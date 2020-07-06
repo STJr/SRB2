@@ -3327,7 +3327,7 @@ static void HWR_RenderBSPNode(INT32 bspnum)
 
 	// Decide which side the view point is on
 	INT32 side;
-	
+
 	rs_numbspcalls++;
 
 	// Found a subsector?
@@ -3570,7 +3570,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	alpha = 255 - alpha;
 
 	gpatch = (GLPatch_t *)W_CachePatchName("DSHADOW", PU_CACHE);
-	if (!(gpatch && gpatch->mipmap->grInfo.format)) return;
+	if (!(gpatch && gpatch->mipmap->format)) return;
 	HWR_GetPatch(gpatch);
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
@@ -4189,7 +4189,7 @@ static int CompareVisSprites(const void *p1, const void *p2)
 	gr_vissprite_t* spr2 = *(gr_vissprite_t*const*)p2;
 	int idiff;
 	float fdiff;
-	
+
 	// Make transparent sprites last. Comment from the previous sort implementation:
 	// Sryder:	Oh boy, while it's nice having ALL the sprites sorted properly, it fails when we bring MD2's into the
 	//			mix and they want to be translucent. So let's place all the translucent sprites and MD2's AFTER
@@ -4411,7 +4411,7 @@ static void HWR_CreateDrawNodes(void)
 	// However, in reality we shouldn't be re-copying and shifting all this information
 	// that is already lying around. This should all be in some sort of linked list or lists.
 	sortindex = Z_Calloc(sizeof(size_t) * (numplanes + numpolyplanes + numwalls), PU_STATIC, NULL);
-	
+
 	rs_hw_nodesorttime = I_GetTimeMicros();
 
 	for (i = 0; i < numplanes; i++, p++)
@@ -4431,7 +4431,7 @@ static void HWR_CreateDrawNodes(void)
 		sortnode[p].wall = &wallinfo[i];
 		sortindex[p] = p;
 	}
-	
+
 	rs_numdrawnodes = p;
 
 	// p is the number of stuff to sort
@@ -4468,7 +4468,7 @@ static void HWR_CreateDrawNodes(void)
 	}
 
 	rs_hw_nodesorttime = I_GetTimeMicros() - rs_hw_nodesorttime;
-	
+
 	rs_hw_nodedrawtime = I_GetTimeMicros();
 
 	// Okay! Let's draw it all! Woo!
@@ -4505,7 +4505,7 @@ static void HWR_CreateDrawNodes(void)
 				sortnode[sortindex[i]].wall->lightlevel, sortnode[sortindex[i]].wall->wallcolormap);
 		}
 	}
-	
+
 	rs_hw_nodedrawtime = I_GetTimeMicros() - rs_hw_nodedrawtime;
 
 	numwalls = 0;
@@ -5763,7 +5763,7 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_grfiltermode);
 	CV_RegisterVar(&cv_grcorrecttricks);
 	CV_RegisterVar(&cv_grsolvetjoin);
-	
+
 	CV_RegisterVar(&cv_renderstats);
 	CV_RegisterVar(&cv_grbatching);
 

@@ -42,17 +42,14 @@ typedef FxI32 GrTextureFormat_t;
 #define GR_TEXFMT_AP_88                 0xe /* 8-bit alpha 8-bit palette */
 #define GR_RGBA                         0x6 // 32 bit RGBA !
 
-typedef struct
-{
-	GrTextureFormat_t format;
-	void              *data;
-} GrTexInfo;
-
-// grInfo.data holds the address of the graphics data cached in heap memory
+// data holds the address of the graphics data cached in heap memory
 //                NULL if the texture is not in Doom heap cache.
 struct GLMipmap_s
 {
-	GrTexInfo       grInfo;         //for TexDownloadMipMap
+	//for TexDownloadMipMap
+	GrTextureFormat_t format;
+	void              *data;
+
 	FxU32           flags;
 	UINT16          height;
 	UINT16          width;
