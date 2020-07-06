@@ -2013,7 +2013,7 @@ void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UI
 	if (c < 0 || c >= HU_FONTSIZE || !fontv[HU_FONT].font[c])
 		return;
 
-	w = (vid.width < 640 ) ? (SHORT(hu_font[c]->width)/2) : (SHORT(hu_font[c]->width));	// use normal sized characters if we're using a terribly low resolution.
+	w = (vid.width < 640 ) ? (SHORT(fontv[HU_FONT].font[c]->width)/2) : (SHORT(fontv[HU_FONT].font[c]->width));	// use normal sized characters if we're using a terribly low resolution.
 	if (x + w > vid.width)
 		return;
 
@@ -2098,6 +2098,7 @@ static inline fixed_t FixedCharacterDim(
 		INT32    dupx,
 		fixed_t *  cwp)
 {
+	(void)scale;
 	(void)hchw;
 	(void)dupx;
 	(*cwp) = chw;
@@ -2239,20 +2240,6 @@ void V_DrawStringScaled(
 				  spacewidth = 3;*/
 			}
 			break;
-		case KART_FONT:
-			spacew = 12;
-			switch (spacing)
-			{
-				case V_MONOSPACE:
-					spacew = 12;
-					/* FALLTHRU */
-				case V_OLDSPACING:
-					chw    = 12;
-					break;
-				case V_6WIDTHSPACE:
-					spacew = 6;
-			}
-			break;
 		case LT_FONT:
 			spacew = 12;
 			break;
@@ -2265,7 +2252,6 @@ void V_DrawStringScaled(
 		default:
 		case HU_FONT:
 		case TINY_FONT:
-		case KART_FONT:
 			if (( flags & V_RETURN8 ))
 				lfh =  8;
 			else
@@ -2426,13 +2412,6 @@ void V_DrawRightAlignedThinString(INT32 x, INT32 y, INT32 option, const char *st
 // NOTE: the text is centered for screens larger than the base width
 //
 // Literally a wrapper. ~Golden
-void V_DrawSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	x <<= FRACBITS;
-	y <<= FRACBITS;
-	V_DrawSmallThinStringAtFixed((fixed_t)x, (fixed_t)y, option, string);
-}
-
 void V_DrawCenteredSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
 {
 	x <<= FRACBITS;
@@ -2550,9 +2529,9 @@ void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, UINT8 num)
 	while (num > 0)
 	{
 		if (num > 9) // if there are two digits, draw second digit first
-			V_DrawScaledPatch(x + (V_LevelActNumWidth(num) - V_LevelActNumWidth(num%10)), y, flags, ttlnum[num%10]);
+			V_DrawScaledPatch(x + (V_LevelActNumWidth(num) - V_LevelActNumWidth(num%10)), y, flags, fontv[TTLNUM_FONT].font[num%10]);
 		else
-			V_DrawScaledPatch(x, y, flags, ttlnum[num]);
+			V_DrawScaledPatch(x, y, flags, fontv[TTLNUM_FONT].font[num]);
 		num = num/10;
 	}
 }
@@ -2601,13 +2580,13 @@ static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UIN
 		c -= NT_FONTSTART;
 
 		// character does not exist or is a space
-		if (c < 0 || c >= NT_FONTSIZE || !ntb_font[c] || !nto_font[c])
+		if (c < 0 || c >= NT_FONTSIZE || !fontv[NTB_FONT].font[c] || !fontv[NTO_FONT].font[c])
 		{
 			cx += FixedMul((4 * dupx)*FRACUNIT, scale);
 			continue;
 		}
 
-		w = FixedMul((SHORT(ntb_font[c]->width)+2 * dupx) * FRACUNIT, scale);
+		w = FixedMul((SHORT(fontv[NTB_FONT].font[c]->width)+2 * dupx) * FRACUNIT, scale);
 
 		if (FixedInt(cx) > scrwidth)
 			continue;
@@ -2617,8 +2596,8 @@ static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UIN
 			continue;
 		}
 
-		V_DrawFixedPatch(cx, cy, scale, option, nto_font[c], outlinecolormap);
-		V_DrawFixedPatch(cx, cy, scale, option, ntb_font[c], basecolormap);
+		V_DrawFixedPatch(cx, cy, scale, option, fontv[NTO_FONT].font[c], outlinecolormap);
+		V_DrawFixedPatch(cx, cy, scale, option, fontv[NTB_FONT].font[c], basecolormap);
 
 		cx += w;
 	}
@@ -2745,10 +2724,10 @@ INT32 V_NameTagWidth(const char *string)
 	for (i = 0; i < strlen(string); i++)
 	{
 		c = toupper(string[i]) - NT_FONTSTART;
-		if (c < 0 || c >= NT_FONTSIZE || !ntb_font[c] || !nto_font[c])
+		if (c < 0 || c >= NT_FONTSIZE || !fontv[NTB_FONT].font[c] || !fontv[NTO_FONT].font[c])
 			w += 4;
 		else
-			w += SHORT(ntb_font[c]->width)+2;
+			w += SHORT(fontv[NTB_FONT].font[c]->width)+2;
 	}
 
 	return w;
@@ -2826,11 +2805,11 @@ INT16 V_LevelActNumWidth(UINT8 num)
 	INT16 result = 0;
 
 	if (num == 0)
-		result = SHORT(ttlnum[num]->width);
+		result = SHORT(fontv[TTLNUM_FONT].font[num]->width);
 
 	while (num > 0 && num <= 99)
 	{
-		result = result + SHORT(ttlnum[num%10]->width);
+		result = result + SHORT(fontv[TTLNUM_FONT].font[num%10]->width);
 		num = num/10;
 	}
 

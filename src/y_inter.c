@@ -429,7 +429,7 @@ dontdrawbg:
 			V_DrawScaledPatch(152, bonusy, 0, data.coop.ptotal);
 			V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.total);
 		}
-		bonusy -= (3*SHORT(tallnum[0]->height)/2) + 1;
+		bonusy -= (3*SHORT(fontv[TALLNUM_FONT].font[0]->height)/2) + 1;
 
 		// Draw bonuses
 		for (i = 3; i >= 0; --i)
@@ -439,7 +439,7 @@ dontdrawbg:
 				V_DrawScaledPatch(152, bonusy, 0, data.coop.bonuspatches[i]);
 				V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.bonuses[i].points);
 			}
-			bonusy -= (3*SHORT(tallnum[0]->height)/2) + 1;
+			bonusy -= (3*SHORT(fontv[TALLNUM_FONT].font[0]->height)/2) + 1;
 		}
 	}
 	else if (intertype == int_spec)

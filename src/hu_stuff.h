@@ -48,7 +48,6 @@ enum
 {
 	X        (HU),
 	X      (TINY),
-	X      (KART),
 
 	X        (LT),
 	X      (CRED),

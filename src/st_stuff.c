@@ -1676,7 +1676,7 @@ static void ST_drawNightsRecords(void)
 			V_DrawString(BASEVIDWIDTH/2 - 56, 148, aflag, "BONUS:");
 			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 140, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres));
 			V_DrawRightAlignedString(BASEVIDWIDTH/2 + 56, 148, V_ORANGEMAP|aflag, va("%d", stplyr->finishedspheres * 50));
-			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
+			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, fontv[NIGHTSNUM_FONT].font, SKINCOLOR_AZURE);
 
 			// If new record, say so!
 			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1) <= stplyr->lastmarescore)
@@ -1768,7 +1768,7 @@ static void ST_drawNiGHTSLink(void)
 
 	y -= (11*scale);
 
-	ST_DrawNightsOverlayNum(x-(4*scale), y, scale, aflag, (stplyr->linkcount-1), nightsnum, colornum);
+	ST_DrawNightsOverlayNum(x-(4*scale), y, scale, aflag, (stplyr->linkcount-1), fontv[NIGHTSNUM_FONT].font, colornum);
 	V_DrawFixedPatch(x+(4*scale), y, scale, aflag, nightslink,
 		colornum == 0 ? colormaps : R_GetTranslationColormap(TC_DEFAULT, colornum, GTC_CACHE));
 
@@ -1983,7 +1983,7 @@ static void ST_drawNiGHTSHUD(void)
 
 	// Score
 	if (!stplyr->exiting && !oldspecialstage && LUA_HudEnabled(hud_nightsscore))
-		ST_DrawNightsOverlayNum(304<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT, stplyr->marescore, nightsnum, SKINCOLOR_AZURE);
+		ST_DrawNightsOverlayNum(304<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP|V_SNAPTORIGHT, stplyr->marescore, fontv[NIGHTSNUM_FONT].font, SKINCOLOR_AZURE);
 
 	// TODO give this its own section for Lua
 	if (!stplyr->exiting && LUA_HudEnabled(hud_nightsscore))
@@ -2049,7 +2049,7 @@ static void ST_drawNiGHTSHUD(void)
 			&& !(stplyr->powers[pw_shield] & SH_PROTECTWATER))
 			col = SKINCOLOR_ORANGE;
 
-		ST_DrawNightsOverlayNum((160 + numbersize)<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP, realnightstime, nightsnum, col);
+		ST_DrawNightsOverlayNum((160 + numbersize)<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP, realnightstime, fontv[NIGHTSNUM_FONT].font, col);
 
 		// Show exact time in debug
 		if (cv_debug & DBG_NIGHTSBASIC)
@@ -2677,7 +2677,7 @@ static void ST_overlayDrawer(void)
 			else
 			{
 				tic_t num = time;
-				INT32 sz = SHORT(tallnum[0]->width)/2, width = 0;
+				INT32 sz = SHORT(fontv[TALLNUM_FONT].font[0]->width)/2, width = 0;
 				do
 				{
 					width += sz;
