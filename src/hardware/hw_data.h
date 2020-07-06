@@ -29,16 +29,14 @@
 
 typedef enum GLTextureFormat_e
 {
-	GL_TEXFMT_ALPHA_8             = 0x2, /* (0..0xFF) alpha     */
-	GL_TEXFMT_INTENSITY_8         = 0x3, /* (0..0xFF) intensity */
-	GL_TEXFMT_ALPHA_INTENSITY_44  = 0x4,
-	GL_TEXFMT_P_8                 = 0x5, /* 8-bit palette */
-	GL_TEXFMT_RGBA                = 0x6, /* 32 bit RGBA! */
-	GL_TEXFMT_RGB_565             = 0xa,
-	GL_TEXFMT_ARGB_1555           = 0xb,
-	GL_TEXFMT_ARGB_4444           = 0xc,
-	GL_TEXFMT_ALPHA_INTENSITY_88  = 0xd,
-	GL_TEXFMT_AP_88               = 0xe, /* 8-bit alpha 8-bit palette */
+	GL_TEXFMT_P_8                 = 0x01, /* 8-bit palette */
+	GL_TEXFMT_AP_88               = 0x02, /* 8-bit alpha, 8-bit palette */
+
+	GL_TEXFMT_RGBA                = 0x10, /* 32 bit RGBA! */
+
+	GL_TEXFMT_ALPHA_8             = 0x20, /* (0..0xFF) alpha     */
+	GL_TEXFMT_INTENSITY_8         = 0x21, /* (0..0xFF) intensity */
+	GL_TEXFMT_ALPHA_INTENSITY_88  = 0x22,
 } GLTextureFormat_t;
 
 // data holds the address of the graphics data cached in heap memory

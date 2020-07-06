@@ -2971,11 +2971,7 @@ EXPORT INT32  HWRAPI(GetTextureUsed) (void)
 		int format = tmp->format;
 		if (format == GL_TEXFMT_RGBA)
 			bpp = 4;
-		else if (format == GL_TEXFMT_RGB_565
-			|| format == GL_TEXFMT_ARGB_1555
-			|| format == GL_TEXFMT_ARGB_4444
-			|| format == GL_TEXFMT_ALPHA_INTENSITY_88
-			|| format == GL_TEXFMT_AP_88)
+		else if (format == GL_TEXFMT_ALPHA_INTENSITY_88 || format == GL_TEXFMT_AP_88)
 			bpp = 2;
 
 		// Add it up!
