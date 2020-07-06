@@ -755,113 +755,40 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		}
 		else
         {
-			const UINT8 color = players[playernum].skincolor;
+			UINT16 chatcolor = skincolors[players[playernum].skincolor].chatcolor;
 
-			cstart = "\x83";
-
-			// Follow palette order at r_draw.c Color_Names
-			switch (color)
-			{
-				default:
-				case SKINCOLOR_WHITE:
-				case SKINCOLOR_BONE:
-				case SKINCOLOR_CLOUDY:
-				case SKINCOLOR_GREY:
-				case SKINCOLOR_SILVER:
-				case SKINCOLOR_AETHER:
-				case SKINCOLOR_SLATE:
-					cstart = "\x80"; // white
-					break;
-				case SKINCOLOR_CARBON:
-				case SKINCOLOR_JET:
-				case SKINCOLOR_BLACK:
-					cstart = "\x86"; // V_GRAYMAP
-					break;
-				case SKINCOLOR_PINK:
-				case SKINCOLOR_RUBY:
-				case SKINCOLOR_SALMON:
-				case SKINCOLOR_RED:
-				case SKINCOLOR_CRIMSON:
-				case SKINCOLOR_FLAME:
-				case SKINCOLOR_KETCHUP:
-					cstart = "\x85"; // V_REDMAP
-					break;
-				case SKINCOLOR_YOGURT:
-				case SKINCOLOR_BROWN:
-				case SKINCOLOR_BRONZE:
-				case SKINCOLOR_TAN:
-				case SKINCOLOR_BEIGE:
-				case SKINCOLOR_QUAIL:
-					cstart = "\x8d"; // V_BROWNMAP
-					break;
-				case SKINCOLOR_MOSS:
-				case SKINCOLOR_GREEN:
-				case SKINCOLOR_FOREST:
-				case SKINCOLOR_EMERALD:
-				case SKINCOLOR_MINT:
-					cstart = "\x83"; // V_GREENMAP
-					break;
-				case SKINCOLOR_AZURE:
-					cstart = "\x8c"; // V_AZUREMAP
-					break;
-				case SKINCOLOR_LAVENDER:
-				case SKINCOLOR_PASTEL:
-				case SKINCOLOR_PURPLE:
-					cstart = "\x89"; // V_PURPLEMAP
-					break;
-				case SKINCOLOR_PEACHY:
-				case SKINCOLOR_LILAC:
-				case SKINCOLOR_PLUM:
-				case SKINCOLOR_ROSY:
-					cstart = "\x8e"; // V_ROSYMAP
-					break;
-				case SKINCOLOR_SUNSET:
-				case SKINCOLOR_COPPER:
-				case SKINCOLOR_APRICOT:
-				case SKINCOLOR_ORANGE:
-				case SKINCOLOR_RUST:
-					cstart = "\x87"; // V_ORANGEMAP
-					break;
-				case SKINCOLOR_GOLD:
-				case SKINCOLOR_SANDY:
-				case SKINCOLOR_YELLOW:
-				case SKINCOLOR_OLIVE:
-					cstart = "\x82"; // V_YELLOWMAP
-					break;
-				case SKINCOLOR_LIME:
-				case SKINCOLOR_PERIDOT:
-				case SKINCOLOR_APPLE:
-					cstart = "\x8b"; // V_PERIDOTMAP
-					break;
-				case SKINCOLOR_SEAFOAM:
-				case SKINCOLOR_AQUA:
-					cstart = "\x8a"; // V_AQUAMAP
-					break;
-				case SKINCOLOR_TEAL:
-				case SKINCOLOR_WAVE:
-				case SKINCOLOR_CYAN:
-				case SKINCOLOR_SKY:
-				case SKINCOLOR_CERULEAN:
-				case SKINCOLOR_ICY:
-				case SKINCOLOR_SAPPHIRE:
-				case SKINCOLOR_VAPOR:
-					cstart = "\x88"; // V_SKYMAP
-					break;
-				case SKINCOLOR_CORNFLOWER:
-				case SKINCOLOR_BLUE:
-				case SKINCOLOR_COBALT:
-				case SKINCOLOR_DUSK:
-				case SKINCOLOR_BLUEBELL:
-					cstart = "\x84"; // V_BLUEMAP
-					break;
-				case SKINCOLOR_BUBBLEGUM:
-				case SKINCOLOR_MAGENTA:
-				case SKINCOLOR_NEON:
-				case SKINCOLOR_VIOLET:
-				case SKINCOLOR_RASPBERRY:
-					cstart = "\x81"; // V_MAGENTAMAP
-					break;
-			}
+			if (!chatcolor || chatcolor%0x1000 || chatcolor>V_INVERTMAP)
+				cstart = "\x80";
+			else if (chatcolor == V_MAGENTAMAP)
+				cstart = "\x81";
+			else if (chatcolor == V_YELLOWMAP)
+				cstart = "\x82";
+			else if (chatcolor == V_GREENMAP)
+				cstart = "\x83";
+			else if (chatcolor == V_BLUEMAP)
+				cstart = "\x84";
+			else if (chatcolor == V_REDMAP)
+				cstart = "\x85";
+			else if (chatcolor == V_GRAYMAP)
+				cstart = "\x86";
+			else if (chatcolor == V_ORANGEMAP)
+				cstart = "\x87";
+			else if (chatcolor == V_SKYMAP)
+				cstart = "\x88";
+			else if (chatcolor == V_PURPLEMAP)
+				cstart = "\x89";
+			else if (chatcolor == V_AQUAMAP)
+				cstart = "\x8a";
+			else if (chatcolor == V_PERIDOTMAP)
+				cstart = "\x8b";
+			else if (chatcolor == V_AZUREMAP)
+				cstart = "\x8c";
+			else if (chatcolor == V_BROWNMAP)
+				cstart = "\x8d";
+			else if (chatcolor == V_ROSYMAP)
+				cstart = "\x8e";
+			else if (chatcolor == V_INVERTMAP)
+				cstart = "\x8f";
         }
 		prefix = cstart;
 
@@ -2172,7 +2099,7 @@ void HU_Drawer(void)
 		{
 			if (LUA_HudEnabled(hud_rankings))
 				HU_DrawRankings();
-			if (gametype == GT_COOP)
+			if (gametyperules & GTR_CAMPAIGN)
 				HU_DrawNetplayCoopOverlay();
 		}
 		else
@@ -2310,7 +2237,7 @@ void HU_Erase(void)
 //                   IN-LEVEL MULTIPLAYER RANKINGS
 //======================================================================
 
-#define supercheckdef ((players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS1] || players[tab[i].num].mo->state >= &states[S_PLAY_SUPER_TRANS6])) || (players[tab[i].num].powers[pw_carry] == CR_NIGHTSMODE && skins[players[tab[i].num].skin].flags & SF_SUPER))
+#define supercheckdef (!(players[tab[i].num].charflags & SF_NOSUPERSPRITES) && ((players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS1] || players[tab[i].num].mo->state >= &states[S_PLAY_SUPER_TRANS6])) || (players[tab[i].num].powers[pw_carry] == CR_NIGHTSMODE && skins[players[tab[i].num].skin].flags & SF_SUPER)))
 #define greycheckdef (players[tab[i].num].spectator || players[tab[i].num].playerstate == PST_DEAD || (G_IsSpecialStage(gamemap) && players[tab[i].num].exiting))
 
 //
@@ -2868,7 +2795,7 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 		if (tab[i].color == 0)
 		{
 			colormap = colormaps;
-			if (players[tab[i].num].powers[pw_super])
+			if (players[tab[i].num].powers[pw_super] && !(players[tab[i].num].charflags & SF_NOSUPERSPRITES))
 				V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, FRACUNIT/4, 0, superprefix[players[tab[i].num].skin], 0);
 			else
 			{

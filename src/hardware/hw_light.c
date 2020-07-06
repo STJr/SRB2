@@ -1,19 +1,13 @@
-// Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-//
 // Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-/// \file
+/// \file hw_light.c
 /// \brief Corona/Dynamic/Static lighting add on by Hurdler
 ///	!!! Under construction !!!
 
@@ -611,6 +605,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT], // SPR_GFZD
 	&lspr[NOLIGHT], // SPR_BRIC
 	&lspr[NOLIGHT], // SPR_WDDB
+	&lspr[NOLIGHT], // SPR_BRIR
+	&lspr[NOLIGHT], // SPR_BRIB
+	&lspr[NOLIGHT], // SPR_BRIY
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG
@@ -879,19 +876,19 @@ void HWR_WallLighting(FOutVector *wlVerts)
 #endif
 		for (i = 0; i < 4; i++)
 		{
-			wlVerts[i].sow = (float)(0.5f + d[i]*s);
-			wlVerts[i].tow = (float)(0.5f + (wlVerts[i].y-LIGHT_POS(j).y)*s*1.2f);
+			wlVerts[i].s = (float)(0.5f + d[i]*s);
+			wlVerts[i].t = (float)(0.5f + (wlVerts[i].y-LIGHT_POS(j).y)*s*1.2f);
 		}
 
 		HWR_SetLight();
 
-		Surf.FlatColor.rgba = LONG(dynlights->p_lspr[j]->dynamic_color);
+		Surf.PolyColor.rgba = LONG(dynlights->p_lspr[j]->dynamic_color);
 #ifdef DL_HIGH_QUALITY
-		Surf.FlatColor.s.alpha = (UINT8)((1-dist_p2d/DL_SQRRADIUS(j))*Surf.FlatColor.s.alpha);
+		Surf.PolyColor.s.alpha = (UINT8)((1-dist_p2d/DL_SQRRADIUS(j))*Surf.PolyColor.s.alpha);
 #endif
 		// next state is null so fade out with alpha
 		if (dynlights->mo[j]->state->nextstate == S_NULL)
-			Surf.FlatColor.s.alpha = (UINT8)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
+			Surf.PolyColor.s.alpha = (UINT8)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.PolyColor.s.alpha);
 
 		HWD.pfnDrawPolygon (&Surf, wlVerts, 4, LIGHTMAPFLAGS);
 
@@ -948,19 +945,19 @@ void HWR_PlaneLighting(FOutVector *clVerts, int nrClipVerts)
 #endif
 		for (i = 0; i < nrClipVerts; i++)
 		{
-			clVerts[i].sow = 0.5f + (clVerts[i].x-LIGHT_POS(j).x)*s;
-			clVerts[i].tow = 0.5f + (clVerts[i].z-LIGHT_POS(j).z)*s*1.2f;
+			clVerts[i].s = 0.5f + (clVerts[i].x-LIGHT_POS(j).x)*s;
+			clVerts[i].t = 0.5f + (clVerts[i].z-LIGHT_POS(j).z)*s*1.2f;
 		}
 
 		HWR_SetLight();
 
-		Surf.FlatColor.rgba = LONG(dynlights->p_lspr[j]->dynamic_color);
+		Surf.PolyColor.rgba = LONG(dynlights->p_lspr[j]->dynamic_color);
 #ifdef DL_HIGH_QUALITY
-		Surf.FlatColor.s.alpha = (unsigned char)((1 - dist_p2d/DL_SQRRADIUS(j))*Surf.FlatColor.s.alpha);
+		Surf.PolyColor.s.alpha = (unsigned char)((1 - dist_p2d/DL_SQRRADIUS(j))*Surf.PolyColor.s.alpha);
 #endif
 		// next state is null so fade out with alpha
 		if ((dynlights->mo[j]->state->nextstate == S_NULL))
-			Surf.FlatColor.s.alpha = (unsigned char)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
+			Surf.PolyColor.s.alpha = (unsigned char)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.PolyColor.s.alpha);
 
 		HWD.pfnDrawPolygon (&Surf, clVerts, nrClipVerts, LIGHTMAPFLAGS);
 
@@ -1027,11 +1024,11 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
 		// more realistique corona !
 		if (cz >= 255*8+250)
 			return;
-		Surf.FlatColor.rgba = p_lspr->corona_color;
+		Surf.PolyColor.rgba = p_lspr->corona_color;
 		if (cz > 250.0f)
-			Surf.FlatColor.s.alpha = 0xff-((int)cz-250)/8;
+			Surf.PolyColor.s.alpha = 0xff-((int)cz-250)/8;
 		else
-			Surf.FlatColor.s.alpha = 0xff;
+			Surf.PolyColor.s.alpha = 0xff;
 
 		// do not be hide by sprite of the light itself !
 		cz = cz - 2.0f;
@@ -1043,19 +1040,19 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
 		//           car comme l'offset est minime sa ce voit pas !
 		light[0].x = cx-size;  light[0].z = cz;
 		light[0].y = cy-size*1.33f+p_lspr->light_yoffset;
-		light[0].sow = 0.0f;   light[0].tow = 0.0f;
+		light[0].s = 0.0f;   light[0].t = 0.0f;
 
 		light[1].x = cx+size;  light[1].z = cz;
 		light[1].y = cy-size*1.33f+p_lspr->light_yoffset;
-		light[1].sow = 1.0f;   light[1].tow = 0.0f;
+		light[1].s = 1.0f;   light[1].t = 0.0f;
 
 		light[2].x = cx+size;  light[2].z = cz;
 		light[2].y = cy+size*1.33f+p_lspr->light_yoffset;
-		light[2].sow = 1.0f;   light[2].tow = 1.0f;
+		light[2].s = 1.0f;   light[2].t = 1.0f;
 
 		light[3].x = cx-size;  light[3].z = cz;
 		light[3].y = cy+size*1.33f+p_lspr->light_yoffset;
-		light[3].sow = 0.0f;   light[3].tow = 1.0f;
+		light[3].s = 0.0f;   light[3].t = 1.0f;
 
 		HWR_GetPic(coronalumpnum);  /// \todo use different coronas
 
@@ -1101,11 +1098,11 @@ void HWR_DrawCoronas(void)
 		// more realistique corona !
 		if (cz >= 255*8+250)
 			continue;
-		Surf.FlatColor.rgba = p_lspr->corona_color;
+		Surf.PolyColor.rgba = p_lspr->corona_color;
 		if (cz > 250.0f)
-			Surf.FlatColor.s.alpha = (UINT8)(0xff-(UINT8)(((int)cz-250)/8));
+			Surf.PolyColor.s.alpha = (UINT8)(0xff-(UINT8)(((int)cz-250)/8));
 		else
-			Surf.FlatColor.s.alpha = 0xff;
+			Surf.PolyColor.s.alpha = 0xff;
 
 		switch (p_lspr->type)
 		{
@@ -1113,7 +1110,7 @@ void HWR_DrawCoronas(void)
 				size  = p_lspr->corona_radius  * ((cz+120.0f)/950.0f); // d'ou vienne ces constante ?
 				break;
 			case ROCKET_SPR:
-				Surf.FlatColor.s.alpha = (UINT8)((M_RandomByte()>>1)&0xff);
+				Surf.PolyColor.s.alpha = (UINT8)((M_RandomByte()>>1)&0xff);
 				// don't need a break
 			case CORONA_SPR:
 				size  = p_lspr->corona_radius  * ((cz+60.0f)/100.0f); // d'ou vienne ces constante ?
@@ -1133,19 +1130,19 @@ void HWR_DrawCoronas(void)
 
 		light[0].x = cx-size;  light[0].z = cz;
 		light[0].y = cy-size*1.33f;
-		light[0].sow = 0.0f;   light[0].tow = 0.0f;
+		light[0].s = 0.0f;   light[0].t = 0.0f;
 
 		light[1].x = cx+size;  light[1].z = cz;
 		light[1].y = cy-size*1.33f;
-		light[1].sow = 1.0f;   light[1].tow = 0.0f;
+		light[1].s = 1.0f;   light[1].t = 0.0f;
 
 		light[2].x = cx+size;  light[2].z = cz;
 		light[2].y = cy+size*1.33f;
-		light[2].sow = 1.0f;   light[2].tow = 1.0f;
+		light[2].s = 1.0f;   light[2].t = 1.0f;
 
 		light[3].x = cx-size;  light[3].z = cz;
 		light[3].y = cy+size*1.33f;
-		light[3].sow = 0.0f;   light[3].tow = 1.0f;
+		light[3].s = 0.0f;   light[3].t = 1.0f;
 
 		HWD.pfnDrawPolygon (&Surf, light, 4, PF_Modulated | PF_Additive | PF_Clip | PF_NoDepthTest | PF_Corona);
 	}
@@ -1254,11 +1251,6 @@ static void HWR_SetLight(void)
 		lightmappatch.height = 128;
 		lightmappatch.mipmap->width = 128;
 		lightmappatch.mipmap->height = 128;
-#ifdef GLIDE_API_COMPATIBILITY
-		lightmappatch.mipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_128;
-		lightmappatch.mipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_128;
-		lightmappatch.mipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
-#endif
 		lightmappatch.mipmap->flags = 0; //TF_WRAPXY; // DEBUG: view the overdraw !
 	}
 	HWD.pfnSetTexture(lightmappatch.mipmap);
