@@ -59,7 +59,7 @@ typedef struct
 
 // needed for sprite rendering
 // equivalent of the software renderer's vissprites
-typedef struct gr_vissprite_s
+typedef struct gl_vissprite_s
 {
 	float x1, x2;
 	float tz, ty;
@@ -74,7 +74,7 @@ typedef struct gr_vissprite_s
 	UINT8 *colormap;
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 	float z1, z2;
-} gr_vissprite_t;
+} gl_vissprite_t;
 
 // --------
 // hw_bsp.c

@@ -1108,14 +1108,14 @@ static boolean HWR_AllowModel(mobj_t *mobj)
 
 static boolean HWR_CanInterpolateModel(mobj_t *mobj, model_t *model)
 {
-	if (cv_grmodelinterpolation.value == 2) // Always interpolate
+	if (cv_glmodelinterpolation.value == 2) // Always interpolate
 		return true;
 	return model->interpolate[(mobj->frame & FF_FRAMEMASK)];
 }
 
 static boolean HWR_CanInterpolateSprite2(modelspr2frames_t *spr2frame)
 {
-	if (cv_grmodelinterpolation.value == 2) // Always interpolate
+	if (cv_glmodelinterpolation.value == 2) // Always interpolate
 		return true;
 	return spr2frame->interpolate;
 }
@@ -1181,7 +1181,7 @@ static UINT8 HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t 
 // HWR_DrawModel
 //
 
-boolean HWR_DrawModel(gr_vissprite_t *spr)
+boolean HWR_DrawModel(gl_vissprite_t *spr)
 {
 	md2_t *md2;
 
@@ -1192,7 +1192,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 	FTransform p;
 	FSurfaceInfo Surf;
 
-	if (!cv_grmodels.value)
+	if (!cv_glmodels.value)
 		return false;
 
 	if (spr->precip)
@@ -1388,7 +1388,7 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 
 #ifdef USE_MODEL_NEXTFRAME
 #define INTERPOLERATION_LIMIT TICRATE/4
-		if (cv_grmodelinterpolation.value && tics <= durs && tics <= INTERPOLERATION_LIMIT)
+		if (cv_glmodelinterpolation.value && tics <= durs && tics <= INTERPOLERATION_LIMIT)
 		{
 			if (durs > INTERPOLERATION_LIMIT)
 				durs = INTERPOLERATION_LIMIT;

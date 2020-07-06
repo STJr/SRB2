@@ -1446,19 +1446,19 @@ static menuitem_t OP_ColorOptionsMenu[] =
 static menuitem_t OP_OpenGLOptionsMenu[] =
 {
 	{IT_HEADER, NULL, "3D Models", NULL, 0},
-	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_grmodels,             12},
-	{IT_STRING|IT_CVAR,         NULL, "Frame interpolation", &cv_grmodelinterpolation, 22},
-	{IT_STRING|IT_CVAR,         NULL, "Ambient lighting",    &cv_grmodellighting,      32},
+	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_glmodels,             12},
+	{IT_STRING|IT_CVAR,         NULL, "Frame interpolation", &cv_glmodelinterpolation, 22},
+	{IT_STRING|IT_CVAR,         NULL, "Ambient lighting",    &cv_glmodellighting,      32},
 
 	{IT_HEADER, NULL, "General", NULL, 51},
-	{IT_STRING|IT_CVAR,         NULL, "Shaders",             &cv_grshaders,            63},
-	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_grshearing,           73},
+	{IT_STRING|IT_CVAR,         NULL, "Shaders",             &cv_glshaders,            63},
+	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_glshearing,           73},
 	{IT_STRING|IT_CVAR,         NULL, "Field of view",       &cv_fov,                  83},
 
 	{IT_HEADER, NULL, "Miscellaneous", NULL, 102},
 	{IT_STRING|IT_CVAR,         NULL, "Bit depth",           &cv_scr_depth,           114},
-	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_grfiltermode,        124},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_granisotropicmode,   134},
+	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_glfiltermode,        124},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_glanisotropicmode,   134},
 #ifdef ALAM_LIGHTING
 	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",         &OP_OpenGLLightingDef,   144},
 #endif
@@ -1470,10 +1470,10 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 #ifdef ALAM_LIGHTING
 static menuitem_t OP_OpenGLLightingMenu[] =
 {
-	{IT_STRING|IT_CVAR, NULL, "Coronas",          &cv_grcoronas,          0},
-	{IT_STRING|IT_CVAR, NULL, "Coronas size",     &cv_grcoronasize,      10},
-	{IT_STRING|IT_CVAR, NULL, "Dynamic lighting", &cv_grdynamiclighting, 20},
-	{IT_STRING|IT_CVAR, NULL, "Static lighting",  &cv_grstaticlighting,  30},
+	{IT_STRING|IT_CVAR, NULL, "Coronas",          &cv_glcoronas,          0},
+	{IT_STRING|IT_CVAR, NULL, "Coronas size",     &cv_glcoronasize,      10},
+	{IT_STRING|IT_CVAR, NULL, "Dynamic lighting", &cv_gldynamiclighting, 20},
+	{IT_STRING|IT_CVAR, NULL, "Static lighting",  &cv_glstaticlighting,  30},
 };
 #endif // ALAM_LIGHTING
 
@@ -2306,9 +2306,9 @@ void Nextmap_OnChange(void)
 		// Check if file exists, if not, disable REPLAY option
 		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name);
 
-#ifdef OLDNREPLAYNAME		
+#ifdef OLDNREPLAYNAME
 		sprintf(tabaseold,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
-#endif	
+#endif
 
 		for (i = 0; i < 4; i++) {
 			SP_NightsReplayMenu[i].status = IT_DISABLED;
@@ -2336,7 +2336,7 @@ void Nextmap_OnChange(void)
 			active = true;
 		}
 
-		// Old style name compatibility 
+		// Old style name compatibility
 #ifdef OLDNREPLAYNAME
 		if (FIL_FileExists(va("%s-score-best.lmp", tabaseold))) {
 			SP_NightsReplayMenu[0].status = IT_WHITESTRING|IT_CALL;

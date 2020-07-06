@@ -739,7 +739,7 @@ void HWR_CorrectSWTricks(void)
 	sector_t **sectorList;
 	sector_t *outSector;
 
-	if ((0 == cv_grcorrecttricks.value))
+	if ((0 == cv_glcorrecttricks.value))
 		return;
 
 	// determine lines for sectors

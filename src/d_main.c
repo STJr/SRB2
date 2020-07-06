@@ -599,7 +599,7 @@ static void D_Display(void)
 			snprintf(s, sizeof s - 1, "SysMiss %.2f%%", lostpercent);
 			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
 		}
-		
+
 		if (cv_renderstats.value)
 		{
 			char s[50];
@@ -608,7 +608,7 @@ static void D_Display(void)
 			rs_prevframetime = I_GetTimeMicros();
 
 			if (rs_rendercalltime > 10000) divisor = 1000;
-			
+
 			snprintf(s, sizeof s - 1, "ft   %d", frametime / divisor);
 			V_DrawThinString(30, 10, V_MONOSPACE | V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "rtot %d", rs_rendercalltime / divisor);
@@ -635,7 +635,7 @@ static void D_Display(void)
 				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
 				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
 				V_DrawThinString(30, 80, V_MONOSPACE | V_YELLOWMAP, s);
-				if (cv_grbatching.value)
+				if (cv_glbatching.value)
 				{
 					snprintf(s, sizeof s - 1, "bsrt %d", rs_hw_batchsorttime / divisor);
 					V_DrawThinString(80, 55, V_MONOSPACE | V_REDMAP, s);

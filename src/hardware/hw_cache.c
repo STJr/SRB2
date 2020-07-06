@@ -598,14 +598,14 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 //             CACHING HANDLING
 // =================================================
 
-static size_t gr_numtextures = 0; // Texture count
-static GLMapTexture_t *gr_textures; // For all textures
-static GLMapTexture_t *gr_flats; // For all (texture) flats, as normal flats don't need to be cached
+static size_t gl_numtextures = 0; // Texture count
+static GLMapTexture_t *gl_textures; // For all textures
+static GLMapTexture_t *gl_flats; // For all (texture) flats, as normal flats don't need to be cached
 
 void HWR_InitTextureCache(void)
 {
-	gr_textures = NULL;
-	gr_flats = NULL;
+	gl_textures = NULL;
+	gl_flats = NULL;
 }
 
 // Callback function for HWR_FreeTextureCache.
@@ -673,13 +673,13 @@ void HWR_FreeTextureCache(void)
 
 	// now the heap don't have any 'user' pointing to our
 	// texturecache info, we can free it
-	if (gr_textures)
-		free(gr_textures);
-	if (gr_flats)
-		free(gr_flats);
-	gr_textures = NULL;
-	gr_flats = NULL;
-	gr_numtextures = 0;
+	if (gl_textures)
+		free(gl_textures);
+	if (gl_flats)
+		free(gl_flats);
+	gl_textures = NULL;
+	gl_flats = NULL;
+	gl_numtextures = 0;
 }
 
 void HWR_LoadTextures(size_t pnumtextures)
@@ -688,13 +688,13 @@ void HWR_LoadTextures(size_t pnumtextures)
 	HWR_FreeTextureCache();
 
 	// Why not Z_Malloc?
-	gr_numtextures = pnumtextures;
-	gr_textures = calloc(gr_numtextures, sizeof(*gr_textures));
-	gr_flats = calloc(gr_numtextures, sizeof(*gr_flats));
+	gl_numtextures = pnumtextures;
+	gl_textures = calloc(gl_numtextures, sizeof(*gl_textures));
+	gl_flats = calloc(gl_numtextures, sizeof(*gl_flats));
 
 	// Doesn't tell you which it _is_, but hopefully
 	// should never ever happen (right?!)
-	if ((gr_textures == NULL) || (gr_flats == NULL))
+	if ((gl_textures == NULL) || (gl_flats == NULL))
 		I_Error("HWR_LoadTextures: ran out of memory for OpenGL textures. Sad!");
 }
 
@@ -718,13 +718,13 @@ GLMapTexture_t *HWR_GetTexture(INT32 tex)
 {
 	GLMapTexture_t *grtex;
 #ifdef PARANOIA
-	if ((unsigned)tex >= gr_numtextures)
+	if ((unsigned)tex >= gl_numtextures)
 		I_Error("HWR_GetTexture: tex >= numtextures\n");
 #endif
 
 	// Every texture in memory, stored in the
 	// hardware renderer's bit depth format. Wow!
-	grtex = &gr_textures[tex];
+	grtex = &gl_textures[tex];
 
 	// Generate texture if missing from the cache
 	if (!grtex->mipmap.data && !grtex->mipmap.downloaded)
@@ -836,7 +836,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		GLMapTexture_t *grtex;
 		INT32 texturenum = levelflat->u.texture.num;
 #ifdef PARANOIA
-		if ((unsigned)texturenum >= gr_numtextures)
+		if ((unsigned)texturenum >= gl_numtextures)
 			I_Error("HWR_GetLevelFlat: texturenum >= numtextures\n");
 #endif
 
@@ -845,7 +845,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 			return;
 
 		// Every texture in memory, stored as a 8-bit flat. Wow!
-		grtex = &gr_flats[texturenum];
+		grtex = &gl_flats[texturenum];
 
 		// Generate flat if missing from the cache
 		if (!grtex->mipmap.data && !grtex->mipmap.downloaded)
