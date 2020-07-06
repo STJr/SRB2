@@ -2990,34 +2990,10 @@ static void HWR_Subsector(size_t num)
 	//gr_cursectorlight.blue  = light;
 	//gr_cursectorlight.alpha = light;
 
-// ----- for special tricks with HW renderer -----
-	if (gr_frontsector->pseudoSector)
-	{
-		cullFloorHeight = locFloorHeight = gr_frontsector->virtualFloorheight;
-		cullCeilingHeight = locCeilingHeight = gr_frontsector->virtualCeilingheight;
-	}
-	else if (gr_frontsector->virtualFloor)
-	{
-		///@TODO Is this whole virtualFloor mess even useful? I don't think it even triggers ever.
-		cullFloorHeight = locFloorHeight = gr_frontsector->virtualFloorheight;
-		if (gr_frontsector->virtualCeiling)
-			cullCeilingHeight = locCeilingHeight = gr_frontsector->virtualCeilingheight;
-		else
-			cullCeilingHeight = locCeilingHeight = gr_frontsector->ceilingheight;
-	}
-	else if (gr_frontsector->virtualCeiling)
-	{
-		cullCeilingHeight = locCeilingHeight = gr_frontsector->virtualCeilingheight;
-		cullFloorHeight   = locFloorHeight   = gr_frontsector->floorheight;
-	}
-	else
-	{
-		cullFloorHeight   = P_GetSectorFloorZAt  (gr_frontsector, viewx, viewy);
-		cullCeilingHeight = P_GetSectorCeilingZAt(gr_frontsector, viewx, viewy);
-		locFloorHeight    = P_GetSectorFloorZAt  (gr_frontsector, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
-		locCeilingHeight  = P_GetSectorCeilingZAt(gr_frontsector, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
-	}
-// ----- end special tricks -----
+	cullFloorHeight   = P_GetSectorFloorZAt  (gr_frontsector, viewx, viewy);
+	cullCeilingHeight = P_GetSectorCeilingZAt(gr_frontsector, viewx, viewy);
+	locFloorHeight    = P_GetSectorFloorZAt  (gr_frontsector, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
+	locCeilingHeight  = P_GetSectorCeilingZAt(gr_frontsector, gr_frontsector->soundorg.x, gr_frontsector->soundorg.y);
 
 	if (gr_frontsector->ffloors)
 	{
@@ -3327,7 +3303,7 @@ static void HWR_RenderBSPNode(INT32 bspnum)
 
 	// Decide which side the view point is on
 	INT32 side;
-	
+
 	rs_numbspcalls++;
 
 	// Found a subsector?
@@ -4189,7 +4165,7 @@ static int CompareVisSprites(const void *p1, const void *p2)
 	gr_vissprite_t* spr2 = *(gr_vissprite_t*const*)p2;
 	int idiff;
 	float fdiff;
-	
+
 	// Make transparent sprites last. Comment from the previous sort implementation:
 	// Sryder:	Oh boy, while it's nice having ALL the sprites sorted properly, it fails when we bring MD2's into the
 	//			mix and they want to be translucent. So let's place all the translucent sprites and MD2's AFTER
@@ -4411,7 +4387,7 @@ static void HWR_CreateDrawNodes(void)
 	// However, in reality we shouldn't be re-copying and shifting all this information
 	// that is already lying around. This should all be in some sort of linked list or lists.
 	sortindex = Z_Calloc(sizeof(size_t) * (numplanes + numpolyplanes + numwalls), PU_STATIC, NULL);
-	
+
 	rs_hw_nodesorttime = I_GetTimeMicros();
 
 	for (i = 0; i < numplanes; i++, p++)
@@ -4431,7 +4407,7 @@ static void HWR_CreateDrawNodes(void)
 		sortnode[p].wall = &wallinfo[i];
 		sortindex[p] = p;
 	}
-	
+
 	rs_numdrawnodes = p;
 
 	// p is the number of stuff to sort
@@ -4468,7 +4444,7 @@ static void HWR_CreateDrawNodes(void)
 	}
 
 	rs_hw_nodesorttime = I_GetTimeMicros() - rs_hw_nodesorttime;
-	
+
 	rs_hw_nodedrawtime = I_GetTimeMicros();
 
 	// Okay! Let's draw it all! Woo!
@@ -4505,7 +4481,7 @@ static void HWR_CreateDrawNodes(void)
 				sortnode[sortindex[i]].wall->lightlevel, sortnode[sortindex[i]].wall->wallcolormap);
 		}
 	}
-	
+
 	rs_hw_nodedrawtime = I_GetTimeMicros() - rs_hw_nodedrawtime;
 
 	numwalls = 0;
@@ -5721,7 +5697,6 @@ consvar_t cv_grfiltermode = {"gr_filtermode", "Nearest", CV_SAVE|CV_CALL, grfilt
 consvar_t cv_granisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, granisotropicmode_cons_t,
                              CV_granisotropic_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_grcorrecttricks = {"gr_correcttricks", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_grsolvetjoin = {"gr_solvetjoin", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 consvar_t cv_grbatching = {"gr_batching", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -5761,9 +5736,8 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_grshaders);
 
 	CV_RegisterVar(&cv_grfiltermode);
-	CV_RegisterVar(&cv_grcorrecttricks);
 	CV_RegisterVar(&cv_grsolvetjoin);
-	
+
 	CV_RegisterVar(&cv_renderstats);
 	CV_RegisterVar(&cv_grbatching);
 
