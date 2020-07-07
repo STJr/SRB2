@@ -204,7 +204,7 @@ extern char logfilename[1024];
 // Will always resemble the versionstring, 205 = 2.0.5, 210 = 2.1, etc.
 #define CODEBASE 220
 
-// The Modification ID; must be obtained from Rob ( https://mb.srb2.org/private.php?do=newpm&u=546 ).
+// The Modification ID; must be obtained from a Master Server Admin ( https://mb.srb2.org/showgroups.php ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
 // "18" is the default mod ID for version 2.2
 #define MODID 18
