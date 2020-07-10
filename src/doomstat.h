@@ -45,7 +45,19 @@ extern INT32 curWeather;
 extern INT32 cursaveslot;
 //extern INT16 lastmapsaved;
 extern INT16 lastmaploaded;
-extern boolean gamecomplete;
+extern UINT8 gamecomplete;
+
+// Extra abilities/settings for skins (combinable stuff)
+typedef enum
+{
+	MA_RUNNING     = 1,    // In action
+	MA_INIT        = 1<<1, // Initialisation
+	MA_NOCUTSCENES = 1<<2, // No cutscenes
+	MA_INGAME      = 1<<3  // Timer ignores loads
+} marathonmode_t;
+
+extern marathonmode_t marathonmode;
+extern tic_t marathontime;
 
 #define maxgameovers 13
 extern UINT8 numgameovers;
@@ -127,7 +139,7 @@ extern INT32 displayplayer;
 extern INT32 secondarydisplayplayer; // for splitscreen
 
 // Maps of special importance
-extern INT16 spstage_start;
+extern INT16 spstage_start, spmarathon_start;
 extern INT16 sstage_start, sstage_end, smpstage_start, smpstage_end;
 
 extern INT16 titlemap;
@@ -145,7 +157,7 @@ extern INT32 tutorialanalog; // store cv_analog[0] user value
 extern boolean looptitle;
 
 // CTF colors.
-extern UINT8 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor_bluering;
+extern UINT16 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor_bluering;
 
 extern tic_t countdowntimer;
 extern boolean countdowntimeup;
@@ -289,6 +301,7 @@ typedef struct
 	UINT8 actnum;          ///< Act number or 0 for none.
 	UINT32 typeoflevel;    ///< Combination of typeoflevel flags.
 	INT16 nextlevel;       ///< Map number of next level, or 1100-1102 to end.
+	INT16 marathonnext;    ///< See nextlevel, but for Marathon mode. Necessary to support hub worlds ala SUGOI.
 	char keywords[33];     ///< Keywords separated by space to search for. 32 characters.
 	char musname[7];       ///< Music track to play. "" for no music.
 	UINT16 mustrack;       ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
@@ -575,11 +588,12 @@ extern UINT16 nightslinktics;
 
 extern UINT8 introtoplay;
 extern UINT8 creditscutscene;
+extern UINT8 useBlackRock;
 
 extern UINT8 use1upSound;
 extern UINT8 maxXtraLife; // Max extra lives from rings
 extern UINT8 useContinues;
-#define continuesInSession (!multiplayer && (useContinues || ultimatemode || !(cursaveslot > 0)))
+#define continuesInSession (!multiplayer && (ultimatemode || (useContinues && !marathonmode) || (!modeattacking && !(cursaveslot > 0))))
 
 extern mobj_t *hunt1, *hunt2, *hunt3; // Emerald hunt locations
 
@@ -619,6 +633,19 @@ extern tic_t gametic;
 extern mapthing_t *playerstarts[MAXPLAYERS]; // Cooperative
 extern mapthing_t *bluectfstarts[MAXPLAYERS]; // CTF
 extern mapthing_t *redctfstarts[MAXPLAYERS]; // CTF
+
+#define WAYPOINTSEQUENCESIZE 256
+#define NUMWAYPOINTSEQUENCES 256
+extern mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
+extern UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
+
+void P_AddWaypoint(UINT8 sequence, UINT8 id, mobj_t *waypoint);
+mobj_t *P_GetFirstWaypoint(UINT8 sequence);
+mobj_t *P_GetLastWaypoint(UINT8 sequence);
+mobj_t *P_GetPreviousWaypoint(mobj_t *current, boolean wrap);
+mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap);
+mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo);
+boolean P_IsDegeneratedWaypointSequence(UINT8 sequence);
 
 // =====================================
 // Internal parameters, used for engine.

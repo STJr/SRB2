@@ -1,20 +1,13 @@
-// Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-//
 // Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-/// \file
+/// \file hw_glob.h
 /// \brief globals (shared data & code) for hw_ modules
 
 #ifndef _HWR_GLOB_H_
@@ -68,9 +61,6 @@ typedef struct
 // equivalent of the software renderer's vissprites
 typedef struct gr_vissprite_s
 {
-	// Doubly linked list
-	struct gr_vissprite_s *prev;
-	struct gr_vissprite_s *next;
 	float x1, x2;
 	float tz, ty;
 	//lumpnum_t patchlumpnum;
@@ -118,11 +108,6 @@ void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
 // --------
 // hw_draw.c
 // --------
-extern float gr_patch_scalex;
-extern float gr_patch_scaley;
-
-extern consvar_t cv_grrounddown; // on/off
-
 extern INT32 patchformat;
 extern INT32 textureformat;
 
