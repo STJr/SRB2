@@ -4503,7 +4503,10 @@ void G_SaveGame(UINT32 slot, INT16 mapnum)
 		P_SaveGame(mapnum);
 		if (marathonmode)
 		{
-			WRITEUINT32(save_p, marathontime);
+			UINT32 writetime = marathontime;
+			if (!(marathonmode & MA_INGAME))
+				marathontime += TICRATE*5; // live event backup penalty because we don't know how long it takes to get to the next map
+			WRITEUINT32(save_p, writetime);
 			WRITEUINT8(save_p, (marathonmode & ~MA_INIT));
 		}
 
