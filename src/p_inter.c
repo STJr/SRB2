@@ -467,10 +467,22 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
 			{
-				if (elementalpierce == 2)
-					P_DoBubbleBounce(player);
-				else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
-					toucher->momz = -toucher->momz;
+				if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+				{
+					fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
+					
+					if (elementalpierce == 2) // Reset bubblewrap, part 1
+						P_DoBubbleBounce(player);
+					toucher->momz = setmomz;
+					if (elementalpierce == 2) // Reset bubblewrap, part 2
+					{
+						boolean underwater = toucher->eflags & MFE_UNDERWATER;
+							
+						if (underwater)
+							toucher->momz /= 2;
+						toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
+					}
+				}
 			}
 			if (player->pflags & PF_BOUNCING)
 				P_DoAbilityBounce(player, false);
