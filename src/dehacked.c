@@ -3082,6 +3082,7 @@ static actionpointer_t actionpointers[] =
 	{{A_NapalmScatter},          "A_NAPALMSCATTER"},
 	{{A_SpawnFreshCopy},         "A_SPAWNFRESHCOPY"},
 	{{A_FlickySpawn},            "A_FLICKYSPAWN"},
+	{{A_FlickyCenter},           "A_FLICKYCENTER"},
 	{{A_FlickyAim},              "A_FLICKYAIM"},
 	{{A_FlickyFly},              "A_FLICKYFLY"},
 	{{A_FlickySoar},             "A_FLICKYSOAR"},
