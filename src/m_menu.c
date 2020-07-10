@@ -10563,8 +10563,7 @@ static void M_StartMarathon(INT32 choice)
 	(void)choice;
 	marathontime = 0;
 	marathonmode = MA_RUNNING|MA_INIT;
-	if (cv_dummymarathon.value == 1)
-		cursaveslot = MARATHONSLOT;
+	cursaveslot = (cv_dummymarathon.value == 1) ? MARATHONSLOT : 0;
 	if (!cv_dummycutscenes.value)
 		marathonmode |= MA_NOCUTSCENES;
 	if (cv_dummyloadless.value)
