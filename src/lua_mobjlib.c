@@ -88,6 +88,7 @@ enum mobj_e {
 	mobj_cvmem,
 	mobj_standingslope,
 	mobj_colorized,
+	mobj_mirrored,
 	mobj_shadowscale
 };
 
@@ -156,6 +157,7 @@ static const char *const mobj_opt[] = {
 	"cvmem",
 	"standingslope",
 	"colorized",
+	"mirrored",
 	"shadowscale",
 	NULL};
 
@@ -395,6 +397,9 @@ static int mobj_get(lua_State *L)
 	case mobj_colorized:
 		lua_pushboolean(L, mo->colorized);
 		break;
+	case mobj_mirrored:
+		lua_pushboolean(L, mo->mirrored);
+		break;
 	case mobj_shadowscale:
 		lua_pushfixed(L, mo->shadowscale);
 		break;
@@ -459,10 +464,9 @@ static int mobj_set(lua_State *L)
 		return UNIMPLEMENTED;
 	case mobj_angle:
 		mo->angle = luaL_checkangle(L, 3);
-		if (mo->player == &players[consoleplayer])
-			localangle = mo->angle;
-		else if (mo->player == &players[secondarydisplayplayer])
-			localangle2 = mo->angle;
+		if (mo->player)
+			P_SetPlayerAngle(mo->player, mo->angle);
+		break;
 	case mobj_pitch:
 		mo->pitch = luaL_checkangle(L, 3);
 		break;
@@ -589,9 +593,9 @@ static int mobj_set(lua_State *L)
 	}
 	case mobj_color:
 	{
-		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
-		if (newcolor >= MAXTRANSLATIONS)
-			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, MAXTRANSLATIONS-1);
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L,3);
+		if (newcolor >= numskincolors)
+			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, numskincolors-1);
 		mo->color = newcolor;
 		break;
 	}
@@ -729,6 +733,9 @@ static int mobj_set(lua_State *L)
 		return NOSET;
 	case mobj_colorized:
 		mo->colorized = luaL_checkboolean(L, 3);
+		break;
+	case mobj_mirrored:
+		mo->mirrored = luaL_checkboolean(L, 3);
 		break;
 	case mobj_shadowscale:
 		mo->shadowscale = luaL_checkfixed(L, 3);
@@ -906,6 +913,15 @@ static int mapthing_set(lua_State *L)
 	return 0;
 }
 
+static int mapthing_num(lua_State *L)
+{
+	mapthing_t *mt = *((mapthing_t **)luaL_checkudata(L, 1, META_MAPTHING));
+	if (!mt)
+		return luaL_error(L, "accessed mapthing_t doesn't exist anymore.");
+	lua_pushinteger(L, mt-mapthings);
+	return 1;
+}
+
 static int lib_iterateMapthings(lua_State *L)
 {
 	size_t i = 0;
@@ -986,6 +1002,9 @@ int LUA_MobjLib(lua_State *L)
 
 		lua_pushcfunction(L, mapthing_set);
 		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, mapthing_num);
+		lua_setfield(L, -2, "__len");
 	lua_pop(L,1);
 
 	lua_newuserdata(L, 0);

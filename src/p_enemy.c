@@ -312,6 +312,7 @@ void A_RolloutRock(mobj_t *actor);
 void A_DragonbomberSpawn(mobj_t *actor);
 void A_DragonWing(mobj_t *actor);
 void A_DragonSegment(mobj_t *actor);
+void A_ChangeHeight(mobj_t *actor);
 
 //for p_enemy.c
 
@@ -2990,6 +2991,19 @@ void A_Boss1Laser(mobj_t *actor)
 	angle_t angle;
 	mobj_t *point;
 	tic_t dur;
+	static const UINT8 LASERCOLORS[] =
+	{
+		SKINCOLOR_SUPERRED3,
+		SKINCOLOR_SUPERRED4,
+		SKINCOLOR_SUPERRED5,
+		SKINCOLOR_FLAME,
+		SKINCOLOR_RED,
+		SKINCOLOR_RED,
+		SKINCOLOR_FLAME,
+		SKINCOLOR_SUPERRED5,
+		SKINCOLOR_SUPERRED4,
+		SKINCOLOR_SUPERRED3,
+	};
 
 	if (LUA_CallAction("A_Boss1Laser", actor))
 		return;
@@ -3064,7 +3078,7 @@ void A_Boss1Laser(mobj_t *actor)
 	point = P_SpawnMobj(x, y, z, locvar1);
 	P_SetTarget(&point->target, actor);
 	point->angle = actor->angle;
-	speed = point->radius*2;
+	speed = point->radius;
 	point->momz = FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT), speed);
 	point->momx = FixedMul(FINESINE(angle>>ANGLETOFINESHIFT), FixedMul(FINECOSINE(point->angle>>ANGLETOFINESHIFT), speed));
 	point->momy = FixedMul(FINESINE(angle>>ANGLETOFINESHIFT), FixedMul(FINESINE(point->angle>>ANGLETOFINESHIFT), speed));
@@ -3073,23 +3087,69 @@ void A_Boss1Laser(mobj_t *actor)
 	{
 		mobj_t *mo = P_SpawnMobj(point->x, point->y, point->z, point->type);
 		mo->angle = point->angle;
+		mo->color = LASERCOLORS[((UINT8)(i + 3*dur) >> 2) % sizeof(LASERCOLORS)]; // codeing
 		P_UnsetThingPosition(mo);
-		mo->flags = MF_NOBLOCKMAP|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY;
+		mo->flags = MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY;
 		P_SetThingPosition(mo);
+
+		if (dur & 1 && mo->info->missilestate)
+		{
+			P_SetMobjState(mo, mo->info->missilestate);
+			if (mo->info->meleestate)
+			{
+				mobj_t *mo2 = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_PARTICLE);
+				mo2->flags2 |= MF2_LINKDRAW;
+				P_SetTarget(&mo2->tracer, actor);
+				P_SetMobjState(mo2, mo->info->meleestate);
+			}
+		}
+
+		if (dur == 1)
+			P_SpawnGhostMobj(mo);
 
 		x = point->x, y = point->y, z = point->z;
 		if (P_RailThinker(point))
 			break;
 	}
 
+	x += point->momx;
+	y += point->momy;
 	floorz = P_FloorzAtPos(x, y, z, mobjinfo[MT_EGGMOBILE_FIRE].height);
-	if (z - floorz < mobjinfo[MT_EGGMOBILE_FIRE].height>>1)
+	if (z - floorz < mobjinfo[MT_EGGMOBILE_FIRE].height>>1 && dur & 1)
 	{
-		point = P_SpawnMobj(x, y, floorz+1, MT_EGGMOBILE_FIRE);
+		point = P_SpawnMobj(x, y, floorz, MT_EGGMOBILE_FIRE);
+		point->angle = actor->angle;
+		point->destscale = actor->scale;
+		P_SetScale(point, point->destscale);
 		P_SetTarget(&point->target, actor);
-		point->destscale = 3*FRACUNIT;
-		point->scalespeed = FRACUNIT>>2;
-		point->fuse = TICRATE;
+		P_MobjCheckWater(point);
+		if (point->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER))
+		{
+			for (i = 0; i < 2; i++)
+			{
+				UINT8 size = 3;
+				mobj_t *steam = P_SpawnMobj(x, y, point->watertop - size*mobjinfo[MT_DUST].height, MT_DUST);
+				P_SetScale(steam, size*actor->scale);
+				P_SetObjectMomZ(steam, FRACUNIT + 2*P_RandomFixed(), true);
+				P_InstaThrust(steam, FixedAngle(P_RandomKey(360)*FRACUNIT), 2*P_RandomFixed());
+				if (point->info->painsound)
+					S_StartSound(steam, point->info->painsound);
+			}
+		}
+		else
+		{
+			fixed_t distx = P_ReturnThrustX(point, point->angle, point->radius);
+			fixed_t disty = P_ReturnThrustY(point, point->angle, point->radius);
+			if (P_TryMove(point, point->x + distx, point->y + disty, false) // prevents the sprite from clipping into the wall or dangling off ledges
+				&& P_TryMove(point, point->x - 2*distx, point->y - 2*disty, false)
+				&& P_TryMove(point, point->x + distx, point->y + disty, false))
+			{
+				if (point->info->seesound)
+					S_StartSound(point, point->info->seesound);
+			}
+			else
+				P_RemoveMobj(point);
+		}
 	}
 
 	if (dur > 1)
@@ -3798,7 +3858,7 @@ void A_Explode(mobj_t *actor)
 	if (LUA_CallAction("A_Explode", actor))
 		return;
 
-	P_RadiusAttack(actor, actor->target, actor->info->damage, locvar1);
+	P_RadiusAttack(actor, actor->target, actor->info->damage, locvar1, true);
 }
 
 // Function: A_BossDeath
@@ -4891,7 +4951,7 @@ void A_ThrownRing(mobj_t *actor)
 				continue;
 
 			// Don't home in on teammates.
-			if ((gametyperules & GTR_TEAMFLAGS)
+			if ((gametyperules & GTR_TEAMS)
 				&& actor->target->player->ctfteam == player->ctfteam)
 				continue;
 		}
@@ -5047,13 +5107,15 @@ void A_SignPlayer(mobj_t *actor)
 	INT32 locvar2 = var2;
 	skin_t *skin = NULL;
 	mobj_t *ov;
-	UINT8 facecolor, signcolor = (UINT8)locvar2;
+	UINT16 facecolor, signcolor = 0;
 	UINT32 signframe = states[actor->info->raisestate].frame;
+
+	facecolor = signcolor = (UINT16)locvar2;
 
 	if (LUA_CallAction("A_SignPlayer", actor))
 		return;
 
-	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins || signcolor >= MAXTRANSLATIONS)
+	if (actor->tracer == NULL || locvar1 < -3 || locvar1 >= numskins || signcolor >= numskincolors)
 		return;
 
 	// if no face overlay, spawn one
@@ -5081,12 +5143,10 @@ void A_SignPlayer(mobj_t *actor)
 			;
 		else if (!skin->sprites[SPR2_SIGN].numframes)
 			signcolor = facecolor;
-		else if ((actor->target->player->skincolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
+		else if ((facecolor == skin->prefcolor) && (skin->prefoppositecolor)) // Set it as the skin's preferred oppositecolor?
 			signcolor = skin->prefoppositecolor;
-		else if (actor->target->player->skincolor) // Set the sign to be an appropriate background color for this player's skincolor.
-			signcolor = Color_Opposite[actor->target->player->skincolor - 1][0];
-		else
-			signcolor = SKINCOLOR_NONE;
+		else if (facecolor) // Set the sign to be an appropriate background color for this player's skincolor.
+			signcolor = skincolors[facecolor].invcolor;
 	}
 	else if (locvar1 != -3) // set to a defined skin
 	{
@@ -5122,7 +5182,7 @@ void A_SignPlayer(mobj_t *actor)
 		else if (skin->prefoppositecolor)
 			signcolor = skin->prefoppositecolor;
 		else if (facecolor)
-			signcolor = Color_Opposite[facecolor - 1][0];
+			signcolor = skincolors[facecolor].invcolor;
 	}
 
 	if (skin)
@@ -5150,22 +5210,12 @@ void A_SignPlayer(mobj_t *actor)
 			P_SetMobjState(ov, actor->info->meleestate); // S_EGGMANSIGN
 		if (!signcolor)
 			signcolor = SKINCOLOR_CARBON;
+		facecolor = signcolor;
 	}
 
 	actor->tracer->color = signcolor;
-	/*
-	If you're here from the comment above Color_Opposite,
-	the following line is the one which is dependent on the
-	array being symmetrical. It gets the opposite of the
-	opposite of your desired colour just so it can get the
-	brightness frame for the End Sign. It's not a great
-	design choice, but it's constant time array access and
-	the idea that the colours should be OPPOSITES is kind
-	of in the name. If you have a better idea, feel free
-	to let me know. ~toast 2016/07/20
-	*/
-	if (signcolor && signcolor < MAXSKINCOLORS)
-		signframe += (15 - Color_Opposite[Color_Opposite[signcolor - 1][0] - 1][1]);
+	if (signcolor && signcolor < numskincolors)
+		signframe += (15 - skincolors[skincolors[signcolor].invcolor].invshade);
 	actor->tracer->frame = signframe;
 }
 
@@ -5590,7 +5640,7 @@ void A_MinusPopup(mobj_t *actor)
 		P_SetObjectMomZ(rock, 3*FRACUNIT, false);
 		P_SetScale(rock, rock->scale/3);
 	}
-	P_RadiusAttack(actor, actor, 2*actor->radius, 0);
+	P_RadiusAttack(actor, actor, 2*actor->radius, 0, true);
 	if (actor->tracer)
 		P_DamageMobj(actor->tracer, actor, actor, 1, 0);
 
@@ -6474,7 +6524,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 		if (changecolor)
 		{
-			if (!(gametyperules & GTR_TEAMFLAGS))
+			if (!(gametyperules & GTR_TEAMS))
 				mo->color = actor->target->color; //copy color
 			else if (actor->target->player->ctfteam == 2)
 				mo->color = skincolor_bluering;
@@ -6490,7 +6540,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (!(gametyperules & GTR_TEAMFLAGS))
+		if (!(gametyperules & GTR_TEAMS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -6505,7 +6555,7 @@ void A_OldRingExplode(mobj_t *actor) {
 
 	if (changecolor)
 	{
-		if (!(gametyperules & GTR_TEAMFLAGS))
+		if (!(gametyperules & GTR_TEAMS))
 			mo->color = actor->target->color; //copy color
 		else if (actor->target->player->ctfteam == 2)
 			mo->color = skincolor_bluering;
@@ -6896,7 +6946,9 @@ void A_RecyclePowers(mobj_t *actor)
 		for (j = 0; j < NUMPOWERS; j++)
 		{
 			if (j == pw_flashing || j == pw_underwater || j == pw_spacetime || j == pw_carry
-			    || j == pw_tailsfly || j == pw_extralife || j == pw_nocontrol || j == pw_super)
+			    || j == pw_tailsfly || j == pw_extralife || j == pw_nocontrol || j == pw_super
+				|| j == pw_pushing || j == pw_justsprung || j == pw_noautobrake || j == pw_justlaunched
+				|| j == pw_ignorelatch)
 				continue;
 			players[recv_pl].powers[j] = powers[send_pl][j];
 		}
@@ -8745,10 +8797,10 @@ void A_ChangeColorRelative(mobj_t *actor)
 	{
 		// Have you ever seen anything so hideous?
 		if (actor->target)
-			actor->color = (UINT8)(actor->color + actor->target->color);
+			actor->color = (UINT16)(actor->color + actor->target->color);
 	}
 	else
-		actor->color = (UINT8)(actor->color + locvar2);
+		actor->color = (UINT16)(actor->color + locvar2);
 }
 
 // Function: A_ChangeColorAbsolute
@@ -8772,7 +8824,7 @@ void A_ChangeColorAbsolute(mobj_t *actor)
 			actor->color = actor->target->color;
 	}
 	else
-		actor->color = (UINT8)locvar2;
+		actor->color = (UINT16)locvar2;
 }
 
 // Function: A_Dye
@@ -8789,11 +8841,9 @@ void A_Dye(mobj_t *actor)
 
 	mobj_t *target = ((locvar1 && actor->target) ? actor->target : actor);
 	UINT8 color = (UINT8)locvar2;
-#ifdef HAVE_BLUA
 	if (LUA_CallAction("A_Dye", actor))
 		return;
-#endif
-	if (color >= MAXTRANSLATIONS)
+	if (color >= numskincolors)
 		return;
 
 	if (!color)
@@ -9648,6 +9698,9 @@ void A_SplitShot(mobj_t *actor)
 	const fixed_t hoffs = (fixed_t)(loc2up*FRACUNIT);
 
 	if (LUA_CallAction("A_SplitShot", actor))
+		return;
+
+	if (!actor->target)
 		return;
 
 	A_FaceTarget(actor);
@@ -10982,7 +11035,7 @@ void A_VileAttack(mobj_t *actor)
 						actor->target->x - P_ReturnThrustX(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 						actor->target->y - P_ReturnThrustY(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 						fire->z);
-		P_RadiusAttack(fire, actor, 70*FRACUNIT, 0);
+		P_RadiusAttack(fire, actor, 70*FRACUNIT, 0, true);
 	}
 	else
 	{
@@ -11027,7 +11080,7 @@ void A_VileAttack(mobj_t *actor)
 							actor->target->x - P_ReturnThrustX(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 							actor->target->y - P_ReturnThrustY(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 							fire->z);
-			P_RadiusAttack(fire, actor, 70*FRACUNIT, 0);
+			P_RadiusAttack(fire, actor, 70*FRACUNIT, 0, true);
 		}
 	}
 
@@ -12263,7 +12316,7 @@ void A_MineExplode(mobj_t *actor)
 	quake.intensity = 8*FRACUNIT;
 	quake.time = TICRATE/3;
 
-	P_RadiusAttack(actor, actor->tracer, 192*FRACUNIT, DMG_CANHURTSELF);
+	P_RadiusAttack(actor, actor->tracer, 192*FRACUNIT, DMG_CANHURTSELF, true);
 	P_MobjCheckWater(actor);
 
 	{
@@ -12643,8 +12696,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 	else // locvar1 == 0
 	{
 		fixed_t hackoffset = P_MobjFlip(actor)*56*FRACUNIT;
-		INT32 numwaypoints = 0;
-		mobj_t **waypoints;
+		INT32 numfangwaypoints = 0;
+		mobj_t **fangwaypoints;
 		INT32 key;
 
 		actor->z += hackoffset;
@@ -12669,7 +12722,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 				continue;
 			if (!P_CheckSight(actor, mapthings[i].mobj))
 				continue;
-			numwaypoints++;
+			numfangwaypoints++;
 		}
 
 		// players also count as waypoints apparently
@@ -12691,11 +12744,11 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 					continue;
 				if (!P_CheckSight(actor, players[i].mo))
 					continue;
-				numwaypoints++;
+				numfangwaypoints++;
 			}
 		}
 
-		if (!numwaypoints)
+		if (!numfangwaypoints)
 		{
 			// restore z position
 			actor->z -= hackoffset;
@@ -12703,8 +12756,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 		}
 
 		// allocate the table and reset count to zero
-		waypoints = Z_Calloc(sizeof(*waypoints)*numwaypoints, PU_STATIC, NULL);
-		numwaypoints = 0;
+		fangwaypoints = Z_Calloc(sizeof(*waypoints)*numfangwaypoints, PU_STATIC, NULL);
+		numfangwaypoints = 0;
 
 		// now find them again and add them to the table!
 		for (i = 0; i < nummapthings; i++)
@@ -12729,7 +12782,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 			}
 			if (!P_CheckSight(actor, mapthings[i].mobj))
 				continue;
-			waypoints[numwaypoints++] = mapthings[i].mobj;
+			fangwaypoints[numfangwaypoints++] = mapthings[i].mobj;
 		}
 
 		if (actor->extravalue2 > 1)
@@ -12750,25 +12803,25 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 					continue;
 				if (!P_CheckSight(actor, players[i].mo))
 					continue;
-				waypoints[numwaypoints++] = players[i].mo;
+				fangwaypoints[numfangwaypoints++] = players[i].mo;
 			}
 		}
 
 		// restore z position
 		actor->z -= hackoffset;
 
-		if (!numwaypoints)
+		if (!numfangwaypoints)
 		{
-			Z_Free(waypoints); // free table
+			Z_Free(fangwaypoints); // free table
 			goto nowaypoints; // ???
 		}
 
-		key = P_RandomKey(numwaypoints);
+		key = P_RandomKey(numfangwaypoints);
 
-		P_SetTarget(&actor->tracer, waypoints[key]);
+		P_SetTarget(&actor->tracer, fangwaypoints[key]);
 		if (actor->tracer->type == MT_FANGWAYPOINT)
-			actor->tracer->reactiontime = numwaypoints/4; // Monster Iestyn: is this how it should be? I count center waypoints as waypoints unlike the original Lua script
-		Z_Free(waypoints); // free table
+			actor->tracer->reactiontime = numfangwaypoints/4; // Monster Iestyn: is this how it should be? I count center waypoints as waypoints unlike the original Lua script
+		Z_Free(fangwaypoints); // free table
 	}
 
 	// now face the tracer you just set!
@@ -13264,7 +13317,7 @@ void A_Boss5BombExplode(mobj_t *actor)
 	actor->flags2 = MF2_EXPLOSION;
 
 	if (actor->target)
-		P_RadiusAttack(actor, actor->target, 7*actor->radius, 0);
+		P_RadiusAttack(actor, actor->target, 7*actor->radius, 0, true);
 
 	P_DustRing(locvar1, 4, actor->x, actor->y, actor->z+actor->height, 2*actor->radius, 0, FRACUNIT, actor->scale);
 	P_DustRing(locvar1, 6, actor->x, actor->y, actor->z+actor->height/2, 3*actor->radius, FRACUNIT, FRACUNIT, actor->scale);
@@ -13287,6 +13340,9 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 	player_t *player = thing->player;
 
 	if (!player)
+		return true;
+
+	if (player->powers[pw_carry] != CR_DUSTDEVIL && (player->powers[pw_ignorelatch] & (1<<15)))
 		return true;
 
 	if (abs(thing->x - dustdevil->x) > dustdevil->radius || abs(thing->y - dustdevil->y) > dustdevil->radius)
@@ -13312,8 +13368,9 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 				P_ResetPlayer(player);
 				A_PlayActiveSound(dustdevil);
 			}
+			player->powers[pw_carry] = CR_DUSTDEVIL;
 			player->powers[pw_nocontrol] = 2;
-			player->drawangle += ANG20;
+			P_SetTarget(&thing->tracer, dustdevil);
 			P_SetPlayerMobjState(thing, S_PLAY_PAIN);
 
 			if (dist > dragamount)
@@ -13333,7 +13390,9 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 			P_ResetPlayer(player);
 			thing->z = dustdevil->z + dustdevil->height;
 			thrust = 20 * FRACUNIT;
+			player->powers[pw_carry] = CR_NONE;
 			player->powers[pw_nocontrol] = 0;
+			P_SetTarget(&thing->tracer, NULL);
 			S_StartSound(thing, sfx_wdjump);
 			P_SetPlayerMobjState(thing, S_PLAY_FALL);
 		}
@@ -14409,4 +14468,44 @@ void A_DragonSegment(mobj_t *actor)
 
 	actor->angle = hangle;
 	P_TeleportMove(actor, target->x + xdist, target->y + ydist, target->z + zdist);
+}
+
+// Function: A_ChangeHeight
+//
+// Description: Changes the actor's height by var1
+//
+// var1 = height
+// var2 =
+//     &1: height is absolute
+//     &2: scale with actor's scale
+//
+void A_ChangeHeight(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	fixed_t height = locvar1;
+	boolean reverse;
+
+	if (LUA_CallAction("A_ChangeHeight", actor))
+		return;
+
+	reverse = (actor->eflags & MFE_VERTICALFLIP) || (actor->flags2 & MF2_OBJECTFLIP);
+
+	if (locvar2 & 2)
+		height = FixedMul(height, actor->scale);
+
+	P_UnsetThingPosition(actor);
+	if (locvar2 & 1)
+	{
+		if (reverse)
+			actor->z += actor->height - locvar1;
+		actor->height = locvar1;
+	}
+	else
+	{
+		if (reverse)
+			actor->z -= locvar1;
+		actor->height += locvar1;
+	}
+	P_SetThingPosition(actor);
 }

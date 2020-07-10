@@ -26,7 +26,10 @@ extern INT32 centerx, centery;
 
 extern fixed_t centerxfrac, centeryfrac;
 extern fixed_t projection, projectiony;
-extern fixed_t fovtan; // field of view
+extern fixed_t fovtan;
+
+// WARNING: a should be unsigned but to add with 2048, it isn't!
+#define AIMINGTODY(a) FixedDiv((FINETANGENT((2048+(((INT32)a)>>ANGLETOFINESHIFT)) & FINEMASK)*160), fovtan)
 
 extern size_t validcount, linecount, loopcount, framecount;
 
@@ -71,6 +74,25 @@ subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y);
 
 boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixed_t bottomh, fixed_t toph);
 
+// Render stats
+
+extern consvar_t cv_renderstats;
+
+extern int rs_prevframetime;// time when previous frame was rendered
+extern int rs_rendercalltime;
+extern int rs_swaptime;
+
+extern int rs_bsptime;
+
+extern int rs_sw_portaltime;
+extern int rs_sw_planetime;
+extern int rs_sw_maskedtime;
+
+extern int rs_numbspcalls;
+extern int rs_numsprites;
+extern int rs_numdrawnodes;
+extern int rs_numpolyobjects;
+
 //
 // REFRESH - the actual rendering functions.
 //
@@ -104,10 +126,13 @@ void R_SetViewSize(void);
 // do it (sometimes explicitly called)
 void R_ExecuteSetViewSize(void);
 
+void R_SetupFrame(player_t *player);
 void R_SkyboxFrame(player_t *player);
 
-void R_SetupFrame(player_t *player);
-// Called by G_Drawer.
+boolean R_ViewpointHasChasecam(player_t *player);
+boolean R_IsViewpointThirdPerson(player_t *player, boolean skybox);
+
+// Called by D_Display.
 void R_RenderPlayerView(player_t *player);
 
 // add commands related to engine, at game startup

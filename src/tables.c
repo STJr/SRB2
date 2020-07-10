@@ -72,7 +72,7 @@ static FUNCMATH angle_t AngleAdj(const fixed_t fa, const fixed_t wf,
 	const angle_t adj = 0x77;
 	const boolean fan = fa < 0;
 	const fixed_t sl = FixedDiv(fa, wf*2);
-	const fixed_t lb = FixedRem(fa, wf*2);
+	const fixed_t lb = fa % (wf*2);
 	const fixed_t lo = (wf*2)-lb;
 
 	if (ra == 0)

@@ -147,6 +147,133 @@ mapthing_t *playerstarts[MAXPLAYERS];
 mapthing_t *bluectfstarts[MAXPLAYERS];
 mapthing_t *redctfstarts[MAXPLAYERS];
 
+// Maintain waypoints
+mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
+UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
+
+void P_AddWaypoint(UINT8 sequence, UINT8 id, mobj_t *waypoint)
+{
+	waypoints[sequence][id] = waypoint;
+	if (id >= numwaypoints[sequence])
+		numwaypoints[sequence] = id + 1;
+}
+
+static void P_ResetWaypoints(void)
+{
+	UINT16 sequence, id;
+	for (sequence = 0; sequence < NUMWAYPOINTSEQUENCES; sequence++)
+	{
+		for (id = 0; id < numwaypoints[sequence]; id++)
+			waypoints[sequence][id] = NULL;
+
+		numwaypoints[sequence] = 0;
+	}
+}
+
+mobj_t *P_GetFirstWaypoint(UINT8 sequence)
+{
+	return waypoints[sequence][0];
+}
+
+mobj_t *P_GetLastWaypoint(UINT8 sequence)
+{
+	return waypoints[sequence][numwaypoints[sequence] - 1];
+}
+
+mobj_t *P_GetPreviousWaypoint(mobj_t *current, boolean wrap)
+{
+	UINT8 sequence = current->threshold;
+	UINT8 id = current->health;
+
+	if (id == 0)
+	{
+		if (!wrap)
+			return NULL;
+
+		id = numwaypoints[sequence] - 1;
+	}
+	else
+		id--;
+
+	return waypoints[sequence][id];
+}
+
+mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap)
+{
+	UINT8 sequence = current->threshold;
+	UINT8 id = current->health;
+
+	if (id == numwaypoints[sequence] - 1)
+	{
+		if (!wrap)
+			return NULL;
+
+		id = 0;
+	}
+	else
+		id++;
+
+	return waypoints[sequence][id];
+}
+
+mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo)
+{
+	UINT8 wp;
+	mobj_t *mo2, *result = NULL;
+	fixed_t bestdist = 0;
+	fixed_t curdist;
+
+	for (wp = 0; wp < numwaypoints[sequence]; wp++)
+	{
+		mo2 = waypoints[sequence][wp];
+
+		if (!mo2)
+			continue;
+
+		curdist = P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z);
+
+		if (result && curdist > bestdist)
+			continue;
+
+		result = mo2;
+		bestdist = curdist;
+	}
+
+	return result;
+}
+
+// Return true if all waypoints are in the same location
+boolean P_IsDegeneratedWaypointSequence(UINT8 sequence)
+{
+	mobj_t *first, *waypoint;
+	UINT8 wp;
+
+	if (numwaypoints[sequence] <= 1)
+		return true;
+
+	first = waypoints[sequence][0];
+
+	for (wp = 1; wp < numwaypoints[sequence]; wp++)
+	{
+		waypoint = waypoints[sequence][wp];
+
+		if (!waypoint)
+			continue;
+
+		if (waypoint->x != first->x)
+			return false;
+
+		if (waypoint->y != first->y)
+			return false;
+
+		if (waypoint->z != first->z)
+			return false;
+	}
+
+	return true;
+}
+
+
 /** Logs an error about a map being corrupt, then terminate.
   * This allows reporting highly technical errors for usefulness, without
   * confusing a novice map designer who simply needs to run ZenNode.
@@ -220,7 +347,11 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->actnum = 0;
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
+	mapheaderinfo[num]->marathonnext = 0;
 	mapheaderinfo[num]->startrings = 0;
+	mapheaderinfo[num]->sstimer = 90;
+	mapheaderinfo[num]->ssspheres = 1;
+	mapheaderinfo[num]->gravity = FRACUNIT/2;
 	mapheaderinfo[num]->keywords[0] = '\0';
 	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
 	mapheaderinfo[num]->musname[6] = 0;
@@ -447,9 +578,9 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 	strupr(levelflat->name);
 
 	/* If we can't find a flat, try looking for a texture! */
-	if (( flatnum = R_GetFlatNumForName(flatname) ) == LUMPERROR)
+	if (( flatnum = R_GetFlatNumForName(levelflat->name) ) == LUMPERROR)
 	{
-		if (( texturenum = R_CheckTextureNumForName(flatname) ) == -1)
+		if (( texturenum = R_CheckTextureNumForName(levelflat->name) ) == -1)
 		{
 			// check for REDWALL
 			if (( texturenum = R_CheckTextureNumForName("REDWALL") ) != -1)
@@ -865,17 +996,6 @@ static void P_InitializeSector(sector_t *ss)
 
 	ss->extra_colormap = NULL;
 
-#ifdef HWRENDER // ----- for special tricks with HW renderer -----
-	ss->pseudoSector = false;
-	ss->virtualFloor = false;
-	ss->virtualFloorheight = 0;
-	ss->virtualCeiling = false;
-	ss->virtualCeilingheight = 0;
-	ss->sectorLines = NULL;
-	ss->stackList = NULL;
-	ss->lineoutLength = -1.0l;
-#endif // ----- end special tricks -----
-
 	ss->gravity = NULL;
 	ss->verticalflip = false;
 	ss->flags = SF_FLIPSPECIAL_FLOOR;
@@ -955,9 +1075,7 @@ static void P_InitializeLinedef(line_t *ld)
 #ifdef WALLSPLATS
 	ld->splats = NULL;
 #endif
-#ifdef POLYOBJECTS
 	ld->polyobj = NULL;
-#endif
 
 	ld->text = NULL;
 	ld->callcount = 0;
@@ -1032,6 +1150,7 @@ static void P_LoadLinedefs(UINT8 *data)
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
+		ld->executordelay = 0;
 		P_SetLinedefV1(i, SHORT(mld->v1));
 		P_SetLinedefV2(i, SHORT(mld->v2));
 
@@ -1523,6 +1642,8 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		lines[i].sidenum[1] = atol(val);
 	else if (fastcmp(param, "alpha"))
 		lines[i].alpha = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "executordelay"))
+		lines[i].executordelay = atol(val);
 
 	// Flags
 	else if (fastcmp(param, "blocking") && fastcmp("true", val))
@@ -1770,6 +1891,7 @@ static void P_LoadTextmap(void)
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
+		ld->executordelay = 0;
 		ld->sidenum[0] = 0xffff;
 		ld->sidenum[1] = 0xffff;
 
@@ -2059,7 +2181,12 @@ static void P_InitializeSeg(seg_t *seg)
 {
 	if (seg->linedef)
 	{
-		seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
+		UINT16 side = seg->linedef->sidenum[seg->side];
+
+		if (side == 0xffff)
+			I_Error("P_InitializeSeg: Seg %s refers to side %d of linedef %s, which doesn't exist!\n", sizeu1((size_t)(seg - segs)), seg->side, sizeu1((size_t)(seg->linedef - lines)));
+
+		seg->sidedef = &sides[side];
 
 		seg->frontsector = seg->sidedef->sector;
 		seg->backsector = (seg->linedef->flags & ML_TWOSIDED) ? sides[seg->linedef->sidenum[seg->side ^ 1]].sector : NULL;
@@ -2074,10 +2201,8 @@ static void P_InitializeSeg(seg_t *seg)
 
 	seg->numlights = 0;
 	seg->rlights = NULL;
-#ifdef POLYOBJECTS
 	seg->polyseg = NULL;
 	seg->dontrenderme = false;
-#endif
 }
 
 static void P_LoadSegs(UINT8 *data)
@@ -2255,10 +2380,8 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 				segs[k - 1 + ((m == 0) ? subsectors[i].numlines : 0)].v2 = segs[k].v1 = &vertexes[vertexnum];
 
 				READUINT32((*data)); // partner, can be ignored by software renderer
-				if (nodetype == NT_XGL3)
-					READUINT16((*data)); // Line number is 32-bit in XGL3, but we're limited to 16 bits.
 
-				linenum = READUINT16((*data));
+				linenum = (nodetype == NT_XGL3) ? READUINT32((*data)) : READUINT16((*data));
 				if (linenum != 0xFFFF && linenum >= numlines)
 					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid linedef %d!\n", sizeu1(k), m, linenum);
 				segs[k].glseg = (linenum == 0xFFFF);
@@ -2440,11 +2563,9 @@ static boolean P_LoadBlockMap(UINT8 *data, size_t count)
 	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 	blockmap = blockmaplump+4;
 
-#ifdef POLYOBJECTS
 	// haleyjd 2/22/06: setup polyobject blockmap
 	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
 	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
 	return true;
 }
 
@@ -2695,11 +2816,9 @@ static void P_CreateBlockMap(void)
 		blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 		blockmap = blockmaplump + 4;
 
-#ifdef POLYOBJECTS
 		// haleyjd 2/22/06: setup polyobject blockmap
 		count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
 		polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
 	}
 }
 
@@ -2841,6 +2960,59 @@ static void P_ConvertBinaryMap(void)
 
 		switch (lines[i].special)
 		{
+		case 20: //PolyObject first line
+		{
+			INT32 check = -1;
+			INT32 paramline = -1;
+
+			TAG_ITER_C
+
+			TAG_ITER_LINES(tag, check)
+			{
+				if (lines[check].special == 22)
+				{
+					paramline = check;
+					break;
+				}
+			}
+
+			//PolyObject ID
+			lines[i].args[0] = tag;
+
+			//Default: Invisible planes
+			lines[i].args[3] |= TMPF_INVISIBLEPLANES;
+
+			//Linedef executor tag
+			lines[i].args[4] = 32000 + lines[i].args[0];
+
+			if (paramline == -1)
+				break; // no extra settings to apply, let's leave it
+
+			//Parent ID
+			lines[i].args[1] = lines[paramline].frontsector->special;
+			//Translucency
+			lines[i].args[2] = (lines[paramline].flags & ML_DONTPEGTOP)
+						? (sides[lines[paramline].sidenum[0]].textureoffset >> FRACBITS)
+						: ((lines[paramline].frontsector->floorheight >> FRACBITS) / 100);
+
+			//Flags
+			if (lines[paramline].flags & ML_EFFECT1)
+				lines[i].args[3] |= TMPF_NOINSIDES;
+			if (lines[paramline].flags & ML_EFFECT2)
+				lines[i].args[3] |= TMPF_INTANGIBLE;
+			if (lines[paramline].flags & ML_EFFECT3)
+				lines[i].args[3] |= TMPF_PUSHABLESTOP;
+			if (lines[paramline].flags & ML_EFFECT4)
+				lines[i].args[3] &= ~TMPF_INVISIBLEPLANES;
+			/*if (lines[paramline].flags & ML_EFFECT5)
+				lines[i].args[3] |= TMPF_DONTCLIPPLANES;*/
+			if (lines[paramline].flags & ML_EFFECT6)
+				lines[i].args[3] |= TMPF_SPLAT;
+			if (lines[paramline].flags & ML_NOCLIMB)
+				lines[i].args[3] |= TMPF_EXECUTOR;
+
+			break;
+		}
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{
@@ -2982,6 +3154,15 @@ static void P_ConvertBinaryMap(void)
 		default:
 			break;
 		}
+
+		//Linedef executor delay
+		if (lines[i].special >= 400 && lines[i].special < 500)
+		{
+			//Dummy value to indicate that this executor is delayed.
+			//The real value is taken from the back sector at runtime.
+			if (lines[i].flags & ML_DONTPEGTOP)
+				lines[i].executordelay = 1;
+		}
 	}
 
 	for (i = 0; i < nummapthings; i++)
@@ -2993,9 +3174,33 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 760:
 		case 761:
-		case 762:
 			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
 			break;
+		case 762:
+		{
+			INT32 check = -1;
+			INT32 firstline = -1;
+			mtag_t tag = Tag_FGet(&lines[check].tags);
+
+			TAG_ITER_C
+
+			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
+
+			TAG_ITER_LINES(tag, check)
+			{
+				if (lines[check].special == 20)
+				{
+					firstline = check;
+					break;
+				}
+			}
+
+			if (firstline != -1)
+				lines[firstline].args[3] |= TMPF_CRUSH;
+
+			mapthings[i].type = 761;
+			break;
+		}
 		case 780:
 			Tag_FSet(&mapthings[i].tags, mapthings[i].extrainfo);
 			break;
@@ -3080,6 +3285,8 @@ static boolean P_LoadMapFromFile(void)
 	P_LoadMapLUT(virt);
 
 	P_LinkMapData();
+
+	Taglist_InitGlobalTables();
 
 	if (!udmf)
 		P_ConvertBinaryMap();
@@ -3426,6 +3633,7 @@ static void P_LoadNightsGhosts(void)
 {
 	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
 	char *gpath = malloc(glen);
+	INT32 i;
 
 	if (!gpath)
 		return;
@@ -3433,16 +3641,43 @@ static void P_LoadNightsGhosts(void)
 	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
 
 	// Best Score ghost
-	if (cv_ghost_bestscore.value && FIL_FileExists(va("%s-score-best.lmp", gpath)))
-			G_AddGhost(va("%s-score-best.lmp", gpath));
+	if (cv_ghost_bestscore.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_bestscore.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Best Time ghost
-	if (cv_ghost_besttime.value && FIL_FileExists(va("%s-time-best.lmp", gpath)))
-			G_AddGhost(va("%s-time-best.lmp", gpath));
+	if (cv_ghost_besttime.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_besttime.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Last ghost
-	if (cv_ghost_last.value && FIL_FileExists(va("%s-last.lmp", gpath)))
-		G_AddGhost(va("%s-last.lmp", gpath));
+	if (cv_ghost_last.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_last.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Guest ghost
 	if (cv_ghost_guest.value && FIL_FileExists(va("%s-guest.lmp", gpath)))
@@ -3564,21 +3799,6 @@ static void P_InitCamera(void)
 		if ((splitscreen && cv_useranalog[1].value) || botingame)
 			CV_SetValue(&cv_analog[1], true);
 	}
-}
-
-static boolean CanSaveLevel(INT32 mapnum)
-{
-	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
-		return false;
-
-	if (G_IsSpecialStage(mapnum) // don't save in special stages
-		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
-		return false;
-
-	// Any levels that have the savegame flag can save normally.
-	// If the game is complete for this save slot, then any level can save!
-	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
-	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
 }
 
 static void P_RunSpecialStageWipe(void)
@@ -3743,7 +3963,7 @@ static void P_InitGametype(void)
 
 	if (G_TagGametype())
 		P_InitTagGametype();
-	else if (gametype == GT_RACE && server)
+	else if (((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE) && server)
 		CV_StealthSetValue(&cv_numlaps,
 		(cv_basenumlaps.value)
 			? cv_basenumlaps.value
@@ -3942,13 +4162,14 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	P_ResetSpawnpoints();
 
+	P_ResetWaypoints();
+
 	P_MapStart();
 
 	if (!P_LoadMapFromFile())
 		return false;
 
-	// init gravity, tag lists,
-	// anything that P_SpawnSlopes/P_LoadThings needs to know
+	// init anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
 
 	P_SpawnSlopes(fromnetsave);
@@ -4015,11 +4236,19 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	P_RunCachedActions();
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(gamemap))
-		G_SaveGame((UINT32)cursaveslot);
-
-	lastmaploaded = gamemap; // HAS to be set after saving!!
+	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
+	if (!titlemapinaction)
+	{
+		if (!lastmaploaded) // Start a new game?
+		{
+			// I'd love to do this in the menu code instead of here, but everything's a mess and I can't guarantee saving proper player struct info before the first act's started. You could probably refactor it, but it'd be a lot of effort. Easier to just work off known good code. ~toast 22/06/2020
+			if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
+			&& (!modifiedgame || savemoddata) && cursaveslot > 0)
+				G_SaveGame((UINT32)cursaveslot, gamemap);
+			// If you're looking for saving sp file progression (distinct from G_SaveGameOver), check G_DoCompleted.
+		}
+		lastmaploaded = gamemap; // HAS to be set after saving!!
+	}
 
 	if (!fromnetsave) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
@@ -4071,8 +4300,6 @@ void HWR_SetupLevel(void)
 	HWR_ResetLights();
 #endif
 
-	// Correct missing sidedefs & deep water trick
-	HWR_CorrectSWTricks();
 	HWR_CreatePlanePolygons((INT32)numnodes - 1);
 }
 #endif

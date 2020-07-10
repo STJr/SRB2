@@ -1143,10 +1143,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					toucher->angle = special->angle;
 
-					if (player == &players[consoleplayer])
-						localangle = toucher->angle;
-					else if (player == &players[secondarydisplayplayer])
-						localangle2 = toucher->angle;
+					P_SetPlayerAngle(player, toucher->angle);
 
 					P_ResetPlayer(player);
 
@@ -1471,7 +1468,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_BLACKEGGMAN_GOOPFIRE:
-			if (!player->powers[pw_flashing])
+			if (!player->powers[pw_flashing] && !(player->powers[pw_ignorelatch] & (1<<15)))
 			{
 				toucher->momx = 0;
 				toucher->momy = 0;
@@ -1564,10 +1561,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 #if 0 // camera redirection - deemed unnecessary
 			toucher->angle = special->angle;
-			if (player == &players[consoleplayer])
-				localangle = toucher->angle;
-			else if (player == &players[secondarydisplayplayer])
-				localangle2 = toucher->angle;
+			P_SetPlayerAngle(player, toucher->angle);
 #endif
 
 			S_StartSound(toucher, special->info->attacksound); // home run
@@ -1590,44 +1584,53 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 		case MT_SMALLGRABCHAIN:
 		case MT_BIGGRABCHAIN:
-			if (P_MobjFlip(toucher)*toucher->momz > 0
-				|| (player->powers[pw_carry]))
-				return;
-
-			if (toucher->z > special->z + special->height/2)
-				return;
-
-			if (toucher->z + toucher->height/2 < special->z)
-				return;
-
-			if (player->powers[pw_flashing])
-				return;
-
-			if (special->movefactor && special->tracer && special->tracer->angle != ANGLE_90 && special->tracer->angle != ANGLE_270)
-			{ // I don't expect you to understand this, Mr Bond...
-				angle_t ang = R_PointToAngle2(special->x, special->y, toucher->x, toucher->y) - special->tracer->angle;
-				if ((special->movefactor > 0) == (special->tracer->angle > ANGLE_90 && special->tracer->angle < ANGLE_270))
-					ang += ANGLE_180;
-				if (ang < ANGLE_180)
-					return; // I expect you to die.
-			}
-
-			P_ResetPlayer(player);
-			P_SetTarget(&toucher->tracer, special);
-
-			if (special->tracer && !(special->tracer->flags2 & MF2_STRONGBOX))
 			{
-				player->powers[pw_carry] = CR_MACESPIN;
-				S_StartSound(toucher, sfx_spin);
-				P_SetPlayerMobjState(toucher, S_PLAY_ROLL);
+				boolean macespin = false;
+				if (P_MobjFlip(toucher)*toucher->momz > 0
+					|| (player->powers[pw_carry]))
+					return;
+
+				if (toucher->z > special->z + special->height/2)
+					return;
+
+				if (toucher->z + toucher->height/2 < special->z)
+					return;
+
+				if (player->powers[pw_flashing])
+					return;
+
+				if (special->tracer && !(special->tracer->flags2 & MF2_STRONGBOX))
+					macespin = true;
+				
+				if (macespin ? (player->powers[pw_ignorelatch] & (1<<15)) : (player->powers[pw_ignorelatch]))
+					return;
+
+				if (special->movefactor && special->tracer && special->tracer->angle != ANGLE_90 && special->tracer->angle != ANGLE_270)
+				{ // I don't expect you to understand this, Mr Bond...
+					angle_t ang = R_PointToAngle2(special->x, special->y, toucher->x, toucher->y) - special->tracer->angle;
+					if ((special->movefactor > 0) == (special->tracer->angle > ANGLE_90 && special->tracer->angle < ANGLE_270))
+						ang += ANGLE_180;
+					if (ang < ANGLE_180)
+						return; // I expect you to die.
+				}
+
+				P_ResetPlayer(player);
+				P_SetTarget(&toucher->tracer, special);
+
+				if (macespin)
+				{
+					player->powers[pw_carry] = CR_MACESPIN;
+					S_StartSound(toucher, sfx_spin);
+					P_SetPlayerMobjState(toucher, S_PLAY_ROLL);
+				}
+				else
+					player->powers[pw_carry] = CR_GENERIC;
+
+				// Can't jump first frame
+				player->pflags |= PF_JUMPSTASIS;
+
+				return;
 			}
-			else
-				player->powers[pw_carry] = CR_GENERIC;
-
-			// Can't jump first frame
-			player->pflags |= PF_JUMPSTASIS;
-
-			return;
 		case MT_EGGMOBILE2_POGO:
 			// sanity checks
 			if (!special->target || !special->target->health)
@@ -1717,7 +1720,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_MINECARTSPAWNER:
-			if (!player->bot && special->fuse <= TICRATE && player->powers[pw_carry] != CR_MINECART)
+			if (!player->bot && special->fuse <= TICRATE && player->powers[pw_carry] != CR_MINECART && !(player->powers[pw_ignorelatch] & (1<<15)))
 			{
 				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
 				P_SetTarget(&mcart->target, toucher);
@@ -2284,7 +2287,7 @@ void P_CheckSurvivors(void)
 	if (!taggers) //If there are no taggers, pick a survivor at random to be it.
 	{
 		// Exception for hide and seek. If a round has started and the IT player leaves, end the round.
-		if (gametype == GT_HIDEANDSEEK && (leveltime >= (hidetime * TICRATE)))
+		if ((gametyperules & GTR_HIDEFROZEN) && (leveltime >= (hidetime * TICRATE)))
 		{
 			CONS_Printf(M_GetText("The IT player has left the game.\n"));
 			if (server)
@@ -2522,7 +2525,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			}
 			P_RestoreMusic(target->player);
 
-			if (gametype != GT_COOP)
+			if (!G_CoopGametype())
 			{
 				HU_SetCEchoFlags(0);
 				HU_SetCEchoDuration(5);
@@ -2600,7 +2603,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			// allow them to try again, rather than sitting the whole thing out.
 			if (leveltime >= hidetime * TICRATE)
 			{
-				if (gametype == GT_TAG)//suiciding in survivor makes you IT.
+				if (!(gametyperules & GTR_HIDEFROZEN))//suiciding in survivor makes you IT.
 				{
 					target->player->pflags |= PF_TAGIT;
 					CONS_Printf(M_GetText("%s is now IT!\n"), player_names[target->player-players]); // Tell everyone who is it!
@@ -3094,7 +3097,7 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 		P_AddPlayerScore(source->player, 100); //award points to tagger.
 		P_HitDeathMessages(player, inflictor, source, 0);
 
-		if (gametype == GT_TAG) //survivor
+		if (!(gametyperules & GTR_HIDEFROZEN)) //survivor
 		{
 			player->pflags |= PF_TAGIT; //in survivor, the player becomes IT and helps hunt down the survivors.
 			CONS_Printf(M_GetText("%s is now IT!\n"), player_names[player-players]); // Tell everyone who is it!
@@ -3155,7 +3158,7 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
 		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && (gametyperules & GTR_FRIENDLY))
 		{
-			if (gametype == GT_COOP && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
+			if ((gametyperules & GTR_FRIENDLY) && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
 			{
 				if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
 				{
@@ -3254,7 +3257,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	}
 
 	// If the player was super, tell them he/she ain't so super nomore.
-	if (gametype != GT_COOP && player->powers[pw_super])
+	if (!G_CoopGametype() && player->powers[pw_super])
 	{
 		S_StartSound(NULL, sfx_s3k66); //let all players hear it.
 		HU_SetCEchoFlags(0);
@@ -3616,7 +3619,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				if (source == target)
 					return false; // Don't hit yourself with your own paraloop, baka
 				if (source && source->player && !(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE))
-				&& (gametype == GT_COOP
+				&& ((gametyperules & GTR_FRIENDLY)
 				|| (G_GametypeHasTeams() && player->ctfteam == source->player->ctfteam)))
 					return false; // Don't run eachother over in special stages and team games and such
 			}

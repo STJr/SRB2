@@ -28,8 +28,6 @@
 #include "m_aatree.h"
 #endif
 
-#define POLYOBJECTS
-
 #include "taglist.h"
 
 //
@@ -109,9 +107,7 @@ typedef struct
 	fixed_t z;         ///< Z coordinate.
 } degenmobj_t;
 
-#ifdef POLYOBJECTS
 #include "p_polyobj.h"
-#endif
 
 // Store fake planes in a resizable array insted of just by
 // heightsec. Allows for multiple fake planes.
@@ -227,20 +223,6 @@ typedef struct r_lightlist_s
 	INT32 lightnum;
 } r_lightlist_t;
 
-// ----- for special tricks with HW renderer -----
-
-//
-// For creating a chain with the lines around a sector
-//
-typedef struct linechain_s
-{
-	struct line_s *line;
-	struct linechain_s *next;
-} linechain_t;
-// ----- end special tricks -----
-
-
-
 // Slopes
 typedef enum {
 	SL_NOPHYSICS = 1, /// This plane will have no physics applied besides the positioning.
@@ -354,17 +336,6 @@ typedef struct sector_s
 	extracolormap_t *extra_colormap;
 	boolean colormap_protected;
 
-#ifdef HWRENDER // ----- for special tricks with HW renderer -----
-	boolean pseudoSector;
-	boolean virtualFloor;
-	fixed_t virtualFloorheight;
-	boolean virtualCeiling;
-	fixed_t virtualCeilingheight;
-	linechain_t *sectorLines;
-	struct sector_s **stackList;
-	double lineoutLength;
-#endif // ----- end special tricks -----
-
 	// This points to the master's floorheight, so it can be changed in realtime!
 	fixed_t *gravity; // per-sector gravity
 	boolean verticalflip; // If gravity < 0, then allow flipped physics
@@ -426,6 +397,7 @@ typedef struct line_s
 	// Visual appearance: sidedefs.
 	UINT16 sidenum[2]; // sidenum[1] will be 0xffff if one-sided
 	fixed_t alpha; // translucency
+	INT32 executordelay;
 
 	fixed_t bbox[4]; // bounding box for the extent of the linedef
 
@@ -441,9 +413,7 @@ typedef struct line_s
 #if 1//#ifdef WALLSPLATS
 	void *splats; // wallsplat_t list
 #endif
-#ifdef POLYOBJECTS
 	polyobj_t *polyobj; // Belongs to a polyobject?
-#endif
 
 	char *text; // a concatenation of all front and back texture names, for linedef specials that require a string.
 	INT16 callcount; // no. of calls left before triggering, for the "X calls" linedef specials, defaults to 0
@@ -486,9 +456,7 @@ typedef struct subsector_s
 	sector_t *sector;
 	INT16 numlines;
 	UINT16 firstline;
-#ifdef POLYOBJECTS
 	struct polyobj_s *polyList; // haleyjd 02/19/06: list of polyobjects
-#endif
 #if 1//#ifdef FLOORSPLATS
 	void *splats; // floorsplat_t list
 #endif
@@ -591,10 +559,8 @@ typedef struct seg_s
 	// Why slow things down by calculating lightlists for every thick side?
 	size_t numlights;
 	r_lightlist_t *rlights;
-#ifdef POLYOBJECTS
 	polyobj_t *polyseg;
 	boolean dontrenderme;
-#endif
 	boolean glseg;
 } seg_t;
 

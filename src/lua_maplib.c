@@ -91,6 +91,7 @@ enum line_e {
 	line_frontside,
 	line_backside,
 	line_alpha,
+	line_executordelay,
 	line_slopetype,
 	line_frontsector,
 	line_backsector,
@@ -113,6 +114,7 @@ static const char *const line_opt[] = {
 	"frontside",
 	"backside",
 	"alpha",
+	"executordelay",
 	"slopetype",
 	"frontsector",
 	"backsector",
@@ -141,6 +143,7 @@ static const char *const side_opt[] = {
 	"toptexture",
 	"bottomtexture",
 	"midtexture",
+	"line",
 	"sector",
 	"special",
 	"repeatcnt",
@@ -787,6 +790,9 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_alpha:
 		lua_pushfixed(L, line->alpha);
+		return 1;
+	case line_executordelay:
+		lua_pushinteger(L, line->executordelay);
 		return 1;
 	case line_slopetype:
 		switch(line->slopetype)
@@ -2050,6 +2056,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->typeoflevel);
 	else if (fastcmp(field,"nextlevel"))
 		lua_pushinteger(L, header->nextlevel);
+	else if (fastcmp(field,"marathonnext"))
+		lua_pushinteger(L, header->marathonnext);
 	else if (fastcmp(field,"keywords"))
 		lua_pushstring(L, header->keywords);
 	else if (fastcmp(field,"musname"))
@@ -2123,6 +2131,12 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->menuflags);
 	else if (fastcmp(field,"startrings"))
 		lua_pushinteger(L, header->startrings);
+	else if (fastcmp(field, "sstimer"))
+		lua_pushinteger(L, header->sstimer);
+	else if (fastcmp(field, "ssspheres"))
+		lua_pushinteger(L, header->ssspheres);
+	else if (fastcmp(field, "gravity"))
+		lua_pushfixed(L, header->gravity);
 	// TODO add support for reading numGradedMares and grades
 	else {
 		// Read custom vars now

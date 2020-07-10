@@ -162,7 +162,9 @@ extern wipestyleflags_t wipestyleflags;
 // Even my function names are borderline
 boolean F_ShouldColormapFade(void);
 boolean F_TryColormapFade(UINT8 wipecolor);
+#ifndef NOWIPE
 void F_DecideWipeStyle(void);
+#endif
 
 #define FADECOLORMAPDIV 8
 #define FADECOLORMAPROWS (256/FADECOLORMAPDIV)

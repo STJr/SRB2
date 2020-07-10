@@ -73,6 +73,7 @@
 #include "../console.h"
 #include "../command.h"
 #include "../r_main.h"
+#include "../lua_hook.h"
 #include "sdlmain.h"
 #ifdef HWRENDER
 #include "../hardware/hw_main.h"
@@ -217,7 +218,6 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 	else
 	{
 		Impl_CreateWindow(fullscreen);
-		Impl_SetWindowIcon();
 		wasfullscreen = fullscreen;
 		SDL_SetWindowSize(window, width, height);
 		if (fullscreen)
@@ -358,11 +358,7 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code)
 		case SDL_SCANCODE_RGUI:   return KEY_RIGHTWIN;
 		default:                  break;
 	}
-#ifdef HWRENDER
-	DBG_Printf("Unknown incoming scancode: %d, represented %c\n",
-				code,
-				SDL_GetKeyName(SDL_GetKeyFromScancode(code)));
-#endif
+
 	return 0;
 }
 
@@ -372,7 +368,10 @@ static boolean IgnoreMouse(void)
 		return false;
 	if (menuactive)
 		return !M_MouseNeeded();
-	if (paused || con_destlines || chat_on || gamestate != GS_LEVEL)
+	if (paused || con_destlines || chat_on)
+		return true;
+	if (gamestate != GS_LEVEL && gamestate != GS_INTERMISSION &&
+			gamestate != GS_CONTINUING && gamestate != GS_CUTSCENE)
 		return true;
 	return false;
 }
@@ -1059,8 +1058,9 @@ void I_GetEvent(void)
 					M_SetupJoystickMenu(0);
 			 	break;
 			case SDL_QUIT:
+				if (Playing())
+					LUAh_GameQuit();
 				I_Quit();
-				M_QuitResponse('y');
 				break;
 		}
 	}
@@ -1201,6 +1201,9 @@ void I_FinishUpdate(void)
 
 	if (I_SkipFrame())
 		return;
+
+	if (marathonmode)
+		SCR_DisplayMarathonInfo();
 
 	// draw captions if enabled
 	if (cv_closedcaptioning.value)
@@ -1478,6 +1481,7 @@ void VID_CheckGLLoaded(rendermode_t oldrender)
 #ifdef HWRENDER
 	if (vid_opengl_state == -1) // Well, it didn't work the first time anyway.
 	{
+		CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
 		rendermode = oldrender;
 		if (chosenrendermode == render_opengl) // fallback to software
 			rendermode = render_soft;
@@ -1630,11 +1634,14 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			realwidth, realheight, flags);
 
+
 	if (window == NULL)
 	{
 		CONS_Printf(M_GetText("Couldn't create window: %s\n"), SDL_GetError());
 		return SDL_FALSE;
 	}
+
+	Impl_SetWindowIcon();
 
 	return Impl_CreateContext();
 }
@@ -1652,12 +1659,8 @@ static void Impl_SetWindowName(const char *title)
 
 static void Impl_SetWindowIcon(void)
 {
-	if (window == NULL || icoSurface == NULL)
-	{
-		return;
-	}
-	//SDL2STUB(); // Monster Iestyn: why is this stubbed?
-	SDL_SetWindowIcon(window, icoSurface);
+	if (window && icoSurface)
+		SDL_SetWindowIcon(window, icoSurface);	
 }
 
 static void Impl_VideoSetupSDLBuffer(void)
@@ -1764,6 +1767,11 @@ void I_StartupGraphics(void)
 		VID_StartupOpenGL();
 #endif
 
+	// Window icon
+#ifdef HAVE_IMAGE
+	icoSurface = IMG_ReadXPMFromArray(SDL_icon_xpm);
+#endif	
+
 	// Fury: we do window initialization after GL setup to allow
 	// SDL_GL_LoadLibrary to work well on Windows
 
@@ -1782,11 +1790,6 @@ void I_StartupGraphics(void)
 #ifdef HAVE_TTF
 	I_ShutdownTTF();
 #endif
-	// Window icon
-#ifdef HAVE_IMAGE
-	icoSurface = IMG_ReadXPMFromArray(SDL_icon_xpm);
-#endif
-	Impl_SetWindowIcon();
 
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
 
@@ -1827,10 +1830,12 @@ void VID_StartupOpenGL(void)
 		HWD.pfnFinishUpdate     = NULL;
 		HWD.pfnDraw2DLine       = hwSym("Draw2DLine",NULL);
 		HWD.pfnDrawPolygon      = hwSym("DrawPolygon",NULL);
+		HWD.pfnDrawIndexedTriangles = hwSym("DrawIndexedTriangles",NULL);
 		HWD.pfnRenderSkyDome    = hwSym("RenderSkyDome",NULL);
 		HWD.pfnSetBlend         = hwSym("SetBlend",NULL);
 		HWD.pfnClearBuffer      = hwSym("ClearBuffer",NULL);
 		HWD.pfnSetTexture       = hwSym("SetTexture",NULL);
+		HWD.pfnUpdateTexture    = hwSym("UpdateTexture",NULL);
 		HWD.pfnReadRect         = hwSym("ReadRect",NULL);
 		HWD.pfnGClipRect        = hwSym("GClipRect",NULL);
 		HWD.pfnClearMipMapCache = hwSym("ClearMipMapCache",NULL);
@@ -1840,7 +1845,6 @@ void VID_StartupOpenGL(void)
 		HWD.pfnDrawModel        = hwSym("DrawModel",NULL);
 		HWD.pfnCreateModelVBOs  = hwSym("CreateModelVBOs",NULL);
 		HWD.pfnSetTransform     = hwSym("SetTransform",NULL);
-		HWD.pfnGetRenderVersion = hwSym("GetRenderVersion",NULL);
 		HWD.pfnPostImgRedraw    = hwSym("PostImgRedraw",NULL);
 		HWD.pfnFlushScreenTextures=hwSym("FlushScreenTextures",NULL);
 		HWD.pfnStartScreenWipe  = hwSym("StartScreenWipe",NULL);
@@ -1851,14 +1855,16 @@ void VID_StartupOpenGL(void)
 		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
 		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 
-		// check gl renderer lib
-		if (HWD.pfnGetRenderVersion() != VERSION)
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("The version of the renderer doesn't match the version of the executable!\nBe sure you have installed SRB2 properly.\n"));
-			vid_opengl_state = -1;
-		}
-		else
-			vid_opengl_state = HWD.pfnInit(I_Error) ? 1 : -1; // let load the OpenGL library
+		HWD.pfnLoadShaders      = hwSym("LoadShaders",NULL);
+		HWD.pfnKillShaders      = hwSym("KillShaders",NULL);
+		HWD.pfnSetShader        = hwSym("SetShader",NULL);
+		HWD.pfnUnSetShader      = hwSym("UnSetShader",NULL);
+
+		HWD.pfnSetShaderInfo    = hwSym("SetShaderInfo",NULL);
+		HWD.pfnLoadCustomShader = hwSym("LoadCustomShader",NULL);
+		HWD.pfnInitCustomShaders= hwSym("InitCustomShaders",NULL);
+
+		vid_opengl_state = HWD.pfnInit() ? 1 : -1; // let load the OpenGL library
 
 		if (vid_opengl_state == -1)
 		{

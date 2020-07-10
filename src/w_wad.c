@@ -76,6 +76,10 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 //int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 #endif
 
+#ifdef _DEBUG
+#include "console.h"
+#endif
+
 #ifndef O_BINARY
 #define O_BINARY 0
 #endif
@@ -195,12 +199,20 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 posStart, posEnd;
 
-	posStart = W_CheckNumForFolderStartPK3("Lua/", wadnum, 0);
+	posStart = W_CheckNumForFullNamePK3("Init.lua", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
-		posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
-		for (; posStart < posEnd; posStart++)
-			LUA_LoadLump(wadnum, posStart);
+		LUA_LoadLump(wadnum, posStart, true);
+	}
+	else
+	{
+		posStart = W_CheckNumForFolderStartPK3("Lua/", wadnum, 0);
+		if (posStart != INT16_MAX)
+		{
+			posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
+			for (; posStart < posEnd; posStart++)
+				LUA_LoadLump(wadnum, posStart, true);
+		}
 	}
 
 	posStart = W_CheckNumForFolderStartPK3("SOC/", wadnum, 0);
@@ -232,7 +244,7 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"LUA_",4)==0)
-				LUA_LoadLump(wadnum, lump);
+				LUA_LoadLump(wadnum, lump, true);
 	}
 
 	{
@@ -836,6 +848,15 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
+#ifdef HWRENDER
+	// Read shaders from file
+	if (rendermode == render_opengl && (vid_opengl_state == 1))
+	{
+		HWR_ReadShaders(numwadfiles - 1, (type == RET_PK3));
+		HWR_LoadShaders();
+	}
+#endif // HWRENDER
+
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
 	switch (wadfile->type)
 	{
@@ -850,7 +871,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0, mainfile);
 		break;
 	case RET_LUA:
-		LUA_LoadLump(numwadfiles - 1, 0);
+		LUA_LoadLump(numwadfiles - 1, 0, true);
 		break;
 	default:
 		break;
@@ -920,6 +941,40 @@ const char *W_CheckNameForNum(lumpnum_t lumpnum)
 // 'startlump' is the lump number to start the search
 //
 UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump)
+{
+	UINT16 i;
+	static char uname[8 + 1];
+
+	if (!TestValidLump(wad,0))
+		return INT16_MAX;
+
+	strlcpy(uname, name, sizeof uname);
+	strupr(uname);
+
+	//
+	// scan forward
+	// start at 'startlump', useful parameter when there are multiple
+	//                       resources with the same name
+	//
+	if (startlump < wadfiles[wad]->numlumps)
+	{
+		lumpinfo_t *lump_p = wadfiles[wad]->lumpinfo + startlump;
+		for (i = startlump; i < wadfiles[wad]->numlumps; i++, lump_p++)
+			if (!strncmp(lump_p->name, uname, sizeof(uname) - 1))
+				return i;
+	}
+
+	// not found.
+	return INT16_MAX;
+}
+
+//
+// Like W_CheckNumForNamePwad, but can find entries with long names
+//
+// Should be the only version, but that's not possible until we fix
+// all the instances of non null-terminated strings in the codebase...
+//
+UINT16 W_CheckNumForLongNamePwad(const char *name, UINT16 wad, UINT16 startlump)
 {
 	UINT16 i;
 	static char uname[256 + 1];
@@ -1025,7 +1080,8 @@ lumpnum_t W_CheckNumForName(const char *name)
 	// most recent entries first
 	for (i = lumpnumcacheindex + LUMPNUMCACHESIZE; i > lumpnumcacheindex; i--)
 	{
-		if (strcmp(lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname, name) == 0)
+		if (!lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname[8]
+			&& strncmp(lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname, name, 8) == 0)
 		{
 			lumpnumcacheindex = i & (LUMPNUMCACHESIZE - 1);
 			return lumpnumcache[lumpnumcacheindex].lumpnum;
@@ -1045,10 +1101,60 @@ lumpnum_t W_CheckNumForName(const char *name)
 	{
 		// Update the cache.
 		lumpnumcacheindex = (lumpnumcacheindex + 1) & (LUMPNUMCACHESIZE - 1);
-		strlcpy(lumpnumcache[lumpnumcacheindex].lumpname, name, 32);
+		memset(lumpnumcache[lumpnumcacheindex].lumpname, '\0', 32);
+		strncpy(lumpnumcache[lumpnumcacheindex].lumpname, name, 8);
 		lumpnumcache[lumpnumcacheindex].lumpnum = (i<<16)+check;
 
 		return lumpnumcache[lumpnumcacheindex].lumpnum;
+	}
+}
+
+//
+// Like W_CheckNumForName, but can find entries with long names
+//
+// Should be the only version, but that's not possible until we fix
+// all the instances of non null-terminated strings in the codebase...
+//
+lumpnum_t W_CheckNumForLongName(const char *name)
+{
+	INT32 i;
+	lumpnum_t check = INT16_MAX;
+
+	if (!*name) // some doofus gave us an empty string?
+		return LUMPERROR;
+
+	// Check the lumpnumcache first. Loop backwards so that we check
+	// most recent entries first
+	for (i = lumpnumcacheindex + LUMPNUMCACHESIZE; i > lumpnumcacheindex; i--)
+	{
+		if (strcmp(lumpnumcache[i & (LUMPNUMCACHESIZE - 1)].lumpname, name) == 0)
+		{
+			lumpnumcacheindex = i & (LUMPNUMCACHESIZE - 1);
+			return lumpnumcache[lumpnumcacheindex].lumpnum;
+		}
+	}
+
+	// scan wad files backwards so patch lump files take precedence
+	for (i = numwadfiles - 1; i >= 0; i--)
+	{
+		check = W_CheckNumForLongNamePwad(name,(UINT16)i,0);
+		if (check != INT16_MAX)
+			break; //found it
+	}
+
+	if (check == INT16_MAX) return LUMPERROR;
+	else
+	{
+		if (strlen(name) < 32)
+		{
+			// Update the cache.
+			lumpnumcacheindex = (lumpnumcacheindex + 1) & (LUMPNUMCACHESIZE - 1);
+			memset(lumpnumcache[lumpnumcacheindex].lumpname, '\0', 32);
+			strlcpy(lumpnumcache[lumpnumcacheindex].lumpname, name, 32);
+			lumpnumcache[lumpnumcacheindex].lumpnum = (i << 16) + check;
+		}
+
+		return (i << 16) + check;
 	}
 }
 
@@ -1101,6 +1207,24 @@ lumpnum_t W_GetNumForName(const char *name)
 }
 
 //
+// Like W_GetNumForName, but can find entries with long names
+//
+// Should be the only version, but that's not possible until we fix
+// all the instances of non null-terminated strings in the codebase...
+//
+lumpnum_t W_GetNumForLongName(const char *name)
+{
+	lumpnum_t i;
+
+	i = W_CheckNumForLongName(name);
+
+	if (i == LUMPERROR)
+		I_Error("W_GetNumForLongName: %s not found!\n", name);
+
+	return i;
+}
+
+//
 // W_CheckNumForNameInBlock
 // Checks only in blocks from blockstart lump to blockend lump
 //
@@ -1139,7 +1263,7 @@ UINT8 W_LumpExists(const char *name)
 	{
 		lumpinfo_t *lump_p = wadfiles[i]->lumpinfo;
 		for (j = 0; j < wadfiles[i]->numlumps; ++j, ++lump_p)
-			if (fastcmp(lump_p->name,name))
+			if (fastcmp(lump_p->longname, name))
 				return true;
 	}
 	return false;
@@ -1517,21 +1641,6 @@ boolean W_IsPatchCached(lumpnum_t lumpnum, void *ptr)
 	return W_IsPatchCachedPWAD(WADFILENUM(lumpnum),LUMPNUM(lumpnum), ptr);
 }
 
-void W_FlushCachedPatches(void)
-{
-	if (needpatchflush)
-	{
-		Z_FreeTag(PU_CACHE);
-		Z_FreeTag(PU_PATCH);
-		Z_FreeTag(PU_HUDGFX);
-		Z_FreeTag(PU_HWRPATCHINFO);
-		Z_FreeTag(PU_HWRMODELTEXTURE);
-		Z_FreeTag(PU_HWRCACHE);
-		Z_FreeTags(PU_HWRCACHE_UNLOCKED, PU_HWRMODELTEXTURE_UNLOCKED);
-	}
-	needpatchflush = false;
-}
-
 // ==========================================================================
 // W_CacheLumpName
 // ==========================================================================
@@ -1558,9 +1667,6 @@ void *W_CacheLumpName(const char *name, INT32 tag)
 void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
 	lumpcache_t *lumpcache = NULL;
-
-	if (needpatchflush)
-		W_FlushCachedPatches();
 
 	if (!TestValidLump(wad, lump))
 		return NULL;
@@ -1612,9 +1718,6 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	GLPatch_t *grPatch;
 #endif
 
-	if (needpatchflush)
-		W_FlushCachedPatches();
-
 	if (!TestValidLump(wad, lump))
 		return NULL;
 
@@ -1663,7 +1766,7 @@ void W_UnlockCachedPatch(void *patch)
 	// The hardware code does its own memory management, as its patches
 	// have different lifetimes from software's.
 #ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 		HWR_UnlockCachedPatch((GLPatch_t*)patch);
 	else
 #endif
@@ -1678,6 +1781,17 @@ void *W_CachePatchName(const char *name, INT32 tag)
 
 	if (num == LUMPERROR)
 		return W_CachePatchNum(W_GetNumForName("MISSING"), tag);
+	return W_CachePatchNum(num, tag);
+}
+
+void *W_CachePatchLongName(const char *name, INT32 tag)
+{
+	lumpnum_t num;
+
+	num = W_CheckNumForLongName(name);
+
+	if (num == LUMPERROR)
+		return W_CachePatchNum(W_GetNumForLongName("MISSING"), tag);
 	return W_CachePatchNum(num, tag);
 }
 #ifndef NOMD5
