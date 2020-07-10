@@ -1177,6 +1177,34 @@ static UINT8 HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t 
 	return spr2;
 }
 
+static void adjustTextureCoords(model_t *model, GLPatch_t *gpatch)
+{
+	int i;
+	for (i = 0; i < model->numMeshes; i++)
+	{
+		int j;
+		mesh_t *mesh = &model->meshes[i];
+		int numVertices;
+		float *uvPtr = mesh->uvs;
+
+		// i dont know if this is actually possible, just logical conclusion of structure in CreateModelVBOs
+		if (!mesh->frames && !mesh->tinyframes) return;
+
+		if (mesh->frames) // again CreateModelVBO and CreateModelVBOTiny iterate like this so I'm gonna do that too
+			numVertices = mesh->numTriangles * 3;
+		else
+			numVertices = mesh->numVertices;
+
+		// fix uvs (texture coordinates) to take into account that the actual texture
+		// has empty space added until the next power of two
+		for (j = 0; j < numVertices; j++)
+		{
+			*uvPtr++ *= gpatch->max_s;
+			*uvPtr++ *= gpatch->max_t;
+		}
+	}
+}
+
 //
 // HWR_DrawModel
 //
@@ -1278,6 +1306,19 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 			sprinfo = &spriteinfo[spr->mobj->sprite];
 		}
 
+		// texture loading before model init, so it knows if sprite graphics are used, which
+		// means that texture coordinates have to be adjusted
+		gpatch = md2->grpatch;
+		if (!gpatch || ((!gpatch->mipmap->grInfo.format || !gpatch->mipmap->downloaded) && !md2->notexturefile))
+			md2_loadTexture(md2);
+		gpatch = md2->grpatch; // Load it again, because it isn't being loaded into gpatch after md2_loadtexture...
+
+		if ((gpatch && gpatch->mipmap->grInfo.format) // don't load the blend texture if the base texture isn't available
+			&& (!md2->blendgrpatch
+			|| ((!((GLPatch_t *)md2->blendgrpatch)->mipmap->grInfo.format || !((GLPatch_t *)md2->blendgrpatch)->mipmap->downloaded)
+			&& !md2->noblendfile)))
+			md2_loadBlendTexture(md2);
+
 		if (md2->error)
 			return false; // we already failed loading this before :(
 		if (!md2->model)
@@ -1289,6 +1330,10 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 			if (md2->model)
 			{
 				md2_printModelInfo(md2->model);
+				// if model uses sprite patch as texture, then
+				// adjust texture coordinates to take power of two textures into account
+				if (!gpatch || !gpatch->mipmap->grInfo.format)
+					adjustTextureCoords(md2->model, spr->gpatch);
 				HWD.pfnCreateModelVBOs(md2->model);
 			}
 			else
@@ -1306,16 +1351,6 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 		//HWD.pfnSetBlend(blend); // This seems to actually break translucency?
 		finalscale = md2->scale;
 		//Hurdler: arf, I don't like that implementation at all... too much crappy
-		gpatch = md2->grpatch;
-		if (!gpatch || ((!gpatch->mipmap->grInfo.format || !gpatch->mipmap->downloaded) && !md2->notexturefile))
-			md2_loadTexture(md2);
-		gpatch = md2->grpatch; // Load it again, because it isn't being loaded into gpatch after md2_loadtexture...
-
-		if ((gpatch && gpatch->mipmap->grInfo.format) // don't load the blend texture if the base texture isn't available
-			&& (!md2->blendgrpatch
-			|| ((!((GLPatch_t *)md2->blendgrpatch)->mipmap->grInfo.format || !((GLPatch_t *)md2->blendgrpatch)->mipmap->downloaded)
-			&& !md2->noblendfile)))
-			md2_loadBlendTexture(md2);
 
 		if (gpatch && gpatch->mipmap->grInfo.format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
 		{
