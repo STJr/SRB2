@@ -5214,7 +5214,7 @@ void A_SignPlayer(mobj_t *actor)
 
 	actor->tracer->color = signcolor;
 	if (signcolor && signcolor < numskincolors)
-		signframe += (15 - skincolors[facecolor].invshade);
+		signframe += (15 - skincolors[skincolors[signcolor].invcolor].invshade);
 	actor->tracer->frame = signframe;
 }
 

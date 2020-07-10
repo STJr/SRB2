@@ -996,17 +996,6 @@ static void P_InitializeSector(sector_t *ss)
 
 	ss->extra_colormap = NULL;
 
-#ifdef HWRENDER // ----- for special tricks with HW renderer -----
-	ss->pseudoSector = false;
-	ss->virtualFloor = false;
-	ss->virtualFloorheight = 0;
-	ss->virtualCeiling = false;
-	ss->virtualCeilingheight = 0;
-	ss->sectorLines = NULL;
-	ss->stackList = NULL;
-	ss->lineoutLength = -1.0l;
-#endif // ----- end special tricks -----
-
 	ss->gravity = NULL;
 	ss->verticalflip = false;
 	ss->flags = SF_FLIPSPECIAL_FLOOR;
@@ -4267,8 +4256,6 @@ void HWR_SetupLevel(void)
 	HWR_ResetLights();
 #endif
 
-	// Correct missing sidedefs & deep water trick
-	HWR_CorrectSWTricks();
 	HWR_CreatePlanePolygons((INT32)numnodes - 1);
 }
 #endif

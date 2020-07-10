@@ -1942,7 +1942,7 @@ static menu_t SP_NightsGhostDef =
 static menu_t SP_MarathonDef =
 {
 	MTREE2(MN_SP_MAIN, MN_SP_MARATHON),
-	"M_ATTACK", // temporary
+	"M_RATHON",
 	sizeof(SP_MarathonMenu)/sizeof(menuitem_t),
 	&MainDef,  // Doesn't matter.
 	SP_MarathonMenu,
@@ -10709,7 +10709,7 @@ void M_DrawMarathon(void)
 			recatkdrawtimer -= (10*TICRATE);
 	}
 
-	//M_DrawMenuTitle();
+	M_DrawMenuTitle();
 
 	// draw menu (everything else goes on top of it)
 	// Sadly we can't just use generic mode menus because we need some extra hacks
