@@ -9484,8 +9484,6 @@ struct {
 	{"PUSHACCEL",PUSHACCEL},
 	{"MODID",MODID}, // I don't know, I just thought it would be cool for a wad to potentially know what mod it was loaded into.
 	{"CODEBASE",CODEBASE}, // or what release of SRB2 this is.
-	{"VERSION",VERSION}, // Grab the game's version!
-	{"SUBVERSION",SUBVERSION}, // more precise version number
 	{"NEWTICRATE",NEWTICRATE}, // TICRATE*NEWTICRATERATIO
 	{"NEWTICRATERATIO",NEWTICRATERATIO},
 

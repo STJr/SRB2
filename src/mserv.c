@@ -754,8 +754,8 @@ static INT32 AddToMasterServer(boolean firstadd)
 	strcpy(info->port, int2str(current_port));
 	strcpy(info->name, cv_servername.string);
 	M_Memcpy(&info->room, & room, sizeof (INT32));
-#if VERSION > 0 || SUBVERSION > 0
-	sprintf(info->version, "%d.%d.%d", VERSION/100, VERSION%100, SUBVERSION);
+#ifndef DEVELOP
+	strcpy(info->version, SRB2VERSION);
 #else // Trunk build, send revision info
 	strcpy(info->version, GetRevisionString());
 #endif

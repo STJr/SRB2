@@ -93,6 +93,10 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 
 #include "lua_script.h"
 
+// Version numbers for netplay :upside_down_face:
+int    VERSION;
+int SUBVERSION;
+
 // platform independant focus loss
 UINT8 window_notinfocus = false;
 
