@@ -487,7 +487,7 @@ CV_PossibleValue_t loadless_cons_t[] = {{0, "Realtime"}, {1, "In-game"}, {0, NUL
 
 consvar_t cv_dummymarathon = {"dummymarathon", "Standard", CV_HIDEN, marathon_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_dummycutscenes = {"dummycutscenes", "Off", CV_HIDEN, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_dummyloadless = {"dummyloadless", "Realtime", CV_HIDEN, loadless_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_dummyloadless = {"dummyloadless", "In-game", CV_HIDEN, loadless_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // ==========================================================================
 // ORGANIZATION START.
@@ -10563,8 +10563,7 @@ static void M_StartMarathon(INT32 choice)
 	(void)choice;
 	marathontime = 0;
 	marathonmode = MA_RUNNING|MA_INIT;
-	if (cv_dummymarathon.value == 1)
-		cursaveslot = MARATHONSLOT;
+	cursaveslot = (cv_dummymarathon.value == 1) ? MARATHONSLOT : 0;
 	if (!cv_dummycutscenes.value)
 		marathonmode |= MA_NOCUTSCENES;
 	if (cv_dummyloadless.value)

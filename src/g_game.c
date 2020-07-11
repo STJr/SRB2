@@ -3729,6 +3729,32 @@ static boolean CanSaveLevel(INT32 mapnum)
 	return (mapheaderinfo[mapnum-1] && (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME));
 }
 
+static void G_HandleSaveLevel(void)
+{
+	// do this before running the intermission or custom cutscene, mostly for the sake of marathon mode but it also massively reduces redundant file save events in f_finale.c
+	if (nextmap >= 1100-1)
+	{
+		if (!gamecomplete)
+			gamecomplete = 2; // special temporary mode to prevent using SP level select in pause menu until the intermission is over without restricting it in every intermission
+		if (cursaveslot > 0)
+		{
+			if (marathonmode)
+			{
+				// don't keep a backup around when the run is done!
+				if (FIL_FileExists(liveeventbackup))
+					remove(liveeventbackup);
+				cursaveslot = 0;
+			}
+			else if ((!modifiedgame || savemoddata) && !(netgame || multiplayer || ultimatemode || demorecording || metalrecording || modeattacking))
+				G_SaveGame((UINT32)cursaveslot, spstage_start);
+		}
+	}
+	// and doing THIS here means you don't lose your progress if you close the game mid-intermission
+	else if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
+		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(lastmap+1))
+		G_SaveGame((UINT32)cursaveslot, lastmap+1); // not nextmap+1 to route around special stages
+}
+
 //
 // G_DoCompleted
 //
@@ -3875,6 +3901,7 @@ static void G_DoCompleted(void)
 	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed) || (intertype == int_none))
 	{
 		G_UpdateVisited();
+		G_HandleSaveLevel();
 		G_AfterIntermission();
 	}
 	else
@@ -3882,30 +3909,8 @@ static void G_DoCompleted(void)
 		G_SetGamestate(GS_INTERMISSION);
 		Y_StartIntermission();
 		G_UpdateVisited();
+		G_HandleSaveLevel();
 	}
-
-	// do this before running the intermission or custom cutscene, mostly for the sake of marathon mode but it also massively reduces redundant file save events in f_finale.c
-	if (nextmap >= 1100-1)
-	{
-		if (!gamecomplete)
-			gamecomplete = 2; // special temporary mode to prevent using SP level select in pause menu until the intermission is over without restricting it in every intermission
-		if (cursaveslot > 0)
-		{
-			if (marathonmode)
-			{
-				// don't keep a backup around when the run is done!
-				if (FIL_FileExists(liveeventbackup))
-					remove(liveeventbackup);
-				cursaveslot = 0;
-			}
-			else if ((!modifiedgame || savemoddata) && !(netgame || multiplayer || ultimatemode || demorecording || metalrecording || modeattacking))
-				G_SaveGame((UINT32)cursaveslot, spstage_start);
-		}
-	}
-	// and doing THIS here means you don't lose your progress if you close the game mid-intermission
-	else if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
-		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(lastmap+1))
-		G_SaveGame((UINT32)cursaveslot, lastmap+1); // not nextmap+1 to route around special stages
 }
 
 // See also F_EndCutscene, the only other place which handles intra-map/ending transitions
@@ -4498,7 +4503,10 @@ void G_SaveGame(UINT32 slot, INT16 mapnum)
 		P_SaveGame(mapnum);
 		if (marathonmode)
 		{
-			WRITEUINT32(save_p, marathontime);
+			UINT32 writetime = marathontime;
+			if (!(marathonmode & MA_INGAME))
+				marathontime += TICRATE*5; // live event backup penalty because we don't know how long it takes to get to the next map
+			WRITEUINT32(save_p, writetime);
 			WRITEUINT8(save_p, (marathonmode & ~MA_INIT));
 		}
 
