@@ -1,8 +1,12 @@
 cmake_minimum_required(VERSION 3.0)
+
+file(STRINGS src/version.h SRB2_VERSION)
+string(REGEX MATCH "[0-9]+\\.[0-9.]+" SRB2_VERSION ${SRB2_VERSION})
+
 # DO NOT CHANGE THIS SRB2 STRING! Some variable names depend on this string.
 # Version change is fine.
 project(SRB2
-	VERSION 2.2.6
+	VERSION ${SRB2_VERSION}
 	LANGUAGES C)
 
 if(${PROJECT_SOURCE_DIR} MATCHES ${PROJECT_BINARY_DIR})
