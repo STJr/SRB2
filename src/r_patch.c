@@ -1231,9 +1231,9 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		if (!R_CheckIfPatch(lump))
 			return;
 
-		width = patch->width;
-		height = patch->height;
-		leftoffset = patch->leftoffset;
+		width = SHORT(patch->width);
+		height = SHORT(patch->height);
+		leftoffset = SHORT(patch->leftoffset);
 
 		// rotation pivot
 		px = SPRITE_XCENTER;
@@ -1348,7 +1348,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			newpatch = R_MaskedFlatToPatch(rawdst, newwidth, newheight, 0, 0, &size);
 			{
 				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
-				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
+				newpatch->topoffset = (newpatch->height / 2) + (SHORT(patch->topoffset) - py);
 			}
 
 			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
@@ -1357,6 +1357,12 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 
 			// P_PrecacheLevel
 			if (devparm) spritememory += size;
+
+			// convert everything to little-endian, for big-endian support
+			newpatch->width = SHORT(newpatch->width);
+			newpatch->height = SHORT(newpatch->height);
+			newpatch->leftoffset = SHORT(newpatch->leftoffset);
+			newpatch->topoffset = SHORT(newpatch->topoffset);
 
 #ifdef HWRENDER
 			if (rendermode == render_opengl)

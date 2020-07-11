@@ -88,6 +88,7 @@ enum mobj_e {
 	mobj_cvmem,
 	mobj_standingslope,
 	mobj_colorized,
+	mobj_mirrored,
 	mobj_shadowscale
 };
 
@@ -156,6 +157,7 @@ static const char *const mobj_opt[] = {
 	"cvmem",
 	"standingslope",
 	"colorized",
+	"mirrored",
 	"shadowscale",
 	NULL};
 
@@ -395,6 +397,9 @@ static int mobj_get(lua_State *L)
 	case mobj_colorized:
 		lua_pushboolean(L, mo->colorized);
 		break;
+	case mobj_mirrored:
+		lua_pushboolean(L, mo->mirrored);
+		break;
 	case mobj_shadowscale:
 		lua_pushfixed(L, mo->shadowscale);
 		break;
@@ -459,10 +464,9 @@ static int mobj_set(lua_State *L)
 		return UNIMPLEMENTED;
 	case mobj_angle:
 		mo->angle = luaL_checkangle(L, 3);
-		if (mo->player == &players[consoleplayer])
-			localangle = mo->angle;
-		else if (mo->player == &players[secondarydisplayplayer])
-			localangle2 = mo->angle;
+		if (mo->player)
+			P_SetPlayerAngle(mo->player, mo->angle);
+		break;
 	case mobj_pitch:
 		mo->pitch = luaL_checkangle(L, 3);
 		break;
@@ -589,9 +593,9 @@ static int mobj_set(lua_State *L)
 	}
 	case mobj_color:
 	{
-		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
-		if (newcolor >= MAXTRANSLATIONS)
-			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, MAXTRANSLATIONS-1);
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L,3);
+		if (newcolor >= numskincolors)
+			return luaL_error(L, "mobj.color %d out of range (0 - %d).", newcolor, numskincolors-1);
 		mo->color = newcolor;
 		break;
 	}
@@ -730,6 +734,9 @@ static int mobj_set(lua_State *L)
 	case mobj_colorized:
 		mo->colorized = luaL_checkboolean(L, 3);
 		break;
+	case mobj_mirrored:
+		mo->mirrored = luaL_checkboolean(L, 3);
+		break;
 	case mobj_shadowscale:
 		mo->shadowscale = luaL_checkfixed(L, 3);
 		break;
@@ -760,6 +767,42 @@ static int mobj_set(lua_State *L)
 #undef NOSET
 #undef NOSETPOS
 #undef NOFIELD
+
+// args, i -> args[i]
+static int thingargs_get(lua_State *L)
+{
+	INT32 *args = *((INT32**)luaL_checkudata(L, 1, META_THINGARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUMMAPTHINGARGS)
+		return luaL_error(L, LUA_QL("mapthing_t.args") " index cannot be %d", i);
+	lua_pushinteger(L, args[i]);
+	return 1;
+}
+
+// #args -> NUMMAPTHINGARGS
+static int thingargs_len(lua_State* L)
+{
+	lua_pushinteger(L, NUMMAPTHINGARGS);
+	return 1;
+}
+
+// stringargs, i -> stringargs[i]
+static int thingstringargs_get(lua_State *L)
+{
+	char **stringargs = *((char***)luaL_checkudata(L, 1, META_THINGSTRINGARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUMMAPTHINGSTRINGARGS)
+		return luaL_error(L, LUA_QL("mapthing_t.stringargs") " index cannot be %d", i);
+	lua_pushstring(L, stringargs[i]);
+	return 1;
+}
+
+// #stringargs -> NUMMAPTHINGSTRINGARGS
+static int thingstringargs_len(lua_State *L)
+{
+	lua_pushinteger(L, NUMMAPTHINGSTRINGARGS);
+	return 1;
+}
 
 static int mapthing_get(lua_State *L)
 {
@@ -802,6 +845,16 @@ static int mapthing_get(lua_State *L)
 		number = mt->extrainfo;
 	else if(fastcmp(field,"tag"))
 		number = mt->tag;
+	else if(fastcmp(field,"args"))
+	{
+		LUA_PushUserdata(L, mt->args, META_THINGARGS);
+		return 1;
+	}
+	else if(fastcmp(field,"stringargs"))
+	{
+		LUA_PushUserdata(L, mt->stringargs, META_THINGSTRINGARGS);
+		return 1;
+	}
 	else if(fastcmp(field,"mobj")) {
 		LUA_PushUserdata(L, mt->mobj, META_MOBJ);
 		return 1;
@@ -858,6 +911,15 @@ static int mapthing_set(lua_State *L)
 		return luaL_error(L, LUA_QL("mapthing_t") " has no field named " LUA_QS, field);
 
 	return 0;
+}
+
+static int mapthing_num(lua_State *L)
+{
+	mapthing_t *mt = *((mapthing_t **)luaL_checkudata(L, 1, META_MAPTHING));
+	if (!mt)
+		return luaL_error(L, "accessed mapthing_t doesn't exist anymore.");
+	lua_pushinteger(L, mt-mapthings);
+	return 1;
 }
 
 static int lib_iterateMapthings(lua_State *L)
@@ -918,12 +980,31 @@ int LUA_MobjLib(lua_State *L)
 		lua_setfield(L, -2, "__newindex");
 	lua_pop(L,1);
 
+	luaL_newmetatable(L, META_THINGARGS);
+		lua_pushcfunction(L, thingargs_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, thingargs_len);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_THINGSTRINGARGS);
+		lua_pushcfunction(L, thingstringargs_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, thingstringargs_len);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
 	luaL_newmetatable(L, META_MAPTHING);
 		lua_pushcfunction(L, mapthing_get);
 		lua_setfield(L, -2, "__index");
 
 		lua_pushcfunction(L, mapthing_set);
 		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, mapthing_num);
+		lua_setfield(L, -2, "__len");
 	lua_pop(L,1);
 
 	lua_newuserdata(L, 0);

@@ -806,11 +806,15 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"HASLUAFILE",
 
 	"FILEFRAGMENT",
+	"FILEACK",
+	"FILERECEIVED",
+
 	"TEXTCMD",
 	"TEXTCMD2",
 	"CLIENTJOIN",
 	"NODETIMEOUT",
 	"RESYNCHING",
+	"LOGIN",
 	"PING"
 };
 
@@ -837,7 +841,7 @@ static void DebugPrintpacket(const char *header)
 			size_t ntxtcmd = &((UINT8 *)netbuffer)[doomcom->datalength] - cmd;
 
 			fprintf(debugfile, "    firsttic %u ply %d tics %d ntxtcmd %s\n    ",
-				(UINT32)ExpandTics(serverpak->starttic), serverpak->numslots, serverpak->numtics, sizeu1(ntxtcmd));
+				(UINT32)serverpak->starttic, serverpak->numslots, serverpak->numtics, sizeu1(ntxtcmd));
 			/// \todo Display more readable information about net commands
 			fprintfstringnewline((char *)cmd, ntxtcmd);
 			/*fprintfstring((char *)cmd, 3);
@@ -856,8 +860,8 @@ static void DebugPrintpacket(const char *header)
 		case PT_NODEKEEPALIVE:
 		case PT_NODEKEEPALIVEMIS:
 			fprintf(debugfile, "    tic %4u resendfrom %u\n",
-				(UINT32)ExpandTics(netbuffer->u.clientpak.client_tic),
-				(UINT32)ExpandTics (netbuffer->u.clientpak.resendfrom));
+				(UINT32)ExpandTics(netbuffer->u.clientpak.client_tic, doomcom->remotenode),
+				(UINT32)ExpandTics (netbuffer->u.clientpak.resendfrom, doomcom->remotenode));
 			break;
 		case PT_TEXTCMD:
 		case PT_TEXTCMD2:

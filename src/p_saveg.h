@@ -21,7 +21,7 @@
 // Persistent storage/archiving.
 // These are the load / save game routines.
 
-void P_SaveGame(void);
+void P_SaveGame(INT16 mapnum);
 void P_SaveNetGame(void);
 boolean P_LoadGame(INT16 mapoverride);
 boolean P_LoadNetGame(void);

@@ -44,9 +44,10 @@ extern fixed_t sprtopscreen;
 extern fixed_t sprbotscreen;
 extern fixed_t windowtop;
 extern fixed_t windowbottom;
+extern INT32 lengthcol;
 
 void R_DrawMaskedColumn(column_t *column);
-void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
+void R_DrawFlippedMaskedColumn(column_t *column);
 
 // ----------------
 // SPRITE RENDERING

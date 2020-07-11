@@ -18,6 +18,7 @@
 #include "z_zone.h"
 #include "v_video.h"
 #include "i_video.h"
+#include "i_system.h" // I_GetTimeMicros
 #include "m_misc.h"
 #include "st_stuff.h" // st_palette
 
@@ -30,11 +31,13 @@
 
 consvar_t cv_gif_optimize = {"gif_optimize", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gif_downscale =  {"gif_downscale", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gif_dynamicdelay = {"gif_dynamicdelay", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gif_localcolortable =  {"gif_localcolortable", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifdef HAVE_ANIGIF
 static boolean gif_optimize = false; // So nobody can do something dumb
 static boolean gif_downscale = false; // like changing cvars mid output
+static boolean gif_dynamicdelay = false; // and messing something up
 
 // Palette handling
 static boolean gif_localcolortable = false;
@@ -44,6 +47,7 @@ static RGBA_t *gif_framepalette = NULL;
 
 static FILE *gif_out = NULL;
 static INT32 gif_frames = 0;
+static UINT32 gif_prevframems = 0;
 static UINT8 gif_writeover = 0;
 
 
@@ -490,29 +494,28 @@ const UINT8 gifframe_gchead[4] = {0x21,0xF9,0x04,0x04}; // GCE, bytes, packed by
 static UINT8 *gifframe_data = NULL;
 static size_t gifframe_size = 8192;
 
+//
+// GIF_rgbconvert
+// converts an RGB frame to a frame with a palette.
+//
 #ifdef HWRENDER
-static void hwrconvert(void)
+static void GIF_rgbconvert(UINT8 *linear, UINT8 *scr)
 {
-	UINT8 *linear = HWR_GetScreenshot();
-	UINT8 *dest = screens[2];
 	UINT8 r, g, b;
-	INT32 x, y;
-	size_t i = 0;
+	size_t src = 0, dest = 0;
+	size_t size = (vid.width * vid.height * 3);
 
 	InitColorLUT(gif_framepalette);
 
-	for (y = 0; y < vid.height; y++)
+	while (src < size)
 	{
-		for (x = 0; x < vid.width; x++, i += 3)
-		{
-			r = (UINT8)linear[i];
-			g = (UINT8)linear[i + 1];
-			b = (UINT8)linear[i + 2];
-			dest[(y * vid.width) + x] = colorlookup[r >> SHIFTCOLORBITS][g >> SHIFTCOLORBITS][b >> SHIFTCOLORBITS];
-		}
+		r = (UINT8)linear[src];
+		g = (UINT8)linear[src + 1];
+		b = (UINT8)linear[src + 2];
+		scr[dest] = colorlookup[r >> SHIFTCOLORBITS][g >> SHIFTCOLORBITS][b >> SHIFTCOLORBITS];
+		src += (3 * scrbuf_downscaleamt);
+		dest += scrbuf_downscaleamt;
 	}
-
-	free(linear);
 }
 #endif
 
@@ -556,7 +559,11 @@ static void GIF_framewrite(void)
 			I_ReadScreen(movie_screen);
 #ifdef HWRENDER
 		else if (rendermode == render_opengl)
-			hwrconvert();
+		{
+			UINT8 *linear = HWR_GetScreenshot();
+			GIF_rgbconvert(linear, movie_screen);
+			free(linear);
+		}
 #endif
 	}
 	else
@@ -565,28 +572,44 @@ static void GIF_framewrite(void)
 		blitw = vid.width;
 		blith = vid.height;
 
-		if (gif_frames == 0)
-		{
-			if (rendermode == render_soft)
-				I_ReadScreen(movie_screen);
 #ifdef HWRENDER
-			else if (rendermode == render_opengl)
-			{
-				hwrconvert();
-				VID_BlitLinearScreen(screens[2], screens[0], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
-			}
-#endif
+		// Copy the current OpenGL frame into the base screen
+		if (rendermode == render_opengl)
+		{
+			UINT8 *linear = HWR_GetScreenshot();
+			GIF_rgbconvert(linear, screens[0]);
+			free(linear);
 		}
+#endif
+
+		// Copy the first frame into the movie screen
+		// OpenGL already does the same above.
+		if (gif_frames == 0 && rendermode == render_soft)
+			I_ReadScreen(movie_screen);
 
 		movie_screen = screens[0];
 	}
 
 	// screen regions are handled in GIF_lzw
 	{
-		int d1 = (int)((100.0f/NEWTICRATE)*(gif_frames+1));
-		int d2 = (int)((100.0f/NEWTICRATE)*(gif_frames));
-		UINT16 delay = d1-d2;
+		UINT16 delay;
 		INT32 startline;
+
+		if (gif_dynamicdelay) {
+			// golden's attempt at creating a "dynamic delay"
+			float delayf = ceil(100.0f/NEWTICRATE);
+
+			delay = (UINT16)((I_GetTimeMicros() - gif_prevframems)/10/1000);
+			if (delay < (int)(delayf))
+				delay = (int)(delayf);
+		}
+		else
+		{
+			// the original code
+			int d1 = (int)((100.0f/NEWTICRATE)*(gif_frames+1));
+			int d2 = (int)((100.0f/NEWTICRATE)*(gif_frames));
+			delay = d1-d2;
+		}
 
 		WRITEMEM(p, gifframe_gchead, 4);
 
@@ -665,6 +688,7 @@ static void GIF_framewrite(void)
 	}
 	fwrite(gifframe_data, 1, (p - gifframe_data), gif_out);
 	++gif_frames;
+	gif_prevframems = I_GetTimeMicros();
 }
 
 
@@ -685,12 +709,14 @@ INT32 GIF_open(const char *filename)
 
 	gif_optimize = (!!cv_gif_optimize.value);
 	gif_downscale = (!!cv_gif_downscale.value);
+	gif_dynamicdelay = (!!cv_gif_dynamicdelay.value);
 	gif_localcolortable = (!!cv_gif_localcolortable.value);
 	gif_colorprofile = (!!cv_screenshot_colorprofile.value);
 	gif_headerpalette = GIF_getpalette(0);
 
 	GIF_headwrite();
 	gif_frames = 0;
+	gif_prevframems = I_GetTimeMicros();
 	return 1;
 }
 
