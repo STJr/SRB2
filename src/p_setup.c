@@ -3180,11 +3180,11 @@ static void P_ConvertBinaryMap(void)
 		{
 			INT32 check = -1;
 			INT32 firstline = -1;
-			mtag_t tag = Tag_FGet(&lines[check].tags);
+			mtag_t tag = mapthings[i].angle;
 
 			TAG_ITER_C
 
-			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
+			Tag_FSet(&mapthings[i].tags, tag);
 
 			TAG_ITER_LINES(tag, check)
 			{
