@@ -418,9 +418,9 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			else if (object->player->dashmode >= DASHMODE_THRESHOLD)
 				P_SetPlayerMobjState(object, S_PLAY_DASH);
 			else if (P_IsObjectOnGround(object))
-				(horizspeed >= FixedMul(object->player->runspeed, object->scale)) ? P_SetPlayerMobjState(object, S_PLAY_RUN) : P_SetPlayerMobjState(object, S_PLAY_WALK);
+				P_SetPlayerMobjState(object, (horizspeed >= FixedMul(object->player->runspeed, object->scale)) ? S_PLAY_RUN : S_PLAY_WALK);
 			else
-				object->momz > 0 ? P_SetPlayerMobjState(object, S_PLAY_SPRING) : P_SetPlayerMobjState(object, S_PLAY_FALL);
+				P_SetPlayerMobjState(object, (object->momz > 0) ? S_PLAY_SPRING : S_PLAY_FALL);
 		}
 		else if (P_MobjFlip(object)*vertispeed > 0)
 			P_SetPlayerMobjState(object, S_PLAY_SPRING);
@@ -1681,7 +1681,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 					{
 						fixed_t setmomz = -*momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
-					
+
 						if (elementalpierce == 2) // Reset bubblewrap, part 1
 							P_DoBubbleBounce(player);
 						*momz = setmomz; // Therefore, you should be thrust in the opposite direction, vertically.
@@ -1690,7 +1690,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 						if (elementalpierce == 2) // Reset bubblewrap, part 2
 						{
 							boolean underwater = tmthing->eflags & MFE_UNDERWATER;
-							
+
 							if (underwater)
 								*momz /= 2;
 							*momz -= (*momz/(underwater ? 8 : 4)); // Cap the height!
