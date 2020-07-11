@@ -1674,6 +1674,18 @@ void F_GameEvaluationDrawer(void)
 			V_DrawString(8, 96, V_YELLOWMAP, "Modified games\ncan't unlock\nextras!");
 	}
 #endif
+
+	if (marathonmode)
+	{
+		const char *rtatext, *cuttext;
+		rtatext = (marathonmode & MA_INGAME) ? "In-game timer" : "RTA timer";
+		cuttext = (marathonmode & MA_NOCUTSCENES) ? "" : " w/ cutscenes";
+		if (botskin)
+			endingtext = va("%s & %s, %s%s", skins[players[consoleplayer].skin].realname, skins[botskin-1].realname, rtatext, cuttext);
+		else
+			endingtext = va("%s, %s%s", skins[players[consoleplayer].skin].realname, rtatext, cuttext);
+		V_DrawCenteredString(BASEVIDWIDTH/2, 182, (ultimatemode ? V_REDMAP : V_YELLOWMAP), endingtext);
+	}
 }
 
 void F_GameEvaluationTicker(void)
