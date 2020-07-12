@@ -4273,7 +4273,7 @@ static int CompareVisSprites(const void *p1, const void *p2)
 		else
 		{
 			tz1 = spr1->tz;
-			transparency1 = !spr1->precip && ((spr1->mobj->flags2 & MF2_SHADOW) || (spr1->mobj->frame & FF_TRANSMASK));
+			transparency1 = (!spr1->precip && (spr1->mobj->flags2 & MF2_SHADOW)) || (spr1->mobj->frame & FF_TRANSMASK);
 		}
 		if (linkdraw2)
 		{
@@ -4283,15 +4283,15 @@ static int CompareVisSprites(const void *p1, const void *p2)
 		else
 		{
 			tz2 = spr2->tz;
-			transparency2 = !spr2->precip && ((spr2->mobj->flags2 & MF2_SHADOW) || (spr2->mobj->frame & FF_TRANSMASK));
+			transparency2 = (!spr2->precip && (spr2->mobj->flags2 & MF2_SHADOW)) || (spr2->mobj->frame & FF_TRANSMASK);
 		}
 	}
 	else
 	{
 		tz1 = spr1->tz;
-		transparency1 = !spr1->precip && ((spr1->mobj->flags2 & MF2_SHADOW) || (spr1->mobj->frame & FF_TRANSMASK));
+		transparency1 = (!spr1->precip && (spr1->mobj->flags2 & MF2_SHADOW)) || (spr1->mobj->frame & FF_TRANSMASK);
 		tz2 = spr2->tz;
-		transparency2 = !spr2->precip && ((spr2->mobj->flags2 & MF2_SHADOW) || (spr2->mobj->frame & FF_TRANSMASK));
+		transparency2 = (!spr2->precip && (spr2->mobj->flags2 & MF2_SHADOW)) || (spr2->mobj->frame & FF_TRANSMASK);
 	}
 
 	// first compare transparency flags, then compare tz, then compare dispoffset
