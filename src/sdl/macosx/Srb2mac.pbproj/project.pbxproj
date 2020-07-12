@@ -1120,13 +1120,6 @@
 			path = ../../hardware/hw_md2.h;
 			refType = 2;
 		};
-		84177743085A106C000C01D8 = {
-			fileEncoding = 30;
-			isa = PBXFileReference;
-			name = hw_trick.c;
-			path = ../../hardware/hw_trick.c;
-			refType = 2;
-		};
 		84177744085A106C000C01D8 = {
 			fileEncoding = 30;
 			isa = PBXFileReference;

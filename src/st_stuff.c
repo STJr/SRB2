@@ -456,7 +456,7 @@ boolean st_overlay;
 //
 // Supports different colors! woo!
 static void ST_DrawNightsOverlayNum(fixed_t x /* right border */, fixed_t y, fixed_t s, INT32 a,
-	UINT32 num, patch_t **numpat, skincolors_t colornum)
+	UINT32 num, patch_t **numpat, skincolornum_t colornum)
 {
 	fixed_t w = SHORT(numpat[0]->width)*s;
 	const UINT8 *colormap;
@@ -763,7 +763,7 @@ static void ST_drawTime(void)
 		ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon, V_HUDTRANS); // Colon
 		ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2, V_HUDTRANS); // Seconds
 
-		if (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking) // there's not enough room for tics in splitscreen, don't even bother trying!
+		if (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking || marathonmode)
 		{
 			ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod, V_HUDTRANS); // Period
 			ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2, V_HUDTRANS); // Tics
@@ -821,7 +821,7 @@ static void ST_drawLivesArea(void)
 		// skincolor face/super
 		UINT8 *colormap = R_GetTranslationColormap(stplyr->skin, stplyr->mo->color, GTC_CACHE);
 		patch_t *face = faceprefix[stplyr->skin];
-		if (stplyr->powers[pw_super])
+		if (stplyr->powers[pw_super] && !(stplyr->charflags & SF_NOSUPERSPRITES))
 			face = superprefix[stplyr->skin];
 		V_DrawSmallMappedPatch(hudinfo[HUD_LIVES].x, hudinfo[HUD_LIVES].y,
 			hudinfo[HUD_LIVES].f|V_PERPLAYER|V_HUDTRANS, face, colormap);
@@ -992,7 +992,7 @@ static void ST_drawLivesArea(void)
 
 static void ST_drawInput(void)
 {
-	const INT32 accent = V_SNAPTOLEFT|V_SNAPTOBOTTOM|(stplyr->skincolor ? Color_Index[stplyr->skincolor-1][4] : 0);
+	const INT32 accent = V_SNAPTOLEFT|V_SNAPTOBOTTOM|(stplyr->skincolor ? skincolors[stplyr->skincolor].ramp[4] : 0);
 	INT32 col;
 	UINT8 offs;
 
@@ -1325,7 +1325,7 @@ void ST_drawTitleCard(void)
 {
 	char *lvlttl = mapheaderinfo[gamemap-1]->lvlttl;
 	char *subttl = mapheaderinfo[gamemap-1]->subttl;
-	INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
+	UINT8 actnum = mapheaderinfo[gamemap-1]->actnum;
 	INT32 lvlttlxpos, ttlnumxpos, zonexpos;
 	INT32 subttlxpos = BASEVIDWIDTH/2;
 	INT32 ttlscroll = FixedInt(lt_scroll);
@@ -1382,7 +1382,12 @@ void ST_drawTitleCard(void)
 	if (actnum)
 	{
 		if (!splitscreen)
-			V_DrawMappedPatch(ttlnumxpos + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);
+		{
+			if (actnum > 9) // slightly offset the act diamond for two-digit act numbers
+				V_DrawMappedPatch(ttlnumxpos + (V_LevelActNumWidth(actnum)/4) + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);
+			else
+				V_DrawMappedPatch(ttlnumxpos + ttlscroll, 104 - ttlscroll, 0, actpat, colormap);
+		}
 		V_DrawLevelActNum(ttlnumxpos + ttlscroll, 104, V_PERPLAYER, actnum);
 	}
 
@@ -1445,7 +1450,7 @@ static void ST_drawPowerupHUD(void)
 // ---------
 
 	// Let's have a power-like icon to represent finishing the level!
-	if (stplyr->pflags & PF_FINISHED && cv_exitmove.value)
+	if (stplyr->pflags & PF_FINISHED && cv_exitmove.value && multiplayer)
 	{
 		finishoffs[q] = ICONSEP;
 		V_DrawSmallScaledPatch(offs, hudinfo[HUD_POWERUPS].y, V_PERPLAYER|hudinfo[HUD_POWERUPS].f|V_HUDTRANS, fnshico);
@@ -1695,14 +1700,14 @@ static void ST_drawNightsRecords(void)
 
 // 2.0-1: [21:42] <+Rob> Beige - Lavender - Steel Blue - Peach - Orange - Purple - Silver - Yellow - Pink - Red - Blue - Green - Cyan - Gold
 /*#define NUMLINKCOLORS 14
-static skincolors_t linkColor[NUMLINKCOLORS] =
+static skincolornum_t linkColor[NUMLINKCOLORS] =
 {SKINCOLOR_BEIGE,  SKINCOLOR_LAVENDER, SKINCOLOR_AZURE, SKINCOLOR_PEACH, SKINCOLOR_ORANGE,
  SKINCOLOR_MAGENTA, SKINCOLOR_SILVER, SKINCOLOR_SUPERGOLD4, SKINCOLOR_PINK,  SKINCOLOR_RED,
  SKINCOLOR_BLUE, SKINCOLOR_GREEN, SKINCOLOR_CYAN, SKINCOLOR_GOLD};*/
 
 // 2.2 indev list: (unix time 1470866042) <Rob> Emerald, Aqua, Cyan, Blue, Pastel, Purple, Magenta, Rosy, Red, Orange, Gold, Yellow, Peridot
 /*#define NUMLINKCOLORS 13
-static skincolors_t linkColor[NUMLINKCOLORS] =
+static skincolornum_t linkColor[NUMLINKCOLORS] =
 {SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_BLUE, SKINCOLOR_PASTEL,
  SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA, SKINCOLOR_ROSY, SKINCOLOR_RED,  SKINCOLOR_ORANGE,
  SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT};*/
@@ -1711,7 +1716,7 @@ static skincolors_t linkColor[NUMLINKCOLORS] =
 // [20:00:25] <baldobo> Also Icy for the link freeze text color
 // [20:04:03] <baldobo> I would start it on lime
 /*#define NUMLINKCOLORS 18
-static skincolors_t linkColor[NUMLINKCOLORS] =
+static skincolornum_t linkColor[NUMLINKCOLORS] =
 {SKINCOLOR_LIME, SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_CYAN, SKINCOLOR_SKY,
  SKINCOLOR_SAPPHIRE, SKINCOLOR_PASTEL, SKINCOLOR_PURPLE, SKINCOLOR_BUBBLEGUM, SKINCOLOR_MAGENTA,
  SKINCOLOR_ROSY, SKINCOLOR_RUBY, SKINCOLOR_RED, SKINCOLOR_FLAME, SKINCOLOR_SUNSET,
@@ -1719,7 +1724,7 @@ static skincolors_t linkColor[NUMLINKCOLORS] =
 
 // 2.2+ list for real this time: https://wiki.srb2.org/wiki/User:Rob/Sandbox (check history around 31/10/17, spoopy)
 #define NUMLINKCOLORS 12
-static skincolors_t linkColor[2][NUMLINKCOLORS] = {
+static skincolornum_t linkColor[2][NUMLINKCOLORS] = {
 {SKINCOLOR_EMERALD, SKINCOLOR_AQUA, SKINCOLOR_SKY, SKINCOLOR_BLUE, SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,
  SKINCOLOR_ROSY, SKINCOLOR_RED, SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT},
 {SKINCOLOR_SEAFOAM, SKINCOLOR_CYAN, SKINCOLOR_WAVE, SKINCOLOR_SAPPHIRE, SKINCOLOR_VAPOR, SKINCOLOR_BUBBLEGUM,
@@ -1730,7 +1735,7 @@ static void ST_drawNiGHTSLink(void)
 	static INT32 prevsel[2] = {0, 0}, prevtime[2] = {0, 0};
 	const UINT8 q = ((splitscreen && stplyr == &players[secondarydisplayplayer]) ? 1 : 0);
 	INT32 sel = ((stplyr->linkcount-1) / 5) % NUMLINKCOLORS, aflag = V_PERPLAYER, mag = ((stplyr->linkcount-1 >= 300) ? 1 : 0);
-	skincolors_t colornum;
+	skincolornum_t colornum;
 	fixed_t x, y, scale;
 
 	if (sel != prevsel[q])
@@ -2210,7 +2215,7 @@ static void ST_drawTextHUD(void)
 	if (F_GetPromptHideHud(y))
 		return;
 
-	if (stplyr->spectator && (gametype != GT_COOP || stplyr->playerstate == PST_LIVE))
+	if (stplyr->spectator && (!G_CoopGametype() || stplyr->playerstate == PST_LIVE))
 		textHUDdraw(M_GetText("\x86""Spectator mode:"))
 
 	if (circuitmap)
@@ -2221,7 +2226,7 @@ static void ST_drawTextHUD(void)
 			textHUDdraw(va("Lap:""\x82 %u/%d", stplyr->laps+1, cv_numlaps.value))
 	}
 
-	if (gametype != GT_COOP && (stplyr->exiting || (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)))
+	if (!G_CoopGametype() && (stplyr->exiting || (G_GametypeUsesLives() && stplyr->lives <= 0 && countdown != 1)))
 	{
 		if (!splitscreen && !donef12)
 		{
@@ -2238,7 +2243,7 @@ static void ST_drawTextHUD(void)
 		else
 			textHUDdraw(M_GetText("\x82""JUMP:""\x80 Respawn"))
 	}
-	else if (stplyr->spectator && (gametype != GT_COOP || stplyr->playerstate == PST_LIVE))
+	else if (stplyr->spectator && (!G_CoopGametype() || stplyr->playerstate == PST_LIVE))
 	{
 		if (!splitscreen && !donef12)
 		{
@@ -2285,7 +2290,7 @@ static void ST_drawTextHUD(void)
 			textHUDdraw(M_GetText("\x82""FIRE:""\x80 Enter game"))
 	}
 
-	if (gametype == GT_COOP && (!stplyr->spectator || (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))) && (stplyr->exiting || (stplyr->pflags & PF_FINISHED)))
+	if (G_CoopGametype() && (!stplyr->spectator || (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))) && (stplyr->exiting || (stplyr->pflags & PF_FINISHED)))
 	{
 		UINT8 numneeded = (G_IsSpecialStage(gamemap) ? 4 : cv_playersforexit.value);
 		if (numneeded)
@@ -2334,20 +2339,19 @@ static void ST_drawTextHUD(void)
 					textHUDdraw(M_GetText("\x82""You are blindfolded!"))
 				textHUDdraw(M_GetText("Waiting for players to hide..."))
 			}
-			else if (gametype == GT_HIDEANDSEEK)
+			else if (gametyperules & GTR_HIDEFROZEN)
 				textHUDdraw(M_GetText("Hide before time runs out!"))
 			else
 				textHUDdraw(M_GetText("Flee before you are hunted!"))
 		}
-		else if (gametype == GT_HIDEANDSEEK && !(stplyr->pflags & PF_TAGIT))
+		else if ((gametyperules & GTR_HIDEFROZEN) && !(stplyr->pflags & PF_TAGIT))
 		{
 			if (!splitscreen && !donef12)
 			{
 				textHUDdraw(M_GetText("\x82""VIEWPOINT:""\x80 Switch view"))
 				donef12 = true;
 			}
-			if (gametyperules & GTR_HIDEFROZEN)
-				textHUDdraw(M_GetText("You cannot move while hiding."))
+			textHUDdraw(M_GetText("You cannot move while hiding."))
 		}
 	}
 
@@ -2623,11 +2627,11 @@ static void ST_overlayDrawer(void)
 	}
 
 	// GAME OVER hud
-	if ((gametype == GT_COOP)
+	if (G_GametypeUsesCoopLives()
 		&& (netgame || multiplayer)
 		&& (cv_cooplives.value == 0))
 	;
-	else if ((G_GametypeUsesLives() || gametype == GT_RACE) && stplyr->lives <= 0 && !(hu_showscores && (netgame || multiplayer)))
+	else if ((G_GametypeUsesLives() || ((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE)) && stplyr->lives <= 0 && !(hu_showscores && (netgame || multiplayer)))
 	{
 		INT32 i = MAXPLAYERS;
 		INT32 deadtimer = stplyr->spectator ? TICRATE : (stplyr->deadtimer-(TICRATE<<1));
