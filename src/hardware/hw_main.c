@@ -3454,6 +3454,54 @@ static gr_vissprite_t *HWR_NewVisSprite(void)
 	return HWR_GetVisSprite(gr_visspritecount++);
 }
 
+// A hack solution for transparent surfaces appearing on top of linkdraw sprites.
+// Keep a list of linkdraw sprites and draw their shapes to the z-buffer after all other
+// sprite drawing is done. (effectively the z-buffer drawing of linkdraw sprites is delayed)
+// NOTE: This will no longer be necessary once full translucent sorting is implemented, where
+// translucent sprites and surfaces are sorted together.
+
+typedef struct
+{
+	FOutVector verts[4];
+	gr_vissprite_t *spr;
+} zbuffersprite_t;
+
+// this list is used to store data about linkdraw sprites
+zbuffersprite_t linkdrawlist[MAXVISSPRITES];
+UINT32 linkdrawcount = 0;
+
+// add the necessary data to the list for delayed z-buffer drawing
+static void HWR_LinkDrawHackAdd(FOutVector *verts, gr_vissprite_t *spr)
+{
+	if (linkdrawcount < MAXVISSPRITES)
+	{
+		memcpy(linkdrawlist[linkdrawcount].verts, verts, sizeof(FOutVector) * 4);
+		linkdrawlist[linkdrawcount].spr = spr;
+		linkdrawcount++;
+	}
+}
+
+// process and clear the list of sprites for delayed z-buffer drawing
+static void HWR_LinkDrawHackFinish(void)
+{
+	UINT32 i;
+	FSurfaceInfo surf;
+	surf.PolyColor.rgba = 0xFFFFFFFF;
+	surf.TintColor.rgba = 0xFFFFFFFF;
+	surf.FadeColor.rgba = 0xFFFFFFFF;
+	surf.LightInfo.light_level = 0;
+	surf.LightInfo.fade_start = 0;
+	surf.LightInfo.fade_end = 31;
+	for (i = 0; i < linkdrawcount; i++)
+	{
+		// draw sprite shape, only to z-buffer
+		HWR_GetPatch(linkdrawlist[i].spr->gpatch);
+		HWR_ProcessPolygon(&surf, linkdrawlist[i].verts, 4, PF_Translucent|PF_Occlude|PF_Invisible|PF_Clip, 0, false);
+	}
+	// reset list
+	linkdrawcount = 0;
+}
+
 //
 // HWR_DoCulling
 // Hardware version of R_DoCulling
@@ -3640,6 +3688,8 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	extracolormap_t *colormap;
 	FUINT lightlevel;
 	FBITFIELD blend = 0;
+	FBITFIELD occlusion;
+	boolean use_linkdraw_hack = false;
 	UINT8 alpha;
 
 	INT32 i;
@@ -3733,10 +3783,18 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	// co-ordinates
 	memcpy(wallVerts, baseWallVerts, sizeof(baseWallVerts));
 
+	// if sprite has linkdraw, then dont write to z-buffer (by not using PF_Occlude)
+	// this will result in sprites drawn afterwards to be drawn on top like intended when using linkdraw.
+	if ((spr->mobj->flags2 & MF2_LINKDRAW) && spr->mobj->tracer)
+		occlusion = 0;
+	else
+		occlusion = PF_Occlude;
+
 	if (!cv_translucency.value) // translucency disabled
 	{
 		Surf.PolyColor.s.alpha = 0xFF;
-		blend = PF_Translucent|PF_Occlude;
+		blend = PF_Translucent|occlusion;
+		if (!occlusion) use_linkdraw_hack = true;
 	}
 	else if (spr->mobj->flags2 & MF2_SHADOW)
 	{
@@ -3752,7 +3810,8 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 		// Hurdler: PF_Environement would be cool, but we need to fix
 		//          the issue with the fog before
 		Surf.PolyColor.s.alpha = 0xFF;
-		blend = PF_Translucent|PF_Occlude;
+		blend = PF_Translucent|occlusion;
+		if (!occlusion) use_linkdraw_hack = true;
 	}
 
 	alpha = Surf.PolyColor.s.alpha;
@@ -3857,6 +3916,9 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 
 		HWR_ProcessPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip, 3, false); // sprite shader
 
+		if (use_linkdraw_hack)
+			HWR_LinkDrawHackAdd(wallVerts, spr);
+
 		top = bot;
 		endtop = endbot;
 	}
@@ -3882,6 +3944,9 @@ static void HWR_SplitSprite(gr_vissprite_t *spr)
 	Surf.PolyColor.s.alpha = alpha;
 
 	HWR_ProcessPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip, 3, false); // sprite shader
+
+	if (use_linkdraw_hack)
+		HWR_LinkDrawHackAdd(wallVerts, spr);
 }
 
 // -----------------+
@@ -4004,10 +4069,21 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 
 	{
 		FBITFIELD blend = 0;
+		FBITFIELD occlusion;
+		boolean use_linkdraw_hack = false;
+
+		// if sprite has linkdraw, then dont write to z-buffer (by not using PF_Occlude)
+		// this will result in sprites drawn afterwards to be drawn on top like intended when using linkdraw.
+		if ((spr->mobj->flags2 & MF2_LINKDRAW) && spr->mobj->tracer)
+			occlusion = 0;
+		else
+			occlusion = PF_Occlude;
+
 		if (!cv_translucency.value) // translucency disabled
 		{
 			Surf.PolyColor.s.alpha = 0xFF;
-			blend = PF_Translucent|PF_Occlude;
+			blend = PF_Translucent|occlusion;
+			if (!occlusion) use_linkdraw_hack = true;
 		}
 		else if (spr->mobj->flags2 & MF2_SHADOW)
 		{
@@ -4023,10 +4099,14 @@ static void HWR_DrawSprite(gr_vissprite_t *spr)
 			// Hurdler: PF_Environement would be cool, but we need to fix
 			//          the issue with the fog before
 			Surf.PolyColor.s.alpha = 0xFF;
-			blend = PF_Translucent|PF_Occlude;
+			blend = PF_Translucent|occlusion;
+			if (!occlusion) use_linkdraw_hack = true;
 		}
 
 		HWR_ProcessPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip, 3, false); // sprite shader
+
+		if (use_linkdraw_hack)
+			HWR_LinkDrawHackAdd(wallVerts, spr);
 	}
 }
 
@@ -4142,6 +4222,7 @@ static int CompareVisSprites(const void *p1, const void *p2)
 	gr_vissprite_t* spr2 = *(gr_vissprite_t*const*)p2;
 	int idiff;
 	float fdiff;
+	float tz1, tz2;
 
 	// Make transparent sprites last. Comment from the previous sort implementation:
 	// Sryder:	Oh boy, while it's nice having ALL the sprites sorted properly, it fails when we bring MD2's into the
@@ -4149,12 +4230,52 @@ static int CompareVisSprites(const void *p1, const void *p2)
 	//			everything else, but still ordered of course, the depth buffer can handle the opaque ones plenty fine.
 	//			We just need to move all translucent ones to the end in order
 	// TODO:	Fully sort all sprites and MD2s with walls and floors, this part will be unnecessary after that
-	int transparency1 = (spr1->mobj->flags2 & MF2_SHADOW) || (spr1->mobj->frame & FF_TRANSMASK);
-	int transparency2 = (spr2->mobj->flags2 & MF2_SHADOW) || (spr2->mobj->frame & FF_TRANSMASK);
+	int transparency1;
+	int transparency2;
+
+	int linkdraw1 = (spr1->mobj->flags2 & MF2_LINKDRAW) && spr1->mobj->tracer;
+	int linkdraw2 = (spr2->mobj->flags2 & MF2_LINKDRAW) && spr2->mobj->tracer;
+
+	// ^ is the XOR operation
+	// if comparing a linkdraw and non-linkdraw sprite or 2 linkdraw sprites with different tracers, then use
+	// the tracer's properties instead of the main sprite's.
+	if ((linkdraw1 && linkdraw2 && spr1->mobj->tracer != spr2->mobj->tracer) || (linkdraw1 ^ linkdraw2))
+	{
+		if (linkdraw1)
+		{
+			tz1 = spr1->tracertz;
+			transparency1 = (spr1->mobj->tracer->flags2 & MF2_SHADOW) || (spr1->mobj->tracer->frame & FF_TRANSMASK);
+		}
+		else
+		{
+			tz1 = spr1->tz;
+			transparency1 = (spr1->mobj->flags2 & MF2_SHADOW) || (spr1->mobj->frame & FF_TRANSMASK);
+		}
+		if (linkdraw2)
+		{
+			tz2 = spr2->tracertz;
+			transparency2 = (spr2->mobj->tracer->flags2 & MF2_SHADOW) || (spr2->mobj->tracer->frame & FF_TRANSMASK);
+		}
+		else
+		{
+			tz2 = spr2->tz;
+			transparency2 = (spr2->mobj->flags2 & MF2_SHADOW) || (spr2->mobj->frame & FF_TRANSMASK);
+		}
+	}
+	else
+	{
+		tz1 = spr1->tz;
+		transparency1 = (spr1->mobj->flags2 & MF2_SHADOW) || (spr1->mobj->frame & FF_TRANSMASK);
+		tz2 = spr2->tz;
+		transparency2 = (spr2->mobj->flags2 & MF2_SHADOW) || (spr2->mobj->frame & FF_TRANSMASK);
+	}
+
+	// first compare transparency flags, then compare tz, then compare dispoffset
+
 	idiff = transparency1 - transparency2;
 	if (idiff != 0) return idiff;
 
-	fdiff = spr2->tz - spr1->tz; // this order seems correct when checking with apitrace. Back to front.
+	fdiff = tz2 - tz1; // this order seems correct when checking with apitrace. Back to front.
 	if (fabsf(fdiff) < 1.0E-36f)
 		return spr1->dispoffset - spr2->dispoffset; // smallest dispoffset first if sprites are at (almost) same location.
 	else if (fdiff > 0)
@@ -4478,6 +4599,7 @@ static void HWR_CreateDrawNodes(void)
 static void HWR_DrawSprites(void)
 {
 	UINT32 i;
+	boolean skipshadow = false; // skip shadow if it was drawn already for a linkdraw sprite encountered earlier in the list
 	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_grmodellighting.value);
 	for (i = 0; i < gr_visspritecount; i++)
 	{
@@ -4488,9 +4610,30 @@ static void HWR_DrawSprites(void)
 		else
 #endif
 		{
-			if (spr->mobj && spr->mobj->shadowscale && cv_shadow.value)
+			if (spr->mobj && spr->mobj->shadowscale && cv_shadow.value && !skipshadow)
 			{
 				HWR_DrawDropShadow(spr->mobj, spr->mobj->shadowscale);
+			}
+
+			if ((spr->mobj->flags2 & MF2_LINKDRAW) && spr->mobj->tracer)
+			{
+				// If this linkdraw sprite is behind a sprite that has a shadow,
+				// then that shadow has to be drawn first, otherwise the shadow ends up on top of
+				// the linkdraw sprite because the linkdraw sprite does not modify the z-buffer.
+				// The !skipshadow check is there in case there are multiple linkdraw sprites connected
+				// to the same tracer, so the tracer's shadow only gets drawn once.
+				if (cv_shadow.value && !skipshadow && spr->dispoffset < 0 && spr->mobj->tracer->shadowscale)
+				{
+					HWR_DrawDropShadow(spr->mobj->tracer, spr->mobj->tracer->shadowscale);
+					skipshadow = true;
+					// The next sprite in this loop should be either another linkdraw sprite or the tracer.
+					// When the tracer is inevitably encountered, skipshadow will cause it's shadow
+					// to get skipped and skipshadow will get set to false by the 'else' clause below.
+				}
+			}
+			else
+			{
+				skipshadow = false;
 			}
 
 			if (spr->mobj && spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
@@ -4516,6 +4659,16 @@ static void HWR_DrawSprites(void)
 		}
 	}
 	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, 0);
+
+	// At the end of sprite drawing, draw shapes of linkdraw sprites to z-buffer, so they
+	// don't get drawn over by transparent surfaces.
+	HWR_LinkDrawHackFinish();
+	// Work around a r_opengl.c bug with PF_Invisible by making this SetBlend call
+	// where PF_Invisible is off and PF_Masked is on.
+	// (Other states probably don't matter. Here I left them same as in LinkDrawHackFinish)
+	// Without this workaround the rest of the draw calls in this frame (including UI, screen texture)
+	// can get drawn using an incorrect glBlendFunc, resulting in a occasional black screen.
+	HWD.pfnSetBlend(PF_Translucent|PF_Occlude|PF_Clip|PF_Masked);
 }
 
 // --------------------------------------------------------------------------
@@ -4577,6 +4730,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	gr_vissprite_t *vis;
 	float tr_x, tr_y;
 	float tz;
+	float tracertz = 0.0f;
 	float x1, x2;
 	float rightsin, rightcos;
 	float this_scale;
@@ -4591,6 +4745,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !(thing->frame & FF_VERTICALFLIP));
 	boolean mirrored = thing->mirrored;
 	boolean hflip = (!(thing->frame & FF_HORIZONTALFLIP) != !mirrored);
+	INT32 dispoffset;
 
 	angle_t ang;
 	INT32 heightsec, phs;
@@ -4607,6 +4762,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if (!thing)
 		return;
+
+	dispoffset = thing->info->dispoffset;
 
 	this_scale = FIXED_TO_FLOAT(thing->scale);
 
@@ -4820,9 +4977,28 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer)
 	{
-		// bodge support - not nearly as comprehensive as r_things.c, but better than nothing
 		if (! R_ThingVisible(thing->tracer))
 			return;
+
+		// calculate tz for tracer, same way it is calculated for this sprite
+		// transform the origin point
+		tr_x = FIXED_TO_FLOAT(thing->tracer->x) - gr_viewx;
+		tr_y = FIXED_TO_FLOAT(thing->tracer->y) - gr_viewy;
+
+		// rotation around vertical axis
+		tracertz = (tr_x * gr_viewcos) + (tr_y * gr_viewsin);
+
+		// Software does not render the linkdraw sprite if the tracer is behind the view plane,
+		// so do the same check here.
+		// NOTE: This check has the same flaw as the view plane check at the beginning of HWR_ProjectSprite:
+		// the view aiming angle is not taken into account, leading to sprites disappearing too early when they
+		// can still be seen when looking down/up at steep angles.
+		if (tracertz < ZCLIP_PLANE)
+			return;
+
+		// if the sprite is behind the tracer, invert dispoffset, putting the sprite behind the tracer
+		if (tz > tracertz)
+			dispoffset *= -1;
 	}
 
 	// store information in a vissprite
@@ -4830,7 +5006,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->x1 = x1;
 	vis->x2 = x2;
 	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
-	vis->dispoffset = thing->info->dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
+	vis->tracertz = tracertz;
+	vis->dispoffset = dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
 	//vis->patchlumpnum = sprframe->lumppat[rot];
 #ifdef ROTSPRITE
 	if (rotsprite)
