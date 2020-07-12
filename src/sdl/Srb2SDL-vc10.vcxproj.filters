@@ -219,6 +219,9 @@
     <ClInclude Include="..\hardware\hws_data.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
+    <ClInclude Include="..\hardware\hw_batching.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
     <ClInclude Include="..\hardware\hw_clip.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
@@ -636,6 +639,9 @@
     <ClCompile Include="..\hardware\hw3sound.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
+    <ClCompile Include="..\hardware\hw_batching.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
     <ClCompile Include="..\hardware\hw_bsp.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
@@ -664,9 +670,6 @@
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
     <ClCompile Include="..\hardware\hw_model.c">
-      <Filter>Hw_Hardware</Filter>
-    </ClCompile>
-    <ClCompile Include="..\hardware\hw_trick.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
     <ClCompile Include="..\hardware\u_list.c">

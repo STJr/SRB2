@@ -108,9 +108,6 @@
     <ClCompile Include="..\hardware\hw_md2.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
-    <ClCompile Include="..\hardware\hw_trick.c">
-      <Filter>Hw_Hardware</Filter>
-    </ClCompile>
     <ClCompile Include="..\hardware\hw3sound.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>

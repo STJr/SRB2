@@ -46,6 +46,8 @@ UINT32 I_GetFreeMem(UINT32 *total);
 */
 tic_t I_GetTime(void);
 
+int I_GetTimeMicros(void);// provides microsecond counter for render stats
+
 /**	\brief	The I_Sleep function
 
 	\return	void

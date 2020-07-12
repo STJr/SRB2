@@ -45,7 +45,7 @@
 #include "lua_hook.h"
 #include "md5.h"
 
-#ifdef CLIENT_LOADINGSCREEN
+#ifndef NONET
 // cl loading screen
 #include "v_video.h"
 #include "f_finale.h"
@@ -195,24 +195,25 @@ static inline void *G_ScpyTiccmd(ticcmd_t* dest, void* src, const size_t n)
 // of 512 bytes is like 0.1)
 UINT16 software_MAXPACKETLENGTH;
 
-/** Guesses the value of a tic from its lowest byte and from maketic
+/** Guesses the full value of a tic from its lowest byte, for a specific node
   *
   * \param low The lowest byte of the tic value
+  * \param node The node to deduce the tic for
   * \return The full tic value
   *
   */
-tic_t ExpandTics(INT32 low)
+tic_t ExpandTics(INT32 low, INT32 node)
 {
 	INT32 delta;
 
-	delta = low - (maketic & UINT8_MAX);
+	delta = low - (nettics[node] & UINT8_MAX);
 
 	if (delta >= -64 && delta <= 64)
-		return (maketic & ~UINT8_MAX) + low;
+		return (nettics[node] & ~UINT8_MAX) + low;
 	else if (delta > 64)
-		return (maketic & ~UINT8_MAX) - 256 + low;
+		return (nettics[node] & ~UINT8_MAX) - 256 + low;
 	else //if (delta < -64)
-		return (maketic & ~UINT8_MAX) + 256 + low;
+		return (nettics[node] & ~UINT8_MAX) + 256 + low;
 }
 
 // -----------------------------------------------------------------
@@ -522,6 +523,9 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->pflags = (UINT32)LONG(players[i].pflags); //pflags_t
 	rsp->panim  = (UINT8)players[i].panim; //panim_t
 
+	rsp->angleturn = (INT16)SHORT(players[i].angleturn);
+	rsp->oldrelangleturn = (INT16)SHORT(players[i].oldrelangleturn);
+
 	rsp->aiming = (angle_t)LONG(players[i].aiming);
 	rsp->currentweapon = LONG(players[i].currentweapon);
 	rsp->ringweapons = LONG(players[i].ringweapons);
@@ -662,6 +666,9 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].playerstate = (UINT8)rsp->playerstate; //playerstate_t
 	players[i].pflags = (UINT32)LONG(rsp->pflags); //pflags_t
 	players[i].panim  = (UINT8)rsp->panim; //panim_t
+
+	players[i].angleturn = (INT16)SHORT(rsp->angleturn);
+	players[i].oldrelangleturn = (INT16)SHORT(rsp->oldrelangleturn);
 
 	players[i].aiming = (angle_t)LONG(rsp->aiming);
 	players[i].currentweapon = LONG(rsp->currentweapon);
@@ -1100,19 +1107,13 @@ static void SV_AcknowledgeResynchAck(INT32 node, UINT8 rsg)
 
 static INT16 Consistancy(void);
 
-#ifndef NONET
-#define JOININGAME
-#endif
-
 typedef enum
 {
 	CL_SEARCHING,
 	CL_DOWNLOADFILES,
 	CL_ASKJOIN,
 	CL_WAITJOINRESPONSE,
-#ifdef JOININGAME
 	CL_DOWNLOADSAVEGAME,
-#endif
 	CL_CONNECTED,
 	CL_ABORTED
 } cl_mode_t;
@@ -1155,7 +1156,498 @@ static void CV_LoadPlayerNames(UINT8 **p)
 	}
 }
 
-#ifdef CLIENT_LOADINGSCREEN
+#ifndef NONET
+#define SNAKE_SPEED 5
+
+#define SNAKE_NUM_BLOCKS_X 20
+#define SNAKE_NUM_BLOCKS_Y 10
+#define SNAKE_BLOCK_SIZE 12
+#define SNAKE_BORDER_SIZE 12
+
+#define SNAKE_MAP_WIDTH  (SNAKE_NUM_BLOCKS_X * SNAKE_BLOCK_SIZE)
+#define SNAKE_MAP_HEIGHT (SNAKE_NUM_BLOCKS_Y * SNAKE_BLOCK_SIZE)
+
+#define SNAKE_LEFT_X ((BASEVIDWIDTH - SNAKE_MAP_WIDTH) / 2 - SNAKE_BORDER_SIZE)
+#define SNAKE_RIGHT_X (SNAKE_LEFT_X + SNAKE_MAP_WIDTH + SNAKE_BORDER_SIZE * 2 - 1)
+#define SNAKE_BOTTOM_Y (BASEVIDHEIGHT - 48)
+#define SNAKE_TOP_Y (SNAKE_BOTTOM_Y - SNAKE_MAP_HEIGHT - SNAKE_BORDER_SIZE * 2 + 1)
+
+enum snake_bonustype_s {
+	SNAKE_BONUS_NONE = 0,
+	SNAKE_BONUS_SLOW,
+	SNAKE_BONUS_FAST,
+	SNAKE_BONUS_GHOST,
+	SNAKE_BONUS_NUKE,
+	SNAKE_BONUS_SCISSORS,
+	SNAKE_BONUS_REVERSE,
+	SNAKE_BONUS_EGGMAN,
+	SNAKE_NUM_BONUSES,
+};
+
+static const char *snake_bonuspatches[] = {
+	NULL,
+	"DL_SLOW",
+	"TVSSC0",
+	"TVIVC0",
+	"TVARC0",
+	"DL_SCISSORS",
+	"TVRCC0",
+	"TVEGC0",
+};
+
+static const char *snake_backgrounds[] = {
+	"RVPUMICF",
+	"FRSTRCKF",
+	"TAR",
+	"MMFLRB4",
+	"RVDARKF1",
+	"RVZWALF1",
+	"RVZWALF4",
+	"RVZWALF5",
+	"RVZGRS02",
+	"RVZGRS04",
+};
+
+typedef struct snake_s
+{
+	boolean paused;
+	boolean pausepressed;
+	tic_t time;
+	tic_t nextupdate;
+	boolean gameover;
+	UINT8 background;
+
+	UINT16 snakelength;
+	enum snake_bonustype_s snakebonus;
+	tic_t snakebonustime;
+	UINT8 snakex[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
+	UINT8 snakey[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
+	UINT8 snakedir[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
+
+	UINT8 applex;
+	UINT8 appley;
+
+	enum snake_bonustype_s bonustype;
+	UINT8 bonusx;
+	UINT8 bonusy;
+} snake_t;
+
+static snake_t *snake = NULL;
+
+static void Snake_Initialise(void)
+{
+	if (!snake)
+		snake = malloc(sizeof(snake_t));
+
+	snake->paused = false;
+	snake->pausepressed = false;
+	snake->time = 0;
+	snake->nextupdate = SNAKE_SPEED;
+	snake->gameover = false;
+	snake->background = M_RandomKey(sizeof(snake_backgrounds) / sizeof(*snake_backgrounds));
+
+	snake->snakelength = 1;
+	snake->snakebonus = SNAKE_BONUS_NONE;
+	snake->snakex[0] = M_RandomKey(SNAKE_NUM_BLOCKS_X);
+	snake->snakey[0] = M_RandomKey(SNAKE_NUM_BLOCKS_Y);
+	snake->snakedir[0] = 0;
+	snake->snakedir[1] = 0;
+
+	snake->applex = M_RandomKey(SNAKE_NUM_BLOCKS_X);
+	snake->appley = M_RandomKey(SNAKE_NUM_BLOCKS_Y);
+
+	snake->bonustype = SNAKE_BONUS_NONE;
+}
+
+static UINT8 Snake_GetOppositeDir(UINT8 dir)
+{
+	if (dir == 1 || dir == 3)
+		return dir + 1;
+	else if (dir == 2 || dir == 4)
+		return dir - 1;
+	else
+		return 12 + 5 - dir;
+}
+
+static void Snake_FindFreeSlot(UINT8 *x, UINT8 *y, UINT8 headx, UINT8 heady)
+{
+	UINT16 i;
+
+	do
+	{
+		*x = M_RandomKey(SNAKE_NUM_BLOCKS_X);
+		*y = M_RandomKey(SNAKE_NUM_BLOCKS_Y);
+
+		for (i = 0; i < snake->snakelength; i++)
+			if (*x == snake->snakex[i] && *y == snake->snakey[i])
+				break;
+	} while (i < snake->snakelength || (*x == headx && *y == heady));
+}
+
+static void Snake_Handle(void)
+{
+	UINT8 x, y;
+	UINT8 oldx, oldy;
+	UINT16 i;
+
+	// Handle retry
+	if (snake->gameover && (PLAYER1INPUTDOWN(gc_jump) || gamekeydown[KEY_ENTER]))
+	{
+		Snake_Initialise();
+		snake->pausepressed = true; // Avoid accidental pause on respawn
+	}
+
+	// Handle pause
+	if (PLAYER1INPUTDOWN(gc_pause) || gamekeydown[KEY_ENTER])
+	{
+		if (!snake->pausepressed)
+			snake->paused = !snake->paused;
+		snake->pausepressed = true;
+	}
+	else
+		snake->pausepressed = false;
+
+	if (snake->paused)
+		return;
+
+	snake->time++;
+
+	x = snake->snakex[0];
+	y = snake->snakey[0];
+	oldx = snake->snakex[1];
+	oldy = snake->snakey[1];
+
+	// Update direction
+	if (gamekeydown[KEY_LEFTARROW])
+	{
+		if (snake->snakelength < 2 || x <= oldx)
+			snake->snakedir[0] = 1;
+	}
+	else if (gamekeydown[KEY_RIGHTARROW])
+	{
+		if (snake->snakelength < 2 || x >= oldx)
+			snake->snakedir[0] = 2;
+	}
+	else if (gamekeydown[KEY_UPARROW])
+	{
+		if (snake->snakelength < 2 || y <= oldy)
+			snake->snakedir[0] = 3;
+	}
+	else if (gamekeydown[KEY_DOWNARROW])
+	{
+		if (snake->snakelength < 2 || y >= oldy)
+			snake->snakedir[0] = 4;
+	}
+
+	if (snake->snakebonustime)
+	{
+		snake->snakebonustime--;
+		if (!snake->snakebonustime)
+			snake->snakebonus = SNAKE_BONUS_NONE;
+	}
+
+	snake->nextupdate--;
+	if (snake->nextupdate)
+		return;
+	if (snake->snakebonus == SNAKE_BONUS_SLOW)
+		snake->nextupdate = SNAKE_SPEED * 2;
+	else if (snake->snakebonus == SNAKE_BONUS_FAST)
+		snake->nextupdate = SNAKE_SPEED * 2 / 3;
+	else
+		snake->nextupdate = SNAKE_SPEED;
+
+	if (snake->gameover)
+		return;
+
+	// Find new position
+	switch (snake->snakedir[0])
+	{
+		case 1:
+			if (x > 0)
+				x--;
+			else
+				snake->gameover = true;
+			break;
+		case 2:
+			if (x < SNAKE_NUM_BLOCKS_X - 1)
+				x++;
+			else
+				snake->gameover = true;
+			break;
+		case 3:
+			if (y > 0)
+				y--;
+			else
+				snake->gameover = true;
+			break;
+		case 4:
+			if (y < SNAKE_NUM_BLOCKS_Y - 1)
+				y++;
+			else
+				snake->gameover = true;
+			break;
+	}
+
+	// Check collision with snake
+	if (snake->snakebonus != SNAKE_BONUS_GHOST)
+		for (i = 1; i < snake->snakelength - 1; i++)
+			if (x == snake->snakex[i] && y == snake->snakey[i])
+			{
+				if (snake->snakebonus == SNAKE_BONUS_SCISSORS)
+				{
+					snake->snakebonus = SNAKE_BONUS_NONE;
+					snake->snakelength = i;
+					S_StartSound(NULL, sfx_adderr);
+				}
+				else
+					snake->gameover = true;
+			}
+
+	if (snake->gameover)
+	{
+		S_StartSound(NULL, sfx_lose);
+		return;
+	}
+
+	// Check collision with apple
+	if (x == snake->applex && y == snake->appley)
+	{
+		if (snake->snakelength + 1 < SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y)
+		{
+			snake->snakelength++;
+			snake->snakex  [snake->snakelength - 1] = snake->snakex  [snake->snakelength - 2];
+			snake->snakey  [snake->snakelength - 1] = snake->snakey  [snake->snakelength - 2];
+			snake->snakedir[snake->snakelength - 1] = snake->snakedir[snake->snakelength - 2];
+		}
+
+		// Spawn new apple
+		Snake_FindFreeSlot(&snake->applex, &snake->appley, x, y);
+
+		// Spawn new bonus
+		if (!(snake->snakelength % 5))
+		{
+			do
+			{
+				snake->bonustype = M_RandomKey(SNAKE_NUM_BONUSES - 1) + 1;
+			} while (snake->snakelength > SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y * 3 / 4
+				&& (snake->bonustype == SNAKE_BONUS_EGGMAN || snake->bonustype == SNAKE_BONUS_FAST || snake->bonustype == SNAKE_BONUS_REVERSE));
+
+			Snake_FindFreeSlot(&snake->bonusx, &snake->bonusy, x, y);
+		}
+
+		S_StartSound(NULL, sfx_s3k6b);
+	}
+
+	if (snake->snakelength > 1 && snake->snakedir[0])
+	{
+		UINT8 dir = snake->snakedir[0];
+
+		oldx = snake->snakex[1];
+		oldy = snake->snakey[1];
+
+		// Move
+		for (i = snake->snakelength - 1; i > 0; i--)
+		{
+			snake->snakex[i] = snake->snakex[i - 1];
+			snake->snakey[i] = snake->snakey[i - 1];
+			snake->snakedir[i] = snake->snakedir[i - 1];
+		}
+
+		// Handle corners
+		if      (x < oldx && dir == 3)
+			dir = 5;
+		else if (x > oldx && dir == 3)
+			dir = 6;
+		else if (x < oldx && dir == 4)
+			dir = 7;
+		else if (x > oldx && dir == 4)
+			dir = 8;
+		else if (y < oldy && dir == 1)
+			dir = 9;
+		else if (y < oldy && dir == 2)
+			dir = 10;
+		else if (y > oldy && dir == 1)
+			dir = 11;
+		else if (y > oldy && dir == 2)
+			dir = 12;
+		snake->snakedir[1] = dir;
+	}
+
+	snake->snakex[0] = x;
+	snake->snakey[0] = y;
+
+	// Check collision with bonus
+	if (snake->bonustype != SNAKE_BONUS_NONE && x == snake->bonusx && y == snake->bonusy)
+	{
+		S_StartSound(NULL, sfx_ncchip);
+
+		switch (snake->bonustype)
+		{
+		case SNAKE_BONUS_SLOW:
+			snake->snakebonus = SNAKE_BONUS_SLOW;
+			snake->snakebonustime = 20 * TICRATE;
+			break;
+		case SNAKE_BONUS_FAST:
+			snake->snakebonus = SNAKE_BONUS_FAST;
+			snake->snakebonustime = 20 * TICRATE;
+			break;
+		case SNAKE_BONUS_GHOST:
+			snake->snakebonus = SNAKE_BONUS_GHOST;
+			snake->snakebonustime = 10 * TICRATE;
+			break;
+		case SNAKE_BONUS_NUKE:
+			for (i = 0; i < snake->snakelength; i++)
+			{
+				snake->snakex  [i] = snake->snakex  [0];
+				snake->snakey  [i] = snake->snakey  [0];
+				snake->snakedir[i] = snake->snakedir[0];
+			}
+
+			S_StartSound(NULL, sfx_bkpoof);
+			break;
+		case SNAKE_BONUS_SCISSORS:
+			snake->snakebonus = SNAKE_BONUS_SCISSORS;
+			snake->snakebonustime = 60 * TICRATE;
+			break;
+		case SNAKE_BONUS_REVERSE:
+			for (i = 0; i < (snake->snakelength + 1) / 2; i++)
+			{
+				UINT16 i2 = snake->snakelength - 1 - i;
+				UINT8 tmpx   = snake->snakex  [i];
+				UINT8 tmpy   = snake->snakey  [i];
+				UINT8 tmpdir = snake->snakedir[i];
+
+				// Swap first segment with last segment
+				snake->snakex  [i] = snake->snakex  [i2];
+				snake->snakey  [i] = snake->snakey  [i2];
+				snake->snakedir[i] = Snake_GetOppositeDir(snake->snakedir[i2]);
+				snake->snakex  [i2] = tmpx;
+				snake->snakey  [i2] = tmpy;
+				snake->snakedir[i2] = Snake_GetOppositeDir(tmpdir);
+			}
+
+			snake->snakedir[0] = 0;
+
+			S_StartSound(NULL, sfx_gravch);
+			break;
+		default:
+			if (snake->snakebonus != SNAKE_BONUS_GHOST)
+			{
+				snake->gameover = true;
+				S_StartSound(NULL, sfx_lose);
+			}
+		}
+
+		snake->bonustype = SNAKE_BONUS_NONE;
+	}
+}
+
+static void Snake_Draw(void)
+{
+	INT16 i;
+
+	// Background
+	V_DrawFlatFill(
+		SNAKE_LEFT_X + SNAKE_BORDER_SIZE,
+		SNAKE_TOP_Y  + SNAKE_BORDER_SIZE,
+		SNAKE_MAP_WIDTH,
+		SNAKE_MAP_HEIGHT,
+		W_GetNumForName(snake_backgrounds[snake->background])
+	);
+
+	// Borders
+	V_DrawFill(SNAKE_LEFT_X, SNAKE_TOP_Y, SNAKE_BORDER_SIZE + SNAKE_MAP_WIDTH, SNAKE_BORDER_SIZE, 242); // Top
+	V_DrawFill(SNAKE_LEFT_X + SNAKE_BORDER_SIZE + SNAKE_MAP_WIDTH, SNAKE_TOP_Y, SNAKE_BORDER_SIZE, SNAKE_BORDER_SIZE + SNAKE_MAP_HEIGHT, 242); // Right
+	V_DrawFill(SNAKE_LEFT_X + SNAKE_BORDER_SIZE, SNAKE_TOP_Y + SNAKE_BORDER_SIZE + SNAKE_MAP_HEIGHT, SNAKE_BORDER_SIZE + SNAKE_MAP_WIDTH, SNAKE_BORDER_SIZE, 242); // Bottom
+	V_DrawFill(SNAKE_LEFT_X, SNAKE_TOP_Y + SNAKE_BORDER_SIZE, SNAKE_BORDER_SIZE, SNAKE_BORDER_SIZE + SNAKE_MAP_HEIGHT, 242); // Left
+
+	// Apple
+	V_DrawFixedPatch(
+		(SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->applex * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
+		(SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->appley * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
+		FRACUNIT / 4,
+		0,
+		W_CachePatchLongName("DL_APPLE", PU_HUDGFX),
+		NULL
+	);
+
+	// Bonus
+	if (snake->bonustype != SNAKE_BONUS_NONE)
+		V_DrawFixedPatch(
+			(SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->bonusx * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2    ) * FRACUNIT,
+			(SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->bonusy * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2 + 4) * FRACUNIT,
+			FRACUNIT / 2,
+			0,
+			W_CachePatchLongName(snake_bonuspatches[snake->bonustype], PU_HUDGFX),
+			NULL
+		);
+
+	// Snake
+	if (!snake->gameover || snake->time % 8 < 8 / 2) // Blink if game over
+	{
+		for (i = snake->snakelength - 1; i >= 0; i--)
+		{
+			const char *patchname;
+			UINT8 dir = snake->snakedir[i];
+
+			if (i == 0) // Head
+			{
+				switch (dir)
+				{
+					case  1: patchname = "DL_SNAKEHEAD_L"; break;
+					case  2: patchname = "DL_SNAKEHEAD_R"; break;
+					case  3: patchname = "DL_SNAKEHEAD_T"; break;
+					case  4: patchname = "DL_SNAKEHEAD_B"; break;
+					default: patchname = "DL_SNAKEHEAD_M";
+				}
+			}
+			else // Body
+			{
+				switch (dir)
+				{
+					case  1: patchname = "DL_SNAKEBODY_L"; break;
+					case  2: patchname = "DL_SNAKEBODY_R"; break;
+					case  3: patchname = "DL_SNAKEBODY_T"; break;
+					case  4: patchname = "DL_SNAKEBODY_B"; break;
+					case  5: patchname = "DL_SNAKEBODY_LT"; break;
+					case  6: patchname = "DL_SNAKEBODY_RT"; break;
+					case  7: patchname = "DL_SNAKEBODY_LB"; break;
+					case  8: patchname = "DL_SNAKEBODY_RB"; break;
+					case  9: patchname = "DL_SNAKEBODY_TL"; break;
+					case 10: patchname = "DL_SNAKEBODY_TR"; break;
+					case 11: patchname = "DL_SNAKEBODY_BL"; break;
+					case 12: patchname = "DL_SNAKEBODY_BR"; break;
+					default: patchname = "DL_SNAKEBODY_B";
+				}
+			}
+
+			V_DrawFixedPatch(
+				(SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->snakex[i] * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
+				(SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->snakey[i] * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
+				i == 0 && dir == 0 ? FRACUNIT / 5 : FRACUNIT / 2,
+				snake->snakebonus == SNAKE_BONUS_GHOST ? V_TRANSLUCENT : 0,
+				W_CachePatchLongName(patchname, PU_HUDGFX),
+				NULL
+			);
+		}
+	}
+
+	// Length
+	V_DrawString(SNAKE_RIGHT_X + 4, SNAKE_TOP_Y, V_MONOSPACE, va("%u", snake->snakelength));
+
+	// Bonus
+	if (snake->snakebonus != SNAKE_BONUS_NONE
+	&& (snake->snakebonustime >= 3 * TICRATE || snake->time % 4 < 4 / 2))
+		V_DrawFixedPatch(
+			(SNAKE_RIGHT_X + 10) * FRACUNIT,
+			(SNAKE_TOP_Y + 24) * FRACUNIT,
+			FRACUNIT / 2,
+			0,
+			W_CachePatchLongName(snake_bonuspatches[snake->snakebonus], PU_HUDGFX),
+			NULL
+		);
+}
+
 //
 // CL_DrawConnectionStatus
 //
@@ -1170,8 +1662,8 @@ static inline void CL_DrawConnectionStatus(void)
 		V_DrawFadeScreen(0xFF00, 16); // force default
 
 	// Draw the bottom box.
-	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-24-8, 32, 1);
-	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-24-24, V_YELLOWMAP, "Press ESC to abort");
+	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
+	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
 
 	if (cl_mode != CL_DOWNLOADFILES)
 	{
@@ -1180,26 +1672,37 @@ static inline void CL_DrawConnectionStatus(void)
 		// 15 pal entries total.
 		const char *cltext;
 
-		for (i = 0; i < 16; ++i)
-			V_DrawFill((BASEVIDWIDTH/2-128) + (i * 16), BASEVIDHEIGHT-24, 16, 8, palstart + ((animtime - i) & 15));
+		if (!(cl_mode == CL_DOWNLOADSAVEGAME && lastfilenum != -1))
+			for (i = 0; i < 16; ++i)
+				V_DrawFill((BASEVIDWIDTH/2-128) + (i * 16), BASEVIDHEIGHT-16, 16, 8, palstart + ((animtime - i) & 15));
 
 		switch (cl_mode)
 		{
-#ifdef JOININGAME
 			case CL_DOWNLOADSAVEGAME:
 				if (lastfilenum != -1)
 				{
+					UINT32 currentsize = fileneeded[lastfilenum].currentsize;
+					UINT32 totalsize = fileneeded[lastfilenum].totalsize;
+					INT32 dldlength;
+
 					cltext = M_GetText("Downloading game state...");
 					Net_GetNetStat();
-					V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
-						va(" %4uK",fileneeded[lastfilenum].currentsize>>10));
-					V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
+
+					dldlength = (INT32)((currentsize/(double)totalsize) * 256);
+					if (dldlength > 256)
+						dldlength = 256;
+					V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
+					V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, dldlength, 8, 96);
+
+					V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
+						va(" %4uK/%4uK",currentsize>>10,totalsize>>10));
+
+					V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
 						va("%3.1fK/s ", ((double)getbps)/1024));
 				}
 				else
 					cltext = M_GetText("Waiting to download game state...");
 				break;
-#endif
 			case CL_ASKJOIN:
 			case CL_WAITJOINRESPONSE:
 				cltext = M_GetText("Requesting to join...");
@@ -1208,7 +1711,7 @@ static inline void CL_DrawConnectionStatus(void)
 				cltext = M_GetText("Connecting to server...");
 				break;
 		}
-		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-24-32, V_YELLOWMAP, cltext);
+		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP, cltext);
 	}
 	else
 	{
@@ -1219,12 +1722,14 @@ static inline void CL_DrawConnectionStatus(void)
 			fileneeded_t *file = &fileneeded[lastfilenum];
 			char *filename = file->filename;
 
+			Snake_Draw();
+
 			Net_GetNetStat();
 			dldlength = (INT32)((file->currentsize/(double)file->totalsize) * 256);
 			if (dldlength > 256)
 				dldlength = 256;
-			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, 256, 8, 111);
-			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, dldlength, 8, 96);
+			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
+			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, dldlength, 8, 96);
 
 			memset(tempname, 0, sizeof(tempname));
 			// offset filename to just the name only part
@@ -1242,15 +1747,15 @@ static inline void CL_DrawConnectionStatus(void)
 				strncpy(tempname, filename, sizeof(tempname)-1);
 			}
 
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-24-32, V_YELLOWMAP,
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP,
 				va(M_GetText("Downloading \"%s\""), tempname));
-			V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
+			V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
 				va(" %4uK/%4uK",fileneeded[lastfilenum].currentsize>>10,file->totalsize>>10));
-			V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-24, V_20TRANS|V_MONOSPACE,
+			V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
 				va("%3.1fK/s ", ((double)getbps)/1024));
 		}
 		else
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-24-32, V_YELLOWMAP,
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP,
 				M_GetText("Waiting to download files..."));
 	}
 }
@@ -1495,7 +2000,7 @@ static boolean SV_SendServerConfig(INT32 node)
 		if (!playeringame[i])
 			continue;
 		netbuffer->u.servercfg.playerskins[i] = (UINT8)players[i].skin;
-		netbuffer->u.servercfg.playercolor[i] = (UINT8)players[i].skincolor;
+		netbuffer->u.servercfg.playercolor[i] = (UINT16)players[i].skincolor;
 		netbuffer->u.servercfg.playeravailabilities[i] = (UINT32)LONG(players[i].availabilities);
 	}
 
@@ -1535,7 +2040,7 @@ static boolean SV_SendServerConfig(INT32 node)
 	return waspacketsent;
 }
 
-#ifdef JOININGAME
+#ifndef NONET
 #define SAVEGAMESIZE (768*1024)
 
 static void SV_SendSaveGame(INT32 node)
@@ -1598,7 +2103,7 @@ static void SV_SendSaveGame(INT32 node)
 		WRITEUINT32(savebuffer, 0);
 	}
 
-	SV_SendRam(node, buffertosend, length, SF_RAM, 0);
+	AddRamToSendQueue(node, buffertosend, length, SF_RAM, 0);
 	save_p = NULL;
 
 	// Remember when we started sending the savegame so we can handle timeouts
@@ -1690,7 +2195,7 @@ static void CL_LoadReceivedSavegame(void)
 	// load a base level
 	if (P_LoadNetGame())
 	{
-		const INT32 actnum = mapheaderinfo[gamemap-1]->actnum;
+		const UINT8 actnum = mapheaderinfo[gamemap-1]->actnum;
 		CONS_Printf(M_GetText("Map is now \"%s"), G_BuildMapName(gamemap));
 		if (strcmp(mapheaderinfo[gamemap-1]->lvlttl, ""))
 		{
@@ -1831,8 +2336,8 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 		if (server_list)
 		{
 			char version[8] = "";
-#if VERSION > 0 || SUBVERSION > 0
-			snprintf(version, sizeof (version), "%d.%d.%d", VERSION/100, VERSION%100, SUBVERSION);
+#ifndef DEVELOP
+			strcpy(version, SRB2VERSION);
 #else
 			strcpy(version, GetRevisionString());
 #endif
@@ -1978,8 +2483,13 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 					return false;
 				}
 				// no problem if can't send packet, we will retry later
-				if (CL_SendRequestFile())
+				if (CL_SendFileRequest())
+				{
 					cl_mode = CL_DOWNLOADFILES;
+#ifndef NONET
+					Snake_Initialise();
+#endif
+				}
 			}
 		}
 		else
@@ -2043,12 +2553,20 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 			if (waitmore)
 				break; // exit the case
 
+#ifndef NONET
+			if (snake)
+			{
+				free(snake);
+				snake = NULL;
+			}
+#endif
+
 			cl_mode = CL_ASKJOIN; // don't break case continue to cljoin request now
 			/* FALLTHRU */
 
 		case CL_ASKJOIN:
 			CL_LoadServerFiles();
-#ifdef JOININGAME
+#ifndef NONET
 			// prepare structures to save the file
 			// WARNING: this can be useless in case of server not in GS_LEVEL
 			// but since the network layer doesn't provide ordered packets...
@@ -2058,7 +2576,7 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 				cl_mode = CL_WAITJOINRESPONSE;
 			break;
 
-#ifdef JOININGAME
+#ifndef NONET
 		case CL_DOWNLOADSAVEGAME:
 			// At this state, the first (and only) needed file is the gamestate
 			if (fileneeded[0].status == FS_FOUND)
@@ -2089,36 +2607,58 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 	// Call it only once by tic
 	if (*oldtic != I_GetTime())
 	{
-		INT32 key;
-
 		I_OsPolling();
-		key = I_GetKey();
-		if (key == KEY_ESCAPE || key == KEY_JOY1+1)
+		for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
+			G_MapEventsToControls(&events[eventtail]);
+
+		if (gamekeydown[KEY_ESCAPE] || gamekeydown[KEY_JOY1+1])
 		{
 			CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
 //				M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
+
+#ifndef NONET
+			if (snake)
+			{
+				free(snake);
+				snake = NULL;
+			}
+#endif
+
 			D_QuitNetGame();
 			CL_Reset();
 			D_StartTitle();
+			memset(gamekeydown, 0, NUMKEYS);
 			return false;
 		}
+#ifndef NONET
+		else if (cl_mode == CL_DOWNLOADFILES && snake)
+			Snake_Handle();
+#endif
+
+		if (client && (cl_mode == CL_DOWNLOADFILES || cl_mode == CL_DOWNLOADSAVEGAME))
+			FileReceiveTicker();
 
 		// why are these here? this is for servers, we're a client
 		//if (key == 's' && server)
 		//	doomcom->numnodes = (INT16)pnumnodes;
-		//SV_FileSendTicker();
+		//FileSendTicker();
 		*oldtic = I_GetTime();
 
-#ifdef CLIENT_LOADINGSCREEN
+#ifndef NONET
 		if (client && cl_mode != CL_CONNECTED && cl_mode != CL_ABORTED)
 		{
-			F_MenuPresTicker(true); // title sky
-			F_TitleScreenTicker(true);
-			F_TitleScreenDrawer();
+			if (cl_mode != CL_DOWNLOADFILES && cl_mode != CL_DOWNLOADSAVEGAME)
+			{
+				F_MenuPresTicker(true); // title sky
+				F_TitleScreenTicker(true);
+				F_TitleScreenDrawer();
+			}
 			CL_DrawConnectionStatus();
 			I_UpdateNoVsync(); // page flip or blit buffer
 			if (moviemode)
 				M_SaveFrame();
+			S_UpdateSounds();
+			S_UpdateClosedCaptions();
 		}
 #else
 		CON_Drawer();
@@ -2143,20 +2683,16 @@ static void CL_ConnectToServer(boolean viams)
 	tic_t oldtic;
 #ifndef NONET
 	tic_t asksent;
-#endif
-#ifdef JOININGAME
 	char tmpsave[256];
 
 	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
+
+	lastfilenum = -1;
 #endif
 
 	cl_mode = CL_SEARCHING;
 
-#ifdef CLIENT_LOADINGSCREEN
-	lastfilenum = -1;
-#endif
-
-#ifdef JOININGAME
+#ifndef NONET
 	// Don't get a corrupt savegame error because tmpsave already exists
 	if (FIL_FileExists(tmpsave) && unlink(tmpsave) == -1)
 		I_Error("Can't delete %s\n", tmpsave);
@@ -3036,6 +3572,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	if (pnum == consoleplayer)
 	{
+		if (Playing())
+			LUAh_GameQuit();
 #ifdef DUMPCONSISTENCY
 		if (msg == KICK_MSG_CON_FAIL) SV_SavedGame();
 #endif
@@ -3240,6 +3778,7 @@ void D_QuitNetGame(void)
 	CloseNetFile();
 	RemoveAllLuaFileTransfers();
 	waitingforluafiletransfer = false;
+	waitingforluafilecommand = false;
 
 	if (server)
 	{
@@ -3291,7 +3830,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 	boolean splitscreenplayer;
 	boolean rejoined;
 	player_t *newplayer;
-	char *port;
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -3322,10 +3860,15 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 
 		if (server && I_GetNodeAddress)
 		{
-			strcpy(playeraddress[newplayernum], I_GetNodeAddress(node));
-			port = strchr(playeraddress[newplayernum], ':');
-			if (port)
-				*port = '\0';
+			const char *address = I_GetNodeAddress(node);
+			char *port = NULL;
+			if (address) // MI: fix msvcrt.dll!_mbscat crash?
+			{
+				strcpy(playeraddress[newplayernum], address);
+				port = strchr(playeraddress[newplayernum], ':');
+				if (port)
+					*port = '\0';
+			}
 		}
 	}
 
@@ -3346,6 +3889,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			displayplayer = newplayernum;
 			secondarydisplayplayer = newplayernum;
 			DEBFILE("spawning me\n");
+			ticcmd_oldangleturn[0] = newplayer->oldrelangleturn;
 		}
 		else
 		{
@@ -3353,7 +3897,9 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 			DEBFILE("spawning my brother\n");
 			if (botingame)
 				newplayer->bot = 1;
+			ticcmd_oldangleturn[1] = newplayer->oldrelangleturn;
 		}
+		P_ForceLocalAngle(newplayer, (angle_t)(newplayer->angleturn << 16));
 		D_SendPlayerConfig();
 		addedtogame = true;
 
@@ -3361,11 +3907,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		{
 			if (newplayer->mo)
 			{
-				if (!splitscreenplayer)
-					localangle = newplayer->mo->angle;
-				else
-					localangle2 = newplayer->mo->angle;
-
 				newplayer->viewheight = 41*newplayer->height/48;
 
 				if (newplayer->mo->eflags & MFE_VERTICALFLIP)
@@ -3672,7 +4213,7 @@ static void HandleConnect(SINT8 node)
 			G_SetGamestate(backupstate);
 			DEBFILE("new node joined\n");
 		}
-#ifdef JOININGAME
+#ifndef NONET
 		if (nodewaiting[node])
 		{
 			if ((gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) && newnode)
@@ -3684,11 +4225,6 @@ static void HandleConnect(SINT8 node)
 			joindelay += cv_joindelay.value * TICRATE;
 			player_joining = true;
 		}
-#else
-#ifndef NONET
-		// I guess we have no use for this if we aren't doing mid-level joins?
-		(void)newnode;
-#endif
 #endif
 	}
 }
@@ -3701,6 +4237,8 @@ static void HandleConnect(SINT8 node)
 static void HandleShutdown(SINT8 node)
 {
 	(void)node;
+	if (Playing())
+		LUAh_GameQuit();
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -3715,6 +4253,8 @@ static void HandleShutdown(SINT8 node)
 static void HandleTimeout(SINT8 node)
 {
 	(void)node;
+	if (Playing())
+		LUAh_GameQuit();
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -3866,7 +4406,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				playernode[(UINT8)serverplayer] = servernode;
 
 			if (netgame)
-#ifdef JOININGAME
+#ifndef NONET
 				CONS_Printf(M_GetText("Join accepted, waiting for complete game state...\n"));
 #else
 				CONS_Printf(M_GetText("Join accepted, waiting for next level change...\n"));
@@ -3877,7 +4417,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			for (j = 0; j < MAXPLAYERS; j++)
 			{
 				if (netbuffer->u.servercfg.playerskins[j] == 0xFF
-				 && netbuffer->u.servercfg.playercolor[j] == 0xFF
+				 && netbuffer->u.servercfg.playercolor[j] == 0xFFFF
 				 && netbuffer->u.servercfg.playeravailabilities[j] == 0xFFFFFFFF)
 					continue; // not in game
 
@@ -3890,7 +4430,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 			scp = netbuffer->u.servercfg.varlengthinputs;
 			CV_LoadPlayerNames(&scp);
 			CV_LoadNetVars(&scp);
-#ifdef JOININGAME
+#ifndef NONET
 			/// \note Wait. What if a Lua script uses some global custom variables synched with the NetVars hook?
 			///       Shouldn't them be downloaded even at intermission time?
 			///       Also, according to HandleConnect, the server will send the savegame even during intermission...
@@ -3911,13 +4451,23 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				break;
 			}
 			SERVERONLY
-			Got_Filetxpak();
+			PT_FileFragment();
+			break;
+
+		case PT_FILEACK:
+			if (server)
+				PT_FileAck();
+			break;
+
+		case PT_FILERECEIVED:
+			if (server)
+				PT_FileReceived();
 			break;
 
 		case PT_REQUESTFILE:
 			if (server)
 			{
-				if (!cv_downloading.value || !Got_RequestFilePak(node))
+				if (!cv_downloading.value || !PT_RequestFile(node))
 					Net_CloseConnection(node); // close connection if one of the requested files could not be sent, or you disabled downloading anyway
 			}
 			else
@@ -3999,8 +4549,8 @@ static void HandlePacketFromPlayer(SINT8 node)
 
 			// To save bytes, only the low byte of tic numbers are sent
 			// Use ExpandTics to figure out what the rest of the bytes are
-			realstart = ExpandTics(netbuffer->u.clientpak.client_tic);
-			realend = ExpandTics(netbuffer->u.clientpak.resendfrom);
+			realstart = ExpandTics(netbuffer->u.clientpak.client_tic, node);
+			realend = ExpandTics(netbuffer->u.clientpak.resendfrom, node);
 
 			if (netbuffer->packettype == PT_CLIENTMIS || netbuffer->packettype == PT_CLIENT2MIS
 				|| netbuffer->packettype == PT_NODEKEEPALIVEMIS
@@ -4213,11 +4763,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 			break;
 		case PT_ASKLUAFILE:
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_ASKED)
-			{
-				char *name = va("%s" PATHSEP "%s", luafiledir, luafiletransfers->filename);
-				boolean textmode = !strchr(luafiletransfers->mode, 'b');
-				SV_SendLuaFile(node, name, textmode);
-			}
+				AddLuaFileToSendQueue(node, luafiletransfers->realfilename);
 			break;
 		case PT_HASLUAFILE:
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_SENDING)
@@ -4252,15 +4798,15 @@ static void HandlePacketFromPlayer(SINT8 node)
 				break;
 			}
 
-			realstart = ExpandTics(netbuffer->u.serverpak.starttic);
+			realstart = netbuffer->u.serverpak.starttic;
 			realend = realstart + netbuffer->u.serverpak.numtics;
 
 			if (!txtpak)
 				txtpak = (UINT8 *)&netbuffer->u.serverpak.cmds[netbuffer->u.serverpak.numslots
 					* netbuffer->u.serverpak.numtics];
 
-			if (realend > gametic + BACKUPTICS)
-				realend = gametic + BACKUPTICS;
+			if (realend > gametic + CLIENTBACKUPTICS)
+				realend = gametic + CLIENTBACKUPTICS;
 			cl_packetmissed = realstart > neededtic;
 
 			if (realstart <= neededtic && realend > neededtic)
@@ -4348,7 +4894,15 @@ static void HandlePacketFromPlayer(SINT8 node)
 				break;
 			}
 			if (client)
-				Got_Filetxpak();
+				PT_FileFragment();
+			break;
+		case PT_FILEACK:
+			if (server)
+				PT_FileAck();
+			break;
+		case PT_FILERECEIVED:
+			if (server)
+				PT_FileReceived();
 			break;
 		case PT_SENDINGLUAFILE:
 			if (client)
@@ -4603,11 +5157,11 @@ static void SV_SendTics(void)
 	for (n = 1; n < MAXNETNODES; n++)
 		if (nodeingame[n])
 		{
-			lasttictosend = maketic;
-
 			// assert supposedtics[n]>=nettics[n]
 			realfirsttic = supposedtics[n];
-			if (realfirsttic >= maketic)
+			lasttictosend = min(maketic, nettics[n] + CLIENTBACKUPTICS);
+
+			if (realfirsttic >= lasttictosend)
 			{
 				// well we have sent all tics we will so use extrabandwidth
 				// to resent packet that are supposed lost (this is necessary since lost
@@ -4616,7 +5170,7 @@ static void SV_SendTics(void)
 				DEBFILE(va("Nothing to send node %u mak=%u sup=%u net=%u \n",
 					n, maketic, supposedtics[n], nettics[n]));
 				realfirsttic = nettics[n];
-				if (realfirsttic >= maketic || (I_GetTime() + n)&3)
+				if (realfirsttic >= lasttictosend || (I_GetTime() + n)&3)
 					// all tic are ok
 					continue;
 				DEBFILE(va("Sent %d anyway\n", realfirsttic));
@@ -4659,7 +5213,7 @@ static void SV_SendTics(void)
 
 			// Send the tics
 			netbuffer->packettype = PT_SERVERTICS;
-			netbuffer->u.serverpak.starttic = (UINT8)realfirsttic;
+			netbuffer->u.serverpak.starttic = realfirsttic;
 			netbuffer->u.serverpak.numtics = (UINT8)(lasttictosend - realfirsttic);
 			netbuffer->u.serverpak.numslots = (UINT8)SHORT(doomcom->numslots);
 			bufpos = (UINT8 *)&netbuffer->u.serverpak.cmds;
@@ -4719,41 +5273,6 @@ static void Local_Maketic(INT32 realtics)
 
 	localcmds.angleturn |= TICCMD_RECEIVED;
 	localcmds2.angleturn |= TICCMD_RECEIVED;
-}
-
-// This function is utter bullshit and is responsible for
-// the random desynch that happens when a player spawns.
-// This is because ticcmds are resent to clients if a packet
-// was dropped, and thus modifying them can lead to several
-// clients having their ticcmds set to different values.
-void SV_SpawnPlayer(INT32 playernum, INT32 x, INT32 y, angle_t angle)
-{
-	tic_t tic;
-	UINT8 numadjust = 0;
-
-	(void)x;
-	(void)y;
-
-	// Revisionist history: adjust the angles in the ticcmds received
-	// for this player, because they actually preceded the player
-	// spawning, but will be applied afterwards.
-
-	for (tic = server ? maketic : (neededtic - 1); tic >= gametic; tic--)
-	{
-		if (numadjust++ == BACKUPTICS)
-		{
-			DEBFILE(va("SV_SpawnPlayer: All netcmds for player %d adjusted!\n", playernum));
-			// We already adjusted them all, waste of time doing the same thing over and over
-			// This shouldn't happen normally though, either gametic was 0 (which is handled now anyway)
-			// or maketic >= gametic + BACKUPTICS
-			// -- Monster Iestyn 16/01/18
-			break;
-		}
-		netcmds[tic%BACKUPTICS][playernum].angleturn = (INT16)((angle>>16) | TICCMD_RECEIVED);
-
-		if (!tic) // failsafe for gametic == 0 -- Monster Iestyn 16/01/18
-			break;
-	}
 }
 
 // create missed tic
@@ -5073,7 +5592,7 @@ void NetUpdate(void)
 		CON_Ticker();
 	}
 
-	SV_FileSendTicker();
+	FileSendTicker();
 }
 
 /** Returns the number of players playing.
