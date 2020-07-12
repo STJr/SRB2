@@ -19,37 +19,35 @@
 #include <time.h>
 
 #if (defined (NOMSERV)) && !defined (NONET)
-#define NONET
+	#define NONET
 #endif
 
 #ifndef NONET
+	#ifndef NO_IPV6
+		#define HAVE_IPV6
+	#endif
+	#ifdef _WIN32
+		#define RPC_NO_WINDOWS_H
+		#ifdef HAVE_IPV6
+			#include <ws2tcpip.h>
+		#else
+			#include <winsock.h>     // socket(),...
+		#endif //!HAVE_IPV6
+	#else
+		#include <arpa/inet.h>
+		#ifdef __APPLE_CC__
+			#ifndef _BSD_SOCKLEN_T_
+				#define _BSD_SOCKLEN_T_
+			#endif
+		#endif
+		#include <sys/socket.h> // socket(),...
+		#include <netinet/in.h> // sockaddr_in
+		#include <netdb.h> // getaddrinfo(),...
+		#include <sys/ioctl.h>
 
-#ifndef NO_IPV6
-#define HAVE_IPV6
-#endif
-
-#ifdef _WIN32
-#define RPC_NO_WINDOWS_H
-#ifdef HAVE_IPV6
-#include <ws2tcpip.h>
-#else
-#include <winsock.h>     // socket(),...
-#endif //!HAVE_IPV6
-#else
-#include <arpa/inet.h>
-#ifdef __APPLE_CC__
-#ifndef _BSD_SOCKLEN_T_
-#define _BSD_SOCKLEN_T_
-#endif
-#endif
-#include <sys/socket.h> // socket(),...
-#include <netinet/in.h> // sockaddr_in
-#include <netdb.h> // getaddrinfo(),...
-#include <sys/ioctl.h>
-
-#include <sys/time.h> // timeval,... (TIMEOUT)
-#include <errno.h>
-#endif // _WIN32
+		#include <sys/time.h> // timeval,... (TIMEOUT)
+		#include <errno.h>
+	#endif // _WIN32
 #endif // !NONET
 
 #include "doomstat.h"
@@ -155,18 +153,18 @@ typedef struct
 
 // win32 or djgpp
 #if defined (_WIN32) || defined (__DJGPP__)
-#define ioctl ioctlsocket
-#define close closesocket
-#ifdef WATTCP
-#define strerror strerror_s
-#endif
-#ifdef _WIN32
-#undef errno
-#define errno h_errno // some very strange things happen when not using h_error
-#endif
-#ifndef AI_ADDRCONFIG
-#define AI_ADDRCONFIG 0x00000400
-#endif
+	#define ioctl ioctlsocket
+	#define close closesocket
+	#ifdef WATTCP
+		#define strerror strerror_s
+	#endif
+	#ifdef _WIN32
+		#undef errno
+		#define errno h_errno // some very strange things happen when not using h_error
+	#endif
+	#ifndef AI_ADDRCONFIG
+		#define AI_ADDRCONFIG 0x00000400
+	#endif
 #endif
 
 #ifndef NONET
