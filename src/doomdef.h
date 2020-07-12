@@ -86,6 +86,7 @@
 // warning C4213: nonstandard extension used : cast on l-value
 
 
+#include "version.h"
 #include "doomtype.h"
 
 #include <stdarg.h>
@@ -135,20 +136,16 @@ extern char logfilename[1024];
 
 //#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
 #ifdef DEVELOP
-#define VERSION    0 // Game version
-#define SUBVERSION 0 // more precise version number
 #define VERSIONSTRING "Development EXE"
-#define VERSIONSTRINGW L"Development EXE"
 // most interface strings are ignored in development mode.
 // we use comprevision and compbranch instead.
 #else
-#define VERSION    202 // Game version
-#define SUBVERSION 6  // more precise version number
-#define VERSIONSTRING "v2.2.6"
-#define VERSIONSTRINGW L"v2.2.6"
+#define VERSIONSTRING "v"SRB2VERSION
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
+
+#define VERSIONSTRINGW WSTRING (VERSIONSTRING)
 
 /* A custom URL protocol for server links. */
 #define SERVER_URL_PROTOCOL "srb2://"
@@ -203,17 +200,6 @@ extern char logfilename[1024];
 // (such as 2.0.4 to 2.0.5, etc) into your working copy.
 // Will always resemble the versionstring, 205 = 2.0.5, 210 = 2.1, etc.
 #define CODEBASE 220
-
-// The Modification ID; must be obtained from a Master Server Admin ( https://mb.srb2.org/showgroups.php ).
-// DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
-// "18" is the default mod ID for version 2.2
-#define MODID 18
-
-// The Modification Version, starting from 1. Do not follow your version string for this,
-// it's only for detection of the version the player is using so the MS can alert them of an update.
-// Only set it higher, not lower, obviously.
-// Note that we use this to help keep internal testing in check; this is why v2.2.0 is not version "1".
-#define MODVERSION 47
 
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
 // Increment MINOREXECVERSION whenever a config change is needed that does not correspond
@@ -503,6 +489,8 @@ char *sizeu4(size_t num);
 char *sizeu5(size_t num);
 
 // d_main.c
+extern int    VERSION;
+extern int SUBVERSION;
 extern boolean devparm; // development mode (-debug)
 // d_netcmd.c
 extern INT32 cv_debug;
