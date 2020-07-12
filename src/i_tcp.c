@@ -47,7 +47,7 @@
 #else
 	#ifdef USE_WINSOCK1
 		#include <winsock.h>
-	#elif !defined (SCOUW2) && !defined (SCOUW7)
+	#else
 		#ifndef USE_WINSOCK
 			#include <arpa/inet.h>
 		#endif //normal BSD API
@@ -73,7 +73,7 @@
 		#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
 			#include <sys/time.h>
 		#endif // UNIXCOMMON
-	#endif // !defined (SCOUW2) && !defined (SCOUW7))
+	#endif
 
 	#ifdef USE_WINSOCK
 		// some undefined under win32
