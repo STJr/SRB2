@@ -1545,9 +1545,12 @@ static int lib_setSkinColor(lua_State *L)
 			if (strchr(info->name, ' ') != NULL)
 				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", info->name);
 
-			UINT16 dupecheck = R_GetColorByName(info->name);
-			if (!stricmp(info->name, skincolors[SKINCOLOR_NONE].name) || (dupecheck && (dupecheck != info-skincolors)))
-				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') is a duplicate of another skincolor's name.\n", info->name);
+			if (info->name[0] != '\0') // don't check empty string for dupe
+			{
+				UINT16 dupecheck = R_GetColorByName(info->name);
+				if (!stricmp(info->name, skincolors[SKINCOLOR_NONE].name) || (dupecheck && (dupecheck != info-skincolors)))
+					CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') is a duplicate of another skincolor's name.\n", info->name);
+			}
 		} else if (i == 2 || (str && fastcmp(str,"ramp"))) {
 			if (!lua_istable(L, 3) && luaL_checkudata(L, 3, META_COLORRAMP) == NULL)
 				return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be a table or array.");
@@ -1567,7 +1570,7 @@ static int lib_setSkinColor(lua_State *L)
 		else if (i == 5 || (str && fastcmp(str,"chatcolor")))
 			info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
 		else if (i == 6 || (str && fastcmp(str,"accessible")))
-			info->accessible = lua_toboolean(L, 3) != 0;
+			info->accessible = lua_toboolean(L, 3);
 		lua_pop(L, 1);
 	}
 	return 0;
@@ -1627,9 +1630,12 @@ static int skincolor_set(lua_State *L)
 		if (strchr(info->name, ' ') != NULL)
 			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", info->name);
 
-		UINT16 dupecheck = R_GetColorByName(info->name);
-		if (!stricmp(info->name, skincolors[SKINCOLOR_NONE].name) || (dupecheck && (dupecheck != info-skincolors)))
-			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') is a duplicate of another skincolor's name.\n", info->name);
+		if (info->name[0] != '\0') // don't check empty string for dupe
+		{
+			UINT16 dupecheck = R_GetColorByName(info->name);
+			if (!stricmp(info->name, skincolors[SKINCOLOR_NONE].name) || (dupecheck && (dupecheck != info-skincolors)))
+				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') is a duplicate of another skincolor's name.\n", info->name);
+		}
 	} else if (fastcmp(field,"ramp")) {
 		if (!lua_istable(L, 3) && luaL_checkudata(L, 3, META_COLORRAMP) == NULL)
 			return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be a table or array.");
@@ -1649,7 +1655,7 @@ static int skincolor_set(lua_State *L)
 	else if (fastcmp(field,"chatcolor"))
 		info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"accessible"))
-		info->accessible = lua_toboolean(L, 3) != 0;
+		info->accessible = lua_toboolean(L, 3);
 	else
 		CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "skincolor_t", field);
 	return 1;
