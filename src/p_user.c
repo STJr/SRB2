@@ -7889,7 +7889,7 @@ static void P_SkidStuff(player_t *player)
 
 //
 // P_MovePlayer
-static void P_MovePlayer(player_t *player)
+void P_MovePlayer(player_t *player)
 {
 	ticcmd_t *cmd;
 	INT32 i;

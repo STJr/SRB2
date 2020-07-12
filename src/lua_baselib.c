@@ -913,6 +913,83 @@ static int lib_pRailThinker(lua_State *L)
 	return 1;
 }
 
+static int lib_pXYMovement(lua_State *L)
+{
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!actor)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_XYMovement(actor);
+	return 0;
+}
+
+static int lib_pRingXYMovement(lua_State *L)
+{
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!actor)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_RingXYMovement(actor);
+	return 0;
+}
+
+static int lib_pSceneryXYMovement(lua_State *L)
+{
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!actor)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_SceneryXYMovement(actor);
+	return 0;
+}
+
+static int lib_pZMovement(lua_State *L)
+{
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!actor)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_ZMovement(actor));
+	return 1;
+}
+
+static int lib_pRingZMovement(lua_State *L)
+{
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!actor)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_RingZMovement(actor);
+	return 0;
+}
+
+static int lib_pSceneryZMovement(lua_State *L)
+{
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!actor)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_SceneryZMovement(actor));
+	return 1;
+}
+
+static int lib_pPlayerZMovement(lua_State *L)
+{
+	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!actor)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_PlayerZMovement(actor);
+	return 0;
+}
+
 // P_USER
 ////////////
 
@@ -1280,6 +1357,17 @@ static int lib_pSpawnSkidDust(lua_State *L)
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	P_SpawnSkidDust(player, radius, sound);
+	return 0;
+}
+
+static int lib_pMovePlayer(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_MovePlayer(player);
 	return 0;
 }
 
@@ -3271,6 +3359,13 @@ static luaL_Reg lib[] = {
 	{"P_CanRunOnWater",lib_pCanRunOnWater},
 	{"P_MaceRotate",lib_pMaceRotate},
 	{"P_RailThinker",lib_pRailThinker},
+	{"P_XYMovement",lib_pXYMovement},
+	{"P_RingXYMovement",lib_pRingXYMovement},
+	{"P_SceneryXYMovement",lib_pSceneryXYMovement},
+	{"P_ZMovement",lib_pZMovement},
+	{"P_RingZMovement",lib_pRingZMovement},
+	{"P_SceneryZMovement",lib_pSceneryZMovement},
+	{"P_PlayerZMovement",lib_pPlayerZMovement},
 
 	// p_user
 	{"P_GetPlayerHeight",lib_pGetPlayerHeight},
@@ -3302,6 +3397,7 @@ static luaL_Reg lib[] = {
 	{"P_BlackOw",lib_pBlackOw},
 	{"P_ElementalFire",lib_pElementalFire},
 	{"P_SpawnSkidDust", lib_pSpawnSkidDust},
+	{"P_MovePlayer",lib_pMovePlayer},
 	{"P_DoPlayerFinish",lib_pDoPlayerFinish},
 	{"P_DoPlayerExit",lib_pDoPlayerExit},
 	{"P_InstaThrust",lib_pInstaThrust},
