@@ -33,6 +33,7 @@
 #include "p_setup.h"
 #include "lua_script.h"
 #include "d_netfil.h" // findfile
+#include "r_data.h" // Color_cons_t
 
 //========
 // protos.
@@ -818,6 +819,18 @@ static void COM_Help_f(void)
 					CONS_Printf("  Yes or No (On or Off, 1 or 0)\n");
 				else if (cvar->PossibleValue == CV_OnOff)
 					CONS_Printf("  On or Off (Yes or No, 1 or 0)\n");
+				else if (cvar->PossibleValue == Color_cons_t)
+				{
+					for (i = 1; i < numskincolors; ++i)
+					{
+						if (skincolors[i].accessible)
+						{
+							CONS_Printf("  %-2d : %s\n", i, skincolors[i].name);
+							if (i == cvar->value)
+								cvalue = skincolors[i].name;
+						}
+					}
+				}
 				else
 				{
 #define MINVAL 0

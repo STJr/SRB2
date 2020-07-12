@@ -806,8 +806,41 @@ static void readskincolor(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "NAME"))
 			{
-				deh_strlcpy(skincolors[num].name, word2,
-					sizeof (skincolors[num].name), va("Skincolor %d: name", num));
+				size_t namesize = sizeof(skincolors[num].name);
+				char truncword[namesize];
+
+				deh_strlcpy(truncword, word2, namesize, va("Skincolor %d: name", num)); // truncate here to check for dupes
+				if (!stricmp(truncword, skincolors[SKINCOLOR_NONE].name) || R_GetColorByName(truncword))
+				{
+					size_t lastchar = strlen(truncword);
+					char oldword[lastchar+1];
+
+					strlcpy(oldword, truncword, lastchar+1);
+					lastchar--;
+					if (lastchar == namesize-2) // exactly max length, replace last character with 0
+						truncword[lastchar] = '0';
+					else // append 0
+					{
+						strcat(truncword, "0");
+						lastchar++;
+					}
+
+					char dupenum = '1';
+					while (R_GetColorByName(truncword))
+					{
+						truncword[lastchar] = dupenum;
+						if (dupenum == '9')
+							dupenum = 'A';
+						else if (dupenum == 'Z') // give up :?
+							break;
+						else
+							dupenum++;
+					}
+
+					deh_warning("Skincolor %d: name %s is a duplicate of another skincolor's name - renamed to %s", num, oldword, truncword);
+				}
+
+				deh_strlcpy(skincolors[num].name, truncword, namesize, NULL); // already truncated
 			}
 			else if (fastcmp(word, "RAMP"))
 			{
@@ -821,7 +854,11 @@ static void readskincolor(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "INVCOLOR"))
 			{
-				skincolors[num].invcolor = (UINT16)get_number(word2);
+				UINT16 v = (UINT16)get_number(word2);
+				if (v < numskincolors)
+					skincolors[num].invcolor = v;
+				else
+					skincolors[num].invcolor = SKINCOLOR_GREEN;
 			}
 			else if (fastcmp(word, "INVSHADE"))
 			{
