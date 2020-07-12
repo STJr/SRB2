@@ -3487,7 +3487,7 @@ static gl_vissprite_t *HWR_NewVisSprite(void)
 typedef struct
 {
 	FOutVector verts[4];
-	gr_vissprite_t *spr;
+	gl_vissprite_t *spr;
 } zbuffersprite_t;
 
 // this list is used to store data about linkdraw sprites
@@ -3495,7 +3495,7 @@ zbuffersprite_t linkdrawlist[MAXVISSPRITES];
 UINT32 linkdrawcount = 0;
 
 // add the necessary data to the list for delayed z-buffer drawing
-static void HWR_LinkDrawHackAdd(FOutVector *verts, gr_vissprite_t *spr)
+static void HWR_LinkDrawHackAdd(FOutVector *verts, gl_vissprite_t *spr)
 {
 	if (linkdrawcount < MAXVISSPRITES)
 	{
@@ -5007,11 +5007,11 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 		// calculate tz for tracer, same way it is calculated for this sprite
 		// transform the origin point
-		tr_x = FIXED_TO_FLOAT(thing->tracer->x) - gr_viewx;
-		tr_y = FIXED_TO_FLOAT(thing->tracer->y) - gr_viewy;
+		tr_x = FIXED_TO_FLOAT(thing->tracer->x) - gl_viewx;
+		tr_y = FIXED_TO_FLOAT(thing->tracer->y) - gl_viewy;
 
 		// rotation around vertical axis
-		tracertz = (tr_x * gr_viewcos) + (tr_y * gr_viewsin);
+		tracertz = (tr_x * gl_viewcos) + (tr_y * gl_viewsin);
 
 		// Software does not render the linkdraw sprite if the tracer is behind the view plane,
 		// so do the same check here.

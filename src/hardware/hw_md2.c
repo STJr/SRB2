@@ -1309,13 +1309,13 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		// texture loading before model init, so it knows if sprite graphics are used, which
 		// means that texture coordinates have to be adjusted
 		gpatch = md2->grpatch;
-		if (!gpatch || ((!gpatch->mipmap->grInfo.format || !gpatch->mipmap->downloaded) && !md2->notexturefile))
+		if (!gpatch || ((!gpatch->mipmap->format || !gpatch->mipmap->downloaded) && !md2->notexturefile))
 			md2_loadTexture(md2);
 		gpatch = md2->grpatch; // Load it again, because it isn't being loaded into gpatch after md2_loadtexture...
 
-		if ((gpatch && gpatch->mipmap->grInfo.format) // don't load the blend texture if the base texture isn't available
+		if ((gpatch && gpatch->mipmap->format) // don't load the blend texture if the base texture isn't available
 			&& (!md2->blendgrpatch
-			|| ((!((GLPatch_t *)md2->blendgrpatch)->mipmap->grInfo.format || !((GLPatch_t *)md2->blendgrpatch)->mipmap->downloaded)
+			|| ((!((GLPatch_t *)md2->blendgrpatch)->mipmap->format || !((GLPatch_t *)md2->blendgrpatch)->mipmap->downloaded)
 			&& !md2->noblendfile)))
 			md2_loadBlendTexture(md2);
 
@@ -1332,7 +1332,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 				md2_printModelInfo(md2->model);
 				// if model uses sprite patch as texture, then
 				// adjust texture coordinates to take power of two textures into account
-				if (!gpatch || !gpatch->mipmap->grInfo.format)
+				if (!gpatch || !gpatch->mipmap->format)
 					adjustTextureCoords(md2->model, spr->gpatch);
 				HWD.pfnCreateModelVBOs(md2->model);
 			}
