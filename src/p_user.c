@@ -10046,7 +10046,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	if (camorbit) //Sev here, I'm guessing this is where orbital cam lives
 	{
 #ifdef HWRENDER
-		if (rendermode == render_opengl && !cv_grshearing.value)
+		if (rendermode == render_opengl && !cv_glshearing.value)
 			distxy = FixedMul(dist, FINECOSINE((focusaiming>>ANGLETOFINESHIFT) & FINEMASK));
 		else
 #endif

@@ -821,7 +821,7 @@ void HWR_WallLighting(FOutVector *wlVerts)
 {
 	int             i, j;
 
-	// dynlights->nb == 0 if cv_grdynamiclighting.value is not set
+	// dynlights->nb == 0 if cv_gldynamiclighting.value is not set
 	for (j = 0; j < dynlights->nb; j++)
 	{
 		FVector         inter;
@@ -970,7 +970,7 @@ static lumpnum_t coronalumpnum = LUMPERROR;
 // --------------------------------------------------------------------------
 // coronas lighting
 // --------------------------------------------------------------------------
-void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
+void HWR_DoCoronasLighting(FOutVector *outVerts, gl_vissprite_t *spr)
 {
 	light_t   *p_lspr;
 
@@ -985,7 +985,7 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
 		p_lspr = &lspr[ROCKETEXP_L];
 	}
 
-	if (cv_grcoronas.value && (p_lspr->type & CORONA_SPR))
+	if (cv_glcoronas.value && (p_lspr->type & CORONA_SPR))
 	{ // it's an object which emits light
 		FOutVector      light[4];
 		FSurfaceInfo    Surf;
@@ -1010,7 +1010,7 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
 		}
 		if (size > p_lspr->corona_radius)
 			size = p_lspr->corona_radius;
-		size *= FIXED_TO_FLOAT(cv_grcoronasize.value<<1);
+		size *= FIXED_TO_FLOAT(cv_glcoronasize.value<<1);
 
 		// compute position doing average
 		for (i = 0; i < 4; i++)
@@ -1067,7 +1067,7 @@ void HWR_DrawCoronas(void)
 {
 	int       j;
 
-	if (!cv_grcoronas.value || dynlights->nb <= 0 || coronalumpnum == LUMPERROR)
+	if (!cv_glcoronas.value || dynlights->nb <= 0 || coronalumpnum == LUMPERROR)
 		return;
 
 	HWR_GetPic(coronalumpnum);  /// \todo use different coronas
@@ -1121,7 +1121,7 @@ void HWR_DrawCoronas(void)
 		}
 		if (size > p_lspr->corona_radius)
 			size = p_lspr->corona_radius;
-		size = (float)(FIXED_TO_FLOAT(cv_grcoronasize.value<<1)*size);
+		size = (float)(FIXED_TO_FLOAT(cv_glcoronasize.value<<1)*size);
 
 		// put light little forward the sprite so there is no
 		// z-buffer problem (coplanar polygons)
@@ -1170,13 +1170,13 @@ void HWR_SetLights(int viewnumber)
 // Add a light for dynamic lighting
 // The light position is already transformed execpt for mlook
 // --------------------------------------------------------------------------
-void HWR_DL_AddLight(gr_vissprite_t *spr, GLPatch_t *patch)
+void HWR_DL_AddLight(gl_vissprite_t *spr, GLPatch_t *patch)
 {
 	light_t   *p_lspr;
 
 	//Hurdler: moved here because it's better;-)
 	(void)patch;
-	if (!cv_grdynamiclighting.value)
+	if (!cv_gldynamiclighting.value)
 		return;
 
 	if (!spr->mobj)
@@ -1193,7 +1193,7 @@ void HWR_DL_AddLight(gr_vissprite_t *spr, GLPatch_t *patch)
 	p_lspr = t_lspr[spr->mobj->sprite];
 	if (!(p_lspr->type & DYNLIGHT_SPR))
 		return;
-	if ((p_lspr->type != LIGHT_SPR) || cv_grstaticlighting.value)
+	if ((p_lspr->type != LIGHT_SPR) || cv_glstaticlighting.value)
 		return;
 
 	LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(spr->mobj->x);
@@ -1229,10 +1229,10 @@ static void HWR_SetLight(void)
 {
 	int    i, j;
 
-	if (!lightmappatch.mipmap->downloaded && !lightmappatch.mipmap->grInfo.data)
+	if (!lightmappatch.mipmap->downloaded && !lightmappatch.mipmap->data)
 	{
 
-		UINT16 *Data = Z_Malloc(129*128*sizeof (UINT16), PU_HWRCACHE, &lightmappatch.mipmap->grInfo.data);
+		UINT16 *Data = Z_Malloc(129*128*sizeof (UINT16), PU_HWRCACHE, &lightmappatch.mipmap->data);
 
 		for (i = 0; i < 128; i++)
 		{
@@ -1245,7 +1245,7 @@ static void HWR_SetLight(void)
 					Data[i*128+j] = 0;
 			}
 		}
-		lightmappatch.mipmap->grInfo.format = GR_TEXFMT_ALPHA_INTENSITY_88;
+		lightmappatch.mipmap->format = GL_TEXFMT_ALPHA_INTENSITY_88;
 
 		lightmappatch.width = 128;
 		lightmappatch.height = 128;
@@ -1256,7 +1256,7 @@ static void HWR_SetLight(void)
 	HWD.pfnSetTexture(lightmappatch.mipmap);
 
 	// The system-memory data can be purged now.
-	Z_ChangeTag(lightmappatch.mipmap->grInfo.data, PU_HWRCACHE_UNLOCKED);
+	Z_ChangeTag(lightmappatch.mipmap->data, PU_HWRCACHE_UNLOCKED);
 }
 
 //**********************************************************
@@ -1265,8 +1265,8 @@ static void HWR_SetLight(void)
 
 #ifdef STATICLIGHT
 // is this really necessary?
-static sector_t *lgr_backsector;
-static seg_t *lgr_curline;
+static sector_t *lgl_backsector;
+static seg_t *lgl_curline;
 #endif
 
 // p1 et p2 c'est le deux bou du seg en float
@@ -1304,27 +1304,27 @@ static void HWR_AddLightMapForLine(int lightnum, seg_t *line)
 	*/
 	FVector             p1,p2;
 
-	lgr_curline = line;
-	lgr_backsector = line->backsector;
+	lgl_curline = line;
+	lgl_backsector = line->backsector;
 
 	// Reject empty lines used for triggers and special events.
 	// Identical floor and ceiling on both sides,
 	//  identical light levels on both sides,
 	//  and no middle texture.
 /*
-	if ( lgr_backsector->ceilingpic == gr_frontsector->ceilingpic
-	  && lgr_backsector->floorpic == gr_frontsector->floorpic
-	  && lgr_backsector->lightlevel == gr_frontsector->lightlevel
-	  && lgr_curline->sidedef->midtexture == 0)
+	if ( lgl_backsector->ceilingpic == gl_frontsector->ceilingpic
+	  && lgl_backsector->floorpic == gl_frontsector->floorpic
+	  && lgl_backsector->lightlevel == gl_frontsector->lightlevel
+	  && lgl_curline->sidedef->midtexture == 0)
 	{
 		return;
 	}
 */
 
-	p1.y = FIXED_TO_FLOAT(lgr_curline->v1->y);
-	p1.x = FIXED_TO_FLOAT(lgr_curline->v1->x);
-	p2.y = FIXED_TO_FLOAT(lgr_curline->v2->y);
-	p2.x = FIXED_TO_FLOAT(lgr_curline->v2->x);
+	p1.y = FIXED_TO_FLOAT(lgl_curline->v1->y);
+	p1.x = FIXED_TO_FLOAT(lgl_curline->v1->x);
+	p2.y = FIXED_TO_FLOAT(lgl_curline->v2->y);
+	p2.x = FIXED_TO_FLOAT(lgl_curline->v2->x);
 
 	// check bbox of the seg
 //	if (CircleTouchBBox(&p1, &p2, &LIGHT_POS(lightnum), DL_RADIUS(lightnum))==false)
