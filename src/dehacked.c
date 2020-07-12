@@ -814,6 +814,7 @@ static void readskincolor(MYFILE *f, INT32 num)
 				{
 					size_t lastchar = strlen(truncword);
 					char oldword[lastchar+1];
+					char dupenum = '1';
 
 					strlcpy(oldword, truncword, lastchar+1);
 					lastchar--;
@@ -825,7 +826,6 @@ static void readskincolor(MYFILE *f, INT32 num)
 						lastchar++;
 					}
 
-					char dupenum = '1';
 					while (R_GetColorByName(truncword))
 					{
 						truncword[lastchar] = dupenum;
