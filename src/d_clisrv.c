@@ -5159,7 +5159,7 @@ static void SV_SendTics(void)
 		{
 			// assert supposedtics[n]>=nettics[n]
 			realfirsttic = supposedtics[n];
-			lasttictosend = min(maketic, realfirsttic + CLIENTBACKUPTICS);
+			lasttictosend = min(maketic, nettics[n] + CLIENTBACKUPTICS);
 
 			if (realfirsttic >= lasttictosend)
 			{
@@ -5496,7 +5496,7 @@ void NetUpdate(void)
 		// update node latency values so we can take an average later.
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && playernode[i] != UINT8_MAX)
-				realpingtable[i] += GetLag(playernode[i]) * (1000.00f / TICRATE);
+				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
 	}
 

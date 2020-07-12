@@ -902,6 +902,17 @@ static int lib_pMaceRotate(lua_State *L)
 	return 0;
 }
 
+static int lib_pRailThinker(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_RailThinker(mobj));
+	return 1;
+}
+
 // P_USER
 ////////////
 
@@ -3259,6 +3270,7 @@ static luaL_Reg lib[] = {
 	{"P_CheckSolidLava",lib_pCheckSolidLava},
 	{"P_CanRunOnWater",lib_pCanRunOnWater},
 	{"P_MaceRotate",lib_pMaceRotate},
+	{"P_RailThinker",lib_pRailThinker},
 
 	// p_user
 	{"P_GetPlayerHeight",lib_pGetPlayerHeight},

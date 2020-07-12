@@ -52,7 +52,6 @@ boolean HWR_Screenshot(const char *pathname);
 
 void HWR_AddCommands(void);
 void HWR_AddSessionCommands(void);
-void HWR_CorrectSWTricks(void);
 void transform(float *cx, float *cy, float *cz);
 FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
 INT32 HWR_GetTextureUsed(void);
@@ -87,7 +86,6 @@ extern consvar_t cv_glmodelinterpolation;
 extern consvar_t cv_glmodellighting;
 extern consvar_t cv_glfiltermode;
 extern consvar_t cv_glanisotropicmode;
-extern consvar_t cv_glcorrecttricks;
 extern consvar_t cv_fovchange;
 extern consvar_t cv_glsolvetjoin;
 extern consvar_t cv_glshearing;

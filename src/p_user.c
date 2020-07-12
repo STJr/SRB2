@@ -4863,7 +4863,7 @@ void P_DoBubbleBounce(player_t *player)
 	player->pflags |= PF_THOKKED;
 	player->pflags &= ~PF_STARTJUMP;
 	player->secondjump = UINT8_MAX;
-	player->mo->momz = FixedMul(player->mo->momz, 5*FRACUNIT/4);
+	player->mo->momz = FixedMul(player->mo->momz, 11*FRACUNIT/8);
 }
 
 //
@@ -5112,15 +5112,19 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 									boolean elem = ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL);
 									player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 									if (elem)
+									{
+										player->mo->momx = player->mo->momy = 0;
 										S_StartSound(player->mo, sfx_s3k43);
+									}
 									else
 									{
+										player->mo->momx -= (player->mo->momx/3);
+										player->mo->momy -= (player->mo->momy/3);
 										player->pflags &= ~PF_NOJUMPDAMAGE;
 										P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 										S_StartSound(player->mo, sfx_s3k44);
 									}
 									player->secondjump = 0;
-									player->mo->momx = player->mo->momy = 0;
 									P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
 									break;
 								}

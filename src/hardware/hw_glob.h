@@ -63,11 +63,12 @@ typedef struct gl_vissprite_s
 {
 	float x1, x2;
 	float tz, ty;
+	float tracertz; // for MF2_LINKDRAW sprites, this contains tracer's tz for use in sorting
 	//lumpnum_t patchlumpnum;
 	GLPatch_t *gpatch;
 	boolean flip;
 	UINT8 translucency;       //alpha level 0-255
-	mobj_t *mobj;
+	mobj_t *mobj; // NOTE: This is a precipmobj_t if precip is true !!! Watch out.
 	boolean precip; // Tails 08-25-2002
 	boolean vflip;
    //Hurdler: 25/04/2000: now support colormap in hardware mode

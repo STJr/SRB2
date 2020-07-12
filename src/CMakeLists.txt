@@ -429,7 +429,6 @@ if(${SRB2_CONFIG_HWRENDER})
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_md2load.c
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_md3load.c
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_model.c
-		${CMAKE_CURRENT_SOURCE_DIR}/hardware/hw_trick.c
 		${CMAKE_CURRENT_SOURCE_DIR}/hardware/u_list.c
 	)
 

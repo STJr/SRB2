@@ -381,7 +381,6 @@
     <ClCompile Include="..\hardware\hw_md2load.c" />
     <ClCompile Include="..\hardware\hw_md3load.c" />
     <ClCompile Include="..\hardware\hw_model.c" />
-    <ClCompile Include="..\hardware\hw_trick.c" />
     <ClCompile Include="..\hardware\r_opengl\r_opengl.c" />
     <ClCompile Include="..\hardware\u_list.c" />
     <ClCompile Include="..\hu_stuff.c" />

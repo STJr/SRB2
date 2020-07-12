@@ -604,10 +604,6 @@ SOURCE=..\hardware\hw_md2.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\hardware\hw_trick.c
-# End Source File
-# Begin Source File
-
 SOURCE=..\hardware\hws_data.h
 # End Source File
 # End Group
