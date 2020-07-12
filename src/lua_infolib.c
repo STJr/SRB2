@@ -1567,7 +1567,7 @@ static int lib_setSkinColor(lua_State *L)
 		else if (i == 5 || (str && fastcmp(str,"chatcolor")))
 			info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
 		else if (i == 6 || (str && fastcmp(str,"accessible")))
-			info->accessible = (boolean)lua_toboolean(L, 3);
+			info->accessible = lua_toboolean(L, 3) != 0;
 		lua_pop(L, 1);
 	}
 	return 0;
@@ -1649,7 +1649,7 @@ static int skincolor_set(lua_State *L)
 	else if (fastcmp(field,"chatcolor"))
 		info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"accessible"))
-		info->accessible = (boolean)lua_toboolean(L, 3);
+		info->accessible = lua_toboolean(L, 3) != 0;
 	else
 		CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "skincolor_t", field);
 	return 1;
