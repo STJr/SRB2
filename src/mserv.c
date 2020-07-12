@@ -22,6 +22,19 @@
 	#define NONET
 #endif
 
+#ifndef NO_IPV6
+	#define HAVE_IPV6
+#endif
+
+#ifdef _WIN32
+	#define USE_WINSOCK
+	#if /*defined (_WIN64) ||*/ defined (HAVE_IPV6)
+		#define USE_WINSOCK2
+	#else //_WIN64/HAVE_IPV6
+		#define USE_WINSOCK1
+	#endif
+#endif //WIN32 OS
+
 #ifndef NONET
 	#ifndef NO_IPV6
 		#define HAVE_IPV6
@@ -196,7 +209,7 @@ typedef unsigned long SOCKET_TYPE;
 #define ERRSOCKET (-1)
 #endif
 
-#if (defined (WATTCP) && !defined (__libsocket_socklen_t)) || defined (_WIN32)
+#if (defined (WATTCP) && !defined (__libsocket_socklen_t)) || defined (USE_WINSOCK1)
 typedef int socklen_t;
 #endif
 

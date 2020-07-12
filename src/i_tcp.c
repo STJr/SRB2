@@ -50,9 +50,6 @@
 	#else
 		#ifndef USE_WINSOCK
 			#include <arpa/inet.h>
-		#endif //normal BSD API
-
-		#ifndef USE_WINSOCK
 			#ifdef __APPLE_CC__
 				#ifndef _BSD_SOCKLEN_T_
 					#define _BSD_SOCKLEN_T_
@@ -60,9 +57,6 @@
 			#endif //__APPLE_CC__
 			#include <sys/socket.h>
 			#include <netinet/in.h>
-		#endif //normal BSD API
-
-		#ifndef USE_WINSOCK
 			#include <netdb.h>
 			#include <sys/ioctl.h>
 		#endif //normal BSD API
