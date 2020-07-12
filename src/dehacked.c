@@ -840,7 +840,7 @@ static void readskincolor(MYFILE *f, INT32 num)
 					deh_warning("Skincolor %d: name %s is a duplicate of another skincolor's name - renamed to %s", num, oldword, truncword);
 				}
 
-				deh_strlcpy(skincolors[num].name, truncword, namesize, NULL); // already truncated
+				strlcpy(skincolors[num].name, truncword, namesize); // already truncated
 			}
 			else if (fastcmp(word, "RAMP"))
 			{

@@ -1561,8 +1561,7 @@ static int lib_setSkinColor(lua_State *L)
 			UINT16 v = (UINT16)luaL_checkinteger(L, 3);
 			if (v >= numskincolors)
 				return luaL_error(L, "attempt to set skincolors[%d].invcolor to out of range value %d.", cnum, v);
-			else
-				info->invcolor = v;
+			info->invcolor = v;
 		} else if (i == 4 || (str && fastcmp(str,"invshade")))
 			info->invshade = (UINT8)luaL_checkinteger(L, 3)%COLORRAMPSIZE;
 		else if (i == 5 || (str && fastcmp(str,"chatcolor")))
@@ -1644,8 +1643,7 @@ static int skincolor_set(lua_State *L)
 		UINT16 v = (UINT16)luaL_checkinteger(L, 3);
 		if (v >= numskincolors)
 			return luaL_error(L, "attempt to set skincolor_t field 'invcolor' to out of range value %d.", v);
-		else
-			info->invcolor = v;
+		info->invcolor = v;
 	} else if (fastcmp(field,"invshade"))
 		info->invshade = (UINT8)luaL_checkinteger(L, 3)%COLORRAMPSIZE;
 	else if (fastcmp(field,"chatcolor"))
