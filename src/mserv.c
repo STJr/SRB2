@@ -26,9 +26,11 @@
 	#define HAVE_IPV6
 #endif
 
+// -- Monster Iestyn 12/07/20
+// define Winsock related macros like in i_tcp.c (this is really all for socklen_t tbh)
 #ifdef _WIN32
 	#define USE_WINSOCK
-	#if /*defined (_WIN64) ||*/ defined (HAVE_IPV6)
+	#if /*defined (_WIN64) ||*/ defined (HAVE_IPV6) // (to be consistent with below code)
 		#define USE_WINSOCK2
 	#else //_WIN64/HAVE_IPV6
 		#define USE_WINSOCK1
@@ -36,9 +38,6 @@
 #endif //WIN32 OS
 
 #ifndef NONET
-	#ifndef NO_IPV6
-		#define HAVE_IPV6
-	#endif
 	#ifdef _WIN32
 		#define RPC_NO_WINDOWS_H
 		#ifdef HAVE_IPV6
@@ -210,6 +209,7 @@ UINT16 current_port = 0;
 #endif
 
 #ifndef NONET
+	// define socklen_t in DOS/Windows if it is not already defined
 	#if (defined (WATTCP) && !defined (__libsocket_socklen_t)) || defined (USE_WINSOCK1)
 		typedef int socklen_t;
 	#endif

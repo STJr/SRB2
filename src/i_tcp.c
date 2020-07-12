@@ -183,6 +183,7 @@
 #endif
 
 #ifndef NONET
+	// define socklen_t in DOS/Windows if it is not already defined
 	#if (defined (WATTCP) && !defined (__libsocket_socklen_t)) || defined (USE_WINSOCK1)
 		typedef int socklen_t;
 	#endif
