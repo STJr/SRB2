@@ -68,7 +68,7 @@ typedef struct gr_vissprite_s
 	GLPatch_t *gpatch;
 	boolean flip;
 	UINT8 translucency;       //alpha level 0-255
-	mobj_t *mobj;
+	mobj_t *mobj; // NOTE: This is a precipmobj_t if precip is true !!! Watch out.
 	boolean precip; // Tails 08-25-2002
 	boolean vflip;
    //Hurdler: 25/04/2000: now support colormap in hardware mode

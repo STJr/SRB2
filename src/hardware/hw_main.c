@@ -4256,8 +4256,9 @@ static int CompareVisSprites(const void *p1, const void *p2)
 	int transparency1;
 	int transparency2;
 
-	int linkdraw1 = (spr1->mobj->flags2 & MF2_LINKDRAW) && spr1->mobj->tracer;
-	int linkdraw2 = (spr2->mobj->flags2 & MF2_LINKDRAW) && spr2->mobj->tracer;
+	// check for precip first, because then sprX->mobj is actually a precipmobj_t and does not have flags2 or tracer
+	int linkdraw1 = !spr1->precip && (spr1->mobj->flags2 & MF2_LINKDRAW) && spr1->mobj->tracer;
+	int linkdraw2 = !spr2->precip && (spr2->mobj->flags2 & MF2_LINKDRAW) && spr2->mobj->tracer;
 
 	// ^ is the XOR operation
 	// if comparing a linkdraw and non-linkdraw sprite or 2 linkdraw sprites with different tracers, then use
@@ -4272,7 +4273,7 @@ static int CompareVisSprites(const void *p1, const void *p2)
 		else
 		{
 			tz1 = spr1->tz;
-			transparency1 = (spr1->mobj->flags2 & MF2_SHADOW) || (spr1->mobj->frame & FF_TRANSMASK);
+			transparency1 = (!spr1->precip && (spr1->mobj->flags2 & MF2_SHADOW)) || (spr1->mobj->frame & FF_TRANSMASK);
 		}
 		if (linkdraw2)
 		{
@@ -4282,15 +4283,15 @@ static int CompareVisSprites(const void *p1, const void *p2)
 		else
 		{
 			tz2 = spr2->tz;
-			transparency2 = (spr2->mobj->flags2 & MF2_SHADOW) || (spr2->mobj->frame & FF_TRANSMASK);
+			transparency2 = (!spr2->precip && (spr2->mobj->flags2 & MF2_SHADOW)) || (spr2->mobj->frame & FF_TRANSMASK);
 		}
 	}
 	else
 	{
 		tz1 = spr1->tz;
-		transparency1 = (spr1->mobj->flags2 & MF2_SHADOW) || (spr1->mobj->frame & FF_TRANSMASK);
+		transparency1 = (!spr1->precip && (spr1->mobj->flags2 & MF2_SHADOW)) || (spr1->mobj->frame & FF_TRANSMASK);
 		tz2 = spr2->tz;
-		transparency2 = (spr2->mobj->flags2 & MF2_SHADOW) || (spr2->mobj->frame & FF_TRANSMASK);
+		transparency2 = (!spr2->precip && (spr2->mobj->flags2 & MF2_SHADOW)) || (spr2->mobj->frame & FF_TRANSMASK);
 	}
 
 	// first compare transparency flags, then compare tz, then compare dispoffset
