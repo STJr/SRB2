@@ -198,26 +198,25 @@ static INT32 msnode = -1;
 UINT16 current_port = 0;
 
 #if defined (_WIN32) && !defined (NONET)
-typedef SOCKET SOCKET_TYPE;
-#define ERRSOCKET (SOCKET_ERROR)
+	typedef SOCKET SOCKET_TYPE;
+	#define ERRSOCKET (SOCKET_ERROR)
 #else
-#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
-typedef int SOCKET_TYPE;
-#else
-typedef unsigned long SOCKET_TYPE;
-#endif
-#define ERRSOCKET (-1)
-#endif
-
-#if (defined (WATTCP) && !defined (__libsocket_socklen_t)) || defined (USE_WINSOCK1)
-typedef int socklen_t;
+	#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
+		typedef int SOCKET_TYPE;
+	#else
+		typedef unsigned long SOCKET_TYPE;
+	#endif
+	#define ERRSOCKET (-1)
 #endif
 
 #ifndef NONET
-static SOCKET_TYPE socket_fd = ERRSOCKET; // WINSOCK socket
-static struct timeval select_timeout;
-static fd_set wset;
-static size_t recvfull(SOCKET_TYPE s, char *buf, size_t len, int flags);
+	#if (defined (WATTCP) && !defined (__libsocket_socklen_t)) || defined (USE_WINSOCK1)
+		typedef int socklen_t;
+	#endif
+	static SOCKET_TYPE socket_fd = ERRSOCKET; // WINSOCK socket
+	static struct timeval select_timeout;
+	static fd_set wset;
+	static size_t recvfull(SOCKET_TYPE s, char *buf, size_t len, int flags);
 #endif
 
 // Room list is an external variable now.

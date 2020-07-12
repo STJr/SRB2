@@ -171,32 +171,31 @@
 #define DEFAULTPORT "5029"
 
 #if defined (USE_WINSOCK) && !defined (NONET)
-typedef SOCKET SOCKET_TYPE;
-#define ERRSOCKET (SOCKET_ERROR)
+	typedef SOCKET SOCKET_TYPE;
+	#define ERRSOCKET (SOCKET_ERROR)
 #else
-#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
-typedef int SOCKET_TYPE;
-#else
-typedef unsigned long SOCKET_TYPE;
-#endif
-#define ERRSOCKET (-1)
-#endif
-
-#if (defined (WATTCP) && !defined (__libsocket_socklen_t)) || defined (USE_WINSOCK1)
-typedef int socklen_t;
+	#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
+		typedef int SOCKET_TYPE;
+	#else
+		typedef unsigned long SOCKET_TYPE;
+	#endif
+	#define ERRSOCKET (-1)
 #endif
 
 #ifndef NONET
-static SOCKET_TYPE mysockets[MAXNETNODES+1] = {ERRSOCKET};
-static size_t mysocketses = 0;
-static int myfamily[MAXNETNODES+1] = {0};
-static SOCKET_TYPE nodesocket[MAXNETNODES+1] = {ERRSOCKET};
-static mysockaddr_t clientaddress[MAXNETNODES+1];
-static mysockaddr_t broadcastaddress[MAXNETNODES+1];
-static size_t broadcastaddresses = 0;
-static boolean nodeconnected[MAXNETNODES+1];
-static mysockaddr_t banned[MAXBANS];
-static UINT8 bannedmask[MAXBANS];
+	#if (defined (WATTCP) && !defined (__libsocket_socklen_t)) || defined (USE_WINSOCK1)
+		typedef int socklen_t;
+	#endif
+	static SOCKET_TYPE mysockets[MAXNETNODES+1] = {ERRSOCKET};
+	static size_t mysocketses = 0;
+	static int myfamily[MAXNETNODES+1] = {0};
+	static SOCKET_TYPE nodesocket[MAXNETNODES+1] = {ERRSOCKET};
+	static mysockaddr_t clientaddress[MAXNETNODES+1];
+	static mysockaddr_t broadcastaddress[MAXNETNODES+1];
+	static size_t broadcastaddresses = 0;
+	static boolean nodeconnected[MAXNETNODES+1];
+	static mysockaddr_t banned[MAXBANS];
+	static UINT8 bannedmask[MAXBANS];
 #endif
 
 static size_t numbans = 0;
