@@ -1177,6 +1177,7 @@ static UINT8 HWR_GetModelSprite2(md2_t *md2, skin_t *skin, UINT8 spr2, player_t 
 	return spr2;
 }
 
+// Adjust texture coords of model to fit into a patch's max_s and max_t
 static void adjustTextureCoords(model_t *model, GLPatch_t *gpatch)
 {
 	int i;
@@ -1185,24 +1186,38 @@ static void adjustTextureCoords(model_t *model, GLPatch_t *gpatch)
 		int j;
 		mesh_t *mesh = &model->meshes[i];
 		int numVertices;
-		float *uvPtr = mesh->uvs;
+		float *uvReadPtr = mesh->originaluvs;
+		float *uvWritePtr;
 
 		// i dont know if this is actually possible, just logical conclusion of structure in CreateModelVBOs
-		if (!mesh->frames && !mesh->tinyframes) return;
+		if (!mesh->frames && !mesh->tinyframes) continue;
 
 		if (mesh->frames) // again CreateModelVBO and CreateModelVBOTiny iterate like this so I'm gonna do that too
 			numVertices = mesh->numTriangles * 3;
 		else
 			numVertices = mesh->numVertices;
 
+		// if originaluvs points to uvs, we need to allocate new memory for adjusted uvs
+		// the old uvs are kept around for use in possible readjustments
+		if (mesh->uvs == mesh->originaluvs)
+		{
+			CONS_Printf("Debug: allocating memory for adjusted uvs\n");
+			mesh->uvs = Z_Malloc(numVertices * 2 * sizeof(float), PU_STATIC, NULL);
+		}
+
+		uvWritePtr = mesh->uvs;
+
 		// fix uvs (texture coordinates) to take into account that the actual texture
 		// has empty space added until the next power of two
 		for (j = 0; j < numVertices; j++)
 		{
-			*uvPtr++ *= gpatch->max_s;
-			*uvPtr++ *= gpatch->max_t;
+			*uvWritePtr++ = *uvReadPtr++ * gpatch->max_s;
+			*uvWritePtr++ = *uvReadPtr++ * gpatch->max_t;
 		}
 	}
+	// Save the values we adjusted the uvs for
+	model->max_s = gpatch->max_s;
+	model->max_t = gpatch->max_t;
 }
 
 //
@@ -1224,6 +1239,10 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 		return false;
 
 	if (spr->precip)
+		return false;
+
+	// Lactozilla: Disallow certain models from rendering
+	if (!HWR_AllowModel(spr->mobj))
 		return false;
 
 	memset(&p, 0x00, sizeof(FTransform));
@@ -1344,10 +1363,6 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 			}
 		}
 
-		// Lactozilla: Disallow certain models from rendering
-		if (!HWR_AllowModel(spr->mobj))
-			return false;
-
 		//HWD.pfnSetBlend(blend); // This seems to actually break translucency?
 		finalscale = md2->scale;
 		//Hurdler: arf, I don't like that implementation at all... too much crappy
@@ -1391,6 +1406,17 @@ boolean HWR_DrawModel(gr_vissprite_t *spr)
 		{
 			// Sprite
 			gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+			// Check if sprite dimensions are different from previously used sprite.
+			// If so, uvs need to be readjusted.
+			if (gpatch->max_s != md2->model->max_s || gpatch->max_t != md2->model->max_t)
+			{
+				CONS_Printf("Debug: Readjusting uvs!\n");
+				adjustTextureCoords(md2->model, gpatch);
+				// The vbo(s) are now wrong, so recreate them.
+				// If this turns out to be slow, then could try updating the vbos instead of
+				// deleting and creating new ones.
+				HWD.pfnCreateModelVBOs(md2->model);
+			}
 			HWR_GetMappedPatch(gpatch, spr->colormap);
 		}
 

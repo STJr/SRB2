@@ -59,6 +59,11 @@ typedef struct mesh_s
 	int numTriangles;
 
 	float *uvs;
+	// if uv adjustment is needed, uvs is changed to point to adjusted ones and
+	// this one retains the originals
+	// note: this member has been added with the assumption that models are never freed.
+	// (UnloadModel is called by nobody at the time of writing.)
+	float *originaluvs;
 	float *lightuvs;
 
 	int numFrames;
@@ -99,6 +104,11 @@ typedef struct model_s
 	char *framenames;
 	boolean interpolate[256];
 	modelspr2frames_t *spr2frames;
+
+	// the max_s and max_t values that the uvs are currently adjusted to
+	// (if a sprite is used as a texture)
+	float max_s;
+	float max_t;
 } model_t;
 
 extern int numModels;
