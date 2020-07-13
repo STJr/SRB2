@@ -740,18 +740,15 @@ void P_SlopeLaunch(mobj_t *mo)
 		&& (mo->standingslope->normal.x != 0
 		||  mo->standingslope->normal.y != 0))
 	{
-		// Double the pre-rotation Z, then halve the post-rotation Z. This reduces the
-		// vertical launch given from slopes while increasing the horizontal launch
-		// given. Good for SRB2's gravity and horizontal speeds.
 		vector3_t slopemom;
 		slopemom.x = mo->momx;
 		slopemom.y = mo->momy;
-		slopemom.z = mo->momz*2;
+		slopemom.z = mo->momz;
 		P_QuantizeMomentumToSlope(&slopemom, mo->standingslope);
 
 		mo->momx = slopemom.x;
 		mo->momy = slopemom.y;
-		mo->momz = slopemom.z/2;
+		mo->momz = slopemom.z;
 	}
 
 	//CONS_Printf("Launched off of slope.\n");
