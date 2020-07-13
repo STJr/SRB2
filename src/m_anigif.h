@@ -27,6 +27,6 @@ void GIF_frame(void);
 INT32 GIF_close(void);
 #endif
 
-extern consvar_t cv_gif_optimize, cv_gif_downscale, cv_gif_localcolortable;
+extern consvar_t cv_gif_optimize, cv_gif_downscale, cv_gif_dynamicdelay, cv_gif_localcolortable;
 
 #endif

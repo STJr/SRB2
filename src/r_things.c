@@ -1367,6 +1367,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	size_t frame, rot;
 	UINT16 flip;
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !(thing->frame & FF_VERTICALFLIP));
+	boolean mirrored = thing->mirrored;
+	boolean hflip = (!(thing->frame & FF_HORIZONTALFLIP) != !mirrored);
 
 	INT32 lindex;
 
@@ -1477,7 +1479,11 @@ static void R_ProjectSprite(mobj_t *thing)
 #endif
 
 	if (sprframe->rotate != SRF_SINGLE || papersprite)
+	{
 		ang = R_PointToAngle (thing->x, thing->y) - (thing->player ? thing->player->drawangle : thing->angle);
+		if (mirrored)
+			ang = InvAngle(ang);
+	}
 
 	if (sprframe->rotate == SRF_SINGLE)
 	{
@@ -1536,6 +1542,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		}
 	}
 #endif
+
+	flip = !flip != !hflip;
 
 	// calculate edges of the shape
 	if (flip)
@@ -2505,6 +2513,8 @@ static drawnode_t *R_CreateDrawNode(drawnode_t *link)
 	node->thickseg = NULL;
 	node->ffloor = NULL;
 	node->sprite = NULL;
+
+	rs_numdrawnodes++;
 	return node;
 }
 

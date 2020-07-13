@@ -166,7 +166,7 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride);
 
 void G_SaveGameData(void);
 
-void G_SaveGame(UINT32 slot);
+void G_SaveGame(UINT32 slot, INT16 mapnum);
 
 void G_SaveGameOver(UINT32 slot, boolean modifylives);
 
@@ -191,6 +191,7 @@ boolean G_GametypeHasTeams(void);
 boolean G_GametypeHasSpectators(void);
 boolean G_RingSlingerGametype(void);
 boolean G_PlatformGametype(void);
+boolean G_CoopGametype(void);
 boolean G_TagGametype(void);
 boolean G_CompetitionGametype(void);
 boolean G_EnoughPlayersFinished(void);

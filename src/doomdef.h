@@ -143,9 +143,9 @@ extern char logfilename[1024];
 // we use comprevision and compbranch instead.
 #else
 #define VERSION    202 // Game version
-#define SUBVERSION 4  // more precise version number
-#define VERSIONSTRING "v2.2.4"
-#define VERSIONSTRINGW L"v2.2.4"
+#define SUBVERSION 6  // more precise version number
+#define VERSIONSTRING "v2.2.6"
+#define VERSIONSTRINGW L"v2.2.6"
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
@@ -204,7 +204,7 @@ extern char logfilename[1024];
 // Will always resemble the versionstring, 205 = 2.0.5, 210 = 2.1, etc.
 #define CODEBASE 220
 
-// The Modification ID; must be obtained from Rob ( https://mb.srb2.org/private.php?do=newpm&u=546 ).
+// The Modification ID; must be obtained from a Master Server Admin ( https://mb.srb2.org/showgroups.php ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
 // "18" is the default mod ID for version 2.2
 #define MODID 18
@@ -213,7 +213,7 @@ extern char logfilename[1024];
 // it's only for detection of the version the player is using so the MS can alert them of an update.
 // Only set it higher, not lower, obviously.
 // Note that we use this to help keep internal testing in check; this is why v2.2.0 is not version "1".
-#define MODVERSION 44
+#define MODVERSION 47
 
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
 // Increment MINOREXECVERSION whenever a config change is needed that does not correspond
@@ -479,6 +479,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...) FUNCDEBUG;
 // Things that used to be in dstrings.h
 #define SAVEGAMENAME "srb2sav"
 extern char savegamename[256];
+extern char liveeventbackup[256];
 
 // m_misc.h
 #ifdef GETTEXT
@@ -616,11 +617,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	    	memory that never gets touched.
 #define ALLOW_RESETDATA
 
-#ifndef NONET
-///	Display a connection screen on join attempts.
-#define CLIENT_LOADINGSCREEN
-#endif
-
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
 
@@ -638,16 +634,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
 
+/// OpenGL shaders
+#define GL_SHADERS
+
 /// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
 /// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
 #define SECTORSPECIALSAFTERTHINK
-
-/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
-/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
-/// on the bright side it fixes some weird issues with translucent walls
-/// \note	SRB2CB port.
-///      	SRB2CB itself ported this from PrBoom+
-#define NEWCLIP
 
 /// Cache patches in Lua in a way that renderer switching will work flawlessly.
 //#define LUA_PATCH_SAFETY
@@ -664,5 +656,8 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Render flats on walls
 #define WALLFLATS
+
+/// Maintain compatibility with older 2.2 demos
+#define OLD22DEMOCOMPAT
 
 #endif // __DOOMDEF__

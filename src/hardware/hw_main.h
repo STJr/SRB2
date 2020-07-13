@@ -1,20 +1,13 @@
-// Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-//
 // Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-/// \file
+/// \file hw_main.h
 /// \brief 3D render mode functions
 
 #ifndef __HWR_MAIN_H__
@@ -59,7 +52,6 @@ boolean HWR_Screenshot(const char *pathname);
 
 void HWR_AddCommands(void);
 void HWR_AddSessionCommands(void);
-void HWR_CorrectSWTricks(void);
 void transform(float *cx, float *cy, float *cz);
 FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
 INT32 HWR_GetTextureUsed(void);
@@ -73,8 +65,11 @@ void HWR_MakeScreenFinalTexture(void);
 void HWR_DrawScreenFinalTexture(int width, int height);
 
 // This stuff is put here so MD2's can use them
-UINT32 HWR_Lighting(INT32 light, UINT32 color, UINT32 fadecolor, boolean fogblockpoly, boolean plane);
-FUNCMATH UINT8 LightLevelToLum(INT32 l);
+void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap);
+UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
+
+void HWR_ReadShaders(UINT16 wadnum, boolean PK3);
+boolean HWR_LoadShaders(void);
 
 extern CV_PossibleValue_t granisotropicmode_cons_t[];
 
@@ -84,21 +79,22 @@ extern consvar_t cv_grstaticlighting;
 extern consvar_t cv_grcoronas;
 extern consvar_t cv_grcoronasize;
 #endif
+
+extern consvar_t cv_grshaders;
 extern consvar_t cv_grmodels;
 extern consvar_t cv_grmodelinterpolation;
 extern consvar_t cv_grmodellighting;
-extern consvar_t cv_grfog;
-extern consvar_t cv_grfogcolor;
-extern consvar_t cv_grfogdensity;
-extern consvar_t cv_grsoftwarefog;
 extern consvar_t cv_grfiltermode;
 extern consvar_t cv_granisotropicmode;
-extern consvar_t cv_grcorrecttricks;
 extern consvar_t cv_fovchange;
 extern consvar_t cv_grsolvetjoin;
+extern consvar_t cv_grshearing;
 extern consvar_t cv_grspritebillboarding;
 extern consvar_t cv_grskydome;
 extern consvar_t cv_grfakecontrast;
+extern consvar_t cv_grslopecontrast;
+
+extern consvar_t cv_grbatching;
 
 extern float gr_viewwidth, gr_viewheight, gr_baseviewwindowy;
 
@@ -107,5 +103,25 @@ extern float gr_viewwindowx, gr_basewindowcentery;
 // BP: big hack for a test in lighting ref : 1249753487AB
 extern fixed_t *hwbbox;
 extern FTransform atransform;
+
+
+// Render stats
+extern int rs_hw_nodesorttime;
+extern int rs_hw_nodedrawtime;
+extern int rs_hw_spritesorttime;
+extern int rs_hw_spritedrawtime;
+
+// Render stats for batching
+extern int rs_hw_numpolys;
+extern int rs_hw_numverts;
+extern int rs_hw_numcalls;
+extern int rs_hw_numshaders;
+extern int rs_hw_numtextures;
+extern int rs_hw_numpolyflags;
+extern int rs_hw_numcolors;
+extern int rs_hw_batchsorttime;
+extern int rs_hw_batchdrawtime;
+
+extern boolean gr_shadersavailable;
 
 #endif
