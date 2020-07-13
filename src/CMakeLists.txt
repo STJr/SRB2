@@ -226,6 +226,12 @@ set(SRB2_CONFIG_HAVE_GME ON CACHE BOOL
 	"Enable GME support.")
 set(SRB2_CONFIG_HAVE_OPENMPT ON CACHE BOOL
 	"Enable OpenMPT support.")
+if(${CMAKE_SYSTEM} MATCHES Windows)
+	set(SRB2_CONFIG_HAVE_MIXERX ON CACHE BOOL
+		"Enable SDL Mixer X support.")
+else()
+	set(SRB2_CONFIG_HAVE_MIXERX OFF)
+endif()
 set(SRB2_CONFIG_HWRENDER ON CACHE BOOL
 	"Enable hardware rendering through OpenGL.")
 set(SRB2_CONFIG_USEASM OFF CACHE BOOL
@@ -366,6 +372,30 @@ if(${SRB2_CONFIG_HAVE_OPENMPT})
 	endif()
 endif()
 
+if(${SRB2_CONFIG_HAVE_MIXERX})
+	if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
+		set(MIXERX_FOUND ON)
+		set(MIXERX_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/SDLMixerX/i686-w64-mingw32/include/SDL2)
+        if(${SRB2_SYSTEM_BITS} EQUAL 64)
+			set(MIXERX_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/SDLMixerX/x86_64-w64-mingw32/lib -lSDL2_mixer_ext")
+		else() # 32-bit
+			set(MIXERX_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/SDLMixerX/i686-w64-mingw32/lib -lSDL2_mixer_ext")
+		endif()
+	else()
+		# No support for non-Windows (yet?)
+		#find_package(MIXERX)
+		message(WARNING "SDL Mixer X is not supported as an external library.")
+		set(MIXERX_FOUND OFF)
+	endif()
+	if(${MIXERX_FOUND})
+		set(SRB2_HAVE_MIXERX ON)
+		set(SRB2_SDL2_SOUNDIMPL mixer_sound.c)
+		add_definitions(-DHAVE_MIXERX)
+	else()
+		message(WARNING "You have specified that SDL Mixer X is available but it was not found.")
+	endif()
+endif()
+
 if(${SRB2_CONFIG_HAVE_ZLIB})
 	if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
 		set(ZLIB_FOUND ON)
@@ -493,6 +523,27 @@ else()
 endif()
 
 # Targets
+
+# If using CCACHE, then force it.
+# https://github.com/Cockatrice/Cockatrice/pull/3052/files
+if (${CMAKE_SYSTEM} MATCHES "Darwin")
+	get_property(RULE_LAUNCH_COMPILE GLOBAL PROPERTY RULE_LAUNCH_COMPILE)
+	if(RULE_LAUNCH_COMPILE)
+		MESSAGE(STATUS "Force enabling CCache usage under macOS")
+		# Set up wrapper scripts
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/launch-c.in   ${CMAKE_BINARY_DIR}/launch-c)
+		configure_file(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/launch-cxx.in ${CMAKE_BINARY_DIR}/launch-cxx)
+		execute_process(COMMAND chmod a+rx
+			"${CMAKE_BINARY_DIR}/launch-c"
+			"${CMAKE_BINARY_DIR}/launch-cxx")
+
+		# Set Xcode project attributes to route compilation through our scripts
+		set(CMAKE_XCODE_ATTRIBUTE_CC         "${CMAKE_BINARY_DIR}/launch-c")
+		set(CMAKE_XCODE_ATTRIBUTE_CXX        "${CMAKE_BINARY_DIR}/launch-cxx")
+		set(CMAKE_XCODE_ATTRIBUTE_LD         "${CMAKE_BINARY_DIR}/launch-c")
+		set(CMAKE_XCODE_ATTRIBUTE_LDPLUSPLUS "${CMAKE_BINARY_DIR}/launch-cxx")
+	endif()
+endif()
 
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
