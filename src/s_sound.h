@@ -185,7 +185,7 @@ boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 
 // Returns whether the preferred format a (true = MIDI, false = Digital)
 // exists and is enabled for musicname b
-#define PREFAVAILABLE(a, b) (a ? \
+#define S_PrefAvailable(a, b) (a ? \
 	(!S_MIDIMusicDisabled() && S_MIDIExists(b)) : \
 	(!S_DigMusicDisabled() && S_DigExists(b)))
 

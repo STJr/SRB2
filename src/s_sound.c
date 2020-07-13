@@ -2097,6 +2097,8 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 	boolean mapmuschanged = false;
 	musicstack_t *result;
 	musicstack_t *entry = Z_Calloc(sizeof (*result), PU_MUSIC, NULL);
+	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
+	boolean midipref = cv_musicpref.value;
 
 	if (status)
 		result = S_GetMusicStackEntry(status, fromfirst, -1);
@@ -2151,11 +2153,8 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		return false;
 	}
 
-	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
-	boolean midipref = cv_musicpref.value;
-
 	if (strncmp(entry->musname, S_MusicName(), 7) || // don't restart music if we're already playing it
-		(midipref != currentmidi && PREFAVAILABLE(midipref, entry->musname))) // but do if the user's preference has changed
+		(midipref != currentmidi && S_PrefAvailable(midipref, entry->musname))) // but do if the user's preference has changed
 	{
 		if (music_stack_fadeout)
 			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, music_stack_fadeout, 0);
@@ -2204,9 +2203,9 @@ static lumpnum_t S_GetMusicLumpNum(const char *mname)
 {
 	boolean midipref = cv_musicpref.value;
 	
-	if (PREFAVAILABLE(midipref, mname))
+	if (S_PrefAvailable(midipref, mname))
 		return W_GetNumForName(va(midipref ? "d_%s":"o_%s", mname));
-	else if (PREFAVAILABLE(!midipref, mname))
+	else if (S_PrefAvailable(!midipref, mname))
 		return W_GetNumForName(va(midipref ? "o_%s":"d_%s", mname));
 	else
 		return LUMPERROR;
@@ -2333,6 +2332,8 @@ static void S_ChangeMusicToQueue(void)
 void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
 	char newmusic[7];
+	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
+	boolean midipref = cv_musicpref.value;
 
 	if (S_MusicDisabled())
 		return;
@@ -2354,9 +2355,6 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 	}
 
-	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
-	boolean midipref = cv_musicpref.value;
-
 	if (prefadems) // queue music change for after fade // allow even if the music is the same
 		// && S_MusicPlaying() // Let the delay happen even if we're not playing music
 	{
@@ -2366,7 +2364,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 	}
 	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET) || 
-		(midipref != currentmidi && PREFAVAILABLE(midipref, newmusic)))
+		(midipref != currentmidi && S_PrefAvailable(midipref, newmusic)))
  	{
 		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
 
@@ -2738,7 +2736,7 @@ void MusicPref_OnChange(void)
 
 	if (Playing())
 		P_RestoreMusic(&players[consoleplayer]);
-	else if (PREFAVAILABLE(cv_musicpref.value, "_clear"))
+	else if (S_PrefAvailable(cv_musicpref.value, "_clear"))
 		S_ChangeMusicInternal("_clear", false);
 }
 
