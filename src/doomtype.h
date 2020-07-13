@@ -367,4 +367,8 @@ typedef UINT32 tic_t;
 #define UINT2RGBA(a) (UINT32)((a&0xff)<<24)|((a&0xff00)<<8)|((a&0xff0000)>>8)|(((UINT32)a&0xff000000)>>24)
 #endif
 
+/* preprocessor dumb and needs second macro to expand input */
+#define WSTRING2(s) L ## s
+#define WSTRING(s) WSTRING2 (s)
+
 #endif //__DOOMTYPE__
