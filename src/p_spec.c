@@ -6963,6 +6963,71 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
+			case 260: // GZDoom-like 3D Floor.
+				{
+					UINT8 dtype = lines[i].args[1] & 3;
+					UINT8 dflags1 = lines[i].args[1] - dtype;
+					UINT8 dflags2 = lines[i].args[2];
+					UINT8 dopacity = lines[i].args[3];
+					boolean isfog = false;
+
+					if (dtype == 0)
+						dtype = 1;
+
+					ffloorflags = FF_EXISTS;
+
+					if (dflags2 & 1) ffloorflags |= FF_NOSHADE; // Disable light effects (Means no shadowcast)
+					if (dflags2 & 2) ffloorflags |= FF_DOUBLESHADOW; // Restrict light inside (Means doubleshadow)
+					if (dflags2 & 4) isfog = true; // Fog effect (Explicitly render like a fog block)
+
+					if (dflags1 & 4) ffloorflags |= FF_BOTHPLANES|FF_ALLSIDES; // Render-inside
+					if (dflags1 & 16) ffloorflags |= FF_INVERTSIDES|FF_INVERTPLANES; // Invert visibility rules
+
+					// Fog block
+					if (isfog)
+						ffloorflags |= FF_RENDERALL|FF_CUTEXTRA|FF_CUTSPRITES|FF_BOTHPLANES|FF_EXTRA|FF_FOG|FF_INVERTPLANES|FF_ALLSIDES|FF_INVERTSIDES;
+					else
+					{
+						ffloorflags |= FF_RENDERALL;
+
+						// Solid
+						if (dtype == 1)
+							ffloorflags |= FF_SOLID|FF_CUTLEVEL;
+						// Water
+						else if (dtype == 2)
+							ffloorflags |= FF_SWIMMABLE|FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA|FF_RIPPLE;
+						// Intangible
+						else if (dtype == 3)
+							ffloorflags |= FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA;
+					}
+
+					// Non-opaque
+					if (dopacity < 255)
+					{
+						// Invisible
+						if (dopacity == 0)
+						{
+							// True invisible
+							if (ffloorflags & FF_NOSHADE)
+								ffloorflags &= ~(FF_RENDERALL|FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTLEVEL);
+							// Shadow block
+							else
+							{
+								ffloorflags |= FF_CUTSPRITES;
+								ffloorflags &= ~(FF_RENDERALL|FF_CUTEXTRA|FF_EXTRA|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTLEVEL);
+							}
+						}
+						else
+						{
+							ffloorflags |= FF_TRANSLUCENT|FF_CUTEXTRA|FF_EXTRA;
+							ffloorflags &= ~FF_CUTLEVEL;
+						}
+					}
+
+					P_AddFakeFloorsByLine(i, dopacity, ffloorflags, secthinkers);
+				}
+				break;
+
 			case 300: // Linedef executor (combines with sector special 974/975) and commands
 			case 302:
 			case 303:
