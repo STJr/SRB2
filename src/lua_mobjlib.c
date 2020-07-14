@@ -165,14 +165,15 @@ static int mobj_get(lua_State *L)
 	enum mobj_e field = Lua_optoption(L, 2, NULL, mobj_opt);
 	lua_settop(L, 2);
 
-	INLEVEL
-
-	if (!mo) {
+	if (!mo || !ISINLEVEL) {
 		if (field == mobj_valid) {
 			lua_pushboolean(L, 0);
 			return 1;
 		}
-		return LUA_ErrInvalid(L, "mobj_t");
+		if (!mo) {
+			return LUA_ErrInvalid(L, "mobj_t");
+		} else
+			return luaL_error(L, "Do not access an mobj_t field outside a level!");
 	}
 
 	switch(field)
