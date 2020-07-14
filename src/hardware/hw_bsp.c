@@ -61,17 +61,17 @@ static INT32 totalsubsecpolys = 0;
 /// \todo check out how much is used
 static size_t POLYPOOLSIZE = 1024000;
 
-static UINT8 *gr_polypool = NULL;
-static UINT8 *gr_ppcurrent;
-static size_t gr_ppfree;
+static UINT8 *gl_polypool = NULL;
+static UINT8 *gl_ppcurrent;
+static size_t gl_ppfree;
 #endif
 
 // only between levels, clear poly pool
 static void HWR_ClearPolys(void)
 {
 #ifndef ZPLANALLOC
-	gr_ppcurrent = gr_polypool;
-	gr_ppfree = POLYPOOLSIZE;
+	gl_ppcurrent = gl_polypool;
+	gl_ppfree = POLYPOOLSIZE;
 #endif
 }
 
@@ -86,8 +86,8 @@ void HWR_InitPolyPool(void)
 		POLYPOOLSIZE = atoi(myargv[pnum+1])*1024; // (in kb)
 
 	CONS_Debug(DBG_RENDER, "HWR_InitPolyPool(): allocating %d bytes\n", POLYPOOLSIZE);
-	gr_polypool = malloc(POLYPOOLSIZE);
-	if (!gr_polypool)
+	gl_polypool = malloc(POLYPOOLSIZE);
+	if (!gl_polypool)
 		I_Error("HWR_InitPolyPool(): couldn't malloc polypool\n");
 	HWR_ClearPolys();
 #endif
@@ -96,9 +96,9 @@ void HWR_InitPolyPool(void)
 void HWR_FreePolyPool(void)
 {
 #ifndef ZPLANALLOC
-	if (gr_polypool)
-		free(gr_polypool);
-	gr_polypool = NULL;
+	if (gl_polypool)
+		free(gl_polypool);
+	gl_polypool = NULL;
 #endif
 }
 
@@ -110,19 +110,19 @@ static poly_t *HWR_AllocPoly(INT32 numpts)
 	p = Z_Malloc(size, PU_HWRPLANE, NULL);
 #else
 #ifdef PARANOIA
-	if (!gr_polypool)
-		I_Error("Used gr_polypool without init!\n");
-	if (!gr_ppcurrent)
-		I_Error("gr_ppcurrent == NULL!\n");
+	if (!gl_polypool)
+		I_Error("Used gl_polypool without init!\n");
+	if (!gl_ppcurrent)
+		I_Error("gl_ppcurrent == NULL!\n");
 #endif
 
-	if (gr_ppfree < size)
+	if (gl_ppfree < size)
 		I_Error("HWR_AllocPoly(): no more memory %u bytes left, %u bytes needed\n\n%s\n",
-		        gr_ppfree, size, "You can try the param -polypoolsize 2048 (or higher if needed)");
+		        gl_ppfree, size, "You can try the param -polypoolsize 2048 (or higher if needed)");
 
-	p = (poly_t *)gr_ppcurrent;
-	gr_ppcurrent += size;
-	gr_ppfree -= size;
+	p = (poly_t *)gl_ppcurrent;
+	gl_ppcurrent += size;
+	gl_ppfree -= size;
 #endif
 	p->numpts = numpts;
 	return p;
@@ -135,13 +135,13 @@ static polyvertex_t *HWR_AllocVertex(void)
 #ifdef ZPLANALLOC
 	p = Z_Malloc(size, PU_HWRPLANE, NULL);
 #else
-	if (gr_ppfree < size)
+	if (gl_ppfree < size)
 		I_Error("HWR_AllocVertex(): no more memory %u bytes left, %u bytes needed\n\n%s\n",
-		        gr_ppfree, size, "You can try the param -polypoolsize 2048 (or higher if needed)");
+		        gl_ppfree, size, "You can try the param -polypoolsize 2048 (or higher if needed)");
 
-	p = (polyvertex_t *)gr_ppcurrent;
-	gr_ppcurrent += size;
-	gr_ppfree -= size;
+	p = (polyvertex_t *)gl_ppcurrent;
+	gl_ppcurrent += size;
+	gl_ppfree -= size;
 #endif
 	return p;
 }
@@ -829,7 +829,7 @@ static INT32 SolveTProblem(void)
 	INT32 i;
 	size_t l;
 
-	if (cv_grsolvetjoin.value == 0)
+	if (cv_glsolvetjoin.value == 0)
 		return 0;
 
 	CONS_Debug(DBG_RENDER, "Solving T-joins. This may take a while. Please wait...\n");
@@ -983,9 +983,9 @@ void HWR_CreatePlanePolygons(INT32 bspnum)
 		I_Error("couldn't malloc extrasubsectors totsubsectors %s\n", sizeu1(totsubsectors));
 
 	// allocate table for back to front drawing of subsectors
-	/*gr_drawsubsectors = (INT16 *)malloc(sizeof (*gr_drawsubsectors) * totsubsectors);
-	if (!gr_drawsubsectors)
-		I_Error("couldn't malloc gr_drawsubsectors\n");*/
+	/*gl_drawsubsectors = (INT16 *)malloc(sizeof (*gl_drawsubsectors) * totsubsectors);
+	if (!gl_drawsubsectors)
+		I_Error("couldn't malloc gl_drawsubsectors\n");*/
 
 	// number of the first new subsector that might be added
 	addsubsector = numsubsectors;

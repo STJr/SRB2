@@ -2336,8 +2336,8 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 		if (server_list)
 		{
 			char version[8] = "";
-#if VERSION > 0 || SUBVERSION > 0
-			snprintf(version, sizeof (version), "%d.%d.%d", VERSION/100, VERSION%100, SUBVERSION);
+#ifndef DEVELOP
+			strcpy(version, SRB2VERSION);
 #else
 			strcpy(version, GetRevisionString());
 #endif

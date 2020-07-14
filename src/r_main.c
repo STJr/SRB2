@@ -1064,7 +1064,7 @@ static void R_SetupFreelook(void)
 	// (lmps, network and use F12...)
 	if (rendermode == render_soft
 #ifdef HWRENDER
-		|| cv_grshearing.value
+		|| cv_glshearing.value
 #endif
 		)
 	{

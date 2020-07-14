@@ -19,6 +19,7 @@
 #include "z_zone.h"
 #include "r_patch.h"
 #include "r_things.h"
+#include "r_draw.h" // R_GetColorByName
 #include "doomstat.h" // luabanks[]
 
 #include "lua_script.h"
@@ -1540,7 +1541,16 @@ static int lib_setSkinColor(lua_State *L)
 			const char* n = luaL_checkstring(L, 3);
 			strlcpy(info->name, n, MAXCOLORNAME+1);
 			if (strlen(n) > MAXCOLORNAME)
-				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; shortened to %s.\n", n, MAXCOLORNAME, info->name);
+				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; clipped to %s.\n", n, MAXCOLORNAME, info->name);
+			if (strchr(info->name, ' ') != NULL)
+				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", info->name);
+
+			if (info->name[0] != '\0') // don't check empty string for dupe
+			{
+				UINT16 dupecheck = R_GetColorByName(info->name);
+				if (!stricmp(info->name, skincolors[SKINCOLOR_NONE].name) || (dupecheck && (dupecheck != info-skincolors)))
+					CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') is a duplicate of another skincolor's name.\n", info->name);
+			}
 		} else if (i == 2 || (str && fastcmp(str,"ramp"))) {
 			if (!lua_istable(L, 3) && luaL_checkudata(L, 3, META_COLORRAMP) == NULL)
 				return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be a table or array.");
@@ -1550,19 +1560,17 @@ static int lib_setSkinColor(lua_State *L)
 				for (j=0; j<COLORRAMPSIZE; j++)
 					info->ramp[j] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[j];
 			R_FlushTranslationColormapCache();
-		} else if (i == 3 || (str && fastcmp(str,"invcolor")))
-			info->invcolor = (UINT16)luaL_checkinteger(L, 3);
-		else if (i == 4 || (str && fastcmp(str,"invshade")))
+		} else if (i == 3 || (str && fastcmp(str,"invcolor"))) {
+			UINT16 v = (UINT16)luaL_checkinteger(L, 3);
+			if (v >= numskincolors)
+				return luaL_error(L, "attempt to set skincolors[%d].invcolor to out of range value %d.", cnum, v);
+			info->invcolor = v;
+		} else if (i == 4 || (str && fastcmp(str,"invshade")))
 			info->invshade = (UINT8)luaL_checkinteger(L, 3)%COLORRAMPSIZE;
 		else if (i == 5 || (str && fastcmp(str,"chatcolor")))
 			info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
-		else if (i == 6 || (str && fastcmp(str,"accessible"))) {
-			boolean v = lua_isboolean(L,3) ? lua_toboolean(L, 3) : true;
-			if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-				return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", i);
-			else
-				info->accessible = v;
-		}
+		else if (i == 6 || (str && fastcmp(str,"accessible")))
+			info->accessible = lua_toboolean(L, 3);
 		lua_pop(L, 1);
 	}
 	return 0;
@@ -1616,11 +1624,18 @@ static int skincolor_set(lua_State *L)
 
 	if (fastcmp(field,"name")) {
 		const char* n = luaL_checkstring(L, 3);
-		if (strchr(n, ' ') != NULL)
-			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", n);
 		strlcpy(info->name, n, MAXCOLORNAME+1);
 		if (strlen(n) > MAXCOLORNAME)
 			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; clipped to %s.\n", n, MAXCOLORNAME, info->name);
+		if (strchr(info->name, ' ') != NULL)
+			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", info->name);
+
+		if (info->name[0] != '\0') // don't check empty string for dupe
+		{
+			UINT16 dupecheck = R_GetColorByName(info->name);
+			if (!stricmp(info->name, skincolors[SKINCOLOR_NONE].name) || (dupecheck && (dupecheck != info-skincolors)))
+				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') is a duplicate of another skincolor's name.\n", info->name);
+		}
 	} else if (fastcmp(field,"ramp")) {
 		if (!lua_istable(L, 3) && luaL_checkudata(L, 3, META_COLORRAMP) == NULL)
 			return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be a table or array.");
@@ -1630,14 +1645,17 @@ static int skincolor_set(lua_State *L)
 			for (i=0; i<COLORRAMPSIZE; i++)
 				info->ramp[i] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[i];
 		R_FlushTranslationColormapCache();
-	} else if (fastcmp(field,"invcolor"))
-		info->invcolor = (UINT16)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"invshade"))
+	} else if (fastcmp(field,"invcolor")) {
+		UINT16 v = (UINT16)luaL_checkinteger(L, 3);
+		if (v >= numskincolors)
+			return luaL_error(L, "attempt to set skincolor_t field 'invcolor' to out of range value %d.", v);
+		info->invcolor = v;
+	} else if (fastcmp(field,"invshade"))
 		info->invshade = (UINT8)luaL_checkinteger(L, 3)%COLORRAMPSIZE;
 	else if (fastcmp(field,"chatcolor"))
 		info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"accessible"))
-		info->accessible = lua_isboolean(L,3);
+		info->accessible = lua_toboolean(L, 3);
 	else
 		CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "skincolor_t", field);
 	return 1;
