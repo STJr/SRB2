@@ -10665,7 +10665,7 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("State S_%s allocated.\n",word);
 					FREE_STATES[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_STATES[i],word);
-					lua_pushinteger(L, i);
+					lua_pushinteger(L, S_FIRSTFREESLOT + i);
 					r++;
 					break;
 				}
@@ -10680,7 +10680,7 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("MobjType MT_%s allocated.\n",word);
 					FREE_MOBJS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_MOBJS[i],word);
-					lua_pushinteger(L, i);
+					lua_pushinteger(L, MT_FIRSTFREESLOT + i);
 					r++;
 					break;
 				}
@@ -10696,7 +10696,7 @@ static inline int lib_freeslot(lua_State *L)
 					FREE_SKINCOLORS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_SKINCOLORS[i],word);
 					M_AddMenuColor(numskincolors++);
-					lua_pushinteger(L, i);
+					lua_pushinteger(L, SKINCOLOR_FIRSTFREESLOT + i);
 					r++;
 					break;
 				}
@@ -10717,11 +10717,12 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
 					spr2defaults[free_spr2] = 0;
+					lua_pushinteger(L, free_spr2);
+					r++;
 					spr2names[free_spr2++][4] = 0;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
 			}
-			r++;
 		}
 		else if (fastcmp(type, "TOL"))
 		{
