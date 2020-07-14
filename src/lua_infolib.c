@@ -26,8 +26,8 @@
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
 
-extern CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
-extern void R_FlushTranslationColormapCache(void);
+extern CV_PossibleValue_t Color_cons_t[];
+extern UINT8 skincolor_modified[];
 
 boolean LUA_CallAction(const char *action, mobj_t *actor);
 state_t *astate;
@@ -1559,7 +1559,7 @@ static int lib_setSkinColor(lua_State *L)
 			else
 				for (j=0; j<COLORRAMPSIZE; j++)
 					info->ramp[j] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[j];
-			R_FlushTranslationColormapCache();
+			skincolor_modified[cnum] = true;
 		} else if (i == 3 || (str && fastcmp(str,"invcolor"))) {
 			UINT16 v = (UINT16)luaL_checkinteger(L, 3);
 			if (v >= numskincolors)
@@ -1644,7 +1644,7 @@ static int skincolor_set(lua_State *L)
 		else
 			for (i=0; i<COLORRAMPSIZE; i++)
 				info->ramp[i] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[i];
-		R_FlushTranslationColormapCache();
+		skincolor_modified[info-skincolors] = true;
 	} else if (fastcmp(field,"invcolor")) {
 		UINT16 v = (UINT16)luaL_checkinteger(L, 3);
 		if (v >= numskincolors)
@@ -1698,7 +1698,7 @@ static int colorramp_set(lua_State *L)
 	if (hud_running)
 		return luaL_error(L, "Do not alter skincolor_t in HUD rendering code!");
 	colorramp[n] = i;
-	R_FlushTranslationColormapCache();
+	skincolor_modified[cnum] = true;
 	return 0;
 }
 
