@@ -2803,7 +2803,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 				}
 				else
 				{
-					//CONS_Printf("non-vbo tinyframe\n");
 					pglVertexPointer(3, GL_SHORT, 0, frame->vertices);
 					pglNormalPointer(GL_BYTE, 0, frame->normals);
 					pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
@@ -2858,7 +2857,6 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 				}
 				else
 				{
-					//CONS_Printf("non-vbo frame\n");
 					pglVertexPointer(3, GL_FLOAT, 0, frame->vertices);
 					pglNormalPointer(GL_FLOAT, 0, frame->normals);
 					pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
