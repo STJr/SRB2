@@ -109,6 +109,10 @@ typedef struct model_s
 	// (if a sprite is used as a texture)
 	float max_s;
 	float max_t;
+	// These are the values that the uvs in the VBO have been adjusted to.
+	// If they are not same as max_s and max_t, then the VBO won't be used.
+	float vbo_max_s;
+	float vbo_max_t;
 } model_t;
 
 extern int numModels;

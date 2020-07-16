@@ -1200,10 +1200,7 @@ static void adjustTextureCoords(model_t *model, GLPatch_t *gpatch)
 		// if originaluvs points to uvs, we need to allocate new memory for adjusted uvs
 		// the old uvs are kept around for use in possible readjustments
 		if (mesh->uvs == mesh->originaluvs)
-		{
-			CONS_Printf("Debug: allocating memory for adjusted uvs\n");
 			mesh->uvs = Z_Malloc(numVertices * 2 * sizeof(float), PU_STATIC, NULL);
-		}
 
 		uvWritePtr = mesh->uvs;
 
@@ -1349,10 +1346,13 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			if (md2->model)
 			{
 				md2_printModelInfo(md2->model);
-				// if model uses sprite patch as texture, then
+				// If model uses sprite patch as texture, then
 				// adjust texture coordinates to take power of two textures into account
 				if (!gpatch || !gpatch->mipmap->format)
 					adjustTextureCoords(md2->model, spr->gpatch);
+				// note down the max_s and max_t that end up in the VBO
+				md2->model->vbo_max_s = md2->model->max_s;
+				md2->model->vbo_max_t = md2->model->max_t;
 				HWD.pfnCreateModelVBOs(md2->model);
 			}
 			else
@@ -1408,15 +1408,10 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
 			// Check if sprite dimensions are different from previously used sprite.
 			// If so, uvs need to be readjusted.
+			// Comparing floats with the != operator here should be okay because they
+			// are just copies of glpatches' max_s and max_t values.
 			if (gpatch->max_s != md2->model->max_s || gpatch->max_t != md2->model->max_t)
-			{
-				CONS_Printf("Debug: Readjusting uvs!\n");
 				adjustTextureCoords(md2->model, gpatch);
-				// The vbo(s) are now wrong, so recreate them.
-				// If this turns out to be slow, then could try updating the vbos instead of
-				// deleting and creating new ones.
-				HWD.pfnCreateModelVBOs(md2->model);
-			}
 			HWR_GetMappedPatch(gpatch, spr->colormap);
 		}
 
