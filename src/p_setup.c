@@ -3815,6 +3815,10 @@ void HWR_SetupLevel(void)
 #endif
 
 	HWR_CreatePlanePolygons((INT32)numnodes - 1);
+
+	// Build the sky dome
+	HWR_ClearSkyDome();
+	HWR_BuildSkyDome();
 }
 #endif
 
