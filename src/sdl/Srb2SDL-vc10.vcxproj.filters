@@ -237,9 +237,6 @@
     <ClInclude Include="..\hardware\hw_drv.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
-    <ClInclude Include="..\hardware\hw_glide.h">
-      <Filter>Hw_Hardware</Filter>
-    </ClInclude>
     <ClInclude Include="..\hardware\hw_glob.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>

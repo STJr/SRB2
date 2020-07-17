@@ -1684,7 +1684,7 @@ void F_GameEvaluationDrawer(void)
 			endingtext = va("%s & %s, %s%s", skins[players[consoleplayer].skin].realname, skins[botskin-1].realname, rtatext, cuttext);
 		else
 			endingtext = va("%s, %s%s", skins[players[consoleplayer].skin].realname, rtatext, cuttext);
-		V_DrawCenteredString(BASEVIDWIDTH/2, 182, (ultimatemode ? V_REDMAP : V_YELLOWMAP), endingtext);
+		V_DrawCenteredString(BASEVIDWIDTH/2, 182, V_SNAPTOBOTTOM|(ultimatemode ? V_REDMAP : V_YELLOWMAP), endingtext);
 	}
 }
 

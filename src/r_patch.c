@@ -319,11 +319,11 @@ void *Patch_CacheGL(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
 {
 	GLPatch_t *grPatch = HWR_GetCachedGLPatchPwad(wad, lump, Patch_GetRendererBaseSubTree(wad, render_opengl));
 
-	if (grPatch->mipmap->grInfo.data)
+	if (grPatch->mipmap->data)
 	{
 		if (tag == PU_CACHE)
 			tag = PU_HWRCACHE;
-		Z_ChangeTag(grPatch->mipmap->grInfo.data, tag);
+		Z_ChangeTag(grPatch->mipmap->data, tag);
 	}
 	else
 	{

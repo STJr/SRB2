@@ -1880,7 +1880,7 @@ static inline void HU_DrawCrosshair(void)
 
 #ifdef HWRENDER
 	if (rendermode != render_soft)
-		y = (INT32)gr_basewindowcentery;
+		y = (INT32)gl_basewindowcentery;
 	else
 #endif
 		y = viewwindowy + (viewheight>>1);
@@ -1901,7 +1901,7 @@ static inline void HU_DrawCrosshair2(void)
 
 #ifdef HWRENDER
 	if (rendermode != render_soft)
-		y = (INT32)gr_basewindowcentery;
+		y = (INT32)gl_basewindowcentery;
 	else
 #endif
 		y = viewwindowy + (viewheight>>1);
@@ -1910,7 +1910,7 @@ static inline void HU_DrawCrosshair2(void)
 	{
 #ifdef HWRENDER
 		if (rendermode != render_soft)
-			y += (INT32)gr_viewheight;
+			y += (INT32)gl_viewheight;
 		else
 #endif
 			y += viewheight;

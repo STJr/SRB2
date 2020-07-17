@@ -936,17 +936,17 @@ void HWR_DrawViewBorder(INT32 clearlines)
 	INT32 basewindowx, basewindowy;
 	GLPatch_t *patch;
 
-//    if (gr_viewwidth == vid.width)
+//    if (gl_viewwidth == vid.width)
 //        return;
 
 	if (!clearlines)
 		clearlines = BASEVIDHEIGHT; // refresh all
 
 	// calc view size based on original game resolution
-	baseviewwidth =  FixedInt(FixedDiv(FLOAT_TO_FIXED(gr_viewwidth), vid.fdupx)); //(cv_viewsize.value * BASEVIDWIDTH/10)&~7;
-	baseviewheight = FixedInt(FixedDiv(FLOAT_TO_FIXED(gr_viewheight), vid.fdupy));
-	top = FixedInt(FixedDiv(FLOAT_TO_FIXED(gr_baseviewwindowy), vid.fdupy));
-	side = FixedInt(FixedDiv(FLOAT_TO_FIXED(gr_viewwindowx), vid.fdupx));
+	baseviewwidth =  FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewwidth), vid.fdupx)); //(cv_viewsize.value * BASEVIDWIDTH/10)&~7;
+	baseviewheight = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewheight), vid.fdupy));
+	top = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_baseviewwindowy), vid.fdupy));
+	side = FixedInt(FixedDiv(FLOAT_TO_FIXED(gl_viewwindowx), vid.fdupx));
 
 	// top
 	HWR_DrawFlatFill(0, 0,

@@ -240,8 +240,8 @@ void ST_LoadGraphics(void)
 	int i;
 
 	// SRB2 border patch
-	st_borderpatchnum = W_GetNumForName("GFZFLR01");
-	scr_borderpatch = W_CacheLumpNum(st_borderpatchnum, PU_HUDGFX);
+	// st_borderpatchnum = W_GetNumForName("GFZFLR01");
+	// scr_borderpatch = W_CacheLumpNum(st_borderpatchnum, PU_HUDGFX);
 
 	// the original Doom uses 'STF' as base name for all face graphics
 	// Graue 04-08-2004: face/name graphics are now indexed by skins
