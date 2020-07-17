@@ -851,6 +851,7 @@ static void readskincolor(MYFILE *f, INT32 num)
 					if ((tmp = strtok(NULL,",")) == NULL)
 						break;
 				}
+				skincolor_modified[num] = true;
 			}
 			else if (fastcmp(word, "INVCOLOR"))
 			{

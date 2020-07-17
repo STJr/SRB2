@@ -117,6 +117,9 @@ void R_FlushTranslationColormapCache(void);
 UINT16 R_GetColorByName(const char *name);
 UINT16 R_GetSuperColorByName(const char *name);
 
+// Color ramp modification should force a recache
+extern UINT8 skincolor_modified[];
+
 // Custom player skin translation
 void R_InitViewBuffer(INT32 width, INT32 height);
 void R_InitViewBorder(void);
