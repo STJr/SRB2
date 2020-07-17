@@ -1804,7 +1804,7 @@ boolean LUAh_PlayerCmd(player_t *player, ticcmd_t *cmd)
 {
 	hook_p hookp;
 	boolean hooked = false;
-	if (!gL || !(hooksAvailable[hook_PlayerCmd/8] & (1<<hook_PlayerCmd%8))))
+	if (!gL || !(hooksAvailable[hook_PlayerCmd/8] & (1<<(hook_PlayerCmd%8))))
 		return false;
 
 	lua_settop(gL, 0);
@@ -1825,7 +1825,7 @@ boolean LUAh_PlayerCmd(player_t *player, ticcmd_t *cmd)
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
 		if (lua_pcall(gL, 2, 1, 1)) {
-			if (!hook->error || cv_debug & DBG_LUA)
+			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
 			hookp->error = true;
@@ -1837,6 +1837,6 @@ boolean LUAh_PlayerCmd(player_t *player, ticcmd_t *cmd)
 	}
 
 	lua_settop(gL, 0);
-	lua_cmd_running = false;
+	hook_cmd_running = false;
 	return hooked;
 }
