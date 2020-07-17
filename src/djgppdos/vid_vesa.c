@@ -378,10 +378,12 @@ INT32 VID_SetMode (INT32 modenum)  //, UINT8 *palette)
 	return 1;
 }
 
-void VID_CheckRenderer(void) {}
+boolean VID_CheckRenderer(void)
+{
+	return false;
+}
+
 void VID_CheckGLLoaded(rendermode_t oldrender) {}
-
-
 
 // converts a segm:offs 32bit pair to a 32bit flat ptr
 #if 0
@@ -739,7 +741,7 @@ static INT32 VGA_InitMode (viddef_t *lvid, vmode_t *currentmodep)
 	// here it is the standard VGA 64k window, not an LFB
 	// (you could have 320x200x256c with LFB in the vesa modes)
 	lvid->direct = (UINT8 *) real2ptr (0xa0000);
-	lvid->u.numpages = 1;
+	lvid->numpages = 1;
 	lvid->bpp = currentmodep->bytesperpixel;
 
 	return 1;
@@ -773,7 +775,7 @@ INT32 VID_VesaInitMode (viddef_t *lvid, vmode_t *currentmodep)
 #endif
 
 	//added:20-01-98:no page flipping now... TO DO!!!
-	lvid->u.numpages = 1;
+	lvid->numpages = 1;
 
 	// clean up any old vid buffer lying around, alloc new if needed
 	if (!VID_FreeAndAllocVidbuffer (lvid))

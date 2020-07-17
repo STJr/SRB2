@@ -10,7 +10,7 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  r_patch.c
-/// \brief Patch generation.
+/// \brief Patch caching and generation.
 
 #include "byteptr.h"
 #include "dehacked.h"
@@ -19,6 +19,7 @@
 #include "r_draw.h"
 #include "r_patch.h"
 #include "r_things.h"
+#include "r_rotsprite.h"
 #include "z_zone.h"
 #include "w_wad.h"
 
@@ -49,6 +50,356 @@
 #endif
 
 static unsigned char imgbuf[1<<26];
+
+// ==========================================================================
+//                                         CACHING OF GRAPHIC PATCH RESOURCES
+// ==========================================================================
+
+// Graphic 'patches' are loaded, and if necessary, converted into the format
+// the most useful for the current render mode. For the software renderer, the
+// graphic patches are kept as is. For the hardware renderer, graphic patches
+// are 'unpacked', and are kept into the cache in that unpacked format, and
+// the heap memory cache then acts as a 'level 2' cache just after the
+// graphics card memory.
+
+// If patches need to be cached only once, references to those patches
+// can be obtained with W_GetPatchPointer and relatives. By returning a
+// double pointer that can be dereferenced, the addresses of the patches
+// can be swapped out to point to another patch instead. The main use case
+// for this is renderer switching.
+
+static patchreference_t *patchlist_head = NULL;
+static patchreference_t *patchlist_tail = NULL;
+
+// Find patch in list
+patchreference_t *Patch_FindReference(UINT16 wad, UINT16 lump, INT32 rollangle, boolean flip)
+{
+	patchreference_t *patch = patchlist_head;
+
+	CONS_Debug(DBG_RENDER, "Patch_FindReference: searching for %s (%d)\n", W_CheckNameForNumPwad(wad, lump), rollangle);
+
+	while (patch)
+	{
+		patchreference_t *prev = NULL, *next = NULL;
+
+		if (patch->wad == wad && patch->lump == lump && patch->rollangle == rollangle && patch->flip == flip)
+		{
+			CONS_Debug(DBG_RENDER, "found\n");
+			return patch;
+		}
+
+		// Lazy memory deallocation.
+		// References aren't removed until an iteration
+		// knows the pointer isn't valid anymore.
+		next = patch->next;
+		if (patch->ptr == NULL)
+		{
+			CONS_Debug(DBG_RENDER, "freeing %s (%d) in the list\n", W_CheckNameForNumPwad(patch->wad, patch->lump), patch->rollangle);
+			prev = patch->prev;
+			if (prev)
+				prev->next = next;
+			Z_Free(patch);
+		}
+		patch = next;
+	}
+
+	CONS_Debug(DBG_RENDER, "not found\n");
+	return NULL;
+}
+
+// Insert patch in list
+patchreference_t *Patch_StoreReference(UINT16 wad, UINT16 lump, INT32 tag, void *ptr, INT32 rollangle, boolean flip)
+{
+	patchreference_t *found = Patch_FindReference(wad, lump, rollangle, flip);
+	if (found)
+		return found;
+
+	CONS_Debug(DBG_RENDER, "Patch_StoreReference: storing %s (%d)\n", W_CheckNameForNumPwad(wad, lump), rollangle);
+
+	if (!patchlist_head)
+	{
+		patchlist_head = Z_Calloc(sizeof(patchreference_t), PU_STATIC, NULL);
+		patchlist_head->wad = wad;
+		patchlist_head->lump = lump;
+		patchlist_head->tag = tag;
+		patchlist_head->ptr = ptr;
+		patchlist_head->rollangle = rollangle;
+		patchlist_head->flip = flip;
+		patchlist_tail = patchlist_head;
+		return patchlist_head;
+	}
+	else
+	{
+		patchreference_t *list = Z_Calloc(sizeof(patchreference_t), PU_STATIC, NULL);
+		list->wad = wad;
+		list->lump = lump;
+		list->tag = tag;
+		list->ptr = ptr;
+		list->rollangle = rollangle;
+		list->flip = flip;
+		list->prev = patchlist_tail; // set the previous item to the tail
+		patchlist_tail->next = list; // set the tail's next item to the new item
+		patchlist_tail = list; // set the tail to the new item
+		return list;
+	}
+}
+
+// Get patch tree type from a render mode.
+patchtreetype_t Patch_GetTreeType(rendermode_t mode)
+{
+	return (mode == render_opengl) ? patchtree_mipmap : patchtree_software;
+}
+
+// Get patch tree.
+patchtree_t *Patch_GetRendererTree(UINT16 wadnum, rendermode_t mode)
+{
+	return &(wadfiles[wadnum]->patchinfo.renderer[Patch_GetTreeType(mode)]);
+}
+
+// Get patch base subtree.
+aatree_t *Patch_GetRendererBaseSubTree(UINT16 wadnum, rendermode_t mode)
+{
+	return Patch_GetRendererTree(wadnum, mode)->base;
+}
+
+#ifdef ROTSPRITE
+// Get rotated patch subtree.
+aatree_t *Patch_GetRendererRotatedSubTree(UINT16 wadnum, rendermode_t mode, boolean flip)
+{
+	UINT8 f = (flip == true) ? 1 : 0;
+	return Patch_GetRendererTree(wadnum, mode)->rotated[f];
+}
+#endif
+
+//
+// Initializes patch info for a WAD file.
+//
+void Patch_InitInfo(wadfile_t *wadfile)
+{
+	patchinfo_t *cache = &wadfile->patchinfo;
+	rendermode_t rmode;
+
+	// Patch info is uninitialized.
+	memset(cache, 0x00, sizeof(patchinfo_t));
+
+	// Main patch cache for the current renderer
+	Z_Calloc(wadfile->numlumps * sizeof(lumpcache_t), PU_STATIC, &cache->current);
+
+#ifdef ROTSPRITE
+	// Rotated patch cache for the current renderer
+	Z_Calloc(wadfile->numlumps * sizeof(lumpcache_t *), PU_STATIC, &cache->rotated);
+#endif
+
+	// Patch trees for each renderer
+	for (rmode = render_first; rmode < render_last; rmode++)
+	{
+		patchtree_t *rcache = &(cache->renderer[Patch_GetTreeType(rmode)]);
+
+		// Multiple renderers can point to the same tree.
+		// If this tree was already initialized, then
+		// don't try initializing it again.
+		if (rcache->base)
+			continue;
+
+		rcache->base = M_AATreeAlloc(AATREE_ZUSER);
+
+#ifdef ROTSPRITE
+		RotSprite_InitPatchTree(rcache);
+#endif
+	}
+}
+
+// Get renderer patch info.
+void *GetRendererPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode)
+{
+	return M_AATreeGet(Patch_GetRendererBaseSubTree(wadnum, mode), lumpnum);
+}
+
+// Set renderer patch info.
+void SetRendererPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, void *ptr)
+{
+	M_AATreeSet(Patch_GetRendererBaseSubTree(wadnum, mode), lumpnum, ptr);
+}
+
+// Update current patch info.
+void UpdateCurrentPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode)
+{
+	wadfiles[wadnum]->patchinfo.current[lumpnum] = GetRendererPatchInfo(wadnum, lumpnum, mode);
+}
+
+#ifdef ROTSPRITE
+void RotSprite_InitPatchTree(patchtree_t *rcache)
+{
+	INT32 i;
+	for (i = 0; i < 2; i++)
+		rcache->rotated[i] = M_AATreeAlloc(AATREE_ZUSER);
+}
+
+int RotSprite_GetCurrentPatchInfoIdx(INT32 rollangle, boolean flip)
+{
+	UINT8 f = (flip == true) ? 1 : 0;
+	return rollangle + (ROTANGLES * f);
+}
+
+void RotSprite_AllocCurrentPatchInfo(patchinfo_t *patchinfo, UINT16 lumpnum)
+{
+	patchinfo->rotated[lumpnum] = Z_Calloc((ROTANGLES * 2) * sizeof(lumpcache_t), PU_STATIC, NULL);
+}
+
+// Get renderer rotated patch info.
+void *GetRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, boolean flip)
+{
+	return M_AATreeGet(Patch_GetRendererRotatedSubTree(wadnum, mode, flip), lumpnum);
+}
+
+// Set renderer rotated patch info.
+void SetRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, boolean flip, void *ptr)
+{
+	M_AATreeSet(Patch_GetRendererRotatedSubTree(wadnum, mode, flip), lumpnum, ptr);
+}
+
+// Update current rotated patch info.
+void UpdateCurrentRotatedPatchInfo(UINT16 wadnum, UINT16 lumpnum, rendermode_t mode, INT32 rollangle, boolean flip)
+{
+	patchinfo_t *patchinfo = &wadfiles[wadnum]->patchinfo;
+	if (!patchinfo->rotated[lumpnum])
+		RotSprite_AllocCurrentPatchInfo(patchinfo, lumpnum);
+	patchinfo->rotated[lumpnum][RotSprite_GetCurrentPatchInfoIdx(rollangle, flip)] = ((rotsprite_t *)GetRotatedPatchInfo(wadnum, lumpnum, mode, flip))->patches[rollangle];
+}
+#endif
+
+void *Patch_CacheSoftware(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
+{
+	void *cache = GetRendererPatchInfo(wad, lump, render_soft);
+	if (!GetRendererPatchInfo(wad, lump, render_soft))
+	{
+		size_t len = W_LumpLengthPwad(wad, lump);
+		void *ptr, *lumpdata;
+#ifndef NO_PNG_LUMPS
+		void *converted = NULL;
+#endif
+
+		ptr = Z_Malloc(len, tag, &cache);
+		lumpdata = Z_Malloc(len, tag, NULL);
+
+		// read the lump in full
+		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
+
+#ifndef NO_PNG_LUMPS
+		// lump is a png so convert it
+		if (R_IsLumpPNG((UINT8 *)lumpdata, len))
+		{
+			size_t newlen;
+			converted = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
+			ptr = Z_Realloc(ptr, newlen, tag, &cache);
+			M_Memcpy(ptr, converted, newlen);
+			Z_Free(converted);
+		}
+		else // just copy it into the patch cache
+#endif
+			M_Memcpy(ptr, lumpdata, len);
+
+		// insert into list
+		if (store)
+			Patch_StoreReference(wad, lump, tag, ptr, 0, false);
+
+		SetRendererPatchInfo(wad, lump, render_soft, ptr);
+		UpdateCurrentPatchInfo(wad, lump, render_soft);
+
+		return ptr;
+	}
+	else
+		Z_ChangeTag(cache, tag);
+
+	return cache;
+}
+
+#ifdef HWRENDER
+void *Patch_CacheGL(UINT16 wad, UINT16 lump, INT32 tag, boolean store)
+{
+	GLPatch_t *grPatch = HWR_GetCachedGLPatchPwad(wad, lump, Patch_GetRendererBaseSubTree(wad, render_opengl));
+
+	if (grPatch->mipmap->data)
+	{
+		if (tag == PU_CACHE)
+			tag = PU_HWRCACHE;
+		Z_ChangeTag(grPatch->mipmap->data, tag);
+	}
+	else
+	{
+		patch_t *ptr = NULL;
+
+		// Only load the patch if we haven't initialised the grPatch yet
+		if (grPatch->mipmap->width == 0)
+			ptr = W_CacheLumpNumPwad(grPatch->wadnum, grPatch->lumpnum, PU_STATIC);
+
+		// Run HWR_MakePatch in all cases, to recalculate some things
+		HWR_MakePatch(ptr, grPatch, grPatch->mipmap, false);
+		Z_Free(ptr);
+
+		// insert into list
+		if (store)
+			Patch_StoreReference(wad, lump, tag, (void *)grPatch, 0, false);
+		UpdateCurrentPatchInfo(wad, lump, render_opengl);
+	}
+
+	// return GLPatch_t, which can be casted to (patch_t *) with valid patch header info
+	return (void *)grPatch;
+}
+#endif
+
+//
+// Update patch references to point to the current renderer's patches.
+//
+void Patch_UpdateReferences(void)
+{
+	patchreference_t *patch = patchlist_head;
+
+	while (patch)
+	{
+		CONS_Debug(DBG_RENDER, "Patch_UpdateReferences: %s (%d)\n", W_CheckNameForNumPwad(patch->wad, patch->lump), patch->rollangle);
+
+#ifdef ROTSPRITE
+		if (patch->rollangle)
+		{
+			static rotsprite_vars_t rsvars;
+
+			rsvars.rollangle = patch->rollangle;
+			rsvars.flip = patch->flip;
+
+			Patch_CacheRotatedPwad(patch->wad, patch->lump, patch->tag, rsvars, false);
+			UpdateCurrentRotatedPatchInfo(patch->wad, patch->lump, rendermode, patch->rollangle, patch->flip);
+		}
+		else
+#endif
+		{
+#ifdef HWRENDER
+			if (rendermode == render_opengl)
+				Patch_CacheGL(patch->wad, patch->lump, patch->tag, false);
+			else
+#endif
+				Patch_CacheSoftware(patch->wad, patch->lump, patch->tag, false);
+
+			UpdateCurrentPatchInfo(patch->wad, patch->lump, rendermode);
+		}
+
+		patch = patch->next;
+	}
+}
+
+//
+// Free the patch reference list.
+//
+void Patch_FreeReferences(void)
+{
+	patchreference_t *patch = patchlist_head;
+	while (patch)
+	{
+		patchreference_t *next = patch->next;
+		Z_Free(patch);
+		patch = next;
+	}
+}
 
 //
 // R_CheckIfPatch
@@ -199,47 +550,6 @@ void R_PatchToFlat(patch_t *patch, UINT8 *flat)
 }
 
 //
-// R_PatchToMaskedFlat
-//
-// Convert a patch to a masked flat.
-// Now, what is a "masked" flat anyway?
-// It means the flat uses two bytes to store image data.
-// The upper byte is used to store the transparent pixel,
-// and the lower byte stores a palette index.
-//
-void R_PatchToMaskedFlat(patch_t *patch, UINT16 *raw, boolean flip)
-{
-	fixed_t col, ofs;
-	column_t *column;
-	UINT16 *desttop, *dest, *deststop;
-	UINT8 *source;
-
-	desttop = raw;
-	deststop = desttop + (SHORT(patch->width) * SHORT(patch->height));
-
-	for (col = 0; col < SHORT(patch->width); col++, desttop++)
-	{
-		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[flip ? (patch->width-1-col) : col]));
-		while (column->topdelta != 0xff)
-		{
-			topdelta = column->topdelta;
-			if (topdelta <= prevdelta)
-				topdelta += prevdelta;
-			prevdelta = topdelta;
-			dest = desttop + (topdelta * SHORT(patch->width));
-			source = (UINT8 *)(column) + 3;
-			for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
-			{
-				*dest = source[ofs];
-				dest += SHORT(patch->width);
-			}
-			column = (column_t *)((UINT8 *)column + column->length + 4);
-		}
-	}
-}
-
-//
 // R_FlatToPatch
 //
 // Convert a flat to a patch.
@@ -354,12 +664,11 @@ patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffse
 }
 
 //
-// R_MaskedFlatToPatch
+// R_TransparentFlatToPatch
 //
-// Convert a masked flat to a patch.
-// Explanation of "masked" flats in R_PatchToMaskedFlat.
+// Convert a transparent flat to a patch.
 //
-patch_t *R_MaskedFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize)
+patch_t *R_TransparentFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize)
 {
 	UINT32 x, y;
 	UINT8 *img;
@@ -687,7 +996,7 @@ static UINT8 *PNG_RawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topo
 }
 
 // Convert a PNG with transparency to a raw image.
-static UINT16 *PNG_MaskedRawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+static UINT16 *PNG_TransparentRawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
 {
 	UINT16 *flat;
 	png_uint_32 x, y;
@@ -696,7 +1005,7 @@ static UINT16 *PNG_MaskedRawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT1
 	size_t flatsize, i;
 
 	if (!row_pointers)
-		I_Error("PNG_MaskedRawConvert: conversion failed");
+		I_Error("PNG_TransparentRawConvert: conversion failed");
 
 	// Convert the image to 16bpp
 	flatsize = (width * height);
@@ -740,12 +1049,12 @@ patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize)
 {
 	UINT16 width, height;
 	INT16 topoffset = 0, leftoffset = 0;
-	UINT16 *raw = PNG_MaskedRawConvert(png, &width, &height, &topoffset, &leftoffset, size);
+	UINT16 *raw = PNG_TransparentRawConvert(png, &width, &height, &topoffset, &leftoffset, size);
 
 	if (!raw)
 		I_Error("R_PNGToPatch: conversion failed");
 
-	return R_MaskedFlatToPatch(raw, width, height, leftoffset, topoffset, destsize);
+	return R_TransparentFlatToPatch(raw, width, height, leftoffset, topoffset, destsize);
 }
 
 //
@@ -979,11 +1288,6 @@ static void R_ParseSpriteInfo(boolean spr2)
 	info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
 	info->available = true;
 
-#ifdef ROTSPRITE
-	if ((sprites != NULL) && (!spr2))
-		R_FreeSingleRotSprite(&sprites[sprnum]);
-#endif
-
 	// Left Curly Brace
 	sprinfoToken = M_GetToken(NULL);
 	if (sprinfoToken == NULL)
@@ -1035,18 +1339,17 @@ static void R_ParseSpriteInfo(boolean spr2)
 			{
 				R_ParseSpriteInfoFrame(info);
 				Z_Free(sprinfoToken);
+
 				if (spr2)
 				{
 					if (!foundskins)
 						I_Error("Error parsing SPRTINFO lump: No skins specified in this sprite2 definition");
+
 					for (i = 0; i < foundskins; i++)
 					{
 						size_t skinnum = skinnumbers[i];
 						skin_t *skin = &skins[skinnum];
 						spriteinfo_t *sprinfo = skin->sprinfo;
-#ifdef ROTSPRITE
-						R_FreeSkinRotSprite(skinnum);
-#endif
 						M_Memcpy(&sprinfo[spr2num], info, sizeof(spriteinfo_t));
 					}
 				}
@@ -1137,7 +1440,7 @@ void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps)
 	}
 }
 
-static UINT16 GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
+UINT8 *Patch_GetPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
 {
 	fixed_t ofs;
 	column_t *column;
@@ -1146,7 +1449,7 @@ static UINT16 GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
 	if (x >= 0 && x < SHORT(patch->width))
 	{
 		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[flip ? (patch->width-1-x) : x]));
+		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[flip ? (SHORT(patch->width)-1-x) : x]));
 		while (column->topdelta != 0xff)
 		{
 			topdelta = column->topdelta;
@@ -1157,324 +1460,200 @@ static UINT16 GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
 			for (ofs = 0; ofs < column->length; ofs++)
 			{
 				if ((topdelta + ofs) == y)
-					return source[ofs];
+					return &source[ofs];
 			}
 			column = (column_t *)((UINT8 *)column + column->length + 4);
 		}
 	}
 
-	return 0xFF00;
+	return NULL;
+}
+
+boolean PixelMap_ApplyToColumn(pixelmap_t *pmap, INT32 *map, patch_t *patch, UINT8 *post, size_t *colsize, boolean flipped)
+{
+	INT32 x, y;
+	size_t pmsize = pmap->size;
+	size_t i = 0;
+	int lastStartY = 0;
+	int spanSize = 0;
+	UINT8 *px, *startofspan = NULL, *dest = post;
+	boolean written = false;
+
+	while (i < pmap->height)
+	{
+		y = map[i];
+		x = map[i + pmsize];
+		px = Patch_GetPixel(patch, x, y, flipped); // If not NULL, we have a pixel
+		i++;
+
+		// End span if we have a transparent pixel
+		if (px == NULL)
+		{
+			if (startofspan)
+				WRITEUINT8(dest, 0);
+			startofspan = NULL;
+			continue;
+		}
+
+		// Start new column if we need to
+		if (!startofspan || spanSize == 255)
+		{
+			int writeY = i;
+
+			// If we reached the span size limit, finish the previous span
+			if (startofspan)
+				WRITEUINT8(dest, 0);
+
+			if (i > 254)
+			{
+				// Make sure we're aligned to 254
+				if (lastStartY < 254)
+				{
+					WRITEUINT8(dest, 254);
+					WRITEUINT8(dest, 0);
+					dest += 2;
+					lastStartY = 254;
+				}
+
+				// Write stopgap empty spans if needed
+				writeY = y - lastStartY;
+
+				while (writeY > 254)
+				{
+					WRITEUINT8(dest, 254);
+					WRITEUINT8(dest, 0);
+					dest += 2;
+					writeY -= 254;
+				}
+			}
+
+			startofspan = dest;
+			WRITEUINT8(dest, writeY);
+			dest += 2;
+			spanSize = 0;
+
+			lastStartY = i;
+		}
+
+		// Write the pixel
+		WRITEUINT8(dest, *px);
+		spanSize++;
+		startofspan[1] = spanSize;
+		written = true;
+	}
+
+	if (startofspan)
+		WRITEUINT8(dest, 0);
+	WRITEUINT8(dest, 0xFF);
+
+	if (colsize)
+		*colsize = (dest - post);
+	return written;
 }
 
 #ifdef ROTSPRITE
-//
-// R_GetRollAngle
-//
-// Angles precalculated in R_InitSprites.
-//
-fixed_t rollcosang[ROTANGLES];
-fixed_t rollsinang[ROTANGLES];
-INT32 R_GetRollAngle(angle_t rollangle)
+/** Creates a rotated patch from another patch.
+  *
+  * \param wad The patch's wad number.
+  * \param lump The patch's lump number.
+  * \param tag Zone memory tag.
+  * \param rsvars Sprite rotation variables.
+  * \param store Store the rotated patch into the patch reference list.
+  * \return The rotated patch.
+  * \sa Patch_CacheRotatedPwad
+  */
+patch_t *Patch_CacheRotatedPwad(UINT16 wad, UINT16 lump, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
-	INT32 ra = AngleFixed(rollangle)>>FRACBITS;
-#if (ROTANGDIFF > 1)
-	ra += (ROTANGDIFF/2);
-#endif
-	ra /= ROTANGDIFF;
-	ra %= ROTANGLES;
-	return ra;
-}
+	rotsprite_t *rotsprite = RotSprite_GetFromPatchNumPwad(wad, lump, tag, rsvars, store);
+	patch_t *patch = NULL;
 
-//
-// R_CacheRotSprite
-//
-// Create a rotated sprite.
-//
-void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip)
-{
-	UINT32 i;
-	INT32 angle;
-	patch_t *patch;
-	patch_t *newpatch;
-	UINT16 *rawdst;
-	size_t size;
-	INT32 bflip = (flip != 0x00);
+	if (rotsprite->patches[rsvars.rollangle])
+		return rotsprite->patches[rsvars.rollangle];
 
-#define SPRITE_XCENTER (leftoffset)
-#define SPRITE_YCENTER (height / 2)
-#define ROTSPRITE_XCENTER (newwidth / 2)
-#define ROTSPRITE_YCENTER (newheight / 2)
+	rsvars.sprite = false;
+	rotsprite->vars = rsvars;
+	rotsprite->tag = tag;
 
-	if (!(sprframe->rotsprite.cached & (1<<rot)))
-	{
-		INT32 dx, dy;
-		INT32 px, py;
-		INT32 width, height, leftoffset;
-		fixed_t ca, sa;
-		lumpnum_t lump = sprframe->lumppat[rot];
-#ifndef NO_PNG_LUMPS
-		size_t lumplength;
-#endif
+	RotSprite_Create(rotsprite, rsvars);
+	patch = RotSprite_CreatePatch(rotsprite, rsvars);
 
-		if (lump == LUMPERROR)
-			return;
-
-		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
-#ifndef NO_PNG_LUMPS
-		lumplength = W_LumpLength(lump);
-
-		if (R_IsLumpPNG((UINT8 *)patch, lumplength))
-			patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL);
-		else
-#endif
-		// Because there's something wrong with SPR_DFLM, I guess
-		if (!R_CheckIfPatch(lump))
-			return;
-
-		width = SHORT(patch->width);
-		height = SHORT(patch->height);
-		leftoffset = SHORT(patch->leftoffset);
-
-		// rotation pivot
-		px = SPRITE_XCENTER;
-		py = SPRITE_YCENTER;
-
-		// get correct sprite info for sprite
-		if (sprinfo == NULL)
-			sprinfo = &spriteinfo[sprnum];
-		if (sprinfo->available)
-		{
-			px = sprinfo->pivot[frame].x;
-			py = sprinfo->pivot[frame].y;
-		}
-		if (bflip)
-		{
-			px = width - px;
-			leftoffset = width - leftoffset;
-		}
-
-		// Don't cache angle = 0
-		for (angle = 1; angle < ROTANGLES; angle++)
-		{
-			INT32 newwidth, newheight;
-
-			ca = rollcosang[angle];
-			sa = rollsinang[angle];
-
-			// Find the dimensions of the rotated patch.
-			{
-				INT32 w1 = abs(FixedMul(width << FRACBITS, ca) - FixedMul(height << FRACBITS, sa));
-				INT32 w2 = abs(FixedMul(-(width << FRACBITS), ca) - FixedMul(height << FRACBITS, sa));
-				INT32 h1 = abs(FixedMul(width << FRACBITS, sa) + FixedMul(height << FRACBITS, ca));
-				INT32 h2 = abs(FixedMul(-(width << FRACBITS), sa) + FixedMul(height << FRACBITS, ca));
-				w1 = FixedInt(FixedCeil(w1 + (FRACUNIT/2)));
-				w2 = FixedInt(FixedCeil(w2 + (FRACUNIT/2)));
-				h1 = FixedInt(FixedCeil(h1 + (FRACUNIT/2)));
-				h2 = FixedInt(FixedCeil(h2 + (FRACUNIT/2)));
-				newwidth = max(width, max(w1, w2));
-				newheight = max(height, max(h1, h2));
-			}
-
-			// check boundaries
-			{
-				fixed_t top[2][2];
-				fixed_t bottom[2][2];
-
-				top[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				top[0][1] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-				top[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				top[1][1] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-
-				bottom[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				bottom[0][1] = -FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-				bottom[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				bottom[1][1] = -FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-
-				top[0][0] >>= FRACBITS;
-				top[0][1] >>= FRACBITS;
-				top[1][0] >>= FRACBITS;
-				top[1][1] >>= FRACBITS;
-
-				bottom[0][0] >>= FRACBITS;
-				bottom[0][1] >>= FRACBITS;
-				bottom[1][0] >>= FRACBITS;
-				bottom[1][1] >>= FRACBITS;
-
-#define BOUNDARYWCHECK(b) (b[0] < 0 || b[0] >= width)
-#define BOUNDARYHCHECK(b) (b[1] < 0 || b[1] >= height)
-#define BOUNDARYADJUST(x) x *= 2
-				// top left/right
-				if (BOUNDARYWCHECK(top[0]) || BOUNDARYWCHECK(top[1]))
-					BOUNDARYADJUST(newwidth);
-				// bottom left/right
-				else if (BOUNDARYWCHECK(bottom[0]) || BOUNDARYWCHECK(bottom[1]))
-					BOUNDARYADJUST(newwidth);
-				// top left/right
-				if (BOUNDARYHCHECK(top[0]) || BOUNDARYHCHECK(top[1]))
-					BOUNDARYADJUST(newheight);
-				// bottom left/right
-				else if (BOUNDARYHCHECK(bottom[0]) || BOUNDARYHCHECK(bottom[1]))
-					BOUNDARYADJUST(newheight);
-#undef BOUNDARYWCHECK
-#undef BOUNDARYHCHECK
-#undef BOUNDARYADJUST
-			}
-
-			// Draw the rotated sprite to a temporary buffer.
-			size = (newwidth * newheight);
-			if (!size)
-				size = (width * height);
-
-			rawdst = Z_Malloc(size * sizeof(UINT16), PU_STATIC, NULL);
-			for (i = 0; i < size; i++)
-				rawdst[i] = 0xFF00;
-
-			for (dy = 0; dy < newheight; dy++)
-			{
-				for (dx = 0; dx < newwidth; dx++)
-				{
-					INT32 x = (dx-ROTSPRITE_XCENTER) << FRACBITS;
-					INT32 y = (dy-ROTSPRITE_YCENTER) << FRACBITS;
-					INT32 sx = FixedMul(x, ca) + FixedMul(y, sa) + (px << FRACBITS);
-					INT32 sy = -FixedMul(x, sa) + FixedMul(y, ca) + (py << FRACBITS);
-					sx >>= FRACBITS;
-					sy >>= FRACBITS;
-					if (sx >= 0 && sy >= 0 && sx < width && sy < height)
-						rawdst[(dy*newwidth)+dx] = GetPatchPixel(patch, sx, sy, bflip);
-				}
-			}
-
-			// make patch
-			newpatch = R_MaskedFlatToPatch(rawdst, newwidth, newheight, 0, 0, &size);
-			{
-				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
-				newpatch->topoffset = (newpatch->height / 2) + (SHORT(patch->topoffset) - py);
-			}
-
-			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-			if (rendermode != render_none) // not for psprite
-				newpatch->topoffset += FEETADJUST>>FRACBITS;
-
-			// P_PrecacheLevel
-			if (devparm) spritememory += size;
-
-			// convert everything to little-endian, for big-endian support
-			newpatch->width = SHORT(newpatch->width);
-			newpatch->height = SHORT(newpatch->height);
-			newpatch->leftoffset = SHORT(newpatch->leftoffset);
-			newpatch->topoffset = SHORT(newpatch->topoffset);
+	// Caveat: At the point RotSprite_GetFromPatchNum is called, no patch exists yet.
+	// So, the update has to be done right below here.
+	if (store)
+		UpdateCurrentRotatedPatchInfo(wad, lump, rendermode, rsvars.rollangle, rsvars.flip);
 
 #ifdef HWRENDER
-			if (rendermode == render_opengl)
-			{
-				GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
-				grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
-				grPatch->rawpatch = newpatch;
-				sprframe->rotsprite.patch[rot][angle] = (patch_t *)grPatch;
-				HWR_MakePatch(newpatch, grPatch, grPatch->mipmap, false);
-			}
-			else
-#endif // HWRENDER
-				sprframe->rotsprite.patch[rot][angle] = newpatch;
-
-			// free rotated image data
-			Z_Free(rawdst);
-		}
-
-		// This rotation is cached now
-		sprframe->rotsprite.cached |= (1<<rot);
-
-		// free image data
-		Z_Free(patch);
-	}
-#undef SPRITE_XCENTER
-#undef SPRITE_YCENTER
-#undef ROTSPRITE_XCENTER
-#undef ROTSPRITE_YCENTER
-}
-
-//
-// R_FreeSingleRotSprite
-//
-// Free sprite rotation data from memory, for a single spritedef.
-//
-void R_FreeSingleRotSprite(spritedef_t *spritedef)
-{
-	UINT8 frame;
-	INT32 rot, ang;
-
-	for (frame = 0; frame < spritedef->numframes; frame++)
-	{
-		spriteframe_t *sprframe = &spritedef->spriteframes[frame];
-		for (rot = 0; rot < 16; rot++)
-		{
-			if (sprframe->rotsprite.cached & (1<<rot))
-			{
-				for (ang = 0; ang < ROTANGLES; ang++)
-				{
-					patch_t *rotsprite = sprframe->rotsprite.patch[rot][ang];
-					if (rotsprite)
-					{
-#ifdef HWRENDER
-						if (rendermode == render_opengl)
-						{
-							GLPatch_t *grPatch = (GLPatch_t *)rotsprite;
-							if (grPatch->rawpatch)
-							{
-								Z_Free(grPatch->rawpatch);
-								grPatch->rawpatch = NULL;
-							}
-							if (grPatch->mipmap)
-							{
-								if (grPatch->mipmap->data)
-								{
-									Z_Free(grPatch->mipmap->data);
-									grPatch->mipmap->data = NULL;
-								}
-								Z_Free(grPatch->mipmap);
-								grPatch->mipmap = NULL;
-							}
-						}
+	if (rendermode != render_opengl) // uuggghhhhh
 #endif
-						Z_Free(rotsprite);
-					}
-				}
-				sprframe->rotsprite.cached &= ~(1<<rot);
-			}
-		}
-	}
-}
-
-//
-// R_FreeSkinRotSprite
-//
-// Free sprite rotation data from memory, for a skin.
-// Calls R_FreeSingleRotSprite.
-//
-void R_FreeSkinRotSprite(size_t skinnum)
-{
-	size_t i;
-	skin_t *skin = &skins[skinnum];
-	spritedef_t *skinsprites = skin->sprites;
-	for (i = 0; i < NUMPLAYERSPRITES*2; i++)
 	{
-		R_FreeSingleRotSprite(skinsprites);
-		skinsprites++;
+		Z_ChangeTag(patch, tag);
+		Z_SetUser(patch, (void **)(&rotsprite->patches[rsvars.rollangle]));
 	}
+
+	return patch;
 }
 
-//
-// R_FreeAllRotSprite
-//
-// Free ALL sprite rotation data from memory.
-//
-void R_FreeAllRotSprite(void)
+/** Creates a rotated patch from a sprite.
+  *
+  * \param wad The sprite's wad number.
+  * \param lump The sprite's lump number.
+  * \param tag Zone memory tag.
+  * \param rsvars Sprite rotation variables.
+  * \param store Store the rotated sprite into the patch reference list.
+  * \return The rotated sprite.
+  * \sa Patch_CacheRotatedPwad
+  */
+patch_t *Patch_CacheRotatedForSpritePwad(UINT16 wad, UINT16 lump, INT32 tag, rotsprite_vars_t rsvars, boolean store)
 {
-	INT32 i;
-	size_t s;
-	for (s = 0; s < numsprites; s++)
-		R_FreeSingleRotSprite(&sprites[s]);
-	for (i = 0; i < numskins; ++i)
-		R_FreeSkinRotSprite(i);
+	lumpnum_t lumpnum = WADANDLUMP(wad, lump);
+	rotsprite_t *rotsprite = RotSprite_GetFromPatchNum(lumpnum, tag, rsvars, store);
+	patch_t *patch = NULL;
+
+	if (rotsprite->patches[rsvars.rollangle])
+		return rotsprite->patches[rsvars.rollangle];
+
+	rsvars.sprite = true;
+	rotsprite->vars = rsvars;
+	rotsprite->tag = tag;
+
+	RotSprite_Create(rotsprite, rsvars);
+	patch = RotSprite_CreatePatch(rotsprite, rsvars);
+
+#ifdef HWRENDER
+	if (rendermode != render_opengl) // uuggghhhhh
+#endif
+	{
+		Z_ChangeTag(patch, tag);
+		Z_SetUser(patch, (void **)(&rotsprite->patches[rsvars.rollangle]));
+	}
+
+	return patch;
 }
+
+patch_t *Patch_CacheRotated(UINT32 lumpnum, INT32 tag, rotsprite_vars_t rsvars, boolean store)
+{
+	return Patch_CacheRotatedPwad(WADFILENUM(lumpnum), LUMPNUM(lumpnum), tag, rsvars, store);
+}
+
+patch_t *Patch_CacheRotatedForSprite(UINT32 lumpnum, INT32 tag, rotsprite_vars_t rsvars, boolean store)
+{
+	return Patch_CacheRotatedForSpritePwad(WADFILENUM(lumpnum), LUMPNUM(lumpnum), tag, rsvars, store);
+}
+
+patch_t *Patch_CacheRotatedName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store)
+{
+	lumpnum_t num = W_CheckNumForName(name);
+	if (num == LUMPERROR)
+		return Patch_CacheRotated(W_GetNumForName("MISSING"), tag, rsvars, store);
+	return Patch_CacheRotated(num, tag, rsvars, store);
+}
+
+patch_t *Patch_CacheRotatedLongName(const char *name, INT32 tag, rotsprite_vars_t rsvars, boolean store)
+{
+	lumpnum_t num = W_CheckNumForLongName(name);
+	if (num == LUMPERROR)
+		return Patch_CacheRotated(W_GetNumForLongName("MISSING"), tag, rsvars, store);
+	return Patch_CacheRotated(num, tag, rsvars, store);
+}
+
 #endif

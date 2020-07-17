@@ -127,6 +127,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_splats.c
 	r_things.c
 	r_patch.c
+	r_rotsprite.c
 	r_portal.c
 
 	r_bsp.h
@@ -143,6 +144,8 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_state.h
 	r_things.h
 	r_patch.h
+	r_rotsprite.h
+	r_patchtrees.h
 	r_portal.h
 )
 

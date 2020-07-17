@@ -56,6 +56,8 @@
 #include "d_clisrv.h"
 #include "r_defs.h"
 #include "r_data.h"
+#include "r_patch.h"
+#include "r_rotsprite.h"
 #include "i_system.h"
 #include "md5.h"
 #include "lua_script.h"
@@ -834,12 +836,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// set up caching
 	//
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
-	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
-
-#ifdef HWRENDER
-	// allocates GLPatch info structures and store them in a tree
-	wadfile->hwrcache = M_AATreeAlloc(AATREE_ZUSER);
-#endif
+	Patch_InitInfo(wadfile);
 
 	//
 	// add the wadfile
@@ -850,7 +847,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 #ifdef HWRENDER
 	// Read shaders from file
-	if (rendermode == render_opengl && (vid_opengl_state == 1))
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 	{
 		HWR_ReadShaders(numwadfiles - 1, (type == RET_PK3));
 		HWR_LoadShaders();
@@ -1609,38 +1606,6 @@ boolean W_IsLumpCached(lumpnum_t lumpnum, void *ptr)
 	return W_IsLumpCachedPWAD(WADFILENUM(lumpnum),LUMPNUM(lumpnum), ptr);
 }
 
-//
-// W_IsPatchCached
-//
-// If a patch is already cached return true, otherwise
-// return false.
-//
-// no outside code uses the PWAD form, for now
-static inline boolean W_IsPatchCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
-{
-	void *lcache;
-
-	if (!TestValidLump(wad, lump))
-		return false;
-
-	lcache = wadfiles[wad]->patchcache[lump];
-
-	if (ptr)
-	{
-		if (ptr == lcache)
-			return true;
-	}
-	else if (lcache)
-		return true;
-
-	return false;
-}
-
-boolean W_IsPatchCached(lumpnum_t lumpnum, void *ptr)
-{
-	return W_IsPatchCachedPWAD(WADFILENUM(lumpnum),LUMPNUM(lumpnum), ptr);
-}
-
 // ==========================================================================
 // W_CacheLumpName
 // ==========================================================================
@@ -1649,62 +1614,12 @@ void *W_CacheLumpName(const char *name, INT32 tag)
 	return W_CacheLumpNum(W_GetNumForName(name), tag);
 }
 
-// ==========================================================================
-//                                         CACHING OF GRAPHIC PATCH RESOURCES
-// ==========================================================================
-
-// Graphic 'patches' are loaded, and if necessary, converted into the format
-// the most useful for the current rendermode. For software renderer, the
-// graphic patches are kept as is. For the hardware renderer, graphic patches
-// are 'unpacked', and are kept into the cache in that unpacked format, and
-// the heap memory cache then acts as a 'level 2' cache just after the
-// graphics card memory.
-
-//
-// Cache a patch into heap memory, convert the patch format as necessary
-//
-
 void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
-	lumpcache_t *lumpcache = NULL;
-
 	if (!TestValidLump(wad, lump))
 		return NULL;
 
-	lumpcache = wadfiles[wad]->patchcache;
-
-	if (!lumpcache[lump])
-	{
-		size_t len = W_LumpLengthPwad(wad, lump);
-		void *ptr, *lumpdata;
-#ifndef NO_PNG_LUMPS
-		void *srcdata = NULL;
-#endif
-
-		ptr = Z_Malloc(len, tag, &lumpcache[lump]);
-		lumpdata = Z_Malloc(len, tag, NULL);
-
-		// read the lump in full
-		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
-
-#ifndef NO_PNG_LUMPS
-		// lump is a png so convert it
-		if (R_IsLumpPNG((UINT8 *)lumpdata, len))
-		{
-			size_t newlen;
-			srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
-			ptr = Z_Realloc(ptr, newlen, tag, &lumpcache[lump]);
-			M_Memcpy(ptr, srcdata, newlen);
-			Z_Free(srcdata);
-		}
-		else // just copy it into the patch cache
-#endif
-			M_Memcpy(ptr, lumpdata, len);
-	}
-	else
-		Z_ChangeTag(lumpcache[lump], tag);
-
-	return lumpcache[lump];
+	return Patch_CacheSoftware(wad, lump, tag, false);
 }
 
 void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag)
@@ -1714,52 +1629,126 @@ void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag)
 
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
-#ifdef HWRENDER
-	GLPatch_t *grPatch;
-#endif
-
 	if (!TestValidLump(wad, lump))
 		return NULL;
 
 #ifdef HWRENDER
-	// Software-only compile cache the data without conversion
-	if (rendermode == render_soft || rendermode == render_none)
-#endif
-	{
-		return W_CacheSoftwarePatchNumPwad(wad, lump, tag);
-	}
-#ifdef HWRENDER
-
-	grPatch = HWR_GetCachedGLPatchPwad(wad, lump);
-
-	if (grPatch->mipmap->data)
-	{
-		if (tag == PU_CACHE)
-			tag = PU_HWRCACHE;
-		Z_ChangeTag(grPatch->mipmap->data, tag);
-	}
+	if (rendermode == render_opengl)
+		return (void *)Patch_CacheGL(wad, lump, tag, false);
 	else
-	{
-		patch_t *ptr = NULL;
-
-		// Only load the patch if we haven't initialised the grPatch yet
-		if (grPatch->mipmap->width == 0)
-			ptr = W_CacheLumpNumPwad(grPatch->wadnum, grPatch->lumpnum, PU_STATIC);
-
-		// Run HWR_MakePatch in all cases, to recalculate some things
-		HWR_MakePatch(ptr, grPatch, grPatch->mipmap, false);
-		Z_Free(ptr);
-	}
-
-	// return GLPatch_t, which can be casted to (patch_t) with valid patch header info
-	return (void *)grPatch;
 #endif
+		return Patch_CacheSoftware(wad, lump, tag, false);
 }
 
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag)
 {
 	return W_CachePatchNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
 }
+
+void *W_CachePatchName(const char *name, INT32 tag)
+{
+	lumpnum_t num = W_CheckNumForName(name);
+	if (num == LUMPERROR)
+		return W_CachePatchNum(W_GetNumForName("MISSING"), tag);
+	return W_CachePatchNum(num, tag);
+}
+
+void *W_CachePatchLongName(const char *name, INT32 tag)
+{
+	lumpnum_t num = W_CheckNumForLongName(name);
+	if (num == LUMPERROR)
+		return W_CachePatchNum(W_GetNumForLongName("MISSING"), tag);
+	return W_CachePatchNum(num, tag);
+}
+
+void **W_GetPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag)
+{
+	void **pp;
+	if (!TestValidLump(wad, lump))
+		return NULL;
+
+	pp = (void **)(&(wadfiles[wad]->patchinfo.current[lump]));
+	if (*pp) // Already cached
+		return pp;
+
+#ifdef HWRENDER
+	if (rendermode == render_opengl)
+		Patch_CacheGL(wad, lump, tag, true);
+	else
+#endif
+		Patch_CacheSoftware(wad, lump, tag, true);
+
+	return pp;
+}
+
+void **W_GetPatchPointer(lumpnum_t lumpnum, INT32 tag)
+{
+	return W_GetPatchPointerPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
+}
+
+void **W_GetPatchPointerFromName(const char *name, INT32 tag)
+{
+	lumpnum_t num = W_CheckNumForName(name);
+	if (num == LUMPERROR)
+		return W_GetPatchPointer(W_GetNumForName("MISSING"), tag);
+	return W_GetPatchPointer(num, tag);
+}
+
+void **W_GetPatchPointerFromLongName(const char *name, INT32 tag)
+{
+	lumpnum_t num = W_CheckNumForLongName(name);
+	if (num == LUMPERROR)
+		return W_GetPatchPointer(W_CheckNumForLongName("MISSING"), tag);
+	return W_GetPatchPointer(num, tag);
+}
+
+#ifdef ROTSPRITE
+void **W_GetRotatedPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)
+{
+	static rotsprite_vars_t rsvars;
+	patchinfo_t *patchinfo = NULL;
+
+	if (!TestValidLump(wad, lump))
+		return NULL;
+
+	patchinfo = &wadfiles[wad]->patchinfo;
+	if (!patchinfo->rotated[lump])
+		RotSprite_AllocCurrentPatchInfo(patchinfo, lump);
+
+	rsvars.rollangle = rollangle;
+	rsvars.sprite = sprite;
+	rsvars.pivot = pivot;
+	rsvars.flip = flip;
+
+	if (sprite)
+		Patch_CacheRotatedForSpritePwad(wad, lump, tag, rsvars, true);
+	else
+		Patch_CacheRotatedPwad(wad, lump, tag, rsvars, true);
+
+	return (void **)(&(patchinfo->rotated[lump][RotSprite_GetCurrentPatchInfoIdx(rollangle, flip)]));
+}
+
+void **W_GetRotatedPatchPointer(lumpnum_t lumpnum, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)
+{
+	return W_GetRotatedPatchPointerPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag,rollangle,sprite,pivot,flip);
+}
+
+void **W_GetRotatedPatchPointerFromName(const char *name, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)
+{
+	lumpnum_t num = W_CheckNumForName(name);
+	if (num == LUMPERROR)
+		return W_GetRotatedPatchPointer(W_GetNumForName("MISSING"), tag, rollangle, sprite, pivot, flip);
+	return W_GetRotatedPatchPointer(num, tag, rollangle, sprite, pivot, flip);
+}
+
+void **W_GetRotatedPatchPointerFromLongName(const char *name, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip)
+{
+	lumpnum_t num = W_CheckNumForLongName(name);
+	if (num == LUMPERROR)
+		return W_GetRotatedPatchPointer(W_CheckNumForLongName("MISSING"), tag, rollangle, sprite, pivot, flip);
+	return W_GetRotatedPatchPointer(num, tag, rollangle, sprite, pivot, flip);
+}
+#endif
 
 void W_UnlockCachedPatch(void *patch)
 {
@@ -1768,32 +1757,9 @@ void W_UnlockCachedPatch(void *patch)
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 		HWR_UnlockCachedPatch((GLPatch_t*)patch);
-	else
 #endif
-		Z_Unlock(patch);
 }
 
-void *W_CachePatchName(const char *name, INT32 tag)
-{
-	lumpnum_t num;
-
-	num = W_CheckNumForName(name);
-
-	if (num == LUMPERROR)
-		return W_CachePatchNum(W_GetNumForName("MISSING"), tag);
-	return W_CachePatchNum(num, tag);
-}
-
-void *W_CachePatchLongName(const char *name, INT32 tag)
-{
-	lumpnum_t num;
-
-	num = W_CheckNumForLongName(name);
-
-	if (num == LUMPERROR)
-		return W_CachePatchNum(W_GetNumForLongName("MISSING"), tag);
-	return W_CachePatchNum(num, tag);
-}
 #ifndef NOMD5
 #define MD5_LEN 16
 

@@ -22,6 +22,8 @@
 #pragma interface
 #endif
 
+#define lumpcache_t void *
+
 // a raw entry of the wad directory
 // NOTE: This sits here and not in w_wad.c because p_setup.c makes use of it to load map WADs inside PK3s.
 #if defined(_MSC_VER)
@@ -36,7 +38,6 @@ typedef struct
 #if defined(_MSC_VER)
 #pragma pack()
 #endif
-
 
 // ==============================================================
 //               WAD FILE STRUCTURE DEFINITIONS
@@ -93,18 +94,28 @@ void vres_Free(virtres_t*);
 virtlump_t* vres_Find(const virtres_t*, const char*);
 
 // =========================================================================
+//                                PATCH INFO
+// =========================================================================
+
+#include "r_patchtrees.h"
+
+typedef struct patchinfo_s
+{
+	patchtree_t renderer[num_patchtrees];
+
+	lumpcache_t *current;
+#ifdef ROTSPRITE
+	lumpcache_t **rotated;
+#endif
+} patchinfo_t;
+
+// =========================================================================
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
 #define MAX_WADPATH 512
 #define MAX_WADFILES 48 // maximum of wad files used at the same time
 // (there is a max of simultaneous open files anyway, and this should be plenty)
-
-#define lumpcache_t void *
-
-#ifdef HWRENDER
-#include "m_aatree.h"
-#endif
 
 // Resource type of the WAD. Yeah, I know this sounds dumb, but I'll leave it like this until I clean up the code further.
 typedef enum restype
@@ -122,10 +133,7 @@ typedef struct wadfile_s
 	restype_t type;
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
-	lumpcache_t *patchcache;
-#ifdef HWRENDER
-	aatree_t *hwrcache; // patches are cached in renderer's native format
-#endif
+	patchinfo_t patchinfo;
 	UINT16 numlumps; // this wad's number of resources
 	FILE *handle;
 	UINT32 filesize; // for network
@@ -134,8 +142,9 @@ typedef struct wadfile_s
 	boolean important; // also network - !W_VerifyNMUSlumps
 } wadfile_t;
 
-#define WADFILENUM(lumpnum) (UINT16)((lumpnum)>>16) // wad flumpnum>>16) // wad file number in upper word
+#define WADFILENUM(lumpnum) (UINT16)((lumpnum)>>16) // wad file number in upper word
 #define LUMPNUM(lumpnum) (UINT16)((lumpnum)&0xFFFF) // lump number for this pwad
+#define WADANDLUMP(wad, lump) (UINT32)(((wad)<<16)|((lump)&0xFFFF)) // wad and lump number
 
 extern UINT16 numwadfiles;
 extern wadfile_t *wadfiles[MAX_WADFILES];
@@ -193,7 +202,6 @@ void *W_CacheLumpNum(lumpnum_t lump, INT32 tag);
 void *W_CacheLumpNumForce(lumpnum_t lumpnum, INT32 tag);
 
 boolean W_IsLumpCached(lumpnum_t lump, void *ptr);
-boolean W_IsPatchCached(lumpnum_t lump, void *ptr);
 
 void *W_CacheLumpName(const char *name, INT32 tag);
 void *W_CachePatchName(const char *name, INT32 tag);
@@ -208,6 +216,20 @@ void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag);
 // Performs any necessary conversions from PNG images.
 void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
 void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag);
+
+// Returns patch pointers.
+void **W_GetPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag);
+void **W_GetPatchPointer(lumpnum_t lumpnum, INT32 tag);
+void **W_GetPatchPointerFromName(const char *name, INT32 tag);
+void **W_GetPatchPointerFromLongName(const char *name, INT32 tag);
+
+#ifdef ROTSPRITE
+// Returns rotated patch pointers.
+void **W_GetRotatedPatchPointerPwad(UINT16 wad, UINT16 lump, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip);
+void **W_GetRotatedPatchPointer(lumpnum_t lumpnum, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip);
+void **W_GetRotatedPatchPointerFromName(const char *name, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip);
+void **W_GetRotatedPatchPointerFromLongName(const char *name, INT32 tag, INT32 rollangle, boolean sprite, void *pivot, boolean flip);
+#endif
 
 void W_UnlockCachedPatch(void *patch);
 

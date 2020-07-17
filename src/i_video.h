@@ -20,26 +20,33 @@
 #pragma interface
 #endif
 
-typedef enum
+typedef enum rendermode_e
 {
-	/// Software
-	render_soft = 1,
+	// No renderer chosen. Used on dedicated mode.
+	render_none = 0,
 
-	/// OpenGL
-	render_opengl = 2,
+	// First renderer choice.
+	// Must start from 1.
+	render_first = 1,
 
-	/// Dedicated
-	render_none = 3  // for dedicated server
+	// Main renderer choices.
+	render_soft = render_first,
+	render_opengl,
+
+	// Last renderer choice.
+	render_last,
+
+	// Renderer count.
+	num_renderers = (render_last - 1),
 } rendermode_t;
 
 /**	\brief current render mode
 */
 extern rendermode_t rendermode;
 
-/**	\brief OpenGL state
-	0 = never loaded, 1 = loaded successfully, -1 = failed loading
+/**	\brief render mode set by command line arguments
 */
-extern INT32 vid_opengl_state;
+extern rendermode_t chosenrendermode;
 
 /**	\brief use highcolor modes if true
 */
@@ -89,9 +96,19 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h);
 */
 INT32 VID_SetMode(INT32 modenum);
 
-/**	\brief Checks the render state
+/**	\brief	The VID_GetModeName function
+
+	\param	modenum	video mode number
+
+	\return	name of video mode
 */
-void VID_CheckRenderer(void);
+const char *VID_GetModeName(INT32 modenum);
+
+/**	\brief Checks the render state
+
+	\return	true if the renderer changed
+*/
+boolean VID_CheckRenderer(void);
 
 /**	\brief Load OpenGL mode
 */
@@ -100,16 +117,6 @@ void VID_StartupOpenGL(void);
 /**	\brief Checks if OpenGL loaded
 */
 void VID_CheckGLLoaded(rendermode_t oldrender);
-
-/**	\brief	The VID_GetModeName function
-
-	\param	modenum	video mode number
-
-	\return	name of video mode
-*/
-const char *VID_GetModeName(INT32 modenum);
-void VID_PrepareModeList(void); /// note hack for SDL
-
 
 /**	\brief can video system do fullscreen
 */

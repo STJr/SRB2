@@ -48,6 +48,7 @@
 
 // this is the CURRENT rendermode!! very important: used by w_wad, and much other code
 rendermode_t rendermode = render_soft;
+rendermode_t chosenrendermode = render_none; // set by command line arguments
 static void OnTop_OnChange(void);
 // synchronize page flipping with screen refresh
 static CV_PossibleValue_t CV_NeverOnOff[] = {{-1, "Never"}, {0, "Off"}, {1, "On"}, {0, NULL}};
@@ -56,7 +57,6 @@ static consvar_t cv_stretch = {"stretch", "On", CV_SAVE|CV_NOSHOWHELP, CV_OnOff,
 static consvar_t cv_ontop = {"ontop", "Never", 0, CV_NeverOnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 boolean highcolor;
-int vid_opengl_state = 0;
 
 static BOOL bDIBMode; // means we are using DIB instead of DirectDraw surfaces
 static LPBITMAPINFO bmiMain = NULL;
@@ -778,7 +778,7 @@ static INT32 WINAPI VID_SetWindowedDisplayMode(viddef_t *lvid, vmode_t *currentm
 	I_OutputMsg("VID_SetWindowedDisplayMode()\n");
 
 
-	lvid->u.numpages = 1; // not used
+	lvid->numpages = 1; // not used
 	lvid->direct = NULL; // DOS remains
 	lvid->buffer = NULL;
 
@@ -903,9 +903,9 @@ INT32 VID_SetMode(INT32 modenum)
 			if (cv_scr_depth.value < 16)
 				CV_SetValue(&cv_scr_depth,  16);
 			vid.bpp = cv_scr_depth.value/8;
-			vid.u.windowed = (bWinParm || !cv_fullscreen.value);
+			vid.windowed = (bWinParm || !cv_fullscreen.value);
 			pcurrentmode->bytesperpixel = vid.bpp;
-			pcurrentmode->windowed = vid.u.windowed;
+			pcurrentmode->windowed = vid.windowed;
 		}
 	}
 
@@ -952,7 +952,11 @@ INT32 VID_SetMode(INT32 modenum)
 	return 1;
 }
 
-void VID_CheckRenderer(void) {}
+boolean VID_CheckRenderer(void)
+{
+	return false;
+}
+
 void VID_CheckGLLoaded(rendermode_t oldrender)
 {
 	(void)oldrender;
@@ -995,7 +999,7 @@ static INT32 WINAPI VID_SetDirectDrawMode(viddef_t *lvid, vmode_t *currentmode)
 
 
 	// DD modes do double-buffer page flipping, but the game engine doesn't need this..
-	lvid->u.numpages = 2;
+	lvid->numpages = 2;
 
 	// release ddraw surfaces etc..
 	ReleaseChtuff();

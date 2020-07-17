@@ -111,20 +111,13 @@ extern consvar_t cv_tailspickup;
 
 // Called by startup code.
 void R_Init(void);
-#ifdef HWRENDER
-void R_InitHardwareMode(void);
-#endif
-void R_ReloadHUDGraphics(void);
 
 void R_CheckViewMorph(void);
 void R_ApplyViewMorph(void);
 
-// just sets setsizeneeded true
 extern boolean setsizeneeded;
+void R_ViewSizeChanged(void); // sets setsizeneeded true
 void R_SetViewSize(void);
-
-// do it (sometimes explicitly called)
-void R_ExecuteSetViewSize(void);
 
 void R_SetupFrame(player_t *player);
 void R_SkyboxFrame(player_t *player);

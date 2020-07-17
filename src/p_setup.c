@@ -29,6 +29,7 @@
 #include "r_data.h"
 #include "r_things.h" // for R_AddSpriteDefs
 #include "r_patch.h"
+#include "r_rotsprite.h"
 #include "r_sky.h"
 #include "r_draw.h"
 
@@ -3703,14 +3704,12 @@ boolean P_LoadLevel(boolean fromnetsave)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
-	// Lactozilla: Free extrasubsectors regardless of renderer.
-	// Maybe we're not in OpenGL anymore.
-	if (extrasubsectors)
-		free(extrasubsectors);
-	extrasubsectors = NULL;
-	// stuff like HWR_CreatePlanePolygons is called there
+	// Free extrasubsectors regardless of the renderer.
+	HWR_FreeExtraSubsectors();
+
+	// Create plane polygons.
 	if (rendermode == render_opengl)
-		HWR_SetupLevel();
+		HWR_LoadLevel();
 #endif
 
 	// oh god I hope this helps
@@ -3796,7 +3795,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 }
 
 #ifdef HWRENDER
-void HWR_SetupLevel(void)
+void HWR_LoadLevel(void)
 {
 	// Lactozilla (December 8, 2019)
 	// Level setup used to free EVERY mipmap from memory.
@@ -4053,6 +4052,13 @@ boolean P_AddWadFile(const char *wadfilename)
 	// edit music defs
 	//
 	S_LoadMusicDefs(wadnum);
+
+	//
+	// recache sprite rotation data
+	//
+#ifdef ROTSPRITE
+	RotSprite_RecreateAll();
+#endif
 
 	//
 	// search for maps

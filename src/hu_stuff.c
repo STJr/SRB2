@@ -27,7 +27,7 @@
 #include "i_video.h"
 #include "i_system.h"
 
-#include "st_stuff.h" // ST_HEIGHT
+#include "st_stuff.h"
 #include "r_local.h"
 
 #include "keys.h"
@@ -82,10 +82,10 @@ static boolean headsupactive = false;
 boolean hu_showscores; // draw rankings
 static char hu_tick;
 
-patch_t *rflagico;
-patch_t *bflagico;
-patch_t *rmatcico;
-patch_t *bmatcico;
+patch_t **rflagico;
+patch_t **bflagico;
+patch_t **rmatcico;
+patch_t **bmatcico;
 patch_t *tagico;
 patch_t *tallminus;
 patch_t *tallinfin;
@@ -2038,9 +2038,6 @@ static void HU_DrawDemoInfo(void)
 //
 void HU_Drawer(void)
 {
-	if (needpatchrecache)
-		R_ReloadHUDGraphics();
-
 #ifndef NONET
 	// draw chat string plus cursor
 	if (chat_on)
@@ -2468,9 +2465,9 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (gametyperules & GTR_TEAMFLAGS)
 		{
 			if (players[tab[i].num].gotflag & GF_REDFLAG) // Red
-				V_DrawFixedPatch((x-10)*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, 0, rflagico, 0);
+				V_DrawFixedPatch((x-10)*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, 0, *rflagico, 0);
 			else if (players[tab[i].num].gotflag & GF_BLUEFLAG) // Blue
-				V_DrawFixedPatch((x-10)*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, 0, bflagico, 0);
+				V_DrawFixedPatch((x-10)*FRACUNIT, (y)*FRACUNIT, FRACUNIT/4, 0, *bflagico, 0);
 		}
 
 		// Draw emeralds
@@ -2596,9 +2593,9 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (gametyperules & GTR_TEAMFLAGS)
 		{
 			if (players[tab[i].num].gotflag & GF_REDFLAG) // Red
-				V_DrawSmallScaledPatch(x-28, y-4, 0, rflagico);
+				V_DrawSmallScaledPatch(x-28, y-4, 0, *rflagico);
 			else if (players[tab[i].num].gotflag & GF_BLUEFLAG) // Blue
-				V_DrawSmallScaledPatch(x-28, y-4, 0, bflagico);
+				V_DrawSmallScaledPatch(x-28, y-4, 0, *bflagico);
 		}
 
 		// Draw emeralds

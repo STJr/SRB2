@@ -20,7 +20,11 @@ boolean CON_Responder(event_t *ev);
 // set true when screen size has changed, to adapt console
 extern boolean con_recalc;
 
+// console being displayed at game startup
 extern boolean con_startup;
+
+// needs explicit screen refresh until we are in the main game loop
+extern boolean con_refresh;
 
 // top clip value for view render: do not draw part of view hidden by console
 extern INT32 con_clipviewtop;

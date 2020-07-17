@@ -302,13 +302,13 @@ void ST_LoadGraphics(void)
 	sneakers = W_CachePatchName("TVSSICON", PU_HUDGFX);
 	gravboots = W_CachePatchName("TVGVICON", PU_HUDGFX);
 
-	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
-	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
-	bflagico = W_CachePatchName("BFLAGICO", PU_HUDGFX);
-	rmatcico = W_CachePatchName("RMATCICO", PU_HUDGFX);
-	bmatcico = W_CachePatchName("BMATCICO", PU_HUDGFX);
+	rflagico = (patch_t **)W_GetPatchPointerFromName("RFLAGICO", PU_HUDGFX);
+	bflagico = (patch_t **)W_GetPatchPointerFromName("BFLAGICO", PU_HUDGFX);
+	rmatcico = (patch_t **)W_GetPatchPointerFromName("RMATCICO", PU_HUDGFX);
+	bmatcico = (patch_t **)W_GetPatchPointerFromName("BMATCICO", PU_HUDGFX);
 	gotrflag = W_CachePatchName("GOTRFLAG", PU_HUDGFX);
 	gotbflag = W_CachePatchName("GOTBFLAG", PU_HUDGFX);
+	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
 	fnshico = W_CachePatchName("FNSHICO", PU_HUDGFX);
 	nonicon = W_CachePatchName("NONICON", PU_HUDGFX);
 	nonicon2 = W_CachePatchName("NONICON2", PU_HUDGFX);
@@ -2374,17 +2374,17 @@ static void ST_drawTeamHUD(void)
 		return;
 
 	if (gametyperules & GTR_TEAMFLAGS)
-		p = bflagico;
+		p = *bflagico;
 	else
-		p = bmatcico;
+		p = *bmatcico;
 
 	if (LUA_HudEnabled(hud_teamscores))
 		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
 
 	if (gametyperules & GTR_TEAMFLAGS)
-		p = rflagico;
+		p = *rflagico;
 	else
-		p = rmatcico;
+		p = *rmatcico;
 
 	if (LUA_HudEnabled(hud_teamscores))
 		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
@@ -2755,9 +2755,6 @@ static void ST_overlayDrawer(void)
 
 void ST_Drawer(void)
 {
-	if (needpatchrecache)
-		R_ReloadHUDGraphics();
-
 #ifdef SEENAMES
 	if (cv_seenames.value && cv_allowseenames.value && displayplayer == consoleplayer && seenplayer && seenplayer->mo)
 	{

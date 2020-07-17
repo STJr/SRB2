@@ -351,7 +351,7 @@ typedef struct
 	char notes[441];
 	char picname[8];
 	char skinname[SKINNAMESIZE*2+2]; // skin&skin\0
-	patch_t *charpic;
+	patch_t **charpic;
 	UINT8 prev;
 	UINT8 next;
 
@@ -360,7 +360,7 @@ typedef struct
 	SINT8 skinnum[2];
 	UINT16 oppositecolor;
 	char nametag[8];
-	patch_t *namepic;
+	patch_t **namepic;
 	UINT16 tagtextcolor;
 	UINT16 tagoutlinecolor;
 } description_t;

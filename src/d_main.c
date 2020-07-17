@@ -110,8 +110,6 @@ boolean devparm = false; // started game with -devparm
 boolean singletics = false; // timedemo
 boolean lastdraw = false;
 
-static void D_CheckRendererState(void);
-
 postimg_t postimgtype = postimg_none;
 INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
@@ -222,7 +220,6 @@ INT16 wipetypepost = -1;
 
 static void D_Display(void)
 {
-	INT32 setrenderstillneeded = 0;
 	boolean forcerefresh = false;
 	static boolean wipe = false;
 	INT32 wipedefindex = 0;
@@ -233,59 +230,25 @@ static void D_Display(void)
 	if (nodrawers)
 		return; // for comparative timing/profiling
 
-	// Lactozilla: Switching renderers works by checking
-	// if the game has to do it right when the frame
-	// needs to render. If so, five things will happen:
-	// 1. Interface functions will be called so
-	//    that switching to OpenGL creates a
-	//    GL context, and switching to Software
-	//    allocates screen buffers.
-	// 2. Software will set drawer functions,
-	//    and OpenGL will load textures and
-	//    create plane polygons, if necessary.
-	// 3. Functions related to switching video
-	//    modes (resolution) are called.
-	// 4. Patch data is freed from memory,
-	//    and recached if necessary.
-	// 5. The frame is ready to be drawn!
-
-	// stop movie if needs to change renderer
-	if (setrenderneeded && (moviemode == MM_APNG))
-		M_StopMovie();
-
-	// check for change of renderer or screen size (video mode)
+	// Check for change of renderer or screen size (video mode)
 	if ((setrenderneeded || setmodeneeded) && !wipe)
-	{
-		if (setrenderneeded)
-		{
-			CONS_Debug(DBG_RENDER, "setrenderneeded set (%d)\n", setrenderneeded);
-			setrenderstillneeded = setrenderneeded;
-		}
 		SCR_SetMode(); // change video mode
-	}
 
-	if (vid.recalc || setrenderstillneeded)
-	{
+	// Recalc the screen
+	if (vid.recalc)
 		SCR_Recalc(); // NOTE! setsizeneeded is set by SCR_Recalc()
-#ifdef HWRENDER
-		// Shoot! The screen texture was flushed!
-		if ((rendermode == render_opengl) && (gamestate == GS_INTERMISSION))
-			usebuffer = false;
-#endif
-	}
 
+	// View morph
 	if (rendermode == render_soft && !splitscreen)
 		R_CheckViewMorph();
 
-	// change the view size if needed
-	if (setsizeneeded || setrenderstillneeded)
+	// Change the view size if needed
+	// Set by changing video mode or renderer
+	if (setsizeneeded)
 	{
-		R_ExecuteSetViewSize();
+		R_SetViewSize();
 		forcerefresh = true; // force background redraw
 	}
-
-	// Lactozilla: Renderer switching
-	D_CheckRendererState();
 
 	// draw buffered stuff to screen
 	// Used only by linux GGI version
@@ -426,11 +389,11 @@ static void D_Display(void)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
 					objectsdrawn = 0;
-	#ifdef HWRENDER
+#ifdef HWRENDER
 					if (rendermode != render_soft)
 						HWR_RenderPlayerView(0, &players[displayplayer]);
 					else
-	#endif
+#endif
 					if (rendermode != render_none)
 						R_RenderPlayerView(&players[displayplayer]);
 				}
@@ -438,11 +401,11 @@ static void D_Display(void)
 				// render the second screen
 				if (splitscreen && players[secondarydisplayplayer].mo)
 				{
-	#ifdef HWRENDER
+#ifdef HWRENDER
 					if (rendermode != render_soft)
 						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
 					else
-	#endif
+#endif
 					if (rendermode != render_none)
 					{
 						viewwindowy = vid.height / 2;
@@ -595,13 +558,13 @@ static void D_Display(void)
 			s[sizeof s - 1] = '\0';
 
 			snprintf(s, sizeof s - 1, "get %d b/s", getbps);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-40, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-32-40, V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "send %d b/s", sendbps);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-30, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-32-30, V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "GameMiss %.2f%%", gamelostpercent);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-20, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-32-20, V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "SysMiss %.2f%%", lostpercent);
-			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
+			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-32-10, V_YELLOWMAP, s);
 		}
 
 		if (cv_renderstats.value)
@@ -679,26 +642,6 @@ static void D_Display(void)
 		I_FinishUpdate(); // page flip or blit buffer
 		rs_swaptime = I_GetTimeMicros() - rs_swaptime;
 	}
-
-	needpatchflush = false;
-	needpatchrecache = false;
-}
-
-// Check the renderer's state
-// after a possible renderer switch.
-void D_CheckRendererState(void)
-{
-	// flush all patches from memory
-	if (needpatchflush)
-	{
-		Z_FlushCachedPatches();
-		needpatchflush = false;
-	}
-
-	// some patches have been freed,
-	// so cache them again
-	if (needpatchrecache)
-		R_ReloadHUDGraphics();
 }
 
 // =========================================================================
@@ -723,7 +666,8 @@ void D_SRB2Loop(void)
 
 	oldentertics = I_GetTime();
 
-	// end of loading screen: CONS_Printf() will no more call FinishUpdate()
+	// end of loading screen: CONS_Printf() will no more call I_FinishUpdate()
+	con_refresh = false;
 	con_startup = false;
 
 	// make sure to do a d_display to init mode _before_ load a level
@@ -1423,28 +1367,27 @@ void D_SRB2Main(void)
 	G_LoadGameData();
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
+	// Under SDL2, we just use the windowed modes list, and scale in windowed fullscreen.
+	allow_fullscreen = true;
 #endif
 
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
 
-	// Lactozilla: Does the render mode need to change?
-	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
+	// Check if the render mode needs to change.
+	if (setrenderneeded)
 	{
 		CONS_Printf(M_GetText("Switching the renderer...\n"));
-		Z_PreparePatchFlush();
 
-		// set needpatchflush / needpatchrecache true for D_CheckRendererState
-		needpatchflush = true;
-		needpatchrecache = true;
+		// Switch the renderer in the interface
+		if (VID_CheckRenderer())
+			con_refresh = true; // Allow explicit screen refresh again
 
 		// Set cv_renderer to the new render mode
-		VID_CheckRenderer();
-		SCR_ChangeRendererCVars(rendermode);
-
-		// check the renderer's state
-		D_CheckRendererState();
+		CV_StealthSetValue(&cv_renderer, rendermode);
+#ifdef HWRENDER
+		CV_StealthSetValue(&cv_newrenderer, rendermode);
+#endif
 	}
 
 	wipegamestate = gamestate;

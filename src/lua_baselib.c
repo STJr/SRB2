@@ -19,6 +19,7 @@
 #include "r_main.h"
 #include "r_draw.h"
 #include "r_things.h" // R_Frame2Char etc
+#include "r_rotsprite.h" // R_GetRollAngle
 #include "m_random.h"
 #include "s_sound.h"
 #include "g_game.h"
@@ -2434,6 +2435,16 @@ static int lib_rPointInSubsectorOrNil(lua_State *L)
 	return 1;
 }
 
+#ifdef ROTSPRITE
+// R_ROTSPRITE
+////////////
+static int lib_rGetRollAngle(lua_State *L)
+{
+	lua_pushinteger(L, R_GetRollAngle(luaL_checkangle(L, 1)));
+	return 1;
+}
+#endif
+
 // R_THINGS
 ////////////
 
@@ -3488,6 +3499,11 @@ static luaL_Reg lib[] = {
 	{"R_PointToDist2",lib_rPointToDist2},
 	{"R_PointInSubsector",lib_rPointInSubsector},
 	{"R_PointInSubsectorOrNil",lib_rPointInSubsectorOrNil},
+
+#ifdef ROTSPRITE
+	// r_rotsprite
+	{"R_GetRollAngle",lib_rGetRollAngle},
+#endif
 
 	// r_things (sprite)
 	{"R_Char2Frame",lib_rChar2Frame},

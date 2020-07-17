@@ -688,14 +688,21 @@ typedef struct
 #pragma pack()
 #endif
 
-// rotsprite
-#ifdef ROTSPRITE
 typedef struct
 {
-	patch_t *patch[16][ROTANGLES];
-	UINT16 cached;
-} rotsprite_t;
-#endif/*ROTSPRITE*/
+	UINT8 *data;
+	void **columnofs;
+	size_t *columnsize;
+} pmcache_t;
+
+typedef struct
+{
+	UINT32 width, height;
+	INT16 leftoffset, topoffset;
+	size_t size;
+	INT32 *map;
+	pmcache_t cache;
+} pixelmap_t;
 
 typedef enum
 {
@@ -708,24 +715,6 @@ typedef enum
 	SRF_2D          = SRF_LEFT|SRF_RIGHT, // 12
 	SRF_NONE        = 0xff // Initial value
 } spriterotateflags_t;     // SRF's up!
-
-// Same as a patch_t, except just the header
-// and the wadnum/lumpnum combination that points
-// to wherever the patch is in memory.
-struct patchinfo_s
-{
-	INT16 width;          // bounding box size
-	INT16 height;
-	INT16 leftoffset;     // pixels to the left of origin
-	INT16 topoffset;      // pixels below the origin
-
-	UINT16 wadnum;        // the software patch lump num for when the patch
-	UINT16 lumpnum;       // was flushed, and we need to re-create it
-
-	// next patchinfo_t in memory
-	struct patchinfo_s *next;
-};
-typedef struct patchinfo_s patchinfo_t;
 
 //
 // Sprites are patches with a special naming convention so they can be
@@ -754,10 +743,6 @@ typedef struct
 
 	// Flip bits (1 = flip) to use for view angles 0-7/15.
 	UINT16 flip;
-
-#ifdef ROTSPRITE
-	rotsprite_t rotsprite;
-#endif
 } spriteframe_t;
 
 //
