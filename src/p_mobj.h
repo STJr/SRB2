@@ -312,7 +312,7 @@ typedef struct mobj_s
 	void *skin; // overrides 'sprite' when non-NULL (for player bodies to 'remember' the skin)
 	// Player and mobj sprites in multiplayer modes are modified
 	//  using an internal color lookup table for re-indexing.
-	UINT8 color; // This replaces MF_TRANSLATION. Use 0 for default (no translation).
+	UINT16 color; // This replaces MF_TRANSLATION. Use 0 for default (no translation).
 
 	// Interaction info, by BLOCKMAP.
 	// Links in blocks (if needed).
@@ -373,6 +373,7 @@ typedef struct mobj_s
 	struct pslope_s *standingslope; // The slope that the object is standing on (shouldn't need synced in savegames, right?)
 
 	boolean colorized; // Whether the mobj uses the rainbow colormap
+	boolean mirrored; // The object's rotations will be mirrored left to right, e.g., see frame AL from the right and AR from the left
 	fixed_t shadowscale; // If this object casts a shadow, and the size relative to radius
 
 	// WARNING: New fields must be added separately to savegame and Lua.

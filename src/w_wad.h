@@ -232,7 +232,6 @@ void **W_GetRotatedPatchPointerFromLongName(const char *name, INT32 tag, INT32 r
 #endif
 
 void W_UnlockCachedPatch(void *patch);
-void W_FlushCachedPatches(void);
 
 void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5);
 

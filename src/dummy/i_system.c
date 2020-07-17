@@ -16,6 +16,11 @@ tic_t I_GetTime(void)
 	return 0;
 }
 
+int I_GetTimeMicros(void)
+{
+	return 0;
+}
+
 void I_Sleep(void){}
 
 void I_GetEvent(void){}

@@ -2068,7 +2068,7 @@ msgstr ""
 
 #: m_cheat.c:292
 #, c-format
-msgid "Sissy Mode %s\n"
+msgid "Cheese Mode %s\n"
 msgstr ""
 
 #: m_cheat.c:315 m_cheat.c:349 m_cheat.c:514 m_cheat.c:538 m_cheat.c:557

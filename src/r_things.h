@@ -169,7 +169,6 @@ typedef struct vissprite_s
 	extracolormap_t *extra_colormap; // global colormaps
 
 	fixed_t xscale;
-	boolean flipped;
 
 	// Precalculated top and bottom screen coords for the sprite.
 	fixed_t thingheight; // The actual height of the thing (for 3D floors)

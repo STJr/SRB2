@@ -93,6 +93,7 @@ typedef enum
 // build an internal map name MAPxx from map number
 const char *G_BuildMapName(INT32 map);
 
+extern INT16 ticcmd_oldangleturn[2];
 extern boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
 extern mobj_t *ticcmd_ztargetfocus[2]; // Locking onto an object?
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer);
@@ -165,7 +166,7 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride);
 
 void G_SaveGameData(void);
 
-void G_SaveGame(UINT32 slot);
+void G_SaveGame(UINT32 slot, INT16 mapnum);
 
 void G_SaveGameOver(UINT32 slot, boolean modifylives);
 
@@ -190,6 +191,7 @@ boolean G_GametypeHasTeams(void);
 boolean G_GametypeHasSpectators(void);
 boolean G_RingSlingerGametype(void);
 boolean G_PlatformGametype(void);
+boolean G_CoopGametype(void);
 boolean G_TagGametype(void);
 boolean G_CompetitionGametype(void);
 boolean G_EnoughPlayersFinished(void);
