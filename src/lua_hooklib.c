@@ -71,6 +71,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"PlayerThink",
 	"ShouldJingleContinue",
 	"GameQuit",
+	"PlayerCmd",
 	NULL
 };
 
@@ -1793,6 +1794,49 @@ void LUAh_GameQuit(void)
 			hookp->error = true;
 		}
 	}
-	
+
 	lua_pop(gL, 1); // Pop error handler
+}
+
+// Hook for building player's ticcmd struct (Ported from SRB2Kart)
+boolean hook_cmd_running = false;
+boolean LUAh_PlayerCmd(player_t *player, ticcmd_t *cmd)
+{
+	hook_p hookp;
+	boolean hooked = false;
+	if (!gL || !(hooksAvailable[hook_PlayerCmd/8] & (1<<hook_PlayerCmd%8))))
+		return false;
+
+	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	hook_cmd_running = true;
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_PlayerCmd)
+			continue;
+
+		if (lua_gettop(gL) == 1)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+			LUA_PushUserdata(gL, cmd, META_TICCMD);
+		}
+		PushHook(gL, hookp);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 1)) {
+			if (!hook->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			hooked = true;
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	lua_cmd_running = false;
+	return hooked;
 }

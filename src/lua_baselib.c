@@ -32,9 +32,12 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
+#include "lua_hook.h" // hook_cmd_running errors
 
 #define NOHUD if (hud_running)\
-return luaL_error(L, "HUD rendering code should not call this function!");
+return luaL_error(L, "HUD rendering code should not call this function!");\
+else if (hook_cmd_running)\
+return luaL_error(L, "CMD building code should not call this function!");
 
 boolean luaL_checkboolean(lua_State *L, int narg) {
 	luaL_checktype(L, narg, LUA_TBOOLEAN);
@@ -2593,8 +2596,8 @@ static int lib_sStartSound(lua_State *L)
 	}
 	if (!player || P_IsLocalPlayer(player))
 	{
-		if (hud_running)
-			origin = NULL;	// HUD rendering startsound shouldn't have an origin, just remove it instead of having a retarded error.
+		if (hud_running || hook_cmd_running)
+			origin = NULL;	// HUD rendering and CMD building startsound shouldn't have an origin, just remove it instead of having a retarded error.
 
 		S_StartSound(origin, sound_id);
 	}
