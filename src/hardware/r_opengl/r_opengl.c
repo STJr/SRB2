@@ -1107,8 +1107,9 @@ EXPORT void HWRAPI(SetShader) (int shader)
 	if (gl_allowshaders)
 	{
 		// If using model lighting, set the appropriate shader.
+		// However don't override a custom shader.
 		// Should use an enum or something...
-		if (shader == 4 && model_lighting)
+		if (shader == 4 && model_lighting && !gl_shaderprograms[4].custom)
 			shader = 8;
 		if ((GLuint)shader != gl_currentshaderprogram)
 		{
