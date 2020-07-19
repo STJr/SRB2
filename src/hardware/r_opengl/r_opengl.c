@@ -860,7 +860,7 @@ static const char *vertex_shaders[] = {
 	// Sky vertex shader
 	GLSL_DEFAULT_VERTEX_SHADER,
 
-	// Model fragment shader + diffuse lighting from above
+	// Model vertex shader + diffuse lighting from above
 	GLSL_MODEL_LIGHTING_VERTEX_SHADER,
 
 	NULL,
