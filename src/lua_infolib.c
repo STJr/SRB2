@@ -1569,8 +1569,13 @@ static int lib_setSkinColor(lua_State *L)
 			info->invshade = (UINT8)luaL_checkinteger(L, 3)%COLORRAMPSIZE;
 		else if (i == 5 || (str && fastcmp(str,"chatcolor")))
 			info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
-		else if (i == 6 || (str && fastcmp(str,"accessible")))
-			info->accessible = lua_toboolean(L, 3);
+		else if (i == 6 || (str && fastcmp(str,"accessible"))) {
+			boolean v = lua_toboolean(L, 3);
+			if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
+				return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+			else
+				info->accessible = v;
+		}
 		lua_pop(L, 1);
 	}
 	return 0;
@@ -1655,9 +1660,13 @@ static int skincolor_set(lua_State *L)
 		info->invshade = (UINT8)luaL_checkinteger(L, 3)%COLORRAMPSIZE;
 	else if (fastcmp(field,"chatcolor"))
 		info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"accessible"))
-		info->accessible = lua_toboolean(L, 3);
-	else
+	else if (fastcmp(field,"accessible")) {
+		boolean v = lua_toboolean(L, 3);
+		if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
+			return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+		else
+			info->accessible = v;
+	} else
 		CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "skincolor_t", field);
 	return 1;
 }

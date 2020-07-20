@@ -808,9 +808,11 @@ static void readskincolor(MYFILE *f, INT32 num)
 			{
 				size_t namesize = sizeof(skincolors[num].name);
 				char truncword[namesize];
+				UINT16 dupecheck;
 
 				deh_strlcpy(truncword, word2, namesize, va("Skincolor %d: name", num)); // truncate here to check for dupes
-				if (truncword[0] != '\0' && (!stricmp(truncword, skincolors[SKINCOLOR_NONE].name) || R_GetColorByName(truncword)))
+				dupecheck = R_GetColorByName(truncword);
+				if (truncword[0] != '\0' && (!stricmp(truncword, skincolors[SKINCOLOR_NONE].name) || dupecheck && dupecheck != num))
 				{
 					size_t lastchar = strlen(truncword);
 					char oldword[lastchar+1];
@@ -4726,11 +4728,11 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_skincolor(word2); // find a skincolor by name
-					if (i < numskincolors && i >= (INT32)SKINCOLOR_FIRSTFREESLOT)
+					if (i && i < numskincolors)
 						readskincolor(f, i);
 					else
 					{
-						deh_warning("Skincolor %d out of range (%d - %d)", i, SKINCOLOR_FIRSTFREESLOT, numskincolors-1);
+						deh_warning("Skincolor %d out of range (1 - %d)", i, numskincolors-1);
 						ignorelines(f);
 					}
 				}
