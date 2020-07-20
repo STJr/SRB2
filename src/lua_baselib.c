@@ -1113,6 +1113,16 @@ static int lib_pPlayerCanDamage(lua_State *L)
 	return 1;
 }
 
+static int lib_pPlayerFullbright(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushboolean(L, P_PlayerFullbright(player));
+	return 1;
+}
+
 
 static int lib_pIsObjectInGoop(lua_State *L)
 {
@@ -3386,6 +3396,7 @@ static luaL_Reg lib[] = {
 	{"P_DoPlayerPain",lib_pDoPlayerPain},
 	{"P_ResetPlayer",lib_pResetPlayer},
 	{"P_PlayerCanDamage",lib_pPlayerCanDamage},
+	{"P_PlayerFullbright",lib_pPlayerFullbright},
 	{"P_IsObjectInGoop",lib_pIsObjectInGoop},
 	{"P_IsObjectOnGround",lib_pIsObjectOnGround},
 	{"P_InSpaceSector",lib_pInSpaceSector},
