@@ -68,6 +68,16 @@ static struct {
 static INT32 tidcachelen = 0;
 
 //
+// MAPTEXTURE_T CACHING
+// When a texture is first needed, it counts the number of composite columns
+//  required in the texture and allocates space for a column directory and
+//  any new columns.
+// The directory will simply point inside other patches if there is only one
+//  patch in a given column, but any columns with multiple patches will have
+//  new column_ts generated.
+//
+
+//
 // R_DrawColumnInCache
 // Clip and draw a column from a patch into a cached post.
 //
@@ -188,7 +198,7 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 		{
 			for (; dest < cache + position + count; source++, dest++)
 				if (*source != 0xFF)
-					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -232,7 +242,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 		{
 			for (; dest < cache + position + count; --source, dest++)
 				if (*source != 0xFF)
-					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);

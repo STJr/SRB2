@@ -2336,8 +2336,8 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 		if (server_list)
 		{
 			char version[8] = "";
-#if VERSION > 0 || SUBVERSION > 0
-			snprintf(version, sizeof (version), "%d.%d.%d", VERSION/100, VERSION%100, SUBVERSION);
+#ifndef DEVELOP
+			strcpy(version, SRB2VERSION);
 #else
 			strcpy(version, GetRevisionString());
 #endif
@@ -5159,7 +5159,7 @@ static void SV_SendTics(void)
 		{
 			// assert supposedtics[n]>=nettics[n]
 			realfirsttic = supposedtics[n];
-			lasttictosend = min(maketic, realfirsttic + CLIENTBACKUPTICS);
+			lasttictosend = min(maketic, nettics[n] + CLIENTBACKUPTICS);
 
 			if (realfirsttic >= lasttictosend)
 			{
@@ -5496,7 +5496,7 @@ void NetUpdate(void)
 		// update node latency values so we can take an average later.
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && playernode[i] != UINT8_MAX)
-				realpingtable[i] += GetLag(playernode[i]) * (1000.00f / TICRATE);
+				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
 	}
 

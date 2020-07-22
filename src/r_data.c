@@ -56,6 +56,8 @@ size_t flatmemory, spritememory, texturememory;
 INT16 color8to16[256]; // remap color index to highcolor rgb value
 INT16 *hicolormaps; // test a 32k colormap remaps high -> high
 
+// Blends two pixels together, using the equation
+// that matches the specified alpha style.
 UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	RGBA_t output;
@@ -74,7 +76,13 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 			// if the background pixel is empty,
 			// match software and don't blend anything
 			if (!background.s.alpha)
-				output.s.alpha = 0;
+			{
+				// ...unless the foreground pixel ISN'T actually translucent.
+				if (alpha == 0xFF)
+					output.rgba = foreground.rgba;
+				else
+					output.rgba = 0;
+			}
 			else
 			{
 				UINT8 beta = (0xFF - alpha);
@@ -131,18 +139,46 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 	return 0;
 }
 
-UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
+INT32 ASTTextureBlendingThreshold[2] = {255/11, (10*255/11)};
+
+// Blends a pixel for a texture patch.
+UINT32 ASTBlendTexturePixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	// Alpha style set to translucent?
 	if (style == AST_TRANSLUCENT)
 	{
 		// Is the alpha small enough for translucency?
-		if (alpha <= (10*255/11))
+		if (alpha <= ASTTextureBlendingThreshold[1])
+		{
+			// Is the patch way too translucent? Don't blend then.
+			if (alpha < ASTTextureBlendingThreshold[0])
+				return background.rgba;
+
+			return ASTBlendPixel(background, foreground, style, alpha);
+		}
+		else // just copy the pixel
+			return foreground.rgba;
+	}
+	else
+		return ASTBlendPixel(background, foreground, style, alpha);
+}
+
+// Blends two palette indexes for a texture patch, then
+// finds the nearest palette index from the blended output.
+UINT8 ASTBlendPaletteIndexes(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
+{
+	// Alpha style set to translucent?
+	if (style == AST_TRANSLUCENT)
+	{
+		// Is the alpha small enough for translucency?
+		if (alpha <= ASTTextureBlendingThreshold[1])
 		{
 			UINT8 *mytransmap;
+
 			// Is the patch way too translucent? Don't blend then.
-			if (alpha < 255/11)
+			if (alpha < ASTTextureBlendingThreshold[0])
 				return background;
+
 			// The equation's not exact but it works as intended. I'll call it a day for now.
 			mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
 			if (background != 0xFF)

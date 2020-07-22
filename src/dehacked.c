@@ -807,8 +807,41 @@ static void readskincolor(MYFILE *f, INT32 num)
 
 			if (fastcmp(word, "NAME"))
 			{
-				deh_strlcpy(skincolors[num].name, word2,
-					sizeof (skincolors[num].name), va("Skincolor %d: name", num));
+				size_t namesize = sizeof(skincolors[num].name);
+				char truncword[namesize];
+
+				deh_strlcpy(truncword, word2, namesize, va("Skincolor %d: name", num)); // truncate here to check for dupes
+				if (truncword[0] != '\0' && (!stricmp(truncword, skincolors[SKINCOLOR_NONE].name) || R_GetColorByName(truncword)))
+				{
+					size_t lastchar = strlen(truncword);
+					char oldword[lastchar+1];
+					char dupenum = '1';
+
+					strlcpy(oldword, truncword, lastchar+1);
+					lastchar--;
+					if (lastchar == namesize-2) // exactly max length, replace last character with 0
+						truncword[lastchar] = '0';
+					else // append 0
+					{
+						strcat(truncword, "0");
+						lastchar++;
+					}
+
+					while (R_GetColorByName(truncword))
+					{
+						truncword[lastchar] = dupenum;
+						if (dupenum == '9')
+							dupenum = 'A';
+						else if (dupenum == 'Z') // give up :?
+							break;
+						else
+							dupenum++;
+					}
+
+					deh_warning("Skincolor %d: name %s is a duplicate of another skincolor's name - renamed to %s", num, oldword, truncword);
+				}
+
+				strlcpy(skincolors[num].name, truncword, namesize); // already truncated
 			}
 			else if (fastcmp(word, "RAMP"))
 			{
@@ -819,10 +852,15 @@ static void readskincolor(MYFILE *f, INT32 num)
 					if ((tmp = strtok(NULL,",")) == NULL)
 						break;
 				}
+				skincolor_modified[num] = true;
 			}
 			else if (fastcmp(word, "INVCOLOR"))
 			{
-				skincolors[num].invcolor = (UINT16)get_number(word2);
+				UINT16 v = (UINT16)get_number(word2);
+				if (v < numskincolors)
+					skincolors[num].invcolor = v;
+				else
+					skincolors[num].invcolor = SKINCOLOR_GREEN;
 			}
 			else if (fastcmp(word, "INVSHADE"))
 			{
@@ -3083,6 +3121,7 @@ static actionpointer_t actionpointers[] =
 	{{A_NapalmScatter},          "A_NAPALMSCATTER"},
 	{{A_SpawnFreshCopy},         "A_SPAWNFRESHCOPY"},
 	{{A_FlickySpawn},            "A_FLICKYSPAWN"},
+	{{A_FlickyCenter},           "A_FLICKYCENTER"},
 	{{A_FlickyAim},              "A_FLICKYAIM"},
 	{{A_FlickyFly},              "A_FLICKYFLY"},
 	{{A_FlickySoar},             "A_FLICKYSOAR"},
@@ -9484,8 +9523,6 @@ struct {
 	{"PUSHACCEL",PUSHACCEL},
 	{"MODID",MODID}, // I don't know, I just thought it would be cool for a wad to potentially know what mod it was loaded into.
 	{"CODEBASE",CODEBASE}, // or what release of SRB2 this is.
-	{"VERSION",VERSION}, // Grab the game's version!
-	{"SUBVERSION",SUBVERSION}, // more precise version number
 	{"NEWTICRATE",NEWTICRATE}, // TICRATE*NEWTICRATERATIO
 	{"NEWTICRATERATIO",NEWTICRATERATIO},
 
@@ -10630,7 +10667,7 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("State S_%s allocated.\n",word);
 					FREE_STATES[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_STATES[i],word);
-					lua_pushinteger(L, i);
+					lua_pushinteger(L, S_FIRSTFREESLOT + i);
 					r++;
 					break;
 				}
@@ -10645,7 +10682,7 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("MobjType MT_%s allocated.\n",word);
 					FREE_MOBJS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_MOBJS[i],word);
-					lua_pushinteger(L, i);
+					lua_pushinteger(L, MT_FIRSTFREESLOT + i);
 					r++;
 					break;
 				}
@@ -10661,7 +10698,7 @@ static inline int lib_freeslot(lua_State *L)
 					FREE_SKINCOLORS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_SKINCOLORS[i],word);
 					M_AddMenuColor(numskincolors++);
-					lua_pushinteger(L, i);
+					lua_pushinteger(L, SKINCOLOR_FIRSTFREESLOT + i);
 					r++;
 					break;
 				}
@@ -10682,11 +10719,12 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
 					spr2defaults[free_spr2] = 0;
+					lua_pushinteger(L, free_spr2);
+					r++;
 					spr2names[free_spr2++][4] = 0;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
 			}
-			r++;
 		}
 		else if (fastcmp(type, "TOL"))
 		{

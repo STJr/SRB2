@@ -487,7 +487,7 @@ CV_PossibleValue_t loadless_cons_t[] = {{0, "Realtime"}, {1, "In-game"}, {0, NUL
 
 consvar_t cv_dummymarathon = {"dummymarathon", "Standard", CV_HIDEN, marathon_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_dummycutscenes = {"dummycutscenes", "Off", CV_HIDEN, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_dummyloadless = {"dummyloadless", "Realtime", CV_HIDEN, loadless_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_dummyloadless = {"dummyloadless", "In-game", CV_HIDEN, loadless_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // ==========================================================================
 // ORGANIZATION START.
@@ -1446,19 +1446,19 @@ static menuitem_t OP_ColorOptionsMenu[] =
 static menuitem_t OP_OpenGLOptionsMenu[] =
 {
 	{IT_HEADER, NULL, "3D Models", NULL, 0},
-	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_grmodels,             12},
-	{IT_STRING|IT_CVAR,         NULL, "Frame interpolation", &cv_grmodelinterpolation, 22},
-	{IT_STRING|IT_CVAR,         NULL, "Ambient lighting",    &cv_grmodellighting,      32},
+	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_glmodels,             12},
+	{IT_STRING|IT_CVAR,         NULL, "Frame interpolation", &cv_glmodelinterpolation, 22},
+	{IT_STRING|IT_CVAR,         NULL, "Ambient lighting",    &cv_glmodellighting,      32},
 
 	{IT_HEADER, NULL, "General", NULL, 51},
-	{IT_STRING|IT_CVAR,         NULL, "Shaders",             &cv_grshaders,            63},
-	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_grshearing,           73},
+	{IT_STRING|IT_CVAR,         NULL, "Shaders",             &cv_glshaders,            63},
+	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_glshearing,           73},
 	{IT_STRING|IT_CVAR,         NULL, "Field of view",       &cv_fov,                  83},
 
 	{IT_HEADER, NULL, "Miscellaneous", NULL, 102},
 	{IT_STRING|IT_CVAR,         NULL, "Bit depth",           &cv_scr_depth,           114},
-	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_grfiltermode,        124},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_granisotropicmode,   134},
+	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_glfiltermode,        124},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_glanisotropicmode,   134},
 #ifdef ALAM_LIGHTING
 	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",         &OP_OpenGLLightingDef,   144},
 #endif
@@ -1470,10 +1470,10 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 #ifdef ALAM_LIGHTING
 static menuitem_t OP_OpenGLLightingMenu[] =
 {
-	{IT_STRING|IT_CVAR, NULL, "Coronas",          &cv_grcoronas,          0},
-	{IT_STRING|IT_CVAR, NULL, "Coronas size",     &cv_grcoronasize,      10},
-	{IT_STRING|IT_CVAR, NULL, "Dynamic lighting", &cv_grdynamiclighting, 20},
-	{IT_STRING|IT_CVAR, NULL, "Static lighting",  &cv_grstaticlighting,  30},
+	{IT_STRING|IT_CVAR, NULL, "Coronas",          &cv_glcoronas,          0},
+	{IT_STRING|IT_CVAR, NULL, "Coronas size",     &cv_glcoronasize,      10},
+	{IT_STRING|IT_CVAR, NULL, "Dynamic lighting", &cv_gldynamiclighting, 20},
+	{IT_STRING|IT_CVAR, NULL, "Static lighting",  &cv_glstaticlighting,  30},
 };
 #endif // ALAM_LIGHTING
 
@@ -1942,7 +1942,7 @@ static menu_t SP_NightsGhostDef =
 static menu_t SP_MarathonDef =
 {
 	MTREE2(MN_SP_MAIN, MN_SP_MARATHON),
-	"M_ATTACK", // temporary
+	"M_RATHON",
 	sizeof(SP_MarathonMenu)/sizeof(menuitem_t),
 	&MainDef,  // Doesn't matter.
 	SP_MarathonMenu,
@@ -2306,9 +2306,9 @@ void Nextmap_OnChange(void)
 		// Check if file exists, if not, disable REPLAY option
 		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name);
 
-#ifdef OLDNREPLAYNAME		
+#ifdef OLDNREPLAYNAME
 		sprintf(tabaseold,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
-#endif	
+#endif
 
 		for (i = 0; i < 4; i++) {
 			SP_NightsReplayMenu[i].status = IT_DISABLED;
@@ -2336,7 +2336,7 @@ void Nextmap_OnChange(void)
 			active = true;
 		}
 
-		// Old style name compatibility 
+		// Old style name compatibility
 #ifdef OLDNREPLAYNAME
 		if (FIL_FileExists(va("%s-score-best.lmp", tabaseold))) {
 			SP_NightsReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
@@ -10560,8 +10560,7 @@ static void M_StartMarathon(INT32 choice)
 	(void)choice;
 	marathontime = 0;
 	marathonmode = MA_RUNNING|MA_INIT;
-	if (cv_dummymarathon.value == 1)
-		cursaveslot = MARATHONSLOT;
+	cursaveslot = (cv_dummymarathon.value == 1) ? MARATHONSLOT : 0;
 	if (!cv_dummycutscenes.value)
 		marathonmode |= MA_NOCUTSCENES;
 	if (cv_dummyloadless.value)
@@ -10706,7 +10705,7 @@ void M_DrawMarathon(void)
 			recatkdrawtimer -= (10*TICRATE);
 	}
 
-	//M_DrawMenuTitle();
+	M_DrawMenuTitle();
 
 	// draw menu (everything else goes on top of it)
 	// Sadly we can't just use generic mode menus because we need some extra hacks

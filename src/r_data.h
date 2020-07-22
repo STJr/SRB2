@@ -34,7 +34,10 @@ typedef struct
 enum patchalphastyle {AST_COPY, AST_TRANSLUCENT, AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY};
 
 UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha);
-UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha);
+UINT32 ASTBlendTexturePixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha);
+UINT8 ASTBlendPaletteIndexes(UINT8 background, UINT8 foreground, int style, UINT8 alpha);
+
+extern INT32 ASTTextureBlendingThreshold[2];
 
 extern INT16 color8to16[256]; // remap color index to highcolor
 extern INT16 *hicolormaps; // remap high colors to high colors..

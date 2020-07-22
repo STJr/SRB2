@@ -356,8 +356,8 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->mustrack = 0;
 	mapheaderinfo[num]->muspos = 0;
 	mapheaderinfo[num]->musinterfadeout = 0;
-	mapheaderinfo[num]->musintername[0] = '\0';
-	mapheaderinfo[num]->muspostbossname[6] = 0;
+	mapheaderinfo[num]->musintername[0] = 0;
+	mapheaderinfo[num]->muspostbossname[0] = 0;
 	mapheaderinfo[num]->muspostbosstrack = 0;
 	mapheaderinfo[num]->muspostbosspos = 0;
 	mapheaderinfo[num]->muspostbossfadein = 0;
@@ -1001,17 +1001,6 @@ static void P_InitializeSector(sector_t *ss)
 	ss->moved = true;
 
 	ss->extra_colormap = NULL;
-
-#ifdef HWRENDER // ----- for special tricks with HW renderer -----
-	ss->pseudoSector = false;
-	ss->virtualFloor = false;
-	ss->virtualFloorheight = 0;
-	ss->virtualCeiling = false;
-	ss->virtualCeilingheight = 0;
-	ss->sectorLines = NULL;
-	ss->stackList = NULL;
-	ss->lineoutLength = -1.0l;
-#endif // ----- end special tricks -----
 
 	ss->gravity = NULL;
 	ss->verticalflip = false;
@@ -3774,7 +3763,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 		if (!lastmaploaded) // Start a new game?
 		{
 			// I'd love to do this in the menu code instead of here, but everything's a mess and I can't guarantee saving proper player struct info before the first act's started. You could probably refactor it, but it'd be a lot of effort. Easier to just work off known good code. ~toast 22/06/2020
-			if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
+			if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || marathonmode)
 			&& (!modifiedgame || savemoddata) && cursaveslot > 0)
 				G_SaveGame((UINT32)cursaveslot, gamemap);
 			// If you're looking for saving sp file progression (distinct from G_SaveGameOver), check G_DoCompleted.
@@ -3832,8 +3821,6 @@ void HWR_SetupLevel(void)
 	HWR_ResetLights();
 #endif
 
-	// Correct missing sidedefs & deep water trick
-	HWR_CorrectSWTricks();
 	HWR_CreatePlanePolygons((INT32)numnodes - 1);
 }
 #endif
