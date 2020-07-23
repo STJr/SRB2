@@ -1207,8 +1207,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 //
 // R_ThickSideClip
 // Clips the level by a thick side.
-//
-void R_ThickSideClip(INT32 x, drawseg_t *ds, ffloor_t *pfloor)
+static void R_ThickSideClip(INT32 x, drawseg_t *ds, ffloor_t *pfloor)
 {
 	fixed_t bottombounds = viewheight << FRACBITS;
 	fixed_t topbounds = (con_clipviewtop - 1) << FRACBITS;
