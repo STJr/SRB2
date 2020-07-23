@@ -2382,9 +2382,12 @@ static void WriteDemoChecksum(void)
 static void G_StopDemoRecording(void)
 {
 	boolean saved = false;
-	WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-	WriteDemoChecksum();
-	saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
+	if (demo_p)
+	{
+		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
+		WriteDemoChecksum();
+		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
+	}
 	free(demobuffer);
 	demorecording = false;
 

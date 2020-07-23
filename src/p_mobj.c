@@ -442,7 +442,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 			mobj->sprite2 = spr2;
 			mobj->frame = frame|(st->frame&~FF_FRAMEMASK);
-			if (player->powers[pw_super] || (player->powers[pw_carry] == CR_NIGHTSMODE && (player->charflags & (SF_SUPER|SF_NONIGHTSSUPER)) == SF_SUPER)) // Super colours? Super bright!
+			if (P_PlayerFullbright(player))
 				mobj->frame |= FF_FULLBRIGHT;
 		}
 		// Regular sprites
