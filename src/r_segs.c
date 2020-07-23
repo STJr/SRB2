@@ -1347,7 +1347,7 @@ static void R_RenderSegLoop (void)
 
 							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
 							// "bottom" is the top pixel of the floor column
-							if (ffbottom >= bottom && R_FFloorCanClip(&ffloor[i]))
+							if (ffbottom >= bottom-1 && R_FFloorCanClip(&ffloor[i]))
 							{
 								floormarked = true;
 								floorclip[rw_x] = fftop;
@@ -1395,7 +1395,7 @@ static void R_RenderSegLoop (void)
 
 							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
 							// "top" is the height of the ceiling column
-							if (fftop <= top && R_FFloorCanClip(&ffloor[i]))
+							if (fftop <= top+1 && R_FFloorCanClip(&ffloor[i]))
 							{
 								ceilingmarked = true;
 								ceilingclip[rw_x] = ffbottom;
