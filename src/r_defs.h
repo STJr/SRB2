@@ -617,8 +617,8 @@ typedef struct drawseg_s
 	fixed_t tsilheight; // do not clip sprites below this
 
 	// Pointers to lists for sprite clipping, all three adjusted so [x1] is first value.
-	INT16 *sprtopclip;
-	INT16 *sprbottomclip;
+	INT16 *sprtopclip, *thicktopclip;
+	INT16 *sprbottomclip, *thickbottomclip;
 	INT16 *maskedtexturecol;
 
 	struct visplane_s *ffloorplanes[MAXFFLOORS];

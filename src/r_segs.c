@@ -56,6 +56,12 @@ static INT32 worldtopslope, worldbottomslope, worldhighslope, worldlowslope; // 
 static fixed_t rw_toptextureslide, rw_midtextureslide, rw_bottomtextureslide; // Defines how to adjust Y offsets along the wall for slopes
 static fixed_t rw_midtextureback, rw_midtexturebackslide; // Values for masked midtexture height calculation
 
+static boolean rw_floormarked = false;
+static boolean rw_ceilingmarked = false;
+
+static INT16 rw_thickfloorclip[MAXVIDWIDTH];
+static INT16 rw_thickceilingclip[MAXVIDWIDTH];
+
 static INT32 *rw_silhouette = NULL;
 static fixed_t *rw_tsilheight = NULL;
 static fixed_t *rw_bsilheight = NULL;
@@ -915,8 +921,8 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	maskedtexturecol = ds->thicksidecol;
 
-	mfloorclip = ds->sprbottomclip;
-	mceilingclip = ds->sprtopclip;
+	mfloorclip = (ds->thickbottomclip ? ds->thickbottomclip : ds->sprbottomclip);
+	mceilingclip = (ds->thicktopclip ? ds->thicktopclip : ds->sprtopclip);
 	dc_texheight = textureheight[texnum]>>FRACBITS;
 
 	// calculate both left ends
@@ -1196,6 +1202,90 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		}
 	}
 	colfunc = colfuncs[BASEDRAWFUNC];
+}
+
+//
+// R_ThickSideClip
+// Clips the level by a thick side.
+//
+void R_ThickSideClip(INT32 x, drawseg_t *ds, ffloor_t *pfloor)
+{
+	fixed_t bottombounds = viewheight << FRACBITS;
+	fixed_t topbounds = (con_clipviewtop - 1) << FRACBITS;
+
+	INT64 top_frac, top_step, bottom_frac, bottom_step;
+	fixed_t left_top, left_bottom;
+
+	fixed_t top, bottom;
+	INT32 scrtop, scrbottom;
+	INT32 cliptop, clipbottom;
+	INT32 range = max(ds->x2-ds->x1, 1);
+
+	if (ds->thicksidecol[x] == INT16_MAX)
+		return;
+
+	// calculate both left ends
+	left_top    = P_GetFFloorTopZAt   (pfloor, ds->leftpos.x, ds->leftpos.y) - viewz;
+	left_bottom = P_GetFFloorBottomZAt(pfloor, ds->leftpos.x, ds->leftpos.y) - viewz;
+
+	// Set heights according to plane, or slope, whichever
+	{
+		fixed_t right_top, right_bottom;
+
+		// calculate right ends now
+		right_top    = P_GetFFloorTopZAt   (pfloor, ds->rightpos.x, ds->rightpos.y) - viewz;
+		right_bottom = P_GetFFloorBottomZAt(pfloor, ds->rightpos.x, ds->rightpos.y) - viewz;
+
+		// using INT64 to avoid 32bit overflow
+		top_frac =    (INT64)centeryfrac - (((INT64)left_top     * ds->scale1) >> FRACBITS);
+		bottom_frac = (INT64)centeryfrac - (((INT64)left_bottom  * ds->scale1) >> FRACBITS);
+		top_step =    (INT64)centeryfrac - (((INT64)right_top    * ds->scale2) >> FRACBITS);
+		bottom_step = (INT64)centeryfrac - (((INT64)right_bottom * ds->scale2) >> FRACBITS);
+
+		top_step = (top_step-top_frac)/(range);
+		bottom_step = (bottom_step-bottom_frac)/(range);
+
+		top_frac += top_step * (x - ds->x1);
+		bottom_frac += bottom_step * (x - ds->x1);
+	}
+
+	// Calculate bounds
+	// clamp the values if necessary to avoid overflows and rendering glitches caused by them
+	if      (top_frac > (INT64)CLAMPMAX) top = CLAMPMAX;
+	else if (top_frac > (INT64)CLAMPMIN) top = (fixed_t)top_frac;
+	else                                 top = CLAMPMIN;
+	if      (bottom_frac > (INT64)CLAMPMAX) bottom = CLAMPMAX;
+	else if (bottom_frac > (INT64)CLAMPMIN) bottom = (fixed_t)bottom_frac;
+	else                                    bottom = CLAMPMIN;
+
+	// SoM: If column is out of range, why bother with it??
+	if (bottom < topbounds || top > bottombounds)
+		return;
+
+	scrtop = (top+FRACUNIT-1)>>FRACBITS;
+	scrbottom = (bottom-1)>>FRACBITS;
+
+	cliptop = ceilingclip[x]+1;
+	clipbottom = floorclip[x]-1;
+
+	if (scrbottom >= clipbottom+1)
+		scrbottom = clipbottom;
+	if (scrtop <= cliptop-1)
+		scrtop = cliptop;
+
+	if (scrbottom >= clipbottom-1)
+	{
+		rw_floormarked = true;
+		if (floorclip[x] > scrtop+1)
+			floorclip[x] = scrtop+1;
+	}
+
+	if (scrtop <= cliptop+1)
+	{
+		rw_ceilingmarked = true;
+		if (ceilingclip[x] < scrbottom-1)
+			ceilingclip[x] = scrbottom-1;
+	}
 
 #undef CLAMPMAX
 #undef CLAMPMIN
@@ -1260,8 +1350,8 @@ static void R_RenderSegLoop (void)
 
 	for (; rw_x < rw_stopx; rw_x++)
 	{
-		boolean floormarked = false;
-		boolean ceilingmarked = false;
+		rw_floormarked = false;
+		rw_ceilingmarked = false;
 
 		// mark floor / ceiling areas
 		yl = (topfrac+HEIGHTUNIT-1)>>HEIGHTBITS;
@@ -1349,7 +1439,7 @@ static void R_RenderSegLoop (void)
 							// "bottom" is the top pixel of the floor column
 							if (ffbottom >= bottom-1 && R_FFloorCanClip(&ffloor[i]))
 							{
-								floormarked = true;
+								rw_floormarked = true;
 								floorclip[rw_x] = fftop;
 								if (yh > fftop)
 									yh = fftop;
@@ -1397,7 +1487,7 @@ static void R_RenderSegLoop (void)
 							// "top" is the height of the ceiling column
 							if (fftop <= top+1 && R_FFloorCanClip(&ffloor[i]))
 							{
-								ceilingmarked = true;
+								rw_ceilingmarked = true;
 								ceilingclip[rw_x] = ffbottom;
 								if (yl < ffbottom)
 									yl = ffbottom;
@@ -1413,6 +1503,27 @@ static void R_RenderSegLoop (void)
 							}
 						}
 					}
+				}
+			}
+		}
+
+		// Lactozilla: Clip by thick sides
+		if (cv_ffloorclip.value)
+		{
+			rw_thickfloorclip[rw_x] = floorclip[rw_x];
+			rw_thickceilingclip[rw_x] = ceilingclip[rw_x];
+
+			if (numthicksides)
+			{
+				for (i = 0; i < numthicksides; i++)
+				{
+					ffloor_t *pfloor = ds_p->thicksides[i];
+
+					// Don't clip with translucent thick sides
+					if (R_IsFFloorTranslucent(pfloor))
+						continue;
+
+					R_ThickSideClip(rw_x, ds_p, pfloor);
 				}
 			}
 		}
@@ -1516,17 +1627,17 @@ static void R_RenderSegLoop (void)
 
 				// dont draw anything more for this column, since
 				// a midtexture blocks the view
-				if (!ceilingmarked)
+				if (!rw_ceilingmarked)
 					ceilingclip[rw_x] = (INT16)viewheight;
-				if (!floormarked)
+				if (!rw_floormarked)
 					floorclip[rw_x] = -1;
 			}
 			else
 			{
 				// note: don't use min/max macros, since casting from INT32 to INT16 is involved here
-				if (markceiling && (!ceilingmarked))
+				if (markceiling && (!rw_ceilingmarked))
 					ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
-				if (markfloor && (!floormarked))
+				if (markfloor && (!rw_floormarked))
 					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 			}
 		}
@@ -1546,7 +1657,7 @@ static void R_RenderSegLoop (void)
 				{
 					if (yl >= viewheight) // entirely off bottom of screen
 					{
-						if (!ceilingmarked)
+						if (!rw_ceilingmarked)
 							ceilingclip[rw_x] = (INT16)viewheight;
 					}
 					else if (mid >= 0) // safe to draw top texture
@@ -1559,13 +1670,13 @@ static void R_RenderSegLoop (void)
 						colfunc();
 						ceilingclip[rw_x] = (INT16)mid;
 					}
-					else if (!ceilingmarked) // entirely off top of screen
+					else if (!rw_ceilingmarked) // entirely off top of screen
 						ceilingclip[rw_x] = -1;
 				}
-				else if (!ceilingmarked)
+				else if (!rw_ceilingmarked)
 					ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
 			}
-			else if (markceiling && (!ceilingmarked)) // no top wall
+			else if (markceiling && (!rw_ceilingmarked)) // no top wall
 				ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
 
 			if (bottomtexture)
@@ -1582,7 +1693,7 @@ static void R_RenderSegLoop (void)
 				{
 					if (yh < 0) // entirely off top of screen
 					{
-						if (!floormarked)
+						if (!rw_floormarked)
 							floorclip[rw_x] = -1;
 					}
 					else if (mid < viewheight) // safe to draw bottom texture
@@ -1596,13 +1707,13 @@ static void R_RenderSegLoop (void)
 						colfunc();
 						floorclip[rw_x] = (INT16)mid;
 					}
-					else if (!floormarked)  // entirely off bottom of screen
+					else if (!rw_floormarked)  // entirely off bottom of screen
 						floorclip[rw_x] = (INT16)viewheight;
 				}
-				else if (!floormarked)
+				else if (!rw_floormarked)
 					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 			}
-			else if (markfloor && (!floormarked)) // no bottom wall
+			else if (markfloor && (!rw_floormarked)) // no bottom wall
 				floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 		}
 
@@ -1754,6 +1865,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				ADJUST(maskedtexturecol);
 				ADJUST(sprtopclip);
 				ADJUST(sprbottomclip);
+				ADJUST(thicktopclip);
+				ADJUST(thickbottomclip);
 				ADJUST(thicksidecol);
 #undef ADJUST
 			}
@@ -2904,6 +3017,27 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		M_Memcpy(lastopening, floorclip + start, 2*(rw_stopx-start));
 		ds_p->sprbottomclip = lastopening - start;
 		lastopening += rw_stopx - start;
+	}
+
+	// Lactozilla: Set fake floor clipping arrays
+	ds_p->thicktopclip = NULL;
+	ds_p->thickbottomclip = NULL;
+
+	if (cv_ffloorclip.value)
+	{
+		if (numthicksides && !ds_p->thicktopclip)
+		{
+			M_Memcpy(lastopening, rw_thickceilingclip+start, 2*(rw_stopx - start));
+			ds_p->thicktopclip = lastopening - start;
+			lastopening += rw_stopx - start;
+		}
+
+		if (numthicksides && !ds_p->thickbottomclip)
+		{
+			M_Memcpy(lastopening, rw_thickfloorclip + start, 2*(rw_stopx-start));
+			ds_p->thickbottomclip = lastopening - start;
+			lastopening += rw_stopx - start;
+		}
 	}
 
 	if (maskedtexture && !(ds_p->silhouette & SIL_TOP))
