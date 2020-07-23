@@ -57,6 +57,8 @@ static fixed_t rw_toptextureslide, rw_midtextureslide, rw_bottomtextureslide; //
 static fixed_t rw_midtextureback, rw_midtexturebackslide; // Values for masked midtexture height calculation
 
 static INT32 *rw_silhouette = NULL;
+static fixed_t *rw_tsilheight = NULL;
+static fixed_t *rw_bsilheight = NULL;
 
 static fixed_t pixhigh, pixlow, pixhighstep, pixlowstep;
 static fixed_t topfrac, topstep;
@@ -1356,7 +1358,10 @@ static void R_RenderSegLoop (void)
 									floorplane->top[rw_x] = bottom;
 
 								if (rw_silhouette)
+								{
 									(*rw_silhouette) |= SIL_BOTTOM;
+									(*rw_bsilheight) = INT32_MAX;
+								}
 							}
 						}
 					}
@@ -1401,7 +1406,10 @@ static void R_RenderSegLoop (void)
 									ceilingplane->bottom[rw_x] = top;
 
 								if (rw_silhouette)
+								{
 									(*rw_silhouette) |= SIL_TOP;
+									(*rw_tsilheight) = INT32_MIN;
+								}
 							}
 						}
 					}
@@ -2859,6 +2867,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	}
 
 	rw_silhouette = &(ds_p->silhouette);
+	rw_tsilheight = &(ds_p->tsilheight);
+	rw_bsilheight = &(ds_p->bsilheight);
 
 #ifdef WALLSPLATS
 	if (linedef->splats && cv_splats.value)
