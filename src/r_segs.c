@@ -1549,8 +1549,7 @@ static void R_RenderSegLoop (void)
 						dc_source = R_GetColumn(toptexture,texturecolumn);
 						dc_texheight = textureheight[toptexture]>>FRACBITS;
 						colfunc();
-						if (!ceilingmarked)
-							ceilingclip[rw_x] = (INT16)mid;
+						ceilingclip[rw_x] = (INT16)mid;
 					}
 					else if (!ceilingmarked) // entirely off top of screen
 						ceilingclip[rw_x] = -1;
@@ -1587,8 +1586,7 @@ static void R_RenderSegLoop (void)
 							texturecolumn);
 						dc_texheight = textureheight[bottomtexture]>>FRACBITS;
 						colfunc();
-						if (!floormarked)
-							floorclip[rw_x] = (INT16)mid;
+						floorclip[rw_x] = (INT16)mid;
 					}
 					else if (!floormarked)  // entirely off bottom of screen
 						floorclip[rw_x] = (INT16)viewheight;
