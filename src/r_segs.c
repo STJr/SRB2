@@ -688,6 +688,14 @@ static void R_DrawRepeatFlippedMaskedColumn(column_t *col)
 	} while (sprtopscreen < sprbotscreen);
 }
 
+// Returns true if the fake floor will be translucent
+static boolean R_IsFFloorTranslucent(ffloor_t *pfloor)
+{
+	if (pfloor->flags & FF_TRANSLUCENT)
+		return (pfloor->alpha < 243);
+	return false;
+}
+
 //
 // R_RenderThickSideRange
 // Renders all the thick sides in the given range.
@@ -1200,6 +1208,14 @@ static inline void R_ExpandPlaneY(visplane_t *pl, INT32 x, INT16 top, INT16 bott
 	if (pl->bottom[x] < bottom) pl->bottom[x] = bottom;
 }
 
+// R_FFloorCanClip
+//
+// Returns true if a fake floor can clip a column away.
+static boolean R_FFloorCanClip(visffloor_t *floor)
+{
+	return (cv_ffloorclip.value && !R_IsFFloorTranslucent(floor->ffloor) && !floor->polyobj);
+}
+
 //
 // R_RenderSegLoop
 // Draws zero, one, or two textures (and possibly a masked
@@ -1283,6 +1299,8 @@ static void R_RenderSegLoop (void)
 
 		if (numffloors)
 		{
+			INT16 fftop, ffbottom;
+
 			firstseg->frontscale[rw_x] = frontscale[rw_x];
 			top = ceilingclip[rw_x]+1; // PRBoom
 			bottom = floorclip[rw_x]-1; // PRBoom
@@ -1313,8 +1331,23 @@ static void R_RenderSegLoop (void)
 					{
 						if (top_w <= bottom_w)
 						{
-							ffloor[i].plane->top[rw_x] = (INT16)top_w;
-							ffloor[i].plane->bottom[rw_x] = (INT16)bottom_w;
+							fftop = (INT16)top_w;
+							ffbottom = (INT16)bottom_w;
+
+							ffloor[i].plane->top[rw_x] = fftop;
+							ffloor[i].plane->bottom[rw_x] = ffbottom;
+
+							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
+							// "bottom" is the top pixel of the floor column
+							if (ffbottom >= bottom && R_FFloorCanClip(&ffloor[i]))
+							{
+								floorclip[rw_x] = fftop-1;
+								if (yh > floorclip[rw_x])
+									yh = floorclip[rw_x];
+
+								if (markfloor && floorplane)
+									floorplane->top[rw_x] = bottom;
+							}
 						}
 					}
 				}
@@ -1339,8 +1372,23 @@ static void R_RenderSegLoop (void)
 					{
 						if (top_w <= bottom_w)
 						{
-							ffloor[i].plane->top[rw_x] = (INT16)top_w;
-							ffloor[i].plane->bottom[rw_x] = (INT16)bottom_w;
+							fftop = (INT16)top_w;
+							ffbottom = (INT16)bottom_w;
+
+							ffloor[i].plane->top[rw_x] = fftop;
+							ffloor[i].plane->bottom[rw_x] = ffbottom;
+
+							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
+							// "top" is the height of the ceiling column
+							if (fftop <= top && R_FFloorCanClip(&ffloor[i]))
+							{
+								ceilingclip[rw_x] = ffbottom+1;
+								if (yl < ceilingclip[rw_x])
+									yl = ceilingclip[rw_x];
+
+								if (markceiling && ceilingplane)
+									ceilingplane->bottom[rw_x] = top;
+							}
 						}
 					}
 				}
