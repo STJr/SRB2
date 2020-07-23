@@ -7975,20 +7975,13 @@ void P_MovePlayer(player_t *player)
 	// Locate the capsule for this mare.
 	else if (maptol & TOL_NIGHTS)
 	{
-		if ((player->powers[pw_carry] == CR_NIGHTSMODE)
-		&& (player->exiting
-		|| !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
-			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6]))) // Note the < instead of <=
+		if (P_PlayerFullbright(player))
 		{
-			skin_t *skin = ((skin_t *)(player->mo->skin));
-			if (( skin->flags & (SF_SUPER|SF_NONIGHTSSUPER) ) == SF_SUPER)
-			{
-				player->mo->color = skin->supercolor
-					+ ((player->nightstime == player->startedtime)
-						? 4
-						: abs((((signed)leveltime >> 1) % 9) - 4)); // This is where super flashing is handled.
-				G_GhostAddColor(GHC_SUPER);
-			}
+			player->mo->color = ((skin_t *)player->mo->skin)->supercolor
+				+ ((player->nightstime == player->startedtime)
+					? 4
+					: abs((((signed)leveltime >> 1) % 9) - 4)); // This is where super flashing is handled.
+			G_GhostAddColor(GHC_SUPER);
 		}
 
 		if (!player->capsule && !player->bonustime)
@@ -12894,4 +12887,13 @@ void P_ForceLocalAngle(player_t *player, angle_t angle)
 		localangle = angle;
 	else if (player == &players[secondarydisplayplayer])
 		localangle2 = angle;
+}
+
+boolean P_PlayerFullbright(player_t *player)
+{
+	return (player->powers[pw_super]
+		|| ((player->powers[pw_carry] == CR_NIGHTSMODE && (((skin_t *)player->mo->skin)->flags & (SF_SUPER|SF_NONIGHTSSUPER)) == SF_SUPER) // Super colours? Super bright!
+		&& (player->exiting
+			|| !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
+			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6])))); // Note the < instead of <=
 }
