@@ -55,6 +55,9 @@ static INT32 worldtop, worldbottom, worldhigh, worldlow;
 static INT32 worldtopslope, worldbottomslope, worldhighslope, worldlowslope; // worldtop/bottom at end of slope
 static fixed_t rw_toptextureslide, rw_midtextureslide, rw_bottomtextureslide; // Defines how to adjust Y offsets along the wall for slopes
 static fixed_t rw_midtextureback, rw_midtexturebackslide; // Values for masked midtexture height calculation
+
+static INT32 *rw_silhouette = NULL;
+
 static fixed_t pixhigh, pixlow, pixhighstep, pixlowstep;
 static fixed_t topfrac, topstep;
 static fixed_t bottomfrac, bottomstep;
@@ -1255,6 +1258,9 @@ static void R_RenderSegLoop (void)
 
 	for (; rw_x < rw_stopx; rw_x++)
 	{
+		boolean floormarked = false;
+		boolean ceilingmarked = false;
+
 		// mark floor / ceiling areas
 		yl = (topfrac+HEIGHTUNIT-1)>>HEIGHTBITS;
 
@@ -1341,12 +1347,16 @@ static void R_RenderSegLoop (void)
 							// "bottom" is the top pixel of the floor column
 							if (ffbottom >= bottom && R_FFloorCanClip(&ffloor[i]))
 							{
-								floorclip[rw_x] = fftop-1;
-								if (yh > floorclip[rw_x])
-									yh = floorclip[rw_x];
+								floormarked = true;
+								floorclip[rw_x] = fftop;
+								if (yh > fftop)
+									yh = fftop;
 
 								if (markfloor && floorplane)
 									floorplane->top[rw_x] = bottom;
+
+								if (rw_silhouette)
+									(*rw_silhouette) |= SIL_BOTTOM;
 							}
 						}
 					}
@@ -1382,12 +1392,16 @@ static void R_RenderSegLoop (void)
 							// "top" is the height of the ceiling column
 							if (fftop <= top && R_FFloorCanClip(&ffloor[i]))
 							{
-								ceilingclip[rw_x] = ffbottom+1;
-								if (yl < ceilingclip[rw_x])
-									yl = ceilingclip[rw_x];
+								ceilingmarked = true;
+								ceilingclip[rw_x] = ffbottom;
+								if (yl < ffbottom)
+									yl = ffbottom;
 
 								if (markceiling && ceilingplane)
 									ceilingplane->bottom[rw_x] = top;
+
+								if (rw_silhouette)
+									(*rw_silhouette) |= SIL_TOP;
 							}
 						}
 					}
@@ -1494,15 +1508,17 @@ static void R_RenderSegLoop (void)
 
 				// dont draw anything more for this column, since
 				// a midtexture blocks the view
-				ceilingclip[rw_x] = (INT16)viewheight;
-				floorclip[rw_x] = -1;
+				if (!ceilingmarked)
+					ceilingclip[rw_x] = (INT16)viewheight;
+				if (!floormarked)
+					floorclip[rw_x] = -1;
 			}
 			else
 			{
 				// note: don't use min/max macros, since casting from INT32 to INT16 is involved here
-				if (markceiling)
+				if (markceiling && (!ceilingmarked))
 					ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
-				if (markfloor)
+				if (markfloor && (!floormarked))
 					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 			}
 		}
@@ -1521,7 +1537,10 @@ static void R_RenderSegLoop (void)
 				if (mid >= yl) // back ceiling lower than front ceiling ?
 				{
 					if (yl >= viewheight) // entirely off bottom of screen
-						ceilingclip[rw_x] = (INT16)viewheight;
+					{
+						if (!ceilingmarked)
+							ceilingclip[rw_x] = (INT16)viewheight;
+					}
 					else if (mid >= 0) // safe to draw top texture
 					{
 						dc_yl = yl;
@@ -1530,15 +1549,16 @@ static void R_RenderSegLoop (void)
 						dc_source = R_GetColumn(toptexture,texturecolumn);
 						dc_texheight = textureheight[toptexture]>>FRACBITS;
 						colfunc();
-						ceilingclip[rw_x] = (INT16)mid;
+						if (!ceilingmarked)
+							ceilingclip[rw_x] = (INT16)mid;
 					}
-					else // entirely off top of screen
+					else if (!ceilingmarked) // entirely off top of screen
 						ceilingclip[rw_x] = -1;
 				}
-				else
+				else if (!ceilingmarked)
 					ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
 			}
-			else if (markceiling) // no top wall
+			else if (markceiling && (!ceilingmarked)) // no top wall
 				ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
 
 			if (bottomtexture)
@@ -1554,7 +1574,10 @@ static void R_RenderSegLoop (void)
 				if (mid <= yh) // back floor higher than front floor ?
 				{
 					if (yh < 0) // entirely off top of screen
-						floorclip[rw_x] = -1;
+					{
+						if (!floormarked)
+							floorclip[rw_x] = -1;
+					}
 					else if (mid < viewheight) // safe to draw bottom texture
 					{
 						dc_yl = mid;
@@ -1564,15 +1587,16 @@ static void R_RenderSegLoop (void)
 							texturecolumn);
 						dc_texheight = textureheight[bottomtexture]>>FRACBITS;
 						colfunc();
-						floorclip[rw_x] = (INT16)mid;
+						if (!floormarked)
+							floorclip[rw_x] = (INT16)mid;
 					}
-					else  // entirely off bottom of screen
+					else if (!floormarked)  // entirely off bottom of screen
 						floorclip[rw_x] = (INT16)viewheight;
 				}
-				else
+				else if (!floormarked)
 					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 			}
-			else if (markfloor) // no bottom wall
+			else if (markfloor && (!floormarked)) // no bottom wall
 				floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 		}
 
@@ -2835,6 +2859,8 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 	}
+
+	rw_silhouette = &(ds_p->silhouette);
 
 #ifdef WALLSPLATS
 	if (linedef->splats && cv_splats.value)
