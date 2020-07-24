@@ -1870,7 +1870,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	//SoM: Code to remove limits on openings.
 	{
 		size_t pos = lastopening - openings;
-		size_t need = (rw_stopx - start)*4 + pos;
+		size_t need = (rw_stopx - start)*6 + pos;
 		if (need > maxopenings)
 		{
 			drawseg_t *ds;  //needed for fix from *cough* zdoom *cough*
