@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -43,9 +43,6 @@
 
 // Quincunx antialiasing of flats!
 //#define QUINCUNX
-
-// good night sweet prince
-#define SHITPLANESPARENCY
 
 //SoM: 3/23/2000: Use Boom visplane hashing.
 
@@ -205,7 +202,6 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		// Needed for ds_bgofs
 		R_PlaneRipple(currentplane, y, planeheight);
 
-#ifdef ESLOPE
 		if (currentplane->slope)
 		{
 			ds_sup = &ds_su[y];
@@ -213,7 +209,6 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 			ds_szp = &ds_sz[y];
 		}
 		else
-#endif
 		{
 			ds_xfrac += ripple_xfrac;
 			ds_yfrac += ripple_yfrac;
@@ -230,12 +225,10 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	if (pindex >= MAXLIGHTZ)
 		pindex = MAXLIGHTZ - 1;
 
-#ifdef ESLOPE
 	if (currentplane->slope)
 		ds_colormap = colormaps;
 	else
-#endif
-	ds_colormap = planezlight[pindex];
+		ds_colormap = planezlight[pindex];
 
 	if (currentplane->extra_colormap)
 		ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
@@ -344,21 +337,12 @@ static visplane_t *new_visplane(unsigned hash)
 //
 visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	fixed_t xoff, fixed_t yoff, angle_t plangle, extracolormap_t *planecolormap,
-	ffloor_t *pfloor
-#ifdef POLYOBJECTS_PLANES
-			, polyobj_t *polyobj
-#endif
-#ifdef ESLOPE
-			, pslope_t *slope
-#endif
-			)
+	ffloor_t *pfloor, polyobj_t *polyobj, pslope_t *slope)
 {
 	visplane_t *check;
 	unsigned hash;
 
-#ifdef ESLOPE
-	if (slope); else // Don't mess with this right now if a slope is involved
-#endif
+	if (!slope) // Don't mess with this right now if a slope is involved
 	{
 		xoff += viewx;
 		yoff -= viewy;
@@ -373,7 +357,6 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 		}
 	}
 
-#ifdef POLYOBJECTS_PLANES
 	if (polyobj)
 	{
 		if (polyobj->angle != 0)
@@ -388,7 +371,6 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			yoff += polyobj->centerPt.y;
 		}
 	}
-#endif
 
 	// This appears to fix the Nimbus Ruins sky bug.
 	if (picnum == skyflatnum && pfloor)
@@ -402,12 +384,10 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 
 	for (check = visplanes[hash]; check; check = check->next)
 	{
-#ifdef POLYOBJECTS_PLANES
 		if (check->polyobj && pfloor)
 			continue;
 		if (polyobj != check->polyobj)
 			continue;
-#endif
 		if (height == check->height && picnum == check->picnum
 			&& lightlevel == check->lightlevel
 			&& xoff == check->xoffs && yoff == check->yoffs
@@ -416,10 +396,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 			&& check->viewx == viewx && check->viewy == viewy && check->viewz == viewz
 			&& check->viewangle == viewangle
 			&& check->plangle == plangle
-#ifdef ESLOPE
-			&& check->slope == slope
-#endif
-			)
+			&& check->slope == slope)
 		{
 			return check;
 		}
@@ -441,12 +418,8 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	check->viewz = viewz;
 	check->viewangle = viewangle;
 	check->plangle = plangle;
-#ifdef POLYOBJECTS_PLANES
 	check->polyobj = polyobj;
-#endif
-#ifdef ESLOPE
 	check->slope = slope;
-#endif
 
 	memset(check->top, 0xff, sizeof (check->top));
 	memset(check->bottom, 0x00, sizeof (check->bottom));
@@ -513,12 +486,8 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 		new_pl->viewz = pl->viewz;
 		new_pl->viewangle = pl->viewangle;
 		new_pl->plangle = pl->plangle;
-#ifdef POLYOBJECTS_PLANES
 		new_pl->polyobj = pl->polyobj;
-#endif
-#ifdef ESLOPE
 		new_pl->slope = pl->slope;
-#endif
 		pl = new_pl;
 		pl->minx = start;
 		pl->maxx = stop;
@@ -542,11 +511,9 @@ void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 //	INT32 unionl, unionh;
 //	INT32 x;
 
-#ifdef POLYOBJECTS_PLANES
 	// Don't expand polyobject planes here - we do that on our own.
 	if (pl->polyobj)
 		return;
-#endif
 
 	if (pl->minx > start) pl->minx = start;
 	if (pl->maxx < stop)  pl->maxx = stop;
@@ -622,11 +589,7 @@ void R_DrawPlanes(void)
 	{
 		for (pl = visplanes[i]; pl; pl = pl->next)
 		{
-			if (pl->ffloor != NULL
-#ifdef POLYOBJECTS_PLANES
-			|| pl->polyobj != NULL
-#endif
-			)
+			if (pl->ffloor != NULL || pl->polyobj != NULL)
 				continue;
 
 			R_DrawSinglePlane(pl);
@@ -863,7 +826,6 @@ static UINT8 *R_GetTextureFlat(levelflat_t *levelflat, boolean leveltexture, boo
 	return flat;
 }
 
-#ifdef ESLOPE
 static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
 {
 	// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
@@ -871,15 +833,15 @@ static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
 	floatv3_t p, m, n;
 	float ang;
 	float vx, vy, vz;
-	// compiler complains when P_GetZAt is used in FLOAT_TO_FIXED directly
-	// use this as a temp var to store P_GetZAt's return value each time
+	// compiler complains when P_GetSlopeZAt is used in FLOAT_TO_FIXED directly
+	// use this as a temp var to store P_GetSlopeZAt's return value each time
 	fixed_t temp;
 
 	vx = FIXED_TO_FLOAT(pl->viewx+xoffs);
 	vy = FIXED_TO_FLOAT(pl->viewy-yoffs);
 	vz = FIXED_TO_FLOAT(pl->viewz);
 
-	temp = P_GetZAt(pl->slope, pl->viewx, pl->viewy);
+	temp = P_GetSlopeZAt(pl->slope, pl->viewx, pl->viewy);
 	zeroheight = FIXED_TO_FLOAT(temp);
 
 	// p is the texture origin in view space
@@ -888,7 +850,7 @@ static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
 	ang = ANG2RAD(ANGLE_270 - pl->viewangle);
 	p.x = vx * cos(ang) - vy * sin(ang);
 	p.z = vx * sin(ang) + vy * cos(ang);
-	temp = P_GetZAt(pl->slope, -xoffs, yoffs);
+	temp = P_GetSlopeZAt(pl->slope, -xoffs, yoffs);
 	p.y = FIXED_TO_FLOAT(temp) - vz;
 
 	// m is the v direction vector in view space
@@ -901,9 +863,9 @@ static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
 	n.z = -cos(ang);
 
 	ang = ANG2RAD(pl->plangle);
-	temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(sin(ang)), pl->viewy + FLOAT_TO_FIXED(cos(ang)));
+	temp = P_GetSlopeZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(sin(ang)), pl->viewy + FLOAT_TO_FIXED(cos(ang)));
 	m.y = FIXED_TO_FLOAT(temp) - zeroheight;
-	temp = P_GetZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(cos(ang)), pl->viewy - FLOAT_TO_FIXED(sin(ang)));
+	temp = P_GetSlopeZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(cos(ang)), pl->viewy - FLOAT_TO_FIXED(sin(ang)));
 	n.y = FIXED_TO_FLOAT(temp) - zeroheight;
 
 	if (ds_powersoftwo)
@@ -954,7 +916,6 @@ d.z = (v1.x * v2.y) - (v1.y * v2.x)
 	}
 #undef SFMULT
 }
-#endif // ESLOPE
 
 void R_DrawSinglePlane(visplane_t *pl)
 {
@@ -982,126 +943,118 @@ void R_DrawSinglePlane(visplane_t *pl)
 #endif
 	spanfunc = spanfuncs[BASEDRAWFUNC];
 
-#ifdef POLYOBJECTS_PLANES
-	if (pl->polyobj && pl->polyobj->translucency != 0)
+	if (pl->polyobj)
 	{
-		spanfunctype = SPANDRAWFUNC_TRANS;
-
 		// Hacked up support for alpha value in software mode Tails 09-24-2002 (sidenote: ported to polys 10-15-2014, there was no time travel involved -Red)
 		if (pl->polyobj->translucency >= 10)
 			return; // Don't even draw it
 		else if (pl->polyobj->translucency > 0)
+		{
+			spanfunctype = (pl->polyobj->flags & POF_SPLAT) ? SPANDRAWFUNC_TRANSSPLAT : SPANDRAWFUNC_TRANS;
 			ds_transmap = transtables + ((pl->polyobj->translucency-1)<<FF_TRANSSHIFT);
-		else // Opaque, but allow transparent flat pixels
+		}
+		else if (pl->polyobj->flags & POF_SPLAT) // Opaque, but allow transparent flat pixels
 			spanfunctype = SPANDRAWFUNC_SPLAT;
 
-#ifdef SHITPLANESPARENCY
-		if ((spanfunctype == SPANDRAWFUNC_SPLAT) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
-#else
-		if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
-#endif
+		if (pl->polyobj->translucency == 0 || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 		else
 			light = LIGHTLEVELS-1;
-
-	} else
-#endif
-	if (pl->ffloor)
+	}
+	else
 	{
-		// Don't draw planes that shouldn't be drawn.
-		for (rover = pl->ffloor->target->ffloors; rover; rover = rover->next)
+		if (pl->ffloor)
 		{
-			if ((pl->ffloor->flags & FF_CUTEXTRA) && (rover->flags & FF_EXTRA))
+			// Don't draw planes that shouldn't be drawn.
+			for (rover = pl->ffloor->target->ffloors; rover; rover = rover->next)
 			{
-				if (pl->ffloor->flags & FF_EXTRA)
+				if ((pl->ffloor->flags & FF_CUTEXTRA) && (rover->flags & FF_EXTRA))
 				{
-					// The plane is from an extra 3D floor... Check the flags so
-					// there are no undesired cuts.
-					if (((pl->ffloor->flags & (FF_FOG|FF_SWIMMABLE)) == (rover->flags & (FF_FOG|FF_SWIMMABLE)))
-						&& pl->height < *rover->topheight
-						&& pl->height > *rover->bottomheight)
-						return;
+					if (pl->ffloor->flags & FF_EXTRA)
+					{
+						// The plane is from an extra 3D floor... Check the flags so
+						// there are no undesired cuts.
+						if (((pl->ffloor->flags & (FF_FOG|FF_SWIMMABLE)) == (rover->flags & (FF_FOG|FF_SWIMMABLE)))
+							&& pl->height < *rover->topheight
+							&& pl->height > *rover->bottomheight)
+							return;
+					}
 				}
 			}
-		}
 
-		if (pl->ffloor->flags & FF_TRANSLUCENT)
-		{
-			spanfunctype = SPANDRAWFUNC_TRANS;
-
-			// Hacked up support for alpha value in software mode Tails 09-24-2002
-			if (pl->ffloor->alpha < 12)
-				return; // Don't even draw it
-			else if (pl->ffloor->alpha < 38)
-				ds_transmap = transtables + ((tr_trans90-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 64)
-				ds_transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 89)
-				ds_transmap = transtables + ((tr_trans70-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 115)
-				ds_transmap = transtables + ((tr_trans60-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 140)
-				ds_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 166)
-				ds_transmap = transtables + ((tr_trans40-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 192)
-				ds_transmap = transtables + ((tr_trans30-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 217)
-				ds_transmap = transtables + ((tr_trans20-1)<<FF_TRANSSHIFT);
-			else if (pl->ffloor->alpha < 243)
-				ds_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
-			else // Opaque, but allow transparent flat pixels
-				spanfunctype = SPANDRAWFUNC_SPLAT;
-
-#ifdef SHITPLANESPARENCY
-			if ((spanfunctype == SPANDRAWFUNC_SPLAT) != (pl->extra_colormap && (pl->extra_colormap->fog & 4)))
-#else
-			if (!pl->extra_colormap || !(pl->extra_colormap->fog & 2))
-#endif
-				light = (pl->lightlevel >> LIGHTSEGSHIFT);
-			else
-				light = LIGHTLEVELS-1;
-		}
-		else if (pl->ffloor->flags & FF_FOG)
-		{
-			spanfunctype = SPANDRAWFUNC_FOG;
-			light = (pl->lightlevel >> LIGHTSEGSHIFT);
-		}
-		else light = (pl->lightlevel >> LIGHTSEGSHIFT);
-
-#ifndef NOWATER
-		if (pl->ffloor->flags & FF_RIPPLE)
-		{
-			INT32 top, bottom;
-
-			itswater = true;
-			if (spanfunctype == SPANDRAWFUNC_TRANS)
+			if (pl->ffloor->flags & FF_TRANSLUCENT)
 			{
-				spanfunctype = SPANDRAWFUNC_WATER;
+				spanfunctype = (pl->ffloor->master->flags & ML_EFFECT6) ? SPANDRAWFUNC_TRANSSPLAT : SPANDRAWFUNC_TRANS;
 
-				// Copy the current scene, ugh
-				top = pl->high-8;
-				bottom = pl->low+8;
+				// Hacked up support for alpha value in software mode Tails 09-24-2002
+				if (pl->ffloor->alpha < 12)
+					return; // Don't even draw it
+				else if (pl->ffloor->alpha < 38)
+					ds_transmap = transtables + ((tr_trans90-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 64)
+					ds_transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 89)
+					ds_transmap = transtables + ((tr_trans70-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 115)
+					ds_transmap = transtables + ((tr_trans60-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 140)
+					ds_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 166)
+					ds_transmap = transtables + ((tr_trans40-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 192)
+					ds_transmap = transtables + ((tr_trans30-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 217)
+					ds_transmap = transtables + ((tr_trans20-1)<<FF_TRANSSHIFT);
+				else if (pl->ffloor->alpha < 243)
+					ds_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
+				else // Opaque, but allow transparent flat pixels
+					spanfunctype = SPANDRAWFUNC_SPLAT;
 
-				if (top < 0)
-					top = 0;
-				if (bottom > vid.height)
-					bottom = vid.height;
-
-				// Only copy the part of the screen we need
-				VID_BlitLinearScreen((splitscreen && viewplayer == &players[secondarydisplayplayer]) ? screens[0] + (top+(vid.height>>1))*vid.width : screens[0]+((top)*vid.width), screens[1]+((top)*vid.width),
-				                     vid.width, bottom-top,
-				                     vid.width, vid.width);
+				if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
+					light = (pl->lightlevel >> LIGHTSEGSHIFT);
+				else
+					light = LIGHTLEVELS-1;
 			}
-		}
-#endif
-	}
-	else light = (pl->lightlevel >> LIGHTSEGSHIFT);
+			else if (pl->ffloor->flags & FF_FOG)
+			{
+				spanfunctype = SPANDRAWFUNC_FOG;
+				light = (pl->lightlevel >> LIGHTSEGSHIFT);
+			}
+			else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
-#ifdef ESLOPE
-	if (!pl->slope) // Don't mess with angle on slopes! We'll handle this ourselves later
-#endif
-	if (viewangle != pl->viewangle+pl->plangle)
+	#ifndef NOWATER
+			if (pl->ffloor->flags & FF_RIPPLE)
+			{
+				INT32 top, bottom;
+
+				itswater = true;
+				if (spanfunctype == SPANDRAWFUNC_TRANS)
+				{
+					spanfunctype = SPANDRAWFUNC_WATER;
+
+					// Copy the current scene, ugh
+					top = pl->high-8;
+					bottom = pl->low+8;
+
+					if (top < 0)
+						top = 0;
+					if (bottom > vid.height)
+						bottom = vid.height;
+
+					// Only copy the part of the screen we need
+					VID_BlitLinearScreen((splitscreen && viewplayer == &players[secondarydisplayplayer]) ? screens[0] + (top+(vid.height>>1))*vid.width : screens[0]+((top)*vid.width), screens[1]+((top)*vid.width),
+										 vid.width, bottom-top,
+										 vid.width, vid.width);
+				}
+			}
+	#endif
+		}
+		else
+			light = (pl->lightlevel >> LIGHTSEGSHIFT);
+	}
+
+	if (!pl->slope // Don't mess with angle on slopes! We'll handle this ourselves later
+		&& viewangle != pl->viewangle+pl->plangle)
 	{
 		memset(cachedheight, 0, sizeof (cachedheight));
 		angle = (pl->viewangle+pl->plangle-ANGLE_90)>>ANGLETOFINESHIFT;
@@ -1159,7 +1112,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 	if (light < 0)
 		light = 0;
 
-#ifdef ESLOPE
 	if (pl->slope)
 	{
 		float fudgecanyon = 0;
@@ -1225,7 +1177,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		if (itswater)
 		{
 			INT32 i;
-			fixed_t plheight = abs(P_GetZAt(pl->slope, pl->viewx, pl->viewy) - pl->viewz);
+			fixed_t plheight = abs(P_GetSlopeZAt(pl->slope, pl->viewx, pl->viewy) - pl->viewz);
 			fixed_t rxoffs = xoffs;
 			fixed_t ryoffs = yoffs;
 
@@ -1259,10 +1211,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 			spanfunctype = SPANDRAWFUNC_TILTED;
 
 		planezlight = scalelight[light];
-	} else
-#endif // ESLOPE
-
-	planezlight = zlight[light];
+	}
+	else
+		planezlight = zlight[light];
 
 	// Use the correct span drawer depending on the powers-of-twoness
 	if (!ds_powersoftwo)

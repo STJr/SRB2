@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2013-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,6 +16,7 @@
 #include "i_video.h"
 #include "v_video.h"
 
+#include "r_state.h" // fadecolormap
 #include "r_draw.h" // transtable
 #include "p_pspr.h" // tr_transxxx
 #include "p_local.h"
@@ -32,9 +33,7 @@
 
 #include "doomstat.h"
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h" // level title
-#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -192,8 +191,7 @@ void F_WipeStageTitle(void)
 	// draw level title
 	if ((WipeStageTitle && st_overlay)
 	&& (wipestyle == WIPESTYLE_COLORMAP)
-	&& !(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)
-	&& *mapheaderinfo[gamemap-1]->lvlttl != '\0')
+	&& G_IsTitleCardAvailable())
 	{
 		ST_runTitleCard();
 		ST_drawWipeTitleCard();
@@ -466,6 +464,7 @@ void F_WipeEndScreen(void)
   */
 boolean F_ShouldColormapFade(void)
 {
+#ifndef NOWIPE
 	if ((wipestyleflags & (WSF_FADEIN|WSF_FADEOUT)) // only if one of those wipestyleflags are actually set
 	&& !(wipestyleflags & WSF_CROSSFADE)) // and if not crossfading
 	{
@@ -481,11 +480,13 @@ boolean F_ShouldColormapFade(void)
 		// Menus
 		|| gamestate == GS_TIMEATTACK);
 	}
+#endif
 	return false;
 }
 
 /** Decides what wipe style to use.
   */
+#ifndef NOWIPE
 void F_DecideWipeStyle(void)
 {
 	// Set default wipe style
@@ -495,6 +496,7 @@ void F_DecideWipeStyle(void)
 	if (F_ShouldColormapFade())
 		wipestyle = WIPESTYLE_COLORMAP;
 }
+#endif
 
 /** Attempt to run a colormap fade,
     provided all the conditionals were properly met.
@@ -503,6 +505,7 @@ void F_DecideWipeStyle(void)
   */
 boolean F_TryColormapFade(UINT8 wipecolor)
 {
+#ifndef NOWIPE
 	if (F_ShouldColormapFade())
 	{
 #ifdef HWRENDER
@@ -512,6 +515,7 @@ boolean F_TryColormapFade(UINT8 wipecolor)
 		return true;
 	}
 	else
+#endif
 	{
 		F_WipeColorFill(wipecolor);
 		return false;
@@ -610,6 +614,7 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 tic_t F_GetWipeLength(UINT8 wipetype)
 {
 #ifdef NOWIPE
+	(void)wipetype;
 	return 0;
 #else
 	static char lumpname[10] = "FADEmmss";
@@ -636,6 +641,7 @@ tic_t F_GetWipeLength(UINT8 wipetype)
 boolean F_WipeExists(UINT8 wipetype)
 {
 #ifdef NOWIPE
+	(void)wipetype;
 	return false;
 #else
 	static char lumpname[10] = "FADEmm00";

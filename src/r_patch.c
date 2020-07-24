@@ -1196,7 +1196,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 	INT32 angle;
 	patch_t *patch;
 	patch_t *newpatch;
-	UINT16 *rawsrc, *rawdst;
+	UINT16 *rawdst;
 	size_t size;
 	INT32 bflip = (flip != 0x00);
 
@@ -1212,17 +1212,28 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		INT32 width, height, leftoffset;
 		fixed_t ca, sa;
 		lumpnum_t lump = sprframe->lumppat[rot];
+#ifndef NO_PNG_LUMPS
+		size_t lumplength;
+#endif
 
 		if (lump == LUMPERROR)
 			return;
+
+		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
+#ifndef NO_PNG_LUMPS
+		lumplength = W_LumpLength(lump);
+
+		if (R_IsLumpPNG((UINT8 *)patch, lumplength))
+			patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL);
+		else
+#endif
 		// Because there's something wrong with SPR_DFLM, I guess
 		if (!R_CheckIfPatch(lump))
 			return;
 
-		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
-		width = patch->width;
-		height = patch->height;
-		leftoffset = patch->leftoffset;
+		width = SHORT(patch->width);
+		height = SHORT(patch->height);
+		leftoffset = SHORT(patch->leftoffset);
 
 		// rotation pivot
 		px = SPRITE_XCENTER;
@@ -1241,16 +1252,6 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			px = width - px;
 			leftoffset = width - leftoffset;
 		}
-
-		// Draw the sprite to a temporary buffer.
-		size = (width*height);
-		rawsrc = Z_Malloc(size * sizeof(UINT16), PU_STATIC, NULL);
-
-		// can't memset here
-		for (i = 0; i < size; i++)
-			rawsrc[i] = 0xFF00;
-
-		R_PatchToMaskedFlat(patch, rawsrc, bflip);
 
 		// Don't cache angle = 0
 		for (angle = 1; angle < ROTANGLES; angle++)
@@ -1347,7 +1348,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			newpatch = R_MaskedFlatToPatch(rawdst, newwidth, newheight, 0, 0, &size);
 			{
 				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
-				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
+				newpatch->topoffset = (newpatch->height / 2) + (SHORT(patch->topoffset) - py);
 			}
 
 			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
@@ -1356,6 +1357,12 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 
 			// P_PrecacheLevel
 			if (devparm) spritememory += size;
+
+			// convert everything to little-endian, for big-endian support
+			newpatch->width = SHORT(newpatch->width);
+			newpatch->height = SHORT(newpatch->height);
+			newpatch->leftoffset = SHORT(newpatch->leftoffset);
+			newpatch->topoffset = SHORT(newpatch->topoffset);
 
 #ifdef HWRENDER
 			if (rendermode == render_opengl)
@@ -1419,10 +1426,10 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 							}
 							if (grPatch->mipmap)
 							{
-								if (grPatch->mipmap->grInfo.data)
+								if (grPatch->mipmap->data)
 								{
-									Z_Free(grPatch->mipmap->grInfo.data);
-									grPatch->mipmap->grInfo.data = NULL;
+									Z_Free(grPatch->mipmap->data);
+									grPatch->mipmap->data = NULL;
 								}
 								Z_Free(grPatch->mipmap);
 								grPatch->mipmap = NULL;

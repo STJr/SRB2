@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -31,6 +31,7 @@
 #include "r_data.h"
 #include "r_draw.h"
 #include "r_patch.h"
+#include "r_things.h" // R_Char2Frame
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h"
@@ -39,9 +40,7 @@
 
 #include "m_cond.h"
 
-#ifdef HAVE_BLUA
 #include "v_video.h" // video flags (for lua)
-#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_light.h"
@@ -57,10 +56,12 @@ int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 // The crazy word-reading stuff uses these.
 static char *FREE_STATES[NUMSTATEFREESLOTS];
 static char *FREE_MOBJS[NUMMOBJFREESLOTS];
+static char *FREE_SKINCOLORS[NUMCOLORFREESLOTS];
 static UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite freeslot in use! I would use ceil() here if I could, but it only saves 1 byte of memory anyway.
 #define initfreeslots() {\
 memset(FREE_STATES,0,sizeof(char *) * NUMSTATEFREESLOTS);\
 memset(FREE_MOBJS,0,sizeof(char *) * NUMMOBJFREESLOTS);\
+memset(FREE_SKINCOLORS,0,sizeof(char *) * NUMCOLORFREESLOTS);\
 memset(used_spr,0,sizeof(UINT8) * ((NUMSPRITEFREESLOTS / 8) + 1));\
 }
 
@@ -76,10 +77,9 @@ static UINT16 get_mus(const char *word, UINT8 dehacked_mode);
 #endif
 static hudnum_t get_huditem(const char *word);
 static menutype_t get_menutype(const char *word);
-#ifndef HAVE_BLUA
-static INT16 get_gametype(const char *word);
-static powertype_t get_power(const char *word);
-#endif
+//static INT16 get_gametype(const char *word);
+//static powertype_t get_power(const char *word);
+skincolornum_t get_skincolor(const char *word);
 
 boolean deh_loaded = false;
 static int dbg_line;
@@ -395,7 +395,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 				// It works down here, though.
 				{
 					INT32 numline = 0;
-					for (i = 0; i < MAXLINELEN-1; i++)
+					for (i = 0; (size_t)i < sizeof(description[num].notes)-1; i++)
 					{
 						if (numline < 20 && description[num].notes[i] == '\n')
 							numline++;
@@ -452,7 +452,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "OPPOSITECOLOR") || fastcmp(word, "OPPOSITECOLOUR"))
 			{
 				SLOTFOUND
-				description[num].oppositecolor = (UINT8)get_number(word2);
+				description[num].oppositecolor = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "NAMETAG") || fastcmp(word, "TAGNAME"))
 			{
@@ -462,12 +462,12 @@ static void readPlayer(MYFILE *f, INT32 num)
 			else if (fastcmp(word, "TAGTEXTCOLOR") || fastcmp(word, "TAGTEXTCOLOUR"))
 			{
 				SLOTFOUND
-				description[num].tagtextcolor = (UINT8)get_number(word2);
+				description[num].tagtextcolor = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "TAGOUTLINECOLOR") || fastcmp(word, "TAGOUTLINECOLOUR"))
 			{
 				SLOTFOUND
-				description[num].tagoutlinecolor = (UINT8)get_number(word2);
+				description[num].tagoutlinecolor = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "STATUS"))
 			{
@@ -574,6 +574,16 @@ static void readfreeslots(MYFILE *f)
 						break;
 					}
 			}
+			else if (fastcmp(type, "SKINCOLOR"))
+			{
+				for (i = 0; i < NUMCOLORFREESLOTS; i++)
+					if (!FREE_SKINCOLORS[i]) {
+						FREE_SKINCOLORS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
+						strcpy(FREE_SKINCOLORS[i],word);
+						M_AddMenuColor(numskincolors++);
+						break;
+					}
+			}
 			else if (fastcmp(type, "SPR2"))
 			{
 				// Search if we already have an SPR2 by that name...
@@ -585,21 +595,30 @@ static void readfreeslots(MYFILE *f)
 					continue;
 				// Copy in the spr2 name and increment free_spr2.
 				if (free_spr2 < NUMPLAYERSPRITES) {
-					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
 					spr2defaults[free_spr2] = 0;
 					spr2names[free_spr2++][4] = 0;
 				} else
-					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
+					deh_warning("Ran out of free SPR2 slots!\n");
 			}
 			else if (fastcmp(type, "TOL"))
 			{
-				if (lastcustomtol > 31)
-					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				// Search if we already have a typeoflevel by that name...
+				for (i = 0; TYPEOFLEVEL[i].name; i++)
+					if (fastcmp(word, TYPEOFLEVEL[i].name))
+						break;
+
+				// We found it? Then don't allocate another one.
+				if (TYPEOFLEVEL[i].name)
+					continue;
+
+				// We don't, so freeslot it.
+				if (lastcustomtol == (UINT32)MAXTOL) // Unless you have way too many, since they're flags.
+					deh_warning("Ran out of free typeoflevel slots!\n");
 				else
 				{
-					G_AddTOL((1<<lastcustomtol), word);
-					lastcustomtol++;
+					G_AddTOL(lastcustomtol, word);
+					lastcustomtol <<= 1;
 				}
 			}
 			else
@@ -741,6 +760,124 @@ static void readthing(MYFILE *f, INT32 num)
 			}
 			else
 				deh_warning("Thing %d: unknown word '%s'", num, word);
+		}
+	} while (!myfeof(f)); // finish when the line is empty
+
+	Z_Free(s);
+}
+
+static void readskincolor(MYFILE *f, INT32 num)
+{
+	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
+	char *word = s;
+	char *word2;
+	char *tmp;
+
+	Color_cons_t[num].value = num;
+
+	do
+	{
+		if (myfgets(s, MAXLINELEN, f))
+		{
+			if (s[0] == '\n')
+				break;
+
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
+			tmp = strchr(s, '#');
+			if (tmp)
+				*tmp = '\0';
+			if (s == tmp)
+				continue; // Skip comment lines, but don't break.
+
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+				*(tmp-1) = '\0';
+			else
+				break;
+			strupr(word);
+
+			// Now get the part after
+			word2 = tmp += 2;
+
+			if (fastcmp(word, "NAME"))
+			{
+				size_t namesize = sizeof(skincolors[num].name);
+				char truncword[namesize];
+				UINT16 dupecheck;
+
+				deh_strlcpy(truncword, word2, namesize, va("Skincolor %d: name", num)); // truncate here to check for dupes
+				dupecheck = R_GetColorByName(truncword);
+				if (truncword[0] != '\0' && (!stricmp(truncword, skincolors[SKINCOLOR_NONE].name) || (dupecheck && dupecheck != num)))
+				{
+					size_t lastchar = strlen(truncword);
+					char oldword[lastchar+1];
+					char dupenum = '1';
+
+					strlcpy(oldword, truncword, lastchar+1);
+					lastchar--;
+					if (lastchar == namesize-2) // exactly max length, replace last character with 0
+						truncword[lastchar] = '0';
+					else // append 0
+					{
+						strcat(truncword, "0");
+						lastchar++;
+					}
+
+					while (R_GetColorByName(truncword))
+					{
+						truncword[lastchar] = dupenum;
+						if (dupenum == '9')
+							dupenum = 'A';
+						else if (dupenum == 'Z') // give up :?
+							break;
+						else
+							dupenum++;
+					}
+
+					deh_warning("Skincolor %d: name %s is a duplicate of another skincolor's name - renamed to %s", num, oldword, truncword);
+				}
+
+				strlcpy(skincolors[num].name, truncword, namesize); // already truncated
+			}
+			else if (fastcmp(word, "RAMP"))
+			{
+				UINT8 i;
+				tmp = strtok(word2,",");
+				for (i = 0; i < COLORRAMPSIZE; i++) {
+					skincolors[num].ramp[i] = (UINT8)get_number(tmp);
+					if ((tmp = strtok(NULL,",")) == NULL)
+						break;
+				}
+				skincolor_modified[num] = true;
+			}
+			else if (fastcmp(word, "INVCOLOR"))
+			{
+				UINT16 v = (UINT16)get_number(word2);
+				if (v < numskincolors)
+					skincolors[num].invcolor = v;
+				else
+					skincolors[num].invcolor = SKINCOLOR_GREEN;
+			}
+			else if (fastcmp(word, "INVSHADE"))
+			{
+				skincolors[num].invshade = get_number(word2)%COLORRAMPSIZE;
+			}
+			else if (fastcmp(word, "CHATCOLOR"))
+			{
+				skincolors[num].chatcolor = get_number(word2);
+			}
+			else if (fastcmp(word, "ACCESSIBLE"))
+			{
+				if (num > FIRSTSUPERCOLOR)
+					skincolors[num].accessible = (boolean)(atoi(word2) || word2[0] == 'T' || word2[0] == 'Y');
+			}
+			else
+				deh_warning("Skincolor %d: unknown word '%s'", num, word);
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 
@@ -1105,38 +1242,7 @@ static void readsprite2(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
-INT32 numtolinfo = NUMBASETOL;
-UINT32 lastcustomtol = 13;
-
-tolinfo_t TYPEOFLEVEL[NUMMAXTOL] = {
-	{"SOLO",TOL_SP},
-	{"SP",TOL_SP},
-	{"SINGLEPLAYER",TOL_SP},
-	{"SINGLE",TOL_SP},
-
-	{"COOP",TOL_COOP},
-	{"CO-OP",TOL_COOP},
-
-	{"COMPETITION",TOL_COMPETITION},
-	{"RACE",TOL_RACE},
-
-	{"MATCH",TOL_MATCH},
-	{"TAG",TOL_TAG},
-	{"CTF",TOL_CTF},
-
-	{"2D",TOL_2D},
-	{"MARIO",TOL_MARIO},
-	{"NIGHTS",TOL_NIGHTS},
-	{"OLDBRAK",TOL_ERZ3},
-
-	{"XMAS",TOL_XMAS},
-	{"CHRISTMAS",TOL_XMAS},
-	{"WINTER",TOL_XMAS},
-
-	{NULL, 0}
-};
-
-// copypasted from readPlayer :sleep:
+// copypasted from readPlayer :]
 static const char *const GAMETYPERULE_LIST[];
 static void readgametype(MYFILE *f, char *gtname)
 {
@@ -1199,7 +1305,7 @@ static void readgametype(MYFILE *f, char *gtname)
 				// It works down here, though.
 				{
 					INT32 numline = 0;
-					for (i = 0; i < MAXLINELEN-1; i++)
+					for (i = 0; (size_t)i < sizeof(gtdescription)-1; i++)
 					{
 						if (numline < 20 && gtdescription[i] == '\n')
 							numline++;
@@ -1271,7 +1377,7 @@ static void readgametype(MYFILE *f, char *gtname)
 					newgttol = (UINT32)i;
 				else
 				{
-					UINT16 tol = 0;
+					UINT32 tol = 0;
 					tmp = strtok(word2,",");
 					do {
 						for (i = 0; TYPEOFLEVEL[i].name; i++)
@@ -1293,10 +1399,7 @@ static void readgametype(MYFILE *f, char *gtname)
 				UINT32 wordgt = 0;
 				for (j = 0; GAMETYPERULE_LIST[j]; j++)
 					if (fastcmp(word, GAMETYPERULE_LIST[j])) {
-						if (!j) // GTR_CAMPAIGN
-							wordgt |= 1;
-						else
-							wordgt |= (1<<j);
+						wordgt |= (1<<j);
 						if (i || word2[0] == 'T' || word2[0] == 'Y')
 							newgtrules |= wordgt;
 						break;
@@ -1440,7 +1543,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			// Lua custom options also go above, contents may be case sensitive.
 			if (fastncmp(word, "LUA.", 4))
 			{
-#ifdef HAVE_BLUA
 				UINT8 j;
 				customoption_t *modoption;
 
@@ -1474,9 +1576,6 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				modoption->option[31] = '\0';
 				strncpy(modoption->value,  word2, 255);
 				modoption->value[255] = '\0';
-#else
-				// Silently ignore.
-#endif
 				continue;
 			}
 
@@ -1589,7 +1688,7 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "ACT"))
 			{
-				if (i >= 0 && i < 20) // 0 for no act number, TTL1 through TTL19
+				if (i >= 0 && i <= 99) // 0 for no act number
 					mapheaderinfo[num-1]->actnum = (UINT8)i;
 				else
 					deh_warning("Level header %d: invalid act number %d", num, i);
@@ -1610,13 +1709,29 @@ static void readlevelheader(MYFILE *f, INT32 num)
 
 				mapheaderinfo[num-1]->nextlevel = (INT16)i;
 			}
+			else if (fastcmp(word, "MARATHONNEXT"))
+			{
+				if      (fastcmp(word2, "TITLE"))      i = 1100;
+				else if (fastcmp(word2, "EVALUATION")) i = 1101;
+				else if (fastcmp(word2, "CREDITS"))    i = 1102;
+				else if (fastcmp(word2, "ENDING"))     i = 1103;
+				else
+				// Support using the actual map name,
+				// i.e., MarathonNext = AB, MarathonNext = FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z' && word2[2] == '\0')
+					i = M_MapNumber(word2[0], word2[1]);
+
+				mapheaderinfo[num-1]->marathonnext = (INT16)i;
+			}
 			else if (fastcmp(word, "TYPEOFLEVEL"))
 			{
 				if (i) // it's just a number
 					mapheaderinfo[num-1]->typeoflevel = (UINT32)i;
 				else
 				{
-					UINT16 tol = 0;
+					UINT32 tol = 0;
 					tmp = strtok(word2,",");
 					do {
 						for (i = 0; TYPEOFLEVEL[i].name; i++)
@@ -1628,6 +1743,11 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					} while((tmp = strtok(NULL,",")) != NULL);
 					mapheaderinfo[num-1]->typeoflevel = tol;
 				}
+			}
+			else if (fastcmp(word, "KEYWORDS"))
+			{
+				deh_strlcpy(mapheaderinfo[num-1]->keywords, word2,
+						sizeof(mapheaderinfo[num-1]->keywords), va("Level header %d: keywords", num));
 			}
 			else if (fastcmp(word, "MUSIC"))
 			{
@@ -1826,6 +1946,24 @@ static void readlevelheader(MYFILE *f, INT32 num)
 				else
 					mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
 			}
+			else if (fastcmp(word, "SHOWTITLECARDFOR"))
+			{
+				mapheaderinfo[num-1]->levelflags |= LF_NOTITLECARD;
+				tmp = strtok(word2,",");
+				do {
+					if (fastcmp(tmp, "FIRST"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDFIRST;
+					else if (fastcmp(tmp, "RESPAWN"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDRESPAWN;
+					else if (fastcmp(tmp, "RECORDATTACK"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARDRECORDATTACK;
+					else if (fastcmp(tmp, "ALL"))
+						mapheaderinfo[num-1]->levelflags &= ~LF_NOTITLECARD;
+					else if (!fastcmp(tmp, "NONE"))
+						deh_warning("Level header %d: unknown titlecard show option %s\n", num, tmp);
+
+				} while((tmp = strtok(NULL,",")) != NULL);
+			}
 
 			// Individual triggers for menu flags
 			else if (fastcmp(word, "HIDDEN"))
@@ -1872,6 +2010,12 @@ static void readlevelheader(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "STARTRINGS"))
 				mapheaderinfo[num-1]->startrings = (UINT16)i;
+			else if (fastcmp(word, "SPECIALSTAGETIME"))
+				mapheaderinfo[num-1]->sstimer = i;
+			else if (fastcmp(word, "SPECIALSTAGESPHERES"))
+				mapheaderinfo[num-1]->ssspheres = i;
+			else if (fastcmp(word, "GRAVITY"))
+				mapheaderinfo[num-1]->gravity = FLOAT_TO_FIXED(atof(word2));
 			else
 				deh_warning("Level header %d: unknown word '%s'", num, word);
 		}
@@ -2816,7 +2960,7 @@ static actionpointer_t actionpointers[] =
 	{{A_ThrownRing},             "A_THROWNRING"},
 	{{A_SetSolidSteam},          "A_SETSOLIDSTEAM"},
 	{{A_UnsetSolidSteam},        "A_UNSETSOLIDSTEAM"},
-	{{A_SignSpin},               "S_SIGNSPIN"},
+	{{A_SignSpin},               "A_SIGNSPIN"},
 	{{A_SignPlayer},             "A_SIGNPLAYER"},
 	{{A_OverlayThink},           "A_OVERLAYTHINK"},
 	{{A_JetChase},               "A_JETCHASE"},
@@ -2918,6 +3062,7 @@ static actionpointer_t actionpointers[] =
 	{{A_SetRandomTics},          "A_SETRANDOMTICS"},
 	{{A_ChangeColorRelative},    "A_CHANGECOLORRELATIVE"},
 	{{A_ChangeColorAbsolute},    "A_CHANGECOLORABSOLUTE"},
+	{{A_Dye},                    "A_DYE"},
 	{{A_MoveRelative},           "A_MOVERELATIVE"},
 	{{A_MoveAbsolute},           "A_MOVEABSOLUTE"},
 	{{A_Thrust},                 "A_THRUST"},
@@ -2977,6 +3122,7 @@ static actionpointer_t actionpointers[] =
 	{{A_NapalmScatter},          "A_NAPALMSCATTER"},
 	{{A_SpawnFreshCopy},         "A_SPAWNFRESHCOPY"},
 	{{A_FlickySpawn},            "A_FLICKYSPAWN"},
+	{{A_FlickyCenter},           "A_FLICKYCENTER"},
 	{{A_FlickyAim},              "A_FLICKYAIM"},
 	{{A_FlickyFly},              "A_FLICKYFLY"},
 	{{A_FlickySoar},             "A_FLICKYSOAR"},
@@ -3035,6 +3181,7 @@ static actionpointer_t actionpointers[] =
 	{{A_DragonbomberSpawn},      "A_DRAGONBOMERSPAWN"},
 	{{A_DragonWing},             "A_DRAGONWING"},
 	{{A_DragonSegment},          "A_DRAGONSEGMENT"},
+	{{A_ChangeHeight},           "A_CHANGEHEIGHT"},
 	{{NULL},                     "NONE"},
 
 	// This NULL entry must be the last in the list
@@ -3125,22 +3272,20 @@ static void readframe(MYFILE *f, INT32 num)
 				}
 
 				z = 0;
-#ifdef HAVE_BLUA
 				found = LUA_SetLuaAction(&states[num], actiontocompare);
 				if (!found)
-#endif
-				while (actionpointers[z].name)
-				{
-					if (fastcmp(actiontocompare, actionpointers[z].name))
+					while (actionpointers[z].name)
 					{
-						states[num].action = actionpointers[z].action;
-						states[num].action.acv = actionpointers[z].action.acv; // assign
-						states[num].action.acp1 = actionpointers[z].action.acp1;
-						found = true;
-						break;
+						if (fastcmp(actiontocompare, actionpointers[z].name))
+						{
+							states[num].action = actionpointers[z].action;
+							states[num].action.acv = actionpointers[z].action.acv; // assign
+							states[num].action.acp1 = actionpointers[z].action.acp1;
+							found = true;
+							break;
+						}
+						z++;
 					}
-					z++;
-				}
 
 				if (!found)
 					deh_warning("Unknown action %s", actiontocompare);
@@ -3891,7 +4036,26 @@ static void readmaincfg(MYFILE *f)
 			value = atoi(word2); // used for numerical settings
 
 			if (fastcmp(word, "EXECCFG"))
-				COM_BufAddText(va("exec %s\n", word2));
+			{
+				if (strchr(word2, '.'))
+					COM_BufAddText(va("exec %s\n", word2));
+				else
+				{
+					lumpnum_t lumpnum;
+					char newname[9];
+
+					strncpy(newname, word2, 8);
+
+					newname[8] = '\0';
+
+					lumpnum = W_CheckNumForName(newname);
+
+					if (lumpnum == LUMPERROR || W_LumpLength(lumpnum) == 0)
+						CONS_Debug(DBG_SETUP, "SOC Error: script lump %s not found/not valid.\n", newname);
+					else
+						COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
+				}
+			}
 
 			else if (fastcmp(word, "SPSTAGE_START"))
 			{
@@ -3904,7 +4068,20 @@ static void readmaincfg(MYFILE *f)
 				else
 					value = get_number(word2);
 
-				spstage_start = (INT16)value;
+				spstage_start = spmarathon_start = (INT16)value;
+			}
+			else if (fastcmp(word, "SPMARATHON_START"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				spmarathon_start = (INT16)value;
 			}
 			else if (fastcmp(word, "SSTAGE_START"))
 			{
@@ -3936,19 +4113,19 @@ static void readmaincfg(MYFILE *f)
 			}
 			else if (fastcmp(word, "REDTEAM"))
 			{
-				skincolor_redteam = (UINT8)get_number(word2);
+				skincolor_redteam = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "BLUETEAM"))
 			{
-				skincolor_blueteam = (UINT8)get_number(word2);
+				skincolor_blueteam = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "REDRING"))
 			{
-				skincolor_redring = (UINT8)get_number(word2);
+				skincolor_redring = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "BLUERING"))
 			{
-				skincolor_bluering = (UINT8)get_number(word2);
+				skincolor_bluering = (UINT16)get_number(word2);
 			}
 			else if (fastcmp(word, "INVULNTICS"))
 			{
@@ -3997,6 +4174,17 @@ static void readmaincfg(MYFILE *f)
 				if (introtoplay > 128)
 					introtoplay = 128;
 				introchanged = true;
+			}
+			else if (fastcmp(word, "CREDITSCUTSCENE"))
+			{
+				creditscutscene = (UINT8)get_number(word2);
+				// range check, you morons.
+				if (creditscutscene > 128)
+					creditscutscene = 128;
+			}
+			else if (fastcmp(word, "USEBLACKROCK"))
+			{
+				useBlackRock = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
@@ -4099,13 +4287,6 @@ static void readmaincfg(MYFILE *f)
 				titlescrollyspeed = get_number(word2);
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "CREDITSCUTSCENE"))
-			{
-				creditscutscene = (UINT8)get_number(word2);
-				// range check, you morons.
-				if (creditscutscene > 128)
-					creditscutscene = 128;
-			}
 			else if (fastcmp(word, "DISABLESPEEDADJUST"))
 			{
 				disableSpeedAdjust = (value || word2[0] == 'T' || word2[0] == 'Y');
@@ -4133,6 +4314,10 @@ static void readmaincfg(MYFILE *f)
 			{
 				maxXtraLife = (UINT8)get_number(word2);
 			}
+			else if (fastcmp(word, "USECONTINUES"))
+			{
+				useContinues = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
 
 			else if (fastcmp(word, "GAMEDATA"))
 			{
@@ -4157,6 +4342,9 @@ static void readmaincfg(MYFILE *f)
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
 				// can't use sprintf since there is %u in savegamename
 				strcatbf(savegamename, srb2home, PATHSEP);
+
+				strcpy(liveeventbackup, va("live%s.bkp", timeattackfolder));
+				strcatbf(liveeventbackup, srb2home, PATHSEP);
 
 				gamedataadded = true;
 				titlechanged = true;
@@ -4533,6 +4721,18 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 					else
 					{
 						deh_warning("Thing %d out of range (1 - %d)", i, NUMMOBJTYPES-1);
+						ignorelines(f);
+					}
+				}
+				else if (fastcmp(word, "SKINCOLOR") || fastcmp(word, "COLOR"))
+				{
+					if (i == 0 && word2[0] != '0') // If word2 isn't a number
+						i = get_skincolor(word2); // find a skincolor by name
+					if (i && i < numskincolors)
+						readskincolor(f, i);
+					else
+					{
+						deh_warning("Skincolor %d out of range (1 - %d)", i, numskincolors-1);
 						ignorelines(f);
 					}
 				}
@@ -4940,19 +5140,19 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_PLAY_SUPER_TRANS3",
 	"S_PLAY_SUPER_TRANS4",
 	"S_PLAY_SUPER_TRANS5",
-	"S_PLAY_SUPER_TRANS6", // This has special significance in the code. If you add more frames, search for it and make the appropriate changes.
+	"S_PLAY_SUPER_TRANS6",
 
 	// technically the player goes here but it's an infinite tic state
 	"S_OBJPLACE_DUMMY",
 
-	// 1-Up Box Sprites (uses player sprite)
+	// 1-Up Box Sprites overlay (uses player sprite)
 	"S_PLAY_BOX1",
 	"S_PLAY_BOX2",
 	"S_PLAY_ICON1",
 	"S_PLAY_ICON2",
 	"S_PLAY_ICON3",
 
-	// Level end sign (uses player sprite)
+	// Level end sign overlay (uses player sprite)
 	"S_PLAY_SIGN",
 
 	// NiGHTS character (uses player sprite)
@@ -5175,6 +5375,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_JETJAW_CHOMP14",
 	"S_JETJAW_CHOMP15",
 	"S_JETJAW_CHOMP16",
+	"S_JETJAW_SOUND",
 
 	// Snailer
 	"S_SNAILER1",
@@ -5200,7 +5401,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ROBOHOOD_JUMP2",
 	"S_ROBOHOOD_JUMP3",
 
-	// CastleBot FaceStabber
+	// Castlebot Facestabber
 	"S_FACESTABBER_STND1",
 	"S_FACESTABBER_STND2",
 	"S_FACESTABBER_STND3",
@@ -5420,6 +5621,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE_FLEE2",
 	"S_EGGMOBILE_BALL",
 	"S_EGGMOBILE_TARGET",
+
 	"S_BOSSEGLZ1",
 	"S_BOSSEGLZ2",
 
@@ -5472,7 +5674,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_EGGMOBILE3_FLEE1",
 	"S_EGGMOBILE3_FLEE2",
 
-	// Boss 3 pinch
+	// Boss 3 Pinch
 	"S_FAKEMOBILE_INIT",
 	"S_FAKEMOBILE",
 	"S_FAKEMOBILE_ATK1",
@@ -5488,7 +5690,6 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BOSSSEBH2",
 
 	// Boss 3 Shockwave
-
 	"S_SHOCKWAVE1",
 	"S_SHOCKWAVE2",
 
@@ -5525,9 +5726,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_JETFLAME",
 
 	// Boss 4 Spectator Eggrobo
-	"S_EGGROBO1_IDLE",
+	"S_EGGROBO1_STND",
 	"S_EGGROBO1_BSLAP1",
-	"S_EGGROBO2_BSLAP2",
+	"S_EGGROBO1_BSLAP2",
 	"S_EGGROBO1_PISSED",
 
 	// Boss 4 Spectator Eggrobo jet flame
@@ -5597,10 +5798,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FANG_PINCHPATHINGSTART1",
 	"S_FANG_PINCHPATHINGSTART2",
 	"S_FANG_PINCHPATHING",
+	"S_FANG_PINCHBOUNCE0",
 	"S_FANG_PINCHBOUNCE1",
 	"S_FANG_PINCHBOUNCE2",
 	"S_FANG_PINCHBOUNCE3",
 	"S_FANG_PINCHBOUNCE4",
+	"S_FANG_PINCHFALL0",
 	"S_FANG_PINCHFALL1",
 	"S_FANG_PINCHFALL2",
 	"S_FANG_PINCHSKID1",
@@ -5771,7 +5974,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CYBRAKDEMON_NAPALM_ATTACK1",
 	"S_CYBRAKDEMON_NAPALM_ATTACK2",
 	"S_CYBRAKDEMON_NAPALM_ATTACK3",
-	"S_CYBRAKDEMON_FINISH_ATTACK", // If just attacked, remove MF2_FRET w/out going back to spawnstate
+	"S_CYBRAKDEMON_FINISH_ATTACK1", // If just attacked, remove MF2_FRET w/out going back to spawnstate
 	"S_CYBRAKDEMON_FINISH_ATTACK2", // Force a delay between attacks so you don't get bombarded with them back-to-back
 	"S_CYBRAKDEMON_PAIN1",
 	"S_CYBRAKDEMON_PAIN2",
@@ -6015,6 +6218,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SIGNSTOP",
 	"S_SIGNBOARD",
 	"S_EGGMANSIGN",
+	"S_CLEARSIGN",
 
 	// Spike Ball
 	"S_SPIKEBALL1",
@@ -6211,6 +6415,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ROCKET",
 
 	"S_LASER",
+	"S_LASER2",
+	"S_LASERFLASH",
+
+	"S_LASERFLAME1",
+	"S_LASERFLAME2",
+	"S_LASERFLAME3",
+	"S_LASERFLAME4",
+	"S_LASERFLAME5",
 
 	"S_TORPEDO",
 
@@ -6464,7 +6676,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_LITTLETUMBLEWEED_ROLL7",
 	"S_LITTLETUMBLEWEED_ROLL8",
 
-	// Cacti Sprites
+	// Cacti
 	"S_CACTI1",
 	"S_CACTI2",
 	"S_CACTI3",
@@ -6479,7 +6691,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_CACTITINYSEG",
 	"S_CACTISMALLSEG",
 
-	// Warning signs sprites
+	// Warning signs
 	"S_ARIDSIGN_CAUTION",
 	"S_ARIDSIGN_CACTI",
 	"S_ARIDSIGN_SHARPTURN",
@@ -6496,6 +6708,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TNTBARREL_EXPL4",
 	"S_TNTBARREL_EXPL5",
 	"S_TNTBARREL_EXPL6",
+	"S_TNTBARREL_EXPL7",
 	"S_TNTBARREL_FLYING",
 
 	// TNT proximity shell
@@ -7041,7 +7254,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ZAPSB10",
 	"S_ZAPSB11", // blank frame
 
-	// Thunder spark
+	//Thunder spark
 	"S_THUNDERCOIN_SPARK",
 
 	// Invincibility Sparkles
@@ -7342,6 +7555,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_BHORIZ7",
 	"S_BHORIZ8",
 
+	// Booster
 	"S_BOOSTERSOUND",
 	"S_YELLOWBOOSTERROLLER",
 	"S_YELLOWBOOSTERSEG_LEFT",
@@ -7372,7 +7586,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_SPLISH8",
 	"S_SPLISH9",
 
-	// Lava splish
+	// Lava Splish
 	"S_LAVASPLISH",
 
 	// added water splash
@@ -7476,6 +7690,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 
 	// Got Flag Sign
 	"S_GOTFLAG",
+
+	// Finish flag
+	"S_FINISHFLAG",
 
 	"S_CORK",
 	"S_LHRT",
@@ -7968,9 +8185,14 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_ROCKCRUMBLEN",
 	"S_ROCKCRUMBLEO",
 	"S_ROCKCRUMBLEP",
+
+	// Level debris
 	"S_GFZDEBRIS",
 	"S_BRICKDEBRIS",
 	"S_WOODDEBRIS",
+	"S_REDBRICKDEBRIS",
+	"S_BLUEBRICKDEBRIS",
+	"S_YELLOWBRICKDEBRIS",
 
 #ifdef SEENAMES
 	"S_NAMECHECK",
@@ -7987,7 +8209,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_THOK", // Thok! mobj
 	"MT_PLAYER",
 	"MT_TAILSOVERLAY", // c:
-	"MT_METALJETFUME", // [:
+	"MT_METALJETFUME",
 
 	// Enemies
 	"MT_BLUECRAWLA", // Crawla (Blue)
@@ -8104,7 +8326,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_CYBRAKDEMON_NAPALM_FLAMES",
 	"MT_CYBRAKDEMON_VILE_EXPLOSION",
 
-	// Metal Sonic
+	// Metal Sonic (Boss 9)
 	"MT_METALSONIC_RACE",
 	"MT_METALSONIC_BATTLE",
 	"MT_MSSHIELD_FRONT",
@@ -8118,7 +8340,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_BOMBSPHERE",
 	"MT_REDTEAMRING",  //Rings collectable by red team.
 	"MT_BLUETEAMRING", //Rings collectable by blue team.
-	"MT_TOKEN", // Special Stage Token
+	"MT_TOKEN", // Special Stage token for special stage
 	"MT_REDFLAG", // Red CTF Flag
 	"MT_BLUEFLAG", // Blue CTF Flag
 	"MT_EMBLEM",
@@ -8344,22 +8566,22 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	// Arid Canyon Scenery
 	"MT_BIGTUMBLEWEED",
 	"MT_LITTLETUMBLEWEED",
-	"MT_CACTI1",
-	"MT_CACTI2",
-	"MT_CACTI3",
-	"MT_CACTI4",
-	"MT_CACTI5",
-	"MT_CACTI6",
-	"MT_CACTI7",
-	"MT_CACTI8",
-	"MT_CACTI9",
-	"MT_CACTI10",
-	"MT_CACTI11",
-	"MT_CACTITINYSEG",
-	"MT_CACTISMALLSEG",
-	"MT_ARIDSIGN_CAUTION",
-	"MT_ARIDSIGN_CACTI",
-	"MT_ARIDSIGN_SHARPTURN",
+	"MT_CACTI1", // Tiny Red Flower Cactus
+	"MT_CACTI2", // Small Red Flower Cactus
+	"MT_CACTI3", // Tiny Blue Flower Cactus
+	"MT_CACTI4", // Small Blue Flower Cactus
+	"MT_CACTI5", // Prickly Pear
+	"MT_CACTI6", // Barrel Cactus
+	"MT_CACTI7", // Tall Barrel Cactus
+	"MT_CACTI8", // Armed Cactus
+	"MT_CACTI9", // Ball Cactus
+	"MT_CACTI10", // Tiny Cactus
+	"MT_CACTI11", // Small Cactus
+	"MT_CACTITINYSEG", // Tiny Cactus Segment
+	"MT_CACTISMALLSEG", // Small Cactus Segment
+	"MT_ARIDSIGN_CAUTION", // Caution Sign
+	"MT_ARIDSIGN_CACTI", // Cacti Sign
+	"MT_ARIDSIGN_SHARPTURN", // Sharp Turn Sign
 	"MT_OILLAMP",
 	"MT_TNTBARREL",
 	"MT_PROXIMITYTNT",
@@ -8414,7 +8636,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_GLAREGOYLEUP",
 	"MT_GLAREGOYLEDOWN",
 	"MT_GLAREGOYLELONG",
-	"MT_TARGET",
+	"MT_TARGET", // AKA Red Crystal
 	"MT_GREENFLAME",
 	"MT_BLUEGARGOYLE",
 
@@ -8465,7 +8687,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_HHZSTALAGMITE_TALL",
 	"MT_HHZSTALAGMITE_SHORT",
 
-	// Botanic Serenity
+	// Botanic Serenity scenery
 	"MT_BSZTALLFLOWER_RED",
 	"MT_BSZTALLFLOWER_PURPLE",
 	"MT_BSZTALLFLOWER_BLUE",
@@ -8595,6 +8817,7 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_LOCKONINF", // In-level Target
 	"MT_TAG", // Tag Sign
 	"MT_GOTFLAG", // Got Flag sign
+	"MT_FINISHFLAG", // Finish flag
 
 	// Ambient Sounds
 	"MT_AWATERA", // Ambient Water Sound 1
@@ -8745,9 +8968,14 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ROCKCRUMBLE14",
 	"MT_ROCKCRUMBLE15",
 	"MT_ROCKCRUMBLE16",
+
+	// Level debris
 	"MT_GFZDEBRIS",
 	"MT_BRICKDEBRIS",
 	"MT_WOODDEBRIS",
+	"MT_REDBRICKDEBRIS",
+	"MT_BLUEBRICKDEBRIS",
+	"MT_YELLOWBRICKDEBRIS",
 
 #ifdef SEENAMES
 	"MT_NAMECHECK",
@@ -8839,14 +9067,12 @@ static const char *const MOBJEFLAG_LIST[] = {
 	NULL
 };
 
-#ifdef HAVE_BLUA
 static const char *const MAPTHINGFLAG_LIST[4] = {
-	NULL,
+	"EXTRA", // Extra flag for objects.
 	"OBJECTFLIP", // Reverse gravity flag for objects.
 	"OBJECTSPECIAL", // Special flag used with certain objects.
 	"AMBUSH" // Deaf monsters/do not react to sound.
 };
-#endif
 
 static const char *const PLAYERFLAG_LIST[] = {
 
@@ -8943,7 +9169,6 @@ static const char *const GAMETYPERULE_LIST[] = {
 	NULL
 };
 
-#ifdef HAVE_BLUA
 // Linedef flags
 static const char *const ML_LIST[16] = {
 	"IMPASSIBLE",
@@ -8963,10 +9188,7 @@ static const char *const ML_LIST[16] = {
 	"BOUNCY",
 	"TFERLINE"
 };
-#endif
 
-// This DOES differ from r_draw's Color_Names, unfortunately.
-// Also includes Super colors
 static const char *COLOR_ENUMS[] = {
 	"NONE",			// SKINCOLOR_NONE,
 
@@ -8983,9 +9205,11 @@ static const char *COLOR_ENUMS[] = {
 	// Desaturated
 	"AETHER",     	// SKINCOLOR_AETHER,
 	"SLATE",     	// SKINCOLOR_SLATE,
+	"BLUEBELL",   	// SKINCOLOR_BLUEBELL,
 	"PINK",     	// SKINCOLOR_PINK,
 	"YOGURT",     	// SKINCOLOR_YOGURT,
 	"BROWN",     	// SKINCOLOR_BROWN,
+	"BRONZE",     	// SKINCOLOR_BRONZE,
 	"TAN",     		// SKINCOLOR_TAN,
 	"BEIGE",     	// SKINCOLOR_BEIGE,
 	"MOSS",     	// SKINCOLOR_MOSS,
@@ -8998,9 +9222,11 @@ static const char *COLOR_ENUMS[] = {
 	"RED",     		// SKINCOLOR_RED,
 	"CRIMSON",     	// SKINCOLOR_CRIMSON,
 	"FLAME",     	// SKINCOLOR_FLAME,
+	"KETCHUP",     	// SKINCOLOR_KETCHUP,
 	"PEACHY",     	// SKINCOLOR_PEACHY,
 	"QUAIL",     	// SKINCOLOR_QUAIL,
 	"SUNSET",     	// SKINCOLOR_SUNSET,
+	"COPPER",     	// SKINCOLOR_COPPER,
 	"APRICOT",     	// SKINCOLOR_APRICOT,
 	"ORANGE",     	// SKINCOLOR_ORANGE,
 	"RUST",     	// SKINCOLOR_RUST,
@@ -9010,6 +9236,7 @@ static const char *COLOR_ENUMS[] = {
 	"OLIVE",     	// SKINCOLOR_OLIVE,
 	"LIME",     	// SKINCOLOR_LIME,
 	"PERIDOT",     	// SKINCOLOR_PERIDOT,
+	"APPLE",     	// SKINCOLOR_APPLE,
 	"GREEN",     	// SKINCOLOR_GREEN,
 	"FOREST",     	// SKINCOLOR_FOREST,
 	"EMERALD",     	// SKINCOLOR_EMERALD,
@@ -9036,6 +9263,7 @@ static const char *COLOR_ENUMS[] = {
 	"VIOLET",     	// SKINCOLOR_VIOLET,
 	"LILAC",     	// SKINCOLOR_LILAC,
 	"PLUM",     	// SKINCOLOR_PLUM,
+	"RASPBERRY",  	// SKINCOLOR_RASPBERRY,
 	"ROSY",     	// SKINCOLOR_ROSY,
 
 	// Super special awesome Super flashing colors!
@@ -9129,7 +9357,14 @@ static const char *const POWERS_LIST[] = {
 	"NIGHTS_LINKFREEZE",
 
 	//for linedef exec 427
-	"NOCONTROL"
+	"NOCONTROL",
+
+	//for dyes
+	"DYE",
+
+	"JUSTLAUNCHED",
+
+	"IGNORELATCH"
 };
 
 static const char *const HUDITEMS_LIST[] = {
@@ -9137,6 +9372,7 @@ static const char *const HUDITEMS_LIST[] = {
 
 	"RINGS",
 	"RINGSNUM",
+	"RINGSNUMTICS",
 
 	"SCORE",
 	"SCORENUM",
@@ -9156,8 +9392,7 @@ static const char *const HUDITEMS_LIST[] = {
 	"TIMELEFTNUM",
 	"TIMEUP",
 	"HUNTPICS",
-	"POWERUPS",
-	"LAP"
+	"POWERUPS"
 };
 
 static const char *const MENUTYPES_LIST[] = {
@@ -9193,6 +9428,7 @@ static const char *const MENUTYPES_LIST[] = {
 	"MP_CONNECT",
 	"MP_ROOM",
 	"MP_PLAYERSETUP", // MP_PlayerSetupDef shared with SPLITSCREEN if #defined NONET
+	"MP_SERVER_OPTIONS",
 
 	// Options
 	"OP_MAIN",
@@ -9202,18 +9438,20 @@ static const char *const MENUTYPES_LIST[] = {
 	"OP_P1MOUSE",
 	"OP_P1JOYSTICK",
 	"OP_JOYSTICKSET", // OP_JoystickSetDef shared with P2
+	"OP_P1CAMERA",
 
 	"OP_P2CONTROLS",
 	"OP_P2MOUSE",
 	"OP_P2JOYSTICK",
+	"OP_P2CAMERA",
+
+	"OP_PLAYSTYLE",
 
 	"OP_VIDEO",
 	"OP_VIDEOMODE",
 	"OP_COLOR",
 	"OP_OPENGL",
 	"OP_OPENGL_LIGHTING",
-	"OP_OPENGL_FOG",
-	"OP_OPENGL_COLOR",
 
 	"OP_SOUND",
 
@@ -9255,11 +9493,7 @@ static const char *const MENUTYPES_LIST[] = {
 struct {
 	const char *n;
 	// has to be able to hold both fixed_t and angle_t, so drastic measure!!
-#ifdef HAVE_BLUA
 	lua_Integer v;
-#else
-	INT64 v;
-#endif
 } const INT_CONST[] = {
 	// If a mod removes some variables here,
 	// please leave the names in-tact and just set
@@ -9290,8 +9524,6 @@ struct {
 	{"PUSHACCEL",PUSHACCEL},
 	{"MODID",MODID}, // I don't know, I just thought it would be cool for a wad to potentially know what mod it was loaded into.
 	{"CODEBASE",CODEBASE}, // or what release of SRB2 this is.
-	{"VERSION",VERSION}, // Grab the game's version!
-	{"SUBVERSION",SUBVERSION}, // more precise version number
 	{"NEWTICRATE",NEWTICRATE}, // TICRATE*NEWTICRATERATIO
 	{"NEWTICRATERATIO",NEWTICRATERATIO},
 
@@ -9322,6 +9554,7 @@ struct {
 	{"FF_GLOBALANIM",FF_GLOBALANIM},
 	{"FF_FULLBRIGHT",FF_FULLBRIGHT},
 	{"FF_VERTICALFLIP",FF_VERTICALFLIP},
+	{"FF_HORIZONTALFLIP",FF_HORIZONTALFLIP},
 	{"FF_PAPERSPRITE",FF_PAPERSPRITE},
 	{"FF_TRANSMASK",FF_TRANSMASK},
 	{"FF_TRANSSHIFT",FF_TRANSSHIFT},
@@ -9366,6 +9599,9 @@ struct {
 	{"LF_NOZONE",LF_NOZONE},
 	{"LF_SAVEGAME",LF_SAVEGAME},
 	{"LF_MIXNIGHTSCOUNTDOWN",LF_MIXNIGHTSCOUNTDOWN},
+	{"LF_NOTITLECARDFIRST",LF_NOTITLECARDFIRST},
+	{"LF_NOTITLECARDRESPAWN",LF_NOTITLECARDRESPAWN},
+	{"LF_NOTITLECARDRECORDATTACK",LF_NOTITLECARDRECORDATTACK},
 	{"LF_NOTITLECARD",LF_NOTITLECARD},
 	{"LF_WARNINGTITLE",LF_WARNINGTITLE},
 	// And map flags
@@ -9387,7 +9623,8 @@ struct {
 
 	// SKINCOLOR_ doesn't include these..!
 	{"MAXSKINCOLORS",MAXSKINCOLORS},
-	{"MAXTRANSLATIONS",MAXTRANSLATIONS},
+	{"FIRSTSUPERCOLOR",FIRSTSUPERCOLOR},
+	{"NUMSUPERCOLORS",NUMSUPERCOLORS},
 
 	// Precipitation
 	{"PRECIP_NONE",PRECIP_NONE},
@@ -9421,7 +9658,7 @@ struct {
 	{"SH_FORCE",SH_FORCE},
 	{"SH_FORCEHP",SH_FORCEHP}, // to be used as a bitmask only
 	// Mostly for use with Mario mode.
-	{"SH_FIREFLOWER", SH_FIREFLOWER},
+	{"SH_FIREFLOWER",SH_FIREFLOWER},
 	{"SH_STACK",SH_STACK},
 	{"SH_NOSTACK",SH_NOSTACK},
 
@@ -9436,8 +9673,9 @@ struct {
 	{"CR_ROPEHANG",CR_ROPEHANG},
 	{"CR_MACESPIN",CR_MACESPIN},
 	{"CR_MINECART",CR_MINECART},
-	{"CR_ROLLOUT", CR_ROLLOUT},
+	{"CR_ROLLOUT",CR_ROLLOUT},
 	{"CR_PTERABYTE",CR_PTERABYTE},
+	{"CR_DUSTDEVIL",CR_DUSTDEVIL},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon
@@ -9465,6 +9703,9 @@ struct {
 	{"SF_FASTEDGE",SF_FASTEDGE},
 	{"SF_MULTIABILITY",SF_MULTIABILITY},
 	{"SF_NONIGHTSROTATION",SF_NONIGHTSROTATION},
+	{"SF_NONIGHTSSUPER",SF_NONIGHTSSUPER},
+	{"SF_NOSUPERSPRITES",SF_NOSUPERSPRITES},
+	{"SF_NOSUPERJUMPBOOST",SF_NOSUPERJUMPBOOST},
 
 	// Dashmode constants
 	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
@@ -9512,7 +9753,6 @@ struct {
 	{"ME_ULTIMATE",ME_ULTIMATE},
 	{"ME_PERFECT",ME_PERFECT},
 
-#ifdef HAVE_BLUA
 	// p_local.h constants
 	{"FLOATSPEED",FLOATSPEED},
 	{"MAXSTEPMOVE",MAXSTEPMOVE},
@@ -9603,7 +9843,7 @@ struct {
 	{"NUM_WEAPONS",NUM_WEAPONS},
 
 	// Value for infinite lives
-	{"INFLIVES", INFLIVES},
+	{"INFLIVES",INFLIVES},
 
 	// Got Flags, for player->gotflag!
 	// Used to be MF_ for some stupid reason, now they're GF_ to stop them looking like mobjflags
@@ -9647,11 +9887,11 @@ struct {
 	{"FF_CUTEXTRA",FF_CUTEXTRA},               ///< Cuts out hidden translucent pixels.
 	{"FF_CUTLEVEL",FF_CUTLEVEL},               ///< Cuts out all hidden pixels.
 	{"FF_CUTSPRITES",FF_CUTSPRITES},           ///< Final step in making 3D water.
-	{"FF_BOTHPLANES",FF_BOTHPLANES},           ///< Renders both planes all the time.
+	{"FF_BOTHPLANES",FF_BOTHPLANES},           ///< Render inside and outside planes.
 	{"FF_EXTRA",FF_EXTRA},                     ///< Gets cut by ::FF_CUTEXTRA.
 	{"FF_TRANSLUCENT",FF_TRANSLUCENT},         ///< See through!
 	{"FF_FOG",FF_FOG},                         ///< Fog "brush."
-	{"FF_INVERTPLANES",FF_INVERTPLANES},       ///< Reverse the plane visibility rules.
+	{"FF_INVERTPLANES",FF_INVERTPLANES},       ///< Only render inside planes.
 	{"FF_ALLSIDES",FF_ALLSIDES},               ///< Render inside and outside sides.
 	{"FF_INVERTSIDES",FF_INVERTSIDES},         ///< Only render inside sides.
 	{"FF_DOUBLESHADOW",FF_DOUBLESHADOW},       ///< Make two lightlist entries to reset light?
@@ -9664,10 +9904,11 @@ struct {
 	{"FF_QUICKSAND",FF_QUICKSAND},             ///< Quicksand!
 	{"FF_PLATFORM",FF_PLATFORM},               ///< You can jump up through this to the top.
 	{"FF_REVERSEPLATFORM",FF_REVERSEPLATFORM}, ///< A fall-through floor in normal gravity, a platform in reverse gravity.
-	{"FF_INTANGABLEFLATS",FF_INTANGABLEFLATS}, ///< Both flats are intangable, but the sides are still solid.
+	{"FF_INTANGIBLEFLATS",FF_INTANGIBLEFLATS}, ///< Both flats are intangible, but the sides are still solid.
+	{"FF_INTANGABLEFLATS",FF_INTANGIBLEFLATS}, ///< Both flats are intangable, but the sides are still solid.
 	{"FF_SHATTER",FF_SHATTER},                 ///< Used with ::FF_BUSTUP. Bustable on mere touch.
 	{"FF_SPINBUST",FF_SPINBUST},               ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
-	{"FF_STRONGBUST",FF_STRONGBUST },          ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
+	{"FF_STRONGBUST",FF_STRONGBUST},           ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
 	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
@@ -9676,11 +9917,10 @@ struct {
 	// Node flags
 	{"NF_SUBSECTOR",NF_SUBSECTOR}, // Indicate a leaf.
 #endif
-#ifdef ESLOPE
+
 	// Slope flags
 	{"SL_NOPHYSICS",SL_NOPHYSICS},
 	{"SL_DYNAMIC",SL_DYNAMIC},
-#endif
 
 	// Angles
 	{"ANG1",ANG1},
@@ -9844,7 +10084,12 @@ struct {
 	{"TC_RAINBOW",TC_RAINBOW},
 	{"TC_BLINK",TC_BLINK},
 	{"TC_DASHMODE",TC_DASHMODE},
-#endif
+
+	// marathonmode flags
+	{"MA_INIT",MA_INIT},
+	{"MA_RUNNING",MA_RUNNING},
+	{"MA_NOCUTSCENES",MA_NOCUTSCENES},
+	{"MA_INGAME",MA_INGAME},
 
 	{NULL,0}
 };
@@ -9887,6 +10132,26 @@ static statenum_t get_state(const char *word)
 			return i;
 	deh_warning("Couldn't find state named 'S_%s'",word);
 	return S_NULL;
+}
+
+skincolornum_t get_skincolor(const char *word)
+{ // Returns the value of SKINCOLOR_ enumerations
+	skincolornum_t i;
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (fastncmp("SKINCOLOR_",word,10))
+		word += 10; // take off the SKINCOLOR_
+	for (i = 0; i < NUMCOLORFREESLOTS; i++) {
+		if (!FREE_SKINCOLORS[i])
+			break;
+		if (fastcmp(word, FREE_SKINCOLORS[i]))
+			return SKINCOLOR_FIRSTFREESLOT+i;
+	}
+	for (i = 0; i < SKINCOLOR_FIRSTFREESLOT; i++)
+		if (fastcmp(word, COLOR_ENUMS[i]))
+			return i;
+	deh_warning("Couldn't find skincolor named 'SKINCOLOR_%s'",word);
+	return SKINCOLOR_GREEN;
 }
 
 static spritenum_t get_sprite(const char *word)
@@ -10001,8 +10266,7 @@ static menutype_t get_menutype(const char *word)
 	return MN_NONE;
 }
 
-#ifndef HAVE_BLUA
-static INT16 get_gametype(const char *word)
+/*static INT16 get_gametype(const char *word)
 { // Returns the value of GT_ enumerations
 	INT16 i;
 	if (*word >= '0' && *word <= '9')
@@ -10028,7 +10292,7 @@ static powertype_t get_power(const char *word)
 			return i;
 	deh_warning("Couldn't find power named 'pw_%s'",word);
 	return pw_invulnerability;
-}
+}*/
 
 /// \todo Make ANY of this completely over-the-top math craziness obey the order of operations.
 static fixed_t op_mul(fixed_t a, fixed_t b) { return a*b; }
@@ -10056,7 +10320,7 @@ struct {
 };
 
 // Returns the full word, cut at the first symbol or whitespace
-static char *read_word(const char *line)
+/*static char *read_word(const char *line)
 {
 	// Part 1: You got the start of the word, now find the end.
   const char *p;
@@ -10184,6 +10448,11 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
+	else if (fastncmp("SKINCOLOR_",word,10)) {
+		r = get_skincolor(word);
+		free(word);
+		return r;
+	}
 	else if (fastncmp("MT_",word,3)) {
 		r = get_mobjtype(word);
 		free(word);
@@ -10216,7 +10485,7 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
-	else if (fastncmp("GT_",word,4)) {
+	else if (fastncmp("GT_",word,3)) {
 		r = get_gametype(word);
 		free(word);
 		return r;
@@ -10252,17 +10521,6 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
-	else if (fastncmp("SKINCOLOR_",word,10)) {
-		char *p = word+10;
-		for (i = 0; i < MAXTRANSLATIONS; i++)
-			if (fastcmp(p, COLOR_ENUMS[i])) {
-				free(word);
-				return i;
-			}
-		const_warning("color",word);
-		free(word);
-		return 0;
-	}
 	else if (fastncmp("GRADE_",word,6))
 	{
 		char *p = word+6;
@@ -10286,16 +10544,14 @@ static fixed_t find_const(const char **rword)
 	const_warning("constant",word);
 	free(word);
 	return 0;
-}
-#endif
+}*/
 
 // Loops through every constant and operation in word and performs its calculations, returning the final value.
 fixed_t get_number(const char *word)
 {
-#ifdef HAVE_BLUA
 	return LUA_EvalMath(word);
-#else
-	// DESPERATELY NEEDED: Order of operations support! :x
+
+	/*// DESPERATELY NEEDED: Order of operations support! :x
 	fixed_t i = find_const(&word);
 	INT32 o;
 	while(*word) {
@@ -10305,8 +10561,7 @@ fixed_t get_number(const char *word)
 		else
 			break;
 	}
-	return i;
-#endif
+	return i;*/
 }
 
 void DEH_Check(void)
@@ -10326,12 +10581,11 @@ void DEH_Check(void)
 	if (dehpowers != NUMPOWERS)
 		I_Error("You forgot to update the Dehacked powers list, you dolt!\n(%d powers defined, versus %s in the Dehacked list)\n", NUMPOWERS, sizeu1(dehpowers));
 
-	if (dehcolors != MAXTRANSLATIONS)
-		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", MAXTRANSLATIONS, sizeu1(dehcolors));
+	if (dehcolors != SKINCOLOR_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", SKINCOLOR_FIRSTFREESLOT, sizeu1(dehcolors));
 #endif
 }
 
-#ifdef HAVE_BLUA
 #include "lua_script.h"
 #include "lua_libs.h"
 
@@ -10414,7 +10668,7 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("State S_%s allocated.\n",word);
 					FREE_STATES[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_STATES[i],word);
-					lua_pushinteger(L, i);
+					lua_pushinteger(L, S_FIRSTFREESLOT + i);
 					r++;
 					break;
 				}
@@ -10429,12 +10683,28 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("MobjType MT_%s allocated.\n",word);
 					FREE_MOBJS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_MOBJS[i],word);
-					lua_pushinteger(L, i);
+					lua_pushinteger(L, MT_FIRSTFREESLOT + i);
 					r++;
 					break;
 				}
 			if (i == NUMMOBJFREESLOTS)
 				CONS_Alert(CONS_WARNING, "Ran out of free MobjType slots!\n");
+		}
+		else if (fastcmp(type, "SKINCOLOR"))
+		{
+			skincolornum_t i;
+			for (i = 0; i < NUMCOLORFREESLOTS; i++)
+				if (!FREE_SKINCOLORS[i]) {
+					CONS_Printf("Skincolor SKINCOLOR_%s allocated.\n",word);
+					FREE_SKINCOLORS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
+					strcpy(FREE_SKINCOLORS[i],word);
+					M_AddMenuColor(numskincolors++);
+					lua_pushinteger(L, SKINCOLOR_FIRSTFREESLOT + i);
+					r++;
+					break;
+				}
+			if (i == NUMCOLORFREESLOTS)
+				CONS_Alert(CONS_WARNING, "Ran out of free skincolor slots!\n");
 		}
 		else if (fastcmp(type, "SPR2"))
 		{
@@ -10450,24 +10720,32 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("Sprite SPR2_%s allocated.\n",word);
 					strncpy(spr2names[free_spr2],word,4);
 					spr2defaults[free_spr2] = 0;
+					lua_pushinteger(L, free_spr2);
+					r++;
 					spr2names[free_spr2++][4] = 0;
 				} else
 					CONS_Alert(CONS_WARNING, "Ran out of free SPR2 slots!\n");
 			}
-			r++;
 		}
 		else if (fastcmp(type, "TOL"))
 		{
-			if (lastcustomtol > 31)
-				CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
-			else
-			{
-				UINT32 newtol = (1<<lastcustomtol);
-				CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
-				G_AddTOL(newtol, word);
-				lua_pushinteger(L, newtol);
-				lastcustomtol++;
-				r++;
+			// Search if we already have a typeoflevel by that name...
+			int i;
+			for (i = 0; TYPEOFLEVEL[i].name; i++)
+				if (fastcmp(word, TYPEOFLEVEL[i].name))
+					break;
+
+			// We don't, so allocate a new one.
+			if (TYPEOFLEVEL[i].name == NULL) {
+				if (lastcustomtol == (UINT32)MAXTOL) // Unless you have way too many, since they're flags.
+					CONS_Alert(CONS_WARNING, "Ran out of free typeoflevel slots!\n");
+				else {
+					CONS_Printf("TypeOfLevel TOL_%s allocated.\n",word);
+					G_AddTOL(lastcustomtol, word);
+					lua_pushinteger(L, lastcustomtol);
+					lastcustomtol <<= 1;
+					r++;
+				}
 			}
 		}
 		Z_Free(s);
@@ -10760,13 +11038,20 @@ static inline int lib_getenum(lua_State *L)
 	}
 	else if (fastncmp("SKINCOLOR_",word,10)) {
 		p = word+10;
-		for (i = 0; i < MAXTRANSLATIONS; i++)
+		for (i = 0; i < NUMCOLORFREESLOTS; i++) {
+			if (!FREE_SKINCOLORS[i])
+				break;
+			if (fastcmp(p, FREE_SKINCOLORS[i])) {
+				lua_pushinteger(L, SKINCOLOR_FIRSTFREESLOT+i);
+				return 1;
+			}
+		}
+		for (i = 0; i < SKINCOLOR_FIRSTFREESLOT; i++)
 			if (fastcmp(p, COLOR_ENUMS[i])) {
 				lua_pushinteger(L, i);
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "skincolor '%s' could not be found.\n", word);
-		return 0;
+		return luaL_error(L, "skincolor '%s' could not be found.\n", word);
 	}
 	else if (fastncmp("GRADE_",word,6))
 	{
@@ -10950,5 +11235,3 @@ void LUA_SetActionByName(void *state, const char *actiontocompare)
 		}
 	}
 }
-
-#endif // HAVE_BLUA

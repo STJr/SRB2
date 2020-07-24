@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,7 +11,6 @@
 /// \brief player object library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "p_mobj.h"
 #include "d_player.h"
@@ -97,6 +96,10 @@ static int player_get(lua_State *L)
 		lua_pushboolean(L, true);
 	else if (fastcmp(field,"name"))
 		lua_pushstring(L, player_names[plr-players]);
+	else if (fastcmp(field,"realmo"))
+		LUA_PushUserdata(L, plr->mo, META_MOBJ);
+	// Kept for backward-compatibility
+	// Should be fixed to work like "realmo" later
 	else if (fastcmp(field,"mo"))
 	{
 		if (plr->spectator)
@@ -120,6 +123,8 @@ static int player_get(lua_State *L)
 		lua_pushfixed(L, plr->deltaviewheight);
 	else if (fastcmp(field,"bob"))
 		lua_pushfixed(L, plr->bob);
+	else if (fastcmp(field,"viewrollangle"))
+		lua_pushangle(L, plr->viewrollangle);
 	else if (fastcmp(field,"aiming"))
 		lua_pushangle(L, plr->aiming);
 	else if (fastcmp(field,"drawangle"))
@@ -362,6 +367,8 @@ static int player_get(lua_State *L)
 		lua_pushinteger(L, plr->bot);
 	else if (fastcmp(field,"jointime"))
 		lua_pushinteger(L, plr->jointime);
+	else if (fastcmp(field,"quittime"))
+		lua_pushinteger(L, plr->quittime);
 #ifdef HWRENDER
 	else if (fastcmp(field,"fovadd"))
 		lua_pushfixed(L, plr->fovadd);
@@ -394,7 +401,7 @@ static int player_set(lua_State *L)
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");
 
-	if (fastcmp(field,"mo")) {
+	if (fastcmp(field,"mo") || fastcmp(field,"realmo")) {
 		mobj_t *newmo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 		plr->mo->player = NULL; // remove player pointer from old mobj
 		(newmo->player = plr)->mo = newmo; // set player pointer for new mobj, and set new mobj as the player's mobj
@@ -415,6 +422,8 @@ static int player_set(lua_State *L)
 		plr->deltaviewheight = luaL_checkfixed(L, 3);
 	else if (fastcmp(field,"bob"))
 		plr->bob = luaL_checkfixed(L, 3);
+	else if (fastcmp(field,"viewrollangle"))
+		plr->viewrollangle = luaL_checkangle(L, 3);
 	else if (fastcmp(field,"aiming")) {
 		plr->aiming = luaL_checkangle(L, 3);
 		if (plr == &players[consoleplayer])
@@ -452,9 +461,9 @@ static int player_set(lua_State *L)
 		plr->flashpal = (UINT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"skincolor"))
 	{
-		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
-		if (newcolor >= MAXSKINCOLORS)
-			return luaL_error(L, "player.skincolor %d out of range (0 - %d).", newcolor, MAXSKINCOLORS-1);
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L,3);
+		if (newcolor >= numskincolors)
+			return luaL_error(L, "player.skincolor %d out of range (0 - %d).", newcolor, numskincolors-1);
 		plr->skincolor = newcolor;
 	}
 	else if (fastcmp(field,"score"))
@@ -701,6 +710,8 @@ static int player_set(lua_State *L)
 		return NOSET;
 	else if (fastcmp(field,"jointime"))
 		plr->jointime = (tic_t)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"quittime"))
+		plr->quittime = (tic_t)luaL_checkinteger(L, 3);
 #ifdef HWRENDER
 	else if (fastcmp(field,"fovadd"))
 		plr->fovadd = luaL_checkfixed(L, 3);
@@ -866,5 +877,3 @@ int LUA_PlayerLib(lua_State *L)
 	lua_setglobal(L, "players");
 	return 0;
 }
-
-#endif

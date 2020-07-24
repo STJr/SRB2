@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -162,7 +162,9 @@ extern wipestyleflags_t wipestyleflags;
 // Even my function names are borderline
 boolean F_ShouldColormapFade(void);
 boolean F_TryColormapFade(UINT8 wipecolor);
+#ifndef NOWIPE
 void F_DecideWipeStyle(void);
+#endif
 
 #define FADECOLORMAPDIV 8
 #define FADECOLORMAPROWS (256/FADECOLORMAPDIV)

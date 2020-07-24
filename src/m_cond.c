@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,7 +18,7 @@
 #include "v_video.h" // video flags
 
 #include "g_game.h" // record info
-#include "r_things.h" // numskins
+#include "r_skins.h" // numskins
 #include "r_draw.h" // R_GetColorByName
 
 // Map triggers for linedef executors
@@ -523,9 +523,9 @@ emblem_t *M_GetLevelEmblems(INT32 mapnum)
 	return NULL;
 }
 
-skincolors_t M_GetEmblemColor(emblem_t *em)
+skincolornum_t M_GetEmblemColor(emblem_t *em)
 {
-	if (!em || em->color >= MAXSKINCOLORS)
+	if (!em || em->color >= numskincolors)
 		return SKINCOLOR_NONE;
 	return em->color;
 }
@@ -549,9 +549,9 @@ const char *M_GetEmblemPatch(emblem_t *em, boolean big)
 	return pnamebuf;
 }
 
-skincolors_t M_GetExtraEmblemColor(extraemblem_t *em)
+skincolornum_t M_GetExtraEmblemColor(extraemblem_t *em)
 {
-	if (!em || em->color >= MAXSKINCOLORS)
+	if (!em || em->color >= numskincolors)
 		return SKINCOLOR_NONE;
 	return em->color;
 }

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -86,6 +86,7 @@
 // warning C4213: nonstandard extension used : cast on l-value
 
 
+#include "version.h"
 #include "doomtype.h"
 
 #include <stdarg.h>
@@ -98,8 +99,8 @@
 
 #ifdef GETTEXT
 #include <libintl.h>
-#include <locale.h>
 #endif
+#include <locale.h> // locale should not be dependent on GETTEXT -- 11/01/20 Monster Iestyn
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -135,24 +136,23 @@ extern char logfilename[1024];
 
 //#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
 #ifdef DEVELOP
-#define VERSION    0 // Game version
-#define SUBVERSION 0 // more precise version number
 #define VERSIONSTRING "Development EXE"
-#define VERSIONSTRINGW L"Development EXE"
 // most interface strings are ignored in development mode.
 // we use comprevision and compbranch instead.
 #else
-#define VERSION    202 // Game version
-#define SUBVERSION 0  // more precise version number
-#define VERSIONSTRING "v2.2.0"
-#define VERSIONSTRINGW L"v2.2.0"
+#define VERSIONSTRING "v"SRB2VERSION
 // Hey! If you change this, add 1 to the MODVERSION below!
 // Otherwise we can't force updates!
 #endif
 
+#define VERSIONSTRINGW WSTRING (VERSIONSTRING)
+
+/* A custom URL protocol for server links. */
+#define SERVER_URL_PROTOCOL "srb2://"
+
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
-//#define USE_PATCH_DTA
+#define USE_PATCH_DTA
 
 // Use .kart extension addons
 //#define USE_KART
@@ -201,17 +201,6 @@ extern char logfilename[1024];
 // Will always resemble the versionstring, 205 = 2.0.5, 210 = 2.1, etc.
 #define CODEBASE 220
 
-// The Modification ID; must be obtained from Rob ( https://mb.srb2.org/private.php?do=newpm&u=546 ).
-// DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
-// "18" is the default mod ID for version 2.2
-#define MODID 18
-
-// The Modification Version, starting from 1. Do not follow your version string for this,
-// it's only for detection of the version the player is using so the MS can alert them of an update.
-// Only set it higher, not lower, obviously.
-// Note that we use this to help keep internal testing in check; this is why v2.2.0 is not version "1".
-#define MODVERSION 40
-
 // To version config.cfg, MAJOREXECVERSION is set equal to MODVERSION automatically.
 // Increment MINOREXECVERSION whenever a config change is needed that does not correspond
 // to an increment in MODVERSION. This might never happen in practice.
@@ -236,6 +225,20 @@ extern char logfilename[1024];
 #define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
 
+#define COLORRAMPSIZE 16
+#define MAXCOLORNAME 32
+#define NUMCOLORFREESLOTS 1024
+
+typedef struct skincolor_s
+{
+	char name[MAXCOLORNAME+1];  // Skincolor name
+	UINT8 ramp[COLORRAMPSIZE];  // Colormap ramp
+	UINT16 invcolor;            // Signpost color
+	UINT8 invshade;             // Signpost color shade
+	UINT16 chatcolor;           // Chat color
+	boolean accessible;         // Accessible by the color command + setup menu
+} skincolor_t;
+
 typedef enum
 {
 	SKINCOLOR_NONE = 0,
@@ -253,9 +256,11 @@ typedef enum
 	// Desaturated
 	SKINCOLOR_AETHER,
 	SKINCOLOR_SLATE,
+	SKINCOLOR_BLUEBELL,
 	SKINCOLOR_PINK,
 	SKINCOLOR_YOGURT,
 	SKINCOLOR_BROWN,
+	SKINCOLOR_BRONZE,
 	SKINCOLOR_TAN,
 	SKINCOLOR_BEIGE,
 	SKINCOLOR_MOSS,
@@ -268,9 +273,11 @@ typedef enum
 	SKINCOLOR_RED,
 	SKINCOLOR_CRIMSON,
 	SKINCOLOR_FLAME,
+	SKINCOLOR_KETCHUP,
 	SKINCOLOR_PEACHY,
 	SKINCOLOR_QUAIL,
 	SKINCOLOR_SUNSET,
+	SKINCOLOR_COPPER,
 	SKINCOLOR_APRICOT,
 	SKINCOLOR_ORANGE,
 	SKINCOLOR_RUST,
@@ -280,6 +287,7 @@ typedef enum
 	SKINCOLOR_OLIVE,
 	SKINCOLOR_LIME,
 	SKINCOLOR_PERIDOT,
+	SKINCOLOR_APPLE,
 	SKINCOLOR_GREEN,
 	SKINCOLOR_FOREST,
 	SKINCOLOR_EMERALD,
@@ -306,14 +314,13 @@ typedef enum
 	SKINCOLOR_VIOLET,
 	SKINCOLOR_LILAC,
 	SKINCOLOR_PLUM,
+	SKINCOLOR_RASPBERRY,
 	SKINCOLOR_ROSY,
 
-	// SKINCOLOR_? - one left before we bump up against 0x39, which isn't a HARD limit anymore but would be excessive
-
-	MAXSKINCOLORS,
+	FIRSTSUPERCOLOR,
 
 	// Super special awesome Super flashing colors!
-	SKINCOLOR_SUPERSILVER1 = MAXSKINCOLORS,
+	SKINCOLOR_SUPERSILVER1 = FIRSTSUPERCOLOR,
 	SKINCOLOR_SUPERSILVER2,
 	SKINCOLOR_SUPERSILVER3,
 	SKINCOLOR_SUPERSILVER4,
@@ -367,9 +374,17 @@ typedef enum
 	SKINCOLOR_SUPERTAN4,
 	SKINCOLOR_SUPERTAN5,
 
-	MAXTRANSLATIONS,
-	NUMSUPERCOLORS = ((MAXTRANSLATIONS - MAXSKINCOLORS)/5)
-} skincolors_t;
+	SKINCOLOR_FIRSTFREESLOT,
+	SKINCOLOR_LASTFREESLOT = SKINCOLOR_FIRSTFREESLOT + NUMCOLORFREESLOTS - 1,
+
+	MAXSKINCOLORS,
+
+	NUMSUPERCOLORS = ((SKINCOLOR_FIRSTFREESLOT - FIRSTSUPERCOLOR)/5)
+} skincolornum_t;
+
+extern UINT16 numskincolors;
+
+extern skincolor_t skincolors[MAXSKINCOLORS];
 
 // State updates, number of tics / second.
 // NOTE: used to setup the timer rate, see I_StartupTimer().
@@ -449,17 +464,18 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...) FUNCDEBUG;
 
 // Things that used to be in dstrings.h
 #define SAVEGAMENAME "srb2sav"
-char savegamename[256];
+extern char savegamename[256];
+extern char liveeventbackup[256];
 
 // m_misc.h
 #ifdef GETTEXT
 #define M_GetText(String) gettext(String)
-void M_StartupLocale(void);
 #else
 // If no translations are to be used, make a stub
 // M_GetText function that just returns the string.
 #define M_GetText(x) (x)
 #endif
+void M_StartupLocale(void);
 extern void *(*M_Memcpy)(void* dest, const void* src, size_t n) FUNCNONNULL;
 char *va(const char *format, ...) FUNCPRINTF;
 char *M_GetToken(const char *inputString);
@@ -473,6 +489,8 @@ char *sizeu4(size_t num);
 char *sizeu5(size_t num);
 
 // d_main.c
+extern int    VERSION;
+extern int SUBVERSION;
 extern boolean devparm; // development mode (-debug)
 // d_netcmd.c
 extern INT32 cv_debug;
@@ -490,6 +508,7 @@ extern INT32 cv_debug;
 #define DBG_SETUP       0x0400
 #define DBG_LUA         0x0800
 #define DBG_RANDOMIZER  0x1000
+#define DBG_VIEWMORPH   0x2000
 
 // =======================
 // Misc stuff for later...
@@ -546,21 +565,14 @@ INT32 I_GetKey(void);
 	#define PATHSEP "/"
 #endif
 
+#define PUNCTUATION "!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~"
+
 // Compile date and time and revision.
 extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 // Disabled code and code under testing
 // None of these that are disabled in the normal build are guaranteed to work perfectly
 // Compile them at your own risk!
-
-/// Kalaron/Eternity Engine slope code (SRB2CB ported)
-#define ESLOPE
-
-#ifdef ESLOPE
-/// Backwards compatibility with SRB2CB's slope linedef types.
-///	\note	A simple shim that prints a warning.
-#define ESLOPE_TYPESHIM
-#endif
 
 ///	Allows the use of devmode in multiplayer. AKA "fishcake"
 //#define NETGAME_DEVMODE
@@ -570,9 +582,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 ///	Dumps the contents of a network save game upon consistency failure for debugging.
 //#define DUMPCONSISTENCY
-
-///	Polyobject fake flat code
-#define POLYOBJECTS_PLANES
 
 ///	See name of player in your crosshair
 #define SEENAMES
@@ -596,11 +605,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	    	memory that never gets touched.
 #define ALLOW_RESETDATA
 
-#ifndef NONET
-///	Display a connection screen on join attempts.
-#define CLIENT_LOADINGSCREEN
-#endif
-
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
 
@@ -618,16 +622,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///      	SRB2CB itself ported this from PrBoom+
 #define NEWCLIP
 
+/// OpenGL shaders
+#define GL_SHADERS
+
 /// Handle touching sector specials in P_PlayerAfterThink instead of P_PlayerThink.
 /// \note   Required for proper collision with moving sloped surfaces that have sector specials on them.
 #define SECTORSPECIALSAFTERTHINK
-
-/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
-/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
-/// on the bright side it fixes some weird issues with translucent walls
-/// \note	SRB2CB port.
-///      	SRB2CB itself ported this from PrBoom+
-#define NEWCLIP
 
 /// Cache patches in Lua in a way that renderer switching will work flawlessly.
 //#define LUA_PATCH_SAFETY
@@ -644,5 +644,8 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Render flats on walls
 #define WALLFLATS
+
+/// Maintain compatibility with older 2.2 demos
+#define OLD22DEMOCOMPAT
 
 #endif // __DOOMDEF__

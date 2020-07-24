@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -45,7 +45,19 @@ extern INT32 curWeather;
 extern INT32 cursaveslot;
 //extern INT16 lastmapsaved;
 extern INT16 lastmaploaded;
-extern boolean gamecomplete;
+extern UINT8 gamecomplete;
+
+// Extra abilities/settings for skins (combinable stuff)
+typedef enum
+{
+	MA_RUNNING     = 1,    // In action
+	MA_INIT        = 1<<1, // Initialisation
+	MA_NOCUTSCENES = 1<<2, // No cutscenes
+	MA_INGAME      = 1<<3  // Timer ignores loads
+} marathonmode_t;
+
+extern marathonmode_t marathonmode;
+extern tic_t marathontime;
 
 #define maxgameovers 13
 extern UINT8 numgameovers;
@@ -127,7 +139,7 @@ extern INT32 displayplayer;
 extern INT32 secondarydisplayplayer; // for splitscreen
 
 // Maps of special importance
-extern INT16 spstage_start;
+extern INT16 spstage_start, spmarathon_start;
 extern INT16 sstage_start, sstage_end, smpstage_start, smpstage_end;
 
 extern INT16 titlemap;
@@ -145,7 +157,7 @@ extern INT32 tutorialanalog; // store cv_analog[0] user value
 extern boolean looptitle;
 
 // CTF colors.
-extern UINT8 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor_bluering;
+extern UINT16 skincolor_redteam, skincolor_blueteam, skincolor_redring, skincolor_bluering;
 
 extern tic_t countdowntimer;
 extern boolean countdowntimeup;
@@ -289,6 +301,8 @@ typedef struct
 	UINT8 actnum;          ///< Act number or 0 for none.
 	UINT32 typeoflevel;    ///< Combination of typeoflevel flags.
 	INT16 nextlevel;       ///< Map number of next level, or 1100-1102 to end.
+	INT16 marathonnext;    ///< See nextlevel, but for Marathon mode. Necessary to support hub worlds ala SUGOI.
+	char keywords[33];     ///< Keywords separated by space to search for. 32 characters.
 	char musname[7];       ///< Music track to play. "" for no music.
 	UINT16 mustrack;       ///< Subsong to play. Only really relevant for music modules and specific formats supported by GME. 0 to ignore.
 	UINT32 muspos;    ///< Music position to jump to.
@@ -318,6 +332,9 @@ typedef struct
 
 	char selectheading[22]; ///< Level select heading. Allows for controllable grouping.
 	UINT16 startrings;      ///< Number of rings players start with.
+	INT32 sstimer;          ///< Timer for special stages.
+	UINT32 ssspheres;       ///< Sphere requirement in special stages.
+	fixed_t gravity;        ///< Map-wide gravity.
 
 	// Title card.
 	char ltzzpatch[8];      ///< Zig zag patch.
@@ -350,15 +367,19 @@ typedef struct
 } mapheader_t;
 
 // level flags
-#define LF_SCRIPTISFILE   1 ///< True if the script is a file, not a lump.
-#define LF_SPEEDMUSIC     2 ///< Speed up act music for super sneakers
-#define LF_NOSSMUSIC      4 ///< Disable Super Sonic music
-#define LF_NORELOAD       8 ///< Don't reload level on death
-#define LF_NOZONE        16 ///< Don't include "ZONE" on level title
-#define LF_SAVEGAME      32 ///< Save the game upon loading this level
-#define LF_MIXNIGHTSCOUNTDOWN 64 ///< Play sfx_timeup instead of music change for NiGHTS countdown
-#define LF_WARNINGTITLE 128 ///< WARNING! WARNING! WARNING! WARNING!
-#define LF_NOTITLECARD  256 ///< Don't start the title card
+#define LF_SCRIPTISFILE       (1<<0) ///< True if the script is a file, not a lump.
+#define LF_SPEEDMUSIC         (1<<1) ///< Speed up act music for super sneakers
+#define LF_NOSSMUSIC          (1<<2) ///< Disable Super Sonic music
+#define LF_NORELOAD           (1<<3) ///< Don't reload level on death
+#define LF_NOZONE             (1<<4) ///< Don't include "ZONE" on level title
+#define LF_SAVEGAME           (1<<5) ///< Save the game upon loading this level
+#define LF_MIXNIGHTSCOUNTDOWN (1<<6) ///< Play sfx_timeup instead of music change for NiGHTS countdown
+#define LF_WARNINGTITLE       (1<<7) ///< WARNING! WARNING! WARNING! WARNING!
+
+#define LF_NOTITLECARDFIRST        (1<<8)
+#define LF_NOTITLECARDRESPAWN      (1<<9)
+#define LF_NOTITLECARDRECORDATTACK (1<<10)
+#define LF_NOTITLECARD  (LF_NOTITLECARDFIRST|LF_NOTITLECARDRESPAWN|LF_NOTITLECARDRECORDATTACK) ///< Don't start the title card at all
 
 #define LF2_HIDEINMENU     1 ///< Hide in the multiplayer menu
 #define LF2_HIDEINSTATS    2 ///< Hide in the statistics screen
@@ -436,6 +457,7 @@ extern const char *Gametype_ConstantNames[NUMGAMETYPES];
 extern INT32 pointlimits[NUMGAMETYPES];
 extern INT32 timelimits[NUMGAMETYPES];
 
+// TypeOfLevel things
 enum TypeOfLevel
 {
 	TOL_SP          = 0x01, ///< Single Player
@@ -460,16 +482,16 @@ enum TypeOfLevel
 	TOL_XMAS   = 0x1000, ///< Christmas NiGHTS
 };
 
-#define NUMBASETOL 18
-#define NUMMAXTOL (18 + NUMGAMETYPEFREESLOTS)
+#define MAXTOL             (1<<31)
+#define NUMBASETOLNAMES    (19)
+#define NUMTOLNAMES        (NUMBASETOLNAMES + NUMGAMETYPEFREESLOTS)
 
 typedef struct
 {
 	const char *name;
 	UINT32 flag;
 } tolinfo_t;
-extern tolinfo_t TYPEOFLEVEL[NUMMAXTOL];
-extern INT32 numtolinfo;
+extern tolinfo_t TYPEOFLEVEL[NUMTOLNAMES];
 extern UINT32 lastcustomtol;
 
 extern tic_t totalplaytime;
@@ -487,7 +509,6 @@ extern UINT16 emeralds;
 #define EMERALD7 64
 #define ALL7EMERALDS(v) ((v & (EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7)) == (EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7))
 
-// yes, even in non HAVE_BLUA
 #define NUM_LUABANKS 16 // please only make this number go up between versions, never down. you'll break saves otherwise. also, must fit in UINT8
 extern INT32 luabanks[NUM_LUABANKS];
 
@@ -537,7 +558,7 @@ extern recorddata_t *mainrecords[NUMMAPS];
 extern UINT8 mapvisited[NUMMAPS];
 
 // Temporary holding place for nights data for the current map
-nightsdata_t ntemprecords;
+extern nightsdata_t ntemprecords;
 
 extern UINT32 token; ///< Number of tokens collected in a level
 extern UINT32 tokenlist; ///< List of tokens collected
@@ -567,9 +588,12 @@ extern UINT16 nightslinktics;
 
 extern UINT8 introtoplay;
 extern UINT8 creditscutscene;
+extern UINT8 useBlackRock;
 
 extern UINT8 use1upSound;
 extern UINT8 maxXtraLife; // Max extra lives from rings
+extern UINT8 useContinues;
+#define continuesInSession (!multiplayer && (ultimatemode || (useContinues && !marathonmode) || (!modeattacking && !(cursaveslot > 0))))
 
 extern mobj_t *hunt1, *hunt2, *hunt3; // Emerald hunt locations
 
@@ -609,6 +633,19 @@ extern tic_t gametic;
 extern mapthing_t *playerstarts[MAXPLAYERS]; // Cooperative
 extern mapthing_t *bluectfstarts[MAXPLAYERS]; // CTF
 extern mapthing_t *redctfstarts[MAXPLAYERS]; // CTF
+
+#define WAYPOINTSEQUENCESIZE 256
+#define NUMWAYPOINTSEQUENCES 256
+extern mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
+extern UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
+
+void P_AddWaypoint(UINT8 sequence, UINT8 id, mobj_t *waypoint);
+mobj_t *P_GetFirstWaypoint(UINT8 sequence);
+mobj_t *P_GetLastWaypoint(UINT8 sequence);
+mobj_t *P_GetPreviousWaypoint(mobj_t *current, boolean wrap);
+mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap);
+mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo);
+boolean P_IsDegeneratedWaypointSequence(UINT8 sequence);
 
 // =====================================
 // Internal parameters, used for engine.

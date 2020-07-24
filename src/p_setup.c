@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,7 +27,7 @@
 #include "i_system.h"
 
 #include "r_data.h"
-#include "r_things.h"
+#include "r_things.h" // for R_AddSpriteDefs
 #include "r_patch.h"
 #include "r_sky.h"
 #include "r_draw.h"
@@ -57,9 +57,7 @@
 
 #include "filesrch.h" // refreshdirmenu
 
-#ifdef HAVE_BLUA
 #include "lua_hud.h" // level title
-#endif
 
 #include "f_finale.h" // wipes
 
@@ -79,9 +77,7 @@
 #include "hardware/hw_model.h"
 #endif
 
-#ifdef ESLOPE
 #include "p_slopes.h"
-#endif
 
 #include "fastcmp.h" // textmap parsing
 
@@ -147,6 +143,133 @@ mapthing_t *deathmatchstarts[MAX_DM_STARTS];
 mapthing_t *playerstarts[MAXPLAYERS];
 mapthing_t *bluectfstarts[MAXPLAYERS];
 mapthing_t *redctfstarts[MAXPLAYERS];
+
+// Maintain waypoints
+mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
+UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
+
+void P_AddWaypoint(UINT8 sequence, UINT8 id, mobj_t *waypoint)
+{
+	waypoints[sequence][id] = waypoint;
+	if (id >= numwaypoints[sequence])
+		numwaypoints[sequence] = id + 1;
+}
+
+static void P_ResetWaypoints(void)
+{
+	UINT16 sequence, id;
+	for (sequence = 0; sequence < NUMWAYPOINTSEQUENCES; sequence++)
+	{
+		for (id = 0; id < numwaypoints[sequence]; id++)
+			waypoints[sequence][id] = NULL;
+
+		numwaypoints[sequence] = 0;
+	}
+}
+
+mobj_t *P_GetFirstWaypoint(UINT8 sequence)
+{
+	return waypoints[sequence][0];
+}
+
+mobj_t *P_GetLastWaypoint(UINT8 sequence)
+{
+	return waypoints[sequence][numwaypoints[sequence] - 1];
+}
+
+mobj_t *P_GetPreviousWaypoint(mobj_t *current, boolean wrap)
+{
+	UINT8 sequence = current->threshold;
+	UINT8 id = current->health;
+
+	if (id == 0)
+	{
+		if (!wrap)
+			return NULL;
+
+		id = numwaypoints[sequence] - 1;
+	}
+	else
+		id--;
+
+	return waypoints[sequence][id];
+}
+
+mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap)
+{
+	UINT8 sequence = current->threshold;
+	UINT8 id = current->health;
+
+	if (id == numwaypoints[sequence] - 1)
+	{
+		if (!wrap)
+			return NULL;
+
+		id = 0;
+	}
+	else
+		id++;
+
+	return waypoints[sequence][id];
+}
+
+mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo)
+{
+	UINT8 wp;
+	mobj_t *mo2, *result = NULL;
+	fixed_t bestdist = 0;
+	fixed_t curdist;
+
+	for (wp = 0; wp < numwaypoints[sequence]; wp++)
+	{
+		mo2 = waypoints[sequence][wp];
+
+		if (!mo2)
+			continue;
+
+		curdist = P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z);
+
+		if (result && curdist > bestdist)
+			continue;
+
+		result = mo2;
+		bestdist = curdist;
+	}
+
+	return result;
+}
+
+// Return true if all waypoints are in the same location
+boolean P_IsDegeneratedWaypointSequence(UINT8 sequence)
+{
+	mobj_t *first, *waypoint;
+	UINT8 wp;
+
+	if (numwaypoints[sequence] <= 1)
+		return true;
+
+	first = waypoints[sequence][0];
+
+	for (wp = 1; wp < numwaypoints[sequence]; wp++)
+	{
+		waypoint = waypoints[sequence][wp];
+
+		if (!waypoint)
+			continue;
+
+		if (waypoint->x != first->x)
+			return false;
+
+		if (waypoint->y != first->y)
+			return false;
+
+		if (waypoint->z != first->z)
+			return false;
+	}
+
+	return true;
+}
+
 
 /** Logs an error about a map being corrupt, then terminate.
   * This allows reporting highly technical errors for usefulness, without
@@ -221,14 +344,19 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->actnum = 0;
 	mapheaderinfo[num]->typeoflevel = 0;
 	mapheaderinfo[num]->nextlevel = (INT16)(i + 1);
+	mapheaderinfo[num]->marathonnext = 0;
 	mapheaderinfo[num]->startrings = 0;
+	mapheaderinfo[num]->sstimer = 90;
+	mapheaderinfo[num]->ssspheres = 1;
+	mapheaderinfo[num]->gravity = FRACUNIT/2;
+	mapheaderinfo[num]->keywords[0] = '\0';
 	snprintf(mapheaderinfo[num]->musname, 7, "%sM", G_BuildMapName(i));
 	mapheaderinfo[num]->musname[6] = 0;
 	mapheaderinfo[num]->mustrack = 0;
 	mapheaderinfo[num]->muspos = 0;
 	mapheaderinfo[num]->musinterfadeout = 0;
-	mapheaderinfo[num]->musintername[0] = '\0';
-	mapheaderinfo[num]->muspostbossname[6] = 0;
+	mapheaderinfo[num]->musintername[0] = 0;
+	mapheaderinfo[num]->muspostbossname[0] = 0;
 	mapheaderinfo[num]->muspostbosstrack = 0;
 	mapheaderinfo[num]->muspostbosspos = 0;
 	mapheaderinfo[num]->muspostbossfadein = 0;
@@ -410,7 +538,7 @@ levelflat refers to an array of level flats,
 or NULL if we want to allocate it now.
 */
 static INT32
-Ploadflat (levelflat_t *levelflat, const char *flatname)
+Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 {
 #ifndef NO_PNG_LUMPS
 	UINT8         buffer[8];
@@ -421,30 +549,25 @@ Ploadflat (levelflat_t *levelflat, const char *flatname)
 
 	size_t i;
 
-	if (levelflat)
+	// Scan through the already found flats, return if it matches.
+	for (i = 0; i < numlevelflats; i++)
 	{
-		// Scan through the already found flats, return if it matches.
-		for (i = 0; i < numlevelflats; i++)
-		{
-			if (strnicmp(levelflat[i].name, flatname, 8) == 0)
-				return i;
-		}
+		if (strnicmp(levelflat[i].name, flatname, 8) == 0)
+			return i;
 	}
 
-#ifndef ZDEBUG
-	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
-#endif
-
-	if (numlevelflats >= MAXLEVELFLATS)
-		I_Error("Too many flats in level\n");
-
-	if (levelflat)
-		levelflat += numlevelflats;
-	else
+	if (resize)
 	{
 		// allocate new flat memory
 		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
 		levelflat  = levelflats + numlevelflats;
+	}
+	else
+	{
+		if (numlevelflats >= MAXLEVELFLATS)
+			I_Error("Too many flats in level\n");
+
+		levelflat += numlevelflats;
 	}
 
 	// Store the name.
@@ -452,9 +575,9 @@ Ploadflat (levelflat_t *levelflat, const char *flatname)
 	strupr(levelflat->name);
 
 	/* If we can't find a flat, try looking for a texture! */
-	if (( flatnum = R_GetFlatNumForName(flatname) ) == LUMPERROR)
+	if (( flatnum = R_GetFlatNumForName(levelflat->name) ) == LUMPERROR)
 	{
-		if (( texturenum = R_CheckTextureNumForName(flatname) ) == -1)
+		if (( texturenum = R_CheckTextureNumForName(levelflat->name) ) == -1)
 		{
 			// check for REDWALL
 			if (( texturenum = R_CheckTextureNumForName("REDWALL") ) != -1)
@@ -500,6 +623,10 @@ flatfound:
 		levelflat->u.flat.baselumpnum = LUMPERROR;
 	}
 
+#ifndef ZDEBUG
+	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+#endif
+
 	return ( numlevelflats++ );
 }
 
@@ -507,7 +634,7 @@ flatfound:
 // allocate an id for it, and set the levelflat (to speedup search)
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 {
-	return Ploadflat(levelflat, flatname);
+	return Ploadflat(levelflat, flatname, false);
 }
 
 // help function for Lua and $$$.sav reading
@@ -516,7 +643,7 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	return Ploadflat(levelflats, flatname);
+	return Ploadflat(levelflats, flatname, true);
 }
 
 // help function for $$$.sav checking
@@ -697,47 +824,27 @@ void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum)
 
 static void P_SpawnEmeraldHunt(void)
 {
-	INT32 emer1, emer2, emer3;
-	INT32 timeout = 0; // keeps from getting stuck
+	INT32 emer[3], num[MAXHUNTEMERALDS], i, randomkey;
+	fixed_t x, y, z;
 
-	emer1 = emer2 = emer3 = 0;
+	for (i = 0; i < numhuntemeralds; i++)
+		num[i] = i;
 
-	//increment spawn numbers because zero is valid.
-	emer1 = (P_RandomKey(numhuntemeralds)) + 1;
-	while (timeout++ < 100)
+	for (i = 0; i < 3; i++)
 	{
-		emer2 = (P_RandomKey(numhuntemeralds)) + 1;
+		// generate random index, shuffle afterwards
+		randomkey = P_RandomKey(numhuntemeralds--);
+		emer[i] = num[randomkey];
+		num[randomkey] = num[numhuntemeralds];
+		num[numhuntemeralds] = emer[i];
 
-		if (emer2 != emer1)
-			break;
+		// spawn emerald
+		x = huntemeralds[emer[i]]->x<<FRACBITS;
+		y = huntemeralds[emer[i]]->y<<FRACBITS;
+		z = P_GetMapThingSpawnHeight(MT_EMERHUNT, huntemeralds[emer[i]], x, y);
+		P_SetMobjStateNF(P_SpawnMobj(x, y, z, MT_EMERHUNT),
+			mobjinfo[MT_EMERHUNT].spawnstate+i);
 	}
-
-	timeout = 0;
-	while (timeout++ < 100)
-	{
-		emer3 = (P_RandomKey(numhuntemeralds)) + 1;
-
-		if (emer3 != emer2 && emer3 != emer1)
-			break;
-	}
-
-	//decrement spawn values to the actual number because zero is valid.
-	if (emer1--)
-		P_SpawnMobj(huntemeralds[emer1]->x<<FRACBITS,
-			huntemeralds[emer1]->y<<FRACBITS,
-			huntemeralds[emer1]->z<<FRACBITS, MT_EMERHUNT);
-
-	if (emer2--)
-		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer2]->x<<FRACBITS,
-			huntemeralds[emer2]->y<<FRACBITS,
-			huntemeralds[emer2]->z<<FRACBITS, MT_EMERHUNT),
-		mobjinfo[MT_EMERHUNT].spawnstate+1);
-
-	if (emer3--)
-		P_SetMobjStateNF(P_SpawnMobj(huntemeralds[emer3]->x<<FRACBITS,
-			huntemeralds[emer3]->y<<FRACBITS,
-			huntemeralds[emer3]->z<<FRACBITS, MT_EMERHUNT),
-		mobjinfo[MT_EMERHUNT].spawnstate+2);
 }
 
 static void P_SpawnMapThings(boolean spawnemblems)
@@ -870,13 +977,12 @@ static void P_InitializeSector(sector_t *ss)
 	ss->camsec = -1;
 
 	ss->floorlightsec = ss->ceilinglightsec = -1;
-	ss->crumblestate = 0;
+	ss->crumblestate = CRUMBLE_NONE;
 
 	ss->touching_thinglist = NULL;
 
 	ss->linecount = 0;
 	ss->lines = NULL;
-	ss->tagline = NULL;
 
 	ss->ffloors = NULL;
 	ss->attached = NULL;
@@ -889,17 +995,6 @@ static void P_InitializeSector(sector_t *ss)
 
 	ss->extra_colormap = NULL;
 
-#ifdef HWRENDER // ----- for special tricks with HW renderer -----
-	ss->pseudoSector = false;
-	ss->virtualFloor = false;
-	ss->virtualFloorheight = 0;
-	ss->virtualCeiling = false;
-	ss->virtualCeilingheight = 0;
-	ss->sectorLines = NULL;
-	ss->stackList = NULL;
-	ss->lineoutLength = -1.0l;
-#endif // ----- end special tricks -----
-
 	ss->gravity = NULL;
 	ss->verticalflip = false;
 	ss->flags = SF_FLIPSPECIAL_FLOOR;
@@ -911,11 +1006,9 @@ static void P_InitializeSector(sector_t *ss)
 	ss->preciplist = NULL;
 	ss->touching_preciplist = NULL;
 
-#ifdef ESLOPE
 	ss->f_slope = NULL;
 	ss->c_slope = NULL;
 	ss->hasslope = false;
-#endif
 
 	ss->spawn_lightlevel = ss->lightlevel;
 
@@ -980,9 +1073,7 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->splats = NULL;
 #endif
 	ld->firsttag = ld->nexttag = -1;
-#ifdef POLYOBJECTS
 	ld->polyobj = NULL;
-#endif
 
 	ld->text = NULL;
 	ld->callcount = 0;
@@ -1187,10 +1278,14 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 9: // Mace parameters
 			case 14: // Bustable block parameters
 			case 15: // Fan particle spawner parameters
+			case 334: // Trigger linedef executor: Object dye - Continuous
+			case 335: // Trigger linedef executor: Object dye - Each time
+			case 336: // Trigger linedef executor: Object dye - Once
 			case 425: // Calls P_SetMobjState on calling mobj
 			case 434: // Custom Power
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
 			case 461: // Spawns an object on the map based on texture offsets
+			case 463: // Colorizes an object
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -1892,10 +1987,8 @@ static void P_InitializeSeg(seg_t *seg)
 
 	seg->numlights = 0;
 	seg->rlights = NULL;
-#ifdef POLYOBJECTS
 	seg->polyseg = NULL;
 	seg->dontrenderme = false;
-#endif
 }
 
 static void P_LoadSegs(UINT8 *data)
@@ -2258,11 +2351,9 @@ static boolean P_LoadBlockMap(UINT8 *data, size_t count)
 	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 	blockmap = blockmaplump+4;
 
-#ifdef POLYOBJECTS
 	// haleyjd 2/22/06: setup polyobject blockmap
 	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
 	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
 	return true;
 }
 
@@ -2513,11 +2604,9 @@ static void P_CreateBlockMap(void)
 		blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 		blockmap = blockmaplump + 4;
 
-#ifdef POLYOBJECTS
 		// haleyjd 2/22/06: setup polyobject blockmap
 		count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
 		polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-#endif
 	}
 }
 
@@ -3057,6 +3146,7 @@ static void P_LoadNightsGhosts(void)
 {
 	const size_t glen = strlen(srb2home)+1+strlen("replay")+1+strlen(timeattackfolder)+1+strlen("MAPXX")+1;
 	char *gpath = malloc(glen);
+	INT32 i;
 
 	if (!gpath)
 		return;
@@ -3064,16 +3154,43 @@ static void P_LoadNightsGhosts(void)
 	sprintf(gpath,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s", srb2home, timeattackfolder, G_BuildMapName(gamemap));
 
 	// Best Score ghost
-	if (cv_ghost_bestscore.value && FIL_FileExists(va("%s-score-best.lmp", gpath)))
-			G_AddGhost(va("%s-score-best.lmp", gpath));
+	if (cv_ghost_bestscore.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_bestscore.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-score-best.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-score-best.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Best Time ghost
-	if (cv_ghost_besttime.value && FIL_FileExists(va("%s-time-best.lmp", gpath)))
-			G_AddGhost(va("%s-time-best.lmp", gpath));
+	if (cv_ghost_besttime.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_besttime.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-time-best.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-time-best.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Last ghost
-	if (cv_ghost_last.value && FIL_FileExists(va("%s-last.lmp", gpath)))
-		G_AddGhost(va("%s-last.lmp", gpath));
+	if (cv_ghost_last.value)
+	{
+		for (i = 0; i < numskins; ++i)
+		{
+			if (cv_ghost_last.value == 1 && players[consoleplayer].skin != i)
+				continue;
+
+			if (FIL_FileExists(va("%s-%s-last.lmp", gpath, skins[i].name)))
+				G_AddGhost(va("%s-%s-last.lmp", gpath, skins[i].name));
+		}
+	}
 
 	// Guest ghost
 	if (cv_ghost_guest.value && FIL_FileExists(va("%s-guest.lmp", gpath)))
@@ -3096,7 +3213,7 @@ static void P_InitTagGametype(void)
 	//Also, you'd never have to loop through all 32 players slots to find anything ever again.
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i] && !players[i].spectator)
+		if (playeringame[i] && !(players[i].spectator || players[i].quittime))
 		{
 			playersactive[realnumplayers] = i; //stores the player's node in the array.
 			realnumplayers++;
@@ -3118,7 +3235,7 @@ static void P_InitTagGametype(void)
 	if (players[playersactive[i]].mo)
 		P_RemoveMobj(players[playersactive[i]].mo);
 
-	G_SpawnPlayer(playersactive[i], false); //respawn the lucky player in his dedicated spawn location.
+	G_SpawnPlayer(playersactive[i]); //respawn the lucky player in his dedicated spawn location.
 }
 
 static void P_SetupCamera(void)
@@ -3195,21 +3312,6 @@ static void P_InitCamera(void)
 		if ((splitscreen && cv_useranalog[1].value) || botingame)
 			CV_SetValue(&cv_analog[1], true);
 	}
-}
-
-static boolean CanSaveLevel(INT32 mapnum)
-{
-	if (ultimatemode) // never save in ultimate (probably redundant with cursaveslot also being checked)
-		return false;
-
-	if (G_IsSpecialStage(mapnum) // don't save in special stages
-		|| mapnum == lastmaploaded) // don't save if the last map loaded was this one
-		return false;
-
-	// Any levels that have the savegame flag can save normally.
-	// If the game is complete for this save slot, then any level can save!
-	// On the other side of the spectrum, if lastmaploaded is 0, then the save file has only just been created and needs to save ASAP!
-	return (mapheaderinfo[mapnum-1]->levelflags & LF_SAVEGAME || gamecomplete || !lastmaploaded);
 }
 
 static void P_RunSpecialStageWipe(void)
@@ -3296,7 +3398,7 @@ static void P_InitPlayers(void)
 			G_DoReborn(i);
 		else // gametype is GT_COOP or GT_RACE
 		{
-			G_SpawnPlayer(i, players[i].starposttime);
+			G_SpawnPlayer(i);
 			if (players[i].starposttime)
 				P_ClearStarPost(players[i].starpostnum);
 		}
@@ -3374,7 +3476,7 @@ static void P_InitGametype(void)
 
 	if (G_TagGametype())
 		P_InitTagGametype();
-	else if (gametype == GT_RACE && server)
+	else if (((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE) && server)
 		CV_StealthSetValue(&cv_numlaps,
 		(cv_basenumlaps.value)
 			? cv_basenumlaps.value
@@ -3526,9 +3628,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// Close text prompt before freeing the old level
 	F_EndTextPrompt(false, true);
 
-#ifdef HAVE_BLUA
 	LUA_InvalidateLevel();
-#endif
 
 	for (ss = sectors; sectors+numsectors != ss; ss++)
 	{
@@ -3575,6 +3675,8 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	P_ResetSpawnpoints();
 
+	P_ResetWaypoints();
+
 	P_MapStart();
 
 	if (!P_LoadMapFromFile())
@@ -3584,9 +3686,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
 
-#ifdef ESLOPE
 	P_SpawnSlopes(fromnetsave);
-#endif
 
 	P_SpawnMapThings(!fromnetsave);
 	skyboxmo[0] = skyboxviewpnts[0];
@@ -3650,11 +3750,19 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	P_RunCachedActions();
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || players[consoleplayer].lives <= 0)
-		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(gamemap))
-		G_SaveGame((UINT32)cursaveslot);
-
-	lastmaploaded = gamemap; // HAS to be set after saving!!
+	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
+	if (!titlemapinaction)
+	{
+		if (!lastmaploaded) // Start a new game?
+		{
+			// I'd love to do this in the menu code instead of here, but everything's a mess and I can't guarantee saving proper player struct info before the first act's started. You could probably refactor it, but it'd be a lot of effort. Easier to just work off known good code. ~toast 22/06/2020
+			if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || marathonmode)
+			&& (!modifiedgame || savemoddata) && cursaveslot > 0)
+				G_SaveGame((UINT32)cursaveslot, gamemap);
+			// If you're looking for saving sp file progression (distinct from G_SaveGameOver), check G_DoCompleted.
+		}
+		lastmaploaded = gamemap; // HAS to be set after saving!!
+	}
 
 	if (!fromnetsave) // uglier hack
 	{ // to make a newly loaded level start on the second frame.
@@ -3665,9 +3773,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
-#ifdef HAVE_BLUA
 		LUAh_MapLoad();
-#endif
 	}
 
 	// No render mode, stop here.
@@ -3684,8 +3790,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 		return true;
 
 	// If so...
-	if ((!(mapheaderinfo[gamemap-1]->levelflags & LF_NOTITLECARD)) && (*mapheaderinfo[gamemap-1]->lvlttl != '\0'))
-		G_PreLevelTitleCard();
+	G_PreLevelTitleCard();
 
 	return true;
 }
@@ -3700,12 +3805,15 @@ void HWR_SetupLevel(void)
 	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
 	// Level textures are only reloaded after R_LoadTextures, which is
 	// when the texture list is loaded.
+
+	// Sal: Unfortunately, NOT freeing them causes the dreaded Color Bug.
+	HWR_FreeMipmapCache();
+
 #ifdef ALAM_LIGHTING
 	// BP: reset light between levels (we draw preview frame lights on current frame)
 	HWR_ResetLights();
 #endif
-	// Correct missing sidedefs & deep water trick
-	HWR_CorrectSWTricks();
+
 	HWR_CreatePlanePolygons((INT32)numnodes - 1);
 }
 #endif
@@ -3782,12 +3890,12 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 {
 	UINT16 numlumps = *pnumlumps;
 	size_t i = *pi;
-	if (!stricmp(lumpinfo->name2, folName))
+	if (!stricmp(lumpinfo->fullname, folName))
 	{
 		lumpinfo++;
 		*start = ++i;
 		for (; i < numlumps; i++, lumpinfo++)
-			if (strnicmp(lumpinfo->name2, folName, strlen(folName)))
+			if (strnicmp(lumpinfo->fullname, folName, strlen(folName)))
 				break;
 		lumpinfo--;
 		*end = i-- - *start;
@@ -3827,10 +3935,9 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 mapPos, mapNum = 0;
 
 	// Init file.
-	if ((numlumps = W_InitFile(wadfilename, false)) == INT16_MAX)
+	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
 	{
 		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), wadfilename);
 		return false;
 	}
 	else
@@ -3856,10 +3963,8 @@ boolean P_AddWadFile(const char *wadfilename)
 
 		// Update the detected resources.
 		// Note: ALWAYS load Lua scripts first, SOCs right after, and the remaining resources afterwards.
-#ifdef HAVE_BLUA
 //		if (luaNum) // Lua scripts.
 //			P_LoadLuaScrRange(wadnum, luaPos, luaNum);
-#endif
 //		if (socNum) // SOCs.
 //			P_LoadDehackRange(wadnum, socPos, socNum);
 		if (sfxNum) // Sounds. TODO: Function currently only updates already existing sounds, the rest is handled somewhere else.

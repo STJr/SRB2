@@ -90,6 +90,9 @@ static   unsigned long  nombre = NEWTICRATE*10;
 static void I_BlitScreenVesa1(void);   //see later
 void I_FinishUpdate (void)
 {
+	if (marathonmode)
+		SCR_DisplayMarathonInfo();
+
 	// draw captions if enabled
 	if (cv_closedcaptioning.value)
 		SCR_ClosedCaptions();
@@ -339,7 +342,4 @@ void I_StartupGraphics(void)
 
 }
 
-void I_StartupHardwareGraphics(void)
-{
-	// oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo yeah oh yeah woo y
-}
+void VID_StartupOpenGL(void) {}

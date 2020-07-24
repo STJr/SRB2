@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -165,6 +165,7 @@ void A_SetTics();
 void A_SetRandomTics();
 void A_ChangeColorRelative();
 void A_ChangeColorAbsolute();
+void A_Dye();
 void A_MoveRelative();
 void A_MoveAbsolute();
 void A_Thrust();
@@ -283,6 +284,7 @@ void A_RolloutRock();
 void A_DragonbomberSpawn();
 void A_DragonWing();
 void A_DragonSegment();
+void A_ChangeHeight();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -450,6 +452,8 @@ typedef enum sprite
 
 	// Projectiles
 	SPR_MISL,
+	SPR_LASR, // GFZ3 laser
+	SPR_LASF, // GFZ3 laser flames
 	SPR_TORP, // Torpedo
 	SPR_ENRG, // Energy ball
 	SPR_MINE, // Skim mine
@@ -670,6 +674,7 @@ typedef enum sprite
 	SPR_LCKN, // Target
 	SPR_TTAG, // Tag Sign
 	SPR_GFLG, // Got Flag sign
+	SPR_FNSF, // Finish flag
 
 	SPR_CORK,
 	SPR_LHRT,
@@ -769,6 +774,9 @@ typedef enum sprite
 	SPR_GFZD, // GFZ debris
 	SPR_BRIC, // Bricks
 	SPR_WDDB, // Wood Debris
+	SPR_BRIR, // CEZ3 colored bricks
+	SPR_BRIB,
+	SPR_BRIY,
 
 	// Gravity Well Objects
 	SPR_GWLG,
@@ -1181,6 +1189,7 @@ typedef enum state
 	S_JETJAW_CHOMP14,
 	S_JETJAW_CHOMP15,
 	S_JETJAW_CHOMP16,
+	S_JETJAW_SOUND,
 
 	// Snailer
 	S_SNAILER1,
@@ -1603,10 +1612,12 @@ typedef enum state
 	S_FANG_PINCHPATHINGSTART1,
 	S_FANG_PINCHPATHINGSTART2,
 	S_FANG_PINCHPATHING,
+	S_FANG_PINCHBOUNCE0,
 	S_FANG_PINCHBOUNCE1,
 	S_FANG_PINCHBOUNCE2,
 	S_FANG_PINCHBOUNCE3,
 	S_FANG_PINCHBOUNCE4,
+	S_FANG_PINCHFALL0,
 	S_FANG_PINCHFALL1,
 	S_FANG_PINCHFALL2,
 	S_FANG_PINCHSKID1,
@@ -2021,6 +2032,7 @@ typedef enum state
 	S_SIGNSTOP,
 	S_SIGNBOARD,
 	S_EGGMANSIGN,
+	S_CLEARSIGN,
 
 	// Spike Ball
 	S_SPIKEBALL1,
@@ -2217,6 +2229,14 @@ typedef enum state
 	S_ROCKET,
 
 	S_LASER,
+	S_LASER2,
+	S_LASERFLASH,
+
+	S_LASERFLAME1,
+	S_LASERFLAME2,
+	S_LASERFLAME3,
+	S_LASERFLAME4,
+	S_LASERFLAME5,
 
 	S_TORPEDO,
 
@@ -2502,6 +2522,7 @@ typedef enum state
 	S_TNTBARREL_EXPL4,
 	S_TNTBARREL_EXPL5,
 	S_TNTBARREL_EXPL6,
+	S_TNTBARREL_EXPL7,
 	S_TNTBARREL_FLYING,
 
 	// TNT proximity shell
@@ -3484,6 +3505,9 @@ typedef enum state
 	// Got Flag Sign
 	S_GOTFLAG,
 
+	// Finish flag
+	S_FINISHFLAG,
+
 	S_CORK,
 	S_LHRT,
 
@@ -3980,6 +4004,9 @@ typedef enum state
 	S_GFZDEBRIS,
 	S_BRICKDEBRIS,
 	S_WOODDEBRIS,
+	S_REDBRICKDEBRIS, // for CEZ3
+	S_BLUEBRICKDEBRIS, // for CEZ3
+	S_YELLOWBRICKDEBRIS, // for CEZ3
 
 #ifdef SEENAMES
 	S_NAMECHECK,
@@ -4624,6 +4651,7 @@ typedef enum mobj_type
 	MT_LOCKONINF, // In-level Target
 	MT_TAG, // Tag Sign
 	MT_GOTFLAG, // Got Flag sign
+	MT_FINISHFLAG, // Finish flag
 
 	// Ambient Sounds
 	MT_AWATERA, // Ambient Water Sound 1
@@ -4779,6 +4807,9 @@ typedef enum mobj_type
 	MT_GFZDEBRIS,
 	MT_BRICKDEBRIS,
 	MT_WOODDEBRIS,
+	MT_REDBRICKDEBRIS, // for CEZ3
+	MT_BLUEBRICKDEBRIS, // for CEZ3
+	MT_YELLOWBRICKDEBRIS, // for CEZ3
 
 #ifdef SEENAMES
 	MT_NAMECHECK,

@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,10 +15,14 @@
 #ifndef __X_MENU__
 #define __X_MENU__
 
+#include "doomstat.h" // for NUMGAMETYPES
 #include "d_event.h"
 #include "command.h"
-#include "r_things.h" // for SKINNAMESIZE
+#include "r_skins.h" // for SKINNAMESIZE
 #include "f_finale.h" // for ttmode_enum
+
+// Compatibility with old-style named NiGHTS replay files.
+#define OLDNREPLAYNAME
 
 //
 // MENUS
@@ -30,6 +34,9 @@
 #define MENUBITS 6
 
 // Menu IDs sectioned by numeric places to signify hierarchy
+/**
+ * IF YOU MODIFY THIS, MODIFY MENUTYPES_LIST[] IN dehacked.c TO MATCH.
+ */
 typedef enum
 {
 	MN_NONE,
@@ -56,6 +63,8 @@ typedef enum
 	MN_SP_NIGHTS_GUESTREPLAY,
 	MN_SP_NIGHTS_REPLAY,
 	MN_SP_NIGHTS_GHOST,
+
+	MN_SP_MARATHON,
 
 	// Multiplayer
 	MN_MP_MAIN,
@@ -88,8 +97,6 @@ typedef enum
 	MN_OP_COLOR,
 	MN_OP_OPENGL,
 	MN_OP_OPENGL_LIGHTING,
-	MN_OP_OPENGL_FOG,
-	MN_OP_OPENGL_COLOR,
 
 	MN_OP_SOUND,
 
@@ -128,6 +135,9 @@ typedef enum
 	MN_SPECIAL,
 	NUMMENUTYPES,
 } menutype_t; // up to 63; MN_SPECIAL = 53
+#define MTREE2(a,b) (a | (b<<MENUBITS))
+#define MTREE3(a,b,c) MTREE2(a, MTREE2(b,c))
+#define MTREE4(a,b,c,d) MTREE2(a, MTREE3(b,c,d))
 
 typedef struct
 {
@@ -322,6 +332,9 @@ typedef struct menu_s
 void M_SetupNextMenu(menu_t *menudef);
 void M_ClearMenus(boolean callexitmenufunc);
 
+// Maybe this goes here????? Who knows.
+boolean M_MouseNeeded(void);
+
 extern menu_t *currentMenu;
 
 extern menu_t MainDef;
@@ -345,11 +358,11 @@ typedef struct
 	// new character select
 	char displayname[SKINNAMESIZE+1];
 	SINT8 skinnum[2];
-	UINT8 oppositecolor;
+	UINT16 oppositecolor;
 	char nametag[8];
 	patch_t *namepic;
-	UINT8 tagtextcolor;
-	UINT8 tagoutlinecolor;
+	UINT16 tagtextcolor;
+	UINT16 tagoutlinecolor;
 } description_t;
 
 // level select platter
@@ -393,7 +406,7 @@ typedef struct
 	UINT8 numemeralds;
 	UINT8 numgameovers;
 	INT32 lives;
-	INT32 continues;
+	INT32 continuescore;
 	INT32 gamemap;
 } saveinfo_t;
 
@@ -409,6 +422,7 @@ extern INT16 char_on, startchar;
 
 #define MAXSAVEGAMES 31
 #define NOSAVESLOT 0 //slot where Play Without Saving appears
+#define MARATHONSLOT 420 // just has to be nonzero, but let's use one that'll show up as an obvious error if something goes wrong while not using our existing saves
 
 #define BwehHehHe() S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)) // Bweh heh he
 
@@ -432,6 +446,23 @@ void Addons_option_Onchange(void);
 
 // Moviemode menu updating
 void Moviemode_option_Onchange(void);
+
+// Player Setup menu colors linked list
+typedef struct menucolor_s {
+	struct menucolor_s *next;
+	struct menucolor_s *prev;
+	UINT16 color;
+} menucolor_t;
+
+extern menucolor_t *menucolorhead, *menucolortail;
+
+void M_AddMenuColor(UINT16 color);
+void M_MoveColorBefore(UINT16 color, UINT16 targ);
+void M_MoveColorAfter(UINT16 color, UINT16 targ);
+UINT16 M_GetColorBefore(UINT16 color);
+UINT16 M_GetColorAfter(UINT16 color);
+void M_InitPlayerSetupColors(void);
+void M_FreePlayerSetupColors(void);
 
 // These defines make it a little easier to make menus
 #define DEFAULTMENUSTYLE(id, header, source, prev, x, y)\

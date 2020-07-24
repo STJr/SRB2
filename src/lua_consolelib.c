@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2019 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,7 +11,6 @@
 /// \brief console modifying/etc library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "p_local.h"
 #include "g_game.h"
@@ -87,7 +86,7 @@ deny:
 
 	CONS_Alert(CONS_WARNING, M_GetText("Illegal lua command received from %s\n"), player_names[playernum]);
 	if (server)
-		SendKick(playernum, KICK_MSG_CON_FAIL);
+		SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 }
 
 // Wrapper for COM_AddCommand commands
@@ -431,22 +430,8 @@ static int lib_cvRegisterVar(lua_State *L)
 
 static int lib_cvFindVar(lua_State *L)
 {
-	consvar_t *cv;
-	if (( cv = CV_FindVar(luaL_checkstring(L,1)) ))
-	{
-		lua_settop(L,1);/* We only want one argument in the stack. */
-		lua_pushlightuserdata(L, cv);/* Now the second value on stack. */
-		luaL_getmetatable(L, META_CVAR);
-		/*
-		The metatable is the last value on the stack, so this
-		applies it to the second value, which is the cvar.
-		*/
-		lua_setmetatable(L,2);
-		lua_pushvalue(L,2);
-		return 1;
-	}
-	else
-		return 0;
+	LUA_PushLightUserdata(L, CV_FindVar(luaL_checkstring(L,1)), META_CVAR);
+	return 1;
 }
 
 // CONS_Printf for a single player
@@ -459,7 +444,7 @@ static int lib_consPrintf(lua_State *L)
 	if (n < 2)
 		return luaL_error(L, "CONS_Printf requires at least two arguments: player and text.");
 	//HUDSAFE
-	INLEVEL
+
 	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	if (!plr)
 		return LUA_ErrInvalid(L, "player_t");
@@ -551,5 +536,3 @@ int LUA_ConsoleLib(lua_State *L)
 	luaL_register(L, NULL, lib);
 	return 0;
 }
-
-#endif

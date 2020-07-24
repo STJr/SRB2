@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -227,28 +227,42 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 	}
 }
 
+// Blends two pixels together, using the equation
+// that matches the specified alpha style.
 UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	RGBA_t output;
+	INT16 fullalpha = (alpha - (0xFF - foreground.s.alpha));
 	if (style == AST_TRANSLUCENT)
 	{
-		if (alpha == 0)
+		if (fullalpha <= 0)
 			output.rgba = background.rgba;
-		else if (alpha == 0xFF)
-			output.rgba = foreground.rgba;
-		else if (alpha < 0xFF)
-		{
-			UINT8 beta = (0xFF - alpha);
-			output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
-			output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
-			output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
-		}
-		// write foreground pixel alpha
-		// if there's no pixel in here
-		if (!background.rgba)
-			output.s.alpha = foreground.s.alpha;
 		else
-			output.s.alpha = 0xFF;
+		{
+			// don't go too high
+			if (fullalpha >= 0xFF)
+				fullalpha = 0xFF;
+			alpha = (UINT8)fullalpha;
+
+			// if the background pixel is empty,
+			// match software and don't blend anything
+			if (!background.s.alpha)
+			{
+				// ...unless the foreground pixel ISN'T actually translucent.
+				if (alpha == 0xFF)
+					output.rgba = foreground.rgba;
+				else
+					output.rgba = 0;
+			}
+			else
+			{
+				UINT8 beta = (0xFF - alpha);
+				output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
+				output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
+				output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
+				output.s.alpha = 0xFF;
+			}
+		}
 		return output.rgba;
 	}
 #define clamp(c) max(min(c, 0xFF), 0x00);
@@ -296,18 +310,46 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 	return 0;
 }
 
-UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
+INT32 ASTTextureBlendingThreshold[2] = {255/11, (10*255/11)};
+
+// Blends a pixel for a texture patch.
+UINT32 ASTBlendTexturePixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	// Alpha style set to translucent?
 	if (style == AST_TRANSLUCENT)
 	{
 		// Is the alpha small enough for translucency?
-		if (alpha <= (10*255/11))
+		if (alpha <= ASTTextureBlendingThreshold[1])
+		{
+			// Is the patch way too translucent? Don't blend then.
+			if (alpha < ASTTextureBlendingThreshold[0])
+				return background.rgba;
+
+			return ASTBlendPixel(background, foreground, style, alpha);
+		}
+		else // just copy the pixel
+			return foreground.rgba;
+	}
+	else
+		return ASTBlendPixel(background, foreground, style, alpha);
+}
+
+// Blends two palette indexes for a texture patch, then
+// finds the nearest palette index from the blended output.
+UINT8 ASTBlendPaletteIndexes(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
+{
+	// Alpha style set to translucent?
+	if (style == AST_TRANSLUCENT)
+	{
+		// Is the alpha small enough for translucency?
+		if (alpha <= ASTTextureBlendingThreshold[1])
 		{
 			UINT8 *mytransmap;
+
 			// Is the patch way too translucent? Don't blend then.
-			if (alpha < 255/11)
+			if (alpha < ASTTextureBlendingThreshold[0])
 				return background;
+
 			// The equation's not exact but it works as intended. I'll call it a day for now.
 			mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
 			if (background != 0xFF)
@@ -372,7 +414,7 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 		{
 			for (; dest < cache + position + count; source++, dest++)
 				if (*source != 0xFF)
-					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -416,7 +458,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 		{
 			for (; dest < cache + position + count; --source, dest++)
 				if (*source != 0xFF)
-					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -699,256 +741,29 @@ void R_FlushTextureCache(void)
 int R_CountTexturesInTEXTURESLump(UINT16 wadNum, UINT16 lumpNum);
 void R_ParseTEXTURESLump(UINT16 wadNum, UINT16 lumpNum, INT32 *index);
 
-//
-// R_LoadTextures
-// Initializes the texture list with the textures from the world map.
-//
-#define TX_START "TX_START"
-#define TX_END "TX_END"
-void R_LoadTextures(void)
+#ifdef WALLFLATS
+static INT32
+Rloadflats (INT32 i, INT32 w)
 {
-	INT32 i, w;
 	UINT16 j;
-	UINT16 texstart, texend, texturesLumpPos;
-	patch_t *patchlump;
-	texpatch_t *patch;
+	UINT16 texstart, texend;
 	texture_t *texture;
+	texpatch_t *patch;
 
-	// Free previous memory before numtextures change.
-	if (numtextures)
+	// Yes
+	if (wadfiles[w]->type == RET_PK3)
 	{
-		for (i = 0; i < numtextures; i++)
-		{
-			Z_Free(textures[i]);
-			Z_Free(texturecache[i]);
-		}
-		Z_Free(texturetranslation);
-		Z_Free(textures);
-		Z_Free(texflats);
+		texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
+		texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
+	}
+	else
+	{
+		texstart = W_CheckNumForMarkerStartPwad("F_START", (UINT16)w, 0);
+		texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
 	}
 
-	// Load patches and textures.
-
-	// Get the number of textures to check.
-	// NOTE: Make SURE the system does not process
-	// the markers.
-	// This system will allocate memory for all duplicate/patched textures even if it never uses them,
-	// but the alternative is to spend a ton of time checking and re-checking all previous entries just to skip any potentially patched textures.
-	for (w = 0, numtextures = 0; w < numwadfiles; w++)
+	if (!( texstart == INT16_MAX || texend == INT16_MAX ))
 	{
-		// Count the textures from TEXTURES lumps
-		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
-		while (texturesLumpPos != INT16_MAX)
-		{
-			numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
-			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
-		}
-
-		// Count single-patch textures
-		if (wadfiles[w]->type == RET_PK3)
-		{
-			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
-			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
-		}
-		else
-		{
-			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0);
-			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
-		}
-
-		if (texstart == INT16_MAX || texend == INT16_MAX)
-#ifdef WALLFLATS
-			goto countflats;
-#else
-			continue;
-#endif
-
-		texstart++; // Do not count the first marker
-
-		// PK3s have subfolders, so we can't just make a simple sum
-		if (wadfiles[w]->type == RET_PK3)
-		{
-			for (j = texstart; j < texend; j++)
-			{
-				if (!W_IsLumpFolder((UINT16)w, j)) // Check if lump is a folder; if not, then count it
-					numtextures++;
-			}
-		}
-		else // Add all the textures between TX_START and TX_END
-		{
-			numtextures += (UINT32)(texend - texstart);
-		}
-
-#ifdef WALLFLATS
-countflats:
-		// Count flats
-		if (wadfiles[w]->type == RET_PK3)
-		{
-			texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
-			texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
-		}
-		else
-		{
-			texstart = W_CheckNumForNamePwad("F_START", (UINT16)w, 0);
-			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
-		}
-
-		if (texstart == INT16_MAX || texend == INT16_MAX)
-			continue;
-
-		texstart++; // Do not count the first marker
-
-		// PK3s have subfolders, so we can't just make a simple sum
-		if (wadfiles[w]->type == RET_PK3)
-		{
-			for (j = texstart; j < texend; j++)
-			{
-				if (!W_IsLumpFolder((UINT16)w, j)) // Check if lump is a folder; if not, then count it
-					numtextures++;
-			}
-		}
-		else // Add all the textures between F_START and F_END
-		{
-			numtextures += (UINT32)(texend - texstart);
-		}
-#endif
-	}
-
-	// If no textures found by this point, bomb out
-	if (!numtextures)
-		I_Error("No textures detected in any WADs!\n");
-
-	// Allocate memory and initialize to 0 for all the textures we are initialising.
-	// There are actually 5 buffers allocated in one for convenience.
-	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
-	texflats = Z_Calloc((numtextures * sizeof(*texflats)), PU_STATIC, NULL);
-
-	// Allocate texture column offset table.
-	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
-	// Allocate texture referencing cache.
-	texturecache     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
-	// Allocate texture width table.
-	texturewidth     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
-	// Allocate texture height table.
-	textureheight    = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
-	// Create translation table for global animation.
-	texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
-
-	for (i = 0; i < numtextures; i++)
-		texturetranslation[i] = i;
-
-	for (i = 0, w = 0; w < numwadfiles; w++)
-	{
-		// Get the lump numbers for the markers in the WAD, if they exist.
-		if (wadfiles[w]->type == RET_PK3)
-		{
-			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
-			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
-			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
-			while (texturesLumpPos != INT16_MAX)
-			{
-				R_ParseTEXTURESLump(w, texturesLumpPos, &i);
-				texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
-			}
-		}
-		else
-		{
-			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0);
-			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
-			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
-			if (texturesLumpPos != INT16_MAX)
-				R_ParseTEXTURESLump(w, texturesLumpPos, &i);
-		}
-
-		if (texstart == INT16_MAX || texend == INT16_MAX)
-#ifdef WALLFLATS
-			goto checkflats;
-#else
-			continue;
-#endif
-
-		texstart++; // Do not count the first marker
-
-		// Work through each lump between the markers in the WAD.
-		for (j = 0; j < (texend - texstart); j++)
-		{
-			UINT16 wadnum = (UINT16)w;
-			lumpnum_t lumpnum = texstart + j;
-#ifndef NO_PNG_LUMPS
-			size_t lumplength;
-#endif
-
-			if (wadfiles[w]->type == RET_PK3)
-			{
-				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
-					continue; // If it is then SKIP IT
-			}
-
-			patchlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
-#ifndef NO_PNG_LUMPS
-			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-#endif
-
-			//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
-			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
-
-			// Set texture properties.
-			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
-
-#ifndef NO_PNG_LUMPS
-			if (R_IsLumpPNG((UINT8 *)patchlump, lumplength))
-			{
-				INT16 width, height;
-				R_PNGDimensions((UINT8 *)patchlump, &width, &height, lumplength);
-				texture->width = width;
-				texture->height = height;
-			}
-			else
-#endif
-			{
-				texture->width = SHORT(patchlump->width);
-				texture->height = SHORT(patchlump->height);
-			}
-
-			texture->type = TEXTURETYPE_SINGLEPATCH;
-			texture->patchcount = 1;
-			texture->holes = false;
-			texture->flip = 0;
-
-			// Allocate information for the texture's patches.
-			patch = &texture->patches[0];
-
-			patch->originx = patch->originy = 0;
-			patch->wad = (UINT16)w;
-			patch->lump = texstart + j;
-			patch->flip = 0;
-
-			Z_Unlock(patchlump);
-
-			texturewidth[i] = texture->width;
-			textureheight[i] = texture->height << FRACBITS;
-			i++;
-		}
-
-#ifdef WALLFLATS
-checkflats:
-		// Yes
-		if (wadfiles[w]->type == RET_PK3)
-		{
-			texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
-			texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
-		}
-		else
-		{
-			texstart = W_CheckNumForNamePwad("F_START", (UINT16)w, 0);
-			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
-		}
-
-		if (texstart == INT16_MAX || texend == INT16_MAX)
-			continue;
-
-		texstart++; // Do not count the first marker
-
 		// Work through each lump between the markers in the WAD.
 		for (j = 0; j < (texend - texstart); j++)
 		{
@@ -1029,7 +844,242 @@ checkflats:
 			textureheight[i] = texture->height << FRACBITS;
 			i++;
 		}
+	}
+
+	return i;
+}
+#endif/*WALLFLATS*/
+
+#define TX_START "TX_START"
+#define TX_END "TX_END"
+
+static INT32
+Rloadtextures (INT32 i, INT32 w)
+{
+	UINT16 j;
+	UINT16 texstart, texend, texturesLumpPos;
+	texture_t *texture;
+	patch_t *patchlump;
+	texpatch_t *patch;
+
+	// Get the lump numbers for the markers in the WAD, if they exist.
+	if (wadfiles[w]->type == RET_PK3)
+	{
+		texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
+		texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
+		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
+		while (texturesLumpPos != INT16_MAX)
+		{
+			R_ParseTEXTURESLump(w, texturesLumpPos, &i);
+			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
+		}
+	}
+	else
+	{
+		texstart = W_CheckNumForMarkerStartPwad(TX_START, (UINT16)w, 0);
+		texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
+		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
+		if (texturesLumpPos != INT16_MAX)
+			R_ParseTEXTURESLump(w, texturesLumpPos, &i);
+	}
+
+	if (!( texstart == INT16_MAX || texend == INT16_MAX ))
+	{
+		// Work through each lump between the markers in the WAD.
+		for (j = 0; j < (texend - texstart); j++)
+		{
+			UINT16 wadnum = (UINT16)w;
+			lumpnum_t lumpnum = texstart + j;
+#ifndef NO_PNG_LUMPS
+			size_t lumplength;
 #endif
+
+			if (wadfiles[w]->type == RET_PK3)
+			{
+				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
+					continue; // If it is then SKIP IT
+			}
+
+			patchlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
+#ifndef NO_PNG_LUMPS
+			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+#endif
+
+			//CONS_Printf("\n\"%s\" is a single patch, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),patchlump->width, patchlump->height);
+			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
+
+			// Set texture properties.
+			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
+
+#ifndef NO_PNG_LUMPS
+			if (R_IsLumpPNG((UINT8 *)patchlump, lumplength))
+			{
+				INT16 width, height;
+				R_PNGDimensions((UINT8 *)patchlump, &width, &height, lumplength);
+				texture->width = width;
+				texture->height = height;
+			}
+			else
+#endif
+			{
+				texture->width = SHORT(patchlump->width);
+				texture->height = SHORT(patchlump->height);
+			}
+
+			texture->type = TEXTURETYPE_SINGLEPATCH;
+			texture->patchcount = 1;
+			texture->holes = false;
+			texture->flip = 0;
+
+			// Allocate information for the texture's patches.
+			patch = &texture->patches[0];
+
+			patch->originx = patch->originy = 0;
+			patch->wad = (UINT16)w;
+			patch->lump = texstart + j;
+			patch->flip = 0;
+
+			Z_Unlock(patchlump);
+
+			texturewidth[i] = texture->width;
+			textureheight[i] = texture->height << FRACBITS;
+			i++;
+		}
+	}
+
+	return i;
+}
+
+//
+// R_LoadTextures
+// Initializes the texture list with the textures from the world map.
+//
+void R_LoadTextures(void)
+{
+	INT32 i, w;
+	UINT16 j;
+	UINT16 texstart, texend, texturesLumpPos;
+
+	// Free previous memory before numtextures change.
+	if (numtextures)
+	{
+		for (i = 0; i < numtextures; i++)
+		{
+			Z_Free(textures[i]);
+			Z_Free(texturecache[i]);
+		}
+		Z_Free(texturetranslation);
+		Z_Free(textures);
+		Z_Free(texflats);
+	}
+
+	// Load patches and textures.
+
+	// Get the number of textures to check.
+	// NOTE: Make SURE the system does not process
+	// the markers.
+	// This system will allocate memory for all duplicate/patched textures even if it never uses them,
+	// but the alternative is to spend a ton of time checking and re-checking all previous entries just to skip any potentially patched textures.
+	for (w = 0, numtextures = 0; w < numwadfiles; w++)
+	{
+#ifdef WALLFLATS
+		// Count flats
+		if (wadfiles[w]->type == RET_PK3)
+		{
+			texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
+			texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
+		}
+		else
+		{
+			texstart = W_CheckNumForMarkerStartPwad("F_START", (UINT16)w, 0);
+			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
+		}
+
+		if (!( texstart == INT16_MAX || texend == INT16_MAX ))
+		{
+			// PK3s have subfolders, so we can't just make a simple sum
+			if (wadfiles[w]->type == RET_PK3)
+			{
+				for (j = texstart; j < texend; j++)
+				{
+					if (!W_IsLumpFolder((UINT16)w, j)) // Check if lump is a folder; if not, then count it
+						numtextures++;
+				}
+			}
+			else // Add all the textures between F_START and F_END
+			{
+				numtextures += (UINT32)(texend - texstart);
+			}
+		}
+#endif/*WALLFLATS*/
+
+		// Count the textures from TEXTURES lumps
+		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
+		while (texturesLumpPos != INT16_MAX)
+		{
+			numtextures += R_CountTexturesInTEXTURESLump((UINT16)w, (UINT16)texturesLumpPos);
+			texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, texturesLumpPos + 1);
+		}
+
+		// Count single-patch textures
+		if (wadfiles[w]->type == RET_PK3)
+		{
+			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
+			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
+		}
+		else
+		{
+			texstart = W_CheckNumForMarkerStartPwad(TX_START, (UINT16)w, 0);
+			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
+		}
+
+		if (texstart == INT16_MAX || texend == INT16_MAX)
+			continue;
+
+		// PK3s have subfolders, so we can't just make a simple sum
+		if (wadfiles[w]->type == RET_PK3)
+		{
+			for (j = texstart; j < texend; j++)
+			{
+				if (!W_IsLumpFolder((UINT16)w, j)) // Check if lump is a folder; if not, then count it
+					numtextures++;
+			}
+		}
+		else // Add all the textures between TX_START and TX_END
+		{
+			numtextures += (UINT32)(texend - texstart);
+		}
+	}
+
+	// If no textures found by this point, bomb out
+	if (!numtextures)
+		I_Error("No textures detected in any WADs!\n");
+
+	// Allocate memory and initialize to 0 for all the textures we are initialising.
+	// There are actually 5 buffers allocated in one for convenience.
+	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
+	texflats = Z_Calloc((numtextures * sizeof(*texflats)), PU_STATIC, NULL);
+
+	// Allocate texture column offset table.
+	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
+	// Allocate texture referencing cache.
+	texturecache     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 2));
+	// Allocate texture width table.
+	texturewidth     = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 3));
+	// Allocate texture height table.
+	textureheight    = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
+	// Create translation table for global animation.
+	texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
+
+	for (i = 0; i < numtextures; i++)
+		texturetranslation[i] = i;
+
+	for (i = 0, w = 0; w < numwadfiles; w++)
+	{
+#ifdef WALLFLATS
+		i = Rloadflats(i, w);
+#endif
+		i = Rloadtextures(i, w);
 	}
 
 #ifdef HWRENDER
@@ -1571,9 +1621,9 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 		switch (wadfiles[i]->type)
 		{
 		case RET_WAD:
-			if ((start = W_CheckNumForNamePwad("F_START", (UINT16)i, 0)) == INT16_MAX)
+			if ((start = W_CheckNumForMarkerStartPwad("F_START", (UINT16)i, 0)) == INT16_MAX)
 			{
-				if ((start = W_CheckNumForNamePwad("FF_START", (UINT16)i, 0)) == INT16_MAX)
+				if ((start = W_CheckNumForMarkerStartPwad("FF_START", (UINT16)i, 0)) == INT16_MAX)
 					continue;
 				else if ((end = W_CheckNumForNamePwad("FF_END", (UINT16)i, start)) == INT16_MAX)
 					continue;
@@ -1783,7 +1833,7 @@ extracolormap_t *R_CreateDefaultColormap(boolean lighttable)
 	extracolormap_t *exc = Z_Calloc(sizeof (*exc), PU_LEVEL, NULL);
 	exc->fadestart = 0;
 	exc->fadeend = 31;
-	exc->fog = 0;
+	exc->flags = 0;
 	exc->rgba = 0;
 	exc->fadergba = 0x19000000;
 	exc->colormap = lighttable ? R_CreateLightTable(exc) : NULL;
@@ -1887,17 +1937,17 @@ void R_AddColormapToList(extracolormap_t *extra_colormap)
 //
 #ifdef EXTRACOLORMAPLUMPS
 boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
-	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump)
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags, lumpnum_t lump)
 #else
 boolean R_CheckDefaultColormapByValues(boolean checkrgba, boolean checkfadergba, boolean checkparams,
-	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog)
+	INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags)
 #endif
 {
 	return (
 		(!checkparams ? true :
 			(fadestart == 0
 				&& fadeend == 31
-				&& !fog)
+				&& !flags)
 			)
 		&& (!checkrgba ? true : rgba == 0)
 		&& (!checkfadergba ? true : fadergba == 0x19000000)
@@ -1914,9 +1964,9 @@ boolean R_CheckDefaultColormap(extracolormap_t *extra_colormap, boolean checkrgb
 		return true;
 
 #ifdef EXTRACOLORMAPLUMPS
-	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
+	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->flags, extra_colormap->lump);
 #else
-	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
+	return R_CheckDefaultColormapByValues(checkrgba, checkfadergba, checkparams, extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->flags);
 #endif
 }
 
@@ -1936,7 +1986,7 @@ boolean R_CheckEqualColormaps(extracolormap_t *exc_a, extracolormap_t *exc_b, bo
 		(!checkparams ? true :
 			(exc_a->fadestart == exc_b->fadestart
 				&& exc_a->fadeend == exc_b->fadeend
-				&& exc_a->fog == exc_b->fog)
+				&& exc_a->flags == exc_b->flags)
 			)
 		&& (!checkrgba ? true : exc_a->rgba == exc_b->rgba)
 		&& (!checkfadergba ? true : exc_a->fadergba == exc_b->fadergba)
@@ -1952,9 +2002,9 @@ boolean R_CheckEqualColormaps(extracolormap_t *exc_a, extracolormap_t *exc_b, bo
 // NOTE: Returns NULL if no match is found
 //
 #ifdef EXTRACOLORMAPLUMPS
-extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog, lumpnum_t lump)
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags, lumpnum_t lump)
 #else
-extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 fog)
+extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags)
 #endif
 {
 	extracolormap_t *exc;
@@ -1966,7 +2016,7 @@ extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8
 			&& fadergba == exc->fadergba
 			&& fadestart == exc->fadestart
 			&& fadeend == exc->fadeend
-			&& fog == exc->fog
+			&& flags == exc->flags
 #ifdef EXTRACOLORMAPLUMPS
 			&& (lump != LUMPERROR && lump == exc->lump)
 #endif
@@ -1985,9 +2035,9 @@ extracolormap_t *R_GetColormapFromListByValues(INT32 rgba, INT32 fadergba, UINT8
 extracolormap_t *R_GetColormapFromList(extracolormap_t *extra_colormap)
 {
 #ifdef EXTRACOLORMAPLUMPS
-	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog, extra_colormap->lump);
+	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->flags, extra_colormap->lump);
 #else
-	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->fog);
+	return R_GetColormapFromListByValues(extra_colormap->rgba, extra_colormap->fadergba, extra_colormap->fadestart, extra_colormap->fadeend, extra_colormap->flags);
 #endif
 }
 
@@ -2019,7 +2069,7 @@ extracolormap_t *R_ColormapForName(char *name)
 	// is no real way to tell how GL should handle a colormap lump anyway..
 	exc->fadestart = 0;
 	exc->fadeend = 31;
-	exc->fog = 0;
+	exc->flags = 0;
 	exc->rgba = 0;
 	exc->fadergba = 0x19000000;
 
@@ -2176,7 +2226,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	// default values
 	UINT8 cr = 0, cg = 0, cb = 0, ca = 0, cfr = 0, cfg = 0, cfb = 0, cfa = 25;
 	UINT32 fadestart = 0, fadeend = 31;
-	UINT8 fog = 0;
+	UINT8 flags = 0;
 	INT32 rgba = 0, fadergba = 0x19000000;
 
 #define HEX2INT(x) (UINT32)(x >= '0' && x <= '9' ? x - '0' : x >= 'a' && x <= 'f' ? x - 'a' + 10 : x >= 'A' && x <= 'F' ? x - 'A' + 10 : 0)
@@ -2225,12 +2275,12 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 #define NUMFROMCHAR(c) (c >= '0' && c <= '9' ? c - '0' : 0)
 
-	// Get parameters like fadestart, fadeend, and the fogflag
+	// Get parameters like fadestart, fadeend, and flags
 	if (p2[0] == '#')
 	{
 		if (p2[1])
 		{
-			fog = NUMFROMCHAR(p2[1]);
+			flags = NUMFROMCHAR(p2[1]);
 			if (p2[2] && p2[3])
 			{
 				fadestart = NUMFROMCHAR(p2[3]) + (NUMFROMCHAR(p2[2]) * 10);
@@ -2297,18 +2347,18 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 	// Did we just make a default colormap?
 #ifdef EXTRACOLORMAPLUMPS
-	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog, LUMPERROR))
+	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, flags, LUMPERROR))
 		return NULL;
 #else
-	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, fog))
+	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, flags))
 		return NULL;
 #endif
 
 	// Look for existing colormaps
 #ifdef EXTRACOLORMAPLUMPS
-	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog, LUMPERROR);
+	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags, LUMPERROR);
 #else
-	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, fog);
+	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags);
 #endif
 	if (exc)
 		return exc;
@@ -2320,7 +2370,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 	extra_colormap->fadestart = (UINT16)fadestart;
 	extra_colormap->fadeend = (UINT16)fadeend;
-	extra_colormap->fog = fog;
+	extra_colormap->flags = flags;
 
 	extra_colormap->rgba = rgba;
 	extra_colormap->fadergba = fadergba;
@@ -2347,7 +2397,7 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *exc_addend,
 	boolean subR, boolean subG, boolean subB, boolean subA,
 	boolean subFadeR, boolean subFadeG, boolean subFadeB, boolean subFadeA,
-	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFog,
+	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFlags,
 	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
 	boolean lighttable)
 {
@@ -2435,8 +2485,8 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 				// HACK: fadeend defaults to 31, so don't add anything in this case
 		, 31), 0);
 
-	if (!ignoreFog) // overwrite fog with new value
-		exc_augend->fog = exc_addend->fog;
+	if (!ignoreFlags) // overwrite flags with new value
+		exc_augend->flags = exc_addend->flags;
 
 	///////////////////
 	// put it together
@@ -2449,16 +2499,20 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 
 // Thanks to quake2 source!
 // utils3/qdata/images.c
-UINT8 NearestColor(UINT8 r, UINT8 g, UINT8 b)
+UINT8 NearestPaletteColor(UINT8 r, UINT8 g, UINT8 b, RGBA_t *palette)
 {
 	int dr, dg, db;
 	int distortion, bestdistortion = 256 * 256 * 4, bestcolor = 0, i;
 
+	// Use master palette if none specified
+	if (palette == NULL)
+		palette = pMasterPalette;
+
 	for (i = 0; i < 256; i++)
 	{
-		dr = r - pMasterPalette[i].s.red;
-		dg = g - pMasterPalette[i].s.green;
-		db = b - pMasterPalette[i].s.blue;
+		dr = r - palette[i].s.red;
+		dg = g - palette[i].s.green;
+		db = b - palette[i].s.blue;
 		distortion = dr*dr + dg*dg + db*db;
 		if (distortion < bestdistortion)
 		{

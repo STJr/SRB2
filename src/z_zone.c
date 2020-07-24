@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by Graue.
-// Copyright (C) 2006-2019 by Sonic Team Junior.
+// Copyright (C) 2006-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -217,11 +217,9 @@ void Z_Free(void *ptr)
 	CONS_Debug(DBG_MEMORY, "Z_Free at %s:%d\n", file, line);
 #endif
 
-#ifdef HAVE_BLUA
 	// anything that isn't by lua gets passed to lua just in case.
 	if (block->tag != PU_LUA)
 		LUA_InvalidateUserdata(ptr);
-#endif
 
 	// TODO: if zdebugging, make sure no other block has a user
 	// that is about to be freed.
@@ -232,12 +230,12 @@ void Z_Free(void *ptr)
 
 	// Free the memory and get rid of the block.
 	free(block->real);
-	block->prev->next = block->next;
-	block->next->prev = block->prev;
-	free(block);
 #ifdef VALGRIND_DESTROY_MEMPOOL
 	VALGRIND_DESTROY_MEMPOOL(block);
 #endif
+	block->prev->next = block->next;
+	block->next->prev = block->prev;
+	free(block);
 }
 
 /** malloc() that doesn't accept failure.
@@ -317,12 +315,8 @@ void *Z_MallocAlign(size_t size, INT32 tag, void *user, INT32 alignbits)
 	// The mem header lives 'sizeof (memhdr_t)' bytes before given.
 	hdr = (memhdr_t *)((UINT8 *)given - sizeof *hdr);
 
-#ifdef VALGRIND_CREATE_MEMPOOL
-	VALGRIND_CREATE_MEMPOOL(block, padsize, Z_calloc);
+#ifdef HAVE_VALGRIND
 	Z_calloc = false;
-#endif
-#ifdef VALGRIND_MEMPOOL_ALLOC
-	VALGRIND_MEMPOOL_ALLOC(block, hdr, size + sizeof *hdr);
 #endif
 
 	block->next = head.next;
@@ -340,6 +334,13 @@ void *Z_MallocAlign(size_t size, INT32 tag, void *user, INT32 alignbits)
 #endif
 	block->size = blocksize;
 	block->realsize = size;
+
+#ifdef VALGRIND_CREATE_MEMPOOL
+	VALGRIND_CREATE_MEMPOOL(block, padsize, Z_calloc);
+#endif
+//#ifdef VALGRIND_MEMPOOL_ALLOC
+//	VALGRIND_MEMPOOL_ALLOC(block, hdr, size + sizeof *hdr);
+//#endif
 
 	hdr->id = ZONEID;
 	hdr->block = block;
@@ -498,17 +499,14 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 // Utility functions
 // -----------------
 
-// for renderer switching, free a bunch of stuff
+// for renderer switching
 boolean needpatchflush = false;
 boolean needpatchrecache = false;
 
 // flush all patches from memory
-// (also frees memory tagged with PU_CACHE)
-// (which are not necessarily patches but I don't care)
 void Z_FlushCachedPatches(void)
 {
 	CONS_Debug(DBG_RENDER, "Z_FlushCachedPatches()...\n");
-	Z_FreeTag(PU_CACHE);
 	Z_FreeTag(PU_PATCH);
 	Z_FreeTag(PU_HUDGFX);
 	Z_FreeTag(PU_HWRPATCHINFO);
@@ -516,6 +514,7 @@ void Z_FlushCachedPatches(void)
 	Z_FreeTag(PU_HWRCACHE);
 	Z_FreeTag(PU_HWRCACHE_UNLOCKED);
 	Z_FreeTag(PU_HWRPATCHINFO_UNLOCKED);
+	Z_FreeTag(PU_HWRMODELTEXTURE_UNLOCKED);
 }
 
 // happens before a renderer switch
@@ -806,12 +805,13 @@ static void Command_Memfree_f(void)
 		sizeu1(Z_TagsUsage(PU_PURGELEVEL, INT32_MAX)>>10));
 
 #ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 	{
 		CONS_Printf(M_GetText("Patch info headers: %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHINFO)>>10));
 		CONS_Printf(M_GetText("Mipmap patches    : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHCOLMIPMAP)>>10));
 		CONS_Printf(M_GetText("HW Texture cache  : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRCACHE)>>10));
 		CONS_Printf(M_GetText("Plane polygons    : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPLANE)>>10));
+		CONS_Printf(M_GetText("HW model textures : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRMODELTEXTURE)>>10));
 		CONS_Printf(M_GetText("HW Texture used   : %7d KB\n"), HWR_GetTextureUsed()>>10);
 	}
 #endif

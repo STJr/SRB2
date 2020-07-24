@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -55,7 +55,6 @@ fixed_t P_FindNextLowestFloor(sector_t *sec, fixed_t currentheight);
 fixed_t P_FindLowestCeilingSurrounding(sector_t *sec);
 fixed_t P_FindHighestCeilingSurrounding(sector_t *sec);
 
-INT32 P_FindSectorFromLineTag(line_t *line, INT32 start);
 INT32 P_FindSectorFromTag(INT16 tag, INT32 start);
 INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start);
 
@@ -74,6 +73,7 @@ void P_RunDeNightserizeExecutors(mobj_t *actor);
 void P_RunNightsLapExecutors(mobj_t *actor);
 void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean enoughspheres);
 
+UINT16 P_GetFFloorID(ffloor_t *fflr);
 ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id);
 
 //
@@ -104,10 +104,9 @@ typedef struct
 typedef struct
 {
 	thinker_t thinker; ///< Thinker structure for laser.
-	ffloor_t *ffloor;  ///< 3Dfloor that is a laser.
-	sector_t *sector;  ///< Sector in which the effect takes place.
-	sector_t *sec;
+	INT16 tag;
 	line_t *sourceline;
+	UINT8 nobosses;
 } laserthink_t;
 
 /** Strobe light action structure..
@@ -307,18 +306,130 @@ typedef struct
 	fixed_t delaytimer;
 	fixed_t floorwasheight; // Height the floor WAS at
 	fixed_t ceilingwasheight; // Height the ceiling WAS at
-	player_t *player; // Player who initiated the thinker (used for airbob)
 	line_t *sourceline;
 } elevator_t;
+
+typedef enum
+{
+	CF_RETURN   = 1,    // Return after crumbling
+	CF_FLOATBOB = 1<<1, // Float on water
+	CF_REVERSE  = 1<<2, // Reverse gravity
+} crumbleflag_t;
 
 typedef struct
 {
 	thinker_t thinker;
-	fixed_t vars[16];   // Misc. variables
-	fixed_t var2s[16];   // Second misc variables buffer.
+	line_t *sourceline;
+	sector_t *sector;
+	sector_t *actionsector; // The sector the rover action is taking place in.
+	player_t *player; // Player who initiated the thinker (used for airbob)
+	INT32 direction;
+	INT32 origalpha;
+	INT32 timer;
+	fixed_t speed;
+	fixed_t floorwasheight; // Height the floor WAS at
+	fixed_t ceilingwasheight; // Height the ceiling WAS at
+	UINT8 flags;
+} crumble_t;
+
+typedef struct
+{
+	thinker_t thinker;
 	line_t *sourceline; // Source line of the thinker
-	sector_t *sector;   // Sector the thinker is from
-} levelspecthink_t;
+} noenemies_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	sector_t *sector;
+	fixed_t speed;
+	INT32 direction;
+	fixed_t floorstartheight;
+	fixed_t ceilingstartheight;
+	fixed_t destheight;
+} continuousfall_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	line_t *sourceline;
+	sector_t *sector;
+	fixed_t speed;
+	fixed_t distance;
+	fixed_t floorwasheight;
+	fixed_t ceilingwasheight;
+	boolean low;
+} bouncecheese_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	sector_t *sector;
+	fixed_t speed;
+	INT32 direction;
+	fixed_t floorstartheight;
+	fixed_t ceilingstartheight;
+	INT16 tag;
+} mariothink_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	line_t *sourceline;
+	sector_t *sector;
+} mariocheck_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	line_t *sourceline;
+	sector_t *sector;
+	fixed_t crushspeed;
+	fixed_t retractspeed;
+	INT32 direction;
+	fixed_t floorstartheight;
+	fixed_t ceilingstartheight;
+	INT32 delay;
+	INT16 tag;
+	UINT16 sound;
+} thwomp_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	line_t *sourceline;
+	sector_t *sector;
+	INT16 tag;
+} floatthink_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	line_t *sourceline; // Source line of the thinker
+	boolean playersInArea[MAXPLAYERS];
+	boolean playersOnArea[MAXPLAYERS];
+	boolean triggerOnExit;
+} eachtime_t;
+
+typedef enum
+{
+	RF_REVERSE  = 1,    //Lower when stood on
+	RF_SPINDASH = 1<<1, //Require spindash to move
+	RF_DYNAMIC  = 1<<2, //Dynamically sinking platform
+} raiseflag_t;
+
+typedef struct
+{
+	thinker_t thinker;
+	INT16 tag;
+	sector_t *sector;
+	fixed_t ceilingbottom;
+	fixed_t ceilingtop;
+	fixed_t basespeed;
+	fixed_t extraspeed; //For dynamically sinking platform
+	UINT8 shaketimer; //For dynamically sinking platform
+	UINT8 flags;
+} raise_t;
 
 #define ELEVATORSPEED (FRACUNIT*4)
 #define FLOORSPEED (FRACUNIT)
@@ -331,36 +442,34 @@ typedef enum
 } result_e;
 
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crush,
-	INT32 floorOrCeiling, INT32 direction);
-INT32 EV_DoFloor(line_t *line, floor_e floortype);
-INT32 EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed);
+	boolean ceiling, INT32 direction);
+void EV_DoFloor(line_t *line, floor_e floortype);
+void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed);
 void EV_CrumbleChain(sector_t *sec, ffloor_t *rover);
-INT32 EV_BounceSector(sector_t *sector, fixed_t momz, line_t *sourceline);
+void EV_BounceSector(sector_t *sector, fixed_t momz, line_t *sourceline);
 
 // Some other special 3dfloor types
 INT32 EV_StartCrumble(sector_t *sector, ffloor_t *rover,
 	boolean floating, player_t *player, fixed_t origalpha, boolean crumblereturn);
 
-INT32 EV_DoContinuousFall(sector_t *sec, sector_t *pbacksector, fixed_t spd, boolean backwards);
+void EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boolean backwards);
 
-INT32 EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher);
+void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher);
 
 void T_MoveFloor(floormove_t *movefloor);
 
 void T_MoveElevator(elevator_t *elevator);
-void T_ContinuousFalling(levelspecthink_t *faller);
-void T_BounceCheese(levelspecthink_t *bouncer);
-void T_StartCrumble(elevator_t *elevator);
-void T_MarioBlock(levelspecthink_t *block);
-void T_SpikeSector(levelspecthink_t *spikes);
-void T_FloatSector(levelspecthink_t *floater);
-void T_BridgeThinker(levelspecthink_t *bridge);
-void T_MarioBlockChecker(levelspecthink_t *block);
-void T_ThwompSector(levelspecthink_t *thwomp);
-void T_NoEnemiesSector(levelspecthink_t *nobaddies);
-void T_EachTimeThinker(levelspecthink_t *eachtime);
+void T_ContinuousFalling(continuousfall_t *faller);
+void T_BounceCheese(bouncecheese_t *bouncer);
+void T_StartCrumble(crumble_t *crumble);
+void T_MarioBlock(mariothink_t *block);
+void T_FloatSector(floatthink_t *floater);
+void T_MarioBlockChecker(mariocheck_t *block);
+void T_ThwompSector(thwomp_t *thwomp);
+void T_NoEnemiesSector(noenemies_t *nobaddies);
+void T_EachTimeThinker(eachtime_t *eachtime);
 void T_CameraScanner(elevator_t *elevator);
-void T_RaiseSector(levelspecthink_t *sraise);
+void T_RaiseSector(raise_t *raise);
 
 typedef struct
 {

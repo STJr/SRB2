@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -86,6 +86,7 @@ extern fixed_t viewx, viewy, viewz;
 extern angle_t viewangle, aimingangle;
 extern sector_t *viewsector;
 extern player_t *viewplayer;
+extern mobj_t *r_viewmobj;
 
 extern consvar_t cv_allowmlook;
 extern consvar_t cv_maxportals;

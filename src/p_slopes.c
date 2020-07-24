@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2019 by Sonic Team Junior.
+// Copyright (C) 2015-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,8 +22,6 @@
 #include "r_main.h"
 #include "p_maputl.h"
 #include "w_wad.h"
-
-#ifdef ESLOPE
 
 pslope_t *slopelist = NULL;
 UINT16 slopecount = 0;
@@ -568,7 +566,7 @@ void P_CopySectorSlope(line_t *line)
 	int i, special = line->special;
 
 	// Check for copy linedefs
-	for (i = -1; (i = P_FindSectorFromLineTag(line, i)) >= 0;)
+	for (i = -1; (i = P_FindSectorFromTag(line->tag, i)) >= 0;)
 	{
 		sector_t *srcsec = sectors + i;
 
@@ -657,17 +655,49 @@ void P_SpawnSlopes(const boolean fromsave) {
 // Various utilities related to slopes
 //
 
-//
-// P_GetZAt
-//
 // Returns the height of the sloped plane at (x, y) as a fixed_t
-//
-fixed_t P_GetZAt(pslope_t *slope, fixed_t x, fixed_t y)
+fixed_t P_GetSlopeZAt(const pslope_t *slope, fixed_t x, fixed_t y)
 {
-   fixed_t dist = FixedMul(x - slope->o.x, slope->d.x) +
-                  FixedMul(y - slope->o.y, slope->d.y);
+	fixed_t dist = FixedMul(x - slope->o.x, slope->d.x) +
+	               FixedMul(y - slope->o.y, slope->d.y);
 
-   return slope->o.z + FixedMul(dist, slope->zdelta);
+	return slope->o.z + FixedMul(dist, slope->zdelta);
+}
+
+// Like P_GetSlopeZAt but falls back to z if slope is NULL
+fixed_t P_GetZAt(const pslope_t *slope, fixed_t x, fixed_t y, fixed_t z)
+{
+	return slope ? P_GetSlopeZAt(slope, x, y) : z;
+}
+
+// Returns the height of the sector floor at (x, y)
+fixed_t P_GetSectorFloorZAt(const sector_t *sector, fixed_t x, fixed_t y)
+{
+	return sector->f_slope ? P_GetSlopeZAt(sector->f_slope, x, y) : sector->floorheight;
+}
+
+// Returns the height of the sector ceiling at (x, y)
+fixed_t P_GetSectorCeilingZAt(const sector_t *sector, fixed_t x, fixed_t y)
+{
+	return sector->c_slope ? P_GetSlopeZAt(sector->c_slope, x, y) : sector->ceilingheight;
+}
+
+// Returns the height of the FOF top at (x, y)
+fixed_t P_GetFFloorTopZAt(const ffloor_t *ffloor, fixed_t x, fixed_t y)
+{
+	return *ffloor->t_slope ? P_GetSlopeZAt(*ffloor->t_slope, x, y) : *ffloor->topheight;
+}
+
+// Returns the height of the FOF bottom  at (x, y)
+fixed_t P_GetFFloorBottomZAt(const ffloor_t *ffloor, fixed_t x, fixed_t y)
+{
+	return *ffloor->b_slope ? P_GetSlopeZAt(*ffloor->b_slope, x, y) : *ffloor->bottomheight;
+}
+
+// Returns the height of the light list at (x, y)
+fixed_t P_GetLightZAt(const lightlist_t *light, fixed_t x, fixed_t y)
+{
+	return light->slope ? P_GetSlopeZAt(light->slope, x, y) : light->height;
 }
 
 
@@ -726,6 +756,9 @@ void P_SlopeLaunch(mobj_t *mo)
 
 	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
+
+	if (mo->player)
+		mo->player->powers[pw_justlaunched] = 1;
 }
 
 //
@@ -841,6 +874,3 @@ void P_ButteredSlope(mobj_t *mo)
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }
-
-// EOF
-#endif // #ifdef ESLOPE
