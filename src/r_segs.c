@@ -1642,6 +1642,9 @@ static void R_RenderSegLoop (void)
 		}
 		else
 		{
+			INT16 topclip = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+			INT16 bottomclip = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
+
 			// two sided line
 			if (toptexture)
 			{
@@ -1673,10 +1676,13 @@ static void R_RenderSegLoop (void)
 						ceilingclip[rw_x] = -1;
 				}
 				else if (!rw_ceilingmarked)
-					ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+					ceilingclip[rw_x] = topclip;
 			}
 			else if (markceiling && (!rw_ceilingmarked)) // no top wall
-				ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+				ceilingclip[rw_x] = topclip;
+
+			// Lactozilla: Set thick side ceiling clip
+			rw_thickceilingclip[rw_x] = topclip;
 
 			if (bottomtexture)
 			{
@@ -1710,10 +1716,13 @@ static void R_RenderSegLoop (void)
 						floorclip[rw_x] = (INT16)viewheight;
 				}
 				else if (!rw_floormarked)
-					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
+					floorclip[rw_x] = bottomclip;
 			}
 			else if (markfloor && (!rw_floormarked)) // no bottom wall
-				floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
+				floorclip[rw_x] = bottomclip;
+
+			// Lactozilla: Set thick side floor clip
+			rw_thickfloorclip[rw_x] = bottomclip;
 		}
 
 		if (maskedtexture || numthicksides)
