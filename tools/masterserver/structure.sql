@@ -13,8 +13,8 @@ SET time_zone = "+00:00";
 -- Database: `srb2ms`
 --
 
-CREATE DATABASE IF NOT EXISTS `srb2ms` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
-USE `srb2ms`;
+CREATE DATABASE IF NOT EXISTS `srb2_ms` DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;
+USE `srb2_ms`;
 
 
 -- --------------------------------------------------------
@@ -25,8 +25,8 @@ USE `srb2ms`;
 
 CREATE TABLE `ms_bans` (
   `bid` int(11) DEFAULT NULL,
-  `ipstart` int(11) DEFAULT NULL,
-  `ipend` int(11) DEFAULT NULL,
+  `ipstart` int(10) unsigned DEFAULT NULL,
+  `ipend` int(10) unsigned DEFAULT NULL,
   `full_endtime` int(11) DEFAULT NULL,
   `permanent` tinyint(1) DEFAULT NULL,
   `hostonly` tinyint(1) DEFAULT NULL,
@@ -63,19 +63,19 @@ INSERT INTO `ms_rooms` (`room_id`, `title`, `motd`, `visible`, `order`, `private
 --
 
 CREATE TABLE `ms_servers` (
-  `sid` int(11) NOT NULL,
+  `sid` int(11) primary key AUTO_INCREMENT,
   `name` text COLLATE utf8mb4_unicode_ci NOT NULL,
   `ip` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `port` int(11) NOT NULL,
+  `port` int(11) NOT NULL DEFAULT 5029,
   `version` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `timestamp` int(11) NOT NULL,
-  `room` int(11) NOT NULL,
+  `timestamp` int(11) NOT NULL DEFAULT 0,
+  `room` int(11) NOT NULL DEFAULT 0,
   `key` text COLLATE utf8mb4_unicode_ci NOT NULL,
-  `room_override` int(11) NOT NULL,
-  `upnow` tinyint(1) NOT NULL,
-  `permanent` tinyint(1) NOT NULL,
-  `delisted` tinyint(1) NOT NULL,
-  `sticky` int(11) NOT NULL
+  `room_override` int(11) NOT NULL DEFAULT 0,
+  `upnow` tinyint(1) NOT NULL DEFAULT 1,
+  `permanent` tinyint(1) NOT NULL DEFAULT 0,
+  `delisted` tinyint(1) NOT NULL DEFAULT 0,
+  `sticky` int(11) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- --------------------------------------------------------
@@ -85,16 +85,20 @@ CREATE TABLE `ms_servers` (
 --
 
 CREATE TABLE `ms_versions` (
-  `mod_id` int(11) NOT NULL,
-  `mod_version` int(11) NOT NULL
+  `mod_id` int(10) unsigned primary key AUTO_INCREMENT,
+  `mod_version` int(10) unsigned NOT NULL DEFAULT 1,
+  `mod_vstring` varchar(45) NOT NULL DEFAULT 'v1.0',
+  `mod_codebase` int(10) unsigned NOT NULL DEFAULT 205,
+  `mod_name` varchar(255) NOT NULL DEFAULT 'Default MOD Name',
+  `mod_url` text NOT NULL 
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `ms_versions`
 --
 
-INSERT INTO `ms_versions` (`mod_id`, `mod_version`) VALUES
-(12, 25);
+INSERT INTO `ms_versions` (`mod_id`, `mod_version`, `mod_vstring`, `mod_codebase`, `mod_name`, `mod_url`) VALUES
+(18, 42, 'v2.2.2', 205, 'SRB2 2.2', 'SRB2.org');
 
 -- --------------------------------------------------------
 
