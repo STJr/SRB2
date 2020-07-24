@@ -1220,7 +1220,26 @@ static void R_ThickSideClip(INT32 x, drawseg_t *ds, ffloor_t *pfloor)
 	INT32 cliptop, clipbottom;
 	INT32 range = max(ds->x2-ds->x1, 1);
 
+	INT32 texnum;
+
 	if (ds->thicksidecol[x] == INT16_MAX)
+		return;
+
+	// Check which texture will be used
+	if (pfloor->master->flags & ML_TFERLINE)
+	{
+		size_t linenum = ds->curline->linedef-pfloor->target->lines[0];
+		line_t *newline = pfloor->master->frontsector->lines[0] + linenum;
+		texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
+	}
+	else
+		texnum = R_GetTextureNum(sides[pfloor->master->sidenum[0]].midtexture);
+
+	// Generate the texture if it already hasn't been
+	R_CheckTextureCache(texnum);
+
+	// Don't clip if the texture has holes
+	if (textures[texnum]->holetype != TEXTUREHOLETYPE_NOHOLES)
 		return;
 
 	// calculate both left ends

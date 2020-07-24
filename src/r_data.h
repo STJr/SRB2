@@ -48,7 +48,7 @@ typedef struct
 	enum patchalphastyle style;
 } texpatch_t;
 
-// texture type
+// Texture type (single-patch, composite, flat)
 enum
 {
 	TEXTURETYPE_UNKNOWN,
@@ -57,6 +57,14 @@ enum
 #ifdef WALLFLATS
 	TEXTURETYPE_FLAT,
 #endif
+};
+
+// Texture hole type (none, single-patch, composite)
+enum
+{
+	TEXTUREHOLETYPE_NOHOLES,
+	TEXTUREHOLETYPE_SINGLEPATCH,
+	TEXTUREHOLETYPE_COMPOSITE,
 };
 
 // A maptexturedef_t describes a rectangular texture,
@@ -69,6 +77,7 @@ typedef struct
 	UINT8 type; // TEXTURETYPE_
 	INT16 width, height;
 	boolean holes;
+	UINT8 holetype; // TEXTUREHOLETYPE_
 	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
 
 	// All the patches[patchcount] are drawn back to front into the cached texture.

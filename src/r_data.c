@@ -550,6 +550,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		if (holey)
 		{
 			texture->holes = true;
+			texture->holetype = TEXTUREHOLETYPE_SINGLEPATCH;
 			texture->flip = patch->flip;
 			blocksize = lumplength;
 			block = Z_Calloc(blocksize, PU_STATIC, // will change tag at end of this function
@@ -580,6 +581,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	// multi-patch textures (or 'composite')
 	multipatch:
 	texture->holes = false;
+	texture->holetype = TEXTUREHOLETYPE_NOHOLES;
 	texture->flip = 0;
 	blocksize = (texture->width * 4) + (texture->width * texture->height);
 	texturememory += blocksize;
@@ -664,6 +666,21 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 
 		if (dealloc)
 			Z_Free(realpatch);
+	}
+
+	// Lactozilla: Check if the texture has holes
+	for (x = 0; x < texture->width; x++)
+	{
+		UINT8 *cache = block + LONG(*(UINT32 *)&colofs[x<<2]);
+		INT32 y = texture->height;
+		while (y--)
+		{
+			if (cache[y] == TRANSPARENTPIXEL)
+			{
+				texture->holetype = TEXTUREHOLETYPE_COMPOSITE;
+				goto done;
+			}
+		}
 	}
 
 done:
