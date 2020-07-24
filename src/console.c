@@ -835,6 +835,44 @@ boolean CON_Responder(event_t *ev)
 		return true;
 	}
 
+	// backspace and delete command prompt
+	if (input_sel != input_cur)
+	{
+		if (key == KEY_BACKSPACE || key == KEY_DEL)
+		{
+			CON_InputDelSelection();
+			return true;
+		}
+	}
+	else if (key == KEY_BACKSPACE)
+	{
+		if (ctrldown)
+		{
+			input_sel = M_JumpWordReverse(inputlines[inputline], input_cur);
+			CON_InputDelSelection();
+		}
+		else
+			CON_InputDelChar();
+		return true;
+	}
+	else if (key == KEY_DEL)
+	{
+		if (input_cur == input_len)
+			return true;
+
+		if (ctrldown)
+		{
+			input_sel = input_cur + M_JumpWord(&inputlines[inputline][input_cur]);
+			CON_InputDelSelection();
+		}
+		else
+		{
+			++input_cur;
+			CON_InputDelChar();
+		}
+		return true;
+	}
+
 	// ctrl modifier -- changes behavior, adds shortcuts
 	if (ctrldown)
 	{
@@ -1022,29 +1060,6 @@ boolean CON_Responder(event_t *ev)
 		inputhist = inputline;
 		CON_InputClear();
 
-		return true;
-	}
-
-	// backspace and delete command prompt
-	if (input_sel != input_cur)
-	{
-		if (key == KEY_BACKSPACE || key == KEY_DEL)
-		{
-			CON_InputDelSelection();
-			return true;
-		}
-	}
-	else if (key == KEY_BACKSPACE)
-	{
-		CON_InputDelChar();
-		return true;
-	}
-	else if (key == KEY_DEL)
-	{
-		if (input_cur == input_len)
-			return true;
-		++input_cur;
-		CON_InputDelChar();
 		return true;
 	}
 
