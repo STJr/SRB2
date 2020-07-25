@@ -74,12 +74,6 @@
 #endif
 #endif
 
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-int	snprintf(char *str, size_t n, const char *fmt, ...);
-//int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
-#endif
-
 #if defined (__GNUC__) && (__GNUC__ >= 4)
 #define FIXUPO0
 #endif
