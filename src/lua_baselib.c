@@ -1116,6 +1116,16 @@ static int lib_pPlayerCanDamage(lua_State *L)
 	return 1;
 }
 
+static int lib_pPlayerFullbright(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushboolean(L, P_PlayerFullbright(player));
+	return 1;
+}
+
 
 static int lib_pIsObjectInGoop(lua_State *L)
 {
@@ -3119,6 +3129,117 @@ static int lib_gBuildMapTitle(lua_State *L)
 	return 1;
 }
 
+static void
+Lpushdim (lua_State *L, int c, struct searchdim *v)
+{
+	int i;
+	lua_createtable(L, c, 0);/* I guess narr is numeric indices??? */
+	for (i = 0; i < c; ++i)
+	{
+		lua_createtable(L, 0, 2);/* and hashed indices (field)... */
+			lua_pushnumber(L, v[i].pos);
+			lua_setfield(L, -2, "pos");
+
+			lua_pushnumber(L, v[i].siz);
+			lua_setfield(L, -2, "siz");
+		lua_rawseti(L, -2, 1 + i);
+	}
+}
+
+/*
+I decided to make this return a table because userdata
+is scary and tables let the user set their own fields.
+*/
+/*
+Returns:
+
+[1] => map number
+[2] => map title
+[3] => search frequency table
+
+The frequency table is unsorted. It has the following format:
+
+{
+	['mapnum'],
+
+	['matchd'] => matches in map title string
+	['keywhd'] => matches in map keywords
+
+	The above two tables have the following format:
+
+	{
+		['pos'] => offset from start of string
+		['siz'] => length of match
+	}...
+
+	['total'] => the total matches
+}...
+*/
+static int lib_gFindMap(lua_State *L)
+{
+	const char *query = luaL_checkstring(L, 1);
+
+	INT32 map;
+	char *realname;
+	INT32 frc;
+	mapsearchfreq_t *frv;
+
+	INT32 i;
+
+	map = G_FindMap(query, &realname, &frv, &frc);
+
+	lua_settop(L, 0);
+
+	lua_pushnumber(L, map);
+	lua_pushstring(L, realname);
+
+	lua_createtable(L, frc, 0);
+	for (i = 0; i < frc; ++i)
+	{
+		lua_createtable(L, 0, 4);
+			lua_pushnumber(L, frv[i].mapnum);
+			lua_setfield(L, -2, "mapnum");
+
+			Lpushdim(L, frv[i].matchc, frv[i].matchd);
+			lua_setfield(L, -2, "matchd");
+
+			Lpushdim(L, frv[i].keywhc, frv[i].keywhd);
+			lua_setfield(L, -2, "keywhd");
+
+			lua_pushnumber(L, frv[i].total);
+			lua_setfield(L, -2, "total");
+		lua_rawseti(L, -2, 1 + i);
+	}
+
+	G_FreeMapSearch(frv, frc);
+	Z_Free(realname);
+
+	return 3;
+}
+
+/*
+Returns:
+
+[1] => map number
+[2] => map title
+*/
+static int lib_gFindMapByNameOrCode(lua_State *L)
+{
+	const char *query = luaL_checkstring(L, 1);
+	INT32 map;
+	char *realname;
+	map = G_FindMapByNameOrCode(query, &realname);
+	lua_pushnumber(L, map);
+	if (map)
+	{
+		lua_pushstring(L, realname);
+		Z_Free(realname);
+		return 2;
+	}
+	else
+		return 1;
+}
+
 static int lib_gDoReborn(lua_State *L)
 {
 	INT32 playernum = luaL_checkinteger(L, 1);
@@ -3389,6 +3510,7 @@ static luaL_Reg lib[] = {
 	{"P_DoPlayerPain",lib_pDoPlayerPain},
 	{"P_ResetPlayer",lib_pResetPlayer},
 	{"P_PlayerCanDamage",lib_pPlayerCanDamage},
+	{"P_PlayerFullbright",lib_pPlayerFullbright},
 	{"P_IsObjectInGoop",lib_pIsObjectInGoop},
 	{"P_IsObjectOnGround",lib_pIsObjectOnGround},
 	{"P_InSpaceSector",lib_pInSpaceSector},
@@ -3531,6 +3653,8 @@ static luaL_Reg lib[] = {
 	{"G_AddGametype", lib_gAddGametype},
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_BuildMapTitle",lib_gBuildMapTitle},
+	{"G_FindMap",lib_gFindMap},
+	{"G_FindMapByNameOrCode",lib_gFindMapByNameOrCode},
 	{"G_DoReborn",lib_gDoReborn},
 	{"G_SetCustomExitVars",lib_gSetCustomExitVars},
 	{"G_EnoughPlayersFinished",lib_gEnoughPlayersFinished},

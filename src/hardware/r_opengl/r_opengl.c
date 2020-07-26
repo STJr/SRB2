@@ -1535,7 +1535,7 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 					// Sryder: Fog
 					// multiplies input colour by input alpha, and destination colour by input colour, then adds them
 					pglBlendFunc(GL_SRC_ALPHA, GL_SRC_COLOR);
-					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
+					pglAlphaFunc(GL_ALWAYS, 0.0f); // Don't discard zero alpha fragments
 					break;
 				default : // must be 0, otherwise it's an error
 					// No blending

@@ -214,6 +214,9 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 		poly_color.s.blue = (UINT8)blue;
 	}
 
+	// Clamp the light level, since it can sometimes go out of the 0-255 range from animations
+	light_level = min(max(light_level, 0), 255);
+
 	Surface->PolyColor.rgba = poly_color.rgba;
 	Surface->TintColor.rgba = tint_color.rgba;
 	Surface->FadeColor.rgba = fade_color.rgba;
@@ -2757,8 +2760,11 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		HWR_SetCurrentTexture(NULL);
 
 	// reference point for flat texture coord for each vertex around the polygon
-	flatxref = (float)((polysector->origVerts[0].x & (~flatflag)) / fflatwidth);
-	flatyref = (float)((polysector->origVerts[0].y & (~flatflag)) / fflatheight);
+	flatxref = FIXED_TO_FLOAT(polysector->origVerts[0].x);
+	flatyref = FIXED_TO_FLOAT(polysector->origVerts[0].y);
+
+	flatxref = (float)(((fixed_t)flatxref & (~flatflag)) / fflatwidth);
+	flatyref = (float)(((fixed_t)flatyref & (~flatflag)) / fflatheight);
 
 	// transform
 	v3d = planeVerts;
