@@ -820,8 +820,6 @@ static int ticcmd_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");
-	if (hook_cmd_running)
-		return luaL_error(L, "Do not alter player_t in CMD building code!");
 
 	if (fastcmp(field,"forwardmove"))
 		cmd->forwardmove = (SINT8)luaL_checkinteger(L, 3);
