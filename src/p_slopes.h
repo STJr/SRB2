@@ -18,6 +18,35 @@
 extern pslope_t *slopelist;
 extern UINT16 slopecount;
 
+typedef enum
+{
+	TMSP_FRONTFLOOR,
+	TMSP_FRONTCEILING,
+	TMSP_BACKFLOOR,
+	TMSP_BACKCEILING,
+} textmapslopeplane_t;
+
+typedef enum
+{
+	TMSC_FRONTTOBACKFLOOR   = 1,
+	TMSC_BACKTOFRONTFLOOR   = 1<<1,
+	TMSC_FRONTTOBACKCEILING = 1<<2,
+	TMSC_BACKTOFRONTCEILING = 1<<3,
+} textmapslopecopy_t;
+
+typedef enum
+{
+	TMS_NONE,
+	TMS_FRONT,
+	TMS_BACK,
+} textmapside_t;
+
+typedef enum
+{
+	TMSL_NOPHYSICS = 1,
+	TMSL_DYNAMIC = 2,
+} textmapslopeflags_t;
+
 void P_LinkSlopeThinkers (void);
 
 void P_CalculateSlopeNormal(pslope_t *slope);

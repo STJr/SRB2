@@ -1186,7 +1186,7 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 
 	for (hookp = linedefexecutorhooks; hookp; hookp = hookp->next)
 	{
-		if (strcmp(hookp->s.str, line->text))
+		if (strcmp(hookp->s.str, line->stringargs[0]))
 			continue;
 
 		if (lua_gettop(gL) == 1)

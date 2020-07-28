@@ -85,9 +85,13 @@ enum line_e {
 	line_flags,
 	line_special,
 	line_tag,
+	line_args,
+	line_stringargs,
 	line_sidenum,
 	line_frontside,
 	line_backside,
+	line_alpha,
+	line_executordelay,
 	line_slopetype,
 	line_frontsector,
 	line_backsector,
@@ -106,9 +110,13 @@ static const char *const line_opt[] = {
 	"flags",
 	"special",
 	"tag",
+	"args",
+	"stringargs",
 	"sidenum",
 	"frontside",
 	"backside",
+	"alpha",
+	"executordelay",
 	"slopetype",
 	"frontsector",
 	"backsector",
@@ -691,6 +699,42 @@ static int subsector_num(lua_State *L)
 // line_t //
 ////////////
 
+// args, i -> args[i]
+static int lineargs_get(lua_State *L)
+{
+	INT32 *args = *((INT32**)luaL_checkudata(L, 1, META_LINEARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUMLINEARGS)
+		return luaL_error(L, LUA_QL("line_t.args") " index cannot be %d", i);
+	lua_pushinteger(L, args[i]);
+	return 1;
+}
+
+// #args -> NUMLINEARGS
+static int lineargs_len(lua_State* L)
+{
+	lua_pushinteger(L, NUMLINEARGS);
+	return 1;
+}
+
+// stringargs, i -> stringargs[i]
+static int linestringargs_get(lua_State *L)
+{
+	char **stringargs = *((char***)luaL_checkudata(L, 1, META_LINESTRINGARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUMLINESTRINGARGS)
+		return luaL_error(L, LUA_QL("line_t.stringargs") " index cannot be %d", i);
+	lua_pushstring(L, stringargs[i]);
+	return 1;
+}
+
+// #stringargs -> NUMLINESTRINGARGS
+static int linestringargs_len(lua_State *L)
+{
+	lua_pushinteger(L, NUMLINESTRINGARGS);
+	return 1;
+}
+
 static int line_get(lua_State *L)
 {
 	line_t *line = *((line_t **)luaL_checkudata(L, 1, META_LINE));
@@ -731,6 +775,12 @@ static int line_get(lua_State *L)
 	case line_tag:
 		lua_pushinteger(L, line->tag);
 		return 1;
+	case line_args:
+		LUA_PushUserdata(L, line->args, META_LINEARGS);
+		return 1;
+	case line_stringargs:
+		LUA_PushUserdata(L, line->stringargs, META_LINESTRINGARGS);
+		return 1;
 	case line_sidenum:
 		LUA_PushUserdata(L, line->sidenum, META_SIDENUM);
 		return 1;
@@ -741,6 +791,12 @@ static int line_get(lua_State *L)
 		if (line->sidenum[1] == 0xffff)
 			return 0;
 		LUA_PushUserdata(L, &sides[line->sidenum[1]], META_SIDE);
+		return 1;
+	case line_alpha:
+		lua_pushfixed(L, line->alpha);
+		return 1;
+	case line_executordelay:
+		lua_pushinteger(L, line->executordelay);
 		return 1;
 	case line_slopetype:
 		switch(line->slopetype)
@@ -2140,6 +2196,22 @@ int LUA_MapLib(lua_State *L)
 		lua_setfield(L, -2, "__index");
 
 		lua_pushcfunction(L, line_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_LINEARGS);
+		lua_pushcfunction(L, lineargs_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, lineargs_len);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_LINESTRINGARGS);
+		lua_pushcfunction(L, linestringargs_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, linestringargs_len);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 

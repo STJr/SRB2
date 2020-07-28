@@ -8940,7 +8940,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ANGLEMAN",
 	"MT_POLYANCHOR",
 	"MT_POLYSPAWN",
-	"MT_POLYSPAWNCRUSH",
 
 	// Skybox objects
 	"MT_SKYBOX",
