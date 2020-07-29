@@ -464,12 +464,19 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETINT(contangle)
 #undef GETINT
 
-#define GETSKINCOLOR(field) else if (!stricmp(stoken, #field)) skin->field = R_GetColorByName(value);
+#define GETSKINCOLOR(field) else if (!stricmp(stoken, #field)) \
+{ \
+	UINT16 color = R_GetColorByName(value); \
+	skin->field = (color ? color : SKINCOLOR_GREEN); \
+}
 	GETSKINCOLOR(prefcolor)
 	GETSKINCOLOR(prefoppositecolor)
 #undef GETSKINCOLOR
 	else if (!stricmp(stoken, "supercolor"))
-		skin->supercolor = R_GetSuperColorByName(value);
+	{
+		UINT16 color = R_GetSuperColorByName(value);
+		skin->supercolor = (color ? color : SKINCOLOR_SUPERGOLD1);
+	}
 
 #define GETFLOAT(field) else if (!stricmp(stoken, #field)) skin->field = FLOAT_TO_FIXED(atof(value));
 	GETFLOAT(jumpfactor)
