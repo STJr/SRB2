@@ -2141,6 +2141,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					for (r2 = frontsector->ffloors; r2; r2 = r2->next)
 					{
+						if (r2->master == rover->master) // Skip if same control line.
+							continue;
+
 						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
 							continue;
 
