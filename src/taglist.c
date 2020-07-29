@@ -284,6 +284,48 @@ INT32 Tag_FindLineSpecial(const INT16 special, const mtag_t tag)
 	return -1;
 }
 
+/// Backwards compatibility iteration function for Lua scripts.
+INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
+{
+	if (tag == -1)
+	{
+		start++;
+
+		if (start >= (INT32)numlines)
+			return -1;
+
+		while (start < (INT32)numlines && lines[start].special != special)
+			start++;
+
+		return start;
+	}
+	else
+	{
+		size_t p = 0;
+		INT32 id;
+
+		// For backwards compatibility's sake, simulate the old linked taglist behavior:
+		// Iterate through the taglist and find the "start" line's position in the list,
+		// And start checking with the next one (if it exists).
+		if (start != -1)
+		{
+			for (; (id = Tag_Iterate_Lines(tag, p)) >= 0; p++)
+				if (id == start)
+				{
+					p++;
+					break;
+				}
+		}
+
+		for (; (id = Tag_Iterate_Lines(tag, p)) >= 0; p++)
+			if (lines[id].special == special)
+				return id;
+
+		return -1;
+	}
+}
+
+
 // Ingame list manipulation.
 
 void Tag_SectorFSet (const size_t id, const mtag_t tag)
