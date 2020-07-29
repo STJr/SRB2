@@ -1627,6 +1627,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					continue;
 				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
 					continue;
+				if (Tag_Find(&gl_frontsector->tags, rover->master->args[0])) // Skip FOF if on both sectors by checking arg0. Hacky but it works.
+					continue;
+
 
 				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
 
@@ -1760,6 +1763,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				if (!(rover->flags & FF_ALLSIDES || rover->flags & FF_INVERTSIDES))
 					continue;
 				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
+					continue;
+				if (Tag_Find(&gl_backsector->tags, rover->master->args[0])) // Skip FOF if on both sectors by checking arg0. Hacky but it works.
 					continue;
 
 				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
