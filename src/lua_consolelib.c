@@ -444,7 +444,7 @@ static int lib_consPrintf(lua_State *L)
 	if (n < 2)
 		return luaL_error(L, "CONS_Printf requires at least two arguments: player and text.");
 	//HUDSAFE
-	INLEVEL
+
 	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	if (!plr)
 		return LUA_ErrInvalid(L, "player_t");

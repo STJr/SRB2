@@ -442,7 +442,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 			mobj->sprite2 = spr2;
 			mobj->frame = frame|(st->frame&~FF_FRAMEMASK);
-			if (player->powers[pw_super] || (player->powers[pw_carry] == CR_NIGHTSMODE && (player->charflags & (SF_SUPER|SF_NONIGHTSSUPER)) == SF_SUPER)) // Super colours? Super bright!
+			if (P_PlayerFullbright(player))
 				mobj->frame |= FF_FULLBRIGHT;
 		}
 		// Regular sprites
@@ -2107,7 +2107,7 @@ void P_XYMovement(mobj_t *mo)
 	P_XYFriction(mo, oldx, oldy);
 }
 
-static void P_RingXYMovement(mobj_t *mo)
+void P_RingXYMovement(mobj_t *mo)
 {
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
@@ -2116,7 +2116,7 @@ static void P_RingXYMovement(mobj_t *mo)
 		P_SlideMove(mo);
 }
 
-static void P_SceneryXYMovement(mobj_t *mo)
+void P_SceneryXYMovement(mobj_t *mo)
 {
 	fixed_t oldx, oldy; // reducing bobbing/momentum on ice when up against walls
 
@@ -2275,7 +2275,7 @@ static void P_AdjustMobjFloorZ_PolyObjs(mobj_t *mo, subsector_t *subsec)
 	}
 }
 
-static void P_RingZMovement(mobj_t *mo)
+void P_RingZMovement(mobj_t *mo)
 {
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
@@ -2342,7 +2342,7 @@ boolean P_CheckSolidLava(ffloor_t *rover)
 // P_ZMovement
 // Returns false if the mobj was killed/exploded/removed, true otherwise.
 //
-static boolean P_ZMovement(mobj_t *mo)
+boolean P_ZMovement(mobj_t *mo)
 {
 	fixed_t dist, delta;
 	boolean onground;
@@ -2895,7 +2895,7 @@ static boolean P_PlayerPolyObjectZMovement(mobj_t *mo)
 	return stopmovecut;
 }
 
-static void P_PlayerZMovement(mobj_t *mo)
+void P_PlayerZMovement(mobj_t *mo)
 {
 	boolean onground;
 
@@ -3073,7 +3073,7 @@ nightsdone:
 	}
 }
 
-static boolean P_SceneryZMovement(mobj_t *mo)
+boolean P_SceneryZMovement(mobj_t *mo)
 {
 	// Intercept the stupid 'fall through 3dfloors' bug
 	if (mo->subsector->sector->ffloors)

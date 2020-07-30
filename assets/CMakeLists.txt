@@ -12,6 +12,9 @@ ENDFUNCTION(PREPEND)
 set(SRB2_ASSET_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/installer"
 	CACHE STRING "Path to directory that contains all asset files for the installer.")
 
+set(SRB2_ASSET_INSTALL ON
+	CACHE BOOL "Insert asset files into the install directory or package.")
+
 ####################
 # POST-V2.2 NOTE: Do not forget to add patch.pk3 to the end of this list!
 ####################
@@ -43,20 +46,27 @@ endforeach()
 
 if(${CMAKE_SYSTEM} MATCHES Darwin)
 	get_target_property(outname SRB2SDL2 OUTPUT_NAME)
-	install(DIRECTORY "${SRB2_ASSET_DIRECTORY}/"
-		DESTINATION "${outname}.app/Contents/Resources"
-	)
+	if(${SRB2_ASSET_INSTALL})
+		install(DIRECTORY "${SRB2_ASSET_DIRECTORY}/"
+			DESTINATION "${outname}.app/Contents/Resources"
+		)
+	endif()
+	# Always install the doc files, even in non-asset packages.
 	install(FILES ${SRB2_ASSET_DOCS}
 		DESTINATION .
 		OPTIONAL
 	)
 else()
-	install(DIRECTORY "${SRB2_ASSET_DIRECTORY}/"
-		DESTINATION .
-	)
-	# Docs are assumed to be located in SRB2_ASSET_DIRECTORY, so don't install again
-	#install(FILES ${SRB2_ASSET_DOCS}
-	#	DESTINATION .
-	#	OPTIONAL
-	#)
+	if(${SRB2_ASSET_INSTALL})
+		install(DIRECTORY "${SRB2_ASSET_DIRECTORY}/"
+			DESTINATION .
+		)
+		# Docs are assumed to be located in SRB2_ASSET_DIRECTORY, so don't install them in their own call.
+	else()
+		# Always install the doc files, even in non-asset packages.
+		install(FILES ${SRB2_ASSET_DOCS}
+			DESTINATION .
+			OPTIONAL
+		)
+	endif()
 endif()
