@@ -33,6 +33,7 @@
 #include "p_setup.h"
 #include "lua_script.h"
 #include "d_netfil.h" // findfile
+#include "r_data.h" // Color_cons_t
 
 //========
 // protos.
@@ -626,7 +627,7 @@ static void COM_ExecuteString(char *ptext)
 
 	// check cvars
 	// Hurdler: added at Ebola's request ;)
-	// (don't flood the console in software mode with bad gr_xxx command)
+	// (don't flood the console in software mode with bad gl_xxx command)
 	if (!CV_Command() && con_destlines)
 		CONS_Printf(M_GetText("Unknown command '%s'\n"), COM_Argv(0));
 }
@@ -818,6 +819,18 @@ static void COM_Help_f(void)
 					CONS_Printf("  Yes or No (On or Off, 1 or 0)\n");
 				else if (cvar->PossibleValue == CV_OnOff)
 					CONS_Printf("  On or Off (Yes or No, 1 or 0)\n");
+				else if (cvar->PossibleValue == Color_cons_t)
+				{
+					for (i = 1; i < numskincolors; ++i)
+					{
+						if (skincolors[i].accessible)
+						{
+							CONS_Printf("  %-2d : %s\n", i, skincolors[i].name);
+							if (i == cvar->value)
+								cvalue = skincolors[i].name;
+						}
+					}
+				}
 				else
 				{
 #define MINVAL 0

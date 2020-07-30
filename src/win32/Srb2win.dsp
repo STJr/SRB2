@@ -535,10 +535,6 @@ SOURCE=..\hardware\hw_drv.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\hardware\hw_glide.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\hardware\hw_glob.h
 # End Source File
 # Begin Source File

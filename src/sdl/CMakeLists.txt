@@ -1,6 +1,10 @@
 # Declare SDL2 interface sources
 
-set(SRB2_CONFIG_SDL2_USEMIXER ON CACHE BOOL "Use SDL2_mixer or regular sdl sound")
+if(NOT ${SRB2_CONFIG_HAVE_MIXERX})
+	set(SRB2_CONFIG_SDL2_USEMIXER ON CACHE BOOL "Use SDL2_mixer or regular sdl sound")
+else()
+	set(SRB2_CONFIG_SDL2_USEMIXER OFF)
+endif()
 
 if(${SRB2_CONFIG_SDL2_USEMIXER})
 	if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
@@ -22,6 +26,8 @@ if(${SRB2_CONFIG_SDL2_USEMIXER})
 		message(WARNING "You specified that SDL2_mixer is available, but it was not found. Falling back to sdl sound.")
 		set(SRB2_SDL2_SOUNDIMPL sdl_sound.c)
 	endif()
+elseif(${MIXERX_FOUND})
+	set(SRB2_SDL2_SOUNDIMPL mixer_sound.c)
 else()
 	set(SRB2_SDL2_SOUNDIMPL sdl_sound.c)
 endif()
@@ -156,6 +162,7 @@ if(${SDL2_FOUND})
 			SDL2_mixer
 			${GME_LIBRARIES}
 			${OPENMPT_LIBRARIES}
+			${MIXERX_LIBRARIES}
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
@@ -167,6 +174,7 @@ if(${SDL2_FOUND})
 			${SDL2_MIXER_LIBRARIES}
 			${GME_LIBRARIES}
 			${OPENMPT_LIBRARIES}
+			${MIXERX_LIBRARIES}
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
@@ -247,27 +255,32 @@ if(${SDL2_FOUND})
 		${SDL2_MIXER_INCLUDE_DIRS}
 		${GME_INCLUDE_DIRS}
 		${OPENMPT_INCLUDE_DIRS}
+		${MIXERX_INCLUDE_DIRS}
 		${PNG_INCLUDE_DIRS}
 		${ZLIB_INCLUDE_DIRS}
 		${OPENGL_INCLUDE_DIRS}
 	)
 
-	if(${SRB2_HAVE_MIXER})
+	if((${SRB2_HAVE_MIXER}) OR (${SRB2_HAVE_MIXERX}))
 		target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_MIXER -DSOUND=SOUND_MIXER)
 	endif()
 
 	target_compile_definitions(SRB2SDL2 PRIVATE
-		-DHAVE_SDL
+		-DDDIRECTFULLSCREEN -DHAVE_SDL
 	)
 
-	## strip debug symbols into separate file when using gcc
-	if(CMAKE_COMPILER_IS_GNUCC)
-		if(${CMAKE_BUILD_TYPE} MATCHES Debug)
+	## strip debug symbols into separate file when using gcc.
+	## to be consistent with Makefile, don't generate for OS X.
+	if((CMAKE_COMPILER_IS_GNUCC) AND NOT (${CMAKE_SYSTEM} MATCHES Darwin))
+		if((${CMAKE_BUILD_TYPE} MATCHES Debug) OR (${CMAKE_BUILD_TYPE} MATCHES RelWithDebInfo))
+			if(${CMAKE_BUILD_TYPE} MATCHES Debug)
+				set(OBJCOPY_ONLY_KEEP_DEBUG "--only-keep-debug")
+			endif()
 			message(STATUS "Will make separate debug symbols in *.debug")
 			add_custom_command(TARGET SRB2SDL2 POST_BUILD
-				COMMAND ${OBJCOPY} --only-keep-debug $<TARGET_FILE:SRB2SDL2> $<TARGET_FILE:SRB2SDL2>.debug
+				COMMAND ${OBJCOPY} ${OBJCOPY_ONLY_KEEP_DEBUG} $<TARGET_FILE:SRB2SDL2> $<TARGET_FILE:SRB2SDL2>.debug
 				COMMAND ${OBJCOPY} --strip-debug $<TARGET_FILE:SRB2SDL2>
-				COMMAND ${OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE_NAME:SRB2SDL2>.debug $<TARGET_FILE:SRB2SDL2>
+				COMMAND ${OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE:SRB2SDL2>.debug $<TARGET_FILE:SRB2SDL2>
 			)
 		endif()
 	endif()
@@ -281,6 +294,15 @@ if(${SDL2_FOUND})
 		install(TARGETS SRB2SDL2 SRB2SDL2
 			RUNTIME DESTINATION .
 		)
+		if ((${CMAKE_BUILD_TYPE} MATCHES Debug) OR (${CMAKE_BUILD_TYPE} MATCHES RelWithDebInfo))
+			set(SRB2_DEBUG_INSTALL OFF CACHE BOOL "Insert *.debug file into the install directory or package.")
+			if (${SRB2_DEBUG_INSTALL})
+				install(FILES $<TARGET_FILE:SRB2SDL2>.debug
+					DESTINATION .
+					OPTIONAL
+				)
+			endif()
+		endif()
 	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES Windows)
@@ -294,6 +316,7 @@ if(${SDL2_FOUND})
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/x86_64-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/x86_64-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86_64/mingw
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDLMixerX/x86_64-w64-mingw32/bin
 						)
 					else()
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
@@ -301,6 +324,7 @@ if(${SDL2_FOUND})
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/i686-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/i686-w64-mingw32/bin
 							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86/mingw
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDLMixerX/i686-w64-mingw32/bin
 						)
 					endif()
 				else()
@@ -310,6 +334,7 @@ if(${SDL2_FOUND})
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x64
 							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86_64/mingw
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDLMixerX/x86_64-w64-mingw32/bin
 						)
 					else()
 						find_library(SRB2_SDL2_DLL_${dllname} "${defaultname}"
@@ -317,6 +342,7 @@ if(${SDL2_FOUND})
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2/lib/x86
 							HINTS ${CMAKE_SOURCE_DIR}/libs/SDL2_mixer/lib/x86
 							HINTS ${CMAKE_SOURCE_DIR}/libs/libopenmpt/bin/x86/mingw
+							HINTS ${CMAKE_SOURCE_DIR}/libs/SDLMixerX/i686-w64-mingw32/bin
 						)
 					endif()
 				endif()
@@ -339,6 +365,12 @@ if(${SDL2_FOUND})
 		endif()
 		if(${SRB2_CONFIG_HAVE_OPENMPT})
 			getwinlib(libopenmpt "libopenmpt.dll")
+		endif()
+		if(${SRB2_CONFIG_HAVE_MIXERX})
+			getwinlib(SDL2_mixer_ext "SDL2_mixer_ext.dll")
+			getwinlib(libfluidsynth-2 "libfluidsynth-2.dll")
+			getwinlib(libgcc_s_sjlj-1 "libgcc_s_sjlj-1.dll")
+			getwinlib(libstdc++-6 "libstdc++-6.dll")
 		endif()
 
 		install(PROGRAMS

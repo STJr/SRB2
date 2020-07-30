@@ -1426,10 +1426,10 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 							}
 							if (grPatch->mipmap)
 							{
-								if (grPatch->mipmap->grInfo.data)
+								if (grPatch->mipmap->data)
 								{
-									Z_Free(grPatch->mipmap->grInfo.data);
-									grPatch->mipmap->grInfo.data = NULL;
+									Z_Free(grPatch->mipmap->data);
+									grPatch->mipmap->data = NULL;
 								}
 								Z_Free(grPatch->mipmap);
 								grPatch->mipmap = NULL;

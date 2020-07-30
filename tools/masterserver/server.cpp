@@ -86,7 +86,7 @@ typedef struct
 
 //=============================================================================
 
-#define HOSTNAME "loopback"
+#define HOSTNAME "localhost"
 #define USER "srb2_ms"
 #define PASSWORD "gLRDRb7WgLRDRb7W"
 #define DATABASE "srb2_ms"
@@ -291,17 +291,17 @@ void MySQL_AddServer(const char *ip, const char *port, const char *name, const c
         char checkquery[500];
         char updatequery[5000];
         char queryp1[5000] = "INSERT INTO `ms_servers` (`name`,`ip`,`port`,`version`,`timestamp`,`room`,`key`) VALUES ('%s','%s','%s','%s','%ld','%d','%s')";
-        char checkqueryp1[500] = "SELECT room_override FROM `ms_servers` WHERE `ip` = '%s'";
+        char checkqueryp1[500] = "SELECT room_override FROM `ms_servers` WHERE `ip` = '%s' AND `port` = '%s'";
 		char updatequeryp1[5000];
 		if(firstadd)
 		{
 			logPrintf(logfile, "First add.\n");
-			strcpy(updatequeryp1, "UPDATE `ms_servers` SET `name` = '%s', `port` = '%s', `version` = '%s', timestamp = '%ld', upnow = '1', `room` = '%d', `delisted` = '0', `key` = '%s' WHERE `ip` = '%s'");
+			strcpy(updatequeryp1, "UPDATE `ms_servers` SET `name` = '%s', `port` = '%s', `version` = '%s', timestamp = '%ld', upnow = '1', `room` = '%d', `delisted` = '0', `key` = '%s' WHERE `ip` = '%s' AND `port` = '%s'");
 		}
 		else
 		{
 			logPrintf(logfile, "Update ping.\n");
-			strcpy(updatequeryp1, "UPDATE `ms_servers` SET `name` = '%s', `port` = '%s', `version` = '%s', timestamp = '%ld', upnow = '1', `room` = '%d', `key` = '%s' WHERE `ip` = '%s' AND `delisted` = '0'");
+			strcpy(updatequeryp1, "UPDATE `ms_servers` SET `name` = '%s', `port` = '%s', `version` = '%s', timestamp = '%ld', upnow = '1', `room` = '%d', `key` = '%s' WHERE `ip` = '%s' AND `port` = '%s' AND `delisted` = '0'");
 		}
         MySQL_Conn(false);
         mysql_real_escape_string(conn, escapedName, name, (unsigned long)strlen(name));
@@ -314,10 +314,10 @@ void MySQL_AddServer(const char *ip, const char *port, const char *name, const c
 			logPrintf(errorfile, "IP %s tried to use the private room %d! THIS SHOULD NOT HAPPEN\n", ip, room);
 			return;
 		}
-        sprintf(checkquery, checkqueryp1, ip);
+        sprintf(checkquery, checkqueryp1, ip, port);
         time_t timestamp;
         timestamp = time (NULL);
-        logPrintf(logfile, "Checking for existing servers in table with the same IP...\n");
+        logPrintf(logfile, "Checking for existing servers in table with the same IP and port...\n");
         logPrintf(mysqlfile, "Executing MySQL Query: %s\n", checkquery);
         if(mysql_query(conn, checkquery)) {
           logPrintf(errorfile, "MYSQL ERROR: %s\n", mysql_error(conn));
@@ -341,9 +341,9 @@ void MySQL_AddServer(const char *ip, const char *port, const char *name, const c
 			if(atoi(row[0]) != 0)
 				room = atoi(row[0]);
             mysql_free_result(res);
-            logPrintf(logfile, "Server's IP already exists, so let's just update it instead...\n");
+            logPrintf(logfile, "Server's IP and port already exists, so let's just update it instead...\n");
             logPrintf(logfile, "Updating Server Data for %s\n", ip);
-            sprintf(updatequery, updatequeryp1, escapedName, escapedPort, escapedVersion, timestamp, room, escapedKey, ip);
+            sprintf(updatequery, updatequeryp1, escapedName, escapedPort, escapedVersion, timestamp, room, escapedKey, ip, port);
             logPrintf(mysqlfile, "Executing MySQL Query: %s\n", updatequery);
             if(mysql_query(conn, updatequery)) {
                logPrintf(errorfile, "MYSQL ERROR: %s\n", mysql_error(conn));
@@ -619,10 +619,10 @@ void MySQL_ListServServers(UINT32 id, UINT32 type, const char *ip) {
 void MySQL_RemoveServer(char *ip, char *port, char *name, char *version) {
         char escapedName[255];
         char updatequery[5000];
-        char updatequeryp1[5000] = "UPDATE `ms_servers` SET upnow = '0' WHERE `ip` = '%s' AND `permanent` = '0'";
+        char updatequeryp1[5000] = "UPDATE `ms_servers` SET upnow = '0' WHERE `ip` = '%s' AND `port` = '%s' AND `permanent` = '0'";
         MySQL_Conn(false);
         mysql_real_escape_string(conn, escapedName, name, (unsigned long)strlen(name));
-        sprintf(updatequery, updatequeryp1, ip);
+        sprintf(updatequery, updatequeryp1, ip, port);
         logPrintf(mysqlfile, "Executing MySQL Query: %s\n", updatequery);
         if(mysql_query(conn, updatequery)) {
            logPrintf(errorfile, "MYSQL ERROR: %s\n", mysql_error(conn));
@@ -841,6 +841,10 @@ static void addServer(int id, char *buffer, bool firstadd)
 	info->port[sizeof (info->port)-1] = '\0';
 	info->name[sizeof (info->name)-1] = '\0';
 	info->version[sizeof (info->version)-1] = '\0';
+
+	logPrintf(logfile, "addServer(): Version = \"%s\"\n", info->version);
+	logPrintf(logfile, "addServer(): Key = \"%s\"\n", info->key);
+
 	// retrieve the true ip of the server
 	strcpy(info->ip, server_socket.getClientIP(id));
 	//strcpy(info->port, server_socket.getClientPort(id));
@@ -995,7 +999,7 @@ int main(int argc, char *argv[])
 
 	if (server_socket.listen(argv[1]) < 0)
 	{
-		fprintf(stderr, "Error while initializing the server\n");
+		fprintf(stderr, "Error while initializing the server; port being used! Try killing the other Master Server.\n");
 		exit(2);
 	}
 
