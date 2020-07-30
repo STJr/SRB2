@@ -2020,7 +2020,9 @@ boolean G_Responder(event_t *ev)
 		if (F_CreditResponder(ev))
 		{
 			// Skip credits for everyone
-			if (!netgame || server || IsPlayerAdmin(consoleplayer))
+			if (! serverrunning)/* hahahahahaha */
+				F_StartGameEvaluation();
+			else if (server || IsPlayerAdmin(consoleplayer))
 				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			return true;
 		}

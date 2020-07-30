@@ -136,6 +136,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	if (fastcmp(word,"gamemap")) {
 		lua_pushinteger(L, gamemap);
 		return 1;
+	} else if (fastcmp(word,"udmf")) {
+		lua_pushboolean(L, udmf);
+		return 1;
 	} else if (fastcmp(word,"maptol")) {
 		lua_pushinteger(L, maptol);
 		return 1;
