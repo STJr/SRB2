@@ -1621,11 +1621,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		{
 			for (rover = gl_backsector->ffloors; rover; rover = rover->next)
 			{
+				boolean bothsides = false;
 				// Skip if it exists on both sectors.
 				ffloor_t * r2;
 				for (r2 = gl_frontsector->ffloors; r2; r2 = r2->next)
 					if (rover->master == r2->master)
-						continue;
+					{
+						bothsides = true;
+						break;
+					}
+
+				if (bothsides) continue;
 
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERSIDES))
 					continue;
@@ -1761,11 +1767,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		{
 			for (rover = gl_frontsector->ffloors; rover; rover = rover->next)
 			{
+				boolean bothsides = false;
 				// Skip if it exists on both sectors.
 				ffloor_t * r2;
 				for (r2 = gl_backsector->ffloors; r2; r2 = r2->next)
 					if (rover->master == r2->master)
-						continue;
+					{
+						bothsides = true;
+						break;
+					}
+
+				if (bothsides) continue;
 
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERSIDES))
 					continue;
