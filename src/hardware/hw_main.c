@@ -2260,8 +2260,8 @@ static void HWR_AddLine(seg_t * line)
 	v2y = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->y);
 
 	// OPTIMIZE: quickly reject orthogonal back sides.
-	angle1 = R_PointToAngle(v1x, v1y);
-	angle2 = R_PointToAngle(v2x, v2y);
+	angle1 = R_PointToAngle64(v1x, v1y);
+	angle2 = R_PointToAngle64(v2x, v2y);
 
 #ifdef NEWCLIP
 	 // PrBoom: Back side, i.e. backface culling - read: endAngle >= startAngle!
@@ -2554,8 +2554,8 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 	py2 = bspcoord[checkcoord[boxpos][3]];
 
 #ifdef NEWCLIP
-	angle1 = R_PointToAngle(px1, py1);
-	angle2 = R_PointToAngle(px2, py2);
+	angle1 = R_PointToAngle64(px1, py1);
+	angle2 = R_PointToAngle64(px2, py2);
 	return gld_clipper_SafeCheckRange(angle2, angle1);
 #else
 	// check clip list for an open space
