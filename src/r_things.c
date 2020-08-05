@@ -2773,7 +2773,7 @@ boolean R_ThingVisible (mobj_t *thing)
 	return (!(
 				thing->sprite == SPR_NULL ||
 				( thing->flags2 & (MF2_DONTDRAW) ) ||
-				thing == r_viewmobj
+				(r_viewmobj && (thing == r_viewmobj || (r_viewmobj->player && r_viewmobj->player->followmobj == thing)))
 	));
 }
 
