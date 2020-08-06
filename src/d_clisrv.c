@@ -1122,6 +1122,9 @@ static void GetPackets(void);
 
 static cl_mode_t cl_mode = CL_SEARCHING;
 
+/* allow clientside shaders, determined by server */
+boolean cl_shadersallowed = false;
+
 // Player name send/load
 
 static void CV_SavePlayerNames(UINT8 **p)
@@ -1860,7 +1863,11 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 			sizeof netbuffer->u.serverinfo.gametypename);
 	netbuffer->u.serverinfo.modifiedgame = (UINT8)modifiedgame;
 	netbuffer->u.serverinfo.cheatsenabled = CV_CheatsEnabled();
-	netbuffer->u.serverinfo.isdedicated = (UINT8)dedicated;
+	netbuffer->u.serverinfo.flags = 0;
+	if (dedicated)
+		netbuffer->u.serverinfo.flags |= SV_DEDICATED;
+	if (cv_allowclientshaders.value)
+		netbuffer->u.serverinfo.flags |= SV_LOCALSHADERS;
 	strncpy(netbuffer->u.serverinfo.servername, cv_servername.string,
 		MAXSERVERNAME);
 	strncpy(netbuffer->u.serverinfo.mapname, G_BuildMapName(gamemap), 7);
@@ -2426,6 +2433,8 @@ static boolean CL_ServerConnectionSearchTicker(boolean viams, tic_t *asksent)
 				M_StartMessage(M_GetText("You can't join.\nI don't know why,\nbut you can't join.\n\nPress ESC\n"), NULL, MM_NOTHING);
 			return false;
 		}
+
+		cl_shadersallowed = ( serverlist[i].info.flags & SV_LOCALSHADERS ) != 0;
 
 		if (client)
 		{
@@ -4086,6 +4095,7 @@ void SV_StopServer(void)
 
 	consoleplayer = 0;
 	cl_mode = CL_SEARCHING;
+	cl_shadersallowed = false;
 	maketic = gametic+1;
 	neededtic = maketic;
 	serverrunning = false;

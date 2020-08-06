@@ -112,6 +112,8 @@ extern consvar_t cv_showping;
 
 extern consvar_t cv_skipmapcheck;
 
+extern consvar_t cv_allowclientshaders;
+
 extern consvar_t cv_sleep;
 
 extern char timedemo_name[256];

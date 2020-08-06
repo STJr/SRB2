@@ -368,6 +368,12 @@ typedef struct
 	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME];
 } ATTRPACK clientconfig_pak;
 
+enum
+{
+	SV_DEDICATED    = (1<<0),
+	SV_LOCALSHADERS = (1<<1),
+};
+
 #define MAXSERVERNAME 32
 #define MAXFILENEEDED 915
 // This packet is too large
@@ -389,7 +395,7 @@ typedef struct
 	char gametypename[24];
 	UINT8 modifiedgame;
 	UINT8 cheatsenabled;
-	UINT8 isdedicated;
+	UINT8 flags;
 	UINT8 fileneedednum;
 	tic_t time;
 	tic_t leveltime;
@@ -602,4 +608,6 @@ extern UINT8 hu_resynching;
 
 extern UINT8 adminpassmd5[16];
 extern boolean adminpasswordset;
+
+extern boolean cl_shadersallowed;
 #endif

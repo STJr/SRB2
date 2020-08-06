@@ -1075,7 +1075,7 @@ static void IdentifyVersion(void)
 			int ms = W_VerifyNMUSlumps(musicpath); \
 			if (ms == 1) \
 				D_AddFile(musicpath); \
-			else if (ms == 0) \
+			else if (ms == 0 || ms == 2) \
 				I_Error("File "str" has been modified with non-music/sound lumps"); \
 		}
 

@@ -720,6 +720,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 #endif
 	size_t packetsize;
 	UINT8 md5sum[16];
+	int nmus;
 	boolean important;
 
 	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
@@ -750,10 +751,12 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	if ((handle = W_OpenWadFile(&filename, true)) == NULL)
 		return W_InitFileError(filename, startup);
 
+	nmus = W_VerifyNMUSlumps(filename);
+
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
 	// see PutFileNeeded in d_netfil.c
-	if ((important = !W_VerifyNMUSlumps(filename)))
+	if ((important = !nmus))
 	{
 		packetsize = packetsizetally + nameonlylength(filename) + 22;
 
@@ -823,6 +826,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	wadfile->numlumps = (UINT16)numlumps;
 	wadfile->lumpinfo = lumpinfo;
 	wadfile->important = important;
+	wadfile->shaders = ( nmus == 2 );
 	fseek(handle, 0, SEEK_END);
 	wadfile->filesize = (unsigned)ftell(handle);
 	wadfile->type = type;
@@ -1870,9 +1874,12 @@ void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5)
 // Verify versions for different archive
 // formats. checklist assumed to be valid.
 
-static int
-W_VerifyName (const char *name, lumpchecklist_t *checklist, boolean status)
-{
+static boolean
+W_VerifyName (
+		const char      * name,
+		lumpchecklist_t * checklist,
+		boolean           status
+){
 	size_t j;
 	for (j = 0; checklist[j].len && checklist[j].name; ++j)
 	{
@@ -1886,8 +1893,27 @@ W_VerifyName (const char *name, lumpchecklist_t *checklist, boolean status)
 }
 
 static int
-W_VerifyWAD (FILE *fp, lumpchecklist_t *checklist, boolean status)
-{
+W_VerifyName2 (
+		const char      * name,
+		lumpchecklist_t * checklist1,
+		lumpchecklist_t * checklist2,
+		boolean           status
+){
+	if (W_VerifyName(name, checklist1, status))
+		return 1;
+	else if (W_VerifyName(name, checklist2, status))
+		return 2;
+	else
+		return 0;
+}
+
+static int
+W_VerifyWAD (
+		FILE            * fp,
+		lumpchecklist_t * checklist1,
+		lumpchecklist_t * checklist2,
+		boolean           status
+){
 	size_t i;
 
 	// assume wad file
@@ -1924,7 +1950,7 @@ W_VerifyWAD (FILE *fp, lumpchecklist_t *checklist, boolean status)
 		if (lumpinfo.size == 0)
 			continue;
 
-		if (! W_VerifyName(lumpinfo.name, checklist, status))
+		if (! W_VerifyName2(lumpinfo.name, checklist1, checklist2, status))
 			return false;
 	}
 
@@ -1945,8 +1971,12 @@ static lumpchecklist_t folderblacklist[] =
 };
 
 static int
-W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
-{
+W_VerifyPK3 (
+		FILE            * fp,
+		lumpchecklist_t * checklist1,
+		lumpchecklist_t * checklist2,
+		boolean           status
+){
     zend_t zend;
     zentry_t zentry;
 
@@ -2003,7 +2033,7 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 			memset(lumpname, '\0', 9); // Making sure they're initialized to 0. Is it necessary?
 			strncpy(lumpname, trimname, min(8, dotpos - trimname));
 
-			if (! W_VerifyName(lumpname, checklist, status))
+			if (! W_VerifyName2(lumpname, checklist1, checklist2, status))
 				return false;
 
 			// Check for directories next, if it's blacklisted it will return false
@@ -2023,27 +2053,31 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 
 // Note: This never opens lumps themselves and therefore doesn't have to
 // deal with compressed lumps.
-static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
-	boolean status)
-{
+static int
+W_VerifyFile (
+		const char      * filename,
+		lumpchecklist_t * checklist1,
+		lumpchecklist_t * checklist2,
+		boolean           status
+){
 	FILE *handle;
 	int goodfile = false;
 
-	if (!checklist)
+	if (!checklist1 || !checklist2)
 		I_Error("No checklist for %s\n", filename);
 	// open wad file
 	if ((handle = W_OpenWadFile(&filename, false)) == NULL)
 		return -1;
 
 	if (stricmp(&filename[strlen(filename) - 4], ".pk3") == 0)
-		goodfile = W_VerifyPK3(handle, checklist, status);
+		goodfile = W_VerifyPK3(handle, checklist1, checklist2, status);
 	else
 	{
 		// detect wad file by the absence of the other supported extensions
 		if (stricmp(&filename[strlen(filename) - 4], ".soc")
 		&& stricmp(&filename[strlen(filename) - 4], ".lua"))
 		{
-			goodfile = W_VerifyWAD(handle, checklist, status);
+			goodfile = W_VerifyWAD(handle, checklist1, checklist2, status);
 		}
 	}
 	fclose(handle);
@@ -2057,9 +2091,9 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
   * be sent.
   *
   * \param filename Filename of the wad to check.
-  * \return 1 if file contains only music/sound lumps, 0 if it contains other
-  *         stuff (maps, sprites, dehacked lumps, and so on). -1 if there no
-  *         file exists with that filename
+  * \return 1 if file contains only music/sound lumps, 2 if it contains shaders
+  *         too, 0 if it contains other stuff (maps, sprites, dehacked lumps
+  *          and so on). -1 if there no file exists with that filename
   * \author Alam Arias
   */
 int W_VerifyNMUSlumps(const char *filename)
@@ -2088,12 +2122,17 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"YB_", 3}, // Intermission graphics, goes with the above
 		{"M_", 2}, // As does menu stuff
 		{"MUSICDEF", 8}, // Song definitions (thanks kart)
+
+		{NULL, 0},
+	};
+	lumpchecklist_t shaders_list[] =
+	{
 		{"SHADERS", 7}, // OpenGL shader definitions
 		{"SH_", 3}, // GLSL shader
 
 		{NULL, 0},
 	};
-	return W_VerifyFile(filename, NMUSlist, false);
+	return W_VerifyFile(filename, NMUSlist, shaders_list, false);
 }
 
 /** \brief Generates a virtual resource used for level data loading.

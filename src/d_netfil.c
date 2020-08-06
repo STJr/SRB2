@@ -395,11 +395,16 @@ INT32 CL_CheckFiles(void)
 		CONS_Debug(DBG_NETPLAY, "game is modified; only doing basic checks\n");
 		for (i = 1, j = 1; i < fileneedednum || j < numwadfiles;)
 		{
-			if (j < numwadfiles && !wadfiles[j]->important)
+			if (j < numwadfiles)
 			{
-				// Unimportant on our side.
-				++j;
-				continue;
+				if (
+						( ! wadfiles[j]->important ) &&
+						( ! wadfiles[j]->shaders || cl_shadersallowed )
+				){
+					// Unimportant on our side.
+					++j;
+					continue;
+				}
 			}
 
 			// If this test is true, we've reached the end of one file list

@@ -240,6 +240,8 @@ consvar_t cv_defaultskin2 = {"defaultskin2", DEFAULTSKIN2, CV_SAVE, NULL, NULL, 
 
 consvar_t cv_skipmapcheck = {"skipmapcheck", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
+consvar_t cv_allowclientshaders = {"allowclientshaders", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+
 INT32 cv_debug;
 
 consvar_t cv_usemouse = {"use_mouse", "On", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse, 0, NULL, NULL, 0, 0, NULL};
@@ -594,6 +596,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_jointimeout);
 
 	CV_RegisterVar(&cv_skipmapcheck);
+	CV_RegisterVar(&cv_allowclientshaders);
 	CV_RegisterVar(&cv_sleep);
 	CV_RegisterVar(&cv_maxping);
 	CV_RegisterVar(&cv_pingtimeout);
@@ -3265,6 +3268,11 @@ static void Command_Addfile(void)
 			return;
 
 	musiconly = W_VerifyNMUSlumps(fn);
+
+	if (musiconly == 2 && client)
+	{
+		musiconly = cl_shadersallowed;
+	}
 
 	if (!musiconly)
 	{
