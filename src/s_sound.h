@@ -61,13 +61,6 @@ extern consvar_t cv_midisoundfontpath;
 extern consvar_t cv_miditimiditypath;
 #endif
 
-#ifdef SNDSERV
-extern consvar_t sndserver_cmd, sndserver_arg;
-#endif
-#ifdef MUSSERV
-extern consvar_t musserver_cmd, musserver_arg;
-#endif
-
 extern CV_PossibleValue_t soundvolume_cons_t[];
 //part of i_cdmus.c
 extern consvar_t cd_volume, cdUpdate;
