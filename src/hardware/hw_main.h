@@ -68,8 +68,13 @@ void HWR_DrawScreenFinalTexture(int width, int height);
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap);
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
 
-void HWR_ReadShaders(UINT16 wadnum, boolean PK3);
-boolean HWR_LoadShaders(void);
+boolean HWR_CompileShaders(void);
+
+void HWR_LoadAllCustomShaders(void);
+void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3);
+const char *HWR_GetShaderName(INT32 shader);
+
+extern customshaderxlat_t shaderxlat[];
 
 extern CV_PossibleValue_t granisotropicmode_cons_t[];
 
