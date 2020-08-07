@@ -65,17 +65,6 @@ extern CV_PossibleValue_t soundvolume_cons_t[];
 //part of i_cdmus.c
 extern consvar_t cd_volume, cdUpdate;
 
-#if defined (macintosh) && !defined (HAVE_SDL)
-typedef enum
-{
-	music_normal,
-	playlist_random,
-	playlist_normal
-} playmode_t;
-
-extern consvar_t play_mode;
-#endif
-
 typedef enum
 {
 	SF_TOTALLYSINGLE =  1, // Only play one of these sounds at a time...GLOBALLY

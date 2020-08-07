@@ -294,27 +294,6 @@ void S_RegisterSoundStuff(void)
 
 	COM_AddCommand("tunes", Command_Tunes_f);
 	COM_AddCommand("restartaudio", Command_RestartAudio_f);
-
-#if defined (macintosh) && !defined (HAVE_SDL) // mp3 playlist stuff
-	{
-		INT32 i;
-		for (i = 0; i < PLAYLIST_LENGTH; i++)
-		{
-			user_songs[i].name = malloc(7);
-			if (!user_songs[i].name)
-				I_Error("No more free memory for mp3 playlist");
-			sprintf(user_songs[i].name, "song%d%d",i/10,i%10);
-			user_songs[i].defaultvalue = malloc(sizeof (char));
-			if (user_songs[i].defaultvalue)
-				I_Error("No more free memory for blank mp3 playerlist");
-			*user_songs[i].defaultvalue = 0;
-			user_songs[i].flags = CV_SAVE;
-			user_songs[i].PossibleValue = NULL;
-			CV_RegisterVar(&user_songs[i]);
-		}
-		CV_RegisterVar(&play_mode);
-	}
-#endif
 }
 
 static void SetChannelsNum(void)
