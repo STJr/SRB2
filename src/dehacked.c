@@ -1046,7 +1046,7 @@ static void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 
 #ifdef ROTSPRITE
 	if ((sprites != NULL) && (!sprite2))
-		R_FreeSingleRotSprite(&sprites[num]);
+		R_FreeRotSprite(&sprites[num]);
 #endif
 
 	do

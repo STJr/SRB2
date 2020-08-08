@@ -482,7 +482,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 	UINT8 *blocktex;
 	texture_t *texture;
 	texpatch_t *patch;
-	patch_t *realpatch;
+	softwarepatch_t *realpatch;
 	UINT8 *pdata;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
@@ -512,7 +512,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
-		realpatch = (patch_t *)pdata;
+		realpatch = (softwarepatch_t *)pdata;
 
 #ifndef NO_PNG_LUMPS
 		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
@@ -608,7 +608,7 @@ static UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-		realpatch = (patch_t *)pdata;
+		realpatch = (softwarepatch_t *)pdata;
 		dealloc = true;
 
 #ifndef NO_PNG_LUMPS

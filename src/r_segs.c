@@ -217,7 +217,7 @@ static void R_DrawWallSplats(void)
 				continue;
 
 			// draw the texture
-			col = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
+			col = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
 			R_DrawSplatColumn(col);
 		}
 	} // next splat

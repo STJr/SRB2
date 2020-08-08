@@ -110,8 +110,6 @@ boolean devparm = false; // started game with -devparm
 boolean singletics = false; // timedemo
 boolean lastdraw = false;
 
-static void D_CheckRendererState(void);
-
 postimg_t postimgtype = postimg_none;
 INT32 postimgparam;
 postimg_t postimgtype2 = postimg_none;
@@ -245,9 +243,7 @@ static void D_Display(void)
 	//    create plane polygons, if necessary.
 	// 3. Functions related to switching video
 	//    modes (resolution) are called.
-	// 4. Patch data is freed from memory,
-	//    and recached if necessary.
-	// 5. The frame is ready to be drawn!
+	// 4. The frame is ready to be drawn!
 
 	// stop movie if needs to change renderer
 	if (setrenderneeded && (moviemode == MM_APNG))
@@ -283,9 +279,6 @@ static void D_Display(void)
 		R_ExecuteSetViewSize();
 		forcerefresh = true; // force background redraw
 	}
-
-	// Lactozilla: Renderer switching
-	D_CheckRendererState();
 
 	// draw buffered stuff to screen
 	// Used only by linux GGI version
@@ -679,26 +672,6 @@ static void D_Display(void)
 		I_FinishUpdate(); // page flip or blit buffer
 		rs_swaptime = I_GetTimeMicros() - rs_swaptime;
 	}
-
-	needpatchflush = false;
-	needpatchrecache = false;
-}
-
-// Check the renderer's state
-// after a possible renderer switch.
-void D_CheckRendererState(void)
-{
-	// flush all patches from memory
-	if (needpatchflush)
-	{
-		Z_FlushCachedPatches();
-		needpatchflush = false;
-	}
-
-	// some patches have been freed,
-	// so cache them again
-	if (needpatchrecache)
-		R_ReloadHUDGraphics();
 }
 
 // =========================================================================
@@ -1433,18 +1406,10 @@ void D_SRB2Main(void)
 	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
 	{
 		CONS_Printf(M_GetText("Switching the renderer...\n"));
-		Z_PreparePatchFlush();
-
-		// set needpatchflush / needpatchrecache true for D_CheckRendererState
-		needpatchflush = true;
-		needpatchrecache = true;
 
 		// Set cv_renderer to the new render mode
 		VID_CheckRenderer();
 		SCR_ChangeRendererCVars(rendermode);
-
-		// check the renderer's state
-		D_CheckRendererState();
 	}
 
 	wipegamestate = gamestate;

@@ -1901,13 +1901,6 @@ void F_EndingDrawer(void)
 	INT32 x, y, i, j, parallaxticker;
 	patch_t *rockpat;
 
-	if (needpatchrecache)
-	{
-		F_CacheEnding();
-		if (goodending && finalecount >= INFLECTIONPOINT) // time to swap some assets
-			F_CacheGoodEnding();
-	}
-
 	if (!goodending || finalecount < INFLECTIONPOINT)
 		rockpat = W_CachePatchName("ROID0000", PU_PATCH);
 	else
@@ -2706,17 +2699,12 @@ static void F_FigureActiveTtScale(void)
 	SINT8 newttscale = max(1, min(6, vid.dupx));
 	SINT8 oldttscale = activettscale;
 
-	if (needpatchrecache)
-		ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] = 0;
-	else
-	{
-		if (newttscale == testttscale)
-			return;
+	if (newttscale == testttscale)
+		return;
 
-		// We have a new ttscale, so load gfx
-		if(oldttscale > 0)
-			F_UnloadAlacroixGraphics(oldttscale);
-	}
+	// We have a new ttscale, so load gfx
+	if(oldttscale > 0)
+		F_UnloadAlacroixGraphics(oldttscale);
 
 	testttscale = newttscale;
 
@@ -2749,9 +2737,6 @@ void F_TitleScreenDrawer(void)
 
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
-
-	if (needpatchrecache && (curttmode != TTMODE_ALACROIX))
-		F_CacheTitleScreen();
 
 	// Draw that sky!
 	if (curbgcolor >= 0)

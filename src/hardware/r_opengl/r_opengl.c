@@ -1318,6 +1318,17 @@ void SetStates(void)
 
 
 // -----------------+
+// DeleteTexture    : Deletes a texture from the GPU and frees its data
+// -----------------+
+EXPORT void HWRAPI(DeleteTexture) (FTextureInfo *pTexInfo)
+{
+	if (pTexInfo->downloaded)
+		pglDeleteTextures(1, (GLuint *)&pTexInfo->downloaded);
+	pTexInfo->downloaded = 0;
+}
+
+
+// -----------------+
 // Flush            : flush OpenGL textures
 //                  : Clear list of downloaded mipmaps
 // -----------------+
@@ -1327,9 +1338,7 @@ void Flush(void)
 
 	while (gl_cachehead)
 	{
-		if (gl_cachehead->downloaded)
-			pglDeleteTextures(1, (GLuint *)&gl_cachehead->downloaded);
-		gl_cachehead->downloaded = 0;
+		DeleteTexture(gl_cachehead);
 		gl_cachehead = gl_cachehead->nextmipmap;
 	}
 	gl_cachetail = gl_cachehead = NULL; //Hurdler: well, gl_cachehead is already NULL

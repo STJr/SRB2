@@ -499,33 +499,6 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 // Utility functions
 // -----------------
 
-// for renderer switching
-boolean needpatchflush = false;
-boolean needpatchrecache = false;
-
-// flush all patches from memory
-void Z_FlushCachedPatches(void)
-{
-	CONS_Debug(DBG_RENDER, "Z_FlushCachedPatches()...\n");
-	Z_FreeTag(PU_PATCH);
-	Z_FreeTag(PU_HUDGFX);
-	Z_FreeTag(PU_HWRPATCHINFO);
-	Z_FreeTag(PU_HWRMODELTEXTURE);
-	Z_FreeTag(PU_HWRCACHE);
-	Z_FreeTag(PU_HWRCACHE_UNLOCKED);
-	Z_FreeTag(PU_HWRPATCHINFO_UNLOCKED);
-	Z_FreeTag(PU_HWRMODELTEXTURE_UNLOCKED);
-}
-
-// happens before a renderer switch
-void Z_PreparePatchFlush(void)
-{
-	CONS_Debug(DBG_RENDER, "Z_PreparePatchFlush()...\n");
-#ifdef ROTSPRITE
-	R_FreeAllRotSprite();
-#endif
-}
-
 // starting value of nextcleanup
 #define CLEANUPCOUNT 2000
 

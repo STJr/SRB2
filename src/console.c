@@ -1555,7 +1555,7 @@ static void CON_DrawBackpic(void)
 	// then fill the sides with a solid color.
 	if (x > 0)
 	{
-		column_t *column = (column_t *)((UINT8 *)(con_backpic) + LONG(con_backpic->columnofs[0]));
+		column_t *column = (column_t *)((UINT8 *)(con_backpic->columns) + (con_backpic->columnofs[0]));
 		if (!column->topdelta)
 		{
 			UINT8 *source = (UINT8 *)(column) + 3;
@@ -1647,9 +1647,6 @@ void CON_Drawer(void)
 {
 	if (!con_started || !graphics_started)
 		return;
-
-	if (needpatchrecache)
-		HU_LoadGraphics();
 
 	if (con_recalc)
 	{

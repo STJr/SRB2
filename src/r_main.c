@@ -1572,14 +1572,6 @@ void R_InitHardwareMode(void)
 }
 #endif
 
-void R_ReloadHUDGraphics(void)
-{
-	CONS_Debug(DBG_RENDER, "R_ReloadHUDGraphics()...\n");
-	ST_LoadGraphics();
-	HU_LoadGraphics();
-	ST_ReloadSkinFaceGraphics();
-}
-
 // =========================================================================
 //                    ENGINE COMMANDS & VARS
 // =========================================================================

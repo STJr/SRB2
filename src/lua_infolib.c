@@ -379,7 +379,7 @@ static int lib_setSpriteInfo(lua_State *L)
 			return luaL_error(L, "spriteinfo[] index %d out of range (1 - %d)", i, NUMSPRITES-1);
 #ifdef ROTSPRITE
 		if (sprites != NULL)
-			R_FreeSingleRotSprite(&sprites[i]);
+			R_FreeRotSprite(&sprites[i]);
 #endif
 		info = &spriteinfo[i]; // get the spriteinfo to assign to.
 	}
@@ -464,7 +464,7 @@ static int spriteinfo_set(lua_State *L)
 
 #ifdef ROTSPRITE
 	if (sprites != NULL)
-		R_FreeSingleRotSprite(&sprites[sprinfo-spriteinfo]);
+		R_FreeRotSprite(&sprites[sprinfo-spriteinfo]);
 #endif
 
 	if (fastcmp(field, "pivot"))

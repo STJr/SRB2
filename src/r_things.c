@@ -228,7 +228,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	UINT8 frame;
 	UINT8 rotation;
 	lumpinfo_t *lumpinfo;
-	patch_t patch;
+	softwarepatch_t patch;
 	UINT8 numadded = 0;
 
 	memset(sprtemp,0xFF, sizeof (sprtemp));
@@ -241,7 +241,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	if (spritedef->numframes) // (then spriteframes is not null)
 	{
 #ifdef ROTSPRITE
-		R_FreeSingleRotSprite(spritedef);
+		R_FreeRotSprite(spritedef);
 #endif
 		// copy the already defined sprite frames
 		M_Memcpy(sprtemp, spritedef->spriteframes,
@@ -277,7 +277,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof (patch_t), 0);
 #ifndef NO_PNG_LUMPS
 			{
-				patch_t *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
+				softwarepatch_t *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
 				size_t len = W_LumpLengthPwad(wadnum, l);
 				// lump is a png so convert it
 				if (R_IsLumpPNG((UINT8 *)png, len))
@@ -398,7 +398,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 		spritedef->numframes < maxframe)   // more frames are defined ?
 	{
 #ifdef ROTSPRITE
-		R_FreeSingleRotSprite(spritedef);
+		R_FreeRotSprite(spritedef);
 #endif
 		Z_Free(spritedef->spriteframes);
 		spritedef->spriteframes = NULL;
@@ -910,7 +910,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			sprtopscreen = (centeryfrac - FixedMul(dc_texturemid, spryscale));
 			dc_iscale = (0xffffffffu / (unsigned)spryscale);
 
-			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
+			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
 
 			localcolfunc (column);
 		}
@@ -928,9 +928,9 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			texturecolumn = frac>>FRACBITS;
 			if (texturecolumn < 0 || texturecolumn >= pwidth)
 				I_Error("R_DrawSpriteRange: bad texturecolumn at %d from end", vis->x2 - dc_x);
-			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
+			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
 #else
-			column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
+			column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[frac>>FRACBITS]));
 #endif
 			localcolfunc (column);
 		}
@@ -995,9 +995,9 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 		if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
 			I_Error("R_DrawPrecipitationSpriteRange: bad texturecolumn");
 
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[texturecolumn]));
+		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
 #else
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[frac>>FRACBITS]));
+		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[frac>>FRACBITS]));
 #endif
 		R_DrawMaskedColumn(column);
 	}

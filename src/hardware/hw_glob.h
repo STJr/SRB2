@@ -64,8 +64,7 @@ typedef struct gl_vissprite_s
 	float x1, x2;
 	float tz, ty;
 	float tracertz; // for MF2_LINKDRAW sprites, this contains tracer's tz for use in sorting
-	//lumpnum_t patchlumpnum;
-	GLPatch_t *gpatch;
+	patch_t *gpatch;
 	boolean flip;
 	UINT8 translucency;       //alpha level 0-255
 	mobj_t *mobj; // NOTE: This is a precipmobj_t if precip is true !!! Watch out.
@@ -86,25 +85,33 @@ extern size_t addsubsector;
 void HWR_InitPolyPool(void);
 void HWR_FreePolyPool(void);
 
+void HWR_FreeExtraSubsectors(void);
+
 // --------
 // hw_cache.c
 // --------
 void HWR_InitTextureCache(void);
 void HWR_FreeTextureCache(void);
 void HWR_FreeMipmapCache(void);
-void HWR_FreeExtraSubsectors(void);
 
+patch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
+patch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
+
+void HWR_GetPatch(patch_t *patch);
+void HWR_GetMappedPatch(patch_t *patch, const UINT8 *colormap);
+void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
+patch_t *HWR_GetPic(lumpnum_t lumpnum);
+
+GLMapTexture_t *HWR_GetTexture(INT32 tex);
 void HWR_GetLevelFlat(levelflat_t *levelflat);
 void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum);
-GLMapTexture_t *HWR_GetTexture(INT32 tex);
-void HWR_GetPatch(GLPatch_t *gpatch);
-void HWR_GetMappedPatch(GLPatch_t *gpatch, const UINT8 *colormap);
+
+void HWR_FreeTexture(patch_t *patch);
+void HWR_FreeTextureColormaps(patch_t *patch);
 void HWR_UnlockCachedPatch(GLPatch_t *gpatch);
-GLPatch_t *HWR_GetPic(lumpnum_t lumpnum);
+
 void HWR_SetPalette(RGBA_t *palette);
-GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
-GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
-void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
+
 
 // --------
 // hw_draw.c

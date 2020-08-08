@@ -51,6 +51,98 @@
 static unsigned char imgbuf[1<<26];
 
 //
+// Creates a patch.
+// Assumes a PU_PATCH zone memory tag and no user, but can always be set later
+//
+
+patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
+{
+	patch_t *patch = (dest == NULL) ? Z_Calloc(sizeof(patch_t), PU_PATCH, NULL) : (patch_t *)(dest);
+
+	if (source)
+	{
+		INT32 col, colsize;
+		size_t size = sizeof(INT32) * source->width;
+		size_t offs = (sizeof(INT16) * 4) + size;
+
+		patch->width      = source->width;
+		patch->height     = source->height;
+		patch->leftoffset = source->leftoffset;
+		patch->topoffset  = source->topoffset;
+		patch->columnofs  = Z_Calloc(size, PU_PATCH, NULL);
+
+		for (col = 0; col < source->width; col++)
+		{
+			// This makes the column offsets relative to the column data itself,
+			// instead of the entire patch data
+			patch->columnofs[col] = LONG(source->columnofs[col]) - offs;
+		}
+
+		if (!srcsize)
+			I_Error("R_CreatePatch: no source size!");
+
+		colsize = (INT32)(srcsize) - (INT32)offs;
+		if (colsize <= 0)
+			I_Error("R_CreatePatch: no column data!");
+
+		patch->columns = Z_Calloc(colsize, PU_PATCH, NULL);
+		M_Memcpy(patch->columns, ((UINT8 *)source + LONG(source->columnofs[0])), colsize);
+	}
+
+	if (patch->hardware)
+		I_Error("wtf?\n");
+
+	return patch;
+}
+
+//
+// Frees a patch from memory.
+//
+
+void Patch_Free(patch_t *patch)
+{
+#ifdef HWRENDER
+	if (patch->hardware)
+		HWR_FreeTexture(patch);
+#endif
+
+	if (patch->columnofs)
+		Z_Free(patch->columnofs);
+	if (patch->columns)
+		Z_Free(patch->columns);
+
+	Z_Free(patch);
+}
+
+#ifdef HWRENDER
+//
+// Allocates a hardware patch.
+//
+
+void *Patch_AllocateHardwarePatch(patch_t *patch)
+{
+	if (!patch->hardware)
+	{
+		GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, &patch->hardware);
+		grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, &grPatch->mipmap);
+	}
+	return (void *)(patch->hardware);
+}
+
+//
+// Creates a hardware patch.
+//
+
+void *Patch_CreateGL(patch_t *patch)
+{
+	GLPatch_t *grPatch = (GLPatch_t *)Patch_AllocateHardwarePatch(patch);
+	if (!grPatch->mipmap->data) // Run HWR_MakePatch in all cases, to recalculate some things
+		HWR_MakePatch(patch, grPatch, grPatch->mipmap, false);
+	return grPatch;
+}
+#endif // HWRENDER
+
+//
 // R_CheckIfPatch
 //
 // Returns true if the lump is a valid patch.
@@ -177,7 +269,7 @@ void R_PatchToFlat(patch_t *patch, UINT8 *flat)
 	for (col = 0; col < SHORT(patch->width); col++, desttop++)
 	{
 		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[col]));
+		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[col]));
 
 		while (column->topdelta != 0xff)
 		{
@@ -220,7 +312,7 @@ void R_PatchToMaskedFlat(patch_t *patch, UINT16 *raw, boolean flip)
 	for (col = 0; col < SHORT(patch->width); col++, desttop++)
 	{
 		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[flip ? (patch->width-1-col) : col]));
+		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[flip ? (patch->width-1-col) : col]));
 		while (column->topdelta != 0xff)
 		{
 			topdelta = column->topdelta;
@@ -244,7 +336,7 @@ void R_PatchToMaskedFlat(patch_t *patch, UINT16 *raw, boolean flip)
 //
 // Convert a flat to a patch.
 //
-patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency)
+softwarepatch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency)
 {
 	UINT32 x, y;
 	UINT8 *img;
@@ -350,7 +442,7 @@ patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffse
 
 	if (destsize != NULL)
 		*destsize = size;
-	return (patch_t *)img;
+	return (softwarepatch_t *)img;
 }
 
 //
@@ -359,7 +451,7 @@ patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffse
 // Convert a masked flat to a patch.
 // Explanation of "masked" flats in R_PatchToMaskedFlat.
 //
-patch_t *R_MaskedFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize)
+softwarepatch_t *R_MaskedFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize)
 {
 	UINT32 x, y;
 	UINT8 *img;
@@ -464,7 +556,7 @@ patch_t *R_MaskedFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 le
 
 	if (destsize != NULL)
 		*destsize = size;
-	return (patch_t *)img;
+	return (softwarepatch_t *)img;
 }
 
 //
@@ -736,7 +828,7 @@ UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size)
 //
 // Convert a PNG to a patch.
 //
-patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize)
+softwarepatch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize)
 {
 	UINT16 width, height;
 	INT16 topoffset = 0, leftoffset = 0;
@@ -981,7 +1073,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 
 #ifdef ROTSPRITE
 	if ((sprites != NULL) && (!spr2))
-		R_FreeSingleRotSprite(&sprites[sprnum]);
+		R_FreeRotSprite(&sprites[sprnum]);
 #endif
 
 	// Left Curly Brace
@@ -1143,10 +1235,10 @@ static UINT16 GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
 	column_t *column;
 	UINT8 *source;
 
-	if (x >= 0 && x < SHORT(patch->width))
+	if (x >= 0 && x < patch->width)
 	{
 		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[flip ? (patch->width-1-x) : x]));
+		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[flip ? (patch->width-1-x) : x]));
 		while (column->topdelta != 0xff)
 		{
 			topdelta = column->topdelta;
@@ -1194,8 +1286,8 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 {
 	UINT32 i;
 	INT32 angle;
-	patch_t *patch;
-	patch_t *newpatch;
+	patch_t *patch, *newpatch;
+	softwarepatch_t *swpatch;
 	UINT16 *rawdst;
 	size_t size;
 	INT32 bflip = (flip != 0x00);
@@ -1212,28 +1304,14 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		INT32 width, height, leftoffset;
 		fixed_t ca, sa;
 		lumpnum_t lump = sprframe->lumppat[rot];
-#ifndef NO_PNG_LUMPS
-		size_t lumplength;
-#endif
 
 		if (lump == LUMPERROR)
 			return;
 
-		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
-#ifndef NO_PNG_LUMPS
-		lumplength = W_LumpLength(lump);
-
-		if (R_IsLumpPNG((UINT8 *)patch, lumplength))
-			patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL);
-		else
-#endif
-		// Because there's something wrong with SPR_DFLM, I guess
-		if (!R_CheckIfPatch(lump))
-			return;
-
-		width = SHORT(patch->width);
-		height = SHORT(patch->height);
-		leftoffset = SHORT(patch->leftoffset);
+		patch = (patch_t *)W_CachePatchNum(lump, PU_STATIC);
+		width = patch->width;
+		height = patch->height;
+		leftoffset = patch->leftoffset;
 
 		// rotation pivot
 		px = SPRITE_XCENTER;
@@ -1345,37 +1423,33 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			}
 
 			// make patch
-			newpatch = R_MaskedFlatToPatch(rawdst, newwidth, newheight, 0, 0, &size);
+			swpatch = R_MaskedFlatToPatch(rawdst, newwidth, newheight, 0, 0, &size);
 			{
-				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
-				newpatch->topoffset = (newpatch->height / 2) + (SHORT(patch->topoffset) - py);
+				swpatch->leftoffset = (swpatch->width / 2) + (leftoffset - px);
+				swpatch->topoffset = (swpatch->height / 2) + (patch->topoffset - py);
 			}
 
 			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
 			if (rendermode != render_none) // not for psprite
-				newpatch->topoffset += FEETADJUST>>FRACBITS;
+				swpatch->topoffset += FEETADJUST>>FRACBITS;
 
 			// P_PrecacheLevel
 			if (devparm) spritememory += size;
 
 			// convert everything to little-endian, for big-endian support
-			newpatch->width = SHORT(newpatch->width);
-			newpatch->height = SHORT(newpatch->height);
-			newpatch->leftoffset = SHORT(newpatch->leftoffset);
-			newpatch->topoffset = SHORT(newpatch->topoffset);
+			swpatch->width = SHORT(swpatch->width);
+			swpatch->height = SHORT(swpatch->height);
+			swpatch->leftoffset = SHORT(swpatch->leftoffset);
+			swpatch->topoffset = SHORT(swpatch->topoffset);
+
+			newpatch = Patch_Create(swpatch, size, NULL);
 
 #ifdef HWRENDER
 			if (rendermode == render_opengl)
-			{
-				GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
-				grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
-				grPatch->rawpatch = newpatch;
-				sprframe->rotsprite.patch[rot][angle] = (patch_t *)grPatch;
-				HWR_MakePatch(newpatch, grPatch, grPatch->mipmap, false);
-			}
-			else
-#endif // HWRENDER
-				sprframe->rotsprite.patch[rot][angle] = newpatch;
+				Patch_CreateGL(newpatch);
+#endif
+
+			sprframe->rotsprite.patch[rot][angle] = newpatch;
 
 			// free rotated image data
 			Z_Free(rawdst);
@@ -1386,6 +1460,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 
 		// free image data
 		Z_Free(patch);
+		Z_Free(swpatch);
 	}
 #undef SPRITE_XCENTER
 #undef SPRITE_YCENTER
@@ -1394,11 +1469,11 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 }
 
 //
-// R_FreeSingleRotSprite
+// R_FreeRotSprite
 //
 // Free sprite rotation data from memory, for a single spritedef.
 //
-void R_FreeSingleRotSprite(spritedef_t *spritedef)
+void R_FreeRotSprite(spritedef_t *spritedef)
 {
 	UINT8 frame;
 	INT32 rot, ang;
@@ -1414,30 +1489,8 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 				{
 					patch_t *rotsprite = sprframe->rotsprite.patch[rot][ang];
 					if (rotsprite)
-					{
-#ifdef HWRENDER
-						if (rendermode == render_opengl)
-						{
-							GLPatch_t *grPatch = (GLPatch_t *)rotsprite;
-							if (grPatch->rawpatch)
-							{
-								Z_Free(grPatch->rawpatch);
-								grPatch->rawpatch = NULL;
-							}
-							if (grPatch->mipmap)
-							{
-								if (grPatch->mipmap->data)
-								{
-									Z_Free(grPatch->mipmap->data);
-									grPatch->mipmap->data = NULL;
-								}
-								Z_Free(grPatch->mipmap);
-								grPatch->mipmap = NULL;
-							}
-						}
-#endif
-						Z_Free(rotsprite);
-					}
+						Patch_Free(rotsprite);
+					rotsprite = NULL;
 				}
 				sprframe->rotsprite.cached &= ~(1<<rot);
 			}
@@ -1449,7 +1502,7 @@ void R_FreeSingleRotSprite(spritedef_t *spritedef)
 // R_FreeSkinRotSprite
 //
 // Free sprite rotation data from memory, for a skin.
-// Calls R_FreeSingleRotSprite.
+// Calls R_FreeRotSprite.
 //
 void R_FreeSkinRotSprite(size_t skinnum)
 {
@@ -1458,23 +1511,8 @@ void R_FreeSkinRotSprite(size_t skinnum)
 	spritedef_t *skinsprites = skin->sprites;
 	for (i = 0; i < NUMPLAYERSPRITES*2; i++)
 	{
-		R_FreeSingleRotSprite(skinsprites);
+		R_FreeRotSprite(skinsprites);
 		skinsprites++;
 	}
-}
-
-//
-// R_FreeAllRotSprite
-//
-// Free ALL sprite rotation data from memory.
-//
-void R_FreeAllRotSprite(void)
-{
-	INT32 i;
-	size_t s;
-	for (s = 0; s < numsprites; s++)
-		R_FreeSingleRotSprite(&sprites[s]);
-	for (i = 0; i < numskins; ++i)
-		R_FreeSkinRotSprite(i);
 }
 #endif

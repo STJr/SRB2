@@ -37,21 +37,30 @@ typedef struct
 	boolean available;
 } spriteinfo_t;
 
+// Patch functions
+patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest);
+void Patch_Free(patch_t *patch);
+
+#ifdef HWRENDER
+void *Patch_AllocateHardwarePatch(patch_t *patch);
+void *Patch_CreateGL(patch_t *patch);
+#endif
+
 // Conversions between patches / flats / textures...
 boolean R_CheckIfPatch(lumpnum_t lump);
 void R_TextureToFlat(size_t tex, UINT8 *flat);
 void R_PatchToFlat(patch_t *patch, UINT8 *flat);
 void R_PatchToMaskedFlat(patch_t *patch, UINT16 *raw, boolean flip);
-patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency);
-patch_t *R_MaskedFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize);
+softwarepatch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency);
+softwarepatch_t *R_MaskedFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize);
 
-// Portable Network Graphics
+// PNGs
 boolean R_IsLumpPNG(const UINT8 *d, size_t s);
 #define W_ThrowPNGError(lumpname, wadfilename) I_Error("W_Wad: Lump \"%s\" in file \"%s\" is a .png - please convert to either Doom or Flat (raw) image format.", lumpname, wadfilename); // Fears Of LJ Sonic
 
 #ifndef NO_PNG_LUMPS
 UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size);
-patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize);
+softwarepatch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize);
 boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
 #endif
 
@@ -64,11 +73,10 @@ void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 #ifdef ROTSPRITE
 INT32 R_GetRollAngle(angle_t rollangle);
 void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip);
-void R_FreeSingleRotSprite(spritedef_t *spritedef);
+void R_FreeRotSprite(spritedef_t *spritedef);
 void R_FreeSkinRotSprite(size_t skinnum);
 extern fixed_t rollcosang[ROTANGLES];
 extern fixed_t rollsinang[ROTANGLES];
-void R_FreeAllRotSprite(void);
 #endif
 
 #endif // __R_PATCH__

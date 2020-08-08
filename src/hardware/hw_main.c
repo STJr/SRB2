@@ -706,7 +706,7 @@ static void HWR_DrawSegsSplats(FSurfaceInfo * pSurf)
 {
 	FOutVector wallVerts[4];
 	wallsplat_t *splat;
-	GLPatch_t *gpatch;
+	patch_t *gpatch;
 	fixed_t i;
 	// seg bbox
 	fixed_t segbbox[4];
@@ -3549,7 +3549,7 @@ static boolean HWR_DoCulling(line_t *cullheight, line_t *viewcullheight, float v
 
 static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 {
-	GLPatch_t *gpatch;
+	patch_t *gpatch;
 	FOutVector shadowVerts[4];
 	FSurfaceInfo sSurf;
 	float fscale; float fx; float fy; float offset;
@@ -3575,12 +3575,12 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	if (alpha >= 255) return;
 	alpha = 255 - alpha;
 
-	gpatch = (GLPatch_t *)W_CachePatchName("DSHADOW", PU_CACHE);
-	if (!(gpatch && gpatch->mipmap->format)) return;
+	gpatch = (patch_t *)W_CachePatchName("DSHADOW", PU_CACHE);
+	if (!(gpatch && ((GLPatch_t *)gpatch->hardware)->mipmap->format)) return;
 	HWR_GetPatch(gpatch);
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
-	scalemul = FixedMul(scalemul, (thing->radius*2) / SHORT(gpatch->height));
+	scalemul = FixedMul(scalemul, (thing->radius*2) / gpatch->height);
 
 	fscale = FIXED_TO_FLOAT(scalemul);
 	fx = FIXED_TO_FLOAT(thing->x);
@@ -3592,9 +3592,9 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	//  0--1
 
 	if (thing && fabsf(fscale - 1.0f) > 1.0E-36f)
-		offset = (SHORT(gpatch->height)/2) * fscale;
+		offset = ((gpatch->height)/2) * fscale;
 	else
-		offset = (float)(SHORT(gpatch->height)/2);
+		offset = (float)((gpatch->height)/2);
 
 	shadowVerts[2].x = shadowVerts[3].x = fx + offset;
 	shadowVerts[1].x = shadowVerts[0].x = fx - offset;
@@ -3624,10 +3624,10 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	}
 
 	shadowVerts[0].s = shadowVerts[3].s = 0;
-	shadowVerts[2].s = shadowVerts[1].s = gpatch->max_s;
+	shadowVerts[2].s = shadowVerts[1].s = ((GLPatch_t *)gpatch->hardware)->max_s;
 
 	shadowVerts[3].t = shadowVerts[2].t = 0;
-	shadowVerts[0].t = shadowVerts[1].t = gpatch->max_t;
+	shadowVerts[0].t = shadowVerts[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
 
 	if (thing->subsector->sector->numlights)
 	{
@@ -3687,7 +3687,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	float this_scale = 1.0f;
 	FOutVector wallVerts[4];
 	FOutVector baseWallVerts[4]; // This is what the verts should end up as
-	GLPatch_t *gpatch;
+	patch_t *gpatch;
 	FSurfaceInfo Surf;
 	const boolean hires = (spr->mobj && spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES);
 	extracolormap_t *colormap;
@@ -3715,7 +3715,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	if (hires)
 		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)spr->mobj->skin)->highresscale);
 
-	gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+	gpatch = spr->gpatch;
 
 	// cache the patch in the graphics card memory
 	//12/12/99: Hurdler: same comment as above (for md2)
@@ -3740,25 +3740,25 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 
 	if (spr->flip)
 	{
-		baseWallVerts[0].s = baseWallVerts[3].s = gpatch->max_s;
+		baseWallVerts[0].s = baseWallVerts[3].s = ((GLPatch_t *)gpatch->hardware)->max_s;
 		baseWallVerts[2].s = baseWallVerts[1].s = 0;
 	}
 	else
 	{
 		baseWallVerts[0].s = baseWallVerts[3].s = 0;
-		baseWallVerts[2].s = baseWallVerts[1].s = gpatch->max_s;
+		baseWallVerts[2].s = baseWallVerts[1].s = ((GLPatch_t *)gpatch->hardware)->max_s;
 	}
 
 	// flip the texture coords (look familiar?)
 	if (spr->vflip)
 	{
-		baseWallVerts[3].t = baseWallVerts[2].t = gpatch->max_t;
+		baseWallVerts[3].t = baseWallVerts[2].t = ((GLPatch_t *)gpatch->hardware)->max_t;
 		baseWallVerts[0].t = baseWallVerts[1].t = 0;
 	}
 	else
 	{
 		baseWallVerts[3].t = baseWallVerts[2].t = 0;
-		baseWallVerts[0].t = baseWallVerts[1].t = gpatch->max_t;
+		baseWallVerts[0].t = baseWallVerts[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
 	}
 
 	// if it has a dispoffset, push it a little towards the camera
@@ -3963,7 +3963,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 {
 	float this_scale = 1.0f;
 	FOutVector wallVerts[4];
-	GLPatch_t *gpatch; // sprite patch converted to hardware
+	patch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
 	const boolean hires = (spr->mobj && spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES);
 	//const boolean papersprite = (spr->mobj && (spr->mobj->frame & FF_PAPERSPRITE));
@@ -3990,7 +3990,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	//          sure to do it the right way. So actually, we keep normal sprite
 	//          in memory and we add the md2 model if it exists for that sprite
 
-	gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+	gpatch = spr->gpatch;
 
 #ifdef ALAM_LIGHTING
 	if (!(spr->mobj->flags2 & MF2_DEBRIS) && (spr->mobj->sprite != SPR_PLAY ||
@@ -4021,21 +4021,21 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 
 	if (spr->flip)
 	{
-		wallVerts[0].s = wallVerts[3].s = gpatch->max_s;
+		wallVerts[0].s = wallVerts[3].s = ((GLPatch_t *)gpatch->hardware)->max_s;
 		wallVerts[2].s = wallVerts[1].s = 0;
 	}else{
 		wallVerts[0].s = wallVerts[3].s = 0;
-		wallVerts[2].s = wallVerts[1].s = gpatch->max_s;
+		wallVerts[2].s = wallVerts[1].s = ((GLPatch_t *)gpatch->hardware)->max_s;
 	}
 
 	// flip the texture coords (look familiar?)
 	if (spr->vflip)
 	{
-		wallVerts[3].t = wallVerts[2].t = gpatch->max_t;
+		wallVerts[3].t = wallVerts[2].t = ((GLPatch_t *)gpatch->hardware)->max_t;
 		wallVerts[0].t = wallVerts[1].t = 0;
 	}else{
 		wallVerts[3].t = wallVerts[2].t = 0;
-		wallVerts[0].t = wallVerts[1].t = gpatch->max_t;
+		wallVerts[0].t = wallVerts[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
 	}
 
 	// cache the patch in the graphics card memory
@@ -4121,7 +4121,7 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 {
 	FBITFIELD blend = 0;
 	FOutVector wallVerts[4];
-	GLPatch_t *gpatch; // sprite patch converted to hardware
+	patch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
 
 	if (!spr->mobj)
@@ -4131,7 +4131,7 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 		return;
 
 	// cache sprite graphics
-	gpatch = spr->gpatch; //W_CachePatchNum(spr->patchlumpnum, PU_CACHE);
+	gpatch = spr->gpatch;
 
 	// create the sprite billboard
 	//
@@ -4153,10 +4153,10 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 	HWR_RotateSpritePolyToAim(spr, wallVerts, true);
 
 	wallVerts[0].s = wallVerts[3].s = 0;
-	wallVerts[2].s = wallVerts[1].s = gpatch->max_s;
+	wallVerts[2].s = wallVerts[1].s = ((GLPatch_t *)gpatch->hardware)->max_s;
 
 	wallVerts[3].t = wallVerts[2].t = 0;
-	wallVerts[0].t = wallVerts[1].t = gpatch->max_t;
+	wallVerts[0].t = wallVerts[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
 
 	// cache the patch in the graphics card memory
 	//12/12/99: Hurdler: same comment as above (for md2)
@@ -5014,13 +5014,12 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
 	vis->tracertz = tracertz;
 	vis->dispoffset = dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	//vis->patchlumpnum = sprframe->lumppat[rot];
 #ifdef ROTSPRITE
 	if (rotsprite)
-		vis->gpatch = (GLPatch_t *)rotsprite;
+		vis->gpatch = (patch_t *)rotsprite;
 	else
 #endif
-		vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
+		vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->flip = flip;
 	vis->mobj = thing;
 	vis->z1 = z1;
@@ -5155,8 +5154,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->z2 = z2;
 	vis->tz = tz;
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	//vis->patchlumpnum = sprframe->lumppat[rot];
-	vis->gpatch = (GLPatch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
+	vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
 

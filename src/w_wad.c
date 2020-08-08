@@ -836,11 +836,6 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
 	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
 
-#ifdef HWRENDER
-	// allocates GLPatch info structures and store them in a tree
-	wadfile->hwrcache = M_AATreeAlloc(AATREE_ZUSER);
-#endif
-
 	//
 	// add the wadfile
 	//
@@ -1676,13 +1671,7 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	if (!lumpcache[lump])
 	{
 		size_t len = W_LumpLengthPwad(wad, lump);
-		void *ptr, *lumpdata;
-#ifndef NO_PNG_LUMPS
-		void *srcdata = NULL;
-#endif
-
-		ptr = Z_Malloc(len, tag, &lumpcache[lump]);
-		lumpdata = Z_Malloc(len, tag, NULL);
+		void *ptr, *dest, *lumpdata = Z_Malloc(len, PU_STATIC, NULL);
 
 		// read the lump in full
 		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
@@ -1692,14 +1681,25 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 		if (R_IsLumpPNG((UINT8 *)lumpdata, len))
 		{
 			size_t newlen;
-			srcdata = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
-			ptr = Z_Realloc(ptr, newlen, tag, &lumpcache[lump]);
-			M_Memcpy(ptr, srcdata, newlen);
-			Z_Free(srcdata);
+			void *converted = R_PNGToPatch((UINT8 *)lumpdata, len, &newlen);
+			ptr = Z_Malloc(newlen, PU_STATIC, NULL);
+			M_Memcpy(ptr, converted, newlen);
+			Z_Free(converted);
+			len = newlen;
 		}
 		else // just copy it into the patch cache
 #endif
+		{
+			ptr = Z_Malloc(len, PU_STATIC, NULL);
 			M_Memcpy(ptr, lumpdata, len);
+		}
+
+		Z_Free(lumpdata);
+
+		dest = Z_Calloc(sizeof(patch_t), tag, &lumpcache[lump]);
+		Patch_Create(ptr, len, dest);
+
+		Z_Free(ptr);
 	}
 	else
 		Z_ChangeTag(lumpcache[lump], tag);
@@ -1714,45 +1714,22 @@ void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag)
 
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
-#ifdef HWRENDER
-	GLPatch_t *grPatch;
-#endif
+	patch_t *patch;
 
 	if (!TestValidLump(wad, lump))
 		return NULL;
+
+	patch = W_CacheSoftwarePatchNumPwad(wad, lump, tag);
 
 #ifdef HWRENDER
 	// Software-only compile cache the data without conversion
 	if (rendermode == render_soft || rendermode == render_none)
 #endif
-	{
-		return W_CacheSoftwarePatchNumPwad(wad, lump, tag);
-	}
+		return (void *)patch;
+
 #ifdef HWRENDER
-
-	grPatch = HWR_GetCachedGLPatchPwad(wad, lump);
-
-	if (grPatch->mipmap->data)
-	{
-		if (tag == PU_CACHE)
-			tag = PU_HWRCACHE;
-		Z_ChangeTag(grPatch->mipmap->data, tag);
-	}
-	else
-	{
-		patch_t *ptr = NULL;
-
-		// Only load the patch if we haven't initialised the grPatch yet
-		if (grPatch->mipmap->width == 0)
-			ptr = W_CacheLumpNumPwad(grPatch->wadnum, grPatch->lumpnum, PU_STATIC);
-
-		// Run HWR_MakePatch in all cases, to recalculate some things
-		HWR_MakePatch(ptr, grPatch, grPatch->mipmap, false);
-		Z_Free(ptr);
-	}
-
-	// return GLPatch_t, which can be casted to (patch_t) with valid patch header info
-	return (void *)grPatch;
+	Patch_CreateGL(patch);
+	return (void *)patch;
 #endif
 }
 
@@ -1767,7 +1744,7 @@ void W_UnlockCachedPatch(void *patch)
 	// have different lifetimes from software's.
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-		HWR_UnlockCachedPatch((GLPatch_t*)patch);
+		HWR_UnlockCachedPatch((GLPatch_t *)((patch_t *)patch)->hardware);
 	else
 #endif
 		Z_Unlock(patch);

@@ -1490,7 +1490,7 @@ static menuitem_t OP_SoundOptionsMenu[] =
 
 	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 36},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 41},
-	
+
 	{IT_STRING | IT_CVAR,  NULL,  "Music Preference", &cv_musicpref, 51},
 
 	{IT_HEADER, NULL, "Miscellaneous", NULL, 61},
@@ -5593,9 +5593,6 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 	if (map <= 0)
 		return;
 
-	if (needpatchrecache)
-		M_CacheLevelPlatter();
-
 	//  A 564x100 image of the level as entry MAPxxW
 	if (!(levelselect.rows[row].mapavailable[col]))
 	{
@@ -5626,9 +5623,6 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 	INT32 map = levelselect.rows[row].maplist[col];
 	if (map <= 0)
 		return;
-
-	if (needpatchrecache)
-		M_CacheLevelPlatter();
 
 	//  A 160x100 image of the level as entry MAPxxP
 	if (!(levelselect.rows[row].mapavailable[col]))
@@ -6451,10 +6445,6 @@ static void M_DrawAddons(void)
 		M_DrawMessageMenu();
 		return;
 	}
-
-	// Lactozilla: Load addons menu patches.
-	if (needpatchrecache)
-		M_LoadAddonsPatches();
 
 	if (Playing())
 		V_DrawCenteredString(BASEVIDWIDTH/2, 5, warningflags, "Adding files mid-game may cause problems.");
@@ -7610,9 +7600,6 @@ static void M_DrawSoundTest(void)
 	fixed_t hscale = FRACUNIT/2, vscale = FRACUNIT/2, bounce = 0;
 	UINT8 frame[4] = {0, 0, -1, SKINCOLOR_RUBY};
 
-	if (needpatchrecache)
-		M_CacheSoundTest();
-
 	// let's handle the ticker first. ideally we'd tick this somewhere else, BUT...
 	if (curplaying)
 	{
@@ -8259,9 +8246,6 @@ static void M_DrawLoadGameData(void)
 
 	if (vid.width != BASEVIDWIDTH*vid.dupx)
 		hsep = (hsep*vid.width)/(BASEVIDWIDTH*vid.dupx);
-
-	if (needpatchrecache)
-		M_CacheLoadGameData();
 
 	for (i = -2; i <= 2; i++)
 	{
@@ -8966,7 +8950,6 @@ void M_ForceSaveSlotSelected(INT32 sslot)
 // CHARACTER SELECT
 // ================
 
-// lactozilla: sometimes the renderer changes and these patches don't exist anymore
 static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 {
 	if (!(description[i].picname[0]))
@@ -8985,22 +8968,6 @@ static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 
 	if (description[i].nametag[0])
 		description[i].namepic = W_CachePatchName(description[i].nametag, PU_PATCH);
-}
-
-static void M_CacheCharacterSelect(void)
-{
-	INT32 i, skinnum;
-
-	for (i = 0; i < MAXSKINS; i++)
-	{
-		if (!description[i].used)
-			continue;
-
-		// Already set in M_SetupChoosePlayer
-		skinnum = description[i].skinnum[0];
-		if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
-			M_CacheCharacterSelectEntry(i, skinnum);
-	}
 }
 
 static UINT8 M_SetupChoosePlayerDirect(INT32 choice)
@@ -9208,10 +9175,6 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	INT16 fgwidth = SHORT(charfg->width);
 	INT32 x, y;
 	INT32 w = (vid.width/vid.dupx);
-
-	// lactozilla: the renderer changed so recache patches
-	if (needpatchrecache)
-		M_CacheCharacterSelect();
 
 	if (abs(char_scroll) > FRACUNIT)
 		char_scroll -= (char_scroll>>2);
@@ -10583,10 +10546,6 @@ void M_DrawMarathon(void)
 	char *work;
 	angle_t fa;
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy), xspan = (vid.width/dupz), yspan = (vid.height/dupz), diffx = (xspan - BASEVIDWIDTH)/2, diffy = (yspan - BASEVIDHEIGHT)/2, maxy = BASEVIDHEIGHT + diffy;
-
-	// lactozilla: the renderer changed so recache patches
-	if (needpatchrecache)
-		M_CacheCharacterSelect();
 
 	curbgxspeed = 0;
 	curbgyspeed = 18;

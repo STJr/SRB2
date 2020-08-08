@@ -652,16 +652,26 @@ typedef enum
 	RGBA32          = 4,  // 32 bit rgba
 } pic_mode_t;
 
-#if defined(_MSC_VER)
-#pragma pack(1)
-#endif
-
 // Patches.
 // A patch holds one or more columns.
 // Patches are used for sprites and all masked pictures, and we compose
 // textures from the TEXTURES list of patches.
 //
-// WARNING: this structure is cloned in GLPatch_t
+typedef struct
+{
+	INT16 width, height;
+	INT16 leftoffset, topoffset;
+
+	INT32 *columnofs; // Column offsets. This is relative to patch->columns
+	UINT8 *columns; // Software column data
+
+	void *hardware; // OpenGL patch, allocated whenever necessary
+} patch_t;
+
+#if defined(_MSC_VER)
+#pragma pack(1)
+#endif
+
 typedef struct
 {
 	INT16 width;          // bounding box size
@@ -670,7 +680,7 @@ typedef struct
 	INT16 topoffset;      // pixels below the origin
 	INT32 columnofs[8];     // only [width] used
 	// the [0] is &columnofs[width]
-} ATTRPACK patch_t;
+} ATTRPACK softwarepatch_t;
 
 #ifdef _MSC_VER
 #pragma warning(disable :  4200)
