@@ -678,6 +678,29 @@ static INT32 shader_leveltime = 0;
 		"gl_FragColor = final_color;\n" \
 	"}\0"
 
+// same as above but multiplies results with the lighting value from the
+// accompanying vertex shader (stored in gl_Color)
+#define GLSL_SOFTWARE_MODEL_LIGHTING_FRAGMENT_SHADER \
+	"uniform sampler2D tex;\n" \
+	"uniform vec4 poly_color;\n" \
+	"uniform vec4 tint_color;\n" \
+	"uniform vec4 fade_color;\n" \
+	"uniform float lighting;\n" \
+	"uniform float fade_start;\n" \
+	"uniform float fade_end;\n" \
+	GLSL_DOOM_COLORMAP \
+	GLSL_DOOM_LIGHT_EQUATION \
+	"void main(void) {\n" \
+		"vec4 texel = texture2D(tex, gl_TexCoord[0].st);\n" \
+		"vec4 base_color = texel * poly_color;\n" \
+		"vec4 final_color = base_color;\n" \
+		GLSL_SOFTWARE_TINT_EQUATION \
+		GLSL_SOFTWARE_FADE_EQUATION \
+		"final_color *= gl_Color;\n" \
+		"final_color.a = texel.a * poly_color.a;\n" \
+		"gl_FragColor = final_color;\n" \
+	"}\0"
+
 //
 // Water surface shader
 //
@@ -775,6 +798,9 @@ static const char *fragment_shaders[] = {
 		"gl_FragColor = texture2D(tex, gl_TexCoord[0].st);\n"
 	"}\0",
 
+	// Model fragment shader + diffuse lighting from above
+	GLSL_SOFTWARE_MODEL_LIGHTING_FRAGMENT_SHADER,
+
 	NULL,
 };
 
@@ -791,6 +817,20 @@ static const char *fragment_shaders[] = {
 	"{\n" \
 		"gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;\n" \
 		"gl_FrontColor = gl_Color;\n" \
+		"gl_TexCoord[0].xy = gl_MultiTexCoord0.xy;\n" \
+		"gl_ClipVertex = gl_ModelViewMatrix * gl_Vertex;\n" \
+	"}\0"
+
+// replicates the way fixed function lighting is used by the model lighting option,
+// stores the lighting result to gl_Color
+// (ambient lighting of 0.75 and diffuse lighting from above)
+#define GLSL_MODEL_LIGHTING_VERTEX_SHADER \
+	"void main()\n" \
+	"{\n" \
+		"float nDotVP = dot(gl_Normal, vec3(0, 1, 0));\n" \
+		"float light = 0.75 + max(nDotVP, 0.0);\n" \
+		"gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;\n" \
+		"gl_FrontColor = vec4(light, light, light, 1.0);\n" \
 		"gl_TexCoord[0].xy = gl_MultiTexCoord0.xy;\n" \
 		"gl_ClipVertex = gl_ModelViewMatrix * gl_Vertex;\n" \
 	"}\0"
@@ -819,6 +859,9 @@ static const char *vertex_shaders[] = {
 
 	// Sky vertex shader
 	GLSL_DEFAULT_VERTEX_SHADER,
+
+	// Model vertex shader + diffuse lighting from above
+	GLSL_MODEL_LIGHTING_VERTEX_SHADER,
 
 	NULL,
 };
@@ -1063,6 +1106,11 @@ EXPORT void HWRAPI(SetShader) (int shader)
 #ifdef GL_SHADERS
 	if (gl_allowshaders)
 	{
+		// If using model lighting, set the appropriate shader.
+		// However don't override a custom shader.
+		// Should use an enum or something...
+		if (shader == 4 && model_lighting && !gl_shaderprograms[4].custom)
+			shader = 8;
 		if ((GLuint)shader != gl_currentshaderprogram)
 		{
 			gl_currentshaderprogram = shader;
@@ -1535,7 +1583,7 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 					// Sryder: Fog
 					// multiplies input colour by input alpha, and destination colour by input colour, then adds them
 					pglBlendFunc(GL_SRC_ALPHA, GL_SRC_COLOR);
-					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
+					pglAlphaFunc(GL_ALWAYS, 0.0f); // Don't discard zero alpha fragments
 					break;
 				default : // must be 0, otherwise it's an error
 					// No blending
@@ -2660,31 +2708,34 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	poly.alpha  = byte2float[Surface->PolyColor.s.alpha];
 
 #ifdef GL_LIGHT_MODEL_AMBIENT
-	if (model_lighting && (!gl_shadersenabled)) // doesn't work with shaders anyway
+	if (model_lighting)
 	{
-		ambient[0] = poly.red;
-		ambient[1] = poly.green;
-		ambient[2] = poly.blue;
-		ambient[3] = poly.alpha;
+		if (!gl_shadersenabled)
+		{
+			ambient[0] = poly.red;
+			ambient[1] = poly.green;
+			ambient[2] = poly.blue;
+			ambient[3] = poly.alpha;
 
-		diffuse[0] = poly.red;
-		diffuse[1] = poly.green;
-		diffuse[2] = poly.blue;
-		diffuse[3] = poly.alpha;
+			diffuse[0] = poly.red;
+			diffuse[1] = poly.green;
+			diffuse[2] = poly.blue;
+			diffuse[3] = poly.alpha;
 
-		if (ambient[0] > 0.75f)
-			ambient[0] = 0.75f;
-		if (ambient[1] > 0.75f)
-			ambient[1] = 0.75f;
-		if (ambient[2] > 0.75f)
-			ambient[2] = 0.75f;
+			if (ambient[0] > 0.75f)
+				ambient[0] = 0.75f;
+			if (ambient[1] > 0.75f)
+				ambient[1] = 0.75f;
+			if (ambient[2] > 0.75f)
+				ambient[2] = 0.75f;
 
-		pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
+			pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
+
+			pglEnable(GL_LIGHTING);
+			pglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
+			pglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+		}
 		pglShadeModel(GL_SMOOTH);
-
-		pglEnable(GL_LIGHTING);
-		pglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
-		pglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
 	}
 #endif
 	else
@@ -2874,9 +2925,10 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	pglDisable(GL_NORMALIZE);
 
 #ifdef GL_LIGHT_MODEL_AMBIENT
-	if (model_lighting && (!gl_shadersenabled))
+	if (model_lighting)
 	{
-		pglDisable(GL_LIGHTING);
+		if (!gl_shadersenabled)
+			pglDisable(GL_LIGHTING);
 		pglShadeModel(GL_FLAT);
 	}
 #endif

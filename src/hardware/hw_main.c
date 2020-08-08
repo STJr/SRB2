@@ -214,6 +214,9 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 		poly_color.s.blue = (UINT8)blue;
 	}
 
+	// Clamp the light level, since it can sometimes go out of the 0-255 range from animations
+	light_level = min(max(light_level, 0), 255);
+
 	Surface->PolyColor.rgba = poly_color.rgba;
 	Surface->TintColor.rgba = tint_color.rgba;
 	Surface->FadeColor.rgba = fade_color.rgba;
@@ -491,7 +494,7 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	if (angle) // Only needs to be done if there's an altered angle
 	{
 
-		angle = (InvAngle(angle)+ANGLE_180)>>ANGLETOFINESHIFT;
+		angle = (InvAngle(angle))>>ANGLETOFINESHIFT;
 
 		// This needs to be done so that it scrolls in a different direction after rotation like software
 		/*tempxsow = FLOAT_TO_FIXED(scrollx);
@@ -525,8 +528,6 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		{\
 			tempxsow = FLOAT_TO_FIXED(vert->s);\
 			tempytow = FLOAT_TO_FIXED(vert->t);\
-			if (texflat)\
-				tempytow = -tempytow;\
 			vert->s = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));\
 			vert->t = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINESINE(angle)) + FixedMul(tempytow, FINECOSINE(angle))));\
 		}\
@@ -770,6 +771,7 @@ FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
 {
 	switch (transtablenum)
 	{
+		case 0          : pSurf->PolyColor.s.alpha = 0x00;return  PF_Masked;
 		case tr_trans10 : pSurf->PolyColor.s.alpha = 0xe6;return  PF_Translucent;
 		case tr_trans20 : pSurf->PolyColor.s.alpha = 0xcc;return  PF_Translucent;
 		case tr_trans30 : pSurf->PolyColor.s.alpha = 0xb3;return  PF_Translucent;
@@ -1438,37 +1440,10 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				wallVerts[1].y = FIXED_TO_FLOAT(l);
 			}
 
-			// set alpha for transparent walls (new boom and legacy linedef types)
+			// set alpha for transparent walls
 			// ooops ! this do not work at all because render order we should render it in backtofront order
 			switch (gl_linedef->special)
 			{
-				case 900:
-					blendmode = HWR_TranstableToAlpha(tr_trans10, &Surf);
-					break;
-				case 901:
-					blendmode = HWR_TranstableToAlpha(tr_trans20, &Surf);
-					break;
-				case 902:
-					blendmode = HWR_TranstableToAlpha(tr_trans30, &Surf);
-					break;
-				case 903:
-					blendmode = HWR_TranstableToAlpha(tr_trans40, &Surf);
-					break;
-				case 904:
-					blendmode = HWR_TranstableToAlpha(tr_trans50, &Surf);
-					break;
-				case 905:
-					blendmode = HWR_TranstableToAlpha(tr_trans60, &Surf);
-					break;
-				case 906:
-					blendmode = HWR_TranstableToAlpha(tr_trans70, &Surf);
-					break;
-				case 907:
-					blendmode = HWR_TranstableToAlpha(tr_trans80, &Surf);
-					break;
-				case 908:
-					blendmode = HWR_TranstableToAlpha(tr_trans90, &Surf);
-					break;
 				//  Translucent
 				case 102:
 				case 121:
@@ -1489,7 +1464,10 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					blendmode = PF_Translucent;
 					break;
 				default:
-					blendmode = PF_Masked;
+					if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
+						blendmode = HWR_TranstableToAlpha(R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
+					else
+						blendmode = PF_Masked;
 					break;
 			}
 
@@ -2280,8 +2258,8 @@ static void HWR_AddLine(seg_t * line)
 	v2y = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->y);
 
 	// OPTIMIZE: quickly reject orthogonal back sides.
-	angle1 = R_PointToAngle(v1x, v1y);
-	angle2 = R_PointToAngle(v2x, v2y);
+	angle1 = R_PointToAngle64(v1x, v1y);
+	angle2 = R_PointToAngle64(v2x, v2y);
 
 #ifdef NEWCLIP
 	 // PrBoom: Back side, i.e. backface culling - read: endAngle >= startAngle!
@@ -2574,8 +2552,8 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 	py2 = bspcoord[checkcoord[boxpos][3]];
 
 #ifdef NEWCLIP
-	angle1 = R_PointToAngle(px1, py1);
-	angle2 = R_PointToAngle(px2, py2);
+	angle1 = R_PointToAngle64(px1, py1);
+	angle2 = R_PointToAngle64(px2, py2);
 	return gld_clipper_SafeCheckRange(angle2, angle1);
 #else
 	// check clip list for an open space
@@ -2757,8 +2735,11 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		HWR_SetCurrentTexture(NULL);
 
 	// reference point for flat texture coord for each vertex around the polygon
-	flatxref = (float)((polysector->origVerts[0].x & (~flatflag)) / fflatwidth);
-	flatyref = (float)((polysector->origVerts[0].y & (~flatflag)) / fflatheight);
+	flatxref = FIXED_TO_FLOAT(polysector->origVerts[0].x);
+	flatyref = FIXED_TO_FLOAT(polysector->origVerts[0].y);
+
+	flatxref = (float)(((fixed_t)flatxref & (~flatflag)) / fflatwidth);
+	flatyref = (float)(((fixed_t)flatyref & (~flatflag)) / fflatheight);
 
 	// transform
 	v3d = planeVerts;
@@ -2769,13 +2750,13 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		{
 			scrollx = FIXED_TO_FLOAT(FOFsector->floor_xoffs)/fflatwidth;
 			scrolly = FIXED_TO_FLOAT(FOFsector->floor_yoffs)/fflatheight;
-			angle = FOFsector->floorpic_angle>>ANGLETOFINESHIFT;
+			angle = FOFsector->floorpic_angle;
 		}
 		else // it's a ceiling
 		{
 			scrollx = FIXED_TO_FLOAT(FOFsector->ceiling_xoffs)/fflatwidth;
 			scrolly = FIXED_TO_FLOAT(FOFsector->ceiling_yoffs)/fflatheight;
-			angle = FOFsector->ceilingpic_angle>>ANGLETOFINESHIFT;
+			angle = FOFsector->ceilingpic_angle;
 		}
 	}
 	else if (gl_frontsector)
@@ -2784,23 +2765,25 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		{
 			scrollx = FIXED_TO_FLOAT(gl_frontsector->floor_xoffs)/fflatwidth;
 			scrolly = FIXED_TO_FLOAT(gl_frontsector->floor_yoffs)/fflatheight;
-			angle = gl_frontsector->floorpic_angle>>ANGLETOFINESHIFT;
+			angle = gl_frontsector->floorpic_angle;
 		}
 		else // it's a ceiling
 		{
 			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceiling_xoffs)/fflatwidth;
 			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceiling_yoffs)/fflatheight;
-			angle = gl_frontsector->ceilingpic_angle>>ANGLETOFINESHIFT;
+			angle = gl_frontsector->ceilingpic_angle;
 		}
 	}
 
 	if (angle) // Only needs to be done if there's an altered angle
 	{
+		angle = (InvAngle(angle))>>ANGLETOFINESHIFT;
+
 		// This needs to be done so that it scrolls in a different direction after rotation like software
-		tempxs = FLOAT_TO_FIXED(scrollx);
+		/*tempxs = FLOAT_TO_FIXED(scrollx);
 		tempyt = FLOAT_TO_FIXED(scrolly);
 		scrollx = (FIXED_TO_FLOAT(FixedMul(tempxs, FINECOSINE(angle)) - FixedMul(tempyt, FINESINE(angle))));
-		scrolly = (FIXED_TO_FLOAT(FixedMul(tempxs, FINESINE(angle)) + FixedMul(tempyt, FINECOSINE(angle))));
+		scrolly = (FIXED_TO_FLOAT(FixedMul(tempxs, FINESINE(angle)) + FixedMul(tempyt, FINECOSINE(angle))));*/
 
 		// This needs to be done so everything aligns after rotation
 		// It would be done so that rotation is done, THEN the translation, but I couldn't get it to rotate AND scroll like software does
@@ -2830,10 +2813,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		{
 			tempxs = FLOAT_TO_FIXED(v3d->s);
 			tempyt = FLOAT_TO_FIXED(v3d->t);
-			if (texflat)
-				tempyt = -tempyt;
 			v3d->s = (FIXED_TO_FLOAT(FixedMul(tempxs, FINECOSINE(angle)) - FixedMul(tempyt, FINESINE(angle))));
-			v3d->t = (FIXED_TO_FLOAT(-FixedMul(tempxs, FINESINE(angle)) - FixedMul(tempyt, FINECOSINE(angle))));
+			v3d->t = (FIXED_TO_FLOAT(FixedMul(tempxs, FINESINE(angle)) + FixedMul(tempyt, FINECOSINE(angle))));
 		}
 
 		v3d->x = FIXED_TO_FLOAT(polysector->vertices[i]->x);

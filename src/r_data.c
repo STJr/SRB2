@@ -2080,7 +2080,7 @@ extracolormap_t *R_ColormapForName(char *name)
 #endif
 
 //
-// R_CreateColormap
+// R_CreateColormapFromLinedef
 //
 // This is a more GL friendly way of doing colormaps: Specify colormap
 // data in a special linedef's texture areas and use that to generate
@@ -2219,10 +2219,8 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 	return lighttable;
 }
 
-extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
+extracolormap_t *R_CreateColormapFromLinedef(char *p1, char *p2, char *p3)
 {
-	extracolormap_t *extra_colormap, *exc;
-
 	// default values
 	UINT8 cr = 0, cg = 0, cb = 0, ca = 0, cfr = 0, cfg = 0, cfb = 0, cfa = 25;
 	UINT32 fadestart = 0, fadeend = 31;
@@ -2345,6 +2343,13 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	rgba = R_PutRgbaRGBA(cr, cg, cb, ca);
 	fadergba = R_PutRgbaRGBA(cfr, cfg, cfb, cfa);
 
+	return R_CreateColormap(rgba, fadergba, fadestart, fadeend, flags);
+}
+
+extracolormap_t *R_CreateColormap(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags)
+{
+	extracolormap_t *extra_colormap;
+
 	// Did we just make a default colormap?
 #ifdef EXTRACOLORMAPLUMPS
 	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, flags, LUMPERROR))
@@ -2356,17 +2361,16 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 	// Look for existing colormaps
 #ifdef EXTRACOLORMAPLUMPS
-	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags, LUMPERROR);
+	extra_colormap = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags, LUMPERROR);
 #else
-	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags);
+	extra_colormap = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags);
 #endif
-	if (exc)
-		return exc;
+	if (extra_colormap)
+		return extra_colormap;
 
-	CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-		cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+	CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%x) fadergba(%x)\n", rgba, fadergba);
 
-	extra_colormap = Z_Calloc(sizeof (*extra_colormap), PU_LEVEL, NULL);
+	extra_colormap = Z_Calloc(sizeof(*extra_colormap), PU_LEVEL, NULL);
 
 	extra_colormap->fadestart = (UINT16)fadestart;
 	extra_colormap->fadeend = (UINT16)fadeend;
@@ -2398,7 +2402,6 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 	boolean subR, boolean subG, boolean subB, boolean subA,
 	boolean subFadeR, boolean subFadeG, boolean subFadeB, boolean subFadeA,
 	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFlags,
-	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
 	boolean lighttable)
 {
 	INT16 red, green, blue, alpha;
@@ -2434,7 +2437,7 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 			* R_GetRgbaB(exc_addend->rgba)
 		, 255), 0);
 
-	alpha = useAltAlpha ? altAlpha : R_GetRgbaA(exc_addend->rgba);
+	alpha = R_GetRgbaA(exc_addend->rgba);
 	alpha = max(min(R_GetRgbaA(exc_augend->rgba) + (subA ? -1 : 1) * alpha, 25), 0);
 
 	exc_augend->rgba = R_PutRgbaRGBA(red, green, blue, alpha);
@@ -2461,8 +2464,8 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 			* R_GetRgbaB(exc_addend->fadergba)
 		, 255), 0);
 
-	alpha = useAltAlpha ? altFadeAlpha : R_GetRgbaA(exc_addend->fadergba);
-	if (alpha == 25 && !useAltAlpha && !R_GetRgbaRGB(exc_addend->fadergba))
+	alpha = R_GetRgbaA(exc_addend->fadergba);
+	if (alpha == 25 && !R_GetRgbaRGB(exc_addend->fadergba))
 		alpha = 0; // HACK: fadergba A defaults at 25, so don't add anything in this case
 	alpha = max(min(R_GetRgbaA(exc_augend->fadergba) + (subFadeA ? -1 : 1) * alpha, 25), 0);
 

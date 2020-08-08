@@ -442,7 +442,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 			mobj->sprite2 = spr2;
 			mobj->frame = frame|(st->frame&~FF_FRAMEMASK);
-			if (player->powers[pw_super] || (player->powers[pw_carry] == CR_NIGHTSMODE && (player->charflags & (SF_SUPER|SF_NONIGHTSSUPER)) == SF_SUPER)) // Super colours? Super bright!
+			if (P_PlayerFullbright(player))
 				mobj->frame |= FF_FULLBRIGHT;
 		}
 		// Regular sprites
@@ -2882,8 +2882,7 @@ static boolean P_PlayerPolyObjectZMovement(mobj_t *mo)
 					continue;
 
 				// We're landing on a PO, so check for a linedef executor.
-				// Trigger tags are 32000 + the PO's ID number.
-				P_LinedefExecute((INT16)(32000 + po->id), mo, NULL);
+				P_LinedefExecute(po->triggertag, mo, NULL);
 			}
 		}
 	}
@@ -11615,7 +11614,7 @@ void P_MovePlayerToStarpost(INT32 playernum)
 mapthing_t *huntemeralds[MAXHUNTEMERALDS];
 INT32 numhuntemeralds;
 
-fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t offset, const boolean flip)
+fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale)
 {
 	const subsector_t *ss = R_PointInSubsector(x, y);
 
@@ -11625,14 +11624,15 @@ fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const f
 
 	// Establish height.
 	if (flip)
-		return P_GetSectorCeilingZAt(ss->sector, x, y) - offset - mobjinfo[mobjtype].height;
+		return P_GetSectorCeilingZAt(ss->sector, x, y) - dz - FixedMul(scale, offset + mobjinfo[mobjtype].height);
 	else
-		return P_GetSectorFloorZAt(ss->sector, x, y) + offset;
+		return P_GetSectorFloorZAt(ss->sector, x, y) + dz + FixedMul(scale, offset);
 }
 
 fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y)
 {
-	fixed_t offset = mthing->z << FRACBITS;
+	fixed_t dz = mthing->z << FRACBITS; // Base offset from the floor.
+	fixed_t offset = 0; // Specific scaling object offset.
 	boolean flip = (!!(mobjinfo[mobjtype].flags & MF_SPAWNCEILING) ^ !!(mthing->options & MTF_OBJECTFLIP));
 
 	switch (mobjtype)
@@ -11648,17 +11648,17 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	case MT_JETTBOMBER:
 	case MT_JETTGUNNER:
 	case MT_EGGMOBILE2:
-		if (!offset)
-			offset = 33*FRACUNIT;
+		if (!dz)
+			dz = 33*FRACUNIT;
 		break;
 	case MT_EGGMOBILE:
-		if (!offset)
-			offset = 128*FRACUNIT;
+		if (!dz)
+			dz = 128*FRACUNIT;
 		break;
 	case MT_GOLDBUZZ:
 	case MT_REDBUZZ:
-		if (!offset)
-			offset = 288*FRACUNIT;
+		if (!dz)
+			dz = 288*FRACUNIT;
 		break;
 
 	// Horizontal springs, may float additional units with MTF_AMBUSH.
@@ -11691,7 +11691,7 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 			offset += mthing->options & MTF_AMBUSH ? 24*FRACUNIT : 0;
 	}
 
-	if (!offset) // Snap to the surfaces when there's no offset set.
+	if (!(dz + offset)) // Snap to the surfaces when there's no offset set.
 	{
 		if (flip)
 			return ONCEILINGZ;
@@ -11699,7 +11699,7 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 			return ONFLOORZ;
 	}
 
-	return P_GetMobjSpawnHeight(mobjtype, x, y, offset, flip);
+	return P_GetMobjSpawnHeight(mobjtype, x, y, dz, offset, flip, mthing->scale);
 }
 
 static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
@@ -12583,10 +12583,16 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	}
 	case MT_SKYBOX:
+		if (mthing->tag < 0 || mthing->tag > 15)
+		{
+			CONS_Debug(DBG_GAMELOGIC, "P_SetupSpawnedMapThing: Skybox ID %d of mapthing %s is not between 0 and 15!\n", mthing->tag, sizeu1((size_t)(mthing - mapthings)));
+			break;
+		}
+
 		if (mthing->options & MTF_OBJECTSPECIAL)
-			skyboxcenterpnts[mthing->extrainfo] = mobj;
+			skyboxcenterpnts[mthing->tag] = mobj;
 		else
-			skyboxviewpnts[mthing->extrainfo] = mobj;
+			skyboxviewpnts[mthing->tag] = mobj;
 		break;
 	case MT_EGGSTATUE:
 		if (mthing->options & MTF_EXTRA)
@@ -13074,11 +13080,17 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	mobj = P_SpawnMobj(x, y, z, i);
 	mobj->spawnpoint = mthing;
 
+	P_SetScale(mobj, mthing->scale);
+	mobj->destscale = mthing->scale;
+
 	if (!P_SetupSpawnedMapThing(mthing, mobj, &doangle))
 		return mobj;
 
 	if (doangle)
 		mobj->angle = FixedAngle(mthing->angle << FRACBITS);
+
+	mobj->pitch = FixedAngle(mthing->pitch << FRACBITS);
+	mobj->roll = FixedAngle(mthing->roll << FRACBITS);
 
 	mthing->mobj = mobj;
 
@@ -13176,7 +13188,7 @@ static void P_SpawnHoopInternal(mapthing_t *mthing, INT32 hoopsize, fixed_t size
 	TVector v, *res;
 	fixed_t x = mthing->x << FRACBITS;
 	fixed_t y = mthing->y << FRACBITS;
-	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, false);
+	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, 0, false, mthing->scale);
 
 	hoopcenter = P_SpawnMobj(x, y, z, MT_HOOPCENTER);
 	hoopcenter->spawnpoint = mthing;
@@ -13321,7 +13333,7 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t* itemtypes, UINT8 numi
 			itemtypes[r] = P_GetMobjtypeSubstitute(&dummything, itemtypes[r]);
 		}
 	}
-	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, mthing->options & MTF_OBJECTFLIP);
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, mthing->options & MTF_OBJECTFLIP, mthing->scale);
 
 	for (r = 0; r < numitems; r++)
 	{
@@ -13379,7 +13391,7 @@ static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 n
 			itemtypes[i] = P_GetMobjtypeSubstitute(&dummything, itemtypes[i]);
 		}
 	}
-	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, false);
+	z = P_GetMobjSpawnHeight(itemtypes[0], x, y, z, 0, false, mthing->scale);
 
 	for (i = 0; i < numitems; i++)
 	{
