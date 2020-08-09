@@ -2120,6 +2120,9 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 		scrwidth -= left;
 	}
 
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
+
 	switch (option & V_SPACINGMASK)
 	{
 		case V_MONOSPACE:
@@ -2232,6 +2235,9 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 		left = (scrwidth - BASEVIDWIDTH)/2;
 		scrwidth -= left;
 	}
+
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
 
 	charflags = (option & V_CHARCOLORMASK);
 
@@ -2347,6 +2353,9 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 		left = (scrwidth - BASEVIDWIDTH)/2;
 		scrwidth -= left;
 	}
+
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
 
 	charflags = (option & V_CHARCOLORMASK);
 
@@ -2483,6 +2492,9 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 		scrwidth -= left;
 	}
 
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
+
 	charflags = (option & V_CHARCOLORMASK);
 
 	switch (option & V_SPACINGMASK)
@@ -2595,6 +2607,9 @@ void V_DrawSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *st
 		left = (scrwidth - BASEVIDWIDTH)/2;
 		scrwidth -= left;
 	}
+
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
 
 	charflags = (option & V_CHARCOLORMASK);
 
@@ -2710,6 +2725,9 @@ void V_DrawThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *str
 		scrwidth -= left;
 	}
 
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
+
 	charflags = (option & V_CHARCOLORMASK);
 
 	switch (option & V_SPACINGMASK)
@@ -2824,6 +2842,9 @@ void V_DrawSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char
 		scrwidth -= left;
 	}
 
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
+
 	charflags = (option & V_CHARCOLORMASK);
 
 	switch (option & V_SPACINGMASK)
@@ -2917,7 +2938,7 @@ void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num)
 	INT32 w = SHORT(tallnum[0]->width);
 	boolean neg;
 
-	if (flags & V_NOSCALESTART)
+	if (flags & (V_NOSCALESTART|V_NOSCALEPATCH))
 		w *= vid.dupx;
 
 	if ((neg = num < 0))
@@ -2942,7 +2963,7 @@ void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits)
 {
 	INT32 w = SHORT(tallnum[0]->width);
 
-	if (flags & V_NOSCALESTART)
+	if (flags & (V_NOSCALESTART|V_NOSCALEPATCH))
 		w *= vid.dupx;
 
 	if (num < 0)
@@ -2994,6 +3015,9 @@ void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string)
 	}
 	else
 		dupx = dupy = 1;
+
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
 
 	for (;;)
 	{
@@ -3051,6 +3075,9 @@ static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UIN
 		left = (scrwidth - BASEVIDWIDTH)/2;
 		scrwidth -= left;
 	}
+
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
 
 	for (;;ch++)
 	{
@@ -3267,6 +3294,9 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 		scrwidth -= left;
 	}
 
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
+
 	for (;;ch++)
 	{
 		if (!*ch)
@@ -3402,8 +3432,8 @@ INT32 V_StringWidth(const char *string, INT32 option)
 			w += (charwidth ? charwidth : SHORT(hu_font[c]->width));
 	}
 
-	if (option & V_NOSCALESTART)
-	w *= vid.dupx;
+	if (option & (V_NOSCALESTART|V_NOSCALEPATCH))
+		w *= vid.dupx;
 
 	return w;
 }
