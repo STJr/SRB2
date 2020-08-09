@@ -8,13 +8,11 @@
 # terms of the GNU General Public License, version 2.
 # See the 'LICENSE' file for more details.
 #
-#     -DPC_DOS    -> use DOS specific code (eg:textmode stuff)...
 #     -DLINUX     -> use for the GNU/Linux specific
 #     -D_WINDOWS  -> use for the Win32/DirectX specific
 #     -DHAVE_SDL  -> use for the SDL interface
 #
 # Sets:
-#     Compile the DGJPP/DOS version with 'make WATTCP=1'
 #     Compile the DirectX/Mingw version with 'make MINGW=1'
 #     Compile the SDL/Mingw version with 'make MINGW=1 SDL=1'
 #     Compile the SDL/Linux version with 'make LINUX=1'
@@ -144,10 +142,6 @@ ifdef PANDORA
 NONX86=1
 NOHW=1
 NOHS=1
-endif
-
-ifdef DJGPPDOS
-include djgppdos/Makefile.cfg
 endif
 
 ifndef NOOPENMPT
@@ -496,10 +490,6 @@ ifdef GETTEXT
 POS:=$(BIN)/en.mo
 
 OPTS+=-DGETTEXT
-endif
-
-ifdef DJGPPDOS
-all:	 pre-build $(BIN)/$(EXENAME)
 endif
 
 ifdef PANDORA

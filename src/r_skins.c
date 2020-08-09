@@ -31,12 +31,6 @@
 #include "hardware/hw_md2.h"
 #endif
 
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-int	snprintf(char *str, size_t n, const char *fmt, ...);
-//int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
-#endif
-
 INT32 numskins = 0;
 skin_t skins[MAXSKINS];
 

@@ -2474,10 +2474,6 @@ void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
 	CV_SetValue(&cv_midimusicvolume, seqvolume&31);
 	actualmidimusicvolume = cv_midimusicvolume.value;   //check for change of var
 
-#ifdef DJGPPDOS
-	digvolume = seqvolume = 31;
-#endif
-
 	switch(I_SongType())
 	{
 		case MU_MID:

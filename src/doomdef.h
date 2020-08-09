@@ -110,10 +110,6 @@
 #include <io.h>
 #endif
 
-#ifdef PC_DOS
-#include <conio.h>
-#endif
-
 //#define NOMD5
 
 // Uncheck this to compile debugging code
@@ -558,8 +554,8 @@ INT32 I_GetKey(void);
 #endif
 
 // The character that separates pathnames. Forward slash on
-// most systems, but reverse solidus (\) on Windows and DOS.
-#if defined (PC_DOS) || defined (_WIN32)
+// most systems, but reverse solidus (\) on Windows.
+#if defined (_WIN32)
 	#define PATHSEP "\\"
 #else
 	#define PATHSEP "/"
