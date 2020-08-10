@@ -150,15 +150,15 @@ FUNCINLINE static ATTRINLINE UINT32 readulong(void *ptr)
 
 #undef DEALIGNED
 
-#define WRITESTRINGN(p,s,n) { size_t tmp_i = 0; for (; tmp_i < n && s[tmp_i] != '\0'; tmp_i++) WRITECHAR(p, s[tmp_i]); if (tmp_i < n) WRITECHAR(p, '\0');}
-#define WRITESTRING(p,s)    { size_t tmp_i = 0; for (;              s[tmp_i] != '\0'; tmp_i++) WRITECHAR(p, s[tmp_i]); WRITECHAR(p, '\0');}
-#define WRITEMEM(p,s,n)     { memcpy(p, s, n); p += n; }
+#define WRITESTRINGN(p,s,n) do { size_t tmp_i = 0; for (; tmp_i < n && s[tmp_i] != '\0'; tmp_i++) WRITECHAR(p, s[tmp_i]); if (tmp_i < n) WRITECHAR(p, '\0');} while (0)
+#define WRITESTRING(p,s)    do { size_t tmp_i = 0; for (;              s[tmp_i] != '\0'; tmp_i++) WRITECHAR(p, s[tmp_i]); WRITECHAR(p, '\0');} while (0)
+#define WRITEMEM(p,s,n)     do { memcpy(p, s, n); p += n; } while (0)
 
 #define SKIPSTRING(p)       while (READCHAR(p) != '\0')
 
-#define READSTRINGN(p,s,n)  { size_t tmp_i = 0; for (; tmp_i < n && (s[tmp_i] = READCHAR(p)) != '\0'; tmp_i++); s[tmp_i] = '\0';}
-#define READSTRING(p,s)     { size_t tmp_i = 0; for (;              (s[tmp_i] = READCHAR(p)) != '\0'; tmp_i++); s[tmp_i] = '\0';}
-#define READMEM(p,s,n)      { memcpy(s, p, n); p += n; }
+#define READSTRINGN(p,s,n)  ({ size_t tmp_i = 0; for (; tmp_i < n && (s[tmp_i] = READCHAR(p)) != '\0'; tmp_i++); s[tmp_i] = '\0';})
+#define READSTRING(p,s)     ({ size_t tmp_i = 0; for (;              (s[tmp_i] = READCHAR(p)) != '\0'; tmp_i++); s[tmp_i] = '\0';})
+#define READMEM(p,s,n)      ({ memcpy(s, p, n); p += n; })
 
 #if 0 // old names
 #define WRITEBYTE(p,b)      WRITEUINT8(p,b)

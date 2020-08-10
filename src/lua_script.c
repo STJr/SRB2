@@ -78,11 +78,66 @@ FUNCNORETURN static int LUA_Panic(lua_State *L)
 #endif
 }
 
+#define LEVELS1 12 // size of the first part of the stack
+#define LEVELS2 10 // size of the second part of the stack
+
+// Error handler used with pcall() when loading scripts or calling hooks
+// Takes a string with the original error message,
+// appends the traceback to it, and return the result
+int LUA_GetErrorMessage(lua_State *L)
+{
+	int level = 1;
+	int firstpart = 1; // still before eventual `...'
+	lua_Debug ar;
+
+	lua_pushliteral(L, "\nstack traceback:");
+	while (lua_getstack(L, level++, &ar))
+	{
+		if (level > LEVELS1 && firstpart)
+		{
+			// no more than `LEVELS2' more levels?
+			if (!lua_getstack(L, level + LEVELS2, &ar))
+				level--; // keep going
+			else
+			{
+				lua_pushliteral(L, "\n    ..."); // too many levels
+				while (lua_getstack(L, level + LEVELS2, &ar)) // find last levels
+					level++;
+			}
+			firstpart = 0;
+			continue;
+		}
+		lua_pushliteral(L, "\n    ");
+		lua_getinfo(L, "Snl", &ar);
+		lua_pushfstring(L, "%s:", ar.short_src);
+		if (ar.currentline > 0)
+			lua_pushfstring(L, "%d:", ar.currentline);
+		if (*ar.namewhat != '\0') // is there a name?
+			lua_pushfstring(L, " in function " LUA_QS, ar.name);
+		else
+		{
+			if (*ar.what == 'm') // main?
+				lua_pushfstring(L, " in main chunk");
+			else if (*ar.what == 'C' || *ar.what == 't')
+				lua_pushliteral(L, " ?"); // C function or tail call
+			else
+				lua_pushfstring(L, " in function <%s:%d>",
+					ar.short_src, ar.linedefined);
+		}
+		lua_concat(L, lua_gettop(L));
+	}
+	lua_concat(L, lua_gettop(L));
+	return 1;
+}
+
 // Moved here from lib_getenum.
 int LUA_PushGlobals(lua_State *L, const char *word)
 {
 	if (fastcmp(word,"gamemap")) {
 		lua_pushinteger(L, gamemap);
+		return 1;
+	} else if (fastcmp(word,"udmf")) {
+		lua_pushboolean(L, udmf);
 		return 1;
 	} else if (fastcmp(word,"maptol")) {
 		lua_pushinteger(L, maptol);
@@ -115,7 +170,10 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushboolean(L, splitscreen);
 		return 1;
 	} else if (fastcmp(word,"gamecomplete")) {
-		lua_pushboolean(L, gamecomplete);
+		lua_pushboolean(L, (gamecomplete != 0));
+		return 1;
+	} else if (fastcmp(word,"marathonmode")) {
+		lua_pushinteger(L, marathonmode);
 		return 1;
 	} else if (fastcmp(word,"devparm")) {
 		lua_pushboolean(L, devparm);
@@ -144,6 +202,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	// begin map vars
 	} else if (fastcmp(word,"spstage_start")) {
 		lua_pushinteger(L, spstage_start);
+		return 1;
+	} else if (fastcmp(word,"spmarathon_start")) {
+		lua_pushinteger(L, spmarathon_start);
 		return 1;
 	} else if (fastcmp(word,"sstage_start")) {
 		lua_pushinteger(L, sstage_start);
@@ -268,6 +329,12 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 			return 0;
 		LUA_PushUserdata(L, &players[secondarydisplayplayer], META_PLAYER);
 		return 1;
+	} else if (fastcmp(word,"isserver")) {
+		lua_pushboolean(L, server);
+		return 1;
+	} else if (fastcmp(word,"isdedicatedserver")) {
+		lua_pushboolean(L, dedicated);
+		return 1;
 	// end local player variables
 	} else if (fastcmp(word,"server")) {
 		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
@@ -279,6 +346,12 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	} else if (fastcmp(word,"gravity")) {
 		lua_pushinteger(L, gravity);
+		return 1;
+	} else if (fastcmp(word,"VERSION")) {
+		lua_pushinteger(L, VERSION);
+		return 1;
+	} else if (fastcmp(word,"SUBVERSION")) {
+		lua_pushinteger(L, SUBVERSION);
 		return 1;
 	} else if (fastcmp(word,"VERSIONSTRING")) {
 		lua_pushstring(L, VERSIONSTRING);
@@ -395,30 +468,35 @@ void LUA_ClearExtVars(void)
 // Use this variable to prevent certain functions from running
 // if they were not called on lump load
 // (i.e. they were called in hooks or coroutines etc)
-boolean lua_lumploading = false;
+INT32 lua_lumploading = 0;
 
 // Load a script from a MYFILE
-static inline void LUA_LoadFile(MYFILE *f, char *name)
+static inline void LUA_LoadFile(MYFILE *f, char *name, boolean noresults)
 {
+	int errorhandlerindex;
+
 	if (!name)
 		name = wadfiles[f->wad]->filename;
 	CONS_Printf("Loading Lua script from %s\n", name);
 	if (!gL) // Lua needs to be initialized
 		LUA_ClearState();
 
-	lua_lumploading = true; // turn on loading flag
+	lua_lumploading++; // turn on loading flag
 
-	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, 0, 0)) {
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+	errorhandlerindex = lua_gettop(gL);
+	if (luaL_loadbuffer(gL, f->data, f->size, va("@%s",name)) || lua_pcall(gL, 0, noresults ? 0 : LUA_MULTRET, lua_gettop(gL) - 1)) {
 		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
 		lua_pop(gL,1);
 	}
 	lua_gc(gL, LUA_GCCOLLECT, 0);
+	lua_remove(gL, errorhandlerindex);
 
-	lua_lumploading = false; // turn off again
+	lua_lumploading--; // turn off again
 }
 
 // Load a script from a lump
-void LUA_LoadLump(UINT16 wad, UINT16 lump)
+void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults)
 {
 	MYFILE f;
 	char *name;
@@ -445,7 +523,7 @@ void LUA_LoadLump(UINT16 wad, UINT16 lump)
 		name[len] = '\0';
 	}
 
-	LUA_LoadFile(&f, name); // actually load file!
+	LUA_LoadFile(&f, name, noresults); // actually load file!
 
 	free(name);
 	Z_Free(f.data);

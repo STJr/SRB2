@@ -134,6 +134,7 @@ UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 #define NUM_PALETTE_ENTRIES 256
 
 static UINT8** translationtablecache[MAXSKINS + 7] = {NULL};
+UINT8 skincolor_modified[MAXSKINCOLORS];
 
 CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
 
@@ -362,6 +363,7 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags
 {
 	UINT8* ret;
 	INT32 skintableindex;
+	INT32 i;
 
 	// Adjust if we want the default colormap
 	switch (skinnum)
@@ -385,6 +387,15 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags
 
 		// Get colormap
 		ret = translationtablecache[skintableindex][color];
+
+		// Rebuild the cache if necessary
+		if (skincolor_modified[color])
+		{
+			for (i = 0; i < (INT32)(sizeof(translationtablecache) / sizeof(translationtablecache[0])); i++)
+				if (translationtablecache[i] && translationtablecache[i][color])
+					R_GenerateTranslationColormap(translationtablecache[i][color], i>=MAXSKINS ? MAXSKINS-i-1 : i, color);
+			skincolor_modified[color] = false;
+		}
 	}
 	else ret = NULL;
 
@@ -427,12 +438,12 @@ UINT16 R_GetColorByName(const char *name)
 	for (color = 1; color < numskincolors; color++)
 		if (!stricmp(skincolors[color].name, name))
 			return color;
-	return SKINCOLOR_GREEN;
+	return SKINCOLOR_NONE;
 }
 
 UINT16 R_GetSuperColorByName(const char *name)
 {
-	UINT16 i, color = SKINCOLOR_SUPERGOLD1;
+	UINT16 i, color = SKINCOLOR_NONE;
 	char *realname = Z_Malloc(MAXCOLORNAME+1, PU_STATIC, NULL);
 	snprintf(realname, MAXCOLORNAME+1, "Super %s 1", name);
 	for (i = 1; i < numskincolors; i++)

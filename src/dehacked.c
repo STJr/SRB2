@@ -46,12 +46,6 @@
 #include "hardware/hw_light.h"
 #endif
 
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-//int	snprintf(char *str, size_t n, const char *fmt, ...);
-int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
-#endif
-
 // Free slot names
 // The crazy word-reading stuff uses these.
 static char *FREE_STATES[NUMSTATEFREESLOTS];
@@ -395,7 +389,7 @@ static void readPlayer(MYFILE *f, INT32 num)
 				// It works down here, though.
 				{
 					INT32 numline = 0;
-					for (i = 0; i < MAXLINELEN-1; i++)
+					for (i = 0; (size_t)i < sizeof(description[num].notes)-1; i++)
 					{
 						if (numline < 20 && description[num].notes[i] == '\n')
 							numline++;
@@ -789,7 +783,8 @@ static void readthing(MYFILE *f, INT32 num)
 static void readskincolor(MYFILE *f, INT32 num)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
-	char *word, *word2, *word3;
+	char *word = s;
+	char *word2;
 	char *tmp;
 
 	Color_cons_t[num].value = num;
@@ -801,33 +796,67 @@ static void readskincolor(MYFILE *f, INT32 num)
 			if (s[0] == '\n')
 				break;
 
+			// First remove trailing newline, if there is one
+			tmp = strchr(s, '\n');
+			if (tmp)
+				*tmp = '\0';
+
 			tmp = strchr(s, '#');
 			if (tmp)
 				*tmp = '\0';
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
 
-			word = strtok(s, " ");
-			if (word)
-				strupr(word);
+			// Get the part before the " = "
+			tmp = strchr(s, '=');
+			if (tmp)
+				*(tmp-1) = '\0';
 			else
 				break;
+			strupr(word);
 
-			word2 = strtok(NULL, " = ");
-			if (word2) {
-				word3 = Z_StrDup(word2);
-				strupr(word2);
-			} else
-				break;
-			if (word2[strlen(word2)-1] == '\n')
-				word2[strlen(word2)-1] = '\0';
-			if (word3[strlen(word3)-1] == '\n')
-				word3[strlen(word3)-1] = '\0';
+			// Now get the part after
+			word2 = tmp += 2;
 
 			if (fastcmp(word, "NAME"))
 			{
-				deh_strlcpy(skincolors[num].name, word3,
-					sizeof (skincolors[num].name), va("Skincolor %d: name", num));
+				size_t namesize = sizeof(skincolors[num].name);
+				char truncword[namesize];
+				UINT16 dupecheck;
+
+				deh_strlcpy(truncword, word2, namesize, va("Skincolor %d: name", num)); // truncate here to check for dupes
+				dupecheck = R_GetColorByName(truncword);
+				if (truncword[0] != '\0' && (!stricmp(truncword, skincolors[SKINCOLOR_NONE].name) || (dupecheck && dupecheck != num)))
+				{
+					size_t lastchar = strlen(truncword);
+					char oldword[lastchar+1];
+					char dupenum = '1';
+
+					strlcpy(oldword, truncword, lastchar+1);
+					lastchar--;
+					if (lastchar == namesize-2) // exactly max length, replace last character with 0
+						truncword[lastchar] = '0';
+					else // append 0
+					{
+						strcat(truncword, "0");
+						lastchar++;
+					}
+
+					while (R_GetColorByName(truncword))
+					{
+						truncword[lastchar] = dupenum;
+						if (dupenum == '9')
+							dupenum = 'A';
+						else if (dupenum == 'Z') // give up :?
+							break;
+						else
+							dupenum++;
+					}
+
+					deh_warning("Skincolor %d: name %s is a duplicate of another skincolor's name - renamed to %s", num, oldword, truncword);
+				}
+
+				strlcpy(skincolors[num].name, truncword, namesize); // already truncated
 			}
 			else if (fastcmp(word, "RAMP"))
 			{
@@ -838,10 +867,15 @@ static void readskincolor(MYFILE *f, INT32 num)
 					if ((tmp = strtok(NULL,",")) == NULL)
 						break;
 				}
+				skincolor_modified[num] = true;
 			}
 			else if (fastcmp(word, "INVCOLOR"))
 			{
-				skincolors[num].invcolor = (UINT16)get_number(word2);
+				UINT16 v = (UINT16)get_number(word2);
+				if (v < numskincolors)
+					skincolors[num].invcolor = v;
+				else
+					skincolors[num].invcolor = SKINCOLOR_GREEN;
 			}
 			else if (fastcmp(word, "INVSHADE"))
 			{
@@ -1285,7 +1319,7 @@ static void readgametype(MYFILE *f, char *gtname)
 				// It works down here, though.
 				{
 					INT32 numline = 0;
-					for (i = 0; i < MAXLINELEN-1; i++)
+					for (i = 0; (size_t)i < sizeof(gtdescription)-1; i++)
 					{
 						if (numline < 20 && gtdescription[i] == '\n')
 							numline++;
@@ -1688,6 +1722,22 @@ static void readlevelheader(MYFILE *f, INT32 num)
 					i = M_MapNumber(word2[0], word2[1]);
 
 				mapheaderinfo[num-1]->nextlevel = (INT16)i;
+			}
+			else if (fastcmp(word, "MARATHONNEXT"))
+			{
+				if      (fastcmp(word2, "TITLE"))      i = 1100;
+				else if (fastcmp(word2, "EVALUATION")) i = 1101;
+				else if (fastcmp(word2, "CREDITS"))    i = 1102;
+				else if (fastcmp(word2, "ENDING"))     i = 1103;
+				else
+				// Support using the actual map name,
+				// i.e., MarathonNext = AB, MarathonNext = FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z' && word2[2] == '\0')
+					i = M_MapNumber(word2[0], word2[1]);
+
+				mapheaderinfo[num-1]->marathonnext = (INT16)i;
 			}
 			else if (fastcmp(word, "TYPEOFLEVEL"))
 			{
@@ -3086,6 +3136,7 @@ static actionpointer_t actionpointers[] =
 	{{A_NapalmScatter},          "A_NAPALMSCATTER"},
 	{{A_SpawnFreshCopy},         "A_SPAWNFRESHCOPY"},
 	{{A_FlickySpawn},            "A_FLICKYSPAWN"},
+	{{A_FlickyCenter},           "A_FLICKYCENTER"},
 	{{A_FlickyAim},              "A_FLICKYAIM"},
 	{{A_FlickyFly},              "A_FLICKYFLY"},
 	{{A_FlickySoar},             "A_FLICKYSOAR"},
@@ -4031,7 +4082,20 @@ static void readmaincfg(MYFILE *f)
 				else
 					value = get_number(word2);
 
-				spstage_start = (INT16)value;
+				spstage_start = spmarathon_start = (INT16)value;
+			}
+			else if (fastcmp(word, "SPMARATHON_START"))
+			{
+				// Support using the actual map name,
+				// i.e., Level AB, Level FZ, etc.
+
+				// Convert to map number
+				if (word2[0] >= 'A' && word2[0] <= 'Z')
+					value = M_MapNumber(word2[0], word2[1]);
+				else
+					value = get_number(word2);
+
+				spmarathon_start = (INT16)value;
 			}
 			else if (fastcmp(word, "SSTAGE_START"))
 			{
@@ -4124,6 +4188,17 @@ static void readmaincfg(MYFILE *f)
 				if (introtoplay > 128)
 					introtoplay = 128;
 				introchanged = true;
+			}
+			else if (fastcmp(word, "CREDITSCUTSCENE"))
+			{
+				creditscutscene = (UINT8)get_number(word2);
+				// range check, you morons.
+				if (creditscutscene > 128)
+					creditscutscene = 128;
+			}
+			else if (fastcmp(word, "USEBLACKROCK"))
+			{
+				useBlackRock = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
 			else if (fastcmp(word, "LOOPTITLE"))
 			{
@@ -4226,13 +4301,6 @@ static void readmaincfg(MYFILE *f)
 				titlescrollyspeed = get_number(word2);
 				titlechanged = true;
 			}
-			else if (fastcmp(word, "CREDITSCUTSCENE"))
-			{
-				creditscutscene = (UINT8)get_number(word2);
-				// range check, you morons.
-				if (creditscutscene > 128)
-					creditscutscene = 128;
-			}
 			else if (fastcmp(word, "DISABLESPEEDADJUST"))
 			{
 				disableSpeedAdjust = (value || word2[0] == 'T' || word2[0] == 'Y');
@@ -4288,6 +4356,9 @@ static void readmaincfg(MYFILE *f)
 				strlcat(savegamename, "%u.ssg", sizeof(savegamename));
 				// can't use sprintf since there is %u in savegamename
 				strcatbf(savegamename, srb2home, PATHSEP);
+
+				strcpy(liveeventbackup, va("live%s.bkp", timeattackfolder));
+				strcatbf(liveeventbackup, srb2home, PATHSEP);
 
 				gamedataadded = true;
 				titlechanged = true;
@@ -4671,11 +4742,11 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 				{
 					if (i == 0 && word2[0] != '0') // If word2 isn't a number
 						i = get_skincolor(word2); // find a skincolor by name
-					if (i < numskincolors && i >= (INT32)SKINCOLOR_FIRSTFREESLOT)
+					if (i && i < numskincolors)
 						readskincolor(f, i);
 					else
 					{
-						deh_warning("Skincolor %d out of range (%d - %d)", i, SKINCOLOR_FIRSTFREESLOT, numskincolors-1);
+						deh_warning("Skincolor %d out of range (1 - %d)", i, numskincolors-1);
 						ignorelines(f);
 					}
 				}
@@ -5318,6 +5389,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_JETJAW_CHOMP14",
 	"S_JETJAW_CHOMP15",
 	"S_JETJAW_CHOMP16",
+	"S_JETJAW_SOUND",
 
 	// Snailer
 	"S_SNAILER1",
@@ -5740,10 +5812,12 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_FANG_PINCHPATHINGSTART1",
 	"S_FANG_PINCHPATHINGSTART2",
 	"S_FANG_PINCHPATHING",
+	"S_FANG_PINCHBOUNCE0",
 	"S_FANG_PINCHBOUNCE1",
 	"S_FANG_PINCHBOUNCE2",
 	"S_FANG_PINCHBOUNCE3",
 	"S_FANG_PINCHBOUNCE4",
+	"S_FANG_PINCHFALL0",
 	"S_FANG_PINCHFALL1",
 	"S_FANG_PINCHFALL2",
 	"S_FANG_PINCHSKID1",
@@ -8130,6 +8204,9 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_GFZDEBRIS",
 	"S_BRICKDEBRIS",
 	"S_WOODDEBRIS",
+	"S_REDBRICKDEBRIS",
+	"S_BLUEBRICKDEBRIS",
+	"S_YELLOWBRICKDEBRIS",
 
 #ifdef SEENAMES
 	"S_NAMECHECK",
@@ -8877,7 +8954,6 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_ANGLEMAN",
 	"MT_POLYANCHOR",
 	"MT_POLYSPAWN",
-	"MT_POLYSPAWNCRUSH",
 
 	// Skybox objects
 	"MT_SKYBOX",
@@ -8910,6 +8986,9 @@ static const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for s
 	"MT_GFZDEBRIS",
 	"MT_BRICKDEBRIS",
 	"MT_WOODDEBRIS",
+	"MT_REDBRICKDEBRIS",
+	"MT_BLUEBRICKDEBRIS",
+	"MT_YELLOWBRICKDEBRIS",
 
 #ifdef SEENAMES
 	"MT_NAMECHECK",
@@ -9023,7 +9102,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 
 	// True if button down last tic.
 	"ATTACKDOWN",
-	"USEDOWN",
+	"SPINDOWN",
 	"JUMPDOWN",
 	"WPNDOWN",
 
@@ -9296,7 +9375,9 @@ static const char *const POWERS_LIST[] = {
 	//for dyes
 	"DYE",
 
-	"JUSTLAUNCHED"
+	"JUSTLAUNCHED",
+
+	"IGNORELATCH"
 };
 
 static const char *const HUDITEMS_LIST[] = {
@@ -9384,8 +9465,6 @@ static const char *const MENUTYPES_LIST[] = {
 	"OP_COLOR",
 	"OP_OPENGL",
 	"OP_OPENGL_LIGHTING",
-	"OP_OPENGL_FOG",
-	"OP_OPENGL_COLOR",
 
 	"OP_SOUND",
 
@@ -9458,8 +9537,6 @@ struct {
 	{"PUSHACCEL",PUSHACCEL},
 	{"MODID",MODID}, // I don't know, I just thought it would be cool for a wad to potentially know what mod it was loaded into.
 	{"CODEBASE",CODEBASE}, // or what release of SRB2 this is.
-	{"VERSION",VERSION}, // Grab the game's version!
-	{"SUBVERSION",SUBVERSION}, // more precise version number
 	{"NEWTICRATE",NEWTICRATE}, // TICRATE*NEWTICRATERATIO
 	{"NEWTICRATERATIO",NEWTICRATERATIO},
 
@@ -9490,6 +9567,7 @@ struct {
 	{"FF_GLOBALANIM",FF_GLOBALANIM},
 	{"FF_FULLBRIGHT",FF_FULLBRIGHT},
 	{"FF_VERTICALFLIP",FF_VERTICALFLIP},
+	{"FF_HORIZONTALFLIP",FF_HORIZONTALFLIP},
 	{"FF_PAPERSPRITE",FF_PAPERSPRITE},
 	{"FF_TRANSMASK",FF_TRANSMASK},
 	{"FF_TRANSSHIFT",FF_TRANSSHIFT},
@@ -9639,6 +9717,8 @@ struct {
 	{"SF_MULTIABILITY",SF_MULTIABILITY},
 	{"SF_NONIGHTSROTATION",SF_NONIGHTSROTATION},
 	{"SF_NONIGHTSSUPER",SF_NONIGHTSSUPER},
+	{"SF_NOSUPERSPRITES",SF_NOSUPERSPRITES},
+	{"SF_NOSUPERJUMPBOOST",SF_NOSUPERJUMPBOOST},
 
 	// Dashmode constants
 	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
@@ -9909,7 +9989,7 @@ struct {
 	{"BT_WEAPONNEXT",BT_WEAPONNEXT},
 	{"BT_WEAPONPREV",BT_WEAPONPREV},
 	{"BT_ATTACK",BT_ATTACK}, // shoot rings
-	{"BT_USE",BT_USE}, // spin
+	{"BT_SPIN",BT_SPIN},
 	{"BT_CAMLEFT",BT_CAMLEFT}, // turn camera left
 	{"BT_CAMRIGHT",BT_CAMRIGHT}, // turn camera right
 	{"BT_TOSSFLAG",BT_TOSSFLAG},
@@ -10017,6 +10097,12 @@ struct {
 	{"TC_RAINBOW",TC_RAINBOW},
 	{"TC_BLINK",TC_BLINK},
 	{"TC_DASHMODE",TC_DASHMODE},
+
+	// marathonmode flags
+	{"MA_INIT",MA_INIT},
+	{"MA_RUNNING",MA_RUNNING},
+	{"MA_NOCUTSCENES",MA_NOCUTSCENES},
+	{"MA_INGAME",MA_INGAME},
 
 	{NULL,0}
 };
@@ -10599,7 +10685,7 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("State S_%s allocated.\n",word);
 					FREE_STATES[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_STATES[i],word);
-					lua_pushinteger(L, i);
+					lua_pushinteger(L, S_FIRSTFREESLOT + i);
 					r++;
 					break;
 				}
@@ -10619,7 +10705,7 @@ static inline int lib_freeslot(lua_State *L)
 					CONS_Printf("MobjType MT_%s allocated.\n",word);
 					FREE_MOBJS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_MOBJS[i],word);
-					lua_pushinteger(L, i);
+					lua_pushinteger(L, MT_FIRSTFREESLOT + i);
 					r++;
 					break;
 				}
@@ -10640,7 +10726,7 @@ static inline int lib_freeslot(lua_State *L)
 					FREE_SKINCOLORS[i] = Z_Malloc(strlen(word)+1, PU_STATIC, NULL);
 					strcpy(FREE_SKINCOLORS[i],word);
 					M_AddMenuColor(numskincolors++);
-					lua_pushinteger(L, i);
+					lua_pushinteger(L, SKINCOLOR_FIRSTFREESLOT + i);
 					r++;
 					break;
 				}
@@ -10796,6 +10882,12 @@ static inline int lib_getenum(lua_State *L)
 		if (fastcmp(p, "FULLSTASIS"))
 		{
 			lua_pushinteger(L, (lua_Integer)PF_FULLSTASIS);
+			return 1;
+		}
+		else if (fastcmp(p, "USEDOWN")) // Remove case when 2.3 nears release...
+		{
+			LUA_Deprecated(L, "PF_USEDOWN", "PF_SPINDOWN");
+			lua_pushinteger(L, (lua_Integer)PF_SPINDOWN);
 			return 1;
 		}
 		if (mathlib) return luaL_error(L, "playerflag '%s' could not be found.\n", word);
@@ -11067,6 +11159,13 @@ static inline int lib_getenum(lua_State *L)
 				return 1;
 			}
 		return 0;
+	}
+
+	if (fastcmp(word, "BT_USE")) // Remove case when 2.3 nears release...
+	{
+		LUA_Deprecated(L, "BT_USE", "BT_SPIN");
+		lua_pushinteger(L, (lua_Integer)BT_SPIN);
+		return 1;
 	}
 
 	for (i = 0; INT_CONST[i].n; i++)

@@ -18,8 +18,13 @@
 #include "doomstat.h" // for NUMGAMETYPES
 #include "d_event.h"
 #include "command.h"
-#include "r_skins.h" // for SKINNAMESIZE
 #include "f_finale.h" // for ttmode_enum
+#include "i_threads.h"
+#include "mserv.h"
+#include "r_things.h" // for SKINNAMESIZE
+
+// Compatibility with old-style named NiGHTS replay files.
+#define OLDNREPLAYNAME
 
 //
 // MENUS
@@ -61,6 +66,8 @@ typedef enum
 	MN_SP_NIGHTS_REPLAY,
 	MN_SP_NIGHTS_GHOST,
 
+	MN_SP_MARATHON,
+
 	// Multiplayer
 	MN_MP_MAIN,
 	MN_MP_SPLITSCREEN, // SplitServer
@@ -92,8 +99,6 @@ typedef enum
 	MN_OP_COLOR,
 	MN_OP_OPENGL,
 	MN_OP_OPENGL_LIGHTING,
-	MN_OP_OPENGL_FOG,
-	MN_OP_OPENGL_COLOR,
 
 	MN_OP_SOUND,
 
@@ -223,6 +228,18 @@ typedef enum
 } menumessagetype_t;
 void M_StartMessage(const char *string, void *routine, menumessagetype_t itemtype);
 
+typedef enum
+{
+	M_NOT_WAITING,
+
+	M_WAITING_VERSION,
+	M_WAITING_ROOMS,
+	M_WAITING_SERVERS,
+}
+M_waiting_mode_t;
+
+extern M_waiting_mode_t m_waiting_mode;
+
 // Called by linux_x/i_video_xshm.c
 void M_QuitResponse(INT32 ch);
 
@@ -313,6 +330,9 @@ typedef struct menuitem_s
 	UINT8 alphaKey;
 } menuitem_t;
 
+extern menuitem_t MP_RoomMenu[];
+extern UINT32     roomIds[NUM_LIST_ROOMS];
+
 typedef struct menu_s
 {
 	UINT32         menuid;             // ID to encode menu type and hierarchy
@@ -331,6 +351,10 @@ void M_ClearMenus(boolean callexitmenufunc);
 
 // Maybe this goes here????? Who knows.
 boolean M_MouseNeeded(void);
+
+#ifdef HAVE_THREADS
+extern I_mutex m_menu_mutex;
+#endif
 
 extern menu_t *currentMenu;
 
@@ -419,6 +443,7 @@ extern INT16 char_on, startchar;
 
 #define MAXSAVEGAMES 31
 #define NOSAVESLOT 0 //slot where Play Without Saving appears
+#define MARATHONSLOT 420 // just has to be nonzero, but let's use one that'll show up as an obvious error if something goes wrong while not using our existing saves
 
 #define BwehHehHe() S_StartSound(NULL, sfx_bewar1+M_RandomKey(4)) // Bweh heh he
 

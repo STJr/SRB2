@@ -1,19 +1,13 @@
-// Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-//
 // Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-/// \file
+/// \file hw_light.c
 /// \brief Corona/Dynamic/Static lighting add on by Hurdler
 ///	!!! Under construction !!!
 
@@ -611,6 +605,9 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT], // SPR_GFZD
 	&lspr[NOLIGHT], // SPR_BRIC
 	&lspr[NOLIGHT], // SPR_WDDB
+	&lspr[NOLIGHT], // SPR_BRIR
+	&lspr[NOLIGHT], // SPR_BRIB
+	&lspr[NOLIGHT], // SPR_BRIY
 
 	// Gravity Well Objects
 	&lspr[NOLIGHT],     // SPR_GWLG
@@ -824,7 +821,7 @@ void HWR_WallLighting(FOutVector *wlVerts)
 {
 	int             i, j;
 
-	// dynlights->nb == 0 if cv_grdynamiclighting.value is not set
+	// dynlights->nb == 0 if cv_gldynamiclighting.value is not set
 	for (j = 0; j < dynlights->nb; j++)
 	{
 		FVector         inter;
@@ -879,19 +876,19 @@ void HWR_WallLighting(FOutVector *wlVerts)
 #endif
 		for (i = 0; i < 4; i++)
 		{
-			wlVerts[i].sow = (float)(0.5f + d[i]*s);
-			wlVerts[i].tow = (float)(0.5f + (wlVerts[i].y-LIGHT_POS(j).y)*s*1.2f);
+			wlVerts[i].s = (float)(0.5f + d[i]*s);
+			wlVerts[i].t = (float)(0.5f + (wlVerts[i].y-LIGHT_POS(j).y)*s*1.2f);
 		}
 
 		HWR_SetLight();
 
-		Surf.FlatColor.rgba = LONG(dynlights->p_lspr[j]->dynamic_color);
+		Surf.PolyColor.rgba = LONG(dynlights->p_lspr[j]->dynamic_color);
 #ifdef DL_HIGH_QUALITY
-		Surf.FlatColor.s.alpha = (UINT8)((1-dist_p2d/DL_SQRRADIUS(j))*Surf.FlatColor.s.alpha);
+		Surf.PolyColor.s.alpha = (UINT8)((1-dist_p2d/DL_SQRRADIUS(j))*Surf.PolyColor.s.alpha);
 #endif
 		// next state is null so fade out with alpha
 		if (dynlights->mo[j]->state->nextstate == S_NULL)
-			Surf.FlatColor.s.alpha = (UINT8)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
+			Surf.PolyColor.s.alpha = (UINT8)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.PolyColor.s.alpha);
 
 		HWD.pfnDrawPolygon (&Surf, wlVerts, 4, LIGHTMAPFLAGS);
 
@@ -948,19 +945,19 @@ void HWR_PlaneLighting(FOutVector *clVerts, int nrClipVerts)
 #endif
 		for (i = 0; i < nrClipVerts; i++)
 		{
-			clVerts[i].sow = 0.5f + (clVerts[i].x-LIGHT_POS(j).x)*s;
-			clVerts[i].tow = 0.5f + (clVerts[i].z-LIGHT_POS(j).z)*s*1.2f;
+			clVerts[i].s = 0.5f + (clVerts[i].x-LIGHT_POS(j).x)*s;
+			clVerts[i].t = 0.5f + (clVerts[i].z-LIGHT_POS(j).z)*s*1.2f;
 		}
 
 		HWR_SetLight();
 
-		Surf.FlatColor.rgba = LONG(dynlights->p_lspr[j]->dynamic_color);
+		Surf.PolyColor.rgba = LONG(dynlights->p_lspr[j]->dynamic_color);
 #ifdef DL_HIGH_QUALITY
-		Surf.FlatColor.s.alpha = (unsigned char)((1 - dist_p2d/DL_SQRRADIUS(j))*Surf.FlatColor.s.alpha);
+		Surf.PolyColor.s.alpha = (unsigned char)((1 - dist_p2d/DL_SQRRADIUS(j))*Surf.PolyColor.s.alpha);
 #endif
 		// next state is null so fade out with alpha
 		if ((dynlights->mo[j]->state->nextstate == S_NULL))
-			Surf.FlatColor.s.alpha = (unsigned char)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.FlatColor.s.alpha);
+			Surf.PolyColor.s.alpha = (unsigned char)(((float)dynlights->mo[j]->tics/(float)dynlights->mo[j]->state->tics)*Surf.PolyColor.s.alpha);
 
 		HWD.pfnDrawPolygon (&Surf, clVerts, nrClipVerts, LIGHTMAPFLAGS);
 
@@ -973,7 +970,7 @@ static lumpnum_t coronalumpnum = LUMPERROR;
 // --------------------------------------------------------------------------
 // coronas lighting
 // --------------------------------------------------------------------------
-void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
+void HWR_DoCoronasLighting(FOutVector *outVerts, gl_vissprite_t *spr)
 {
 	light_t   *p_lspr;
 
@@ -988,7 +985,7 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
 		p_lspr = &lspr[ROCKETEXP_L];
 	}
 
-	if (cv_grcoronas.value && (p_lspr->type & CORONA_SPR))
+	if (cv_glcoronas.value && (p_lspr->type & CORONA_SPR))
 	{ // it's an object which emits light
 		FOutVector      light[4];
 		FSurfaceInfo    Surf;
@@ -1013,7 +1010,7 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
 		}
 		if (size > p_lspr->corona_radius)
 			size = p_lspr->corona_radius;
-		size *= FIXED_TO_FLOAT(cv_grcoronasize.value<<1);
+		size *= FIXED_TO_FLOAT(cv_glcoronasize.value<<1);
 
 		// compute position doing average
 		for (i = 0; i < 4; i++)
@@ -1027,11 +1024,11 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
 		// more realistique corona !
 		if (cz >= 255*8+250)
 			return;
-		Surf.FlatColor.rgba = p_lspr->corona_color;
+		Surf.PolyColor.rgba = p_lspr->corona_color;
 		if (cz > 250.0f)
-			Surf.FlatColor.s.alpha = 0xff-((int)cz-250)/8;
+			Surf.PolyColor.s.alpha = 0xff-((int)cz-250)/8;
 		else
-			Surf.FlatColor.s.alpha = 0xff;
+			Surf.PolyColor.s.alpha = 0xff;
 
 		// do not be hide by sprite of the light itself !
 		cz = cz - 2.0f;
@@ -1043,19 +1040,19 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr)
 		//           car comme l'offset est minime sa ce voit pas !
 		light[0].x = cx-size;  light[0].z = cz;
 		light[0].y = cy-size*1.33f+p_lspr->light_yoffset;
-		light[0].sow = 0.0f;   light[0].tow = 0.0f;
+		light[0].s = 0.0f;   light[0].t = 0.0f;
 
 		light[1].x = cx+size;  light[1].z = cz;
 		light[1].y = cy-size*1.33f+p_lspr->light_yoffset;
-		light[1].sow = 1.0f;   light[1].tow = 0.0f;
+		light[1].s = 1.0f;   light[1].t = 0.0f;
 
 		light[2].x = cx+size;  light[2].z = cz;
 		light[2].y = cy+size*1.33f+p_lspr->light_yoffset;
-		light[2].sow = 1.0f;   light[2].tow = 1.0f;
+		light[2].s = 1.0f;   light[2].t = 1.0f;
 
 		light[3].x = cx-size;  light[3].z = cz;
 		light[3].y = cy+size*1.33f+p_lspr->light_yoffset;
-		light[3].sow = 0.0f;   light[3].tow = 1.0f;
+		light[3].s = 0.0f;   light[3].t = 1.0f;
 
 		HWR_GetPic(coronalumpnum);  /// \todo use different coronas
 
@@ -1070,7 +1067,7 @@ void HWR_DrawCoronas(void)
 {
 	int       j;
 
-	if (!cv_grcoronas.value || dynlights->nb <= 0 || coronalumpnum == LUMPERROR)
+	if (!cv_glcoronas.value || dynlights->nb <= 0 || coronalumpnum == LUMPERROR)
 		return;
 
 	HWR_GetPic(coronalumpnum);  /// \todo use different coronas
@@ -1101,11 +1098,11 @@ void HWR_DrawCoronas(void)
 		// more realistique corona !
 		if (cz >= 255*8+250)
 			continue;
-		Surf.FlatColor.rgba = p_lspr->corona_color;
+		Surf.PolyColor.rgba = p_lspr->corona_color;
 		if (cz > 250.0f)
-			Surf.FlatColor.s.alpha = (UINT8)(0xff-(UINT8)(((int)cz-250)/8));
+			Surf.PolyColor.s.alpha = (UINT8)(0xff-(UINT8)(((int)cz-250)/8));
 		else
-			Surf.FlatColor.s.alpha = 0xff;
+			Surf.PolyColor.s.alpha = 0xff;
 
 		switch (p_lspr->type)
 		{
@@ -1113,7 +1110,7 @@ void HWR_DrawCoronas(void)
 				size  = p_lspr->corona_radius  * ((cz+120.0f)/950.0f); // d'ou vienne ces constante ?
 				break;
 			case ROCKET_SPR:
-				Surf.FlatColor.s.alpha = (UINT8)((M_RandomByte()>>1)&0xff);
+				Surf.PolyColor.s.alpha = (UINT8)((M_RandomByte()>>1)&0xff);
 				// don't need a break
 			case CORONA_SPR:
 				size  = p_lspr->corona_radius  * ((cz+60.0f)/100.0f); // d'ou vienne ces constante ?
@@ -1124,7 +1121,7 @@ void HWR_DrawCoronas(void)
 		}
 		if (size > p_lspr->corona_radius)
 			size = p_lspr->corona_radius;
-		size = (float)(FIXED_TO_FLOAT(cv_grcoronasize.value<<1)*size);
+		size = (float)(FIXED_TO_FLOAT(cv_glcoronasize.value<<1)*size);
 
 		// put light little forward the sprite so there is no
 		// z-buffer problem (coplanar polygons)
@@ -1133,19 +1130,19 @@ void HWR_DrawCoronas(void)
 
 		light[0].x = cx-size;  light[0].z = cz;
 		light[0].y = cy-size*1.33f;
-		light[0].sow = 0.0f;   light[0].tow = 0.0f;
+		light[0].s = 0.0f;   light[0].t = 0.0f;
 
 		light[1].x = cx+size;  light[1].z = cz;
 		light[1].y = cy-size*1.33f;
-		light[1].sow = 1.0f;   light[1].tow = 0.0f;
+		light[1].s = 1.0f;   light[1].t = 0.0f;
 
 		light[2].x = cx+size;  light[2].z = cz;
 		light[2].y = cy+size*1.33f;
-		light[2].sow = 1.0f;   light[2].tow = 1.0f;
+		light[2].s = 1.0f;   light[2].t = 1.0f;
 
 		light[3].x = cx-size;  light[3].z = cz;
 		light[3].y = cy+size*1.33f;
-		light[3].sow = 0.0f;   light[3].tow = 1.0f;
+		light[3].s = 0.0f;   light[3].t = 1.0f;
 
 		HWD.pfnDrawPolygon (&Surf, light, 4, PF_Modulated | PF_Additive | PF_Clip | PF_NoDepthTest | PF_Corona);
 	}
@@ -1173,13 +1170,13 @@ void HWR_SetLights(int viewnumber)
 // Add a light for dynamic lighting
 // The light position is already transformed execpt for mlook
 // --------------------------------------------------------------------------
-void HWR_DL_AddLight(gr_vissprite_t *spr, GLPatch_t *patch)
+void HWR_DL_AddLight(gl_vissprite_t *spr, GLPatch_t *patch)
 {
 	light_t   *p_lspr;
 
 	//Hurdler: moved here because it's better;-)
 	(void)patch;
-	if (!cv_grdynamiclighting.value)
+	if (!cv_gldynamiclighting.value)
 		return;
 
 	if (!spr->mobj)
@@ -1196,7 +1193,7 @@ void HWR_DL_AddLight(gr_vissprite_t *spr, GLPatch_t *patch)
 	p_lspr = t_lspr[spr->mobj->sprite];
 	if (!(p_lspr->type & DYNLIGHT_SPR))
 		return;
-	if ((p_lspr->type != LIGHT_SPR) || cv_grstaticlighting.value)
+	if ((p_lspr->type != LIGHT_SPR) || cv_glstaticlighting.value)
 		return;
 
 	LIGHT_POS(dynlights->nb).x = FIXED_TO_FLOAT(spr->mobj->x);
@@ -1232,10 +1229,10 @@ static void HWR_SetLight(void)
 {
 	int    i, j;
 
-	if (!lightmappatch.mipmap->downloaded && !lightmappatch.mipmap->grInfo.data)
+	if (!lightmappatch.mipmap->downloaded && !lightmappatch.mipmap->data)
 	{
 
-		UINT16 *Data = Z_Malloc(129*128*sizeof (UINT16), PU_HWRCACHE, &lightmappatch.mipmap->grInfo.data);
+		UINT16 *Data = Z_Malloc(129*128*sizeof (UINT16), PU_HWRCACHE, &lightmappatch.mipmap->data);
 
 		for (i = 0; i < 128; i++)
 		{
@@ -1248,23 +1245,18 @@ static void HWR_SetLight(void)
 					Data[i*128+j] = 0;
 			}
 		}
-		lightmappatch.mipmap->grInfo.format = GR_TEXFMT_ALPHA_INTENSITY_88;
+		lightmappatch.mipmap->format = GL_TEXFMT_ALPHA_INTENSITY_88;
 
 		lightmappatch.width = 128;
 		lightmappatch.height = 128;
 		lightmappatch.mipmap->width = 128;
 		lightmappatch.mipmap->height = 128;
-#ifdef GLIDE_API_COMPATIBILITY
-		lightmappatch.mipmap->grInfo.smallLodLog2 = GR_LOD_LOG2_128;
-		lightmappatch.mipmap->grInfo.largeLodLog2 = GR_LOD_LOG2_128;
-		lightmappatch.mipmap->grInfo.aspectRatioLog2 = GR_ASPECT_LOG2_1x1;
-#endif
 		lightmappatch.mipmap->flags = 0; //TF_WRAPXY; // DEBUG: view the overdraw !
 	}
 	HWD.pfnSetTexture(lightmappatch.mipmap);
 
 	// The system-memory data can be purged now.
-	Z_ChangeTag(lightmappatch.mipmap->grInfo.data, PU_HWRCACHE_UNLOCKED);
+	Z_ChangeTag(lightmappatch.mipmap->data, PU_HWRCACHE_UNLOCKED);
 }
 
 //**********************************************************
@@ -1273,8 +1265,8 @@ static void HWR_SetLight(void)
 
 #ifdef STATICLIGHT
 // is this really necessary?
-static sector_t *lgr_backsector;
-static seg_t *lgr_curline;
+static sector_t *lgl_backsector;
+static seg_t *lgl_curline;
 #endif
 
 // p1 et p2 c'est le deux bou du seg en float
@@ -1312,27 +1304,27 @@ static void HWR_AddLightMapForLine(int lightnum, seg_t *line)
 	*/
 	FVector             p1,p2;
 
-	lgr_curline = line;
-	lgr_backsector = line->backsector;
+	lgl_curline = line;
+	lgl_backsector = line->backsector;
 
 	// Reject empty lines used for triggers and special events.
 	// Identical floor and ceiling on both sides,
 	//  identical light levels on both sides,
 	//  and no middle texture.
 /*
-	if ( lgr_backsector->ceilingpic == gr_frontsector->ceilingpic
-	  && lgr_backsector->floorpic == gr_frontsector->floorpic
-	  && lgr_backsector->lightlevel == gr_frontsector->lightlevel
-	  && lgr_curline->sidedef->midtexture == 0)
+	if ( lgl_backsector->ceilingpic == gl_frontsector->ceilingpic
+	  && lgl_backsector->floorpic == gl_frontsector->floorpic
+	  && lgl_backsector->lightlevel == gl_frontsector->lightlevel
+	  && lgl_curline->sidedef->midtexture == 0)
 	{
 		return;
 	}
 */
 
-	p1.y = FIXED_TO_FLOAT(lgr_curline->v1->y);
-	p1.x = FIXED_TO_FLOAT(lgr_curline->v1->x);
-	p2.y = FIXED_TO_FLOAT(lgr_curline->v2->y);
-	p2.x = FIXED_TO_FLOAT(lgr_curline->v2->x);
+	p1.y = FIXED_TO_FLOAT(lgl_curline->v1->y);
+	p1.x = FIXED_TO_FLOAT(lgl_curline->v1->x);
+	p2.y = FIXED_TO_FLOAT(lgl_curline->v2->y);
+	p2.x = FIXED_TO_FLOAT(lgl_curline->v2->x);
 
 	// check bbox of the seg
 //	if (CircleTouchBBox(&p1, &p2, &LIGHT_POS(lightnum), DL_RADIUS(lightnum))==false)

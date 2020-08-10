@@ -7,19 +7,19 @@
 CFG=Srb2win - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
-!MESSAGE 
+!MESSAGE
 !MESSAGE NMAKE /f "Srb2win.mak".
-!MESSAGE 
+!MESSAGE
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
-!MESSAGE 
+!MESSAGE
 !MESSAGE NMAKE /f "Srb2win.mak" CFG="Srb2win - Win32 Debug"
-!MESSAGE 
+!MESSAGE
 !MESSAGE Possible choices for configuration are:
-!MESSAGE 
+!MESSAGE
 !MESSAGE "Srb2win - Win32 Release" (based on "Win32 (x86) Application")
 !MESSAGE "Srb2win - Win32 Debug" (based on "Win32 (x86) Application")
-!MESSAGE 
+!MESSAGE
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -84,7 +84,7 @@ LINK32=link.exe
 # ADD LINK32 dxguid.lib user32.lib gdi32.lib winmm.lib advapi32.lib ws2_32.lib dinput.lib /nologo /subsystem:windows /profile /debug /machine:I386 /out:"C:\srb2demo2\srb2debug.exe"
 # SUBTRACT LINK32 /nodefaultlib
 
-!ENDIF 
+!ENDIF
 
 # Begin Target
 
@@ -148,7 +148,7 @@ SOURCE=.\Srb2win.rc
 
 !ELSEIF  "$(CFG)" == "Srb2win - Win32 Debug"
 
-!ENDIF 
+!ENDIF
 
 # End Source File
 # Begin Source File
@@ -233,7 +233,7 @@ InputName=tmap
 
 # End Custom Build
 
-!ENDIF 
+!ENDIF
 
 # End Source File
 # Begin Source File
@@ -266,7 +266,7 @@ InputName=tmap_mmx
 
 # End Custom Build
 
-!ENDIF 
+!ENDIF
 
 # End Source File
 # Begin Source File
@@ -298,7 +298,7 @@ InputName=tmap_vc
 
 # End Custom Build
 
-!ENDIF 
+!ENDIF
 
 # End Source File
 # End Group
@@ -535,10 +535,6 @@ SOURCE=..\hardware\hw_drv.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\hardware\hw_glide.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\hardware\hw_glob.h
 # End Source File
 # Begin Source File
@@ -564,10 +560,6 @@ SOURCE=..\hardware\hw_md2.c
 # Begin Source File
 
 SOURCE=..\hardware\hw_md2.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\hardware\hw_trick.c
 # End Source File
 # Begin Source File
 

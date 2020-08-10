@@ -288,7 +288,7 @@ void Command_CheatGod_f(void)
 
 	plyr = &players[consoleplayer];
 	plyr->pflags ^= PF_GODMODE;
-	CONS_Printf(M_GetText("Sissy Mode %s\n"), plyr->pflags & PF_GODMODE ? M_GetText("On") : M_GetText("Off"));
+	CONS_Printf(M_GetText("Cheese Mode %s\n"), plyr->pflags & PF_GODMODE ? M_GetText("On") : M_GetText("Off"));
 
 	G_SetGameModified(multiplayer);
 }
@@ -555,7 +555,8 @@ void Command_Teleport_f(void)
 				p->mo->flags2 &= ~MF2_OBJECTFLIP;
 			}
 
-			localangle = p->mo->angle = p->drawangle = FixedAngle(mt->angle<<FRACBITS);
+			p->mo->angle = p->drawangle = FixedAngle(mt->angle<<FRACBITS);
+			P_SetPlayerAngle(p, p->mo->angle);
 		}
 		else // scan the thinkers to find starposts...
 		{
@@ -619,7 +620,8 @@ void Command_Teleport_f(void)
 				p->mo->flags2 &= ~MF2_OBJECTFLIP;
 			}
 
-			localangle = p->mo->angle = p->drawangle = mo2->angle;
+			p->mo->angle = p->drawangle = mo2->angle;
+			P_SetPlayerAngle(p, p->mo->angle);
 		}
 
 		CONS_Printf(M_GetText("Teleporting to checkpoint %d, %d...\n"), starpostnum, starpostpath);
@@ -673,7 +675,10 @@ void Command_Teleport_f(void)
 
 		i = COM_CheckParm("-ang");
 		if (i)
-			localangle = p->drawangle = p->mo->angle = FixedAngle(atoi(COM_Argv(i + 1))<<FRACBITS);
+		{
+			p->drawangle = p->mo->angle = FixedAngle(atoi(COM_Argv(i + 1))<<FRACBITS);
+			P_SetPlayerAngle(p, p->mo->angle);
+		}
 
 		i = COM_CheckParm("-aim");
 		if (i)
@@ -1139,7 +1144,7 @@ void OP_NightsObjectplace(player_t *player)
 	if (player->pflags & PF_ATTACKDOWN)
 	{
 		// Are ANY objectplace buttons pressed?  If no, remove flag.
-		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_USE|BT_WEAPONNEXT|BT_WEAPONPREV)))
+		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_SPIN|BT_WEAPONNEXT|BT_WEAPONPREV)))
 			player->pflags &= ~PF_ATTACKDOWN;
 
 		// Do nothing.
@@ -1246,7 +1251,7 @@ void OP_NightsObjectplace(player_t *player)
 	}
 
 	// This places a custom object as defined in the console cv_mapthingnum.
-	if (cmd->buttons & BT_USE)
+	if (cmd->buttons & BT_SPIN)
 	{
 		UINT16 angle;
 
@@ -1301,7 +1306,7 @@ void OP_ObjectplaceMovement(player_t *player)
 
 	if (cmd->buttons & BT_JUMP)
 		player->mo->z += FRACUNIT*cv_speed.value;
-	else if (cmd->buttons & BT_USE)
+	else if (cmd->buttons & BT_SPIN)
 		player->mo->z -= FRACUNIT*cv_speed.value;
 
 	if (cmd->forwardmove != 0)

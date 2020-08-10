@@ -166,7 +166,6 @@ void G_LoadMetal(UINT8 **buffer)
 void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 {
 	UINT8 ziptic;
-	(void)playernum;
 
 	if (!demo_p || !demo_start)
 		return;
@@ -184,6 +183,7 @@ void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 		oldcmd.aiming = READINT16(demo_p);
 
 	G_CopyTiccmd(cmd, &oldcmd, 1);
+	players[playernum].angleturn = cmd->angleturn;
 
 	if (!(demoflags & DF_GHOST) && *demo_p == DEMOMARKER)
 	{
@@ -765,7 +765,7 @@ void G_GhostTicker(void)
 			if (xziptic & EZT_THOKMASK)
 			{ // Let's only spawn ONE of these per frame, thanks.
 				mobj_t *mobj;
-				INT32 type = -1;
+				UINT32 type = MT_NULL;
 				if (g->mo->skin)
 				{
 					skin_t *skin = (skin_t *)g->mo->skin;
@@ -997,7 +997,11 @@ void G_ReadMetalTic(mobj_t *metal)
 	// Read changes from the tic
 	if (ziptic & GZT_XYZ)
 	{
-		P_TeleportMove(metal, READFIXED(metal_p), READFIXED(metal_p), READFIXED(metal_p));
+		// make sure the values are read in the right order
+		oldmetal.x = READFIXED(metal_p);
+		oldmetal.y = READFIXED(metal_p);
+		oldmetal.z = READFIXED(metal_p);
+		P_TeleportMove(metal, oldmetal.x, oldmetal.y, oldmetal.z);
 		oldmetal.x = metal->x;
 		oldmetal.y = metal->y;
 		oldmetal.z = metal->z;
@@ -1052,7 +1056,7 @@ void G_ReadMetalTic(mobj_t *metal)
 		if (xziptic & EZT_THOKMASK)
 		{ // Let's only spawn ONE of these per frame, thanks.
 			mobj_t *mobj;
-			INT32 type = -1;
+			UINT32 type = MT_NULL;
 			if (metal->skin)
 			{
 				skin_t *skin = (skin_t *)metal->skin;
@@ -1521,7 +1525,7 @@ void G_BeginRecording(void)
 	}
 
 	// Save netvar data
-	CV_SaveNetVars(&demo_p);
+	CV_SaveDemoVars(&demo_p);
 
 	memset(&oldcmd,0,sizeof(oldcmd));
 	memset(&oldghost,0,sizeof(oldghost));
@@ -1752,6 +1756,9 @@ void G_DoPlayDemo(char *defdemoname)
 	UINT32 randseed, followitem;
 	fixed_t camerascale,shieldscale,actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor,height,spinheight;
 	char msg[1024];
+#ifdef OLD22DEMOCOMPAT
+	boolean use_old_demo_vars = false;
+#endif
 
 	skin[16] = '\0';
 	color[MAXCOLORNAME] = '\0';
@@ -1814,10 +1821,13 @@ void G_DoPlayDemo(char *defdemoname)
 	case DEMOVERSION: // latest always supported
 		cnamelen = MAXCOLORNAME;
 		break;
+#ifdef OLD22DEMOCOMPAT
 	// all that changed between then and now was longer color name
 	case 0x000c:
 		cnamelen = 16;
+		use_old_demo_vars = true;
 		break;
+#endif
 	// too old, cannot support.
 	default:
 		snprintf(msg, 1024, M_GetText("%s is an incompatible replay format and cannot be played.\n"), pdemoname);
@@ -1919,7 +1929,13 @@ void G_DoPlayDemo(char *defdemoname)
 	}
 
 	// net var data
-	CV_LoadNetVars(&demo_p);
+#ifdef OLD22DEMOCOMPAT
+	if (use_old_demo_vars)
+		CV_LoadOldDemoVars(&demo_p);
+	else
+#else
+		CV_LoadDemoVars(&demo_p);
+#endif
 
 	// Sigh ... it's an empty demo.
 	if (*demo_p == DEMOMARKER)
@@ -2366,9 +2382,12 @@ static void WriteDemoChecksum(void)
 static void G_StopDemoRecording(void)
 {
 	boolean saved = false;
-	WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-	WriteDemoChecksum();
-	saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
+	if (demo_p)
+	{
+		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
+		WriteDemoChecksum();
+		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
+	}
 	free(demobuffer);
 	demorecording = false;
 

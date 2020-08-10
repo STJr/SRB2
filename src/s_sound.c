@@ -11,16 +11,6 @@
 /// \file  s_sound.c
 /// \brief System-independent sound and music routines
 
-#ifdef MUSSERV
-#include <sys/msg.h>
-struct musmsg
-{
-	long msg_type;
-	char msg_text[12];
-};
-extern INT32 msg_id;
-#endif
-
 #include "doomdef.h"
 #include "doomstat.h"
 #include "command.h"
@@ -60,6 +50,7 @@ static void Command_RestartAudio_f(void);
 static void GameMIDIMusic_OnChange(void);
 static void GameSounds_OnChange(void);
 static void GameDigiMusic_OnChange(void);
+static void MusicPref_OnChange(void);
 
 #ifdef HAVE_OPENMPT
 static void ModFilter_OnChange(void);
@@ -68,16 +59,6 @@ static void ModFilter_OnChange(void);
 static lumpnum_t S_GetMusicLumpNum(const char *mname);
 
 static boolean S_CheckQueue(void);
-
-// commands for music and sound servers
-#ifdef MUSSERV
-consvar_t musserver_cmd = {"musserver_cmd", "musserver", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t musserver_arg = {"musserver_arg", "-t 20 -f -u 0 -i music.dta", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
-#ifdef SNDSERV
-consvar_t sndserver_cmd = {"sndserver_cmd", "llsndserv", CV_SAVE, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t sndserver_arg = {"sndserver_arg", "-quiet", CV_SAVE, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
 
 #if defined (_WINDOWS) && !defined (SURROUND) //&& defined (_X86_)
 #define SURROUND
@@ -128,6 +109,14 @@ consvar_t cv_1upsound = {"1upsound", "Jingle", CV_SAVE, cons_1upsound_t, NULL, 0
 consvar_t cv_gamedigimusic = {"digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gamemidimusic = {"midimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameMIDIMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gamesounds = {"sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameSounds_OnChange, 0, NULL, NULL, 0, 0, NULL};
+
+// Music preference
+static CV_PossibleValue_t cons_musicpref_t[] = {
+	{0, "Digital"},
+	{1, "MIDI"},
+	{0, NULL}
+};
+consvar_t cv_musicpref = {"musicpref", "Digital", CV_SAVE|CV_CALL|CV_NOINIT, cons_musicpref_t, MusicPref_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // Window focus sound sytem toggles
 consvar_t cv_playmusicifunfocused = {"playmusicifunfocused", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
@@ -283,14 +272,6 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&stereoreverse);
 	CV_RegisterVar(&precachesound);
 
-#ifdef SNDSERV
-	CV_RegisterVar(&sndserver_cmd);
-	CV_RegisterVar(&sndserver_arg);
-#endif
-#ifdef MUSSERV
-	CV_RegisterVar(&musserver_cmd);
-	CV_RegisterVar(&musserver_arg);
-#endif
 	CV_RegisterVar(&surround);
 	CV_RegisterVar(&cv_samplerate);
 	CV_RegisterVar(&cv_resetmusic);
@@ -301,6 +282,7 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&cv_gamesounds);
 	CV_RegisterVar(&cv_gamedigimusic);
 	CV_RegisterVar(&cv_gamemidimusic);
+	CV_RegisterVar(&cv_musicpref);
 #ifdef HAVE_OPENMPT
 	CV_RegisterVar(&cv_modfilter);
 #endif
@@ -312,27 +294,6 @@ void S_RegisterSoundStuff(void)
 
 	COM_AddCommand("tunes", Command_Tunes_f);
 	COM_AddCommand("restartaudio", Command_RestartAudio_f);
-
-#if defined (macintosh) && !defined (HAVE_SDL) // mp3 playlist stuff
-	{
-		INT32 i;
-		for (i = 0; i < PLAYLIST_LENGTH; i++)
-		{
-			user_songs[i].name = malloc(7);
-			if (!user_songs[i].name)
-				I_Error("No more free memory for mp3 playlist");
-			sprintf(user_songs[i].name, "song%d%d",i/10,i%10);
-			user_songs[i].defaultvalue = malloc(sizeof (char));
-			if (user_songs[i].defaultvalue)
-				I_Error("No more free memory for blank mp3 playerlist");
-			*user_songs[i].defaultvalue = 0;
-			user_songs[i].flags = CV_SAVE;
-			user_songs[i].PossibleValue = NULL;
-			CV_RegisterVar(&user_songs[i]);
-		}
-		CV_RegisterVar(&play_mode);
-	}
-#endif
 }
 
 static void SetChannelsNum(void)
@@ -1847,19 +1808,6 @@ const char *S_MusicName(void)
 	return music_name;
 }
 
-boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping)
-{
-	if (!I_SongPlaying())
-		return false;
-
-	strncpy(mname, music_name, 7);
-	mname[6] = 0;
-	*mflags = music_flags;
-	*looping = music_looping;
-
-	return (boolean)mname[0];
-}
-
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi)
 {
 	return (
@@ -2100,6 +2048,8 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 	boolean mapmuschanged = false;
 	musicstack_t *result;
 	musicstack_t *entry = Z_Calloc(sizeof (*result), PU_MUSIC, NULL);
+	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
+	boolean midipref = cv_musicpref.value;
 
 	if (status)
 		result = S_GetMusicStackEntry(status, fromfirst, -1);
@@ -2154,7 +2104,8 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 		return false;
 	}
 
-	if (strncmp(entry->musname, S_MusicName(), 7)) // don't restart music if we're already playing it
+	if (strncmp(entry->musname, S_MusicName(), 7) || // don't restart music if we're already playing it
+		(midipref != currentmidi && S_PrefAvailable(midipref, entry->musname))) // but do if the user's preference has changed
 	{
 		if (music_stack_fadeout)
 			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, music_stack_fadeout, 0);
@@ -2201,10 +2152,12 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 
 static lumpnum_t S_GetMusicLumpNum(const char *mname)
 {
-	if (!S_DigMusicDisabled() && S_DigExists(mname))
-		return W_GetNumForName(va("o_%s", mname));
-	else if (!S_MIDIMusicDisabled() && S_MIDIExists(mname))
-		return W_GetNumForName(va("d_%s", mname));
+	boolean midipref = cv_musicpref.value;
+	
+	if (S_PrefAvailable(midipref, mname))
+		return W_GetNumForName(va(midipref ? "d_%s":"o_%s", mname));
+	else if (S_PrefAvailable(!midipref, mname))
+		return W_GetNumForName(va(midipref ? "o_%s":"d_%s", mname));
 	else
 		return LUMPERROR;
 }
@@ -2228,17 +2181,6 @@ static boolean S_LoadMusic(const char *mname)
 	// load & register it
 	mdata = W_CacheLumpNum(mlumpnum, PU_MUSIC);
 
-#ifdef MUSSERV
-	if (msg_id != -1)
-	{
-		struct musmsg msg_buffer;
-
-		msg_buffer.msg_type = 6;
-		memset(msg_buffer.msg_text, 0, sizeof (msg_buffer.msg_text));
-		sprintf(msg_buffer.msg_text, "d_%s", mname);
-		msgsnd(msg_id, (struct msgbuf*)&msg_buffer, sizeof (msg_buffer.msg_text), IPC_NOWAIT);
-	}
-#endif
 
 	if (I_LoadSong(mdata, W_LumpLength(mlumpnum)))
 	{
@@ -2330,6 +2272,8 @@ static void S_ChangeMusicToQueue(void)
 void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
 	char newmusic[7];
+	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
+	boolean midipref = cv_musicpref.value;
 
 	if (S_MusicDisabled())
 		return;
@@ -2359,7 +2303,8 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		I_FadeSong(0, prefadems, S_ChangeMusicToQueue);
 		return;
 	}
-	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET))
+	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET) || 
+		(midipref != currentmidi && S_PrefAvailable(midipref, newmusic)))
  	{
 		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
 
@@ -2428,13 +2373,6 @@ void S_PauseAudio(void)
 	if (I_SongPlaying() && !I_SongPaused())
 		I_PauseSong();
 
-	// pause cd music
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	I_PauseCD();
-#else
-	I_StopCD();
-#endif
-
 	S_SetStackAdjustmentStart();
 }
 
@@ -2445,9 +2383,6 @@ void S_ResumeAudio(void)
 
 	if (I_SongPlaying() && I_SongPaused())
 		I_ResumeSong();
-
-	// resume cd music
-	I_ResumeCD();
 
 	S_AdjustMusicStackTics();
 }
@@ -2468,10 +2403,6 @@ void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
 		CONS_Alert(CONS_WARNING, "midimusicvolume should be between 0-31\n");
 	CV_SetValue(&cv_midimusicvolume, seqvolume&31);
 	actualmidimusicvolume = cv_midimusicvolume.value;   //check for change of var
-
-#ifdef DJGPPDOS
-	digvolume = seqvolume = 31;
-#endif
 
 	switch(I_SongType())
 	{
@@ -2665,32 +2596,24 @@ void GameDigiMusic_OnChange(void)
 		digital_disabled = false;
 		I_StartupSound(); // will return early if initialised
 		I_InitMusic();
-		S_StopMusic();
+
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
-		else
+		else if ((!cv_musicpref.value || midi_disabled) && S_DigExists("_clear"))
 			S_ChangeMusicInternal("_clear", false);
 	}
 	else
 	{
 		digital_disabled = true;
-		if (S_MusicType() != MU_MID)
+		if (S_MusicType() != MU_MID && S_MusicType() != MU_MID_EX)
 		{
-			if (midi_disabled)
-				S_StopMusic();
-			else
+			S_StopMusic();
+			if (!midi_disabled)
 			{
-				char mmusic[7];
-				UINT16 mflags;
-				boolean looping;
-
-				if (S_MusicInfo(mmusic, &mflags, &looping) && S_MIDIExists(mmusic))
-				{
-					S_StopMusic();
-					S_ChangeMusic(mmusic, mflags, looping);
-				}
+				if (Playing())
+					P_RestoreMusic(&players[consoleplayer]);
 				else
-					S_StopMusic();
+					S_ChangeMusicInternal("_clear", false);
 			}
 		}
 	}
@@ -2708,9 +2631,10 @@ void GameMIDIMusic_OnChange(void)
 		midi_disabled = false;
 		I_StartupSound(); // will return early if initialised
 		I_InitMusic();
+
 		if (Playing())
 			P_RestoreMusic(&players[consoleplayer]);
-		else
+		else if ((cv_musicpref.value || digital_disabled) && S_MIDIExists("_clear"))
 			S_ChangeMusicInternal("_clear", false);
 	}
 	else
@@ -2718,24 +2642,28 @@ void GameMIDIMusic_OnChange(void)
 		midi_disabled = true;
 		if (S_MusicType() == MU_MID || S_MusicType() == MU_MID_EX)
 		{
-			if (digital_disabled)
-				S_StopMusic();
-			else
+			S_StopMusic();
+			if (!digital_disabled)
 			{
-				char mmusic[7];
-				UINT16 mflags;
-				boolean looping;
-
-				if (S_MusicInfo(mmusic, &mflags, &looping) && S_DigExists(mmusic))
-				{
-					S_StopMusic();
-					S_ChangeMusic(mmusic, mflags, looping);
-				}
+				if (Playing())
+					P_RestoreMusic(&players[consoleplayer]);
 				else
-					S_StopMusic();
+					S_ChangeMusicInternal("_clear", false);
 			}
 		}
 	}
+}
+
+void MusicPref_OnChange(void)
+{
+	if (M_CheckParm("-nomusic") || M_CheckParm("-noaudio") ||
+		M_CheckParm("-nomidimusic") || M_CheckParm("-nodigmusic"))
+		return;
+
+	if (Playing())
+		P_RestoreMusic(&players[consoleplayer]);
+	else if (S_PrefAvailable(cv_musicpref.value, "_clear"))
+		S_ChangeMusicInternal("_clear", false);
 }
 
 #ifdef HAVE_OPENMPT

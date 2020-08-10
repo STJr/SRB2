@@ -278,7 +278,7 @@ typedef struct mobj_s
 	struct mobj_s **sprev; // killough 8/11/98: change to ptr-to-ptr
 
 	// More drawing info: to determine current sprite.
-	angle_t angle;  // orientation
+	angle_t angle, pitch, roll; // orientation
 	angle_t rollangle;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
@@ -373,6 +373,7 @@ typedef struct mobj_s
 	struct pslope_s *standingslope; // The slope that the object is standing on (shouldn't need synced in savegames, right?)
 
 	boolean colorized; // Whether the mobj uses the rainbow colormap
+	boolean mirrored; // The object's rotations will be mirrored left to right, e.g., see frame AL from the right and AR from the left
 	fixed_t shadowscale; // If this object casts a shadow, and the size relative to radius
 
 	// WARNING: New fields must be added separately to savegame and Lua.
@@ -398,7 +399,7 @@ typedef struct precipmobj_s
 	struct precipmobj_s **sprev; // killough 8/11/98: change to ptr-to-ptr
 
 	// More drawing info: to determine current sprite.
-	angle_t angle;  // orientation
+	angle_t angle, pitch, roll;  // orientation
 	angle_t rollangle;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
@@ -451,7 +452,7 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing);
 void P_MovePlayerToStarpost(INT32 playernum);
 void P_AfterPlayerSpawn(INT32 playernum);
 
-fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t offset, const boolean flip);
+fixed_t P_GetMobjSpawnHeight(const mobjtype_t mobjtype, const fixed_t x, const fixed_t y, const fixed_t dz, const fixed_t offset, const boolean flip, const fixed_t scale);
 fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mthing, const fixed_t x, const fixed_t y);
 
 mobj_t *P_SpawnMapThing(mapthing_t *mthing);
@@ -470,6 +471,12 @@ void P_NullPrecipThinker(precipmobj_t *mobj);
 void P_RemovePrecipMobj(precipmobj_t *mobj);
 void P_SetScale(mobj_t *mobj, fixed_t newscale);
 void P_XYMovement(mobj_t *mo);
+void P_RingXYMovement(mobj_t *mo);
+void P_SceneryXYMovement(mobj_t *mo);
+boolean P_ZMovement(mobj_t *mo);
+void P_RingZMovement(mobj_t *mo);
+boolean P_SceneryZMovement(mobj_t *mo);
+void P_PlayerZMovement(mobj_t *mo);
 void P_EmeraldManager(void);
 
 extern INT32 modulothing;

@@ -1,19 +1,13 @@
-// Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-//
 // Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-/// \file
+/// \file hw_light.h
 /// \brief Dynamic lighting & coronas add on by Hurdler
 
 #ifndef _HW_LIGHTS_
@@ -30,7 +24,7 @@
 #define DL_MAX_LIGHT 256 // maximum number of lights (extra lights are ignored)
 
 void HWR_InitLight(void);
-void HWR_DL_AddLight(gr_vissprite_t *spr, GLPatch_t *patch);
+void HWR_DL_AddLight(gl_vissprite_t *spr, GLPatch_t *patch);
 void HWR_PlaneLighting(FOutVector *clVerts, int nrClipVerts);
 void HWR_WallLighting(FOutVector *wlVerts);
 void HWR_ResetLights(void);
@@ -39,7 +33,7 @@ void HWR_SetLights(int viewnumber);
 #ifdef NEWCORONAS
 void HWR_DrawCoronas(void);
 #else
-void HWR_DoCoronasLighting(FOutVector *outVerts, gr_vissprite_t *spr);
+void HWR_DoCoronasLighting(FOutVector *outVerts, gl_vissprite_t *spr);
 #endif
 
 typedef struct
