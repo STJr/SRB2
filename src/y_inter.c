@@ -1009,7 +1009,7 @@ void Y_Ticker(void)
 			return;
 
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && (players[i].cmd.buttons & BT_USE))
+			if (playeringame[i] && (players[i].cmd.buttons & BT_SPIN))
 				skip = true;
 
 		// bonuses count down by 222 each tic
@@ -1086,7 +1086,7 @@ void Y_Ticker(void)
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
 			{
-				if (players[i].cmd.buttons & BT_USE)
+				if (players[i].cmd.buttons & BT_SPIN)
 					skip = true;
 				if (players[i].charflags & SF_SUPER)
 					super = true;
