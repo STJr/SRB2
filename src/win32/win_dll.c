@@ -102,7 +102,7 @@ static loadfunc_t hwdFuncTable[] = {
 	{"FinishUpdate@4",      &hwdriver.pfnFinishUpdate},
 	{"Draw2DLine@12",       &hwdriver.pfnDraw2DLine},
 	{"DrawPolygon@16",      &hwdriver.pfnDrawPolygon},
-	{"RenderSkyDome@16",    &hwdriver.pfnRenderSkyDome},
+	{"RenderSkyDome@4",     &hwdriver.pfnRenderSkyDome},
 	{"SetBlend@4",          &hwdriver.pfnSetBlend},
 	{"ClearBuffer@12",      &hwdriver.pfnClearBuffer},
 	{"SetTexture@4",        &hwdriver.pfnSetTexture},
