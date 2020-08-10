@@ -2248,7 +2248,10 @@ void G_Ticker(boolean run)
 
 			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
 			players[i].oldrelangleturn = players[i].cmd.angleturn;
-			players[i].cmd.angleturn = players[i].angleturn;
+			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
+				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
+			else
+				players[i].cmd.angleturn = players[i].angleturn;
 		}
 	}
 
