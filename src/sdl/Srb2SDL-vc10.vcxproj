@@ -251,6 +251,7 @@
     <ClInclude Include="..\lzf.h" />
     <ClInclude Include="..\md5.h" />
     <ClInclude Include="..\mserv.h" />
+    <ClInclude Include="..\http-mserv.h" />
     <ClInclude Include="..\m_aatree.h" />
     <ClInclude Include="..\m_anigif.h" />
     <ClInclude Include="..\m_argv.h" />
@@ -405,6 +406,7 @@
     <ClCompile Include="..\lzf.c" />
     <ClCompile Include="..\md5.c" />
     <ClCompile Include="..\mserv.c" />
+    <ClCompile Include="..\http-mserv.c" />
     <ClCompile Include="..\m_aatree.c" />
     <ClCompile Include="..\m_anigif.c" />
     <ClCompile Include="..\m_argv.c" />
