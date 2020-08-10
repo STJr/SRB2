@@ -207,6 +207,7 @@ endif
 
 ifdef NONET
 	OPTS+=-DNONET
+	NOCURL=1
 else
 ifdef NO_IPV6
 	OPTS+=-DNO_IPV6
@@ -314,6 +315,16 @@ LIBS+=$(ZLIB_LDFLAGS)
 CFLAGS+=$(ZLIB_CFLAGS)
 else
 NOPNG=1
+endif
+
+ifndef NOCURL
+OPTS+=-DHAVE_CURL
+CURLCONFIG?=curl-config
+CURL_CFLAGS?=$(shell $(CURLCONFIG) --cflags)
+CURL_LDFLAGS?=$(shell $(CURLCONFIG) --libs)
+
+LIBS+=$(CURL_LDFLAGS)
+CFLAGS+=$(CURL_CFLAGS)
 endif
 
 ifdef STATIC
@@ -472,6 +483,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/w_wad.o    \
 		$(OBJDIR)/filesrch.o \
 		$(OBJDIR)/mserv.o    \
+		$(OBJDIR)/http-mserv.o\
 		$(OBJDIR)/i_tcp.o    \
 		$(OBJDIR)/lzf.o	     \
 		$(OBJDIR)/vid_copy.o \
