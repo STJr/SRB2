@@ -13406,10 +13406,10 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 //
 // Description: Thinker for the dust devil.
 //
-// var1 = unused
-// var2 = unused
+// var1 = Whether to show the dust devil's audio/visuals
+// var2 = Whether to use the dust devil's physics
 //
-void A_DustDevilThink(mobj_t *actor)
+void A_DustDevilThink(mobj_t *actor, visual, physics)
 {
 	fixed_t scale = actor->scale;
 	mobj_t *layer = actor->tracer;
@@ -13418,67 +13418,74 @@ void A_DustDevilThink(mobj_t *actor)
 
 	if (LUA_CallAction("A_DustDevilThink", actor))
 		return;
-
-	//Chained thinker for the spiralling dust column.
-	while (layer && !P_MobjWasRemoved(layer)) {
-		angle_t fa = layer->angle >> ANGLETOFINESHIFT;
-		P_TeleportMove(layer, layer->x + 5 * FixedMul(scale, FINECOSINE(fa)), layer->y + 5 * FixedMul(scale, FINESINE(fa)), layer->z);
-		layer->scale = scale;
-		layer->angle += ANG10 / 2;
-		layer->momx = actor->momx;
-		layer->momy = actor->momy;
-		layer = layer->tracer;
-	}
-
-	//Spawn random dust around the column on the base.
-	if (P_IsObjectOnGround(actor)) {
-		angle_t dustang = ((P_RandomRange(0, 7)*ANGLE_45)>>ANGLETOFINESHIFT) & FINEMASK;
-		mobj_t *dust = P_SpawnMobj(actor->x + 96 * FixedMul(scale, FINECOSINE(dustang)), actor->y + 96 * FixedMul(scale, FINESINE(dustang)), actor->z, MT_ARIDDUST);
-		P_SetMobjState(dust, dust->info->spawnstate + P_RandomRange(0, 2));
-		dust->destscale = scale * 3;
-		P_SetScale(dust, dust->destscale);
-	}
-
-	actor->extravalue1++;
-	if (actor->extravalue1 == 12) {
-		size_t i = 0;
-		actor->extravalue1 = 0;
-
-		//Create a set of items for the rising dust column
-		for (; i <= 3; i++) {
-			fixed_t fa = (ANGLE_90*i) >> ANGLETOFINESHIFT;
-			fixed_t px = actor->x + 70 * FixedMul(scale, FINECOSINE(fa));
-			fixed_t py = actor->y + 70 * FixedMul(scale, FINESINE(fa));
-			fixed_t pz = actor->z;
-
-			layer = P_SpawnMobj(px, py, pz, MT_DUSTLAYER);
-			layer->momz = 5 * scale;
-			layer->angle = ANGLE_90 + ANGLE_90*i;
-			layer->extravalue1 = TICRATE * 3;
-
-			//Chain them
-			P_SetTarget(&layer->tracer, actor->tracer);
-			P_SetTarget(&actor->tracer, layer);
+	
+	// Handle the audio/visuals
+	if visual != 0
+	{
+		//Chained thinker for the spiralling dust column.
+		while (layer && !P_MobjWasRemoved(layer)) {
+			angle_t fa = layer->angle >> ANGLETOFINESHIFT;
+			P_TeleportMove(layer, layer->x + 5 * FixedMul(scale, FINECOSINE(fa)), layer->y + 5 * FixedMul(scale, FINESINE(fa)), layer->z);
+			layer->scale = scale;
+			layer->angle += ANG10 / 2;
+			layer->momx = actor->momx;
+			layer->momy = actor->momy;
+			layer = layer->tracer;
 		}
+
+		//Spawn random dust around the column on the base.
+		if (P_IsObjectOnGround(actor)) {
+			angle_t dustang = ((P_RandomRange(0, 7)*ANGLE_45)>>ANGLETOFINESHIFT) & FINEMASK;
+			mobj_t *dust = P_SpawnMobj(actor->x + 96 * FixedMul(scale, FINECOSINE(dustang)), actor->y + 96 * FixedMul(scale, FINESINE(dustang)), actor->z, MT_ARIDDUST);
+			P_SetMobjState(dust, dust->info->spawnstate + P_RandomRange(0, 2));
+			dust->destscale = scale * 3;
+			P_SetScale(dust, dust->destscale);
+		}
+
+		actor->extravalue1++;
+		if (actor->extravalue1 == 12) {
+			size_t i = 0;
+			actor->extravalue1 = 0;
+
+			//Create a set of items for the rising dust column
+			for (; i <= 3; i++) {
+				fixed_t fa = (ANGLE_90*i) >> ANGLETOFINESHIFT;
+				fixed_t px = actor->x + 70 * FixedMul(scale, FINECOSINE(fa));
+				fixed_t py = actor->y + 70 * FixedMul(scale, FINESINE(fa));
+				fixed_t pz = actor->z;
+
+				layer = P_SpawnMobj(px, py, pz, MT_DUSTLAYER);
+				layer->momz = 5 * scale;
+				layer->angle = ANGLE_90 + ANGLE_90*i;
+				layer->extravalue1 = TICRATE * 3;
+
+				//Chain them
+				P_SetTarget(&layer->tracer, actor->tracer);
+				P_SetTarget(&actor->tracer, layer);
+			}
+		}
+		
+		//Whirlwind sound effect.
+		if (leveltime % 70 == 0)
+			S_StartSound(actor, sfx_s3kcel);
 	}
+	
+	// Handle the launch physics
+	if physics != 0
+	{
+		yh = (unsigned)(actor->y + radius - bmaporgy) >> MAPBLOCKSHIFT;
+		yl = (unsigned)(actor->y - radius - bmaporgy) >> MAPBLOCKSHIFT;
+		xh = (unsigned)(actor->x + radius - bmaporgx) >> MAPBLOCKSHIFT;
+		xl = (unsigned)(actor->x - radius - bmaporgx) >> MAPBLOCKSHIFT;
 
-	//The physics are handled here.
-	yh = (unsigned)(actor->y + radius - bmaporgy) >> MAPBLOCKSHIFT;
-	yl = (unsigned)(actor->y - radius - bmaporgy) >> MAPBLOCKSHIFT;
-	xh = (unsigned)(actor->x + radius - bmaporgx) >> MAPBLOCKSHIFT;
-	xl = (unsigned)(actor->x - radius - bmaporgx) >> MAPBLOCKSHIFT;
+		BMBOUNDFIX(xl, xh, yl, yh);
 
-	BMBOUNDFIX(xl, xh, yl, yh);
+		dustdevil = actor;
 
-	dustdevil = actor;
-
-	for (bx = xl; bx <= xh; bx++)
-		for (by = yl; by <= yh; by++)
-			P_BlockThingsIterator(bx, by, PIT_DustDevilLaunch);
-
-	//Whirlwind sound effect.
-	if (leveltime % 70 == 0)
-		S_StartSound(actor, sfx_s3kcel);
+		for (bx = xl; bx <= xh; bx++)
+			for (by = yl; by <= yh; by++)
+				P_BlockThingsIterator(bx, by, PIT_DustDevilLaunch);
+	}
 }
 
 // stuff used by A_TNTExplode
