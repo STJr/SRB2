@@ -32,6 +32,7 @@
 #include "sounds.h"
 #include "s_sound.h"
 #include "i_system.h"
+#include "i_threads.h"
 
 // Addfile
 #include "filesrch.h"
@@ -72,12 +73,6 @@
 #if SDL_VERSION_ATLEAST(2,0,0)
 #include "sdl/sdlmain.h" // JOYSTICK_HOTPLUG
 #endif
-#endif
-
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-int	snprintf(char *str, size_t n, const char *fmt, ...);
-//int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 #endif
 
 #if defined (__GNUC__) && (__GNUC__ >= 4)
@@ -121,6 +116,12 @@ typedef enum
 	QUIT3MSG6,
 	NUM_QUITMESSAGES
 } text_enum;
+
+#ifdef HAVE_THREADS
+I_mutex m_menu_mutex;
+#endif
+
+M_waiting_mode_t m_waiting_mode = M_NOT_WAITING;
 
 const char *quitmsg[NUM_QUITMESSAGES];
 
@@ -1033,7 +1034,7 @@ enum
 	FIRSTSERVERLINE
 };
 
-static menuitem_t MP_RoomMenu[] =
+menuitem_t MP_RoomMenu[] =
 {
 	{IT_STRING | IT_CALL, NULL, "<Unlisted Mode>", M_ChooseRoom,   9},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom,  18},
@@ -1116,7 +1117,7 @@ static menuitem_t OP_ChangeControlsMenu[] =
 	{IT_CALL | IT_STRING2, NULL, "Move Left",        M_ChangeControl, gc_strafeleft  },
 	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, gc_straferight },
 	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, gc_jump      },
-	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, gc_use     },
+	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, gc_spin     },
 	{IT_HEADER, NULL, "Camera", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
 	{IT_CALL | IT_STRING2, NULL, "Look Up",        M_ChangeControl, gc_lookup      },
@@ -1446,19 +1447,19 @@ static menuitem_t OP_ColorOptionsMenu[] =
 static menuitem_t OP_OpenGLOptionsMenu[] =
 {
 	{IT_HEADER, NULL, "3D Models", NULL, 0},
-	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_grmodels,             12},
-	{IT_STRING|IT_CVAR,         NULL, "Frame interpolation", &cv_grmodelinterpolation, 22},
-	{IT_STRING|IT_CVAR,         NULL, "Ambient lighting",    &cv_grmodellighting,      32},
+	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_glmodels,             12},
+	{IT_STRING|IT_CVAR,         NULL, "Frame interpolation", &cv_glmodelinterpolation, 22},
+	{IT_STRING|IT_CVAR,         NULL, "Ambient lighting",    &cv_glmodellighting,      32},
 
 	{IT_HEADER, NULL, "General", NULL, 51},
-	{IT_STRING|IT_CVAR,         NULL, "Shaders",             &cv_grshaders,            63},
-	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_grshearing,           73},
+	{IT_STRING|IT_CVAR,         NULL, "Shaders",             &cv_glshaders,            63},
+	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_glshearing,           73},
 	{IT_STRING|IT_CVAR,         NULL, "Field of view",       &cv_fov,                  83},
 
 	{IT_HEADER, NULL, "Miscellaneous", NULL, 102},
 	{IT_STRING|IT_CVAR,         NULL, "Bit depth",           &cv_scr_depth,           114},
-	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_grfiltermode,        124},
-	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_granisotropicmode,   134},
+	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_glfiltermode,        124},
+	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_glanisotropicmode,   134},
 #ifdef ALAM_LIGHTING
 	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",         &OP_OpenGLLightingDef,   144},
 #endif
@@ -1470,10 +1471,10 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 #ifdef ALAM_LIGHTING
 static menuitem_t OP_OpenGLLightingMenu[] =
 {
-	{IT_STRING|IT_CVAR, NULL, "Coronas",          &cv_grcoronas,          0},
-	{IT_STRING|IT_CVAR, NULL, "Coronas size",     &cv_grcoronasize,      10},
-	{IT_STRING|IT_CVAR, NULL, "Dynamic lighting", &cv_grdynamiclighting, 20},
-	{IT_STRING|IT_CVAR, NULL, "Static lighting",  &cv_grstaticlighting,  30},
+	{IT_STRING|IT_CVAR, NULL, "Coronas",          &cv_glcoronas,          0},
+	{IT_STRING|IT_CVAR, NULL, "Coronas size",     &cv_glcoronasize,      10},
+	{IT_STRING|IT_CVAR, NULL, "Dynamic lighting", &cv_gldynamiclighting, 20},
+	{IT_STRING|IT_CVAR, NULL, "Static lighting",  &cv_glstaticlighting,  30},
 };
 #endif // ALAM_LIGHTING
 
@@ -1482,21 +1483,23 @@ static menuitem_t OP_OpenGLLightingMenu[] =
 static menuitem_t OP_SoundOptionsMenu[] =
 {
 	{IT_HEADER, NULL, "Game Audio", NULL, 0},
-	{IT_STRING | IT_CVAR,  NULL,  "Sound Effects", &cv_gamesounds, 12},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Sound Volume", &cv_soundvolume, 22},
+	{IT_STRING | IT_CVAR,  NULL,  "Sound Effects", &cv_gamesounds, 6},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Sound Volume", &cv_soundvolume, 11},
 
-	{IT_STRING | IT_CVAR,  NULL,  "Digital Music", &cv_gamedigimusic, 42},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Volume", &cv_digmusicvolume,  52},
+	{IT_STRING | IT_CVAR,  NULL,  "Digital Music", &cv_gamedigimusic, 21},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Volume", &cv_digmusicvolume,  26},
 
-	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 72},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 82},
+	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 36},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 41},
+	
+	{IT_STRING | IT_CVAR,  NULL,  "Music Preference", &cv_musicpref, 51},
 
-	{IT_HEADER, NULL, "Miscellaneous", NULL, 102},
-	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 114},
-	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 124},
-	{IT_STRING | IT_CVAR, NULL, "Default 1-Up sound", &cv_1upsound, 134},
+	{IT_HEADER, NULL, "Miscellaneous", NULL, 61},
+	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 67},
+	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 72},
+	{IT_STRING | IT_CVAR, NULL, "Default 1-Up sound", &cv_1upsound, 77},
 
-	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 154},
+	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 87},
 };
 
 #ifdef HAVE_OPENMPT
@@ -2195,7 +2198,7 @@ menu_t OP_ColorOptionsDef =
 	0,
 	NULL
 };
-menu_t OP_SoundOptionsDef = DEFAULTMENUSTYLE(
+menu_t OP_SoundOptionsDef = DEFAULTSCROLLMENUSTYLE(
 	MTREE2(MN_OP_MAIN, MN_OP_SOUND),
 	"M_SOUND", OP_SoundOptionsMenu, &OP_MainDef, 30, 30);
 menu_t OP_SoundAdvancedDef = DEFAULTMENUSTYLE(
@@ -2306,9 +2309,9 @@ void Nextmap_OnChange(void)
 		// Check if file exists, if not, disable REPLAY option
 		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name);
 
-#ifdef OLDNREPLAYNAME		
+#ifdef OLDNREPLAYNAME
 		sprintf(tabaseold,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
-#endif	
+#endif
 
 		for (i = 0; i < 4; i++) {
 			SP_NightsReplayMenu[i].status = IT_DISABLED;
@@ -2336,7 +2339,7 @@ void Nextmap_OnChange(void)
 			active = true;
 		}
 
-		// Old style name compatibility 
+		// Old style name compatibility
 #ifdef OLDNREPLAYNAME
 		if (FIL_FileExists(va("%s-score-best.lmp", tabaseold))) {
 			SP_NightsReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
@@ -3078,7 +3081,6 @@ static void M_GoBack(INT32 choice)
 		//make sure the game doesn't still think we're in a netgame.
 		if (!Playing() && netgame && multiplayer)
 		{
-			MSCloseUDPSocket();		// Clean up so we can re-open the connection later.
 			netgame = multiplayer = false;
 		}
 
@@ -3837,6 +3839,30 @@ void M_SetupNextMenu(menu_t *menudef)
 {
 	INT16 i;
 
+#ifdef HAVE_THREADS
+	if (currentMenu == &MP_RoomDef || currentMenu == &MP_ConnectDef)
+	{
+		I_lock_mutex(&ms_QueryId_mutex);
+		{
+			ms_QueryId++;
+		}
+		I_unlock_mutex(ms_QueryId_mutex);
+	}
+
+	if (currentMenu == &MP_ConnectDef)
+	{
+		I_lock_mutex(&ms_ServerList_mutex);
+		{
+			if (ms_ServerList)
+			{
+				free(ms_ServerList);
+				ms_ServerList = NULL;
+			}
+		}
+		I_unlock_mutex(ms_ServerList_mutex);
+	}
+#endif/*HAVE_THREADS*/
+
 	if (currentMenu->quitroutine)
 	{
 		// If you're going from a menu to itself, why are you running the quitroutine? You're not quitting it! -SH
@@ -3900,6 +3926,19 @@ void M_Ticker(void)
 
 	if (currentMenu == &OP_ScreenshotOptionsDef)
 		M_SetupScreenshotMenu();
+
+#ifdef HAVE_THREADS
+	I_lock_mutex(&ms_ServerList_mutex);
+	{
+		if (ms_ServerList)
+		{
+			CL_QueryServerList(ms_ServerList);
+			free(ms_ServerList);
+			ms_ServerList = NULL;
+		}
+	}
+	I_unlock_mutex(ms_ServerList_mutex);
+#endif
 }
 
 //
@@ -10917,22 +10956,65 @@ static INT32 menuRoomIndex = 0;
 
 static void M_DrawRoomMenu(void)
 {
+	static int frame = -12;
+	int dot_frame;
+	char text[4];
+
 	const char *rmotd;
+	const char *waiting_message;
+
+	int dots;
+
+	if (m_waiting_mode)
+	{
+		dot_frame = frame / 4;
+		dots = dot_frame + 3;
+
+		strcpy(text, "   ");
+
+		if (dots > 0)
+		{
+			if (dot_frame < 0)
+				dot_frame = 0;
+
+			strncpy(&text[dot_frame], "...", min(dots, 3 - dot_frame));
+		}
+
+		if (++frame == 12)
+			frame = -12;
+
+		currentMenu->menuitems[0].text = text;
+	}
 
 	// use generic drawer for cursor, items and title
 	M_DrawGenericMenu();
 
 	V_DrawString(currentMenu->x - 16, currentMenu->y, V_YELLOWMAP, M_GetText("Select a room"));
 
-	M_DrawTextBox(144, 24, 20, 20);
+	if (m_waiting_mode == M_NOT_WAITING)
+	{
+		M_DrawTextBox(144, 24, 20, 20);
 
-	if (itemOn == 0)
-		rmotd = M_GetText("Don't connect to the Master Server.");
-	else
-		rmotd = room_list[itemOn-1].motd;
+		if (itemOn == 0)
+			rmotd = M_GetText("Don't connect to the Master Server.");
+		else
+			rmotd = room_list[itemOn-1].motd;
 
-	rmotd = V_WordWrap(0, 20*8, 0, rmotd);
-	V_DrawString(144+8, 32, V_ALLOWLOWERCASE|V_RETURN8, rmotd);
+		rmotd = V_WordWrap(0, 20*8, 0, rmotd);
+		V_DrawString(144+8, 32, V_ALLOWLOWERCASE|V_RETURN8, rmotd);
+	}
+
+	if (m_waiting_mode)
+	{
+		// Display a little "please wait" message.
+		M_DrawTextBox(52, BASEVIDHEIGHT/2-10, 25, 3);
+		if (m_waiting_mode == M_WAITING_VERSION)
+			waiting_message = "Checking for updates...";
+		else
+			waiting_message = "Fetching room info...";
+		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, waiting_message);
+		V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2)+12, 0, "Please wait.");
+	}
 }
 
 static void M_DrawConnectMenu(void)
@@ -11000,6 +11082,14 @@ static void M_DrawConnectMenu(void)
 	localservercount = serverlistcount;
 
 	M_DrawGenericMenu();
+
+	if (m_waiting_mode)
+	{
+		// Display a little "please wait" message.
+		M_DrawTextBox(52, BASEVIDHEIGHT/2-10, 25, 3);
+		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, "Searching for servers...");
+		V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2)+12, 0, "Please wait.");
+	}
 }
 
 static boolean M_CancelConnect(void)
@@ -11089,10 +11179,10 @@ void M_SortServerList(void)
 
 #ifndef NONET
 #ifdef UPDATE_ALERT
-static boolean M_CheckMODVersion(void)
+static boolean M_CheckMODVersion(int id)
 {
 	char updatestring[500];
-	const char *updatecheck = GetMODVersion();
+	const char *updatecheck = GetMODVersion(id);
 	if(updatecheck)
 	{
 		sprintf(updatestring, UPDATE_ALERT_STRING, VERSIONSTRING, updatecheck);
@@ -11101,7 +11191,62 @@ static boolean M_CheckMODVersion(void)
 	} else
 		return true;
 }
-#endif
+
+#ifdef HAVE_THREADS
+static void
+Check_new_version_thread (int *id)
+{
+	int hosting;
+	int okay;
+
+	okay = 0;
+
+	if (M_CheckMODVersion(*id))
+	{
+		I_lock_mutex(&ms_QueryId_mutex);
+		{
+			okay = ( *id == ms_QueryId );
+		}
+		I_unlock_mutex(ms_QueryId_mutex);
+
+		if (okay)
+		{
+			I_lock_mutex(&m_menu_mutex);
+			{
+				m_waiting_mode = M_WAITING_ROOMS;
+				hosting = ( currentMenu->prevMenu == &MP_ServerDef );
+			}
+			I_unlock_mutex(m_menu_mutex);
+
+			GetRoomsList(hosting, *id);
+		}
+	}
+	else
+	{
+		I_lock_mutex(&ms_QueryId_mutex);
+		{
+			okay = ( *id == ms_QueryId );
+		}
+		I_unlock_mutex(ms_QueryId_mutex);
+	}
+
+	if (okay)
+	{
+		I_lock_mutex(&m_menu_mutex);
+		{
+			if (m_waiting_mode)
+			{
+				m_waiting_mode = M_NOT_WAITING;
+				MP_RoomMenu[0].text = "<Offline Mode>";
+			}
+		}
+		I_unlock_mutex(m_menu_mutex);
+	}
+
+	free(id);
+}
+#endif/*HAVE_THREADS*/
+#endif/*UPDATE_ALERT*/
 
 static void M_ConnectMenu(INT32 choice)
 {
@@ -11137,11 +11282,14 @@ static void M_ConnectMenuModChecks(INT32 choice)
 	M_ConnectMenu(-1);
 }
 
-static UINT32 roomIds[NUM_LIST_ROOMS];
+UINT32 roomIds[NUM_LIST_ROOMS];
 
 static void M_RoomMenu(INT32 choice)
 {
 	INT32 i;
+#ifdef HAVE_THREADS
+	int *id;
+#endif
 
 	(void)choice;
 
@@ -11154,34 +11302,47 @@ static void M_RoomMenu(INT32 choice)
 	if (rendermode == render_soft)
 		I_FinishUpdate(); // page flip or blit buffer
 
-	if (GetRoomsList(currentMenu == &MP_ServerDef) < 0)
-		return;
-
-#ifdef UPDATE_ALERT
-	if (!M_CheckMODVersion())
-		return;
-#endif
-
 	for (i = 1; i < NUM_LIST_ROOMS+1; ++i)
 		MP_RoomMenu[i].status = IT_DISABLED;
 	memset(roomIds, 0, sizeof(roomIds));
 
-	for (i = 0; room_list[i].header.buffer[0]; i++)
-	{
-		if(*room_list[i].name != '\0')
-		{
-			MP_RoomMenu[i+1].text = room_list[i].name;
-			roomIds[i] = room_list[i].id;
-			MP_RoomMenu[i+1].status = IT_STRING|IT_CALL;
-		}
-	}
-
 	MP_RoomDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_RoomDef);
+
+#ifdef UPDATE_ALERT
+#ifdef HAVE_THREADS
+	m_waiting_mode = M_WAITING_VERSION;
+	MP_RoomMenu[0].text = "";
+
+	id = malloc(sizeof *id);
+
+	I_lock_mutex(&ms_QueryId_mutex);
+	{
+		*id = ms_QueryId;
+	}
+	I_unlock_mutex(ms_QueryId_mutex);
+
+	I_spawn_thread("check-new-version",
+			(I_thread_fn)Check_new_version_thread, id);
+#else/*HAVE_THREADS*/
+	if (M_CheckMODVersion(0))
+	{
+		GetRoomsList(currentMenu->prevMenu == &MP_ServerDef, 0);
+	}
+#endif/*HAVE_THREADS*/
+#endif/*UPDATE_ALERT*/
 }
 
 static void M_ChooseRoom(INT32 choice)
 {
+#ifdef HAVE_THREADS
+	I_lock_mutex(&ms_QueryId_mutex);
+	{
+		ms_QueryId++;
+	}
+	I_unlock_mutex(ms_QueryId_mutex);
+#endif
+
 	if (choice == 0)
 		ms_RoomId = -1;
 	else

@@ -1525,7 +1525,7 @@ void G_BeginRecording(void)
 	}
 
 	// Save netvar data
-	CV_SaveNetVars(&demo_p);
+	CV_SaveDemoVars(&demo_p);
 
 	memset(&oldcmd,0,sizeof(oldcmd));
 	memset(&oldghost,0,sizeof(oldghost));
@@ -1756,6 +1756,9 @@ void G_DoPlayDemo(char *defdemoname)
 	UINT32 randseed, followitem;
 	fixed_t camerascale,shieldscale,actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor,height,spinheight;
 	char msg[1024];
+#ifdef OLD22DEMOCOMPAT
+	boolean use_old_demo_vars = false;
+#endif
 
 	skin[16] = '\0';
 	color[MAXCOLORNAME] = '\0';
@@ -1818,10 +1821,13 @@ void G_DoPlayDemo(char *defdemoname)
 	case DEMOVERSION: // latest always supported
 		cnamelen = MAXCOLORNAME;
 		break;
+#ifdef OLD22DEMOCOMPAT
 	// all that changed between then and now was longer color name
 	case 0x000c:
 		cnamelen = 16;
+		use_old_demo_vars = true;
 		break;
+#endif
 	// too old, cannot support.
 	default:
 		snprintf(msg, 1024, M_GetText("%s is an incompatible replay format and cannot be played.\n"), pdemoname);
@@ -1923,7 +1929,13 @@ void G_DoPlayDemo(char *defdemoname)
 	}
 
 	// net var data
-	CV_LoadNetVars(&demo_p);
+#ifdef OLD22DEMOCOMPAT
+	if (use_old_demo_vars)
+		CV_LoadOldDemoVars(&demo_p);
+	else
+#else
+		CV_LoadDemoVars(&demo_p);
+#endif
 
 	// Sigh ... it's an empty demo.
 	if (*demo_p == DEMOMARKER)
@@ -2370,9 +2382,12 @@ static void WriteDemoChecksum(void)
 static void G_StopDemoRecording(void)
 {
 	boolean saved = false;
-	WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-	WriteDemoChecksum();
-	saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
+	if (demo_p)
+	{
+		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
+		WriteDemoChecksum();
+		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
+	}
 	free(demobuffer);
 	demorecording = false;
 

@@ -18,6 +18,7 @@
 #include "d_net.h"
 #include "tables.h"
 #include "d_player.h"
+#include "mserv.h"
 
 /*
 The 'packet version' is used to distinguish packet formats.
@@ -526,6 +527,7 @@ typedef enum
 } kickreason_t;
 
 extern boolean server;
+extern boolean serverrunning;
 #define client (!server)
 extern boolean dedicated; // For dedicated server
 extern UINT16 software_MAXPACKETLENGTH;
@@ -540,7 +542,7 @@ extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
 extern tic_t servermaxping;
 
-extern consvar_t cv_allownewplayer, cv_joinnextround, cv_maxplayers, cv_joindelay, cv_rejointimeout;
+extern consvar_t cv_netticbuffer, cv_allownewplayer, cv_joinnextround, cv_maxplayers, cv_joindelay, cv_rejointimeout;
 extern consvar_t cv_resynchattempts, cv_blamecfail;
 extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
@@ -565,6 +567,7 @@ void CL_AddSplitscreenPlayer(void);
 void CL_RemoveSplitscreenPlayer(void);
 void CL_Reset(void);
 void CL_ClearPlayer(INT32 playernum);
+void CL_QueryServerList(msg_server_t *list);
 void CL_UpdateServerList(boolean internetsearch, INT32 room);
 // Is there a game running
 boolean Playing(void);

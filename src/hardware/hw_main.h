@@ -31,6 +31,8 @@ void HWR_DrawConsoleBack(UINT32 color, INT32 height);
 void HWR_DrawTutorialBack(UINT32 color, INT32 boxheight);
 void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player);
 void HWR_RenderPlayerView(INT32 viewnumber, player_t *player);
+void HWR_ClearSkyDome(void);
+void HWR_BuildSkyDome(void);
 void HWR_DrawViewBorder(INT32 clearlines);
 void HWR_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum);
 void HWR_InitTextureMapping(void);
@@ -74,31 +76,31 @@ boolean HWR_LoadShaders(void);
 extern CV_PossibleValue_t granisotropicmode_cons_t[];
 
 #ifdef ALAM_LIGHTING
-extern consvar_t cv_grdynamiclighting;
-extern consvar_t cv_grstaticlighting;
-extern consvar_t cv_grcoronas;
-extern consvar_t cv_grcoronasize;
+extern consvar_t cv_gldynamiclighting;
+extern consvar_t cv_glstaticlighting;
+extern consvar_t cv_glcoronas;
+extern consvar_t cv_glcoronasize;
 #endif
 
-extern consvar_t cv_grshaders;
-extern consvar_t cv_grmodels;
-extern consvar_t cv_grmodelinterpolation;
-extern consvar_t cv_grmodellighting;
-extern consvar_t cv_grfiltermode;
-extern consvar_t cv_granisotropicmode;
+extern consvar_t cv_glshaders;
+extern consvar_t cv_glmodels;
+extern consvar_t cv_glmodelinterpolation;
+extern consvar_t cv_glmodellighting;
+extern consvar_t cv_glfiltermode;
+extern consvar_t cv_glanisotropicmode;
 extern consvar_t cv_fovchange;
-extern consvar_t cv_grsolvetjoin;
-extern consvar_t cv_grshearing;
-extern consvar_t cv_grspritebillboarding;
-extern consvar_t cv_grskydome;
-extern consvar_t cv_grfakecontrast;
-extern consvar_t cv_grslopecontrast;
+extern consvar_t cv_glsolvetjoin;
+extern consvar_t cv_glshearing;
+extern consvar_t cv_glspritebillboarding;
+extern consvar_t cv_glskydome;
+extern consvar_t cv_glfakecontrast;
+extern consvar_t cv_glslopecontrast;
 
-extern consvar_t cv_grbatching;
+extern consvar_t cv_glbatching;
 
-extern float gr_viewwidth, gr_viewheight, gr_baseviewwindowy;
+extern float gl_viewwidth, gl_viewheight, gl_baseviewwindowy;
 
-extern float gr_viewwindowx, gr_basewindowcentery;
+extern float gl_viewwindowx, gl_basewindowcentery;
 
 // BP: big hack for a test in lighting ref : 1249753487AB
 extern fixed_t *hwbbox;
@@ -122,6 +124,6 @@ extern int rs_hw_numcolors;
 extern int rs_hw_batchsorttime;
 extern int rs_hw_batchdrawtime;
 
-extern boolean gr_shadersavailable;
+extern boolean gl_shadersavailable;
 
 #endif

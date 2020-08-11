@@ -787,10 +787,38 @@ static void P_NetUnArchiveWaypoints(void)
 #define LD_DIFF2    0x80
 
 // diff2 flags
-#define LD_S2TEXOFF 0x01
-#define LD_S2TOPTEX 0x02
-#define LD_S2BOTTEX 0x04
-#define LD_S2MIDTEX 0x08
+#define LD_S2TEXOFF      0x01
+#define LD_S2TOPTEX      0x02
+#define LD_S2BOTTEX      0x04
+#define LD_S2MIDTEX      0x08
+#define LD_ARGS          0x10
+#define LD_STRINGARGS    0x20
+#define LD_EXECUTORDELAY 0x40
+
+static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
+{
+	UINT8 i;
+	for (i = 0; i < NUMLINEARGS; i++)
+		if (li->args[i] != spawnli->args[i])
+			return false;
+
+	return true;
+}
+
+static boolean P_AreStringArgsEqual(const line_t *li, const line_t *spawnli)
+{
+	UINT8 i;
+	for (i = 0; i < NUMLINESTRINGARGS; i++)
+	{
+		if (!li->stringargs[i])
+			return !spawnli->stringargs[i];
+
+		if (strcmp(li->stringargs[i], spawnli->stringargs[i]))
+			return false;
+	}
+
+	return true;
+}
 
 #define FD_FLAGS 0x01
 #define FD_ALPHA 0x02
@@ -1085,6 +1113,15 @@ static void ArchiveLines(void)
 		if (spawnli->special == 321 || spawnli->special == 322) // only reason li->callcount would be non-zero is if either of these are involved
 			diff |= LD_CLLCOUNT;
 
+		if (!P_AreArgsEqual(li, spawnli))
+			diff2 |= LD_ARGS;
+
+		if (!P_AreStringArgsEqual(li, spawnli))
+			diff2 |= LD_STRINGARGS;
+
+		if (li->executordelay != spawnli->executordelay)
+			diff2 |= LD_EXECUTORDELAY;
+
 		if (li->sidenum[0] != 0xffff)
 		{
 			si = &sides[li->sidenum[0]];
@@ -1111,9 +1148,10 @@ static void ArchiveLines(void)
 				diff2 |= LD_S2BOTTEX;
 			if (si->midtexture != spawnsi->midtexture)
 				diff2 |= LD_S2MIDTEX;
-			if (diff2)
-				diff |= LD_DIFF2;
 		}
+
+		if (diff2)
+			diff |= LD_DIFF2;
 
 		if (diff)
 		{
@@ -1147,6 +1185,33 @@ static void ArchiveLines(void)
 				WRITEINT32(save_p, si->bottomtexture);
 			if (diff2 & LD_S2MIDTEX)
 				WRITEINT32(save_p, si->midtexture);
+			if (diff2 & LD_ARGS)
+			{
+				UINT8 j;
+				for (j = 0; j < NUMLINEARGS; j++)
+					WRITEINT32(save_p, li->args[j]);
+			}
+			if (diff2 & LD_STRINGARGS)
+			{
+				UINT8 j;
+				for (j = 0; j < NUMLINESTRINGARGS; j++)
+				{
+					size_t len, k;
+
+					if (!li->stringargs[j])
+					{
+						WRITEINT32(save_p, 0);
+						continue;
+					}
+
+					len = strlen(li->stringargs[j]);
+					WRITEINT32(save_p, len);
+					for (k = 0; k < len; k++)
+						WRITECHAR(save_p, li->stringargs[j][k]);
+				}
+			}
+			if (diff2 & LD_EXECUTORDELAY)
+				WRITEINT32(save_p, li->executordelay);
 		}
 	}
 	WRITEUINT16(save_p, 0xffff);
@@ -1202,6 +1267,36 @@ static void UnArchiveLines(void)
 			si->bottomtexture = READINT32(save_p);
 		if (diff2 & LD_S2MIDTEX)
 			si->midtexture = READINT32(save_p);
+		if (diff2 & LD_ARGS)
+		{
+			UINT8 j;
+			for (j = 0; j < NUMLINEARGS; j++)
+				li->args[j] = READINT32(save_p);
+		}
+		if (diff2 & LD_STRINGARGS)
+		{
+			UINT8 j;
+			for (j = 0; j < NUMLINESTRINGARGS; j++)
+			{
+				size_t len = READINT32(save_p);
+				size_t k;
+
+				if (!len)
+				{
+					Z_Free(li->stringargs[j]);
+					li->stringargs[j] = NULL;
+					continue;
+				}
+
+				li->stringargs[j] = Z_Realloc(li->stringargs[j], len + 1, PU_LEVEL, NULL);
+				for (k = 0; k < len; k++)
+					li->stringargs[j][k] = READCHAR(save_p);
+				li->stringargs[j][len] = '\0';
+			}
+		}
+		if (diff2 & LD_EXECUTORDELAY)
+			li->executordelay = READINT32(save_p);
+
 	}
 }
 
@@ -1400,7 +1495,9 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 
 		if ((mobj->x != mobj->spawnpoint->x << FRACBITS) ||
 			(mobj->y != mobj->spawnpoint->y << FRACBITS) ||
-			(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)))
+			(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)) ||
+			(mobj->pitch != FixedAngle(mobj->spawnpoint->pitch*FRACUNIT)) ||
+			(mobj->roll != FixedAngle(mobj->spawnpoint->roll*FRACUNIT)) )
 			diff |= MD_POS;
 
 		if (mobj->info->doomednum != mobj->spawnpoint->type)
@@ -1556,6 +1653,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, mobj->x);
 		WRITEFIXED(save_p, mobj->y);
 		WRITEANGLE(save_p, mobj->angle);
+		WRITEANGLE(save_p, mobj->pitch);
+		WRITEANGLE(save_p, mobj->roll);
 	}
 	if (diff & MD_MOM)
 	{
@@ -2513,12 +2612,16 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->x = READFIXED(save_p);
 		mobj->y = READFIXED(save_p);
 		mobj->angle = READANGLE(save_p);
+		mobj->pitch = READANGLE(save_p);
+		mobj->roll = READANGLE(save_p);
 	}
 	else
 	{
 		mobj->x = mobj->spawnpoint->x << FRACBITS;
 		mobj->y = mobj->spawnpoint->y << FRACBITS;
 		mobj->angle = FixedAngle(mobj->spawnpoint->angle*FRACUNIT);
+		mobj->pitch = FixedAngle(mobj->spawnpoint->pitch*FRACUNIT);
+		mobj->roll = FixedAngle(mobj->spawnpoint->roll*FRACUNIT);
 	}
 	if (diff & MD_MOM)
 	{

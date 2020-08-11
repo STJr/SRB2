@@ -204,47 +204,44 @@ boolean P_BBoxInsidePolyobj(polyobj_t *po, fixed_t *bbox)
 	return true;
 }
 
-// Finds the 'polyobject settings' linedef for a polyobject
-// the polyobject's id should be set as its tag
-static void Polyobj_GetInfo(polyobj_t *po)
+// Gets the polyobject's settings from its first line
+// args[0] of the first line should be the polyobject's id
+static void Polyobj_GetInfo(polyobj_t *po, line_t *line)
 {
-	INT32 i = P_FindSpecialLineFromTag(POLYINFO_SPECIALNUM, po->id, -1);
-
-	po->flags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES;
-
-	if (i == -1)
-		return; // no extra settings to apply, let's leave it
-
-	po->parent = lines[i].frontsector->special;
+	po->parent = line->args[1];
 	if (po->parent == po->id) // do not allow a self-reference
 		po->parent = -1;
 
-	po->translucency = (lines[i].flags & ML_DONTPEGTOP)
-						? (sides[lines[i].sidenum[0]].textureoffset>>FRACBITS)
-						: ((lines[i].frontsector->floorheight>>FRACBITS) / 100);
+	po->translucency = max(min(line->args[2], NUMTRANSMAPS), 0);
 
-	po->translucency = max(min(po->translucency, NUMTRANSMAPS), 0);
+	po->flags = POF_SOLID|POF_TESTHEIGHT|POF_RENDERSIDES|POF_RENDERPLANES;
 
-	if (lines[i].flags & ML_EFFECT1)
+	if (line->args[3] & TMPF_NOINSIDES)
 		po->flags |= POF_ONESIDE;
 
-	if (lines[i].flags & ML_EFFECT2)
+	if (line->args[3] & TMPF_INTANGIBLE)
 		po->flags &= ~POF_SOLID;
 
-	if (lines[i].flags & ML_EFFECT3)
+	if (line->args[3] & TMPF_PUSHABLESTOP)
 		po->flags |= POF_PUSHABLESTOP;
 
-	if (lines[i].flags & ML_EFFECT4)
-		po->flags |= POF_RENDERPLANES;
+	if (line->args[3] & TMPF_INVISIBLEPLANES)
+		po->flags &= ~POF_RENDERPLANES;
 
-	/*if (lines[i].flags & ML_EFFECT5)
+	/*if (line->args[3] & TMPF_DONTCLIPPLANES)
 		po->flags &= ~POF_CLIPPLANES;*/
 
-	if (lines[i].flags & ML_EFFECT6)
+	if (line->args[3] & TMPF_SPLAT)
 		po->flags |= POF_SPLAT;
 
-	if (lines[i].flags & ML_NOCLIMB) // Has a linedef executor
+	if (line->args[3] & TMPF_EXECUTOR) // Has a linedef executor
 		po->flags |= POF_LDEXEC;
+
+	// TODO: support customized damage somehow?
+	if (line->args[3] & TMPF_CRUSH)
+		po->damage = 3;
+
+	po->triggertag = line->args[4];
 }
 
 // Reallocating array maintenance
@@ -483,10 +480,6 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 
 	po->id = id;
 
-	// TODO: support customized damage somehow?
-	if (spawnSpot->info->doomednum == POLYOBJ_SPAWNCRUSH_DOOMEDNUM)
-		po->damage = 3;
-
 	// set to default thrust; may be modified by attached thinkers
 	// TODO: support customized thrust?
 	po->thrust = FRACUNIT;
@@ -508,10 +501,10 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 		if (seg->linedef->special != POLYOBJ_START_LINE)
 			continue;
 
-		if (seg->linedef->tag != po->id)
+		if (seg->linedef->args[0] != po->id)
 			continue;
 
-		Polyobj_GetInfo(po); // apply extra settings if they exist!
+		Polyobj_GetInfo(po, seg->linedef); // apply extra settings if they exist!
 
 		// save original flags and translucency to reference later for netgames!
 		po->spawnflags = po->flags;
@@ -564,9 +557,9 @@ static void Polyobj_moveToSpawnSpot(mapthing_t *anchor)
 	vertex_t  dist, sspot;
 	size_t i;
 
-	if (!(po = Polyobj_GetForNum(anchor->angle)))
+	if (!(po = Polyobj_GetForNum(anchor->tag)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "Bad polyobject %d for anchor point\n", anchor->angle);
+		CONS_Debug(DBG_POLYOBJ, "Bad polyobject %d for anchor point\n", anchor->tag);
 		return;
 	}
 
@@ -1314,8 +1307,7 @@ void Polyobj_InitLevel(void)
 
 		mo = (mobj_t *)th;
 
-		if (mo->info->doomednum == POLYOBJ_SPAWN_DOOMEDNUM ||
-			mo->info->doomednum == POLYOBJ_SPAWNCRUSH_DOOMEDNUM)
+		if (mo->info->doomednum == POLYOBJ_SPAWN_DOOMEDNUM)
 		{
 			++numPolyObjects;
 
@@ -1350,7 +1342,7 @@ void Polyobj_InitLevel(void)
 		{
 			qitem = (mobjqitem_t *)M_QueueIterator(&spawnqueue);
 
-			Polyobj_spawnPolyObj(i, qitem->mo, qitem->mo->spawnpoint->angle);
+			Polyobj_spawnPolyObj(i, qitem->mo, qitem->mo->spawnpoint->tag);
 		}
 
 		// move polyobjects to spawn points

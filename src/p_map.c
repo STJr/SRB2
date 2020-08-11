@@ -380,7 +380,7 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		if ((spring->info->painchance == 3))
 		{
 			if (!(pflags = (object->player->pflags & PF_SPINNING)) &&
-				(((object->player->charability2 == CA2_SPINDASH) && (object->player->cmd.buttons & BT_USE))
+				(((object->player->charability2 == CA2_SPINDASH) && (object->player->cmd.buttons & BT_SPIN))
 				|| (spring->flags2 & MF2_AMBUSH)))
 			{
 				pflags = PF_SPINNING;
@@ -1678,13 +1678,23 @@ static boolean PIT_CheckThing(mobj_t *thing)
 				&& (flipval*(*momz) < 0) // monitor is on the floor and you're going down, or on the ceiling and you're going up
 				&& (elementalpierce != 1)) // you're not piercing through the monitor...
 				{
-					if (elementalpierce == 2)
-						P_DoBubbleBounce(player);
-					else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+					if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 					{
-						*momz = -*momz; // Therefore, you should be thrust in the opposite direction, vertically.
+						fixed_t setmomz = -*momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
+					
+						if (elementalpierce == 2) // Reset bubblewrap, part 1
+							P_DoBubbleBounce(player);
+						*momz = setmomz; // Therefore, you should be thrust in the opposite direction, vertically.
 						if (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY)
 							P_TwinSpinRejuvenate(player, player->thokitem);
+						if (elementalpierce == 2) // Reset bubblewrap, part 2
+						{
+							boolean underwater = tmthing->eflags & MFE_UNDERWATER;
+							
+							if (underwater)
+								*momz /= 2;
+							*momz -= (*momz/(underwater ? 8 : 4)); // Cap the height!
+						}
 					}
 				}
 				if (!(elementalpierce == 1 && thing->flags & MF_GRENADEBOUNCE)) // prevent gold monitor clipthrough.

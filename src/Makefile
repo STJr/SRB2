@@ -8,13 +8,11 @@
 # terms of the GNU General Public License, version 2.
 # See the 'LICENSE' file for more details.
 #
-#     -DPC_DOS    -> use DOS specific code (eg:textmode stuff)...
 #     -DLINUX     -> use for the GNU/Linux specific
 #     -D_WINDOWS  -> use for the Win32/DirectX specific
 #     -DHAVE_SDL  -> use for the SDL interface
 #
 # Sets:
-#     Compile the DGJPP/DOS version with 'make WATTCP=1'
 #     Compile the DirectX/Mingw version with 'make MINGW=1'
 #     Compile the SDL/Mingw version with 'make MINGW=1 SDL=1'
 #     Compile the SDL/Linux version with 'make LINUX=1'
@@ -146,10 +144,6 @@ NOHW=1
 NOHS=1
 endif
 
-ifdef DJGPPDOS
-include djgppdos/Makefile.cfg
-endif
-
 ifndef NOOPENMPT
 HAVE_OPENMPT=1
 endif
@@ -213,6 +207,7 @@ endif
 
 ifdef NONET
 	OPTS+=-DNONET
+	NOCURL=1
 else
 ifdef NO_IPV6
 	OPTS+=-DNO_IPV6
@@ -320,6 +315,16 @@ LIBS+=$(ZLIB_LDFLAGS)
 CFLAGS+=$(ZLIB_CFLAGS)
 else
 NOPNG=1
+endif
+
+ifndef NOCURL
+OPTS+=-DHAVE_CURL
+CURLCONFIG?=curl-config
+CURL_CFLAGS?=$(shell $(CURLCONFIG) --cflags)
+CURL_LDFLAGS?=$(shell $(CURLCONFIG) --libs)
+
+LIBS+=$(CURL_LDFLAGS)
+CFLAGS+=$(CURL_CFLAGS)
 endif
 
 ifdef STATIC
@@ -478,11 +483,11 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/w_wad.o    \
 		$(OBJDIR)/filesrch.o \
 		$(OBJDIR)/mserv.o    \
+		$(OBJDIR)/http-mserv.o\
 		$(OBJDIR)/i_tcp.o    \
 		$(OBJDIR)/lzf.o	     \
 		$(OBJDIR)/vid_copy.o \
 		$(OBJDIR)/b_bot.o \
-		$(i_cdmus_o)    \
 		$(i_net_o)      \
 		$(i_system_o)   \
 		$(i_sound_o)    \
@@ -496,10 +501,6 @@ ifdef GETTEXT
 POS:=$(BIN)/en.mo
 
 OPTS+=-DGETTEXT
-endif
-
-ifdef DJGPPDOS
-all:	 pre-build $(BIN)/$(EXENAME)
 endif
 
 ifdef PANDORA
@@ -645,7 +646,7 @@ ifdef SDL
 ifdef MINGW
 $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
  doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
- command.h hardware/hw_data.h hardware/hw_glide.h hardware/hw_defs.h \
+ command.h hardware/hw_data.h hardware/hw_defs.h \
  hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h \
  hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
  am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
@@ -654,7 +655,7 @@ $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h 
 else
 $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
  doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
- command.h hardware/hw_data.h hardware/hw_glide.h hardware/hw_defs.h \
+ command.h hardware/hw_data.h hardware/hw_defs.h \
  hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h \
  hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
  am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
@@ -732,7 +733,7 @@ ifndef SDL
 ifndef NOHW
 $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
  doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
- command.h hardware/hw_data.h hardware/hw_glide.h hardware/hw_defs.h \
+ command.h hardware/hw_data.h hardware/hw_defs.h \
  hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h \
  hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
  am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
@@ -741,7 +742,7 @@ $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h 
 
 $(OBJDIR)/ogl_win.o: hardware/r_opengl/ogl_win.c hardware/r_opengl/r_opengl.h \
  doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
- command.h hardware/hw_data.h hardware/hw_glide.h hardware/hw_defs.h \
+ command.h hardware/hw_data.h hardware/hw_defs.h \
  hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h \
  hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
  am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \

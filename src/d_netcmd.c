@@ -701,6 +701,7 @@ void D_RegisterClientCommands(void)
 #endif
 	CV_RegisterVar(&cv_rollingdemos);
 	CV_RegisterVar(&cv_netstat);
+	CV_RegisterVar(&cv_netticbuffer);
 
 #ifdef NETGAME_DEVMODE
 	CV_RegisterVar(&cv_fishcake);
@@ -859,10 +860,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_digmusicvolume);
 	CV_RegisterVar(&cv_midimusicvolume);
 	CV_RegisterVar(&cv_numChannels);
-
-	// i_cdmus.c
-	CV_RegisterVar(&cd_volume);
-	CV_RegisterVar(&cdUpdate);
 
 	// screen.c
 	CV_RegisterVar(&cv_fullscreen);

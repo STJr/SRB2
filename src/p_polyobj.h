@@ -26,10 +26,8 @@
 
 #define POLYOBJ_ANCHOR_DOOMEDNUM     760
 #define POLYOBJ_SPAWN_DOOMEDNUM      761
-#define POLYOBJ_SPAWNCRUSH_DOOMEDNUM 762 // todo: REMOVE
 
 #define POLYOBJ_START_LINE    20
-#define POLYINFO_SPECIALNUM   22
 
 typedef enum
 {
@@ -51,6 +49,18 @@ typedef enum
 	POF_NOSPECIALS        = 0x1000,    ///< Don't apply sector specials.
 	POF_SPLAT             = 0x2000,    ///< Use splat flat renderer (treat cyan pixels as invisible).
 } polyobjflags_e;
+
+typedef enum
+{
+	TMPF_NOINSIDES       = 1,
+	TMPF_INTANGIBLE      = 1<<1,
+	TMPF_PUSHABLESTOP    = 1<<2,
+	TMPF_INVISIBLEPLANES = 1<<3,
+	TMPF_EXECUTOR        = 1<<4,
+	TMPF_CRUSH           = 1<<5,
+	TMPF_SPLAT           = 1<<6,
+	//TMPF_DONTCLIPPLANES  = 1<<7,
+} textmappolyobjectflags_t;
 
 //
 // Polyobject Structure
@@ -97,6 +107,7 @@ typedef struct polyobj_s
 
 	UINT8 isBad;         // a bad polyobject: should not be rendered/manipulated
 	INT32 translucency; // index to translucency tables
+	INT16 triggertag;   // Tag of linedef executor to trigger on touch
 
 	struct visplane_s *visplane; // polyobject's visplane, for ease of putting into the list later
 
