@@ -13409,7 +13409,7 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 // var1 = Whether to show the dust devil's audio/visuals
 // var2 = Whether to use the dust devil's physics
 //
-void A_DustDevilThink(mobj_t *actor, visual, physics)
+void A_DustDevilThink(mobj_t *actor)
 {
 	fixed_t scale = actor->scale;
 	mobj_t *layer = actor->tracer;
@@ -13420,7 +13420,7 @@ void A_DustDevilThink(mobj_t *actor, visual, physics)
 		return;
 	
 	// Handle the audio/visuals
-	if visual != 0
+	if (var1 != 0)
 	{
 		//Chained thinker for the spiralling dust column.
 		while (layer && !P_MobjWasRemoved(layer)) {
@@ -13471,7 +13471,7 @@ void A_DustDevilThink(mobj_t *actor, visual, physics)
 	}
 	
 	// Handle the launch physics
-	if physics != 0
+	if (var2 != 0)
 	{
 		yh = (unsigned)(actor->y + radius - bmaporgy) >> MAPBLOCKSHIFT;
 		yl = (unsigned)(actor->y - radius - bmaporgy) >> MAPBLOCKSHIFT;
