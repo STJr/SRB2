@@ -165,6 +165,7 @@ void A_SetTics();
 void A_SetRandomTics();
 void A_ChangeColorRelative();
 void A_ChangeColorAbsolute();
+void A_Dye();
 void A_MoveRelative();
 void A_MoveAbsolute();
 void A_Thrust();
@@ -283,6 +284,7 @@ void A_RolloutRock();
 void A_DragonbomberSpawn();
 void A_DragonWing();
 void A_DragonSegment();
+void A_ChangeHeight();
 
 // ratio of states to sprites to mobj types is roughly 6 : 1 : 1
 #define NUMMOBJFREESLOTS 512
@@ -450,6 +452,8 @@ typedef enum sprite
 
 	// Projectiles
 	SPR_MISL,
+	SPR_LASR, // GFZ3 laser
+	SPR_LASF, // GFZ3 laser flames
 	SPR_TORP, // Torpedo
 	SPR_ENRG, // Energy ball
 	SPR_MINE, // Skim mine
@@ -770,6 +774,9 @@ typedef enum sprite
 	SPR_GFZD, // GFZ debris
 	SPR_BRIC, // Bricks
 	SPR_WDDB, // Wood Debris
+	SPR_BRIR, // CEZ3 colored bricks
+	SPR_BRIB,
+	SPR_BRIY,
 
 	// Gravity Well Objects
 	SPR_GWLG,
@@ -1182,6 +1189,7 @@ typedef enum state
 	S_JETJAW_CHOMP14,
 	S_JETJAW_CHOMP15,
 	S_JETJAW_CHOMP16,
+	S_JETJAW_SOUND,
 
 	// Snailer
 	S_SNAILER1,
@@ -1604,10 +1612,12 @@ typedef enum state
 	S_FANG_PINCHPATHINGSTART1,
 	S_FANG_PINCHPATHINGSTART2,
 	S_FANG_PINCHPATHING,
+	S_FANG_PINCHBOUNCE0,
 	S_FANG_PINCHBOUNCE1,
 	S_FANG_PINCHBOUNCE2,
 	S_FANG_PINCHBOUNCE3,
 	S_FANG_PINCHBOUNCE4,
+	S_FANG_PINCHFALL0,
 	S_FANG_PINCHFALL1,
 	S_FANG_PINCHFALL2,
 	S_FANG_PINCHSKID1,
@@ -2219,6 +2229,14 @@ typedef enum state
 	S_ROCKET,
 
 	S_LASER,
+	S_LASER2,
+	S_LASERFLASH,
+
+	S_LASERFLAME1,
+	S_LASERFLAME2,
+	S_LASERFLAME3,
+	S_LASERFLAME4,
+	S_LASERFLAME5,
 
 	S_TORPEDO,
 
@@ -3486,7 +3504,7 @@ typedef enum state
 
 	// Got Flag Sign
 	S_GOTFLAG,
-	
+
 	// Finish flag
 	S_FINISHFLAG,
 
@@ -3986,6 +4004,9 @@ typedef enum state
 	S_GFZDEBRIS,
 	S_BRICKDEBRIS,
 	S_WOODDEBRIS,
+	S_REDBRICKDEBRIS, // for CEZ3
+	S_BLUEBRICKDEBRIS, // for CEZ3
+	S_YELLOWBRICKDEBRIS, // for CEZ3
 
 #ifdef SEENAMES
 	S_NAMECHECK,
@@ -4753,7 +4774,6 @@ typedef enum mobj_type
 	MT_ANGLEMAN,
 	MT_POLYANCHOR,
 	MT_POLYSPAWN,
-	MT_POLYSPAWNCRUSH,
 
 	// Skybox objects
 	MT_SKYBOX,
@@ -4786,6 +4806,9 @@ typedef enum mobj_type
 	MT_GFZDEBRIS,
 	MT_BRICKDEBRIS,
 	MT_WOODDEBRIS,
+	MT_REDBRICKDEBRIS, // for CEZ3
+	MT_BLUEBRICKDEBRIS, // for CEZ3
+	MT_YELLOWBRICKDEBRIS, // for CEZ3
 
 #ifdef SEENAMES
 	MT_NAMECHECK,

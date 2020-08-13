@@ -227,28 +227,42 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 	}
 }
 
+// Blends two pixels together, using the equation
+// that matches the specified alpha style.
 UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	RGBA_t output;
+	INT16 fullalpha = (alpha - (0xFF - foreground.s.alpha));
 	if (style == AST_TRANSLUCENT)
 	{
-		if (alpha == 0)
+		if (fullalpha <= 0)
 			output.rgba = background.rgba;
-		else if (alpha == 0xFF)
-			output.rgba = foreground.rgba;
-		else if (alpha < 0xFF)
-		{
-			UINT8 beta = (0xFF - alpha);
-			output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
-			output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
-			output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
-		}
-		// write foreground pixel alpha
-		// if there's no pixel in here
-		if (!background.rgba)
-			output.s.alpha = foreground.s.alpha;
 		else
-			output.s.alpha = 0xFF;
+		{
+			// don't go too high
+			if (fullalpha >= 0xFF)
+				fullalpha = 0xFF;
+			alpha = (UINT8)fullalpha;
+
+			// if the background pixel is empty,
+			// match software and don't blend anything
+			if (!background.s.alpha)
+			{
+				// ...unless the foreground pixel ISN'T actually translucent.
+				if (alpha == 0xFF)
+					output.rgba = foreground.rgba;
+				else
+					output.rgba = 0;
+			}
+			else
+			{
+				UINT8 beta = (0xFF - alpha);
+				output.s.red = ((background.s.red * beta) + (foreground.s.red * alpha)) / 0xFF;
+				output.s.green = ((background.s.green * beta) + (foreground.s.green * alpha)) / 0xFF;
+				output.s.blue = ((background.s.blue * beta) + (foreground.s.blue * alpha)) / 0xFF;
+				output.s.alpha = 0xFF;
+			}
+		}
 		return output.rgba;
 	}
 #define clamp(c) max(min(c, 0xFF), 0x00);
@@ -296,18 +310,46 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 	return 0;
 }
 
-UINT8 ASTBlendPixel_8bpp(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
+INT32 ASTTextureBlendingThreshold[2] = {255/11, (10*255/11)};
+
+// Blends a pixel for a texture patch.
+UINT32 ASTBlendTexturePixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha)
 {
 	// Alpha style set to translucent?
 	if (style == AST_TRANSLUCENT)
 	{
 		// Is the alpha small enough for translucency?
-		if (alpha <= (10*255/11))
+		if (alpha <= ASTTextureBlendingThreshold[1])
+		{
+			// Is the patch way too translucent? Don't blend then.
+			if (alpha < ASTTextureBlendingThreshold[0])
+				return background.rgba;
+
+			return ASTBlendPixel(background, foreground, style, alpha);
+		}
+		else // just copy the pixel
+			return foreground.rgba;
+	}
+	else
+		return ASTBlendPixel(background, foreground, style, alpha);
+}
+
+// Blends two palette indexes for a texture patch, then
+// finds the nearest palette index from the blended output.
+UINT8 ASTBlendPaletteIndexes(UINT8 background, UINT8 foreground, int style, UINT8 alpha)
+{
+	// Alpha style set to translucent?
+	if (style == AST_TRANSLUCENT)
+	{
+		// Is the alpha small enough for translucency?
+		if (alpha <= ASTTextureBlendingThreshold[1])
 		{
 			UINT8 *mytransmap;
+
 			// Is the patch way too translucent? Don't blend then.
-			if (alpha < 255/11)
+			if (alpha < ASTTextureBlendingThreshold[0])
 				return background;
+
 			// The equation's not exact but it works as intended. I'll call it a day for now.
 			mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
 			if (background != 0xFF)
@@ -372,7 +414,7 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 		{
 			for (; dest < cache + position + count; source++, dest++)
 				if (*source != 0xFF)
-					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -416,7 +458,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 		{
 			for (; dest < cache + position + count; --source, dest++)
 				if (*source != 0xFF)
-					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -716,14 +758,12 @@ Rloadflats (INT32 i, INT32 w)
 	}
 	else
 	{
-		texstart = W_CheckNumForNamePwad("F_START", (UINT16)w, 0);
+		texstart = W_CheckNumForMarkerStartPwad("F_START", (UINT16)w, 0);
 		texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
 	}
 
 	if (!( texstart == INT16_MAX || texend == INT16_MAX ))
 	{
-		texstart++; // Do not count the first marker
-
 		// Work through each lump between the markers in the WAD.
 		for (j = 0; j < (texend - texstart); j++)
 		{
@@ -836,7 +876,7 @@ Rloadtextures (INT32 i, INT32 w)
 	}
 	else
 	{
-		texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0);
+		texstart = W_CheckNumForMarkerStartPwad(TX_START, (UINT16)w, 0);
 		texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
 		texturesLumpPos = W_CheckNumForNamePwad("TEXTURES", (UINT16)w, 0);
 		if (texturesLumpPos != INT16_MAX)
@@ -845,8 +885,6 @@ Rloadtextures (INT32 i, INT32 w)
 
 	if (!( texstart == INT16_MAX || texend == INT16_MAX ))
 	{
-		texstart++; // Do not count the first marker
-
 		// Work through each lump between the markers in the WAD.
 		for (j = 0; j < (texend - texstart); j++)
 		{
@@ -953,14 +991,12 @@ void R_LoadTextures(void)
 		}
 		else
 		{
-			texstart = W_CheckNumForNamePwad("F_START", (UINT16)w, 0);
+			texstart = W_CheckNumForMarkerStartPwad("F_START", (UINT16)w, 0);
 			texend = W_CheckNumForNamePwad("F_END", (UINT16)w, texstart);
 		}
 
 		if (!( texstart == INT16_MAX || texend == INT16_MAX ))
 		{
-			texstart++; // Do not count the first marker
-
 			// PK3s have subfolders, so we can't just make a simple sum
 			if (wadfiles[w]->type == RET_PK3)
 			{
@@ -993,14 +1029,12 @@ void R_LoadTextures(void)
 		}
 		else
 		{
-			texstart = W_CheckNumForNamePwad(TX_START, (UINT16)w, 0);
+			texstart = W_CheckNumForMarkerStartPwad(TX_START, (UINT16)w, 0);
 			texend = W_CheckNumForNamePwad(TX_END, (UINT16)w, 0);
 		}
 
 		if (texstart == INT16_MAX || texend == INT16_MAX)
 			continue;
-
-		texstart++; // Do not count the first marker
 
 		// PK3s have subfolders, so we can't just make a simple sum
 		if (wadfiles[w]->type == RET_PK3)
@@ -1587,9 +1621,9 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 		switch (wadfiles[i]->type)
 		{
 		case RET_WAD:
-			if ((start = W_CheckNumForNamePwad("F_START", (UINT16)i, 0)) == INT16_MAX)
+			if ((start = W_CheckNumForMarkerStartPwad("F_START", (UINT16)i, 0)) == INT16_MAX)
 			{
-				if ((start = W_CheckNumForNamePwad("FF_START", (UINT16)i, 0)) == INT16_MAX)
+				if ((start = W_CheckNumForMarkerStartPwad("FF_START", (UINT16)i, 0)) == INT16_MAX)
 					continue;
 				else if ((end = W_CheckNumForNamePwad("FF_END", (UINT16)i, start)) == INT16_MAX)
 					continue;
@@ -2046,7 +2080,7 @@ extracolormap_t *R_ColormapForName(char *name)
 #endif
 
 //
-// R_CreateColormap
+// R_CreateColormapFromLinedef
 //
 // This is a more GL friendly way of doing colormaps: Specify colormap
 // data in a special linedef's texture areas and use that to generate
@@ -2185,10 +2219,8 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 	return lighttable;
 }
 
-extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
+extracolormap_t *R_CreateColormapFromLinedef(char *p1, char *p2, char *p3)
 {
-	extracolormap_t *extra_colormap, *exc;
-
 	// default values
 	UINT8 cr = 0, cg = 0, cb = 0, ca = 0, cfr = 0, cfg = 0, cfb = 0, cfa = 25;
 	UINT32 fadestart = 0, fadeend = 31;
@@ -2311,6 +2343,13 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 	rgba = R_PutRgbaRGBA(cr, cg, cb, ca);
 	fadergba = R_PutRgbaRGBA(cfr, cfg, cfb, cfa);
 
+	return R_CreateColormap(rgba, fadergba, fadestart, fadeend, flags);
+}
+
+extracolormap_t *R_CreateColormap(INT32 rgba, INT32 fadergba, UINT8 fadestart, UINT8 fadeend, UINT8 flags)
+{
+	extracolormap_t *extra_colormap;
+
 	// Did we just make a default colormap?
 #ifdef EXTRACOLORMAPLUMPS
 	if (R_CheckDefaultColormapByValues(true, true, true, rgba, fadergba, fadestart, fadeend, flags, LUMPERROR))
@@ -2322,17 +2361,16 @@ extracolormap_t *R_CreateColormap(char *p1, char *p2, char *p3)
 
 	// Look for existing colormaps
 #ifdef EXTRACOLORMAPLUMPS
-	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags, LUMPERROR);
+	extra_colormap = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags, LUMPERROR);
 #else
-	exc = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags);
+	extra_colormap = R_GetColormapFromListByValues(rgba, fadergba, fadestart, fadeend, flags);
 #endif
-	if (exc)
-		return exc;
+	if (extra_colormap)
+		return extra_colormap;
 
-	CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
-		cr, cg, cb, ca, cfr, cfg, cfb, cfa);
+	CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%x) fadergba(%x)\n", rgba, fadergba);
 
-	extra_colormap = Z_Calloc(sizeof (*extra_colormap), PU_LEVEL, NULL);
+	extra_colormap = Z_Calloc(sizeof(*extra_colormap), PU_LEVEL, NULL);
 
 	extra_colormap->fadestart = (UINT16)fadestart;
 	extra_colormap->fadeend = (UINT16)fadeend;
@@ -2364,7 +2402,6 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 	boolean subR, boolean subG, boolean subB, boolean subA,
 	boolean subFadeR, boolean subFadeG, boolean subFadeB, boolean subFadeA,
 	boolean subFadeStart, boolean subFadeEnd, boolean ignoreFlags,
-	boolean useAltAlpha, INT16 altAlpha, INT16 altFadeAlpha,
 	boolean lighttable)
 {
 	INT16 red, green, blue, alpha;
@@ -2400,7 +2437,7 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 			* R_GetRgbaB(exc_addend->rgba)
 		, 255), 0);
 
-	alpha = useAltAlpha ? altAlpha : R_GetRgbaA(exc_addend->rgba);
+	alpha = R_GetRgbaA(exc_addend->rgba);
 	alpha = max(min(R_GetRgbaA(exc_augend->rgba) + (subA ? -1 : 1) * alpha, 25), 0);
 
 	exc_augend->rgba = R_PutRgbaRGBA(red, green, blue, alpha);
@@ -2427,8 +2464,8 @@ extracolormap_t *R_AddColormaps(extracolormap_t *exc_augend, extracolormap_t *ex
 			* R_GetRgbaB(exc_addend->fadergba)
 		, 255), 0);
 
-	alpha = useAltAlpha ? altFadeAlpha : R_GetRgbaA(exc_addend->fadergba);
-	if (alpha == 25 && !useAltAlpha && !R_GetRgbaRGB(exc_addend->fadergba))
+	alpha = R_GetRgbaA(exc_addend->fadergba);
+	if (alpha == 25 && !R_GetRgbaRGB(exc_addend->fadergba))
 		alpha = 0; // HACK: fadergba A defaults at 25, so don't add anything in this case
 	alpha = max(min(R_GetRgbaA(exc_augend->fadergba) + (subFadeA ? -1 : 1) * alpha, 25), 0);
 

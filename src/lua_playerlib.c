@@ -11,7 +11,6 @@
 /// \brief player object library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "fastcmp.h"
 #include "p_mobj.h"
 #include "d_player.h"
@@ -462,9 +461,9 @@ static int player_set(lua_State *L)
 		plr->flashpal = (UINT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"skincolor"))
 	{
-		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
-		if (newcolor >= MAXSKINCOLORS)
-			return luaL_error(L, "player.skincolor %d out of range (0 - %d).", newcolor, MAXSKINCOLORS-1);
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L,3);
+		if (newcolor >= numskincolors)
+			return luaL_error(L, "player.skincolor %d out of range (0 - %d).", newcolor, numskincolors-1);
 		plr->skincolor = newcolor;
 	}
 	else if (fastcmp(field,"score"))
@@ -878,5 +877,3 @@ int LUA_PlayerLib(lua_State *L)
 	lua_setglobal(L, "players");
 	return 0;
 }
-
-#endif

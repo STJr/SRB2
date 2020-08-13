@@ -11,11 +11,10 @@
 /// \brief hooks for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "doomstat.h"
 #include "p_mobj.h"
 #include "g_game.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "b_bot.h"
 #include "z_zone.h"
 
@@ -53,6 +52,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"JumpSpinSpecial",
 	"BotTiccmd",
 	"BotAI",
+	"BotRespawn",
 	"LinedefExecute",
 	"PlayerMsg",
 	"HurtMsg",
@@ -69,6 +69,8 @@ const char *const hookNames[hook_MAX+1] = {
 	"ViewpointSwitch",
 	"SeenPlayer",
 	"PlayerThink",
+	"ShouldJingleContinue",
+	"GameQuit",
 	NULL
 };
 
@@ -80,8 +82,7 @@ struct hook_s
 	UINT16 id;
 	union {
 		mobjtype_t mt;
-		char *skinname;
-		char *funcname;
+		char *str;
 	} s;
 	boolean error;
 };
@@ -107,6 +108,12 @@ static hook_p linedefexecutorhooks;
 
 // For other hooks, a unique linked list
 hook_p roothook;
+
+static void PushHook(lua_State *L, hook_p hookp)
+{
+	lua_pushfstring(L, FMT_HOOKID, hookp->id);
+	lua_gettable(L, LUA_REGISTRYINDEX);
+}
 
 // Takes hook, function, and additional arguments (mobj type to act on, etc.)
 static int lib_addHook(lua_State *L)
@@ -149,28 +156,17 @@ static int lib_addHook(lua_State *L)
 		luaL_argcheck(L, hook.s.mt < NUMMOBJTYPES, 2, "invalid mobjtype_t");
 		break;
 	case hook_BotAI:
-		hook.s.skinname = NULL;
+	case hook_ShouldJingleContinue:
+		hook.s.str = NULL;
 		if (lua_isstring(L, 2))
 		{ // lowercase copy
-			const char *s = lua_tostring(L, 2);
-			char *p = hook.s.skinname = ZZ_Alloc(strlen(s)+1);
-			do {
-				*p = tolower(*s);
-				++p;
-			} while(*(++s));
-			*p = 0;
+			hook.s.str = Z_StrDup(lua_tostring(L, 2));
+			strlwr(hook.s.str);
 		}
 		break;
 	case hook_LinedefExecute: // Linedef executor functions
-		{ // uppercase copy
-			const char *s = luaL_checkstring(L, 2);
-			char *p = hook.s.funcname = ZZ_Alloc(strlen(s)+1);
-			do {
-				*p = toupper(*s);
-				++p;
-			} while(*(++s));
-			*p = 0;
-		}
+		hook.s.str = Z_StrDup(luaL_checkstring(L, 2));
+		strupr(hook.s.str);
 		break;
 	default:
 		break;
@@ -264,6 +260,7 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 	I_Assert(mo->type < NUMMOBJTYPES);
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// Look for all generic mobj hooks
 	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
@@ -271,12 +268,11 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 		if (hookp->type != which)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 			LUA_PushUserdata(gL, mo, META_MOBJ);
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -2);
-		if (lua_pcall(gL, 1, 1, 0)) {
+		if (lua_pcall(gL, 1, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -293,12 +289,11 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 		if (hookp->type != which)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 			LUA_PushUserdata(gL, mo, META_MOBJ);
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -2);
-		if (lua_pcall(gL, 1, 1, 0)) {
+		if (lua_pcall(gL, 1, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -322,18 +317,18 @@ boolean LUAh_PlayerHook(player_t *plr, enum hook which)
 		return false;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	for (hookp = playerhooks; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != which)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 			LUA_PushUserdata(gL, plr, META_PLAYER);
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -2);
-		if (lua_pcall(gL, 1, 1, 0)) {
+		if (lua_pcall(gL, 1, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -357,6 +352,7 @@ void LUAh_MapChange(INT16 mapnumber)
 		return;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 	lua_pushinteger(gL, mapnumber);
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
@@ -364,10 +360,12 @@ void LUAh_MapChange(INT16 mapnumber)
 		if (hookp->type != hook_MapChange)
 			continue;
 
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -2);
-		LUA_Call(gL, 1);
+		if (lua_pcall(gL, 1, 0, 1)) {
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+		}
 	}
 
 	lua_settop(gL, 0);
@@ -381,6 +379,7 @@ void LUAh_MapLoad(void)
 		return;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 	lua_pushinteger(gL, gamemap);
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
@@ -388,10 +387,12 @@ void LUAh_MapLoad(void)
 		if (hookp->type != hook_MapLoad)
 			continue;
 
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -2);
-		LUA_Call(gL, 1);
+		if (lua_pcall(gL, 1, 0, 1)) {
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+		}
 	}
 
 	lua_settop(gL, 0);
@@ -405,6 +406,7 @@ void LUAh_PlayerJoin(int playernum)
 		return;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 	lua_pushinteger(gL, playernum);
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
@@ -412,10 +414,12 @@ void LUAh_PlayerJoin(int playernum)
 		if (hookp->type != hook_PlayerJoin)
 			continue;
 
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -2);
-		LUA_Call(gL, 1);
+		if (lua_pcall(gL, 1, 0, 1)) {
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+		}
 	}
 
 	lua_settop(gL, 0);
@@ -428,20 +432,23 @@ void LUAh_PreThinkFrame(void)
 	if (!gL || !(hooksAvailable[hook_PreThinkFrame/8] & (1<<(hook_PreThinkFrame%8))))
 		return;
 
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_PreThinkFrame)
 			continue;
 
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
-		if (lua_pcall(gL, 0, 0, 0)) {
+		PushHook(gL, hookp);
+		if (lua_pcall(gL, 0, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
 			hookp->error = true;
 		}
 	}
+
+	lua_pop(gL, 1); // Pop error handler
 }
 
 // Hook for frame (after mobj and player thinkers)
@@ -451,22 +458,24 @@ void LUAh_ThinkFrame(void)
 	if (!gL || !(hooksAvailable[hook_ThinkFrame/8] & (1<<(hook_ThinkFrame%8))))
 		return;
 
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_ThinkFrame)
 			continue;
 
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
-		if (lua_pcall(gL, 0, 0, 0)) {
+		PushHook(gL, hookp);
+		if (lua_pcall(gL, 0, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
 			hookp->error = true;
 		}
 	}
-}
 
+	lua_pop(gL, 1); // Pop error handler
+}
 
 // Hook for frame (at end of tick, ie after overlays, precipitation, specials)
 void LUAh_PostThinkFrame(void)
@@ -475,20 +484,23 @@ void LUAh_PostThinkFrame(void)
 	if (!gL || !(hooksAvailable[hook_PostThinkFrame/8] & (1<<(hook_PostThinkFrame%8))))
 		return;
 
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_PostThinkFrame)
 			continue;
 
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
-		if (lua_pcall(gL, 0, 0, 0)) {
+		PushHook(gL, hookp);
+		if (lua_pcall(gL, 0, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
 			hookp->error = true;
 		}
 	}
+
+	lua_pop(gL, 1); // Pop error handler
 }
 
 // Hook for mobj collisions
@@ -502,6 +514,7 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 	I_Assert(thing1->type < NUMMOBJTYPES);
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// Look for all generic mobj collision hooks
 	for (hookp = mobjcollidehooks[MT_NULL]; hookp; hookp = hookp->next)
@@ -509,16 +522,15 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 		if (hookp->type != which)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, thing1, META_MOBJ);
 			LUA_PushUserdata(gL, thing2, META_MOBJ);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -540,16 +552,15 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 		if (hookp->type != which)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, thing1, META_MOBJ);
 			LUA_PushUserdata(gL, thing2, META_MOBJ);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -580,6 +591,7 @@ UINT8 LUAh_MobjLineCollideHook(mobj_t *thing, line_t *line, enum hook which)
 	I_Assert(thing->type < NUMMOBJTYPES);
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// Look for all generic mobj collision hooks
 	for (hookp = mobjcollidehooks[MT_NULL]; hookp; hookp = hookp->next)
@@ -587,16 +599,15 @@ UINT8 LUAh_MobjLineCollideHook(mobj_t *thing, line_t *line, enum hook which)
 		if (hookp->type != which)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, thing, META_MOBJ);
 			LUA_PushUserdata(gL, line, META_LINE);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -618,16 +629,15 @@ UINT8 LUAh_MobjLineCollideHook(mobj_t *thing, line_t *line, enum hook which)
 		if (hookp->type != which)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, thing, META_MOBJ);
 			LUA_PushUserdata(gL, line, META_LINE);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -659,16 +669,16 @@ boolean LUAh_MobjThinker(mobj_t *mo)
 	I_Assert(mo->type < NUMMOBJTYPES);
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// Look for all generic mobj thinker hooks
 	for (hookp = mobjthinkerhooks[MT_NULL]; hookp; hookp = hookp->next)
 	{
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 			LUA_PushUserdata(gL, mo, META_MOBJ);
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -2);
-		if (lua_pcall(gL, 1, 1, 0)) {
+		if (lua_pcall(gL, 1, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -682,12 +692,11 @@ boolean LUAh_MobjThinker(mobj_t *mo)
 
 	for (hookp = mobjthinkerhooks[mo->type]; hookp; hookp = hookp->next)
 	{
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 			LUA_PushUserdata(gL, mo, META_MOBJ);
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -2);
-		if (lua_pcall(gL, 1, 1, 0)) {
+		if (lua_pcall(gL, 1, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -714,6 +723,7 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 	I_Assert(special->type < NUMMOBJTYPES);
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// Look for all generic touch special hooks
 	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
@@ -721,16 +731,15 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 		if (hookp->type != hook_TouchSpecial)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, special, META_MOBJ);
 			LUA_PushUserdata(gL, toucher, META_MOBJ);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -747,16 +756,15 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 		if (hookp->type != hook_TouchSpecial)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, special, META_MOBJ);
 			LUA_PushUserdata(gL, toucher, META_MOBJ);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -783,6 +791,7 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 	I_Assert(target->type < NUMMOBJTYPES);
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// Look for all generic should damage hooks
 	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
@@ -790,7 +799,7 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 		if (hookp->type != hook_ShouldDamage)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, target, META_MOBJ);
 			LUA_PushUserdata(gL, inflictor, META_MOBJ);
@@ -798,14 +807,13 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 			lua_pushinteger(gL, damage);
 			lua_pushinteger(gL, damagetype);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
-		if (lua_pcall(gL, 5, 1, 0)) {
+		if (lua_pcall(gL, 5, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -826,7 +834,7 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 	{
 		if (hookp->type != hook_ShouldDamage)
 			continue;
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, target, META_MOBJ);
 			LUA_PushUserdata(gL, inflictor, META_MOBJ);
@@ -834,14 +842,13 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 			lua_pushinteger(gL, damage);
 			lua_pushinteger(gL, damagetype);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
-		if (lua_pcall(gL, 5, 1, 0)) {
+		if (lua_pcall(gL, 5, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -873,6 +880,7 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 	I_Assert(target->type < NUMMOBJTYPES);
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// Look for all generic mobj damage hooks
 	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
@@ -880,7 +888,7 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 		if (hookp->type != hook_MobjDamage)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, target, META_MOBJ);
 			LUA_PushUserdata(gL, inflictor, META_MOBJ);
@@ -888,14 +896,13 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 			lua_pushinteger(gL, damage);
 			lua_pushinteger(gL, damagetype);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
-		if (lua_pcall(gL, 5, 1, 0)) {
+		if (lua_pcall(gL, 5, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -912,7 +919,7 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 		if (hookp->type != hook_MobjDamage)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, target, META_MOBJ);
 			LUA_PushUserdata(gL, inflictor, META_MOBJ);
@@ -920,14 +927,13 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 			lua_pushinteger(gL, damage);
 			lua_pushinteger(gL, damagetype);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
-		if (lua_pcall(gL, 5, 1, 0)) {
+		if (lua_pcall(gL, 5, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -954,6 +960,7 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 
 	I_Assert(target->type < NUMMOBJTYPES);
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// Look for all generic mobj death hooks
 	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
@@ -961,20 +968,19 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 
 		if (hookp->type != hook_MobjDeath)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, target, META_MOBJ);
 			LUA_PushUserdata(gL, inflictor, META_MOBJ);
 			LUA_PushUserdata(gL, source, META_MOBJ);
 			lua_pushinteger(gL, damagetype);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
-		if (lua_pcall(gL, 4, 1, 0)) {
+		if (lua_pcall(gL, 4, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -991,20 +997,19 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 
 		if (hookp->type != hook_MobjDeath)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, target, META_MOBJ);
 			LUA_PushUserdata(gL, inflictor, META_MOBJ);
 			LUA_PushUserdata(gL, source, META_MOBJ);
 			lua_pushinteger(gL, damagetype);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
-		if (lua_pcall(gL, 4, 1, 0)) {
+		if (lua_pcall(gL, 4, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1029,22 +1034,22 @@ boolean LUAh_BotTiccmd(player_t *bot, ticcmd_t *cmd)
 		return false;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_BotTiccmd)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, bot, META_PLAYER);
 			LUA_PushUserdata(gL, cmd, META_TICCMD);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1069,23 +1074,23 @@ boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		return false;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_BotAI
-		|| (hookp->s.skinname && strcmp(hookp->s.skinname, ((skin_t*)tails->skin)->name)))
+		|| (hookp->s.str && strcmp(hookp->s.str, ((skin_t*)tails->skin)->name)))
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, sonic, META_MOBJ);
 			LUA_PushUserdata(gL, tails, META_MOBJ);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 8, 0)) {
+		if (lua_pcall(gL, 2, 8, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1123,6 +1128,51 @@ boolean LUAh_BotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	return hooked;
 }
 
+// Hook for B_CheckRespawn
+boolean LUAh_BotRespawn(mobj_t *sonic, mobj_t *tails)
+{
+	hook_p hookp;
+	UINT8 shouldRespawn = 0; // 0 = default, 1 = force yes, 2 = force no.
+	if (!gL || !(hooksAvailable[hook_BotRespawn/8] & (1<<(hook_BotRespawn%8))))
+		return false;
+
+	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_BotRespawn)
+			continue;
+
+		if (lua_gettop(gL) == 1)
+		{
+			LUA_PushUserdata(gL, sonic, META_MOBJ);
+			LUA_PushUserdata(gL, tails, META_MOBJ);
+		}
+		PushHook(gL, hookp);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 1)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1))
+		{
+			if (lua_toboolean(gL, -1))
+				shouldRespawn = 1; // Force yes
+			else
+				shouldRespawn = 2; // Force no
+		}
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return shouldRespawn;
+}
+
 // Hook for linedef executors
 boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 {
@@ -1132,24 +1182,27 @@ boolean LUAh_LinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 		return 0;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	for (hookp = linedefexecutorhooks; hookp; hookp = hookp->next)
 	{
-		if (strcmp(hookp->s.funcname, line->text))
+		if (strcmp(hookp->s.str, line->stringargs[0]))
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, line, META_LINE);
 			LUA_PushUserdata(gL, mo, META_MOBJ);
 			LUA_PushUserdata(gL, sector, META_SECTOR);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -4);
 		lua_pushvalue(gL, -4);
 		lua_pushvalue(gL, -4);
-		LUA_Call(gL, 3);
+		if (lua_pcall(gL, 3, 0, 1)) {
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+		}
 		hooked = true;
 	}
 
@@ -1166,13 +1219,14 @@ boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 		return false;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_PlayerMsg)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, &players[source], META_PLAYER); // Source player
 			if (flags & 2 /*HU_CSAY*/) { // csay TODO: make HU_CSAY accessible outside hu_stuff.c
@@ -1190,13 +1244,12 @@ boolean LUAh_PlayerMsg(int source, int target, int flags, char *msg)
 			}
 			lua_pushstring(gL, msg); // msg
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
-		if (lua_pcall(gL, 4, 1, 0)) {
+		if (lua_pcall(gL, 4, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1222,6 +1275,7 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 
 		return false;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
@@ -1229,20 +1283,19 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 
 		|| (hookp->s.mt && !(inflictor && hookp->s.mt == inflictor->type)))
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, player, META_PLAYER);
 			LUA_PushUserdata(gL, inflictor, META_MOBJ);
 			LUA_PushUserdata(gL, source, META_MOBJ);
 			lua_pushinteger(gL, damagetype);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
 		lua_pushvalue(gL, -5);
-		if (lua_pcall(gL, 4, 1, 0)) {
+		if (lua_pcall(gL, 4, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1261,7 +1314,7 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 
 void LUAh_NetArchiveHook(lua_CFunction archFunc)
 {
 	hook_p hookp;
-
+	int errorhandlerindex;
 	if (!gL || !(hooksAvailable[hook_NetVars/8] & (1<<(hook_NetVars%8))))
 		return;
 
@@ -1269,8 +1322,11 @@ void LUAh_NetArchiveHook(lua_CFunction archFunc)
 	I_Assert(lua_gettop(gL) > 0);
 	I_Assert(lua_istable(gL, -1));
 
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+	errorhandlerindex = lua_gettop(gL);
+
 	// tables becomes an upvalue of archFunc
-	lua_pushvalue(gL, -1);
+	lua_pushvalue(gL, -2);
 	lua_pushcclosure(gL, archFunc, 1);
 	// stack: tables, archFunc
 
@@ -1279,13 +1335,15 @@ void LUAh_NetArchiveHook(lua_CFunction archFunc)
 		if (hookp->type != hook_NetVars)
 			continue;
 
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -2); // archFunc
-		LUA_Call(gL, 1);
+		if (lua_pcall(gL, 1, 0, errorhandlerindex)) {
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+		}
 	}
 
-	lua_pop(gL, 1); // pop archFunc
+	lua_pop(gL, 2); // Pop archFunc and error handler
 	// stack: tables
 }
 
@@ -1297,6 +1355,7 @@ boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing)
 		return false;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// Look for all generic mobj map thing spawn hooks
 	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
@@ -1304,16 +1363,15 @@ boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing)
 		if (hookp->type != hook_MapThingSpawn)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, mo, META_MOBJ);
 			LUA_PushUserdata(gL, mthing, META_MAPTHING);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1330,16 +1388,15 @@ boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing)
 		if (hookp->type != hook_MapThingSpawn)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, mo, META_MOBJ);
 			LUA_PushUserdata(gL, mthing, META_MAPTHING);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1364,6 +1421,7 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
 		return 0;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// Look for all generic mobj follow item hooks
 	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
@@ -1371,16 +1429,15 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
 		if (hookp->type != hook_FollowMobj)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, player, META_PLAYER);
 			LUA_PushUserdata(gL, mobj, META_MOBJ);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1397,16 +1454,15 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
 		if (hookp->type != hook_FollowMobj)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, player, META_PLAYER);
 			LUA_PushUserdata(gL, mobj, META_MOBJ);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1431,22 +1487,22 @@ UINT8 LUAh_PlayerCanDamage(player_t *player, mobj_t *mobj)
 		return 0;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	for (hookp = playerhooks; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_PlayerCanDamage)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, player, META_PLAYER);
 			LUA_PushUserdata(gL, mobj, META_MOBJ);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1474,22 +1530,25 @@ void LUAh_PlayerQuit(player_t *plr, kickreason_t reason)
 		return;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_PlayerQuit)
 			continue;
 
-	    if (lua_gettop(gL) == 0)
+	    if (lua_gettop(gL) == 1)
 	    {
 	        LUA_PushUserdata(gL, plr, META_PLAYER); // Player that quit
 	        lua_pushinteger(gL, reason); // Reason for quitting
 	    }
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		LUA_Call(gL, 2);
+		if (lua_pcall(gL, 2, 0, 1)) {
+			CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+		}
 	}
 
 	lua_settop(gL, 0);
@@ -1502,20 +1561,23 @@ void LUAh_IntermissionThinker(void)
 	if (!gL || !(hooksAvailable[hook_IntermissionThinker/8] & (1<<(hook_IntermissionThinker%8))))
 		return;
 
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	for (hookp = roothook; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_IntermissionThinker)
 			continue;
 
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
-		if (lua_pcall(gL, 0, 0, 0)) {
+		PushHook(gL, hookp);
+		if (lua_pcall(gL, 0, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
 			hookp->error = true;
 		}
 	}
+
+	lua_pop(gL, 1); // Pop error handler
 }
 
 // Hook for team switching
@@ -1528,13 +1590,14 @@ boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, b
 		return true;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	for (hookp = playerhooks; hookp; hookp = hookp->next)
 	{
 		if (hookp->type != hook_TeamSwitch)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, player, META_PLAYER);
 			lua_pushinteger(gL, newteam);
@@ -1542,14 +1605,13 @@ boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, b
 			lua_pushboolean(gL, tryingautobalance);
 			lua_pushboolean(gL, tryingscramble);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
 		lua_pushvalue(gL, -6);
-		if (lua_pcall(gL, 5, 1, 0)) {
+		if (lua_pcall(gL, 5, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1574,6 +1636,8 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 		return 0;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	hud_running = true; // local hook
 
 	for (hookp = playerhooks; hookp; hookp = hookp->next)
@@ -1581,18 +1645,17 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 		if (hookp->type != hook_ViewpointSwitch)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, player, META_PLAYER);
 			LUA_PushUserdata(gL, newdisplayplayer, META_PLAYER);
 			lua_pushboolean(gL, forced);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -4);
 		lua_pushvalue(gL, -4);
 		lua_pushvalue(gL, -4);
-		if (lua_pcall(gL, 3, 1, 0)) {
+		if (lua_pcall(gL, 3, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1610,6 +1673,7 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 	}
 
 	lua_settop(gL, 0);
+
 	hud_running = false;
 
 	return canSwitchView;
@@ -1625,6 +1689,8 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 		return true;
 
 	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	hud_running = true; // local hook
 
 	for (hookp = playerhooks; hookp; hookp = hookp->next)
@@ -1632,16 +1698,15 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 		if (hookp->type != hook_SeenPlayer)
 			continue;
 
-		if (lua_gettop(gL) == 0)
+		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, player, META_PLAYER);
 			LUA_PushUserdata(gL, seenfriend, META_PLAYER);
 		}
-		lua_pushfstring(gL, FMT_HOOKID, hookp->id);
-		lua_gettable(gL, LUA_REGISTRYINDEX);
+		PushHook(gL, hookp);
 		lua_pushvalue(gL, -3);
 		lua_pushvalue(gL, -3);
-		if (lua_pcall(gL, 2, 1, 0)) {
+		if (lua_pcall(gL, 2, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1654,10 +1719,80 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 	}
 
 	lua_settop(gL, 0);
+
 	hud_running = false;
 
 	return hasSeenPlayer;
 }
 #endif // SEENAMES
 
-#endif
+boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
+{
+	hook_p hookp;
+	boolean keepplaying = false;
+	if (!gL || !(hooksAvailable[hook_ShouldJingleContinue/8] & (1<<(hook_ShouldJingleContinue%8))))
+		return true;
+
+	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	hud_running = true; // local hook
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_ShouldJingleContinue
+			|| (hookp->s.str && strcmp(hookp->s.str, musname)))
+			continue;
+
+		if (lua_gettop(gL) == 1)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+			lua_pushstring(gL, musname);
+		}
+		PushHook(gL, hookp);
+		lua_pushvalue(gL, -3);
+		lua_pushvalue(gL, -3);
+		if (lua_pcall(gL, 2, 1, 1)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1) && lua_toboolean(gL, -1))
+			keepplaying = true; // Keep playing this boolean
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+
+	hud_running = false;
+
+	return keepplaying;
+}
+
+// Hook for game quitting
+void LUAh_GameQuit(void)
+{
+	hook_p hookp;
+	if (!gL || !(hooksAvailable[hook_GameQuit/8] & (1<<(hook_GameQuit%8))))
+		return;
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_GameQuit)
+			continue;
+
+		PushHook(gL, hookp);
+		if (lua_pcall(gL, 0, 0, 1)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+		}
+	}
+	
+	lua_pop(gL, 1); // Pop error handler
+}

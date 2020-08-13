@@ -1,21 +1,14 @@
-// Emacs style mode select   -*- C++ -*-
+// SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-//
 // Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
-// This program is free software; you can redistribute it and/or
-// modify it under the terms of the GNU General Public License
-// as published by the Free Software Foundation; either version 2
-// of the License, or (at your option) any later version.
-//
-// This program is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-/// \file
-/// \brief defines structures and exports for the standard 3D driver DLL used by Doom Legacy
+/// \file hw_data.h
+/// \brief defines structures and exports for the hardware interface used by Sonic Robo Blast 2
 
 #ifndef _HWR_DATA_
 #define _HWR_DATA_
@@ -27,8 +20,6 @@
 #endif
 
 #include "../doomdef.h"
-//THIS MUST DISAPPEAR!!!
-#include "hw_glide.h"
 #include "../screen.h"
 
 
@@ -36,12 +27,27 @@
 //                                                               TEXTURE INFO
 // ==========================================================================
 
-// grInfo.data holds the address of the graphics data cached in heap memory
+typedef enum GLTextureFormat_e
+{
+	GL_TEXFMT_P_8                 = 0x01, /* 8-bit palette */
+	GL_TEXFMT_AP_88               = 0x02, /* 8-bit alpha, 8-bit palette */
+
+	GL_TEXFMT_RGBA                = 0x10, /* 32 bit RGBA! */
+
+	GL_TEXFMT_ALPHA_8             = 0x20, /* (0..0xFF) alpha     */
+	GL_TEXFMT_INTENSITY_8         = 0x21, /* (0..0xFF) intensity */
+	GL_TEXFMT_ALPHA_INTENSITY_88  = 0x22,
+} GLTextureFormat_t;
+
+// data holds the address of the graphics data cached in heap memory
 //                NULL if the texture is not in Doom heap cache.
 struct GLMipmap_s
 {
-	GrTexInfo       grInfo;         //for TexDownloadMipMap
-	FxU32           flags;
+	//for TexDownloadMipMap
+	GLTextureFormat_t format;
+	void              *data;
+
+	UINT32          flags;
 	UINT16          height;
 	UINT16          width;
 	UINT32          downloaded;     // the dll driver have it in there cache ?
@@ -58,13 +64,13 @@ typedef struct GLMipmap_s GLMipmap_t;
 //
 // Doom texture info, as cached for hardware rendering
 //
-struct GLTexture_s
+struct GLMapTexture_s
 {
 	GLMipmap_t  mipmap;
 	float       scaleX;             //used for scaling textures on walls
 	float       scaleY;
 };
-typedef struct GLTexture_s GLTexture_t;
+typedef struct GLMapTexture_s GLMapTexture_t;
 
 
 // a cached patch as converted to hardware format, holding the original patch_t

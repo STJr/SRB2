@@ -365,10 +365,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	if (special->flags & (MF_ENEMY|MF_BOSS) && special->flags2 & MF2_FRET)
 		return;
 
-#ifdef HAVE_BLUA
 	if (LUAh_TouchSpecial(special, toucher) || P_MobjWasRemoved(special))
 		return;
-#endif
 
 	// 0 = none, 1 = elemental pierce, 2 = bubble bounce
 	elementalpierce = (((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL || (player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) && (player->pflags & PF_SHIELDABILITY)
@@ -469,10 +467,22 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if ((P_MobjFlip(toucher)*toucher->momz < 0) && (elementalpierce != 1))
 			{
-				if (elementalpierce == 2)
-					P_DoBubbleBounce(player);
-				else if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
-					toucher->momz = -toucher->momz;
+				if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
+				{
+					fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
+					
+					if (elementalpierce == 2) // Reset bubblewrap, part 1
+						P_DoBubbleBounce(player);
+					toucher->momz = setmomz;
+					if (elementalpierce == 2) // Reset bubblewrap, part 2
+					{
+						boolean underwater = toucher->eflags & MFE_UNDERWATER;
+							
+						if (underwater)
+							toucher->momz /= 2;
+						toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
+					}
+				}
 			}
 			if (player->pflags & PF_BOUNCING)
 				P_DoAbilityBounce(player, false);
@@ -635,7 +645,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if (ALL7EMERALDS(emeralds)) // Got all 7
 			{
-				if (!(netgame || multiplayer))
+				if (continuesInSession)
 				{
 					player->continues += 1;
 					player->gotcontinue = true;
@@ -645,7 +655,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						S_StartSound(toucher, sfx_chchng);
 				}
 				else
+				{
+					P_GiveCoopLives(player, 1, true); // if continues are disabled, a life is a reasonable substitute
 					S_StartSound(toucher, sfx_chchng);
+				}
 			}
 			else
 			{
@@ -1142,10 +1155,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					toucher->angle = special->angle;
 
-					if (player == &players[consoleplayer])
-						localangle = toucher->angle;
-					else if (player == &players[secondarydisplayplayer])
-						localangle2 = toucher->angle;
+					P_SetPlayerAngle(player, toucher->angle);
 
 					P_ResetPlayer(player);
 
@@ -1470,7 +1480,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_BLACKEGGMAN_GOOPFIRE:
-			if (!player->powers[pw_flashing])
+			if (!player->powers[pw_flashing] && !(player->powers[pw_ignorelatch] & (1<<15)))
 			{
 				toucher->momx = 0;
 				toucher->momy = 0;
@@ -1563,10 +1573,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 #if 0 // camera redirection - deemed unnecessary
 			toucher->angle = special->angle;
-			if (player == &players[consoleplayer])
-				localangle = toucher->angle;
-			else if (player == &players[secondarydisplayplayer])
-				localangle2 = toucher->angle;
+			P_SetPlayerAngle(player, toucher->angle);
 #endif
 
 			S_StartSound(toucher, special->info->attacksound); // home run
@@ -1589,44 +1596,53 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 		case MT_SMALLGRABCHAIN:
 		case MT_BIGGRABCHAIN:
-			if (P_MobjFlip(toucher)*toucher->momz > 0
-				|| (player->powers[pw_carry]))
-				return;
-
-			if (toucher->z > special->z + special->height/2)
-				return;
-
-			if (toucher->z + toucher->height/2 < special->z)
-				return;
-
-			if (player->powers[pw_flashing])
-				return;
-
-			if (special->movefactor && special->tracer && special->tracer->angle != ANGLE_90 && special->tracer->angle != ANGLE_270)
-			{ // I don't expect you to understand this, Mr Bond...
-				angle_t ang = R_PointToAngle2(special->x, special->y, toucher->x, toucher->y) - special->tracer->angle;
-				if ((special->movefactor > 0) == (special->tracer->angle > ANGLE_90 && special->tracer->angle < ANGLE_270))
-					ang += ANGLE_180;
-				if (ang < ANGLE_180)
-					return; // I expect you to die.
-			}
-
-			P_ResetPlayer(player);
-			P_SetTarget(&toucher->tracer, special);
-
-			if (special->tracer && !(special->tracer->flags2 & MF2_STRONGBOX))
 			{
-				player->powers[pw_carry] = CR_MACESPIN;
-				S_StartSound(toucher, sfx_spin);
-				P_SetPlayerMobjState(toucher, S_PLAY_ROLL);
+				boolean macespin = false;
+				if (P_MobjFlip(toucher)*toucher->momz > 0
+					|| (player->powers[pw_carry]))
+					return;
+
+				if (toucher->z > special->z + special->height/2)
+					return;
+
+				if (toucher->z + toucher->height/2 < special->z)
+					return;
+
+				if (player->powers[pw_flashing])
+					return;
+
+				if (special->tracer && !(special->tracer->flags2 & MF2_STRONGBOX))
+					macespin = true;
+				
+				if (macespin ? (player->powers[pw_ignorelatch] & (1<<15)) : (player->powers[pw_ignorelatch]))
+					return;
+
+				if (special->movefactor && special->tracer && special->tracer->angle != ANGLE_90 && special->tracer->angle != ANGLE_270)
+				{ // I don't expect you to understand this, Mr Bond...
+					angle_t ang = R_PointToAngle2(special->x, special->y, toucher->x, toucher->y) - special->tracer->angle;
+					if ((special->movefactor > 0) == (special->tracer->angle > ANGLE_90 && special->tracer->angle < ANGLE_270))
+						ang += ANGLE_180;
+					if (ang < ANGLE_180)
+						return; // I expect you to die.
+				}
+
+				P_ResetPlayer(player);
+				P_SetTarget(&toucher->tracer, special);
+
+				if (macespin)
+				{
+					player->powers[pw_carry] = CR_MACESPIN;
+					S_StartSound(toucher, sfx_spin);
+					P_SetPlayerMobjState(toucher, S_PLAY_ROLL);
+				}
+				else
+					player->powers[pw_carry] = CR_GENERIC;
+
+				// Can't jump first frame
+				player->pflags |= PF_JUMPSTASIS;
+
+				return;
 			}
-			else
-				player->powers[pw_carry] = CR_GENERIC;
-
-			// Can't jump first frame
-			player->pflags |= PF_JUMPSTASIS;
-
-			return;
 		case MT_EGGMOBILE2_POGO:
 			// sanity checks
 			if (!special->target || !special->target->health)
@@ -1716,7 +1732,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_MINECARTSPAWNER:
-			if (!player->bot && special->fuse <= TICRATE && player->powers[pw_carry] != CR_MINECART)
+			if (!player->bot && special->fuse <= TICRATE && player->powers[pw_carry] != CR_MINECART && !(player->powers[pw_ignorelatch] & (1<<15)))
 			{
 				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
 				P_SetTarget(&mcart->target, toucher);
@@ -1919,10 +1935,8 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 	if (!netgame)
 		return; // Presumably it's obvious what's happening in splitscreen.
 
-#ifdef HAVE_BLUA
 	if (LUAh_HurtMsg(player, inflictor, source, damagetype))
 		return;
-#endif
 
 	deadtarget = (player->mo->health <= 0);
 
@@ -2285,7 +2299,7 @@ void P_CheckSurvivors(void)
 	if (!taggers) //If there are no taggers, pick a survivor at random to be it.
 	{
 		// Exception for hide and seek. If a round has started and the IT player leaves, end the round.
-		if (gametype == GT_HIDEANDSEEK && (leveltime >= (hidetime * TICRATE)))
+		if ((gametyperules & GTR_HIDEFROZEN) && (leveltime >= (hidetime * TICRATE)))
 		{
 			CONS_Printf(M_GetText("The IT player has left the game.\n"));
 			if (server)
@@ -2395,10 +2409,8 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	target->flags2 &= ~(MF2_SKULLFLY|MF2_NIGHTSPULL);
 	target->health = 0; // This makes it easy to check if something's dead elsewhere.
 
-#ifdef HAVE_BLUA
 	if (LUAh_MobjDeath(target, inflictor, source, damagetype) || P_MobjWasRemoved(target))
 		return;
-#endif
 
 	// Let EVERYONE know what happened to a player! 01-29-2002 Tails
 	if (target->player && !target->player->spectator)
@@ -2525,7 +2537,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			}
 			P_RestoreMusic(target->player);
 
-			if (gametype != GT_COOP)
+			if (!G_CoopGametype())
 			{
 				HU_SetCEchoFlags(0);
 				HU_SetCEchoDuration(5);
@@ -2603,7 +2615,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 			// allow them to try again, rather than sitting the whole thing out.
 			if (leveltime >= hidetime * TICRATE)
 			{
-				if (gametype == GT_TAG)//suiciding in survivor makes you IT.
+				if (!(gametyperules & GTR_HIDEFROZEN))//suiciding in survivor makes you IT.
 				{
 					target->player->pflags |= PF_TAGIT;
 					CONS_Printf(M_GetText("%s is now IT!\n"), player_names[target->player-players]); // Tell everyone who is it!
@@ -3097,7 +3109,7 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 		P_AddPlayerScore(source->player, 100); //award points to tagger.
 		P_HitDeathMessages(player, inflictor, source, 0);
 
-		if (gametype == GT_TAG) //survivor
+		if (!(gametyperules & GTR_HIDEFROZEN)) //survivor
 		{
 			player->pflags |= PF_TAGIT; //in survivor, the player becomes IT and helps hunt down the survivors.
 			CONS_Printf(M_GetText("%s is now IT!\n"), player_names[player-players]); // Tell everyone who is it!
@@ -3156,9 +3168,9 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 			return false;
 
 		// In COOP/RACE, you can't hurt other players unless cv_friendlyfire is on
-		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && (G_PlatformGametype()))
+		if (!(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE)) && (gametyperules & GTR_FRIENDLY))
 		{
-			if (gametype == GT_COOP && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
+			if ((gametyperules & GTR_FRIENDLY) && inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK)) // co-op only
 			{
 				if (player->revitem != MT_LHRT && player->spinitem != MT_LHRT && player->thokitem != MT_LHRT) // Healers do not get to heal other healers.
 				{
@@ -3257,7 +3269,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	}
 
 	// If the player was super, tell them he/she ain't so super nomore.
-	if (gametype != GT_COOP && player->powers[pw_super])
+	if (!G_CoopGametype() && player->powers[pw_super])
 	{
 		S_StartSound(NULL, sfx_s3k66); //let all players hear it.
 		HU_SetCEchoFlags(0);
@@ -3441,7 +3453,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	if (player->powers[pw_invulnerability] || player->powers[pw_flashing] || player->powers[pw_super])
 		return;
 
-	if (!cv_friendlyfire.value)
+	if (!cv_friendlyfire.value && source && source->player)
 	{
 		if (inflictor->type == MT_LHRT && !(player->powers[pw_shield] & SH_NOSTACK))
 		{
@@ -3456,7 +3468,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 			return;
 	}
 
-	if (inflictor->type == MT_LHRT)
+	if (inflictor && inflictor->type == MT_LHRT)
 		return;
 
 	if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
@@ -3511,11 +3523,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	player_t *player;
-#ifdef HAVE_BLUA
 	boolean force = false;
-#else
-	static const boolean force = false;
-#endif
 
 	if (objectplacing)
 		return false;
@@ -3533,7 +3541,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return false;
 	}
 
-#ifdef HAVE_BLUA
 	// Everything above here can't be forced.
 	if (!metalrecording)
 	{
@@ -3545,7 +3552,6 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		else if (shouldForce == 2)
 			return false;
 	}
-#endif
 
 	if (!force)
 	{
@@ -3579,10 +3585,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		if (!force && target->flags2 & MF2_FRET) // Currently flashing from being hit
 			return false;
 
-#ifdef HAVE_BLUA
 		if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype) || P_MobjWasRemoved(target))
 			return true;
-#endif
 
 		if (target->health > 1)
 			target->flags2 |= MF2_FRET;
@@ -3627,14 +3631,12 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				if (source == target)
 					return false; // Don't hit yourself with your own paraloop, baka
 				if (source && source->player && !(cv_friendlyfire.value || (gametyperules & GTR_FRIENDLYFIRE))
-				&& (gametype == GT_COOP
+				&& ((gametyperules & GTR_FRIENDLY)
 				|| (G_GametypeHasTeams() && player->ctfteam == source->player->ctfteam)))
 					return false; // Don't run eachother over in special stages and team games and such
 			}
-#ifdef HAVE_BLUA
 			if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
 				return true;
-#endif
 			P_NiGHTSDamage(target, source); // -5s :(
 			return true;
 		}
@@ -3687,18 +3689,14 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (force
 			|| (inflictor && inflictor->flags & MF_MISSILE && inflictor->flags2 & MF2_SUPERFIRE)) // Super Sonic is stunned!
 			{
-#ifdef HAVE_BLUA
 				if (!LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
-#endif
 					P_SuperDamage(player, inflictor, source, damage);
 				return true;
 			}
 			return false;
 		}
-#ifdef HAVE_BLUA
 		else if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
 			return true;
-#endif
 		else if (player->powers[pw_shield] || (player->bot && !ultimatemode))  //If One-Hit Shield
 		{
 			P_ShieldDamage(player, inflictor, source, damage, damagetype);

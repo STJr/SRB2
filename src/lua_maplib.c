@@ -11,14 +11,11 @@
 /// \brief game map library for Lua scripting
 
 #include "doomdef.h"
-#ifdef HAVE_BLUA
 #include "r_state.h"
 #include "p_local.h"
 #include "p_setup.h"
 #include "z_zone.h"
-#ifdef ESLOPE
 #include "p_slopes.h"
-#endif
 #include "r_main.h"
 
 #include "lua_script.h"
@@ -42,13 +39,9 @@ enum sector_e {
 	sector_heightsec,
 	sector_camsec,
 	sector_lines,
-#ifdef ESLOPE
 	sector_ffloors,
 	sector_fslope,
 	sector_cslope
-#else
-	sector_ffloors
-#endif
 };
 
 static const char *const sector_opt[] = {
@@ -65,10 +58,8 @@ static const char *const sector_opt[] = {
 	"camsec",
 	"lines",
 	"ffloors",
-#ifdef ESLOPE
 	"f_slope",
 	"c_slope",
-#endif
 	NULL};
 
 enum subsector_e {
@@ -94,9 +85,13 @@ enum line_e {
 	line_flags,
 	line_special,
 	line_tag,
+	line_args,
+	line_stringargs,
 	line_sidenum,
 	line_frontside,
 	line_backside,
+	line_alpha,
+	line_executordelay,
 	line_slopetype,
 	line_frontsector,
 	line_backsector,
@@ -115,9 +110,13 @@ static const char *const line_opt[] = {
 	"flags",
 	"special",
 	"tag",
+	"args",
+	"stringargs",
 	"sidenum",
 	"frontside",
 	"backside",
+	"alpha",
+	"executordelay",
 	"slopetype",
 	"frontsector",
 	"backsector",
@@ -148,6 +147,7 @@ static const char *const side_opt[] = {
 	"toptexture",
 	"bottomtexture",
 	"midtexture",
+	"line",
 	"sector",
 	"special",
 	"repeatcnt",
@@ -181,10 +181,8 @@ enum ffloor_e {
 	ffloor_toplightlevel,
 	ffloor_bottomheight,
 	ffloor_bottompic,
-#ifdef ESLOPE
 	ffloor_tslope,
 	ffloor_bslope,
-#endif
 	ffloor_sector,
 	ffloor_flags,
 	ffloor_master,
@@ -201,10 +199,8 @@ static const char *const ffloor_opt[] = {
 	"toplightlevel",
 	"bottomheight",
 	"bottompic",
-#ifdef ESLOPE
 	"t_slope",
 	"b_slope",
-#endif
 	"sector", // secnum pushed as control sector userdata
 	"flags",
 	"master", // control linedef
@@ -290,7 +286,6 @@ static const char *const bbox_opt[] = {
 	"right",
 	NULL};
 
-#ifdef ESLOPE
 enum slope_e {
 	slope_valid = 0,
 	slope_o,
@@ -325,7 +320,6 @@ static const char *const vector_opt[] = {
 	"y",
 	"z",
 	NULL};
-#endif
 
 static const char *const array_opt[] ={"iterate",NULL};
 static const char *const valid_opt[] ={"valid",NULL};
@@ -571,14 +565,12 @@ static int sector_get(lua_State *L)
 		LUA_PushUserdata(L, sector->ffloors, META_FFLOOR);
 		lua_pushcclosure(L, sector_iterate, 2); // push lib_iterateFFloors and sector->ffloors as upvalues for the function
 		return 1;
-#ifdef ESLOPE
 	case sector_fslope: // f_slope
 		LUA_PushUserdata(L, sector->f_slope, META_SLOPE);
 		return 1;
 	case sector_cslope: // c_slope
 		LUA_PushUserdata(L, sector->c_slope, META_SLOPE);
 		return 1;
-#endif
 	}
 	return 0;
 }
@@ -602,10 +594,8 @@ static int sector_set(lua_State *L)
 	case sector_camsec: // camsec
 	case sector_lines: // lines
 	case sector_ffloors: // ffloors
-#ifdef ESLOPE
 	case sector_fslope: // f_slope
 	case sector_cslope: // c_slope
-#endif
 	default:
 		return luaL_error(L, "sector_t field " LUA_QS " cannot be set.", sector_opt[field]);
 	case sector_floorheight: { // floorheight
@@ -709,6 +699,42 @@ static int subsector_num(lua_State *L)
 // line_t //
 ////////////
 
+// args, i -> args[i]
+static int lineargs_get(lua_State *L)
+{
+	INT32 *args = *((INT32**)luaL_checkudata(L, 1, META_LINEARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUMLINEARGS)
+		return luaL_error(L, LUA_QL("line_t.args") " index cannot be %d", i);
+	lua_pushinteger(L, args[i]);
+	return 1;
+}
+
+// #args -> NUMLINEARGS
+static int lineargs_len(lua_State* L)
+{
+	lua_pushinteger(L, NUMLINEARGS);
+	return 1;
+}
+
+// stringargs, i -> stringargs[i]
+static int linestringargs_get(lua_State *L)
+{
+	char **stringargs = *((char***)luaL_checkudata(L, 1, META_LINESTRINGARGS));
+	int i = luaL_checkinteger(L, 2);
+	if (i < 0 || i >= NUMLINESTRINGARGS)
+		return luaL_error(L, LUA_QL("line_t.stringargs") " index cannot be %d", i);
+	lua_pushstring(L, stringargs[i]);
+	return 1;
+}
+
+// #stringargs -> NUMLINESTRINGARGS
+static int linestringargs_len(lua_State *L)
+{
+	lua_pushinteger(L, NUMLINESTRINGARGS);
+	return 1;
+}
+
 static int line_get(lua_State *L)
 {
 	line_t *line = *((line_t **)luaL_checkudata(L, 1, META_LINE));
@@ -749,6 +775,12 @@ static int line_get(lua_State *L)
 	case line_tag:
 		lua_pushinteger(L, line->tag);
 		return 1;
+	case line_args:
+		LUA_PushUserdata(L, line->args, META_LINEARGS);
+		return 1;
+	case line_stringargs:
+		LUA_PushUserdata(L, line->stringargs, META_LINESTRINGARGS);
+		return 1;
 	case line_sidenum:
 		LUA_PushUserdata(L, line->sidenum, META_SIDENUM);
 		return 1;
@@ -759,6 +791,12 @@ static int line_get(lua_State *L)
 		if (line->sidenum[1] == 0xffff)
 			return 0;
 		LUA_PushUserdata(L, &sides[line->sidenum[1]], META_SIDE);
+		return 1;
+	case line_alpha:
+		lua_pushfixed(L, line->alpha);
+		return 1;
+	case line_executordelay:
+		lua_pushinteger(L, line->executordelay);
 		return 1;
 	case line_slopetype:
 		switch(line->slopetype)
@@ -1693,14 +1731,12 @@ static int ffloor_get(lua_State *L)
 		lua_pushlstring(L, levelflat->name, i);
 		return 1;
 	}
-#ifdef ESLOPE
 	case ffloor_tslope:
 		LUA_PushUserdata(L, *ffloor->t_slope, META_SLOPE);
 		return 1;
 	case ffloor_bslope:
 		LUA_PushUserdata(L, *ffloor->b_slope, META_SLOPE);
 		return 1;
-#endif
 	case ffloor_sector:
 		LUA_PushUserdata(L, &sectors[ffloor->secnum], META_SECTOR);
 		return 1;
@@ -1740,10 +1776,8 @@ static int ffloor_set(lua_State *L)
 	switch(field)
 	{
 	case ffloor_valid: // valid
-#ifdef ESLOPE
 	case ffloor_tslope: // t_slope
 	case ffloor_bslope: // b_slope
-#endif
 	case ffloor_sector: // sector
 	case ffloor_master: // master
 	case ffloor_target: // target
@@ -1804,7 +1838,6 @@ static int ffloor_set(lua_State *L)
 	return 0;
 }
 
-#ifdef ESLOPE
 //////////////
 // pslope_t //
 //////////////
@@ -1977,7 +2010,6 @@ static int vector3_get(lua_State *L)
 
 	return 0;
 }
-#endif
 
 /////////////////////
 // mapheaderinfo[] //
@@ -2034,6 +2066,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->typeoflevel);
 	else if (fastcmp(field,"nextlevel"))
 		lua_pushinteger(L, header->nextlevel);
+	else if (fastcmp(field,"marathonnext"))
+		lua_pushinteger(L, header->marathonnext);
 	else if (fastcmp(field,"keywords"))
 		lua_pushstring(L, header->keywords);
 	else if (fastcmp(field,"musname"))
@@ -2107,6 +2141,12 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->menuflags);
 	else if (fastcmp(field,"startrings"))
 		lua_pushinteger(L, header->startrings);
+	else if (fastcmp(field, "sstimer"))
+		lua_pushinteger(L, header->sstimer);
+	else if (fastcmp(field, "ssspheres"))
+		lua_pushinteger(L, header->ssspheres);
+	else if (fastcmp(field, "gravity"))
+		lua_pushfixed(L, header->gravity);
 	// TODO add support for reading numGradedMares and grades
 	else {
 		// Read custom vars now
@@ -2156,6 +2196,22 @@ int LUA_MapLib(lua_State *L)
 		lua_setfield(L, -2, "__index");
 
 		lua_pushcfunction(L, line_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_LINEARGS);
+		lua_pushcfunction(L, lineargs_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, lineargs_len);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_LINESTRINGARGS);
+		lua_pushcfunction(L, linestringargs_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, linestringargs_len);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
@@ -2226,7 +2282,6 @@ int LUA_MapLib(lua_State *L)
 		lua_setfield(L, -2, "__index");
 	lua_pop(L, 1);
 
-#ifdef ESLOPE
 	luaL_newmetatable(L, META_SLOPE);
 		lua_pushcfunction(L, slope_get);
 		lua_setfield(L, -2, "__index");
@@ -2244,7 +2299,6 @@ int LUA_MapLib(lua_State *L)
 		lua_pushcfunction(L, vector3_get);
 		lua_setfield(L, -2, "__index");
 	lua_pop(L, 1);
-#endif
 
 	luaL_newmetatable(L, META_MAPHEADER);
 		lua_pushcfunction(L, mapheaderinfo_get);
@@ -2337,5 +2391,3 @@ int LUA_MapLib(lua_State *L)
 	lua_setglobal(L, "mapheaderinfo");
 	return 0;
 }
-
-#endif

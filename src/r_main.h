@@ -26,7 +26,10 @@ extern INT32 centerx, centery;
 
 extern fixed_t centerxfrac, centeryfrac;
 extern fixed_t projection, projectiony;
-extern fixed_t fovtan; // field of view
+extern fixed_t fovtan;
+
+// WARNING: a should be unsigned but to add with 2048, it isn't!
+#define AIMINGTODY(a) FixedDiv((FINETANGENT((2048+(((INT32)a)>>ANGLETOFINESHIFT)) & FINEMASK)*160), fovtan)
 
 extern size_t validcount, linecount, loopcount, framecount;
 
@@ -60,6 +63,7 @@ extern lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 INT32 R_PointOnSide(fixed_t x, fixed_t y, node_t *node);
 INT32 R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line);
 angle_t R_PointToAngle(fixed_t x, fixed_t y);
+angle_t R_PointToAngle64(INT64 x, INT64 y);
 angle_t R_PointToAngle2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
 angle_t R_PointToAngleEx(INT32 x2, INT32 y2, INT32 x1, INT32 y1);
 fixed_t R_PointToDist(fixed_t x, fixed_t y);
@@ -70,6 +74,25 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y);
 subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y);
 
 boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixed_t bottomh, fixed_t toph);
+
+// Render stats
+
+extern consvar_t cv_renderstats;
+
+extern int rs_prevframetime;// time when previous frame was rendered
+extern int rs_rendercalltime;
+extern int rs_swaptime;
+
+extern int rs_bsptime;
+
+extern int rs_sw_portaltime;
+extern int rs_sw_planetime;
+extern int rs_sw_maskedtime;
+
+extern int rs_numbspcalls;
+extern int rs_numsprites;
+extern int rs_numdrawnodes;
+extern int rs_numpolyobjects;
 
 //
 // REFRESH - the actual rendering functions.
@@ -104,10 +127,13 @@ void R_SetViewSize(void);
 // do it (sometimes explicitly called)
 void R_ExecuteSetViewSize(void);
 
+void R_SetupFrame(player_t *player);
 void R_SkyboxFrame(player_t *player);
 
-void R_SetupFrame(player_t *player);
-// Called by G_Drawer.
+boolean R_ViewpointHasChasecam(player_t *player);
+boolean R_IsViewpointThirdPerson(player_t *player, boolean skybox);
+
+// Called by D_Display.
 void R_RenderPlayerView(player_t *player);
 
 // add commands related to engine, at game startup

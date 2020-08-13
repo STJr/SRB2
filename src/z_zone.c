@@ -217,11 +217,9 @@ void Z_Free(void *ptr)
 	CONS_Debug(DBG_MEMORY, "Z_Free at %s:%d\n", file, line);
 #endif
 
-#ifdef HAVE_BLUA
 	// anything that isn't by lua gets passed to lua just in case.
 	if (block->tag != PU_LUA)
 		LUA_InvalidateUserdata(ptr);
-#endif
 
 	// TODO: if zdebugging, make sure no other block has a user
 	// that is about to be freed.
@@ -501,17 +499,14 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 // Utility functions
 // -----------------
 
-// for renderer switching, free a bunch of stuff
+// for renderer switching
 boolean needpatchflush = false;
 boolean needpatchrecache = false;
 
 // flush all patches from memory
-// (also frees memory tagged with PU_CACHE)
-// (which are not necessarily patches but I don't care)
 void Z_FlushCachedPatches(void)
 {
 	CONS_Debug(DBG_RENDER, "Z_FlushCachedPatches()...\n");
-	Z_FreeTag(PU_CACHE);
 	Z_FreeTag(PU_PATCH);
 	Z_FreeTag(PU_HUDGFX);
 	Z_FreeTag(PU_HWRPATCHINFO);
@@ -810,7 +805,7 @@ static void Command_Memfree_f(void)
 		sizeu1(Z_TagsUsage(PU_PURGELEVEL, INT32_MAX)>>10));
 
 #ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
+	if (rendermode == render_opengl)
 	{
 		CONS_Printf(M_GetText("Patch info headers: %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHINFO)>>10));
 		CONS_Printf(M_GetText("Mipmap patches    : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHCOLMIPMAP)>>10));

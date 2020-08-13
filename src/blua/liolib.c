@@ -34,7 +34,8 @@
 #define FMT_FILECALLBACKID "file_callback_%d"
 
 
-static const char *whitelist[] = { // Allow scripters to write files of these types to SRB2's folder
+// Allow scripters to write files of these types to SRB2's folder
+static const char *whitelist[] = {
 	".bmp",
 	".cfg",
 	".csv",
@@ -283,8 +284,16 @@ void Got_LuaFile(UINT8 **cp, INT32 playernum)
 	// Push the first argument (file handle or nil) on the stack
 	if (success)
 	{
+		char mode[4];
+
+		// Ensure we are opening in binary mode
+		// (if it's a text file, newlines have been converted already)
+		strcpy(mode, luafiletransfers->mode);
+		if (!strchr(mode, 'b'))
+			strcat(mode, "b");
+
 		pf = newfile(gL); // Create and push the file handle
-		*pf = fopen(luafiletransfers->realfilename, luafiletransfers->mode); // Open the file
+		*pf = fopen(luafiletransfers->realfilename, mode); // Open the file
 		if (!*pf)
 			I_Error("Can't open file \"%s\"\n", luafiletransfers->realfilename); // The file SHOULD exist
 	}
@@ -312,17 +321,14 @@ void Got_LuaFile(UINT8 **cp, INT32 playernum)
 
 	RemoveLuaFileTransfer();
 
-	if (server && luafiletransfers)
+	if (waitingforluafilecommand)
 	{
-		if (FIL_FileOK(luafiletransfers->realfilename))
-			SV_PrepareSendLuaFileToNextNode();
-		else
-		{
-			// Send a net command with 0 as its first byte to indicate the file couldn't be opened
-			success = 0;
-			SendNetXCmd(XD_LUAFILE, &success, 1);
-		}
+		waitingforluafilecommand = false;
+		CL_PrepareDownloadLuaFile();
 	}
+
+	if (server && luafiletransfers)
+		SV_PrepareSendLuaFile();
 }
 
 
@@ -508,7 +514,6 @@ static int io_readline (lua_State *L) {
 static int g_write (lua_State *L, FILE *f, int arg) {
   int nargs = lua_gettop(L) - 1;
   int status = 1;
-  size_t count;
   for (; nargs--; arg++) {
     if (lua_type(L, arg) == LUA_TNUMBER) {
       /* optimization: could be done exactly as for strings */
@@ -518,12 +523,10 @@ static int g_write (lua_State *L, FILE *f, int arg) {
     else {
       size_t l;
       const char *s = luaL_checklstring(L, arg, &l);
-	  count += l;
-	  if (ftell(f) + l > FILELIMIT)
-	  {
-		luaL_error(L,"write limit bypassed in file. Changes have been discarded.");
-		break;
-	  }
+      if (ftell(f) + l > FILELIMIT) {
+          luaL_error(L,"write limit bypassed in file. Changes have been discarded.");
+          break;
+      }
       status = status && (fwrite(s, sizeof(char), l, f) == l);
     }
   }

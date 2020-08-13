@@ -22,7 +22,7 @@
 
 #ifdef HAVE_OPENMPT
 #include "libopenmpt/libopenmpt.h"
-openmpt_module *openmpt_mhandle;
+extern openmpt_module *openmpt_mhandle;
 #endif
 
 // mask used to indicate sound origin is player item pickup
@@ -46,6 +46,7 @@ extern consvar_t cv_1upsound;
 extern consvar_t cv_gamedigimusic;
 extern consvar_t cv_gamemidimusic;
 extern consvar_t cv_gamesounds;
+extern consvar_t cv_musicpref;
 
 extern consvar_t cv_playmusicifunfocused;
 extern consvar_t cv_playsoundsifunfocused;
@@ -60,27 +61,7 @@ extern consvar_t cv_midisoundfontpath;
 extern consvar_t cv_miditimiditypath;
 #endif
 
-#ifdef SNDSERV
-extern consvar_t sndserver_cmd, sndserver_arg;
-#endif
-#ifdef MUSSERV
-extern consvar_t musserver_cmd, musserver_arg;
-#endif
-
 extern CV_PossibleValue_t soundvolume_cons_t[];
-//part of i_cdmus.c
-extern consvar_t cd_volume, cdUpdate;
-
-#if defined (macintosh) && !defined (HAVE_SDL)
-typedef enum
-{
-	music_normal,
-	playlist_random,
-	playlist_normal
-} playmode_t;
-
-extern consvar_t play_mode;
-#endif
 
 typedef enum
 {
@@ -178,10 +159,15 @@ boolean S_MusicPaused(void);
 boolean S_MusicNotInFocus(void);
 musictype_t S_MusicType(void);
 const char *S_MusicName(void);
-boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping);
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 #define S_DigExists(a) S_MusicExists(a, false, true)
 #define S_MIDIExists(a) S_MusicExists(a, true, false)
+
+// Returns whether the preferred format a (true = MIDI, false = Digital)
+// exists and is enabled for musicname b
+#define S_PrefAvailable(a, b) (a ? \
+	(!S_MIDIMusicDisabled() && S_MIDIExists(b)) : \
+	(!S_DigMusicDisabled() && S_DigExists(b)))
 
 //
 // Music Effects
@@ -208,6 +194,7 @@ typedef struct musicdef_s
 	INT16 soundtestcond; // +ve for map, -ve for conditionset, 0 for already here
 	tic_t stoppingtics;
 	fixed_t bpm;
+	UINT32 loop_ms;/* override LOOPPOINT/LOOPMS */
 	boolean allowed; // question marks or listenable on sound test?
 	struct musicdef_s *next;
 } musicdef_t;
@@ -261,10 +248,10 @@ typedef struct musicstack_s
     struct musicstack_s *next;
 } musicstack_t;
 
-char music_stack_nextmusname[7];
-boolean music_stack_noposition;
-UINT32 music_stack_fadeout;
-UINT32 music_stack_fadein;
+extern char music_stack_nextmusname[7];
+extern boolean music_stack_noposition;
+extern UINT32 music_stack_fadeout;
+extern UINT32 music_stack_fadein;
 
 void S_SetStackAdjustmentStart(void);
 void S_AdjustMusicStackTics(void);
@@ -332,7 +319,7 @@ void S_StopSoundByNum(sfxenum_t sfxnum);
 #ifdef MUSICSLOT_COMPATIBILITY
 // For compatibility with code/scripts relying on older versions
 // This is a list of all the "special" slot names and their associated numbers
-const char *compat_special_music_slots[16];
+extern const char *compat_special_music_slots[16];
 #endif
 
 #endif

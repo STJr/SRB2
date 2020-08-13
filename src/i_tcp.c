@@ -487,7 +487,7 @@ static void cleanupnodes(void)
 
 	// Why can't I start at zero?
 	for (j = 1; j < MAXNETNODES; j++)
-		if (!(nodeingame[j] || SV_SendingFile(j)))
+		if (!(nodeingame[j] || SendingFile(j)))
 			nodeconnected[j] = false;
 }
 
@@ -1423,6 +1423,7 @@ static void SOCK_ClearBans(void)
 boolean I_InitTcpNetwork(void)
 {
 	char serverhostname[255];
+	const char *urlparam = NULL;
 	boolean ret = false;
 	// initilize the OS's TCP/IP stack
 	if (!I_InitTcpDriver())
@@ -1476,10 +1477,12 @@ boolean I_InitTcpNetwork(void)
 
 		ret = true;
 	}
-	else if (M_CheckParm("-connect"))
+	else if ((urlparam = M_GetUrlProtocolArg()) != NULL || M_CheckParm("-connect"))
 	{
-		if (M_IsNextParm())
-			strcpy(serverhostname, M_GetNextParm());
+		if (urlparam != NULL)
+			strlcpy(serverhostname, urlparam, sizeof(serverhostname));
+		else if (M_IsNextParm())
+			strlcpy(serverhostname, M_GetNextParm(), sizeof(serverhostname));
 		else
 			serverhostname[0] = 0; // assuming server in the LAN, use broadcast to detect it
 

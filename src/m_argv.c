@@ -34,6 +34,25 @@ boolean myargmalloc = false;
 */
 static INT32 found;
 
+/**	\brief Parses a server URL (such as srb2://127.0.0.1) as may be passed to the game via a web browser, etc.
+
+	\return the contents of the URL after the protocol (a server to join), or NULL if not found
+*/
+const char *M_GetUrlProtocolArg(void)
+{
+	INT32 i;
+	const size_t len = strlen(SERVER_URL_PROTOCOL);
+
+	for (i = 1; i < myargc; i++)
+	{
+		if (strlen(myargv[i]) > len && !strnicmp(myargv[i], SERVER_URL_PROTOCOL, len))
+		{
+			return &myargv[i][len];
+		}
+	}
+
+	return NULL;
+}
 
 /**	\brief	The M_CheckParm function
 
