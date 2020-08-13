@@ -1565,9 +1565,6 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 //
 static void P_SceneryXYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 {
-	I_Assert(mo != NULL);
-	I_Assert(!P_MobjWasRemoved(mo));
-
 	if (abs(mo->momx) < FixedMul(STOPSPEED/32, mo->scale)
 		&& abs(mo->momy) < FixedMul(STOPSPEED/32, mo->scale))
 	{
@@ -1602,55 +1599,45 @@ static void P_SceneryXYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
 //
 // adds friction on the xy plane
 //
-static void P_XYFriction(mobj_t *mo, fixed_t oldx, fixed_t oldy)
+static void P_XYFriction(mobj_t *mo, const fixed_t oldx, const fixed_t oldy)
 {
-	player_t *player;
-
-	I_Assert(mo != NULL);
-	I_Assert(!P_MobjWasRemoved(mo));
-
-	player = mo->player;
-	if (player) // valid only if player avatar
+	player_t *player = mo->player;
+	// spinning friction
+	if (player->pflags & PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH))
 	{
-		// spinning friction
-		if (player->pflags & PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH))
+		if (twodlevel || player->mo->flags2 & MF2_TWOD) // Otherwise handled in P_3DMovement
 		{
-			if (twodlevel || player->mo->flags2 & MF2_TWOD) // Otherwise handled in P_3DMovement
-			{
-				const fixed_t ns = FixedDiv(549*ORIG_FRICTION,500*FRACUNIT);
-				mo->momx = FixedMul(mo->momx, ns);
-				mo->momy = FixedMul(mo->momy, ns);
-			}
-		}
-		else if (abs(player->rmomx) < FixedMul(STOPSPEED, mo->scale)
-		    && abs(player->rmomy) < FixedMul(STOPSPEED, mo->scale)
-		    && (!(player->cmd.forwardmove && !(twodlevel || mo->flags2 & MF2_TWOD)) && !player->cmd.sidemove && !(player->pflags & PF_SPINNING))
-			&& !(player->mo->standingslope && (!(player->mo->standingslope->flags & SL_NOPHYSICS)) && (abs(player->mo->standingslope->zdelta) >= FRACUNIT/2)))
-		{
-			// if in a walking frame, stop moving
-			if (player->panim == PA_WALK)
-				P_SetPlayerMobjState(mo, S_PLAY_STND);
-			mo->momx = player->cmomx;
-			mo->momy = player->cmomy;
-		}
-		else if (!(mo->eflags & MFE_SPRUNG))
-		{
-			if (oldx == mo->x && oldy == mo->y) // didn't go anywhere
-			{
-				mo->momx = FixedMul(mo->momx, ORIG_FRICTION);
-				mo->momy = FixedMul(mo->momy, ORIG_FRICTION);
-			}
-			else
-			{
-				mo->momx = FixedMul(mo->momx, mo->friction);
-				mo->momy = FixedMul(mo->momy, mo->friction);
-			}
-
-			mo->friction = ORIG_FRICTION;
+			const fixed_t ns = FixedDiv(549*ORIG_FRICTION,500*FRACUNIT);
+			mo->momx = FixedMul(mo->momx, ns);
+			mo->momy = FixedMul(mo->momy, ns);
 		}
 	}
-	else
-		P_SceneryXYFriction(mo, oldx, oldy);
+	else if (abs(player->rmomx) < FixedMul(STOPSPEED, mo->scale)
+		&& abs(player->rmomy) < FixedMul(STOPSPEED, mo->scale)
+		&& (!(player->cmd.forwardmove && !(twodlevel || mo->flags2 & MF2_TWOD)) && !player->cmd.sidemove && !(player->pflags & PF_SPINNING))
+		&& !(player->mo->standingslope && (!(player->mo->standingslope->flags & SL_NOPHYSICS)) && (abs(player->mo->standingslope->zdelta) >= FRACUNIT/2)))
+	{
+		// if in a walking frame, stop moving
+		if (player->panim == PA_WALK)
+			P_SetPlayerMobjState(mo, S_PLAY_STND);
+		mo->momx = player->cmomx;
+		mo->momy = player->cmomy;
+	}
+	else if (!(mo->eflags & MFE_SPRUNG))
+	{
+		if (oldx == mo->x && oldy == mo->y) // didn't go anywhere
+		{
+			mo->momx = FixedMul(mo->momx, ORIG_FRICTION);
+			mo->momy = FixedMul(mo->momy, ORIG_FRICTION);
+		}
+		else
+		{
+			mo->momx = FixedMul(mo->momx, mo->friction);
+			mo->momy = FixedMul(mo->momy, mo->friction);
+		}
+
+		mo->friction = ORIG_FRICTION;
+	}
 }
 
 static void P_PushableCheckBustables(mobj_t *mo)
@@ -2079,27 +2066,35 @@ void P_XYMovement(mobj_t *mo)
 		P_SetThingPosition(mo);
 	}
 
+	I_Assert(mo != NULL);
+	I_Assert(!P_MobjWasRemoved(mo));
+
 	if (mo->flags & MF_NOCLIPHEIGHT)
 		return; // no frictions for objects that can pass through floors
 
 	if (mo->flags & MF_MISSILE || mo->flags2 & MF2_SKULLFLY || mo->type == MT_SHELL || mo->type == MT_VULTURE || mo->type == MT_PENGUINATOR)
 		return; // no friction for missiles ever
 
-	if (player && player->homing) // no friction for homing
-		return;
-
-	if (player && player->powers[pw_carry] == CR_NIGHTSMODE)
-		return; // no friction for NiGHTS players
-
 	if ((mo->type == MT_BIGTUMBLEWEED || mo->type == MT_LITTLETUMBLEWEED)
 			&& (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8)) // Special exception for tumbleweeds on slopes
 		return;
 
-	if (((!(mo->eflags & MFE_VERTICALFLIP) && mo->z > mo->floorz) || (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height < mo->ceilingz))
-		&& !(player && player->pflags & PF_SLIDING))
+	if ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z > mo->floorz) || (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height < mo->ceilingz))
 		return; // no friction when airborne
 
-	P_XYFriction(mo, oldx, oldy);
+	if (player)
+	{
+		if (player->homing)
+			return;
+		if (player->powers[pw_carry] == CR_NIGHTSMODE)
+			return;
+		if (player->pflags & PF_SLIDING)
+			return;
+
+		P_XYFriction(mo, oldx, oldy);
+	}
+	else
+		P_SceneryXYFriction(mo, oldx, oldy);
 }
 
 void P_RingXYMovement(mobj_t *mo)
