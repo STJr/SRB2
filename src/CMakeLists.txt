@@ -102,7 +102,6 @@ set(SRB2_CORE_HEADERS
 	m_swap.h
 	md5.h
 	mserv.h
-	http-mserv.h
 	p5prof.h
 	s_sound.h
 	screen.h
