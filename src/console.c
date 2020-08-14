@@ -1543,8 +1543,8 @@ static void CON_DrawBackpic(void)
 	if (piclump == LUMPERROR)
 		piclump = W_GetNumForName("MISSING");
 
-	// Cache the Software patch.
-	con_backpic = W_CacheSoftwarePatchNum(piclump, PU_PATCH);
+	// Cache the patch.
+	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
 
 	// Center the backpic, and draw a vertically cropped patch.
 	w = (con_backpic->width * vid.dupx);
@@ -1567,8 +1567,7 @@ static void CON_DrawBackpic(void)
 		}
 	}
 
-	// Cache the patch normally.
-	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
+	// Draw the patch.
 	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, V_NOSCALESTART, con_backpic,
 			0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
 
