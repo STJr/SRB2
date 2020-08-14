@@ -560,7 +560,7 @@ static boolean COM_Exists(const char *com_name)
   * \param partial The partial name of the command (potentially).
   * \param skips   Number of commands to skip.
   * \return The complete command name, or NULL.
-  * \sa CV_CompleteVar
+  * \sa CV_CompleteAlias, CV_CompleteVar
   */
 const char *COM_CompleteCommand(const char *partial, INT32 skips)
 {
@@ -577,6 +577,32 @@ const char *COM_CompleteCommand(const char *partial, INT32 skips)
 		if (!strncmp(partial, cmd->name, len))
 			if (!skips--)
 				return cmd->name;
+
+	return NULL;
+}
+
+/** Completes the name of an alias.
+  *
+  * \param partial The partial name of the alias (potentially).
+  * \param skips   Number of aliases to skip.
+  * \return The complete alias name, or NULL.
+  * \sa CV_CompleteCommand, CV_CompleteVar
+  */
+const char *COM_CompleteAlias(const char *partial, INT32 skips)
+{
+	cmdalias_t *a;
+	size_t len;
+
+	len = strlen(partial);
+
+	if (!len)
+		return NULL;
+
+	// check functions
+	for (a = com_alias; a; a = a->next)
+		if (!strncmp(partial, a->name, len))
+			if (!skips--)
+				return a->name;
 
 	return NULL;
 }
@@ -1321,7 +1347,7 @@ static const char *CV_StringValue(const char *var_name)
   * \param partial The partial name of the variable (potentially).
   * \param skips   Number of variables to skip.
   * \return The complete variable name, or NULL.
-  * \sa COM_CompleteCommand
+  * \sa COM_CompleteCommand, CV_CompleteAlias
   */
 const char *CV_CompleteVar(char *partial, INT32 skips)
 {
