@@ -560,14 +560,12 @@ static void Impl_HandleKeyboardConsoleEvent(KEY_EVENT_RECORD evt, HANDLE co)
 			case VK_TAB:
 				event.data1 = KEY_NULL;
 				break;
-			case VK_SHIFT:
-				event.data1 = KEY_LSHIFT;
-				break;
 			case VK_RETURN:
 				entering_con_command = false;
 				/* FALLTHRU */
 			default:
-				event.data1 = MapVirtualKey(evt.wVirtualKeyCode,2); // convert in to char
+				//event.data1 = MapVirtualKey(evt.wVirtualKeyCode,2); // convert in to char
+				event.data1 = evt.uChar.AsciiChar;
 		}
 		if (co != INVALID_HANDLE_VALUE && GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &t))
 		{
@@ -584,18 +582,6 @@ static void Impl_HandleKeyboardConsoleEvent(KEY_EVENT_RECORD evt, HANDLE co)
 			{
 				WriteConsoleOutputCharacterA(co, " ",1, CSBI.dwCursorPosition, &t);
 			}
-		}
-	}
-	else
-	{
-		event.type = ev_keyup;
-		switch (evt.wVirtualKeyCode)
-		{
-			case VK_SHIFT:
-				event.data1 = KEY_LSHIFT;
-				break;
-			default:
-				break;
 		}
 	}
 	if (event.data1) D_PostEvent(&event);
