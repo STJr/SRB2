@@ -18,6 +18,7 @@
 #include "p_local.h"
 #include "z_zone.h"
 #include "r_patch.h"
+#include "r_picformats.h"
 #include "r_things.h"
 #include "r_draw.h" // R_GetColorByName
 #include "doomstat.h" // luabanks[]

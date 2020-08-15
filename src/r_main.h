@@ -16,6 +16,7 @@
 
 #include "d_player.h"
 #include "r_data.h"
+#include "r_textures.h"
 
 //
 // POV related.

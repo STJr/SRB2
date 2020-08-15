@@ -16,6 +16,7 @@
 
 #include "r_plane.h"
 #include "r_patch.h"
+#include "r_picformats.h"
 #include "r_portal.h"
 #include "r_defs.h"
 #include "r_skins.h"
