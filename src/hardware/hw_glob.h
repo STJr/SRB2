@@ -90,9 +90,11 @@ void HWR_FreeExtraSubsectors(void);
 // --------
 // hw_cache.c
 // --------
-void HWR_InitTextureCache(void);
-void HWR_FreeTextureCache(void);
-void HWR_FreeMipmapCache(void);
+void HWR_InitMapTextures(void);
+void HWR_LoadMapTextures(size_t pnumtextures);
+void HWR_FreeMapTextures(void);
+
+extern boolean gl_maptexturesloaded;
 
 patch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
 patch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
@@ -108,6 +110,8 @@ void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum);
 
 void HWR_FreeTexture(patch_t *patch);
 void HWR_FreeTextureColormaps(patch_t *patch);
+void HWR_ClearAllTextures(void);
+void HWR_FreeColormapCache(void);
 void HWR_UnlockCachedPatch(GLPatch_t *gpatch);
 
 void HWR_SetPalette(RGBA_t *palette);

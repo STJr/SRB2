@@ -37,6 +37,9 @@ cv_allcaps;
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);
 
+// Recalculates the viddef (dupx, dupy, etc.) according to the current screen resolution.
+void V_Recalc(void);
+
 // Color look-up table
 #define COLORBITS 6
 #define SHIFTCOLORBITS (8-COLORBITS)

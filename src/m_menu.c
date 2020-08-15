@@ -2149,15 +2149,22 @@ menu_t OP_PlaystyleDef = {
 static void M_VideoOptions(INT32 choice)
 {
 	(void)choice;
+
+	OP_VideoOptionsMenu[op_video_renderer].status = (IT_TRANSTEXT | IT_PAIR);
+	OP_VideoOptionsMenu[op_video_renderer].patch = "Renderer";
+	OP_VideoOptionsMenu[op_video_renderer].text = "Software";
+
 #ifdef HWRENDER
-	if (vid_opengl_state == -1)
+	if (vid.glstate != VID_GL_LIBRARY_ERROR)
 	{
-		OP_VideoOptionsMenu[op_video_renderer].status = (IT_TRANSTEXT | IT_PAIR);
-		OP_VideoOptionsMenu[op_video_renderer].patch = "Renderer";
-		OP_VideoOptionsMenu[op_video_renderer].text = "Software";
+		OP_VideoOptionsMenu[op_video_renderer].status = (IT_STRING | IT_CVAR);
+		OP_VideoOptionsMenu[op_video_renderer].patch = NULL;
+		OP_VideoOptionsMenu[op_video_renderer].text = "Renderer";
 	}
 
+	CV_StealthSetValue(&cv_newrenderer, cv_renderer.value);
 #endif
+
 	M_SetupNextMenu(&OP_VideoOptionsDef);
 }
 

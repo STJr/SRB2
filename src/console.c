@@ -45,7 +45,8 @@
 #define MAXHUDLINES 20
 
 static boolean con_started = false; // console has been initialised
-       boolean con_startup = false; // true at game startup, screen need refreshing
+       boolean con_startup = false; // true at game startup
+       boolean con_refresh = false; // screen needs refreshing
 static boolean con_forcepic = true; // at startup toggle console translucency when first off
        boolean con_recalc;          // set true when screen size has changed
 
@@ -406,7 +407,8 @@ void CON_Init(void)
 	if (!dedicated)
 	{
 		con_started = true;
-		con_startup = true; // need explicit screen refresh until we are in Doom loop
+		con_startup = true;
+		con_refresh = true; // needs explicit screen refresh until we are in the main game loop
 		consoletoggle = false;
 		CV_RegisterVar(&cons_msgtimeout);
 		CV_RegisterVar(&cons_hudlines);
@@ -419,7 +421,8 @@ void CON_Init(void)
 	else
 	{
 		con_started = true;
-		con_startup = false; // need explicit screen refresh until we are in Doom loop
+		con_startup = false;
+		con_refresh = false; // disable explicit screen refresh
 		consoletoggle = true;
 	}
 }
@@ -1293,16 +1296,19 @@ void CONS_Printf(const char *fmt, ...)
 	con_scrollup = 0;
 
 	// if not in display loop, force screen update
-	if (con_startup && (!setrenderneeded))
+	if (con_refresh)
 	{
-#ifdef _WINDOWS
-		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
+#if defined(_WINDOWS)
+		if (con_startup)
+		{
+			patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
 
-		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
-		V_DrawScaledPatch(0, 0, 0, con_backpic);
+			// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
+			V_DrawScaledPatch(0, 0, 0, con_backpic);
 
-		W_UnlockCachedPatch(con_backpic);
-		I_LoadingScreen(txt);				// Win32/OS2 only
+			W_UnlockCachedPatch(con_backpic);
+			I_LoadingScreen(txt);				// Win32/OS2 only
+		}
 #else
 		// here we display the console text
 		CON_Drawer();
@@ -1369,7 +1375,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...)
 //
 void CONS_Error(const char *msg)
 {
-#ifdef RPC_NO_WINDOWS_H
+#if defined(RPC_NO_WINDOWS_H) && defined(_WINDOWS)
 	if (!graphics_started)
 	{
 		MessageBoxA(vid.WndParent, msg, "SRB2 Warning", MB_OK);

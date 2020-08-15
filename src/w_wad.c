@@ -845,7 +845,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 #ifdef HWRENDER
 	// Read shaders from file
-	if (rendermode == render_opengl && (vid_opengl_state == 1))
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 	{
 		HWR_ReadShaders(numwadfiles - 1, (type == RET_PK3));
 		HWR_LoadShaders();

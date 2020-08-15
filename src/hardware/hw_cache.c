@@ -585,23 +585,27 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 static size_t gl_numtextures = 0; // Texture count
 static GLMapTexture_t *gl_textures; // For all textures
 static GLMapTexture_t *gl_flats; // For all (texture) flats, as normal flats don't need to be cached
-
-void HWR_InitTextureCache(void)
-{
-	gl_textures = NULL;
-	gl_flats = NULL;
-}
+boolean gl_maptexturesloaded = false;
 
 void HWR_FreeTexture(patch_t *patch)
 {
+	if (!patch)
+		return;
+
 	if (patch->hardware)
 	{
 		GLPatch_t *grPatch = patch->hardware;
 
 		HWR_FreeTextureColormaps(patch);
 
-		if (grPatch->mipmap && (rendermode == render_opengl))
-			HWD.pfnDeleteTexture(grPatch->mipmap);
+		if (grPatch->mipmap)
+		{
+			if (vid.glstate == VID_GL_LIBRARY_LOADED)
+				HWD.pfnDeleteTexture(grPatch->mipmap);
+			if (grPatch->mipmap->data)
+				Z_Free(grPatch->mipmap->data);
+			Z_Free(grPatch->mipmap);
+		}
 
 		Z_Free(patch->hardware);
 	}
@@ -609,7 +613,7 @@ void HWR_FreeTexture(patch_t *patch)
 	patch->hardware = NULL;
 }
 
-// Called by HWR_FreeTextureCache.
+// Called by HWR_FreePatchCache.
 void HWR_FreeTextureColormaps(patch_t *patch)
 {
 	GLPatch_t *pat;
@@ -653,9 +657,21 @@ void HWR_FreeTextureColormaps(patch_t *patch)
 	}
 }
 
-void HWR_FreeMipmapCache(void)
+static void HWR_FreePatchCache(boolean freeall)
 {
 	INT32 i;
+
+	for (i = 0; i < numwadfiles; i++)
+	{
+		INT32 j = 0;
+		for (; j < wadfiles[i]->numlumps; j++)
+			(freeall ? HWR_FreeTexture : HWR_FreeTextureColormaps)(wadfiles[i]->patchcache[j]);
+	}
+}
+
+void HWR_ClearAllTextures(void)
+{
+	HWR_FreeMapTextures();
 
 	// free references to the textures
 	HWD.pfnClearMipMapCache();
@@ -666,19 +682,38 @@ void HWR_FreeMipmapCache(void)
 	Z_FreeTag(PU_HWRCACHE_UNLOCKED);
 
 	// Alam: free the Z_Blocks before freeing it's users
-	// free all patch colormaps after each level: must be done after ClearMipMapCache!
-	for (i = 0; i < numwadfiles; i++)
-	{
-		INT32 j = 0;
-		for (; j < wadfiles[i]->numlumps; j++)
-			HWR_FreeTextureColormaps(wadfiles[i]->patchcache[j]);
-	}
+	HWR_FreePatchCache(true);
 }
 
-void HWR_FreeTextureCache(void)
+// free all patch colormaps after each level: must be done after ClearMipMapCache!
+void HWR_FreeColormapCache(void)
 {
-	// free references to the textures
-	HWR_FreeMipmapCache();
+	HWR_FreePatchCache(false);
+}
+
+void HWR_InitMapTextures(void)
+{
+	gl_textures = NULL;
+	gl_flats = NULL;
+	gl_maptexturesloaded = false;
+}
+
+static void FreeMapTexture(GLMapTexture_t *tex)
+{
+	HWD.pfnDeleteTexture(&tex->mipmap);
+	if (tex->mipmap.data)
+		Z_Free(tex->mipmap.data);
+}
+
+void HWR_FreeMapTextures(void)
+{
+	size_t i;
+
+	for (i = 0; i < gl_numtextures; i++)
+	{
+		FreeMapTexture(&gl_textures[i]);
+		FreeMapTexture(&gl_flats[i]);
+	}
 
 	// now the heap don't have any 'user' pointing to our
 	// texturecache info, we can free it
@@ -689,12 +724,13 @@ void HWR_FreeTextureCache(void)
 	gl_textures = NULL;
 	gl_flats = NULL;
 	gl_numtextures = 0;
+	gl_maptexturesloaded = false;
 }
 
-void HWR_LoadTextures(size_t pnumtextures)
+void HWR_LoadMapTextures(size_t pnumtextures)
 {
 	// we must free it since numtextures changed
-	HWR_FreeTextureCache();
+	HWR_FreeMapTextures();
 
 	// Why not Z_Malloc?
 	gl_numtextures = pnumtextures;
@@ -704,7 +740,9 @@ void HWR_LoadTextures(size_t pnumtextures)
 	// Doesn't tell you which it _is_, but hopefully
 	// should never ever happen (right?!)
 	if ((gl_textures == NULL) || (gl_flats == NULL))
-		I_Error("HWR_LoadTextures: ran out of memory for OpenGL textures. Sad!");
+		I_Error("HWR_LoadMapTextures: ran out of memory for OpenGL textures. Sad!");
+
+	gl_maptexturesloaded = true;
 }
 
 void HWR_SetPalette(RGBA_t *palette)
@@ -814,10 +852,13 @@ static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
 {
 	GLMipmap_t *grmip;
+	patch_t *patch;
+
 	if (flatlumpnum == LUMPERROR)
 		return;
 
-	grmip = ((GLPatch_t *)HWR_GetCachedGLPatch(flatlumpnum)->hardware)->mipmap;
+	patch = HWR_GetCachedGLPatch(flatlumpnum);
+	grmip = ((GLPatch_t *)Patch_AllocateHardwarePatch(patch))->mipmap;
 	if (!grmip->downloaded && !grmip->data)
 		HWR_CacheFlat(grmip, flatlumpnum);
 
@@ -933,7 +974,7 @@ void HWR_GetMappedPatch(patch_t *patch, const UINT8 *colormap)
 
 	//BP: WARNING: don't free it manually without clearing the cache of harware renderer
 	//              (it have a liste of mipmap)
-	//    this malloc is cleared in HWR_FreeTextureCache
+	//    this malloc is cleared in HWR_FreeColormapCache
 	//    (...) unfortunately z_malloc fragment alot the memory :(so malloc is better
 	newMipmap = calloc(1, sizeof (*newMipmap));
 	if (newMipmap == NULL)
@@ -1190,7 +1231,8 @@ static void HWR_CacheFadeMask(GLMipmap_t *grMipmap, lumpnum_t fademasklumpnum)
 
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum)
 {
-	GLMipmap_t *grmip = ((GLPatch_t *)HWR_GetCachedGLPatch(fademasklumpnum)->hardware)->mipmap;
+	patch_t *patch = HWR_GetCachedGLPatch(fademasklumpnum);
+	GLMipmap_t *grmip = ((GLPatch_t *)Patch_AllocateHardwarePatch(patch))->mipmap;
 	if (!grmip->downloaded && !grmip->data)
 		HWR_CacheFadeMask(grmip, fademasklumpnum);
 

@@ -4146,13 +4146,11 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
 	// Lactozilla: Free extrasubsectors regardless of renderer.
-	// Maybe we're not in OpenGL anymore.
-	if (extrasubsectors)
-		free(extrasubsectors);
-	extrasubsectors = NULL;
-	// stuff like HWR_CreatePlanePolygons is called there
+	HWR_FreeExtraSubsectors();
+
+	// Create plane polygons.
 	if (rendermode == render_opengl)
-		HWR_SetupLevel();
+		HWR_LoadLevel();
 #endif
 
 	// oh god I hope this helps
@@ -4238,7 +4236,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 }
 
 #ifdef HWRENDER
-void HWR_SetupLevel(void)
+void HWR_LoadLevel(void)
 {
 	// Lactozilla (December 8, 2019)
 	// Level setup used to free EVERY mipmap from memory.
@@ -4249,7 +4247,7 @@ void HWR_SetupLevel(void)
 	// when the texture list is loaded.
 
 	// Sal: Unfortunately, NOT freeing them causes the dreaded Color Bug.
-	HWR_FreeMipmapCache();
+	HWR_FreeColormapCache();
 
 #ifdef ALAM_LIGHTING
 	// BP: reset light between levels (we draw preview frame lights on current frame)

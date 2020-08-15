@@ -5930,7 +5930,7 @@ void HWR_Startup(void)
 
 		HWR_InitPolyPool();
 		HWR_AddSessionCommands();
-		HWR_InitTextureCache();
+		HWR_InitMapTextures();
 		HWR_InitModels();
 #ifdef ALAM_LIGHTING
 		HWR_InitLight();
@@ -5954,9 +5954,20 @@ void HWR_Startup(void)
 // --------------------------------------------------------------------------
 void HWR_Switch(void)
 {
+	// Add session commands
+	HWR_AddSessionCommands();
+
 	// Set special states from CVARs
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_glfiltermode.value);
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_glanisotropicmode.value);
+
+	// Load textures
+	if (!gl_maptexturesloaded)
+		HWR_LoadMapTextures(numtextures);
+
+	// Create plane polygons
+	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
+		HWR_LoadLevel();
 }
 
 // --------------------------------------------------------------------------
@@ -5967,7 +5978,7 @@ void HWR_Shutdown(void)
 	CONS_Printf("HWR_Shutdown()\n");
 	HWR_FreeExtraSubsectors();
 	HWR_FreePolyPool();
-	HWR_FreeTextureCache();
+	HWR_FreeMapTextures();
 	HWD.pfnFlushScreenTextures();
 }
 

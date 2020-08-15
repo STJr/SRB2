@@ -1560,18 +1560,6 @@ void R_RenderPlayerView(player_t *player)
 	free(masks);
 }
 
-// Lactozilla: Renderer switching
-#ifdef HWRENDER
-void R_InitHardwareMode(void)
-{
-	HWR_AddSessionCommands();
-	HWR_Switch();
-	HWR_LoadTextures(numtextures);
-	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
-		HWR_SetupLevel();
-}
-#endif
-
 // =========================================================================
 //                    ENGINE COMMANDS & VARS
 // =========================================================================

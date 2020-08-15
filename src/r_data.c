@@ -33,7 +33,7 @@
 #endif
 
 #ifdef HWRENDER
-#include "hardware/hw_main.h" // HWR_LoadTextures
+#include "hardware/hw_main.h" // HWR_LoadMapTextures
 #endif
 
 #if defined(_MSC_VER)
@@ -1084,7 +1084,7 @@ void R_LoadTextures(void)
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-		HWR_LoadTextures(numtextures);
+		HWR_LoadMapTextures(numtextures);
 #endif
 }
 

@@ -220,7 +220,6 @@ INT16 wipetypepost = -1;
 
 static void D_Display(void)
 {
-	INT32 setrenderstillneeded = 0;
 	boolean forcerefresh = false;
 	static boolean wipe = false;
 	INT32 wipedefindex = 0;
@@ -245,36 +244,21 @@ static void D_Display(void)
 	//    modes (resolution) are called.
 	// 4. The frame is ready to be drawn!
 
-	// stop movie if needs to change renderer
-	if (setrenderneeded && (moviemode == MM_APNG))
-		M_StopMovie();
-
-	// check for change of renderer or screen size (video mode)
+	// Check for change of renderer or screen size (video mode)
 	if ((setrenderneeded || setmodeneeded) && !wipe)
-	{
-		if (setrenderneeded)
-		{
-			CONS_Debug(DBG_RENDER, "setrenderneeded set (%d)\n", setrenderneeded);
-			setrenderstillneeded = setrenderneeded;
-		}
 		SCR_SetMode(); // change video mode
-	}
 
-	if (vid.recalc || setrenderstillneeded)
-	{
+	// Recalc the screen
+	if (vid.recalc)
 		SCR_Recalc(); // NOTE! setsizeneeded is set by SCR_Recalc()
-#ifdef HWRENDER
-		// Shoot! The screen texture was flushed!
-		if ((rendermode == render_opengl) && (gamestate == GS_INTERMISSION))
-			usebuffer = false;
-#endif
-	}
 
+	// View morph
 	if (rendermode == render_soft && !splitscreen)
 		R_CheckViewMorph();
 
-	// change the view size if needed
-	if (setsizeneeded || setrenderstillneeded)
+	// Change the view size if needed
+	// Set by changing video mode or renderer
+	if (setsizeneeded)
 	{
 		R_ExecuteSetViewSize();
 		forcerefresh = true; // force background redraw
@@ -697,6 +681,7 @@ void D_SRB2Loop(void)
 	oldentertics = I_GetTime();
 
 	// end of loading screen: CONS_Printf() will no more call FinishUpdate()
+	con_refresh = false;
 	con_startup = false;
 
 	// make sure to do a d_display to init mode _before_ load a level
@@ -1402,14 +1387,20 @@ void D_SRB2Main(void)
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
 
-	// Lactozilla: Does the render mode need to change?
-	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
+	// Lactozilla: Check if the render mode needs to change.
+	if (setrenderneeded)
 	{
 		CONS_Printf(M_GetText("Switching the renderer...\n"));
 
+		// Switch the renderer in the interface
+		if (VID_CheckRenderer())
+			con_refresh = true; // Allow explicit screen refresh again
+
 		// Set cv_renderer to the new render mode
-		VID_CheckRenderer();
-		SCR_ChangeRendererCVars(rendermode);
+		CV_StealthSetValue(&cv_renderer, rendermode);
+#ifdef HWRENDER
+		CV_StealthSetValue(&cv_newrenderer, rendermode);
+#endif
 	}
 
 	wipegamestate = gamestate;
