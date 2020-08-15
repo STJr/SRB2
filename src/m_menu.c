@@ -1663,8 +1663,11 @@ static menuitem_t OP_ServerOptionsMenu[] =
 #ifndef NONET
 	{IT_HEADER, NULL, "Advanced", NULL, 225},
 	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,       231},
+
 	{IT_STRING | IT_CVAR,    NULL, "Join delay",                       &cv_joindelay,          246},
 	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,    251},
+
+	{IT_STRING | IT_CVAR,    NULL, "Show IP Address of Joiners",       &cv_showjoinaddress,    256},
 #endif
 };
 
