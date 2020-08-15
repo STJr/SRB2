@@ -2072,13 +2072,6 @@ void P_XYMovement(mobj_t *mo)
 	if (mo->flags & MF_NOCLIPHEIGHT)
 		return; // no frictions for objects that can pass through floors
 
-	if (mo->flags & MF_MISSILE || mo->flags2 & MF2_SKULLFLY || mo->type == MT_SHELL || mo->type == MT_VULTURE || mo->type == MT_PENGUINATOR)
-		return; // no friction for missiles ever
-
-	if ((mo->type == MT_BIGTUMBLEWEED || mo->type == MT_LITTLETUMBLEWEED)
-			&& (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8)) // Special exception for tumbleweeds on slopes
-		return;
-
 	if ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z > mo->floorz) || (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height < mo->ceilingz))
 		return; // no friction when airborne
 
@@ -2094,7 +2087,16 @@ void P_XYMovement(mobj_t *mo)
 		P_XYFriction(mo, oldx, oldy);
 	}
 	else
+	{
+		if (mo->flags & MF_MISSILE || mo->flags2 & MF2_SKULLFLY || mo->type == MT_SHELL || mo->type == MT_VULTURE || mo->type == MT_PENGUINATOR)
+			return; // no friction for missiles ever
+
+		if ((mo->type == MT_BIGTUMBLEWEED || mo->type == MT_LITTLETUMBLEWEED)
+				&& (mo->standingslope && abs(mo->standingslope->zdelta) > FRACUNIT>>8)) // Special exception for tumbleweeds on slopes
+			return;
+
 		P_SceneryXYFriction(mo, oldx, oldy);
+	}
 }
 
 void P_RingXYMovement(mobj_t *mo)
