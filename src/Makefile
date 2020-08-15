@@ -8,13 +8,11 @@
 # terms of the GNU General Public License, version 2.
 # See the 'LICENSE' file for more details.
 #
-#     -DPC_DOS    -> use DOS specific code (eg:textmode stuff)...
 #     -DLINUX     -> use for the GNU/Linux specific
 #     -D_WINDOWS  -> use for the Win32/DirectX specific
 #     -DHAVE_SDL  -> use for the SDL interface
 #
 # Sets:
-#     Compile the DGJPP/DOS version with 'make WATTCP=1'
 #     Compile the DirectX/Mingw version with 'make MINGW=1'
 #     Compile the SDL/Mingw version with 'make MINGW=1 SDL=1'
 #     Compile the SDL/Linux version with 'make LINUX=1'
@@ -146,10 +144,6 @@ NOHW=1
 NOHS=1
 endif
 
-ifdef DJGPPDOS
-include djgppdos/Makefile.cfg
-endif
-
 ifndef NOOPENMPT
 HAVE_OPENMPT=1
 endif
@@ -213,6 +207,7 @@ endif
 
 ifdef NONET
 	OPTS+=-DNONET
+	NOCURL=1
 else
 ifdef NO_IPV6
 	OPTS+=-DNO_IPV6
@@ -320,6 +315,16 @@ LIBS+=$(ZLIB_LDFLAGS)
 CFLAGS+=$(ZLIB_CFLAGS)
 else
 NOPNG=1
+endif
+
+ifndef NOCURL
+OPTS+=-DHAVE_CURL
+CURLCONFIG?=curl-config
+CURL_CFLAGS?=$(shell $(CURLCONFIG) --cflags)
+CURL_LDFLAGS?=$(shell $(CURLCONFIG) --libs)
+
+LIBS+=$(CURL_LDFLAGS)
+CFLAGS+=$(CURL_CFLAGS)
 endif
 
 ifdef STATIC
@@ -479,11 +484,11 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/w_wad.o    \
 		$(OBJDIR)/filesrch.o \
 		$(OBJDIR)/mserv.o    \
+		$(OBJDIR)/http-mserv.o\
 		$(OBJDIR)/i_tcp.o    \
 		$(OBJDIR)/lzf.o	     \
 		$(OBJDIR)/vid_copy.o \
 		$(OBJDIR)/b_bot.o \
-		$(i_cdmus_o)    \
 		$(i_net_o)      \
 		$(i_system_o)   \
 		$(i_sound_o)    \
@@ -497,10 +502,6 @@ ifdef GETTEXT
 POS:=$(BIN)/en.mo
 
 OPTS+=-DGETTEXT
-endif
-
-ifdef DJGPPDOS
-all:	 pre-build $(BIN)/$(EXENAME)
 endif
 
 ifdef PANDORA

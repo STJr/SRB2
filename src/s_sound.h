@@ -61,27 +61,7 @@ extern consvar_t cv_midisoundfontpath;
 extern consvar_t cv_miditimiditypath;
 #endif
 
-#ifdef SNDSERV
-extern consvar_t sndserver_cmd, sndserver_arg;
-#endif
-#ifdef MUSSERV
-extern consvar_t musserver_cmd, musserver_arg;
-#endif
-
 extern CV_PossibleValue_t soundvolume_cons_t[];
-//part of i_cdmus.c
-extern consvar_t cd_volume, cdUpdate;
-
-#if defined (macintosh) && !defined (HAVE_SDL)
-typedef enum
-{
-	music_normal,
-	playlist_random,
-	playlist_normal
-} playmode_t;
-
-extern consvar_t play_mode;
-#endif
 
 typedef enum
 {

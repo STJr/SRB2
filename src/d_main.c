@@ -24,12 +24,6 @@
 #include <unistd.h> // for getcwd
 #endif
 
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-int	snprintf(char *str, size_t n, const char *fmt, ...);
-//int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
-#endif
-
 #ifdef _WIN32
 #include <direct.h>
 #include <malloc.h>
@@ -46,6 +40,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "hu_stuff.h"
 #include "i_sound.h"
 #include "i_system.h"
+#include "i_threads.h"
 #include "i_video.h"
 #include "m_argv.h"
 #include "m_menu.h"
@@ -162,10 +157,6 @@ void D_PostEvent(const event_t *ev)
 	events[eventhead] = *ev;
 	eventhead = (eventhead+1) & (MAXEVENTS-1);
 }
-// just for lock this function
-#if defined (PC_DOS) && !defined (DOXYGEN)
-void D_PostEvent_end(void) {};
-#endif
 
 // modifier keys
 // Now handled in I_OsPolling
@@ -182,6 +173,8 @@ void D_ProcessEvents(void)
 {
 	event_t *ev;
 
+	boolean eaten;
+
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
 		ev = &events[eventtail];
@@ -197,11 +190,31 @@ void D_ProcessEvents(void)
 		}
 
 		// Menu input
-		if (M_Responder(ev))
+#ifdef HAVE_THREADS
+		I_lock_mutex(&m_menu_mutex);
+#endif
+		{
+			eaten = M_Responder(ev);
+		}
+#ifdef HAVE_THREADS
+		I_unlock_mutex(m_menu_mutex);
+#endif
+
+		if (eaten)
 			continue; // menu ate the event
 
 		// console input
-		if (CON_Responder(ev))
+#ifdef HAVE_THREADS
+		I_lock_mutex(&con_mutex);
+#endif
+		{
+			eaten = CON_Responder(ev);
+		}
+#ifdef HAVE_THREADS
+		I_unlock_mutex(con_mutex);
+#endif
+
+		if (eaten)
 			continue; // ate the event
 
 		G_Responder(ev);
@@ -520,7 +533,13 @@ static void D_Display(void)
 	// vid size change is now finished if it was on...
 	vid.recalc = 0;
 
+#ifdef HAVE_THREADS
+	I_lock_mutex(&m_menu_mutex);
+#endif
 	M_Drawer(); // menu is drawn even on top of everything
+#ifdef HAVE_THREADS
+	I_unlock_mutex(m_menu_mutex);
+#endif
 	// focus lost moved to M_Drawer
 
 	CON_Drawer();
@@ -825,9 +844,6 @@ void D_SRB2Loop(void)
 		S_UpdateSounds(); // move positional sounds
 		S_UpdateClosedCaptions();
 
-		// check for media change, loop music..
-		I_UpdateCD();
-
 #ifdef HW3SOUND
 		HW3S_EndFrameUpdate();
 #endif
@@ -1088,64 +1104,6 @@ static void IdentifyVersion(void)
 #endif
 }
 
-#ifdef PC_DOS
-/* ======================================================================== */
-// Code for printing SRB2's title bar in DOS
-/* ======================================================================== */
-
-//
-// Center the title string, then add the date and time of compilation.
-//
-static inline void D_MakeTitleString(char *s)
-{
-	char temp[82];
-	char *t;
-	const char *u;
-	INT32 i;
-
-	for (i = 0, t = temp; i < 82; i++)
-		*t++=' ';
-
-	for (t = temp + (80-strlen(s))/2, u = s; *u != '\0' ;)
-		*t++ = *u++;
-
-	u = compdate;
-	for (t = temp + 1, i = 11; i-- ;)
-		*t++ = *u++;
-	u = comptime;
-	for (t = temp + 71, i = 8; i-- ;)
-		*t++ = *u++;
-
-	temp[80] = '\0';
-	strcpy(s, temp);
-}
-
-static inline void D_Titlebar(void)
-{
-	char title1[82]; // srb2 title banner
-	char title2[82];
-
-	strcpy(title1, "Sonic Robo Blast 2");
-	strcpy(title2, "Sonic Robo Blast 2");
-
-	D_MakeTitleString(title1);
-
-	// SRB2 banner
-	clrscr();
-	textattr((BLUE<<4)+WHITE);
-	clreol();
-	cputs(title1);
-
-	// standard srb2 banner
-	textattr((RED<<4)+WHITE);
-	clreol();
-	gotoxy((80-strlen(title2))/2, 2);
-	cputs(title2);
-	normvideo();
-	gotoxy(1,3);
-}
-#endif
-
 static void
 D_ConvertVersionNumbers (void)
 {
@@ -1189,7 +1147,7 @@ void D_SRB2Main(void)
 	"in this program.\n\n");
 
 	// keep error messages until the final flush(stderr)
-#if !defined (PC_DOS) && !defined(NOTERMIOS)
+#if !defined(NOTERMIOS)
 	if (setvbuf(stderr, NULL, _IOFBF, 1000))
 		I_OutputMsg("setvbuf didnt work\n");
 #endif
@@ -1225,10 +1183,6 @@ void D_SRB2Main(void)
 	// for dedicated server
 #if !defined (_WINDOWS) //already check in win_main.c
 	dedicated = M_CheckParm("-dedicated") != 0;
-#endif
-
-#ifdef PC_DOS
-	D_Titlebar();
 #endif
 
 	if (devparm)
@@ -1469,10 +1423,6 @@ void D_SRB2Main(void)
 			autostart = true;
 		}
 	}
-
-	// Initialize CD-Audio
-	if (M_CheckParm("-usecd") && !dedicated)
-		I_InitCD();
 
 	if (M_CheckParm("-noupload"))
 		COM_BufAddText("downloading 0\n");

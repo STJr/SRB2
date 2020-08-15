@@ -1126,7 +1126,7 @@ static void ST_drawInput(void)
 	V_DrawCharacter(x+16+1+(xoffs), y+1+(yoffs)-offs, hudinfo[HUD_LIVES].f|symb, false)
 
 	drawbutt( 4,-3, BT_JUMP, 'J');
-	drawbutt(15,-3, BT_USE,  'S');
+	drawbutt(15,-3, BT_SPIN, 'S');
 
 	V_DrawFill(x+16+4, y+8, 21, 10, hudinfo[HUD_LIVES].f|20); // sundial backing
 	if (stplyr->mo)

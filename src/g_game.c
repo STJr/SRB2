@@ -1340,8 +1340,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	// use with any button/key
 	axis = PlayerJoyAxis(ssplayer, AXISSPIN);
-	if (PLAYERINPUTDOWN(ssplayer, gc_use) || (usejoystick && axis > 0))
-		cmd->buttons |= BT_USE;
+	if (PLAYERINPUTDOWN(ssplayer, gc_spin) || (usejoystick && axis > 0))
+		cmd->buttons |= BT_SPIN;
 
 	// Centerview can be a toggle in simple mode!
 	{
@@ -2248,7 +2248,10 @@ void G_Ticker(boolean run)
 
 			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
 			players[i].oldrelangleturn = players[i].cmd.angleturn;
-			players[i].cmd.angleturn = players[i].angleturn;
+			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
+				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
+			else
+				players[i].cmd.angleturn = players[i].angleturn;
 		}
 	}
 
@@ -2572,7 +2575,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->spheres = spheres;
 
 	// Don't do anything immediately
-	p->pflags |= PF_USEDOWN;
+	p->pflags |= PF_SPINDOWN;
 	p->pflags |= PF_ATTACKDOWN;
 	p->pflags |= PF_JUMPDOWN;
 

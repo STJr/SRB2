@@ -494,7 +494,7 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	if (angle) // Only needs to be done if there's an altered angle
 	{
 
-		angle = (InvAngle(angle)+ANGLE_180)>>ANGLETOFINESHIFT;
+		angle = (InvAngle(angle))>>ANGLETOFINESHIFT;
 
 		// This needs to be done so that it scrolls in a different direction after rotation like software
 		/*tempxsow = FLOAT_TO_FIXED(scrollx);
@@ -528,8 +528,6 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		{\
 			tempxsow = FLOAT_TO_FIXED(vert->s);\
 			tempytow = FLOAT_TO_FIXED(vert->t);\
-			if (texflat)\
-				tempytow = -tempytow;\
 			vert->s = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));\
 			vert->t = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINESINE(angle)) + FixedMul(tempytow, FINECOSINE(angle))));\
 		}\
@@ -2284,8 +2282,8 @@ static void HWR_AddLine(seg_t * line)
 	v2y = FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->y);
 
 	// OPTIMIZE: quickly reject orthogonal back sides.
-	angle1 = R_PointToAngle(v1x, v1y);
-	angle2 = R_PointToAngle(v2x, v2y);
+	angle1 = R_PointToAngle64(v1x, v1y);
+	angle2 = R_PointToAngle64(v2x, v2y);
 
 #ifdef NEWCLIP
 	 // PrBoom: Back side, i.e. backface culling - read: endAngle >= startAngle!
@@ -2578,8 +2576,8 @@ static boolean HWR_CheckBBox(fixed_t *bspcoord)
 	py2 = bspcoord[checkcoord[boxpos][3]];
 
 #ifdef NEWCLIP
-	angle1 = R_PointToAngle(px1, py1);
-	angle2 = R_PointToAngle(px2, py2);
+	angle1 = R_PointToAngle64(px1, py1);
+	angle2 = R_PointToAngle64(px2, py2);
 	return gld_clipper_SafeCheckRange(angle2, angle1);
 #else
 	// check clip list for an open space
@@ -2776,13 +2774,13 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		{
 			scrollx = FIXED_TO_FLOAT(FOFsector->floor_xoffs)/fflatwidth;
 			scrolly = FIXED_TO_FLOAT(FOFsector->floor_yoffs)/fflatheight;
-			angle = FOFsector->floorpic_angle>>ANGLETOFINESHIFT;
+			angle = FOFsector->floorpic_angle;
 		}
 		else // it's a ceiling
 		{
 			scrollx = FIXED_TO_FLOAT(FOFsector->ceiling_xoffs)/fflatwidth;
 			scrolly = FIXED_TO_FLOAT(FOFsector->ceiling_yoffs)/fflatheight;
-			angle = FOFsector->ceilingpic_angle>>ANGLETOFINESHIFT;
+			angle = FOFsector->ceilingpic_angle;
 		}
 	}
 	else if (gl_frontsector)
@@ -2791,23 +2789,25 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		{
 			scrollx = FIXED_TO_FLOAT(gl_frontsector->floor_xoffs)/fflatwidth;
 			scrolly = FIXED_TO_FLOAT(gl_frontsector->floor_yoffs)/fflatheight;
-			angle = gl_frontsector->floorpic_angle>>ANGLETOFINESHIFT;
+			angle = gl_frontsector->floorpic_angle;
 		}
 		else // it's a ceiling
 		{
 			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceiling_xoffs)/fflatwidth;
 			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceiling_yoffs)/fflatheight;
-			angle = gl_frontsector->ceilingpic_angle>>ANGLETOFINESHIFT;
+			angle = gl_frontsector->ceilingpic_angle;
 		}
 	}
 
 	if (angle) // Only needs to be done if there's an altered angle
 	{
+		angle = (InvAngle(angle))>>ANGLETOFINESHIFT;
+
 		// This needs to be done so that it scrolls in a different direction after rotation like software
-		tempxs = FLOAT_TO_FIXED(scrollx);
+		/*tempxs = FLOAT_TO_FIXED(scrollx);
 		tempyt = FLOAT_TO_FIXED(scrolly);
 		scrollx = (FIXED_TO_FLOAT(FixedMul(tempxs, FINECOSINE(angle)) - FixedMul(tempyt, FINESINE(angle))));
-		scrolly = (FIXED_TO_FLOAT(FixedMul(tempxs, FINESINE(angle)) + FixedMul(tempyt, FINECOSINE(angle))));
+		scrolly = (FIXED_TO_FLOAT(FixedMul(tempxs, FINESINE(angle)) + FixedMul(tempyt, FINECOSINE(angle))));*/
 
 		// This needs to be done so everything aligns after rotation
 		// It would be done so that rotation is done, THEN the translation, but I couldn't get it to rotate AND scroll like software does
@@ -2837,10 +2837,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		{
 			tempxs = FLOAT_TO_FIXED(v3d->s);
 			tempyt = FLOAT_TO_FIXED(v3d->t);
-			if (texflat)
-				tempyt = -tempyt;
 			v3d->s = (FIXED_TO_FLOAT(FixedMul(tempxs, FINECOSINE(angle)) - FixedMul(tempyt, FINESINE(angle))));
-			v3d->t = (FIXED_TO_FLOAT(-FixedMul(tempxs, FINESINE(angle)) - FixedMul(tempyt, FINECOSINE(angle))));
+			v3d->t = (FIXED_TO_FLOAT(FixedMul(tempxs, FINESINE(angle)) + FixedMul(tempyt, FINECOSINE(angle))));
 		}
 
 		v3d->x = FIXED_TO_FLOAT(polysector->vertices[i]->x);
@@ -5206,10 +5204,155 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 #endif
 
 // ==========================================================================
-//
+// Sky dome rendering, ported from PrBoom+
 // ==========================================================================
+
+static gl_sky_t gl_sky;
+
+static void HWR_SkyDomeVertex(gl_sky_t *sky, gl_skyvertex_t *vbo, int r, int c, signed char yflip, float delta, boolean foglayer)
+{
+	const float radians = (float)(M_PIl / 180.0f);
+	const float scale = 10000.0f;
+	const float maxSideAngle = 60.0f;
+
+	float topAngle = (c / (float)sky->columns * 360.0f);
+	float sideAngle = (maxSideAngle * (sky->rows - r) / sky->rows);
+	float height = (float)(sin(sideAngle * radians));
+	float realRadius = (float)(scale * cos(sideAngle * radians));
+	float x = (float)(realRadius * cos(topAngle * radians));
+	float y = (!yflip) ? scale * height : -scale * height;
+	float z = (float)(realRadius * sin(topAngle * radians));
+	float timesRepeat = (4 * (256.0f / sky->width));
+	if (fpclassify(timesRepeat) == FP_ZERO)
+		timesRepeat = 1.0f;
+
+	if (!foglayer)
+	{
+		vbo->r = 255;
+		vbo->g = 255;
+		vbo->b = 255;
+		vbo->a = (r == 0 ? 0 : 255);
+
+		// And the texture coordinates.
+		vbo->u = (-timesRepeat * c / (float)sky->columns);
+		if (!yflip)	// Flipped Y is for the lower hemisphere.
+			vbo->v = (r / (float)sky->rows) + 0.5f;
+		else
+			vbo->v = 1.0f + ((sky->rows - r) / (float)sky->rows) + 0.5f;
+	}
+
+	if (r != 4)
+		y += 300.0f;
+
+	// And finally the vertex.
+	vbo->x = x;
+	vbo->y = y + delta;
+	vbo->z = z;
+}
+
+// Clears the sky dome.
+void HWR_ClearSkyDome(void)
+{
+	gl_sky_t *sky = &gl_sky;
+
+	if (sky->loops)
+		free(sky->loops);
+	if (sky->data)
+		free(sky->data);
+
+	sky->loops = NULL;
+	sky->data = NULL;
+
+	sky->vbo = 0;
+	sky->rows = sky->columns = 0;
+	sky->loopcount = 0;
+
+	sky->detail = 0;
+	sky->texture = -1;
+	sky->width = sky->height = 0;
+
+	sky->rebuild = true;
+}
+
+void HWR_BuildSkyDome(void)
+{
+	int c, r;
+	signed char yflip;
+	int row_count = 4;
+	int col_count = 4;
+	float delta;
+
+	gl_sky_t *sky = &gl_sky;
+	gl_skyvertex_t *vertex_p;
+	texture_t *texture = textures[texturetranslation[skytexture]];
+
+	sky->detail = 16;
+	col_count *= sky->detail;
+
+	if ((sky->columns != col_count) || (sky->rows != row_count))
+		HWR_ClearSkyDome();
+
+	sky->columns = col_count;
+	sky->rows = row_count;
+	sky->vertex_count = 2 * sky->rows * (sky->columns * 2 + 2) + sky->columns * 2;
+
+	if (!sky->loops)
+		sky->loops = malloc((sky->rows * 2 + 2) * sizeof(sky->loops[0]));
+
+	// create vertex array
+	if (!sky->data)
+		sky->data = malloc(sky->vertex_count * sizeof(sky->data[0]));
+
+	sky->texture = texturetranslation[skytexture];
+	sky->width = texture->width;
+	sky->height = texture->height;
+
+	vertex_p = &sky->data[0];
+	sky->loopcount = 0;
+
+	for (yflip = 0; yflip < 2; yflip++)
+	{
+		sky->loops[sky->loopcount].mode = HWD_SKYLOOP_FAN;
+		sky->loops[sky->loopcount].vertexindex = vertex_p - &sky->data[0];
+		sky->loops[sky->loopcount].vertexcount = col_count;
+		sky->loops[sky->loopcount].use_texture = false;
+		sky->loopcount++;
+
+		delta = 0.0f;
+
+		for (c = 0; c < col_count; c++)
+		{
+			HWR_SkyDomeVertex(sky, vertex_p, 1, c, yflip, 0.0f, true);
+			vertex_p->r = 255;
+			vertex_p->g = 255;
+			vertex_p->b = 255;
+			vertex_p->a = 255;
+			vertex_p++;
+		}
+
+		delta = (yflip ? 5.0f : -5.0f) / 128.0f;
+
+		for (r = 0; r < row_count; r++)
+		{
+			sky->loops[sky->loopcount].mode = HWD_SKYLOOP_STRIP;
+			sky->loops[sky->loopcount].vertexindex = vertex_p - &sky->data[0];
+			sky->loops[sky->loopcount].vertexcount = 2 * col_count + 2;
+			sky->loops[sky->loopcount].use_texture = true;
+			sky->loopcount++;
+
+			for (c = 0; c <= col_count; c++)
+			{
+				HWR_SkyDomeVertex(sky, vertex_p++, r + (yflip ? 1 : 0), (c ? c : 0), yflip, delta, false);
+				HWR_SkyDomeVertex(sky, vertex_p++, r + (yflip ? 0 : 1), (c ? c : 0), yflip, delta, false);
+			}
+		}
+	}
+}
+
 static void HWR_DrawSkyBackground(player_t *player)
 {
+	HWD.pfnSetBlend(PF_Translucent|PF_NoDepthTest|PF_Modulated);
+
 	if (cv_glskydome.value)
 	{
 		FTransform dometransform;
@@ -5247,7 +5390,16 @@ static void HWR_DrawSkyBackground(player_t *player)
 		dometransform.splitscreen = splitscreen;
 
 		HWR_GetTexture(texturetranslation[skytexture]);
-		HWD.pfnRenderSkyDome(skytexture, textures[skytexture]->width, textures[skytexture]->height, dometransform);
+
+		if (gl_sky.texture != texturetranslation[skytexture])
+		{
+			HWR_ClearSkyDome();
+			HWR_BuildSkyDome();
+		}
+
+		HWD.pfnSetShader(7); // sky shader
+		HWD.pfnSetTransform(&dometransform);
+		HWD.pfnRenderSkyDome(&gl_sky);
 	}
 	else
 	{
@@ -5328,10 +5480,11 @@ static void HWR_DrawSkyBackground(player_t *player)
 			v[0].t = v[1].t -= ((float) angle / angleturn);
 		}
 
-		HWD.pfnSetShader(7); // sky shader
+		HWD.pfnUnSetShader();
 		HWD.pfnDrawPolygon(NULL, v, 4, 0);
-		HWD.pfnSetShader(0);
 	}
+
+	HWD.pfnSetShader(0);
 }
 
 

@@ -25,6 +25,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "i_system.h"
+#include "i_threads.h"
 #include "m_menu.h"
 #include "dehacked.h"
 #include "g_input.h"
@@ -959,7 +960,13 @@ void F_IntroDrawer(void)
 
 					I_OsPolling();
 					I_UpdateNoBlit();
+#ifdef HAVE_THREADS
+					I_lock_mutex(&m_menu_mutex);
+#endif
 					M_Drawer(); // menu is drawn even on top of wipes
+#ifdef HAVE_THREADS
+					I_unlock_mutex(m_menu_mutex);
+#endif
 					I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
 
 					if (moviemode) // make sure we save frames for the white hold too
@@ -4097,7 +4104,7 @@ void F_CutsceneTicker(void)
 		if (netgame && i != serverplayer && !IsPlayerAdmin(i))
 			continue;
 
-		if (players[i].cmd.buttons & BT_USE)
+		if (players[i].cmd.buttons & BT_SPIN)
 		{
 			keypressed = false;
 			cutscene_boostspeed = 1;
@@ -4437,11 +4444,11 @@ static boolean F_GetTextPromptTutorialTag(char *tag, INT32 length)
 	else if (!strncmp(tag, "TAJ", 3)) // Jump
 		gcs = G_GetControlScheme(gamecontrol, gcl_jump, num_gcl_jump);
 	else if (!strncmp(tag, "TAS", 3)) // Spin
-		gcs = G_GetControlScheme(gamecontrol, gcl_use, num_gcl_use);
+		gcs = G_GetControlScheme(gamecontrol, gcl_spin, num_gcl_spin);
 	else if (!strncmp(tag, "TAA", 3)) // Char ability
 		gcs = G_GetControlScheme(gamecontrol, gcl_jump, num_gcl_jump);
 	else if (!strncmp(tag, "TAW", 3)) // Shield ability
-		gcs = G_GetControlScheme(gamecontrol, gcl_jump_use, num_gcl_jump_use);
+		gcs = G_GetControlScheme(gamecontrol, gcl_jump_spin, num_gcl_jump_spin);
 	else
 		gcs = G_GetControlScheme(gamecontrol, gcl_tutorial_used, num_gcl_tutorial_used);
 
@@ -4698,7 +4705,7 @@ void F_TextPromptTicker(void)
 				else
 					continue;
 
-				if ((players[i].cmd.buttons & BT_USE) || (players[i].cmd.buttons & BT_JUMP))
+				if ((players[i].cmd.buttons & BT_SPIN) || (players[i].cmd.buttons & BT_JUMP))
 				{
 					if (timetonext > 1)
 						timetonext--;
@@ -4721,7 +4728,7 @@ void F_TextPromptTicker(void)
 					}
 					keypressed = true; // prevent repeat events
 				}
-				else if (!(players[i].cmd.buttons & BT_USE) && !(players[i].cmd.buttons & BT_JUMP))
+				else if (!(players[i].cmd.buttons & BT_SPIN) && !(players[i].cmd.buttons & BT_JUMP))
 					keypressed = false;
 
 				if (!splitscreen)

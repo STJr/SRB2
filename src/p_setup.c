@@ -4212,9 +4212,6 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// clear special respawning que
 	iquehead = iquetail = 0;
 
-	// Fab : 19-07-98 : start cd music for this level (note: can be remapped)
-	I_PlayCD((UINT8)(gamemap), false);
-
 	P_MapEnd();
 
 	// Remove the loading shit from the screen
@@ -4301,6 +4298,10 @@ void HWR_SetupLevel(void)
 #endif
 
 	HWR_CreatePlanePolygons((INT32)numnodes - 1);
+
+	// Build the sky dome
+	HWR_ClearSkyDome();
+	HWR_BuildSkyDome();
 }
 #endif
 

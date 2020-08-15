@@ -11,16 +11,6 @@
 /// \file  s_sound.c
 /// \brief System-independent sound and music routines
 
-#ifdef MUSSERV
-#include <sys/msg.h>
-struct musmsg
-{
-	long msg_type;
-	char msg_text[12];
-};
-extern INT32 msg_id;
-#endif
-
 #include "doomdef.h"
 #include "doomstat.h"
 #include "command.h"
@@ -69,16 +59,6 @@ static void ModFilter_OnChange(void);
 static lumpnum_t S_GetMusicLumpNum(const char *mname);
 
 static boolean S_CheckQueue(void);
-
-// commands for music and sound servers
-#ifdef MUSSERV
-consvar_t musserver_cmd = {"musserver_cmd", "musserver", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t musserver_arg = {"musserver_arg", "-t 20 -f -u 0 -i music.dta", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
-#ifdef SNDSERV
-consvar_t sndserver_cmd = {"sndserver_cmd", "llsndserv", CV_SAVE, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t sndserver_arg = {"sndserver_arg", "-quiet", CV_SAVE, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
 
 #if defined (_WINDOWS) && !defined (SURROUND) //&& defined (_X86_)
 #define SURROUND
@@ -292,14 +272,6 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&stereoreverse);
 	CV_RegisterVar(&precachesound);
 
-#ifdef SNDSERV
-	CV_RegisterVar(&sndserver_cmd);
-	CV_RegisterVar(&sndserver_arg);
-#endif
-#ifdef MUSSERV
-	CV_RegisterVar(&musserver_cmd);
-	CV_RegisterVar(&musserver_arg);
-#endif
 	CV_RegisterVar(&surround);
 	CV_RegisterVar(&cv_samplerate);
 	CV_RegisterVar(&cv_resetmusic);
@@ -322,27 +294,6 @@ void S_RegisterSoundStuff(void)
 
 	COM_AddCommand("tunes", Command_Tunes_f);
 	COM_AddCommand("restartaudio", Command_RestartAudio_f);
-
-#if defined (macintosh) && !defined (HAVE_SDL) // mp3 playlist stuff
-	{
-		INT32 i;
-		for (i = 0; i < PLAYLIST_LENGTH; i++)
-		{
-			user_songs[i].name = malloc(7);
-			if (!user_songs[i].name)
-				I_Error("No more free memory for mp3 playlist");
-			sprintf(user_songs[i].name, "song%d%d",i/10,i%10);
-			user_songs[i].defaultvalue = malloc(sizeof (char));
-			if (user_songs[i].defaultvalue)
-				I_Error("No more free memory for blank mp3 playerlist");
-			*user_songs[i].defaultvalue = 0;
-			user_songs[i].flags = CV_SAVE;
-			user_songs[i].PossibleValue = NULL;
-			CV_RegisterVar(&user_songs[i]);
-		}
-		CV_RegisterVar(&play_mode);
-	}
-#endif
 }
 
 static void SetChannelsNum(void)
@@ -2230,17 +2181,6 @@ static boolean S_LoadMusic(const char *mname)
 	// load & register it
 	mdata = W_CacheLumpNum(mlumpnum, PU_MUSIC);
 
-#ifdef MUSSERV
-	if (msg_id != -1)
-	{
-		struct musmsg msg_buffer;
-
-		msg_buffer.msg_type = 6;
-		memset(msg_buffer.msg_text, 0, sizeof (msg_buffer.msg_text));
-		sprintf(msg_buffer.msg_text, "d_%s", mname);
-		msgsnd(msg_id, (struct msgbuf*)&msg_buffer, sizeof (msg_buffer.msg_text), IPC_NOWAIT);
-	}
-#endif
 
 	if (I_LoadSong(mdata, W_LumpLength(mlumpnum)))
 	{
@@ -2433,13 +2373,6 @@ void S_PauseAudio(void)
 	if (I_SongPlaying() && !I_SongPaused())
 		I_PauseSong();
 
-	// pause cd music
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	I_PauseCD();
-#else
-	I_StopCD();
-#endif
-
 	S_SetStackAdjustmentStart();
 }
 
@@ -2450,9 +2383,6 @@ void S_ResumeAudio(void)
 
 	if (I_SongPlaying() && I_SongPaused())
 		I_ResumeSong();
-
-	// resume cd music
-	I_ResumeCD();
 
 	S_AdjustMusicStackTics();
 }
@@ -2473,10 +2403,6 @@ void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume)
 		CONS_Alert(CONS_WARNING, "midimusicvolume should be between 0-31\n");
 	CV_SetValue(&cv_midimusicvolume, seqvolume&31);
 	actualmidimusicvolume = cv_midimusicvolume.value;   //check for change of var
-
-#ifdef DJGPPDOS
-	digvolume = seqvolume = 31;
-#endif
 
 	switch(I_SongType())
 	{

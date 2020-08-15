@@ -297,6 +297,9 @@
     <ClInclude Include="..\mserv.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
+    <ClInclude Include="..\http-mserv.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
     <ClInclude Include="..\lua_hook.h">
       <Filter>LUA</Filter>
     </ClInclude>
@@ -682,6 +685,9 @@
       <Filter>I_Interface</Filter>
     </ClCompile>
     <ClCompile Include="..\mserv.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\http-mserv.c">
       <Filter>I_Interface</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_baselib.c">
