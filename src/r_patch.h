@@ -46,8 +46,9 @@ void *Patch_AllocateHardwarePatch(patch_t *patch);
 void *Patch_CreateGL(patch_t *patch);
 #endif
 
+boolean Patch_CheckIfDoom(softwarepatch_t *patch, size_t length);
+
 // Conversions between patches / flats / textures...
-boolean R_CheckIfPatch(lumpnum_t lump);
 void R_TextureToFlat(size_t tex, UINT8 *flat);
 void R_PatchToFlat(patch_t *patch, UINT8 *flat);
 void R_PatchToMaskedFlat(patch_t *patch, UINT16 *raw, boolean flip);

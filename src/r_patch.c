@@ -143,29 +143,23 @@ void *Patch_CreateGL(patch_t *patch)
 #endif // HWRENDER
 
 //
-// R_CheckIfPatch
+// Patch_CheckIfDoom
 //
-// Returns true if the lump is a valid patch.
+// Returns true if the lump is a valid Doom patch.
 //
-boolean R_CheckIfPatch(lumpnum_t lump)
+boolean Patch_CheckIfDoom(softwarepatch_t *patch, size_t length)
 {
-	size_t size;
 	INT16 width, height;
-	patch_t *patch;
 	boolean result;
 
-	size = W_LumpLength(lump);
-
 	// minimum length of a valid Doom patch
-	if (size < 13)
+	if (length < 13)
 		return false;
-
-	patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
 
 	width = SHORT(patch->width);
 	height = SHORT(patch->height);
 
-	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < (INT16)(size / 4));
+	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < (INT16)(length / 4));
 
 	if (result)
 	{
@@ -180,7 +174,7 @@ boolean R_CheckIfPatch(lumpnum_t lump)
 			UINT32 ofs = LONG(patch->columnofs[x]);
 
 			// Need one byte for an empty column (but there's patches that don't know that!)
-			if (ofs < (UINT32)width * 4 + 8 || ofs >= (UINT32)size)
+			if (ofs < (UINT32)width * 4 + 8 || ofs >= (UINT32)length)
 			{
 				result = false;
 				break;

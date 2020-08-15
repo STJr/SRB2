@@ -603,7 +603,7 @@ texturefound:
 	{
 flatfound:
 		/* This could be a flat, patch, or PNG. */
-		if (R_CheckIfPatch(flatnum))
+		if (Patch_CheckIfDoom((patch_t *)W_CacheLumpNum(flatnum, PU_STATIC), W_LumpLength(flatnum)))
 			levelflat->type = LEVELFLAT_PATCH;
 		else
 		{
