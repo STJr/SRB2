@@ -47,9 +47,12 @@ INT32 Tag_Iterate_Things (const mtag_t tag, const size_t p);
 INT32 Tag_FindLineSpecial(const INT16 special, const mtag_t tag);
 INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start);
 
-#define TAG_ITER_C size_t kkkk;
-#define TAG_ITER(fn, tag, id) for(kkkk = 0; (id = fn(tag, kkkk)) >= 0; kkkk++)
+// Use this macro to declare the iterator position variable.
+#define TAG_ITER_C size_t tag_iterator_pos;
 
+#define TAG_ITER(fn, tag, id) for(tag_iterator_pos = 0; (id = fn(tag, tag_iterator_pos)) >= 0; tag_iterator_pos++)
+
+// Use these macros as wrappers for the taglist iterations.
 #define TAG_ITER_SECTORS(tag, id) TAG_ITER(Tag_Iterate_Sectors, tag, id)
 #define TAG_ITER_LINES(tag, id)   TAG_ITER(Tag_Iterate_Lines, tag, id)
 #define TAG_ITER_THINGS(tag, id)  TAG_ITER(Tag_Iterate_Things, tag, id)

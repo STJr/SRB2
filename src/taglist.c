@@ -208,7 +208,7 @@ void Taglist_InitGlobalTables(void)
 	}
 }
 
-// Iteration, inagme search.
+// Iteration, ingame search.
 
 INT32 Tag_Iterate_Sectors (const mtag_t tag, const size_t p)
 {
