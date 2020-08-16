@@ -118,7 +118,7 @@ void *Picture_PatchConvert(
 	UINT8 *imgptr = imgbuf;
 	UINT8 *colpointers, *startofspan;
 	size_t size = 0;
-	softwarepatch_t *inpatch = NULL;
+	patch_t *inpatch = NULL;
 	INT32 inbpp = Picture_FormatBPP(informat);
 
 	(void)insize; // ignore
@@ -140,10 +140,21 @@ void *Picture_PatchConvert(
 	if (Picture_IsPatchFormat(informat))
 	{
 		inpatch = (patch_t *)picture;
-		inwidth = SHORT(inpatch->width);
-		inheight = SHORT(inpatch->height);
-		inleftoffset = SHORT(inpatch->leftoffset);
-		intopoffset = SHORT(inpatch->topoffset);
+		if (Picture_IsDoomPatchFormat(informat))
+		{
+			softwarepatch_t *doompatch = (softwarepatch_t *)picture;
+			inwidth = SHORT(doompatch->width);
+			inheight = SHORT(doompatch->height);
+			inleftoffset = SHORT(doompatch->leftoffset);
+			intopoffset = SHORT(doompatch->topoffset);
+		}
+		else
+		{
+			inwidth = inpatch->width;
+			inheight = inpatch->height;
+			inleftoffset = inpatch->leftoffset;
+			intopoffset = inpatch->topoffset;
+		}
 	}
 
 	// Write image size and offset
@@ -273,6 +284,7 @@ void *Picture_PatchConvert(
 			switch (outformat)
 			{
 				case PICFMT_PATCH32:
+				case PICFMT_DOOMPATCH32:
 				{
 					if (inbpp == PICDEPTH_32BPP)
 					{
@@ -292,6 +304,7 @@ void *Picture_PatchConvert(
 					break;
 				}
 				case PICFMT_PATCH16:
+				case PICFMT_DOOMPATCH16:
 					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t in = *(RGBA_t *)input;
@@ -338,7 +351,18 @@ void *Picture_PatchConvert(
 
 	if (outsize != NULL)
 		*outsize = size;
-	return img;
+
+	if (Picture_IsInternalPatchFormat(outformat))
+	{
+		patch_t *converted = Patch_Create((softwarepatch_t *)img, size, NULL);
+#ifdef HWRENDER
+		Patch_CreateGL(converted);
+#endif
+		Z_Free(img);
+		return converted;
+	}
+	else
+		return img;
 }
 
 /** Converts a picture to a flat.
@@ -389,8 +413,17 @@ void *Picture_FlatConvert(
 	if (Picture_IsPatchFormat(informat))
 	{
 		inpatch = (patch_t *)picture;
-		inwidth = SHORT(inpatch->width);
-		inheight = SHORT(inpatch->height);
+		if (Picture_IsDoomPatchFormat(informat))
+		{
+			softwarepatch_t *doompatch = ((softwarepatch_t *)picture);
+			inwidth = SHORT(doompatch->width);
+			inheight = SHORT(doompatch->height);
+		}
+		else
+		{
+			inwidth = inpatch->width;
+			inheight = inpatch->height;
+		}
 	}
 
 	size = (inwidth * inheight) * (outbpp / 8);
@@ -501,22 +534,25 @@ void *Picture_GetPatchPixel(
 	UINT8 *s8 = NULL;
 	UINT16 *s16 = NULL;
 	UINT32 *s32 = NULL;
+	softwarepatch_t *doompatch = (softwarepatch_t *)patch;
+	INT16 width;
 
 	if (patch == NULL)
 		I_Error("Picture_GetPatchPixel: patch == NULL");
 
-	if (x >= 0 && x < SHORT(patch->width))
-	{
-		INT32 topdelta, prevdelta = -1;
-		INT32 colofs = 0;
+	width = (Picture_IsDoomPatchFormat(informat) ? patch->width : SHORT(patch->width));
 
-		if (flags & PICFLAGS_XFLIP)
-			colofs = LONG(patch->columnofs[(SHORT(patch->width)-1)-x]);
-		else
-			colofs = LONG(patch->columnofs[x]);
+	if (x >= 0 && x < width)
+	{
+		INT32 colx = (flags & PICFLAGS_XFLIP) ? (width-1)-x : x;
+		INT32 topdelta, prevdelta = -1;
+		INT32 colofs = (Picture_IsDoomPatchFormat(informat) ? LONG(patch->columnofs[colx]) : patch->columnofs[colx]);
 
 		// Column offsets are pointers so no casting required
-		column = (column_t *)((UINT8 *)patch + colofs);
+		if (Picture_IsDoomPatchFormat(informat))
+			column = (column_t *)((UINT8 *)doompatch + colofs);
+		else
+			column = (column_t *)((UINT8 *)patch->columns + colofs);
 
 		while (column->topdelta != 0xff)
 		{
@@ -525,25 +561,25 @@ void *Picture_GetPatchPixel(
 				topdelta += prevdelta;
 			prevdelta = topdelta;
 			s8 = (UINT8 *)(column) + 3;
-			if (informat == PICFMT_PATCH32)
+			if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
 				s32 = (UINT32 *)s8;
-			else if (informat == PICFMT_PATCH16)
+			else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
 				s16 = (UINT16 *)s8;
 			for (ofs = 0; ofs < column->length; ofs++)
 			{
 				if ((topdelta + ofs) == y)
 				{
-					if (informat == PICFMT_PATCH32)
+					if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
 						return &s32[ofs];
-					else if (informat == PICFMT_PATCH16)
+					else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
 						return &s16[ofs];
-					else // PICFMT_PATCH
+					else // PICDEPTH_8BPP
 						return &s8[ofs];
 				}
 			}
-			if (informat == PICFMT_PATCH32)
+			if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
 				column = (column_t *)((UINT32 *)column + column->length);
-			else if (informat == PICFMT_PATCH16)
+			else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
 				column = (column_t *)((UINT16 *)column + column->length);
 			else
 				column = (column_t *)((UINT8 *)column + column->length);
@@ -566,15 +602,18 @@ INT32 Picture_FormatBPP(pictureformat_t format)
 	{
 		case PICFMT_PATCH32:
 		case PICFMT_FLAT32:
+		case PICFMT_DOOMPATCH32:
 		case PICFMT_PNG:
 			bpp = PICDEPTH_32BPP;
 			break;
 		case PICFMT_PATCH16:
 		case PICFMT_FLAT16:
+		case PICFMT_DOOMPATCH16:
 			bpp = PICDEPTH_16BPP;
 			break;
 		case PICFMT_PATCH:
 		case PICFMT_FLAT:
+		case PICFMT_DOOMPATCH:
 			bpp = PICDEPTH_8BPP;
 			break;
 		default:
@@ -590,7 +629,43 @@ INT32 Picture_FormatBPP(pictureformat_t format)
   */
 boolean Picture_IsPatchFormat(pictureformat_t format)
 {
-	return (format == PICFMT_PATCH || format == PICFMT_PATCH16 || format == PICFMT_PATCH32);
+	return (Picture_IsInternalPatchFormat(format) || Picture_IsDoomPatchFormat(format));
+}
+
+/** Checks if the specified picture format is an internal patch.
+  *
+  * \param format Input picture format.
+  * \return True if the picture format is an internal patch, false if not.
+  */
+boolean Picture_IsInternalPatchFormat(pictureformat_t format)
+{
+	switch (format)
+	{
+		case PICFMT_PATCH:
+		case PICFMT_PATCH16:
+		case PICFMT_PATCH32:
+			return true;
+		default:
+			return false;
+	}
+}
+
+/** Checks if the specified picture format is a Doom patch.
+  *
+  * \param format Input picture format.
+  * \return True if the picture format is a Doom patch, false if not.
+  */
+boolean Picture_IsDoomPatchFormat(pictureformat_t format)
+{
+	switch (format)
+	{
+		case PICFMT_DOOMPATCH:
+		case PICFMT_DOOMPATCH16:
+		case PICFMT_DOOMPATCH32:
+			return true;
+		default:
+			return false;
+	}
 }
 
 /** Checks if the specified picture format is a flat.
@@ -604,13 +679,13 @@ boolean Picture_IsFlatFormat(pictureformat_t format)
 }
 
 /** Returns true if the lump is a valid Doom patch.
-  * PICFMT_PATCH only, I think??
+  * PICFMT_DOOMPATCH only.
   *
   * \param patch Input patch.
   * \param picture Input patch size.
   * \return True if the input patch is valid.
   */
-boolean Picture_CheckIfPatch(softwarepatch_t *patch, size_t size)
+boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size)
 {
 	INT16 width, height;
 	boolean result;
@@ -1461,7 +1536,6 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 {
 	INT32 angle;
 	patch_t *patch, *newpatch;
-	softwarepatch_t *swpatch;
 	UINT16 *rawdst;
 	size_t size;
 	pictureflags_t bflip = (flip) ? PICFLAGS_XFLIP : 0;
@@ -1598,31 +1672,18 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			}
 
 			// make patch
-			swpatch = (softwarepatch_t *)Picture_Convert(PICFMT_FLAT16, rawdst, PICFMT_PATCH, 0, &size, newwidth, newheight, 0, 0, 0);
+			newpatch = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawdst, PICFMT_PATCH, 0, &size, newwidth, newheight, 0, 0, 0);
 			{
-				swpatch->leftoffset = (swpatch->width / 2) + (leftoffset - px);
-				swpatch->topoffset = (swpatch->height / 2) + (patch->topoffset - py);
+				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
+				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
 			}
 
 			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
 			if (rendermode != render_none) // not for psprite
-				swpatch->topoffset += FEETADJUST>>FRACBITS;
+				newpatch->topoffset += FEETADJUST>>FRACBITS;
 
 			// P_PrecacheLevel
 			if (devparm) spritememory += size;
-
-			// convert everything to little-endian, for big-endian support
-			swpatch->width = SHORT(swpatch->width);
-			swpatch->height = SHORT(swpatch->height);
-			swpatch->leftoffset = SHORT(swpatch->leftoffset);
-			swpatch->topoffset = SHORT(swpatch->topoffset);
-
-			newpatch = Patch_Create(swpatch, size, NULL);
-
-#ifdef HWRENDER
-			if (rendermode == render_opengl)
-				Patch_CreateGL(newpatch);
-#endif
 
 			sprframe->rotsprite.patch[rot][angle] = newpatch;
 
@@ -1632,10 +1693,6 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 
 		// This rotation is cached now
 		sprframe->rotsprite.cached |= (1<<rot);
-
-		// free image data
-		Z_Free(patch);
-		Z_Free(swpatch);
 	}
 #undef SPRITE_XCENTER
 #undef SPRITE_YCENTER

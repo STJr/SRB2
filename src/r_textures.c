@@ -401,13 +401,13 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		{
 			// Dummy variables.
 			INT32 pngwidth, pngheight;
-			realpatch = (softwarepatch_t *)Picture_PNGConvert((UINT8 *)realpatch, PICFMT_PATCH, &pngwidth, &pngheight, NULL, NULL, lumplength, NULL, 0);
+			realpatch = (softwarepatch_t *)Picture_PNGConvert((UINT8 *)realpatch, PICFMT_DOOMPATCH, &pngwidth, &pngheight, NULL, NULL, lumplength, NULL, 0);
 		}
 		else
 #endif
 #ifdef WALLFLATS
 		if (texture->type == TEXTURETYPE_FLAT)
-			realpatch = (softwarepatch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_PATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
+			realpatch = (softwarepatch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_DOOMPATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
 		else
 #endif
 		{
@@ -608,7 +608,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 				levelflat->height = ds_flatheight = SHORT(patch->height);
 
 				levelflat->picture = Z_Malloc(levelflat->width * levelflat->height, PU_LEVEL, NULL);
-				converted = Picture_FlatConvert(PICFMT_PATCH, patch, PICFMT_FLAT, 0, &size, levelflat->width, levelflat->height, patch->topoffset, patch->leftoffset, 0);
+				converted = Picture_FlatConvert(PICFMT_DOOMPATCH, patch, PICFMT_FLAT, 0, &size, levelflat->width, levelflat->height, patch->topoffset, patch->leftoffset, 0);
 				M_Memcpy(levelflat->picture, converted, size);
 				Z_Free(converted);
 			}

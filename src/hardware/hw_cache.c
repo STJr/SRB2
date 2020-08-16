@@ -516,13 +516,13 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 		{
 			// Dummy variables.
 			INT32 pngwidth, pngheight;
-			realpatch = (softwarepatch_t *)Picture_PNGConvert(pdata, PICFMT_PATCH, &pngwidth, &pngheight, NULL, NULL, lumplength, NULL, 0);
+			realpatch = (softwarepatch_t *)Picture_PNGConvert(pdata, PICFMT_DOOMPATCH, &pngwidth, &pngheight, NULL, NULL, lumplength, NULL, 0);
 		}
 		else
 #endif
 #ifdef WALLFLATS
 		if (texture->type == TEXTURETYPE_FLAT)
-			realpatch = (softwarepatch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_PATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
+			realpatch = (softwarepatch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_DOOMPATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
 		else
 #endif
 		{

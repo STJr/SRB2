@@ -286,7 +286,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 					// Dummy variables.
 					INT32 pngwidth, pngheight;
 					INT16 topoffset, leftoffset;
-					patch_t *converted = (patch_t *)Picture_PNGConvert((UINT8 *)png, PICFMT_PATCH, &pngwidth, &pngheight, &topoffset, &leftoffset, len, NULL, 0);
+					patch_t *converted = (patch_t *)Picture_PNGConvert((UINT8 *)png, PICFMT_DOOMPATCH, &pngwidth, &pngheight, &topoffset, &leftoffset, len, NULL, 0);
 					M_Memcpy(&patch, converted, sizeof(INT16)*4); // only copy the header because that's all we need
 					Z_Free(converted);
 				}

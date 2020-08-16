@@ -549,7 +549,7 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 
 	lumpnum_t    flatnum;
 	int       texturenum;
-	patch_t   *flatpatch;
+	UINT8     *flatpatch;
 	size_t    lumplength;
 
 	size_t i;
@@ -609,7 +609,7 @@ flatfound:
 		/* This could be a flat, patch, or PNG. */
 		flatpatch = W_CacheLumpNum(flatnum, PU_CACHE);
 		lumplength = W_LumpLength(flatnum);
-		if (Picture_CheckIfPatch(flatpatch, lumplength))
+		if (Picture_CheckIfDoomPatch((softwarepatch_t *)flatpatch, lumplength))
 			levelflat->type = LEVELFLAT_PATCH;
 		else
 		{

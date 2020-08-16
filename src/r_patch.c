@@ -57,9 +57,6 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 		M_Memcpy(patch->columns, ((UINT8 *)source + LONG(source->columnofs[0])), colsize);
 	}
 
-	if (patch->hardware)
-		I_Error("wtf?\n");
-
 	return patch;
 }
 

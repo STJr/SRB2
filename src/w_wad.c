@@ -1684,7 +1684,7 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 		{
 			size_t newlen;
 			INT32 pngwidth, pngheight; // Dummy variables.
-			void *converted = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_PATCH, &pngwidth, &pngheight, NULL, NULL, len, &newlen, 0);
+			void *converted = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, &pngwidth, &pngheight, NULL, NULL, len, &newlen, 0);
 			ptr = Z_Malloc(newlen, PU_STATIC, NULL);
 			M_Memcpy(ptr, converted, newlen);
 			Z_Free(converted);
