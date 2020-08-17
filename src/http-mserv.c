@@ -14,7 +14,9 @@ Documentation available here.
                      <http://mb.srb2.org/MS/tools/api/v1/>
 */
 
+#ifdef HAVE_CURL
 #include <curl/curl.h>
+#endif
 
 #include "doomdef.h"
 #include "d_clisrv.h"
@@ -48,6 +50,8 @@ consvar_t cv_masterserver_token = {
 	"masterserver_token", "", CV_SAVE, NULL,
 	NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
 };
+
+#ifdef MASTERSERVER
 
 static int hms_started;
 
@@ -664,10 +668,14 @@ HMS_set_api (char *api)
 #endif
 }
 
+#endif/*MASTERSERVER*/
+
 static void
 MasterServer_Debug_OnChange (void)
 {
+#ifdef MASTERSERVER
 	/* TODO: change to 'latest-log.txt' for log files revision. */
 	if (cv_masterserver_debug.value)
 		CONS_Printf("Master server debug messages will appear in log.txt\n");
+#endif
 }
