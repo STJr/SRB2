@@ -2772,7 +2772,9 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	// (Can happen when model uses a sprite as a texture and the sprite changes)
 	// Comparing floats with the != operator here should be okay because they
 	// are just copies of glpatches' max_s and max_t values.
-	if (model->vbo_max_s != model->max_s || model->vbo_max_t != model->max_t)
+	// Instead of the != operator, memcmp is used to avoid a compiler warning.
+	if (memcmp(&(model->vbo_max_s), &(model->max_s), sizeof(model->max_s)) != 0 ||
+		memcmp(&(model->vbo_max_t), &(model->max_t), sizeof(model->max_t)) != 0)
 		useVBO = false;
 
 	pglEnableClientState(GL_NORMAL_ARRAY);

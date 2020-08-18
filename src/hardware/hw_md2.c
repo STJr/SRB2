@@ -1410,7 +1410,9 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			// If so, uvs need to be readjusted.
 			// Comparing floats with the != operator here should be okay because they
 			// are just copies of glpatches' max_s and max_t values.
-			if (gpatch->max_s != md2->model->max_s || gpatch->max_t != md2->model->max_t)
+			// Instead of the != operator, memcmp is used to avoid a compiler warning.
+			if (memcmp(&(gpatch->max_s), &(md2->model->max_s), sizeof(md2->model->max_s)) != 0 ||
+				memcmp(&(gpatch->max_t), &(md2->model->max_t), sizeof(md2->model->max_t)) != 0)
 				adjustTextureCoords(md2->model, gpatch);
 			HWR_GetMappedPatch(gpatch, spr->colormap);
 		}
