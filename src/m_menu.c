@@ -8020,7 +8020,7 @@ static void M_SecretsMenu(INT32 choice)
 
 		skyRoomMenuTranslations[i-1] = (UINT8)ul;
 		SR_MainMenu[i].text = unlockables[ul].name;
-		SR_MainMenu[i].alphaKey = (UINT8)unlockables[ul].height;
+		SR_MainMenu[i].alphaKey = (UINT16)unlockables[ul].height;
 
 		if (unlockables[ul].type == SECRET_HEADER)
 		{
