@@ -2251,7 +2251,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 	// Add the 3D floors, thicksides, and masked textures...
 	for (ds = drawsegs + mask->drawsegs[1]; ds-- > drawsegs + mask->drawsegs[0];)
 	{
-		if (ds->numthicksides && cv_3dfloors.value)
+		if (ds->numthicksides)
 		{
 			for (i = 0; i < ds->numthicksides; i++)
 			{
@@ -2280,7 +2280,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			entry = R_CreateDrawNode(head);
 			entry->seg = ds;
 		}
-		if (ds->numffloorplanes && cv_3dfloors.value)
+		if (ds->numffloorplanes)
 		{
 			for (i = 0; i < ds->numffloorplanes; i++)
 			{
