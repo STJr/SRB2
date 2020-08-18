@@ -699,12 +699,10 @@ static void R_DrawRepeatFlippedMaskedColumn(column_t *col)
 	} while (sprtopscreen < sprbotscreen);
 }
 
-// Returns true if the fake floor will be translucent
+// Returns true if a fake floor is translucent.
 static boolean R_IsFFloorTranslucent(ffloor_t *pfloor)
 {
-	if (pfloor->flags & FF_TRANSLUCENT)
-		return (pfloor->alpha < 243);
-	return false;
+	return (pfloor->flags & FF_TRANSLUCENT);
 }
 
 //
