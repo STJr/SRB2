@@ -776,6 +776,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
+			packetsizetally -= nameonlylength(filename) + 22;
 			if (handle)
 				fclose(handle);
 			return W_InitFileError(filename, false);
