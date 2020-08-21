@@ -106,6 +106,7 @@ ifeq ($(OS),Windows_NT) # all windows are Windows_NT...
  # go for a 32-bit sdl mingw exe by default
  MINGW=1
  SDL=1
+ WINDOWSHELL=1
 
 else # if you on the *nix
 
