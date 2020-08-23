@@ -1269,19 +1269,25 @@ static UINT8 Snake_GetOppositeDir(UINT8 dir)
 		return 12 + 5 - dir;
 }
 
-static void Snake_FindFreeSlot(UINT8 *x, UINT8 *y, UINT8 headx, UINT8 heady)
+static void Snake_FindFreeSlot(UINT8 *freex, UINT8 *freey, UINT8 headx, UINT8 heady)
 {
+	UINT8 x, y;
 	UINT16 i;
 
 	do
 	{
-		*x = M_RandomKey(SNAKE_NUM_BLOCKS_X);
-		*y = M_RandomKey(SNAKE_NUM_BLOCKS_Y);
+		x = M_RandomKey(SNAKE_NUM_BLOCKS_X);
+		y = M_RandomKey(SNAKE_NUM_BLOCKS_Y);
 
 		for (i = 0; i < snake->snakelength; i++)
-			if (*x == snake->snakex[i] && *y == snake->snakey[i])
+			if (x == snake->snakex[i] && y == snake->snakey[i])
 				break;
-	} while (i < snake->snakelength || (*x == headx && *y == heady));
+	} while (i < snake->snakelength || (x == headx && y == heady)
+		|| (x == snake->applex && y == snake->appley)
+		|| (snake->bonustype != SNAKE_BONUS_NONE && x == snake->bonusx && y == snake->bonusy));
+
+	*freex = x;
+	*freey = y;
 }
 
 static void Snake_Handle(void)
@@ -1412,7 +1418,7 @@ static void Snake_Handle(void)
 	// Check collision with apple
 	if (x == snake->applex && y == snake->appley)
 	{
-		if (snake->snakelength + 1 < SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y)
+		if (snake->snakelength + 3 < SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y)
 		{
 			snake->snakelength++;
 			snake->snakex  [snake->snakelength - 1] = snake->snakex  [snake->snakelength - 2];
