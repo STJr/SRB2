@@ -8839,25 +8839,26 @@ void A_Dye(mobj_t *actor)
 	INT32 locvar2 = var2;
 
 	mobj_t *target = ((locvar1 && actor->target) ? actor->target : actor);
-	UINT8 color = (UINT8)locvar2;
+	UINT16 color = (UINT16)locvar2;
 	if (LUA_CallAction("A_Dye", actor))
 		return;
 	if (color >= numskincolors)
 		return;
 
-	if (!color)
-		target->colorized = false;
-	else
-		target->colorized = true;
-
 	// What if it's a player?
 	if (target->player)
-	{
 		target->player->powers[pw_dye] = color;
-		return;
-	}
 
-	target->color = color;
+	if (!color)
+	{
+		target->colorized = false;
+		target->color = target->player ? target->player->skincolor : SKINCOLOR_NONE;
+	}
+	else if (!(target->player))
+	{
+		target->colorized = true;
+		target->color = color;
+	}
 }
 
 // Function: A_MoveRelative

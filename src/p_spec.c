@@ -1933,7 +1933,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		case 336: // object dye - once
 			{
 				INT32 triggercolor = (INT32)sides[triggerline->sidenum[0]].toptexture;
-				UINT8 color = (actor->player ? actor->player->powers[pw_dye] : actor->color);
+				UINT16 color = (actor->player ? actor->player->powers[pw_dye] : actor->color);
 				boolean invert = (triggerline->flags & ML_NOCLIMB ? true : false);
 
 				if (invert ^ (triggercolor != color))
