@@ -960,7 +960,7 @@ void F_IntroDrawer(void)
 					I_OsPolling();
 					I_UpdateNoBlit();
 					M_Drawer(); // menu is drawn even on top of wipes
-					I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
+					SCR_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
 
 					if (moviemode) // make sure we save frames for the white hold too
 						M_SaveFrame();

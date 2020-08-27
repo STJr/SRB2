@@ -347,7 +347,7 @@ static UINT8 joystick2_detected = false;
 FUNCINLINE static ATTRINLINE int I_WaitJoyButton (int js)
 {
 	CON_Drawer ();
-	I_FinishUpdate ();        // page flip or blit buffer
+	SCR_FinishUpdate ();        // page flip or blit buffer
 
 	do
 	{

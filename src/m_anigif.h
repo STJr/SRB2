@@ -25,8 +25,9 @@
 INT32 GIF_open(const char *filename);
 void GIF_frame(void);
 INT32 GIF_close(void);
+void GIF_displayinfo(void);
 #endif
 
-extern consvar_t cv_gif_optimize, cv_gif_downscale, cv_gif_dynamicdelay, cv_gif_localcolortable;
+extern consvar_t cv_gif_optimize, cv_gif_downscale, cv_gif_dynamicdelay, cv_gif_localcolortable, cv_gif_sizelimit;
 
 #endif

@@ -1202,19 +1202,6 @@ void I_FinishUpdate(void)
 	if (I_SkipFrame())
 		return;
 
-	if (marathonmode)
-		SCR_DisplayMarathonInfo();
-
-	// draw captions if enabled
-	if (cv_closedcaptioning.value)
-		SCR_ClosedCaptions();
-
-	if (cv_ticrate.value)
-		SCR_DisplayTicRate();
-
-	if (cv_showping.value && netgame && consoleplayer != serverplayer)
-		SCR_DisplayLocalPing();
-
 	if (rendermode == render_soft && screens[0])
 	{
 		SDL_Rect rect;
@@ -1256,7 +1243,7 @@ void I_UpdateNoVsync(void)
 {
 	INT32 real_vidwait = cv_vidwait.value;
 	cv_vidwait.value = 0;
-	I_FinishUpdate();
+	SCR_FinishUpdate();
 	cv_vidwait.value = real_vidwait;
 }
 
@@ -1660,7 +1647,7 @@ static void Impl_SetWindowName(const char *title)
 static void Impl_SetWindowIcon(void)
 {
 	if (window && icoSurface)
-		SDL_SetWindowIcon(window, icoSurface);	
+		SDL_SetWindowIcon(window, icoSurface);
 }
 
 static void Impl_VideoSetupSDLBuffer(void)
@@ -1770,7 +1757,7 @@ void I_StartupGraphics(void)
 	// Window icon
 #ifdef HAVE_IMAGE
 	icoSurface = IMG_ReadXPMFromArray(SDL_icon_xpm);
-#endif	
+#endif
 
 	// Fury: we do window initialization after GL setup to allow
 	// SDL_GL_LoadLibrary to work well on Windows

@@ -21,6 +21,7 @@
 #include "r_sky.h"
 #include "m_argv.h"
 #include "m_misc.h"
+#include "m_anigif.h"
 #include "v_video.h"
 #include "st_stuff.h"
 #include "hu_stuff.h"
@@ -83,6 +84,8 @@ consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_C
 
 INT32 scr_bpp; // current video mode bytes per pixel
 UINT8 *scr_borderpatch; // flat used to fill the reduced view borders set at ST_Init()
+boolean scr_delayedupdate = false; // updates the screen after D_Display
+boolean scr_delayedoverlay = false; // delayed update overlay
 
 // =========================================================================
 
@@ -511,6 +514,64 @@ boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
 	 && height % BASEVIDHEIGHT == 0
 	 && width / BASEVIDWIDTH == height / BASEVIDHEIGHT
 	 );
+}
+
+void SCR_FinishUpdate(void)
+{
+	SCR_Overlay();
+	I_FinishUpdate();
+}
+
+void SCR_Overlay(void)
+{
+	if (marathonmode)
+		SCR_DisplayMarathonInfo();
+
+	// draw captions if enabled
+	if (cv_closedcaptioning.value)
+		SCR_ClosedCaptions();
+
+	if (cv_ticrate.value)
+		SCR_DisplayTicRate();
+
+	if (cv_showping.value && netgame && consoleplayer != serverplayer)
+		SCR_DisplayLocalPing();
+
+	if (SCR_UseDelayedOverlay())
+		SCR_DelayedOverlay();
+}
+
+void SCR_DelayedUpdate(void)
+{
+	if (SCR_UseDelayedOverlay())
+		SCR_DelayedOverlay();
+
+	rs_swaptime = I_GetTimeMicros();
+	SCR_FinishUpdate(); // page flip or blit buffer
+	rs_swaptime = I_GetTimeMicros() - rs_swaptime;
+}
+
+void SCR_DelayedOverlay(void)
+{
+#ifdef HAVE_ANIGIF
+	if (moviemode == MM_GIF)
+		GIF_displayinfo();
+#endif
+}
+
+boolean SCR_IsUpdateDelayed(void)
+{
+	return (scr_delayedupdate || SCR_NeedsDelayedOverlay());
+}
+
+boolean SCR_UseDelayedOverlay(void)
+{
+	return (scr_delayedoverlay || SCR_NeedsDelayedOverlay());
+}
+
+boolean SCR_NeedsDelayedOverlay(void)
+{
+	return (moviemode != MM_OFF);
 }
 
 // XMOD FPS display

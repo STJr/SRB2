@@ -597,10 +597,14 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 		if (drawMenu)
 			M_Drawer(); // menu is drawn even on top of wipes
 
-		I_FinishUpdate(); // page flip or blit buffer
+		if (!SCR_IsUpdateDelayed())
+			SCR_FinishUpdate(); // page flip or blit buffer
 
 		if (moviemode)
 			M_SaveFrame();
+
+		if (SCR_IsUpdateDelayed())
+			SCR_DelayedUpdate();
 	}
 
 	WipeInAction = false;

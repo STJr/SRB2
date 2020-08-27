@@ -1902,7 +1902,7 @@ void G_PreLevelTitleCard(void)
 
 		ST_runTitleCard();
 		ST_preLevelTitleCardDrawer();
-		I_FinishUpdate(); // page flip or blit buffer
+		SCR_FinishUpdate(); // page flip or blit buffer
 
 		if (moviemode)
 			M_SaveFrame();

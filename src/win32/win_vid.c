@@ -366,20 +366,6 @@ void I_FinishUpdate(void)
 	if (I_SkipFrame())
 		return;
 
-	if (marathonmode)
-		SCR_DisplayMarathonInfo();
-
-	// draw captions if enabled
-	if (cv_closedcaptioning.value)
-		SCR_ClosedCaptions();
-
-	// display a graph of ticrate
-	if (cv_ticrate.value)
-		SCR_DisplayTicRate();
-
-	if (cv_showping.value && netgame && consoleplayer != serverplayer)
-		SCR_DisplayLocalPing();
-
 	//
 	if (bDIBMode)
 	{
@@ -435,7 +421,7 @@ void I_UpdateNoVsync(void)
 {
 	int real_vidwait = cv_vidwait.value;
 	cv_vidwait.value = 0;
-	I_FinishUpdate();
+	SCR_FinishUpdate();
 	cv_vidwait.value = real_vidwait;
 }
 

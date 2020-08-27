@@ -835,7 +835,7 @@ static INT32 SolveTProblem(void)
 	CONS_Debug(DBG_RENDER, "Solving T-joins. This may take a while. Please wait...\n");
 #ifdef HWR_LOADING_SCREEN
 	CON_Drawer(); //let the user know what we are doing
-	I_FinishUpdate(); // page flip or blit buffer
+	SCR_FinishUpdate(); // page flip or blit buffer
 #endif
 
 	numsplitpoly = 0;
@@ -962,7 +962,7 @@ void HWR_CreatePlanePolygons(INT32 bspnum)
 #ifdef HWR_LOADING_SCREEN
 	ls_count = ls_percent = 0; // reset the loading status
 	CON_Drawer(); //let the user know what we are doing
-	I_FinishUpdate(); // page flip or blit buffer
+	SCR_FinishUpdate(); // page flip or blit buffer
 #endif
 
 	HWR_ClearPolys();

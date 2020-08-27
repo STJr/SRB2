@@ -1306,7 +1306,7 @@ void CONS_Printf(const char *fmt, ...)
 #else
 		// here we display the console text
 		CON_Drawer();
-		I_FinishUpdate(); // page flip or blit buffer
+		SCR_FinishUpdate(); // page flip or blit buffer
 #endif
 	}
 }

@@ -603,7 +603,7 @@ static void D_Display(void)
 			snprintf(s, sizeof s - 1, "SysMiss %.2f%%", lostpercent);
 			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
 		}
-		
+
 		if (cv_renderstats.value)
 		{
 			char s[50];
@@ -612,7 +612,7 @@ static void D_Display(void)
 			rs_prevframetime = I_GetTimeMicros();
 
 			if (rs_rendercalltime > 10000) divisor = 1000;
-			
+
 			snprintf(s, sizeof s - 1, "ft   %d", frametime / divisor);
 			V_DrawThinString(30, 10, V_MONOSPACE | V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "rtot %d", rs_rendercalltime / divisor);
@@ -675,9 +675,12 @@ static void D_Display(void)
 			}
 		}
 
-		rs_swaptime = I_GetTimeMicros();
-		I_FinishUpdate(); // page flip or blit buffer
-		rs_swaptime = I_GetTimeMicros() - rs_swaptime;
+		if (!SCR_IsUpdateDelayed())
+		{
+			rs_swaptime = I_GetTimeMicros();
+			I_FinishUpdate(); // page flip or blit buffer
+			rs_swaptime = I_GetTimeMicros() - rs_swaptime;
+		}
 	}
 
 	needpatchflush = false;
@@ -742,10 +745,10 @@ void D_SRB2Loop(void)
 	// hack to start on a nice clear console screen.
 	COM_ImmedExecute("cls;version");
 
-	I_FinishUpdate(); // page flip or blit buffer
+	SCR_FinishUpdate(); // page flip or blit buffer
 	/*
 	LMFAO this was showing garbage under OpenGL
-	because I_FinishUpdate was called afterward
+	because SCR_FinishUpdate was called afterward
 	*/
 	/* Smells like a hack... Don't fade Sonic's ass into the title screen. */
 	if (gamestate != GS_TITLESCREEN)
@@ -802,6 +805,9 @@ void D_SRB2Loop(void)
 				M_SaveFrame();
 			if (takescreenshot) // Only take screenshots after drawing.
 				M_DoScreenShot();
+
+			if (SCR_IsUpdateDelayed())
+				SCR_DelayedUpdate();
 		}
 		else if (rendertimeout < entertic) // in case the server hang or netsplit
 		{

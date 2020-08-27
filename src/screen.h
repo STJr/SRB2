@@ -178,6 +178,7 @@ extern UINT8 setrenderneeded;
 
 extern INT32 scr_bpp;
 extern UINT8 *scr_borderpatch; // patch used to fill the view borders
+extern boolean scr_delayedupdate, scr_delayedoverlay;
 
 extern CV_PossibleValue_t cv_renderer_t[];
 
@@ -202,10 +203,20 @@ void SCR_Startup (void);
 
 FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 
+void SCR_FinishUpdate(void);
+void SCR_Overlay(void);
+
+void SCR_DelayedUpdate(void);
+void SCR_DelayedOverlay(void);
+boolean SCR_IsUpdateDelayed(void);
+boolean SCR_UseDelayedOverlay(void);
+boolean SCR_NeedsDelayedOverlay(void);
+
 // move out to main code for consistency
 void SCR_DisplayTicRate(void);
 void SCR_ClosedCaptions(void);
 void SCR_DisplayLocalPing(void);
 void SCR_DisplayMarathonInfo(void);
+
 #undef DNWH
 #endif //__SCREEN_H__

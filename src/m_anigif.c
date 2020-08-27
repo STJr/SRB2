@@ -30,9 +30,10 @@
 #include "byteptr.h"
 
 consvar_t cv_gif_optimize = {"gif_optimize", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_gif_downscale =  {"gif_downscale", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gif_downscale = {"gif_downscale", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gif_dynamicdelay = {"gif_dynamicdelay", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_gif_localcolortable =  {"gif_localcolortable", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gif_localcolortable = {"gif_localcolortable", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gif_sizelimit = {"gif_sizelimit", "8192", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifdef HAVE_ANIGIF
 static boolean gif_optimize = false; // So nobody can do something dumb
@@ -50,6 +51,8 @@ static INT32 gif_frames = 0;
 static UINT32 gif_prevframems = 0;
 static UINT8 gif_writeover = 0;
 
+static size_t gif_sizelimit = 0;
+static size_t gif_totalsize = 0;
 
 
 // OPTIMIZE gif output
@@ -483,6 +486,7 @@ static void GIF_headwrite(void)
 	// write to file and be done with it!
 	fwrite(gifhead, 1, 800, gif_out);
 	Z_Free(gifhead);
+	gif_totalsize = 800;
 }
 
 
@@ -529,6 +533,7 @@ static void GIF_framewrite(void)
 	UINT8 *movie_screen = screens[2];
 	INT32 blitx, blity, blitw, blith;
 	boolean palchanged;
+	size_t writebytes;
 
 	if (!gifframe_data)
 		gifframe_data = Z_Malloc(gifframe_size, PU_STATIC, NULL);
@@ -686,7 +691,21 @@ static void GIF_framewrite(void)
 		}
 		WRITEUINT8(p, 0); //terminator
 	}
-	fwrite(gifframe_data, 1, (p - gifframe_data), gif_out);
+
+	writebytes = (size_t)(p - gifframe_data);
+	gif_totalsize += writebytes;
+
+	// Too big!!
+	// Stop recording if writing this frame would go over the size limit
+	if (gif_sizelimit && ((gif_totalsize + 1) > gif_sizelimit)) // plus one byte because of the final terminator
+	{
+		CONS_Alert(CONS_NOTICE, "Output GIF exceeded the specified filesize limit, recording stopped\n");
+		M_StopMovie();
+		return;
+	}
+
+	fwrite(gifframe_data, 1, writebytes, gif_out);
+
 	++gif_frames;
 	gif_prevframems = I_GetTimeMicros();
 }
@@ -714,6 +733,9 @@ INT32 GIF_open(const char *filename)
 	gif_colorprofile = (!!cv_screenshot_colorprofile.value);
 	gif_headerpalette = GIF_getpalette(0);
 
+	gif_sizelimit = (cv_gif_sizelimit.value) ? (cv_gif_sizelimit.value * 1024) : 0;
+	gif_totalsize = 0;
+
 	GIF_headwrite();
 	gif_frames = 0;
 	gif_prevframems = I_GetTimeMicros();
@@ -728,6 +750,56 @@ void GIF_frame(void)
 {
 	// there's not much actually needed here, is there.
 	GIF_framewrite();
+}
+
+//
+// GIF_getinfosize
+// gets file size info for gif information
+//
+static void GIF_getinfosize(size_t basesize, float *destsize, char *destunit)
+{
+	*destsize = ((float)basesize)/1024;
+
+	if ((*destsize) > 1024)
+	{
+		(*destsize) /= 1024;
+		destunit[0] = 'M';
+	}
+	else
+		destunit[0] = 'K';
+
+	destunit[1] = '\0';
+}
+
+//
+// GIF_displayinfo
+// displays current gif information
+//
+void GIF_displayinfo(void)
+{
+	float filesize[2];
+	char unit[2][2];
+	char *sizestring;
+	INT32 stringflags = V_ALLOWLOWERCASE;
+
+	if (!gif_sizelimit)
+		return;
+
+	GIF_getinfosize(gif_totalsize, &filesize[0], &unit[0][0]);
+	GIF_getinfosize(gif_sizelimit, &filesize[1], &unit[1][0]);
+
+	sizestring = va("%.2f%s/%.2f%s", filesize[0], unit[0], filesize[1], unit[1]);
+
+	if ((gif_totalsize > (gif_sizelimit - (gif_sizelimit / 4)))
+	&& (gif_frames/5 & 1)) // flashing
+		stringflags |= V_REDMAP;
+
+#if 0
+	if (vid.dupx > 1)
+		V_DrawRightAlignedSmallString(320, 0, stringflags, sizestring);
+	else
+#endif
+		V_DrawRightAlignedString(320, 0, stringflags, sizestring);
 }
 
 //

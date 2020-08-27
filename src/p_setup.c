@@ -3341,7 +3341,7 @@ static void P_RunSpecialStageWipe(void)
 	F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
 
 	I_OsPolling();
-	I_FinishUpdate(); // page flip or blit buffer
+	SCR_FinishUpdate(); // page flip or blit buffer
 	if (moviemode)
 		M_SaveFrame();
 
@@ -3502,7 +3502,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	gametyperules = gametypedefaultrules[gametype];
 
 	CON_Drawer(); // let the user know what we are going to do
-	I_FinishUpdate(); // page flip or blit buffer
+	SCR_FinishUpdate(); // page flip or blit buffer
 
 	// Reset the palette
 	if (rendermode != render_none)

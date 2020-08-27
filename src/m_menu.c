@@ -2306,9 +2306,9 @@ void Nextmap_OnChange(void)
 		// Check if file exists, if not, disable REPLAY option
 		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name);
 
-#ifdef OLDNREPLAYNAME		
+#ifdef OLDNREPLAYNAME
 		sprintf(tabaseold,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
-#endif	
+#endif
 
 		for (i = 0; i < 4; i++) {
 			SP_NightsReplayMenu[i].status = IT_DISABLED;
@@ -2336,7 +2336,7 @@ void Nextmap_OnChange(void)
 			active = true;
 		}
 
-		// Old style name compatibility 
+		// Old style name compatibility
 #ifdef OLDNREPLAYNAME
 		if (FIL_FileExists(va("%s-score-best.lmp", tabaseold))) {
 			SP_NightsReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
@@ -10903,7 +10903,7 @@ static void M_Refresh(INT32 choice)
 	I_OsPolling();
 	I_UpdateNoBlit();
 	if (rendermode == render_soft)
-		I_FinishUpdate(); // page flip or blit buffer
+		SCR_FinishUpdate(); // page flip or blit buffer
 
 	// note: this is the one case where 0 is a valid room number
 	// because it corresponds to "All"
@@ -11152,7 +11152,7 @@ static void M_RoomMenu(INT32 choice)
 	I_OsPolling();
 	I_UpdateNoBlit();
 	if (rendermode == render_soft)
-		I_FinishUpdate(); // page flip or blit buffer
+		SCR_FinishUpdate(); // page flip or blit buffer
 
 	if (GetRoomsList(currentMenu == &MP_ServerDef) < 0)
 		return;
@@ -11429,7 +11429,7 @@ static void M_ConnectIP(INT32 choice)
 	I_OsPolling();
 	I_UpdateNoBlit();
 	if (rendermode == render_soft)
-		I_FinishUpdate(); // page flip or blit buffer
+		SCR_FinishUpdate(); // page flip or blit buffer
 }
 
 // Tails 11-19-2002
@@ -13294,7 +13294,7 @@ void M_QuitResponse(INT32 ch)
 		while (ptime > I_GetTime())
 		{
 			V_DrawScaledPatch(0, 0, 0, W_CachePatchName("GAMEQUIT", PU_PATCH)); // Demo 3 Quit Screen Tails 06-16-2001
-			I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
+			SCR_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
 			I_Sleep();
 		}
 	}
