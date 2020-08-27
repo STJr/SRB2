@@ -30,7 +30,7 @@
 #include "byteptr.h"
 
 static INT32 GIF_start(const char *filename, boolean split);
-static INT32 GIF_stop(boolean split);
+static void GIF_stop(boolean split);
 static void GIF_setsizelimit(size_t size);
 
 static void CV_gifsizelimit_OnChange(void);
@@ -777,13 +777,13 @@ static INT32 GIF_start(const char *filename, boolean split)
 // GIF_stop
 // stops recording output GIF
 //
-static INT32 GIF_stop(boolean split)
+static void GIF_stop(boolean split)
 {
 	if (!split && (gif_basepath != NULL))
 		Z_Free(gif_basepath);
 
 	if (!gif_out)
-		return 1;
+		return;
 
 	// final terminator.
 	fwrite(";", 1, 1, gif_out);
@@ -802,7 +802,7 @@ static INT32 GIF_stop(boolean split)
 		Z_Free(giflzw_hashTable);
 	giflzw_hashTable = NULL;
 
-	return 1;
+	return;
 }
 
 static void GIF_setsizelimit(size_t size)
@@ -986,18 +986,15 @@ void GIF_displayinfo(void)
 //
 INT32 GIF_close(void)
 {
-	if (GIF_stop(false))
-	{
-		if (gif_splitcount)
-			CONS_Printf(
-						M_GetText("Animated GIF closed; wrote a total of %d frames over %d GIFs\n"),
-						gif_totalframes, (gif_splitcount + 1));
-		else
-			CONS_Printf(M_GetText("Animated GIF closed; wrote %d frames\n"), gif_frames);
+	GIF_stop(false);
 
-		return 1;
-	}
+	if (gif_splitcount)
+		CONS_Printf(
+					M_GetText("Animated GIF closed; wrote a total of %d frames over %d GIFs\n"),
+					gif_totalframes, (gif_splitcount + 1));
+	else
+		CONS_Printf(M_GetText("Animated GIF closed; wrote %d frames\n"), gif_frames);
 
-	return 0;
+	return 1;
 }
 #endif //ifdef HAVE_ANIGIF
