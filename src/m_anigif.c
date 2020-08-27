@@ -34,6 +34,7 @@ consvar_t cv_gif_downscale = {"gif_downscale", "On", CV_SAVE, CV_OnOff, NULL, 0,
 consvar_t cv_gif_dynamicdelay = {"gif_dynamicdelay", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gif_localcolortable = {"gif_localcolortable", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_gif_sizelimit = {"gif_sizelimit", "8192", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gif_split = {"gif_split", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifdef HAVE_ANIGIF
 static boolean gif_optimize = false; // So nobody can do something dumb
@@ -48,11 +49,19 @@ static RGBA_t *gif_framepalette = NULL;
 
 static FILE *gif_out = NULL;
 static INT32 gif_frames = 0;
-static UINT32 gif_prevframems = 0;
-static UINT8 gif_writeover = 0;
 
 static size_t gif_sizelimit = 0;
 static size_t gif_totalsize = 0;
+
+static char *gif_basepath = NULL;
+static INT32 gif_splitcount = 0;
+static INT32 gif_totalframes = 0;
+
+static UINT32 gif_prevframems = 0;
+static UINT8 gif_writeover = 0;
+
+static INT32 GIF_start(const char *filename, boolean split);
+static INT32 GIF_stop(boolean split);
 
 
 // OPTIMIZE gif output
@@ -699,57 +708,39 @@ static void GIF_framewrite(void)
 	// Stop recording if writing this frame would go over the size limit
 	if (gif_sizelimit && ((gif_totalsize + 1) > gif_sizelimit)) // plus one byte because of the final terminator
 	{
-		CONS_Alert(CONS_NOTICE, "Output GIF exceeded the specified filesize limit, recording stopped\n");
-		M_StopMovie();
-		return;
+		// This CVAR is intentionally directly referred to
+		// instead of being stored on a variable because
+		// it's okay to change that mid-recording frame
+		if (cv_gif_split.value)
+		{
+			const char *freename;
+
+#if 0
+			CONS_Alert(CONS_NOTICE, "Output GIF exceeded the specified filesize limit, splitting\n");
+#endif
+
+			GIF_stop(true);
+
+			if (!(freename = M_GetScreenshotName(gif_basepath, "gif"))
+			|| (!GIF_start(va(pandf, gif_basepath, freename), true)))
+			{
+				CONS_Alert(CONS_ERROR, "Couldn't split GIF: error creating %s in %s\n", freename, gif_basepath);
+				M_StopMovie();
+				return;
+			}
+		}
+		else
+		{
+			CONS_Alert(CONS_NOTICE, "Output GIF exceeded the specified filesize limit, recording stopped\n");
+			M_StopMovie();
+			return;
+		}
 	}
 
 	fwrite(gifframe_data, 1, writebytes, gif_out);
 
 	++gif_frames;
 	gif_prevframems = I_GetTimeMicros();
-}
-
-
-
-// ========================
-// !!! PUBLIC FUNCTIONS !!!
-// ========================
-
-//
-// GIF_open
-// opens a new file for writing.
-//
-INT32 GIF_open(const char *filename)
-{
-	gif_out = fopen(filename, "wb");
-	if (!gif_out)
-		return 0;
-
-	gif_optimize = (!!cv_gif_optimize.value);
-	gif_downscale = (!!cv_gif_downscale.value);
-	gif_dynamicdelay = (!!cv_gif_dynamicdelay.value);
-	gif_localcolortable = (!!cv_gif_localcolortable.value);
-	gif_colorprofile = (!!cv_screenshot_colorprofile.value);
-	gif_headerpalette = GIF_getpalette(0);
-
-	gif_sizelimit = (cv_gif_sizelimit.value) ? (cv_gif_sizelimit.value * 1024) : 0;
-	gif_totalsize = 0;
-
-	GIF_headwrite();
-	gif_frames = 0;
-	gif_prevframems = I_GetTimeMicros();
-	return 1;
-}
-
-//
-// GIF_frame
-// writes a frame into the output gif
-//
-void GIF_frame(void)
-{
-	// there's not much actually needed here, is there.
-	GIF_framewrite();
 }
 
 //
@@ -772,42 +763,52 @@ static void GIF_getinfosize(size_t basesize, float *destsize, char *destunit)
 }
 
 //
-// GIF_displayinfo
-// displays current gif information
+// GIF_start
+// starts recording output GIF
 //
-void GIF_displayinfo(void)
+static INT32 GIF_start(const char *filename, boolean split)
 {
-	float filesize[2];
-	char unit[2][2];
-	char *sizestring;
-	INT32 stringflags = V_ALLOWLOWERCASE;
+	gif_out = fopen(filename, "wb");
+	if (!gif_out)
+		return 0;
 
-	if (!gif_sizelimit)
-		return;
+	gif_optimize = (!!cv_gif_optimize.value);
+	gif_downscale = (!!cv_gif_downscale.value);
+	gif_dynamicdelay = (!!cv_gif_dynamicdelay.value);
+	gif_localcolortable = (!!cv_gif_localcolortable.value);
+	gif_colorprofile = (!!cv_screenshot_colorprofile.value);
+	gif_headerpalette = GIF_getpalette(0);
 
-	GIF_getinfosize(gif_totalsize, &filesize[0], &unit[0][0]);
-	GIF_getinfosize(gif_sizelimit, &filesize[1], &unit[1][0]);
+	gif_sizelimit = (cv_gif_sizelimit.value) ? (cv_gif_sizelimit.value * 1024) : 0;
+	gif_totalsize = 0;
 
-	sizestring = va("%.2f%s/%.2f%s", filesize[0], unit[0], filesize[1], unit[1]);
-
-	if ((gif_totalsize > (gif_sizelimit - (gif_sizelimit / 4)))
-	&& (gif_frames/5 & 1)) // flashing
-		stringflags |= V_REDMAP;
-
-#if 0
-	if (vid.dupx > 1)
-		V_DrawRightAlignedSmallString(320, 0, stringflags, sizestring);
+	if (split)
+	{
+		gif_splitcount++;
+		gif_totalframes += gif_frames;
+	}
 	else
-#endif
-		V_DrawRightAlignedString(320, 0, stringflags, sizestring);
+	{
+		gif_totalframes = 0;
+		gif_splitcount = 0;
+	}
+
+	GIF_headwrite();
+
+	gif_frames = 0;
+	gif_prevframems = I_GetTimeMicros();
+	return 1;
 }
 
 //
-// GIF_close
-// closes output GIF
+// GIF_stop
+// stops recording output GIF
 //
-INT32 GIF_close(void)
+static INT32 GIF_stop(boolean split)
 {
+	if (!split && (gif_basepath != NULL))
+		Z_Free(gif_basepath);
+
 	if (!gif_out)
 		return 0;
 
@@ -828,7 +829,111 @@ INT32 GIF_close(void)
 		Z_Free(giflzw_hashTable);
 	giflzw_hashTable = NULL;
 
-	CONS_Printf(M_GetText("Animated gif closed; wrote %d frames\n"), gif_frames);
 	return 1;
+}
+
+
+
+// ========================
+// !!! PUBLIC FUNCTIONS !!!
+// ========================
+
+//
+// GIF_open
+// opens a new file for writing.
+//
+INT32 GIF_open(const char *filename)
+{
+	if (GIF_start(filename, false))
+	{
+		size_t len;
+
+		gif_basepath = Z_StrDup(filename);
+
+		for (len = strlen(gif_basepath); len != (size_t)-1; len--)
+			if ((gif_basepath[len] == '\\') || (gif_basepath[len] == '/'))
+			{
+				gif_basepath[len + 1] = '\0';
+				break;
+			}
+
+		return 1;
+	}
+
+	return 0;
+}
+
+//
+// GIF_frame
+// writes a frame into the output gif
+//
+void GIF_frame(void)
+{
+	// there's not much actually needed here, is there.
+	GIF_framewrite();
+}
+
+//
+// GIF_displayinfo
+// displays current gif information
+//
+void GIF_displayinfo(void)
+{
+	float filesize[2];
+	char unit[2][2];
+	char *string;
+	INT32 stringflags = V_ALLOWLOWERCASE;
+
+	if (!gif_sizelimit)
+		return;
+
+	GIF_getinfosize(gif_totalsize, &filesize[0], &unit[0][0]);
+	GIF_getinfosize(gif_sizelimit, &filesize[1], &unit[1][0]);
+
+	string = va("%.2f%s/%.2f%s", filesize[0], unit[0], filesize[1], unit[1]);
+
+	if ((!cv_gif_split.value)
+	&& (gif_totalsize > (gif_sizelimit - (gif_sizelimit / 4)))
+	&& (gif_frames/5 & 1)) // flashing
+		stringflags |= V_REDMAP;
+
+#if 0
+	if (vid.dupx > 1)
+		V_DrawRightAlignedSmallString(320, 0, stringflags, string);
+	else
+#endif
+		V_DrawRightAlignedString(320, 0, stringflags, string);
+
+	if (cv_gif_split.value && gif_splitcount)
+	{
+		stringflags = V_ALLOWLOWERCASE;
+		string = va("GIF count: %d\n", (gif_splitcount + 1));
+
+		if (vid.dupx > 1)
+			V_DrawRightAlignedSmallString(320, 10, stringflags, string);
+		else
+			V_DrawRightAlignedString(320, 10, stringflags, string);
+	}
+}
+
+//
+// GIF_close
+// closes output GIF
+//
+INT32 GIF_close(void)
+{
+	if (GIF_stop(false))
+	{
+		if (gif_splitcount)
+			CONS_Printf(
+						M_GetText("Animated GIF closed; wrote a total of %d frames over %d GIFs\n"),
+						gif_totalframes, (gif_splitcount + 1));
+		else
+			CONS_Printf(M_GetText("Animated GIF closed; wrote %d frames\n"), gif_frames);
+
+		return 1;
+	}
+
+	return 0;
 }
 #endif //ifdef HAVE_ANIGIF

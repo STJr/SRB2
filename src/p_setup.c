@@ -3341,9 +3341,7 @@ static void P_RunSpecialStageWipe(void)
 	F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
 
 	I_OsPolling();
-	SCR_FinishUpdate(); // page flip or blit buffer
-	if (moviemode)
-		M_SaveFrame();
+	SCR_UpdateOrDelay(true);
 
 	nowtime = lastwipetic;
 

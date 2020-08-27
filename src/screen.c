@@ -559,6 +559,28 @@ void SCR_DelayedOverlay(void)
 #endif
 }
 
+void SCR_UpdateOrDelay(boolean vsync)
+{
+	INT32 real_vidwait = cv_vidwait.value;
+
+	if (!vsync)
+		cv_vidwait.value = 0;
+
+	if (!SCR_IsUpdateDelayed())
+		SCR_FinishUpdate(); // page flip or blit buffer
+
+	if (moviemode)
+		M_SaveFrame();
+	if (takescreenshot) // Only take screenshots after drawing.
+		M_DoScreenShot();
+
+	if (SCR_IsUpdateDelayed())
+		SCR_DelayedUpdate();
+
+	if (!vsync)
+		cv_vidwait.value = real_vidwait;
+}
+
 boolean SCR_IsUpdateDelayed(void)
 {
 	return (scr_delayedupdate || SCR_NeedsDelayedOverlay());

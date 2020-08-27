@@ -2654,9 +2654,7 @@ static boolean CL_ServerConnectionTicker(boolean viams, const char *tmpsave, tic
 				F_TitleScreenDrawer();
 			}
 			CL_DrawConnectionStatus();
-			I_UpdateNoVsync(); // page flip or blit buffer
-			if (moviemode)
-				M_SaveFrame();
+			SCR_UpdateOrDelay(false); // page flip or blit buffer
 			S_UpdateSounds();
 			S_UpdateClosedCaptions();
 		}

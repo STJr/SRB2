@@ -208,6 +208,8 @@ void SCR_Overlay(void);
 
 void SCR_DelayedUpdate(void);
 void SCR_DelayedOverlay(void);
+void SCR_UpdateOrDelay(boolean vsync);
+
 boolean SCR_IsUpdateDelayed(void);
 boolean SCR_UseDelayedOverlay(void);
 boolean SCR_NeedsDelayedOverlay(void);

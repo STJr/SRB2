@@ -1902,12 +1902,7 @@ void G_PreLevelTitleCard(void)
 
 		ST_runTitleCard();
 		ST_preLevelTitleCardDrawer();
-		SCR_FinishUpdate(); // page flip or blit buffer
-
-		if (moviemode)
-			M_SaveFrame();
-		if (takescreenshot) // Only take screenshots after drawing.
-			M_DoScreenShot();
+		SCR_UpdateOrDelay(true); // page flip or blit buffer
 	}
 	if (!cv_showhud.value)
 		wipestyleflags = WSF_CROSSFADE;

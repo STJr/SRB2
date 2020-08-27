@@ -678,6 +678,7 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_gif_dynamicdelay);
 	CV_RegisterVar(&cv_gif_localcolortable);
 	CV_RegisterVar(&cv_gif_sizelimit);
+	CV_RegisterVar(&cv_gif_split);
 
 #ifdef WALLSPLATS
 	CV_RegisterVar(&cv_splats);

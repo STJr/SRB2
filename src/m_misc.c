@@ -678,7 +678,7 @@ static void M_CreateScreenShotPalette(void)
 }
 
 #if NUMSCREENS > 2
-static const char *Newsnapshotfile(const char *pathname, const char *ext)
+const char *M_GetScreenshotName(const char *pathname, const char *ext)
 {
 	static char freename[13] = "srb2XXXX.ext";
 	int i = 5000; // start in the middle: num screenshots divided by 2
@@ -1116,7 +1116,7 @@ static inline moviemode_t M_StartMovieAPNG(const char *pathname)
 		return MM_OFF;
 	}
 
-	if (!(freename = Newsnapshotfile(pathname,"png")))
+	if (!(freename = M_GetScreenshotName(pathname,"png")))
 	{
 		CONS_Alert(CONS_ERROR, "Couldn't create aPNG: no slots open in %s\n", pathname);
 		return MM_OFF;
@@ -1149,7 +1149,7 @@ static inline moviemode_t M_StartMovieGIF(const char *pathname)
 #ifdef HAVE_ANIGIF
 	const char *freename;
 
-	if (!(freename = Newsnapshotfile(pathname,"gif")))
+	if (!(freename = M_GetScreenshotName(pathname,"gif")))
 	{
 		CONS_Alert(CONS_ERROR, "Couldn't create GIF: no slots open in %s\n", pathname);
 		return MM_OFF;
@@ -1553,12 +1553,12 @@ void M_DoScreenShot(void)
 	}
 
 #ifdef USE_PNG
-	freename = Newsnapshotfile(pathname,"png");
+	freename = M_GetScreenshotName(pathname,"png");
 #else
 	if (rendermode == render_soft)
-		freename = Newsnapshotfile(pathname,"pcx");
+		freename = M_GetScreenshotName(pathname,"pcx");
 	else if (rendermode == render_opengl)
-		freename = Newsnapshotfile(pathname,"tga");
+		freename = M_GetScreenshotName(pathname,"tga");
 #endif
 
 	if (rendermode == render_soft)

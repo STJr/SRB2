@@ -678,7 +678,7 @@ static void D_Display(void)
 		if (!SCR_IsUpdateDelayed())
 		{
 			rs_swaptime = I_GetTimeMicros();
-			I_FinishUpdate(); // page flip or blit buffer
+			SCR_FinishUpdate(); // page flip or blit buffer
 			rs_swaptime = I_GetTimeMicros() - rs_swaptime;
 		}
 	}
