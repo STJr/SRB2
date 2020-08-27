@@ -679,6 +679,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_gif_localcolortable);
 	CV_RegisterVar(&cv_gif_sizelimit);
 	CV_RegisterVar(&cv_gif_split);
+	CV_RegisterVar(&cv_gif_showfilesize);
+	CV_RegisterVar(&cv_gif_showsplitcount);
 
 #ifdef WALLSPLATS
 	CV_RegisterVar(&cv_splats);

@@ -30,5 +30,6 @@ void GIF_displayinfo(void);
 
 extern consvar_t cv_gif_optimize, cv_gif_downscale, cv_gif_dynamicdelay, cv_gif_localcolortable;
 extern consvar_t cv_gif_sizelimit, cv_gif_split;
+extern consvar_t cv_gif_showfilesize, cv_gif_showsplitcount;
 
 #endif

@@ -1174,6 +1174,7 @@ void M_StartMovie(void)
 {
 #if NUMSCREENS > 2
 	char pathname[MAX_WADPATH];
+	const char *movietype = NULL;
 
 	if (moviemode)
 		return;
@@ -1211,12 +1212,24 @@ void M_StartMovie(void)
 			return;
 	}
 
-	if (moviemode == MM_APNG)
-		CONS_Printf(M_GetText("Movie mode enabled (%s).\n"), "aPNG");
-	else if (moviemode == MM_GIF)
-		CONS_Printf(M_GetText("Movie mode enabled (%s).\n"), "GIF");
-	else if (moviemode == MM_SCREENSHOT)
-		CONS_Printf(M_GetText("Movie mode enabled (%s).\n"), "screenshots");
+	switch (moviemode)
+	{
+		case MM_GIF:
+			if (cv_gif_sizelimit.value && cv_gif_showfilesize.value)
+				return;
+			movietype = "GIF";
+			break;
+		case MM_APNG:
+			movietype = "aPNG";
+			break;
+		case MM_SCREENSHOT:
+			movietype = "screenshots";
+			break;
+		default:
+			return;
+	}
+
+	CONS_Printf(M_GetText("Movie mode enabled (%s).\n"), movietype);
 
 	//singletics = (moviemode != MM_OFF);
 #endif
