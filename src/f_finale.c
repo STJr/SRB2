@@ -315,7 +315,7 @@ const char *introtext[NUMINTROSCENES];
 
 static tic_t introscenetime[NUMINTROSCENES] =
 {
-	6*TICRATE,	// STJr Presents
+	5*TICRATE,	// STJr Presents
 	11*TICRATE + (TICRATE/2),	// Two months had passed since...
 	15*TICRATE + (TICRATE/2),	// As it was about to drain the rings...
 	14*TICRATE,					// What Sonic, Tails, and Knuckles...
@@ -641,7 +641,7 @@ static void F_IntroDrawScene(void)
 				F_TryColormapFade(31);
 				V_DrawSmallScaledPatch(bgxoffs, 84, 0, background);
 				F_WipeEndScreen();
-				F_RunWipe(99,true);
+				F_RunWipe(0,true);
 			}
 			
 			if (!WipeInAction) // Draw the patch if not in a wipe
