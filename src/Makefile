@@ -56,7 +56,8 @@
 #     Compile with GCC 4.6x version, add 'GCC46=1'
 #     Compile a profile version, add 'PROFILEMODE=1'
 #     Compile a debug version, add 'DEBUGMODE=1'
-#     Compile with extra warnings, add 'WARNINGMODE=1'
+#     Compile with less warnings, add 'RELAXWARNINGS=1'
+#     Generate compiler errors for most compiler warnings, add 'ERRORMODE=1'
 #     Compile without NASM's tmap.nas, add 'NOASM=1'
 #     Compile without 3D hardware support, add 'NOHW=1'
 #     Compile without 3D sound support, add 'NOHS=1'
@@ -79,6 +80,58 @@
 #     To link with SDLMain to hide console or make on a console-less binary, add 'SDLMAIN=1'
 #
 #############################################################################
+
+ALL_SYSTEMS=\
+	PANDORA\
+	LINUX64\
+	MINGW64\
+	HAIKU\
+	DUMMY\
+	DJGPPDOS\
+	MINGW\
+	UNIX\
+	LINUX\
+	SOLARIS\
+	FREEBSD\
+	MACOSX\
+	SDL\
+
+# check for user specified system
+ifeq (,$(filter $(ALL_SYSTEMS),$(.VARIABLES)))
+ifeq ($(OS),Windows_NT) # all windows are Windows_NT...
+
+ $(info Detected a Windows system, compiling for 32-bit MinGW SDL2...)
+
+ # go for a 32-bit sdl mingw exe by default
+ MINGW=1
+ SDL=1
+ WINDOWSHELL=1
+
+else # if you on the *nix
+
+ system:=$(shell uname -s)
+
+ ifeq ($(system),Linux)
+ new_system=LINUX
+ else
+
+ $(error \
+	 Could not automatically detect your system,\
+	 try specifying a system manually)
+
+ endif
+
+ ifeq ($(shell getconf LONG_BIT),64)
+ system+=64-bit
+ new_system:=$(new_system)64
+ endif
+
+ $(info Detected $(system) ($(new_system))...)
+ $(new_system)=1
+
+endif
+endif
+
 
 # SRB2 data files
 D_DIR?=../bin/Resources
