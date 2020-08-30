@@ -621,7 +621,7 @@ static void F_IntroDrawScene(void)
 	}
 	else if (intro_scenenum == 0) // STJr presents
 	{	 
-		if (intro_curtime > 1 && intro_curtime < introscenetime[intro_scenenum])
+		if (intro_curtime > 1 && intro_curtime < (INT32)introscenetime[intro_scenenum])
 		{
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 			if (intro_curtime < TICRATE-5) // Make the text shine!
