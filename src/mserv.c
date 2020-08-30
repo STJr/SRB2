@@ -53,7 +53,7 @@ static void MasterServer_OnChange(void);
 static CV_PossibleValue_t masterserver_update_rate_cons_t[] = {
 	{2,  "MIN"},
 	{60, "MAX"},
-	{0}
+	{0,NULL}
 };
 
 consvar_t cv_masterserver = {"masterserver", "https://mb.srb2.org/MS/0", CV_SAVE|CV_CALL, NULL, MasterServer_OnChange, 0, NULL, NULL, 0, 0, NULL};
