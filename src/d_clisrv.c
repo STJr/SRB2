@@ -2566,7 +2566,6 @@ static boolean CL_ServerConnectionSearchTicker(tic_t *asksent)
 		*asksent = I_GetTime();
 	}
 #else
-	(void)viams;
 	(void)asksent;
 	// No netgames, so we skip this state.
 	cl_mode = CL_ASKJOIN;
