@@ -220,6 +220,8 @@ static void var_cleanup(void)
 	internal_volume = 100;
 }
 
+#ifdef HAVE_LIBGME
+#ifdef HAVE_ZLIB
 static const char* get_zlib_error(int zErr)
 {
 	switch (zErr)
@@ -240,6 +242,8 @@ static const char* get_zlib_error(int zErr)
 			return "unknown error";
 	}
 }
+#endif
+#endif
 
 /// ------------------------
 /// Audio System
