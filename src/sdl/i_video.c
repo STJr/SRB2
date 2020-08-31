@@ -1478,6 +1478,7 @@ static SDL_bool Impl_CreateContext(void)
 
 void VID_CheckGLLoaded(rendermode_t oldrender)
 {
+	(void)oldrender;
 #ifdef HWRENDER
 	if (vid_opengl_state == -1) // Well, it didn't work the first time anyway.
 	{
