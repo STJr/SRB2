@@ -648,6 +648,7 @@ static void D_Display(void)
 			V_DrawThinString(80, 40, V_MONOSPACE | V_BLUEMAP, s);
 			if (rendermode == render_opengl) // OpenGL specific stats
 			{
+#ifdef HWRENDER
 				snprintf(s, sizeof s - 1, "nsrt %d", rs_hw_nodesorttime / divisor);
 				V_DrawThinString(30, 40, V_MONOSPACE | V_YELLOWMAP, s);
 				snprintf(s, sizeof s - 1, "ndrw %d", rs_hw_nodedrawtime / divisor);
@@ -680,6 +681,7 @@ static void D_Display(void)
 					snprintf(s, sizeof s - 1, "ncol %d", rs_hw_numcolors);
 					V_DrawThinString(185, 30, V_MONOSPACE | V_PURPLEMAP, s);
 				}
+#endif
 			}
 			else // software specific stats
 			{
