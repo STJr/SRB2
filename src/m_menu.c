@@ -11227,6 +11227,7 @@ Check_new_version_thread (int *id)
 			GetRoomsList(hosting, *id);
 		}
 	}
+#ifdef UPDATE_ALERT
 	else
 	{
 		I_lock_mutex(&ms_QueryId_mutex);
@@ -11235,6 +11236,7 @@ Check_new_version_thread (int *id)
 		}
 		I_unlock_mutex(ms_QueryId_mutex);
 	}
+#endif
 
 	if (okay)
 	{

@@ -157,7 +157,9 @@ extern char logfilename[1024];
 // the other options the same.
 
 // Comment out this line to completely disable update alerts (recommended for testing, but not for release)
+#ifndef BETAVERSION
 #define UPDATE_ALERT
+#endif
 
 // The string used in the alert that pops up in the event of an update being available.
 // Please change to apply to your modification (we don't want everyone asking where your mod is on SRB2.org!).
