@@ -32,12 +32,13 @@
  * Last updated 2020 / 05 / 11 - v2.2.4 - patch.pk3
  * Last updated 2020 / 07 / 07 - v2.2.5 - player.dta & patch.pk3
  * Last updated 2020 / 07 / 10 - v2.2.6 - player.dta & patch.pk3
+ * Last updated 2020 / 09 / 01 - v2.2.7 - patch.pk3
  */
 #define ASSET_HASH_SRB2_PK3   "0277c9416756627004e83cbb5b2e3e28"
 #define ASSET_HASH_ZONES_PK3  "f7e88afb6af7996a834c7d663144bead"
 #define ASSET_HASH_PLAYER_DTA "49dad7b24634c89728cc3e0b689e12bb"
 #ifdef USE_PATCH_DTA
-#define ASSET_HASH_PATCH_PK3  "ecf00060f03c76b3e49c6ae3925b627f"
+#define ASSET_HASH_PATCH_PK3  "97b440b48139c53fa666b585a4e208f2"
 #endif
 
 #endif
