@@ -1677,8 +1677,12 @@ static void CON_DrawBackpic(void)
 	lumpnum_t piclump;
 	int x, w, h;
 
-	// Get the lumpnum for CONSBACK, or fallback into MISSING.
-	piclump = W_CheckNumForName("CONSBACK");
+	// Get the lumpnum for CONSBACK, STARTUP (Only during game startup) or fallback into MISSING.
+	if (con_startup)
+		piclump = W_CheckNumForName("STARTUP");
+	else
+		piclump = W_CheckNumForName("CONSBACK");
+
 	if (piclump == LUMPERROR)
 		piclump = W_GetNumForName("MISSING");
 
