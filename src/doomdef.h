@@ -29,7 +29,6 @@
 // Use Mixer interface?
 #ifdef HAVE_MIXER
     #define SOUND SOUND_MIXER
-    #define NOHS // No HW3SOUND
     #ifdef HW3SOUND
     #undef HW3SOUND
     #endif
@@ -45,7 +44,6 @@
 // Use FMOD?
 #ifdef HAVE_FMOD
     #define SOUND SOUND_FMOD
-    #define NOHS // No HW3SOUND
     #ifdef HW3SOUND
     #undef HW3SOUND
     #endif
@@ -61,10 +59,6 @@
 #define NONET
 #if !defined (HWRENDER) && !defined (NOHW)
 #define HWRENDER
-#endif
-// judgecutor: 3D sound support
-#if !defined(HW3SOUND) && !defined (NOHS)
-#define HW3SOUND
 #endif
 #endif
 
@@ -643,5 +637,11 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
+
+#if defined (HAVE_CURL) && ! defined (NONET)
+#define MASTERSERVER
+#else
+#undef UPDATE_ALERT
+#endif
 
 #endif // __DOOMDEF__

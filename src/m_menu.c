@@ -3842,7 +3842,7 @@ void M_SetupNextMenu(menu_t *menudef)
 {
 	INT16 i;
 
-#ifdef HAVE_THREADS
+#if defined (MASTERSERVER) && defined (HAVE_THREADS)
 	if (currentMenu == &MP_RoomDef || currentMenu == &MP_ConnectDef)
 	{
 		I_lock_mutex(&ms_QueryId_mutex);
@@ -3930,7 +3930,7 @@ void M_Ticker(void)
 	if (currentMenu == &OP_ScreenshotOptionsDef)
 		M_SetupScreenshotMenu();
 
-#ifdef HAVE_THREADS
+#if defined (MASTERSERVER) && defined (HAVE_THREADS)
 	I_lock_mutex(&ms_ServerList_mutex);
 	{
 		if (ms_ServerList)
@@ -11194,8 +11194,9 @@ static boolean M_CheckMODVersion(int id)
 	} else
 		return true;
 }
+#endif/*UPDATE_ALERT*/
 
-#ifdef HAVE_THREADS
+#if defined (MASTERSERVER) && defined (HAVE_THREADS)
 static void
 Check_new_version_thread (int *id)
 {
@@ -11204,7 +11205,9 @@ Check_new_version_thread (int *id)
 
 	okay = 0;
 
+#ifdef UPDATE_ALERT
 	if (M_CheckMODVersion(*id))
+#endif
 	{
 		I_lock_mutex(&ms_QueryId_mutex);
 		{
@@ -11248,8 +11251,7 @@ Check_new_version_thread (int *id)
 
 	free(id);
 }
-#endif/*HAVE_THREADS*/
-#endif/*UPDATE_ALERT*/
+#endif/*defined (MASTERSERVER) && defined (HAVE_THREADS)*/
 
 static void M_ConnectMenu(INT32 choice)
 {
@@ -11290,7 +11292,7 @@ UINT32 roomIds[NUM_LIST_ROOMS];
 static void M_RoomMenu(INT32 choice)
 {
 	INT32 i;
-#ifdef HAVE_THREADS
+#if defined (MASTERSERVER) && defined (HAVE_THREADS)
 	int *id;
 #endif
 
@@ -11312,9 +11314,14 @@ static void M_RoomMenu(INT32 choice)
 	MP_RoomDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&MP_RoomDef);
 
-#ifdef UPDATE_ALERT
+#ifdef MASTERSERVER
 #ifdef HAVE_THREADS
+#ifdef UPDATE_ALERT
 	m_waiting_mode = M_WAITING_VERSION;
+#else/*UPDATE_ALERT*/
+	m_waiting_mode = M_WAITING_ROOMS;
+#endif/*UPDATE_ALERT*/
+
 	MP_RoomMenu[0].text = "";
 
 	id = malloc(sizeof *id);
@@ -11328,17 +11335,19 @@ static void M_RoomMenu(INT32 choice)
 	I_spawn_thread("check-new-version",
 			(I_thread_fn)Check_new_version_thread, id);
 #else/*HAVE_THREADS*/
+#ifdef UPDATE_ALERT
 	if (M_CheckMODVersion(0))
+#endif/*UPDATE_ALERT*/
 	{
 		GetRoomsList(currentMenu->prevMenu == &MP_ServerDef, 0);
 	}
 #endif/*HAVE_THREADS*/
-#endif/*UPDATE_ALERT*/
+#endif/*MASTERSERVER*/
 }
 
 static void M_ChooseRoom(INT32 choice)
 {
-#ifdef HAVE_THREADS
+#if defined (MASTERSERVER) && defined (HAVE_THREADS)
 	I_lock_mutex(&ms_QueryId_mutex);
 	{
 		ms_QueryId++;
