@@ -526,6 +526,10 @@ typedef enum
 
 } kickreason_t;
 
+/* the max number of name changes in some time period */
+#define MAXNAMECHANGES (5)
+#define NAMECHANGERATE (60*TICRATE)
+
 extern boolean server;
 extern boolean serverrunning;
 #define client (!server)

@@ -452,6 +452,8 @@ player_t *seenplayer; // player we're aiming at right now
 // so that it doesn't have to be updated depending on the value of MAXPLAYERS
 char player_names[MAXPLAYERS][MAXPLAYERNAME+1];
 
+INT32 player_name_changes[MAXPLAYERS];
+
 INT16 rw_maximums[NUM_WEAPONS] =
 {
 	800, // MAX_INFINITY
@@ -2345,6 +2347,11 @@ void G_Ticker(boolean run)
 
 		if (camtoggledelay2)
 			camtoggledelay2--;
+
+		if (gametic % NAMECHANGERATE == 0)
+		{
+			memset(player_name_changes, 0, sizeof player_name_changes);
+		}
 	}
 }
 
