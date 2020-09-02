@@ -1144,6 +1144,7 @@ static const char *credits[] = {
 	"Wessel \"sphere\" Smit",
 	"David \"Instant Sonic\" Spencer Jr.",
 	"\"SSNTails\"",
+	"\"SuperPhanto\"", // for the new brak render
 	"Daniel \"Inazuma\" Trinh",
 	"\"VelocitOni\"",
 	"Jarrett \"JEV3\" Voight",
