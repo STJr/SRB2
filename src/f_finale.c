@@ -1122,6 +1122,7 @@ static const char *credits[] = {
 	"\1Art",
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
 	"Ryan \"Blaze Hedgehog\" Bloom",
+	"Graeme P. \"SuperPhanto\" Caldwell", // for the new brak render
 	"\"ChrispyPixels\"",
 	"Paul \"Boinciel\" Clempson",
 	"Sally \"TehRealSalt\" Cochenour",
@@ -1144,7 +1145,6 @@ static const char *credits[] = {
 	"Wessel \"sphere\" Smit",
 	"David \"Instant Sonic\" Spencer Jr.",
 	"\"SSNTails\"",
-	"\"SuperPhanto\"", // for the new brak render
 	"Daniel \"Inazuma\" Trinh",
 	"\"VelocitOni\"",
 	"Jarrett \"JEV3\" Voight",
