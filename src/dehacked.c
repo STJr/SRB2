@@ -10844,7 +10844,6 @@ static inline int lib_getenum(lua_State *L)
 		}
 		else if (fastcmp(p, "USEDOWN")) // Remove case when 2.3 nears release...
 		{
-			LUA_Deprecated(L, "PF_USEDOWN", "PF_SPINDOWN");
 			lua_pushinteger(L, (lua_Integer)PF_SPINDOWN);
 			return 1;
 		}
@@ -11116,7 +11115,6 @@ static inline int lib_getenum(lua_State *L)
 
 	if (fastcmp(word, "BT_USE")) // Remove case when 2.3 nears release...
 	{
-		LUA_Deprecated(L, "BT_USE", "BT_SPIN");
 		lua_pushinteger(L, (lua_Integer)BT_SPIN);
 		return 1;
 	}
