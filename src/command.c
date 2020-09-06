@@ -1262,7 +1262,7 @@ void CV_RegisterVar(consvar_t *variable)
 	// check net variables
 	if (variable->flags & CV_NETVAR)
 	{
-		variable->netid = consvar_number_of_netids++;
+		variable->netid = ++consvar_number_of_netids;
 
 		/* in case of overflow... */
 		if (variable->netid > consvar_number_of_netids)
