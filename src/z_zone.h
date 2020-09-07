@@ -42,8 +42,12 @@ enum
 
 	PU_SOUND                 = 11, // static while playing
 	PU_MUSIC                 = 12, // static while playing
-	PU_HUDGFX                = 13, // static until WAD added
-	PU_PATCH                 = 14, // static until renderer change
+
+	PU_PATCH                 = 14, // static entire execution time
+	PU_PATCH_LOWPRIORITY     = 15, // lower priority patch, static until level exited
+	PU_SPRITE                = 16, // sprite patch, static until WAD added
+	PU_SPRITE_ROTATED        = 17, // sprite patch, static until level exited or WAD added
+	PU_HUDGFX                = 18, // HUD patch, static until WAD added
 
 	PU_HWRPATCHINFO          = 21, // Hardware GLPatch_t struct for OpenGL texture cache
 	PU_HWRPATCHCOLMIPMAP     = 22, // Hardware GLMipmap_t struct colormap variation of patch
@@ -63,7 +67,7 @@ enum
 	PU_HWRCACHE_UNLOCKED     = 102, // 'unlocked' PU_HWRCACHE memory:
 									// 'second-level' cache for graphics
                                     // stored in hardware format and downloaded as needed
-	PU_HWRPATCHINFO_UNLOCKED = 103, // 'unlocked' PU_HWRPATCHINFO memory
+	PU_HWRPATCHINFO_UNLOCKED    = 103, // 'unlocked' PU_HWRPATCHINFO memory
 	PU_HWRMODELTEXTURE_UNLOCKED = 104, // 'unlocked' PU_HWRMODELTEXTURE memory
 };
 
@@ -106,6 +110,10 @@ void *Z_ReallocAlign(void *ptr, size_t size, INT32 tag, void *user, INT32 alignb
 // (perhaps this should be changed in future?)
 #define Z_FreeTag(tagnum) Z_FreeTags(tagnum, tagnum)
 void Z_FreeTags(INT32 lowtag, INT32 hightag);
+
+// Iterate memory by tag
+#define Z_IterateTag(tagnum, func) Z_IterateTags(tagnum, tagnum, func)
+void Z_IterateTags(INT32 lowtag, INT32 hightag, boolean (*iterfunc)(void *));
 
 //
 // Utility functions

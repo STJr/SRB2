@@ -19,6 +19,9 @@
 patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest);
 void Patch_Free(patch_t *patch);
 
+#define Patch_FreeTag(tagnum) Patch_FreeTags(tagnum, tagnum)
+void Patch_FreeTags(INT32 lowtag, INT32 hightag);
+
 #ifdef HWRENDER
 void *Patch_AllocateHardwarePatch(patch_t *patch);
 void *Patch_CreateGL(patch_t *patch);

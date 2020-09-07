@@ -2044,18 +2044,13 @@ void Y_EndIntermission(void)
 	usebuffer = false;
 }
 
-#define UNLOAD(x) if (x) {Z_ChangeTag(x, PU_CACHE);} x = NULL;
+#define UNLOAD(x) if (x) {Patch_Free(x);} x = NULL;
 
 //
 // Y_UnloadData
 //
 static void Y_UnloadData(void)
 {
-	// In hardware mode, don't Z_ChangeTag a pointer returned by W_CachePatchName().
-	// It doesn't work and is unnecessary.
-	if (rendermode != render_soft)
-		return;
-
 	// unload the background patches
 	UNLOAD(bgpatch);
 	UNLOAD(bgtile);

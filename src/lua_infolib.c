@@ -378,10 +378,6 @@ static int lib_setSpriteInfo(lua_State *L)
 		UINT32 i = luaL_checkinteger(L, 1);
 		if (i == 0 || i >= NUMSPRITES)
 			return luaL_error(L, "spriteinfo[] index %d out of range (1 - %d)", i, NUMSPRITES-1);
-#ifdef ROTSPRITE
-		if (sprites != NULL)
-			R_FreeRotSprite(&sprites[i]);
-#endif
 		info = &spriteinfo[i]; // get the spriteinfo to assign to.
 	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
@@ -462,11 +458,6 @@ static int spriteinfo_set(lua_State *L)
 	lua_remove(L, 1); // remove spriteinfo
 	lua_remove(L, 1); // remove field
 	lua_settop(L, 1); // leave only one value
-
-#ifdef ROTSPRITE
-	if (sprites != NULL)
-		R_FreeRotSprite(&sprites[sprinfo-spriteinfo]);
-#endif
 
 	if (fastcmp(field, "pivot"))
 	{

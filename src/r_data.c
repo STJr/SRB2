@@ -1308,7 +1308,7 @@ void R_PrecacheLevel(void)
 		lump = sf->lumppat[a];\
 		if (devparm)\
 			spritememory += W_LumpLength(lump);\
-		W_CachePatchNum(lump, PU_PATCH);\
+		W_CachePatchNum(lump, PU_SPRITE);\
 	}
 			// see R_InitSprites for more about lumppat,lumpid
 			switch (sf->rotate)

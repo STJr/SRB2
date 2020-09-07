@@ -5840,8 +5840,6 @@ static void M_DrawNightsAttackSuperSonic(void)
 	const UINT8 *colormap = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_YELLOW, GTC_CACHE);
 	INT32 timer = (ntsatkdrawtimer/4) % 2;
 	angle_t fa = (FixedAngle(((ntsatkdrawtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
-	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_PATCH);
-	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_PATCH);
 	V_DrawFixedPatch(235<<FRACBITS, (120<<FRACBITS) - (8*FINESINE(fa)), FRACUNIT, 0, ntssupersonic[timer], colormap);
 }
 
@@ -6185,7 +6183,7 @@ static void M_StopMessage(INT32 choice)
 static void M_DrawImageDef(void)
 {
 	// Grr.  Need to autodetect for pic_ts.
-	pic_t *pictest = (pic_t *)W_CachePatchName(currentMenu->menuitems[itemOn].text,PU_CACHE);
+	pic_t *pictest = (pic_t *)W_CacheLumpName(currentMenu->menuitems[itemOn].text,PU_CACHE);
 	if (!pictest->zero)
 		V_DrawScaledPic(0,0,0,W_GetNumForName(currentMenu->menuitems[itemOn].text));
 	else
@@ -10152,6 +10150,9 @@ static void M_NightsAttack(INT32 choice)
 	}
 	// This is really just to make sure Sonic is the played character, just in case
 	M_PatchSkinNameTable();
+
+	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_PATCH);
+	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_PATCH);
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please

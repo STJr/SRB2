@@ -1350,11 +1350,6 @@ static void R_ParseSpriteInfo(boolean spr2)
 	info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
 	info->available = true;
 
-#ifdef ROTSPRITE
-	if ((sprites != NULL) && (!spr2))
-		R_FreeRotSprite(&sprites[sprnum]);
-#endif
-
 	// Left Curly Brace
 	sprinfoToken = M_GetToken(NULL);
 	if (sprinfoToken == NULL)
@@ -1415,9 +1410,6 @@ static void R_ParseSpriteInfo(boolean spr2)
 						size_t skinnum = skinnumbers[i];
 						skin_t *skin = &skins[skinnum];
 						spriteinfo_t *sprinfo = skin->sprinfo;
-#ifdef ROTSPRITE
-						R_FreeSkinRotSprite(skinnum);
-#endif
 						M_Memcpy(&sprinfo[spr2num], info, sizeof(spriteinfo_t));
 					}
 				}
@@ -1532,24 +1524,28 @@ INT32 R_GetRollAngle(angle_t rollangle)
 //
 // Create a rotated sprite.
 //
-void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip)
+void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, INT32 angle, UINT8 flip)
 {
-	INT32 angle;
 	patch_t *patch, *newpatch;
 	UINT16 *rawdst;
 	size_t size;
 	pictureflags_t bflip = (flip) ? PICFLAGS_XFLIP : 0;
+
+	// Don't cache angle = 0
+	if (angle < 1 || angle >= ROTANGLES)
+		return;
 
 #define SPRITE_XCENTER (leftoffset)
 #define SPRITE_YCENTER (height / 2)
 #define ROTSPRITE_XCENTER (newwidth / 2)
 #define ROTSPRITE_YCENTER (newheight / 2)
 
-	if (!(sprframe->rotsprite.cached & (1<<rot)))
+	if (sprframe->rotsprite.patch[rot][angle] == NULL)
 	{
 		INT32 dx, dy;
 		INT32 px, py;
 		INT32 width, height, leftoffset;
+		INT32 newwidth, newheight;
 		fixed_t ca, sa;
 		lumpnum_t lump = sprframe->lumppat[rot];
 
@@ -1579,172 +1575,116 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			leftoffset = width - leftoffset;
 		}
 
-		// Don't cache angle = 0
-		for (angle = 1; angle < ROTANGLES; angle++)
+		ca = rollcosang[angle];
+		sa = rollsinang[angle];
+
+		// Find the dimensions of the rotated patch.
 		{
-			INT32 newwidth, newheight;
+			INT32 w1 = abs(FixedMul(width << FRACBITS, ca) - FixedMul(height << FRACBITS, sa));
+			INT32 w2 = abs(FixedMul(-(width << FRACBITS), ca) - FixedMul(height << FRACBITS, sa));
+			INT32 h1 = abs(FixedMul(width << FRACBITS, sa) + FixedMul(height << FRACBITS, ca));
+			INT32 h2 = abs(FixedMul(-(width << FRACBITS), sa) + FixedMul(height << FRACBITS, ca));
+			w1 = FixedInt(FixedCeil(w1 + (FRACUNIT/2)));
+			w2 = FixedInt(FixedCeil(w2 + (FRACUNIT/2)));
+			h1 = FixedInt(FixedCeil(h1 + (FRACUNIT/2)));
+			h2 = FixedInt(FixedCeil(h2 + (FRACUNIT/2)));
+			newwidth = max(width, max(w1, w2));
+			newheight = max(height, max(h1, h2));
+		}
 
-			ca = rollcosang[angle];
-			sa = rollsinang[angle];
+		// check boundaries
+		{
+			fixed_t top[2][2];
+			fixed_t bottom[2][2];
 
-			// Find the dimensions of the rotated patch.
-			{
-				INT32 w1 = abs(FixedMul(width << FRACBITS, ca) - FixedMul(height << FRACBITS, sa));
-				INT32 w2 = abs(FixedMul(-(width << FRACBITS), ca) - FixedMul(height << FRACBITS, sa));
-				INT32 h1 = abs(FixedMul(width << FRACBITS, sa) + FixedMul(height << FRACBITS, ca));
-				INT32 h2 = abs(FixedMul(-(width << FRACBITS), sa) + FixedMul(height << FRACBITS, ca));
-				w1 = FixedInt(FixedCeil(w1 + (FRACUNIT/2)));
-				w2 = FixedInt(FixedCeil(w2 + (FRACUNIT/2)));
-				h1 = FixedInt(FixedCeil(h1 + (FRACUNIT/2)));
-				h2 = FixedInt(FixedCeil(h2 + (FRACUNIT/2)));
-				newwidth = max(width, max(w1, w2));
-				newheight = max(height, max(h1, h2));
-			}
+			top[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
+			top[0][1] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
+			top[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
+			top[1][1] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
 
-			// check boundaries
-			{
-				fixed_t top[2][2];
-				fixed_t bottom[2][2];
+			bottom[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
+			bottom[0][1] = -FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
+			bottom[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
+			bottom[1][1] = -FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
 
-				top[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				top[0][1] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-				top[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				top[1][1] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
+			top[0][0] >>= FRACBITS;
+			top[0][1] >>= FRACBITS;
+			top[1][0] >>= FRACBITS;
+			top[1][1] >>= FRACBITS;
 
-				bottom[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				bottom[0][1] = -FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-				bottom[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				bottom[1][1] = -FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-
-				top[0][0] >>= FRACBITS;
-				top[0][1] >>= FRACBITS;
-				top[1][0] >>= FRACBITS;
-				top[1][1] >>= FRACBITS;
-
-				bottom[0][0] >>= FRACBITS;
-				bottom[0][1] >>= FRACBITS;
-				bottom[1][0] >>= FRACBITS;
-				bottom[1][1] >>= FRACBITS;
+			bottom[0][0] >>= FRACBITS;
+			bottom[0][1] >>= FRACBITS;
+			bottom[1][0] >>= FRACBITS;
+			bottom[1][1] >>= FRACBITS;
 
 #define BOUNDARYWCHECK(b) (b[0] < 0 || b[0] >= width)
 #define BOUNDARYHCHECK(b) (b[1] < 0 || b[1] >= height)
 #define BOUNDARYADJUST(x) x *= 2
-				// top left/right
-				if (BOUNDARYWCHECK(top[0]) || BOUNDARYWCHECK(top[1]))
-					BOUNDARYADJUST(newwidth);
-				// bottom left/right
-				else if (BOUNDARYWCHECK(bottom[0]) || BOUNDARYWCHECK(bottom[1]))
-					BOUNDARYADJUST(newwidth);
-				// top left/right
-				if (BOUNDARYHCHECK(top[0]) || BOUNDARYHCHECK(top[1]))
-					BOUNDARYADJUST(newheight);
-				// bottom left/right
-				else if (BOUNDARYHCHECK(bottom[0]) || BOUNDARYHCHECK(bottom[1]))
-					BOUNDARYADJUST(newheight);
+			// top left/right
+			if (BOUNDARYWCHECK(top[0]) || BOUNDARYWCHECK(top[1]))
+				BOUNDARYADJUST(newwidth);
+			// bottom left/right
+			else if (BOUNDARYWCHECK(bottom[0]) || BOUNDARYWCHECK(bottom[1]))
+				BOUNDARYADJUST(newwidth);
+			// top left/right
+			if (BOUNDARYHCHECK(top[0]) || BOUNDARYHCHECK(top[1]))
+				BOUNDARYADJUST(newheight);
+			// bottom left/right
+			else if (BOUNDARYHCHECK(bottom[0]) || BOUNDARYHCHECK(bottom[1]))
+				BOUNDARYADJUST(newheight);
 #undef BOUNDARYWCHECK
 #undef BOUNDARYHCHECK
 #undef BOUNDARYADJUST
-			}
-
-			// Draw the rotated sprite to a temporary buffer.
-			size = (newwidth * newheight);
-			if (!size)
-				size = (width * height);
-			rawdst = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
-
-			for (dy = 0; dy < newheight; dy++)
-			{
-				for (dx = 0; dx < newwidth; dx++)
-				{
-					INT32 x = (dx-ROTSPRITE_XCENTER) << FRACBITS;
-					INT32 y = (dy-ROTSPRITE_YCENTER) << FRACBITS;
-					INT32 sx = FixedMul(x, ca) + FixedMul(y, sa) + (px << FRACBITS);
-					INT32 sy = -FixedMul(x, sa) + FixedMul(y, ca) + (py << FRACBITS);
-					sx >>= FRACBITS;
-					sy >>= FRACBITS;
-					if (sx >= 0 && sy >= 0 && sx < width && sy < height)
-					{
-						void *input = Picture_GetPatchPixel(patch, PICFMT_PATCH, sx, sy, bflip);
-						if (input != NULL)
-							rawdst[(dy*newwidth)+dx] = (0xFF00 | (*(UINT8 *)input));
-					}
-				}
-			}
-
-			// make patch
-			newpatch = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawdst, PICFMT_PATCH, 0, &size, newwidth, newheight, 0, 0, 0);
-			{
-				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
-				newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
-			}
-
-			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-			if (rendermode != render_none) // not for psprite
-				newpatch->topoffset += FEETADJUST>>FRACBITS;
-
-			// P_PrecacheLevel
-			if (devparm) spritememory += size;
-
-			sprframe->rotsprite.patch[rot][angle] = newpatch;
-
-			// free rotated image data
-			Z_Free(rawdst);
 		}
 
-		// This rotation is cached now
-		sprframe->rotsprite.cached |= (1<<rot);
+		// Draw the rotated sprite to a temporary buffer.
+		size = (newwidth * newheight);
+		if (!size)
+			size = (width * height);
+		rawdst = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
+
+		for (dy = 0; dy < newheight; dy++)
+		{
+			for (dx = 0; dx < newwidth; dx++)
+			{
+				INT32 x = (dx-ROTSPRITE_XCENTER) << FRACBITS;
+				INT32 y = (dy-ROTSPRITE_YCENTER) << FRACBITS;
+				INT32 sx = FixedMul(x, ca) + FixedMul(y, sa) + (px << FRACBITS);
+				INT32 sy = -FixedMul(x, sa) + FixedMul(y, ca) + (py << FRACBITS);
+				sx >>= FRACBITS;
+				sy >>= FRACBITS;
+				if (sx >= 0 && sy >= 0 && sx < width && sy < height)
+				{
+					void *input = Picture_GetPatchPixel(patch, PICFMT_PATCH, sx, sy, bflip);
+					if (input != NULL)
+						rawdst[(dy*newwidth)+dx] = (0xFF00 | (*(UINT8 *)input));
+				}
+			}
+		}
+
+		// make patch
+		newpatch = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawdst, PICFMT_PATCH, 0, &size, newwidth, newheight, 0, 0, 0);
+		Z_ChangeTag(newpatch, PU_SPRITE_ROTATED);
+		{
+			newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
+			newpatch->topoffset = (newpatch->height / 2) + (patch->topoffset - py);
+		}
+
+		//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
+		if (rendermode != render_none) // not for psprite
+			newpatch->topoffset += FEETADJUST>>FRACBITS;
+
+		// P_PrecacheLevel
+		if (devparm) spritememory += size;
+
+		Z_SetUser(newpatch, &sprframe->rotsprite.patch[rot][angle]);
+
+		// free rotated image data
+		Z_Free(rawdst);
 	}
 #undef SPRITE_XCENTER
 #undef SPRITE_YCENTER
 #undef ROTSPRITE_XCENTER
 #undef ROTSPRITE_YCENTER
-}
-
-//
-// R_FreeRotSprite
-//
-// Free sprite rotation data from memory, for a single spritedef.
-//
-void R_FreeRotSprite(spritedef_t *spritedef)
-{
-	UINT8 frame;
-	INT32 rot, ang;
-
-	for (frame = 0; frame < spritedef->numframes; frame++)
-	{
-		spriteframe_t *sprframe = &spritedef->spriteframes[frame];
-		for (rot = 0; rot < 16; rot++)
-		{
-			if (sprframe->rotsprite.cached & (1<<rot))
-			{
-				for (ang = 0; ang < ROTANGLES; ang++)
-				{
-					patch_t *rotsprite = sprframe->rotsprite.patch[rot][ang];
-					if (rotsprite)
-						Patch_Free(rotsprite);
-					rotsprite = NULL;
-				}
-				sprframe->rotsprite.cached &= ~(1<<rot);
-			}
-		}
-	}
-}
-
-//
-// R_FreeSkinRotSprite
-//
-// Free sprite rotation data from memory, for a skin.
-// Calls R_FreeRotSprite.
-//
-void R_FreeSkinRotSprite(size_t skinnum)
-{
-	size_t i;
-	skin_t *skin = &skins[skinnum];
-	spritedef_t *skinsprites = skin->sprites;
-	for (i = 0; i < NUMPLAYERSPRITES*2; i++)
-	{
-		R_FreeRotSprite(skinsprites);
-		skinsprites++;
-	}
 }
 #endif

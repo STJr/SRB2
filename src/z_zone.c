@@ -496,6 +496,33 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 	}
 }
 
+/** Iterates through all memory for a given set of tags.
+  *
+  * \param lowtag The lowest tag to consider.
+  * \param hightag The highest tag to consider.
+  * \param iterfunc The iterator function.
+  */
+void Z_IterateTags(INT32 lowtag, INT32 hightag, boolean (*iterfunc)(void *))
+{
+	memblock_t *block, *next;
+
+	if (!iterfunc)
+		I_Error("Z_IterateTags: no iterator function was given");
+
+	for (block = head.next; block != &head; block = next)
+	{
+		next = block->next; // get link before possibly freeing
+
+		if (block->tag >= lowtag && block->tag <= hightag)
+		{
+			void *mem = (UINT8 *)block->hdr + sizeof *block->hdr;
+			boolean free = iterfunc(mem);
+			if (free)
+				Z_Free(mem);
+		}
+	}
+}
+
 // -----------------
 // Utility functions
 // -----------------
@@ -772,6 +799,11 @@ static void Command_Memfree_f(void)
 	CONS_Printf(M_GetText("Static            : %7s KB\n"), sizeu1(Z_TagUsage(PU_STATIC)>>10));
 	CONS_Printf(M_GetText("Static (sound)    : %7s KB\n"), sizeu1(Z_TagUsage(PU_SOUND)>>10));
 	CONS_Printf(M_GetText("Static (music)    : %7s KB\n"), sizeu1(Z_TagUsage(PU_MUSIC)>>10));
+	CONS_Printf(M_GetText("Patches           : %7s KB\n"), sizeu1(Z_TagUsage(PU_PATCH)>>10));
+	CONS_Printf(M_GetText("Patches (low)     : %7s KB\n"), sizeu1(Z_TagUsage(PU_PATCH_LOWPRIORITY)>>10));
+	CONS_Printf(M_GetText("Sprites           : %7s KB\n"), sizeu1(Z_TagUsage(PU_SPRITE)>>10));
+	CONS_Printf(M_GetText("Sprites (rotated) : %7s KB\n"), sizeu1(Z_TagUsage(PU_SPRITE_ROTATED)>>10));
+	CONS_Printf(M_GetText("HUD graphics      : %7s KB\n"), sizeu1(Z_TagUsage(PU_HUDGFX)>>10));
 	CONS_Printf(M_GetText("Locked cache      : %7s KB\n"), sizeu1(Z_TagUsage(PU_CACHE)>>10));
 	CONS_Printf(M_GetText("Level             : %7s KB\n"), sizeu1(Z_TagUsage(PU_LEVEL)>>10));
 	CONS_Printf(M_GetText("Special thinker   : %7s KB\n"), sizeu1(Z_TagUsage(PU_LEVSPEC)>>10));

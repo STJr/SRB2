@@ -711,7 +711,6 @@ typedef struct
 typedef struct
 {
 	patch_t *patch[16][ROTANGLES];
-	UINT16 cached;
 } rotsprite_t;
 #endif/*ROTSPRITE*/
 

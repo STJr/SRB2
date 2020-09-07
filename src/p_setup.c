@@ -4090,6 +4090,8 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// Clear pointers that would be left dangling by the purge
 	R_FlushTranslationColormapCache();
 
+	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
+	Patch_FreeTag(PU_SPRITE_ROTATED);
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
 
 #if defined (WALLSPLATS) || defined (FLOORSPLATS)
@@ -4475,6 +4477,8 @@ boolean P_AddWadFile(const char *wadfilename)
 	//
 	// search for sprite replacements
 	//
+	Patch_FreeTag(PU_SPRITE);
+	Patch_FreeTag(PU_SPRITE_ROTATED);
 	R_AddSpriteDefs(wadnum);
 
 	// Reload it all anyway, just in case they

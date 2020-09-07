@@ -64,7 +64,7 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 // Frees a patch from memory.
 //
 
-void Patch_Free(patch_t *patch)
+static void Patch_FreeData(patch_t *patch)
 {
 #ifdef HWRENDER
 	if (patch->hardware)
@@ -75,8 +75,28 @@ void Patch_Free(patch_t *patch)
 		Z_Free(patch->columnofs);
 	if (patch->columns)
 		Z_Free(patch->columns);
+}
 
+void Patch_Free(patch_t *patch)
+{
+	Patch_FreeData(patch);
 	Z_Free(patch);
+}
+
+//
+// Frees patches with a tag range.
+//
+
+static boolean Patch_FreeTagsCallback(void *mem)
+{
+	patch_t *patch = (patch_t *)mem;
+	Patch_FreeData(patch);
+	return true;
+}
+
+void Patch_FreeTags(INT32 lowtag, INT32 hightag)
+{
+	Z_IterateTags(lowtag, hightag, Patch_FreeTagsCallback);
 }
 
 #ifdef HWRENDER

@@ -107,7 +107,6 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 
 	// rotsprite
 #ifdef ROTSPRITE
-	sprtemp[frame].rotsprite.cached = 0;
 	for (r = 0; r < 16; r++)
 	{
 		for (ang = 0; ang < ROTANGLES; ang++)
@@ -241,9 +240,6 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	// if so, it might patch only certain frames, not all
 	if (spritedef->numframes) // (then spriteframes is not null)
 	{
-#ifdef ROTSPRITE
-		R_FreeRotSprite(spritedef);
-#endif
 		// copy the already defined sprite frames
 		M_Memcpy(sprtemp, spritedef->spriteframes,
 		 spritedef->numframes * sizeof (spriteframe_t));
@@ -402,9 +398,6 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	if (spritedef->numframes &&             // has been allocated
 		spritedef->numframes < maxframe)   // more frames are defined ?
 	{
-#ifdef ROTSPRITE
-		R_FreeRotSprite(spritedef);
-#endif
 		Z_Free(spritedef->spriteframes);
 		spritedef->spriteframes = NULL;
 	}
@@ -1237,7 +1230,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
 
-	patch = W_CachePatchName("DSHADOW", PU_CACHE);
+	patch = W_CachePatchName("DSHADOW", PU_SPRITE);
 	xscale = FixedDiv(projection, tz);
 	yscale = FixedDiv(projectiony, tz);
 	shadowxscale = FixedMul(thing->radius*2, scalemul);
@@ -1533,8 +1526,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->rollangle)
 	{
 		rollangle = R_GetRollAngle(thing->rollangle);
-		if (!(sprframe->rotsprite.cached & (1<<rot)))
-			R_CacheRotSprite(thing->sprite, frame, sprinfo, sprframe, rot, flip);
+		if (sprframe->rotsprite.patch[rot][rollangle] == NULL)
+			R_CacheRotSprite(thing->sprite, frame, sprinfo, sprframe, rot, rollangle, flip);
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
 		{
@@ -1823,7 +1816,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->patch = rotsprite;
 	else
 #endif
-		vis->patch = W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
+		vis->patch = W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 
 //
 // determine the colormap (lightlevel & special effects)
@@ -2006,7 +1999,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
-	vis->patch = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
+	vis->patch = W_CachePatchNum(sprframe->lumppat[0], PU_SPRITE);
 
 	// specific translucency
 	if (thing->frame & FF_TRANSMASK)

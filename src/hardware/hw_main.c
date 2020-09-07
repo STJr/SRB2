@@ -733,7 +733,7 @@ static void HWR_DrawSegsSplats(FSurfaceInfo * pSurf)
 		if (!M_PointInBox(segbbox,splat->v1.x,splat->v1.y) && !M_PointInBox(segbbox,splat->v2.x,splat->v2.y))
 			continue;
 
-		gpatch = W_CachePatchNum(splat->patch, PU_PATCH);
+		gpatch = W_CachePatchNum(splat->patch, PU_SPRITE);
 		HWR_GetPatch(gpatch);
 
 		wallVerts[0].x = wallVerts[3].x = FIXED_TO_FLOAT(splat->v1.x);
@@ -3586,7 +3586,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	if (alpha >= 255) return;
 	alpha = 255 - alpha;
 
-	gpatch = (patch_t *)W_CachePatchName("DSHADOW", PU_CACHE);
+	gpatch = (patch_t *)W_CachePatchName("DSHADOW", PU_SPRITE);
 	if (!(gpatch && ((GLPatch_t *)gpatch->hardware)->mipmap->format)) return;
 	HWR_GetPatch(gpatch);
 
@@ -4901,8 +4901,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->rollangle)
 	{
 		rollangle = R_GetRollAngle(thing->rollangle);
-		if (!(sprframe->rotsprite.cached & (1<<rot)))
-			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, flip);
+		if (sprframe->rotsprite.patch[rot][rollangle] == NULL)
+			R_CacheRotSprite(thing->sprite, (thing->frame & FF_FRAMEMASK), sprinfo, sprframe, rot, rollangle, flip);
 		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
 		if (rotsprite != NULL)
 		{
@@ -5030,7 +5030,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		vis->gpatch = (patch_t *)rotsprite;
 	else
 #endif
-		vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
+		vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 	vis->flip = flip;
 	vis->mobj = thing;
 	vis->z1 = z1;
@@ -5165,7 +5165,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->z2 = z2;
 	vis->tz = tz;
 	vis->dispoffset = 0; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
-	vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_CACHE);
+	vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
 
