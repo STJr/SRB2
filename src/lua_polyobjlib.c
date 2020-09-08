@@ -19,9 +19,21 @@
 
 enum polyobj_e {
 	polyobj_valid = 0,
+	polyobj_id,
+	polyobj_parent,
+	polyobj_angle,
+	polyobj_damage,
+	polyobj_thrust,
+	polyobj_flags
 };
 static const char *const polyobj_opt[] = {
 	"valid",
+	"id",
+	"parent",
+	"angle",
+	"damage",
+	"thrust",
+	"flags",
 	NULL};
 
 static int polyobj_get(lua_State *L)
@@ -42,13 +54,40 @@ static int polyobj_get(lua_State *L)
 	case polyobj_valid:
 		lua_pushboolean(L, true);
 		break;
+	case polyobj_id:
+		lua_pushinteger(L, polyobj->id);
+		break;
+	case polyobj_parent:
+		lua_pushinteger(L, polyobj->parent);
+		break;
+	case polyobj_angle:
+		lua_pushangle(L, polyobj->angle);
+		break;
+	case polyobj_damage:
+		lua_pushinteger(L, polyobj->damage);
+		break;
+	case polyobj_thrust:
+		lua_pushfixed(L, polyobj->thrust);
+		break;
+	case polyobj_flags:
+		lua_pushinteger(L, polyobj->flags);
+		break;
 	}
 	return 1;
-};
+}
 
 static int polyobj_set(lua_State *L)
 {
 	return luaL_error(L, LUA_QL("polyobj_t") " struct cannot be edited by Lua."); // this is just temporary
+}
+
+static int polyobj_num(lua_State *L)
+{
+	polyobj_t *polyobj = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
+	if (!polyobj)
+		return luaL_error(L, "accessed polyobj_t doesn't exist anymore.");
+	lua_pushinteger(L, polyobj-PolyObjects);
+	return 1;
 }
 
 static int lib_iteratePolyObjects(lua_State *L)
@@ -70,6 +109,17 @@ static int lib_iteratePolyObjects(lua_State *L)
 		return 1;
 	}
 	return 0;
+}
+
+static int lib_PolyObject_getfornum(lua_State *L)
+{
+	INT32 id = (INT32)luaL_checkinteger(L, 1);
+
+	if (!numPolyObjects)
+		return 0; // if there's no PolyObjects then bail out here
+
+	LUA_PushUserdata(L, Polyobj_GetForNum(id), META_POLYOBJ);
+	return 1;
 }
 
 static int lib_getPolyObject(lua_State *L)
@@ -94,6 +144,12 @@ static int lib_getPolyObject(lua_State *L)
 		lua_pushcfunction(L, lib_iteratePolyObjects);
 		return 1;
 	}
+	// find PolyObject by ID
+	else if (fastcmp(field,"GetForNum")) // name could probably be better
+	{
+		lua_pushcfunction(L, lib_PolyObject_getfornum);
+		return 1;
+	}
 	return 0;
 }
 
@@ -112,8 +168,8 @@ int LUA_PolyObjLib(lua_State *L)
 		lua_pushcfunction(L, polyobj_set);
 		lua_setfield(L, -2, "__newindex");
 
-		//lua_pushcfunction(L, polyobj_num);
-		//lua_setfield(L, -2, "__len");
+		lua_pushcfunction(L, polyobj_num);
+		lua_setfield(L, -2, "__len");
 	lua_pop(L,1);
 
 	lua_newuserdata(L, 0);
