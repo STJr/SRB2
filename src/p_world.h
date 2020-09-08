@@ -16,6 +16,7 @@
 #include "p_setup.h"
 #include "r_state.h"
 #include "p_polyobj.h"
+#include "p_slopes.h"
 #include "doomstat.h"
 
 // Player spawn spots for deathmatch.
@@ -31,6 +32,12 @@ typedef struct
 	angle_t angle;
 } worldplayerinfo_t;
 
+//
+// Lactozilla: A "world" is the environment that players interact with.
+// A "map" is what defines how the world is built (what you edit in a level editor.)
+// And you could say that a "level" both describes metadata about that "map" (level headers), and contains a world.
+// (This is my terminology anyway, "map" and "level" are usually interchangeable.)
+//
 typedef struct
 {
 	INT32 gamemap;
@@ -55,6 +62,18 @@ typedef struct
 
 	size_t numflats;
 	levelflat_t *flats;
+
+	pslope_t *slopelist;
+	UINT16 slopecount;
+
+	mobj_t *shields[MAXPLAYERS*2];
+	INT32 numshields;
+
+	mobj_t *overlaycap;
+
+	INT32 skytexture; // the lump number of the sky texture
+	INT32 skytexturemid; // the horizon line in a 256x128 sky texture
+	fixed_t skyscale; // the scale of the sky
 
 	// Needed to store the number of the dummy sky flat.
 	// Used for rendering, as well as tracking projectiles etc.
@@ -110,8 +129,11 @@ void P_SetGameWorld(world_t *w);
 void P_SetViewWorld(world_t *w);
 
 void P_SetWorld(world_t *w);
+void P_MarkWorldVisited(player_t *player, world_t *w);
+
 void P_SwitchWorld(player_t *player, world_t *w);
-void P_SetWorldVisited(player_t *player, world_t *w);
+void P_DetachPlayerWorld(player_t *player);
+void P_SwitchPlayerWorld(player_t *player, world_t *newworld);
 
 void Command_Switchworld_f(void);
 void Command_Listworlds_f(void);

@@ -15,6 +15,7 @@
 #define __R_SKY__
 
 #include "m_fixed.h"
+#include "p_world.h"
 
 #ifdef __GNUG__
 #pragma interface
@@ -26,15 +27,11 @@
 /// \brief The sky map is 256*128*4 maps.
 #define ANGLETOSKYSHIFT 22
 
-extern INT32 skytexture, skytexturemid;
-extern fixed_t skyscale;
-
 extern INT32 levelskynum;
 extern INT32 globallevelskynum;
 
 // call after skytexture is set to adapt for old/new skies
-void R_SetupSkyDraw(void);
-
-void R_SetSkyScale(void);
+void R_SetupSkyDraw(world_t *w);
+void R_SetSkyScale(world_t *w);
 
 #endif

@@ -397,6 +397,7 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 	s2 = t2->subsector->sector;
 
 	// Check in REJECT table.
+	//CONS_Printf("P_CheckSight: %d %p %d %p\n", t1->type, t1->world, t2->type, t2->world);
 	if (t1->world == t2->world)
 	{
 		size_t pnum = (s1-sectors)*numsectors + (s2-sectors);
@@ -407,6 +408,8 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 				return false;
 		}
 	}
+	else
+		return false;
 
 	// killough 11/98: shortcut for melee situations
 	// same subsector? obviously visible

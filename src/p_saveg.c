@@ -2418,8 +2418,8 @@ static inline player_t *LoadPlayer(UINT32 player)
 
 static inline pslope_t *LoadSlope(UINT32 slopeid)
 {
-	pslope_t *p = slopelist;
-	if (slopeid > slopecount) return NULL;
+	pslope_t *p = world->slopelist;
+	if (slopeid > world->slopecount) return NULL;
 	do
 	{
 		if (p->id == slopeid)
@@ -3950,7 +3950,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 
 	tokenlist = READUINT32(save_p);
 
-	if (!P_LoadLevel(true))
+	if (!P_LoadLevel(&players[consoleplayer], false, true))
 		return false;
 
 	// get the time

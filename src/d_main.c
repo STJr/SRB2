@@ -1689,7 +1689,7 @@ void D_SRB2Main(void)
 	{
 		levelstarttic = gametic;
 		G_SetGamestate(GS_LEVEL);
-		if (!P_LoadLevel(false))
+		if (!P_LoadLevel(&players[consoleplayer], false, false))
 			I_Quit(); // fail so reset game stuff
 	}
 }

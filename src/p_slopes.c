@@ -23,9 +23,6 @@
 #include "p_maputl.h"
 #include "w_wad.h"
 
-pslope_t *slopelist = NULL;
-UINT16 slopecount = 0;
-
 // Calculate line normal
 void P_CalculateSlopeNormal(pslope_t *slope) {
 	slope->normal.z = FINECOSINE(slope->zangle>>ANGLETOFINESHIFT);
@@ -179,11 +176,11 @@ static inline pslope_t* Slope_Add (const UINT8 flags)
 	pslope_t *ret = Z_Calloc(sizeof(pslope_t), PU_LEVEL, NULL);
 	ret->flags = flags;
 
-	ret->next = slopelist;
-	slopelist = ret;
+	ret->next = world->slopelist;
+	world->slopelist = ret;
 
-	slopecount++;
-	ret->id = slopecount;
+	world->slopecount++;
+	ret->id = world->slopecount;
 
 	return ret;
 }
@@ -594,7 +591,7 @@ void P_CopySectorSlope(line_t *line)
 pslope_t *P_SlopeById(UINT16 id)
 {
 	pslope_t *ret;
-	for (ret = slopelist; ret && ret->id != id; ret = ret->next);
+	for (ret = world->slopelist; ret && ret->id != id; ret = ret->next);
 	return ret;
 }
 
@@ -602,8 +599,8 @@ pslope_t *P_SlopeById(UINT16 id)
 void P_SpawnSlopes(const boolean fromsave) {
 	size_t i;
 
-	slopelist = NULL;
-	slopecount = 0;
+	world->slopelist = NULL;
+	world->slopecount = 0;
 
 	/// Generates vertex slopes.
 	SpawnVertexSlopes();

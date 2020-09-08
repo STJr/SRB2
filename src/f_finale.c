@@ -2543,7 +2543,7 @@ void F_StartTitleScreen(void)
 		maptol = mapheaderinfo[gamemap-1]->typeoflevel;
 		globalweather = mapheaderinfo[gamemap-1]->weather;
 
-		G_DoLoadLevel(false, true);
+		G_DoLoadLevel(&players[displayplayer], false, true);
 		if (!titlemap)
 			return;
 

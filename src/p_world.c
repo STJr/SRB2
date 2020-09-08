@@ -28,6 +28,7 @@
 
 #include "r_data.h"
 #include "r_draw.h"
+#include "r_sky.h"
 
 #include "s_sound.h"
 #include "w_wad.h"
@@ -122,7 +123,7 @@ void P_SetViewWorld(world_t *w)
 //
 // Sets a world as visited by a player.
 //
-void P_SetWorldVisited(player_t *player, world_t *w)
+void P_MarkWorldVisited(player_t *player, world_t *w)
 {
 	size_t playernum = (size_t)(player - players);
 	worldplayerinfo_t *playerinfo = &w->playerinfo[playernum];
@@ -144,16 +145,42 @@ void P_SetWorldVisited(player_t *player, world_t *w)
 //
 void P_SetWorld(world_t *w)
 {
-	if (w == NULL || w == world)
+	if (w == NULL)
 		return;
 
 	P_SetGameWorld(w);
-	P_SetViewWorld(w);
 
 	thlist = world->thlist;
 	gamemap = w->gamemap;
 
 	P_InitSpecials();
+}
+
+//
+// Detaches a world from a player.
+//
+void P_DetachPlayerWorld(player_t *player)
+{
+	if (player->world != NULL)
+		((world_t *)player->world)->players--;
+
+	player->world = NULL;
+	if (player->mo && !P_MobjWasRemoved(player->mo))
+		player->mo->world = NULL;
+}
+
+//
+// Switches a player between worlds.
+//
+void P_SwitchPlayerWorld(player_t *player, world_t *newworld)
+{
+	P_DetachPlayerWorld(player);
+
+	player->world = newworld;
+	if (player->mo && !P_MobjWasRemoved(player->mo))
+		player->mo->world = newworld;
+
+	newworld->players++;
 }
 
 //
@@ -164,13 +191,13 @@ void P_SwitchWorld(player_t *player, world_t *w)
 	size_t playernum = (size_t)(player - players);
 	worldplayerinfo_t *playerinfo = &w->playerinfo[playernum];
 
-	if (w == world)
+	if (w == player->world)
 		return;
 
 	if (!playeringame[playernum] || !player->mo || P_MobjWasRemoved(player->mo))
 		return;
 
-	P_SetWorldVisited(player, world);
+	P_MarkWorldVisited(player, player->world);
 
 	if (player->followmobj)
 	{
@@ -178,11 +205,9 @@ void P_SwitchWorld(player_t *player, world_t *w)
 		P_SetTarget(&player->followmobj, NULL);
 	}
 
-	world->players--;
-	P_SetWorld(w);
-	world->players++;
-
-	player->world = world;
+	P_SwitchPlayerWorld(player, w);
+	if (!splitscreen)
+		P_SetWorld(w);
 
 	P_UnsetThingPosition(player->mo);
 	P_MoveThinkerToWorld(w, THINK_MAIN, (thinker_t *)(player->mo));
@@ -204,7 +229,8 @@ void P_SwitchWorld(player_t *player, world_t *w)
 		S_Start();
 	}
 
-	P_SetupLevelSky(mapheaderinfo[gamemap-1]->skynum, true);
+	if (!dedicated)
+		R_SetupSkyDraw(world);
 	P_ResetCamera(player, &camera);
 }
 
@@ -242,6 +268,7 @@ void Command_Listworlds_f(void)
 			w->numvertexes, w->numsegs, w->numsectors, w->numsubsectors, w->numnodes, w->numlines, w->numsides, w->nummapthings);
 
 		CONS_Printf("Player has visited: %d\n", playerinfo->visited);
+		CONS_Printf("Player count: %d\n", w->players);
 		CONS_Printf("Player position: %d %d %d %d\n",
 					playerinfo->pos.x>>FRACBITS,
 					playerinfo->pos.y>>FRACBITS,
@@ -251,22 +278,29 @@ void Command_Listworlds_f(void)
 }
 
 //
-// Unloads a world.
+// Unloads sector attachments.
 //
-void P_UnloadWorld(world_t *w)
+static void P_UnloadSectorAttachments(sector_t *s, size_t ns)
 {
 	sector_t *ss;
 
-	LUA_InvalidateLevel(w);
-
-	for (ss = w->sectors; w->sectors+w->numsectors != ss; ss++)
+	for (ss = s; s+ns != ss; ss++)
 	{
 		Z_Free(ss->attached);
 		Z_Free(ss->attachedsolid);
 	}
+}
 
-	if (w)
-		Z_Free(w);
+//
+// Unloads a world.
+//
+void P_UnloadWorld(world_t *w)
+{
+	if (w == NULL)
+		return;
+
+	LUA_InvalidateLevel(w);
+	P_UnloadSectorAttachments(w->sectors, w->numsectors);
 }
 
 //
@@ -276,16 +310,47 @@ void P_UnloadWorldList(void)
 {
 	INT32 i;
 
-	for (i = 0; i < numworlds; i++)
-		P_UnloadWorld(worldlist[i]);
+	if (numworlds > 1)
+		P_UnloadSectorAttachments(sectors, numsectors);
+	else
+	{
+		for (i = 0; i < numworlds; i++)
+		{
+			if (worldlist[i])
+				P_UnloadWorld(worldlist[i]);
+		}
+	}
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (playeringame[i])
-			players[i].world = NULL;
+		{
+			player_t *player = &players[i];
+
+			player->world = NULL;
+
+			if (player->mo && !P_MobjWasRemoved(player->mo))
+				player->mo->world = NULL;
+		}
 	}
 
-	Z_Free(worldlist);
+	if (numworlds > 1)
+	{
+		for (i = 0; i < numworlds; i++)
+		{
+			world_t *w = worldlist[i];
+
+			if (w == NULL)
+				continue;
+
+			Z_Free(w->thlist);
+			Z_Free(w);
+		}
+
+		Z_Free(worldlist);
+	}
+
+	worldlist = NULL;
 	numworlds = 0;
 
 	// Clear pointers that would be left dangling by the purge
@@ -293,7 +358,7 @@ void P_UnloadWorldList(void)
 
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
 
-	world = localworld = NULL;
+	world = localworld = viewworld = NULL;
 }
 
 //
@@ -301,6 +366,8 @@ void P_UnloadWorldList(void)
 //
 void P_UnloadWorldPlayer(player_t *player)
 {
+	P_DetachPlayerWorld(player);
+
 	if (player->followmobj)
 	{
 		P_RemoveMobj(player->followmobj);

@@ -1173,7 +1173,7 @@ void R_Prep3DFloors(sector_t *sector)
 		sector->lightlist[i].caster = best;
 		sector->lightlist[i].flags = best->flags;
 		sector->lightlist[i].slope = bestslope;
-		sec = &sectors[best->secnum];
+		sec = &viewworld->sectors[best->secnum];
 
 		if (best->flags & FF_NOSHADE)
 		{

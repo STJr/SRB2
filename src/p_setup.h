@@ -90,7 +90,7 @@ void P_SetupLevelSky(INT32 skynum, boolean global);
 void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum);
 #endif
 void P_RespawnThings(void);
-boolean P_LoadLevel(boolean fromnetsave);
+boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave);
 #ifdef HWRENDER
 void HWR_SetupLevel(void);
 #endif

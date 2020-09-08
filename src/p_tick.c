@@ -355,7 +355,7 @@ static inline void P_RunWorldThinkers(void)
 {
 	INT32 i;
 
-	if (!netgame || (numworlds < 2))
+	if (!(netgame || multiplayer) || (numworlds < 2))
 	{
 		P_RunThinkers();
 		return;
@@ -626,8 +626,10 @@ static inline void P_RunWorldSpecials(void)
 {
 	INT32 i;
 
-	if (!netgame || (numworlds < 2))
+	if (!(netgame || multiplayer) || (numworlds < 2))
 	{
+		P_RunShields();
+		P_RunOverlays();
 		P_UpdateSpecials();
 		P_RespawnSpecials();
 		return;
@@ -642,8 +644,33 @@ static inline void P_RunWorldSpecials(void)
 
 		P_SetWorld(w);
 
+		P_RunShields();
+		P_RunOverlays();
 		P_UpdateSpecials();
 		P_RespawnSpecials();
+	}
+}
+
+static inline void P_WorldRunVoid(void (*func)(void))
+{
+	INT32 i;
+
+	if (!(netgame || multiplayer) || (numworlds < 2))
+	{
+		func();
+		return;
+	}
+
+	for (i = 0; i < numworlds; i++)
+	{
+		world_t *w = worldlist[i];
+
+		if (!w->players)
+			continue;
+
+		P_SetWorld(w);
+
+		func();
 	}
 }
 
@@ -748,16 +775,9 @@ void P_Ticker(boolean run)
 			}
 	}
 
-	if (numworlds > 1)
-		P_SetWorld(localworld);
-
-	if (run)
-		LUAh_ThinkFrame();
+	P_WorldRunVoid(LUAh_ThinkFrame);
 
 	// Run shield positioning
-	P_RunShields();
-	P_RunOverlays();
-
 	P_RunWorldSpecials();
 
 	// Lightning, rain sounds, etc.
@@ -822,9 +842,7 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 
-		if (numworlds > 1)
-			P_SetWorld(localworld);
-		LUAh_PostThinkFrame();
+		P_WorldRunVoid(LUAh_PostThinkFrame);
 	}
 
 	P_MapEnd();
@@ -885,19 +903,12 @@ void P_PreTicker(INT32 frames)
 				P_PlayerAfterThink(&players[i]);
 			}
 
-		if (numworlds > 1)
-			P_SetWorld(localworld);
-		LUAh_ThinkFrame();
+		P_WorldRunVoid(LUAh_ThinkFrame);
 
 		// Run shield positioning
-		P_RunShields();
-		P_RunOverlays();
-
 		P_RunWorldSpecials();
 
-		if (numworlds > 1)
-			P_SetWorld(localworld);
-		LUAh_PostThinkFrame();
+		P_WorldRunVoid(LUAh_PostThinkFrame);
 
 		P_MapEnd();
 	}

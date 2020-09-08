@@ -3903,6 +3903,8 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		D_SendPlayerConfig();
 		addedtogame = true;
 
+		P_SwitchPlayerWorld(newplayer, world);
+
 		if (rejoined)
 		{
 			if (newplayer->mo)

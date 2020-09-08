@@ -318,8 +318,10 @@ static void LoadPalette(const char *lumpname)
 
 	Cubeapply = InitCube();
 
-	Z_Free(pLocalPalette);
-	Z_Free(pMasterPalette);
+	if (pLocalPalette)
+		Z_Free(pLocalPalette);
+	if (pMasterPalette)
+		Z_Free(pMasterPalette);
 
 	pLocalPalette = Z_Malloc(sizeof (*pLocalPalette)*palsize, PU_STATIC, NULL);
 	pMasterPalette = Z_Malloc(sizeof (*pMasterPalette)*palsize, PU_STATIC, NULL);

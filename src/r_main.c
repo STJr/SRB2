@@ -75,6 +75,7 @@ fixed_t viewcos, viewsin;
 sector_t *viewsector;
 player_t *viewplayer;
 mobj_t *r_viewmobj;
+camera_t *r_viewcam;
 
 //
 // precalculated math tables
@@ -926,7 +927,11 @@ void R_ExecuteSetViewSize(void)
 		screenheightarray[i] = (INT16)viewheight;
 
 	// setup sky scaling
-	R_SetSkyScale();
+	for (i = 0; i < numworlds; i++)
+	{
+		if (worldlist[i])
+			R_SetSkyScale(worldlist[i]);
+	}
 
 	// planes
 	if (rendermode == render_soft)
@@ -1092,27 +1097,48 @@ static void R_SetupFreelook(void)
 	centeryfrac = centery<<FRACBITS;
 }
 
-void R_SetupFrame(player_t *player)
+static boolean R_SetViewCamera(player_t *player)
 {
-	camera_t *thiscam;
-	boolean chasecam = false;
-
 	if (splitscreen && player == &players[secondarydisplayplayer]
 		&& player != &players[consoleplayer])
 	{
-		thiscam = &camera2;
-		chasecam = (cv_chasecam2.value != 0);
+		r_viewcam = &camera2;
+		return (cv_chasecam2.value != 0);
 	}
 	else
 	{
-		thiscam = &camera;
-		chasecam = (cv_chasecam.value != 0);
+		r_viewcam = &camera;
+		return (cv_chasecam.value != 0);
 	}
+}
+
+static boolean R_SetViewMobj(player_t *player)
+{
+	boolean chasecam = R_SetViewCamera(player);
 
 	if (player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || gamestate == GS_TITLESCREEN || tutorialmode)
 		chasecam = true; // force chasecam on
 	else if (player->spectator) // no spectator chasecam
 		chasecam = false; // force chasecam off
+
+	if (player->awayviewtics) // cut-away view stuff
+		r_viewmobj = player->awayviewmobj; // should be a MT_ALTVIEWMAN
+	else if (!player->spectator && chasecam) // use outside cam view
+	{
+		r_viewmobj = NULL;
+		return chasecam;
+	}
+	else
+		r_viewmobj = player->mo; // use the player's eyes view
+
+	I_Assert(r_viewmobj != NULL);
+	return chasecam;
+}
+
+void R_SetupFrame(player_t *player)
+{
+	boolean chasecam = R_SetViewMobj(player);
+	camera_t *thiscam = r_viewcam;
 
 	if (chasecam && !thiscam->chase)
 	{
@@ -1125,8 +1151,6 @@ void R_SetupFrame(player_t *player)
 	if (player->awayviewtics)
 	{
 		// cut-away view stuff
-		r_viewmobj = player->awayviewmobj; // should be a MT_ALTVIEWMAN
-		I_Assert(r_viewmobj != NULL);
 		viewz = r_viewmobj->z + 20*FRACUNIT;
 		aimingangle = player->awayviewaiming;
 		viewangle = r_viewmobj->angle;
@@ -1134,7 +1158,6 @@ void R_SetupFrame(player_t *player)
 	else if (!player->spectator && chasecam)
 	// use outside cam view
 	{
-		r_viewmobj = NULL;
 		viewz = thiscam->z + (thiscam->height>>1);
 		aimingangle = thiscam->aiming;
 		viewangle = thiscam->angle;
@@ -1143,10 +1166,6 @@ void R_SetupFrame(player_t *player)
 	// use the player's eyes view
 	{
 		viewz = player->viewz;
-
-		r_viewmobj = player->mo;
-		I_Assert(r_viewmobj != NULL);
-
 		aimingangle = player->aiming;
 		viewangle = r_viewmobj->angle;
 
@@ -1423,8 +1442,23 @@ static void Mask_Post (maskcount_t* m)
 
 void R_RenderPlayerView(player_t *player)
 {
-	UINT8			nummasks	= 1;
-	maskcount_t*	masks		= malloc(sizeof(maskcount_t));
+	UINT8 nummasks;
+	maskcount_t *masks;
+
+	viewworld = NULL;
+	R_SetViewMobj(player);
+
+	if (r_viewmobj)
+		P_SetViewWorld(r_viewmobj->world);
+	else if (player->world)
+		P_SetViewWorld(player->world);
+	else if (localworld && !splitscreen) // Yes?
+		P_SetViewWorld(localworld);
+	else
+		return;
+
+	nummasks	= 1;
+	masks		= malloc(sizeof(maskcount_t));
 
 	if (cv_homremoval.value && player == &players[displayplayer]) // if this is display player 1
 	{
@@ -1475,7 +1509,7 @@ void R_RenderPlayerView(player_t *player)
 #endif
 	rs_numbspcalls = rs_numpolyobjects = rs_numdrawnodes = 0;
 	rs_bsptime = I_GetTimeMicros();
-	R_RenderBSPNode((INT32)numnodes - 1);
+	R_RenderBSPNode((INT32)viewworld->numnodes - 1);
 	rs_bsptime = I_GetTimeMicros() - rs_bsptime;
 	rs_numsprites = visspritecount;
 #ifdef TIMING
@@ -1527,7 +1561,7 @@ void R_RenderPlayerView(player_t *player)
 
 			// Render the BSP from the new viewpoint, and clip
 			// any sprites with the new clipsegs and window.
-			R_RenderBSPNode((INT32)numnodes - 1);
+			R_RenderBSPNode((INT32)viewworld->numnodes - 1);
 			Mask_Post(&masks[nummasks - 1]);
 
 			R_ClipSprites(ds_p - (masks[nummasks - 1].drawsegs[1] - masks[nummasks - 1].drawsegs[0]), portal);

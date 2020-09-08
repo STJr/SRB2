@@ -1782,7 +1782,7 @@ static void AutoBrake2_OnChange(void)
 //
 // G_DoLoadLevel
 //
-void G_DoLoadLevel(boolean addworld, boolean resetplayer)
+void G_DoLoadLevel(player_t *player, boolean addworld, boolean resetplayer)
 {
 	INT32 i;
 
@@ -1814,7 +1814,8 @@ void G_DoLoadLevel(boolean addworld, boolean resetplayer)
 		titlemapinaction = TITLEMAP_OFF;
 
 	G_SetGamestate(GS_LEVEL);
-	I_UpdateMouseGrab();
+	if (player == &players[consoleplayer])
+		I_UpdateMouseGrab();
 
 	if (!addworld)
 	{
@@ -1826,9 +1827,11 @@ void G_DoLoadLevel(boolean addworld, boolean resetplayer)
 
 		P_UnloadWorldList();
 	}
+	else if (resetplayer)
+		player->playerstate = PST_REBORN;
 
 	// Setup the level.
-	if (!P_LoadLevel(false)) // this never returns false?
+	if (!P_LoadLevel(player, addworld, false)) // this never returns false?
 	{
 		// fail so reset game stuff
 		Command_ExitGame_f();
@@ -1846,23 +1849,28 @@ void G_DoLoadLevel(boolean addworld, boolean resetplayer)
 	Z_CheckHeap(-2);
 #endif
 
-	if (camera.chase)
-		P_ResetCamera(&players[displayplayer], &camera);
-	if (camera2.chase && splitscreen)
-		P_ResetCamera(&players[secondarydisplayplayer], &camera2);
-
-	// clear cmd building stuff
-	memset(gamekeydown, 0, sizeof (gamekeydown));
-	for (i = 0;i < JOYAXISSET; i++)
+	if (player == &players[consoleplayer])
 	{
-		joyxmove[i] = joyymove[i] = 0;
-		joy2xmove[i] = joy2ymove[i] = 0;
-	}
-	mousex = mousey = 0;
-	mouse2x = mouse2y = 0;
+		if (camera.chase)
+			P_ResetCamera(&players[displayplayer], &camera);
+		if (camera2.chase && splitscreen)
+			P_ResetCamera(&players[secondarydisplayplayer], &camera2);
 
-	// clear hud messages remains (usually from game startup)
-	CON_ClearHUD();
+		// clear cmd building stuff
+		memset(gamekeydown, 0, sizeof (gamekeydown));
+		for (i = 0;i < JOYAXISSET; i++)
+		{
+			joyxmove[i] = joyymove[i] = 0;
+			joy2xmove[i] = joy2ymove[i] = 0;
+		}
+		mousex = mousey = 0;
+		mouse2x = mouse2y = 0;
+
+		// clear hud messages remains (usually from game startup)
+		CON_ClearHUD();
+	}
+	else if (addworld && !splitscreen) // change world back to yours
+		P_SetWorld(localworld);
 }
 
 //
@@ -2515,6 +2523,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p = &players[player];
 	memset(p, 0, sizeof (*p));
 
+	p->world = world;
 	p->score = score;
 	p->lives = lives;
 	p->continues = continues;
@@ -2581,6 +2590,9 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 
 	p->playerstate = PST_LIVE;
 	p->panim = PA_IDLE; // standing animation
+
+	if (p->world)
+		((world_t *)p->world)->players++;
 
 	//if ((netgame || multiplayer) && !p->spectator) -- moved into P_SpawnPlayer to account for forced changes there
 		//p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
@@ -2696,7 +2708,8 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 	else
 		P_MovePlayerToSpawn(playernum, G_FindMapStart(playernum));
 
-	P_SetWorldVisited(&players[playernum], players[playernum].world);
+	if (players[playernum].world)
+		P_MarkWorldVisited(&players[playernum], players[playernum].world);
 }
 
 mapthing_t *G_FindCTFStart(INT32 playernum)
@@ -3069,7 +3082,7 @@ void G_DoReborn(INT32 playernum)
 		{
 			LUAh_MapChange(gamemap);
 			titlecardforreload = true;
-			G_DoLoadLevel(false, true);
+			G_DoLoadLevel(&players[consoleplayer], false, true);
 			titlecardforreload = false;
 			if (metalrecording)
 				G_BeginMetal();
@@ -3136,6 +3149,10 @@ void G_AddPlayer(INT32 playernum)
 			p->starpostnum = players[i].starpostnum;
 		}
 	}
+
+	p->world = world;
+	if (p->world)
+		((world_t *)p->world)->players++;
 
 	p->playerstate = PST_REBORN;
 
@@ -4675,11 +4692,43 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 		D_MapChange(M_MapNumber(mapname[3], mapname[4]), gametype, false, pultmode, true, 1, false, FLS);
 }
 
+static void G_ResetPlayer(player_t *player, boolean pultmode, boolean FLS)
+{
+	player->playerstate = PST_REBORN;
+	player->starpostscale = player->starpostangle = player->starpostnum = player->starposttime = 0;
+	player->starpostx = player->starposty = player->starpostz = 0;
+
+	if (netgame || multiplayer)
+	{
+		if (!FLS || (player->lives < 1))
+			player->lives = cv_startinglives.value;
+		player->continues = 0;
+	}
+	else
+	{
+		player->lives = (pultmode) ? 1 : startinglivesbalance[0];
+		player->continues = (pultmode) ? 0 : 1;
+	}
+
+	if (!((netgame || multiplayer) && (FLS)))
+		player->score = 0;
+
+	// The latter two should clear by themselves, but just in case
+	player->pflags &= ~(PF_TAGIT|PF_GAMETYPEOVER|PF_FULLSTASIS);
+
+	// Clear cheatcodes too, just in case.
+	player->pflags &= ~(PF_GODMODE|PF_NOCLIP|PF_INVIS);
+
+	player->xtralife = 0;
+}
+
 //
 // This is the map command interpretation something like Command_Map_f
 //
 // called at: map cmd execution, doloadgame, doplaydemo
-void G_InitNew(const char *mapname, boolean addworld, UINT8 pultmode, boolean resetplayer, boolean skipprecutscene, boolean FLS)
+void G_InitNew(player_t *player,
+	const char *mapname, boolean addworld,
+	UINT8 pultmode, boolean resetplayer, boolean skipprecutscene, boolean FLS)
 {
 	INT32 i;
 
@@ -4703,34 +4752,15 @@ void G_InitNew(const char *mapname, boolean addworld, UINT8 pultmode, boolean re
 		numgameovers = tokenlist = token = sstimer = redscore = bluescore = lastmap = 0;
 		countdown = countdown2 = exitfadestarted = 0;
 
-		for (i = 0; i < MAXPLAYERS; i++)
+		if (addworld)
 		{
-			players[i].playerstate = PST_REBORN;
-			players[i].starpostscale = players[i].starpostangle = players[i].starpostnum = players[i].starposttime = 0;
-			players[i].starpostx = players[i].starposty = players[i].starpostz = 0;
-
-			if (netgame || multiplayer)
-			{
-				if (!FLS || (players[i].lives < 1))
-					players[i].lives = cv_startinglives.value;
-				players[i].continues = 0;
-			}
-			else
-			{
-				players[i].lives = (pultmode) ? 1 : startinglivesbalance[0];
-				players[i].continues = (pultmode) ? 0 : 1;
-			}
-
-			if (!((netgame || multiplayer) && (FLS)))
-				players[i].score = 0;
-
-			// The latter two should clear by themselves, but just in case
-			players[i].pflags &= ~(PF_TAGIT|PF_GAMETYPEOVER|PF_FULLSTASIS);
-
-			// Clear cheatcodes too, just in case.
-			players[i].pflags &= ~(PF_GODMODE|PF_NOCLIP|PF_INVIS);
-
-			players[i].xtralife = 0;
+			P_DetachPlayerWorld(player);
+			G_ResetPlayer(player, pultmode, FLS);
+		}
+		else
+		{
+			for (i = 0; i < MAXPLAYERS; i++)
+				G_ResetPlayer(&players[i], pultmode, FLS);
 		}
 
 		// Reset unlockable triggers
@@ -4771,7 +4801,10 @@ void G_InitNew(const char *mapname, boolean addworld, UINT8 pultmode, boolean re
 	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer);
 	else
-		G_DoLoadLevel(addworld, resetplayer);
+		G_DoLoadLevel(player, addworld, resetplayer);
+
+	if (addworld && player != &players[consoleplayer])
+		return;
 
 	if (netgame)
 	{

@@ -28,18 +28,6 @@
 // sky mapping
 //
 
-/**	\brief the lump number of the sky texture
-*/
-INT32 skytexture;
-
-/**	\brief the horizon line in a 256x128 sky texture
-*/
-INT32 skytexturemid;
-
-/**	\brief the scale of the sky
-*/
-fixed_t skyscale;
-
 /** \brief used for keeping track of the current sky
 */
 INT32 levelskynum;
@@ -54,12 +42,11 @@ INT32 globallevelskynum;
 
 	\return	void
 */
-void R_SetupSkyDraw(void)
+void R_SetupSkyDraw(world_t *w)
 {
 	// the horizon line in a 256x128 sky texture
-	skytexturemid = (textures[skytexture]->height/2)<<FRACBITS;
-
-	R_SetSkyScale();
+	w->skytexturemid = (textures[world->skytexture]->height/2)<<FRACBITS;
+	R_SetSkyScale(w);
 }
 
 /**	\brief	The R_SetSkyScale function
@@ -68,8 +55,8 @@ void R_SetupSkyDraw(void)
 
 	\return void
 */
-void R_SetSkyScale(void)
+void R_SetSkyScale(world_t *w)
 {
 	fixed_t difference = vid.fdupx-(vid.dupx<<FRACBITS);
-	skyscale = FixedDiv(fovtan, vid.fdupx+difference);
+	w->skyscale = FixedDiv(fovtan, vid.fdupx+difference);
 }

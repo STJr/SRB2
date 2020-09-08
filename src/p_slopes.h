@@ -15,9 +15,6 @@
 
 #include "m_fixed.h" // Vectors
 
-extern pslope_t *slopelist;
-extern UINT16 slopecount;
-
 void P_LinkSlopeThinkers (void);
 
 void P_CalculateSlopeNormal(pslope_t *slope);

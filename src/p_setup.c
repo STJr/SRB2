@@ -2468,15 +2468,15 @@ static void P_CreateBlockMap(void)
 
 		if (bmap == NULL) I_Error("%s: Out of memory making blockmap", "P_CreateBlockMap");
 
-		for (i = 0; i < numlines; i++)
+		for (i = 0; i < world->numlines; i++)
 		{
 			// starting coordinates
-			INT32 x = (lines[i].v1->x>>FRACBITS) - minx;
-			INT32 y = (lines[i].v1->y>>FRACBITS) - miny;
+			INT32 x = (world->lines[i].v1->x>>FRACBITS) - minx;
+			INT32 y = (world->lines[i].v1->y>>FRACBITS) - miny;
 			INT32 bxstart, bxend, bystart, byend, v2x, v2y, curblockx, curblocky;
 
-			v2x = lines[i].v2->x>>FRACBITS;
-			v2y = lines[i].v2->y>>FRACBITS;
+			v2x = world->lines[i].v2->x>>FRACBITS;
+			v2y = world->lines[i].v2->y>>FRACBITS;
 
 			// Draw a "box" around the line.
 			bxstart = (x >> MAPBTOFRAC);
@@ -2506,13 +2506,13 @@ static void P_CreateBlockMap(void)
 			// This fixes the error where straight lines
 			// directly on a blockmap boundary would not
 			// be included in the proper blocks.
-			if (lines[i].v1->y == lines[i].v2->y)
+			if (world->lines[i].v1->y == world->lines[i].v2->y)
 			{
 				straight = true;
 				bystart--;
 				byend++;
 			}
-			else if (lines[i].v1->x == lines[i].v2->x)
+			else if (world->lines[i].v1->x == world->lines[i].v2->x)
 			{
 				straight = true;
 				bxstart--;
@@ -2840,7 +2840,7 @@ void P_SetupLevelSky(INT32 skynum, boolean global)
 	char skytexname[12];
 
 	sprintf(skytexname, "SKY%d", skynum);
-	skytexture = R_TextureNumForName(skytexname);
+	world->skytexture = R_TextureNumForName(skytexname);
 	levelskynum = skynum;
 
 	// Global change
@@ -2852,22 +2852,38 @@ void P_SetupLevelSky(INT32 skynum, boolean global)
 		return;
 
 	// scale up the old skies, if needed
-	R_SetupSkyDraw();
+	R_SetupSkyDraw(world);
 }
 
 static const char *maplumpname;
 lumpnum_t lastloadedmaplumpnum; // for comparative savegame
 
 //
-// P_LevelInitStuff
-//
 // Some player initialization for map start.
 //
-static void P_InitLevelSettings(void)
+static void P_InitPlayerSettings(INT32 i, boolean canresetlives)
 {
-	INT32 i;
-	boolean canresetlives = true;
+	G_PlayerReborn(i, true);
 
+	if (canresetlives && (netgame || multiplayer) && playeringame[i] && (G_CompetitionGametype() || players[i].lives <= 0))
+	{
+		// In Co-Op, replenish a user's lives if they are depleted.
+		players[i].lives = cv_startinglives.value;
+	}
+
+	// obliteration station...
+	players[i].numboxes = players[i].totalring =\
+	 players[i].laps = players[i].marescore = players[i].lastmarescore =\
+	 players[i].mare = players[i].exiting = 0;
+
+	players[i].drillmeter = 40*20;
+
+	// hit these too
+	players[i].pflags &= ~(PF_GAMETYPEOVER);
+}
+
+static void P_InitWorldSettings(void)
+{
 	leveltime = 0;
 
 	localaiming = 0;
@@ -2889,6 +2905,7 @@ static void P_InitLevelSettings(void)
 	// map time limit
 	if (mapheaderinfo[gamemap-1]->countdown)
 	{
+		INT32 i;
 		tic_t maxtime = 0;
 		countdowntimer = mapheaderinfo[gamemap-1]->countdown * TICRATE;
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -2915,6 +2932,16 @@ static void P_InitLevelSettings(void)
 
 	// special stage
 	stagefailed = true; // assume failed unless proven otherwise - P_GiveEmerald or emerald touchspecial
+}
+
+static void P_InitLevelSettings(player_t *player, boolean addworld)
+{
+	INT32 i;
+	boolean canresetlives = true;
+
+	if (!addworld)
+		P_InitWorldSettings();
+
 	// Reset temporary record data
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
 
@@ -2933,27 +2960,18 @@ static void P_InitLevelSettings(void)
 		}
 	}
 
-	countdown = countdown2 = exitfadestarted = 0;
+	if (!addworld)
+		countdown = countdown2 = exitfadestarted = 0;
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	if (!addworld)
 	{
-		G_PlayerReborn(i, true);
-
-		if (canresetlives && (netgame || multiplayer) && playeringame[i] && (G_CompetitionGametype() || players[i].lives <= 0))
-		{
-			// In Co-Op, replenish a user's lives if they are depleted.
-			players[i].lives = cv_startinglives.value;
-		}
-
-		// obliteration station...
-		players[i].numboxes = players[i].totalring =\
-		 players[i].laps = players[i].marescore = players[i].lastmarescore =\
-		 players[i].mare = players[i].exiting = 0;
-
-		players[i].drillmeter = 40*20;
-
-		// hit these too
-		players[i].pflags &= ~(PF_GAMETYPEOVER);
+		for (i = 0; i < MAXPLAYERS; i++)
+			P_InitPlayerSettings(i, canresetlives);
+	}
+	else if (player)
+	{
+		P_DetachPlayerWorld(player);
+		P_InitPlayerSettings((INT32)(player - players), canresetlives);
 	}
 
 	if (botingame)
@@ -2984,7 +3002,7 @@ void P_RespawnThings(void)
 		P_RemoveMobj((mobj_t *)think);
 	}
 
-	P_InitLevelSettings();
+	P_InitLevelSettings(NULL, false);
 
 	P_SpawnMapThings(true);
 
@@ -3385,7 +3403,24 @@ static void P_RunLevelWipe(void)
 	wipetypepre = -1;
 }
 
-static void P_InitPlayers(void)
+static void P_InitPlayer(INT32 i)
+{
+	// Start players with pity shields if possible
+	players[i].pity = -1;
+
+	players[i].mo = NULL;
+
+	if (!G_PlatformGametype())
+		G_DoReborn(i);
+	else // gametype is GT_COOP or GT_RACE
+	{
+		G_SpawnPlayer(i);
+		if (players[i].starposttime)
+			P_ClearStarPost(players[i].starpostnum);
+	}
+}
+
+static void P_InitGametypePlayers(void)
 {
 	UINT8 i;
 
@@ -3394,19 +3429,7 @@ static void P_InitPlayers(void)
 		if (!playeringame[i])
 			continue;
 
-		// Start players with pity shields if possible
-		players[i].pity = -1;
-
-		players[i].mo = NULL;
-
-		if (!G_PlatformGametype())
-			G_DoReborn(i);
-		else // gametype is GT_COOP or GT_RACE
-		{
-			G_SpawnPlayer(i);
-			if (players[i].starposttime)
-				P_ClearStarPost(players[i].starpostnum);
-		}
+		P_InitPlayer(i);
 	}
 }
 
@@ -3453,24 +3476,29 @@ static void P_WriteLetter(void)
 	Z_Free(buf);
 }
 
-static void P_InitGametype(void)
+static void P_InitGametype(player_t *player, boolean addplayer)
 {
 	UINT8 i;
 
-	P_InitPlayers();
-
-	// restore time in netgame (see also g_game.c)
-	if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
+	if (!addplayer)
 	{
-		// is this a hack? maybe
-		tic_t maxstarposttime = 0;
-		for (i = 0; i < MAXPLAYERS; i++)
+		P_InitGametypePlayers();
+
+		// restore time in netgame (see also g_game.c)
+		if ((netgame || multiplayer) && G_GametypeUsesCoopStarposts() && cv_coopstarposts.value == 2)
 		{
-			if (playeringame[i] && players[i].starposttime > maxstarposttime)
-				maxstarposttime = players[i].starposttime;
+			// is this a hack? maybe
+			tic_t maxstarposttime = 0;
+			for (i = 0; i < MAXPLAYERS; i++)
+			{
+				if (playeringame[i] && players[i].starposttime > maxstarposttime)
+					maxstarposttime = players[i].starposttime;
+			}
+			leveltime = maxstarposttime;
 		}
-		leveltime = maxstarposttime;
 	}
+	else
+		P_InitPlayer((INT32)(player - players));
 
 	P_WriteLetter();
 
@@ -3493,13 +3521,12 @@ static void P_InitGametype(void)
   * \param fromnetsave If true, skip some stuff because we're loading a netgame snapshot.
   * \todo Clean up, refactor, split up; get rid of the bloat.
   */
-boolean P_LoadLevel(boolean fromnetsave)
+boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave)
 {
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
 	INT32 i, ranspecialwipe = 0;
-	player_t *player = &players[consoleplayer];
 
 	levelloading = true;
 
@@ -3514,8 +3541,8 @@ boolean P_LoadLevel(boolean fromnetsave)
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
 
-	if (!titlemapinaction && world)
-		P_SetWorldVisited(player, world);
+	if (player && !titlemapinaction && player->world)
+		P_MarkWorldVisited(player, player->world);
 
 	// Initialize sector node list.
 	P_Initsecnode();
@@ -3535,7 +3562,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	if (cv_runscripts.value && mapheaderinfo[gamemap-1]->scriptname[0] != '#')
 		P_RunLevelScript(mapheaderinfo[gamemap-1]->scriptname);
 
-	P_InitLevelSettings();
+	P_InitLevelSettings(player, addworld);
 
 	postimgtype = postimgtype2 = postimg_none;
 
@@ -3637,7 +3664,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// Close text prompt before freeing the old level
 	F_EndTextPrompt(false, true);
 
-	if (world && (!titlemapinaction))
+	if (player && (!titlemapinaction))
 	{
 		P_UnloadWorldPlayer(player);
 		//P_UnloadWorld(world);
@@ -3645,6 +3672,25 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	world = P_InitNewWorld();
 	thlist = world->thlist;
+
+	if (addworld)
+		P_SwitchPlayerWorld(player, world);
+	else
+	{
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			player_t *p;
+
+			if (!playeringame[i])
+				continue;
+
+			p = &players[i];
+			p->world = NULL;
+			P_SwitchPlayerWorld(p, world);
+		}
+
+		world->players = D_NumPlayers();
+	}
 
 	if (player == &players[consoleplayer])
 		localworld = world;
@@ -3691,7 +3737,6 @@ boolean P_LoadLevel(boolean fromnetsave)
 		return false;
 
 	P_SetGameWorld(world);
-	P_SetViewWorld(world);
 
 	// init gravity, tag lists,
 	// anything that P_SpawnSlopes/P_LoadThings needs to know
@@ -3731,7 +3776,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	//  a netgame save is being loaded, and could actively be harmful by messing with
 	//  the client's view of the data.)
 	if (!fromnetsave)
-		P_InitGametype();
+		P_InitGametype(player, addworld);
 
 	P_InitCamera();
 

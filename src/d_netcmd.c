@@ -2116,7 +2116,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	mapnumber = M_MapNumber(mapname[3], mapname[4]);
 	LUAh_MapChange(mapnumber);
 
-	G_InitNew(mapname, addworld, ultimatemode, resetplayer, skipprecutscene, FLS);
+	G_InitNew(player, mapname, addworld, ultimatemode, resetplayer, skipprecutscene, FLS);
 	if (demoplayback && !timingdemo)
 		precache = true;
 	if (timingdemo)

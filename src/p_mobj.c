@@ -44,8 +44,6 @@ consvar_t cv_splats = {"splats", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0
 
 actioncache_t actioncachehead;
 
-static mobj_t *overlaycap = NULL;
-
 void P_InitCachedActions(void)
 {
 	actioncachehead.prev = actioncachehead.next = &actioncachehead;
@@ -3677,6 +3675,7 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 		{ // Never fails for 2D mode.
 			mobj_t dummy;
 			dummy.thinker.function.acp1 = (actionf_p1)P_MobjThinker;
+			dummy.world = thiscam->subsector->sector->world;
 			dummy.subsector = thiscam->subsector;
 			dummy.x = thiscam->x;
 			dummy.y = thiscam->y;
@@ -6775,20 +6774,18 @@ static boolean P_ShieldLook(mobj_t *thing, shieldtype_t shield)
 	return true;
 }
 
-mobj_t *shields[MAXPLAYERS*2];
-INT32 numshields = 0;
-
 void P_RunShields(void)
 {
 	INT32 i;
 
 	// run shields
-	for (i = 0; i < numshields; i++)
+	for (i = 0; i < world->numshields; i++)
 	{
-		P_ShieldLook(shields[i], shields[i]->threshold);
-		P_SetTarget(&shields[i], NULL);
+		P_ShieldLook(world->shields[i], world->shields[i]->threshold);
+		P_SetTarget(&world->shields[i], NULL);
 	}
-	numshields = 0;
+
+	world->numshields = 0;
 }
 
 static boolean P_AddShield(mobj_t *thing)
@@ -6818,10 +6815,10 @@ static boolean P_AddShield(mobj_t *thing)
 	}
 
 	// Queue has been hit... why?!?
-	if (numshields >= MAXPLAYERS*2)
+	if (world->numshields >= MAXPLAYERS*2)
 		return P_ShieldLook(thing, thing->info->speed);
 
-	P_SetTarget(&shields[numshields++], thing);
+	P_SetTarget(&world->shields[world->numshields++], thing);
 	return true;
 }
 
@@ -6831,7 +6828,7 @@ void P_RunOverlays(void)
 	mobj_t *mo, *next = NULL;
 	fixed_t destx,desty,zoffs;
 
-	for (mo = overlaycap; mo; mo = next)
+	for (mo = world->overlaycap; mo; mo = next)
 	{
 		I_Assert(!P_MobjWasRemoved(mo));
 
@@ -6896,7 +6893,7 @@ void P_RunOverlays(void)
 			P_SetThingPosition(mo);
 		P_CheckPosition(mo, mo->x, mo->y);
 	}
-	P_SetTarget(&overlaycap, NULL);
+	P_SetTarget(&world->overlaycap, NULL);
 }
 
 // Called only when MT_OVERLAY thinks.
@@ -6904,11 +6901,11 @@ static void P_AddOverlay(mobj_t *thing)
 {
 	I_Assert(thing != NULL);
 
-	if (overlaycap == NULL)
-		P_SetTarget(&overlaycap, thing);
+	if (world->overlaycap == NULL)
+		P_SetTarget(&world->overlaycap, thing);
 	else {
 		mobj_t *mo;
-		for (mo = overlaycap; mo && mo->hnext; mo = mo->hnext)
+		for (mo = world->overlaycap; mo && mo->hnext; mo = mo->hnext)
 			;
 
 		I_Assert(mo != NULL);
@@ -6924,7 +6921,7 @@ static void P_AddOverlay(mobj_t *thing)
 static void P_RemoveOverlay(mobj_t *thing)
 {
 	mobj_t *mo;
-	for (mo = overlaycap; mo; mo = mo->hnext)
+	for (mo = world->overlaycap; mo; mo = mo->hnext)
 	{
 		if (mo->hnext != thing)
 			continue;
@@ -11378,9 +11375,8 @@ void P_SpawnPlayer(INT32 playernum)
 	if ((netgame || multiplayer) && ((gametyperules & GTR_SPAWNINVUL) || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
 		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
 
-	p->world = world;
-
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);
+	mobj->world = p->world;
 	(mobj->player = p)->mo = mobj;
 
 	mobj->angle = 0;
@@ -13865,6 +13861,8 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 	newmobj = P_SpawnMobj(mobj->x + xofs, mobj->y + yofs, mobj->z + zofs, type);
 	if (!newmobj)
 		return NULL;
+
+	newmobj->world = mobj->world;
 
 	if (mobj->eflags & MFE_VERTICALFLIP)
 	{
