@@ -5041,7 +5041,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		else if (player->pflags & (PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player has used an ability previously
 			;
 		else if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SPINDOWN)
-			&& ((!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX)))) // thokked is optional if you're bubblewrapped
+			&& ((!(player->pflags & PF_THOKKED) || (((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP || (player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT) && player->secondjump == UINT8_MAX) ))) // thokked is optional if you're bubblewrapped / 3dblasted
 		{
 			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
 			{
@@ -5093,6 +5093,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						case SH_ATTRACT:
 							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 							player->homing = 2;
+							player->secondjump = 0;
 							P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockonshield));
 							if (lockonshield)
 								{
@@ -5484,6 +5485,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		{
 			if (!P_HomingAttack(player->mo, player->mo->tracer))
 			{
+				player->pflags &= ~PF_SHIELDABILITY;
+				player->secondjump = UINT8_MAX;
 				P_SetObjectMomZ(player->mo, 6*FRACUNIT, false);
 				if (player->mo->eflags & MFE_UNDERWATER)
 					player->mo->momz = FixedMul(player->mo->momz, FRACUNIT/3);
