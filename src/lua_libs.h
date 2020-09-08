@@ -50,6 +50,8 @@ extern lua_State *gL;
 #define META_VECTOR3 "VECTOR3_T"
 #define META_MAPHEADER "MAPHEADER_T*"
 
+#define META_POLYOBJ "POLYOBJ_T*"
+
 #define META_CVAR "CONSVAR_T*"
 
 #define META_SECTORLINES "SECTOR_T*LINES"
@@ -88,5 +90,6 @@ int LUA_PlayerLib(lua_State *L);
 int LUA_SkinLib(lua_State *L);
 int LUA_ThinkerLib(lua_State *L);
 int LUA_MapLib(lua_State *L);
+int LUA_PolyObjLib(lua_State *L);
 int LUA_BlockmapLib(lua_State *L);
 int LUA_HudLib(lua_State *L);

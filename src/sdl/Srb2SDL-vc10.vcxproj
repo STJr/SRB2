@@ -400,6 +400,7 @@
     <ClCompile Include="..\lua_mathlib.c" />
     <ClCompile Include="..\lua_mobjlib.c" />
     <ClCompile Include="..\lua_playerlib.c" />
+    <ClCompile Include="..\lua_polyobjlib.c" />
     <ClCompile Include="..\lua_script.c" />
     <ClCompile Include="..\lua_skinlib.c" />
     <ClCompile Include="..\lua_thinkerlib.c" />
