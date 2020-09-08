@@ -24,7 +24,9 @@ enum polyobj_e {
 	polyobj_angle,
 	polyobj_damage,
 	polyobj_thrust,
-	polyobj_flags
+	polyobj_flags,
+	polyobj_translucency,
+	polyobj_triggertag
 };
 static const char *const polyobj_opt[] = {
 	"valid",
@@ -34,6 +36,8 @@ static const char *const polyobj_opt[] = {
 	"damage",
 	"thrust",
 	"flags",
+	"translucency",
+	"triggertag",
 	NULL};
 
 static int polyobj_get(lua_State *L)
@@ -71,6 +75,12 @@ static int polyobj_get(lua_State *L)
 		break;
 	case polyobj_flags:
 		lua_pushinteger(L, polyobj->flags);
+		break;
+	case polyobj_translucency:
+		lua_pushinteger(L, polyobj->translucency);
+		break;
+	case polyobj_triggertag:
+		lua_pushinteger(L, polyobj->triggertag);
 		break;
 	}
 	return 1;
