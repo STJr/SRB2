@@ -509,7 +509,7 @@ static int sector_get(lua_State *L)
 		return 1;
 	case sector_floorpic: // floorpic
 	{
-		levelflat_t *levelflat = &levelflats[sector->floorpic];
+		levelflat_t *levelflat = &((world_t *)sector->world)->flats[sector->floorpic];
 		for (i = 0; i < 8; i++)
 			if (!levelflat->name[i])
 				break;
@@ -518,7 +518,7 @@ static int sector_get(lua_State *L)
 	}
 	case sector_ceilingpic: // ceilingpic
 	{
-		levelflat_t *levelflat = &levelflats[sector->ceilingpic];
+		levelflat_t *levelflat = &((world_t *)sector->world)->flats[sector->ceilingpic];
 		for (i = 0; i < 8; i++)
 			if (!levelflat->name[i])
 				break;
@@ -619,10 +619,10 @@ static int sector_set(lua_State *L)
 		break;
 	}
 	case sector_floorpic:
-		sector->floorpic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
+		sector->floorpic = P_AddLevelFlatForWorld(sector->world, luaL_checkstring(L, 3));
 		break;
 	case sector_ceilingpic:
-		sector->ceilingpic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
+		sector->ceilingpic = P_AddLevelFlatForWorld(sector->world, luaL_checkstring(L, 3));
 		break;
 	case sector_lightlevel:
 		sector->lightlevel = (INT16)luaL_checkinteger(L, 3);
@@ -1654,7 +1654,7 @@ static int ffloor_get(lua_State *L)
 		lua_pushfixed(L, *ffloor->topheight);
 		return 1;
 	case ffloor_toppic: { // toppic
-		levelflat_t *levelflat = &levelflats[*ffloor->toppic];
+		levelflat_t *levelflat = &(*(world_t **)ffloor->world)->flats[*ffloor->toppic];
 		for (i = 0; i < 8; i++)
 			if (!levelflat->name[i])
 				break;
@@ -1668,7 +1668,7 @@ static int ffloor_get(lua_State *L)
 		lua_pushfixed(L, *ffloor->bottomheight);
 		return 1;
 	case ffloor_bottompic: { // bottompic
-		levelflat_t *levelflat = &levelflats[*ffloor->bottompic];
+		levelflat_t *levelflat = &(*(world_t **)ffloor->world)->flats[*ffloor->bottompic];
 		for (i = 0; i < 8; i++)
 			if (!levelflat->name[i])
 				break;
@@ -1745,7 +1745,7 @@ static int ffloor_set(lua_State *L)
 		break;
 	}
 	case ffloor_toppic:
-		*ffloor->toppic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
+		*ffloor->toppic = P_AddLevelFlatForWorld(*ffloor->world, luaL_checkstring(L, 3));
 		break;
 	case ffloor_toplightlevel:
 		*ffloor->toplightlevel = (INT16)luaL_checkinteger(L, 3);
@@ -1766,7 +1766,7 @@ static int ffloor_set(lua_State *L)
 		break;
 	}
 	case ffloor_bottompic:
-		*ffloor->bottompic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
+		*ffloor->bottompic = P_AddLevelFlatForWorld(*ffloor->world, luaL_checkstring(L, 3));
 		break;
 	case ffloor_flags: {
 		ffloortype_e oldflags = ffloor->flags; // store FOF's old flags

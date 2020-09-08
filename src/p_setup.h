@@ -21,11 +21,6 @@
 // map md5, sent to players via PT_SERVERINFO
 extern unsigned char mapmd5[16];
 
-// Player spawn spots for deathmatch.
-#define MAX_DM_STARTS 64
-extern mapthing_t *deathmatchstarts[MAX_DM_STARTS];
-extern INT32 numdmstarts, numcoopstarts, numredctfstarts, numbluectfstarts;
-
 extern boolean levelloading;
 extern UINT8 levelfadecol;
 
@@ -83,8 +78,6 @@ typedef struct
 	UINT8 *flatpatch;
 } levelflat_t;
 
-extern size_t numlevelflats;
-extern levelflat_t *levelflats;
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat);
 INT32 P_AddLevelFlatRuntime(const char *flatname);
 INT32 P_CheckLevelFlat(const char *flatname);
@@ -101,6 +94,7 @@ boolean P_LoadLevel(boolean fromnetsave);
 #ifdef HWRENDER
 void HWR_SetupLevel(void);
 #endif
+
 boolean P_AddWadFile(const char *wadfilename);
 boolean P_RunSOC(const char *socfilename);
 void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num);

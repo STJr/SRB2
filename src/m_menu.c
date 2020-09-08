@@ -2306,9 +2306,9 @@ void Nextmap_OnChange(void)
 		// Check if file exists, if not, disable REPLAY option
 		sprintf(tabase,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s-%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value), skins[cv_chooseskin.value-1].name);
 
-#ifdef OLDNREPLAYNAME		
+#ifdef OLDNREPLAYNAME
 		sprintf(tabaseold,"%s"PATHSEP"replay"PATHSEP"%s"PATHSEP"%s",srb2home, timeattackfolder, G_BuildMapName(cv_nextmap.value));
-#endif	
+#endif
 
 		for (i = 0; i < 4; i++) {
 			SP_NightsReplayMenu[i].status = IT_DISABLED;
@@ -2336,7 +2336,7 @@ void Nextmap_OnChange(void)
 			active = true;
 		}
 
-		// Old style name compatibility 
+		// Old style name compatibility
 #ifdef OLDNREPLAYNAME
 		if (FIL_FileExists(va("%s-score-best.lmp", tabaseold))) {
 			SP_NightsReplayMenu[0].status = IT_WHITESTRING|IT_CALL;
@@ -11230,7 +11230,7 @@ static void M_StartServer(INT32 choice)
 
 	if (!StartSplitScreenGame)
 	{
-		D_MapChange(cv_nextmap.value, cv_newgametype.value, false, 1, 1, false, false);
+		D_MapChange(cv_nextmap.value, cv_newgametype.value, false, false, 1, 1, false, false);
 		COM_BufAddText("dummyconsvar 1\n");
 	}
 	else // split screen
@@ -11242,7 +11242,7 @@ static void M_StartServer(INT32 choice)
 			splitscreen = true;
 			SplitScreen_OnChange();
 		}
-		D_MapChange(cv_nextmap.value, cv_newgametype.value, false, 1, 1, false, false);
+		D_MapChange(cv_nextmap.value, cv_newgametype.value, false, false, 1, 1, false, false);
 	}
 
 	M_ClearMenus(true);

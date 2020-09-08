@@ -380,7 +380,6 @@ static boolean P_CrossBSPNode(INT32 bspnum, register los_t *los)
 boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 {
 	const sector_t *s1, *s2;
-	size_t pnum;
 	los_t los;
 
 	// First check for trivial rejection.
@@ -396,13 +395,17 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 
 	s1 = t1->subsector->sector;
 	s2 = t2->subsector->sector;
-	pnum = (s1-sectors)*numsectors + (s2-sectors);
 
-	if (rejectmatrix != NULL)
+	// Check in REJECT table.
+	if (t1->world == t2->world)
 	{
-		// Check in REJECT table.
-		if (rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
-			return false;
+		size_t pnum = (s1-sectors)*numsectors + (s2-sectors);
+
+		if (rejectmatrix != NULL)
+		{
+			if (rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
+				return false;
+		}
 	}
 
 	// killough 11/98: shortcut for melee situations

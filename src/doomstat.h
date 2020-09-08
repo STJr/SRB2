@@ -629,16 +629,6 @@ extern UINT32 timesBeatenUltimate;
 extern tic_t gametic;
 #define localgametic leveltime
 
-// Player spawn spots.
-extern mapthing_t *playerstarts[MAXPLAYERS]; // Cooperative
-extern mapthing_t *bluectfstarts[MAXPLAYERS]; // CTF
-extern mapthing_t *redctfstarts[MAXPLAYERS]; // CTF
-
-#define WAYPOINTSEQUENCESIZE 256
-#define NUMWAYPOINTSEQUENCES 256
-extern mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
-extern UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
-
 void P_AddWaypoint(UINT8 sequence, UINT8 id, mobj_t *waypoint);
 mobj_t *P_GetFirstWaypoint(UINT8 sequence);
 mobj_t *P_GetLastWaypoint(UINT8 sequence);

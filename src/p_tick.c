@@ -36,7 +36,7 @@ tic_t leveltime;
 //
 
 // The entries will behave like both the head and tail of the lists.
-thinker_t thlist[NUM_THINKERLISTS];
+thinker_t *thlist = NULL;
 
 void Command_Numthinkers_f(void)
 {
@@ -194,18 +194,23 @@ void P_InitThinkers(void)
 }
 
 // Adds a new thinker at the end of the list.
-void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
+static void P_AddThinkerIntoWorld(world_t *w, const thinklistnum_t n, thinker_t *thinker)
 {
 #ifdef PARANOIA
 	I_Assert(n < NUM_THINKERLISTS);
 #endif
 
-	thlist[n].prev->next = thinker;
-	thinker->next = &thlist[n];
-	thinker->prev = thlist[n].prev;
-	thlist[n].prev = thinker;
+	w->thlist[n].prev->next = thinker;
+	thinker->next = &w->thlist[n];
+	thinker->prev = w->thlist[n].prev;
+	w->thlist[n].prev = thinker;
 
 	thinker->references = 0;    // killough 11/98: init reference counter to 0
+}
+
+void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
+{
+	P_AddThinkerIntoWorld(world, n, thinker);
 }
 
 //
@@ -273,6 +278,21 @@ void P_RemoveThinker(thinker_t *thinker)
 	thinker->function.acp1 = (actionf_p1)P_RemoveThinkerDelayed;
 }
 
+// Moves a thinker to another world
+void P_MoveThinkerToWorld(world_t *w, const thinklistnum_t n, thinker_t *thinker)
+{
+	thinker_t *next;
+
+#ifdef PARANOIA
+	I_Assert(n < NUM_THINKERLISTS);
+#endif
+
+	next = thinker->next;
+	(next->prev = currentthinker = thinker->prev)->next = next;
+
+	P_AddThinkerIntoWorld(w, n, thinker);
+}
+
 /*
  * P_SetTarget
  *
@@ -329,7 +349,28 @@ static inline void P_RunThinkers(void)
 			currentthinker->function.acp1(currentthinker);
 		}
 	}
+}
 
+static inline void P_RunWorldThinkers(void)
+{
+	INT32 i;
+
+	if (!netgame || (numworlds < 2))
+	{
+		P_RunThinkers();
+		return;
+	}
+
+	for (i = 0; i < numworlds; i++)
+	{
+		world_t *w = worldlist[i];
+
+		if (!w->players)
+			continue;
+
+		P_SetWorld(w);
+		P_RunThinkers();
+	}
 }
 
 //
@@ -581,6 +622,31 @@ static inline void P_DoCTFStuff(void)
 	}
 }
 
+static inline void P_RunWorldSpecials(void)
+{
+	INT32 i;
+
+	if (!netgame || (numworlds < 2))
+	{
+		P_UpdateSpecials();
+		P_RespawnSpecials();
+		return;
+	}
+
+	for (i = 0; i < numworlds; i++)
+	{
+		world_t *w = worldlist[i];
+
+		if (!w->players)
+			continue;
+
+		P_SetWorld(w);
+
+		P_UpdateSpecials();
+		P_RespawnSpecials();
+	}
+}
+
 //
 // P_Ticker
 //
@@ -645,7 +711,14 @@ void P_Ticker(boolean run)
 
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
-				P_PlayerThink(&players[i]);
+			{
+				player_t *player = &players[i];
+
+				if (numworlds > 1 && !titlemapinaction && !player->bot)
+					P_SetWorld(player->world);
+
+				P_PlayerThink(player);
+			}
 	}
 
 	// Keep track of how long they've been playing!
@@ -660,22 +733,32 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		P_RunThinkers();
+		P_RunWorldThinkers();
 
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
-				P_PlayerAfterThink(&players[i]);
+			{
+				player_t *player = &players[i];
 
-		LUAh_ThinkFrame();
+				if (numworlds > 1 && !titlemapinaction && !player->bot)
+					P_SetWorld(player->world);
+
+				P_PlayerAfterThink(player);
+			}
 	}
+
+	if (numworlds > 1)
+		P_SetWorld(localworld);
+
+	if (run)
+		LUAh_ThinkFrame();
 
 	// Run shield positioning
 	P_RunShields();
 	P_RunOverlays();
 
-	P_UpdateSpecials();
-	P_RespawnSpecials();
+	P_RunWorldSpecials();
 
 	// Lightning, rain sounds, etc.
 	P_PrecipitationEffects();
@@ -739,6 +822,8 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 
+		if (numworlds > 1)
+			P_SetWorld(localworld);
 		LUAh_PostThinkFrame();
 	}
 
@@ -767,6 +852,8 @@ void P_PreTicker(INT32 frames)
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 			{
+				player_t *player = &players[i];
+
 				// stupid fucking cmd hack
 				// if it isn't for this, players can move in preticker time
 				// (and disrupt demo recording and other things !!)
@@ -777,27 +864,39 @@ void P_PreTicker(INT32 frames)
 				players[i].oldrelangleturn = temptic.angleturn;
 				players[i].cmd.angleturn = players[i].angleturn;
 
-				P_PlayerThink(&players[i]);
+				if (numworlds > 1 && !titlemapinaction && !player->bot)
+					P_SetWorld(player->world);
+				P_PlayerThink(player);
 
 				memcpy(&players[i].cmd, &temptic, sizeof(ticcmd_t));
 			}
 
-		P_RunThinkers();
+		P_RunWorldThinkers();
 
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
-				P_PlayerAfterThink(&players[i]);
+			{
+				player_t *player = &players[i];
 
+				if (numworlds > 1 && !titlemapinaction && !player->bot)
+					P_SetWorld(player->world);
+
+				P_PlayerAfterThink(&players[i]);
+			}
+
+		if (numworlds > 1)
+			P_SetWorld(localworld);
 		LUAh_ThinkFrame();
 
 		// Run shield positioning
 		P_RunShields();
 		P_RunOverlays();
 
-		P_UpdateSpecials();
-		P_RespawnSpecials();
+		P_RunWorldSpecials();
 
+		if (numworlds > 1)
+			P_SetWorld(localworld);
 		LUAh_PostThinkFrame();
 
 		P_MapEnd();

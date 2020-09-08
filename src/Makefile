@@ -495,6 +495,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/p_polyobj.o\
 		$(OBJDIR)/p_saveg.o  \
 		$(OBJDIR)/p_setup.o  \
+		$(OBJDIR)/p_world.o  \
 		$(OBJDIR)/p_sight.o  \
 		$(OBJDIR)/p_spec.o   \
 		$(OBJDIR)/p_telept.o \

@@ -16,7 +16,7 @@
 
 #include "r_defs.h"
 #include "r_state.h"
-#include "p_setup.h" // levelflats
+#include "p_world.h" // levelflats
 
 #ifdef __GNUG__
 #pragma interface

@@ -1758,9 +1758,9 @@ bustupdone:
 static boolean P_CheckSkyHit(mobj_t *mo)
 {
 	if (ceilingline && ceilingline->backsector
-		&& ceilingline->backsector->ceilingpic == skyflatnum
+		&& ceilingline->backsector->ceilingpic == world->skyflatnum
 		&& ceilingline->frontsector
-		&& ceilingline->frontsector->ceilingpic == skyflatnum
+		&& ceilingline->frontsector->ceilingpic == world->skyflatnum
 		&& (mo->z >= ceilingline->frontsector->ceilingheight
 		|| mo->z >= ceilingline->backsector->ceilingheight))
 			return true;
@@ -2621,11 +2621,11 @@ static boolean P_ZMovement(mobj_t *mo)
 				{
 					// Don't explode on the sky!
 					if (!(mo->eflags & MFE_VERTICALFLIP)
-					&& mo->subsector->sector->floorpic == skyflatnum
+					&& mo->subsector->sector->floorpic == world->skyflatnum
 					&& mo->subsector->sector->floorheight == mo->floorz)
 						P_RemoveMobj(mo);
 					else if (mo->eflags & MFE_VERTICALFLIP
-					&& mo->subsector->sector->ceilingpic == skyflatnum
+					&& mo->subsector->sector->ceilingpic == world->skyflatnum
 					&& mo->subsector->sector->ceilingheight == mo->ceilingz)
 						P_RemoveMobj(mo);
 					else
@@ -2769,11 +2769,11 @@ static boolean P_ZMovement(mobj_t *mo)
 			{
 				// Don't explode on the sky!
 				if (!(mo->eflags & MFE_VERTICALFLIP)
-				&& mo->subsector->sector->ceilingpic == skyflatnum
+				&& mo->subsector->sector->ceilingpic == world->skyflatnum
 				&& mo->subsector->sector->ceilingheight == mo->ceilingz)
 					P_RemoveMobj(mo);
 				else if (mo->eflags & MFE_VERTICALFLIP
-				&& mo->subsector->sector->floorpic == skyflatnum
+				&& mo->subsector->sector->floorpic == world->skyflatnum
 				&& mo->subsector->sector->floorheight == mo->floorz)
 					P_RemoveMobj(mo);
 				else
@@ -8433,7 +8433,7 @@ static boolean P_HangsterThink(mobj_t *mobj)
 
 	//should you roost on a ceiling with F_SKY1 as its flat, disappear forever
 	if (st == S_HANGSTER_RETURN3 && mobj->momz == 0 && mobj->ceilingz == (mobj->z + mobj->height)
-		&& mobj->subsector->sector->ceilingpic == skyflatnum
+		&& mobj->subsector->sector->ceilingpic == world->skyflatnum
 		&& mobj->subsector->sector->ceilingheight == mobj->ceilingz)
 	{
 		P_RemoveMobj(mobj);
@@ -10470,6 +10470,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->x = x;
 	mobj->y = y;
 
+	mobj->world = world;
+
 	mobj->radius = info->radius;
 	mobj->height = info->height;
 	mobj->flags = info->flags;
@@ -10850,6 +10852,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 	mobj->x = x;
 	mobj->y = y;
 	mobj->flags = mobjinfo[type].flags;
+	mobj->world = world;
 
 	// do not set the state with P_SetMobjState,
 	// because action routines can not be called yet
@@ -10882,7 +10885,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 		mobj->precipflags |= PCF_FOF;
 	else if (GETSECSPECIAL(mobj->subsector->sector->special, 1) == 7
 	 || GETSECSPECIAL(mobj->subsector->sector->special, 1) == 6
-	 || mobj->subsector->sector->floorpic == skyflatnum)
+	 || mobj->subsector->sector->floorpic == world->skyflatnum)
 		mobj->precipflags |= PCF_PIT;
 
 	return mobj;
@@ -11089,7 +11092,7 @@ void P_SpawnPrecipitation(void)
 		if (curWeather == PRECIP_SNOW)
 		{
 			// Not in a sector with visible sky -- exception for NiGHTS.
-			if ((!(maptol & TOL_NIGHTS) && (precipsector->sector->ceilingpic != skyflatnum)) == !(precipsector->sector->flags & SF_INVERTPRECIP))
+			if ((!(maptol & TOL_NIGHTS) && (precipsector->sector->ceilingpic != world->skyflatnum)) == !(precipsector->sector->flags & SF_INVERTPRECIP))
 				continue;
 
 			rainmo = P_SpawnSnowMobj(x, y, height, MT_SNOWFLAKE);
@@ -11102,7 +11105,7 @@ void P_SpawnPrecipitation(void)
 		else // everything else.
 		{
 			// Not in a sector with visible sky.
-			if ((precipsector->sector->ceilingpic != skyflatnum) == !(precipsector->sector->flags & SF_INVERTPRECIP))
+			if ((precipsector->sector->ceilingpic != world->skyflatnum) == !(precipsector->sector->flags & SF_INVERTPRECIP))
 				continue;
 
 			rainmo = P_SpawnRainMobj(x, y, height, MT_RAIN);
@@ -11181,7 +11184,7 @@ void P_PrecipitationEffects(void)
 		sector_t *ss = sectors;
 
 		for (i = 0; i < numsectors; i++, ss++)
-			if (ss->ceilingpic == skyflatnum) // Only for the sky.
+			if (ss->ceilingpic == world->skyflatnum) // Only for the sky.
 				P_SpawnLightningFlash(ss); // Spawn a quick flash thinker
 	}
 
@@ -11193,7 +11196,7 @@ void P_PrecipitationEffects(void)
 	if (sound_disabled)
 		return; // Sound off? D'aw, no fun.
 
-	if (players[displayplayer].mo->subsector->sector->ceilingpic == skyflatnum)
+	if (players[displayplayer].mo->subsector->sector->ceilingpic == world->skyflatnum)
 		volume = 255; // Sky above? We get it full blast.
 	else
 	{
@@ -11209,7 +11212,7 @@ void P_PrecipitationEffects(void)
 		for (y = yl; y <= yh; y += FRACUNIT*64)
 			for (x = xl; x <= xh; x += FRACUNIT*64)
 			{
-				if (R_PointInSubsector(x, y)->sector->ceilingpic == skyflatnum) // Found the outdoors!
+				if (R_PointInSubsector(x, y)->sector->ceilingpic == world->skyflatnum) // Found the outdoors!
 				{
 					newdist = S_CalculateSoundDistance(players[displayplayer].mo->x, players[displayplayer].mo->y, 0, x, y, 0);
 					if (newdist < closedist)
@@ -11374,6 +11377,8 @@ void P_SpawnPlayer(INT32 playernum)
 
 	if ((netgame || multiplayer) && ((gametyperules & GTR_SPAWNINVUL) || leveltime) && !p->spectator && !(maptol & TOL_NIGHTS))
 		p->powers[pw_flashing] = flashingtics-1; // Babysitting deterrent
+
+	p->world = world;
 
 	mobj = P_SpawnMobj(0, 0, 0, MT_PLAYER);
 	(mobj->player = p)->mo = mobj;
@@ -11711,42 +11716,42 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 	{
 		// save spots for respawning in network games
 		if (!metalrecording)
-			playerstarts[mthing->type - 1] = mthing;
+			world->playerstarts[mthing->type - 1] = mthing;
 		return true;
 	}
 	else if (mthing->type == 33) // Match starts
 	{
-		if (numdmstarts < MAX_DM_STARTS)
+		if (world->numdmstarts < MAX_DM_STARTS)
 		{
-			deathmatchstarts[numdmstarts] = mthing;
+			world->deathmatchstarts[world->numdmstarts] = mthing;
 			mthing->type = 0;
-			numdmstarts++;
+			world->numdmstarts++;
 		}
 		return true;
 	}
 	else if (mthing->type == 34) // Red CTF starts
 	{
-		if (numredctfstarts < MAXPLAYERS)
+		if (world->numredctfstarts < MAXPLAYERS)
 		{
-			redctfstarts[numredctfstarts] = mthing;
+			world->redctfstarts[world->numredctfstarts] = mthing;
 			mthing->type = 0;
-			numredctfstarts++;
+			world->numredctfstarts++;
 		}
 		return true;
 	}
 	else if (mthing->type == 35) // Blue CTF starts
 	{
-		if (numbluectfstarts < MAXPLAYERS)
+		if (world->numbluectfstarts < MAXPLAYERS)
 		{
-			bluectfstarts[numbluectfstarts] = mthing;
+			world->bluectfstarts[world->numbluectfstarts] = mthing;
 			mthing->type = 0;
-			numbluectfstarts++;
+			world->numbluectfstarts++;
 		}
 		return true;
 	}
 	else if (metalrecording && mthing->type == mobjinfo[MT_METALSONIC_RACE].doomednum)
 	{ // If recording, you ARE Metal Sonic. Do not spawn it, do not save normal spawnpoints.
-		playerstarts[0] = mthing;
+		world->playerstarts[0] = mthing;
 		return true;
 	}
 	else if (mthing->type == 750 // Slope vertex point (formerly chaos spawn)
@@ -12584,9 +12589,9 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	}
 	case MT_SKYBOX:
 		if (mthing->options & MTF_OBJECTSPECIAL)
-			skyboxcenterpnts[mthing->extrainfo] = mobj;
+			world->skyboxcenterpnts[mthing->extrainfo] = mobj;
 		else
-			skyboxviewpnts[mthing->extrainfo] = mobj;
+			world->skyboxviewpnts[mthing->extrainfo] = mobj;
 		break;
 	case MT_EGGSTATUE:
 		if (mthing->options & MTF_EXTRA)

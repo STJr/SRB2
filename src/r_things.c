@@ -30,6 +30,7 @@
 #include "p_tick.h"
 #include "p_local.h"
 #include "p_slopes.h"
+#include "p_world.h"
 #include "d_netfil.h" // blargh. for nameonly().
 #include "m_cheat.h" // objectplace
 #ifdef HWRENDER
@@ -1111,7 +1112,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 		slope = sector->heightsec != -1 ? NULL : (isflipped ? sector->c_slope : sector->f_slope);
 
 		if (sector->heightsec != -1)
-			z = isflipped ? sectors[sector->heightsec].ceilingheight : sectors[sector->heightsec].floorheight;
+			z = isflipped ? viewworld->sectors[sector->heightsec].ceilingheight : viewworld->sectors[sector->heightsec].floorheight;
 		else
 			z = isflipped ? P_GetSectorCeilingZAt(sector, thing->x, thing->y) : P_GetSectorFloorZAt(sector, thing->x, thing->y);
 
@@ -2325,22 +2326,22 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 	// find all the remaining polyobject planes and add them on the end of the list
 	// probably this is a terrible idea if we wanted them to be sorted properly
 	// but it works getting them in for now
-	for (i = 0; i < numPolyObjects; i++)
+	for (i = 0; i < viewworld->numPolyObjects; i++)
 	{
-		if (!PolyObjects[i].visplane)
+		if (!viewworld->PolyObjects[i].visplane)
 			continue;
-		plane = PolyObjects[i].visplane;
+		plane = viewworld->PolyObjects[i].visplane;
 		R_PlaneBounds(plane);
 
 		if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low)
 		{
-			PolyObjects[i].visplane = NULL;
+			viewworld->PolyObjects[i].visplane = NULL;
 			continue;
 		}
 		entry = R_CreateDrawNode(head);
 		entry->plane = plane;
 		// note: no seg is set, for what should be obvious reasons
-		PolyObjects[i].visplane = NULL;
+		viewworld->PolyObjects[i].visplane = NULL;
 	}
 
 	// No vissprites in this mask?
@@ -2677,7 +2678,7 @@ void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 		{
 			fixed_t mh, h;
 			INT32 phs = viewplayer->mo->subsector->sector->heightsec;
-			if ((mh = sectors[spr->heightsec].floorheight) > spr->gz &&
+			if ((mh = viewworld->sectors[spr->heightsec].floorheight) > spr->gz &&
 				(h = centeryfrac - FixedMul(mh -= viewz, spr->sortscale)) >= 0 &&
 				(h >>= FRACBITS) < viewheight)
 			{

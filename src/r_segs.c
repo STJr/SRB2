@@ -24,6 +24,7 @@
 #include "m_misc.h"
 #include "p_local.h" // Camera...
 #include "p_slopes.h"
+#include "p_world.h"
 #include "console.h" // con_clipviewtop
 
 // OPTIMIZE: closed two sided lines as single sided
@@ -439,12 +440,12 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	mceilingclip = ds->sprtopclip;
 
 	if (frontsector->heightsec != -1)
-		front = &sectors[frontsector->heightsec];
+		front = &viewworld->sectors[frontsector->heightsec];
 	else
 		front = frontsector;
 
 	if (backsector->heightsec != -1)
-		back = &sectors[backsector->heightsec];
+		back = &viewworld->sectors[backsector->heightsec];
 	else
 		back = backsector;
 
@@ -727,7 +728,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	curline = ds->curline;
 	backsector = pfloor->target;
 	frontsector = curline->frontsector == pfloor->target ? curline->backsector : curline->frontsector;
-	texnum = R_GetTextureNum(sides[pfloor->master->sidenum[0]].midtexture);
+	texnum = R_GetTextureNum(viewworld->sides[pfloor->master->sidenum[0]].midtexture);
 
 	colfunc = colfuncs[BASEDRAWFUNC];
 
@@ -735,7 +736,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	{
 		size_t linenum = curline->linedef-backsector->lines[0];
 		newline = pfloor->master->frontsector->lines[0] + linenum;
-		texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
+		texnum = R_GetTextureNum(viewworld->sides[newline->sidenum[0]].midtexture);
 	}
 
 	if (pfloor->flags & FF_TRANSLUCENT)
@@ -926,7 +927,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	if (newline)
 	{
-		offsetvalue = sides[newline->sidenum[0]].rowoffset;
+		offsetvalue = viewworld->sides[newline->sidenum[0]].rowoffset;
 		if (newline->flags & ML_DONTPEGBOTTOM)
 		{
 			skewslope = *pfloor->b_slope; // skew using bottom slope
@@ -938,7 +939,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	}
 	else
 	{
-		offsetvalue = sides[pfloor->master->sidenum[0]].rowoffset;
+		offsetvalue = viewworld->sides[pfloor->master->sidenum[0]].rowoffset;
 		if (curline->linedef->flags & ML_DONTPEGBOTTOM)
 		{
 			skewslope = *pfloor->b_slope; // skew using bottom slope
@@ -1871,15 +1872,15 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		// hack to allow height changes in outdoor areas
 		// This is what gets rid of the upper textures if there should be sky
-		if (frontsector->ceilingpic == skyflatnum
-			&& backsector->ceilingpic == skyflatnum)
+		if (frontsector->ceilingpic == viewworld->skyflatnum
+			&& backsector->ceilingpic == viewworld->skyflatnum)
 		{
 			bothceilingssky = true;
 		}
 
 		// likewise, but for floors and upper textures
-		if (frontsector->floorpic == skyflatnum
-			&& backsector->floorpic == skyflatnum)
+		if (frontsector->floorpic == viewworld->skyflatnum
+			&& backsector->floorpic == viewworld->skyflatnum)
 		{
 			bothfloorssky = true;
 		}
@@ -1975,7 +1976,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->floor_yoffs != frontsector->floor_yoffs
 		    || backsector->floorpic_angle != frontsector->floorpic_angle
 		    //SoM: 3/22/2000: Prevents bleeding.
-		    || (frontsector->heightsec != -1 && frontsector->floorpic != skyflatnum)
+		    || (frontsector->heightsec != -1 && frontsector->floorpic != viewworld->skyflatnum)
 		    || backsector->floorlightsec != frontsector->floorlightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
@@ -2006,7 +2007,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->ceiling_yoffs != frontsector->ceiling_yoffs
 		    || backsector->ceilingpic_angle != frontsector->ceilingpic_angle
 		    //SoM: 3/22/2000: Prevents bleeding.
-		    || (frontsector->heightsec != -1 && frontsector->ceilingpic != skyflatnum)
+		    || (frontsector->heightsec != -1 && frontsector->ceilingpic != viewworld->skyflatnum)
 		    || backsector->ceilinglightsec != frontsector->ceilinglightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
@@ -2040,7 +2041,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				&& linedef->sidenum[1] != 0xffff)
 			{
 				// Special case... use offsets from 2nd side but only if it has a texture.
-				side_t *def = &sides[linedef->sidenum[1]];
+				side_t *def = &viewworld->sides[linedef->sidenum[1]];
 				toptexture = R_GetTextureNum(def->toptexture);
 
 				if (!toptexture) //Second side has no texture, use the first side's instead.
@@ -2399,13 +2400,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	//  and doesn't need to be marked.
 	if (frontsector->heightsec == -1)
 	{
-		if (frontsector->floorpic != skyflatnum && P_GetSectorFloorZAt(frontsector, viewx, viewy) >= viewz)
+		if (frontsector->floorpic != viewworld->skyflatnum && P_GetSectorFloorZAt(frontsector, viewx, viewy) >= viewz)
 		{
 			// above view plane
 			markfloor = false;
 		}
 
-		if (frontsector->ceilingpic != skyflatnum && P_GetSectorCeilingZAt(frontsector, viewx, viewy) <= viewz)
+		if (frontsector->ceilingpic != viewworld->skyflatnum && P_GetSectorCeilingZAt(frontsector, viewx, viewy) <= viewz)
 		{
 			// below view plane
 			markceiling = false;

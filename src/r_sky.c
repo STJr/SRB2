@@ -28,11 +28,6 @@
 // sky mapping
 //
 
-/**	\brief Needed to store the number of the dummy sky flat.
-	Used for rendering, as well as tracking projectiles etc.
-*/
-INT32 skyflatnum;
-
 /**	\brief the lump number of the sky texture
 */
 INT32 skytexture;

@@ -603,7 +603,7 @@ static void D_Display(void)
 			snprintf(s, sizeof s - 1, "SysMiss %.2f%%", lostpercent);
 			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
 		}
-		
+
 		if (cv_renderstats.value)
 		{
 			char s[50];
@@ -612,7 +612,7 @@ static void D_Display(void)
 			rs_prevframetime = I_GetTimeMicros();
 
 			if (rs_rendercalltime > 10000) divisor = 1000;
-			
+
 			snprintf(s, sizeof s - 1, "ft   %d", frametime / divisor);
 			V_DrawThinString(30, 10, V_MONOSPACE | V_YELLOWMAP, s);
 			snprintf(s, sizeof s - 1, "rtot %d", rs_rendercalltime / divisor);
@@ -1671,7 +1671,7 @@ void D_SRB2Main(void)
 				I_Error("You need to unlock this level before you can warp to it!\n");
 			else
 			{
-				D_MapChange(pstartmap, gametype, ultimatemode, true, 0, false, false);
+				D_MapChange(pstartmap, gametype, false, ultimatemode, true, 0, false, false);
 			}
 		}
 	}

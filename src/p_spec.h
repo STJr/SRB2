@@ -17,10 +17,6 @@
 #ifndef __P_SPEC__
 #define __P_SPEC__
 
-extern mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
-extern mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
-extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
-
 // GETSECSPECIAL (specialval, section)
 //
 // Pulls out the special # from a particular section.
@@ -38,6 +34,7 @@ void P_SetupLevelFlatAnims(void);
 
 // at map load
 void P_InitSpecials(void);
+void P_InitTagLists(void);
 void P_SpawnSpecials(boolean fromnetsave);
 
 // every tic

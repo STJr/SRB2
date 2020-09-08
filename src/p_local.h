@@ -22,6 +22,8 @@
 #include "p_tick.h"
 #include "r_defs.h"
 #include "p_maputl.h"
+#include "p_setup.h"
+#include "p_world.h"
 
 #define FLOATSPEED (FRACUNIT*4)
 
@@ -70,11 +72,12 @@ typedef enum
 	THINK_PRECIP,
 	NUM_THINKERLISTS
 } thinklistnum_t; /**< Thinker lists. */
-extern thinker_t thlist[];
+extern thinker_t *thlist;
 
 void P_InitThinkers(void);
 void P_AddThinker(const thinklistnum_t n, thinker_t *thinker);
 void P_RemoveThinker(thinker_t *thinker);
+void P_MoveThinkerToWorld(world_t *w, const thinklistnum_t n, thinker_t *thinker);
 
 //
 // P_USER

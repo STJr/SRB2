@@ -189,6 +189,8 @@ typedef struct ffloor_s
 	INT32 spawnalpha; // alpha the 3D floor spawned with
 
 	void *fadingdata; // fading FOF thinker
+
+	void **world; // current world
 } ffloor_t;
 
 
@@ -359,6 +361,9 @@ typedef struct sector_s
 
 	// colormap structure
 	extracolormap_t *spawn_extra_colormap;
+
+	// current world
+	void *world;
 } sector_t;
 
 //

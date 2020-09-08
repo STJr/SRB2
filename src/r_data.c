@@ -22,7 +22,7 @@
 #include "r_patch.h"
 #include "w_wad.h"
 #include "z_zone.h"
-#include "p_setup.h" // levelflats
+#include "p_world.h" // levelflats
 #include "v_video.h" // pMasterPalette
 #include "f_finale.h" // wipes
 #include "byteptr.h"

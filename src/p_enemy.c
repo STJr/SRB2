@@ -12755,7 +12755,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 		}
 
 		// allocate the table and reset count to zero
-		fangwaypoints = Z_Calloc(sizeof(*waypoints)*numfangwaypoints, PU_STATIC, NULL);
+		fangwaypoints = Z_Calloc(sizeof(*world->waypoints)*numfangwaypoints, PU_STATIC, NULL);
 		numfangwaypoints = 0;
 
 		// now find them again and add them to the table!

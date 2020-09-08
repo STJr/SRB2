@@ -34,7 +34,7 @@ extern INT32 msg_id;
 #include "w_wad.h"
 #include "z_zone.h"
 #include "d_main.h"
-#include "r_sky.h" // skyflatnum
+#include "p_world.h" // world->skyflatnum
 #include "p_local.h" // camera info
 #include "fastcmp.h"
 #include "m_misc.h" // for tunes command
@@ -1176,7 +1176,7 @@ INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, INT32 *v
 	{
 		fixed_t x, y, yl, yh, xl, xh, newdist;
 
-		if (R_PointInSubsector(listensource.x, listensource.y)->sector->ceilingpic == skyflatnum)
+		if (R_PointInSubsector(listensource.x, listensource.y)->sector->ceilingpic == world->skyflatnum)
 			approx_dist = 0;
 		else
 		{
@@ -1189,7 +1189,7 @@ INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, INT32 *v
 			for (y = yl; y <= yh; y += FRACUNIT*64)
 				for (x = xl; x <= xh; x += FRACUNIT*64)
 				{
-					if (R_PointInSubsector(x, y)->sector->ceilingpic == skyflatnum)
+					if (R_PointInSubsector(x, y)->sector->ceilingpic == world->skyflatnum)
 					{
 						// Found the outdoors!
 						newdist = S_CalculateSoundDistance(listensource.x, listensource.y, 0, x, y, 0);

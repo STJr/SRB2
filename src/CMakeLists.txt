@@ -158,6 +158,7 @@ set(SRB2_CORE_GAME_SOURCES
 	p_polyobj.c
 	p_saveg.c
 	p_setup.c
+	p_world.c
 	p_sight.c
 	p_slopes.c
 	p_spec.c

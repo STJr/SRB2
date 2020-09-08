@@ -29,7 +29,6 @@
 extern INT32 skytexture, skytexturemid;
 extern fixed_t skyscale;
 
-extern INT32 skyflatnum;
 extern INT32 levelskynum;
 extern INT32 globallevelskynum;
 

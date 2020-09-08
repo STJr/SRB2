@@ -86,21 +86,8 @@
 // Globals
 //
 
-// The Polyobjects
-polyobj_t *PolyObjects;
-INT32 numPolyObjects;
-
 // Polyobject Blockmap -- initialized in P_LoadBlockMap
 polymaplink_t **polyblocklinks;
-
-
-//
-// Static Data
-//
-
-// Polyobject Blockmap
-static polymaplink_t *bmap_freelist; // free list of blockmap links
-
 
 //
 // Static Functions
@@ -472,7 +459,7 @@ newseg:
 static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 {
 	size_t i;
-	polyobj_t *po = &PolyObjects[num];
+	polyobj_t *po = &world->PolyObjects[num];
 
 	// don't spawn a polyobject more than once
 	if (po->segCount)
@@ -548,9 +535,9 @@ static void Polyobj_spawnPolyObj(INT32 num, mobj_t *spawnSpot, INT32 id)
 	}
 	else
 	{
-		INT32 hashkey = po->id % numPolyObjects;
-		po->next = PolyObjects[hashkey].first;
-		PolyObjects[hashkey].first = num;
+		INT32 hashkey = po->id % world->numPolyObjects;
+		po->next = world->PolyObjects[hashkey].first;
+		world->PolyObjects[hashkey].first = num;
 	}
 }
 
@@ -656,10 +643,10 @@ static polymaplink_t *Polyobj_getLink(void)
 {
 	polymaplink_t *l;
 
-	if (bmap_freelist)
+	if (world->po_bmap_freelist)
 	{
-		l = bmap_freelist;
-		bmap_freelist = (polymaplink_t *)(l->link.next);
+		l = world->po_bmap_freelist;
+		world->po_bmap_freelist = (polymaplink_t *)(l->link.next);
 	}
 	else
 	{
@@ -674,8 +661,8 @@ static polymaplink_t *Polyobj_getLink(void)
 static void Polyobj_putLink(polymaplink_t *l)
 {
 	memset(l, 0, sizeof(*l));
-	l->link.next = (mdllistitem_t *)bmap_freelist;
-	bmap_freelist = l;
+	l->link.next = (mdllistitem_t *)world->po_bmap_freelist;
+	world->po_bmap_freelist = l;
 }
 
 // Inserts a polyobject into the polyobject blockmap. Unlike, mobj_t's,
@@ -1246,12 +1233,12 @@ static boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, bo
 // Returns NULL if no such polyobject exists.
 polyobj_t *Polyobj_GetForNum(INT32 id)
 {
-	INT32 curidx  = PolyObjects[id % numPolyObjects].first;
+	INT32 curidx = world->PolyObjects[id % world->numPolyObjects].first;
 
-	while (curidx != numPolyObjects && PolyObjects[curidx].id != id)
-		curidx = PolyObjects[curidx].next;
+	while (curidx != world->numPolyObjects && world->PolyObjects[curidx].id != id)
+		curidx = world->PolyObjects[curidx].next;
 
-	return curidx == numPolyObjects ? NULL : &PolyObjects[curidx];
+	return curidx == world->numPolyObjects ? NULL : &world->PolyObjects[curidx];
 }
 
 
@@ -1268,10 +1255,10 @@ static polyobj_t *Polyobj_GetParent(polyobj_t *po)
 // sorta like P_FindSectorSpecialFromTag.
 static polyobj_t *Polyobj_GetChild(polyobj_t *po, INT32 *start)
 {
-	for (; *start < numPolyObjects; (*start)++)
+	for (; *start < world->numPolyObjects; (*start)++)
 	{
-		if (PolyObjects[*start].parent == po->id)
-			return &PolyObjects[(*start)++];
+		if (world->PolyObjects[*start].parent == po->id)
+			return &world->PolyObjects[(*start)++];
 	}
 
 	return NULL;
@@ -1301,9 +1288,9 @@ void Polyobj_InitLevel(void)
 	// get rid of values from previous level
 	// note: as with msecnodes, it is very important to clear out the blockmap
 	// node freelist, otherwise it may contain dangling pointers to old objects
-	PolyObjects    = NULL;
-	numPolyObjects = 0;
-	bmap_freelist  = NULL;
+	world->PolyObjects      = NULL;
+	world->numPolyObjects   = 0;
+	world->po_bmap_freelist = NULL;
 
 	// run down the thinker list, count the number of spawn points, and save
 	// the mobj_t pointers on a queue for use below.
@@ -1317,7 +1304,7 @@ void Polyobj_InitLevel(void)
 		if (mo->info->doomednum == POLYOBJ_SPAWN_DOOMEDNUM ||
 			mo->info->doomednum == POLYOBJ_SPAWNCRUSH_DOOMEDNUM)
 		{
-			++numPolyObjects;
+			++world->numPolyObjects;
 
 			qitem = malloc(sizeof(mobjqitem_t));
 			memset(qitem, 0, sizeof(mobjqitem_t));
@@ -1335,18 +1322,18 @@ void Polyobj_InitLevel(void)
 		}
 	}
 
-	if (numPolyObjects)
+	if (world->numPolyObjects)
 	{
 		// allocate the PolyObjects array
-		PolyObjects = Z_Calloc(numPolyObjects * sizeof(polyobj_t),
-													PU_LEVEL, NULL);
+		world->PolyObjects = Z_Calloc(world->numPolyObjects * sizeof(polyobj_t),
+																PU_LEVEL, NULL);
 
 		// setup hash fields
-		for (i = 0; i < numPolyObjects; ++i)
-			PolyObjects[i].first = PolyObjects[i].next = numPolyObjects;
+		for (i = 0; i < world->numPolyObjects; ++i)
+			world->PolyObjects[i].first = world->PolyObjects[i].next = world->numPolyObjects;
 
 		// setup polyobjects
-		for (i = 0; i < numPolyObjects; ++i)
+		for (i = 0; i < world->numPolyObjects; ++i)
 		{
 			qitem = (mobjqitem_t *)M_QueueIterator(&spawnqueue);
 
@@ -1362,17 +1349,17 @@ void Polyobj_InitLevel(void)
 		}
 
 		// setup polyobject clipping
-		for (i = 0; i < numPolyObjects; ++i)
-			Polyobj_linkToBlockmap(&PolyObjects[i]);
+		for (i = 0; i < world->numPolyObjects; ++i)
+			Polyobj_linkToBlockmap(&world->PolyObjects[i]);
 	}
 
 #if 0
 	// haleyjd 02/22/06: temporary debug
 	printf("DEBUG: numPolyObjects = %d\n", numPolyObjects);
-	for (i = 0; i < numPolyObjects; ++i)
+	for (i = 0; i < world->numPolyObjects; ++i)
 	{
 		INT32 j;
-		polyobj_t *po = &PolyObjects[i];
+		polyobj_t *po = &world->PolyObjects[i];
 
 		printf("polyobj %d:\n", i);
 		printf("id = %d, first = %d, next = %d\n", po->id, po->first, po->next);
@@ -1619,7 +1606,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 	if (!po->thinker)
 		po->thinker = &th->thinker;
 
-	target = waypoints[th->sequence][th->pointnum];
+	target = world->waypoints[th->sequence][th->pointnum];
 
 	if (!target)
 	{

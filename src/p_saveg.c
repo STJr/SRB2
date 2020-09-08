@@ -21,6 +21,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "p_saveg.h"
+#include "p_world.h"
 #include "r_data.h"
 #include "r_skins.h"
 #include "r_state.h"
@@ -727,9 +728,9 @@ static void P_NetArchiveWaypoints(void)
 
 	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
 	{
-		WRITEUINT16(save_p, numwaypoints[i]);
-		for (j = 0; j < numwaypoints[i]; j++)
-			WRITEUINT32(save_p, waypoints[i][j] ? waypoints[i][j]->mobjnum : 0);
+		WRITEUINT16(save_p, world->numwaypoints[i]);
+		for (j = 0; j < world->numwaypoints[i]; j++)
+			WRITEUINT32(save_p, world->waypoints[i][j] ? world->waypoints[i][j]->mobjnum : 0);
 	}
 }
 
@@ -740,11 +741,11 @@ static void P_NetUnArchiveWaypoints(void)
 
 	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
 	{
-		numwaypoints[i] = READUINT16(save_p);
-		for (j = 0; j < numwaypoints[i]; j++)
+		world->numwaypoints[i] = READUINT16(save_p);
+		for (j = 0; j < world->numwaypoints[i]; j++)
 		{
 			mobjnum = READUINT32(save_p);
-			waypoints[i][j] = (mobjnum == 0) ? NULL : P_FindNewPosition(mobjnum);
+			world->waypoints[i][j] = (mobjnum == 0) ? NULL : P_FindNewPosition(mobjnum);
 		}
 	}
 }
@@ -953,9 +954,9 @@ static void ArchiveSectors(void)
 			if (diff & SD_CEILHT)
 				WRITEFIXED(save_p, ss->ceilingheight);
 			if (diff & SD_FLOORPIC)
-				WRITEMEM(save_p, levelflats[ss->floorpic].name, 8);
+				WRITEMEM(save_p, world->flats[ss->floorpic].name, 8);
 			if (diff & SD_CEILPIC)
-				WRITEMEM(save_p, levelflats[ss->ceilingpic].name, 8);
+				WRITEMEM(save_p, world->flats[ss->ceilingpic].name, 8);
 			if (diff & SD_LIGHT)
 				WRITEINT16(save_p, ss->lightlevel);
 			if (diff & SD_SPECIAL)
@@ -3580,10 +3581,10 @@ static inline void P_ArchivePolyObjects(void)
 	WRITEUINT32(save_p, ARCHIVEBLOCK_POBJS);
 
 	// save number of polyobjects
-	WRITEINT32(save_p, numPolyObjects);
+	WRITEINT32(save_p, world->numPolyObjects);
 
-	for (i = 0; i < numPolyObjects; ++i)
-		P_ArchivePolyObj(&PolyObjects[i]);
+	for (i = 0; i < world->numPolyObjects; ++i)
+		P_ArchivePolyObj(&world->PolyObjects[i]);
 }
 
 static inline void P_UnArchivePolyObjects(void)
@@ -3595,11 +3596,11 @@ static inline void P_UnArchivePolyObjects(void)
 
 	numSavedPolys = READINT32(save_p);
 
-	if (numSavedPolys != numPolyObjects)
+	if (numSavedPolys != world->numPolyObjects)
 		I_Error("P_UnArchivePolyObjects: polyobj count inconsistency\n");
 
 	for (i = 0; i < numSavedPolys; ++i)
-		P_UnArchivePolyObj(&PolyObjects[i]);
+		P_UnArchivePolyObj(&world->PolyObjects[i]);
 }
 
 static inline void P_FinishMobjs(void)

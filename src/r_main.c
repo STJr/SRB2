@@ -30,6 +30,7 @@
 #include "v_video.h"
 #include "p_spec.h" // skyboxmo
 #include "p_setup.h"
+#include "p_world.h"
 #include "z_zone.h"
 #include "m_random.h" // quake camera shake
 #include "r_portal.h"
@@ -999,22 +1000,22 @@ void R_Init(void)
 }
 
 //
-// R_PointInSubsector
+// R_PointInWorldSubsector
 //
-subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
+subsector_t *R_PointInWorldSubsector(world_t *w, fixed_t x, fixed_t y)
 {
-	size_t nodenum = numnodes-1;
+	size_t nodenum = w->numnodes-1;
 
 	while (!(nodenum & NF_SUBSECTOR))
-		nodenum = nodes[nodenum].children[R_PointOnSide(x, y, nodes+nodenum)];
+		nodenum = w->nodes[nodenum].children[R_PointOnSide(x, y, w->nodes+nodenum)];
 
-	return &subsectors[nodenum & ~NF_SUBSECTOR];
+	return &w->subsectors[nodenum & ~NF_SUBSECTOR];
 }
 
 //
-// R_PointInSubsectorOrNull, same as above but returns 0 if not in subsector
+// R_PointInWorldSubsectorOrNull, same as above but returns 0 if not in subsector
 //
-subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
+subsector_t *R_PointInWorldSubsectorOrNull(world_t *w, fixed_t x, fixed_t y)
 {
 	node_t *node;
 	INT32 side, i;
@@ -1023,20 +1024,20 @@ subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
 	seg_t *seg;
 
 	// single subsector is a special case
-	if (numnodes == 0)
-		return subsectors;
+	if (w->numnodes == 0)
+		return w->subsectors;
 
-	nodenum = numnodes - 1;
+	nodenum = w->numnodes - 1;
 
 	while (!(nodenum & NF_SUBSECTOR))
 	{
-		node = &nodes[nodenum];
+		node = &w->nodes[nodenum];
 		side = R_PointOnSide(x, y, node);
 		nodenum = node->children[side];
 	}
 
-	ret = &subsectors[nodenum & ~NF_SUBSECTOR];
-	for (i = 0, seg = &segs[ret->firstline]; i < ret->numlines; i++, seg++)
+	ret = &w->subsectors[nodenum & ~NF_SUBSECTOR];
+	for (i = 0, seg = &w->segs[ret->firstline]; i < ret->numlines; i++, seg++)
 	{
 		if (seg->glseg)
 			continue;
@@ -1047,6 +1048,16 @@ subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
 	}
 
 	return ret;
+}
+
+subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
+{
+	return R_PointInWorldSubsector(world, x, y);
+}
+
+subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
+{
+	return R_PointInWorldSubsectorOrNull(world, x, y);
 }
 
 //
@@ -1167,7 +1178,7 @@ void R_SetupFrame(player_t *player)
 		if (thiscam->subsector)
 			viewsector = thiscam->subsector->sector;
 		else
-			viewsector = R_PointInSubsector(viewx, viewy)->sector;
+			viewsector = R_PointInWorldSubsector(viewworld, viewx, viewy)->sector;
 	}
 	else
 	{
@@ -1179,7 +1190,7 @@ void R_SetupFrame(player_t *player)
 		if (r_viewmobj->subsector)
 			viewsector = r_viewmobj->subsector->sector;
 		else
-			viewsector = R_PointInSubsector(viewx, viewy)->sector;
+			viewsector = R_PointInWorldSubsector(viewworld, viewx, viewy)->sector;
 	}
 
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
@@ -1199,7 +1210,7 @@ void R_SkyboxFrame(player_t *player)
 		thiscam = &camera;
 
 	// cut-away view stuff
-	r_viewmobj = skyboxmo[0];
+	r_viewmobj = world->skyboxmo[0];
 #ifdef PARANOIA
 	if (!r_viewmobj)
 	{
@@ -1268,18 +1279,18 @@ void R_SkyboxFrame(player_t *player)
 		campos.y += quake.y;
 		campos.z += quake.z;
 
-		if (skyboxmo[1]) // Is there a viewpoint?
+		if (world->skyboxmo[1]) // Is there a viewpoint?
 		{
 			fixed_t x = 0, y = 0;
 			if (mh->skybox_scalex > 0)
-				x = (campos.x - skyboxmo[1]->x) / mh->skybox_scalex;
+				x = (campos.x - world->skyboxmo[1]->x) / mh->skybox_scalex;
 			else if (mh->skybox_scalex < 0)
-				x = (campos.x - skyboxmo[1]->x) * -mh->skybox_scalex;
+				x = (campos.x - world->skyboxmo[1]->x) * -mh->skybox_scalex;
 
 			if (mh->skybox_scaley > 0)
-				y = (campos.y - skyboxmo[1]->y) / mh->skybox_scaley;
+				y = (campos.y - world->skyboxmo[1]->y) / mh->skybox_scaley;
 			else if (mh->skybox_scaley < 0)
-				y = (campos.y - skyboxmo[1]->y) * -mh->skybox_scaley;
+				y = (campos.y - world->skyboxmo[1]->y) * -mh->skybox_scaley;
 
 			if (r_viewmobj->angle == 0)
 			{
@@ -1317,7 +1328,7 @@ void R_SkyboxFrame(player_t *player)
 	if (r_viewmobj->subsector)
 		viewsector = r_viewmobj->subsector->sector;
 	else
-		viewsector = R_PointInSubsector(viewx, viewy)->sector;
+		viewsector = R_PointInWorldSubsector(viewworld, viewx, viewy)->sector;
 
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
@@ -1380,7 +1391,7 @@ static void R_PortalFrame(portal_t *portal)
 	{
 		portalclipline = NULL;
 		portalcullsector = NULL;
-		viewsector = R_PointInSubsector(viewx, viewy)->sector;
+		viewsector = R_PointInWorldSubsector(viewworld, viewx, viewy)->sector;
 	}
 }
 
@@ -1480,7 +1491,7 @@ void R_RenderPlayerView(player_t *player)
 
 
 	// Add skybox portals caused by sky visplanes.
-	if (cv_skybox.value && skyboxmo[0])
+	if (cv_skybox.value && world->skyboxmo[0])
 		Portal_AddSkyboxPortals();
 
 	// Portal rendering. Hijacks the BSP traversal.

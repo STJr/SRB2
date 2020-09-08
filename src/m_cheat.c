@@ -519,13 +519,13 @@ void Command_Teleport_f(void)
 			mapthing_t *mt;
 			fixed_t offset;
 
-			if (starpostpath >= numcoopstarts)
+			if (starpostpath >= world->numcoopstarts)
 			{
-				CONS_Alert(CONS_NOTICE, M_GetText("Player %d spawnpoint not found (%d max).\n"), starpostpath+1, numcoopstarts-1);
+				CONS_Alert(CONS_NOTICE, M_GetText("Player %d spawnpoint not found (%d max).\n"), starpostpath+1, world->numcoopstarts-1);
 				return;
 			}
 
-			mt = playerstarts[starpostpath]; // Given above check, should never be NULL.
+			mt = world->playerstarts[starpostpath]; // Given above check, should never be NULL.
 			intx = mt->x<<FRACBITS;
 			inty = mt->y<<FRACBITS;
 			offset = mt->z<<FRACBITS;
@@ -1062,21 +1062,24 @@ static boolean OP_HeightOkay(player_t *player, UINT8 ceiling)
 
 static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean ceiling)
 {
-	mapthing_t *mt = mapthings;
+	mapthing_t *mt = world->mapthings;
 	sector_t *sec = player->mo->subsector->sector;
 
-	LUA_InvalidateMapthings();
+	LUA_InvalidateMapthings(world);
 
-	mapthings = Z_Realloc(mapthings, ++nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
+	world->mapthings = Z_Realloc(world->mapthings, ++world->nummapthings * sizeof (*world->mapthings), PU_LEVEL, NULL);
+
+	mapthings = world->mapthings;
+	nummapthings = world->nummapthings;
 
 	// as Z_Realloc can relocate mapthings, quickly go through thinker list and correct
 	// the spawnpoints of any objects that have them to the new location
-	if (mt != mapthings)
+	if (mt != world->mapthings)
 	{
 		thinker_t *th;
 		mobj_t *mo;
 
-		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+		for (th = world->thlist[THINK_MOBJ].next; th != &world->thlist[THINK_MOBJ]; th = th->next)
 		{
 			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 				continue;
@@ -1085,11 +1088,11 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 			// get offset from mt, which points to old mapthings, then add new location
 			if (!mo->spawnpoint)
 				continue;
-			mo->spawnpoint = (mo->spawnpoint - mt) + mapthings;
+			mo->spawnpoint = (mo->spawnpoint - mt) + world->mapthings;
 		}
 	}
 
-	mt = (mapthings+nummapthings-1);
+	mt = (world->mapthings+world->nummapthings-1);
 
 	mt->type = type;
 	mt->x = (INT16)(player->mo->x>>FRACBITS);

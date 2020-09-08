@@ -16,7 +16,7 @@
 #include "doomdef.h"
 #include "console.h"
 #include "g_game.h"
-#include "p_setup.h" // levelflats
+#include "p_world.h" // levelflats
 #include "p_slopes.h"
 #include "r_data.h"
 #include "r_local.h"
@@ -373,7 +373,7 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	}
 
 	// This appears to fix the Nimbus Ruins sky bug.
-	if (picnum == skyflatnum && pfloor)
+	if (picnum == viewworld->skyflatnum && pfloor)
 	{
 		height = 0; // all skies map together
 		lightlevel = 0;
@@ -932,7 +932,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		return;
 
 	// sky flat
-	if (pl->picnum == skyflatnum)
+	if (pl->picnum == viewworld->skyflatnum)
 	{
 		R_DrawSkyPlane(pl);
 		return;
@@ -1068,7 +1068,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	planeheight = abs(pl->height - pl->viewz);
 
 	currentplane = pl;
-	levelflat = &levelflats[pl->picnum];
+	levelflat = &world->flats[pl->picnum];
 
 	/* :james: */
 	type = levelflat->type;

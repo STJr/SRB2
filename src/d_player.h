@@ -322,6 +322,8 @@ typedef struct player_s
 
 	playerstate_t playerstate;
 
+	void *world;
+
 	// Determine POV, including viewpoint bobbing during movement.
 	fixed_t camerascale;
 	fixed_t shieldscale;

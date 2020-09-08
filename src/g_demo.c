@@ -1959,7 +1959,7 @@ void G_DoPlayDemo(char *defdemoname)
 	memset(playeringame,0,sizeof(playeringame));
 	playeringame[0] = true;
 	P_SetRandSeed(randseed);
-	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
+	G_InitNew(G_BuildMapName(gamemap), false, false, true, true, false);
 
 	// Set color
 	players[0].skincolor = skins[players[0].skin].prefcolor;
@@ -2178,7 +2178,7 @@ void G_AddGhost(char *defdemoname)
 	ghosts = gh;
 
 	gh->version = ghostversion;
-	mthing = playerstarts[0];
+	mthing = world->playerstarts[0];
 	I_Assert(mthing);
 	{ // A bit more complex than P_SpawnPlayer because ghosts aren't solid and won't just push themselves out of the ceiling.
 		fixed_t z,f,c;

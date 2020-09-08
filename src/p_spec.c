@@ -45,10 +45,6 @@
 // Not sure if this is necessary, but it was in w_wad.c, so I'm putting it here too -Shadow Hog
 #include <errno.h>
 
-mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
-mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
-mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
-
 // Amount (dx, dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
 
@@ -460,7 +456,7 @@ static inline void P_FindAnimatedFlat(INT32 animnum)
 	lumpnum_t startflatnum, endflatnum;
 	levelflat_t *foundflats;
 
-	foundflats = levelflats;
+	foundflats = world->flats;
 	startflatnum = anims[animnum].basepic;
 	endflatnum = anims[animnum].picnum;
 
@@ -472,7 +468,7 @@ static inline void P_FindAnimatedFlat(INT32 animnum)
 	//
 	// now search through the levelflats if this anim flat sequence is used
 	//
-	for (i = 0; i < numlevelflats; i++, foundflats++)
+	for (i = 0; i < world->numflats; i++, foundflats++)
 	{
 		// is that levelflat from the flat anim sequence ?
 		if ((anims[animnum].istexture) && (foundflats->type == LEVELFLAT_TEXTURE)
@@ -1501,22 +1497,22 @@ void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean e
   * \sa P_FindSectorFromTag, P_ChangeSectorTag
   * \author Lee Killough
   */
-static inline void P_InitTagLists(void)
+void P_InitTagLists(void)
 {
-	register size_t i;
+	size_t i;
 
-	for (i = numsectors - 1; i != (size_t)-1; i--)
+	for (i = world->numsectors - 1; i != (size_t)-1; i--)
 	{
-		size_t j = (unsigned)sectors[i].tag % numsectors;
-		sectors[i].nexttag = sectors[j].firsttag;
-		sectors[j].firsttag = (INT32)i;
+		size_t j = (unsigned)world->sectors[i].tag % world->numsectors;
+		world->sectors[i].nexttag = world->sectors[j].firsttag;
+		world->sectors[j].firsttag = (INT32)i;
 	}
 
-	for (i = numlines - 1; i != (size_t)-1; i--)
+	for (i = world->numlines - 1; i != (size_t)-1; i--)
 	{
-		size_t j = (unsigned)lines[i].tag % numlines;
-		lines[i].nexttag = lines[j].firsttag;
-		lines[j].firsttag = (INT32)i;
+		size_t j = (unsigned)world->lines[i].tag % world->numlines;
+		world->lines[i].nexttag = world->lines[j].firsttag;
+		world->lines[j].firsttag = (INT32)i;
 	}
 }
 
@@ -3493,18 +3489,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (!(line->flags & ML_EFFECT4)) // Solid Midtexture turns off viewpoint setting
 					{
 						if (viewid >= 0 && viewid < 16)
-							skyboxmo[0] = skyboxviewpnts[viewid];
+							world->skyboxmo[0] = world->skyboxviewpnts[viewid];
 						else
-							skyboxmo[0] = NULL;
+							world->skyboxmo[0] = NULL;
 					}
 
 					// set centerpoint mobj
 					if (line->flags & ML_BLOCKMONSTERS) // Block Enemies turns ON centerpoint setting
 					{
 						if (centerid >= 0 && centerid < 16)
-							skyboxmo[1] = skyboxcenterpnts[centerid];
+							world->skyboxmo[1] = world->skyboxcenterpnts[centerid];
 						else
-							skyboxmo[1] = NULL;
+							world->skyboxmo[1] = NULL;
 					}
 				}
 
@@ -5106,7 +5102,7 @@ DoneSection2:
 					player->mo->y = resulthigh.y;
 					player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
 				}
-				else if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == numwaypoints[sequence] - 1)
+				else if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == world->numwaypoints[sequence] - 1)
 				{
 					closest = waypointmid;
 					player->mo->x = resultlow.x;
@@ -5498,8 +5494,8 @@ void P_UpdateSpecials(void)
 	/// \todo do not check the non-animate flat.. link the animated ones?
 	/// \note its faster than the original anywaysince it animates only
 	///    flats used in the level, and there's usually very few of them
-	foundflats = levelflats;
-	for (j = 0; j < numlevelflats; j++, foundflats++)
+	foundflats = world->flats;
+	for (j = 0; j < world->numflats; j++, foundflats++)
 	{
 		if (foundflats->speed) // it is an animated flat
 		{
@@ -5668,6 +5664,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	fflr = Z_Calloc(sizeof (*fflr), PU_LEVEL, NULL);
 	fflr->secnum = sec2 - sectors;
 	fflr->target = sec;
+	fflr->world = &sec2->world;
 	fflr->bottomheight = &sec2->floorheight;
 	fflr->bottompic = &sec2->floorpic;
 	fflr->bottomxoffs = &sec2->floor_xoffs;
@@ -6145,7 +6142,8 @@ void P_InitSpecials(void)
 	sstimer = mapheaderinfo[gamemap-1]->sstimer*TICRATE + 6;
 	ssspheres = mapheaderinfo[gamemap-1]->ssspheres;
 
-	CheckForBustableBlocks = CheckForBouncySector = CheckForQuicksand = CheckForMarioBlocks = CheckForFloatBob = CheckForReverseGravity = false;
+	if (numworlds < 2)
+		CheckForBustableBlocks = CheckForBouncySector = CheckForQuicksand = CheckForMarioBlocks = CheckForFloatBob = CheckForReverseGravity = false;
 
 	// Set curWeather
 	switch (mapheaderinfo[gamemap-1]->weather)
@@ -6164,8 +6162,6 @@ void P_InitSpecials(void)
 
 	// Set globalweather
 	globalweather = mapheaderinfo[gamemap-1]->weather;
-
-	P_InitTagLists();   // Create xref tables for tags
 }
 
 static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs)

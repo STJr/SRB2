@@ -2126,7 +2126,7 @@ static int lib_pSetSkyboxMobj(lua_State *L)
 		return luaL_error(L, "skybox mobj index %d is out of range for P_SetSkyboxMobj argument #2 (expected 0 or 1)", w);
 
 	if (!user || P_IsLocalPlayer(user))
-		skyboxmo[w] = mo;
+		world->skyboxmo[w] = mo;
 	return 0;
 }
 

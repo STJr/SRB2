@@ -358,8 +358,6 @@ boolean EV_DoPolyObjFade(polyfadedata_t *);
 // External Variables
 //
 
-extern polyobj_t *PolyObjects;
-extern INT32 numPolyObjects;
 extern polymaplink_t **polyblocklinks; // polyobject blockmap
 
 #endif

@@ -14,6 +14,7 @@
 #include "doomtype.h"
 #include "d_player.h"
 #include "g_state.h"
+#include "p_world.h"
 
 #include "blua/lua.h"
 #include "blua/lualib.h"
@@ -48,8 +49,8 @@ fixed_t LUA_EvalMath(const char *word);
 void LUA_PushLightUserdata(lua_State *L, void *data, const char *meta);
 void LUA_PushUserdata(lua_State *L, void *data, const char *meta);
 void LUA_InvalidateUserdata(void *data);
-void LUA_InvalidateLevel(void);
-void LUA_InvalidateMapthings(void);
+void LUA_InvalidateLevel(world_t *w);
+void LUA_InvalidateMapthings(world_t *w);
 void LUA_InvalidatePlayer(player_t *player);
 void LUA_Step(void);
 void LUA_Archive(void);

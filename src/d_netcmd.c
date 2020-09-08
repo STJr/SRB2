@@ -469,6 +469,8 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_CLEARSCORES, Got_Clearscores);
 	COM_AddCommand("clearscores", Command_Clearscores_f);
 	COM_AddCommand("map", Command_Map_f);
+	COM_AddCommand("switchworld", Command_Switchworld_f);
+	COM_AddCommand("listworlds", Command_Listworlds_f);
 
 	COM_AddCommand("exitgame", Command_ExitGame_f);
 	COM_AddCommand("retry", Command_Retry_f);
@@ -1690,7 +1692,7 @@ static void Command_StopMovie_f(void)
 	M_StopMovie();
 }
 
-INT32 mapchangepending = 0;
+boolean mapchangepending = false;
 
 /** Runs a map change.
   * The supplied data are assumed to be good. If provided by a user, they will
@@ -1705,6 +1707,7 @@ INT32 mapchangepending = 0;
   *
   * \param mapnum          Map number to change to.
   * \param gametype        Gametype to switch to.
+  * \param addworld        Loads a separate world.
   * \param pultmode        Is this 'Ultimate Mode'?
   * \param resetplayers    1 to reset player scores and lives and such, 0 not to.
   * \param delay           Determines how the function will be executed: 0 to do
@@ -1714,7 +1717,7 @@ INT32 mapchangepending = 0;
   * \sa D_GameTypeChanged, Command_Map_f
   * \author Graue <graue@oceanbase.org>
   */
-void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean resetplayers, INT32 delay, boolean skipprecutscene, boolean FLS)
+void D_MapChange(INT32 mapnum, INT32 newgametype, boolean addworld, boolean pultmode, boolean resetplayers, INT32 delay, boolean skipprecutscene, boolean FLS)
 {
 	static char buf[2+MAX_WADPATH+1+4];
 	static char *buf_p = buf;
@@ -1765,6 +1768,8 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 			flags |= 1<<2;
 		if (FLS)
 			flags |= 1<<3;
+		if (addworld)
+			flags |= 1<<4;
 		WRITEUINT8(buf_p, flags);
 
 		// new gametype value
@@ -1774,10 +1779,10 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	}
 
 	if (delay == 1)
-		mapchangepending = 1;
+		mapchangepending = true;
 	else
 	{
-		mapchangepending = 0;
+		mapchangepending = false;
 		// spawn the server if needed
 		// reset players if there is a new one
 		if (!IsPlayerAdmin(consoleplayer))
@@ -1843,6 +1848,7 @@ static void Command_Map_f(void)
 	size_t option_gametype;
 	const char *gametypename;
 	boolean newresetplayers;
+	boolean addworld;
 
 	boolean mustmodifygame;
 
@@ -1864,6 +1870,7 @@ static void Command_Map_f(void)
 	option_force    =   COM_CheckPartialParm("-f");
 	option_gametype =   COM_CheckPartialParm("-g");
 	newresetplayers = ! COM_CheckParm("-noresetplayers");
+	addworld        =   COM_CheckParm("-addworld");
 
 	mustmodifygame =
 		!( netgame     || multiplayer ) &&
@@ -2020,7 +2027,7 @@ static void Command_Map_f(void)
 	}
 	tutorialmode = false; // warping takes us out of tutorial mode
 
-	D_MapChange(newmapnum, newgametype, false, newresetplayers, 0, false, fromlevelselect);
+	D_MapChange(newmapnum, newgametype, addworld, false, newresetplayers, 0, false, fromlevelselect);
 
 	Z_Free(realmapname);
 }
@@ -2034,13 +2041,19 @@ static void Command_Map_f(void)
   */
 static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 {
+	player_t *player;
+	boolean addworld;
 	char mapname[MAX_WADPATH+1];
 	UINT8 flags;
 	INT32 resetplayer = 1, lastgametype;
 	UINT8 skipprecutscene, FLS;
 	INT16 mapnumber;
 
-	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
+	flags = READUINT8(*cp);
+
+	addworld = ((flags & (1<<4)) != 0);
+
+	if (!addworld && playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
 		CONS_Alert(CONS_WARNING, M_GetText("Illegal map change received from %s\n"), player_names[playernum]);
 		if (server)
@@ -2048,10 +2061,10 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
+	player = &players[playernum];
+
 	if (chmappending)
 		chmappending--;
-
-	flags = READUINT8(*cp);
 
 	ultimatemode = ((flags & 1) != 0);
 	if (netgame || multiplayer)
@@ -2103,7 +2116,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	mapnumber = M_MapNumber(mapname[3], mapname[4]);
 	LUAh_MapChange(mapnumber);
 
-	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene, FLS);
+	G_InitNew(mapname, addworld, ultimatemode, resetplayer, skipprecutscene, FLS);
 	if (demoplayback && !timingdemo)
 		precache = true;
 	if (timingdemo)

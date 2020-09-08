@@ -20,6 +20,7 @@
 #include "p_setup.h"
 #include "p_spec.h"
 #include "p_saveg.h"
+#include "p_world.h"
 
 #include "i_sound.h" // for I_PlayCD()..
 #include "i_video.h" // for I_FinishUpdate()..
@@ -136,23 +137,11 @@ mobj_t **blocklinks;
 //
 UINT8 *rejectmatrix;
 
-// Maintain single and multi player starting spots.
-INT32 numdmstarts, numcoopstarts, numredctfstarts, numbluectfstarts;
-
-mapthing_t *deathmatchstarts[MAX_DM_STARTS];
-mapthing_t *playerstarts[MAXPLAYERS];
-mapthing_t *bluectfstarts[MAXPLAYERS];
-mapthing_t *redctfstarts[MAXPLAYERS];
-
-// Maintain waypoints
-mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
-UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
-
 void P_AddWaypoint(UINT8 sequence, UINT8 id, mobj_t *waypoint)
 {
-	waypoints[sequence][id] = waypoint;
-	if (id >= numwaypoints[sequence])
-		numwaypoints[sequence] = id + 1;
+	world->waypoints[sequence][id] = waypoint;
+	if (id >= world->numwaypoints[sequence])
+		world->numwaypoints[sequence] = id + 1;
 }
 
 static void P_ResetWaypoints(void)
@@ -160,21 +149,21 @@ static void P_ResetWaypoints(void)
 	UINT16 sequence, id;
 	for (sequence = 0; sequence < NUMWAYPOINTSEQUENCES; sequence++)
 	{
-		for (id = 0; id < numwaypoints[sequence]; id++)
-			waypoints[sequence][id] = NULL;
+		for (id = 0; id < world->numwaypoints[sequence]; id++)
+			world->waypoints[sequence][id] = NULL;
 
-		numwaypoints[sequence] = 0;
+		world->numwaypoints[sequence] = 0;
 	}
 }
 
 mobj_t *P_GetFirstWaypoint(UINT8 sequence)
 {
-	return waypoints[sequence][0];
+	return world->waypoints[sequence][0];
 }
 
 mobj_t *P_GetLastWaypoint(UINT8 sequence)
 {
-	return waypoints[sequence][numwaypoints[sequence] - 1];
+	return world->waypoints[sequence][world->numwaypoints[sequence] - 1];
 }
 
 mobj_t *P_GetPreviousWaypoint(mobj_t *current, boolean wrap)
@@ -187,12 +176,12 @@ mobj_t *P_GetPreviousWaypoint(mobj_t *current, boolean wrap)
 		if (!wrap)
 			return NULL;
 
-		id = numwaypoints[sequence] - 1;
+		id = world->numwaypoints[sequence] - 1;
 	}
 	else
 		id--;
 
-	return waypoints[sequence][id];
+	return world->waypoints[sequence][id];
 }
 
 mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap)
@@ -200,7 +189,7 @@ mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap)
 	UINT8 sequence = current->threshold;
 	UINT8 id = current->health;
 
-	if (id == numwaypoints[sequence] - 1)
+	if (id == world->numwaypoints[sequence] - 1)
 	{
 		if (!wrap)
 			return NULL;
@@ -210,7 +199,7 @@ mobj_t *P_GetNextWaypoint(mobj_t *current, boolean wrap)
 	else
 		id++;
 
-	return waypoints[sequence][id];
+	return world->waypoints[sequence][id];
 }
 
 mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo)
@@ -220,9 +209,9 @@ mobj_t *P_GetClosestWaypoint(UINT8 sequence, mobj_t *mo)
 	fixed_t bestdist = 0;
 	fixed_t curdist;
 
-	for (wp = 0; wp < numwaypoints[sequence]; wp++)
+	for (wp = 0; wp < world->numwaypoints[sequence]; wp++)
 	{
-		mo2 = waypoints[sequence][wp];
+		mo2 = world->waypoints[sequence][wp];
 
 		if (!mo2)
 			continue;
@@ -245,14 +234,14 @@ boolean P_IsDegeneratedWaypointSequence(UINT8 sequence)
 	mobj_t *first, *waypoint;
 	UINT8 wp;
 
-	if (numwaypoints[sequence] <= 1)
+	if (world->numwaypoints[sequence] <= 1)
 		return true;
 
-	first = waypoints[sequence][0];
+	first = world->waypoints[sequence][0];
 
-	for (wp = 1; wp < numwaypoints[sequence]; wp++)
+	for (wp = 1; wp < world->numwaypoints[sequence]; wp++)
 	{
-		waypoint = waypoints[sequence][wp];
+		waypoint = world->waypoints[sequence][wp];
 
 		if (!waypoint)
 			continue;
@@ -508,8 +497,6 @@ UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade)
 //
 #define MAXLEVELFLATS 256
 
-size_t numlevelflats;
-levelflat_t *levelflats;
 levelflat_t *foundflats;
 
 //SoM: Other files want this info.
@@ -520,11 +507,11 @@ size_t P_PrecacheLevelFlats(void)
 
 	//SoM: 4/18/2000: New flat code to make use of levelflats.
 	flatmemory = 0;
-	for (i = 0; i < numlevelflats; i++)
+	for (i = 0; i < world->numflats; i++)
 	{
-		if (levelflats[i].type == LEVELFLAT_FLAT)
+		if (world->flats[i].type == LEVELFLAT_FLAT)
 		{
-			lump = levelflats[i].u.flat.lumpnum;
+			lump = world->flats[i].u.flat.lumpnum;
 			if (devparm)
 				flatmemory += W_LumpLength(lump);
 			R_GetFlat(lump);
@@ -538,7 +525,7 @@ levelflat refers to an array of level flats,
 or NULL if we want to allocate it now.
 */
 static INT32
-Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
+Ploadflat (world_t *w, levelflat_t *levelflat, const char *flatname, boolean resize)
 {
 #ifndef NO_PNG_LUMPS
 	UINT8         buffer[8];
@@ -550,7 +537,7 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 	size_t i;
 
 	// Scan through the already found flats, return if it matches.
-	for (i = 0; i < numlevelflats; i++)
+	for (i = 0; i < w->numflats; i++)
 	{
 		if (strnicmp(levelflat[i].name, flatname, 8) == 0)
 			return i;
@@ -559,15 +546,15 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 	if (resize)
 	{
 		// allocate new flat memory
-		levelflats = Z_Realloc(levelflats, (numlevelflats + 1) * sizeof(*levelflats), PU_LEVEL, NULL);
-		levelflat  = levelflats + numlevelflats;
+		w->flats  = Z_Realloc(w->flats, (w->numflats + 1) * sizeof(*w->flats), PU_LEVEL, NULL);
+		levelflat = w->flats + w->numflats;
 	}
 	else
 	{
-		if (numlevelflats >= MAXLEVELFLATS)
+		if (w->numflats >= MAXLEVELFLATS)
 			I_Error("Too many flats in level\n");
 
-		levelflat += numlevelflats;
+		levelflat += w->numflats;
 	}
 
 	// Store the name.
@@ -624,17 +611,17 @@ flatfound:
 	}
 
 #ifndef ZDEBUG
-	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(numlevelflats)), levelflat->name);
+	CONS_Debug(DBG_SETUP, "flat #%03d: %s\n", atoi(sizeu1(world->numflats)), levelflat->name);
 #endif
 
-	return ( numlevelflats++ );
+	return ( w->numflats++ );
 }
 
 // Auxiliary function. Find a flat in the active wad files,
 // allocate an id for it, and set the levelflat (to speedup search)
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 {
-	return Ploadflat(levelflat, flatname, false);
+	return Ploadflat(world, levelflat, flatname, false);
 }
 
 // help function for Lua and $$$.sav reading
@@ -643,7 +630,13 @@ INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat)
 //
 INT32 P_AddLevelFlatRuntime(const char *flatname)
 {
-	return Ploadflat(levelflats, flatname, true);
+	return Ploadflat(world, world->flats, flatname, true);
+}
+
+// adds a level flat for a world
+INT32 P_AddLevelFlatForWorld(world_t *w, const char *flatname)
+{
+	return Ploadflat(w, world->flats, flatname, true);
 }
 
 // help function for $$$.sav checking
@@ -652,16 +645,16 @@ INT32 P_AddLevelFlatRuntime(const char *flatname)
 INT32 P_CheckLevelFlat(const char *flatname)
 {
 	size_t i;
-	levelflat_t *levelflat = levelflats;
+	levelflat_t *levelflat = world->flats;
 
 	//
 	//  scan through the already found flats
 	//
-	for (i = 0; i < numlevelflats; i++, levelflat++)
+	for (i = 0; i < world->numflats; i++, levelflat++)
 		if (strnicmp(levelflat->name,flatname,8)==0)
 			break;
 
-	if (i == numlevelflats)
+	if (i == world->numflats)
 		return 0; // ??? flat was not found, this should not happen!
 
 	// level flat id
@@ -853,7 +846,7 @@ static void P_SpawnMapThings(boolean spawnemblems)
 	mapthing_t *mt;
 
         // Spawn axis points first so they are at the front of the list for fast searching.
-	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	for (i = 0, mt = world->mapthings; i < world->nummapthings; i++, mt++)
 	{
 		switch (mt->type)
 		{
@@ -870,7 +863,7 @@ static void P_SpawnMapThings(boolean spawnemblems)
 
 	numhuntemeralds = 0;
 
-	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	for (i = 0, mt = world->mapthings; i < world->nummapthings; i++, mt++)
 	{
 		if (mt->type == 1700 // MT_AXIS
 			|| mt->type == 1701 // MT_AXISTRANSFER
@@ -914,8 +907,8 @@ void P_WriteThings(lumpnum_t lumpnum)
 		return;
 	}
 
-	mt = mapthings;
-	for (i = 0; i < nummapthings; i++, mt++)
+	mt = world->mapthings;
+	for (i = 0; i < world->nummapthings; i++, mt++)
 	{
 		WRITEINT16(savebuf_p, mt->x);
 		WRITEINT16(savebuf_p, mt->y);
@@ -945,11 +938,11 @@ void P_WriteThings(lumpnum_t lumpnum)
 static void P_LoadVertices(UINT8 *data)
 {
 	mapvertex_t *mv = (mapvertex_t *)data;
-	vertex_t *v = vertexes;
+	vertex_t *v = world->vertexes;
 	size_t i;
 
 	// Copy and convert vertex coordinates, internal representation as fixed.
-	for (i = 0; i < numvertexes; i++, v++, mv++)
+	for (i = 0; i < world->numvertexes; i++, v++, mv++)
 	{
 		v->x = SHORT(mv->x)<<FRACBITS;
 		v->y = SHORT(mv->y)<<FRACBITS;
@@ -960,6 +953,8 @@ static void P_LoadVertices(UINT8 *data)
 
 static void P_InitializeSector(sector_t *ss)
 {
+	ss->world = world;
+
 	ss->nexttag = ss->firsttag = -1;
 
 	memset(&ss->soundorg, 0, sizeof(ss->soundorg));
@@ -1018,11 +1013,11 @@ static void P_InitializeSector(sector_t *ss)
 static void P_LoadSectors(UINT8 *data)
 {
 	mapsector_t *ms = (mapsector_t *)data;
-	sector_t *ss = sectors;
+	sector_t *ss = world->sectors;
 	size_t i;
 
 	// For each counted sector, copy the sector raw data from our cache pointer ms, to the global table pointer ss.
-	for (i = 0; i < numsectors; i++, ss++, ms++)
+	for (i = 0; i < world->numsectors; i++, ss++, ms++)
 	{
 		ss->floorheight = SHORT(ms->floorheight)<<FRACBITS;
 		ss->ceilingheight = SHORT(ms->ceilingheight)<<FRACBITS;
@@ -1081,10 +1076,10 @@ static void P_InitializeLinedef(line_t *ld)
 	// cph 2006/09/30 - fix sidedef errors right away.
 	// cph 2002/07/20 - these errors are fatal if not fixed, so apply them
 	for (j = 0; j < 2; j++)
-		if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)numsides)
+		if (ld->sidenum[j] != 0xffff && ld->sidenum[j] >= (UINT16)world->numsides)
 		{
 			ld->sidenum[j] = 0xffff;
-			CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has out-of-range sidedef number\n", sizeu1((size_t)(ld - lines)));
+			CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has out-of-range sidedef number\n", sizeu1((size_t)(ld - world->lines)));
 		}
 
 	// killough 11/98: fix common wad errors (missing sidedefs):
@@ -1092,55 +1087,55 @@ static void P_InitializeLinedef(line_t *ld)
 	{
 		ld->sidenum[0] = 0;  // Substitute dummy sidedef for missing right side
 		// cph - print a warning about the bug
-		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s missing first sidedef\n", sizeu1((size_t)(ld - lines)));
+		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s missing first sidedef\n", sizeu1((size_t)(ld - world->lines)));
 	}
 
 	if ((ld->sidenum[1] == 0xffff) && (ld->flags & ML_TWOSIDED))
 	{
 		ld->flags &= ~ML_TWOSIDED;  // Clear 2s flag for missing left side
 		// cph - print a warning about the bug
-		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1((size_t)(ld - lines)));
+		CONS_Debug(DBG_SETUP, "P_InitializeLinedef: Linedef %s has two-sided flag set, but no second sidedef\n", sizeu1((size_t)(ld - world->lines)));
 	}
 
 	if (ld->sidenum[0] != 0xffff)
 	{
-		sides[ld->sidenum[0]].special = ld->special;
-		sides[ld->sidenum[0]].line = ld;
+		world->sides[ld->sidenum[0]].special = ld->special;
+		world->sides[ld->sidenum[0]].line = ld;
 	}
 	if (ld->sidenum[1] != 0xffff)
 	{
-		sides[ld->sidenum[1]].special = ld->special;
-		sides[ld->sidenum[1]].line = ld;
+		world->sides[ld->sidenum[1]].special = ld->special;
+		world->sides[ld->sidenum[1]].line = ld;
 	}
 }
 
 static void P_SetLinedefV1(size_t i, UINT16 vertex_num)
 {
-	if (vertex_num >= numvertexes)
+	if (vertex_num >= world->numvertexes)
 	{
 		CONS_Debug(DBG_SETUP, "P_SetLinedefV1: linedef %s has out-of-range v1 num %u\n", sizeu1(i), vertex_num);
 		vertex_num = 0;
 	}
-	lines[i].v1 = &vertexes[vertex_num];
+	world->lines[i].v1 = &world->vertexes[vertex_num];
 }
 
 static void P_SetLinedefV2(size_t i, UINT16 vertex_num)
 {
-	if (vertex_num >= numvertexes)
+	if (vertex_num >= world->numvertexes)
 	{
 		CONS_Debug(DBG_SETUP, "P_SetLinedefV2: linedef %s has out-of-range v2 num %u\n", sizeu1(i), vertex_num);
 		vertex_num = 0;
 	}
-	lines[i].v2 = &vertexes[vertex_num];
+	world->lines[i].v2 = &world->vertexes[vertex_num];
 }
 
 static void P_LoadLinedefs(UINT8 *data)
 {
 	maplinedef_t *mld = (maplinedef_t *)data;
-	line_t *ld = lines;
+	line_t *ld = world->lines;
 	size_t i;
 
-	for (i = 0; i < numlines; i++, mld++, ld++)
+	for (i = 0; i < world->numlines; i++, mld++, ld++)
 	{
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
@@ -1158,20 +1153,20 @@ static void P_LoadLinedefs(UINT8 *data)
 static void P_SetSidedefSector(size_t i, UINT16 sector_num)
 {
 	// cph 2006/09/30 - catch out-of-range sector numbers; use sector 0 instead
-	if (sector_num >= numsectors)
+	if (sector_num >= world->numsectors)
 	{
 		CONS_Debug(DBG_SETUP, "P_SetSidedefSector: sidedef %s has out-of-range sector num %u\n", sizeu1(i), sector_num);
 		sector_num = 0;
 	}
-	sides[i].sector = &sectors[sector_num];
+	world->sides[i].sector = &world->sectors[sector_num];
 }
 
 static void P_InitializeSidedef(side_t *sd)
 {
 	if (!sd->line)
 	{
-		CONS_Debug(DBG_SETUP, "P_LoadSidedefs: Sidedef %s is not used by any linedef\n", sizeu1((size_t)(sd - sides)));
-		sd->line = &lines[0];
+		CONS_Debug(DBG_SETUP, "P_LoadSidedefs: Sidedef %s is not used by any linedef\n", sizeu1((size_t)(sd - world->sides)));
+		sd->line = &world->lines[0];
 		sd->special = sd->line->special;
 	}
 
@@ -1182,10 +1177,10 @@ static void P_InitializeSidedef(side_t *sd)
 static void P_LoadSidedefs(UINT8 *data)
 {
 	mapsidedef_t *msd = (mapsidedef_t*)data;
-	side_t *sd = sides;
+	side_t *sd = world->sides;
 	size_t i;
 
-	for (i = 0; i < numsides; i++, sd++, msd++)
+	for (i = 0; i < world->numsides; i++, sd++, msd++)
 	{
 		INT16 textureoffset = SHORT(msd->textureoffset);
 		boolean isfrontside;
@@ -1362,7 +1357,7 @@ static void P_LoadThings(UINT8 *data)
 	mapthing_t *mt;
 	size_t i;
 
-	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	for (i = 0, mt = world->mapthings; i < world->nummapthings; i++, mt++)
 	{
 		mt->x = READINT16(data);
 		mt->y = READINT16(data);
@@ -1396,11 +1391,11 @@ static boolean TextmapCount(UINT8 *data, size_t size)
 	char *tkn = M_GetToken((char *)data);
 	UINT8 brackets = 0;
 
-	nummapthings = 0;
-	numlines = 0;
-	numsides = 0;
-	numvertexes = 0;
-	numsectors = 0;
+	world->nummapthings = 0;
+	world->numlines = 0;
+	world->numsides = 0;
+	world->numvertexes = 0;
+	world->numsectors = 0;
 
 	// Look for namespace at the beginning.
 	if (!fastcmp(tkn, "namespace"))
@@ -1430,15 +1425,15 @@ static boolean TextmapCount(UINT8 *data, size_t size)
 			brackets++;
 		// Check for valid fields.
 		else if (fastcmp(tkn, "thing"))
-			mapthingsPos[nummapthings++] = M_GetTokenPos();
+			mapthingsPos[world->nummapthings++] = M_GetTokenPos();
 		else if (fastcmp(tkn, "linedef"))
-			linesPos[numlines++] = M_GetTokenPos();
+			linesPos[world->numlines++] = M_GetTokenPos();
 		else if (fastcmp(tkn, "sidedef"))
-			sidesPos[numsides++] = M_GetTokenPos();
+			sidesPos[world->numsides++] = M_GetTokenPos();
 		else if (fastcmp(tkn, "vertex"))
-			vertexesPos[numvertexes++] = M_GetTokenPos();
+			vertexesPos[world->numvertexes++] = M_GetTokenPos();
 		else if (fastcmp(tkn, "sector"))
-			sectorsPos[numsectors++] = M_GetTokenPos();
+			sectorsPos[world->numsectors++] = M_GetTokenPos();
 		else
 			CONS_Alert(CONS_NOTICE, "Unknown field '%s'.\n", tkn);
 
@@ -1460,141 +1455,141 @@ static boolean TextmapCount(UINT8 *data, size_t size)
 static void ParseTextmapVertexParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "x"))
-		vertexes[i].x = FLOAT_TO_FIXED(atof(val));
+		world->vertexes[i].x = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "y"))
-		vertexes[i].y = FLOAT_TO_FIXED(atof(val));
+		world->vertexes[i].y = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "zfloor"))
 	{
-		vertexes[i].floorz = FLOAT_TO_FIXED(atof(val));
-		vertexes[i].floorzset = true;
+		world->vertexes[i].floorz = FLOAT_TO_FIXED(atof(val));
+		world->vertexes[i].floorzset = true;
 	}
 	else if (fastcmp(param, "zceiling"))
 	{
-		vertexes[i].ceilingz = FLOAT_TO_FIXED(atof(val));
-		vertexes[i].ceilingzset = true;
+		world->vertexes[i].ceilingz = FLOAT_TO_FIXED(atof(val));
+		world->vertexes[i].ceilingzset = true;
 	}
 }
 
 static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "heightfloor"))
-		sectors[i].floorheight = atol(val) << FRACBITS;
+		world->sectors[i].floorheight = atol(val) << FRACBITS;
 	else if (fastcmp(param, "heightceiling"))
-		sectors[i].ceilingheight = atol(val) << FRACBITS;
+		world->sectors[i].ceilingheight = atol(val) << FRACBITS;
 	if (fastcmp(param, "texturefloor"))
-		sectors[i].floorpic = P_AddLevelFlat(val, foundflats);
+		world->sectors[i].floorpic = P_AddLevelFlat(val, foundflats);
 	else if (fastcmp(param, "textureceiling"))
-		sectors[i].ceilingpic = P_AddLevelFlat(val, foundflats);
+		world->sectors[i].ceilingpic = P_AddLevelFlat(val, foundflats);
 	else if (fastcmp(param, "lightlevel"))
-		sectors[i].lightlevel = atol(val);
+		world->sectors[i].lightlevel = atol(val);
 	else if (fastcmp(param, "special"))
-		sectors[i].special = atol(val);
+		world->sectors[i].special = atol(val);
 	else if (fastcmp(param, "id"))
-		sectors[i].tag = atol(val);
+		world->sectors[i].tag = atol(val);
 	else if (fastcmp(param, "xpanningfloor"))
-		sectors[i].floor_xoffs = FLOAT_TO_FIXED(atof(val));
+		world->sectors[i].floor_xoffs = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningfloor"))
-		sectors[i].floor_yoffs = FLOAT_TO_FIXED(atof(val));
+		world->sectors[i].floor_yoffs = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "xpanningceiling"))
-		sectors[i].ceiling_xoffs = FLOAT_TO_FIXED(atof(val));
+		world->sectors[i].ceiling_xoffs = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningceiling"))
-		sectors[i].ceiling_yoffs = FLOAT_TO_FIXED(atof(val));
+		world->sectors[i].ceiling_yoffs = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "rotationfloor"))
-		sectors[i].floorpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+		world->sectors[i].floorpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
-		sectors[i].ceilingpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+		world->sectors[i].ceilingpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "offsetx"))
-		sides[i].textureoffset = atol(val)<<FRACBITS;
+		world->sides[i].textureoffset = atol(val)<<FRACBITS;
 	else if (fastcmp(param, "offsety"))
-		sides[i].rowoffset = atol(val)<<FRACBITS;
+		world->sides[i].rowoffset = atol(val)<<FRACBITS;
 	else if (fastcmp(param, "texturetop"))
-		sides[i].toptexture = R_TextureNumForName(val);
+		world->sides[i].toptexture = R_TextureNumForName(val);
 	else if (fastcmp(param, "texturebottom"))
-		sides[i].bottomtexture = R_TextureNumForName(val);
+		world->sides[i].bottomtexture = R_TextureNumForName(val);
 	else if (fastcmp(param, "texturemiddle"))
-		sides[i].midtexture = R_TextureNumForName(val);
+		world->sides[i].midtexture = R_TextureNumForName(val);
 	else if (fastcmp(param, "sector"))
 		P_SetSidedefSector(i, atol(val));
 	else if (fastcmp(param, "repeatcnt"))
-		sides[i].repeatcnt = atol(val);
+		world->sides[i].repeatcnt = atol(val);
 }
 
 static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "id"))
-		lines[i].tag = atol(val);
+		world->lines[i].tag = atol(val);
 	else if (fastcmp(param, "special"))
-		lines[i].special = atol(val);
+		world->lines[i].special = atol(val);
 	else if (fastcmp(param, "v1"))
 		P_SetLinedefV1(i, atol(val));
 	else if (fastcmp(param, "v2"))
 		P_SetLinedefV2(i, atol(val));
 	else if (fastcmp(param, "sidefront"))
-		lines[i].sidenum[0] = atol(val);
+		world->lines[i].sidenum[0] = atol(val);
 	else if (fastcmp(param, "sideback"))
-		lines[i].sidenum[1] = atol(val);
+		world->lines[i].sidenum[1] = atol(val);
 
 	// Flags
 	else if (fastcmp(param, "blocking") && fastcmp("true", val))
-		lines[i].flags |= ML_IMPASSIBLE;
+		world->lines[i].flags |= ML_IMPASSIBLE;
 	else if (fastcmp(param, "blockmonsters") && fastcmp("true", val))
-		lines[i].flags |= ML_BLOCKMONSTERS;
+		world->lines[i].flags |= ML_BLOCKMONSTERS;
 	else if (fastcmp(param, "twosided") && fastcmp("true", val))
-		lines[i].flags |= ML_TWOSIDED;
+		world->lines[i].flags |= ML_TWOSIDED;
 	else if (fastcmp(param, "dontpegtop") && fastcmp("true", val))
-		lines[i].flags |= ML_DONTPEGTOP;
+		world->lines[i].flags |= ML_DONTPEGTOP;
 	else if (fastcmp(param, "dontpegbottom") && fastcmp("true", val))
-		lines[i].flags |= ML_DONTPEGBOTTOM;
+		world->lines[i].flags |= ML_DONTPEGBOTTOM;
 	else if (fastcmp(param, "skewtd") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT1;
+		world->lines[i].flags |= ML_EFFECT1;
 	else if (fastcmp(param, "noclimb") && fastcmp("true", val))
-		lines[i].flags |= ML_NOCLIMB;
+		world->lines[i].flags |= ML_NOCLIMB;
 	else if (fastcmp(param, "noskew") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT2;
+		world->lines[i].flags |= ML_EFFECT2;
 	else if (fastcmp(param, "midpeg") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT3;
+		world->lines[i].flags |= ML_EFFECT3;
 	else if (fastcmp(param, "midsolid") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT4;
+		world->lines[i].flags |= ML_EFFECT4;
 	else if (fastcmp(param, "wrapmidtex") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT5;
+		world->lines[i].flags |= ML_EFFECT5;
 	else if (fastcmp(param, "effect6") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT6;
+		world->lines[i].flags |= ML_EFFECT6;
 	else if (fastcmp(param, "nonet") && fastcmp("true", val))
-		lines[i].flags |= ML_NONET;
+		world->lines[i].flags |= ML_NONET;
 	else if (fastcmp(param, "netonly") && fastcmp("true", val))
-		lines[i].flags |= ML_NETONLY;
+		world->lines[i].flags |= ML_NETONLY;
 	else if (fastcmp(param, "bouncy") && fastcmp("true", val))
-		lines[i].flags |= ML_BOUNCY;
+		world->lines[i].flags |= ML_BOUNCY;
 	else if (fastcmp(param, "transfer") && fastcmp("true", val))
-		lines[i].flags |= ML_TFERLINE;
+		world->lines[i].flags |= ML_TFERLINE;
 }
 
 static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "x"))
-		mapthings[i].x = atol(val);
+		world->mapthings[i].x = atol(val);
 	else if (fastcmp(param, "y"))
-		mapthings[i].y = atol(val);
+		world->mapthings[i].y = atol(val);
 	else if (fastcmp(param, "height"))
-		mapthings[i].z = atol(val);
+		world->mapthings[i].z = atol(val);
 	else if (fastcmp(param, "angle"))
-		mapthings[i].angle = atol(val);
+		world->mapthings[i].angle = atol(val);
 	else if (fastcmp(param, "type"))
-		mapthings[i].type = atol(val);
+		world->mapthings[i].type = atol(val);
 
 	// Flags
 	else if (fastcmp(param, "extra") && fastcmp("true", val))
-		mapthings[i].options |= MTF_EXTRA;
+		world->mapthings[i].options |= MTF_EXTRA;
 	else if (fastcmp(param, "flip") && fastcmp("true", val))
-		mapthings[i].options |= MTF_OBJECTFLIP;
+		world->mapthings[i].options |= MTF_OBJECTFLIP;
 	else if (fastcmp(param, "special") && fastcmp("true", val))
-		mapthings[i].options |= MTF_OBJECTSPECIAL;
+		world->mapthings[i].options |= MTF_OBJECTSPECIAL;
 	else if (fastcmp(param, "ambush") && fastcmp("true", val))
-		mapthings[i].options |= MTF_AMBUSH;
+		world->mapthings[i].options |= MTF_AMBUSH;
 }
 
 /** From a given position table, run a specified parser function through a {}-encapsuled text.
@@ -1676,7 +1671,7 @@ static void P_LoadTextmap(void)
 	/// from the textmap, and therefore we have to account for it by
 	/// preemptively setting that value beforehand.
 
-	for (i = 0, vt = vertexes; i < numvertexes; i++, vt++)
+	for (i = 0, vt = world->vertexes; i < world->numvertexes; i++, vt++)
 	{
 		// Defaults.
 		vt->x = vt->y = INT32_MAX;
@@ -1691,7 +1686,7 @@ static void P_LoadTextmap(void)
 			I_Error("P_LoadTextmap: vertex %s has no y value set!\n", sizeu1(i));
 	}
 
-	for (i = 0, sc = sectors; i < numsectors; i++, sc++)
+	for (i = 0, sc = world->sectors; i < world->numsectors; i++, sc++)
 	{
 		// Defaults.
 		sc->floorheight = 0;
@@ -1715,7 +1710,7 @@ static void P_LoadTextmap(void)
 		TextmapFixFlatOffsets(sc);
 	}
 
-	for (i = 0, ld = lines; i < numlines; i++, ld++)
+	for (i = 0, ld = world->lines; i < world->numlines; i++, ld++)
 	{
 		// Defaults.
 		ld->v1 = ld->v2 = NULL;
@@ -1737,7 +1732,7 @@ static void P_LoadTextmap(void)
 		P_InitializeLinedef(ld);
 	}
 
-	for (i = 0, sd = sides; i < numsides; i++, sd++)
+	for (i = 0, sd = world->sides; i < world->numsides; i++, sd++)
 	{
 		// Defaults.
 		sd->textureoffset = 0;
@@ -1756,7 +1751,7 @@ static void P_LoadTextmap(void)
 		P_InitializeSidedef(sd);
 	}
 
-	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
+	for (i = 0, mt = world->mapthings; i < world->nummapthings; i++, mt++)
 	{
 		// Defaults.
 		mt->x = mt->y = 0;
@@ -1773,12 +1768,12 @@ static void P_LoadTextmap(void)
 
 static void P_ProcessLinedefsAfterSidedefs(void)
 {
-	size_t i = numlines;
-	register line_t *ld = lines;
+	size_t i = world->numlines;
+	register line_t *ld = world->lines;
 	for (; i--; ld++)
 	{
-		ld->frontsector = sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
-		ld->backsector = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
+		ld->frontsector = world->sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
+		ld->backsector = ld->sidenum[1] != 0xffff ? world->sides[ld->sidenum[1]].sector : 0;
 
 		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
 		switch (ld->special)
@@ -1787,15 +1782,15 @@ static void P_ProcessLinedefsAfterSidedefs(void)
 		case 332: // Trigger linedef executor: Skin - Each time
 		case 333: // Trigger linedef executor: Skin - Once
 		case 443: // Calls a named Lua function
-			if (sides[ld->sidenum[0]].text)
+			if (world->sides[ld->sidenum[0]].text)
 			{
-				size_t len = strlen(sides[ld->sidenum[0]].text) + 1;
+				size_t len = strlen(world->sides[ld->sidenum[0]].text) + 1;
 				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
-					len += strlen(sides[ld->sidenum[1]].text);
+					len += strlen(world->sides[ld->sidenum[1]].text);
 				ld->text = Z_Malloc(len, PU_LEVEL, NULL);
-				M_Memcpy(ld->text, sides[ld->sidenum[0]].text, strlen(sides[ld->sidenum[0]].text) + 1);
-				if (ld->sidenum[1] != 0xffff && sides[ld->sidenum[1]].text)
-					M_Memcpy(ld->text + strlen(ld->text) + 1, sides[ld->sidenum[1]].text, strlen(sides[ld->sidenum[1]].text) + 1);
+				M_Memcpy(ld->text, world->sides[ld->sidenum[0]].text, strlen(world->sides[ld->sidenum[0]].text) + 1);
+				if (ld->sidenum[1] != 0xffff && world->sides[ld->sidenum[1]].text)
+					M_Memcpy(ld->text + strlen(ld->text) + 1, world->sides[ld->sidenum[1]].text, strlen(world->sides[ld->sidenum[1]].text) + 1);
 			}
 			break;
 		}
@@ -1833,27 +1828,27 @@ static boolean P_LoadMapData(const virtres_t *virt)
 			I_Error("LINEDEFS lump not found");
 
 		// Traditional doom map format just assumes the number of elements from the lump sizes.
-		numvertexes  = virtvertexes->size / sizeof (mapvertex_t);
-		numsectors   = virtsectors->size  / sizeof (mapsector_t);
-		numsides     = virtsidedefs->size / sizeof (mapsidedef_t);
-		numlines     = virtlinedefs->size / sizeof (maplinedef_t);
-		nummapthings = virtthings->size   / (5 * sizeof (INT16));
+		world->numvertexes  = virtvertexes->size / sizeof (mapvertex_t);
+		world->numsectors   = virtsectors->size  / sizeof (mapsector_t);
+		world->numsides     = virtsidedefs->size / sizeof (mapsidedef_t);
+		world->numlines     = virtlinedefs->size / sizeof (maplinedef_t);
+		world->nummapthings = virtthings->size   / (5 * sizeof (INT16));
 	}
 
-	if (numvertexes <= 0)
+	if (world->numvertexes <= 0)
 		I_Error("Level has no vertices");
-	if (numsectors <= 0)
+	if (world->numsectors <= 0)
 		I_Error("Level has no sectors");
-	if (numsides <= 0)
+	if (world->numsides <= 0)
 		I_Error("Level has no sidedefs");
-	if (numlines <= 0)
+	if (world->numlines <= 0)
 		I_Error("Level has no linedefs");
 
-	vertexes  = Z_Calloc(numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
-	sectors   = Z_Calloc(numsectors * sizeof (*sectors), PU_LEVEL, NULL);
-	sides     = Z_Calloc(numsides * sizeof (*sides), PU_LEVEL, NULL);
-	lines     = Z_Calloc(numlines * sizeof (*lines), PU_LEVEL, NULL);
-	mapthings = Z_Calloc(nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
+	world->vertexes  = Z_Calloc(world->numvertexes * sizeof (*vertexes), PU_LEVEL, NULL);
+	world->sectors   = Z_Calloc(world->numsectors * sizeof (*sectors), PU_LEVEL, NULL);
+	world->sides     = Z_Calloc(world->numsides * sizeof (*sides), PU_LEVEL, NULL);
+	world->lines     = Z_Calloc(world->numlines * sizeof (*lines), PU_LEVEL, NULL);
+	world->mapthings = Z_Calloc(world->nummapthings * sizeof (*mapthings), PU_LEVEL, NULL);
 
 	// Allocate a big chunk of memory as big as our MAXLEVELFLATS limit.
 	//Fab : FIXME: allocate for whatever number of flats - 512 different flats per level should be plenty
@@ -1861,7 +1856,7 @@ static boolean P_LoadMapData(const virtres_t *virt)
 	if (foundflats == NULL)
 		I_Error("Ran out of memory while loading sectors\n");
 
-	numlevelflats = 0;
+	world->numflats = 0;
 
 	// Load map data.
 	if (textmap)
@@ -1880,10 +1875,10 @@ static boolean P_LoadMapData(const virtres_t *virt)
 	R_ClearTextureNumCache(true);
 
 	// set the sky flat num
-	skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
+	world->skyflatnum = P_AddLevelFlat(SKYFLATNAME, foundflats);
 
 	// copy table for global usage
-	levelflats = M_Memcpy(Z_Calloc(numlevelflats * sizeof (*levelflats), PU_LEVEL, NULL), foundflats, numlevelflats * sizeof (levelflat_t));
+	world->flats = M_Memcpy(Z_Calloc(world->numflats * sizeof (*world->flats), PU_LEVEL, NULL), foundflats, world->numflats * sizeof (levelflat_t));
 	free(foundflats);
 
 	// search for animated flats and set up
@@ -1904,10 +1899,10 @@ static void P_InitializeSubsector(subsector_t *ss)
 static inline void P_LoadSubsectors(UINT8 *data)
 {
 	mapsubsector_t *ms = (mapsubsector_t*)data;
-	subsector_t *ss = subsectors;
+	subsector_t *ss = world->subsectors;
 	size_t i;
 
-	for (i = 0; i < numsubsectors; i++, ss++, ms++)
+	for (i = 0; i < world->numsubsectors; i++, ss++, ms++)
 	{
 		ss->numlines = SHORT(ms->numsegs);
 		ss->firstline = SHORT(ms->firstseg);
@@ -1919,10 +1914,10 @@ static void P_LoadNodes(UINT8 *data)
 {
 	UINT8 j, k;
 	mapnode_t *mn = (mapnode_t*)data;
-	node_t *no = nodes;
+	node_t *no = world->nodes;
 	size_t i;
 
-	for (i = 0; i < numnodes; i++, no++, mn++)
+	for (i = 0; i < world->numnodes; i++, no++, mn++)
 	{
 		no->x = SHORT(mn->x)<<FRACBITS;
 		no->y = SHORT(mn->y)<<FRACBITS;
@@ -1972,10 +1967,10 @@ static void P_InitializeSeg(seg_t *seg)
 {
 	if (seg->linedef)
 	{
-		seg->sidedef = &sides[seg->linedef->sidenum[seg->side]];
+		seg->sidedef = &world->sides[seg->linedef->sidenum[seg->side]];
 
 		seg->frontsector = seg->sidedef->sector;
-		seg->backsector = (seg->linedef->flags & ML_TWOSIDED) ? sides[seg->linedef->sidenum[seg->side ^ 1]].sector : NULL;
+		seg->backsector = (seg->linedef->flags & ML_TWOSIDED) ? world->sides[seg->linedef->sidenum[seg->side ^ 1]].sector : NULL;
 	}
 
 #ifdef HWRENDER
@@ -1994,13 +1989,13 @@ static void P_InitializeSeg(seg_t *seg)
 static void P_LoadSegs(UINT8 *data)
 {
 	mapseg_t *ms = (mapseg_t*)data;
-	seg_t *seg = segs;
+	seg_t *seg = world->segs;
 	size_t i;
 
-	for (i = 0; i < numsegs; i++, seg++, ms++)
+	for (i = 0; i < world->numsegs; i++, seg++, ms++)
 	{
-		seg->v1 = &vertexes[SHORT(ms->v1)];
-		seg->v2 = &vertexes[SHORT(ms->v2)];
+		seg->v1 = &world->vertexes[SHORT(ms->v1)];
+		seg->v2 = &world->vertexes[SHORT(ms->v2)];
 
 		seg->side = SHORT(ms->side);
 
@@ -2008,7 +2003,7 @@ static void P_LoadSegs(UINT8 *data)
 
 		seg->angle = (SHORT(ms->angle)) << FRACBITS;
 
-		seg->linedef = &lines[SHORT(ms->linedef)];
+		seg->linedef = &world->lines[SHORT(ms->linedef)];
 
 		seg->length = P_SegLength(seg);
 #ifdef HWRENDER
@@ -2095,7 +2090,7 @@ static boolean P_LoadExtraVertices(UINT8 **data)
 	UINT32 origvrtx = READUINT32((*data));
 	UINT32 xtrvrtx = READUINT32((*data));
 	line_t* ld = lines;
-	vertex_t *oldpos = vertexes;
+	vertex_t *oldpos = world->vertexes;
 	ssize_t offset;
 	size_t i;
 
@@ -2109,18 +2104,18 @@ static boolean P_LoadExtraVertices(UINT8 **data)
 		return true;
 
 	// If extra vertexes were generated, reallocate the vertex array and fix the pointers.
-	numvertexes += xtrvrtx;
-	vertexes = Z_Realloc(vertexes, numvertexes*sizeof(*vertexes), PU_LEVEL, NULL);
+	world->numvertexes += xtrvrtx;
+	world->vertexes = Z_Realloc(world->vertexes, world->numvertexes*sizeof(*world->vertexes), PU_LEVEL, NULL);
 	offset = (size_t)(vertexes - oldpos);
 
-	for (i = 0, ld = lines; i < numlines; i++, ld++)
+	for (i = 0, ld = world->lines; i < world->numlines; i++, ld++)
 	{
 		ld->v1 += offset;
 		ld->v2 += offset;
 	}
 
 	// Read extra vertex data.
-	for (i = origvrtx; i < numvertexes; i++)
+	for (i = origvrtx; i < world->numvertexes; i++)
 	{
 		vertexes[i].x = READFIXED((*data));
 		vertexes[i].y = READFIXED((*data));
@@ -2136,67 +2131,67 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 	seg_t *seg;
 
 	// Subsectors
-	numsubsectors = READUINT32((*data));
-	subsectors = Z_Calloc(numsubsectors*sizeof(*subsectors), PU_LEVEL, NULL);
+	world->numsubsectors = READUINT32((*data));
+	world->subsectors = Z_Calloc(world->numsubsectors*sizeof(*world->subsectors), PU_LEVEL, NULL);
 
-	for (i = 0; i < numsubsectors; i++)
-		subsectors[i].numlines = READUINT32((*data));
+	for (i = 0; i < world->numsubsectors; i++)
+		world->subsectors[i].numlines = READUINT32((*data));
 
 	// Segs
-	numsegs = READUINT32((*data));
-	segs = Z_Calloc(numsegs*sizeof(*segs), PU_LEVEL, NULL);
+	world->numsegs = READUINT32((*data));
+	world->segs = Z_Calloc(world->numsegs*sizeof(*world->segs), PU_LEVEL, NULL);
 
-	for (i = 0, k = 0; i < numsubsectors; i++)
+	for (i = 0, k = 0; i < world->numsubsectors; i++)
 	{
-		subsectors[i].firstline = k;
-		P_InitializeSubsector(&subsectors[i]);
+		world->subsectors[i].firstline = k;
+		P_InitializeSubsector(&world->subsectors[i]);
 
 		switch (nodetype)
 		{
 		case NT_XGLN:
 		case NT_XGL3:
-			for (m = 0; m < subsectors[i].numlines; m++, k++)
+			for (m = 0; m < world->subsectors[i].numlines; m++, k++)
 			{
 				UINT32 vertexnum = READUINT32((*data));
 				UINT16 linenum;
 
-				if (vertexnum >= numvertexes)
+				if (vertexnum >= world->numvertexes)
 					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid vertex %d!\n", sizeu1(k), m, vertexnum);
 
-				segs[k - 1 + ((m == 0) ? subsectors[i].numlines : 0)].v2 = segs[k].v1 = &vertexes[vertexnum];
+				world->segs[k - 1 + ((m == 0) ? world->subsectors[i].numlines : 0)].v2 = world->segs[k].v1 = &world->vertexes[vertexnum];
 
 				READUINT32((*data)); // partner, can be ignored by software renderer
 				if (nodetype == NT_XGL3)
 					READUINT16((*data)); // Line number is 32-bit in XGL3, but we're limited to 16 bits.
 
 				linenum = READUINT16((*data));
-				if (linenum != 0xFFFF && linenum >= numlines)
+				if (linenum != 0xFFFF && linenum >= world->numlines)
 					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid linedef %d!\n", sizeu1(k), m, linenum);
-				segs[k].glseg = (linenum == 0xFFFF);
-				segs[k].linedef = (linenum == 0xFFFF) ? NULL : &lines[linenum];
-				segs[k].side = READUINT8((*data));
+				world->segs[k].glseg = (linenum == 0xFFFF);
+				world->segs[k].linedef = (linenum == 0xFFFF) ? NULL : &world->lines[linenum];
+				world->segs[k].side = READUINT8((*data));
 			}
 			break;
 
 		case NT_XNOD:
-			for (m = 0; m < subsectors[i].numlines; m++, k++)
+			for (m = 0; m < world->subsectors[i].numlines; m++, k++)
 			{
 				UINT32 v1num = READUINT32((*data));
 				UINT32 v2num = READUINT32((*data));
 				UINT16 linenum = READUINT16((*data));
 
-				if (v1num >= numvertexes)
+				if (v1num >= world->numvertexes)
 					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid v1 %d!\n", sizeu1(k), m, v1num);
-				if (v2num >= numvertexes)
+				if (v2num >= world->numvertexes)
 					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid v2 %d!\n", sizeu1(k), m, v2num);
-				if (linenum >= numlines)
+				if (linenum >= world->numlines)
 					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid linedef %d!\n", sizeu1(k), m, linenum);
 
-				segs[k].v1 = &vertexes[v1num];
-				segs[k].v2 = &vertexes[v2num];
-				segs[k].linedef = &lines[linenum];
-				segs[k].side = READUINT8((*data));
-				segs[k].glseg = false;
+				world->segs[k].v1 = &world->vertexes[v1num];
+				world->segs[k].v2 = &world->vertexes[v2num];
+				world->segs[k].linedef = &world->lines[linenum];
+				world->segs[k].side = READUINT8((*data));
+				world->segs[k].glseg = false;
 			}
 			break;
 
@@ -2205,14 +2200,14 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		}
 	}
 
-	for (i = 0, seg = segs; i < numsegs; i++, seg++)
+	for (i = 0, seg = world->segs; i < world->numsegs; i++, seg++)
 	{
 		vertex_t *v1 = seg->v1;
 		vertex_t *v2 = seg->v2;
 		P_InitializeSeg(seg);
 		seg->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
 		if (seg->linedef)
-			segs[i].offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
+			world->segs[i].offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
 	}
 
 	return true;
@@ -2231,10 +2226,10 @@ static void P_LoadExtendedNodes(UINT8 **data, nodetype_t nodetype)
 	size_t i, j, k;
 	boolean xgl3 = (nodetype == NT_XGL3);
 
-	numnodes = READINT32((*data));
-	nodes = Z_Calloc(numnodes*sizeof(*nodes), PU_LEVEL, NULL);
+	world->numnodes = READINT32((*data));
+	world->nodes = Z_Calloc(world->numnodes*sizeof(*world->nodes), PU_LEVEL, NULL);
 
-	for (i = 0, mn = nodes; i < numnodes; i++, mn++)
+	for (i = 0, mn = world->nodes; i < world->numnodes; i++, mn++)
 	{
 		// Splitter
 		mn->x = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
@@ -2266,20 +2261,20 @@ static void P_LoadMapBSP(const virtres_t *virt)
 		virtlump_t* virtnodes = vres_Find(virt, "NODES");
 		virtlump_t *virtsegs = vres_Find(virt, "SEGS");
 
-		numsubsectors = virtssectors->size / sizeof(mapsubsector_t);
-		numnodes      = virtnodes->size    / sizeof(mapnode_t);
-		numsegs       = virtsegs->size     / sizeof(mapseg_t);
+		world->numsubsectors = virtssectors->size / sizeof(mapsubsector_t);
+		world->numnodes      = virtnodes->size    / sizeof(mapnode_t);
+		world->numsegs       = virtsegs->size     / sizeof(mapseg_t);
 
-		if (numsubsectors <= 0)
+		if (world->numsubsectors <= 0)
 			I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
-		if (numnodes <= 0)
+		if (world->numnodes <= 0)
 			I_Error("Level has no nodes");
-		if (numsegs <= 0)
+		if (world->numsegs <= 0)
 			I_Error("Level has no segs");
 
-		subsectors = Z_Calloc(numsubsectors * sizeof(*subsectors), PU_LEVEL, NULL);
-		nodes      = Z_Calloc(numnodes * sizeof(*nodes), PU_LEVEL, NULL);
-		segs       = Z_Calloc(numsegs * sizeof(*segs), PU_LEVEL, NULL);
+		world->subsectors = Z_Calloc(world->numsubsectors * sizeof(*world->subsectors), PU_LEVEL, NULL);
+		world->nodes      = Z_Calloc(world->numnodes * sizeof(*world->nodes), PU_LEVEL, NULL);
+		world->segs       = Z_Calloc(world->numsegs * sizeof(*world->segs), PU_LEVEL, NULL);
 
 		P_LoadSubsectors(virtssectors->data);
 		P_LoadNodes(virtnodes->data);
@@ -2307,22 +2302,22 @@ static void P_LoadMapBSP(const virtres_t *virt)
 static void P_ReadBlockMapLump(INT16 *wadblockmaplump, size_t count)
 {
 	size_t i;
-	blockmaplump = Z_Calloc(sizeof (*blockmaplump) * count, PU_LEVEL, NULL);
+	world->blockmaplump = Z_Calloc(sizeof (*blockmaplump) * count, PU_LEVEL, NULL);
 
 	// killough 3/1/98: Expand wad blockmap into larger internal one,
 	// by treating all offsets except -1 as unsigned and zero-extending
 	// them. This potentially doubles the size of blockmaps allowed,
 	// because Doom originally considered the offsets as always signed.
 
-	blockmaplump[0] = SHORT(wadblockmaplump[0]);
-	blockmaplump[1] = SHORT(wadblockmaplump[1]);
-	blockmaplump[2] = (INT32)(SHORT(wadblockmaplump[2])) & 0xffff;
-	blockmaplump[3] = (INT32)(SHORT(wadblockmaplump[3])) & 0xffff;
+	world->blockmaplump[0] = SHORT(wadblockmaplump[0]);
+	world->blockmaplump[1] = SHORT(wadblockmaplump[1]);
+	world->blockmaplump[2] = (INT32)(SHORT(wadblockmaplump[2])) & 0xffff;
+	world->blockmaplump[3] = (INT32)(SHORT(wadblockmaplump[3])) & 0xffff;
 
 	for (i = 4; i < count; i++)
 	{
 		INT16 t = SHORT(wadblockmaplump[i]);          // killough 3/1/98
-		blockmaplump[i] = t == -1 ? (INT32)-1 : (INT32) t & 0xffff;
+		world->blockmaplump[i] = t == -1 ? (INT32)-1 : (INT32) t & 0xffff;
 	}
 }
 
@@ -2341,19 +2336,19 @@ static boolean P_LoadBlockMap(UINT8 *data, size_t count)
 	count /= 2;
 	P_ReadBlockMapLump((INT16 *)data, count);
 
-	bmaporgx = blockmaplump[0]<<FRACBITS;
-	bmaporgy = blockmaplump[1]<<FRACBITS;
-	bmapwidth = blockmaplump[2];
-	bmapheight = blockmaplump[3];
+	world->bmaporgx = world->blockmaplump[0]<<FRACBITS;
+	world->bmaporgy = world->blockmaplump[1]<<FRACBITS;
+	world->bmapwidth = world->blockmaplump[2];
+	world->bmapheight = world->blockmaplump[3];
 
 	// clear out mobj chains
-	count = sizeof (*blocklinks)* bmapwidth*bmapheight;
-	blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
-	blockmap = blockmaplump+4;
+	count = sizeof (*world->blocklinks)* world->bmapwidth * world->bmapheight;
+	world->blocklinks = Z_Calloc(count, PU_LEVEL, NULL);
+	world->blockmap = world->blockmaplump+4;
 
 	// haleyjd 2/22/06: setup polyobject blockmap
-	count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
-	polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
+	count = sizeof(*world->polyblocklinks) * world->bmapwidth * world->bmapheight;
+	world->polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 	return true;
 }
 
@@ -2423,18 +2418,18 @@ static void P_CreateBlockMap(void)
 {
 	register size_t i;
 	fixed_t minx = INT32_MAX, miny = INT32_MAX, maxx = INT32_MIN, maxy = INT32_MIN;
-	// First find limits of map
 
-	for (i = 0; i < numvertexes; i++)
+	// First find limits of map
+	for (i = 0; i < world->numvertexes; i++)
 	{
-		if (vertexes[i].x>>FRACBITS < minx)
-			minx = vertexes[i].x>>FRACBITS;
-		else if (vertexes[i].x>>FRACBITS > maxx)
-			maxx = vertexes[i].x>>FRACBITS;
-		if (vertexes[i].y>>FRACBITS < miny)
-			miny = vertexes[i].y>>FRACBITS;
-		else if (vertexes[i].y>>FRACBITS > maxy)
-			maxy = vertexes[i].y>>FRACBITS;
+		if (world->vertexes[i].x>>FRACBITS < minx)
+			minx = world->vertexes[i].x>>FRACBITS;
+		else if (world->vertexes[i].x>>FRACBITS > maxx)
+			maxx = world->vertexes[i].x>>FRACBITS;
+		if (world->vertexes[i].y>>FRACBITS < miny)
+			miny = world->vertexes[i].y>>FRACBITS;
+		else if (world->vertexes[i].y>>FRACBITS > maxy)
+			maxy = world->vertexes[i].y>>FRACBITS;
 	}
 
 	// Save blockmap parameters
@@ -2598,6 +2593,7 @@ static void P_CreateBlockMap(void)
 			free(bmap); // Free uncompressed blockmap
 		}
 	}
+
 	{
 		size_t count = sizeof (*blocklinks) * bmapwidth * bmapheight;
 		// clear out mobj chains (copied from from P_LoadBlockMap)
@@ -2608,6 +2604,15 @@ static void P_CreateBlockMap(void)
 		count = sizeof(*polyblocklinks) * bmapwidth * bmapheight;
 		polyblocklinks = Z_Calloc(count, PU_LEVEL, NULL);
 	}
+
+	world->blockmaplump = blockmaplump;
+	world->blockmap = blockmap;
+	world->bmapwidth = bmapwidth;
+	world->bmapheight = bmapheight;
+	world->bmaporgx = bmaporgx;
+	world->bmaporgy = bmaporgy;
+	world->blocklinks = blocklinks;
+	world->polyblocklinks = polyblocklinks;
 }
 
 // PK3 version
@@ -2616,13 +2621,13 @@ static void P_LoadReject(UINT8 *data, size_t count)
 {
 	if (!count) // zero length, someone probably used ZDBSP
 	{
-		rejectmatrix = NULL;
+		world->rejectmatrix = NULL;
 		CONS_Debug(DBG_SETUP, "P_LoadReject: REJECT lump has size 0, will not be loaded\n");
 	}
 	else
 	{
-		rejectmatrix = Z_Malloc(count, PU_LEVEL, NULL); // allocate memory for the reject matrix
-		M_Memcpy(rejectmatrix, data, count); // copy the data into it
+		world->rejectmatrix = Z_Malloc(count, PU_LEVEL, NULL); // allocate memory for the reject matrix
+		M_Memcpy(world->rejectmatrix, data, count); // copy the data into it
 	}
 }
 
@@ -2635,7 +2640,7 @@ static void P_LoadMapLUT(const virtres_t *virt)
 	if (virtreject)
 		P_LoadReject(virtreject->data, virtreject->size);
 	else
-		rejectmatrix = NULL;
+		world->rejectmatrix = NULL;
 
 	if (!(virtblockmap && P_LoadBlockMap(virtblockmap->data, virtblockmap->size)))
 		P_CreateBlockMap();
@@ -2651,26 +2656,26 @@ static void P_LinkMapData(void)
 	size_t i, j;
 	line_t *li;
 	sector_t *sector;
-	subsector_t *ss = subsectors;
+	subsector_t *ss = world->subsectors;
 	size_t sidei;
 	seg_t *seg;
 	fixed_t bbox[4];
 
 	// look up sector number for each subsector
-	for (i = 0; i < numsubsectors; i++, ss++)
+	for (i = 0; i < world->numsubsectors; i++, ss++)
 	{
-		if (ss->firstline >= numsegs)
+		if (ss->firstline >= world->numsegs)
 			CorruptMapError(va("P_LinkMapData: ss->firstline invalid "
 				"(subsector %s, firstline refers to %d of %s)", sizeu1(i), ss->firstline,
-				sizeu2(numsegs)));
-		seg = &segs[ss->firstline];
-		sidei = (size_t)(seg->sidedef - sides);
+				sizeu2(world->numsegs)));
+		seg = &world->segs[ss->firstline];
+		sidei = (size_t)(seg->sidedef - world->sides);
 		if (!seg->sidedef)
 			CorruptMapError(va("P_LinkMapData: seg->sidedef is NULL "
 				"(subsector %s, firstline is %d)", sizeu1(i), ss->firstline));
-		if (seg->sidedef - sides < 0 || seg->sidedef - sides > (UINT16)numsides)
+		if (seg->sidedef - world->sides < 0 || seg->sidedef - world->sides > (UINT16)world->numsides)
 			CorruptMapError(va("P_LinkMapData: seg->sidedef refers to sidedef %s of %s "
-				"(subsector %s, firstline is %d)", sizeu1(sidei), sizeu2(numsides),
+				"(subsector %s, firstline is %d)", sizeu1(sidei), sizeu2(world->numsides),
 				sizeu3(i), ss->firstline));
 		if (!seg->sidedef->sector)
 			CorruptMapError(va("P_LinkMapData: seg->sidedef->sector is NULL "
@@ -2680,7 +2685,7 @@ static void P_LinkMapData(void)
 	}
 
 	// count number of lines in each sector
-	for (i = 0, li = lines; i < numlines; i++, li++)
+	for (i = 0, li = world->lines; i < world->numlines; i++, li++)
 	{
 		li->frontsector->linecount++;
 
@@ -2689,7 +2694,7 @@ static void P_LinkMapData(void)
 	}
 
 	// allocate linebuffers for each sector
-	for (i = 0, sector = sectors; i < numsectors; i++, sector++)
+	for (i = 0, sector = world->sectors; i < world->numsectors; i++, sector++)
 	{
 		if (sector->linecount == 0) // no lines found?
 		{
@@ -2707,7 +2712,7 @@ static void P_LinkMapData(void)
 
 	// iterate through lines, assigning them to sectors' linebuffers,
 	// and recalculate the counts in the process
-	for (i = 0, li = lines; i < numlines; i++, li++)
+	for (i = 0, li = world->lines; i < world->numlines; i++, li++)
 	{
 		li->frontsector->lines[li->frontsector->linecount++] = li;
 
@@ -2716,7 +2721,7 @@ static void P_LinkMapData(void)
 	}
 
 	// set soundorg's position for each sector
-	for (i = 0, sector = sectors; i < numsectors; i++, sector++)
+	for (i = 0, sector = world->sectors; i < world->numsectors; i++, sector++)
 	{
 		M_ClearBox(bbox);
 
@@ -2809,13 +2814,13 @@ static boolean P_LoadMapFromFile(void)
 	P_LinkMapData();
 
 	// Copy relevant map data for NetArchive purposes.
-	spawnsectors = Z_Calloc(numsectors * sizeof(*sectors), PU_LEVEL, NULL);
-	spawnlines = Z_Calloc(numlines * sizeof(*lines), PU_LEVEL, NULL);
-	spawnsides = Z_Calloc(numsides * sizeof(*sides), PU_LEVEL, NULL);
+	world->spawnsectors = Z_Calloc(world->numsectors * sizeof(*sectors), PU_LEVEL, NULL);
+	world->spawnlines = Z_Calloc(world->numlines * sizeof(*lines), PU_LEVEL, NULL);
+	world->spawnsides = Z_Calloc(world->numsides * sizeof(*sides), PU_LEVEL, NULL);
 
-	memcpy(spawnsectors, sectors, numsectors * sizeof(*sectors));
-	memcpy(spawnlines, lines, numlines * sizeof(*lines));
-	memcpy(spawnsides, sides, numsides * sizeof(*sides));
+	memcpy(world->spawnsectors, world->sectors, world->numsectors * sizeof(*sectors));
+	memcpy(world->spawnlines, world->lines, world->numlines * sizeof(*lines));
+	memcpy(world->spawnsides, world->sides, world->numsides * sizeof(*sides));
 
 	P_MakeMapMD5(virt, &mapmd5);
 
@@ -2963,12 +2968,12 @@ void P_RespawnThings(void)
 	INT32 i, viewid = -1, centerid = -1; // for skyboxes
 
 	// check if these are any of the normal viewpoint/centerpoint mobjs in the level or not
-	if (skyboxmo[0] || skyboxmo[1])
+	if (world->skyboxmo[0] || world->skyboxmo[1])
 		for (i = 0; i < 16; i++)
 		{
-			if (skyboxmo[0] && skyboxmo[0] == skyboxviewpnts[i])
+			if (world->skyboxmo[0] && world->skyboxmo[0] == world->skyboxviewpnts[i])
 				viewid = i; // save id just in case
-			if (skyboxmo[1] && skyboxmo[1] == skyboxcenterpnts[i])
+			if (world->skyboxmo[1] && world->skyboxmo[1] == world->skyboxcenterpnts[i])
 				centerid = i; // save id just in case
 		}
 
@@ -2984,8 +2989,8 @@ void P_RespawnThings(void)
 	P_SpawnMapThings(true);
 
 	// restore skybox viewpoint/centerpoint if necessary, set them to defaults if we can't do that
-	skyboxmo[0] = skyboxviewpnts[(viewid >= 0) ? viewid : 0];
-	skyboxmo[1] = skyboxcenterpnts[(centerid >= 0) ? centerid : 0];
+	world->skyboxmo[0] = world->skyboxviewpnts[(viewid >= 0) ? viewid : 0];
+	world->skyboxmo[1] = world->skyboxcenterpnts[(centerid >= 0) ? centerid : 0];
 }
 
 static void P_RunLevelScript(const char *scriptname)
@@ -3056,20 +3061,20 @@ static void P_ResetSpawnpoints(void)
 {
 	UINT8 i;
 
-	numdmstarts = numredctfstarts = numbluectfstarts = 0;
+	world->numdmstarts = world->numredctfstarts = world->numbluectfstarts = 0;
 
 	// reset the player starts
 	for (i = 0; i < MAXPLAYERS; i++)
-		playerstarts[i] = bluectfstarts[i] = redctfstarts[i] = NULL;
+		world->playerstarts[i] = world->bluectfstarts[i] = world->redctfstarts[i] = NULL;
 
 	for (i = 0; i < MAX_DM_STARTS; i++)
-		deathmatchstarts[i] = NULL;
+		world->deathmatchstarts[i] = NULL;
 
 	for (i = 0; i < 2; i++)
-		skyboxmo[i] = NULL;
+		world->skyboxmo[i] = NULL;
 
 	for (i = 0; i < 16; i++)
-		skyboxviewpnts[i] = skyboxcenterpnts[i] = NULL;
+		world->skyboxviewpnts[i] = world->skyboxcenterpnts[i] = NULL;
 }
 
 static void P_LoadRecordGhosts(void)
@@ -3253,9 +3258,9 @@ static void P_SetupCamera(void)
 		mapthing_t *thing;
 
 		if (gametyperules & GTR_DEATHMATCHSTARTS)
-			thing = deathmatchstarts[0];
+			thing = world->deathmatchstarts[0];
 		else
-			thing = playerstarts[0];
+			thing = world->playerstarts[0];
 
 		if (thing)
 		{
@@ -3494,7 +3499,8 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// 99% of the things already did, so.
 	// Map header should always be in place at this point
 	INT32 i, ranspecialwipe = 0;
-	sector_t *ss;
+	player_t *player = &players[consoleplayer];
+
 	levelloading = true;
 
 	// This is needed. Don't touch.
@@ -3507,6 +3513,9 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// Reset the palette
 	if (rendermode != render_none)
 		V_SetPaletteLump("PLAYPAL");
+
+	if (!titlemapinaction && world)
+		P_SetWorldVisited(player, world);
 
 	// Initialize sector node list.
 	P_Initsecnode();
@@ -3628,18 +3637,17 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// Close text prompt before freeing the old level
 	F_EndTextPrompt(false, true);
 
-	LUA_InvalidateLevel();
-
-	for (ss = sectors; sectors+numsectors != ss; ss++)
+	if (world && (!titlemapinaction))
 	{
-		Z_Free(ss->attached);
-		Z_Free(ss->attachedsolid);
+		P_UnloadWorldPlayer(player);
+		//P_UnloadWorld(world);
 	}
 
-	// Clear pointers that would be left dangling by the purge
-	R_FlushTranslationColormapCache();
+	world = P_InitNewWorld();
+	thlist = world->thlist;
 
-	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
+	if (player == &players[consoleplayer])
+		localworld = world;
 
 #if defined (WALLSPLATS) || defined (FLOORSPLATS)
 	// clear the splats from previous level
@@ -3682,18 +3690,22 @@ boolean P_LoadLevel(boolean fromnetsave)
 	if (!P_LoadMapFromFile())
 		return false;
 
+	P_SetGameWorld(world);
+	P_SetViewWorld(world);
+
 	// init gravity, tag lists,
 	// anything that P_SpawnSlopes/P_LoadThings needs to know
 	P_InitSpecials();
+	P_InitTagLists();   // Create xref tables for tags
 
 	P_SpawnSlopes(fromnetsave);
 
 	P_SpawnMapThings(!fromnetsave);
-	skyboxmo[0] = skyboxviewpnts[0];
-	skyboxmo[1] = skyboxcenterpnts[0];
+	world->skyboxmo[0] = world->skyboxviewpnts[0];
+	world->skyboxmo[1] = world->skyboxcenterpnts[0];
 
-	for (numcoopstarts = 0; numcoopstarts < MAXPLAYERS; numcoopstarts++)
-		if (!playerstarts[numcoopstarts])
+	for (world->numcoopstarts = 0; world->numcoopstarts < MAXPLAYERS; world->numcoopstarts++)
+		if (!world->playerstarts[world->numcoopstarts])
 			break;
 
 	// set up world state

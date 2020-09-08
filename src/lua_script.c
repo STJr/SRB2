@@ -737,7 +737,7 @@ void LUA_InvalidateUserdata(void *data)
 }
 
 // Invalidate level data arrays
-void LUA_InvalidateLevel(void)
+void LUA_InvalidateLevel(world_t *w)
 {
 	thinker_t *th;
 	size_t i;
@@ -745,52 +745,52 @@ void LUA_InvalidateLevel(void)
 	if (!gL)
 		return;
 	for (i = 0; i < NUM_THINKERLISTS; i++)
-		for (th = thlist[i].next; th && th != &thlist[i]; th = th->next)
+		for (th = w->thlist[i].next; th && th != &w->thlist[i]; th = th->next)
 			LUA_InvalidateUserdata(th);
 
-	LUA_InvalidateMapthings();
+	LUA_InvalidateMapthings(w);
 
-	for (i = 0; i < numsubsectors; i++)
-		LUA_InvalidateUserdata(&subsectors[i]);
-	for (i = 0; i < numsectors; i++)
+	for (i = 0; i < w->numsubsectors; i++)
+		LUA_InvalidateUserdata(&w->subsectors[i]);
+	for (i = 0; i < w->numsectors; i++)
 	{
-		LUA_InvalidateUserdata(&sectors[i]);
-		LUA_InvalidateUserdata(&sectors[i].lines);
-		if (sectors[i].ffloors)
+		LUA_InvalidateUserdata(&w->sectors[i]);
+		LUA_InvalidateUserdata(&w->sectors[i].lines);
+		if (w->sectors[i].ffloors)
 		{
-			for (rover = sectors[i].ffloors; rover; rover = rover->next)
+			for (rover = w->sectors[i].ffloors; rover; rover = rover->next)
 				LUA_InvalidateUserdata(rover);
 		}
 	}
-	for (i = 0; i < numlines; i++)
+	for (i = 0; i < w->numlines; i++)
 	{
-		LUA_InvalidateUserdata(&lines[i]);
-		LUA_InvalidateUserdata(lines[i].sidenum);
+		LUA_InvalidateUserdata(&w->lines[i]);
+		LUA_InvalidateUserdata(w->lines[i].sidenum);
 	}
-	for (i = 0; i < numsides; i++)
-		LUA_InvalidateUserdata(&sides[i]);
-	for (i = 0; i < numvertexes; i++)
-		LUA_InvalidateUserdata(&vertexes[i]);
+	for (i = 0; i < w->numsides; i++)
+		LUA_InvalidateUserdata(&w->sides[i]);
+	for (i = 0; i < w->numvertexes; i++)
+		LUA_InvalidateUserdata(&w->vertexes[i]);
 #ifdef HAVE_LUA_SEGS
-	for (i = 0; i < numsegs; i++)
-		LUA_InvalidateUserdata(&segs[i]);
-	for (i = 0; i < numnodes; i++)
+	for (i = 0; i < w->numsegs; i++)
+		LUA_InvalidateUserdata(&w->segs[i]);
+	for (i = 0; i < w->numnodes; i++)
 	{
-		LUA_InvalidateUserdata(&nodes[i]);
-		LUA_InvalidateUserdata(nodes[i].bbox);
-		LUA_InvalidateUserdata(nodes[i].children);
+		LUA_InvalidateUserdata(&w->nodes[i]);
+		LUA_InvalidateUserdata(w->nodes[i].bbox);
+		LUA_InvalidateUserdata(w->nodes[i].children);
 	}
 #endif
 }
 
-void LUA_InvalidateMapthings(void)
+void LUA_InvalidateMapthings(world_t *w)
 {
 	size_t i;
 	if (!gL)
 		return;
 
-	for (i = 0; i < nummapthings; i++)
-		LUA_InvalidateUserdata(&mapthings[i]);
+	for (i = 0; i < w->nummapthings; i++)
+		LUA_InvalidateUserdata(&w->mapthings[i]);
 }
 
 void LUA_InvalidatePlayer(player_t *player)

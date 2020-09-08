@@ -154,8 +154,8 @@ void Portal_Add2Lines (const INT32 line1, const INT32 line2, const INT32 x1, con
 	portal_t* portal = Portal_Add(x1, x2);
 
 	// Offset the portal view by the linedef centers
-	line_t* start	= &lines[line1];
-	line_t* dest	= &lines[line2];
+	line_t* start	= &viewworld->lines[line1];
+	line_t* dest	= &viewworld->lines[line2];
 
 	angle_t dangle = R_PointToAngle2(0,0,dest->dx,dest->dy) - R_PointToAngle2(start->dx,start->dy,0,0);
 
@@ -269,28 +269,28 @@ void Portal_AddSkybox (const visplane_t* plane)
 
 	Portal_ClipVisplane(plane, portal);
 
-	portal->viewx = skyboxmo[0]->x;
-	portal->viewy = skyboxmo[0]->y;
-	portal->viewz = skyboxmo[0]->z;
-	portal->viewangle = viewangle + skyboxmo[0]->angle;
+	portal->viewx = viewworld->skyboxmo[0]->x;
+	portal->viewy = viewworld->skyboxmo[0]->y;
+	portal->viewz = viewworld->skyboxmo[0]->z;
+	portal->viewangle = viewangle + viewworld->skyboxmo[0]->angle;
 
 	mh = mapheaderinfo[gamemap-1];
 
 	// If a relative viewpoint exists, offset the viewpoint.
-	if (skyboxmo[1])
+	if (viewworld->skyboxmo[1])
 	{
 		fixed_t x = 0, y = 0;
-		angle_t ang = skyboxmo[0]->angle>>ANGLETOFINESHIFT;
+		angle_t ang = viewworld->skyboxmo[0]->angle>>ANGLETOFINESHIFT;
 
 		if (mh->skybox_scalex > 0)
-			x = (viewx - skyboxmo[1]->x) / mh->skybox_scalex;
+			x = (viewx - viewworld->skyboxmo[1]->x) / mh->skybox_scalex;
 		else if (mh->skybox_scalex < 0)
-			x = (viewx - skyboxmo[1]->x) * -mh->skybox_scalex;
+			x = (viewx - viewworld->skyboxmo[1]->x) * -mh->skybox_scalex;
 
 		if (mh->skybox_scaley > 0)
-			y = (viewy - skyboxmo[1]->y) / mh->skybox_scaley;
+			y = (viewy - viewworld->skyboxmo[1]->y) / mh->skybox_scaley;
 		else if (mh->skybox_scaley < 0)
-			y = (viewy - skyboxmo[1]->y) * -mh->skybox_scaley;
+			y = (viewy - viewworld->skyboxmo[1]->y) * -mh->skybox_scaley;
 
 		// Apply transform to account for the skybox viewport angle.
 		portal->viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
@@ -318,7 +318,7 @@ void Portal_AddSkyboxPortals (void)
 	{
 		for (pl = visplanes[i]; pl; pl = pl->next)
 		{
-			if (pl->picnum == skyflatnum)
+			if (pl->picnum == viewworld->skyflatnum)
 			{
 				Portal_AddSkybox(pl);
 

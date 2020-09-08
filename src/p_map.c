@@ -3268,7 +3268,7 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 				floorclimb = true;
 
 			if ((floorz > mo->z)
-				&& glidesector->floorpic == skyflatnum)
+				&& glidesector->floorpic == world->skyflatnum)
 				return false;
 
 			if ((mo->z + mo->height - FixedMul(16*FRACUNIT,mo->scale) > ceilingz)
@@ -3282,7 +3282,7 @@ static boolean P_IsClimbingValid(player_t *player, angle_t angle)
 				floorclimb = true;
 
 			if ((ceilingz < mo->z+mo->height)
-				&& glidesector->ceilingpic == skyflatnum)
+				&& glidesector->ceilingpic == world->skyflatnum)
 				return false;
 
 			if ((mo->z + FixedMul(16*FRACUNIT,mo->scale) < floorz)

@@ -289,6 +289,8 @@ typedef struct mobj_s
 
 	struct subsector_s *subsector; // Subsector the mobj resides in.
 
+	void *world; // current world
+
 	// The closest interval over all contacted sectors (or things).
 	fixed_t floorz; // Nearest floor below.
 	fixed_t ceilingz; // Nearest ceiling above.
@@ -409,6 +411,8 @@ typedef struct precipmobj_s
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
 
 	struct subsector_s *subsector; // Subsector the mobj resides in.
+
+	void *world; // current world
 
 	// The closest interval over all contacted sectors (or things).
 	fixed_t floorz; // Nearest floor below.

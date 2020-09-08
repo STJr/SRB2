@@ -1782,7 +1782,7 @@ static void AutoBrake2_OnChange(void)
 //
 // G_DoLoadLevel
 //
-void G_DoLoadLevel(boolean resetplayer)
+void G_DoLoadLevel(boolean addworld, boolean resetplayer)
 {
 	INT32 i;
 
@@ -1816,10 +1816,15 @@ void G_DoLoadLevel(boolean resetplayer)
 	G_SetGamestate(GS_LEVEL);
 	I_UpdateMouseGrab();
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	if (!addworld)
 	{
-		if (resetplayer || (playeringame[i] && players[i].playerstate == PST_DEAD))
-			players[i].playerstate = PST_REBORN;
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (resetplayer || (playeringame[i] && players[i].playerstate == PST_DEAD))
+				players[i].playerstate = PST_REBORN;
+		}
+
+		P_UnloadWorldList();
 	}
 
 	// Setup the level.
@@ -2690,22 +2695,24 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 		P_MovePlayerToStarpost(playernum);
 	else
 		P_MovePlayerToSpawn(playernum, G_FindMapStart(playernum));
+
+	P_SetWorldVisited(&players[playernum], players[playernum].world);
 }
 
 mapthing_t *G_FindCTFStart(INT32 playernum)
 {
 	INT32 i,j;
 
-	if (!numredctfstarts && !numbluectfstarts) //why even bother, eh?
+	if (!world->numredctfstarts && !world->numbluectfstarts) //why even bother, eh?
 	{
 		if ((gametyperules & GTR_TEAMFLAGS) && (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer)))
 			CONS_Alert(CONS_WARNING, M_GetText("No CTF starts in this map!\n"));
 		return NULL;
 	}
 
-	if ((!players[playernum].ctfteam && numredctfstarts && (!numbluectfstarts || P_RandomChance(FRACUNIT/2))) || players[playernum].ctfteam == 1) //red
+	if ((!players[playernum].ctfteam && world->numredctfstarts && (!world->numbluectfstarts || P_RandomChance(FRACUNIT/2))) || players[playernum].ctfteam == 1) //red
 	{
-		if (!numredctfstarts)
+		if (!world->numredctfstarts)
 		{
 			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
 				CONS_Alert(CONS_WARNING, M_GetText("No Red Team starts in this map!\n"));
@@ -2714,9 +2721,9 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 
 		for (j = 0; j < 32; j++)
 		{
-			i = P_RandomKey(numredctfstarts);
-			if (G_CheckSpot(playernum, redctfstarts[i]))
-				return redctfstarts[i];
+			i = P_RandomKey(world->numredctfstarts);
+			if (G_CheckSpot(playernum, world->redctfstarts[i]))
+				return world->redctfstarts[i];
 		}
 
 		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
@@ -2725,7 +2732,7 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 	}
 	else if (!players[playernum].ctfteam || players[playernum].ctfteam == 2) //blue
 	{
-		if (!numbluectfstarts)
+		if (!world->numbluectfstarts)
 		{
 			if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
 				CONS_Alert(CONS_WARNING, M_GetText("No Blue Team starts in this map!\n"));
@@ -2734,9 +2741,9 @@ mapthing_t *G_FindCTFStart(INT32 playernum)
 
 		for (j = 0; j < 32; j++)
 		{
-			i = P_RandomKey(numbluectfstarts);
-			if (G_CheckSpot(playernum, bluectfstarts[i]))
-				return bluectfstarts[i];
+			i = P_RandomKey(world->numbluectfstarts);
+			if (G_CheckSpot(playernum, world->bluectfstarts[i]))
+				return world->bluectfstarts[i];
 		}
 		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
 			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Blue Team starts!\n"));
@@ -2750,13 +2757,13 @@ mapthing_t *G_FindMatchStart(INT32 playernum)
 {
 	INT32 i, j;
 
-	if (numdmstarts)
+	if (world->numdmstarts)
 	{
 		for (j = 0; j < 64; j++)
 		{
-			i = P_RandomKey(numdmstarts);
-			if (G_CheckSpot(playernum, deathmatchstarts[i]))
-				return deathmatchstarts[i];
+			i = P_RandomKey(world->numdmstarts);
+			if (G_CheckSpot(playernum, world->deathmatchstarts[i]))
+				return world->deathmatchstarts[i];
 		}
 		if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
 			CONS_Alert(CONS_WARNING, M_GetText("Could not spawn at any Deathmatch starts!\n"));
@@ -2770,15 +2777,15 @@ mapthing_t *G_FindMatchStart(INT32 playernum)
 
 mapthing_t *G_FindCoopStart(INT32 playernum)
 {
-	if (numcoopstarts)
+	if (world->numcoopstarts)
 	{
 		//if there's 6 players in a map with 3 player starts, this spawns them 1/2/3/1/2/3.
-		if (G_CheckSpot(playernum, playerstarts[playernum % numcoopstarts]))
-			return playerstarts[playernum % numcoopstarts];
+		if (G_CheckSpot(playernum, world->playerstarts[playernum % world->numcoopstarts]))
+			return world->playerstarts[playernum % world->numcoopstarts];
 
 		//Don't bother checking to see if the player 1 start is open.
 		//Just spawn there.
-		return playerstarts[0];
+		return world->playerstarts[0];
 	}
 
 	if (playernum == consoleplayer || (splitscreen && playernum == secondarydisplayplayer))
@@ -3062,7 +3069,7 @@ void G_DoReborn(INT32 playernum)
 		{
 			LUAh_MapChange(gamemap);
 			titlecardforreload = true;
-			G_DoLoadLevel(true);
+			G_DoLoadLevel(false, true);
 			titlecardforreload = false;
 			if (metalrecording)
 				G_BeginMetal();
@@ -3957,10 +3964,10 @@ static void G_DoWorldDone(void)
 	{
 		if (gametyperules & GTR_CAMPAIGN)
 			// don't reset player between maps
-			D_MapChange(nextmap+1, gametype, ultimatemode, false, 0, false, false);
+			D_MapChange(nextmap+1, gametype, false, ultimatemode, false, 0, false, false);
 		else
 			// resetplayer in match/chaos/tag/CTF/race for more equality
-			D_MapChange(nextmap+1, gametype, ultimatemode, true, 0, false, false);
+			D_MapChange(nextmap+1, gametype, false, ultimatemode, true, 0, false, false);
 	}
 
 	gameaction = ga_nothing;
@@ -4021,7 +4028,7 @@ static void G_DoContinued(void)
 	// Reset # of lives
 	pl->lives = (ultimatemode) ? 1 : startinglivesbalance[numgameovers];
 
-	D_MapChange(gamemap, gametype, ultimatemode, false, 0, false, false);
+	D_MapChange(gamemap, gametype, false, ultimatemode, false, 0, false, false);
 
 	gameaction = ga_nothing;
 }
@@ -4665,14 +4672,14 @@ void G_DeferedInitNew(boolean pultmode, const char *mapname, INT32 pickedchar, b
 	CV_StealthSetValue(&cv_playercolor, color);
 
 	if (mapname)
-		D_MapChange(M_MapNumber(mapname[3], mapname[4]), gametype, pultmode, true, 1, false, FLS);
+		D_MapChange(M_MapNumber(mapname[3], mapname[4]), gametype, false, pultmode, true, 1, false, FLS);
 }
 
 //
 // This is the map command interpretation something like Command_Map_f
 //
 // called at: map cmd execution, doloadgame, doplaydemo
-void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean skipprecutscene, boolean FLS)
+void G_InitNew(const char *mapname, boolean addworld, UINT8 pultmode, boolean resetplayer, boolean skipprecutscene, boolean FLS)
 {
 	INT32 i;
 
@@ -4764,7 +4771,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer);
 	else
-		G_DoLoadLevel(resetplayer);
+		G_DoLoadLevel(addworld, resetplayer);
 
 	if (netgame)
 	{

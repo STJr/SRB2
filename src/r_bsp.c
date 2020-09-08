@@ -237,31 +237,31 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 {
 	if (floorlightlevel)
 		*floorlightlevel = sec->floorlightsec == -1 ?
-			sec->lightlevel : sectors[sec->floorlightsec].lightlevel;
+			sec->lightlevel : viewworld->sectors[sec->floorlightsec].lightlevel;
 
 	if (ceilinglightlevel)
 		*ceilinglightlevel = sec->ceilinglightsec == -1 ?
-			sec->lightlevel : sectors[sec->ceilinglightsec].lightlevel;
+			sec->lightlevel : viewworld->sectors[sec->ceilinglightsec].lightlevel;
 
 	// if (sec->midmap != -1)
 	//	mapnum = sec->midmap;
 	// In original colormap code, this block did not run if sec->midmap was set
 	if (!sec->extra_colormap && sec->heightsec != -1)
 	{
-		const sector_t *s = &sectors[sec->heightsec];
+		const sector_t *s = &viewworld->sectors[sec->heightsec];
 		mobj_t *viewmobj = viewplayer->mo;
 		INT32 heightsec;
 		boolean underwater;
 
 		if (splitscreen && viewplayer == &players[secondarydisplayplayer] && camera2.chase)
-			heightsec = R_PointInSubsector(camera2.x, camera2.y)->sector->heightsec;
+			heightsec = R_PointInWorldSubsector(viewworld, camera2.x, camera2.y)->sector->heightsec;
 		else if (camera.chase && viewplayer == &players[displayplayer])
-			heightsec = R_PointInSubsector(camera.x, camera.y)->sector->heightsec;
+			heightsec = R_PointInWorldSubsector(viewworld, camera.x, camera.y)->sector->heightsec;
 		else if (viewmobj)
-			heightsec = R_PointInSubsector(viewmobj->x, viewmobj->y)->sector->heightsec;
+			heightsec = R_PointInWorldSubsector(viewworld, viewmobj->x, viewmobj->y)->sector->heightsec;
 		else
 			return sec;
-		underwater = heightsec != -1 && viewz <= sectors[heightsec].floorheight;
+		underwater = heightsec != -1 && viewz <= viewworld->sectors[heightsec].floorheight;
 
 		// Replace sector being drawn, with a copy to be hacked
 		*tempsec = *sec;
@@ -280,7 +280,7 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 
 			if (underwater)
 			{
-				if (s->ceilingpic == skyflatnum)
+				if (s->ceilingpic == viewworld->skyflatnum)
 				{
 					tempsec->floorheight = tempsec->ceilingheight+1;
 					tempsec->ceilingpic = tempsec->floorpic;
@@ -301,13 +301,13 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 
 			if (floorlightlevel)
 				*floorlightlevel = s->floorlightsec == -1 ? s->lightlevel
-					: sectors[s->floorlightsec].lightlevel;
+					: viewworld->sectors[s->floorlightsec].lightlevel;
 
 			if (ceilinglightlevel)
 				*ceilinglightlevel = s->ceilinglightsec == -1 ? s->lightlevel
-					: sectors[s->ceilinglightsec].lightlevel;
+					: viewworld->sectors[s->ceilinglightsec].lightlevel;
 		}
-		else if (heightsec != -1 && viewz >= sectors[heightsec].ceilingheight
+		else if (heightsec != -1 && viewz >= viewworld->sectors[heightsec].ceilingheight
 			&& sec->ceilingheight > s->ceilingheight)
 		{ // Above-ceiling hack
 			tempsec->ceilingheight = s->ceilingheight;
@@ -318,7 +318,7 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 			tempsec->floor_yoffs = tempsec->ceiling_yoffs = s->ceiling_yoffs;
 			tempsec->floorpic_angle = tempsec->ceilingpic_angle = s->ceilingpic_angle;
 
-			if (s->floorpic == skyflatnum) // SKYFIX?
+			if (s->floorpic == viewworld->skyflatnum) // SKYFIX?
 			{
 				tempsec->ceilingheight = tempsec->floorheight-1;
 				tempsec->floorpic = tempsec->ceilingpic;
@@ -339,11 +339,11 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 
 			if (floorlightlevel)
 				*floorlightlevel = s->floorlightsec == -1 ? s->lightlevel :
-			sectors[s->floorlightsec].lightlevel;
+			viewworld->sectors[s->floorlightsec].lightlevel;
 
 			if (ceilinglightlevel)
 				*ceilinglightlevel = s->ceilinglightsec == -1 ? s->lightlevel :
-			sectors[s->ceilinglightsec].lightlevel;
+			viewworld->sectors[s->ceilinglightsec].lightlevel;
 		}
 		sec = tempsec;
 	}
@@ -473,9 +473,9 @@ static void R_AddLine(seg_t *line)
 
 	doorclosed = 0;
 
-	if (backsector->ceilingpic == skyflatnum && frontsector->ceilingpic == skyflatnum)
+	if (backsector->ceilingpic == viewworld->skyflatnum && frontsector->ceilingpic == viewworld->skyflatnum)
 		bothceilingssky = true;
-	if (backsector->floorpic == skyflatnum && frontsector->floorpic == skyflatnum)
+	if (backsector->floorpic == viewworld->skyflatnum && frontsector->floorpic == viewworld->skyflatnum)
 		bothfloorssky = true;
 
 	if (bothceilingssky && bothfloorssky) // everything's sky? let's save us a bit of time then
@@ -833,18 +833,18 @@ static void R_Subsector(size_t num)
 	fixed_t floorcenterz, ceilingcenterz;
 
 #ifdef RANGECHECK
-	if (num >= numsubsectors)
-		I_Error("R_Subsector: ss %s with numss = %s\n", sizeu1(num), sizeu2(numsubsectors));
+	if (num >= viewworld->numsubsectors)
+		I_Error("R_Subsector: ss %s with numss = %s\n", sizeu1(num), sizeu2(viewworld->numsubsectors));
 #endif
 
 	// subsectors added at run-time
-	if (num >= numsubsectors)
+	if (num >= viewworld->numsubsectors)
 		return;
 
-	sub = &subsectors[num];
+	sub = &viewworld->subsectors[num];
 	frontsector = sub->sector;
 	count = sub->numlines;
-	line = &segs[sub->firstline];
+	line = &viewworld->segs[sub->firstline];
 
 	// Deep water/fake ceiling effect.
 	frontsector = R_FakeFlat(frontsector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
@@ -879,8 +879,8 @@ static void R_Subsector(size_t num)
 	sub->sector->extra_colormap = frontsector->extra_colormap;
 
 	if (P_GetSectorFloorZAt(frontsector, viewx, viewy) < viewz
-		|| frontsector->floorpic == skyflatnum
-		|| (frontsector->heightsec != -1 && sectors[frontsector->heightsec].ceilingpic == skyflatnum))
+		|| frontsector->floorpic == viewworld->skyflatnum
+		|| (frontsector->heightsec != -1 && viewworld->sectors[frontsector->heightsec].ceilingpic == viewworld->skyflatnum))
 	{
 		floorplane = R_FindPlane(frontsector->floorheight, frontsector->floorpic, floorlightlevel,
 			frontsector->floor_xoffs, frontsector->floor_yoffs, frontsector->floorpic_angle, floorcolormap, NULL, NULL, frontsector->f_slope);
@@ -889,8 +889,8 @@ static void R_Subsector(size_t num)
 		floorplane = NULL;
 
 	if (P_GetSectorCeilingZAt(frontsector, viewx, viewy) > viewz
-		|| frontsector->ceilingpic == skyflatnum
-		|| (frontsector->heightsec != -1 && sectors[frontsector->heightsec].floorpic == skyflatnum))
+		|| frontsector->ceilingpic == viewworld->skyflatnum
+		|| (frontsector->heightsec != -1 && viewworld->sectors[frontsector->heightsec].floorpic == viewworld->skyflatnum))
 	{
 		ceilingplane = R_FindPlane(frontsector->ceilingheight, frontsector->ceilingpic,
 			ceilinglightlevel, frontsector->ceiling_xoffs, frontsector->ceiling_yoffs, frontsector->ceilingpic_angle,
@@ -1243,7 +1243,7 @@ void R_RenderBSPNode(INT32 bspnum)
 
 	while (!(bspnum & NF_SUBSECTOR))  // Found a subsector?
 	{
-		bsp = &nodes[bspnum];
+		bsp = &viewworld->nodes[bspnum];
 
 		// Decide which side the view point is on.
 		side = R_PointOnSide(viewx, viewy, bsp);
@@ -1260,7 +1260,7 @@ void R_RenderBSPNode(INT32 bspnum)
 
 	// PORTAL CULLING
 	if (portalcullsector) {
-		sector_t *sect = subsectors[bspnum & ~NF_SUBSECTOR].sector;
+		sector_t *sect = viewworld->subsectors[bspnum & ~NF_SUBSECTOR].sector;
 		if (sect != portalcullsector)
 			return;
 		portalcullsector = NULL;

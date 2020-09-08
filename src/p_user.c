@@ -3375,7 +3375,7 @@ static void P_DoClimbing(player_t *player)
 
 				// Reached the top of the lower texture area
 				if (!floorclimb && ceilingheight > player->mo->z + player->mo->height - FixedMul(16*FRACUNIT, player->mo->scale)
-					&& (glidesector->sector->ceilingpic == skyflatnum || floorheight < (player->mo->z - FixedMul(8*FRACUNIT, player->mo->scale))))
+					&& (glidesector->sector->ceilingpic == world->skyflatnum || floorheight < (player->mo->z - FixedMul(8*FRACUNIT, player->mo->scale))))
 				{
 					thrust = true;
 					boostup = true;
@@ -3423,7 +3423,7 @@ static void P_DoClimbing(player_t *player)
 
 				// Reached the top of the lower texture area
 				if (!floorclimb && floorheight < player->mo->z + FixedMul(16*FRACUNIT, player->mo->scale)
-					&& (glidesector->sector->ceilingpic == skyflatnum || ceilingheight > (player->mo->z + player->mo->height + FixedMul(8*FRACUNIT, player->mo->scale))))
+					&& (glidesector->sector->ceilingpic == world->skyflatnum || ceilingheight > (player->mo->z + player->mo->height + FixedMul(8*FRACUNIT, player->mo->scale))))
 				{
 					thrust = true;
 					boostup = true;
@@ -3432,7 +3432,7 @@ static void P_DoClimbing(player_t *player)
 			}
 
 			// Trying to climb on the sky
-			if ((ceilingheight < player->mo->z) && glidesector->sector->ceilingpic == skyflatnum)
+			if ((ceilingheight < player->mo->z) && glidesector->sector->ceilingpic == world->skyflatnum)
 			{
 				skyclimber = true;
 			}
