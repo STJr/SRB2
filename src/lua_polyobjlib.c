@@ -16,6 +16,10 @@
 #include "p_polyobj.h"
 #include "lua_script.h"
 #include "lua_libs.h"
+#include "lua_hud.h" // hud_running errors
+
+#define NOHUD if (hud_running)\
+return luaL_error(L, "HUD rendering code should not call this function!");
 
 enum polyobj_e {
 	// properties
@@ -29,10 +33,13 @@ enum polyobj_e {
 	polyobj_flags,
 	polyobj_translucency,
 	polyobj_triggertag,
-	// special functions
+	// special functions - utility
 	polyobj_pointInside,
 	polyobj_mobjTouching,
-	polyobj_mobjInside
+	polyobj_mobjInside,
+	// special functions - manipulation
+	polyobj_moveXY,
+	polyobj_rotate
 };
 static const char *const polyobj_opt[] = {
 	// properties
@@ -46,12 +53,16 @@ static const char *const polyobj_opt[] = {
 	"flags",
 	"translucency",
 	"triggertag",
-	// special functions
+	// special functions - utility
 	"pointInside",
 	"mobjTouching",
 	"mobjInside",
+	// special functions - manipulation
+	"moveXY",
+	"rotate",
 	NULL};
 
+// special functions - utility
 static int lib_polyobj_PointInside(lua_State *L)
 {
 	polyobj_t *po = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
@@ -87,6 +98,35 @@ static int lib_polyobj_MobjInside(lua_State *L)
 	if (!mo)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushboolean(L, P_MobjInsidePolyobj(po, mo));
+	return 1;
+}
+
+// special functions - manipulation
+static int lib_polyobj_moveXY(lua_State *L)
+{
+	polyobj_t *po = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	boolean checkmobjs = lua_opttrueboolean(L, 4);
+	NOHUD
+	INLEVEL
+	if (!po)
+		return LUA_ErrInvalid(L, "polyobj_t");
+	lua_pushboolean(L, Polyobj_moveXY(po, x, y, checkmobjs));
+	return 1;
+}
+
+static int lib_polyobj_rotate(lua_State *L)
+{
+	polyobj_t *po = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
+	angle_t delta = luaL_checkangle(L, 2);
+	UINT8 turnthings = (UINT8)luaL_optinteger(L, 3, 0); // don't turn anything by default? (could change this if not desired)
+	boolean checkmobjs = lua_opttrueboolean(L, 4);
+	NOHUD
+	INLEVEL
+	if (!po)
+		return LUA_ErrInvalid(L, "polyobj_t");
+	lua_pushboolean(L, Polyobj_rotate(po, delta, turnthings, checkmobjs));
 	return 1;
 }
 
@@ -136,7 +176,7 @@ static int polyobj_get(lua_State *L)
 	case polyobj_triggertag:
 		lua_pushinteger(L, polyobj->triggertag);
 		break;
-	// special functions
+	// special functions - utility
 	case polyobj_pointInside:
 		lua_pushcfunction(L, lib_polyobj_PointInside);
 		break;
@@ -145,6 +185,13 @@ static int polyobj_get(lua_State *L)
 		break;
 	case polyobj_mobjInside:
 		lua_pushcfunction(L, lib_polyobj_MobjInside);
+		break;
+	// special functions - manipulation
+	case polyobj_moveXY:
+		lua_pushcfunction(L, lib_polyobj_moveXY);
+		break;
+	case polyobj_rotate:
+		lua_pushcfunction(L, lib_polyobj_rotate);
 		break;
 	}
 	return 1;
