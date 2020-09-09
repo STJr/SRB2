@@ -21,6 +21,7 @@ enum polyobj_e {
 	polyobj_valid = 0,
 	polyobj_id,
 	polyobj_parent,
+	polyobj_sector,
 	polyobj_angle,
 	polyobj_damage,
 	polyobj_thrust,
@@ -32,6 +33,7 @@ static const char *const polyobj_opt[] = {
 	"valid",
 	"id",
 	"parent",
+	"sector",
 	"angle",
 	"damage",
 	"thrust",
@@ -63,6 +65,9 @@ static int polyobj_get(lua_State *L)
 		break;
 	case polyobj_parent:
 		lua_pushinteger(L, polyobj->parent);
+		break;
+	case polyobj_sector: // shortcut that exists only in Lua!
+		LUA_PushUserdata(L, polyobj->lines[0]->backsector, META_SECTOR);
 		break;
 	case polyobj_angle:
 		lua_pushangle(L, polyobj->angle);
