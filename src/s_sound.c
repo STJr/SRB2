@@ -521,6 +521,7 @@ void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
 
 void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 {
+	const INT32 initial_volume = volume;
 	INT32 sep, pitch, priority, cnum;
 	const sfxenum_t actual_id = sfx_id;
 	sfxinfo_t *sfx;
@@ -718,6 +719,7 @@ dontplay:
 
 	// Assigns the handle to one of the channels in the
 	// mix/output buffer.
+	channels[cnum].volume = initial_volume;
 	channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
 }
 
@@ -929,7 +931,7 @@ void S_UpdateSounds(void)
 			if (I_SoundIsPlaying(c->handle))
 			{
 				// initialize parameters
-				volume = 255; // 8 bits internal volume precision
+				volume = c->volume; // 8 bits internal volume precision
 				pitch = NORM_PITCH;
 				sep = NORM_SEP;
 
@@ -1204,15 +1206,12 @@ INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, INT32 *v
 	}
 
 	// volume calculation
-	if (approx_dist < S_CLOSE_DIST)
-	{
-		// SfxVolume is now hardware volume
-		*vol = 255; // not snd_SfxVolume
-	}
-	else
+	/* not sure if it should be > (no =), but this matches the old behavior */
+	if (approx_dist >= S_CLOSE_DIST)
 	{
 		// distance effect
-		*vol = (15 * ((S_CLIPPING_DIST - approx_dist)>>FRACBITS)) / S_ATTENUATOR;
+		INT32 n = (15 * ((S_CLIPPING_DIST - approx_dist)>>FRACBITS));
+		*vol = FixedMul(*vol * FRACUNIT / 255, n) / S_ATTENUATOR;
 	}
 
 	return (*vol > 0);
