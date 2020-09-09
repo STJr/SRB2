@@ -18,6 +18,7 @@
 #include "lua_libs.h"
 
 enum polyobj_e {
+	// properties
 	polyobj_valid = 0,
 	polyobj_id,
 	polyobj_parent,
@@ -27,9 +28,14 @@ enum polyobj_e {
 	polyobj_thrust,
 	polyobj_flags,
 	polyobj_translucency,
-	polyobj_triggertag
+	polyobj_triggertag,
+	// special functions
+	polyobj_pointInside,
+	polyobj_mobjTouching,
+	polyobj_mobjInside
 };
 static const char *const polyobj_opt[] = {
+	// properties
 	"valid",
 	"id",
 	"parent",
@@ -40,7 +46,49 @@ static const char *const polyobj_opt[] = {
 	"flags",
 	"translucency",
 	"triggertag",
+	// special functions
+	"pointInside",
+	"mobjTouching",
+	"mobjInside",
 	NULL};
+
+static int lib_polyobj_PointInside(lua_State *L)
+{
+	polyobj_t *po = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	INLEVEL
+	if (!po)
+		return LUA_ErrInvalid(L, "polyobj_t");
+	lua_pushboolean(L, P_PointInsidePolyobj(po, x, y));
+	return 1;
+}
+
+static int lib_polyobj_MobjTouching(lua_State *L)
+{
+	polyobj_t *po = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
+	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	INLEVEL
+	if (!po)
+		return LUA_ErrInvalid(L, "polyobj_t");
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_MobjTouchingPolyobj(po, mo));
+	return 1;
+}
+
+static int lib_polyobj_MobjInside(lua_State *L)
+{
+	polyobj_t *po = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
+	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 2, META_MOBJ));
+	INLEVEL
+	if (!po)
+		return LUA_ErrInvalid(L, "polyobj_t");
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	lua_pushboolean(L, P_MobjInsidePolyobj(po, mo));
+	return 1;
+}
 
 static int polyobj_get(lua_State *L)
 {
@@ -57,6 +105,7 @@ static int polyobj_get(lua_State *L)
 
 	switch (field)
 	{
+	// properties
 	case polyobj_valid:
 		lua_pushboolean(L, true);
 		break;
@@ -86,6 +135,16 @@ static int polyobj_get(lua_State *L)
 		break;
 	case polyobj_triggertag:
 		lua_pushinteger(L, polyobj->triggertag);
+		break;
+	// special functions
+	case polyobj_pointInside:
+		lua_pushcfunction(L, lib_polyobj_PointInside);
+		break;
+	case polyobj_mobjTouching:
+		lua_pushcfunction(L, lib_polyobj_MobjTouching);
+		break;
+	case polyobj_mobjInside:
+		lua_pushcfunction(L, lib_polyobj_MobjInside);
 		break;
 	}
 	return 1;
