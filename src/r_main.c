@@ -927,11 +927,7 @@ void R_ExecuteSetViewSize(void)
 		screenheightarray[i] = (INT16)viewheight;
 
 	// setup sky scaling
-	for (i = 0; i < numworlds; i++)
-	{
-		if (worldlist[i])
-			R_SetSkyScale(worldlist[i]);
-	}
+	R_SetSkyScale();
 
 	// planes
 	if (rendermode == render_soft)
@@ -1229,7 +1225,7 @@ void R_SkyboxFrame(player_t *player)
 		thiscam = &camera;
 
 	// cut-away view stuff
-	r_viewmobj = world->skyboxmo[0];
+	r_viewmobj = viewworld->skyboxmo[0];
 #ifdef PARANOIA
 	if (!r_viewmobj)
 	{
@@ -1298,18 +1294,18 @@ void R_SkyboxFrame(player_t *player)
 		campos.y += quake.y;
 		campos.z += quake.z;
 
-		if (world->skyboxmo[1]) // Is there a viewpoint?
+		if (viewworld->skyboxmo[1]) // Is there a viewpoint?
 		{
 			fixed_t x = 0, y = 0;
 			if (mh->skybox_scalex > 0)
-				x = (campos.x - world->skyboxmo[1]->x) / mh->skybox_scalex;
+				x = (campos.x - viewworld->skyboxmo[1]->x) / mh->skybox_scalex;
 			else if (mh->skybox_scalex < 0)
-				x = (campos.x - world->skyboxmo[1]->x) * -mh->skybox_scalex;
+				x = (campos.x - viewworld->skyboxmo[1]->x) * -mh->skybox_scalex;
 
 			if (mh->skybox_scaley > 0)
-				y = (campos.y - world->skyboxmo[1]->y) / mh->skybox_scaley;
+				y = (campos.y - viewworld->skyboxmo[1]->y) / mh->skybox_scaley;
 			else if (mh->skybox_scaley < 0)
-				y = (campos.y - world->skyboxmo[1]->y) * -mh->skybox_scaley;
+				y = (campos.y - viewworld->skyboxmo[1]->y) * -mh->skybox_scaley;
 
 			if (r_viewmobj->angle == 0)
 			{
@@ -1525,7 +1521,7 @@ void R_RenderPlayerView(player_t *player)
 
 
 	// Add skybox portals caused by sky visplanes.
-	if (cv_skybox.value && world->skyboxmo[0])
+	if (cv_skybox.value && viewworld->skyboxmo[0])
 		Portal_AddSkyboxPortals();
 
 	// Portal rendering. Hijacks the BSP traversal.

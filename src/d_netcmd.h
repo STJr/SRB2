@@ -133,8 +133,8 @@ typedef enum
 	XD_ADDPLAYER,   // 10
 	XD_TEAMCHANGE,  // 11
 	XD_CLEARSCORES, // 12
-	// UNUSED          13 (Because I don't want to change these comments)
-	XD_VERIFIED = 14,//14
+	XD_SWITCHWORLD, // 13
+	XD_VERIFIED,    // 14
 	XD_RANDOMSEED,  // 15
 	XD_RUNSOC,      // 16
 	XD_REQADDFILE,  // 17
@@ -206,6 +206,7 @@ void ClearAdminPlayers(void);
 void RemoveAdminPlayer(INT32 playernum);
 void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
+void SendWorldSwitch(INT32 worldnum, boolean nodetach);
 
 // used for the player setup menu
 UINT8 CanChangeSkin(INT32 playernum);

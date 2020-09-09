@@ -266,13 +266,6 @@ void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, b
 #define ONFLOORZ INT32_MIN
 #define ONCEILINGZ INT32_MAX
 
-// Time interval for item respawning.
-// WARNING MUST be a power of 2
-#define ITEMQUESIZE 1024
-
-extern mapthing_t *itemrespawnque[ITEMQUESIZE];
-extern tic_t itemrespawntime[ITEMQUESIZE];
-extern size_t iquehead, iquetail;
 extern consvar_t cv_gravity, cv_movebob;
 
 void P_RespawnSpecials(void);
@@ -280,7 +273,7 @@ void P_RespawnSpecials(void);
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type);
 
 void P_RecalcPrecipInSector(sector_t *sector);
-void P_PrecipitationEffects(void);
+void P_PrecipitationEffects(world_t *w);
 
 void P_RemoveMobj(mobj_t *th);
 boolean P_MobjWasRemoved(mobj_t *th);

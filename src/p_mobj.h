@@ -357,7 +357,9 @@ typedef struct mobj_s
 	fixed_t watertop; // top of the water FOF the mobj is in
 	fixed_t waterbottom; // bottom of the water FOF the mobj is in
 
-	UINT32 mobjnum; // A unique number for this mobj. Used for restoring pointers on save games.
+	// Used for restoring pointers on save games.
+	UINT32 mobjnum; // A unique number for this mobj.
+	UINT32 worldnum; // The world number for this mobj.
 
 	fixed_t scale;
 	fixed_t destscale;

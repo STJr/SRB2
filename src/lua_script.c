@@ -293,13 +293,13 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushinteger(L, curWeather);
 		return 1;
 	} else if (fastcmp(word,"globalweather")) {
-		lua_pushinteger(L, globalweather);
+		lua_pushinteger(L, (localworld ? localworld->weather : PRECIP_NONE));
 		return 1;
 	} else if (fastcmp(word,"levelskynum")) {
 		lua_pushinteger(L, levelskynum);
 		return 1;
 	} else if (fastcmp(word,"globallevelskynum")) {
-		lua_pushinteger(L, globallevelskynum);
+		lua_pushinteger(L, (localworld ? localworld->skynum : 0));
 		return 1;
 	} else if (fastcmp(word,"mapmusname")) {
 		lua_pushstring(L, mapmusname);
@@ -1338,40 +1338,40 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		LUA_PushUserdata(gL, &states[READUINT16(save_p)], META_STATE);
 		break;
 	case ARCH_MOBJ:
-		LUA_PushUserdata(gL, P_FindNewPosition(READUINT32(save_p)), META_MOBJ);
+		LUA_PushUserdata(gL, P_FindNewPosition(archiveworld, READUINT32(save_p)), META_MOBJ);
 		break;
 	case ARCH_PLAYER:
 		LUA_PushUserdata(gL, &players[READUINT8(save_p)], META_PLAYER);
 		break;
 	case ARCH_MAPTHING:
-		LUA_PushUserdata(gL, &mapthings[READUINT16(save_p)], META_MAPTHING);
+		LUA_PushUserdata(gL, &archiveworld->mapthings[READUINT16(save_p)], META_MAPTHING);
 		break;
 	case ARCH_VERTEX:
-		LUA_PushUserdata(gL, &vertexes[READUINT16(save_p)], META_VERTEX);
+		LUA_PushUserdata(gL, &archiveworld->vertexes[READUINT16(save_p)], META_VERTEX);
 		break;
 	case ARCH_LINE:
-		LUA_PushUserdata(gL, &lines[READUINT16(save_p)], META_LINE);
+		LUA_PushUserdata(gL, &archiveworld->lines[READUINT16(save_p)], META_LINE);
 		break;
 	case ARCH_SIDE:
-		LUA_PushUserdata(gL, &sides[READUINT16(save_p)], META_SIDE);
+		LUA_PushUserdata(gL, &archiveworld->sides[READUINT16(save_p)], META_SIDE);
 		break;
 	case ARCH_SUBSECTOR:
-		LUA_PushUserdata(gL, &subsectors[READUINT16(save_p)], META_SUBSECTOR);
+		LUA_PushUserdata(gL, &archiveworld->subsectors[READUINT16(save_p)], META_SUBSECTOR);
 		break;
 	case ARCH_SECTOR:
-		LUA_PushUserdata(gL, &sectors[READUINT16(save_p)], META_SECTOR);
+		LUA_PushUserdata(gL, &archiveworld->sectors[READUINT16(save_p)], META_SECTOR);
 		break;
 #ifdef HAVE_LUA_SEGS
 	case ARCH_SEG:
-		LUA_PushUserdata(gL, &segs[READUINT16(save_p)], META_SEG);
+		LUA_PushUserdata(gL, &archiveworld->segs[READUINT16(save_p)], META_SEG);
 		break;
 	case ARCH_NODE:
-		LUA_PushUserdata(gL, &nodes[READUINT16(save_p)], META_NODE);
+		LUA_PushUserdata(gL, &archiveworld->nodes[READUINT16(save_p)], META_NODE);
 		break;
 #endif
 	case ARCH_FFLOOR:
 	{
-		sector_t *sector = &sectors[READUINT16(save_p)];
+		sector_t *sector = &archiveworld->sectors[READUINT16(save_p)];
 		UINT16 id = READUINT16(save_p);
 		ffloor_t *rover = P_GetFFloorByID(sector, id);
 		if (rover)

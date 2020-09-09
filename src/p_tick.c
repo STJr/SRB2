@@ -651,6 +651,27 @@ static inline void P_RunWorldSpecials(void)
 	}
 }
 
+static inline void P_WorldPrecipitationEffects(void)
+{
+	INT32 i;
+
+	if (!(netgame || multiplayer) || (numworlds < 2))
+	{
+		P_PrecipitationEffects(baseworld);
+		return;
+	}
+
+	for (i = 0; i < numworlds; i++)
+	{
+		world_t *w = worldlist[i];
+
+		if (!w->players)
+			continue;
+
+		P_PrecipitationEffects(w);
+	}
+}
+
 static inline void P_WorldRunVoid(void (*func)(void))
 {
 	INT32 i;
@@ -781,7 +802,7 @@ void P_Ticker(boolean run)
 	P_RunWorldSpecials();
 
 	// Lightning, rain sounds, etc.
-	P_PrecipitationEffects();
+	P_WorldPrecipitationEffects();
 
 	if (run)
 		leveltime++;

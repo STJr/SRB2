@@ -749,6 +749,9 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if (player->quittime)
 			continue; // Ignore uncontrolled bodies
 
+		if (player->world != actor->world)
+			continue; // Different world
+
 		if (dist > 0
 			&& P_AproxDistance(P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y), player->mo->z - actor->z) > dist)
 			continue; // Too far away

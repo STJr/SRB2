@@ -323,6 +323,7 @@ typedef struct player_s
 	playerstate_t playerstate;
 
 	void *world;
+	INT32 worldnum; // Lactozilla: for unarchiving purposes only, just like mobjnum
 
 	// Determine POV, including viewpoint bobbing during movement.
 	fixed_t camerascale;

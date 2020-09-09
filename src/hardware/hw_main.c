@@ -5061,8 +5061,8 @@ static void HWR_DrawSkyBackground(player_t *player)
 		}
 		dometransform.splitscreen = splitscreen;
 
-		HWR_GetTexture(texturetranslation[viewworld->skytexture]);
-		HWD.pfnRenderSkyDome(viewworld->skytexture, textures[viewworld->skytexture]->width, textures[viewworld->skytexture]->height, dometransform);
+		HWR_GetTexture(texturetranslation[skytexture]);
+		HWD.pfnRenderSkyDome(skytexture, textures[skytexture]->width, textures[skytexture]->height, dometransform);
 	}
 	else
 	{
@@ -5072,7 +5072,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 		float aspectratio;
 		float angleturn;
 
-		HWR_GetTexture(texturetranslation[viewworld->skytexture]);
+		HWR_GetTexture(texturetranslation[skytexture]);
 		aspectratio = (float)vid.width/(float)vid.height;
 
 		//Hurdler: the sky is the only texture who need 4.0f instead of 1.0
@@ -5099,7 +5099,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 		angle = (dup_viewangle + gr_xtoviewangle[0]);
 
-		dimensionmultiply = ((float)textures[texturetranslation[viewworld->skytexture]]->width/256.0f);
+		dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->width/256.0f);
 
 		v[0].s = v[3].s = (-1.0f * angle) / ((ANGLE_90-1)*dimensionmultiply); // left
 		v[2].s = v[1].s = v[0].s + (1.0f/dimensionmultiply); // right (or left + 1.0f)
@@ -5107,7 +5107,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 		// Y
 		angle = aimingangle;
-		dimensionmultiply = ((float)textures[texturetranslation[viewworld->skytexture]]->height/(128.0f*aspectratio));
+		dimensionmultiply = ((float)textures[texturetranslation[skytexture]]->height/(128.0f*aspectratio));
 
 		if (splitscreen)
 		{

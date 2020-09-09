@@ -2987,8 +2987,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 424: // Change Weather
 			if (line->flags & ML_NOCLIMB)
 			{
-				globalweather = (UINT8)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
-				P_SwitchWeather(globalweather);
+				world->weather = (UINT8)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				P_SwitchWeather(world->weather);
 			}
 			else if (mo && mo->player && P_IsLocalPlayer(mo->player))
 				P_SwitchWeather(sides[line->sidenum[0]].textureoffset>>FRACBITS);
@@ -6136,7 +6136,7 @@ static void P_RunLevelLoadExecutors(void)
 void P_InitSpecials(void)
 {
 	// Set the default gravity. Custom gravity overrides this setting.
-	gravity = mapheaderinfo[gamemap-1]->gravity;
+	world->gravity = gravity = mapheaderinfo[gamemap-1]->gravity;
 
 	// Defaults in case levels don't have them set.
 	sstimer = mapheaderinfo[gamemap-1]->sstimer*TICRATE + 6;
@@ -6161,7 +6161,7 @@ void P_InitSpecials(void)
 	}
 
 	// Set globalweather
-	globalweather = mapheaderinfo[gamemap-1]->weather;
+	world->weather = mapheaderinfo[gamemap-1]->weather;
 }
 
 static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs)
@@ -6236,7 +6236,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 11: // Custom global gravity!
-				gravity = sector->floorheight/1000;
+				world->gravity = gravity = sector->floorheight/1000;
 				break;
 		}
 

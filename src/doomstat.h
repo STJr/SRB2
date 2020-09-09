@@ -40,7 +40,6 @@ extern UINT32 mapmusposition;
 // Use other bits if necessary.
 
 extern UINT32 maptol;
-extern UINT8 globalweather;
 extern INT32 curWeather;
 extern INT32 cursaveslot;
 //extern INT16 lastmapsaved;

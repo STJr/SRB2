@@ -4205,6 +4205,9 @@ boolean P_SupermanLook4Players(mobj_t *actor)
 			if (players[c].mo->health <= 0)
 				continue; // dead
 
+			if (players[c].world != actor->world)
+				continue; // Different world
+
 			playersinthegame[stop] = &players[c];
 			stop++;
 		}
@@ -10028,13 +10031,13 @@ void P_MobjThinker(mobj_t *mobj)
 		return;
 
 	// Remove dead target/tracer.
-	if (mobj->target && P_MobjWasRemoved(mobj->target))
+	if (!P_MobjIsConnected(mobj, mobj->target))
 		P_SetTarget(&mobj->target, NULL);
-	if (mobj->tracer && P_MobjWasRemoved(mobj->tracer))
+	if (!P_MobjIsConnected(mobj, mobj->tracer))
 		P_SetTarget(&mobj->tracer, NULL);
-	if (mobj->hnext && P_MobjWasRemoved(mobj->hnext))
+	if (!P_MobjIsConnected(mobj, mobj->hnext))
 		P_SetTarget(&mobj->hnext, NULL);
-	if (mobj->hprev && P_MobjWasRemoved(mobj->hprev))
+	if (!P_MobjIsConnected(mobj, mobj->hprev))
 		P_SetTarget(&mobj->hprev, NULL);
 
 	mobj->eflags &= ~(MFE_PUSHED|MFE_SPRUNG);
@@ -10906,9 +10909,6 @@ static inline precipmobj_t *P_SpawnSnowMobj(fixed_t x, fixed_t y, fixed_t z, mob
 //
 // P_RemoveMobj
 //
-mapthing_t *itemrespawnque[ITEMQUESIZE];
-tic_t itemrespawntime[ITEMQUESIZE];
-size_t iquehead, iquetail;
 
 #ifdef PARANOIA
 #define SCRAMBLE_REMOVED // Force debug build to crash when Removed mobj is accessed
@@ -10933,12 +10933,12 @@ void P_RemoveMobj(mobj_t *mobj)
 		|| P_WeaponOrPanel(mobj->type))
 		&& !(mobj->flags2 & MF2_DONTRESPAWN))
 	{
-		itemrespawnque[iquehead] = mobj->spawnpoint;
-		itemrespawntime[iquehead] = leveltime;
-		iquehead = (iquehead+1)&(ITEMQUESIZE-1);
+		world->itemrespawnque[world->iquehead] = mobj->spawnpoint;
+		world->itemrespawntime[world->iquehead] = leveltime;
+		world->iquehead = (world->iquehead+1)&(ITEMQUESIZE-1);
 		// lose one off the end?
-		if (iquehead == iquetail)
-			iquetail = (iquetail+1)&(ITEMQUESIZE-1);
+		if (world->iquehead == world->iquetail)
+			world->iquetail = (world->iquetail+1)&(ITEMQUESIZE-1);
 	}
 
 	if (mobj->type == MT_OVERLAY)
@@ -11127,7 +11127,7 @@ void P_SpawnPrecipitation(void)
 //
 // P_PrecipitationEffects
 //
-void P_PrecipitationEffects(void)
+void P_PrecipitationEffects(world_t *w)
 {
 	INT16 thunderchance = INT16_MAX;
 	INT32 volume;
@@ -11144,8 +11144,8 @@ void P_PrecipitationEffects(void)
 	// with global rain and switched players to anything else ...
 	// If the global weather has lightning strikes,
 	// EVERYONE gets them at the SAME time!
-	else if (globalweather == PRECIP_STORM
-	 || globalweather == PRECIP_STORM_NORAIN)
+	else if (w->weather == PRECIP_STORM
+	 || w->weather == PRECIP_STORM_NORAIN)
 		thunderchance = (P_RandomKey(8192));
 	// But on the other hand, if the global weather is ANYTHING ELSE,
 	// don't sync lightning strikes.
@@ -11180,8 +11180,8 @@ void P_PrecipitationEffects(void)
 	{
 		sector_t *ss = sectors;
 
-		for (i = 0; i < numsectors; i++, ss++)
-			if (ss->ceilingpic == world->skyflatnum) // Only for the sky.
+		for (i = 0; i < w->numsectors; i++, ss++)
+			if (ss->ceilingpic == w->skyflatnum) // Only for the sky.
 				P_SpawnLightningFlash(ss); // Spawn a quick flash thinker
 	}
 
@@ -11193,7 +11193,7 @@ void P_PrecipitationEffects(void)
 	if (sound_disabled)
 		return; // Sound off? D'aw, no fun.
 
-	if (players[displayplayer].mo->subsector->sector->ceilingpic == world->skyflatnum)
+	if (players[displayplayer].mo->subsector->sector->ceilingpic == w->skyflatnum)
 		volume = 255; // Sky above? We get it full blast.
 	else
 	{
@@ -11209,7 +11209,7 @@ void P_PrecipitationEffects(void)
 		for (y = yl; y <= yh; y += FRACUNIT*64)
 			for (x = xl; x <= xh; x += FRACUNIT*64)
 			{
-				if (R_PointInSubsector(x, y)->sector->ceilingpic == world->skyflatnum) // Found the outdoors!
+				if (R_PointInWorldSubsector(w, x, y)->sector->ceilingpic == w->skyflatnum) // Found the outdoors!
 				{
 					newdist = S_CalculateSoundDistance(players[displayplayer].mo->x, players[displayplayer].mo->y, 0, x, y, 0);
 					if (newdist < closedist)
@@ -11277,15 +11277,15 @@ void P_RespawnSpecials(void)
 		return;
 
 	// nothing left to respawn?
-	if (iquehead == iquetail)
+	if (world->iquehead == world->iquetail)
 		return;
 
 	// the first item in the queue is the first to respawn
 	// wait at least 30 seconds
-	if (leveltime - itemrespawntime[iquetail] < (tic_t)cv_itemrespawntime.value*TICRATE)
+	if (leveltime - world->itemrespawntime[world->iquetail] < (tic_t)cv_itemrespawntime.value*TICRATE)
 		return;
 
-	mthing = itemrespawnque[iquetail];
+	mthing = world->itemrespawnque[world->iquetail];
 
 #ifdef PARANOIA
 	if (!mthing)
@@ -11296,7 +11296,7 @@ void P_RespawnSpecials(void)
 		P_SpawnMapThing(mthing);
 
 	// pull it from the que
-	iquetail = (iquetail+1)&(ITEMQUESIZE-1);
+	world->iquetail = (world->iquetail+1)&(ITEMQUESIZE-1);
 }
 
 //

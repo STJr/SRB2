@@ -2213,7 +2213,9 @@ void P_DoPlayerExit(player_t *player)
 	if (player->exiting)
 		return;
 
-	if (cv_allowexitlevel.value == 0 && !G_PlatformGametype())
+	if (roaming)
+		player->exiting = (3*TICRATE) - 1;
+	else if (cv_allowexitlevel.value == 0 && !G_PlatformGametype())
 		return;
 	else if (gametyperules & GTR_RACE) // If in Race Mode, allow
 	{
@@ -9457,6 +9459,30 @@ void P_RestoreMultiMusic(player_t *player)
 	}
 }
 
+static void P_PlayerSetRaceRealTime(player_t *player)
+{
+	if (leveltime >= 4*TICRATE)
+	{
+		player->realtime = leveltime - 4*TICRATE;
+
+		if (roaming)
+		{
+			INT32 i;
+
+			for (i = 0; i < numworlds; i++)
+			{
+				if (player->world == worldlist[i])
+					break;
+			}
+
+			if (i > 0 && i < numworlds)
+				player->realtime -= (i * (3*TICRATE)-1);
+		}
+	}
+	else
+		player->realtime = 0;
+}
+
 //
 // P_DeathThink
 // Fall on your face when dying.
@@ -9584,12 +9610,7 @@ static void P_DeathThink(player_t *player)
 		if (!(countdown2 && !countdown) && !player->exiting && !(player->pflags & PF_GAMETYPEOVER) && !stoppedclock)
 		{
 			if (gametyperules & GTR_RACE)
-			{
-				if (leveltime >= 4*TICRATE)
-					player->realtime = leveltime - 4*TICRATE;
-				else
-					player->realtime = 0;
-			}
+				P_PlayerSetRaceRealTime(player);
 			else
 				player->realtime = leveltime;
 		}
@@ -11608,43 +11629,52 @@ void P_PlayerThink(player_t *player)
 
 	if (player->exiting == 2 || countdown2 == 2)
 	{
-		UINT8 numneeded = (G_IsSpecialStage(gamemap) ? 4 : cv_playersforexit.value);
-		if (numneeded) // Count to be sure everyone's exited
+		if (roaming)
 		{
-			INT32 i, total = 0, exiting = 0;
-
-			for (i = 0; i < MAXPLAYERS; i++)
+			G_PlayerFinishLevel(playeri);
+			G_SetNextMap(false, false);
+			P_RoamIntoWorld(player, nextmap+1);
+		}
+		else
+		{
+			UINT8 numneeded = (G_IsSpecialStage(gamemap) ? 4 : cv_playersforexit.value);
+			if (numneeded) // Count to be sure everyone's exited
 			{
-				if (!playeringame[i] || players[i].spectator || players[i].bot)
-					continue;
-				if (players[i].quittime > 30 * TICRATE)
-					continue;
-				if (players[i].lives <= 0)
-					continue;
+				INT32 i, total = 0, exiting = 0;
 
-				total++;
-				if (players[i].exiting && players[i].exiting < 4)
-					exiting++;
+				for (i = 0; i < MAXPLAYERS; i++)
+				{
+					if (!playeringame[i] || players[i].spectator || players[i].bot)
+						continue;
+					if (players[i].quittime > 30 * TICRATE)
+						continue;
+					if (players[i].lives <= 0)
+						continue;
+
+					total++;
+					if (players[i].exiting && players[i].exiting < 4)
+						exiting++;
+				}
+
+				if (!total || ((4*exiting)/total) >= numneeded)
+				{
+					if (server)
+						SendNetXCmd(XD_EXITLEVEL, NULL, 0);
+				}
+				else
+					player->exiting = 3;
 			}
-
-			if (!total || ((4*exiting)/total) >= numneeded)
+			else
 			{
 				if (server)
 					SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 			}
-			else
-				player->exiting = 3;
-		}
-		else
-		{
-			if (server)
-				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
 		}
 	}
 
 	if (player->pflags & PF_FINISHED)
 	{
-		if (((gametyperules & GTR_FRIENDLY) && cv_exitmove.value) && !G_EnoughPlayersFinished())
+		if (((gametyperules & GTR_FRIENDLY) && cv_exitmove.value) && !G_EnoughPlayersFinished() && (!roaming))
 			player->exiting = 0;
 		else
 			P_DoPlayerExit(player);
@@ -11699,12 +11729,7 @@ void P_PlayerThink(player_t *player)
 	if (!player->exiting && !stoppedclock)
 	{
 		if (gametyperules & GTR_RACE)
-		{
-			if (leveltime >= 4*TICRATE)
-				player->realtime = leveltime - 4*TICRATE;
-			else
-				player->realtime = 0;
-		}
+			P_PlayerSetRaceRealTime(player);
 		else
 			player->realtime = leveltime;
 	}

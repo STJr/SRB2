@@ -25,13 +25,6 @@
 #define WAYPOINTSEQUENCESIZE 256
 #define NUMWAYPOINTSEQUENCES 256
 
-typedef struct
-{
-	boolean visited;
-	vector3_t pos;
-	angle_t angle;
-} worldplayerinfo_t;
-
 //
 // Lactozilla: A "world" is the environment that players interact with.
 // A "map" is what defines how the world is built (what you edit in a level editor.)
@@ -41,7 +34,6 @@ typedef struct
 typedef struct
 {
 	INT32 gamemap;
-	worldplayerinfo_t playerinfo[MAXPLAYERS];
 	thinker_t *thlist;
 
 	INT32 players;
@@ -71,9 +63,10 @@ typedef struct
 
 	mobj_t *overlaycap;
 
-	INT32 skytexture; // the lump number of the sky texture
-	INT32 skytexturemid; // the horizon line in a 256x128 sky texture
-	fixed_t skyscale; // the scale of the sky
+	fixed_t gravity;
+
+	INT32 skynum; // used for keeping track of the current sky
+	UINT8 weather;
 
 	// Needed to store the number of the dummy sky flat.
 	// Used for rendering, as well as tracking projectiles etc.
@@ -95,6 +88,10 @@ typedef struct
 	mobj_t *waypoints[NUMWAYPOINTSEQUENCES][WAYPOINTSEQUENCESIZE];
 	UINT16 numwaypoints[NUMWAYPOINTSEQUENCES];
 
+	mapthing_t *itemrespawnque[ITEMQUESIZE];
+	tic_t itemrespawntime[ITEMQUESIZE];
+	size_t iquehead, iquetail;
+
 	UINT8 *rejectmatrix; // for fast sight rejection
 	INT32 *blockmaplump; // offsets in blockmap are from here
 	INT32 *blockmap; // Big blockmap
@@ -112,6 +109,7 @@ typedef struct
 } world_t;
 
 extern world_t *world;
+extern world_t *baseworld;
 extern world_t *localworld;
 extern world_t *viewworld;
 
@@ -129,15 +127,21 @@ void P_SetGameWorld(world_t *w);
 void P_SetViewWorld(world_t *w);
 
 void P_SetWorld(world_t *w);
-void P_MarkWorldVisited(player_t *player, world_t *w);
 
+void P_RoamIntoWorld(player_t *player, INT32 mapnum);
 void P_SwitchWorld(player_t *player, world_t *w);
+
 void P_DetachPlayerWorld(player_t *player);
 void P_SwitchPlayerWorld(player_t *player, world_t *newworld);
+
+boolean P_TransferCarriedPlayers(player_t *player, world_t *w);
+boolean P_MobjIsConnected(mobj_t *mobj1, mobj_t *mobj2);
+void P_RemoveMobjConnections(mobj_t *mobj, world_t *w);
 
 void Command_Switchworld_f(void);
 void Command_Listworlds_f(void);
 
+void P_SetupWorldSky(INT32 skynum, world_t *w);
 INT32 P_AddLevelFlatForWorld(world_t *w, const char *flatname);
 
 #endif

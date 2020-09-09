@@ -2000,7 +2000,7 @@ static int lib_pSwitchWeather(lua_State *L)
 	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2)) // if a player, setup weather for only the player, otherwise setup weather for all players
 		user = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
 	if (!user) // global
-		globalweather = weathernum;
+		world->weather = weathernum;
 	if (!user || P_IsLocalPlayer(user))
 		P_SwitchWeather(weathernum);
 	return 0;

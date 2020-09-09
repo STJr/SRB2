@@ -392,6 +392,10 @@ extern skincolor_t skincolors[MAXSKINCOLORS];
 
 #define PUSHACCEL (2*FRACUNIT) // Acceleration for MF2_SLIDEPUSH items.
 
+// Time interval for item respawning.
+// WARNING MUST be a power of 2
+#define ITEMQUESIZE 1024
+
 // Special linedef executor tag numbers!
 enum {
 	LE_PINCHPHASE      =    -2, // A boss entered pinch phase (and, in most cases, is preparing their pinch phase attack!)

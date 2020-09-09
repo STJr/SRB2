@@ -62,6 +62,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum);
 static void Got_WeaponPref(UINT8 **cp, INT32 playernum);
 static void Got_Mapcmd(UINT8 **cp, INT32 playernum);
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum);
+static void Got_Switchworld(UINT8 **cp, INT32 playernum);
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum);
 static void Got_Addfilecmd(UINT8 **cp, INT32 playernum);
 static void Got_Pause(UINT8 **cp, INT32 playernum);
@@ -406,7 +407,7 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
 	"ADDPLAYER",
 	"TEAMCHANGE",
 	"CLEARSCORES",
-	"LOGIN",
+	"SWITCHWORLD",
 	"VERIFIED",
 	"RANDOMSEED",
 	"RUNSOC",
@@ -444,6 +445,7 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_WEAPONPREF, Got_WeaponPref);
 	RegisterNetXCmd(XD_MAP, Got_Mapcmd);
 	RegisterNetXCmd(XD_EXITLEVEL, Got_ExitLevelcmd);
+	RegisterNetXCmd(XD_SWITCHWORLD, Got_Switchworld);
 	RegisterNetXCmd(XD_ADDFILE, Got_Addfilecmd);
 	RegisterNetXCmd(XD_REQADDFILE, Got_RequestAddfilecmd);
 	RegisterNetXCmd(XD_PAUSE, Got_Pause);
@@ -1783,9 +1785,10 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean addworld, boolean pult
 	else
 	{
 		mapchangepending = false;
+
 		// spawn the server if needed
 		// reset players if there is a new one
-		if (!IsPlayerAdmin(consoleplayer))
+		if (!IsPlayerAdmin(consoleplayer) && !addworld)
 		{
 			if (SV_SpawnServer())
 				buf[0] &= ~(1<<1);
@@ -1848,7 +1851,6 @@ static void Command_Map_f(void)
 	size_t option_gametype;
 	const char *gametypename;
 	boolean newresetplayers;
-	boolean addworld;
 
 	boolean mustmodifygame;
 
@@ -1861,7 +1863,9 @@ static void Command_Map_f(void)
 
 	INT32 d;
 
-	if (client && !IsPlayerAdmin(consoleplayer))
+	boolean addworld = COM_CheckParm("-addworld");
+
+	if (client && !addworld && !IsPlayerAdmin(consoleplayer))
 	{
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 		return;
@@ -1870,7 +1874,6 @@ static void Command_Map_f(void)
 	option_force    =   COM_CheckPartialParm("-f");
 	option_gametype =   COM_CheckPartialParm("-g");
 	newresetplayers = ! COM_CheckParm("-noresetplayers");
-	addworld        =   COM_CheckParm("-addworld");
 
 	mustmodifygame =
 		!( netgame     || multiplayer ) &&
@@ -2094,7 +2097,8 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	{
 		DEBFILE(va("Warping to %s [resetplayer=%d lastgametype=%d gametype=%d cpnd=%d]\n",
 			mapname, resetplayer, lastgametype, gametype, chmappending));
-		CONS_Printf(M_GetText("Speeding off to level...\n"));
+		if (!addworld || (addworld && playernum == consoleplayer))
+			CONS_Printf(M_GetText("Speeding off to level...\n"));
 	}
 
 	if (demoplayback && !timingdemo)
@@ -2127,6 +2131,44 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	if (demorecording) // Okay, level loaded, character spawned and skinned,
 		G_BeginRecording(); // I AM NOW READY TO RECORD.
 	demo_start = true;
+}
+
+void SendWorldSwitch(INT32 worldnum, boolean nodetach)
+{
+	UINT8 buf[sizeof(INT32) + sizeof(UINT8)];
+	UINT8 *p = buf;
+
+	WRITEINT32(p, worldnum);
+	WRITEUINT8(p, nodetach ? 1 : 0);
+
+	SendNetXCmd(XD_SWITCHWORLD, buf, sizeof(buf));
+}
+
+static void Got_Switchworld(UINT8 **cp, INT32 playernum)
+{
+	player_t *player = &players[playernum];
+
+	INT32 worldnum = READINT32(*cp);
+	UINT8 nodetach = READUINT8(*cp);
+
+	if (worldnum > numworlds)
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal world switch command received from %s\n"), player_names[playernum]);
+		if (server)
+			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+		return;
+	}
+
+	if (nodetach) // Don't detach from the current world, if any
+	{
+#if 1
+		if (player->world)
+			((world_t *)player->world)->players--;
+#endif
+		player->world = NULL;
+	}
+
+	P_SwitchWorld(player, worldlist[worldnum]);
 }
 
 static void Command_Pause(void)

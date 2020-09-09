@@ -38,6 +38,7 @@
 #include "lua_hook.h"
 
 world_t *world = NULL;
+world_t *baseworld = NULL;
 world_t *localworld = NULL;
 world_t *viewworld = NULL;
 
@@ -66,13 +67,15 @@ world_t *P_InitNewWorld(void)
 	worldlist[numworlds] = P_InitWorld();
 	w = worldlist[numworlds];
 
+	if (!numworlds)
+		baseworld = w;
+
 	numworlds++;
 	return w;
 }
 
 //
 // Sets the current world structures for physics simulation.
-// (This was easier than referencing world-> in every part of gamelogic.)
 //
 void P_SetGameWorld(world_t *w)
 {
@@ -121,26 +124,6 @@ void P_SetViewWorld(world_t *w)
 }
 
 //
-// Sets a world as visited by a player.
-//
-void P_MarkWorldVisited(player_t *player, world_t *w)
-{
-	size_t playernum = (size_t)(player - players);
-	worldplayerinfo_t *playerinfo = &w->playerinfo[playernum];
-	vector3_t *pos = &playerinfo->pos;
-
-	if (!playeringame[playernum] || !player->mo || P_MobjWasRemoved(player->mo))
-		return;
-
-	pos->x = player->mo->x;
-	pos->y = player->mo->y;
-	pos->z = player->mo->z;
-	playerinfo->angle = player->mo->angle;
-
-	playerinfo->visited = true;
-}
-
-//
 // Sets the current world.
 //
 void P_SetWorld(world_t *w)
@@ -150,10 +133,9 @@ void P_SetWorld(world_t *w)
 
 	P_SetGameWorld(w);
 
-	thlist = world->thlist;
+	thlist = w->thlist;
 	gamemap = w->gamemap;
-
-	P_InitSpecials();
+	gravity = w->gravity;
 }
 
 //
@@ -184,20 +166,93 @@ void P_SwitchPlayerWorld(player_t *player, world_t *newworld)
 }
 
 //
+// Loads a new world, or switches to one.
+//
+void P_RoamIntoWorld(player_t *player, INT32 mapnum)
+{
+	world_t *w = NULL;
+	INT32 i;
+
+	for (i = 0; i < numworlds; i++)
+	{
+		if (worldlist[i]->gamemap == mapnum)
+		{
+			w = worldlist[i];
+			break;
+		}
+	}
+
+	if (w == player->world)
+		return;
+	else if (w)
+		P_SwitchWorld(player, w);
+	else
+		D_MapChange(mapnum, gametype, true, false, false, 0, false, false);
+}
+
+boolean P_TransferCarriedPlayers(player_t *player, world_t *w)
+{
+	boolean anycarried = false;
+	INT32 i;
+
+	// Lactozilla: Transfer carried players
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		player_t *carry;
+
+		if (!playeringame[i])
+			continue;
+
+		carry = &players[i];
+		if (carry == player)
+			continue;
+
+		if (carry->powers[pw_carry] == CR_PLAYER
+		&& carry->mo->tracer && !P_MobjWasRemoved(carry->mo->tracer)
+		&& carry->mo->tracer == player->mo)
+		{
+			mobj_t *tails = player->mo;
+
+			P_SwitchWorld(carry, w);
+
+			tails->z += tails->height*3*P_MobjFlip(tails);
+
+			// Set player position
+			P_UnsetThingPosition(carry->mo);
+			carry->mo->x = tails->x;
+			carry->mo->y = tails->y;
+			if (carry->mo->eflags & MFE_VERTICALFLIP)
+				carry->mo->z = tails->z + tails->height + 12*carry->mo->scale;
+			else
+				carry->mo->z = tails->z - carry->mo->height - 12*carry->mo->scale;
+			P_SetThingPosition(carry->mo);
+
+			anycarried = true;
+		}
+	}
+
+	return anycarried;
+}
+
+//
 // Switches a player to a world.
 //
 void P_SwitchWorld(player_t *player, world_t *w)
 {
 	size_t playernum = (size_t)(player - players);
-	worldplayerinfo_t *playerinfo = &w->playerinfo[playernum];
+	boolean local = ((INT32)playernum == consoleplayer);
+	boolean resetplayer = (player->powers[pw_carry] != CR_PLAYER);
 
+#if 0
 	if (w == player->world)
 		return;
+#endif
 
 	if (!playeringame[playernum] || !player->mo || P_MobjWasRemoved(player->mo))
 		return;
 
-	P_MarkWorldVisited(player, player->world);
+	if (player->world)
+		P_RemoveMobjConnections(player->mo, player->world);
 
 	if (player->followmobj)
 	{
@@ -206,32 +261,38 @@ void P_SwitchWorld(player_t *player, world_t *w)
 	}
 
 	P_SwitchPlayerWorld(player, w);
+
 	if (!splitscreen)
+	{
 		P_SetWorld(w);
+		if (local)
+			P_InitSpecials();
+	}
 
 	P_UnsetThingPosition(player->mo);
 	P_MoveThinkerToWorld(w, THINK_MAIN, (thinker_t *)(player->mo));
+	G_MovePlayerToSpawnOrStarpost(playernum);
 
-	if (playerinfo->visited)
-	{
-		vector3_t *pos = &playerinfo->pos;
-		P_TeleportMove(player->mo, pos->x, pos->y, pos->z);
-		P_SetPlayerAngle(player, playerinfo->angle);
-	}
-	else
-		G_MovePlayerToSpawnOrStarpost(playernum);
-
-	P_MapEnd();
-
-	if ((INT32)playernum == consoleplayer)
+	if (local)
 	{
 		localworld = world;
 		S_Start();
+		if (!dedicated)
+		{
+			P_SetupSkyTexture(w->skynum);
+			R_SetupSkyDraw();
+		}
 	}
 
-	if (!dedicated)
-		R_SetupSkyDraw(world);
-	P_ResetCamera(player, &camera);
+	if (player == &players[displayplayer])
+		P_ResetCamera(player, (splitscreen && playernum == 1) ? &camera2 : &camera);
+
+	if (P_TransferCarriedPlayers(player, w))
+		resetplayer = false;
+
+	if (resetplayer)
+		P_ResetPlayer(player);
+	P_MapEnd();
 }
 
 void Command_Switchworld_f(void)
@@ -248,32 +309,27 @@ void Command_Switchworld_f(void)
 
 	w = worldlist[worldnum];
 	CONS_Printf("Switching to world %d (%p)\n", worldnum, w);
-	P_SwitchWorld(&players[consoleplayer], w);
+
+	if (netgame)
+		SendWorldSwitch(worldnum, false);
+	else
+		P_SwitchWorld(&players[consoleplayer], w);
 }
 
 void Command_Listworlds_f(void)
 {
 	INT32 worldnum;
 	world_t *w;
-	worldplayerinfo_t *playerinfo;
 
     for (worldnum = 0; worldnum < numworlds; worldnum++)
 	{
 		w = worldlist[worldnum];
-		playerinfo = &w->playerinfo[consoleplayer];
 
 		CONS_Printf("World %d (%p)\n", worldnum, w);
 		CONS_Printf("Gamemap: %d\n", w->gamemap);
 		CONS_Printf("vt %d sg %d sc %d ss %d nd %d ld %d sd %d mt %d\n",
 			w->numvertexes, w->numsegs, w->numsectors, w->numsubsectors, w->numnodes, w->numlines, w->numsides, w->nummapthings);
-
-		CONS_Printf("Player has visited: %d\n", playerinfo->visited);
 		CONS_Printf("Player count: %d\n", w->players);
-		CONS_Printf("Player position: %d %d %d %d\n",
-					playerinfo->pos.x>>FRACBITS,
-					playerinfo->pos.y>>FRACBITS,
-					playerinfo->pos.z>>FRACBITS,
-					AngleFixed(playerinfo->angle)>>FRACBITS);
 	}
 }
 
@@ -378,5 +434,33 @@ void P_UnloadWorldPlayer(player_t *player)
 	{
 		P_RemoveMobj(player->mo);
 		P_SetTarget(&player->mo, NULL);
+	}
+}
+
+boolean P_MobjIsConnected(mobj_t *mobj1, mobj_t *mobj2)
+{
+	return (mobj2 && !P_MobjWasRemoved(mobj2) && mobj1->world == mobj2->world);
+}
+
+void P_RemoveMobjConnections(mobj_t *mobj, world_t *w)
+{
+	thinker_t *th;
+	mobj_t *check;
+
+	for (th = w->thlist[THINK_MOBJ].next; th != &w->thlist[THINK_MOBJ]; th = th->next)
+	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+
+		check = (mobj_t *)th;
+
+		if (check->target == mobj)
+			P_SetTarget(&mobj->target, NULL);
+		if (check->tracer == mobj)
+			P_SetTarget(&mobj->tracer, NULL);
+		if (check->hnext == mobj)
+			P_SetTarget(&mobj->hnext, NULL);
+		if (check->hprev == mobj)
+			P_SetTarget(&mobj->hprev, NULL);
 	}
 }

@@ -54,6 +54,7 @@ typedef enum
 extern gamestate_t gamestate;
 extern UINT8 titlemapinaction;
 extern UINT8 ultimatemode; // was sk_insane
+extern boolean roaming;
 extern gameaction_t gameaction;
 
 extern boolean botingame;

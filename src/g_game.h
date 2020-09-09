@@ -198,6 +198,8 @@ boolean G_CompetitionGametype(void);
 boolean G_EnoughPlayersFinished(void);
 void G_ExitLevel(void);
 void G_NextLevel(void);
+void G_SetNextMap(boolean usespec, boolean inspec);
+void G_PlayerFinishLevel(INT32 player);
 void G_Continue(void);
 void G_UseContinue(void);
 void G_AfterIntermission(void);

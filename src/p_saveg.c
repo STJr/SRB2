@@ -37,11 +37,15 @@
 savedata_t savedata;
 UINT8 *save_p;
 
+world_t *archiveworld;
+world_t *unarchiveworld;
+
 // Block UINT32s to attempt to ensure that the correct data is
 // being sent and received
 #define ARCHIVEBLOCK_MISC     0x7FEEDEED
 #define ARCHIVEBLOCK_PLAYERS  0x7F448008
-#define ARCHIVEBLOCK_WORLD    0x7F8C08C0
+#define ARCHIVEBLOCK_MAP      0x7F8C08C0
+#define ARCHIVEBLOCK_WORLD    0x7F9F47A3
 #define ARCHIVEBLOCK_POBJS    0x7F928546
 #define ARCHIVEBLOCK_THINKERS 0x7F37037C
 #define ARCHIVEBLOCK_SPECIALS 0x7F228378
@@ -104,6 +108,7 @@ static void P_NetArchivePlayers(void)
 
 		// no longer send ticcmds, player name, skin, or color
 
+		WRITEINT32(save_p, players[i].worldnum);
 		WRITEINT16(save_p, players[i].angleturn);
 		WRITEINT16(save_p, players[i].oldrelangleturn);
 		WRITEANGLE(save_p, players[i].aiming);
@@ -314,6 +319,7 @@ static void P_NetUnArchivePlayers(void)
 		// sending player names, skin and color should not be necessary at all!
 		// (that data is handled in the server config now)
 
+		players[i].worldnum = READINT32(save_p);
 		players[i].angleturn = READINT16(save_p);
 		players[i].oldrelangleturn = READINT16(save_p);
 		players[i].aiming = READANGLE(save_p);
@@ -728,9 +734,9 @@ static void P_NetArchiveWaypoints(void)
 
 	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
 	{
-		WRITEUINT16(save_p, world->numwaypoints[i]);
-		for (j = 0; j < world->numwaypoints[i]; j++)
-			WRITEUINT32(save_p, world->waypoints[i][j] ? world->waypoints[i][j]->mobjnum : 0);
+		WRITEUINT16(save_p, archiveworld->numwaypoints[i]);
+		for (j = 0; j < archiveworld->numwaypoints[i]; j++)
+			WRITEUINT32(save_p, archiveworld->waypoints[i][j] ? archiveworld->waypoints[i][j]->mobjnum : 0);
 	}
 }
 
@@ -741,11 +747,11 @@ static void P_NetUnArchiveWaypoints(void)
 
 	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
 	{
-		world->numwaypoints[i] = READUINT16(save_p);
-		for (j = 0; j < world->numwaypoints[i]; j++)
+		unarchiveworld->numwaypoints[i] = READUINT16(save_p);
+		for (j = 0; j < unarchiveworld->numwaypoints[i]; j++)
 		{
 			mobjnum = READUINT32(save_p);
-			world->waypoints[i][j] = (mobjnum == 0) ? NULL : P_FindNewPosition(mobjnum);
+			unarchiveworld->waypoints[i][j] = (mobjnum == 0) ? NULL : P_FindNewPosition(unarchiveworld, mobjnum);
 		}
 	}
 }
@@ -885,11 +891,11 @@ static void UnArchiveFFloors(const sector_t *ss)
 static void ArchiveSectors(void)
 {
 	size_t i;
-	const sector_t *ss = sectors;
-	const sector_t *spawnss = spawnsectors;
+	const sector_t *ss = archiveworld->sectors;
+	const sector_t *spawnss = archiveworld->spawnsectors;
 	UINT8 diff, diff2, diff3;
 
-	for (i = 0; i < numsectors; i++, ss++, spawnss++)
+	for (i = 0; i < archiveworld->numsectors; i++, ss++, spawnss++)
 	{
 		diff = diff2 = diff3 = 0;
 		if (ss->floorheight != spawnss->floorheight)
@@ -954,9 +960,9 @@ static void ArchiveSectors(void)
 			if (diff & SD_CEILHT)
 				WRITEFIXED(save_p, ss->ceilingheight);
 			if (diff & SD_FLOORPIC)
-				WRITEMEM(save_p, world->flats[ss->floorpic].name, 8);
+				WRITEMEM(save_p, archiveworld->flats[ss->floorpic].name, 8);
 			if (diff & SD_CEILPIC)
-				WRITEMEM(save_p, world->flats[ss->ceilingpic].name, 8);
+				WRITEMEM(save_p, archiveworld->flats[ss->ceilingpic].name, 8);
 			if (diff & SD_LIGHT)
 				WRITEINT16(save_p, ss->lightlevel);
 			if (diff & SD_SPECIAL)
@@ -1005,8 +1011,8 @@ static void UnArchiveSectors(void)
 		if (i == 0xffff)
 			break;
 
-		if (i > numsectors)
-			I_Error("Invalid sector number %u from server (expected end at %s)", i, sizeu1(numsectors));
+		if (i > unarchiveworld->numsectors)
+			I_Error("Invalid sector number %u from server (expected end at %s)", i, sizeu1(unarchiveworld->numsectors));
 
 		diff = READUINT8(save_p);
 		if (diff & SD_DIFF2)
@@ -1019,64 +1025,64 @@ static void UnArchiveSectors(void)
 			diff3 = 0;
 
 		if (diff & SD_FLOORHT)
-			sectors[i].floorheight = READFIXED(save_p);
+			unarchiveworld->sectors[i].floorheight = READFIXED(save_p);
 		if (diff & SD_CEILHT)
-			sectors[i].ceilingheight = READFIXED(save_p);
+			unarchiveworld->sectors[i].ceilingheight = READFIXED(save_p);
 		if (diff & SD_FLOORPIC)
 		{
-			sectors[i].floorpic = P_AddLevelFlatRuntime((char *)save_p);
+			unarchiveworld->sectors[i].floorpic = P_AddLevelFlatForWorld(unarchiveworld, (char *)save_p);
 			save_p += 8;
 		}
 		if (diff & SD_CEILPIC)
 		{
-			sectors[i].ceilingpic = P_AddLevelFlatRuntime((char *)save_p);
+			unarchiveworld->sectors[i].ceilingpic = P_AddLevelFlatForWorld(unarchiveworld, (char *)save_p);
 			save_p += 8;
 		}
 		if (diff & SD_LIGHT)
-			sectors[i].lightlevel = READINT16(save_p);
+			unarchiveworld->sectors[i].lightlevel = READINT16(save_p);
 		if (diff & SD_SPECIAL)
-			sectors[i].special = READINT16(save_p);
+			unarchiveworld->sectors[i].special = READINT16(save_p);
 
 		if (diff2 & SD_FXOFFS)
-			sectors[i].floor_xoffs = READFIXED(save_p);
+			unarchiveworld->sectors[i].floor_xoffs = READFIXED(save_p);
 		if (diff2 & SD_FYOFFS)
-			sectors[i].floor_yoffs = READFIXED(save_p);
+			unarchiveworld->sectors[i].floor_yoffs = READFIXED(save_p);
 		if (diff2 & SD_CXOFFS)
-			sectors[i].ceiling_xoffs = READFIXED(save_p);
+			unarchiveworld->sectors[i].ceiling_xoffs = READFIXED(save_p);
 		if (diff2 & SD_CYOFFS)
-			sectors[i].ceiling_yoffs = READFIXED(save_p);
+			unarchiveworld->sectors[i].ceiling_yoffs = READFIXED(save_p);
 		if (diff2 & SD_FLOORANG)
-			sectors[i].floorpic_angle  = READANGLE(save_p);
+			unarchiveworld->sectors[i].floorpic_angle  = READANGLE(save_p);
 		if (diff2 & SD_CEILANG)
-			sectors[i].ceilingpic_angle = READANGLE(save_p);
+			unarchiveworld->sectors[i].ceilingpic_angle = READANGLE(save_p);
 		if (diff2 & SD_TAG)
-			sectors[i].tag = READINT16(save_p); // DON'T use P_ChangeSectorTag
+			unarchiveworld->sectors[i].tag = READINT16(save_p); // DON'T use P_ChangeSectorTag
 		if (diff3 & SD_TAGLIST)
 		{
-			sectors[i].firsttag = READINT32(save_p);
-			sectors[i].nexttag = READINT32(save_p);
+			unarchiveworld->sectors[i].firsttag = READINT32(save_p);
+			unarchiveworld->sectors[i].nexttag = READINT32(save_p);
 		}
 
 		if (diff3 & SD_COLORMAP)
-			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(save_p));
+			unarchiveworld->sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(save_p));
 		if (diff3 & SD_CRUMBLESTATE)
-			sectors[i].crumblestate = READINT32(save_p);
+			unarchiveworld->sectors[i].crumblestate = READINT32(save_p);
 
 		if (diff & SD_FFLOORS)
-			UnArchiveFFloors(&sectors[i]);
+			UnArchiveFFloors(&unarchiveworld->sectors[i]);
 	}
 }
 
 static void ArchiveLines(void)
 {
 	size_t i;
-	const line_t *li = lines;
-	const line_t *spawnli = spawnlines;
+	const line_t *li = archiveworld->lines;
+	const line_t *spawnli = archiveworld->spawnlines;
 	const side_t *si;
 	const side_t *spawnsi;
 	UINT8 diff, diff2; // no diff3
 
-	for (i = 0; i < numlines; i++, spawnli++, li++)
+	for (i = 0; i < archiveworld->numlines; i++, spawnli++, li++)
 	{
 		diff = diff2 = 0;
 
@@ -1088,8 +1094,8 @@ static void ArchiveLines(void)
 
 		if (li->sidenum[0] != 0xffff)
 		{
-			si = &sides[li->sidenum[0]];
-			spawnsi = &spawnsides[li->sidenum[0]];
+			si = &archiveworld->sides[li->sidenum[0]];
+			spawnsi = &archiveworld->spawnsides[li->sidenum[0]];
 			if (si->textureoffset != spawnsi->textureoffset)
 				diff |= LD_S1TEXOFF;
 			//SoM: 4/1/2000: Some textures are colormaps. Don't worry about invalid textures.
@@ -1102,8 +1108,8 @@ static void ArchiveLines(void)
 		}
 		if (li->sidenum[1] != 0xffff)
 		{
-			si = &sides[li->sidenum[1]];
-			spawnsi = &spawnsides[li->sidenum[1]];
+			si = &archiveworld->sides[li->sidenum[1]];
+			spawnsi = &archiveworld->spawnsides[li->sidenum[1]];
 			if (si->textureoffset != spawnsi->textureoffset)
 				diff2 |= LD_S2TEXOFF;
 			if (si->toptexture != spawnsi->toptexture)
@@ -1129,7 +1135,7 @@ static void ArchiveLines(void)
 			if (diff & LD_CLLCOUNT)
 				WRITEINT16(save_p, li->callcount);
 
-			si = &sides[li->sidenum[0]];
+			si = &archiveworld->sides[li->sidenum[0]];
 			if (diff & LD_S1TEXOFF)
 				WRITEFIXED(save_p, si->textureoffset);
 			if (diff & LD_S1TOPTEX)
@@ -1139,7 +1145,7 @@ static void ArchiveLines(void)
 			if (diff & LD_S1MIDTEX)
 				WRITEINT32(save_p, si->midtexture);
 
-			si = &sides[li->sidenum[1]];
+			si = &archiveworld->sides[li->sidenum[1]];
 			if (diff2 & LD_S2TEXOFF)
 				WRITEFIXED(save_p, si->textureoffset);
 			if (diff2 & LD_S2TOPTEX)
@@ -1166,11 +1172,11 @@ static void UnArchiveLines(void)
 
 		if (i == 0xffff)
 			break;
-		if (i > numlines)
+		if (i > unarchiveworld->numlines)
 			I_Error("Invalid line number %u from server", i);
 
 		diff = READUINT8(save_p);
-		li = &lines[i];
+		li = &unarchiveworld->lines[i];
 
 		if (diff & LD_DIFF2)
 			diff2 = READUINT8(save_p);
@@ -1206,27 +1212,19 @@ static void UnArchiveLines(void)
 	}
 }
 
-static void P_NetArchiveWorld(void)
+static void P_NetArchiveMap(void)
 {
-	// initialize colormap vars because paranoia
-	ClearNetColormaps();
-
-	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
-
+	WRITEUINT32(save_p, ARCHIVEBLOCK_MAP);
 	ArchiveSectors();
 	ArchiveLines();
-	R_ClearTextureNumCache(false);
 }
 
-static void P_NetUnArchiveWorld(void)
+static void P_NetUnArchiveMap(void)
 {
 	UINT16 i;
 
-	if (READUINT32(save_p) != ARCHIVEBLOCK_WORLD)
-		I_Error("Bad $$$.sav at archive block World");
-
-	// initialize colormap vars because paranoia
-	ClearNetColormaps();
+	if (READUINT32(save_p) != ARCHIVEBLOCK_MAP)
+		I_Error("Bad $$$.sav at archive block Map");
 
 	// count the level's ffloors so that colormap loading can have an upper limit
 	for (i = 0; i < numsectors; i++)
@@ -1354,13 +1352,13 @@ static inline UINT32 SaveMobjnum(const mobj_t *mobj)
 
 static UINT32 SaveSector(const sector_t *sector)
 {
-	if (sector) return (UINT32)(sector - sectors);
+	if (sector) return (UINT32)(sector - archiveworld->sectors);
 	return 0xFFFFFFFF;
 }
 
 static UINT32 SaveLine(const line_t *line)
 {
-	if (line) return (UINT32)(line - lines);
+	if (line) return (UINT32)(line - archiveworld->lines);
 	return 0xFFFFFFFF;
 }
 
@@ -1543,8 +1541,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	{
 		size_t z;
 
-		for (z = 0; z < nummapthings; z++)
-			if (&mapthings[z] == mobj->spawnpoint)
+		for (z = 0; z < archiveworld->nummapthings; z++)
+			if (&archiveworld->mapthings[z] == mobj->spawnpoint)
 				WRITEUINT16(save_p, z);
 		if (mobj->type == MT_HOOPCENTER)
 			return;
@@ -1650,6 +1648,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, mobj->shadowscale);
 
 	WRITEUINT32(save_p, mobj->mobjnum);
+	WRITEUINT32(save_p, mobj->worldnum);
 }
 
 static void SaveNoEnemiesThinker(const thinker_t *th, const UINT8 type)
@@ -2142,7 +2141,7 @@ static void P_NetArchiveThinkers(void)
 	{
 		UINT32 numsaved = 0;
 		// save off the current thinkers
-		for (th = thlist[i].next; th != &thlist[i]; th = th->next)
+		for (th = archiveworld->thlist[i].next; th != &archiveworld->thlist[i]; th = th->next)
 		{
 			if (!(th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed
 			 || th->function.acp1 == (actionf_p1)P_NullPrecipThinker))
@@ -2372,12 +2371,12 @@ static void P_NetArchiveThinkers(void)
 // relink to this; the savegame contains the old position in the pointer
 // field copyed in the info field temporarily, but finally we just search
 // for the old position and relink to it.
-mobj_t *P_FindNewPosition(UINT32 oldposition)
+mobj_t *P_FindNewPosition(world_t *w, UINT32 oldposition)
 {
 	thinker_t *th;
 	mobj_t *mobj;
 
-	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+	for (th = w->thlist[THINK_MOBJ].next; th != &w->thlist[THINK_MOBJ]; th = th->next)
 	{
 		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
@@ -2400,14 +2399,14 @@ static inline mobj_t *LoadMobj(UINT32 mobjnum)
 
 static sector_t *LoadSector(UINT32 sector)
 {
-	if (sector >= numsectors) return NULL;
-	return &sectors[sector];
+	if (sector >= unarchiveworld->numsectors) return NULL;
+	return &unarchiveworld->sectors[sector];
 }
 
 static line_t *LoadLine(UINT32 line)
 {
-	if (line >= numlines) return NULL;
-	return &lines[line];
+	if (line >= unarchiveworld->numlines) return NULL;
+	return &unarchiveworld->lines[line];
 }
 
 static inline player_t *LoadPlayer(UINT32 player)
@@ -2418,8 +2417,8 @@ static inline player_t *LoadPlayer(UINT32 player)
 
 static inline pslope_t *LoadSlope(UINT32 slopeid)
 {
-	pslope_t *p = world->slopelist;
-	if (slopeid > world->slopecount) return NULL;
+	pslope_t *p = unarchiveworld->slopelist;
+	if (slopeid > unarchiveworld->slopecount) return NULL;
 	do
 	{
 		if (p->id == slopeid)
@@ -2468,16 +2467,17 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	{
 		UINT16 spawnpointnum = READUINT16(save_p);
 
-		if (mapthings[spawnpointnum].type == 1705 || mapthings[spawnpointnum].type == 1713) // NiGHTS Hoop special case
+		if (unarchiveworld->mapthings[spawnpointnum].type == 1705
+		|| unarchiveworld->mapthings[spawnpointnum].type == 1713) // NiGHTS Hoop special case
 		{
-			P_SpawnHoop(&mapthings[spawnpointnum]);
+			P_SpawnHoop(&unarchiveworld->mapthings[spawnpointnum]);
 			return NULL;
 		}
 
 		mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
 
-		mobj->spawnpoint = &mapthings[spawnpointnum];
-		mapthings[spawnpointnum].mobj = mobj;
+		mobj->spawnpoint = &unarchiveworld->mapthings[spawnpointnum];
+		unarchiveworld->mapthings[spawnpointnum].mobj = mobj;
 	}
 	else
 		mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
@@ -2669,6 +2669,11 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	P_SetThingPosition(mobj);
 
 	mobj->mobjnum = READUINT32(save_p);
+
+	// Lactozilla: Unarchive world number
+	mobj->worldnum = READUINT32(save_p);
+	if (mobj->worldnum == 0xFFFFFFFF)
+		I_Error("Unknown world");
 
 	if (mobj->player)
 	{
@@ -3284,8 +3289,8 @@ static void P_NetUnArchiveThinkers(void)
 	// remove all the current thinkers
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
-		currentthinker = thlist[i].next;
-		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = next)
+		currentthinker = unarchiveworld->thlist[i].next;
+		for (currentthinker = unarchiveworld->thlist[i].next; currentthinker != &unarchiveworld->thlist[i]; currentthinker = next)
 		{
 			next = currentthinker->next;
 
@@ -3297,7 +3302,7 @@ static void P_NetUnArchiveThinkers(void)
 	}
 
 	// we don't want the removed mobjs to come back
-	iquetail = iquehead = 0;
+	unarchiveworld->iquetail = unarchiveworld->iquehead = 0;
 	P_InitThinkers();
 
 	// clear sector thinker pointers so they don't point to non-existant thinkers for all of eternity
@@ -3505,7 +3510,7 @@ static void P_NetUnArchiveThinkers(void)
 			delay = (void *)currentthinker;
 			if (!(mobjnum = (UINT32)(size_t)delay->caller))
 				continue;
-			delay->caller = P_FindNewPosition(mobjnum);
+			delay->caller = P_FindNewPosition(unarchiveworld, mobjnum);
 		}
 	}
 }
@@ -3574,20 +3579,20 @@ static inline void P_UnArchivePolyObj(polyobj_t *po)
 	Polyobj_MoveOnLoad(po, angle, x, y);
 }
 
-static inline void P_ArchivePolyObjects(void)
+static inline void P_NetArchivePolyObjects(void)
 {
 	INT32 i;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_POBJS);
 
 	// save number of polyobjects
-	WRITEINT32(save_p, world->numPolyObjects);
+	WRITEINT32(save_p, archiveworld->numPolyObjects);
 
-	for (i = 0; i < world->numPolyObjects; ++i)
-		P_ArchivePolyObj(&world->PolyObjects[i]);
+	for (i = 0; i < archiveworld->numPolyObjects; ++i)
+		P_ArchivePolyObj(&archiveworld->PolyObjects[i]);
 }
 
-static inline void P_UnArchivePolyObjects(void)
+static inline void P_NetUnArchivePolyObjects(void)
 {
 	INT32 i, numSavedPolys;
 
@@ -3597,7 +3602,7 @@ static inline void P_UnArchivePolyObjects(void)
 	numSavedPolys = READINT32(save_p);
 
 	if (numSavedPolys != world->numPolyObjects)
-		I_Error("P_UnArchivePolyObjects: polyobj count inconsistency\n");
+		I_Error("P_NetUnArchivePolyObjects: polyobj count inconsistency\n");
 
 	for (i = 0; i < numSavedPolys; ++i)
 		P_UnArchivePolyObj(&world->PolyObjects[i]);
@@ -3627,7 +3632,8 @@ static void P_RelinkPointers(void)
 	UINT32 temp;
 
 	// use info field (value = oldposition) to relink mobjs
-	for (currentthinker = thlist[THINK_MOBJ].next; currentthinker != &thlist[THINK_MOBJ];
+	for (currentthinker = unarchiveworld->thlist[THINK_MOBJ].next;
+		currentthinker != &unarchiveworld->thlist[THINK_MOBJ];
 		currentthinker = currentthinker->next)
 	{
 		if (currentthinker->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
@@ -3642,70 +3648,70 @@ static void P_RelinkPointers(void)
 		{
 			temp = (UINT32)(size_t)mobj->tracer;
 			mobj->tracer = NULL;
-			if (!P_SetTarget(&mobj->tracer, P_FindNewPosition(temp)))
+			if (!P_SetTarget(&mobj->tracer, P_FindNewPosition(unarchiveworld, temp)))
 				CONS_Debug(DBG_GAMELOGIC, "tracer not found on %d\n", mobj->type);
 		}
 		if (mobj->target)
 		{
 			temp = (UINT32)(size_t)mobj->target;
 			mobj->target = NULL;
-			if (!P_SetTarget(&mobj->target, P_FindNewPosition(temp)))
+			if (!P_SetTarget(&mobj->target, P_FindNewPosition(unarchiveworld, temp)))
 				CONS_Debug(DBG_GAMELOGIC, "target not found on %d\n", mobj->type);
 		}
 		if (mobj->hnext)
 		{
 			temp = (UINT32)(size_t)mobj->hnext;
 			mobj->hnext = NULL;
-			if (!(mobj->hnext = P_FindNewPosition(temp)))
+			if (!(mobj->hnext = P_FindNewPosition(unarchiveworld, temp)))
 				CONS_Debug(DBG_GAMELOGIC, "hnext not found on %d\n", mobj->type);
 		}
 		if (mobj->hprev)
 		{
 			temp = (UINT32)(size_t)mobj->hprev;
 			mobj->hprev = NULL;
-			if (!(mobj->hprev = P_FindNewPosition(temp)))
+			if (!(mobj->hprev = P_FindNewPosition(unarchiveworld, temp)))
 				CONS_Debug(DBG_GAMELOGIC, "hprev not found on %d\n", mobj->type);
 		}
 		if (mobj->player && mobj->player->capsule)
 		{
 			temp = (UINT32)(size_t)mobj->player->capsule;
 			mobj->player->capsule = NULL;
-			if (!P_SetTarget(&mobj->player->capsule, P_FindNewPosition(temp)))
+			if (!P_SetTarget(&mobj->player->capsule, P_FindNewPosition(unarchiveworld, temp)))
 				CONS_Debug(DBG_GAMELOGIC, "capsule not found on %d\n", mobj->type);
 		}
 		if (mobj->player && mobj->player->axis1)
 		{
 			temp = (UINT32)(size_t)mobj->player->axis1;
 			mobj->player->axis1 = NULL;
-			if (!P_SetTarget(&mobj->player->axis1, P_FindNewPosition(temp)))
+			if (!P_SetTarget(&mobj->player->axis1, P_FindNewPosition(unarchiveworld, temp)))
 				CONS_Debug(DBG_GAMELOGIC, "axis1 not found on %d\n", mobj->type);
 		}
 		if (mobj->player && mobj->player->axis2)
 		{
 			temp = (UINT32)(size_t)mobj->player->axis2;
 			mobj->player->axis2 = NULL;
-			if (!P_SetTarget(&mobj->player->axis2, P_FindNewPosition(temp)))
+			if (!P_SetTarget(&mobj->player->axis2, P_FindNewPosition(unarchiveworld, temp)))
 				CONS_Debug(DBG_GAMELOGIC, "axis2 not found on %d\n", mobj->type);
 		}
 		if (mobj->player && mobj->player->awayviewmobj)
 		{
 			temp = (UINT32)(size_t)mobj->player->awayviewmobj;
 			mobj->player->awayviewmobj = NULL;
-			if (!P_SetTarget(&mobj->player->awayviewmobj, P_FindNewPosition(temp)))
+			if (!P_SetTarget(&mobj->player->awayviewmobj, P_FindNewPosition(unarchiveworld, temp)))
 				CONS_Debug(DBG_GAMELOGIC, "awayviewmobj not found on %d\n", mobj->type);
 		}
 		if (mobj->player && mobj->player->followmobj)
 		{
 			temp = (UINT32)(size_t)mobj->player->followmobj;
 			mobj->player->followmobj = NULL;
-			if (!P_SetTarget(&mobj->player->followmobj, P_FindNewPosition(temp)))
+			if (!P_SetTarget(&mobj->player->followmobj, P_FindNewPosition(unarchiveworld, temp)))
 				CONS_Debug(DBG_GAMELOGIC, "followmobj not found on %d\n", mobj->type);
 		}
 		if (mobj->player && mobj->player->drone)
 		{
 			temp = (UINT32)(size_t)mobj->player->drone;
 			mobj->player->drone = NULL;
-			if (!P_SetTarget(&mobj->player->drone, P_FindNewPosition(temp)))
+			if (!P_SetTarget(&mobj->player->drone, P_FindNewPosition(unarchiveworld, temp)))
 				CONS_Debug(DBG_GAMELOGIC, "drone not found on %d\n", mobj->type);
 		}
 	}
@@ -3718,18 +3724,18 @@ static inline void P_NetArchiveSpecials(void)
 	WRITEUINT32(save_p, ARCHIVEBLOCK_SPECIALS);
 
 	// itemrespawn queue for deathmatch
-	i = iquetail;
-	while (iquehead != i)
+	i = archiveworld->iquetail;
+	while (archiveworld->iquehead != i)
 	{
-		for (z = 0; z < nummapthings; z++)
+		for (z = 0; z < archiveworld->nummapthings; z++)
 		{
-			if (&mapthings[z] == itemrespawnque[i])
+			if (&archiveworld->mapthings[z] == archiveworld->itemrespawnque[i])
 			{
 				WRITEUINT32(save_p, z);
 				break;
 			}
 		}
-		WRITEUINT32(save_p, itemrespawntime[i]);
+		WRITEUINT32(save_p, archiveworld->itemrespawntime[i]);
 		i = (i + 1) & (ITEMQUESIZE-1);
 	}
 
@@ -3737,10 +3743,10 @@ static inline void P_NetArchiveSpecials(void)
 	WRITEUINT32(save_p, 0xffffffff);
 
 	// Sky number
-	WRITEINT32(save_p, globallevelskynum);
+	WRITEINT32(save_p, archiveworld->skynum);
 
 	// Current global weather type
-	WRITEUINT8(save_p, globalweather);
+	WRITEUINT8(save_p, archiveworld->weather);
 
 	if (metalplayback) // Is metal sonic running?
 	{
@@ -3760,30 +3766,30 @@ static void P_NetUnArchiveSpecials(void)
 		I_Error("Bad $$$.sav at archive block Specials");
 
 	// BP: added save itemrespawn queue for deathmatch
-	iquetail = iquehead = 0;
+	unarchiveworld->iquetail = unarchiveworld->iquehead = 0;
 	while ((i = READUINT32(save_p)) != 0xffffffff)
 	{
-		itemrespawnque[iquehead] = &mapthings[i];
-		itemrespawntime[iquehead++] = READINT32(save_p);
+		unarchiveworld->itemrespawnque[unarchiveworld->iquehead] = &unarchiveworld->mapthings[i];
+		unarchiveworld->itemrespawntime[unarchiveworld->iquehead++] = READINT32(save_p);
 	}
 
 	j = READINT32(save_p);
-	if (j != globallevelskynum)
-		P_SetupLevelSky(j, true);
+	P_SetupLevelSky(j, false); // Don't call P_SetupWorldSky from there
+	P_SetupWorldSky(j, unarchiveworld);
 
-	globalweather = READUINT8(save_p);
+	unarchiveworld->weather = READUINT8(save_p);
 
-	if (globalweather)
+	if (world->weather)
 	{
-		if (curWeather == globalweather)
+		if (curWeather == world->weather)
 			curWeather = PRECIP_NONE;
 
-		P_SwitchWeather(globalweather);
+		P_SwitchWeather(world->weather);
 	}
 	else // PRECIP_NONE
 	{
 		if (curWeather != PRECIP_NONE)
-			P_SwitchWeather(globalweather);
+			P_SwitchWeather(world->weather);
 	}
 
 	if (READUINT8(save_p) == 0x01) // metal sonic
@@ -3853,7 +3859,7 @@ static void P_NetArchiveMisc(void)
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_MISC);
 
-	WRITEINT16(save_p, gamemap);
+	WRITEINT16(save_p, baseworld->gamemap);
 	WRITEINT16(save_p, gamestate);
 
 	{
@@ -3903,7 +3909,7 @@ static void P_NetArchiveMisc(void)
 	WRITEUINT32(save_p, countdown);
 	WRITEUINT32(save_p, countdown2);
 
-	WRITEFIXED(save_p, gravity);
+	WRITEFIXED(save_p, baseworld->gravity);
 
 	WRITEUINT32(save_p, countdowntimer);
 	WRITEUINT8(save_p, countdowntimeup);
@@ -3923,6 +3929,8 @@ static inline boolean P_NetUnArchiveMisc(void)
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_MISC)
 		I_Error("Bad $$$.sav at archive block Misc");
+
+	P_UnloadWorldList();
 
 	gamemap = READINT16(save_p);
 
@@ -4049,37 +4057,87 @@ void P_SaveGame(INT16 mapnum)
 	P_ArchiveLuabanksAndConsistency();
 }
 
+static void P_NetArchiveWorlds(void)
+{
+	INT32 i;
+
+	// initialize colormap vars because paranoia
+	ClearNetColormaps();
+	R_ClearTextureNumCache(false);
+
+	WRITEUINT32(save_p, ARCHIVEBLOCK_WORLD);
+	WRITEINT32(save_p, numworlds);
+
+	for (i = 0; i < numworlds; i++)
+	{
+		archiveworld = worldlist[i];
+
+		WRITEINT16(save_p, archiveworld->gamemap);
+		WRITEUINT8(save_p, archiveworld->players);
+
+		P_NetArchiveMap();
+		P_NetArchivePolyObjects();
+		P_NetArchiveThinkers();
+		P_NetArchiveSpecials();
+		P_NetArchiveWaypoints();
+	}
+
+	P_NetArchiveColormaps();
+}
+
 void P_SaveNetGame(void)
 {
 	thinker_t *th;
 	mobj_t *mobj;
-	INT32 i = 1; // don't start from 0, it'd be confused with a blank pointer otherwise
+	INT32 i;
 
 	CV_SaveNetVars(&save_p);
 	P_NetArchiveMisc();
 
 	// Assign the mobjnumber for pointer tracking
-	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+	for (i = 0; i < numworlds; i++)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+		world_t *w = worldlist[i];
+		INT32 mobjnum = 1; // don't start from 0, it'd be confused with a blank pointer otherwise
+
+		for (th = w->thlist[THINK_MOBJ].next; th != &w->thlist[THINK_MOBJ]; th = th->next)
+		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
+			mobj = (mobj_t *)th;
+			if (mobj->type == MT_HOOP || mobj->type == MT_HOOPCOLLIDE || mobj->type == MT_HOOPCENTER)
+				continue;
+			mobj->mobjnum = mobjnum++;
+			mobj->worldnum = (UINT32)i;
+		}
+	}
+
+	// Lactozilla: Assign world numbers to players
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		player_t *player;
+		INT32 w;
+
+		if (!playeringame[i])
 			continue;
 
-		mobj = (mobj_t *)th;
-		if (mobj->type == MT_HOOP || mobj->type == MT_HOOPCOLLIDE || mobj->type == MT_HOOPCENTER)
-			continue;
-		mobj->mobjnum = i++;
+		player = &players[i];
+		player->worldnum = -1;
+
+		for (w = 0; w < numworlds; w++)
+		{
+			if (player->world == worldlist[w])
+			{
+				player->worldnum = w;
+				break;
+			}
+		}
 	}
 
 	P_NetArchivePlayers();
 	if (gamestate == GS_LEVEL)
-	{
-		P_NetArchiveWorld();
-		P_ArchivePolyObjects();
-		P_NetArchiveThinkers();
-		P_NetArchiveSpecials();
-		P_NetArchiveColormaps();
-		P_NetArchiveWaypoints();
-	}
+		P_NetArchiveWorlds();
 	LUA_Archive();
 
 	P_ArchiveLuabanksAndConsistency();
@@ -4104,6 +4162,108 @@ boolean P_LoadGame(INT16 mapoverride)
 	return true;
 }
 
+static void UnArchiveWorld(void)
+{
+	unarchiveworld->players = READUINT8(save_p);
+	P_NetUnArchiveMap();
+	P_NetUnArchivePolyObjects();
+	P_NetUnArchiveThinkers();
+	P_NetUnArchiveSpecials();
+	P_NetUnArchiveWaypoints();
+	P_RelinkPointers();
+	P_FinishMobjs();
+}
+
+static void RelinkWorldsToEntities(void)
+{
+	thinker_t *th;
+	mobj_t *mo;
+	INT32 i;
+
+	for (i = 0; i < numworlds; i++)
+	{
+		world_t *w = worldlist[i];
+
+		for (th = w->thlist[THINK_MOBJ].next; th != &w->thlist[THINK_MOBJ]; th = th->next)
+		{
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
+			mo = (mobj_t *)th;
+
+			if ((INT32)mo->worldnum >= numworlds)
+				I_Error("RelinkWorldsToEntities: Mobj type %d has unknown world %d", mo->type, mo->worldnum);
+
+			if ((INT32)mo->worldnum != i)
+				I_Error("RelinkWorldsToEntities: Mobj type %d has a world mismatch (mobj: %d, set: %d)", mo->type, mo->worldnum, i);
+
+			mo->world = worldlist[mo->worldnum];
+		}
+	}
+
+	// Relink players to their worlds
+	// This is also done for their mobjs.
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		world_t *w;
+		player_t *player;
+
+		if (!playeringame[i])
+			continue;
+
+		player = &players[i];
+
+		if (player->worldnum == -1 || player->worldnum >= numworlds)
+			I_Error("RelinkWorldsToEntities: Player %d (%s) has unknown world %d", i, player_names[i], player->worldnum);
+
+		w = worldlist[player->worldnum];
+		player->world = w;
+		if (player->mo)
+			player->mo->world = w;
+	}
+}
+
+static void SetUnArchiveWorld(world_t *w)
+{
+	unarchiveworld = world = baseworld = localworld = w;
+}
+
+static void P_NetUnArchiveWorlds(void)
+{
+	player_t *player = &players[consoleplayer];
+	INT32 worldcount, i;
+
+	if (READUINT32(save_p) != ARCHIVEBLOCK_WORLD)
+		I_Error("Bad $$$.sav at archive block World");
+
+	worldcount = READINT32(save_p);
+
+	// initialize colormap vars because paranoia
+	ClearNetColormaps();
+
+	// Unarchive the first world
+	gamemap = READINT16(save_p);
+	SetUnArchiveWorld(worldlist[0]);
+	UnArchiveWorld();
+
+	for (i = 1; i < worldcount; i++)
+	{
+		gamemap = READINT16(save_p);
+		if (!P_LoadLevel(player, true, true))
+			I_Error("P_NetUnArchiveWorlds: failed loading world");
+		SetUnArchiveWorld(worldlist[i]);
+		UnArchiveWorld();
+	}
+
+	P_NetUnArchiveColormaps();
+	RelinkWorldsToEntities();
+
+	// Send a command to switch this player to the first world
+	// For every other client, the player is on that world, but not for the joiner
+	if (worldcount > 1)
+		SendWorldSwitch(0, true);
+}
+
 boolean P_LoadNetGame(void)
 {
 	CV_LoadNetVars(&save_p);
@@ -4111,16 +4271,7 @@ boolean P_LoadNetGame(void)
 		return false;
 	P_NetUnArchivePlayers();
 	if (gamestate == GS_LEVEL)
-	{
-		P_NetUnArchiveWorld();
-		P_UnArchivePolyObjects();
-		P_NetUnArchiveThinkers();
-		P_NetUnArchiveSpecials();
-		P_NetUnArchiveColormaps();
-		P_NetUnArchiveWaypoints();
-		P_RelinkPointers();
-		P_FinishMobjs();
-	}
+		P_NetUnArchiveWorlds();
 	LUA_UnArchive();
 
 	// This is stupid and hacky, but maybe it'll work!

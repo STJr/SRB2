@@ -397,14 +397,17 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 	s2 = t2->subsector->sector;
 
 	// Check in REJECT table.
-	//CONS_Printf("P_CheckSight: %d %p %d %p\n", t1->type, t1->world, t2->type, t2->world);
-	if (t1->world == t2->world)
+	if (s1->world == s2->world
+	&& t1->world == t2->world
+	&& t1->world == s1->world
+	&& t2->world == s2->world)
 	{
-		size_t pnum = (s1-sectors)*numsectors + (s2-sectors);
+		world_t *w = s1->world;
+		size_t pnum = (s1-w->sectors)*w->numsectors + (s2-w->sectors);
 
-		if (rejectmatrix != NULL)
+		if (w->rejectmatrix != NULL)
 		{
-			if (rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
+			if (w->rejectmatrix[pnum>>3] & (1 << (pnum&7))) // can't possibly be connected
 				return false;
 		}
 	}

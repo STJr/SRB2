@@ -616,15 +616,15 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	colfunc = colfuncs[BASEDRAWFUNC];
 
 	// use correct aspect ratio scale
-	dc_iscale = world->skyscale;
+	dc_iscale = skyscale;
 
 	// Sky is always drawn full bright,
 	//  i.e. colormaps[0] is used.
 	// Because of this hack, sky is not affected
 	//  by sector colormaps (INVUL inverse mapping is not implemented in SRB2 so is irrelevant).
 	dc_colormap = colormaps;
-	dc_texturemid = viewworld->skytexturemid;
-	dc_texheight = textureheight[viewworld->skytexture]
+	dc_texturemid = skytexturemid;
+	dc_texheight = textureheight[skytexture]
 		>>FRACBITS;
 	for (x = pl->minx; x <= pl->maxx; x++)
 	{
@@ -634,10 +634,10 @@ static void R_DrawSkyPlane(visplane_t *pl)
 		if (dc_yl <= dc_yh)
 		{
 			angle = (pl->viewangle + xtoviewangle[x])>>ANGLETOSKYSHIFT;
-			dc_iscale = FixedMul(viewworld->skyscale, FINECOSINE(xtoviewangle[x]>>ANGLETOFINESHIFT));
+			dc_iscale = FixedMul(skyscale, FINECOSINE(xtoviewangle[x]>>ANGLETOFINESHIFT));
 			dc_x = x;
 			dc_source =
-				R_GetColumn(texturetranslation[viewworld->skytexture],
+				R_GetColumn(texturetranslation[skytexture],
 					-angle); // get negative of angle for each column to display sky correct way round! --Monster Iestyn 27/01/18
 			colfunc();
 		}

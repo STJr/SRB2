@@ -2041,7 +2041,7 @@ static boolean SV_SendServerConfig(INT32 node)
 }
 
 #ifndef NONET
-#define SAVEGAMESIZE (768*1024)
+#define SAVEGAMESIZE (2048*1024) //(768*1024)
 
 static void SV_SendSaveGame(INT32 node)
 {
@@ -3037,6 +3037,9 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 		}
 	}
 
+	if (players[playernum].world)
+		((world_t *)players[playernum].world)->players--;
+
 	if (gametyperules & GTR_TEAMFLAGS)
 		P_PlayerFlagBurst(&players[playernum], false); // Don't take the flag with you!
 
@@ -3902,8 +3905,6 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		P_ForceLocalAngle(newplayer, (angle_t)(newplayer->angleturn << 16));
 		D_SendPlayerConfig();
 		addedtogame = true;
-
-		P_SwitchPlayerWorld(newplayer, world);
 
 		if (rejoined)
 		{

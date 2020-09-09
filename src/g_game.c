@@ -51,6 +51,7 @@
 gameaction_t gameaction;
 gamestate_t gamestate = GS_NULL;
 UINT8 ultimatemode = false;
+boolean roaming = false;
 
 boolean botingame;
 UINT8 botskin;
@@ -77,7 +78,6 @@ UINT32 mapmusposition; // Position to jump to
 
 INT16 gamemap = 1;
 UINT32 maptol;
-UINT8 globalweather = 0;
 INT32 curWeather = PRECIP_NONE;
 INT32 cursaveslot = 0; // Auto-save 1p savegame slot
 //INT16 lastmapsaved = 0; // Last map we auto-saved at
@@ -1779,6 +1779,14 @@ static void AutoBrake2_OnChange(void)
 	SendWeaponPref2();
 }
 
+static void G_ResetCamera(INT32 playernum)
+{
+	if (playernum == consoleplayer && camera.chase)
+		P_ResetCamera(&players[displayplayer], &camera);
+	if (playernum == 1 && camera2.chase && splitscreen)
+		P_ResetCamera(&players[secondarydisplayplayer], &camera2);
+}
+
 //
 // G_DoLoadLevel
 //
@@ -1849,13 +1857,8 @@ void G_DoLoadLevel(player_t *player, boolean addworld, boolean resetplayer)
 	Z_CheckHeap(-2);
 #endif
 
-	if (player == &players[consoleplayer])
+	if (!addworld)
 	{
-		if (camera.chase)
-			P_ResetCamera(&players[displayplayer], &camera);
-		if (camera2.chase && splitscreen)
-			P_ResetCamera(&players[secondarydisplayplayer], &camera2);
-
 		// clear cmd building stuff
 		memset(gamekeydown, 0, sizeof (gamekeydown));
 		for (i = 0;i < JOYAXISSET; i++)
@@ -1865,6 +1868,14 @@ void G_DoLoadLevel(player_t *player, boolean addworld, boolean resetplayer)
 		}
 		mousex = mousey = 0;
 		mouse2x = mouse2y = 0;
+
+		if (splitscreen)
+			G_ResetCamera(1);
+	}
+
+	if (player == &players[consoleplayer])
+	{
+		G_ResetCamera(consoleplayer);
 
 		// clear hud messages remains (usually from game startup)
 		CON_ClearHUD();
@@ -2365,7 +2376,7 @@ void G_Ticker(boolean run)
 // G_PlayerFinishLevel
 // Called when a player completes a level.
 //
-static inline void G_PlayerFinishLevel(INT32 player)
+void G_PlayerFinishLevel(INT32 player)
 {
 	player_t *p;
 
@@ -2707,9 +2718,6 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 		P_MovePlayerToStarpost(playernum);
 	else
 		P_MovePlayerToSpawn(playernum, G_FindMapStart(playernum));
-
-	if (players[playernum].world)
-		P_MarkWorldVisited(&players[playernum], players[playernum].world);
 }
 
 mapthing_t *G_FindCTFStart(INT32 playernum)
@@ -3150,9 +3158,8 @@ void G_AddPlayer(INT32 playernum)
 		}
 	}
 
-	p->world = world;
-	if (p->world)
-		((world_t *)p->world)->players++;
+	if (worldlist) // Assume the player is on the first world
+		p->world = worldlist[0];
 
 	p->playerstate = PST_REBORN;
 
@@ -3779,34 +3786,9 @@ static void G_HandleSaveLevel(void)
 		G_SaveGame((UINT32)cursaveslot, lastmap+1); // not nextmap+1 to route around special stages
 }
 
-//
-// G_DoCompleted
-//
-static void G_DoCompleted(void)
+void G_SetNextMap(boolean usespec, boolean inspec)
 {
 	INT32 i;
-	boolean spec = G_IsSpecialStage(gamemap);
-
-	tokenlist = 0; // Reset the list
-
-	if (modeattacking && pausedelay)
-		pausedelay = 0;
-
-	gameaction = ga_nothing;
-
-	if (metalplayback)
-		G_StopMetalDemo();
-	if (metalrecording)
-		G_StopMetalRecording(false);
-
-	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i])
-			G_PlayerFinishLevel(i); // take away cards and stuff
-
-	if (automapactive)
-		AM_Stop();
-
-	S_StopSounds();
 
 	prevmap = (INT16)(gamemap-1);
 
@@ -3827,7 +3809,7 @@ static void G_DoCompleted(void)
 	// a map of the proper gametype -- skip levels that don't support
 	// the current gametype. (Helps avoid playing boss levels in Race,
 	// for instance).
-	if (!spec)
+	if (!inspec)
 	{
 		if (nextmap >= 0 && nextmap < NUMMAPS)
 		{
@@ -3882,7 +3864,7 @@ static void G_DoCompleted(void)
 		lastmap = nextmap; // Remember last map for when you come out of the special stage.
 	}
 
-	if ((gottoken = ((gametyperules & GTR_SPECIALSTAGES) && token)))
+	if ((gottoken = (usespec && token)))
 	{
 		token--;
 
@@ -3900,8 +3882,39 @@ static void G_DoCompleted(void)
 		}
 	}
 
-	if (spec && !gottoken)
+	if (inspec && !gottoken)
 		nextmap = lastmap; // Exiting from a special stage? Go back to the game. Tails 08-11-2001
+}
+
+//
+// G_DoCompleted
+//
+static void G_DoCompleted(void)
+{
+	INT32 i;
+	boolean spec = G_IsSpecialStage(gamemap);
+
+	tokenlist = 0; // Reset the list
+
+	if (modeattacking && pausedelay)
+		pausedelay = 0;
+
+	gameaction = ga_nothing;
+
+	if (metalplayback)
+		G_StopMetalDemo();
+	if (metalrecording)
+		G_StopMetalRecording(false);
+
+	for (i = 0; i < MAXPLAYERS; i++)
+		if (playeringame[i])
+			G_PlayerFinishLevel(i); // take away cards and stuff
+
+	if (automapactive)
+		AM_Stop();
+
+	S_StopSounds();
+	G_SetNextMap(gametyperules & GTR_SPECIALSTAGES, spec);
 
 	automapactive = false;
 
@@ -4755,6 +4768,7 @@ void G_InitNew(player_t *player,
 		if (addworld)
 		{
 			P_DetachPlayerWorld(player);
+			P_UnloadWorldPlayer(player);
 			G_ResetPlayer(player, pultmode, FLS);
 		}
 		else
@@ -4789,7 +4803,6 @@ void G_InitNew(player_t *player,
 		P_AllocMapHeader(gamemap-1);
 
 	maptol = mapheaderinfo[gamemap-1]->typeoflevel;
-	globalweather = mapheaderinfo[gamemap-1]->weather;
 
 	// Don't carry over custom music change to another map.
 	mapmusflags |= MUSIC_RELOADRESET;

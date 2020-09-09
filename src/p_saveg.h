@@ -18,6 +18,8 @@
 #pragma interface
 #endif
 
+#include "p_world.h"
+
 // Persistent storage/archiving.
 // These are the load / save game routines.
 
@@ -26,7 +28,7 @@ void P_SaveNetGame(void);
 boolean P_LoadGame(INT16 mapoverride);
 boolean P_LoadNetGame(void);
 
-mobj_t *P_FindNewPosition(UINT32 oldposition);
+mobj_t *P_FindNewPosition(world_t *w, UINT32 oldposition);
 
 typedef struct
 {
@@ -41,5 +43,8 @@ typedef struct
 
 extern savedata_t savedata;
 extern UINT8 *save_p;
+
+extern world_t *archiveworld;
+extern world_t *unarchiveworld;
 
 #endif
