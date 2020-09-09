@@ -26,6 +26,8 @@ enum polyobj_e {
 	polyobj_valid = 0,
 	polyobj_id,
 	polyobj_parent,
+	polyobj_vertices,
+	polyobj_lines,
 	polyobj_sector,
 	polyobj_angle,
 	polyobj_damage,
@@ -46,6 +48,8 @@ static const char *const polyobj_opt[] = {
 	"valid",
 	"id",
 	"parent",
+	"vertices",
+	"lines",
 	"sector",
 	"angle",
 	"damage",
@@ -61,6 +65,126 @@ static const char *const polyobj_opt[] = {
 	"moveXY",
 	"rotate",
 	NULL};
+
+static const char *const valid_opt[] ={"valid",NULL};
+
+////////////////////////
+// polyobj.vertices[] //
+////////////////////////
+
+// polyobj.vertices, i -> polyobj.vertices[i]
+// polyobj.vertices.valid, for validity checking
+//
+// see sectorlines_get in lua_maplib.c
+//
+static int polyobjvertices_get(lua_State *L)
+{
+	vertex_t ***polyverts = *((vertex_t ****)luaL_checkudata(L, 1, META_POLYOBJVERTICES));
+	size_t i;
+	size_t numofverts = 0;
+	lua_settop(L, 2);
+	if (!lua_isnumber(L, 2))
+	{
+		int field = luaL_checkoption(L, 2, NULL, valid_opt);
+		if (!polyverts || !(*polyverts))
+		{
+			if (field == 0) {
+				lua_pushboolean(L, 0);
+				return 1;
+			}
+			return luaL_error(L, "accessed polyobj_t.vertices doesn't exist anymore.");
+		} else if (field == 0) {
+			lua_pushboolean(L, 1);
+			return 1;
+		}
+	}
+
+	numofverts = (size_t)(*(size_t *)(((size_t)polyverts) - (offsetof(polyobj_t, vertices) - offsetof(polyobj_t, numVertices))));
+
+	if (!numofverts)
+		return luaL_error(L, "no vertices found!");
+
+	i = (size_t)lua_tointeger(L, 2);
+	if (i >= numofverts)
+		return 0;
+	LUA_PushUserdata(L, (*polyverts)[i], META_VERTEX);
+	return 1;
+}
+
+// #(polyobj.vertices) -> polyobj.numVertices
+static int polyobjvertices_num(lua_State *L)
+{
+	vertex_t ***polyverts = *((vertex_t ****)luaL_checkudata(L, 1, META_POLYOBJVERTICES));
+	size_t numofverts = 0;
+
+	if (!polyverts || !(*polyverts))
+		return luaL_error(L, "accessed polyobj_t.vertices doesn't exist anymore.");
+
+	numofverts = (size_t)(*(size_t *)(((size_t)polyverts) - (offsetof(polyobj_t, vertices) - offsetof(polyobj_t, numVertices))));
+	lua_pushinteger(L, numofverts);
+	return 1;
+}
+
+/////////////////////
+// polyobj.lines[] //
+/////////////////////
+
+// polyobj.lines, i -> polyobj.lines[i]
+// polyobj.lines.valid, for validity checking
+//
+// see sectorlines_get in lua_maplib.c
+//
+static int polyobjlines_get(lua_State *L)
+{
+	line_t ***polylines = *((line_t ****)luaL_checkudata(L, 1, META_POLYOBJLINES));
+	size_t i;
+	size_t numoflines = 0;
+	lua_settop(L, 2);
+	if (!lua_isnumber(L, 2))
+	{
+		int field = luaL_checkoption(L, 2, NULL, valid_opt);
+		if (!polylines || !(*polylines))
+		{
+			if (field == 0) {
+				lua_pushboolean(L, 0);
+				return 1;
+			}
+			return luaL_error(L, "accessed polyobj_t.lines doesn't exist anymore.");
+		} else if (field == 0) {
+			lua_pushboolean(L, 1);
+			return 1;
+		}
+	}
+
+	numoflines = (size_t)(*(size_t *)(((size_t)polylines) - (offsetof(polyobj_t, lines) - offsetof(polyobj_t, numLines))));
+
+	if (!numoflines)
+		return luaL_error(L, "no lines found!");
+
+	i = (size_t)lua_tointeger(L, 2);
+	if (i >= numoflines)
+		return 0;
+	LUA_PushUserdata(L, (*polylines)[i], META_LINE);
+	return 1;
+}
+
+// #(polyobj.lines) -> polyobj.numLines
+static int polyobjlines_num(lua_State *L)
+{
+	line_t ***polylines = *((line_t ****)luaL_checkudata(L, 1, META_POLYOBJLINES));
+	size_t numoflines = 0;
+
+	if (!polylines || !(*polylines))
+		return luaL_error(L, "accessed polyobj_t.lines doesn't exist anymore.");
+
+	numoflines = (size_t)(*(size_t *)(((size_t)polylines) - (offsetof(polyobj_t, lines) - offsetof(polyobj_t, numLines))));
+	lua_pushinteger(L, numoflines);
+	return 1;
+}
+
+/////////////////////////////////
+// polyobj_t function wrappers //
+/////////////////////////////////
 
 // special functions - utility
 static int lib_polyobj_PointInside(lua_State *L)
@@ -130,6 +254,10 @@ static int lib_polyobj_rotate(lua_State *L)
 	return 1;
 }
 
+///////////////
+// polyobj_t //
+///////////////
+
 static int polyobj_get(lua_State *L)
 {
 	polyobj_t *polyobj = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
@@ -154,6 +282,12 @@ static int polyobj_get(lua_State *L)
 		break;
 	case polyobj_parent:
 		lua_pushinteger(L, polyobj->parent);
+		break;
+	case polyobj_vertices: // vertices
+		LUA_PushUserdata(L, &polyobj->vertices, META_POLYOBJVERTICES); // push the address of the "vertices" member in the struct, to allow our hacks to work
+		break;
+	case polyobj_lines: // lines
+		LUA_PushUserdata(L, &polyobj->lines, META_POLYOBJLINES); // push the address of the "lines" member in the struct, to allow our hacks to work
 		break;
 	case polyobj_sector: // shortcut that exists only in Lua!
 		LUA_PushUserdata(L, polyobj->lines[0]->backsector, META_SECTOR);
@@ -210,6 +344,10 @@ static int polyobj_num(lua_State *L)
 	lua_pushinteger(L, polyobj-PolyObjects);
 	return 1;
 }
+
+///////////////////
+// PolyObjects[] //
+///////////////////
 
 static int lib_iteratePolyObjects(lua_State *L)
 {
@@ -282,6 +420,22 @@ static int lib_numPolyObjects(lua_State *L)
 
 int LUA_PolyObjLib(lua_State *L)
 {
+	luaL_newmetatable(L, META_POLYOBJVERTICES);
+		lua_pushcfunction(L, polyobjvertices_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, polyobjvertices_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
+	luaL_newmetatable(L, META_POLYOBJLINES);
+		lua_pushcfunction(L, polyobjlines_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, polyobjlines_num);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L, 1);
+
 	luaL_newmetatable(L, META_POLYOBJ);
 		lua_pushcfunction(L, polyobj_get);
 		lua_setfield(L, -2, "__index");

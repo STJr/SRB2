@@ -777,7 +777,11 @@ void LUA_InvalidateLevel(void)
 	for (i = 0; i < numvertexes; i++)
 		LUA_InvalidateUserdata(&vertexes[i]);
 	for (i = 0; i < (size_t)numPolyObjects; i++)
+	{
 		LUA_InvalidateUserdata(&PolyObjects[i]);
+		LUA_InvalidateUserdata(&PolyObjects[i].vertices);
+		LUA_InvalidateUserdata(&PolyObjects[i].lines);
+	}
 #ifdef HAVE_LUA_SEGS
 	for (i = 0; i < numsegs; i++)
 		LUA_InvalidateUserdata(&segs[i]);
