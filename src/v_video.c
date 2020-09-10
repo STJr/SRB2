@@ -3666,26 +3666,51 @@ Unoptimized version
 #endif
 }
 
-// Generates a color look-up table
-// which has up to 64 colors at each channel
-// (see the defines in v_video.h)
+// Generates a RGB565 color look-up table
+static colorlookup_t colorlookup;
 
-UINT8 colorlookup[CLUTSIZE][CLUTSIZE][CLUTSIZE];
-
-void InitColorLUT(RGBA_t *palette)
+void InitColorLUT(RGBA_t *palette, boolean makecolors)
 {
-	UINT8 r, g, b;
-	static boolean clutinit = false;
-	static RGBA_t *lastpalette = NULL;
-	if ((!clutinit) || (lastpalette != palette))
+	size_t palsize = (sizeof(RGBA_t) * 256);
+
+	if (!colorlookup.init || memcmp(colorlookup.palette, palette, palsize))
 	{
-		for (r = 0; r < CLUTSIZE; r++)
-			for (g = 0; g < CLUTSIZE; g++)
-				for (b = 0; b < CLUTSIZE; b++)
-					colorlookup[r][g][b] = NearestPaletteColor(r << SHIFTCOLORBITS, g << SHIFTCOLORBITS, b << SHIFTCOLORBITS, palette);
-		clutinit = true;
-		lastpalette = palette;
+		INT32 i;
+
+		colorlookup.init = true;
+		memcpy(colorlookup.palette, palette, palsize);
+
+		for (i = 0; i < 0xFFFF; i++)
+			colorlookup.table[i] = 0xFFFF;
+
+		if (makecolors)
+		{
+			UINT8 r, g, b;
+
+			for (r = 0; r < 0xFF; r++)
+			for (g = 0; g < 0xFF; g++)
+			for (b = 0; b < 0xFF; b++)
+			{
+				i = CLUTINDEX(r, g, b);
+				if (colorlookup.table[i] == 0xFFFF)
+					colorlookup.table[i] = NearestPaletteColor(r, g, b, palette);
+			}
+		}
 	}
+}
+
+UINT8 GetColorLUT(UINT8 r, UINT8 g, UINT8 b)
+{
+	INT32 i = CLUTINDEX(r, g, b);
+	if (colorlookup.table[i] == 0xFFFF)
+		colorlookup.table[i] = NearestPaletteColor(r << 3, g << 2, b << 3, colorlookup.palette);
+	return colorlookup.table[i];
+}
+
+UINT8 GetColorLUTDirect(UINT8 r, UINT8 g, UINT8 b)
+{
+	INT32 i = CLUTINDEX(r, g, b);
+	return colorlookup.table[i];
 }
 
 // V_Init

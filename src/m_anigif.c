@@ -505,14 +505,14 @@ static void GIF_rgbconvert(UINT8 *linear, UINT8 *scr)
 	size_t src = 0, dest = 0;
 	size_t size = (vid.width * vid.height * 3);
 
-	InitColorLUT(gif_framepalette);
+	InitColorLUT(gif_framepalette, true);
 
 	while (src < size)
 	{
 		r = (UINT8)linear[src];
 		g = (UINT8)linear[src + 1];
 		b = (UINT8)linear[src + 2];
-		scr[dest] = colorlookup[r >> SHIFTCOLORBITS][g >> SHIFTCOLORBITS][b >> SHIFTCOLORBITS];
+		scr[dest] = GetColorLUTDirect(r, g, b);
 		src += (3 * scrbuf_downscaleamt);
 		dest += scrbuf_downscaleamt;
 	}

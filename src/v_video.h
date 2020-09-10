@@ -38,13 +38,18 @@ cv_allcaps;
 void V_Init(void);
 
 // Color look-up table
-#define COLORBITS 6
-#define SHIFTCOLORBITS (8-COLORBITS)
-#define CLUTSIZE (1<<COLORBITS)
+#define CLUTINDEX(r, g, b) (((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3)
 
-extern UINT8 colorlookup[CLUTSIZE][CLUTSIZE][CLUTSIZE];
+void InitColorLUT(RGBA_t *palette, boolean makecolors);
+UINT8 GetColorLUT(UINT8 r, UINT8 g, UINT8 b);
+UINT8 GetColorLUTDirect(UINT8 r, UINT8 g, UINT8 b);
 
-void InitColorLUT(RGBA_t *palette);
+typedef struct
+{
+	boolean init;
+	RGBA_t palette[256];
+	UINT16 table[0xFFFF];
+} colorlookup_t;
 
 // Set the current RGB palette lookup to use for palettized graphics
 void V_SetPalette(INT32 palettenum);
