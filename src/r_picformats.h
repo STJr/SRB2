@@ -113,6 +113,8 @@ void *Picture_PNGConvert(
 boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
 #endif
 
+#define PICTURE_PNG_USELOOKUP
+
 // SpriteInfo
 extern spriteinfo_t spriteinfo[NUMSPRITES];
 void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps);

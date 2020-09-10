@@ -40,16 +40,16 @@ void V_Init(void);
 // Color look-up table
 #define CLUTINDEX(r, g, b) (((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3)
 
-void InitColorLUT(RGBA_t *palette, boolean makecolors);
-UINT8 GetColorLUT(UINT8 r, UINT8 g, UINT8 b);
-UINT8 GetColorLUTDirect(UINT8 r, UINT8 g, UINT8 b);
-
 typedef struct
 {
 	boolean init;
 	RGBA_t palette[256];
 	UINT16 table[0xFFFF];
 } colorlookup_t;
+
+void InitColorLUT(colorlookup_t *lut, RGBA_t *palette, boolean makecolors);
+UINT8 GetColorLUT(colorlookup_t *lut, UINT8 r, UINT8 g, UINT8 b);
+UINT8 GetColorLUTDirect(colorlookup_t *lut, UINT8 r, UINT8 g, UINT8 b);
 
 // Set the current RGB palette lookup to use for palettized graphics
 void V_SetPalette(INT32 palettenum);

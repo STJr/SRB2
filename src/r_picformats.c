@@ -52,6 +52,10 @@
 
 static unsigned char imgbuf[1<<26];
 
+#ifdef PICTURE_PNG_USELOOKUP
+static colorlookup_t png_colorlookup;
+#endif
+
 /** Converts a picture between two formats.
   *
   * \param informat Input picture format.
@@ -964,6 +968,11 @@ void *Picture_PNGConvert(
 	if (outbpp == PICDEPTH_8BPP)
 		memset(flat, TRANSPARENTPIXEL, (width * height));
 
+#ifdef PICTURE_PNG_USELOOKUP
+	if (outbpp != PICDEPTH_32BPP)
+		InitColorLUT(&png_colorlookup, pMasterPalette, false);
+#endif
+
 	for (y = 0; y < height; y++)
 	{
 		png_bytep row = row_pointers[y];
@@ -988,7 +997,11 @@ void *Picture_PNGConvert(
 				}
 				else
 				{
+#ifdef PICTURE_PNG_USELOOKUP
+					UINT8 palidx = GetColorLUT(&png_colorlookup, red, green, blue);
+#else
 					UINT8 palidx = NearestColor(red, green, blue);
+#endif
 					if (outbpp == PICDEPTH_16BPP)
 					{
 						UINT16 *outflat = (UINT16 *)flat;

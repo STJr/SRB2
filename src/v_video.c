@@ -3667,21 +3667,19 @@ Unoptimized version
 }
 
 // Generates a RGB565 color look-up table
-static colorlookup_t colorlookup;
-
-void InitColorLUT(RGBA_t *palette, boolean makecolors)
+void InitColorLUT(colorlookup_t *lut, RGBA_t *palette, boolean makecolors)
 {
 	size_t palsize = (sizeof(RGBA_t) * 256);
 
-	if (!colorlookup.init || memcmp(colorlookup.palette, palette, palsize))
+	if (!lut->init || memcmp(lut->palette, palette, palsize))
 	{
 		INT32 i;
 
-		colorlookup.init = true;
-		memcpy(colorlookup.palette, palette, palsize);
+		lut->init = true;
+		memcpy(lut->palette, palette, palsize);
 
 		for (i = 0; i < 0xFFFF; i++)
-			colorlookup.table[i] = 0xFFFF;
+			lut->table[i] = 0xFFFF;
 
 		if (makecolors)
 		{
@@ -3692,25 +3690,25 @@ void InitColorLUT(RGBA_t *palette, boolean makecolors)
 			for (b = 0; b < 0xFF; b++)
 			{
 				i = CLUTINDEX(r, g, b);
-				if (colorlookup.table[i] == 0xFFFF)
-					colorlookup.table[i] = NearestPaletteColor(r, g, b, palette);
+				if (lut->table[i] == 0xFFFF)
+					lut->table[i] = NearestPaletteColor(r, g, b, palette);
 			}
 		}
 	}
 }
 
-UINT8 GetColorLUT(UINT8 r, UINT8 g, UINT8 b)
+UINT8 GetColorLUT(colorlookup_t *lut, UINT8 r, UINT8 g, UINT8 b)
 {
 	INT32 i = CLUTINDEX(r, g, b);
-	if (colorlookup.table[i] == 0xFFFF)
-		colorlookup.table[i] = NearestPaletteColor(r << 3, g << 2, b << 3, colorlookup.palette);
-	return colorlookup.table[i];
+	if (lut->table[i] == 0xFFFF)
+		lut->table[i] = NearestPaletteColor(r, g, b, lut->palette);
+	return lut->table[i];
 }
 
-UINT8 GetColorLUTDirect(UINT8 r, UINT8 g, UINT8 b)
+UINT8 GetColorLUTDirect(colorlookup_t *lut, UINT8 r, UINT8 g, UINT8 b)
 {
 	INT32 i = CLUTINDEX(r, g, b);
-	return colorlookup.table[i];
+	return lut->table[i];
 }
 
 // V_Init
