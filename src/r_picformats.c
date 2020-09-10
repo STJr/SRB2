@@ -9,16 +9,18 @@
 // terms of the GNU General Public License, version 2.
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
-/// \file  r_patch.c
-/// \brief Patch generation.
+/// \file  r_picformats.c
+/// \brief Picture generation.
 
 #include "byteptr.h"
 #include "dehacked.h"
 #include "i_video.h"
 #include "r_data.h"
+#include "r_textures.h"
 #include "r_draw.h"
-#include "r_patch.h"
+#include "r_picformats.h"
 #include "r_things.h"
+#include "v_video.h"
 #include "z_zone.h"
 #include "w_wad.h"
 
@@ -50,30 +52,578 @@
 
 static unsigned char imgbuf[1<<26];
 
-//
-// R_CheckIfPatch
-//
-// Returns true if the lump is a valid patch.
-//
-boolean R_CheckIfPatch(lumpnum_t lump)
-{
-	size_t size;
-	INT16 width, height;
-	patch_t *patch;
-	boolean result;
+#ifdef PICTURE_PNG_USELOOKUP
+static colorlookup_t png_colorlookup;
+#endif
 
-	size = W_LumpLength(lump);
+/** Converts a picture between two formats.
+  *
+  * \param informat Input picture format.
+  * \param picture Input picture data.
+  * \param outformat Output picture format.
+  * \param insize Input picture size.
+  * \param outsize Output picture size, as a pointer.
+  * \param inwidth Input picture width.
+  * \param inheight Input picture height.
+  * \param inleftoffset Input picture left offset, for patches.
+  * \param intopoffset Input picture top offset, for patches.
+  * \param flags Input picture flags.
+  * \return A pointer to the converted picture.
+  * \sa Picture_PatchConvert
+  * \sa Picture_FlatConvert
+  */
+void *Picture_Convert(
+	pictureformat_t informat, void *picture, pictureformat_t outformat,
+	size_t insize, size_t *outsize,
+	INT32 inwidth, INT32 inheight, INT32 inleftoffset, INT32 intopoffset,
+	pictureflags_t flags)
+{
+	if (informat == PICFMT_NONE)
+		I_Error("Picture_Convert: input format was PICFMT_NONE!");
+	else if (outformat == PICFMT_NONE)
+		I_Error("Picture_Convert: output format was PICFMT_NONE!");
+	else if (informat == outformat)
+		I_Error("Picture_Convert: input and output formats were the same!");
+
+	if (Picture_IsPatchFormat(outformat))
+		return Picture_PatchConvert(informat, picture, outformat, insize, outsize, inwidth, inheight, inleftoffset, intopoffset, flags);
+	else if (Picture_IsFlatFormat(outformat))
+		return Picture_FlatConvert(informat, picture, outformat, insize, outsize, inwidth, inheight, inleftoffset, intopoffset, flags);
+	else
+		I_Error("Picture_Convert: unsupported input format!");
+
+	return NULL;
+}
+
+/** Converts a picture to a patch.
+  *
+  * \param informat Input picture format.
+  * \param picture Input picture data.
+  * \param outformat Output picture format.
+  * \param insize Input picture size.
+  * \param outsize Output picture size, as a pointer.
+  * \param inwidth Input picture width.
+  * \param inheight Input picture height.
+  * \param inleftoffset Input picture left offset, for patches.
+  * \param intopoffset Input picture top offset, for patches.
+  * \param flags Input picture flags.
+  * \return A pointer to the converted picture.
+  */
+void *Picture_PatchConvert(
+	pictureformat_t informat, void *picture, pictureformat_t outformat,
+	size_t insize, size_t *outsize,
+	INT16 inwidth, INT16 inheight, INT16 inleftoffset, INT16 intopoffset,
+	pictureflags_t flags)
+{
+	INT16 x, y;
+	UINT8 *img;
+	UINT8 *imgptr = imgbuf;
+	UINT8 *colpointers, *startofspan;
+	size_t size = 0;
+	patch_t *inpatch = NULL;
+	INT32 inbpp = Picture_FormatBPP(informat);
+
+	(void)insize; // ignore
+
+	if (informat == PICFMT_NONE)
+		I_Error("Picture_PatchConvert: input format was PICFMT_NONE!");
+	else if (outformat == PICFMT_NONE)
+		I_Error("Picture_PatchConvert: output format was PICFMT_NONE!");
+	else if (informat == outformat)
+		I_Error("Picture_PatchConvert: input and output formats were the same!");
+
+	if (inbpp == PICDEPTH_NONE)
+		I_Error("Picture_PatchConvert: unknown input bits per pixel?!");
+	if (Picture_FormatBPP(outformat) == PICDEPTH_NONE)
+		I_Error("Picture_PatchConvert: unknown output bits per pixel?!");
+
+	// If it's a patch, you can just figure out
+	// the dimensions from the header.
+	if (Picture_IsPatchFormat(informat))
+	{
+		inpatch = (patch_t *)picture;
+		inwidth = SHORT(inpatch->width);
+		inheight = SHORT(inpatch->height);
+		inleftoffset = SHORT(inpatch->leftoffset);
+		intopoffset = SHORT(inpatch->topoffset);
+	}
+
+	// Write image size and offset
+	WRITEINT16(imgptr, inwidth);
+	WRITEINT16(imgptr, inheight);
+	WRITEINT16(imgptr, inleftoffset);
+	WRITEINT16(imgptr, intopoffset);
+
+	// Leave placeholder to column pointers
+	colpointers = imgptr;
+	imgptr += inwidth*4;
+
+	// Write columns
+	for (x = 0; x < inwidth; x++)
+	{
+		int lastStartY = 0;
+		int spanSize = 0;
+		startofspan = NULL;
+
+		// Write column pointer
+		WRITEINT32(colpointers, imgptr - imgbuf);
+
+		// Write pixels
+		for (y = 0; y < inheight; y++)
+		{
+			void *input = NULL;
+			boolean opaque = false;
+
+			// Read pixel
+			if (Picture_IsPatchFormat(informat))
+				input = Picture_GetPatchPixel(inpatch, informat, x, y, flags);
+			else if (Picture_IsFlatFormat(informat))
+			{
+				size_t offs = ((y * inwidth) + x);
+				switch (informat)
+				{
+					case PICFMT_FLAT32:
+						input = (UINT32 *)picture + offs;
+						break;
+					case PICFMT_FLAT16:
+						input = (UINT16 *)picture + offs;
+						break;
+					case PICFMT_FLAT:
+						input = (UINT8 *)picture + offs;
+						break;
+					default:
+						I_Error("Picture_PatchConvert: unsupported flat input format!");
+						break;
+				}
+			}
+			else
+				I_Error("Picture_PatchConvert: unsupported input format!");
+
+			// Determine opacity
+			if (input != NULL)
+			{
+				UINT8 alpha = 0xFF;
+				if (inbpp == PICDEPTH_32BPP)
+				{
+					RGBA_t px = *(RGBA_t *)input;
+					alpha = px.s.alpha;
+				}
+				else if (inbpp == PICDEPTH_16BPP)
+				{
+					UINT16 px = *(UINT16 *)input;
+					alpha = (px & 0xFF00) >> 8;
+				}
+				else if (inbpp == PICDEPTH_8BPP)
+				{
+					UINT8 px = *(UINT8 *)input;
+					if (px == TRANSPARENTPIXEL)
+						alpha = 0;
+				}
+				opaque = (alpha > 1);
+			}
+
+			// End span if we have a transparent pixel
+			if (!opaque)
+			{
+				if (startofspan)
+					WRITEUINT8(imgptr, 0);
+				startofspan = NULL;
+				continue;
+			}
+
+			// Start new column if we need to
+			if (!startofspan || spanSize == 255)
+			{
+				int writeY = y;
+
+				// If we reached the span size limit, finish the previous span
+				if (startofspan)
+					WRITEUINT8(imgptr, 0);
+
+				if (y > 254)
+				{
+					// Make sure we're aligned to 254
+					if (lastStartY < 254)
+					{
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
+						imgptr += 2;
+						lastStartY = 254;
+					}
+
+					// Write stopgap empty spans if needed
+					writeY = y - lastStartY;
+
+					while (writeY > 254)
+					{
+						WRITEUINT8(imgptr, 254);
+						WRITEUINT8(imgptr, 0);
+						imgptr += 2;
+						writeY -= 254;
+					}
+				}
+
+				startofspan = imgptr;
+				WRITEUINT8(imgptr, writeY);
+				imgptr += 2;
+				spanSize = 0;
+
+				lastStartY = y;
+			}
+
+			// Write the pixel
+			switch (outformat)
+			{
+				case PICFMT_PATCH32:
+				{
+					if (inbpp == PICDEPTH_32BPP)
+					{
+						RGBA_t out = *(RGBA_t *)input;
+						WRITEUINT32(imgptr, out.rgba);
+					}
+					else if (inbpp == PICDEPTH_16BPP)
+					{
+						RGBA_t out = pMasterPalette[*((UINT16 *)input) & 0xFF];
+						WRITEUINT32(imgptr, out.rgba);
+					}
+					else // PICFMT_PATCH
+					{
+						RGBA_t out = pMasterPalette[*((UINT8 *)input) & 0xFF];
+						WRITEUINT32(imgptr, out.rgba);
+					}
+					break;
+				}
+				case PICFMT_PATCH16:
+					if (inbpp == PICDEPTH_32BPP)
+					{
+						RGBA_t in = *(RGBA_t *)input;
+						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
+						WRITEUINT16(imgptr, (0xFF00 | out));
+					}
+					else if (inbpp == PICDEPTH_16BPP)
+						WRITEUINT16(imgptr, *(UINT16 *)input);
+					else // PICFMT_PATCH
+						WRITEUINT16(imgptr, (0xFF00 | (*(UINT8 *)input)));
+					break;
+				default: // PICFMT_PATCH
+				{
+					if (inbpp == PICDEPTH_32BPP)
+					{
+						RGBA_t in = *(RGBA_t *)input;
+						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
+						WRITEUINT8(imgptr, out);
+					}
+					else if (inbpp == PICDEPTH_16BPP)
+					{
+						UINT16 out = *(UINT16 *)input;
+						WRITEUINT8(imgptr, (out & 0xFF));
+					}
+					else // PICFMT_PATCH
+						WRITEUINT8(imgptr, *(UINT8 *)input);
+					break;
+				}
+			}
+
+			spanSize++;
+			startofspan[1] = spanSize;
+		}
+
+		if (startofspan)
+			WRITEUINT8(imgptr, 0);
+
+		WRITEUINT8(imgptr, 0xFF);
+	}
+
+	size = imgptr-imgbuf;
+	img = Z_Malloc(size, PU_STATIC, NULL);
+	memcpy(img, imgbuf, size);
+
+	if (outsize != NULL)
+		*outsize = size;
+	return img;
+}
+
+/** Converts a picture to a flat.
+  *
+  * \param informat Input picture format.
+  * \param picture Input picture data.
+  * \param outformat Output picture format.
+  * \param insize Input picture size.
+  * \param outsize Output picture size, as a pointer.
+  * \param inwidth Input picture width.
+  * \param inheight Input picture height.
+  * \param inleftoffset Input picture left offset, for patches.
+  * \param intopoffset Input picture top offset, for patches.
+  * \param flags Input picture flags.
+  * \return A pointer to the converted picture.
+  */
+void *Picture_FlatConvert(
+	pictureformat_t informat, void *picture, pictureformat_t outformat,
+	size_t insize, size_t *outsize,
+	INT16 inwidth, INT16 inheight, INT16 inleftoffset, INT16 intopoffset,
+	pictureflags_t flags)
+{
+	void *outflat;
+	patch_t *inpatch = NULL;
+	INT32 inbpp = Picture_FormatBPP(informat);
+	INT32 outbpp = Picture_FormatBPP(outformat);
+	INT32 x, y;
+	size_t size;
+
+	(void)insize; // ignore
+	(void)inleftoffset; // ignore
+	(void)intopoffset; // ignore
+
+	if (informat == PICFMT_NONE)
+		I_Error("Picture_FlatConvert: input format was PICFMT_NONE!");
+	else if (outformat == PICFMT_NONE)
+		I_Error("Picture_FlatConvert: output format was PICFMT_NONE!");
+	else if (informat == outformat)
+		I_Error("Picture_FlatConvert: input and output formats were the same!");
+
+	if (inbpp == PICDEPTH_NONE)
+		I_Error("Picture_FlatConvert: unknown input bits per pixel?!");
+	if (outbpp == PICDEPTH_NONE)
+		I_Error("Picture_FlatConvert: unknown output bits per pixel?!");
+
+	// If it's a patch, you can just figure out
+	// the dimensions from the header.
+	if (Picture_IsPatchFormat(informat))
+	{
+		inpatch = (patch_t *)picture;
+		inwidth = SHORT(inpatch->width);
+		inheight = SHORT(inpatch->height);
+	}
+
+	size = (inwidth * inheight) * (outbpp / 8);
+	outflat = Z_Calloc(size, PU_STATIC, NULL);
+	if (outsize)
+		*outsize = size;
+
+	// Set transparency
+	if (outbpp == PICDEPTH_8BPP)
+		memset(outflat, TRANSPARENTPIXEL, size);
+
+	for (y = 0; y < inheight; y++)
+		for (x = 0; x < inwidth; x++)
+		{
+			void *input;
+			size_t offs = ((y * inwidth) + x);
+
+			// Read pixel
+			if (Picture_IsPatchFormat(informat))
+				input = Picture_GetPatchPixel(inpatch, informat, x, y, flags);
+			else if (Picture_IsFlatFormat(informat))
+				input = (UINT8 *)picture + (offs * (inbpp / 8));
+			else
+				I_Error("Picture_FlatConvert: unsupported input format!");
+
+			if (!input)
+				continue;
+
+			switch (outformat)
+			{
+				case PICFMT_FLAT32:
+				{
+					UINT32 *f32 = (UINT32 *)outflat;
+					if (inbpp == PICDEPTH_32BPP)
+					{
+						RGBA_t out = *(RGBA_t *)input;
+						f32[offs] = out.rgba;
+					}
+					else if (inbpp == PICDEPTH_16BPP)
+					{
+						RGBA_t out = pMasterPalette[*((UINT16 *)input) & 0xFF];
+						f32[offs] = out.rgba;
+					}
+					else // PICFMT_PATCH
+					{
+						RGBA_t out = pMasterPalette[*((UINT8 *)input) & 0xFF];
+						f32[offs] = out.rgba;
+					}
+					break;
+				}
+				case PICFMT_FLAT16:
+				{
+					UINT16 *f16 = (UINT16 *)outflat;
+					if (inbpp == PICDEPTH_32BPP)
+					{
+						RGBA_t in = *(RGBA_t *)input;
+						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
+						f16[offs] = (0xFF00 | out);
+					}
+					else if (inbpp == PICDEPTH_16BPP)
+						f16[offs] = *(UINT16 *)input;
+					else // PICFMT_PATCH
+						f16[offs] = (0xFF00 | *((UINT8 *)input));
+					break;
+				}
+				case PICFMT_FLAT:
+				{
+					UINT8 *f8 = (UINT8 *)outflat;
+					if (inbpp == PICDEPTH_32BPP)
+					{
+						RGBA_t in = *(RGBA_t *)input;
+						UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
+						f8[offs] = out;
+					}
+					else if (inbpp == PICDEPTH_16BPP)
+					{
+						UINT16 out = *(UINT16 *)input;
+						f8[offs] = (out & 0xFF);
+					}
+					else // PICFMT_PATCH
+						f8[offs] = *(UINT8 *)input;
+					break;
+				}
+				default:
+					I_Error("Picture_FlatConvert: unsupported output format!");
+			}
+		}
+
+	return outflat;
+}
+
+/** Returns a pixel from a patch.
+  *
+  * \param patch Input patch.
+  * \param informat Input picture format.
+  * \param x Pixel X position.
+  * \param y Pixel Y position.
+  * \param flags Input picture flags.
+  * \return A pointer to a pixel in the patch. Returns NULL if not opaque.
+  */
+void *Picture_GetPatchPixel(
+	patch_t *patch, pictureformat_t informat,
+	INT32 x, INT32 y,
+	pictureflags_t flags)
+{
+	fixed_t ofs;
+	column_t *column;
+	UINT8 *s8 = NULL;
+	UINT16 *s16 = NULL;
+	UINT32 *s32 = NULL;
+
+	if (patch == NULL)
+		I_Error("Picture_GetPatchPixel: patch == NULL");
+
+	if (x >= 0 && x < SHORT(patch->width))
+	{
+		INT32 topdelta, prevdelta = -1;
+		INT32 colofs = 0;
+
+		if (flags & PICFLAGS_XFLIP)
+			colofs = LONG(patch->columnofs[(SHORT(patch->width)-1)-x]);
+		else
+			colofs = LONG(patch->columnofs[x]);
+
+		// Column offsets are pointers so no casting required
+		column = (column_t *)((UINT8 *)patch + colofs);
+
+		while (column->topdelta != 0xff)
+		{
+			topdelta = column->topdelta;
+			if (topdelta <= prevdelta)
+				topdelta += prevdelta;
+			prevdelta = topdelta;
+			s8 = (UINT8 *)(column) + 3;
+			if (informat == PICFMT_PATCH32)
+				s32 = (UINT32 *)s8;
+			else if (informat == PICFMT_PATCH16)
+				s16 = (UINT16 *)s8;
+			for (ofs = 0; ofs < column->length; ofs++)
+			{
+				if ((topdelta + ofs) == y)
+				{
+					if (informat == PICFMT_PATCH32)
+						return &s32[ofs];
+					else if (informat == PICFMT_PATCH16)
+						return &s16[ofs];
+					else // PICFMT_PATCH
+						return &s8[ofs];
+				}
+			}
+			if (informat == PICFMT_PATCH32)
+				column = (column_t *)((UINT32 *)column + column->length);
+			else if (informat == PICFMT_PATCH16)
+				column = (column_t *)((UINT16 *)column + column->length);
+			else
+				column = (column_t *)((UINT8 *)column + column->length);
+			column = (column_t *)((UINT8 *)column + 4);
+		}
+	}
+
+	return NULL;
+}
+
+/** Returns the amount of bits per pixel in the specified picture format.
+  *
+  * \param format Input picture format.
+  * \return The bits per pixel amount of the picture format.
+  */
+INT32 Picture_FormatBPP(pictureformat_t format)
+{
+	INT32 bpp = PICDEPTH_NONE;
+	switch (format)
+	{
+		case PICFMT_PATCH32:
+		case PICFMT_FLAT32:
+		case PICFMT_PNG:
+			bpp = PICDEPTH_32BPP;
+			break;
+		case PICFMT_PATCH16:
+		case PICFMT_FLAT16:
+			bpp = PICDEPTH_16BPP;
+			break;
+		case PICFMT_PATCH:
+		case PICFMT_FLAT:
+			bpp = PICDEPTH_8BPP;
+			break;
+		default:
+			break;
+	}
+	return bpp;
+}
+
+/** Checks if the specified picture format is a patch.
+  *
+  * \param format Input picture format.
+  * \return True if the picture format is a patch, false if not.
+  */
+boolean Picture_IsPatchFormat(pictureformat_t format)
+{
+	return (format == PICFMT_PATCH || format == PICFMT_PATCH16 || format == PICFMT_PATCH32);
+}
+
+/** Checks if the specified picture format is a flat.
+  *
+  * \param format Input picture format.
+  * \return True if the picture format is a flat, false if not.
+  */
+boolean Picture_IsFlatFormat(pictureformat_t format)
+{
+	return (format == PICFMT_FLAT || format == PICFMT_FLAT16 || format == PICFMT_FLAT32);
+}
+
+/** Returns true if the lump is a valid patch.
+  * PICFMT_PATCH only, I think??
+  *
+  * \param patch Input patch.
+  * \param picture Input patch size.
+  * \return True if the input patch is valid.
+  */
+boolean Picture_CheckIfPatch(patch_t *patch, size_t size)
+{
+	INT16 width, height;
+	boolean result;
 
 	// minimum length of a valid Doom patch
 	if (size < 13)
 		return false;
 
-	patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
-
 	width = SHORT(patch->width);
 	height = SHORT(patch->height);
-
-	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384 && width < (INT16)(size / 4));
+	result = (height > 0 && height <= 16384 && width > 0 && width <= 16384);
 
 	if (result)
 	{
@@ -99,26 +649,40 @@ boolean R_CheckIfPatch(lumpnum_t lump)
 	return result;
 }
 
-//
-// R_TextureToFlat
-//
-// Convert a texture to a flat.
-//
-void R_TextureToFlat(size_t tex, UINT8 *flat)
+/** Converts a texture to a flat.
+  *
+  * \param trickytex The texture number.
+  * \return The converted flat.
+  */
+void *Picture_TextureToFlat(size_t trickytex)
 {
-	texture_t *texture = textures[tex];
+	texture_t *texture;
+	size_t tex;
 
+	UINT8 *converted;
+	size_t flatsize;
 	fixed_t col, ofs;
 	column_t *column;
 	UINT8 *desttop, *dest, *deststop;
 	UINT8 *source;
 
-	// yea
+	if (trickytex >= (unsigned)numtextures)
+		I_Error("Picture_TextureToFlat: invalid texture number!");
+
+	// Check the texture cache
+	// If the texture's not there, it'll be generated right now
+	tex = trickytex;
+	texture = textures[tex];
 	R_CheckTextureCache(tex);
 
-	desttop = flat;
-	deststop = desttop + (texture->width * texture->height);
+	// Allocate the flat
+	flatsize = (texture->width * texture->height);
+	converted = Z_Malloc(flatsize, PU_STATIC, NULL);
+	memset(converted, TRANSPARENTPIXEL, flatsize);
 
+	// Now we're gonna write to it
+	desttop = converted;
+	deststop = desttop + flatsize;
 	for (col = 0; col < texture->width; col++, desttop++)
 	{
 		// no post_t info
@@ -157,322 +721,17 @@ void R_TextureToFlat(size_t tex, UINT8 *flat)
 			}
 		}
 	}
+
+	return converted;
 }
 
-//
-// R_PatchToFlat
-//
-// Convert a patch to a flat.
-//
-void R_PatchToFlat(patch_t *patch, UINT8 *flat)
-{
-	fixed_t col, ofs;
-	column_t *column;
-	UINT8 *desttop, *dest, *deststop;
-	UINT8 *source;
-
-	desttop = flat;
-	deststop = desttop + (SHORT(patch->width) * SHORT(patch->height));
-
-	for (col = 0; col < SHORT(patch->width); col++, desttop++)
-	{
-		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[col]));
-
-		while (column->topdelta != 0xff)
-		{
-			topdelta = column->topdelta;
-			if (topdelta <= prevdelta)
-				topdelta += prevdelta;
-			prevdelta = topdelta;
-
-			dest = desttop + (topdelta * SHORT(patch->width));
-			source = (UINT8 *)(column) + 3;
-			for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
-			{
-				*dest = source[ofs];
-				dest += SHORT(patch->width);
-			}
-			column = (column_t *)((UINT8 *)column + column->length + 4);
-		}
-	}
-}
-
-//
-// R_PatchToMaskedFlat
-//
-// Convert a patch to a masked flat.
-// Now, what is a "masked" flat anyway?
-// It means the flat uses two bytes to store image data.
-// The upper byte is used to store the transparent pixel,
-// and the lower byte stores a palette index.
-//
-void R_PatchToMaskedFlat(patch_t *patch, UINT16 *raw, boolean flip)
-{
-	fixed_t col, ofs;
-	column_t *column;
-	UINT16 *desttop, *dest, *deststop;
-	UINT8 *source;
-
-	desttop = raw;
-	deststop = desttop + (SHORT(patch->width) * SHORT(patch->height));
-
-	for (col = 0; col < SHORT(patch->width); col++, desttop++)
-	{
-		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[flip ? (patch->width-1-col) : col]));
-		while (column->topdelta != 0xff)
-		{
-			topdelta = column->topdelta;
-			if (topdelta <= prevdelta)
-				topdelta += prevdelta;
-			prevdelta = topdelta;
-			dest = desttop + (topdelta * SHORT(patch->width));
-			source = (UINT8 *)(column) + 3;
-			for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
-			{
-				*dest = source[ofs];
-				dest += SHORT(patch->width);
-			}
-			column = (column_t *)((UINT8 *)column + column->length + 4);
-		}
-	}
-}
-
-//
-// R_FlatToPatch
-//
-// Convert a flat to a patch.
-//
-patch_t *R_FlatToPatch(UINT8 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize, boolean transparency)
-{
-	UINT32 x, y;
-	UINT8 *img;
-	UINT8 *imgptr = imgbuf;
-	UINT8 *colpointers, *startofspan;
-	size_t size = 0;
-
-	if (!raw)
-		return NULL;
-
-	// Write image size and offset
-	WRITEINT16(imgptr, width);
-	WRITEINT16(imgptr, height);
-	WRITEINT16(imgptr, leftoffset);
-	WRITEINT16(imgptr, topoffset);
-
-	// Leave placeholder to column pointers
-	colpointers = imgptr;
-	imgptr += width*4;
-
-	// Write columns
-	for (x = 0; x < width; x++)
-	{
-		int lastStartY = 0;
-		int spanSize = 0;
-		startofspan = NULL;
-
-		// Write column pointer
-		WRITEINT32(colpointers, imgptr - imgbuf);
-
-		// Write pixels
-		for (y = 0; y < height; y++)
-		{
-			UINT8 paletteIndex = raw[((y * width) + x)];
-			boolean opaque = transparency ? (paletteIndex != TRANSPARENTPIXEL) : true;
-
-			// End span if we have a transparent pixel
-			if (!opaque)
-			{
-				if (startofspan)
-					WRITEUINT8(imgptr, 0);
-				startofspan = NULL;
-				continue;
-			}
-
-			// Start new column if we need to
-			if (!startofspan || spanSize == 255)
-			{
-				int writeY = y;
-
-				// If we reached the span size limit, finish the previous span
-				if (startofspan)
-					WRITEUINT8(imgptr, 0);
-
-				if (y > 254)
-				{
-					// Make sure we're aligned to 254
-					if (lastStartY < 254)
-					{
-						WRITEUINT8(imgptr, 254);
-						WRITEUINT8(imgptr, 0);
-						imgptr += 2;
-						lastStartY = 254;
-					}
-
-					// Write stopgap empty spans if needed
-					writeY = y - lastStartY;
-
-					while (writeY > 254)
-					{
-						WRITEUINT8(imgptr, 254);
-						WRITEUINT8(imgptr, 0);
-						imgptr += 2;
-						writeY -= 254;
-					}
-				}
-
-				startofspan = imgptr;
-				WRITEUINT8(imgptr, writeY);
-				imgptr += 2;
-				spanSize = 0;
-
-				lastStartY = y;
-			}
-
-			// Write the pixel
-			WRITEUINT8(imgptr, paletteIndex);
-			spanSize++;
-			startofspan[1] = spanSize;
-		}
-
-		if (startofspan)
-			WRITEUINT8(imgptr, 0);
-
-		WRITEUINT8(imgptr, 0xFF);
-	}
-
-	size = imgptr-imgbuf;
-	img = Z_Malloc(size, PU_STATIC, NULL);
-	memcpy(img, imgbuf, size);
-
-	Z_Free(raw);
-
-	if (destsize != NULL)
-		*destsize = size;
-	return (patch_t *)img;
-}
-
-//
-// R_MaskedFlatToPatch
-//
-// Convert a masked flat to a patch.
-// Explanation of "masked" flats in R_PatchToMaskedFlat.
-//
-patch_t *R_MaskedFlatToPatch(UINT16 *raw, UINT16 width, UINT16 height, UINT16 leftoffset, UINT16 topoffset, size_t *destsize)
-{
-	UINT32 x, y;
-	UINT8 *img;
-	UINT8 *imgptr = imgbuf;
-	UINT8 *colpointers, *startofspan;
-	size_t size = 0;
-
-	if (!raw)
-		return NULL;
-
-	// Write image size and offset
-	WRITEINT16(imgptr, width);
-	WRITEINT16(imgptr, height);
-	WRITEINT16(imgptr, leftoffset);
-	WRITEINT16(imgptr, topoffset);
-
-	// Leave placeholder to column pointers
-	colpointers = imgptr;
-	imgptr += width*4;
-
-	// Write columns
-	for (x = 0; x < width; x++)
-	{
-		int lastStartY = 0;
-		int spanSize = 0;
-		startofspan = NULL;
-
-		// Write column pointer
-		WRITEINT32(colpointers, imgptr - imgbuf);
-
-		// Write pixels
-		for (y = 0; y < height; y++)
-		{
-			UINT16 pixel = raw[((y * width) + x)];
-			UINT8 paletteIndex = (pixel & 0xFF);
-			UINT8 opaque = (pixel != 0xFF00); // If 1, we have a pixel
-
-			// End span if we have a transparent pixel
-			if (!opaque)
-			{
-				if (startofspan)
-					WRITEUINT8(imgptr, 0);
-				startofspan = NULL;
-				continue;
-			}
-
-			// Start new column if we need to
-			if (!startofspan || spanSize == 255)
-			{
-				int writeY = y;
-
-				// If we reached the span size limit, finish the previous span
-				if (startofspan)
-					WRITEUINT8(imgptr, 0);
-
-				if (y > 254)
-				{
-					// Make sure we're aligned to 254
-					if (lastStartY < 254)
-					{
-						WRITEUINT8(imgptr, 254);
-						WRITEUINT8(imgptr, 0);
-						imgptr += 2;
-						lastStartY = 254;
-					}
-
-					// Write stopgap empty spans if needed
-					writeY = y - lastStartY;
-
-					while (writeY > 254)
-					{
-						WRITEUINT8(imgptr, 254);
-						WRITEUINT8(imgptr, 0);
-						imgptr += 2;
-						writeY -= 254;
-					}
-				}
-
-				startofspan = imgptr;
-				WRITEUINT8(imgptr, writeY);
-				imgptr += 2;
-				spanSize = 0;
-
-				lastStartY = y;
-			}
-
-			// Write the pixel
-			WRITEUINT8(imgptr, paletteIndex);
-			spanSize++;
-			startofspan[1] = spanSize;
-		}
-
-		if (startofspan)
-			WRITEUINT8(imgptr, 0);
-
-		WRITEUINT8(imgptr, 0xFF);
-	}
-
-	size = imgptr-imgbuf;
-	img = Z_Malloc(size, PU_STATIC, NULL);
-	memcpy(img, imgbuf, size);
-
-	if (destsize != NULL)
-		*destsize = size;
-	return (patch_t *)img;
-}
-
-//
-// R_IsLumpPNG
-//
-// Returns true if the lump is a valid PNG.
-//
-boolean R_IsLumpPNG(const UINT8 *d, size_t s)
+/** Returns true if the lump is a valid PNG.
+  *
+  * \param d The lump to be checked.
+  * \param s The lump size.
+  * \return True if the lump is a PNG image.
+  */
+boolean Picture_IsLumpPNG(const UINT8 *d, size_t s)
 {
 	if (s < 67) // http://garethrees.org/2007/11/14/pngcrush/
 		return false;
@@ -539,13 +798,24 @@ static void PNG_warn(png_structp PNG, png_const_charp pngtext)
 	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
 }
 
-static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+static png_bytep *PNG_Read(
+	const UINT8 *png,
+	INT32 *w, INT32 *h, INT16 *topoffset, INT16 *leftoffset,
+	boolean *use_palette, size_t size)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
 	png_uint_32 width, height;
 	int bit_depth, color_type;
 	png_uint_32 y;
+
+	png_colorp palette;
+	int palette_size;
+
+	png_bytep trans;
+	int trans_num;
+	png_color_16p trans_values;
+
 #ifdef PNG_SETJMP_SUPPORTED
 #ifdef USE_FAR_KEYWORD
 	jmp_buf jmpbuf;
@@ -560,17 +830,13 @@ static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoff
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
 	if (!png_ptr)
-	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on initialize libpng\n");
-		return NULL;
-	}
+		I_Error("PNG_Read: Couldn't initialize libpng!");
 
 	png_info_ptr = png_create_info_struct(png_ptr);
 	if (!png_info_ptr)
 	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on allocate for libpng\n");
 		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		return NULL;
+		I_Error("PNG_Read: libpng couldn't allocate memory!");
 	}
 
 #ifdef USE_FAR_KEYWORD
@@ -579,9 +845,8 @@ static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoff
 	if (setjmp(png_jmpbuf(png_ptr)))
 #endif
 	{
-		//CONS_Debug(DBG_RENDER, "libpng load error on %s\n", filename);
 		png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
-		return NULL;
+		I_Error("PNG_Read: libpng load error!");
 	}
 #ifdef USE_FAR_KEYWORD
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
@@ -610,10 +875,48 @@ static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoff
 	if (bit_depth == 16)
 		png_set_strip_16(png_ptr);
 
+	palette = NULL;
+	*use_palette = false;
+
 	if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
 		png_set_gray_to_rgb(png_ptr);
 	else if (color_type == PNG_COLOR_TYPE_PALETTE)
-		png_set_palette_to_rgb(png_ptr);
+	{
+		boolean usepal = false;
+
+		// Lactozilla: Check if the PNG has a palette, and if its color count
+		// matches the color count of SRB2's palette: 256 colors.
+		if (png_get_PLTE(png_ptr, png_info_ptr, &palette, &palette_size))
+		{
+			if (palette_size == 256)
+				usepal = true;
+		}
+
+		// If any of the tRNS colors have an alpha lower than 0xFF, and that
+		// color is present on the image, the palette flag is disabled.
+		png_get_tRNS(png_ptr, png_info_ptr, &trans, &trans_num, &trans_values);
+
+		if (trans_num == 256)
+		{
+			int i;
+			for (i = 0; i < trans_num; i++)
+			{
+				// libpng will transform this image into RGB even if
+				// the transparent index does not exist in the image,
+				// and there is no way around that.
+				if (trans[i] < 0xFF)
+				{
+					usepal = false;
+					break;
+				}
+			}
+		}
+
+		if (usepal)
+			*use_palette = true;
+		else
+			png_set_palette_to_rgb(png_ptr);
+	}
 
 	if (png_get_valid(png_ptr, png_info_ptr, PNG_INFO_tRNS))
 		png_set_tRNS_to_alpha(png_ptr);
@@ -654,106 +957,248 @@ static png_bytep *PNG_Read(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoff
 
 	*w = (INT32)width;
 	*h = (INT32)height;
+
 	return row_pointers;
 }
 
-// Convert a PNG to a raw image.
-static UINT8 *PNG_RawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+/** Converts a PNG to a picture.
+  *
+  * \param png The PNG image.
+  * \param outformat The output picture's format.
+  * \param w The output picture's width, as a pointer.
+  * \param h The output picture's height, as a pointer.
+  * \param topoffset The output picture's top offset, for sprites, as a pointer.
+  * \param leftoffset The output picture's left offset, for sprites, as a pointer.
+  * \param insize The input picture's size.
+  * \param outsize A pointer to the output picture's size.
+  * \param flags Input picture flags.
+  * \return A pointer to the converted picture.
+  */
+void *Picture_PNGConvert(
+	const UINT8 *png, pictureformat_t outformat,
+	INT32 *w, INT32 *h,
+	INT16 *topoffset, INT16 *leftoffset,
+	size_t insize, size_t *outsize,
+	pictureflags_t flags)
 {
-	UINT8 *flat;
+	void *flat;
+	INT32 outbpp;
+	size_t flatsize;
 	png_uint_32 x, y;
-	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, size);
+	png_bytep row;
+	boolean palette = false;
+	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, &palette, insize);
 	png_uint_32 width = *w, height = *h;
 
-	if (!row_pointers)
-		I_Error("PNG_RawConvert: conversion failed");
+	if (png == NULL)
+		I_Error("Picture_PNGConvert: picture was NULL!");
 
-	// Convert the image to 8bpp
-	flat = Z_Malloc(width * height, PU_LEVEL, NULL);
-	memset(flat, TRANSPARENTPIXEL, width * height);
-	for (y = 0; y < height; y++)
+	if (row_pointers == NULL)
+		I_Error("Picture_PNGConvert: row_pointers was NULL!");
+
+	// Find the output format's bits per pixel amount
+	outbpp = Picture_FormatBPP(outformat);
+
+	// Hack for patches because you'll want to preserve transparency.
+	if (Picture_IsPatchFormat(outformat))
 	{
-		png_bytep row = row_pointers[y];
-		for (x = 0; x < width; x++)
+		// Force a higher bit depth
+		if (outbpp == PICDEPTH_8BPP)
+			outbpp = PICDEPTH_16BPP;
+	}
+
+	// Shouldn't happen.
+	if (outbpp == PICDEPTH_NONE)
+		I_Error("Picture_PNGConvert: unknown output bits per pixel?!");
+
+	// Figure out the size
+	flatsize = (width * height) * (outbpp / 8);
+	if (outsize)
+		*outsize = flatsize;
+
+	// Convert the image
+	flat = Z_Calloc(flatsize, PU_STATIC, NULL);
+
+	// Set transparency
+	if (outbpp == PICDEPTH_8BPP)
+		memset(flat, TRANSPARENTPIXEL, (width * height));
+
+#ifdef PICTURE_PNG_USELOOKUP
+	if (outbpp != PICDEPTH_32BPP)
+		InitColorLUT(&png_colorlookup, pMasterPalette, false);
+#endif
+
+	if (outbpp == PICDEPTH_32BPP)
+	{
+		RGBA_t out;
+		UINT32 *outflat = (UINT32 *)flat;
+
+		if (palette)
 		{
-			png_bytep px = &(row[x * 4]);
-			if ((UINT8)px[3])
-				flat[((y * width) + x)] = NearestColor((UINT8)px[0], (UINT8)px[1], (UINT8)px[2]);
+			for (y = 0; y < height; y++)
+			{
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
+				{
+					out = V_GetColor(row[x]);
+					outflat[((y * width) + x)] = out.rgba;
+				}
+			}
+		}
+		else
+		{
+			for (y = 0; y < height; y++)
+			{
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
+				{
+					png_bytep px = &(row[x * 4]);
+					if ((UINT8)px[3])
+					{
+						out.s.red = (UINT8)px[0];
+						out.s.green = (UINT8)px[1];
+						out.s.blue = (UINT8)px[2];
+						out.s.alpha = (UINT8)px[3];
+						outflat[((y * width) + x)] = out.rgba;
+					}
+					else
+						outflat[((y * width) + x)] = 0x00000000;
+				}
+			}
 		}
 	}
+	else if (outbpp == PICDEPTH_16BPP)
+	{
+		UINT16 *outflat = (UINT16 *)flat;
+
+		if (palette)
+		{
+			for (y = 0; y < height; y++)
+			{
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
+					outflat[((y * width) + x)] = (0xFF << 8) | row[x];
+			}
+		}
+		else
+		{
+			for (y = 0; y < height; y++)
+			{
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
+				{
+					png_bytep px = &(row[x * 4]);
+					UINT8 red = (UINT8)px[0];
+					UINT8 green = (UINT8)px[1];
+					UINT8 blue = (UINT8)px[2];
+					UINT8 alpha = (UINT8)px[3];
+
+					if (alpha)
+					{
+#ifdef PICTURE_PNG_USELOOKUP
+						UINT8 palidx = GetColorLUT(&png_colorlookup, red, green, blue);
+#else
+						UINT8 palidx = NearestColor(red, green, blue);
+#endif
+						outflat[((y * width) + x)] = (0xFF << 8) | palidx;
+					}
+					else
+						outflat[((y * width) + x)] = 0x0000;
+				}
+			}
+		}
+	}
+	else // 8bpp
+	{
+		UINT8 *outflat = (UINT8 *)flat;
+
+		if (palette)
+		{
+			for (y = 0; y < height; y++)
+			{
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
+					outflat[((y * width) + x)] = row[x];
+			}
+		}
+		else
+		{
+			for (y = 0; y < height; y++)
+			{
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
+				{
+					png_bytep px = &(row[x * 4]);
+					UINT8 red = (UINT8)px[0];
+					UINT8 green = (UINT8)px[1];
+					UINT8 blue = (UINT8)px[2];
+					UINT8 alpha = (UINT8)px[3];
+
+					if (alpha)
+					{
+#ifdef PICTURE_PNG_USELOOKUP
+						UINT8 palidx = GetColorLUT(&png_colorlookup, red, green, blue);
+#else
+						UINT8 palidx = NearestColor(red, green, blue);
+#endif
+						outflat[((y * width) + x)] = palidx;
+					}
+				}
+			}
+		}
+	}
+
+	// Free the row pointers that we allocated for libpng.
+	for (y = 0; y < height; y++)
+		free(row_pointers[y]);
 	free(row_pointers);
 
+	// But wait, there's more!
+	if (Picture_IsPatchFormat(outformat))
+	{
+		void *converted;
+		pictureformat_t informat = PICFMT_NONE;
+		INT16 patleftoffset = 0, pattopoffset = 0;
+
+		// Figure out the format of the flat, from the bit depth of the output format
+		switch (outbpp)
+		{
+			case 32:
+				informat = PICFMT_FLAT32;
+				break;
+			case 16:
+				informat = PICFMT_FLAT16;
+				break;
+			default:
+				informat = PICFMT_FLAT;
+				break;
+		}
+
+		// Also find out if leftoffset and topoffset aren't pointing to NULL.
+		if (leftoffset)
+			patleftoffset = *leftoffset;
+		if (topoffset)
+			pattopoffset = *topoffset;
+
+		// Now, convert it!
+		converted = Picture_PatchConvert(informat, flat, outformat, insize, outsize, (INT16)width, (INT16)height, patleftoffset, pattopoffset, flags);
+		Z_Free(flat);
+		return converted;
+	}
+
+	// Return the converted flat!
 	return flat;
 }
 
-// Convert a PNG with transparency to a raw image.
-static UINT16 *PNG_MaskedRawConvert(const UINT8 *png, UINT16 *w, UINT16 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
-{
-	UINT16 *flat;
-	png_uint_32 x, y;
-	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, size);
-	png_uint_32 width = *w, height = *h;
-	size_t flatsize, i;
-
-	if (!row_pointers)
-		I_Error("PNG_MaskedRawConvert: conversion failed");
-
-	// Convert the image to 16bpp
-	flatsize = (width * height);
-	flat = Z_Malloc(flatsize * sizeof(UINT16), PU_LEVEL, NULL);
-
-	// can't memset here
-	for (i = 0; i < flatsize; i++)
-		flat[i] = 0xFF00;
-
-	for (y = 0; y < height; y++)
-	{
-		png_bytep row = row_pointers[y];
-		for (x = 0; x < width; x++)
-		{
-			png_bytep px = &(row[x * 4]);
-			if ((UINT8)px[3])
-				flat[((y * width) + x)] = NearestColor((UINT8)px[0], (UINT8)px[1], (UINT8)px[2]);
-		}
-	}
-	free(row_pointers);
-
-	return flat;
-}
-
-//
-// R_PNGToFlat
-//
-// Convert a PNG to a flat.
-//
-UINT8 *R_PNGToFlat(UINT16 *width, UINT16 *height, UINT8 *png, size_t size)
-{
-	return PNG_RawConvert(png, width, height, NULL, NULL, size);
-}
-
-//
-// R_PNGToPatch
-//
-// Convert a PNG to a patch.
-//
-patch_t *R_PNGToPatch(const UINT8 *png, size_t size, size_t *destsize)
-{
-	UINT16 width, height;
-	INT16 topoffset = 0, leftoffset = 0;
-	UINT16 *raw = PNG_MaskedRawConvert(png, &width, &height, &topoffset, &leftoffset, size);
-
-	if (!raw)
-		I_Error("R_PNGToPatch: conversion failed");
-
-	return R_MaskedFlatToPatch(raw, width, height, leftoffset, topoffset, destsize);
-}
-
-//
-// R_PNGDimensions
-//
-// Get the dimensions of a PNG file.
-//
-boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
+/** Returns the dimensions of a PNG image, but doesn't perform any conversions.
+  *
+  * \param png The PNG image.
+  * \param width A pointer to the input picture's width.
+  * \param height A pointer to the input picture's height.
+  * \param size The input picture's size.
+  * \return True if reading the file succeeded, false if it failed.
+  */
+boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
@@ -770,17 +1215,13 @@ boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
 		PNG_error, PNG_warn);
 	if (!png_ptr)
-	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on initialize libpng\n");
-		return false;
-	}
+		I_Error("Picture_PNGDimensions: Couldn't initialize libpng!");
 
 	png_info_ptr = png_create_info_struct(png_ptr);
 	if (!png_info_ptr)
 	{
-		CONS_Debug(DBG_RENDER, "PNG_Load: Error on allocate for libpng\n");
 		png_destroy_read_struct(&png_ptr, NULL, NULL);
-		return false;
+		I_Error("Picture_PNGDimensions: libpng couldn't allocate memory!");
 	}
 
 #ifdef USE_FAR_KEYWORD
@@ -789,9 +1230,8 @@ boolean R_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
 	if (setjmp(png_jmpbuf(png_ptr)))
 #endif
 	{
-		//CONS_Debug(DBG_RENDER, "libpng load error on %s\n", filename);
 		png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
-		return false;
+		I_Error("Picture_PNGDimensions: libpng load error!");
 	}
 #ifdef USE_FAR_KEYWORD
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
@@ -1137,35 +1577,6 @@ void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps)
 	}
 }
 
-static UINT16 GetPatchPixel(patch_t *patch, INT32 x, INT32 y, boolean flip)
-{
-	fixed_t ofs;
-	column_t *column;
-	UINT8 *source;
-
-	if (x >= 0 && x < SHORT(patch->width))
-	{
-		INT32 topdelta, prevdelta = -1;
-		column = (column_t *)((UINT8 *)patch + LONG(patch->columnofs[flip ? (patch->width-1-x) : x]));
-		while (column->topdelta != 0xff)
-		{
-			topdelta = column->topdelta;
-			if (topdelta <= prevdelta)
-				topdelta += prevdelta;
-			prevdelta = topdelta;
-			source = (UINT8 *)(column) + 3;
-			for (ofs = 0; ofs < column->length; ofs++)
-			{
-				if ((topdelta + ofs) == y)
-					return source[ofs];
-			}
-			column = (column_t *)((UINT8 *)column + column->length + 4);
-		}
-	}
-
-	return 0xFF00;
-}
-
 #ifdef ROTSPRITE
 //
 // R_GetRollAngle
@@ -1192,13 +1603,12 @@ INT32 R_GetRollAngle(angle_t rollangle)
 //
 void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip)
 {
-	UINT32 i;
 	INT32 angle;
 	patch_t *patch;
 	patch_t *newpatch;
 	UINT16 *rawdst;
 	size_t size;
-	INT32 bflip = (flip != 0x00);
+	pictureflags_t bflip = (flip) ? PICFLAGS_XFLIP : 0;
 
 #define SPRITE_XCENTER (leftoffset)
 #define SPRITE_YCENTER (height / 2)
@@ -1223,12 +1633,16 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 #ifndef NO_PNG_LUMPS
 		lumplength = W_LumpLength(lump);
 
-		if (R_IsLumpPNG((UINT8 *)patch, lumplength))
-			patch = R_PNGToPatch((UINT8 *)patch, lumplength, NULL);
+		if (Picture_IsLumpPNG((const UINT8 *)patch, lumplength))
+		{
+			INT32 pngwidth, pngheight;
+			INT16 toffs, loffs;
+			patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, &pngwidth, &pngheight, &toffs, &loffs, lumplength, NULL, 0);
+		}
 		else
 #endif
 		// Because there's something wrong with SPR_DFLM, I guess
-		if (!R_CheckIfPatch(lump))
+		if (!Picture_CheckIfPatch(patch, lumplength))
 			return;
 
 		width = SHORT(patch->width);
@@ -1324,10 +1738,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 			size = (newwidth * newheight);
 			if (!size)
 				size = (width * height);
-
-			rawdst = Z_Malloc(size * sizeof(UINT16), PU_STATIC, NULL);
-			for (i = 0; i < size; i++)
-				rawdst[i] = 0xFF00;
+			rawdst = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
 
 			for (dy = 0; dy < newheight; dy++)
 			{
@@ -1340,12 +1751,16 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 					sx >>= FRACBITS;
 					sy >>= FRACBITS;
 					if (sx >= 0 && sy >= 0 && sx < width && sy < height)
-						rawdst[(dy*newwidth)+dx] = GetPatchPixel(patch, sx, sy, bflip);
+					{
+						void *input = Picture_GetPatchPixel(patch, PICFMT_PATCH, sx, sy, bflip);
+						if (input != NULL)
+							rawdst[(dy*newwidth)+dx] = (0xFF00 | (*(UINT8 *)input));
+					}
 				}
 			}
 
 			// make patch
-			newpatch = R_MaskedFlatToPatch(rawdst, newwidth, newheight, 0, 0, &size);
+			newpatch = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawdst, PICFMT_PATCH, 0, &size, newwidth, newheight, 0, 0, 0);
 			{
 				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
 				newpatch->topoffset = (newpatch->height / 2) + (SHORT(patch->topoffset) - py);
