@@ -333,7 +333,33 @@ static int polyobj_get(lua_State *L)
 
 static int polyobj_set(lua_State *L)
 {
-	return luaL_error(L, LUA_QL("polyobj_t") " struct cannot be edited by Lua."); // this is just temporary
+	polyobj_t *polyobj = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
+	enum polyobj_e field = luaL_checkoption(L, 2, NULL, polyobj_opt);
+
+	if (!polyobj)
+		return LUA_ErrInvalid(L, "polyobj_t");
+
+	if (hud_running)
+		return luaL_error(L, "Do not alter polyobj_t in HUD rendering code!");
+
+	switch (field)
+	{
+	default:
+		return luaL_error(L, LUA_QL("polyobj_t") " field " LUA_QS " cannot be modified.", polyobj_opt[field]);
+	case polyobj_angle:
+		return luaL_error(L, LUA_QL("polyobj_t") " field " LUA_QS " should not be set directly. Use the function " LUA_QL("polyobj:rotate(angle)") " instead.", polyobj_opt[field]);
+	case polyobj_parent:
+		polyobj->parent = luaL_checkinteger(L, 3);
+		break;
+	case polyobj_flags:
+		polyobj->flags = luaL_checkinteger(L, 3);
+		break;
+	case polyobj_translucency:
+		polyobj->translucency = luaL_checkinteger(L, 3);
+		break;
+	}
+
+	return 0;
 }
 
 static int polyobj_num(lua_State *L)
