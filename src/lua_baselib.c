@@ -2620,6 +2620,8 @@ static int lib_sStartSound(lua_State *L)
 			origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
 			if (!origin)
 				return LUA_ErrInvalid(L, "sector_t");
+
+			origin = &((sector_t *)origin)->soundorg;
 		}
 		else
 			return LUA_ErrInvalid(L, "mobj_t/sector_t");
@@ -2668,6 +2670,8 @@ static int lib_sStartSoundAtVolume(lua_State *L)
 			origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
 			if (!origin)
 				return LUA_ErrInvalid(L, "sector_t");
+
+			origin = &((sector_t *)origin)->soundorg;
 		}
 		else
 			return LUA_ErrInvalid(L, "mobj_t/sector_t");
@@ -2682,6 +2686,7 @@ static int lib_sStopSound(lua_State *L)
 	void *origin = NULL;
 	const char *origtype;
 	//NOHUD
+	lua_settop(L, 1);
 	origtype = GetUserdataUType(L);
 
 	if (fasticmp(origtype, "mobj_t"))
@@ -2695,6 +2700,8 @@ static int lib_sStopSound(lua_State *L)
 		origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
 		if (!origin)
 			return LUA_ErrInvalid(L, "sector_t");
+
+		origin = &((sector_t *)origin)->soundorg;
 	}
 	else
 		return LUA_ErrInvalid(L, "mobj_t/sector_t");
@@ -2729,6 +2736,8 @@ static int lib_sStopSoundByID(lua_State *L)
 			origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
 			if (!origin)
 				return LUA_ErrInvalid(L, "sector_t");
+
+			origin = &((sector_t *)origin)->soundorg;
 		}
 		else
 			return LUA_ErrInvalid(L, "mobj_t/sector_t");
@@ -2962,7 +2971,7 @@ static int lib_sOriginPlaying(lua_State *L)
 	const char *origtype;
 	//NOHUD
 	INLEVEL
-
+	lua_settop(L, 1);
 	origtype = GetUserdataUType(L);
 
 	if (fasticmp(origtype, "mobj_t"))
@@ -2976,6 +2985,8 @@ static int lib_sOriginPlaying(lua_State *L)
 		origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
 		if (!origin)
 			return LUA_ErrInvalid(L, "sector_t");
+
+		origin = &((sector_t *)origin)->soundorg;
 	}
 	else
 		return LUA_ErrInvalid(L, "mobj_t/sector_t");
@@ -3020,6 +3031,8 @@ static int lib_sSoundPlaying(lua_State *L)
 			origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
 			if (!origin)
 				return LUA_ErrInvalid(L, "sector_t");
+
+			origin = &((sector_t *)origin)->soundorg;
 		}
 		else
 			return LUA_ErrInvalid(L, "mobj_t/sector_t");
