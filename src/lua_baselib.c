@@ -2588,23 +2588,41 @@ static int lib_rGetNameByColor(lua_State *L)
 ////////////
 static int lib_sStartSound(lua_State *L)
 {
-	const void *origin = NULL;
+	void *origin = NULL;
+	const char *origtype;
 	sfxenum_t sound_id = luaL_checkinteger(L, 2);
 	player_t *player = NULL;
 	//NOHUD
+
 	if (sound_id >= NUMSFX)
 		return luaL_error(L, "sfx %d out of range (0 - %d)", sound_id, NUMSFX-1);
-	if (!lua_isnil(L, 1))
-	{
-		origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-		if (!origin)
-			return LUA_ErrInvalid(L, "mobj_t");
-	}
+
 	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
 	{
 		player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!lua_isnil(L, 1))
+	{
+		lua_settop(L, 1);
+
+		origtype = GetUserdataUType(L);
+
+		if (fasticmp(origtype, "mobj_t"))
+		{
+			origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+			if (!origin)
+				return LUA_ErrInvalid(L, "mobj_t");
+		}
+		else if (fasticmp(origtype, "sector_t"))
+		{
+			origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+			if (!origin)
+				return LUA_ErrInvalid(L, "sector_t");
+		}
+		else
+			return LUA_ErrInvalid(L, "mobj_t/sector_t");
 	}
 	if (!player || P_IsLocalPlayer(player))
 	{
@@ -2618,18 +2636,13 @@ static int lib_sStartSound(lua_State *L)
 
 static int lib_sStartSoundAtVolume(lua_State *L)
 {
-	const void *origin = NULL;
+	void *origin = NULL;
+	const char *origtype;
 	sfxenum_t sound_id = luaL_checkinteger(L, 2);
 	INT32 volume = (INT32)luaL_checkinteger(L, 3);
 	player_t *player = NULL;
 	//NOHUD
 
-	if (!lua_isnil(L, 1))
-	{
-		origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
-		if (!origin)
-			return LUA_ErrInvalid(L, "mobj_t");
-	}
 	if (sound_id >= NUMSFX)
 		return luaL_error(L, "sfx %d out of range (0 - %d)", sound_id, NUMSFX-1);
 	if (!lua_isnone(L, 4) && lua_isuserdata(L, 4))
@@ -2638,6 +2651,27 @@ static int lib_sStartSoundAtVolume(lua_State *L)
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
+	if (!lua_isnil(L, 1))
+	{
+		lua_settop(L, 1);
+
+		origtype = GetUserdataUType(L);
+
+		if (fasticmp(origtype, "mobj_t"))
+		{
+			origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+			if (!origin)
+				return LUA_ErrInvalid(L, "mobj_t");
+		}
+		else if (fasticmp(origtype, "sector_t"))
+		{
+			origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+			if (!origin)
+				return LUA_ErrInvalid(L, "sector_t");
+		}
+		else
+			return LUA_ErrInvalid(L, "mobj_t/sector_t");
+	}
 	if (!player || P_IsLocalPlayer(player))
 	S_StartSoundAtVolume(origin, sound_id, volume);
 	return 0;
@@ -2645,23 +2679,60 @@ static int lib_sStartSoundAtVolume(lua_State *L)
 
 static int lib_sStopSound(lua_State *L)
 {
-	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	void *origin = NULL;
+	const char *origtype;
 	//NOHUD
-	if (!origin)
-		return LUA_ErrInvalid(L, "mobj_t");
+	origtype = GetUserdataUType(L);
+
+	if (fasticmp(origtype, "mobj_t"))
+	{
+		origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+		if (!origin)
+			return LUA_ErrInvalid(L, "mobj_t");
+	}
+	else if (fasticmp(origtype, "sector_t"))
+	{
+		origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+		if (!origin)
+			return LUA_ErrInvalid(L, "sector_t");
+	}
+	else
+		return LUA_ErrInvalid(L, "mobj_t/sector_t");
+
 	S_StopSound(origin);
 	return 0;
 }
 
 static int lib_sStopSoundByID(lua_State *L)
 {
-	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	void *origin = NULL;
+	const char *origtype;
 	sfxenum_t sound_id = luaL_checkinteger(L, 2);
 	//NOHUD
-	if (!origin)
-		return LUA_ErrInvalid(L, "mobj_t");
+
 	if (sound_id >= NUMSFX)
 		return luaL_error(L, "sfx %d out of range (0 - %d)", sound_id, NUMSFX-1);
+	if (!lua_isnil(L, 1))
+	{
+		lua_settop(L, 1);
+
+		origtype = GetUserdataUType(L);
+
+		if (fasticmp(origtype, "mobj_t"))
+		{
+			origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+			if (!origin)
+				return LUA_ErrInvalid(L, "mobj_t");
+		}
+		else if (fasticmp(origtype, "sector_t"))
+		{
+			origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+			if (!origin)
+				return LUA_ErrInvalid(L, "sector_t");
+		}
+		else
+			return LUA_ErrInvalid(L, "mobj_t/sector_t");
+	}
 
 	S_StopSoundByID(origin, sound_id);
 	return 0;
@@ -2887,11 +2958,28 @@ static int lib_sSetMusicPosition(lua_State *L)
 
 static int lib_sOriginPlaying(lua_State *L)
 {
-	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	void *origin = NULL;
+	const char *origtype;
 	//NOHUD
 	INLEVEL
-	if (!origin)
-		return LUA_ErrInvalid(L, "mobj_t");
+
+	origtype = GetUserdataUType(L);
+
+	if (fasticmp(origtype, "mobj_t"))
+	{
+		origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+		if (!origin)
+			return LUA_ErrInvalid(L, "mobj_t");
+	}
+	else if (fasticmp(origtype, "sector_t"))
+	{
+		origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+		if (!origin)
+			return LUA_ErrInvalid(L, "sector_t");
+	}
+	else
+		return LUA_ErrInvalid(L, "mobj_t/sector_t");
+
 	lua_pushboolean(L, S_OriginPlaying(origin));
 	return 1;
 }
@@ -2908,14 +2996,35 @@ static int lib_sIdPlaying(lua_State *L)
 
 static int lib_sSoundPlaying(lua_State *L)
 {
-	void *origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	void *origin = NULL;
+	const char *origtype;
 	sfxenum_t id = luaL_checkinteger(L, 2);
 	//NOHUD
 	INLEVEL
-	if (!origin)
-		return LUA_ErrInvalid(L, "mobj_t");
 	if (id >= NUMSFX)
 		return luaL_error(L, "sfx %d out of range (0 - %d)", id, NUMSFX-1);
+	if (!lua_isnil(L, 1))
+	{
+		lua_settop(L, 1);
+
+		origtype = GetUserdataUType(L);
+
+		if (fasticmp(origtype, "mobj_t"))
+		{
+			origin = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+			if (!origin)
+				return LUA_ErrInvalid(L, "mobj_t");
+		}
+		else if (fasticmp(origtype, "sector_t"))
+		{
+			origin = *((sector_t **)luaL_checkudata(L, 1, META_SECTOR));
+			if (!origin)
+				return LUA_ErrInvalid(L, "sector_t");
+		}
+		else
+			return LUA_ErrInvalid(L, "mobj_t/sector_t");
+	}
+
 	lua_pushboolean(L, S_SoundPlaying(origin, id));
 	return 1;
 }
