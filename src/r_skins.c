@@ -286,6 +286,11 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 			else if (playernum == secondarydisplayplayer)
 				CV_StealthSetValue(&cv_playercolor2, skin->prefcolor);
 			player->skincolor = newcolor = skin->prefcolor;
+			if (player->bot && botingame)
+			{
+				botskin = (UINT8)(skinnum + 1);
+				botcolor = skin->prefcolor;
+			}
 		}
 
 		if (player->followmobj)

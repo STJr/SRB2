@@ -8483,7 +8483,7 @@ static void M_DrawLoadGameData(void)
 				sprdef = &charbotskin->sprites[SPR2_SIGN];
 				if (!sprdef->numframes)
 					goto skipbot;
-				colormap = R_GetTranslationColormap(savegameinfo[savetodraw].botskin, charbotskin->prefcolor, 0);
+				colormap = R_GetTranslationColormap(savegameinfo[savetodraw].botskin-1, charbotskin->prefcolor, 0);
 				sprframe = &sprdef->spriteframes[0];
 				patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 
