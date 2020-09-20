@@ -472,6 +472,7 @@ HMS_list_servers (void)
 {
 	struct HMS_buffer *hms;
 
+	char *list;
 	char *p;
 
 	hms = HMS_connect("servers");
@@ -481,11 +482,17 @@ HMS_list_servers (void)
 
 	if (HMS_do(hms))
 	{
-		p = &hms->buffer[strlen(hms->buffer)];
-		while (*--p == '\n')
-			;
+		list = curl_easy_unescape(hms->curl, hms->buffer, 0, NULL);
 
-		CONS_Printf("%s\n", hms->buffer);
+		p = strtok(list, "\n");
+
+		while (p != NULL)
+		{
+			CONS_Printf("\x80%s\n", p);
+			p = strtok(NULL, "\n");
+		}
+
+		curl_free(list);
 	}
 
 	HMS_end(hms);
