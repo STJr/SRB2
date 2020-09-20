@@ -11249,7 +11249,7 @@ void P_PrecipitationEffects(void)
  * \param mthingtype Mapthing number in question.
  * \return Mobj type; MT_UNKNOWN if nothing found.
  */
-static mobjtype_t P_GetMobjtype(UINT16 mthingtype)
+mobjtype_t P_GetMobjtype(UINT16 mthingtype)
 {
 	mobjtype_t i;
 	for (i = 0; i < NUMMOBJTYPES; i++)
