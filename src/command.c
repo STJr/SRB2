@@ -1262,11 +1262,11 @@ void CV_RegisterVar(consvar_t *variable)
 	// check net variables
 	if (variable->flags & CV_NETVAR)
 	{
-		variable->netid = consvar_number_of_netids++;
-
 		/* in case of overflow... */
-		if (variable->netid > consvar_number_of_netids)
+		if (consvar_number_of_netids + 1 < consvar_number_of_netids)
 			I_Error("Way too many netvars");
+
+		variable->netid = ++consvar_number_of_netids;
 
 #ifdef OLD22DEMOCOMPAT
 		CV_RegisterOldDemoVar(variable);
