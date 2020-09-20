@@ -2513,11 +2513,11 @@ static boolean CL_ServerConnectionSearchTicker(tic_t *asksent)
 				CL_Reset();
 				D_StartTitle();
 				M_StartMessage(M_GetText(
-					"You have WAD files loaded or have\n"
-					"modified the game in some way, and\n"
-					"your file list does not match\n"
-					"the server's file list.\n"
-					"Please restart SRB2 before connecting.\n\n"
+					"You have the wrong addons loaded.\n\n"
+					"To play on this server, restart\n"
+					"the game and don't load any addons.\n"
+					"SRB2 will automatically add\n"
+					"everything you need when you join.\n\n"
 					"Press ESC\n"
 				), NULL, MM_NOTHING);
 				return false;
