@@ -625,9 +625,7 @@ void G_ConsGhostTic(void)
 		if (followtic & FZT_SCALE)
 			demo_p += sizeof(fixed_t);
 		// momx, momy and momz
-		demo_p += (demoversion < 0x000e) ? sizeof(UINT16) : sizeof(fixed_t);
-		demo_p += (demoversion < 0x000e) ? sizeof(UINT16) : sizeof(fixed_t);
-		demo_p += (demoversion < 0x000e) ? sizeof(UINT16) : sizeof(fixed_t);
+		demo_p += (demoversion < 0x000e) ? sizeof(UINT16) * 3 : sizeof(fixed_t) * 3;
 		if (followtic & FZT_SKIN)
 			demo_p++;
 		demo_p += sizeof(UINT16);
