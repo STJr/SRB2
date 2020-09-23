@@ -345,7 +345,6 @@ void G_WriteGhostTic(mobj_t *ghost)
 	else
 	{
 		// For moving normally:
-		// Store one full byte of movement, plus one byte of fractional movement.
 		fixed_t momx = ghost->x-oldghost.x;
 		fixed_t momy = ghost->y-oldghost.y;
 		if (momx != oldghost.momx
@@ -366,8 +365,6 @@ void G_WriteGhostTic(mobj_t *ghost)
 		}
 
 		// This SHOULD set oldghost.x/y/z to match ghost->x/y/z
-		// but it keeps the fractional loss of one byte,
-		// so it will hopefully be made up for in future tics.
 		oldghost.x += oldghost.momx;
 		oldghost.y += oldghost.momy;
 		oldghost.z += oldghost.momz;
@@ -1235,8 +1232,6 @@ void G_WriteMetalTic(mobj_t *metal)
 		}
 
 		// This SHOULD set oldmetal.x/y/z to match metal->x/y/z
-		// but it keeps the fractional loss of one byte,
-		// so it will hopefully be made up for in future tics.
 		oldmetal.x += oldmetal.momx;
 		oldmetal.y += oldmetal.momy;
 		oldmetal.z += oldmetal.momz;
