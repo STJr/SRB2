@@ -87,6 +87,9 @@ typedef struct
 	// origin of sound
 	const void *origin;
 
+	// initial volume of sound, which is applied after distance and direction
+	INT32 volume;
+
 	// handle of the sound being played
 	INT32 handle;
 
