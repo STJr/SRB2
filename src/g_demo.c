@@ -1933,9 +1933,8 @@ void G_DoPlayDemo(char *defdemoname)
 	if (use_old_demo_vars)
 		CV_LoadOldDemoVars(&demo_p);
 	else
-#else
-		CV_LoadDemoVars(&demo_p);
 #endif
+		CV_LoadDemoVars(&demo_p);
 
 	// Sigh ... it's an empty demo.
 	if (*demo_p == DEMOMARKER)
