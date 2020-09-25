@@ -2370,15 +2370,6 @@ skipwhite:
 		}
 	}
 
-	// parse single characters
-	if (c == '{' || c == '}' || c == ')' || c == '(' || c == '\'')
-	{
-		com_token[len] = c;
-		len++;
-		com_token[len] = 0;
-		return data + 1;
-	}
-
 	// parse a regular word
 	do
 	{
@@ -2398,8 +2389,6 @@ skipwhite:
 			len++;
 			c = *data;
 		}
-		if (c == '{' || c == '}' || c == ')'|| c == '(' || c == '\'')
-			break;
 	} while (c > 32);
 
 	com_token[len] = 0;
