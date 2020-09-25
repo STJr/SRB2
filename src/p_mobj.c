@@ -4194,7 +4194,7 @@ boolean P_SupermanLook4Players(mobj_t *actor)
 
 	for (c = 0; c < MAXPLAYERS; c++)
 	{
-		if (playeringame[c])
+		if (playeringame[c] && !players[c].spectator)
 		{
 			if (players[c].pflags & PF_INVIS)
 				continue; // ignore notarget
