@@ -1130,6 +1130,7 @@ static const char *credits[] = {
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
 	"\"DirkTheHusky\"",
+	"Jesse \"Jeck Jims\" Emerick",
 	"Buddy \"KinkaJoy\" Fischer",
 	"Vivian \"toaster\" Grannell",
 	"James \"SwitchKaze\" Hale",
