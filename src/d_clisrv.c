@@ -3167,6 +3167,8 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 	// Reset the name
 	sprintf(player_names[playernum], "Player %d", playernum+1);
 
+	player_name_changes[playernum] = 0;
+
 	if (IsPlayerAdmin(playernum))
 	{
 		RemoveAdminPlayer(playernum); // don't stay admin after you're gone
@@ -3782,6 +3784,8 @@ void SV_ResetServer(void)
 		sprintf(player_names[i], "Player %d", i + 1);
 		adminplayers[i] = -1; // Populate the entire adminplayers array with -1.
 	}
+
+	memset(player_name_changes, 0, sizeof player_name_changes);
 
 	mynode = 0;
 	cl_packetmissed = false;
