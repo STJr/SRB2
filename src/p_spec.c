@@ -4395,7 +4395,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 	// Ignore dead players.
 	// If this strange phenomenon could be potentially used in levels,
 	// TODO: modify this to accommodate for it.
-	if (player->playerstate == PST_DEAD)
+	if (player->playerstate != PST_LIVE)
 		return;
 
 	// Conveyor stuff
