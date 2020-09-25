@@ -14,6 +14,7 @@
 #define __D_CLISRV__
 
 #include "d_ticcmd.h"
+#include "d_net.h"
 #include "d_netcmd.h"
 #include "d_net.h"
 #include "tables.h"
@@ -484,7 +485,7 @@ typedef struct
 #pragma pack()
 #endif
 
-#define MAXSERVERLIST 64 // Depends only on the display
+#define MAXSERVERLIST (MAXNETNODES-1)
 typedef struct
 {
 	SINT8 node;
