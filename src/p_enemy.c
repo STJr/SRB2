@@ -3040,11 +3040,11 @@ void A_Boss1Laser(mobj_t *actor)
 				z = actor->z + FixedMul(56*FRACUNIT, actor->scale);
 			break;
 		case 2:
-			var2 = 3; // Fire middle laser
+			var1 = locvar1; var2 = 3; // Fire middle laser
 			A_Boss1Laser(actor);
-			var2 = 0; // Fire left laser
+			var1 = locvar1; var2 = 0; // Fire left laser
 			A_Boss1Laser(actor);
-			var2 = 1; // Fire right laser
+			var1 = locvar1; var2 = 1; // Fire right laser
 			A_Boss1Laser(actor);
 			return;
 			break;
