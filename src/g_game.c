@@ -3815,7 +3815,7 @@ static void G_DoCompleted(void)
 	// a map of the proper gametype -- skip levels that don't support
 	// the current gametype. (Helps avoid playing boss levels in Race,
 	// for instance).
-	if (!spec)
+	if (!spec || nextmapoverride)
 	{
 		if (nextmap >= 0 && nextmap < NUMMAPS)
 		{
@@ -3867,7 +3867,8 @@ static void G_DoCompleted(void)
 		if (nextmap < 0 || (nextmap >= NUMMAPS && nextmap < 1100-1) || nextmap > 1103-1)
 			I_Error("Followed map %d to invalid map %d\n", prevmap + 1, nextmap + 1);
 
-		lastmap = nextmap; // Remember last map for when you come out of the special stage.
+		if (!spec)
+			lastmap = nextmap; // Remember last map for when you come out of the special stage.
 	}
 
 	if ((gottoken = ((gametyperules & GTR_SPECIALSTAGES) && token)))
@@ -3888,7 +3889,7 @@ static void G_DoCompleted(void)
 		}
 	}
 
-	if (spec && !gottoken)
+	if (spec && !gottoken && !nextmapoverride)
 		nextmap = lastmap; // Exiting from a special stage? Go back to the game. Tails 08-11-2001
 
 	automapactive = false;
