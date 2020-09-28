@@ -1263,7 +1263,7 @@ void CV_RegisterVar(consvar_t *variable)
 	if (variable->flags & CV_NETVAR)
 	{
 		/* in case of overflow... */
-		if (consvar_number_of_netids + 1 < consvar_number_of_netids)
+		if (consvar_number_of_netids == UINT16_MAX)
 			I_Error("Way too many netvars");
 
 		variable->netid = ++consvar_number_of_netids;
