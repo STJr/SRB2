@@ -1074,51 +1074,45 @@ static const char *credits[] = {
 	"\1Programming",
 	"Alam \"GBC\" Arias",
 	"Logan \"GBA\" Arias",
+	"Colette \"fickleheart\" Bordelon",
+	"Andrew \"orospakr\" Clunis",
+	"Sally \"TehRealSalt\" Cochenour",
+	"Gregor \"Oogaland\" Dick",
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
 	"Victor \"SteelT\" Fuentes",
 	"Nathan \"Jazz\" Giroux",
+	"\"Golden\"",
 	"Vivian \"toaster\" Grannell",
+	"Julio \"Chaos Zero 64\" Guir",
+	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"\"james\"",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"\"Jimita\"",
-	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
-	"Louis-Antoine \"LJ Sonic\" de Moulins", // de Rochefort doesn't quite fit on the screen sorry lol
-	"John \"JTE\" Muniz",
-	"Ehab \"Wolfy\" Saeed",
-	"Jonas \"MascaraSnake\" Sauer",
 	"\"Kaito Sinclaire\"",
-	"\"SSNTails\"",
-	"Lachlan \"Lach\" Wright",
-	"Marco \"mazmazz\" Zafra",
-	"",
-	"\1Programming",
-	"\1Assistance",
-	"Colette \"fickleheart\" Bordelon",
-	"\"chi.miru\"", // helped port slope drawing code from ZDoom
-	"Andrew \"orospakr\" Clunis",
-	"Sally \"TehRealSalt\" Cochenour",
-	"Gregor \"Oogaland\" Dick",
-	"\"Golden\"",
-	"Julio \"Chaos Zero 64\" Guir",
-	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
+	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"Matthew \"Shuffle\" Marsalko",
 	"Steven \"StroggOnMeth\" McGranahan",
 	"\"Morph\"", // For SRB2Morphed stuff
+	"Louis-Antoine \"LJ Sonic\" de Moulins", // de Rochefort doesn't quite fit on the screen sorry lol
+	"John \"JTE\" Muniz",
 	"Colin \"Sonict\" Pfaff",
 	"Sean \"Sryder13\" Ryder",
+	"Ehab \"Wolfy\" Saeed",
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
+	"Jonas \"MascaraSnake\" Sauer",
 	"Wessel \"sphere\" Smit",
-	"Ben \"Cue\" Woodford",
+	"\"SSNTails\"",
+	"\"Varren\"",
 	"\"VelocitOni\"", // Wrote the original dashmode script
 	"Ikaro \"Tatsuru\" Vinhas",
-	// Git contributors with 5+ approved merges of substantive quality,
-	// or contributors with at least one groundbreaking merge, may be named.
-	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors".
+	"Ben \"Cue\" Woodford",
+	"Lachlan \"Lach\" Wright",
+	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Art",
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
@@ -1144,7 +1138,6 @@ static const char *credits[] = {
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"Andrew \"Senku Niola\" Moran",
 	"\"MotorRoach\"",
-	"\"Revan\"",
 	"Phillip \"TelosTurntable\" Robinson",
 	"\"Scizor300\"",
 	"Wessel \"sphere\" Smit",
@@ -1160,9 +1153,9 @@ static const char *credits[] = {
 	"Malcolm \"RedXVI\" Brown",
 	"Dave \"DemonTomatoDave\" Bulmer",
 	"Paul \"Boinciel\" Clempson",
+	"\"Cyan Helkaraxe\"",
 	"Shane \"CobaltBW\" Ellis",
 	"James \"SeventhSentinel\" Hall",
-	"\"Cyan Helkaraxe\"",
 	"Kepa \"Nev3r\" Iceta",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"Jarel \"Arrow\" Jones",
@@ -1189,8 +1182,9 @@ static const char *credits[] = {
 	"James \"SeventhSentinel\" Hall",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
-	"Alexander \"DrTapeworm\" Moench-Ford",
 	"\"Kaito Sinclaire\"",
+	"Alexander \"DrTapeworm\" Moench-Ford",
+	"\"Revan\"",
 	"Anna \"QueenDelta\" Sandlin",
 	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
