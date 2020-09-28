@@ -531,7 +531,7 @@ static void F_IntroDrawScene(void)
 	{
 		case 0:
 			bgxoffs = 28;
-			break;	
+			break;
 		case 1:
 			background = W_CachePatchName("INTRO1", PU_PATCH);
 			break;
@@ -620,7 +620,7 @@ static void F_IntroDrawScene(void)
 			V_DrawScaledPatch(bgxoffs, 0, 0, background);
 	}
 	else if (intro_scenenum == 0) // STJr presents
-	{	 
+	{
 		if (intro_curtime > 1 && intro_curtime < (INT32)introscenetime[intro_scenenum])
 		{
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
@@ -628,13 +628,13 @@ static void F_IntroDrawScene(void)
 				sprintf(stjrintro, "STJRI%03u", intro_curtime-1);
 			else if (intro_curtime >= TICRATE-6 && intro_curtime < 2*TICRATE-20) // Pause on black screen for just a second
 				return;
-			else if (intro_curtime == 2*TICRATE-19) 
+			else if (intro_curtime == 2*TICRATE-19)
 			{
 				// Fade in the text
 				// The text fade out is automatically handled when switching to a new intro scene
 				strncpy(stjrintro, "STJRI029", 9);
 				S_ChangeMusicInternal("_stjr", false);
-				
+
 				background = W_CachePatchName(stjrintro, PU_PATCH);
 				wipestyleflags = WSF_FADEIN;
 				F_WipeStartScreen();
@@ -643,7 +643,7 @@ static void F_IntroDrawScene(void)
 				F_WipeEndScreen();
 				F_RunWipe(0,true);
 			}
-			
+
 			if (!WipeInAction) // Draw the patch if not in a wipe
 			{
 				background = W_CachePatchName(stjrintro, PU_PATCH);
@@ -863,7 +863,7 @@ void F_IntroDrawer(void)
 				F_WipeEndScreen();
 				F_RunWipe(99,true);
 			}
-		
+
 			S_ChangeMusicInternal("_intro", false);
 		}
 		else if (intro_scenenum == 10)
@@ -1101,6 +1101,7 @@ static const char *credits[] = {
 	"Andrew \"orospakr\" Clunis",
 	"Sally \"TehRealSalt\" Cochenour",
 	"Gregor \"Oogaland\" Dick",
+	"\"Golden\"",
 	"Julio \"Chaos Zero 64\" Guir",
 	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
@@ -1121,6 +1122,7 @@ static const char *credits[] = {
 	"",
 	"\1Art",
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
+	"\"Arietty\"",
 	"Ryan \"Blaze Hedgehog\" Bloom",
 	"Graeme P. \"SuperPhanto\" Caldwell", // for the new brak render
 	"\"ChrispyPixels\"",
@@ -1142,7 +1144,9 @@ static const char *credits[] = {
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"Andrew \"Senku Niola\" Moran",
 	"\"MotorRoach\"",
+	"\"Revan\"",
 	"Phillip \"TelosTurntable\" Robinson",
+	"\"Scizor300\"",
 	"Wessel \"sphere\" Smit",
 	"David \"Instant Sonic\" Spencer Jr.",
 	"\"SSNTails\"",
@@ -1158,7 +1162,7 @@ static const char *credits[] = {
 	"Paul \"Boinciel\" Clempson",
 	"Shane \"CobaltBW\" Ellis",
 	"James \"SeventhSentinel\" Hall",
-	"Cyan Helkaraxe",
+	"\"Cyan Helkaraxe\"",
 	"Kepa \"Nev3r\" Iceta",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"Jarel \"Arrow\" Jones",
@@ -1226,13 +1230,6 @@ static const char *credits[] = {
 	"Pascal \"CodeImp\" vd Heiden", // Doom Builder developer
 	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
 	"Simon \"sirjuddington\" Judd", // SLADE developer
-	// Acknowledged here are the following:
-	// Minor merge request authors, see guideline above
-	// - Golden - Expanded thin font
-	// Creators of small quantities of sprite/texture assets
-	// - Arietty - New Green Hill-styled textures
-	// - Scizor300 - the only other contributor to the 2.0 SRB2 Asset Pack
-	// - Revan/Icefox - the new Nimbus Ruins skybox
 	"SRB2 Community Contributors",
 	"",
 	"\1Produced By",
