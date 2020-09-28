@@ -12,4 +12,4 @@
 #define MODVERSION 48
 
 // Define this as a prerelease version suffix
-#define BETAVERSION "RC2"
+#define BETAVERSION "RC3"
