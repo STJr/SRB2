@@ -2564,7 +2564,7 @@ static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
 	}
 
 	// Strong abilities can break even FF_STRONGBUST.
-	if (player->charability == CA_GLIDEANDCLIMB)
+	if (player->charflags & SF_CANBREAKWALLS)
 		return true;
 
 	if (player->pflags & PF_BOUNCING)
