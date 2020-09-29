@@ -1067,7 +1067,7 @@ static const char *credits[] = {
 	"\1Credits",
 	"",
 	"\1Game Design",
-	"Ben \"Mystic\" Geyer",
+	"Sonic Team Junior",
 	"\"SSNTails\"",
 	"Johnny \"Sonikku\" Wallbank",
 	"",
