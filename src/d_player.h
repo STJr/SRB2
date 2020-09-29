@@ -156,7 +156,6 @@ typedef enum
 	PF_FORCESTRAFE = 1<<28, // Turning inputs are translated into strafing inputs
 	PF_CANCARRY    = 1<<29, // Can carry another player?
 	PF_FINISHED    = 1<<30, // The player finished the level. NOT the same as exiting
-	PF_CANBUSTFLOORS	= 1<<31, // The player can bust floors on contact.
 
 	// up to 1<<31 is free
 } pflags_t;

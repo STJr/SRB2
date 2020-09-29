@@ -9089,7 +9089,6 @@ static const char *const PLAYERFLAG_LIST[] = {
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 	"CANCARRY", // Can carry?
 	"FINISHED",
-	"CANBUSTFLOORS", // Can bust floors?
 
 	NULL // stop loop here.
 };

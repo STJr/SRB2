@@ -2612,47 +2612,6 @@ static void P_CheckBustableBlocks(player_t *player)
 	if ((netgame || multiplayer) && player->spectator)
 		return;
 	
-	// First iteration, check for floors we're touching directly (PF_CANBUSTFLOORS)
-	if (player->pflags & PF_CANBUSTFLOORS)
-	{
-		for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-		{
-			ffloor_t *rover;
-			fixed_t topheight, bottomheight;
-
-			if (!node->m_sector)
-				break;
-
-			if (!node->m_sector->ffloors)
-				continue;
-			
-			for (rover = node->m_sector->ffloors; rover; rover = rover->next)
-			{
-				// Make sure it's a bustable. (And that it actually exists!)
-				if (!(rover->flags & FF_EXISTS))
-					continue;
-
-				if (!(rover->flags & FF_BUSTUP))
-					continue;
-				
-				topheight = P_GetFOFTopZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL) - player->mo->momz;
-				bottomheight = P_GetFOFBottomZ(player->mo, node->m_sector, rover, player->mo->x, player->mo->y, NULL) - player->mo->momz;
-				
-				if (player->mo->z > topheight)
-					continue;
-				
-				if (player->mo->z + player->mo->height < bottomheight)
-					continue;
-				
-				EV_CrumbleChain(NULL, rover); // node->m_sector
-				
-				// Run a linedef executor??
-				if (rover->master->flags & ML_EFFECT5)
-					P_LinedefExecute((INT16)(P_AproxDistance(rover->master->dx, rover->master->dy)>>FRACBITS), player->mo, node->m_sector);
-			}
-		}
-	}
-	
 	oldx = player->mo->x;
 	oldy = player->mo->y;
 	
