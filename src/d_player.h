@@ -51,7 +51,7 @@ typedef enum
 	SF_NONIGHTSSUPER    = 1<<15, // Disable super colors for NiGHTS (if you have SF_SUPER)
 	SF_NOSUPERSPRITES   = 1<<16, // Don't use super sprites while super
 	SF_NOSUPERJUMPBOOST = 1<<17, // Disable the jump boost given while super (i.e. Knuckles)
-	SF_CANBREAKWALLS	= 1<<18, // Can naturally break walls on contact? (i.e. Knuckles)
+	SF_CANBUSTWALLS		= 1<<18, // Can naturally bust walls on contact? (i.e. Knuckles)
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -156,7 +156,7 @@ typedef enum
 	PF_FORCESTRAFE = 1<<28, // Turning inputs are translated into strafing inputs
 	PF_CANCARRY    = 1<<29, // Can carry another player?
 	PF_FINISHED    = 1<<30, // The player finished the level. NOT the same as exiting
-	PF_CANBREAKFLOORS	= 1<<31, // The player can break floors.
+	PF_CANBUSTFLOORS	= 1<<31, // The player can bust floors on contact.
 
 	// up to 1<<31 is free
 } pflags_t;

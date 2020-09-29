@@ -9089,7 +9089,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 	"FORCESTRAFE", // Translate turn inputs into strafe inputs
 	"CANCARRY", // Can carry?
 	"FINISHED",
-	"CANBREAKFLOORS", // Can break floors?
+	"CANBUSTFLOORS", // Can bust floors?
 
 	NULL // stop loop here.
 };
@@ -9667,7 +9667,7 @@ struct {
 	{"SF_NONIGHTSSUPER",SF_NONIGHTSSUPER},
 	{"SF_NOSUPERSPRITES",SF_NOSUPERSPRITES},
 	{"SF_NOSUPERJUMPBOOST",SF_NOSUPERJUMPBOOST},
-	{"SF_CANBREAKWALLS",SF_CANBREAKWALLS},
+	{"SF_CANBUSTWALLS",SF_CANBUSTWALLS},
 
 	// Dashmode constants
 	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
