@@ -3341,7 +3341,7 @@ static void PTR_GlideClimbTraverse(line_t *li)
 	{
 		for (rover = checksector->ffloors; rover; rover = rover->next)
 		{
-			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
+			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (slidemo->player->charflags & SF_CANBREAKWALLS)))
 				continue;
 
 			topheight    = P_GetFFloorTopZAt   (rover, slidemo->x, slidemo->y);
