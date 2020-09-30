@@ -5024,9 +5024,9 @@ fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 
 			if (rover->flags & FF_QUICKSAND)
 			{
-				if (z < topheight && bottomheight < thingtop)
+				if (thingtop > bottomheight && topheight > z)
 				{
-					if (ceilingz < z)
+					if (ceilingz > z)
 						ceilingz = z;
 				}
 				continue;
@@ -5034,7 +5034,7 @@ fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 
 			delta1 = z - (bottomheight + ((topheight - bottomheight)/2));
 			delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
-			if (bottomheight > ceilingz && abs(delta1) < abs(delta2))
+			if (bottomheight < ceilingz && abs(delta1) > abs(delta2))
 				ceilingz = bottomheight;
 		}
 	}
