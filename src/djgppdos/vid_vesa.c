@@ -382,12 +382,13 @@ INT32 VID_SetResolution(INT32 width, INT32 height)
 {
 	(void)width;
 	(void)height;
-	return 1;
+	return 0;
 }
 
-void VID_CheckRenderer(void)
+void VID_CheckRenderer(void) {}
+void VID_CheckGLLoaded(rendermode_t oldrender)
 {
-	// ..............
+	(void)oldrender;
 }
 
 

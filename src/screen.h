@@ -39,8 +39,8 @@
 // we try to re-allocate a minimum of buffers for stability of the memory,
 // so all the small-enough tables based on screen size, are allocated once
 // and for all at the maximum size.
-#define MAXVIDWIDTH 1920 // don't set this too high because actually
-#define MAXVIDHEIGHT 1200 // lots of tables are allocated with the MAX size.
+#define MAXVIDWIDTH 2560 // don't set this too high because actually
+#define MAXVIDHEIGHT 1080 // lots of tables are allocated with the MAX size.
 #define BASEVIDWIDTH 320 // NEVER CHANGE THIS! This is the original
 #define BASEVIDHEIGHT 200 // resolution of the graphics.
 
@@ -140,13 +140,11 @@ enum
 #ifndef NOWATER
 	SPANDRAWFUNC_WATER,
 #endif
-#ifdef ESLOPE
 	SPANDRAWFUNC_TILTED,
 	SPANDRAWFUNC_TILTEDTRANS,
 	SPANDRAWFUNC_TILTEDSPLAT,
 #ifndef NOWATER
 	SPANDRAWFUNC_TILTEDWATER,
-#endif
 #endif
 
 	SPANDRAWFUNC_MAX
@@ -214,5 +212,6 @@ FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 void SCR_DisplayTicRate(void);
 void SCR_ClosedCaptions(void);
 void SCR_DisplayLocalPing(void);
+void SCR_DisplayMarathonInfo(void);
 #undef DNWH
 #endif //__SCREEN_H__

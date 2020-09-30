@@ -11,6 +11,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "../doomdef.h"
+#include "../lua_script.h"
+#include "../w_wad.h"
+
 #define lbaselib_c
 #define LUA_LIB
 
@@ -263,6 +267,27 @@ static int luaB_ipairs (lua_State *L) {
 }
 
 
+// Edited to load PK3 entries instead
+static int luaB_dofile (lua_State *L) {
+	const char *filename = luaL_checkstring(L, 1);
+	char fullfilename[256];
+	UINT16 lumpnum;
+	int n = lua_gettop(L);
+
+	if (wadfiles[numwadfiles - 1]->type != RET_PK3)
+		luaL_error(L, "dofile() only works with PK3 files");
+
+	snprintf(fullfilename, sizeof(fullfilename), "Lua/%s", filename);
+	lumpnum = W_CheckNumForFullNamePK3(fullfilename, numwadfiles - 1, 0);
+	if (lumpnum == INT16_MAX)
+		luaL_error(L, "can't find script " LUA_QS, fullfilename);
+
+	LUA_LoadLump(numwadfiles - 1, lumpnum, false);
+
+	return lua_gettop(L) - n;
+}
+
+
 static int luaB_assert (lua_State *L) {
   luaL_checkany(L, 1);
   if (!lua_toboolean(L, 1))
@@ -380,6 +405,7 @@ static const luaL_Reg base_funcs[] = {
   {"assert", luaB_assert},
   {"collectgarbage", luaB_collectgarbage},
   {"error", luaB_error},
+  {"dofile", luaB_dofile},
   {"gcinfo", luaB_gcinfo},
   {"getfenv", luaB_getfenv},
   {"getmetatable", luaB_getmetatable},

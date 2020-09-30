@@ -10,8 +10,6 @@
 /// \file  lua_script.h
 /// \brief Lua scripting basics
 
-#ifdef HAVE_BLUA
-
 #include "m_fixed.h"
 #include "doomtype.h"
 #include "d_player.h"
@@ -39,13 +37,15 @@
 void LUA_ClearExtVars(void);
 #endif
 
-extern boolean lua_lumploading; // is LUA_LoadLump being called?
+extern INT32 lua_lumploading; // is LUA_LoadLump being called?
 
-void LUA_LoadLump(UINT16 wad, UINT16 lump);
+int LUA_GetErrorMessage(lua_State *L);
+void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults);
 #ifdef LUA_ALLOW_BYTECODE
 void LUA_DumpFile(const char *filename);
 #endif
 fixed_t LUA_EvalMath(const char *word);
+void LUA_PushLightUserdata(lua_State *L, void *data, const char *meta);
 void LUA_PushUserdata(lua_State *L, void *data, const char *meta);
 void LUA_InvalidateUserdata(void *data);
 void LUA_InvalidateLevel(void);
@@ -100,7 +100,8 @@ void COM_Lua_f(void);
 // uncomment if you want seg_t/node_t in Lua
 // #define HAVE_LUA_SEGS
 
-#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
-return luaL_error(L, "This can only be used in a level!");
+#define ISINLEVEL \
+	(gamestate == GS_LEVEL || titlemapinaction)
 
-#endif
+#define INLEVEL if (! ISINLEVEL)\
+return luaL_error(L, "This can only be used in a level!");

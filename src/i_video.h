@@ -32,10 +32,14 @@ typedef enum
 	render_none = 3  // for dedicated server
 } rendermode_t;
 
-/**	\brief currect render mode
+/**	\brief current render mode
 */
 extern rendermode_t rendermode;
 
+/**	\brief OpenGL state
+	0 = never loaded, 1 = loaded successfully, -1 = failed loading
+*/
+extern INT32 vid_opengl_state;
 
 /**	\brief use highcolor modes if true
 */
@@ -44,9 +48,8 @@ extern boolean highcolor;
 /**	\brief setup video mode
 */
 void I_StartupGraphics(void);
-void I_StartupHardwareGraphics(void);
 
-/**	\brief restore old video mode
+/**	\brief shutdown video mode
 */
 void I_ShutdownGraphics(void);
 
@@ -82,9 +85,12 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h);
 
 	\param	modenum	video mode to set to
 
-	\return	currect video mode
+	\return	current video mode
 */
 INT32 VID_SetMode(INT32 modenum);
+
+/**	\brief Checks the render state
+*/
 void VID_CheckRenderer(void);
 
 /**	\brief	The VID_SetResolution function
@@ -98,6 +104,14 @@ void VID_CheckRenderer(void);
 	\return	???
 */
 INT32 VID_SetResolution(INT32 width, INT32 height);
+
+/**	\brief Load OpenGL mode
+*/
+void VID_StartupOpenGL(void);
+
+/**	\brief Checks if OpenGL loaded
+*/
+void VID_CheckGLLoaded(rendermode_t oldrender);
 
 /**	\brief	The VID_GetModeName function
 
