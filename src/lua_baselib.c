@@ -3328,8 +3328,8 @@ static luaL_Reg lib[] = {
 	{"P_CheckSight", lib_pCheckSight},
 	{"P_CheckHoopPosition",lib_pCheckHoopPosition},
 	{"P_RadiusAttack",lib_pRadiusAttack},
-	{"P_FloorzAtPos",lib_pCeilingzAtPos},
-	{"P_CeilingzAtPos",lib_pFloorzAtPos},
+	{"P_FloorzAtPos",lib_pFloorzAtPos},
+	{"P_CeilingzAtPos",lib_pCeilingzAtPos},
 	{"P_DoSpring",lib_pDoSpring},
 
 	// p_inter
