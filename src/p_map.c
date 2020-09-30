@@ -4999,7 +4999,7 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 }
 
 // P_CeilingZAtPos
-// Returns the ceilinz of the XYZ position
+// Returns the ceilingz of the XYZ position
 fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 {
 	sector_t *sec = R_PointInSubsector(x, y)->sector;
