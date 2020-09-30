@@ -4953,7 +4953,7 @@ void P_MapEnd(void)
 }
 
 // P_FloorzAtPos
-// Returns the floorz of the XYZ position // TODO: Need ceilingpos function too
+// Returns the floorz of the XYZ position
 // Tails 05-26-2003
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 {
@@ -4996,4 +4996,48 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 	}
 
 	return floorz;
+}
+
+// P_CeilingZAtPos
+// Returns the ceilinz of the XYZ position
+fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
+{
+	sector_t *sec = R_PointInSubsector(x, y)->sector;
+	fixed_t ceilingz = P_GetSectorCeilingZAt(sec, x, y);
+
+	if (sec->ffloors)
+	{
+		ffloor_t *rover;
+		fixed_t delta1, delta2, thingtop = z + height;
+
+		for (rover = sec->ffloors; rover; rover = rover->next)
+		{
+			fixed_t topheight, bottomheight;
+			if (!(rover->flags & FF_EXISTS))
+				continue;
+
+			if ((!(rover->flags & FF_SOLID || rover->flags & FF_QUICKSAND) || (rover->flags & FF_SWIMMABLE)))
+				continue;
+
+			topheight    = P_GetFFloorTopZAt   (rover, x, y);
+			bottomheight = P_GetFFloorBottomZAt(rover, x, y);
+
+			if (rover->flags & FF_QUICKSAND)
+			{
+				if (z < topheight && bottomheight < thingtop)
+				{
+					if (ceilingz < z)
+						ceilingz = z;
+				}
+				continue;
+			}
+
+			delta1 = z - (bottomheight + ((topheight - bottomheight)/2));
+			delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
+			if (bottomheight > ceilingz && abs(delta1) < abs(delta2))
+				ceilingz = bottomheight;
+		}
+	}
+
+	return ceilingz;
 }
