@@ -1201,7 +1201,7 @@ static consvar_t *CV_FindNetVar(UINT16 netid)
 {
 	consvar_t *cvar;
 
-	if (netid >= consvar_number_of_netids)
+	if (netid > consvar_number_of_netids)
 		return NULL;
 
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
