@@ -887,16 +887,13 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
   *
   * \param filenames A null-terminated list of files to use.
   */
-void W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
+void W_InitMultipleFiles(char **filenames)
 {
-	// open all the files, load headers, and count lumps
-	numwadfiles = 0;
-
 	// will be realloced as lumps are added
 	for (; *filenames; filenames++)
 	{
 		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
-		W_InitFile(*filenames, numwadfiles < mainfiles, true);
+		W_InitFile(*filenames, numwadfiles < mainwads, true);
 	}
 }
 
