@@ -1188,7 +1188,7 @@ void *Picture_PNGConvert(
 		}
 
 		// Now, convert it!
-		converted = Picture_PatchConvert(informat, flat, outformat, insize, outsize, (INT16)width, (INT16)height, loffs, toffs, flags);
+		converted = Picture_PatchConvert(informat, flat, outformat, insize, outsize, (INT16)width, (INT16)height, *leftoffset, *topoffset, flags);
 		Z_Free(flat);
 		return converted;
 	}
