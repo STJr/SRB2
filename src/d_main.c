@@ -1383,8 +1383,6 @@ void D_SRB2Main(void)
 	// setup loading screen
 	SCR_Startup();
 
-	// we need the font of the console
-	CONS_Printf("HU_Init(): Setting up heads up display.\n");
 	HU_Init();
 
 	CON_Init();
@@ -1399,6 +1397,9 @@ void D_SRB2Main(void)
 	CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
 	W_InitMultipleFiles(startuppwads);
 	D_CleanFile(startuppwads);
+
+	CONS_Printf("HU_LoadGraphics()...\n");
+	HU_LoadGraphics();
 
 	//--------------------------------------------------------- CONFIG.CFG
 	M_FirstLoadConfig(); // WARNING : this do a "COM_BufExecute()"
