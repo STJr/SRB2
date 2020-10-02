@@ -1489,7 +1489,6 @@ void VID_CheckGLLoaded(rendermode_t oldrender)
 		if (setrenderneeded)
 		{
 			CV_StealthSetValue(&cv_renderer, oldrender);
-			CV_StealthSetValue(&cv_newrenderer, oldrender);
 			setrenderneeded = 0;
 		}
 	}
