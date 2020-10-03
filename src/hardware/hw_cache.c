@@ -109,12 +109,6 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			if (mipmap->colormap)
 				texel = mipmap->colormap[texel];
 
-			// If the mipmap is chromakeyed, check if the texel's color
-			// is equivalent to the chroma key's color index.
-			alpha = 0xff;
-			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
-				alpha = 0x00;
-
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
 			// Alam: SRB2 uses Mingw, HUGS
@@ -512,11 +506,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 
 #ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
-		{
-			// Dummy variables.
-			INT32 pngwidth, pngheight;
-			realpatch = (patch_t *)Picture_PNGConvert(pdata, PICFMT_PATCH, &pngwidth, &pngheight, NULL, NULL, lumplength, NULL, 0);
-		}
+			realpatch = (patch_t *)Picture_PNGConvert(pdata, PICFMT_PATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
 		else
 #endif
 #ifdef WALLFLATS
@@ -558,12 +548,7 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 	// lump is a png so convert it
 	size_t len = W_LumpLengthPwad(grPatch->wadnum, grPatch->lumpnum);
 	if ((patch != NULL) && Picture_IsLumpPNG((const UINT8 *)patch, len))
-	{
-		// Dummy variables.
-		INT32 pngwidth, pngheight;
-		INT16 topoffset, leftoffset;
-		patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, &pngwidth, &pngheight, &topoffset, &leftoffset, len, NULL, 0);
-	}
+		patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, NULL, NULL, NULL, NULL, len, NULL, 0);
 #endif
 
 	// don't do it twice (like a cache)
@@ -885,7 +870,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 #ifndef NO_PNG_LUMPS
 	else if (levelflat->type == LEVELFLAT_PNG)
 	{
-		INT32 pngwidth, pngheight;
+		INT32 pngwidth = 0, pngheight = 0;
 		GLMipmap_t *mipmap = levelflat->mipmap;
 		UINT8 *flat;
 		size_t size;
