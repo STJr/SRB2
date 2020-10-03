@@ -240,7 +240,7 @@ static int lib_userdataType(lua_State *L)
 
 // Takes a metatable as first and only argument
 // Only callable during script loading
-static int lib_registermetatable(lua_State *L)
+static int lib_registerMetatable(lua_State *L)
 {
 	static UINT32 nextid = 1;
 
@@ -263,6 +263,16 @@ static int lib_registermetatable(lua_State *L)
 	nextid++;
 
 	return 0;
+}
+
+// Takes a string as only argument and returns the metatable
+// associated to the userdata type this string refers to
+// Returns nil if the string does not refer to a valid userdata type
+static int lib_userdataMetatable(lua_State *L)
+{
+	const char *udname = luaL_checkstring(L, 1);
+	luaL_getmetatable(L, udname);
+	return 1;
 }
 
 static int lib_isPlayerAdmin(lua_State *L)
@@ -3460,7 +3470,8 @@ static luaL_Reg lib[] = {
 	{"chatprint", lib_chatprint},
 	{"chatprintf", lib_chatprintf},
 	{"userdataType", lib_userdataType},
-	{"registermetatable", lib_registermetatable},
+	{"registerMetatable", lib_registerMetatable},
+	{"userdataMetatable", lib_userdataMetatable},
 	{"IsPlayerAdmin", lib_isPlayerAdmin},
 	{"reserveLuabanks", lib_reserveLuabanks},
 
