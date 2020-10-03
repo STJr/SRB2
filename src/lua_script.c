@@ -437,6 +437,10 @@ static void LUA_ClearState(void)
 	lua_newtable(L);
 	lua_setfield(L, LUA_REGISTRYINDEX, LREG_VALID);
 
+	// make LREG_METATABLES table for all registered metatables
+	lua_newtable(L);
+	lua_setfield(L, LUA_REGISTRYINDEX, LREG_METATABLES);
+
 	// open srb2 libraries
 	for(i = 0; liblist[i]; i++) {
 		lua_pushcfunction(L, liblist[i]);
@@ -1269,8 +1273,22 @@ static void ArchiveTables(void)
 
 			lua_pop(gL, 1);
 		}
-		lua_pop(gL, 1);
 		WRITEUINT8(save_p, ARCH_TEND);
+
+		// Write metatable ID
+		if (lua_getmetatable(gL, -1))
+		{
+			// registry.metatables[metatable]
+			lua_getfield(gL, LUA_REGISTRYINDEX, LREG_METATABLES);
+			lua_pushvalue(gL, -2);
+			lua_gettable(gL, -2);
+			WRITEUINT16(save_p, lua_isnil(gL, -1) ? 0 : lua_tointeger(gL, -1));
+			lua_pop(gL, 3);
+		}
+		else
+			WRITEUINT16(save_p, 0);
+
+		lua_pop(gL, 1);
 	}
 }
 
@@ -1438,6 +1456,7 @@ static void UnArchiveTables(void)
 {
 	int TABLESINDEX;
 	UINT16 i, n;
+	UINT16 metatableid;
 
 	if (!gL)
 		return;
@@ -1462,6 +1481,19 @@ static void UnArchiveTables(void)
 			else
 				lua_rawset(gL, -3);
 		}
+
+		metatableid = READUINT16(save_p);
+		if (metatableid)
+		{
+			// setmetatable(table, registry.metatables[metatableid])
+			lua_getfield(gL, LUA_REGISTRYINDEX, LREG_METATABLES);
+				lua_rawgeti(gL, -1, metatableid);
+				if (lua_isnil(gL, -1))
+					I_Error("Unknown metatable ID %d\n", metatableid);
+				lua_setmetatable(gL, -3);
+			lua_pop(gL, 1);
+		}
+
 		lua_pop(gL, 1);
 	}
 }
