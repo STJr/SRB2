@@ -3285,7 +3285,10 @@ static void Command_Addfile(void)
 
 		// If we've added this one, skip to the next one.
 		if (fileadded)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Already processed %s, skipping\n"), fn);
 			continue;
+		}
 
 		// Disallow non-printing characters and semicolons.
 		for (i = 0; fn[i] != '\0'; i++)
