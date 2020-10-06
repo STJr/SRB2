@@ -1677,10 +1677,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		}
 	}
 
-	/* Note: Lat originally made the PlayerCmd hook for SRB2 Kart so credit goes to him.
-	Also, unlike in SRB2 Kart, the cmd's variables cannot be set using the PlayerCmd, because
-	it is recommended to use the PreThinkFrame to set the cmd's variables, because PreThinkFrame is actually synched,
-	unlike the PlayerCmd hook. */
+	// Note: Lat originally made the PlayerCmd hook for SRB2 Kart so credit goes to him.
 	if (gamestate == GS_LEVEL)
 		LUAh_PlayerCmd(player, cmd);
 
