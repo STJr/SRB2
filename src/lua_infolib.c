@@ -919,6 +919,8 @@ static int state_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter states in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter states in CMD building code!");
 
 	if (fastcmp(field,"sprite")) {
 		value = luaL_checknumber(L, 3);
