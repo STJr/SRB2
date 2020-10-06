@@ -4189,7 +4189,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	if (!(netgame || multiplayer || demoplayback) && (!modifiedgame || savemoddata))
 		mapvisited[gamemap-1] |= MV_VISITED;
-	else
+	else if (netgame || multiplayer)
 		mapvisited[gamemap-1] |= MV_MP; // you want to record that you've been there this session, but not permanently
 
 	levelloading = false;
