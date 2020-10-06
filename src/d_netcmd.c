@@ -3256,7 +3256,7 @@ static void Command_Addfile(void)
 
 	if (argc < 2)
 	{
-		CONS_Printf(M_GetText("addfile <wadfile.wad>: load wad file\n"));
+		CONS_Printf(M_GetText("addfile <filename.pk3/wad/lua/soc> [filename2...] [...]: Load add-ons\n"));
 		return;
 	}
 
