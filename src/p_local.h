@@ -274,6 +274,8 @@ extern tic_t itemrespawntime[ITEMQUESIZE];
 extern size_t iquehead, iquetail;
 extern consvar_t cv_gravity, cv_movebob;
 
+mobjtype_t P_GetMobjtype(UINT16 mthingtype);
+
 void P_RespawnSpecials(void);
 
 mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type);

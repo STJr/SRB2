@@ -297,6 +297,9 @@
     <ClInclude Include="..\mserv.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
+    <ClInclude Include="..\http-mserv.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
     <ClInclude Include="..\lua_hook.h">
       <Filter>LUA</Filter>
     </ClInclude>
@@ -471,7 +474,10 @@
     <ClInclude Include="..\hardware\hw_clip.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
-    <ClInclude Include="..\r_patch.h">
+    <ClInclude Include="..\r_textures.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_picformats.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
     <ClInclude Include="..\r_portal.h">
@@ -682,6 +688,9 @@
       <Filter>I_Interface</Filter>
     </ClCompile>
     <ClCompile Include="..\mserv.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\http-mserv.c">
       <Filter>I_Interface</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_baselib.c">
@@ -943,7 +952,10 @@
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
     <ClCompile Include="..\apng.c" />
-    <ClCompile Include="..\r_patch.c">
+    <ClCompile Include="..\r_textures.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_picformats.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_portal.c">

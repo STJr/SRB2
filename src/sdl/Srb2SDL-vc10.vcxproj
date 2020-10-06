@@ -251,6 +251,7 @@
     <ClInclude Include="..\lzf.h" />
     <ClInclude Include="..\md5.h" />
     <ClInclude Include="..\mserv.h" />
+    <ClInclude Include="..\http-mserv.h" />
     <ClInclude Include="..\m_aatree.h" />
     <ClInclude Include="..\m_anigif.h" />
     <ClInclude Include="..\m_argv.h" />
@@ -281,14 +282,15 @@
     <ClInclude Include="..\r_draw.h" />
     <ClInclude Include="..\r_local.h" />
     <ClInclude Include="..\r_main.h" />
+    <ClInclude Include="..\r_picformats.h" />
     <ClInclude Include="..\r_plane.h" />
-    <ClInclude Include="..\r_patch.h" />
     <ClInclude Include="..\r_portal.h" />
     <ClInclude Include="..\r_segs.h" />
     <ClInclude Include="..\r_skins.h" />
     <ClInclude Include="..\r_sky.h" />
     <ClInclude Include="..\r_splats.h" />
     <ClInclude Include="..\r_state.h" />
+    <ClInclude Include="..\r_textures.h" />
     <ClInclude Include="..\r_things.h" />
     <ClInclude Include="..\screen.h" />
     <ClInclude Include="..\sounds.h" />
@@ -405,6 +407,7 @@
     <ClCompile Include="..\lzf.c" />
     <ClCompile Include="..\md5.c" />
     <ClCompile Include="..\mserv.c" />
+    <ClCompile Include="..\http-mserv.c" />
     <ClCompile Include="..\m_aatree.c" />
     <ClCompile Include="..\m_anigif.c" />
     <ClCompile Include="..\m_argv.c" />
@@ -446,13 +449,14 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\r_main.c" />
+    <ClCompile Include="..\r_picformats.c" />
     <ClCompile Include="..\r_plane.c" />
-	<ClCompile Include="..\r_patch.c" />
     <ClCompile Include="..\r_portal.c" />
     <ClCompile Include="..\r_segs.c" />
     <ClCompile Include="..\r_skins.c" />
     <ClCompile Include="..\r_sky.c" />
     <ClCompile Include="..\r_splats.c" />
+    <ClCompile Include="..\r_textures.c" />
     <ClCompile Include="..\r_things.c" />
     <ClCompile Include="..\screen.c" />
     <ClCompile Include="..\sounds.c" />

@@ -20,11 +20,12 @@
 #include "../doomstat.h"    //gamemode
 #include "../i_video.h"     //rendermode
 #include "../r_data.h"
+#include "../r_textures.h"
 #include "../w_wad.h"
 #include "../z_zone.h"
 #include "../v_video.h"
 #include "../r_draw.h"
-#include "../r_patch.h"
+#include "../r_picformats.h"
 #include "../p_setup.h"
 
 INT32 patchformat = GL_TEXFMT_AP_88; // use alpha for holes
@@ -99,16 +100,14 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			count--;
 
 			texel = source[yfrac>>FRACBITS];
+			alpha = 0xFF;
+			// Make pixel transparent if chroma keyed
+			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
+				alpha = 0x00;
 
 			//Hurdler: 25/04/2000: now support colormap in hardware mode
 			if (mipmap->colormap)
 				texel = mipmap->colormap[texel];
-
-			// If the mipmap is chromakeyed, check if the texel's color
-			// is equivalent to the chroma key's color index.
-			alpha = 0xff;
-			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
-				alpha = 0x00;
 
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
@@ -211,16 +210,14 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			count--;
 
 			texel = source[yfrac>>FRACBITS];
+			alpha = 0xFF;
+			// Make pixel transparent if chroma keyed
+			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
+				alpha = 0x00;
 
 			//Hurdler: 25/04/2000: now support colormap in hardware mode
 			if (mipmap->colormap)
 				texel = mipmap->colormap[texel];
-
-			// If the mipmap is chromakeyed, check if the texel's color
-			// is equivalent to the chroma key's color index.
-			alpha = 0xff;
-			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
-				alpha = 0x00;
 
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
@@ -508,13 +505,13 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 		realpatch = (patch_t *)pdata;
 
 #ifndef NO_PNG_LUMPS
-		if (R_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = R_PNGToPatch((UINT8 *)realpatch, lumplength, NULL);
+		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
+			realpatch = (patch_t *)Picture_PNGConvert(pdata, PICFMT_PATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
 		else
 #endif
 #ifdef WALLFLATS
 		if (texture->type == TEXTURETYPE_FLAT)
-			realpatch = R_FlatToPatch(pdata, texture->width, texture->height, 0, 0, NULL, false);
+			realpatch = (patch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_PATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
 		else
 #endif
 		{
@@ -550,8 +547,8 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 #ifndef NO_PNG_LUMPS
 	// lump is a png so convert it
 	size_t len = W_LumpLengthPwad(grPatch->wadnum, grPatch->lumpnum);
-	if ((patch != NULL) && R_IsLumpPNG((const UINT8 *)patch, len))
-		patch = R_PNGToPatch((const UINT8 *)patch, len, NULL);
+	if ((patch != NULL) && Picture_IsLumpPNG((const UINT8 *)patch, len))
+		patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, NULL, NULL, NULL, NULL, len, NULL, 0);
 #endif
 
 	// don't do it twice (like a cache)
@@ -788,6 +785,8 @@ static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 {
 	UINT8 *flat;
+	UINT8 *converted;
+	size_t size;
 
 	// setup the texture info
 	grMipmap->format = GL_TEXFMT_P_8;
@@ -795,11 +794,12 @@ static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 
 	grMipmap->width  = (UINT16)textures[texturenum]->width;
 	grMipmap->height = (UINT16)textures[texturenum]->height;
+	size = (grMipmap->width * grMipmap->height);
 
-	flat = Z_Malloc(grMipmap->width * grMipmap->height, PU_HWRCACHE, &grMipmap->data);
-	memset(flat, TRANSPARENTPIXEL, grMipmap->width * grMipmap->height);
-
-	R_TextureToFlat(texturenum, flat);
+	flat = Z_Malloc(size, PU_HWRCACHE, &grMipmap->data);
+	converted = (UINT8 *)Picture_TextureToFlat(texturenum);
+	M_Memcpy(flat, converted, size);
+	Z_Free(converted);
 }
 
 // Download a Doom 'flat' to the hardware cache and make it ready for use
@@ -837,7 +837,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		INT32 texturenum = levelflat->u.texture.num;
 #ifdef PARANOIA
 		if ((unsigned)texturenum >= gl_numtextures)
-			I_Error("HWR_GetLevelFlat: texturenum >= numtextures\n");
+			I_Error("HWR_GetLevelFlat: texturenum >= numtextures");
 #endif
 
 		// Who knows?
@@ -860,6 +860,53 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		// The system-memory data can be purged now.
 		Z_ChangeTag(grtex->mipmap.data, PU_HWRCACHE_UNLOCKED);
 	}
+	else if (levelflat->type == LEVELFLAT_PATCH)
+	{
+		GLPatch_t *patch = W_CachePatchNum(levelflat->u.flat.lumpnum, PU_CACHE);
+		levelflat->width = (UINT16)SHORT(patch->width);
+		levelflat->height = (UINT16)SHORT(patch->height);
+		HWR_GetPatch(patch);
+	}
+#ifndef NO_PNG_LUMPS
+	else if (levelflat->type == LEVELFLAT_PNG)
+	{
+		INT32 pngwidth = 0, pngheight = 0;
+		GLMipmap_t *mipmap = levelflat->mipmap;
+		UINT8 *flat;
+		size_t size;
+
+		// Cache the picture.
+		if (!levelflat->picture)
+		{
+			levelflat->picture = Picture_PNGConvert(W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), PICFMT_FLAT, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
+			levelflat->width = (UINT16)pngwidth;
+			levelflat->height = (UINT16)pngheight;
+		}
+
+		// Make the mipmap.
+		if (mipmap == NULL)
+		{
+			mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_LEVEL, NULL);
+			mipmap->format = GL_TEXFMT_P_8;
+			mipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
+			levelflat->mipmap = mipmap;
+		}
+
+		if (!mipmap->data && !mipmap->downloaded)
+		{
+			mipmap->width = levelflat->width;
+			mipmap->height = levelflat->height;
+			size = (mipmap->width * mipmap->height);
+			flat = Z_Malloc(size, PU_LEVEL, &mipmap->data);
+			if (levelflat->picture == NULL)
+				I_Error("HWR_GetLevelFlat: levelflat->picture == NULL");
+			M_Memcpy(flat, levelflat->picture, size);
+		}
+
+		// Tell the hardware driver to bind the current texture to the flat's mipmap
+		HWD.pfnSetTexture(mipmap);
+	}
+#endif
 	else // set no texture
 		HWR_SetCurrentTexture(NULL);
 }

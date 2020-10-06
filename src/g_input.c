@@ -57,13 +57,13 @@ const INT32 gcl_tutorial_check[num_gcl_tutorial_check] = {
 const INT32 gcl_tutorial_used[num_gcl_tutorial_used] = {
 	gc_forward, gc_backward, gc_strafeleft, gc_straferight,
 	gc_turnleft, gc_turnright,
-	gc_jump, gc_use
+	gc_jump, gc_spin
 };
 
 const INT32 gcl_tutorial_full[num_gcl_tutorial_full] = {
 	gc_forward, gc_backward, gc_strafeleft, gc_straferight,
 	gc_lookup, gc_lookdown, gc_turnleft, gc_turnright, gc_centerview,
-	gc_jump, gc_use,
+	gc_jump, gc_spin,
 	gc_fire, gc_firenormal
 };
 
@@ -82,10 +82,10 @@ const INT32 gcl_movement_camera[num_gcl_movement_camera] = {
 
 const INT32 gcl_jump[num_gcl_jump] = { gc_jump };
 
-const INT32 gcl_use[num_gcl_use] = { gc_use };
+const INT32 gcl_spin[num_gcl_spin] = { gc_spin };
 
-const INT32 gcl_jump_use[num_gcl_jump_use] = {
-	gc_jump, gc_use
+const INT32 gcl_jump_spin[num_gcl_jump_spin] = {
+	gc_jump, gc_spin
 };
 
 typedef struct
@@ -583,7 +583,7 @@ static const char *gamecontrolname[num_gamecontrols] =
 	"fire",
 	"firenormal",
 	"tossflag",
-	"use",
+	"spin",
 	"camtoggle",
 	"camreset",
 	"lookup",
@@ -692,7 +692,7 @@ void G_DefineDefaultControls(void)
 	gamecontroldefault[gcs_fps][gc_turnright  ][0] = KEY_RIGHTARROW;
 	gamecontroldefault[gcs_fps][gc_centerview ][0] = KEY_END;
 	gamecontroldefault[gcs_fps][gc_jump       ][0] = KEY_SPACE;
-	gamecontroldefault[gcs_fps][gc_use        ][0] = KEY_LSHIFT;
+	gamecontroldefault[gcs_fps][gc_spin       ][0] = KEY_LSHIFT;
 	gamecontroldefault[gcs_fps][gc_fire       ][0] = KEY_RCTRL;
 	gamecontroldefault[gcs_fps][gc_fire       ][1] = KEY_MOUSE1+0;
 	gamecontroldefault[gcs_fps][gc_firenormal ][0] = 'c';
@@ -708,7 +708,7 @@ void G_DefineDefaultControls(void)
 	gamecontroldefault[gcs_platform][gc_turnright  ][0] = KEY_RIGHTARROW;
 	gamecontroldefault[gcs_platform][gc_centerview ][0] = KEY_END;
 	gamecontroldefault[gcs_platform][gc_jump       ][0] = KEY_SPACE;
-	gamecontroldefault[gcs_platform][gc_use        ][0] = KEY_LSHIFT;
+	gamecontroldefault[gcs_platform][gc_spin       ][0] = KEY_LSHIFT;
 	gamecontroldefault[gcs_platform][gc_fire       ][0] = 's';
 	gamecontroldefault[gcs_platform][gc_fire       ][1] = KEY_MOUSE1+0;
 	gamecontroldefault[gcs_platform][gc_firenormal ][0] = 'w';
@@ -743,7 +743,7 @@ void G_DefineDefaultControls(void)
 		gamecontroldefault[i][gc_weaponnext ][1] = KEY_JOY1+1; // B
 		gamecontroldefault[i][gc_weaponprev ][1] = KEY_JOY1+2; // X
 		gamecontroldefault[i][gc_tossflag   ][1] = KEY_JOY1+0; // A
-		gamecontroldefault[i][gc_use        ][1] = KEY_JOY1+4; // LB
+		gamecontroldefault[i][gc_spin       ][1] = KEY_JOY1+4; // LB
 		gamecontroldefault[i][gc_camtoggle  ][1] = KEY_HAT1+0; // D-Pad Up
 		gamecontroldefault[i][gc_camreset   ][1] = KEY_JOY1+3; // Y
 		gamecontroldefault[i][gc_centerview ][1] = KEY_JOY1+9; // Right Stick
@@ -758,7 +758,7 @@ void G_DefineDefaultControls(void)
 		gamecontrolbisdefault[i][gc_weaponnext][0] = KEY_2JOY1+1; // B
 		gamecontrolbisdefault[i][gc_weaponprev][0] = KEY_2JOY1+2; // X
 		gamecontrolbisdefault[i][gc_tossflag  ][0] = KEY_2JOY1+0; // A
-		gamecontrolbisdefault[i][gc_use       ][0] = KEY_2JOY1+4; // LB
+		gamecontrolbisdefault[i][gc_spin      ][0] = KEY_2JOY1+4; // LB
 		gamecontrolbisdefault[i][gc_camreset  ][0] = KEY_2JOY1+3; // Y
 		gamecontrolbisdefault[i][gc_centerview][0] = KEY_2JOY1+9; // Right Stick
 		gamecontrolbisdefault[i][gc_jump      ][0] = KEY_2JOY1+5; // RB
@@ -890,7 +890,7 @@ static INT32 G_FilterKeyByVersion(INT32 numctrl, INT32 keyidx, INT32 player, INT
 
 	if (GETMAJOREXECVERSION(cv_execversion.value) < 27 && ( // v2.1.22
 		numctrl == gc_weaponnext || numctrl == gc_weaponprev || numctrl == gc_tossflag ||
-		numctrl == gc_use || numctrl == gc_camreset || numctrl == gc_jump ||
+		numctrl == gc_spin || numctrl == gc_camreset || numctrl == gc_jump ||
 		numctrl == gc_pause || numctrl == gc_systemmenu || numctrl == gc_camtoggle ||
 		numctrl == gc_screenshot || numctrl == gc_talkkey || numctrl == gc_scores ||
 		numctrl == gc_centerview
@@ -996,7 +996,9 @@ static void setcontrol(INT32 (*gc)[2])
 	INT32 player = ((void*)gc == (void*)&gamecontrolbis ? 1 : 0);
 	boolean nestedoverride = false;
 
-	namectrl = COM_Argv(1);
+	// Update me for 2.3
+	namectrl = (stricmp(COM_Argv(1), "use")) ? COM_Argv(1) : "spin";
+
 	for (numctrl = 0; numctrl < num_gamecontrols && stricmp(namectrl, gamecontrolname[numctrl]);
 		numctrl++)
 		;

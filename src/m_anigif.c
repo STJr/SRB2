@@ -499,20 +499,22 @@ static size_t gifframe_size = 8192;
 // converts an RGB frame to a frame with a palette.
 //
 #ifdef HWRENDER
+static colorlookup_t gif_colorlookup;
+
 static void GIF_rgbconvert(UINT8 *linear, UINT8 *scr)
 {
 	UINT8 r, g, b;
 	size_t src = 0, dest = 0;
 	size_t size = (vid.width * vid.height * 3);
 
-	InitColorLUT(gif_framepalette);
+	InitColorLUT(&gif_colorlookup, gif_framepalette, true);
 
 	while (src < size)
 	{
 		r = (UINT8)linear[src];
 		g = (UINT8)linear[src + 1];
 		b = (UINT8)linear[src + 2];
-		scr[dest] = colorlookup[r >> SHIFTCOLORBITS][g >> SHIFTCOLORBITS][b >> SHIFTCOLORBITS];
+		scr[dest] = GetColorLUTDirect(&gif_colorlookup, r, g, b);
 		src += (3 * scrbuf_downscaleamt);
 		dest += scrbuf_downscaleamt;
 	}

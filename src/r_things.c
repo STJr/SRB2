@@ -24,7 +24,7 @@
 #include "i_video.h" // rendermode
 #include "i_system.h"
 #include "r_things.h"
-#include "r_patch.h"
+#include "r_picformats.h"
 #include "r_plane.h"
 #include "r_portal.h"
 #include "p_tick.h"
@@ -259,6 +259,12 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	{
 		if (memcmp(lumpinfo[l].name,sprname,4)==0)
 		{
+			INT32 width, height;
+			INT16 topoffset, leftoffset;
+#ifndef NO_PNG_LUMPS
+			boolean isPNG = false;
+#endif
+
 			frame = R_Char2Frame(lumpinfo[l].name[4]);
 			rotation = R_Char2Rotation(lumpinfo[l].name[5]);
 
@@ -274,24 +280,35 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 
 			// store sprite info in lookup tables
 			//FIXME : numspritelumps do not duplicate sprite replacements
-			W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof (patch_t), 0);
+
 #ifndef NO_PNG_LUMPS
 			{
 				patch_t *png = W_CacheLumpNumPwad(wadnum, l, PU_STATIC);
 				size_t len = W_LumpLengthPwad(wadnum, l);
-				// lump is a png so convert it
-				if (R_IsLumpPNG((UINT8 *)png, len))
+
+				if (Picture_IsLumpPNG((UINT8 *)png, len))
 				{
-					png = R_PNGToPatch((UINT8 *)png, len, NULL);
-					M_Memcpy(&patch, png, sizeof(INT16)*4);
+					Picture_PNGDimensions((UINT8 *)png, &width, &height, &topoffset, &leftoffset, len);
+					isPNG = true;
 				}
+
 				Z_Free(png);
 			}
+
+			if (!isPNG)
 #endif
-			spritecachedinfo[numspritelumps].width = SHORT(patch.width)<<FRACBITS;
-			spritecachedinfo[numspritelumps].offset = SHORT(patch.leftoffset)<<FRACBITS;
-			spritecachedinfo[numspritelumps].topoffset = SHORT(patch.topoffset)<<FRACBITS;
-			spritecachedinfo[numspritelumps].height = SHORT(patch.height)<<FRACBITS;
+			{
+				W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof (patch_t), 0);
+				width = SHORT(patch.width);
+				height = SHORT(patch.height);
+				topoffset = SHORT(patch.topoffset);
+				leftoffset = SHORT(patch.leftoffset);
+			}
+
+			spritecachedinfo[numspritelumps].width = width<<FRACBITS;
+			spritecachedinfo[numspritelumps].offset = leftoffset<<FRACBITS;
+			spritecachedinfo[numspritelumps].topoffset = topoffset<<FRACBITS;
+			spritecachedinfo[numspritelumps].height = height<<FRACBITS;
 
 			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
 			if (rendermode != render_none) // not for psprite
@@ -2773,7 +2790,7 @@ boolean R_ThingVisible (mobj_t *thing)
 	return (!(
 				thing->sprite == SPR_NULL ||
 				( thing->flags2 & (MF2_DONTDRAW) ) ||
-				thing == r_viewmobj
+				(r_viewmobj && (thing == r_viewmobj || (r_viewmobj->player && r_viewmobj->player->followmobj == thing)))
 	));
 }
 
