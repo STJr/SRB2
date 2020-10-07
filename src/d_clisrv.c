@@ -3208,6 +3208,7 @@ void CL_Reset(void)
 	doomcom->numslots = 1;
 	SV_StopServer();
 	SV_ResetServer();
+	CV_RevertNetVars();
 
 	// make sure we don't leave any fileneeded gunk over from a failed join
 	fileneedednum = 0;

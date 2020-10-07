@@ -138,6 +138,16 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 	const char *string;   // value in string
 	char *zstring;        // Either NULL or same as string.
 	                      // If non-NULL, must be Z_Free'd later.
+	struct
+	{
+		char allocated; // whether to Z_Free
+		union
+		{
+			char       * string;
+			const char * const_munge;
+		} v;
+	} revert;             // value of netvar before joining netgame
+
 	UINT16 netid; // used internaly : netid for send end receive
 	                      // used only with CV_NETVAR
 	char changed;         // has variable been changed by the user? 0 = no, 1 = yes
@@ -146,7 +156,7 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 
 /* name, defaultvalue, flags, PossibleValue, func */
 #define CVAR_INIT( ... ) \
-{ __VA_ARGS__, 0, NULL, NULL, 0U, (char)0, NULL }
+{ __VA_ARGS__, 0, NULL, NULL, {0}, 0U, (char)0, NULL }
 
 #ifdef OLD22DEMOCOMPAT
 typedef struct old_demo_var old_demo_var_t;
@@ -205,6 +215,9 @@ void CV_SaveVars(UINT8 **p, boolean in_demo);
 
 #define CV_SaveNetVars(p) CV_SaveVars(p, false)
 void CV_LoadNetVars(UINT8 **p);
+
+// then revert after leaving a netgame
+void CV_RevertNetVars(void);
 
 #define CV_SaveDemoVars(p) CV_SaveVars(p, true)
 void CV_LoadDemoVars(UINT8 **p);

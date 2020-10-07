@@ -1280,6 +1280,7 @@ void CV_RegisterVar(consvar_t *variable)
 		consvar_vars = variable;
 	}
 	variable->string = variable->zstring = NULL;
+	memset(&variable->revert, 0, sizeof variable->revert);
 	variable->changed = 0; // new variable has not been modified by the user
 
 #ifdef PARANOIA
@@ -1676,8 +1677,19 @@ static void CV_LoadVars(UINT8 **p,
 	serverloading = true;
 
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
+	{
 		if (cvar->flags & CV_NETVAR)
+		{
+			if (client && cvar->revert.v.string == NULL)
+			{
+				cvar->revert.v.const_munge = cvar->string;
+				cvar->revert.allocated = ( cvar->zstring != NULL );
+				cvar->zstring = NULL;/* don't free this */
+			}
+
 			Setvalue(cvar, cvar->defaultvalue, true);
+		}
+	}
 
 	count = READUINT16(*p);
 	while (count--)
@@ -1689,6 +1701,26 @@ static void CV_LoadVars(UINT8 **p,
 	}
 
 	serverloading = false;
+}
+
+void CV_RevertNetVars(void)
+{
+	consvar_t * cvar;
+
+	for (cvar = consvar_vars; cvar; cvar = cvar->next)
+	{
+		if (cvar->revert.v.string != NULL)
+		{
+			Setvalue(cvar, cvar->revert.v.string, false);
+
+			if (cvar->revert.allocated)
+			{
+				Z_Free(cvar->revert.v.string);
+			}
+
+			cvar->revert.v.string = NULL;
+		}
+	}
 }
 
 void CV_LoadNetVars(UINT8 **p)
