@@ -870,9 +870,14 @@ boolean CON_Responder(event_t *ev)
 
 	// sequential completions a la 4dos
 	static char completion[80];
-	static INT32 comskips, varskips;
 
-	const char *cmd = "";
+	static INT32 skips;
+
+	static INT32   com_skips;
+	static INT32   var_skips;
+	static INT32 alias_skips;
+
+	const char *cmd = NULL;
 	INT32 key;
 
 	if (chat_on)
@@ -1007,7 +1012,6 @@ boolean CON_Responder(event_t *ev)
 				if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
 					return true;
 				strcpy(completion, inputlines[inputline]);
-				comskips = varskips = 0;
 			}
 			len = strlen(completion);
 
@@ -1022,6 +1026,14 @@ boolean CON_Responder(event_t *ev)
 			for (i = 0, cmd = CV_CompleteVar(completion, i); cmd; cmd = CV_CompleteVar(completion, ++i))
 				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
 			if (i == 0) CONS_Printf("  (none)\n");
+
+			//and finally aliases
+			CONS_Printf("Aliases:\n");
+			for (i = 0, cmd = COM_CompleteAlias(completion, i); cmd; cmd = COM_CompleteAlias(completion, ++i))
+				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
+			if (i == 0) CONS_Printf("  (none)\n");
+
+			completion[0] = 0;
 
 			return true;
 		}
@@ -1091,43 +1103,64 @@ boolean CON_Responder(event_t *ev)
 			if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
 				return true;
 			strcpy(completion, inputlines[inputline]);
-			comskips = varskips = 0;
+			skips       = 0;
+			com_skips   = 0;
+			var_skips   = 0;
+			alias_skips = 0;
 		}
 		else
 		{
 			if (shiftdown)
 			{
-				if (comskips < 0)
-				{
-					if (--varskips < 0)
-						comskips = -comskips - 2;
-				}
-				else if (comskips > 0) comskips--;
+				if (skips > 0)
+					skips--;
 			}
 			else
 			{
-				if (comskips < 0) varskips++;
-				else              comskips++;
+				skips++;
 			}
 		}
 
-		if (comskips >= 0)
+		if (skips <= com_skips)
 		{
-			cmd = COM_CompleteCommand(completion, comskips);
-			if (!cmd) // dirty: make sure if comskips is zero, to have a neg value
-				comskips = -comskips - 1;
+			cmd = COM_CompleteCommand(completion, skips);
+
+			if (cmd && skips == com_skips)
+			{
+				com_skips  ++;
+				var_skips  ++;
+				alias_skips++;
+			}
 		}
-		if (comskips < 0)
-			cmd = CV_CompleteVar(completion, varskips);
+
+		if (!cmd && skips <= var_skips)
+		{
+			cmd = CV_CompleteVar(completion, skips - com_skips);
+
+			if (cmd && skips == var_skips)
+			{
+				var_skips  ++;
+				alias_skips++;
+			}
+		}
+
+		if (!cmd && skips <= alias_skips)
+		{
+			cmd = COM_CompleteAlias(completion, skips - var_skips);
+
+			if (cmd && skips == alias_skips)
+			{
+				alias_skips++;
+			}
+		}
 
 		if (cmd)
+		{
 			CON_InputSetString(va("%s ", cmd));
+		}
 		else
 		{
-			if (comskips > 0)
-				comskips--;
-			else if (varskips > 0)
-				varskips--;
+			skips--;
 		}
 
 		return true;

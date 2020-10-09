@@ -49,6 +49,8 @@ size_t COM_FirstOption(void);
 // match existing command or NULL
 const char *COM_CompleteCommand(const char *partial, INT32 skips);
 
+const char *COM_CompleteAlias(const char *partial, INT32 skips);
+
 // insert at queu (at end of other command)
 #define COM_BufAddText(s) COM_BufAddTextEx(s, 0)
 void COM_BufAddTextEx(const char *btext, int flags);
