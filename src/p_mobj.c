@@ -36,10 +36,10 @@
 #include "m_cond.h"
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
-consvar_t cv_movebob = {"movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_movebob = CVAR_INIT ("movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
 
 #ifdef WALLSPLATS
-consvar_t cv_splats = {"splats", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_splats = CVAR_INIT ("splats", "On", CV_SAVE, CV_OnOff, NULL);
 #endif
 
 actioncache_t actioncachehead;
@@ -11047,10 +11047,10 @@ void P_RemoveSavegameMobj(mobj_t *mobj)
 }
 
 static CV_PossibleValue_t respawnitemtime_cons_t[] = {{1, "MIN"}, {300, "MAX"}, {0, NULL}};
-consvar_t cv_itemrespawntime = {"respawnitemtime", "30", CV_NETVAR|CV_CHEAT, respawnitemtime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_itemrespawn = {"respawnitem", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_itemrespawntime = CVAR_INIT ("respawnitemtime", "30", CV_NETVAR|CV_CHEAT, respawnitemtime_cons_t, NULL);
+consvar_t cv_itemrespawn = CVAR_INIT ("respawnitem", "On", CV_NETVAR, CV_OnOff, NULL);
 static CV_PossibleValue_t flagtime_cons_t[] = {{0, "MIN"}, {300, "MAX"}, {0, NULL}};
-consvar_t cv_flagtime = {"flagtime", "30", CV_NETVAR|CV_CHEAT, flagtime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_flagtime = CVAR_INIT ("flagtime", "30", CV_NETVAR|CV_CHEAT, flagtime_cons_t, NULL);
 
 void P_SpawnPrecipitation(void)
 {

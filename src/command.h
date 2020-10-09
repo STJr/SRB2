@@ -146,6 +146,10 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 	struct consvar_s *next;
 } consvar_t;
 
+/* name, defaultvalue, flags, PossibleValue, func */
+#define CVAR_INIT( ... ) \
+{ __VA_ARGS__, 0, NULL, NULL, 0U, (char)0, NULL }
+
 #ifdef OLD22DEMOCOMPAT
 typedef struct old_demo_var old_demo_var_t;
 
