@@ -336,11 +336,11 @@ consvar_t cv_netstat = CVAR_INIT ("netstat", "Off", 0, CV_OnOff, NULL); // show 
 static CV_PossibleValue_t nettimeout_cons_t[] = {{TICRATE/7, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
 consvar_t cv_nettimeout = CVAR_INIT ("nettimeout", "350", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange);
 static CV_PossibleValue_t jointimeout_cons_t[] = {{5*TICRATE, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
-consvar_t cv_jointimeout = CVAR_INIT ("jointimeout", "350", CV_CALL|CV_SAVE, jointimeout_cons_t, JoinTimeout_OnChange);
-consvar_t cv_maxping = CVAR_INIT ("maxping", "0", CV_SAVE, CV_Unsigned, NULL);
+consvar_t cv_jointimeout = CVAR_INIT ("jointimeout", "350", CV_CALL|CV_SAVE|CV_NETVAR, jointimeout_cons_t, JoinTimeout_OnChange);
+consvar_t cv_maxping = CVAR_INIT ("maxping", "0", CV_SAVE|CV_NETVAR, CV_Unsigned, NULL);
 
 static CV_PossibleValue_t pingtimeout_cons_t[] = {{8, "MIN"}, {120, "MAX"}, {0, NULL}};
-consvar_t cv_pingtimeout = CVAR_INIT ("pingtimeout", "10", CV_SAVE, pingtimeout_cons_t, NULL);
+consvar_t cv_pingtimeout = CVAR_INIT ("pingtimeout", "10", CV_SAVE|CV_NETVAR, pingtimeout_cons_t, NULL);
 
 // show your ping on the HUD next to framerate. Defaults to warning only (shows up if your ping is > maxping)
 static CV_PossibleValue_t showping_cons_t[] = {{0, "Off"}, {1, "Always"}, {2, "Warning"}, {0, NULL}};
