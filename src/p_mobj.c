@@ -11956,9 +11956,6 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 			return MT_SCORE1K_BOX; // 1,000
 	}
 
-	if (mariomode && i == MT_ROSY)
-		return MT_TOAD; // don't remove on penalty of death
-
 	return i;
 }
 
