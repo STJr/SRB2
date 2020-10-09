@@ -875,6 +875,9 @@ static void COM_Help_f(void)
 				CONS_Printf(" Current value: %s\n", cvar->string);
 			else
 				CONS_Printf(" Current value: %d\n", cvar->value);
+
+			if (cvar->revert.v.string != NULL && strcmp(cvar->revert.v.string, cvar->string) != 0)
+				CONS_Printf(" Value before netgame: %s\n", cvar->revert.v.string);
 		}
 		else
 		{
