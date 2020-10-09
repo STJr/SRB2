@@ -17,7 +17,7 @@
 #include "p_mobj.h"
 #include "p_local.h"
 #include "z_zone.h"
-#include "r_patch.h"
+#include "r_picformats.h"
 #include "r_things.h"
 #include "r_draw.h" // R_GetColorByName
 #include "doomstat.h" // luabanks[]
@@ -1542,8 +1542,10 @@ static int lib_setSkinColor(lua_State *L)
 			strlcpy(info->name, n, MAXCOLORNAME+1);
 			if (strlen(n) > MAXCOLORNAME)
 				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; clipped to %s.\n", n, MAXCOLORNAME, info->name);
+#if 0
 			if (strchr(info->name, ' ') != NULL)
 				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", info->name);
+#endif
 
 			if (info->name[0] != '\0') // don't check empty string for dupe
 			{
@@ -1633,8 +1635,10 @@ static int skincolor_set(lua_State *L)
 		strlcpy(info->name, n, MAXCOLORNAME+1);
 		if (strlen(n) > MAXCOLORNAME)
 			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; clipped to %s.\n", n, MAXCOLORNAME, info->name);
+#if 0
 		if (strchr(info->name, ' ') != NULL)
 			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", info->name);
+#endif
 
 		if (info->name[0] != '\0') // don't check empty string for dupe
 		{

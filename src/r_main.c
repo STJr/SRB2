@@ -102,7 +102,9 @@ extracolormap_t *extra_colormaps = NULL;
 // Render stats
 int rs_prevframetime = 0;
 int rs_rendercalltime = 0;
+int rs_uitime = 0;
 int rs_swaptime = 0;
+int rs_tictime = 0;
 
 int rs_bsptime = 0;
 
@@ -1074,15 +1076,22 @@ subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
 // recalc necessary stuff for mouseaiming
 // slopes are already calculated for the full possible view (which is 4*viewheight).
 // 18/08/18: (No it's actually 16*viewheight, thanks Jimita for finding this out)
-static void R_SetupFreelook(void)
+static void R_SetupFreelook(player_t *player, boolean skybox)
 {
 	INT32 dy = 0;
+
+#ifndef HWRENDER
+	(void)player;
+	(void)skybox;
+#endif
 
 	// clip it in the case we are looking a hardware 90 degrees full aiming
 	// (lmps, network and use F12...)
 	if (rendermode == render_soft
 #ifdef HWRENDER
-		|| cv_glshearing.value
+		|| (rendermode == render_opengl
+			&& (cv_glshearing.value == 1
+			|| (cv_glshearing.value == 2 && R_IsViewpointThirdPerson(player, skybox))))
 #endif
 		)
 	{
@@ -1203,7 +1212,7 @@ void R_SetupFrame(player_t *player)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	R_SetupFreelook();
+	R_SetupFreelook(player, false);
 }
 
 void R_SkyboxFrame(player_t *player)
@@ -1340,7 +1349,7 @@ void R_SkyboxFrame(player_t *player)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	R_SetupFreelook();
+	R_SetupFreelook(player, true);
 }
 
 boolean R_ViewpointHasChasecam(player_t *player)
@@ -1560,7 +1569,6 @@ void R_RenderPlayerView(player_t *player)
 	free(masks);
 }
 
-// Lactozilla: Renderer switching
 #ifdef HWRENDER
 void R_InitHardwareMode(void)
 {
@@ -1574,7 +1582,6 @@ void R_InitHardwareMode(void)
 
 void R_ReloadHUDGraphics(void)
 {
-	CONS_Debug(DBG_RENDER, "R_ReloadHUDGraphics()...\n");
 	ST_LoadGraphics();
 	HU_LoadGraphics();
 	ST_ReloadSkinFaceGraphics();

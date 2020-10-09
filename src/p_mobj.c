@@ -4194,7 +4194,7 @@ boolean P_SupermanLook4Players(mobj_t *actor)
 
 	for (c = 0; c < MAXPLAYERS; c++)
 	{
-		if (playeringame[c])
+		if (playeringame[c] && !players[c].spectator)
 		{
 			if (players[c].pflags & PF_INVIS)
 				continue; // ignore notarget
@@ -11249,7 +11249,7 @@ void P_PrecipitationEffects(void)
  * \param mthingtype Mapthing number in question.
  * \return Mobj type; MT_UNKNOWN if nothing found.
  */
-static mobjtype_t P_GetMobjtype(UINT16 mthingtype)
+mobjtype_t P_GetMobjtype(UINT16 mthingtype)
 {
 	mobjtype_t i;
 	for (i = 0; i < NUMMOBJTYPES; i++)

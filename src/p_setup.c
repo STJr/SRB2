@@ -28,7 +28,8 @@
 
 #include "r_data.h"
 #include "r_things.h" // for R_AddSpriteDefs
-#include "r_patch.h"
+#include "r_textures.h"
+#include "r_picformats.h"
 #include "r_sky.h"
 #include "r_draw.h"
 
@@ -547,6 +548,8 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 
 	lumpnum_t    flatnum;
 	int       texturenum;
+	patch_t   *flatpatch;
+	size_t    lumplength;
 
 	size_t i;
 
@@ -603,7 +606,9 @@ texturefound:
 	{
 flatfound:
 		/* This could be a flat, patch, or PNG. */
-		if (R_CheckIfPatch(flatnum))
+		flatpatch = W_CacheLumpNum(flatnum, PU_CACHE);
+		lumplength = W_LumpLength(flatnum);
+		if (Picture_CheckIfPatch(flatpatch, lumplength))
 			levelflat->type = LEVELFLAT_PATCH;
 		else
 		{
@@ -613,12 +618,14 @@ flatfound:
 			FIXME: Put this elsewhere.
 			*/
 			W_ReadLumpHeader(flatnum, buffer, 8, 0);
-			if (R_IsLumpPNG(buffer, W_LumpLength(flatnum)))
+			if (Picture_IsLumpPNG(buffer, lumplength))
 				levelflat->type = LEVELFLAT_PNG;
 			else
 #endif/*NO_PNG_LUMPS*/
 				levelflat->type = LEVELFLAT_FLAT;/* phew */
 		}
+		if (flatpatch)
+			Z_Free(flatpatch);
 
 		levelflat->u.flat.    lumpnum = flatnum;
 		levelflat->u.flat.baselumpnum = LUMPERROR;
@@ -4168,9 +4175,6 @@ boolean P_LoadLevel(boolean fromnetsave)
 	// clear special respawning que
 	iquehead = iquetail = 0;
 
-	// Fab : 19-07-98 : start cd music for this level (note: can be remapped)
-	I_PlayCD((UINT8)(gamemap), false);
-
 	P_MapEnd();
 
 	// Remove the loading shit from the screen
@@ -4257,6 +4261,10 @@ void HWR_SetupLevel(void)
 #endif
 
 	HWR_CreatePlanePolygons((INT32)numnodes - 1);
+
+	// Build the sky dome
+	HWR_ClearSkyDome();
+	HWR_BuildSkyDome();
 }
 #endif
 

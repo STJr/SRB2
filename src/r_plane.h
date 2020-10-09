@@ -16,6 +16,7 @@
 
 #include "screen.h" // needs MAXVIDWIDTH/MAXVIDHEIGHT
 #include "r_data.h"
+#include "r_textures.h"
 #include "p_polyobj.h"
 
 #define MAXVISPLANES 512

@@ -16,6 +16,7 @@
 
 #include "d_player.h"
 #include "r_data.h"
+#include "r_textures.h"
 
 //
 // POV related.
@@ -81,7 +82,9 @@ extern consvar_t cv_renderstats;
 
 extern int rs_prevframetime;// time when previous frame was rendered
 extern int rs_rendercalltime;
+extern int rs_uitime;
 extern int rs_swaptime;
+extern int rs_tictime;
 
 extern int rs_bsptime;
 

@@ -8,13 +8,11 @@
 # terms of the GNU General Public License, version 2.
 # See the 'LICENSE' file for more details.
 #
-#     -DPC_DOS    -> use DOS specific code (eg:textmode stuff)...
 #     -DLINUX     -> use for the GNU/Linux specific
 #     -D_WINDOWS  -> use for the Win32/DirectX specific
 #     -DHAVE_SDL  -> use for the SDL interface
 #
 # Sets:
-#     Compile the DGJPP/DOS version with 'make WATTCP=1'
 #     Compile the DirectX/Mingw version with 'make MINGW=1'
 #     Compile the SDL/Mingw version with 'make MINGW=1 SDL=1'
 #     Compile the SDL/Linux version with 'make LINUX=1'
@@ -58,10 +56,10 @@
 #     Compile with GCC 4.6x version, add 'GCC46=1'
 #     Compile a profile version, add 'PROFILEMODE=1'
 #     Compile a debug version, add 'DEBUGMODE=1'
-#     Compile with extra warnings, add 'WARNINGMODE=1'
+#     Compile with less warnings, add 'RELAXWARNINGS=1'
+#     Generate compiler errors for most compiler warnings, add 'ERRORMODE=1'
 #     Compile without NASM's tmap.nas, add 'NOASM=1'
 #     Compile without 3D hardware support, add 'NOHW=1'
-#     Compile without 3D sound support, add 'NOHS=1'
 #     Compile with GDBstubs, add 'RDB=1'
 #     Compile without PNG, add 'NOPNG=1'
 #     Compile without zlib, add 'NOZLIB=1'
@@ -81,6 +79,58 @@
 #     To link with SDLMain to hide console or make on a console-less binary, add 'SDLMAIN=1'
 #
 #############################################################################
+
+ALL_SYSTEMS=\
+	PANDORA\
+	LINUX64\
+	MINGW64\
+	HAIKU\
+	DUMMY\
+	DJGPPDOS\
+	MINGW\
+	UNIX\
+	LINUX\
+	SOLARIS\
+	FREEBSD\
+	MACOSX\
+	SDL\
+
+# check for user specified system
+ifeq (,$(filter $(ALL_SYSTEMS),$(.VARIABLES)))
+ifeq ($(OS),Windows_NT) # all windows are Windows_NT...
+
+ $(info Detected a Windows system, compiling for 32-bit MinGW SDL2...)
+
+ # go for a 32-bit sdl mingw exe by default
+ MINGW=1
+ SDL=1
+ WINDOWSHELL=1
+
+else # if you on the *nix
+
+ system:=$(shell uname -s)
+
+ ifeq ($(system),Linux)
+ new_system=LINUX
+ else
+
+ $(error \
+	 Could not automatically detect your system,\
+	 try specifying a system manually)
+
+ endif
+
+ ifeq ($(shell getconf LONG_BIT),64)
+ system+=64-bit
+ new_system:=$(new_system)64
+ endif
+
+ $(info Detected $(system) ($(new_system))...)
+ $(new_system)=1
+
+endif
+endif
+
 
 # SRB2 data files
 D_DIR?=../bin/Resources
@@ -121,7 +171,6 @@ NOPNG=1
 NOZLIB=1
 NONET=1
 NOHW=1
-NOHS=1
 NOASM=1
 NOIPX=1
 EXENAME?=srb2dummy
@@ -143,11 +192,6 @@ endif
 ifdef PANDORA
 NONX86=1
 NOHW=1
-NOHS=1
-endif
-
-ifdef DJGPPDOS
-include djgppdos/Makefile.cfg
 endif
 
 ifndef NOOPENMPT
@@ -213,6 +257,7 @@ endif
 
 ifdef NONET
 	OPTS+=-DNONET
+	NOCURL=1
 else
 ifdef NO_IPV6
 	OPTS+=-DNO_IPV6
@@ -226,13 +271,6 @@ else
 	OBJS+=$(OBJDIR)/hw_bsp.o $(OBJDIR)/hw_draw.o $(OBJDIR)/hw_light.o \
 		 $(OBJDIR)/hw_main.o $(OBJDIR)/hw_clip.o $(OBJDIR)/hw_md2.o $(OBJDIR)/hw_cache.o \
 		 $(OBJDIR)/hw_md2load.o $(OBJDIR)/hw_md3load.o $(OBJDIR)/hw_model.o $(OBJDIR)/u_list.o $(OBJDIR)/hw_batching.o
-endif
-
-ifdef NOHS
-	OPTS+=-DNOHS
-else
-	OPTS+=-DHW3SOUND
-	OBJS+=$(OBJDIR)/hw3sound.o
 endif
 
 OPTS += -DCOMPVERSION
@@ -320,6 +358,16 @@ LIBS+=$(ZLIB_LDFLAGS)
 CFLAGS+=$(ZLIB_CFLAGS)
 else
 NOPNG=1
+endif
+
+ifndef NOCURL
+OPTS+=-DHAVE_CURL
+CURLCONFIG?=curl-config
+CURL_CFLAGS?=$(shell $(CURLCONFIG) --cflags)
+CURL_LDFLAGS?=$(shell $(CURLCONFIG) --libs)
+
+LIBS+=$(CURL_LDFLAGS)
+CFLAGS+=$(CURL_CFLAGS)
 endif
 
 ifdef STATIC
@@ -469,7 +517,8 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_sky.o    \
 		$(OBJDIR)/r_splats.o \
 		$(OBJDIR)/r_things.o \
-		$(OBJDIR)/r_patch.o \
+		$(OBJDIR)/r_textures.o \
+		$(OBJDIR)/r_picformats.o \
 		$(OBJDIR)/r_portal.o \
 		$(OBJDIR)/screen.o   \
 		$(OBJDIR)/v_video.o  \
@@ -478,11 +527,11 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/w_wad.o    \
 		$(OBJDIR)/filesrch.o \
 		$(OBJDIR)/mserv.o    \
+		$(OBJDIR)/http-mserv.o\
 		$(OBJDIR)/i_tcp.o    \
 		$(OBJDIR)/lzf.o	     \
 		$(OBJDIR)/vid_copy.o \
 		$(OBJDIR)/b_bot.o \
-		$(i_cdmus_o)    \
 		$(i_net_o)      \
 		$(i_system_o)   \
 		$(i_sound_o)    \
@@ -496,10 +545,6 @@ ifdef GETTEXT
 POS:=$(BIN)/en.mo
 
 OPTS+=-DGETTEXT
-endif
-
-ifdef DJGPPDOS
-all:	 pre-build $(BIN)/$(EXENAME)
 endif
 
 ifdef PANDORA
@@ -749,19 +794,6 @@ $(OBJDIR)/ogl_win.o: hardware/r_opengl/ogl_win.c hardware/r_opengl/r_opengl.h \
 	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
 endif
 
-ifndef NOHS
-$(OBJDIR)/s_ds3d.o: hardware/s_ds3d/s_ds3d.c hardware/hw3dsdrv.h \
- hardware/hw_dll.h
-	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_ds3d.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_ds3d/s_ds3d.c
-
-$(OBJDIR)/s_fmod.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
- hardware/hw_dll.h
-	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_fmod.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_fmod/s_fmod.c
-
-$(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
- hardware/hw_dll.h
-	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_openal.o $(WFLAGS) -D_WINDOWS -mwindows -c hardware/s_openal/s_openal.c
-endif
 endif
 endif
 

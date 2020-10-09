@@ -77,8 +77,6 @@ consvar_t cv_csaturation = {"csaturation", "10", CV_SAVE|CV_CALL, saturation_con
 consvar_t cv_bsaturation = {"bsaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
 consvar_t cv_msaturation = {"msaturation", "10", CV_SAVE|CV_CALL, saturation_cons_t, CV_palette_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_allcaps = {"allcaps", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-
 static CV_PossibleValue_t constextsize_cons_t[] = {
 	{V_NOSCALEPATCH, "Small"}, {V_SMALLSCALEPATCH, "Medium"}, {V_MEDSCALEPATCH, "Large"}, {0, "Huge"},
 	{0, NULL}};
@@ -2120,6 +2118,9 @@ void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
 		scrwidth -= left;
 	}
 
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
+
 	switch (option & V_SPACINGMASK)
 	{
 		case V_MONOSPACE:
@@ -2232,6 +2233,9 @@ void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
 		left = (scrwidth - BASEVIDWIDTH)/2;
 		scrwidth -= left;
 	}
+
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
 
 	charflags = (option & V_CHARCOLORMASK);
 
@@ -2347,6 +2351,9 @@ void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
 		left = (scrwidth - BASEVIDWIDTH)/2;
 		scrwidth -= left;
 	}
+
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
 
 	charflags = (option & V_CHARCOLORMASK);
 
@@ -2483,6 +2490,9 @@ void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
 		scrwidth -= left;
 	}
 
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
+
 	charflags = (option & V_CHARCOLORMASK);
 
 	switch (option & V_SPACINGMASK)
@@ -2595,6 +2605,9 @@ void V_DrawSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *st
 		left = (scrwidth - BASEVIDWIDTH)/2;
 		scrwidth -= left;
 	}
+
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
 
 	charflags = (option & V_CHARCOLORMASK);
 
@@ -2710,6 +2723,9 @@ void V_DrawThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *str
 		scrwidth -= left;
 	}
 
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
+
 	charflags = (option & V_CHARCOLORMASK);
 
 	switch (option & V_SPACINGMASK)
@@ -2824,6 +2840,9 @@ void V_DrawSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char
 		scrwidth -= left;
 	}
 
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
+
 	charflags = (option & V_CHARCOLORMASK);
 
 	switch (option & V_SPACINGMASK)
@@ -2917,7 +2936,7 @@ void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num)
 	INT32 w = SHORT(tallnum[0]->width);
 	boolean neg;
 
-	if (flags & V_NOSCALESTART)
+	if (flags & (V_NOSCALESTART|V_NOSCALEPATCH))
 		w *= vid.dupx;
 
 	if ((neg = num < 0))
@@ -2942,7 +2961,7 @@ void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits)
 {
 	INT32 w = SHORT(tallnum[0]->width);
 
-	if (flags & V_NOSCALESTART)
+	if (flags & (V_NOSCALESTART|V_NOSCALEPATCH))
 		w *= vid.dupx;
 
 	if (num < 0)
@@ -2994,6 +3013,9 @@ void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string)
 	}
 	else
 		dupx = dupy = 1;
+
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
 
 	for (;;)
 	{
@@ -3051,6 +3073,9 @@ static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UIN
 		left = (scrwidth - BASEVIDWIDTH)/2;
 		scrwidth -= left;
 	}
+
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
 
 	for (;;ch++)
 	{
@@ -3267,6 +3292,9 @@ void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
 		scrwidth -= left;
 	}
 
+	if (option & V_NOSCALEPATCH)
+		scrwidth *= vid.dupx;
+
 	for (;;ch++)
 	{
 		if (!*ch)
@@ -3402,8 +3430,8 @@ INT32 V_StringWidth(const char *string, INT32 option)
 			w += (charwidth ? charwidth : SHORT(hu_font[c]->width));
 	}
 
-	if (option & V_NOSCALESTART)
-	w *= vid.dupx;
+	if (option & (V_NOSCALESTART|V_NOSCALEPATCH))
+		w *= vid.dupx;
 
 	return w;
 }
@@ -3666,26 +3694,49 @@ Unoptimized version
 #endif
 }
 
-// Generates a color look-up table
-// which has up to 64 colors at each channel
-// (see the defines in v_video.h)
-
-UINT8 colorlookup[CLUTSIZE][CLUTSIZE][CLUTSIZE];
-
-void InitColorLUT(RGBA_t *palette)
+// Generates a RGB565 color look-up table
+void InitColorLUT(colorlookup_t *lut, RGBA_t *palette, boolean makecolors)
 {
-	UINT8 r, g, b;
-	static boolean clutinit = false;
-	static RGBA_t *lastpalette = NULL;
-	if ((!clutinit) || (lastpalette != palette))
+	size_t palsize = (sizeof(RGBA_t) * 256);
+
+	if (!lut->init || memcmp(lut->palette, palette, palsize))
 	{
-		for (r = 0; r < CLUTSIZE; r++)
-			for (g = 0; g < CLUTSIZE; g++)
-				for (b = 0; b < CLUTSIZE; b++)
-					colorlookup[r][g][b] = NearestPaletteColor(r << SHIFTCOLORBITS, g << SHIFTCOLORBITS, b << SHIFTCOLORBITS, palette);
-		clutinit = true;
-		lastpalette = palette;
+		INT32 i;
+
+		lut->init = true;
+		memcpy(lut->palette, palette, palsize);
+
+		for (i = 0; i < 0xFFFF; i++)
+			lut->table[i] = 0xFFFF;
+
+		if (makecolors)
+		{
+			UINT8 r, g, b;
+
+			for (r = 0; r < 0xFF; r++)
+			for (g = 0; g < 0xFF; g++)
+			for (b = 0; b < 0xFF; b++)
+			{
+				i = CLUTINDEX(r, g, b);
+				if (lut->table[i] == 0xFFFF)
+					lut->table[i] = NearestPaletteColor(r, g, b, palette);
+			}
+		}
 	}
+}
+
+UINT8 GetColorLUT(colorlookup_t *lut, UINT8 r, UINT8 g, UINT8 b)
+{
+	INT32 i = CLUTINDEX(r, g, b);
+	if (lut->table[i] == 0xFFFF)
+		lut->table[i] = NearestPaletteColor(r, g, b, lut->palette);
+	return lut->table[i];
+}
+
+UINT8 GetColorLUTDirect(colorlookup_t *lut, UINT8 r, UINT8 g, UINT8 b)
+{
+	INT32 i = CLUTINDEX(r, g, b);
+	return lut->table[i];
 }
 
 // V_Init
