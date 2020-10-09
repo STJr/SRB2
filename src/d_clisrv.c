@@ -2119,7 +2119,7 @@ static void SV_SendSaveGame(INT32 node)
 
 #ifdef DUMPCONSISTENCY
 #define TMPSAVENAME "badmath.sav"
-static consvar_t cv_dumpconsistency = CVAR_INIT ("dumpconsistency", "Off", CV_NETVAR, CV_OnOff, NULL);
+static consvar_t cv_dumpconsistency = CVAR_INIT ("dumpconsistency", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
 
 static void SV_SavedGame(void)
 {
@@ -3678,8 +3678,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 static CV_PossibleValue_t netticbuffer_cons_t[] = {{0, "MIN"}, {3, "MAX"}, {0, NULL}};
 consvar_t cv_netticbuffer = CVAR_INIT ("netticbuffer", "1", CV_SAVE, netticbuffer_cons_t, NULL);
 
-consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", CV_NETVAR, CV_OnOff, NULL);
-consvar_t cv_joinnextround = CVAR_INIT ("joinnextround", "Off", CV_NETVAR, CV_OnOff, NULL); /// \todo not done
+consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_joinnextround = CVAR_INIT ("joinnextround", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL); /// \todo not done
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
 consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", CV_SAVE, maxplayers_cons_t, NULL);
 static CV_PossibleValue_t joindelay_cons_t[] = {{1, "MIN"}, {3600, "MAX"}, {0, "Off"}, {0, NULL}};
