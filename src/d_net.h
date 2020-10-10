@@ -19,7 +19,9 @@
 #define __D_NET__
 
 // Max computers in a game
-#define MAXNETNODES (MAXPLAYERS+4)
+// 127 is probably as high as this can go, because
+// SINT8 is used for nodes sometimes >:(
+#define MAXNETNODES 127
 #define BROADCASTADDR MAXNETNODES
 #define MAXSPLITSCREENPLAYERS 2 // Max number of players on a single computer
 //#define NETSPLITSCREEN // Kart's splitscreen netgame feature

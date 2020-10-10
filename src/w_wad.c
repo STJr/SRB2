@@ -72,12 +72,6 @@
 #include "hardware/hw_glob.h"
 #endif
 
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-int	snprintf(char *str, size_t n, const char *fmt, ...);
-//int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
-#endif
-
 #ifdef _DEBUG
 #include "console.h"
 #endif
@@ -784,6 +778,8 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
+			if (important)
+				packetsizetally -= nameonlylength(filename) + 22;
 			if (handle)
 				fclose(handle);
 			return W_InitFileError(filename, false);
@@ -887,16 +883,13 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
   *
   * \param filenames A null-terminated list of files to use.
   */
-void W_InitMultipleFiles(char **filenames, UINT16 mainfiles)
+void W_InitMultipleFiles(char **filenames)
 {
-	// open all the files, load headers, and count lumps
-	numwadfiles = 0;
-
 	// will be realloced as lumps are added
 	for (; *filenames; filenames++)
 	{
 		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
-		W_InitFile(*filenames, numwadfiles < mainfiles, true);
+		W_InitFile(*filenames, numwadfiles < mainwads, true);
 	}
 }
 
@@ -1683,8 +1676,7 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 		if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
 		{
 			size_t newlen;
-			INT32 pngwidth, pngheight; // Dummy variables.
-			void *converted = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, &pngwidth, &pngheight, NULL, NULL, len, &newlen, 0);
+			void *converted = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, len, &newlen, 0);
 			ptr = Z_Malloc(newlen, PU_STATIC, NULL);
 			M_Memcpy(ptr, converted, newlen);
 			Z_Free(converted);

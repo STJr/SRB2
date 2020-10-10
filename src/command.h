@@ -49,6 +49,8 @@ size_t COM_FirstOption(void);
 // match existing command or NULL
 const char *COM_CompleteCommand(const char *partial, INT32 skips);
 
+const char *COM_CompleteAlias(const char *partial, INT32 skips);
+
 // insert at queu (at end of other command)
 #define COM_BufAddText(s) COM_BufAddTextEx(s, 0)
 void COM_BufAddTextEx(const char *btext, int flags);
@@ -143,6 +145,10 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 	char changed;         // has variable been changed by the user? 0 = no, 1 = yes
 	struct consvar_s *next;
 } consvar_t;
+
+/* name, defaultvalue, flags, PossibleValue, func */
+#define CVAR_INIT( ... ) \
+{ __VA_ARGS__, 0, NULL, NULL, 0U, (char)0, NULL }
 
 #ifdef OLD22DEMOCOMPAT
 typedef struct old_demo_var old_demo_var_t;

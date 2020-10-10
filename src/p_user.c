@@ -665,7 +665,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->powers[pw_carry] = CR_NIGHTSFALL;
 
 	player->powers[pw_underwater] = 0;
-	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
+	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SPINNING|PF_DRILLING|PF_TRANSFERTOCLOSEST);
 	player->secondjump = 0;
 	player->homing = 0;
 	player->climbing = 0;
@@ -795,7 +795,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		}
 	}
 
-	player->pflags &= ~(PF_USEDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
+	player->pflags &= ~(PF_SPINDOWN|PF_JUMPDOWN|PF_ATTACKDOWN|PF_STARTDASH|PF_GLIDING|PF_JUMPED|PF_NOJUMPDAMAGE|PF_THOKKED|PF_SHIELDABILITY|PF_SPINNING|PF_DRILLING);
 	player->homing = 0;
 	player->mo->fuse = 0;
 	player->speed = 0;
@@ -2303,7 +2303,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 		if (dorollstuff)
 		{
 			if ((player->charability2 == CA2_SPINDASH) && !((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_THOKKED) && !(player->charability == CA_THOK && player->secondjump)
-			&& (player->cmd.buttons & BT_USE) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
+			&& (player->cmd.buttons & BT_SPIN) && (FixedHypot(player->mo->momx, player->mo->momy) > (5*player->mo->scale)))
 				player->pflags = (player->pflags|PF_SPINNING) & ~PF_THOKKED;
 			else if (!(player->pflags & PF_STARTDASH))
 				player->pflags &= ~PF_SPINNING;
@@ -2368,7 +2368,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 				}
 			}
 			else if (player->charability2 == CA2_MELEE
-				&& ((player->panim == PA_ABILITY2) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY && player->cmd.buttons & (BT_JUMP|BT_USE))))
+				&& ((player->panim == PA_ABILITY2) || (player->charability == CA_TWINSPIN && player->panim == PA_ABILITY && player->cmd.buttons & (BT_JUMP|BT_SPIN))))
 			{
 				if (player->mo->state-states != S_PLAY_MELEE_LANDING)
 				{
@@ -3576,7 +3576,7 @@ static void P_DoClimbing(player_t *player)
 	else if ((!(player->mo->momx || player->mo->momy || player->mo->momz) || !climb) && player->mo->state-states != S_PLAY_CLING)
 		P_SetPlayerMobjState(player->mo, S_PLAY_CLING);
 
-	if (cmd->buttons & BT_USE && !(player->pflags & PF_JUMPSTASIS))
+	if (cmd->buttons & BT_SPIN && !(player->pflags & PF_JUMPSTASIS))
 	{
 		player->climbing = 0;
 		player->pflags |= P_GetJumpFlags(player);
@@ -4574,7 +4574,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 		&& (player->pflags & PF_JUMPSTASIS || player->mo->state-states != S_PLAY_GLIDE_LANDING))
 		return;
 
-	if (cmd->buttons & BT_USE)
+	if (cmd->buttons & BT_SPIN)
 	{
 		if (LUAh_SpinSpecial(player))
 			return;
@@ -4591,20 +4591,20 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 		{
 			case CA2_SPINDASH: // Spinning and Spindashing
 				 // Start revving
-				if ((cmd->buttons & BT_USE) && (player->speed < FixedMul(5<<FRACBITS, player->mo->scale) || player->mo->state - states == S_PLAY_GLIDE_LANDING)
-					&& !player->mo->momz && onground && !(player->pflags & (PF_USEDOWN|PF_SPINNING))
+				if ((cmd->buttons & BT_SPIN) && (player->speed < FixedMul(5<<FRACBITS, player->mo->scale) || player->mo->state - states == S_PLAY_GLIDE_LANDING)
+					&& !player->mo->momz && onground && !(player->pflags & (PF_SPINDOWN|PF_SPINNING))
 						&& canstand)
 				{
 					player->mo->momx = player->cmomx;
 					player->mo->momy = player->cmomy;
-					player->pflags |= (PF_USEDOWN|PF_STARTDASH|PF_SPINNING);
+					player->pflags |= (PF_SPINDOWN|PF_STARTDASH|PF_SPINNING);
 					player->dashspeed = player->mindash;
 					P_SetPlayerMobjState(player->mo, S_PLAY_SPINDASH);
 					if (!player->spectator)
 						S_StartSound(player->mo, sfx_spndsh); // Make the rev sound!
 				}
 				 // Revving
-				else if ((cmd->buttons & BT_USE) && (player->pflags & PF_STARTDASH))
+				else if ((cmd->buttons & BT_SPIN) && (player->pflags & PF_STARTDASH))
 				{
 					if (player->speed > 5*player->mo->scale)
 					{
@@ -4637,18 +4637,18 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 				// If not moving up or down, and travelling faster than a speed of five while not holding
 				// down the spin button and not spinning.
 				// AKA Just go into a spin on the ground, you idiot. ;)
-				else if ((cmd->buttons & BT_USE || ((twodlevel || (player->mo->flags2 & MF2_TWOD)) && cmd->forwardmove < -20))
+				else if ((cmd->buttons & BT_SPIN || ((twodlevel || (player->mo->flags2 & MF2_TWOD)) && cmd->forwardmove < -20))
 					&& !player->climbing && !player->mo->momz && onground && (player->speed > FixedMul(5<<FRACBITS, player->mo->scale)
-						|| !canstand) && !(player->pflags & (PF_USEDOWN|PF_SPINNING)))
+						|| !canstand) && !(player->pflags & (PF_SPINDOWN|PF_SPINNING)))
 				{
-					player->pflags |= (PF_USEDOWN|PF_SPINNING);
+					player->pflags |= (PF_SPINDOWN|PF_SPINNING);
 					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					if (!player->spectator)
 						S_StartSound(player->mo, sfx_spin);
 				}
 				else
 				// Catapult the player from a spindash rev!
-				if (onground && !(player->pflags & PF_USEDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
+				if (onground && !(player->pflags & PF_SPINDOWN) && (player->pflags & PF_STARTDASH) && (player->pflags & PF_SPINNING))
 				{
 					player->pflags &= ~PF_STARTDASH;
 					if (player->powers[pw_carry] == CR_BRAKGOOP)
@@ -4690,7 +4690,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 								P_SetTarget(&visual->target, lockon);
 							}
 						}
-						if ((cmd->buttons & BT_USE) && !(player->pflags & PF_USEDOWN))
+						if ((cmd->buttons & BT_SPIN) && !(player->pflags & PF_SPINDOWN))
 						{
 							mobj_t *bullet;
 
@@ -4719,15 +4719,15 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 
 							player->mo->momx >>= 1;
 							player->mo->momy >>= 1;
-							player->pflags |= PF_USEDOWN;
+							player->pflags |= PF_SPINDOWN;
 							P_SetWeaponDelay(player, TICRATE/2);
 						}
 					}
 				}
 				break;
 			case CA2_MELEE: // Melee attack
-				if (player->panim != PA_ABILITY2 && (cmd->buttons & BT_USE)
-				&& !player->mo->momz && onground && !(player->pflags & PF_USEDOWN)
+				if (player->panim != PA_ABILITY2 && (cmd->buttons & BT_SPIN)
+				&& !player->mo->momz && onground && !(player->pflags & PF_SPINDOWN)
 				&& canstand)
 				{
 					P_ResetPlayer(player);
@@ -4767,7 +4767,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 						P_SetPlayerMobjState(player->mo, S_PLAY_MELEE);
 						S_StartSound(player->mo, sfx_s3k42);
 					}
-					player->pflags |= PF_USEDOWN;
+					player->pflags |= PF_SPINDOWN;
 				}
 				break;
 		}
@@ -5040,8 +5040,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			;
 		else if (player->pflags & (PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player has used an ability previously
 			;
-		else if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_USEDOWN)
-			&& ((!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX)))) // thokked is optional if you're bubblewrapped
+		else if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SPINDOWN)
+			&& ((!(player->pflags & PF_THOKKED) || (((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP || (player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT) && player->secondjump == UINT8_MAX) ))) // thokked is optional if you're bubblewrapped / 3dblasted
 		{
 			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
 			{
@@ -5066,7 +5066,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					}
 				}
 			}
-			if (cmd->buttons & BT_USE && !LUAh_ShieldSpecial(player)) // Spin button effects
+			if (cmd->buttons & BT_SPIN && !LUAh_ShieldSpecial(player)) // Spin button effects
 			{
 				// Force stop
 				if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
@@ -5093,6 +5093,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						case SH_ATTRACT:
 							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 							player->homing = 2;
+							player->secondjump = 0;
 							P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockonshield));
 							if (lockonshield)
 								{
@@ -5140,9 +5141,9 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				}
 			}
 		}
-		else if ((cmd->buttons & BT_USE))
+		else if ((cmd->buttons & BT_SPIN))
 		{
-			if (!(player->pflags & PF_USEDOWN) && P_SuperReady(player))
+			if (!(player->pflags & PF_SPINDOWN) && P_SuperReady(player))
 			{
 				// If you can turn super and aren't already,
 				// and you don't have a shield, do it!
@@ -5172,7 +5173,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						}
 						break;
 					case CA_TELEKINESIS:
-						if (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || (player->charflags & SF_MULTIABILITY))
+						if (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || (player->charflags & SF_MULTIABILITY))
 						{
 							P_Telekinesis(player,
 								-FixedMul(player->actionspd, player->mo->scale), // -ve thrust (pulling towards player)
@@ -5180,7 +5181,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						}
 						break;
 					case CA_TWINSPIN:
-						if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_USEDOWN)) || player->charflags & SF_MULTIABILITY))
+						if ((player->charability2 == CA2_MELEE) && (!(player->pflags & (PF_THOKKED|PF_SPINDOWN)) || player->charflags & SF_MULTIABILITY))
 							P_DoTwinSpin(player);
 						break;
 					default:
@@ -5193,7 +5194,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 	{
 		if (player->pflags & PF_JUMPED)
 		{
-			if (cmd->buttons & BT_USE && player->secondjump < 42) // speed up falling down
+			if (cmd->buttons & BT_SPIN && player->secondjump < 42) // speed up falling down
 				player->secondjump++;
 
 			if (player->flyangle > 0 && player->pflags & PF_THOKKED)
@@ -5484,6 +5485,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		{
 			if (!P_HomingAttack(player->mo, player->mo->tracer))
 			{
+				player->pflags &= ~PF_SHIELDABILITY;
+				player->secondjump = UINT8_MAX;
 				P_SetObjectMomZ(player->mo, 6*FRACUNIT, false);
 				if (player->mo->eflags & MFE_UNDERWATER)
 					player->mo->momz = FixedMul(player->mo->momz, FRACUNIT/3);
@@ -6188,7 +6191,7 @@ static void P_SpectatorMovement(player_t *player)
 
 	if (cmd->buttons & BT_JUMP)
 		player->mo->z += FRACUNIT*16;
-	else if (cmd->buttons & BT_USE)
+	else if (cmd->buttons & BT_SPIN)
 		player->mo->z -= FRACUNIT*16;
 
 	if (player->mo->z > player->mo->ceilingz - player->mo->height)
@@ -7410,7 +7413,7 @@ static void P_NiGHTSMovement(player_t *player)
 	// No more bumper braking
 	if (!player->bumpertime
 	 && ((cmd->buttons & (BT_CAMLEFT|BT_CAMRIGHT)) == (BT_CAMLEFT|BT_CAMRIGHT)
-	  || (cmd->buttons & BT_USE)))
+	  || (cmd->buttons & BT_SPIN)))
 	{
 		if (!(player->pflags & PF_STARTDASH))
 			S_StartSound(player->mo, sfx_ngskid);
@@ -8457,7 +8460,7 @@ void P_MovePlayer(player_t *player)
 				S_StartSound(player->mo, sfx_putput);
 
 			// Descend
-			if (cmd->buttons & BT_USE && !(player->pflags & PF_STASIS) && !player->exiting && !(player->mo->eflags & MFE_GOOWATER))
+			if (cmd->buttons & BT_SPIN && !(player->pflags & PF_STASIS) && !player->exiting && !(player->mo->eflags & MFE_GOOWATER))
 				if (P_MobjFlip(player->mo)*player->mo->momz > -FixedMul(5*actionspd, player->mo->scale))
 				{
 					if (player->fly1 > 2)
@@ -8821,9 +8824,9 @@ static void P_DoRopeHang(player_t *player)
 	player->mo->momy = FixedMul(FixedDiv(player->mo->tracer->y - player->mo->y, dist), (speed));
 	player->mo->momz = FixedMul(FixedDiv(player->mo->tracer->z - playerz, dist), (speed));
 
-	if (player->cmd.buttons & BT_USE && !(player->pflags & PF_STASIS)) // Drop off of the rope
+	if (player->cmd.buttons & BT_SPIN && !(player->pflags & PF_STASIS)) // Drop off of the rope
 	{
-		player->pflags |= (P_GetJumpFlags(player)|PF_USEDOWN);
+		player->pflags |= (P_GetJumpFlags(player)|PF_SPINDOWN);
 		P_SetPlayerMobjState(player->mo, S_PLAY_JUMP);
 
 		P_SetTarget(&player->mo->tracer, NULL);
@@ -9476,7 +9479,7 @@ static void P_DeathThink(player_t *player)
 	// continue logic
 	if (!(netgame || multiplayer) && player->lives <= 0)
 	{
-		if (player->deadtimer > (3*TICRATE) && (cmd->buttons & BT_USE || cmd->buttons & BT_JUMP) && (!continuesInSession || player->continues > 0))
+		if (player->deadtimer > (3*TICRATE) && (cmd->buttons & BT_SPIN || cmd->buttons & BT_JUMP) && (!continuesInSession || player->continues > 0))
 			G_UseContinue();
 		else if (player->deadtimer >= gameovertics)
 			G_UseContinue(); // Even if we don't have one this handles ending the game
@@ -9631,45 +9634,45 @@ static CV_PossibleValue_t rotation_cons_t[] = {{1, "MIN"}, {25, "MAX"}, {0, NULL
 static CV_PossibleValue_t CV_CamRotate[] = {{-720, "MIN"}, {720, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t multiplier_cons_t[] = {{0, "MIN"}, {3*FRACUNIT, "MAX"}, {0, NULL}};
 
-consvar_t cv_cam_dist = {"cam_curdist", "160", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_height = {"cam_curheight", "25", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_still = {"cam_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_speed = {"cam_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_rotate = {"cam_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_rotspeed = {"cam_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_turnmultiplier = {"cam_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_orbit = {"cam_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_adjust = {"cam_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_dist = {"cam2_curdist", "160", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_height = {"cam2_curheight", "25", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_still = {"cam2_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_speed = {"cam2_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_rotate = {"cam2_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_rotspeed = {"cam2_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_turnmultiplier = {"cam2_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_orbit = {"cam2_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_adjust = {"cam2_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam_dist = CVAR_INIT ("cam_curdist", "160", CV_FLOAT, NULL, NULL);
+consvar_t cv_cam_height = CVAR_INIT ("cam_curheight", "25", CV_FLOAT, NULL, NULL);
+consvar_t cv_cam_still = CVAR_INIT ("cam_still", "Off", 0, CV_OnOff, NULL);
+consvar_t cv_cam_speed = CVAR_INIT ("cam_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL);
+consvar_t cv_cam_rotate = CVAR_INIT ("cam_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange);
+consvar_t cv_cam_rotspeed = CVAR_INIT ("cam_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL);
+consvar_t cv_cam_turnmultiplier = CVAR_INIT ("cam_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL);
+consvar_t cv_cam_orbit = CVAR_INIT ("cam_orbit", "Off", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_cam_adjust = CVAR_INIT ("cam_adjust", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_cam2_dist = CVAR_INIT ("cam2_curdist", "160", CV_FLOAT, NULL, NULL);
+consvar_t cv_cam2_height = CVAR_INIT ("cam2_curheight", "25", CV_FLOAT, NULL, NULL);
+consvar_t cv_cam2_still = CVAR_INIT ("cam2_still", "Off", 0, CV_OnOff, NULL);
+consvar_t cv_cam2_speed = CVAR_INIT ("cam2_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL);
+consvar_t cv_cam2_rotate = CVAR_INIT ("cam2_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange);
+consvar_t cv_cam2_rotspeed = CVAR_INIT ("cam2_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL);
+consvar_t cv_cam2_turnmultiplier = CVAR_INIT ("cam2_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL);
+consvar_t cv_cam2_orbit = CVAR_INIT ("cam2_orbit", "Off", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_cam2_adjust = CVAR_INIT ("cam2_adjust", "On", CV_SAVE, CV_OnOff, NULL);
 
 // [standard vs simple][p1 or p2]
 consvar_t cv_cam_savedist[2][2] = {
 	{ // standard
-		{"cam_dist", "160", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
-		{"cam2_dist", "160", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+		CVAR_INIT ("cam_dist", "160", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_dist", "160", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
 	},
 	{ // simple
-		{"cam_simpledist", "224", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
-		{"cam2_simpledist", "224", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+		CVAR_INIT ("cam_simpledist", "224", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_simpledist", "224", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
 
 	}
 };
 consvar_t cv_cam_saveheight[2][2] = {
 	{ // standard
-		{"cam_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
-		{"cam2_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+		CVAR_INIT ("cam_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
 	},
 	{ // simple
-		{"cam_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
-		{"cam2_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+		CVAR_INIT ("cam_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
 
 	}
 };
@@ -11010,7 +11013,7 @@ static void P_MinecartThink(player_t *player)
 			else if (detright && player->cmd.sidemove > 0)
 				sidelock = detright;
 
-			//if (player->cmd.buttons & BT_USE && currentSpeed > 4*FRACUNIT)
+			//if (player->cmd.buttons & BT_SPIN && currentSpeed > 4*FRACUNIT)
 			//	currentSpeed -= FRACUNIT/8;
 
 			// Jumping
@@ -11687,7 +11690,7 @@ void P_PlayerThink(player_t *player)
 
 	if ((gametyperules & GTR_RACE) && leveltime < 4*TICRATE)
 	{
-		cmd->buttons &= BT_USE; // Remove all buttons except BT_USE
+		cmd->buttons &= BT_SPIN; // Remove all buttons except BT_SPIN
 		cmd->forwardmove = 0;
 		cmd->sidemove = 0;
 	}
@@ -12057,10 +12060,10 @@ void P_PlayerThink(player_t *player)
 	// check for use
 	if (player->powers[pw_carry] != CR_NIGHTSMODE)
 	{
-		if (cmd->buttons & BT_USE)
-			player->pflags |= PF_USEDOWN;
+		if (cmd->buttons & BT_SPIN)
+			player->pflags |= PF_SPINDOWN;
 		else
-			player->pflags &= ~PF_USEDOWN;
+			player->pflags &= ~PF_SPINDOWN;
 	}
 
 	// IF PLAYER NOT HERE THEN FLASH END IF

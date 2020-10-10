@@ -1959,7 +1959,7 @@ static cliprange_t *   hw_newend;
 static cliprange_t     gl_solidsegs[MAXSEGS];
 
 // needs fix: walls are incorrectly clipped one column less
-static consvar_t cv_glclipwalls = {"gr_clipwalls", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+static consvar_t cv_glclipwalls = CVAR_INIT ("gr_clipwalls", "Off", 0, CV_OnOff, NULL);
 
 static void printsolidsegs(void)
 {
@@ -5189,10 +5189,155 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 #endif
 
 // ==========================================================================
-//
+// Sky dome rendering, ported from PrBoom+
 // ==========================================================================
+
+static gl_sky_t gl_sky;
+
+static void HWR_SkyDomeVertex(gl_sky_t *sky, gl_skyvertex_t *vbo, int r, int c, signed char yflip, float delta, boolean foglayer)
+{
+	const float radians = (float)(M_PIl / 180.0f);
+	const float scale = 10000.0f;
+	const float maxSideAngle = 60.0f;
+
+	float topAngle = (c / (float)sky->columns * 360.0f);
+	float sideAngle = (maxSideAngle * (sky->rows - r) / sky->rows);
+	float height = (float)(sin(sideAngle * radians));
+	float realRadius = (float)(scale * cos(sideAngle * radians));
+	float x = (float)(realRadius * cos(topAngle * radians));
+	float y = (!yflip) ? scale * height : -scale * height;
+	float z = (float)(realRadius * sin(topAngle * radians));
+	float timesRepeat = (4 * (256.0f / sky->width));
+	if (fpclassify(timesRepeat) == FP_ZERO)
+		timesRepeat = 1.0f;
+
+	if (!foglayer)
+	{
+		vbo->r = 255;
+		vbo->g = 255;
+		vbo->b = 255;
+		vbo->a = (r == 0 ? 0 : 255);
+
+		// And the texture coordinates.
+		vbo->u = (-timesRepeat * c / (float)sky->columns);
+		if (!yflip)	// Flipped Y is for the lower hemisphere.
+			vbo->v = (r / (float)sky->rows) + 0.5f;
+		else
+			vbo->v = 1.0f + ((sky->rows - r) / (float)sky->rows) + 0.5f;
+	}
+
+	if (r != 4)
+		y += 300.0f;
+
+	// And finally the vertex.
+	vbo->x = x;
+	vbo->y = y + delta;
+	vbo->z = z;
+}
+
+// Clears the sky dome.
+void HWR_ClearSkyDome(void)
+{
+	gl_sky_t *sky = &gl_sky;
+
+	if (sky->loops)
+		free(sky->loops);
+	if (sky->data)
+		free(sky->data);
+
+	sky->loops = NULL;
+	sky->data = NULL;
+
+	sky->vbo = 0;
+	sky->rows = sky->columns = 0;
+	sky->loopcount = 0;
+
+	sky->detail = 0;
+	sky->texture = -1;
+	sky->width = sky->height = 0;
+
+	sky->rebuild = true;
+}
+
+void HWR_BuildSkyDome(void)
+{
+	int c, r;
+	signed char yflip;
+	int row_count = 4;
+	int col_count = 4;
+	float delta;
+
+	gl_sky_t *sky = &gl_sky;
+	gl_skyvertex_t *vertex_p;
+	texture_t *texture = textures[texturetranslation[skytexture]];
+
+	sky->detail = 16;
+	col_count *= sky->detail;
+
+	if ((sky->columns != col_count) || (sky->rows != row_count))
+		HWR_ClearSkyDome();
+
+	sky->columns = col_count;
+	sky->rows = row_count;
+	sky->vertex_count = 2 * sky->rows * (sky->columns * 2 + 2) + sky->columns * 2;
+
+	if (!sky->loops)
+		sky->loops = malloc((sky->rows * 2 + 2) * sizeof(sky->loops[0]));
+
+	// create vertex array
+	if (!sky->data)
+		sky->data = malloc(sky->vertex_count * sizeof(sky->data[0]));
+
+	sky->texture = texturetranslation[skytexture];
+	sky->width = texture->width;
+	sky->height = texture->height;
+
+	vertex_p = &sky->data[0];
+	sky->loopcount = 0;
+
+	for (yflip = 0; yflip < 2; yflip++)
+	{
+		sky->loops[sky->loopcount].mode = HWD_SKYLOOP_FAN;
+		sky->loops[sky->loopcount].vertexindex = vertex_p - &sky->data[0];
+		sky->loops[sky->loopcount].vertexcount = col_count;
+		sky->loops[sky->loopcount].use_texture = false;
+		sky->loopcount++;
+
+		delta = 0.0f;
+
+		for (c = 0; c < col_count; c++)
+		{
+			HWR_SkyDomeVertex(sky, vertex_p, 1, c, yflip, 0.0f, true);
+			vertex_p->r = 255;
+			vertex_p->g = 255;
+			vertex_p->b = 255;
+			vertex_p->a = 255;
+			vertex_p++;
+		}
+
+		delta = (yflip ? 5.0f : -5.0f) / 128.0f;
+
+		for (r = 0; r < row_count; r++)
+		{
+			sky->loops[sky->loopcount].mode = HWD_SKYLOOP_STRIP;
+			sky->loops[sky->loopcount].vertexindex = vertex_p - &sky->data[0];
+			sky->loops[sky->loopcount].vertexcount = 2 * col_count + 2;
+			sky->loops[sky->loopcount].use_texture = true;
+			sky->loopcount++;
+
+			for (c = 0; c <= col_count; c++)
+			{
+				HWR_SkyDomeVertex(sky, vertex_p++, r + (yflip ? 1 : 0), (c ? c : 0), yflip, delta, false);
+				HWR_SkyDomeVertex(sky, vertex_p++, r + (yflip ? 0 : 1), (c ? c : 0), yflip, delta, false);
+			}
+		}
+	}
+}
+
 static void HWR_DrawSkyBackground(player_t *player)
 {
+	HWD.pfnSetBlend(PF_Translucent|PF_NoDepthTest|PF_Modulated);
+
 	if (cv_glskydome.value)
 	{
 		FTransform dometransform;
@@ -5230,7 +5375,16 @@ static void HWR_DrawSkyBackground(player_t *player)
 		dometransform.splitscreen = splitscreen;
 
 		HWR_GetTexture(texturetranslation[skytexture]);
-		HWD.pfnRenderSkyDome(skytexture, textures[skytexture]->width, textures[skytexture]->height, dometransform);
+
+		if (gl_sky.texture != texturetranslation[skytexture])
+		{
+			HWR_ClearSkyDome();
+			HWR_BuildSkyDome();
+		}
+
+		HWD.pfnSetShader(7); // sky shader
+		HWD.pfnSetTransform(&dometransform);
+		HWD.pfnRenderSkyDome(&gl_sky);
 	}
 	else
 	{
@@ -5311,10 +5465,11 @@ static void HWR_DrawSkyBackground(player_t *player)
 			v[0].t = v[1].t -= ((float) angle / angleturn);
 		}
 
-		HWD.pfnSetShader(7); // sky shader
+		HWD.pfnUnSetShader();
 		HWD.pfnDrawPolygon(NULL, v, 4, 0);
-		HWD.pfnSetShader(0);
 	}
+
+	HWD.pfnSetShader(0);
 }
 
 
@@ -5841,34 +5996,32 @@ static CV_PossibleValue_t glfiltermode_cons_t[]= {{HWD_SET_TEXTUREFILTER_POINTSA
 	{0, NULL}};
 CV_PossibleValue_t granisotropicmode_cons_t[] = {{1, "MIN"}, {16, "MAX"}, {0, NULL}};
 
-consvar_t cv_glshaders = {"gr_shaders", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_fovchange = {"gr_fovchange", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glshaders = CVAR_INIT ("gr_shaders", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_fovchange = CVAR_INIT ("gr_fovchange", "Off", CV_SAVE, CV_OnOff, NULL);
 
 #ifdef ALAM_LIGHTING
-consvar_t cv_gldynamiclighting = {"gr_dynamiclighting", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glstaticlighting  = {"gr_staticlighting", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glcoronas = {"gr_coronas", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glcoronasize = {"gr_coronasize", "1", CV_SAVE|CV_FLOAT, 0, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gldynamiclighting = CVAR_INIT ("gr_dynamiclighting", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glstaticlighting  = CVAR_INIT ("gr_staticlighting", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glcoronas = CVAR_INIT ("gr_coronas", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glcoronasize = CVAR_INIT ("gr_coronasize", "1", CV_SAVE|CV_FLOAT, 0, NULL);
 #endif
 
-consvar_t cv_glmodels = {"gr_models", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glmodelinterpolation = {"gr_modelinterpolation", "Sometimes", CV_SAVE, grmodelinterpolation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glmodellighting = {"gr_modellighting", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glmodels = CVAR_INIT ("gr_models", "Off", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glmodelinterpolation = CVAR_INIT ("gr_modelinterpolation", "Sometimes", CV_SAVE, grmodelinterpolation_cons_t, NULL);
+consvar_t cv_glmodellighting = CVAR_INIT ("gr_modellighting", "Off", CV_SAVE, CV_OnOff, NULL);
 
-consvar_t cv_glshearing = {"gr_shearing", "Off", CV_SAVE, grshearing_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glspritebillboarding = {"gr_spritebillboarding", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glskydome = {"gr_skydome", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glfakecontrast = {"gr_fakecontrast", "Smooth", CV_SAVE, grfakecontrast_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glslopecontrast = {"gr_slopecontrast", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glshearing = CVAR_INIT ("gr_shearing", "Off", CV_SAVE, grshearing_cons_t, NULL);
+consvar_t cv_glspritebillboarding = CVAR_INIT ("gr_spritebillboarding", "Off", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glskydome = CVAR_INIT ("gr_skydome", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glfakecontrast = CVAR_INIT ("gr_fakecontrast", "Smooth", CV_SAVE, grfakecontrast_cons_t, NULL);
+consvar_t cv_glslopecontrast = CVAR_INIT ("gr_slopecontrast", "Off", CV_SAVE, CV_OnOff, NULL);
 
-consvar_t cv_glfiltermode = {"gr_filtermode", "Nearest", CV_SAVE|CV_CALL, glfiltermode_cons_t,
-                             CV_glfiltermode_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glanisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, granisotropicmode_cons_t,
-                             CV_glanisotropic_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glfiltermode = CVAR_INIT ("gr_filtermode", "Nearest", CV_SAVE|CV_CALL, glfiltermode_cons_t, CV_glfiltermode_OnChange);
+consvar_t cv_glanisotropicmode = CVAR_INIT ("gr_anisotropicmode", "1", CV_CALL, granisotropicmode_cons_t, CV_glanisotropic_OnChange);
 
-consvar_t cv_glsolvetjoin = {"gr_solvetjoin", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glsolvetjoin = CVAR_INIT ("gr_solvetjoin", "On", 0, CV_OnOff, NULL);
 
-consvar_t cv_glbatching = {"gr_batching", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glbatching = CVAR_INIT ("gr_batching", "On", 0, CV_OnOff, NULL);
 
 static void CV_glfiltermode_OnChange(void)
 {

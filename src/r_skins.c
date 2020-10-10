@@ -31,12 +31,6 @@
 #include "hardware/hw_md2.h"
 #endif
 
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-int	snprintf(char *str, size_t n, const char *fmt, ...);
-//int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
-#endif
-
 INT32 numskins = 0;
 skin_t skins[MAXSKINS];
 
@@ -292,6 +286,11 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 			else if (playernum == secondarydisplayplayer)
 				CV_StealthSetValue(&cv_playercolor2, skin->prefcolor);
 			player->skincolor = newcolor = skin->prefcolor;
+			if (player->bot && botingame)
+			{
+				botskin = (UINT8)(skinnum + 1);
+				botcolor = skin->prefcolor;
+			}
 		}
 
 		if (player->followmobj)

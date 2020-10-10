@@ -26,6 +26,7 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
+#include "lua_hook.h" // hook_cmd_running errors
 
 extern CV_PossibleValue_t Color_cons_t[];
 extern UINT8 skincolor_modified[];
@@ -166,6 +167,8 @@ static int lib_setSpr2default(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter spr2defaults[] in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter spr2defaults[] in CMD building code!");
 
 // todo: maybe allow setting below first freeslot..? step 1 is toggling this, step 2 is testing to see whether it's net-safe
 #ifdef SETALLSPR2DEFAULTS
@@ -372,6 +375,8 @@ static int lib_setSpriteInfo(lua_State *L)
 		return luaL_error(L, "Do not alter spriteinfo_t from within a hook or coroutine!");
 	if (hud_running)
 		return luaL_error(L, "Do not alter spriteinfo_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter spriteinfo_t in CMD building code!");     
 
 	lua_remove(L, 1);
 	{
@@ -452,6 +457,8 @@ static int spriteinfo_set(lua_State *L)
 		return luaL_error(L, "Do not alter spriteinfo_t from within a hook or coroutine!");
 	if (hud_running)
 		return luaL_error(L, "Do not alter spriteinfo_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter spriteinfo_t in CMD building code!");
 
 	I_Assert(sprinfo != NULL);
 
@@ -525,6 +532,8 @@ static int pivotlist_set(lua_State *L)
 		return luaL_error(L, "Do not alter spriteframepivot_t from within a hook or coroutine!");
 	if (hud_running)
 		return luaL_error(L, "Do not alter spriteframepivot_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter spriteframepivot_t in CMD building code!");
 
 	I_Assert(pivotlist != NULL);
 
@@ -579,6 +588,8 @@ static int framepivot_set(lua_State *L)
 		return luaL_error(L, "Do not alter spriteframepivot_t from within a hook or coroutine!");
 	if (hud_running)
 		return luaL_error(L, "Do not alter spriteframepivot_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter spriteframepivot_t in CMD building code!");
 
 	I_Assert(framepivot != NULL);
 
@@ -678,6 +689,8 @@ static int lib_setState(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter states in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter states in CMD building code!");
 
 	// clear the state to start with, in case of missing table elements
 	memset(state,0,sizeof(state_t));
@@ -898,6 +911,8 @@ static int state_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter states in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter states in CMD building code!");
 
 	if (fastcmp(field,"sprite")) {
 		value = luaL_checknumber(L, 3);
@@ -998,6 +1013,8 @@ static int lib_setMobjInfo(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter mobjinfo in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter mobjinfo in CMD building code!");
 
 	// clear the mobjinfo to start with, in case of missing table elements
 	memset(info,0,sizeof(mobjinfo_t));
@@ -1165,6 +1182,8 @@ static int mobjinfo_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter mobjinfo in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter mobjinfo in CMD building code!");
 
 	I_Assert(info != NULL);
 	I_Assert(info >= mobjinfo);
@@ -1287,6 +1306,8 @@ static int lib_setSfxInfo(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter sfxinfo in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter sfxinfo in CMD building code!");
 
 	lua_pushnil(L);
 	while (lua_next(L, 1)) {
@@ -1368,6 +1389,8 @@ static int sfxinfo_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter S_sfx in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter S_sfx in CMD building code!");
 
 	I_Assert(sfx != NULL);
 
@@ -1435,6 +1458,8 @@ static int lib_setluabanks(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter luabanks[] in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter luabanks[] in CMD building code!");
 
 	lua_remove(L, 1); // don't care about luabanks[] dummy userdata.
 
@@ -1515,6 +1540,8 @@ static int lib_setSkinColor(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter skincolors in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter skincolors in CMD building code!");
 
 	// clear the skincolor to start with, in case of missing table elements
 	memset(info,0,sizeof(skincolor_t));
@@ -1534,8 +1561,10 @@ static int lib_setSkinColor(lua_State *L)
 			strlcpy(info->name, n, MAXCOLORNAME+1);
 			if (strlen(n) > MAXCOLORNAME)
 				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; clipped to %s.\n", n, MAXCOLORNAME, info->name);
+#if 0
 			if (strchr(info->name, ' ') != NULL)
 				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", info->name);
+#endif
 
 			if (info->name[0] != '\0') // don't check empty string for dupe
 			{
@@ -1625,8 +1654,10 @@ static int skincolor_set(lua_State *L)
 		strlcpy(info->name, n, MAXCOLORNAME+1);
 		if (strlen(n) > MAXCOLORNAME)
 			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; clipped to %s.\n", n, MAXCOLORNAME, info->name);
+#if 0
 		if (strchr(info->name, ' ') != NULL)
 			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", info->name);
+#endif
 
 		if (info->name[0] != '\0') // don't check empty string for dupe
 		{
@@ -1699,6 +1730,8 @@ static int colorramp_set(lua_State *L)
 		return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' index %d out of range (0 - %d)", n, COLORRAMPSIZE-1);
 	if (hud_running)
 		return luaL_error(L, "Do not alter skincolor_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter skincolor_t in CMD building code!");
 	colorramp[n] = i;
 	skincolor_modified[cnum] = true;
 	return 0;

@@ -110,12 +110,6 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			if (mipmap->colormap)
 				texel = mipmap->colormap[texel];
 
-			// If the mipmap is chromakeyed, check if the texel's color
-			// is equivalent to the chroma key's color index.
-			alpha = 0xff;
-			if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
-				alpha = 0x00;
-
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
 			// Alam: SRB2 uses Mingw, HUGS
@@ -513,11 +507,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 
 #ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
-		{
-			// Dummy variables.
-			INT32 pngwidth, pngheight;
-			realpatch = (softwarepatch_t *)Picture_PNGConvert(pdata, PICFMT_DOOMPATCH, &pngwidth, &pngheight, NULL, NULL, lumplength, NULL, 0);
-		}
+			realpatch = (softwarepatch_t *)Picture_PNGConvert(pdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
 		else
 #endif
 #ifdef WALLFLATS
@@ -928,7 +918,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 #ifndef NO_PNG_LUMPS
 	else if (levelflat->type == LEVELFLAT_PNG)
 	{
-		INT32 pngwidth, pngheight;
+		INT32 pngwidth = 0, pngheight = 0;
 		GLMipmap_t *mipmap = levelflat->mipmap;
 		UINT8 *flat;
 		size_t size;

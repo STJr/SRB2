@@ -100,9 +100,9 @@ rendermode_t chosenrendermode = render_none; // set by command line arguments
 boolean highcolor = false;
 
 // synchronize page flipping with screen refresh
-consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-static consvar_t cv_stretch = {"stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-static consvar_t cv_alwaysgrabmouse = {"alwaysgrabmouse", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_vidwait = CVAR_INIT ("vid_wait", "On", CV_SAVE, CV_OnOff, NULL);
+static consvar_t cv_stretch = CVAR_INIT ("stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL);
+static consvar_t cv_alwaysgrabmouse = CVAR_INIT ("alwaysgrabmouse", "Off", CV_SAVE, CV_OnOff, NULL);
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
 
@@ -1478,6 +1478,7 @@ static SDL_bool Impl_CreateContext(void)
 
 void VID_CheckGLLoaded(rendermode_t oldrender)
 {
+	(void)oldrender;
 #ifdef HWRENDER
 	if (vid.glstate == VID_GL_LIBRARY_ERROR) // Well, it didn't work the first time anyway.
 	{
@@ -1485,9 +1486,11 @@ void VID_CheckGLLoaded(rendermode_t oldrender)
 		rendermode = oldrender;
 		if (chosenrendermode == render_opengl) // fallback to software
 			rendermode = render_soft;
-
-		CV_StealthSetValue(&cv_renderer, oldrender);
-		CV_StealthSetValue(&cv_newrenderer, oldrender);
+		if (setrenderneeded)
+		{
+			CV_StealthSetValue(&cv_renderer, oldrender);
+			setrenderneeded = 0;
+		}
 	}
 #endif
 }

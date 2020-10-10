@@ -54,6 +54,10 @@
 
 static unsigned char imgbuf[1<<26];
 
+#ifdef PICTURE_PNG_USELOOKUP
+static colorlookup_t png_colorlookup;
+#endif
+
 /** Converts a picture between two formats.
   *
   * \param informat Input picture format.
@@ -871,13 +875,26 @@ static void PNG_warn(png_structp PNG, png_const_charp pngtext)
 	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
 }
 
-static png_bytep *PNG_Read(const UINT8 *png, INT32 *w, INT32 *h, INT16 *topoffset, INT16 *leftoffset, size_t size)
+static png_byte grAb_chunk[5] = {'g', 'r', 'A', 'b', (png_byte)'\0'};
+
+static png_bytep *PNG_Read(
+	const UINT8 *png,
+	INT32 *w, INT32 *h, INT16 *topoffset, INT16 *leftoffset,
+	boolean *use_palette, size_t size)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
 	png_uint_32 width, height;
 	int bit_depth, color_type;
 	png_uint_32 y;
+
+	png_colorp palette;
+	int palette_size;
+
+	png_bytep trans;
+	int trans_num;
+	png_color_16p trans_values;
+
 #ifdef PNG_SETJMP_SUPPORTED
 #ifdef USE_FAR_KEYWORD
 	jmp_buf jmpbuf;
@@ -886,8 +903,6 @@ static png_bytep *PNG_Read(const UINT8 *png, INT32 *w, INT32 *h, INT16 *topoffse
 
 	png_io_t png_io;
 	png_bytep *row_pointers;
-
-	png_byte grAb_chunk[5] = {'g', 'r', 'A', 'b', (png_byte)'\0'};
 	png_voidp *user_chunk_ptr;
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
@@ -914,7 +929,6 @@ static png_bytep *PNG_Read(const UINT8 *png, INT32 *w, INT32 *h, INT16 *topoffse
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
 #endif
 
-	// set our own read function
 	png_io.buffer = png;
 	png_io.size = size;
 	png_io.position = 0;
@@ -937,10 +951,48 @@ static png_bytep *PNG_Read(const UINT8 *png, INT32 *w, INT32 *h, INT16 *topoffse
 	if (bit_depth == 16)
 		png_set_strip_16(png_ptr);
 
+	palette = NULL;
+	*use_palette = false;
+
 	if (color_type == PNG_COLOR_TYPE_GRAY || color_type == PNG_COLOR_TYPE_GRAY_ALPHA)
 		png_set_gray_to_rgb(png_ptr);
 	else if (color_type == PNG_COLOR_TYPE_PALETTE)
-		png_set_palette_to_rgb(png_ptr);
+	{
+		boolean usepal = false;
+
+		// Lactozilla: Check if the PNG has a palette, and if its color count
+		// matches the color count of SRB2's palette: 256 colors.
+		if (png_get_PLTE(png_ptr, png_info_ptr, &palette, &palette_size))
+		{
+			if (palette_size == 256)
+				usepal = true;
+		}
+
+		// If any of the tRNS colors have an alpha lower than 0xFF, and that
+		// color is present on the image, the palette flag is disabled.
+		png_get_tRNS(png_ptr, png_info_ptr, &trans, &trans_num, &trans_values);
+
+		if (trans && trans_num == 256)
+		{
+			int i;
+			for (i = 0; i < trans_num; i++)
+			{
+				// libpng will transform this image into RGB even if
+				// the transparent index does not exist in the image,
+				// and there is no way around that.
+				if (trans[i] < 0xFF)
+				{
+					usepal = false;
+					break;
+				}
+			}
+		}
+
+		if (usepal)
+			*use_palette = true;
+		else
+			png_set_palette_to_rgb(png_ptr);
+	}
 
 	if (png_get_valid(png_ptr, png_info_ptr, PNG_INFO_tRNS))
 		png_set_tRNS_to_alpha(png_ptr);
@@ -974,13 +1026,13 @@ static png_bytep *PNG_Read(const UINT8 *png, INT32 *w, INT32 *h, INT16 *topoffse
 			*topoffset = (INT16)BIGENDIAN_LONG(*offsets);
 	}
 
-	// bye
 	png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
 	if (chunk.data)
 		Z_Free(chunk.data);
 
 	*w = (INT32)width;
 	*h = (INT32)height;
+
 	return row_pointers;
 }
 
@@ -1008,11 +1060,32 @@ void *Picture_PNGConvert(
 	INT32 outbpp;
 	size_t flatsize;
 	png_uint_32 x, y;
-	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, insize);
-	png_uint_32 width = *w, height = *h;
+	png_bytep row;
+	boolean palette = false;
+	png_bytep *row_pointers = NULL;
+	png_uint_32 width, height;
+
+	INT32 pngwidth, pngheight;
+	INT16 loffs = 0, toffs = 0;
 
 	if (png == NULL)
 		I_Error("Picture_PNGConvert: picture was NULL!");
+
+	if (w == NULL)
+		w = &pngwidth;
+	if (h == NULL)
+		h = &pngheight;
+	if (topoffset == NULL)
+		topoffset = &toffs;
+	if (leftoffset == NULL)
+		leftoffset = &loffs;
+
+	row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, &palette, insize);
+	width = *w;
+	height = *h;
+
+	if (row_pointers == NULL)
+		I_Error("Picture_PNGConvert: row_pointers was NULL!");
 
 	// Find the output format's bits per pixel amount
 	outbpp = Picture_FormatBPP(outformat);
@@ -1041,39 +1114,124 @@ void *Picture_PNGConvert(
 	if (outbpp == PICDEPTH_8BPP)
 		memset(flat, TRANSPARENTPIXEL, (width * height));
 
-	for (y = 0; y < height; y++)
+#ifdef PICTURE_PNG_USELOOKUP
+	if (outbpp != PICDEPTH_32BPP)
+		InitColorLUT(&png_colorlookup, pMasterPalette, false);
+#endif
+
+	if (outbpp == PICDEPTH_32BPP)
 	{
-		png_bytep row = row_pointers[y];
-		for (x = 0; x < width; x++)
+		RGBA_t out;
+		UINT32 *outflat = (UINT32 *)flat;
+
+		if (palette)
 		{
-			png_bytep px = &(row[x * 4]);
-			if ((UINT8)px[3])
+			for (y = 0; y < height; y++)
 			{
-				UINT8 red = (UINT8)px[0];
-				UINT8 green = (UINT8)px[1];
-				UINT8 blue = (UINT8)px[2];
-				UINT8 alpha = (UINT8)px[3];
-				if (outbpp == PICDEPTH_32BPP)
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
 				{
-					UINT32 *outflat = (UINT32 *)flat;
-					RGBA_t out;
-					out.s.red = red;
-					out.s.green = green;
-					out.s.blue = blue;
-					out.s.alpha = alpha;
+					out = V_GetColor(row[x]);
 					outflat[((y * width) + x)] = out.rgba;
 				}
-				else
+			}
+		}
+		else
+		{
+			for (y = 0; y < height; y++)
+			{
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
 				{
-					UINT8 palidx = NearestColor(red, green, blue);
-					if (outbpp == PICDEPTH_16BPP)
+					png_bytep px = &(row[x * 4]);
+					if ((UINT8)px[3])
 					{
-						UINT16 *outflat = (UINT16 *)flat;
-						outflat[((y * width) + x)] = (alpha << 8) | palidx;
+						out.s.red = (UINT8)px[0];
+						out.s.green = (UINT8)px[1];
+						out.s.blue = (UINT8)px[2];
+						out.s.alpha = (UINT8)px[3];
+						outflat[((y * width) + x)] = out.rgba;
 					}
-					else // 8bpp
+					else
+						outflat[((y * width) + x)] = 0x00000000;
+				}
+			}
+		}
+	}
+	else if (outbpp == PICDEPTH_16BPP)
+	{
+		UINT16 *outflat = (UINT16 *)flat;
+
+		if (palette)
+		{
+			for (y = 0; y < height; y++)
+			{
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
+					outflat[((y * width) + x)] = (0xFF << 8) | row[x];
+			}
+		}
+		else
+		{
+			for (y = 0; y < height; y++)
+			{
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
+				{
+					png_bytep px = &(row[x * 4]);
+					UINT8 red = (UINT8)px[0];
+					UINT8 green = (UINT8)px[1];
+					UINT8 blue = (UINT8)px[2];
+					UINT8 alpha = (UINT8)px[3];
+
+					if (alpha)
 					{
-						UINT8 *outflat = (UINT8 *)flat;
+#ifdef PICTURE_PNG_USELOOKUP
+						UINT8 palidx = GetColorLUT(&png_colorlookup, red, green, blue);
+#else
+						UINT8 palidx = NearestColor(red, green, blue);
+#endif
+						outflat[((y * width) + x)] = (0xFF << 8) | palidx;
+					}
+					else
+						outflat[((y * width) + x)] = 0x0000;
+				}
+			}
+		}
+	}
+	else // 8bpp
+	{
+		UINT8 *outflat = (UINT8 *)flat;
+
+		if (palette)
+		{
+			for (y = 0; y < height; y++)
+			{
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
+					outflat[((y * width) + x)] = row[x];
+			}
+		}
+		else
+		{
+			for (y = 0; y < height; y++)
+			{
+				row = row_pointers[y];
+				for (x = 0; x < width; x++)
+				{
+					png_bytep px = &(row[x * 4]);
+					UINT8 red = (UINT8)px[0];
+					UINT8 green = (UINT8)px[1];
+					UINT8 blue = (UINT8)px[2];
+					UINT8 alpha = (UINT8)px[3];
+
+					if (alpha)
+					{
+#ifdef PICTURE_PNG_USELOOKUP
+						UINT8 palidx = GetColorLUT(&png_colorlookup, red, green, blue);
+#else
+						UINT8 palidx = NearestColor(red, green, blue);
+#endif
 						outflat[((y * width) + x)] = palidx;
 					}
 				}
@@ -1082,6 +1240,8 @@ void *Picture_PNGConvert(
 	}
 
 	// Free the row pointers that we allocated for libpng.
+	for (y = 0; y < height; y++)
+		free(row_pointers[y]);
 	free(row_pointers);
 
 	// But wait, there's more!
@@ -1089,7 +1249,6 @@ void *Picture_PNGConvert(
 	{
 		void *converted;
 		pictureformat_t informat = PICFMT_NONE;
-		INT16 patleftoffset = 0, pattopoffset = 0;
 
 		// Figure out the format of the flat, from the bit depth of the output format
 		switch (outbpp)
@@ -1105,14 +1264,8 @@ void *Picture_PNGConvert(
 				break;
 		}
 
-		// Also find out if leftoffset and topoffset aren't pointing to NULL.
-		if (leftoffset)
-			patleftoffset = *leftoffset;
-		if (topoffset)
-			pattopoffset = *topoffset;
-
 		// Now, convert it!
-		converted = Picture_PatchConvert(informat, flat, outformat, insize, outsize, (INT16)width, (INT16)height, patleftoffset, pattopoffset, flags);
+		converted = Picture_PatchConvert(informat, flat, outformat, insize, outsize, (INT16)width, (INT16)height, *leftoffset, *topoffset, flags);
 		Z_Free(flat);
 		return converted;
 	}
@@ -1126,10 +1279,12 @@ void *Picture_PNGConvert(
   * \param png The PNG image.
   * \param width A pointer to the input picture's width.
   * \param height A pointer to the input picture's height.
+  * \param topoffset A pointer to the input picture's vertical offset.
+  * \param leftoffset A pointer to the input picture's horizontal offset.
   * \param size The input picture's size.
   * \return True if reading the file succeeded, false if it failed.
   */
-boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
+boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *topoffset, INT16 *leftoffset, size_t size)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
@@ -1142,9 +1297,9 @@ boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t si
 #endif
 
 	png_io_t png_io;
+	png_voidp *user_chunk_ptr;
 
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
-		PNG_error, PNG_warn);
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
 	if (!png_ptr)
 		I_Error("Picture_PNGDimensions: Couldn't initialize libpng!");
 
@@ -1168,23 +1323,41 @@ boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t si
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
 #endif
 
-	// set our own read function
 	png_io.buffer = png;
 	png_io.size = size;
 	png_io.position = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
+
+	memset(&chunk, 0x00, sizeof(png_chunk_t));
+	chunkname = grAb_chunk; // I want to read a grAb chunk
+
+	user_chunk_ptr = png_get_user_chunk_ptr(png_ptr);
+	png_set_read_user_chunk_fn(png_ptr, user_chunk_ptr, PNG_ChunkReader);
+	png_set_keep_unknown_chunks(png_ptr, 2, chunkname, 1);
 
 #ifdef PNG_SET_USER_LIMITS_SUPPORTED
 	png_set_user_limits(png_ptr, 2048, 2048);
 #endif
 
 	png_read_info(png_ptr, png_info_ptr);
+	png_get_IHDR(png_ptr, png_info_ptr, &w, &h, &bit_depth, &color_type, NULL, NULL, NULL);
 
-	png_get_IHDR(png_ptr, png_info_ptr, &w, &h, &bit_depth, &color_type,
-	 NULL, NULL, NULL);
+	// Read grAB chunk
+	if ((topoffset || leftoffset) && (chunk.data != NULL))
+	{
+		INT32 *offsets = (INT32 *)chunk.data;
+		// read left offset
+		if (leftoffset != NULL)
+			*leftoffset = (INT16)BIGENDIAN_LONG(*offsets);
+		offsets++;
+		// read top offset
+		if (topoffset != NULL)
+			*topoffset = (INT16)BIGENDIAN_LONG(*offsets);
+	}
 
-	// okay done. stop.
 	png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
+	if (chunk.data)
+		Z_Free(chunk.data);
 
 	*width = (INT32)w;
 	*height = (INT32)h;
