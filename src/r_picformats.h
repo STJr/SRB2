@@ -125,12 +125,4 @@ extern spriteinfo_t spriteinfo[NUMSPRITES];
 void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps);
 void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 
-// Sprite rotation
-#ifdef ROTSPRITE
-INT32 R_GetRollAngle(angle_t rollangle);
-void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, INT32 angle, UINT8 flip);
-extern fixed_t rollcosang[ROTANGLES];
-extern fixed_t rollsinang[ROTANGLES];
-#endif
-
 #endif // __R_PICFORMATS__

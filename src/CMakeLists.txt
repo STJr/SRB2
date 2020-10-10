@@ -129,6 +129,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_things.c
 	r_textures.c
 	r_patch.c
+	r_patchrotation.c
 	r_picformats.c
 	r_portal.c
 

@@ -4091,7 +4091,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	R_FlushTranslationColormapCache();
 
 	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
-	Patch_FreeTag(PU_SPRITE_ROTATED);
+	Patch_FreeTag(PU_PATCH_ROTATED);
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
 
 #if defined (WALLSPLATS) || defined (FLOORSPLATS)
@@ -4479,7 +4479,7 @@ boolean P_AddWadFile(const char *wadfilename)
 	// search for sprite replacements
 	//
 	Patch_FreeTag(PU_SPRITE);
-	Patch_FreeTag(PU_SPRITE_ROTATED);
+	Patch_FreeTag(PU_PATCH_ROTATED);
 	R_AddSpriteDefs(wadnum);
 
 	// Reload it all anyway, just in case they

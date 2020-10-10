@@ -37,7 +37,7 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 		patch->height     = source->height;
 		patch->leftoffset = source->leftoffset;
 		patch->topoffset  = source->topoffset;
-		patch->columnofs  = Z_Calloc(size, PU_PATCH, NULL);
+		patch->columnofs  = Z_Calloc(size, PU_PATCH_DATA, NULL);
 
 		for (col = 0; col < source->width; col++)
 		{
@@ -53,7 +53,7 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 		if (colsize <= 0)
 			I_Error("R_CreatePatch: no column data!");
 
-		patch->columns = Z_Calloc(colsize, PU_PATCH, NULL);
+		patch->columns = Z_Calloc(colsize, PU_PATCH_DATA, NULL);
 		M_Memcpy(patch->columns, ((UINT8 *)source + LONG(source->columnofs[0])), colsize);
 	}
 
@@ -69,6 +69,23 @@ static void Patch_FreeData(patch_t *patch)
 #ifdef HWRENDER
 	if (patch->hardware)
 		HWR_FreeTexture(patch);
+#endif
+
+#ifdef ROTSPRITE
+	if (patch->rotated)
+	{
+		rotsprite_t *rotsprite = patch->rotated;
+		INT32 i = 0;
+
+		for (; i < rotsprite->angles; i++)
+		{
+			if (rotsprite->patches[i])
+				Patch_Free(rotsprite->patches[i]);
+		}
+
+		Z_Free(rotsprite->patches);
+		Z_Free(rotsprite);
+	}
 #endif
 
 	if (patch->columnofs)

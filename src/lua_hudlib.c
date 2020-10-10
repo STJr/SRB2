@@ -458,9 +458,8 @@ static int libd_getSpritePatch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			if (sprframe->rotsprite.patch[angle][rot] == NULL)
-				R_CacheRotSprite(i, frame, NULL, sprframe, angle, rot, sprframe->flip & (1<<angle));
-			LUA_PushUserdata(L, sprframe->rotsprite.patch[angle][rot], META_PATCH);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), &spriteinfo[i], rot);
+			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
 			return 3;
@@ -571,9 +570,8 @@ static int libd_getSprite2Patch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			if (sprframe->rotsprite.patch[angle][rot] == NULL)
-				R_CacheRotSprite(SPR_PLAY, frame, &skins[i].sprinfo[j], sprframe, angle, rot, sprframe->flip & (1<<angle));
-			LUA_PushUserdata(L, sprframe->rotsprite.patch[angle][rot], META_PATCH);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), &skins[i].sprinfo[j], rot);
+			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
 			return 3;

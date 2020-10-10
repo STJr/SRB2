@@ -97,7 +97,7 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 {
 	char cn = R_Frame2Char(frame), cr = R_Rotation2Char(rotation); // for debugging
 
-	INT32 r, ang;
+	INT32 r;
 	lumpnum_t lumppat = wad;
 	lumppat <<= 16;
 	lumppat += lump;
@@ -105,14 +105,10 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	if (maxframe ==(size_t)-1 || frame > maxframe)
 		maxframe = frame;
 
-	// rotsprite
 #ifdef ROTSPRITE
 	for (r = 0; r < 16; r++)
-	{
-		for (ang = 0; ang < ROTANGLES; ang++)
-			sprtemp[frame].rotsprite.patch[r][ang] = NULL;
-	}
-#endif/*ROTSPRITE*/
+		sprtemp[frame].rotated[r] = NULL;
+#endif
 
 	if (rotation == 0)
 	{
@@ -1454,7 +1450,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
 #ifdef ROTSPRITE
-			sprinfo = NULL;
+			sprinfo = &spriteinfo[thing->sprite];
 #endif
 			frame = thing->frame&FF_FRAMEMASK;
 		}
@@ -1463,7 +1459,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		sprdef = &sprites[thing->sprite];
 #ifdef ROTSPRITE
-		sprinfo = NULL;
+		sprinfo = &spriteinfo[thing->sprite];
 #endif
 
 		if (frame >= sprdef->numframes)
@@ -1478,6 +1474,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			thing->sprite = states[S_UNKNOWN].sprite;
 			thing->frame = states[S_UNKNOWN].frame;
 			sprdef = &sprites[thing->sprite];
+			sprinfo = &spriteinfo[thing->sprite];
 			frame = thing->frame&FF_FRAMEMASK;
 		}
 	}
@@ -1539,9 +1536,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->rollangle)
 	{
 		rollangle = R_GetRollAngle(thing->rollangle);
-		if (sprframe->rotsprite.patch[rot][rollangle] == NULL)
-			R_CacheRotSprite(thing->sprite, frame, sprinfo, sprframe, rot, rollangle, flip);
-		rotsprite = sprframe->rotsprite.patch[rot][rollangle];
+		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, sprinfo, rollangle);
 		if (rotsprite != NULL)
 		{
 			spr_width = SHORT(rotsprite->width) << FRACBITS;

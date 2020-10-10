@@ -519,6 +519,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_things.o \
 		$(OBJDIR)/r_textures.o \
 		$(OBJDIR)/r_patch.o \
+		$(OBJDIR)/r_patchrotation.o \
 		$(OBJDIR)/r_picformats.o \
 		$(OBJDIR)/r_portal.o \
 		$(OBJDIR)/screen.o   \

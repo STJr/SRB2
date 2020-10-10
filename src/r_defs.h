@@ -652,6 +652,14 @@ typedef enum
 	RGBA32          = 4,  // 32 bit rgba
 } pic_mode_t;
 
+#ifdef ROTSPRITE
+typedef struct
+{
+	INT32 angles;
+	void **patches;
+} rotsprite_t;
+#endif
+
 // Patches.
 // A patch holds one or more columns.
 // Patches are used for sprites and all masked pictures, and we compose
@@ -666,6 +674,10 @@ typedef struct
 	UINT8 *columns; // Software column data
 
 	void *hardware; // OpenGL patch, allocated whenever necessary
+
+#ifdef ROTSPRITE
+	rotsprite_t *rotated; // Rotated patches
+#endif
 } patch_t;
 
 #if defined(_MSC_VER)
@@ -705,14 +717,6 @@ typedef struct
 #if defined(_MSC_VER)
 #pragma pack()
 #endif
-
-// rotsprite
-#ifdef ROTSPRITE
-typedef struct
-{
-	patch_t *patch[16][ROTANGLES];
-} rotsprite_t;
-#endif/*ROTSPRITE*/
 
 typedef enum
 {
@@ -755,7 +759,7 @@ typedef struct
 	UINT16 flip;
 
 #ifdef ROTSPRITE
-	rotsprite_t rotsprite;
+	rotsprite_t *rotated[16]; // Rotated patches
 #endif
 } spriteframe_t;
 

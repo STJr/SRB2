@@ -27,4 +27,12 @@ void *Patch_AllocateHardwarePatch(patch_t *patch);
 void *Patch_CreateGL(patch_t *patch);
 #endif
 
+#ifdef ROTSPRITE
+void Patch_Rotate(patch_t *patch, INT32 angle, INT32 xpivot, INT32 ypivot, boolean flip);
+patch_t *Patch_GetRotated(patch_t *patch, INT32 angle, boolean flip);
+patch_t *Patch_GetRotatedSprite(spriteframe_t *sprite, size_t frame, size_t spriteangle, boolean flip, void *info, INT32 rotationangle);INT32 R_GetRollAngle(angle_t rollangle);
+extern fixed_t rollcosang[ROTANGLES];
+extern fixed_t rollsinang[ROTANGLES];
+#endif
+
 #endif // __R_PATCH__
