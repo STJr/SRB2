@@ -1309,12 +1309,12 @@ static void R_RenderSegLoop (void)
 				R_ExpandPlaneY(floorplane, rw_x, top, bottom);
 		}
 
+		rw_floormarked = false;
+		rw_ceilingmarked = false;
+
 		if (numffloors)
 		{
 			INT16 fftop, ffbottom;
-
-			rw_floormarked = false;
-			rw_ceilingmarked = false;
 
 			firstseg->frontscale[rw_x] = frontscale[rw_x];
 			top = ceilingclip[rw_x]+1; // PRBoom
