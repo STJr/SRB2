@@ -20,6 +20,7 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
+#include "lua_hook.h" // hook_cmd_running errors
 
 static int lib_iteratePlayers(lua_State *L)
 {
@@ -400,6 +401,8 @@ static int player_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter player_t in CMD building code!");
 
 	if (fastcmp(field,"mo") || fastcmp(field,"realmo")) {
 		mobj_t *newmo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
@@ -461,9 +464,9 @@ static int player_set(lua_State *L)
 		plr->flashpal = (UINT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"skincolor"))
 	{
-		UINT8 newcolor = (UINT8)luaL_checkinteger(L,3);
-		if (newcolor >= MAXSKINCOLORS)
-			return luaL_error(L, "player.skincolor %d out of range (0 - %d).", newcolor, MAXSKINCOLORS-1);
+		UINT16 newcolor = (UINT16)luaL_checkinteger(L,3);
+		if (newcolor >= numskincolors)
+			return luaL_error(L, "player.skincolor %d out of range (0 - %d).", newcolor, numskincolors-1);
 		plr->skincolor = newcolor;
 	}
 	else if (fastcmp(field,"score"))
@@ -770,6 +773,8 @@ static int power_set(lua_State *L)
 		return luaL_error(L, LUA_QL("powertype_t") " cannot be %d", (INT16)p);
 	if (hud_running)
 		return luaL_error(L, "Do not alter player_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter player_t in CMD building code!");
 	powers[p] = i;
 	return 0;
 }

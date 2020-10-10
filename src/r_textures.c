@@ -68,6 +68,16 @@ static struct {
 static INT32 tidcachelen = 0;
 
 //
+// MAPTEXTURE_T CACHING
+// When a texture is first needed, it counts the number of composite columns
+//  required in the texture and allocates space for a column directory and
+//  any new columns.
+// The directory will simply point inside other patches if there is only one
+//  patch in a given column, but any columns with multiple patches will have
+//  new column_ts generated.
+//
+
+//
 // R_DrawColumnInCache
 // Clip and draw a column from a patch into a cached post.
 //
@@ -188,7 +198,7 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 		{
 			for (; dest < cache + position + count; source++, dest++)
 				if (*source != 0xFF)
-					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -232,7 +242,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 		{
 			for (; dest < cache + position + count; --source, dest++)
 				if (*source != 0xFF)
-					*dest = ASTBlendPixel_8bpp(*dest, *source, originPatch->style, originPatch->alpha);
+					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
 		}
 
 		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
@@ -387,11 +397,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 #ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
-		{
-			// Dummy variables.
-			INT32 pngwidth, pngheight;
-			realpatch = (patch_t *)Picture_PNGConvert((UINT8 *)realpatch, PICFMT_PATCH, &pngwidth, &pngheight, NULL, NULL, lumplength, NULL, 0);
-		}
+			realpatch = (patch_t *)Picture_PNGConvert((UINT8 *)realpatch, PICFMT_PATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
 		else
 #endif
 #ifdef WALLFLATS
@@ -790,10 +796,10 @@ Rloadflats (INT32 i, INT32 w)
 #ifndef NO_PNG_LUMPS
 			if (Picture_IsLumpPNG((UINT8 *)flatlump, lumplength))
 			{
-				INT16 width, height;
-				Picture_PNGDimensions((UINT8 *)flatlump, &width, &height, lumplength);
-				texture->width = width;
-				texture->height = height;
+				INT32 width, height;
+				Picture_PNGDimensions((UINT8 *)flatlump, &width, &height, NULL, NULL, lumplength);
+				texture->width = (INT16)width;
+				texture->height = (INT16)height;
 			}
 			else
 #endif
@@ -888,10 +894,10 @@ Rloadtextures (INT32 i, INT32 w)
 #ifndef NO_PNG_LUMPS
 			if (Picture_IsLumpPNG((UINT8 *)patchlump, lumplength))
 			{
-				INT16 width, height;
-				Picture_PNGDimensions((UINT8 *)patchlump, &width, &height, lumplength);
-				texture->width = width;
-				texture->height = height;
+				INT32 width, height;
+				Picture_PNGDimensions((UINT8 *)patchlump, &width, &height, NULL, NULL, lumplength);
+				texture->width = (INT16)width;
+				texture->height = (INT16)height;
 			}
 			else
 #endif

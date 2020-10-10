@@ -1,4 +1,4 @@
-version: 2.2.4.{branch}-{build}
+version: 2.2.8.{branch}-{build}
 os: MinGW
 
 environment:
@@ -110,8 +110,8 @@ after_build:
 - set BUILDSARCHIVE=%REPO%-%CONFIGURATION%.7z
 - cmd: 7z a %BUILD_ARCHIVE% %BUILD_PATH% -xr!.gitignore
 - appveyor PushArtifact %BUILD_ARCHIVE%
-- cmd: copy %BUILD_ARCHIVE% %BUILDSARCHIVE%
-- appveyor PushArtifact %BUILDSARCHIVE%
+#- cmd: copy %BUILD_ARCHIVE% %BUILDSARCHIVE%
+#- appveyor PushArtifact %BUILDSARCHIVE%
 ##############################
 # DEPLOYER SCRIPT
 ##############################

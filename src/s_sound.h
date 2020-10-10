@@ -46,6 +46,7 @@ extern consvar_t cv_1upsound;
 extern consvar_t cv_gamedigimusic;
 extern consvar_t cv_gamemidimusic;
 extern consvar_t cv_gamesounds;
+extern consvar_t cv_musicpref;
 
 extern consvar_t cv_playmusicifunfocused;
 extern consvar_t cv_playsoundsifunfocused;
@@ -60,27 +61,7 @@ extern consvar_t cv_midisoundfontpath;
 extern consvar_t cv_miditimiditypath;
 #endif
 
-#ifdef SNDSERV
-extern consvar_t sndserver_cmd, sndserver_arg;
-#endif
-#ifdef MUSSERV
-extern consvar_t musserver_cmd, musserver_arg;
-#endif
-
 extern CV_PossibleValue_t soundvolume_cons_t[];
-//part of i_cdmus.c
-extern consvar_t cd_volume, cdUpdate;
-
-#if defined (macintosh) && !defined (HAVE_SDL)
-typedef enum
-{
-	music_normal,
-	playlist_random,
-	playlist_normal
-} playmode_t;
-
-extern consvar_t play_mode;
-#endif
 
 typedef enum
 {
@@ -105,6 +86,9 @@ typedef struct
 
 	// origin of sound
 	const void *origin;
+
+	// initial volume of sound, which is applied after distance and direction
+	INT32 volume;
 
 	// handle of the sound being played
 	INT32 handle;
@@ -178,10 +162,15 @@ boolean S_MusicPaused(void);
 boolean S_MusicNotInFocus(void);
 musictype_t S_MusicType(void);
 const char *S_MusicName(void);
-boolean S_MusicInfo(char *mname, UINT16 *mflags, boolean *looping);
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 #define S_DigExists(a) S_MusicExists(a, false, true)
 #define S_MIDIExists(a) S_MusicExists(a, true, false)
+
+// Returns whether the preferred format a (true = MIDI, false = Digital)
+// exists and is enabled for musicname b
+#define S_PrefAvailable(a, b) (a ? \
+	(!S_MIDIMusicDisabled() && S_MIDIExists(b)) : \
+	(!S_DigMusicDisabled() && S_DigExists(b)))
 
 //
 // Music Effects

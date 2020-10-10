@@ -288,7 +288,7 @@ void Command_CheatGod_f(void)
 
 	plyr = &players[consoleplayer];
 	plyr->pflags ^= PF_GODMODE;
-	CONS_Printf(M_GetText("Sissy Mode %s\n"), plyr->pflags & PF_GODMODE ? M_GetText("On") : M_GetText("Off"));
+	CONS_Printf(M_GetText("Cheese Mode %s\n"), plyr->pflags & PF_GODMODE ? M_GetText("On") : M_GetText("Off"));
 
 	G_SetGameModified(multiplayer);
 }
@@ -555,7 +555,8 @@ void Command_Teleport_f(void)
 				p->mo->flags2 &= ~MF2_OBJECTFLIP;
 			}
 
-			localangle = p->mo->angle = p->drawangle = FixedAngle(mt->angle<<FRACBITS);
+			p->mo->angle = p->drawangle = FixedAngle(mt->angle<<FRACBITS);
+			P_SetPlayerAngle(p, p->mo->angle);
 		}
 		else // scan the thinkers to find starposts...
 		{
@@ -619,7 +620,8 @@ void Command_Teleport_f(void)
 				p->mo->flags2 &= ~MF2_OBJECTFLIP;
 			}
 
-			localangle = p->mo->angle = p->drawangle = mo2->angle;
+			p->mo->angle = p->drawangle = mo2->angle;
+			P_SetPlayerAngle(p, p->mo->angle);
 		}
 
 		CONS_Printf(M_GetText("Teleporting to checkpoint %d, %d...\n"), starpostnum, starpostpath);
@@ -673,7 +675,10 @@ void Command_Teleport_f(void)
 
 		i = COM_CheckParm("-ang");
 		if (i)
-			localangle = p->drawangle = p->mo->angle = FixedAngle(atoi(COM_Argv(i + 1))<<FRACBITS);
+		{
+			p->drawangle = p->mo->angle = FixedAngle(atoi(COM_Argv(i + 1))<<FRACBITS);
+			P_SetPlayerAngle(p, p->mo->angle);
+		}
 
 		i = COM_CheckParm("-aim");
 		if (i)
@@ -962,10 +967,10 @@ static CV_PossibleValue_t op_speed_t[] = {{1, "MIN"}, {128, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t op_flags_t[] = {{0, "MIN"}, {15, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t op_hoopflags_t[] = {{0, "MIN"}, {15, "MAX"}, {0, NULL}};
 
-consvar_t cv_mapthingnum = {"op_mapthingnum", "0", CV_NOTINNET, op_mapthing_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_speed = {"op_speed", "16", CV_NOTINNET, op_speed_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_opflags = {"op_flags", "0", CV_NOTINNET, op_flags_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_ophoopflags = {"op_hoopflags", "4", CV_NOTINNET, op_hoopflags_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mapthingnum = CVAR_INIT ("op_mapthingnum", "0", CV_NOTINNET, op_mapthing_t, NULL);
+consvar_t cv_speed = CVAR_INIT ("op_speed", "16", CV_NOTINNET, op_speed_t, NULL);
+consvar_t cv_opflags = CVAR_INIT ("op_flags", "0", CV_NOTINNET, op_flags_t, NULL);
+consvar_t cv_ophoopflags = CVAR_INIT ("op_hoopflags", "4", CV_NOTINNET, op_hoopflags_t, NULL);
 
 boolean objectplacing = false;
 mobjtype_t op_currentthing = 0; // For the object placement mode
@@ -978,7 +983,7 @@ static mobjflag2_t op_oldflags2 = 0;
 static UINT32 op_oldeflags = 0;
 static fixed_t op_oldmomx = 0, op_oldmomy = 0, op_oldmomz = 0, op_oldheight = 0;
 static statenum_t op_oldstate = 0;
-static UINT8 op_oldcolor = 0;
+static UINT16 op_oldcolor = 0;
 
 //
 // Static calculation / common output help
@@ -1018,8 +1023,8 @@ static void OP_CycleThings(INT32 amt)
 		states[S_OBJPLACE_DUMMY].frame = states[mobjinfo[op_currentthing].spawnstate].frame;
 	}
 	if (players[0].mo->eflags & MFE_VERTICALFLIP) // correct z when flipped
-		players[0].mo->z += players[0].mo->height - mobjinfo[op_currentthing].height;
-	players[0].mo->height = mobjinfo[op_currentthing].height;
+		players[0].mo->z += players[0].mo->height - FixedMul(mobjinfo[op_currentthing].height, players[0].mo->scale);
+	players[0].mo->height = FixedMul(mobjinfo[op_currentthing].height, players[0].mo->scale);
 	P_SetPlayerMobjState(players[0].mo, S_OBJPLACE_DUMMY);
 
 	op_currentdoomednum = mobjinfo[op_currentthing].doomednum;
@@ -1032,8 +1037,8 @@ static boolean OP_HeightOkay(player_t *player, UINT8 ceiling)
 	if (ceiling)
 	{
 		// Truncate position to match where mapthing would be when spawned
-		// (this applies to every further P_GetZAt call as well)
-		fixed_t cheight = sec->c_slope ? P_GetZAt(sec->c_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->ceilingheight;
+		// (this applies to every further P_GetSlopeZAt call as well)
+		fixed_t cheight = P_GetSectorCeilingZAt(sec, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000);
 
 		if (((cheight - player->mo->z - player->mo->height)>>FRACBITS) >= (1 << (16-ZSHIFT)))
 		{
@@ -1044,7 +1049,7 @@ static boolean OP_HeightOkay(player_t *player, UINT8 ceiling)
 	}
 	else
 	{
-		fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->floorheight;
+		fixed_t fheight = P_GetSectorFloorZAt(sec, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000);
 		if (((player->mo->z - fheight)>>FRACBITS) >= (1 << (16-ZSHIFT)))
 		{
 			CONS_Printf(M_GetText("Sorry, you're too %s to place this object (max: %d %s).\n"), M_GetText("high"),
@@ -1091,17 +1096,22 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 	mt->y = (INT16)(player->mo->y>>FRACBITS);
 	if (ceiling)
 	{
-		fixed_t cheight = sec->c_slope ? P_GetZAt(sec->c_slope, mt->x << FRACBITS, mt->y << FRACBITS) : sec->ceilingheight;
+		fixed_t cheight = P_GetSectorCeilingZAt(sec, mt->x << FRACBITS, mt->y << FRACBITS);
 		mt->z = (UINT16)((cheight - player->mo->z - player->mo->height)>>FRACBITS);
 	}
 	else
 	{
-		fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, mt->x << FRACBITS, mt->y << FRACBITS) : sec->floorheight;
+		fixed_t fheight = P_GetSectorFloorZAt(sec, mt->x << FRACBITS, mt->y << FRACBITS);
 		mt->z = (UINT16)((player->mo->z - fheight)>>FRACBITS);
 	}
 	mt->angle = (INT16)(FixedInt(AngleFixed(player->mo->angle)));
 
 	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
+	mt->scale = player->mo->scale;
+	mt->tag = 0;
+	memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
+	memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
+	mt->pitch = mt->roll = 0;
 	return mt;
 }
 
@@ -1139,7 +1149,7 @@ void OP_NightsObjectplace(player_t *player)
 	if (player->pflags & PF_ATTACKDOWN)
 	{
 		// Are ANY objectplace buttons pressed?  If no, remove flag.
-		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_USE|BT_WEAPONNEXT|BT_WEAPONPREV)))
+		if (!(cmd->buttons & (BT_ATTACK|BT_TOSSFLAG|BT_SPIN|BT_WEAPONNEXT|BT_WEAPONPREV)))
 			player->pflags &= ~PF_ATTACKDOWN;
 
 		// Do nothing.
@@ -1246,7 +1256,7 @@ void OP_NightsObjectplace(player_t *player)
 	}
 
 	// This places a custom object as defined in the console cv_mapthingnum.
-	if (cmd->buttons & BT_USE)
+	if (cmd->buttons & BT_SPIN)
 	{
 		UINT16 angle;
 
@@ -1292,27 +1302,26 @@ void OP_ObjectplaceMovement(player_t *player)
 {
 	ticcmd_t *cmd = &player->cmd;
 
-	if (!player->climbing && (netgame || !cv_analog[0].value || (player->pflags & PF_SPINNING)))
-		player->drawangle = player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
+	player->drawangle = player->mo->angle = (cmd->angleturn<<16 /* not FRACBITS */);
 
 	ticruned++;
 	if (!(cmd->angleturn & TICCMD_RECEIVED))
 		ticmiss++;
 
 	if (cmd->buttons & BT_JUMP)
-		player->mo->z += FRACUNIT*cv_speed.value;
-	else if (cmd->buttons & BT_USE)
-		player->mo->z -= FRACUNIT*cv_speed.value;
+		player->mo->z += player->mo->scale*cv_speed.value;
+	else if (cmd->buttons & BT_SPIN)
+		player->mo->z -= player->mo->scale*cv_speed.value;
 
 	if (cmd->forwardmove != 0)
 	{
-		P_Thrust(player->mo, player->mo->angle, (cmd->forwardmove*FRACUNIT/MAXPLMOVE)*cv_speed.value);
+		P_Thrust(player->mo, player->mo->angle, (cmd->forwardmove*player->mo->scale/MAXPLMOVE)*cv_speed.value);
 		P_TeleportMove(player->mo, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, player->mo->z);
 		player->mo->momx = player->mo->momy = 0;
 	}
 	if (cmd->sidemove != 0)
 	{
-		P_Thrust(player->mo, player->mo->angle-ANGLE_90, (cmd->sidemove*FRACUNIT/MAXPLMOVE)*cv_speed.value);
+		P_Thrust(player->mo, player->mo->angle-ANGLE_90, (cmd->sidemove*player->mo->scale/MAXPLMOVE)*cv_speed.value);
 		P_TeleportMove(player->mo, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, player->mo->z);
 		player->mo->momx = player->mo->momy = 0;
 	}
@@ -1342,12 +1351,12 @@ void OP_ObjectplaceMovement(player_t *player)
 
 		if (!!(mobjinfo[op_currentthing].flags & MF_SPAWNCEILING) ^ !!(cv_opflags.value & MTF_OBJECTFLIP))
 		{
-			fixed_t cheight = sec->c_slope ? P_GetZAt(sec->c_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->ceilingheight;
+			fixed_t cheight = P_GetSectorCeilingZAt(sec, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000);
 			op_displayflags = (UINT16)((cheight - player->mo->z - mobjinfo[op_currentthing].height)>>FRACBITS);
 		}
 		else
 		{
-			fixed_t fheight = sec->f_slope ? P_GetZAt(sec->f_slope, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000) : sec->floorheight;
+			fixed_t fheight = P_GetSectorFloorZAt(sec, player->mo->x & 0xFFFF0000, player->mo->y & 0xFFFF0000);
 			op_displayflags = (UINT16)((player->mo->z - fheight)>>FRACBITS);
 		}
 		op_displayflags <<= ZSHIFT;
@@ -1438,62 +1447,75 @@ void Command_ObjectPlace_f(void)
 	G_SetGameModified(multiplayer);
 
 	// Entering objectplace?
-	if (!objectplacing)
+	if (!objectplacing || COM_Argc() > 1)
 	{
-		objectplacing = true;
-
-		if (players[0].powers[pw_carry] == CR_NIGHTSMODE)
-			return;
-
-		if (!COM_CheckParm("-silent"))
+		if (!objectplacing)
 		{
-			HU_SetCEchoFlags(V_RETURN8|V_MONOSPACE|V_AUTOFADEOUT);
-			HU_SetCEchoDuration(10);
-			HU_DoCEcho(va(M_GetText(
-				"\\\\\\\\\\\\\\\\\\\\\\\\\x82"
-				"   Objectplace Controls:   \x80\\\\"
-				"Weapon Next/Prev: Cycle mapthings\\"
-				"            Jump: Float up       \\"
-				"            Spin: Float down     \\"
-				"       Fire Ring: Place object   \\")));
+			objectplacing = true;
+
+			if (players[0].powers[pw_carry] == CR_NIGHTSMODE)
+				return;
+
+			if (!COM_CheckParm("-silent"))
+			{
+				HU_SetCEchoFlags(V_RETURN8|V_MONOSPACE|V_AUTOFADEOUT);
+				HU_SetCEchoDuration(10);
+				HU_DoCEcho(va(M_GetText(
+					"\\\\\\\\\\\\\\\\\\\\\\\\\x82"
+					"   Objectplace Controls:   \x80\\\\"
+					"Weapon Next/Prev: Cycle mapthings\\"
+					"            Jump: Float up       \\"
+					"            Spin: Float down     \\"
+					"       Fire Ring: Place object   \\")));
+			}
+
+			// Save all the player's data.
+			op_oldflags1 = players[0].mo->flags;
+			op_oldflags2 = players[0].mo->flags2;
+			op_oldeflags = players[0].mo->eflags;
+			op_oldpflags = players[0].pflags;
+			op_oldmomx = players[0].mo->momx;
+			op_oldmomy = players[0].mo->momy;
+			op_oldmomz = players[0].mo->momz;
+			op_oldheight = players[0].mo->height;
+			op_oldstate = S_PLAY_STND;
+			op_oldcolor = players[0].mo->color; // save color too in case of super/fireflower
+
+			// Remove ALL flags and motion.
+			P_UnsetThingPosition(players[0].mo);
+			players[0].pflags = 0;
+			players[0].mo->flags2 = 0;
+			players[0].mo->eflags = 0;
+			players[0].mo->flags = (MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP);
+			players[0].mo->momx = players[0].mo->momy = players[0].mo->momz = 0;
+			P_SetThingPosition(players[0].mo);
+
+			// Take away color so things display properly
+			players[0].mo->color = 0;
+
+			// Like the classics, recover from death by entering objectplace
+			if (players[0].mo->health <= 0)
+			{
+				players[0].mo->health = 1;
+				players[0].deadtimer = 0;
+				op_oldflags1 = mobjinfo[MT_PLAYER].flags;
+				++players[0].lives;
+				players[0].playerstate = PST_LIVE;
+				P_RestoreMusic(&players[0]);
+			}
+			else
+				op_oldstate = (statenum_t)(players[0].mo->state-states);
 		}
 
-		// Save all the player's data.
-		op_oldflags1 = players[0].mo->flags;
-		op_oldflags2 = players[0].mo->flags2;
-		op_oldeflags = players[0].mo->eflags;
-		op_oldpflags = players[0].pflags;
-		op_oldmomx = players[0].mo->momx;
-		op_oldmomy = players[0].mo->momy;
-		op_oldmomz = players[0].mo->momz;
-		op_oldheight = players[0].mo->height;
-		op_oldstate = S_PLAY_STND;
-		op_oldcolor = players[0].mo->color; // save color too in case of super/fireflower
-
-		// Remove ALL flags and motion.
-		P_UnsetThingPosition(players[0].mo);
-		players[0].pflags = 0;
-		players[0].mo->flags2 = 0;
-		players[0].mo->eflags = 0;
-		players[0].mo->flags = (MF_NOCLIP|MF_NOGRAVITY|MF_NOBLOCKMAP);
-		players[0].mo->momx = players[0].mo->momy = players[0].mo->momz = 0;
-		P_SetThingPosition(players[0].mo);
-
-		// Take away color so things display properly
-		players[0].mo->color = 0;
-
-		// Like the classics, recover from death by entering objectplace
-		if (players[0].mo->health <= 0)
+		if (COM_Argc() > 1)
 		{
-			players[0].mo->health = 1;
-			players[0].deadtimer = 0;
-			op_oldflags1 = mobjinfo[MT_PLAYER].flags;
-			++players[0].lives;
-			players[0].playerstate = PST_LIVE;
-			P_RestoreMusic(&players[0]);
+			UINT16 mapthingnum = atoi(COM_Argv(1));
+			mobjtype_t type = P_GetMobjtype(mapthingnum);
+			if (type == MT_UNKNOWN)
+				CONS_Printf(M_GetText("No mobj type delegated to thing type %d.\n"), mapthingnum);
+			else
+				op_currentthing = type;
 		}
-		else
-			op_oldstate = (statenum_t)(players[0].mo->state-states);
 
 		// If no thing set, then cycle a little
 		if (!op_currentthing)
@@ -1501,8 +1523,8 @@ void Command_ObjectPlace_f(void)
 			op_currentthing = 1;
 			OP_CycleThings(1);
 		}
-		else // Cycle things sets this for the former.
-			players[0].mo->height = mobjinfo[op_currentthing].height;
+		else
+			OP_CycleThings(0); // sets all necessary height values without cycling op_currentthing
 
 		P_SetPlayerMobjState(players[0].mo, S_OBJPLACE_DUMMY);
 	}

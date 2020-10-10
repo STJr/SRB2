@@ -112,10 +112,13 @@ extern lumpnum_t viewborderlump[8];
 
 // Initialize color translation tables, for player rendering etc.
 void R_InitTranslationTables(void);
-UINT8* R_GetTranslationColormap(INT32 skinnum, skincolors_t color, UINT8 flags);
+UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags);
 void R_FlushTranslationColormapCache(void);
-UINT8 R_GetColorByName(const char *name);
-UINT8 R_GetSuperColorByName(const char *name);
+UINT16 R_GetColorByName(const char *name);
+UINT16 R_GetSuperColorByName(const char *name);
+
+// Color ramp modification should force a recache
+extern UINT8 skincolor_modified[];
 
 // Custom player skin translation
 void R_InitViewBuffer(INT32 width, INT32 height);

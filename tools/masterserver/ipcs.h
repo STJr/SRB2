@@ -140,8 +140,8 @@ typedef struct
 	char port[8];
 	char name[32];
 	INT32 room;
-	char key[32]; // Secret key for linking dedicated servers to accounts
 	char version[8]; // format is: x.yy.z (like 1.30.2 or 1.31)
+	char key[32]; // Secret key for linking dedicated servers to accounts
 } ATTRPACK msg_server_t;
 
 typedef struct

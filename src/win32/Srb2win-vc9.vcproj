@@ -2152,10 +2152,6 @@
 				>
 			</File>
 			<File
-				RelativePath="..\hardware\hw_glide.h"
-				>
-			</File>
-			<File
 				RelativePath="..\hardware\hw_glob.h"
 				>
 			</File>
@@ -2290,46 +2286,6 @@
 			<File
 				RelativePath="..\hardware\hw_md2.h"
 				>
-			</File>
-			<File
-				RelativePath="..\hardware\hw_trick.c"
-				>
-				<FileConfiguration
-					Name="Debug|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Debug|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|Win32"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
-				<FileConfiguration
-					Name="Release|x64"
-					>
-					<Tool
-						Name="VCCLCompilerTool"
-						AdditionalIncludeDirectories=""
-						PreprocessorDefinitions=""
-					/>
-				</FileConfiguration>
 			</File>
 			<File
 				RelativePath="..\hardware\hws_data.h"

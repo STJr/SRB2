@@ -22,6 +22,16 @@ LANGUAGE LANG_ENGLISH, SUBLANG_ENGLISH_US
 #pragma code_page(1252)
 #endif //_WIN32*/
 
+#ifndef RT_MANIFEST
+#define RT_MANIFEST 24
+#endif
+
+#ifndef CREATEPROCESS_MANIFEST_RESOURCE_ID
+#define CREATEPROCESS_MANIFEST_RESOURCE_ID 1
+#endif
+
+CREATEPROCESS_MANIFEST_RESOURCE_ID RT_MANIFEST srb2win.exe.manifest
+
 /////////////////////////////////////////////////////////////////////////////
 //
 // Icon
@@ -66,8 +76,8 @@ END
 #include "../doomdef.h" // Needed for version string
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,2,0,0
- PRODUCTVERSION 2,2,0,0
+ FILEVERSION 2,2,8,0
+ PRODUCTVERSION 2,2,8,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -85,14 +95,14 @@ BEGIN
             VALUE "Comments", "Visit our web site at www.srb2.org for news and updates!\0"
             VALUE "CompanyName", "Sonic Team Junior\0"
             VALUE "FileDescription", "Sonic Robo Blast 2\0"
-            VALUE "FileVersion", VERSIONSTRING
+            VALUE "FileVersion", VERSIONSTRING_RC
             VALUE "InternalName", "srb2\0"
             VALUE "LegalCopyright", "Copyright 1998-2020 by Sonic Team Junior\0"
             VALUE "LegalTrademarks", "Sonic the Hedgehog and related characters are trademarks of Sega.\0"
             VALUE "OriginalFilename", "srb2win.exe\0"
             VALUE "PrivateBuild", "\0"
             VALUE "ProductName", "Sonic Robo Blast 2\0"
-            VALUE "ProductVersion", VERSIONSTRING
+            VALUE "ProductVersion", VERSIONSTRING_RC
             VALUE "SpecialBuild", "\0"
         END
     END

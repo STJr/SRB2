@@ -49,6 +49,8 @@ size_t COM_FirstOption(void);
 // match existing command or NULL
 const char *COM_CompleteCommand(const char *partial, INT32 skips);
 
+const char *COM_CompleteAlias(const char *partial, INT32 skips);
+
 // insert at queu (at end of other command)
 #define COM_BufAddText(s) COM_BufAddTextEx(s, 0)
 void COM_BufAddTextEx(const char *btext, int flags);
@@ -144,6 +146,23 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 	struct consvar_s *next;
 } consvar_t;
 
+/* name, defaultvalue, flags, PossibleValue, func */
+#define CVAR_INIT( ... ) \
+{ __VA_ARGS__, 0, NULL, NULL, 0U, (char)0, NULL }
+
+#ifdef OLD22DEMOCOMPAT
+typedef struct old_demo_var old_demo_var_t;
+
+struct old_demo_var
+{
+	UINT16  checksum;
+	boolean collides;/* this var is a collision of multiple hashes */
+
+	consvar_t      *cvar;
+	old_demo_var_t *next;
+};
+#endif/*OLD22DEMOCOMPAT*/
+
 extern CV_PossibleValue_t CV_OnOff[];
 extern CV_PossibleValue_t CV_YesNo[];
 extern CV_PossibleValue_t CV_Unsigned[];
@@ -184,8 +203,17 @@ void CV_AddValue(consvar_t *var, INT32 increment);
 void CV_SaveVariables(FILE *f);
 
 // load/save gamesate (load and save option and for network join in game)
-void CV_SaveNetVars(UINT8 **p);
+void CV_SaveVars(UINT8 **p, boolean in_demo);
+
+#define CV_SaveNetVars(p) CV_SaveVars(p, false)
 void CV_LoadNetVars(UINT8 **p);
+
+#define CV_SaveDemoVars(p) CV_SaveVars(p, true)
+void CV_LoadDemoVars(UINT8 **p);
+
+#ifdef OLD22DEMOCOMPAT
+void CV_LoadOldDemoVars(UINT8 **p);
+#endif
 
 // reset cheat netvars after cheats is deactivated
 void CV_ResetCheatNetVars(void);

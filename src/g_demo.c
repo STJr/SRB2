@@ -68,7 +68,7 @@ static struct {
 	UINT8 flags; // EZT flags
 
 	// EZT_COLOR
-	UINT8 color, lastcolor;
+	UINT16 color, lastcolor;
 
 	// EZT_SCALE
 	fixed_t scale, lastscale;
@@ -82,7 +82,8 @@ static struct {
 // There is no conflict here.
 typedef struct demoghost {
 	UINT8 checksum[16];
-	UINT8 *buffer, *p, color, fadein;
+	UINT8 *buffer, *p, fadein;
+	UINT16 color;
 	UINT16 version;
 	mobj_t oldmo, *mo;
 	struct demoghost *next;
@@ -93,7 +94,7 @@ demoghost *ghosts = NULL;
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x000c
+#define DEMOVERSION 0x000e
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -165,7 +166,6 @@ void G_LoadMetal(UINT8 **buffer)
 void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 {
 	UINT8 ziptic;
-	(void)playernum;
 
 	if (!demo_p || !demo_start)
 		return;
@@ -183,6 +183,7 @@ void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 		oldcmd.aiming = READINT16(demo_p);
 
 	G_CopyTiccmd(cmd, &oldcmd, 1);
+	players[playernum].angleturn = cmd->angleturn;
 
 	if (!(demoflags & DF_GHOST) && *demo_p == DEMOMARKER)
 	{
@@ -280,13 +281,13 @@ void G_GhostAddColor(ghostcolor_t color)
 {
 	if (!demorecording || !(demoflags & DF_GHOST))
 		return;
-	if (ghostext.lastcolor == (UINT8)color)
+	if (ghostext.lastcolor == (UINT16)color)
 	{
 		ghostext.flags &= ~EZT_COLOR;
 		return;
 	}
 	ghostext.flags |= EZT_COLOR;
-	ghostext.color = (UINT8)color;
+	ghostext.color = (UINT16)color;
 }
 
 void G_GhostAddScale(fixed_t scale)
@@ -344,32 +345,29 @@ void G_WriteGhostTic(mobj_t *ghost)
 	else
 	{
 		// For moving normally:
-		// Store one full byte of movement, plus one byte of fractional movement.
-		INT16 momx = (INT16)((ghost->x-oldghost.x)>>8);
-		INT16 momy = (INT16)((ghost->y-oldghost.y)>>8);
+		fixed_t momx = ghost->x-oldghost.x;
+		fixed_t momy = ghost->y-oldghost.y;
 		if (momx != oldghost.momx
 		|| momy != oldghost.momy)
 		{
 			oldghost.momx = momx;
 			oldghost.momy = momy;
 			ziptic |= GZT_MOMXY;
-			WRITEINT16(demo_p,momx);
-			WRITEINT16(demo_p,momy);
+			WRITEFIXED(demo_p,momx);
+			WRITEFIXED(demo_p,momy);
 		}
-		momx = (INT16)((ghost->z-oldghost.z)>>8);
+		momx = ghost->z-oldghost.z;
 		if (momx != oldghost.momz)
 		{
 			oldghost.momz = momx;
 			ziptic |= GZT_MOMZ;
-			WRITEINT16(demo_p,momx);
+			WRITEFIXED(demo_p,momx);
 		}
 
 		// This SHOULD set oldghost.x/y/z to match ghost->x/y/z
-		// but it keeps the fractional loss of one byte,
-		// so it will hopefully be made up for in future tics.
-		oldghost.x += oldghost.momx<<8;
-		oldghost.y += oldghost.momy<<8;
-		oldghost.z += oldghost.momz<<8;
+		oldghost.x += oldghost.momx;
+		oldghost.y += oldghost.momy;
+		oldghost.z += oldghost.momz;
 	}
 
 	#undef MAXMOM
@@ -425,7 +423,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 		WRITEUINT8(demo_p,ghostext.flags);
 		if (ghostext.flags & EZT_COLOR)
 		{
-			WRITEUINT8(demo_p,ghostext.color);
+			WRITEUINT16(demo_p,ghostext.color);
 			ghostext.lastcolor = ghostext.color;
 		}
 		if (ghostext.flags & EZT_SCALE)
@@ -463,7 +461,7 @@ void G_WriteGhostTic(mobj_t *ghost)
 
 	if (ghost->player && ghost->player->followmobj && !(ghost->player->followmobj->sprite == SPR_NULL || (ghost->player->followmobj->flags2 & MF2_DONTDRAW))) // bloats tails runs but what can ya do
 	{
-		INT16 temp;
+		fixed_t temp;
 		UINT8 *followtic_p = demo_p++;
 		UINT8 followtic = 0;
 
@@ -491,17 +489,17 @@ void G_WriteGhostTic(mobj_t *ghost)
 			WRITEFIXED(demo_p,ghost->player->followmobj->scale);
 		}
 
-		temp = (INT16)((ghost->player->followmobj->x-ghost->x)>>8);
-		WRITEINT16(demo_p,temp);
-		temp = (INT16)((ghost->player->followmobj->y-ghost->y)>>8);
-		WRITEINT16(demo_p,temp);
-		temp = (INT16)((ghost->player->followmobj->z-ghost->z)>>8);
-		WRITEINT16(demo_p,temp);
+		temp = ghost->player->followmobj->x-ghost->x;
+		WRITEFIXED(demo_p,temp);
+		temp = ghost->player->followmobj->y-ghost->y;
+		WRITEFIXED(demo_p,temp);
+		temp = ghost->player->followmobj->z-ghost->z;
+		WRITEFIXED(demo_p,temp);
 		if (followtic & FZT_SKIN)
 			WRITEUINT8(demo_p,ghost->player->followmobj->sprite2);
 		WRITEUINT16(demo_p,ghost->player->followmobj->sprite);
 		WRITEUINT8(demo_p,(ghost->player->followmobj->frame & FF_FRAMEMASK));
-		WRITEUINT8(demo_p,ghost->player->followmobj->color);
+		WRITEUINT16(demo_p,ghost->player->followmobj->color);
 
 		*followtic_p = followtic;
 	}
@@ -546,11 +544,11 @@ void G_ConsGhostTic(void)
 	{
 		if (ziptic & GZT_MOMXY)
 		{
-			oldghost.momx = READINT16(demo_p)<<8;
-			oldghost.momy = READINT16(demo_p)<<8;
+			oldghost.momx = (demoversion < 0x000e) ? READINT16(demo_p)<<8 : READFIXED(demo_p);
+			oldghost.momy = (demoversion < 0x000e) ? READINT16(demo_p)<<8 : READFIXED(demo_p);
 		}
 		if (ziptic & GZT_MOMZ)
-			oldghost.momz = READINT16(demo_p)<<8;
+			oldghost.momz = (demoversion < 0x000e) ? READINT16(demo_p)<<8 : READFIXED(demo_p);
 		oldghost.x += oldghost.momx;
 		oldghost.y += oldghost.momy;
 		oldghost.z += oldghost.momz;
@@ -566,7 +564,7 @@ void G_ConsGhostTic(void)
 	{ // But wait, there's more!
 		UINT8 xziptic = READUINT8(demo_p);
 		if (xziptic & EZT_COLOR)
-			demo_p++;
+			demo_p += (demoversion==0x000c) ? 1 : sizeof(UINT16);
 		if (xziptic & EZT_SCALE)
 			demo_p += sizeof(fixed_t);
 		if (xziptic & EZT_HIT)
@@ -626,14 +624,13 @@ void G_ConsGhostTic(void)
 		}
 		if (followtic & FZT_SCALE)
 			demo_p += sizeof(fixed_t);
-		demo_p += sizeof(INT16);
-		demo_p += sizeof(INT16);
-		demo_p += sizeof(INT16);
+		// momx, momy and momz
+		demo_p += (demoversion < 0x000e) ? sizeof(UINT16) * 3 : sizeof(fixed_t) * 3;
 		if (followtic & FZT_SKIN)
 			demo_p++;
 		demo_p += sizeof(UINT16);
 		demo_p++;
-		demo_p++;
+		demo_p += (demoversion==0x000c) ? 1 : sizeof(UINT16);
 	}
 
 	// Re-synchronise
@@ -696,11 +693,11 @@ void G_GhostTicker(void)
 		{
 			if (ziptic & GZT_MOMXY)
 			{
-				g->oldmo.momx = READINT16(g->p)<<8;
-				g->oldmo.momy = READINT16(g->p)<<8;
+				g->oldmo.momx = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
+				g->oldmo.momy = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
 			}
 			if (ziptic & GZT_MOMZ)
-				g->oldmo.momz = READINT16(g->p)<<8;
+				g->oldmo.momz = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
 			g->oldmo.x += g->oldmo.momx;
 			g->oldmo.y += g->oldmo.momy;
 			g->oldmo.z += g->oldmo.momz;
@@ -731,7 +728,7 @@ void G_GhostTicker(void)
 			xziptic = READUINT8(g->p);
 			if (xziptic & EZT_COLOR)
 			{
-				g->color = READUINT8(g->p);
+				g->color = (g->version==0x000c) ? READUINT8(g->p) : READUINT16(g->p);
 				switch(g->color)
 				{
 				default:
@@ -764,7 +761,7 @@ void G_GhostTicker(void)
 			if (xziptic & EZT_THOKMASK)
 			{ // Let's only spawn ONE of these per frame, thanks.
 				mobj_t *mobj;
-				INT32 type = -1;
+				UINT32 type = MT_NULL;
 				if (g->mo->skin)
 				{
 					skin_t *skin = (skin_t *)g->mo->skin;
@@ -864,7 +861,7 @@ void G_GhostTicker(void)
 			g->mo->color += abs( ( (signed)( (unsigned)leveltime >> 1 ) % 9) - 4);
 			break;
 		case GHC_INVINCIBLE: // Mario invincibility (P_CheckInvincibilityTimer)
-			g->mo->color = (UINT8)(SKINCOLOR_RUBY + (leveltime % (MAXSKINCOLORS - SKINCOLOR_RUBY))); // Passes through all saturated colours
+			g->mo->color = (UINT16)(SKINCOLOR_RUBY + (leveltime % (FIRSTSUPERCOLOR - SKINCOLOR_RUBY))); // Passes through all saturated colours
 			break;
 		default:
 			break;
@@ -904,11 +901,11 @@ void G_GhostTicker(void)
 					P_SetScale(follow, follow->destscale);
 
 				P_UnsetThingPosition(follow);
-				temp = READINT16(g->p)<<8;
+				temp = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
 				follow->x = g->mo->x + temp;
-				temp = READINT16(g->p)<<8;
+				temp = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
 				follow->y = g->mo->y + temp;
-				temp = READINT16(g->p)<<8;
+				temp = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
 				follow->z = g->mo->z + temp;
 				P_SetThingPosition(follow);
 				if (followtic & FZT_SKIN)
@@ -918,7 +915,7 @@ void G_GhostTicker(void)
 				follow->sprite = READUINT16(g->p);
 				follow->frame = (READUINT8(g->p)) | (g->mo->frame & FF_TRANSMASK);
 				follow->angle = g->mo->angle;
-				follow->color = READUINT8(g->p);
+				follow->color = (g->version==0x000c) ? READUINT8(g->p) : READUINT16(g->p);
 
 				if (!(followtic & FZT_SPAWNED))
 				{
@@ -996,7 +993,11 @@ void G_ReadMetalTic(mobj_t *metal)
 	// Read changes from the tic
 	if (ziptic & GZT_XYZ)
 	{
-		P_TeleportMove(metal, READFIXED(metal_p), READFIXED(metal_p), READFIXED(metal_p));
+		// make sure the values are read in the right order
+		oldmetal.x = READFIXED(metal_p);
+		oldmetal.y = READFIXED(metal_p);
+		oldmetal.z = READFIXED(metal_p);
+		P_TeleportMove(metal, oldmetal.x, oldmetal.y, oldmetal.z);
 		oldmetal.x = metal->x;
 		oldmetal.y = metal->y;
 		oldmetal.z = metal->z;
@@ -1005,11 +1006,11 @@ void G_ReadMetalTic(mobj_t *metal)
 	{
 		if (ziptic & GZT_MOMXY)
 		{
-			oldmetal.momx = READINT16(metal_p)<<8;
-			oldmetal.momy = READINT16(metal_p)<<8;
+			oldmetal.momx = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
+			oldmetal.momy = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 		}
 		if (ziptic & GZT_MOMZ)
-			oldmetal.momz = READINT16(metal_p)<<8;
+			oldmetal.momz = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 		oldmetal.x += oldmetal.momx;
 		oldmetal.y += oldmetal.momy;
 		oldmetal.z += oldmetal.momz;
@@ -1051,7 +1052,7 @@ void G_ReadMetalTic(mobj_t *metal)
 		if (xziptic & EZT_THOKMASK)
 		{ // Let's only spawn ONE of these per frame, thanks.
 			mobj_t *mobj;
-			INT32 type = -1;
+			UINT32 type = MT_NULL;
 			if (metal->skin)
 			{
 				skin_t *skin = (skin_t *)metal->skin;
@@ -1144,11 +1145,11 @@ void G_ReadMetalTic(mobj_t *metal)
 					P_SetScale(follow, follow->destscale);
 
 				P_UnsetThingPosition(follow);
-				temp = READINT16(metal_p)<<8;
+				temp = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 				follow->x = metal->x + temp;
-				temp = READINT16(metal_p)<<8;
+				temp = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 				follow->y = metal->y + temp;
-				temp = READINT16(metal_p)<<8;
+				temp = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 				follow->z = metal->z + temp;
 				P_SetThingPosition(follow);
 				if (followtic & FZT_SKIN)
@@ -1158,7 +1159,7 @@ void G_ReadMetalTic(mobj_t *metal)
 				follow->sprite = READUINT16(metal_p);
 				follow->frame = READUINT32(metal_p); // NOT & FF_FRAMEMASK here, so 32 bits
 				follow->angle = metal->angle;
-				follow->color = READUINT8(metal_p);
+				follow->color = (metalversion==0x000c) ? READUINT8(metal_p) : READUINT16(metal_p);
 
 				if (!(followtic & FZT_SPAWNED))
 				{
@@ -1208,32 +1209,30 @@ void G_WriteMetalTic(mobj_t *metal)
 	else
 	{
 		// For moving normally:
-		// Store one full byte of movement, plus one byte of fractional movement.
-		INT16 momx = (INT16)((metal->x-oldmetal.x)>>8);
-		INT16 momy = (INT16)((metal->y-oldmetal.y)>>8);
+		// Store movement as a fixed value
+		fixed_t momx = metal->x-oldmetal.x;
+		fixed_t momy = metal->y-oldmetal.y;
 		if (momx != oldmetal.momx
 		|| momy != oldmetal.momy)
 		{
 			oldmetal.momx = momx;
 			oldmetal.momy = momy;
 			ziptic |= GZT_MOMXY;
-			WRITEINT16(demo_p,momx);
-			WRITEINT16(demo_p,momy);
+			WRITEFIXED(demo_p,momx);
+			WRITEFIXED(demo_p,momy);
 		}
-		momx = (INT16)((metal->z-oldmetal.z)>>8);
+		momx = metal->z-oldmetal.z;
 		if (momx != oldmetal.momz)
 		{
 			oldmetal.momz = momx;
 			ziptic |= GZT_MOMZ;
-			WRITEINT16(demo_p,momx);
+			WRITEFIXED(demo_p,momx);
 		}
 
 		// This SHOULD set oldmetal.x/y/z to match metal->x/y/z
-		// but it keeps the fractional loss of one byte,
-		// so it will hopefully be made up for in future tics.
-		oldmetal.x += oldmetal.momx<<8;
-		oldmetal.y += oldmetal.momy<<8;
-		oldmetal.z += oldmetal.momz<<8;
+		oldmetal.x += oldmetal.momx;
+		oldmetal.y += oldmetal.momy;
+		oldmetal.z += oldmetal.momz;
 	}
 
 	#undef MAXMOM
@@ -1302,7 +1301,7 @@ void G_WriteMetalTic(mobj_t *metal)
 
 	if (metal->player && metal->player->followmobj && !(metal->player->followmobj->sprite == SPR_NULL || (metal->player->followmobj->flags2 & MF2_DONTDRAW)))
 	{
-		INT16 temp;
+		fixed_t temp;
 		UINT8 *followtic_p = demo_p++;
 		UINT8 followtic = 0;
 
@@ -1330,17 +1329,17 @@ void G_WriteMetalTic(mobj_t *metal)
 			WRITEFIXED(demo_p,metal->player->followmobj->scale);
 		}
 
-		temp = (INT16)((metal->player->followmobj->x-metal->x)>>8);
-		WRITEINT16(demo_p,temp);
-		temp = (INT16)((metal->player->followmobj->y-metal->y)>>8);
-		WRITEINT16(demo_p,temp);
-		temp = (INT16)((metal->player->followmobj->z-metal->z)>>8);
-		WRITEINT16(demo_p,temp);
+		temp = metal->player->followmobj->x-metal->x;
+		WRITEFIXED(demo_p,temp);
+		temp = metal->player->followmobj->y-metal->y;
+		WRITEFIXED(demo_p,temp);
+		temp = metal->player->followmobj->z-metal->z;
+		WRITEFIXED(demo_p,temp);
 		if (followtic & FZT_SKIN)
 			WRITEUINT8(demo_p,metal->player->followmobj->sprite2);
 		WRITEUINT16(demo_p,metal->player->followmobj->sprite);
 		WRITEUINT32(demo_p,metal->player->followmobj->frame); // NOT & FF_FRAMEMASK here, so 32 bits
-		WRITEUINT8(demo_p,metal->player->followmobj->color);
+		WRITEUINT16(demo_p,metal->player->followmobj->color);
 
 		*followtic_p = followtic;
 	}
@@ -1394,7 +1393,7 @@ void G_RecordMetal(void)
 void G_BeginRecording(void)
 {
 	UINT8 i;
-	char name[16];
+	char name[MAXCOLORNAME+1];
 	player_t *player = &players[consoleplayer];
 
 	if (demo_p)
@@ -1457,12 +1456,12 @@ void G_BeginRecording(void)
 	demo_p += 16;
 
 	// Color
-	for (i = 0; i < 16 && cv_playercolor.string[i]; i++)
+	for (i = 0; i < MAXCOLORNAME && cv_playercolor.string[i]; i++)
 		name[i] = cv_playercolor.string[i];
-	for (; i < 16; i++)
+	for (; i < MAXCOLORNAME; i++)
 		name[i] = '\0';
-	M_Memcpy(demo_p,name,16);
-	demo_p += 16;
+	M_Memcpy(demo_p,name,MAXCOLORNAME);
+	demo_p += MAXCOLORNAME;
 
 	// Stats
 	WRITEUINT8(demo_p,player->charability);
@@ -1520,7 +1519,7 @@ void G_BeginRecording(void)
 	}
 
 	// Save netvar data
-	CV_SaveNetVars(&demo_p);
+	CV_SaveDemoVars(&demo_p);
 
 	memset(&oldcmd,0,sizeof(oldcmd));
 	memset(&oldghost,0,sizeof(oldghost));
@@ -1622,7 +1621,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	c = READUINT8(p); // SUBVERSION
 	I_Assert(c == SUBVERSION);
 	s = READUINT16(p);
-	I_Assert(s == DEMOVERSION);
+	I_Assert(s >= 0x000c);
 	p += 16; // demo checksum
 	I_Assert(!memcmp(p, "PLAY", 4));
 	p += 4; // PLAY
@@ -1671,6 +1670,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	switch(oldversion) // demoversion
 	{
 	case DEMOVERSION: // latest always supported
+	case 0x000c: // all that changed between then and now was longer color name
 		break;
 	// too old, cannot support.
 	default:
@@ -1744,15 +1744,18 @@ void G_DoPlayDemo(char *defdemoname)
 {
 	UINT8 i;
 	lumpnum_t l;
-	char skin[17],color[17],*n,*pdemoname;
-	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration;
+	char skin[17],color[MAXCOLORNAME+1],*n,*pdemoname;
+	UINT8 version,subversion,charability,charability2,thrustfactor,accelstart,acceleration,cnamelen;
 	pflags_t pflags;
 	UINT32 randseed, followitem;
 	fixed_t camerascale,shieldscale,actionspd,mindash,maxdash,normalspeed,runspeed,jumpfactor,height,spinheight;
 	char msg[1024];
+#ifdef OLD22DEMOCOMPAT
+	boolean use_old_demo_vars = false;
+#endif
 
 	skin[16] = '\0';
-	color[16] = '\0';
+	color[MAXCOLORNAME] = '\0';
 
 	n = defdemoname+strlen(defdemoname);
 	while (*n != '/' && *n != '\\' && n != defdemoname)
@@ -1809,8 +1812,17 @@ void G_DoPlayDemo(char *defdemoname)
 	demoversion = READUINT16(demo_p);
 	switch(demoversion)
 	{
+	case 0x000d:
 	case DEMOVERSION: // latest always supported
+		cnamelen = MAXCOLORNAME;
 		break;
+#ifdef OLD22DEMOCOMPAT
+	// all that changed between then and now was longer color name
+	case 0x000c:
+		cnamelen = 16;
+		use_old_demo_vars = true;
+		break;
+#endif
 	// too old, cannot support.
 	default:
 		snprintf(msg, 1024, M_GetText("%s is an incompatible replay format and cannot be played.\n"), pdemoname);
@@ -1876,8 +1888,8 @@ void G_DoPlayDemo(char *defdemoname)
 	demo_p += 16;
 
 	// Color
-	M_Memcpy(color,demo_p,16);
-	demo_p += 16;
+	M_Memcpy(color,demo_p,cnamelen);
+	demo_p += cnamelen;
 
 	charability = READUINT8(demo_p);
 	charability2 = READUINT8(demo_p);
@@ -1912,7 +1924,12 @@ void G_DoPlayDemo(char *defdemoname)
 	}
 
 	// net var data
-	CV_LoadNetVars(&demo_p);
+#ifdef OLD22DEMOCOMPAT
+	if (use_old_demo_vars)
+		CV_LoadOldDemoVars(&demo_p);
+	else
+#endif
+		CV_LoadDemoVars(&demo_p);
 
 	// Sigh ... it's an empty demo.
 	if (*demo_p == DEMOMARKER)
@@ -1941,7 +1958,9 @@ void G_DoPlayDemo(char *defdemoname)
 	// Set skin
 	SetPlayerSkin(0, skin);
 
+#ifdef HAVE_BLUA
 	LUAh_MapChange(gamemap);
+#endif
 	displayplayer = consoleplayer = 0;
 	memset(playeringame,0,sizeof(playeringame));
 	playeringame[0] = true;
@@ -1949,8 +1968,9 @@ void G_DoPlayDemo(char *defdemoname)
 	G_InitNew(false, G_BuildMapName(gamemap), true, true, false);
 
 	// Set color
-	for (i = 0; i < MAXSKINCOLORS; i++)
-		if (!stricmp(Color_Names[i],color))
+	players[0].skincolor = skins[players[0].skin].prefcolor;
+	for (i = 0; i < numskincolors; i++)
+		if (!stricmp(skincolors[i].name,color))
 		{
 			players[0].skincolor = i;
 			break;
@@ -1992,7 +2012,8 @@ void G_AddGhost(char *defdemoname)
 {
 	INT32 i;
 	lumpnum_t l;
-	char name[17],skin[17],color[17],*n,*pdemoname,md5[16];
+	char name[17],skin[17],color[MAXCOLORNAME+1],*n,*pdemoname,md5[16];
+	UINT8 cnamelen;
 	demoghost *gh;
 	UINT8 flags;
 	UINT8 *buffer,*p;
@@ -2046,7 +2067,13 @@ void G_AddGhost(char *defdemoname)
 	ghostversion = READUINT16(p);
 	switch(ghostversion)
 	{
+	case 0x000d:
 	case DEMOVERSION: // latest always supported
+		cnamelen = MAXCOLORNAME;
+		break;
+	// all that changed between then and now was longer color name
+	case 0x000c:
+		cnamelen = 16;
 		break;
 	// too old, cannot support.
 	default:
@@ -2109,8 +2136,8 @@ void G_AddGhost(char *defdemoname)
 	p += 16;
 
 	// Color
-	M_Memcpy(color, p,16);
-	p += 16;
+	M_Memcpy(color, p,cnamelen);
+	p += cnamelen;
 
 	// Ghosts do not have a player structure to put this in.
 	p++; // charability
@@ -2198,10 +2225,10 @@ void G_AddGhost(char *defdemoname)
 
 	// Set color
 	gh->mo->color = ((skin_t*)gh->mo->skin)->prefcolor;
-	for (i = 0; i < MAXSKINCOLORS; i++)
-		if (!stricmp(Color_Names[i],color))
+	for (i = 0; i < numskincolors; i++)
+		if (!stricmp(skincolors[i].name,color))
 		{
-			gh->mo->color = (UINT8)i;
+			gh->mo->color = (UINT16)i;
 			break;
 		}
 	gh->oldmo.color = gh->mo->color;
@@ -2292,6 +2319,8 @@ void G_DoPlayMetal(void)
 	switch(metalversion)
 	{
 	case DEMOVERSION: // latest always supported
+	case 0x000d: // There are checks wheter the momentum is from older demo versions or not
+	case 0x000c: // all that changed between then and now was longer color name
 		break;
 	// too old, cannot support.
 	default:
@@ -2332,6 +2361,41 @@ void G_DoneLevelLoad(void)
 ===================
 */
 
+// Writes the demo's checksum, or just random garbage if you can't do that for some reason.
+static void WriteDemoChecksum(void)
+{
+	UINT8 *p = demobuffer+16; // checksum position
+#ifdef NOMD5
+	UINT8 i;
+	for (i = 0; i < 16; i++, p++)
+		*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
+#else
+	md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.
+#endif
+}
+
+// Stops recording a demo.
+static void G_StopDemoRecording(void)
+{
+	boolean saved = false;
+	if (demo_p)
+	{
+		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
+		WriteDemoChecksum();
+		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
+	}
+	free(demobuffer);
+	demorecording = false;
+
+	if (modeattacking != ATTACKING_RECORD)
+	{
+		if (saved)
+			CONS_Printf(M_GetText("Demo %s recorded\n"), demoname);
+		else
+			CONS_Alert(CONS_WARNING, M_GetText("Demo %s not saved\n"), demoname);
+	}
+}
+
 // Stops metal sonic's demo. Separate from other functions because metal + replays can coexist
 void G_StopMetalDemo(void)
 {
@@ -2349,20 +2413,8 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill)
 	boolean saved = false;
 	if (demo_p)
 	{
-		UINT8 *p = demobuffer+16; // checksum position
-		if (kill)
-			WRITEUINT8(demo_p, METALDEATH); // add the metal death marker
-		else
-			WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-#ifdef NOMD5
-		{
-			UINT8 i;
-			for (i = 0; i < 16; i++, p++)
-				*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
-		}
-#else
-		md5_buffer((char *)p+16, demo_p - (p+16), (void *)p); // make a checksum of everything after the checksum in the file.
-#endif
+		WRITEUINT8(demo_p, (kill) ? METALDEATH : DEMOMARKER); // add the demo end (or metal death) marker
+		WriteDemoChecksum();
 		saved = FIL_WriteFile(va("%sMS.LMP", G_BuildMapName(gamemap)), demobuffer, demo_p - demobuffer); // finally output the file.
 	}
 	free(demobuffer);
@@ -2370,6 +2422,63 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill)
 	if (saved)
 		I_Error("Saved to %sMS.LMP", G_BuildMapName(gamemap));
 	I_Error("Failed to save demo!");
+}
+
+// Stops timing a demo.
+static void G_StopTimingDemo(void)
+{
+	INT32 demotime;
+	double f1, f2;
+	demotime = I_GetTime() - demostarttime;
+	if (!demotime)
+		return;
+	G_StopDemo();
+	timingdemo = false;
+	f1 = (double)demotime;
+	f2 = (double)framecount*TICRATE;
+
+	CONS_Printf(M_GetText("timed %u gametics in %d realtics - %u frames\n%f seconds, %f avg fps\n"),
+		leveltime,demotime,(UINT32)framecount,f1/TICRATE,f2/f1);
+
+	// CSV-readable timedemo results, for external parsing
+	if (timedemo_csv)
+	{
+		FILE *f;
+		const char *csvpath = va("%s"PATHSEP"%s", srb2home, "timedemo.csv");
+		const char *header = "id,demoname,seconds,avgfps,leveltime,demotime,framecount,ticrate,rendermode,vidmode,vidwidth,vidheight,procbits\n";
+		const char *rowformat = "\"%s\",\"%s\",%f,%f,%u,%d,%u,%u,%u,%u,%u,%u,%u\n";
+		boolean headerrow = !FIL_FileExists(csvpath);
+		UINT8 procbits = 0;
+
+		// Bitness
+		if (sizeof(void*) == 4)
+			procbits = 32;
+		else if (sizeof(void*) == 8)
+			procbits = 64;
+
+		f = fopen(csvpath, "a+");
+
+		if (f)
+		{
+			if (headerrow)
+				fputs(header, f);
+			fprintf(f, rowformat,
+				timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.modenum,vid.width,vid.height,procbits);
+			fclose(f);
+			CONS_Printf("Timedemo results saved to '%s'\n", csvpath);
+		}
+		else
+		{
+			// Just print the CSV output to console
+			CON_LogMessage(header);
+			CONS_Printf(rowformat,
+				timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.modenum,vid.width,vid.height,procbits);
+		}
+	}
+
+	if (restorecv_vidwait != cv_vidwait.value)
+		CV_SetValue(&cv_vidwait, restorecv_vidwait);
+	D_AdvanceDemo();
 }
 
 // reset engine variable set for the demos
@@ -2394,66 +2503,13 @@ void G_StopDemo(void)
 
 boolean G_CheckDemoStatus(void)
 {
-	boolean saved;
-
 	G_FreeGhosts();
 
 	// DO NOT end metal sonic demos here
 
 	if (timingdemo)
 	{
-		INT32 demotime;
-		double f1, f2;
-		demotime = I_GetTime() - demostarttime;
-		if (!demotime)
-			return true;
-		G_StopDemo();
-		timingdemo = false;
-		f1 = (double)demotime;
-		f2 = (double)framecount*TICRATE;
-
-		CONS_Printf(M_GetText("timed %u gametics in %d realtics - %u frames\n%f seconds, %f avg fps\n"),
-			leveltime,demotime,(UINT32)framecount,f1/TICRATE,f2/f1);
-
-		// CSV-readable timedemo results, for external parsing
-		if (timedemo_csv)
-		{
-			FILE *f;
-			const char *csvpath = va("%s"PATHSEP"%s", srb2home, "timedemo.csv");
-			const char *header = "id,demoname,seconds,avgfps,leveltime,demotime,framecount,ticrate,rendermode,vidmode,vidwidth,vidheight,procbits\n";
-			const char *rowformat = "\"%s\",\"%s\",%f,%f,%u,%d,%u,%u,%u,%u,%u,%u,%u\n";
-			boolean headerrow = !FIL_FileExists(csvpath);
-			UINT8 procbits = 0;
-
-			// Bitness
-			if (sizeof(void*) == 4)
-				procbits = 32;
-			else if (sizeof(void*) == 8)
-				procbits = 64;
-
-			f = fopen(csvpath, "a+");
-
-			if (f)
-			{
-				if (headerrow)
-					fputs(header, f);
-				fprintf(f, rowformat,
-					timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.modenum,vid.width,vid.height,procbits);
-				fclose(f);
-				CONS_Printf("Timedemo results saved to '%s'\n", csvpath);
-			}
-			else
-			{
-				// Just print the CSV output to console
-				CON_LogMessage(header);
-				CONS_Printf(rowformat,
-					timedemo_csv_id,timedemo_name,f1/TICRATE,f2/f1,leveltime,demotime,(UINT32)framecount,TICRATE,rendermode,vid.modenum,vid.width,vid.height,procbits);
-			}
-		}
-
-		if (restorecv_vidwait != cv_vidwait.value)
-			CV_SetValue(&cv_vidwait, restorecv_vidwait);
-		D_AdvanceDemo();
+		G_StopTimingDemo();
 		return true;
 	}
 
@@ -2473,27 +2529,7 @@ boolean G_CheckDemoStatus(void)
 
 	if (demorecording)
 	{
-		UINT8 *p = demobuffer+16; // checksum position
-#ifdef NOMD5
-		UINT8 i;
-		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-		for (i = 0; i < 16; i++, p++)
-			*p = P_RandomByte(); // This MD5 was chosen by fair dice roll and most likely < 50% correct.
-#else
-		WRITEUINT8(demo_p, DEMOMARKER); // add the demo end marker
-		md5_buffer((char *)p+16, demo_p - (p+16), p); // make a checksum of everything after the checksum in the file.
-#endif
-		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
-		free(demobuffer);
-		demorecording = false;
-
-		if (modeattacking != ATTACKING_RECORD)
-		{
-			if (saved)
-				CONS_Printf(M_GetText("Demo %s recorded\n"), demoname);
-			else
-				CONS_Alert(CONS_WARNING, M_GetText("Demo %s not saved\n"), demoname);
-		}
+		G_StopDemoRecording();
 		return true;
 	}
 

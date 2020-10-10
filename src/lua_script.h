@@ -37,9 +37,10 @@
 void LUA_ClearExtVars(void);
 #endif
 
-extern boolean lua_lumploading; // is LUA_LoadLump being called?
+extern INT32 lua_lumploading; // is LUA_LoadLump being called?
 
-void LUA_LoadLump(UINT16 wad, UINT16 lump);
+int LUA_GetErrorMessage(lua_State *L);
+void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults);
 #ifdef LUA_ALLOW_BYTECODE
 void LUA_DumpFile(const char *filename);
 #endif
@@ -99,5 +100,8 @@ void COM_Lua_f(void);
 // uncomment if you want seg_t/node_t in Lua
 // #define HAVE_LUA_SEGS
 
-#define INLEVEL if (gamestate != GS_LEVEL && !titlemapinaction)\
+#define ISINLEVEL \
+	(gamestate == GS_LEVEL || titlemapinaction)
+
+#define INLEVEL if (! ISINLEVEL)\
 return luaL_error(L, "This can only be used in a level!");

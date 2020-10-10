@@ -18,6 +18,7 @@
 #include "doomstat.h"
 #include "d_event.h"
 #include "g_demo.h"
+#include "m_cheat.h" // objectplacing
 
 extern char gamedatafilename[64];
 extern char timeattackfolder[64];
@@ -27,7 +28,8 @@ extern char customversionstring[32];
 #ifdef SEENAMES
 extern player_t *seenplayer;
 #endif
-extern char player_names[MAXPLAYERS][MAXPLAYERNAME+1];
+extern char  player_names[MAXPLAYERS][MAXPLAYERNAME+1];
+extern INT32 player_name_changes[MAXPLAYERS];
 
 extern player_t players[MAXPLAYERS];
 extern boolean playeringame[MAXPLAYERS];
@@ -64,7 +66,7 @@ typedef enum {
 	CS_STANDARD,
 	CS_SIMPLE = CS_LMAOGALOG|CS_STANDARD,
 } controlstyle_e;
-#define G_ControlStyle(ssplayer) (cv_directionchar[(ssplayer)-1].value == 3 ? CS_LMAOGALOG : ((cv_analog[(ssplayer)-1].value ? CS_LMAOGALOG : 0) | (cv_directionchar[(ssplayer)-1].value ? CS_STANDARD : 0)))
+#define G_ControlStyle(ssplayer) (cv_directionchar[(ssplayer)-1].value == 3 ? CS_LMAOGALOG : ((!objectplacing && cv_analog[(ssplayer)-1].value ? CS_LMAOGALOG : 0) | (cv_directionchar[(ssplayer)-1].value ? CS_STANDARD : 0)))
 #define P_ControlStyle(player) ((((player)->pflags & PF_ANALOGMODE) ? CS_LMAOGALOG : 0) | (((player)->pflags & PF_DIRECTIONCHAR) ? CS_STANDARD : 0))
 
 extern consvar_t cv_autobrake, cv_autobrake2;
@@ -93,6 +95,7 @@ typedef enum
 // build an internal map name MAPxx from map number
 const char *G_BuildMapName(INT32 map);
 
+extern INT16 ticcmd_oldangleturn[2];
 extern boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
 extern mobj_t *ticcmd_ztargetfocus[2]; // Locking onto an object?
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer);
@@ -165,7 +168,7 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride);
 
 void G_SaveGameData(void);
 
-void G_SaveGame(UINT32 slot);
+void G_SaveGame(UINT32 slot, INT16 mapnum);
 
 void G_SaveGameOver(UINT32 slot, boolean modifylives);
 
@@ -190,6 +193,7 @@ boolean G_GametypeHasTeams(void);
 boolean G_GametypeHasSpectators(void);
 boolean G_RingSlingerGametype(void);
 boolean G_PlatformGametype(void);
+boolean G_CoopGametype(void);
 boolean G_TagGametype(void);
 boolean G_CompetitionGametype(void);
 boolean G_EnoughPlayersFinished(void);

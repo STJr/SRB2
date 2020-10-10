@@ -236,15 +236,14 @@ static int lib_comAddCommand(lua_State *L)
 static int lib_comBufAddText(lua_State *L)
 {
 	int n = lua_gettop(L);  /* number of arguments */
-	player_t *plr;
+	player_t *plr = NULL;
 	if (n < 2)
 		return luaL_error(L, "COM_BufAddText requires two arguments: player and text.");
 	NOHUD
 	lua_settop(L, 2);
-	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	if (!plr)
-		return LUA_ErrInvalid(L, "player_t");
-	if (plr != &players[consoleplayer])
+	if (!lua_isnoneornil(L, 1))
+		plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	if (plr && plr != &players[consoleplayer])
 		return 0;
 	COM_BufAddTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
 	return 0;
@@ -253,15 +252,14 @@ static int lib_comBufAddText(lua_State *L)
 static int lib_comBufInsertText(lua_State *L)
 {
 	int n = lua_gettop(L);  /* number of arguments */
-	player_t *plr;
+	player_t *plr = NULL;
 	if (n < 2)
 		return luaL_error(L, "COM_BufInsertText requires two arguments: player and text.");
 	NOHUD
 	lua_settop(L, 2);
-	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	if (!plr)
-		return LUA_ErrInvalid(L, "player_t");
-	if (plr != &players[consoleplayer])
+	if (!lua_isnoneornil(L, 1))
+		plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	if (plr && plr != &players[consoleplayer])
 		return 0;
 	COM_BufInsertTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
 	return 0;
@@ -444,7 +442,7 @@ static int lib_consPrintf(lua_State *L)
 	if (n < 2)
 		return luaL_error(L, "CONS_Printf requires at least two arguments: player and text.");
 	//HUDSAFE
-	INLEVEL
+
 	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	if (!plr)
 		return LUA_ErrInvalid(L, "player_t");

@@ -197,185 +197,179 @@ static CV_PossibleValue_t matchboxes_cons_t[] = {{0, "Normal"}, {1, "Mystery"}, 
 static CV_PossibleValue_t chances_cons_t[] = {{0, "MIN"}, {9, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t pause_cons_t[] = {{0, "Server"}, {1, "All"}, {0, NULL}};
 
-consvar_t cv_showinputjoy = {"showinputjoy", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_showinputjoy = CVAR_INIT ("showinputjoy", "Off", 0, CV_OnOff, NULL);
 
 #ifdef NETGAME_DEVMODE
-static consvar_t cv_fishcake = {"fishcake", "Off", CV_CALL|CV_NOSHOWHELP|CV_RESTRICT, CV_OnOff, Fishcake_OnChange, 0, NULL, NULL, 0, 0, NULL};
+static consvar_t cv_fishcake = CVAR_INIT ("fishcake", "Off", CV_CALL|CV_NOSHOWHELP|CV_RESTRICT, CV_OnOff, Fishcake_OnChange);
 #endif
-static consvar_t cv_dummyconsvar = {"dummyconsvar", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff,
-	DummyConsvar_OnChange, 0, NULL, NULL, 0, 0, NULL};
+static consvar_t cv_dummyconsvar = CVAR_INIT ("dummyconsvar", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, DummyConsvar_OnChange);
 
-consvar_t cv_restrictskinchange = {"restrictskinchange", "Yes", CV_NETVAR|CV_CHEAT, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_allowteamchange = {"allowteamchange", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_restrictskinchange = CVAR_INIT ("restrictskinchange", "Yes", CV_NETVAR|CV_CHEAT, CV_YesNo, NULL);
+consvar_t cv_allowteamchange = CVAR_INIT ("allowteamchange", "Yes", CV_NETVAR, CV_YesNo, NULL);
 
-consvar_t cv_startinglives = {"startinglives", "3", CV_NETVAR|CV_CHEAT, startingliveslimit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_startinglives = CVAR_INIT ("startinglives", "3", CV_NETVAR|CV_CHEAT, startingliveslimit_cons_t, NULL);
 
 static CV_PossibleValue_t respawntime_cons_t[] = {{1, "MIN"}, {30, "MAX"}, {0, "Off"}, {0, NULL}};
-consvar_t cv_respawntime = {"respawndelay", "3", CV_NETVAR|CV_CHEAT, respawntime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_respawntime = CVAR_INIT ("respawndelay", "3", CV_NETVAR|CV_CHEAT, respawntime_cons_t, NULL);
 
-consvar_t cv_competitionboxes = {"competitionboxes", "Mystery", CV_NETVAR|CV_CHEAT, competitionboxes_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_competitionboxes = CVAR_INIT ("competitionboxes", "Mystery", CV_NETVAR|CV_CHEAT, competitionboxes_cons_t, NULL);
 
 #ifdef SEENAMES
 static CV_PossibleValue_t seenames_cons_t[] = {{0, "Off"}, {1, "Colorless"}, {2, "Team"}, {3, "Ally/Foe"}, {0, NULL}};
-consvar_t cv_seenames = {"seenames", "Ally/Foe", CV_SAVE, seenames_cons_t, 0, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_allowseenames = {"allowseenames", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_seenames = CVAR_INIT ("seenames", "Ally/Foe", CV_SAVE, seenames_cons_t, 0);
+consvar_t cv_allowseenames = CVAR_INIT ("allowseenames", "Yes", CV_NETVAR, CV_YesNo, NULL);
 #endif
 
 // names
-consvar_t cv_playername = {"name", "Sonic", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_playername2 = {"name2", "Tails", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_playername = CVAR_INIT ("name", "Sonic", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name_OnChange);
+consvar_t cv_playername2 = CVAR_INIT ("name2", "Tails", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name2_OnChange);
 // player colors
-consvar_t cv_playercolor = {"color", "Blue", CV_CALL|CV_NOINIT, Color_cons_t, Color_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_playercolor2 = {"color2", "Orange", CV_CALL|CV_NOINIT, Color_cons_t, Color2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+UINT16 lastgoodcolor = SKINCOLOR_BLUE, lastgoodcolor2 = SKINCOLOR_BLUE;
+consvar_t cv_playercolor = CVAR_INIT ("color", "Blue", CV_CALL|CV_NOINIT, Color_cons_t, Color_OnChange);
+consvar_t cv_playercolor2 = CVAR_INIT ("color2", "Orange", CV_CALL|CV_NOINIT, Color_cons_t, Color2_OnChange);
 // player's skin, saved for commodity, when using a favorite skins wad..
-consvar_t cv_skin = {"skin", DEFAULTSKIN, CV_CALL|CV_NOINIT, NULL, Skin_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_skin2 = {"skin2", DEFAULTSKIN2, CV_CALL|CV_NOINIT, NULL, Skin2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_skin = CVAR_INIT ("skin", DEFAULTSKIN, CV_CALL|CV_NOINIT, NULL, Skin_OnChange);
+consvar_t cv_skin2 = CVAR_INIT ("skin2", DEFAULTSKIN2, CV_CALL|CV_NOINIT, NULL, Skin2_OnChange);
 
 // saved versions of the above six
-consvar_t cv_defaultplayercolor = {"defaultcolor", "Blue", CV_SAVE, Color_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_defaultplayercolor2 = {"defaultcolor2", "Orange", CV_SAVE, Color_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_defaultskin = {"defaultskin", DEFAULTSKIN, CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_defaultskin2 = {"defaultskin2", DEFAULTSKIN2, CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_defaultplayercolor = CVAR_INIT ("defaultcolor", "Blue", CV_SAVE, Color_cons_t, NULL);
+consvar_t cv_defaultplayercolor2 = CVAR_INIT ("defaultcolor2", "Orange", CV_SAVE, Color_cons_t, NULL);
+consvar_t cv_defaultskin = CVAR_INIT ("defaultskin", DEFAULTSKIN, CV_SAVE, NULL, NULL);
+consvar_t cv_defaultskin2 = CVAR_INIT ("defaultskin2", DEFAULTSKIN2, CV_SAVE, NULL, NULL);
 
-consvar_t cv_skipmapcheck = {"skipmapcheck", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_skipmapcheck = CVAR_INIT ("skipmapcheck", "Off", CV_SAVE, CV_OnOff, NULL);
 
 INT32 cv_debug;
 
-consvar_t cv_usemouse = {"use_mouse", "On", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_usemouse2 = {"use_mouse2", "Off", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse2, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_usemouse = CVAR_INIT ("use_mouse", "On", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse);
+consvar_t cv_usemouse2 = CVAR_INIT ("use_mouse2", "Off", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse2);
 
-consvar_t cv_usejoystick = {"use_gamepad", "1", CV_SAVE|CV_CALL, usejoystick_cons_t,
-	I_InitJoystick, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_usejoystick2 = {"use_gamepad2", "2", CV_SAVE|CV_CALL, usejoystick_cons_t,
-	I_InitJoystick2, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_usejoystick = CVAR_INIT ("use_gamepad", "1", CV_SAVE|CV_CALL, usejoystick_cons_t, I_InitJoystick);
+consvar_t cv_usejoystick2 = CVAR_INIT ("use_gamepad2", "2", CV_SAVE|CV_CALL, usejoystick_cons_t, I_InitJoystick2);
 #if (defined (LJOYSTICK) || defined (HAVE_SDL))
 #ifdef LJOYSTICK
-consvar_t cv_joyport = {"padport", "/dev/js0", CV_SAVE, joyport_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_joyport2 = {"padport2", "/dev/js0", CV_SAVE, joyport_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL}; //Alam: for later
+consvar_t cv_joyport = CVAR_INIT ("padport", "/dev/js0", CV_SAVE, joyport_cons_t, NULL);
+consvar_t cv_joyport2 = CVAR_INIT ("padport2", "/dev/js0", CV_SAVE, joyport_cons_t, NULL); //Alam: for later
 #endif
-consvar_t cv_joyscale = {"padscale", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_joyscale2 = {"padscale2", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale2, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_joyscale = CVAR_INIT ("padscale", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale);
+consvar_t cv_joyscale2 = CVAR_INIT ("padscale2", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale2);
 #else
-consvar_t cv_joyscale = {"padscale", "1", CV_SAVE|CV_HIDEN, NULL, NULL, 0, NULL, NULL, 0, 0, NULL}; //Alam: Dummy for save
-consvar_t cv_joyscale2 = {"padscale2", "1", CV_SAVE|CV_HIDEN, NULL, NULL, 0, NULL, NULL, 0, 0, NULL}; //Alam: Dummy for save
+consvar_t cv_joyscale = CVAR_INIT ("padscale", "1", CV_SAVE|CV_HIDEN, NULL, NULL); //Alam: Dummy for save
+consvar_t cv_joyscale2 = CVAR_INIT ("padscale2", "1", CV_SAVE|CV_HIDEN, NULL, NULL); //Alam: Dummy for save
 #endif
 #if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
-consvar_t cv_mouse2port = {"mouse2port", "/dev/gpmdata", CV_SAVE, mouse2port_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_mouse2opt = {"mouse2opt", "0", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mouse2port = CVAR_INIT ("mouse2port", "/dev/gpmdata", CV_SAVE, mouse2port_cons_t, NULL);
+consvar_t cv_mouse2opt = CVAR_INIT ("mouse2opt", "0", CV_SAVE, NULL, NULL);
 #else
-consvar_t cv_mouse2port = {"mouse2port", "COM2", CV_SAVE, mouse2port_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mouse2port = CVAR_INIT ("mouse2port", "COM2", CV_SAVE, mouse2port_cons_t, NULL);
 #endif
 
-consvar_t cv_matchboxes = {"matchboxes", "Normal", CV_NETVAR|CV_CHEAT, matchboxes_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_specialrings = {"specialrings", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_powerstones = {"powerstones", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_matchboxes = CVAR_INIT ("matchboxes", "Normal", CV_NETVAR|CV_CHEAT, matchboxes_cons_t, NULL);
+consvar_t cv_specialrings = CVAR_INIT ("specialrings", "On", CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_powerstones = CVAR_INIT ("powerstones", "On", CV_NETVAR, CV_OnOff, NULL);
 
-consvar_t cv_recycler =      {"tv_recycler",      "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_teleporters =   {"tv_teleporter",    "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_superring =     {"tv_superring",     "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_supersneakers = {"tv_supersneaker",  "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_invincibility = {"tv_invincibility", "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_jumpshield =    {"tv_jumpshield",    "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_watershield =   {"tv_watershield",   "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_ringshield =    {"tv_ringshield",    "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_forceshield =   {"tv_forceshield",   "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_bombshield =    {"tv_bombshield",    "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_1up =           {"tv_1up",           "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_eggmanbox =     {"tv_eggman",        "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_recycler =      CVAR_INIT ("tv_recycler",      "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_teleporters =   CVAR_INIT ("tv_teleporter",    "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_superring =     CVAR_INIT ("tv_superring",     "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_supersneakers = CVAR_INIT ("tv_supersneaker",  "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_invincibility = CVAR_INIT ("tv_invincibility", "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_jumpshield =    CVAR_INIT ("tv_jumpshield",    "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_watershield =   CVAR_INIT ("tv_watershield",   "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_ringshield =    CVAR_INIT ("tv_ringshield",    "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_forceshield =   CVAR_INIT ("tv_forceshield",   "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_bombshield =    CVAR_INIT ("tv_bombshield",    "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_1up =           CVAR_INIT ("tv_1up",           "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_eggmanbox =     CVAR_INIT ("tv_eggman",        "5", CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
 
-consvar_t cv_ringslinger = {"ringslinger", "No", CV_NETVAR|CV_NOSHOWHELP|CV_CALL|CV_CHEAT, CV_YesNo,
-	Ringslinger_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_gravity = {"gravity", "0.5", CV_RESTRICT|CV_FLOAT|CV_CALL, NULL, Gravity_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_ringslinger = CVAR_INIT ("ringslinger", "No", CV_NETVAR|CV_NOSHOWHELP|CV_CALL|CV_CHEAT, CV_YesNo, Ringslinger_OnChange);
+consvar_t cv_gravity = CVAR_INIT ("gravity", "0.5", CV_RESTRICT|CV_FLOAT|CV_CALL, NULL, Gravity_OnChange);
 
-consvar_t cv_soundtest = {"soundtest", "0", CV_CALL, NULL, SoundTest_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_soundtest = CVAR_INIT ("soundtest", "0", CV_CALL, NULL, SoundTest_OnChange);
 
 static CV_PossibleValue_t minitimelimit_cons_t[] = {{15, "MIN"}, {9999, "MAX"}, {0, NULL}};
-consvar_t cv_countdowntime = {"countdowntime", "60", CV_NETVAR|CV_CHEAT, minitimelimit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_countdowntime = CVAR_INIT ("countdowntime", "60", CV_NETVAR|CV_CHEAT, minitimelimit_cons_t, NULL);
 
-consvar_t cv_touchtag = {"touchtag", "Off", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_hidetime = {"hidetime", "30", CV_NETVAR|CV_CALL, minitimelimit_cons_t, Hidetime_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_touchtag = CVAR_INIT ("touchtag", "Off", CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_hidetime = CVAR_INIT ("hidetime", "30", CV_NETVAR|CV_CALL, minitimelimit_cons_t, Hidetime_OnChange);
 
-consvar_t cv_autobalance = {"autobalance", "Off", CV_NETVAR|CV_CALL, CV_OnOff, AutoBalance_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_teamscramble = {"teamscramble", "Off", CV_NETVAR|CV_CALL|CV_NOINIT, teamscramble_cons_t, TeamScramble_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_scrambleonchange = {"scrambleonchange", "Off", CV_NETVAR, teamscramble_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_autobalance = CVAR_INIT ("autobalance", "Off", CV_NETVAR|CV_CALL, CV_OnOff, AutoBalance_OnChange);
+consvar_t cv_teamscramble = CVAR_INIT ("teamscramble", "Off", CV_NETVAR|CV_CALL|CV_NOINIT, teamscramble_cons_t, TeamScramble_OnChange);
+consvar_t cv_scrambleonchange = CVAR_INIT ("scrambleonchange", "Off", CV_NETVAR, teamscramble_cons_t, NULL);
 
-consvar_t cv_friendlyfire = {"friendlyfire", "Off", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_itemfinder = {"itemfinder", "Off", CV_CALL, CV_OnOff, ItemFinder_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_friendlyfire = CVAR_INIT ("friendlyfire", "Off", CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_itemfinder = CVAR_INIT ("itemfinder", "Off", CV_CALL, CV_OnOff, ItemFinder_OnChange);
 
 // Scoring type options
-consvar_t cv_overtime = {"overtime", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_overtime = CVAR_INIT ("overtime", "Yes", CV_NETVAR, CV_YesNo, NULL);
 
-consvar_t cv_rollingdemos = {"rollingdemos", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_rollingdemos = CVAR_INIT ("rollingdemos", "On", CV_SAVE, CV_OnOff, NULL);
 
 static CV_PossibleValue_t timetic_cons_t[] = {{0, "Classic"}, {1, "Centiseconds"}, {2, "Mania"}, {3, "Tics"}, {0, NULL}};
-consvar_t cv_timetic = {"timerres", "Classic", CV_SAVE, timetic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_timetic = CVAR_INIT ("timerres", "Classic", CV_SAVE, timetic_cons_t, NULL);
 
 static CV_PossibleValue_t powerupdisplay_cons_t[] = {{0, "Never"}, {1, "First-person only"}, {2, "Always"}, {0, NULL}};
-consvar_t cv_powerupdisplay = {"powerupdisplay", "First-person only", CV_SAVE, powerupdisplay_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_powerupdisplay = CVAR_INIT ("powerupdisplay", "First-person only", CV_SAVE, powerupdisplay_cons_t, NULL);
 
 static CV_PossibleValue_t pointlimit_cons_t[] = {{1, "MIN"}, {MAXSCORE, "MAX"}, {0, "None"}, {0, NULL}};
-consvar_t cv_pointlimit = {"pointlimit", "None", CV_NETVAR|CV_CALL|CV_NOINIT, pointlimit_cons_t,
-	PointLimit_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_pointlimit = CVAR_INIT ("pointlimit", "None", CV_NETVAR|CV_CALL|CV_NOINIT, pointlimit_cons_t, PointLimit_OnChange);
 static CV_PossibleValue_t timelimit_cons_t[] = {{1, "MIN"}, {30, "MAX"}, {0, "None"}, {0, NULL}};
-consvar_t cv_timelimit = {"timelimit", "None", CV_NETVAR|CV_CALL|CV_NOINIT, timelimit_cons_t,
-	TimeLimit_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_timelimit = CVAR_INIT ("timelimit", "None", CV_NETVAR|CV_CALL|CV_NOINIT, timelimit_cons_t, TimeLimit_OnChange);
 static CV_PossibleValue_t numlaps_cons_t[] = {{1, "MIN"}, {50, "MAX"}, {0, NULL}};
-consvar_t cv_numlaps = {"numlaps", "4", CV_NETVAR|CV_CALL|CV_NOINIT, numlaps_cons_t,
-	NumLaps_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_numlaps = CVAR_INIT ("numlaps", "4", CV_NETVAR|CV_CALL|CV_NOINIT, numlaps_cons_t, NumLaps_OnChange);
 static CV_PossibleValue_t basenumlaps_cons_t[] = {{1, "MIN"}, {50, "MAX"}, {0, "Map default"}, {0, NULL}};
-consvar_t cv_basenumlaps = {"basenumlaps", "Map default", CV_NETVAR|CV_CALL|CV_CHEAT, basenumlaps_cons_t, BaseNumLaps_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_basenumlaps = CVAR_INIT ("basenumlaps", "Map default", CV_NETVAR|CV_CALL|CV_CHEAT, basenumlaps_cons_t, BaseNumLaps_OnChange);
 
 // Point and time limits for every gametype
 INT32 pointlimits[NUMGAMETYPES];
 INT32 timelimits[NUMGAMETYPES];
 
 // log elemental hazards -- not a netvar, is local to current player
-consvar_t cv_hazardlog = {"hazardlog", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_hazardlog = CVAR_INIT ("hazardlog", "Yes", 0, CV_YesNo, NULL);
 
-consvar_t cv_forceskin = {"forceskin", "None", CV_NETVAR|CV_CALL|CV_CHEAT, NULL, ForceSkin_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_downloading = {"downloading", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_allowexitlevel = {"allowexitlevel", "No", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_forceskin = CVAR_INIT ("forceskin", "None", CV_NETVAR|CV_CALL|CV_CHEAT, NULL, ForceSkin_OnChange);
+consvar_t cv_downloading = CVAR_INIT ("downloading", "On", 0, CV_OnOff, NULL);
+consvar_t cv_allowexitlevel = CVAR_INIT ("allowexitlevel", "No", CV_NETVAR, CV_YesNo, NULL);
 
-consvar_t cv_killingdead = {"killingdead", "Off", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_killingdead = CVAR_INIT ("killingdead", "Off", CV_NETVAR, CV_OnOff, NULL);
 
-consvar_t cv_netstat = {"netstat", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL}; // show bandwidth statistics
+consvar_t cv_netstat = CVAR_INIT ("netstat", "Off", 0, CV_OnOff, NULL); // show bandwidth statistics
 static CV_PossibleValue_t nettimeout_cons_t[] = {{TICRATE/7, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
-consvar_t cv_nettimeout = {"nettimeout", "350", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_nettimeout = CVAR_INIT ("nettimeout", "350", CV_CALL|CV_SAVE, nettimeout_cons_t, NetTimeout_OnChange);
 static CV_PossibleValue_t jointimeout_cons_t[] = {{5*TICRATE, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
-consvar_t cv_jointimeout = {"jointimeout", "350", CV_CALL|CV_SAVE, jointimeout_cons_t, JoinTimeout_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_maxping = {"maxping", "0", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_jointimeout = CVAR_INIT ("jointimeout", "350", CV_CALL|CV_SAVE, jointimeout_cons_t, JoinTimeout_OnChange);
+consvar_t cv_maxping = CVAR_INIT ("maxping", "0", CV_SAVE, CV_Unsigned, NULL);
 
 static CV_PossibleValue_t pingtimeout_cons_t[] = {{8, "MIN"}, {120, "MAX"}, {0, NULL}};
-consvar_t cv_pingtimeout = {"pingtimeout", "10", CV_SAVE, pingtimeout_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_pingtimeout = CVAR_INIT ("pingtimeout", "10", CV_SAVE, pingtimeout_cons_t, NULL);
 
 // show your ping on the HUD next to framerate. Defaults to warning only (shows up if your ping is > maxping)
 static CV_PossibleValue_t showping_cons_t[] = {{0, "Off"}, {1, "Always"}, {2, "Warning"}, {0, NULL}};
-consvar_t cv_showping = {"showping", "Warning", CV_SAVE, showping_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_showping = CVAR_INIT ("showping", "Warning", CV_SAVE, showping_cons_t, NULL);
 
 // Intermission time Tails 04-19-2002
 static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NULL}};
-consvar_t cv_inttime = {"inttime", "10", CV_NETVAR, inttime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_inttime = CVAR_INIT ("inttime", "10", CV_NETVAR, inttime_cons_t, NULL);
 
 static CV_PossibleValue_t coopstarposts_cons_t[] = {{0, "Per-player"}, {1, "Shared"}, {2, "Teamwork"}, {0, NULL}};
-consvar_t cv_coopstarposts = {"coopstarposts", "Per-player", CV_NETVAR|CV_CALL, coopstarposts_cons_t, CoopStarposts_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_coopstarposts = CVAR_INIT ("coopstarposts", "Per-player", CV_NETVAR|CV_CALL, coopstarposts_cons_t, CoopStarposts_OnChange);
 
 static CV_PossibleValue_t cooplives_cons_t[] = {{0, "Infinite"}, {1, "Per-player"}, {2, "Avoid Game Over"}, {3, "Single pool"}, {0, NULL}};
-consvar_t cv_cooplives = {"cooplives", "Avoid Game Over", CV_NETVAR|CV_CALL|CV_CHEAT, cooplives_cons_t, CoopLives_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cooplives = CVAR_INIT ("cooplives", "Avoid Game Over", CV_NETVAR|CV_CALL|CV_CHEAT, cooplives_cons_t, CoopLives_OnChange);
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
-consvar_t cv_advancemap = {"advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_advancemap = CVAR_INIT ("advancemap", "Next", CV_NETVAR, advancemap_cons_t, NULL);
 
 static CV_PossibleValue_t playersforexit_cons_t[] = {{0, "One"}, {1, "1/4"}, {2, "Half"}, {3, "3/4"}, {4, "All"}, {0, NULL}};
-consvar_t cv_playersforexit = {"playersforexit", "All", CV_NETVAR, playersforexit_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_playersforexit = CVAR_INIT ("playersforexit", "All", CV_NETVAR, playersforexit_cons_t, NULL);
 
-consvar_t cv_exitmove = {"exitmove", "On", CV_NETVAR|CV_CALL, CV_OnOff, ExitMove_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_exitmove = CVAR_INIT ("exitmove", "On", CV_NETVAR|CV_CALL, CV_OnOff, ExitMove_OnChange);
 
-consvar_t cv_runscripts = {"runscripts", "Yes", 0, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_runscripts = CVAR_INIT ("runscripts", "Yes", 0, CV_YesNo, NULL);
 
-consvar_t cv_pause = {"pausepermission", "Server", CV_NETVAR, pause_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_mute = {"mute", "Off", CV_NETVAR|CV_CALL, CV_OnOff, Mute_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_pause = CVAR_INIT ("pausepermission", "Server", CV_NETVAR, pause_cons_t, NULL);
+consvar_t cv_mute = CVAR_INIT ("mute", "Off", CV_NETVAR|CV_CALL, CV_OnOff, Mute_OnChange);
 
-consvar_t cv_sleep = {"cpusleep", "1", CV_SAVE, sleeping_cons_t, NULL, -1, NULL, NULL, 0, 0, NULL};
+consvar_t cv_sleep = CVAR_INIT ("cpusleep", "1", CV_SAVE, sleeping_cons_t, NULL);
 
 char timedemo_name[256];
 boolean timedemo_csv;
@@ -501,6 +495,8 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("archivetest", Command_Archivetest_f);
 #endif
 
+	COM_AddCommand("downloads", Command_Downloads_f);
+
 	// for master server connection
 	AddMServCommands();
 
@@ -619,7 +615,7 @@ void D_RegisterClientCommands(void)
 	for (i = 0; i < MAXSKINCOLORS; i++)
 	{
 		Color_cons_t[i].value = i;
-		Color_cons_t[i].strvalue = Color_Names[i];
+		Color_cons_t[i].strvalue = skincolors[i].name;
 	}
 	Color_cons_t[MAXSKINCOLORS].value = 0;
 	Color_cons_t[MAXSKINCOLORS].strvalue = NULL;
@@ -672,6 +668,7 @@ void D_RegisterClientCommands(void)
 	// GIF variables
 	CV_RegisterVar(&cv_gif_optimize);
 	CV_RegisterVar(&cv_gif_downscale);
+	CV_RegisterVar(&cv_gif_dynamicdelay);
 	CV_RegisterVar(&cv_gif_localcolortable);
 
 #ifdef WALLSPLATS
@@ -697,6 +694,7 @@ void D_RegisterClientCommands(void)
 #endif
 	CV_RegisterVar(&cv_rollingdemos);
 	CV_RegisterVar(&cv_netstat);
+	CV_RegisterVar(&cv_netticbuffer);
 
 #ifdef NETGAME_DEVMODE
 	CV_RegisterVar(&cv_fishcake);
@@ -856,17 +854,10 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_midimusicvolume);
 	CV_RegisterVar(&cv_numChannels);
 
-	// i_cdmus.c
-	CV_RegisterVar(&cd_volume);
-	CV_RegisterVar(&cdUpdate);
-
 	// screen.c
 	CV_RegisterVar(&cv_fullscreen);
 	CV_RegisterVar(&cv_renderview);
 	CV_RegisterVar(&cv_renderer);
-#ifdef HWRENDER
-	CV_RegisterVar(&cv_newrenderer);
-#endif
 	CV_RegisterVar(&cv_scr_depth);
 	CV_RegisterVar(&cv_scr_width);
 	CV_RegisterVar(&cv_scr_height);
@@ -1125,6 +1116,8 @@ static void SetPlayerName(INT32 playernum, char *newname)
 			if (netgame)
 				HU_AddChatText(va("\x82*%s renamed to %s", player_names[playernum], newname), false);
 
+			player_name_changes[playernum]++;
+
 			strcpy(player_names[playernum], newname);
 		}
 	}
@@ -1153,7 +1146,7 @@ UINT8 CanChangeSkin(INT32 playernum)
 	// Server has skin change restrictions.
 	if (cv_restrictskinchange.value)
 	{
-		if (gametype == GT_COOP)
+		if (gametyperules & GTR_FRIENDLY)
 			return true;
 
 		// Can change skin during initial countdown.
@@ -1221,15 +1214,20 @@ static void SendNameAndColor(void)
 			CV_StealthSetValue(&cv_playercolor, skincolor_blueteam);
 	}
 
-	// never allow the color "none"
-	if (!cv_playercolor.value)
+	// don't allow inaccessible colors
+	if (!skincolors[cv_playercolor.value].accessible)
 	{
-		if (players[consoleplayer].skincolor)
+		if (players[consoleplayer].skincolor && skincolors[players[consoleplayer].skincolor].accessible)
 			CV_StealthSetValue(&cv_playercolor, players[consoleplayer].skincolor);
-		else if (skins[players[consoleplayer].skin].prefcolor)
-			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin].prefcolor);
-		else
+		else if (skincolors[atoi(cv_playercolor.defaultvalue)].accessible)
 			CV_StealthSet(&cv_playercolor, cv_playercolor.defaultvalue);
+		else if (skins[players[consoleplayer].skin].prefcolor && skincolors[skins[players[consoleplayer].skin].prefcolor].accessible)
+			CV_StealthSetValue(&cv_playercolor, skins[players[consoleplayer].skin].prefcolor);
+		else {
+			UINT16 i = 0;
+			while (i<numskincolors && !skincolors[i].accessible) i++;
+			CV_StealthSetValue(&cv_playercolor, (i != numskincolors) ? i : SKINCOLOR_BLUE);
+		}
 	}
 
 	if (!strcmp(cv_playername.string, player_names[consoleplayer])
@@ -1276,10 +1274,10 @@ static void SendNameAndColor(void)
 			{
 				CV_StealthSetValue(&cv_playercolor, skins[cv_skin.value].prefcolor);
 
-				players[consoleplayer].skincolor = cv_playercolor.value % MAXSKINCOLORS;
+				players[consoleplayer].skincolor = cv_playercolor.value % numskincolors;
 
 				if (players[consoleplayer].mo)
-					players[consoleplayer].mo->color = (UINT8)players[consoleplayer].skincolor;
+					players[consoleplayer].mo->color = (UINT16)players[consoleplayer].skincolor;
 			}*/
 		}
 		else
@@ -1296,7 +1294,12 @@ static void SendNameAndColor(void)
 	snacpending++;
 
 	// Don't change name if muted
-	if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
+	if (player_name_changes[consoleplayer] >= MAXNAMECHANGES)
+	{
+		CV_StealthSet(&cv_playername, player_names[consoleplayer]);
+		HU_AddChatText("\x85*You must wait to change your name again", false);
+	}
+	else if (cv_mute.value && !(server || IsPlayerAdmin(consoleplayer)))
 		CV_StealthSet(&cv_playername, player_names[consoleplayer]);
 	else // Cleanup name if changing it
 		CleanupPlayerName(consoleplayer, cv_playername.zstring);
@@ -1317,7 +1320,7 @@ static void SendNameAndColor(void)
 	// Finally write out the complete packet and send it off.
 	WRITESTRINGN(p, cv_playername.zstring, MAXPLAYERNAME);
 	WRITEUINT32(p, (UINT32)players[consoleplayer].availabilities);
-	WRITEUINT8(p, (UINT8)cv_playercolor.value);
+	WRITEUINT16(p, (UINT16)cv_playercolor.value);
 	WRITEUINT8(p, (UINT8)cv_skin.value);
 	SendNetXCmd(XD_NAMEANDCOLOR, buf, p - buf);
 }
@@ -1344,15 +1347,20 @@ static void SendNameAndColor2(void)
 			CV_StealthSetValue(&cv_playercolor2, skincolor_blueteam);
 	}
 
-	// never allow the color "none"
-	if (!cv_playercolor2.value)
+	// don't allow inaccessible colors
+	if (!skincolors[cv_playercolor2.value].accessible)
 	{
-		if (players[secondplaya].skincolor)
+		if (players[secondplaya].skincolor && skincolors[players[secondplaya].skincolor].accessible)
 			CV_StealthSetValue(&cv_playercolor2, players[secondplaya].skincolor);
-		else if (skins[players[secondplaya].skin].prefcolor)
+		else if (skincolors[atoi(cv_playercolor2.defaultvalue)].accessible)
+			CV_StealthSet(&cv_playercolor, cv_playercolor2.defaultvalue);
+		else if (skins[players[secondplaya].skin].prefcolor && skincolors[skins[players[secondplaya].skin].prefcolor].accessible)
 			CV_StealthSetValue(&cv_playercolor2, skins[players[secondplaya].skin].prefcolor);
-		else
-			CV_StealthSet(&cv_playercolor2, cv_playercolor2.defaultvalue);
+		else {
+			UINT16 i = 0;
+			while (i<numskincolors && !skincolors[i].accessible) i++;
+			CV_StealthSetValue(&cv_playercolor2, (i != numskincolors) ? i : SKINCOLOR_BLUE);
+		}
 	}
 
 	players[secondplaya].availabilities = R_GetSkinAvailabilities();
@@ -1405,7 +1413,7 @@ static void SendNameAndColor2(void)
 			{
 				CV_StealthSetValue(&cv_playercolor2, skins[players[secondplaya].skin].prefcolor);
 
-				players[secondplaya].skincolor = cv_playercolor2.value % MAXSKINCOLORS;
+				players[secondplaya].skincolor = cv_playercolor2.value % numskincolors;
 
 				if (players[secondplaya].mo)
 					players[secondplaya].mo->color = players[secondplaya].skincolor;
@@ -1428,7 +1436,8 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 {
 	player_t *p = &players[playernum];
 	char name[MAXPLAYERNAME+1];
-	UINT8 color, skin;
+	UINT16 color;
+	UINT8 skin;
 
 #ifdef PARANOIA
 	if (playernum < 0 || playernum > MAXPLAYERS)
@@ -1447,17 +1456,20 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 
 	READSTRINGN(*cp, name, MAXPLAYERNAME);
 	p->availabilities = READUINT32(*cp);
-	color = READUINT8(*cp);
+	color = READUINT16(*cp);
 	skin = READUINT8(*cp);
 
 	// set name
-	if (strcasecmp(player_names[playernum], name) != 0)
-		SetPlayerName(playernum, name);
+	if (player_name_changes[playernum] < MAXNAMECHANGES)
+	{
+		if (strcasecmp(player_names[playernum], name) != 0)
+			SetPlayerName(playernum, name);
+	}
 
 	// set color
-	p->skincolor = color % MAXSKINCOLORS;
+	p->skincolor = color % numskincolors;
 	if (p->mo)
-		p->mo->color = (UINT8)p->skincolor;
+		p->mo->color = (UINT16)p->skincolor;
 
 	// normal player colors
 	if (server && (p != &players[consoleplayer] && p != &players[secondarydisplayplayer]))
@@ -1474,8 +1486,8 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 				kick = true;
 		}
 
-		// don't allow color "none"
-		if (!p->skincolor)
+		// don't allow inaccessible colors
+		if (skincolors[p->skincolor].accessible == false)
 			kick = true;
 
 		// availabilities
@@ -1733,7 +1745,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 	}
 	CONS_Debug(DBG_GAMELOGIC, "Map change: mapnum=%d gametype=%d ultmode=%d resetplayers=%d delay=%d skipprecutscene=%d\n",
 	           mapnum, newgametype, pultmode, resetplayers, delay, skipprecutscene);
-	if ((netgame || multiplayer) && !((gametype == newgametype) && (newgametype == GT_COOP)))
+	if ((netgame || multiplayer) && !((gametype == newgametype) && (gametypedefaultrules[newgametype] & GTR_CAMPAIGN)))
 		FLS = false;
 
 	if (delay != 2)
@@ -1975,7 +1987,7 @@ static void Command_Map_f(void)
 			fromlevelselect =
 				( netgame || multiplayer ) &&
 				newgametype == gametype    &&
-				newgametype == GT_COOP;
+				gametypedefaultrules[newgametype] & GTR_CAMPAIGN;
 		}
 	}
 
@@ -2765,7 +2777,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 			players[playernum].spectator = false;
 
 			//If joining after hidetime in normal tag, default to being IT.
-			if (gametype == GT_TAG && (leveltime > (hidetime * TICRATE)))
+			if (((gametyperules & (GTR_TAG|GTR_HIDEFROZEN)) == GTR_TAG) && (leveltime > (hidetime * TICRATE)))
 			{
 				NetPacket.packet.newteam = 1; //minor hack, causes the "is it" message to be printed later.
 				players[playernum].pflags |= PF_TAGIT; //make the player IT.
@@ -3460,7 +3472,7 @@ static void Command_Version_f(void)
 #ifdef DEVELOP
 	CONS_Printf("Sonic Robo Blast 2 %s-%s (%s %s) ", compbranch, comprevision, compdate, comptime);
 #else
-	CONS_Printf("Sonic Robo Blast 2 %s (%s %s %s) ", VERSIONSTRING, compdate, comptime, comprevision);
+	CONS_Printf("Sonic Robo Blast 2 %s (%s %s %s %s) ", VERSIONSTRING, compdate, comptime, comprevision, compbranch);
 #endif
 
 	// Base library
@@ -3556,6 +3568,8 @@ static void Command_Playintro_f(void)
   */
 FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void)
 {
+	if (Playing())
+		LUAh_GameQuit();
 	I_Quit();
 }
 
@@ -3613,7 +3627,7 @@ static void PointLimit_OnChange(void)
 static void NumLaps_OnChange(void)
 {
 	// Just don't be verbose
-	if (gametype == GT_RACE)
+	if ((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE)
 		CONS_Printf(M_GetText("Number of laps set to %d\n"), cv_numlaps.value);
 }
 
@@ -3727,7 +3741,7 @@ static void ExitMove_OnChange(void)
 {
 	UINT8 i;
 
-	if (!(netgame || multiplayer) || gametype != GT_COOP)
+	if (!(netgame || multiplayer) || !(gametyperules & GTR_FRIENDLY))
 		return;
 
 	if (cv_exitmove.value)
@@ -4217,6 +4231,9 @@ void Command_ExitGame_f(void)
 {
 	INT32 i;
 
+	if (Playing())
+		LUAh_GameQuit();
+
 	D_QuitNetGame();
 	CL_Reset();
 	CV_ClearChangedFlags();
@@ -4473,25 +4490,30 @@ static void Skin2_OnChange(void)
   */
 static void Color_OnChange(void)
 {
-	if (!Playing())
-		return; // do whatever you want
-
-	if (!(cv_debug || devparm) && !(multiplayer || netgame)) // In single player.
-	{
-		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
-		return;
-	}
-
-	if (!P_PlayerMoving(consoleplayer))
-	{
-		// Color change menu scrolling fix is no longer necessary
-		SendNameAndColor();
+	if (!Playing()) {
+		if (!cv_playercolor.value || !skincolors[cv_playercolor.value].accessible)
+			CV_StealthSetValue(&cv_playercolor, lastgoodcolor);
 	}
 	else
 	{
-		CV_StealthSetValue(&cv_playercolor,
-			players[consoleplayer].skincolor);
+		if (!(cv_debug || devparm) && !(multiplayer || netgame)) // In single player.
+		{
+			CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
+			return;
+		}
+
+		if (!P_PlayerMoving(consoleplayer) && skincolors[players[consoleplayer].skincolor].accessible == true)
+		{
+			// Color change menu scrolling fix is no longer necessary
+			SendNameAndColor();
+		}
+		else
+		{
+			CV_StealthSetValue(&cv_playercolor,
+				players[consoleplayer].skincolor);
+		}
 	}
+	lastgoodcolor = cv_playercolor.value;
 }
 
 /** Sends a color change for the secondary splitscreen player, unless that
@@ -4502,18 +4524,24 @@ static void Color_OnChange(void)
 static void Color2_OnChange(void)
 {
 	if (!Playing() || !splitscreen)
-		return; // do whatever you want
-
-	if (!P_PlayerMoving(secondarydisplayplayer))
 	{
-		// Color change menu scrolling fix is no longer necessary
-		SendNameAndColor2();
+		if (!cv_playercolor2.value || !skincolors[cv_playercolor2.value].accessible)
+			CV_StealthSetValue(&cv_playercolor2, lastgoodcolor2);
 	}
 	else
 	{
-		CV_StealthSetValue(&cv_playercolor2,
-			players[secondarydisplayplayer].skincolor);
+		if (!P_PlayerMoving(secondarydisplayplayer) && skincolors[players[secondarydisplayplayer].skincolor].accessible == true)
+		{
+			// Color change menu scrolling fix is no longer necessary
+			SendNameAndColor2();
+		}
+		else
+		{
+			CV_StealthSetValue(&cv_playercolor2,
+				players[secondarydisplayplayer].skincolor);
+		}
 	}
+	lastgoodcolor2 = cv_playercolor2.value;
 }
 
 /** Displays the result of the chat being muted or unmuted.
@@ -4590,7 +4618,7 @@ static void Command_ShowTime_f(void)
 
 static void BaseNumLaps_OnChange(void)
 {
-	if (gametype == GT_RACE)
+	if ((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE)
 	{
 		if (cv_basenumlaps.value)
 			CONS_Printf(M_GetText("Number of laps will be changed to map defaults next round.\n"));

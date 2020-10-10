@@ -14,10 +14,12 @@
 #define __D_CLISRV__
 
 #include "d_ticcmd.h"
+#include "d_net.h"
 #include "d_netcmd.h"
 #include "d_net.h"
 #include "tables.h"
 #include "d_player.h"
+#include "mserv.h"
 
 /*
 The 'packet version' is used to distinguish packet formats.
@@ -33,7 +35,8 @@ applications may follow different packet versions.
 //  be transmitted.
 
 // Networking and tick handling related.
-#define BACKUPTICS 96
+#define BACKUPTICS 1024
+#define CLIENTBACKUPTICS 32
 #define MAXTEXTCMD 256
 //
 // Packet structure
@@ -75,6 +78,8 @@ typedef enum
 	                  // In addition, this packet can't occupy all the available slots.
 
 	PT_FILEFRAGMENT = PT_CANFAIL, // A part of a file.
+	PT_FILEACK,
+	PT_FILERECEIVED,
 
 	PT_TEXTCMD,       // Extra text commands from the client.
 	PT_TEXTCMD2,      // Splitscreen text commands.
@@ -128,7 +133,7 @@ typedef struct
 // this packet is too large
 typedef struct
 {
-	UINT8 starttic;
+	tic_t starttic;
 	UINT8 numtics;
 	UINT8 numslots; // "Slots filled": Highest player number in use plus one.
 	ticcmd_t cmds[45]; // Normally [BACKUPTIC][MAXPLAYERS] but too large
@@ -171,6 +176,9 @@ typedef struct
 	UINT32 pflags; // pflags_t
 	UINT8 panim; // panim_t
 
+	INT16 angleturn;
+	INT16 oldrelangleturn;
+
 	angle_t aiming;
 	INT32 currentweapon;
 	INT32 ringweapons;
@@ -188,7 +196,7 @@ typedef struct
 	SINT8 xtralife;
 	SINT8 pity;
 
-	UINT8 skincolor;
+	UINT16 skincolor;
 	INT32 skin;
 	UINT32 availabilities;
 	// Just in case Lua does something like
@@ -308,7 +316,7 @@ typedef struct
 
 	// 0xFF == not in game; else player skin num
 	UINT8 playerskins[MAXPLAYERS];
-	UINT8 playercolor[MAXPLAYERS];
+	UINT16 playercolor[MAXPLAYERS];
 	UINT32 playeravailabilities[MAXPLAYERS];
 
 	UINT8 gametype;
@@ -320,12 +328,29 @@ typedef struct
 	UINT8 varlengthinputs[0]; // Playernames and netvars
 } ATTRPACK serverconfig_pak;
 
-typedef struct {
+typedef struct
+{
 	UINT8 fileid;
+	UINT32 filesize;
+	UINT8 iteration;
 	UINT32 position;
 	UINT16 size;
 	UINT8 data[0]; // Size is variable using hardware_MAXPACKETLENGTH
 } ATTRPACK filetx_pak;
+
+typedef struct
+{
+	UINT32 start;
+	UINT32 acks;
+} ATTRPACK fileacksegment_t;
+
+typedef struct
+{
+	UINT8 fileid;
+	UINT8 iteration;
+	UINT8 numsegments;
+	fileacksegment_t segments[0];
+} ATTRPACK fileack_pak;
 
 #ifdef _MSC_VER
 #pragma warning(default : 4200)
@@ -414,7 +439,7 @@ typedef struct
 {
 	char name[MAXPLAYERNAME+1];
 	UINT8 skin;
-	UINT8 color;
+	UINT16 color;
 	UINT32 pflags;
 	UINT32 score;
 	UINT8 ctfteam;
@@ -442,6 +467,8 @@ typedef struct
 		UINT8 resynchgot;                   //
 		UINT8 textcmd[MAXTEXTCMD+1];        //       66049 bytes (wut??? 64k??? More like 257 bytes...)
 		filetx_pak filetxpak;               //         139 bytes
+		fileack_pak fileack;
+		UINT8 filereceived;
 		clientconfig_pak clientcfg;         //         136 bytes
 		UINT8 md5sum[16];
 		serverinfo_pak serverinfo;          //        1024 bytes
@@ -458,7 +485,7 @@ typedef struct
 #pragma pack()
 #endif
 
-#define MAXSERVERLIST 64 // Depends only on the display
+#define MAXSERVERLIST (MAXNETNODES-1)
 typedef struct
 {
 	SINT8 node;
@@ -500,7 +527,12 @@ typedef enum
 
 } kickreason_t;
 
+/* the max number of name changes in some time period */
+#define MAXNAMECHANGES (5)
+#define NAMECHANGERATE (60*TICRATE)
+
 extern boolean server;
+extern boolean serverrunning;
 #define client (!server)
 extern boolean dedicated; // For dedicated server
 extern UINT16 software_MAXPACKETLENGTH;
@@ -515,12 +547,12 @@ extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
 extern tic_t servermaxping;
 
-extern consvar_t cv_allownewplayer, cv_joinnextround, cv_maxplayers, cv_joindelay, cv_rejointimeout;
+extern consvar_t cv_netticbuffer, cv_allownewplayer, cv_joinnextround, cv_maxplayers, cv_joindelay, cv_rejointimeout;
 extern consvar_t cv_resynchattempts, cv_blamecfail;
 extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
 // Used in d_net, the only dependence
-tic_t ExpandTics(INT32 low);
+tic_t ExpandTics(INT32 low, INT32 node);
 void D_ClientServerInit(void);
 
 // Initialise the other field
@@ -534,13 +566,13 @@ void NetUpdate(void);
 
 void SV_StartSinglePlayerServer(void);
 boolean SV_SpawnServer(void);
-void SV_SpawnPlayer(INT32 playernum, INT32 x, INT32 y, angle_t angle);
 void SV_StopServer(void);
 void SV_ResetServer(void);
 void CL_AddSplitscreenPlayer(void);
 void CL_RemoveSplitscreenPlayer(void);
 void CL_Reset(void);
 void CL_ClearPlayer(INT32 playernum);
+void CL_QueryServerList(msg_server_t *list);
 void CL_UpdateServerList(boolean internetsearch, INT32 room);
 // Is there a game running
 boolean Playing(void);

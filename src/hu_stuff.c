@@ -330,8 +330,6 @@ void HU_Init(void)
 
 	// set shift translation table
 	shiftxform = english_shiftxform;
-
-	HU_LoadGraphics();
 }
 
 static inline void HU_Stop(void)
@@ -755,113 +753,40 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 		}
 		else
         {
-			const UINT8 color = players[playernum].skincolor;
+			UINT16 chatcolor = skincolors[players[playernum].skincolor].chatcolor;
 
-			cstart = "\x83";
-
-			// Follow palette order at r_draw.c Color_Names
-			switch (color)
-			{
-				default:
-				case SKINCOLOR_WHITE:
-				case SKINCOLOR_BONE:
-				case SKINCOLOR_CLOUDY:
-				case SKINCOLOR_GREY:
-				case SKINCOLOR_SILVER:
-				case SKINCOLOR_AETHER:
-				case SKINCOLOR_SLATE:
-					cstart = "\x80"; // white
-					break;
-				case SKINCOLOR_CARBON:
-				case SKINCOLOR_JET:
-				case SKINCOLOR_BLACK:
-					cstart = "\x86"; // V_GRAYMAP
-					break;
-				case SKINCOLOR_PINK:
-				case SKINCOLOR_RUBY:
-				case SKINCOLOR_SALMON:
-				case SKINCOLOR_RED:
-				case SKINCOLOR_CRIMSON:
-				case SKINCOLOR_FLAME:
-				case SKINCOLOR_KETCHUP:
-					cstart = "\x85"; // V_REDMAP
-					break;
-				case SKINCOLOR_YOGURT:
-				case SKINCOLOR_BROWN:
-				case SKINCOLOR_BRONZE:
-				case SKINCOLOR_TAN:
-				case SKINCOLOR_BEIGE:
-				case SKINCOLOR_QUAIL:
-					cstart = "\x8d"; // V_BROWNMAP
-					break;
-				case SKINCOLOR_MOSS:
-				case SKINCOLOR_GREEN:
-				case SKINCOLOR_FOREST:
-				case SKINCOLOR_EMERALD:
-				case SKINCOLOR_MINT:
-					cstart = "\x83"; // V_GREENMAP
-					break;
-				case SKINCOLOR_AZURE:
-					cstart = "\x8c"; // V_AZUREMAP
-					break;
-				case SKINCOLOR_LAVENDER:
-				case SKINCOLOR_PASTEL:
-				case SKINCOLOR_PURPLE:
-					cstart = "\x89"; // V_PURPLEMAP
-					break;
-				case SKINCOLOR_PEACHY:
-				case SKINCOLOR_LILAC:
-				case SKINCOLOR_PLUM:
-				case SKINCOLOR_ROSY:
-					cstart = "\x8e"; // V_ROSYMAP
-					break;
-				case SKINCOLOR_SUNSET:
-				case SKINCOLOR_COPPER:
-				case SKINCOLOR_APRICOT:
-				case SKINCOLOR_ORANGE:
-				case SKINCOLOR_RUST:
-					cstart = "\x87"; // V_ORANGEMAP
-					break;
-				case SKINCOLOR_GOLD:
-				case SKINCOLOR_SANDY:
-				case SKINCOLOR_YELLOW:
-				case SKINCOLOR_OLIVE:
-					cstart = "\x82"; // V_YELLOWMAP
-					break;
-				case SKINCOLOR_LIME:
-				case SKINCOLOR_PERIDOT:
-				case SKINCOLOR_APPLE:
-					cstart = "\x8b"; // V_PERIDOTMAP
-					break;
-				case SKINCOLOR_SEAFOAM:
-				case SKINCOLOR_AQUA:
-					cstart = "\x8a"; // V_AQUAMAP
-					break;
-				case SKINCOLOR_TEAL:
-				case SKINCOLOR_WAVE:
-				case SKINCOLOR_CYAN:
-				case SKINCOLOR_SKY:
-				case SKINCOLOR_CERULEAN:
-				case SKINCOLOR_ICY:
-				case SKINCOLOR_SAPPHIRE:
-				case SKINCOLOR_VAPOR:
-					cstart = "\x88"; // V_SKYMAP
-					break;
-				case SKINCOLOR_CORNFLOWER:
-				case SKINCOLOR_BLUE:
-				case SKINCOLOR_COBALT:
-				case SKINCOLOR_DUSK:
-				case SKINCOLOR_BLUEBELL:
-					cstart = "\x84"; // V_BLUEMAP
-					break;
-				case SKINCOLOR_BUBBLEGUM:
-				case SKINCOLOR_MAGENTA:
-				case SKINCOLOR_NEON:
-				case SKINCOLOR_VIOLET:
-				case SKINCOLOR_RASPBERRY:
-					cstart = "\x81"; // V_MAGENTAMAP
-					break;
-			}
+			if (!chatcolor || chatcolor%0x1000 || chatcolor>V_INVERTMAP)
+				cstart = "\x80";
+			else if (chatcolor == V_MAGENTAMAP)
+				cstart = "\x81";
+			else if (chatcolor == V_YELLOWMAP)
+				cstart = "\x82";
+			else if (chatcolor == V_GREENMAP)
+				cstart = "\x83";
+			else if (chatcolor == V_BLUEMAP)
+				cstart = "\x84";
+			else if (chatcolor == V_REDMAP)
+				cstart = "\x85";
+			else if (chatcolor == V_GRAYMAP)
+				cstart = "\x86";
+			else if (chatcolor == V_ORANGEMAP)
+				cstart = "\x87";
+			else if (chatcolor == V_SKYMAP)
+				cstart = "\x88";
+			else if (chatcolor == V_PURPLEMAP)
+				cstart = "\x89";
+			else if (chatcolor == V_AQUAMAP)
+				cstart = "\x8a";
+			else if (chatcolor == V_PERIDOTMAP)
+				cstart = "\x8b";
+			else if (chatcolor == V_AZUREMAP)
+				cstart = "\x8c";
+			else if (chatcolor == V_BROWNMAP)
+				cstart = "\x8d";
+			else if (chatcolor == V_ROSYMAP)
+				cstart = "\x8e";
+			else if (chatcolor == V_INVERTMAP)
+				cstart = "\x8f";
         }
 		prefix = cstart;
 
@@ -1539,7 +1464,7 @@ static void HU_drawMiniChat(void)
 				if (cv_chatbacktint.value) // on request of wolfy
 					V_DrawFillConsoleMap(x + dx + 2, y+dy, charwidth, charheight, 239|V_SNAPTOBOTTOM|V_SNAPTOLEFT);
 
-				V_DrawChatCharacter(x + dx + 2, y+dy, msg[j++] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|transflag, !cv_allcaps.value, colormap);
+				V_DrawChatCharacter(x + dx + 2, y+dy, msg[j++] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|transflag, true, colormap);
 			}
 
 			dx += charwidth;
@@ -1632,7 +1557,7 @@ static void HU_drawChatLog(INT32 offset)
 			else
 			{
 				if ((y+dy+2 >= chat_topy) && (y+dy < (chat_bottomy)))
-					V_DrawChatCharacter(x + dx + 2, y+dy+2, msg[j++] |V_SNAPTOBOTTOM|V_SNAPTOLEFT, !cv_allcaps.value, colormap);
+					V_DrawChatCharacter(x + dx + 2, y+dy+2, msg[j++] |V_SNAPTOBOTTOM|V_SNAPTOLEFT, true, colormap);
 				else
 					j++; // don't forget to increment this or we'll get stuck in the limbo.
 			}
@@ -1732,7 +1657,7 @@ static void HU_DrawChat(void)
 			++i;
 		else
 		{
-			V_DrawChatCharacter(chatx + c + 2, y, talk[i] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|cflag, !cv_allcaps.value, V_GetStringColormap(talk[i]|cflag));
+			V_DrawChatCharacter(chatx + c + 2, y, talk[i] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|cflag, true, V_GetStringColormap(talk[i]|cflag));
 			i++;
 		}
 
@@ -1750,7 +1675,7 @@ static void HU_DrawChat(void)
 	typelines = 1;
 
 	if ((strlen(w_chat) == 0 || c_input == 0) && hu_tick < 4)
-		V_DrawChatCharacter(chatx + 2 + c, y+1, '_' |V_SNAPTOBOTTOM|V_SNAPTOLEFT|t, !cv_allcaps.value, NULL);
+		V_DrawChatCharacter(chatx + 2 + c, y+1, '_' |V_SNAPTOBOTTOM|V_SNAPTOLEFT|t, true, NULL);
 
 	while (w_chat[i])
 	{
@@ -1760,7 +1685,7 @@ static void HU_DrawChat(void)
 			INT32 cursorx = (c+charwidth < boxw-charwidth) ? (chatx + 2 + c+charwidth) : (chatx+1); // we may have to go down.
 			INT32 cursory = (cursorx != chatx+1) ? (y) : (y+charheight);
 			if (hu_tick < 4)
-				V_DrawChatCharacter(cursorx, cursory+1, '_' |V_SNAPTOBOTTOM|V_SNAPTOLEFT|t, !cv_allcaps.value, NULL);
+				V_DrawChatCharacter(cursorx, cursory+1, '_' |V_SNAPTOBOTTOM|V_SNAPTOLEFT|t, true, NULL);
 
 			if (cursorx == chatx+1 && saylen == i) // a weirdo hack
 			{
@@ -1773,7 +1698,7 @@ static void HU_DrawChat(void)
 		if (w_chat[i] < HU_FONTSTART)
 			++i;
 		else
-			V_DrawChatCharacter(chatx + c + 2, y, w_chat[i++] | V_SNAPTOBOTTOM|V_SNAPTOLEFT | t, !cv_allcaps.value, NULL);
+			V_DrawChatCharacter(chatx + c + 2, y, w_chat[i++] | V_SNAPTOBOTTOM|V_SNAPTOLEFT | t, true, NULL);
 
 		c += charwidth;
 		if (c > boxw-(charwidth*2) && !skippedline)
@@ -1898,7 +1823,7 @@ static void HU_DrawChat_Old(void)
 	}
 
 	if ((strlen(w_chat) == 0 || c_input == 0) && hu_tick < 4)
-		V_DrawCharacter(HU_INPUTX+c, y+2*con_scalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, !cv_allcaps.value);
+		V_DrawCharacter(HU_INPUTX+c, y+2*con_scalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, true);
 
 	i = 0;
 	while (w_chat[i])
@@ -1908,7 +1833,7 @@ static void HU_DrawChat_Old(void)
 		{
 			INT32 cursorx = (HU_INPUTX+c+charwidth < vid.width) ? (HU_INPUTX + c + charwidth) : (HU_INPUTX); // we may have to go down.
 			INT32 cursory = (cursorx != HU_INPUTX) ? (y) : (y+charheight);
-			V_DrawCharacter(cursorx, cursory+2*con_scalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, !cv_allcaps.value);
+			V_DrawCharacter(cursorx, cursory+2*con_scalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, true);
 		}
 
 		//Hurdler: isn't it better like that?
@@ -1953,7 +1878,7 @@ static inline void HU_DrawCrosshair(void)
 
 #ifdef HWRENDER
 	if (rendermode != render_soft)
-		y = (INT32)gr_basewindowcentery;
+		y = (INT32)gl_basewindowcentery;
 	else
 #endif
 		y = viewwindowy + (viewheight>>1);
@@ -1974,7 +1899,7 @@ static inline void HU_DrawCrosshair2(void)
 
 #ifdef HWRENDER
 	if (rendermode != render_soft)
-		y = (INT32)gr_basewindowcentery;
+		y = (INT32)gl_basewindowcentery;
 	else
 #endif
 		y = viewwindowy + (viewheight>>1);
@@ -1983,7 +1908,7 @@ static inline void HU_DrawCrosshair2(void)
 	{
 #ifdef HWRENDER
 		if (rendermode != render_soft)
-			y += (INT32)gr_viewheight;
+			y += (INT32)gl_viewheight;
 		else
 #endif
 			y += viewheight;
@@ -2172,7 +2097,7 @@ void HU_Drawer(void)
 		{
 			if (LUA_HudEnabled(hud_rankings))
 				HU_DrawRankings();
-			if (gametype == GT_COOP)
+			if (gametyperules & GTR_CAMPAIGN)
 				HU_DrawNetplayCoopOverlay();
 		}
 		else
@@ -2310,7 +2235,7 @@ void HU_Erase(void)
 //                   IN-LEVEL MULTIPLAYER RANKINGS
 //======================================================================
 
-#define supercheckdef ((players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS1] || players[tab[i].num].mo->state >= &states[S_PLAY_SUPER_TRANS6])) || (players[tab[i].num].powers[pw_carry] == CR_NIGHTSMODE && skins[players[tab[i].num].skin].flags & SF_SUPER))
+#define supercheckdef (!(players[tab[i].num].charflags & SF_NOSUPERSPRITES) && ((players[tab[i].num].powers[pw_super] && players[tab[i].num].mo && (players[tab[i].num].mo->state < &states[S_PLAY_SUPER_TRANS1] || players[tab[i].num].mo->state >= &states[S_PLAY_SUPER_TRANS6])) || (players[tab[i].num].powers[pw_carry] == CR_NIGHTSMODE && skins[players[tab[i].num].skin].flags & SF_SUPER)))
 #define greycheckdef (players[tab[i].num].spectator || players[tab[i].num].playerstate == PST_DEAD || (G_IsSpecialStage(gamemap) && players[tab[i].num].exiting))
 
 //
@@ -2868,7 +2793,7 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 		if (tab[i].color == 0)
 		{
 			colormap = colormaps;
-			if (players[tab[i].num].powers[pw_super])
+			if (players[tab[i].num].powers[pw_super] && !(players[tab[i].num].charflags & SF_NOSUPERSPRITES))
 				V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, FRACUNIT/4, 0, superprefix[players[tab[i].num].skin], 0);
 			else
 			{

@@ -219,6 +219,9 @@
     <ClInclude Include="..\hardware\hws_data.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
+    <ClInclude Include="..\hardware\hw_batching.h">
+      <Filter>Hw_Hardware</Filter>
+    </ClInclude>
     <ClInclude Include="..\hardware\hw_clip.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
@@ -232,9 +235,6 @@
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
     <ClInclude Include="..\hardware\hw_drv.h">
-      <Filter>Hw_Hardware</Filter>
-    </ClInclude>
-    <ClInclude Include="..\hardware\hw_glide.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
     <ClInclude Include="..\hardware\hw_glob.h">
@@ -295,6 +295,9 @@
       <Filter>I_Interface</Filter>
     </ClInclude>
     <ClInclude Include="..\mserv.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
+    <ClInclude Include="..\http-mserv.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
     <ClInclude Include="..\lua_hook.h">
@@ -537,6 +540,9 @@
     <ClCompile Include="..\blua\linit.c">
       <Filter>BLUA</Filter>
     </ClCompile>
+    <ClCompile Include="..\blua\liolib.c">
+      <Filter>BLUA</Filter>
+    </ClCompile>
     <ClCompile Include="..\blua\llex.c">
       <Filter>BLUA</Filter>
     </ClCompile>
@@ -636,6 +642,9 @@
     <ClCompile Include="..\hardware\hw3sound.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
+    <ClCompile Include="..\hardware\hw_batching.c">
+      <Filter>Hw_Hardware</Filter>
+    </ClCompile>
     <ClCompile Include="..\hardware\hw_bsp.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
@@ -666,9 +675,6 @@
     <ClCompile Include="..\hardware\hw_model.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
-    <ClCompile Include="..\hardware\hw_trick.c">
-      <Filter>Hw_Hardware</Filter>
-    </ClCompile>
     <ClCompile Include="..\hardware\u_list.c">
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
@@ -682,6 +688,9 @@
       <Filter>I_Interface</Filter>
     </ClCompile>
     <ClCompile Include="..\mserv.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
+    <ClCompile Include="..\http-mserv.c">
       <Filter>I_Interface</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_baselib.c">

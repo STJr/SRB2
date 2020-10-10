@@ -105,6 +105,8 @@ static void P_NetArchivePlayers(void)
 
 		// no longer send ticcmds, player name, skin, or color
 
+		WRITEINT16(save_p, players[i].angleturn);
+		WRITEINT16(save_p, players[i].oldrelangleturn);
 		WRITEANGLE(save_p, players[i].aiming);
 		WRITEANGLE(save_p, players[i].drawangle);
 		WRITEANGLE(save_p, players[i].viewrollangle);
@@ -313,6 +315,8 @@ static void P_NetUnArchivePlayers(void)
 		// sending player names, skin and color should not be necessary at all!
 		// (that data is handled in the server config now)
 
+		players[i].angleturn = READINT16(save_p);
+		players[i].oldrelangleturn = READINT16(save_p);
 		players[i].aiming = READANGLE(save_p);
 		players[i].drawangle = READANGLE(save_p);
 		players[i].viewrollangle = READANGLE(save_p);
@@ -719,6 +723,34 @@ static void P_NetUnArchiveColormaps(void)
 	net_colormaps = NULL;
 }
 
+static void P_NetArchiveWaypoints(void)
+{
+	INT32 i, j;
+
+	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
+	{
+		WRITEUINT16(save_p, numwaypoints[i]);
+		for (j = 0; j < numwaypoints[i]; j++)
+			WRITEUINT32(save_p, waypoints[i][j] ? waypoints[i][j]->mobjnum : 0);
+	}
+}
+
+static void P_NetUnArchiveWaypoints(void)
+{
+	INT32 i, j;
+	UINT32 mobjnum;
+
+	for (i = 0; i < NUMWAYPOINTSEQUENCES; i++)
+	{
+		numwaypoints[i] = READUINT16(save_p);
+		for (j = 0; j < numwaypoints[i]; j++)
+		{
+			mobjnum = READUINT32(save_p);
+			waypoints[i][j] = (mobjnum == 0) ? NULL : P_FindNewPosition(mobjnum);
+		}
+	}
+}
+
 ///
 /// World Archiving
 ///
@@ -757,10 +789,38 @@ static void P_NetUnArchiveColormaps(void)
 #define LD_DIFF2    0x80
 
 // diff2 flags
-#define LD_S2TEXOFF 0x01
-#define LD_S2TOPTEX 0x02
-#define LD_S2BOTTEX 0x04
-#define LD_S2MIDTEX 0x08
+#define LD_S2TEXOFF      0x01
+#define LD_S2TOPTEX      0x02
+#define LD_S2BOTTEX      0x04
+#define LD_S2MIDTEX      0x08
+#define LD_ARGS          0x10
+#define LD_STRINGARGS    0x20
+#define LD_EXECUTORDELAY 0x40
+
+static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
+{
+	UINT8 i;
+	for (i = 0; i < NUMLINEARGS; i++)
+		if (li->args[i] != spawnli->args[i])
+			return false;
+
+	return true;
+}
+
+static boolean P_AreStringArgsEqual(const line_t *li, const line_t *spawnli)
+{
+	UINT8 i;
+	for (i = 0; i < NUMLINESTRINGARGS; i++)
+	{
+		if (!li->stringargs[i])
+			return !spawnli->stringargs[i];
+
+		if (strcmp(li->stringargs[i], spawnli->stringargs[i]))
+			return false;
+	}
+
+	return true;
+}
 
 #define FD_FLAGS 0x01
 #define FD_ALPHA 0x02
@@ -1055,6 +1115,15 @@ static void ArchiveLines(void)
 		if (spawnli->special == 321 || spawnli->special == 322) // only reason li->callcount would be non-zero is if either of these are involved
 			diff |= LD_CLLCOUNT;
 
+		if (!P_AreArgsEqual(li, spawnli))
+			diff2 |= LD_ARGS;
+
+		if (!P_AreStringArgsEqual(li, spawnli))
+			diff2 |= LD_STRINGARGS;
+
+		if (li->executordelay != spawnli->executordelay)
+			diff2 |= LD_EXECUTORDELAY;
+
 		if (li->sidenum[0] != 0xffff)
 		{
 			si = &sides[li->sidenum[0]];
@@ -1081,9 +1150,10 @@ static void ArchiveLines(void)
 				diff2 |= LD_S2BOTTEX;
 			if (si->midtexture != spawnsi->midtexture)
 				diff2 |= LD_S2MIDTEX;
-			if (diff2)
-				diff |= LD_DIFF2;
 		}
+
+		if (diff2)
+			diff |= LD_DIFF2;
 
 		if (diff)
 		{
@@ -1117,6 +1187,33 @@ static void ArchiveLines(void)
 				WRITEINT32(save_p, si->bottomtexture);
 			if (diff2 & LD_S2MIDTEX)
 				WRITEINT32(save_p, si->midtexture);
+			if (diff2 & LD_ARGS)
+			{
+				UINT8 j;
+				for (j = 0; j < NUMLINEARGS; j++)
+					WRITEINT32(save_p, li->args[j]);
+			}
+			if (diff2 & LD_STRINGARGS)
+			{
+				UINT8 j;
+				for (j = 0; j < NUMLINESTRINGARGS; j++)
+				{
+					size_t len, k;
+
+					if (!li->stringargs[j])
+					{
+						WRITEINT32(save_p, 0);
+						continue;
+					}
+
+					len = strlen(li->stringargs[j]);
+					WRITEINT32(save_p, len);
+					for (k = 0; k < len; k++)
+						WRITECHAR(save_p, li->stringargs[j][k]);
+				}
+			}
+			if (diff2 & LD_EXECUTORDELAY)
+				WRITEINT32(save_p, li->executordelay);
 		}
 	}
 	WRITEUINT16(save_p, 0xffff);
@@ -1172,6 +1269,36 @@ static void UnArchiveLines(void)
 			si->bottomtexture = READINT32(save_p);
 		if (diff2 & LD_S2MIDTEX)
 			si->midtexture = READINT32(save_p);
+		if (diff2 & LD_ARGS)
+		{
+			UINT8 j;
+			for (j = 0; j < NUMLINEARGS; j++)
+				li->args[j] = READINT32(save_p);
+		}
+		if (diff2 & LD_STRINGARGS)
+		{
+			UINT8 j;
+			for (j = 0; j < NUMLINESTRINGARGS; j++)
+			{
+				size_t len = READINT32(save_p);
+				size_t k;
+
+				if (!len)
+				{
+					Z_Free(li->stringargs[j]);
+					li->stringargs[j] = NULL;
+					continue;
+				}
+
+				li->stringargs[j] = Z_Realloc(li->stringargs[j], len + 1, PU_LEVEL, NULL);
+				for (k = 0; k < len; k++)
+					li->stringargs[j][k] = READCHAR(save_p);
+				li->stringargs[j][len] = '\0';
+			}
+		}
+		if (diff2 & LD_EXECUTORDELAY)
+			li->executordelay = READINT32(save_p);
+
 	}
 }
 
@@ -1264,8 +1391,9 @@ typedef enum
 	MD2_CEILINGROVER = 1<<10,
 	MD2_SLOPE        = 1<<11,
 	MD2_COLORIZED    = 1<<12,
-	MD2_ROLLANGLE    = 1<<13,
-	MD2_SHADOWSCALE  = 1<<14,
+	MD2_MIRRORED     = 1<<13,
+	MD2_ROLLANGLE    = 1<<14,
+	MD2_SHADOWSCALE  = 1<<15,
 } mobj_diff2_t;
 
 typedef enum
@@ -1369,7 +1497,9 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 
 		if ((mobj->x != mobj->spawnpoint->x << FRACBITS) ||
 			(mobj->y != mobj->spawnpoint->y << FRACBITS) ||
-			(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)))
+			(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)) ||
+			(mobj->pitch != FixedAngle(mobj->spawnpoint->pitch*FRACUNIT)) ||
+			(mobj->roll != FixedAngle(mobj->spawnpoint->roll*FRACUNIT)) )
 			diff |= MD_POS;
 
 		if (mobj->info->doomednum != mobj->spawnpoint->type)
@@ -1470,6 +1600,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_SLOPE;
 	if (mobj->colorized)
 		diff2 |= MD2_COLORIZED;
+	if (mobj->mirrored)
+		diff2 |= MD2_MIRRORED;
 	if (mobj->rollangle)
 		diff2 |= MD2_ROLLANGLE;
 	if (mobj->shadowscale)
@@ -1523,6 +1655,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, mobj->x);
 		WRITEFIXED(save_p, mobj->y);
 		WRITEANGLE(save_p, mobj->angle);
+		WRITEANGLE(save_p, mobj->pitch);
+		WRITEANGLE(save_p, mobj->roll);
 	}
 	if (diff & MD_MOM)
 	{
@@ -1595,7 +1729,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	if (diff2 & MD2_SKIN)
 		WRITEUINT8(save_p, (UINT8)((skin_t *)mobj->skin - skins));
 	if (diff2 & MD2_COLOR)
-		WRITEUINT8(save_p, mobj->color);
+		WRITEUINT16(save_p, mobj->color);
 	if (diff2 & MD2_EXTVAL1)
 		WRITEINT32(save_p, mobj->extravalue1);
 	if (diff2 & MD2_EXTVAL2)
@@ -1608,6 +1742,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT16(save_p, mobj->standingslope->id);
 	if (diff2 & MD2_COLORIZED)
 		WRITEUINT8(save_p, mobj->colorized);
+	if (diff2 & MD2_MIRRORED)
+		WRITEUINT8(save_p, mobj->mirrored);
 	if (diff2 & MD2_ROLLANGLE)
 		WRITEANGLE(save_p, mobj->rollangle);
 	if (diff2 & MD2_SHADOWSCALE)
@@ -1890,8 +2026,7 @@ static void SaveLaserThinker(const thinker_t *th, const UINT8 type)
 {
 	const laserthink_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
-	WRITEUINT32(save_p, SaveSector(ht->sector));
-	WRITEUINT32(save_p, SaveSector(ht->sec));
+	WRITEINT16(save_p, ht->tag);
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
 	WRITEUINT8(save_p, ht->nobosses);
 }
@@ -1998,6 +2133,7 @@ static inline void SavePolyrotatetThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->polyObjNum);
 	WRITEINT32(save_p, ht->speed);
 	WRITEINT32(save_p, ht->distance);
+	WRITEUINT8(save_p, ht->turnobjs);
 }
 
 static void SavePolymoveThinker(const thinker_t *th, const UINT8 type)
@@ -2021,14 +2157,9 @@ static void SavePolywaypointThinker(const thinker_t *th, UINT8 type)
 	WRITEINT32(save_p, ht->sequence);
 	WRITEINT32(save_p, ht->pointnum);
 	WRITEINT32(save_p, ht->direction);
-	WRITEUINT8(save_p, ht->comeback);
-	WRITEUINT8(save_p, ht->wrap);
+	WRITEUINT8(save_p, ht->returnbehavior);
 	WRITEUINT8(save_p, ht->continuous);
 	WRITEUINT8(save_p, ht->stophere);
-	WRITEFIXED(save_p, ht->diffx);
-	WRITEFIXED(save_p, ht->diffy);
-	WRITEFIXED(save_p, ht->diffz);
-	WRITEUINT32(save_p, SaveMobjnum(ht->target));
 }
 
 static void SavePolyslidedoorThinker(const thinker_t *th, const UINT8 type)
@@ -2483,12 +2614,16 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->x = READFIXED(save_p);
 		mobj->y = READFIXED(save_p);
 		mobj->angle = READANGLE(save_p);
+		mobj->pitch = READANGLE(save_p);
+		mobj->roll = READANGLE(save_p);
 	}
 	else
 	{
 		mobj->x = mobj->spawnpoint->x << FRACBITS;
 		mobj->y = mobj->spawnpoint->y << FRACBITS;
 		mobj->angle = FixedAngle(mobj->spawnpoint->angle*FRACUNIT);
+		mobj->pitch = FixedAngle(mobj->spawnpoint->pitch*FRACUNIT);
+		mobj->roll = FixedAngle(mobj->spawnpoint->roll*FRACUNIT);
 	}
 	if (diff & MD_MOM)
 	{
@@ -2555,11 +2690,6 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		i = READUINT8(save_p);
 		mobj->player = &players[i];
 		mobj->player->mo = mobj;
-		// added for angle prediction
-		if (consoleplayer == i)
-			localangle = mobj->angle;
-		if (secondarydisplayplayer == i)
-			localangle2 = mobj->angle;
 	}
 	if (diff & MD_MOVEDIR)
 		mobj->movedir = READANGLE(save_p);
@@ -2608,7 +2738,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	if (diff2 & MD2_SKIN)
 		mobj->skin = &skins[READUINT8(save_p)];
 	if (diff2 & MD2_COLOR)
-		mobj->color = READUINT8(save_p);
+		mobj->color = READUINT16(save_p);
 	if (diff2 & MD2_EXTVAL1)
 		mobj->extravalue1 = READINT32(save_p);
 	if (diff2 & MD2_EXTVAL2)
@@ -2621,6 +2751,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->standingslope = P_SlopeById(READUINT16(save_p));
 	if (diff2 & MD2_COLORIZED)
 		mobj->colorized = READUINT8(save_p);
+	if (diff2 & MD2_MIRRORED)
+		mobj->mirrored = READUINT8(save_p);
 	if (diff2 & MD2_ROLLANGLE)
 		mobj->rollangle = READANGLE(save_p);
 	if (diff2 & MD2_SHADOWSCALE)
@@ -2997,16 +3129,10 @@ static thinker_t* LoadPusherThinker(actionf_p1 thinker)
 static inline thinker_t* LoadLaserThinker(actionf_p1 thinker)
 {
 	laserthink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
-	ffloor_t *rover = NULL;
 	ht->thinker.function.acp1 = thinker;
-	ht->sector = LoadSector(READUINT32(save_p));
-	ht->sec = LoadSector(READUINT32(save_p));
+	ht->tag = READINT16(save_p);
 	ht->sourceline = LoadLine(READUINT32(save_p));
 	ht->nobosses = READUINT8(save_p);
-	for (rover = ht->sector->ffloors; rover; rover = rover->next)
-		if (rover->secnum == (size_t)(ht->sec - sectors)
-		&& rover->master == ht->sourceline)
-			ht->ffloor = rover;
 	return &ht->thinker;
 }
 
@@ -3141,6 +3267,7 @@ static inline thinker_t* LoadPolyrotatetThinker(actionf_p1 thinker)
 	ht->polyObjNum = READINT32(save_p);
 	ht->speed = READINT32(save_p);
 	ht->distance = READINT32(save_p);
+	ht->turnobjs = READUINT8(save_p);
 	return &ht->thinker;
 }
 
@@ -3166,14 +3293,9 @@ static inline thinker_t* LoadPolywaypointThinker(actionf_p1 thinker)
 	ht->sequence = READINT32(save_p);
 	ht->pointnum = READINT32(save_p);
 	ht->direction = READINT32(save_p);
-	ht->comeback = READUINT8(save_p);
-	ht->wrap = READUINT8(save_p);
+	ht->returnbehavior = READUINT8(save_p);
 	ht->continuous = READUINT8(save_p);
 	ht->stophere = READUINT8(save_p);
-	ht->diffx = READFIXED(save_p);
-	ht->diffy = READFIXED(save_p);
-	ht->diffz = READFIXED(save_p);
-	ht->target = LoadMobj(READUINT32(save_p));
 	return &ht->thinker;
 }
 
@@ -3420,7 +3542,6 @@ static void P_NetUnArchiveThinkers(void)
 
 				case tc_polywaypoint:
 					th = LoadPolywaypointThinker((actionf_p1)T_PolyObjWaypoint);
-					restoreNum = true;
 					break;
 
 				case tc_polyslidedoor:
@@ -3480,7 +3601,6 @@ static void P_NetUnArchiveThinkers(void)
 	if (restoreNum)
 	{
 		executor_t *delay = NULL;
-		polywaypoint_t *polywp = NULL;
 		UINT32 mobjnum;
 		for (currentthinker = thlist[THINK_MAIN].next; currentthinker != &thlist[THINK_MAIN]; currentthinker = currentthinker->next)
 		{
@@ -3490,15 +3610,6 @@ static void P_NetUnArchiveThinkers(void)
 			if (!(mobjnum = (UINT32)(size_t)delay->caller))
 				continue;
 			delay->caller = P_FindNewPosition(mobjnum);
-		}
-		for (currentthinker = thlist[THINK_POLYOBJ].next; currentthinker != &thlist[THINK_POLYOBJ]; currentthinker = currentthinker->next)
-		{
-			if (currentthinker->function.acp1 != (actionf_p1)T_PolyObjWaypoint)
-				continue;
-			polywp = (void *)currentthinker;
-			if (!(mobjnum = (UINT32)(size_t)polywp->target))
-				continue;
-			polywp->target = P_FindNewPosition(mobjnum);
 		}
 	}
 }
@@ -3786,16 +3897,15 @@ static void P_NetUnArchiveSpecials(void)
 // =======================================================================
 //          Misc
 // =======================================================================
-static inline void P_ArchiveMisc(void)
+static inline void P_ArchiveMisc(INT16 mapnum)
 {
+	//lastmapsaved = mapnum;
+	lastmaploaded = mapnum;
+
 	if (gamecomplete)
-		WRITEINT16(save_p, gamemap | 8192);
-	else
-		WRITEINT16(save_p, gamemap);
+		mapnum |= 8192;
 
-	//lastmapsaved = gamemap;
-	lastmaploaded = gamemap;
-
+	WRITEINT16(save_p, mapnum);
 	WRITEUINT16(save_p, emeralds+357);
 	WRITESTRINGN(save_p, timeattackfolder, sizeof(timeattackfolder));
 }
@@ -3809,10 +3919,10 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 	if (mapoverride != 0)
 	{
 		gamemap = mapoverride;
-		gamecomplete = true;
+		gamecomplete = 1;
 	}
 	else
-		gamecomplete = false;
+		gamecomplete = 0;
 
 	// gamemap changed; we assume that its map header is always valid,
 	// so make it so
@@ -4036,9 +4146,9 @@ static inline boolean P_UnArchiveLuabanksAndConsistency(void)
 	return true;
 }
 
-void P_SaveGame(void)
+void P_SaveGame(INT16 mapnum)
 {
-	P_ArchiveMisc();
+	P_ArchiveMisc(mapnum);
 	P_ArchivePlayer();
 	P_ArchiveLuabanksAndConsistency();
 }
@@ -4072,6 +4182,7 @@ void P_SaveNetGame(void)
 		P_NetArchiveThinkers();
 		P_NetArchiveSpecials();
 		P_NetArchiveColormaps();
+		P_NetArchiveWaypoints();
 	}
 	LUA_Archive();
 
@@ -4110,6 +4221,7 @@ boolean P_LoadNetGame(void)
 		P_NetUnArchiveThinkers();
 		P_NetUnArchiveSpecials();
 		P_NetUnArchiveColormaps();
+		P_NetUnArchiveWaypoints();
 		P_RelinkPointers();
 		P_FinishMobjs();
 	}
