@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2018-2020 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2020 by Jaime "Lactozilla" Passos.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -9,17 +9,12 @@
 /// \file  r_patchrotation.c
 /// \brief Patch rotation.
 
-#include "r_patch.h"
-#include "r_picformats.h"
+#include "r_patchrotation.h"
 #include "r_things.h" // FEETADJUST
 #include "z_zone.h"
 #include "w_wad.h"
 
 #ifdef ROTSPRITE
-
-static rotsprite_t *RotatedPatch_Create(INT32 numangles);
-static void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle, INT32 xpivot, INT32 ypivot, boolean flip);
-
 fixed_t rollcosang[ROTANGLES];
 fixed_t rollsinang[ROTANGLES];
 

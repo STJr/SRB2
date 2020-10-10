@@ -148,6 +148,7 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_things.h
 	r_textures.h
 	r_patch.h
+	r_patchrotation.h
 	r_picformats.h
 	r_portal.h
 )

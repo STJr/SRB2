@@ -25,6 +25,7 @@
 #include "i_system.h"
 #include "r_things.h"
 #include "r_patch.h"
+#include "r_patchrotation.h"
 #include "r_picformats.h"
 #include "r_plane.h"
 #include "r_portal.h"
