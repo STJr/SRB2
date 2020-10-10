@@ -127,16 +127,14 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 #define ROTSPRITE_YCENTER (newheight / 2)
 
 	if (flip)
-		idx += rotsprite->angles;
-
-	if (rotsprite->patches[idx])
-		return;
-
-	if (bflip)
 	{
+		idx += rotsprite->angles;
 		xpivot = width - xpivot;
 		leftoffset = width - leftoffset;
 	}
+
+	if (rotsprite->patches[idx])
+		return;
 
 	// Find the dimensions of the rotated patch.
 	{
@@ -226,7 +224,7 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 	rotated = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawdst, PICFMT_PATCH, 0, &size, newwidth, newheight, 0, 0, 0);
 
 	Z_ChangeTag(rotated, PU_PATCH_ROTATED);
-	Z_SetUser(rotated, (void **)(&rotsprite->patches[angle]));
+	Z_SetUser(rotated, (void **)(&rotsprite->patches[idx]));
 
 	rotated->leftoffset = (rotated->width / 2) + (leftoffset - xpivot);
 	rotated->topoffset = (rotated->height / 2) + (patch->topoffset - ypivot);
