@@ -100,22 +100,22 @@ lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 extracolormap_t *extra_colormaps = NULL;
 
 // Render stats
-int rs_prevframetime = 0;
-int rs_rendercalltime = 0;
-int rs_uitime = 0;
-int rs_swaptime = 0;
-int rs_tictime = 0;
+int ps_prevframetime = 0;
+int ps_rendercalltime = 0;
+int ps_uitime = 0;
+int ps_swaptime = 0;
 
-int rs_bsptime = 0;
+int ps_bsptime = 0;
 
-int rs_sw_portaltime = 0;
-int rs_sw_planetime = 0;
-int rs_sw_maskedtime = 0;
+int ps_sw_spritecliptime = 0;
+int ps_sw_portaltime = 0;
+int ps_sw_planetime = 0;
+int ps_sw_maskedtime = 0;
 
-int rs_numbspcalls = 0;
-int rs_numsprites = 0;
-int rs_numdrawnodes = 0;
-int rs_numpolyobjects = 0;
+int ps_numbspcalls = 0;
+int ps_numsprites = 0;
+int ps_numdrawnodes = 0;
+int ps_numpolyobjects = 0;
 
 static CV_PossibleValue_t drawdist_cons_t[] = {
 	{256, "256"},	{512, "512"},	{768, "768"},
@@ -1489,11 +1489,11 @@ void R_RenderPlayerView(player_t *player)
 	mytotal = 0;
 	ProfZeroTimer();
 #endif
-	rs_numbspcalls = rs_numpolyobjects = rs_numdrawnodes = 0;
-	rs_bsptime = I_GetTimeMicros();
+	ps_numbspcalls = ps_numpolyobjects = ps_numdrawnodes = 0;
+	ps_bsptime = I_GetTimeMicros();
 	R_RenderBSPNode((INT32)numnodes - 1);
-	rs_bsptime = I_GetTimeMicros() - rs_bsptime;
-	rs_numsprites = visspritecount;
+	ps_bsptime = I_GetTimeMicros() - ps_bsptime;
+	ps_numsprites = visspritecount;
 #ifdef TIMING
 	RDMSR(0x10, &mycount);
 	mytotal += mycount; // 64bit add
@@ -1503,7 +1503,9 @@ void R_RenderPlayerView(player_t *player)
 //profile stuff ---------------------------------------------------------
 	Mask_Post(&masks[nummasks - 1]);
 
+	ps_sw_spritecliptime = I_GetTimeMicros();
 	R_ClipSprites(drawsegs, NULL);
+	ps_sw_spritecliptime = I_GetTimeMicros() - ps_sw_spritecliptime;
 
 
 	// Add skybox portals caused by sky visplanes.
@@ -1511,7 +1513,7 @@ void R_RenderPlayerView(player_t *player)
 		Portal_AddSkyboxPortals();
 
 	// Portal rendering. Hijacks the BSP traversal.
-	rs_sw_portaltime = I_GetTimeMicros();
+	ps_sw_portaltime = I_GetTimeMicros();
 	if (portal_base)
 	{
 		portal_t *portal;
@@ -1551,20 +1553,20 @@ void R_RenderPlayerView(player_t *player)
 			Portal_Remove(portal);
 		}
 	}
-	rs_sw_portaltime = I_GetTimeMicros() - rs_sw_portaltime;
+	ps_sw_portaltime = I_GetTimeMicros() - ps_sw_portaltime;
 
-	rs_sw_planetime = I_GetTimeMicros();
+	ps_sw_planetime = I_GetTimeMicros();
 	R_DrawPlanes();
 #ifdef FLOORSPLATS
 	R_DrawVisibleFloorSplats();
 #endif
-	rs_sw_planetime = I_GetTimeMicros() - rs_sw_planetime;
+	ps_sw_planetime = I_GetTimeMicros() - ps_sw_planetime;
 
 	// draw mid texture and sprite
 	// And now 3D floors/sides!
-	rs_sw_maskedtime = I_GetTimeMicros();
+	ps_sw_maskedtime = I_GetTimeMicros();
 	R_DrawMasked(masks, nummasks);
-	rs_sw_maskedtime = I_GetTimeMicros() - rs_sw_maskedtime;
+	ps_sw_maskedtime = I_GetTimeMicros() - ps_sw_maskedtime;
 
 	free(masks);
 }

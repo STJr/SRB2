@@ -146,21 +146,22 @@ static angle_t gl_aimingangle;
 static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean skybox);
 
 // Render stats
-int rs_hw_nodesorttime = 0;
-int rs_hw_nodedrawtime = 0;
-int rs_hw_spritesorttime = 0;
-int rs_hw_spritedrawtime = 0;
+int ps_hw_skyboxtime = 0;
+int ps_hw_nodesorttime = 0;
+int ps_hw_nodedrawtime = 0;
+int ps_hw_spritesorttime = 0;
+int ps_hw_spritedrawtime = 0;
 
 // Render stats for batching
-int rs_hw_numpolys = 0;
-int rs_hw_numverts = 0;
-int rs_hw_numcalls = 0;
-int rs_hw_numshaders = 0;
-int rs_hw_numtextures = 0;
-int rs_hw_numpolyflags = 0;
-int rs_hw_numcolors = 0;
-int rs_hw_batchsorttime = 0;
-int rs_hw_batchdrawtime = 0;
+int ps_hw_numpolys = 0;
+int ps_hw_numverts = 0;
+int ps_hw_numcalls = 0;
+int ps_hw_numshaders = 0;
+int ps_hw_numtextures = 0;
+int ps_hw_numpolyflags = 0;
+int ps_hw_numcolors = 0;
+int ps_hw_batchsorttime = 0;
+int ps_hw_batchdrawtime = 0;
 
 boolean gl_shadersavailable = true;
 
@@ -3188,7 +3189,7 @@ static void HWR_Subsector(size_t num)
 		}
 
 		// for render stats
-		rs_numpolyobjects += numpolys;
+		ps_numpolyobjects += numpolys;
 
 		// Sort polyobjects
 		R_SortPolyObjects(sub);
@@ -3296,7 +3297,7 @@ static void HWR_RenderBSPNode(INT32 bspnum)
 	// Decide which side the view point is on
 	INT32 side;
 
-	rs_numbspcalls++;
+	ps_numbspcalls++;
 
 	// Found a subsector?
 	if (bspnum & NF_SUBSECTOR)
@@ -4502,7 +4503,7 @@ static void HWR_CreateDrawNodes(void)
 	// that is already lying around. This should all be in some sort of linked list or lists.
 	sortindex = Z_Calloc(sizeof(size_t) * (numplanes + numpolyplanes + numwalls), PU_STATIC, NULL);
 
-	rs_hw_nodesorttime = I_GetTimeMicros();
+	ps_hw_nodesorttime = I_GetTimeMicros();
 
 	for (i = 0; i < numplanes; i++, p++)
 	{
@@ -4522,7 +4523,7 @@ static void HWR_CreateDrawNodes(void)
 		sortindex[p] = p;
 	}
 
-	rs_numdrawnodes = p;
+	ps_numdrawnodes = p;
 
 	// p is the number of stuff to sort
 
@@ -4557,9 +4558,9 @@ static void HWR_CreateDrawNodes(void)
 		}
 	}
 
-	rs_hw_nodesorttime = I_GetTimeMicros() - rs_hw_nodesorttime;
+	ps_hw_nodesorttime = I_GetTimeMicros() - ps_hw_nodesorttime;
 
-	rs_hw_nodedrawtime = I_GetTimeMicros();
+	ps_hw_nodedrawtime = I_GetTimeMicros();
 
 	// Okay! Let's draw it all! Woo!
 	HWD.pfnSetTransform(&atransform);
@@ -4596,7 +4597,7 @@ static void HWR_CreateDrawNodes(void)
 		}
 	}
 
-	rs_hw_nodedrawtime = I_GetTimeMicros() - rs_hw_nodedrawtime;
+	ps_hw_nodedrawtime = I_GetTimeMicros() - ps_hw_nodedrawtime;
 
 	numwalls = 0;
 	numplanes = 0;
@@ -5777,8 +5778,10 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	if (viewnumber == 0) // Only do it if it's the first screen being rendered
 		HWD.pfnClearBuffer(true, false, &ClearColor); // Clear the Color Buffer, stops HOMs. Also seems to fix the skybox issue on Intel GPUs.
 
+	ps_hw_skyboxtime = I_GetTimeMicros();
 	if (skybox && drawsky) // If there's a skybox and we should be drawing the sky, draw the skybox
 		HWR_RenderSkyboxView(viewnumber, player); // This is drawn before everything else so it is placed behind
+	ps_hw_skyboxtime = I_GetTimeMicros() - ps_hw_skyboxtime;
 
 	{
 		// do we really need to save player (is it not the same)?
@@ -5889,9 +5892,9 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	HWD.pfnSetSpecialState(HWD_SET_SHADERS, cv_glshaders.value);
 	HWD.pfnSetShader(0);
 
-	rs_numbspcalls = 0;
-	rs_numpolyobjects = 0;
-	rs_bsptime = I_GetTimeMicros();
+	ps_numbspcalls = 0;
+	ps_numpolyobjects = 0;
+	ps_bsptime = I_GetTimeMicros();
 
 	validcount++;
 
@@ -5929,7 +5932,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	}
 #endif
 
-	rs_bsptime = I_GetTimeMicros() - rs_bsptime;
+	ps_bsptime = I_GetTimeMicros() - ps_bsptime;
 
 	if (cv_glbatching.value)
 		HWR_RenderBatches();
@@ -5944,22 +5947,22 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 #endif
 
 	// Draw MD2 and sprites
-	rs_numsprites = gl_visspritecount;
-	rs_hw_spritesorttime = I_GetTimeMicros();
+	ps_numsprites = gl_visspritecount;
+	ps_hw_spritesorttime = I_GetTimeMicros();
 	HWR_SortVisSprites();
-	rs_hw_spritesorttime = I_GetTimeMicros() - rs_hw_spritesorttime;
-	rs_hw_spritedrawtime = I_GetTimeMicros();
+	ps_hw_spritesorttime = I_GetTimeMicros() - ps_hw_spritesorttime;
+	ps_hw_spritedrawtime = I_GetTimeMicros();
 	HWR_DrawSprites();
-	rs_hw_spritedrawtime = I_GetTimeMicros() - rs_hw_spritedrawtime;
+	ps_hw_spritedrawtime = I_GetTimeMicros() - ps_hw_spritedrawtime;
 
 #ifdef NEWCORONAS
 	//Hurdler: they must be drawn before translucent planes, what about gl fog?
 	HWR_DrawCoronas();
 #endif
 
-	rs_numdrawnodes = 0;
-	rs_hw_nodesorttime = 0;
-	rs_hw_nodedrawtime = 0;
+	ps_numdrawnodes = 0;
+	ps_hw_nodesorttime = 0;
+	ps_hw_nodedrawtime = 0;
 	if (numplanes || numpolyplanes || numwalls) //Hurdler: render 3D water and transparent walls after everything
 	{
 		HWR_CreateDrawNodes();
@@ -6061,7 +6064,6 @@ void HWR_AddCommands(void)
 	CV_RegisterVar(&cv_glfiltermode);
 	CV_RegisterVar(&cv_glsolvetjoin);
 
-	CV_RegisterVar(&cv_renderstats);
 	CV_RegisterVar(&cv_glbatching);
 
 #ifndef NEWCLIP
