@@ -887,8 +887,24 @@ static png_bytep *PNG_Read(
 		// matches the color count of SRB2's palette: 256 colors.
 		if (png_get_PLTE(png_ptr, png_info_ptr, &palette, &palette_size))
 		{
-			if (palette_size == 256)
+			if (palette_size == 256 && pMasterPalette)
+			{
+				png_colorp pal = palette;
+				INT32 i;
+
 				usepal = true;
+
+				for (i = 0; i < 256; i++)
+				{
+					UINT32 rgb = R_PutRgbaRGBA(pal->red, pal->green, pal->blue, 0xFF);
+					if (rgb != pMasterPalette[i].rgba)
+					{
+						usepal = false;
+						break;
+					}
+					pal++;
+				}
+			}
 		}
 
 		// If any of the tRNS colors have an alpha lower than 0xFF, and that
