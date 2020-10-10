@@ -909,20 +909,23 @@ static png_bytep *PNG_Read(
 
 		// If any of the tRNS colors have an alpha lower than 0xFF, and that
 		// color is present on the image, the palette flag is disabled.
-		png_get_tRNS(png_ptr, png_info_ptr, &trans, &trans_num, &trans_values);
-
-		if (trans && trans_num == 256)
+		if (usepal)
 		{
-			int i;
-			for (i = 0; i < trans_num; i++)
+			png_get_tRNS(png_ptr, png_info_ptr, &trans, &trans_num, &trans_values);
+
+			if (trans && trans_num == 256)
 			{
-				// libpng will transform this image into RGB even if
-				// the transparent index does not exist in the image,
-				// and there is no way around that.
-				if (trans[i] < 0xFF)
+				INT32 i;
+				for (i = 0; i < trans_num; i++)
 				{
-					usepal = false;
-					break;
+					// libpng will transform this image into RGB even if
+					// the transparent index does not exist in the image,
+					// and there is no way around that.
+					if (trans[i] < 0xFF)
+					{
+						usepal = false;
+						break;
+					}
 				}
 			}
 		}
