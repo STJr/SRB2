@@ -47,11 +47,11 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 		}
 
 		if (!srcsize)
-			I_Error("R_CreatePatch: no source size!");
+			I_Error("Patch_Create: no source size!");
 
 		colsize = (INT32)(srcsize) - (INT32)offs;
 		if (colsize <= 0)
-			I_Error("R_CreatePatch: no column data!");
+			I_Error("Patch_Create: no column data!");
 
 		patch->columns = Z_Calloc(colsize, PU_PATCH_DATA, NULL);
 		M_Memcpy(patch->columns, ((UINT8 *)source + LONG(source->columnofs[0])), colsize);

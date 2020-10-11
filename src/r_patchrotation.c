@@ -82,6 +82,9 @@ patch_t *Patch_GetRotatedSprite(spriteframe_t *sprite, size_t frame, size_t spri
 		}
 
 		RotatedPatch_DoRotation(rotsprite, patch, rotationangle, xpivot, ypivot, flip);
+
+		//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
+		((patch_t *)rotsprite->patches[idx])->topoffset += FEETADJUST>>FRACBITS;
 	}
 
 	return rotsprite->patches[idx];
@@ -102,10 +105,32 @@ rotsprite_t *RotatedPatch_Create(INT32 numangles)
 	return rotsprite;
 }
 
+static void RotatedPatch_CalculateDimensions(
+	INT32 width, INT32 height,
+	fixed_t ca, fixed_t sa,
+	INT32 *newwidth, INT32 *newheight)
+{
+	fixed_t fixedwidth = (width * FRACUNIT);
+	fixed_t fixedheight = (height * FRACUNIT);
+
+	fixed_t w1 = abs(FixedMul(fixedwidth, ca) - FixedMul(fixedheight, sa));
+	fixed_t w2 = abs(FixedMul(-fixedwidth, ca) - FixedMul(fixedheight, sa));
+	fixed_t h1 = abs(FixedMul(fixedwidth, sa) + FixedMul(fixedheight, ca));
+	fixed_t h2 = abs(FixedMul(-fixedwidth, sa) + FixedMul(fixedheight, ca));
+
+	w1 = FixedInt(FixedCeil(w1 + (FRACUNIT/2)));
+	w2 = FixedInt(FixedCeil(w2 + (FRACUNIT/2)));
+	h1 = FixedInt(FixedCeil(h1 + (FRACUNIT/2)));
+	h2 = FixedInt(FixedCeil(h2 + (FRACUNIT/2)));
+
+	*newwidth = max(width, max(w1, w2));
+	*newheight = max(height, max(h1, h2));
+}
+
 void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle, INT32 xpivot, INT32 ypivot, boolean flip)
 {
 	patch_t *rotated;
-	UINT16 *rawdst;
+	UINT16 *rawdst, *rawconv;
 	size_t size;
 	pictureflags_t bflip = (flip) ? PICFLAGS_XFLIP : 0;
 
@@ -114,17 +139,19 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 	INT32 leftoffset = patch->leftoffset;
 	INT32 newwidth, newheight;
 
-	INT32 dx, dy;
 	fixed_t ca = rollcosang[angle];
 	fixed_t sa = rollsinang[angle];
+	fixed_t xcenter, ycenter;
 	INT32 idx = angle;
+	INT32 x, y;
+	INT32 sx, sy;
+	INT32 dx, dy;
+	INT32 ox, oy;
+	INT32 minx, miny, maxx, maxy;
 
 	// Don't cache angle = 0
 	if (angle < 1 || angle >= ROTANGLES)
 		return;
-
-#define ROTSPRITE_XCENTER (newwidth / 2)
-#define ROTSPRITE_YCENTER (newheight / 2)
 
 	if (flip)
 	{
@@ -137,63 +164,21 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 		return;
 
 	// Find the dimensions of the rotated patch.
+	RotatedPatch_CalculateDimensions(width, height, ca, sa, &newwidth, &newheight);
+
+	xcenter = (xpivot * FRACUNIT);
+	ycenter = (ypivot * FRACUNIT);
+
+	if (xpivot != width / 2 || ypivot != height / 2)
 	{
-		INT32 w1 = abs(FixedMul(width << FRACBITS, ca) - FixedMul(height << FRACBITS, sa));
-		INT32 w2 = abs(FixedMul(-(width << FRACBITS), ca) - FixedMul(height << FRACBITS, sa));
-		INT32 h1 = abs(FixedMul(width << FRACBITS, sa) + FixedMul(height << FRACBITS, ca));
-		INT32 h2 = abs(FixedMul(-(width << FRACBITS), sa) + FixedMul(height << FRACBITS, ca));
-		w1 = FixedInt(FixedCeil(w1 + (FRACUNIT/2)));
-		w2 = FixedInt(FixedCeil(w2 + (FRACUNIT/2)));
-		h1 = FixedInt(FixedCeil(h1 + (FRACUNIT/2)));
-		h2 = FixedInt(FixedCeil(h2 + (FRACUNIT/2)));
-		newwidth = max(width, max(w1, w2));
-		newheight = max(height, max(h1, h2));
+		newwidth *= 2;
+		newheight *= 2;
 	}
 
-	// check boundaries
-	{
-		fixed_t top[2][2];
-		fixed_t bottom[2][2];
-
-		top[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (xpivot << FRACBITS);
-		top[0][1] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (ypivot << FRACBITS);
-		top[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (xpivot << FRACBITS);
-		top[1][1] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (ypivot << FRACBITS);
-
-		bottom[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (xpivot << FRACBITS);
-		bottom[0][1] = -FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (ypivot << FRACBITS);
-		bottom[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (xpivot << FRACBITS);
-		bottom[1][1] = -FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (ypivot << FRACBITS);
-
-		top[0][0] >>= FRACBITS;
-		top[0][1] >>= FRACBITS;
-		top[1][0] >>= FRACBITS;
-		top[1][1] >>= FRACBITS;
-
-		bottom[0][0] >>= FRACBITS;
-		bottom[0][1] >>= FRACBITS;
-		bottom[1][0] >>= FRACBITS;
-		bottom[1][1] >>= FRACBITS;
-
-#define BOUNDARYWCHECK(b) (b[0] < 0 || b[0] >= width)
-#define BOUNDARYHCHECK(b) (b[1] < 0 || b[1] >= height)
-#define BOUNDARYADJUST(x) x *= 2
-		// top left/right
-		if (BOUNDARYWCHECK(top[0]) || BOUNDARYWCHECK(top[1]))
-			BOUNDARYADJUST(newwidth);
-		// bottom left/right
-		else if (BOUNDARYWCHECK(bottom[0]) || BOUNDARYWCHECK(bottom[1]))
-			BOUNDARYADJUST(newwidth);
-		// top left/right
-		if (BOUNDARYHCHECK(top[0]) || BOUNDARYHCHECK(top[1]))
-			BOUNDARYADJUST(newheight);
-		// bottom left/right
-		else if (BOUNDARYHCHECK(bottom[0]) || BOUNDARYHCHECK(bottom[1]))
-			BOUNDARYADJUST(newheight);
-#undef BOUNDARYWCHECK
-#undef BOUNDARYHCHECK
-#undef BOUNDARYADJUST
-	}
+	minx = newwidth;
+	miny = newheight;
+	maxx = 0;
+	maxy = 0;
 
 	// Draw the rotated sprite to a temporary buffer.
 	size = (newwidth * newheight);
@@ -205,37 +190,76 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 	{
 		for (dx = 0; dx < newwidth; dx++)
 		{
-			INT32 x = (dx-ROTSPRITE_XCENTER) << FRACBITS;
-			INT32 y = (dy-ROTSPRITE_YCENTER) << FRACBITS;
-			INT32 sx = FixedMul(x, ca) + FixedMul(y, sa) + (xpivot << FRACBITS);
-			INT32 sy = -FixedMul(x, sa) + FixedMul(y, ca) + (ypivot << FRACBITS);
+			x = (dx - (newwidth / 2)) * FRACUNIT;
+			y = (dy - (newheight / 2)) * FRACUNIT;
+			sx = FixedMul(x, ca) + FixedMul(y, sa) + xcenter;
+			sy = -FixedMul(x, sa) + FixedMul(y, ca) + ycenter;
+
 			sx >>= FRACBITS;
 			sy >>= FRACBITS;
+
 			if (sx >= 0 && sy >= 0 && sx < width && sy < height)
 			{
 				void *input = Picture_GetPatchPixel(patch, PICFMT_PATCH, sx, sy, bflip);
 				if (input != NULL)
-					rawdst[(dy*newwidth)+dx] = (0xFF00 | (*(UINT8 *)input));
+				{
+					rawdst[(dy * newwidth) + dx] = (0xFF00 | (*(UINT8 *)input));
+					if (dx < minx)
+						minx = dx;
+					if (dy < miny)
+						miny = dy;
+					if (dx > maxx)
+						maxx = dx;
+					if (dy > maxy)
+						maxy = dy;
+				}
 			}
 		}
 	}
 
+	ox = (newwidth / 2) + (leftoffset - xpivot);
+	oy = (newheight / 2) + (patch->topoffset - ypivot);
+	width = (maxx - minx);
+	height = (maxy - miny);
+
+	if ((unsigned)(width * height) != size)
+	{
+		UINT16 *src, *dest;
+
+		size = (width * height);
+		rawconv = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
+
+		src = &rawdst[(miny * newwidth) + minx];
+		dest = rawconv;
+		dy = height;
+
+		while (dy--)
+		{
+			M_Memcpy(dest, src, width * sizeof(UINT16));
+			dest += width;
+			src += newwidth;
+		}
+
+		ox -= minx;
+		oy -= miny;
+
+		Z_Free(rawdst);
+	}
+	else
+	{
+		rawconv = rawdst;
+		width = newwidth;
+		height = newheight;
+	}
+
 	// make patch
-	rotated = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawdst, PICFMT_PATCH, 0, &size, newwidth, newheight, 0, 0, 0);
+	rotated = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawconv, PICFMT_PATCH, 0, NULL, width, height, 0, 0, 0);
 
 	Z_ChangeTag(rotated, PU_PATCH_ROTATED);
 	Z_SetUser(rotated, (void **)(&rotsprite->patches[idx]));
+	Z_Free(rawconv);
 
-	rotated->leftoffset = (rotated->width / 2) + (leftoffset - xpivot);
-	rotated->topoffset = (rotated->height / 2) + (patch->topoffset - ypivot);
-
-	//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-	rotated->topoffset += FEETADJUST>>FRACBITS;
-
-	// free rotated image data
-	Z_Free(rawdst);
-
-#undef ROTSPRITE_XCENTER
-#undef ROTSPRITE_YCENTER
+	rotated->leftoffset = ox;
+	rotated->topoffset = oy;
 }
 #endif
