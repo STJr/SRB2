@@ -481,7 +481,7 @@ static int sectorlines_num(lua_State *L)
 		return luaL_error(L, "accessed sector_t.lines doesn't exist anymore.");
 
 	// see comments in the _get function above
-	numoflines = (size_t)(*(size_t *)(((size_t)seclines) - (offsetof(sector_t, lines) - offsetof(sector_t, linecount))));
+	numoflines = *(size_t *)FIELDFROM (sector_t, seclines, lines,/* -> */linecount);
 	lua_pushinteger(L, numoflines);
 	return 1;
 }
