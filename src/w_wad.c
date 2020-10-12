@@ -2079,6 +2079,7 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"STCFN", 5}, // Console font changes
 		{"TNYFN", 5}, // Tiny console font changes
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
+		{"STLIVEX", 7}, // "X" that shows under skin's HUDNAME
 		{"YB_", 3}, // Intermission graphics, goes with the above
 		{"M_", 2}, // As does menu stuff
 		{"MUSICDEF", 8}, // Song definitions (thanks kart)
