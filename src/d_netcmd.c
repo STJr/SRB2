@@ -3241,97 +3241,130 @@ static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum)
   */
 static void Command_Addfile(void)
 {
-	const char *fn, *p;
-	char buf[256];
-	char *buf_p = buf;
-	INT32 i;
-	int musiconly; // W_VerifyNMUSlumps isn't boolean
+	size_t argc = COM_Argc(); // amount of arguments total
+	size_t curarg; // current argument index
 
-	if (COM_Argc() != 2)
+	const char *addedfiles[argc]; // list of filenames already processed
+	size_t numfilesadded = 0; // the amount of filenames processed
+
+	if (argc < 2)
 	{
-		CONS_Printf(M_GetText("addfile <wadfile.wad>: load wad file\n"));
-		return;
-	}
-	else
-		fn = COM_Argv(1);
-
-	// Disallow non-printing characters and semicolons.
-	for (i = 0; fn[i] != '\0'; i++)
-		if (!isprint(fn[i]) || fn[i] == ';')
-			return;
-
-	musiconly = W_VerifyNMUSlumps(fn);
-
-	if (!musiconly)
-	{
-		// ... But only so long as they contain nothing more then music and sprites.
-		if (netgame && !(server || IsPlayerAdmin(consoleplayer)))
-		{
-			CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
-			return;
-		}
-		G_SetGameModified(multiplayer);
-	}
-
-	// Add file on your client directly if it is trivial, or you aren't in a netgame.
-	if (!(netgame || multiplayer) || musiconly)
-	{
-		P_AddWadFile(fn);
+		CONS_Printf(M_GetText("addfile <filename.pk3/wad/lua/soc> [filename2...] [...]: Load add-ons\n"));
 		return;
 	}
 
-	p = fn+strlen(fn);
-	while(--p >= fn)
-		if (*p == '\\' || *p == '/' || *p == ':')
-			break;
-	++p;
-
-	// check total packet size and no of files currently loaded
-	// See W_LoadWadFile in w_wad.c
-	if ((numwadfiles >= MAX_WADFILES)
-	|| ((packetsizetally + nameonlylength(fn) + 22) > MAXFILENEEDED*sizeof(UINT8)))
+	// start at one to skip command name
+	for (curarg = 1; curarg < argc; curarg++)
 	{
-		CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
-		return;
-	}
+		const char *fn, *p;
+		char buf[256];
+		char *buf_p = buf;
+		INT32 i;
+		size_t ii;
+		int musiconly; // W_VerifyNMUSlumps isn't boolean
+		boolean fileadded = false;
 
-	WRITESTRINGN(buf_p,p,240);
+		fn = COM_Argv(curarg);
 
-	// calculate and check md5
-	{
-		UINT8 md5sum[16];
-#ifdef NOMD5
-		memset(md5sum,0,16);
-#else
-		FILE *fhandle;
-
-		if ((fhandle = W_OpenWadFile(&fn, true)) != NULL)
+		// For the amount of filenames previously processed...
+		for (ii = 0; ii < numfilesadded; ii++)
 		{
-			tic_t t = I_GetTime();
-			CONS_Debug(DBG_SETUP, "Making MD5 for %s\n",fn);
-			md5_stream(fhandle, md5sum);
-			CONS_Debug(DBG_SETUP, "MD5 calc for %s took %f second\n", fn, (float)(I_GetTime() - t)/TICRATE);
-			fclose(fhandle);
-		}
-		else // file not found
-			return;
-
-		for (i = 0; i < numwadfiles; i++)
-		{
-			if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
+			// If this is one of them, don't try to add it.
+			if (!strcmp(fn, addedfiles[ii]))
 			{
-				CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
-				return;
+				fileadded = true;
+				break;
 			}
 		}
-#endif
-		WRITEMEM(buf_p, md5sum, 16);
-	}
 
-	if (IsPlayerAdmin(consoleplayer) && (!server)) // Request to add file
-		SendNetXCmd(XD_REQADDFILE, buf, buf_p - buf);
-	else
-		SendNetXCmd(XD_ADDFILE, buf, buf_p - buf);
+		// If we've added this one, skip to the next one.
+		if (fileadded)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Already processed %s, skipping\n"), fn);
+			continue;
+		}
+
+		// Disallow non-printing characters and semicolons.
+		for (i = 0; fn[i] != '\0'; i++)
+			if (!isprint(fn[i]) || fn[i] == ';')
+				return;
+
+		musiconly = W_VerifyNMUSlumps(fn);
+
+		if (!musiconly)
+		{
+			// ... But only so long as they contain nothing more then music and sprites.
+			if (netgame && !(server || IsPlayerAdmin(consoleplayer)))
+			{
+				CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
+				continue;
+			}
+			G_SetGameModified(multiplayer);
+		}
+
+		// Add file on your client directly if it is trivial, or you aren't in a netgame.
+		if (!(netgame || multiplayer) || musiconly)
+		{
+			P_AddWadFile(fn);
+			addedfiles[numfilesadded++] = fn;
+			continue;
+		}
+
+		p = fn+strlen(fn);
+		while(--p >= fn)
+			if (*p == '\\' || *p == '/' || *p == ':')
+				break;
+		++p;
+
+		// check total packet size and no of files currently loaded
+		// See W_LoadWadFile in w_wad.c
+		if ((numwadfiles >= MAX_WADFILES)
+		|| ((packetsizetally + nameonlylength(fn) + 22) > MAXFILENEEDED*sizeof(UINT8)))
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+			return;
+		}
+
+		WRITESTRINGN(buf_p,p,240);
+
+		// calculate and check md5
+		{
+			UINT8 md5sum[16];
+#ifdef NOMD5
+			memset(md5sum,0,16);
+#else
+			FILE *fhandle;
+
+			if ((fhandle = W_OpenWadFile(&fn, true)) != NULL)
+			{
+				tic_t t = I_GetTime();
+				CONS_Debug(DBG_SETUP, "Making MD5 for %s\n",fn);
+				md5_stream(fhandle, md5sum);
+				CONS_Debug(DBG_SETUP, "MD5 calc for %s took %f second\n", fn, (float)(I_GetTime() - t)/TICRATE);
+				fclose(fhandle);
+			}
+			else // file not found
+				continue;
+
+			for (i = 0; i < numwadfiles; i++)
+			{
+				if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
+				{
+					CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
+					continue;
+				}
+			}
+#endif
+			WRITEMEM(buf_p, md5sum, 16);
+		}
+
+		addedfiles[numfilesadded++] = fn;
+
+		if (IsPlayerAdmin(consoleplayer) && (!server)) // Request to add file
+			SendNetXCmd(XD_REQADDFILE, buf, buf_p - buf);
+		else
+			SendNetXCmd(XD_ADDFILE, buf, buf_p - buf);
+	}
 }
 
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
