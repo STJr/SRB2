@@ -1821,15 +1821,17 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		if (shadowdraw)
 		{
-			spritexscale = FixedMul(thing->radius * 2, shadowscale);
-			spriteyscale = FixedMul(thing->radius * 2, shadowscale);
+			spritexscale = FixedMul(thing->radius * 2, FixedMul(shadowscale, spritexscale));
+			spriteyscale = FixedMul(thing->radius * 2, FixedMul(shadowscale, spriteyscale));
 			spriteyscale = FixedMul(spriteyscale, FixedDiv(abs(groundz - viewz), tz));
 			spriteyscale = min(spriteyscale, spritexscale) / patch->height;
+			spritexscale /= patch->width;
 		}
 		else
-			spritexscale = spriteyscale = shadowscale;
-
-		spritexscale /= patch->width;
+		{
+			spritexscale = FixedMul(shadowscale, spritexscale);
+			spriteyscale = FixedMul(shadowscale, spriteyscale);
+		}
 
 		if (shadowskew)
 		{
@@ -1951,13 +1953,13 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->spritexscale = spritexscale;
 	vis->spriteyscale = spriteyscale;
+	vis->shadowscale = shadowscale;
 
 	if (shadowdraw || shadoweffects)
 	{
 		iscale = (patch->width<<FRACBITS)/(x2-x1+1); // fuck it
 		x1 += (x2-x1)/2; // reusing x1 variable
 		vis->shear.offset = vis->x1-x1;
-		vis->shadowscale = shadowscale;
 	}
 	else
 		iscale = FixedDiv(FRACUNIT, vis->xscale);
@@ -2748,9 +2750,6 @@ static void R_DrawVisSplat(vissprite_t *spr)
 	splat.height = spr->patch->height;
 	splat.scale = spr->mobj->scale;
 
-	if (spr->renderflags & RF_SHADOWEFFECTS)
-		splat.scale = FixedMul(splat.scale, spr->shadowscale);
-
 	if (spr->rotateflags & SRF_3D || spr->renderflags & RF_NOSPLATBILLBOARD)
 		splatangle = spr->mobj->angle;
 	else
@@ -2767,8 +2766,8 @@ static void R_DrawVisSplat(vissprite_t *spr)
 	if (hflip)
 		leftoffset = ((splat.width * FRACUNIT) - leftoffset);
 
-	xscale = spr->mobj->spritexscale;
-	yscale = spr->mobj->spriteyscale;
+	xscale = spr->spritexscale;
+	yscale = spr->spriteyscale;
 
 	splat.xscale = FixedMul(splat.scale, xscale);
 	splat.yscale = FixedMul(splat.scale, yscale);

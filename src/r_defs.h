@@ -718,8 +718,9 @@ typedef enum
 	RF_HORIZONTALFLIP   = 0x0001,   // Flip sprite horizontally
 	RF_VERTICALFLIP     = 0x0002,   // Flip sprite vertically
 	RF_ONESIDED         = 0x0004,   // Wall/floor sprite is visible from front only
-	RF_NOSPLATBILLBOARD = 0x0008,   // Don't billboard floor sprites (faces forward from the view angle)
-	RF_NOSPLATROLLANGLE = 0x0010,   // Don't rotate floor sprites by the object's rollangle (uses rotated patches instead)
+	RF_SLOPESPLAT       = 0x0008,   // Rotate floor sprites by the object's standing slope
+	RF_NOSPLATBILLBOARD = 0x0010,   // Don't billboard floor sprites (faces forward from the view angle)
+	RF_NOSPLATROLLANGLE = 0x0020,   // Don't rotate floor sprites by the object's rollangle (uses rotated patches instead)
 
 	RF_BLENDMASK        = 0x0F00,   // --Blending modes
 	RF_FULLBRIGHT       = 0x0100,   // Sprite is drawn at full brightness

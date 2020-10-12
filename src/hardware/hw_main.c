@@ -3634,6 +3634,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	FBITFIELD blend = 0;
 	FBITFIELD occlusion;
 	boolean use_linkdraw_hack = false;
+	boolean splat = R_ThingIsFloorSprite(spr->mobj);
 	UINT8 alpha;
 
 	INT32 i;
@@ -3692,18 +3693,21 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		baseWallVerts[0].t = baseWallVerts[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
 	}
 
-	// if it has a dispoffset, push it a little towards the camera
-	if (spr->dispoffset) {
-		float co = -gl_viewcos*(0.05f*spr->dispoffset);
-		float si = -gl_viewsin*(0.05f*spr->dispoffset);
-		baseWallVerts[0].z = baseWallVerts[3].z = baseWallVerts[0].z+si;
-		baseWallVerts[1].z = baseWallVerts[2].z = baseWallVerts[1].z+si;
-		baseWallVerts[0].x = baseWallVerts[3].x = baseWallVerts[0].x+co;
-		baseWallVerts[1].x = baseWallVerts[2].x = baseWallVerts[1].x+co;
-	}
+	if (!splat)
+	{
+		// if it has a dispoffset, push it a little towards the camera
+		if (spr->dispoffset) {
+			float co = -gl_viewcos*(0.05f*spr->dispoffset);
+			float si = -gl_viewsin*(0.05f*spr->dispoffset);
+			baseWallVerts[0].z = baseWallVerts[3].z = baseWallVerts[0].z+si;
+			baseWallVerts[1].z = baseWallVerts[2].z = baseWallVerts[1].z+si;
+			baseWallVerts[0].x = baseWallVerts[3].x = baseWallVerts[0].x+co;
+			baseWallVerts[1].x = baseWallVerts[2].x = baseWallVerts[1].x+co;
+		}
 
-	// Let dispoffset work first since this adjust each vertex
-	HWR_RotateSpritePolyToAim(spr, baseWallVerts, false);
+		// Let dispoffset work first since this adjust each vertex
+		HWR_RotateSpritePolyToAim(spr, baseWallVerts, false);
+	}
 
 	realtop = top = baseWallVerts[3].y;
 	realbot = bot = baseWallVerts[0].y;
@@ -3899,7 +3903,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	FOutVector wallVerts[4];
 	patch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
-	//const boolean papersprite = R_ThingIsPaperSprite(spr->mobj);
+	const boolean splat = R_ThingIsFloorSprite(spr->mobj);
 
 	if (!spr->mobj)
 		return;
@@ -3907,7 +3911,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	if (!spr->mobj->subsector)
 		return;
 
-	if (spr->mobj->subsector->sector->numlights)
+	if (spr->mobj->subsector->sector->numlights && !splat)
 	{
 		HWR_SplitSprite(spr);
 		return;
@@ -3934,16 +3938,112 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	//  |/ |
 	//  0--1
 
-	// these were already scaled in HWR_ProjectSprite
-	wallVerts[0].x = wallVerts[3].x = spr->x1;
-	wallVerts[2].x = wallVerts[1].x = spr->x2;
-	wallVerts[2].y = wallVerts[3].y = spr->gzt;
-	wallVerts[0].y = wallVerts[1].y = spr->gz;
+	if (splat)
+	{
+		F2DCoord verts[4];
+		F2DCoord rotated[4];
+		angle_t angle;
+		float ca, sa;
+		float w, h;
+		float xscale, yscale;
+		float xoffset, yoffset;
+		float leftoffset, topoffset;
+		float scale = spr->scale;
+		float zoffset = (P_MobjFlip(spr->mobj) * 0.05f);
+		INT32 i;
 
-	// make a wall polygon (with 2 triangles), using the floor/ceiling heights,
-	// and the 2d map coords of start/end vertices
-	wallVerts[0].z = wallVerts[3].z = spr->z1;
-	wallVerts[1].z = wallVerts[2].z = spr->z2;
+		if (spr->renderflags & RF_SHADOWEFFECTS)
+			scale *= spr->shadowscale;
+
+		if (spr->rotateflags & SRF_3D || spr->renderflags & RF_NOSPLATBILLBOARD)
+			angle = spr->mobj->angle;
+		else
+			angle = viewangle;
+
+		if (!spr->rotated)
+			angle += spr->mobj->rollangle;
+
+		angle = -angle;
+		angle += ANGLE_90;
+
+		topoffset = (float)gpatch->topoffset;
+		leftoffset = (float)gpatch->leftoffset;
+		if (spr->flip)
+			leftoffset = ((float)gpatch->width - leftoffset);
+
+		xscale = spr->scale * spr->spritexscale;
+		yscale = spr->scale * spr->spriteyscale;
+
+		xoffset = leftoffset * xscale;
+		yoffset = topoffset * yscale;
+
+		w = (float)gpatch->width * xscale;
+		h = (float)gpatch->height * yscale;
+
+		// Set positions
+
+		// 3--2
+		// |  |
+		// 0--1
+
+		verts[3].x = -xoffset;
+		verts[3].y = yoffset;
+
+		verts[2].x = w - xoffset;
+		verts[2].y = yoffset;
+
+		verts[1].x = w - xoffset;
+		verts[1].y = -h + yoffset;
+
+		verts[0].x = -xoffset;
+		verts[0].y = -h + yoffset;
+
+		ca = FIXED_TO_FLOAT(FINECOSINE((-angle)>>ANGLETOFINESHIFT));
+		sa = FIXED_TO_FLOAT(FINESINE((-angle)>>ANGLETOFINESHIFT));
+
+		// Rotate
+		for (i = 0; i < 4; i++)
+		{
+			rotated[i].x = (verts[i].x * ca) - (verts[i].y * sa);
+			rotated[i].y = (verts[i].x * sa) + (verts[i].y * ca);
+		}
+
+		// Translate
+		for (i = 0; i < 4; i++)
+		{
+			wallVerts[i].x = rotated[i].x + FIXED_TO_FLOAT(spr->mobj->x);
+			wallVerts[i].z = rotated[i].y + FIXED_TO_FLOAT(spr->mobj->y);
+		}
+
+		if (spr->renderflags & RF_SLOPESPLAT && spr->mobj->standingslope)
+		{
+			pslope_t *slope = spr->mobj->standingslope;
+
+			for (i = 0; i < 4; i++)
+			{
+				fixed_t slopez = P_GetSlopeZAt(slope, FLOAT_TO_FIXED(wallVerts[i].x), FLOAT_TO_FIXED(wallVerts[i].z));
+				wallVerts[i].y = FIXED_TO_FLOAT(slopez) + zoffset;
+			}
+		}
+		else
+		{
+			for (i = 0; i < 4; i++)
+				wallVerts[i].y = FIXED_TO_FLOAT(spr->mobj->z) + zoffset;
+		}
+	}
+	else
+	{
+		// these were already scaled in HWR_ProjectSprite
+		wallVerts[0].x = wallVerts[3].x = spr->x1;
+		wallVerts[2].x = wallVerts[1].x = spr->x2;
+		wallVerts[2].y = wallVerts[3].y = spr->gzt;
+		wallVerts[0].y = wallVerts[1].y = spr->gz;
+
+		// make a wall polygon (with 2 triangles), using the floor/ceiling heights,
+		// and the 2d map coords of start/end vertices
+		wallVerts[0].z = wallVerts[3].z = spr->z1;
+		wallVerts[1].z = wallVerts[2].z = spr->z2;
+	}
 
 	if (spr->flip)
 	{
@@ -3969,18 +4069,21 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	HWR_GetMappedPatch(gpatch, spr->colormap);
 
-	// if it has a dispoffset, push it a little towards the camera
-	if (spr->dispoffset) {
-		float co = -gl_viewcos*(0.05f*spr->dispoffset);
-		float si = -gl_viewsin*(0.05f*spr->dispoffset);
-		wallVerts[0].z = wallVerts[3].z = wallVerts[0].z+si;
-		wallVerts[1].z = wallVerts[2].z = wallVerts[1].z+si;
-		wallVerts[0].x = wallVerts[3].x = wallVerts[0].x+co;
-		wallVerts[1].x = wallVerts[2].x = wallVerts[1].x+co;
-	}
+	if (!splat)
+	{
+		// if it has a dispoffset, push it a little towards the camera
+		if (spr->dispoffset) {
+			float co = -gl_viewcos*(0.05f*spr->dispoffset);
+			float si = -gl_viewsin*(0.05f*spr->dispoffset);
+			wallVerts[0].z = wallVerts[3].z = wallVerts[0].z+si;
+			wallVerts[1].z = wallVerts[2].z = wallVerts[1].z+si;
+			wallVerts[0].x = wallVerts[3].x = wallVerts[0].x+co;
+			wallVerts[1].x = wallVerts[2].x = wallVerts[1].x+co;
+		}
 
-	// Let dispoffset work first since this adjust each vertex
-	HWR_RotateSpritePolyToAim(spr, wallVerts, false);
+		// Let dispoffset work first since this adjust each vertex
+		HWR_RotateSpritePolyToAim(spr, wallVerts, false);
+	}
 
 	// This needs to be AFTER the shadows so that the regular sprites aren't drawn completely black.
 	// sprite lighting by modulating the RGB components
@@ -3990,6 +4093,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	{
 		sector_t *sector = spr->mobj->subsector->sector;
 		UINT8 lightlevel;
+		boolean lightset = true;
 		extracolormap_t *colormap = sector->extra_colormap;
 
 		if (R_ThingIsFullBright(spr->mobj))
@@ -3997,6 +4101,19 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		else if (R_ThingIsFullDark(spr->mobj))
 			lightlevel = 0;
 		else
+			lightset = false;
+
+		if (splat && sector->numlights)
+		{
+			INT32 light = R_GetPlaneLight(sector, spr->mobj->z, false);
+
+			if (!lightset)
+				lightlevel = *sector->lightlist[light].lightlevel > 255 ? 255 : *sector->lightlist[light].lightlevel;
+
+			if (*sector->lightlist[light].extra_colormap)
+				colormap = *sector->lightlist[light].extra_colormap;
+		}
+		else if (!lightset)
 			lightlevel = sector->lightlevel > 255 ? 255 : sector->lightlevel;
 
 		HWR_Lighting(&Surf, lightlevel, colormap);
@@ -4034,6 +4151,18 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			// Hurdler: PF_Environement would be cool, but we need to fix
 			//          the issue with the fog before
 			Surf.PolyColor.s.alpha = 0xFF;
+			blend = PF_Translucent|occlusion;
+			if (!occlusion) use_linkdraw_hack = true;
+		}
+
+		if (spr->renderflags & RF_SHADOWEFFECTS)
+		{
+			INT32 alpha = Surf.PolyColor.s.alpha;
+			alpha -= ((INT32)(spr->shadowheight / 4.0f)) + 75;
+			if (alpha < 1)
+				return;
+
+			Surf.PolyColor.s.alpha = (UINT8)(alpha);
 			blend = PF_Translucent|occlusion;
 			if (!occlusion) use_linkdraw_hack = true;
 		}
@@ -4669,8 +4798,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	float tracertz = 0.0f;
 	float x1, x2;
 	float rightsin, rightcos;
-	float this_scale;
+	float this_scale, this_xscale, this_yscale;
 	float spritexscale, spriteyscale;
+	float shadowheight = 1.0f, shadowscale = 1.0f;
 	float gz, gzt;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
@@ -4689,6 +4819,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	angle_t ang;
 	INT32 heightsec, phs;
 	const boolean papersprite = R_ThingIsPaperSprite(thing);
+	const boolean splat = R_ThingIsFloorSprite(thing);
 	angle_t mobjangle = (thing->player ? thing->player->drawangle : thing->angle);
 	float z1, z2;
 
@@ -4716,7 +4847,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	tz = (tr_x * gl_viewcos) + (tr_y * gl_viewsin);
 
 	// thing is behind view plane?
-	if (tz < ZCLIP_PLANE && !papersprite)
+	if (tz < ZCLIP_PLANE && !(papersprite || splat))
 	{
 		if (cv_glmodels.value) //Yellow: Only MD2's dont disappear
 		{
@@ -4820,7 +4951,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	}
 
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
-		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)thing->skin)->highresscale);
+		this_scale *= FIXED_TO_FLOAT(((skin_t *)thing->skin)->highresscale);
 
 	spr_width = spritecachedinfo[lumpoff].width;
 	spr_height = spritecachedinfo[lumpoff].height;
@@ -4828,7 +4959,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
 #ifdef ROTSPRITE
-	if (thing->rollangle)
+	if (thing->rollangle
+	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{
 		rollangle = R_GetRollAngle(thing->rollangle);
 		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
@@ -4860,18 +4992,36 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	flip = !flip != !hflip;
 
-	spritexscale *= this_scale;
-	spriteyscale *= this_scale;
+	if (thing->renderflags & RF_SHADOWEFFECTS)
+	{
+		mobj_t *caster = thing->target;
+
+		if (caster && !P_MobjWasRemoved(caster))
+		{
+			fixed_t groundz = R_GetShadowZ(thing, NULL);
+			fixed_t floordiff = abs(((thing->eflags & MFE_VERTICALFLIP) ? caster->height : 0) + caster->z - groundz);
+
+			shadowheight = FIXED_TO_FLOAT(floordiff);
+			shadowscale = FIXED_TO_FLOAT(FixedMul(FRACUNIT - floordiff/640, caster->scale));
+
+			if (splat)
+				spritexscale *= shadowscale;
+			spriteyscale *= shadowscale;
+		}
+	}
+
+	this_xscale = spritexscale * this_scale;
+	this_yscale = spriteyscale * this_scale;
 
 	if (flip)
 	{
-		x1 = (FIXED_TO_FLOAT(spr_width - spr_offset) * spritexscale);
-		x2 = (FIXED_TO_FLOAT(spr_offset) * spritexscale);
+		x1 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_xscale);
+		x2 = (FIXED_TO_FLOAT(spr_offset) * this_xscale);
 	}
 	else
 	{
-		x1 = (FIXED_TO_FLOAT(spr_offset) * spritexscale);
-		x2 = (FIXED_TO_FLOAT(spr_width - spr_offset) * spritexscale);
+		x1 = (FIXED_TO_FLOAT(spr_offset) * this_xscale);
+		x2 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_xscale);
 	}
 
 	// test if too close
@@ -4893,13 +5043,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if (vflip)
 	{
-		gz = FIXED_TO_FLOAT(thing->z+thing->height) - (FIXED_TO_FLOAT(spr_topoffset) * spriteyscale);
-		gzt = gz + (FIXED_TO_FLOAT(spr_height) * spriteyscale);
+		gz = FIXED_TO_FLOAT(thing->z + thing->height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
+		gzt = gz + (FIXED_TO_FLOAT(spr_height) * this_yscale);
 	}
 	else
 	{
-		gzt = FIXED_TO_FLOAT(thing->z) + (FIXED_TO_FLOAT(spr_topoffset) * spriteyscale);
-		gz = gzt - (FIXED_TO_FLOAT(spr_height) * spriteyscale);
+		gzt = FIXED_TO_FLOAT(thing->z) + (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
+		gz = gzt - (FIXED_TO_FLOAT(spr_height) * this_yscale);
 	}
 
 	if (thing->subsector->sector->cullheight)
@@ -4956,19 +5106,37 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis = HWR_NewVisSprite();
 	vis->x1 = x1;
 	vis->x2 = x2;
+	vis->z1 = z1;
+	vis->z2 = z2;
+
 	vis->tz = tz; // Keep tz for the simple sprite sorting that happens
 	vis->tracertz = tracertz;
+
+	vis->renderflags = thing->renderflags;
+	vis->rotateflags = sprframe->rotate;
+
+	vis->shadowheight = shadowheight;
+	vis->shadowscale = shadowscale;
 	vis->dispoffset = dispoffset; // Monster Iestyn: 23/11/15: HARDWARE SUPPORT AT LAST
+	vis->flip = flip;
+
+	vis->scale = this_scale;
+	vis->spritexscale = spritexscale;
+	vis->spriteyscale = spriteyscale;
+
+	vis->rotated = false;
+
 #ifdef ROTSPRITE
 	if (rotsprite)
+	{
 		vis->gpatch = (patch_t *)rotsprite;
+		vis->rotated = true;
+	}
 	else
 #endif
 		vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
-	vis->flip = flip;
+
 	vis->mobj = thing;
-	vis->z1 = z1;
-	vis->z2 = z2;
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	if ((vis->mobj->flags & (MF_ENEMY|MF_BOSS)) && (vis->mobj->flags2 & MF2_FRET) && !(vis->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"

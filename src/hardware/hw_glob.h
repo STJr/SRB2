@@ -62,19 +62,30 @@ typedef struct
 typedef struct gl_vissprite_s
 {
 	float x1, x2;
+	float z1, z2;
 	float gz, gzt;
+
 	float tz;
 	float tracertz; // for MF2_LINKDRAW sprites, this contains tracer's tz for use in sorting
-	patch_t *gpatch;
-	boolean flip;
-	UINT8 translucency;       //alpha level 0-255
-	mobj_t *mobj; // NOTE: This is a precipmobj_t if precip is true !!! Watch out.
+
+	float scale;
+	float spritexscale, spriteyscale;
+	float shadowheight, shadowscale;
+
+	UINT32 renderflags;
+	UINT8 rotateflags;
+
+	boolean flip, vflip;
 	boolean precip; // Tails 08-25-2002
-	boolean vflip;
-   //Hurdler: 25/04/2000: now support colormap in hardware mode
+	boolean rotated;
+	UINT8 translucency;       //alpha level 0-255
+
+	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	UINT8 *colormap;
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
-	float z1, z2;
+
+	patch_t *gpatch;
+	mobj_t *mobj; // NOTE: This is a precipmobj_t if precip is true !!! Watch out.
 } gl_vissprite_t;
 
 // --------
