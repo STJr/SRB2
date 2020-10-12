@@ -1730,6 +1730,18 @@ static int lib_pFloorzAtPos(lua_State *L)
 	return 1;
 }
 
+static int lib_pCeilingzAtPos(lua_State *L)
+{
+	fixed_t x = luaL_checkfixed(L, 1);
+	fixed_t y = luaL_checkfixed(L, 2);
+	fixed_t z = luaL_checkfixed(L, 3);
+	fixed_t height = luaL_checkfixed(L, 4);
+	//HUDSAFE
+	INLEVEL
+	lua_pushfixed(L, P_CeilingzAtPos(x, y, z, height));
+	return 1;
+}
+
 static int lib_pDoSpring(lua_State *L)
 {
 	mobj_t *spring = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -3604,6 +3616,7 @@ static luaL_Reg lib[] = {
 	{"P_CheckHoopPosition",lib_pCheckHoopPosition},
 	{"P_RadiusAttack",lib_pRadiusAttack},
 	{"P_FloorzAtPos",lib_pFloorzAtPos},
+	{"P_CeilingzAtPos",lib_pCeilingzAtPos},
 	{"P_DoSpring",lib_pDoSpring},
 
 	// p_inter
