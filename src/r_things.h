@@ -192,6 +192,7 @@ typedef struct vissprite_s
 	UINT32 renderflags;
 	UINT8 rotateflags;
 
+	fixed_t spritexscale, spriteyscale;
 	fixed_t shadowscale;
 
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];

@@ -62,7 +62,8 @@ typedef struct
 typedef struct gl_vissprite_s
 {
 	float x1, x2;
-	float tz, ty;
+	float gz, gzt;
+	float tz;
 	float tracertz; // for MF2_LINKDRAW sprites, this contains tracer's tz for use in sorting
 	patch_t *gpatch;
 	boolean flip;

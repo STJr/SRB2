@@ -3605,17 +3605,17 @@ static void HWR_RotateSpritePolyToAim(gl_vissprite_t *spr, FOutVector *wallVerts
 		// X, Y, AND Z need to be manipulated for the polys to rotate around the
 		// origin, because of how the origin setting works I believe that should
 		// be mobj->z or mobj->z + mobj->height
-		wallVerts[2].y = wallVerts[3].y = (spr->ty - basey) * gl_viewludsin + basey;
+		wallVerts[2].y = wallVerts[3].y = (spr->gzt - basey) * gl_viewludsin + basey;
 		wallVerts[0].y = wallVerts[1].y = (lowy - basey) * gl_viewludsin + basey;
 		// translate back to be around 0 before translating back
-		wallVerts[3].x += ((spr->ty - basey) * gl_viewludcos) * gl_viewcos;
-		wallVerts[2].x += ((spr->ty - basey) * gl_viewludcos) * gl_viewcos;
+		wallVerts[3].x += ((spr->gzt - basey) * gl_viewludcos) * gl_viewcos;
+		wallVerts[2].x += ((spr->gzt - basey) * gl_viewludcos) * gl_viewcos;
 
 		wallVerts[0].x += ((lowy - basey) * gl_viewludcos) * gl_viewcos;
 		wallVerts[1].x += ((lowy - basey) * gl_viewludcos) * gl_viewcos;
 
-		wallVerts[3].z += ((spr->ty - basey) * gl_viewludcos) * gl_viewsin;
-		wallVerts[2].z += ((spr->ty - basey) * gl_viewludcos) * gl_viewsin;
+		wallVerts[3].z += ((spr->gzt - basey) * gl_viewludcos) * gl_viewsin;
+		wallVerts[2].z += ((spr->gzt - basey) * gl_viewludcos) * gl_viewsin;
 
 		wallVerts[0].z += ((lowy - basey) * gl_viewludcos) * gl_viewsin;
 		wallVerts[1].z += ((lowy - basey) * gl_viewludcos) * gl_viewsin;
@@ -3624,14 +3624,13 @@ static void HWR_RotateSpritePolyToAim(gl_vissprite_t *spr, FOutVector *wallVerts
 
 static void HWR_SplitSprite(gl_vissprite_t *spr)
 {
-	float this_scale = 1.0f;
 	FOutVector wallVerts[4];
 	FOutVector baseWallVerts[4]; // This is what the verts should end up as
 	patch_t *gpatch;
 	FSurfaceInfo Surf;
-	const boolean hires = (spr->mobj && spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES);
 	extracolormap_t *colormap;
 	FUINT lightlevel;
+	boolean lightset = true;
 	FBITFIELD blend = 0;
 	FBITFIELD occlusion;
 	boolean use_linkdraw_hack = false;
@@ -3650,11 +3649,6 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	fixed_t temp;
 	fixed_t v1x, v1y, v2x, v2y;
 
-	this_scale = FIXED_TO_FLOAT(spr->mobj->scale);
-
-	if (hires)
-		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)spr->mobj->skin)->highresscale);
-
 	gpatch = spr->gpatch;
 
 	// cache the patch in the graphics card memory
@@ -3667,11 +3661,8 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	baseWallVerts[0].z = baseWallVerts[3].z = spr->z1;
 	baseWallVerts[1].z = baseWallVerts[2].z = spr->z2;
 
-	baseWallVerts[2].y = baseWallVerts[3].y = spr->ty;
-	if (spr->mobj && fabsf(this_scale - 1.0f) > 1.0E-36f)
-		baseWallVerts[0].y = baseWallVerts[1].y = spr->ty - gpatch->height * this_scale;
-	else
-		baseWallVerts[0].y = baseWallVerts[1].y = spr->ty - gpatch->height;
+	baseWallVerts[2].y = baseWallVerts[3].y = spr->gzt;
+	baseWallVerts[0].y = baseWallVerts[1].y = spr->gz;
 
 	v1x = FLOAT_TO_FIXED(spr->x1);
 	v1y = FLOAT_TO_FIXED(spr->z1);
@@ -3767,15 +3758,19 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	i = 0;
 	temp = FLOAT_TO_FIXED(realtop);
 
-	if (spr->mobj->frame & FF_FULLBRIGHT)
+	if (R_ThingIsFullBright(spr->mobj))
 		lightlevel = 255;
+	else if (R_ThingIsFullDark(spr->mobj))
+		lightlevel = 0;
+	else
+		lightset = false;
 
 	for (i = 1; i < sector->numlights; i++)
 	{
 		fixed_t h = P_GetLightZAt(&sector->lightlist[i], spr->mobj->x, spr->mobj->y);
 		if (h <= temp)
 		{
-			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+			if (!lightset)
 				lightlevel = *list[i-1].lightlevel > 255 ? 255 : *list[i-1].lightlevel;
 			colormap = *list[i-1].extra_colormap;
 			break;
@@ -3790,7 +3785,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		// even if we aren't changing colormap or lightlevel, we still need to continue drawing down the sprite
 		if (!(list[i].flags & FF_NOSHADE) && (list[i].flags & FF_CUTSPRITES))
 		{
-			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+			if (!lightset)
 				lightlevel = *list[i].lightlevel > 255 ? 255 : *list[i].lightlevel;
 			colormap = *list[i].extra_colormap;
 		}
@@ -3901,16 +3896,10 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 // -----------------+
 static void HWR_DrawSprite(gl_vissprite_t *spr)
 {
-	float this_scale = 1.0f;
 	FOutVector wallVerts[4];
 	patch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
-	const boolean hires = (spr->mobj && spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES);
 	//const boolean papersprite = R_ThingIsPaperSprite(spr->mobj);
-	if (spr->mobj)
-		this_scale = FIXED_TO_FLOAT(spr->mobj->scale);
-	if (hires)
-		this_scale = this_scale * FIXED_TO_FLOAT(((skin_t *)spr->mobj->skin)->highresscale);
 
 	if (!spr->mobj)
 		return;
@@ -3948,11 +3937,8 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	// these were already scaled in HWR_ProjectSprite
 	wallVerts[0].x = wallVerts[3].x = spr->x1;
 	wallVerts[2].x = wallVerts[1].x = spr->x2;
-	wallVerts[2].y = wallVerts[3].y = spr->ty;
-	if (spr->mobj && fabsf(this_scale - 1.0f) > 1.0E-36f)
-		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height * this_scale;
-	else
-		wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height;
+	wallVerts[2].y = wallVerts[3].y = spr->gzt;
+	wallVerts[0].y = wallVerts[1].y = spr->gz;
 
 	// make a wall polygon (with 2 triangles), using the floor/ceiling heights,
 	// and the 2d map coords of start/end vertices
@@ -4003,10 +3989,14 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	// colormap test
 	{
 		sector_t *sector = spr->mobj->subsector->sector;
-		UINT8 lightlevel = 255;
+		UINT8 lightlevel;
 		extracolormap_t *colormap = sector->extra_colormap;
 
-		if (!(spr->mobj->frame & FF_FULLBRIGHT))
+		if (R_ThingIsFullBright(spr->mobj))
+			lightlevel = 255;
+		else if (R_ThingIsFullDark(spr->mobj))
+			lightlevel = 0;
+		else
 			lightlevel = sector->lightlevel > 255 ? 255 : sector->lightlevel;
 
 		HWR_Lighting(&Surf, lightlevel, colormap);
@@ -4081,8 +4071,8 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 	//  0--1
 	wallVerts[0].x = wallVerts[3].x = spr->x1;
 	wallVerts[2].x = wallVerts[1].x = spr->x2;
-	wallVerts[2].y = wallVerts[3].y = spr->ty;
-	wallVerts[0].y = wallVerts[1].y = spr->ty - gpatch->height;
+	wallVerts[2].y = wallVerts[3].y = spr->gzt;
+	wallVerts[0].y = wallVerts[1].y = spr->gz;
 
 	// make a wall polygon (with 2 triangles), using the floor/ceiling heights,
 	// and the 2d map coords of start/end vertices
@@ -4680,6 +4670,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	float x1, x2;
 	float rightsin, rightcos;
 	float this_scale;
+	float spritexscale, spriteyscale;
 	float gz, gzt;
 	spritedef_t *sprdef;
 	spriteframe_t *sprframe;
@@ -4714,6 +4705,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	dispoffset = thing->info->dispoffset;
 
 	this_scale = FIXED_TO_FLOAT(thing->scale);
+	spritexscale = FIXED_TO_FLOAT(thing->spritexscale);
+	spriteyscale = FIXED_TO_FLOAT(thing->spriteyscale);
 
 	// transform the origin point
 	tr_x = FIXED_TO_FLOAT(thing->x) - gl_viewx;
@@ -4867,15 +4860,18 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	flip = !flip != !hflip;
 
+	spritexscale *= this_scale;
+	spriteyscale *= this_scale;
+
 	if (flip)
 	{
-		x1 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_scale);
-		x2 = (FIXED_TO_FLOAT(spr_offset) * this_scale);
+		x1 = (FIXED_TO_FLOAT(spr_width - spr_offset) * spritexscale);
+		x2 = (FIXED_TO_FLOAT(spr_offset) * spritexscale);
 	}
 	else
 	{
-		x1 = (FIXED_TO_FLOAT(spr_offset) * this_scale);
-		x2 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_scale);
+		x1 = (FIXED_TO_FLOAT(spr_offset) * spritexscale);
+		x2 = (FIXED_TO_FLOAT(spr_width - spr_offset) * spritexscale);
 	}
 
 	// test if too close
@@ -4897,13 +4893,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if (vflip)
 	{
-		gz = FIXED_TO_FLOAT(thing->z+thing->height) - FIXED_TO_FLOAT(spr_topoffset) * this_scale;
-		gzt = gz + FIXED_TO_FLOAT(spr_height) * this_scale;
+		gz = FIXED_TO_FLOAT(thing->z+thing->height) - (FIXED_TO_FLOAT(spr_topoffset) * spriteyscale);
+		gzt = gz + (FIXED_TO_FLOAT(spr_height) * spriteyscale);
 	}
 	else
 	{
-		gzt = FIXED_TO_FLOAT(thing->z) + FIXED_TO_FLOAT(spr_topoffset) * this_scale;
-		gz = gzt - FIXED_TO_FLOAT(spr_height) * this_scale;
+		gzt = FIXED_TO_FLOAT(thing->z) + (FIXED_TO_FLOAT(spr_topoffset) * spriteyscale);
+		gz = gzt - (FIXED_TO_FLOAT(spr_height) * spriteyscale);
 	}
 
 	if (thing->subsector->sector->cullheight)
@@ -5010,7 +5006,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		vis->colormap = colormaps;
 
 	// set top/bottom coords
-	vis->ty = gzt;
+	vis->gzt = gzt;
+	vis->gz = gz;
 
 	//CONS_Debug(DBG_RENDER, "------------------\nH: sprite  : %d\nH: frame   : %x\nH: type    : %d\nH: sname   : %s\n\n",
 	//            thing->sprite, thing->frame, thing->type, sprnames[thing->sprite]);
@@ -5110,7 +5107,8 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->colormap = colormaps;
 
 	// set top/bottom coords
-	vis->ty = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset);
+	vis->gzt = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset);
+	vis->gz = vis->gzt - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height);
 
 	vis->precip = true;
 

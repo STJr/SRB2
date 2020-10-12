@@ -923,13 +923,16 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	// Split drawing loops for paper and non-paper to reduce conditional checks per sprite
 	if (vis->scalestep)
 	{
+		fixed_t horzscale = FixedMul(vis->spritexscale, this_scale);
+		fixed_t scalestep = FixedMul(vis->scalestep, vis->spriteyscale);
+
 		pwidth = SHORT(patch->width);
 
 		// Papersprite drawing loop
-		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += vis->scalestep)
+		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += scalestep)
 		{
 			angle_t angle = ((vis->centerangle + xtoviewangle[dc_x]) >> ANGLETOFINESHIFT) & 0xFFF;
-			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / this_scale;
+			texturecolumn = (vis->paperoffset - FixedMul(FINETANGENT(angle), vis->paperdistance)) / horzscale;
 
 			if (texturecolumn < 0 || texturecolumn >= pwidth)
 				continue;
@@ -1946,6 +1949,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->xscale = FixedMul(spritexscale, xscale); //SoM: 4/17/2000
 	vis->scale = FixedMul(spriteyscale, yscale); //<<detailshift;
 
+	vis->spritexscale = spritexscale;
+	vis->spriteyscale = spriteyscale;
+
 	if (shadowdraw || shadoweffects)
 	{
 		iscale = (patch->width<<FRACBITS)/(x2-x1+1); // fuck it
@@ -1969,8 +1975,8 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (vis->x1 > x1)
 	{
-		vis->startfrac += FixedDiv(vis->xiscale, this_scale)*(vis->x1-x1);
-		vis->scale += scalestep*(vis->x1 - x1);
+		vis->startfrac += FixedDiv(vis->xiscale, this_scale) * (vis->x1 - x1);
+		vis->scale += FixedMul(scalestep, spriteyscale) * (vis->x1 - x1);
 	}
 
 	vis->patch = patch;
