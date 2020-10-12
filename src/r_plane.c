@@ -745,6 +745,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	ffloor_t *rover;
 	int type;
 	int spanfunctype = BASEDRAWFUNC;
+	angle_t viewang = viewangle;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -871,20 +872,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 	}
 
-	if (!pl->slope // Don't mess with angle on slopes! We'll handle this ourselves later
-		&& viewangle != pl->viewangle+pl->plangle)
-	{
-		memset(cachedheight, 0, sizeof (cachedheight));
-		angle = (pl->viewangle+pl->plangle-ANGLE_90)>>ANGLETOFINESHIFT;
-		basexscale = FixedDiv(FINECOSINE(angle),centerxfrac);
-		baseyscale = -FixedDiv(FINESINE(angle),centerxfrac);
-		viewangle = pl->viewangle+pl->plangle;
-	}
-
-	xoffs = pl->xoffs;
-	yoffs = pl->yoffs;
-	planeheight = abs(pl->height - pl->viewz);
-
 	currentplane = pl;
 	levelflat = &levelflats[pl->picnum];
 
@@ -908,6 +895,20 @@ void R_DrawSinglePlane(visplane_t *pl)
 			if (R_CheckPowersOfTwo())
 				R_CheckFlatLength(ds_flatwidth * ds_flatheight);
 	}
+
+	if (!pl->slope // Don't mess with angle on slopes! We'll handle this ourselves later
+		&& viewangle != pl->viewangle+pl->plangle)
+	{
+		memset(cachedheight, 0, sizeof (cachedheight));
+		angle = (pl->viewangle+pl->plangle-ANGLE_90)>>ANGLETOFINESHIFT;
+		basexscale = FixedDiv(FINECOSINE(angle),centerxfrac);
+		baseyscale = -FixedDiv(FINESINE(angle),centerxfrac);
+		viewangle = pl->viewangle+pl->plangle;
+	}
+
+	xoffs = pl->xoffs;
+	yoffs = pl->yoffs;
+	planeheight = abs(pl->height - pl->viewz);
 
 	if (light >= LIGHTLEVELS)
 		light = LIGHTLEVELS-1;
@@ -1121,6 +1122,8 @@ using the palette colors.
 		}
 	}
 #endif
+
+	viewangle = viewang;
 }
 
 void R_PlaneBounds(visplane_t *plane)

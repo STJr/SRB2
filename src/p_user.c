@@ -8678,12 +8678,6 @@ void P_MovePlayer(player_t *player)
 		player->fovadd = 0;
 #endif
 
-#ifdef FLOORSPLATS
-	if (cv_shadow.value && rendermode == render_soft)
-		R_AddFloorSplat(player->mo->subsector, player->mo, "SHADOW", player->mo->x,
-			player->mo->y, player->mo->floorz, SPLATDRAWMODE_OPAQUE);
-#endif
-
 	// Look for blocks to bust up
 	// Because of FF_SHATTER, we should look for blocks constantly,
 	// not just when spinning or playing as Knuckles

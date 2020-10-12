@@ -1080,9 +1080,6 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->frontsector = ld->backsector = NULL;
 
 	ld->validcount = 0;
-#ifdef WALLSPLATS
-	ld->splats = NULL;
-#endif
 	ld->firsttag = ld->nexttag = -1;
 	ld->polyobj = NULL;
 
@@ -2081,9 +2078,6 @@ static boolean P_LoadMapData(const virtres_t *virt)
 static void P_InitializeSubsector(subsector_t *ss)
 {
 	ss->sector = NULL;
-#ifdef FLOORSPLATS
-	ss->splats = NULL;
-#endif
 	ss->validcount = 0;
 }
 
@@ -2128,7 +2122,7 @@ static void P_LoadNodes(UINT8 *data)
   * \param seg Seg to compute length for.
   * \return Length in fracunits.
   */
-fixed_t P_SegLength(seg_t *seg)
+static fixed_t P_SegLength(seg_t *seg)
 {
 	INT64 dx = (seg->v2->x - seg->v1->x)>>1;
 	INT64 dy = (seg->v2->y - seg->v1->y)>>1;
@@ -4093,11 +4087,6 @@ boolean P_LoadLevel(boolean fromnetsave)
 	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
 	Patch_FreeTag(PU_PATCH_ROTATED);
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
-
-#if defined (WALLSPLATS) || defined (FLOORSPLATS)
-	// clear the splats from previous level
-	R_ClearLevelSplats();
-#endif
 
 	P_InitThinkers();
 	P_InitCachedActions();

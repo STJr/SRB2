@@ -671,10 +671,6 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_gif_dynamicdelay);
 	CV_RegisterVar(&cv_gif_localcolortable);
 
-#ifdef WALLSPLATS
-	CV_RegisterVar(&cv_splats);
-#endif
-
 	// register these so it is saved to config
 	CV_RegisterVar(&cv_playername);
 	CV_RegisterVar(&cv_playercolor);

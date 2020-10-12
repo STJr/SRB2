@@ -41,19 +41,26 @@ patch_t *Patch_GetRotated(patch_t *patch, INT32 angle, boolean flip)
 	return rotsprite->patches[angle];
 }
 
-patch_t *Patch_GetRotatedSprite(spriteframe_t *sprite, size_t frame, size_t spriteangle, boolean flip, void *info, INT32 rotationangle)
+patch_t *Patch_GetRotatedSprite(
+	spriteframe_t *sprite,
+	size_t frame, size_t spriteangle,
+	boolean flip, boolean adjustfeet,
+	void *info, INT32 rotationangle)
 {
-	rotsprite_t *rotsprite = sprite->rotated[spriteangle];
+	rotsprite_t *rotsprite;
 	spriteinfo_t *sprinfo = (spriteinfo_t *)info;
 	INT32 idx = rotationangle;
+	UINT8 type = (adjustfeet ? 1 : 0);
 
 	if (rotationangle < 1 || rotationangle >= ROTANGLES)
 		return NULL;
 
+	rotsprite = sprite->rotated[type][spriteangle];
+
 	if (rotsprite == NULL)
 	{
 		rotsprite = RotatedPatch_Create(ROTANGLES);
-		sprite->rotated[spriteangle] = rotsprite;
+		sprite->rotated[type][spriteangle] = rotsprite;
 	}
 
 	if (flip)
@@ -84,7 +91,8 @@ patch_t *Patch_GetRotatedSprite(spriteframe_t *sprite, size_t frame, size_t spri
 		RotatedPatch_DoRotation(rotsprite, patch, rotationangle, xpivot, ypivot, flip);
 
 		//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-		((patch_t *)rotsprite->patches[idx])->topoffset += FEETADJUST>>FRACBITS;
+		if (adjustfeet)
+			((patch_t *)rotsprite->patches[idx])->topoffset += FEETADJUST>>FRACBITS;
 	}
 
 	return rotsprite->patches[idx];

@@ -409,9 +409,6 @@ typedef struct line_s
 	sector_t *backsector;
 
 	size_t validcount; // if == validcount, already checked
-#if 1//#ifdef WALLSPLATS
-	void *splats; // wallsplat_t list
-#endif
 	INT32 firsttag, nexttag; // improves searches for tags.
 	polyobj_t *polyobj; // Belongs to a polyobject?
 
@@ -457,9 +454,6 @@ typedef struct subsector_s
 	INT16 numlines;
 	UINT16 firstline;
 	struct polyobj_s *polyList; // haleyjd 02/19/06: list of polyobjects
-#if 1//#ifdef FLOORSPLATS
-	void *splats; // floorsplat_t list
-#endif
 	size_t validcount;
 } subsector_t;
 
@@ -674,6 +668,7 @@ typedef struct
 	UINT8 *columns; // Software column data
 
 	void *hardware; // OpenGL patch, allocated whenever necessary
+	void *flats[4]; // The patch as flats
 
 #ifdef ROTSPRITE
 	rotsprite_t *rotated; // Rotated patches
@@ -720,6 +715,28 @@ typedef struct
 
 typedef enum
 {
+	RF_HORIZONTALFLIP   = 0x0001,   // Flip sprite horizontally
+	RF_VERTICALFLIP     = 0x0002,   // Flip sprite vertically
+	RF_ONESIDED         = 0x0004,   // Wall/floor sprite is visible from front only
+	RF_NOSPLATBILLBOARD = 0x0008,   // Don't billboard floor sprites (faces forward from the view angle)
+	RF_NOSPLATROLLANGLE = 0x0010,   // Don't rotate floor sprites by the object's rollangle (uses rotated patches instead)
+
+	RF_BLENDMASK        = 0x0F00,   // --Blending modes
+	RF_FULLBRIGHT       = 0x0100,   // Sprite is drawn at full brightness
+	RF_FULLDARK         = 0x0200,   // Sprite is drawn completely dark
+
+	RF_SPRITETYPEMASK   = 0x7000,   // ---Different sprite types, not all implemented
+	RF_PAPERSPRITE      = 0x1000,   // Paper sprite
+	RF_FLOORSPRITE      = 0x2000,   // Floor sprite
+	RF_VOXELSPRITE      = 0x3000,   // Voxel object
+
+	RF_SHADOWDRAW       = 0x10000,  // Stretches and skews the sprite like a shadow.
+	RF_SHADOWEFFECTS    = 0x20000,  // Scales and becomes transparent like a shadow.
+	RF_DROPSHADOW       = (RF_SHADOWDRAW | RF_SHADOWEFFECTS | RF_FULLDARK),
+} renderflags_t;
+
+typedef enum
+{
 	SRF_SINGLE      = 0,   // 0-angle for all rotations
 	SRF_3D          = 1,   // Angles 1-8
 	SRF_3DGE        = 2,   // 3DGE, ZDoom and Doom Legacy all have 16-angle support. Why not us?
@@ -759,7 +776,7 @@ typedef struct
 	UINT16 flip;
 
 #ifdef ROTSPRITE
-	rotsprite_t *rotated[16]; // Rotated patches
+	rotsprite_t *rotated[2][16]; // Rotated patches
 #endif
 } spriteframe_t;
 

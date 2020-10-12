@@ -194,6 +194,7 @@ typedef enum
 	MF2_AMBUSH         = 1<<27, // Alternate behaviour typically set by MTF_AMBUSH
 	MF2_LINKDRAW       = 1<<28, // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	MF2_SHIELD         = 1<<29, // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
+	MF2_SPLAT          = 1<<30, // Renders as a splat
 	// free: to and including 1<<31
 } mobjflag2_t;
 
@@ -308,6 +309,7 @@ typedef struct mobj_s
 	UINT32 flags; // flags from mobjinfo tables
 	UINT32 flags2; // MF2_ flags
 	UINT16 eflags; // extra flags
+	UINT32 renderflags; // render flags
 
 	void *skin; // overrides 'sprite' when non-NULL (for player bodies to 'remember' the skin)
 	// Player and mobj sprites in multiplayer modes are modified
@@ -360,6 +362,7 @@ typedef struct mobj_s
 	fixed_t scale;
 	fixed_t destscale;
 	fixed_t scalespeed;
+	fixed_t spritexscale, spriteyscale;
 
 	// Extra values are for internal use for whatever you want
 	INT32 extravalue1;

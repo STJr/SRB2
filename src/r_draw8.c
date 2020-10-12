@@ -1419,6 +1419,230 @@ void R_DrawTranslucentSplat_8 (void)
 	}
 }
 
+/**	\brief The R_DrawFloorSprite_8 function
+	Just like R_DrawSplat_8, but for floor sprites.
+*/
+void R_DrawFloorSprite_8 (void)
+{
+	fixed_t xposition;
+	fixed_t yposition;
+	fixed_t xstep, ystep;
+
+	UINT16 *source;
+	UINT8 *colormap;
+	UINT8 *translation;
+	UINT8 *dest;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+
+	size_t count = (ds_x2 - ds_x1 + 1);
+	UINT32 val;
+
+	xposition = ds_xfrac; yposition = ds_yfrac;
+	xstep = ds_xstep; ystep = ds_ystep;
+
+	// SoM: we only need 6 bits for the integer part (0 thru 63) so the rest
+	// can be used for the fraction part. This allows calculation of the memory address in the
+	// texture with two shifts, an OR and one AND. (see below)
+	// for texture sizes > 64 the amount of precision we can allow will decrease, but only by one
+	// bit per power of two (obviously)
+	// Ok, because I was able to eliminate the variable spot below, this function is now FASTER
+	// than the original span renderer. Whodathunkit?
+	xposition <<= nflatshiftup; yposition <<= nflatshiftup;
+	xstep <<= nflatshiftup; ystep <<= nflatshiftup;
+
+	source = (UINT16 *)ds_source;
+	colormap = ds_colormap;
+	translation = ds_translation;
+	dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	while (count >= 8)
+	{
+		// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
+		// have the uber complicated math to calculate it now, so that was a memory write we didn't
+		// need!
+		//
+		// <Callum> 4194303 = (2048x2048)-1 (2048x2048 is maximum flat size)
+		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
+		val &= 4194303;
+		val = source[val];
+		if (val & 0xFF00)
+			dest[0] = colormap[translation[val & 0xFF]];
+		xposition += xstep;
+		yposition += ystep;
+
+		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
+		val &= 4194303;
+		val = source[val];
+		if (val & 0xFF00)
+			dest[1] = colormap[translation[val & 0xFF]];
+		xposition += xstep;
+		yposition += ystep;
+
+		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
+		val &= 4194303;
+		val = source[val];
+		if (val & 0xFF00)
+			dest[2] = colormap[translation[val & 0xFF]];
+		xposition += xstep;
+		yposition += ystep;
+
+		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
+		val &= 4194303;
+		val = source[val];
+		if (val & 0xFF00)
+			dest[3] = colormap[translation[val & 0xFF]];
+		xposition += xstep;
+		yposition += ystep;
+
+		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
+		val &= 4194303;
+		val = source[val];
+		if (val & 0xFF00)
+			dest[4] = colormap[translation[val & 0xFF]];
+		xposition += xstep;
+		yposition += ystep;
+
+		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
+		val &= 4194303;
+		val = source[val];
+		if (val & 0xFF00)
+			dest[5] = colormap[translation[val & 0xFF]];
+		xposition += xstep;
+		yposition += ystep;
+
+		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
+		val &= 4194303;
+		val = source[val];
+		if (val & 0xFF00)
+			dest[6] = colormap[translation[val & 0xFF]];
+		xposition += xstep;
+		yposition += ystep;
+
+		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
+		val &= 4194303;
+		val = source[val];
+		if (val & 0xFF00)
+			dest[7] = colormap[translation[val & 0xFF]];
+		xposition += xstep;
+		yposition += ystep;
+
+		dest += 8;
+		count -= 8;
+	}
+	while (count-- && dest <= deststop)
+	{
+		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+		if (val & 0xFF00)
+			*dest = colormap[translation[val & 0xFF]];
+		dest++;
+		xposition += xstep;
+		yposition += ystep;
+	}
+}
+
+/**	\brief The R_DrawTranslucentFloorSplat_8 function
+	Just like R_DrawFloorSprite_8, but is translucent!
+*/
+void R_DrawTranslucentFloorSprite_8 (void)
+{
+	fixed_t xposition;
+	fixed_t yposition;
+	fixed_t xstep, ystep;
+
+	UINT16 *source;
+	UINT8 *colormap;
+	UINT8 *translation;
+	UINT8 *dest;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+
+	size_t count = (ds_x2 - ds_x1 + 1);
+	UINT32 val;
+
+	xposition = ds_xfrac; yposition = ds_yfrac;
+	xstep = ds_xstep; ystep = ds_ystep;
+
+	// SoM: we only need 6 bits for the integer part (0 thru 63) so the rest
+	// can be used for the fraction part. This allows calculation of the memory address in the
+	// texture with two shifts, an OR and one AND. (see below)
+	// for texture sizes > 64 the amount of precision we can allow will decrease, but only by one
+	// bit per power of two (obviously)
+	// Ok, because I was able to eliminate the variable spot below, this function is now FASTER
+	// than the original span renderer. Whodathunkit?
+	xposition <<= nflatshiftup; yposition <<= nflatshiftup;
+	xstep <<= nflatshiftup; ystep <<= nflatshiftup;
+
+	source = (UINT16 *)ds_source;
+	colormap = ds_colormap;
+	translation = ds_translation;
+	dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	while (count >= 8)
+	{
+		// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
+		// have the uber complicated math to calculate it now, so that was a memory write we didn't
+		// need!
+		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+		if (val & 0xFF00)
+			dest[0] = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + dest[0]);
+		xposition += xstep;
+		yposition += ystep;
+
+		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+		if (val & 0xFF00)
+			dest[1] = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + dest[1]);
+		xposition += xstep;
+		yposition += ystep;
+
+		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+		if (val & 0xFF00)
+			dest[2] = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + dest[2]);
+		xposition += xstep;
+		yposition += ystep;
+
+		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+		if (val & 0xFF00)
+			dest[3] = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + dest[3]);
+		xposition += xstep;
+		yposition += ystep;
+
+		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+		if (val & 0xFF00)
+			dest[4] = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + dest[4]);
+		xposition += xstep;
+		yposition += ystep;
+
+		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+		if (val & 0xFF00)
+			dest[5] = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + dest[5]);
+		xposition += xstep;
+		yposition += ystep;
+
+		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+		if (val & 0xFF00)
+			dest[6] = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + dest[6]);
+		xposition += xstep;
+		yposition += ystep;
+
+		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+		if (val & 0xFF00)
+			dest[7] = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + dest[7]);
+		xposition += xstep;
+		yposition += ystep;
+
+		dest += 8;
+		count -= 8;
+	}
+	while (count-- && dest <= deststop)
+	{
+		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
+		if (val & 0xFF00)
+			*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+		dest++;
+		xposition += xstep;
+		yposition += ystep;
+	}
+}
+
 /**	\brief The R_DrawTranslucentSpan_8 function
 	Draws the actual span with translucency.
 */

@@ -648,12 +648,15 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->eflags = (UINT16)SHORT(players[i].mo->eflags);
 	rsp->flags = LONG(players[i].mo->flags);
 	rsp->flags2 = LONG(players[i].mo->flags2);
+	rsp->renderflags = LONG(players[i].mo->renderflags);
 
 	rsp->radius = LONG(players[i].mo->radius);
 	rsp->height = LONG(players[i].mo->height);
 	rsp->scale = LONG(players[i].mo->scale);
 	rsp->destscale = LONG(players[i].mo->destscale);
 	rsp->scalespeed = LONG(players[i].mo->scalespeed);
+	rsp->spritexscale = LONG(players[i].mo->spritexscale);
+	rsp->spriteyscale = LONG(players[i].mo->spriteyscale);
 }
 
 static void resynch_read_player(resynch_pak *rsp)
@@ -787,6 +790,7 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mo->eflags = (UINT16)SHORT(rsp->eflags);
 	players[i].mo->flags = LONG(rsp->flags);
 	players[i].mo->flags2 = LONG(rsp->flags2);
+	players[i].mo->renderflags = LONG(rsp->renderflags);
 	players[i].mo->friction = LONG(rsp->friction);
 	players[i].mo->health = LONG(rsp->health);
 	players[i].mo->momx = LONG(rsp->momx);
@@ -813,6 +817,8 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mo->scale = LONG(rsp->scale);
 	players[i].mo->destscale = LONG(rsp->destscale);
 	players[i].mo->scalespeed = LONG(rsp->scalespeed);
+	players[i].mo->spritexscale = LONG(rsp->spritexscale);
+	players[i].mo->spriteyscale = LONG(rsp->spriteyscale);
 
 	// And finally, SET THE MOBJ SKIN damn it.
 	if ((players[i].powers[pw_carry] == CR_NIGHTSMODE) && (skins[players[i].skin].sprites[SPR2_NFLY].numframes == 0))

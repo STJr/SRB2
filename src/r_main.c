@@ -1472,9 +1472,6 @@ void R_RenderPlayerView(player_t *player)
 	}
 	R_ClearDrawSegs();
 	R_ClearSprites();
-#ifdef FLOORSPLATS
-	R_ClearVisibleFloorSplats();
-#endif
 	Portal_InitList();
 
 	// check for new console commands.
@@ -1555,9 +1552,6 @@ void R_RenderPlayerView(player_t *player)
 
 	rs_sw_planetime = I_GetTimeMicros();
 	R_DrawPlanes();
-#ifdef FLOORSPLATS
-	R_DrawVisibleFloorSplats();
-#endif
 	rs_sw_planetime = I_GetTimeMicros() - rs_sw_planetime;
 
 	// draw mid texture and sprite

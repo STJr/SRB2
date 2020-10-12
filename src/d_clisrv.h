@@ -293,12 +293,15 @@ typedef struct
 	UINT32 flags;
 	UINT32 flags2;
 	UINT16 eflags;
+	UINT32 renderflags;
 
 	fixed_t radius;
 	fixed_t height;
 	fixed_t scale;
 	fixed_t destscale;
 	fixed_t scalespeed;
+	fixed_t spritexscale;
+	fixed_t spriteyscale;
 } ATTRPACK resynch_pak;
 
 typedef struct

@@ -56,6 +56,7 @@ enum mobj_e {
 	mobj_flags,
 	mobj_flags2,
 	mobj_eflags,
+	mobj_renderflags,
 	mobj_skin,
 	mobj_color,
 	mobj_bnext,
@@ -83,6 +84,8 @@ enum mobj_e {
 	mobj_scale,
 	mobj_destscale,
 	mobj_scalespeed,
+	mobj_spritexscale,
+	mobj_spriteyscale,
 	mobj_extravalue1,
 	mobj_extravalue2,
 	mobj_cusval,
@@ -125,6 +128,7 @@ static const char *const mobj_opt[] = {
 	"flags",
 	"flags2",
 	"eflags",
+	"renderflags",
 	"skin",
 	"color",
 	"bnext",
@@ -152,6 +156,8 @@ static const char *const mobj_opt[] = {
 	"scale",
 	"destscale",
 	"scalespeed",
+	"spritexscale",
+	"spriteyscale",
 	"extravalue1",
 	"extravalue2",
 	"cusval",
@@ -277,6 +283,9 @@ static int mobj_get(lua_State *L)
 	case mobj_eflags:
 		lua_pushinteger(L, mo->eflags);
 		break;
+	case mobj_renderflags:
+		lua_pushinteger(L, mo->renderflags);
+		break;
 	case mobj_skin: // skin name or nil, not struct
 		if (!mo->skin)
 			return 0;
@@ -380,6 +389,12 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_scalespeed:
 		lua_pushfixed(L, mo->scalespeed);
+		break;
+	case mobj_spritexscale:
+		lua_pushfixed(L, mo->spritexscale);
+		break;
+	case mobj_spriteyscale:
+		lua_pushfixed(L, mo->spriteyscale);
 		break;
 	case mobj_extravalue1:
 		lua_pushinteger(L, mo->extravalue1);
@@ -580,6 +595,9 @@ static int mobj_set(lua_State *L)
 	case mobj_eflags:
 		mo->eflags = (UINT32)luaL_checkinteger(L, 3);
 		break;
+	case mobj_renderflags:
+		mo->renderflags = (UINT32)luaL_checkinteger(L, 3);
+		break;
 	case mobj_skin: // set skin by name
 	{
 		INT32 i;
@@ -720,6 +738,12 @@ static int mobj_set(lua_State *L)
 	}
 	case mobj_scalespeed:
 		mo->scalespeed = luaL_checkfixed(L, 3);
+		break;
+	case mobj_spritexscale:
+		mo->spritexscale = luaL_checkfixed(L, 3);
+		break;
+	case mobj_spriteyscale:
+		mo->spriteyscale = luaL_checkfixed(L, 3);
 		break;
 	case mobj_extravalue1:
 		mo->extravalue1 = luaL_checkinteger(L, 3);

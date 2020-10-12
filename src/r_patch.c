@@ -11,6 +11,7 @@
 
 #include "doomdef.h"
 #include "r_patch.h"
+#include "r_picformats.h"
 #include "r_defs.h"
 #include "z_zone.h"
 
@@ -66,18 +67,25 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 
 static void Patch_FreeData(patch_t *patch)
 {
+	INT32 i;
+
 #ifdef HWRENDER
 	if (patch->hardware)
 		HWR_FreeTexture(patch);
 #endif
 
+	for (i = 0; i < 2; i++)
+	{
+		if (patch->flats[i])
+			Patch_Free(patch->flats[i]);
+	}
+
 #ifdef ROTSPRITE
 	if (patch->rotated)
 	{
 		rotsprite_t *rotsprite = patch->rotated;
-		INT32 i = 0;
 
-		for (; i < rotsprite->angles; i++)
+		for (i = 0; i < rotsprite->angles; i++)
 		{
 			if (rotsprite->patches[i])
 				Patch_Free(rotsprite->patches[i]);
@@ -114,6 +122,13 @@ static boolean Patch_FreeTagsCallback(void *mem)
 void Patch_FreeTags(INT32 lowtag, INT32 hightag)
 {
 	Z_IterateTags(lowtag, hightag, Patch_FreeTagsCallback);
+}
+
+void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags)
+{
+	UINT8 flip = (flags & (PICFLAGS_XFLIP | PICFLAGS_YFLIP));
+	if (patch->flats[flip] == NULL)
+		patch->flats[flip] = Picture_Convert(PICFMT_PATCH, patch, PICFMT_FLAT16, 0, NULL, 0, 0, 0, 0, flags);
 }
 
 #ifdef HWRENDER

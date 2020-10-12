@@ -8,459 +8,253 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  r_splats.c
-/// \brief floor and wall splats
+/// \brief Floor splats
 
 #include "r_draw.h"
 #include "r_main.h"
-#include "r_plane.h"
 #include "r_splats.h"
+#include "r_bsp.h"
 #include "w_wad.h"
 #include "z_zone.h"
-#include "d_netcmd.h"
 
-#ifdef WALLSPLATS
-static wallsplat_t wallsplats[MAXLEVELSPLATS]; // WALL splats
-static INT32 freewallsplat;
-#endif
-
-#ifdef USEASM
-/// \brief for floorsplats \note accessed by asm code
-struct rastery_s *prastertab;
-#endif
+struct rastery_s *prastertab; // for ASM code
 
 #ifdef FLOORSPLATS
-static floorsplat_t floorsplats[1]; // FLOOR splats
-static INT32 freefloorsplat;
-
-struct rastery_s
-{
-	fixed_t minx, maxx; // for each raster line starting at line 0
-	fixed_t tx1, ty1;
-	fixed_t tx2, ty2; // start/end points in texture at this line
-};
 static struct rastery_s rastertab[MAXVIDHEIGHT];
-
 static void prepare_rastertab(void);
-#endif
 
-// --------------------------------------------------------------------------
-// setup splat cache
-// --------------------------------------------------------------------------
-void R_ClearLevelSplats(void)
-{
-#ifdef WALLSPLATS
-	freewallsplat = 0;
-	memset(wallsplats, 0, sizeof (wallsplats));
-#endif
-#ifdef FLOORSPLATS
-	freefloorsplat = 0;
-	memset(floorsplats, 0, sizeof (floorsplats));
-
-	// setup to draw floorsplats
-	prastertab = rastertab;
-	prepare_rastertab();
-#endif
-}
-
-// ==========================================================================
-//                                                                WALL SPLATS
-// ==========================================================================
-#ifdef WALLSPLATS
-// --------------------------------------------------------------------------
-// Return a pointer to a splat free for use, or NULL if no more splats are
-// available
-// --------------------------------------------------------------------------
-static wallsplat_t *R_AllocWallSplat(void)
-{
-	wallsplat_t *splat;
-	wallsplat_t *p_splat;
-	line_t *li;
-
-	// clear the splat from the line if it was in use
-	splat = &wallsplats[freewallsplat];
-	li = splat->line;
-	if (li)
-	{
-		// remove splat from line splats list
-		if (li->splats == splat)
-			li->splats = splat->next; // remove from head
-		else
-		{
-			I_Assert(li->splats != NULL);
-			for (p_splat = li->splats; p_splat->next; p_splat = p_splat->next)
-				if (p_splat->next == splat)
-				{
-					p_splat->next = splat->next;
-					break;
-				}
-		}
-	}
-
-	memset(splat, 0, sizeof (wallsplat_t));
-
-	// for next allocation
-	freewallsplat++;
-	if (freewallsplat >= 20)
-		freewallsplat = 0;
-
-	return splat;
-}
-
-// Add a new splat to the linedef:
-// top: top z coord
-// wallfrac: frac along the linedef vector (0 to FRACUNIT)
-// splatpatchname: name of patch to draw
-void R_AddWallSplat(line_t *wallline, INT16 sectorside, const char *patchname, fixed_t top,
-	fixed_t wallfrac, INT32 flags)
-{
-	fixed_t fracsplat, linelength;
-	wallsplat_t *splat = NULL;
-	wallsplat_t *p_splat;
-	patch_t *patch;
-	sector_t *backsector = NULL;
-
-	if (W_CheckNumForName(patchname) != LUMPERROR)
-		splat = R_AllocWallSplat();
-	if (!splat)
-		return;
-
-	// set the splat
-	splat->patch = W_GetNumForName(patchname);
-	sectorside ^= 1;
-	if (wallline->sidenum[sectorside] != 0xffff)
-	{
-		backsector = sides[wallline->sidenum[sectorside]].sector;
-
-		if (top < backsector->floorheight)
-		{
-			splat->yoffset = &backsector->floorheight;
-			top -= backsector->floorheight;
-		}
-		else if (top > backsector->ceilingheight)
-		{
-			splat->yoffset = &backsector->ceilingheight;
-			top -= backsector->ceilingheight;
-		}
-	}
-
-	splat->top = top;
-	splat->flags = flags;
-
-	// bad.. but will be needed for drawing anyway..
-	patch = W_CachePatchNum(splat->patch, PU_PATCH);
-
-	// offset needed by draw code for texture mapping
-	linelength = P_SegLength((seg_t *)wallline);
-	splat->offset = FixedMul(wallfrac, linelength) - (SHORT(patch->width)<<(FRACBITS-1));
-	fracsplat = FixedDiv(((SHORT(patch->width)<<FRACBITS)>>1), linelength);
-
-	wallfrac -= fracsplat;
-	if (wallfrac > linelength)
-		return;
-	splat->v1.x = wallline->v1->x + FixedMul(wallline->dx, wallfrac);
-	splat->v1.y = wallline->v1->y + FixedMul(wallline->dy, wallfrac);
-	wallfrac += fracsplat + fracsplat;
-	if (wallfrac < 0)
-		return;
-	splat->v2.x = wallline->v1->x + FixedMul(wallline->dx, wallfrac);
-	splat->v2.y = wallline->v1->y + FixedMul(wallline->dy, wallfrac);
-
-	if (wallline->frontsector && wallline->frontsector == backsector)
-		return;
-
-	// insert splat in the linedef splat list
-	// BP: why not insert in head is much more simple?
-	// BP: because for remove it is more simple!
-	splat->line = wallline;
-	splat->next = NULL;
-	if (wallline->splats)
-	{
-		p_splat = wallline->splats;
-		while (p_splat->next)
-			p_splat = p_splat->next;
-		p_splat->next = splat;
-	}
-	else
-		wallline->splats = splat;
-}
-#endif // WALLSPLATS
+UINT8 ds_splatclip[MAXVIDWIDTH];
 
 // ==========================================================================
 //                                                               FLOOR SPLATS
 // ==========================================================================
-#ifdef FLOORSPLATS
 
-// --------------------------------------------------------------------------
-// Return a pointer to a splat free for use, or NULL if no more splats are
-// available
-// --------------------------------------------------------------------------
-static floorsplat_t *R_AllocFloorSplat(void)
+#ifdef USEASM
+void ASMCALL rasterize_segment_tex_asm(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2, INT32 tc, INT32 dir);
+#endif
+
+// Lactozilla
+static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2, INT32 tc, INT32 dir)
 {
-	floorsplat_t *splat;
-	floorsplat_t *p_splat;
-	subsector_t *sub;
-
-	// find splat to use
-	freefloorsplat++;
-	if (freefloorsplat >= 1)
-		freefloorsplat = 0;
-
-	// clear the splat from the line if it was in use
-	splat = &floorsplats[freefloorsplat];
-	sub = splat->subsector;
-	if (sub)
+#ifdef USEASM
+	if (R_ASM)
 	{
-		// remove splat from subsector splats list
-		if (sub->splats == splat)
-			sub->splats = splat->next; // remove from head
+		rasterize_segment_tex_asm(x1, y1, x2, y2, tv1, tv2, tc, dir);
+		return;
+	}
+	else
+#endif
+	{
+		fixed_t xs, xe, count;
+		fixed_t dx0, dx1;
+
+		if (y1 == y2)
+			return;
+
+		if (y2 > y1)
+		{
+			count = (y2-y1)+1;
+
+			dx0 = FixedDiv((x2-x1)<<FRACBITS, count<<FRACBITS);
+			dx1 = FixedDiv((tv2-tv1)<<FRACBITS, count<<FRACBITS);
+
+			xs = x1 << FRACBITS;
+			xe = tv1 << FRACBITS;
+			tc <<= FRACBITS;
+
+			if (dir == 0)
+			{
+				for (;;)
+				{
+					rastertab[y1].maxx = xs;
+					rastertab[y1].tx2 = xe;
+					rastertab[y1].ty2 = tc;
+
+					xs += dx0;
+					xe += dx1;
+					y1++;
+
+					if (count-- < 1) break;
+				}
+			}
+			else
+			{
+				for (;;)
+				{
+					rastertab[y1].maxx = xs;
+					rastertab[y1].tx2 = tc;
+					rastertab[y1].ty2 = xe;
+
+					xs += dx0;
+					xe += dx1;
+					y1++;
+
+					if (count-- < 1) break;
+				}
+			}
+		}
 		else
 		{
-			p_splat = sub->splats;
-			while (p_splat->next)
+			count = (y1-y2)+1;
+
+			dx0 = FixedDiv((x1-x2)<<FRACBITS, count<<FRACBITS);
+			dx1 = FixedDiv((tv1-tv2)<<FRACBITS, count<<FRACBITS);
+
+			xs = x2 << FRACBITS;
+			xe = tv2 << FRACBITS;
+			tc <<= FRACBITS;
+
+			if (dir == 0)
 			{
-				if (p_splat->next == splat)
-					p_splat->next = splat->next;
+				for (;;)
+				{
+					rastertab[y2].minx = xs;
+					rastertab[y2].tx1 = xe;
+					rastertab[y2].ty1 = tc;
+
+					xs += dx0;
+					xe += dx1;
+					y2++;
+
+					if (count-- < 1) break;
+				}
+			}
+			else
+			{
+				for (;;)
+				{
+					rastertab[y2].minx = xs;
+					rastertab[y2].tx1 = tc;
+					rastertab[y2].ty1 = xe;
+
+					xs += dx0;
+					xe += dx1;
+					y2++;
+
+					if (count-- < 1) break;
+				}
 			}
 		}
 	}
-
-	memset(splat, 0, sizeof (floorsplat_t));
-	return splat;
 }
-
-// --------------------------------------------------------------------------
-// Add a floor splat to the subsector
-// --------------------------------------------------------------------------
-void R_AddFloorSplat(subsector_t *subsec, mobj_t *mobj, const char *picname, fixed_t x, fixed_t y, fixed_t z,
-	INT32 flags)
-{
-	floorsplat_t *splat = NULL;
-	floorsplat_t *p_splat;
-	INT32 size;
-
-	if (W_CheckNumForName(picname) != LUMPERROR)
-		splat = R_AllocFloorSplat();
-	if (!splat)
-		return;
-
-	// set the splat
-	splat->pic = W_GetNumForName(picname);
-	splat->flags = flags;
-	splat->mobj = mobj;
-
-	splat->z = z;
-
-	size = W_LumpLength(splat->pic);
-
-	switch (size)
-	{
-		case 4194304: // 2048x2048 lump
-			splat->size = 1024;
-			break;
-		case 1048576: // 1024x1024 lump
-			splat->size = 512;
-			break;
-		case 262144:// 512x512 lump
-			splat->size = 256;
-			break;
-		case 65536: // 256x256 lump
-			splat->size = 128;
-			break;
-		case 16384: // 128x128 lump
-			splat->size = 64;
-			break;
-		case 1024: // 32x32 lump
-			splat->size = 16;
-			break;
-		default: // 64x64 lump
-			splat->size = 32;
-			break;
-	}
-
-	// 3--2
-	// |  |
-	// 0--1
-	//
-	splat->verts[0].x = splat->verts[3].x = x - (splat->size<<FRACBITS);
-	splat->verts[2].x = splat->verts[1].x = x + ((splat->size-1)<<FRACBITS);
-	splat->verts[3].y = splat->verts[2].y = y + ((splat->size-1)<<FRACBITS);
-	splat->verts[0].y = splat->verts[1].y = y - (splat->size<<FRACBITS);
-
-	// insert splat in the subsector splat list
-	splat->subsector = subsec;
-	splat->next = NULL;
-	if (subsec->splats)
-	{
-		p_splat = subsec->splats;
-		while (p_splat->next)
-			p_splat = p_splat->next;
-		p_splat->next = splat;
-	}
-	else
-		subsec->splats = splat;
-}
-
-// --------------------------------------------------------------------------
-// Before each frame being rendered, clear the visible floorsplats list
-// --------------------------------------------------------------------------
-static floorsplat_t *visfloorsplats;
-
-void R_ClearVisibleFloorSplats(void)
-{
-	visfloorsplats = NULL;
-}
-
-// --------------------------------------------------------------------------
-// Add a floorsplat to the visible floorsplats list, for the current frame
-// --------------------------------------------------------------------------
-void R_AddVisibleFloorSplats(subsector_t *subsec)
-{
-	floorsplat_t *pSplat;
-	I_Assert(subsec->splats != NULL);
-
-	pSplat = subsec->splats;
-	// the splat is not visible from below
-	// FIXME: depending on some flag in pSplat->flags, some splats may be visible from 2 sides
-	// (above/below)
-	if (pSplat->z < viewz)
-	{
-		pSplat->nextvis = visfloorsplats;
-		visfloorsplats = pSplat;
-	}
-
-	while (pSplat->next)
-	{
-		pSplat = pSplat->next;
-		if (pSplat->z < viewz)
-		{
-			pSplat->nextvis = visfloorsplats;
-			visfloorsplats = pSplat;
-		}
-	}
-}
-
-#ifdef USEASM
-// tv1, tv2 = x/y qui varie dans la texture, tc = x/y qui est constant.
-void ASMCALL rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2,
-	INT32 tc, INT32 dir);
-#endif
-
-// current test with floor tile
-//#define FLOORSPLATSOLIDCOLOR
 
 // --------------------------------------------------------------------------
 // Rasterize the four edges of a floor splat polygon,
 // fill the polygon with linear interpolation, call span drawer for each
 // scan line
 // --------------------------------------------------------------------------
-static void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, UINT8 *pTex)
+void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, vissprite_t *vis)
 {
 	// rasterizing
-	INT32 miny = vid.height + 1, maxy = 0, y, x1, ry1, x2, y2;
-	fixed_t offsetx, offsety;
+	INT32 miny = viewheight + 1, maxy = 0, y, x1, ry1, x2, y2, i;
+	fixed_t offsetx = 0, offsety = 0;
+	fixed_t step;
 
-#ifdef FLOORSPLATSOLIDCOLOR
-	UINT8 *pDest;
-	INT32 tdx, tdy, ty, tx, x;
-#else
-	lighttable_t **planezlight;
 	fixed_t planeheight;
+	fixed_t xstep, ystep;
 	angle_t angle, planecos, planesin;
 	fixed_t distance, span;
-	size_t indexr;
-	INT32 light;
-#endif
-	(void)pTex;
 
-	offsetx = pSplat->verts[0].x & ((pSplat->size << FRACBITS)-1);
-	offsety = pSplat->verts[0].y & ((pSplat->size << FRACBITS)-1);
+	int spanfunctype = SPANDRAWFUNC_SPRITE;
+
+	prepare_rastertab();
+
+#define RASTERPARAMS(vnum1, vnum2, tv1, tv2, tc, dir) \
+    x1 = verts[vnum1].x; \
+    ry1 = verts[vnum1].y; \
+    x2 = verts[vnum2].x; \
+    y2 = verts[vnum2].y; \
+    if (y2 > ry1) \
+        step = FixedDiv(x2-x1, y2-ry1+1); \
+    else if (y2 == ry1) \
+        step = 0; \
+    else \
+        step = FixedDiv(x2-x1, ry1-y2+1); \
+    if (ry1 < 0) { \
+        if (step) { \
+            x1 <<= FRACBITS; \
+            x1 += (-ry1)*step; \
+            x1 >>= FRACBITS; \
+        } \
+        ry1 = 0; \
+    } \
+    if (ry1 >= vid.height) { \
+        if (step) { \
+            x1 <<= FRACBITS; \
+            x1 -= (vid.height-1-ry1)*step; \
+            x1 >>= FRACBITS; \
+        } \
+        ry1 = vid.height - 1; \
+    } \
+    if (y2 < 0) { \
+        if (step) { \
+            x2 <<= FRACBITS; \
+            x2 -= (-y2)*step; \
+            x2 >>= FRACBITS; \
+        } \
+        y2 = 0; \
+    } \
+    if (y2 >= vid.height) { \
+        if (step) { \
+            x2 <<= FRACBITS; \
+            x2 += (vid.height-1-y2)*step; \
+            x2 >>= FRACBITS; \
+        } \
+        y2 = vid.height - 1; \
+    } \
+    rasterize_segment_tex(x1, ry1, x2, y2, tv1, tv2, tc, dir); \
+    if (ry1 < miny) \
+        miny = ry1; \
+    if (ry1 > maxy) \
+        maxy = ry1;
 
 	// do segment a -> top of texture
-	x1 = verts[3].x;
-	ry1 = verts[3].y;
-	x2 = verts[2].x;
-	y2 = verts[2].y;
-	if (ry1 < 0)
-		ry1 = 0;
-	if (ry1 >= vid.height)
-		ry1 = vid.height - 1;
-	if (y2 < 0)
-		y2 = 0;
-	if (y2 >= vid.height)
-		y2 = vid.height - 1;
-	rasterize_segment_tex(x1, ry1, x2, y2, 0, pSplat->size - 1, 0, 0);
-	if (ry1 < miny)
-		miny = ry1;
-	if (ry1 > maxy)
-		maxy = ry1;
-
+	RASTERPARAMS(3,2,0,pSplat->width-1,0,0);
 	// do segment b -> right side of texture
-	x1 = x2;
-	ry1 = y2;
-	x2 = verts[1].x;
-	y2 = verts[1].y;
-	if (ry1 < 0)
-		ry1 = 0;
-	if (ry1 >= vid.height)
-		ry1 = vid.height - 1;
-	if (y2 < 0)
-		y2 = 0;
-	if (y2 >= vid.height)
-		y2 = vid.height - 1;
-	rasterize_segment_tex(x1, ry1, x2, y2, 0, pSplat->size - 1, pSplat->size - 1, 1);
-	if (ry1 < miny)
-		miny = ry1;
-	if (ry1 > maxy)
-		maxy = ry1;
-
+	RASTERPARAMS(2,1,0,pSplat->width-1,pSplat->height-1,0);
 	// do segment c -> bottom of texture
-	x1 = x2;
-	ry1 = y2;
-	x2 = verts[0].x;
-	y2 = verts[0].y;
-	if (ry1 < 0)
-		ry1 = 0;
-	if (ry1 >= vid.height)
-		ry1 = vid.height - 1;
-	if (y2 < 0)
-		y2 = 0;
-	if (y2 >= vid.height)
-		y2 = vid.height - 1;
-	rasterize_segment_tex(x1, ry1, x2, y2, pSplat->size - 1, 0, pSplat->size - 1, 0);
-	if (ry1 < miny)
-		miny = ry1;
-	if (ry1 > maxy)
-		maxy = ry1;
-
+	RASTERPARAMS(1,0,pSplat->width-1,0,pSplat->height-1,0);
 	// do segment d -> left side of texture
-	x1 = x2;
-	ry1 = y2;
-	x2 = verts[3].x;
-	y2 = verts[3].y;
-	if (ry1 < 0)
-		ry1 = 0;
-	if (ry1 >= vid.height)
-		ry1 = vid.height - 1;
-	if (y2 < 0)
-		y2 = 0;
-	if (y2 >= vid.height)
-		y2 = vid.height - 1;
-	rasterize_segment_tex(x1, ry1, x2, y2, pSplat->size - 1, 0, 0, 1);
-	if (ry1 < miny)
-		miny = ry1;
-	if (ry1 > maxy)
-		maxy = ry1;
+	RASTERPARAMS(0,3,pSplat->width-1,0,0,1);
 
-#ifndef FLOORSPLATSOLIDCOLOR
-	// prepare values for all the splat
-	ds_source = W_CacheLumpNum(pSplat->pic, PU_CACHE);
+	ds_source = pSplat->pic;
+	ds_flatwidth = pSplat->width;
+	ds_flatheight = pSplat->height;
+
+	if (R_CheckPowersOfTwo())
+		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+
+	ds_transmap = NULL;
+
+	if (vis->transmap)
+	{
+		ds_transmap = vis->transmap;
+		spanfunctype = SPANDRAWFUNC_TRANSSPRITE;
+	}
+
+	if (ds_powersoftwo)
+		spanfunc = spanfuncs[spanfunctype];
+	else
+		spanfunc = spanfuncs_npo2[spanfunctype];
+
+	if (pSplat->angle)
+	{
+		memset(cachedheight, 0, sizeof(cachedheight));
+		angle = (viewangle + pSplat->angle - ANGLE_90) >> ANGLETOFINESHIFT;
+		basexscale = FixedDiv(FINECOSINE(angle), centerxfrac);
+		baseyscale = -FixedDiv(FINESINE(angle), centerxfrac);
+	}
+	else
+	{
+		angle = (viewangle - ANGLE_90) >> ANGLETOFINESHIFT;
+		basexscale = FixedDiv(FINECOSINE(angle), centerxfrac);
+		baseyscale = -FixedDiv(FINESINE(angle), centerxfrac);
+	}
+
 	planeheight = abs(pSplat->z - viewz);
-	light = (pSplat->subsector->sector->lightlevel >> LIGHTSEGSHIFT);
-	if (light >= LIGHTLEVELS)
-		light = LIGHTLEVELS - 1;
-	if (light < 0)
-		light = 0;
-	planezlight = zlight[light];
+
+	if (maxy >= vid.height)
+		maxy = vid.height-1;
 
 	for (y = miny; y <= maxy; y++)
 	{
@@ -472,7 +266,7 @@ static void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, UINT8 *pTe
 		if (x2 >= vid.width)
 			x2 = vid.width - 1;
 
-		angle = (currentplane->viewangle + currentplane->plangle)>>ANGLETOFINESHIFT;
+		angle = (viewangle + pSplat->angle)>>ANGLETOFINESHIFT;
 		planecos = FINECOSINE(angle);
 		planesin = FINESINE(angle);
 
@@ -480,146 +274,115 @@ static void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, UINT8 *pTe
 		{
 			cachedheight[y] = planeheight;
 			distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
-			ds_xstep = cachedxstep[y] = FixedMul(distance,basexscale);
-			ds_ystep = cachedystep[y] = FixedMul(distance,baseyscale);
-
+			xstep = cachedxstep[y] = FixedMul(distance, basexscale);
+			ystep = cachedystep[y] = FixedMul(distance, baseyscale);
+			// don't divide by zero
 			if ((span = abs(centery-y)))
 			{
-				ds_xstep = cachedxstep[y] = FixedMul(planesin, planeheight) / span;
-				ds_ystep = cachedystep[y] = FixedMul(planecos, planeheight) / span;
+				xstep = cachedxstep[y] = FixedMul(planesin, planeheight) / span;
+				ystep = cachedystep[y] = FixedMul(planecos, planeheight) / span;
 			}
 		}
 		else
 		{
 			distance = cacheddistance[y];
-			ds_xstep = cachedxstep[y];
-			ds_ystep = cachedystep[y];
+			xstep = cachedxstep[y];
+			ystep = cachedystep[y];
 		}
 
-		ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
-		ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
-		ds_xfrac -= offsetx;
-		ds_yfrac += offsety;
+		ds_xstep = FixedDiv(xstep, pSplat->xscale);
+		ds_ystep = FixedDiv(ystep, pSplat->yscale);
 
-		indexr = distance >> LIGHTZSHIFT;
-		if (indexr >= MAXLIGHTZ)
-			indexr = MAXLIGHTZ - 1;
-		ds_colormap = planezlight[indexr];
+		ds_colormap = vis->colormap;
+		ds_translation = R_GetSpriteTranslation(vis);
+		if (ds_translation == NULL)
+			ds_translation = colormaps;
 
-		ds_y = y;
-		if (x2 >= x1) // sanity check
+		if (vis->extra_colormap)
 		{
-			ds_x1 = x1;
-			ds_x2 = x2;
-			ds_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
-			(spanfuncs[SPANDRAWFUNC_SPLAT])();
+			if (!ds_colormap)
+				ds_colormap = vis->extra_colormap->colormap;
+			else
+				ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
 		}
 
-		// reset for next calls to edge rasterizer
-		rastertab[y].minx = INT32_MAX;
-		rastertab[y].maxx = INT32_MIN;
-	}
-
-#else
-	for (y = miny; y <= maxy; y++)
-	{
-		x1 = rastertab[y].minx>>FRACBITS;
-		x2 = rastertab[y].maxx>>FRACBITS;
-		if (x1 < 0)
-			x1 = 0;
-		if (x2 >= vid.width)
-			x2 = vid.width - 1;
-
-//		pDest = ylookup[y] + columnofs[x1];
-		pDest = &topleft[y*vid.width + x1];
-
-		x = x2 - x1 + 1;
-
-		// starting point of the texture
-		tx = rastertab[y].tx1;
-		ty = rastertab[y].ty1;
-
-		// HORRIBLE BUG!!!
-		if (x > 0)
+		if (pSplat->angle)
 		{
-			tdx = (rastertab[y].tx2 - tx) / x;
-			tdy = (rastertab[y].ty2 - ty) / x;
+			// Add the view offset, rotated by the plane angle.
+			fixed_t a = -pSplat->verts[0].x + viewx;
+			fixed_t b = -pSplat->verts[0].y + viewy;
+			angle = (pSplat->angle >> ANGLETOFINESHIFT);
+			offsetx = FixedMul(a, FINECOSINE(angle)) - FixedMul(b,FINESINE(angle));
+			offsety = -FixedMul(a, FINESINE(angle)) - FixedMul(b,FINECOSINE(angle));
+		}
+		else
+		{
+			offsetx = viewx - pSplat->verts[0].x;
+			offsety = pSplat->verts[0].y - viewy;
+		}
 
-			while (x-- > 0)
+		if (vis != NULL)
+		{
+			INT32 xclip;
+
+			mfloorclip = vis->clipbot;
+			mceilingclip = vis->cliptop;
+
+			R_ClipVisSprite(vis, x1-1, x2+1, drawsegs, NULL);
+			memset(ds_splatclip, 0, sizeof(ds_splatclip));
+
+			if (x2 >= x1 && x1 < viewwidth && x1 >= 0)
 			{
-				*(pDest++) = (UINT8)(y&1);
-				tx += tdx;
-				ty += tdy;
+				for (xclip = x1; xclip <= x2; xclip++)
+				{
+					if (y >= mfloorclip[xclip])
+						ds_splatclip[xclip] = 1;
+				}
+			}
+
+			while (ds_splatclip[x1])
+				x1++;
+			i = x2;
+			while (i > x1)
+			{
+				if (ds_splatclip[i])
+					x2 = i-1;
+				i--;
 			}
 		}
 
-		// reinitialise the minimum and maximum for the next approach
+		ds_xfrac = FixedDiv(offsetx + FixedMul(planecos, distance) + (x1 - centerx) * xstep, pSplat->xscale);
+		ds_yfrac = FixedDiv(offsety - FixedMul(planesin, distance) + (x1 - centerx) * ystep, pSplat->yscale);
+
+		if (x2 >= x1)
+		{
+			ds_y = y;
+			ds_x1 = x1;
+			ds_x2 = x2;
+			spanfunc();
+		}
+
 		rastertab[y].minx = INT32_MAX;
 		rastertab[y].maxx = INT32_MIN;
 	}
-#endif
-}
 
-// --------------------------------------------------------------------------
-// R_DrawVisibleFloorSplats
-// draw the flat floor/ceiling splats
-// --------------------------------------------------------------------------
-void R_DrawVisibleFloorSplats(void)
-{
-	floorsplat_t *pSplat;
-	INT32 iCount = 0, i;
-	fixed_t tr_x, tr_y, rot_x, rot_y, rot_z, xscale, yscale;
-	vertex_t *v3d;
-	vertex_t v2d[4];
-
-	pSplat = visfloorsplats;
-	while (pSplat)
+	if (pSplat->angle)
 	{
-		iCount++;
-
-		// Draw a floor splat
-		// 3--2
-		// |  |
-		// 0--1
-
-		rot_z = pSplat->z - viewz;
-		for (i = 0; i < 4; i++)
-		{
-			v3d = &pSplat->verts[i];
-
-			// transform the origin point
-			tr_x = v3d->x - viewx;
-			tr_y = v3d->y - viewy;
-
-			// rotation around vertical y axis
-			rot_x = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
-			rot_y = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
-
-			if (rot_y < 4*FRACUNIT)
-				goto skipit;
-
-			// note: y from view above of map, is distance far away
-			xscale = FixedDiv(projection, rot_y);
-			yscale = -FixedDiv(projectiony, rot_y);
-
-			// projection
-			v2d[i].x = (centerxfrac + FixedMul (rot_x, xscale))>>FRACBITS;
-			v2d[i].y = (centeryfrac + FixedMul (rot_z, yscale))>>FRACBITS;
-		}
-
-		R_RenderFloorSplat(pSplat, v2d, NULL);
-skipit:
-		pSplat = pSplat->nextvis;
+		memset(cachedheight, 0, sizeof(cachedheight));
+		angle = (viewangle - ANGLE_90) >> ANGLETOFINESHIFT;
+		basexscale = FixedDiv(FINECOSINE(angle), centerxfrac);
+		baseyscale = -FixedDiv(FINESINE(angle), centerxfrac);
 	}
 }
 
 static void prepare_rastertab(void)
 {
-	INT32 iLine;
-	for (iLine = 0; iLine < vid.height; iLine++)
+	INT32 i;
+	prastertab = rastertab;
+	for (i = 0; i < vid.height; i++)
 	{
-		rastertab[iLine].minx = INT32_MAX;
-		rastertab[iLine].maxx = INT32_MIN;
+		rastertab[i].minx = INT32_MAX;
+		rastertab[i].maxx = INT32_MIN;
 	}
 }
 

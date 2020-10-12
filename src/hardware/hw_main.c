@@ -700,79 +700,6 @@ static void HWR_RenderSkyPlane(extrasubsector_t *xsub, fixed_t fixedheight)
 
 #endif //doplanes
 
-/*
-   wallVerts order is :
-		3--2
-		| /|
-		|/ |
-		0--1
-*/
-#ifdef WALLSPLATS
-static void HWR_DrawSegsSplats(FSurfaceInfo * pSurf)
-{
-	FOutVector wallVerts[4];
-	wallsplat_t *splat;
-	patch_t *gpatch;
-	fixed_t i;
-	// seg bbox
-	fixed_t segbbox[4];
-
-	M_ClearBox(segbbox);
-	M_AddToBox(segbbox,
-		FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv1)->x),
-		FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv1)->y));
-	M_AddToBox(segbbox,
-		FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->x),
-		FLOAT_TO_FIXED(((polyvertex_t *)gl_curline->pv2)->y));
-
-	splat = (wallsplat_t *)gl_curline->linedef->splats;
-	for (; splat; splat = splat->next)
-	{
-		//BP: don't draw splat extern to this seg
-		//    this is quick fix best is explain in logboris.txt at 12-4-2000
-		if (!M_PointInBox(segbbox,splat->v1.x,splat->v1.y) && !M_PointInBox(segbbox,splat->v2.x,splat->v2.y))
-			continue;
-
-		gpatch = W_CachePatchNum(splat->patch, PU_SPRITE);
-		HWR_GetPatch(gpatch);
-
-		wallVerts[0].x = wallVerts[3].x = FIXED_TO_FLOAT(splat->v1.x);
-		wallVerts[0].z = wallVerts[3].z = FIXED_TO_FLOAT(splat->v1.y);
-		wallVerts[2].x = wallVerts[1].x = FIXED_TO_FLOAT(splat->v2.x);
-		wallVerts[2].z = wallVerts[1].z = FIXED_TO_FLOAT(splat->v2.y);
-
-		i = splat->top;
-		if (splat->yoffset)
-			i += *splat->yoffset;
-
-		wallVerts[2].y = wallVerts[3].y = FIXED_TO_FLOAT(i)+(gpatch->height>>1);
-		wallVerts[0].y = wallVerts[1].y = FIXED_TO_FLOAT(i)-(gpatch->height>>1);
-
-		wallVerts[3].s = wallVerts[3].t = wallVerts[2].s = wallVerts[0].t = 0.0f;
-		wallVerts[1].s = wallVerts[1].t = wallVerts[2].t = wallVerts[0].s = 1.0f;
-
-		switch (splat->flags & SPLATDRAWMODE_MASK)
-		{
-			case SPLATDRAWMODE_OPAQUE :
-				pSurf.PolyColor.s.alpha = 0xff;
-				i = PF_Translucent;
-				break;
-			case SPLATDRAWMODE_TRANS :
-				pSurf.PolyColor.s.alpha = 128;
-				i = PF_Translucent;
-				break;
-			case SPLATDRAWMODE_SHADE :
-				pSurf.PolyColor.s.alpha = 0xff;
-				i = PF_Substractive;
-				break;
-		}
-
-		HWD.pfnSetShader(2);	// wall shader
-		HWD.pfnDrawPolygon(&pSurf, wallVerts, 4, i|PF_Modulated|PF_Decal);
-	}
-}
-#endif
-
 FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
 {
 	switch (transtablenum)
@@ -797,19 +724,21 @@ static void HWR_AddTransparentWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, I
 // Wall generation from subsector segs
 // ==========================================================================
 
+/*
+   wallVerts order is :
+		3--2
+		| /|
+		|/ |
+		0--1
+*/
+
 //
 // HWR_ProjectWall
 //
 static void HWR_ProjectWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIELD blendmode, INT32 lightlevel, extracolormap_t *wallcolormap)
 {
 	HWR_Lighting(pSurf, lightlevel, wallcolormap);
-
 	HWR_ProcessPolygon(pSurf, wallVerts, 4, blendmode|PF_Modulated|PF_Occlude, 2, false); // wall shader
-
-#ifdef WALLSPLATS
-	if (gl_curline->linedef->splats && cv_splats.value)
-		HWR_DrawSegsSplats(pSurf);
-#endif
 }
 
 // ==========================================================================
@@ -3977,7 +3906,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	patch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
 	const boolean hires = (spr->mobj && spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES);
-	//const boolean papersprite = (spr->mobj && (spr->mobj->frame & FF_PAPERSPRITE));
+	//const boolean papersprite = R_ThingIsPaperSprite(spr->mobj);
 	if (spr->mobj)
 		this_scale = FIXED_TO_FLOAT(spr->mobj->scale);
 	if (hires)
@@ -4761,14 +4690,14 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	size_t lumpoff;
 	unsigned rot;
 	UINT16 flip;
-	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !(thing->frame & FF_VERTICALFLIP));
+	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(thing));
 	boolean mirrored = thing->mirrored;
-	boolean hflip = (!(thing->frame & FF_HORIZONTALFLIP) != !mirrored);
+	boolean hflip = (!R_ThingHorizontallyFlipped(thing) != !mirrored);
 	INT32 dispoffset;
 
 	angle_t ang;
 	INT32 heightsec, phs;
-	const boolean papersprite = (thing->frame & FF_PAPERSPRITE);
+	const boolean papersprite = R_ThingIsPaperSprite(thing);
 	angle_t mobjangle = (thing->player ? thing->player->drawangle : thing->angle);
 	float z1, z2;
 
@@ -4909,13 +4838,16 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->rollangle)
 	{
 		rollangle = R_GetRollAngle(thing->rollangle);
-		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, sprinfo, rollangle);
+		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
+
 		if (rotsprite != NULL)
 		{
-			spr_width = SHORT(rotsprite->width) << FRACBITS;
-			spr_height = SHORT(rotsprite->height) << FRACBITS;
-			spr_offset = SHORT(rotsprite->leftoffset) << FRACBITS;
-			spr_topoffset = SHORT(rotsprite->topoffset) << FRACBITS;
+			spr_width = rotsprite->width << FRACBITS;
+			spr_height = rotsprite->height << FRACBITS;
+			spr_offset = rotsprite->leftoffset << FRACBITS;
+			spr_topoffset = rotsprite->topoffset << FRACBITS;
+			spr_topoffset += FEETADJUST;
+
 			// flip -> rotate, not rotate -> flip
 			flip = 0;
 		}
@@ -6224,13 +6156,7 @@ void HWR_RenderWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIELD blend,
 	}
 
 	blendmode |= PF_Modulated;	// No PF_Occlude means overlapping (incorrect) transparency
-
 	HWR_ProcessPolygon(pSurf, wallVerts, 4, blendmode, shader, false);
-
-#ifdef WALLSPLATS
-	if (gl_curline->linedef->splats && cv_splats.value)
-		HWR_DrawSegsSplats(pSurf);
-#endif
 }
 
 INT32 HWR_GetTextureUsed(void)

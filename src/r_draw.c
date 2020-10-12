@@ -98,6 +98,7 @@ INT32 dc_numlights = 0, dc_maxlights, dc_texheight;
 
 INT32 ds_y, ds_x1, ds_x2;
 lighttable_t *ds_colormap;
+lighttable_t *ds_translation; // Lactozilla: Sprite splat drawer
 fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 UINT16 ds_flatwidth, ds_flatheight;
 boolean ds_powersoftwo;

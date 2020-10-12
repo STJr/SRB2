@@ -38,10 +38,6 @@
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_movebob = CVAR_INIT ("movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
 
-#ifdef WALLSPLATS
-consvar_t cv_splats = CVAR_INIT ("splats", "On", CV_SAVE, CV_OnOff, NULL);
-#endif
-
 actioncache_t actioncachehead;
 
 static mobj_t *overlaycap = NULL;
@@ -1960,29 +1956,6 @@ void P_XYMovement(mobj_t *mo)
 				P_RemoveMobj(mo);
 				return;
 			}
-
-			// draw damage on wall
-			//SPLAT TEST ----------------------------------------------------------
-#ifdef WALLSPLATS
-			if (blockingline && mo->type != MT_REDRING && mo->type != MT_FIREBALL
-			&& !(mo->flags2 & (MF2_AUTOMATIC|MF2_RAILRING|MF2_BOUNCERING|MF2_EXPLOSION|MF2_SCATTER)))
-				// set by last P_TryMove() that failed
-			{
-				divline_t divl;
-				divline_t misl;
-				fixed_t frac;
-
-				P_MakeDivline(blockingline, &divl);
-				misl.x = mo->x;
-				misl.y = mo->y;
-				misl.dx = mo->momx;
-				misl.dy = mo->momy;
-				frac = P_InterceptVector(&divl, &misl);
-				R_AddWallSplat(blockingline, P_PointOnLineSide(mo->x,mo->y,blockingline),
-					"A_DMG3", mo->z, frac, SPLATDRAWMODE_SHADE);
-			}
-#endif
-			// --------------------------------------------------------- SPLAT TEST
 
 			P_ExplodeMissile(mo);
 			return;
@@ -9614,12 +9587,6 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			mobj->fuse = 1; // Return to base.
 		break;
 	}
-	case MT_CANNONBALL:
-#ifdef FLOORSPLATS
-		R_AddFloorSplat(mobj->tracer->subsector, mobj->tracer, "TARGET", mobj->tracer->x,
-			mobj->tracer->y, mobj->tracer->floorz, SPLATDRAWMODE_SHADE);
-#endif
-		break;
 	case MT_SPINDUST: // Spindash dust
 		mobj->momx = FixedMul(mobj->momx, (3*FRACUNIT)/4); // originally 50000
 		mobj->momy = FixedMul(mobj->momy, (3*FRACUNIT)/4); // same
@@ -10487,6 +10454,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->tics = st->tics;
 	mobj->sprite = st->sprite;
 	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
+	mobj->renderflags = 0;
 	P_SetupStateAnimation(mobj, st);
 
 	mobj->friction = ORIG_FRICTION;
@@ -10497,6 +10465,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->scale = FRACUNIT;
 	mobj->destscale = mobj->scale;
 	mobj->scalespeed = FRACUNIT/12;
+	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
 
 	// TODO: Make this a special map header
 	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))

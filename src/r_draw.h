@@ -56,6 +56,7 @@ extern INT32 dc_texheight;
 
 extern INT32 ds_y, ds_x1, ds_x2;
 extern lighttable_t *ds_colormap;
+extern lighttable_t *ds_translation;
 extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 extern UINT16 ds_flatwidth, ds_flatheight;
 extern boolean ds_powersoftwo;
@@ -151,8 +152,10 @@ void R_DrawColumnShadowed_8(void);
 
 void R_DrawSpan_8(void);
 void R_DrawSplat_8(void);
+void R_DrawFloorSprite_8(void);
 void R_DrawTranslucentSpan_8(void);
 void R_DrawTranslucentSplat_8(void);
+void R_DrawTranslucentFloorSprite_8(void);
 void R_DrawTiltedSpan_8(void);
 void R_DrawTiltedTranslucentSpan_8(void);
 #ifndef NOWATER
@@ -171,8 +174,10 @@ void R_DrawFogSpan_8(void);
 // Lactozilla: Non-powers-of-two
 void R_DrawSpan_NPO2_8(void);
 void R_DrawTranslucentSpan_NPO2_8(void);
+void R_DrawFloorSprite_NPO2_8(void);
 void R_DrawSplat_NPO2_8(void);
 void R_DrawTranslucentSplat_NPO2_8(void);
+void R_DrawTranslucentFloorSprite_NPO2_8(void);
 void R_DrawTiltedSpan_NPO2_8(void);
 void R_DrawTiltedTranslucentSpan_NPO2_8(void);
 #ifndef NOWATER

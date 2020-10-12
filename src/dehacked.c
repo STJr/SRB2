@@ -9035,6 +9035,7 @@ static const char *const MOBJFLAG2_LIST[] = {
 	"AMBUSH",         // Alternate behaviour typically set by MTF_AMBUSH
 	"LINKDRAW",       // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	"SHIELD",         // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
+	"SPLAT",          // Object is a splat
 	NULL
 };
 
@@ -9578,6 +9579,22 @@ struct {
 	{"tr_trans80",tr_trans80},
 	{"tr_trans90",tr_trans90},
 	{"NUMTRANSMAPS",NUMTRANSMAPS},
+
+	// Render flags
+	{"RF_HORIZONTALFLIP",RF_HORIZONTALFLIP},
+	{"RF_VERTICALFLIP",RF_VERTICALFLIP},
+	{"RF_ONESIDED",RF_ONESIDED},
+	{"RF_NOSPLATBILLBOARD",RF_NOSPLATBILLBOARD},
+	{"RF_NOSPLATROLLANGLE",RF_NOSPLATROLLANGLE},
+	{"RF_FULLBRIGHT",RF_FULLBRIGHT},
+	{"RF_FULLDARK",RF_FULLDARK},
+	{"RF_SPRITETYPEMASK",RF_SPRITETYPEMASK},
+	{"RF_PAPERSPRITE",RF_PAPERSPRITE},
+	{"RF_FLOORSPRITE",RF_FLOORSPRITE},
+	{"RF_VOXELSPRITE",RF_VOXELSPRITE},
+	{"RF_SHADOWDRAW",RF_SHADOWDRAW},
+	{"RF_SHADOWEFFECTS",RF_SHADOWEFFECTS},
+	{"RF_DROPSHADOW",RF_DROPSHADOW},
 
 	// Level flags
 	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},

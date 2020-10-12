@@ -754,6 +754,104 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 	}
 }
 
+/**	\brief The R_DrawFloorSprite_NPO2_8 function
+	Just like R_DrawSplat_NPO2_8, but for floor sprites.
+*/
+void R_DrawFloorSprite_NPO2_8 (void)
+{
+	fixed_t xposition;
+	fixed_t yposition;
+	fixed_t xstep, ystep;
+
+	UINT16 *source;
+	UINT8 *translation;
+	UINT8 *colormap;
+	UINT8 *dest;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+
+	size_t count = (ds_x2 - ds_x1 + 1);
+	UINT32 val;
+
+	xposition = ds_xfrac; yposition = ds_yfrac;
+	xstep = ds_xstep; ystep = ds_ystep;
+
+	source = (UINT16 *)ds_source;
+	colormap = ds_colormap;
+	translation = ds_translation;
+	dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	while (count-- && dest <= deststop)
+	{
+		fixed_t x = (xposition >> FRACBITS);
+		fixed_t y = (yposition >> FRACBITS);
+
+		// Carefully align all of my Friends.
+		if (x < 0)
+			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+		if (y < 0)
+			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+		x %= ds_flatwidth;
+		y %= ds_flatheight;
+
+		val = source[((y * ds_flatwidth) + x)];
+		if (val & 0xFF00)
+			*dest = colormap[translation[val & 0xFF]];
+		dest++;
+		xposition += xstep;
+		yposition += ystep;
+	}
+}
+
+/**	\brief The R_DrawTranslucentFloorSprite_NPO2_8 function
+	Just like R_DrawFloorSprite_NPO2_8, but is translucent!
+*/
+void R_DrawTranslucentFloorSprite_NPO2_8 (void)
+{
+	fixed_t xposition;
+	fixed_t yposition;
+	fixed_t xstep, ystep;
+
+	UINT16 *source;
+	UINT8 *translation;
+	UINT8 *colormap;
+	UINT8 *dest;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+
+	size_t count = (ds_x2 - ds_x1 + 1);
+	UINT32 val;
+
+	xposition = ds_xfrac; yposition = ds_yfrac;
+	xstep = ds_xstep; ystep = ds_ystep;
+
+	source = (UINT16 *)ds_source;
+	colormap = ds_colormap;
+	translation = ds_translation;
+	dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	while (count-- && dest <= deststop)
+	{
+		fixed_t x = (xposition >> FRACBITS);
+		fixed_t y = (yposition >> FRACBITS);
+
+		// Carefully align all of my Friends.
+		if (x < 0)
+			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+		if (y < 0)
+			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+		x %= ds_flatwidth;
+		y %= ds_flatheight;
+
+		val = source[((y * ds_flatwidth) + x)];
+		if (val & 0xFF00)
+			*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+		dest++;
+		xposition += xstep;
+		yposition += ystep;
+	}
+}
+
 /**	\brief The R_DrawTranslucentSpan_NPO2_8 function
 	Draws the actual span with translucency.
 */

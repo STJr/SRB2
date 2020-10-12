@@ -65,7 +65,6 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope);
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
-void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
 
 boolean R_ThingVisible (mobj_t *thing);
 
@@ -75,6 +74,15 @@ boolean R_ThingVisibleWithinDist (mobj_t *thing,
 
 boolean R_PrecipThingVisible (precipmobj_t *precipthing,
 		fixed_t precip_draw_dist);
+
+boolean R_ThingHorizontallyFlipped (mobj_t *thing);
+boolean R_ThingVerticallyFlipped (mobj_t *thing);
+
+boolean R_ThingIsPaperSprite (mobj_t *thing);
+boolean R_ThingIsFloorSprite (mobj_t *thing);
+
+boolean R_ThingIsFullBright (mobj_t *thing);
+boolean R_ThingIsFullDark (mobj_t *thing);
 
 // --------------
 // MASKED DRAWING
@@ -108,19 +116,23 @@ void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
 typedef enum
 {
 	// actual cuts
-	SC_NONE = 0,
-	SC_TOP = 1,
-	SC_BOTTOM = 1<<1,
+	SC_NONE       = 0,
+	SC_TOP        = 1,
+	SC_BOTTOM     = 1<<1,
 	// other flags
-	SC_PRECIP = 1<<2,
-	SC_LINKDRAW = 1<<3,
+	SC_PRECIP     = 1<<2,
+	SC_LINKDRAW   = 1<<3,
 	SC_FULLBRIGHT = 1<<4,
-	SC_VFLIP = 1<<5,
-	SC_ISSCALED = 1<<6,
-	SC_SHADOW = 1<<7,
+	SC_FULLDARK   = 1<<5,
+	SC_VFLIP      = 1<<6,
+	SC_ISSCALED   = 1<<7,
+	SC_ISROTATED  = 1<<8,
+	SC_SHADOW     = 1<<9,
+	SC_SHEAR      = 1<<10,
+	SC_SPLAT      = 1<<11,
 	// masks
-	SC_CUTMASK = SC_TOP|SC_BOTTOM,
-	SC_FLAGMASK = ~SC_CUTMASK
+	SC_CUTMASK    = SC_TOP|SC_BOTTOM,
+	SC_FLAGMASK   = ~SC_CUTMASK
 } spritecut_e;
 
 // A vissprite_t is a thing that will be drawn during a refresh,
@@ -177,6 +189,10 @@ typedef struct vissprite_s
 	INT16 sz, szt;
 
 	spritecut_e cut;
+	UINT32 renderflags;
+	UINT8 rotateflags;
+
+	fixed_t shadowscale;
 
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
@@ -184,6 +200,12 @@ typedef struct vissprite_s
 } vissprite_t;
 
 extern UINT32 visspritecount;
+
+void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
+void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, portal_t* portal);
+
+boolean R_SpriteIsFlashing(vissprite_t *vis);
+UINT8 *R_GetSpriteTranslation(vissprite_t *vis);
 
 // ----------
 // DRAW NODES
