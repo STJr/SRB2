@@ -3267,13 +3267,14 @@ static void Command_Addfile(void)
 		char buf[256];
 		char *buf_p = buf;
 		INT32 i;
+		size_t ii;
 		int musiconly; // W_VerifyNMUSlumps isn't boolean
 		boolean fileadded = false;
 
 		fn = COM_Argv(curarg);
 
 		// For the amount of filenames previously processed...
-		for (size_t ii = 0; ii < numfilesadded; ii++)
+		for (ii = 0; ii < numfilesadded; ii++)
 		{
 			// If this is one of them, don't try to add it.
 			if (!strcmp(fn, addedfiles[ii]))
