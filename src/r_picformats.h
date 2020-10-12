@@ -110,7 +110,7 @@ void *Picture_PNGConvert(
 	INT16 *topoffset, INT16 *leftoffset,
 	size_t insize, size_t *outsize,
 	pictureflags_t flags);
-boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size);
+boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *topoffset, INT16 *leftoffset, size_t size);
 #endif
 
 #define PICTURE_PNG_USELOOKUP

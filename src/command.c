@@ -79,7 +79,7 @@ CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
 // Also set CV_HIDEN during runtime, after config is loaded
 static boolean execversion_enabled = false;
-consvar_t cv_execversion = {"execversion","25",CV_CALL,CV_Unsigned, CV_EnforceExecVersion, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_execversion = CVAR_INIT ("execversion","25",CV_CALL,CV_Unsigned, CV_EnforceExecVersion);
 
 // for default joyaxis detection
 static boolean joyaxis_default = false;
@@ -560,7 +560,7 @@ static boolean COM_Exists(const char *com_name)
   * \param partial The partial name of the command (potentially).
   * \param skips   Number of commands to skip.
   * \return The complete command name, or NULL.
-  * \sa CV_CompleteVar
+  * \sa CV_CompleteAlias, CV_CompleteVar
   */
 const char *COM_CompleteCommand(const char *partial, INT32 skips)
 {
@@ -577,6 +577,32 @@ const char *COM_CompleteCommand(const char *partial, INT32 skips)
 		if (!strncmp(partial, cmd->name, len))
 			if (!skips--)
 				return cmd->name;
+
+	return NULL;
+}
+
+/** Completes the name of an alias.
+  *
+  * \param partial The partial name of the alias (potentially).
+  * \param skips   Number of aliases to skip.
+  * \return The complete alias name, or NULL.
+  * \sa CV_CompleteCommand, CV_CompleteVar
+  */
+const char *COM_CompleteAlias(const char *partial, INT32 skips)
+{
+	cmdalias_t *a;
+	size_t len;
+
+	len = strlen(partial);
+
+	if (!len)
+		return NULL;
+
+	// check functions
+	for (a = com_alias; a; a = a->next)
+		if (!strncmp(partial, a->name, len))
+			if (!skips--)
+				return a->name;
 
 	return NULL;
 }
@@ -1201,7 +1227,7 @@ static consvar_t *CV_FindNetVar(UINT16 netid)
 {
 	consvar_t *cvar;
 
-	if (netid >= consvar_number_of_netids)
+	if (netid > consvar_number_of_netids)
 		return NULL;
 
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
@@ -1262,11 +1288,11 @@ void CV_RegisterVar(consvar_t *variable)
 	// check net variables
 	if (variable->flags & CV_NETVAR)
 	{
-		variable->netid = consvar_number_of_netids++;
-
 		/* in case of overflow... */
-		if (variable->netid > consvar_number_of_netids)
+		if (consvar_number_of_netids == UINT16_MAX)
 			I_Error("Way too many netvars");
+
+		variable->netid = ++consvar_number_of_netids;
 
 #ifdef OLD22DEMOCOMPAT
 		CV_RegisterOldDemoVar(variable);
@@ -1321,7 +1347,7 @@ static const char *CV_StringValue(const char *var_name)
   * \param partial The partial name of the variable (potentially).
   * \param skips   Number of variables to skip.
   * \return The complete variable name, or NULL.
-  * \sa COM_CompleteCommand
+  * \sa COM_CompleteCommand, CV_CompleteAlias
   */
 const char *CV_CompleteVar(char *partial, INT32 skips)
 {
@@ -2370,15 +2396,6 @@ skipwhite:
 		}
 	}
 
-	// parse single characters
-	if (c == '{' || c == '}' || c == ')' || c == '(' || c == '\'')
-	{
-		com_token[len] = c;
-		len++;
-		com_token[len] = 0;
-		return data + 1;
-	}
-
 	// parse a regular word
 	do
 	{
@@ -2398,8 +2415,6 @@ skipwhite:
 			len++;
 			c = *data;
 		}
-		if (c == '{' || c == '}' || c == ')'|| c == '(' || c == '\'')
-			break;
 	} while (c > 32);
 
 	com_token[len] = 0;

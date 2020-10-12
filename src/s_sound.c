@@ -65,21 +65,21 @@ static boolean S_CheckQueue(void);
 #endif
 
 #ifdef _WINDOWS
-consvar_t cv_samplerate = {"samplerate", "44100", 0, CV_Unsigned, NULL, 44100, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
+consvar_t cv_samplerate = CVAR_INIT ("samplerate", "44100", 0, CV_Unsigned, NULL); //Alam: For easy hacking?
 #else
-consvar_t cv_samplerate = {"samplerate", "22050", 0, CV_Unsigned, NULL, 22050, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
+consvar_t cv_samplerate = CVAR_INIT ("samplerate", "22050", 0, CV_Unsigned, NULL); //Alam: For easy hacking?
 #endif
 
 // stereo reverse
-consvar_t stereoreverse = {"stereoreverse", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t stereoreverse = CVAR_INIT ("stereoreverse", "Off", CV_SAVE, CV_OnOff, NULL);
 
 // if true, all sounds are loaded at game startup
-static consvar_t precachesound = {"precachesound", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+static consvar_t precachesound = CVAR_INIT ("precachesound", "Off", CV_SAVE, CV_OnOff, NULL);
 
 // actual general (maximum) sound & music volume, saved into the config
-consvar_t cv_soundvolume = {"soundvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_digmusicvolume = {"digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_midimusicvolume = {"midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_soundvolume = CVAR_INIT ("soundvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_digmusicvolume = CVAR_INIT ("digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_midimusicvolume = CVAR_INIT ("midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
 
 static void Captioning_OnChange(void)
 {
@@ -88,27 +88,27 @@ static void Captioning_OnChange(void)
 		S_StartSound(NULL, sfx_menu1);
 }
 
-consvar_t cv_closedcaptioning = {"closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_OnOff, Captioning_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_closedcaptioning = CVAR_INIT ("closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_OnOff, Captioning_OnChange);
 
 // number of channels available
-consvar_t cv_numChannels = {"snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_numChannels = CVAR_INIT ("snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum);
 
-static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+static consvar_t surround = CVAR_INIT ("surround", "Off", CV_SAVE, CV_OnOff, NULL);
 
-consvar_t cv_resetmusic = {"resetmusic", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_resetmusicbyheader = {"resetmusicbyheader", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_resetmusic = CVAR_INIT ("resetmusic", "Off", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_resetmusicbyheader = CVAR_INIT ("resetmusicbyheader", "Yes", CV_SAVE, CV_YesNo, NULL);
 
 static CV_PossibleValue_t cons_1upsound_t[] = {
 	{0, "Jingle"},
 	{1, "Sound"},
 	{0, NULL}
 };
-consvar_t cv_1upsound = {"1upsound", "Jingle", CV_SAVE, cons_1upsound_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_1upsound = CVAR_INIT ("1upsound", "Jingle", CV_SAVE, cons_1upsound_t, NULL);
 
 // Sound system toggles, saved into the config
-consvar_t cv_gamedigimusic = {"digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_gamemidimusic = {"midimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameMIDIMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_gamesounds = {"sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameSounds_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gamedigimusic = CVAR_INIT ("digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange);
+consvar_t cv_gamemidimusic = CVAR_INIT ("midimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameMIDIMusic_OnChange);
+consvar_t cv_gamesounds = CVAR_INIT ("sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameSounds_OnChange);
 
 // Music preference
 static CV_PossibleValue_t cons_musicpref_t[] = {
@@ -116,16 +116,16 @@ static CV_PossibleValue_t cons_musicpref_t[] = {
 	{1, "MIDI"},
 	{0, NULL}
 };
-consvar_t cv_musicpref = {"musicpref", "Digital", CV_SAVE|CV_CALL|CV_NOINIT, cons_musicpref_t, MusicPref_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_musicpref = CVAR_INIT ("musicpref", "Digital", CV_SAVE|CV_CALL|CV_NOINIT, cons_musicpref_t, MusicPref_OnChange);
 
 // Window focus sound sytem toggles
-consvar_t cv_playmusicifunfocused = {"playmusicifunfocused", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_playsoundsifunfocused = {"playsoundsifunfocused", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_playmusicifunfocused = CVAR_INIT ("playmusicifunfocused", "No", CV_SAVE, CV_YesNo, NULL);
+consvar_t cv_playsoundsifunfocused = CVAR_INIT ("playsoundsifunfocused", "No", CV_SAVE, CV_YesNo, NULL);
 
 #ifdef HAVE_OPENMPT
 openmpt_module *openmpt_mhandle = NULL;
 static CV_PossibleValue_t interpolationfilter_cons_t[] = {{0, "Default"}, {1, "None"}, {2, "Linear"}, {4, "Cubic"}, {8, "Windowed sinc"}, {0, NULL}};
-consvar_t cv_modfilter = {"modfilter", "0", CV_SAVE|CV_CALL, interpolationfilter_cons_t, ModFilter_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_modfilter = CVAR_INIT ("modfilter", "0", CV_SAVE|CV_CALL, interpolationfilter_cons_t, ModFilter_OnChange);
 #endif
 
 #define S_MAX_VOLUME 127
@@ -521,6 +521,7 @@ void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
 
 void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 {
+	const INT32 initial_volume = volume;
 	INT32 sep, pitch, priority, cnum;
 	const sfxenum_t actual_id = sfx_id;
 	sfxinfo_t *sfx;
@@ -718,6 +719,7 @@ dontplay:
 
 	// Assigns the handle to one of the channels in the
 	// mix/output buffer.
+	channels[cnum].volume = initial_volume;
 	channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
 }
 
@@ -929,7 +931,7 @@ void S_UpdateSounds(void)
 			if (I_SoundIsPlaying(c->handle))
 			{
 				// initialize parameters
-				volume = 255; // 8 bits internal volume precision
+				volume = c->volume; // 8 bits internal volume precision
 				pitch = NORM_PITCH;
 				sep = NORM_SEP;
 
@@ -1043,7 +1045,6 @@ void S_ClearSfx(void)
 
 static void S_StopChannel(INT32 cnum)
 {
-	INT32 i;
 	channel_t *c = &channels[cnum];
 
 	if (c->sfxinfo)
@@ -1052,17 +1053,12 @@ static void S_StopChannel(INT32 cnum)
 		if (I_SoundIsPlaying(c->handle))
 			I_StopSound(c->handle);
 
-		// check to see
-		//  if other channels are playing the sound
-		for (i = 0; i < numofchannels; i++)
-			if (cnum != i && c->sfxinfo == channels[i].sfxinfo)
-				break;
-
 		// degrade usefulness of sound data
 		c->sfxinfo->usefulness--;
-
 		c->sfxinfo = 0;
 	}
+
+	c->origin = NULL;
 }
 
 //
@@ -1204,15 +1200,12 @@ INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, INT32 *v
 	}
 
 	// volume calculation
-	if (approx_dist < S_CLOSE_DIST)
-	{
-		// SfxVolume is now hardware volume
-		*vol = 255; // not snd_SfxVolume
-	}
-	else
+	/* not sure if it should be > (no =), but this matches the old behavior */
+	if (approx_dist >= S_CLOSE_DIST)
 	{
 		// distance effect
-		*vol = (15 * ((S_CLIPPING_DIST - approx_dist)>>FRACBITS)) / S_ATTENUATOR;
+		INT32 n = (15 * ((S_CLIPPING_DIST - approx_dist)>>FRACBITS));
+		*vol = FixedMul(*vol * FRACUNIT / 255, n) / S_ATTENUATOR;
 	}
 
 	return (*vol > 0);

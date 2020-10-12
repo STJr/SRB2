@@ -21,6 +21,7 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
+#include "lua_hook.h" // hook_cmd_running errors
 
 #include "dehacked.h"
 #include "fastcmp.h"
@@ -585,6 +586,8 @@ static int sector_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter sector_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter sector_t in CMD building code!");
 
 	switch(field)
 	{
@@ -1772,6 +1775,8 @@ static int ffloor_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter ffloor_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter ffloor_t in CMD building code!");
 
 	switch(field)
 	{
@@ -1896,6 +1901,8 @@ static int slope_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter pslope_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter pslope_t in CMD building code!");
 
 	switch(field) // todo: reorganize this shit
 	{

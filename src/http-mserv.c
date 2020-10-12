@@ -36,20 +36,23 @@ Documentation available here.
 
 static void MasterServer_Debug_OnChange (void);
 
-consvar_t cv_masterserver_timeout = {
-	"masterserver_timeout", "5", CV_SAVE, CV_Unsigned,
-	NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
-};
+consvar_t cv_masterserver_timeout = CVAR_INIT
+(
+		"masterserver_timeout", "5", CV_SAVE, CV_Unsigned,
+		NULL
+);
 
-consvar_t cv_masterserver_debug = {
+consvar_t cv_masterserver_debug = CVAR_INIT
+(
 	"masterserver_debug", "Off", CV_SAVE|CV_CALL, CV_OnOff,
-	MasterServer_Debug_OnChange, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
-};
+	MasterServer_Debug_OnChange
+);
 
-consvar_t cv_masterserver_token = {
-	"masterserver_token", "", CV_SAVE, NULL,
-	NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
-};
+consvar_t cv_masterserver_token = CVAR_INIT
+(
+		"masterserver_token", "", CV_SAVE, NULL,
+		NULL
+);
 
 #ifdef MASTERSERVER
 
@@ -472,6 +475,7 @@ HMS_list_servers (void)
 {
 	struct HMS_buffer *hms;
 
+	char *list;
 	char *p;
 
 	hms = HMS_connect("servers");
@@ -481,11 +485,17 @@ HMS_list_servers (void)
 
 	if (HMS_do(hms))
 	{
-		p = &hms->buffer[strlen(hms->buffer)];
-		while (*--p == '\n')
-			;
+		list = curl_easy_unescape(hms->curl, hms->buffer, 0, NULL);
 
-		CONS_Printf("%s\n", hms->buffer);
+		p = strtok(list, "\n");
+
+		while (p != NULL)
+		{
+			CONS_Printf("\x80%s\n", p);
+			p = strtok(NULL, "\n");
+		}
+
+		curl_free(list);
 	}
 
 	HMS_end(hms);

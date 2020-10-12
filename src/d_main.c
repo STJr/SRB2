@@ -99,6 +99,7 @@ UINT8 window_notinfocus = false;
 // DEMO LOOP
 //
 static char *startupwadfiles[MAX_WADFILES];
+static char *startuppwads[MAX_WADFILES];
 
 boolean devparm = false; // started game with -devparm
 
@@ -495,6 +496,8 @@ static void D_Display(void)
 				lastdraw = false;
 			}
 
+			rs_uitime = I_GetTimeMicros();
+
 			if (gamestate == GS_LEVEL)
 			{
 				ST_Drawer();
@@ -503,6 +506,10 @@ static void D_Display(void)
 			}
 			else
 				F_TitleScreenDrawer();
+		}
+		else
+		{
+			rs_uitime = I_GetTimeMicros();
 		}
 	}
 
@@ -543,6 +550,8 @@ static void D_Display(void)
 	// focus lost moved to M_Drawer
 
 	CON_Drawer();
+
+	rs_uitime = I_GetTimeMicros() - rs_uitime;
 
 	//
 	// wipe update
@@ -657,8 +666,12 @@ static void D_Display(void)
 				V_DrawThinString(30, 60, V_MONOSPACE | V_YELLOWMAP, s);
 				snprintf(s, sizeof s - 1, "sdrw %d", rs_hw_spritedrawtime / divisor);
 				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
+				snprintf(s, sizeof s - 1, "ui   %d", rs_uitime / divisor);
 				V_DrawThinString(30, 80, V_MONOSPACE | V_YELLOWMAP, s);
+				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
+				V_DrawThinString(30, 90, V_MONOSPACE | V_YELLOWMAP, s);
+				snprintf(s, sizeof s - 1, "tic  %d", rs_tictime / divisor);
+				V_DrawThinString(30, 105, V_MONOSPACE | V_GRAYMAP, s);
 				if (cv_glbatching.value)
 				{
 					snprintf(s, sizeof s - 1, "bsrt %d", rs_hw_batchsorttime / divisor);
@@ -691,8 +704,12 @@ static void D_Display(void)
 				V_DrawThinString(30, 50, V_MONOSPACE | V_YELLOWMAP, s);
 				snprintf(s, sizeof s - 1, "mskd %d", rs_sw_maskedtime / divisor);
 				V_DrawThinString(30, 60, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
+				snprintf(s, sizeof s - 1, "ui   %d", rs_uitime / divisor);
 				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
+				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
+				V_DrawThinString(30, 80, V_MONOSPACE | V_YELLOWMAP, s);
+				snprintf(s, sizeof s - 1, "tic  %d", rs_tictime / divisor);
+				V_DrawThinString(30, 95, V_MONOSPACE | V_GRAYMAP, s);
 			}
 		}
 
@@ -961,12 +978,12 @@ void D_StartTitle(void)
 //
 // D_AddFile
 //
-static void D_AddFile(const char *file)
+static void D_AddFile(char **list, const char *file)
 {
 	size_t pnumwadfiles;
 	char *newfile;
 
-	for (pnumwadfiles = 0; startupwadfiles[pnumwadfiles]; pnumwadfiles++)
+	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
 		;
 
 	newfile = malloc(strlen(file) + 1);
@@ -976,16 +993,16 @@ static void D_AddFile(const char *file)
 	}
 	strcpy(newfile, file);
 
-	startupwadfiles[pnumwadfiles] = newfile;
+	list[pnumwadfiles] = newfile;
 }
 
-static inline void D_CleanFile(void)
+static inline void D_CleanFile(char **list)
 {
 	size_t pnumwadfiles;
-	for (pnumwadfiles = 0; startupwadfiles[pnumwadfiles]; pnumwadfiles++)
+	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
 	{
-		free(startupwadfiles[pnumwadfiles]);
-		startupwadfiles[pnumwadfiles] = NULL;
+		free(list[pnumwadfiles]);
+		list[pnumwadfiles] = NULL;
 	}
 }
 
@@ -1070,7 +1087,7 @@ static void IdentifyVersion(void)
 
 	// Load the IWAD
 	if (srb2wad != NULL && FIL_ReadFileOK(srb2wad))
-		D_AddFile(srb2wad);
+		D_AddFile(startupwadfiles, srb2wad);
 	else
 		I_Error("srb2.pk3 not found! Expected in %s, ss file: %s\n", srb2waddir, srb2wad);
 
@@ -1081,14 +1098,14 @@ static void IdentifyVersion(void)
 	// checking in D_SRB2Main
 
 	// Add the maps
-	D_AddFile(va(pandf,srb2waddir,"zones.pk3"));
+	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"zones.pk3"));
 
 	// Add the players
-	D_AddFile(va(pandf,srb2waddir, "player.dta"));
+	D_AddFile(startupwadfiles, va(pandf,srb2waddir, "player.dta"));
 
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	D_AddFile(va(pandf,srb2waddir,"patch.pk3"));
+	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"patch.pk3"));
 #endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
@@ -1098,7 +1115,7 @@ static void IdentifyVersion(void)
 			const char *musicpath = va(pandf,srb2waddir,str);\
 			int ms = W_VerifyNMUSlumps(musicpath); \
 			if (ms == 1) \
-				D_AddFile(musicpath); \
+				D_AddFile(startupwadfiles, musicpath); \
 			else if (ms == 0) \
 				I_Error("File "str" has been modified with non-music/sound lumps"); \
 		}
@@ -1288,7 +1305,7 @@ void D_SRB2Main(void)
 				{
 					if (!W_VerifyNMUSlumps(s))
 						G_SetGameModified(true);
-					D_AddFile(s);
+					D_AddFile(startuppwads, s);
 				}
 			}
 		}
@@ -1329,8 +1346,8 @@ void D_SRB2Main(void)
 
 	// load wad, including the main wad file
 	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
-	W_InitMultipleFiles(startupwadfiles, mainwads);
-	D_CleanFile();
+	W_InitMultipleFiles(startupwadfiles);
+	D_CleanFile(startupwadfiles);
 
 #ifndef DEVELOP // md5s last updated 22/02/20 (ddmmyy)
 
@@ -1366,8 +1383,6 @@ void D_SRB2Main(void)
 	// setup loading screen
 	SCR_Startup();
 
-	// we need the font of the console
-	CONS_Printf("HU_Init(): Setting up heads up display.\n");
 	HU_Init();
 
 	CON_Init();
@@ -1378,6 +1393,13 @@ void D_SRB2Main(void)
 	S_RegisterSoundStuff();
 
 	I_RegisterSysCommands();
+
+	CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
+	W_InitMultipleFiles(startuppwads);
+	D_CleanFile(startuppwads);
+
+	CONS_Printf("HU_LoadGraphics()...\n");
+	HU_LoadGraphics();
 
 	//--------------------------------------------------------- CONFIG.CFG
 	M_FirstLoadConfig(); // WARNING : this do a "COM_BufExecute()"
@@ -1565,6 +1587,12 @@ void D_SRB2Main(void)
 	{
 		autostart = true;
 		ultimatemode = true;
+	}
+
+	if (M_CheckParm("-splitscreen"))
+	{
+		autostart = true;
+		splitscreen = true;
 	}
 
 	// rei/miru: bootmap (Idea: starts the game on a predefined map)

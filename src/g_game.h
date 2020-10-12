@@ -18,6 +18,7 @@
 #include "doomstat.h"
 #include "d_event.h"
 #include "g_demo.h"
+#include "m_cheat.h" // objectplacing
 
 extern char gamedatafilename[64];
 extern char timeattackfolder[64];
@@ -27,7 +28,8 @@ extern char customversionstring[32];
 #ifdef SEENAMES
 extern player_t *seenplayer;
 #endif
-extern char player_names[MAXPLAYERS][MAXPLAYERNAME+1];
+extern char  player_names[MAXPLAYERS][MAXPLAYERNAME+1];
+extern INT32 player_name_changes[MAXPLAYERS];
 
 extern player_t players[MAXPLAYERS];
 extern boolean playeringame[MAXPLAYERS];
@@ -64,7 +66,7 @@ typedef enum {
 	CS_STANDARD,
 	CS_SIMPLE = CS_LMAOGALOG|CS_STANDARD,
 } controlstyle_e;
-#define G_ControlStyle(ssplayer) (cv_directionchar[(ssplayer)-1].value == 3 ? CS_LMAOGALOG : ((cv_analog[(ssplayer)-1].value ? CS_LMAOGALOG : 0) | (cv_directionchar[(ssplayer)-1].value ? CS_STANDARD : 0)))
+#define G_ControlStyle(ssplayer) (cv_directionchar[(ssplayer)-1].value == 3 ? CS_LMAOGALOG : ((!objectplacing && cv_analog[(ssplayer)-1].value ? CS_LMAOGALOG : 0) | (cv_directionchar[(ssplayer)-1].value ? CS_STANDARD : 0)))
 #define P_ControlStyle(player) ((((player)->pflags & PF_ANALOGMODE) ? CS_LMAOGALOG : 0) | (((player)->pflags & PF_DIRECTIONCHAR) ? CS_STANDARD : 0))
 
 extern consvar_t cv_autobrake, cv_autobrake2;

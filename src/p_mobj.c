@@ -36,10 +36,10 @@
 #include "m_cond.h"
 
 static CV_PossibleValue_t CV_BobSpeed[] = {{0, "MIN"}, {4*FRACUNIT, "MAX"}, {0, NULL}};
-consvar_t cv_movebob = {"movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_movebob = CVAR_INIT ("movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpeed, NULL);
 
 #ifdef WALLSPLATS
-consvar_t cv_splats = {"splats", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_splats = CVAR_INIT ("splats", "On", CV_SAVE, CV_OnOff, NULL);
 #endif
 
 actioncache_t actioncachehead;
@@ -4194,7 +4194,7 @@ boolean P_SupermanLook4Players(mobj_t *actor)
 
 	for (c = 0; c < MAXPLAYERS; c++)
 	{
-		if (playeringame[c])
+		if (playeringame[c] && !players[c].spectator)
 		{
 			if (players[c].pflags & PF_INVIS)
 				continue; // ignore notarget
@@ -11047,10 +11047,10 @@ void P_RemoveSavegameMobj(mobj_t *mobj)
 }
 
 static CV_PossibleValue_t respawnitemtime_cons_t[] = {{1, "MIN"}, {300, "MAX"}, {0, NULL}};
-consvar_t cv_itemrespawntime = {"respawnitemtime", "30", CV_NETVAR|CV_CHEAT, respawnitemtime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_itemrespawn = {"respawnitem", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_itemrespawntime = CVAR_INIT ("respawnitemtime", "30", CV_NETVAR|CV_CHEAT, respawnitemtime_cons_t, NULL);
+consvar_t cv_itemrespawn = CVAR_INIT ("respawnitem", "On", CV_NETVAR, CV_OnOff, NULL);
 static CV_PossibleValue_t flagtime_cons_t[] = {{0, "MIN"}, {300, "MAX"}, {0, NULL}};
-consvar_t cv_flagtime = {"flagtime", "30", CV_NETVAR|CV_CHEAT, flagtime_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_flagtime = CVAR_INIT ("flagtime", "30", CV_NETVAR|CV_CHEAT, flagtime_cons_t, NULL);
 
 void P_SpawnPrecipitation(void)
 {
@@ -11249,7 +11249,7 @@ void P_PrecipitationEffects(void)
  * \param mthingtype Mapthing number in question.
  * \return Mobj type; MT_UNKNOWN if nothing found.
  */
-static mobjtype_t P_GetMobjtype(UINT16 mthingtype)
+mobjtype_t P_GetMobjtype(UINT16 mthingtype)
 {
 	mobjtype_t i;
 	for (i = 0; i < NUMMOBJTYPES; i++)
@@ -11955,9 +11955,6 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 		else
 			return MT_SCORE1K_BOX; // 1,000
 	}
-
-	if (mariomode && i == MT_ROSY)
-		return MT_TOAD; // don't remove on penalty of death
 
 	return i;
 }
