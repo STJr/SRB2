@@ -901,6 +901,9 @@ static void COM_Help_f(void)
 				CONS_Printf(" Current value: %s\n", cvar->string);
 			else
 				CONS_Printf(" Current value: %d\n", cvar->value);
+
+			if (cvar->revert.v.string != NULL && strcmp(cvar->revert.v.string, cvar->string) != 0)
+				CONS_Printf(" Value before netgame: %s\n", cvar->revert.v.string);
 		}
 		else
 		{
@@ -1306,6 +1309,7 @@ void CV_RegisterVar(consvar_t *variable)
 		consvar_vars = variable;
 	}
 	variable->string = variable->zstring = NULL;
+	memset(&variable->revert, 0, sizeof variable->revert);
 	variable->changed = 0; // new variable has not been modified by the user
 
 #ifdef PARANOIA
@@ -1418,6 +1422,18 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 			for (i = MAXVAL+1; var->PossibleValue[i].strvalue; i++)
 				if (v == var->PossibleValue[i].value || !stricmp(var->PossibleValue[i].strvalue, valstr))
 				{
+					if (client && execversion_enabled)
+					{
+						if (var->revert.allocated)
+						{
+							Z_Free(var->revert.v.string);
+						}
+
+						var->revert.v.const_munge = var->PossibleValue[i].strvalue;
+
+						return;
+					}
+
 					var->value = var->PossibleValue[i].value;
 					var->string = var->PossibleValue[i].strvalue;
 					goto finish;
@@ -1478,10 +1494,34 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 			// ...or not.
 			goto badinput;
 found:
+			if (client && execversion_enabled)
+			{
+				if (var->revert.allocated)
+				{
+					Z_Free(var->revert.v.string);
+				}
+
+				var->revert.v.const_munge = var->PossibleValue[i].strvalue;
+
+				return;
+			}
+
 			var->value = var->PossibleValue[i].value;
 			var->string = var->PossibleValue[i].strvalue;
 			goto finish;
 		}
+	}
+
+	if (client && execversion_enabled)
+	{
+		if (var->revert.allocated)
+		{
+			Z_Free(var->revert.v.string);
+		}
+
+		var->revert.v.string = Z_StrDup(valstr);
+
+		return;
 	}
 
 	// free the old value string
@@ -1702,8 +1742,19 @@ static void CV_LoadVars(UINT8 **p,
 	serverloading = true;
 
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
+	{
 		if (cvar->flags & CV_NETVAR)
+		{
+			if (client && cvar->revert.v.string == NULL)
+			{
+				cvar->revert.v.const_munge = cvar->string;
+				cvar->revert.allocated = ( cvar->zstring != NULL );
+				cvar->zstring = NULL;/* don't free this */
+			}
+
 			Setvalue(cvar, cvar->defaultvalue, true);
+		}
+	}
 
 	count = READUINT16(*p);
 	while (count--)
@@ -1715,6 +1766,26 @@ static void CV_LoadVars(UINT8 **p,
 	}
 
 	serverloading = false;
+}
+
+void CV_RevertNetVars(void)
+{
+	consvar_t * cvar;
+
+	for (cvar = consvar_vars; cvar; cvar = cvar->next)
+	{
+		if (cvar->revert.v.string != NULL)
+		{
+			Setvalue(cvar, cvar->revert.v.string, false);
+
+			if (cvar->revert.allocated)
+			{
+				Z_Free(cvar->revert.v.string);
+			}
+
+			cvar->revert.v.string = NULL;
+		}
+	}
 }
 
 void CV_LoadNetVars(UINT8 **p)
@@ -1790,6 +1861,14 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 		// send the value of the variable
 		UINT8 buf[128];
 		UINT8 *p = buf;
+
+		// Loading from a config in a netgame? Set revert value.
+		if (client && execversion_enabled)
+		{
+			Setvalue(var, value, true);
+			return;
+		}
+
 		if (!(server || (addedtogame && IsPlayerAdmin(consoleplayer))))
 		{
 			CONS_Printf(M_GetText("Only the server or admin can change: %s %s\n"), var->name, var->string);
@@ -2323,18 +2402,43 @@ void CV_SaveVariables(FILE *f)
 		{
 			char stringtowrite[MAXTEXTCMD+1];
 
-			// Silly hack for Min/Max vars
-			if (!strcmp(cvar->string, "MAX") || !strcmp(cvar->string, "MIN"))
+			const char * string;
+
+			if (cvar->revert.v.string != NULL)
 			{
-				if (cvar->flags & CV_FLOAT)
-					sprintf(stringtowrite, "%f", FIXED_TO_FLOAT(cvar->value));
-				else
-					sprintf(stringtowrite, "%d", cvar->value);
+				string = cvar->revert.v.string;
 			}
 			else
-				strcpy(stringtowrite, cvar->string);
+			{
+				string = cvar->string;
+			}
 
-			fprintf(f, "%s \"%s\"\n", cvar->name, stringtowrite);
+			// Silly hack for Min/Max vars
+#define MINVAL 0
+#define MAXVAL 1
+			if (
+					cvar->PossibleValue != NULL &&
+					cvar->PossibleValue[0].strvalue &&
+					stricmp(cvar->PossibleValue[0].strvalue, "MIN") == 0
+			){ // bounded cvar
+				int which = stricmp(string, "MAX") == 0;
+
+				if (which || stricmp(string, "MIN") == 0)
+				{
+					INT32 value = cvar->PossibleValue[which].value;
+
+					if (cvar->flags & CV_FLOAT)
+						sprintf(stringtowrite, "%f", FIXED_TO_FLOAT(value));
+					else
+						sprintf(stringtowrite, "%d", value);
+
+					string = stringtowrite;
+				}
+			}
+#undef MINVAL
+#undef MAXVAL
+
+			fprintf(f, "%s \"%s\"\n", cvar->name, string);
 		}
 }
 
