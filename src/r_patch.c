@@ -77,7 +77,7 @@ static void Patch_FreeData(patch_t *patch)
 	for (i = 0; i < 2; i++)
 	{
 		if (patch->flats[i])
-			Patch_Free(patch->flats[i]);
+			Z_Free(patch->flats[i]);
 	}
 
 #ifdef ROTSPRITE
