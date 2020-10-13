@@ -4092,7 +4092,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	// colormap test
 	{
 		sector_t *sector = spr->mobj->subsector->sector;
-		UINT8 lightlevel;
+		UINT8 lightlevel = 0;
 		boolean lightset = true;
 		extracolormap_t *colormap = sector->extra_colormap;
 
