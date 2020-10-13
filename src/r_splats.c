@@ -261,6 +261,13 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, vissprite_t *vis)
 		x1 = rastertab[y].minx>>FRACBITS;
 		x2 = rastertab[y].maxx>>FRACBITS;
 
+		if (x1 > x2)
+		{
+			INT32 swap = x1;
+			x1 = x2;
+			x2 = swap;
+		}
+
 		if (x1 < 0)
 			x1 = 0;
 		if (x2 >= vid.width)
