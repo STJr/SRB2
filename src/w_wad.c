@@ -2075,8 +2075,12 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"TRANS", 5}, // Translucency map changes
 
 		{"CONSBACK", 8}, // Console Background graphic
+		{"GAMEQUIT", 8},
 		{"SAVE", 4}, // Save Select graphics
 		{"ULTIMATE", 8}, // Ultimate no-save
+		{"CRFNT", 5}, // Sonic 1 font changes
+		{"NTFNT", 5}, // Character Select font changes
+		{"NTFNO", 5}, // Character Select font (outline)
 		{"LTFNT", 5}, // Level title font changes
 		{"TTL", 3}, // Act number changes
 		{"STCFN", 5}, // Console font changes
