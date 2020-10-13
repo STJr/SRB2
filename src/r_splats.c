@@ -268,6 +268,9 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, vissprite_t *vis)
 			x2 = swap;
 		}
 
+		if (x1 == INT16_MIN || x2 == INT16_MAX)
+			continue;
+
 		if (x1 < 0)
 			x1 = 0;
 		if (x2 >= vid.width)
