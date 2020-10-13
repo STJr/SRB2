@@ -352,20 +352,26 @@ void *Picture_PatchConvert(
 	img = Z_Malloc(size, PU_STATIC, NULL);
 	memcpy(img, imgbuf, size);
 
-	if (outsize != NULL)
-		*outsize = size;
-
 	if (Picture_IsInternalPatchFormat(outformat))
 	{
 		patch_t *converted = Patch_Create((softwarepatch_t *)img, size, NULL);
+
 #ifdef HWRENDER
 		Patch_CreateGL(converted);
 #endif
+
 		Z_Free(img);
+
+		if (outsize != NULL)
+			*outsize = sizeof(patch_t);
 		return converted;
 	}
 	else
+	{
+		if (outsize != NULL)
+			*outsize = size;
 		return img;
+	}
 }
 
 /** Converts a picture to a flat.
