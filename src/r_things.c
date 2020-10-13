@@ -1743,6 +1743,18 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
+	// Adjust sort scale
+	tr_x = tr_y = 0;
+
+	if (splat)
+	{
+		tz = (patch->height - patch->topoffset) * FRACUNIT;
+		ang = (viewangle >> ANGLETOFINESHIFT);
+
+		tr_x = FixedMul(FixedMul(FixedMul(spritexscale, this_scale), tz), FINECOSINE(ang));
+		tr_y = FixedMul(FixedMul(FixedMul(spriteyscale, this_scale), tz), FINESINE(ang));
+	}
+
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
 	{
 		fixed_t linkscale;
@@ -1752,8 +1764,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (! R_ThingVisible(thing))
 			return;
 
-		tr_x = thing->x - viewx;
-		tr_y = thing->y - viewy;
+		tr_x = (thing->x + tr_x) - viewx;
+		tr_y = (thing->y + tr_y) - viewy;
 		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		linkscale = FixedDiv(projectiony, tz);
 
@@ -1765,6 +1777,13 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		sortscale = linkscale; // now make sure it's linked
 		cut |= SC_LINKDRAW;
+	}
+	else if (splat)
+	{
+		tr_x = (thing->x + tr_x) - viewx;
+		tr_y = (thing->y + tr_y) - viewy;
+		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
+		sortscale = FixedDiv(projectiony, tz);
 	}
 
 	// PORTAL SPRITE CLIPPING
@@ -2634,7 +2653,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 								|| (r2->sprite->sortscale == rover->sortscale && r2->sprite->dispoffset > rover->dispoffset));
 
 				if (rover->cut & SC_SPLAT
-				&& r2->sprite->cut & SC_SPLAT)
+				|| r2->sprite->cut & SC_SPLAT)
 				{
 					fixed_t z1 = 0, z2 = 0;
 
@@ -2652,8 +2671,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 					z1 -= viewz;
 					z2 -= viewz;
 
-					if (z1 >= z2)
-						infront = true;
+					infront = (z1 >= z2);
 				}
 				else
 				{
