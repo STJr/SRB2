@@ -2075,7 +2075,6 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"TRANS", 5}, // Translucency map changes
 
 		{"CONSBACK", 8}, // Console Background graphic
-		{"GAMEQUIT", 8},
 
 		{"SAVE", 4}, // Save Select graphics here and below
 		{"BLACXLVL", 8},
@@ -2093,7 +2092,7 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"TNYFN", 5}, // Tiny console font changes
 
 		{"STLIVE", 6}, // Life graphics, background and the "X" that shows under skin's HUDNAME
-		{"CROSSHAI", 8}, // First person crosshairs
+		{"CROSHAI", 7}, // First person crosshairs
 		{"INTERSC", 7}, // Default intermission backgrounds (co-op)
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
