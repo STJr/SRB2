@@ -2074,14 +2074,40 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"CLM", 3}, // Colormap changes
 		{"TRANS", 5}, // Translucency map changes
 
+		{"CONSBACK", 8}, // Console Background graphic
+		{"SAVE", 4}, // Save Select graphics
+		{"ULTIMATE", 8}, // Ultimate no-save
 		{"LTFNT", 5}, // Level title font changes
 		{"TTL", 3}, // Act number changes
 		{"STCFN", 5}, // Console font changes
 		{"TNYFN", 5}, // Tiny console font changes
-		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"STLIVEX", 7}, // "X" that shows under skin's HUDNAME
+		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
+		{"RESULT", 6}, // Used in intermission for competitive modes, above too :3
+		{"RACE", 4}, // Race mode graphics, 321go
 		{"M_", 2}, // As does menu stuff
+
+		{"MINICAPS", 8}, // NiGHTS graphics here and below
+		{"BLUESTAT", 8}, // Sphere status
+		{"BYELSTAT", 8},
+		{"ORNGSTAT", 8},
+		{"REDSTAT", 7},
+		{"YELSTAT", 7},
+		{"NBRACKET", 8},
+		{"NGHTLINK", 8},
+		{"NGT", 3}, // Link numbers
+		{"NARROW", 6},
+		{"NREDAR", 6},
+		{"NSS", 3},
+		{"NBON", 4},
+		{"NRNG", 4},
+		{"NHUD", 4},
+		{"CAPS", 4},
+		{"DRILL", 5},
+		{"GRADE", 5},
+		{"MINUS5", 6},
+
 		{"MUSICDEF", 8}, // Song definitions (thanks kart)
 
 		{NULL, 0},
