@@ -1413,7 +1413,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	mobj_t *oldthing = thing;
 	fixed_t tr_x, tr_y;
 	fixed_t tx, tz;
-	fixed_t xscale, yscale, sortscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
+	fixed_t xscale, yscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
+	fixed_t sortscale, sortsplat = 0;
+	fixed_t sort_x = 0, sort_y = 0;
 
 	INT32 x1, x2;
 
@@ -1743,16 +1745,13 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
-	// Adjust sort scale
-	tr_x = tr_y = 0;
-
+	// Adjust the sort scale if needed
 	if (splat)
 	{
 		tz = (patch->height - patch->topoffset) * FRACUNIT;
 		ang = (viewangle >> ANGLETOFINESHIFT);
-
-		tr_x = FixedMul(FixedMul(FixedMul(spritexscale, this_scale), tz), FINECOSINE(ang));
-		tr_y = FixedMul(FixedMul(FixedMul(spriteyscale, this_scale), tz), FINESINE(ang));
+		sort_x = FixedMul(FixedMul(FixedMul(spritexscale, this_scale), tz), FINECOSINE(ang));
+		sort_y = FixedMul(FixedMul(FixedMul(spriteyscale, this_scale), tz), FINESINE(ang));
 	}
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
@@ -1764,8 +1763,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (! R_ThingVisible(thing))
 			return;
 
-		tr_x = (thing->x + tr_x) - viewx;
-		tr_y = (thing->y + tr_y) - viewy;
+		tr_x = (thing->x + sort_x) - viewx;
+		tr_y = (thing->y + sort_y) - viewy;
 		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		linkscale = FixedDiv(projectiony, tz);
 
@@ -1780,10 +1779,19 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 	else if (splat)
 	{
-		tr_x = (thing->x + tr_x) - viewx;
-		tr_y = (thing->y + tr_y) - viewy;
+		tr_x = (thing->x + sort_x) - viewx;
+		tr_y = (thing->y + sort_y) - viewy;
 		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		sortscale = FixedDiv(projectiony, tz);
+	}
+
+	// Calculate the splat's sortscale
+	if (splat)
+	{
+		tr_x = (thing->x - sort_x) - viewx;
+		tr_y = (thing->y - sort_y) - viewy;
+		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
+		sortsplat = FixedDiv(projectiony, tz);
 	}
 
 	// PORTAL SPRITE CLIPPING
@@ -1936,6 +1944,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->heightsec = heightsec; //SoM: 3/17/2000
 	vis->mobjflags = thing->flags;
 	vis->sortscale = sortscale;
+	vis->sortsplat = sortsplat;
 	vis->dispoffset = dispoffset; // Monster Iestyn: 23/11/15
 	vis->gx = thing->x;
 	vis->gy = thing->y;
@@ -2652,26 +2661,32 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				boolean infront = (r2->sprite->sortscale > rover->sortscale
 								|| (r2->sprite->sortscale == rover->sortscale && r2->sprite->dispoffset > rover->dispoffset));
 
-				if (rover->cut & SC_SPLAT
-				|| r2->sprite->cut & SC_SPLAT)
+				if (rover->cut & SC_SPLAT || r2->sprite->cut & SC_SPLAT)
 				{
-					fixed_t z1 = 0, z2 = 0;
+					fixed_t scale1 = (rover->cut & SC_SPLAT ? rover->sortsplat : rover->sortscale);
+					fixed_t scale2 = (r2->sprite->cut & SC_SPLAT ? r2->sprite->sortsplat : r2->sprite->sortscale);
+					boolean behind = (scale2 > scale1 || (scale2 == scale1 && r2->sprite->dispoffset > rover->dispoffset));
 
-					if (rover->mobj->z - viewz > 0)
+					if (!behind)
 					{
-						z1 = rover->pz;
-						z2 = r2->sprite->pz;
-					}
-					else
-					{
-						z1 = r2->sprite->pz;
-						z2 = rover->pz;
-					}
+						fixed_t z1 = 0, z2 = 0;
 
-					z1 -= viewz;
-					z2 -= viewz;
+						if (rover->mobj->z - viewz > 0)
+						{
+							z1 = rover->pz;
+							z2 = r2->sprite->pz;
+						}
+						else
+						{
+							z1 = r2->sprite->pz;
+							z2 = rover->pz;
+						}
 
-					infront = (z1 >= z2);
+						z1 -= viewz;
+						z2 -= viewz;
+
+						infront = (z1 >= z2);
+					}
 				}
 				else
 				{
