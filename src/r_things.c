@@ -1456,7 +1456,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	INT32 dispoffset = thing->info->dispoffset;
 
 	//SoM: 3/17/2000
-	fixed_t gz, gzt;
+	fixed_t gz = 0, gzt = 0;
 	INT32 heightsec, phs;
 	INT32 light = 0;
 	fixed_t this_scale = thing->scale;
