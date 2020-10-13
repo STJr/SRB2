@@ -2630,7 +2630,32 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			}
 			else if (r2->sprite)
 			{
-				if (!(r2->sprite->cut & SC_SPLAT || rover->cut & SC_SPLAT))
+				boolean infront = (r2->sprite->sortscale > rover->sortscale
+								|| (r2->sprite->sortscale == rover->sortscale && r2->sprite->dispoffset > rover->dispoffset));
+
+				if (rover->cut & SC_SPLAT
+				&& r2->sprite->cut & SC_SPLAT)
+				{
+					fixed_t z1 = 0, z2 = 0;
+
+					if (rover->mobj->z - viewz > 0)
+					{
+						z1 = rover->pz;
+						z2 = r2->sprite->pz;
+					}
+					else
+					{
+						z1 = r2->sprite->pz;
+						z2 = rover->pz;
+					}
+
+					z1 -= viewz;
+					z2 -= viewz;
+
+					if (z1 >= z2)
+						infront = true;
+				}
+				else
 				{
 					if (r2->sprite->x1 > rover->x2 || r2->sprite->x2 < rover->x1)
 						continue;
@@ -2638,8 +2663,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 						continue;
 				}
 
-				if (r2->sprite->sortscale > rover->sortscale
-				 || (r2->sprite->sortscale == rover->sortscale && r2->sprite->dispoffset > rover->dispoffset))
+				if (infront)
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
