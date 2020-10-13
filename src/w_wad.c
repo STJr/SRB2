@@ -2076,8 +2076,14 @@ int W_VerifyNMUSlumps(const char *filename)
 
 		{"CONSBACK", 8}, // Console Background graphic
 		{"GAMEQUIT", 8},
-		{"SAVE", 4}, // Save Select graphics
+
+		{"SAVE", 4}, // Save Select graphics here and below
+		{"BLACXLVL", 8},
+		{"GAMEDONE", 8},
+		{"CONT", 4}, // Continue icons on saves (probably not used anymore)
+		{"STNONEX", 7}, // "X" graphic
 		{"ULTIMATE", 8}, // Ultimate no-save
+
 		{"CRFNT", 5}, // Sonic 1 font changes
 		{"NTFNT", 5}, // Character Select font changes
 		{"NTFNO", 5}, // Character Select font (outline)
@@ -2085,12 +2091,15 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"TTL", 3}, // Act number changes
 		{"STCFN", 5}, // Console font changes
 		{"TNYFN", 5}, // Tiny console font changes
-		{"STLIVEX", 7}, // "X" that shows under skin's HUDNAME
+
+		{"STLIVE", 6}, // Life graphics, background and the "X" that shows under skin's HUDNAME
+		{"CROSSHAI", 8}, // First person crosshairs
+		{"INTERSC", 7}, // Default intermission backgrounds (co-op)
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
 		{"RESULT", 6}, // Used in intermission for competitive modes, above too :3
 		{"RACE", 4}, // Race mode graphics, 321go
-		{"M_", 2}, // As does menu stuff
+		{"M_", 2}, // Menu stuff
 
 		{"MINICAPS", 8}, // NiGHTS graphics here and below
 		{"BLUESTAT", 8}, // Sphere status
