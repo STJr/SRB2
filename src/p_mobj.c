@@ -10465,11 +10465,14 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->scale = FRACUNIT;
 	mobj->destscale = mobj->scale;
 	mobj->scalespeed = FRACUNIT/12;
-	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
 
 	// TODO: Make this a special map header
 	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
 		mobj->destscale = FRACUNIT/2;
+
+	// Sprite rendering
+	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
+	mobj->spritexoffset = mobj->spriteyoffset = 0;
 
 	// set subsector and/or block links
 	P_SetThingPosition(mobj);

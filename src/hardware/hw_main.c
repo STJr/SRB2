@@ -3966,8 +3966,8 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		angle = -angle;
 		angle += ANGLE_90;
 
-		topoffset = (float)gpatch->topoffset;
-		leftoffset = (float)gpatch->leftoffset;
+		topoffset = spr->spriteyoffset;
+		leftoffset = spr->spritexoffset;
 		if (spr->flip)
 			leftoffset = ((float)gpatch->width - leftoffset);
 
@@ -4979,6 +4979,22 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	}
 #endif
 
+	if (thing->renderflags & RF_ABSOLUTEOFFSETS)
+	{
+		spr_offset = thing->spritexoffset;
+		spr_topoffset = thing->spriteyoffset;
+	}
+	else
+	{
+		SINT8 flipoffset = 1;
+
+		if ((thing->renderflags & RF_FLIPOFFSETS) && flip)
+			flipoffset = -1;
+
+		spr_offset += thing->spritexoffset * flipoffset;
+		spr_topoffset += thing->spriteyoffset * flipoffset;
+	}
+
 	if (papersprite)
 	{
 		rightsin = FIXED_TO_FLOAT(FINESINE((mobjangle)>>ANGLETOFINESHIFT));
@@ -5123,6 +5139,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->scale = this_scale;
 	vis->spritexscale = spritexscale;
 	vis->spriteyscale = spriteyscale;
+	vis->spritexoffset = FIXED_TO_FLOAT(spr_offset);
+	vis->spriteyoffset = FIXED_TO_FLOAT(spr_topoffset);
 
 	vis->rotated = false;
 

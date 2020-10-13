@@ -69,8 +69,10 @@ typedef struct gl_vissprite_s
 	float tracertz; // for MF2_LINKDRAW sprites, this contains tracer's tz for use in sorting
 
 	float scale;
-	float spritexscale, spriteyscale;
 	float shadowheight, shadowscale;
+
+	float spritexscale, spriteyscale;
+	float spritexoffset, spriteyoffset;
 
 	UINT32 renderflags;
 	UINT8 rotateflags;

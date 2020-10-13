@@ -288,6 +288,12 @@ typedef struct
 	UINT32 frame;
 	UINT8 sprite2;
 	UINT16 anim_duration;
+
+	fixed_t spritexscale;
+	fixed_t spriteyscale;
+	fixed_t spritexoffset;
+	fixed_t spriteyoffset;
+
 	INT32 tics;
 	statenum_t statenum;
 	UINT32 flags;
@@ -300,8 +306,6 @@ typedef struct
 	fixed_t scale;
 	fixed_t destscale;
 	fixed_t scalespeed;
-	fixed_t spritexscale;
-	fixed_t spriteyscale;
 } ATTRPACK resynch_pak;
 
 typedef struct

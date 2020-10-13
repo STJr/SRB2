@@ -286,6 +286,10 @@ typedef struct mobj_s
 	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
+	UINT32 renderflags; // render flags
+	fixed_t spritexscale, spriteyscale;
+	fixed_t spritexoffset, spriteyoffset;
+
 	struct msecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
 
 	struct subsector_s *subsector; // Subsector the mobj resides in.
@@ -309,7 +313,6 @@ typedef struct mobj_s
 	UINT32 flags; // flags from mobjinfo tables
 	UINT32 flags2; // MF2_ flags
 	UINT16 eflags; // extra flags
-	UINT32 renderflags; // render flags
 
 	void *skin; // overrides 'sprite' when non-NULL (for player bodies to 'remember' the skin)
 	// Player and mobj sprites in multiplayer modes are modified
@@ -362,7 +365,6 @@ typedef struct mobj_s
 	fixed_t scale;
 	fixed_t destscale;
 	fixed_t scalespeed;
-	fixed_t spritexscale, spriteyscale;
 
 	// Extra values are for internal use for whatever you want
 	INT32 extravalue1;
@@ -408,6 +410,10 @@ typedef struct precipmobj_s
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
+
+	UINT32 renderflags; // render flags
+	fixed_t spritexscale, spriteyscale;
+	fixed_t spritexoffset, spriteyoffset;
 
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
 

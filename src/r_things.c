@@ -1632,6 +1632,22 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (spritexscale < 1 || spriteyscale < 1)
 		return;
 
+	if (thing->renderflags & RF_ABSOLUTEOFFSETS)
+	{
+		spr_offset = thing->spritexoffset;
+		spr_topoffset = thing->spriteyoffset;
+	}
+	else
+	{
+		SINT8 flipoffset = 1;
+
+		if ((thing->renderflags & RF_FLIPOFFSETS) && flip)
+			flipoffset = -1;
+
+		spr_offset += thing->spritexoffset * flipoffset;
+		spr_topoffset += thing->spriteyoffset * flipoffset;
+	}
+
 	if (flip)
 		offset = spr_offset - spr_width;
 	else
@@ -1981,7 +1997,8 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->spritexscale = spritexscale;
 	vis->spriteyscale = spriteyscale;
-	vis->shadowscale = shadowscale;
+	vis->spritexoffset = spr_offset;
+	vis->spriteyoffset = spr_topoffset;
 
 	if (shadowdraw || shadoweffects)
 	{
@@ -1991,6 +2008,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 	else
 		iscale = FixedDiv(FRACUNIT, vis->xscale);
+
+	vis->shadowscale = shadowscale;
 
 	if (flip)
 	{
@@ -2818,8 +2837,8 @@ static void R_DrawVisSplat(vissprite_t *spr)
 	splat.angle = -splatangle;
 	splat.angle += ANGLE_90;
 
-	topoffset = (spr->patch->topoffset * FRACUNIT);
-	leftoffset = (spr->patch->leftoffset * FRACUNIT);
+	topoffset = spr->spriteyoffset;
+	leftoffset = spr->spritexoffset;
 	if (hflip)
 		leftoffset = ((splat.width * FRACUNIT) - leftoffset);
 

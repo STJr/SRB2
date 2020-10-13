@@ -643,6 +643,12 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->frame = LONG(players[i].mo->frame);
 	rsp->sprite2 = players[i].mo->sprite2;
 	rsp->anim_duration = SHORT(players[i].mo->anim_duration);
+
+	rsp->spritexscale = LONG(players[i].mo->spritexscale);
+	rsp->spriteyscale = LONG(players[i].mo->spriteyscale);
+	rsp->spritexoffset = LONG(players[i].mo->spritexoffset);
+	rsp->spriteyoffset = LONG(players[i].mo->spriteyoffset);
+
 	rsp->tics = LONG(players[i].mo->tics);
 	rsp->statenum = (statenum_t)LONG(players[i].mo->state-states); // :(
 	rsp->eflags = (UINT16)SHORT(players[i].mo->eflags);
@@ -655,8 +661,6 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->scale = LONG(players[i].mo->scale);
 	rsp->destscale = LONG(players[i].mo->destscale);
 	rsp->scalespeed = LONG(players[i].mo->scalespeed);
-	rsp->spritexscale = LONG(players[i].mo->spritexscale);
-	rsp->spriteyscale = LONG(players[i].mo->spriteyscale);
 }
 
 static void resynch_read_player(resynch_pak *rsp)
@@ -805,6 +809,12 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mo->frame = LONG(rsp->frame);
 	players[i].mo->sprite2 = rsp->sprite2;
 	players[i].mo->anim_duration = SHORT(rsp->anim_duration);
+
+	players[i].mo->spritexscale = LONG(rsp->spritexscale);
+	players[i].mo->spriteyscale = LONG(rsp->spriteyscale);
+	players[i].mo->spritexoffset = LONG(rsp->spritexoffset);
+	players[i].mo->spriteyoffset = LONG(rsp->spriteyoffset);
+
 	players[i].mo->tics = LONG(rsp->tics);
 	players[i].mo->state = &states[LONG(rsp->statenum)];
 
@@ -817,8 +827,6 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mo->scale = LONG(rsp->scale);
 	players[i].mo->destscale = LONG(rsp->destscale);
 	players[i].mo->scalespeed = LONG(rsp->scalespeed);
-	players[i].mo->spritexscale = LONG(rsp->spritexscale);
-	players[i].mo->spriteyscale = LONG(rsp->spriteyscale);
 
 	// And finally, SET THE MOBJ SKIN damn it.
 	if ((players[i].powers[pw_carry] == CR_NIGHTSMODE) && (skins[players[i].skin].sprites[SPR2_NFLY].numframes == 0))
