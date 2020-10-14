@@ -1914,12 +1914,13 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->subsector->sector->numlights)
 	{
 		INT32 lightnum;
+		fixed_t top = (splat) ? gz : gzt;
 		light = thing->subsector->sector->numlights - 1;
 
 		// R_GetPlaneLight won't work on sloped lights!
 		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
 			fixed_t h = P_GetLightZAt(&thing->subsector->sector->lightlist[lightnum], thing->x, thing->y);
-			if (h <= gzt) {
+			if (h <= top) {
 				light = lightnum - 1;
 				break;
 			}
