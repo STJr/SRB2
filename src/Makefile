@@ -606,8 +606,9 @@ ifndef VALGRIND
 ifndef NOOBJDUMP
 	@echo Dumping debugging info
 	$(OBJDUMP) $(OBJDUMP_OPTS) $(BIN)/$(EXENAME) > $(BIN)/$(DBGNAME).txt
+ifdef WINDOWSHELL
 	-$(GZIP) $(GZIP_OPTS) $(BIN)/$(DBGNAME).txt
-ifndef WINDOWSHELL
+else
 	-$(GZIP) $(GZIP_OPT2) $(BIN)/$(DBGNAME).txt
 endif
 endif
@@ -627,8 +628,9 @@ endif
 reobjdump:
 	@echo Redumping debugging info
 	$(OBJDUMP) $(OBJDUMP_OPTS) $(BIN)/$(DBGNAME) > $(BIN)/$(DBGNAME).txt
+ifdef WINDOWSHELL
 	-$(GZIP) $(GZIP_OPTS) $(BIN)/$(DBGNAME).txt
-ifndef WINDOWSHELL
+else
 	-$(GZIP) $(GZIP_OPT2) $(BIN)/$(DBGNAME).txt
 endif
 
