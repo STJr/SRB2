@@ -645,46 +645,48 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	}
 }
 
-static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
+// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
+// I copied ZDoom's code and adapted it to SRB2... -Red
+void R_CalculateSlopeVectors(pslope_t *slope, fixed_t planeviewx, fixed_t planeviewy, fixed_t planeviewz, fixed_t planexscale, fixed_t planeyscale, fixed_t planexoffset, fixed_t planeyoffset, angle_t planeviewangle, angle_t planeangle, float fudge)
 {
-	// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
-	// I copied ZDoom's code and adapted it to SRB2... -Red
 	floatv3_t p, m, n;
 	float ang;
 	float vx, vy, vz;
+	float xscale = FIXED_TO_FLOAT(planexscale);
+	float yscale = FIXED_TO_FLOAT(planeyscale);
 	// compiler complains when P_GetSlopeZAt is used in FLOAT_TO_FIXED directly
 	// use this as a temp var to store P_GetSlopeZAt's return value each time
 	fixed_t temp;
 
-	vx = FIXED_TO_FLOAT(pl->viewx+xoffs);
-	vy = FIXED_TO_FLOAT(pl->viewy-yoffs);
-	vz = FIXED_TO_FLOAT(pl->viewz);
+	vx = FIXED_TO_FLOAT(planeviewx+planexoffset);
+	vy = FIXED_TO_FLOAT(planeviewy-planeyoffset);
+	vz = FIXED_TO_FLOAT(planeviewz);
 
-	temp = P_GetSlopeZAt(pl->slope, pl->viewx, pl->viewy);
+	temp = P_GetSlopeZAt(slope, planeviewx, planeviewy);
 	zeroheight = FIXED_TO_FLOAT(temp);
 
 	// p is the texture origin in view space
 	// Don't add in the offsets at this stage, because doing so can result in
 	// errors if the flat is rotated.
-	ang = ANG2RAD(ANGLE_270 - pl->viewangle);
+	ang = ANG2RAD(ANGLE_270 - planeviewangle);
 	p.x = vx * cos(ang) - vy * sin(ang);
 	p.z = vx * sin(ang) + vy * cos(ang);
-	temp = P_GetSlopeZAt(pl->slope, -xoffs, yoffs);
+	temp = P_GetSlopeZAt(slope, -planexoffset, planeyoffset);
 	p.y = FIXED_TO_FLOAT(temp) - vz;
 
 	// m is the v direction vector in view space
-	ang = ANG2RAD(ANGLE_180 - (pl->viewangle + pl->plangle));
-	m.x = cos(ang);
-	m.z = sin(ang);
+	ang = ANG2RAD(ANGLE_180 - (planeviewangle + planeangle));
+	m.x = yscale * cos(ang);
+	m.z = yscale * sin(ang);
 
 	// n is the u direction vector in view space
-	n.x = sin(ang);
-	n.z = -cos(ang);
+	n.x = xscale * sin(ang);
+	n.z = -xscale * cos(ang);
 
-	ang = ANG2RAD(pl->plangle);
-	temp = P_GetSlopeZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(sin(ang)), pl->viewy + FLOAT_TO_FIXED(cos(ang)));
+	ang = ANG2RAD(planeangle);
+	temp = P_GetSlopeZAt(slope, planeviewx + yscale * FLOAT_TO_FIXED(sin(ang)), planeviewy + yscale * FLOAT_TO_FIXED(cos(ang)));
 	m.y = FIXED_TO_FLOAT(temp) - zeroheight;
-	temp = P_GetSlopeZAt(pl->slope, pl->viewx + FLOAT_TO_FIXED(cos(ang)), pl->viewy - FLOAT_TO_FIXED(sin(ang)));
+	temp = P_GetSlopeZAt(slope, planeviewx + xscale * FLOAT_TO_FIXED(cos(ang)), planeviewy - xscale * FLOAT_TO_FIXED(sin(ang)));
 	n.y = FIXED_TO_FLOAT(temp) - zeroheight;
 
 	if (ds_powersoftwo)
@@ -700,40 +702,48 @@ static void R_SlopeVectors(visplane_t *pl, INT32 i, float fudge)
 
 	// Eh. I tried making this stuff fixed-point and it exploded on me. Here's a macro for the only floating-point vector function I recall using.
 #define CROSS(d, v1, v2) \
-d.x = (v1.y * v2.z) - (v1.z * v2.y);\
-d.y = (v1.z * v2.x) - (v1.x * v2.z);\
-d.z = (v1.x * v2.y) - (v1.y * v2.x)
-	CROSS(ds_su[i], p, m);
-	CROSS(ds_sv[i], p, n);
-	CROSS(ds_sz[i], m, n);
+d->x = (v1.y * v2.z) - (v1.z * v2.y);\
+d->y = (v1.z * v2.x) - (v1.x * v2.z);\
+d->z = (v1.x * v2.y) - (v1.y * v2.x)
+		CROSS(ds_sup, p, m);
+		CROSS(ds_svp, p, n);
+		CROSS(ds_szp, m, n);
 #undef CROSS
 
-	ds_su[i].z *= focallengthf;
-	ds_sv[i].z *= focallengthf;
-	ds_sz[i].z *= focallengthf;
+	ds_sup->z *= focallengthf;
+	ds_svp->z *= focallengthf;
+	ds_szp->z *= focallengthf;
 
 	// Premultiply the texture vectors with the scale factors
 #define SFMULT 65536.f
 	if (ds_powersoftwo)
 	{
-		ds_su[i].x *= (SFMULT * (1<<nflatshiftup));
-		ds_su[i].y *= (SFMULT * (1<<nflatshiftup));
-		ds_su[i].z *= (SFMULT * (1<<nflatshiftup));
-		ds_sv[i].x *= (SFMULT * (1<<nflatshiftup));
-		ds_sv[i].y *= (SFMULT * (1<<nflatshiftup));
-		ds_sv[i].z *= (SFMULT * (1<<nflatshiftup));
+		ds_sup->x *= (SFMULT * (1<<nflatshiftup));
+		ds_sup->y *= (SFMULT * (1<<nflatshiftup));
+		ds_sup->z *= (SFMULT * (1<<nflatshiftup));
+		ds_svp->x *= (SFMULT * (1<<nflatshiftup));
+		ds_svp->y *= (SFMULT * (1<<nflatshiftup));
+		ds_svp->z *= (SFMULT * (1<<nflatshiftup));
 	}
 	else
 	{
 		// Lactozilla: I'm essentially multiplying the vectors by FRACUNIT...
-		ds_su[i].x *= SFMULT;
-		ds_su[i].y *= SFMULT;
-		ds_su[i].z *= SFMULT;
-		ds_sv[i].x *= SFMULT;
-		ds_sv[i].y *= SFMULT;
-		ds_sv[i].z *= SFMULT;
+		ds_sup->x *= SFMULT;
+		ds_sup->y *= SFMULT;
+		ds_sup->z *= SFMULT;
+		ds_svp->x *= SFMULT;
+		ds_svp->y *= SFMULT;
+		ds_svp->z *= SFMULT;
 	}
 #undef SFMULT
+}
+
+static void R_SlopePlaneVectors(visplane_t *pl, INT32 i, float fudge)
+{
+	ds_sup = &ds_su[i];
+	ds_svp = &ds_sv[i];
+	ds_szp = &ds_sz[i];
+	R_CalculateSlopeVectors(pl->slope, pl->viewx, pl->viewy, pl->viewz, FRACUNIT, FRACUNIT, xoffs, yoffs, pl->viewangle, pl->plangle, fudge);
 }
 
 void R_DrawSinglePlane(visplane_t *pl)
@@ -992,7 +1002,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 				R_PlaneRipple(pl, i, plheight);
 				xoffs = rxoffs + ripple_xfrac;
 				yoffs = ryoffs + ripple_yfrac;
-				R_SlopeVectors(pl, i, fudgecanyon);
+				R_SlopePlaneVectors(pl, i, fudgecanyon);
 			}
 
 			xoffs = rxoffs;
@@ -1000,7 +1010,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		}
 		else
 #endif
-			R_SlopeVectors(pl, 0, fudgecanyon);
+			R_SlopePlaneVectors(pl, 0, fudgecanyon);
 
 #ifndef NOWATER
 		if (itswater && (spanfunctype == SPANDRAWFUNC_WATER))

@@ -31,17 +31,19 @@ extern struct rastery_s *prastertab; // for ASM code
 #ifdef FLOORSPLATS
 typedef struct floorsplat_s
 {
-	UINT8 *pic;
+	UINT16 *pic;
 	INT32 width, height;
 	fixed_t scale, xscale, yscale;
 	angle_t angle;
+	boolean tilted; // Uses the tilted drawer
+	pslope_t slope;
 
-	vertex_t verts[4]; // (x,y) as viewed from above on map
+	vector3_t verts[4]; // (x,y,z) as viewed from above on map
 	fixed_t x, y, z; // position
 	mobj_t *mobj; // Mobj it is tied to
 } floorsplat_t;
 
-void R_RenderFloorSplat(floorsplat_t *pSplat, vertex_t *verts, vissprite_t *vis);
+void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis);
 extern UINT8 ds_splatclip[MAXVIDWIDTH];
 #endif
 

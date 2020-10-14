@@ -84,10 +84,14 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_PlaneBounds(visplane_t *plane);
 
-// Draws a single visplane.
-void R_DrawSinglePlane(visplane_t *pl);
 void R_CheckFlatLength(size_t size);
 boolean R_CheckPowersOfTwo(void);
+
+// Draws a single visplane.
+void R_DrawSinglePlane(visplane_t *pl);
+
+// Calculates the slope vectors needed for tilted span drawing.
+void R_CalculateSlopeVectors(pslope_t *slope, fixed_t planeviewx, fixed_t planeviewy, fixed_t planeviewz, fixed_t planexscale, fixed_t planeyscale, fixed_t planexoffset, fixed_t planeyoffset, angle_t planeviewangle, angle_t planeangle, float fudge);
 
 typedef struct planemgr_s
 {

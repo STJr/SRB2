@@ -1415,7 +1415,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t tx, tz;
 	fixed_t xscale, yscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
 	fixed_t sortscale, sortsplat = 0;
-	fixed_t sort_x = 0, sort_y = 0;
+	fixed_t sort_x = 0, sort_y = 0, sort_z;
 
 	INT32 x1, x2;
 
@@ -1764,10 +1764,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	// Adjust the sort scale if needed
 	if (splat)
 	{
-		tz = (patch->height - patch->topoffset) * FRACUNIT;
+		sort_z = (patch->height - patch->topoffset) * FRACUNIT;
 		ang = (viewangle >> ANGLETOFINESHIFT);
-		sort_x = FixedMul(FixedMul(FixedMul(spritexscale, this_scale), tz), FINECOSINE(ang));
-		sort_y = FixedMul(FixedMul(FixedMul(spriteyscale, this_scale), tz), FINESINE(ang));
+		sort_x = FixedMul(FixedMul(FixedMul(spritexscale, this_scale), sort_z), FINECOSINE(ang));
+		sort_y = FixedMul(FixedMul(FixedMul(spriteyscale, this_scale), sort_z), FINESINE(ang));
 	}
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
@@ -1797,8 +1797,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		tr_x = (thing->x + sort_x) - viewx;
 		tr_y = (thing->y + sort_y) - viewy;
-		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
-		sortscale = FixedDiv(projectiony, tz);
+		sort_z = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
+		sortscale = FixedDiv(projectiony, sort_z);
 	}
 
 	// Calculate the splat's sortscale
@@ -1806,8 +1806,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		tr_x = (thing->x - sort_x) - viewx;
 		tr_y = (thing->y - sort_y) - viewy;
-		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
-		sortsplat = FixedDiv(projectiony, tz);
+		sort_z = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
+		sortsplat = FixedDiv(projectiony, sort_z);
 	}
 
 	// PORTAL SPRITE CLIPPING
@@ -2796,8 +2796,8 @@ static void R_DrawVisSplat(vissprite_t *spr)
 #ifdef FLOORSPLATS
 	floorsplat_t splat;
 	fixed_t tr_x, tr_y, rot_x, rot_y, rot_z;
-	vertex_t *v3d;
-	vertex_t v2d[4];
+	vector3_t *v3d;
+	vector2_t v2d[4];
 	fixed_t x, y;
 	fixed_t w, h;
 	angle_t splatangle, angle;
@@ -2809,6 +2809,7 @@ static void R_DrawVisSplat(vissprite_t *spr)
 	boolean vflip = (spr->cut & SC_VFLIP);
 	UINT8 flipflags = 0;
 	vector2_t rotated[4];
+	pslope_t *slope = NULL;
 	INT32 i;
 
 	if (hflip)
@@ -2825,6 +2826,9 @@ static void R_DrawVisSplat(vissprite_t *spr)
 	splat.width = spr->patch->width;
 	splat.height = spr->patch->height;
 	splat.scale = spr->mobj->scale;
+
+	if (spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES)
+		splat.scale = FixedMul(splat.scale, ((skin_t *)spr->mobj->skin)->highresscale);
 
 	if (spr->rotateflags & SRF_3D || spr->renderflags & RF_NOSPLATBILLBOARD)
 		splatangle = spr->mobj->angle;
@@ -2859,6 +2863,7 @@ static void R_DrawVisSplat(vissprite_t *spr)
 	splat.x = x;
 	splat.y = y;
 	splat.z = spr->mobj->z;
+	splat.tilted = false;
 
 	// Set positions
 
@@ -2889,14 +2894,53 @@ static void R_DrawVisSplat(vissprite_t *spr)
 		rotated[i].y = FixedMul(splat.verts[i].x, sa) + FixedMul(splat.verts[i].y, ca);
 	}
 
+	if (spr->renderflags & RF_SLOPESPLAT)
+	{
+		slope = spr->mobj->standingslope;
+		splat.tilted = (slope != NULL);
+	}
+
+	if (splat.tilted)
+	{
+		// Lactozilla: Just copy the entire slope LMFAOOOO
+		pslope_t *s = &splat.slope;
+
+		s->o.x = slope->o.x;
+		s->o.y = slope->o.y;
+		s->o.z = slope->o.z;
+
+		s->d.x = slope->d.x;
+		s->d.y = slope->d.y;
+
+		s->normal.x = slope->normal.x;
+		s->normal.y = slope->normal.y;
+		s->normal.z = slope->normal.z;
+
+		s->zdelta = slope->zdelta;
+		s->zangle = slope->zangle;
+		s->xydirection = slope->xydirection;
+
+		s->next = NULL;
+		s->flags = 0;
+	}
+
 	// Translate
 	for (i = 0; i < 4; i++)
 	{
-		splat.verts[i].x = rotated[i].x + x;
-		splat.verts[i].y = rotated[i].y + y;
-	}
+		tr_x = rotated[i].x + x;
+		tr_y = rotated[i].y + y;
 
-	rot_z = splat.z - viewz;
+		if (slope)
+		{
+			rot_z = P_GetSlopeZAt(slope, tr_x, tr_y);
+			splat.verts[i].z = rot_z;
+		}
+		else
+			splat.verts[i].z = splat.z;
+
+		splat.verts[i].x = tr_x;
+		splat.verts[i].y = tr_y;
+	}
 
 	for (i = 0; i < 4; i++)
 	{
@@ -2909,6 +2953,7 @@ static void R_DrawVisSplat(vissprite_t *spr)
 		// rotation around vertical y axis
 		rot_x = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
 		rot_y = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
+		rot_z = v3d->z - viewz;
 
 		if (!rot_y || rot_y < FixedDiv(4*FRACUNIT, splat.scale))
 			return;

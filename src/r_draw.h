@@ -150,42 +150,53 @@ void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
 
+#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f * FIXED_TO_FLOAT(fovtan))
+
 void R_DrawSpan_8(void);
-void R_DrawSplat_8(void);
-void R_DrawFloorSprite_8(void);
 void R_DrawTranslucentSpan_8(void);
-void R_DrawTranslucentSplat_8(void);
-void R_DrawTranslucentFloorSprite_8(void);
 void R_DrawTiltedSpan_8(void);
 void R_DrawTiltedTranslucentSpan_8(void);
-#ifndef NOWATER
-void R_DrawTiltedTranslucentWaterSpan_8(void);
-#endif
+
+void R_DrawSplat_8(void);
+void R_DrawTranslucentSplat_8(void);
 void R_DrawTiltedSplat_8(void);
+
+void R_DrawFloorSprite_8(void);
+void R_DrawTranslucentFloorSprite_8(void);
+void R_DrawTiltedFloorSprite_8(void);
+void R_DrawTiltedTranslucentFloorSprite_8(void);
+
 void R_CalcTiltedLighting(fixed_t start, fixed_t end);
 extern INT32 tiltlighting[MAXVIDWIDTH];
+
 #ifndef NOWATER
 void R_DrawTranslucentWaterSpan_8(void);
+void R_DrawTiltedTranslucentWaterSpan_8(void);
+
 extern INT32 ds_bgofs;
 extern INT32 ds_waterofs;
 #endif
+
 void R_DrawFogSpan_8(void);
 
 // Lactozilla: Non-powers-of-two
 void R_DrawSpan_NPO2_8(void);
 void R_DrawTranslucentSpan_NPO2_8(void);
-void R_DrawFloorSprite_NPO2_8(void);
-void R_DrawSplat_NPO2_8(void);
-void R_DrawTranslucentSplat_NPO2_8(void);
-void R_DrawTranslucentFloorSprite_NPO2_8(void);
 void R_DrawTiltedSpan_NPO2_8(void);
 void R_DrawTiltedTranslucentSpan_NPO2_8(void);
-#ifndef NOWATER
-void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void);
-#endif
+
+void R_DrawSplat_NPO2_8(void);
+void R_DrawTranslucentSplat_NPO2_8(void);
 void R_DrawTiltedSplat_NPO2_8(void);
+
+void R_DrawFloorSprite_NPO2_8(void);
+void R_DrawTranslucentFloorSprite_NPO2_8(void);
+void R_DrawTiltedFloorSprite_NPO2_8(void);
+void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void);
+
 #ifndef NOWATER
 void R_DrawTranslucentWaterSpan_NPO2_8(void);
+void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void);
 #endif
 
 #ifdef USEASM
