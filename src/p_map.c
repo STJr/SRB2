@@ -2762,7 +2762,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 				if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
 				{
-					thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
+					thing->z = (thing->ceilingz = tmceilingz) - thing->height;
 					thing->ceilingrover = tmceilingrover;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
