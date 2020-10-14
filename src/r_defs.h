@@ -720,9 +720,11 @@ typedef enum
 	RF_ABSOLUTEOFFSETS  = 0x0004,   // Sprite uses the object's offsets absolutely, instead of relatively
 	RF_FLIPOFFSETS      = 0x0008,   // Relative object offsets are flipped with the sprite
 
-	RF_SLOPESPLAT       = 0x0010,   // Rotate floor sprites by the object's standing slope
-	RF_NOSPLATBILLBOARD = 0x0020,   // Don't billboard floor sprites (faces forward from the view angle)
-	RF_NOSPLATROLLANGLE = 0x0040,   // Don't rotate floor sprites by the object's rollangle (uses rotated patches instead)
+	RF_SPLATMASK        = 0x00F0,   // --Floor sprite flags
+	RF_SLOPESPLAT       = 0x0010,   // Rotate floor sprites by a slope
+	RF_OBJECTSLOPESPLAT = 0x0020,   // Rotate floor sprites by the object's standing slope
+	RF_NOSPLATBILLBOARD = 0x0040,   // Don't billboard floor sprites (faces forward from the view angle)
+	RF_NOSPLATROLLANGLE = 0x0080,   // Don't rotate floor sprites by the object's rollangle (uses rotated patches instead)
 
 	RF_BLENDMASK        = 0x0F00,   // --Blending modes
 	RF_FULLBRIGHT       = 0x0100,   // Sprite is drawn at full brightness

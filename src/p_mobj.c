@@ -10473,6 +10473,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	// Sprite rendering
 	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
 	mobj->spritexoffset = mobj->spriteyoffset = 0;
+	mobj->floorspriteslope = Z_Calloc(sizeof(pslope_t), PU_LEVEL, NULL);
+	mobj->floorspriteslope->normal.z = FRACUNIT;
 
 	// set subsector and/or block links
 	P_SetThingPosition(mobj);
@@ -10934,6 +10936,10 @@ void P_RemoveMobj(mobj_t *mobj)
 	mobj->subsector = NULL;
 	mobj->state = NULL;
 	mobj->player = NULL;
+
+	if (mobj->floorspriteslope)
+		Z_Free(mobj->floorspriteslope);
+	mobj->floorspriteslope = NULL;
 
 	// stop any playing sound
 	S_StopSound(mobj);

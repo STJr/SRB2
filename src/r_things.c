@@ -2797,21 +2797,26 @@ static void R_DrawVisSplat(vissprite_t *spr)
 #ifdef FLOORSPLATS
 	floorsplat_t splat;
 	fixed_t tr_x, tr_y, rot_x, rot_y, rot_z;
+
 	vector3_t *v3d;
 	vector2_t v2d[4];
+	vector2_t rotated[4];
+
 	fixed_t x, y;
 	fixed_t w, h;
-	angle_t splatangle, angle;
+	angle_t angle, splatangle;
 	fixed_t ca, sa;
 	fixed_t xscale, yscale;
 	fixed_t xoffset, yoffset;
 	fixed_t leftoffset, topoffset;
+	pslope_t *slope = NULL;
+	INT32 i;
+
 	boolean hflip = (spr->xiscale < 0);
 	boolean vflip = (spr->cut & SC_VFLIP);
 	UINT8 flipflags = 0;
-	vector2_t rotated[4];
-	pslope_t *slope = NULL;
-	INT32 i;
+
+	renderflags_t renderflags = spr->renderflags;
 
 	if (hflip)
 		flipflags |= PICFLAGS_XFLIP;
@@ -2831,7 +2836,7 @@ static void R_DrawVisSplat(vissprite_t *spr)
 	if (spr->mobj->skin && ((skin_t *)spr->mobj->skin)->flags & SF_HIRES)
 		splat.scale = FixedMul(splat.scale, ((skin_t *)spr->mobj->skin)->highresscale);
 
-	if (spr->rotateflags & SRF_3D || spr->renderflags & RF_NOSPLATBILLBOARD)
+	if (spr->rotateflags & SRF_3D || renderflags & RF_NOSPLATBILLBOARD)
 		splatangle = spr->mobj->angle;
 	else
 		splatangle = viewangle;
@@ -2895,9 +2900,18 @@ static void R_DrawVisSplat(vissprite_t *spr)
 		rotated[i].y = FixedMul(splat.verts[i].x, sa) + FixedMul(splat.verts[i].y, ca);
 	}
 
-	if (spr->renderflags & RF_SLOPESPLAT)
+	if (renderflags & (RF_SLOPESPLAT | RF_OBJECTSLOPESPLAT))
 	{
-		slope = spr->mobj->standingslope;
+		pslope_t *standingslope = spr->mobj->standingslope; // The slope that the object is standing on.
+
+		// The slope that was defined for the sprite.
+		if (renderflags & RF_SLOPESPLAT)
+			slope = spr->mobj->floorspriteslope;
+
+		if (standingslope && (renderflags & RF_OBJECTSLOPESPLAT))
+			slope = standingslope;
+
+		// Set splat as tilted
 		splat.tilted = (slope != NULL);
 	}
 

@@ -1393,12 +1393,13 @@ typedef enum
 	MD2_COLORIZED    = 1<<12,
 	MD2_MIRRORED     = 1<<13,
 	MD2_ROLLANGLE    = 1<<14,
-	MD2_SPRITEXSCALE = 1<<15,
-	MD2_SPRITEYSCALE = 1<<16,
-	MD2_SPRITEXOFFSET = 1<<17,
-	MD2_SPRITEYOFFSET = 1<<18,
-	MD2_SHADOWSCALE   = 1<<19,
-	MD2_RENDERFLAGS   = 1<<20,
+	MD2_SHADOWSCALE  = 1<<15,
+	MD2_RENDERFLAGS  = 1<<16,
+	MD2_SPRITEXSCALE = 1<<17,
+	MD2_SPRITEYSCALE = 1<<18,
+	MD2_SPRITEXOFFSET = 1<<19,
+	MD2_SPRITEYOFFSET = 1<<20,
+	MD2_FLOORSPRITESLOPE = 1<<21,
 } mobj_diff2_t;
 
 typedef enum
@@ -1609,18 +1610,27 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_MIRRORED;
 	if (mobj->rollangle)
 		diff2 |= MD2_ROLLANGLE;
+	if (mobj->shadowscale)
+		diff2 |= MD2_SHADOWSCALE;
+	if (mobj->renderflags)
+		diff2 |= MD2_RENDERFLAGS;
 	if (mobj->spritexscale != FRACUNIT)
 		diff2 |= MD2_SPRITEXSCALE;
 	if (mobj->spriteyscale != FRACUNIT)
 		diff2 |= MD2_SPRITEYSCALE;
 	if (mobj->spritexoffset)
 		diff2 |= MD2_SPRITEXOFFSET;
-	if (mobj->spriteyoffset)
-		diff2 |= MD2_SPRITEYOFFSET;
-	if (mobj->shadowscale)
-		diff2 |= MD2_SHADOWSCALE;
-	if (mobj->renderflags)
-		diff2 |= MD2_RENDERFLAGS;
+
+	{
+		pslope_t *slope = mobj->floorspriteslope;
+		if (slope->zangle || slope->zdelta || slope->xydirection
+		|| slope->o.x || slope->o.y || slope->o.z
+		|| slope->d.x || slope->d.y
+		|| slope->normal.x || slope->normal.y
+		|| (slope->normal.z != FRACUNIT))
+			diff2 |= MD2_FLOORSPRITESLOPE;
+	}
+
 	if (diff2 != 0)
 		diff |= MD_MORE;
 
@@ -1761,6 +1771,10 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT8(save_p, mobj->mirrored);
 	if (diff2 & MD2_ROLLANGLE)
 		WRITEANGLE(save_p, mobj->rollangle);
+	if (diff2 & MD2_SHADOWSCALE)
+		WRITEFIXED(save_p, mobj->shadowscale);
+	if (diff2 & MD2_RENDERFLAGS)
+		WRITEUINT32(save_p, mobj->renderflags);
 	if (diff2 & MD2_SPRITEXSCALE)
 		WRITEFIXED(save_p, mobj->spritexscale);
 	if (diff2 & MD2_SPRITEYSCALE)
@@ -1769,10 +1783,25 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, mobj->spritexoffset);
 	if (diff2 & MD2_SPRITEYOFFSET)
 		WRITEFIXED(save_p, mobj->spriteyoffset);
-	if (diff2 & MD2_SHADOWSCALE)
-		WRITEFIXED(save_p, mobj->shadowscale);
-	if (diff2 & MD2_RENDERFLAGS)
-		WRITEUINT32(save_p, mobj->renderflags);
+	if (diff2 & MD2_FLOORSPRITESLOPE)
+	{
+		pslope_t *slope = mobj->floorspriteslope;
+
+		WRITEFIXED(save_p, slope->zdelta);
+		WRITEANGLE(save_p, slope->zangle);
+		WRITEANGLE(save_p, slope->xydirection);
+
+		WRITEFIXED(save_p, slope->o.x);
+		WRITEFIXED(save_p, slope->o.y);
+		WRITEFIXED(save_p, slope->o.z);
+
+		WRITEFIXED(save_p, slope->d.x);
+		WRITEFIXED(save_p, slope->d.y);
+
+		WRITEFIXED(save_p, slope->normal.x);
+		WRITEFIXED(save_p, slope->normal.y);
+		WRITEFIXED(save_p, slope->normal.z);
+	}
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -2780,6 +2809,10 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->mirrored = READUINT8(save_p);
 	if (diff2 & MD2_ROLLANGLE)
 		mobj->rollangle = READANGLE(save_p);
+	if (diff2 & MD2_SHADOWSCALE)
+		mobj->shadowscale = READFIXED(save_p);
+	if (diff2 & MD2_RENDERFLAGS)
+		mobj->renderflags = READUINT32(save_p);
 	if (diff2 & MD2_SPRITEXSCALE)
 		mobj->spritexscale = READFIXED(save_p);
 	if (diff2 & MD2_SPRITEYSCALE)
@@ -2788,10 +2821,25 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->spritexoffset = READFIXED(save_p);
 	if (diff2 & MD2_SPRITEYOFFSET)
 		mobj->spriteyoffset = READFIXED(save_p);
-	if (diff2 & MD2_SHADOWSCALE)
-		mobj->shadowscale = READFIXED(save_p);
-	if (diff2 & MD2_RENDERFLAGS)
-		mobj->renderflags = READUINT32(save_p);
+	if (diff2 & MD2_FLOORSPRITESLOPE)
+	{
+		pslope_t *slope = mobj->floorspriteslope;
+
+		slope->zdelta = READFIXED(save_p);
+		slope->zangle = READANGLE(save_p);
+		slope->xydirection = READANGLE(save_p);
+
+		slope->o.x = READFIXED(save_p);
+		slope->o.y = READFIXED(save_p);
+		slope->o.z = READFIXED(save_p);
+
+		slope->d.x = READFIXED(save_p);
+		slope->d.y = READFIXED(save_p);
+
+		slope->normal.x = READFIXED(save_p);
+		slope->normal.y = READFIXED(save_p);
+		slope->normal.z = READFIXED(save_p);
+	}
 
 	if (diff & MD_REDFLAG)
 	{

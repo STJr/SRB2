@@ -3942,6 +3942,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	{
 		F2DCoord verts[4];
 		F2DCoord rotated[4];
+
 		angle_t angle;
 		float ca, sa;
 		float w, h;
@@ -3950,12 +3951,14 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		float leftoffset, topoffset;
 		float scale = spr->scale;
 		float zoffset = (P_MobjFlip(spr->mobj) * 0.05f);
+		pslope_t *splatslope = NULL;
 		INT32 i;
 
-		if (spr->renderflags & RF_SHADOWEFFECTS)
+		renderflags_t renderflags = spr->renderflags;
+		if (renderflags & RF_SHADOWEFFECTS)
 			scale *= spr->shadowscale;
 
-		if (spr->rotateflags & SRF_3D || spr->renderflags & RF_NOSPLATBILLBOARD)
+		if (spr->rotateflags & SRF_3D || renderflags & RF_NOSPLATBILLBOARD)
 			angle = spr->mobj->angle;
 		else
 			angle = viewangle;
@@ -4015,13 +4018,24 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			wallVerts[i].z = rotated[i].y + FIXED_TO_FLOAT(spr->mobj->y);
 		}
 
-		if (spr->renderflags & RF_SLOPESPLAT && spr->mobj->standingslope)
+		if (renderflags & (RF_SLOPESPLAT | RF_OBJECTSLOPESPLAT))
 		{
-			pslope_t *slope = spr->mobj->standingslope;
+			pslope_t *standingslope = spr->mobj->standingslope; // The slope that the object is standing on.
 
+			// The slope that was defined for the sprite.
+			if (renderflags & RF_SLOPESPLAT)
+				splatslope = spr->mobj->floorspriteslope;
+
+			if (standingslope && (renderflags & RF_OBJECTSLOPESPLAT))
+				splatslope = standingslope;
+		}
+
+		// Set vertical position
+		if (splatslope)
+		{
 			for (i = 0; i < 4; i++)
 			{
-				fixed_t slopez = P_GetSlopeZAt(slope, FLOAT_TO_FIXED(wallVerts[i].x), FLOAT_TO_FIXED(wallVerts[i].z));
+				fixed_t slopez = P_GetSlopeZAt(splatslope, FLOAT_TO_FIXED(wallVerts[i].x), FLOAT_TO_FIXED(wallVerts[i].z));
 				wallVerts[i].y = FIXED_TO_FLOAT(slopez) + zoffset;
 			}
 		}
