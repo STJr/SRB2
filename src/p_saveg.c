@@ -1620,7 +1620,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_SPRITEYSCALE;
 	if (mobj->spritexoffset)
 		diff2 |= MD2_SPRITEXOFFSET;
-
+	if (mobj->floorspriteslope)
 	{
 		pslope_t *slope = mobj->floorspriteslope;
 		if (slope->zangle || slope->zdelta || slope->xydirection
@@ -2823,7 +2823,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->spriteyoffset = READFIXED(save_p);
 	if (diff2 & MD2_FLOORSPRITESLOPE)
 	{
-		pslope_t *slope = mobj->floorspriteslope;
+		pslope_t *slope = (pslope_t *)P_CreateFloorSpriteSlope(mobj);
 
 		slope->zdelta = READFIXED(save_p);
 		slope->zangle = READANGLE(save_p);

@@ -910,6 +910,28 @@ static int lib_pMaceRotate(lua_State *L)
 	return 0;
 }
 
+static int lib_pCreateFloorSpriteSlope(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	LUA_PushUserdata(L, (pslope_t *)P_CreateFloorSpriteSlope(mobj), META_SLOPE);
+	return 1;
+}
+
+static int lib_pDeleteFloorSpriteSlope(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_DeleteFloorSpriteSlope(mobj);
+	return 1;
+}
+
 static int lib_pRailThinker(lua_State *L)
 {
 	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
@@ -3536,6 +3558,8 @@ static luaL_Reg lib[] = {
 	{"P_CheckSolidLava",lib_pCheckSolidLava},
 	{"P_CanRunOnWater",lib_pCanRunOnWater},
 	{"P_MaceRotate",lib_pMaceRotate},
+	{"P_CreateFloorSpriteSlope",lib_pCreateFloorSpriteSlope},
+	{"P_DeleteFloorSpriteSlope",lib_pDeleteFloorSpriteSlope},
 	{"P_RailThinker",lib_pRailThinker},
 	{"P_XYMovement",lib_pXYMovement},
 	{"P_RingXYMovement",lib_pRingXYMovement},

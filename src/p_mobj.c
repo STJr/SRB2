@@ -10473,8 +10473,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	// Sprite rendering
 	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
 	mobj->spritexoffset = mobj->spriteyoffset = 0;
-	mobj->floorspriteslope = Z_Calloc(sizeof(pslope_t), PU_LEVEL, NULL);
-	mobj->floorspriteslope->normal.z = FRACUNIT;
+	mobj->floorspriteslope = NULL;
 
 	// set subsector and/or block links
 	P_SetThingPosition(mobj);
@@ -10874,6 +10873,22 @@ static inline precipmobj_t *P_SpawnSnowMobj(fixed_t x, fixed_t y, fixed_t z, mob
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
 	//mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
 	return mo;
+}
+
+void *P_CreateFloorSpriteSlope(mobj_t *mobj)
+{
+	if (mobj->floorspriteslope)
+		Z_Free(mobj->floorspriteslope);
+	mobj->floorspriteslope = Z_Calloc(sizeof(pslope_t), PU_LEVEL, NULL);
+	mobj->floorspriteslope->normal.z = FRACUNIT;
+	return (void *)mobj->floorspriteslope;
+}
+
+void P_DeleteFloorSpriteSlope(mobj_t *mobj)
+{
+	if (mobj->floorspriteslope)
+		Z_Free(mobj->floorspriteslope);
+	mobj->floorspriteslope = NULL;
 }
 
 //
