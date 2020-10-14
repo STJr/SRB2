@@ -2661,7 +2661,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 	fixed_t tryx = thing->x;
 	fixed_t tryy = thing->y;
 	fixed_t radius = thing->radius;
-	fixed_t thingtop = thing->z + thing->height;
+	fixed_t thingtop;
 	fixed_t startingonground = P_IsObjectOnGround(thing);
 	floatok = false;
 
@@ -2702,6 +2702,11 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 13)
 					maxstep <<= 1;
 
+				// If using type Section1:14, no maxstep.
+				if (P_PlayerTouchingSectorSpecial(thing->player, 1, 14)
+				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+					maxstep = 0;
+
 				// Don't 'step up' while springing,
 				// Only step up "if needed".
 				if (thing->player->panim == PA_SPRING
@@ -2721,39 +2726,45 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 			floatok = true;
 
-			if (thing->eflags & MFE_VERTICALFLIP)
+			thingtop = thing->z + thing->height;
+
+			// Step up
+			if (thing->z < tmfloorz)
 			{
-				if (thing->z < tmfloorz)
+				if (tmfloorz - thing->z <= maxstep)
+				{
+					thing->z = thing->floorz = tmfloorz;
+					thing->floorrover = tmfloorrover;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
+				}
+				else
+				{
 					return false; // mobj must raise itself to fit
+				}
 			}
 			else if (tmceilingz < thingtop)
-				return false; // mobj must lower itself to fit
-
-			// Ramp test
-			if (maxstep > 0 && !(
-				thing->player && (
-				P_PlayerTouchingSectorSpecial(thing->player, 1, 14)
-				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
-				)
-			)
+			{
+				if (tmceilingz - thingtop <= maxstep)
+				{
+					thing->z = ( thing->ceilingz = tmceilingz ) - thing->height;
+					thing->ceilingrover = tmceilingrover;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
+				}
+				else
+				{
+					return false; // mobj must lower itself to fit
+				}
+			}
+			else if (maxstep > 0) // Step down
 			{
 				// If the floor difference is MAXSTEPMOVE or less, and the sector isn't Section1:14, ALWAYS
 				// step down! Formerly required a Section1:13 sector for the full MAXSTEPMOVE, but no more.
 
-				if (thing->eflags & MFE_VERTICALFLIP)
+				if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
 				{
-					if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
-					{
-						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
-						thing->ceilingrover = tmceilingrover;
-						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
-					}
-					else if (tmceilingz < thingtop && thingtop - tmceilingz <= maxstep)
-					{
-						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
-						thing->ceilingrover = tmceilingrover;
-						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
-					}
+					thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
+					thing->ceilingrover = tmceilingrover;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
 				else if (thing->z == thing->floorz && tmfloorz < thing->z && thing->z - tmfloorz <= maxstep)
 				{
@@ -2761,28 +2772,6 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 					thing->floorrover = tmfloorrover;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
-				else if (tmfloorz > thing->z && tmfloorz - thing->z <= maxstep)
-				{
-					thing->z = thing->floorz = tmfloorz;
-					thing->floorrover = tmfloorrover;
-					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
-				}
-			}
-
-			if (thing->eflags & MFE_VERTICALFLIP)
-			{
-				if (thingtop - tmceilingz > maxstep)
-				{
-					if (tmfloorthing)
-						tmhitthing = tmfloorthing;
-					return false; // too big a step up
-				}
-			}
-			else if (tmfloorz - thing->z > maxstep)
-			{
-				if (tmfloorthing)
-					tmhitthing = tmfloorthing;
-				return false; // too big a step up
 			}
 
 			if (!allowdropoff && !(thing->flags & MF_FLOAT) && thing->type != MT_SKIM && !tmfloorthing)
