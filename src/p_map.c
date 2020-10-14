@@ -2744,7 +2744,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			}
 			else if (tmceilingz < thingtop)
 			{
-				if (tmceilingz - thingtop <= maxstep)
+				if (thingtop - tmceilingz <= maxstep)
 				{
 					thing->z = ( thing->ceilingz = tmceilingz ) - thing->height;
 					thing->ceilingrover = tmceilingrover;
