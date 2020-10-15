@@ -1555,8 +1555,8 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_movie_folder, 	   75},
 	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                  90},
 
-	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,               95},
-	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,             100},
+	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,              95},
+	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,              100},
 	{IT_STRING|IT_CVAR, NULL, "Local Color Table", &cv_gif_localcolortable,       105},
 
 	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_apng_downscale,             95},
