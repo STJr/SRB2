@@ -761,28 +761,6 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 		else
 			return R_GetTranslationColormap(TC_BOSS, 0, GTC_CACHE);
 	}
-	else if (vis->mobj->color && vis->transmap) // Color mapping
-	{
-		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
-			return R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
-		else if (!(vis->cut & SC_PRECIP)
-			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
-			&& (vis->mobj->player->charflags & SF_DASHMODE)
-			&& ((leveltime/2) & 1))
-		{
-			if (vis->mobj->player->charflags & SF_MACHINE)
-				return R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
-			else
-				return R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
-		}
-		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // MT_GHOST LOOKS LIKE A PLAYER SO USE THE PLAYER TRANSLATION TABLES. >_>
-		{
-			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
-			return R_GetTranslationColormap((INT32)skinnum, vis->mobj->color, GTC_CACHE);
-		}
-		else // Use the defaults
-			return R_GetTranslationColormap(TC_DEFAULT, vis->mobj->color, GTC_CACHE);
-	}
 	else if (vis->mobj->color)
 	{
 		// New colormap stuff for skins Tails 06-07-2002
