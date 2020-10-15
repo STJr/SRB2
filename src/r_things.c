@@ -2007,24 +2007,19 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->scale += FixedMul(scalestep, spriteyscale) * (vis->x1 - x1);
 	}
 
-	vis->patch = patch;
-
-//
-// determine the colormap (lightlevel & special effects)
-//
-	vis->transmap = NULL;
-
-	// specific translucency
-	if (!cv_translucency.value)
-		; // no translucency
-	else if (trans)
+	if (cv_translucency.value && trans)
 		vis->transmap = transtables + ((trans-1)<<FF_TRANSSHIFT);
+	else
+		vis->transmap = NULL;
 
 	if (R_ThingIsFullBright(oldthing) || oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW)
 		vis->cut |= SC_FULLBRIGHT;
 	else if (R_ThingIsFullDark(oldthing))
 		vis->cut |= SC_FULLDARK;
 
+	//
+	// determine the colormap (lightlevel & special effects)
+	//
 	if (vis->cut & SC_FULLBRIGHT
 		&& (!vis->extra_colormap || !(vis->extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)))
 	{
@@ -2048,6 +2043,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->cut |= SC_VFLIP;
 	if (splat)
 		vis->cut |= SC_SPLAT; // I like ya cut g
+
+	vis->patch = patch;
 
 	if (thing->subsector->sector->numlights && !(shadowdraw || splat))
 		R_SplitSprite(vis);
