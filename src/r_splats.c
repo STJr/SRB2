@@ -251,7 +251,18 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 		}
 	}
 
-	ds_transmap = NULL;
+	ds_colormap = vis->colormap;
+	ds_translation = R_GetSpriteTranslation(vis);
+	if (ds_translation == NULL)
+		ds_translation = colormaps;
+
+	if (vis->extra_colormap)
+	{
+		if (!ds_colormap)
+			ds_colormap = vis->extra_colormap->colormap;
+		else
+			ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
+	}
 
 	if (vis->transmap)
 	{
@@ -262,6 +273,8 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 		else
 			spanfunctype = SPANDRAWFUNC_TRANSSPRITE;
 	}
+	else
+		ds_transmap = NULL;
 
 	if (ds_powersoftwo)
 		spanfunc = spanfuncs[spanfunctype];
@@ -332,19 +345,6 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 			i--;
 			if (i < 0)
 				break;
-		}
-
-		ds_colormap = vis->colormap;
-		ds_translation = R_GetSpriteTranslation(vis);
-		if (ds_translation == NULL)
-			ds_translation = colormaps;
-
-		if (vis->extra_colormap)
-		{
-			if (!ds_colormap)
-				ds_colormap = vis->extra_colormap->colormap;
-			else
-				ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
 		}
 
 		if (!pSplat->tilted)
