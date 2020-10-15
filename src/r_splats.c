@@ -24,8 +24,6 @@ struct rastery_s *prastertab; // for ASM code
 static struct rastery_s rastertab[MAXVIDHEIGHT];
 static void prepare_rastertab(void);
 
-UINT8 ds_splatclip[MAXVIDWIDTH];
-
 // ==========================================================================
 //                                                               FLOOR SPLATS
 // ==========================================================================
@@ -147,7 +145,8 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis)
 {
 	// rasterizing
-	INT32 miny = viewheight + 1, maxy = 0, y, x1, ry1, x2, y2, i, xclip;
+	INT32 miny = viewheight + 1, maxy = 0;
+	INT32 y, x1, ry1, x2, y2, i;
 	fixed_t offsetx = 0, offsety = 0;
 	fixed_t step;
 
@@ -289,6 +288,8 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 
 	for (y = miny; y <= maxy; y++)
 	{
+		boolean cliptab[MAXVIDWIDTH+1];
+
 		x1 = rastertab[y].minx>>FRACBITS;
 		x2 = rastertab[y].maxx>>FRACBITS;
 
@@ -304,8 +305,34 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 
 		if (x1 < 0)
 			x1 = 0;
-		if (x2 >= vid.width)
-			x2 = vid.width - 1;
+		if (x2 >= viewwidth)
+			x2 = viewwidth - 1;
+
+		if (x1 >= viewwidth || x2 < 0)
+			continue;
+
+		for (i = x1; i <= x2; i++)
+			cliptab[i] = (y >= mfloorclip[i]);
+
+		// clip left
+		while (cliptab[x1])
+		{
+			x1++;
+			if (x1 >= viewwidth)
+				break;
+		}
+
+		// clip right
+		i = x2;
+
+		while (i > x1)
+		{
+			if (cliptab[i])
+				x2 = i-1;
+			i--;
+			if (i < 0)
+				break;
+		}
 
 		ds_colormap = vis->colormap;
 		ds_translation = R_GetSpriteTranslation(vis);
@@ -318,28 +345,6 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 				ds_colormap = vis->extra_colormap->colormap;
 			else
 				ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
-		}
-
-		R_ClipVisSprite(vis, x1-1, x2+1, drawsegs, NULL);
-		memset(ds_splatclip, 0, sizeof(ds_splatclip));
-
-		if (x2 >= x1 && x1 < viewwidth && x1 >= 0)
-		{
-			for (xclip = x1; xclip <= x2; xclip++)
-			{
-				if (y >= mfloorclip[xclip])
-					ds_splatclip[xclip] = 1;
-			}
-		}
-
-		while (ds_splatclip[x1])
-			x1++;
-		i = x2;
-		while (i > x1)
-		{
-			if (ds_splatclip[i])
-				x2 = i-1;
-			i--;
 		}
 
 		if (!pSplat->tilted)

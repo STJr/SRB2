@@ -44,7 +44,6 @@ typedef struct floorsplat_s
 } floorsplat_t;
 
 void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis);
-extern UINT8 ds_splatclip[MAXVIDWIDTH];
 #endif
 
 #endif /*__R_SPLATS_H__*/

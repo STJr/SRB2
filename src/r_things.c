@@ -3213,7 +3213,9 @@ void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 	for (; clippedvissprites < visspritecount; clippedvissprites++)
 	{
 		vissprite_t *spr = R_GetVisSprite(clippedvissprites);
-		R_ClipVisSprite(spr, spr->x1, spr->x2, dsstart, portal);
+		INT32 x1 = (spr->cut & SC_SPLAT) ? 0 : spr->x1;
+		INT32 x2 = (spr->cut & SC_SPLAT) ? viewwidth : spr->x2;
+		R_ClipVisSprite(spr, x1, x2, dsstart, portal);
 	}
 }
 
