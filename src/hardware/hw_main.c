@@ -1958,7 +1958,7 @@ static cliprange_t *   hw_newend;
 static cliprange_t     gl_solidsegs[MAXSEGS];
 
 // needs fix: walls are incorrectly clipped one column less
-static consvar_t cv_glclipwalls = {"gr_clipwalls", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+static consvar_t cv_glclipwalls = CVAR_INIT ("gr_clipwalls", "Off", 0, CV_OnOff, NULL);
 
 static void printsolidsegs(void)
 {
@@ -6010,35 +6010,33 @@ static CV_PossibleValue_t glfiltermode_cons_t[]= {{HWD_SET_TEXTUREFILTER_POINTSA
 	{0, NULL}};
 CV_PossibleValue_t glanisotropicmode_cons_t[] = {{1, "MIN"}, {16, "MAX"}, {0, NULL}};
 
-consvar_t cv_glshaders = {"gr_shaders", "On", CV_SAVE, glshaders_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glallowshaders = {"gr_allowshaders", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_fovchange = {"gr_fovchange", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glshaders = CVAR_INIT ("gr_shaders", "On", CV_SAVE, glshaders_cons_t, NULL);
+consvar_t cv_glallowshaders = CVAR_INIT ("gr_allowshaders", "On", CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_fovchange = CVAR_INIT ("gr_fovchange", "Off", CV_SAVE, CV_OnOff, NULL);
 
 #ifdef ALAM_LIGHTING
-consvar_t cv_gldynamiclighting = {"gr_dynamiclighting", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glstaticlighting  = {"gr_staticlighting", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glcoronas = {"gr_coronas", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glcoronasize = {"gr_coronasize", "1", CV_SAVE|CV_FLOAT, 0, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gldynamiclighting = CVAR_INIT ("gr_dynamiclighting", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glstaticlighting  = CVAR_INIT ("gr_staticlighting", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glcoronas = CVAR_INIT ("gr_coronas", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glcoronasize = CVAR_INIT ("gr_coronasize", "1", CV_SAVE|CV_FLOAT, 0, NULL);
 #endif
 
-consvar_t cv_glmodels = {"gr_models", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glmodelinterpolation = {"gr_modelinterpolation", "Sometimes", CV_SAVE, glmodelinterpolation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glmodellighting = {"gr_modellighting", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glmodels = CVAR_INIT ("gr_models", "Off", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glmodelinterpolation = CVAR_INIT ("gr_modelinterpolation", "Sometimes", CV_SAVE, glmodelinterpolation_cons_t, NULL);
+consvar_t cv_glmodellighting = CVAR_INIT ("gr_modellighting", "Off", CV_SAVE, CV_OnOff, NULL);
 
-consvar_t cv_glshearing = {"gr_shearing", "Off", CV_SAVE, glshearing_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glspritebillboarding = {"gr_spritebillboarding", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glskydome = {"gr_skydome", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glfakecontrast = {"gr_fakecontrast", "Smooth", CV_SAVE, glfakecontrast_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glslopecontrast = {"gr_slopecontrast", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glshearing = CVAR_INIT ("gr_shearing", "Off", CV_SAVE, glshearing_cons_t, NULL);
+consvar_t cv_glspritebillboarding = CVAR_INIT ("gr_spritebillboarding", "Off", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glskydome = CVAR_INIT ("gr_skydome", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_glfakecontrast = CVAR_INIT ("gr_fakecontrast", "Smooth", CV_SAVE, glfakecontrast_cons_t, NULL);
+consvar_t cv_glslopecontrast = CVAR_INIT ("gr_slopecontrast", "Off", CV_SAVE, CV_OnOff, NULL);
 
-consvar_t cv_glfiltermode = {"gr_filtermode", "Nearest", CV_SAVE|CV_CALL, glfiltermode_cons_t,
-                             CV_glfiltermode_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_glanisotropicmode = {"gr_anisotropicmode", "1", CV_CALL, glanisotropicmode_cons_t,
-                             CV_glanisotropic_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glfiltermode = CVAR_INIT ("gr_filtermode", "Nearest", CV_SAVE|CV_CALL, glfiltermode_cons_t, CV_glfiltermode_OnChange);
+consvar_t cv_glanisotropicmode = CVAR_INIT ("gr_anisotropicmode", "1", CV_CALL, glanisotropicmode_cons_t, CV_glanisotropic_OnChange);
 
-consvar_t cv_glsolvetjoin = {"gr_solvetjoin", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glsolvetjoin = CVAR_INIT ("gr_solvetjoin", "On", 0, CV_OnOff, NULL);
 
-consvar_t cv_glbatching = {"gr_batching", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_glbatching = CVAR_INIT ("gr_batching", "On", 0, CV_OnOff, NULL);
 
 static void CV_glfiltermode_OnChange(void)
 {
