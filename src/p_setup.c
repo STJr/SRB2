@@ -4144,6 +4144,8 @@ boolean P_LoadLevel(boolean fromnetsave)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
+	gl_maploaded = false;
+
 	// Lactozilla: Free extrasubsectors regardless of renderer.
 	HWR_FreeExtraSubsectors();
 
@@ -4230,33 +4232,6 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	return true;
 }
-
-#ifdef HWRENDER
-void HWR_LoadLevel(void)
-{
-	// Lactozilla (December 8, 2019)
-	// Level setup used to free EVERY mipmap from memory.
-	// Even mipmaps that aren't related to level textures.
-	// Presumably, the hardware render code used to store textures as level data.
-	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
-	// Level textures are only reloaded after R_LoadTextures, which is
-	// when the texture list is loaded.
-
-	// Sal: Unfortunately, NOT freeing them causes the dreaded Color Bug.
-	HWR_FreeColormapCache();
-
-#ifdef ALAM_LIGHTING
-	// BP: reset light between levels (we draw preview frame lights on current frame)
-	HWR_ResetLights();
-#endif
-
-	HWR_CreatePlanePolygons((INT32)numnodes - 1);
-
-	// Build the sky dome
-	HWR_ClearSkyDome();
-	HWR_BuildSkyDome();
-}
-#endif
 
 //
 // P_RunSOC

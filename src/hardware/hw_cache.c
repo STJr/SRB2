@@ -674,11 +674,6 @@ void HWR_ClearAllTextures(void)
 	// free references to the textures
 	HWD.pfnClearMipMapCache();
 
-	// free all hardware-converted graphics cached in the heap
-	// our gool is only the textures since user of the texture is the texture cache
-	Z_FreeTag(PU_HWRCACHE);
-	Z_FreeTag(PU_HWRCACHE_UNLOCKED);
-
 	// Alam: free the Z_Blocks before freeing it's users
 	HWR_FreePatchCache(true);
 }

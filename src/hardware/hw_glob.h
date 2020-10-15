@@ -108,8 +108,6 @@ void HWR_InitMapTextures(void);
 void HWR_LoadMapTextures(size_t pnumtextures);
 void HWR_FreeMapTextures(void);
 
-extern boolean gl_maptexturesloaded;
-
 patch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
 patch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
 

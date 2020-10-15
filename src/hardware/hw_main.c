@@ -163,8 +163,10 @@ int rs_hw_numcolors = 0;
 int rs_hw_batchsorttime = 0;
 int rs_hw_batchdrawtime = 0;
 
+boolean gl_init = false;
+boolean gl_maploaded = false;
+boolean gl_sessioncommandsadded = false;
 boolean gl_shadersavailable = true;
-
 
 // ==========================================================================
 // Lighting
@@ -6113,6 +6115,33 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	HWD.pfnGClipRect(0, 0, vid.width, vid.height, NZCLIP_PLANE);
 }
 
+void HWR_LoadLevel(void)
+{
+	// Lactozilla (December 8, 2019)
+	// Level setup used to free EVERY mipmap from memory.
+	// Even mipmaps that aren't related to level textures.
+	// Presumably, the hardware render code used to store textures as level data.
+	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
+	// Level textures are only reloaded after R_LoadTextures, which is
+	// when the texture list is loaded.
+
+	// Sal: Unfortunately, NOT freeing them causes the dreaded Color Bug.
+	HWR_FreeColormapCache();
+
+#ifdef ALAM_LIGHTING
+	// BP: reset light between levels (we draw preview frame lights on current frame)
+	HWR_ResetLights();
+#endif
+
+	HWR_CreatePlanePolygons((INT32)numnodes - 1);
+
+	// Build the sky dome
+	HWR_ClearSkyDome();
+	HWR_BuildSkyDome();
+
+	gl_maploaded = true;
+}
+
 // ==========================================================================
 //                                                         3D ENGINE COMMANDS
 // ==========================================================================
@@ -6206,13 +6235,10 @@ void HWR_AddCommands(void)
 
 void HWR_AddSessionCommands(void)
 {
-	static boolean alreadycalled = false;
-	if (alreadycalled)
+	if (gl_sessioncommandsadded)
 		return;
-
 	CV_RegisterVar(&cv_glanisotropicmode);
-
-	alreadycalled = true;
+	gl_sessioncommandsadded = true;
 }
 
 // --------------------------------------------------------------------------
@@ -6220,10 +6246,7 @@ void HWR_AddSessionCommands(void)
 // --------------------------------------------------------------------------
 void HWR_Startup(void)
 {
-	static boolean startupdone = false;
-
-	// do this once
-	if (!startupdone)
+	if (!gl_init)
 	{
 		INT32 i;
 		CONS_Printf("HWR_Startup()...\n");
@@ -6246,7 +6269,7 @@ void HWR_Startup(void)
 	if (rendermode == render_opengl)
 		textureformat = patchformat = GL_TEXFMT_RGBA;
 
-	startupdone = true;
+	gl_init = true;
 }
 
 // --------------------------------------------------------------------------
@@ -6255,7 +6278,8 @@ void HWR_Startup(void)
 void HWR_Switch(void)
 {
 	// Add session commands
-	HWR_AddSessionCommands();
+	if (!gl_sessioncommandsadded)
+		HWR_AddSessionCommands();
 
 	// Set special states from CVARs
 	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_glfiltermode.value);
@@ -6266,7 +6290,7 @@ void HWR_Switch(void)
 		HWR_LoadMapTextures(numtextures);
 
 	// Create plane polygons
-	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
+	if (!gl_maploaded && (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)))
 		HWR_LoadLevel();
 }
 

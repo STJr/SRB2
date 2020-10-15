@@ -123,6 +123,10 @@ extern int rs_hw_numcolors;
 extern int rs_hw_batchsorttime;
 extern int rs_hw_batchdrawtime;
 
+extern boolean gl_init;
+extern boolean gl_maploaded;
+extern boolean gl_maptexturesloaded;
+extern boolean gl_sessioncommandsadded;
 extern boolean gl_shadersavailable;
 
 #endif
