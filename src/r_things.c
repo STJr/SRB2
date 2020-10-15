@@ -2970,7 +2970,7 @@ static void R_DrawVisSplat(vissprite_t *spr)
 		rot_y = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		rot_z = v3d->z - viewz;
 
-		if (!rot_y || rot_y < FixedDiv(4*FRACUNIT, splat.scale))
+		if (rot_y < FRACUNIT)
 			return;
 
 		// note: y from view above of map, is distance far away
