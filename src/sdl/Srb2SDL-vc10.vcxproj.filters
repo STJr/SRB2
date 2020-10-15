@@ -723,6 +723,9 @@
     <ClCompile Include="..\lua_playerlib.c">
       <Filter>LUA</Filter>
     </ClCompile>
+    <ClCompile Include="..\lua_polyobjlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
     <ClCompile Include="..\lua_script.c">
       <Filter>LUA</Filter>
     </ClCompile>
