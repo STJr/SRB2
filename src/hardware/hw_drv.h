@@ -68,14 +68,13 @@ EXPORT void HWRAPI(DrawScreenFinalTexture) (int width, int height);
 EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
 
 // jimita
-EXPORT boolean HWRAPI(LoadShaders) (void);
-EXPORT void HWRAPI(KillShaders) (void);
+EXPORT boolean HWRAPI(CompileShaders) (void);
+EXPORT void HWRAPI(CleanShaders) (void);
 EXPORT void HWRAPI(SetShader) (int shader);
 EXPORT void HWRAPI(UnSetShader) (void);
 
 EXPORT void HWRAPI(SetShaderInfo) (hwdshaderinfo_t info, INT32 value);
-EXPORT void HWRAPI(LoadCustomShader) (int number, char *shader, size_t size, boolean fragment);
-EXPORT boolean HWRAPI(InitCustomShaders) (void);
+EXPORT void HWRAPI(LoadCustomShader) (int number, char *code, size_t size, boolean isfragment);
 
 // ==========================================================================
 //                                      HWR DRIVER OBJECT, FOR CLIENT PROGRAM
@@ -120,14 +119,13 @@ struct hwdriver_s
 	MakeScreenFinalTexture  pfnMakeScreenFinalTexture;
 	DrawScreenFinalTexture  pfnDrawScreenFinalTexture;
 
-	LoadShaders         pfnLoadShaders;
-	KillShaders         pfnKillShaders;
+	CompileShaders      pfnCompileShaders;
+	CleanShaders        pfnCleanShaders;
 	SetShader           pfnSetShader;
 	UnSetShader         pfnUnSetShader;
 
 	SetShaderInfo       pfnSetShaderInfo;
 	LoadCustomShader    pfnLoadCustomShader;
-	InitCustomShaders   pfnInitCustomShaders;
 };
 
 extern struct hwdriver_s hwdriver;

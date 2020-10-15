@@ -507,7 +507,7 @@ static void GIF_rgbconvert(UINT8 *linear, UINT8 *scr)
 	size_t src = 0, dest = 0;
 	size_t size = (vid.width * vid.height * 3);
 
-	InitColorLUT(&gif_colorlookup, gif_framepalette, true);
+	InitColorLUT(&gif_colorlookup, (gif_localcolortable) ? gif_framepalette : gif_headerpalette, true);
 
 	while (src < size)
 	{

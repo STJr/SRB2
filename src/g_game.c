@@ -2019,7 +2019,7 @@ boolean G_Responder(event_t *ev)
 		if (F_CreditResponder(ev))
 		{
 			// Skip credits for everyone
-			if (! serverrunning)/* hahahahahaha */
+			if (! netgame)
 				F_StartGameEvaluation();
 			else if (server || IsPlayerAdmin(consoleplayer))
 				SendNetXCmd(XD_EXITLEVEL, NULL, 0);
@@ -3518,7 +3518,7 @@ INT32 G_GetGametypeByName(const char *gametypestr)
 //
 boolean G_IsSpecialStage(INT32 mapnum)
 {
-	if (gametype != GT_COOP || modeattacking == ATTACKING_RECORD)
+	if (modeattacking == ATTACKING_RECORD)
 		return false;
 	if (mapnum >= sstage_start && mapnum <= sstage_end)
 		return true;

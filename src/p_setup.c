@@ -4011,21 +4011,21 @@ boolean P_LoadLevel(boolean fromnetsave)
 	wipegamestate = FORCEWIPEOFF;
 	wipestyleflags = 0;
 
-	// Special stage fade to white
+	// Special stage & record attack retry fade to white
 	// This is handled BEFORE sounds are stopped.
-	if (modeattacking && !demoplayback && (pausedelay == INT32_MIN))
-		ranspecialwipe = 2;
+	if (G_GetModeAttackRetryFlag())
+	{
+		if (modeattacking && !demoplayback)
+		{
+			ranspecialwipe = 2;
+			wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
+		}
+		G_ClearModeAttackRetryFlag();
+	}
 	else if (rendermode != render_none && G_IsSpecialStage(gamemap))
 	{
 		P_RunSpecialStageWipe();
 		ranspecialwipe = 1;
-	}
-
-	if (G_GetModeAttackRetryFlag())
-	{
-		if (modeattacking)
-			wipestyleflags |= (WSF_FADEOUT|WSF_TOWHITE);
-		G_ClearModeAttackRetryFlag();
 	}
 
 	// Make sure all sounds are stopped before Z_FreeTags.
@@ -4187,9 +4187,9 @@ boolean P_LoadLevel(boolean fromnetsave)
 	nextmapoverride = 0;
 	skipstats = 0;
 
-	if (!(netgame || multiplayer) && (!modifiedgame || savemoddata))
+	if (!(netgame || multiplayer || demoplayback) && (!modifiedgame || savemoddata))
 		mapvisited[gamemap-1] |= MV_VISITED;
-	else
+	else if (netgame || multiplayer)
 		mapvisited[gamemap-1] |= MV_MP; // you want to record that you've been there this session, but not permanently
 
 	levelloading = false;
