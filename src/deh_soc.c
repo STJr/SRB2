@@ -1680,6 +1680,8 @@ void readlevelheader(MYFILE *f, INT32 num)
 				mapheaderinfo[num-1]->skybox_scaley = (INT16)i;
 			else if (fastcmp(word, "SKYBOXSCALEZ"))
 				mapheaderinfo[num-1]->skybox_scalez = (INT16)i;
+			else if (fastcmp(word, "OBJECTSCALE"))
+				mapheaderinfo[num-1]->object_scale = get_number(word2);
 
 			else if (fastcmp(word, "BONUSTYPE"))
 			{

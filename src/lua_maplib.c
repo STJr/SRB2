@@ -2163,6 +2163,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->skybox_scaley);
 	else if (fastcmp(field,"skybox_scalez"))
 		lua_pushinteger(L, header->skybox_scalez);
+	else if (fastcmp(field,"object_scale"))
+		lua_pushinteger(L, header->object_scale);
 	else if (fastcmp(field,"interscreen")) {
 		for (i = 0; i < 8; i++)
 			if (!header->interscreen[i])

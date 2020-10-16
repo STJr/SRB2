@@ -372,6 +372,7 @@ static void P_ClearSingleMapHeaderInfo(INT16 i)
 	mapheaderinfo[num]->skybox_scalex = 16;
 	mapheaderinfo[num]->skybox_scaley = 16;
 	mapheaderinfo[num]->skybox_scalez = 16;
+	mapheaderinfo[num]->object_scale = FRACUNIT;
 	mapheaderinfo[num]->interscreen[0] = '#';
 	mapheaderinfo[num]->runsoc[0] = '#';
 	mapheaderinfo[num]->scriptname[0] = '#';

@@ -312,6 +312,7 @@ typedef struct
 	INT16 skybox_scalex;   ///< Skybox X axis scale. (0 = no movement, 1 = 1:1 movement, 16 = 16:1 slow movement, -4 = 1:4 fast movement, etc.)
 	INT16 skybox_scaley;   ///< Skybox Y axis scale.
 	INT16 skybox_scalez;   ///< Skybox Z axis scale.
+	fixed_t object_scale;  ///< Global object scale.
 
 	// Extra information.
 	char interscreen[8];  ///< 320x200 patch to display at intermission.
