@@ -47,7 +47,8 @@ static RGBA_t *gif_framepalette = NULL;
 
 static FILE *gif_out = NULL;
 static INT32 gif_frames = 0;
-static UINT32 gif_prevframems = 0;
+static UINT32 gif_prevframeus = 0; // "us" is microseconds
+static UINT32 gif_delayus = 0;
 static UINT8 gif_writeover = 0;
 
 
@@ -594,16 +595,20 @@ static void GIF_framewrite(void)
 
 	// screen regions are handled in GIF_lzw
 	{
-		UINT16 delay;
+		UINT16 delay = 0;
 		INT32 startline;
 
 		if (gif_dynamicdelay) {
 			// golden's attempt at creating a "dynamic delay"
-			float delayf = ceil(100.0f/NEWTICRATE);
+			UINT16 mingifdelay = 10; // minimum gif delay in milliseconds (keep at 10 because gifs can't get more precise).
+			gif_delayus += (I_GetTimeMicros() - gif_prevframeus); // increase delay by how much time was spent between last measurement
 
-			delay = (UINT16)((I_GetTimeMicros() - gif_prevframems)/10/1000);
-			if (delay < (int)(delayf))
-				delay = (int)(delayf);
+			if (gif_delayus/1000 >= mingifdelay) // delay is big enough to be able to effect gif frame delay?
+			{
+				int frames = (gif_delayus/1000) / mingifdelay; // get amount of frames to delay.
+				delay = frames; // set the delay to delay that amount of frames.
+				gif_delayus -= frames*(mingifdelay*1000); // remove frames by the amount of milliseconds they take. don't reset to 0, the microseconds help consistency.
+			}
 		}
 		else
 		{
@@ -690,7 +695,7 @@ static void GIF_framewrite(void)
 	}
 	fwrite(gifframe_data, 1, (p - gifframe_data), gif_out);
 	++gif_frames;
-	gif_prevframems = I_GetTimeMicros();
+	gif_prevframeus = I_GetTimeMicros();
 }
 
 
@@ -718,7 +723,8 @@ INT32 GIF_open(const char *filename)
 
 	GIF_headwrite();
 	gif_frames = 0;
-	gif_prevframems = I_GetTimeMicros();
+	gif_prevframeus = I_GetTimeMicros();
+	gif_delayus = 0;
 	return 1;
 }
 
