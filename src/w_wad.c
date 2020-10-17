@@ -2099,6 +2099,7 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"RESULT", 6}, // Used in intermission for competitive modes, above too :3
 		{"RACE", 4}, // Race mode graphics, 321go
 		{"M_", 2}, // Menu stuff
+		{"LT", 2}, // Titlecard changes
 
 		{"MINICAPS", 8}, // NiGHTS graphics here and below
 		{"BLUESTAT", 8}, // Sphere status
