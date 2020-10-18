@@ -58,18 +58,6 @@ void R_DrawSpan_NPO2_8 (void)
 
 	while (count-- && dest <= deststop)
 	{
-/*		fixed_t x = (xposition >> FRACBITS);
-		fixed_t y = (yposition >> FRACBITS);
-
-		// Carefully align all of my Friends.
-		if (x < 0)
-			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
-		if (y < 0)
-			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-		x %= ds_flatwidth;
-		y %= ds_flatheight;*/
-
 		// The loops here keep the texture coordinates within the texture.
 		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
 		// even if using libdivide.
@@ -735,17 +723,6 @@ void R_DrawSplat_NPO2_8 (void)
 
 	while (count-- && dest <= deststop)
 	{
-/*		fixed_t x = (xposition >> FRACBITS);
-		fixed_t y = (yposition >> FRACBITS);
-
-		// Carefully align all of my Friends.
-		if (x < 0)
-			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
-		if (y < 0)
-			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-		x %= ds_flatwidth;
-		y %= ds_flatheight;*/
 		// The loops here keep the texture coordinates within the texture.
 		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
 		// even if using libdivide.
@@ -814,18 +791,6 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 
 	while (count-- && dest <= deststop)
 	{
-		/*fixed_t x = (xposition >> FRACBITS);
-		fixed_t y = (yposition >> FRACBITS);
-
-		// Carefully align all of my Friends.
-		if (x < 0)
-			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
-		if (y < 0)
-			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-		x %= ds_flatwidth;
-		y %= ds_flatheight;*/
-
 		// The loops here keep the texture coordinates within the texture.
 		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
 		// even if using libdivide.
@@ -894,18 +859,6 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 
 	while (count-- && dest <= deststop)
 	{
-		/*fixed_t x = (xposition >> FRACBITS);
-		fixed_t y = (yposition >> FRACBITS);
-
-		// Carefully align all of my Friends.
-		if (x < 0)
-			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
-		if (y < 0)
-			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-		x %= ds_flatwidth;
-		y %= ds_flatheight;*/
-
 		// The loops here keep the texture coordinates within the texture.
 		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
 		// even if using libdivide.
@@ -972,17 +925,6 @@ void R_DrawTranslucentWaterSpan_NPO2_8(void)
 
 	while (count-- && dest <= deststop)
 	{
-		/*fixed_t x = (xposition >> FRACBITS);
-		fixed_t y = (yposition >> FRACBITS);
-
-		// Carefully align all of my Friends.
-		if (x < 0)
-			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
-		if (y < 0)
-			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-		x %= ds_flatwidth;
-		y %= ds_flatheight;*/
 		// The loops here keep the texture coordinates within the texture.
 		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
 		// even if using libdivide.
