@@ -2564,7 +2564,7 @@ static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
 	}
 
 	// Strong abilities can break even FF_STRONGBUST.
-	if (player->charability == CA_GLIDEANDCLIMB)
+	if (player->charflags & SF_CANBUSTWALLS)
 		return true;
 
 	if (player->pflags & PF_BOUNCING)
@@ -2611,10 +2611,10 @@ static void P_CheckBustableBlocks(player_t *player)
 
 	if ((netgame || multiplayer) && player->spectator)
 		return;
-
+	
 	oldx = player->mo->x;
 	oldy = player->mo->y;
-
+	
 	if (!(player->pflags & PF_BOUNCING)) // Bouncers only get to break downwards, not sideways
 	{
 		P_UnsetThingPosition(player->mo);
@@ -2633,7 +2633,7 @@ static void P_CheckBustableBlocks(player_t *player)
 
 		if (!node->m_sector->ffloors)
 			continue;
-
+		
 		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
 			if (!P_PlayerCanBust(player, rover))
@@ -3214,7 +3214,7 @@ static void P_DoClimbing(player_t *player)
 
 				for (rover = glidesector->sector->ffloors; rover; rover = rover->next)
 				{
-					if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
+					if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (player->charflags & SF_CANBUSTWALLS)))
 						continue;
 
 					floorclimb = true;
@@ -3255,7 +3255,7 @@ static void P_DoClimbing(player_t *player)
 							// Is there a FOF directly below this one that we can move onto?
 							for (roverbelow = glidesector->sector->ffloors; roverbelow; roverbelow = roverbelow->next)
 							{
-								if (!(roverbelow->flags & FF_EXISTS) || !(roverbelow->flags & FF_BLOCKPLAYER) || (roverbelow->flags & FF_BUSTUP))
+								if (!(roverbelow->flags & FF_EXISTS) || !(roverbelow->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (player->charflags & SF_CANBUSTWALLS)))
 									continue;
 
 								if (roverbelow == rover)
@@ -3300,7 +3300,7 @@ static void P_DoClimbing(player_t *player)
 							// Is there a FOF directly below this one that we can move onto?
 							for (roverbelow = glidesector->sector->ffloors; roverbelow; roverbelow = roverbelow->next)
 							{
-								if (!(roverbelow->flags & FF_EXISTS) || !(roverbelow->flags & FF_BLOCKPLAYER) || (roverbelow->flags & FF_BUSTUP))
+								if (!(roverbelow->flags & FF_EXISTS) || !(roverbelow->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (player->charflags & SF_CANBUSTWALLS)))
 									continue;
 
 								if (roverbelow == rover)
@@ -3357,7 +3357,7 @@ static void P_DoClimbing(player_t *player)
 						ffloor_t *rover;
 						for (rover = glidesector->sector->ffloors; rover; rover = rover->next)
 						{
-							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
+							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (player->charflags & SF_CANBUSTWALLS)))
 								continue;
 
 							bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
@@ -3397,7 +3397,7 @@ static void P_DoClimbing(player_t *player)
 						ffloor_t *rover;
 						for (rover = glidesector->sector->ffloors; rover; rover = rover->next)
 						{
-							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
+							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (player->charflags & SF_CANBUSTWALLS)))
 								continue;
 
 							topheight = P_GetFFloorTopZAt(rover, player->mo->x, player->mo->y);
