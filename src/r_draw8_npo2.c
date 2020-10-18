@@ -23,6 +23,8 @@ void R_DrawSpan_NPO2_8 (void)
 	fixed_t xposition;
 	fixed_t yposition;
 	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
 
 	UINT8 *source;
 	UINT8 *colormap;
@@ -41,9 +43,22 @@ void R_DrawSpan_NPO2_8 (void)
 	if (dest+8 > deststop)
 		return;
 
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
 	while (count-- && dest <= deststop)
 	{
-		fixed_t x = (xposition >> FRACBITS);
+/*		fixed_t x = (xposition >> FRACBITS);
 		fixed_t y = (yposition >> FRACBITS);
 
 		// Carefully align all of my Friends.
@@ -53,7 +68,26 @@ void R_DrawSpan_NPO2_8 (void)
 			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
 
 		x %= ds_flatwidth;
-		y %= ds_flatheight;
+		y %= ds_flatheight;*/
+
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
+
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
 
 		*dest++ = colormap[source[((y * ds_flatwidth) + x)]];
 		xposition += xstep;
@@ -668,6 +702,8 @@ void R_DrawSplat_NPO2_8 (void)
 	fixed_t xposition;
 	fixed_t yposition;
 	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
 
 	UINT8 *source;
 	UINT8 *colormap;
@@ -684,9 +720,22 @@ void R_DrawSplat_NPO2_8 (void)
 	colormap = ds_colormap;
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
 	while (count-- && dest <= deststop)
 	{
-		fixed_t x = (xposition >> FRACBITS);
+/*		fixed_t x = (xposition >> FRACBITS);
 		fixed_t y = (yposition >> FRACBITS);
 
 		// Carefully align all of my Friends.
@@ -696,8 +745,25 @@ void R_DrawSplat_NPO2_8 (void)
 			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
 
 		x %= ds_flatwidth;
-		y %= ds_flatheight;
+		y %= ds_flatheight;*/
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
 
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
 		val = source[((y * ds_flatwidth) + x)];
 		if (val != TRANSPARENTPIXEL)
 			*dest = colormap[val];
@@ -715,6 +781,8 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 	fixed_t xposition;
 	fixed_t yposition;
 	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
 
 	UINT8 *source;
 	UINT8 *colormap;
@@ -731,9 +799,22 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 	colormap = ds_colormap;
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
 	while (count-- && dest <= deststop)
 	{
-		fixed_t x = (xposition >> FRACBITS);
+		/*fixed_t x = (xposition >> FRACBITS);
 		fixed_t y = (yposition >> FRACBITS);
 
 		// Carefully align all of my Friends.
@@ -743,8 +824,26 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
 
 		x %= ds_flatwidth;
-		y %= ds_flatheight;
+		y %= ds_flatheight;*/
 
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
+
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
 		val = source[((y * ds_flatwidth) + x)];
 		if (val != TRANSPARENTPIXEL)
 			*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
@@ -762,6 +861,8 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 	fixed_t xposition;
 	fixed_t yposition;
 	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
 
 	UINT8 *source;
 	UINT8 *colormap;
@@ -778,9 +879,22 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 	colormap = ds_colormap;
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
 	while (count-- && dest <= deststop)
 	{
-		fixed_t x = (xposition >> FRACBITS);
+		/*fixed_t x = (xposition >> FRACBITS);
 		fixed_t y = (yposition >> FRACBITS);
 
 		// Carefully align all of my Friends.
@@ -790,8 +904,26 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
 
 		x %= ds_flatwidth;
-		y %= ds_flatheight;
+		y %= ds_flatheight;*/
 
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
+
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
 		val = ((y * ds_flatwidth) + x);
 		*dest = *(ds_transmap + (colormap[source[val]] << 8) + *dest);
 		dest++;
@@ -806,6 +938,8 @@ void R_DrawTranslucentWaterSpan_NPO2_8(void)
 	fixed_t xposition;
 	fixed_t yposition;
 	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
 
 	UINT8 *source;
 	UINT8 *colormap;
@@ -823,9 +957,22 @@ void R_DrawTranslucentWaterSpan_NPO2_8(void)
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
 	while (count-- && dest <= deststop)
 	{
-		fixed_t x = (xposition >> FRACBITS);
+		/*fixed_t x = (xposition >> FRACBITS);
 		fixed_t y = (yposition >> FRACBITS);
 
 		// Carefully align all of my Friends.
@@ -835,8 +982,25 @@ void R_DrawTranslucentWaterSpan_NPO2_8(void)
 			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
 
 		x %= ds_flatwidth;
-		y %= ds_flatheight;
+		y %= ds_flatheight;*/
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
 
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
 		*dest++ = colormap[*(ds_transmap + (source[((y * ds_flatwidth) + x)] << 8) + *dsrc++)];
 		xposition += xstep;
 		yposition += ystep;
