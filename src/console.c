@@ -360,11 +360,11 @@ static void CON_SetupColormaps(void)
 		*memorysrc = (UINT8)(i & 0xFF); // remap each color to itself...
 
 #define colset(map, a, b, c, d, e) \
-	map[1] = (UINT8)a;\
+	map[0] = (UINT8)a;\
 	map[2] = (UINT8)b;\
-	map[3] = (UINT8)c;\
-	map[8] = (UINT8)d;\
-	map[9] = (UINT8)e
+	map[4] = (UINT8)c;\
+	map[6] = (UINT8)d;\
+	map[8] = (UINT8)e
 
 	colset(magentamap, 177, 178, 180, 181, 183);
 	colset(yellowmap,   82,  73,  74,  75,  76);
