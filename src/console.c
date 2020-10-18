@@ -359,27 +359,31 @@ static void CON_SetupColormaps(void)
 	for (i = 0; i < (256*15); i++, ++memorysrc)
 		*memorysrc = (UINT8)(i & 0xFF); // remap each color to itself...
 
-#define colset(map, a, b, c) \
+#define colset(map, a, b, c, d, e) \
 	map[1] = (UINT8)a;\
-	map[3] = (UINT8)b;\
-	map[9] = (UINT8)c
+	map[2] = (UINT8)b;\
+	map[3] = (UINT8)c;\
+	map[8] = (UINT8)d;\
+	map[9] = (UINT8)e
 
-	colset(magentamap, 177, 178, 184);
-	colset(yellowmap,   82,  73,  66);
-	colset(lgreenmap,   97,  98, 106);
-	colset(bluemap,    146, 147, 155);
-	colset(redmap,     210,  32,  39);
-	colset(graymap,      6,  8,   14);
-	colset(orangemap,   51,  52,  57);
-	colset(skymap,     129, 130, 133);
-	colset(purplemap,  160, 161, 163);
-	colset(aquamap,    120, 121, 123);
-	colset(peridotmap,  88, 188, 190);
-	colset(azuremap,   144, 145, 170);
-	colset(brownmap,   219, 221, 224);
-	colset(rosymap,    200, 201, 203);
-	colset(invertmap,   27,  26,  22);
+	colset(magentamap, 177, 178, 180, 181, 183);
+	colset(yellowmap,   82,  73,  74,  75,  76);
+	colset(lgreenmap,   96, 112, 113, 114, 115);
+	colset(bluemap,    148, 149, 150, 151, 152);
+	colset(redmap,      33,  34,  35,  37,  39);
+	colset(graymap,      9,  11,  13,  15,  17);
+	colset(orangemap,   50,  52,  54,  56,  58);
+	colset(skymap,     129, 130, 132, 134, 135);
+	colset(purplemap,  161, 162, 163, 164, 166);
+	colset(aquamap,    121, 122, 123, 124, 125);
+	colset(peridotmap,  73, 188, 189, 190, 191);
+	colset(azuremap,   144, 145, 170, 171, 172);
+	colset(brownmap,   224, 226, 228, 230, 232);
+	colset(rosymap,    200, 201, 202, 203, 204);
+	colset(invertmap,   30,  29,  27,  25,  23);
 	invertmap[26] = (UINT8)3;
+	invertmap[30] = (UINT8)1;
+	invertmap[31] = (UINT8)0;
 
 #undef colset
 
