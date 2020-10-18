@@ -1119,6 +1119,7 @@ static const char *credits[] = {
 	"\"Arrietty\"",
 	"Ryan \"Blaze Hedgehog\" Bloom",
 	"Graeme P. \"SuperPhanto\" Caldwell", // for the new brak render
+	"\"Fighter_Builder\"", // for the CEZ3 button debris
 	"\"ChrispyPixels\"",
 	"Paul \"Boinciel\" Clempson",
 	"Sally \"TehRealSalt\" Cochenour",
@@ -1207,7 +1208,7 @@ static const char *credits[] = {
 	"\1Testing",
 	"Discord Community Testers",
 	"Hank \"FuriousFox\" Brannock",
-	"Cody \"SRB2 Playah\" Koester",
+	"Cody \"Playah\" Koester",
 	"Skye \"OmegaVelocity\" Meredith",
 	"Stephen \"HEDGESMFG\" Moellering",
 	"Rosalie \"ST218\" Molina",
