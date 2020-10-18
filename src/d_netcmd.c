@@ -371,6 +371,10 @@ consvar_t cv_mute = CVAR_INIT ("mute", "Off", CV_NETVAR|CV_CALL, CV_OnOff, Mute_
 
 consvar_t cv_sleep = CVAR_INIT ("cpusleep", "1", CV_SAVE, sleeping_cons_t, NULL);
 
+static CV_PossibleValue_t perfstats_cons_t[] = {
+	{0, "Off"}, {1, "Rendering"}, {2, "Logic"}, {3, "ThinkFrame"}, {0, NULL}};
+consvar_t cv_perfstats = CVAR_INIT ("perfstats", "Off", 0, perfstats_cons_t, NULL);
+
 char timedemo_name[256];
 boolean timedemo_csv;
 char timedemo_csv_id[256];
@@ -863,6 +867,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_scr_height);
 
 	CV_RegisterVar(&cv_soundtest);
+
+	CV_RegisterVar(&cv_perfstats);
 
 	// ingame object placing
 	COM_AddCommand("objectplace", Command_ObjectPlace_f);

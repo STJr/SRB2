@@ -486,6 +486,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/m_fixed.o  \
 		$(OBJDIR)/m_menu.o   \
 		$(OBJDIR)/m_misc.o   \
+		$(OBJDIR)/m_perfstats.o \
 		$(OBJDIR)/m_random.o \
 		$(OBJDIR)/m_queue.o  \
 		$(OBJDIR)/info.o     \

@@ -21,6 +21,8 @@
 #include "m_random.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "m_perfstats.h"
+#include "i_system.h" // I_GetTimeMicros
 
 // Object place
 #include "m_cheat.h"
@@ -321,6 +323,7 @@ static inline void P_RunThinkers(void)
 	size_t i;
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
+		ps_thlist_times[i] = I_GetTimeMicros();
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
 #ifdef PARANOIA
@@ -328,6 +331,7 @@ static inline void P_RunThinkers(void)
 #endif
 			currentthinker->function.acp1(currentthinker);
 		}
+		ps_thlist_times[i] = I_GetTimeMicros() - ps_thlist_times[i];
 	}
 
 }
@@ -641,11 +645,16 @@ void P_Ticker(boolean run)
 		if (demoplayback)
 			G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
 
+		ps_lua_mobjhooks = 0;
+		ps_checkposition_calls = 0;
+
 		LUAh_PreThinkFrame();
 
+		ps_playerthink_time = I_GetTimeMicros();
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerThink(&players[i]);
+		ps_playerthink_time = I_GetTimeMicros() - ps_playerthink_time;
 	}
 
 	// Keep track of how long they've been playing!
@@ -660,14 +669,18 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
+		ps_thinkertime = I_GetTimeMicros();
 		P_RunThinkers();
+		ps_thinkertime = I_GetTimeMicros() - ps_thinkertime;
 
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
 
+		ps_lua_thinkframe_time = I_GetTimeMicros();
 		LUAh_ThinkFrame();
+		ps_lua_thinkframe_time = I_GetTimeMicros() - ps_lua_thinkframe_time;
 	}
 
 	// Run shield positioning

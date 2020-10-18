@@ -32,6 +32,7 @@ set(SRB2_CORE_SOURCES
 	m_fixed.c
 	m_menu.c
 	m_misc.c
+	m_perfstats.c
 	m_queue.c
 	m_random.c
 	md5.c
@@ -97,6 +98,7 @@ set(SRB2_CORE_HEADERS
 	m_fixed.h
 	m_menu.h
 	m_misc.h
+	m_perfstats.h
 	m_queue.h
 	m_random.h
 	m_swap.h

@@ -78,24 +78,22 @@ boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixe
 
 // Render stats
 
-extern consvar_t cv_renderstats;
+extern int ps_prevframetime;// time when previous frame was rendered
+extern int ps_rendercalltime;
+extern int ps_uitime;
+extern int ps_swaptime;
 
-extern int rs_prevframetime;// time when previous frame was rendered
-extern int rs_rendercalltime;
-extern int rs_uitime;
-extern int rs_swaptime;
-extern int rs_tictime;
+extern int ps_bsptime;
 
-extern int rs_bsptime;
+extern int ps_sw_spritecliptime;
+extern int ps_sw_portaltime;
+extern int ps_sw_planetime;
+extern int ps_sw_maskedtime;
 
-extern int rs_sw_portaltime;
-extern int rs_sw_planetime;
-extern int rs_sw_maskedtime;
-
-extern int rs_numbspcalls;
-extern int rs_numsprites;
-extern int rs_numdrawnodes;
-extern int rs_numpolyobjects;
+extern int ps_numbspcalls;
+extern int ps_numsprites;
+extern int ps_numdrawnodes;
+extern int ps_numpolyobjects;
 
 //
 // REFRESH - the actual rendering functions.
