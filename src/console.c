@@ -333,7 +333,7 @@ static void CONS_backcolor_Change(void)
 static void CON_SetupColormaps(void)
 {
 	INT32 i;
-	UINT8 *memorysrc = (UINT8 *)Z_Malloc((256*15), PU_STATIC, NULL);
+	UINT8 *memorysrc = (UINT8 *)Z_Calloc((256*15), PU_STATIC, NULL);
 
 	magentamap = memorysrc;
 	yellowmap  = (magentamap+256);
