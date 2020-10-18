@@ -4849,6 +4849,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (!thing)
 		return;
 
+	if (thing->spritexscale < 1 || thing->spriteyscale < 1)
+		return;
+
 	dispoffset = thing->info->dispoffset;
 
 	this_scale = FIXED_TO_FLOAT(thing->scale);
