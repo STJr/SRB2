@@ -360,30 +360,33 @@ static void CON_SetupColormaps(void)
 		*memorysrc = (UINT8)(i & 0xFF); // remap each color to itself...
 
 #define colset(map, a, b, c, d, e) \
-	map[0] = (UINT8)a;\
-	map[2] = (UINT8)b;\
-	map[4] = (UINT8)c;\
-	map[6] = (UINT8)d;\
-	map[8] = (UINT8)e
+	map[1] = (UINT8)a;\
+	map[3] = (UINT8)b;\
+	map[5] = (UINT8)c;\
+	map[7] = (UINT8)d;\
+	map[9] = (UINT8)e
 
-	colset(magentamap, 177, 178, 180, 181, 183);
-	colset(yellowmap,   82,  73,  74,  75,  76);
-	colset(lgreenmap,   96, 112, 113, 114, 115);
-	colset(bluemap,    148, 149, 150, 151, 152);
-	colset(redmap,      33,  34,  35,  37,  39);
-	colset(graymap,      9,  11,  13,  15,  17);
-	colset(orangemap,   50,  52,  54,  56,  58);
-	colset(skymap,     129, 130, 132, 134, 135);
-	colset(purplemap,  161, 162, 163, 164, 166);
-	colset(aquamap,    121, 122, 123, 124, 125);
-	colset(peridotmap,  73, 188, 189, 190, 191);
-	colset(azuremap,   144, 145, 170, 171, 172);
-	colset(brownmap,   224, 226, 228, 230, 232);
-	colset(rosymap,    200, 201, 202, 203, 204);
-	colset(invertmap,   30,  29,  27,  25,  23);
-	invertmap[26] = (UINT8)3;
-	invertmap[30] = (UINT8)1;
-	invertmap[31] = (UINT8)0;
+	colset(magentamap, 178, 179, 181, 182, 184);
+	colset(yellowmap,   83,  74,  75,  76,  77);
+	colset(lgreenmap,   97, 113, 114, 115, 116);
+	colset(bluemap,    149, 150, 151, 152, 153);
+	colset(redmap,      34,  35,  36,  38,  40);
+	colset(graymap,     10,  12,  14,  16,  18);
+	colset(orangemap,   51,  53,  55,  57,  59);
+	colset(skymap,     130, 131, 133, 135, 136);
+	colset(purplemap,  162, 163, 164, 165, 167);
+	colset(aquamap,    122, 123, 124, 125, 126);
+	colset(peridotmap,  74, 189, 190, 191, 192);
+	colset(azuremap,   145, 146, 171, 172, 173);
+	colset(brownmap,   225, 227, 229, 231, 233);
+	colset(rosymap,    201, 202, 203, 204, 205);
+	colset(invertmap,   31,  30,  28,  26,  24);
+	invertmap[27] = (UINT8)6;
+	invertmap[28] = (UINT8)5;
+	invertmap[29] = (UINT8)4;
+	invertmap[30] = (UINT8)3;
+	invertmap[31] = (UINT8)2;
+	invertmap[32] = (UINT8)1;
 
 #undef colset
 
