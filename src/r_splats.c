@@ -20,7 +20,6 @@
 
 struct rastery_s *prastertab; // for ASM code
 
-#ifdef FLOORSPLATS
 static struct rastery_s rastertab[MAXVIDHEIGHT];
 static void prepare_rastertab(void);
 
@@ -412,5 +411,3 @@ static void prepare_rastertab(void)
 		rastertab[i].maxx = INT32_MIN;
 	}
 }
-
-#endif // FLOORSPLATS

@@ -2769,7 +2769,6 @@ void R_InitDrawNodes(void)
 
 static void R_DrawVisSplat(vissprite_t *spr)
 {
-#ifdef FLOORSPLATS
 	floorsplat_t splat;
 	fixed_t tr_x, tr_y, rot_x, rot_y, rot_z;
 
@@ -2958,9 +2957,6 @@ static void R_DrawVisSplat(vissprite_t *spr)
 	}
 
 	R_RenderFloorSplat(&splat, v2d, spr);
-#else
-	(void)spr;
-#endif
 }
 
 //

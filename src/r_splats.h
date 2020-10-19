@@ -28,7 +28,6 @@ struct rastery_s
 };
 extern struct rastery_s *prastertab; // for ASM code
 
-#ifdef FLOORSPLATS
 typedef struct floorsplat_s
 {
 	UINT16 *pic;
@@ -44,6 +43,5 @@ typedef struct floorsplat_s
 } floorsplat_t;
 
 void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis);
-#endif
 
 #endif /*__R_SPLATS_H__*/

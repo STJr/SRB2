@@ -641,9 +641,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Render flats on walls
 #define WALLFLATS
 
-/// Floor splats
-#define FLOORSPLATS
-
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
 
