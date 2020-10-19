@@ -42,6 +42,7 @@ typedef struct floorsplat_s
 	mobj_t *mobj; // Mobj it is tied to
 } floorsplat_t;
 
+void R_DrawSplatSprite(vissprite_t *spr);
 void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis);
 
 #endif /*__R_SPLATS_H__*/

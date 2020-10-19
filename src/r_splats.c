@@ -136,6 +136,202 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 	}
 }
 
+void R_DrawSplatSprite(vissprite_t *spr)
+{
+	floorsplat_t splat;
+	mobj_t *mobj = spr->mobj;
+	fixed_t tr_x, tr_y, rot_x, rot_y, rot_z;
+
+	vector3_t *v3d;
+	vector2_t v2d[4];
+	vector2_t rotated[4];
+
+	fixed_t x, y;
+	fixed_t w, h;
+	angle_t angle, splatangle;
+	fixed_t ca, sa;
+	fixed_t xscale, yscale;
+	fixed_t xoffset, yoffset;
+	fixed_t leftoffset, topoffset;
+	pslope_t *slope = NULL;
+	INT32 i;
+
+	boolean hflip = (spr->xiscale < 0);
+	boolean vflip = (spr->cut & SC_VFLIP);
+	UINT8 flipflags = 0;
+
+	renderflags_t renderflags = spr->renderflags;
+
+	if (hflip)
+		flipflags |= PICFLAGS_XFLIP;
+	if (vflip)
+		flipflags |= PICFLAGS_YFLIP;
+
+	if (!mobj || P_MobjWasRemoved(mobj))
+		return;
+
+	Patch_GenerateFlat(spr->patch, flipflags);
+	splat.pic = spr->patch->flats[flipflags];
+	if (splat.pic == NULL)
+		return;
+
+	splat.mobj = mobj;
+	splat.width = spr->patch->width;
+	splat.height = spr->patch->height;
+	splat.scale = mobj->scale;
+
+	if (mobj->skin && ((skin_t *)mobj->skin)->flags & SF_HIRES)
+		splat.scale = FixedMul(splat.scale, ((skin_t *)mobj->skin)->highresscale);
+
+	if (spr->rotateflags & SRF_3D || renderflags & RF_NOSPLATBILLBOARD)
+		splatangle = mobj->angle;
+	else
+		splatangle = viewangle;
+
+	if (!(spr->cut & SC_ISROTATED))
+		splatangle += mobj->rollangle;
+
+	splat.angle = -splatangle;
+	splat.angle += ANGLE_90;
+
+	topoffset = spr->spriteyoffset;
+	leftoffset = spr->spritexoffset;
+	if (hflip)
+		leftoffset = ((splat.width * FRACUNIT) - leftoffset);
+
+	xscale = spr->spritexscale;
+	yscale = spr->spriteyscale;
+
+	splat.xscale = FixedMul(splat.scale, xscale);
+	splat.yscale = FixedMul(splat.scale, yscale);
+
+	xoffset = FixedMul(leftoffset, splat.xscale);
+	yoffset = FixedMul(topoffset, splat.yscale);
+
+	x = mobj->x;
+	y = mobj->y;
+	w = (splat.width * splat.xscale);
+	h = (splat.height * splat.yscale);
+
+	splat.x = x;
+	splat.y = y;
+	splat.z = mobj->z;
+	splat.tilted = false;
+
+	// Set positions
+
+	// 3--2
+	// |  |
+	// 0--1
+
+	splat.verts[0].x = w - xoffset;
+	splat.verts[0].y = yoffset;
+
+	splat.verts[1].x = -xoffset;
+	splat.verts[1].y = yoffset;
+
+	splat.verts[2].x = -xoffset;
+	splat.verts[2].y = -h + yoffset;
+
+	splat.verts[3].x = w - xoffset;
+	splat.verts[3].y = -h + yoffset;
+
+	angle = -splat.angle;
+	ca = FINECOSINE(angle>>ANGLETOFINESHIFT);
+	sa = FINESINE(angle>>ANGLETOFINESHIFT);
+
+	// Rotate
+	for (i = 0; i < 4; i++)
+	{
+		rotated[i].x = FixedMul(splat.verts[i].x, ca) - FixedMul(splat.verts[i].y, sa);
+		rotated[i].y = FixedMul(splat.verts[i].x, sa) + FixedMul(splat.verts[i].y, ca);
+	}
+
+	if (renderflags & (RF_SLOPESPLAT | RF_OBJECTSLOPESPLAT))
+	{
+		pslope_t *standingslope = mobj->standingslope; // The slope that the object is standing on.
+
+		// The slope that was defined for the sprite.
+		if (renderflags & RF_SLOPESPLAT)
+			slope = mobj->floorspriteslope;
+
+		if (standingslope && (renderflags & RF_OBJECTSLOPESPLAT))
+			slope = standingslope;
+
+		// Set splat as tilted
+		splat.tilted = (slope != NULL);
+	}
+
+	if (splat.tilted)
+	{
+		// Lactozilla: Just copy the entire slope LMFAOOOO
+		pslope_t *s = &splat.slope;
+
+		s->o.x = slope->o.x;
+		s->o.y = slope->o.y;
+		s->o.z = slope->o.z;
+
+		s->d.x = slope->d.x;
+		s->d.y = slope->d.y;
+
+		s->normal.x = slope->normal.x;
+		s->normal.y = slope->normal.y;
+		s->normal.z = slope->normal.z;
+
+		s->zdelta = slope->zdelta;
+		s->zangle = slope->zangle;
+		s->xydirection = slope->xydirection;
+
+		s->next = NULL;
+		s->flags = 0;
+	}
+
+	// Translate
+	for (i = 0; i < 4; i++)
+	{
+		tr_x = rotated[i].x + x;
+		tr_y = rotated[i].y + y;
+
+		if (slope)
+		{
+			rot_z = P_GetSlopeZAt(slope, tr_x, tr_y);
+			splat.verts[i].z = rot_z;
+		}
+		else
+			splat.verts[i].z = splat.z;
+
+		splat.verts[i].x = tr_x;
+		splat.verts[i].y = tr_y;
+	}
+
+	for (i = 0; i < 4; i++)
+	{
+		v3d = &splat.verts[i];
+
+		// transform the origin point
+		tr_x = v3d->x - viewx;
+		tr_y = v3d->y - viewy;
+
+		// rotation around vertical y axis
+		rot_x = FixedMul(tr_x, viewsin) - FixedMul(tr_y, viewcos);
+		rot_y = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
+		rot_z = v3d->z - viewz;
+
+		if (rot_y < FRACUNIT)
+			return;
+
+		// note: y from view above of map, is distance far away
+		xscale = FixedDiv(projection, rot_y);
+		yscale = -FixedDiv(projectiony, rot_y);
+
+		// projection
+		v2d[i].x = (centerxfrac + FixedMul(rot_x, xscale))>>FRACBITS;
+		v2d[i].y = (centeryfrac + FixedMul(rot_z, yscale))>>FRACBITS;
+	}
+
+	R_RenderFloorSplat(&splat, v2d, spr);
+}
+
 // --------------------------------------------------------------------------
 // Rasterize the four edges of a floor splat polygon,
 // fill the polygon with linear interpolation, call span drawer for each
