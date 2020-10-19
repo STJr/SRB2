@@ -14,6 +14,7 @@
 #include "r_main.h"
 #include "r_splats.h"
 #include "r_bsp.h"
+#include "p_local.h"
 #include "p_slopes.h"
 #include "w_wad.h"
 #include "z_zone.h"
