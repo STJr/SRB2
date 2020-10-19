@@ -333,7 +333,7 @@ static void CONS_backcolor_Change(void)
 static void CON_SetupColormaps(void)
 {
 	INT32 i;
-	UINT8 *memorysrc = (UINT8 *)Z_Calloc((256*15), PU_STATIC, NULL);
+	UINT8 *memorysrc = (UINT8 *)Z_Malloc((256*15), PU_STATIC, NULL);
 
 	magentamap = memorysrc;
 	yellowmap  = (magentamap+256);
@@ -359,37 +359,47 @@ static void CON_SetupColormaps(void)
 	for (i = 0; i < (256*15); i++, ++memorysrc)
 		*memorysrc = (UINT8)(i & 0xFF); // remap each color to itself...
 
-#define colset(map, a, b, c, d, e) \
-	map[1]  = (UINT8)a;\
-	map[3]  = (UINT8)b;\
-	map[5]  = (UINT8)c;\
-	map[9]  = (UINT8)d;\
-	map[15] = (UINT8)e
+#define colset(map, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) \
+	map[0x0] = (UINT8)a;\
+	map[0x1] = (UINT8)b;\
+	map[0x2] = (UINT8)c;\
+	map[0x3] = (UINT8)d;\
+	map[0x4] = (UINT8)e;\
+	map[0x5] = (UINT8)f;\
+	map[0x6] = (UINT8)g;\
+	map[0x7] = (UINT8)h;\
+	map[0x8] = (UINT8)i;\
+	map[0x9] = (UINT8)j;\
+	map[0xA] = (UINT8)k;\
+	map[0xB] = (UINT8)l;\
+	map[0xC] = (UINT8)m;\
+	map[0xD] = (UINT8)n;\
+	map[0xE] = (UINT8)o;\
+	map[0xF] = (UINT8)p;
 
-	colset(magentamap, 178, 179, 181, 182, 184);
-	colset(yellowmap,   83,  74,  75,  76,  77);
-	colset(lgreenmap,   97, 113, 114, 115, 116);
-	colset(bluemap,    149, 150, 151, 152, 153);
-	colset(redmap,      34,  35,  36,  38,  40);
-	colset(graymap,     10,  12,  14,  16,  18);
-	colset(orangemap,   51,  53,  55,  57,  59);
-	colset(skymap,     130, 131, 133, 135, 136);
-	colset(purplemap,  162, 163, 164, 165, 167);
-	colset(aquamap,    122, 123, 124, 125, 126);
-	colset(peridotmap,  74, 189, 190, 191, 192);
-	colset(azuremap,   145, 146, 171, 172, 173);
-	colset(brownmap,   225, 227, 229, 231, 233);
-	colset(rosymap,    201, 202, 203, 204, 205);
-	colset(invertmap,   31,  30,  28,  26,  24);
-	invertmap[26] = (UINT8)7;
-	invertmap[27] = (UINT8)6;
-	invertmap[28] = (UINT8)5;
-	invertmap[29] = (UINT8)4;
-	invertmap[30] = (UINT8)3;
-	invertmap[31] = (UINT8)2;
-	invertmap[32] = (UINT8)1;
+	// I tried to make them kinda close to the originals, tell me how I did! ~Golden
+
+	//                      0x1       0x3                           0x9                           0xF
+	colset(magentamap, 177, 177, 178, 178, 179, 179, 180, 180, 181, 181, 182, 182, 183, 183, 184, 184);
+	colset(yellowmap,   82,  82,  72,  73,  74,  74,  64,  64,  65,  65,  65,  66,  66,  66,  67,  67);
+	colset(lgreenmap,   96,  97,  98,  99, 100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111);
+	colset(bluemap,    147, 147, 148, 148, 149, 149, 149, 150, 150, 150, 151, 151, 151, 152, 152, 152);
+	colset(redmap,     210, 210, 211, 211,  32,  32,  33,  33,  34,  34,  35,  35,  37,  37,  38,  38);
+	colset(graymap,      4,   6,   7,   8,   9,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20);
+	colset(orangemap,   51,  51,  52,  52,  53,  53,  54,  54,  55,  55,  56,  56,  57,  57,  58,  58);
+	colset(skymap,     129, 129, 130, 130, 131, 131, 132, 132, 133, 133, 134, 134, 135, 135, 136, 136);
+	colset(purplemap,  160, 160, 161, 161, 162, 162, 162, 163, 163, 163, 164, 164, 164, 165, 165, 165);
+	colset(aquamap,    128, 120, 121, 121, 122, 122, 123, 123, 123, 123, 124, 124, 124, 125, 125, 125);
+	colset(peridotmap,  72,  72, 188, 188, 188, 189, 189, 189, 189, 190, 190, 191, 191, 104, 105, 106);
+	colset(azuremap,   144, 144, 145, 145, 146, 146, 146, 170, 170, 170, 171, 171, 171, 172, 172, 172);
+	colset(brownmap,   218, 219, 220, 221, 221, 222, 223, 223, 224, 224, 225, 226, 227, 228, 229, 230);
+	colset(rosymap,    200, 200, 201, 201, 201, 202, 202, 203, 203, 203, 204, 204, 205, 205, 206, 206);
 
 #undef colset
+
+	// Yeah just straight up invert it like a normal person
+	for (i = 0x00; i <= 0x1F; i++)
+		invertmap[0x1F - i] = i;
 
 	// Init back colormap
 	CON_SetupBackColormap();
