@@ -56,9 +56,7 @@ set(SRB2_SDL2_HEADERS
 )
 
 if(${SRB2_CONFIG_HAVE_THREADS})
-	set(SRB2_HAVE_THREADS ON)
 	set(SRB2_SDL2_SOURCES ${SRB2_SDL2_SOURCES} i_threads.c)
-	add_definitions(-DHAVE_THREADS)
 endif()
 
 source_group("Interface Code" FILES ${SRB2_SDL2_SOURCES} ${SRB2_SDL2_HEADERS})

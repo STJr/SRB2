@@ -472,6 +472,12 @@ if(${SRB2_CONFIG_HAVE_CURL})
 	endif()
 endif()
 
+if(${SRB2_CONFIG_HAVE_THREADS})
+	set(SRB2_HAVE_THREADS ON)
+	set(SRB2_CORE_HEADERS ${SRB2_CORE_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR}/i_threads.h)
+	add_definitions(-DHAVE_THREADS)
+endif()
+
 if(${SRB2_CONFIG_HWRENDER})
 	add_definitions(-DHWRENDER)
 	set(SRB2_HWRENDER_SOURCES
