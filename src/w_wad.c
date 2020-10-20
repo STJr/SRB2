@@ -2101,6 +2101,9 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"M_", 2}, // Menu stuff
 		{"LT", 2}, // Titlecard changes
 
+		{"SLID", 4}, // Continue
+		{"CONT", 4}, 
+
 		{"MINICAPS", 8}, // NiGHTS graphics here and below
 		{"BLUESTAT", 8}, // Sphere status
 		{"BYELSTAT", 8},
