@@ -262,20 +262,34 @@ void COM_BufExecute(void)
 
 /** Executes a string immediately.  Used for skirting around WAIT commands.
   */
-void COM_ImmedExecute(const char *ptext)
+void COM_ImmedExecuteEx(const char *ptext, int flags)
 {
 	size_t i = 0, j = 0;
 	char line[1024] = "";
+	char * text = NULL;
+	size_t length = strlen(ptext);
 	INT32 quotes;
 
-	while (i < strlen(ptext))
+	if (flags)
+	{
+		text = ZZ_Alloc( length += 2 );
+		text[0] = '\033';
+		text[1] = flags;
+		strcpy(&text[2], ptext);
+		ptext = text;
+	}
+
+	while (i < length)
 	{
 
 		quotes = 0;
-		for (j = 0; i < strlen(ptext); i++,j++)
+		for (j = 0; i < length; i++,j++)
 		{
 			if (ptext[i] == '\"' && !quotes && i > 0 && ptext[i-1] != ' ') // Malformed command
+			{
+				Z_Free(text);
 				return;
+			}
 			if (ptext[i] == '\"')
 				quotes++;
 			// don't break if inside a quoted string
@@ -291,6 +305,8 @@ void COM_ImmedExecute(const char *ptext)
 
 		i++; // move to next character
 	}
+
+	Z_Free(text);
 }
 
 // =========================================================================

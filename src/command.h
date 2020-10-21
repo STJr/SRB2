@@ -60,7 +60,8 @@ void COM_BufAddTextEx(const char *btext, int flags);
 void COM_BufInsertTextEx(const char *btext, int flags);
 
 // don't bother inserting, just do immediately
-void COM_ImmedExecute(const char *ptext);
+#define COM_ImmedExecute(s) COM_ImmedExecuteEx(s, 0)
+void COM_ImmedExecuteEx(const char *ptext, int flags);
 
 // Execute commands in buffer, flush them
 void COM_BufExecute(void);

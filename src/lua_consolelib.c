@@ -233,35 +233,39 @@ static int lib_comAddCommand(lua_State *L)
 	return 0;
 }
 
-static int lib_comBufAddText(lua_State *L)
+static int ValidateCommandBuffer(lua_State *L, const char * function)
 {
 	int n = lua_gettop(L);  /* number of arguments */
 	player_t *plr = NULL;
 	if (n < 2)
-		return luaL_error(L, "COM_BufAddText requires two arguments: player and text.");
+		return luaL_error(L, "%s requires two arguments: player and text.", function);
 	NOHUD
 	lua_settop(L, 2);
 	if (!lua_isnoneornil(L, 1))
 		plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	if (plr && plr != &players[consoleplayer])
 		return 0;
-	COM_BufAddTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
+	return 1;
+}
+
+static int lib_comBufAddText(lua_State *L)
+{
+	if (ValidateCommandBuffer(L, "COM_BufAddText"))
+		COM_BufAddTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
 	return 0;
 }
 
 static int lib_comBufInsertText(lua_State *L)
 {
-	int n = lua_gettop(L);  /* number of arguments */
-	player_t *plr = NULL;
-	if (n < 2)
-		return luaL_error(L, "COM_BufInsertText requires two arguments: player and text.");
-	NOHUD
-	lua_settop(L, 2);
-	if (!lua_isnoneornil(L, 1))
-		plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	if (plr && plr != &players[consoleplayer])
-		return 0;
-	COM_BufInsertTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
+	if (ValidateCommandBuffer(L, "COM_BufInsertText"))
+		COM_BufInsertTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
+	return 0;
+}
+
+static int lib_comImmedExecute(lua_State *L)
+{
+	if (ValidateCommandBuffer(L, "COM_ImmedExecute"))
+		COM_ImmedExecuteEx(luaL_checkstring(L, 2), COM_SAFE);
 	return 0;
 }
 
@@ -470,6 +474,7 @@ static luaL_Reg lib[] = {
 	{"COM_AddCommand", lib_comAddCommand},
 	{"COM_BufAddText", lib_comBufAddText},
 	{"COM_BufInsertText", lib_comBufInsertText},
+	{"COM_ImmedExecute", lib_comImmedExecute},
 	{"CV_RegisterVar", lib_cvRegisterVar},
 	{"CV_FindVar", lib_cvFindVar},
 	{"CONS_Printf", lib_consPrintf},
