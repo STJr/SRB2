@@ -244,6 +244,7 @@
     <ClInclude Include="..\i_tcp.h" />
     <ClInclude Include="..\i_video.h" />
     <ClInclude Include="..\keys.h" />
+    <ClInclude Include="..\libdivide.h" />
     <ClInclude Include="..\lua_hook.h" />
     <ClInclude Include="..\lua_hud.h" />
     <ClInclude Include="..\lua_libs.h" />

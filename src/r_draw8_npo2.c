@@ -83,6 +83,9 @@ void R_DrawTiltedSpan_NPO2_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
+
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
 	// Lighting is simple. It's just linear interpolation from start to end
@@ -122,12 +125,13 @@ void R_DrawTiltedSpan_NPO2_8(void)
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			*dest = colormap[source[((y * ds_flatwidth) + x)]];
 		}
@@ -174,12 +178,13 @@ void R_DrawTiltedSpan_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = colormap[source[((y * ds_flatwidth) + x)]];
 			}
@@ -205,12 +210,13 @@ void R_DrawTiltedSpan_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = colormap[source[((y * ds_flatwidth) + x)]];
 			}
@@ -241,12 +247,13 @@ void R_DrawTiltedSpan_NPO2_8(void)
 
 					// Carefully align all of my Friends.
 					if (x < 0)
-						x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+						x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+					else
+						x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 					if (y < 0)
-						y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-					x %= ds_flatwidth;
-					y %= ds_flatheight;
+						y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+					else
+						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 					*dest = colormap[source[((y * ds_flatwidth) + x)]];
 				}
@@ -278,6 +285,9 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 	double izstep, uzstep, vzstep;
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
+
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
@@ -317,12 +327,13 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 		}
@@ -369,12 +380,13 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 			}
@@ -400,12 +412,13 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 			}
@@ -436,12 +449,13 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 
 					// Carefully align all of my Friends.
 					if (x < 0)
-						x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+						x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+					else
+						x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 					if (y < 0)
-						y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-					x %= ds_flatwidth;
-					y %= ds_flatheight;
+						y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+					else
+						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 					*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 				}
@@ -472,6 +486,9 @@ void R_DrawTiltedSplat_NPO2_8(void)
 	double izstep, uzstep, vzstep;
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
+
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
@@ -512,12 +529,13 @@ void R_DrawTiltedSplat_NPO2_8(void)
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			val = source[((y * ds_flatwidth) + x)];
 		}
@@ -568,12 +586,13 @@ void R_DrawTiltedSplat_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 			}
@@ -601,12 +620,13 @@ void R_DrawTiltedSplat_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 			}
@@ -640,12 +660,13 @@ void R_DrawTiltedSplat_NPO2_8(void)
 
 					// Carefully align all of my Friends.
 					if (x < 0)
-						x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+						x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+					else
+						x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 					if (y < 0)
-						y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-					x %= ds_flatwidth;
-					y %= ds_flatheight;
+						y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+					else
+						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 					val = source[((y * ds_flatwidth) + x)];
 				}
@@ -864,6 +885,9 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
+
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
 	// Lighting is simple. It's just linear interpolation from start to end
@@ -903,12 +927,13 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 		}
@@ -955,12 +980,13 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 			}
@@ -986,12 +1012,13 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 			}
@@ -1022,12 +1049,13 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 
 					// Carefully align all of my Friends.
 					if (x < 0)
-						x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+						x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+					else
+						x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 					if (y < 0)
-						y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-					x %= ds_flatwidth;
-					y %= ds_flatheight;
+						y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+					else
+						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 					*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 				}

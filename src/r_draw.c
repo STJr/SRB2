@@ -25,6 +25,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "console.h" // Until buffering gets finished
+#include "libdivide.h" // used by NPO2 tilted span functions
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
