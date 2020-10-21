@@ -539,7 +539,7 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 
 	I_Assert(thing1->type < NUMMOBJTYPES);
 
-	if (!(mobjhooks[MT_NULL] || mobjhooks[thing1->type]))
+	if (!(mobjcollidehooks[MT_NULL] || mobjcollidehooks[thing1->type]))
 		return 0;
 
 	lua_settop(gL, 0);
@@ -621,7 +621,7 @@ UINT8 LUAh_MobjLineCollideHook(mobj_t *thing, line_t *line, enum hook which)
 
 	I_Assert(thing->type < NUMMOBJTYPES);
 
-	if (!(mobjhooks[MT_NULL] || mobjhooks[thing->type]))
+	if (!(mobjcollidehooks[MT_NULL] || mobjcollidehooks[thing->type]))
 		return 0;
 
 	lua_settop(gL, 0);
@@ -704,7 +704,7 @@ boolean LUAh_MobjThinker(mobj_t *mo)
 
 	I_Assert(mo->type < NUMMOBJTYPES);
 
-	if (!(mobjhooks[MT_NULL] || mobjhooks[mo->type]))
+	if (!(mobjthinkerhooks[MT_NULL] || mobjthinkerhooks[mo->type]))
 		return false;
 
 	lua_settop(gL, 0);
