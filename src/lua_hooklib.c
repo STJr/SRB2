@@ -264,6 +264,9 @@ boolean LUAh_MobjHook(mobj_t *mo, enum hook which)
 
 	I_Assert(mo->type < NUMMOBJTYPES);
 
+	if (!(mobjhooks[MT_NULL] || mobjhooks[mo->type]))
+		return false;
+
 	lua_settop(gL, 0);
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
@@ -536,6 +539,9 @@ UINT8 LUAh_MobjCollideHook(mobj_t *thing1, mobj_t *thing2, enum hook which)
 
 	I_Assert(thing1->type < NUMMOBJTYPES);
 
+	if (!(mobjcollidehooks[MT_NULL] || mobjcollidehooks[thing1->type]))
+		return 0;
+
 	lua_settop(gL, 0);
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
@@ -614,6 +620,9 @@ UINT8 LUAh_MobjLineCollideHook(mobj_t *thing, line_t *line, enum hook which)
 		return 0;
 
 	I_Assert(thing->type < NUMMOBJTYPES);
+
+	if (!(mobjcollidehooks[MT_NULL] || mobjcollidehooks[thing->type]))
+		return 0;
 
 	lua_settop(gL, 0);
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
@@ -695,6 +704,9 @@ boolean LUAh_MobjThinker(mobj_t *mo)
 
 	I_Assert(mo->type < NUMMOBJTYPES);
 
+	if (!(mobjthinkerhooks[MT_NULL] || mobjthinkerhooks[mo->type]))
+		return false;
+
 	lua_settop(gL, 0);
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
@@ -747,9 +759,12 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 	hook_p hookp;
 	boolean hooked = false;
 	if (!gL || !(hooksAvailable[hook_TouchSpecial/8] & (1<<(hook_TouchSpecial%8))))
-		return 0;
+		return false;
 
 	I_Assert(special->type < NUMMOBJTYPES);
+
+	if (!(mobjhooks[MT_NULL] || mobjhooks[special->type]))
+		return false;
 
 	lua_settop(gL, 0);
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
@@ -820,6 +835,9 @@ UINT8 LUAh_ShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 		return 0;
 
 	I_Assert(target->type < NUMMOBJTYPES);
+
+	if (!(mobjhooks[MT_NULL] || mobjhooks[target->type]))
+		return 0;
 
 	lua_settop(gL, 0);
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
@@ -908,9 +926,12 @@ boolean LUAh_MobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32
 	hook_p hookp;
 	boolean hooked = false;
 	if (!gL || !(hooksAvailable[hook_MobjDamage/8] & (1<<(hook_MobjDamage%8))))
-		return 0;
+		return false;
 
 	I_Assert(target->type < NUMMOBJTYPES);
+
+	if (!(mobjhooks[MT_NULL] || mobjhooks[target->type]))
+		return false;
 
 	lua_settop(gL, 0);
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
@@ -990,9 +1011,12 @@ boolean LUAh_MobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 
 	hook_p hookp;
 	boolean hooked = false;
 	if (!gL || !(hooksAvailable[hook_MobjDeath/8] & (1<<(hook_MobjDeath%8))))
-		return 0;
+		return false;
 
 	I_Assert(target->type < NUMMOBJTYPES);
+
+	if (!(mobjhooks[MT_NULL] || mobjhooks[target->type]))
+		return false;
 
 	lua_settop(gL, 0);
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
@@ -1392,6 +1416,9 @@ boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing)
 	if (!gL || !(hooksAvailable[hook_MapThingSpawn/8] & (1<<(hook_MapThingSpawn%8))))
 		return false;
 
+	if (!(mobjhooks[MT_NULL] || mobjhooks[mo->type]))
+		return false;
+
 	lua_settop(gL, 0);
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
@@ -1458,6 +1485,9 @@ boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj)
 	hook_p hookp;
 	boolean hooked = false;
 	if (!gL || !(hooksAvailable[hook_FollowMobj/8] & (1<<(hook_FollowMobj%8))))
+		return 0;
+
+	if (!(mobjhooks[MT_NULL] || mobjhooks[mobj->type]))
 		return 0;
 
 	lua_settop(gL, 0);
