@@ -402,14 +402,15 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
 	"ADDPLAYER",
 	"TEAMCHANGE",
 	"CLEARSCORES",
-	"LOGIN",
+	"",
 	"VERIFIED",
 	"RANDOMSEED",
 	"RUNSOC",
 	"REQADDFILE",
-	"DELFILE", // replace next time we add an XD
+	"",
 	"SETMOTD",
 	"SUICIDE",
+	"DEMOTED",
 	"LUACMD",
 	"LUAVAR",
 	"LUAFILE"
@@ -1527,6 +1528,9 @@ void SendWeaponPref(void)
 {
 	UINT8 buf[1];
 
+	if (!Playing())
+		return;
+
 	buf[0] = 0;
 	if (cv_flipcam.value)
 		buf[0] |= 1;
@@ -1542,6 +1546,9 @@ void SendWeaponPref(void)
 void SendWeaponPref2(void)
 {
 	UINT8 buf[1];
+
+	if (!Playing())
+		return;
 
 	buf[0] = 0;
 	if (cv_flipcam2.value)

@@ -355,11 +355,6 @@ static void P_DoAutobalanceTeams(void)
 	memset(redarray, 0, sizeof(redarray));
 	memset(bluearray, 0, sizeof(bluearray));
 
-	// Only do it if we have enough room in the net buffer to send it.
-	// Otherwise, come back next time and try again.
-	if (sizeof(usvalue) > GetFreeXCmdSize())
-		return;
-
 	//We have to store the players in an array with the rest of their team.
 	//We can then pick a random player to be forced to change teams.
 	for (i = 0; i < MAXPLAYERS; i++)
@@ -430,11 +425,6 @@ void P_DoTeamscrambling(void)
 	changeteam_union NetPacket;
 	UINT16 usvalue;
 	NetPacket.value.l = NetPacket.value.b = 0;
-
-	// Only do it if we have enough room in the net buffer to send it.
-	// Otherwise, come back next time and try again.
-	if (sizeof(usvalue) > GetFreeXCmdSize())
-		return;
 
 	if (scramblecount < scrambletotal)
 	{

@@ -292,7 +292,7 @@ typedef struct
 		client2cmd_pak client2pak;          //         200 bytes
 		servertics_pak serverpak;           //      132495 bytes (more around 360, no?)
 		serverconfig_pak servercfg;         //         773 bytes
-		UINT8 textcmd[MAXTEXTCMD+1];        //       66049 bytes (wut??? 64k??? More like 257 bytes...)
+		UINT8 textcmd[MAXTEXTCMD];          //       use sizeof
 		filetx_pak filetxpak;               //         139 bytes
 		fileack_pak fileack;
 		UINT8 filereceived;
@@ -429,7 +429,6 @@ INT32 D_NumPlayers(void);
 void D_ResetTiccmds(void);
 
 tic_t GetLag(INT32 node);
-UINT8 GetFreeXCmdSize(void);
 
 void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
 

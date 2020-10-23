@@ -118,6 +118,7 @@ extern boolean timedemo_quit;
 
 extern consvar_t cv_freedemocamera;
 
+/* there is a netxcmdnames array to keep updated too if you weren't aware! */
 typedef enum
 {
 	XD_NAMEANDCOLOR = 1,
@@ -132,13 +133,13 @@ typedef enum
 	XD_ADDPLAYER,   // 10
 	XD_TEAMCHANGE,  // 11
 	XD_CLEARSCORES, // 12
-	// UNUSED          13 (Because I don't want to change these comments)
+	// UNUSED          13 (new netcmd goes here)
 	XD_VERIFIED = 14,//14
 	XD_RANDOMSEED,  // 15
 	XD_RUNSOC,      // 16
 	XD_REQADDFILE,  // 17
-	XD_DELFILE,     // 18 - replace next time we add an XD
-	XD_SETMOTD,     // 19
+	// UNUSED          18 (new netcmd goes here)
+	XD_SETMOTD = 19,// 19
 	XD_SUICIDE,     // 20
 	XD_DEMOTED,     // 21
 	XD_LUACMD,      // 22
