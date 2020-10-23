@@ -55,6 +55,10 @@ set(SRB2_SDL2_HEADERS
 	sdlmain.h
 )
 
+if(${SRB2_CONFIG_HAVE_THREADS})
+	set(SRB2_SDL2_SOURCES ${SRB2_SDL2_SOURCES} i_threads.c)
+endif()
+
 source_group("Interface Code" FILES ${SRB2_SDL2_SOURCES} ${SRB2_SDL2_HEADERS})
 
 # Dependency
