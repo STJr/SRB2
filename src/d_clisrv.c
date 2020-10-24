@@ -2870,11 +2870,15 @@ void D_SaveBan(void)
 	size_t i;
 	banreason_t *reasonlist = reasonhead;
 	const char *address, *mask;
+	const char *path = va("%s"PATHSEP"%s", srb2home, "ban.txt");
 
 	if (!reasonhead)
+	{
+		remove(path);
 		return;
+	}
 
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "w");
+	f = fopen(path, "w");
 
 	if (!f)
 	{
