@@ -32,6 +32,7 @@ set(SRB2_CORE_SOURCES
 	m_fixed.c
 	m_menu.c
 	m_misc.c
+	m_perfstats.c
 	m_queue.c
 	m_random.c
 	md5.c
@@ -97,12 +98,12 @@ set(SRB2_CORE_HEADERS
 	m_fixed.h
 	m_menu.h
 	m_misc.h
+	m_perfstats.h
 	m_queue.h
 	m_random.h
 	m_swap.h
 	md5.h
 	mserv.h
-	http-mserv.h
 	p5prof.h
 	s_sound.h
 	screen.h
@@ -128,7 +129,8 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_sky.c
 	r_splats.c
 	r_things.c
-	r_patch.c
+	r_textures.c
+	r_picformats.c
 	r_portal.c
 
 	r_bsp.h
@@ -144,7 +146,8 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_splats.h
 	r_state.h
 	r_things.h
-	r_patch.h
+	r_textures.h
+	r_picformats.h
 	r_portal.h
 )
 
@@ -230,6 +233,8 @@ set(SRB2_CONFIG_HAVE_OPENMPT ON CACHE BOOL
 	"Enable OpenMPT support.")
 set(SRB2_CONFIG_HAVE_CURL ON CACHE BOOL
 	"Enable curl support, used for downloading files via HTTP.")
+set(SRB2_CONFIG_HAVE_THREADS ON CACHE BOOL
+	"Enable multithreading support.")
 if(${CMAKE_SYSTEM} MATCHES Windows)
 	set(SRB2_CONFIG_HAVE_MIXERX ON CACHE BOOL
 		"Enable SDL Mixer X support.")
@@ -262,6 +267,7 @@ set(SRB2_LUA_SOURCES
 	lua_mathlib.c
 	lua_mobjlib.c
 	lua_playerlib.c
+	lua_polyobjlib.c
 	lua_script.c
 	lua_skinlib.c
 	lua_thinkerlib.c
@@ -467,6 +473,12 @@ if(${SRB2_CONFIG_HAVE_CURL})
 	else()
 		message(WARNING "You have specified that CURL is available but it was not found. SRB2 may not compile correctly.")
 	endif()
+endif()
+
+if(${SRB2_CONFIG_HAVE_THREADS})
+	set(SRB2_HAVE_THREADS ON)
+	set(SRB2_CORE_HEADERS ${SRB2_CORE_HEADERS} ${CMAKE_CURRENT_SOURCE_DIR}/i_threads.h)
+	add_definitions(-DHAVE_THREADS)
 endif()
 
 if(${SRB2_CONFIG_HWRENDER})

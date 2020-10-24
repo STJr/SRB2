@@ -262,6 +262,7 @@
     <ClInclude Include="..\m_fixed.h" />
     <ClInclude Include="..\m_menu.h" />
     <ClInclude Include="..\m_misc.h" />
+    <ClInclude Include="..\m_perfstats.h" />
     <ClInclude Include="..\m_queue.h" />
     <ClInclude Include="..\m_random.h" />
     <ClInclude Include="..\m_swap.h" />
@@ -282,14 +283,15 @@
     <ClInclude Include="..\r_draw.h" />
     <ClInclude Include="..\r_local.h" />
     <ClInclude Include="..\r_main.h" />
+    <ClInclude Include="..\r_picformats.h" />
     <ClInclude Include="..\r_plane.h" />
-    <ClInclude Include="..\r_patch.h" />
     <ClInclude Include="..\r_portal.h" />
     <ClInclude Include="..\r_segs.h" />
     <ClInclude Include="..\r_skins.h" />
     <ClInclude Include="..\r_sky.h" />
     <ClInclude Include="..\r_splats.h" />
     <ClInclude Include="..\r_state.h" />
+    <ClInclude Include="..\r_textures.h" />
     <ClInclude Include="..\r_things.h" />
     <ClInclude Include="..\screen.h" />
     <ClInclude Include="..\sounds.h" />
@@ -400,6 +402,7 @@
     <ClCompile Include="..\lua_mathlib.c" />
     <ClCompile Include="..\lua_mobjlib.c" />
     <ClCompile Include="..\lua_playerlib.c" />
+    <ClCompile Include="..\lua_polyobjlib.c" />
     <ClCompile Include="..\lua_script.c" />
     <ClCompile Include="..\lua_skinlib.c" />
     <ClCompile Include="..\lua_thinkerlib.c" />
@@ -416,6 +419,7 @@
     <ClCompile Include="..\m_fixed.c" />
     <ClCompile Include="..\m_menu.c" />
     <ClCompile Include="..\m_misc.c" />
+    <ClCompile Include="..\m_perfstats.c" />
     <ClCompile Include="..\m_queue.c" />
     <ClCompile Include="..\m_random.c" />
     <ClCompile Include="..\p_ceilng.c" />
@@ -448,13 +452,14 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\r_main.c" />
+    <ClCompile Include="..\r_picformats.c" />
     <ClCompile Include="..\r_plane.c" />
-	<ClCompile Include="..\r_patch.c" />
     <ClCompile Include="..\r_portal.c" />
     <ClCompile Include="..\r_segs.c" />
     <ClCompile Include="..\r_skins.c" />
     <ClCompile Include="..\r_sky.c" />
     <ClCompile Include="..\r_splats.c" />
+    <ClCompile Include="..\r_textures.c" />
     <ClCompile Include="..\r_things.c" />
     <ClCompile Include="..\screen.c" />
     <ClCompile Include="..\sounds.c" />

@@ -20,6 +20,7 @@
 #include "p_local.h"
 #include "p_setup.h" // levelflats for flat animation
 #include "r_data.h"
+#include "r_textures.h"
 #include "m_random.h"
 #include "p_mobj.h"
 #include "i_system.h"
@@ -1933,7 +1934,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		case 336: // object dye - once
 			{
 				INT32 triggercolor = (INT32)sides[triggerline->sidenum[0]].toptexture;
-				UINT8 color = (actor->player ? actor->player->powers[pw_dye] : actor->color);
+				UINT16 color = (actor->player ? actor->player->powers[pw_dye] : actor->color);
 				boolean invert = (triggerline->flags & ML_NOCLIMB ? true : false);
 
 				if (invert ^ (triggercolor != color))
@@ -4394,7 +4395,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 	// Ignore dead players.
 	// If this strange phenomenon could be potentially used in levels,
 	// TODO: modify this to accommodate for it.
-	if (player->playerstate == PST_DEAD)
+	if (player->playerstate != PST_LIVE)
 		return;
 
 	// Conveyor stuff

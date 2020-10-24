@@ -2564,7 +2564,7 @@ static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
 	}
 
 	// Strong abilities can break even FF_STRONGBUST.
-	if (player->charability == CA_GLIDEANDCLIMB)
+	if (player->charflags & SF_CANBUSTWALLS)
 		return true;
 
 	if (player->pflags & PF_BOUNCING)
@@ -2611,10 +2611,10 @@ static void P_CheckBustableBlocks(player_t *player)
 
 	if ((netgame || multiplayer) && player->spectator)
 		return;
-
+	
 	oldx = player->mo->x;
 	oldy = player->mo->y;
-
+	
 	if (!(player->pflags & PF_BOUNCING)) // Bouncers only get to break downwards, not sideways
 	{
 		P_UnsetThingPosition(player->mo);
@@ -2633,7 +2633,7 @@ static void P_CheckBustableBlocks(player_t *player)
 
 		if (!node->m_sector->ffloors)
 			continue;
-
+		
 		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
 			if (!P_PlayerCanBust(player, rover))
@@ -3214,7 +3214,7 @@ static void P_DoClimbing(player_t *player)
 
 				for (rover = glidesector->sector->ffloors; rover; rover = rover->next)
 				{
-					if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
+					if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (player->charflags & SF_CANBUSTWALLS)))
 						continue;
 
 					floorclimb = true;
@@ -3255,7 +3255,7 @@ static void P_DoClimbing(player_t *player)
 							// Is there a FOF directly below this one that we can move onto?
 							for (roverbelow = glidesector->sector->ffloors; roverbelow; roverbelow = roverbelow->next)
 							{
-								if (!(roverbelow->flags & FF_EXISTS) || !(roverbelow->flags & FF_BLOCKPLAYER) || (roverbelow->flags & FF_BUSTUP))
+								if (!(roverbelow->flags & FF_EXISTS) || !(roverbelow->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (player->charflags & SF_CANBUSTWALLS)))
 									continue;
 
 								if (roverbelow == rover)
@@ -3300,7 +3300,7 @@ static void P_DoClimbing(player_t *player)
 							// Is there a FOF directly below this one that we can move onto?
 							for (roverbelow = glidesector->sector->ffloors; roverbelow; roverbelow = roverbelow->next)
 							{
-								if (!(roverbelow->flags & FF_EXISTS) || !(roverbelow->flags & FF_BLOCKPLAYER) || (roverbelow->flags & FF_BUSTUP))
+								if (!(roverbelow->flags & FF_EXISTS) || !(roverbelow->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (player->charflags & SF_CANBUSTWALLS)))
 									continue;
 
 								if (roverbelow == rover)
@@ -3357,7 +3357,7 @@ static void P_DoClimbing(player_t *player)
 						ffloor_t *rover;
 						for (rover = glidesector->sector->ffloors; rover; rover = rover->next)
 						{
-							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
+							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (player->charflags & SF_CANBUSTWALLS)))
 								continue;
 
 							bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
@@ -3397,7 +3397,7 @@ static void P_DoClimbing(player_t *player)
 						ffloor_t *rover;
 						for (rover = glidesector->sector->ffloors; rover; rover = rover->next)
 						{
-							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
+							if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (player->charflags & SF_CANBUSTWALLS)))
 								continue;
 
 							topheight = P_GetFFloorTopZAt(rover, player->mo->x, player->mo->y);
@@ -5007,13 +5007,125 @@ static void P_DoTwinSpin(player_t *player)
 }
 
 //
+// returns true if the player used a shield ability, false otherwise
+// passing in the mobjs from P_DoJumpStuff is a bit hackily specific, but I don't care enough to make a more elaborate solution (I think that is more appropriately approached with a more general MT_LOCKON spawning system)
+//
+static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lockonthok, mobj_t *visual)
+{
+	mobj_t *lockonshield = NULL;
+
+	if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SPINDOWN)
+		&& ((!(player->pflags & PF_THOKKED) || (((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP || (player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT) && player->secondjump == UINT8_MAX) ))) // thokked is optional if you're bubblewrapped / 3dblasted
+	{
+		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+		{
+			if ((lockonshield = P_LookForEnemies(player, false, false)))
+			{
+				if (P_IsLocalPlayer(player)) // Only display it on your own view.
+				{
+					boolean dovis = true;
+					if (lockonshield == lockonthok)
+					{
+						if (leveltime & 2)
+							dovis = false;
+						else if (visual)
+							P_RemoveMobj(visual);
+					}
+					if (dovis)
+					{
+						visual = P_SpawnMobj(lockonshield->x, lockonshield->y, lockonshield->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
+						P_SetTarget(&visual->target, lockonshield);
+						P_SetMobjStateNF(visual, visual->info->spawnstate+1);
+					}
+				}
+			}
+		}
+		if (cmd->buttons & BT_SPIN && !LUAh_ShieldSpecial(player)) // Spin button effects
+		{
+			// Force stop
+			if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
+			{
+				player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+				player->mo->momx = player->mo->momy = player->mo->momz = 0;
+				S_StartSound(player->mo, sfx_ngskid);
+			}
+			else
+			{
+				switch (player->powers[pw_shield] & SH_NOSTACK)
+				{
+					// Whirlwind jump/Thunder jump
+					case SH_WHIRLWIND:
+					case SH_THUNDERCOIN:
+						P_DoJumpShield(player);
+						break;
+					// Armageddon pow
+					case SH_ARMAGEDDON:
+						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+						P_BlackOw(player);
+						break;
+					// Attraction blast
+					case SH_ATTRACT:
+						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+						player->homing = 2;
+						P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockonshield));
+						if (lockonshield)
+							{
+								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockonshield->x, lockonshield->y);
+									player->pflags &= ~PF_NOJUMPDAMAGE;
+									P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+									S_StartSound(player->mo, sfx_s3k40);
+									player->homing = 3*TICRATE;
+							}
+							else
+								S_StartSound(player->mo, sfx_s3ka6);
+							break;
+						// Elemental stomp/Bubble bounce
+						case SH_ELEMENTAL:
+						case SH_BUBBLEWRAP:
+							{
+								boolean elem = ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL);
+								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+								if (elem)
+								{
+									player->mo->momx = player->mo->momy = 0;
+									S_StartSound(player->mo, sfx_s3k43);
+								}
+								else
+								{
+									player->mo->momx -= (player->mo->momx/3);
+									player->mo->momy -= (player->mo->momy/3);
+									player->pflags &= ~PF_NOJUMPDAMAGE;
+									P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+									S_StartSound(player->mo, sfx_s3k44);
+								}
+								player->secondjump = 0;
+								P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
+								break;
+							}
+						// Flame burst
+						case SH_FLAMEAURA:
+							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+							P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
+							player->drawangle = player->mo->angle;
+							S_StartSound(player->mo, sfx_s3k43);
+						default:
+							break;
+				}
+			}
+		}
+		return player->pflags & PF_SHIELDABILITY;
+	}
+	return false;
+}
+
+//
 // P_DoJumpStuff
 //
 // Handles player jumping
 //
 static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 {
-	mobj_t *lockonthok = NULL, *lockonshield = NULL, *visual = NULL;
+	mobj_t *lockonthok = NULL, *visual = NULL;
 
 	if (player->pflags & PF_JUMPSTASIS)
 		return;
@@ -5040,106 +5152,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			;
 		else if (player->pflags & (PF_GLIDING|PF_SLIDING|PF_SHIELDABILITY)) // If the player has used an ability previously
 			;
-		else if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SPINDOWN)
-			&& ((!(player->pflags & PF_THOKKED) || ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP && player->secondjump == UINT8_MAX)))) // thokked is optional if you're bubblewrapped
-		{
-			if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
-			{
-				if ((lockonshield = P_LookForEnemies(player, false, false)))
-				{
-					if (P_IsLocalPlayer(player)) // Only display it on your own view.
-					{
-						boolean dovis = true;
-						if (lockonshield == lockonthok)
-						{
-							if (leveltime & 2)
-								dovis = false;
-							else if (visual)
-								P_RemoveMobj(visual);
-						}
-						if (dovis)
-						{
-							visual = P_SpawnMobj(lockonshield->x, lockonshield->y, lockonshield->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
-							P_SetTarget(&visual->target, lockonshield);
-							P_SetMobjStateNF(visual, visual->info->spawnstate+1);
-						}
-					}
-				}
-			}
-			if (cmd->buttons & BT_SPIN && !LUAh_ShieldSpecial(player)) // Spin button effects
-			{
-				// Force stop
-				if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
-				{
-					player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-					player->mo->momx = player->mo->momy = player->mo->momz = 0;
-					S_StartSound(player->mo, sfx_ngskid);
-				}
-				else
-				{
-					switch (player->powers[pw_shield] & SH_NOSTACK)
-					{
-						// Whirlwind jump/Thunder jump
-						case SH_WHIRLWIND:
-						case SH_THUNDERCOIN:
-							P_DoJumpShield(player);
-							break;
-						// Armageddon pow
-						case SH_ARMAGEDDON:
-							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-							P_BlackOw(player);
-							break;
-						// Attraction blast
-						case SH_ATTRACT:
-							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-							player->homing = 2;
-							P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockonshield));
-							if (lockonshield)
-								{
-									player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockonshield->x, lockonshield->y);
-										player->pflags &= ~PF_NOJUMPDAMAGE;
-										P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-										S_StartSound(player->mo, sfx_s3k40);
-										player->homing = 3*TICRATE;
-								}
-								else
-									S_StartSound(player->mo, sfx_s3ka6);
-								break;
-							// Elemental stomp/Bubble bounce
-							case SH_ELEMENTAL:
-							case SH_BUBBLEWRAP:
-								{
-									boolean elem = ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL);
-									player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-									if (elem)
-									{
-										player->mo->momx = player->mo->momy = 0;
-										S_StartSound(player->mo, sfx_s3k43);
-									}
-									else
-									{
-										player->mo->momx -= (player->mo->momx/3);
-										player->mo->momy -= (player->mo->momy/3);
-										player->pflags &= ~PF_NOJUMPDAMAGE;
-										P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-										S_StartSound(player->mo, sfx_s3k44);
-									}
-									player->secondjump = 0;
-									P_SetObjectMomZ(player->mo, -24*FRACUNIT, false);
-									break;
-								}
-							// Flame burst
-							case SH_FLAMEAURA:
-								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
-								P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
-								player->drawangle = player->mo->angle;
-								S_StartSound(player->mo, sfx_s3k43);
-							default:
-								break;
-					}
-				}
-			}
-		}
+		else if (P_PlayerShieldThink(player, cmd, lockonthok, visual))
+			;
 		else if ((cmd->buttons & BT_SPIN))
 		{
 			if (!(player->pflags & PF_SPINDOWN) && P_SuperReady(player))
@@ -5484,6 +5498,8 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		{
 			if (!P_HomingAttack(player->mo, player->mo->tracer))
 			{
+				player->pflags &= ~PF_SHIELDABILITY;
+				player->secondjump = UINT8_MAX;
 				P_SetObjectMomZ(player->mo, 6*FRACUNIT, false);
 				if (player->mo->eflags & MFE_UNDERWATER)
 					player->mo->momz = FixedMul(player->mo->momz, FRACUNIT/3);
@@ -9631,45 +9647,45 @@ static CV_PossibleValue_t rotation_cons_t[] = {{1, "MIN"}, {25, "MAX"}, {0, NULL
 static CV_PossibleValue_t CV_CamRotate[] = {{-720, "MIN"}, {720, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t multiplier_cons_t[] = {{0, "MIN"}, {3*FRACUNIT, "MAX"}, {0, NULL}};
 
-consvar_t cv_cam_dist = {"cam_curdist", "160", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_height = {"cam_curheight", "25", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_still = {"cam_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_speed = {"cam_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_rotate = {"cam_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_rotspeed = {"cam_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_turnmultiplier = {"cam_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_orbit = {"cam_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam_adjust = {"cam_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_dist = {"cam2_curdist", "160", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_height = {"cam2_curheight", "25", CV_FLOAT, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_still = {"cam2_still", "Off", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_speed = {"cam2_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_rotate = {"cam2_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_rotspeed = {"cam2_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_turnmultiplier = {"cam2_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_orbit = {"cam2_orbit", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_cam2_adjust = {"cam2_adjust", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_cam_dist = CVAR_INIT ("cam_curdist", "160", CV_FLOAT, NULL, NULL);
+consvar_t cv_cam_height = CVAR_INIT ("cam_curheight", "25", CV_FLOAT, NULL, NULL);
+consvar_t cv_cam_still = CVAR_INIT ("cam_still", "Off", 0, CV_OnOff, NULL);
+consvar_t cv_cam_speed = CVAR_INIT ("cam_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL);
+consvar_t cv_cam_rotate = CVAR_INIT ("cam_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange);
+consvar_t cv_cam_rotspeed = CVAR_INIT ("cam_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL);
+consvar_t cv_cam_turnmultiplier = CVAR_INIT ("cam_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL);
+consvar_t cv_cam_orbit = CVAR_INIT ("cam_orbit", "Off", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_cam_adjust = CVAR_INIT ("cam_adjust", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_cam2_dist = CVAR_INIT ("cam2_curdist", "160", CV_FLOAT, NULL, NULL);
+consvar_t cv_cam2_height = CVAR_INIT ("cam2_curheight", "25", CV_FLOAT, NULL, NULL);
+consvar_t cv_cam2_still = CVAR_INIT ("cam2_still", "Off", 0, CV_OnOff, NULL);
+consvar_t cv_cam2_speed = CVAR_INIT ("cam2_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL);
+consvar_t cv_cam2_rotate = CVAR_INIT ("cam2_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange);
+consvar_t cv_cam2_rotspeed = CVAR_INIT ("cam2_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL);
+consvar_t cv_cam2_turnmultiplier = CVAR_INIT ("cam2_turnmultiplier", "1.0", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL);
+consvar_t cv_cam2_orbit = CVAR_INIT ("cam2_orbit", "Off", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_cam2_adjust = CVAR_INIT ("cam2_adjust", "On", CV_SAVE, CV_OnOff, NULL);
 
 // [standard vs simple][p1 or p2]
 consvar_t cv_cam_savedist[2][2] = {
 	{ // standard
-		{"cam_dist", "160", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
-		{"cam2_dist", "160", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+		CVAR_INIT ("cam_dist", "160", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_dist", "160", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
 	},
 	{ // simple
-		{"cam_simpledist", "224", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
-		{"cam2_simpledist", "224", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+		CVAR_INIT ("cam_simpledist", "224", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_simpledist", "224", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
 
 	}
 };
 consvar_t cv_cam_saveheight[2][2] = {
 	{ // standard
-		{"cam_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
-		{"cam2_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+		CVAR_INIT ("cam_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
 	},
 	{ // simple
-		{"cam_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist, 0, NULL, NULL, 0, 0, NULL},
-		{"cam2_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist, 0, NULL, NULL, 0, 0, NULL}
+		CVAR_INIT ("cam_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
 
 	}
 };

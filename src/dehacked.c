@@ -29,8 +29,9 @@
 #include "p_local.h" // for var1 and var2, and some constants
 #include "p_setup.h"
 #include "r_data.h"
+#include "r_textures.h"
 #include "r_draw.h"
-#include "r_patch.h"
+#include "r_picformats.h"
 #include "r_things.h" // R_Char2Frame
 #include "r_sky.h"
 #include "fastcmp.h"
@@ -9516,6 +9517,7 @@ struct {
 	{"RING_DIST",RING_DIST},
 	{"PUSHACCEL",PUSHACCEL},
 	{"MODID",MODID}, // I don't know, I just thought it would be cool for a wad to potentially know what mod it was loaded into.
+	{"MODVERSION",MODVERSION}, // or what version of the mod this is.
 	{"CODEBASE",CODEBASE}, // or what release of SRB2 this is.
 	{"NEWTICRATE",NEWTICRATE}, // TICRATE*NEWTICRATERATIO
 	{"NEWTICRATERATIO",NEWTICRATERATIO},
@@ -9699,6 +9701,7 @@ struct {
 	{"SF_NONIGHTSSUPER",SF_NONIGHTSSUPER},
 	{"SF_NOSUPERSPRITES",SF_NOSUPERSPRITES},
 	{"SF_NOSUPERJUMPBOOST",SF_NOSUPERJUMPBOOST},
+	{"SF_CANBUSTWALLS",SF_CANBUSTWALLS},
 
 	// Dashmode constants
 	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
@@ -9905,6 +9908,25 @@ struct {
 	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
+
+	// PolyObject flags
+	{"POF_CLIPLINES",POF_CLIPLINES},               ///< Test against lines for collision
+	{"POF_CLIPPLANES",POF_CLIPPLANES},             ///< Test against tops and bottoms for collision
+	{"POF_SOLID",POF_SOLID},                       ///< Clips things.
+	{"POF_TESTHEIGHT",POF_TESTHEIGHT},             ///< Test line collision with heights
+	{"POF_RENDERSIDES",POF_RENDERSIDES},           ///< Renders the sides.
+	{"POF_RENDERTOP",POF_RENDERTOP},               ///< Renders the top.
+	{"POF_RENDERBOTTOM",POF_RENDERBOTTOM},         ///< Renders the bottom.
+	{"POF_RENDERPLANES",POF_RENDERPLANES},         ///< Renders top and bottom.
+	{"POF_RENDERALL",POF_RENDERALL},               ///< Renders everything.
+	{"POF_INVERT",POF_INVERT},                     ///< Inverts collision (like a cage).
+	{"POF_INVERTPLANES",POF_INVERTPLANES},         ///< Render inside planes.
+	{"POF_INVERTPLANESONLY",POF_INVERTPLANESONLY}, ///< Only render inside planes.
+	{"POF_PUSHABLESTOP",POF_PUSHABLESTOP},         ///< Pushables will stop movement.
+	{"POF_LDEXEC",POF_LDEXEC},                     ///< This PO triggers a linedef executor.
+	{"POF_ONESIDE",POF_ONESIDE},                   ///< Only use the first side of the linedef.
+	{"POF_NOSPECIALS",POF_NOSPECIALS},             ///< Don't apply sector specials.
+	{"POF_SPLAT",POF_SPLAT},                       ///< Use splat flat renderer (treat cyan pixels as invisible).
 
 #ifdef HAVE_LUA_SEGS
 	// Node flags
@@ -10844,7 +10866,6 @@ static inline int lib_getenum(lua_State *L)
 		}
 		else if (fastcmp(p, "USEDOWN")) // Remove case when 2.3 nears release...
 		{
-			LUA_Deprecated(L, "PF_USEDOWN", "PF_SPINDOWN");
 			lua_pushinteger(L, (lua_Integer)PF_SPINDOWN);
 			return 1;
 		}
@@ -11116,7 +11137,6 @@ static inline int lib_getenum(lua_State *L)
 
 	if (fastcmp(word, "BT_USE")) // Remove case when 2.3 nears release...
 	{
-		LUA_Deprecated(L, "BT_USE", "BT_SPIN");
 		lua_pushinteger(L, (lua_Integer)BT_SPIN);
 		return 1;
 	}
