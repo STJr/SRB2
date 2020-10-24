@@ -2918,16 +2918,14 @@ static void Ban_Add(const char *reason)
 	reasontail = reasonlist;
 }
 
-static void Command_ClearBans(void)
+static void Ban_Clear(void)
 {
 	banreason_t *temp;
 
-	if (!I_ClearBans)
-		return;
-
 	I_ClearBans();
-	D_SaveBan();
+
 	reasontail = NULL;
+
 	while (reasonhead)
 	{
 		temp = reasonhead->next;
@@ -2937,12 +2935,24 @@ static void Command_ClearBans(void)
 	}
 }
 
+static void Command_ClearBans(void)
+{
+	if (!I_ClearBans)
+		return;
+
+	Ban_Clear();
+	D_SaveBan();
+}
+
 static void Ban_Load_File(boolean warning)
 {
 	FILE *f;
 	size_t i;
 	const char *address, *mask;
 	char buffer[MAX_WADPATH];
+
+	if (!I_ClearBans)
+		return;
 
 	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "r");
 
@@ -2953,13 +2963,7 @@ static void Ban_Load_File(boolean warning)
 		return;
 	}
 
-	if (I_ClearBans)
-		Command_ClearBans();
-	else
-	{
-		fclose(f);
-		return;
-	}
+	Ban_Clear();
 
 	for (i=0; fgets(buffer, (int)sizeof(buffer), f); i++)
 	{
