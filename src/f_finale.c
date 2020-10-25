@@ -1127,7 +1127,7 @@ static const char *credits[] = {
 	"Sherman \"CoatRack\" DesJardins",
 	"\"DirkTheHusky\"",
 	"Jesse \"Jeck Jims\" Emerick",
-    "\"Fighter_Builder\"", // for the CEZ3 button debris
+	"\"Fighter_Builder\"", // for the CEZ3 button debris
 	"Buddy \"KinkaJoy\" Fischer",
 	"Vivian \"toaster\" Grannell",
 	"James \"SwitchKaze\" Hale",
