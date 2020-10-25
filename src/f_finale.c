@@ -1119,7 +1119,6 @@ static const char *credits[] = {
 	"\"Arrietty\"",
 	"Ryan \"Blaze Hedgehog\" Bloom",
 	"Graeme P. \"SuperPhanto\" Caldwell", // for the new brak render
-	"\"Fighter_Builder\"", // for the CEZ3 button debris
 	"\"ChrispyPixels\"",
 	"Paul \"Boinciel\" Clempson",
 	"Sally \"TehRealSalt\" Cochenour",
@@ -1128,6 +1127,7 @@ static const char *credits[] = {
 	"Sherman \"CoatRack\" DesJardins",
 	"\"DirkTheHusky\"",
 	"Jesse \"Jeck Jims\" Emerick",
+    "\"Fighter_Builder\"", // for the CEZ3 button debris
 	"Buddy \"KinkaJoy\" Fischer",
 	"Vivian \"toaster\" Grannell",
 	"James \"SwitchKaze\" Hale",
