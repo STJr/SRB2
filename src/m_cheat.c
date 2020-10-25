@@ -1451,7 +1451,7 @@ void Command_ObjectPlace_f(void)
 
 	silent = COM_CheckParm("-silent");
 
-	thingarg = 2 - ( silent > 1 );
+	thingarg = 2 - ( silent != 1 );
 
 	// Entering objectplace?
 	if (!objectplacing || thingarg < COM_Argc())
