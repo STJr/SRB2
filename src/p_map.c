@@ -2730,54 +2730,51 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 			floatok = true;
 
-			if (maxstep > 0)
+			thingtop = thing->z + thing->height;
+
+			// Step up
+			if (thing->z < tmfloorz)
 			{
-				thingtop = thing->z + thing->height;
-
-				// Step up
-				if (thing->z < tmfloorz)
+				if (maxstep > 0 && tmfloorz - thing->z <= maxstep)
 				{
-					if (tmfloorz - thing->z <= maxstep)
-					{
-						thing->z = thing->floorz = tmfloorz;
-						thing->floorrover = tmfloorrover;
-						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
-					}
-					else
-					{
-						return false; // mobj must raise itself to fit
-					}
+					thing->z = thing->floorz = tmfloorz;
+					thing->floorrover = tmfloorrover;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
-				else if (tmceilingz < thingtop)
+				else
 				{
-					if (thingtop - tmceilingz <= maxstep)
-					{
-						thing->z = ( thing->ceilingz = tmceilingz ) - thing->height;
-						thing->ceilingrover = tmceilingrover;
-						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
-					}
-					else
-					{
-						return false; // mobj must lower itself to fit
-					}
+					return false; // mobj must raise itself to fit
 				}
-				else // Step down
+			}
+			else if (tmceilingz < thingtop)
+			{
+				if (maxstep > 0 && thingtop - tmceilingz <= maxstep)
 				{
-					// If the floor difference is MAXSTEPMOVE or less, and the sector isn't Section1:14, ALWAYS
-					// step down! Formerly required a Section1:13 sector for the full MAXSTEPMOVE, but no more.
+					thing->z = ( thing->ceilingz = tmceilingz ) - thing->height;
+					thing->ceilingrover = tmceilingrover;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
+				}
+				else
+				{
+					return false; // mobj must lower itself to fit
+				}
+			}
+			else if (maxstep > 0) // Step down
+			{
+				// If the floor difference is MAXSTEPMOVE or less, and the sector isn't Section1:14, ALWAYS
+				// step down! Formerly required a Section1:13 sector for the full MAXSTEPMOVE, but no more.
 
-					if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
-					{
-						thing->z = (thing->ceilingz = tmceilingz) - thing->height;
-						thing->ceilingrover = tmceilingrover;
-						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
-					}
-					else if (thing->z == thing->floorz && tmfloorz < thing->z && thing->z - tmfloorz <= maxstep)
-					{
-						thing->z = thing->floorz = tmfloorz;
-						thing->floorrover = tmfloorrover;
-						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
-					}
+				if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
+				{
+					thing->z = (thing->ceilingz = tmceilingz) - thing->height;
+					thing->ceilingrover = tmceilingrover;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
+				}
+				else if (thing->z == thing->floorz && tmfloorz < thing->z && thing->z - tmfloorz <= maxstep)
+				{
+					thing->z = thing->floorz = tmfloorz;
+					thing->floorrover = tmfloorrover;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
 			}
 
