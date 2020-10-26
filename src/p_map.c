@@ -2711,11 +2711,16 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
 					maxstep = 0;
 
+				// TODO: Step up will be less ass, and be able to tell if it's
+				// actually a ledge and not just a steep slope.
+				// Until then, this is disabled.
+#if 0       // disabled because it makes sliding across a slope awful
 				// Don't 'step up' while springing,
 				// Only step up "if needed".
 				if (thing->player->panim == PA_SPRING
 				&& P_MobjFlip(thing)*thing->momz > FixedMul(FRACUNIT, thing->scale))
 					maxstep = 0;
+#endif
 			}
 
 			if (thing->type == MT_SKIM)
