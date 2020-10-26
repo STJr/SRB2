@@ -4067,7 +4067,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 					&netbuffer->u.client2pak.cmd2, 1);
 
 			// Check player consistancy during the level
-			if (realstart <= gametic && realstart > gametic - BACKUPTICS+1 && gamestate == GS_LEVEL
+			if (realstart <= gametic && realstart + BACKUPTICS - 1 > gametic && gamestate == GS_LEVEL
 				&& consistancy[realstart%BACKUPTICS] != SHORT(netbuffer->u.clientpak.consistancy)
 				&& !resendingsavegame[node])
 			{
