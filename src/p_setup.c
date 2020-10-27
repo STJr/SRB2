@@ -4038,18 +4038,20 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
 	// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
-	if (!titlemapinaction && (RESETMUSIC ||
+	if (!(reloadinggamestate || titlemapinaction) && (RESETMUSIC ||
 		strnicmp(S_MusicName(),
 			(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
+	{
 		S_FadeMusic(0, FixedMul(
 			FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
+	}
 
 	// Let's fade to black here
 	// But only if we didn't do the special stage wipe
 	if (rendermode != render_none && !(ranspecialwipe || reloadinggamestate))
 		P_RunLevelWipe();
 
-	if (!titlemapinaction)
+	if (!(reloadinggamestate || titlemapinaction))
 	{
 		if (ranspecialwipe == 2)
 		{
