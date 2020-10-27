@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2016 by Iestyn "Monster Iestyn" Jealous.
+// Copyright (C) 2016-2020 by Iestyn "Monster Iestyn" Jealous.
 // Copyright (C) 2016-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
@@ -13,6 +13,7 @@
 #include "doomdef.h"
 #include "p_local.h"
 #include "r_main.h" // validcount
+#include "p_polyobj.h"
 #include "lua_script.h"
 #include "lua_libs.h"
 //#include "lua_hud.h" // hud_running errors
@@ -20,6 +21,7 @@
 static const char *const search_opt[] = {
 	"objects",
 	"lines",
+	"polyobjs",
 	NULL};
 
 // a quickly-made function pointer typedef used by lib_searchBlockmap...
@@ -167,6 +169,55 @@ static UINT8 lib_searchBlockmap_Lines(lua_State *L, INT32 x, INT32 y, mobj_t *th
 	return 0; // Everything was checked.
 }
 
+// Helper function for "polyobjs" search
+static UINT8 lib_searchBlockmap_PolyObjs(lua_State *L, INT32 x, INT32 y, mobj_t *thing)
+{
+	INT32 offset;
+	polymaplink_t *plink; // haleyjd 02/22/06
+
+	if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
+		return 0;
+
+	offset = y*bmapwidth + x;
+
+	// haleyjd 02/22/06: consider polyobject lines
+	plink = polyblocklinks[offset];
+
+	while (plink)
+	{
+		polyobj_t *po = plink->po;
+
+		if (po->validcount != validcount) // if polyobj hasn't been checked
+		{
+			po->validcount = validcount;
+
+			lua_pushvalue(L, 1);
+			LUA_PushUserdata(L, thing, META_MOBJ);
+			LUA_PushUserdata(L, po, META_POLYOBJ);
+			if (lua_pcall(gL, 2, 1, 0)) {
+				if (!blockfuncerror || cv_debug & DBG_LUA)
+					CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+				lua_pop(gL, 1);
+				blockfuncerror = true;
+				return 0; // *shrugs*
+			}
+			if (!lua_isnil(gL, -1))
+			{ // if nil, continue
+				if (lua_toboolean(gL, -1))
+					return 2; // stop whole search
+				else
+					return 1; // stop block search
+			}
+			lua_pop(gL, 1);
+			if (P_MobjWasRemoved(thing))
+				return 2;
+		}
+		plink = (polymaplink_t *)(plink->link.next);
+	}
+
+	return 0; // Everything was checked.
+}
+
 // The searchBlockmap function
 // arguments: searchBlockmap(searchtype, function, mobj, [x1, x2, y1, y2])
 // return value:
@@ -194,6 +245,9 @@ static int lib_searchBlockmap(lua_State *L)
 			break;
 		case 1: // "lines"
 			searchFunc = lib_searchBlockmap_Lines;
+			break;
+		case 2: // "polyobjs"
+			searchFunc = lib_searchBlockmap_PolyObjs;
 			break;
 	}
 

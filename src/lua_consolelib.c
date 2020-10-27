@@ -236,15 +236,14 @@ static int lib_comAddCommand(lua_State *L)
 static int lib_comBufAddText(lua_State *L)
 {
 	int n = lua_gettop(L);  /* number of arguments */
-	player_t *plr;
+	player_t *plr = NULL;
 	if (n < 2)
 		return luaL_error(L, "COM_BufAddText requires two arguments: player and text.");
 	NOHUD
 	lua_settop(L, 2);
-	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	if (!plr)
-		return LUA_ErrInvalid(L, "player_t");
-	if (plr != &players[consoleplayer])
+	if (!lua_isnoneornil(L, 1))
+		plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	if (plr && plr != &players[consoleplayer])
 		return 0;
 	COM_BufAddTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
 	return 0;
@@ -253,15 +252,14 @@ static int lib_comBufAddText(lua_State *L)
 static int lib_comBufInsertText(lua_State *L)
 {
 	int n = lua_gettop(L);  /* number of arguments */
-	player_t *plr;
+	player_t *plr = NULL;
 	if (n < 2)
 		return luaL_error(L, "COM_BufInsertText requires two arguments: player and text.");
 	NOHUD
 	lua_settop(L, 2);
-	plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
-	if (!plr)
-		return LUA_ErrInvalid(L, "player_t");
-	if (plr != &players[consoleplayer])
+	if (!lua_isnoneornil(L, 1))
+		plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	if (plr && plr != &players[consoleplayer])
 		return 0;
 	COM_BufInsertTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
 	return 0;
@@ -434,6 +432,46 @@ static int lib_cvFindVar(lua_State *L)
 	return 1;
 }
 
+static int CVarSetFunction
+(
+		lua_State *L,
+		void (*Set)(consvar_t *, const char *),
+		void (*SetValue)(consvar_t *, INT32)
+){
+	consvar_t *cvar = (consvar_t *)luaL_checkudata(L, 1, META_CVAR);
+
+	switch (lua_type(L, 2))
+	{
+		case LUA_TSTRING:
+			(*Set)(cvar, lua_tostring(L, 2));
+			break;
+		case LUA_TNUMBER:
+			(*SetValue)(cvar, (INT32)lua_tonumber(L, 2));
+			break;
+		default:
+			return luaL_typerror(L, 1, "string or number");
+	}
+
+	return 0;
+}
+
+static int lib_cvSet(lua_State *L)
+{
+	return CVarSetFunction(L, CV_Set, CV_SetValue);
+}
+
+static int lib_cvStealthSet(lua_State *L)
+{
+	return CVarSetFunction(L, CV_StealthSet, CV_StealthSetValue);
+}
+
+static int lib_cvAddValue(lua_State *L)
+{
+	consvar_t *cvar = (consvar_t *)luaL_checkudata(L, 1, META_CVAR);
+	CV_AddValue(cvar, (INT32)luaL_checknumber(L, 2));
+	return 0;
+}
+
 // CONS_Printf for a single player
 // Use 'print' in baselib for a global message.
 static int lib_consPrintf(lua_State *L)
@@ -474,6 +512,9 @@ static luaL_Reg lib[] = {
 	{"COM_BufInsertText", lib_comBufInsertText},
 	{"CV_RegisterVar", lib_cvRegisterVar},
 	{"CV_FindVar", lib_cvFindVar},
+	{"CV_Set", lib_cvSet},
+	{"CV_StealthSet", lib_cvStealthSet},
+	{"CV_AddValue", lib_cvAddValue},
 	{"CONS_Printf", lib_consPrintf},
 	{NULL, NULL}
 };

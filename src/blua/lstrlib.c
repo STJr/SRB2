@@ -19,6 +19,7 @@
 #include "lauxlib.h"
 #include "lualib.h"
 
+#include "../m_fixed.h"
 
 /* macro to `unsign' a character */
 #define uchar(c)        ((unsigned char)(c))
@@ -790,7 +791,7 @@ static int str_format (lua_State *L) {
         case 'e':  case 'E': case 'f':
         case 'g': case 'G': {
 					lua_Number n = luaL_checknumber(L, arg);
-          sprintf(buff, form, (double)n);
+          sprintf(buff, form, (double)n / FRACUNIT);
           break;
         }
         case 'q': {

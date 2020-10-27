@@ -36,7 +36,6 @@ set(SRB2_SDL2_SOURCES
 	dosstr.c
 	endtxt.c
 	hwsym_sdl.c
-	i_cdmus.c
 	i_main.c
 	i_net.c
 	i_system.c
@@ -55,6 +54,10 @@ set(SRB2_SDL2_HEADERS
 	ogl_sdl.h
 	sdlmain.h
 )
+
+if(${SRB2_CONFIG_HAVE_THREADS})
+	set(SRB2_SDL2_SOURCES ${SRB2_SDL2_SOURCES} i_threads.c)
+endif()
 
 source_group("Interface Code" FILES ${SRB2_SDL2_SOURCES} ${SRB2_SDL2_HEADERS})
 
@@ -166,6 +169,7 @@ if(${SDL2_FOUND})
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
+			${CURL_LIBRARIES}
 		)
 		set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
 	else()
@@ -178,6 +182,7 @@ if(${SDL2_FOUND})
 			${PNG_LIBRARIES}
 			${ZLIB_LIBRARIES}
 			${OPENGL_LIBRARIES}
+			${CURL_LIBRARIES}
 		)
 
 		if(${CMAKE_SYSTEM} MATCHES Linux)
@@ -259,6 +264,7 @@ if(${SDL2_FOUND})
 		${PNG_INCLUDE_DIRS}
 		${ZLIB_INCLUDE_DIRS}
 		${OPENGL_INCLUDE_DIRS}
+		${CURL_INCLUDE_DIRS}
 	)
 
 	if((${SRB2_HAVE_MIXER}) OR (${SRB2_HAVE_MIXERX}))

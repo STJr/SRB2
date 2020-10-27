@@ -992,6 +992,19 @@ static int libd_getColormap(lua_State *L)
 	return 1;
 }
 
+static int libd_getStringColormap(lua_State *L)
+{
+	INT32 flags = luaL_checkinteger(L, 1);
+	UINT8* colormap = NULL;
+	HUDONLY
+	colormap = V_GetStringColormap(flags & V_CHARCOLORMASK);
+	if (colormap) {
+		LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
+		return 1;
+	}
+	return 0;
+}
+
 static int libd_fadeScreen(lua_State *L)
 {
 	UINT16 color = luaL_checkinteger(L, 1);
@@ -1142,6 +1155,7 @@ static luaL_Reg lib_draw[] = {
 	{"getSpritePatch", libd_getSpritePatch},
 	{"getSprite2Patch", libd_getSprite2Patch},
 	{"getColormap", libd_getColormap},
+	{"getStringColormap", libd_getStringColormap},
 	// drawing
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},

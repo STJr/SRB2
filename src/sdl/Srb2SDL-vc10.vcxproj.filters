@@ -297,6 +297,9 @@
     <ClInclude Include="..\mserv.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
+    <ClInclude Include="..\http-mserv.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
     <ClInclude Include="..\lua_hook.h">
       <Filter>LUA</Filter>
     </ClInclude>
@@ -343,6 +346,9 @@
       <Filter>M_Misc</Filter>
     </ClInclude>
     <ClInclude Include="..\m_misc.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
+    <ClInclude Include="..\m_perfstats.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
     <ClInclude Include="..\m_queue.h">
@@ -471,7 +477,10 @@
     <ClInclude Include="..\hardware\hw_clip.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
-    <ClInclude Include="..\r_patch.h">
+    <ClInclude Include="..\r_textures.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_picformats.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
     <ClInclude Include="..\r_portal.h">
@@ -684,6 +693,9 @@
     <ClCompile Include="..\mserv.c">
       <Filter>I_Interface</Filter>
     </ClCompile>
+    <ClCompile Include="..\http-mserv.c">
+      <Filter>I_Interface</Filter>
+    </ClCompile>
     <ClCompile Include="..\lua_baselib.c">
       <Filter>LUA</Filter>
     </ClCompile>
@@ -712,6 +724,9 @@
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_playerlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_polyobjlib.c">
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_script.c">
@@ -751,6 +766,9 @@
       <Filter>M_Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\m_misc.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\m_perfstats.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\m_queue.c">
@@ -943,7 +961,10 @@
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
     <ClCompile Include="..\apng.c" />
-    <ClCompile Include="..\r_patch.c">
+    <ClCompile Include="..\r_textures.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_picformats.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_portal.c">

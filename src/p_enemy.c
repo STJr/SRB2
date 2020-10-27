@@ -3040,11 +3040,11 @@ void A_Boss1Laser(mobj_t *actor)
 				z = actor->z + FixedMul(56*FRACUNIT, actor->scale);
 			break;
 		case 2:
-			var2 = 3; // Fire middle laser
+			var1 = locvar1; var2 = 3; // Fire middle laser
 			A_Boss1Laser(actor);
-			var2 = 0; // Fire left laser
+			var1 = locvar1; var2 = 0; // Fire left laser
 			A_Boss1Laser(actor);
-			var2 = 1; // Fire right laser
+			var1 = locvar1; var2 = 1; // Fire right laser
 			A_Boss1Laser(actor);
 			return;
 			break;
@@ -8839,25 +8839,26 @@ void A_Dye(mobj_t *actor)
 	INT32 locvar2 = var2;
 
 	mobj_t *target = ((locvar1 && actor->target) ? actor->target : actor);
-	UINT8 color = (UINT8)locvar2;
+	UINT16 color = (UINT16)locvar2;
 	if (LUA_CallAction("A_Dye", actor))
 		return;
 	if (color >= numskincolors)
 		return;
 
-	if (!color)
-		target->colorized = false;
-	else
-		target->colorized = true;
-
 	// What if it's a player?
 	if (target->player)
-	{
 		target->player->powers[pw_dye] = color;
-		return;
-	}
 
-	target->color = color;
+	if (!color)
+	{
+		target->colorized = false;
+		target->color = target->player ? target->player->skincolor : SKINCOLOR_NONE;
+	}
+	else if (!(target->player))
+	{
+		target->colorized = true;
+		target->color = color;
+	}
 }
 
 // Function: A_MoveRelative

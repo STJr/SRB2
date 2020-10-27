@@ -132,6 +132,77 @@ typedef struct
 	FLOAT       t;            // t texture ordinate (t over w)
 } FOutVector;
 
+#ifdef GL_SHADERS
+// Predefined shader types
+enum
+{
+	SHADER_DEFAULT = 0,
+
+	SHADER_FLOOR,
+	SHADER_WALL,
+	SHADER_SPRITE,
+	SHADER_MODEL, SHADER_MODEL_LIGHTING,
+	SHADER_WATER,
+	SHADER_FOG,
+	SHADER_SKY,
+
+	NUMBASESHADERS,
+};
+
+// Maximum amount of shader programs
+// Must be higher than NUMBASESHADERS
+#define HWR_MAXSHADERS 16
+
+// Shader sources (vertex and fragment)
+typedef struct
+{
+	char *vertex;
+	char *fragment;
+} shadersource_t;
+
+// Custom shader reference table
+typedef struct
+{
+	const char *type;
+	INT32 id;
+} customshaderxlat_t;
+
+#endif
+
+typedef struct vbo_vertex_s
+{
+	float x, y, z;
+	float u, v;
+	unsigned char r, g, b, a;
+} gl_skyvertex_t;
+
+typedef enum gl_skyloopmode_e
+{
+	HWD_SKYLOOP_FAN,
+	HWD_SKYLOOP_STRIP
+} gl_skyloopmode_t;
+
+typedef struct
+{
+	gl_skyloopmode_t mode;
+	int vertexcount;
+	int vertexindex;
+	boolean use_texture;
+} gl_skyloopdef_t;
+
+typedef struct
+{
+	unsigned int vbo;
+	int rows, columns;
+	int loopcount;
+
+	int detail, vertex_count;
+	int texture, width, height;
+	boolean rebuild; // VBO needs to be rebuilt
+
+	gl_skyloopdef_t *loops;
+	gl_skyvertex_t *data;
+} gl_sky_t;
 
 // ==========================================================================
 //                                                               RENDER MODES

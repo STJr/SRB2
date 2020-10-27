@@ -109,13 +109,10 @@ FILE_PATTERNS          = *.c \
                          *.mm \
                          *.dox
 RECURSIVE              = YES
-EXCLUDE                = ./src/djgppdos/internal.h \
-                         ./src/djgppdos/setup.c \
-                         ./src/sdl/IMG_xpm.c \
+EXCLUDE                = ./src/sdl/IMG_xpm.c \
                          ./src/sdl/SRB2DC/scramble.c
 EXCLUDE_SYMLINKS       = NO
 EXCLUDE_PATTERNS       = */src/hardware/*/* \
-                         */src/djgppdos/bcd.? \
                          */src/sdl/SDL_main/* \
                          */src/*/*_private.h \
                          */src/sdl/*/*help.? \
