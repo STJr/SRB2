@@ -85,6 +85,7 @@ char playeraddress[MAXPLAYERS][64];
 tic_t jointimeout = (10*TICRATE);
 static boolean sendingsavegame[MAXNETNODES]; // Are we sending the savegame?
 static boolean resendingsavegame[MAXNETNODES]; // Are we resending the savegame?
+static tic_t savegameresendcooldown[MAXNETNODES]; // How long before we can resend again?
 static tic_t freezetimeout[MAXNETNODES]; // Until when can this node freeze the server before getting a timeout?
 
 // Incremented by cv_joindelay when a client joins, decremented each tic.
@@ -3149,14 +3150,18 @@ void D_ClientServerInit(void)
 static void ResetNode(INT32 node)
 {
 	nodeingame[node] = false;
-	nodetoplayer[node] = -1;
-	nodetoplayer2[node] = -1;
+	nodewaiting[node] = 0;
+
 	nettics[node] = gametic;
 	supposedtics[node] = gametic;
-	nodewaiting[node] = 0;
+
+	nodetoplayer[node] = -1;
+	nodetoplayer2[node] = -1;
 	playerpernode[node] = 0;
+
 	sendingsavegame[node] = false;
 	resendingsavegame[node] = false;
+	savegameresendcooldown[node] = 0;
 }
 
 void SV_ResetServer(void)
@@ -4069,7 +4074,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 			// Check player consistancy during the level
 			if (realstart <= gametic && realstart + BACKUPTICS - 1 > gametic && gamestate == GS_LEVEL
 				&& consistancy[realstart%BACKUPTICS] != SHORT(netbuffer->u.clientpak.consistancy)
-				&& !resendingsavegame[node])
+				&& !resendingsavegame[node] && savegameresendcooldown[node] <= I_GetTime())
 			{
 				if (cv_resynchattempts.value)
 				{
@@ -4237,6 +4242,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_RECEIVEDGAMESTATE:
 			sendingsavegame[node] = false;
 			resendingsavegame[node] = false;
+			savegameresendcooldown[node] = I_GetTime() + 15 * TICRATE;
 			break;
 // -------------------------------------------- CLIENT RECEIVE ----------
 		case PT_SERVERTICS:
