@@ -9918,7 +9918,7 @@ struct {
 
 	// Bustable FOF type
 	{"BT_TOUCH",BT_TOUCH},
-	{"BT_SPIN",BT_SPIN},
+	{"BT_SPINBUST",BT_SPINBUST},
 	{"BT_REGULAR",BT_REGULAR},
 	{"BT_STRONG",BT_STRONG},
 

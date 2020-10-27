@@ -2552,7 +2552,7 @@ static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
 	{
 	case BT_TOUCH: // Shatters on contact
 		return true;
-	case BT_SPIN: // Can be busted by spinning (either from jumping or spindashing)
+	case BT_SPINBUST: // Can be busted by spinning (either from jumping or spindashing)
 		if ((player->pflags & PF_SPINNING) && !(player->pflags & PF_STARTDASH))
 			return true;
 
@@ -2668,7 +2668,7 @@ static void P_CheckBustableBlocks(player_t *player)
 						continue;
 
 					break;
-				case BT_SPIN:
+				case BT_SPINBUST:
 					if (player->mo->z + player->mo->momz > topheight)
 						continue;
 
@@ -2688,7 +2688,7 @@ static void P_CheckBustableBlocks(player_t *player)
 			}
 
 			// Impede the player's fall a bit
-			if (((rover->busttype == BT_TOUCH) || (rover->busttype == BT_SPIN)) && player->mo->z >= topheight)
+			if (((rover->busttype == BT_TOUCH) || (rover->busttype == BT_SPINBUST)) && player->mo->z >= topheight)
 				player->mo->momz >>= 1;
 			else if (rover->busttype == BT_TOUCH)
 			{

@@ -6867,7 +6867,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						busttype = BT_TOUCH;
 						break;
 					case TMFB_SPIN:
-						busttype = BT_SPIN;
+						busttype = BT_SPINBUST;
 						break;
 					case TMFB_REGULAR:
 						busttype = BT_REGULAR;
@@ -6939,7 +6939,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 									fflr->busttype = BT_TOUCH;
 									break;
 								case TMFB_SPIN:
-									fflr->busttype = BT_SPIN;
+									fflr->busttype = BT_SPINBUST;
 									break;
 								case TMFB_REGULAR:
 									fflr->busttype = BT_REGULAR;
@@ -7298,7 +7298,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						busttype = BT_TOUCH;
 						break;
 					case TMFB_SPIN:
-						busttype = BT_SPIN;
+						busttype = BT_SPINBUST;
 						break;
 					case TMFB_REGULAR:
 						busttype = BT_REGULAR;
