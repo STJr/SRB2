@@ -3616,16 +3616,17 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	shadowVerts[3].t = shadowVerts[2].t = 0;
 	shadowVerts[0].t = shadowVerts[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
 
-	if (thing->subsector->sector->numlights)
+	if (!(thing->renderflags & RF_NOCOLORMAPS))
 	{
-		light = R_GetPlaneLight(thing->subsector->sector, groundz, false); // Always use the light at the top instead of whatever I was doing before
+		if (thing->subsector->sector->numlights)
+		{
+			// Always use the light at the top instead of whatever I was doing before
+			light = R_GetPlaneLight(thing->subsector->sector, groundz, false);
 
-		if (*thing->subsector->sector->lightlist[light].extra_colormap)
-			colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
-	}
-	else
-	{
-		if (thing->subsector->sector->extra_colormap)
+			if (*thing->subsector->sector->lightlist[light].extra_colormap)
+				colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
+		}
+		else if (thing->subsector->sector->extra_colormap)
 			colormap = thing->subsector->sector->extra_colormap;
 	}
 
@@ -3675,7 +3676,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	FOutVector baseWallVerts[4]; // This is what the verts should end up as
 	patch_t *gpatch;
 	FSurfaceInfo Surf;
-	extracolormap_t *colormap;
+	extracolormap_t *colormap = NULL;
 	FUINT lightlevel;
 	boolean lightset = true;
 	FBITFIELD blend = 0;
@@ -3810,7 +3811,9 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 
 	// Start with the lightlevel and colormap from the top of the sprite
 	lightlevel = *list[sector->numlights - 1].lightlevel;
-	colormap = *list[sector->numlights - 1].extra_colormap;
+	if (!(spr->mobj->renderflags & RF_NOCOLORMAPS))
+		colormap = *list[sector->numlights - 1].extra_colormap;
+
 	i = 0;
 	temp = FLOAT_TO_FIXED(realtop);
 
@@ -3828,7 +3831,8 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		{
 			if (!lightset)
 				lightlevel = *list[i-1].lightlevel > 255 ? 255 : *list[i-1].lightlevel;
-			colormap = *list[i-1].extra_colormap;
+			if (!(spr->mobj->renderflags & RF_NOCOLORMAPS))
+				colormap = *list[i-1].extra_colormap;
 			break;
 		}
 	}
@@ -3843,7 +3847,8 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		{
 			if (!lightset)
 				lightlevel = *list[i].lightlevel > 255 ? 255 : *list[i].lightlevel;
-			colormap = *list[i].extra_colormap;
+			if (!(spr->mobj->renderflags & RF_NOCOLORMAPS))
+				colormap = *list[i].extra_colormap;
 		}
 
 		if (i + 1 < sector->numlights)
@@ -4160,7 +4165,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		sector_t *sector = spr->mobj->subsector->sector;
 		UINT8 lightlevel = 0;
 		boolean lightset = true;
-		extracolormap_t *colormap = sector->extra_colormap;
+		extracolormap_t *colormap = NULL;
 
 		if (R_ThingIsFullBright(spr->mobj))
 			lightlevel = 255;
@@ -4169,6 +4174,9 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		else
 			lightset = false;
 
+		if (!(spr->mobj->renderflags & RF_NOCOLORMAPS))
+			colormap = sector->extra_colormap;
+
 		if (splat && sector->numlights)
 		{
 			INT32 light = R_GetPlaneLight(sector, spr->mobj->z, false);
@@ -4176,7 +4184,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			if (!lightset)
 				lightlevel = *sector->lightlist[light].lightlevel > 255 ? 255 : *sector->lightlist[light].lightlevel;
 
-			if (*sector->lightlist[light].extra_colormap)
+			if (*sector->lightlist[light].extra_colormap && !(spr->mobj->renderflags & RF_NOCOLORMAPS))
 				colormap = *sector->lightlist[light].extra_colormap;
 		}
 		else if (!lightset)
@@ -4301,9 +4309,8 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 
 		if (sector->numlights)
 		{
-			INT32 light;
-
-			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
+			// Always use the light at the top instead of whatever I was doing before
+			INT32 light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false);
 
 			if (!(spr->mobj->frame & FF_FULLBRIGHT))
 				lightlevel = *sector->lightlist[light].lightlevel > 255 ? 255 : *sector->lightlist[light].lightlevel;

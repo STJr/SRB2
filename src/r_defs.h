@@ -729,6 +729,7 @@ typedef enum
 	RF_BLENDMASK        = 0x0F00,   // --Blending modes
 	RF_FULLBRIGHT       = 0x0100,   // Sprite is drawn at full brightness
 	RF_FULLDARK         = 0x0200,   // Sprite is drawn completely dark
+	RF_NOCOLORMAPS      = 0x0400,   // Sprite is not drawn with colormaps
 
 	RF_SPRITETYPEMASK   = 0x7000,   // ---Different sprite types, not all implemented
 	RF_PAPERSPRITE      = 0x1000,   // Paper sprite

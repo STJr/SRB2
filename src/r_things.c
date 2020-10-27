@@ -842,7 +842,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 
-	if (vis->extra_colormap)
+	if (vis->extra_colormap && !(vis->renderflags & RF_NOCOLORMAPS))
 	{
 		if (!dc_colormap)
 			dc_colormap = vis->extra_colormap->colormap;
@@ -1354,26 +1354,30 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	x1 += (x2-x1)/2;
 	shadow->shear.offset = shadow->x1-x1;
 
-	if (thing->subsector->sector->numlights)
+	if (thing->renderflags & RF_NOCOLORMAPS)
+		shadow->extra_colormap = NULL;
+	else
 	{
-		INT32 lightnum;
-		light = thing->subsector->sector->numlights - 1;
+		if (thing->subsector->sector->numlights)
+		{
+			INT32 lightnum;
+			light = thing->subsector->sector->numlights - 1;
 
-		// R_GetPlaneLight won't work on sloped lights!
-		for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
-			fixed_t h = P_GetLightZAt(&thing->subsector->sector->lightlist[lightnum], thing->x, thing->y);
-			if (h <= shadow->gzt) {
-				light = lightnum - 1;
-				break;
+			// R_GetPlaneLight won't work on sloped lights!
+			for (lightnum = 1; lightnum < thing->subsector->sector->numlights; lightnum++) {
+				fixed_t h = P_GetLightZAt(&thing->subsector->sector->lightlist[lightnum], thing->x, thing->y);
+				if (h <= shadow->gzt) {
+					light = lightnum - 1;
+					break;
+				}
 			}
 		}
-		//light = R_GetPlaneLight(thing->subsector->sector, shadow->gzt, false);
-	}
 
-	if (thing->subsector->sector->numlights)
-		shadow->extra_colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
-	else
-		shadow->extra_colormap = thing->subsector->sector->extra_colormap;
+		if (thing->subsector->sector->numlights)
+			shadow->extra_colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
+		else
+			shadow->extra_colormap = thing->subsector->sector->extra_colormap;
+	}
 
 	shadow->transmap = R_GetTranslucencyTable(trans + 1);
 	shadow->colormap = scalelight[0][0]; // full dark!
