@@ -722,6 +722,8 @@ FBITFIELD HWR_GetBlendModeFlag(INT32 ast)
 
 UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
 {
+	transtablenum = max(min(transtablenum, tr_trans90), 0);
+
 	switch (transtablenum)
 	{
 		case 0          : return 0xff;
@@ -3787,7 +3789,12 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode);
 	}
 	else if (spr->mobj->frame & FF_TRANSMASK)
-		blend = HWR_SurfaceBlend(spr->mobj->blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
+	{
+		INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
+		if (spr->mobj->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
+			return;
+		blend = HWR_SurfaceBlend(spr->mobj->blendmode, trans, &Surf);
+	}
 	else
 	{
 		// BP: i agree that is little better in environement but it don't
@@ -4202,7 +4209,12 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			blend = HWR_GetBlendModeFlag(spr->mobj->blendmode);
 		}
 		else if (spr->mobj->frame & FF_TRANSMASK)
-			blend = HWR_SurfaceBlend(spr->mobj->blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
+		{
+			INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
+			if (spr->mobj->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
+				return;
+			blend = HWR_SurfaceBlend(spr->mobj->blendmode, trans, &Surf);
+		}
 		else
 		{
 			// BP: i agree that is little better in environement but it don't
@@ -4317,7 +4329,12 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode);
 	}
 	else if (spr->mobj->frame & FF_TRANSMASK)
-		blend = HWR_SurfaceBlend(spr->mobj->blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
+	{
+		INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
+		if (spr->mobj->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
+			return;
+		blend = HWR_SurfaceBlend(spr->mobj->blendmode, trans, &Surf);
+	}
 	else
 	{
 		// BP: i agree that is little better in environement but it don't

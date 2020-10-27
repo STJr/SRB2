@@ -1802,7 +1802,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
 		trans = tr_trans80; // because now the translucency is set through FF_TRANSMASK
 	else if (oldthing->frame & FF_TRANSMASK)
+	{
 		trans = (oldthing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
+		if (oldthing->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
+			return;
+	}
 	else
 		trans = 0;
 
@@ -1834,7 +1838,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			else
 				trans += 3;
 
-			if (trans >= 9)
+			if (trans >= NUMTRANSMAPS)
 				return;
 
 			trans--;
@@ -2007,8 +2011,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->scale += FixedMul(scalestep, spriteyscale) * (vis->x1 - x1);
 	}
 
-	if ((thing->blendmode != AST_COPY) && cv_translucency.value)
-		vis->transmap = R_GetBlendTable(thing->blendmode, trans);
+	if ((oldthing->blendmode != AST_COPY) && cv_translucency.value)
+		vis->transmap = R_GetBlendTable(oldthing->blendmode, trans);
 	else
 		vis->transmap = NULL;
 

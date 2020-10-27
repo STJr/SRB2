@@ -1316,21 +1316,16 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		//if (tics > durs)
 			//durs = tics;
 
-		if (spr->mobj->flags2 & MF2_SHADOW)
-		{
-			Surf.PolyColor.s.alpha = 0x40;
-			Surf.PolyFlags = HWR_GetBlendModeFlag(spr->mobj->blendmode);
-		}
-		else if (spr->mobj->frame & FF_TRANSMASK)
+		if (spr->mobj->frame & FF_TRANSMASK)
 			Surf.PolyFlags = HWR_SurfaceBlend(spr->mobj->blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 		else
 		{
-			Surf.PolyColor.s.alpha = 0xFF;
-			Surf.PolyFlags = 0;
+			Surf.PolyColor.s.alpha = (spr->mobj->flags2 & MF2_SHADOW) ? 0x40 : 0xff;
+			Surf.PolyFlags = HWR_GetBlendModeFlag(spr->mobj->blendmode);
 		}
 
-		// dont forget to enabled the depth test because we can't do this like
-		// before: polygons models are not sorted
+		// don't forget to enable the depth test because we can't do this
+		// like before: model polygons are not sorted
 
 		// 1. load model+texture if not already loaded
 		// 2. draw model with correct position, rotation,...
