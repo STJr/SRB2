@@ -29,10 +29,10 @@
 // GIFs are always little-endian
 #include "byteptr.h"
 
-consvar_t cv_gif_optimize = {"gif_optimize", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_gif_downscale =  {"gif_downscale", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_gif_dynamicdelay = {"gif_dynamicdelay", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_gif_localcolortable =  {"gif_localcolortable", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gif_optimize = CVAR_INIT ("gif_optimize", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_gif_downscale =  CVAR_INIT ("gif_downscale", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_gif_dynamicdelay = CVAR_INIT ("gif_dynamicdelay", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_gif_localcolortable =  CVAR_INIT ("gif_localcolortable", "On", CV_SAVE, CV_OnOff, NULL);
 
 #ifdef HAVE_ANIGIF
 static boolean gif_optimize = false; // So nobody can do something dumb
@@ -499,20 +499,22 @@ static size_t gifframe_size = 8192;
 // converts an RGB frame to a frame with a palette.
 //
 #ifdef HWRENDER
+static colorlookup_t gif_colorlookup;
+
 static void GIF_rgbconvert(UINT8 *linear, UINT8 *scr)
 {
 	UINT8 r, g, b;
 	size_t src = 0, dest = 0;
 	size_t size = (vid.width * vid.height * 3);
 
-	InitColorLUT(gif_framepalette);
+	InitColorLUT(&gif_colorlookup, (gif_localcolortable) ? gif_framepalette : gif_headerpalette, true);
 
 	while (src < size)
 	{
 		r = (UINT8)linear[src];
 		g = (UINT8)linear[src + 1];
 		b = (UINT8)linear[src + 2];
-		scr[dest] = colorlookup[r >> SHIFTCOLORBITS][g >> SHIFTCOLORBITS][b >> SHIFTCOLORBITS];
+		scr[dest] = GetColorLUTDirect(&gif_colorlookup, r, g, b);
 		src += (3 * scrbuf_downscaleamt);
 		dest += scrbuf_downscaleamt;
 	}

@@ -221,6 +221,15 @@ model_t *LoadModel(const char *filename, int ztag)
 		material->shininess = 25.0f;
 	}
 
+	// Set originaluvs to point to uvs
+	for (i = 0; i < model->numMeshes; i++)
+		model->meshes[i].originaluvs = model->meshes[i].uvs;
+
+	model->max_s = 1.0;
+	model->max_t = 1.0;
+	model->vbo_max_s = 1.0;
+	model->vbo_max_t = 1.0;
+
 	return model;
 }
 
