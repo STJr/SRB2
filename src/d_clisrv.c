@@ -4274,9 +4274,6 @@ static void HandlePacketFromPlayer(SINT8 node)
 				break;
 			}
 
-			if (cl_redownloadinggamestate)
-				break;
-
 			realstart = netbuffer->u.serverpak.starttic;
 			realend = realstart + netbuffer->u.serverpak.numtics;
 
@@ -5001,8 +4998,7 @@ void NetUpdate(void)
 		if (cl_redownloadinggamestate && fileneeded[0].status == FS_FOUND)
 			CL_ReloadReceivedSavegame();
 
-		if (!cl_redownloadinggamestate)
-			CL_SendClientCmd(); // Send tic cmd
+		CL_SendClientCmd(); // Send tic cmd
 		hu_redownloadinggamestate = cl_redownloadinggamestate;
 	}
 	else
