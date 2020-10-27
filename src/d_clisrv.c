@@ -5022,24 +5022,18 @@ void NetUpdate(void)
 			// Don't erase tics not acknowledged
 			counts = realtics;
 
-			// Do not make tics while resynching
-			if (counts != -666)
-			{
-				if (maketic + counts >= firstticstosend + BACKUPTICS)
-					counts = firstticstosend+BACKUPTICS-maketic-1;
+			if (maketic + counts >= firstticstosend + BACKUPTICS)
+				counts = firstticstosend+BACKUPTICS-maketic-1;
 
-				for (i = 0; i < counts; i++)
-					SV_Maketic(); // Create missed tics and increment maketic
+			for (i = 0; i < counts; i++)
+				SV_Maketic(); // Create missed tics and increment maketic
 
-				for (; tictoclear < firstticstosend; tictoclear++) // Clear only when acknowledged
-					D_Clearticcmd(tictoclear);                    // Clear the maketic the new tic
+			for (; tictoclear < firstticstosend; tictoclear++) // Clear only when acknowledged
+				D_Clearticcmd(tictoclear);                    // Clear the maketic the new tic
 
-				SV_SendTics();
+			SV_SendTics();
 
-				neededtic = maketic; // The server is a client too
-			}
-			else
-				hu_redownloadinggamestate = true;
+			neededtic = maketic; // The server is a client too
 		}
 	}
 
