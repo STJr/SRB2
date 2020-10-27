@@ -1317,11 +1317,17 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			//durs = tics;
 
 		if (spr->mobj->flags2 & MF2_SHADOW)
+		{
 			Surf.PolyColor.s.alpha = 0x40;
+			Surf.PolyFlags = HWR_GetBlendModeFlag(spr->mobj->blendmode);
+		}
 		else if (spr->mobj->frame & FF_TRANSMASK)
-			HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
+			Surf.PolyFlags = HWR_SurfaceBlend(spr->mobj->blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 		else
+		{
 			Surf.PolyColor.s.alpha = 0xFF;
+			Surf.PolyFlags = 0;
+		}
 
 		// dont forget to enabled the depth test because we can't do this like
 		// before: polygons models are not sorted

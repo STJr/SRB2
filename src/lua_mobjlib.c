@@ -64,6 +64,7 @@ enum mobj_e {
 	mobj_renderflags,
 	mobj_skin,
 	mobj_color,
+	mobj_blendmode,
 	mobj_bnext,
 	mobj_bprev,
 	mobj_hnext,
@@ -139,6 +140,7 @@ static const char *const mobj_opt[] = {
 	"renderflags",
 	"skin",
 	"color",
+	"blendmode",
 	"bnext",
 	"bprev",
 	"hnext",
@@ -314,6 +316,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_color:
 		lua_pushinteger(L, mo->color);
+		break;
+	case mobj_blendmode:
+		lua_pushinteger(L, mo->blendmode);
 		break;
 	case mobj_bnext:
 		LUA_PushUserdata(L, mo->bnext, META_MOBJ);
@@ -650,6 +655,9 @@ static int mobj_set(lua_State *L)
 		mo->color = newcolor;
 		break;
 	}
+	case mobj_blendmode:
+		mo->blendmode = (INT32)luaL_checkinteger(L, 3);
+		break;
 	case mobj_bnext:
 		return NOSETPOS;
 	case mobj_bprev:

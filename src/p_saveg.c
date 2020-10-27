@@ -1395,11 +1395,12 @@ typedef enum
 	MD2_ROLLANGLE    = 1<<14,
 	MD2_SHADOWSCALE  = 1<<15,
 	MD2_RENDERFLAGS  = 1<<16,
-	MD2_SPRITEXSCALE = 1<<17,
-	MD2_SPRITEYSCALE = 1<<18,
-	MD2_SPRITEXOFFSET = 1<<19,
-	MD2_SPRITEYOFFSET = 1<<20,
-	MD2_FLOORSPRITESLOPE = 1<<21,
+	MD2_BLENDMODE    = 1<<17,
+	MD2_SPRITEXSCALE = 1<<18,
+	MD2_SPRITEYSCALE = 1<<19,
+	MD2_SPRITEXOFFSET = 1<<20,
+	MD2_SPRITEYOFFSET = 1<<21,
+	MD2_FLOORSPRITESLOPE = 1<<22,
 } mobj_diff2_t;
 
 typedef enum
@@ -1614,6 +1615,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_SHADOWSCALE;
 	if (mobj->renderflags)
 		diff2 |= MD2_RENDERFLAGS;
+	if (mobj->renderflags)
+		diff2 |= MD2_BLENDMODE;
 	if (mobj->spritexscale != FRACUNIT)
 		diff2 |= MD2_SPRITEXSCALE;
 	if (mobj->spriteyscale != FRACUNIT)
@@ -1775,6 +1778,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, mobj->shadowscale);
 	if (diff2 & MD2_RENDERFLAGS)
 		WRITEUINT32(save_p, mobj->renderflags);
+	if (diff2 & MD2_BLENDMODE)
+		WRITEINT32(save_p, mobj->blendmode);
 	if (diff2 & MD2_SPRITEXSCALE)
 		WRITEFIXED(save_p, mobj->spritexscale);
 	if (diff2 & MD2_SPRITEYSCALE)
@@ -2813,6 +2818,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->shadowscale = READFIXED(save_p);
 	if (diff2 & MD2_RENDERFLAGS)
 		mobj->renderflags = READUINT32(save_p);
+	if (diff2 & MD2_BLENDMODE)
+		mobj->blendmode = READINT32(save_p);
 	if (diff2 & MD2_SPRITEXSCALE)
 		mobj->spritexscale = READFIXED(save_p);
 	if (diff2 & MD2_SPRITEYSCALE)

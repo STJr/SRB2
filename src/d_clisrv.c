@@ -655,6 +655,7 @@ static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
 	rsp->flags = LONG(players[i].mo->flags);
 	rsp->flags2 = LONG(players[i].mo->flags2);
 	rsp->renderflags = LONG(players[i].mo->renderflags);
+	rsp->blendmode = LONG(players[i].mo->blendmode);
 
 	rsp->radius = LONG(players[i].mo->radius);
 	rsp->height = LONG(players[i].mo->height);
@@ -794,7 +795,6 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mo->eflags = (UINT16)SHORT(rsp->eflags);
 	players[i].mo->flags = LONG(rsp->flags);
 	players[i].mo->flags2 = LONG(rsp->flags2);
-	players[i].mo->renderflags = LONG(rsp->renderflags);
 	players[i].mo->friction = LONG(rsp->friction);
 	players[i].mo->health = LONG(rsp->health);
 	players[i].mo->momx = LONG(rsp->momx);
@@ -809,6 +809,8 @@ static void resynch_read_player(resynch_pak *rsp)
 	players[i].mo->frame = LONG(rsp->frame);
 	players[i].mo->sprite2 = rsp->sprite2;
 	players[i].mo->anim_duration = SHORT(rsp->anim_duration);
+	players[i].mo->renderflags = LONG(rsp->renderflags);
+	players[i].mo->blendmode = LONG(rsp->blendmode);
 
 	players[i].mo->spritexscale = LONG(rsp->spritexscale);
 	players[i].mo->spriteyscale = LONG(rsp->spriteyscale);

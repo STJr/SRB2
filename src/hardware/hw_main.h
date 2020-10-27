@@ -54,7 +54,6 @@ boolean HWR_Screenshot(const char *pathname);
 void HWR_AddCommands(void);
 void HWR_AddSessionCommands(void);
 void transform(float *cx, float *cy, float *cz);
-FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
 INT32 HWR_GetTextureUsed(void);
 void HWR_DoPostProcessor(player_t *player);
 void HWR_StartScreenWipe(void);
@@ -65,9 +64,14 @@ void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum);
 void HWR_MakeScreenFinalTexture(void);
 void HWR_DrawScreenFinalTexture(int width, int height);
 
-// This stuff is put here so MD2's can use them
+// This stuff is put here so models can use them
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap);
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
+
+UINT8 HWR_GetTranstableAlpha(INT32 transtablenum);
+FBITFIELD HWR_GetBlendModeFlag(INT32 ast);
+FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf);
+FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
 
 void HWR_ReadShaders(UINT16 wadnum, boolean PK3);
 boolean HWR_LoadShaders(void);

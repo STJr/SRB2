@@ -551,7 +551,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 
 		if (alphalevel)
 		{
-			v_translevel = transtables + ((alphalevel-1)<<FF_TRANSSHIFT);
+			v_translevel = R_GetTranslucencyTable(alphalevel);
 			patchdrawfunc = translucentpdraw;
 		}
 	}
@@ -851,7 +851,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 
 		if (alphalevel)
 		{
-			v_translevel = transtables + ((alphalevel-1)<<FF_TRANSSHIFT);
+			v_translevel = R_GetTranslucencyTable(alphalevel);
 			patchdrawfunc = translucentpdraw;
 		}
 	}
@@ -1500,7 +1500,7 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 	// Jimita (12-04-2018)
 	if (alphalevel)
 	{
-		fadetable = ((UINT8 *)transtables + ((alphalevel-1)<<FF_TRANSSHIFT) + (c*256));
+		fadetable = R_GetTranslucencyTable(alphalevel) + (c*256);
 		for (;(--h >= 0) && dest < deststop; dest += vid.width)
 		{
 			u = 0;
@@ -1683,7 +1683,7 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 
 	fadetable = ((color & 0xFF00) // Color is not palette index?
 		? ((UINT8 *)colormaps + strength*256) // Do COLORMAP fade.
-		: ((UINT8 *)transtables + ((9-strength)<<FF_TRANSSHIFT) + color*256)); // Else, do TRANSMAP** fade.
+		: ((UINT8 *)R_GetTranslucencyTable((9-strength)+1) + color*256)); // Else, do TRANSMAP** fade.
 	for (;(--h >= 0) && dest < deststop; dest += vid.width)
 	{
 		u = 0;
@@ -1829,7 +1829,7 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 		? ((UINT8 *)(((color & 0x0F00) == 0x0A00) ? fadecolormap // Do fadecolormap fade.
 		: (((color & 0x0F00) == 0x0B00) ? fadecolormap + (256 * FADECOLORMAPROWS) // Do white fadecolormap fade.
 		: colormaps)) + strength*256) // Do COLORMAP fade.
-		: ((UINT8 *)transtables + ((9-strength)<<FF_TRANSSHIFT) + color*256)); // Else, do TRANSMAP** fade.
+		: ((UINT8 *)R_GetTranslucencyTable((9-strength)+1) + color*256)); // Else, do TRANSMAP** fade.
 		const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
 		UINT8 *buf = screens[0];
 
@@ -3565,7 +3565,7 @@ void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param)
 		angle_t disStart = (leveltime * 128) & FINEMASK; // in 0 to FINEANGLE
 		INT32 newpix;
 		INT32 sine;
-		//UINT8 *transme = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
+		//UINT8 *transme = R_GetTranslucencyTable(tr_trans50);
 
 		for (y = yoffset; y < yoffset+height; y++)
 		{
@@ -3622,7 +3622,7 @@ Unoptimized version
 		INT32 x, y;
 
 		// TODO: Add a postimg_param so that we can pick the translucency level...
-		UINT8 *transme = transtables + ((param-1)<<FF_TRANSSHIFT);
+		UINT8 *transme = R_GetTranslucencyTable(param);
 
 		for (y = yoffset; y < yoffset+height; y++)
 		{

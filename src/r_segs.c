@@ -147,7 +147,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 	if (ldef->alpha > 0 && ldef->alpha < FRACUNIT)
 	{
-		dc_transmap = transtables + ((R_GetLinedefTransTable(ldef->alpha) - 1) << FF_TRANSSHIFT);
+		dc_transmap = R_GetTranslucencyTable(R_GetLinedefTransTable(ldef->alpha));
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 
 	}
@@ -165,7 +165,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		if (curline->polyseg->translucency >= NUMTRANSMAPS)
 			return;
 
-		dc_transmap = transtables + ((curline->polyseg->translucency-1)<<FF_TRANSSHIFT);
+		dc_transmap = R_GetTranslucencyTable(curline->polyseg->translucency);
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
 
@@ -580,23 +580,23 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		if (pfloor->alpha < 12)
 			return; // Don't even draw it
 		else if (pfloor->alpha < 38)
-			dc_transmap = transtables + ((tr_trans90-1)<<FF_TRANSSHIFT);
+			dc_transmap = R_GetTranslucencyTable(tr_trans90);
 		else if (pfloor->alpha < 64)
-			dc_transmap = transtables + ((tr_trans80-1)<<FF_TRANSSHIFT);
+			dc_transmap = R_GetTranslucencyTable(tr_trans80);
 		else if (pfloor->alpha < 89)
-			dc_transmap = transtables + ((tr_trans70-1)<<FF_TRANSSHIFT);
+			dc_transmap = R_GetTranslucencyTable(tr_trans70);
 		else if (pfloor->alpha < 115)
-			dc_transmap = transtables + ((tr_trans60-1)<<FF_TRANSSHIFT);
+			dc_transmap = R_GetTranslucencyTable(tr_trans60);
 		else if (pfloor->alpha < 140)
-			dc_transmap = transtables + ((tr_trans50-1)<<FF_TRANSSHIFT);
+			dc_transmap = R_GetTranslucencyTable(tr_trans50);
 		else if (pfloor->alpha < 166)
-			dc_transmap = transtables + ((tr_trans40-1)<<FF_TRANSSHIFT);
+			dc_transmap = R_GetTranslucencyTable(tr_trans40);
 		else if (pfloor->alpha < 192)
-			dc_transmap = transtables + ((tr_trans30-1)<<FF_TRANSSHIFT);
+			dc_transmap = R_GetTranslucencyTable(tr_trans30);
 		else if (pfloor->alpha < 217)
-			dc_transmap = transtables + ((tr_trans20-1)<<FF_TRANSSHIFT);
+			dc_transmap = R_GetTranslucencyTable(tr_trans20);
 		else if (pfloor->alpha < 243)
-			dc_transmap = transtables + ((tr_trans10-1)<<FF_TRANSSHIFT);
+			dc_transmap = R_GetTranslucencyTable(tr_trans10);
 		else
 			fuzzy = false; // Opaque
 

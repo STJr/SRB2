@@ -37,7 +37,6 @@ extern UINT8 dc_hires;
 extern UINT8 *dc_source; // first pixel in a column
 
 // translucency stuff here
-extern UINT8 *transtables; // translucency tables, should be (*transtables)[5][256][256]
 extern UINT8 *dc_transmap;
 
 // translation stuff here
@@ -111,17 +110,36 @@ extern lumpnum_t viewborderlump[8];
 #define TC_BLINK      -6 // For item blinking, according to kart
 #define TC_DASHMODE   -7 // For Metal Sonic's dashmode
 
+// Custom player skin translation
 // Initialize color translation tables, for player rendering etc.
-void R_InitTranslationTables(void);
 UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags);
 void R_FlushTranslationColormapCache(void);
 UINT16 R_GetColorByName(const char *name);
 UINT16 R_GetSuperColorByName(const char *name);
 
+extern UINT8 *transtables; // translucency tables, should be (*transtables)[5][256][256]
+
+enum
+{
+	blendtab_add,
+	blendtab_subtract,
+	blendtab_reversesubtract,
+	blendtab_modulate,
+	NUMBLENDMAPS
+};
+
+extern UINT8 *blendtables[NUMBLENDMAPS];
+
+void R_InitTranslucencyTables(void);
+void R_GenerateBlendTables(void);
+void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt);
+
+UINT8 *R_GetTranslucencyTable(INT32 alphalevel);
+UINT8 *R_GetBlendTable(int style, INT32 alphalevel);
+
 // Color ramp modification should force a recache
 extern UINT8 skincolor_modified[];
 
-// Custom player skin translation
 void R_InitViewBuffer(INT32 width, INT32 height);
 void R_InitViewBorder(void);
 void R_VideoErase(size_t ofs, INT32 count);

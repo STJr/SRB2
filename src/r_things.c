@@ -1375,7 +1375,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	else
 		shadow->extra_colormap = thing->subsector->sector->extra_colormap;
 
-	shadow->transmap = transtables + (trans<<FF_TRANSSHIFT);
+	shadow->transmap = R_GetTranslucencyTable(trans + 1);
 	shadow->colormap = scalelight[0][0]; // full dark!
 
 	objectsdrawn++;
@@ -2007,8 +2007,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->scale += FixedMul(scalestep, spriteyscale) * (vis->x1 - x1);
 	}
 
-	if (cv_translucency.value && trans)
-		vis->transmap = transtables + ((trans-1)<<FF_TRANSSHIFT);
+	if ((thing->blendmode != AST_COPY) && cv_translucency.value)
+		vis->transmap = R_GetBlendTable(thing->blendmode, trans);
 	else
 		vis->transmap = NULL;
 

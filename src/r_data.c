@@ -175,13 +175,15 @@ UINT8 ASTBlendPaletteIndexes(UINT8 background, UINT8 foreground, int style, UINT
 		if (alpha <= ASTTextureBlendingThreshold[1])
 		{
 			UINT8 *mytransmap;
+			INT32 trans;
 
 			// Is the patch way too translucent? Don't blend then.
 			if (alpha < ASTTextureBlendingThreshold[0])
 				return background;
 
 			// The equation's not exact but it works as intended. I'll call it a day for now.
-			mytransmap = transtables + ((8*(alpha) + 255/8)/(255 - 255/11) << FF_TRANSSHIFT);
+			trans = (8*(alpha) + 255/8)/(255 - 255/11);
+			mytransmap = R_GetTranslucencyTable(trans + 1);
 			if (background != 0xFF)
 				return *(mytransmap + (background<<8) + foreground);
 		}

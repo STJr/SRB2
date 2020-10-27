@@ -300,6 +300,7 @@ typedef struct
 	UINT32 flags2;
 	UINT16 eflags;
 	UINT32 renderflags;
+	INT32 blendmode;
 
 	fixed_t radius;
 	fixed_t height;

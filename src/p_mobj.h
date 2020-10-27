@@ -265,6 +265,7 @@ typedef enum {
 	// Ran the thinker this tic.
 	PCF_THUNK = 32,
 } precipflag_t;
+
 // Map Object definition.
 typedef struct mobj_s
 {
@@ -287,6 +288,7 @@ typedef struct mobj_s
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	UINT32 renderflags; // render flags
+	INT32 blendmode; // blend mode
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
 	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
@@ -405,7 +407,7 @@ typedef struct precipmobj_s
 	struct precipmobj_s **sprev; // killough 8/11/98: change to ptr-to-ptr
 
 	// More drawing info: to determine current sprite.
-	angle_t angle, pitch, roll;  // orientation
+	angle_t angle, pitch, roll; // orientation
 	angle_t rollangle;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
@@ -413,6 +415,7 @@ typedef struct precipmobj_s
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	UINT32 renderflags; // render flags
+	INT32 blendmode; // blend mode
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
 	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by

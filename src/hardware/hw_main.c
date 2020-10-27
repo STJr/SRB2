@@ -695,28 +695,71 @@ static void HWR_RenderSkyPlane(extrasubsector_t *xsub, fixed_t fixedheight)
 		v3d->z = pv->y;
 	}
 
-	HWD.pfnDrawPolygon(NULL, planeVerts, nrPlaneVerts,
-	 PF_Clip|PF_Invisible|PF_NoTexture|PF_Occlude);
+	HWD.pfnDrawPolygon(NULL, planeVerts, nrPlaneVerts, PF_Invisible|PF_NoTexture|PF_Occlude);
 }
 #endif //polysky
 
 #endif //doplanes
 
-FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
+FBITFIELD HWR_GetBlendModeFlag(INT32 ast)
+{
+	switch (ast)
+	{
+		case AST_ADD:
+			return PF_Additive;
+		case AST_SUBTRACT:
+			return PF_Subtractive;
+		case AST_REVERSESUBTRACT:
+			return PF_ReverseSubtract;
+		case AST_MODULATE:
+			return PF_Multiplicative;
+		default:
+			return PF_Translucent;
+	}
+
+	return 0;
+}
+
+UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
 {
 	switch (transtablenum)
 	{
-		case 0          : pSurf->PolyColor.s.alpha = 0x00;return  PF_Masked;
-		case tr_trans10 : pSurf->PolyColor.s.alpha = 0xe6;return  PF_Translucent;
-		case tr_trans20 : pSurf->PolyColor.s.alpha = 0xcc;return  PF_Translucent;
-		case tr_trans30 : pSurf->PolyColor.s.alpha = 0xb3;return  PF_Translucent;
-		case tr_trans40 : pSurf->PolyColor.s.alpha = 0x99;return  PF_Translucent;
-		case tr_trans50 : pSurf->PolyColor.s.alpha = 0x80;return  PF_Translucent;
-		case tr_trans60 : pSurf->PolyColor.s.alpha = 0x66;return  PF_Translucent;
-		case tr_trans70 : pSurf->PolyColor.s.alpha = 0x4c;return  PF_Translucent;
-		case tr_trans80 : pSurf->PolyColor.s.alpha = 0x33;return  PF_Translucent;
-		case tr_trans90 : pSurf->PolyColor.s.alpha = 0x19;return  PF_Translucent;
+		case 0          : return 0xff;
+		case tr_trans10 : return 0xe6;
+		case tr_trans20 : return 0xcc;
+		case tr_trans30 : return 0xb3;
+		case tr_trans40 : return 0x99;
+		case tr_trans50 : return 0x80;
+		case tr_trans60 : return 0x66;
+		case tr_trans70 : return 0x4c;
+		case tr_trans80 : return 0x33;
+		case tr_trans90 : return 0x19;
 	}
+
+	return 0xff;
+}
+
+FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf)
+{
+	if (!transtablenum)
+	{
+		pSurf->PolyColor.s.alpha = 0xff;
+		return PF_Masked;
+	}
+
+	pSurf->PolyColor.s.alpha = HWR_GetTranstableAlpha(transtablenum);
+	return HWR_GetBlendModeFlag(style);
+}
+
+FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
+{
+	if (!transtablenum)
+	{
+		pSurf->PolyColor.s.alpha = 0x00;
+		return PF_Masked;
+	}
+
+	pSurf->PolyColor.s.alpha = HWR_GetTranstableAlpha(transtablenum);
 	return PF_Translucent;
 }
 
@@ -2770,10 +2813,10 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	if (blendmode & PF_Translucent)
 	{
 		Surf.PolyColor.s.alpha = (UINT8)alpha;
-		blendmode |= PF_Modulated|PF_Occlude|PF_Clip;
+		blendmode |= PF_Modulated|PF_Occlude;
 	}
 	else
-		blendmode |= PF_Masked|PF_Modulated|PF_Clip;
+		blendmode |= PF_Masked|PF_Modulated;
 
 	HWR_ProcessPolygon(&Surf, planeVerts, nrPlaneVerts, blendmode, 1, false); // floor shader
 }
@@ -3443,7 +3486,7 @@ static void HWR_LinkDrawHackFinish(void)
 	{
 		// draw sprite shape, only to z-buffer
 		HWR_GetPatch(linkdrawlist[i].spr->gpatch);
-		HWR_ProcessPolygon(&surf, linkdrawlist[i].verts, 4, PF_Translucent|PF_Occlude|PF_Invisible|PF_Clip, 0, false);
+		HWR_ProcessPolygon(&surf, linkdrawlist[i].verts, 4, PF_Translucent|PF_Occlude|PF_Invisible, 0, false);
 	}
 	// reset list
 	linkdrawcount = 0;
@@ -3587,7 +3630,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	HWR_Lighting(&sSurf, 0, colormap);
 	sSurf.PolyColor.s.alpha = alpha;
 
-	HWR_ProcessPolygon(&sSurf, shadowVerts, 4, PF_Translucent|PF_Modulated|PF_Clip, 3, false); // sprite shader
+	HWR_ProcessPolygon(&sSurf, shadowVerts, 4, PF_Translucent|PF_Modulated, 3, false); // sprite shader
 }
 
 // This is expecting a pointer to an array containing 4 wallVerts for a sprite
@@ -3741,10 +3784,10 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	else if (spr->mobj->flags2 & MF2_SHADOW)
 	{
 		Surf.PolyColor.s.alpha = 0x40;
-		blend = PF_Translucent;
+		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode);
 	}
 	else if (spr->mobj->frame & FF_TRANSMASK)
-		blend = HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
+		blend = HWR_SurfaceBlend(spr->mobj->blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 	else
 	{
 		// BP: i agree that is little better in environement but it don't
@@ -3752,7 +3795,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		// Hurdler: PF_Environement would be cool, but we need to fix
 		//          the issue with the fog before
 		Surf.PolyColor.s.alpha = 0xFF;
-		blend = PF_Translucent|occlusion;
+		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode)|occlusion;
 		if (!occlusion) use_linkdraw_hack = true;
 	}
 
@@ -3860,7 +3903,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 
 		Surf.PolyColor.s.alpha = alpha;
 
-		HWR_ProcessPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip, 3, false); // sprite shader
+		HWR_ProcessPolygon(&Surf, wallVerts, 4, blend|PF_Modulated, 3, false); // sprite shader
 
 		if (use_linkdraw_hack)
 			HWR_LinkDrawHackAdd(wallVerts, spr);
@@ -3889,7 +3932,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 
 	Surf.PolyColor.s.alpha = alpha;
 
-	HWR_ProcessPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip, 3, false); // sprite shader
+	HWR_ProcessPolygon(&Surf, wallVerts, 4, blend|PF_Modulated, 3, false); // sprite shader
 
 	if (use_linkdraw_hack)
 		HWR_LinkDrawHackAdd(wallVerts, spr);
@@ -4156,10 +4199,10 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		else if (spr->mobj->flags2 & MF2_SHADOW)
 		{
 			Surf.PolyColor.s.alpha = 0x40;
-			blend = PF_Translucent;
+			blend = HWR_GetBlendModeFlag(spr->mobj->blendmode);
 		}
 		else if (spr->mobj->frame & FF_TRANSMASK)
-			blend = HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
+			blend = HWR_SurfaceBlend(spr->mobj->blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 		else
 		{
 			// BP: i agree that is little better in environement but it don't
@@ -4167,7 +4210,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			// Hurdler: PF_Environement would be cool, but we need to fix
 			//          the issue with the fog before
 			Surf.PolyColor.s.alpha = 0xFF;
-			blend = PF_Translucent|occlusion;
+			blend = HWR_GetBlendModeFlag(spr->mobj->blendmode)|occlusion;
 			if (!occlusion) use_linkdraw_hack = true;
 		}
 
@@ -4183,7 +4226,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			if (!occlusion) use_linkdraw_hack = true;
 		}
 
-		HWR_ProcessPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip, 3, false); // sprite shader
+		HWR_ProcessPolygon(&Surf, wallVerts, 4, blend|PF_Modulated, 3, false); // sprite shader
 
 		if (use_linkdraw_hack)
 			HWR_LinkDrawHackAdd(wallVerts, spr);
@@ -4271,10 +4314,10 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 	if (spr->mobj->flags2 & MF2_SHADOW)
 	{
 		Surf.PolyColor.s.alpha = 0x40;
-		blend = PF_Translucent;
+		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode);
 	}
 	else if (spr->mobj->frame & FF_TRANSMASK)
-		blend = HWR_TranstableToAlpha((spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
+		blend = HWR_SurfaceBlend(spr->mobj->blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 	else
 	{
 		// BP: i agree that is little better in environement but it don't
@@ -4282,10 +4325,10 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 		// Hurdler: PF_Environement would be cool, but we need to fix
 		//          the issue with the fog before
 		Surf.PolyColor.s.alpha = 0xFF;
-		blend = PF_Translucent|PF_Occlude;
+		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode)|PF_Occlude;
 	}
 
-	HWR_ProcessPolygon(&Surf, wallVerts, 4, blend|PF_Modulated|PF_Clip, 3, false); // sprite shader
+	HWR_ProcessPolygon(&Surf, wallVerts, 4, blend|PF_Modulated, 3, false); // sprite shader
 }
 #endif
 
@@ -4749,7 +4792,7 @@ static void HWR_DrawSprites(void)
 	// (Other states probably don't matter. Here I left them same as in LinkDrawHackFinish)
 	// Without this workaround the rest of the draw calls in this frame (including UI, screen texture)
 	// can get drawn using an incorrect glBlendFunc, resulting in a occasional black screen.
-	HWD.pfnSetBlend(PF_Translucent|PF_Occlude|PF_Clip|PF_Masked);
+	HWD.pfnSetBlend(PF_Translucent|PF_Occlude|PF_Masked);
 }
 
 // --------------------------------------------------------------------------
@@ -6422,7 +6465,7 @@ void HWR_DoPostProcessor(player_t *player)
 
 		Surf.PolyColor.s.alpha = 0xc0; // match software mode
 
-		HWD.pfnDrawPolygon(&Surf, v, 4, PF_Modulated|PF_Additive|PF_NoTexture|PF_NoDepthTest|PF_Clip|PF_NoZClip);
+		HWD.pfnDrawPolygon(&Surf, v, 4, PF_Modulated|PF_AdditiveSource|PF_NoTexture|PF_NoDepthTest);
 	}
 
 	// Capture the screen for intermission and screen waving
