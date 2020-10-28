@@ -1551,6 +1551,26 @@ void P_CheckGravity(mobj_t *mo, boolean affect)
 	}
 }
 
+//
+// P_SetPitchRollFromSlope
+//
+void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope)
+{
+	if (slope)
+	{
+		fixed_t tempz = slope->normal.z;
+		fixed_t tempy = slope->normal.y;
+		fixed_t tempx = slope->normal.x;
+
+		mo->pitch = -R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx);
+		mo->roll = -R_PointToAngle2(0, 0, tempz, tempy);
+	}
+	else
+	{
+		mo->pitch = mo->roll = 0;
+	}
+}
+
 #define STOPSPEED (FRACUNIT)
 
 //
@@ -1985,9 +2005,7 @@ void P_XYMovement(mobj_t *mo)
 			// Now compare the Zs of the different quantizations
 			if (oldangle-newangle > ANG30 && oldangle-newangle < ANGLE_180) { // Allow for a bit of sticking - this value can be adjusted later
 				mo->standingslope = oldslope;
-#ifdef HWRENDER
-				mo->modeltilt = mo->standingslope;
-#endif
+				P_SetPitchRollFromSlope(mo, mo->standingslope);
 				P_SlopeLaunch(mo);
 
 				//CONS_Printf("launched off of slope - ");
@@ -2560,9 +2578,7 @@ boolean P_ZMovement(mobj_t *mo)
 		if (((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) && (mo->type != MT_STEAM))
 		{
 			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
-#ifdef HWRENDER
-			mo->modeltilt = mo->standingslope;
-#endif
+			P_SetPitchRollFromSlope(mo, mo->standingslope);
 			P_ReverseQuantizeMomentumToSlope(&mom, mo->standingslope);
 		}
 
