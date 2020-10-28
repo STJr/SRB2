@@ -1630,22 +1630,18 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 				p.rollflip *= -1;
 		}
 
+		p.anglez = 0.0f;
 		p.anglex = 0.0f;
 
-#ifdef USE_FTRANSFORM_ANGLEZ
-		// Slope rotation from Kart
-		p.anglez = 0.0f;
-		if (spr->mobj->modeltilt)
+		if (spr->mobj->pitch)
 		{
-			fixed_t tempz = spr->mobj->modeltilt->normal.z;
-			fixed_t tempy = spr->mobj->modeltilt->normal.y;
-			fixed_t tempx = spr->mobj->modeltilt->normal.x;
-			fixed_t tempangle = AngleFixed(R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx));
-			p.anglez = FIXED_TO_FLOAT(tempangle);
-			tempangle = -AngleFixed(R_PointToAngle2(0, 0, tempz, tempy));
-			p.anglex = FIXED_TO_FLOAT(tempangle);
+			p.anglez = FIXED_TO_FLOAT(-AngleFixed(spr->mobj->pitch));
 		}
-#endif
+
+		if (spr->mobj->roll)
+		{
+			p.anglex = FIXED_TO_FLOAT(AngleFixed(spr->mobj->roll));
+		}
 
 		// SRB2CBTODO: MD2 scaling support
 		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);

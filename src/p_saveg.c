@@ -2987,11 +2987,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	if (diff2 & MD2_HPREV)
 		mobj->hprev = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff2 & MD2_SLOPE)
-	{
 		mobj->standingslope = P_SlopeById(READUINT16(save_p));
-#ifdef HWRENDER
-		mobj->modeltilt = mobj->standingslope;
-#endif
 	if (diff2 & MD2_COLORIZED)
 		mobj->colorized = READUINT8(save_p);
 	if (diff2 & MD2_MIRRORED)
