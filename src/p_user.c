@@ -5107,6 +5107,8 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 							P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
 							player->drawangle = player->mo->angle;
+							player->pflags &= ~PF_NOJUMPDAMAGE;
+							P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 							S_StartSound(player->mo, sfx_s3k43);
 						default:
 							break;
