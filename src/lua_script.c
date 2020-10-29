@@ -13,6 +13,7 @@
 #include "doomdef.h"
 #include "fastcmp.h"
 #include "dehacked.h"
+#include "deh_lua.h"
 #include "z_zone.h"
 #include "w_wad.h"
 #include "p_setup.h"

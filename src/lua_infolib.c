@@ -14,6 +14,7 @@
 #include "fastcmp.h"
 #include "info.h"
 #include "dehacked.h"
+#include "deh_lua.h"
 #include "p_mobj.h"
 #include "p_local.h"
 #include "z_zone.h"
