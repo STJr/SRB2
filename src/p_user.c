@@ -4835,6 +4835,8 @@ void P_DoJumpShield(player_t *player)
 		}
 #undef limitangle
 #undef numangles
+		player->pflags &= ~PF_NOJUMPDAMAGE;
+		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 		S_StartSound(player->mo, sfx_s3k45);
 	}
 	else
