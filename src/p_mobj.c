@@ -1562,8 +1562,8 @@ void P_SetPitchRollFromSlope(mobj_t *mo, pslope_t *slope)
 		fixed_t tempy = slope->normal.y;
 		fixed_t tempx = slope->normal.x;
 
-		mo->pitch = -R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx);
-		mo->roll = -R_PointToAngle2(0, 0, tempz, tempy);
+		mo->pitch = R_PointToAngle2(0, 0, FixedSqrt(FixedMul(tempy, tempy) + FixedMul(tempz, tempz)), tempx);
+		mo->roll = R_PointToAngle2(0, 0, tempz, tempy);
 	}
 	else
 	{

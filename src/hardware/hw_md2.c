@@ -1642,18 +1642,8 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 				p.rollflip *= -1;
 		}
 
-		p.anglez = 0.0f;
-		p.anglex = 0.0f;
-
-		if (spr->mobj->pitch)
-		{
-			p.anglez = FIXED_TO_FLOAT(-AngleFixed(spr->mobj->pitch));
-		}
-
-		if (spr->mobj->roll)
-		{
-			p.anglex = FIXED_TO_FLOAT(AngleFixed(spr->mobj->roll));
-		}
+		p.anglez = FIXED_TO_FLOAT(AngleFixed(spr->mobj->pitch));
+		p.anglex = FIXED_TO_FLOAT(AngleFixed(spr->mobj->roll));
 
 		// SRB2CBTODO: MD2 scaling support
 		finalscale *= FIXED_TO_FLOAT(interp.scale);
