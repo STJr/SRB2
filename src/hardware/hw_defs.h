@@ -93,9 +93,6 @@ typedef struct FVector
 //Hurdler: Transform (coords + angles)
 //BP: transform order : scale(rotation_x(rotation_y(translation(v))))
 
-// Kart features
-#define USE_FTRANSFORM_MIRROR
-
 // Vanilla features
 #define USE_MODEL_NEXTFRAME
 
@@ -108,13 +105,10 @@ typedef struct
 	UINT8       splitscreen;
 	boolean     flip;            // screenflip
 	boolean     roll;
-	SINT8       rollflip;
 	FLOAT       rollangle; // done to not override USE_FTRANSFORM_ANGLEZ
-	UINT8       rotaxis;
 	FLOAT       centerx, centery;
-#ifdef USE_FTRANSFORM_MIRROR
+	FLOAT       rollx, rollz;
 	boolean     mirror;          // SRB2Kart: Encore Mode
-#endif
 	boolean     shearing;        // 14042019
 	float       viewaiming;      // 17052019
 } FTransform;
