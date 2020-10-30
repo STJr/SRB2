@@ -278,8 +278,18 @@ static int lib_registerMetatable(lua_State *L)
 // Returns nil if the string does not refer to a valid userdata type
 static int lib_userdataMetatable(lua_State *L)
 {
+	UINT32 i;
 	const char *udname = luaL_checkstring(L, 1);
-	luaL_getmetatable(L, udname);
+
+	// Find internal metatable name
+	for (i = 0; meta2utype[i].meta; i++)
+		if (!strcmp(udname, meta2utype[i].utype))
+		{
+			luaL_getmetatable(L, meta2utype[i].meta);
+			return 1;
+		}
+
+	lua_pushnil(L);
 	return 1;
 }
 
