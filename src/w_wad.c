@@ -849,8 +849,8 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// Read shaders from file
 	if (rendermode == render_opengl && (vid_opengl_state == 1))
 	{
-		HWR_ReadShaders(numwadfiles - 1, (type == RET_PK3));
-		HWR_LoadShaders();
+		HWR_LoadCustomShadersFromFile(numwadfiles - 1, (type == RET_PK3));
+		HWR_CompileShaders();
 	}
 #endif // HWRENDER
 
@@ -1685,10 +1685,8 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 		// lump is a png so convert it
 		if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
 		{
-			// Dummy variables.
 			size_t newlen;
-			INT32 pngwidth, pngheight;
-			srcdata = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_PATCH, &pngwidth, &pngheight, NULL, NULL, len, &newlen, 0);
+			srcdata = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_PATCH, NULL, NULL, NULL, NULL, len, &newlen, 0);
 			ptr = Z_Realloc(ptr, newlen, tag, &lumpcache[lump]);
 			M_Memcpy(ptr, srcdata, newlen);
 			Z_Free(srcdata);

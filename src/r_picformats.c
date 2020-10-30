@@ -798,6 +798,8 @@ static void PNG_warn(png_structp PNG, png_const_charp pngtext)
 	CONS_Debug(DBG_RENDER, "libpng warning at %p: %s", PNG, pngtext);
 }
 
+static png_byte grAb_chunk[5] = {'g', 'r', 'A', 'b', (png_byte)'\0'};
+
 static png_bytep *PNG_Read(
 	const UINT8 *png,
 	INT32 *w, INT32 *h, INT16 *topoffset, INT16 *leftoffset,
@@ -824,8 +826,6 @@ static png_bytep *PNG_Read(
 
 	png_io_t png_io;
 	png_bytep *row_pointers;
-
-	png_byte grAb_chunk[5] = {'g', 'r', 'A', 'b', (png_byte)'\0'};
 	png_voidp *user_chunk_ptr;
 
 	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
@@ -852,7 +852,6 @@ static png_bytep *PNG_Read(
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
 #endif
 
-	// set our own read function
 	png_io.buffer = png;
 	png_io.size = size;
 	png_io.position = 0;
@@ -896,7 +895,7 @@ static png_bytep *PNG_Read(
 		// color is present on the image, the palette flag is disabled.
 		png_get_tRNS(png_ptr, png_info_ptr, &trans, &trans_num, &trans_values);
 
-		if (trans_num == 256)
+		if (trans && trans_num == 256)
 		{
 			int i;
 			for (i = 0; i < trans_num; i++)
@@ -950,7 +949,6 @@ static png_bytep *PNG_Read(
 			*topoffset = (INT16)BIGENDIAN_LONG(*offsets);
 	}
 
-	// bye
 	png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
 	if (chunk.data)
 		Z_Free(chunk.data);
@@ -987,11 +985,27 @@ void *Picture_PNGConvert(
 	png_uint_32 x, y;
 	png_bytep row;
 	boolean palette = false;
-	png_bytep *row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, &palette, insize);
-	png_uint_32 width = *w, height = *h;
+	png_bytep *row_pointers = NULL;
+	png_uint_32 width, height;
+
+	INT32 pngwidth, pngheight;
+	INT16 loffs = 0, toffs = 0;
 
 	if (png == NULL)
 		I_Error("Picture_PNGConvert: picture was NULL!");
+
+	if (w == NULL)
+		w = &pngwidth;
+	if (h == NULL)
+		h = &pngheight;
+	if (topoffset == NULL)
+		topoffset = &toffs;
+	if (leftoffset == NULL)
+		leftoffset = &loffs;
+
+	row_pointers = PNG_Read(png, w, h, topoffset, leftoffset, &palette, insize);
+	width = *w;
+	height = *h;
 
 	if (row_pointers == NULL)
 		I_Error("Picture_PNGConvert: row_pointers was NULL!");
@@ -1158,7 +1172,6 @@ void *Picture_PNGConvert(
 	{
 		void *converted;
 		pictureformat_t informat = PICFMT_NONE;
-		INT16 patleftoffset = 0, pattopoffset = 0;
 
 		// Figure out the format of the flat, from the bit depth of the output format
 		switch (outbpp)
@@ -1174,14 +1187,8 @@ void *Picture_PNGConvert(
 				break;
 		}
 
-		// Also find out if leftoffset and topoffset aren't pointing to NULL.
-		if (leftoffset)
-			patleftoffset = *leftoffset;
-		if (topoffset)
-			pattopoffset = *topoffset;
-
 		// Now, convert it!
-		converted = Picture_PatchConvert(informat, flat, outformat, insize, outsize, (INT16)width, (INT16)height, patleftoffset, pattopoffset, flags);
+		converted = Picture_PatchConvert(informat, flat, outformat, insize, outsize, (INT16)width, (INT16)height, *leftoffset, *topoffset, flags);
 		Z_Free(flat);
 		return converted;
 	}
@@ -1195,10 +1202,12 @@ void *Picture_PNGConvert(
   * \param png The PNG image.
   * \param width A pointer to the input picture's width.
   * \param height A pointer to the input picture's height.
+  * \param topoffset A pointer to the input picture's vertical offset.
+  * \param leftoffset A pointer to the input picture's horizontal offset.
   * \param size The input picture's size.
   * \return True if reading the file succeeded, false if it failed.
   */
-boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t size)
+boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *topoffset, INT16 *leftoffset, size_t size)
 {
 	png_structp png_ptr;
 	png_infop png_info_ptr;
@@ -1211,9 +1220,9 @@ boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t si
 #endif
 
 	png_io_t png_io;
+	png_voidp *user_chunk_ptr;
 
-	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL,
-		PNG_error, PNG_warn);
+	png_ptr = png_create_read_struct(PNG_LIBPNG_VER_STRING, NULL, PNG_error, PNG_warn);
 	if (!png_ptr)
 		I_Error("Picture_PNGDimensions: Couldn't initialize libpng!");
 
@@ -1237,23 +1246,41 @@ boolean Picture_PNGDimensions(UINT8 *png, INT16 *width, INT16 *height, size_t si
 	png_memcpy(png_jmpbuf(png_ptr), jmpbuf, sizeof jmp_buf);
 #endif
 
-	// set our own read function
 	png_io.buffer = png;
 	png_io.size = size;
 	png_io.position = 0;
 	png_set_read_fn(png_ptr, &png_io, PNG_IOReader);
+
+	memset(&chunk, 0x00, sizeof(png_chunk_t));
+	chunkname = grAb_chunk; // I want to read a grAb chunk
+
+	user_chunk_ptr = png_get_user_chunk_ptr(png_ptr);
+	png_set_read_user_chunk_fn(png_ptr, user_chunk_ptr, PNG_ChunkReader);
+	png_set_keep_unknown_chunks(png_ptr, 2, chunkname, 1);
 
 #ifdef PNG_SET_USER_LIMITS_SUPPORTED
 	png_set_user_limits(png_ptr, 2048, 2048);
 #endif
 
 	png_read_info(png_ptr, png_info_ptr);
+	png_get_IHDR(png_ptr, png_info_ptr, &w, &h, &bit_depth, &color_type, NULL, NULL, NULL);
 
-	png_get_IHDR(png_ptr, png_info_ptr, &w, &h, &bit_depth, &color_type,
-	 NULL, NULL, NULL);
+	// Read grAB chunk
+	if ((topoffset || leftoffset) && (chunk.data != NULL))
+	{
+		INT32 *offsets = (INT32 *)chunk.data;
+		// read left offset
+		if (leftoffset != NULL)
+			*leftoffset = (INT16)BIGENDIAN_LONG(*offsets);
+		offsets++;
+		// read top offset
+		if (topoffset != NULL)
+			*topoffset = (INT16)BIGENDIAN_LONG(*offsets);
+	}
 
-	// okay done. stop.
 	png_destroy_read_struct(&png_ptr, &png_info_ptr, NULL);
+	if (chunk.data)
+		Z_Free(chunk.data);
 
 	*width = (INT32)w;
 	*height = (INT32)h;
@@ -1634,11 +1661,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		lumplength = W_LumpLength(lump);
 
 		if (Picture_IsLumpPNG((const UINT8 *)patch, lumplength))
-		{
-			INT32 pngwidth, pngheight;
-			INT16 toffs, loffs;
-			patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, &pngwidth, &pngheight, &toffs, &loffs, lumplength, NULL, 0);
-		}
+			patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
 		else
 #endif
 		// Because there's something wrong with SPR_DFLM, I guess

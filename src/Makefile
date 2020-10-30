@@ -486,6 +486,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/m_fixed.o  \
 		$(OBJDIR)/m_menu.o   \
 		$(OBJDIR)/m_misc.o   \
+		$(OBJDIR)/m_perfstats.o \
 		$(OBJDIR)/m_random.o \
 		$(OBJDIR)/m_queue.o  \
 		$(OBJDIR)/info.o     \
@@ -606,8 +607,9 @@ ifndef VALGRIND
 ifndef NOOBJDUMP
 	@echo Dumping debugging info
 	$(OBJDUMP) $(OBJDUMP_OPTS) $(BIN)/$(EXENAME) > $(BIN)/$(DBGNAME).txt
+ifdef WINDOWSHELL
 	-$(GZIP) $(GZIP_OPTS) $(BIN)/$(DBGNAME).txt
-ifndef WINDOWSHELL
+else
 	-$(GZIP) $(GZIP_OPT2) $(BIN)/$(DBGNAME).txt
 endif
 endif
@@ -627,8 +629,9 @@ endif
 reobjdump:
 	@echo Redumping debugging info
 	$(OBJDUMP) $(OBJDUMP_OPTS) $(BIN)/$(DBGNAME) > $(BIN)/$(DBGNAME).txt
+ifdef WINDOWSHELL
 	-$(GZIP) $(GZIP_OPTS) $(BIN)/$(DBGNAME).txt
-ifndef WINDOWSHELL
+else
 	-$(GZIP) $(GZIP_OPT2) $(BIN)/$(DBGNAME).txt
 endif
 

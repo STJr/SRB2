@@ -397,11 +397,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 #ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
-		{
-			// Dummy variables.
-			INT32 pngwidth, pngheight;
-			realpatch = (patch_t *)Picture_PNGConvert((UINT8 *)realpatch, PICFMT_PATCH, &pngwidth, &pngheight, NULL, NULL, lumplength, NULL, 0);
-		}
+			realpatch = (patch_t *)Picture_PNGConvert((UINT8 *)realpatch, PICFMT_PATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
 		else
 #endif
 #ifdef WALLFLATS
@@ -800,10 +796,10 @@ Rloadflats (INT32 i, INT32 w)
 #ifndef NO_PNG_LUMPS
 			if (Picture_IsLumpPNG((UINT8 *)flatlump, lumplength))
 			{
-				INT16 width, height;
-				Picture_PNGDimensions((UINT8 *)flatlump, &width, &height, lumplength);
-				texture->width = width;
-				texture->height = height;
+				INT32 width, height;
+				Picture_PNGDimensions((UINT8 *)flatlump, &width, &height, NULL, NULL, lumplength);
+				texture->width = (INT16)width;
+				texture->height = (INT16)height;
 			}
 			else
 #endif
@@ -898,10 +894,10 @@ Rloadtextures (INT32 i, INT32 w)
 #ifndef NO_PNG_LUMPS
 			if (Picture_IsLumpPNG((UINT8 *)patchlump, lumplength))
 			{
-				INT16 width, height;
-				Picture_PNGDimensions((UINT8 *)patchlump, &width, &height, lumplength);
-				texture->width = width;
-				texture->height = height;
+				INT32 width, height;
+				Picture_PNGDimensions((UINT8 *)patchlump, &width, &height, NULL, NULL, lumplength);
+				texture->width = (INT16)width;
+				texture->height = (INT16)height;
 			}
 			else
 #endif

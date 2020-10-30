@@ -24,6 +24,7 @@
 #include "p_saveg.h"
 #include "p_local.h"
 #include "p_slopes.h" // for P_SlopeById
+#include "p_polyobj.h" // polyobj_t, PolyObjects
 #ifdef LUA_ALLOW_BYTECODE
 #include "d_netfil.h" // for LUA_DumpFile
 #endif
@@ -50,6 +51,7 @@ static lua_CFunction liblist[] = {
 	LUA_SkinLib, // skin_t, skins[]
 	LUA_ThinkerLib, // thinker_t
 	LUA_MapLib, // line_t, side_t, sector_t, subsector_t
+	LUA_PolyObjLib, // polyobj_t
 	LUA_BlockmapLib, // blockmap stuff
 	LUA_HudLib, // HUD stuff
 	NULL
@@ -778,6 +780,12 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(&sides[i]);
 	for (i = 0; i < numvertexes; i++)
 		LUA_InvalidateUserdata(&vertexes[i]);
+	for (i = 0; i < (size_t)numPolyObjects; i++)
+	{
+		LUA_InvalidateUserdata(&PolyObjects[i]);
+		LUA_InvalidateUserdata(&PolyObjects[i].vertices);
+		LUA_InvalidateUserdata(&PolyObjects[i].lines);
+	}
 #ifdef HAVE_LUA_SEGS
 	for (i = 0; i < numsegs; i++)
 		LUA_InvalidateUserdata(&segs[i]);
@@ -836,6 +844,7 @@ enum
 	ARCH_NODE,
 #endif
 	ARCH_FFLOOR,
+	ARCH_POLYOBJ,
 	ARCH_SLOPE,
 	ARCH_MAPHEADER,
 	ARCH_SKINCOLOR,
@@ -862,6 +871,7 @@ static const struct {
 	{META_NODE,     ARCH_NODE},
 #endif
 	{META_FFLOOR,	ARCH_FFLOOR},
+	{META_POLYOBJ,  ARCH_POLYOBJ},
 	{META_SLOPE,    ARCH_SLOPE},
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{META_SKINCOLOR,   ARCH_SKINCOLOR},
@@ -1127,6 +1137,17 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 					WRITEUINT16(save_p, rover->target - sectors);
 					WRITEUINT16(save_p, i);
 				}
+			}
+			break;
+		}
+		case ARCH_POLYOBJ:
+		{
+			polyobj_t *polyobj = *((polyobj_t **)lua_touserdata(gL, myindex));
+			if (!polyobj)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_POLYOBJ);
+				WRITEUINT16(save_p, polyobj-PolyObjects);
 			}
 			break;
 		}
@@ -1399,6 +1420,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 			LUA_PushUserdata(gL, rover, META_FFLOOR);
 		break;
 	}
+	case ARCH_POLYOBJ:
+		LUA_PushUserdata(gL, &PolyObjects[READUINT16(save_p)], META_POLYOBJ);
+		break;
 	case ARCH_SLOPE:
 		LUA_PushUserdata(gL, P_SlopeById(READUINT16(save_p)), META_SLOPE);
 		break;
