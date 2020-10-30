@@ -1346,8 +1346,6 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		const UINT8 hflip = (UINT8)(!(spr->mobj->mirrored) != !R_ThingHorizontallyFlipped(spr->mobj));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
-		spriteinfo_t *sprinfo;
-		angle_t ang;
 		INT32 mod;
 		float finalscale;
 		interpmobjstate_t interp;
@@ -1388,12 +1386,10 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		{
 			md2 = &md2_playermodels[(skin_t*)spr->mobj->skin-skins];
 			md2->skin = (skin_t*)spr->mobj->skin-skins;
-			sprinfo = &((skin_t *)spr->mobj->skin)->sprinfo[spr->mobj->sprite2];
 		}
 		else
 		{
 			md2 = &md2_models[spr->mobj->sprite];
-			sprinfo = &spriteinfo[spr->mobj->sprite];
 		}
 
 		// texture loading before model init, so it knows if sprite graphics are used, which
@@ -1615,43 +1611,32 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		}
 
 		p.rollangle = 0.0f;
-		p.rollflip = 1;
-		p.rotaxis = 0;
-		if (spr->mobj->rollangle)
+
+		if (interp.spriteroll)
 		{
-			fixed_t anglef = AngleFixed(spr->mobj->rollangle);
+			fixed_t camAngleDiff = AngleFixed(viewangle) - FLOAT_TO_FIXED(p.angley); // dumb reconversion back, I know
+			fixed_t anglef = AngleFixed(interp.spriteroll);
+
 			p.rollangle = FIXED_TO_FLOAT(anglef);
 			p.roll = true;
 
 			// rotation pivot
-			p.centerx = FIXED_TO_FLOAT(spr->mobj->radius/2);
-			p.centery = FIXED_TO_FLOAT(spr->mobj->height/(flip ? -2 : 2));
+			p.centerx = FIXED_TO_FLOAT(spr->mobj->radius / 2);
+			p.centery = FIXED_TO_FLOAT(spr->mobj->height / 2);
 
-			// rotation axis
-			if (sprinfo->available)
-				p.rotaxis = (UINT8)(sprinfo->pivot[(spr->mobj->frame & FF_FRAMEMASK)].rotaxis);
-
-			// for NiGHTS specifically but should work everywhere else
-			ang = R_PointToAngle (interp.x, interp.y) - interp.angle;
-			if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
-				p.rollflip = 1;
-			else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
-				p.rollflip = -1;
-
-			if (flip)
-				p.rollflip *= -1;
+			// rotation axes relative to camera
+			p.rollx = FIXED_TO_FLOAT(FINECOSINE(FixedAngle(camAngleDiff) >> ANGLETOFINESHIFT));
+			p.rollz = FIXED_TO_FLOAT(FINESINE(FixedAngle(camAngleDiff) >> ANGLETOFINESHIFT));
 		}
 
-		p.anglez = FIXED_TO_FLOAT(AngleFixed(spr->mobj->pitch));
-		p.anglex = FIXED_TO_FLOAT(AngleFixed(spr->mobj->roll));
+		p.anglez = FIXED_TO_FLOAT(AngleFixed(interp.pitch));
+		p.anglex = FIXED_TO_FLOAT(AngleFixed(interp.roll));
 
 		// SRB2CBTODO: MD2 scaling support
 		finalscale *= FIXED_TO_FLOAT(interp.scale);
 
 		p.flip = atransform.flip;
-#ifdef USE_FTRANSFORM_MIRROR
-		p.mirror = atransform.mirror; // from Kart
-#endif
+		p.mirror = atransform.mirror;
 
 		HWD.pfnSetShader(SHADER_MODEL);	// model shader
 		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, hflip, &Surf);

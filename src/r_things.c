@@ -1743,17 +1743,17 @@ static void R_ProjectSprite(mobj_t *thing)
 	patch = W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 
 #ifdef ROTSPRITE
-	if (thing->rollangle
+	if (interp.spriteroll
 	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{
 		if (papersprite && ang >= ANGLE_180)
 		{
 			// Makes Software act much more sane like OpenGL
-			rollangle = R_GetRollAngle(InvAngle(thing->rollangle));
+			rollangle = R_GetRollAngle(InvAngle(interp.spriteroll));
 		}
 		else
 		{
-			rollangle = R_GetRollAngle(thing->rollangle);
+			rollangle = R_GetRollAngle(interp.spriteroll);
 		}
 
 		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);

@@ -191,7 +191,7 @@ void R_DrawFloorSplat(vissprite_t *spr)
 		splatangle = spr->viewpoint.angle;
 
 	if (!(spr->cut & SC_ISROTATED))
-		splatangle += mobj->rollangle;
+		splatangle += mobj->spriteroll;
 
 	splat.angle = -splatangle;
 	splat.angle += ANGLE_90;

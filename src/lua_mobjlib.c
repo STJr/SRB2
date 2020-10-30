@@ -33,7 +33,8 @@ enum mobj_e {
 	mobj_angle,
 	mobj_pitch,
 	mobj_roll,
-	mobj_rollangle,
+	mobj_spriteroll,
+	mobj_rollangle, // backwards compat
 	mobj_sprite,
 	mobj_frame,
 	mobj_sprite2,
@@ -110,7 +111,8 @@ static const char *const mobj_opt[] = {
 	"angle",
 	"pitch",
 	"roll",
-	"rollangle",
+	"spriteroll",
+	"rollangle", // backwards compat
 	"sprite",
 	"frame",
 	"sprite2",
@@ -229,8 +231,9 @@ static int mobj_get(lua_State *L)
 	case mobj_roll:
 		lua_pushangle(L, mo->roll);
 		break;
-	case mobj_rollangle:
-		lua_pushangle(L, mo->rollangle);
+	case mobj_spriteroll:
+	case mobj_rollangle: // backwards compat
+		lua_pushangle(L, mo->spriteroll);
 		break;
 	case mobj_sprite:
 		lua_pushinteger(L, mo->sprite);
@@ -518,8 +521,9 @@ static int mobj_set(lua_State *L)
 	case mobj_roll:
 		mo->roll = luaL_checkangle(L, 3);
 		break;
-	case mobj_rollangle:
-		mo->rollangle = luaL_checkangle(L, 3);
+	case mobj_spriteroll:
+	case mobj_rollangle: // backwards compat
+		mo->spriteroll = luaL_checkangle(L, 3);
 		break;
 	case mobj_sprite:
 		mo->sprite = luaL_checkinteger(L, 3);

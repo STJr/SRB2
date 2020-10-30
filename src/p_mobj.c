@@ -9868,9 +9868,9 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		break;
 	case MT_MINUS:
 		if (P_IsObjectOnGround(mobj))
-			mobj->rollangle = 0;
+			mobj->spriteroll = 0;
 		else
-			mobj->rollangle = R_PointToAngle2(0, 0, P_MobjFlip(mobj)*mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
+			mobj->spriteroll = R_PointToAngle2(0, 0, P_MobjFlip(mobj)*mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
 		break;
 	case MT_PUSH:
 		P_PointPushThink(mobj);
@@ -14166,6 +14166,13 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 		newmobj->old_angle2 = mobj->old_angle2;
 		newmobj->old_angle = mobj->old_angle;
 	}
+
+	newmobj->old_pitch2 = mobj->old_pitch2;
+	newmobj->old_pitch = mobj->old_pitch;
+	newmobj->old_roll2 = mobj->old_roll2;
+	newmobj->old_roll = mobj->old_roll;
+	newmobj->old_spriteroll2 = mobj->old_spriteroll2;
+	newmobj->old_spriteroll = mobj->old_spriteroll;
 
 	newmobj->old_scale2 = mobj->old_scale2;
 	newmobj->old_scale = mobj->old_scale;

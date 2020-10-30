@@ -1565,7 +1565,7 @@ typedef enum
 	MD2_SLOPE        = 1<<11,
 	MD2_COLORIZED    = 1<<12,
 	MD2_MIRRORED     = 1<<13,
-	MD2_ROLLANGLE    = 1<<14,
+	MD2_SPRITEROLL   = 1<<14,
 	MD2_SHADOWSCALE  = 1<<15,
 	MD2_RENDERFLAGS  = 1<<16,
 	MD2_BLENDMODE    = 1<<17,
@@ -1783,8 +1783,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_COLORIZED;
 	if (mobj->mirrored)
 		diff2 |= MD2_MIRRORED;
-	if (mobj->rollangle)
-		diff2 |= MD2_ROLLANGLE;
+	if (mobj->spriteroll)
+		diff2 |= MD2_SPRITEROLL;
 	if (mobj->shadowscale)
 		diff2 |= MD2_SHADOWSCALE;
 	if (mobj->renderflags)
@@ -1951,8 +1951,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEUINT8(save_p, mobj->colorized);
 	if (diff2 & MD2_MIRRORED)
 		WRITEUINT8(save_p, mobj->mirrored);
-	if (diff2 & MD2_ROLLANGLE)
-		WRITEANGLE(save_p, mobj->rollangle);
+	if (diff2 & MD2_SPRITEROLL)
+		WRITEANGLE(save_p, mobj->spriteroll);
 	if (diff2 & MD2_SHADOWSCALE)
 		WRITEFIXED(save_p, mobj->shadowscale);
 	if (diff2 & MD2_RENDERFLAGS)
@@ -3001,8 +3001,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->colorized = READUINT8(save_p);
 	if (diff2 & MD2_MIRRORED)
 		mobj->mirrored = READUINT8(save_p);
-	if (diff2 & MD2_ROLLANGLE)
-		mobj->rollangle = READANGLE(save_p);
+	if (diff2 & MD2_SPRITEROLL)
+		mobj->spriteroll = READANGLE(save_p);
 	if (diff2 & MD2_SHADOWSCALE)
 		mobj->shadowscale = READFIXED(save_p);
 	if (diff2 & MD2_RENDERFLAGS)

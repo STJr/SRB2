@@ -4158,7 +4158,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			angle = viewangle;
 
 		if (!spr->rotated)
-			angle += spr->mobj->rollangle;
+			angle += spr->mobj->spriteroll;
 
 		angle = -angle;
 		angle += ANGLE_90;
@@ -5245,17 +5245,17 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
 #ifdef ROTSPRITE
-	if (thing->rollangle
+	if (interp.spriteroll
 	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{
 		if (papersprite)
 		{
 			// a positive rollangle should should pitch papersprites upwards relative to their facing angle
-			rollangle = R_GetRollAngle(InvAngle(thing->rollangle));
+			rollangle = R_GetRollAngle(InvAngle(interp.spriteroll));
 		}
 		else
 		{
-			rollangle = R_GetRollAngle(thing->rollangle);
+			rollangle = R_GetRollAngle(interp.spriteroll);
 		}
 		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
 
@@ -5913,6 +5913,8 @@ static void HWR_DrawSkyBackground(player_t *player)
 			fixed_t rol = AngleFixed(player->viewrollangle);
 			dometransform.rollangle = FIXED_TO_FLOAT(rol);
 			dometransform.roll = true;
+			dometransform.rollx = 1.0f;
+			dometransform.rollz = 0.0f;
 		}
 		dometransform.splitscreen = splitscreen;
 
@@ -6191,6 +6193,8 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 		fixed_t rol = AngleFixed(player->viewrollangle);
 		atransform.rollangle = FIXED_TO_FLOAT(rol);
 		atransform.roll = true;
+		atransform.rollx = 1.0f;
+		atransform.rollz = 0.0f;
 	}
 	atransform.splitscreen = splitscreen;
 
@@ -6405,6 +6409,8 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 		fixed_t rol = AngleFixed(player->viewrollangle);
 		atransform.rollangle = FIXED_TO_FLOAT(rol);
 		atransform.roll = true;
+		atransform.rollx = 1.0f;
+		atransform.rollz = 0.0f;
 	}
 	atransform.splitscreen = splitscreen;
 

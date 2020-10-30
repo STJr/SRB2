@@ -8687,10 +8687,10 @@ void A_RollAngle(mobj_t *actor)
 
 	// relative (default)
 	if (!locvar2)
-		actor->rollangle += angle;
+		actor->spriteroll += angle;
 	// absolute
 	else
-		actor->rollangle = angle;
+		actor->spriteroll = angle;
 }
 
 // Function: A_ChangeRollAngleRelative
@@ -8715,7 +8715,7 @@ void A_ChangeRollAngleRelative(mobj_t *actor)
 		I_Error("A_ChangeRollAngleRelative: var1 is greater than var2");
 #endif
 
-	actor->rollangle += FixedAngle(P_RandomRange(amin, amax));
+	actor->spriteroll += FixedAngle(P_RandomRange(amin, amax));
 }
 
 // Function: A_ChangeRollAngleAbsolute
@@ -8740,7 +8740,7 @@ void A_ChangeRollAngleAbsolute(mobj_t *actor)
 		I_Error("A_ChangeRollAngleAbsolute: var1 is greater than var2");
 #endif
 
-	actor->rollangle = FixedAngle(P_RandomRange(amin, amax));
+	actor->spriteroll = FixedAngle(P_RandomRange(amin, amax));
 }
 
 // Function: A_PlaySound

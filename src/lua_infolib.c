@@ -319,7 +319,7 @@ static int PopPivotSubTable(spriteframepivot_t *pivot, lua_State *L, int stk, in
 				else if (ikey == 2 || (key && fastcmp(key, "y")))
 					pivot[idx].y = (INT32)value;
 				else if (ikey == 3 || (key && fastcmp(key, "rotaxis")))
-					pivot[idx].rotaxis = (UINT8)value;
+					LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 				else if (ikey == -1 && (key != NULL))
 					FIELDERROR("pivot key", va("invalid option %s", key));
 				okcool = 1;
@@ -576,7 +576,10 @@ static int framepivot_get(lua_State *L)
 	else if (fastcmp("y", field))
 		lua_pushinteger(L, framepivot->y);
 	else if (fastcmp("rotaxis", field))
-		lua_pushinteger(L, (UINT8)framepivot->rotaxis);
+	{
+		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.");
+		lua_pushinteger(L, 0);
+	}
 	else
 		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
 
@@ -602,7 +605,7 @@ static int framepivot_set(lua_State *L)
 	else if (fastcmp("y", field))
 		framepivot->y = luaL_checkinteger(L, 3);
 	else if (fastcmp("rotaxis", field))
-		framepivot->rotaxis = luaL_checkinteger(L, 3);
+		LUA_UsageWarning(L, "\"rotaxis\" is deprecated and will be removed.")
 	else
 		return luaL_error(L, va("Field %s does not exist in spriteframepivot_t", field));
 

@@ -59,6 +59,9 @@ typedef struct {
 	fixed_t z;
 	subsector_t *subsector;
 	angle_t angle;
+	angle_t pitch;
+	angle_t roll;
+	angle_t spriteroll;
 	fixed_t scale;
 	fixed_t spritexscale;
 	fixed_t spriteyscale;

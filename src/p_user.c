@@ -676,7 +676,7 @@ static void P_DeNightserizePlayer(player_t *player)
 	player->marebonuslap = 0;
 	player->flyangle = 0;
 	player->anotherflyangle = 0;
-	player->mo->rollangle = 0;
+	player->mo->spriteroll = 0;
 
 	P_SetTarget(&player->mo->target, NULL);
 	P_SetTarget(&player->axis1, P_SetTarget(&player->axis2, NULL));
@@ -802,7 +802,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	player->secondjump = 0;
 	player->flyangle = 0;
 	player->anotherflyangle = 0;
-	player->mo->rollangle = 0;
+	player->mo->spriteroll = 0;
 
 	player->powers[pw_shield] = SH_NONE;
 	player->powers[pw_super] = 0;
@@ -1978,7 +1978,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 	ghost->angle = (mobj->player ? mobj->player->drawangle : mobj->angle);
 	ghost->roll = mobj->roll;
 	ghost->pitch = mobj->pitch;
-	ghost->rollangle = mobj->rollangle;
+	ghost->spriteroll = mobj->spriteroll;
 
 	ghost->sprite = mobj->sprite;
 	ghost->sprite2 = mobj->sprite2;
@@ -2017,6 +2017,7 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 	ghost->old_angle = (mobj->player ? mobj->player->old_drawangle2 : mobj->old_angle2);
 	ghost->old_pitch = mobj->old_pitch2;
 	ghost->old_roll = mobj->old_roll2;
+	ghost->old_spriteroll = mobj->old_spriteroll2;
 
 	return ghost;
 }
@@ -6793,9 +6794,9 @@ static void P_DoNiGHTSCapsule(player_t *player)
 	{
 		if ((player->mo->state == &states[S_PLAY_NIGHTS_PULL])
 		&& (player->mo->sprite2 == SPR2_NPUL))
-			player->mo->rollangle -= ANG30;
+			player->mo->spriteroll -= ANG30;
 		else
-			player->mo->rollangle = 0;
+			player->mo->spriteroll = 0;
 	}
 
 	if (G_IsSpecialStage(gamemap))
@@ -7248,7 +7249,7 @@ static void P_NiGHTSMovement(player_t *player)
 		&& player->mo->state <= &states[S_PLAY_NIGHTS_TRANS6])
 	{
 		player->mo->momx = player->mo->momy = player->mo->momz = 0;
-		player->mo->rollangle = 0;
+		player->mo->spriteroll = 0;
 		return;
 	}
 
@@ -7266,7 +7267,7 @@ static void P_NiGHTSMovement(player_t *player)
 		{
 			if (player->mo->state != &states[S_PLAY_NIGHTS_DRILL])
 				P_SetPlayerMobjState(player->mo, S_PLAY_NIGHTS_DRILL);
-			player->mo->rollangle = ANGLE_90;
+			player->mo->spriteroll = ANGLE_90;
 		}
 		else
 #endif
@@ -7599,9 +7600,9 @@ static void P_NiGHTSMovement(player_t *player)
 		P_SetPlayerMobjState(player->mo, flystate);
 
 	if (player->charflags & SF_NONIGHTSROTATION)
-		player->mo->rollangle = 0;
+		player->mo->spriteroll = 0;
 	else
-		player->mo->rollangle = rollangle;
+		player->mo->spriteroll = rollangle;
 
 	P_SetPlayerAngle(player, player->mo->angle);
 
