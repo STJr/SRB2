@@ -11605,7 +11605,10 @@ static void M_StartServerMenu(INT32 choice)
 // CONNECT VIA IP
 // ==============
 
-static char setupm_ip[28];
+#define CONNIP_LEN 128
+static char setupm_ip[CONNIP_LEN];
+
+#define DOTS "... "
 
 // Draw the funky Connect IP menu. Tails 11-19-2002
 // So much work for such a little thing!
@@ -11613,6 +11616,11 @@ static void M_DrawMPMainMenu(void)
 {
 	INT32 x = currentMenu->x;
 	INT32 y = currentMenu->y;
+	const INT32 boxwidth = /*16*8 + 6*/ (BASEVIDWIDTH - 2*(x+5));
+	const INT32 maxstrwidth = boxwidth - 5;
+	char drawnstr[CONNIP_LEN];
+	char *drawnstrptr = malloc(sizeof(setupm_ip));
+	boolean drawthin, shorten = false;
 
 	// use generic drawer for cursor, items and title
 	M_DrawGenericMenu();
@@ -11628,16 +11636,52 @@ static void M_DrawMPMainMenu(void)
 
 	y += 22;
 
-	V_DrawFill(x+5, y+4+5, /*16*8 + 6,*/ BASEVIDWIDTH - 2*(x+5), 8+6, 159);
+	V_DrawFill(x+5, y+4+5, boxwidth, 8+6, 159);
+
+	strcpy(drawnstrptr, setupm_ip);
+	drawthin = V_StringWidth(drawnstrptr, V_ALLOWLOWERCASE) + V_StringWidth("_", V_ALLOWLOWERCASE) > maxstrwidth;
 
 	// draw name string
-	V_DrawString(x+8,y+12, V_ALLOWLOWERCASE, setupm_ip);
+	if (drawthin)
+	{
+		INT32 dotswidth = V_ThinStringWidth(DOTS, V_ALLOWLOWERCASE);
+		//UINT32 color = 0;
+		while (V_ThinStringWidth(drawnstrptr, V_ALLOWLOWERCASE) + V_ThinStringWidth("_", V_ALLOWLOWERCASE) >= maxstrwidth)
+		{
+			shorten = true;
+			drawnstrptr++;
+		}
+
+		if (shorten)
+		{
+			INT32 initiallen = V_ThinStringWidth(drawnstrptr, V_ALLOWLOWERCASE);
+			INT32 cutofflen = 0;
+			while ((cutofflen = initiallen - V_ThinStringWidth(drawnstrptr, V_ALLOWLOWERCASE)) < dotswidth)
+				drawnstrptr++;
+
+			V_DrawThinString(x+8,y+13, V_ALLOWLOWERCASE|V_GRAYMAP, DOTS);
+			x += V_ThinStringWidth(DOTS, V_ALLOWLOWERCASE);
+		}
+
+		V_DrawThinString(x+8,y+13, V_ALLOWLOWERCASE, drawnstrptr);
+	}
+	else
+	{
+		V_DrawString(x+8,y+12, V_ALLOWLOWERCASE, drawnstrptr);
+	}
 
 	// draw text cursor for name
 	if (itemOn == 2 //0
-	    && skullAnimCounter < 4)   //blink cursor
-		V_DrawCharacter(x+8+V_StringWidth(setupm_ip, V_ALLOWLOWERCASE),y+12,'_',false);
+		&& skullAnimCounter < 4)   //blink cursor
+	{
+		if (drawthin)
+			V_DrawCharacter(x+8+V_ThinStringWidth(drawnstrptr, V_ALLOWLOWERCASE),y+12,'_',false);
+		else
+			V_DrawCharacter(x+8+V_StringWidth(drawnstrptr, V_ALLOWLOWERCASE),y+12,'_',false);
+	}
 }
+
+#undef DOTS
 
 // Tails 11-19-2002
 static void M_ConnectIP(INT32 choice)
@@ -11719,7 +11763,7 @@ static void M_HandleConnectIP(INT32 choice)
 						const char *paste = I_ClipboardPaste();
 
 						if (paste != NULL) {
-							strncat(setupm_ip, paste, 28-1 - l); // Concat the ip field with clipboard
+							strncat(setupm_ip, paste, CONNIP_LEN-1 - l); // Concat the ip field with clipboard
 							if (strlen(paste) != 0) // Don't play sound if nothing was pasted
 								S_StartSound(NULL,sfx_menu1); // Tails
 						}
@@ -11753,7 +11797,7 @@ static void M_HandleConnectIP(INT32 choice)
 							const char *paste = I_ClipboardPaste();
 
 							if (paste != NULL) {
-								strncat(setupm_ip, paste, 28-1 - l); // Concat the ip field with clipboard
+								strncat(setupm_ip, paste, CONNIP_LEN-1 - l); // Concat the ip field with clipboard
 								if (strlen(paste) != 0) // Don't play sound if nothing was pasted
 									S_StartSound(NULL,sfx_menu1); // Tails
 							}
@@ -11770,7 +11814,7 @@ static void M_HandleConnectIP(INT32 choice)
 				}
 			}
 
-			if (l >= 28-1)
+			if (l >= CONNIP_LEN-1)
 				break;
 
 			// Rudimentary number and period enforcing - also allows letters so hostnames can be used instead
