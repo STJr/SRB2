@@ -8246,7 +8246,7 @@ static void M_CacheLoadGameData(void)
 
 static void M_DrawLoadGameData(void)
 {
-	INT32 i, savetodraw, x, y, hsep = 90;
+	INT32 i, prev_i = 1, savetodraw, x, y, hsep = 90;
 	skin_t *charskin = NULL;
 
 	if (vid.width != BASEVIDWIDTH*vid.dupx)
@@ -8255,8 +8255,9 @@ static void M_DrawLoadGameData(void)
 	if (needpatchrecache)
 		M_CacheLoadGameData();
 
-	for (i = -2; i <= 2; i++)
+	for (i = 2; prev_i; i = -(i + ((UINT32)i >> 31))) // draws from outwards in; 2, -2, 1, -1, 0
 	{
+		prev_i = i;
 		savetodraw = (saveSlotSelected + i + numsaves)%numsaves;
 		x = (BASEVIDWIDTH/2 - 42 + loadgamescroll) + (i*hsep);
 		y = 33 + 9;
