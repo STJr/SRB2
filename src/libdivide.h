@@ -8,8 +8,37 @@
 // You may use libdivide under the terms of either of these.
 // See LICENSE.txt for more details.
 
-// NOTICE: This version of libdivide has been modified for use with SRB2.
-// Changes made:
+
+// NOTICE: This is an altered source version of libdivide.
+// Libdivide is used here under the terms of the zlib license.
+// Here is the zlib license text from https://github.com/ridiculousfish/libdivide/blob/master/LICENSE.txt
+/*
+  zlib License
+  ------------
+
+  Copyright (C) 2010 - 2019 ridiculous_fish, <libdivide@ridiculousfish.com>
+  Copyright (C) 2016 - 2019 Kim Walisch, <kim.walisch@gmail.com>
+
+  This software is provided 'as-is', without any express or implied
+  warranty.  In no event will the authors be held liable for any damages
+  arising from the use of this software.
+
+  Permission is granted to anyone to use this software for any purpose,
+  including commercial applications, and to alter it and redistribute it
+  freely, subject to the following restrictions:
+
+  1. The origin of this software must not be misrepresented; you must not
+     claim that you wrote the original software. If you use this software
+     in a product, an acknowledgment in the product documentation would be
+     appreciated but is not required.
+  2. Altered source versions must be plainly marked as such, and must not be
+     misrepresented as being the original software.
+  3. This notice may not be removed or altered from any source distribution.
+*/
+
+
+// This version of libdivide has been modified for use with SRB2.
+// Changes made include:
 //     - unused parts commented out (to avoid the need to fix C90 compilation issues with them)
 //     - C90 compilation issues fixed with used parts
 //     - use I_Error for errors
