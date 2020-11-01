@@ -76,6 +76,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"ShouldJingleContinue",
 	"GameQuit",
 	"PlayerCmd",
+	"MusicChange",
 	NULL
 };
 
@@ -1910,5 +1911,64 @@ boolean LUAh_PlayerCmd(player_t *player, ticcmd_t *cmd)
 
 	lua_settop(gL, 0);
 	hook_cmd_running = false;
+	return hooked;
+}
+
+// Hook for music changes
+boolean LUAh_MusicChange(const char *oldname, char *newname, UINT16 *mflags, boolean *looping,
+	UINT32 *position, UINT32 *prefadems, UINT32 *fadeinms)
+{
+	hook_p hookp;
+	boolean hooked = false;
+
+	if (!gL || !(hooksAvailable[hook_MusicChange/8] & (1<<(hook_MusicChange%8))))
+		return false;
+
+	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+		if (hookp->type == hook_MusicChange)
+		{
+			PushHook(gL, hookp);
+			lua_pushstring(gL, oldname);
+			lua_pushstring(gL, newname);
+			lua_pushinteger(gL, *mflags);
+			lua_pushboolean(gL, *looping);
+			lua_pushinteger(gL, *position);
+			lua_pushinteger(gL, *prefadems);
+			lua_pushinteger(gL, *fadeinms);
+			if (lua_pcall(gL, 7, 6, 1)) {
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+				lua_pop(gL, 1);
+				continue;
+			}
+
+			// output 1: true, false, or string musicname override
+			if (lua_isboolean(gL, -6) && lua_toboolean(gL, -6))
+				hooked = true;
+			else if (lua_isstring(gL, -6))
+				strncpy(newname, lua_tostring(gL, -6), 7);
+			// output 2: mflags override
+			if (lua_isnumber(gL, -5))
+				*mflags = lua_tonumber(gL, -5);
+			// output 3: looping override
+			if (lua_isboolean(gL, -4))
+				*looping = lua_toboolean(gL, -4);
+			// output 4: position override
+			if (lua_isboolean(gL, -3))
+				*position = lua_tonumber(gL, -3);
+			// output 5: prefadems override
+			if (lua_isboolean(gL, -2))
+				*prefadems = lua_tonumber(gL, -2);
+			// output 6: fadeinms override
+			if (lua_isboolean(gL, -1))
+				*fadeinms = lua_tonumber(gL, -1);
+
+			lua_pop(gL, 7);  // Pop returned values and error handler
+		}
+
+	lua_settop(gL, 0);
+	newname[6] = 0;
 	return hooked;
 }

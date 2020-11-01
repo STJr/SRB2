@@ -26,6 +26,7 @@
 #include "dehacked.h"
 #include "st_stuff.h"
 #include "i_system.h"
+#include "i_sound.h" // musictype_t (for lua)
 #include "p_local.h" // for var1 and var2, and some constants
 #include "p_setup.h"
 #include "r_data.h"
@@ -10105,6 +10106,21 @@ struct {
 	{"MA_RUNNING",MA_RUNNING},
 	{"MA_NOCUTSCENES",MA_NOCUTSCENES},
 	{"MA_INGAME",MA_INGAME},
+
+	// music types
+	{"MU_NONE", MU_NONE},
+	{"MU_CMD", MU_CMD},
+	{"MU_WAV", MU_WAV},
+	{"MU_MOD", MU_MOD},
+	{"MU_MID", MU_MID},
+	{"MU_OGG", MU_OGG},
+	{"MU_MP3", MU_MP3},
+	{"MU_MP3_MAD_UNUSED", MU_MP3_MAD_UNUSED},
+	{"MU_FLAC", MU_FLAC},
+	{"MU_MODPLUG_UNUSED", MU_MODPLUG_UNUSED},
+	{"MU_GME", MU_GME},
+	{"MU_MOD_EX", MU_MOD_EX},
+	{"MU_MID_EX", MU_MID_EX},
 
 	{NULL,0}
 };
