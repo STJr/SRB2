@@ -856,6 +856,7 @@ typedef enum playersprite
 	SPR2_TAL9,
 	SPR2_TALA,
 	SPR2_TALB,
+	SPR2_TALC,
 
 	SPR2_CNT1, // continue disappointment
 	SPR2_CNT2, // continue lift
@@ -997,6 +998,7 @@ typedef enum state
 	S_TAILSOVERLAY_PAIN,
 	S_TAILSOVERLAY_GASP,
 	S_TAILSOVERLAY_EDGE,
+	S_TAILSOVERLAY_DASH,
 
 	// [:
 	S_JETFUMEFLASH,

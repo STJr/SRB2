@@ -39,6 +39,7 @@
 #include "lua_script.h"
 #include "lua_hook.h"
 #include "d_clisrv.h"
+#include "g_state.h" // gamestate_t (for lua)
 
 #include "m_cond.h"
 
@@ -5179,6 +5180,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TAILSOVERLAY_PAIN",
 	"S_TAILSOVERLAY_GASP",
 	"S_TAILSOVERLAY_EDGE",
+	"S_TAILSOVERLAY_DASH",
 
 	// [:
 	"S_JETFUMEFLASH",
@@ -10121,6 +10123,22 @@ struct {
 	{"MU_GME", MU_GME},
 	{"MU_MOD_EX", MU_MOD_EX},
 	{"MU_MID_EX", MU_MID_EX},
+
+	// gamestates
+	{"GS_NULL",GS_NULL},
+	{"GS_LEVEL",GS_LEVEL},
+	{"GS_INTERMISSION",GS_INTERMISSION},
+	{"GS_CONTINUING",GS_CONTINUING},
+	{"GS_TITLESCREEN",GS_TITLESCREEN},
+	{"GS_TIMEATTACK",GS_TIMEATTACK},
+	{"GS_CREDITS",GS_CREDITS},
+	{"GS_EVALUATION",GS_EVALUATION},
+	{"GS_GAMEEND",GS_GAMEEND},
+	{"GS_INTRO",GS_INTRO},
+	{"GS_ENDING",GS_ENDING},
+	{"GS_CUTSCENE",GS_CUTSCENE},
+	{"GS_DEDICATEDSERVER",GS_DEDICATEDSERVER},
+	{"GS_WAITINGPLAYERS",GS_WAITINGPLAYERS},
 
 	{NULL,0}
 };
