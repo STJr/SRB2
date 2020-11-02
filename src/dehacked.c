@@ -38,6 +38,7 @@
 #include "lua_script.h"
 #include "lua_hook.h"
 #include "d_clisrv.h"
+#include "g_state.h" // gamestate_t (for lua)
 
 #include "m_cond.h"
 
@@ -10106,6 +10107,22 @@ struct {
 	{"MA_RUNNING",MA_RUNNING},
 	{"MA_NOCUTSCENES",MA_NOCUTSCENES},
 	{"MA_INGAME",MA_INGAME},
+
+	// gamestates
+	{"GS_NULL",GS_NULL},
+	{"GS_LEVEL",GS_LEVEL},
+	{"GS_INTERMISSION",GS_INTERMISSION},
+	{"GS_CONTINUING",GS_CONTINUING},
+	{"GS_TITLESCREEN",GS_TITLESCREEN},
+	{"GS_TIMEATTACK",GS_TIMEATTACK},
+	{"GS_CREDITS",GS_CREDITS},
+	{"GS_EVALUATION",GS_EVALUATION},
+	{"GS_GAMEEND",GS_GAMEEND},
+	{"GS_INTRO",GS_INTRO},
+	{"GS_ENDING",GS_ENDING},
+	{"GS_CUTSCENE",GS_CUTSCENE},
+	{"GS_DEDICATEDSERVER",GS_DEDICATEDSERVER},
+	{"GS_WAITINGPLAYERS",GS_WAITINGPLAYERS},
 
 	{NULL,0}
 };
