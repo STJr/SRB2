@@ -230,7 +230,7 @@ set(SRB2_CONFIG_HAVE_GME ON CACHE BOOL
 set(SRB2_CONFIG_HAVE_OPENMPT ON CACHE BOOL
 	"Enable OpenMPT support.")
 set(SRB2_CONFIG_HAVE_CURL ON CACHE BOOL
-	"Enable curl support, used for downloading files via HTTP.")
+	"Enable curl support.")
 set(SRB2_CONFIG_HAVE_THREADS ON CACHE BOOL
 	"Enable multithreading support.")
 if(${CMAKE_SYSTEM} MATCHES Windows)
@@ -455,7 +455,7 @@ endif()
 if(${SRB2_CONFIG_HAVE_CURL})
 	if(${SRB2_CONFIG_USE_INTERNAL_LIBRARIES})
 		set(CURL_FOUND ON)
-		set(CURL_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/curl)
+		set(CURL_INCLUDE_DIRS ${CMAKE_SOURCE_DIR}/libs/curl/include)
 		if(${SRB2_SYSTEM_BITS} EQUAL 64)
 			set(CURL_LIBRARIES "-L${CMAKE_SOURCE_DIR}/libs/curl/lib64 -lcurl")
 		else() # 32-bit
