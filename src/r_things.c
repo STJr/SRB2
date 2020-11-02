@@ -1068,14 +1068,6 @@ static void R_SplitSprite(vissprite_t *sprite)
 		sprite->sz = cutfrac;
 		newsprite->szt = (INT16)(sprite->sz - 1);
 
-		if (testheight < sprite->pzt && testheight > sprite->pz)
-			sprite->pz = newsprite->pzt = testheight;
-		else
-		{
-			newsprite->pz = newsprite->gz;
-			newsprite->pzt = newsprite->gzt;
-		}
-
 		newsprite->szt -= 8;
 
 		newsprite->cut |= SC_TOP;
@@ -1293,16 +1285,12 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	shadow->patch = patch;
 	shadow->heightsec = vis->heightsec;
 
-	shadow->thingheight = FRACUNIT;
-	shadow->pz = groundz + (isflipped ? -shadow->thingheight : 0);
-	shadow->pzt = shadow->pz + shadow->thingheight;
-
 	shadow->mobjflags = 0;
 	shadow->sortscale = vis->sortscale;
 	shadow->dispoffset = vis->dispoffset - 5;
 	shadow->gx = thing->x;
 	shadow->gy = thing->y;
-	shadow->gzt = (isflipped ? shadow->pzt : shadow->pz) + SHORT(patch->height) * shadowyscale / 2;
+	shadow->gzt = groundz + SHORT(patch->height) * shadowyscale / 2;
 	shadow->gz = shadow->gzt - SHORT(patch->height) * shadowyscale;
 	shadow->texturemid = FixedMul(thing->scale, FixedDiv(shadow->gzt - viewz, shadowyscale));
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
@@ -1783,9 +1771,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->gy = thing->y;
 	vis->gz = gz;
 	vis->gzt = gzt;
-	vis->thingheight = thing->height;
-	vis->pz = thing->z;
-	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
 	vis->scalestep = scalestep;
 	vis->paperoffset = paperoffset;
@@ -1991,9 +1976,6 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->gy = thing->y;
 	vis->gz = gz;
 	vis->gzt = gzt;
-	vis->thingheight = 4*FRACUNIT;
-	vis->pz = thing->z;
-	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
 	vis->scalestep = 0;
 	vis->paperdistance = 0;
