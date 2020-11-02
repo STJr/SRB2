@@ -11206,6 +11206,8 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 		chosenstate = S_TAILSOVERLAY_GASP;
 	else if (player->mo->state-states == S_PLAY_EDGE)
 		chosenstate = S_TAILSOVERLAY_EDGE;
+	else if (player->panim == PA_DASH)
+		chosenstate = S_TAILSOVERLAY_DASH;
 	else if (player->panim == PA_RUN)
 		chosenstate = S_TAILSOVERLAY_RUN;
 	else if (player->panim == PA_WALK)

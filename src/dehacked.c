@@ -5178,6 +5178,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TAILSOVERLAY_PAIN",
 	"S_TAILSOVERLAY_GASP",
 	"S_TAILSOVERLAY_EDGE",
+	"S_TAILSOVERLAY_DASH",
 
 	// [:
 	"S_JETFUMEFLASH",
