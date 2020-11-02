@@ -2387,19 +2387,15 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				planeobjectz = P_GetZAt(r2->plane->slope, rover->gx, rover->gy, r2->plane->height);
 				planecameraz = P_GetZAt(r2->plane->slope,     viewx,     viewy, r2->plane->height);
 
-				if (rover->mobjflags & MF_NOCLIPHEIGHT)
+				// bird: if any part of the sprite peeks in front the plane
+				if (planecameraz < viewz)
 				{
-					//Objects with NOCLIPHEIGHT can appear halfway in.
-					if (planecameraz < viewz && rover->pz+(rover->thingheight/2) >= planeobjectz)
-						continue;
-					if (planecameraz > viewz && rover->pzt-(rover->thingheight/2) <= planeobjectz)
+					if (rover->gzt >= planeobjectz)
 						continue;
 				}
-				else
+				else if (planecameraz > viewz)
 				{
-					if (planecameraz < viewz && rover->pz >= planeobjectz)
-						continue;
-					if (planecameraz > viewz && rover->pzt <= planeobjectz)
+					if (rover->gz <= planeobjectz)
 						continue;
 				}
 
