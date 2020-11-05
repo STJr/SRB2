@@ -2410,7 +2410,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			}
 			else if (r2->thickseg)
 			{
-				fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
+				//fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
 				if (rover->x1 > r2->thickseg->x2 || rover->x2 < r2->thickseg->x1)
 					continue;
 
@@ -2421,6 +2421,11 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				if (scale <= rover->sortscale)
 					continue;
 
+				// bird: Always sort sprites behind segs. This helps the plane
+				// sorting above too. Basically if the sprite gets sorted behind
+				// the seg here, it will be behind the plane too, since planes
+				// are added after segs in the list.
+#if 0
 				topplaneobjectz = P_GetFFloorTopZAt   (r2->ffloor, rover->gx, rover->gy);
 				topplanecameraz = P_GetFFloorTopZAt   (r2->ffloor,     viewx,     viewy);
 				botplaneobjectz = P_GetFFloorBottomZAt(r2->ffloor, rover->gx, rover->gy);
@@ -2429,6 +2434,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||
 				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||
 				    (botplanecameraz > viewz && rover->gz > botplaneobjectz))
+#endif
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
