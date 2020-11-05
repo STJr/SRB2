@@ -2787,7 +2787,7 @@ static void R_DrawSprite(vissprite_t *spr)
 	mceilingclip = spr->cliptop;
 
 	if (spr->cut & SC_SPLAT)
-		R_DrawSplatSprite(spr);
+		R_DrawFloorSprite(spr);
 	else
 		R_DrawVisSprite(spr);
 }
@@ -3075,12 +3075,12 @@ boolean R_ThingIsFloorSprite(mobj_t *thing)
 	return (thing->flags2 & MF2_SPLAT || thing->renderflags & RF_FLOORSPRITE);
 }
 
-boolean R_ThingIsFullBright (mobj_t *thing)
+boolean R_ThingIsFullBright(mobj_t *thing)
 {
 	return (thing->frame & FF_FULLBRIGHT || thing->renderflags & RF_FULLBRIGHT);
 }
 
-boolean R_ThingIsFullDark (mobj_t *thing)
+boolean R_ThingIsFullDark(mobj_t *thing)
 {
 	return (thing->renderflags & RF_FULLDARK);
 }

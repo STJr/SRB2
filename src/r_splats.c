@@ -137,7 +137,7 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 	}
 }
 
-void R_DrawSplatSprite(vissprite_t *spr)
+void R_DrawFloorSprite(vissprite_t *spr)
 {
 	floorsplat_t splat;
 	mobj_t *mobj = spr->mobj;
