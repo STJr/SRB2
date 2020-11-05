@@ -382,6 +382,13 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 		token = (UINT32)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "gravity"))
 		gravity = (fixed_t)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "displayplayer"))
+	{
+		player_t *player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+
+		if (player)
+			displayplayer = player - players;
+	}
 	else
 		return 0;
 
