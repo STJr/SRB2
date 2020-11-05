@@ -731,10 +731,9 @@ typedef enum
 	RF_FULLDARK         = 0x0200,   // Sprite is drawn completely dark
 	RF_NOCOLORMAPS      = 0x0400,   // Sprite is not drawn with colormaps
 
-	RF_SPRITETYPEMASK   = 0x7000,   // ---Different sprite types, not all implemented
+	RF_SPRITETYPEMASK   = 0x7000,   // ---Different sprite types
 	RF_PAPERSPRITE      = 0x1000,   // Paper sprite
 	RF_FLOORSPRITE      = 0x2000,   // Floor sprite
-	RF_VOXELSPRITE      = 0x3000,   // Voxel object
 
 	RF_SHADOWDRAW       = 0x10000,  // Stretches and skews the sprite like a shadow.
 	RF_SHADOWEFFECTS    = 0x20000,  // Scales and becomes transparent like a shadow.
