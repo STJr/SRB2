@@ -56,7 +56,10 @@ extern INT32 dc_texheight;
 extern INT32 ds_y, ds_x1, ds_x2;
 extern lighttable_t *ds_colormap;
 extern lighttable_t *ds_translation;
+
 extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
+extern INT32 ds_waterofs, ds_bgofs;
+
 extern UINT16 ds_flatwidth, ds_flatheight;
 extern boolean ds_powersoftwo;
 
@@ -188,13 +191,8 @@ void R_DrawTiltedTranslucentFloorSprite_8(void);
 void R_CalcTiltedLighting(fixed_t start, fixed_t end);
 extern INT32 tiltlighting[MAXVIDWIDTH];
 
-#ifndef NOWATER
 void R_DrawTranslucentWaterSpan_8(void);
 void R_DrawTiltedTranslucentWaterSpan_8(void);
-
-extern INT32 ds_bgofs;
-extern INT32 ds_waterofs;
-#endif
 
 void R_DrawFogSpan_8(void);
 
@@ -213,10 +211,8 @@ void R_DrawTranslucentFloorSprite_NPO2_8(void);
 void R_DrawTiltedFloorSprite_NPO2_8(void);
 void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void);
 
-#ifndef NOWATER
 void R_DrawTranslucentWaterSpan_NPO2_8(void);
 void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void);
-#endif
 
 #ifdef USEASM
 void ASMCALL R_DrawColumn_8_ASM(void);

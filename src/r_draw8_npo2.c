@@ -1190,7 +1190,6 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 	}
 }
 
-#ifndef NOWATER
 void R_DrawTranslucentWaterSpan_NPO2_8(void)
 {
 	fixed_t xposition;
@@ -1426,4 +1425,3 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 	}
 #endif
 }
-#endif // NOWATER
