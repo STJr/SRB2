@@ -376,6 +376,8 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 		redscore = (UINT32)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "bluescore"))
 		bluescore = (UINT32)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "emeralds"))
+		emeralds = (UINT16)luaL_checkinteger(L, 2);
 	else
 		return 0;
 
