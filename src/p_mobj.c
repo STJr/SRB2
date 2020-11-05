@@ -10884,7 +10884,7 @@ void *P_CreateFloorSpriteSlope(mobj_t *mobj)
 	return (void *)mobj->floorspriteslope;
 }
 
-void P_DeleteFloorSpriteSlope(mobj_t *mobj)
+void P_RemoveFloorSpriteSlope(mobj_t *mobj)
 {
 	if (mobj->floorspriteslope)
 		Z_Free(mobj->floorspriteslope);
@@ -10947,14 +10947,13 @@ void P_RemoveMobj(mobj_t *mobj)
 		P_DelSeclist(sector_list);
 		sector_list = NULL;
 	}
+
 	mobj->flags |= MF_NOSECTOR|MF_NOBLOCKMAP;
 	mobj->subsector = NULL;
 	mobj->state = NULL;
 	mobj->player = NULL;
 
-	if (mobj->floorspriteslope)
-		Z_Free(mobj->floorspriteslope);
-	mobj->floorspriteslope = NULL;
+	P_RemoveFloorSpriteSlope(mobj);
 
 	// stop any playing sound
 	S_StopSound(mobj);

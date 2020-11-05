@@ -921,14 +921,14 @@ static int lib_pCreateFloorSpriteSlope(lua_State *L)
 	return 1;
 }
 
-static int lib_pDeleteFloorSpriteSlope(lua_State *L)
+static int lib_pRemoveFloorSpriteSlope(lua_State *L)
 {
 	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
 	NOHUD
 	INLEVEL
 	if (!mobj)
 		return LUA_ErrInvalid(L, "mobj_t");
-	P_DeleteFloorSpriteSlope(mobj);
+	P_RemoveFloorSpriteSlope(mobj);
 	return 1;
 }
 
@@ -3559,7 +3559,7 @@ static luaL_Reg lib[] = {
 	{"P_CanRunOnWater",lib_pCanRunOnWater},
 	{"P_MaceRotate",lib_pMaceRotate},
 	{"P_CreateFloorSpriteSlope",lib_pCreateFloorSpriteSlope},
-	{"P_DeleteFloorSpriteSlope",lib_pDeleteFloorSpriteSlope},
+	{"P_RemoveFloorSpriteSlope",lib_pRemoveFloorSpriteSlope},
 	{"P_RailThinker",lib_pRailThinker},
 	{"P_XYMovement",lib_pXYMovement},
 	{"P_RingXYMovement",lib_pRingXYMovement},
