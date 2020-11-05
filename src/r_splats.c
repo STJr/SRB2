@@ -344,12 +344,8 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 	INT32 miny = viewheight + 1, maxy = 0;
 	INT32 y, x1, ry1, x2, y2, i;
 	fixed_t offsetx = 0, offsety = 0;
+	fixed_t planeheight = 0;
 	fixed_t step;
-
-	fixed_t planeheight;
-	fixed_t xstep, ystep;
-	angle_t angle, planecos, planesin;
-	fixed_t distance, span;
 
 	int spanfunctype = SPANDRAWFUNC_SPRITE;
 
@@ -431,14 +427,17 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 	}
 	else
 	{
+		planeheight = abs(pSplat->z - viewz);
+
 		if (pSplat->angle)
 		{
 			// Add the view offset, rotated by the plane angle.
 			fixed_t a = -pSplat->verts[0].x + viewx;
 			fixed_t b = -pSplat->verts[0].y + viewy;
-			angle = (pSplat->angle >> ANGLETOFINESHIFT);
+			angle_t angle = (pSplat->angle >> ANGLETOFINESHIFT);
 			offsetx = FixedMul(a, FINECOSINE(angle)) - FixedMul(b,FINESINE(angle));
 			offsety = -FixedMul(a, FINESINE(angle)) - FixedMul(b,FINECOSINE(angle));
+			memset(cachedheight, 0, sizeof(cachedheight));
 		}
 		else
 		{
@@ -477,21 +476,6 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 	else
 		spanfunc = spanfuncs_npo2[spanfunctype];
 
-	if (pSplat->angle && !pSplat->tilted)
-	{
-		memset(cachedheight, 0, sizeof(cachedheight));
-		angle = (viewangle + pSplat->angle - ANGLE_90) >> ANGLETOFINESHIFT;
-		basexscale = FixedDiv(FINECOSINE(angle), centerxfrac);
-		baseyscale = -FixedDiv(FINESINE(angle), centerxfrac);
-	}
-	else
-	{
-		angle = (viewangle - ANGLE_90) >> ANGLETOFINESHIFT;
-		basexscale = FixedDiv(FINECOSINE(angle), centerxfrac);
-		baseyscale = -FixedDiv(FINESINE(angle), centerxfrac);
-	}
-
-	planeheight = abs(pSplat->z - viewz);
 	if (maxy >= vid.height)
 		maxy = vid.height-1;
 
@@ -543,25 +527,38 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 				break;
 		}
 
+		if (x2 < x1)
+			continue;
+
 		if (!pSplat->tilted)
 		{
-			angle = (viewangle + pSplat->angle)>>ANGLETOFINESHIFT;
-			planecos = FINECOSINE(angle);
-			planesin = FINESINE(angle);
+			fixed_t xstep, ystep;
+			fixed_t distance, span;
+
+			angle_t angle = (viewangle + pSplat->angle)>>ANGLETOFINESHIFT;
+			angle_t planecos = FINECOSINE(angle);
+			angle_t planesin = FINESINE(angle);
 
 			if (planeheight != cachedheight[y])
 			{
 				cachedheight[y] = planeheight;
 				distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
-				xstep = cachedxstep[y] = FixedMul(distance, basexscale);
-				ystep = cachedystep[y] = FixedMul(distance, baseyscale);
+				span = abs(centery - y);
 
-				// don't divide by zero
-				if ((span = abs(centery-y)))
+				if (span) // don't divide by zero
 				{
-					xstep = cachedxstep[y] = FixedMul(planesin, planeheight) / span;
-					ystep = cachedystep[y] = FixedMul(planecos, planeheight) / span;
+					xstep = FixedMul(planesin, planeheight) / span;
+					ystep = FixedMul(planecos, planeheight) / span;
 				}
+				else
+				{
+					// ah
+					xstep = FRACUNIT;
+					ystep = FRACUNIT;
+				}
+
+				cachedxstep[y] = xstep;
+				cachedystep[y] = ystep;
 			}
 			else
 			{
@@ -577,25 +574,17 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 			ds_yfrac = FixedDiv(offsety - FixedMul(planesin, distance) + (x1 - centerx) * ystep, pSplat->yscale);
 		}
 
-		if (x2 >= x1)
-		{
-			ds_y = y;
-			ds_x1 = x1;
-			ds_x2 = x2;
-			spanfunc();
-		}
+		ds_y = y;
+		ds_x1 = x1;
+		ds_x2 = x2;
+		spanfunc();
 
 		rastertab[y].minx = INT32_MAX;
 		rastertab[y].maxx = INT32_MIN;
 	}
 
 	if (pSplat->angle && !pSplat->tilted)
-	{
 		memset(cachedheight, 0, sizeof(cachedheight));
-		angle = (viewangle - ANGLE_90) >> ANGLETOFINESHIFT;
-		basexscale = FixedDiv(FINECOSINE(angle), centerxfrac);
-		baseyscale = -FixedDiv(FINESINE(angle), centerxfrac);
-	}
 }
 
 static void prepare_rastertab(void)

@@ -117,29 +117,41 @@ void R_InitPlanes(void)
 //
 // Water ripple effect!!
 // Needs the height of the plane, and the vertical position of the span.
-// Sets ripple_xfrac and ripple_yfrac, added to ds_xfrac and ds_yfrac, if the span is not tilted.
+// Sets planeripple.xfrac and planeripple.yfrac, added to ds_xfrac and ds_yfrac, if the span is not tilted.
 //
 
 #ifndef NOWATER
 INT32 ds_bgofs;
 INT32 ds_waterofs;
 
-static INT32 wtofs=0;
-static boolean itswater;
-static fixed_t ripple_xfrac;
-static fixed_t ripple_yfrac;
+struct
+{
+	INT32 offset;
+	fixed_t xfrac, yfrac;
+	boolean active;
+} planeripple;
 
-static void R_PlaneRipple(visplane_t *plane, INT32 y, fixed_t plheight)
+static void R_CalculatePlaneRipple(visplane_t *plane, INT32 y, fixed_t plheight, boolean calcfrac)
 {
 	fixed_t distance = FixedMul(plheight, yslope[y]);
-	const INT32 yay = (wtofs + (distance>>9) ) & 8191;
+	const INT32 yay = (planeripple.offset + (distance>>9)) & 8191;
+
 	// ripples da water texture
-	angle_t angle = (plane->viewangle + plane->plangle)>>ANGLETOFINESHIFT;
 	ds_bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
 
-	angle = (angle + 2048) & 8191;  // 90 degrees
-	ripple_xfrac = FixedMul(FINECOSINE(angle), (ds_bgofs<<FRACBITS));
-	ripple_yfrac = FixedMul(FINESINE(angle), (ds_bgofs<<FRACBITS));
+	if (calcfrac)
+	{
+		angle_t angle = (plane->viewangle + plane->plangle)>>ANGLETOFINESHIFT;
+		angle = (angle + 2048) & 8191; // 90 degrees
+		planeripple.xfrac = FixedMul(FINECOSINE(angle), (ds_bgofs<<FRACBITS));
+		planeripple.yfrac = FixedMul(FINESINE(angle), (ds_bgofs<<FRACBITS));
+	}
+}
+
+static void R_UpdatePlaneRipple(void)
+{
+	ds_waterofs = (leveltime & 1)*16384;
+	planeripple.offset = (leveltime * 140);
 }
 #endif
 
@@ -159,7 +171,7 @@ static void R_PlaneRipple(visplane_t *plane, INT32 y, fixed_t plheight)
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 {
 	angle_t angle, planecos, planesin;
-	fixed_t distance, span;
+	fixed_t distance = 0, span;
 	size_t pindex;
 
 #ifdef RANGECHECK
@@ -167,41 +179,51 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		I_Error("R_MapPlane: %d, %d at %d", x1, x2, y);
 #endif
 
-	// from r_splats's R_RenderFloorSplat
-	if (x1 >= vid.width) x1 = vid.width - 1;
+	if (x1 >= vid.width)
+		x1 = vid.width - 1;
 
-	angle = (currentplane->viewangle + currentplane->plangle)>>ANGLETOFINESHIFT;
-	planecos = FINECOSINE(angle);
-	planesin = FINESINE(angle);
-
-	if (planeheight != cachedheight[y])
+	if (!currentplane->slope)
 	{
-		cachedheight[y] = planeheight;
-		distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
-		ds_xstep = cachedxstep[y] = FixedMul(distance, basexscale);
-		ds_ystep = cachedystep[y] = FixedMul(distance, baseyscale);
+		angle = (currentplane->viewangle + currentplane->plangle)>>ANGLETOFINESHIFT;
+		planecos = FINECOSINE(angle);
+		planesin = FINESINE(angle);
 
-		if ((span = abs(centery-y)))
+		if (planeheight != cachedheight[y])
 		{
-			ds_xstep = cachedxstep[y] = FixedMul(planesin, planeheight) / span;
-			ds_ystep = cachedystep[y] = FixedMul(planecos, planeheight) / span;
-		}
-	}
-	else
-	{
-		distance = cacheddistance[y];
-		ds_xstep = cachedxstep[y];
-		ds_ystep = cachedystep[y];
-	}
+			cachedheight[y] = planeheight;
+			cacheddistance[y] = distance = FixedMul(planeheight, yslope[y]);
+			span = abs(centery - y);
 
-	ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
-	ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
+			if (span) // don't divide by zero
+			{
+				ds_xstep = FixedMul(planesin, planeheight) / span;
+				ds_ystep = FixedMul(planecos, planeheight) / span;
+			}
+			else
+			{
+				ds_xstep = FixedMul(distance, basexscale);
+				ds_ystep = FixedMul(distance, baseyscale);
+			}
+
+			cachedxstep[y] = ds_xstep;
+			cachedystep[y] = ds_ystep;
+		}
+		else
+		{
+			distance = cacheddistance[y];
+			ds_xstep = cachedxstep[y];
+			ds_ystep = cachedystep[y];
+		}
+
+		ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
+		ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
+	}
 
 #ifndef NOWATER
-	if (itswater)
+	if (planeripple.active)
 	{
 		// Needed for ds_bgofs
-		R_PlaneRipple(currentplane, y, planeheight);
+		R_CalculatePlaneRipple(currentplane, y, planeheight, (!currentplane->slope));
 
 		if (currentplane->slope)
 		{
@@ -211,25 +233,26 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		}
 		else
 		{
-			ds_xfrac += ripple_xfrac;
-			ds_yfrac += ripple_yfrac;
+			ds_xfrac += planeripple.xfrac;
+			ds_yfrac += planeripple.yfrac;
 		}
 
-		if (y+ds_bgofs>=viewheight)
+		if ((y + ds_bgofs) >= viewheight)
 			ds_bgofs = viewheight-y-1;
-		if (y+ds_bgofs<0)
+		if ((y + ds_bgofs) < 0)
 			ds_bgofs = -y;
 	}
 #endif
 
-	pindex = distance >> LIGHTZSHIFT;
-	if (pindex >= MAXLIGHTZ)
-		pindex = MAXLIGHTZ - 1;
-
 	if (currentplane->slope)
 		ds_colormap = colormaps;
 	else
+	{
+		pindex = distance >> LIGHTZSHIFT;
+		if (pindex >= MAXLIGHTZ)
+			pindex = MAXLIGHTZ - 1;
 		ds_colormap = planezlight[pindex];
+	}
 
 	if (currentplane->extra_colormap)
 		ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
@@ -596,9 +619,9 @@ void R_DrawPlanes(void)
 			R_DrawSinglePlane(pl);
 		}
 	}
+
 #ifndef NOWATER
-	ds_waterofs = (leveltime & 1)*16384;
-	wtofs = leveltime * 140;
+	R_UpdatePlaneRipple();
 #endif
 }
 
@@ -738,12 +761,20 @@ d->z = (v1.x * v2.y) - (v1.y * v2.x)
 #undef SFMULT
 }
 
-static void R_SlopePlaneVectors(visplane_t *pl, INT32 i, float fudge)
+static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_t yoff, float fudge)
 {
-	ds_sup = &ds_su[i];
-	ds_svp = &ds_sv[i];
-	ds_szp = &ds_sz[i];
-	R_CalculateSlopeVectors(pl->slope, pl->viewx, pl->viewy, pl->viewz, FRACUNIT, FRACUNIT, xoffs, yoffs, pl->viewangle, pl->plangle, fudge);
+	if (ds_su == NULL)
+		ds_su = Z_Malloc(sizeof(*ds_su) * vid.height, PU_STATIC, NULL);
+	if (ds_sv == NULL)
+		ds_sv = Z_Malloc(sizeof(*ds_sv) * vid.height, PU_STATIC, NULL);
+	if (ds_sz == NULL)
+		ds_sz = Z_Malloc(sizeof(*ds_sz) * vid.height, PU_STATIC, NULL);
+
+	ds_sup = &ds_su[y];
+	ds_svp = &ds_sv[y];
+	ds_szp = &ds_sz[y];
+
+	R_CalculateSlopeVectors(pl->slope, pl->viewx, pl->viewy, pl->viewz, FRACUNIT, FRACUNIT, xoff, yoff, pl->viewangle, pl->plangle, fudge);
 }
 
 void R_DrawSinglePlane(visplane_t *pl)
@@ -768,7 +799,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	}
 
 #ifndef NOWATER
-	itswater = false;
+	planeripple.active = false;
 #endif
 	spanfunc = spanfuncs[BASEDRAWFUNC];
 
@@ -851,12 +882,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 			}
 			else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
-	#ifndef NOWATER
+#ifndef NOWATER
 			if (pl->ffloor->flags & FF_RIPPLE)
 			{
 				INT32 top, bottom;
 
-				itswater = true;
+				planeripple.active = true;
+
 				if (spanfunctype == SPANDRAWFUNC_TRANS)
 				{
 					spanfunctype = SPANDRAWFUNC_WATER;
@@ -876,7 +908,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 										 vid.width, vid.width);
 				}
 			}
-	#endif
+#endif
 		}
 		else
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
@@ -979,50 +1011,45 @@ void R_DrawSinglePlane(visplane_t *pl)
 				xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
 				yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
 			}
+
 			xoffs = (fixed_t)(xoffs*fudgecanyon);
 			yoffs = (fixed_t)(yoffs/fudgecanyon);
 		}
 
-		ds_sup = &ds_su[0];
-		ds_svp = &ds_sv[0];
-		ds_szp = &ds_sz[0];
-
 #ifndef NOWATER
-		if (itswater)
+		if (planeripple.active)
 		{
-			INT32 i;
 			fixed_t plheight = abs(P_GetSlopeZAt(pl->slope, pl->viewx, pl->viewy) - pl->viewz);
-			fixed_t rxoffs = xoffs;
-			fixed_t ryoffs = yoffs;
 
 			R_PlaneBounds(pl);
 
-			for (i = pl->high; i < pl->low; i++)
+			for (x = pl->high; x < pl->low; x++)
 			{
-				R_PlaneRipple(pl, i, plheight);
-				xoffs = rxoffs + ripple_xfrac;
-				yoffs = ryoffs + ripple_yfrac;
-				R_SlopePlaneVectors(pl, i, fudgecanyon);
+				R_CalculatePlaneRipple(pl, x, plheight, true);
+				R_SetSlopePlaneVectors(pl, x, (xoffs + planeripple.xfrac), (yoffs + planeripple.yfrac), fudgecanyon);
 			}
-
-			xoffs = rxoffs;
-			yoffs = ryoffs;
 		}
 		else
 #endif
-			R_SlopePlaneVectors(pl, 0, fudgecanyon);
+			R_SetSlopePlaneVectors(pl, 0, xoffs, yoffs, fudgecanyon);
 
+		switch (spanfunctype)
+		{
 #ifndef NOWATER
-		if (itswater && (spanfunctype == SPANDRAWFUNC_WATER))
-			spanfunctype = SPANDRAWFUNC_TILTEDWATER;
-		else
+			case SPANDRAWFUNC_WATER:
+				spanfunctype = SPANDRAWFUNC_TILTEDWATER;
+				break;
 #endif
-		if (spanfunctype == SPANDRAWFUNC_TRANS)
-			spanfunctype = SPANDRAWFUNC_TILTEDTRANS;
-		else if (spanfunctype == SPANDRAWFUNC_SPLAT)
-			spanfunctype = SPANDRAWFUNC_TILTEDSPLAT;
-		else
-			spanfunctype = SPANDRAWFUNC_TILTED;
+			case SPANDRAWFUNC_TRANS:
+				spanfunctype = SPANDRAWFUNC_TILTEDTRANS;
+				break;
+			case SPANDRAWFUNC_SPLAT:
+				spanfunctype = SPANDRAWFUNC_TILTEDSPLAT;
+				break;
+			default:
+				spanfunctype = SPANDRAWFUNC_TILTED;
+				break;
+		}
 
 		planezlight = scalelight[light];
 	}

@@ -59,6 +59,7 @@ extern lighttable_t *ds_translation;
 extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 extern UINT16 ds_flatwidth, ds_flatheight;
 extern boolean ds_powersoftwo;
+
 extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
 
@@ -66,8 +67,8 @@ typedef struct {
 	float x, y, z;
 } floatv3_t;
 
-extern pslope_t *ds_slope; // Current slope being used
-extern floatv3_t ds_su[MAXVIDHEIGHT], ds_sv[MAXVIDHEIGHT], ds_sz[MAXVIDHEIGHT]; // Vectors for... stuff?
+// Vectors for Software's tilted slope drawers
+extern floatv3_t *ds_su, *ds_sv, *ds_sz;
 extern floatv3_t *ds_sup, *ds_svp, *ds_szp;
 extern float focallengthf, zeroheight;
 
