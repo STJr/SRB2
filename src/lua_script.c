@@ -380,6 +380,8 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 		emeralds = (UINT16)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "token"))
 		token = (UINT32)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "gravity"))
+		gravity = (fixed_t)luaL_checkinteger(L, 2);
 	else
 		return 0;
 
