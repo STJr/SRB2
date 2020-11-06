@@ -6,7 +6,7 @@
 //
 // libdivide is dual-licensed under the Boost or zlib licenses.
 // You may use libdivide under the terms of either of these.
-// See LICENSE.txt for more details.
+// See LICENSE.txt in the libdivide source code repository for more details.
 
 
 // NOTICE: This is an altered source version of libdivide.
