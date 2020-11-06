@@ -2126,19 +2126,21 @@ static void I_ShutdownTimer(void)
 // millisecond precision only
 int TimeFunction(int requested_frequency)
 {
-	static Uint64 basetime = 0;
-		   Uint64 ticks = SDL_GetTicks();
+	static Uint64 freq;
+	static Uint64 epoc;
 
-	if (!basetime)
-		basetime = ticks;
+	const Uint64 now = SDL_GetPerformanceCounter();
 
-	ticks -= basetime;
-
-	ticks = (ticks*requested_frequency);
-
-	ticks = (ticks/1000);
-
-	return ticks;
+	if (freq)
+	{
+		return (now - epoc) / (freq / requested_frequency);
+	}
+	else
+	{
+		freq = SDL_GetPerformanceFrequency();
+		epoc = now;
+		return 0;
+	}
 }
 #endif
 
