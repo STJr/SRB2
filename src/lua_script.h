@@ -48,6 +48,7 @@ void LUA_DumpFile(const char *filename);
 fixed_t LUA_EvalMath(const char *word);
 void LUA_PushLightUserdata(lua_State *L, void *data, const char *meta);
 void LUA_PushUserdata(lua_State *L, void *data, const char *meta);
+int  LUA_PushServerPlayer(lua_State *L);
 void LUA_InvalidateUserdata(void *data);
 void LUA_InvalidateLevel(void);
 void LUA_InvalidateMapthings(void);

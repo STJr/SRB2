@@ -332,6 +332,8 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	// local player variables, by popular request
 	} else if (fastcmp(word,"consoleplayer")) { // player controlling console (aka local player 1)
+		if (consoleplayer == serverplayer)
+			return LUA_PushServerPlayer(L);
 		if (consoleplayer < 0 || !playeringame[consoleplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[consoleplayer], META_PLAYER);
@@ -354,10 +356,7 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	// end local player variables
 	} else if (fastcmp(word,"server")) {
-		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
-			return 0;
-		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
-		return 1;
+		return LUA_PushServerPlayer(L);
 	} else if (fastcmp(word,"emeralds")) {
 		lua_pushinteger(L, emeralds);
 		return 1;
@@ -767,6 +766,14 @@ void LUA_PushUserdata(lua_State *L, void *data, const char *meta)
 		// stack is left with the userdata on top, as if getting it had originally succeeded.
 	}
 	lua_remove(L, -2); // remove LREG_VALID
+}
+
+int LUA_PushServerPlayer(lua_State *L)
+{
+	if ((!multiplayer || !netgame) && !playeringame[serverplayer])
+		return 0;
+	LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
+	return 1;
 }
 
 // When userdata is freed, use this function to remove it from Lua.
