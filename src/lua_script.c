@@ -399,6 +399,21 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 		if (player)
 			displayplayer = player - players;
 	}
+	else if (fastcmp(word, "mapmusname"))
+	{
+		size_t strlength;
+		const char *str = luaL_checkstring(L, 2, &strlength);
+
+		if (strlength > 6)
+			return luaL_error(L, "string length out of range (maximum 6 characters)");
+
+		if (strlen(str) < strlength)
+			return luaL_error(L, "string must not contain embedded zeros!");
+
+		strncpy(mapmusname, str, strlength);
+	}
+	else if (fastcmp(word, "mapmusflags"))
+		mapmusflags = (UINT16)luaL_checkinteger(L, 2);
 	else
 		return 0;
 
