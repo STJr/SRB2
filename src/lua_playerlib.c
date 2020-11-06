@@ -50,8 +50,6 @@ static int lib_iteratePlayers(lua_State *L)
 	{
 		if (!playeringame[i])
 			continue;
-		if (!players[i].mo)
-			continue;
 		LUA_PushUserdata(L, &players[i], META_PLAYER);
 		return 1;
 	}
@@ -71,8 +69,6 @@ static int lib_getPlayer(lua_State *L)
 		if (i == serverplayer)
 			return LUA_PushServerPlayer(L);
 		if (!playeringame[i])
-			return 0;
-		if (!players[i].mo)
 			return 0;
 		LUA_PushUserdata(L, &players[i], META_PLAYER);
 		return 1;
