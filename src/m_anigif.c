@@ -18,7 +18,7 @@
 #include "z_zone.h"
 #include "v_video.h"
 #include "i_video.h"
-#include "i_system.h" // I_GetTimeMicros
+#include "i_system.h" // I_GetPreciseTime
 #include "m_misc.h"
 #include "st_stuff.h" // st_palette
 
@@ -47,8 +47,8 @@ static RGBA_t *gif_framepalette = NULL;
 
 static FILE *gif_out = NULL;
 static INT32 gif_frames = 0;
-static UINT32 gif_prevframeus = 0; // "us" is microseconds
-static UINT32 gif_delayus = 0;
+static precise_t gif_prevframetime = 0;
+static UINT32 gif_delayus = 0; // "us" is microseconds
 static UINT8 gif_writeover = 0;
 
 
@@ -601,7 +601,7 @@ static void GIF_framewrite(void)
 		if (gif_dynamicdelay) {
 			// golden's attempt at creating a "dynamic delay"
 			UINT16 mingifdelay = 10; // minimum gif delay in milliseconds (keep at 10 because gifs can't get more precise).
-			gif_delayus += (I_GetTimeMicros() - gif_prevframeus); // increase delay by how much time was spent between last measurement
+			gif_delayus += I_PreciseToMicros(I_GetPreciseTime() - gif_prevframetime); // increase delay by how much time was spent between last measurement
 
 			if (gif_delayus/1000 >= mingifdelay) // delay is big enough to be able to effect gif frame delay?
 			{
@@ -695,7 +695,7 @@ static void GIF_framewrite(void)
 	}
 	fwrite(gifframe_data, 1, (p - gifframe_data), gif_out);
 	++gif_frames;
-	gif_prevframeus = I_GetTimeMicros();
+	gif_prevframetime = I_GetPreciseTime();
 }
 
 
@@ -723,7 +723,7 @@ INT32 GIF_open(const char *filename)
 
 	GIF_headwrite();
 	gif_frames = 0;
-	gif_prevframeus = I_GetTimeMicros();
+	gif_prevframetime = I_GetPreciseTime();
 	gif_delayus = 0;
 	return 1;
 }
