@@ -732,7 +732,7 @@ INT32 GIF_open(const char *filename)
 
 	gif_optimize = (!!cv_gif_optimize.value);
 	gif_downscale = (!!cv_gif_downscale.value);
-	memcpy(&gif_dynamicdelay, &cv_gif_dynamicdelay.value, sizeof(gif_dynamicdelay)); //gif_dynamicdelay = (!!cv_gif_dynamicdelay.value);
+	gif_dynamicdelay = cv_gif_dynamicdelay.value;
 	gif_localcolortable = (!!cv_gif_localcolortable.value);
 	gif_colorprofile = (!!cv_screenshot_colorprofile.value);
 	gif_headerpalette = GIF_getpalette(0);
