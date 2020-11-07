@@ -2044,12 +2044,20 @@ ticcmd_t *I_BaseTiccmd2(void)
 //
 
 static Uint64 timer_frequency;
+
+static double tic_frequency;
 static Uint64 tic_epoch;
 
 tic_t I_GetTime(void)
 {
+	static double elapsed;
+
 	const Uint64 now = SDL_GetPerformanceCounter();
-	return (now - tic_epoch) * NEWTICRATE / timer_frequency;
+
+	elapsed += (now - tic_epoch) / tic_frequency;
+	tic_epoch = now; // moving epoch
+
+	return (tic_t)elapsed;
 }
 
 precise_t I_GetPreciseTime(void)
@@ -2069,6 +2077,8 @@ void I_StartupTimer(void)
 {
 	timer_frequency = SDL_GetPerformanceFrequency();
 	tic_epoch       = SDL_GetPerformanceCounter();
+
+	tic_frequency   = timer_frequency / NEWTICRATE;
 }
 
 void I_Sleep(void)
