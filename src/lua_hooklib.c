@@ -25,7 +25,7 @@
 
 #include "m_perfstats.h"
 #include "d_netcmd.h" // for cv_perfstats
-#include "i_system.h" // I_GetTimeMicros
+#include "i_system.h" // I_GetPreciseTime
 
 static UINT8 hooksAvailable[(hook_MAX/8)+1];
 
@@ -480,7 +480,7 @@ void LUAh_ThinkFrame(void)
 			continue;
 
 		if (cv_perfstats.value == 3)
-			time_taken = I_GetTimeMicros();
+			time_taken = I_GetPreciseTime();
 		PushHook(gL, hookp);
 		if (lua_pcall(gL, 0, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
@@ -491,7 +491,7 @@ void LUAh_ThinkFrame(void)
 		if (cv_perfstats.value == 3)
 		{
 			lua_Debug ar;
-			time_taken = I_GetTimeMicros() - time_taken;
+			time_taken = I_GetPreciseTime() - time_taken;
 			// we need the function, let's just retrieve it again
 			PushHook(gL, hookp);
 			lua_getinfo(gL, ">S", &ar);
