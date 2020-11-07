@@ -2067,7 +2067,7 @@ precise_t I_GetPreciseTime(void)
 
 int I_PreciseToMicros(precise_t d)
 {
-	return d / (timer_frequency / 1000000);
+	return (int)(d / (timer_frequency / 1000000.0));
 }
 
 //
@@ -2078,7 +2078,7 @@ void I_StartupTimer(void)
 	timer_frequency = SDL_GetPerformanceFrequency();
 	tic_epoch       = SDL_GetPerformanceCounter();
 
-	tic_frequency   = timer_frequency / NEWTICRATE;
+	tic_frequency   = timer_frequency / (double)NEWTICRATE;
 }
 
 void I_Sleep(void)
