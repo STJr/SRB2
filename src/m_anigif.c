@@ -43,7 +43,7 @@ consvar_t cv_gif_localcolortable =  CVAR_INIT ("gif_localcolortable", "On", CV_S
 #ifdef HAVE_ANIGIF
 static boolean gif_optimize = false; // So nobody can do something dumb
 static boolean gif_downscale = false; // like changing cvars mid output
-static INT32 gif_dynamicdelay = 0; // and messing something up
+static UINT8 gif_dynamicdelay = (UINT8)0; // and messing something up
 
 // Palette handling
 static boolean gif_localcolortable = false;
@@ -604,7 +604,7 @@ static void GIF_framewrite(void)
 		UINT16 delay = 0;
 		INT32 startline;
 
-		if (gif_dynamicdelay == 2)
+		if (gif_dynamicdelay ==(UINT8) 2)
 		{
 			// golden's attempt at creating a "dynamic delay"
 			UINT16 mingifdelay = 10; // minimum gif delay in milliseconds (keep at 10 because gifs can't get more precise).
@@ -617,7 +617,7 @@ static void GIF_framewrite(void)
 				gif_delayus -= frames*(mingifdelay*1000); // remove frames by the amount of milliseconds they take. don't reset to 0, the microseconds help consistency.
 			}
 		}
-		else if (gif_dynamicdelay == 1)
+		else if (gif_dynamicdelay ==(UINT8) 1)
 		{
 			float delayf = ceil(100.0f/NEWTICRATE);
 
@@ -732,7 +732,7 @@ INT32 GIF_open(const char *filename)
 
 	gif_optimize = (!!cv_gif_optimize.value);
 	gif_downscale = (!!cv_gif_downscale.value);
-	gif_dynamicdelay = cv_gif_dynamicdelay.value;
+	gif_dynamicdelay = (UINT8)cv_gif_dynamicdelay.value;
 	gif_localcolortable = (!!cv_gif_localcolortable.value);
 	gif_colorprofile = (!!cv_screenshot_colorprofile.value);
 	gif_headerpalette = GIF_getpalette(0);
