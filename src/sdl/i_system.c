@@ -54,8 +54,6 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <fcntl.h>
 #endif
 
-int TimeFunction(int requested_frequency);
-
 #include <stdio.h>
 #ifdef _WIN32
 #include <conio.h>
@@ -2045,32 +2043,23 @@ ticcmd_t *I_BaseTiccmd2(void)
 // returns time in 1/TICRATE second tics
 //
 
-// millisecond precision only
-int TimeFunction(int requested_frequency)
-{
-	static Uint64 basetime = 0;
-		   Uint64 ticks = SDL_GetTicks();
-
-	if (!basetime)
-		basetime = ticks;
-
-	ticks -= basetime;
-
-	ticks = (ticks*requested_frequency);
-
-	ticks = (ticks/1000);
-
-	return ticks;
-}
+static Uint64 timer_frequency;
+static Uint64 tic_epoch;
 
 tic_t I_GetTime(void)
 {
-	return TimeFunction(NEWTICRATE);
+	const Uint64 now = SDL_GetPerformanceCounter();
+	return (now - tic_epoch) * NEWTICRATE / timer_frequency;
 }
 
-int I_GetTimeMicros(void)
+precise_t I_GetPreciseTime(void)
 {
-	return TimeFunction(1000000);
+	return SDL_GetPerformanceCounter();
+}
+
+int I_PreciseToMicros(precise_t d)
+{
+	return d / (timer_frequency / 1000000);
 }
 
 //
@@ -2078,6 +2067,8 @@ int I_GetTimeMicros(void)
 //
 void I_StartupTimer(void)
 {
+	timer_frequency = SDL_GetPerformanceFrequency();
+	tic_epoch       = SDL_GetPerformanceCounter();
 }
 
 void I_Sleep(void)
