@@ -257,7 +257,7 @@ static int lib_registerMetatable(lua_State *L)
 	luaL_checktype(L, 1, LUA_TTABLE);
 
 	if (nextid == 0)
-		luaL_error(L, "Too many metatables registered?! Please consider rewriting your script once you are sober again.\n");
+		return luaL_error(L, "Too many metatables registered?! Please consider rewriting your script once you are sober again.\n");
 
 	lua_getfield(L, LUA_REGISTRYINDEX, LREG_METATABLES); // 2
 		// registry.metatables[metatable] = nextid
