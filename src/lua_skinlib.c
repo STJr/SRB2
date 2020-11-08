@@ -217,7 +217,7 @@ static int skin_get(lua_State *L)
 		lua_pushinteger(L, skin->availability);
 		break;
 	case skin_sprites:
-		LUA_PushUserdata(L, skin->sprites, META_SKINSPRITES);
+		LUA_PushLightUserdata(L, skin->sprites, META_SKINSPRITES);
 		break;	
 	}
 	return 1;
@@ -340,7 +340,7 @@ static const char *const sprites_opt[] = {
 // skin.sprites[i] -> sprites[i]
 static int lib_getSkinSprite(lua_State *L)
 {
-	spritedef_t *sprites = *((spritedef_t **)luaL_checkudata(L, 1, META_SKINSPRITES));
+	spritedef_t *sprites = (spritedef_t *)luaL_checkudata(L, 1, META_SKINSPRITES);
 	playersprite_t i = luaL_checkinteger(L, 2);
 
 	if (i < 0 || i >= NUMPLAYERSPRITES*2)
