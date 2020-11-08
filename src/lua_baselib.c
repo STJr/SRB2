@@ -250,11 +250,14 @@ static int lib_userdataType(lua_State *L)
 // Only callable during script loading
 static int lib_registerMetatable(lua_State *L)
 {
-	static UINT32 nextid = 1;
+	static UINT16 nextid = 1;
 
 	if (!lua_lumploading)
 		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
 	luaL_checktype(L, 1, LUA_TTABLE);
+
+	if (nextid == 0)
+		luaL_error(L, "Too many metatables registered?! Please consider rewriting your script once you are sober again.\n");
 
 	lua_getfield(L, LUA_REGISTRYINDEX, LREG_METATABLES); // 2
 		// registry.metatables[metatable] = nextid
