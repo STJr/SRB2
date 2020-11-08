@@ -21,7 +21,6 @@
 enum skin {
 	skin_valid = 0,
 	skin_name,
-	skin_spritedef,
 	skin_wadnum,
 	skin_flags,
 	skin_realname,
@@ -60,7 +59,6 @@ enum skin {
 static const char *const skin_opt[] = {
 	"valid",
 	"name",
-	"spritedef",
 	"wadnum",
 	"flags",
 	"realname",
@@ -115,8 +113,6 @@ static int skin_get(lua_State *L)
 	case skin_name:
 		lua_pushstring(L, skin->name);
 		break;
-	case skin_spritedef:
-		return UNIMPLEMENTED;
 	case skin_wadnum:
 		// !!WARNING!! May differ between clients due to music wads, therefore NOT NETWORK SAFE
 		return UNIMPLEMENTED;
