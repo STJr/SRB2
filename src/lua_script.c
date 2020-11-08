@@ -980,7 +980,16 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			lua_pop(gL, 1);
 		}
 		if (!found)
+		{
 			t++;
+
+			if (t == 0)
+			{
+				CONS_Alert(CONS_ERROR, "Too many tables to archive!\n");
+				WRITEUINT8(save_p, ARCH_NULL);
+				return 0;
+			}
+		}
 
 		WRITEUINT8(save_p, ARCH_TABLE);
 		WRITEUINT16(save_p, t);
