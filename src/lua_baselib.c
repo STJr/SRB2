@@ -427,7 +427,8 @@ static int lib_pAproxDistance(lua_State *L)
 	fixed_t dx = luaL_checkfixed(L, 1);
 	fixed_t dy = luaL_checkfixed(L, 2);
 	//HUDSAFE
-	lua_pushfixed(L, P_AproxDistance(dx, dy));
+	LUA_Deprecated(L, "P_AproxDistance", "FixedHypot");
+	lua_pushfixed(L, FixedHypot(dx, dy));
 	return 1;
 }
 
