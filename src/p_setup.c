@@ -904,15 +904,12 @@ static void P_SpawnMapThings(boolean spawnemblems)
 }
 
 // Experimental groovy write function!
-void P_WriteThings(lumpnum_t lumpnum)
+void P_WriteThings(void)
 {
 	size_t i, length;
 	mapthing_t *mt;
-	UINT8 *data;
 	UINT8 *savebuffer, *savebuf_p;
 	INT16 temp;
-
-	data = W_CacheLumpNum(lumpnum, PU_LEVEL);
 
 	savebuf_p = savebuffer = (UINT8 *)malloc(nummapthings * sizeof (mapthing_t));
 
@@ -934,8 +931,6 @@ void P_WriteThings(lumpnum_t lumpnum)
 		WRITEINT16(savebuf_p, temp);
 		WRITEUINT16(savebuf_p, mt->options);
 	}
-
-	Z_Free(data);
 
 	length = savebuf_p - savebuffer;
 
