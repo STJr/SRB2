@@ -246,6 +246,56 @@ static int lib_userdataType(lua_State *L)
 		return luaL_typerror(L, 1, "userdata");
 }
 
+// Takes a metatable as first and only argument
+// Only callable during script loading
+static int lib_registerMetatable(lua_State *L)
+{
+	static UINT16 nextid = 1;
+
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+	luaL_checktype(L, 1, LUA_TTABLE);
+
+	if (nextid == 0)
+		return luaL_error(L, "Too many metatables registered?! Please consider rewriting your script once you are sober again.\n");
+
+	lua_getfield(L, LUA_REGISTRYINDEX, LREG_METATABLES); // 2
+		// registry.metatables[metatable] = nextid
+		lua_pushvalue(L, 1); // 3
+			lua_pushnumber(L, nextid); // 4
+		lua_settable(L, 2);
+
+		// registry.metatables[nextid] = metatable
+		lua_pushnumber(L, nextid); // 3
+			lua_pushvalue(L, 1); // 4
+		lua_settable(L, 2);
+	lua_pop(L, 1);
+
+	nextid++;
+
+	return 0;
+}
+
+// Takes a string as only argument and returns the metatable
+// associated to the userdata type this string refers to
+// Returns nil if the string does not refer to a valid userdata type
+static int lib_userdataMetatable(lua_State *L)
+{
+	UINT32 i;
+	const char *udname = luaL_checkstring(L, 1);
+
+	// Find internal metatable name
+	for (i = 0; meta2utype[i].meta; i++)
+		if (!strcmp(udname, meta2utype[i].utype))
+		{
+			luaL_getmetatable(L, meta2utype[i].meta);
+			return 1;
+		}
+
+	lua_pushnil(L);
+	return 1;
+}
+
 static int lib_isPlayerAdmin(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -3494,6 +3544,8 @@ static luaL_Reg lib[] = {
 	{"chatprint", lib_chatprint},
 	{"chatprintf", lib_chatprintf},
 	{"userdataType", lib_userdataType},
+	{"registerMetatable", lib_registerMetatable},
+	{"userdataMetatable", lib_userdataMetatable},
 	{"IsPlayerAdmin", lib_isPlayerAdmin},
 	{"reserveLuabanks", lib_reserveLuabanks},
 
