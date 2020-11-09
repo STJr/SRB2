@@ -2735,7 +2735,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			// Step up
 			if (thing->z < tmfloorz)
 			{
-				if (tmfloorz - thing->z <= maxstep)
+				if (maxstep > 0 && tmfloorz - thing->z <= maxstep)
 				{
 					thing->z = thing->floorz = tmfloorz;
 					thing->floorrover = tmfloorrover;
@@ -2748,7 +2748,7 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			}
 			else if (tmceilingz < thingtop)
 			{
-				if (thingtop - tmceilingz <= maxstep)
+				if (maxstep > 0 && thingtop - tmceilingz <= maxstep)
 				{
 					thing->z = ( thing->ceilingz = tmceilingz ) - thing->height;
 					thing->ceilingrover = tmceilingrover;
