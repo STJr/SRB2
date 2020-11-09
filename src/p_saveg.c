@@ -3990,6 +3990,12 @@ static void P_NetArchiveMisc(void)
 	WRITEINT32(save_p, sstimer);
 	WRITEUINT32(save_p, bluescore);
 	WRITEUINT32(save_p, redscore);
+
+	WRITEUINT16(save_p, skincolor_redteam);
+	WRITEUINT16(save_p, skincolor_blueteam);
+	WRITEUINT16(save_p, skincolor_redring);
+	WRITEUINT16(save_p, skincolor_bluering);
+
 	WRITEINT32(save_p, modulothing);
 
 	WRITEINT16(save_p, autobalance);
@@ -4074,6 +4080,12 @@ static inline boolean P_NetUnArchiveMisc(void)
 	sstimer = READINT32(save_p);
 	bluescore = READUINT32(save_p);
 	redscore = READUINT32(save_p);
+
+	skincolor_redteam = READUINT16(save_p);
+	skincolor_blueteam = READUINT16(save_p);
+	skincolor_redring = READUINT16(save_p);
+	skincolor_bluering = READUINT16(save_p);
+
 	modulothing = READINT32(save_p);
 
 	autobalance = READINT16(save_p);
