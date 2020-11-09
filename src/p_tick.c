@@ -639,7 +639,12 @@ void P_Ticker(boolean run)
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
 		if (demoplayback)
+		{
 			G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
+			P_SetPlayerAngle(&players[consoleplayer], players[consoleplayer].mo->angle);
+			P_ForceLocalAngle(&players[consoleplayer], players[consoleplayer].mo->angle);
+			localaiming = players[consoleplayer].aiming;
+		}
 
 		LUAh_PreThinkFrame();
 
