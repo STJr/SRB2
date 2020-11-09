@@ -2125,6 +2125,8 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"MINUS5", 6},
 
 		{"MUSICDEF", 8}, // Song definitions (thanks kart)
+		{"SHADERS", 7}, // OpenGL shader definitions
+		{"SH_", 3}, // GLSL shader
 
 		{NULL, 0},
 	};
