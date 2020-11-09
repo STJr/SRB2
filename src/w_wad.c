@@ -2074,13 +2074,56 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"CLM", 3}, // Colormap changes
 		{"TRANS", 5}, // Translucency map changes
 
+		{"CONSBACK", 8}, // Console Background graphic
+
+		{"SAVE", 4}, // Save Select graphics here and below
+		{"BLACXLVL", 8},
+		{"GAMEDONE", 8},
+		{"CONT", 4}, // Continue icons on saves (probably not used anymore)
+		{"STNONEX", 7}, // "X" graphic
+		{"ULTIMATE", 8}, // Ultimate no-save
+
+		{"CRFNT", 5}, // Sonic 1 font changes
+		{"NTFNT", 5}, // Character Select font changes
+		{"NTFNO", 5}, // Character Select font (outline)
 		{"LTFNT", 5}, // Level title font changes
 		{"TTL", 3}, // Act number changes
 		{"STCFN", 5}, // Console font changes
 		{"TNYFN", 5}, // Tiny console font changes
+
+		{"STLIVE", 6}, // Life graphics, background and the "X" that shows under skin's HUDNAME
+		{"CROSHAI", 7}, // First person crosshairs
+		{"INTERSC", 7}, // Default intermission backgrounds (co-op)
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
-		{"M_", 2}, // As does menu stuff
+		{"RESULT", 6}, // Used in intermission for competitive modes, above too :3
+		{"RACE", 4}, // Race mode graphics, 321go
+		{"M_", 2}, // Menu stuff
+		{"LT", 2}, // Titlecard changes
+
+		{"SLID", 4}, // Continue
+		{"CONT", 4}, 
+
+		{"MINICAPS", 8}, // NiGHTS graphics here and below
+		{"BLUESTAT", 8}, // Sphere status
+		{"BYELSTAT", 8},
+		{"ORNGSTAT", 8},
+		{"REDSTAT", 7},
+		{"YELSTAT", 7},
+		{"NBRACKET", 8},
+		{"NGHTLINK", 8},
+		{"NGT", 3}, // Link numbers
+		{"NARROW", 6},
+		{"NREDAR", 6},
+		{"NSS", 3},
+		{"NBON", 4},
+		{"NRNG", 4},
+		{"NHUD", 4},
+		{"CAPS", 4},
+		{"DRILL", 5},
+		{"GRADE", 5},
+		{"MINUS5", 6},
+
 		{"MUSICDEF", 8}, // Song definitions (thanks kart)
 
 		{NULL, 0},
