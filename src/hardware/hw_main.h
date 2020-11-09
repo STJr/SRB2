@@ -78,7 +78,7 @@ const char *HWR_GetShaderName(INT32 shader);
 
 extern customshaderxlat_t shaderxlat[];
 
-extern CV_PossibleValue_t granisotropicmode_cons_t[];
+extern CV_PossibleValue_t glanisotropicmode_cons_t[];
 
 #ifdef ALAM_LIGHTING
 extern consvar_t cv_gldynamiclighting;
@@ -87,7 +87,7 @@ extern consvar_t cv_glcoronas;
 extern consvar_t cv_glcoronasize;
 #endif
 
-extern consvar_t cv_glshaders;
+extern consvar_t cv_glshaders, cv_glallowshaders;
 extern consvar_t cv_glmodels;
 extern consvar_t cv_glmodelinterpolation;
 extern consvar_t cv_glmodellighting;

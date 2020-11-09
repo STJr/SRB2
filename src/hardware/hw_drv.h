@@ -70,7 +70,7 @@ EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
 // jimita
 EXPORT boolean HWRAPI(CompileShaders) (void);
 EXPORT void HWRAPI(CleanShaders) (void);
-EXPORT void HWRAPI(SetShader) (int shader);
+EXPORT void HWRAPI(SetShader) (int type);
 EXPORT void HWRAPI(UnSetShader) (void);
 
 EXPORT void HWRAPI(SetShaderInfo) (hwdshaderinfo_t info, INT32 value);
