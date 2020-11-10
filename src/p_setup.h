@@ -79,6 +79,7 @@ typedef struct
 	// for textures
 	UINT8 *picture;
 #ifdef HWRENDER
+	void *mippic;
 	void *mipmap;
 #endif
 } levelflat_t;

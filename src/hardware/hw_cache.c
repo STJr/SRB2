@@ -967,7 +967,7 @@ static void HWR_CacheTextureAsFlat(GLMipmap_t *grMipmap, INT32 texturenum)
 }
 
 // Download a Doom 'flat' to the hardware cache and make it ready for use
-void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum)
+void HWR_GetRawFlat(lumpnum_t flatlumpnum)
 {
 	GLMipmap_t *grmip;
 	if (flatlumpnum == LUMPERROR)
@@ -994,7 +994,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		return;
 
 	if (levelflat->type == LEVELFLAT_FLAT)
-		HWR_LiterallyGetFlat(levelflat->u.flat.lumpnum);
+		HWR_GetRawFlat(levelflat->u.flat.lumpnum);
 	else if (levelflat->type == LEVELFLAT_TEXTURE)
 	{
 		GLMapTexture_t *grtex;
@@ -1042,9 +1042,9 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		INT32 fmtbpp = Picture_FormatBPP(format);
 
 		// Cache the picture.
-		if (!levelflat->picture)
+		if (!levelflat->mippic)
 		{
-			levelflat->picture = Picture_PNGConvert(W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), format, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
+			levelflat->mippic = Picture_PNGConvert(W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), format, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
 			levelflat->width = (UINT16)pngwidth;
 			levelflat->height = (UINT16)pngheight;
 		}
@@ -1064,13 +1064,13 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 			mipmap->height = levelflat->height;
 			size = (mipmap->width * mipmap->height) * (fmtbpp / 8);
 			flat = Z_Malloc(size, PU_LEVEL, &mipmap->data);
-			if (levelflat->picture == NULL)
-				I_Error("HWR_GetLevelFlat: levelflat->picture == NULL");
-			M_Memcpy(flat, levelflat->picture, size);
+			if (levelflat->mippic == NULL)
+				I_Error("HWR_GetLevelFlat: levelflat->mippic == NULL");
+			M_Memcpy(flat, levelflat->mippic, size);
 		}
 
 		// Tell the hardware driver to bind the current texture to the flat's mipmap
-		HWD.pfnSetTexture(mipmap);
+		HWR_SetCurrentTexture(mipmap);
 	}
 #endif
 	else // set no texture
