@@ -19,7 +19,6 @@
 #endif
 
 extern tic_t leveltime;
-extern consvar_t cv_freedemocamera;
 
 // Called by G_Ticker. Carries out all thinking of enemies and players.
 void Command_Numthinkers_f(void);
