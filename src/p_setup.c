@@ -906,15 +906,12 @@ static void P_SpawnMapThings(boolean spawnemblems)
 }
 
 // Experimental groovy write function!
-void P_WriteThings(lumpnum_t lumpnum)
+void P_WriteThings(void)
 {
 	size_t i, length;
 	mapthing_t *mt;
-	UINT8 *data;
 	UINT8 *savebuffer, *savebuf_p;
 	INT16 temp;
-
-	data = W_CacheLumpNum(lumpnum, PU_LEVEL);
 
 	savebuf_p = savebuffer = (UINT8 *)malloc(nummapthings * sizeof (mapthing_t));
 
@@ -936,8 +933,6 @@ void P_WriteThings(lumpnum_t lumpnum)
 		WRITEINT16(savebuf_p, temp);
 		WRITEUINT16(savebuf_p, mt->options);
 	}
-
-	Z_Free(data);
 
 	length = savebuf_p - savebuffer;
 
@@ -2432,6 +2427,10 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		seg->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
 		if (seg->linedef)
 			segs[i].offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
+		seg->length = P_SegLength(seg);
+#ifdef HWRENDER
+		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
+#endif
 	}
 
 	return true;
@@ -3359,8 +3358,6 @@ static void P_InitLevelSettings(void)
 
 	leveltime = 0;
 
-	localaiming = 0;
-	localaiming2 = 0;
 	modulothing = 0;
 
 	// special stage tokens, emeralds, and ring total
@@ -3474,6 +3471,9 @@ void P_RespawnThings(void)
 	}
 
 	P_InitLevelSettings();
+
+	localaiming = 0;
+	localaiming2 = 0;
 
 	P_SpawnMapThings(true);
 
@@ -3982,7 +3982,7 @@ static void P_InitGametype(void)
   * \param fromnetsave If true, skip some stuff because we're loading a netgame snapshot.
   * \todo Clean up, refactor, split up; get rid of the bloat.
   */
-boolean P_LoadLevel(boolean fromnetsave)
+boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 {
 	// use gamemap to get map number.
 	// 99% of the things already did, so.
@@ -4052,7 +4052,10 @@ boolean P_LoadLevel(boolean fromnetsave)
 	players[consoleplayer].viewz = 1;
 
 	// Cancel all d_main.c fadeouts (keep fade in though).
-	wipegamestate = FORCEWIPEOFF;
+	if (reloadinggamestate)
+		wipegamestate = gamestate; // Don't fade if reloading the gamestate
+	else
+		wipegamestate = FORCEWIPEOFF;
 	wipestyleflags = 0;
 
 	// Special stage & record attack retry fade to white
@@ -4078,18 +4081,20 @@ boolean P_LoadLevel(boolean fromnetsave)
 
 	// Fade out music here. Deduct 2 tics so the fade volume actually reaches 0.
 	// But don't halt the music! S_Start will take care of that. This dodges a MIDI crash bug.
-	if (!titlemapinaction && (RESETMUSIC ||
+	if (!(reloadinggamestate || titlemapinaction) && (RESETMUSIC ||
 		strnicmp(S_MusicName(),
 			(mapmusflags & MUSIC_RELOADRESET) ? mapheaderinfo[gamemap-1]->musname : mapmusname, 7)))
+	{
 		S_FadeMusic(0, FixedMul(
 			FixedDiv((F_GetWipeLength(wipedefs[wipe_level_toblack])-2)*NEWTICRATERATIO, NEWTICRATE), MUSICRATE));
+	}
 
 	// Let's fade to black here
 	// But only if we didn't do the special stage wipe
-	if (rendermode != render_none && !ranspecialwipe)
+	if (rendermode != render_none && !(ranspecialwipe || reloadinggamestate))
 		P_RunLevelWipe();
 
-	if (!titlemapinaction)
+	if (!(reloadinggamestate || titlemapinaction))
 	{
 		if (ranspecialwipe == 2)
 		{
@@ -4214,7 +4219,12 @@ boolean P_LoadLevel(boolean fromnetsave)
 	if (!fromnetsave)
 		P_InitGametype();
 
-	P_InitCamera();
+	if (!reloadinggamestate)
+	{
+		P_InitCamera();
+		localaiming = 0;
+		localaiming2 = 0;
+	}
 
 	// clear special respawning que
 	iquehead = iquetail = 0;
@@ -4222,7 +4232,7 @@ boolean P_LoadLevel(boolean fromnetsave)
 	P_MapEnd();
 
 	// Remove the loading shit from the screen
-	if (rendermode != render_none && !titlemapinaction)
+	if (rendermode != render_none && !(titlemapinaction || reloadinggamestate))
 		F_WipeColorFill(levelfadecol);
 
 	if (precache || dedicated)
@@ -4266,8 +4276,8 @@ boolean P_LoadLevel(boolean fromnetsave)
 		LUAh_MapLoad();
 	}
 
-	// No render mode, stop here.
-	if (rendermode == render_none)
+	// No render mode or reloading gamestate, stop here.
+	if (rendermode == render_none || reloadinggamestate)
 		return true;
 
 	// Title card!

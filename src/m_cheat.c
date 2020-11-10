@@ -1434,19 +1434,26 @@ void Command_Writethings_f(void)
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_OBJECTPLACE;
 
-	P_WriteThings(W_GetNumForName(G_BuildMapName(gamemap)) + ML_THINGS);
+	P_WriteThings();
 }
 
 void Command_ObjectPlace_f(void)
 {
+	size_t thingarg;
+	size_t silent;
+
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_NOULTIMATE;
 
 	G_SetGameModified(multiplayer);
 
+	silent = COM_CheckParm("-silent");
+
+	thingarg = 2 - ( silent != 1 );
+
 	// Entering objectplace?
-	if (!objectplacing || COM_Argc() > 1)
+	if (!objectplacing || thingarg < COM_Argc())
 	{
 		if (!objectplacing)
 		{
@@ -1455,7 +1462,7 @@ void Command_ObjectPlace_f(void)
 			if (players[0].powers[pw_carry] == CR_NIGHTSMODE)
 				return;
 
-			if (!COM_CheckParm("-silent"))
+			if (! silent)
 			{
 				HU_SetCEchoFlags(V_RETURN8|V_MONOSPACE|V_AUTOFADEOUT);
 				HU_SetCEchoDuration(10);
@@ -1506,9 +1513,9 @@ void Command_ObjectPlace_f(void)
 				op_oldstate = (statenum_t)(players[0].mo->state-states);
 		}
 
-		if (COM_Argc() > 1)
+		if (thingarg < COM_Argc())
 		{
-			UINT16 mapthingnum = atoi(COM_Argv(1));
+			UINT16 mapthingnum = atoi(COM_Argv(thingarg));
 			mobjtype_t type = P_GetMobjtype(mapthingnum);
 			if (type == MT_UNKNOWN)
 				CONS_Printf(M_GetText("No mobj type delegated to thing type %d.\n"), mapthingnum);

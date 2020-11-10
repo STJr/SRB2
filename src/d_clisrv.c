@@ -84,6 +84,8 @@ char playeraddress[MAXPLAYERS][64];
 // The actual timeout will be longer depending on the savegame length
 tic_t jointimeout = (10*TICRATE);
 static boolean sendingsavegame[MAXNETNODES]; // Are we sending the savegame?
+static boolean resendingsavegame[MAXNETNODES]; // Are we resending the savegame?
+static tic_t savegameresendcooldown[MAXNETNODES]; // How long before we can resend again?
 static tic_t freezetimeout[MAXNETNODES]; // Until when can this node freeze the server before getting a timeout?
 
 // Incremented by cv_joindelay when a client joins, decremented each tic.
@@ -107,15 +109,8 @@ static tic_t maketic;
 
 static INT16 consistancy[BACKUPTICS];
 
-// Resynching shit!
-static UINT32 resynch_score[MAXNETNODES]; // "score" for kicking -- if this gets too high then cfail kick
-static UINT16 resynch_delay[MAXNETNODES]; // delay time before the player can be considered to have desynched
-static UINT32 resynch_status[MAXNETNODES]; // 0 bit means synched for that player, 1 means possibly desynched
-static UINT8 resynch_sent[MAXNETNODES][MAXPLAYERS]; // what synch packets have we attempted to send to the player
-static UINT8 resynch_inprogress[MAXNETNODES];
-static UINT8 resynch_local_inprogress = false; // WE are desynched and getting packets to fix it.
 static UINT8 player_joining = false;
-UINT8 hu_resynching = 0;
+UINT8 hu_redownloadinggamestate = 0;
 
 UINT8 adminpassmd5[16];
 boolean adminpasswordset = false;
@@ -126,6 +121,7 @@ static ticcmd_t localcmds2;
 static boolean cl_packetmissed;
 // here it is for the secondary local player (splitscreen)
 static UINT8 mynode; // my address pointofview server
+static boolean cl_redownloadinggamestate = false;
 
 static UINT8 localtextcmd[MAXTEXTCMD];
 static UINT8 localtextcmd2[MAXTEXTCMD]; // splitscreen
@@ -509,603 +505,6 @@ void ReadLmpExtraData(UINT8 **demo_pointer, INT32 playernum)
 // end extra data function for lmps
 // -----------------------------------------------------------------
 
-// -----------------------------------------------------------------
-// resynch player data
-// -----------------------------------------------------------------
-static inline void resynch_write_player(resynch_pak *rsp, const size_t i)
-{
-	size_t j;
-
-	rsp->playernum = (UINT8)i;
-
-	// Do not send anything visual related.
-	// Only send data that we need to know for physics.
-	rsp->playerstate = (UINT8)players[i].playerstate; //playerstate_t
-	rsp->pflags = (UINT32)LONG(players[i].pflags); //pflags_t
-	rsp->panim  = (UINT8)players[i].panim; //panim_t
-
-	rsp->angleturn = (INT16)SHORT(players[i].angleturn);
-	rsp->oldrelangleturn = (INT16)SHORT(players[i].oldrelangleturn);
-
-	rsp->aiming = (angle_t)LONG(players[i].aiming);
-	rsp->currentweapon = LONG(players[i].currentweapon);
-	rsp->ringweapons = LONG(players[i].ringweapons);
-
-	rsp->ammoremoval = (UINT16)SHORT(players[i].ammoremoval);
-	rsp->ammoremovaltimer = (tic_t)LONG(players[i].ammoremovaltimer);
-	rsp->ammoremovalweapon = LONG(players[i].ammoremovalweapon);
-
-	for (j = 0; j < NUMPOWERS; ++j)
-		rsp->powers[j] = (UINT16)SHORT(players[i].powers[j]);
-
-	// Score is resynched in the rspfirm resync packet
-	rsp->rings = SHORT(players[i].rings);
-	rsp->spheres = SHORT(players[i].spheres);
-	rsp->lives = players[i].lives;
-	rsp->continues = players[i].continues;
-	rsp->scoreadd = players[i].scoreadd;
-	rsp->xtralife = players[i].xtralife;
-	rsp->pity = players[i].pity;
-
-	rsp->skincolor = players[i].skincolor;
-	rsp->skin = LONG(players[i].skin);
-	rsp->availabilities = LONG(players[i].availabilities);
-	// Just in case Lua does something like
-	// modify these at runtime
-	rsp->camerascale = (fixed_t)LONG(players[i].camerascale);
-	rsp->shieldscale = (fixed_t)LONG(players[i].shieldscale);
-	rsp->normalspeed = (fixed_t)LONG(players[i].normalspeed);
-	rsp->runspeed = (fixed_t)LONG(players[i].runspeed);
-	rsp->thrustfactor = players[i].thrustfactor;
-	rsp->accelstart = players[i].accelstart;
-	rsp->acceleration = players[i].acceleration;
-	rsp->charability = players[i].charability;
-	rsp->charability2 = players[i].charability2;
-	rsp->charflags = (UINT32)LONG(players[i].charflags);
-	rsp->thokitem = (UINT32)LONG(players[i].thokitem); //mobjtype_t
-	rsp->spinitem = (UINT32)LONG(players[i].spinitem); //mobjtype_t
-	rsp->revitem = (UINT32)LONG(players[i].revitem); //mobjtype_t
-	rsp->followitem = (UINT32)LONG(players[i].followitem); //mobjtype_t
-	rsp->actionspd = (fixed_t)LONG(players[i].actionspd);
-	rsp->mindash = (fixed_t)LONG(players[i].mindash);
-	rsp->maxdash = (fixed_t)LONG(players[i].maxdash);
-	rsp->jumpfactor = (fixed_t)LONG(players[i].jumpfactor);
-	rsp->playerheight = (fixed_t)LONG(players[i].height);
-	rsp->playerspinheight = (fixed_t)LONG(players[i].spinheight);
-
-	rsp->speed = (fixed_t)LONG(players[i].speed);
-	rsp->secondjump = players[i].secondjump;
-	rsp->fly1 = players[i].fly1;
-	rsp->glidetime = (tic_t)LONG(players[i].glidetime);
-	rsp->climbing = players[i].climbing;
-	rsp->deadtimer = players[i].deadtimer;
-	rsp->exiting = (tic_t)LONG(players[i].exiting);
-	rsp->homing = players[i].homing;
-	rsp->dashmode = (tic_t)LONG(players[i].dashmode);
-	rsp->skidtime = (tic_t)LONG(players[i].skidtime);
-	rsp->cmomx = (fixed_t)LONG(players[i].cmomx);
-	rsp->cmomy = (fixed_t)LONG(players[i].cmomy);
-	rsp->rmomx = (fixed_t)LONG(players[i].rmomx);
-	rsp->rmomy = (fixed_t)LONG(players[i].rmomy);
-
-	rsp->weapondelay = LONG(players[i].weapondelay);
-	rsp->tossdelay = LONG(players[i].tossdelay);
-
-	rsp->starpostx = SHORT(players[i].starpostx);
-	rsp->starposty = SHORT(players[i].starposty);
-	rsp->starpostz = SHORT(players[i].starpostz);
-	rsp->starpostnum = LONG(players[i].starpostnum);
-	rsp->starposttime = (tic_t)LONG(players[i].starposttime);
-	rsp->starpostangle = (angle_t)LONG(players[i].starpostangle);
-	rsp->starpostscale = (fixed_t)LONG(players[i].starpostscale);
-
-	rsp->maxlink = LONG(players[i].maxlink);
-	rsp->dashspeed = (fixed_t)LONG(players[i].dashspeed);
-	rsp->angle_pos = (angle_t)LONG(players[i].angle_pos);
-	rsp->old_angle_pos = (angle_t)LONG(players[i].old_angle_pos);
-	rsp->bumpertime = (tic_t)LONG(players[i].bumpertime);
-	rsp->flyangle = LONG(players[i].flyangle);
-	rsp->drilltimer = (tic_t)LONG(players[i].drilltimer);
-	rsp->linkcount = LONG(players[i].linkcount);
-	rsp->linktimer = (tic_t)LONG(players[i].linktimer);
-	rsp->anotherflyangle = LONG(players[i].anotherflyangle);
-	rsp->nightstime = (tic_t)LONG(players[i].nightstime);
-	rsp->drillmeter = LONG(players[i].drillmeter);
-	rsp->drilldelay = players[i].drilldelay;
-	rsp->bonustime = players[i].bonustime;
-	rsp->mare = players[i].mare;
-	rsp->lastsidehit = SHORT(players[i].lastsidehit);
-	rsp->lastlinehit = SHORT(players[i].lastlinehit);
-
-	rsp->losstime = (tic_t)LONG(players[i].losstime);
-	rsp->timeshit = players[i].timeshit;
-	rsp->onconveyor = LONG(players[i].onconveyor);
-
-	rsp->hasmo = false;
-	//Transfer important mo information if the player has a body.
-	//This lets us resync players even if they are dead.
-	if (!players[i].mo)
-		return;
-	rsp->hasmo = true;
-
-	rsp->health = LONG(players[i].mo->health);
-	rsp->angle = (angle_t)LONG(players[i].mo->angle);
-	rsp->rollangle = (angle_t)LONG(players[i].mo->rollangle);
-	rsp->x = LONG(players[i].mo->x);
-	rsp->y = LONG(players[i].mo->y);
-	rsp->z = LONG(players[i].mo->z);
-	rsp->momx = LONG(players[i].mo->momx);
-	rsp->momy = LONG(players[i].mo->momy);
-	rsp->momz = LONG(players[i].mo->momz);
-	rsp->friction = LONG(players[i].mo->friction);
-	rsp->movefactor = LONG(players[i].mo->movefactor);
-
-	rsp->sprite = (spritenum_t)LONG(players[i].mo->sprite);
-	rsp->frame = LONG(players[i].mo->frame);
-	rsp->sprite2 = players[i].mo->sprite2;
-	rsp->anim_duration = SHORT(players[i].mo->anim_duration);
-	rsp->tics = LONG(players[i].mo->tics);
-	rsp->statenum = (statenum_t)LONG(players[i].mo->state-states); // :(
-	rsp->eflags = (UINT16)SHORT(players[i].mo->eflags);
-	rsp->flags = LONG(players[i].mo->flags);
-	rsp->flags2 = LONG(players[i].mo->flags2);
-
-	rsp->radius = LONG(players[i].mo->radius);
-	rsp->height = LONG(players[i].mo->height);
-	rsp->scale = LONG(players[i].mo->scale);
-	rsp->destscale = LONG(players[i].mo->destscale);
-	rsp->scalespeed = LONG(players[i].mo->scalespeed);
-}
-
-static void resynch_read_player(resynch_pak *rsp)
-{
-	INT32 i = rsp->playernum, j;
-	mobj_t *savedmo = players[i].mo;
-
-	// Do not send anything visual related.
-	// Only send data that we need to know for physics.
-	players[i].playerstate = (UINT8)rsp->playerstate; //playerstate_t
-	players[i].pflags = (UINT32)LONG(rsp->pflags); //pflags_t
-	players[i].panim  = (UINT8)rsp->panim; //panim_t
-
-	players[i].angleturn = (INT16)SHORT(rsp->angleturn);
-	players[i].oldrelangleturn = (INT16)SHORT(rsp->oldrelangleturn);
-
-	players[i].aiming = (angle_t)LONG(rsp->aiming);
-	players[i].currentweapon = LONG(rsp->currentweapon);
-	players[i].ringweapons = LONG(rsp->ringweapons);
-
-	players[i].ammoremoval = (UINT16)SHORT(rsp->ammoremoval);
-	players[i].ammoremovaltimer = (tic_t)LONG(rsp->ammoremovaltimer);
-	players[i].ammoremovalweapon = LONG(rsp->ammoremovalweapon);
-
-	for (j = 0; j < NUMPOWERS; ++j)
-		players[i].powers[j] = (UINT16)SHORT(rsp->powers[j]);
-
-	// Score is resynched in the rspfirm resync packet
-	players[i].rings = SHORT(rsp->rings);
-	players[i].spheres = SHORT(rsp->spheres);
-	players[i].lives = rsp->lives;
-	players[i].continues = rsp->continues;
-	players[i].scoreadd = rsp->scoreadd;
-	players[i].xtralife = rsp->xtralife;
-	players[i].pity = rsp->pity;
-
-	players[i].skincolor = rsp->skincolor;
-	players[i].skin = LONG(rsp->skin);
-	players[i].availabilities = LONG(rsp->availabilities);
-	// Just in case Lua does something like
-	// modify these at runtime
-	players[i].camerascale = (fixed_t)LONG(rsp->camerascale);
-	players[i].shieldscale = (fixed_t)LONG(rsp->shieldscale);
-	players[i].normalspeed = (fixed_t)LONG(rsp->normalspeed);
-	players[i].runspeed = (fixed_t)LONG(rsp->runspeed);
-	players[i].thrustfactor = rsp->thrustfactor;
-	players[i].accelstart = rsp->accelstart;
-	players[i].acceleration = rsp->acceleration;
-	players[i].charability = rsp->charability;
-	players[i].charability2 = rsp->charability2;
-	players[i].charflags = (UINT32)LONG(rsp->charflags);
-	players[i].thokitem = (UINT32)LONG(rsp->thokitem); //mobjtype_t
-	players[i].spinitem = (UINT32)LONG(rsp->spinitem); //mobjtype_t
-	players[i].revitem = (UINT32)LONG(rsp->revitem); //mobjtype_t
-	players[i].followitem = (UINT32)LONG(rsp->followitem); //mobjtype_t
-	players[i].actionspd = (fixed_t)LONG(rsp->actionspd);
-	players[i].mindash = (fixed_t)LONG(rsp->mindash);
-	players[i].maxdash = (fixed_t)LONG(rsp->maxdash);
-	players[i].jumpfactor = (fixed_t)LONG(rsp->jumpfactor);
-	players[i].height = (fixed_t)LONG(rsp->playerheight);
-	players[i].spinheight = (fixed_t)LONG(rsp->playerspinheight);
-
-	players[i].speed = (fixed_t)LONG(rsp->speed);
-	players[i].secondjump = rsp->secondjump;
-	players[i].fly1 = rsp->fly1;
-	players[i].glidetime = (tic_t)LONG(rsp->glidetime);
-	players[i].climbing = rsp->climbing;
-	players[i].deadtimer = rsp->deadtimer;
-	players[i].exiting = (tic_t)LONG(rsp->exiting);
-	players[i].homing = rsp->homing;
-	players[i].dashmode = (tic_t)LONG(rsp->dashmode);
-	players[i].skidtime = (tic_t)LONG(rsp->skidtime);
-	players[i].cmomx = (fixed_t)LONG(rsp->cmomx);
-	players[i].cmomy = (fixed_t)LONG(rsp->cmomy);
-	players[i].rmomx = (fixed_t)LONG(rsp->rmomx);
-	players[i].rmomy = (fixed_t)LONG(rsp->rmomy);
-
-	players[i].weapondelay = LONG(rsp->weapondelay);
-	players[i].tossdelay = LONG(rsp->tossdelay);
-
-	players[i].starpostx = SHORT(rsp->starpostx);
-	players[i].starposty = SHORT(rsp->starposty);
-	players[i].starpostz = SHORT(rsp->starpostz);
-	players[i].starpostnum = LONG(rsp->starpostnum);
-	players[i].starposttime = (tic_t)LONG(rsp->starposttime);
-	players[i].starpostangle = (angle_t)LONG(rsp->starpostangle);
-	players[i].starpostscale = (fixed_t)LONG(rsp->starpostscale);
-
-	players[i].maxlink = LONG(rsp->maxlink);
-	players[i].dashspeed = (fixed_t)LONG(rsp->dashspeed);
-	players[i].angle_pos = (angle_t)LONG(rsp->angle_pos);
-	players[i].old_angle_pos = (angle_t)LONG(rsp->old_angle_pos);
-	players[i].bumpertime = (tic_t)LONG(rsp->bumpertime);
-	players[i].flyangle = LONG(rsp->flyangle);
-	players[i].drilltimer = (tic_t)LONG(rsp->drilltimer);
-	players[i].linkcount = LONG(rsp->linkcount);
-	players[i].linktimer = (tic_t)LONG(rsp->linktimer);
-	players[i].anotherflyangle = LONG(rsp->anotherflyangle);
-	players[i].nightstime = (tic_t)LONG(rsp->nightstime);
-	players[i].drillmeter = LONG(rsp->drillmeter);
-	players[i].drilldelay = rsp->drilldelay;
-	players[i].bonustime = rsp->bonustime;
-	players[i].mare = rsp->mare;
-	players[i].lastsidehit = SHORT(rsp->lastsidehit);
-	players[i].lastlinehit = SHORT(rsp->lastlinehit);
-
-	players[i].losstime = (tic_t)LONG(rsp->losstime);
-	players[i].timeshit = rsp->timeshit;
-	players[i].onconveyor = LONG(rsp->onconveyor);
-
-	//We get a packet for each player in game.
-	if (!playeringame[i])
-		return;
-
-	//...but keep old mo even if it is corrupt or null!
-	players[i].mo = savedmo;
-
-	//Transfer important mo information if they have a valid mo.
-	if (!rsp->hasmo)
-		return;
-
-	//server thinks player has a body.
-	//Give them a new body that can be then manipulated by the server's info.
-	if (!players[i].mo) //client thinks it has no body.
-		P_SpawnPlayer(i);
-
-	//At this point, the player should have a body, whether they were respawned or not.
-	P_UnsetThingPosition(players[i].mo);
-	players[i].mo->angle = (angle_t)LONG(rsp->angle);
-	players[i].mo->rollangle = (angle_t)LONG(rsp->rollangle);
-	players[i].mo->eflags = (UINT16)SHORT(rsp->eflags);
-	players[i].mo->flags = LONG(rsp->flags);
-	players[i].mo->flags2 = LONG(rsp->flags2);
-	players[i].mo->friction = LONG(rsp->friction);
-	players[i].mo->health = LONG(rsp->health);
-	players[i].mo->momx = LONG(rsp->momx);
-	players[i].mo->momy = LONG(rsp->momy);
-	players[i].mo->momz = LONG(rsp->momz);
-	players[i].mo->movefactor = LONG(rsp->movefactor);
-
-	// Don't use P_SetMobjStateNF to restore state, write/read all the values manually!
-	// This should stop those stupid console errors, hopefully.
-	// -- Monster Iestyn
-	players[i].mo->sprite = (spritenum_t)LONG(rsp->sprite);
-	players[i].mo->frame = LONG(rsp->frame);
-	players[i].mo->sprite2 = rsp->sprite2;
-	players[i].mo->anim_duration = SHORT(rsp->anim_duration);
-	players[i].mo->tics = LONG(rsp->tics);
-	players[i].mo->state = &states[LONG(rsp->statenum)];
-
-	players[i].mo->x = LONG(rsp->x);
-	players[i].mo->y = LONG(rsp->y);
-	players[i].mo->z = LONG(rsp->z);
-	players[i].mo->radius = LONG(rsp->radius);
-	players[i].mo->height = LONG(rsp->height);
-	// P_SetScale is redundant for this, as all related variables are already restored properly.
-	players[i].mo->scale = LONG(rsp->scale);
-	players[i].mo->destscale = LONG(rsp->destscale);
-	players[i].mo->scalespeed = LONG(rsp->scalespeed);
-
-	// And finally, SET THE MOBJ SKIN damn it.
-	if ((players[i].powers[pw_carry] == CR_NIGHTSMODE) && (skins[players[i].skin].sprites[SPR2_NFLY].numframes == 0))
-	{
-		players[i].mo->skin = &skins[DEFAULTNIGHTSSKIN];
-		players[i].mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor; // this will be corrected by thinker to super flash
-	}
-	else
-	{
-		players[i].mo->skin = &skins[players[i].skin];
-		players[i].mo->color = players[i].skincolor; // this will be corrected by thinker to super flash/mario star
-	}
-
-	P_SetThingPosition(players[i].mo);
-}
-
-static inline void resynch_write_ctf(resynchend_pak *rst)
-{
-	mobj_t *mflag;
-	UINT8 i, j;
-
-	for (i = 0, mflag = redflag; i < 2; ++i, mflag = blueflag)
-	{
-		rst->flagx[i] = rst->flagy[i] = rst->flagz[i] = 0;
-		rst->flagloose[i] = rst->flagflags[i] = 0;
-		rst->flagplayer[i] = -1;
-
-		if (!mflag)
-		{
-			// Should be held by a player
-			for (j = 0; j < MAXPLAYERS; ++j)
-			{
-				// GF_REDFLAG is 1, GF_BLUEFLAG is 2
-				// redflag handling is i=0, blueflag is i=1
-				// so check for gotflag == (i+1)
-				if (!playeringame[j] || players[j].gotflag != (i+1))
-					continue;
-				rst->flagplayer[i] = (SINT8)j;
-				break;
-			}
-			if (j == MAXPLAYERS) // fine, no I_Error
-			{
-				CONS_Alert(CONS_ERROR, "One of the flags has gone completely missing...\n");
-				rst->flagplayer[i] = -2;
-			}
-			continue;
-		}
-
-		rst->flagx[i] = (fixed_t)LONG(mflag->x);
-		rst->flagy[i] = (fixed_t)LONG(mflag->y);
-		rst->flagz[i] = (fixed_t)LONG(mflag->z);
-		rst->flagflags[i] = LONG(mflag->flags2);
-		rst->flagloose[i] = LONG(mflag->fuse); // Dropped or not?
-	}
-}
-
-static inline void resynch_read_ctf(resynchend_pak *p)
-{
-	UINT8 i;
-
-	for (i = 0; i < MAXPLAYERS; ++i)
-		players[i].gotflag = 0;
-
-	// Red flag
-	if (p->flagplayer[0] == -2)
-		; // The server doesn't even know what happened to it...
-	else if (p->flagplayer[0] != -1) // Held by a player
-	{
-		if (!playeringame[p->flagplayer[0]])
-			 I_Error("Invalid red flag player %d who isn't in the game!", (INT32)p->flagplayer[0]);
-		players[p->flagplayer[0]].gotflag = GF_REDFLAG;
-		if (redflag)
-		{
-			P_RemoveMobj(redflag);
-			redflag = NULL;
-		}
-	}
-	else
-	{
-		if (!redflag)
-			redflag = P_SpawnMobj(0,0,0,MT_REDFLAG);
-
-		P_UnsetThingPosition(redflag);
-		redflag->x = (fixed_t)LONG(p->flagx[0]);
-		redflag->y = (fixed_t)LONG(p->flagy[0]);
-		redflag->z = (fixed_t)LONG(p->flagz[0]);
-		redflag->flags2 = LONG(p->flagflags[0]);
-		redflag->fuse = LONG(p->flagloose[0]);
-		P_SetThingPosition(redflag);
-	}
-
-	// Blue flag
-	if (p->flagplayer[1] == -2)
-		; // The server doesn't even know what happened to it...
-	else if (p->flagplayer[1] != -1) // Held by a player
-	{
-		if (!playeringame[p->flagplayer[1]])
-			 I_Error("Invalid blue flag player %d who isn't in the game!", (INT32)p->flagplayer[1]);
-		players[p->flagplayer[1]].gotflag = GF_BLUEFLAG;
-		if (blueflag)
-		{
-			P_RemoveMobj(blueflag);
-			blueflag = NULL;
-		}
-	}
-	else
-	{
-		if (!blueflag)
-			blueflag = P_SpawnMobj(0,0,0,MT_BLUEFLAG);
-
-		P_UnsetThingPosition(blueflag);
-		blueflag->x = (fixed_t)LONG(p->flagx[1]);
-		blueflag->y = (fixed_t)LONG(p->flagy[1]);
-		blueflag->z = (fixed_t)LONG(p->flagz[1]);
-		blueflag->flags2 = LONG(p->flagflags[1]);
-		blueflag->fuse = LONG(p->flagloose[1]);
-		P_SetThingPosition(blueflag);
-	}
-}
-
-static inline void resynch_write_others(resynchend_pak *rst)
-{
-	UINT8 i;
-
-	rst->ingame = 0;
-	rst->outofcoop = 0;
-
-	for (i = 0; i < MAXPLAYERS; ++i)
-	{
-		if (!playeringame[i])
-		{
-			rst->ctfteam[i] = 0;
-			rst->score[i] = 0;
-			rst->numboxes[i] = 0;
-			rst->totalring[i] = 0;
-			rst->realtime[i] = 0;
-			rst->laps[i] = 0;
-			continue;
-		}
-
-		if (!players[i].spectator)
-			rst->ingame |= (1<<i);
-		if (players[i].outofcoop)
-			rst->outofcoop |= (1<<i);
-		rst->ctfteam[i] = (INT32)LONG(players[i].ctfteam);
-		rst->score[i] = (UINT32)LONG(players[i].score);
-		rst->numboxes[i] = SHORT(players[i].numboxes);
-		rst->totalring[i] = SHORT(players[i].totalring);
-		rst->realtime[i] = (tic_t)LONG(players[i].realtime);
-		rst->laps[i] = players[i].laps;
-	}
-
-	// endian safeness
-	rst->ingame = (UINT32)LONG(rst->ingame);
-}
-
-static inline void resynch_read_others(resynchend_pak *p)
-{
-	UINT8 i;
-	UINT32 loc_ingame = (UINT32)LONG(p->ingame);
-	UINT32 loc_outofcoop = (UINT32)LONG(p->outofcoop);
-
-	for (i = 0; i < MAXPLAYERS; ++i)
-	{
-		// We don't care if they're in the game or not, just write all the data.
-		players[i].spectator = !(loc_ingame & (1<<i));
-		players[i].outofcoop = (loc_outofcoop & (1<<i));
-		players[i].ctfteam = (INT32)LONG(p->ctfteam[i]); // no, 0 does not mean spectator, at least not in Match
-		players[i].score = (UINT32)LONG(p->score[i]);
-		players[i].numboxes = SHORT(p->numboxes[i]);
-		players[i].totalring = SHORT(p->totalring[i]);
-		players[i].realtime = (tic_t)LONG(p->realtime[i]);
-		players[i].laps = p->laps[i];
-	}
-}
-
-static void SV_InitResynchVars(INT32 node)
-{
-	resynch_delay[node] = TICRATE; // initial one second delay
-	resynch_score[node] = 0; // clean slate
-	resynch_status[node] = 0x00;
-	resynch_inprogress[node] = false;
-	memset(resynch_sent[node], 0, MAXPLAYERS);
-}
-
-static void SV_RequireResynch(INT32 node)
-{
-	INT32 i;
-
-	resynch_delay[node] = 10; // Delay before you can fail sync again
-	resynch_score[node] += 200; // Add score for initial desynch
-	resynch_status[node] = 0xFFFFFFFF; // No players assumed synched
-	resynch_inprogress[node] = true; // so we know to send a PT_RESYNCHEND after sync
-
-	// Initial setup
-	memset(resynch_sent[node], 0, MAXPLAYERS);
-	for (i = 0; i < MAXPLAYERS; ++i)
-	{
-		if (!playeringame[i]) // Player not in game so just drop it from required synch
-			resynch_status[node] &= ~(1<<i);
-		else if (playernode[i] == node); // instantly update THEIR position
-		else // Send at random times based on num players
-			resynch_sent[node][i] = M_RandomKey(D_NumPlayers()>>1)+1;
-	}
-}
-
-static void SV_SendResynch(INT32 node)
-{
-	INT32 i, j;
-
-	if (!nodeingame[node])
-	{
-		// player left during resynch
-		// so obviously we don't need to do any of this anymore
-		resynch_inprogress[node] = false;
-		return;
-	}
-
-	// resynched?
-	if (!resynch_status[node])
-	{
-		// you are now synched
-		resynch_inprogress[node] = false;
-
-		netbuffer->packettype = PT_RESYNCHEND;
-
-		netbuffer->u.resynchend.randomseed = P_GetRandSeed();
-		if (gametyperules & GTR_TEAMFLAGS)
-			resynch_write_ctf(&netbuffer->u.resynchend);
-		resynch_write_others(&netbuffer->u.resynchend);
-
-		HSendPacket(node, true, 0, (sizeof(resynchend_pak)));
-		return;
-	}
-
-	netbuffer->packettype = PT_RESYNCHING;
-	for (i = 0, j = 0; i < MAXPLAYERS; ++i)
-	{
-		// if already synched don't bother
-		if (!(resynch_status[node] & 1<<i))
-			continue;
-
-		// waiting for a reply or just waiting in general
-		if (resynch_sent[node][i])
-		{
-			--resynch_sent[node][i];
-			continue;
-		}
-
-		resynch_write_player(&netbuffer->u.resynchpak, i);
-		HSendPacket(node, false, 0, (sizeof(resynch_pak)));
-
-		resynch_sent[node][i] = TICRATE;
-		resynch_score[node] += 2; // penalty for send
-
-		if (++j > 3)
-			break;
-	}
-
-	if (resynch_score[node] > (unsigned)cv_resynchattempts.value*250)
-	{
-		SendKick(nodetoplayer[node], KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
-		resynch_score[node] = 0;
-	}
-}
-
-static void CL_AcknowledgeResynch(resynch_pak *rsp)
-{
-	resynch_read_player(rsp);
-
-	netbuffer->packettype = PT_RESYNCHGET;
-	netbuffer->u.resynchgot = rsp->playernum;
-	HSendPacket(servernode, true, 0, sizeof(UINT8));
-}
-
-static void SV_AcknowledgeResynchAck(INT32 node, UINT8 rsg)
-{
-	if (rsg >= MAXPLAYERS)
-		resynch_score[node] += 16384; // lol.
-	else
-	{
-		resynch_status[node] &= ~(1<<rsg);
-		--resynch_score[node]; // unpenalize
-	}
-
-	// Don't let resynch cause a timeout
-	freezetimeout[node] = I_GetTime() + connectiontimeout;
-}
-// -----------------------------------------------------------------
-// end resynch
-// -----------------------------------------------------------------
-
 static INT16 Consistancy(void);
 
 typedef enum
@@ -1122,40 +521,6 @@ typedef enum
 static void GetPackets(void);
 
 static cl_mode_t cl_mode = CL_SEARCHING;
-
-// Player name send/load
-
-static void CV_SavePlayerNames(UINT8 **p)
-{
-	INT32 i = 0;
-	// Players in game only.
-	for (; i < MAXPLAYERS; ++i)
-	{
-		if (!playeringame[i])
-		{
-			WRITEUINT8(*p, 0);
-			continue;
-		}
-		WRITESTRING(*p, player_names[i]);
-	}
-}
-
-static void CV_LoadPlayerNames(UINT8 **p)
-{
-	INT32 i = 0;
-	char tmp_name[MAXPLAYERNAME+1];
-	tmp_name[MAXPLAYERNAME] = 0;
-
-	for (; i < MAXPLAYERS; ++i)
-	{
-		READSTRING(*p, tmp_name);
-		if (tmp_name[0] == 0)
-			continue;
-		if (tmp_name[MAXPLAYERNAME]) // overflow detected
-			I_Error("Received bad server config packet when trying to join");
-		memcpy(player_names[i], tmp_name, MAXPLAYERNAME+1);
-	}
-}
 
 #ifndef NONET
 #define SNAKE_SPEED 5
@@ -1975,8 +1340,6 @@ static void SV_SendPlayerInfo(INT32 node)
   */
 static boolean SV_SendServerConfig(INT32 node)
 {
-	INT32 i;
-	UINT8 *p, *op;
 	boolean waspacketsent;
 
 	netbuffer->packettype = PT_SERVERCFG;
@@ -1992,32 +1355,10 @@ static boolean SV_SendServerConfig(INT32 node)
 	netbuffer->u.servercfg.gametype = (UINT8)gametype;
 	netbuffer->u.servercfg.modifiedgame = (UINT8)modifiedgame;
 
-	// we fill these structs with FFs so that any players not in game get sent as 0xFFFF
-	// which is nice and easy for us to detect
-	memset(netbuffer->u.servercfg.playerskins, 0xFF, sizeof(netbuffer->u.servercfg.playerskins));
-	memset(netbuffer->u.servercfg.playercolor, 0xFF, sizeof(netbuffer->u.servercfg.playercolor));
-	memset(netbuffer->u.servercfg.playeravailabilities, 0xFF, sizeof(netbuffer->u.servercfg.playeravailabilities));
-
-	memset(netbuffer->u.servercfg.adminplayers, -1, sizeof(netbuffer->u.servercfg.adminplayers));
-
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		netbuffer->u.servercfg.adminplayers[i] = (SINT8)adminplayers[i];
-
-		if (!playeringame[i])
-			continue;
-		netbuffer->u.servercfg.playerskins[i] = (UINT8)players[i].skin;
-		netbuffer->u.servercfg.playercolor[i] = (UINT16)players[i].skincolor;
-		netbuffer->u.servercfg.playeravailabilities[i] = (UINT32)LONG(players[i].availabilities);
-	}
-
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
-	op = p = netbuffer->u.servercfg.varlengthinputs;
 
-	CV_SavePlayerNames(&p);
-	CV_SaveNetVars(&p);
 	{
-		const size_t len = sizeof (serverconfig_pak) + (size_t)(p - op);
+		const size_t len = sizeof (serverconfig_pak);
 
 #ifdef DEBUGFILE
 		if (debugfile)
@@ -2050,7 +1391,17 @@ static boolean SV_SendServerConfig(INT32 node)
 #ifndef NONET
 #define SAVEGAMESIZE (768*1024)
 
-static void SV_SendSaveGame(INT32 node)
+static boolean SV_ResendingSavegameToAnyone(void)
+{
+	INT32 i;
+
+	for (i = 0; i < MAXNETNODES; i++)
+		if (resendingsavegame[i])
+			return true;
+	return false;
+}
+
+static void SV_SendSaveGame(INT32 node, boolean resending)
 {
 	size_t length, compressedlen;
 	UINT8 *savebuffer;
@@ -2068,7 +1419,7 @@ static void SV_SendSaveGame(INT32 node)
 	// Leave room for the uncompressed length.
 	save_p = savebuffer + sizeof(UINT32);
 
-	P_SaveNetGame();
+	P_SaveNetGame(resending);
 
 	length = save_p - savebuffer;
 	if (length > SAVEGAMESIZE)
@@ -2141,7 +1492,7 @@ static void SV_SavedGame(void)
 		return;
 	}
 
-	P_SaveNetGame();
+	P_SaveNetGame(false);
 
 	length = save_p - savebuffer;
 	if (length > SAVEGAMESIZE)
@@ -2164,7 +1515,7 @@ static void SV_SavedGame(void)
 #define TMPSAVENAME "$$$.sav"
 
 
-static void CL_LoadReceivedSavegame(void)
+static void CL_LoadReceivedSavegame(boolean reloading)
 {
 	UINT8 *savebuffer = NULL;
 	size_t length, decompressedlen;
@@ -2200,7 +1551,7 @@ static void CL_LoadReceivedSavegame(void)
 	automapactive = false;
 
 	// load a base level
-	if (P_LoadNetGame())
+	if (P_LoadNetGame(reloading))
 	{
 		const UINT8 actnum = mapheaderinfo[gamemap-1]->actnum;
 		CONS_Printf(M_GetText("Map is now \"%s"), G_BuildMapName(gamemap));
@@ -2231,6 +1582,45 @@ static void CL_LoadReceivedSavegame(void)
 		CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
 	consistancy[gametic%BACKUPTICS] = Consistancy();
 	CON_ToggleOff();
+
+	// Tell the server we have received and reloaded the gamestate
+	// so they know they can resume the game
+	netbuffer->packettype = PT_RECEIVEDGAMESTATE;
+	HSendPacket(servernode, true, 0, 0);
+}
+
+static void CL_ReloadReceivedSavegame(void)
+{
+	INT32 i;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+#ifdef HAVE_BLUA
+		LUA_InvalidatePlayer(&players[i]);
+#endif
+		sprintf(player_names[i], "Player %d", i + 1);
+	}
+
+	CL_LoadReceivedSavegame(true);
+
+	if (neededtic < gametic)
+		neededtic = gametic;
+	maketic = neededtic;
+
+	ticcmd_oldangleturn[0] = players[consoleplayer].oldrelangleturn;
+	P_ForceLocalAngle(&players[consoleplayer], (angle_t)(players[consoleplayer].angleturn << 16));
+	if (splitscreen)
+	{
+		ticcmd_oldangleturn[1] = players[secondarydisplayplayer].oldrelangleturn;
+		P_ForceLocalAngle(&players[secondarydisplayplayer], (angle_t)(players[secondarydisplayplayer].angleturn << 16));
+	}
+
+	camera.subsector = R_PointInSubsector(camera.x, camera.y);
+	camera2.subsector = R_PointInSubsector(camera2.x, camera2.y);
+
+	cl_redownloadinggamestate = false;
+
+	CONS_Printf(M_GetText("Game state reloaded\n"));
 }
 #endif
 
@@ -2648,7 +2038,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			if (fileneeded[0].status == FS_FOUND)
 			{
 				// Gamestate is now handled within CL_LoadReceivedSavegame()
-				CL_LoadReceivedSavegame();
+				CL_LoadReceivedSavegame(false);
 				cl_mode = CL_CONNECTED;
 			} // don't break case continue to CL_CONNECTED
 			else
@@ -3111,10 +2501,14 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 		}
 
 		count--;
-		spheres = players[playernum].spheres;
-		rings = players[playernum].rings;
-		sincrement = spheres/count;
-		rincrement = rings/count;
+		sincrement = spheres = players[playernum].spheres;
+		rincrement = rings = players[playernum].rings;
+
+		if (count)
+		{
+			sincrement /= count;
+			rincrement /= count;
+		}
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -3204,7 +2598,6 @@ void CL_Reset(void)
 	multiplayer = false;
 	servernode = 0;
 	server = true;
-	resynch_local_inprogress = false;
 	doomcom->numnodes = 1;
 	doomcom->numslots = 1;
 	SV_StopServer();
@@ -3676,6 +3069,34 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 		CL_RemovePlayer(pnum, kickreason);
 }
 
+static void Command_ResendGamestate(void)
+{
+	SINT8 playernum;
+
+	if (COM_Argc() == 1)
+	{
+		CONS_Printf(M_GetText("resendgamestate <playername/playernum>: resend the game state to a player\n"));
+		return;
+	}
+	else if (client)
+	{
+		CONS_Printf(M_GetText("Only the server can use this.\n"));
+		return;
+	}
+
+	playernum = nametonum(COM_Argv(1));
+	if (playernum == -1 || playernum == 0)
+		return;
+
+	// Send a PT_WILLRESENDGAMESTATE packet to the client so they know what's going on
+	netbuffer->packettype = PT_WILLRESENDGAMESTATE;
+	if (!HSendPacket(playernode[playernum], true, 0, 0))
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("A problem occured, please try again.\n"));
+		return;
+	}
+}
+
 static CV_PossibleValue_t netticbuffer_cons_t[] = {{0, "MIN"}, {3, "MAX"}, {0, NULL}};
 consvar_t cv_netticbuffer = CVAR_INIT ("netticbuffer", "1", CV_SAVE, netticbuffer_cons_t, NULL);
 
@@ -3719,6 +3140,7 @@ void D_ClientServerInit(void)
 	COM_AddCommand("reloadbans", Command_ReloadBan);
 	COM_AddCommand("connect", Command_connect);
 	COM_AddCommand("nodes", Command_Nodes);
+	COM_AddCommand("resendgamestate", Command_ResendGamestate);
 #ifdef PACKETDROP
 	COM_AddCommand("drop", Command_Drop);
 	COM_AddCommand("droprate", Command_Droprate);
@@ -3750,14 +3172,18 @@ void D_ClientServerInit(void)
 static void ResetNode(INT32 node)
 {
 	nodeingame[node] = false;
-	nodetoplayer[node] = -1;
-	nodetoplayer2[node] = -1;
+	nodewaiting[node] = 0;
+
 	nettics[node] = gametic;
 	supposedtics[node] = gametic;
-	nodewaiting[node] = 0;
+
+	nodetoplayer[node] = -1;
+	nodetoplayer2[node] = -1;
 	playerpernode[node] = 0;
+
 	sendingsavegame[node] = false;
-	SV_InitResynchVars(node);
+	resendingsavegame[node] = false;
+	savegameresendcooldown[node] = 0;
 }
 
 void SV_ResetServer(void)
@@ -3791,6 +3217,7 @@ void SV_ResetServer(void)
 
 	mynode = 0;
 	cl_packetmissed = false;
+	cl_redownloadinggamestate = false;
 
 	if (dedicated)
 	{
@@ -4260,12 +3687,6 @@ static void HandleConnect(SINT8 node)
 #endif
 			SV_AddNode(node);
 
-			/// \note Wait what???
-			///       What if the gamestate takes more than one second to get downloaded?
-			///       Or if a lagspike happens?
-			// you get a free second before desynch checks. use it wisely.
-			SV_InitResynchVars(node);
-
 			if (cv_joinnextround.value && gameaction == ga_nothing)
 				G_SetGamestate(GS_WAITINGPLAYERS);
 			if (!SV_SendServerConfig(node))
@@ -4287,7 +3708,7 @@ static void HandleConnect(SINT8 node)
 		{
 			if ((gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) && newnode)
 			{
-				SV_SendSaveGame(node); // send a complete game state
+				SV_SendSaveGame(node, false); // send a complete game state
 				DEBFILE("send savegame\n");
 			}
 			SV_AddWaitingPlayers(names[0], names[1]);
@@ -4353,6 +3774,43 @@ static void HandleServerInfo(SINT8 node)
 	SL_InsertServer(&netbuffer->u.serverinfo, node);
 }
 #endif
+
+static void PT_WillResendGamestate(void)
+{
+	char tmpsave[256];
+
+	if (server || cl_redownloadinggamestate)
+		return;
+
+	// Send back a PT_CANRECEIVEGAMESTATE packet to the server
+	// so they know they can start sending the game state
+	netbuffer->packettype = PT_CANRECEIVEGAMESTATE;
+	if (!HSendPacket(servernode, true, 0, 0))
+		return;
+
+	CONS_Printf(M_GetText("Reloading game state...\n"));
+
+	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
+
+	// Don't get a corrupt savegame error because tmpsave already exists
+	if (FIL_FileExists(tmpsave) && unlink(tmpsave) == -1)
+		I_Error("Can't delete %s\n", tmpsave);
+
+	CL_PrepareDownloadSaveGame(tmpsave);
+
+	cl_redownloadinggamestate = true;
+}
+
+static void PT_CanReceiveGamestate(SINT8 node)
+{
+	if (client || sendingsavegame[node])
+		return;
+
+	CONS_Printf(M_GetText("Resending game state to %s...\n"), player_names[nodetoplayer[node]]);
+
+	SV_SendSaveGame(node, true); // Resend a complete game state
+	resendingsavegame[node] = true;
+}
 
 /** Handles a packet received from a node that isn't in game
   *
@@ -4444,9 +3902,6 @@ static void HandlePacketFromAwayNode(SINT8 node)
 
 		case PT_SERVERCFG: // Positive response of client join request
 		{
-			INT32 j;
-			UINT8 *scp;
-
 			if (server && serverrunning && node != servernode)
 			{ // but wait I thought I'm the server?
 				Net_CloseConnection(node);
@@ -4462,8 +3917,6 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
 				G_SetGametype(netbuffer->u.servercfg.gametype);
 				modifiedgame = netbuffer->u.servercfg.modifiedgame;
-				for (j = 0; j < MAXPLAYERS; j++)
-					adminplayers[j] = netbuffer->u.servercfg.adminplayers[j];
 				memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
 			}
 
@@ -4482,23 +3935,6 @@ static void HandlePacketFromAwayNode(SINT8 node)
 #endif
 			DEBFILE(va("Server accept join gametic=%u mynode=%d\n", gametic, mynode));
 
-			memset(playeringame, 0, sizeof(playeringame));
-			for (j = 0; j < MAXPLAYERS; j++)
-			{
-				if (netbuffer->u.servercfg.playerskins[j] == 0xFF
-				 && netbuffer->u.servercfg.playercolor[j] == 0xFFFF
-				 && netbuffer->u.servercfg.playeravailabilities[j] == 0xFFFFFFFF)
-					continue; // not in game
-
-				playeringame[j] = true;
-				players[j].availabilities = (UINT32)LONG(netbuffer->u.servercfg.playeravailabilities[j]);
-				SetPlayerSkinByNum(j, (INT32)netbuffer->u.servercfg.playerskins[j]);
-				players[j].skincolor = netbuffer->u.servercfg.playercolor[j];
-			}
-
-			scp = netbuffer->u.servercfg.varlengthinputs;
-			CV_LoadPlayerNames(&scp);
-			CV_LoadNetVars(&scp);
 #ifndef NONET
 			/// \note Wait. What if a Lua script uses some global custom variables synched with the NetVars hook?
 			///       Shouldn't them be downloaded even at intermission time?
@@ -4598,11 +4034,6 @@ static void HandlePacketFromPlayer(SINT8 node)
 	switch (netbuffer->packettype)
 	{
 // -------------------------------------------- SERVER RECEIVE ----------
-		case PT_RESYNCHGET:
-			if (client)
-				break;
-			SV_AcknowledgeResynchAck(node, netbuffer->u.resynchgot);
-			break;
 		case PT_CLIENTCMD:
 		case PT_CLIENT2CMD:
 		case PT_CLIENTMIS:
@@ -4610,10 +4041,6 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_NODEKEEPALIVE:
 		case PT_NODEKEEPALIVEMIS:
 			if (client)
-				break;
-
-			// Ignore tics from those not synched
-			if (resynch_inprogress[node] && nettics[node] == gametic)
 				break;
 
 			// To save bytes, only the low byte of tic numbers are sent
@@ -4642,9 +4069,6 @@ static void HandlePacketFromPlayer(SINT8 node)
 				|| netbuffer->packettype == PT_NODEKEEPALIVEMIS)
 				break;
 
-			// If a client sends a ticcmd it should mean they are done receiving the savegame
-			sendingsavegame[node] = false;
-
 			// As long as clients send valid ticcmds, the server can keep running, so reset the timeout
 			/// \todo Use a separate cvar for that kind of timeout?
 			freezetimeout[node] = I_GetTime() + connectiontimeout;
@@ -4669,21 +4093,20 @@ static void HandlePacketFromPlayer(SINT8 node)
 				G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][(UINT8)nodetoplayer2[node]],
 					&netbuffer->u.client2pak.cmd2, 1);
 
-			// A delay before we check resynching
-			// Used on join or just after a synch fail
-			if (resynch_delay[node])
-			{
-				--resynch_delay[node];
-				break;
-			}
 			// Check player consistancy during the level
-			if (realstart <= gametic && realstart > gametic - BACKUPTICS+1 && gamestate == GS_LEVEL
-				&& consistancy[realstart%BACKUPTICS] != SHORT(netbuffer->u.clientpak.consistancy))
+			if (realstart <= gametic && realstart + BACKUPTICS - 1 > gametic && gamestate == GS_LEVEL
+				&& consistancy[realstart%BACKUPTICS] != SHORT(netbuffer->u.clientpak.consistancy)
+				&& !resendingsavegame[node] && savegameresendcooldown[node] <= I_GetTime()
+				&& !SV_ResendingSavegameToAnyone())
 			{
-				SV_RequireResynch(node);
-
-				if (cv_resynchattempts.value && resynch_score[node] <= (unsigned)cv_resynchattempts.value*250)
+				if (cv_resynchattempts.value)
 				{
+					// Tell the client we are about to resend them the gamestate
+					netbuffer->packettype = PT_WILLRESENDGAMESTATE;
+					HSendPacket(node, true, 0, 0);
+
+					resendingsavegame[node] = true;
+
 					if (cv_blamecfail.value)
 						CONS_Printf(M_GetText("Synch failure for player %d (%s); expected %hd, got %hd\n"),
 							netconsole+1, player_names[netconsole],
@@ -4703,8 +4126,6 @@ static void HandlePacketFromPlayer(SINT8 node)
 					break;
 				}
 			}
-			else if (resynch_score[node])
-				--resynch_score[node];
 			break;
 		case PT_TEXTCMD2: // splitscreen special
 			netconsole = nodetoplayer2[node];
@@ -4830,6 +4251,9 @@ static void HandlePacketFromPlayer(SINT8 node)
 			Net_CloseConnection(node);
 			nodeingame[node] = false;
 			break;
+		case PT_CANRECEIVEGAMESTATE:
+			PT_CanReceiveGamestate(node);
+			break;
 		case PT_ASKLUAFILE:
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_ASKED)
 				AddLuaFileToSendQueue(node, luafiletransfers->realfilename);
@@ -4838,25 +4262,12 @@ static void HandlePacketFromPlayer(SINT8 node)
 			if (server && luafiletransfers && luafiletransfers->nodestatus[node] == LFTNS_SENDING)
 				SV_HandleLuaFileSent(node);
 			break;
-// -------------------------------------------- CLIENT RECEIVE ----------
-		case PT_RESYNCHEND:
-			// Only accept PT_RESYNCHEND from the server.
-			if (node != servernode)
-			{
-				CONS_Alert(CONS_WARNING, M_GetText("%s received from non-host %d\n"), "PT_RESYNCHEND", node);
-				if (server)
-					SendKick(netconsole, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
-				break;
-			}
-			resynch_local_inprogress = false;
-
-			P_SetRandSeed(netbuffer->u.resynchend.randomseed);
-
-			if (gametyperules & GTR_TEAMFLAGS)
-				resynch_read_ctf(&netbuffer->u.resynchend);
-			resynch_read_others(&netbuffer->u.resynchend);
-
+		case PT_RECEIVEDGAMESTATE:
+			sendingsavegame[node] = false;
+			resendingsavegame[node] = false;
+			savegameresendcooldown[node] = I_GetTime() + 15 * TICRATE;
 			break;
+// -------------------------------------------- CLIENT RECEIVE ----------
 		case PT_SERVERTICS:
 			// Only accept PT_SERVERTICS from the server.
 			if (node != servernode)
@@ -4917,18 +4328,6 @@ static void HandlePacketFromPlayer(SINT8 node)
 							"IRC or Discord so it can be fixed.\n", (INT32)realstart, (INT32)realend, (INT32)neededtic);*/
 			}
 			break;
-		case PT_RESYNCHING:
-			// Only accept PT_RESYNCHING from the server.
-			if (node != servernode)
-			{
-				CONS_Alert(CONS_WARNING, M_GetText("%s received from non-host %d\n"), "PT_RESYNCHING", node);
-				if (server)
-					SendKick(netconsole, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
-				break;
-			}
-			resynch_local_inprogress = true;
-			CL_AcknowledgeResynch(&netbuffer->u.resynchpak);
-			break;
 		case PT_PING:
 			// Only accept PT_PING from the server.
 			if (node != servernode)
@@ -4972,6 +4371,9 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_FILERECEIVED:
 			if (server)
 				PT_FileReceived();
+			break;
+		case PT_WILLRESENDGAMESTATE:
+			PT_WillResendGamestate();
 			break;
 		case PT_SENDINGLUAFILE:
 			if (client)
@@ -5430,7 +4832,7 @@ void TryRunTics(tic_t realtics)
 	if (player_joining)
 		return;
 
-	if (neededtic > gametic && !resynch_local_inprogress)
+	if (neededtic > gametic)
 	{
 		if (advancedemo)
 		{
@@ -5596,9 +4998,12 @@ void NetUpdate(void)
 
 	if (client)
 	{
-		if (!resynch_local_inprogress)
-			CL_SendClientCmd(); // Send tic cmd
-		hu_resynching = resynch_local_inprogress;
+		// If the client just finished redownloading the game state, load it
+		if (cl_redownloadinggamestate && fileneeded[0].status == FS_FOUND)
+			CL_ReloadReceivedSavegame();
+
+		CL_SendClientCmd(); // Send tic cmd
+		hu_redownloadinggamestate = cl_redownloadinggamestate;
 	}
 	else
 	{
@@ -5606,7 +5011,7 @@ void NetUpdate(void)
 		{
 			INT32 counts;
 
-			hu_resynching = false;
+			hu_redownloadinggamestate = false;
 
 			firstticstosend = gametic;
 			for (i = 0; i < MAXNETNODES; i++)
@@ -5621,36 +5026,18 @@ void NetUpdate(void)
 			// Don't erase tics not acknowledged
 			counts = realtics;
 
-			for (i = 0; i < MAXNETNODES; ++i)
-				if (resynch_inprogress[i])
-				{
-					if (!nodeingame[i] || nettics[i] == gametic)
-					{
-						SV_SendResynch(i);
-						counts = -666;
-					}
-					else
-						counts = 0; // Let the client catch up with the server
-				}
+			if (maketic + counts >= firstticstosend + BACKUPTICS)
+				counts = firstticstosend+BACKUPTICS-maketic-1;
 
-			// Do not make tics while resynching
-			if (counts != -666)
-			{
-				if (maketic + counts >= firstticstosend + BACKUPTICS)
-					counts = firstticstosend+BACKUPTICS-maketic-1;
+			for (i = 0; i < counts; i++)
+				SV_Maketic(); // Create missed tics and increment maketic
 
-				for (i = 0; i < counts; i++)
-					SV_Maketic(); // Create missed tics and increment maketic
+			for (; tictoclear < firstticstosend; tictoclear++) // Clear only when acknowledged
+				D_Clearticcmd(tictoclear);                    // Clear the maketic the new tic
 
-				for (; tictoclear < firstticstosend; tictoclear++) // Clear only when acknowledged
-					D_Clearticcmd(tictoclear);                    // Clear the maketic the new tic
+			SV_SendTics();
 
-				SV_SendTics();
-
-				neededtic = maketic; // The server is a client too
-			}
-			else
-				hu_resynching = true;
+			neededtic = maketic; // The server is a client too
 		}
 	}
 
