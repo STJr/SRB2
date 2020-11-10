@@ -50,6 +50,7 @@ taggroup_t* tags_mapthings[MAXTAGS + 1];
 
 void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id);
 void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id);
+size_t Taggroup_Find (const taggroup_t *group, const size_t id);
 
 void Taglist_InitGlobalTables(void);
 
