@@ -41,6 +41,42 @@ static INT32 format2bpp(GLTextureFormat_t format)
 		return 1;
 }
 
+static colorlookup_t texel_colorlookup;
+
+// Lactozilla: Compare the pixel's RGB color with the palette's.
+// If they match, remap it.
+static void ColormapRGBAPixel(RGBA_t *texelu32, UINT8 *texel, const UINT8 *colormap)
+{
+	UINT8 *basepal = V_CacheBasePalette();
+	INT32 i = 0;
+
+	for (; i < 256; i++)
+	{
+		UINT8 r = *(basepal), g = *(basepal + 1), b = *(basepal + 2);
+		UINT32 rgb = R_PutRgbaRGB(r, g, b);
+
+		if (rgb == R_GetRgbaRGB(texelu32->rgba))
+		{
+			// Find the RGBA color of the mapped palette index
+			RGBA_t mapped = V_GetColor(colormap[i]);
+
+			// Convert to the target bit depth
+			if (texel)
+			{
+				*texel = GetColorLUT(&texel_colorlookup, mapped.s.red, mapped.s.green, mapped.s.blue);
+				texelu32->rgba = mapped.rgba;
+			}
+			else // This preserves the source pixel's translucency.
+				texelu32->rgba = R_GetRgbaRGB(mapped.rgba) + R_PutRgbaA(R_GetRgbaA(texelu32->rgba));
+
+			// Stop looking for a matching color
+			break;
+		}
+
+		basepal += 3;
+	}
+}
+
 // This code was originally placed directly in HWR_DrawPatchInCache.
 // It is now split from it for my sanity! (and the sanity of others)
 // -- Monster Iestyn (13/02/19)
@@ -119,7 +155,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 
 				// Convert to the target bit depth
 				if (bpp < 3)
-					texel = NearestColor(texelu32.s.red, texelu32.s.green, texelu32.s.blue);
+					texel = GetColorLUT(&texel_colorlookup, texelu32.s.red, texelu32.s.green, texelu32.s.blue);
 			}
 			else
 			{
@@ -146,39 +182,8 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			//Hurdler: 25/04/2000: now support colormap in hardware mode
 			if (mipmap->colormap)
 			{
-				// Lactozilla: Compare the pixel's RGB color with the palette's.
-				// If they match, remap it.
 				if (sourcebpp == PICDEPTH_32BPP)
-				{
-					UINT8 *basepal = V_CacheBasePalette();
-					INT32 i = 0;
-
-					for (; i < 256; i++)
-					{
-						UINT8 r = *(basepal), g = *(basepal + 1), b = *(basepal + 2);
-						UINT32 rgb = R_PutRgbaRGB(r, g, b);
-
-						if (rgb == R_GetRgbaRGB(texelu32.rgba))
-						{
-							// Find the RGBA color of the mapped palette index
-							RGBA_t mapped = V_GetColor(mipmap->colormap[i]);
-
-							// Convert to the target bit depth
-							if (bpp < 3)
-							{
-								texel = NearestColor(mapped.s.red, mapped.s.green, mapped.s.blue);
-								texelu32.rgba = mapped.rgba;
-							}
-							else // This preserves the source pixel's translucency.
-								texelu32.rgba = R_GetRgbaRGB(mapped.rgba) + R_PutRgbaA(R_GetRgbaA(texelu32.rgba));
-
-							// Stop looking for a matching color
-							break;
-						}
-
-						basepal += 3;
-					}
-				}
+					ColormapRGBAPixel(&texelu32, (bpp < 3) ? (&texel) : NULL, mipmap->colormap);
 				else
 					texel = mipmap->colormap[texel];
 			}
@@ -313,7 +318,7 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 
 				// Convert to the target bit depth
 				if (bpp < 3)
-					texel = NearestColor(texelu32.s.red, texelu32.s.green, texelu32.s.blue);
+					texel = GetColorLUT(&texel_colorlookup, texelu32.s.red, texelu32.s.green, texelu32.s.blue);
 			}
 			else
 			{
@@ -330,7 +335,8 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 				if (sourcebpp == 8)
 				{
 					alpha = 0xFF;
-					// Make pixel transparent if chroma keyed
+					// If the mipmap is chromakeyed, check if the texel's color
+					// is equivalent to the chroma key's color index.
 					if ((mipmap->flags & TF_CHROMAKEYED) && (texel == HWR_PATCHES_CHROMAKEY_COLORINDEX))
 						alpha = 0x00;
 				}
@@ -339,39 +345,8 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			//Hurdler: 25/04/2000: now support colormap in hardware mode
 			if (mipmap->colormap)
 			{
-				// Lactozilla: Compare the pixel's RGB color with the palette's.
-				// If they match, remap it.
 				if (sourcebpp == PICDEPTH_32BPP)
-				{
-					UINT8 *basepal = V_CacheBasePalette();
-					INT32 i = 0;
-
-					for (; i < 256; i++)
-					{
-						UINT8 r = *(basepal), g = *(basepal + 1), b = *(basepal + 2);
-						UINT32 rgb = R_PutRgbaRGB(r, g, b);
-
-						if (rgb == R_GetRgbaRGB(texelu32.rgba))
-						{
-							// Find the RGBA color of the mapped palette index
-							RGBA_t mapped = V_GetColor(mipmap->colormap[i]);
-
-							// Convert to the target bit depth
-							if (bpp < 3)
-							{
-								texel = NearestColor(mapped.s.red, mapped.s.green, mapped.s.blue);
-								texelu32.rgba = mapped.rgba;
-							}
-							else // This preserves the source pixel's translucency.
-								texelu32.rgba = R_GetRgbaRGB(mapped.rgba) + R_PutRgbaA(R_GetRgbaA(texelu32.rgba));
-
-							// Stop looking for a matching color
-							break;
-						}
-
-						basepal += 3;
-					}
-				}
+					ColormapRGBAPixel(&texelu32, (bpp < 3) ? (&texel) : NULL, mipmap->colormap);
 				else
 					texel = mipmap->colormap[texel];
 			}
@@ -467,6 +442,9 @@ static void HWR_DrawPatchInCache(GLMipmap_t *mipmap,
 	if (bpp < 1 || bpp > 4)
 		I_Error("HWR_DrawPatchInCache: no drawer defined for this bpp (%d)\n",bpp);
 
+	// Initialize the texel color lookup table
+	InitColorLUT(&texel_colorlookup, pLocalPalette, false);
+
 	// NOTE: should this actually be pblockwidth*bpp?
 	blockmodulo = pblockwidth*bpp;
 
@@ -560,6 +538,9 @@ static void HWR_DrawTexturePatchInCache(GLMipmap_t *mipmap,
 
 	if (bpp < 1 || bpp > 4)
 		I_Error("HWR_DrawPatchInCache: no drawer defined for this bpp (%d)\n",bpp);
+
+	// Initialize the texel color lookup table
+	InitColorLUT(&texel_colorlookup, pLocalPalette, false);
 
 	// NOTE: should this actually be pblockwidth*bpp?
 	blockmodulo = pblockwidth*bpp;
