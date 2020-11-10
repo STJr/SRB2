@@ -150,10 +150,15 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 				// If they match, remap it.
 				if (sourcebpp == PICDEPTH_32BPP)
 				{
+					UINT8 *basepal = V_CacheBasePalette();
 					INT32 i = 0;
+
 					for (; i < 256; i++)
 					{
-						if (R_GetRgbaRGB(V_GetColor(i).rgba) == R_GetRgbaRGB(texelu32.rgba))
+						UINT8 r = *(basepal), g = *(basepal + 1), b = *(basepal + 2);
+						UINT32 rgb = R_PutRgbaRGB(r, g, b);
+
+						if (rgb == R_GetRgbaRGB(texelu32.rgba))
 						{
 							// Find the RGBA color of the mapped palette index
 							RGBA_t mapped = V_GetColor(mipmap->colormap[i]);
@@ -170,6 +175,8 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 							// Stop looking for a matching color
 							break;
 						}
+
+						basepal += 3;
 					}
 				}
 				else

@@ -86,6 +86,7 @@ consvar_t cv_constextsize = CVAR_INIT ("con_textsize", "Medium", CV_SAVE|CV_CALL
 // local copy of the palette for V_GetColor()
 RGBA_t *pLocalPalette = NULL;
 RGBA_t *pMasterPalette = NULL;
+lumpnum_t basePaletteLump = LUMPERROR;
 
 /*
 The following was an extremely helpful resource when developing my Colour Cube LUT.
@@ -438,6 +439,25 @@ void V_SetPaletteLump(const char *pal)
 #endif
 	if (rendermode != render_none)
 		I_SetPalette(pLocalPalette);
+}
+
+// Lactozilla: W_FindFirstLump scans files forwards, instead of backwards. This is used to find the first palette lump.
+lumpnum_t V_GetBasePalette(void)
+{
+	return W_FindFirstLump("PLAYPAL");
+}
+
+UINT8 *V_CacheBasePalette(void)
+{
+	// Get the base palette's lump number, if that has not been done yet.
+	if (basePaletteLump == LUMPERROR)
+		basePaletteLump = V_GetBasePalette();
+
+	// Didn't work?
+	if (basePaletteLump == LUMPERROR)
+		return NULL;
+
+	return W_CacheLumpNum(basePaletteLump, PU_STATIC);
 }
 
 static void CV_palette_OnChange(void)

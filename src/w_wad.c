@@ -1184,6 +1184,25 @@ lumpnum_t W_CheckNumForMap(const char *name)
 }
 
 //
+// W_FindFirstLump
+//
+// Finds the first lump that has the specified name.
+//
+lumpnum_t W_FindFirstLump(const char *name)
+{
+	INT32 i;
+
+	for (i = 0; i < numwadfiles; i++)
+	{
+		lumpnum_t check = W_CheckNumForNamePwad(name,(UINT16)i,0);
+		if (check != INT16_MAX)
+			return (i<<16)+check; // found it
+	}
+
+	return LUMPERROR;
+}
+
+//
 // W_GetNumForName
 //
 // Calls W_CheckNumForName, but bombs out if not found.
@@ -2102,7 +2121,7 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"LT", 2}, // Titlecard changes
 
 		{"SLID", 4}, // Continue
-		{"CONT", 4}, 
+		{"CONT", 4},
 
 		{"MINICAPS", 8}, // NiGHTS graphics here and below
 		{"BLUESTAT", 8}, // Sphere status

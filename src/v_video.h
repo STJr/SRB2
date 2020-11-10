@@ -52,14 +52,17 @@ UINT8 GetColorLUTDirect(colorlookup_t *lut, UINT8 r, UINT8 g, UINT8 b);
 
 // Set the current RGB palette lookup to use for palettized graphics
 void V_SetPalette(INT32 palettenum);
-
 void V_SetPaletteLump(const char *pal);
+
+lumpnum_t V_GetBasePalette(void);
+UINT8 *V_CacheBasePalette(void);
 
 const char *R_GetPalname(UINT16 num);
 const char *GetPalette(void);
 
 extern RGBA_t *pLocalPalette;
 extern RGBA_t *pMasterPalette;
+extern lumpnum_t basePaletteLump;
 
 void V_CubeApply(UINT8 *red, UINT8 *green, UINT8 *blue);
 
