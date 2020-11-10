@@ -5806,7 +5806,7 @@ static void P_AddAirbob(sector_t *sec, INT16 tag, fixed_t dist, boolean raise, b
   * \sa P_SpawnSpecials, T_ThwompSector
   * \author SSNTails <http://www.ssntails.org>
   */
-static inline void P_AddThwompThinker(sector_t *sec, INT16 tag, line_t *sourceline, fixed_t crushspeed, fixed_t retractspeed, UINT16 sound)
+static inline void P_AddThwompThinker(sector_t *sec, line_t *sourceline, fixed_t crushspeed, fixed_t retractspeed, UINT16 sound)
 {
 	thwomp_t *thwomp;
 
@@ -6753,7 +6753,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				fixed_t crushspeed = (lines[i].flags & ML_EFFECT5) ? lines[i].dy >> 3 : 10*FRACUNIT;
 				fixed_t retractspeed = (lines[i].flags & ML_EFFECT5) ? lines[i].dx >> 3 : 2*FRACUNIT;
 				UINT16 sound = (lines[i].flags & ML_EFFECT4) ? sides[lines[i].sidenum[0]].textureoffset >> FRACBITS : sfx_thwomp;
-				P_AddThwompThinker(lines[i].frontsector, tag, &lines[i], crushspeed, retractspeed, sound);
+				P_AddThwompThinker(lines[i].frontsector, &lines[i], crushspeed, retractspeed, sound);
 				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				break;
 			}
