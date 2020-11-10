@@ -880,6 +880,8 @@ void D_RegisterClientCommands(void)
 //	CV_RegisterVar(&cv_grid);
 //	CV_RegisterVar(&cv_snapto);
 
+	CV_RegisterVar(&cv_freedemocamera);
+	
 	// add cheat commands
 	COM_AddCommand("noclip", Command_CheatNoClip_f);
 	COM_AddCommand("god", Command_CheatGod_f);
