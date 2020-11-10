@@ -123,14 +123,7 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 
 		// Offset existing elements to make room for the new one.
 		if (i < group->count)
-		{
-			// Temporary memory block for copying.
-			size_t size = group->count - i;
-			size_t *temp = malloc(size);
-			memcpy(temp, &group->elements[i], size);
-			memcpy(&group->elements[i + 1], temp, size);
-			free(temp);
-		}
+			memmove(&group->elements[i + 1], &group->elements[i], group->count - i);
 	}
 
 	group->count++;
