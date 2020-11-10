@@ -338,7 +338,43 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 
 			//Hurdler: 25/04/2000: now support colormap in hardware mode
 			if (mipmap->colormap)
-				texel = mipmap->colormap[texel];
+			{
+				// Lactozilla: Compare the pixel's RGB color with the palette's.
+				// If they match, remap it.
+				if (sourcebpp == PICDEPTH_32BPP)
+				{
+					UINT8 *basepal = V_CacheBasePalette();
+					INT32 i = 0;
+
+					for (; i < 256; i++)
+					{
+						UINT8 r = *(basepal), g = *(basepal + 1), b = *(basepal + 2);
+						UINT32 rgb = R_PutRgbaRGB(r, g, b);
+
+						if (rgb == R_GetRgbaRGB(texelu32.rgba))
+						{
+							// Find the RGBA color of the mapped palette index
+							RGBA_t mapped = V_GetColor(mipmap->colormap[i]);
+
+							// Convert to the target bit depth
+							if (bpp < 3)
+							{
+								texel = NearestColor(mapped.s.red, mapped.s.green, mapped.s.blue);
+								texelu32.rgba = mapped.rgba;
+							}
+							else // This preserves the source pixel's translucency.
+								texelu32.rgba = R_GetRgbaRGB(mapped.rgba) + R_PutRgbaA(R_GetRgbaA(texelu32.rgba));
+
+							// Stop looking for a matching color
+							break;
+						}
+
+						basepal += 3;
+					}
+				}
+				else
+					texel = mipmap->colormap[texel];
+			}
 
 			// Convert to the target bit depth
 			if ((sourcebpp <= 16) && (bpp >= 3))
