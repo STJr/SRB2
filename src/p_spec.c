@@ -5510,7 +5510,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	{
 		fixed_t tempceiling = sec2->ceilingheight;
 		//flip the sector around and print an error instead of crashing 12.1.08 -Inuyasha
-		CONS_Alert(CONS_ERROR, M_GetText("FOF (line %d) has a top height below its bottom.\n"), sizeu1(master - lines));
+		CONS_Alert(CONS_ERROR, M_GetText("FOF (line %s) has a top height below its bottom.\n"), sizeu1(master - lines));
 		sec2->ceilingheight = sec2->floorheight;
 		sec2->floorheight = tempceiling;
 	}
