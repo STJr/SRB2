@@ -37,6 +37,7 @@ tic_t leveltime;
 
 // The entries will behave like both the head and tail of the lists.
 thinker_t thlist[NUM_THINKERLISTS];
+consvar_t cv_freedemocamera = {"freedemocamera", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 void Command_Numthinkers_f(void)
 {
@@ -642,8 +643,11 @@ void P_Ticker(boolean run)
 		{
 			player_t* p = &players[consoleplayer];
 			G_ReadDemoTiccmd(&p->cmd, 0);
-			P_ForceLocalAngle(p, p->cmd.angleturn << 16);
-			localaiming = p->aiming;
+			if (!cv_freedemocamera.value)
+			{
+				P_ForceLocalAngle(p, p->cmd.angleturn << 16);
+				localaiming = p->aiming;
+			}
 		}
 
 		LUAh_PreThinkFrame();
