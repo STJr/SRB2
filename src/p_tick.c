@@ -646,7 +646,7 @@ void P_Ticker(boolean run)
 		{
 			player_t* p = &players[consoleplayer];
 			G_ReadDemoTiccmd(&p->cmd, 0);
-			P_ForceLocalAngle(p, p->mo->angle);
+			P_ForceLocalAngle(p, p->cmd.angleturn << 16);
 			localaiming = p->aiming;
 		}
 
