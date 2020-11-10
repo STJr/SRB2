@@ -70,8 +70,8 @@ boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2)
 		return false;
 
 	for (i = 0; i < list1->count; i++)
-	if (list1->tags[i] != list2->tags[i])
-		return false;
+		if (list1->tags[i] != list2->tags[i])
+			return false;
 
 	return true;
 }
