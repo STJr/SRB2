@@ -61,7 +61,7 @@ INT32 Tag_FindLineSpecial(const INT16 special, const mtag_t tag);
 INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start);
 
 // Use this macro to declare the iterator position variable.
-#define TAG_ITER_C size_t tag_iterator_pos;
+#define TAG_ITER_DECLARECOUNTER size_t tag_iterator_pos
 
 #define TAG_ITER(fn, tag, id) for(tag_iterator_pos = 0; (id = fn(tag, tag_iterator_pos)) >= 0; tag_iterator_pos++)
 

@@ -2971,7 +2971,7 @@ static void P_ConvertBinaryMap(void)
 			INT32 check = -1;
 			INT32 paramline = -1;
 
-			TAG_ITER_C
+			TAG_ITER_DECLARECOUNTER;
 
 			TAG_ITER_LINES(tag, check)
 			{
@@ -3188,7 +3188,7 @@ static void P_ConvertBinaryMap(void)
 			INT32 firstline = -1;
 			mtag_t tag = mapthings[i].angle;
 
-			TAG_ITER_C
+			TAG_ITER_DECLARECOUNTER;
 
 			Tag_FSet(&mapthings[i].tags, tag);
 

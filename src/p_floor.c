@@ -635,7 +635,7 @@ void T_BounceCheese(bouncecheese_t *bouncer)
 	boolean remove;
 	INT32 i;
 	mtag_t tag = Tag_FGet(&bouncer->sourceline->tags);
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	if (bouncer->sector->crumblestate == CRUMBLE_RESTORE || bouncer->sector->crumblestate == CRUMBLE_WAIT
 		|| bouncer->sector->crumblestate == CRUMBLE_ACTIVATED) // Oops! Crumbler says to remove yourself!
@@ -775,7 +775,7 @@ void T_StartCrumble(crumble_t *crumble)
 	sector_t *sector;
 	INT32 i;
 	mtag_t tag = Tag_FGet(&crumble->sourceline->tags);
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	// Once done, the no-return thinker just sits there,
 	// constantly 'returning'... kind of an oxymoron, isn't it?
@@ -948,7 +948,7 @@ void T_StartCrumble(crumble_t *crumble)
 void T_MarioBlock(mariothink_t *block)
 {
 	INT32 i;
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	T_MovePlane
 	(
@@ -1295,7 +1295,7 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 	INT32 secnum = -1;
 	boolean FOFsector = false;
 	mtag_t tag = Tag_FGet(&nobaddies->sourceline->tags);
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	TAG_ITER_SECTORS(tag, secnum)
 	{
@@ -1308,7 +1308,7 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 		{
 			INT32 targetsecnum = -1;
 			mtag_t tag2 = Tag_FGet(&sec->lines[i]->tags);
-			TAG_ITER_C
+			TAG_ITER_DECLARECOUNTER;
 
 			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
 				continue;
@@ -1402,7 +1402,7 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 	fixed_t bottomheight, topheight;
 	ffloor_t *rover;
 	mtag_t tag = Tag_FGet(&eachtime->sourceline->tags);
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -1430,7 +1430,7 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 		{
 			INT32 targetsecnum = -1;
 			mtag_t tag2 = Tag_FGet(&sec->lines[i]->tags);
-			TAG_ITER_C
+			TAG_ITER_DECLARECOUNTER;
 
 			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
 				continue;
@@ -1572,7 +1572,7 @@ void T_RaiseSector(raise_t *raise)
 	INT32 direction;
 	result_e res = 0;
 	mtag_t tag = raise->tag;
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	if (raise->sector->crumblestate >= CRUMBLE_FALL || raise->sector->ceilingdata)
 		return;
@@ -1822,7 +1822,7 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 	sector_t *sec;
 	floormove_t *dofloor;
 	mtag_t tag = Tag_FGet(&line->tags);
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	TAG_ITER_SECTORS(tag, secnum)
 	{
@@ -2039,7 +2039,7 @@ void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 	sector_t *sec;
 	elevator_t *elevator;
 	mtag_t tag = Tag_FGet(&line->tags);
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	// act on all sectors with the same tag as the triggering linedef
 	TAG_ITER_SECTORS(tag, secnum)
@@ -2339,7 +2339,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	sector_t *foundsec;
 	INT32 i;
 	mtag_t tag = Tag_FGet(&rover->master->tags);
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	// If floor is already activated, skip it
 	if (sec->floordata)

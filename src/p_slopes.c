@@ -546,7 +546,7 @@ static boolean P_SetSlopeFromTag(sector_t *sec, INT32 tag, boolean ceiling)
 {
 	INT32 i;
 	pslope_t **secslope = ceiling ? &sec->c_slope : &sec->f_slope;
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	if (!tag || *secslope)
 		return false;

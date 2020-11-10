@@ -2223,7 +2223,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 	INT32 secnum = -1;
 	mobj_t *bot = NULL;
 	mtag_t tag = Tag_FGet(&line->tags);
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	I_Assert(!mo || !P_MobjWasRemoved(mo)); // If mo is there, mo must be valid!
 
@@ -3887,7 +3887,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 465: // Set linedef executor delay
 			{
 				INT32 linenum;
-				TAG_ITER_C
+				TAG_ITER_DECLARECOUNTER;
 
 				if (!udmf)
 					break;
@@ -5922,7 +5922,7 @@ void T_LaserFlash(laserthink_t *flash)
 	sector_t *sector;
 	sector_t *sourcesec = flash->sourceline->frontsector;
 	fixed_t top, bottom;
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	TAG_ITER_SECTORS(flash->tag, s)
 	{
@@ -6204,7 +6204,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			INT32 s;
 			size_t sec;
 			ffloortype_e ffloorflags;
-			TAG_ITER_C
+			TAG_ITER_DECLARECOUNTER;
 
 			case 1: // Definable gravity per sector
 				sec = sides[*lines[i].sidenum].sector - sectors;
@@ -7098,7 +7098,7 @@ void P_SpawnSpecials(boolean fromnetsave)
   */
 static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers)
 {
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 	INT32 s;
 	mtag_t tag = Tag_FGet(&lines[line].tags);
 	size_t sec = sides[*lines[line].sidenum].sector-sectors;
@@ -7214,7 +7214,7 @@ void T_Scroll(scroll_t *s)
 		size_t i;
 		INT32 sect;
 		ffloor_t *rover;
-		TAG_ITER_C
+		TAG_ITER_DECLARECOUNTER;
 
 		case sc_side: // scroll wall texture
 			side = sides + s->affectee;
@@ -7466,7 +7466,7 @@ static void P_SpawnScrollers(void)
 		switch (special)
 		{
 			register INT32 s;
-			TAG_ITER_C
+			TAG_ITER_DECLARECOUNTER;
 
 			case 513: // scroll effect ceiling
 			case 533: // scroll and carry objects on ceiling
@@ -7604,7 +7604,7 @@ void T_Disappear(disappear_t *d)
 		ffloor_t *rover;
 		register INT32 s;
 		mtag_t afftag = Tag_FGet(&lines[d->affectee].tags);
-		TAG_ITER_C
+		TAG_ITER_DECLARECOUNTER;
 
 		TAG_ITER_SECTORS(afftag, s)
 		{
@@ -8337,7 +8337,7 @@ static void P_SpawnFriction(void)
 	fixed_t strength; // frontside texture offset controls magnitude
 	fixed_t friction; // friction value to be applied during movement
 	INT32 movefactor; // applied to each player move to simulate inertia
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	for (i = 0; i < numlines; i++, l++)
 		if (l->special == 540)
@@ -8882,7 +8882,7 @@ static void P_SpawnPushers(void)
 	mtag_t tag;
 	register INT32 s;
 	mobj_t *thing;
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	for (i = 0; i < numlines; i++, l++)
 	{

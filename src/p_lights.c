@@ -374,7 +374,7 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean force)
 {
 	INT32 i;
-	TAG_ITER_C
+	TAG_ITER_DECLARECOUNTER;
 
 	// search all sectors for ones with tag
 	TAG_ITER_SECTORS(tag, i)
