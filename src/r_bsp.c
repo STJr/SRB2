@@ -799,7 +799,7 @@ static void R_AddPolyObjects(subsector_t *sub)
 	}
 
 	// for render stats
-	rs_numpolyobjects += numpolys;
+	ps_numpolyobjects += numpolys;
 
 	// sort polyobjects
 	R_SortPolyObjects(sub);
@@ -1239,7 +1239,7 @@ void R_RenderBSPNode(INT32 bspnum)
 	node_t *bsp;
 	INT32 side;
 
-	rs_numbspcalls++;
+	ps_numbspcalls++;
 
 	while (!(bspnum & NF_SUBSECTOR))  // Found a subsector?
 	{
