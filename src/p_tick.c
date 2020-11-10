@@ -644,10 +644,10 @@ void P_Ticker(boolean run)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
 		if (demoplayback)
 		{
-			G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
-			P_SetPlayerAngle(&players[consoleplayer], players[consoleplayer].mo->angle);
-			P_ForceLocalAngle(&players[consoleplayer], players[consoleplayer].mo->angle);
-			localaiming = players[consoleplayer].aiming;
+			player_t* p = &players[consoleplayer];
+			G_ReadDemoTiccmd(&p->cmd, 0);
+			P_ForceLocalAngle(p, p->mo->angle);
+			localaiming = p->aiming;
 		}
 
 		ps_lua_mobjhooks = 0;
