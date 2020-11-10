@@ -1,3 +1,16 @@
+// SONIC ROBO BLAST 2
+//-----------------------------------------------------------------------------
+// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C)      2020 by Nev3r.
+//
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
+//-----------------------------------------------------------------------------
+/// \file  taglist.h
+/// \brief Tag iteration and reading functions and macros' declarations.
+
 #ifndef __R_TAGLIST__
 #define __R_TAGLIST__
 
