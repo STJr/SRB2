@@ -440,6 +440,9 @@ static int CVarSetFunction
 ){
 	consvar_t *cvar = (consvar_t *)luaL_checkudata(L, 1, META_CVAR);
 
+	if (cvar->flags & CV_NOLUA)
+		return luaL_error(L, "Variable %s cannot be set from Lua.", cvar->name);
+
 	switch (lua_type(L, 2))
 	{
 		case LUA_TSTRING:
@@ -468,7 +471,12 @@ static int lib_cvStealthSet(lua_State *L)
 static int lib_cvAddValue(lua_State *L)
 {
 	consvar_t *cvar = (consvar_t *)luaL_checkudata(L, 1, META_CVAR);
+
+	if (cvar->flags & CV_NOLUA)
+		return luaL_error(L, "Variable %s cannot be set from Lua.", cvar->name);
+
 	CV_AddValue(cvar, (INT32)luaL_checknumber(L, 2));
+
 	return 0;
 }
 
