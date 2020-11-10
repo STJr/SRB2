@@ -1044,7 +1044,11 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		// Cache the picture.
 		if (!levelflat->mippic)
 		{
-			levelflat->mippic = Picture_PNGConvert(W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), format, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
+			void *pic = Picture_PNGConvert(W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), format, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
+
+			Z_ChangeTag(pic, PU_LEVEL);
+			Z_SetUser(pic, &levelflat->mippic);
+
 			levelflat->width = (UINT16)pngwidth;
 			levelflat->height = (UINT16)pngheight;
 		}
@@ -1052,7 +1056,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		// Make the mipmap.
 		if (mipmap == NULL)
 		{
-			mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_LEVEL, NULL);
+			mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_STATIC, NULL);
 			mipmap->format = (fmtbpp == PICDEPTH_32BPP ? GL_TEXFMT_RGBA : GL_TEXFMT_P_8);
 			mipmap->flags = TF_WRAPXY|TF_CHROMAKEYED;
 			levelflat->mipmap = mipmap;
