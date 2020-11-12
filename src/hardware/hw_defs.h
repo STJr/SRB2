@@ -295,6 +295,16 @@ enum hwdsetspecialstate
 
 typedef enum hwdsetspecialstate hwdspecialstate_t;
 
+// Lactozilla: Shader options
+enum hwdshaderoption
+{
+	HWD_SHADEROPTION_OFF,
+	HWD_SHADEROPTION_ON,
+	HWD_SHADEROPTION_NOCUSTOM,
+};
+
+typedef enum hwdshaderoption hwdshaderoption_t;
+
 // Lactozilla: Shader info
 // Generally set at the start of the frame.
 enum hwdshaderinfo
