@@ -44,9 +44,9 @@ typedef struct
 	size_t count;
 } taggroup_t;
 
-taggroup_t* tags_sectors[MAXTAGS + 1];
-taggroup_t* tags_lines[MAXTAGS + 1];
-taggroup_t* tags_mapthings[MAXTAGS + 1];
+extern taggroup_t* tags_sectors[];
+extern taggroup_t* tags_lines[];
+extern taggroup_t* tags_mapthings[];
 
 void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id);
 void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id);

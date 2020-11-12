@@ -15,6 +15,10 @@
 #include "z_zone.h"
 #include "r_data.h"
 
+taggroup_t* tags_sectors[MAXTAGS + 1];
+taggroup_t* tags_lines[MAXTAGS + 1];
+taggroup_t* tags_mapthings[MAXTAGS + 1];
+
 void Tag_Add (taglist_t* list, const mtag_t tag)
 {
 	list->tags = Z_Realloc(list->tags, (list->count + 1) * sizeof(list->tags), PU_LEVEL, NULL);
