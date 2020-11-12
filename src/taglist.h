@@ -62,13 +62,13 @@ INT32 Tag_FindLineSpecial(const INT16 special, const mtag_t tag);
 INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start);
 
 // Use this macro to declare the iterator position variable.
-#define TAG_ITER_DECLARECOUNTER size_t tag_iterator_pos
+#define TAG_ITER_DECLARECOUNTER(level) size_t ICNT_##level
 
-#define TAG_ITER(fn, tag, id) for(tag_iterator_pos = 0; (id = fn(tag, tag_iterator_pos)) >= 0; tag_iterator_pos++)
+#define TAG_ITER(level, fn, tag, id) for(ICNT_##level = 0; (id = fn(tag, ICNT_##level)) >= 0; ICNT_##level++)
 
 // Use these macros as wrappers for the taglist iterations.
-#define TAG_ITER_SECTORS(tag, id) TAG_ITER(Tag_Iterate_Sectors, tag, id)
-#define TAG_ITER_LINES(tag, id)   TAG_ITER(Tag_Iterate_Lines, tag, id)
-#define TAG_ITER_THINGS(tag, id)  TAG_ITER(Tag_Iterate_Things, tag, id)
+#define TAG_ITER_SECTORS(level, tag, id) TAG_ITER(level, Tag_Iterate_Sectors, tag, id)
+#define TAG_ITER_LINES(level, tag, id)   TAG_ITER(level, Tag_Iterate_Lines, tag, id)
+#define TAG_ITER_THINGS(level, tag, id)  TAG_ITER(level, Tag_Iterate_Things, tag, id)
 
 #endif //__R_TAGLIST__

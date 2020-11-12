@@ -395,9 +395,9 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 	sector_t *sec;
 	ceiling_t *ceiling;
 	mtag_t tag = Tag_FGet(&line->tags);
-	TAG_ITER_DECLARECOUNTER;
+	TAG_ITER_DECLARECOUNTER(0);
 
-	TAG_ITER_SECTORS(tag, secnum)
+	TAG_ITER_SECTORS(0, tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -617,9 +617,9 @@ INT32 EV_DoCrush(line_t *line, ceiling_e type)
 	sector_t *sec;
 	ceiling_t *ceiling;
 	mtag_t tag = Tag_FGet(&line->tags);
-	TAG_ITER_DECLARECOUNTER;
+	TAG_ITER_DECLARECOUNTER(0);
 
-	TAG_ITER_SECTORS(tag, secnum)
+	TAG_ITER_SECTORS(0, tag, secnum)
 	{
 		sec = &sectors[secnum];
 
