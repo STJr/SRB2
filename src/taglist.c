@@ -276,7 +276,7 @@ INT32 Tag_Iterate_Things (const mtag_t tag, const size_t p)
 
 INT32 Tag_FindLineSpecial(const INT16 special, const mtag_t tag)
 {
-	INT32 i;
+	size_t i;
 
 	if (tag == MTAG_GLOBAL)
 	{
