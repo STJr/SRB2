@@ -28,6 +28,8 @@
 #include "m_aatree.h"
 #endif
 
+#include "taglist.h"
+
 //
 // ClipWallSegment
 // Clips the given range of columns
@@ -310,8 +312,7 @@ typedef struct sector_s
 	INT32 ceilingpic;
 	INT16 lightlevel;
 	INT16 special;
-	UINT16 tag;
-	INT32 nexttag, firsttag; // for fast tag searches
+	taglist_t tags;
 
 	// origin for any sounds played by the sector
 	// also considered the center for e.g. Mario blocks
@@ -418,7 +419,7 @@ typedef struct line_s
 	// Animation related.
 	INT16 flags;
 	INT16 special;
-	INT16 tag;
+	taglist_t tags;
 	INT32 args[NUMLINEARGS];
 	char *stringargs[NUMLINESTRINGARGS];
 
@@ -441,7 +442,6 @@ typedef struct line_s
 #if 1//#ifdef WALLSPLATS
 	void *splats; // wallsplat_t list
 #endif
-	INT32 firsttag, nexttag; // improves searches for tags.
 	polyobj_t *polyobj; // Belongs to a polyobject?
 
 	char *text; // a concatenation of all front and back texture names, for linedef specials that require a string.

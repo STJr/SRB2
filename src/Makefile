@@ -522,6 +522,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_picformats.o \
 		$(OBJDIR)/r_portal.o \
 		$(OBJDIR)/screen.o   \
+		$(OBJDIR)/taglist.o  \
 		$(OBJDIR)/v_video.o  \
 		$(OBJDIR)/s_sound.o  \
 		$(OBJDIR)/sounds.o   \

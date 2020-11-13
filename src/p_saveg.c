@@ -923,7 +923,7 @@ static void UnArchiveFFloors(const sector_t *ss)
 
 static void ArchiveSectors(void)
 {
-	size_t i;
+	size_t i, j;
 	const sector_t *ss = sectors;
 	const sector_t *spawnss = spawnsectors;
 	UINT8 diff, diff2, diff3;
@@ -961,10 +961,8 @@ static void ArchiveSectors(void)
 		if (ss->ceilingpic_angle != spawnss->ceilingpic_angle)
 			diff2 |= SD_CEILANG;
 
-		if (ss->tag != spawnss->tag)
+		if (!Tag_Compare(&ss->tags, &spawnss->tags))
 			diff2 |= SD_TAG;
-		if (ss->nexttag != spawnss->nexttag || ss->firsttag != spawnss->firsttag)
-			diff3 |= SD_TAGLIST;
 
 		if (ss->extra_colormap != spawnss->extra_colormap)
 			diff3 |= SD_COLORMAP;
@@ -1012,12 +1010,11 @@ static void ArchiveSectors(void)
 				WRITEANGLE(save_p, ss->floorpic_angle);
 			if (diff2 & SD_CEILANG)
 				WRITEANGLE(save_p, ss->ceilingpic_angle);
-			if (diff2 & SD_TAG) // save only the tag
-				WRITEINT16(save_p, ss->tag);
-			if (diff3 & SD_TAGLIST) // save both firsttag and nexttag
-			{ // either of these could be changed even if tag isn't
-				WRITEINT32(save_p, ss->firsttag);
-				WRITEINT32(save_p, ss->nexttag);
+			if (diff2 & SD_TAG)
+			{
+				WRITEUINT32(save_p, ss->tags.count);
+				for (j = 0; j < ss->tags.count; j++)
+					WRITEINT16(save_p, ss->tags.tags[j]);
 			}
 
 			if (diff3 & SD_COLORMAP)
@@ -1035,7 +1032,7 @@ static void ArchiveSectors(void)
 
 static void UnArchiveSectors(void)
 {
-	UINT16 i;
+	UINT16 i, j;
 	UINT8 diff, diff2, diff3;
 	for (;;)
 	{
@@ -1089,12 +1086,28 @@ static void UnArchiveSectors(void)
 		if (diff2 & SD_CEILANG)
 			sectors[i].ceilingpic_angle = READANGLE(save_p);
 		if (diff2 & SD_TAG)
-			sectors[i].tag = READINT16(save_p); // DON'T use P_ChangeSectorTag
-		if (diff3 & SD_TAGLIST)
 		{
-			sectors[i].firsttag = READINT32(save_p);
-			sectors[i].nexttag = READINT32(save_p);
+			size_t ncount = READUINT32(save_p);
+
+			// Remove entries from global lists.
+			for (j = 0; j < sectors[i].tags.count; j++)
+				Taggroup_Remove(tags_sectors, sectors[i].tags.tags[j], i);
+
+			// Reallocate if size differs.
+			if (ncount != sectors[i].tags.count)
+			{
+				sectors[i].tags.count = ncount;
+				sectors[i].tags.tags = Z_Realloc(sectors[i].tags.tags, ncount*sizeof(mtag_t), PU_LEVEL, NULL);
+			}
+
+			for (j = 0; j < ncount; j++)
+				sectors[i].tags.tags[j] = READINT16(save_p);
+
+			// Add new entries.
+			for (j = 0; j < sectors[i].tags.count; j++)
+				Taggroup_Remove(tags_sectors, sectors[i].tags.tags[j], i);
 		}
+
 
 		if (diff3 & SD_COLORMAP)
 			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(save_p));
