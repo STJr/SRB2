@@ -437,7 +437,7 @@ static void LUA_ClearState(void)
 
 	// open base libraries
 	luaL_openlibs(L);
-	lua_pop(L, -1);
+	lua_settop(L, 0);
 
 	// make LREG_VALID table for all pushed userdata cache.
 	lua_newtable(L);
@@ -640,7 +640,7 @@ fixed_t LUA_EvalMath(const char *word)
 	*b = '\0';
 
 	// eval string.
-	lua_pop(L, -1);
+	lua_settop(L, 0);
 	if (luaL_dostring(L, buf))
 	{
 		p = lua_tostring(L, -1);

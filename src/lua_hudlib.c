@@ -1343,7 +1343,7 @@ void LUAh_GameHUD(player_t *stplayr)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1367,7 +1367,7 @@ void LUAh_GameHUD(player_t *stplayr)
 		lua_pushvalue(gL, -5); // camera
 		LUA_Call(gL, 3);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1377,7 +1377,7 @@ void LUAh_ScoresHUD(void)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1392,7 +1392,7 @@ void LUAh_ScoresHUD(void)
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
 		LUA_Call(gL, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1402,7 +1402,7 @@ void LUAh_TitleHUD(void)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1417,7 +1417,7 @@ void LUAh_TitleHUD(void)
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
 		LUA_Call(gL, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1427,7 +1427,7 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1451,7 +1451,7 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 		LUA_Call(gL, 4);
 	}
 
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1461,7 +1461,7 @@ void LUAh_IntermissionHUD(void)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1476,6 +1476,6 @@ void LUAh_IntermissionHUD(void)
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
 		LUA_Call(gL, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
