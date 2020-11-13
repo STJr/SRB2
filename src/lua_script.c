@@ -133,6 +133,19 @@ int LUA_GetErrorMessage(lua_State *L)
 	return 1;
 }
 
+int LUA_Call(lua_State *L, int nargs, int nresults, int errorhandlerindex)
+{
+	int err = lua_pcall(L, nargs, nresults, errorhandlerindex);
+
+	if (err)
+	{
+		CONS_Alert(CONS_WARNING, "%s\n", lua_tostring(L, -1));
+		lua_pop(L, 1);
+	}
+
+	return err;
+}
+
 // Moved here from lib_getenum.
 int LUA_PushGlobals(lua_State *L, const char *word)
 {
