@@ -843,6 +843,7 @@ boolean LUA_CallAction(const char *csaction, mobj_t *actor)
 	if (superstack == MAXRECURSION)
 	{
 		CONS_Alert(CONS_WARNING, "Max Lua Action recursion reached! Cool it on the calling A_Action functions from inside A_Action functions!\n");
+		lua_pop(gL, 1); // pop function
 		return true;
 	}
 
