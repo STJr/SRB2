@@ -20,7 +20,7 @@ typedef INT16 mtag_t;
 #define MAXTAGS UINT16_MAX
 #define MTAG_GLOBAL -1
 
-/// Multitag list.
+/// Multitag list. Each taggable element will have its own taglist.
 typedef struct
 {
 	mtag_t* tags;
@@ -28,16 +28,15 @@ typedef struct
 } taglist_t;
 
 void Tag_Add (taglist_t* list, const mtag_t tag);
-
 void Tag_FSet (taglist_t* list, const mtag_t tag);
 mtag_t Tag_FGet (const taglist_t* list);
 boolean Tag_Find (const taglist_t* list, const mtag_t tag);
 boolean Tag_Share (const taglist_t* list1, const taglist_t* list2);
-
 boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2);
 
 void Tag_SectorFSet (const size_t id, const mtag_t tag);
 
+/// Taggroup list. It is essentially just an element id list.
 typedef struct
 {
 	size_t *elements;
