@@ -2218,6 +2218,10 @@ void G_Ticker(boolean run)
 				{
 					marathonmode |= MA_INIT;
 					marathontime = 0;
+
+					tokenlist = 0;
+					token = 0;
+					emeralds = 0;
 				}
 				else if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != INFLIVES)
 					players[consoleplayer].lives -= 1;
