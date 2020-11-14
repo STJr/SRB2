@@ -2897,13 +2897,6 @@ static void readhuditem(MYFILE *f, INT32 num)
 	Z_Free(s);
 }
 
-/*
-Sprite number = 10
-Sprite subnumber = 32968
-Duration = 200
-Next frame = 200
-*/
-
 /** Action pointer for reading actions from Dehacked lumps.
   */
 typedef struct
