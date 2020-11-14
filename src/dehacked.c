@@ -10111,7 +10111,6 @@ struct {
 
 	// music types
 	{"MU_NONE", MU_NONE},
-	{"MU_CMD", MU_CMD},
 	{"MU_WAV", MU_WAV},
 	{"MU_MOD", MU_MOD},
 	{"MU_MID", MU_MID},
