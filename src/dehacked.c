@@ -3167,7 +3167,7 @@ static actionpointer_t actionpointers[] =
 	{{A_PterabyteHover},         "A_PTERABYTEHOVER"},
 	{{A_RolloutSpawn},           "A_ROLLOUTSPAWN"},
 	{{A_RolloutRock},            "A_ROLLOUTROCK"},
-	{{A_DragonbomberSpawn},      "A_DRAGONBOMERSPAWN"},
+	{{A_DragonbomberSpawn},      "A_DRAGONBOMBERSPAWN"},
 	{{A_DragonWing},             "A_DRAGONWING"},
 	{{A_DragonSegment},          "A_DRAGONSEGMENT"},
 	{{A_ChangeHeight},           "A_CHANGEHEIGHT"},
