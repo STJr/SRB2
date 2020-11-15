@@ -377,7 +377,7 @@ static int lib_setSpriteInfo(lua_State *L)
 	if (hud_running)
 		return luaL_error(L, "Do not alter spriteinfo_t in HUD rendering code!");
 	if (hook_cmd_running)
-		return luaL_error(L, "Do not alter spriteinfo_t in CMD building code!");     
+		return luaL_error(L, "Do not alter spriteinfo_t in CMD building code!");
 
 	lua_remove(L, 1);
 	{
@@ -822,7 +822,7 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 {
 	I_Assert(actor != NULL);
 
-	if (!(gL && actionsoverridden[actionnum])) // Lua isn't loaded, or the action is not overriden,
+	if (!actionsoverridden[actionnum]) // The action is not overriden,
 		return false; // action not called.
 
 	if (superstack && fasticmp(actionpointers[actionnum].name, superactions[superstack-1])) // the action is calling itself,
