@@ -25,6 +25,7 @@
 #include "p_local.h" // Camera...
 #include "p_slopes.h"
 #include "console.h" // con_clipviewtop
+#include "taglist.h"
 
 // OPTIMIZE: closed two sided lines as single sided
 
@@ -60,6 +61,15 @@ static INT32 worldtop, worldbottom, worldhigh, worldlow;
 static INT32 worldtopslope, worldbottomslope, worldhighslope, worldlowslope; // worldtop/bottom at end of slope
 static fixed_t rw_toptextureslide, rw_midtextureslide, rw_bottomtextureslide; // Defines how to adjust Y offsets along the wall for slopes
 static fixed_t rw_midtextureback, rw_midtexturebackslide; // Values for masked midtexture height calculation
+
+// Lactozilla: 3D floor clipping
+static boolean rw_floormarked = false;
+static boolean rw_ceilingmarked = false;
+
+static INT32 *rw_silhouette = NULL;
+static fixed_t *rw_tsilheight = NULL;
+static fixed_t *rw_bsilheight = NULL;
+
 static fixed_t pixhigh, pixlow, pixhighstep, pixlowstep;
 static fixed_t topfrac, topstep;
 static fixed_t bottomfrac, bottomstep;
@@ -692,6 +702,19 @@ static void R_DrawRepeatFlippedMaskedColumn(column_t *col)
 	} while (sprtopscreen < sprbotscreen);
 }
 
+// Returns true if a fake floor is translucent.
+static boolean R_IsFFloorTranslucent(visffloor_t *pfloor)
+{
+	if (pfloor->polyobj)
+		return (pfloor->polyobj->translucency > 0);
+
+	// Polyobjects have no ffloors, and they're handled in the conditional above.
+	if (pfloor->ffloor != NULL)
+		return (pfloor->ffloor->flags & FF_TRANSLUCENT);
+
+	return false;
+}
+
 //
 // R_RenderThickSideRange
 // Renders all the thick sides in the given range.
@@ -1194,7 +1217,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 // R_ExpandPlaneY
 //
-// A simple function to modify a vsplane's top and bottom for a particular column
+// A simple function to modify a visplane's top and bottom for a particular column
 // Sort of like R_ExpandPlane in r_plane.c, except this is vertical expansion
 static inline void R_ExpandPlaneY(visplane_t *pl, INT32 x, INT16 top, INT16 bottom)
 {
@@ -1202,6 +1225,14 @@ static inline void R_ExpandPlaneY(visplane_t *pl, INT32 x, INT16 top, INT16 bott
 	// note: top and bottom default to 0xFFFF and 0x0000 respectively, which is totally compatible with this
 	if (pl->top[x] > top)       pl->top[x] = top;
 	if (pl->bottom[x] < bottom) pl->bottom[x] = bottom;
+}
+
+// R_FFloorCanClip
+//
+// Returns true if a fake floor can clip a column away.
+static boolean R_FFloorCanClip(visffloor_t *pfloor)
+{
+	return (cv_ffloorclip.value && !R_IsFFloorTranslucent(pfloor) && !pfloor->polyobj);
 }
 
 //
@@ -1288,8 +1319,13 @@ static void R_RenderSegLoop (void)
 				R_ExpandPlaneY(floorplane, rw_x, top, bottom);
 		}
 
+		rw_floormarked = false;
+		rw_ceilingmarked = false;
+
 		if (numffloors)
 		{
+			INT16 fftop, ffbottom;
+
 			firstseg->frontscale[rw_x] = frontscale[rw_x];
 			top = ceilingclip[rw_x]+1; // PRBoom
 			bottom = floorclip[rw_x]-1; // PRBoom
@@ -1320,8 +1356,30 @@ static void R_RenderSegLoop (void)
 					{
 						if (top_w <= bottom_w)
 						{
-							ffloor[i].plane->top[rw_x] = (INT16)top_w;
-							ffloor[i].plane->bottom[rw_x] = (INT16)bottom_w;
+							fftop = (INT16)top_w;
+							ffbottom = (INT16)bottom_w;
+
+							ffloor[i].plane->top[rw_x] = fftop;
+							ffloor[i].plane->bottom[rw_x] = ffbottom;
+
+							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
+							// "bottom" is the top pixel of the floor column
+							if (ffbottom >= bottom-1 && R_FFloorCanClip(&ffloor[i]))
+							{
+								rw_floormarked = true;
+								floorclip[rw_x] = fftop;
+								if (yh > fftop)
+									yh = fftop;
+
+								if (markfloor && floorplane)
+									floorplane->top[rw_x] = bottom;
+
+								if (rw_silhouette)
+								{
+									(*rw_silhouette) |= SIL_BOTTOM;
+									(*rw_bsilheight) = INT32_MAX;
+								}
+							}
 						}
 					}
 				}
@@ -1346,8 +1404,30 @@ static void R_RenderSegLoop (void)
 					{
 						if (top_w <= bottom_w)
 						{
-							ffloor[i].plane->top[rw_x] = (INT16)top_w;
-							ffloor[i].plane->bottom[rw_x] = (INT16)bottom_w;
+							fftop = (INT16)top_w;
+							ffbottom = (INT16)bottom_w;
+
+							ffloor[i].plane->top[rw_x] = fftop;
+							ffloor[i].plane->bottom[rw_x] = ffbottom;
+
+							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
+							// "top" is the height of the ceiling column
+							if (fftop <= top+1 && R_FFloorCanClip(&ffloor[i]))
+							{
+								rw_ceilingmarked = true;
+								ceilingclip[rw_x] = ffbottom;
+								if (yl < ffbottom)
+									yl = ffbottom;
+
+								if (markceiling && ceilingplane)
+									ceilingplane->bottom[rw_x] = top;
+
+								if (rw_silhouette)
+								{
+									(*rw_silhouette) |= SIL_TOP;
+									(*rw_tsilheight) = INT32_MIN;
+								}
+							}
 						}
 					}
 				}
@@ -1457,20 +1537,25 @@ static void R_RenderSegLoop (void)
 
 				// dont draw anything more for this column, since
 				// a midtexture blocks the view
-				ceilingclip[rw_x] = (INT16)viewheight;
-				floorclip[rw_x] = -1;
+				if (!rw_ceilingmarked)
+					ceilingclip[rw_x] = (INT16)viewheight;
+				if (!rw_floormarked)
+					floorclip[rw_x] = -1;
 			}
 			else
 			{
 				// note: don't use min/max macros, since casting from INT32 to INT16 is involved here
-				if (markceiling)
+				if (markceiling && (!rw_ceilingmarked))
 					ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
-				if (markfloor)
+				if (markfloor && (!rw_floormarked))
 					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
 			}
 		}
 		else
 		{
+			INT16 topclip = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+			INT16 bottomclip = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
+
 			// two sided line
 			if (toptexture)
 			{
@@ -1484,7 +1569,10 @@ static void R_RenderSegLoop (void)
 				if (mid >= yl) // back ceiling lower than front ceiling ?
 				{
 					if (yl >= viewheight) // entirely off bottom of screen
-						ceilingclip[rw_x] = (INT16)viewheight;
+					{
+						if (!rw_ceilingmarked)
+							ceilingclip[rw_x] = (INT16)viewheight;
+					}
 					else if (mid >= 0) // safe to draw top texture
 					{
 						dc_yl = yl;
@@ -1496,14 +1584,14 @@ static void R_RenderSegLoop (void)
 						colfunc();
 						ceilingclip[rw_x] = (INT16)mid;
 					}
-					else // entirely off top of screen
+					else if (!rw_ceilingmarked) // entirely off top of screen
 						ceilingclip[rw_x] = -1;
 				}
-				else
-					ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+				else if (!rw_ceilingmarked)
+					ceilingclip[rw_x] = topclip;
 			}
-			else if (markceiling) // no top wall
-				ceilingclip[rw_x] = (yl >= 0) ? ((yl > viewheight) ? (INT16)viewheight : (INT16)((INT16)yl - 1)) : -1;
+			else if (markceiling && (!rw_ceilingmarked)) // no top wall
+				ceilingclip[rw_x] = topclip;
 
 			if (bottomtexture)
 			{
@@ -1518,7 +1606,10 @@ static void R_RenderSegLoop (void)
 				if (mid <= yh) // back floor higher than front floor ?
 				{
 					if (yh < 0) // entirely off top of screen
-						floorclip[rw_x] = -1;
+					{
+						if (!rw_floormarked)
+							floorclip[rw_x] = -1;
+					}
 					else if (mid < viewheight) // safe to draw bottom texture
 					{
 						dc_yl = mid;
@@ -1530,14 +1621,14 @@ static void R_RenderSegLoop (void)
 						colfunc();
 						floorclip[rw_x] = (INT16)mid;
 					}
-					else  // entirely off bottom of screen
+					else if (!rw_floormarked)  // entirely off bottom of screen
 						floorclip[rw_x] = (INT16)viewheight;
 				}
-				else
-					floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
+				else if (!rw_floormarked)
+					floorclip[rw_x] = bottomclip;
 			}
-			else if (markfloor) // no bottom wall
-				floorclip[rw_x] = (yh < viewheight) ? ((yh < -1) ? -1 : (INT16)((INT16)yh + 1)) : (INT16)viewheight;
+			else if (markfloor && (!rw_floormarked)) // no bottom wall
+				floorclip[rw_x] = bottomclip;
 		}
 
 		if (maskedtexture || numthicksides)
@@ -1991,7 +2082,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->floorlightsec != frontsector->floorlightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
-		    || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag))
+		    || (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 			markfloor = true;
 		}
@@ -2022,7 +2113,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->ceilinglightsec != frontsector->ceilinglightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
-		    || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag))
+		    || (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 				markceiling = true;
 		}
@@ -2112,7 +2203,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		rw_bottomtexturemid += sidedef->rowoffset;
 
 		// allocate space for masked texture tables
-		if (frontsector && backsector && frontsector->tag != backsector->tag && (backsector->ffloors || frontsector->ffloors))
+		if (frontsector && backsector && !Tag_Compare(&frontsector->tags, &backsector->tags) && (backsector->ffloors || frontsector->ffloors))
 		{
 			ffloor_t *rover;
 			ffloor_t *r2;
@@ -2154,6 +2245,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					for (r2 = frontsector->ffloors; r2; r2 = r2->next)
 					{
+						if (r2->master == rover->master) // Skip if same control line.
+							break;
+
 						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
 							continue;
 
@@ -2209,6 +2303,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					for (r2 = backsector->ffloors; r2; r2 = r2->next)
 					{
+						if (r2->master == rover->master) // Skip if same control line.
+							break;
+
 						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
 							continue;
 
@@ -2814,6 +2911,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 	}
+
+	rw_silhouette = &(ds_p->silhouette);
+	rw_tsilheight = &(ds_p->tsilheight);
+	rw_bsilheight = &(ds_p->bsilheight);
 
 #ifdef WALLSPLATS
 	if (linedef->splats && cv_splats.value)

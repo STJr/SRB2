@@ -59,10 +59,14 @@ enum hook {
 	hook_PlayerThink,
 	hook_ShouldJingleContinue,
 	hook_GameQuit,
+	hook_PlayerCmd,
+	hook_MusicChange,
 
 	hook_MAX // last hook
 };
 extern const char *const hookNames[];
+
+extern boolean hook_cmd_running;
 
 void LUAh_MapChange(INT16 mapnumber); // Hook for map change (before load)
 void LUAh_MapLoad(void); // Hook for map load
@@ -114,3 +118,5 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend); // Hook for MT_
 #define LUAh_PlayerThink(player) LUAh_PlayerHook(player, hook_PlayerThink) // Hook for P_PlayerThink
 boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname); // Hook for whether a jingle of the given music should continue playing
 void LUAh_GameQuit(void); // Hook for game quitting
+boolean LUAh_PlayerCmd(player_t *player, ticcmd_t *cmd); // Hook for building player's ticcmd struct (Ported from SRB2Kart)
+boolean LUAh_MusicChange(const char *oldname, char *newname, UINT16 *mflags, boolean *looping, UINT32 *position, UINT32 *prefadems, UINT32 *fadeinms); // Hook for music changes

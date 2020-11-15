@@ -55,9 +55,6 @@ fixed_t P_FindNextLowestFloor(sector_t *sec, fixed_t currentheight);
 fixed_t P_FindLowestCeilingSurrounding(sector_t *sec);
 fixed_t P_FindHighestCeilingSurrounding(sector_t *sec);
 
-INT32 P_FindSectorFromTag(INT16 tag, INT32 start);
-INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start);
-
 INT32 P_FindMinSurroundingLight(sector_t *sector, INT32 max);
 
 void P_SetupSignExit(player_t *player);
@@ -67,7 +64,6 @@ void P_SwitchWeather(INT32 weathernum);
 
 boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller);
 void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller);
-void P_ChangeSectorTag(UINT32 sector, INT16 newtag);
 void P_RunNightserizeExecutors(mobj_t *actor);
 void P_RunDeNightserizeExecutors(mobj_t *actor);
 void P_RunNightsLapExecutors(mobj_t *actor);

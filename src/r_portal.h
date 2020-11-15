@@ -15,6 +15,7 @@
 #define __R_PORTAL__
 
 #include "r_data.h"
+#include "r_textures.h"
 #include "r_plane.h" // visplanes
 
 /** Portal structure for the software renderer.

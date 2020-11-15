@@ -1,7 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -235,13 +234,13 @@ void HWR_RenderBatches(void)
 	currently_batching = false;// no longer collecting batches
 	if (!polygonArraySize)
 	{
-		rs_hw_numpolys = rs_hw_numcalls = rs_hw_numshaders = rs_hw_numtextures = rs_hw_numpolyflags = rs_hw_numcolors = 0;
+		ps_hw_numpolys = ps_hw_numcalls = ps_hw_numshaders = ps_hw_numtextures = ps_hw_numpolyflags = ps_hw_numcolors = 0;
 		return;// nothing to draw
 	}
 	// init stats vars
-	rs_hw_numpolys = polygonArraySize;
-	rs_hw_numcalls = rs_hw_numverts = 0;
-	rs_hw_numshaders = rs_hw_numtextures = rs_hw_numpolyflags = rs_hw_numcolors = 1;
+	ps_hw_numpolys = polygonArraySize;
+	ps_hw_numcalls = ps_hw_numverts = 0;
+	ps_hw_numshaders = ps_hw_numtextures = ps_hw_numpolyflags = ps_hw_numcolors = 1;
 	// init polygonIndexArray
 	for (i = 0; i < polygonArraySize; i++)
 	{
@@ -249,12 +248,12 @@ void HWR_RenderBatches(void)
 	}
 
 	// sort polygons
-	rs_hw_batchsorttime = I_GetTimeMicros();
+	ps_hw_batchsorttime = I_GetTimeMicros();
 	if (cv_glshaders.value && gl_shadersavailable)
 		qsort(polygonIndexArray, polygonArraySize, sizeof(unsigned int), comparePolygons);
 	else
 		qsort(polygonIndexArray, polygonArraySize, sizeof(unsigned int), comparePolygonsNoShaders);
-	rs_hw_batchsorttime = I_GetTimeMicros() - rs_hw_batchsorttime;
+	ps_hw_batchsorttime = I_GetTimeMicros() - ps_hw_batchsorttime;
 	// sort order
 	// 1. shader
 	// 2. texture
@@ -262,7 +261,7 @@ void HWR_RenderBatches(void)
 	// 4. colors + light level
 	// not sure about what order of the last 2 should be, or if it even matters
 
-	rs_hw_batchdrawtime = I_GetTimeMicros();
+	ps_hw_batchdrawtime = I_GetTimeMicros();
 
 	currentShader = polygonArray[polygonIndexArray[0]].shader;
 	currentTexture = polygonArray[polygonIndexArray[0]].texture;
@@ -398,8 +397,8 @@ void HWR_RenderBatches(void)
 			// execute draw call
             HWD.pfnDrawIndexedTriangles(&currentSurfaceInfo, finalVertexArray, finalIndexWritePos, currentPolyFlags, finalVertexIndexArray);
 			// update stats
-			rs_hw_numcalls++;
-			rs_hw_numverts += finalIndexWritePos;
+			ps_hw_numcalls++;
+			ps_hw_numverts += finalIndexWritePos;
 			// reset write positions
 			finalVertexWritePos = 0;
 			finalIndexWritePos = 0;
@@ -416,7 +415,7 @@ void HWR_RenderBatches(void)
 			currentShader = nextShader;
 			changeShader = false;
 
-			rs_hw_numshaders++;
+			ps_hw_numshaders++;
 		}
 		if (changeTexture)
 		{
@@ -425,21 +424,21 @@ void HWR_RenderBatches(void)
 			currentTexture = nextTexture;
 			changeTexture = false;
 
-			rs_hw_numtextures++;
+			ps_hw_numtextures++;
 		}
 		if (changePolyFlags)
 		{
 			currentPolyFlags = nextPolyFlags;
 			changePolyFlags = false;
 
-			rs_hw_numpolyflags++;
+			ps_hw_numpolyflags++;
 		}
 		if (changeSurfaceInfo)
 		{
 			currentSurfaceInfo = nextSurfaceInfo;
 			changeSurfaceInfo = false;
 
-			rs_hw_numcolors++;
+			ps_hw_numcolors++;
 		}
 		// and that should be it?
 	}
@@ -447,7 +446,7 @@ void HWR_RenderBatches(void)
 	polygonArraySize = 0;
 	unsortedVertexArraySize = 0;
 
-	rs_hw_batchdrawtime = I_GetTimeMicros() - rs_hw_batchdrawtime;
+	ps_hw_batchdrawtime = I_GetTimeMicros() - ps_hw_batchdrawtime;
 }
 
 

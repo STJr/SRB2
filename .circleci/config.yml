@@ -43,7 +43,7 @@ jobs:
             - v1-SRB2-APT
       - run:
           name: Install SDK
-          command: apt-get -qq -y --no-install-recommends install git build-essential nasm libpng-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 libopenmpt-dev:i386 gettext ccache wget gcc-multilib upx openssh-client
+          command: apt-get -qq -y --no-install-recommends install git build-essential nasm libpng-dev:i386 libsdl2-mixer-dev:i386 libgme-dev:i386 libcurl4-openssl-dev:i386 libopenmpt-dev:i386 gettext ccache wget gcc-multilib upx openssh-client
 
       - save_cache:
           key: v1-SRB2-APT

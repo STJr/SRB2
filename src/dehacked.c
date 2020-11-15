@@ -26,17 +26,20 @@
 #include "dehacked.h"
 #include "st_stuff.h"
 #include "i_system.h"
+#include "i_sound.h" // musictype_t (for lua)
 #include "p_local.h" // for var1 and var2, and some constants
 #include "p_setup.h"
 #include "r_data.h"
+#include "r_textures.h"
 #include "r_draw.h"
-#include "r_patch.h"
+#include "r_picformats.h"
 #include "r_things.h" // R_Char2Frame
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h"
 #include "lua_hook.h"
 #include "d_clisrv.h"
+#include "g_state.h" // gamestate_t (for lua)
 
 #include "m_cond.h"
 
@@ -44,12 +47,6 @@
 
 #ifdef HWRENDER
 #include "hardware/hw_light.h"
-#endif
-
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-//int	snprintf(char *str, size_t n, const char *fmt, ...);
-int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 #endif
 
 // Free slot names
@@ -5183,6 +5180,7 @@ static const char *const STATE_LIST[] = { // array length left dynamic for sanit
 	"S_TAILSOVERLAY_PAIN",
 	"S_TAILSOVERLAY_GASP",
 	"S_TAILSOVERLAY_EDGE",
+	"S_TAILSOVERLAY_DASH",
 
 	// [:
 	"S_JETFUMEFLASH",
@@ -9088,7 +9086,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 
 	// True if button down last tic.
 	"ATTACKDOWN",
-	"USEDOWN",
+	"SPINDOWN",
 	"JUMPDOWN",
 	"WPNDOWN",
 
@@ -9522,6 +9520,7 @@ struct {
 	{"RING_DIST",RING_DIST},
 	{"PUSHACCEL",PUSHACCEL},
 	{"MODID",MODID}, // I don't know, I just thought it would be cool for a wad to potentially know what mod it was loaded into.
+	{"MODVERSION",MODVERSION}, // or what version of the mod this is.
 	{"CODEBASE",CODEBASE}, // or what release of SRB2 this is.
 	{"NEWTICRATE",NEWTICRATE}, // TICRATE*NEWTICRATERATIO
 	{"NEWTICRATERATIO",NEWTICRATERATIO},
@@ -9705,6 +9704,7 @@ struct {
 	{"SF_NONIGHTSSUPER",SF_NONIGHTSSUPER},
 	{"SF_NOSUPERSPRITES",SF_NOSUPERSPRITES},
 	{"SF_NOSUPERJUMPBOOST",SF_NOSUPERJUMPBOOST},
+	{"SF_CANBUSTWALLS",SF_CANBUSTWALLS},
 
 	// Dashmode constants
 	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
@@ -9912,6 +9912,25 @@ struct {
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 
+	// PolyObject flags
+	{"POF_CLIPLINES",POF_CLIPLINES},               ///< Test against lines for collision
+	{"POF_CLIPPLANES",POF_CLIPPLANES},             ///< Test against tops and bottoms for collision
+	{"POF_SOLID",POF_SOLID},                       ///< Clips things.
+	{"POF_TESTHEIGHT",POF_TESTHEIGHT},             ///< Test line collision with heights
+	{"POF_RENDERSIDES",POF_RENDERSIDES},           ///< Renders the sides.
+	{"POF_RENDERTOP",POF_RENDERTOP},               ///< Renders the top.
+	{"POF_RENDERBOTTOM",POF_RENDERBOTTOM},         ///< Renders the bottom.
+	{"POF_RENDERPLANES",POF_RENDERPLANES},         ///< Renders top and bottom.
+	{"POF_RENDERALL",POF_RENDERALL},               ///< Renders everything.
+	{"POF_INVERT",POF_INVERT},                     ///< Inverts collision (like a cage).
+	{"POF_INVERTPLANES",POF_INVERTPLANES},         ///< Render inside planes.
+	{"POF_INVERTPLANESONLY",POF_INVERTPLANESONLY}, ///< Only render inside planes.
+	{"POF_PUSHABLESTOP",POF_PUSHABLESTOP},         ///< Pushables will stop movement.
+	{"POF_LDEXEC",POF_LDEXEC},                     ///< This PO triggers a linedef executor.
+	{"POF_ONESIDE",POF_ONESIDE},                   ///< Only use the first side of the linedef.
+	{"POF_NOSPECIALS",POF_NOSPECIALS},             ///< Don't apply sector specials.
+	{"POF_SPLAT",POF_SPLAT},                       ///< Use splat flat renderer (treat cyan pixels as invisible).
+
 #ifdef HAVE_LUA_SEGS
 	// Node flags
 	{"NF_SUBSECTOR",NF_SUBSECTOR}, // Indicate a leaf.
@@ -9975,7 +9994,7 @@ struct {
 	{"BT_WEAPONNEXT",BT_WEAPONNEXT},
 	{"BT_WEAPONPREV",BT_WEAPONPREV},
 	{"BT_ATTACK",BT_ATTACK}, // shoot rings
-	{"BT_USE",BT_USE}, // spin
+	{"BT_SPIN",BT_SPIN},
 	{"BT_CAMLEFT",BT_CAMLEFT}, // turn camera left
 	{"BT_CAMRIGHT",BT_CAMRIGHT}, // turn camera right
 	{"BT_TOSSFLAG",BT_TOSSFLAG},
@@ -10089,6 +10108,35 @@ struct {
 	{"MA_RUNNING",MA_RUNNING},
 	{"MA_NOCUTSCENES",MA_NOCUTSCENES},
 	{"MA_INGAME",MA_INGAME},
+
+	// music types
+	{"MU_NONE", MU_NONE},
+	{"MU_CMD", MU_CMD},
+	{"MU_WAV", MU_WAV},
+	{"MU_MOD", MU_MOD},
+	{"MU_MID", MU_MID},
+	{"MU_OGG", MU_OGG},
+	{"MU_MP3", MU_MP3},
+	{"MU_FLAC", MU_FLAC},
+	{"MU_GME", MU_GME},
+	{"MU_MOD_EX", MU_MOD_EX},
+	{"MU_MID_EX", MU_MID_EX},
+
+	// gamestates
+	{"GS_NULL",GS_NULL},
+	{"GS_LEVEL",GS_LEVEL},
+	{"GS_INTERMISSION",GS_INTERMISSION},
+	{"GS_CONTINUING",GS_CONTINUING},
+	{"GS_TITLESCREEN",GS_TITLESCREEN},
+	{"GS_TIMEATTACK",GS_TIMEATTACK},
+	{"GS_CREDITS",GS_CREDITS},
+	{"GS_EVALUATION",GS_EVALUATION},
+	{"GS_GAMEEND",GS_GAMEEND},
+	{"GS_INTRO",GS_INTRO},
+	{"GS_ENDING",GS_ENDING},
+	{"GS_CUTSCENE",GS_CUTSCENE},
+	{"GS_DEDICATEDSERVER",GS_DEDICATEDSERVER},
+	{"GS_WAITINGPLAYERS",GS_WAITINGPLAYERS},
 
 	{NULL,0}
 };
@@ -10848,6 +10896,11 @@ static inline int lib_getenum(lua_State *L)
 			lua_pushinteger(L, (lua_Integer)PF_FULLSTASIS);
 			return 1;
 		}
+		else if (fastcmp(p, "USEDOWN")) // Remove case when 2.3 nears release...
+		{
+			lua_pushinteger(L, (lua_Integer)PF_SPINDOWN);
+			return 1;
+		}
 		if (mathlib) return luaL_error(L, "playerflag '%s' could not be found.\n", word);
 		return 0;
 	}
@@ -11112,6 +11165,12 @@ static inline int lib_getenum(lua_State *L)
 				return 1;
 			}
 		return 0;
+	}
+
+	if (fastcmp(word, "BT_USE")) // Remove case when 2.3 nears release...
+	{
+		lua_pushinteger(L, (lua_Integer)BT_SPIN);
+		return 1;
 	}
 
 	for (i = 0; INT_CONST[i].n; i++)
