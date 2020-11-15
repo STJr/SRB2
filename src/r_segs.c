@@ -25,6 +25,7 @@
 #include "p_local.h" // Camera...
 #include "p_slopes.h"
 #include "console.h" // con_clipviewtop
+#include "taglist.h"
 
 // OPTIMIZE: closed two sided lines as single sided
 
@@ -2067,7 +2068,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->floorlightsec != frontsector->floorlightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
-		    || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag))
+		    || (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 			markfloor = true;
 		}
@@ -2098,7 +2099,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		    || backsector->ceilinglightsec != frontsector->ceilinglightsec
 		    //SoM: 4/3/2000: Check for colormaps
 		    || frontsector->extra_colormap != backsector->extra_colormap
-		    || (frontsector->ffloors != backsector->ffloors && frontsector->tag != backsector->tag))
+		    || (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 				markceiling = true;
 		}
@@ -2188,7 +2189,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		rw_bottomtexturemid += sidedef->rowoffset;
 
 		// allocate space for masked texture tables
-		if (frontsector && backsector && frontsector->tag != backsector->tag && (backsector->ffloors || frontsector->ffloors))
+		if (frontsector && backsector && !Tag_Compare(&frontsector->tags, &backsector->tags) && (backsector->ffloors || frontsector->ffloors))
 		{
 			ffloor_t *rover;
 			ffloor_t *r2;
@@ -2230,6 +2231,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					for (r2 = frontsector->ffloors; r2; r2 = r2->next)
 					{
+						if (r2->master == rover->master) // Skip if same control line.
+							break;
+
 						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
 							continue;
 
@@ -2285,6 +2289,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 					for (r2 = backsector->ffloors; r2; r2 = r2->next)
 					{
+						if (r2->master == rover->master) // Skip if same control line.
+							break;
+
 						if (!(r2->flags & FF_EXISTS) || !(r2->flags & FF_RENDERSIDES))
 							continue;
 

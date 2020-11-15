@@ -99,8 +99,6 @@ enum line_e {
 	line_slopetype,
 	line_frontsector,
 	line_backsector,
-	line_firsttag,
-	line_nexttag,
 	line_polyobj,
 	line_text,
 	line_callcount
@@ -125,8 +123,6 @@ static const char *const line_opt[] = {
 	"slopetype",
 	"frontsector",
 	"backsector",
-	"firsttag",
-	"nexttag",
 	"polyobj",
 	"text",
 	"callcount",
@@ -583,7 +579,7 @@ static int sector_get(lua_State *L)
 		lua_pushinteger(L, sector->special);
 		return 1;
 	case sector_tag:
-		lua_pushinteger(L, sector->tag);
+		lua_pushinteger(L, Tag_FGet(&sector->tags));
 		return 1;
 	case sector_thinglist: // thinglist
 		lua_pushcfunction(L, lib_iterateSectorThinglist);
@@ -684,7 +680,7 @@ static int sector_set(lua_State *L)
 		sector->special = (INT16)luaL_checkinteger(L, 3);
 		break;
 	case sector_tag:
-		P_ChangeSectorTag((UINT32)(sector - sectors), (INT16)luaL_checkinteger(L, 3));
+		Tag_SectorFSet((UINT32)(sector - sectors), (INT16)luaL_checkinteger(L, 3));
 		break;
 	}
 	return 0;
@@ -823,7 +819,7 @@ static int line_get(lua_State *L)
 		lua_pushinteger(L, line->special);
 		return 1;
 	case line_tag:
-		lua_pushinteger(L, line->tag);
+		lua_pushinteger(L, Tag_FGet(&line->tags));
 		return 1;
 	case line_args:
 		LUA_PushUserdata(L, line->args, META_LINEARGS);
@@ -870,12 +866,6 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_backsector:
 		LUA_PushUserdata(L, line->backsector, META_SECTOR);
-		return 1;
-	case line_firsttag:
-		lua_pushinteger(L, line->firsttag);
-		return 1;
-	case line_nexttag:
-		lua_pushinteger(L, line->nexttag);
 		return 1;
 	case line_polyobj:
 		LUA_PushUserdata(L, line->polyobj, META_POLYOBJ);

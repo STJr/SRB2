@@ -82,6 +82,8 @@
 
 #include "fastcmp.h" // textmap parsing
 
+#include "taglist.h"
+
 //
 // Map MD5, calculated on level load.
 // Sent to clients in PT_SERVERINFO.
@@ -963,8 +965,6 @@ static void P_LoadVertices(UINT8 *data)
 
 static void P_InitializeSector(sector_t *ss)
 {
-	ss->nexttag = ss->firsttag = -1;
-
 	memset(&ss->soundorg, 0, sizeof(ss->soundorg));
 
 	ss->validcount = 0;
@@ -1035,7 +1035,7 @@ static void P_LoadSectors(UINT8 *data)
 
 		ss->lightlevel = SHORT(ms->lightlevel);
 		ss->special = SHORT(ms->special);
-		ss->tag = SHORT(ms->tag);
+		Tag_FSet(&ss->tags, SHORT(ms->tag));
 
 		ss->floor_xoffs = ss->floor_yoffs = 0;
 		ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
@@ -1077,7 +1077,6 @@ static void P_InitializeLinedef(line_t *ld)
 #ifdef WALLSPLATS
 	ld->splats = NULL;
 #endif
-	ld->firsttag = ld->nexttag = -1;
 	ld->polyobj = NULL;
 
 	ld->text = NULL;
@@ -1149,7 +1148,7 @@ static void P_LoadLinedefs(UINT8 *data)
 	{
 		ld->flags = SHORT(mld->flags);
 		ld->special = SHORT(mld->special);
-		ld->tag = SHORT(mld->tag);
+		Tag_FSet(&ld->tags, SHORT(mld->tag));
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
@@ -1342,7 +1341,7 @@ static void P_LoadSidedefs(UINT8 *data)
 						|| (msd->toptexture[0] >= 'A' && msd->toptexture[0] <= 'F'))
 						sd->toptexture = axtoi(msd->toptexture);
 					else
-						I_Error("Custom FOF (tag %d) needs a value in the linedef's back side upper texture field.", sd->line->tag);
+						I_Error("Custom FOF (line id %s) needs a value in the linedef's back side upper texture field.", sizeu1(sd->line - lines));
 
 					sd->midtexture = R_TextureNumForName(msd->midtexture);
 					sd->bottomtexture = R_TextureNumForName(msd->bottomtexture);
@@ -1382,8 +1381,8 @@ static void P_LoadThings(UINT8 *data)
 		mt->type = READUINT16(data);
 		mt->options = READUINT16(data);
 		mt->extrainfo = (UINT8)(mt->type >> 12);
+		Tag_FSet(&mt->tags, 0);
 		mt->scale = FRACUNIT;
-		mt->tag = 0;
 		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->pitch = mt->roll = 0;
@@ -1519,7 +1518,17 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 	else if (fastcmp(param, "special"))
 		sectors[i].special = atol(val);
 	else if (fastcmp(param, "id"))
-		sectors[i].tag = atol(val);
+		Tag_FSet(&sectors[i].tags, atol(val));
+	else if (fastcmp(param, "moreids"))
+	{
+		char* id = val;
+		while (id)
+		{
+			Tag_Add(&sectors[i].tags, atol(id));
+			if ((id = strchr(id, ' ')))
+				id++;
+		}
+	}
 	else if (fastcmp(param, "xpanningfloor"))
 		sectors[i].floor_xoffs = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningfloor"))
@@ -1597,7 +1606,17 @@ static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
 static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "id"))
-		lines[i].tag = atol(val);
+		Tag_FSet(&lines[i].tags, atol(val));
+	else if (fastcmp(param, "moreids"))
+	{
+		char* id = val;
+		while (id)
+		{
+			Tag_Add(&lines[i].tags, atol(id));
+			if ((id = strchr(id, ' ')))
+				id++;
+		}
+	}
 	else if (fastcmp(param, "special"))
 		lines[i].special = atol(val);
 	else if (fastcmp(param, "v1"))
@@ -1666,8 +1685,18 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "id"))
-		mapthings[i].tag = atol(val);
-	if (fastcmp(param, "x"))
+		Tag_FSet(&mapthings[i].tags, atol(val));
+	else if (fastcmp(param, "moreids"))
+	{
+		char* id = val;
+		while (id)
+		{
+			Tag_Add(&mapthings[i].tags, atol(id));
+			if ((id = strchr(id, ' ')))
+				id++;
+		}
+	}
+	else if (fastcmp(param, "x"))
 		mapthings[i].x = atol(val);
 	else if (fastcmp(param, "y"))
 		mapthings[i].y = atol(val);
@@ -1824,7 +1853,7 @@ static void P_LoadTextmap(void)
 		sc->lightlevel = 255;
 
 		sc->special = 0;
-		sc->tag = 0;
+		Tag_FSet(&sc->tags, 0);
 
 		sc->floor_xoffs = sc->floor_yoffs = 0;
 		sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
@@ -1842,6 +1871,7 @@ static void P_LoadTextmap(void)
 		textmap_colormap.fadeend = 31;
 		textmap_colormap.flags = 0;
 		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
+
 		P_InitializeSector(sc);
 		if (textmap_colormap.used)
 		{
@@ -1858,7 +1888,8 @@ static void P_LoadTextmap(void)
 		ld->v1 = ld->v2 = NULL;
 		ld->flags = 0;
 		ld->special = 0;
-		ld->tag = 0;
+		Tag_FSet(&ld->tags, 0);
+
 		memset(ld->args, 0, NUMLINEARGS*sizeof(*ld->args));
 		memset(ld->stringargs, 0x00, NUMLINESTRINGARGS*sizeof(*ld->stringargs));
 		ld->alpha = FRACUNIT;
@@ -1906,8 +1937,8 @@ static void P_LoadTextmap(void)
 		mt->options = 0;
 		mt->z = 0;
 		mt->extrainfo = 0;
+		Tag_FSet(&mt->tags, 0);
 		mt->scale = FRACUNIT;
-		mt->tag = 0;
 		memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 		memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 		mt->mobj = NULL;
@@ -2924,30 +2955,6 @@ static void P_LinkMapData(void)
 	}
 }
 
-/** Hashes the sector tags across the sectors and linedefs.
-  *
-  * \sa P_FindSectorFromTag, P_ChangeSectorTag
-  * \author Lee Killough
-  */
-static inline void P_InitTagLists(void)
-{
-	register size_t i;
-
-	for (i = numsectors - 1; i != (size_t)-1; i--)
-	{
-		size_t j = (unsigned)sectors[i].tag % numsectors;
-		sectors[i].nexttag = sectors[j].firsttag;
-		sectors[j].firsttag = (INT32)i;
-	}
-
-	for (i = numlines - 1; i != (size_t)-1; i--)
-	{
-		size_t j = (unsigned)lines[i].tag % numlines;
-		lines[i].nexttag = lines[j].firsttag;
-		lines[j].firsttag = (INT32)i;
-	}
-}
-
 //For maps in binary format, converts setup of specials to UDMF format.
 static void P_ConvertBinaryMap(void)
 {
@@ -2955,14 +2962,28 @@ static void P_ConvertBinaryMap(void)
 
 	for (i = 0; i < numlines; i++)
 	{
+		mtag_t tag = Tag_FGet(&lines[i].tags);
+
 		switch (lines[i].special)
 		{
 		case 20: //PolyObject first line
 		{
-			INT32 paramline = P_FindSpecialLineFromTag(22, lines[i].tag, -1);
+			INT32 check = -1;
+			INT32 paramline = -1;
+
+			TAG_ITER_DECLARECOUNTER(0);
+
+			TAG_ITER_LINES(0, tag, check)
+			{
+				if (lines[check].special == 22)
+				{
+					paramline = check;
+					break;
+				}
+			}
 
 			//PolyObject ID
-			lines[i].args[0] = lines[i].tag;
+			lines[i].args[0] = tag;
 
 			//Default: Invisible planes
 			lines[i].args[3] |= TMPF_INVISIBLEPLANES;
@@ -3008,7 +3029,7 @@ static void P_ConvertBinaryMap(void)
 				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in the front texture fields)\n", sizeu1(i));
 			break;
 		case 447: //Change colormap
-			lines[i].args[0] = lines[i].tag;
+			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			if (lines[i].flags & ML_EFFECT3)
 				lines[i].args[2] |= TMCF_RELATIVE;
 			if (lines[i].flags & ML_EFFECT1)
@@ -3024,7 +3045,7 @@ static void P_ConvertBinaryMap(void)
 				abs(sides[lines[i].sidenum[1]].rowoffset >> FRACBITS)
 				: abs(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS));
 
-			lines[i].args[0] = lines[i].tag;
+			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			if (lines[i].flags & ML_EFFECT4)
 				lines[i].args[2] = speed;
 			else
@@ -3044,10 +3065,10 @@ static void P_ConvertBinaryMap(void)
 			break;
 		}
 		case 456: //Stop fading colormap
-			lines[i].args[0] = lines[i].tag;
+			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			break;
 		case 606: //Colormap
-			lines[i].args[0] = lines[i].tag;
+			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			break;
 		case 700: //Slope front sector floor
 		case 701: //Slope front sector ceiling
@@ -3088,7 +3109,7 @@ static void P_ConvertBinaryMap(void)
 			else if (lines[i].special == 715)
 				lines[i].args[0] = TMSP_BACKCEILING;
 
-			lines[i].args[1] = lines[i].tag;
+			lines[i].args[1] = tag;
 
 			if (lines[i].flags & ML_EFFECT6)
 			{
@@ -3120,9 +3141,9 @@ static void P_ConvertBinaryMap(void)
 		case 721: //Copy front side ceiling slope
 		case 722: //Copy front side floor and ceiling slope
 			if (lines[i].special != 721)
-				lines[i].args[0] = lines[i].tag;
+				lines[i].args[0] = tag;
 			if (lines[i].special != 720)
-				lines[i].args[1] = lines[i].tag;
+				lines[i].args[1] = tag;
 			lines[i].special = 720;
 			break;
 		case 900: //Translucent wall (10%)
@@ -3155,21 +3176,39 @@ static void P_ConvertBinaryMap(void)
 		switch (mapthings[i].type)
 		{
 		case 750:
+			Tag_Add(&mapthings[i].tags, mapthings[i].angle);
+			break;
 		case 760:
 		case 761:
-			mapthings[i].tag = mapthings[i].angle;
+			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
 			break;
 		case 762:
 		{
-			INT32 firstline = P_FindSpecialLineFromTag(20, mapthings[i].angle, -1);
+			INT32 check = -1;
+			INT32 firstline = -1;
+			mtag_t tag = mapthings[i].angle;
+
+			TAG_ITER_DECLARECOUNTER(0);
+
+			Tag_FSet(&mapthings[i].tags, tag);
+
+			TAG_ITER_LINES(0, tag, check)
+			{
+				if (lines[check].special == 20)
+				{
+					firstline = check;
+					break;
+				}
+			}
+
 			if (firstline != -1)
 				lines[firstline].args[3] |= TMPF_CRUSH;
-			mapthings[i].tag = mapthings[i].angle;
+
 			mapthings[i].type = 761;
 			break;
 		}
 		case 780:
-			mapthings[i].tag = mapthings[i].extrainfo;
+			Tag_FSet(&mapthings[i].tags, mapthings[i].extrainfo);
 			break;
 		default:
 			break;
@@ -3243,6 +3282,7 @@ static boolean P_LoadMapFromFile(void)
 {
 	virtres_t *virt = vres_GetMap(lastloadedmaplumpnum);
 	virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
+	size_t i;
 	udmf = textmap != NULL;
 
 	if (!P_LoadMapData(virt))
@@ -3252,7 +3292,7 @@ static boolean P_LoadMapFromFile(void)
 
 	P_LinkMapData();
 
-	P_InitTagLists();   // Create xref tables for tags
+	Taglist_InitGlobalTables();
 
 	if (!udmf)
 		P_ConvertBinaryMap();
@@ -3265,6 +3305,10 @@ static boolean P_LoadMapFromFile(void)
 	memcpy(spawnsectors, sectors, numsectors * sizeof(*sectors));
 	memcpy(spawnlines, lines, numlines * sizeof(*lines));
 	memcpy(spawnsides, sides, numsides * sizeof(*sides));
+
+	for (i = 0; i < numsectors; i++)
+		if (sectors[i].tags.count)
+			spawnsectors[i].tags.tags = memcpy(Z_Malloc(sectors[i].tags.count*sizeof(mtag_t), PU_LEVEL, NULL), sectors[i].tags.tags, sectors[i].tags.count*sizeof(mtag_t));
 
 	P_MakeMapMD5(virt, &mapmd5);
 
