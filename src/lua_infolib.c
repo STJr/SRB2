@@ -30,7 +30,7 @@
 extern CV_PossibleValue_t Color_cons_t[];
 extern UINT8 skincolor_modified[];
 
-boolean LUA_CallAction(const char *action, mobj_t *actor);
+boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor);
 state_t *astate;
 
 enum sfxinfo_read {
@@ -62,6 +62,8 @@ const char *const sfxinfo_wopt[] = {
 	"flags",
 	"caption",
 	NULL};
+
+boolean actionsoverridden[NUMACTIONS] = {false};
 
 //
 // Sprite Names
@@ -816,27 +818,21 @@ boolean LUA_SetLuaAction(void *stv, const char *action)
 	return true; // action successfully set.
 }
 
-boolean LUA_CallAction(const char *csaction, mobj_t *actor)
+boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 {
-	I_Assert(csaction != NULL);
 	I_Assert(actor != NULL);
 
-	if (!gL) // Lua isn't loaded,
+	if (!(gL && actionsoverridden[actionnum])) // Lua isn't loaded, or the action is not overriden,
 		return false; // action not called.
 
-	if (superstack && fasticmp(csaction, superactions[superstack-1])) // the action is calling itself,
+	if (superstack && fasticmp(actionpointers[actionnum].name, superactions[superstack-1])) // the action is calling itself,
 		return false; // let it call the hardcoded function instead.
 
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// grab function by uppercase name.
 	lua_getfield(gL, LUA_REGISTRYINDEX, LREG_ACTIONS);
-	{
-		char *action = Z_StrDup(csaction);
-		strupr(action);
-		lua_getfield(gL, -1, action);
-		Z_Free(action);
-	}
+	lua_getfield(gL, -1, actionpointers[actionnum].name);
 	lua_remove(gL, -2); // pop LREG_ACTIONS
 
 	if (lua_isnil(gL, -1)) // no match
@@ -859,7 +855,7 @@ boolean LUA_CallAction(const char *csaction, mobj_t *actor)
 	lua_pushinteger(gL, var1);
 	lua_pushinteger(gL, var2);
 
-	superactions[superstack] = csaction;
+	superactions[superstack] = actionpointers[actionnum].name;
 	++superstack;
 
 	LUA_Call(gL, 3, 0, -(2 + 3));
