@@ -203,9 +203,7 @@ void ST_doPaletteStuff(void)
 {
 	INT32 palette;
 
-	if (paused || P_AutoPause())
-		palette = 0;
-	else if (stplyr && stplyr->flashcount)
+	if (stplyr && stplyr->flashcount)
 		palette = stplyr->flashpal;
 	else
 		palette = 0;
@@ -214,8 +212,6 @@ void ST_doPaletteStuff(void)
 	if (rendermode == render_opengl)
 		palette = 0; // No flashpals here in OpenGL
 #endif
-
-	palette = min(max(palette, 0), 13);
 
 	if (palette != st_palette)
 	{
