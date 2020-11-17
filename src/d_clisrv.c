@@ -1595,9 +1595,7 @@ static void CL_ReloadReceivedSavegame(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-#ifdef HAVE_BLUA
 		LUA_InvalidatePlayer(&players[i]);
-#endif
 		sprintf(player_names[i], "Player %d", i + 1);
 	}
 
