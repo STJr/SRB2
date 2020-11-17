@@ -2537,14 +2537,14 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 		}
 	}
 
-	LUAh_PlayerQuit(&players[playernum], reason); // Lua hook for player quitting
+	LUA_HookPlayerQuit(&players[playernum], reason); // Lua hook for player quitting
 
 	// don't look through someone's view who isn't there
 	if (playernum == displayplayer)
 	{
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
-		LUAh_ViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
+		LUA_HookViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 		displayplayer = consoleplayer;
 	}
 
@@ -3025,7 +3025,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	if (pnum == consoleplayer)
 	{
 		if (Playing())
-			LUAh_GameQuit();
+			LUA_Hook(GameQuit);
 #ifdef DUMPCONSISTENCY
 		if (msg == KICK_MSG_CON_FAIL) SV_SavedGame();
 #endif
@@ -3445,7 +3445,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		COM_BufAddText(va("sayto %d %s\n", newplayernum, motd));
 
 	if (!rejoined)
-		LUAh_PlayerJoin(newplayernum);
+		LUA_HookInt(newplayernum, Hook(PlayerJoin));
 }
 
 static boolean SV_AddWaitingPlayers(const char *name, const char *name2)
@@ -3726,7 +3726,7 @@ static void HandleShutdown(SINT8 node)
 {
 	(void)node;
 	if (Playing())
-		LUAh_GameQuit();
+		LUA_Hook(GameQuit);
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -3742,7 +3742,7 @@ static void HandleTimeout(SINT8 node)
 {
 	(void)node;
 	if (Playing())
-		LUAh_GameQuit();
+		LUA_Hook(GameQuit);
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();

@@ -927,7 +927,7 @@ void Y_Ticker(void)
 	if (paused || P_AutoPause())
 		return;
 
-	LUAh_IntermissionThinker();
+	LUA_Hook(IntermissionThinker);
 
 	intertic++;
 

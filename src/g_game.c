@@ -1689,7 +1689,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		cmd->angleturn = orighookangle;
 
-		LUAh_PlayerCmd(player, cmd);
+		LUA_HookTiccmd(player, cmd, Hook(PlayerCmd));
 
 		extra = cmd->angleturn - orighookangle;
 		cmd->angleturn = origangle + extra;
@@ -1703,7 +1703,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	{
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
-		LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
+		LUA_HookViewpointSwitch(player, &players[consoleplayer], true);
 		displayplayer = consoleplayer;
 	}
 
@@ -2076,7 +2076,7 @@ boolean G_Responder(event_t *ev)
 					continue;
 
 				// Call ViewpointSwitch hooks here.
-				canSwitchView = LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
+				canSwitchView = LUA_HookViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
 				if (canSwitchView == 1) // Set viewpoint to this player
 					break;
 				else if (canSwitchView == 2) // Skip this player
@@ -2713,7 +2713,7 @@ void G_SpawnPlayer(INT32 playernum)
 
 	P_SpawnPlayer(playernum);
 	G_MovePlayerToSpawnOrStarpost(playernum);
-	LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
+	LUA_HookPlayer(&players[playernum], Hook(PlayerSpawn)); // Lua hook for player spawning :)
 }
 
 void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
@@ -3092,7 +3092,7 @@ void G_DoReborn(INT32 playernum)
 		}
 		else
 		{
-			LUAh_MapChange(gamemap);
+			LUA_HookInt(gamemap, Hook(MapChange));
 			titlecardforreload = true;
 			G_DoLoadLevel(true);
 			titlecardforreload = false;

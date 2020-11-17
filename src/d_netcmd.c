@@ -2103,7 +2103,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	}
 
 	mapnumber = M_MapNumber(mapname[3], mapname[4]);
-	LUAh_MapChange(mapnumber);
+	LUA_HookInt(mapnumber, Hook(MapChange));
 
 	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene, FLS);
 	if (demoplayback && !timingdemo)
@@ -2688,7 +2688,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	}
 
 	// Don't switch team, just go away, please, go awaayyyy, aaauuauugghhhghgh
-	if (!LUAh_TeamSwitch(&players[playernum], NetPacket.packet.newteam, players[playernum].spectator, NetPacket.packet.autobalance, NetPacket.packet.scrambled))
+	if (!LUA_HookTeamSwitch(&players[playernum], NetPacket.packet.newteam, players[playernum].spectator, NetPacket.packet.autobalance, NetPacket.packet.scrambled))
 		return;
 
 	//no status changes after hidetime
@@ -2849,7 +2849,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
 		if (displayplayer != consoleplayer) // You're already viewing yourself. No big deal.
-			LUAh_ViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
+			LUA_HookViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 		displayplayer = consoleplayer;
 	}
 
@@ -3607,7 +3607,7 @@ static void Command_Playintro_f(void)
 FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void)
 {
 	if (Playing())
-		LUAh_GameQuit();
+		LUA_Hook(GameQuit);
 	I_Quit();
 }
 
@@ -4270,7 +4270,7 @@ void Command_ExitGame_f(void)
 	INT32 i;
 
 	if (Playing())
-		LUAh_GameQuit();
+		LUA_Hook(GameQuit);
 
 	D_QuitNetGame();
 	CL_Reset();
