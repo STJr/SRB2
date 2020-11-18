@@ -4669,7 +4669,7 @@ DoneSection2:
 			break;
 
 		case 7: // Make player spin
-			if (!(player->pflags & PF_SPINNING) && P_IsObjectOnGround(player->mo))
+			if (!(player->pflags & PF_SPINNING))
 			{
 				player->pflags |= PF_SPINNING;
 				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
