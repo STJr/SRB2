@@ -2330,7 +2330,8 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 			P_MobjCheckWater(player->mo);
 			if (player->pflags & PF_SPINNING)
 			{
-				if (player->mo->state-states != S_PLAY_ROLL && !(player->pflags & PF_STARTDASH))
+				if (player->mo->state-states != S_PLAY_ROLL && !(player->pflags & PF_STARTDASH) && player->panim != PA_ROLL
+				&& player->panim != PA_ETC && player->panim != PA_ABILITY && player->panim != PA_ABILITY2)
 				{
 					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					S_StartSound(player->mo, sfx_spin);
