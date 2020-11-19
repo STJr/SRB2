@@ -35,24 +35,24 @@ static void GIF_setsizelimit(size_t size);
 
 static void CV_gifsizelimit_OnChange(void);
 
+static CV_PossibleValue_t gif_dynamicdelay_cons_t[] = {
+	{0, "Off"},
+	{1, "On"},
+	{2, "Accurate, experimental"},
+{0, NULL}};
+
 static CV_PossibleValue_t gif_split_cons_t[] = {
 	{0, "Off"},
 	{1, "On"},
 	{2, "Use last filename"},
 {0, NULL}};
 
-CV_PossibleValue_t gif_dynamicdelay_cons_t[] = {
-	{0, "Off"},
-	{1, "On"},
-	{2, "Accurate, experimental"},
-{0, NULL}};
-
 consvar_t cv_gif_optimize = CVAR_INIT ("gif_optimize", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_gif_downscale =  CVAR_INIT ("gif_downscale", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_gif_dynamicdelay = CVAR_INIT ("gif_dynamicdelay", "On", CV_SAVE, gif_dynamicdelay_cons_t, NULL);
 consvar_t cv_gif_localcolortable =  CVAR_INIT ("gif_localcolortable", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_gif_sizelimit = CVAR_INIT ("gif_sizelimit", "8192", (CV_SAVE | CV_CALL), CV_Unsigned, CV_gifsizelimit_OnChange);
 consvar_t cv_gif_split = CVAR_INIT ("gif_split", "Use last filename", CV_SAVE, gif_split_cons_t, NULL);
+consvar_t cv_gif_sizelimit = CVAR_INIT ("gif_sizelimit", "8192", (CV_SAVE | CV_CALL), CV_Unsigned, CV_gifsizelimit_OnChange);
 consvar_t cv_gif_showfilesize = CVAR_INIT ("gif_showfilesize", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_gif_showsplitcount = CVAR_INIT ("gif_showsplitcount", "On", CV_SAVE, CV_OnOff, NULL);
 
