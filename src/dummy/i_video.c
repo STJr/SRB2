@@ -41,6 +41,17 @@ INT32 VID_SetMode(INT32 modenum)
 	return 0;
 }
 
+boolean VID_IsASoftwareRenderer(rendermode_t mode)
+{
+	(void)mode;
+	return false;
+}
+
+boolean VID_InSoftwareRenderer(void)
+{
+	return false;
+}
+
 void VID_CheckRenderer(void) {}
 void VID_CheckGLLoaded(rendermode_t oldrender) {}
 

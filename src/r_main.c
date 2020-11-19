@@ -99,8 +99,6 @@ lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 #ifdef TRUECOLOR
 lighttable_u32_t *scalelight_u32[LIGHTLEVELS][MAXLIGHTSCALE];
 lighttable_u32_t *zlight_u32[LIGHTLEVELS][MAXLIGHTZ];
-
-static void TrueColor_OnChange(void);
 #endif
 
 // Hack to support extra boom colormaps.
@@ -170,16 +168,8 @@ consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, dr
 //consvar_t cv_precipdensity = CVAR_INIT ("precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL);
 consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
 
-// lactokaiju: truecolor
 #ifdef TRUECOLOR
-consvar_t cv_tcstate = CVAR_INIT ("tc_state", "On", CV_CALL|CV_NOINIT, CV_OnOff, TrueColor_OnChange);
-consvar_t cv_tccolormap = CVAR_INIT ("tc_colormap", "On", CV_SAVE, CV_OnOff, NULL);
-
-static void TrueColor_OnChange(void)
-{
-	truecolor = (!!cv_tcstate.value);
-	setmodeneeded = vid.modenum + 1;
-}
+consvar_t cv_truecolor_colormaps = CVAR_INIT ("truecolor_colormaps", "On", CV_SAVE, CV_OnOff, NULL);
 #endif
 
 // Okay, whoever said homremoval causes a performance hit should be shot.
@@ -971,7 +961,7 @@ void R_ExecuteSetViewSize(void)
 	R_SetSkyScale();
 
 	// planes
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 	{
 		// this is only used for planes rendering in software mode
 		j = viewheight*16;
@@ -1009,9 +999,9 @@ void R_ExecuteSetViewSize(void)
 		}
 	}
 
-	// continue to do the software setviewsize as long as we use the reference software view
+	// continue to do the hardware setviewsize as long as we use the reference software view
 #ifdef HWRENDER
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		HWR_SetViewSize();
 #endif
 
@@ -1116,7 +1106,7 @@ static void R_SetupFreelook(player_t *player, boolean skybox)
 
 	// clip it in the case we are looking a hardware 90 degrees full aiming
 	// (lmps, network and use F12...)
-	if (rendermode == render_soft
+	if (VID_InSoftwareRenderer()
 #ifdef HWRENDER
 		|| (rendermode == render_opengl
 			&& (cv_glshearing.value == 1
@@ -1127,7 +1117,7 @@ static void R_SetupFreelook(player_t *player, boolean skybox)
 		G_SoftwareClipAimingPitch((INT32 *)&aimingangle);
 	}
 
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 	{
 		dy = (AIMINGTODY(aimingangle)>>FRACBITS) * viewwidth/BASEVIDWIDTH;
 		yslope = &yslopetab[viewheight*8 - (viewheight/2 + dy)];
@@ -1479,9 +1469,9 @@ void R_RenderPlayerView(player_t *player)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 32+(timeinmap&15));
 	}
 
-	// lactokaiju: truecolor
+	// Lactozilla: truecolor
 #ifdef TRUECOLOR
-	tc_colormap = (truecolor && (!!cv_tccolormap.value));
+	tc_colormaps = (truecolor && (!!cv_truecolor_colormaps.value));
 #endif
 
 	R_SetupFrame(player);
@@ -1653,10 +1643,8 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_skybox);
 	CV_RegisterVar(&cv_ffloorclip);
 
-	// lactokaiju: truecolor
 #ifdef TRUECOLOR
-	CV_RegisterVar(&cv_tccolormap);
-	CV_RegisterVar(&cv_tcstate);
+	CV_RegisterVar(&cv_truecolor_colormaps);
 #endif
 
 	CV_RegisterVar(&cv_cam_dist);

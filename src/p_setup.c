@@ -3787,7 +3787,7 @@ static void P_RunSpecialStageWipe(void)
 		F_WipeColorFill(0);
 #endif
 #ifdef TRUECOLOR
-	if ((rendermode == render_soft) && truecolor)
+	if (VID_InSoftwareRenderer() && truecolor)
 		F_WipeColorFill(0);
 #endif
 
@@ -3824,7 +3824,7 @@ static void P_RunLevelWipe(void)
 		F_WipeColorFill(31);
 #endif
 #ifdef TRUECOLOR
-	if ((rendermode == render_soft) && truecolor)
+	if (VID_InSoftwareRenderer() && truecolor)
 		F_WipeColorFill(31);
 #endif
 

@@ -333,7 +333,7 @@ void Y_IntermissionDrawer(void)
 		V_DrawScaledPatch(0, 0, 0, interpic);
 	else if (!usetile)
 	{
-		if (rendermode == render_soft && usebuffer)
+		if (VID_InSoftwareRenderer() && usebuffer)
 		{
 			// no y_buffer
 			if (y_buffer == NULL)
@@ -349,7 +349,7 @@ void Y_IntermissionDrawer(void)
 			}
 		}
 #ifdef HWRENDER
-		else if (rendermode != render_soft && usebuffer)
+		else if (!VID_InSoftwareRenderer() && usebuffer)
 			HWR_DrawIntermissionBG();
 #endif
 		else if (bgpatch)
@@ -2070,7 +2070,7 @@ static void Y_UnloadData(void)
 {
 	// In hardware mode, don't Z_ChangeTag a pointer returned by W_CachePatchName().
 	// It doesn't work and is unnecessary.
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		return;
 
 	// unload the background patches

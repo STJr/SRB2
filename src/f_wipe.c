@@ -804,7 +804,7 @@ void F_WipeStartScreen(void)
 {
 #ifndef NOWIPE
 #ifdef HWRENDER
-	if(rendermode != render_soft)
+	if(!VID_InSoftwareRenderer())
 	{
 		HWR_StartScreenWipe();
 		return;
@@ -821,7 +821,7 @@ void F_WipeEndScreen(void)
 {
 #ifndef NOWIPE
 #ifdef HWRENDER
-	if(rendermode != render_soft)
+	if(!VID_InSoftwareRenderer())
 	{
 		HWR_EndScreenWipe();
 		return;
@@ -886,7 +886,7 @@ boolean F_TryColormapFade(UINT8 wipecolor)
 			F_WipeColorFill(wipecolor);
 #endif
 #ifdef TRUECOLOR
-		if ((rendermode == render_soft) && truecolor)
+		if (VID_InSoftwareRenderer() && truecolor)
 			F_WipeColorFill(wipecolor);
 #endif
 		return true;

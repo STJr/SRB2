@@ -22,14 +22,15 @@
 
 typedef enum
 {
-	/// Software
-	render_soft = 1,
+	// Software renderers
+	render_software = 1,
+	render_software_truecolor,
 
-	/// OpenGL
-	render_opengl = 2,
+	// OpenGL
+	render_opengl,
 
-	/// Dedicated
-	render_none = 3  // for dedicated server
+	// Dedicated mode
+	render_none,
 } rendermode_t;
 
 /**	\brief current render mode
@@ -104,6 +105,15 @@ void VID_StartupOpenGL(void);
 /**	\brief Checks if OpenGL loaded
 */
 void VID_CheckGLLoaded(rendermode_t oldrender);
+
+/**	\brief Returns true if mode is a Software renderer.
+	\param mode A render mode.
+*/
+boolean VID_IsASoftwareRenderer(rendermode_t mode);
+
+/**	\brief Returns true if the current rendermode.
+*/
+boolean VID_InSoftwareRenderer(void);
 
 /**	\brief	The VID_GetModeName function
 

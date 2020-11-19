@@ -617,7 +617,6 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 		return;
 
 #ifdef HWRENDER
-	//if (rendermode != render_soft && !con_startup)		// Why?
 	if (rendermode == render_opengl)
 	{
 		HWR_DrawStretchyFixedPatch((GLPatch_t *)patch, x, y, pscale, vscale, scrn, colormap);
@@ -998,7 +997,6 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		return;
 
 #ifdef HWRENDER
-	//if (rendermode != render_soft && !con_startup)		// Not this again
 	if (rendermode == render_opengl)
 	{
 		HWR_DrawCroppedPatch((GLPatch_t*)patch,x,y,pscale,scrn,sx,sy,w,h);
@@ -1326,7 +1324,7 @@ static void V_BlitScaledPic(INT32 px1, INT32 py1, INT32 scrn, pic_t *pic);
 void V_DrawScaledPic(INT32 rx1, INT32 ry1, INT32 scrn, INT32 lumpnum)
 {
 #ifdef HWRENDER
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 	{
 		HWR_DrawPic(rx1, ry1, lumpnum);
 		return;
@@ -1395,7 +1393,6 @@ void V_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 		return;
 
 #ifdef HWRENDER
-	//if (rendermode != render_soft && !con_startup)		// Not this again
 	if (rendermode == render_opengl)
 	{
 		HWR_DrawFill(x, y, w, h, c);
@@ -2299,9 +2296,9 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 		UINT32 *deststop32 = ((UINT32 *)screens[0]) + vid.width * vid.height;
 		UINT32 *buf32 = deststop32;
 		if (boxheight < 0)
-			buf32 += vid.width * boxheight;
+			buf += vid.rowbytes * boxheight;
 		else // 4 lines of space plus gaps between and some leeway
-			buf32 -= vid.width * ((boxheight * 4) + (boxheight/2)*5);
+			buf -= vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5);
 		for (; buf32 < deststop32; ++buf32)
 			*buf32 = TC_BlendTrueColor(*buf32, fadecolor, 128);
 	}
@@ -3932,7 +3929,7 @@ void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param)
 	INT32 height, yoffset;
 
 #ifdef HWRENDER
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		return;
 #endif
 

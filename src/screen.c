@@ -66,8 +66,9 @@ consvar_t cv_renderview = CVAR_INIT ("renderview", "On", 0, CV_OnOff, NULL);
 static void SCR_ActuallyChangeRenderer(void);
 static CV_PossibleValue_t cv_renderer_t[] = {
 	{1, "Software"},
+	{2, "Software (truecolor)"},
 #ifdef HWRENDER
-	{2, "OpenGL"},
+	{3, "OpenGL"},
 #endif
 	{0, NULL}
 };
@@ -239,10 +240,19 @@ void SCR_SetMode(void)
 	// Lactozilla: Renderer switching
 	if (setrenderneeded)
 	{
-		Z_PreparePatchFlush();
-		needpatchflush = true;
-		needpatchrecache = true;
+#ifdef TRUECOLOR
+		truecolor = (setrenderneeded == render_software_truecolor);
+#endif
+
+		if (!(VID_IsASoftwareRenderer(setrenderneeded) && VID_IsASoftwareRenderer(rendermode)))
+		{
+			Z_PreparePatchFlush();
+			needpatchflush = true;
+			needpatchrecache = true;
+		}
+
 		VID_CheckRenderer();
+
 		if (!setmodeneeded)
 			VID_SetMode(vid.modenum);
 	}
@@ -516,26 +526,20 @@ void SCR_ChangeRenderer(void)
 		else
 #endif
 		if (M_CheckParm("-software"))
-			target_renderer = rendermode = render_soft;
+			target_renderer = rendermode = render_software;
 		// set cv_renderer back
 		SCR_ChangeRendererCVars(rendermode);
 		return;
 	}
 
-	if (cv_renderer.value == 1)
-		target_renderer = render_soft;
-	else if (cv_renderer.value == 2)
-		target_renderer = render_opengl;
+	target_renderer = cv_renderer.value;
 	SCR_ActuallyChangeRenderer();
 }
 
 void SCR_ChangeRendererCVars(INT32 mode)
 {
 	// set cv_renderer back
-	if (mode == render_soft)
-		CV_StealthSetValue(&cv_renderer, 1);
-	else if (mode == render_opengl)
-		CV_StealthSetValue(&cv_renderer, 2);
+	CV_StealthSetValue(&cv_renderer, mode);
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)

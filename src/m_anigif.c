@@ -561,7 +561,7 @@ static void GIF_framewrite(void)
 		// before blit movie_screen points to last frame, cur_screen points to this frame
 		UINT8 *cur_screen = screens[0];
 #ifdef TRUECOLOR
-		if ((rendermode == render_soft) && (truecolor))
+		if (VID_InSoftwareRenderer() && truecolor)
 		{
 			cur_screen = screens[2] + (vid.width * vid.height);
 			GIF_rgbconvert(screens[0], cur_screen, 4);
@@ -570,7 +570,7 @@ static void GIF_framewrite(void)
 		GIF_optimizeregion(cur_screen, movie_screen, &blitx, &blity, &blitw, &blith);
 
 		// blit to temp screen
-		if (rendermode == render_soft)
+		if (VID_InSoftwareRenderer())
 		{
 #ifdef TRUECOLOR
 			if (truecolor)
@@ -605,7 +605,7 @@ static void GIF_framewrite(void)
 			}
 			else
 #endif
-			if (rendermode == render_soft)
+			if (VID_InSoftwareRenderer())
 			{
 #ifdef TRUECOLOR
 				if (truecolor)
@@ -619,12 +619,12 @@ static void GIF_framewrite(void)
 
 		// Copy the first frame into the movie screen
 		// OpenGL already does the same above.
-		if (gif_frames == 0 && rendermode == render_soft)
+		if (gif_frames == 0 && VID_InSoftwareRenderer())
 			I_ReadScreen(movie_screen);
 
 		movie_screen = screens[0];
 #ifdef TRUECOLOR
-		if ((rendermode == render_soft) && (truecolor))
+		if (VID_InSoftwareRenderer() && truecolor)
 		{
 			UINT8 *blit = screens[2] + (vid.width * vid.height);
 			GIF_rgbconvert(screens[0], blit, 4);

@@ -63,7 +63,7 @@ UINT32 *topleft_u32;
 // =========================================================================
 
 // Renderer states
-boolean tc_colormap;
+boolean tc_colormaps;
 
 // Column / span drawer states
 UINT8 dp_lighting;
@@ -560,7 +560,7 @@ void R_FillBackScreen(void)
 	INT32 x, y, step, boff;
 
 	// quickfix, don't cache lumps in both modes
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		return;
 
 	// draw pattern around the status bar too (when hires),
@@ -656,7 +656,7 @@ void R_DrawViewBorder(void)
 	if (rendermode == render_none)
 		return;
 #ifdef HWRENDER
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 	{
 		HWR_DrawViewBorder(0);
 		return;

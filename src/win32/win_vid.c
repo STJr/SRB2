@@ -47,7 +47,7 @@
 // -------
 
 // this is the CURRENT rendermode!! very important: used by w_wad, and much other code
-rendermode_t rendermode = render_soft;
+rendermode_t rendermode = render_software;
 static void OnTop_OnChange(void);
 // synchronize page flipping with screen refresh
 static CV_PossibleValue_t CV_NeverOnOff[] = {{-1, "Never"}, {0, "Off"}, {1, "On"}, {0, NULL}};
@@ -228,7 +228,7 @@ void I_StartupGraphics(void)
 		rendermode = render_opengl;
 	else
 #endif
-		rendermode = render_soft;
+		rendermode = render_software;
 
 	if (dedicated)
 		rendermode = render_none;
@@ -277,7 +277,7 @@ void I_ShutdownGraphics(void)
 	}
 
 #ifdef HWRENDER
-	if (oldrendermode != render_soft)
+	if (!VID_IsASoftwareRenderer(oldrendermode))
 	{
 		HWR_Shutdown(); // free stuff from the hardware renderer
 		HWD.pfnShutdown(); // close 3d card display
@@ -293,7 +293,7 @@ void I_ShutdownGraphics(void)
 	}
 
 #ifdef HWRENDER
-	if (rendermode == render_soft)
+	if (!VID_InSoftwareRenderer())
 #endif
 		CloseDirectDraw();
 
@@ -316,7 +316,7 @@ static inline boolean I_SkipFrame(void)
 {
 	static boolean skip = false;
 
-	if (render_soft != rendermode)
+	if (!VID_InSoftwareRenderer())
 		return false;
 
 	skip = !skip;
@@ -392,7 +392,7 @@ void I_FinishUpdate(void)
 	}
 	else
 #ifdef HWRENDER
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		HWD.pfnFinishUpdate(cv_vidwait.value);
 	else
 #endif
@@ -470,7 +470,7 @@ void I_LoadingScreen(LPCSTR msg)
 void I_ReadScreen(UINT8 *scr)
 {
 	// DEBUGGING
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		I_Error("I_ReadScreen: called while in non-software mode");
 	VID_BlitLinearScreen(screens[0], scr, vid.width*vid.bpp, vid.height, vid.width*vid.bpp,
 		vid.rowbytes);
@@ -498,7 +498,7 @@ void I_SetPalette(RGBA_t *palette)
 	}
 	else
 #ifdef HWRENDER
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 #endif
 	{
 		PALETTEENTRY mainpal[256];
@@ -693,7 +693,7 @@ static VOID VID_Init(VOID)
 
 #ifdef HWRENDER
 	// initialize the appropriate display device
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 	{
 		const char *drvname = NULL;
 
@@ -727,11 +727,11 @@ static VOID VID_Init(VOID)
 				default:
 					break;
 			}
-			rendermode = render_soft;
+			rendermode = render_software;
 		}
 	}
 
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 #endif
 		if (!bWinParm)
 		{
@@ -939,7 +939,7 @@ INT32 VID_SetMode(INT32 modenum)
 		bAppFullScreen = TRUE;
 		bDIBMode = FALSE;
 #ifdef HWRENDER
-		if (rendermode != render_soft)
+		if (!VID_InSoftwareRenderer())
 		{
 			// purge all patch graphics stored in software format
 			//Z_FreeTags (PU_PURGELEVEL, PU_PURGELEVEL+100);
@@ -950,6 +950,16 @@ INT32 VID_SetMode(INT32 modenum)
 
 	I_RestartSysMouse();
 	return 1;
+}
+
+boolean VID_IsASoftwareRenderer(rendermode_t mode)
+{
+	return (mode == render_software);
+}
+
+boolean VID_InSoftwareRenderer(void)
+{
+	return VID_IsASoftwareRenderer(rendermode);
 }
 
 void VID_CheckRenderer(void) {}
@@ -1056,7 +1066,7 @@ static void VID_Command_ModeInfo_f(void)
 	CONS_Printf("\x82" "%s\n", VID_GetModeName(modenum));
 	CONS_Printf(M_GetText("width: %d\nheight: %d\n"),
 		pv->width, pv->height);
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 		CONS_Printf(M_GetText("bytes per scanline: %d\nbytes per pixel: %d\nnumpages: %d\n"),
 			pv->rowbytes, pv->bytesperpixel, pv->numpages);
 }

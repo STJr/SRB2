@@ -8,7 +8,7 @@
 
 #include "utils/Log.h"
 
-rendermode_t rendermode = render_soft;
+rendermode_t rendermode = render_software;
 
 boolean highcolor = false;
 boolean truecolor = false;
@@ -51,6 +51,16 @@ INT32 VID_SetMode(INT32 modenum)
   vid.bpp = 1;
   vid.buffer = android_surface;
   return 0;
+}
+
+boolean VID_IsASoftwareRenderer(rendermode_t mode)
+{
+	return (mode == render_software);
+}
+
+boolean VID_InSoftwareRenderer(void)
+{
+	return VID_IsASoftwareRenderer(rendermode);
 }
 
 void VID_CheckRenderer(void) {}

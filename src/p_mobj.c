@@ -6847,7 +6847,7 @@ void P_RunOverlays(void)
 			continue;
 		}
 
-		if (!splitscreen /*&& rendermode != render_soft*/)
+		if (!splitscreen /*&& !VID_InSoftwareRenderer()*/)
 		{
 			angle_t viewingangle;
 

@@ -266,7 +266,7 @@ void R_DrawTranslucentWaterSpan_NPO2_32(void);
 // truecolor states
 //
 
-extern boolean tc_colormap;
+extern boolean tc_colormaps;
 
 FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt);
 #define TC_CalcScaleLight(light_p) (((scalelight_u32[0][0] - light_p) / 256) * 8);

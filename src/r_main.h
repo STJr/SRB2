@@ -116,10 +116,8 @@ extern consvar_t cv_fov;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 
-// lactokaiju: truecolor
 #ifdef TRUECOLOR
-extern consvar_t cv_tcstate;
-extern consvar_t cv_tccolormap;
+extern consvar_t cv_truecolor_colormaps;
 #endif
 
 // Called by startup code.

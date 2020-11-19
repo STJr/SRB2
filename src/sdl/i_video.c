@@ -94,8 +94,8 @@ static INT32 numVidModes = -1;
 */
 static char vidModeName[33][32]; // allow 33 different modes
 
-rendermode_t rendermode = render_soft;
-static rendermode_t chosenrendermode = render_soft; // set by command line arguments
+rendermode_t rendermode = render_software;
+static rendermode_t chosenrendermode = render_software; // set by command line arguments
 
 boolean highcolor = false;
 boolean truecolor = false;
@@ -239,7 +239,7 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 	}
 #endif
 
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 	{
 		SDL_RenderClear(renderer);
 		SDL_RenderSetLogicalSize(renderer, width, height);
@@ -1163,7 +1163,7 @@ void I_UpdateNoBlit(void)
 		}
 		else
 #endif
-		if (rendermode == render_soft)
+		if (VID_InSoftwareRenderer())
 		{
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
@@ -1181,7 +1181,7 @@ static inline boolean I_SkipFrame(void)
 #if 0
 	static boolean skip = false;
 
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		return false;
 
 	skip = !skip;
@@ -1226,7 +1226,7 @@ void I_FinishUpdate(void)
 	if (cv_showping.value && netgame && consoleplayer != serverplayer)
 		SCR_DisplayLocalPing();
 
-	if (rendermode == render_soft && screens[0])
+	if (VID_InSoftwareRenderer() && screens[0])
 	{
 		SDL_Rect rect;
 
@@ -1276,7 +1276,7 @@ void I_UpdateNoVsync(void)
 //
 void I_ReadScreen(UINT8 *scr)
 {
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		I_Error ("I_ReadScreen: called while in non-software mode");
 	else
 		VID_BlitLinearScreen(screens[0], scr,
@@ -1467,7 +1467,7 @@ static SDL_bool Impl_CreateContext(void)
 	}
 	else
 #endif
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 	{
 		int flags = 0; // Use this to set SDL_RENDERER_* flags now
 		if (usesdl2soft)
@@ -1496,7 +1496,7 @@ void VID_CheckGLLoaded(rendermode_t oldrender)
 		CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
 		rendermode = oldrender;
 		if (chosenrendermode == render_opengl) // fallback to software
-			rendermode = render_soft;
+			rendermode = render_software;
 		if (setrenderneeded)
 		{
 			CV_StealthSetValue(&cv_renderer, oldrender);
@@ -1568,7 +1568,7 @@ void VID_CheckRenderer(void)
 	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, (rendererchanged ? SDL_FALSE : SDL_TRUE));
 	Impl_VideoSetupBuffer();
 
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 	{
 		if (bufSurface)
 		{
@@ -1610,12 +1610,9 @@ INT32 VID_SetMode(INT32 modeNum)
 	vid.bpp = 1;
 
 #ifdef TRUECOLOR
+	// Lactozilla: truecolor
 	if (truecolor)
 		vid.bpp = 4;
-#endif
-
-	// lactokaiju: truecolor
-#ifdef TRUECOLOR
 	D_CheckColorDepth(vid.bpp, oldbitdepth);
 #endif
 
@@ -1631,6 +1628,16 @@ INT32 VID_SetMode(INT32 modeNum)
 	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 	VID_CheckRenderer();
 	return SDL_TRUE;
+}
+
+boolean VID_IsASoftwareRenderer(rendermode_t mode)
+{
+	return (mode == render_software || mode == render_software_truecolor);
+}
+
+boolean VID_InSoftwareRenderer(void)
+{
+	return VID_IsASoftwareRenderer(rendermode);
 }
 
 static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
@@ -1785,15 +1792,10 @@ void I_StartupGraphics(void)
 		chosenrendermode = rendermode = render_opengl;
 	else if (M_CheckParm("-software"))
 #endif
-		chosenrendermode = rendermode = render_soft;
+		chosenrendermode = rendermode = render_software;
 
 	usesdl2soft = M_CheckParm("-softblit");
 	borderlesswindow = M_CheckParm("-borderless");
-
-	// lactokaiju: truecolor
-#ifdef TRUECOLOR
-	truecolor = M_CheckParm("-truecolor");
-#endif
 
 	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
 	VID_Command_ModeList_f();
@@ -1910,7 +1912,7 @@ void VID_StartupOpenGL(void)
 
 		if (vid_opengl_state == -1)
 		{
-			rendermode = render_soft;
+			rendermode = render_software;
 			setrenderneeded = 0;
 		}
 		glstartup = true;
@@ -1925,7 +1927,7 @@ void I_ShutdownGraphics(void)
 	rendermode = render_none;
 	if (icoSurface) SDL_FreeSurface(icoSurface);
 	icoSurface = NULL;
-	if (oldrendermode == render_soft)
+	if (VID_IsASoftwareRenderer(oldrendermode))
 	{
 		if (vidSurface) SDL_FreeSurface(vidSurface);
 		vidSurface = NULL;

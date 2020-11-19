@@ -102,10 +102,14 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 	RGBA_t texelu32;
 	INT32 sourcebpp = Picture_FormatBPP(format);
 
+	static UINT32 (*PixelBlendFunction)(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha) = ASTBlendPixel;
 	(void)patchheight; // This parameter is unused
 
 	if (originPatch) // originPatch can be NULL here, unlike in the software version
+	{
+		PixelBlendFunction = ASTBlendTexturePixel;
 		originy = originPatch->originy;
+	}
 
 	memset(&texelu32, 0x00, sizeof(RGBA_t));
 
@@ -197,7 +201,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			// Alam: SRB2 uses Mingw, HUGS
 			switch (bpp)
 			{
-				case 2 : // uhhhhhhhh..........
+				case 2 :
 						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
 							 texel = ASTBlendPaletteIndexes(*(dest+1), texel, originPatch->style, originPatch->alpha);
 						 texelu16 = (UINT16)((alpha<<8) | texel);
@@ -208,7 +212,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 						 {
 							 RGBA_t rgbatexel;
 							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+							 colortemp.rgba = PixelBlendFunction(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
 						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 						 break;
@@ -218,7 +222,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 						 {
 							 RGBA_t rgbatexel;
 							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+							 colortemp.rgba = PixelBlendFunction(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
 						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t));
 						 break;
@@ -266,8 +270,13 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 	RGBA_t texelu32;
 	INT32 sourcebpp = Picture_FormatBPP(format);
 
+	static UINT32 (*PixelBlendFunction)(RGBA_t background, RGBA_t foreground, int style, UINT8 alpha) = ASTBlendPixel;
+
 	if (originPatch) // originPatch can be NULL here, unlike in the software version
+	{
+		PixelBlendFunction = ASTBlendTexturePixel;
 		originy = originPatch->originy;
+	}
 
 	memset(&texelu32, 0x00, sizeof(RGBA_t));
 
@@ -360,7 +369,7 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			// Alam: SRB2 uses Mingw, HUGS
 			switch (bpp)
 			{
-				case 2 : // uhhhhhhhh..........
+				case 2 :
 						 if ((originPatch != NULL) && (originPatch->style != AST_COPY))
 							 texel = ASTBlendPaletteIndexes(*(dest+1), texel, originPatch->style, originPatch->alpha);
 						 texelu16 = (UINT16)((alpha<<8) | texel);
@@ -371,7 +380,7 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 						 {
 							 RGBA_t rgbatexel;
 							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+							 colortemp.rgba = PixelBlendFunction(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
 						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t)-sizeof(UINT8));
 						 break;
@@ -381,7 +390,7 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 						 {
 							 RGBA_t rgbatexel;
 							 rgbatexel.rgba = *(UINT32 *)dest;
-							 colortemp.rgba = ASTBlendTexturePixel(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
+							 colortemp.rgba = PixelBlendFunction(rgbatexel, colortemp, originPatch->style, originPatch->alpha);
 						 }
 						 memcpy(dest, &colortemp, sizeof(RGBA_t));
 						 break;

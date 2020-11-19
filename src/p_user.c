@@ -2612,10 +2612,10 @@ static void P_CheckBustableBlocks(player_t *player)
 
 	if ((netgame || multiplayer) && player->spectator)
 		return;
-	
+
 	oldx = player->mo->x;
 	oldy = player->mo->y;
-	
+
 	if (!(player->pflags & PF_BOUNCING)) // Bouncers only get to break downwards, not sideways
 	{
 		P_UnsetThingPosition(player->mo);
@@ -2634,7 +2634,7 @@ static void P_CheckBustableBlocks(player_t *player)
 
 		if (!node->m_sector->ffloors)
 			continue;
-		
+
 		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
 			if (!P_PlayerCanBust(player, rover))
@@ -8693,7 +8693,7 @@ void P_MovePlayer(player_t *player)
 #endif
 
 #ifdef FLOORSPLATS
-	if (cv_shadow.value && rendermode == render_soft)
+	if (cv_shadow.value && VID_InSoftwareRenderer())
 		R_AddFloorSplat(player->mo->subsector, player->mo, "SHADOW", player->mo->x,
 			player->mo->y, player->mo->floorz, SPLATDRAWMODE_OPAQUE);
 #endif

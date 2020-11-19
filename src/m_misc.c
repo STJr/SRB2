@@ -769,7 +769,7 @@ static void M_PNGhdr(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_
 	else
 	{
 		png_set_IHDR(png_ptr, png_info_ptr, width, height, 8,
-		((rendermode == render_soft && truecolor) ? PNG_COLOR_TYPE_RGB_ALPHA : PNG_COLOR_TYPE_RGB),
+		((VID_InSoftwareRenderer() && truecolor) ? PNG_COLOR_TYPE_RGB_ALPHA : PNG_COLOR_TYPE_RGB),
 		png_interlace, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 		png_write_info_before_PLTE(png_ptr, png_info_ptr);
 		png_set_compression_strategy(png_ptr, Z_FILTERED);
@@ -807,7 +807,8 @@ static void M_PNGText(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png
 
 	switch (rendermode)
 	{
-		case render_soft:
+		case render_software:
+		case render_software_truecolor:
 			strcpy(rendermodetxt, "Software");
 			break;
 		case render_opengl:
@@ -1121,7 +1122,7 @@ static inline moviemode_t M_StartMovieAPNG(const char *pathname)
 		return MM_OFF;
 	}
 
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 	{
 		M_CreateScreenShotPalette();
 		palette = screenshot_palette;
@@ -1250,7 +1251,7 @@ void M_SaveFrame(void)
 					return;
 				}
 
-				if (rendermode == render_soft)
+				if (VID_InSoftwareRenderer())
 				{
 					// munge planar buffer to linear
 					linear = screens[2];
@@ -1262,7 +1263,7 @@ void M_SaveFrame(void)
 #endif
 				M_PNGFrame(apng_ptr, apng_info_ptr, (png_bytep)linear);
 #ifdef HWRENDER
-				if (rendermode != render_soft && linear)
+				if (!VID_InSoftwareRenderer() && linear)
 					free(linear);
 #endif
 
@@ -1557,13 +1558,13 @@ void M_DoScreenShot(void)
 #ifdef USE_PNG
 	freename = Newsnapshotfile(pathname,"png");
 #else
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 		freename = Newsnapshotfile(pathname,"pcx");
 	else if (rendermode == render_opengl)
 		freename = Newsnapshotfile(pathname,"tga");
 #endif
 
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 	{
 		// munge planar buffer to linear
 		linear = screens[2];

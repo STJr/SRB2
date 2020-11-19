@@ -238,7 +238,7 @@ void ST_doPaletteStuff(void)
 	}
 
 #ifdef TRUECOLOR
-	if ((rendermode == render_soft) && (truecolor) && (flashpal > 0))
+	if (VID_InSoftwareRenderer() && truecolor && (flashpal > 0))
 	{
 		UINT32 *buf32 = (UINT32 *)screens[0];
 		const UINT32 *deststop32 = buf32 + vid.width * vid.height;
@@ -2826,7 +2826,7 @@ void ST_Drawer(void)
 	//25/08/99: Hurdler: palette changes is done for all players,
 	//                   not only player1! That's why this part
 	//                   of code is moved somewhere else.
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 #endif
 		if (rendermode != render_none) ST_doPaletteStuff();
 

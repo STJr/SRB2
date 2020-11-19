@@ -1709,7 +1709,7 @@ void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, sp
 		if (Picture_IsLumpPNG((const UINT8 *)patch, lumplength))
 		{
 #ifdef PICTURES_ALLOWDEPTH
-			if (rendermode == render_opengl)
+			if (VID_InSoftwareRenderer() || rendermode == render_opengl)
 				format = PICFMT_PATCH32;
 #endif
 			patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, format, NULL, NULL, NULL, NULL, lumplength, NULL, 0);

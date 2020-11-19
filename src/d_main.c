@@ -287,7 +287,7 @@ static void D_Display(void)
 #endif
 	}
 
-	if (rendermode == render_soft && !splitscreen)
+	if (VID_InSoftwareRenderer() && !splitscreen)
 		R_CheckViewMorph();
 
 	// change the view size if needed
@@ -443,11 +443,11 @@ static void D_Display(void)
 						topleft_u32 = (UINT32 *)screens[0] + viewwindowy*vid.width + viewwindowx;
 #endif
 					objectsdrawn = 0;
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
+#ifdef HWRENDER
+					if (!VID_InSoftwareRenderer())
 						HWR_RenderPlayerView(0, &players[displayplayer]);
 					else
-	#endif
+#endif
 					if (rendermode != render_none)
 						R_RenderPlayerView(&players[displayplayer]);
 				}
@@ -455,11 +455,11 @@ static void D_Display(void)
 				// render the second screen
 				if (splitscreen && players[secondarydisplayplayer].mo)
 				{
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
+#ifdef HWRENDER
+					if (!VID_InSoftwareRenderer())
 						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
 					else
-	#endif
+#endif
 					if (rendermode != render_none)
 					{
 						viewwindowy = vid.height / 2;
@@ -479,7 +479,7 @@ static void D_Display(void)
 				}
 
 				// Image postprocessing effect
-				if (rendermode == render_soft)
+				if (VID_InSoftwareRenderer())
 				{
 					if (!splitscreen)
 						R_ApplyViewMorph();
@@ -494,7 +494,7 @@ static void D_Display(void)
 
 			if (lastdraw)
 			{
-				if (rendermode == render_soft)
+				if (VID_InSoftwareRenderer())
 				{
 					VID_BlitLinearScreen(screens[0], screens[1], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
 					Y_ConsiderScreenBuffer();
@@ -1369,11 +1369,18 @@ void D_SRB2Main(void)
 	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
 	{
 		CONS_Printf(M_GetText("Switching the renderer...\n"));
-		Z_PreparePatchFlush();
+
+#ifdef TRUECOLOR
+		truecolor = (setrenderneeded == render_software_truecolor);
+#endif
 
 		// set needpatchflush / needpatchrecache true for D_CheckRendererState
-		needpatchflush = true;
-		needpatchrecache = true;
+		if (!(VID_IsASoftwareRenderer(setrenderneeded) && VID_IsASoftwareRenderer(rendermode)))
+		{
+			Z_PreparePatchFlush();
+			needpatchflush = true;
+			needpatchrecache = true;
+		}
 
 		// Set cv_renderer to the new render mode
 		VID_CheckRenderer();

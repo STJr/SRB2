@@ -233,7 +233,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	if (currentplane->slope)
 	{
 #ifdef TRUECOLOR
-		if (tc_colormap)
+		if (tc_colormaps)
 		{
 			ds_colormap = (lighttable_t*)colormaps_u32;
 			ds_colmapstyle = TC_COLORMAPSTYLE_32BPP;
@@ -249,7 +249,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	else
 	{
 #ifdef TRUECOLOR
-		if (tc_colormap)
+		if (tc_colormaps)
 		{
 			ds_colormap = (UINT8 *)(planezlight_u32[pindex]);
 			ds_colmapstyle = TC_COLORMAPSTYLE_32BPP;
@@ -267,7 +267,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	{
 #ifdef TRUECOLOR
 		dp_extracolormap = currentplane->extra_colormap;
-		if (tc_colormap)
+		if (tc_colormaps)
 			ds_colormap = (UINT8 *)(currentplane->extra_colormap->colormap_u32 + ((UINT32*)ds_colormap - colormaps_u32));
 		else
 #endif
@@ -834,14 +834,16 @@ void R_DrawSinglePlane(visplane_t *pl)
 				ds_alpha = V_AlphaTrans(transval);
 			else
 #endif
-				ds_transmap = transtables + (transval<<FF_TRANSSHIFT);
+				ds_transmap = transtables + ((pl->polyobj->translucency-1)<<FF_TRANSSHIFT);
 
 			spanfunctype = (pl->polyobj->flags & POF_SPLAT) ? SPANDRAWFUNC_TRANSSPLAT : SPANDRAWFUNC_TRANS;
 		}
 		else if (pl->polyobj->flags & POF_SPLAT) // Opaque, but allow transparent flat pixels
 		{
 			spanfunctype = SPANDRAWFUNC_SPLAT;
+#ifdef TRUECOLOR
 			ds_alpha = 0xFF;
+#endif
 		}
 
 		if (pl->polyobj->translucency == 0 || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
@@ -1110,7 +1112,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			spanfunctype = SPANDRAWFUNC_TILTED;
 
 #ifdef TRUECOLOR
-		if (tc_colormap)
+		if (tc_colormaps)
 			planezlight_u32 = scalelight_u32[light];
 		else
 #endif
@@ -1119,7 +1121,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	else
 	{
 #ifdef TRUECOLOR
-		if (tc_colormap)
+		if (tc_colormaps)
 			planezlight_u32 = zlight_u32[light];
 		else
 #endif

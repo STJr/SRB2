@@ -1877,7 +1877,7 @@ static inline void HU_DrawCrosshair(void)
 		return;
 
 #ifdef HWRENDER
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		y = (INT32)gl_basewindowcentery;
 	else
 #endif
@@ -1898,7 +1898,7 @@ static inline void HU_DrawCrosshair2(void)
 		return;
 
 #ifdef HWRENDER
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		y = (INT32)gl_basewindowcentery;
 	else
 #endif
@@ -1907,7 +1907,7 @@ static inline void HU_DrawCrosshair2(void)
 	if (splitscreen)
 	{
 #ifdef HWRENDER
-		if (rendermode != render_soft)
+		if (!VID_InSoftwareRenderer())
 			y += (INT32)gl_viewheight;
 		else
 #endif
@@ -2205,7 +2205,7 @@ void HU_Erase(void)
 		return;
 
 	// software mode copies view border pattern & beveled edges from the backbuffer
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 	{
 		topline = 0;
 		for (y = topline, yoffset = y*vid.width; y < bottomline; y++, yoffset += vid.width)
