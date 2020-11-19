@@ -51,6 +51,7 @@ typedef enum
 	SF_NONIGHTSSUPER    = 1<<15, // Disable super colors for NiGHTS (if you have SF_SUPER)
 	SF_NOSUPERSPRITES   = 1<<16, // Don't use super sprites while super
 	SF_NOSUPERJUMPBOOST = 1<<17, // Disable the jump boost given while super (i.e. Knuckles)
+	SF_CANBUSTWALLS		= 1<<18, // Can naturally bust walls on contact? (i.e. Knuckles)
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -115,7 +116,7 @@ typedef enum
 
 	// True if button down last tic.
 	PF_ATTACKDOWN = 1<<7,
-	PF_USEDOWN    = 1<<8,
+	PF_SPINDOWN   = 1<<8,
 	PF_JUMPDOWN   = 1<<9,
 	PF_WPNDOWN    = 1<<10,
 

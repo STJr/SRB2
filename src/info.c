@@ -584,6 +584,7 @@ char spr2names[NUMPLAYERSPRITES][5] =
 	"TAL9",
 	"TALA",
 	"TALB",
+	"TALC",
 
 	"CNT1",
 	"CNT2",
@@ -661,6 +662,7 @@ playersprite_t spr2defaults[NUMPLAYERSPRITES] = {
 	SPR2_TAL0, // SPR2_TAL9,
 	SPR2_TAL9, // SPR2_TALA,
 	SPR2_TAL0, // SPR2_TALB,
+	SPR2_TAL6, // SPR2_TALC,
 
 	SPR2_WAIT, // SPR2_CNT1,
 	SPR2_FALL, // SPR2_CNT2,
@@ -801,6 +803,7 @@ state_t states[NUMSTATES] =
 	{SPR_PLAY, SPR2_TAL9|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_PAIN}, // S_TAILSOVERLAY_PAIN
 	{SPR_PLAY, SPR2_TALA|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_GASP}, // S_TAILSOVERLAY_GASP
 	{SPR_PLAY, SPR2_TALB                , 35, {NULL}, 0, 0, S_TAILSOVERLAY_EDGE}, // S_TAILSOVERLAY_EDGE
+	{SPR_PLAY, SPR2_TALC|FF_SPR2MIDSTART, 35, {NULL}, 0, 0, S_TAILSOVERLAY_DASH}, // S_TAILSOVERLAY_DASH
 
 	// [:
 	{SPR_JETF, 3|FF_ANIMATE|FF_FULLBRIGHT, 2, {NULL}, 1, 1, S_JETFUME1}, // S_JETFUMEFLASH
@@ -5139,7 +5142,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		100,            // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOCLIP|MF_SPECIAL, // flags
+		MF_SPECIAL,     // flags
 		S_NULL          // raisestate
 	},
 
@@ -20842,33 +20845,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_POLYSPAWN
 		761,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		1,              // spawnhealth
-		S_NULL,         // seestate
-		sfx_None,       // seesound
-		0,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		3,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		1*FRACUNIT,     // radius
-		1*FRACUNIT,     // height
-		0,              // display offset
-		1000,           // mass
-		8,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_NOCLIP, // flags
-		S_NULL          // raisestate
-	},
-
-	{           // MT_POLYSPAWNCRUSH
-		762,            // doomednum
 		S_INVISIBLE,    // spawnstate
 		1,              // spawnhealth
 		S_NULL,         // seestate

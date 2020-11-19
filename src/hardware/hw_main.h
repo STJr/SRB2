@@ -31,6 +31,8 @@ void HWR_DrawConsoleBack(UINT32 color, INT32 height);
 void HWR_DrawTutorialBack(UINT32 color, INT32 boxheight);
 void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player);
 void HWR_RenderPlayerView(INT32 viewnumber, player_t *player);
+void HWR_ClearSkyDome(void);
+void HWR_BuildSkyDome(void);
 void HWR_DrawViewBorder(INT32 clearlines);
 void HWR_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum);
 void HWR_InitTextureMapping(void);
@@ -68,37 +70,42 @@ void HWR_DrawScreenFinalTexture(int width, int height);
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap);
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
 
-void HWR_ReadShaders(UINT16 wadnum, boolean PK3);
-boolean HWR_LoadShaders(void);
+boolean HWR_CompileShaders(void);
 
-extern CV_PossibleValue_t granisotropicmode_cons_t[];
+void HWR_LoadAllCustomShaders(void);
+void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3);
+const char *HWR_GetShaderName(INT32 shader);
+
+extern customshaderxlat_t shaderxlat[];
+
+extern CV_PossibleValue_t glanisotropicmode_cons_t[];
 
 #ifdef ALAM_LIGHTING
-extern consvar_t cv_grdynamiclighting;
-extern consvar_t cv_grstaticlighting;
-extern consvar_t cv_grcoronas;
-extern consvar_t cv_grcoronasize;
+extern consvar_t cv_gldynamiclighting;
+extern consvar_t cv_glstaticlighting;
+extern consvar_t cv_glcoronas;
+extern consvar_t cv_glcoronasize;
 #endif
 
-extern consvar_t cv_grshaders;
-extern consvar_t cv_grmodels;
-extern consvar_t cv_grmodelinterpolation;
-extern consvar_t cv_grmodellighting;
-extern consvar_t cv_grfiltermode;
-extern consvar_t cv_granisotropicmode;
+extern consvar_t cv_glshaders, cv_glallowshaders;
+extern consvar_t cv_glmodels;
+extern consvar_t cv_glmodelinterpolation;
+extern consvar_t cv_glmodellighting;
+extern consvar_t cv_glfiltermode;
+extern consvar_t cv_glanisotropicmode;
 extern consvar_t cv_fovchange;
-extern consvar_t cv_grsolvetjoin;
-extern consvar_t cv_grshearing;
-extern consvar_t cv_grspritebillboarding;
-extern consvar_t cv_grskydome;
-extern consvar_t cv_grfakecontrast;
-extern consvar_t cv_grslopecontrast;
+extern consvar_t cv_glsolvetjoin;
+extern consvar_t cv_glshearing;
+extern consvar_t cv_glspritebillboarding;
+extern consvar_t cv_glskydome;
+extern consvar_t cv_glfakecontrast;
+extern consvar_t cv_glslopecontrast;
 
-extern consvar_t cv_grbatching;
+extern consvar_t cv_glbatching;
 
-extern float gr_viewwidth, gr_viewheight, gr_baseviewwindowy;
+extern float gl_viewwidth, gl_viewheight, gl_baseviewwindowy;
 
-extern float gr_viewwindowx, gr_basewindowcentery;
+extern float gl_viewwindowx, gl_basewindowcentery;
 
 // BP: big hack for a test in lighting ref : 1249753487AB
 extern fixed_t *hwbbox;
@@ -106,22 +113,23 @@ extern FTransform atransform;
 
 
 // Render stats
-extern int rs_hw_nodesorttime;
-extern int rs_hw_nodedrawtime;
-extern int rs_hw_spritesorttime;
-extern int rs_hw_spritedrawtime;
+extern int ps_hw_skyboxtime;
+extern int ps_hw_nodesorttime;
+extern int ps_hw_nodedrawtime;
+extern int ps_hw_spritesorttime;
+extern int ps_hw_spritedrawtime;
 
 // Render stats for batching
-extern int rs_hw_numpolys;
-extern int rs_hw_numverts;
-extern int rs_hw_numcalls;
-extern int rs_hw_numshaders;
-extern int rs_hw_numtextures;
-extern int rs_hw_numpolyflags;
-extern int rs_hw_numcolors;
-extern int rs_hw_batchsorttime;
-extern int rs_hw_batchdrawtime;
+extern int ps_hw_numpolys;
+extern int ps_hw_numverts;
+extern int ps_hw_numcalls;
+extern int ps_hw_numshaders;
+extern int ps_hw_numtextures;
+extern int ps_hw_numpolyflags;
+extern int ps_hw_numcolors;
+extern int ps_hw_batchsorttime;
+extern int ps_hw_batchdrawtime;
 
-extern boolean gr_shadersavailable;
+extern boolean gl_shadersavailable;
 
 #endif

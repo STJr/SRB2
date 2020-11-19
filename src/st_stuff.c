@@ -240,8 +240,8 @@ void ST_LoadGraphics(void)
 	int i;
 
 	// SRB2 border patch
-	st_borderpatchnum = W_GetNumForName("GFZFLR01");
-	scr_borderpatch = W_CacheLumpNum(st_borderpatchnum, PU_HUDGFX);
+	// st_borderpatchnum = W_GetNumForName("GFZFLR01");
+	// scr_borderpatch = W_CacheLumpNum(st_borderpatchnum, PU_HUDGFX);
 
 	// the original Doom uses 'STF' as base name for all face graphics
 	// Graue 04-08-2004: face/name graphics are now indexed by skins
@@ -1126,7 +1126,7 @@ static void ST_drawInput(void)
 	V_DrawCharacter(x+16+1+(xoffs), y+1+(yoffs)-offs, hudinfo[HUD_LIVES].f|symb, false)
 
 	drawbutt( 4,-3, BT_JUMP, 'J');
-	drawbutt(15,-3, BT_USE,  'S');
+	drawbutt(15,-3, BT_SPIN, 'S');
 
 	V_DrawFill(x+16+4, y+8, 21, 10, hudinfo[HUD_LIVES].f|20); // sundial backing
 	if (stplyr->mo)
@@ -2195,7 +2195,7 @@ static void ST_drawMatchHUD(void)
 		{
 			sprintf(penaltystr, "-%d", stplyr->ammoremoval);
 			V_DrawString(offset + 8 + stplyr->ammoremovalweapon * 20, y,
-					V_REDMAP, penaltystr);
+				V_REDMAP|V_SNAPTOBOTTOM, penaltystr);
 		}
 
 	}

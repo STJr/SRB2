@@ -43,12 +43,6 @@
 #include "hardware/hw_main.h"
 #endif
 
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-int	snprintf(char *str, size_t n, const char *fmt, ...);
-//int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
-#endif
-
 typedef struct
 {
 	char patch[9];
@@ -141,7 +135,6 @@ static y_data data;
 
 // graphics
 static patch_t *bgpatch = NULL;     // INTERSCR
-static patch_t *widebgpatch = NULL; // INTERSCW
 static patch_t *bgtile = NULL;      // SPECTILE/SRB2BACK
 static patch_t *interpic = NULL;    // custom picture defined in map header
 static boolean usetile;
@@ -330,7 +323,7 @@ void Y_IntermissionDrawer(void)
 		safetorender = false;
 	}
 
-	if (!usebuffer || !safetorender)
+	if (!safetorender)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 	if (!safetorender)
@@ -359,12 +352,11 @@ void Y_IntermissionDrawer(void)
 		else if (rendermode != render_soft && usebuffer)
 			HWR_DrawIntermissionBG();
 #endif
-		else
+		else if (bgpatch)
 		{
-			if (widebgpatch && rendermode == render_soft && vid.width / vid.dupx == 400)
-				V_DrawScaledPatch(0, 0, V_SNAPTOLEFT, widebgpatch);
-			else if (bgpatch)
-				V_DrawScaledPatch(0, 0, 0, bgpatch);
+			fixed_t hs = vid.width  * FRACUNIT / BASEVIDWIDTH;
+			fixed_t vs = vid.height * FRACUNIT / BASEVIDHEIGHT;
+			V_DrawStretchyFixedPatch(0, 0, hs, vs, V_NOSCALEPATCH, bgpatch, NULL);
 		}
 	}
 	else if (bgtile)
@@ -1017,7 +1009,7 @@ void Y_Ticker(void)
 			return;
 
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && (players[i].cmd.buttons & BT_USE))
+			if (playeringame[i] && (players[i].cmd.buttons & BT_SPIN))
 				skip = true;
 
 		// bonuses count down by 222 each tic
@@ -1094,7 +1086,7 @@ void Y_Ticker(void)
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
 			{
-				if (players[i].cmd.buttons & BT_USE)
+				if (players[i].cmd.buttons & BT_SPIN)
 					skip = true;
 				if (players[i].charflags & SF_SUPER)
 					super = true;
@@ -1266,7 +1258,6 @@ void Y_StartIntermission(void)
 			data.coop.actnum = mapheaderinfo[gamemap-1]->actnum;
 
 			// get background patches
-			widebgpatch = W_CachePatchName("INTERSCW", PU_PATCH);
 			bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 
 			// grab an interscreen if appropriate
@@ -2084,7 +2075,6 @@ static void Y_UnloadData(void)
 
 	// unload the background patches
 	UNLOAD(bgpatch);
-	UNLOAD(widebgpatch);
 	UNLOAD(bgtile);
 	UNLOAD(interpic);
 
@@ -2127,7 +2117,6 @@ static void Y_CleanupData(void)
 {
 	// unload the background patches
 	CLEANUP(bgpatch);
-	CLEANUP(widebgpatch);
 	CLEANUP(bgtile);
 	CLEANUP(interpic);
 

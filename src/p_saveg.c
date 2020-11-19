@@ -22,6 +22,8 @@
 #include "p_setup.h"
 #include "p_saveg.h"
 #include "r_data.h"
+#include "r_textures.h"
+#include "r_things.h"
 #include "r_skins.h"
 #include "r_state.h"
 #include "w_wad.h"
@@ -96,13 +98,16 @@ static void P_NetArchivePlayers(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
+		WRITESINT8(save_p, (SINT8)adminplayers[i]);
+
 		if (!playeringame[i])
 			continue;
 
 		flags = 0;
 
-		// no longer send ticcmds, player name, skin, or color
+		// no longer send ticcmds
 
+		WRITESTRINGN(save_p, player_names[i], MAXPLAYERNAME);
 		WRITEINT16(save_p, players[i].angleturn);
 		WRITEINT16(save_p, players[i].oldrelangleturn);
 		WRITEANGLE(save_p, players[i].aiming);
@@ -132,6 +137,9 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT16(save_p, players[i].flashpal);
 		WRITEUINT16(save_p, players[i].flashcount);
 
+		WRITEUINT8(save_p, players[i].skincolor);
+		WRITEINT32(save_p, players[i].skin);
+		WRITEUINT32(save_p, players[i].availabilities);
 		WRITEUINT32(save_p, players[i].score);
 		WRITEFIXED(save_p, players[i].dashspeed);
 		WRITESINT8(save_p, players[i].lives);
@@ -303,6 +311,8 @@ static void P_NetUnArchivePlayers(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
+		adminplayers[i] = (INT32)READSINT8(save_p);
+
 		// Do NOT memset player struct to 0
 		// other areas may initialize data elsewhere
 		//memset(&players[i], 0, sizeof (player_t));
@@ -310,9 +320,8 @@ static void P_NetUnArchivePlayers(void)
 			continue;
 
 		// NOTE: sending tics should (hopefully) no longer be necessary
-		// sending player names, skin and color should not be necessary at all!
-		// (that data is handled in the server config now)
 
+		READSTRINGN(save_p, player_names[i], MAXPLAYERNAME);
 		players[i].angleturn = READINT16(save_p);
 		players[i].oldrelangleturn = READINT16(save_p);
 		players[i].aiming = READANGLE(save_p);
@@ -342,6 +351,9 @@ static void P_NetUnArchivePlayers(void)
 		players[i].flashpal = READUINT16(save_p);
 		players[i].flashcount = READUINT16(save_p);
 
+		players[i].skincolor = READUINT8(save_p);
+		players[i].skin = READINT32(save_p);
+		players[i].availabilities = READUINT32(save_p);
 		players[i].score = READUINT32(save_p);
 		players[i].dashspeed = READFIXED(save_p); // dashing speed
 		players[i].lives = READSINT8(save_p);
@@ -787,10 +799,38 @@ static void P_NetUnArchiveWaypoints(void)
 #define LD_DIFF2    0x80
 
 // diff2 flags
-#define LD_S2TEXOFF 0x01
-#define LD_S2TOPTEX 0x02
-#define LD_S2BOTTEX 0x04
-#define LD_S2MIDTEX 0x08
+#define LD_S2TEXOFF      0x01
+#define LD_S2TOPTEX      0x02
+#define LD_S2BOTTEX      0x04
+#define LD_S2MIDTEX      0x08
+#define LD_ARGS          0x10
+#define LD_STRINGARGS    0x20
+#define LD_EXECUTORDELAY 0x40
+
+static boolean P_AreArgsEqual(const line_t *li, const line_t *spawnli)
+{
+	UINT8 i;
+	for (i = 0; i < NUMLINEARGS; i++)
+		if (li->args[i] != spawnli->args[i])
+			return false;
+
+	return true;
+}
+
+static boolean P_AreStringArgsEqual(const line_t *li, const line_t *spawnli)
+{
+	UINT8 i;
+	for (i = 0; i < NUMLINESTRINGARGS; i++)
+	{
+		if (!li->stringargs[i])
+			return !spawnli->stringargs[i];
+
+		if (strcmp(li->stringargs[i], spawnli->stringargs[i]))
+			return false;
+	}
+
+	return true;
+}
 
 #define FD_FLAGS 0x01
 #define FD_ALPHA 0x02
@@ -883,7 +923,7 @@ static void UnArchiveFFloors(const sector_t *ss)
 
 static void ArchiveSectors(void)
 {
-	size_t i;
+	size_t i, j;
 	const sector_t *ss = sectors;
 	const sector_t *spawnss = spawnsectors;
 	UINT8 diff, diff2, diff3;
@@ -921,10 +961,8 @@ static void ArchiveSectors(void)
 		if (ss->ceilingpic_angle != spawnss->ceilingpic_angle)
 			diff2 |= SD_CEILANG;
 
-		if (ss->tag != spawnss->tag)
+		if (!Tag_Compare(&ss->tags, &spawnss->tags))
 			diff2 |= SD_TAG;
-		if (ss->nexttag != spawnss->nexttag || ss->firsttag != spawnss->firsttag)
-			diff3 |= SD_TAGLIST;
 
 		if (ss->extra_colormap != spawnss->extra_colormap)
 			diff3 |= SD_COLORMAP;
@@ -972,12 +1010,11 @@ static void ArchiveSectors(void)
 				WRITEANGLE(save_p, ss->floorpic_angle);
 			if (diff2 & SD_CEILANG)
 				WRITEANGLE(save_p, ss->ceilingpic_angle);
-			if (diff2 & SD_TAG) // save only the tag
-				WRITEINT16(save_p, ss->tag);
-			if (diff3 & SD_TAGLIST) // save both firsttag and nexttag
-			{ // either of these could be changed even if tag isn't
-				WRITEINT32(save_p, ss->firsttag);
-				WRITEINT32(save_p, ss->nexttag);
+			if (diff2 & SD_TAG)
+			{
+				WRITEUINT32(save_p, ss->tags.count);
+				for (j = 0; j < ss->tags.count; j++)
+					WRITEINT16(save_p, ss->tags.tags[j]);
 			}
 
 			if (diff3 & SD_COLORMAP)
@@ -995,7 +1032,7 @@ static void ArchiveSectors(void)
 
 static void UnArchiveSectors(void)
 {
-	UINT16 i;
+	UINT16 i, j;
 	UINT8 diff, diff2, diff3;
 	for (;;)
 	{
@@ -1049,12 +1086,28 @@ static void UnArchiveSectors(void)
 		if (diff2 & SD_CEILANG)
 			sectors[i].ceilingpic_angle = READANGLE(save_p);
 		if (diff2 & SD_TAG)
-			sectors[i].tag = READINT16(save_p); // DON'T use P_ChangeSectorTag
-		if (diff3 & SD_TAGLIST)
 		{
-			sectors[i].firsttag = READINT32(save_p);
-			sectors[i].nexttag = READINT32(save_p);
+			size_t ncount = READUINT32(save_p);
+
+			// Remove entries from global lists.
+			for (j = 0; j < sectors[i].tags.count; j++)
+				Taggroup_Remove(tags_sectors, sectors[i].tags.tags[j], i);
+
+			// Reallocate if size differs.
+			if (ncount != sectors[i].tags.count)
+			{
+				sectors[i].tags.count = ncount;
+				sectors[i].tags.tags = Z_Realloc(sectors[i].tags.tags, ncount*sizeof(mtag_t), PU_LEVEL, NULL);
+			}
+
+			for (j = 0; j < ncount; j++)
+				sectors[i].tags.tags[j] = READINT16(save_p);
+
+			// Add new entries.
+			for (j = 0; j < sectors[i].tags.count; j++)
+				Taggroup_Remove(tags_sectors, sectors[i].tags.tags[j], i);
 		}
+
 
 		if (diff3 & SD_COLORMAP)
 			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(save_p));
@@ -1085,6 +1138,15 @@ static void ArchiveLines(void)
 		if (spawnli->special == 321 || spawnli->special == 322) // only reason li->callcount would be non-zero is if either of these are involved
 			diff |= LD_CLLCOUNT;
 
+		if (!P_AreArgsEqual(li, spawnli))
+			diff2 |= LD_ARGS;
+
+		if (!P_AreStringArgsEqual(li, spawnli))
+			diff2 |= LD_STRINGARGS;
+
+		if (li->executordelay != spawnli->executordelay)
+			diff2 |= LD_EXECUTORDELAY;
+
 		if (li->sidenum[0] != 0xffff)
 		{
 			si = &sides[li->sidenum[0]];
@@ -1111,9 +1173,10 @@ static void ArchiveLines(void)
 				diff2 |= LD_S2BOTTEX;
 			if (si->midtexture != spawnsi->midtexture)
 				diff2 |= LD_S2MIDTEX;
-			if (diff2)
-				diff |= LD_DIFF2;
 		}
+
+		if (diff2)
+			diff |= LD_DIFF2;
 
 		if (diff)
 		{
@@ -1147,6 +1210,33 @@ static void ArchiveLines(void)
 				WRITEINT32(save_p, si->bottomtexture);
 			if (diff2 & LD_S2MIDTEX)
 				WRITEINT32(save_p, si->midtexture);
+			if (diff2 & LD_ARGS)
+			{
+				UINT8 j;
+				for (j = 0; j < NUMLINEARGS; j++)
+					WRITEINT32(save_p, li->args[j]);
+			}
+			if (diff2 & LD_STRINGARGS)
+			{
+				UINT8 j;
+				for (j = 0; j < NUMLINESTRINGARGS; j++)
+				{
+					size_t len, k;
+
+					if (!li->stringargs[j])
+					{
+						WRITEINT32(save_p, 0);
+						continue;
+					}
+
+					len = strlen(li->stringargs[j]);
+					WRITEINT32(save_p, len);
+					for (k = 0; k < len; k++)
+						WRITECHAR(save_p, li->stringargs[j][k]);
+				}
+			}
+			if (diff2 & LD_EXECUTORDELAY)
+				WRITEINT32(save_p, li->executordelay);
 		}
 	}
 	WRITEUINT16(save_p, 0xffff);
@@ -1202,6 +1292,36 @@ static void UnArchiveLines(void)
 			si->bottomtexture = READINT32(save_p);
 		if (diff2 & LD_S2MIDTEX)
 			si->midtexture = READINT32(save_p);
+		if (diff2 & LD_ARGS)
+		{
+			UINT8 j;
+			for (j = 0; j < NUMLINEARGS; j++)
+				li->args[j] = READINT32(save_p);
+		}
+		if (diff2 & LD_STRINGARGS)
+		{
+			UINT8 j;
+			for (j = 0; j < NUMLINESTRINGARGS; j++)
+			{
+				size_t len = READINT32(save_p);
+				size_t k;
+
+				if (!len)
+				{
+					Z_Free(li->stringargs[j]);
+					li->stringargs[j] = NULL;
+					continue;
+				}
+
+				li->stringargs[j] = Z_Realloc(li->stringargs[j], len + 1, PU_LEVEL, NULL);
+				for (k = 0; k < len; k++)
+					li->stringargs[j][k] = READCHAR(save_p);
+				li->stringargs[j][len] = '\0';
+			}
+		}
+		if (diff2 & LD_EXECUTORDELAY)
+			li->executordelay = READINT32(save_p);
+
 	}
 }
 
@@ -1400,7 +1520,9 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 
 		if ((mobj->x != mobj->spawnpoint->x << FRACBITS) ||
 			(mobj->y != mobj->spawnpoint->y << FRACBITS) ||
-			(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)))
+			(mobj->angle != FixedAngle(mobj->spawnpoint->angle*FRACUNIT)) ||
+			(mobj->pitch != FixedAngle(mobj->spawnpoint->pitch*FRACUNIT)) ||
+			(mobj->roll != FixedAngle(mobj->spawnpoint->roll*FRACUNIT)) )
 			diff |= MD_POS;
 
 		if (mobj->info->doomednum != mobj->spawnpoint->type)
@@ -1556,6 +1678,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, mobj->x);
 		WRITEFIXED(save_p, mobj->y);
 		WRITEANGLE(save_p, mobj->angle);
+		WRITEANGLE(save_p, mobj->pitch);
+		WRITEANGLE(save_p, mobj->roll);
 	}
 	if (diff & MD_MOM)
 	{
@@ -2513,12 +2637,16 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->x = READFIXED(save_p);
 		mobj->y = READFIXED(save_p);
 		mobj->angle = READANGLE(save_p);
+		mobj->pitch = READANGLE(save_p);
+		mobj->roll = READANGLE(save_p);
 	}
 	else
 	{
 		mobj->x = mobj->spawnpoint->x << FRACBITS;
 		mobj->y = mobj->spawnpoint->y << FRACBITS;
 		mobj->angle = FixedAngle(mobj->spawnpoint->angle*FRACUNIT);
+		mobj->pitch = FixedAngle(mobj->spawnpoint->pitch*FRACUNIT);
+		mobj->roll = FixedAngle(mobj->spawnpoint->roll*FRACUNIT);
 	}
 	if (diff & MD_MOM)
 	{
@@ -3846,14 +3974,17 @@ static inline void P_UnArchiveSPGame(INT16 mapoverride)
 	playeringame[consoleplayer] = true;
 }
 
-static void P_NetArchiveMisc(void)
+static void P_NetArchiveMisc(boolean resending)
 {
 	INT32 i;
 
 	WRITEUINT32(save_p, ARCHIVEBLOCK_MISC);
 
+	if (resending)
+		WRITEUINT32(save_p, gametic);
 	WRITEINT16(save_p, gamemap);
 	WRITEINT16(save_p, gamestate);
+	WRITEINT16(save_p, gametype);
 
 	{
 		UINT32 pig = 0;
@@ -3916,12 +4047,15 @@ static void P_NetArchiveMisc(void)
 		WRITEUINT8(save_p, 0x2e);
 }
 
-static inline boolean P_NetUnArchiveMisc(void)
+static inline boolean P_NetUnArchiveMisc(boolean reloading)
 {
 	INT32 i;
 
 	if (READUINT32(save_p) != ARCHIVEBLOCK_MISC)
 		I_Error("Bad $$$.sav at archive block Misc");
+
+	if (reloading)
+		gametic = READUINT32(save_p);
 
 	gamemap = READINT16(save_p);
 
@@ -3936,6 +4070,8 @@ static inline boolean P_NetUnArchiveMisc(void)
 
 	G_SetGamestate(READINT16(save_p));
 
+	gametype = READINT16(save_p);
+
 	{
 		UINT32 pig = READUINT32(save_p);
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -3949,7 +4085,7 @@ static inline boolean P_NetUnArchiveMisc(void)
 
 	tokenlist = READUINT32(save_p);
 
-	if (!P_LoadLevel(true))
+	if (!P_LoadLevel(true, reloading))
 		return false;
 
 	// get the time
@@ -4048,14 +4184,14 @@ void P_SaveGame(INT16 mapnum)
 	P_ArchiveLuabanksAndConsistency();
 }
 
-void P_SaveNetGame(void)
+void P_SaveNetGame(boolean resending)
 {
 	thinker_t *th;
 	mobj_t *mobj;
 	INT32 i = 1; // don't start from 0, it'd be confused with a blank pointer otherwise
 
 	CV_SaveNetVars(&save_p);
-	P_NetArchiveMisc();
+	P_NetArchiveMisc(resending);
 
 	// Assign the mobjnumber for pointer tracking
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
@@ -4103,10 +4239,10 @@ boolean P_LoadGame(INT16 mapoverride)
 	return true;
 }
 
-boolean P_LoadNetGame(void)
+boolean P_LoadNetGame(boolean reloading)
 {
 	CV_LoadNetVars(&save_p);
-	if (!P_NetUnArchiveMisc())
+	if (!P_NetUnArchiveMisc(reloading))
 		return false;
 	P_NetUnArchivePlayers();
 	if (gamestate == GS_LEVEL)

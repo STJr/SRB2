@@ -59,22 +59,23 @@ typedef struct
 
 // needed for sprite rendering
 // equivalent of the software renderer's vissprites
-typedef struct gr_vissprite_s
+typedef struct gl_vissprite_s
 {
 	float x1, x2;
 	float tz, ty;
+	float tracertz; // for MF2_LINKDRAW sprites, this contains tracer's tz for use in sorting
 	//lumpnum_t patchlumpnum;
 	GLPatch_t *gpatch;
 	boolean flip;
 	UINT8 translucency;       //alpha level 0-255
-	mobj_t *mobj;
+	mobj_t *mobj; // NOTE: This is a precipmobj_t if precip is true !!! Watch out.
 	boolean precip; // Tails 08-25-2002
 	boolean vflip;
    //Hurdler: 25/04/2000: now support colormap in hardware mode
 	UINT8 *colormap;
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 	float z1, z2;
-} gr_vissprite_t;
+} gl_vissprite_t;
 
 // --------
 // hw_bsp.c
@@ -95,7 +96,7 @@ void HWR_FreeExtraSubsectors(void);
 
 void HWR_GetLevelFlat(levelflat_t *levelflat);
 void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum);
-GLTexture_t *HWR_GetTexture(INT32 tex);
+GLMapTexture_t *HWR_GetTexture(INT32 tex);
 void HWR_GetPatch(GLPatch_t *gpatch);
 void HWR_GetMappedPatch(GLPatch_t *gpatch, const UINT8 *colormap);
 void HWR_UnlockCachedPatch(GLPatch_t *gpatch);

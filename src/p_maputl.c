@@ -18,6 +18,7 @@
 #include "p_local.h"
 #include "r_main.h"
 #include "r_data.h"
+#include "r_textures.h"
 #include "p_maputl.h"
 #include "p_polyobj.h"
 #include "p_slopes.h"

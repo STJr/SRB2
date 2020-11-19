@@ -17,16 +17,18 @@
 #include "p_mobj.h"
 #include "p_local.h"
 #include "z_zone.h"
-#include "r_patch.h"
+#include "r_picformats.h"
 #include "r_things.h"
+#include "r_draw.h" // R_GetColorByName
 #include "doomstat.h" // luabanks[]
 
 #include "lua_script.h"
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
+#include "lua_hook.h" // hook_cmd_running errors
 
-extern CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
-extern void R_FlushTranslationColormapCache(void);
+extern CV_PossibleValue_t Color_cons_t[];
+extern UINT8 skincolor_modified[];
 
 boolean LUA_CallAction(const char *action, mobj_t *actor);
 state_t *astate;
@@ -164,6 +166,8 @@ static int lib_setSpr2default(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter spr2defaults[] in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter spr2defaults[] in CMD building code!");
 
 // todo: maybe allow setting below first freeslot..? step 1 is toggling this, step 2 is testing to see whether it's net-safe
 #ifdef SETALLSPR2DEFAULTS
@@ -370,6 +374,8 @@ static int lib_setSpriteInfo(lua_State *L)
 		return luaL_error(L, "Do not alter spriteinfo_t from within a hook or coroutine!");
 	if (hud_running)
 		return luaL_error(L, "Do not alter spriteinfo_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter spriteinfo_t in CMD building code!");     
 
 	lua_remove(L, 1);
 	{
@@ -454,6 +460,8 @@ static int spriteinfo_set(lua_State *L)
 		return luaL_error(L, "Do not alter spriteinfo_t from within a hook or coroutine!");
 	if (hud_running)
 		return luaL_error(L, "Do not alter spriteinfo_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter spriteinfo_t in CMD building code!");
 
 	I_Assert(sprinfo != NULL);
 
@@ -532,6 +540,8 @@ static int pivotlist_set(lua_State *L)
 		return luaL_error(L, "Do not alter spriteframepivot_t from within a hook or coroutine!");
 	if (hud_running)
 		return luaL_error(L, "Do not alter spriteframepivot_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter spriteframepivot_t in CMD building code!");
 
 	I_Assert(pivotlist != NULL);
 
@@ -586,6 +596,8 @@ static int framepivot_set(lua_State *L)
 		return luaL_error(L, "Do not alter spriteframepivot_t from within a hook or coroutine!");
 	if (hud_running)
 		return luaL_error(L, "Do not alter spriteframepivot_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter spriteframepivot_t in CMD building code!");
 
 	I_Assert(framepivot != NULL);
 
@@ -685,6 +697,8 @@ static int lib_setState(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter states in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter states in CMD building code!");
 
 	// clear the state to start with, in case of missing table elements
 	memset(state,0,sizeof(state_t));
@@ -905,6 +919,8 @@ static int state_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter states in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter states in CMD building code!");
 
 	if (fastcmp(field,"sprite")) {
 		value = luaL_checknumber(L, 3);
@@ -1005,6 +1021,8 @@ static int lib_setMobjInfo(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter mobjinfo in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter mobjinfo in CMD building code!");
 
 	// clear the mobjinfo to start with, in case of missing table elements
 	memset(info,0,sizeof(mobjinfo_t));
@@ -1172,6 +1190,8 @@ static int mobjinfo_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter mobjinfo in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter mobjinfo in CMD building code!");
 
 	I_Assert(info != NULL);
 	I_Assert(info >= mobjinfo);
@@ -1294,6 +1314,8 @@ static int lib_setSfxInfo(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter sfxinfo in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter sfxinfo in CMD building code!");
 
 	lua_pushnil(L);
 	while (lua_next(L, 1)) {
@@ -1375,6 +1397,8 @@ static int sfxinfo_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter S_sfx in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter S_sfx in CMD building code!");
 
 	I_Assert(sfx != NULL);
 
@@ -1442,6 +1466,8 @@ static int lib_setluabanks(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter luabanks[] in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter luabanks[] in CMD building code!");
 
 	lua_remove(L, 1); // don't care about luabanks[] dummy userdata.
 
@@ -1490,7 +1516,7 @@ static void setRamp(lua_State *L, skincolor_t* c) {
 	UINT32 i;
 	lua_pushnil(L);
 	for (i=0; i<COLORRAMPSIZE; i++) {
-		if (lua_objlen(L,-2)<COLORRAMPSIZE) {
+		if (lua_objlen(L,-2)!=COLORRAMPSIZE) {
 			luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be %d entries long; got %d.", COLORRAMPSIZE, lua_objlen(L,-2));
 			break;
 		}
@@ -1512,8 +1538,8 @@ static int lib_setSkinColor(lua_State *L)
 	lua_remove(L, 1); // don't care about skincolors[] userdata.
 	{
 		cnum = (UINT16)luaL_checkinteger(L, 1);
-		if (cnum < SKINCOLOR_FIRSTFREESLOT || cnum >= numskincolors)
-			return luaL_error(L, "skincolors[] index %d out of range (%d - %d)", cnum, SKINCOLOR_FIRSTFREESLOT, numskincolors-1);
+		if (!cnum || cnum >= numskincolors)
+			return luaL_error(L, "skincolors[] index %d out of range (1 - %d)", cnum, numskincolors-1);
 		info = &skincolors[cnum]; // get the skincolor to assign to.
 	}
 	luaL_checktype(L, 2, LUA_TTABLE); // check that we've been passed a table.
@@ -1522,6 +1548,8 @@ static int lib_setSkinColor(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter skincolors in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter skincolors in CMD building code!");
 
 	// clear the skincolor to start with, in case of missing table elements
 	memset(info,0,sizeof(skincolor_t));
@@ -1540,7 +1568,18 @@ static int lib_setSkinColor(lua_State *L)
 			const char* n = luaL_checkstring(L, 3);
 			strlcpy(info->name, n, MAXCOLORNAME+1);
 			if (strlen(n) > MAXCOLORNAME)
-				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; shortened to %s.\n", n, MAXCOLORNAME, info->name);
+				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; clipped to %s.\n", n, MAXCOLORNAME, info->name);
+#if 0
+			if (strchr(info->name, ' ') != NULL)
+				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", info->name);
+#endif
+
+			if (info->name[0] != '\0') // don't check empty string for dupe
+			{
+				UINT16 dupecheck = R_GetColorByName(info->name);
+				if (!stricmp(info->name, skincolors[SKINCOLOR_NONE].name) || (dupecheck && (dupecheck != info-skincolors)))
+					CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') is a duplicate of another skincolor's name.\n", info->name);
+			}
 		} else if (i == 2 || (str && fastcmp(str,"ramp"))) {
 			if (!lua_istable(L, 3) && luaL_checkudata(L, 3, META_COLORRAMP) == NULL)
 				return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be a table or array.");
@@ -1549,17 +1588,20 @@ static int lib_setSkinColor(lua_State *L)
 			else
 				for (j=0; j<COLORRAMPSIZE; j++)
 					info->ramp[j] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[j];
-			R_FlushTranslationColormapCache();
-		} else if (i == 3 || (str && fastcmp(str,"invcolor")))
-			info->invcolor = (UINT16)luaL_checkinteger(L, 3);
-		else if (i == 4 || (str && fastcmp(str,"invshade")))
+			skincolor_modified[cnum] = true;
+		} else if (i == 3 || (str && fastcmp(str,"invcolor"))) {
+			UINT16 v = (UINT16)luaL_checkinteger(L, 3);
+			if (v >= numskincolors)
+				return luaL_error(L, "skincolor_t field 'invcolor' out of range (1 - %d)", numskincolors-1);
+			info->invcolor = v;
+		} else if (i == 4 || (str && fastcmp(str,"invshade")))
 			info->invshade = (UINT8)luaL_checkinteger(L, 3)%COLORRAMPSIZE;
 		else if (i == 5 || (str && fastcmp(str,"chatcolor")))
 			info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
 		else if (i == 6 || (str && fastcmp(str,"accessible"))) {
-			boolean v = lua_isboolean(L,3) ? lua_toboolean(L, 3) : true;
+			boolean v = lua_toboolean(L, 3);
 			if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
-				return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", i);
+				return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
 			else
 				info->accessible = v;
 		}
@@ -1607,20 +1649,30 @@ static int skincolor_set(lua_State *L)
 	UINT32 i;
 	skincolor_t *info = *((skincolor_t **)luaL_checkudata(L, 1, META_SKINCOLOR));
 	const char *field = luaL_checkstring(L, 2);
+	UINT16 cnum = (UINT16)(info-skincolors);
 
 	I_Assert(info != NULL);
 	I_Assert(info >= skincolors);
 
-	if (info-skincolors < SKINCOLOR_FIRSTFREESLOT || info-skincolors >= numskincolors)
-		return luaL_error(L, "skincolors[] index %d out of range (%d - %d)", info-skincolors, SKINCOLOR_FIRSTFREESLOT, numskincolors-1);
+	if (!cnum || cnum >= numskincolors)
+		return luaL_error(L, "skincolors[] index %d out of range (1 - %d)", cnum, numskincolors-1);
 
 	if (fastcmp(field,"name")) {
 		const char* n = luaL_checkstring(L, 3);
-		if (strchr(n, ' ') != NULL)
-			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", n);
 		strlcpy(info->name, n, MAXCOLORNAME+1);
 		if (strlen(n) > MAXCOLORNAME)
 			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') longer than %d chars; clipped to %s.\n", n, MAXCOLORNAME, info->name);
+#if 0
+		if (strchr(info->name, ' ') != NULL)
+			CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') contains spaces.\n", info->name);
+#endif
+
+		if (info->name[0] != '\0') // don't check empty string for dupe
+		{
+			UINT16 dupecheck = R_GetColorByName(info->name);
+			if (!stricmp(info->name, skincolors[SKINCOLOR_NONE].name) || (dupecheck && (dupecheck != cnum)))
+				CONS_Alert(CONS_WARNING, "skincolor_t field 'name' ('%s') is a duplicate of another skincolor's name.\n", info->name);
+		}
 	} else if (fastcmp(field,"ramp")) {
 		if (!lua_istable(L, 3) && luaL_checkudata(L, 3, META_COLORRAMP) == NULL)
 			return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' must be a table or array.");
@@ -1629,16 +1681,23 @@ static int skincolor_set(lua_State *L)
 		else
 			for (i=0; i<COLORRAMPSIZE; i++)
 				info->ramp[i] = (*((UINT8 **)luaL_checkudata(L, 3, META_COLORRAMP)))[i];
-		R_FlushTranslationColormapCache();
-	} else if (fastcmp(field,"invcolor"))
-		info->invcolor = (UINT16)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"invshade"))
+		skincolor_modified[cnum] = true;
+	} else if (fastcmp(field,"invcolor")) {
+		UINT16 v = (UINT16)luaL_checkinteger(L, 3);
+		if (v >= numskincolors)
+			return luaL_error(L, "skincolor_t field 'invcolor' out of range (1 - %d)", numskincolors-1);
+		info->invcolor = v;
+	} else if (fastcmp(field,"invshade"))
 		info->invshade = (UINT8)luaL_checkinteger(L, 3)%COLORRAMPSIZE;
 	else if (fastcmp(field,"chatcolor"))
 		info->chatcolor = (UINT16)luaL_checkinteger(L, 3);
-	else if (fastcmp(field,"accessible"))
-		info->accessible = lua_isboolean(L,3);
-	else
+	else if (fastcmp(field,"accessible")) {
+		boolean v = lua_toboolean(L, 3);
+		if (cnum < FIRSTSUPERCOLOR && v != skincolors[cnum].accessible)
+			return luaL_error(L, "skincolors[] index %d is a standard color; accessibility changes are prohibited.", cnum);
+		else
+			info->accessible = v;
+	} else
 		CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "skincolor_t", field);
 	return 1;
 }
@@ -1670,17 +1729,19 @@ static int colorramp_get(lua_State *L)
 static int colorramp_set(lua_State *L)
 {
 	UINT8 *colorramp = *((UINT8 **)luaL_checkudata(L, 1, META_COLORRAMP));
-	UINT16 cnum = (UINT16)(((uint8_t*)colorramp - (uint8_t*)(skincolors[0].ramp))/sizeof(skincolor_t));
+	UINT16 cnum = (UINT16)(((UINT8*)colorramp - (UINT8*)(skincolors[0].ramp))/sizeof(skincolor_t));
 	UINT32 n = luaL_checkinteger(L, 2);
 	UINT8 i = (UINT8)luaL_checkinteger(L, 3);
-	if (cnum < SKINCOLOR_FIRSTFREESLOT || cnum >= numskincolors)
-		return luaL_error(L, "skincolors[] index %d out of range (%d - %d)", cnum, SKINCOLOR_FIRSTFREESLOT, numskincolors-1);
+	if (!cnum || cnum >= numskincolors)
+		return luaL_error(L, "skincolors[] index %d out of range (1 - %d)", cnum, numskincolors-1);
 	if (n >= COLORRAMPSIZE)
 		return luaL_error(L, LUA_QL("skincolor_t") " field 'ramp' index %d out of range (0 - %d)", n, COLORRAMPSIZE-1);
 	if (hud_running)
 		return luaL_error(L, "Do not alter skincolor_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter skincolor_t in CMD building code!");
 	colorramp[n] = i;
-	R_FlushTranslationColormapCache();
+	skincolor_modified[cnum] = true;
 	return 0;
 }
 

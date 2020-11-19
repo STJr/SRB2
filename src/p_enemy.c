@@ -3040,11 +3040,11 @@ void A_Boss1Laser(mobj_t *actor)
 				z = actor->z + FixedMul(56*FRACUNIT, actor->scale);
 			break;
 		case 2:
-			var2 = 3; // Fire middle laser
+			var1 = locvar1; var2 = 3; // Fire middle laser
 			A_Boss1Laser(actor);
-			var2 = 0; // Fire left laser
+			var1 = locvar1; var2 = 0; // Fire left laser
 			A_Boss1Laser(actor);
-			var2 = 1; // Fire right laser
+			var1 = locvar1; var2 = 1; // Fire right laser
 			A_Boss1Laser(actor);
 			return;
 			break;
@@ -3925,11 +3925,12 @@ void A_BossDeath(mobj_t *mo)
 	else
 	{
 		// Bring the egg trap up to the surface
-		junk.tag = LE_CAPSULE0;
+		// Incredibly shitty code ahead
+		Tag_FSet(&junk.tags, LE_CAPSULE0);
 		EV_DoElevator(&junk, elevateHighest, false);
-		junk.tag = LE_CAPSULE1;
+		Tag_FSet(&junk.tags, LE_CAPSULE1);
 		EV_DoElevator(&junk, elevateUp, false);
-		junk.tag = LE_CAPSULE2;
+		Tag_FSet(&junk.tags, LE_CAPSULE2);
 		EV_DoElevator(&junk, elevateHighest, false);
 
 		if (mapheaderinfo[gamemap-1]->muspostbossname[0] &&
@@ -4052,7 +4053,7 @@ bossjustdie:
 		}
 		case MT_KOOPA:
 		{
-			junk.tag = LE_KOOPA;
+			Tag_FSet(&junk.tags, LE_KOOPA);
 			EV_DoCeiling(&junk, raiseToHighest);
 			return;
 		}
@@ -6157,7 +6158,7 @@ void A_RockSpawn(mobj_t *actor)
 {
 	mobj_t *mo;
 	mobjtype_t type;
-	INT32 i = P_FindSpecialLineFromTag(12, (INT16)actor->threshold, -1);
+	INT32 i = Tag_FindLineSpecial(12, (INT16)actor->threshold);
 	line_t *line;
 	fixed_t dist;
 	fixed_t randomoomph;
@@ -8839,25 +8840,26 @@ void A_Dye(mobj_t *actor)
 	INT32 locvar2 = var2;
 
 	mobj_t *target = ((locvar1 && actor->target) ? actor->target : actor);
-	UINT8 color = (UINT8)locvar2;
+	UINT16 color = (UINT16)locvar2;
 	if (LUA_CallAction("A_Dye", actor))
 		return;
 	if (color >= numskincolors)
 		return;
 
-	if (!color)
-		target->colorized = false;
-	else
-		target->colorized = true;
-
 	// What if it's a player?
 	if (target->player)
-	{
 		target->player->powers[pw_dye] = color;
-		return;
-	}
 
-	target->color = color;
+	if (!color)
+	{
+		target->colorized = false;
+		target->color = target->player ? target->player->skincolor : SKINCOLOR_NONE;
+	}
+	else if (!(target->player))
+	{
+		target->colorized = true;
+		target->color = color;
+	}
 }
 
 // Function: A_MoveRelative
