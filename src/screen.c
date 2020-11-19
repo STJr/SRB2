@@ -590,7 +590,7 @@ boolean SCR_UseDelayedOverlay(void)
 
 boolean SCR_NeedsDelayedOverlay(void)
 {
-	return (moviemode != MM_OFF);
+	return (moviemode == MM_GIF);
 }
 
 // XMOD FPS display
