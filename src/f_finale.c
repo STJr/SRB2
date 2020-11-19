@@ -1127,6 +1127,7 @@ static const char *credits[] = {
 	"Sherman \"CoatRack\" DesJardins",
 	"\"DirkTheHusky\"",
 	"Jesse \"Jeck Jims\" Emerick",
+	"\"Fighter_Builder\"", // for the CEZ3 button debris
 	"Buddy \"KinkaJoy\" Fischer",
 	"Vivian \"toaster\" Grannell",
 	"James \"SwitchKaze\" Hale",
@@ -1207,7 +1208,7 @@ static const char *credits[] = {
 	"\1Testing",
 	"Discord Community Testers",
 	"Hank \"FuriousFox\" Brannock",
-	"Cody \"SRB2 Playah\" Koester",
+	"Cody \"Playah\" Koester",
 	"Skye \"OmegaVelocity\" Meredith",
 	"Stephen \"HEDGESMFG\" Moellering",
 	"Rosalie \"ST218\" Molina",

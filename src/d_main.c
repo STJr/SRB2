@@ -67,6 +67,7 @@
 #include "keys.h"
 #include "filesrch.h" // refreshdirmenu, mainwadstally
 #include "g_input.h" // tutorial mode control scheming
+#include "m_perfstats.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -412,7 +413,7 @@ static void D_Display(void)
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
-				rs_rendercalltime = I_GetTimeMicros();
+				ps_rendercalltime = I_GetTimeMicros();
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
@@ -459,7 +460,7 @@ static void D_Display(void)
 					if (postimgtype2)
 						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
-				rs_rendercalltime = I_GetTimeMicros() - rs_rendercalltime;
+				ps_rendercalltime = I_GetTimeMicros() - ps_rendercalltime;
 			}
 
 			if (lastdraw)
@@ -473,7 +474,7 @@ static void D_Display(void)
 				lastdraw = false;
 			}
 
-			rs_uitime = I_GetTimeMicros();
+			ps_uitime = I_GetTimeMicros();
 
 			if (gamestate == GS_LEVEL)
 			{
@@ -486,7 +487,7 @@ static void D_Display(void)
 		}
 		else
 		{
-			rs_uitime = I_GetTimeMicros();
+			ps_uitime = I_GetTimeMicros();
 		}
 	}
 
@@ -528,7 +529,7 @@ static void D_Display(void)
 
 	CON_Drawer();
 
-	rs_uitime = I_GetTimeMicros() - rs_uitime;
+	ps_uitime = I_GetTimeMicros() - ps_uitime;
 
 	//
 	// wipe update
@@ -609,90 +610,14 @@ static void D_Display(void)
 			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
 		}
 
-		if (cv_renderstats.value)
+		if (cv_perfstats.value)
 		{
-			char s[50];
-			int frametime = I_GetTimeMicros() - rs_prevframetime;
-			int divisor = 1;
-			rs_prevframetime = I_GetTimeMicros();
-
-			if (rs_rendercalltime > 10000) divisor = 1000;
-
-			snprintf(s, sizeof s - 1, "ft   %d", frametime / divisor);
-			V_DrawThinString(30, 10, V_MONOSPACE | V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "rtot %d", rs_rendercalltime / divisor);
-			V_DrawThinString(30, 20, V_MONOSPACE | V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "bsp  %d", rs_bsptime / divisor);
-			V_DrawThinString(30, 30, V_MONOSPACE | V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "nbsp %d", rs_numbspcalls);
-			V_DrawThinString(80, 10, V_MONOSPACE | V_BLUEMAP, s);
-			snprintf(s, sizeof s - 1, "nspr %d", rs_numsprites);
-			V_DrawThinString(80, 20, V_MONOSPACE | V_BLUEMAP, s);
-			snprintf(s, sizeof s - 1, "nnod %d", rs_numdrawnodes);
-			V_DrawThinString(80, 30, V_MONOSPACE | V_BLUEMAP, s);
-			snprintf(s, sizeof s - 1, "npob %d", rs_numpolyobjects);
-			V_DrawThinString(80, 40, V_MONOSPACE | V_BLUEMAP, s);
-			if (rendermode == render_opengl) // OpenGL specific stats
-			{
-#ifdef HWRENDER
-				snprintf(s, sizeof s - 1, "nsrt %d", rs_hw_nodesorttime / divisor);
-				V_DrawThinString(30, 40, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ndrw %d", rs_hw_nodedrawtime / divisor);
-				V_DrawThinString(30, 50, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ssrt %d", rs_hw_spritesorttime / divisor);
-				V_DrawThinString(30, 60, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "sdrw %d", rs_hw_spritedrawtime / divisor);
-				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ui   %d", rs_uitime / divisor);
-				V_DrawThinString(30, 80, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
-				V_DrawThinString(30, 90, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "tic  %d", rs_tictime / divisor);
-				V_DrawThinString(30, 105, V_MONOSPACE | V_GRAYMAP, s);
-				if (cv_glbatching.value)
-				{
-					snprintf(s, sizeof s - 1, "bsrt %d", rs_hw_batchsorttime / divisor);
-					V_DrawThinString(80, 55, V_MONOSPACE | V_REDMAP, s);
-					snprintf(s, sizeof s - 1, "bdrw %d", rs_hw_batchdrawtime / divisor);
-					V_DrawThinString(80, 65, V_MONOSPACE | V_REDMAP, s);
-
-					snprintf(s, sizeof s - 1, "npol %d", rs_hw_numpolys);
-					V_DrawThinString(130, 10, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "ndc  %d", rs_hw_numcalls);
-					V_DrawThinString(130, 20, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "nshd %d", rs_hw_numshaders);
-					V_DrawThinString(130, 30, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "nvrt %d", rs_hw_numverts);
-					V_DrawThinString(130, 40, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "ntex %d", rs_hw_numtextures);
-					V_DrawThinString(185, 10, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "npf  %d", rs_hw_numpolyflags);
-					V_DrawThinString(185, 20, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "ncol %d", rs_hw_numcolors);
-					V_DrawThinString(185, 30, V_MONOSPACE | V_PURPLEMAP, s);
-				}
-#endif
-			}
-			else // software specific stats
-			{
-				snprintf(s, sizeof s - 1, "prtl %d", rs_sw_portaltime / divisor);
-				V_DrawThinString(30, 40, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "plns %d", rs_sw_planetime / divisor);
-				V_DrawThinString(30, 50, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "mskd %d", rs_sw_maskedtime / divisor);
-				V_DrawThinString(30, 60, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ui   %d", rs_uitime / divisor);
-				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
-				V_DrawThinString(30, 80, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "tic  %d", rs_tictime / divisor);
-				V_DrawThinString(30, 95, V_MONOSPACE | V_GRAYMAP, s);
-			}
+			M_DrawPerfStats();
 		}
 
-		rs_swaptime = I_GetTimeMicros();
+		ps_swaptime = I_GetTimeMicros();
 		I_FinishUpdate(); // page flip or blit buffer
-		rs_swaptime = I_GetTimeMicros() - rs_swaptime;
+		ps_swaptime = I_GetTimeMicros() - ps_swaptime;
 	}
 }
 
@@ -1542,6 +1467,12 @@ void D_SRB2Main(void)
 		ultimatemode = true;
 	}
 
+	if (M_CheckParm("-splitscreen"))
+	{
+		autostart = true;
+		splitscreen = true;
+	}
+
 	// rei/miru: bootmap (Idea: starts the game on a predefined map)
 	if (bootmap && !(M_CheckParm("-warp") && M_IsNextParm()))
 	{
@@ -1620,7 +1551,7 @@ void D_SRB2Main(void)
 	{
 		levelstarttic = gametic;
 		G_SetGamestate(GS_LEVEL);
-		if (!P_LoadLevel(false))
+		if (!P_LoadLevel(false, false))
 			I_Quit(); // fail so reset game stuff
 	}
 }

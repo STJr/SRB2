@@ -24,6 +24,7 @@
 #include "p_saveg.h"
 #include "p_local.h"
 #include "p_slopes.h" // for P_SlopeById
+#include "p_polyobj.h" // polyobj_t, PolyObjects
 #ifdef LUA_ALLOW_BYTECODE
 #include "d_netfil.h" // for LUA_DumpFile
 #endif
@@ -33,6 +34,7 @@
 #include "lua_hook.h"
 
 #include "doomstat.h"
+#include "g_state.h"
 
 lua_State *gL = NULL;
 
@@ -50,6 +52,7 @@ static lua_CFunction liblist[] = {
 	LUA_SkinLib, // skin_t, skins[]
 	LUA_ThinkerLib, // thinker_t
 	LUA_MapLib, // line_t, side_t, sector_t, subsector_t
+	LUA_PolyObjLib, // polyobj_t
 	LUA_BlockmapLib, // blockmap stuff
 	LUA_HudLib, // HUD stuff
 	NULL
@@ -359,6 +362,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word, "token")) {
 		lua_pushinteger(L, token);
 		return 1;
+	} else if (fastcmp(word, "gamestate")) {
+		lua_pushinteger(L, gamestate);
+		return 1;
 	}
 	return 0;
 }
@@ -436,6 +442,10 @@ static void LUA_ClearState(void)
 	// make LREG_VALID table for all pushed userdata cache.
 	lua_newtable(L);
 	lua_setfield(L, LUA_REGISTRYINDEX, LREG_VALID);
+
+	// make LREG_METATABLES table for all registered metatables
+	lua_newtable(L);
+	lua_setfield(L, LUA_REGISTRYINDEX, LREG_METATABLES);
 
 	// open srb2 libraries
 	for(i = 0; liblist[i]; i++) {
@@ -774,6 +784,12 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(&sides[i]);
 	for (i = 0; i < numvertexes; i++)
 		LUA_InvalidateUserdata(&vertexes[i]);
+	for (i = 0; i < (size_t)numPolyObjects; i++)
+	{
+		LUA_InvalidateUserdata(&PolyObjects[i]);
+		LUA_InvalidateUserdata(&PolyObjects[i].vertices);
+		LUA_InvalidateUserdata(&PolyObjects[i].lines);
+	}
 #ifdef HAVE_LUA_SEGS
 	for (i = 0; i < numsegs; i++)
 		LUA_InvalidateUserdata(&segs[i]);
@@ -832,6 +848,7 @@ enum
 	ARCH_NODE,
 #endif
 	ARCH_FFLOOR,
+	ARCH_POLYOBJ,
 	ARCH_SLOPE,
 	ARCH_MAPHEADER,
 	ARCH_SKINCOLOR,
@@ -858,6 +875,7 @@ static const struct {
 	{META_NODE,     ARCH_NODE},
 #endif
 	{META_FFLOOR,	ARCH_FFLOOR},
+	{META_POLYOBJ,  ARCH_POLYOBJ},
 	{META_SLOPE,    ARCH_SLOPE},
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{META_SKINCOLOR,   ARCH_SKINCOLOR},
@@ -966,7 +984,16 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			lua_pop(gL, 1);
 		}
 		if (!found)
+		{
 			t++;
+
+			if (t == 0)
+			{
+				CONS_Alert(CONS_ERROR, "Too many tables to archive!\n");
+				WRITEUINT8(save_p, ARCH_NULL);
+				return 0;
+			}
+		}
 
 		WRITEUINT8(save_p, ARCH_TABLE);
 		WRITEUINT16(save_p, t);
@@ -1126,6 +1153,17 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
+		case ARCH_POLYOBJ:
+		{
+			polyobj_t *polyobj = *((polyobj_t **)lua_touserdata(gL, myindex));
+			if (!polyobj)
+				WRITEUINT8(save_p, ARCH_NULL);
+			else {
+				WRITEUINT8(save_p, ARCH_POLYOBJ);
+				WRITEUINT16(save_p, polyobj-PolyObjects);
+			}
+			break;
+		}
 		case ARCH_SLOPE:
 		{
 			pslope_t *slope = *((pslope_t **)lua_touserdata(gL, myindex));
@@ -1269,8 +1307,22 @@ static void ArchiveTables(void)
 
 			lua_pop(gL, 1);
 		}
-		lua_pop(gL, 1);
 		WRITEUINT8(save_p, ARCH_TEND);
+
+		// Write metatable ID
+		if (lua_getmetatable(gL, -1))
+		{
+			// registry.metatables[metatable]
+			lua_getfield(gL, LUA_REGISTRYINDEX, LREG_METATABLES);
+			lua_pushvalue(gL, -2);
+			lua_gettable(gL, -2);
+			WRITEUINT16(save_p, lua_isnil(gL, -1) ? 0 : lua_tointeger(gL, -1));
+			lua_pop(gL, 3);
+		}
+		else
+			WRITEUINT16(save_p, 0);
+
+		lua_pop(gL, 1);
 	}
 }
 
@@ -1381,6 +1433,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 			LUA_PushUserdata(gL, rover, META_FFLOOR);
 		break;
 	}
+	case ARCH_POLYOBJ:
+		LUA_PushUserdata(gL, &PolyObjects[READUINT16(save_p)], META_POLYOBJ);
+		break;
 	case ARCH_SLOPE:
 		LUA_PushUserdata(gL, P_SlopeById(READUINT16(save_p)), META_SLOPE);
 		break;
@@ -1438,6 +1493,7 @@ static void UnArchiveTables(void)
 {
 	int TABLESINDEX;
 	UINT16 i, n;
+	UINT16 metatableid;
 
 	if (!gL)
 		return;
@@ -1462,6 +1518,19 @@ static void UnArchiveTables(void)
 			else
 				lua_rawset(gL, -3);
 		}
+
+		metatableid = READUINT16(save_p);
+		if (metatableid)
+		{
+			// setmetatable(table, registry.metatables[metatableid])
+			lua_getfield(gL, LUA_REGISTRYINDEX, LREG_METATABLES);
+				lua_rawgeti(gL, -1, metatableid);
+				if (lua_isnil(gL, -1))
+					I_Error("Unknown metatable ID %d\n", metatableid);
+				lua_setmetatable(gL, -3);
+			lua_pop(gL, 1);
+		}
+
 		lua_pop(gL, 1);
 	}
 }

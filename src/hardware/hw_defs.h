@@ -132,6 +132,43 @@ typedef struct
 	FLOAT       t;            // t texture ordinate (t over w)
 } FOutVector;
 
+#ifdef GL_SHADERS
+// Predefined shader types
+enum
+{
+	SHADER_DEFAULT = 0,
+
+	SHADER_FLOOR,
+	SHADER_WALL,
+	SHADER_SPRITE,
+	SHADER_MODEL, SHADER_MODEL_LIGHTING,
+	SHADER_WATER,
+	SHADER_FOG,
+	SHADER_SKY,
+
+	NUMBASESHADERS,
+};
+
+// Maximum amount of shader programs
+// Must be higher than NUMBASESHADERS
+#define HWR_MAXSHADERS 16
+
+// Shader sources (vertex and fragment)
+typedef struct
+{
+	char *vertex;
+	char *fragment;
+} shadersource_t;
+
+// Custom shader reference table
+typedef struct
+{
+	const char *type;
+	INT32 id;
+} customshaderxlat_t;
+
+#endif
+
 typedef struct vbo_vertex_s
 {
 	float x, y, z;
@@ -254,6 +291,16 @@ enum hwdsetspecialstate
 };
 
 typedef enum hwdsetspecialstate hwdspecialstate_t;
+
+// Lactozilla: Shader options
+enum hwdshaderoption
+{
+	HWD_SHADEROPTION_OFF,
+	HWD_SHADEROPTION_ON,
+	HWD_SHADEROPTION_NOCUSTOM,
+};
+
+typedef enum hwdshaderoption hwdshaderoption_t;
 
 // Lactozilla: Shader info
 // Generally set at the start of the frame.

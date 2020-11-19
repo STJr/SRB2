@@ -42,7 +42,7 @@
 
 #ifdef HAVE_IMAGE
 #include "SDL_image.h"
-#elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) // Windows doesn't need this, as SDL will do it for us.
+#elif defined (__unix__) || (!defined(__APPLE__) && defined (UNIXCOMMON)) // Windows & Mac don't need this, as SDL will do it for us.
 #define LOAD_XPM //I want XPM!
 #include "IMG_xpm.c" //Alam: I don't want to add SDL_Image.dll/so
 #define HAVE_IMAGE //I have SDL_Image, sortof
@@ -1884,14 +1884,13 @@ void VID_StartupOpenGL(void)
 		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
 		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 
-		HWD.pfnLoadShaders      = hwSym("LoadShaders",NULL);
-		HWD.pfnKillShaders      = hwSym("KillShaders",NULL);
+		HWD.pfnCompileShaders   = hwSym("CompileShaders",NULL);
+		HWD.pfnCleanShaders     = hwSym("CleanShaders",NULL);
 		HWD.pfnSetShader        = hwSym("SetShader",NULL);
 		HWD.pfnUnSetShader      = hwSym("UnSetShader",NULL);
 
 		HWD.pfnSetShaderInfo    = hwSym("SetShaderInfo",NULL);
 		HWD.pfnLoadCustomShader = hwSym("LoadCustomShader",NULL);
-		HWD.pfnInitCustomShaders= hwSym("InitCustomShaders",NULL);
 
 		vid.glstate = HWD.pfnInit() ? VID_GL_LIBRARY_LOADED : VID_GL_LIBRARY_ERROR; // let load the OpenGL library
 

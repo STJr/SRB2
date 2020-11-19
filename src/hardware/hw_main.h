@@ -73,10 +73,15 @@ FBITFIELD HWR_GetBlendModeFlag(INT32 ast);
 FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf);
 FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
 
-void HWR_ReadShaders(UINT16 wadnum, boolean PK3);
-boolean HWR_LoadShaders(void);
+boolean HWR_CompileShaders(void);
 
-extern CV_PossibleValue_t granisotropicmode_cons_t[];
+void HWR_LoadAllCustomShaders(void);
+void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3);
+const char *HWR_GetShaderName(INT32 shader);
+
+extern customshaderxlat_t shaderxlat[];
+
+extern CV_PossibleValue_t glanisotropicmode_cons_t[];
 
 #ifdef ALAM_LIGHTING
 extern consvar_t cv_gldynamiclighting;
@@ -85,7 +90,7 @@ extern consvar_t cv_glcoronas;
 extern consvar_t cv_glcoronasize;
 #endif
 
-extern consvar_t cv_glshaders;
+extern consvar_t cv_glshaders, cv_glallowshaders;
 extern consvar_t cv_glmodels;
 extern consvar_t cv_glmodelinterpolation;
 extern consvar_t cv_glmodellighting;
@@ -111,21 +116,22 @@ extern FTransform atransform;
 
 
 // Render stats
-extern int rs_hw_nodesorttime;
-extern int rs_hw_nodedrawtime;
-extern int rs_hw_spritesorttime;
-extern int rs_hw_spritedrawtime;
+extern int ps_hw_skyboxtime;
+extern int ps_hw_nodesorttime;
+extern int ps_hw_nodedrawtime;
+extern int ps_hw_spritesorttime;
+extern int ps_hw_spritedrawtime;
 
 // Render stats for batching
-extern int rs_hw_numpolys;
-extern int rs_hw_numverts;
-extern int rs_hw_numcalls;
-extern int rs_hw_numshaders;
-extern int rs_hw_numtextures;
-extern int rs_hw_numpolyflags;
-extern int rs_hw_numcolors;
-extern int rs_hw_batchsorttime;
-extern int rs_hw_batchdrawtime;
+extern int ps_hw_numpolys;
+extern int ps_hw_numverts;
+extern int ps_hw_numcalls;
+extern int ps_hw_numshaders;
+extern int ps_hw_numtextures;
+extern int ps_hw_numpolyflags;
+extern int ps_hw_numcolors;
+extern int ps_hw_batchsorttime;
+extern int ps_hw_batchdrawtime;
 
 extern boolean gl_init;
 extern boolean gl_maploaded;

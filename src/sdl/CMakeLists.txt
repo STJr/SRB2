@@ -55,6 +55,10 @@ set(SRB2_SDL2_HEADERS
 	sdlmain.h
 )
 
+if(${SRB2_CONFIG_HAVE_THREADS})
+	set(SRB2_SDL2_SOURCES ${SRB2_SDL2_SOURCES} i_threads.c)
+endif()
+
 source_group("Interface Code" FILES ${SRB2_SDL2_SOURCES} ${SRB2_SDL2_HEADERS})
 
 # Dependency
@@ -268,7 +272,7 @@ if(${SDL2_FOUND})
 	endif()
 
 	target_compile_definitions(SRB2SDL2 PRIVATE
-		-DDDIRECTFULLSCREEN -DHAVE_SDL
+		-DDIRECTFULLSCREEN -DHAVE_SDL
 	)
 
 	## strip debug symbols into separate file when using gcc.
