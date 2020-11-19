@@ -768,8 +768,9 @@ static void M_PNGhdr(png_structp png_ptr, png_infop png_info_ptr, PNG_CONST png_
 	}
 	else
 	{
-		png_set_IHDR(png_ptr, png_info_ptr, width, height, 8, PNG_COLOR_TYPE_RGB,
-		 png_interlace, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
+		png_set_IHDR(png_ptr, png_info_ptr, width, height, 8,
+		((rendermode == render_soft && truecolor) ? PNG_COLOR_TYPE_RGB_ALPHA : PNG_COLOR_TYPE_RGB),
+		png_interlace, PNG_COMPRESSION_TYPE_BASE, PNG_FILTER_TYPE_BASE);
 		png_write_info_before_PLTE(png_ptr, png_info_ptr);
 		png_set_compression_strategy(png_ptr, Z_FILTERED);
 	}
@@ -1454,6 +1455,9 @@ static boolean WritePCXfile(const char *filename, const UINT8 *data, int width, 
 	pcx_t *pcx;
 	UINT8 *pack;
 
+	if (!pal)
+		return;
+
 	pcx = Z_Malloc(width*height*2 + 1000, PU_STATIC, NULL);
 
 	pcx->manufacturer = 0x0a; // PCX id
@@ -1576,11 +1580,16 @@ void M_DoScreenShot(void)
 	else
 #endif
 	{
-		M_CreateScreenShotPalette();
+		UINT8 *sshotpal = NULL;
+		if (!truecolor)
+		{
+			M_CreateScreenShotPalette();
+			sshotpal = screenshot_palette;
+		}
 #ifdef USE_PNG
-		ret = M_SavePNG(va(pandf,pathname,freename), linear, vid.width, vid.height, screenshot_palette);
+		ret = M_SavePNG(va(pandf,pathname,freename), linear, vid.width, vid.height, sshotpal);
 #else
-		ret = WritePCXfile(va(pandf,pathname,freename), linear, vid.width, vid.height, screenshot_palette);
+		ret = WritePCXfile(va(pandf,pathname,freename), linear, vid.width, vid.height, sshotpal);
 #endif
 	}
 
@@ -2085,6 +2094,14 @@ char *sizeu5(size_t num)
 	static char sizeu5_buf[28];
 	sprintf(sizeu5_buf, "%"PRIdS, num);
 	return sizeu5_buf;
+}
+
+// 32-bit memset
+void M_Memset32(void *dest, UINT64 value, uintptr_t size)
+{
+	uintptr_t i;
+	for (i = 0; i < size; i++)
+		((char*)dest)[i] = ((char*)&value)[i & 3];
 }
 
 #if defined (__GNUC__) && defined (__i386__) // from libkwave, under GPL

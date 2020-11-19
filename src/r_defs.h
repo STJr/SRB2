@@ -50,6 +50,7 @@ typedef struct
 // from darkening PLAYPAL to all black.
 // Could even use more than 32 levels.
 typedef UINT8 lighttable_t;
+typedef UINT32 lighttable_u32_t;
 
 #define CMF_FADEFULLBRIGHTSPRITES  1
 #define CMF_FOG 4
@@ -61,11 +62,14 @@ typedef struct extracolormap_s
 	UINT8 flags;
 
 	// store rgba values in combined bitwise
-	// also used in OpenGL instead lighttables
+	// also used in OpenGL instead of lighttables
 	INT32 rgba; // similar to maskcolor in sw mode
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+#ifdef TRUECOLOR
+	lighttable_u32_t *colormap_u32;
+#endif
 
 #ifdef EXTRACOLORMAPLUMPS
 	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
@@ -219,6 +223,9 @@ typedef struct r_lightlist_s
 	lighttable_t *rcolormap;
 	ffloortype_e flags;
 	INT32 lightnum;
+#ifdef TRUECOLOR
+	UINT8 blendlight; // lactokaiju: truecolor
+#endif
 } r_lightlist_t;
 
 // Slopes

@@ -56,6 +56,19 @@ UINT8 *ylookup2[MAXVIDHEIGHT*4];
 INT32 columnofs[MAXVIDWIDTH*4];
 
 UINT8 *topleft;
+UINT32 *topleft_u32;
+
+// =========================================================================
+//                              TRUECOLOR STUFF
+// =========================================================================
+
+// Renderer states
+boolean tc_colormap;
+
+// Column / span drawer states
+UINT8 dp_lighting;
+extracolormap_t *dp_extracolormap;
+extracolormap_t *defaultextracolormap;
 
 // =========================================================================
 //                      COLUMN DRAWING CODE STUFF
@@ -67,6 +80,8 @@ INT32 dc_x = 0, dc_yl = 0, dc_yh = 0;
 fixed_t dc_iscale, dc_texturemid;
 UINT8 dc_hires; // under MSVC boolean is a byte, while on other systems, it a bit,
                // soo lets make it a byte on all system for the ASM code
+UINT8 dc_picfmt = PICFMT_PATCH;
+UINT8 dc_colmapstyle = TC_COLORMAPSTYLE_8BPP;
 UINT8 *dc_source;
 
 // -----------------------
@@ -79,11 +94,11 @@ UINT8 *transtables; // translucency tables
 /**	\brief R_DrawTransColumn uses this
 */
 UINT8 *dc_transmap; // one of the translucency tables
+UINT8 dc_alpha; // column alpha
 
 // ----------------------
 // translation stuff here
 // ----------------------
-
 
 /**	\brief R_DrawTranslatedColumn uses this
 */
@@ -101,9 +116,12 @@ lighttable_t *ds_colormap;
 fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 UINT16 ds_flatwidth, ds_flatheight;
 boolean ds_powersoftwo;
+UINT8 ds_picfmt = PICFMT_FLAT;
+UINT8 ds_colmapstyle = TC_COLORMAPSTYLE_8BPP;
 
 UINT8 *ds_source; // start of a 64*64 tile image
 UINT8 *ds_transmap; // one of the translucency tables
+UINT8 ds_alpha; // span alpha
 
 pslope_t *ds_slope; // Current slope being used
 floatv3_t ds_su[MAXVIDHEIGHT], ds_sv[MAXVIDHEIGHT], ds_sz[MAXVIDHEIGHT]; // Vectors for... stuff?
@@ -681,10 +699,124 @@ void R_DrawViewBorder(void)
 #include "r_draw8.c"
 #include "r_draw8_npo2.c"
 
+
 // ==========================================================================
-//                   INCLUDE 16bpp DRAWING CODE HERE
+//                   INCLUDE 32bpp DRAWING CODE HERE
 // ==========================================================================
 
-#ifdef HIGHCOLOR
-#include "r_draw16.c"
+#ifdef TRUECOLOR
+static UINT32 TC_ColorMix(UINT32 fg, UINT32 bg)
+{
+	RGBA_t rgba;
+	UINT8 tint;
+	UINT32 pixel, origpixel;
+
+	// fg is the graphic's pixel
+	// bg is the background pixel
+	// blendcolor is the colormap
+	// fadecolor is the fade color
+	pixel = origpixel = rgba.rgba = fg;
+	tint = R_GetRgbaA(dp_extracolormap->rgba) * 10;
+
+	// mix pixel with blend color
+	if (tint > 0)
+		pixel = TC_TintTrueColor(rgba, (UINT32)(dp_extracolormap->rgba), tint);
+
+	// mix pixel with fade color
+	fg = TC_BlendTrueColor(pixel, (UINT32)(dp_extracolormap->fadergba), (0xFF - dp_lighting));
+
+	// mix background with the pixel's alpha value
+	fg = TC_BlendTrueColor(bg, fg, R_GetRgbaA(origpixel));
+
+	return (0xFF000000 | fg);
+}
+
+static UINT32 TC_TranslucentColorMix(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	// do full alpha mix
+	fg = TC_ColorMix(fg, bg);
+
+	// mix pixel with the translucency value
+	fg = TC_BlendTrueColor(bg, fg, alpha);
+
+	return (0xFF000000 | fg);
+}
+
+FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt)
+{
+#ifndef TINTFLOATS
+	fixed_t r, g, b;
+	fixed_t cmaskr, cmaskg, cmaskb;
+	fixed_t cbrightness;
+	fixed_t maskamt, othermask;
+	UINT32 origpixel = rgba.rgba;
+
+	r = cmaskr = (rgba.s.red<<FRACBITS);
+	g = cmaskg = (rgba.s.green<<FRACBITS);
+	b = cmaskb = (rgba.s.blue<<FRACBITS);
+
+	cbrightness = (FixedMul(r, 19595) + FixedMul(g, 38469) + FixedMul(b, 7471));
+	maskamt = FixedDiv((tintamt<<FRACBITS), 0xFF<<FRACBITS);
+	othermask = FixedDiv((0xFF-tintamt)<<FRACBITS, 0xFF<<FRACBITS);
+
+	maskamt = FixedDiv(maskamt, (0xFF<<FRACBITS));
+	cmaskr = FixedMul(cmaskr, maskamt);
+	cmaskg = FixedMul(cmaskg, maskamt);
+	cmaskb = FixedMul(cmaskb, maskamt);
+
+	rgba.s.red = (FixedMul(cbrightness, cmaskr)>>FRACBITS) + (FixedMul(r, othermask)>>FRACBITS);
+	rgba.s.green = (FixedMul(cbrightness, cmaskg)>>FRACBITS) + (FixedMul(g, othermask)>>FRACBITS);
+	rgba.s.blue = (FixedMul(cbrightness, cmaskb)>>FRACBITS) + (FixedMul(b, othermask)>>FRACBITS);
+
+	return TC_BlendTrueColor(origpixel, TC_BlendTrueColor(rgba.rgba, blendcolor, (cbrightness>>FRACBITS)), tintamt);
+#else
+	double r, g, b;
+	double cmaskr, cmaskg, cmaskb;
+	double cbrightness;
+	double maskamt, othermask;
+	UINT32 origpixel = rgba.rgba;
+
+	r = cmaskr = (rgba.s.red/256.0f);
+	g = cmaskg = (rgba.s.green/256.0f);
+	b = cmaskb = (rgba.s.blue/256.0f);
+
+	cbrightness = (0.299*r + 0.587*g + 0.114*b);	// sqrt((r*r) + (g*g) + (b*b))
+	r = rgba.s.red;
+	g = rgba.s.green;
+	b = rgba.s.blue;
+
+	maskamt = (tintamt/256.0f);
+	othermask = 1 - maskamt;
+
+	maskamt /= 0xFF;
+	cmaskr *= maskamt;
+	cmaskg *= maskamt;
+	cmaskb *= maskamt;
+
+	rgba.s.red = (cbrightness * cmaskr) + (r * othermask);
+	rgba.s.green = (cbrightness * cmaskg) + (g * othermask);
+	rgba.s.blue = (cbrightness * cmaskb) + (b * othermask);
+
+	return TC_BlendTrueColor(origpixel, TC_BlendTrueColor(rgba.rgba, blendcolor, llrint(cbrightness*256.0f)), tintamt);
+#endif
+}
+
+// You like macros, don't you?
+#define WriteTranslucentColumn(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, GetTrueColor(idx), dc_alpha)
+#define WriteTranslucentColumn32(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, idx, dc_alpha)
+
+#define WriteTranslucentSpan(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, GetTrueColor(idx), ds_alpha)
+#define WriteTranslucentSpan32(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dest, idx, ds_alpha)
+#define WriteTranslucentSpanIdx(idx, destidx) dest[destidx] = TC_BlendTrueColor(dest[destidx], GetTrueColor(idx), ds_alpha)
+#define WriteTranslucentSpanIdx32(idx, destidx) dest[destidx] = TC_BlendTrueColor(dest[destidx], idx, ds_alpha)
+
+#ifndef NOWATER
+#define WriteTranslucentWaterSpan(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dsrc, GetTrueColor(idx), ds_alpha); dsrc++;
+#define WriteTranslucentWaterSpan32(idx) *dest = TC_BlendTrueColor(*(UINT32 *)dsrc, idx, ds_alpha); dsrc++;
+#define WriteTranslucentWaterSpanIdx(idx, destidx) dest[destidx] = TC_BlendTrueColor(*(UINT32 *)dsrc, GetTrueColor(idx), ds_alpha); dsrc++;
+#define WriteTranslucentWaterSpanIdx32(idx, destidx) dest[destidx] = TC_BlendTrueColor(*(UINT32 *)dsrc, idx, ds_alpha); dsrc++;
+#endif
+
+#include "r_draw32.c"
+#include "r_draw32_npo2.c"
 #endif

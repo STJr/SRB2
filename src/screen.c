@@ -101,9 +101,9 @@ boolean R_SSE2 = false;
 void SCR_SetDrawFuncs(void)
 {
 	//
-	//  setup the right draw routines for either 8bpp or 16bpp
+	//  setup the right draw routines for either 8bpp or 32bpp
 	//
-	if (true)//vid.bpp == 1) //Always run in 8bpp. todo: remove all 16bpp code?
+	if (vid.bpp == 1)
 	{
 		colfuncs[BASEDRAWFUNC] = R_DrawColumn_8;
 		spanfuncs[BASEDRAWFUNC] = R_DrawSpan_8;
@@ -171,18 +171,55 @@ void SCR_SetDrawFuncs(void)
 		}
 #endif
 	}
-/*	else if (vid.bpp > 1)
+#ifdef TRUECOLOR
+	else if (vid.bpp == 4)
 	{
-		I_OutputMsg("using highcolor mode\n");
-		spanfunc = basespanfunc = R_DrawSpan_16;
-		transcolfunc = R_DrawTranslatedColumn_16;
-		transtransfunc = R_DrawTranslucentColumn_16; // No 16bit operation for this function
+		colfuncs[BASEDRAWFUNC] = R_DrawColumn_32;
+		spanfuncs[BASEDRAWFUNC] = R_DrawSpan_32;
 
-		colfunc = basecolfunc = R_DrawColumn_16;
-		shadecolfunc = NULL; // detect error if used somewhere..
-		fuzzcolfunc = R_DrawTranslucentColumn_16;
-		walldrawerfunc = R_DrawWallColumn_16;
-	}*/
+		colfunc = colfuncs[BASEDRAWFUNC];
+		spanfunc = spanfuncs[BASEDRAWFUNC];
+
+		colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_32;
+		colfuncs[COLDRAWFUNC_TRANS] = R_DrawTranslatedColumn_32;
+		colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_32;
+		colfuncs[COLDRAWFUNC_SHADOWED] = R_DrawColumnShadowed_32;
+		colfuncs[COLDRAWFUNC_TRANSTRANS] = R_DrawTranslatedTranslucentColumn_32;
+		colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_32;
+		colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS] = R_Draw2sMultiPatchTranslucentColumn_32;
+		colfuncs[COLDRAWFUNC_FOG] = R_DrawFogColumn_32;
+
+		spanfuncs[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_32;
+		spanfuncs[SPANDRAWFUNC_SPLAT] = R_DrawSplat_32;
+		spanfuncs[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_32;
+		spanfuncs[SPANDRAWFUNC_FOG] = R_DrawFogSpan_32;
+#ifndef NOWATER
+		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_32;
+#endif
+		spanfuncs[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_32;
+		spanfuncs[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_32;
+#ifndef NOWATER
+		spanfuncs[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_32;
+#endif
+		spanfuncs[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_32;
+
+		// Lactozilla: Non-powers-of-two
+		spanfuncs_npo2[BASEDRAWFUNC] = R_DrawSpan_NPO2_32;
+		spanfuncs_npo2[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_NPO2_32;
+		spanfuncs_npo2[SPANDRAWFUNC_SPLAT] = R_DrawSplat_NPO2_32;
+		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_NPO2_32;
+		spanfuncs_npo2[SPANDRAWFUNC_FOG] = NULL; // Not needed
+#ifndef NOWATER
+		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_32;
+#endif
+		spanfuncs_npo2[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_NPO2_32;
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_NPO2_32;
+#ifndef NOWATER
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_NPO2_32;
+#endif
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_32;
+	}
+#endif
 	else
 		I_Error("unknown bytes per pixel mode %d\n", vid.bpp);
 /*

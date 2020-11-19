@@ -653,4 +653,9 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 #undef UPDATE_ALERT
 #endif
 
+/// Software true color mode rendering
+#ifndef NO_TRUECOLOR
+#define TRUECOLOR
+#endif
+
 #endif // __DOOMDEF__

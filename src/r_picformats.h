@@ -18,6 +18,7 @@
 #include "doomdef.h"
 
 #define PICTURES_ALLOWDEPTH
+//#define PICTURES_FORCEFLATDEPTH
 
 typedef enum
 {

@@ -664,10 +664,12 @@ void *Picture_TextureToFlat(size_t trickytex)
 
 	UINT8 *converted;
 	size_t flatsize;
-	fixed_t col, ofs;
+	fixed_t col, ofs, step;
 	column_t *column;
 	UINT8 *desttop, *dest, *deststop;
-	UINT8 *source;
+	UINT8 *source = NULL;
+	pictureformat_t format;
+	INT32 fmtbpp;
 
 	if (trickytex >= (unsigned)numtextures)
 		I_Error("Picture_TextureToFlat: invalid texture number!");
@@ -679,14 +681,22 @@ void *Picture_TextureToFlat(size_t trickytex)
 	R_CheckTextureCache(tex);
 
 	// Allocate the flat
-	flatsize = (texture->width * texture->height);
+	format = texture->format;
+	fmtbpp = Picture_FormatBPP(format) / 8;
+
+	flatsize = (texture->width * texture->height) * fmtbpp;
 	converted = Z_Malloc(flatsize, PU_STATIC, NULL);
-	memset(converted, TRANSPARENTPIXEL, flatsize);
+
+	if (format == PICFMT_PATCH32)
+		memset(converted, 0x00000000, flatsize);
+	else
+		memset(converted, TRANSPARENTPIXEL, flatsize); // Transparency hack
 
 	// Now we're gonna write to it
 	desttop = converted;
 	deststop = desttop + flatsize;
-	for (col = 0; col < texture->width; col++, desttop++)
+
+	for (col = 0; col < texture->width; col++, desttop += fmtbpp)
 	{
 		// no post_t info
 		if (!texture->holes)
@@ -694,11 +704,16 @@ void *Picture_TextureToFlat(size_t trickytex)
 			column = (column_t *)(R_GetColumn(tex, col));
 			source = (UINT8 *)(column);
 			dest = desttop;
-			for (ofs = 0; dest < deststop && ofs < texture->height; ofs++)
+			for (ofs = 0, step = 0; dest < deststop && step < texture->height; ofs += fmtbpp, step++)
 			{
-				if (source[ofs] != TRANSPARENTPIXEL)
-					*dest = source[ofs];
-				dest += texture->width;
+				if (format == PICFMT_PATCH32)
+					M_Memcpy(dest, &source[ofs], fmtbpp);
+				else
+				{
+					if (source[ofs] != TRANSPARENTPIXEL)
+						*dest = source[ofs];
+				}
+				dest += (texture->width * fmtbpp);
 			}
 		}
 		else
@@ -711,16 +726,24 @@ void *Picture_TextureToFlat(size_t trickytex)
 				if (topdelta <= prevdelta)
 					topdelta += prevdelta;
 				prevdelta = topdelta;
-
-				dest = desttop + (topdelta * texture->width);
+				dest = desttop + ((topdelta * texture->width) * fmtbpp);
 				source = (UINT8 *)column + 3;
-				for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
+				for (ofs = 0, step = 0; dest < deststop && step < column->length; ofs += fmtbpp, step++)
 				{
-					if (source[ofs] != TRANSPARENTPIXEL)
-						*dest = source[ofs];
-					dest += texture->width;
+					if (format == PICFMT_PATCH32)
+						M_Memcpy(dest, &source[ofs], fmtbpp);
+					else
+					{
+						if (source[ofs] != TRANSPARENTPIXEL)
+							*dest = source[ofs];
+					}
+					dest += (texture->width * fmtbpp);
 				}
-				column = (column_t *)((UINT8 *)column + column->length + 4);
+				if (format == PICFMT_PATCH32)
+					column = (column_t *)((UINT32 *)column + column->length);
+				else
+					column = (column_t *)((UINT8 *)column + column->length);
+				column = (column_t *)((UINT8 *)column + 4);
 			}
 		}
 	}

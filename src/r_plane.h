@@ -72,7 +72,11 @@ extern fixed_t cachedystep[MAXVIDHEIGHT];
 extern fixed_t basexscale, baseyscale;
 
 extern fixed_t *yslope;
+
 extern lighttable_t **planezlight;
+#ifdef TRUECOLOR
+extern lighttable_u32_t **planezlight_u32;
+#endif
 
 void R_InitPlanes(void);
 void R_ClearPlanes(void);

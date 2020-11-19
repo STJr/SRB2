@@ -5,6 +5,7 @@
 rendermode_t rendermode = render_none;
 
 boolean highcolor = false;
+boolean truecolor = false;
 
 boolean allow_fullscreen = false;
 

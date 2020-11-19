@@ -45,6 +45,10 @@ extern INT32 vid_opengl_state;
 */
 extern boolean highcolor;
 
+/**	\brief use truecolor modes if true
+*/
+extern boolean truecolor;
+
 /**	\brief setup video mode
 */
 void I_StartupGraphics(void);

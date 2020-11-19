@@ -24,6 +24,12 @@ extern UINT8 *ylookup1[MAXVIDHEIGHT*4];
 extern UINT8 *ylookup2[MAXVIDHEIGHT*4];
 extern INT32 columnofs[MAXVIDWIDTH*4];
 extern UINT8 *topleft;
+extern UINT32 *topleft_u32;
+
+// Color blending
+extern UINT8 dp_lighting; // dp_ = draw pixel
+extern extracolormap_t *dp_extracolormap;
+extern extracolormap_t *defaultextracolormap;
 
 // -------------------------
 // COLUMN DRAWING CODE STUFF
@@ -33,15 +39,17 @@ extern lighttable_t *dc_colormap;
 extern INT32 dc_x, dc_yl, dc_yh;
 extern fixed_t dc_iscale, dc_texturemid;
 extern UINT8 dc_hires;
+extern UINT8 dc_picfmt;
+extern UINT8 dc_colmapstyle;
 
 extern UINT8 *dc_source; // first pixel in a column
 
 // translucency stuff here
 extern UINT8 *transtables; // translucency tables, should be (*transtables)[5][256][256]
 extern UINT8 *dc_transmap;
+extern UINT8 dc_alpha;
 
 // translation stuff here
-
 extern UINT8 *dc_translation;
 
 extern struct r_lightlist_s *dc_lightlist;
@@ -61,6 +69,9 @@ extern UINT16 ds_flatwidth, ds_flatheight;
 extern boolean ds_powersoftwo;
 extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
+extern UINT8 ds_alpha;
+extern UINT8 ds_picfmt;
+extern UINT8 ds_colmapstyle;
 
 typedef struct {
 	float x, y, z;
@@ -206,6 +217,80 @@ void R_DrawTranslucentColumn_16(void);
 void R_DrawTranslatedColumn_16(void);
 void R_DrawSpan_16(void);
 #endif
+
+// ------------------
+// 32bpp DRAWING CODE
+// ------------------
+
+void R_DrawColumn_32(void);
+void R_DrawShadeColumn_32(void);
+void R_DrawTranslucentColumn_32(void);
+void R_DrawTranslatedColumn_32(void);
+void R_DrawTranslatedTranslucentColumn_32(void);
+void R_Draw2sMultiPatchColumn_32(void);
+void R_Draw2sMultiPatchTranslucentColumn_32(void);
+void R_DrawFogColumn_32(void);
+void R_DrawColumnShadowed_32(void);
+
+void R_DrawSpan_32(void);
+void R_DrawSplat_32(void);
+void R_DrawTranslucentSpan_32(void);
+void R_DrawTranslucentSplat_32(void);
+void R_DrawTiltedSpan_32(void);
+void R_DrawTiltedTranslucentSpan_32(void);
+#ifndef NOWATER
+void R_DrawTiltedTranslucentWaterSpan_32(void);
+#endif
+void R_DrawTiltedSplat_32(void);
+#ifndef NOWATER
+void R_DrawTranslucentWaterSpan_32(void);
+#endif
+void R_DrawFogSpan_32(void);
+
+// Lactozilla: Non-powers-of-two
+void R_DrawSpan_NPO2_32(void);
+void R_DrawTranslucentSpan_NPO2_32(void);
+void R_DrawSplat_NPO2_32(void);
+void R_DrawTranslucentSplat_NPO2_32(void);
+void R_DrawTiltedSpan_NPO2_32(void);
+void R_DrawTiltedTranslucentSpan_NPO2_32(void);
+#ifndef NOWATER
+void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void);
+#endif
+void R_DrawTiltedSplat_NPO2_32(void);
+#ifndef NOWATER
+void R_DrawTranslucentWaterSpan_NPO2_32(void);
+#endif
+
+//
+// truecolor states
+//
+
+extern boolean tc_colormap;
+
+FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt);
+#define TC_CalcScaleLight(light_p) (((scalelight_u32[0][0] - light_p) / 256) * 8);
+
+enum
+{
+	TC_COLORMAPSTYLE_8BPP,
+	TC_COLORMAPSTYLE_32BPP
+};
+
+//
+// color blending math
+//
+
+#define GetTrueColor(c) ((st_palette > 0) ? V_GetPalNumColor(c,st_palette) : V_GetColor(c)).rgba
+
+#define MIX_ALPHA(a) (0xFF-(a))
+
+#define TC_BlendTrueColor(bg, fg, alpha) \
+	((alpha) == 0) ? (bg) : ( ((alpha)==0xFF) ? (fg) \
+	:( ( (R_GetRgbaR(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaR(fg) * (alpha)) ) >> 8) \
+	|( ( (R_GetRgbaG(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaG(fg) * (alpha)) ) >> 8) << 8 \
+	|( ( (R_GetRgbaB(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaB(fg) * (alpha)) ) >> 8) << 16 \
+	|( ( (R_GetRgbaA(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaA(fg) * (alpha)) ) >> 8) << 24)
 
 // =========================================================================
 #endif  // __R_DRAW__

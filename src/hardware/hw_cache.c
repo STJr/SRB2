@@ -645,6 +645,9 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 		}
 	}
 
+	if (texture->format == PICFMT_NONE)
+		texture->format = PICFMT_PATCH;
+
 	// Composite the columns together.
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
@@ -1081,6 +1084,8 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 
 		if (!mipmap->data && !mipmap->downloaded)
 		{
+			if (levelflat->picture == NULL)
+				I_Error("HWR_GetLevelFlat: levelflat->picture == NULL");
 			mipmap->width = levelflat->width;
 			mipmap->height = levelflat->height;
 			size = (mipmap->width * mipmap->height) * (fmtbpp / 8);

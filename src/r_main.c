@@ -25,6 +25,7 @@
 #include "keys.h"
 #include "i_video.h"
 #include "m_menu.h"
+#include "m_misc.h"
 #include "am_map.h"
 #include "d_main.h"
 #include "v_video.h"
@@ -93,8 +94,14 @@ INT32 viewangletox[FINEANGLES/2];
 angle_t xtoviewangle[MAXVIDWIDTH+1];
 
 lighttable_t *scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
-lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
+
+#ifdef TRUECOLOR
+lighttable_u32_t *scalelight_u32[LIGHTLEVELS][MAXLIGHTSCALE];
+lighttable_u32_t *zlight_u32[LIGHTLEVELS][MAXLIGHTZ];
+
+static void TrueColor_OnChange(void);
+#endif
 
 // Hack to support extra boom colormaps.
 extracolormap_t *extra_colormaps = NULL;
@@ -162,6 +169,18 @@ consvar_t cv_drawdist_nights = CVAR_INIT ("drawdist_nights", "2048", CV_SAVE, dr
 consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL);
 //consvar_t cv_precipdensity = CVAR_INIT ("precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL);
 consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
+
+// lactokaiju: truecolor
+#ifdef TRUECOLOR
+consvar_t cv_tcstate = CVAR_INIT ("tc_state", "On", CV_CALL|CV_NOINIT, CV_OnOff, TrueColor_OnChange);
+consvar_t cv_tccolormap = CVAR_INIT ("tc_colormap", "On", CV_SAVE, CV_OnOff, NULL);
+
+static void TrueColor_OnChange(void)
+{
+	truecolor = (!!cv_tcstate.value);
+	setmodeneeded = vid.modenum + 1;
+}
+#endif
 
 // Okay, whoever said homremoval causes a performance hit should be shot.
 consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
@@ -582,6 +601,9 @@ static inline void R_InitLightTables(void)
 				level = NUMCOLORMAPS-1;
 
 			zlight[i][j] = colormaps + level*256;
+#ifdef TRUECOLOR
+			zlight_u32[i][j] = colormaps_u32 + level*256;
+#endif
 		}
 	}
 }
@@ -962,6 +984,9 @@ void R_ExecuteSetViewSize(void)
 	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
+#ifdef TRUECOLOR
+	M_Memset32(scalelight_u32, 0xFF, sizeof(scalelight_u32));
+#endif
 
 	// Calculate the light levels to use for each level/scale combination.
 	for (i = 0; i< LIGHTLEVELS; i++)
@@ -978,6 +1003,9 @@ void R_ExecuteSetViewSize(void)
 				level = NUMCOLORMAPS - 1;
 
 			scalelight[i][j] = colormaps + level*256;
+#ifdef TRUECOLOR
+			scalelight_u32[i][j] = colormaps_u32 + level*256;
+#endif
 		}
 	}
 
@@ -1451,6 +1479,11 @@ void R_RenderPlayerView(player_t *player)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 32+(timeinmap&15));
 	}
 
+	// lactokaiju: truecolor
+#ifdef TRUECOLOR
+	tc_colormap = (truecolor && (!!cv_tccolormap.value));
+#endif
+
 	R_SetupFrame(player);
 	framecount++;
 	validcount++;
@@ -1619,6 +1652,12 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_shadow);
 	CV_RegisterVar(&cv_skybox);
 	CV_RegisterVar(&cv_ffloorclip);
+
+	// lactokaiju: truecolor
+#ifdef TRUECOLOR
+	CV_RegisterVar(&cv_tccolormap);
+	CV_RegisterVar(&cv_tcstate);
+#endif
 
 	CV_RegisterVar(&cv_cam_dist);
 	CV_RegisterVar(&cv_cam_still);

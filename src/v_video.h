@@ -65,10 +65,13 @@ extern RGBA_t *pMasterPalette;
 extern lumpnum_t basePaletteLump;
 
 void V_CubeApply(UINT8 *red, UINT8 *green, UINT8 *blue);
+UINT8 V_AlphaTrans(INT32 num);
 
 // Retrieve the ARGB value from a palette color index
 #define V_GetColor(color) (pLocalPalette[color&0xFF])
 #define V_GetMasterColor(color) (pMasterPalette[color&0xFF])
+#define V_GetPalNumColor(color,palettenum) (pLocalPalette[(palettenum*256)+(color&0xFF)])
+#define V_GetPalNumMasterColor(color,palettenum) (pMasterPalette[(palettenum*256)+(color&0xFF)])
 
 // Bottom 8 bits are used for parameter (screen or character)
 #define V_PARAMMASK          0x000000FF
