@@ -541,10 +541,13 @@ void luaV_execute (lua_State *L, int nexeccalls) {
 	continue;
       }
       case OP_BNOT: {
-        TValue *rb = RB(i);
+        TValue *rb = RKB(i);
         if (ttisnumber(rb)) {
           lua_Number nb = nvalue(rb);
           setnvalue(ra, luai_numnot(nb));
+        }
+        else if (ttisboolean(rb) || ttisnil(rb)) {
+          setbvalue(ra, l_isfalse(rb));
         }
         else {
           Protect(Arith(L, ra, rb, rb, TM_NOT));
