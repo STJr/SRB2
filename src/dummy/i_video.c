@@ -3,6 +3,7 @@
 #include "../i_video.h"
 
 rendermode_t rendermode = render_none;
+rendermode_t chosenrendermode = render_none;
 
 boolean highcolor = false;
 boolean truecolor = false;
@@ -52,8 +53,15 @@ boolean VID_InSoftwareRenderer(void)
 	return false;
 }
 
-void VID_CheckRenderer(void) {}
-void VID_CheckGLLoaded(rendermode_t oldrender) {}
+boolean VID_CheckRenderer(void)
+{
+	return false;
+}
+
+void VID_CheckGLLoaded(rendermode_t oldrender)
+{
+	(void)oldrender;
+}
 
 const char *VID_GetModeName(INT32 modenum)
 {

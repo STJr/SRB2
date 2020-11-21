@@ -102,15 +102,6 @@ virtlump_t* vres_Find(const virtres_t*, const char*);
 
 #define lumpcache_t void *
 
-typedef struct
-{
-	lumpcache_t *lumps;
-} patchcache_t;
-
-#ifdef HWRENDER
-#include "m_aatree.h"
-#endif
-
 // Resource type of the WAD. Yeah, I know this sounds dumb, but I'll leave it like this until I clean up the code further.
 typedef enum restype
 {
@@ -127,10 +118,7 @@ typedef struct wadfile_s
 	restype_t type;
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
-	patchcache_t *patchcache;
-#ifdef HWRENDER
-	aatree_t *hwrcache; // patches are cached in renderer's native format
-#endif
+	lumpcache_t *patchcache;
 	UINT16 numlumps; // this wad's number of resources
 	FILE *handle;
 	UINT32 filesize; // for network

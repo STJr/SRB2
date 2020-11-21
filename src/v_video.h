@@ -36,6 +36,9 @@ cv_rsaturation, cv_ysaturation, cv_gsaturation, cv_csaturation, cv_bsaturation, 
 // Allocates buffer screens, call before R_Init.
 void V_Init(void);
 
+// Recalculates the viddef (dupx, dupy, etc.) according to the current screen resolution.
+void V_Recalc(void);
+
 // Color look-up table
 #define CLUTINDEX(r, g, b) (((r) >> 3) << 11) | (((g) >> 2) << 5) | ((b) >> 3)
 

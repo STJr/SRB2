@@ -971,6 +971,16 @@ void R_ExecuteSetViewSize(void)
 			dy = FixedMul(abs(dy), fovtan);
 			yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
 		}
+
+		if (ds_su)
+			Z_Free(ds_su);
+		if (ds_sv)
+			Z_Free(ds_sv);
+		if (ds_sz)
+			Z_Free(ds_sz);
+
+		ds_su = ds_sv = ds_sz = NULL;
+		ds_sup = ds_svp = ds_szp = NULL;
 	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
@@ -1029,8 +1039,8 @@ void R_Init(void)
 	//I_OutputMsg("\nR_InitLightTables");
 	R_InitLightTables();
 
-	//I_OutputMsg("\nR_InitTranslationTables\n");
-	R_InitTranslationTables();
+	//I_OutputMsg("\nR_InitTranslucencyTables\n");
+	R_InitTranslucencyTables();
 
 	R_InitDrawNodes();
 
@@ -1496,9 +1506,6 @@ void R_RenderPlayerView(player_t *player)
 	}
 	R_ClearDrawSegs();
 	R_ClearSprites();
-#ifdef FLOORSPLATS
-	R_ClearVisibleFloorSplats();
-#endif
 	Portal_InitList();
 
 	// check for new console commands.
@@ -1581,9 +1588,6 @@ void R_RenderPlayerView(player_t *player)
 
 	ps_sw_planetime = I_GetTimeMicros();
 	R_DrawPlanes();
-#ifdef FLOORSPLATS
-	R_DrawVisibleFloorSplats();
-#endif
 	ps_sw_planetime = I_GetTimeMicros() - ps_sw_planetime;
 
 	// draw mid texture and sprite
@@ -1593,24 +1597,6 @@ void R_RenderPlayerView(player_t *player)
 	ps_sw_maskedtime = I_GetTimeMicros() - ps_sw_maskedtime;
 
 	free(masks);
-}
-
-#ifdef HWRENDER
-void R_InitHardwareMode(void)
-{
-	HWR_AddSessionCommands();
-	HWR_Switch();
-	HWR_LoadTextures(numtextures);
-	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
-		HWR_SetupLevel();
-}
-#endif
-
-void R_ReloadHUDGraphics(void)
-{
-	ST_LoadGraphics();
-	HU_LoadGraphics();
-	ST_ReloadSkinFaceGraphics();
 }
 
 // =========================================================================
