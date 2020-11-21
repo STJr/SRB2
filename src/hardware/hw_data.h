@@ -73,23 +73,10 @@ struct GLMapTexture_s
 typedef struct GLMapTexture_s GLMapTexture_t;
 
 
-// a cached patch as converted to hardware format, holding the original patch_t
-// header so that the existing code can retrieve ->width, ->height as usual
-// This is returned by W_CachePatchNum()/W_CachePatchName(), when rendermode
-// is 'render_opengl'. Else it returns the normal patch_t data.
-
+// a cached patch as converted to hardware format
 struct GLPatch_s
 {
-	// the 4 first fields come right away from the original patch_t
-	INT16               width;
-	INT16               height;
-	INT16               leftoffset;     // pixels to the left of origin
-	INT16               topoffset;      // pixels below the origin
-	//
 	float               max_s,max_t;
-	UINT16              wadnum;      // the software patch lump num for when the hardware patch
-	UINT16              lumpnum;     // was flushed, and we need to re-create it
-	void                *rawpatch;   // :^)
 	GLMipmap_t          *mipmap;
 } ATTRPACK;
 typedef struct GLPatch_s GLPatch_t;

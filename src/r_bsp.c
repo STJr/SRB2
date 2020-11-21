@@ -1053,11 +1053,6 @@ static void R_Subsector(size_t num)
 		}
 	}
 
-#ifdef FLOORSPLATS
-	if (sub->splats)
-		R_AddVisibleFloorSplats(sub);
-#endif
-
    // killough 9/18/98: Fix underwater slowdown, by passing real sector
    // instead of fake one. Improve sprite lighting by basing sprite
    // lightlevels on floor & ceiling lightlevels in the surrounding area.

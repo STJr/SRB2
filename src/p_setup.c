@@ -29,6 +29,7 @@
 #include "r_data.h"
 #include "r_things.h" // for R_AddSpriteDefs
 #include "r_textures.h"
+#include "r_patch.h"
 #include "r_picformats.h"
 #include "r_sky.h"
 #include "r_draw.h"
@@ -550,7 +551,7 @@ Ploadflat (levelflat_t *levelflat, const char *flatname, boolean resize)
 
 	lumpnum_t    flatnum;
 	int       texturenum;
-	patch_t   *flatpatch;
+	UINT8     *flatpatch;
 	size_t    lumplength;
 
 	size_t i;
@@ -610,7 +611,7 @@ flatfound:
 		/* This could be a flat, patch, or PNG. */
 		flatpatch = W_CacheLumpNum(flatnum, PU_CACHE);
 		lumplength = W_LumpLength(flatnum);
-		if (Picture_CheckIfPatch(flatpatch, lumplength))
+		if (Picture_CheckIfDoomPatch((softwarepatch_t *)flatpatch, lumplength))
 			levelflat->type = LEVELFLAT_PATCH;
 		else
 		{
@@ -1074,9 +1075,6 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->frontsector = ld->backsector = NULL;
 
 	ld->validcount = 0;
-#ifdef WALLSPLATS
-	ld->splats = NULL;
-#endif
 	ld->polyobj = NULL;
 
 	ld->text = NULL;
@@ -2106,9 +2104,6 @@ static boolean P_LoadMapData(const virtres_t *virt)
 static void P_InitializeSubsector(subsector_t *ss)
 {
 	ss->sector = NULL;
-#ifdef FLOORSPLATS
-	ss->splats = NULL;
-#endif
 	ss->validcount = 0;
 }
 
@@ -2153,7 +2148,7 @@ static void P_LoadNodes(UINT8 *data)
   * \param seg Seg to compute length for.
   * \return Length in fracunits.
   */
-fixed_t P_SegLength(seg_t *seg)
+static fixed_t P_SegLength(seg_t *seg)
 {
 	INT64 dx = (seg->v2->x - seg->v1->x)>>1;
 	INT64 dy = (seg->v2->y - seg->v1->y)>>1;
@@ -4138,12 +4133,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// Clear pointers that would be left dangling by the purge
 	R_FlushTranslationColormapCache();
 
+	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
+	Patch_FreeTag(PU_PATCH_ROTATED);
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
-
-#if defined (WALLSPLATS) || defined (FLOORSPLATS)
-	// clear the splats from previous level
-	R_ClearLevelSplats();
-#endif
 
 	P_InitThinkers();
 	P_InitCachedActions();
@@ -4201,14 +4193,14 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		P_SpawnPrecipitation();
 
 #ifdef HWRENDER // not win32 only 19990829 by Kin
+	gl_maploaded = false;
+
 	// Lactozilla: Free extrasubsectors regardless of renderer.
-	// Maybe we're not in OpenGL anymore.
-	if (extrasubsectors)
-		free(extrasubsectors);
-	extrasubsectors = NULL;
-	// stuff like HWR_CreatePlanePolygons is called there
+	HWR_FreeExtraSubsectors();
+
+	// Create plane polygons.
 	if (rendermode == render_opengl)
-		HWR_SetupLevel();
+		HWR_LoadLevel();
 #endif
 
 	// oh god I hope this helps
@@ -4294,33 +4286,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	return true;
 }
-
-#ifdef HWRENDER
-void HWR_SetupLevel(void)
-{
-	// Lactozilla (December 8, 2019)
-	// Level setup used to free EVERY mipmap from memory.
-	// Even mipmaps that aren't related to level textures.
-	// Presumably, the hardware render code used to store textures as level data.
-	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
-	// Level textures are only reloaded after R_LoadTextures, which is
-	// when the texture list is loaded.
-
-	// Sal: Unfortunately, NOT freeing them causes the dreaded Color Bug.
-	HWR_FreeMipmapCache();
-
-#ifdef ALAM_LIGHTING
-	// BP: reset light between levels (we draw preview frame lights on current frame)
-	HWR_ResetLights();
-#endif
-
-	HWR_CreatePlanePolygons((INT32)numnodes - 1);
-
-	// Build the sky dome
-	HWR_ClearSkyDome();
-	HWR_BuildSkyDome();
-}
-#endif
 
 //
 // P_RunSOC
@@ -4531,6 +4496,8 @@ boolean P_AddWadFile(const char *wadfilename)
 	//
 	// search for sprite replacements
 	//
+	Patch_FreeTag(PU_SPRITE);
+	Patch_FreeTag(PU_PATCH_ROTATED);
 	R_AddSpriteDefs(wadnum);
 
 	// Reload it all anyway, just in case they

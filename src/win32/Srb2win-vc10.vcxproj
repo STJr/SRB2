@@ -298,6 +298,8 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\r_main.c" />
+    <ClCompile Include="..\r_patch.c" />
+    <ClCompile Include="..\r_patchrotation.c" />
     <ClCompile Include="..\r_picformats.c" />
     <ClCompile Include="..\r_plane.c" />
     <ClCompile Include="..\r_portal.c" />
@@ -454,6 +456,8 @@
     <ClInclude Include="..\r_draw.h" />
     <ClInclude Include="..\r_local.h" />
     <ClInclude Include="..\r_main.h" />
+    <ClInclude Include="..\r_patch.h" />
+    <ClInclude Include="..\r_patchrotation.h" />
     <ClInclude Include="..\r_picformats.h" />
     <ClInclude Include="..\r_plane.h" />
     <ClInclude Include="..\r_portal.h" />
