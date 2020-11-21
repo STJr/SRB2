@@ -142,6 +142,7 @@ void *Patch_AllocateHardwarePatch(patch_t *patch)
 	{
 		GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, &patch->hardware);
 		grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, &grPatch->mipmap);
+		grPatch->picfmt = PICFMT_PATCH;
 	}
 	return (void *)(patch->hardware);
 }

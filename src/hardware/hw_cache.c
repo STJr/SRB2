@@ -1371,13 +1371,9 @@ patch_t *HWR_GetCachedGLPatchPwad(UINT16 wadnum, UINT16 lumpnum)
 	lumpcache_t *lumpcache = wadfiles[wadnum]->patchcache;
 	if (!lumpcache[lumpnum])
 	{
-		GLPatch_t *glpatch = NULL;
-
 		void *ptr = Z_Calloc(sizeof(patch_t), PU_PATCH, &lumpcache[lumpnum]);
 		Patch_Create(NULL, 0, ptr);
-
-		glpatch = ((GLPatch_t *)Patch_AllocateHardwarePatch(ptr));
-		glpatch->picfmt = PICFMT_PATCH;
+		Patch_AllocateHardwarePatch(ptr);
 	}
 	return (patch_t *)(lumpcache[lumpnum]);
 }
