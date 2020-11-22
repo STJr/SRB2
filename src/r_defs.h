@@ -805,6 +805,9 @@ typedef struct
 
 #ifdef ROTSPRITE
 	rotsprite_t *rotated[2][16]; // Rotated patches
+#ifdef TRUECOLOR
+	rotsprite_t *rotated_tc[2][16]; // Rotated patches, for truecolor Software
+#endif
 #endif
 } spriteframe_t;
 

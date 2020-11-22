@@ -15,6 +15,10 @@
 #include "w_wad.h"
 #include "v_video.h" // V_GetColor
 
+#ifdef TRUECOLOR
+#include "i_video.h" // truecolor
+#endif
+
 #ifdef ROTSPRITE
 fixed_t rollcosang[ROTANGLES];
 fixed_t rollsinang[ROTANGLES];
@@ -53,30 +57,45 @@ patch_t *Patch_GetRotatedSprite(
 	INT32 idx = rotationangle;
 	UINT8 type = (adjustfeet ? 1 : 0);
 
+	patch_t *patch;
+	lumpnum_t lump;
+
+#ifdef TRUECOLOR
+	boolean usetc = false;
+#endif
+
 	if (rotationangle < 1 || rotationangle >= ROTANGLES)
 		return NULL;
 
-	rotsprite = sprite->rotated[type][spriteangle];
+	lump = sprite->lumppat[spriteangle];
+	if (lump == LUMPERROR)
+		return NULL;
+
+	patch = W_CachePatchNum(lump, PU_SPRITE);
+
+#ifdef TRUECOLOR
+	usetc = ((truecolor || rendermode == render_opengl) && Patch_GetTruecolor(patch) != NULL);
+#define SPRITELIST (usetc ? sprite->rotated_tc : sprite->rotated)
+#else
+#define SPRITELIST (sprite->rotated)
+#endif
+
+	rotsprite = SPRITELIST[type][spriteangle];
 
 	if (rotsprite == NULL)
 	{
 		rotsprite = RotatedPatch_Create(ROTANGLES);
-		sprite->rotated[type][spriteangle] = rotsprite;
+		SPRITELIST[type][spriteangle] = rotsprite;
 	}
+
+#undef SPRITELIST
 
 	if (flip)
 		idx += rotsprite->angles;
 
 	if (rotsprite->patches[idx] == NULL)
 	{
-		patch_t *patch;
 		INT32 xpivot = 0, ypivot = 0;
-		lumpnum_t lump = sprite->lumppat[spriteangle];
-
-		if (lump == LUMPERROR)
-			return NULL;
-
-		patch = W_CachePatchNum(lump, PU_SPRITE);
 
 		if (sprinfo->available)
 		{
@@ -88,6 +107,11 @@ patch_t *Patch_GetRotatedSprite(
 			xpivot = patch->leftoffset;
 			ypivot = patch->height / 2;
 		}
+
+#ifdef TRUECOLOR
+		if (usetc)
+			patch = Patch_GetTruecolor(patch);
+#endif
 
 		RotatedPatch_DoRotation(rotsprite, patch, rotationangle, xpivot, ypivot, flip);
 
@@ -158,7 +182,7 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 	INT32 ox, oy;
 	INT32 minx, miny, maxx, maxy;
 
-	pictureformat_t format = PICFMT_PATCH;
+	pictureformat_t format = patch->format;
 	INT32 fmtbpp = PICDEPTH_NONE;
 
 	// Don't cache angle = 0
@@ -284,7 +308,7 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 		{
 			case PICDEPTH_32BPP:
 			{
-				UINT16 *f32 = (UINT16 *)rawdst;
+				UINT32 *f32 = (UINT32 *)rawdst;
 				src = (UINT8 *)(&f32[(miny * newwidth) + minx]);
 				break;
 			}

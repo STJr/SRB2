@@ -180,18 +180,8 @@ void R_DrawFloorSprite(vissprite_t *spr)
 #ifdef TRUECOLOR
 	if (truecolor)
 	{
-		boolean usetc = (dc_picfmt == PICFMT_PATCH32);
-
+		ds_picfmt = (patch->format == PICFMT_PATCH32) ? PICFMT_FLAT32 : PICFMT_FLAT16;
 		ds_colmapstyle = dc_colmapstyle;
-
-		if (usetc)
-		{
-			ds_picfmt = PICFMT_FLAT32;
-			patch = Patch_GetTruecolor(patch);
-		}
-		else
-			ds_picfmt = PICFMT_FLAT16;
-
 		Patch_GenerateFlat(patch, flipflags, ds_picfmt);
 	}
 	else

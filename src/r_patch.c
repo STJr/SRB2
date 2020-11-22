@@ -162,6 +162,7 @@ void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags, pictureformat_t fo
 
 patch_t *Patch_GetTruecolor(patch_t *patch)
 {
+#ifdef PICTURES_ALLOWDEPTH
 	if (!patch->extra->truecolor && patch->extra->source.data)
 	{
 		patch_t *tc = Picture_PNGConvert(
@@ -175,6 +176,9 @@ patch_t *Patch_GetTruecolor(patch_t *patch)
 	}
 
 	return patch->extra->truecolor;
+#else
+	return NULL;
+#endif
 }
 
 //

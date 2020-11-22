@@ -363,6 +363,8 @@ void *Picture_PatchConvert(
 		Patch_CreateGL(converted);
 #endif
 
+		converted->format = outformat;
+
 		Z_Free(img);
 
 		if (outsize != NULL)

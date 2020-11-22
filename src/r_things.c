@@ -116,6 +116,10 @@ static void R_InstallSpriteLump(UINT16 wad,            // graphics patch
 	{
 		sprtemp[frame].rotated[0][r] = NULL;
 		sprtemp[frame].rotated[1][r] = NULL;
+#ifdef TRUECOLOR
+		sprtemp[frame].rotated_tc[0][r] = NULL;
+		sprtemp[frame].rotated_tc[1][r] = NULL;
+#endif
 	}
 #endif
 
@@ -764,15 +768,14 @@ boolean R_SpriteIsFlashing(vissprite_t *vis)
 
 boolean R_SpriteIsPaletted(vissprite_t *spr)
 {
+#ifdef TRUECOLOR
 	patch_t *patch = spr->patch;
 
 	if (!truecolor || !patch)
 		return true;
 
-#ifdef TRUECOLOR
-	if (patch->extra->source.data)
-		return (Patch_GetTruecolor(patch) == NULL);
-
+	return (patch->format != PICFMT_PATCH32);
+#else
 	return true;
 #endif
 }
@@ -832,12 +835,6 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	fixed_t this_scale = vis->mobj->scale;
 	INT32 x1, x2;
 	INT64 overflow_test;
-
-#ifdef TRUECOLOR
-	if (!R_SpriteIsPaletted(vis))
-		patch = Patch_GetTruecolor(patch);
-	else
-#endif
 
 	if (!patch)
 		return;
@@ -1060,12 +1057,6 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 	//Fab : R_InitSprites now sets a wad lump number
 	patch = vis->patch;
-
-#ifdef TRUECOLOR
-	if (!R_SpriteIsPaletted(vis))
-		patch = Patch_GetTruecolor(patch);
-	else
-#endif
 
 	if (!patch)
 		return;
@@ -1695,6 +1686,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
 	patch = W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
+
+#ifdef TRUECOLOR
+	if (truecolor && patch->extra->source.data && Patch_GetTruecolor(patch) != NULL)
+		patch = Patch_GetTruecolor(patch);
+#endif
 
 #ifdef ROTSPRITE
 	if (thing->rollangle

@@ -734,11 +734,10 @@ void HWR_MakePatch (patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, bo
 #ifdef PICTURES_ALLOWDEPTH
 		patch_t *tc = Patch_GetTruecolor(source);
 		if (tc)
-		{
 			source = tc;
-			grPatch->picfmt = PICFMT_PATCH32;
-		}
 #endif
+
+		grPatch->picfmt = source->format;
 
 		MakeBlock(grMipmap);
 
