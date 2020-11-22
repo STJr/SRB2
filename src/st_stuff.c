@@ -458,7 +458,7 @@ boolean st_overlay;
 static void ST_DrawNightsOverlayNum(fixed_t x /* right border */, fixed_t y, fixed_t s, INT32 a,
 	UINT32 num, patch_t **numpat, skincolornum_t colornum)
 {
-	fixed_t w = SHORT(numpat[0]->width)*s;
+	fixed_t w = numpat[0]->width * s;
 	const UINT8 *colormap;
 
 	// I want my V_SNAPTOx flags. :< -Red
@@ -676,7 +676,7 @@ static void ST_drawRaceNum(INT32 time)
 		if (!(P_AutoPause() || paused) && !bounce)
 				S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
 	}
-	V_DrawScaledPatch(((BASEVIDWIDTH - SHORT(racenum->width))/2), height, V_PERPLAYER, racenum);
+	V_DrawScaledPatch(((BASEVIDWIDTH - racenum->width)/2), height, V_PERPLAYER, racenum);
 }
 
 static void ST_drawTime(void)
@@ -1625,8 +1625,8 @@ static void ST_drawFirstPersonHUD(void)
 	p = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 
 	// Display the countdown drown numbers!
-	if (p && !F_GetPromptHideHud(60 - SHORT(p->topoffset)))
-		V_DrawScaledPatch((BASEVIDWIDTH/2) - (SHORT(p->width)/2) + SHORT(p->leftoffset), 60 - SHORT(p->topoffset),
+	if (p && !F_GetPromptHideHud(60 - p->topoffset))
+		V_DrawScaledPatch((BASEVIDWIDTH/2) - (p->width / 2) + SHORT(p->leftoffset), 60 - SHORT(p->topoffset),
 			V_PERPLAYER|V_PERPLAYER|V_TRANSLUCENT, p);
 }
 
@@ -2379,7 +2379,7 @@ static void ST_drawTeamHUD(void)
 		p = bmatcico;
 
 	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
+		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (p->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
 
 	if (gametyperules & GTR_TEAMFLAGS)
 		p = rflagico;
@@ -2387,7 +2387,7 @@ static void ST_drawTeamHUD(void)
 		p = rmatcico;
 
 	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
+		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (p->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
 
 	if (!(gametyperules & GTR_TEAMFLAGS))
 		goto num;
@@ -2400,11 +2400,11 @@ static void ST_drawTeamHUD(void)
 		{
 			// Blue flag isn't at base
 			if (players[i].gotflag & GF_BLUEFLAG && LUA_HudEnabled(hud_teamscores))
-				V_DrawScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(nonicon->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon);
+				V_DrawScaledPatch(BASEVIDWIDTH/2 - SEP - (nonicon->width / 2), 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon);
 
 			// Red flag isn't at base
 			if (players[i].gotflag & GF_REDFLAG && LUA_HudEnabled(hud_teamscores))
-				V_DrawScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(nonicon2->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon2);
+				V_DrawScaledPatch(BASEVIDWIDTH/2 + SEP - (nonicon2->width / 2), 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon2);
 
 			whichflag |= players[i].gotflag;
 
@@ -2677,7 +2677,7 @@ static void ST_overlayDrawer(void)
 			else
 			{
 				tic_t num = time;
-				INT32 sz = SHORT(tallnum[0]->width)/2, width = 0;
+				INT32 sz = tallnum[0]->width / 2, width = 0;
 				do
 				{
 					width += sz;

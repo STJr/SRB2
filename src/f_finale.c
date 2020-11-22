@@ -2336,8 +2336,8 @@ void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
 
 	pat = W_CachePatchName(patchname, PU_PATCH_LOWPRIORITY);
 
-	patwidth = SHORT(pat->width);
-	patheight = SHORT(pat->height);
+	patwidth = pat->width;
+	patheight = pat->height;
 	pw = patwidth * dupz;
 	ph = patheight * dupz;
 
