@@ -785,7 +785,6 @@ void R_DrawViewBorder(void)
 #include "r_draw8.c"
 #include "r_draw8_npo2.c"
 
-
 // ==========================================================================
 //                   INCLUDE 32bpp DRAWING CODE HERE
 // ==========================================================================
@@ -814,7 +813,11 @@ static UINT32 TC_ColorMix(UINT32 fg, UINT32 bg)
 	// mix background with the pixel's alpha value
 	fg = TC_BlendTrueColor(bg, fg, R_GetRgbaA(origpixel));
 
-	return (0xFF000000 | fg);
+	// Apply the color cube
+	rgba.rgba = fg;
+	ColorCube_Apply(&rgba.s.red, &rgba.s.green, &rgba.s.blue);
+
+	return (0xFF000000 | rgba.rgba);
 }
 
 static UINT32 TC_TranslucentColorMix(UINT32 fg, UINT32 bg, UINT8 alpha)
@@ -885,6 +888,17 @@ FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt)
 
 	return TC_BlendTrueColor(origpixel, TC_BlendTrueColor(rgba.rgba, blendcolor, llrint(cbrightness*256.0f)), tintamt);
 #endif
+}
+
+static UINT32 TC_Colormap32Mix(UINT32 color)
+{
+	RGBA_t rgba;
+
+	// Apply the color cube
+	rgba.rgba = color;
+	ColorCube_Apply(&rgba.s.red, &rgba.s.green, &rgba.s.blue);
+
+	return rgba.rgba;
 }
 
 // You like macros, don't you?

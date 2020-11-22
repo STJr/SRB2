@@ -67,7 +67,7 @@ extern RGBA_t *pLocalPalette;
 extern RGBA_t *pMasterPalette;
 extern lumpnum_t basePaletteLump;
 
-void V_CubeApply(UINT8 *red, UINT8 *green, UINT8 *blue);
+void ColorCube_Apply(UINT8 *red, UINT8 *green, UINT8 *blue);
 UINT8 V_AlphaTrans(INT32 num);
 
 enum v_patchdrawfunc

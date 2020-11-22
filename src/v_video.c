@@ -339,11 +339,11 @@ static void LoadPalette(const char *lumpname)
 
 		// lerp of colour cubing! if you want, make it smoother yourself
 		if (Cubeapply)
-			V_CubeApply(&pLocalPalette[i].s.red, &pLocalPalette[i].s.green, &pLocalPalette[i].s.blue);
+			ColorCube_Apply(&pLocalPalette[i].s.red, &pLocalPalette[i].s.green, &pLocalPalette[i].s.blue);
 	}
 }
 
-void V_CubeApply(UINT8 *red, UINT8 *green, UINT8 *blue)
+void ColorCube_Apply(UINT8 *red, UINT8 *green, UINT8 *blue)
 {
 	float working[4][3];
 	float linear;

@@ -102,7 +102,7 @@ void R_DrawColumn_32(void)
 						// Re-map color indices from wall texture column
 						//  using a lighting/special effects LUT.
 						// heightmask is the Tutti-Frutti fix
-						*dest = (colormapu32[source[frac>>FRACBITS]]);
+						*dest = TC_Colormap32Mix(colormapu32[source[frac>>FRACBITS]]);
 						dest += vid.width;
 
 						// Avoid overflow.
@@ -160,15 +160,15 @@ void R_DrawColumn_32(void)
 					colormapu32 = (lighttable_u32_t *)colormap;
 					while ((count -= 2) >= 0) // texture height is a power of 2
 					{
-						*dest = (colormapu32[source[(frac>>FRACBITS) & heightmask]]);
+						*dest = TC_Colormap32Mix(colormapu32[source[(frac>>FRACBITS) & heightmask]]);
 						dest += vid.width;
 						frac += fracstep;
-						*dest = (colormapu32[source[(frac>>FRACBITS) & heightmask]]);
+						*dest = TC_Colormap32Mix(colormapu32[source[(frac>>FRACBITS) & heightmask]]);
 						dest += vid.width;
 						frac += fracstep;
 					}
 					if (count & 1)
-						*dest = (colormapu32[source[(frac>>FRACBITS) & heightmask]]);
+						*dest = TC_Colormap32Mix(colormapu32[source[(frac>>FRACBITS) & heightmask]]);
 				}
 			}
 			else if (dc_picfmt == PICFMT_PATCH32)
@@ -278,7 +278,7 @@ void R_Draw2sMultiPatchColumn_32(void)
 						val = source[frac>>FRACBITS];
 
 						if (val != TRANSPARENTPIXEL)
-							*dest = (colormapu32[val]);
+							*dest = TC_Colormap32Mix(colormapu32[val]);
 
 						dest += vid.width;
 
@@ -351,12 +351,12 @@ void R_Draw2sMultiPatchColumn_32(void)
 					{
 						val = source[(frac>>FRACBITS) & heightmask];
 						if (val != TRANSPARENTPIXEL)
-							*dest = (colormapu32[val]);
+							*dest = TC_Colormap32Mix(colormapu32[val]);
 						dest += vid.width;
 						frac += fracstep;
 						val = source[(frac>>FRACBITS) & heightmask];
 						if (val != TRANSPARENTPIXEL)
-							*dest = (colormapu32[val]);
+							*dest = TC_Colormap32Mix(colormapu32[val]);
 						dest += vid.width;
 						frac += fracstep;
 					}
@@ -364,7 +364,7 @@ void R_Draw2sMultiPatchColumn_32(void)
 					{
 						val = source[(frac>>FRACBITS) & heightmask];
 						if (val != TRANSPARENTPIXEL)
-							*dest = (colormapu32[val]);
+							*dest = TC_Colormap32Mix(colormapu32[val]);
 					}
 				}
 			}
@@ -993,7 +993,7 @@ void R_DrawTranslatedColumn_32(void)
 				//  used with PLAY sprites.
 				// Thus the "green" ramp of the player 0 sprite
 				//  is mapped to gray, red, black/indigo.
-				*dest = (colormapu32[dc_translation[source[frac>>FRACBITS]]]);
+				*dest = TC_Colormap32Mix(colormapu32[dc_translation[source[frac>>FRACBITS]]]);
 				dest += vid.width;
 				frac += fracstep;
 			} while (count--);
@@ -1123,35 +1123,35 @@ void R_DrawSpan_32 (void)
 				// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
 				// have the uber complicated math to calculate it now, so that was a memory write we didn't
 				// need!
-				dest[0] = (colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
+				dest[0] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
 				xposition += xstep;
 				yposition += ystep;
 
-				dest[1] = (colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
+				dest[1] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
 				xposition += xstep;
 				yposition += ystep;
 
-				dest[2] = (colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
+				dest[2] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
 				xposition += xstep;
 				yposition += ystep;
 
-				dest[3] = (colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
+				dest[3] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
 				xposition += xstep;
 				yposition += ystep;
 
-				dest[4] = (colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
+				dest[4] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
 				xposition += xstep;
 				yposition += ystep;
 
-				dest[5] = (colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
+				dest[5] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
 				xposition += xstep;
 				yposition += ystep;
 
-				dest[6] = (colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
+				dest[6] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
 				xposition += xstep;
 				yposition += ystep;
 
-				dest[7] = (colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
+				dest[7] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
 				xposition += xstep;
 				yposition += ystep;
 
@@ -1160,7 +1160,7 @@ void R_DrawSpan_32 (void)
 			}
 			while (count-- && dest <= deststop)
 			{
-				*dest = (colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
+				*dest = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -1359,7 +1359,7 @@ void R_DrawTiltedSpan_32(void)
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
 					colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
-					*dest = (colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+					*dest = TC_Colormap32Mix(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -1375,7 +1375,7 @@ void R_DrawTiltedSpan_32(void)
 					u = (INT64)(startu);
 					v = (INT64)(startv);
 					colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
-					*dest = (colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+					*dest = TC_Colormap32Mix(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 				}
 				else
 				{
@@ -1396,7 +1396,7 @@ void R_DrawTiltedSpan_32(void)
 					for (; width != 0; width--)
 					{
 						colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
-						*dest = (colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+						*dest = TC_Colormap32Mix(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 						dest++;
 						u += stepu;
 						v += stepv;
@@ -2125,7 +2125,7 @@ void R_DrawTiltedSplat_32(void)
 					colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
 					val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 					if (val != TRANSPARENTPIXEL)
-						*dest = (colormapu32[val]);
+						*dest = TC_Colormap32Mix(colormapu32[val]);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -2143,7 +2143,7 @@ void R_DrawTiltedSplat_32(void)
 					colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
 					val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 					if (val != TRANSPARENTPIXEL)
-						*dest = (colormapu32[val]);
+						*dest = TC_Colormap32Mix(colormapu32[val]);
 				}
 				else
 				{
@@ -2166,7 +2166,7 @@ void R_DrawTiltedSplat_32(void)
 						colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
 						val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 						if (val != TRANSPARENTPIXEL)
-							*dest = (colormapu32[val]);
+							*dest = TC_Colormap32Mix(colormapu32[val]);
 						dest++;
 						u += stepu;
 						v += stepv;
@@ -2392,7 +2392,7 @@ void R_DrawSplat_32 (void)
 				val &= 4194303;
 				val = source[val];
 				if (val != TRANSPARENTPIXEL)
-					dest[0] = (colormapu32[val]);
+					dest[0] = TC_Colormap32Mix(colormapu32[val]);
 				xposition += xstep;
 				yposition += ystep;
 
@@ -2400,7 +2400,7 @@ void R_DrawSplat_32 (void)
 				val &= 4194303;
 				val = source[val];
 				if (val != TRANSPARENTPIXEL)
-					dest[1] = (colormapu32[val]);
+					dest[1] = TC_Colormap32Mix(colormapu32[val]);
 				xposition += xstep;
 				yposition += ystep;
 
@@ -2408,7 +2408,7 @@ void R_DrawSplat_32 (void)
 				val &= 4194303;
 				val = source[val];
 				if (val != TRANSPARENTPIXEL)
-					dest[2] = (colormapu32[val]);
+					dest[2] = TC_Colormap32Mix(colormapu32[val]);
 				xposition += xstep;
 				yposition += ystep;
 
@@ -2416,7 +2416,7 @@ void R_DrawSplat_32 (void)
 				val &= 4194303;
 				val = source[val];
 				if (val != TRANSPARENTPIXEL)
-					dest[3] = (colormapu32[val]);
+					dest[3] = TC_Colormap32Mix(colormapu32[val]);
 				xposition += xstep;
 				yposition += ystep;
 
@@ -2424,7 +2424,7 @@ void R_DrawSplat_32 (void)
 				val &= 4194303;
 				val = source[val];
 				if (val != TRANSPARENTPIXEL)
-					dest[4] = (colormapu32[val]);
+					dest[4] = TC_Colormap32Mix(colormapu32[val]);
 				xposition += xstep;
 				yposition += ystep;
 
@@ -2432,7 +2432,7 @@ void R_DrawSplat_32 (void)
 				val &= 4194303;
 				val = source[val];
 				if (val != TRANSPARENTPIXEL)
-					dest[5] = (colormapu32[val]);
+					dest[5] = TC_Colormap32Mix(colormapu32[val]);
 				xposition += xstep;
 				yposition += ystep;
 
@@ -2440,7 +2440,7 @@ void R_DrawSplat_32 (void)
 				val &= 4194303;
 				val = source[val];
 				if (val != TRANSPARENTPIXEL)
-					dest[6] = (colormapu32[val]);
+					dest[6] = TC_Colormap32Mix(colormapu32[val]);
 				xposition += xstep;
 				yposition += ystep;
 
@@ -2448,7 +2448,7 @@ void R_DrawSplat_32 (void)
 				val &= 4194303;
 				val = source[val];
 				if (val != TRANSPARENTPIXEL)
-					dest[7] = (colormapu32[val]);
+					dest[7] = TC_Colormap32Mix(colormapu32[val]);
 				xposition += xstep;
 				yposition += ystep;
 
@@ -2459,7 +2459,7 @@ void R_DrawSplat_32 (void)
 			{
 				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 				if (val != TRANSPARENTPIXEL)
-					*dest = (colormapu32[val]);
+					*dest = TC_Colormap32Mix(colormapu32[val]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -2875,7 +2875,7 @@ void R_DrawFloorSprite_32 (void)
 			{
 				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 				if (val & 0xFF00)
-					*dest = colormapu32[translation[val & 0xFF]];
+					*dest = TC_Colormap32Mix(colormapu32[translation[val & 0xFF]]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -3122,7 +3122,7 @@ void R_DrawTiltedFloorSprite_32(void)
 				{
 					val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 					if (val & 0xFF00)
-						*dest = colormapu32[translation[val & 0xFF]];
+						*dest = TC_Colormap32Mix(colormapu32[translation[val & 0xFF]]);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -3139,7 +3139,7 @@ void R_DrawTiltedFloorSprite_32(void)
 					v = (INT64)(startv);
 					val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 					if (val & 0xFF00)
-						*dest = colormapu32[translation[val & 0xFF]];
+						*dest = TC_Colormap32Mix(colormapu32[translation[val & 0xFF]]);
 				}
 				else
 				{
@@ -3161,7 +3161,7 @@ void R_DrawTiltedFloorSprite_32(void)
 					{
 						val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 						if (val & 0xFF00)
-							*dest = colormapu32[translation[val & 0xFF]];
+							*dest = TC_Colormap32Mix(colormapu32[translation[val & 0xFF]]);
 						dest++;
 						u += stepu;
 						v += stepv;
