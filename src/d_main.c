@@ -652,6 +652,8 @@ void D_SRB2Loop(void)
 	SCR_SetMode(); // change video mode
 	SCR_Recalc();
 
+	chosenrendermode = render_none;
+
 	// Check and print which version is executed.
 	// Use this as the border between setup and the main game loop being entered.
 	CONS_Printf(
@@ -1295,19 +1297,6 @@ void D_SRB2Main(void)
 
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
-
-	// Lactozilla: Check if the render mode needs to change.
-	if (setrenderneeded)
-	{
-		CONS_Printf(M_GetText("Switching the renderer...\n"));
-
-		// Switch the renderer in the interface
-		if (VID_CheckRenderer())
-			con_refresh = true; // Allow explicit screen refresh again
-
-		// Set cv_renderer to the new render mode
-		CV_StealthSetValue(&cv_renderer, rendermode);
-	}
 
 	wipegamestate = gamestate;
 

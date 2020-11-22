@@ -1557,7 +1557,7 @@ boolean VID_CheckRenderer(void)
 		setrenderneeded = 0;
 	}
 
-	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, (rendererchanged ? SDL_FALSE : SDL_TRUE));
+	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, (setmodeneeded ? SDL_TRUE : SDL_FALSE));
 	Impl_VideoSetupBuffer();
 
 	if (rendermode == render_soft)
