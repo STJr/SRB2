@@ -539,9 +539,11 @@ OBJS:=$(i_main_o) \
 
 
 ifndef ECHO
+ifndef NOECHOFILENAMES
 define echoName =
 	@echo -- $< ...
 endef
+endif
 endif
 
 # List of languages to compile.
