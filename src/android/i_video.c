@@ -9,6 +9,7 @@
 #include "utils/Log.h"
 
 rendermode_t rendermode = render_soft;
+rendermode_t chosenrendermode = render_none;
 
 boolean highcolor = false;
 
@@ -52,8 +53,15 @@ INT32 VID_SetMode(INT32 modenum)
   return 0;
 }
 
-void VID_CheckRenderer(void) {}
-void VID_CheckGLLoaded(rendermode_t oldrender) {}
+boolean VID_CheckRenderer(void)
+{
+	return false;
+}
+
+void VID_CheckGLLoaded(rendermode_t oldrender)
+{
+	(void)oldrender;
+}
 
 const char *VID_GetModeName(INT32 modenum)
 {

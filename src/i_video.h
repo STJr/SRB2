@@ -36,10 +36,9 @@ typedef enum
 */
 extern rendermode_t rendermode;
 
-/**	\brief OpenGL state
-	0 = never loaded, 1 = loaded successfully, -1 = failed loading
+/**	\brief render mode set by command line arguments
 */
-extern INT32 vid_opengl_state;
+extern rendermode_t chosenrendermode;
 
 /**	\brief use highcolor modes if true
 */
@@ -90,8 +89,9 @@ INT32 VID_GetModeForSize(INT32 w, INT32 h);
 INT32 VID_SetMode(INT32 modenum);
 
 /**	\brief Checks the render state
+	\return	true if the renderer changed
 */
-void VID_CheckRenderer(void);
+boolean VID_CheckRenderer(void);
 
 /**	\brief Load OpenGL mode
 */

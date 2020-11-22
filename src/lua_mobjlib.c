@@ -39,6 +39,11 @@ enum mobj_e {
 	mobj_frame,
 	mobj_sprite2,
 	mobj_anim_duration,
+	mobj_spritexscale,
+	mobj_spriteyscale,
+	mobj_spritexoffset,
+	mobj_spriteyoffset,
+	mobj_floorspriteslope,
 	mobj_touching_sectorlist,
 	mobj_subsector,
 	mobj_floorz,
@@ -56,8 +61,10 @@ enum mobj_e {
 	mobj_flags,
 	mobj_flags2,
 	mobj_eflags,
+	mobj_renderflags,
 	mobj_skin,
 	mobj_color,
+	mobj_blendmode,
 	mobj_bnext,
 	mobj_bprev,
 	mobj_hnext,
@@ -108,6 +115,11 @@ static const char *const mobj_opt[] = {
 	"frame",
 	"sprite2",
 	"anim_duration",
+	"spritexscale",
+	"spriteyscale",
+	"spritexoffset",
+	"spriteyoffset",
+	"floorspriteslope",
 	"touching_sectorlist",
 	"subsector",
 	"floorz",
@@ -125,8 +137,10 @@ static const char *const mobj_opt[] = {
 	"flags",
 	"flags2",
 	"eflags",
+	"renderflags",
 	"skin",
 	"color",
+	"blendmode",
 	"bnext",
 	"bprev",
 	"hnext",
@@ -227,6 +241,21 @@ static int mobj_get(lua_State *L)
 	case mobj_anim_duration:
 		lua_pushinteger(L, mo->anim_duration);
 		break;
+	case mobj_spritexscale:
+		lua_pushfixed(L, mo->spritexscale);
+		break;
+	case mobj_spriteyscale:
+		lua_pushfixed(L, mo->spriteyscale);
+		break;
+	case mobj_spritexoffset:
+		lua_pushfixed(L, mo->spritexoffset);
+		break;
+	case mobj_spriteyoffset:
+		lua_pushfixed(L, mo->spriteyoffset);
+		break;
+	case mobj_floorspriteslope:
+		LUA_PushUserdata(L, mo->floorspriteslope, META_SLOPE);
+		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
 	case mobj_subsector:
@@ -277,6 +306,9 @@ static int mobj_get(lua_State *L)
 	case mobj_eflags:
 		lua_pushinteger(L, mo->eflags);
 		break;
+	case mobj_renderflags:
+		lua_pushinteger(L, mo->renderflags);
+		break;
 	case mobj_skin: // skin name or nil, not struct
 		if (!mo->skin)
 			return 0;
@@ -284,6 +316,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_color:
 		lua_pushinteger(L, mo->color);
+		break;
+	case mobj_blendmode:
+		lua_pushinteger(L, mo->blendmode);
 		break;
 	case mobj_bnext:
 		LUA_PushUserdata(L, mo->bnext, META_MOBJ);
@@ -492,6 +527,20 @@ static int mobj_set(lua_State *L)
 	case mobj_anim_duration:
 		mo->anim_duration = (UINT16)luaL_checkinteger(L, 3);
 		break;
+	case mobj_spritexscale:
+		mo->spritexscale = luaL_checkfixed(L, 3);
+		break;
+	case mobj_spriteyscale:
+		mo->spriteyscale = luaL_checkfixed(L, 3);
+		break;
+	case mobj_spritexoffset:
+		mo->spritexoffset = luaL_checkfixed(L, 3);
+		break;
+	case mobj_spriteyoffset:
+		mo->spriteyoffset = luaL_checkfixed(L, 3);
+		break;
+	case mobj_floorspriteslope:
+		return NOSET;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
 	case mobj_subsector:
@@ -580,6 +629,9 @@ static int mobj_set(lua_State *L)
 	case mobj_eflags:
 		mo->eflags = (UINT32)luaL_checkinteger(L, 3);
 		break;
+	case mobj_renderflags:
+		mo->renderflags = (UINT32)luaL_checkinteger(L, 3);
+		break;
 	case mobj_skin: // set skin by name
 	{
 		INT32 i;
@@ -603,6 +655,9 @@ static int mobj_set(lua_State *L)
 		mo->color = newcolor;
 		break;
 	}
+	case mobj_blendmode:
+		mo->blendmode = (INT32)luaL_checkinteger(L, 3);
+		break;
 	case mobj_bnext:
 		return NOSETPOS;
 	case mobj_bprev:

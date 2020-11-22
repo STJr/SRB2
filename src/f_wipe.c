@@ -293,7 +293,7 @@ static void F_DoWipe(fademask_t *fademask)
 			else
 			{
 				// pointer to transtable that this mask would use
-				transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
+				transtbl = R_GetTranslucencyTable((9 - *mask) + 1);
 
 				// DRAWING LOOP
 				while (draw_linestogo--)
