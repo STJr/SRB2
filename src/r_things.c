@@ -1084,14 +1084,6 @@ static void R_SplitSprite(vissprite_t *sprite)
 		sprite->sz = cutfrac;
 		newsprite->szt = (INT16)(sprite->sz - 1);
 
-		if (testheight < sprite->pzt && testheight > sprite->pz)
-			sprite->pz = newsprite->pzt = testheight;
-		else
-		{
-			newsprite->pz = newsprite->gz;
-			newsprite->pzt = newsprite->gzt;
-		}
-
 		newsprite->szt -= 8;
 
 		newsprite->cut |= SC_TOP;
@@ -1314,16 +1306,12 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	shadow->patch = patch;
 	shadow->heightsec = vis->heightsec;
 
-	shadow->thingheight = FRACUNIT;
-	shadow->pz = groundz + (isflipped ? -shadow->thingheight : 0);
-	shadow->pzt = shadow->pz + shadow->thingheight;
-
 	shadow->mobjflags = 0;
 	shadow->sortscale = vis->sortscale;
 	shadow->dispoffset = vis->dispoffset - 5;
 	shadow->gx = thing->x;
 	shadow->gy = thing->y;
-	shadow->gzt = (isflipped ? shadow->pzt : shadow->pz) + patch->height * shadowyscale / 2;
+	shadow->gzt = groundz + patch->height * shadowyscale / 2;
 	shadow->gz = shadow->gzt - patch->height * shadowyscale;
 	shadow->texturemid = FixedMul(thing->scale, FixedDiv(shadow->gzt - viewz, shadowyscale));
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
@@ -1953,9 +1941,6 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->gy = thing->y;
 	vis->gz = gz;
 	vis->gzt = gzt;
-	vis->thingheight = thing->height;
-	vis->pz = thing->z;
-	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = FixedDiv(gzt - viewz, spriteyscale);
 	vis->scalestep = scalestep;
 	vis->paperoffset = paperoffset;
@@ -2172,9 +2157,6 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->gy = thing->y;
 	vis->gz = gz;
 	vis->gzt = gzt;
-	vis->thingheight = 4*FRACUNIT;
-	vis->pz = thing->z;
-	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
 	vis->scalestep = 0;
 	vis->paperdistance = 0;
@@ -2568,19 +2550,15 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				planeobjectz = P_GetZAt(r2->plane->slope, rover->gx, rover->gy, r2->plane->height);
 				planecameraz = P_GetZAt(r2->plane->slope,     viewx,     viewy, r2->plane->height);
 
-				if (rover->mobjflags & MF_NOCLIPHEIGHT)
+				// bird: if any part of the sprite peeks in front the plane
+				if (planecameraz < viewz)
 				{
-					//Objects with NOCLIPHEIGHT can appear halfway in.
-					if (planecameraz < viewz && rover->pz+(rover->thingheight/2) >= planeobjectz)
-						continue;
-					if (planecameraz > viewz && rover->pzt-(rover->thingheight/2) <= planeobjectz)
+					if (rover->gzt >= planeobjectz)
 						continue;
 				}
-				else
+				else if (planecameraz > viewz)
 				{
-					if (planecameraz < viewz && rover->pz >= planeobjectz)
-						continue;
-					if (planecameraz > viewz && rover->pzt <= planeobjectz)
+					if (rover->gz <= planeobjectz)
 						continue;
 				}
 
@@ -2613,7 +2591,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			}
 			else if (r2->thickseg)
 			{
-				fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
+				//fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
 				if (rover->x1 > r2->thickseg->x2 || rover->x2 < r2->thickseg->x1)
 					continue;
 
@@ -2624,6 +2602,11 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				if (scale <= rover->sortscale)
 					continue;
 
+				// bird: Always sort sprites behind segs. This helps the plane
+				// sorting above too. Basically if the sprite gets sorted behind
+				// the seg here, it will be behind the plane too, since planes
+				// are added after segs in the list.
+#if 0
 				topplaneobjectz = P_GetFFloorTopZAt   (r2->ffloor, rover->gx, rover->gy);
 				topplanecameraz = P_GetFFloorTopZAt   (r2->ffloor,     viewx,     viewy);
 				botplaneobjectz = P_GetFFloorBottomZAt(r2->ffloor, rover->gx, rover->gy);
@@ -2632,6 +2615,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||
 				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||
 				    (botplanecameraz > viewz && rover->gz > botplaneobjectz))
+#endif
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
@@ -2672,23 +2656,11 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 
 					if (!behind)
 					{
-						fixed_t z1 = 0, z2 = 0;
-
-						if (rover->mobj->z - viewz > 0)
-						{
-							z1 = rover->pz;
-							z2 = r2->sprite->pz;
-						}
+						// FIXME: calculate gz and gzt for splats properly and use that
+						if (rover->mobj->z < viewz)
+							infront = (r2->sprite->mobj->z >= rover->mobj->z);
 						else
-						{
-							z1 = r2->sprite->pz;
-							z2 = rover->pz;
-						}
-
-						z1 -= viewz;
-						z2 -= viewz;
-
-						infront = (z1 >= z2);
+							infront = (r2->sprite->mobj->z <= rover->mobj->z);
 					}
 				}
 				else
