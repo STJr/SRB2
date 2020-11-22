@@ -198,7 +198,7 @@ void R_DrawFloorSprite(vissprite_t *spr)
 #endif
 		Patch_GenerateFlat(patch, flipflags, PICFMT_FLAT16);
 
-	splat.pic = patch->flats[flipflags];
+	splat.pic = patch->extra->flats[flipflags];
 	if (splat.pic == NULL)
 		return;
 

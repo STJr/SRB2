@@ -770,7 +770,7 @@ boolean R_SpriteIsPaletted(vissprite_t *spr)
 		return true;
 
 #ifdef TRUECOLOR
-	if (patch->source.data)
+	if (patch->extra->source.data)
 		return (Patch_GetTruecolor(patch) == NULL);
 
 	return true;

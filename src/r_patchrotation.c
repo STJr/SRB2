@@ -32,7 +32,7 @@ INT32 R_GetRollAngle(angle_t rollangle)
 
 patch_t *Patch_GetRotated(patch_t *patch, INT32 angle, boolean flip)
 {
-	rotsprite_t *rotsprite = patch->rotated;
+	rotsprite_t *rotsprite = patch->extra->rotated;
 	if (rotsprite == NULL || angle < 1 || angle >= ROTANGLES)
 		return NULL;
 
@@ -101,9 +101,9 @@ patch_t *Patch_GetRotatedSprite(
 
 void Patch_Rotate(patch_t *patch, INT32 angle, INT32 xpivot, INT32 ypivot, boolean flip)
 {
-	if (patch->rotated == NULL)
-		patch->rotated = RotatedPatch_Create(ROTANGLES);
-	RotatedPatch_DoRotation(patch->rotated, patch, angle, xpivot, ypivot, flip);
+	if (patch->extra->rotated == NULL)
+		patch->extra->rotated = RotatedPatch_Create(ROTANGLES);
+	RotatedPatch_DoRotation(patch->extra->rotated, patch, angle, xpivot, ypivot, flip);
 }
 
 rotsprite_t *RotatedPatch_Create(INT32 numangles)

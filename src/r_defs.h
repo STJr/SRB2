@@ -676,6 +676,13 @@ typedef struct
 	INT32 *columnofs; // Column offsets. This is relative to patch->columns
 	UINT8 *columns; // Software column data
 
+	void *hardware; // OpenGL patch, allocated whenever necessary
+
+	struct patchextra_s *extra;
+} patch_t;
+
+typedef struct patchextra_s
+{
 	// The unconverted source picture. May be a PNG.
 	struct
 	{
@@ -684,13 +691,12 @@ typedef struct
 	} source;
 
 	void *truecolor; // Truecolor patch, for Software
-	void *hardware; // OpenGL patch, allocated whenever necessary
 	void **flats; // The patch as flats
 
 #ifdef ROTSPRITE
 	rotsprite_t *rotated; // Rotated patches
 #endif
-} patch_t;
+} patchextra_t;
 
 #if defined(_MSC_VER)
 #pragma pack(1)

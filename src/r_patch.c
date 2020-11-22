@@ -59,6 +59,7 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 	}
 
 	patch->format = PICFMT_PATCH;
+	patch->extra = Z_Calloc(sizeof(patchextra_t), PU_PATCH_DATA, NULL);
 
 	return patch;
 }
@@ -67,36 +68,31 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 // Frees a patch from memory.
 //
 
-static void Patch_FreeData(patch_t *patch)
+static void Patch_FreeExtra(patchextra_t *ext)
 {
 	INT32 i;
 
-#ifdef HWRENDER
-	if (patch->hardware)
-		HWR_FreeTexture(patch);
-#endif
+	if (ext->truecolor)
+		Patch_Free(ext->truecolor);
 
-	if (patch->truecolor)
-		Patch_Free(patch->truecolor);
+	if (ext->source.data)
+		Z_Free(ext->source.data);
 
-	if (patch->source.data)
-		Z_Free(patch->source.data);
-
-	if (patch->flats)
+	if (ext->flats)
 	{
 		for (i = 0; i < 4; i++)
 		{
-			if (patch->flats[i])
-				Z_Free(patch->flats[i]);
+			if (ext->flats[i])
+				Z_Free(ext->flats[i]);
 		}
 
-		Z_Free(patch->flats);
+		Z_Free(ext->flats);
 	}
 
 #ifdef ROTSPRITE
-	if (patch->rotated)
+	if (ext->rotated)
 	{
-		rotsprite_t *rotsprite = patch->rotated;
+		rotsprite_t *rotsprite = ext->rotated;
 
 		for (i = 0; i < rotsprite->angles; i++)
 		{
@@ -108,6 +104,18 @@ static void Patch_FreeData(patch_t *patch)
 		Z_Free(rotsprite);
 	}
 #endif
+
+	Z_Free(ext);
+}
+
+static void Patch_FreeData(patch_t *patch)
+{
+#ifdef HWRENDER
+	if (patch->hardware)
+		HWR_FreeTexture(patch);
+#endif
+
+	Patch_FreeExtra(patch->extra);
 
 	if (patch->columnofs)
 		Z_Free(patch->columnofs);
@@ -141,11 +149,11 @@ void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags, pictureformat_t fo
 {
 	UINT8 flip = (flags & (PICFLAGS_XFLIP | PICFLAGS_YFLIP));
 
-	if (patch->flats == NULL)
-		patch->flats = Z_Calloc(sizeof(void *) * 4, PU_PATCH_DATA, NULL);
+	if (patch->extra->flats == NULL)
+		patch->extra->flats = Z_Calloc(sizeof(void *) * 4, PU_PATCH_DATA, NULL);
 
-	if (patch->flats[flip] == NULL)
-		patch->flats[flip] = Picture_Convert(patch->format, patch, format, 0, NULL, 0, 0, 0, 0, flags);
+	if (patch->extra->flats[flip] == NULL)
+		patch->extra->flats[flip] = Picture_Convert(patch->format, patch, format, 0, NULL, 0, 0, 0, 0, flags);
 }
 
 //
@@ -154,19 +162,19 @@ void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags, pictureformat_t fo
 
 patch_t *Patch_GetTruecolor(patch_t *patch)
 {
-	if (!patch->truecolor && patch->source.data)
+	if (!patch->extra->truecolor && patch->extra->source.data)
 	{
 		patch_t *tc = Picture_PNGConvert(
-						(UINT8 *)patch->source.data, PICFMT_PATCH32,
+						(UINT8 *)patch->extra->source.data, PICFMT_PATCH32,
 						NULL, NULL, NULL, NULL,
-						patch->source.len, NULL, 0);
+						patch->extra->source.len, NULL, 0);
 
 		tc->format = PICFMT_PATCH32;
 
-		patch->truecolor = tc;
+		patch->extra->truecolor = tc;
 	}
 
-	return patch->truecolor;
+	return patch->extra->truecolor;
 }
 
 //

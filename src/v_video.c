@@ -670,7 +670,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 #ifdef TRUECOLOR
 	if (truecolor)
 	{
-		if (patch->source.data)
+		if (patch->extra->source.data)
 		{
 			patch = Patch_GetTruecolor(patch);
 			picfmt = PICFMT_PATCH32;
@@ -1049,7 +1049,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 #ifdef TRUECOLOR
 	if (truecolor)
 	{
-		if (patch->source.data)
+		if (patch->extra->source.data)
 		{
 			patch = Patch_GetTruecolor(patch);
 			picfmt = PICFMT_PATCH32;

@@ -1721,16 +1721,16 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 		if (sourcepic)
 		{
-			patch->source.data = sourcepic;
-			patch->source.len = srclen;
+			patch->extra->source.data = sourcepic;
+			patch->extra->source.len = srclen;
 		}
 		else
 		{
-			patch->source.data = NULL;
-			patch->source.len = 0;
+			patch->extra->source.data = NULL;
+			patch->extra->source.len = 0;
 		}
 
-		patch->truecolor = NULL;
+		patch->extra->truecolor = NULL;
 
 #ifdef TRUECOLOR
 		if (truecolor && sourcepic)
