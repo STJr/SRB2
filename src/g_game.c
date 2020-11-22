@@ -2242,6 +2242,12 @@ void G_Ticker(boolean run)
 					// Reset unlockable triggers
 					unlocktriggers = 0;
 
+					emeralds = 0;
+					tokenbits = 0;
+					tokenlist = 0;
+					token = 0;
+
+					memset(&luabanks, 0, sizeof(luabanks));
 				}
 				else if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != INFLIVES)
 					players[consoleplayer].lives -= 1;
