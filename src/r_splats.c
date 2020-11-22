@@ -485,11 +485,29 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 
 	if (vis->extra_colormap)
 	{
-		if (!ds_colormap)
-			ds_colormap = vis->extra_colormap->colormap;
+#ifdef TRUECOLOR
+		dp_extracolormap = vis->extra_colormap;
+
+		if (tc_colormaps)
+		{
+			if (!ds_colormap)
+				ds_colormap = (UINT8 *)(vis->extra_colormap->colormap_u32);
+			else
+				ds_colormap = (UINT8 *)(vis->extra_colormap->colormap_u32 + ((UINT32 *)ds_colormap - colormaps_u32));
+		}
 		else
-			ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
+#endif
+		{
+			if (!ds_colormap)
+				ds_colormap = vis->extra_colormap->colormap;
+			else
+				ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
+		}
 	}
+#ifdef TRUECOLOR
+	else
+		dp_extracolormap = defaultextracolormap;
+#endif
 
 #ifdef TRUECOLOR
 	if (truecolor && vis->transnum)
