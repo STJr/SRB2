@@ -814,10 +814,9 @@ static UINT32 TC_ColorMix(UINT32 fg, UINT32 bg)
 	fg = TC_BlendTrueColor(bg, fg, R_GetRgbaA(origpixel));
 
 	// Apply the color cube
-	rgba.rgba = fg;
-	ColorCube_Apply(&rgba.s.red, &rgba.s.green, &rgba.s.blue);
+	fg = ColorCube_ApplyRGBA(fg);
 
-	return (0xFF000000 | rgba.rgba);
+	return (0xFF000000 | fg);
 }
 
 static UINT32 TC_TranslucentColorMix(UINT32 fg, UINT32 bg, UINT8 alpha)
@@ -892,13 +891,7 @@ FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt)
 
 static UINT32 TC_Colormap32Mix(UINT32 color)
 {
-	RGBA_t rgba;
-
-	// Apply the color cube
-	rgba.rgba = color;
-	ColorCube_Apply(&rgba.s.red, &rgba.s.green, &rgba.s.blue);
-
-	return rgba.rgba;
+	return ColorCube_ApplyRGBA(color);
 }
 
 // You like macros, don't you?

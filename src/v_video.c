@@ -343,6 +343,14 @@ static void LoadPalette(const char *lumpname)
 	}
 }
 
+UINT32 ColorCube_ApplyRGBA(UINT32 color)
+{
+	RGBA_t rgba;
+	rgba.rgba = color;
+	ColorCube_Apply(&rgba.s.red, &rgba.s.green, &rgba.s.blue);
+	return rgba.rgba;
+}
+
 void ColorCube_Apply(UINT8 *red, UINT8 *green, UINT8 *blue)
 {
 	float working[4][3];
@@ -561,6 +569,8 @@ static inline UINT32 standardpdraw_u32(void *dest, void *source, fixed_t ofs)
 	UINT32 fg = ((UINT32 *)source)[ofs>>FRACBITS];
 	UINT8 alpha = R_GetRgbaA(fg);
 
+	fg = ColorCube_ApplyRGBA(fg);
+
 	if (alpha < 0xFF)
 	{
 		UINT32 bg = (*(UINT32 *)dest);
@@ -580,6 +590,8 @@ static inline UINT32 translucentpdraw_u32(void *dest, void *source, fixed_t ofs)
 	UINT32 bg = (*(UINT32 *)dest);
 	UINT32 fg = ((UINT32 *)source)[ofs>>FRACBITS];
 	INT32 alpha = (*v_translevel);
+
+	fg = ColorCube_ApplyRGBA(fg);
 
 	alpha -= (0xFF - R_GetRgbaA(fg));
 	if (alpha > 0)
