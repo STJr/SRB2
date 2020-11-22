@@ -70,6 +70,14 @@ extern lumpnum_t basePaletteLump;
 void V_CubeApply(UINT8 *red, UINT8 *green, UINT8 *blue);
 UINT8 V_AlphaTrans(INT32 num);
 
+enum v_patchdrawfunc
+{
+	patchdraw_standard,
+	patchdraw_mapped,
+	patchdraw_translucent,
+	patchdraw_transmapped
+};
+
 // Retrieve the ARGB value from a palette color index
 #define V_GetColor(color) (pLocalPalette[color&0xFF])
 #define V_GetMasterColor(color) (pMasterPalette[color&0xFF])

@@ -546,26 +546,59 @@ static inline UINT8 transmappedpdraw(void *dest, void *source, fixed_t ofs)
 	return *(v_translevel + (((*(v_colormap + ((UINT8 *)source)[ofs>>FRACBITS]))<<8)&0xff00) + (*(UINT8 *)dest&0xff));
 }
 
+static UINT8 (*pdrawlist_pal[4])(void *, void *, fixed_t) =
+{
+	standardpdraw,
+	mappedpdraw,
+	translucentpdraw,
+	transmappedpdraw
+};
+
 #ifdef TRUECOLOR
 // 32bpp
 static inline UINT32 standardpdraw_u32(void *dest, void *source, fixed_t ofs)
 {
-	(void)dest;
-	return ((UINT32 *)source)[ofs>>FRACBITS];
+	UINT32 fg = ((UINT32 *)source)[ofs>>FRACBITS];
+	UINT8 alpha = R_GetRgbaA(fg);
+
+	if (alpha < 0xFF)
+	{
+		UINT32 bg = (*(UINT32 *)dest);
+		if (alpha < 1)
+			return bg;
+		return TC_BlendTrueColor(bg, fg, (UINT8)alpha);
+	}
+
+	return fg;
 }
 static inline UINT32 mappedpdraw_u32(void *dest, void *source, fixed_t ofs)
 {
-	(void)dest;
 	return standardpdraw_u32(dest, source, ofs);
 }
 static inline UINT32 translucentpdraw_u32(void *dest, void *source, fixed_t ofs)
 {
-	return TC_BlendTrueColor(*(UINT32 *)dest, ((UINT8 *)source)[ofs>>FRACBITS], *v_translevel);
+	UINT32 bg = (*(UINT32 *)dest);
+	UINT32 fg = ((UINT32 *)source)[ofs>>FRACBITS];
+	INT32 alpha = (*v_translevel);
+
+	alpha -= (0xFF - R_GetRgbaA(fg));
+	if (alpha > 0)
+		return TC_BlendTrueColor(bg, fg, (UINT8)alpha);
+
+	return bg;
 }
 static inline UINT32 transmappedpdraw_u32(void *dest, void *source, fixed_t ofs)
 {
 	return translucentpdraw_u32(dest, source, ofs);
 }
+
+static UINT32 (*pdrawlist_tc[4])(void *, void *, fixed_t) =
+{
+	standardpdraw_u32,
+	mappedpdraw_u32,
+	translucentpdraw_u32,
+	transmappedpdraw_u32
+};
 
 // 32bpp with 8bpp source
 static inline UINT32 standardpdraw_u32_palsrc(void *dest, void *source, fixed_t ofs)
@@ -586,11 +619,21 @@ static inline UINT32 transmappedpdraw_u32_palsrc(void *dest, void *source, fixed
 {
 	return TC_BlendTrueColor(*(UINT32 *)dest, GetTrueColor(*(v_colormap + ((UINT8 *)source)[ofs>>FRACBITS])), *v_translevel);
 }
+
+static UINT32 (*pdrawlist_tc_palsrc[4])(void *, void *, fixed_t) =
+{
+	standardpdraw_u32_palsrc,
+	mappedpdraw_u32_palsrc,
+	translucentpdraw_u32_palsrc,
+	transmappedpdraw_u32_palsrc
+};
 #endif
 
 // Draws a patch scaled to arbitrary size.
 void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
 {
+	int drawfunc = patchdraw_standard;
+
 	UINT8 (*patchdrawfunc)(void*, void*, fixed_t) = NULL;
 #ifdef TRUECOLOR
 	UINT32 (*patchdrawfunc_u32)(void*, void*, fixed_t) = NULL;
@@ -608,7 +651,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 #ifdef TRUECOLOR
 	UINT32 *s32;
 	pictureformat_t picfmt = PICFMT_PATCH;
-	UINT8 alphaval = 0;
+	UINT8 alphaval = 0xFF;
 #endif
 
 	UINT8 perplayershuffle = 0;
@@ -626,12 +669,15 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 
 #ifdef TRUECOLOR
 	if (truecolor)
-		patchdrawfunc_u32 = standardpdraw_u32;
-	else
+	{
+		if (patch->source.data)
+		{
+			patch = Patch_GetTruecolor(patch);
+			picfmt = PICFMT_PATCH32;
+		}
+	}
 #endif
-		patchdrawfunc = standardpdraw;
 
-	v_translevel = NULL;
 	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)))
 	{
 		if (alphalevel == 13)
@@ -647,47 +693,39 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 		if (alphalevel)
 		{
 			v_translevel = R_GetTranslucencyTable(alphalevel);
+			drawfunc = patchdraw_translucent;
+
 #ifdef TRUECOLOR
 			if (truecolor)
 			{
-				patchdrawfunc_u32 = translucentpdraw_u32;
 				alphaval = V_AlphaTrans(alphalevel);
 				v_translevel = &alphaval;
 			}
-			else
 #endif
-				patchdrawfunc = translucentpdraw;
 		}
 	}
+	else
+		v_translevel = NULL;
 
-	v_colormap = NULL;
 	if (colormap)
 	{
 		v_colormap = colormap;
-#ifdef TRUECOLOR
-		if (truecolor)
-			patchdrawfunc_u32 = (v_translevel) ? transmappedpdraw_u32 : mappedpdraw_u32;
-		else
-#endif
-			patchdrawfunc = (v_translevel) ? transmappedpdraw : mappedpdraw;
+		drawfunc = (v_translevel) ? patchdraw_transmapped : patchdraw_mapped;
 	}
+	else
+		v_colormap = NULL;
 
 #ifdef TRUECOLOR
 	if (truecolor)
 	{
 		if (Picture_FormatBPP(picfmt) == PICDEPTH_8BPP)
-		{
-			if (patchdrawfunc_u32 == standardpdraw_u32)
-				patchdrawfunc_u32 = standardpdraw_u32_palsrc;
-			else if (patchdrawfunc_u32 == mappedpdraw_u32)
-				patchdrawfunc_u32 = mappedpdraw_u32_palsrc;
-			else if (patchdrawfunc_u32 == translucentpdraw_u32)
-				patchdrawfunc_u32 = translucentpdraw_u32_palsrc;
-			else if (patchdrawfunc_u32 == transmappedpdraw_u32)
-				patchdrawfunc_u32 = transmappedpdraw_u32_palsrc;
-		}
+			patchdrawfunc_u32 = pdrawlist_tc_palsrc[drawfunc];
+		else
+			patchdrawfunc_u32 = pdrawlist_tc[drawfunc];
 	}
+	else
 #endif
+		patchdrawfunc = pdrawlist_pal[drawfunc];
 
 	dupx = vid.dupx;
 	dupy = vid.dupy;
@@ -840,7 +878,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 			// if it's meant to cover the whole screen, black out the rest (ONLY IF TOP LEFT ISN'T TRANSPARENT)
 			if (x == 0 && SHORT(patch->width) == BASEVIDWIDTH && y == 0 && SHORT(patch->height) == BASEVIDHEIGHT)
 			{
-				column = (column_t *)((const UINT8 *)(patch->columns) + (patch->columnofs[0]));
+				column = (column_t *)((UINT8 *)(patch->columns) + (patch->columnofs[0]));
 				if (!column->topdelta)
 				{
 					source = (UINT8 *)(column) + 3;
@@ -908,7 +946,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 			if (x+offx >= vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
 				break;
 		}
-		column = (column_t *)((const UINT8 *)(patch->columns) + (patch->columnofs[col>>FRACBITS]));
+		column = (column_t *)((UINT8 *)(patch->columns) + (patch->columnofs[col>>FRACBITS]));
 
 		while (column->topdelta != 0xff)
 		{
@@ -974,7 +1012,12 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 // Draws a patch cropped and scaled to arbitrary size.
 void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t *patch, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
 {
+	int drawfunc = patchdraw_standard;
+
 	UINT8 (*patchdrawfunc)(void*, void*, fixed_t) = NULL;
+#ifdef TRUECOLOR
+	UINT32 (*patchdrawfunc_u32)(void*, void*, fixed_t) = NULL;
+#endif
 	UINT32 alphalevel = 0;
 	// boolean flip = false;
 
@@ -985,7 +1028,6 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 	UINT8 *source, *deststop;
 
 #ifdef TRUECOLOR
-	UINT32 (*patchdrawfunc_u32)(void*, void*, fixed_t) = NULL;
 	UINT32 *s32;
 	pictureformat_t picfmt = PICFMT_PATCH;
 	UINT8 alphaval = 0;
@@ -1006,12 +1048,15 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 
 #ifdef TRUECOLOR
 	if (truecolor)
-		patchdrawfunc_u32 = standardpdraw_u32;
-	else
+	{
+		if (patch->source.data)
+		{
+			patch = Patch_GetTruecolor(patch);
+			picfmt = PICFMT_PATCH32;
+		}
+	}
 #endif
-		patchdrawfunc = standardpdraw;
 
-	v_translevel = NULL;
 	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)))
 	{
 		if (alphalevel == 13)
@@ -1027,35 +1072,33 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		if (alphalevel)
 		{
 			v_translevel = R_GetTranslucencyTable(alphalevel);
+			drawfunc = patchdraw_translucent;
+
 #ifdef TRUECOLOR
 			if (truecolor)
 			{
-				patchdrawfunc_u32 = translucentpdraw_u32;
 				alphaval = V_AlphaTrans(alphalevel);
 				v_translevel = &alphaval;
 			}
-			else
 #endif
-				patchdrawfunc = translucentpdraw;
 		}
 	}
+	else
+		v_translevel = NULL;
+
+	v_colormap = NULL;
 
 #ifdef TRUECOLOR
 	if (truecolor)
 	{
 		if (Picture_FormatBPP(picfmt) == PICDEPTH_8BPP)
-		{
-			if (patchdrawfunc_u32 == standardpdraw_u32)
-				patchdrawfunc_u32 = standardpdraw_u32_palsrc;
-			else if (patchdrawfunc_u32 == mappedpdraw_u32)
-				patchdrawfunc_u32 = mappedpdraw_u32_palsrc;
-			else if (patchdrawfunc_u32 == translucentpdraw_u32)
-				patchdrawfunc_u32 = translucentpdraw_u32_palsrc;
-			else if (patchdrawfunc_u32 == transmappedpdraw_u32)
-				patchdrawfunc_u32 = transmappedpdraw_u32_palsrc;
-		}
+			patchdrawfunc_u32 = pdrawlist_tc_palsrc[drawfunc];
+		else
+			patchdrawfunc_u32 = pdrawlist_tc[drawfunc];
 	}
+	else
 #endif
+		patchdrawfunc = pdrawlist_pal[drawfunc];
 
 	// only use one dup, to avoid stretching (har har)
 	dupx = dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
@@ -1206,7 +1249,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 			continue;
 		if (x >= vid.width) // don't draw off the right of the screen (WRAP PREVENTION)
 			break;
-		column = (column_t *)((const UINT8 *)(patch->columns) + (patch->columnofs[col>>FRACBITS]));
+		column = (column_t *)((UINT8 *)(patch->columns) + (patch->columnofs[col>>FRACBITS]));
 
 		while (column->topdelta != 0xff)
 		{
@@ -2296,9 +2339,9 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 		UINT32 *deststop32 = ((UINT32 *)screens[0]) + vid.width * vid.height;
 		UINT32 *buf32 = deststop32;
 		if (boxheight < 0)
-			buf += vid.rowbytes * boxheight;
+			buf32 += vid.width * boxheight;
 		else // 4 lines of space plus gaps between and some leeway
-			buf -= vid.rowbytes * ((boxheight * 4) + (boxheight/2)*5);
+			buf32 -= vid.width * ((boxheight * 4) + (boxheight/2)*5);
 		for (; buf32 < deststop32; ++buf32)
 			*buf32 = TC_BlendTrueColor(*buf32, fadecolor, 128);
 	}

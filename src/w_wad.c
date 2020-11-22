@@ -1690,34 +1690,52 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 	if (!lumpcache[lump])
 	{
-		size_t len = W_LumpLengthPwad(wad, lump);
+		size_t srclen = W_LumpLengthPwad(wad, lump), len = srclen, newlen;
 		void *ptr, *dest, *lumpdata = Z_Malloc(len, PU_STATIC, NULL);
+		void *sourcepic = NULL, *converted = NULL;
+		patch_t *patch = NULL;
 
 		// read the lump in full
 		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
 
 #ifndef NO_PNG_LUMPS
-		// lump is a png so convert it
 		if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
 		{
-			size_t newlen;
-			void *converted = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, len, &newlen, 0);
+			sourcepic = lumpdata;
+			converted = Picture_PNGConvert((UINT8 *)sourcepic, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, len, &newlen, 0);
+
 			ptr = Z_Malloc(newlen, PU_STATIC, NULL);
 			M_Memcpy(ptr, converted, newlen);
 			Z_Free(converted);
 			len = newlen;
 		}
-		else // just copy it into the patch cache
+		else
 #endif
 		{
 			ptr = Z_Malloc(len, PU_STATIC, NULL);
 			M_Memcpy(ptr, lumpdata, len);
 		}
 
-		Z_Free(lumpdata);
-
 		dest = Z_Calloc(sizeof(patch_t), tag, &lumpcache[lump]);
-		Patch_Create(ptr, len, dest);
+		patch = Patch_Create(ptr, len, dest);
+
+		if (sourcepic)
+		{
+			patch->source.data = sourcepic;
+			patch->source.len = srclen;
+		}
+		else
+		{
+			patch->source.data = NULL;
+			patch->source.len = 0;
+		}
+
+		patch->truecolor = NULL;
+
+#ifdef TRUECOLOR
+		if (truecolor && sourcepic)
+			Patch_GetTruecolor(patch);
+#endif
 
 		Z_Free(ptr);
 	}

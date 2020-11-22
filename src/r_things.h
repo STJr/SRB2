@@ -213,6 +213,8 @@ void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, p
 boolean R_SpriteIsFlashing(vissprite_t *vis);
 UINT8 *R_GetSpriteTranslation(vissprite_t *vis);
 
+boolean R_SpriteIsPaletted(vissprite_t *spr);
+
 // ----------
 // DRAW NODES
 // ----------

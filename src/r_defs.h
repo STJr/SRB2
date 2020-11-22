@@ -674,6 +674,14 @@ typedef struct
 	INT32 *columnofs; // Column offsets. This is relative to patch->columns
 	UINT8 *columns; // Software column data
 
+	// The unconverted source picture. May be a PNG.
+	struct
+	{
+		UINT8 *data;
+		size_t len;
+	} source;
+
+	void *truecolor; // Truecolor patch, for Software
 	void *hardware; // OpenGL patch, allocated whenever necessary
 	void *flats[4]; // The patch as flats
 

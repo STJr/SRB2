@@ -1768,7 +1768,6 @@ void R_DrawTiltedTranslucentSpan_32(void)
 #endif
 }
 
-#ifndef NOWATER
 /**	\brief The R_DrawTiltedTranslucentWaterSpan_32 function
 	Like DrawTiltedTranslucentSpan, but for water
 */
@@ -2044,7 +2043,6 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 	}
 #endif
 }
-#endif // NOWATER
 
 void R_DrawTiltedSplat_32(void)
 {
@@ -3104,7 +3102,6 @@ void R_DrawTranslucentSpan_32 (void)
 	}
 }
 
-#ifndef NOWATER
 void R_DrawTranslucentWaterSpan_32(void)
 {
 	UINT32 xposition;
@@ -3298,7 +3295,6 @@ void R_DrawTranslucentWaterSpan_32(void)
 		}
 	}
 }
-#endif
 
 /**	\brief The R_DrawFogSpan_32 function
 	Draws the actual span with fogging.

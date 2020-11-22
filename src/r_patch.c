@@ -74,6 +74,12 @@ static void Patch_FreeData(patch_t *patch)
 		HWR_FreeTexture(patch);
 #endif
 
+	if (patch->truecolor)
+		Patch_Free(patch->truecolor);
+
+	if (patch->source.data)
+		Z_Free(patch->source.data);
+
 	for (i = 0; i < 2; i++)
 	{
 		if (patch->flats[i])
@@ -131,11 +137,22 @@ void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags)
 		patch->flats[flip] = Picture_Convert(PICFMT_PATCH, patch, PICFMT_FLAT16, 0, NULL, 0, 0, 0, 0, flags);
 }
 
-#ifdef HWRENDER
+//
+// Allocates a truecolor patch.
+//
+
+patch_t *Patch_GetTruecolor(patch_t *patch)
+{
+	if (!patch->truecolor && patch->source.data)
+		patch->truecolor = Picture_PNGConvert((UINT8 *)patch->source.data, PICFMT_PATCH32, NULL, NULL, NULL, NULL, patch->source.len, NULL, 0);
+	return patch->truecolor;
+}
+
 //
 // Allocates a hardware patch.
 //
 
+#ifdef HWRENDER
 void *Patch_AllocateHardwarePatch(patch_t *patch)
 {
 	if (!patch->hardware)

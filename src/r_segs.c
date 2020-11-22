@@ -198,6 +198,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	}
 
 #ifdef TRUECOLOR
+	dc_picfmt = textures[texnum]->format;
 	dc_colmapstyle = (tc_colormaps) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 #endif
 
@@ -738,6 +739,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		colfunc = colfuncs[COLDRAWFUNC_FOG];
 
 #ifdef TRUECOLOR
+	dc_picfmt = textures[texnum]->format;
 	dc_colmapstyle = (tc_colormaps) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 #endif
 
@@ -2039,7 +2041,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		fixed_t texheight;
 		// single sided line
 		midtexture = R_GetTextureNum(sidedef->midtexture);
-		midformat = dc_picfmt;
+		midformat = textures[midtexture]->format;
 		texheight = textureheight[midtexture];
 		// a single sided line is terminal, so it must mark ends
 		markfloor = markceiling = true;
@@ -2265,7 +2267,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				texheight = textureheight[toptexture];
 			}
 
-			topformat = dc_picfmt;
+			topformat = textures[toptexture]->format;
 
 			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
 				if (linedef->flags & ML_DONTPEGTOP)
@@ -2291,7 +2293,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			// bottom texture
 			bottomtexture = R_GetTextureNum(sidedef->bottomtexture);
-			bottomformat = dc_picfmt;
+			bottomformat = textures[bottomtexture]->format;
 
 			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
 				if (linedef->flags & ML_DONTPEGBOTTOM)

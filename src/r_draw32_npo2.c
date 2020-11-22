@@ -988,7 +988,6 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 #endif
 }
 
-#ifndef NOWATER
 /**	\brief The R_DrawTiltedTranslucentWaterSpan_NPO2_32 function
 	Like DrawTiltedTranslucentSpan, but for water
 */
@@ -1399,7 +1398,6 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void)
 	}
 #endif
 }
-#endif // NOWATER
 
 void R_DrawTiltedSplat_NPO2_32(void)
 {
@@ -2270,7 +2268,6 @@ void R_DrawTranslucentSpan_NPO2_32 (void)
 	}
 }
 
-#ifndef NOWATER
 void R_DrawTranslucentWaterSpan_NPO2_32(void)
 {
 	fixed_t xposition;
@@ -2409,4 +2406,3 @@ void R_DrawTranslucentWaterSpan_NPO2_32(void)
 		}
 	}
 }
-#endif

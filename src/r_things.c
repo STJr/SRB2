@@ -674,7 +674,15 @@ void R_DrawMaskedColumn(column_t *column)
 				I_Error("R_DrawMaskedColumn: Invalid ylookup for dc_yl %d", dc_yl);
 #endif
 		}
-		column = (column_t *)((UINT8 *)column + column->length + 4);
+
+#ifdef TRUECOLOR
+		if (dc_picfmt == PICFMT_PATCH32)
+			column = (column_t *)((UINT32 *)column + column->length);
+		else
+#endif
+			column = (column_t *)((UINT8 *)column + column->length);
+
+		column = (column_t *)((UINT8 *)column + 4);
 	}
 
 	dc_texturemid = basetexturemid;
@@ -754,6 +762,21 @@ boolean R_SpriteIsFlashing(vissprite_t *vis)
 	&& (leveltime & 1));
 }
 
+boolean R_SpriteIsPaletted(vissprite_t *spr)
+{
+	patch_t *patch = spr->patch;
+
+	if (!truecolor || !patch)
+		return true;
+
+#ifdef TRUECOLOR
+	if (patch->source.data)
+		return (Patch_GetTruecolor(patch) == NULL);
+
+	return true;
+#endif
+}
+
 UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 {
 	if (R_SpriteIsFlashing(vis)) // Bosses "flash"
@@ -810,6 +833,12 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	INT32 x1, x2;
 	INT64 overflow_test;
 
+#ifdef TRUECOLOR
+	if (!R_SpriteIsPaletted(vis))
+		patch = Patch_GetTruecolor(patch);
+	else
+#endif
+
 	if (!patch)
 		return;
 
@@ -846,10 +875,21 @@ static void R_DrawVisSprite(vissprite_t *vis)
 #endif
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 
+#ifdef TRUECOLOR
+	if (truecolor && dc_picfmt == PICFMT_PATCH32 && dc_colormap)
+	{
+		if (tc_colormaps)
+			dp_lighting = TC_CalcScaleLight((UINT32 *)dc_colormap);
+		else
+			dp_lighting = TC_CalcScaleLightPaletted(dc_colormap);
+	}
+#endif
+
 	if (vis->extra_colormap && !(vis->renderflags & RF_NOCOLORMAPS))
 	{
 #ifdef TRUECOLOR
 		dp_extracolormap = vis->extra_colormap;
+
 		if (tc_colormaps)
 		{
 			if (!dc_colormap)
@@ -874,6 +914,8 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (!dc_colormap)
 	{
 #ifdef TRUECOLOR
+		dp_lighting = 0xFF;
+
 		if (tc_colormaps)
 			dc_colormap = (UINT8 *)colormaps_u32;
 		else
@@ -1018,6 +1060,13 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 	//Fab : R_InitSprites now sets a wad lump number
 	patch = vis->patch;
+
+#ifdef TRUECOLOR
+	if (!R_SpriteIsPaletted(vis))
+		patch = Patch_GetTruecolor(patch);
+	else
+#endif
+
 	if (!patch)
 		return;
 
@@ -2895,6 +2944,17 @@ void R_InitDrawNodes(void)
 	nodebankhead.next = nodebankhead.prev = &nodebankhead;
 }
 
+static void R_SetSpriteStyle(vissprite_t *spr)
+{
+#ifdef TRUECOLOR
+	dc_picfmt = R_SpriteIsPaletted(spr) ? PICFMT_PATCH : PICFMT_PATCH32;
+	dc_colmapstyle = (tc_colormaps) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
+#endif
+
+	mfloorclip = spr->clipbot;
+	mceilingclip = spr->cliptop;
+}
+
 //
 // R_DrawSprite
 //
@@ -2903,12 +2963,7 @@ void R_InitDrawNodes(void)
 //        don't draw the part of sprites hidden under the console
 static void R_DrawSprite(vissprite_t *spr)
 {
-#ifdef TRUECOLOR
-	dc_picfmt = PICFMT_PATCH;
-	dc_colmapstyle = (tc_colormaps) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
-#endif
-	mfloorclip = spr->clipbot;
-	mceilingclip = spr->cliptop;
+	R_SetSpriteStyle(spr);
 
 	if (spr->cut & SC_SPLAT)
 		R_DrawFloorSprite(spr);
@@ -2919,12 +2974,7 @@ static void R_DrawSprite(vissprite_t *spr)
 // Special drawer for precipitation sprites Tails 08-18-2002
 static void R_DrawPrecipitationSprite(vissprite_t *spr)
 {
-#ifdef TRUECOLOR
-	dc_picfmt = PICFMT_PATCH;
-	dc_colmapstyle = (tc_colormaps) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
-#endif
-	mfloorclip = spr->clipbot;
-	mceilingclip = spr->cliptop;
+	R_SetSpriteStyle(spr);
 	R_DrawPrecipitationVisSprite(spr);
 }
 

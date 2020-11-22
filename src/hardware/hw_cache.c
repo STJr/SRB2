@@ -729,12 +729,23 @@ void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipm
 
 	if (makebitmap)
 	{
+		patch_t *source = patch;
+
+#ifdef PICTURES_ALLOWDEPTH
+		patch_t *tc = Patch_GetTruecolor(source);
+		if (tc)
+		{
+			source = tc;
+			grPatch->picfmt = PICFMT_PATCH32;
+		}
+#endif
+
 		MakeBlock(grMipmap);
 
 		HWR_DrawPatchInCache(grMipmap,
 			grMipmap->width, grMipmap->height,
-			patch->width, patch->height,
-			patch, grPatch->picfmt);
+			source->width, source->height,
+			source, grPatch->picfmt);
 	}
 }
 

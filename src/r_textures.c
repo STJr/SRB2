@@ -660,7 +660,6 @@ INT32 R_GetTextureNum(INT32 texnum)
 {
 	if (texnum < 0 || texnum >= numtextures)
 		return 0;
-	dc_picfmt = textures[texnum]->format;
 	return texturetranslation[texnum];
 }
 

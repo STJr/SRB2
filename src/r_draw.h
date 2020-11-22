@@ -269,13 +269,9 @@ void R_DrawTranslucentSpan_32(void);
 void R_DrawTranslucentSplat_32(void);
 void R_DrawTiltedSpan_32(void);
 void R_DrawTiltedTranslucentSpan_32(void);
-#ifndef NOWATER
 void R_DrawTiltedTranslucentWaterSpan_32(void);
-#endif
 void R_DrawTiltedSplat_32(void);
-#ifndef NOWATER
 void R_DrawTranslucentWaterSpan_32(void);
-#endif
 void R_DrawFogSpan_32(void);
 
 // Lactozilla: Non-powers-of-two
@@ -285,13 +281,9 @@ void R_DrawSplat_NPO2_32(void);
 void R_DrawTranslucentSplat_NPO2_32(void);
 void R_DrawTiltedSpan_NPO2_32(void);
 void R_DrawTiltedTranslucentSpan_NPO2_32(void);
-#ifndef NOWATER
 void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void);
-#endif
 void R_DrawTiltedSplat_NPO2_32(void);
-#ifndef NOWATER
 void R_DrawTranslucentWaterSpan_NPO2_32(void);
-#endif
 
 //
 // truecolor states
@@ -300,7 +292,8 @@ void R_DrawTranslucentWaterSpan_NPO2_32(void);
 extern boolean tc_colormaps;
 
 FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt);
-#define TC_CalcScaleLight(light_p) (((scalelight_u32[0][0] - light_p) / 256) * 8);
+#define TC_CalcScaleLight(light_p) (((scalelight_u32[0][0] - light_p) / 256) * 8)
+#define TC_CalcScaleLightPaletted(light_p) (((scalelight[0][0] - light_p) / 256) * 8)
 
 enum
 {

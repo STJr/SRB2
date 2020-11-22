@@ -195,14 +195,10 @@ void SCR_SetDrawFuncs(void)
 		spanfuncs[SPANDRAWFUNC_SPLAT] = R_DrawSplat_32;
 		spanfuncs[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_32;
 		spanfuncs[SPANDRAWFUNC_FOG] = R_DrawFogSpan_32;
-#ifndef NOWATER
 		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_32;
-#endif
 		spanfuncs[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_32;
 		spanfuncs[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_32;
-#ifndef NOWATER
 		spanfuncs[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_32;
-#endif
 		spanfuncs[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_32;
 
 		// Lactozilla: Non-powers-of-two
@@ -211,14 +207,10 @@ void SCR_SetDrawFuncs(void)
 		spanfuncs_npo2[SPANDRAWFUNC_SPLAT] = R_DrawSplat_NPO2_32;
 		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_NPO2_32;
 		spanfuncs_npo2[SPANDRAWFUNC_FOG] = NULL; // Not needed
-#ifndef NOWATER
 		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_32;
-#endif
 		spanfuncs_npo2[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_NPO2_32;
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_NPO2_32;
-#ifndef NOWATER
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_NPO2_32;
-#endif
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_32;
 	}
 #endif
@@ -445,7 +437,8 @@ void SCR_ChangeFullscreen(void)
 
 void SCR_ChangeRenderer(void)
 {
-	if ((signed)rendermode == cv_renderer.value)
+	if (chosenrendermode != render_none
+	|| (signed)rendermode == cv_renderer.value)
 		return;
 
 #ifdef HWRENDER

@@ -681,6 +681,8 @@ void D_SRB2Loop(void)
 	SCR_SetMode(); // change video mode
 	SCR_Recalc();
 
+	chosenrendermode = render_none;
+
 	// Check and print which version is executed.
 	// Use this as the border between setup and the main game loop being entered.
 	CONS_Printf(
