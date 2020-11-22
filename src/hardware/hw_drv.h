@@ -46,6 +46,7 @@ EXPORT void HWRAPI(DeleteTexture) (FTextureInfo *TexInfo);
 EXPORT void HWRAPI(ReadRect) (INT32 x, INT32 y, INT32 width, INT32 height, INT32 dst_stride, UINT16 *dst_data);
 EXPORT void HWRAPI(GClipRect) (INT32 minx, INT32 miny, INT32 maxx, INT32 maxy, float nearclip);
 EXPORT void HWRAPI(ClearMipMapCache) (void);
+EXPORT void HWRAPI(ClearCacheList) (void);
 
 //Hurdler: added for backward compatibility
 EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value);
@@ -100,6 +101,7 @@ struct hwdriver_s
 	ReadRect            pfnReadRect;
 	GClipRect           pfnGClipRect;
 	ClearMipMapCache    pfnClearMipMapCache;
+	ClearCacheList      pfnClearCacheList;
 	SetSpecialState     pfnSetSpecialState;//Hurdler: added for backward compatibility
 	DrawModel           pfnDrawModel;
 	CreateModelVBOs     pfnCreateModelVBOs;

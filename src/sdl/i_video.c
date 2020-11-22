@@ -1868,6 +1868,7 @@ void VID_StartupOpenGL(void)
 		HWD.pfnReadRect         = hwSym("ReadRect",NULL);
 		HWD.pfnGClipRect        = hwSym("GClipRect",NULL);
 		HWD.pfnClearMipMapCache = hwSym("ClearMipMapCache",NULL);
+		HWD.pfnClearCacheList   = hwSym("ClearCacheList",NULL);
 		HWD.pfnSetSpecialState  = hwSym("SetSpecialState",NULL);
 		HWD.pfnSetPalette       = hwSym("SetPalette",NULL);
 		HWD.pfnGetTextureUsed   = hwSym("GetTextureUsed",NULL);

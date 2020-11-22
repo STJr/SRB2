@@ -642,6 +642,9 @@ void HWR_FreeTextureColormaps(patch_t *patch)
 
 		// Set the first colormap to the one that comes after it.
 		next = pat->mipmap->nextcolormap;
+		if (!next)
+			break;
+
 		pat->mipmap->nextcolormap = next->nextcolormap;
 
 		// Free image data from memory.
@@ -671,14 +674,14 @@ void HWR_ClearAllTextures(void)
 {
 	HWR_FreeMapTextures();
 
-	// free references to the textures
-	HWD.pfnClearMipMapCache();
-
 	// Alam: free the Z_Blocks before freeing it's users
 	HWR_FreePatchCache(true);
+
+	// free references to the textures
+	HWD.pfnClearCacheList();
 }
 
-// free all patch colormaps after each level: must be done after ClearMipMapCache!
+// free all patch colormaps after each level
 void HWR_FreeColormapCache(void)
 {
 	HWR_FreePatchCache(false);
@@ -696,6 +699,7 @@ static void FreeMapTexture(GLMapTexture_t *tex)
 	HWD.pfnDeleteTexture(&tex->mipmap);
 	if (tex->mipmap.data)
 		Z_Free(tex->mipmap.data);
+	tex->mipmap.data = NULL;
 }
 
 void HWR_FreeMapTextures(void)
@@ -722,18 +726,15 @@ void HWR_FreeMapTextures(void)
 
 void HWR_LoadMapTextures(size_t pnumtextures)
 {
-	// we must free it since numtextures changed
+	// we must free it since numtextures may have changed
 	HWR_FreeMapTextures();
 
-	// Why not Z_Malloc?
 	gl_numtextures = pnumtextures;
 	gl_textures = calloc(gl_numtextures, sizeof(*gl_textures));
 	gl_flats = calloc(gl_numtextures, sizeof(*gl_flats));
 
-	// Doesn't tell you which it _is_, but hopefully
-	// should never ever happen (right?!)
 	if ((gl_textures == NULL) || (gl_flats == NULL))
-		I_Error("HWR_LoadMapTextures: ran out of memory for OpenGL textures. Sad!");
+		I_Error("HWR_LoadMapTextures: ran out of memory for OpenGL textures");
 
 	gl_maptexturesloaded = true;
 }
