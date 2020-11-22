@@ -2243,9 +2243,6 @@ void G_Ticker(boolean run)
 					unlocktriggers = 0;
 
 					emeralds = 0;
-					tokenbits = 0;
-					tokenlist = 0;
-					token = 0;
 
 					memset(&luabanks, 0, sizeof(luabanks));
 				}
