@@ -21,6 +21,7 @@
 
 #ifdef TRUECOLOR
 #include "i_video.h" // truecolor
+#include "v_video.h" // V_AlphaTrans
 #endif
 
 struct rastery_s *prastertab; // for ASM code
