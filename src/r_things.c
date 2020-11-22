@@ -2656,23 +2656,11 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 
 					if (!behind)
 					{
-						fixed_t z1 = 0, z2 = 0;
-
-						if (rover->mobj->z - viewz > 0)
-						{
-							z1 = rover->pz;
-							z2 = r2->sprite->pz;
-						}
+						// FIXME: calculate gz and gzt for splats properly and use that
+						if (rover->mobj->z < viewz)
+							infront = (r2->sprite->mobj->z >= rover->mobj->z);
 						else
-						{
-							z1 = r2->sprite->pz;
-							z2 = rover->pz;
-						}
-
-						z1 -= viewz;
-						z2 -= viewz;
-
-						infront = (z1 >= z2);
+							infront = (r2->sprite->mobj->z <= rover->mobj->z);
 					}
 				}
 				else
