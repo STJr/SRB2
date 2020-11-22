@@ -4498,6 +4498,11 @@ boolean P_AddWadFile(const char *wadfilename)
 	if (!devparm && digmreplaces)
 		CONS_Printf(M_GetText("%s digital musics replaced\n"), sizeu1(digmreplaces));
 
+#ifdef HWRENDER
+	// Free GPU textures before freeing patches.
+	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+		HWR_ClearAllTextures();
+#endif
 
 	//
 	// search for sprite replacements
