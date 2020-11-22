@@ -57,6 +57,7 @@
 #include "r_defs.h"
 #include "r_data.h"
 #include "r_textures.h"
+#include "r_patch.h"
 #include "r_picformats.h"
 #include "i_system.h"
 #include "md5.h"
@@ -833,11 +834,6 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
 	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
 
-#ifdef HWRENDER
-	// allocates GLPatch info structures and store them in a tree
-	wadfile->hwrcache = M_AATreeAlloc(AATREE_ZUSER);
-#endif
-
 	//
 	// add the wadfile
 	//
@@ -847,7 +843,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 #ifdef HWRENDER
 	// Read shaders from file
-	if (rendermode == render_opengl && (vid_opengl_state == 1))
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 	{
 		HWR_LoadCustomShadersFromFile(numwadfiles - 1, (type == RET_PK3));
 		HWR_CompileShaders();
@@ -1670,13 +1666,7 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	if (!lumpcache[lump])
 	{
 		size_t len = W_LumpLengthPwad(wad, lump);
-		void *ptr, *lumpdata;
-#ifndef NO_PNG_LUMPS
-		void *srcdata = NULL;
-#endif
-
-		ptr = Z_Malloc(len, tag, &lumpcache[lump]);
-		lumpdata = Z_Malloc(len, tag, NULL);
+		void *ptr, *dest, *lumpdata = Z_Malloc(len, PU_STATIC, NULL);
 
 		// read the lump in full
 		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
@@ -1686,14 +1676,25 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 		if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
 		{
 			size_t newlen;
-			srcdata = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_PATCH, NULL, NULL, NULL, NULL, len, &newlen, 0);
-			ptr = Z_Realloc(ptr, newlen, tag, &lumpcache[lump]);
-			M_Memcpy(ptr, srcdata, newlen);
-			Z_Free(srcdata);
+			void *converted = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, len, &newlen, 0);
+			ptr = Z_Malloc(newlen, PU_STATIC, NULL);
+			M_Memcpy(ptr, converted, newlen);
+			Z_Free(converted);
+			len = newlen;
 		}
 		else // just copy it into the patch cache
 #endif
+		{
+			ptr = Z_Malloc(len, PU_STATIC, NULL);
 			M_Memcpy(ptr, lumpdata, len);
+		}
+
+		Z_Free(lumpdata);
+
+		dest = Z_Calloc(sizeof(patch_t), tag, &lumpcache[lump]);
+		Patch_Create(ptr, len, dest);
+
+		Z_Free(ptr);
 	}
 	else
 		Z_ChangeTag(lumpcache[lump], tag);
@@ -1708,45 +1709,22 @@ void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag)
 
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
-#ifdef HWRENDER
-	GLPatch_t *grPatch;
-#endif
+	patch_t *patch;
 
 	if (!TestValidLump(wad, lump))
 		return NULL;
+
+	patch = W_CacheSoftwarePatchNumPwad(wad, lump, tag);
 
 #ifdef HWRENDER
 	// Software-only compile cache the data without conversion
 	if (rendermode == render_soft || rendermode == render_none)
 #endif
-	{
-		return W_CacheSoftwarePatchNumPwad(wad, lump, tag);
-	}
+		return (void *)patch;
+
 #ifdef HWRENDER
-
-	grPatch = HWR_GetCachedGLPatchPwad(wad, lump);
-
-	if (grPatch->mipmap->data)
-	{
-		if (tag == PU_CACHE)
-			tag = PU_HWRCACHE;
-		Z_ChangeTag(grPatch->mipmap->data, tag);
-	}
-	else
-	{
-		patch_t *ptr = NULL;
-
-		// Only load the patch if we haven't initialised the grPatch yet
-		if (grPatch->mipmap->width == 0)
-			ptr = W_CacheLumpNumPwad(grPatch->wadnum, grPatch->lumpnum, PU_STATIC);
-
-		// Run HWR_MakePatch in all cases, to recalculate some things
-		HWR_MakePatch(ptr, grPatch, grPatch->mipmap, false);
-		Z_Free(ptr);
-	}
-
-	// return GLPatch_t, which can be casted to (patch_t) with valid patch header info
-	return (void *)grPatch;
+	Patch_CreateGL(patch);
+	return (void *)patch;
 #endif
 }
 
@@ -1761,7 +1739,7 @@ void W_UnlockCachedPatch(void *patch)
 	// have different lifetimes from software's.
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-		HWR_UnlockCachedPatch((GLPatch_t*)patch);
+		HWR_UnlockCachedPatch((GLPatch_t *)((patch_t *)patch)->hardware);
 	else
 #endif
 		Z_Unlock(patch);
@@ -2074,14 +2052,59 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"CLM", 3}, // Colormap changes
 		{"TRANS", 5}, // Translucency map changes
 
+		{"CONSBACK", 8}, // Console Background graphic
+
+		{"SAVE", 4}, // Save Select graphics here and below
+		{"BLACXLVL", 8},
+		{"GAMEDONE", 8},
+		{"CONT", 4}, // Continue icons on saves (probably not used anymore)
+		{"STNONEX", 7}, // "X" graphic
+		{"ULTIMATE", 8}, // Ultimate no-save
+
+		{"CRFNT", 5}, // Sonic 1 font changes
+		{"NTFNT", 5}, // Character Select font changes
+		{"NTFNO", 5}, // Character Select font (outline)
 		{"LTFNT", 5}, // Level title font changes
 		{"TTL", 3}, // Act number changes
 		{"STCFN", 5}, // Console font changes
 		{"TNYFN", 5}, // Tiny console font changes
+
+		{"STLIVE", 6}, // Life graphics, background and the "X" that shows under skin's HUDNAME
+		{"CROSHAI", 7}, // First person crosshairs
+		{"INTERSC", 7}, // Default intermission backgrounds (co-op)
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
-		{"M_", 2}, // As does menu stuff
+		{"RESULT", 6}, // Used in intermission for competitive modes, above too :3
+		{"RACE", 4}, // Race mode graphics, 321go
+		{"M_", 2}, // Menu stuff
+		{"LT", 2}, // Titlecard changes
+
+		{"SLID", 4}, // Continue
+		{"CONT", 4}, 
+
+		{"MINICAPS", 8}, // NiGHTS graphics here and below
+		{"BLUESTAT", 8}, // Sphere status
+		{"BYELSTAT", 8},
+		{"ORNGSTAT", 8},
+		{"REDSTAT", 7},
+		{"YELSTAT", 7},
+		{"NBRACKET", 8},
+		{"NGHTLINK", 8},
+		{"NGT", 3}, // Link numbers
+		{"NARROW", 6},
+		{"NREDAR", 6},
+		{"NSS", 3},
+		{"NBON", 4},
+		{"NRNG", 4},
+		{"NHUD", 4},
+		{"CAPS", 4},
+		{"DRILL", 5},
+		{"GRADE", 5},
+		{"MINUS5", 6},
+
 		{"MUSICDEF", 8}, // Song definitions (thanks kart)
+		{"SHADERS", 7}, // OpenGL shader definitions
+		{"SH_", 3}, // GLSL shader
 
 		{NULL, 0},
 	};

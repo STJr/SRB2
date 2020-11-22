@@ -152,7 +152,6 @@ typedef struct
 
 boolean usebuffer = false;
 static boolean useinterpic;
-static boolean safetorender = true;
 static y_buffer_t *y_buffer;
 
 static INT32 intertic;
@@ -169,7 +168,6 @@ static void Y_CalculateCompetitionWinners(void);
 static void Y_CalculateTimeRaceWinners(void);
 static void Y_CalculateMatchWinners(void);
 static void Y_UnloadData(void);
-static void Y_CleanupData(void);
 
 // Stuff copy+pasted from st_stuff.c
 #define ST_DrawNumFromHud(h,n)        V_DrawTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, n)
@@ -316,19 +314,6 @@ void Y_IntermissionDrawer(void)
 	if (intertype == int_none || rendermode == render_none)
 		return;
 
-	// Lactozilla: Renderer switching
-	if (needpatchrecache)
-	{
-		Y_CleanupData();
-		safetorender = false;
-	}
-
-	if (!safetorender)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-
-	if (!safetorender)
-		goto dontdrawbg;
-
 	if (useinterpic)
 		V_DrawScaledPatch(0, 0, 0, interpic);
 	else if (!usetile)
@@ -366,7 +351,6 @@ void Y_IntermissionDrawer(void)
 	if (!LUA_HudEnabled(hud_intermissiontally))
 		goto skiptallydrawer;
 
-dontdrawbg:
 	if (intertype == int_coop)
 	{
 		INT32 bonusy;
@@ -416,17 +400,14 @@ dontdrawbg:
 
 		bonusy = 150;
 		// Total
-		if (safetorender)
-		{
-			V_DrawScaledPatch(152, bonusy, 0, data.coop.ptotal);
-			V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.total);
-		}
+		V_DrawScaledPatch(152, bonusy, 0, data.coop.ptotal);
+		V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.total);
 		bonusy -= (3*SHORT(tallnum[0]->height)/2) + 1;
 
 		// Draw bonuses
 		for (i = 3; i >= 0; --i)
 		{
-			if (data.coop.bonuses[i].display && safetorender)
+			if (data.coop.bonuses[i].display)
 			{
 				V_DrawScaledPatch(152, bonusy, 0, data.coop.bonuspatches[i]);
 				V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.bonuses[i].points);
@@ -655,8 +636,7 @@ dontdrawbg:
 		char strtime[10];
 
 		// draw the header
-		if (safetorender)
-			V_DrawScaledPatch(112, 2, 0, data.match.result);
+		V_DrawScaledPatch(112, 2, 0, data.match.result);
 
 		// draw the level name
 		V_DrawCenteredString(BASEVIDWIDTH/2, 20, 0, data.match.levelstring);
@@ -1211,8 +1191,6 @@ void Y_StartIntermission(void)
 	if (endtic != -1)
 		I_Error("endtic is dirty");
 #endif
-
-	safetorender = true;
 
 	if (!multiplayer)
 	{
@@ -2060,19 +2038,13 @@ void Y_EndIntermission(void)
 	usebuffer = false;
 }
 
-#define UNLOAD(x) if (x) {Z_ChangeTag(x, PU_CACHE);} x = NULL;
-#define CLEANUP(x) x = NULL;
+#define UNLOAD(x) if (x) {Patch_Free(x);} x = NULL;
 
 //
 // Y_UnloadData
 //
 static void Y_UnloadData(void)
 {
-	// In hardware mode, don't Z_ChangeTag a pointer returned by W_CachePatchName().
-	// It doesn't work and is unnecessary.
-	if (rendermode != render_soft)
-		return;
-
 	// unload the background patches
 	UNLOAD(bgpatch);
 	UNLOAD(bgtile);
@@ -2108,48 +2080,6 @@ static void Y_UnloadData(void)
 		default:
 			//without this default,
 			//int_none, int_tag, int_chaos, and int_comp
-			//are not handled
-			break;
-	}
-}
-
-static void Y_CleanupData(void)
-{
-	// unload the background patches
-	CLEANUP(bgpatch);
-	CLEANUP(bgtile);
-	CLEANUP(interpic);
-
-	switch (intertype)
-	{
-		case int_coop:
-			// unload the coop and single player patches
-			CLEANUP(data.coop.bonuspatches[3]);
-			CLEANUP(data.coop.bonuspatches[2]);
-			CLEANUP(data.coop.bonuspatches[1]);
-			CLEANUP(data.coop.bonuspatches[0]);
-			CLEANUP(data.coop.ptotal);
-			break;
-		case int_spec:
-			// unload the special stage patches
-			//CLEANUP(data.spec.cemerald);
-			//CLEANUP(data.spec.nowsuper);
-			CLEANUP(data.spec.bonuspatches[1]);
-			CLEANUP(data.spec.bonuspatches[0]);
-			CLEANUP(data.spec.pscore);
-			CLEANUP(data.spec.pcontinues);
-			break;
-		case int_match:
-		case int_race:
-			CLEANUP(data.match.result);
-			break;
-		case int_ctf:
-			CLEANUP(data.match.blueflag);
-			CLEANUP(data.match.redflag);
-			break;
-		default:
-			//without this default,
-			//int_none, int_tag, int_chaos, and int_classicrace
 			//are not handled
 			break;
 	}

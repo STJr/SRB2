@@ -32,6 +32,7 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
+#include "taglist.h" // P_FindSpecialLineFromTag
 #include "lua_hook.h" // hook_cmd_running errors
 
 #define NOHUD if (hud_running)\
@@ -244,6 +245,56 @@ static int lib_userdataType(lua_State *L)
 	}
 	else
 		return luaL_typerror(L, 1, "userdata");
+}
+
+// Takes a metatable as first and only argument
+// Only callable during script loading
+static int lib_registerMetatable(lua_State *L)
+{
+	static UINT16 nextid = 1;
+
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+	luaL_checktype(L, 1, LUA_TTABLE);
+
+	if (nextid == 0)
+		return luaL_error(L, "Too many metatables registered?! Please consider rewriting your script once you are sober again.\n");
+
+	lua_getfield(L, LUA_REGISTRYINDEX, LREG_METATABLES); // 2
+		// registry.metatables[metatable] = nextid
+		lua_pushvalue(L, 1); // 3
+			lua_pushnumber(L, nextid); // 4
+		lua_settable(L, 2);
+
+		// registry.metatables[nextid] = metatable
+		lua_pushnumber(L, nextid); // 3
+			lua_pushvalue(L, 1); // 4
+		lua_settable(L, 2);
+	lua_pop(L, 1);
+
+	nextid++;
+
+	return 0;
+}
+
+// Takes a string as only argument and returns the metatable
+// associated to the userdata type this string refers to
+// Returns nil if the string does not refer to a valid userdata type
+static int lib_userdataMetatable(lua_State *L)
+{
+	UINT32 i;
+	const char *udname = luaL_checkstring(L, 1);
+
+	// Find internal metatable name
+	for (i = 0; meta2utype[i].meta; i++)
+		if (!strcmp(udname, meta2utype[i].utype))
+		{
+			luaL_getmetatable(L, meta2utype[i].meta);
+			return 1;
+		}
+
+	lua_pushnil(L);
+	return 1;
 }
 
 static int lib_isPlayerAdmin(lua_State *L)
@@ -913,6 +964,28 @@ static int lib_pMaceRotate(lua_State *L)
 		return LUA_ErrInvalid(L, "mobj_t");
 	P_MaceRotate(center, baserot, baseprevrot);
 	return 0;
+}
+
+static int lib_pCreateFloorSpriteSlope(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	LUA_PushUserdata(L, (pslope_t *)P_CreateFloorSpriteSlope(mobj), META_SLOPE);
+	return 1;
+}
+
+static int lib_pRemoveFloorSpriteSlope(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_RemoveFloorSpriteSlope(mobj);
+	return 1;
 }
 
 static int lib_pRailThinker(lua_State *L)
@@ -3006,6 +3079,185 @@ static int lib_sStartMusicCaption(lua_State *L)
 	return 0;
 }
 
+static int lib_sMusicType(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushinteger(L, S_MusicType());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sMusicPlaying(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushboolean(L, S_MusicPlaying());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sMusicPaused(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushboolean(L, S_MusicPaused());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sMusicName(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushstring(L, S_MusicName());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sMusicExists(lua_State *L)
+{
+	boolean checkMIDI = lua_opttrueboolean(L, 2);
+	boolean checkDigi = lua_opttrueboolean(L, 3);
+#ifdef MUSICSLOT_COMPATIBILITY
+	const char *music_name;
+	UINT32 music_num;
+	char music_compat_name[7];
+	UINT16 music_flags = 0;
+	NOHUD
+	if (lua_isnumber(L, 1))
+	{
+		music_num = (UINT32)luaL_checkinteger(L, 1);
+		music_flags = (UINT16)(music_num & 0x0000FFFF);
+		if (music_flags && music_flags <= 1035)
+			snprintf(music_compat_name, 7, "%sM", G_BuildMapName((INT32)music_flags));
+		else if (music_flags && music_flags <= 1050)
+			strncpy(music_compat_name, compat_special_music_slots[music_flags - 1036], 7);
+		else
+			music_compat_name[0] = 0; // becomes empty string
+		music_compat_name[6] = 0;
+		music_name = (const char *)&music_compat_name;
+	}
+	else
+	{
+		music_num = 0;
+		music_name = luaL_checkstring(L, 1);
+	}
+#else
+	const char *music_name = luaL_checkstring(L, 1);
+#endif
+	NOHUD
+	lua_pushboolean(L, S_MusicExists(music_name, checkMIDI, checkDigi));
+	return 1;
+}
+
+static int lib_sSetMusicLoopPoint(lua_State *L)
+{
+	UINT32 looppoint = (UINT32)luaL_checkinteger(L, 1);
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 2) && lua_isuserdata(L, 2))
+	{
+		player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushboolean(L, S_SetMusicLoopPoint(looppoint));
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sGetMusicLoopPoint(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+		lua_pushinteger(L, (int)S_GetMusicLoopPoint());
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sPauseMusic(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		S_PauseAudio();
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_sResumeMusic(lua_State *L)
+{
+	player_t *player = NULL;
+	NOHUD
+	if (!lua_isnone(L, 1) && lua_isuserdata(L, 1))
+	{
+		player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+		if (!player)
+			return LUA_ErrInvalid(L, "player_t");
+	}
+	if (!player || P_IsLocalPlayer(player))
+	{
+		S_ResumeAudio();
+		lua_pushboolean(L, true);
+	}
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
 // G_GAME
 ////////////
 
@@ -3494,6 +3746,8 @@ static luaL_Reg lib[] = {
 	{"chatprint", lib_chatprint},
 	{"chatprintf", lib_chatprintf},
 	{"userdataType", lib_userdataType},
+	{"registerMetatable", lib_registerMetatable},
+	{"userdataMetatable", lib_userdataMetatable},
 	{"IsPlayerAdmin", lib_isPlayerAdmin},
 	{"reserveLuabanks", lib_reserveLuabanks},
 
@@ -3553,6 +3807,8 @@ static luaL_Reg lib[] = {
 	{"P_CheckSolidLava",lib_pCheckSolidLava},
 	{"P_CanRunOnWater",lib_pCanRunOnWater},
 	{"P_MaceRotate",lib_pMaceRotate},
+	{"P_CreateFloorSpriteSlope",lib_pCreateFloorSpriteSlope},
+	{"P_RemoveFloorSpriteSlope",lib_pRemoveFloorSpriteSlope},
 	{"P_RailThinker",lib_pRailThinker},
 	{"P_XYMovement",lib_pXYMovement},
 	{"P_RingXYMovement",lib_pRingXYMovement},
@@ -3712,6 +3968,15 @@ static luaL_Reg lib[] = {
 	{"S_IdPlaying",lib_sIdPlaying},
 	{"S_SoundPlaying",lib_sSoundPlaying},
 	{"S_StartMusicCaption", lib_sStartMusicCaption},
+	{"S_MusicType",lib_sMusicType},
+	{"S_MusicPlaying",lib_sMusicPlaying},
+	{"S_MusicPaused",lib_sMusicPaused},
+	{"S_MusicName",lib_sMusicName},
+	{"S_MusicExists",lib_sMusicExists},
+	{"S_SetMusicLoopPoint",lib_sSetMusicLoopPoint},
+	{"S_GetMusicLoopPoint",lib_sGetMusicLoopPoint},
+	{"S_PauseMusic",lib_sPauseMusic},
+	{"S_ResumeMusic", lib_sResumeMusic},
 
 	// g_game
 	{"G_AddGametype", lib_gAddGametype},

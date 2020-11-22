@@ -1108,7 +1108,6 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 
 	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
 	mt->scale = player->mo->scale;
-	mt->tag = 0;
 	memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 	memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 	mt->pitch = mt->roll = 0;
@@ -1435,7 +1434,7 @@ void Command_Writethings_f(void)
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_OBJECTPLACE;
 
-	P_WriteThings(W_GetNumForName(G_BuildMapName(gamemap)) + ML_THINGS);
+	P_WriteThings();
 }
 
 void Command_ObjectPlace_f(void)

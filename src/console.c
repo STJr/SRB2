@@ -56,7 +56,8 @@ I_mutex con_mutex;
 #endif/*HAVE_THREADS*/
 
 static boolean con_started = false; // console has been initialised
-       boolean con_startup = false; // true at game startup, screen need refreshing
+       boolean con_startup = false; // true at game startup
+       boolean con_refresh = false; // screen needs refreshing
 static boolean con_forcepic = true; // at startup toggle console translucency when first off
        boolean con_recalc;          // set true when screen size has changed
 
@@ -439,7 +440,8 @@ void CON_Init(void)
 		Lock_state();
 
 		con_started = true;
-		con_startup = true; // need explicit screen refresh until we are in Doom loop
+		con_startup = true;
+		con_refresh = true; // needs explicit screen refresh until we are in the main game loop
 		consoletoggle = false;
 
 		Unlock_state();
@@ -457,7 +459,8 @@ void CON_Init(void)
 		Lock_state();
 
 		con_started = true;
-		con_startup = false; // need explicit screen refresh until we are in Doom loop
+		con_startup = false;
+		con_refresh = false; // disable explicit screen refresh
 		consoletoggle = true;
 
 		Unlock_state();
@@ -1438,7 +1441,7 @@ void CONS_Printf(const char *fmt, ...)
 {
 	va_list argptr;
 	static char *txt = NULL;
-	boolean startup;
+	boolean refresh;
 
 	if (txt == NULL)
 		txt = malloc(8192);
@@ -1454,32 +1457,21 @@ void CONS_Printf(const char *fmt, ...)
 	if (con_started)
 		CON_Print(txt);
 
-	CON_LogMessage(txt);	
+	CON_LogMessage(txt);
 
 	Lock_state();
 
 	// make sure new text is visible
 	con_scrollup = 0;
-	startup = con_startup;
+	refresh = con_refresh;
 
 	Unlock_state();
 
 	// if not in display loop, force screen update
-	if (startup && (!setrenderneeded))
+	if (refresh)
 	{
-#ifdef _WINDOWS
-		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
-
-		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
-		V_DrawScaledPatch(0, 0, 0, con_backpic);
-
-		W_UnlockCachedPatch(con_backpic);
-		I_LoadingScreen(txt);				// Win32/OS2 only
-#else
-		// here we display the console text
-		CON_Drawer();
+		CON_Drawer(); // here we display the console text
 		I_FinishUpdate(); // page flip or blit buffer
-#endif
 	}
 }
 
@@ -1541,7 +1533,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...)
 //
 void CONS_Error(const char *msg)
 {
-#ifdef RPC_NO_WINDOWS_H
+#if defined(RPC_NO_WINDOWS_H) && defined(_WINDOWS)
 	if (!graphics_started)
 	{
 		MessageBoxA(vid.WndParent, msg, "SRB2 Warning", MB_OK);
@@ -1719,8 +1711,8 @@ static void CON_DrawBackpic(void)
 	if (piclump == LUMPERROR)
 		piclump = W_GetNumForName("MISSING");
 
-	// Cache the Software patch.
-	con_backpic = W_CacheSoftwarePatchNum(piclump, PU_PATCH);
+	// Cache the patch.
+	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
 
 	// Center the backpic, and draw a vertically cropped patch.
 	w = (con_backpic->width * vid.dupx);
@@ -1731,7 +1723,7 @@ static void CON_DrawBackpic(void)
 	// then fill the sides with a solid color.
 	if (x > 0)
 	{
-		column_t *column = (column_t *)((UINT8 *)(con_backpic) + LONG(con_backpic->columnofs[0]));
+		column_t *column = (column_t *)((UINT8 *)(con_backpic->columns) + (con_backpic->columnofs[0]));
 		if (!column->topdelta)
 		{
 			UINT8 *source = (UINT8 *)(column) + 3;
@@ -1743,8 +1735,7 @@ static void CON_DrawBackpic(void)
 		}
 	}
 
-	// Cache the patch normally.
-	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
+	// Draw the patch.
 	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, V_NOSCALESTART, con_backpic,
 			0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
 
@@ -1828,9 +1819,6 @@ void CON_Drawer(void)
 		Unlock_state();
 		return;
 	}
-
-	if (needpatchrecache)
-		HU_LoadGraphics();
 
 	if (con_recalc)
 	{

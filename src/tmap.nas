@@ -763,8 +763,8 @@ TX2             EQU    16
 TY2             EQU    20
 RASTERY_SIZEOF  EQU    24
 
-cglobal rasterize_segment_tex
-rasterize_segment_tex:
+cglobal rasterize_segment_tex_asm
+rasterize_segment_tex_asm:
         push    ebp
         mov     ebp,esp
 

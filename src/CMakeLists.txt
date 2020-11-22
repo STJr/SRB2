@@ -130,6 +130,8 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_splats.c
 	r_things.c
 	r_textures.c
+	r_patch.c
+	r_patchrotation.c
 	r_picformats.c
 	r_portal.c
 
@@ -147,6 +149,8 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_state.h
 	r_things.h
 	r_textures.h
+	r_patch.h
+	r_patchrotation.h
 	r_picformats.h
 	r_portal.h
 )
@@ -169,6 +173,7 @@ set(SRB2_CORE_GAME_SOURCES
 	p_telept.c
 	p_tick.c
 	p_user.c
+	taglist.c
 
 	p_local.h
 	p_maputl.h
@@ -180,6 +185,7 @@ set(SRB2_CORE_GAME_SOURCES
 	p_slopes.h
 	p_spec.h
 	p_tick.h
+	taglist.h
 )
 
 if(NOT (CMAKE_CXX_COMPILER_ID MATCHES "Clang"))
