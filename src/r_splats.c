@@ -19,6 +19,10 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#ifdef TRUECOLOR
+#include "i_video.h" // truecolor
+#endif
+
 struct rastery_s *prastertab; // for ASM code
 
 static struct rastery_s rastertab[MAXVIDHEIGHT];
@@ -140,6 +144,7 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 void R_DrawFloorSprite(vissprite_t *spr)
 {
 	floorsplat_t splat;
+	patch_t *patch = spr->patch;
 	mobj_t *mobj = spr->mobj;
 	fixed_t tr_x, tr_y, rot_x, rot_y, rot_z;
 
@@ -168,11 +173,31 @@ void R_DrawFloorSprite(vissprite_t *spr)
 	if (vflip)
 		flipflags |= PICFLAGS_YFLIP;
 
-	if (!mobj || P_MobjWasRemoved(mobj))
+	if (!mobj || P_MobjWasRemoved(mobj) || !patch)
 		return;
 
-	Patch_GenerateFlat(spr->patch, flipflags);
-	splat.pic = spr->patch->flats[flipflags];
+#ifdef TRUECOLOR
+	if (truecolor)
+	{
+		boolean usetc = (dc_picfmt == PICFMT_PATCH32);
+
+		ds_colmapstyle = dc_colmapstyle;
+
+		if (usetc)
+		{
+			ds_picfmt = PICFMT_FLAT32;
+			patch = Patch_GetTruecolor(patch);
+		}
+		else
+			ds_picfmt = PICFMT_FLAT16;
+
+		Patch_GenerateFlat(patch, flipflags, ds_picfmt);
+	}
+	else
+#endif
+		Patch_GenerateFlat(patch, flipflags, PICFMT_FLAT16);
+
+	splat.pic = patch->flats[flipflags];
 	if (splat.pic == NULL)
 		return;
 
@@ -348,6 +373,7 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 	fixed_t step;
 
 	int spanfunctype = SPANDRAWFUNC_SPRITE;
+	boolean translucent = false;
 
 	prepare_rastertab();
 
@@ -451,6 +477,21 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 	if (ds_translation == NULL)
 		ds_translation = colormaps;
 
+#ifdef TRUECOLOR
+	if (truecolor && ds_picfmt == PICFMT_FLAT32)
+	{
+		if (ds_colormap)
+		{
+			if (tc_colormaps)
+				dp_lighting = TC_CalcScaleLight((UINT32 *)ds_colormap);
+			else
+				dp_lighting = TC_CalcScaleLightPaletted(ds_colormap);
+		}
+		else
+			dp_lighting = 0xFF;
+	}
+#endif
+
 	if (vis->extra_colormap)
 	{
 		if (!ds_colormap)
@@ -459,17 +500,29 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 			ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
 	}
 
+#ifdef TRUECOLOR
+	if (truecolor && vis->transnum)
+	{
+		dc_alpha = V_AlphaTrans(vis->transnum);
+		translucent = true;
+	}
+	else
+#endif
 	if (vis->transmap)
 	{
 		ds_transmap = vis->transmap;
+		translucent = true;
+	}
+	else
+		ds_transmap = NULL;
 
+	if (translucent)
+	{
 		if (pSplat->tilted)
 			spanfunctype = SPANDRAWFUNC_TILTEDTRANSSPRITE;
 		else
 			spanfunctype = SPANDRAWFUNC_TRANSSPRITE;
 	}
-	else
-		ds_transmap = NULL;
 
 	if (ds_powersoftwo)
 		spanfunc = spanfuncs[spanfunctype];

@@ -705,7 +705,7 @@ static void HWR_GenerateTexture(INT32 texnum, GLMapTexture_t *grtex)
 }
 
 // patch may be NULL if grMipmap has been initialised already and makebitmap is false
-void HWR_MakePatch (const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap)
+void HWR_MakePatch (patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap)
 {
 	// don't do it twice (like a cache)
 	if (grMipmap->width == 0)

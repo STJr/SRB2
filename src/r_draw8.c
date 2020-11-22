@@ -536,9 +536,6 @@ void R_DrawTranslatedColumn_8(void)
 // SPANS
 // ==========================================================================
 
-#define SPANSIZE 16
-#define INVSPAN 0.0625f
-
 /**	\brief The R_DrawSpan_8 function
 	Draws the actual span.
 */

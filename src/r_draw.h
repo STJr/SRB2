@@ -184,6 +184,8 @@ void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
 
 #define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f * FIXED_TO_FLOAT(fovtan))
+#define SPANSIZE 16
+#define INVSPAN 0.0625f // (1.0f / 16.0f)
 
 void R_DrawSpan_8(void);
 void R_DrawTranslucentSpan_8(void);
@@ -199,13 +201,13 @@ void R_DrawTranslucentFloorSprite_8(void);
 void R_DrawTiltedFloorSprite_8(void);
 void R_DrawTiltedTranslucentFloorSprite_8(void);
 
-void R_CalcTiltedLighting(fixed_t start, fixed_t end);
-extern INT32 tiltlighting[MAXVIDWIDTH];
-
 void R_DrawTranslucentWaterSpan_8(void);
 void R_DrawTiltedTranslucentWaterSpan_8(void);
 
 void R_DrawFogSpan_8(void);
+
+void R_CalcTiltedLighting(fixed_t start, fixed_t end);
+extern INT32 tiltlighting[MAXVIDWIDTH];
 
 // Lactozilla: Non-powers-of-two
 void R_DrawSpan_NPO2_8(void);
@@ -264,26 +266,41 @@ void R_DrawFogColumn_32(void);
 void R_DrawColumnShadowed_32(void);
 
 void R_DrawSpan_32(void);
-void R_DrawSplat_32(void);
-void R_DrawTranslucentSpan_32(void);
-void R_DrawTranslucentSplat_32(void);
 void R_DrawTiltedSpan_32(void);
+void R_DrawTranslucentSpan_32(void);
 void R_DrawTiltedTranslucentSpan_32(void);
-void R_DrawTiltedTranslucentWaterSpan_32(void);
+
+void R_DrawSplat_32(void);
+void R_DrawTranslucentSplat_32(void);
 void R_DrawTiltedSplat_32(void);
+
+void R_DrawFloorSprite_32(void);
+void R_DrawTranslucentFloorSprite_32(void);
+void R_DrawTiltedFloorSprite_32(void);
+void R_DrawTiltedTranslucentFloorSprite_32(void);
+
 void R_DrawTranslucentWaterSpan_32(void);
+void R_DrawTiltedTranslucentWaterSpan_32(void);
+
 void R_DrawFogSpan_32(void);
 
 // Lactozilla: Non-powers-of-two
 void R_DrawSpan_NPO2_32(void);
 void R_DrawTranslucentSpan_NPO2_32(void);
-void R_DrawSplat_NPO2_32(void);
-void R_DrawTranslucentSplat_NPO2_32(void);
 void R_DrawTiltedSpan_NPO2_32(void);
 void R_DrawTiltedTranslucentSpan_NPO2_32(void);
-void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void);
+
+void R_DrawSplat_NPO2_32(void);
+void R_DrawTranslucentSplat_NPO2_32(void);
 void R_DrawTiltedSplat_NPO2_32(void);
+
+void R_DrawFloorSprite_NPO2_32(void);
+void R_DrawTranslucentFloorSprite_NPO2_32(void);
+void R_DrawTiltedFloorSprite_NPO2_32(void);
+void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void);
+
 void R_DrawTranslucentWaterSpan_NPO2_32(void);
+void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void);
 
 //
 // truecolor states

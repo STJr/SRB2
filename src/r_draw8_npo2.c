@@ -15,9 +15,6 @@
 // SPANS
 // ==========================================================================
 
-#define SPANSIZE 16
-#define INVSPAN 0.0625f
-
 /**	\brief The R_DrawSpan_NPO2_8 function
 	Draws the actual span.
 */

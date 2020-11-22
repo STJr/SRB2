@@ -23,7 +23,7 @@ void Patch_Free(patch_t *patch);
 #define Patch_FreeTag(tagnum) Patch_FreeTags(tagnum, tagnum)
 void Patch_FreeTags(INT32 lowtag, INT32 hightag);
 
-void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags);
+void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags, pictureformat_t format);
 
 #ifdef HWRENDER
 void *Patch_AllocateHardwarePatch(patch_t *patch);

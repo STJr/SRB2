@@ -21,7 +21,7 @@
 
 //
 // Creates a patch.
-// Assumes a PU_PATCH zone memory tag and no user, but can always be set later
+// Assumes a PU_PATCH zone memory tag and no user.
 //
 
 patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
@@ -58,6 +58,8 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 		M_Memcpy(patch->columns, ((UINT8 *)source + LONG(source->columnofs[0])), colsize);
 	}
 
+	patch->format = PICFMT_PATCH;
+
 	return patch;
 }
 
@@ -80,10 +82,15 @@ static void Patch_FreeData(patch_t *patch)
 	if (patch->source.data)
 		Z_Free(patch->source.data);
 
-	for (i = 0; i < 2; i++)
+	if (patch->flats)
 	{
-		if (patch->flats[i])
-			Z_Free(patch->flats[i]);
+		for (i = 0; i < 4; i++)
+		{
+			if (patch->flats[i])
+				Z_Free(patch->flats[i]);
+		}
+
+		Z_Free(patch->flats);
 	}
 
 #ifdef ROTSPRITE
@@ -130,11 +137,15 @@ void Patch_FreeTags(INT32 lowtag, INT32 hightag)
 	Z_IterateTags(lowtag, hightag, Patch_FreeTagsCallback);
 }
 
-void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags)
+void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags, pictureformat_t format)
 {
 	UINT8 flip = (flags & (PICFLAGS_XFLIP | PICFLAGS_YFLIP));
+
+	if (patch->flats == NULL)
+		patch->flats = Z_Calloc(sizeof(void *) * 4, PU_PATCH_DATA, NULL);
+
 	if (patch->flats[flip] == NULL)
-		patch->flats[flip] = Picture_Convert(PICFMT_PATCH, patch, PICFMT_FLAT16, 0, NULL, 0, 0, 0, 0, flags);
+		patch->flats[flip] = Picture_Convert(patch->format, patch, format, 0, NULL, 0, 0, 0, 0, flags);
 }
 
 //
@@ -144,7 +155,17 @@ void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags)
 patch_t *Patch_GetTruecolor(patch_t *patch)
 {
 	if (!patch->truecolor && patch->source.data)
-		patch->truecolor = Picture_PNGConvert((UINT8 *)patch->source.data, PICFMT_PATCH32, NULL, NULL, NULL, NULL, patch->source.len, NULL, 0);
+	{
+		patch_t *tc = Picture_PNGConvert(
+						(UINT8 *)patch->source.data, PICFMT_PATCH32,
+						NULL, NULL, NULL, NULL,
+						patch->source.len, NULL, 0);
+
+		tc->format = PICFMT_PATCH32;
+
+		patch->truecolor = tc;
+	}
+
 	return patch->truecolor;
 }
 

@@ -671,6 +671,8 @@ typedef struct
 	INT16 width, height;
 	INT16 leftoffset, topoffset;
 
+	INT32 format;
+
 	INT32 *columnofs; // Column offsets. This is relative to patch->columns
 	UINT8 *columns; // Software column data
 
@@ -683,7 +685,7 @@ typedef struct
 
 	void *truecolor; // Truecolor patch, for Software
 	void *hardware; // OpenGL patch, allocated whenever necessary
-	void *flats[4]; // The patch as flats
+	void **flats; // The patch as flats
 
 #ifdef ROTSPRITE
 	rotsprite_t *rotated; // Rotated patches
