@@ -527,7 +527,7 @@ void HWR_InitModels(void)
 			return;
 		}
 	}
-	
+
 	// length of the player model prefix
 	prefixlen = strlen(PLAYERMODELPREFIX);
 
@@ -1470,7 +1470,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			// Instead of the != operator, memcmp is used to avoid a compiler warning.
 			if (memcmp(&(hwrPatch->max_s), &(md2->model->max_s), sizeof(md2->model->max_s)) != 0 ||
 				memcmp(&(hwrPatch->max_t), &(md2->model->max_t), sizeof(md2->model->max_t)) != 0)
-				adjustTextureCoords(md2->model, gpatch);
+				adjustTextureCoords(md2->model, spr->gpatch);
 			HWR_GetMappedPatch(spr->gpatch, spr->colormap);
 		}
 
