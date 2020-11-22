@@ -296,7 +296,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			if (!isPNG)
 #endif
 			{
-				W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof (patch_t), 0);
+				W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof(INT16) * 4, 0);
 				width = SHORT(patch.width);
 				height = SHORT(patch.height);
 				topoffset = SHORT(patch.topoffset);

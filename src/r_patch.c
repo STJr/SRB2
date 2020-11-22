@@ -74,7 +74,7 @@ static void Patch_FreeData(patch_t *patch)
 		HWR_FreeTexture(patch);
 #endif
 
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < 4; i++)
 	{
 		if (patch->flats[i])
 			Z_Free(patch->flats[i]);
