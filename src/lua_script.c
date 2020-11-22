@@ -376,6 +376,44 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 		redscore = (UINT32)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "bluescore"))
 		bluescore = (UINT32)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "skincolor_redteam"))
+		skincolor_redteam = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "skincolor_blueteam"))
+		skincolor_blueteam = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "skincolor_redring"))
+		skincolor_redring = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "skincolor_bluering"))
+		skincolor_bluering = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "emeralds"))
+		emeralds = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "token"))
+		token = (UINT32)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "gravity"))
+		gravity = (fixed_t)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "stoppedclock"))
+		stoppedclock = luaL_checkboolean(L, 2);
+	else if (fastcmp(word, "displayplayer"))
+	{
+		player_t *player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+
+		if (player)
+			displayplayer = player - players;
+	}
+	else if (fastcmp(word, "mapmusname"))
+	{
+		size_t strlength;
+		const char *str = luaL_checkstring(L, 2, &strlength);
+
+		if (strlength > 6)
+			return luaL_error(L, "string length out of range (maximum 6 characters)");
+
+		if (strlen(str) < strlength)
+			return luaL_error(L, "string must not contain embedded zeros!");
+
+		strncpy(mapmusname, str, strlength);
+	}
+	else if (fastcmp(word, "mapmusflags"))
+		mapmusflags = (UINT16)luaL_checkinteger(L, 2);
 	else
 		return 0;
 
