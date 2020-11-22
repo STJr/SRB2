@@ -1568,11 +1568,6 @@ boolean VID_CheckRenderer(void)
 			bufSurface = NULL;
 		}
 
-#ifdef HWRENDER
-		if (rendererchanged && vid.glstate == VID_GL_LIBRARY_LOADED) // Only if OpenGL ever loaded!
-			HWR_ClearAllTextures();
-#endif
-
 		SCR_SetDrawFuncs();
 	}
 #ifdef HWRENDER

@@ -1292,9 +1292,6 @@ EXPORT void HWRAPI(DeleteTexture) (FTextureInfo *pTexInfo)
 	if (pTexInfo->downloaded)
 		pglDeleteTextures(1, (GLuint *)&pTexInfo->downloaded);
 	pTexInfo->downloaded = 0;
-
-	if (pTexInfo->prevmipmap)
-		pTexInfo->prevmipmap->nextmipmap = pTexInfo->nextmipmap;
 }
 
 
@@ -1941,15 +1938,12 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 	else
 	{
 		UpdateTexture(pTexInfo);
-
-		pTexInfo->prevmipmap = NULL;
 		pTexInfo->nextmipmap = NULL;
 
 		// insertion at the tail
 		if (gl_cachetail)
 		{
 			gl_cachetail->nextmipmap = pTexInfo;
-			pTexInfo->prevmipmap = gl_cachetail;
 			gl_cachetail = pTexInfo;
 		}
 		else // initialization of the linked list

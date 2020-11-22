@@ -6221,17 +6221,6 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 
 void HWR_LoadLevel(void)
 {
-	// Lactozilla (December 8, 2019)
-	// Level setup used to free EVERY mipmap from memory.
-	// Even mipmaps that aren't related to level textures.
-	// Presumably, the hardware render code used to store textures as level data.
-	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
-	// Level textures are only reloaded after R_LoadTextures, which is
-	// when the texture list is loaded.
-
-	// Sal: Unfortunately, NOT freeing them causes the dreaded Color Bug.
-	HWR_FreeColormapCache();
-
 #ifdef ALAM_LIGHTING
 	// BP: reset light between levels (we draw preview frame lights on current frame)
 	HWR_ResetLights();
@@ -6394,7 +6383,10 @@ void HWR_Switch(void)
 
 	// Create plane polygons
 	if (!gl_maploaded && (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)))
+	{
+		HWR_ClearAllTextures();
 		HWR_LoadLevel();
+	}
 }
 
 // --------------------------------------------------------------------------

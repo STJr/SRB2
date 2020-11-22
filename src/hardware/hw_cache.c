@@ -585,6 +585,21 @@ static GLMapTexture_t *gl_textures; // For all textures
 static GLMapTexture_t *gl_flats; // For all (texture) flats, as normal flats don't need to be cached
 boolean gl_maptexturesloaded = false;
 
+void HWR_FreeTextureData(patch_t *patch)
+{
+	GLPatch_t *grPatch;
+
+	if (!patch || !patch->hardware)
+		return;
+
+	grPatch = patch->hardware;
+
+	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+		HWD.pfnDeleteTexture(grPatch->mipmap);
+	if (grPatch->mipmap->data)
+		Z_Free(grPatch->mipmap->data);
+}
+
 void HWR_FreeTexture(patch_t *patch)
 {
 	if (!patch)
@@ -598,10 +613,7 @@ void HWR_FreeTexture(patch_t *patch)
 
 		if (grPatch->mipmap)
 		{
-			if (vid.glstate == VID_GL_LIBRARY_LOADED)
-				HWD.pfnDeleteTexture(grPatch->mipmap);
-			if (grPatch->mipmap->data)
-				Z_Free(grPatch->mipmap->data);
+			HWR_FreeTextureData(patch);
 			Z_Free(grPatch->mipmap);
 		}
 
@@ -636,15 +648,12 @@ void HWR_FreeTextureColormaps(patch_t *patch)
 		if (!pat->mipmap)
 			break;
 
-		// No colormap mipmap either.
+		// No colormap mipmaps either.
 		if (!pat->mipmap->nextcolormap)
 			break;
 
 		// Set the first colormap to the one that comes after it.
 		next = pat->mipmap->nextcolormap;
-		if (!next)
-			break;
-
 		pat->mipmap->nextcolormap = next->nextcolormap;
 
 		// Free image data from memory.
@@ -670,18 +679,13 @@ static void HWR_FreePatchCache(boolean freeall)
 	}
 }
 
+// free all textures after each level
 void HWR_ClearAllTextures(void)
 {
-	HWR_FreeMapTextures();
-
-	// Alam: free the Z_Blocks before freeing it's users
+	HWD.pfnClearMipMapCache(); // free references to the textures
 	HWR_FreePatchCache(true);
-
-	// free references to the textures
-	HWD.pfnClearCacheList();
 }
 
-// free all patch colormaps after each level
 void HWR_FreeColormapCache(void)
 {
 	HWR_FreePatchCache(false);
