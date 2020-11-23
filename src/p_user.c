@@ -4526,7 +4526,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 	player->pflags |= P_GetJumpFlags(player);;
 	
-	if (!(player->charflags & SF_NOJUMPDAMAGE))
+	if (player->charflags & SF_NOJUMPDAMAGE)
 		player->pflags &= ~PF_SPINNING;
 
 	if (soundandstate)
