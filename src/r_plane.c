@@ -759,7 +759,7 @@ d->z = (v1.x * v2.y) - (v1.y * v2.x)
 #undef SFMULT
 }
 
-static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_t yoff, float fudge)
+void R_SetTiltedSpan(INT32 span)
 {
 	if (ds_su == NULL)
 		ds_su = Z_Malloc(sizeof(*ds_su) * vid.height, PU_STATIC, NULL);
@@ -768,10 +768,14 @@ static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_
 	if (ds_sz == NULL)
 		ds_sz = Z_Malloc(sizeof(*ds_sz) * vid.height, PU_STATIC, NULL);
 
-	ds_sup = &ds_su[y];
-	ds_svp = &ds_sv[y];
-	ds_szp = &ds_sz[y];
+	ds_sup = &ds_su[span];
+	ds_svp = &ds_sv[span];
+	ds_szp = &ds_sz[span];
+}
 
+static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_t yoff, float fudge)
+{
+	R_SetTiltedSpan(y);
 	R_CalculateSlopeVectors(pl->slope, pl->viewx, pl->viewy, pl->viewz, FRACUNIT, FRACUNIT, xoff, yoff, pl->viewangle, pl->plangle, fudge);
 }
 
