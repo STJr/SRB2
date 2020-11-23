@@ -4525,7 +4525,9 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
 	player->pflags |= P_GetJumpFlags(player);;
-	player->pflags &= ~PF_SPINNING;
+	
+	if (!(player->charflags & SF_NOJUMPDAMAGE))
+		player->pflags &= ~PF_SPINNING;
 
 	if (soundandstate)
 	{
