@@ -1135,8 +1135,7 @@ boolean P_PlayerCanDamage(player_t *player, mobj_t *thing)
 		return true;
 
 	// Spinning.
-	if ((player->pflags & PF_SPINNING)
-	&& !((player->pflags & PF_JUMPED) && (player->pflags & PF_NOJUMPDAMAGE)))
+	if (player->pflags & PF_SPINNING)
 		return true;
 
 	if (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE))
@@ -4526,6 +4525,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
 	player->pflags |= P_GetJumpFlags(player);;
+	player->pflags &= ~PF_SPINNING;
 
 	if (soundandstate)
 	{
