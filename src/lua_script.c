@@ -402,7 +402,7 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 	else if (fastcmp(word, "mapmusname"))
 	{
 		size_t strlength;
-		const char *str = luaL_checkstring(L, 2, &strlength);
+		const char *str = luaL_checklstring(L, 2, &strlength);
 
 		if (strlength > 6)
 			return luaL_error(L, "string length out of range (maximum 6 characters)");
