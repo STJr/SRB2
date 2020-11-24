@@ -8614,6 +8614,7 @@ void P_MovePlayer(player_t *player)
 		P_DoFiring(player, cmd);
 
 	{
+		boolean atspinheight = false;
 		fixed_t oldheight = player->mo->height;
 
 		// Less height while spinning. Good for spinning under things...?
@@ -8623,32 +8624,35 @@ void P_MovePlayer(player_t *player)
 		|| player->powers[pw_tailsfly] || player->pflags & PF_GLIDING
 		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
 		|| (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
+		{
 			player->mo->height = P_GetPlayerSpinHeight(player);
+			atspinheight = true;
+		}
 		else
 			player->mo->height = P_GetPlayerHeight(player);
 
 		if (player->mo->eflags & MFE_VERTICALFLIP && player->mo->height != oldheight) // adjust z height for reverse gravity, similar to how it's done for scaling
 			player->mo->z -= player->mo->height - oldheight;
-	}
 
-	// Crush test...
-	if ((player->mo->ceilingz - player->mo->floorz < player->mo->height)
-		&& !(player->mo->flags & MF_NOCLIP))
-	{
-		if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_SPINNING))
+		// Crush test...
+		if ((player->mo->ceilingz - player->mo->floorz < player->mo->height)
+			&& !(player->mo->flags & MF_NOCLIP))
 		{
-			player->pflags |= PF_SPINNING;
-			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-		}
-		else if (player->mo->ceilingz - player->mo->floorz < player->mo->height)
-		{
-			if ((netgame || multiplayer) && player->spectator)
-				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPECTATOR); // Respawn crushed spectators
-			else
-				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_CRUSHED);
+			if (!atspinheight)
+			{
+				player->pflags |= PF_SPINNING;
+				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+			}
+			else if (player->mo->ceilingz - player->mo->floorz < player->mo->height)
+			{
+				if ((netgame || multiplayer) && player->spectator)
+					P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPECTATOR); // Respawn crushed spectators
+				else
+					P_DamageMobj(player->mo, NULL, NULL, 1, DMG_CRUSHED);
 
-			if (player->playerstate == PST_DEAD)
-				return;
+				if (player->playerstate == PST_DEAD)
+					return;
+			}
 		}
 	}
 
