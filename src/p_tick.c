@@ -771,7 +771,7 @@ void P_Ticker(boolean run)
 // Abbreviated ticker for pre-loading, calls thinkers and assorted things
 void P_PreTicker(INT32 frames)
 {
-	INT32 i,framecnt;
+	INT32 i;
 	ticcmd_t temptic;
 
 	postimgtype = postimgtype2 = postimg_none;
@@ -779,7 +779,9 @@ void P_PreTicker(INT32 frames)
 	if (marathonmode & MA_INGAME)
 		marathonmode |= MA_INIT;
 
-	for (framecnt = 0; framecnt < frames; ++framecnt)
+	hook_defrosting = frames;
+
+	while (hook_defrosting)
 	{
 		P_MapStart();
 
@@ -822,6 +824,8 @@ void P_PreTicker(INT32 frames)
 		LUAh_PostThinkFrame();
 
 		P_MapEnd();
+
+		hook_defrosting--;
 	}
 
 	if (marathonmode & MA_INGAME)

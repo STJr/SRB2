@@ -67,6 +67,7 @@ enum hook {
 extern const char *const hookNames[];
 
 extern boolean hook_cmd_running;
+extern int hook_defrosting;
 
 void LUAh_MapChange(INT16 mapnumber); // Hook for map change (before load)
 void LUAh_MapLoad(void); // Hook for map load
