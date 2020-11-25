@@ -1417,6 +1417,13 @@ typedef enum
 	MD2_MIRRORED     = 1<<13,
 	MD2_ROLLANGLE    = 1<<14,
 	MD2_SHADOWSCALE  = 1<<15,
+	MD2_RENDERFLAGS  = 1<<16,
+	MD2_BLENDMODE    = 1<<17,
+	MD2_SPRITEXSCALE = 1<<18,
+	MD2_SPRITEYSCALE = 1<<19,
+	MD2_SPRITEXOFFSET = 1<<20,
+	MD2_SPRITEYOFFSET = 1<<21,
+	MD2_FLOORSPRITESLOPE = 1<<22,
 } mobj_diff2_t;
 
 typedef enum
@@ -1629,6 +1636,27 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_ROLLANGLE;
 	if (mobj->shadowscale)
 		diff2 |= MD2_SHADOWSCALE;
+	if (mobj->renderflags)
+		diff2 |= MD2_RENDERFLAGS;
+	if (mobj->renderflags)
+		diff2 |= MD2_BLENDMODE;
+	if (mobj->spritexscale != FRACUNIT)
+		diff2 |= MD2_SPRITEXSCALE;
+	if (mobj->spriteyscale != FRACUNIT)
+		diff2 |= MD2_SPRITEYSCALE;
+	if (mobj->spritexoffset)
+		diff2 |= MD2_SPRITEXOFFSET;
+	if (mobj->floorspriteslope)
+	{
+		pslope_t *slope = mobj->floorspriteslope;
+		if (slope->zangle || slope->zdelta || slope->xydirection
+		|| slope->o.x || slope->o.y || slope->o.z
+		|| slope->d.x || slope->d.y
+		|| slope->normal.x || slope->normal.y
+		|| (slope->normal.z != FRACUNIT))
+			diff2 |= MD2_FLOORSPRITESLOPE;
+	}
+
 	if (diff2 != 0)
 		diff |= MD_MORE;
 
@@ -1771,6 +1799,37 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEANGLE(save_p, mobj->rollangle);
 	if (diff2 & MD2_SHADOWSCALE)
 		WRITEFIXED(save_p, mobj->shadowscale);
+	if (diff2 & MD2_RENDERFLAGS)
+		WRITEUINT32(save_p, mobj->renderflags);
+	if (diff2 & MD2_BLENDMODE)
+		WRITEINT32(save_p, mobj->blendmode);
+	if (diff2 & MD2_SPRITEXSCALE)
+		WRITEFIXED(save_p, mobj->spritexscale);
+	if (diff2 & MD2_SPRITEYSCALE)
+		WRITEFIXED(save_p, mobj->spriteyscale);
+	if (diff2 & MD2_SPRITEXOFFSET)
+		WRITEFIXED(save_p, mobj->spritexoffset);
+	if (diff2 & MD2_SPRITEYOFFSET)
+		WRITEFIXED(save_p, mobj->spriteyoffset);
+	if (diff2 & MD2_FLOORSPRITESLOPE)
+	{
+		pslope_t *slope = mobj->floorspriteslope;
+
+		WRITEFIXED(save_p, slope->zdelta);
+		WRITEANGLE(save_p, slope->zangle);
+		WRITEANGLE(save_p, slope->xydirection);
+
+		WRITEFIXED(save_p, slope->o.x);
+		WRITEFIXED(save_p, slope->o.y);
+		WRITEFIXED(save_p, slope->o.z);
+
+		WRITEFIXED(save_p, slope->d.x);
+		WRITEFIXED(save_p, slope->d.y);
+
+		WRITEFIXED(save_p, slope->normal.x);
+		WRITEFIXED(save_p, slope->normal.y);
+		WRITEFIXED(save_p, slope->normal.z);
+	}
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -2780,6 +2839,37 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->rollangle = READANGLE(save_p);
 	if (diff2 & MD2_SHADOWSCALE)
 		mobj->shadowscale = READFIXED(save_p);
+	if (diff2 & MD2_RENDERFLAGS)
+		mobj->renderflags = READUINT32(save_p);
+	if (diff2 & MD2_BLENDMODE)
+		mobj->blendmode = READINT32(save_p);
+	if (diff2 & MD2_SPRITEXSCALE)
+		mobj->spritexscale = READFIXED(save_p);
+	if (diff2 & MD2_SPRITEYSCALE)
+		mobj->spriteyscale = READFIXED(save_p);
+	if (diff2 & MD2_SPRITEXOFFSET)
+		mobj->spritexoffset = READFIXED(save_p);
+	if (diff2 & MD2_SPRITEYOFFSET)
+		mobj->spriteyoffset = READFIXED(save_p);
+	if (diff2 & MD2_FLOORSPRITESLOPE)
+	{
+		pslope_t *slope = (pslope_t *)P_CreateFloorSpriteSlope(mobj);
+
+		slope->zdelta = READFIXED(save_p);
+		slope->zangle = READANGLE(save_p);
+		slope->xydirection = READANGLE(save_p);
+
+		slope->o.x = READFIXED(save_p);
+		slope->o.y = READFIXED(save_p);
+		slope->o.z = READFIXED(save_p);
+
+		slope->d.x = READFIXED(save_p);
+		slope->d.y = READFIXED(save_p);
+
+		slope->normal.x = READFIXED(save_p);
+		slope->normal.y = READFIXED(save_p);
+		slope->normal.z = READFIXED(save_p);
+	}
 
 	if (diff & MD_REDFLAG)
 	{
@@ -4016,6 +4106,12 @@ static void P_NetArchiveMisc(boolean resending)
 	WRITEINT32(save_p, sstimer);
 	WRITEUINT32(save_p, bluescore);
 	WRITEUINT32(save_p, redscore);
+
+	WRITEUINT16(save_p, skincolor_redteam);
+	WRITEUINT16(save_p, skincolor_blueteam);
+	WRITEUINT16(save_p, skincolor_redring);
+	WRITEUINT16(save_p, skincolor_bluering);
+
 	WRITEINT32(save_p, modulothing);
 
 	WRITEINT16(save_p, autobalance);
@@ -4105,6 +4201,12 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 	sstimer = READINT32(save_p);
 	bluescore = READUINT32(save_p);
 	redscore = READUINT32(save_p);
+
+	skincolor_redteam = READUINT16(save_p);
+	skincolor_blueteam = READUINT16(save_p);
+	skincolor_redring = READUINT16(save_p);
+	skincolor_bluering = READUINT16(save_p);
+
 	modulothing = READINT32(save_p);
 
 	autobalance = READINT16(save_p);

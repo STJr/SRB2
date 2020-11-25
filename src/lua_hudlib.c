@@ -35,11 +35,6 @@ static UINT8 hud_enabled[(hud_MAX/8)+1];
 
 static UINT8 hudAvailable; // hud hooks field
 
-#ifdef LUA_PATCH_SAFETY
-static patchinfo_t *patchinfo, *patchinfohead;
-static int numluapatches;
-#endif
-
 // must match enum hud in lua_hud.h
 static const char *const hud_disable_options[] = {
 	"stagetitle",
@@ -292,11 +287,7 @@ static int colormap_get(lua_State *L)
 
 static int patch_get(lua_State *L)
 {
-#ifdef LUA_PATCH_SAFETY
 	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
-#else
-	patchinfo_t *patch = *((patchinfo_t **)luaL_checkudata(L, 1, META_PATCH));
-#endif
 	enum patch field = luaL_checkoption(L, 2, NULL, patch_opt);
 
 	// patches are invalidated when switching renderers
@@ -403,59 +394,8 @@ static int libd_patchExists(lua_State *L)
 
 static int libd_cachePatch(lua_State *L)
 {
-#ifdef LUA_PATCH_SAFETY
-	int i;
-	lumpnum_t lumpnum;
-	patchinfo_t *luapat;
-	patch_t *realpatch;
-
-	HUDONLY
-
-	luapat = patchinfohead;
-	lumpnum = W_CheckNumForLongName(luaL_checkstring(L, 1));
-	if (lumpnum == LUMPERROR)
-		lumpnum = W_GetNumForLongName("MISSING");
-
-	for (i = 0; i < numluapatches; i++)
-	{
-		// check if already cached
-		if (luapat->wadnum == WADFILENUM(lumpnum) && luapat->lumpnum == LUMPNUM(lumpnum))
-		{
-			LUA_PushUserdata(L, luapat, META_PATCH);
-			return 1;
-		}
-		luapat = luapat->next;
-		if (!luapat)
-			break;
-	}
-
-	if (numluapatches > 0)
-	{
-		patchinfo->next = Z_Malloc(sizeof(patchinfo_t), PU_STATIC, NULL);
-		patchinfo = patchinfo->next;
-	}
-	else
-	{
-		patchinfo = Z_Malloc(sizeof(patchinfo_t), PU_STATIC, NULL);
-		patchinfohead = patchinfo;
-	}
-
-	realpatch = W_CachePatchNum(lumpnum, PU_PATCH);
-
-	patchinfo->width = realpatch->width;
-	patchinfo->height = realpatch->height;
-	patchinfo->leftoffset = realpatch->leftoffset;
-	patchinfo->topoffset = realpatch->topoffset;
-
-	patchinfo->wadnum = WADFILENUM(lumpnum);
-	patchinfo->lumpnum = LUMPNUM(lumpnum);
-
-	LUA_PushUserdata(L, patchinfo, META_PATCH);
-	numluapatches++;
-#else
 	HUDONLY
 	LUA_PushUserdata(L, W_CachePatchLongName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
-#endif
 	return 1;
 }
 
@@ -518,9 +458,8 @@ static int libd_getSpritePatch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			if (!(sprframe->rotsprite.cached & (1<<angle)))
-				R_CacheRotSprite(i, frame, NULL, sprframe, angle, sprframe->flip & (1<<angle));
-			LUA_PushUserdata(L, sprframe->rotsprite.patch[angle][rot], META_PATCH);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), true, &spriteinfo[i], rot);
+			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
 			return 3;
@@ -529,7 +468,7 @@ static int libd_getSpritePatch(lua_State *L)
 #endif
 
 	// push both the patch and it's "flip" value
-	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_PATCH), META_PATCH);
+	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_SPRITE), META_PATCH);
 	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
 	return 2;
 }
@@ -631,9 +570,8 @@ static int libd_getSprite2Patch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			if (!(sprframe->rotsprite.cached & (1<<angle)))
-				R_CacheRotSprite(SPR_PLAY, frame, &skins[i].sprinfo[j], sprframe, angle, sprframe->flip & (1<<angle));
-			LUA_PushUserdata(L, sprframe->rotsprite.patch[angle][rot], META_PATCH);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), true, &skins[i].sprinfo[j], rot);
+			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
 			return 3;
@@ -642,7 +580,7 @@ static int libd_getSprite2Patch(lua_State *L)
 #endif
 
 	// push both the patch and it's "flip" value
-	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_PATCH), META_PATCH);
+	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_SPRITE), META_PATCH);
 	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
 	return 2;
 }
@@ -651,22 +589,14 @@ static int libd_draw(lua_State *L)
 {
 	INT32 x, y, flags;
 	patch_t *patch;
-#ifdef LUA_PATCH_SAFETY
-	patchinfo_t *luapat;
-#endif
 	const UINT8 *colormap = NULL;
 
 	HUDONLY
 	x = luaL_checkinteger(L, 1);
 	y = luaL_checkinteger(L, 2);
-#ifdef LUA_PATCH_SAFETY
-	luapat = *((patchinfo_t **)luaL_checkudata(L, 3, META_PATCH));
-	patch = W_CachePatchNum((luapat->wadnum<<16)+luapat->lumpnum, PU_PATCH);
-#else
 	patch = *((patch_t **)luaL_checkudata(L, 3, META_PATCH));
 	if (!patch)
 		return LUA_ErrInvalid(L, "patch_t");
-#endif
 	flags = luaL_optinteger(L, 4, 0);
 	if (!lua_isnoneornil(L, 5))
 		colormap = *((UINT8 **)luaL_checkudata(L, 5, META_COLORMAP));
@@ -682,9 +612,6 @@ static int libd_drawScaled(lua_State *L)
 	fixed_t x, y, scale;
 	INT32 flags;
 	patch_t *patch;
-#ifdef LUA_PATCH_SAFETY
-	patchinfo_t *luapat;
-#endif
 	const UINT8 *colormap = NULL;
 
 	HUDONLY
@@ -693,14 +620,9 @@ static int libd_drawScaled(lua_State *L)
 	scale = luaL_checkinteger(L, 3);
 	if (scale < 0)
 		return luaL_error(L, "negative scale");
-#ifdef LUA_PATCH_SAFETY
-	luapat = *((patchinfo_t **)luaL_checkudata(L, 4, META_PATCH));
-	patch = W_CachePatchNum((luapat->wadnum<<16)+luapat->lumpnum, PU_PATCH);
-#else
 	patch = *((patch_t **)luaL_checkudata(L, 4, META_PATCH));
 	if (!patch)
 		return LUA_ErrInvalid(L, "patch_t");
-#endif
 	flags = luaL_optinteger(L, 5, 0);
 	if (!lua_isnoneornil(L, 6))
 		colormap = *((UINT8 **)luaL_checkudata(L, 6, META_COLORMAP));
@@ -1260,10 +1182,6 @@ static luaL_Reg lib_hud[] = {
 int LUA_HudLib(lua_State *L)
 {
 	memset(hud_enabled, 0xff, (hud_MAX/8)+1);
-
-#ifdef LUA_PATCH_SAFETY
-	numluapatches = 0;
-#endif
 
 	lua_newtable(L); // HUD registry table
 		lua_newtable(L);
