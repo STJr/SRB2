@@ -1259,8 +1259,8 @@ boolean CON_Responder(event_t *ev)
 		return true;
 	}
 
-#ifdef HAVE_TEXTINPUT
-	if (!cv_textinput.value)
+#ifdef TEXTINPUTEVENTS
+	if (!cv_keyboardlocale.value)
 #endif
 	{
 		// allow people to use keypad in console (good for typing IP addresses) - Calum

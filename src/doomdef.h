@@ -629,7 +629,7 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 #define SECTORSPECIALSAFTERTHINK
 
 /// Text input events
-#define HAVE_TEXTINPUT
+#define TEXTINPUTEVENTS
 
 /// Sprite rotation
 #define ROTSPRITE

@@ -278,13 +278,13 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Keysym keysym, Uint32 type)
 	SDL_Keycode keycode = keysym.sym;
 
 	boolean useqwerty = true;
-	boolean uselocale = (!!cv_keyboardlocale.value);
+	boolean uselocale = (!!cv_usekeycodes.value);
 
-#ifdef HAVE_TEXTINPUT
-	if (cv_textinput.value)
+#ifdef TEXTINPUTEVENTS
+	if (cv_keyboardlocale.value)
 		uselocale = true;
 #else
-	if (cv_keyboardlocale.value == 2
+	if (cv_usekeycodes.value == 2
 	&& !(CON_AcceptInput() || M_TextInput() || HU_ChatActive()))
 		uselocale = false;
 #endif
@@ -338,8 +338,8 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Keysym keysym, Uint32 type)
 		// Send key up events to avoid stuck movement keys
 		if (type != SDL_KEYUP && (!ctrldown))
 		{
-#ifdef HAVE_TEXTINPUT
-			if (cv_textinput.value)
+#ifdef TEXTINPUTEVENTS
+			if (cv_keyboardlocale.value)
 			{
 				// console input
 				if (CON_AcceptInput())
@@ -476,11 +476,11 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Keysym keysym, Uint32 type)
 			return KEY_F1 + (scancode - SDL_SCANCODE_F1);
 		}
 
-#ifdef HAVE_TEXTINPUT
+#ifdef TEXTINPUTEVENTS
 		// Send key up events to avoid stuck movement keys
 		if (type != SDL_KEYUP && (!ctrldown))
 		{
-			if (cv_textinput.value)
+			if (cv_keyboardlocale.value)
 			{
 				// console input
 				if (CON_AcceptInput())
@@ -842,12 +842,12 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 	if (event.data1) D_PostEvent(&event);
 }
 
-#ifdef HAVE_TEXTINPUT
+#ifdef TEXTINPUTEVENTS
 static void Impl_HandleTextInputEvent(char *text)
 {
 	event_t event;
 
-	if (!cv_textinput.value)
+	if (!cv_keyboardlocale.value)
 		return;
 
 	if (!(CON_AcceptInput() // console input
@@ -1112,7 +1112,7 @@ void I_GetEvent(void)
 			case SDL_KEYDOWN:
 				Impl_HandleKeyboardEvent(evt.key, evt.type);
 				break;
-#ifdef HAVE_TEXTINPUT
+#ifdef TEXTINPUTEVENTS
 			case SDL_TEXTINPUT:
 				Impl_HandleTextInputEvent(evt.text.text);
 				break;

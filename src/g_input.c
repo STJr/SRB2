@@ -25,10 +25,10 @@ static CV_PossibleValue_t keyboardlocale_cons_t[] = {
 	{2, "Only in text fields"},
 {0, NULL}};
 
-#ifdef HAVE_TEXTINPUT
-consvar_t cv_textinput = CVAR_INIT ("textinput", "On", CV_SAVE, CV_OnOff, NULL);
+#ifdef TEXTINPUTEVENTS
+consvar_t cv_keyboardlocale = CVAR_INIT ("keyboardlocale", "On", CV_SAVE, CV_OnOff, NULL);
 #endif
-consvar_t cv_keyboardlocale = CVAR_INIT ("keyboardlocale", "Off", CV_SAVE, keyboardlocale_cons_t, NULL);
+consvar_t cv_usekeycodes = CVAR_INIT ("usekeycodes", "Off", CV_SAVE, keyboardlocale_cons_t, NULL);
 consvar_t cv_forceqwerty = CVAR_INIT ("forceqwerty", "Off", CV_SAVE, CV_OnOff, NULL);
 
 #define MAXMOUSESENSITIVITY 100 // sensitivity steps

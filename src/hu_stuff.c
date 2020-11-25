@@ -1167,8 +1167,8 @@ boolean HU_Responder(event_t *ev)
 
 		c = (INT32)ev->data1;
 
-#ifdef HAVE_TEXTINPUT
-		if (!cv_textinput.value)
+#ifdef TEXTINPUTEVENTS
+		if (!cv_keyboardlocale.value)
 #endif
 		{
 			// I know this looks very messy but this works. If it ain't broke, don't fix it!
