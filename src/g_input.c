@@ -19,6 +19,18 @@
 #include "d_net.h"
 #include "console.h"
 
+static CV_PossibleValue_t keyboardlocale_cons_t[] = {
+	{0, "Off"},
+	{1, "On"},
+	{2, "Only in text fields"},
+{0, NULL}};
+
+#ifdef HAVE_TEXTINPUT
+consvar_t cv_textinput = CVAR_INIT ("textinput", "On", CV_SAVE, CV_OnOff, NULL);
+#endif
+consvar_t cv_keyboardlocale = CVAR_INIT ("keyboardlocale", "Off", CV_SAVE, keyboardlocale_cons_t, NULL);
+consvar_t cv_forceqwerty = CVAR_INIT ("forceqwerty", "Off", CV_SAVE, CV_OnOff, NULL);
+
 #define MAXMOUSESENSITIVITY 100 // sensitivity steps
 
 static CV_PossibleValue_t mousesens_cons_t[] = {{1, "MIN"}, {MAXMOUSESENSITIVITY, "MAX"}, {0, NULL}};

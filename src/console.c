@@ -1259,26 +1259,31 @@ boolean CON_Responder(event_t *ev)
 		return true;
 	}
 
-	// allow people to use keypad in console (good for typing IP addresses) - Calum
-	if (key >= KEY_KEYPAD7 && key <= KEY_KPADDEL)
+#ifdef HAVE_TEXTINPUT
+	if (!cv_textinput.value)
+#endif
 	{
-		char keypad_translation[] = {'7','8','9','-',
-		                             '4','5','6','+',
-		                             '1','2','3',
-		                             '0','.'};
+		// allow people to use keypad in console (good for typing IP addresses) - Calum
+		if (key >= KEY_KEYPAD7 && key <= KEY_KPADDEL)
+		{
+			char keypad_translation[] = {'7','8','9','-',
+										 '4','5','6','+',
+										 '1','2','3',
+										 '0','.'};
 
-		key = keypad_translation[key - KEY_KEYPAD7];
-	}
-	else if (key == KEY_KPADSLASH)
-		key = '/';
+			key = keypad_translation[key - KEY_KEYPAD7];
+		}
+		else if (key == KEY_KPADSLASH)
+			key = '/';
 
-	if (key >= 'a' && key <= 'z')
-	{
-		if (capslock ^ shiftdown)
+		if (key >= 'a' && key <= 'z')
+		{
+			if (capslock ^ shiftdown)
+				key = shiftxform[key];
+		}
+		else if (shiftdown)
 			key = shiftxform[key];
 	}
-	else if (shiftdown)
-		key = shiftxform[key];
 
 	// enter a char into the command prompt
 	if (key < 32 || key > 127)

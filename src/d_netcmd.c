@@ -817,6 +817,22 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_joyscale);
 	CV_RegisterVar(&cv_joyscale2);
 
+	// * cv_textinput allows "text input" events from SDL,
+	//   so that console and chat is guaranteed to use
+	//   the player's keyboard locale reliably
+	// * When disabled, the game will fallback to using
+	//   keycode events, still following the player's locale
+	// * If cv_keyboardlocale is disabled, input will default
+	//   to using the US keyboard layout
+	// * cv_forceqwerty forces a QWERTY layout, but only
+	//   if text input events are disabled
+
+#ifdef HAVE_TEXTINPUT
+	CV_RegisterVar (&cv_textinput);
+#endif
+	CV_RegisterVar (&cv_keyboardlocale);
+	CV_RegisterVar (&cv_forceqwerty);
+
 	// Analog Control
 	CV_RegisterVar(&cv_analog[0]);
 	CV_RegisterVar(&cv_analog[1]);

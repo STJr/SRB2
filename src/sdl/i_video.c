@@ -107,13 +107,6 @@ static consvar_t cv_alwaysgrabmouse = CVAR_INIT ("alwaysgrabmouse", "Off", CV_SA
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
 
-// Lactozilla: keyboard input
-#ifdef HAVE_TEXTINPUT
-consvar_t cv_textinput = {"textinput", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif
-consvar_t cv_keyboardlocale = {"keyboardlocale", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_forceqwerty = {"forceqwerty", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-
 // To disable fullscreen at startup; is set in VID_PrepareModeList
 boolean allow_fullscreen = false;
 static SDL_bool disable_fullscreen = SDL_FALSE;
@@ -279,16 +272,26 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 	}
 }
 
-static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
+static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Keysym keysym, Uint32 type)
 {
-	boolean useqwerty = true;
-	if (cv_keyboardlocale.value)
-	{
-		SDL_Keycode keycode = SDL_GetKeyFromScancode(code);
+	SDL_Scancode scancode = keysym.scancode;
+	SDL_Keycode keycode = keysym.sym;
 
-		// Lactozilla
-		// Use keycodes instead of scancodes,
-		// so that non-US keyboards can work! Wow!
+	boolean useqwerty = true;
+	boolean uselocale = (!!cv_keyboardlocale.value);
+
+#ifdef HAVE_TEXTINPUT
+	if (cv_textinput.value)
+		uselocale = true;
+#else
+	if (cv_keyboardlocale.value == 2
+	&& !(CON_AcceptInput() || M_TextInput() || HU_ChatActive()))
+		uselocale = false;
+#endif
+
+	if (uselocale)
+	{
+		// Lactozilla: Use keycodes instead of scancodes, so that non-US keyboards can work.
 		switch (keycode)
 		{
 			// F11 and F12 are separated from the rest of the function keys
@@ -332,13 +335,13 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 			return KEY_F1 + (keycode - SDLK_F1);
 		}
 
-		// Do send keyup events to avoid stuck movement keys
+		// Send key up events to avoid stuck movement keys
 		if (type != SDL_KEYUP && (!ctrldown))
 		{
 #ifdef HAVE_TEXTINPUT
 			if (cv_textinput.value)
 			{
-				// Lactozilla: console input
+				// console input
 				if (CON_AcceptInput())
 					return 0;
 				// menu text input
@@ -405,17 +408,16 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 			case SDLK_QUOTEDBL:       return '"';
 			case SDLK_RIGHTPAREN:     return ')';
 			case SDLK_UNDERSCORE:     return '_';
-			default:          break;
+			default:                  break;
 		}
 
-		// Tested by installing a French keymap
 		if (useqwerty)
 		{
-			if (code >= SDL_SCANCODE_A && code <= SDL_SCANCODE_Z)
-				return code - SDL_SCANCODE_A + 'a';
-			else if (code >= SDL_SCANCODE_1 && code <= SDL_SCANCODE_9)
-				return code - SDL_SCANCODE_1 + '1';
-			else if (code == SDL_SCANCODE_0)
+			if (scancode >= SDL_SCANCODE_A && scancode <= SDL_SCANCODE_Z)
+				return scancode - SDL_SCANCODE_A + 'a';
+			else if (scancode >= SDL_SCANCODE_1 && scancode <= SDL_SCANCODE_9)
+				return scancode - SDL_SCANCODE_1 + '1';
+			else if (scancode == SDL_SCANCODE_0)
 				return '0';
 		}
 		else
@@ -430,7 +432,7 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 	}
 	else
 	{
-		switch (code)
+		switch (scancode)
 		{
 			// F11 and F12 are separated from the rest of the function keys
 			case SDL_SCANCODE_F11: return KEY_F11;
@@ -469,18 +471,18 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 			default:                  break;
 		}
 
-		if (code >= SDL_SCANCODE_F1 && code <= SDL_SCANCODE_F10)
+		if (scancode >= SDL_SCANCODE_F1 && scancode <= SDL_SCANCODE_F10)
 		{
-			return KEY_F1 + (code - SDL_SCANCODE_F1);
+			return KEY_F1 + (scancode - SDL_SCANCODE_F1);
 		}
 
 #ifdef HAVE_TEXTINPUT
-		// Do send keyup events to avoid stuck movement keys
+		// Send key up events to avoid stuck movement keys
 		if (type != SDL_KEYUP && (!ctrldown))
 		{
 			if (cv_textinput.value)
 			{
-				// Lactozilla: console input
+				// console input
 				if (CON_AcceptInput())
 					return 0;
 				// menu text input
@@ -493,7 +495,7 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 		}
 #endif
 
-		switch (code)
+		switch (scancode)
 		{
 			case SDL_SCANCODE_KP_0: return KEY_KEYPAD0;
 			case SDL_SCANCODE_KP_1: return KEY_KEYPAD1;
@@ -529,17 +531,16 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Scancode code, Uint32 type)
 			default:                  break;
 		}
 
-		// cv_forceqwerty assumed on
-		if (code >= SDL_SCANCODE_A && code <= SDL_SCANCODE_Z)
+		if (scancode >= SDL_SCANCODE_A && scancode <= SDL_SCANCODE_Z)
 		{
 			// get lowercase ASCII
-			return code - SDL_SCANCODE_A + 'a';
+			return scancode - SDL_SCANCODE_A + 'a';
 		}
-		if (code >= SDL_SCANCODE_1 && code <= SDL_SCANCODE_9)
+		if (scancode >= SDL_SCANCODE_1 && scancode <= SDL_SCANCODE_9)
 		{
-			return code - SDL_SCANCODE_1 + '1';
+			return scancode - SDL_SCANCODE_1 + '1';
 		}
-		else if (code == SDL_SCANCODE_0)
+		else if (scancode == SDL_SCANCODE_0)
 		{
 			return '0';
 		}
@@ -837,7 +838,7 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 	{
 		return;
 	}
-	event.data1 = Impl_SDL_Scancode_To_Keycode(evt.keysym.scancode, type);
+	event.data1 = Impl_SDL_Scancode_To_Keycode(evt.keysym, type);
 	if (event.data1) D_PostEvent(&event);
 }
 
@@ -1936,22 +1937,6 @@ void I_StartupGraphics(void)
 	CV_RegisterVar (&cv_alwaysgrabmouse);
 	disable_mouse = M_CheckParm("-nomouse");
 	disable_fullscreen = M_CheckParm("-win") ? 1 : 0;
-
-	// * cv_textinput allows "text input" events from SDL,
-	//   so that console and chat is guaranteed to use
-	//   the player's keyboard locale reliably
-	// * When disabled, the game will fallback to using
-	//   keycode events, still following the player's locale
-	// * If cv_keyboardlocale is disabled, input will default
-	//   to using the US keyboard layout
-	// * cv_forceqwerty forces a QWERTY layout, but only
-	//   if text input events are disabled
-
-#ifdef HAVE_TEXTINPUT
-	CV_RegisterVar (&cv_textinput);
-#endif
-	CV_RegisterVar (&cv_keyboardlocale);
-	CV_RegisterVar (&cv_forceqwerty);
 
 	keyboard_started = true;
 
