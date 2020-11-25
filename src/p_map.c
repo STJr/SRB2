@@ -3443,9 +3443,17 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 			P_ProcessSpecialSector(slidemo->player, slidemo->subsector->sector, li->polyobj->lines[0]->backsector);
 	}
 
-	if (slidemo->player && slidemo->player->charability == CA_GLIDEANDCLIMB
-		&& (slidemo->player->pflags & PF_GLIDING || slidemo->player->climbing))
-		PTR_GlideClimbTraverse(li);
+	if (slidemo->player)
+	{
+		if (slidemo->player->charability == CA_GLIDEANDCLIMB
+			&& (slidemo->player->pflags & PF_GLIDING || slidemo->player->climbing))
+			PTR_GlideClimbTraverse(li);
+		else
+		{
+			slidemo->player->lastsidehit = li->sidenum[P_PointOnLineSide(slidemo->x, slidemo->y, li)];
+			slidemo->player->lastlinehit = (INT16)(li - lines);
+		}
+	}
 
 	if (in->frac < bestslidefrac && (!slidemo->player || !slidemo->player->climbing))
 	{

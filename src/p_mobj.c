@@ -11404,6 +11404,10 @@ void P_SpawnPlayer(INT32 playernum)
 		p->normalspeed = skins[p->skin].normalspeed;
 		p->jumpfactor = skins[p->skin].jumpfactor;
 	}
+	
+	// Clear lastlinehit and lastsidehit
+	p->lastsidehit = -1;
+	p->lastlinehit = -1;
 
 	//awayview stuff
 	p->awayviewmobj = NULL;
