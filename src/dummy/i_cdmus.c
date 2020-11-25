@@ -8,8 +8,8 @@
 
 UINT8 cdaudio_started = 0;
 
-consvar_t cd_volume = {"cd_volume","31",CV_SAVE,soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cdUpdate  = {"cd_update","1",CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cd_volume = CVAR_INIT ("cd_volume","31",CV_SAVE,soundvolume_cons_t, NULL);
+consvar_t cdUpdate  = CVAR_INIT ("cd_update","1",CV_SAVE, NULL, NULL);
 
 
 void I_InitCD(void){}

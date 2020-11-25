@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -64,8 +64,10 @@
 #define FF_FULLBRIGHT 0x00100000
 /// \brief Frame flags: Flip sprite vertically (relative to what it should be for its gravity)
 #define FF_VERTICALFLIP 0x00200000
+/// \brief Frame flags: Flip sprite horizontally
+#define FF_HORIZONTALFLIP 0x00400000
 /// \brief Frame flags: Thin, paper-like sprite (for collision equivalent, see MF_PAPERCOLLISION)
-#define FF_PAPERSPRITE 0x00400000
+#define FF_PAPERSPRITE 0x00800000
 
 /// \brief Frame flags - Animate: Simple stateless animation
 #define FF_ANIMATE 0x01000000

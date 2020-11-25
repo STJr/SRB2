@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -47,8 +47,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 		case 0: // IN STASIS
 			break;
 		case 1: // UP
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false,
-				1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false, true, ceiling->direction);
 
 			if (ceiling->type == bounceCeiling)
 			{
@@ -159,8 +158,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 			break;
 
 		case -1: // DOWN
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight,
-				ceiling->crush, 1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, true, ceiling->direction);
 
 			if (ceiling->type == bounceCeiling)
 			{
@@ -314,11 +312,10 @@ void T_CrushCeiling(ceiling_t *ceiling)
 			if (ceiling->type == crushBothOnce)
 			{
 				// Move the floor
-				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight-(ceiling->topheight-ceiling->bottomheight), false, 0, -ceiling->direction);
+				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight-(ceiling->topheight-ceiling->bottomheight), false, false, -ceiling->direction);
 			}
 
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight,
-				false, 1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false, true, ceiling->direction);
 
 			if (res == pastdest)
 			{
@@ -357,11 +354,10 @@ void T_CrushCeiling(ceiling_t *ceiling)
 			if (ceiling->type == crushBothOnce)
 			{
 				// Move the floor
-				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, 0, -ceiling->direction);
+				T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, false, -ceiling->direction);
 			}
 
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight,
-				ceiling->crush, 1, ceiling->direction);
+			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, true, ceiling->direction);
 
 			if (res == pastdest)
 			{
@@ -398,8 +394,10 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 	INT32 secnum = -1;
 	sector_t *sec;
 	ceiling_t *ceiling;
+	mtag_t tag = Tag_FGet(&line->tags);
+	TAG_ITER_DECLARECOUNTER(0);
 
-	while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
+	TAG_ITER_SECTORS(0, tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -597,7 +595,7 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 
 		}
 
-		ceiling->tag = sec->tag;
+		ceiling->tag = tag;
 		ceiling->type = type;
 		firstone = 0;
 	}
@@ -618,8 +616,10 @@ INT32 EV_DoCrush(line_t *line, ceiling_e type)
 	INT32 secnum = -1;
 	sector_t *sec;
 	ceiling_t *ceiling;
+	mtag_t tag = Tag_FGet(&line->tags);
+	TAG_ITER_DECLARECOUNTER(0);
 
-	while ((secnum = P_FindSectorFromLineTag(line,secnum)) >= 0)
+	TAG_ITER_SECTORS(0, tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -674,7 +674,7 @@ INT32 EV_DoCrush(line_t *line, ceiling_e type)
 				break;
 		}
 
-		ceiling->tag = sec->tag;
+		ceiling->tag = tag;
 		ceiling->type = type;
 	}
 	return rtn;

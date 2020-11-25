@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2007-2016 by John "JTE" Muniz.
-// Copyright (C) 2011-2019 by Sonic Team Junior.
+// Copyright (C) 2011-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -74,11 +74,9 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	if (!sonic || sonic->health <= 0)
 		return;
 
-#ifdef HAVE_BLUA
 	// Lua can handle it!
 	if (LUAh_BotAI(sonic, tails, cmd))
 		return;
-#endif
 
 	if (tails->player->powers[pw_carry] == CR_MACESPIN || tails->player->powers[pw_carry] == CR_GENERIC)
 	{
@@ -127,13 +125,17 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	}
 
 	// Orientation
-	if ((bot->pflags & (PF_SPINNING|PF_STARTDASH)) || flymode == 2)
+	if (bot->pflags & (PF_SPINNING|PF_STARTDASH))
 	{
-		cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
+		cmd->angleturn = (sonic->angle - tails->angle) >> 16; // NOT FRACBITS DAMNIT
+	}
+	else if (flymode == 2)
+	{
+		cmd->angleturn = sonic->player->cmd.angleturn - (tails->angle >> 16);
 	}
 	else
 	{
-		cmd->angleturn = (ang - tails->angle) >> FRACBITS;
+		cmd->angleturn = (ang - tails->angle) >> 16; // NOT FRACBITS DAMNIT
 	}
 
 	// ********
@@ -191,7 +193,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		{
 			cmd->forwardmove = pcmd->forwardmove;
 			cmd->sidemove = pcmd->sidemove;
-			if (pcmd->buttons & BT_USE)
+			if (pcmd->buttons & BT_SPIN)
 			{
 				spin = true;
 				jump = false;
@@ -222,7 +224,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 			{
 				if (dist < followthres && dist > touchdist) // Do positioning
 				{
-					cmd->angleturn = (ang - tails->angle) >> FRACBITS;
+					cmd->angleturn = (ang - tails->angle) >> 16; // NOT FRACBITS DAMNIT
 					cmd->forwardmove = 50;
 					spinmode = true;
 				}
@@ -230,7 +232,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 				{
 					if (!bmom && (!(bot->pflags & PF_SPINNING) || (bot->dashspeed && bot->pflags & PF_SPINNING)))
 					{
-						cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
+						cmd->angleturn = (sonic->angle - tails->angle) >> 16; // NOT FRACBITS DAMNIT
 						spin = true;
 					}
 					spinmode = true;
@@ -244,7 +246,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 				if (bot->pflags & PF_SPINNING || !spin_last)
 				{
 					spin = true;
-					cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
+					cmd->angleturn = (sonic->angle - tails->angle) >> 16; // NOT FRACBITS DAMNIT
 					cmd->forwardmove = MAXPLMOVE;
 					spinmode = true;
 				}
@@ -290,7 +292,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		else if (dist < followmin)
 		{
 			// Copy inputs
-			cmd->angleturn = (sonic->angle - tails->angle) >> FRACBITS;
+			cmd->angleturn = (sonic->angle - tails->angle) >> 16; // NOT FRACBITS DAMNIT
 			bot->drawangle = ang;
 			cmd->forwardmove = 8 * pcmd->forwardmove / 10;
 			cmd->sidemove = 8 * pcmd->sidemove / 10;
@@ -335,27 +337,6 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	jump_last = jump;
 	spin_last = spin;
 
-	// ********
-	// Thinkfly overlay
-	if (thinkfly)
-	{
-		if (!tails->hnext)
-		{
-			P_SetTarget(&tails->hnext, P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY));
-			if (tails->hnext)
-			{
-				P_SetTarget(&tails->hnext->target, tails);
-				P_SetTarget(&tails->hnext->hprev, tails);
-				P_SetMobjState(tails->hnext, S_FLIGHTINDICATOR);
-			}
-		}
-	}
-	else if (tails->hnext && tails->hnext->type == MT_OVERLAY && tails->hnext->state == states+S_FLIGHTINDICATOR)
-	{
-		P_RemoveMobj(tails->hnext);
-		P_SetTarget(&tails->hnext, NULL);
-	}
-
 	// Turn the virtual keypresses into ticcmd_t.
 	B_KeysToTiccmd(tails, cmd, forward, backward, left, right, false, false, jump, spin);
 
@@ -379,13 +360,11 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 	}
 
 	// Bot AI isn't programmed in analog.
-	CV_SetValue(&cv_analog2, false);
+	CV_SetValue(&cv_analog[1], false);
 
-#ifdef HAVE_BLUA
 	// Let Lua scripts build ticcmds
 	if (LUAh_BotTiccmd(player, cmd))
 		return;
-#endif
 
 	// We don't have any main character AI, sorry. D:
 	if (player-players == consoleplayer)
@@ -462,7 +441,7 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 	if (jump)
 		cmd->buttons |= BT_JUMP;
 	if (spin)
-		cmd->buttons |= BT_USE;
+		cmd->buttons |= BT_SPIN;
 }
 
 void B_MoveBlocked(player_t *player)
@@ -479,6 +458,19 @@ boolean B_CheckRespawn(player_t *player)
 	// We can't follow Sonic if he's not around!
 	if (!sonic || sonic->health <= 0)
 		return false;
+
+	// B_RespawnBot doesn't do anything if the condition above this isn't met
+	{
+		UINT8 shouldForce = LUAh_BotRespawn(sonic, tails);
+
+		if (P_MobjWasRemoved(sonic) || P_MobjWasRemoved(tails))
+			return (shouldForce == 1); // mobj was removed
+
+		if (shouldForce == 1)
+			return true;
+		else if (shouldForce == 2)
+			return false;
+	}
 
 	// Check if Sonic is busy first.
 	// If he's doing any of these things, he probably doesn't want to see us.
@@ -564,4 +556,31 @@ void B_RespawnBot(INT32 playernum)
 		P_SetPlayerMobjState(tails, S_PLAY_FALL);
 	P_SetScale(tails, sonic->scale);
 	tails->destscale = sonic->destscale;
+}
+
+void B_HandleFlightIndicator(player_t *player)
+{
+	mobj_t *tails = player->mo;
+
+	if (!tails)
+		return;
+
+	if (thinkfly && player->bot == 1 && tails->health)
+	{
+		if (!tails->hnext)
+		{
+			P_SetTarget(&tails->hnext, P_SpawnMobjFromMobj(tails, 0, 0, 0, MT_OVERLAY));
+			if (tails->hnext)
+			{
+				P_SetTarget(&tails->hnext->target, tails);
+				P_SetTarget(&tails->hnext->hprev, tails);
+				P_SetMobjState(tails->hnext, S_FLIGHTINDICATOR);
+			}
+		}
+	}
+	else if (tails->hnext && tails->hnext->type == MT_OVERLAY && tails->hnext->state == states+S_FLIGHTINDICATOR)
+	{
+		P_RemoveMobj(tails->hnext);
+		P_SetTarget(&tails->hnext, NULL);
+	}
 }

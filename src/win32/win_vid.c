@@ -48,12 +48,13 @@
 
 // this is the CURRENT rendermode!! very important: used by w_wad, and much other code
 rendermode_t rendermode = render_soft;
+rendermode_t chosenrendermode = render_none; // set by command line arguments
 static void OnTop_OnChange(void);
 // synchronize page flipping with screen refresh
 static CV_PossibleValue_t CV_NeverOnOff[] = {{-1, "Never"}, {0, "Off"}, {1, "On"}, {0, NULL}};
-consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, OnTop_OnChange, 0, NULL, NULL, 0, 0, NULL};
-static consvar_t cv_stretch = {"stretch", "On", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-static consvar_t cv_ontop = {"ontop", "Never", 0, CV_NeverOnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_vidwait = CVAR_INIT ("vid_wait", "On", CV_SAVE, CV_OnOff, OnTop_OnChange);
+static consvar_t cv_stretch = CVAR_INIT ("stretch", "On", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL);
+static consvar_t cv_ontop = CVAR_INIT ("ontop", "Never", 0, CV_NeverOnOff, NULL);
 
 boolean highcolor;
 
@@ -239,6 +240,8 @@ void I_StartupGraphics(void)
 	if (!dedicated) graphics_started = true;
 }
 
+void VID_StartupOpenGL(void){}
+
 // ------------------
 // I_ShutdownGraphics
 // Close the screen, restore previous video mode.
@@ -323,7 +326,7 @@ static inline boolean I_SkipFrame(void)
 			if (!paused)
 				return false;
 		//case GS_TIMEATTACK: -- sorry optimisation but now we have a cool level platter and that being laggardly looks terrible
-#ifndef CLIENT_LOADINGSCREEN
+#ifndef NONET
 		/* FALLTHRU */
 		case GS_WAITINGPLAYERS:
 #endif
@@ -362,6 +365,9 @@ void I_FinishUpdate(void)
 
 	if (I_SkipFrame())
 		return;
+
+	if (marathonmode)
+		SCR_DisplayMarathonInfo();
 
 	// draw captions if enabled
 	if (cv_closedcaptioning.value)
@@ -944,6 +950,16 @@ INT32 VID_SetMode(INT32 modenum)
 
 	I_RestartSysMouse();
 	return 1;
+}
+
+boolean VID_CheckRenderer(void)
+{
+	return false;
+}
+
+void VID_CheckGLLoaded(rendermode_t oldrender)
+{
+	(void)oldrender;
 }
 
 // ========================================================================

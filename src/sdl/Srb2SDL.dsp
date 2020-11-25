@@ -7,19 +7,19 @@
 CFG=Srb2SDL - Win32 Debug
 !MESSAGE This is not a valid makefile. To build this project using NMAKE,
 !MESSAGE use the Export Makefile command and run
-!MESSAGE 
+!MESSAGE
 !MESSAGE NMAKE /f "Srb2SDL.mak".
-!MESSAGE 
+!MESSAGE
 !MESSAGE You can specify a configuration when running NMAKE
 !MESSAGE by defining the macro CFG on the command line. For example:
-!MESSAGE 
+!MESSAGE
 !MESSAGE NMAKE /f "Srb2SDL.mak" CFG="Srb2SDL - Win32 Debug"
-!MESSAGE 
+!MESSAGE
 !MESSAGE Possible choices for configuration are:
-!MESSAGE 
+!MESSAGE
 !MESSAGE "Srb2SDL - Win32 Release" (based on "Win32 (x86) Console Application")
 !MESSAGE "Srb2SDL - Win32 Debug" (based on "Win32 (x86) Console Application")
-!MESSAGE 
+!MESSAGE
 
 # Begin Project
 # PROP AllowPerConfigDependencies 0
@@ -85,7 +85,7 @@ LINK32=link.exe
 # ADD LINK32 SDL.lib SDL_mixer.lib user32.lib advapi32.lib ws2_32.lib /nologo /subsystem:console /pdb:"C:\srb2demo2\srb2sdldebug.pdb" /debug /machine:I386 /out:"C:\srb2demo2\srb2sdldebug.exe" /pdbtype:sept
 # SUBTRACT LINK32 /pdb:none
 
-!ENDIF 
+!ENDIF
 
 # Begin Target
 
@@ -213,7 +213,7 @@ SOURCE=.\SDL_main\SDL_win32_main.c
 
 # PROP Exclude_From_Build 1
 
-!ENDIF 
+!ENDIF
 
 # End Source File
 # Begin Source File
@@ -274,7 +274,7 @@ InputName=tmap
 
 # End Custom Build
 
-!ENDIF 
+!ENDIF
 
 # End Source File
 # Begin Source File
@@ -308,7 +308,7 @@ InputName=tmap_mmx
 
 # End Custom Build
 
-!ENDIF 
+!ENDIF
 
 # End Source File
 # Begin Source File
@@ -339,7 +339,7 @@ InputName=tmap_vc
 
 # End Custom Build
 
-!ENDIF 
+!ENDIF
 
 # End Source File
 # End Group
@@ -576,10 +576,6 @@ SOURCE=..\hardware\hw_drv.h
 # End Source File
 # Begin Source File
 
-SOURCE=..\hardware\hw_glide.h
-# End Source File
-# Begin Source File
-
 SOURCE=..\hardware\hw_glob.h
 # End Source File
 # Begin Source File
@@ -605,10 +601,6 @@ SOURCE=..\hardware\hw_md2.c
 # Begin Source File
 
 SOURCE=..\hardware\hw_md2.h
-# End Source File
-# Begin Source File
-
-SOURCE=..\hardware\hw_trick.c
 # End Source File
 # Begin Source File
 

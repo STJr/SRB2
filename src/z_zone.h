@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -42,10 +42,17 @@ enum
 
 	PU_SOUND                 = 11, // static while playing
 	PU_MUSIC                 = 12, // static while playing
-	PU_HUDGFX                = 13, // static until WAD added
+
+	PU_PATCH                 = 14, // static entire execution time
+	PU_PATCH_LOWPRIORITY     = 15, // lower priority patch, static until level exited
+	PU_PATCH_ROTATED         = 16, // rotated patch, static until level exited or WAD added
+	PU_PATCH_DATA            = 17, // patch data, lifetime depends on the patch that owns it
+	PU_SPRITE                = 18, // sprite patch, static until WAD added
+	PU_HUDGFX                = 19, // HUD patch, static until WAD added
 
 	PU_HWRPATCHINFO          = 21, // Hardware GLPatch_t struct for OpenGL texture cache
 	PU_HWRPATCHCOLMIPMAP     = 22, // Hardware GLMipmap_t struct colormap variation of patch
+	PU_HWRMODELTEXTURE       = 23, // Hardware model texture
 
 	PU_HWRCACHE              = 48, // static until unlocked
 	PU_CACHE                 = 49, // static until unlocked
@@ -61,7 +68,8 @@ enum
 	PU_HWRCACHE_UNLOCKED     = 102, // 'unlocked' PU_HWRCACHE memory:
 									// 'second-level' cache for graphics
                                     // stored in hardware format and downloaded as needed
-	PU_HWRPATCHINFO_UNLOCKED = 103, // 'unlocked' PU_HWRPATCHINFO memory
+	PU_HWRPATCHINFO_UNLOCKED    = 103, // 'unlocked' PU_HWRPATCHINFO memory
+	PU_HWRMODELTEXTURE_UNLOCKED = 104, // 'unlocked' PU_HWRMODELTEXTURE memory
 };
 
 //
@@ -103,6 +111,10 @@ void *Z_ReallocAlign(void *ptr, size_t size, INT32 tag, void *user, INT32 alignb
 // (perhaps this should be changed in future?)
 #define Z_FreeTag(tagnum) Z_FreeTags(tagnum, tagnum)
 void Z_FreeTags(INT32 lowtag, INT32 hightag);
+
+// Iterate memory by tag
+#define Z_IterateTag(tagnum, func) Z_IterateTags(tagnum, tagnum, func)
+void Z_IterateTags(INT32 lowtag, INT32 hightag, boolean (*iterfunc)(void *));
 
 //
 // Utility functions

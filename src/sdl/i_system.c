@@ -5,7 +5,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2019 by Sonic Team Junior.
+// Copyright (C) 2014-2020 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -54,6 +54,12 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <fcntl.h>
 #endif
 
+#if defined (_WIN32)
+DWORD TimeFunction(int requested_frequency);
+#else
+int TimeFunction(int requested_frequency);
+#endif
+
 #include <stdio.h>
 #ifdef _WIN32
 #include <conio.h>
@@ -100,6 +106,12 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <sys/ioctl.h> // ioctl
 #define HAVE_TERMIOS
 #endif
+#endif
+
+#if (defined (__unix__) && !defined (_MSDOS)) || (defined (UNIXCOMMON) && !defined(__APPLE__))
+#include <errno.h>
+#include <sys/wait.h>
+#define NEWSIGNALHANDLER
 #endif
 
 #ifndef NOMUMBLE
@@ -161,6 +173,7 @@ static char returnWadPath[256];
 #include "../i_video.h"
 #include "../i_sound.h"
 #include "../i_system.h"
+#include "../i_threads.h"
 #include "../screen.h" //vid.WndParent
 #include "../d_net.h"
 #include "../g_game.h"
@@ -171,6 +184,8 @@ static char returnWadPath[256];
 #include "../i_joy.h"
 
 #include "../m_argv.h"
+
+#include "../m_menu.h"
 
 #ifdef MAC_ALERT
 #include "macosx/mac_alert.h"
@@ -229,13 +244,11 @@ SDL_bool framebuffer = SDL_FALSE;
 
 UINT8 keyboard_started = false;
 
-FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
+static void I_ReportSignal(int num, int coredumped)
 {
 	//static char msg[] = "oh no! back to reality!\r\n";
 	const char *      sigmsg;
-	char        sigdef[32];
-
-	D_QuitNetGame(); // Fix server freezes
+	char msg[128];
 
 	switch (num)
 	{
@@ -261,20 +274,42 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 		sigmsg = "SIGABRT - abnormal termination triggered by abort call";
 		break;
 	default:
-		sprintf(sigdef,"signal number %d", num);
-		sigmsg = sigdef;
+		sprintf(msg,"signal number %d", num);
+		if (coredumped)
+			sigmsg = 0;
+		else
+			sigmsg = msg;
 	}
 
-	I_OutputMsg("\nsignal_handler() error: %s\n", sigmsg);
+	if (coredumped)
+	{
+		if (sigmsg)
+			sprintf(msg, "%s (core dumped)", sigmsg);
+		else
+			strcat(msg, " (core dumped)");
+
+		sigmsg = msg;
+	}
+
+	I_OutputMsg("\nProcess killed by signal: %s\n\n", sigmsg);
 
 	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-		"Signal caught",
+		"Process killed by signal",
 		sigmsg, NULL);
+}
+
+#ifndef NEWSIGNALHANDLER
+FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
+{
+	D_QuitNetGame(); // Fix server freezes
+	CL_AbortDownloadResume();
+	I_ReportSignal(num, 0);
 	I_ShutdownSystem();
 	signal(num, SIG_DFL);               //default signal action
 	raise(num);
 	I_Quit();
 }
+#endif
 
 FUNCNORETURN static ATTRNORETURN void quit_handler(int num)
 {
@@ -525,14 +560,12 @@ static void Impl_HandleKeyboardConsoleEvent(KEY_EVENT_RECORD evt, HANDLE co)
 			case VK_TAB:
 				event.data1 = KEY_NULL;
 				break;
-			case VK_SHIFT:
-				event.data1 = KEY_LSHIFT;
-				break;
 			case VK_RETURN:
 				entering_con_command = false;
 				/* FALLTHRU */
 			default:
-				event.data1 = MapVirtualKey(evt.wVirtualKeyCode,2); // convert in to char
+				//event.data1 = MapVirtualKey(evt.wVirtualKeyCode,2); // convert in to char
+				event.data1 = evt.uChar.AsciiChar;
 		}
 		if (co != INVALID_HANDLE_VALUE && GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &t))
 		{
@@ -549,18 +582,6 @@ static void Impl_HandleKeyboardConsoleEvent(KEY_EVENT_RECORD evt, HANDLE co)
 			{
 				WriteConsoleOutputCharacterA(co, " ",1, CSBI.dwCursorPosition, &t);
 			}
-		}
-	}
-	else
-	{
-		event.type = ev_keyup;
-		switch (evt.wVirtualKeyCode)
-		{
-			case VK_SHIFT:
-				event.data1 = KEY_LSHIFT;
-				break;
-			default:
-				break;
 		}
 	}
 	if (event.data1) D_PostEvent(&event);
@@ -650,7 +671,7 @@ static inline void I_ShutdownConsole(void){}
 //
 // StartupKeyboard
 //
-void I_StartupKeyboard (void)
+static void I_RegisterSignals (void)
 {
 #ifdef SIGINT
 	signal(SIGINT , quit_handler);
@@ -664,10 +685,12 @@ void I_StartupKeyboard (void)
 
 	// If these defines don't exist,
 	// then compilation would have failed above us...
+#ifndef NEWSIGNALHANDLER
 	signal(SIGILL , signal_handler);
 	signal(SIGSEGV , signal_handler);
 	signal(SIGABRT , signal_handler);
 	signal(SIGFPE , signal_handler);
+#endif
 }
 
 //
@@ -2033,9 +2056,11 @@ static p_timeGetTime pfntimeGetTime = NULL;
 // but lower precision on Windows NT
 // ---------
 
-tic_t I_GetTime(void)
+DWORD TimeFunction(int requested_frequency)
 {
-	tic_t newtics = 0;
+	DWORD newtics = 0;
+	// this var acts as a multiplier if sub-millisecond precision is asked but is not available
+	int excess_frequency = requested_frequency / 1000;
 
 	if (!starttickcount) // high precision timer
 	{
@@ -2055,7 +2080,7 @@ tic_t I_GetTime(void)
 
 		if (frequency.LowPart && QueryPerformanceCounter(&currtime))
 		{
-			newtics = (INT32)((currtime.QuadPart - basetime.QuadPart) * NEWTICRATE
+			newtics = (INT32)((currtime.QuadPart - basetime.QuadPart) * requested_frequency
 				/ frequency.QuadPart);
 		}
 		else if (pfntimeGetTime)
@@ -2063,11 +2088,19 @@ tic_t I_GetTime(void)
 			currtime.LowPart = pfntimeGetTime();
 			if (!basetime.LowPart)
 				basetime.LowPart = currtime.LowPart;
-			newtics = ((currtime.LowPart - basetime.LowPart)/(1000/NEWTICRATE));
+			if (requested_frequency > 1000)
+				newtics = currtime.LowPart - basetime.LowPart * excess_frequency;
+			else
+				newtics = (currtime.LowPart - basetime.LowPart)/(1000/requested_frequency);
 		}
 	}
 	else
-		newtics = (GetTickCount() - starttickcount)/(1000/NEWTICRATE);
+	{
+		if (requested_frequency > 1000)
+			newtics = (GetTickCount() - starttickcount) * excess_frequency;
+		else
+			newtics = (GetTickCount() - starttickcount)/(1000/requested_frequency);
+	}
 
 	return newtics;
 }
@@ -2089,7 +2122,9 @@ static void I_ShutdownTimer(void)
 // I_GetTime
 // returns time in 1/TICRATE second tics
 //
-tic_t I_GetTime (void)
+
+// millisecond precision only
+int TimeFunction(int requested_frequency)
 {
 	static Uint64 basetime = 0;
 		   Uint64 ticks = SDL_GetTicks();
@@ -2099,13 +2134,23 @@ tic_t I_GetTime (void)
 
 	ticks -= basetime;
 
-	ticks = (ticks*TICRATE);
+	ticks = (ticks*requested_frequency);
 
 	ticks = (ticks/1000);
 
-	return (tic_t)ticks;
+	return ticks;
 }
 #endif
+
+tic_t I_GetTime(void)
+{
+	return TimeFunction(NEWTICRATE);
+}
+
+int I_GetTimeMicros(void)
+{
+	return TimeFunction(1000000);
+}
 
 //
 //I_StartupTimer
@@ -2139,13 +2184,100 @@ void I_Sleep(void)
 		SDL_Delay(cv_sleep.value);
 }
 
+#ifdef NEWSIGNALHANDLER
+static void newsignalhandler_Warn(const char *pr)
+{
+	char text[128];
+
+	snprintf(text, sizeof text,
+			"Error while setting up signal reporting: %s: %s",
+			pr,
+			strerror(errno)
+	);
+
+	I_OutputMsg("%s\n", text);
+
+	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+		"Startup error",
+		text, NULL);
+
+	I_ShutdownConsole();
+	exit(-1);
+}
+
+static void I_Fork(void)
+{
+	int child;
+	int status;
+	int signum;
+	int c;
+
+	child = fork();
+
+	switch (child)
+	{
+		case -1:
+			newsignalhandler_Warn("fork()");
+			break;
+		case 0:
+			break;
+		default:
+			if (logstream)
+				fclose(logstream);/* the child has this */
+
+			c = wait(&status);
+
+#ifdef LOGMESSAGES
+			/* By the way, exit closes files. */
+			logstream = fopen(logfilename, "at");
+#else
+			logstream = 0;
+#endif
+
+			if (c == -1)
+			{
+				kill(child, SIGKILL);
+				newsignalhandler_Warn("wait()");
+			}
+			else
+			{
+				if (WIFSIGNALED (status))
+				{
+					signum = WTERMSIG (status);
+#ifdef WCOREDUMP
+					I_ReportSignal(signum, WCOREDUMP (status));
+#else
+					I_ReportSignal(signum, 0);
+#endif
+					status = 128 + signum;
+				}
+				else if (WIFEXITED (status))
+				{
+					status = WEXITSTATUS (status);
+				}
+
+				I_ShutdownConsole();
+				exit(status);
+			}
+	}
+}
+#endif/*NEWSIGNALHANDLER*/
+
 INT32 I_StartupSystem(void)
 {
 	SDL_version SDLcompiled;
 	SDL_version SDLlinked;
 	SDL_VERSION(&SDLcompiled)
 	SDL_GetVersion(&SDLlinked);
+#ifdef HAVE_THREADS
+	I_start_threads();
+	I_AddExitFunc(I_stop_threads);
+#endif
 	I_StartupConsole();
+#ifdef NEWSIGNALHANDLER
+	I_Fork();
+#endif
+	I_RegisterSignals();
 	I_OutputMsg("Compiled for SDL version: %d.%d.%d\n",
 	 SDLcompiled.major, SDLcompiled.minor, SDLcompiled.patch);
 	I_OutputMsg("Linked with SDL version: %d.%d.%d\n",
@@ -2169,7 +2301,6 @@ void I_Quit(void)
 	if (quiting) goto death;
 	SDLforceUngrabMouse();
 	quiting = SDL_FALSE;
-	I_ShutdownConsole();
 	M_SaveConfig(NULL); //save game config, cvars..
 #ifndef NONET
 	D_SaveBan(); // save the ban list
@@ -2184,9 +2315,10 @@ void I_Quit(void)
 		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
+	CL_AbortDownloadResume();
+	M_FreePlayerSetupColors();
 	I_ShutdownMusic();
 	I_ShutdownSound();
-	I_ShutdownCD();
 	// use this for 1.28 19990220 by Kin
 	I_ShutdownGraphics();
 	I_ShutdownInput();
@@ -2247,16 +2379,14 @@ void I_Error(const char *error, ...)
 		if (errorcount == 3)
 			I_ShutdownSound();
 		if (errorcount == 4)
-			I_ShutdownCD();
-		if (errorcount == 5)
 			I_ShutdownGraphics();
-		if (errorcount == 6)
+		if (errorcount == 5)
 			I_ShutdownInput();
-		if (errorcount == 7)
+		if (errorcount == 6)
 			I_ShutdownSystem();
-		if (errorcount == 8)
+		if (errorcount == 7)
 			SDL_Quit();
-		if (errorcount == 9)
+		if (errorcount == 8)
 		{
 			M_SaveConfig(NULL);
 			G_SaveGameData();
@@ -2287,8 +2417,6 @@ void I_Error(const char *error, ...)
 	I_OutputMsg("\nI_Error(): %s\n", buffer);
 	// ---
 
-	I_ShutdownConsole();
-
 	M_SaveConfig(NULL); // save game config, cvars..
 #ifndef NONET
 	D_SaveBan(); // save the ban list
@@ -2302,9 +2430,10 @@ void I_Error(const char *error, ...)
 		G_StopMetalRecording(false);
 
 	D_QuitNetGame();
+	CL_AbortDownloadResume();
+	M_FreePlayerSetupColors();
 	I_ShutdownMusic();
 	I_ShutdownSound();
-	I_ShutdownCD();
 	// use this for 1.28 19990220 by Kin
 	I_ShutdownGraphics();
 	I_ShutdownInput();
@@ -2377,6 +2506,48 @@ void I_RemoveExitFunc(void (*func)())
 	}
 }
 
+#if !(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))
+static void Shittycopyerror(const char *name)
+{
+	I_OutputMsg(
+			"Error copying log file: %s: %s\n",
+			name,
+			strerror(errno)
+	);
+}
+
+static void Shittylogcopy(void)
+{
+	char buf[8192];
+	FILE *fp;
+	size_t r;
+	if (fseek(logstream, 0, SEEK_SET) == -1)
+	{
+		Shittycopyerror("fseek");
+	}
+	else if (( fp = fopen(logfilename, "wt") ))
+	{
+		while (( r = fread(buf, 1, sizeof buf, logstream) ))
+		{
+			if (fwrite(buf, 1, r, fp) < r)
+			{
+				Shittycopyerror("fwrite");
+				break;
+			}
+		}
+		if (ferror(logstream))
+		{
+			Shittycopyerror("fread");
+		}
+		fclose(fp);
+	}
+	else
+	{
+		Shittycopyerror(logfilename);
+	}
+}
+#endif/*!(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))*/
+
 //
 //  Closes down everything. This includes restoring the initial
 //  palette and video mode, and removing whatever mouse, keyboard, and
@@ -2388,6 +2559,10 @@ void I_ShutdownSystem(void)
 {
 	INT32 c;
 
+#ifndef NEWSIGNALHANDLER
+	I_ShutdownConsole();
+#endif
+
 	for (c = MAX_QUIT_FUNCS-1; c >= 0; c--)
 		if (quit_funcs[c])
 			(*quit_funcs[c])();
@@ -2395,6 +2570,9 @@ void I_ShutdownSystem(void)
 	if (logstream)
 	{
 		I_OutputMsg("I_ShutdownSystem(): end of logstream.\n");
+#if !(defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON))
+		Shittylogcopy();
+#endif
 		fclose(logstream);
 		logstream = NULL;
 	}
@@ -2410,7 +2588,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 	return;
 #else // Both Linux and BSD have this, apparently.
 	struct statfs stfs;
-	if (statfs(".", &stfs) == -1)
+	if (statfs(srb2home, &stfs) == -1)
 	{
 		*freespace = INT32_MAX;
 		return;
@@ -2429,7 +2607,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 	}
 	if (pfnGetDiskFreeSpaceEx)
 	{
-		if (pfnGetDiskFreeSpaceEx(NULL, &lfreespace, &usedbytes, NULL))
+		if (pfnGetDiskFreeSpaceEx(srb2home, &lfreespace, &usedbytes, NULL))
 			*freespace = lfreespace.QuadPart;
 		else
 			*freespace = INT32_MAX;
@@ -2535,10 +2713,10 @@ const char *I_ClipboardPaste(void)
 
 	if (!SDL_HasClipboardText())
 		return NULL;
+
 	clipboard_contents = SDL_GetClipboardText();
-	memcpy(clipboard_modified, clipboard_contents, 255);
+	strlcpy(clipboard_modified, clipboard_contents, 256);
 	SDL_free(clipboard_contents);
-	clipboard_modified[255] = 0;
 
 	while (*i)
 	{

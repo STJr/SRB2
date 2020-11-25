@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,6 +21,8 @@
 #include "m_random.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "m_perfstats.h"
+#include "i_system.h" // I_GetTimeMicros
 
 // Object place
 #include "m_cheat.h"
@@ -269,9 +271,7 @@ void P_RemoveThinkerDelayed(thinker_t *thinker)
 //
 void P_RemoveThinker(thinker_t *thinker)
 {
-#ifdef HAVE_BLUA
 	LUA_InvalidateUserdata(thinker);
-#endif
 	thinker->function.acp1 = (actionf_p1)P_RemoveThinkerDelayed;
 }
 
@@ -323,6 +323,7 @@ static inline void P_RunThinkers(void)
 	size_t i;
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
+		ps_thlist_times[i] = I_GetTimeMicros();
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
 #ifdef PARANOIA
@@ -330,6 +331,7 @@ static inline void P_RunThinkers(void)
 #endif
 			currentthinker->function.acp1(currentthinker);
 		}
+		ps_thlist_times[i] = I_GetTimeMicros() - ps_thlist_times[i];
 	}
 
 }
@@ -590,10 +592,24 @@ void P_Ticker(boolean run)
 {
 	INT32 i;
 
-	//Increment jointime even if paused.
+	// Increment jointime and quittime even if paused
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
-			++players[i].jointime;
+		{
+			players[i].jointime++;
+
+			if (players[i].quittime)
+			{
+				players[i].quittime++;
+
+				if (players[i].quittime == 30 * TICRATE && G_TagGametype())
+					P_CheckSurvivors();
+
+				if (server && players[i].quittime >= (tic_t)FixedMul(cv_rejointimeout.value, 60 * TICRATE)
+				&& !(players[i].quittime % TICRATE))
+					SendKick(i, KICK_MSG_PLAYER_QUIT);
+			}
+		}
 
 	if (objectplacing)
 	{
@@ -629,9 +645,16 @@ void P_Ticker(boolean run)
 		if (demoplayback)
 			G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
 
+		ps_lua_mobjhooks = 0;
+		ps_checkposition_calls = 0;
+
+		LUAh_PreThinkFrame();
+
+		ps_playerthink_time = I_GetTimeMicros();
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerThink(&players[i]);
+		ps_playerthink_time = I_GetTimeMicros() - ps_playerthink_time;
 	}
 
 	// Keep track of how long they've been playing!
@@ -646,16 +669,18 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
+		ps_thinkertime = I_GetTimeMicros();
 		P_RunThinkers();
+		ps_thinkertime = I_GetTimeMicros() - ps_thinkertime;
 
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
 
-#ifdef HAVE_BLUA
+		ps_lua_thinkframe_time = I_GetTimeMicros();
 		LUAh_ThinkFrame();
-#endif
+		ps_lua_thinkframe_time = I_GetTimeMicros() - ps_lua_thinkframe_time;
 	}
 
 	// Run shield positioning
@@ -680,7 +705,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		if (countdowntimer && G_PlatformGametype() && (gametype == GT_COOP || leveltime >= 4*TICRATE) && !stoppedclock && --countdowntimer <= 0)
+		if (countdowntimer && G_PlatformGametype() && ((gametyperules & GTR_CAMPAIGN) || leveltime >= 4*TICRATE) && !stoppedclock && --countdowntimer <= 0)
 		{
 			countdowntimer = 0;
 			countdowntimeup = true;
@@ -726,6 +751,8 @@ void P_Ticker(boolean run)
 			G_ConsGhostTic();
 		if (modeattacking)
 			G_GhostTicker();
+
+		LUAh_PostThinkFrame();
 	}
 
 	P_MapEnd();
@@ -741,9 +768,14 @@ void P_PreTicker(INT32 frames)
 
 	postimgtype = postimgtype2 = postimg_none;
 
+	if (marathonmode & MA_INGAME)
+		marathonmode |= MA_INIT;
+
 	for (framecnt = 0; framecnt < frames; ++framecnt)
 	{
 		P_MapStart();
+
+		LUAh_PreThinkFrame();
 
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
@@ -754,7 +786,9 @@ void P_PreTicker(INT32 frames)
 				memcpy(&temptic, &players[i].cmd, sizeof(ticcmd_t));
 				memset(&players[i].cmd, 0, sizeof(ticcmd_t));
 				// correct angle on spawn...
-				players[i].cmd.angleturn = temptic.angleturn;
+				players[i].angleturn += temptic.angleturn - players[i].oldrelangleturn;
+				players[i].oldrelangleturn = temptic.angleturn;
+				players[i].cmd.angleturn = players[i].angleturn;
 
 				P_PlayerThink(&players[i]);
 
@@ -768,9 +802,7 @@ void P_PreTicker(INT32 frames)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
 
-#ifdef HAVE_BLUA
 		LUAh_ThinkFrame();
-#endif
 
 		// Run shield positioning
 		P_RunShields();
@@ -779,6 +811,11 @@ void P_PreTicker(INT32 frames)
 		P_UpdateSpecials();
 		P_RespawnSpecials();
 
+		LUAh_PostThinkFrame();
+
 		P_MapEnd();
 	}
+
+	if (marathonmode & MA_INGAME)
+		marathonmode &= ~MA_INIT;
 }

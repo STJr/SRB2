@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,6 +19,7 @@
 #include "r_local.h"
 #include "r_splats.h" // faB(21jan): testing
 #include "r_sky.h"
+#include "hu_stuff.h"
 #include "st_stuff.h"
 #include "p_local.h"
 #include "keys.h"
@@ -28,9 +29,12 @@
 #include "d_main.h"
 #include "v_video.h"
 #include "p_spec.h" // skyboxmo
+#include "p_setup.h"
 #include "z_zone.h"
 #include "m_random.h" // quake camera shake
 #include "r_portal.h"
+#include "r_main.h"
+#include "i_system.h" // I_GetTimeMicros
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -57,6 +61,7 @@ INT32 centerx, centery;
 fixed_t centerxfrac, centeryfrac;
 fixed_t projection;
 fixed_t projectiony; // aspect ratio
+fixed_t fovtan; // field of view
 
 // just for profiling purposes
 size_t framecount;
@@ -68,6 +73,7 @@ angle_t viewangle, aimingangle;
 fixed_t viewcos, viewsin;
 sector_t *viewsector;
 player_t *viewplayer;
+mobj_t *r_viewmobj;
 
 //
 // precalculated math tables
@@ -93,6 +99,24 @@ lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 // Hack to support extra boom colormaps.
 extracolormap_t *extra_colormaps = NULL;
 
+// Render stats
+int ps_prevframetime = 0;
+int ps_rendercalltime = 0;
+int ps_uitime = 0;
+int ps_swaptime = 0;
+
+int ps_bsptime = 0;
+
+int ps_sw_spritecliptime = 0;
+int ps_sw_portaltime = 0;
+int ps_sw_planetime = 0;
+int ps_sw_maskedtime = 0;
+
+int ps_numbspcalls = 0;
+int ps_numsprites = 0;
+int ps_numdrawnodes = 0;
+int ps_numpolyobjects = 0;
+
 static CV_PossibleValue_t drawdist_cons_t[] = {
 	{256, "256"},	{512, "512"},	{768, "768"},
 	{1024, "1024"},	{1536, "1536"},	{2048, "2048"},
@@ -106,10 +130,12 @@ static CV_PossibleValue_t drawdist_precip_cons_t[] = {
 	{1024, "1024"},	{1536, "1536"},	{2048, "2048"},
 	{0, "None"},	{0, NULL}};
 
+static CV_PossibleValue_t fov_cons_t[] = {{60*FRACUNIT, "MIN"}, {179*FRACUNIT, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t translucenthud_cons_t[] = {{0, "MIN"}, {10, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t maxportals_cons_t[] = {{0, "MIN"}, {12, "MAX"}, {0, NULL}}; // lmao rendering 32 portals, you're a card
 static CV_PossibleValue_t homremoval_cons_t[] = {{0, "No"}, {1, "Yes"}, {2, "Flash"}, {0, NULL}};
 
+static void Fov_OnChange(void);
 static void ChaseCam_OnChange(void);
 static void ChaseCam2_OnChange(void);
 static void FlipCam_OnChange(void);
@@ -117,33 +143,32 @@ static void FlipCam2_OnChange(void);
 void SendWeaponPref(void);
 void SendWeaponPref2(void);
 
-consvar_t cv_tailspickup = {"tailspickup", "On", CV_NETVAR, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_chasecam = {"chasecam", "On", CV_CALL, CV_OnOff, ChaseCam_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_chasecam2 = {"chasecam2", "On", CV_CALL, CV_OnOff, ChaseCam2_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_flipcam = {"flipcam", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam_OnChange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_flipcam2 = {"flipcam2", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam2_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_tailspickup = CVAR_INIT ("tailspickup", "On", CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_chasecam = CVAR_INIT ("chasecam", "On", CV_CALL, CV_OnOff, ChaseCam_OnChange);
+consvar_t cv_chasecam2 = CVAR_INIT ("chasecam2", "On", CV_CALL, CV_OnOff, ChaseCam2_OnChange);
+consvar_t cv_flipcam = CVAR_INIT ("flipcam", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam_OnChange);
+consvar_t cv_flipcam2 = CVAR_INIT ("flipcam2", "No", CV_SAVE|CV_CALL|CV_NOINIT, CV_YesNo, FlipCam2_OnChange);
 
-#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
-consvar_t cv_shadow = {"shadow", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif //#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
-#ifdef GLBADSHADOWS
-consvar_t cv_shadowoffs = {"offsetshadows", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-#endif //#ifdef GLBADSHADOWS
-consvar_t cv_skybox = {"skybox", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_allowmlook = {"allowmlook", "Yes", CV_NETVAR, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_showhud = {"showhud", "Yes", CV_CALL,  CV_YesNo, R_SetViewSize, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_translucenthud = {"translucenthud", "10", CV_SAVE, translucenthud_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_shadow = CVAR_INIT ("shadow", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_skybox = CVAR_INIT ("skybox", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_ffloorclip = CVAR_INIT ("ffloorclip", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_allowmlook = CVAR_INIT ("allowmlook", "Yes", CV_NETVAR, CV_YesNo, NULL);
+consvar_t cv_showhud = CVAR_INIT ("showhud", "Yes", CV_CALL,  CV_YesNo, R_SetViewSize);
+consvar_t cv_translucenthud = CVAR_INIT ("translucenthud", "10", CV_SAVE, translucenthud_cons_t, NULL);
 
-consvar_t cv_translucency = {"translucency", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_drawdist = {"drawdist", "Infinite", CV_SAVE, drawdist_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_drawdist_nights = {"drawdist_nights", "2048", CV_SAVE, drawdist_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_drawdist_precip = {"drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-//consvar_t cv_precipdensity = {"precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_translucency = CVAR_INIT ("translucency", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_drawdist = CVAR_INIT ("drawdist", "Infinite", CV_SAVE, drawdist_cons_t, NULL);
+consvar_t cv_drawdist_nights = CVAR_INIT ("drawdist_nights", "2048", CV_SAVE, drawdist_cons_t, NULL);
+consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL);
+//consvar_t cv_precipdensity = CVAR_INIT ("precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL);
+consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
 
 // Okay, whoever said homremoval causes a performance hit should be shot.
-consvar_t cv_homremoval = {"homremoval", "No", CV_SAVE, homremoval_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
 
-consvar_t cv_maxportals = {"maxportals", "2", CV_SAVE, maxportals_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_maxportals = CVAR_INIT ("maxportals", "2", CV_SAVE, maxportals_cons_t, NULL);
+
+consvar_t cv_renderstats = CVAR_INIT ("renderstats", "Off", 0, CV_OnOff, NULL);
 
 void SplitScreen_OnChange(void)
 {
@@ -182,23 +207,31 @@ void SplitScreen_OnChange(void)
 			}
 	}
 }
+static void Fov_OnChange(void)
+{
+	// Shouldn't be needed with render parity?
+	//if ((netgame || multiplayer) && !cv_debug && cv_fov.value != 90*FRACUNIT)
+	//	CV_Set(&cv_fov, cv_fov.defaultvalue);
+
+	R_SetViewSize();
+}
 
 static void ChaseCam_OnChange(void)
 {
-	if (!cv_chasecam.value || !cv_useranalog.value)
-		CV_SetValue(&cv_analog, 0);
+	if (!cv_chasecam.value || !cv_useranalog[0].value)
+		CV_SetValue(&cv_analog[0], 0);
 	else
-		CV_SetValue(&cv_analog, 1);
+		CV_SetValue(&cv_analog[0], 1);
 }
 
 static void ChaseCam2_OnChange(void)
 {
 	if (botingame)
 		return;
-	if (!cv_chasecam2.value || !cv_useranalog2.value)
-		CV_SetValue(&cv_analog2, 0);
+	if (!cv_chasecam2.value || !cv_useranalog[1].value)
+		CV_SetValue(&cv_analog[1], 0);
 	else
-		CV_SetValue(&cv_analog2, 1);
+		CV_SetValue(&cv_analog[1], 1);
 }
 
 static void FlipCam_OnChange(void)
@@ -285,6 +318,24 @@ angle_t R_PointToAngle(fixed_t x, fixed_t y)
 		ANGLE_90 + tantoangle[SlopeDiv(x,y)] :                         // octant 2
 		(x = -x) > (y = -y) ? ANGLE_180+tantoangle[SlopeDiv(y,x)] :    // octant 4
 		ANGLE_270-tantoangle[SlopeDiv(x,y)] :                          // octant 5
+		0;
+}
+
+// This version uses 64-bit variables to avoid overflows with large values.
+// Currently used only by OpenGL rendering.
+angle_t R_PointToAngle64(INT64 x, INT64 y)
+{
+	return (y -= viewy, (x -= viewx) || y) ?
+	x >= 0 ?
+	y >= 0 ?
+		(x > y) ? tantoangle[SlopeDivEx(y,x)] :                            // octant 0
+		ANGLE_90-tantoangle[SlopeDivEx(x,y)] :                               // octant 1
+		x > (y = -y) ? 0-tantoangle[SlopeDivEx(y,x)] :                    // octant 8
+		ANGLE_270+tantoangle[SlopeDivEx(x,y)] :                              // octant 7
+		y >= 0 ? (x = -x) > y ? ANGLE_180-tantoangle[SlopeDivEx(y,x)] :  // octant 3
+		ANGLE_90 + tantoangle[SlopeDivEx(x,y)] :                             // octant 2
+		(x = -x) > (y = -y) ? ANGLE_180+tantoangle[SlopeDivEx(y,x)] :    // octant 4
+		ANGLE_270-tantoangle[SlopeDivEx(x,y)] :                              // octant 5
 		0;
 }
 
@@ -446,18 +497,16 @@ static void R_InitTextureMapping(void)
 	//
 	// Calc focallength
 	//  so FIELDOFVIEW angles covers SCREENWIDTH.
-	focallength = FixedDiv(centerxfrac,
-		FINETANGENT(FINEANGLES/4+/*cv_fov.value*/ FIELDOFVIEW/2));
+	focallength = FixedDiv(projection,
+		FINETANGENT(FINEANGLES/4+FIELDOFVIEW/2));
 
-#ifdef ESLOPE
 	focallengthf = FIXED_TO_FLOAT(focallength);
-#endif
 
 	for (i = 0; i < FINEANGLES/2; i++)
 	{
-		if (FINETANGENT(i) > FRACUNIT*2)
+		if (FINETANGENT(i) > fovtan*2)
 			t = -1;
-		else if (FINETANGENT(i) < -FRACUNIT*2)
+		else if (FINETANGENT(i) < -fovtan*2)
 			t = viewwidth+1;
 		else
 		{
@@ -537,6 +586,303 @@ static inline void R_InitLightTables(void)
 	}
 }
 
+//#define WOUGHMP_WOUGHMP // I got a fish-eye lens - I'll make a rap video with a couple of friends
+// it's kinda laggy sometimes
+
+static struct {
+	angle_t rollangle; // pre-shifted by fineshift
+#ifdef WOUGHMP_WOUGHMP
+	fixed_t fisheye;
+#endif
+
+	fixed_t zoomneeded;
+	INT32 *scrmap;
+	INT32 scrmapsize;
+
+	INT32 x1; // clip rendering horizontally for efficiency
+	INT16 ceilingclip[MAXVIDWIDTH], floorclip[MAXVIDWIDTH];
+
+	boolean use;
+} viewmorph = {
+	0,
+#ifdef WOUGHMP_WOUGHMP
+	0,
+#endif
+
+	FRACUNIT,
+	NULL,
+	0,
+
+	0,
+	{}, {},
+
+	false
+};
+
+void R_CheckViewMorph(void)
+{
+	float zoomfactor, rollcos, rollsin;
+	float x1, y1, x2, y2;
+	fixed_t temp;
+	INT32 end, vx, vy, pos, usedpos;
+	INT32 usedx, usedy, halfwidth = vid.width/2, halfheight = vid.height/2;
+#ifdef WOUGHMP_WOUGHMP
+	float fisheyemap[MAXVIDWIDTH/2 + 1];
+#endif
+
+	angle_t rollangle = players[displayplayer].viewrollangle;
+#ifdef WOUGHMP_WOUGHMP
+	fixed_t fisheye = cv_cam2_turnmultiplier.value; // temporary test value
+#endif
+
+	rollangle >>= ANGLETOFINESHIFT;
+	rollangle = ((rollangle+2) & ~3) & FINEMASK; // Limit the distinct number of angles to reduce recalcs from angles changing a lot.
+
+#ifdef WOUGHMP_WOUGHMP
+	fisheye &= ~0x7FF; // Same
+#endif
+
+	if (rollangle == viewmorph.rollangle &&
+#ifdef WOUGHMP_WOUGHMP
+		fisheye == viewmorph.fisheye &&
+#endif
+		viewmorph.scrmapsize == vid.width*vid.height)
+		return; // No change
+
+	viewmorph.rollangle = rollangle;
+#ifdef WOUGHMP_WOUGHMP
+	viewmorph.fisheye = fisheye;
+#endif
+
+	if (viewmorph.rollangle == 0
+#ifdef WOUGHMP_WOUGHMP
+		 && viewmorph.fisheye == 0
+#endif
+	 )
+	{
+		viewmorph.use = false;
+		viewmorph.x1 = 0;
+		if (viewmorph.zoomneeded != FRACUNIT)
+			R_SetViewSize();
+		viewmorph.zoomneeded = FRACUNIT;
+
+		return;
+	}
+
+	if (viewmorph.scrmapsize != vid.width*vid.height)
+	{
+		if (viewmorph.scrmap)
+			free(viewmorph.scrmap);
+		viewmorph.scrmap = malloc(vid.width*vid.height * sizeof(INT32));
+		viewmorph.scrmapsize = vid.width*vid.height;
+	}
+
+	temp = FINECOSINE(rollangle);
+	rollcos = FIXED_TO_FLOAT(temp);
+	temp = FINESINE(rollangle);
+	rollsin = FIXED_TO_FLOAT(temp);
+
+	// Calculate maximum zoom needed
+	x1 = (vid.width*fabsf(rollcos) + vid.height*fabsf(rollsin)) / vid.width;
+	y1 = (vid.height*fabsf(rollcos) + vid.width*fabsf(rollsin)) / vid.height;
+
+#ifdef WOUGHMP_WOUGHMP
+	if (fisheye)
+	{
+		float f = FIXED_TO_FLOAT(fisheye);
+		for (vx = 0; vx <= halfwidth; vx++)
+			fisheyemap[vx] = 1.0f / cos(atan(vx * f / halfwidth));
+
+		f = cos(atan(f));
+		if (f < 1.0f)
+		{
+			x1 /= f;
+			y1 /= f;
+		}
+	}
+#endif
+
+	temp = max(x1, y1)*FRACUNIT;
+	if (temp < FRACUNIT)
+		temp = FRACUNIT;
+	else
+		temp |= 0x3FFF; // Limit how many times the viewport needs to be recalculated
+
+	//CONS_Printf("Setting zoom to %f\n", FIXED_TO_FLOAT(temp));
+
+	if (temp != viewmorph.zoomneeded)
+	{
+		viewmorph.zoomneeded = temp;
+		R_SetViewSize();
+	}
+
+	zoomfactor = FIXED_TO_FLOAT(viewmorph.zoomneeded);
+
+	end = vid.width * vid.height - 1;
+
+	pos = 0;
+
+	// Pre-multiply rollcos and rollsin to use for positional stuff
+	rollcos /= zoomfactor;
+	rollsin /= zoomfactor;
+
+	x1 = -(halfwidth * rollcos - halfheight * rollsin);
+	y1 = -(halfheight * rollcos + halfwidth * rollsin);
+
+#ifdef WOUGHMP_WOUGHMP
+	if (fisheye)
+		viewmorph.x1 = (INT32)(halfwidth - (halfwidth * fabsf(rollcos) + halfheight * fabsf(rollsin)) * fisheyemap[halfwidth]);
+	else
+#endif
+	viewmorph.x1 = (INT32)(halfwidth - (halfwidth * fabsf(rollcos) + halfheight * fabsf(rollsin)));
+	//CONS_Printf("saving %d cols\n", viewmorph.x1);
+
+	// Set ceilingclip and floorclip
+	for (vx = 0; vx < vid.width; vx++)
+	{
+		viewmorph.ceilingclip[vx] = vid.height;
+		viewmorph.floorclip[vx] = -1;
+	}
+	x2 = x1;
+	y2 = y1;
+	for (vx = 0; vx < vid.width; vx++)
+	{
+		INT16 xa, ya, xb, yb;
+		xa = x2+halfwidth;
+		ya = y2+halfheight-1;
+		xb = vid.width-1-xa;
+		yb = vid.height-1-ya;
+
+		viewmorph.ceilingclip[xa] = min(viewmorph.ceilingclip[xa], ya);
+		viewmorph.floorclip[xa] = max(viewmorph.floorclip[xa], ya);
+		viewmorph.ceilingclip[xb] = min(viewmorph.ceilingclip[xb], yb);
+		viewmorph.floorclip[xb] = max(viewmorph.floorclip[xb], yb);
+		x2 += rollcos;
+		y2 += rollsin;
+	}
+	x2 = x1;
+	y2 = y1;
+	for (vy = 0; vy < vid.height; vy++)
+	{
+		INT16 xa, ya, xb, yb;
+		xa = x2+halfwidth;
+		ya = y2+halfheight;
+		xb = vid.width-1-xa;
+		yb = vid.height-1-ya;
+
+		viewmorph.ceilingclip[xa] = min(viewmorph.ceilingclip[xa], ya);
+		viewmorph.floorclip[xa] = max(viewmorph.floorclip[xa], ya);
+		viewmorph.ceilingclip[xb] = min(viewmorph.ceilingclip[xb], yb);
+		viewmorph.floorclip[xb] = max(viewmorph.floorclip[xb], yb);
+		x2 -= rollsin;
+		y2 += rollcos;
+	}
+
+	//CONS_Printf("Top left corner is %f %f\n", x1, y1);
+
+#ifdef WOUGHMP_WOUGHMP
+	if (fisheye)
+	{
+		for (vy = 0; vy < halfheight; vy++)
+		{
+			x2 = x1;
+			y2 = y1;
+			x1 -= rollsin;
+			y1 += rollcos;
+
+			for (vx = 0; vx < vid.width; vx++)
+			{
+				usedx = halfwidth + x2*fisheyemap[(int) floorf(fabsf(y2*zoomfactor))];
+				usedy = halfheight + y2*fisheyemap[(int) floorf(fabsf(x2*zoomfactor))];
+
+				usedpos = usedx + usedy*vid.width;
+
+				viewmorph.scrmap[pos] = usedpos;
+				viewmorph.scrmap[end-pos] = end-usedpos;
+
+				x2 += rollcos;
+				y2 += rollsin;
+				pos++;
+			}
+		}
+	}
+	else
+	{
+#endif
+	x1 += halfwidth;
+	y1 += halfheight;
+
+	for (vy = 0; vy < halfheight; vy++)
+	{
+		x2 = x1;
+		y2 = y1;
+		x1 -= rollsin;
+		y1 += rollcos;
+
+		for (vx = 0; vx < vid.width; vx++)
+		{
+			usedx = x2;
+			usedy = y2;
+
+			usedpos = usedx + usedy*vid.width;
+
+			viewmorph.scrmap[pos] = usedpos;
+			viewmorph.scrmap[end-pos] = end-usedpos;
+
+			x2 += rollcos;
+			y2 += rollsin;
+			pos++;
+		}
+	}
+#ifdef WOUGHMP_WOUGHMP
+	}
+#endif
+
+	viewmorph.use = true;
+}
+
+void R_ApplyViewMorph(void)
+{
+	UINT8 *tmpscr = screens[4];
+	UINT8 *srcscr = screens[0];
+	INT32 p, end = vid.width * vid.height;
+
+	if (!viewmorph.use)
+		return;
+
+	if (cv_debug & DBG_VIEWMORPH)
+	{
+		UINT8 border = 32;
+		UINT8 grid = 160;
+		INT32 ws = vid.width / 4;
+		INT32 hs = vid.width * (vid.height / 4);
+
+		memcpy(tmpscr, srcscr, vid.width*vid.height);
+		for (p = 0; p < vid.width; p++)
+		{
+			tmpscr[viewmorph.scrmap[p]] = border;
+			tmpscr[viewmorph.scrmap[p + hs]] = grid;
+			tmpscr[viewmorph.scrmap[p + hs*2]] = grid;
+			tmpscr[viewmorph.scrmap[p + hs*3]] = grid;
+			tmpscr[viewmorph.scrmap[end - 1 - p]] = border;
+		}
+		for (p = vid.width; p < end; p += vid.width)
+		{
+			tmpscr[viewmorph.scrmap[p]] = border;
+			tmpscr[viewmorph.scrmap[p + ws]] = grid;
+			tmpscr[viewmorph.scrmap[p + ws*2]] = grid;
+			tmpscr[viewmorph.scrmap[p + ws*3]] = grid;
+			tmpscr[viewmorph.scrmap[end - 1 - p]] = border;
+		}
+	}
+	else
+		for (p = 0; p < end; p++)
+			tmpscr[p] = srcscr[viewmorph.scrmap[p]];
+
+	VID_BlitLinearScreen(tmpscr, screens[0],
+			vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.width);
+}
+
 
 //
 // R_SetViewSize
@@ -561,6 +907,7 @@ void R_ExecuteSetViewSize(void)
 	INT32 j;
 	INT32 level;
 	INT32 startmapl;
+	angle_t fov;
 
 	setsizeneeded = false;
 
@@ -583,18 +930,16 @@ void R_ExecuteSetViewSize(void)
 	centerxfrac = centerx<<FRACBITS;
 	centeryfrac = centery<<FRACBITS;
 
-	projection = centerxfrac;
-	//projectiony = (((vid.height*centerx*BASEVIDWIDTH)/BASEVIDHEIGHT)/vid.width)<<FRACBITS;
-	projectiony = centerxfrac;
+	fov = FixedAngle(cv_fov.value/2) + ANGLE_90;
+	fovtan = FixedMul(FINETANGENT(fov >> ANGLETOFINESHIFT), viewmorph.zoomneeded);
+	if (splitscreen == 1) // Splitscreen FOV should be adjusted to maintain expected vertical view
+		fovtan = 17*fovtan/10;
+
+	projection = projectiony = FixedDiv(centerxfrac, fovtan);
 
 	R_InitViewBuffer(scaledviewwidth, viewheight);
 
 	R_InitTextureMapping();
-
-#ifdef HWRENDER
-	if (rendermode != render_soft)
-		HWR_InitTextureMapping();
-#endif
 
 	// thing clipping
 	for (i = 0; i < viewwidth; i++)
@@ -611,9 +956,19 @@ void R_ExecuteSetViewSize(void)
 		for (i = 0; i < j; i++)
 		{
 			dy = ((i - viewheight*8)<<FRACBITS) + FRACUNIT/2;
-			dy = abs(dy);
+			dy = FixedMul(abs(dy), fovtan);
 			yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
 		}
+
+		if (ds_su)
+			Z_Free(ds_su);
+		if (ds_sv)
+			Z_Free(ds_sv);
+		if (ds_sz)
+			Z_Free(ds_sz);
+
+		ds_su = ds_sv = ds_sz = NULL;
+		ds_sup = ds_svp = ds_szp = NULL;
 	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
@@ -666,8 +1021,8 @@ void R_Init(void)
 	//I_OutputMsg("\nR_InitLightTables");
 	R_InitLightTables();
 
-	//I_OutputMsg("\nR_InitTranslationTables\n");
-	R_InitTranslationTables();
+	//I_OutputMsg("\nR_InitTranslucencyTables\n");
+	R_InitTranslucencyTables();
 
 	R_InitDrawNodes();
 
@@ -688,14 +1043,15 @@ subsector_t *R_PointInSubsector(fixed_t x, fixed_t y)
 }
 
 //
-// R_IsPointInSubsector, same as above but returns 0 if not in subsector
+// R_PointInSubsectorOrNull, same as above but returns 0 if not in subsector
 //
-subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
+subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
 {
 	node_t *node;
 	INT32 side, i;
 	size_t nodenum;
 	subsector_t *ret;
+	seg_t *seg;
 
 	// single subsector is a special case
 	if (numnodes == 0)
@@ -711,10 +1067,15 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 	}
 
 	ret = &subsectors[nodenum & ~NF_SUBSECTOR];
-	for (i = 0; i < ret->numlines; i++)
-		//if (R_PointOnSegSide(x, y, &segs[ret->firstline + i])) -- breaks in ogl because polyvertex_t cast over vertex pointers
-		if (P_PointOnLineSide(x, y, segs[ret->firstline + i].linedef) != segs[ret->firstline + i].side)
+	for (i = 0, seg = &segs[ret->firstline]; i < ret->numlines; i++, seg++)
+	{
+		if (seg->glseg)
+			continue;
+
+		//if (R_PointOnSegSide(x, y, seg)) -- breaks in ogl because polyvertex_t cast over vertex pointers
+		if (P_PointOnLineSide(x, y, seg->linedef) != seg->side)
 			return 0;
+	}
 
 	return ret;
 }
@@ -723,30 +1084,40 @@ subsector_t *R_IsPointInSubsector(fixed_t x, fixed_t y)
 // R_SetupFrame
 //
 
-static mobj_t *viewmobj;
-
-// WARNING: a should be unsigned but to add with 2048, it isn't!
-#define AIMINGTODY(a) ((FINETANGENT((2048+(((INT32)a)>>ANGLETOFINESHIFT)) & FINEMASK)*160)>>FRACBITS)
-
 // recalc necessary stuff for mouseaiming
 // slopes are already calculated for the full possible view (which is 4*viewheight).
 // 18/08/18: (No it's actually 16*viewheight, thanks Jimita for finding this out)
-static void R_SetupFreelook(void)
+static void R_SetupFreelook(player_t *player, boolean skybox)
 {
 	INT32 dy = 0;
+
+#ifndef HWRENDER
+	(void)player;
+	(void)skybox;
+#endif
+
+	// clip it in the case we are looking a hardware 90 degrees full aiming
+	// (lmps, network and use F12...)
+	if (rendermode == render_soft
+#ifdef HWRENDER
+		|| (rendermode == render_opengl
+			&& (cv_glshearing.value == 1
+			|| (cv_glshearing.value == 2 && R_IsViewpointThirdPerson(player, skybox))))
+#endif
+		)
+	{
+		G_SoftwareClipAimingPitch((INT32 *)&aimingangle);
+	}
+
 	if (rendermode == render_soft)
 	{
-		// clip it in the case we are looking a hardware 90 degrees full aiming
-		// (lmps, network and use F12...)
-		G_SoftwareClipAimingPitch((INT32 *)&aimingangle);
-		dy = AIMINGTODY(aimingangle) * viewwidth/BASEVIDWIDTH;
+		dy = (AIMINGTODY(aimingangle)>>FRACBITS) * viewwidth/BASEVIDWIDTH;
 		yslope = &yslopetab[viewheight*8 - (viewheight/2 + dy)];
 	}
+
 	centery = (viewheight/2) + dy;
 	centeryfrac = centery<<FRACBITS;
 }
-
-#undef AIMINGTODY
 
 void R_SetupFrame(player_t *player)
 {
@@ -781,16 +1152,16 @@ void R_SetupFrame(player_t *player)
 	if (player->awayviewtics)
 	{
 		// cut-away view stuff
-		viewmobj = player->awayviewmobj; // should be a MT_ALTVIEWMAN
-		I_Assert(viewmobj != NULL);
-		viewz = viewmobj->z + 20*FRACUNIT;
+		r_viewmobj = player->awayviewmobj; // should be a MT_ALTVIEWMAN
+		I_Assert(r_viewmobj != NULL);
+		viewz = r_viewmobj->z + 20*FRACUNIT;
 		aimingangle = player->awayviewaiming;
-		viewangle = viewmobj->angle;
+		viewangle = r_viewmobj->angle;
 	}
 	else if (!player->spectator && chasecam)
 	// use outside cam view
 	{
-		viewmobj = NULL;
+		r_viewmobj = NULL;
 		viewz = thiscam->z + (thiscam->height>>1);
 		aimingangle = thiscam->aiming;
 		viewangle = thiscam->angle;
@@ -800,11 +1171,11 @@ void R_SetupFrame(player_t *player)
 	{
 		viewz = player->viewz;
 
-		viewmobj = player->mo;
-		I_Assert(viewmobj != NULL);
+		r_viewmobj = player->mo;
+		I_Assert(r_viewmobj != NULL);
 
 		aimingangle = player->aiming;
-		viewangle = viewmobj->angle;
+		viewangle = r_viewmobj->angle;
 
 		if (!demoplayback && player->playerstate != PST_DEAD)
 		{
@@ -838,13 +1209,13 @@ void R_SetupFrame(player_t *player)
 	}
 	else
 	{
-		viewx = viewmobj->x;
-		viewy = viewmobj->y;
+		viewx = r_viewmobj->x;
+		viewy = r_viewmobj->y;
 		viewx += quake.x;
 		viewy += quake.y;
 
-		if (viewmobj->subsector)
-			viewsector = viewmobj->subsector->sector;
+		if (r_viewmobj->subsector)
+			viewsector = r_viewmobj->subsector->sector;
 		else
 			viewsector = R_PointInSubsector(viewx, viewy)->sector;
 	}
@@ -852,7 +1223,7 @@ void R_SetupFrame(player_t *player)
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	R_SetupFreelook();
+	R_SetupFreelook(player, false);
 }
 
 void R_SkyboxFrame(player_t *player)
@@ -866,12 +1237,12 @@ void R_SkyboxFrame(player_t *player)
 		thiscam = &camera;
 
 	// cut-away view stuff
-	viewmobj = skyboxmo[0];
+	r_viewmobj = skyboxmo[0];
 #ifdef PARANOIA
-	if (!viewmobj)
+	if (!r_viewmobj)
 	{
 		const size_t playeri = (size_t)(player - players);
-		I_Error("R_SkyboxFrame: viewmobj null (player %s)", sizeu1(playeri));
+		I_Error("R_SkyboxFrame: r_viewmobj null (player %s)", sizeu1(playeri));
 	}
 #endif
 	if (player->awayviewtics)
@@ -902,13 +1273,13 @@ void R_SkyboxFrame(player_t *player)
 			}
 		}
 	}
-	viewangle += viewmobj->angle;
+	viewangle += r_viewmobj->angle;
 
 	viewplayer = player;
 
-	viewx = viewmobj->x;
-	viewy = viewmobj->y;
-	viewz = viewmobj->z; // 26/04/17: use actual Z position instead of spawnpoint angle!
+	viewx = r_viewmobj->x;
+	viewy = r_viewmobj->y;
+	viewz = r_viewmobj->z; // 26/04/17: use actual Z position instead of spawnpoint angle!
 
 	if (mapheaderinfo[gamemap-1])
 	{
@@ -948,29 +1319,29 @@ void R_SkyboxFrame(player_t *player)
 			else if (mh->skybox_scaley < 0)
 				y = (campos.y - skyboxmo[1]->y) * -mh->skybox_scaley;
 
-			if (viewmobj->angle == 0)
+			if (r_viewmobj->angle == 0)
 			{
 				viewx += x;
 				viewy += y;
 			}
-			else if (viewmobj->angle == ANGLE_90)
+			else if (r_viewmobj->angle == ANGLE_90)
 			{
 				viewx -= y;
 				viewy += x;
 			}
-			else if (viewmobj->angle == ANGLE_180)
+			else if (r_viewmobj->angle == ANGLE_180)
 			{
 				viewx -= x;
 				viewy -= y;
 			}
-			else if (viewmobj->angle == ANGLE_270)
+			else if (r_viewmobj->angle == ANGLE_270)
 			{
 				viewx += y;
 				viewy -= x;
 			}
 			else
 			{
-				angle_t ang = viewmobj->angle>>ANGLETOFINESHIFT;
+				angle_t ang = r_viewmobj->angle>>ANGLETOFINESHIFT;
 				viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
 				viewy += FixedMul(x,  FINESINE(ang)) + FixedMul(y,FINECOSINE(ang));
 			}
@@ -981,15 +1352,47 @@ void R_SkyboxFrame(player_t *player)
 			viewz += campos.z * -mh->skybox_scalez;
 	}
 
-	if (viewmobj->subsector)
-		viewsector = viewmobj->subsector->sector;
+	if (r_viewmobj->subsector)
+		viewsector = r_viewmobj->subsector->sector;
 	else
 		viewsector = R_PointInSubsector(viewx, viewy)->sector;
 
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
 
-	R_SetupFreelook();
+	R_SetupFreelook(player, true);
+}
+
+boolean R_ViewpointHasChasecam(player_t *player)
+{
+	boolean chasecam = false;
+
+	if (splitscreen && player == &players[secondarydisplayplayer] && player != &players[consoleplayer])
+		chasecam = (cv_chasecam2.value != 0);
+	else
+		chasecam = (cv_chasecam.value != 0);
+
+	if (player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || gamestate == GS_TITLESCREEN || tutorialmode)
+		chasecam = true; // force chasecam on
+	else if (player->spectator) // no spectator chasecam
+		chasecam = false; // force chasecam off
+
+	return chasecam;
+}
+
+boolean R_IsViewpointThirdPerson(player_t *player, boolean skybox)
+{
+	boolean chasecam = R_ViewpointHasChasecam(player);
+
+	// cut-away view stuff
+	if (player->awayviewtics || skybox)
+		return chasecam;
+	// use outside cam view
+	else if (!player->spectator && chasecam)
+		return true;
+
+	// use the player's eyes view
+	return false;
 }
 
 static void R_PortalFrame(portal_t *portal)
@@ -1008,11 +1411,13 @@ static void R_PortalFrame(portal_t *portal)
 	if (portal->clipline != -1)
 	{
 		portalclipline = &lines[portal->clipline];
+		portalcullsector = portalclipline->frontsector;
 		viewsector = portalclipline->frontsector;
 	}
 	else
 	{
 		portalclipline = NULL;
+		portalcullsector = NULL;
 		viewsector = R_PointInSubsector(viewx, viewy)->sector;
 	}
 }
@@ -1061,13 +1466,23 @@ void R_RenderPlayerView(player_t *player)
 	validcount++;
 
 	// Clear buffers.
-	R_ClearClipSegs();
-	R_ClearDrawSegs();
 	R_ClearPlanes();
+	if (viewmorph.use)
+	{
+		portalclipstart = viewmorph.x1;
+		portalclipend = viewwidth-viewmorph.x1-1;
+		R_PortalClearClipSegs(portalclipstart, portalclipend);
+		memcpy(ceilingclip, viewmorph.ceilingclip, sizeof(INT16)*vid.width);
+		memcpy(floorclip, viewmorph.floorclip, sizeof(INT16)*vid.width);
+	}
+	else
+	{
+		portalclipstart = 0;
+		portalclipend = viewwidth;
+		R_ClearClipSegs();
+	}
+	R_ClearDrawSegs();
 	R_ClearSprites();
-#ifdef FLOORSPLATS
-	R_ClearVisibleFloorSplats();
-#endif
 	Portal_InitList();
 
 	// check for new console commands.
@@ -1082,7 +1497,11 @@ void R_RenderPlayerView(player_t *player)
 	mytotal = 0;
 	ProfZeroTimer();
 #endif
+	ps_numbspcalls = ps_numpolyobjects = ps_numdrawnodes = 0;
+	ps_bsptime = I_GetTimeMicros();
 	R_RenderBSPNode((INT32)numnodes - 1);
+	ps_bsptime = I_GetTimeMicros() - ps_bsptime;
+	ps_numsprites = visspritecount;
 #ifdef TIMING
 	RDMSR(0x10, &mycount);
 	mytotal += mycount; // 64bit add
@@ -1092,7 +1511,9 @@ void R_RenderPlayerView(player_t *player)
 //profile stuff ---------------------------------------------------------
 	Mask_Post(&masks[nummasks - 1]);
 
+	ps_sw_spritecliptime = I_GetTimeMicros();
 	R_ClipSprites(drawsegs, NULL);
+	ps_sw_spritecliptime = I_GetTimeMicros() - ps_sw_spritecliptime;
 
 
 	// Add skybox portals caused by sky visplanes.
@@ -1100,6 +1521,7 @@ void R_RenderPlayerView(player_t *player)
 		Portal_AddSkyboxPortals();
 
 	// Portal rendering. Hijacks the BSP traversal.
+	ps_sw_portaltime = I_GetTimeMicros();
 	if (portal_base)
 	{
 		portal_t *portal;
@@ -1139,15 +1561,17 @@ void R_RenderPlayerView(player_t *player)
 			Portal_Remove(portal);
 		}
 	}
+	ps_sw_portaltime = I_GetTimeMicros() - ps_sw_portaltime;
 
+	ps_sw_planetime = I_GetTimeMicros();
 	R_DrawPlanes();
-#ifdef FLOORSPLATS
-	R_DrawVisibleFloorSplats();
-#endif
+	ps_sw_planetime = I_GetTimeMicros() - ps_sw_planetime;
 
 	// draw mid texture and sprite
 	// And now 3D floors/sides!
+	ps_sw_maskedtime = I_GetTimeMicros();
 	R_DrawMasked(masks, nummasks);
+	ps_sw_maskedtime = I_GetTimeMicros() - ps_sw_maskedtime;
 
 	free(masks);
 }
@@ -1173,16 +1597,14 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_drawdist);
 	CV_RegisterVar(&cv_drawdist_nights);
 	CV_RegisterVar(&cv_drawdist_precip);
+	CV_RegisterVar(&cv_fov);
 
 	CV_RegisterVar(&cv_chasecam);
 	CV_RegisterVar(&cv_chasecam2);
-#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
+
 	CV_RegisterVar(&cv_shadow);
-#endif //#if defined(FLOORSPLATS) || defined(GLBADSHADOWS)
-#ifdef GLBADSHADOWS
-	CV_RegisterVar(&cv_shadowoffs);
-#endif //#ifdef GLBADSHADOWS
 	CV_RegisterVar(&cv_skybox);
+	CV_RegisterVar(&cv_ffloorclip);
 
 	CV_RegisterVar(&cv_cam_dist);
 	CV_RegisterVar(&cv_cam_still);
@@ -1190,6 +1612,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_cam_speed);
 	CV_RegisterVar(&cv_cam_rotate);
 	CV_RegisterVar(&cv_cam_rotspeed);
+	CV_RegisterVar(&cv_cam_turnmultiplier);
 	CV_RegisterVar(&cv_cam_orbit);
 	CV_RegisterVar(&cv_cam_adjust);
 
@@ -1199,8 +1622,19 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_cam2_speed);
 	CV_RegisterVar(&cv_cam2_rotate);
 	CV_RegisterVar(&cv_cam2_rotspeed);
+	CV_RegisterVar(&cv_cam2_turnmultiplier);
 	CV_RegisterVar(&cv_cam2_orbit);
 	CV_RegisterVar(&cv_cam2_adjust);
+
+	CV_RegisterVar(&cv_cam_savedist[0][0]);
+	CV_RegisterVar(&cv_cam_savedist[0][1]);
+	CV_RegisterVar(&cv_cam_savedist[1][0]);
+	CV_RegisterVar(&cv_cam_savedist[1][1]);
+
+	CV_RegisterVar(&cv_cam_saveheight[0][0]);
+	CV_RegisterVar(&cv_cam_saveheight[0][1]);
+	CV_RegisterVar(&cv_cam_saveheight[1][0]);
+	CV_RegisterVar(&cv_cam_saveheight[1][1]);
 
 	CV_RegisterVar(&cv_showhud);
 	CV_RegisterVar(&cv_translucenthud);
@@ -1208,30 +1642,4 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_maxportals);
 
 	CV_RegisterVar(&cv_movebob);
-
-#ifdef HWRENDER
-	// GL-specific Commands
-	CV_RegisterVar(&cv_grgammablue);
-	CV_RegisterVar(&cv_grgammagreen);
-	CV_RegisterVar(&cv_grgammared);
-	CV_RegisterVar(&cv_grfovchange);
-	CV_RegisterVar(&cv_grfog);
-	CV_RegisterVar(&cv_grfogcolor);
-	CV_RegisterVar(&cv_grsoftwarefog);
-#ifdef ALAM_LIGHTING
-	CV_RegisterVar(&cv_grstaticlighting);
-	CV_RegisterVar(&cv_grdynamiclighting);
-	CV_RegisterVar(&cv_grcoronas);
-	CV_RegisterVar(&cv_grcoronasize);
-#endif
-	CV_RegisterVar(&cv_grmodelinterpolation);
-	CV_RegisterVar(&cv_grmodels);
-	CV_RegisterVar(&cv_grspritebillboarding);
-	CV_RegisterVar(&cv_grskydome);
-#endif
-
-#ifdef HWRENDER
-	if (rendermode != render_soft && rendermode != render_none)
-		HWR_AddCommands();
-#endif
 }

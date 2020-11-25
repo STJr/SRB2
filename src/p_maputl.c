@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,6 +18,7 @@
 #include "p_local.h"
 #include "r_main.h"
 #include "r_data.h"
+#include "r_textures.h"
 #include "p_maputl.h"
 #include "p_polyobj.h"
 #include "p_slopes.h"
@@ -78,68 +79,37 @@ void P_ClosestPointOnLine(fixed_t x, fixed_t y, line_t *line, vertex_t *result)
 	return;
 }
 
-//
-// P_ClosestPointOnLine3D
-// Finds the closest point on a given line to the supplied point IN 3D!!!
-//
-void P_ClosestPointOnLine3D(fixed_t x, fixed_t y, fixed_t z, line_t *line, vertex_t *result)
+/// Similar to FV3_ClosestPointOnLine() except it actually works.
+void P_ClosestPointOnLine3D(const vector3_t *p, const vector3_t *Line, vector3_t *result)
 {
-	fixed_t startx = line->v1->x;
-	fixed_t starty = line->v1->y;
-	fixed_t startz = line->v1->z;
-	fixed_t dx = line->dx;
-	fixed_t dy = line->dy;
-	fixed_t dz = line->v2->z - line->v1->z;
+	const vector3_t* v1 = &Line[0];
+	const vector3_t* v2 = &Line[1];
+	vector3_t c, V, n;
+	fixed_t t, d;
+	FV3_SubEx(v2, v1, &V);
+	FV3_SubEx(p, v1, &c);
 
-	// Determine t (the length of the vector from �Line[0]� to �p�)
-	fixed_t cx, cy, cz;
-	fixed_t vx, vy, vz;
-	fixed_t magnitude;
-	fixed_t t;
+	d = R_PointToDist2(0, v2->z, R_PointToDist2(v2->x, v2->y, v1->x, v1->y), v1->z);
+	FV3_Copy(&n, &V);
+	FV3_Divide(&n, d);
 
-	//Sub (p, &Line[0], &c);
-	cx = x - startx;
-	cy = y - starty;
-	cz = z - startz;
-
-	//Sub (&Line[1], &Line[0], &V);
-	vx = dx;
-	vy = dy;
-	vz = dz;
-
-	//Normalize (&V, &V);
-	magnitude = R_PointToDist2(0, line->v2->z, R_PointToDist2(line->v2->x, line->v2->y, startx, starty), startz);
-	vx = FixedDiv(vx, magnitude);
-	vy = FixedDiv(vy, magnitude);
-	vz = FixedDiv(vz, magnitude);
-
-	t = (FixedMul(vx, cx) + FixedMul(vy, cy) + FixedMul(vz, cz));
+	t = FV3_Dot(&n, &c);
 
 	// Set closest point to the end if it extends past -Red
 	if (t <= 0)
 	{
-		result->x = line->v1->x;
-		result->y = line->v1->y;
-		result->z = line->v1->z;
+		FV3_Copy(result, v1);
 		return;
 	}
-	else if (t >= magnitude)
+	else if (t >= d)
 	{
-		result->x = line->v2->x;
-		result->y = line->v2->y;
-		result->z = line->v2->z;
+		FV3_Copy(result, v2);
 		return;
 	}
 
-	// Return the point between �Line[0]� and �Line[1]�
-	vx = FixedMul(vx, t);
-	vy = FixedMul(vy, t);
-	vz = FixedMul(vz, t);
+	FV3_Mul(&n, t);
 
-	//Add (&Line[0], &V, out);
-	result->x = startx + vx;
-	result->y = starty + vy;
-	result->z = startz + vz;
+	FV3_AddEx(v1, &n, result);
 	return;
 }
 
@@ -308,9 +278,7 @@ fixed_t P_InterceptVector(divline_t *v2, divline_t *v1)
 // OPTIMIZE: keep this precalculated
 //
 fixed_t opentop, openbottom, openrange, lowfloor, highceiling;
-#ifdef ESLOPE
 pslope_t *opentopslope, *openbottomslope;
-#endif
 ffloor_t *openfloorrover, *openceilingrover;
 
 // P_CameraLineOpening
@@ -336,53 +304,33 @@ void P_CameraLineOpening(line_t *linedef)
 	// If you can see through it, why not move the camera through it too?
 	if (front->camsec >= 0)
 	{
-		frontfloor = sectors[front->camsec].floorheight;
-		frontceiling = sectors[front->camsec].ceilingheight;
-#ifdef ESLOPE
-		if (sectors[front->camsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
-			frontfloor = P_GetZAt(sectors[front->camsec].f_slope, camera.x, camera.y);
-		if (sectors[front->camsec].c_slope)
-			frontceiling = P_GetZAt(sectors[front->camsec].c_slope, camera.x, camera.y);
-#endif
+		// SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
+		frontfloor   = P_GetSectorFloorZAt  (&sectors[front->camsec], camera.x, camera.y);
+		frontceiling = P_GetSectorCeilingZAt(&sectors[front->camsec], camera.x, camera.y);
 
 	}
 	else if (front->heightsec >= 0)
 	{
-		frontfloor = sectors[front->heightsec].floorheight;
-		frontceiling = sectors[front->heightsec].ceilingheight;
-#ifdef ESLOPE
-		if (sectors[front->heightsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
-			frontfloor = P_GetZAt(sectors[front->heightsec].f_slope, camera.x, camera.y);
-		if (sectors[front->heightsec].c_slope)
-			frontceiling = P_GetZAt(sectors[front->heightsec].c_slope, camera.x, camera.y);
-#endif
+		// SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
+		frontfloor   = P_GetSectorFloorZAt  (&sectors[front->heightsec], camera.x, camera.y);
+		frontceiling = P_GetSectorCeilingZAt(&sectors[front->heightsec], camera.x, camera.y);
 	}
 	else
 	{
-		frontfloor = P_CameraGetFloorZ(mapcampointer, front, tmx, tmy, linedef);
+		frontfloor   = P_CameraGetFloorZ  (mapcampointer, front, tmx, tmy, linedef);
 		frontceiling = P_CameraGetCeilingZ(mapcampointer, front, tmx, tmy, linedef);
 	}
 	if (back->camsec >= 0)
 	{
-		backfloor = sectors[back->camsec].floorheight;
-		backceiling = sectors[back->camsec].ceilingheight;
-#ifdef ESLOPE
-		if (sectors[back->camsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
-			frontfloor = P_GetZAt(sectors[back->camsec].f_slope, camera.x, camera.y);
-		if (sectors[back->camsec].c_slope)
-			frontceiling = P_GetZAt(sectors[back->camsec].c_slope, camera.x, camera.y);
-#endif
+		// SRB2CBTODO: ESLOPE (sectors[back->heightsec].f_slope)
+		backfloor   = P_GetSectorFloorZAt  (&sectors[back->camsec], camera.x, camera.y);
+		backceiling = P_GetSectorCeilingZAt(&sectors[back->camsec], camera.x, camera.y);
 	}
 	else if (back->heightsec >= 0)
 	{
-		backfloor = sectors[back->heightsec].floorheight;
-		backceiling = sectors[back->heightsec].ceilingheight;
-#ifdef ESLOPE
-		if (sectors[back->heightsec].f_slope) // SRB2CBTODO: ESLOPE (sectors[front->heightsec].f_slope)
-			frontfloor = P_GetZAt(sectors[back->heightsec].f_slope, camera.x, camera.y);
-		if (sectors[back->heightsec].c_slope)
-			frontceiling = P_GetZAt(sectors[back->heightsec].c_slope, camera.x, camera.y);
-#endif
+		// SRB2CBTODO: ESLOPE (sectors[back->heightsec].f_slope)
+		backfloor   = P_GetSectorFloorZAt  (&sectors[back->heightsec], camera.x, camera.y);
+		backceiling = P_GetSectorCeilingZAt(&sectors[back->heightsec], camera.x, camera.y);
 	}
 	else
 	{
@@ -492,7 +440,6 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 	I_Assert(back != NULL);
 
 	openfloorrover = openceilingrover = NULL;
-#ifdef POLYOBJECTS
 	if (linedef->polyobj)
 	{
 		// set these defaults so that polyobjects don't interfere with collision above or below them
@@ -500,12 +447,9 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 		openbottom = INT32_MIN;
 		highceiling = INT32_MIN;
 		lowfloor = INT32_MAX;
-#ifdef ESLOPE
 		opentopslope = openbottomslope = NULL;
-#endif
 	}
 	else
-#endif
 	{ // Set open and high/low values here
 		fixed_t frontheight, backheight;
 
@@ -516,17 +460,13 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 		{
 			opentop = frontheight;
 			highceiling = backheight;
-#ifdef ESLOPE
 			opentopslope = front->c_slope;
-#endif
 		}
 		else
 		{
 			opentop = backheight;
 			highceiling = frontheight;
-#ifdef ESLOPE
 			opentopslope = back->c_slope;
-#endif
 		}
 
 		frontheight = P_GetFloorZ(mobj, front, tmx, tmy, linedef);
@@ -536,17 +476,13 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 		{
 			openbottom = frontheight;
 			lowfloor = backheight;
-#ifdef ESLOPE
 			openbottomslope = front->f_slope;
-#endif
 		}
 		else
 		{
 			openbottom = backheight;
 			lowfloor = frontheight;
-#ifdef ESLOPE
 			openbottomslope = back->f_slope;
-#endif
 		}
 	}
 
@@ -568,7 +504,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				texheight = textures[texnum]->height << FRACBITS;
 
 				// Set texbottom and textop to the Z coordinates of the texture's boundaries
-#if 0 // #ifdef POLYOBJECTS
+#if 0
 				// don't remove this code unless solid midtextures
 				// on non-solid polyobjects should NEVER happen in the future
 				if (linedef->polyobj && (linedef->polyobj->flags & POF_TESTHEIGHT)) {
@@ -611,7 +547,6 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				}
 			}
 		}
-#ifdef POLYOBJECTS
 		if (linedef->polyobj)
 		{
 			// Treat polyobj's backsector like a 3D Floor
@@ -648,102 +583,95 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 			// otherwise don't do anything special, pretend there's nothing else there
 		}
 		else
-#endif
-		// Check for fake floors in the sector.
-		if (front->ffloors || back->ffloors)
 		{
-			ffloor_t *rover;
-			fixed_t delta1, delta2;
-
-			// Check for frontsector's fake floors
-			for (rover = front->ffloors; rover; rover = rover->next)
+			// Check for fake floors in the sector.
+			if (front->ffloors || back->ffloors)
 			{
-				fixed_t topheight, bottomheight;
-				if (!(rover->flags & FF_EXISTS))
-					continue;
+				ffloor_t *rover;
+				fixed_t delta1, delta2;
 
-				if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
-					;
-				else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
-					|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
-					continue;
-
-				topheight = P_GetFOFTopZ(mobj, front, rover, tmx, tmy, linedef);
-				bottomheight = P_GetFOFBottomZ(mobj, front, rover, tmx, tmy, linedef);
-
-				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
-				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
-
-				if (delta1 >= delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_PLATFORM) // thing is below FOF
+				// Check for frontsector's fake floors
+				for (rover = front->ffloors; rover; rover = rover->next)
 				{
-					if (bottomheight < opentop) {
-						opentop = bottomheight;
-#ifdef ESLOPE
-						opentopslope = *rover->b_slope;
-#endif
-						openceilingrover = rover;
+					fixed_t topheight, bottomheight;
+					if (!(rover->flags & FF_EXISTS))
+						continue;
+
+					if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
+						;
+					else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
+						|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
+						continue;
+
+					topheight = P_GetFOFTopZ(mobj, front, rover, tmx, tmy, linedef);
+					bottomheight = P_GetFOFBottomZ(mobj, front, rover, tmx, tmy, linedef);
+
+					delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
+					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
+
+					if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
+					{
+						if (bottomheight < opentop) {
+							opentop = bottomheight;
+							opentopslope = *rover->b_slope;
+							openceilingrover = rover;
+						}
+						else if (bottomheight < highceiling)
+							highceiling = bottomheight;
 					}
-					else if (bottomheight < highceiling)
-						highceiling = bottomheight;
+
+					if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+					{
+						if (topheight > openbottom) {
+							openbottom = topheight;
+							openbottomslope = *rover->t_slope;
+							openfloorrover = rover;
+						}
+						else if (topheight > lowfloor)
+							lowfloor = topheight;
+					}
 				}
 
-				if (delta1 < delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+				// Check for backsectors fake floors
+				for (rover = back->ffloors; rover; rover = rover->next)
 				{
-					if (topheight > openbottom) {
-						openbottom = topheight;
-#ifdef ESLOPE
-						openbottomslope = *rover->t_slope;
-#endif
-						openfloorrover = rover;
+					fixed_t topheight, bottomheight;
+					if (!(rover->flags & FF_EXISTS))
+						continue;
+
+					if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
+						;
+					else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
+						|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
+						continue;
+
+					topheight = P_GetFOFTopZ(mobj, back, rover, tmx, tmy, linedef);
+					bottomheight = P_GetFOFBottomZ(mobj, back, rover, tmx, tmy, linedef);
+
+					delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
+					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
+
+					if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
+					{
+						if (bottomheight < opentop) {
+							opentop = bottomheight;
+							opentopslope = *rover->b_slope;
+							openceilingrover = rover;
+						}
+						else if (bottomheight < highceiling)
+							highceiling = bottomheight;
 					}
-					else if (topheight > lowfloor)
-						lowfloor = topheight;
-				}
-			}
 
-			// Check for backsectors fake floors
-			for (rover = back->ffloors; rover; rover = rover->next)
-			{
-				fixed_t topheight, bottomheight;
-				if (!(rover->flags & FF_EXISTS))
-					continue;
-
-				if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
-					;
-				else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
-					|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
-					continue;
-
-				topheight = P_GetFOFTopZ(mobj, back, rover, tmx, tmy, linedef);
-				bottomheight = P_GetFOFBottomZ(mobj, back, rover, tmx, tmy, linedef);
-
-				delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
-				delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
-
-				if (delta1 >= delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_PLATFORM) // thing is below FOF
-				{
-					if (bottomheight < opentop) {
-						opentop = bottomheight;
-#ifdef ESLOPE
-						opentopslope = *rover->b_slope;
-#endif
-						openceilingrover = rover;
+					if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+					{
+						if (topheight > openbottom) {
+							openbottom = topheight;
+							openbottomslope = *rover->t_slope;
+							openfloorrover = rover;
+						}
+						else if (topheight > lowfloor)
+							lowfloor = topheight;
 					}
-					else if (bottomheight < highceiling)
-						highceiling = bottomheight;
-				}
-
-				if (delta1 < delta2 && (rover->flags & FF_INTANGABLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
-				{
-					if (topheight > openbottom) {
-						openbottom = topheight;
-#ifdef ESLOPE
-						openbottomslope = *rover->t_slope;
-#endif
-						openfloorrover = rover;
-					}
-					else if (topheight > lowfloor)
-						lowfloor = topheight;
 				}
 			}
 		}
@@ -993,9 +921,7 @@ boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean (*func)(line_t *))
 {
 	INT32 offset;
 	const INT32 *list; // Big blockmap
-#ifdef POLYOBJECTS
 	polymaplink_t *plink; // haleyjd 02/22/06
-#endif
 	line_t *ld;
 
 	if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
@@ -1003,7 +929,6 @@ boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean (*func)(line_t *))
 
 	offset = y*bmapwidth + x;
 
-#ifdef POLYOBJECTS
 	// haleyjd 02/22/06: consider polyobject lines
 	plink = polyblocklinks[offset];
 
@@ -1027,7 +952,6 @@ boolean P_BlockLinesIterator(INT32 x, INT32 y, boolean (*func)(line_t *))
 		}
 		plink = (polymaplink_t *)(plink->link.next);
 	}
-#endif
 
 	offset = *(blockmap + offset); // offset = blockmap[y*bmapwidth+x];
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,6 +15,7 @@
 #define __R_PORTAL__
 
 #include "r_data.h"
+#include "r_textures.h"
 #include "r_plane.h" // visplanes
 
 /** Portal structure for the software renderer.
@@ -45,6 +46,7 @@ extern portal_t* portal_cap;
 extern UINT8 portalrender;
 
 extern line_t *portalclipline;
+extern sector_t *portalcullsector;
 extern INT32 portalclipstart, portalclipend;
 
 void Portal_InitList	(void);

@@ -1,7 +1,7 @@
 ;; SONIC ROBO BLAST 2
 ;;-----------------------------------------------------------------------------
 ;; Copyright (C) 1998-2000 by DooM Legacy Team.
-;; Copyright (C) 1999-2019 by Sonic Team Junior.
+;; Copyright (C) 1999-2020 by Sonic Team Junior.
 ;;
 ;; This program is free software distributed under the
 ;; terms of the GNU General Public License, version 2.
@@ -763,8 +763,8 @@ TX2             EQU    16
 TY2             EQU    20
 RASTERY_SIZEOF  EQU    24
 
-cglobal rasterize_segment_tex
-rasterize_segment_tex:
+cglobal rasterize_segment_tex_asm
+rasterize_segment_tex_asm:
         push    ebp
         mov     ebp,esp
 

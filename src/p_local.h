@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -66,9 +66,7 @@ typedef enum
 	THINK_POLYOBJ,
 	THINK_MAIN,
 	THINK_MOBJ,
-#ifdef ESLOPE
 	THINK_DYNSLOPE,
-#endif
 	THINK_PRECIP,
 	NUM_THINKERLISTS
 } thinklistnum_t; /**< Thinker lists. */
@@ -115,10 +113,14 @@ typedef struct camera_s
 
 extern camera_t camera, camera2;
 extern consvar_t cv_cam_dist, cv_cam_still, cv_cam_height;
-extern consvar_t cv_cam_speed, cv_cam_rotate, cv_cam_rotspeed, cv_cam_orbit, cv_cam_adjust;
+extern consvar_t cv_cam_speed, cv_cam_rotate, cv_cam_rotspeed, cv_cam_turnmultiplier, cv_cam_orbit, cv_cam_adjust;
 
 extern consvar_t cv_cam2_dist, cv_cam2_still, cv_cam2_height;
-extern consvar_t cv_cam2_speed, cv_cam2_rotate, cv_cam2_rotspeed, cv_cam2_orbit, cv_cam2_adjust;
+extern consvar_t cv_cam2_speed, cv_cam2_rotate, cv_cam2_rotspeed, cv_cam2_turnmultiplier, cv_cam2_orbit, cv_cam2_adjust;
+
+extern consvar_t cv_cam_savedist[2][2], cv_cam_saveheight[2][2];
+void CV_UpdateCamDist(void);
+void CV_UpdateCam2Dist(void);
 
 extern fixed_t t_cam_dist, t_cam_height, t_cam_rotate;
 extern fixed_t t_cam2_dist, t_cam2_height, t_cam2_rotate;
@@ -136,6 +138,11 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);
 void P_ResetPlayer(player_t *player);
 boolean P_PlayerCanDamage(player_t *player, mobj_t *thing);
 boolean P_IsLocalPlayer(player_t *player);
+void P_SetPlayerAngle(player_t *player, angle_t angle);
+angle_t P_GetLocalAngle(player_t *player);
+void P_SetLocalAngle(player_t *player, angle_t angle);
+void P_ForceLocalAngle(player_t *player, angle_t angle);
+boolean P_PlayerFullbright(player_t *player);
 
 boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
@@ -155,6 +162,7 @@ void P_GivePlayerLives(player_t *player, INT32 numlives);
 void P_GiveCoopLives(player_t *player, INT32 numlives, boolean sound);
 UINT8 P_GetNextEmerald(void);
 void P_GiveEmerald(boolean spawnObj);
+void P_GiveFinishFlags(player_t *player);
 #if 0
 void P_ResetScore(player_t *player);
 #else
@@ -168,7 +176,9 @@ void P_DoAbilityBounce(player_t *player, boolean changemomz);
 void P_TwinSpinRejuvenate(player_t *player, mobjtype_t type);
 void P_BlackOw(player_t *player);
 void P_ElementalFire(player_t *player, boolean cropcircle);
+void P_SpawnSkidDust(player_t *player, fixed_t radius, boolean sound);
 
+void P_MovePlayer(player_t *player);
 void P_DoPityCheck(player_t *player);
 void P_PlayerThink(player_t *player);
 void P_PlayerAfterThink(player_t *player);
@@ -181,16 +191,15 @@ fixed_t P_ReturnThrustX(mobj_t *mo, angle_t angle, fixed_t move);
 fixed_t P_ReturnThrustY(mobj_t *mo, angle_t angle, fixed_t move);
 void P_InstaThrustEvenIn2D(mobj_t *mo, angle_t angle, fixed_t move);
 
+mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction, UINT8 lockonflags);
+
 mobj_t *P_LookForEnemies(player_t *player, boolean nonenemies, boolean bullet);
 void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius);
+void P_Earthquake(mobj_t *inflictor, mobj_t *source, fixed_t radius);
 boolean P_HomingAttack(mobj_t *source, mobj_t *enemy); /// \todo doesn't belong in p_user
 boolean P_SuperReady(player_t *player);
 void P_DoJump(player_t *player, boolean soundandstate);
-#if 0
-boolean P_AnalogMove(player_t *player);
-#else
-#define P_AnalogMove(player) (player->pflags & PF_ANALOGMODE)
-#endif
+#define P_AnalogMove(player) (P_ControlStyle(player) == CS_LMAOGALOG)
 boolean P_TransferToNextMare(player_t *player);
 UINT8 P_FindLowestMare(void);
 void P_FindEmerald(void);
@@ -247,7 +256,7 @@ extern jingle_t jingleinfo[NUMJINGLES];
 #define JINGLEPOSTFADE 1000
 
 void P_PlayJingle(player_t *player, jingletype_t jingletype);
-boolean P_EvaluateMusicStatus(UINT16 status);
+boolean P_EvaluateMusicStatus(UINT16 status, const char *musname);
 void P_PlayJingleMusic(player_t *player, const char *musname, UINT16 musflags, boolean looping, UINT16 status);
 
 //
@@ -264,6 +273,8 @@ extern mapthing_t *itemrespawnque[ITEMQUESIZE];
 extern tic_t itemrespawntime[ITEMQUESIZE];
 extern size_t iquehead, iquetail;
 extern consvar_t cv_gravity, cv_movebob;
+
+mobjtype_t P_GetMobjtype(UINT16 mthingtype);
 
 void P_RespawnSpecials(void);
 
@@ -380,9 +391,7 @@ extern mobj_t *tmfloorthing, *tmhitthing, *tmthing;
 extern camera_t *mapcampointer;
 extern fixed_t tmx;
 extern fixed_t tmy;
-#ifdef ESLOPE
 extern pslope_t *tmfloorslope, *tmceilingslope;
-#endif
 
 /* cphipps 2004/08/30 */
 extern void P_MapStart(void);
@@ -416,9 +425,10 @@ void P_DelPrecipSeclist(mprecipsecnode_t *node);
 void P_CreateSecNodeList(mobj_t *thing, fixed_t x, fixed_t y);
 void P_Initsecnode(void);
 
-void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype);
+void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype, boolean sightcheck);
 
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
+fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 boolean PIT_PushableMoved(mobj_t *thing);
 
 boolean P_DoSpring(mobj_t *spring, mobj_t *object);
@@ -484,6 +494,7 @@ void P_PlayerWeaponPanelOrAmmoBurst(player_t *player);
 void P_PlayerEmeraldBurst(player_t *player, boolean toss);
 
 void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck);
+void P_TouchStarPost(mobj_t *starpost, player_t *player, boolean snaptopost);
 void P_PlayerFlagBurst(player_t *player, boolean toss);
 void P_CheckTimeLimit(void);
 void P_CheckPointLimit(void);

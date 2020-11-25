@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2019 by Sonic Team Junior.
+// Copyright (C) 2015-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,8 +22,6 @@
 #include "r_main.h"
 #include "p_maputl.h"
 #include "w_wad.h"
-
-#ifdef ESLOPE
 
 pslope_t *slopelist = NULL;
 UINT16 slopecount = 0;
@@ -50,10 +48,10 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 	// Set some defaults for a non-sloped "slope"
 	if (vec1.z == 0 && vec2.z == 0)
 	{
-		/// \todo Fix fully flat cases.
-
 		slope->zangle = slope->xydirection = 0;
 		slope->zdelta = slope->d.x = slope->d.y = 0;
+		slope->normal.x = slope->normal.y = 0;
+		slope->normal.z = FRACUNIT;
 	}
 	else
 	{
@@ -141,7 +139,7 @@ void T_DynamicSlopeVert (dynplanethink_t* th)
 	INT32 l;
 
 	for (i = 0; i < 3; i++) {
-		l = P_FindSpecialLineFromTag(799, th->tags[i], -1);
+		l = Tag_FindLineSpecial(799, th->tags[i]);
 		if (l != -1) {
 			th->vex[i].z = lines[l].frontsector->floorheight;
 		}
@@ -247,32 +245,30 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 	// because checking to see if a slope had changed will waste more memory than
 	// if the slope was just updated when called
 	line_t *line = lines + linenum;
-	INT16 special = line->special;
 	pslope_t *fslope = NULL, *cslope = NULL;
 	vector3_t origin, point;
 	vector2_t direction;
 	fixed_t nx, ny, dz, extent;
 
-	boolean frontfloor = (special == 700 || special == 702 || special == 703);
-	boolean backfloor  = (special == 710 || special == 712 || special == 713);
-	boolean frontceil  = (special == 701 || special == 702 || special == 713);
-	boolean backceil   = (special == 711 || special == 712 || special == 703);
-
+	boolean frontfloor = line->args[0] == TMS_FRONT;
+	boolean backfloor = line->args[0] == TMS_BACK;
+	boolean frontceil = line->args[1] == TMS_FRONT;
+	boolean backceil = line->args[1] == TMS_BACK;
 	UINT8 flags = 0; // Slope flags
-	if (line->flags & ML_NETONLY)
+	if (line->args[2] & TMSL_NOPHYSICS)
 		flags |= SL_NOPHYSICS;
-	if (line->flags & ML_NONET)
+	if (line->args[2] & TMSL_DYNAMIC)
 		flags |= SL_DYNAMIC;
 
 	if(!frontfloor && !backfloor && !frontceil && !backceil)
 	{
-		CONS_Printf("P_SpawnSlope_Line called with non-slope line special.\n");
+		CONS_Printf("line_SpawnViaLine: Slope special with nothing to do.\n");
 		return;
 	}
 
 	if(!line->frontsector || !line->backsector)
 	{
-		CONS_Debug(DBG_SETUP, "P_SpawnSlope_Line used on a line without two sides. (line number %i)\n", linenum);
+		CONS_Debug(DBG_SETUP, "line_SpawnViaLine: Slope special used on a line without two sides. (line number %i)\n", linenum);
 		return;
 	}
 
@@ -299,7 +295,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 
 		if(extent < 0)
 		{
-			CONS_Printf("P_SpawnSlope_Line failed to get frontsector extent on line number %i\n", linenum);
+			CONS_Printf("line_SpawnViaLine failed to get frontsector extent on line number %i\n", linenum);
 			return;
 		}
 
@@ -365,7 +361,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 
 		if(extent < 0)
 		{
-			CONS_Printf("P_SpawnSlope_Line failed to get backsector extent on line number %i\n", linenum);
+			CONS_Printf("line_SpawnViaLine failed to get backsector extent on line number %i\n", linenum);
 			return;
 		}
 
@@ -409,9 +405,6 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 				P_AddDynSlopeThinker(cslope, DP_BACKCEIL, line, extent, NULL, NULL);
 		}
 	}
-
-	if(!line->tag)
-		return;
 }
 
 /// Creates a new slope from three mapthings with the specified IDs
@@ -430,11 +423,11 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 		if (mt->type != 750) // Haha, I'm hijacking the old Chaos Spawn thingtype for something!
 			continue;
 
-		if (!vertices[0] && mt->angle == tag1)
+		if (!vertices[0] && Tag_Find(&mt->tags, tag1))
 			vertices[0] = mt;
-		else if (!vertices[1] && mt->angle == tag2)
+		else if (!vertices[1] && Tag_Find(&mt->tags, tag2))
 			vertices[1] = mt;
-		else if (!vertices[2] && mt->angle == tag3)
+		else if (!vertices[2] && Tag_Find(&mt->tags, tag3))
 			vertices[2] = mt;
 	}
 
@@ -445,10 +438,9 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 			I_Error("MakeViaMapthings: Slope vertex %s (for linedef tag %d) not found!", sizeu1(i), tag1);
 		vx[i].x = mt->x << FRACBITS;
 		vx[i].y = mt->y << FRACBITS;
-		if (mt->extrainfo)
-			vx[i].z = mt->options << FRACBITS;
-		else
-			vx[i].z = (R_PointInSubsector(mt->x << FRACBITS, mt->y << FRACBITS)->sector->floorheight) + ((mt->options >> ZSHIFT) << FRACBITS);
+		vx[i].z = mt->z << FRACBITS;
+		if (!mt->extrainfo)
+			vx[i].z += R_PointInSubsector(vx[i].x, vx[i].y)->sector->floorheight;
 	}
 
 	ReconfigureViaVertexes(ret, vx[0], vx[1], vx[2]);
@@ -459,55 +451,137 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 	return ret;
 }
 
-/// Create vertex based slopes.
-static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
+/// Create vertex based slopes using tagged mapthings.
+static void line_SpawnViaMapthingVertexes(const int linenum, const boolean spawnthinker)
 {
 	line_t *line = lines + linenum;
 	side_t *side;
 	pslope_t **slopetoset;
-	UINT16 tag1, tag2, tag3;
-
-	UINT8 flags = 0;
-	if (line->flags & ML_NETONLY)
+	UINT16 tag1 = line->args[1];
+	UINT16 tag2 = line->args[2];
+	UINT16 tag3 = line->args[3];
+	UINT8 flags = 0; // Slope flags
+	if (line->args[4] & TMSL_NOPHYSICS)
 		flags |= SL_NOPHYSICS;
-	if (line->flags & ML_NONET)
+	if (line->args[4] & TMSL_DYNAMIC)
 		flags |= SL_DYNAMIC;
 
-	switch(line->special)
+	switch(line->args[0])
 	{
-	case 704:
+	case TMSP_FRONTFLOOR:
 		slopetoset = &line->frontsector->f_slope;
 		side = &sides[line->sidenum[0]];
 		break;
-	case 705:
+	case TMSP_FRONTCEILING:
 		slopetoset = &line->frontsector->c_slope;
 		side = &sides[line->sidenum[0]];
 		break;
-	case 714:
+	case TMSP_BACKFLOOR:
 		slopetoset = &line->backsector->f_slope;
 		side = &sides[line->sidenum[1]];
 		break;
-	case 715:
+	case TMSP_BACKCEILING:
 		slopetoset = &line->backsector->c_slope;
 		side = &sides[line->sidenum[1]];
 	default:
 		return;
 	}
 
-	if (line->flags & ML_EFFECT6)
-	{
-		tag1 = line->tag;
-		tag2 = side->textureoffset >> FRACBITS;
-		tag3 = side->rowoffset >> FRACBITS;
-	}
-	else
-		tag1 = tag2 = tag3 = line->tag;
-
 	*slopetoset = MakeViaMapthings(tag1, tag2, tag3, flags, spawnthinker);
 
 	side->sector->hasslope = true;
 }
 
+/// Spawn textmap vertex slopes.
+static void SpawnVertexSlopes(void)
+{
+	line_t *l1, *l2;
+	sector_t* sc;
+	vertex_t *v1, *v2, *v3;
+	size_t i;
+	for (i = 0, sc = sectors; i < numsectors; i++, sc++)
+	{
+		// The vertex slopes only work for 3-vertex sectors (and thus 3-sided sectors).
+		if (sc->linecount != 3)
+			continue;
+
+		l1 = sc->lines[0];
+		l2 = sc->lines[1];
+
+		// Determine the vertexes.
+		v1 = l1->v1;
+		v2 = l1->v2;
+		if ((l2->v1 != v1) && (l2->v1 != v2))
+			v3 = l2->v1;
+		else
+			v3 = l2->v2;
+
+		if (v1->floorzset || v2->floorzset || v3->floorzset)
+		{
+			vector3_t vtx[3] = {
+				{v1->x, v1->y, v1->floorzset ? v1->floorz : sc->floorheight},
+				{v2->x, v2->y, v2->floorzset ? v2->floorz : sc->floorheight},
+				{v3->x, v3->y, v3->floorzset ? v3->floorz : sc->floorheight}};
+			pslope_t *slop = Slope_Add(0);
+			sc->f_slope = slop;
+			sc->hasslope = true;
+			ReconfigureViaVertexes(slop, vtx[0], vtx[1], vtx[2]);
+		}
+
+		if (v1->ceilingzset || v2->ceilingzset || v3->ceilingzset)
+		{
+			vector3_t vtx[3] = {
+				{v1->x, v1->y, v1->ceilingzset ? v1->ceilingz : sc->ceilingheight},
+				{v2->x, v2->y, v2->ceilingzset ? v2->ceilingz : sc->ceilingheight},
+				{v3->x, v3->y, v3->ceilingzset ? v3->ceilingz : sc->ceilingheight}};
+			pslope_t *slop = Slope_Add(0);
+			sc->c_slope = slop;
+			sc->hasslope = true;
+			ReconfigureViaVertexes(slop, vtx[0], vtx[1], vtx[2]);
+		}
+	}
+}
+
+static boolean P_SetSlopeFromTag(sector_t *sec, INT32 tag, boolean ceiling)
+{
+	INT32 i;
+	pslope_t **secslope = ceiling ? &sec->c_slope : &sec->f_slope;
+	TAG_ITER_DECLARECOUNTER(0);
+
+	if (!tag || *secslope)
+		return false;
+	TAG_ITER_SECTORS(0, tag, i)
+	{
+		pslope_t *srcslope = ceiling ? sectors[i].c_slope : sectors[i].f_slope;
+		if (srcslope)
+		{
+			*secslope = srcslope;
+			return true;
+		}
+	}
+	return false;
+}
+
+static boolean P_CopySlope(pslope_t **toslope, pslope_t *fromslope)
+{
+	if (*toslope || !fromslope)
+		return true;
+
+	*toslope = fromslope;
+	return true;
+}
+
+static void P_UpdateHasSlope(sector_t *sec)
+{
+	size_t i;
+
+	sec->hasslope = true;
+
+	// if this is an FOF control sector, make sure any target sectors also are marked as having slopes
+	if (sec->numattached)
+		for (i = 0; i < sec->numattached; i++)
+			sectors[sec->attached[i]].hasslope = true;
+}
 
 //
 // P_CopySectorSlope
@@ -517,25 +591,31 @@ static void line_SpawnViaVertexes(const int linenum, const boolean spawnthinker)
 void P_CopySectorSlope(line_t *line)
 {
 	sector_t *fsec = line->frontsector;
-	int i, special = line->special;
+	sector_t *bsec = line->backsector;
+	boolean setfront = false;
+	boolean setback = false;
 
-	// Check for copy linedefs
-	for (i = -1; (i = P_FindSectorFromLineTag(line, i)) >= 0;)
+	setfront |= P_SetSlopeFromTag(fsec, line->args[0], false);
+	setfront |= P_SetSlopeFromTag(fsec, line->args[1], true);
+	if (bsec)
 	{
-		sector_t *srcsec = sectors + i;
+		setback |= P_SetSlopeFromTag(bsec, line->args[2], false);
+		setback |= P_SetSlopeFromTag(bsec, line->args[3], true);
 
-		if ((special - 719) & 1 && !fsec->f_slope && srcsec->f_slope)
-			fsec->f_slope = srcsec->f_slope; //P_CopySlope(srcsec->f_slope);
-		if ((special - 719) & 2 && !fsec->c_slope && srcsec->c_slope)
-			fsec->c_slope = srcsec->c_slope; //P_CopySlope(srcsec->c_slope);
+		if (line->args[4] & TMSC_FRONTTOBACKFLOOR)
+			setback |= P_CopySlope(&bsec->f_slope, fsec->f_slope);
+		if (line->args[4] & TMSC_BACKTOFRONTFLOOR)
+			setfront |= P_CopySlope(&fsec->f_slope, bsec->f_slope);
+		if (line->args[4] & TMSC_FRONTTOBACKCEILING)
+			setback |= P_CopySlope(&bsec->c_slope, fsec->c_slope);
+		if (line->args[4] & TMSC_BACKTOFRONTCEILING)
+			setfront |= P_CopySlope(&fsec->c_slope, bsec->c_slope);
 	}
 
-	fsec->hasslope = true;
-
-	// if this is an FOF control sector, make sure any target sectors also are marked as having slopes
-	if (fsec->numattached)
-		for (i = 0; i < (int)fsec->numattached; i++)
-			sectors[fsec->attached[i]].hasslope = true;
+	if (setfront)
+		P_UpdateHasSlope(fsec);
+	if (setback)
+		P_UpdateHasSlope(bsec);
 
 	line->special = 0; // Linedef was use to set slopes, it finished its job, so now make it a normal linedef
 }
@@ -552,14 +632,15 @@ pslope_t *P_SlopeById(UINT16 id)
 	return ret;
 }
 
-/// Reset slopes and read them from special lines.
-void P_ResetDynamicSlopes(const UINT32 fromsave) {
+/// Initializes and reads the slopes from the map data.
+void P_SpawnSlopes(const boolean fromsave) {
 	size_t i;
-
-	boolean spawnthinkers = !(boolean)fromsave;
 
 	slopelist = NULL;
 	slopecount = 0;
+
+	/// Generates vertex slopes.
+	SpawnVertexSlopes();
 
 	/// Generates line special-defined slopes.
 	for (i = 0; i < numlines; i++)
@@ -567,21 +648,11 @@ void P_ResetDynamicSlopes(const UINT32 fromsave) {
 		switch (lines[i].special)
 		{
 			case 700:
-			case 701:
-			case 702:
-			case 703:
-			case 710:
-			case 711:
-			case 712:
-			case 713:
-				line_SpawnViaLine(i, spawnthinkers);
+				line_SpawnViaLine(i, !fromsave);
 				break;
 
 			case 704:
-			case 705:
-			case 714:
-			case 715:
-				line_SpawnViaVertexes(i, spawnthinkers);
+				line_SpawnViaMapthingVertexes(i, !fromsave);
 				break;
 
 			default:
@@ -595,8 +666,6 @@ void P_ResetDynamicSlopes(const UINT32 fromsave) {
 		switch (lines[i].special)
 		{
 			case 720:
-			case 721:
-			case 722:
 				P_CopySectorSlope(&lines[i]);
 			default:
 				break;
@@ -608,17 +677,49 @@ void P_ResetDynamicSlopes(const UINT32 fromsave) {
 // Various utilities related to slopes
 //
 
-//
-// P_GetZAt
-//
 // Returns the height of the sloped plane at (x, y) as a fixed_t
-//
-fixed_t P_GetZAt(pslope_t *slope, fixed_t x, fixed_t y)
+fixed_t P_GetSlopeZAt(const pslope_t *slope, fixed_t x, fixed_t y)
 {
-   fixed_t dist = FixedMul(x - slope->o.x, slope->d.x) +
-                  FixedMul(y - slope->o.y, slope->d.y);
+	fixed_t dist = FixedMul(x - slope->o.x, slope->d.x) +
+	               FixedMul(y - slope->o.y, slope->d.y);
 
-   return slope->o.z + FixedMul(dist, slope->zdelta);
+	return slope->o.z + FixedMul(dist, slope->zdelta);
+}
+
+// Like P_GetSlopeZAt but falls back to z if slope is NULL
+fixed_t P_GetZAt(const pslope_t *slope, fixed_t x, fixed_t y, fixed_t z)
+{
+	return slope ? P_GetSlopeZAt(slope, x, y) : z;
+}
+
+// Returns the height of the sector floor at (x, y)
+fixed_t P_GetSectorFloorZAt(const sector_t *sector, fixed_t x, fixed_t y)
+{
+	return sector->f_slope ? P_GetSlopeZAt(sector->f_slope, x, y) : sector->floorheight;
+}
+
+// Returns the height of the sector ceiling at (x, y)
+fixed_t P_GetSectorCeilingZAt(const sector_t *sector, fixed_t x, fixed_t y)
+{
+	return sector->c_slope ? P_GetSlopeZAt(sector->c_slope, x, y) : sector->ceilingheight;
+}
+
+// Returns the height of the FOF top at (x, y)
+fixed_t P_GetFFloorTopZAt(const ffloor_t *ffloor, fixed_t x, fixed_t y)
+{
+	return *ffloor->t_slope ? P_GetSlopeZAt(*ffloor->t_slope, x, y) : *ffloor->topheight;
+}
+
+// Returns the height of the FOF bottom  at (x, y)
+fixed_t P_GetFFloorBottomZAt(const ffloor_t *ffloor, fixed_t x, fixed_t y)
+{
+	return *ffloor->b_slope ? P_GetSlopeZAt(*ffloor->b_slope, x, y) : *ffloor->bottomheight;
+}
+
+// Returns the height of the light list at (x, y)
+fixed_t P_GetLightZAt(const lightlist_t *light, fixed_t x, fixed_t y)
+{
+	return light->slope ? P_GetSlopeZAt(light->slope, x, y) : light->height;
 }
 
 
@@ -657,7 +758,9 @@ void P_ReverseQuantizeMomentumToSlope(vector3_t *momentum, pslope_t *slope)
 // Handles slope ejection for objects
 void P_SlopeLaunch(mobj_t *mo)
 {
-	if (!(mo->standingslope->flags & SL_NOPHYSICS)) // If there's physics, time for launching.
+	if (!(mo->standingslope->flags & SL_NOPHYSICS) // If there's physics, time for launching.
+		&& (mo->standingslope->normal.x != 0
+		||  mo->standingslope->normal.y != 0))
 	{
 		// Double the pre-rotation Z, then halve the post-rotation Z. This reduces the
 		// vertical launch given from slopes while increasing the horizontal launch
@@ -675,6 +778,9 @@ void P_SlopeLaunch(mobj_t *mo)
 
 	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
+
+	if (mo->player)
+		mo->player->powers[pw_justlaunched] = 1;
 }
 
 //
@@ -714,8 +820,7 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 {
 	vector3_t mom; // Ditto.
-
-	if (slope->flags & SL_NOPHYSICS) { // No physics, no need to make anything complicated.
+	if (slope->flags & SL_NOPHYSICS || (slope->normal.x == 0 && slope->normal.y == 0)) { // No physics, no need to make anything complicated.
 		if (P_MobjFlip(thing)*(thing->momz) < 0) // falling, land on slope
 		{
 			thing->standingslope = slope;
@@ -791,6 +896,3 @@ void P_ButteredSlope(mobj_t *mo)
 
 	P_Thrust(mo, mo->standingslope->xydirection, thrust);
 }
-
-// EOF
-#endif // #ifdef ESLOPE

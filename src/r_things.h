@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,30 +14,28 @@
 #ifndef __R_THINGS__
 #define __R_THINGS__
 
-#include "sounds.h"
 #include "r_plane.h"
 #include "r_patch.h"
+#include "r_picformats.h"
 #include "r_portal.h"
 #include "r_defs.h"
+#include "r_skins.h"
 
-// "Left" and "Right" character symbols for additional rotation functionality
-#define ROT_L ('L' - '0')
-#define ROT_R ('R' - '0')
-
-// number of sprite lumps for spritewidth,offset,topoffset lookup tables
-// Fab: this is a hack : should allocate the lookup tables per sprite
-#define MAXVISSPRITES 2048 // added 2-2-98 was 128
-
-#define VISSPRITECHUNKBITS 6	// 2^6 = 64 sprites per chunk
-#define VISSPRITESPERCHUNK (1 << VISSPRITECHUNKBITS)
-#define VISSPRITEINDEXMASK (VISSPRITESPERCHUNK - 1)
+// --------------
+// SPRITE LOADING
+// --------------
 
 #define FEETADJUST (4<<FRACBITS) // R_AddSingleSpriteDef
 
-// Constant arrays used for psprite clipping
-//  and initializing clipping.
-extern INT16 negonearray[MAXVIDWIDTH];
-extern INT16 screenheightarray[MAXVIDWIDTH];
+boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump);
+
+//faB: find sprites in wadfile, replace existing, add new ones
+//     (only sprites from namelist are added or replaced)
+void R_AddSpriteDefs(UINT16 wadnum);
+
+// ---------------------
+// MASKED COLUMN DRAWING
+// ---------------------
 
 // vars for R_DrawMaskedColumn
 extern INT16 *mfloorclip;
@@ -47,20 +45,48 @@ extern fixed_t sprtopscreen;
 extern fixed_t sprbotscreen;
 extern fixed_t windowtop;
 extern fixed_t windowbottom;
+extern INT32 lengthcol;
 
 void R_DrawMaskedColumn(column_t *column);
-void R_DrawFlippedMaskedColumn(column_t *column, INT32 texheight);
+void R_DrawFlippedMaskedColumn(column_t *column);
 
-//faB: find sprites in wadfile, replace existing, add new ones
-//     (only sprites from namelist are added or replaced)
-void R_AddSpriteDefs(UINT16 wadnum);
+// ----------------
+// SPRITE RENDERING
+// ----------------
+
+// Constant arrays used for psprite clipping
+//  and initializing clipping.
+extern INT16 negonearray[MAXVIDWIDTH];
+extern INT16 screenheightarray[MAXVIDWIDTH];
+
+fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope);
 
 //SoM: 6/5/2000: Light sprites correctly!
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
-void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
 
+boolean R_ThingVisible (mobj_t *thing);
+
+boolean R_ThingVisibleWithinDist (mobj_t *thing,
+		fixed_t        draw_dist,
+		fixed_t nights_draw_dist);
+
+boolean R_PrecipThingVisible (precipmobj_t *precipthing,
+		fixed_t precip_draw_dist);
+
+boolean R_ThingHorizontallyFlipped (mobj_t *thing);
+boolean R_ThingVerticallyFlipped (mobj_t *thing);
+
+boolean R_ThingIsPaperSprite (mobj_t *thing);
+boolean R_ThingIsFloorSprite (mobj_t *thing);
+
+boolean R_ThingIsFullBright (mobj_t *thing);
+boolean R_ThingIsFullDark (mobj_t *thing);
+
+// --------------
+// MASKED DRAWING
+// --------------
 /** Used to count the amount of masked elements
  * per portal to later group them in separate
  * drawnode lists.
@@ -75,88 +101,38 @@ typedef struct
 
 void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
 
-// -----------
-// SKINS STUFF
-// -----------
-#define SKINNAMESIZE 16
-// should be all lowercase!! S_SKIN processing does a strlwr
-#define DEFAULTSKIN "sonic"
-#define DEFAULTSKIN2 "tails" // secondary player
-#define DEFAULTNIGHTSSKIN 0
+// ----------
+// VISSPRITES
+// ----------
 
-typedef struct
-{
-	char name[SKINNAMESIZE+1]; // INT16 descriptive name of the skin
-	UINT16 wadnum;
-	skinflags_t flags;
+// number of sprite lumps for spritewidth,offset,topoffset lookup tables
+// Fab: this is a hack : should allocate the lookup tables per sprite
+#define MAXVISSPRITES 2048 // added 2-2-98 was 128
 
-	char realname[SKINNAMESIZE+1]; // Display name for level completion.
-	char hudname[SKINNAMESIZE+1]; // HUD name to display (officially exactly 5 characters long)
+#define VISSPRITECHUNKBITS 6	// 2^6 = 64 sprites per chunk
+#define VISSPRITESPERCHUNK (1 << VISSPRITECHUNKBITS)
+#define VISSPRITEINDEXMASK (VISSPRITESPERCHUNK - 1)
 
-	UINT8 ability; // ability definition
-	UINT8 ability2; // secondary ability definition
-	INT32 thokitem;
-	INT32 spinitem;
-	INT32 revitem;
-	INT32 followitem;
-	fixed_t actionspd;
-	fixed_t mindash;
-	fixed_t maxdash;
-
-	fixed_t normalspeed; // Normal ground
-	fixed_t runspeed; // Speed that you break into your run animation
-
-	UINT8 thrustfactor; // Thrust = thrustfactor * acceleration
-	UINT8 accelstart; // Acceleration if speed = 0
-	UINT8 acceleration; // Acceleration
-
-	fixed_t jumpfactor; // multiple of standard jump height
-
-	fixed_t radius; // Bounding box changes.
-	fixed_t height;
-	fixed_t spinheight;
-
-	fixed_t shieldscale; // no change to bounding box, but helps set the shield's sprite size
-	fixed_t camerascale;
-
-	// Definable color translation table
-	UINT8 starttranscolor;
-	UINT8 prefcolor;
-	UINT8 supercolor;
-	UINT8 prefoppositecolor; // if 0 use tables instead
-
-	fixed_t highresscale; // scale of highres, default is 0.5
-	UINT8 contspeed; // continue screen animation speed
-	UINT8 contangle; // initial angle on continue screen
-
-	// specific sounds per skin
-	sfxenum_t soundsid[NUMSKINSOUNDS]; // sound # in S_sfx table
-
-	// contains super versions too
-	spritedef_t sprites[NUMPLAYERSPRITES*2];
-	spriteinfo_t sprinfo[NUMPLAYERSPRITES*2];
-
-	UINT8 availability; // lock?
-} skin_t;
-
-// -----------
-// NOT SKINS STUFF !
-// -----------
 typedef enum
 {
 	// actual cuts
-	SC_NONE = 0,
-	SC_TOP = 1,
-	SC_BOTTOM = 1<<1,
+	SC_NONE       = 0,
+	SC_TOP        = 1,
+	SC_BOTTOM     = 1<<1,
 	// other flags
-	SC_PRECIP = 1<<2,
-	SC_LINKDRAW = 1<<3,
+	SC_PRECIP     = 1<<2,
+	SC_LINKDRAW   = 1<<3,
 	SC_FULLBRIGHT = 1<<4,
-	SC_VFLIP = 1<<5,
-	SC_ISSCALED = 1>>6,
+	SC_FULLDARK   = 1<<5,
+	SC_VFLIP      = 1<<6,
+	SC_ISSCALED   = 1<<7,
+	SC_ISROTATED  = 1<<8,
+	SC_SHADOW     = 1<<9,
+	SC_SHEAR      = 1<<10,
+	SC_SPLAT      = 1<<11,
 	// masks
-	SC_CUTMASK = SC_TOP|SC_BOTTOM,
-	SC_FLAGMASK = ~SC_CUTMASK
+	SC_CUTMASK    = SC_TOP|SC_BOTTOM,
+	SC_FLAGMASK   = ~SC_CUTMASK
 } spritecut_e;
 
 // A vissprite_t is a thing that will be drawn during a refresh,
@@ -179,9 +155,19 @@ typedef struct vissprite_s
 	fixed_t pz, pzt; // physical bottom/top for sorting with 3D floors
 
 	fixed_t startfrac; // horizontal position of x1
-	fixed_t scale, sortscale; // sortscale only differs from scale for paper sprites and MF2_LINKDRAW
+	fixed_t scale;
+	fixed_t sortscale; // sortscale only differs from scale for paper sprites, floor sprites, and MF2_LINKDRAW
+	fixed_t sortsplat; // the sortscale from behind the floor sprite
 	fixed_t scalestep; // only for paper sprites, 0 otherwise
+	fixed_t paperoffset, paperdistance; // for paper sprites, offset/dist relative to the angle
 	fixed_t xiscale; // negative if flipped
+
+	angle_t centerangle; // for paper sprites
+
+	struct {
+		fixed_t tan; // The amount to shear the sprite vertically per row
+		INT32 offset; // The center of the shearing location offset from x1
+	} shear;
 
 	fixed_t texturemid;
 	patch_t *patch;
@@ -205,11 +191,30 @@ typedef struct vissprite_s
 	INT16 sz, szt;
 
 	spritecut_e cut;
+	UINT32 renderflags;
+	UINT8 rotateflags;
+
+	fixed_t spritexscale, spriteyscale;
+	fixed_t spritexoffset, spriteyoffset;
+
+	fixed_t shadowscale;
 
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 } vissprite_t;
+
+extern UINT32 visspritecount;
+
+void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
+void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, portal_t* portal);
+
+boolean R_SpriteIsFlashing(vissprite_t *vis);
+UINT8 *R_GetSpriteTranslation(vissprite_t *vis);
+
+// ----------
+// DRAW NODES
+// ----------
 
 // A drawnode is something that points to a 3D floor, 3D side, or masked
 // middle texture. This is used for sorting with sprites.
@@ -225,23 +230,11 @@ typedef struct drawnode_s
 	struct drawnode_s *prev;
 } drawnode_t;
 
-extern INT32 numskins;
-extern skin_t skins[MAXSKINS];
-extern UINT32 visspritecount;
-
-void SetPlayerSkin(INT32 playernum,const char *skinname);
-void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
-boolean R_SkinUsable(INT32 playernum, INT32 skinnum);
-UINT32 R_GetSkinAvailabilities(void);
-INT32 R_SkinAvailable(const char *name);
-void R_PatchSkins(UINT16 wadnum);
-void R_AddSkins(UINT16 wadnum);
-
-UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
-
 void R_InitDrawNodes(void);
 
-char *GetPlayerFacePic(INT32 skinnum);
+// -----------------------
+// SPRITE FRAME CHARACTERS
+// -----------------------
 
 // Functions to go from sprite character ID to frame number
 // for 2.1 compatibility this still uses the old 'A' + frame code
@@ -270,7 +263,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
 	if (cn == '+') return '\\' - 'A'; // PK3 can't use backslash, so use + instead
 	return cn - 'A';
 #else
-	if (cn >= 'A' && cn <= 'Z') return cn - 'A';
+	if (cn >= 'A' && cn <= 'Z') return (cn - 'A');
 	if (cn >= '0' && cn <= '9') return (cn - '0') + 26;
 	if (cn >= 'a' && cn <= 'z') return (cn - 'a') + 36;
 	if (cn == '!') return 62;
@@ -279,9 +272,26 @@ FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Frame(char cn)
 #endif
 }
 
-FUNCMATH FUNCINLINE static ATTRINLINE boolean R_ValidSpriteAngle(UINT8 rotation)
+// "Left" and "Right" character symbols for additional rotation functionality
+#define ROT_L 17
+#define ROT_R 18
+
+FUNCMATH FUNCINLINE static ATTRINLINE char R_Rotation2Char(UINT8 rot)
 {
-	return ((rotation <= 8) || (rotation == ROT_L) || (rotation == ROT_R));
+	if (rot <=     9) return '0' + rot;
+	if (rot <=    16) return 'A' + (rot - 10);
+	if (rot == ROT_L) return 'L';
+	if (rot == ROT_R) return 'R';
+	return '\xFF';
+}
+
+FUNCMATH FUNCINLINE static ATTRINLINE UINT8 R_Char2Rotation(char cn)
+{
+	if (cn >= '0' && cn <= '9') return (cn - '0');
+	if (cn >= 'A' && cn <= 'G') return (cn - 'A') + 10;
+	if (cn == 'L') return ROT_L;
+	if (cn == 'R') return ROT_R;
+	return 255;
 }
 
 #endif //__R_THINGS__

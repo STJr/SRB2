@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,9 +16,13 @@
 
 #include "screen.h" // needs MAXVIDWIDTH/MAXVIDHEIGHT
 #include "r_data.h"
+#include "r_textures.h"
 #include "p_polyobj.h"
 
-#define MAXVISPLANES 512
+#define VISPLANEHASHBITS 9
+#define VISPLANEHASHMASK ((1<<VISPLANEHASHBITS)-1)
+// the last visplane list is outside of the hash table and is used for fof planes
+#define MAXVISPLANES ((1<<VISPLANEHASHBITS)+1)
 
 //
 // Now what is a visplane, anyway?
@@ -47,12 +51,8 @@ typedef struct visplane_s
 	fixed_t xoffs, yoffs; // Scrolling flats.
 
 	struct ffloor_s *ffloor;
-#ifdef POLYOBJECTS_PLANES
 	polyobj_t *polyobj;
-#endif
-#ifdef ESLOPE
 	pslope_t *slope;
-#endif
 } visplane_t;
 
 extern visplane_t *visplanes[MAXVISPLANES];
@@ -82,22 +82,19 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2);
 void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2);
 void R_DrawPlanes(void);
 visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel, fixed_t xoff, fixed_t yoff, angle_t plangle,
-	extracolormap_t *planecolormap, ffloor_t *ffloor
-#ifdef POLYOBJECTS_PLANES
-	, polyobj_t *polyobj
-#endif
-#ifdef ESLOPE
-	, pslope_t *slope
-#endif
-	);
+	extracolormap_t *planecolormap, ffloor_t *ffloor, polyobj_t *polyobj, pslope_t *slope);
 visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_PlaneBounds(visplane_t *plane);
 
-// Draws a single visplane.
-void R_DrawSinglePlane(visplane_t *pl);
 void R_CheckFlatLength(size_t size);
 boolean R_CheckPowersOfTwo(void);
+
+// Draws a single visplane.
+void R_DrawSinglePlane(visplane_t *pl);
+
+// Calculates the slope vectors needed for tilted span drawing.
+void R_CalculateSlopeVectors(pslope_t *slope, fixed_t planeviewx, fixed_t planeviewy, fixed_t planeviewz, fixed_t planexscale, fixed_t planeyscale, fixed_t planexoffset, fixed_t planeyoffset, angle_t planeviewangle, angle_t planeangle, float fudge);
 
 typedef struct planemgr_s
 {
@@ -110,18 +107,14 @@ typedef struct planemgr_s
 	INT16 f_clip[MAXVIDWIDTH];
 	INT16 c_clip[MAXVIDWIDTH];
 
-#ifdef ESLOPE
 	// For slope rendering; the height at the other end
 	fixed_t f_pos_slope;
 	fixed_t b_pos_slope;
 
 	struct pslope_s *slope;
-#endif
 
 	struct ffloor_s *ffloor;
-#ifdef POLYOBJECTS_PLANES
 	polyobj_t *polyobj;
-#endif
 } visffloor_t;
 
 extern visffloor_t ffloor[MAXFFLOORS];

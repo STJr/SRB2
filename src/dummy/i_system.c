@@ -16,6 +16,11 @@ tic_t I_GetTime(void)
 	return 0;
 }
 
+int I_GetTimeMicros(void)
+{
+	return 0;
+}
+
 void I_Sleep(void){}
 
 void I_GetEvent(void){}
@@ -149,6 +154,8 @@ void I_GetJoystickEvents(void){}
 void I_GetJoystick2Events(void){}
 
 void I_GetMouseEvents(void){}
+
+void I_UpdateMouseGrab(void){}
 
 char *I_GetEnv(const char *name)
 {

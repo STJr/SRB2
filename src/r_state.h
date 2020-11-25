@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -52,6 +52,8 @@ extern size_t numspritelumps, max_spritelumps;
 //
 // Lookup tables for map data.
 //
+extern boolean udmf;
+
 extern size_t numsprites;
 extern spritedef_t *sprites;
 
@@ -63,6 +65,7 @@ extern seg_t *segs;
 
 extern size_t numsectors;
 extern sector_t *sectors;
+extern sector_t *spawnsectors;
 
 extern size_t numsubsectors;
 extern subsector_t *subsectors;
@@ -72,9 +75,11 @@ extern node_t *nodes;
 
 extern size_t numlines;
 extern line_t *lines;
+extern line_t *spawnlines;
 
 extern size_t numsides;
 extern side_t *sides;
+extern side_t *spawnsides;
 
 //
 // POV data.
@@ -83,6 +88,7 @@ extern fixed_t viewx, viewy, viewz;
 extern angle_t viewangle, aimingangle;
 extern sector_t *viewsector;
 extern player_t *viewplayer;
+extern mobj_t *r_viewmobj;
 
 extern consvar_t cv_allowmlook;
 extern consvar_t cv_maxportals;

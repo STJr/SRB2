@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -80,7 +80,7 @@ typedef enum
 	gc_fire,
 	gc_firenormal,
 	gc_tossflag,
-	gc_use,
+	gc_spin,
 	gc_camtoggle,
 	gc_camreset,
 	gc_lookup,
@@ -132,6 +132,7 @@ extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; //
 extern INT32 gamecontrolbisdefault[num_gamecontrolschemes][num_gamecontrols][2];
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
+#define PLAYERINPUTDOWN(p, gc) ((p) == 2 ? PLAYER2INPUTDOWN(gc) : PLAYER1INPUTDOWN(gc))
 
 #define num_gcl_tutorial_check 6
 #define num_gcl_tutorial_used 8
@@ -140,8 +141,8 @@ extern INT32 gamecontrolbisdefault[num_gamecontrolschemes][num_gamecontrols][2];
 #define num_gcl_camera 2
 #define num_gcl_movement_camera 6
 #define num_gcl_jump 1
-#define num_gcl_use 1
-#define num_gcl_jump_use 2
+#define num_gcl_spin 1
+#define num_gcl_jump_spin 2
 
 extern const INT32 gcl_tutorial_check[num_gcl_tutorial_check];
 extern const INT32 gcl_tutorial_used[num_gcl_tutorial_used];
@@ -150,8 +151,8 @@ extern const INT32 gcl_movement[num_gcl_movement];
 extern const INT32 gcl_camera[num_gcl_camera];
 extern const INT32 gcl_movement_camera[num_gcl_movement_camera];
 extern const INT32 gcl_jump[num_gcl_jump];
-extern const INT32 gcl_use[num_gcl_use];
-extern const INT32 gcl_jump_use[num_gcl_jump_use];
+extern const INT32 gcl_spin[num_gcl_spin];
+extern const INT32 gcl_jump_spin[num_gcl_jump_spin];
 
 // peace to my little coder fingers!
 // check a gamecontrol being active or not

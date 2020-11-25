@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -66,11 +66,31 @@ typedef struct
 {
 	unsigned long position; // filelump_t filepos
 	unsigned long disksize; // filelump_t size
-	char name[9]; // filelump_t name[]
-	char *name2; // Used by PK3s. Dynamically allocated name.
-	size_t size; // real (uncompressed) size
+	char name[9];           // filelump_t name[] e.g. "LongEntr"
+	char *longname;         //                   e.g. "LongEntryName"
+	char *fullname;         //                   e.g. "Folder/Subfolder/LongEntryName.extension"
+	size_t size;            // real (uncompressed) size
 	compmethod compression; // lump compression method
 } lumpinfo_t;
+
+// =========================================================================
+//                         'VIRTUAL' RESOURCES
+// =========================================================================
+
+typedef struct {
+	char name[9];
+	UINT8* data;
+	size_t size;
+} virtlump_t;
+
+typedef struct {
+	size_t numlumps;
+	virtlump_t* vlumps;
+} virtres_t;
+
+virtres_t* vres_GetMap(lumpnum_t);
+void vres_Free(virtres_t*);
+virtlump_t* vres_Find(const virtres_t*, const char*);
 
 // =========================================================================
 //                         DYNAMIC WAD LOADING
@@ -81,10 +101,6 @@ typedef struct
 // (there is a max of simultaneous open files anyway, and this should be plenty)
 
 #define lumpcache_t void *
-
-#ifdef HWRENDER
-#include "m_aatree.h"
-#endif
 
 // Resource type of the WAD. Yeah, I know this sounds dumb, but I'll leave it like this until I clean up the code further.
 typedef enum restype
@@ -103,9 +119,6 @@ typedef struct wadfile_s
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
 	lumpcache_t *patchcache;
-#ifdef HWRENDER
-	aatree_t *hwrcache; // patches are cached in renderer's native format
-#endif
 	UINT16 numlumps; // this wad's number of resources
 	FILE *handle;
 	UINT32 filesize; // for network
@@ -127,16 +140,19 @@ void W_Shutdown(void);
 // Opens a WAD file. Returns the FILE * handle for the file, or NULL if not found or could not be opened
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
-UINT16 W_InitFile(const char *filename, boolean mainfile);
+UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup);
 
-// W_InitMultipleFiles returns 1 if all is okay, 0 otherwise,
-// so that it stops with a message if a file was not found, but not if all is okay.
-INT32 W_InitMultipleFiles(char **filenames, UINT16 mainfiles);
+// W_InitMultipleFiles exits if a file was not found, but not if all is okay.
+void W_InitMultipleFiles(char **filenames);
 
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);
 
 UINT16 W_CheckNumForNamePwad(const char *name, UINT16 wad, UINT16 startlump); // checks only in one pwad
+UINT16 W_CheckNumForLongNamePwad(const char *name, UINT16 wad, UINT16 startlump);
+
+/* Find the first lump after F_START for instance. */
+UINT16 W_CheckNumForMarkerStartPwad(const char *name, UINT16 wad, UINT16 startlump);
 
 UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump);
@@ -144,7 +160,9 @@ UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump)
 
 lumpnum_t W_CheckNumForMap(const char *name);
 lumpnum_t W_CheckNumForName(const char *name);
+lumpnum_t W_CheckNumForLongName(const char *name);
 lumpnum_t W_GetNumForName(const char *name); // like W_CheckNumForName but I_Error on LUMPERROR
+lumpnum_t W_GetNumForLongName(const char *name);
 lumpnum_t W_CheckNumForNameInBlock(const char *name, const char *blockstart, const char *blockend);
 UINT8 W_LumpExists(const char *name); // Lua uses this.
 
@@ -172,9 +190,17 @@ boolean W_IsPatchCached(lumpnum_t lump, void *ptr);
 
 void *W_CacheLumpName(const char *name, INT32 tag);
 void *W_CachePatchName(const char *name, INT32 tag);
+void *W_CachePatchLongName(const char *name, INT32 tag);
 
-void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag); // return a patch_t
-void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag); // return a patch_t
+// Returns either a Software patch, or an OpenGL patch.
+// Performs any necessary conversions from PNG images.
+void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
+void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag);
+
+// Returns a Software patch.
+// Performs any necessary conversions from PNG images.
+void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
+void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag);
 
 void W_UnlockCachedPatch(void *patch);
 

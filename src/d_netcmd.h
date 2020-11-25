@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -75,9 +75,6 @@ extern consvar_t cv_teamscramble;
 extern consvar_t cv_scrambleonchange;
 
 extern consvar_t cv_netstat;
-#ifdef WALLSPLATS
-extern consvar_t cv_splats;
-#endif
 
 extern consvar_t cv_countdowntime;
 extern consvar_t cv_runscripts;
@@ -114,6 +111,8 @@ extern consvar_t cv_skipmapcheck;
 
 extern consvar_t cv_sleep;
 
+extern consvar_t cv_perfstats;
+
 extern char timedemo_name[256];
 extern boolean timedemo_csv;
 extern char timedemo_csv_id[256];
@@ -142,10 +141,9 @@ typedef enum
 	XD_SETMOTD,     // 19
 	XD_SUICIDE,     // 20
 	XD_DEMOTED,     // 21
-#ifdef HAVE_BLUA
 	XD_LUACMD,      // 22
 	XD_LUAVAR,      // 23
-#endif
+	XD_LUAFILE,     // 24
 	MAXNETXCMD
 } netxcmd_t;
 
@@ -194,6 +192,7 @@ typedef union {
 // add game commands, needs cleanup
 void D_RegisterServerCommands(void);
 void D_RegisterClientCommands(void);
+void CleanupPlayerName(INT32 playernum, const char *newname);
 boolean EnsurePlayerNameIsGood(char *name, INT32 playernum);
 void D_SendPlayerConfig(void);
 void Command_ExitGame_f(void);

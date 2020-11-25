@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -72,10 +72,16 @@ typedef struct viddef_s
 #ifdef HWRENDER
 	INT32/*fixed_t*/ fsmalldupx, fsmalldupy;
 	INT32/*fixed_t*/ fmeddupx, fmeddupy;
+	INT32 glstate;
 #endif
 } viddef_t;
-#define VIDWIDTH vid.width
-#define VIDHEIGHT vid.height
+
+enum
+{
+	VID_GL_LIBRARY_NOTLOADED  = 0,
+	VID_GL_LIBRARY_LOADED     = 1,
+	VID_GL_LIBRARY_ERROR      = -1,
+};
 
 // internal additional info for vesa modes only
 typedef struct
@@ -110,19 +116,53 @@ extern vmode_t specialmodes[NUMSPECIALMODES];
 // color mode dependent drawer function pointers
 // ---------------------------------------------
 
-extern void (*wallcolfunc)(void);
+#define BASEDRAWFUNC 0
+
+enum
+{
+	COLDRAWFUNC_BASE = BASEDRAWFUNC,
+	COLDRAWFUNC_FUZZY,
+	COLDRAWFUNC_TRANS,
+	COLDRAWFUNC_SHADE,
+	COLDRAWFUNC_SHADOWED,
+	COLDRAWFUNC_TRANSTRANS,
+	COLDRAWFUNC_TWOSMULTIPATCH,
+	COLDRAWFUNC_TWOSMULTIPATCHTRANS,
+	COLDRAWFUNC_FOG,
+
+	COLDRAWFUNC_MAX
+};
+
 extern void (*colfunc)(void);
-extern void (*basecolfunc)(void);
-extern void (*fuzzcolfunc)(void);
-extern void (*transcolfunc)(void);
-extern void (*shadecolfunc)(void);
+extern void (*colfuncs[COLDRAWFUNC_MAX])(void);
+
+enum
+{
+	SPANDRAWFUNC_BASE = BASEDRAWFUNC,
+	SPANDRAWFUNC_TRANS,
+	SPANDRAWFUNC_TILTED,
+	SPANDRAWFUNC_TILTEDTRANS,
+
+	SPANDRAWFUNC_SPLAT,
+	SPANDRAWFUNC_TRANSSPLAT,
+	SPANDRAWFUNC_TILTEDSPLAT,
+
+	SPANDRAWFUNC_SPRITE,
+	SPANDRAWFUNC_TRANSSPRITE,
+	SPANDRAWFUNC_TILTEDSPRITE,
+	SPANDRAWFUNC_TILTEDTRANSSPRITE,
+
+	SPANDRAWFUNC_WATER,
+	SPANDRAWFUNC_TILTEDWATER,
+
+	SPANDRAWFUNC_FOG,
+
+	SPANDRAWFUNC_MAX
+};
+
 extern void (*spanfunc)(void);
-extern void (*basespanfunc)(void);
-extern void (*mmxspanfunc)(void);
-extern void (*splatfunc)(void);
-extern void (*transtransfunc)(void);
-extern void (*twosmultipatchfunc)(void);
-extern void (*twosmultipatchtransfunc)(void);
+extern void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
+extern void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
 
 // -----
 // CPUID
@@ -140,27 +180,37 @@ extern boolean R_SSE2;
 // ----------------
 extern viddef_t vid;
 extern INT32 setmodeneeded; // mode number to set if needed, or 0
+extern UINT8 setrenderneeded;
+
+void SCR_ChangeRenderer(void);
+void SCR_SetTargetRenderer(void);
+
+extern CV_PossibleValue_t cv_renderer_t[];
 
 extern INT32 scr_bpp;
 extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 
-extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_fullscreen;
+extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_renderer, cv_fullscreen;
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
 
-// quick fix for tall/short skies, depending on bytesperpixel
-extern void (*walldrawerfunc)(void);
+// Initialize the screen
+void SCR_Startup(void);
 
 // Change video mode, only at the start of a refresh.
 void SCR_SetMode(void);
+
+// Set drawer functions for Software
+void SCR_SetDrawFuncs(void);
+
 // Recalc screen size dependent stuff
 void SCR_Recalc(void);
+
 // Check parms once at startup
 void SCR_CheckDefaultMode(void);
-// Set the mode number which is saved in the config
-void SCR_SetDefaultMode (void);
 
-void SCR_Startup (void);
+// Set the mode number which is saved in the config
+void SCR_SetDefaultMode(void);
 
 FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 
@@ -168,5 +218,6 @@ FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 void SCR_DisplayTicRate(void);
 void SCR_ClosedCaptions(void);
 void SCR_DisplayLocalPing(void);
+void SCR_DisplayMarathonInfo(void);
 #undef DNWH
 #endif //__SCREEN_H__

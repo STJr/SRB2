@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2019 by Sonic Team Junior.
+// Copyright (C) 2004-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,7 +19,7 @@
 #include "i_video.h"
 #include "p_tick.h"
 #include "r_defs.h"
-#include "r_things.h"
+#include "r_skins.h"
 #include "s_sound.h"
 #include "st_stuff.h"
 #include "v_video.h"
@@ -37,14 +37,10 @@
 #include "m_cond.h" // condition sets
 #include "lua_hook.h" // IntermissionThinker hook
 
+#include "lua_hud.h"
+
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
-#endif
-
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-int	snprintf(char *str, size_t n, const char *fmt, ...);
-//int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
 #endif
 
 typedef struct
@@ -71,7 +67,7 @@ typedef union
 		UINT32 score, total; // fake score, total
 		UINT32 tics; // time
 
-		INT32 actnum; // act number being displayed
+		UINT8 actnum; // act number being displayed
 		patch_t *ptotal; // TOTAL
 		UINT8 gotlife; // Number of extra lives obtained
 	} coop;
@@ -97,7 +93,7 @@ typedef union
 		UINT8 continues;
 		patch_t *pcontinues;
 		INT32 *playerchar; // Continue HUD
-		UINT8 *playercolor;
+		UINT16 *playercolor;
 
 		UINT8 gotlife; // Number of extra lives obtained
 	} spec;
@@ -105,7 +101,7 @@ typedef union
 	struct
 	{
 		UINT32 scores[MAXPLAYERS]; // Winner's score
-		UINT8 *color[MAXPLAYERS]; // Winner's color #
+		UINT16 *color[MAXPLAYERS]; // Winner's color #
 		boolean spectator[MAXPLAYERS]; // Spectator list
 		INT32 *character[MAXPLAYERS]; // Winner's character #
 		INT32 num[MAXPLAYERS]; // Winner's player #
@@ -119,7 +115,7 @@ typedef union
 
 	struct
 	{
-		UINT8 *color[MAXPLAYERS]; // Winner's color #
+		UINT16 *color[MAXPLAYERS]; // Winner's color #
 		INT32 *character[MAXPLAYERS]; // Winner's character #
 		INT32 num[MAXPLAYERS]; // Winner's player #
 		char name[MAXPLAYERS][9]; // Winner's name
@@ -139,7 +135,6 @@ static y_data data;
 
 // graphics
 static patch_t *bgpatch = NULL;     // INTERSCR
-static patch_t *widebgpatch = NULL; // INTERSCW
 static patch_t *bgtile = NULL;      // SPECTILE/SRB2BACK
 static patch_t *interpic = NULL;    // custom picture defined in map header
 static boolean usetile;
@@ -164,6 +159,7 @@ static INT32 tallydonetic = -1;
 static INT32 endtic = -1;
 
 intertype_t intertype = int_none;
+intertype_t intermissiontypes[NUMGAMETYPES];
 
 static void Y_RescaleScreenBuffer(void);
 static void Y_AwardCoopBonuses(void);
@@ -222,8 +218,7 @@ static void Y_IntermissionTokenDrawer(void)
 //
 // Y_ConsiderScreenBuffer
 //
-// Can we copy the current screen
-// to a buffer?
+// Can we copy the current screen to a buffer?
 //
 void Y_ConsiderScreenBuffer(void)
 {
@@ -249,9 +244,7 @@ void Y_ConsiderScreenBuffer(void)
 //
 // Y_RescaleScreenBuffer
 //
-// Write the rescaled source picture,
-// to the destination picture that
-// has the current screen's resolutions.
+// Write the rescaled source picture, to the destination picture that has the current screen's resolutions.
 //
 static void Y_RescaleScreenBuffer(void)
 {
@@ -321,9 +314,6 @@ void Y_IntermissionDrawer(void)
 	if (intertype == int_none || rendermode == render_none)
 		return;
 
-	if (!usebuffer)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-
 	if (useinterpic)
 		V_DrawScaledPatch(0, 0, 0, interpic);
 	else if (!usetile)
@@ -347,16 +337,19 @@ void Y_IntermissionDrawer(void)
 		else if (rendermode != render_soft && usebuffer)
 			HWR_DrawIntermissionBG();
 #endif
-		else
+		else if (bgpatch)
 		{
-			if (widebgpatch && rendermode == render_soft && vid.width / vid.dupx == 400)
-				V_DrawScaledPatch(0, 0, V_SNAPTOLEFT, widebgpatch);
-			else
-				V_DrawScaledPatch(0, 0, 0, bgpatch);
+			fixed_t hs = vid.width  * FRACUNIT / BASEVIDWIDTH;
+			fixed_t vs = vid.height * FRACUNIT / BASEVIDHEIGHT;
+			V_DrawStretchyFixedPatch(0, 0, hs, vs, V_NOSCALEPATCH, bgpatch, NULL);
 		}
 	}
-	else
+	else if (bgtile)
 		V_DrawPatchFill(bgtile);
+
+	LUAh_IntermissionHUD();
+	if (!LUA_HudEnabled(hud_intermissiontally))
+		goto skiptallydrawer;
 
 	if (intertype == int_coop)
 	{
@@ -365,7 +358,7 @@ void Y_IntermissionDrawer(void)
 		if (gottoken) // first to be behind everything else
 			Y_IntermissionTokenDrawer();
 
-		if (!splitscreen)
+		if (!splitscreen)  // there's not enough room in splitscreen, don't even bother trying!
 		{
 			// draw score
 			ST_DrawPatchFromHud(HUD_SCORE, sboscore);
@@ -387,7 +380,7 @@ void Y_IntermissionDrawer(void)
 				ST_DrawPatchFromHud(HUD_TIMECOLON, sbocolon); // Colon
 				ST_DrawPadNumFromHud(HUD_SECONDS, seconds, 2); // Seconds
 
-				if (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking) // there's not enough room for tics in splitscreen, don't even bother trying!
+				if (cv_timetic.value == 1 || cv_timetic.value == 2 || modeattacking || marathonmode)
 				{
 					ST_DrawPatchFromHud(HUD_TIMETICCOLON, sboperiod); // Period
 					ST_DrawPadNumFromHud(HUD_TICS, tictrn, 2); // Tics
@@ -534,7 +527,7 @@ void Y_IntermissionDrawer(void)
 			V_DrawTallNum(BASEVIDWIDTH + xoffset4 - 68, 125+yoffset, 0, data.spec.score);
 
 			// Draw continues!
-			if (!multiplayer /* && (data.spec.continues & 0x80) */) // Always draw outside of netplay
+			if (continuesInSession /* && (data.spec.continues & 0x80) */) // Always draw when continues are a thing
 			{
 				UINT8 continues = data.spec.continues & 0x7F;
 
@@ -907,6 +900,10 @@ void Y_IntermissionDrawer(void)
 		}
 	}
 
+skiptallydrawer:
+	if (!LUA_HudEnabled(hud_intermissionmessages))
+		return;
+
 	if (timer)
 		V_DrawCenteredString(BASEVIDWIDTH/2, 188, V_YELLOWMAP,
 			va("start in %d seconds", timer/TICRATE));
@@ -930,9 +927,7 @@ void Y_Ticker(void)
 	if (paused || P_AutoPause())
 		return;
 
-#ifdef HAVE_BLUA
 	LUAh_IntermissionThinker();
-#endif
 
 	intertic++;
 
@@ -971,7 +966,7 @@ void Y_Ticker(void)
 	{
 		INT32 i;
 		UINT32 oldscore = data.coop.score;
-		boolean skip = false;
+		boolean skip = (marathonmode) ? true : false;
 		boolean anybonuses = false;
 
 		if (!intertic) // first time only
@@ -994,7 +989,7 @@ void Y_Ticker(void)
 			return;
 
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && (players[i].cmd.buttons & BT_USE))
+			if (playeringame[i] && (players[i].cmd.buttons & BT_SPIN))
 				skip = true;
 
 		// bonuses count down by 222 each tic
@@ -1047,7 +1042,7 @@ void Y_Ticker(void)
 	{
 		INT32 i;
 		UINT32 oldscore = data.spec.score;
-		boolean skip = false, super = false, anybonuses = false;
+		boolean skip = (marathonmode) ? true : false, super = false, anybonuses = false;
 
 		if (!intertic) // first time only
 		{
@@ -1071,7 +1066,7 @@ void Y_Ticker(void)
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
 			{
-				if (players[i].cmd.buttons & BT_USE)
+				if (players[i].cmd.buttons & BT_SPIN)
 					skip = true;
 				if (players[i].charflags & SF_SUPER)
 					super = true;
@@ -1154,6 +1149,34 @@ void Y_Ticker(void)
 }
 
 //
+// Y_DetermineIntermissionType
+//
+// Determines the intermission type from the current gametype.
+//
+void Y_DetermineIntermissionType(void)
+{
+	// set to int_none initially
+	intertype = int_none;
+
+	if (intermissiontypes[gametype] != int_none)
+		intertype = intermissiontypes[gametype];
+	else if (gametype == GT_COOP)
+		intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
+	else if (gametype == GT_TEAMMATCH)
+		intertype = int_teammatch;
+	else if (gametype == GT_MATCH
+	 || gametype == GT_TAG
+	 || gametype == GT_HIDEANDSEEK)
+		intertype = int_match;
+	else if (gametype == GT_RACE)
+		intertype = int_race;
+	else if (gametype == GT_COMPETITION)
+		intertype = int_comp;
+	else if (gametype == GT_CTF)
+		intertype = int_ctf;
+}
+
+//
 // Y_StartIntermission
 //
 // Called by G_DoCompleted. Sets up data for intermission drawer/ticker.
@@ -1172,12 +1195,11 @@ void Y_StartIntermission(void)
 	if (!multiplayer)
 	{
 		timer = 0;
-
 		intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
 	}
 	else
 	{
-		if (cv_inttime.value == 0 && gametype == GT_COOP)
+		if (cv_inttime.value == 0 && ((intertype == int_coop) || (intertype == int_spec)))
 			timer = 0;
 		else
 		{
@@ -1186,21 +1208,6 @@ void Y_StartIntermission(void)
 			if (!timer)
 				timer = 1;
 		}
-
-		if (gametype == GT_COOP)
-			intertype = (G_IsSpecialStage(gamemap)) ? int_spec : int_coop;
-		else if (gametype == GT_TEAMMATCH)
-			intertype = int_teammatch;
-		else if (gametype == GT_MATCH
-		 || gametype == GT_TAG
-		 || gametype == GT_HIDEANDSEEK)
-			intertype = int_match;
-		else if (gametype == GT_RACE)
-			intertype = int_race;
-		else if (gametype == GT_COMPETITION)
-			intertype = int_comp;
-		else if (gametype == GT_CTF)
-			intertype = int_ctf;
 	}
 
 	// We couldn't display the intermission even if we wanted to.
@@ -1222,20 +1229,19 @@ void Y_StartIntermission(void)
 			data.coop.tics = players[consoleplayer].realtime;
 
 			for (i = 0; i < 4; ++i)
-				data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_STATIC);
-			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_STATIC);
+				data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_PATCH);
+			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_PATCH);
 
 			// get act number
 			data.coop.actnum = mapheaderinfo[gamemap-1]->actnum;
 
 			// get background patches
-			widebgpatch = W_CachePatchName("INTERSCW", PU_STATIC);
-			bgpatch = W_CachePatchName("INTERSCR", PU_STATIC);
+			bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
 			{
-				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_STATIC);
+				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
 				useinterpic = true;
 				usebuffer = false;
 			}
@@ -1293,18 +1299,18 @@ void Y_StartIntermission(void)
 			Y_AwardSpecialStageBonus();
 
 			for (i = 0; i < 2; ++i)
-				data.spec.bonuspatches[i] = W_CachePatchName(data.spec.bonuses[i].patch, PU_STATIC);
+				data.spec.bonuspatches[i] = W_CachePatchName(data.spec.bonuses[i].patch, PU_PATCH);
 
-			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_STATIC);
-			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_STATIC);
+			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_PATCH);
+			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_PATCH);
 
 			// get background tile
-			bgtile = W_CachePatchName("SPECTILE", PU_STATIC);
+			bgtile = W_CachePatchName("SPECTILE", PU_PATCH);
 
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
 			{
-				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_STATIC);
+				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
 				useinterpic = true;
 			}
 			else
@@ -1316,14 +1322,14 @@ void Y_StartIntermission(void)
 			// get special stage specific patches
 /*			if (!stagefailed && ALL7EMERALDS(emeralds))
 			{
-				data.spec.cemerald = W_CachePatchName("GOTEMALL", PU_STATIC);
+				data.spec.cemerald = W_CachePatchName("GOTEMALL", PU_PATCH);
 				data.spec.headx = 70;
 				data.spec.nowsuper = players[consoleplayer].skin
-					? NULL : W_CachePatchName("NOWSUPER", PU_STATIC);
+					? NULL : W_CachePatchName("NOWSUPER", PU_PATCH);
 			}
 			else
 			{
-				data.spec.cemerald = W_CachePatchName("CEMERALD", PU_STATIC);
+				data.spec.cemerald = W_CachePatchName("CEMERALD", PU_PATCH);
 				data.spec.headx = 48;
 				data.spec.nowsuper = NULL;
 			} */
@@ -1401,9 +1407,9 @@ void Y_StartIntermission(void)
 
 			// get RESULT header
 			data.match.result =
-				W_CachePatchName("RESULT", PU_STATIC);
+				W_CachePatchName("RESULT", PU_PATCH);
 
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1429,9 +1435,9 @@ void Y_StartIntermission(void)
 			data.match.levelstring[sizeof data.match.levelstring - 1] = '\0';
 
 			// get RESULT header
-			data.match.result = W_CachePatchName("RESULT", PU_STATIC);
+			data.match.result = W_CachePatchName("RESULT", PU_PATCH);
 
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1468,7 +1474,7 @@ void Y_StartIntermission(void)
 				data.match.blueflag = bmatcico;
 			}
 
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1494,7 +1500,7 @@ void Y_StartIntermission(void)
 			data.competition.levelstring[sizeof data.competition.levelstring - 1] = '\0';
 
 			// get background tile
-			bgtile = W_CachePatchName("SRB2BACK", PU_STATIC);
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1950,7 +1956,7 @@ static void Y_AwardCoopBonuses(void)
 
 		if (i == consoleplayer)
 		{
-			data.coop.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
+			data.coop.gotlife = (((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0) ? 0 : ptlives);
 			M_Memcpy(&data.coop.bonuses, &localbonuses, sizeof(data.coop.bonuses));
 		}
 	}
@@ -2005,7 +2011,7 @@ static void Y_AwardSpecialStageBonus(void)
 
 		if (i == consoleplayer)
 		{
-			data.spec.gotlife = (((netgame || multiplayer) && gametype == GT_COOP && cv_cooplives.value == 0) ? 0 : ptlives);
+			data.spec.gotlife = (((netgame || multiplayer) && G_GametypeUsesCoopLives() && cv_cooplives.value == 0) ? 0 : ptlives);
 			M_Memcpy(&data.spec.bonuses, &localbonuses, sizeof(data.spec.bonuses));
 
 			// Continues related
@@ -2032,21 +2038,15 @@ void Y_EndIntermission(void)
 	usebuffer = false;
 }
 
-#define UNLOAD(x) Z_ChangeTag(x, PU_CACHE); x = NULL
+#define UNLOAD(x) if (x) {Patch_Free(x);} x = NULL;
 
 //
 // Y_UnloadData
 //
 static void Y_UnloadData(void)
 {
-	// In hardware mode, don't Z_ChangeTag a pointer returned by W_CachePatchName().
-	// It doesn't work and is unnecessary.
-	if (rendermode != render_soft)
-		return;
-
 	// unload the background patches
 	UNLOAD(bgpatch);
-	UNLOAD(widebgpatch);
 	UNLOAD(bgtile);
 	UNLOAD(interpic);
 
@@ -2083,5 +2083,4 @@ static void Y_UnloadData(void)
 			//are not handled
 			break;
 	}
-
 }

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2019 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,6 +22,9 @@
 
 // Some global defines, that configure the game.
 #include "doomdef.h"
+
+#include "taglist.h"
+#include "m_fixed.h" // See the mapthing_t scale.
 
 //
 // Map level types.
@@ -193,24 +196,27 @@ typedef struct
 #pragma pack()
 #endif
 
+#define NUMMAPTHINGARGS 6
+#define NUMMAPTHINGSTRINGARGS 2
+
 // Thing definition, position, orientation and type,
 // plus visibility flags and attributes.
 typedef struct
 {
 	INT16 x, y;
-	INT16 angle;
+	INT16 angle, pitch, roll;
 	UINT16 type;
 	UINT16 options;
 	INT16 z;
 	UINT8 extrainfo;
+	taglist_t tags;
+	fixed_t scale;
+	INT32 args[NUMMAPTHINGARGS];
+	char *stringargs[NUMMAPTHINGSTRINGARGS];
 	struct mobj_s *mobj;
 } mapthing_t;
 
 #define ZSHIFT 4
-
-extern const UINT8 Color_Index[MAXTRANSLATIONS-1][16];
-extern const char *Color_Names[MAXSKINCOLORS + NUMSUPERCOLORS];
-extern const UINT8 Color_Opposite[MAXSKINCOLORS - 1][2];
 
 #define NUMMAPS 1035
 
