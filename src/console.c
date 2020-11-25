@@ -867,7 +867,7 @@ static void CON_InputDelChar(void)
 
 boolean CON_AcceptInput(void)
 {
-	return consoleready;
+	return CON_Ready();
 }
 
 // Handles console key input
