@@ -277,19 +277,17 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Keysym keysym, Uint32 type)
 	SDL_Scancode scancode = keysym.scancode;
 	SDL_Keycode keycode = keysym.sym;
 
-	boolean useqwerty = true;
-	boolean uselocale = (!!cv_usekeycodes.value);
+	boolean intextfield = (CON_AcceptInput() || M_TextInput() || HU_ChatActive());
+	boolean usekeycodes = (!!cv_usekeycodes.value);
+	boolean forceqwerty = (!!cv_forceqwerty.value);
 
-#ifdef TEXTINPUTEVENTS
-	if (cv_keyboardlocale.value)
-		uselocale = true;
-#else
-	if (cv_usekeycodes.value == 2
-	&& !(CON_AcceptInput() || M_TextInput() || HU_ChatActive()))
-		uselocale = false;
-#endif
+	// Only use keycodes in text fields
+	if (cv_usekeycodes.value == 2 && !intextfield)
+	{
+		usekeycodes = false;
+	}
 
-	if (uselocale)
+	if (usekeycodes)
 	{
 		// Lactozilla: Use keycodes instead of scancodes, so that non-US keyboards can work.
 		switch (keycode)
@@ -335,29 +333,14 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Keysym keysym, Uint32 type)
 			return KEY_F1 + (keycode - SDLK_F1);
 		}
 
-		// Send key up events to avoid stuck movement keys
-		if (type != SDL_KEYUP && (!ctrldown))
-		{
 #ifdef TEXTINPUTEVENTS
-			if (cv_keyboardlocale.value)
-			{
-				// console input
-				if (CON_AcceptInput())
-					return 0;
-				// menu text input
-				if (M_TextInput())
-					return 0;
-				// chat input
-				if (HU_ChatActive())
-					return 0;
-			}
-#else
-			if (CON_AcceptInput() // console input
-			|| M_TextInput() // menu text input
-			|| HU_ChatActive()) // chat input
-				useqwerty = (cv_forceqwerty.value);
-#endif
+		// Don't send key events if a text field is active.
+		// Send key up events to avoid stuck movement keys.
+		if (type != SDL_KEYUP && (!ctrldown) && cv_keyboardlocale.value && intextfield)
+		{
+			return 0;
 		}
+#endif
 
 		switch (keycode)
 		{
@@ -411,23 +394,35 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Keysym keysym, Uint32 type)
 			default:                  break;
 		}
 
-		if (useqwerty)
+		if (forceqwerty)
 		{
 			if (scancode >= SDL_SCANCODE_A && scancode <= SDL_SCANCODE_Z)
+			{
 				return scancode - SDL_SCANCODE_A + 'a';
+			}
 			else if (scancode >= SDL_SCANCODE_1 && scancode <= SDL_SCANCODE_9)
+			{
 				return scancode - SDL_SCANCODE_1 + '1';
+			}
 			else if (scancode == SDL_SCANCODE_0)
+			{
 				return '0';
+			}
 		}
 		else
 		{
 			if (keycode >= SDLK_a && keycode <= SDLK_z)
+			{
 				return keycode - SDLK_a + 'a';
+			}
 			else if (keycode >= SDLK_1 && keycode <= SDLK_9)
+			{
 				return keycode - SDLK_1 + '1';
+			}
 			else if (keycode == SDLK_0)
+			{
 				return '0';
+			}
 		}
 	}
 	else
@@ -477,21 +472,11 @@ static INT32 Impl_SDL_Scancode_To_Keycode(SDL_Keysym keysym, Uint32 type)
 		}
 
 #ifdef TEXTINPUTEVENTS
-		// Send key up events to avoid stuck movement keys
-		if (type != SDL_KEYUP && (!ctrldown))
+		// Don't send key events if a text field is active.
+		// Send key up events to avoid stuck movement keys.
+		if (type != SDL_KEYUP && (!ctrldown) && cv_keyboardlocale.value && intextfield)
 		{
-			if (cv_keyboardlocale.value)
-			{
-				// console input
-				if (CON_AcceptInput())
-					return 0;
-				// menu text input
-				if (M_TextInput())
-					return 0;
-				// chat input
-				if (HU_ChatActive())
-					return 0;
-			}
+			return 0;
 		}
 #endif
 
