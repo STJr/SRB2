@@ -121,6 +121,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat);
 void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum);
 
 void HWR_FreeTexture(patch_t *patch);
+void HWR_FreeTextureData(patch_t *patch);
 void HWR_FreeTextureColormaps(patch_t *patch);
 void HWR_ClearAllTextures(void);
 void HWR_FreeColormapCache(void);

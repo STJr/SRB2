@@ -296,11 +296,11 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			if (!isPNG)
 #endif
 			{
-				W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof (patch_t), 0);
-				width = SHORT(patch.width);
-				height = SHORT(patch.height);
-				topoffset = SHORT(patch.topoffset);
-				leftoffset = SHORT(patch.leftoffset);
+				W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof(INT16) * 4, 0);
+				width = (INT32)(SHORT(patch.width));
+				height = (INT32)(SHORT(patch.height));
+				topoffset = (INT16)(SHORT(patch.topoffset));
+				leftoffset = (INT16)(SHORT(patch.leftoffset));
 			}
 
 			spritecachedinfo[numspritelumps].width = width<<FRACBITS;
@@ -308,14 +308,8 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			spritecachedinfo[numspritelumps].topoffset = topoffset<<FRACBITS;
 			spritecachedinfo[numspritelumps].height = height<<FRACBITS;
 
-			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-			if (rendermode != render_none) // not for psprite
-				spritecachedinfo[numspritelumps].topoffset += FEETADJUST;
-			// Being selective with this causes bad things. :( Like the special stage tokens breaking apart.
-			/*if (rendermode != render_none // not for psprite
-			 && SHORT(patch.topoffset)>0 && SHORT(patch.topoffset)<SHORT(patch.height))
-				// perfect is patch.height but sometime it is too high
-				spritecachedinfo[numspritelumps].topoffset = min(SHORT(patch.topoffset)+(FEETADJUST>>FRACBITS),SHORT(patch.height))<<FRACBITS;*/
+			// BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
+			spritecachedinfo[numspritelumps].topoffset += FEETADJUST;
 
 			//----------------------------------------------------
 
@@ -896,7 +890,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		vis->x2 = vid.width-1;
 
 	localcolfunc = (vis->cut & SC_VFLIP) ? R_DrawFlippedMaskedColumn : R_DrawMaskedColumn;
-	lengthcol = SHORT(patch->height);
+	lengthcol = patch->height;
 
 	// Split drawing loops for paper and non-paper to reduce conditional checks per sprite
 	if (vis->scalestep)
@@ -904,7 +898,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		fixed_t horzscale = FixedMul(vis->spritexscale, this_scale);
 		fixed_t scalestep = FixedMul(vis->scalestep, vis->spriteyscale);
 
-		pwidth = SHORT(patch->width);
+		pwidth = patch->width;
 
 		// Papersprite drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += scalestep)
@@ -929,7 +923,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	else if (vis->cut & SC_SHEAR)
 	{
 #ifdef RANGECHECK
-		pwidth = SHORT(patch->width);
+		pwidth = patch->width;
 #endif
 
 		// Vertically sheared sprite
@@ -951,7 +945,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	else
 	{
 #ifdef RANGECHECK
-		pwidth = SHORT(patch->width);
+		pwidth = patch->width;
 #endif
 
 		// Non-paper drawing loop
@@ -1025,7 +1019,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 #ifdef RANGECHECK
 		texturecolumn = frac>>FRACBITS;
 
-		if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
+		if (texturecolumn < 0 || texturecolumn >= patch->width)
 			I_Error("R_DrawPrecipitationSpriteRange: bad texturecolumn");
 
 		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));

@@ -1308,9 +1308,18 @@ void Flush(void)
 		DeleteTexture(gl_cachehead);
 		gl_cachehead = gl_cachehead->nextmipmap;
 	}
-	gl_cachetail = gl_cachehead = NULL; //Hurdler: well, gl_cachehead is already NULL
 
+	ClearCacheList(); //Hurdler: well, gl_cachehead is already NULL
 	tex_downloaded = 0;
+}
+
+
+// -----------------+
+// ClearCacheList   : Clears the texture cache tail and head
+// -----------------+
+EXPORT void HWRAPI(ClearCacheList) (void)
+{
+	gl_cachetail = gl_cachehead = NULL;
 }
 
 
@@ -1930,13 +1939,15 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 	{
 		UpdateTexture(pTexInfo);
 		pTexInfo->nextmipmap = NULL;
+
+		// insertion at the tail
 		if (gl_cachetail)
-		{ // insertion at the tail
+		{
 			gl_cachetail->nextmipmap = pTexInfo;
 			gl_cachetail = pTexInfo;
 		}
 		else // initialization of the linked list
-			gl_cachetail = gl_cachehead =  pTexInfo;
+			gl_cachetail = gl_cachehead = pTexInfo;
 	}
 }
 

@@ -31,13 +31,13 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 	if (source)
 	{
 		INT32 col, colsize;
-		size_t size = sizeof(INT32) * source->width;
+		size_t size = sizeof(INT32) * SHORT(source->width);
 		size_t offs = (sizeof(INT16) * 4) + size;
 
-		patch->width      = source->width;
-		patch->height     = source->height;
-		patch->leftoffset = source->leftoffset;
-		patch->topoffset  = source->topoffset;
+		patch->width      = SHORT(source->width);
+		patch->height     = SHORT(source->height);
+		patch->leftoffset = SHORT(source->leftoffset);
+		patch->topoffset  = SHORT(source->topoffset);
 		patch->columnofs  = Z_Calloc(size, PU_PATCH_DATA, NULL);
 
 		for (col = 0; col < source->width; col++)
@@ -74,7 +74,7 @@ static void Patch_FreeData(patch_t *patch)
 		HWR_FreeTexture(patch);
 #endif
 
-	for (i = 0; i < 2; i++)
+	for (i = 0; i < 4; i++)
 	{
 		if (patch->flats[i])
 			Z_Free(patch->flats[i]);

@@ -507,7 +507,7 @@ static void D_Display(void)
 		else
 			py = viewwindowy + 4;
 		patch = W_CachePatchName("M_PAUSE", PU_PATCH);
-		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - SHORT(patch->width))/2, py, 0, patch);
+		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - patch->width)/2, py, 0, patch);
 #else
 		INT32 y = ((automapactive) ? (32) : (BASEVIDHEIGHT/2));
 		M_DrawTextBox((BASEVIDWIDTH/2) - (60), y - (16), 13, 2);
@@ -651,6 +651,8 @@ void D_SRB2Loop(void)
 	// make sure to do a d_display to init mode _before_ load a level
 	SCR_SetMode(); // change video mode
 	SCR_Recalc();
+
+	chosenrendermode = render_none;
 
 	// Check and print which version is executed.
 	// Use this as the border between setup and the main game loop being entered.
@@ -1295,19 +1297,6 @@ void D_SRB2Main(void)
 
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
-
-	// Lactozilla: Check if the render mode needs to change.
-	if (setrenderneeded)
-	{
-		CONS_Printf(M_GetText("Switching the renderer...\n"));
-
-		// Switch the renderer in the interface
-		if (VID_CheckRenderer())
-			con_refresh = true; // Allow explicit screen refresh again
-
-		// Set cv_renderer to the new render mode
-		CV_StealthSetValue(&cv_renderer, rendermode);
-	}
 
 	wipegamestate = gamestate;
 
