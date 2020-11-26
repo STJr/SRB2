@@ -4031,7 +4031,7 @@ static void M_DrawThermo(INT32 x, INT32 y, consvar_t *cv)
 	cursorlump = W_GetNumForName("M_THERMO");
 
 	V_DrawScaledPatch(xx, y, 0, p = W_CachePatchNum(leftlump,PU_PATCH));
-	xx += SHORT(p->width) - SHORT(p->leftoffset);
+	xx += p->width - p->leftoffset;
 	for (i = 0; i < 16; i++)
 	{
 		V_DrawScaledPatch(xx, y, V_WRAPX, W_CachePatchNum(centerlump[i & 1], PU_PATCH));
@@ -4170,7 +4170,7 @@ static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_
 	fixed_t sw, pw;
 
 	patch = W_CachePatchName("LSSTATIC", PU_PATCH);
-	pw = SHORT(patch->width) - (sw = w*2); //FixedDiv(w, scale); -- for scale FRACUNIT/2
+	pw = patch->width - (sw = w*2); //FixedDiv(w, scale); -- for scale FRACUNIT/2
 
 	/*if (pw > 0) -- model code for modders providing weird LSSTATIC
 	{
@@ -4267,8 +4267,8 @@ static void M_DrawMenuTitle(void)
 
 		if (p->height > 24) // title is larger than normal
 		{
-			INT32 xtitle = (BASEVIDWIDTH - (SHORT(p->width)/2))/2;
-			INT32 ytitle = (30 - (SHORT(p->height)/2))/2;
+			INT32 xtitle = (BASEVIDWIDTH - (p->width/2))/2;
+			INT32 ytitle = (30 - (p->height/2))/2;
 
 			if (xtitle < 0)
 				xtitle = 0;
@@ -4279,8 +4279,8 @@ static void M_DrawMenuTitle(void)
 		}
 		else
 		{
-			INT32 xtitle = (BASEVIDWIDTH - SHORT(p->width))/2;
-			INT32 ytitle = (30 - SHORT(p->height))/2;
+			INT32 xtitle = (BASEVIDWIDTH - p->width)/2;
+			INT32 ytitle = (30 - p->height)/2;
 
 			if (xtitle < 0)
 				xtitle = 0;
@@ -4316,7 +4316,7 @@ static void M_DrawGenericMenu(void)
 					{
 						patch_t *p;
 						p = W_CachePatchName(currentMenu->menuitems[i].patch, PU_PATCH);
-						V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, y, 0, p);
+						V_DrawScaledPatch((BASEVIDWIDTH - p->width)/2, y, 0, p);
 					}
 					else
 					{
@@ -4847,7 +4847,7 @@ static void M_DrawCenteredMenu(void)
 					{
 						patch_t *p;
 						p = W_CachePatchName(currentMenu->menuitems[i].patch, PU_PATCH);
-						V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, y, 0, p);
+						V_DrawScaledPatch((BASEVIDWIDTH - p->width)/2, y, 0, p);
 					}
 					else
 					{
@@ -5695,7 +5695,7 @@ static void M_DrawRecordAttackForeground(void)
 	angle_t fa;
 
 	INT32 i;
-	INT32 height = (SHORT(fg->height)/2);
+	INT32 height = (fg->height / 2);
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 
 	for (i = -12; i < (BASEVIDHEIGHT/height) + 12; i++)
@@ -5730,9 +5730,9 @@ static void M_DrawNightsAttackMountains(void)
 	static INT32 bgscrollx;
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	patch_t *background = W_CachePatchName(curbgname, PU_PATCH);
-	INT16 w = SHORT(background->width);
+	INT16 w = background->width;
 	INT32 x = FixedInt(-bgscrollx) % w;
-	INT32 y = BASEVIDHEIGHT - SHORT(background->height)*2;
+	INT32 y = BASEVIDHEIGHT - (background->height * 2);
 
 	if (vid.height != BASEVIDHEIGHT * dupz)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 158);
@@ -5757,18 +5757,18 @@ static void M_DrawNightsAttackBackground(void)
 	// top
 	patch_t *backtopfg = W_CachePatchName("NTSATKT1", PU_PATCH);
 	patch_t *fronttopfg = W_CachePatchName("NTSATKT2", PU_PATCH);
-	INT32 backtopwidth = SHORT(backtopfg->width);
-	//INT32 backtopheight = SHORT(backtopfg->height);
-	INT32 fronttopwidth = SHORT(fronttopfg->width);
-	//INT32 fronttopheight = SHORT(fronttopfg->height);
+	INT32 backtopwidth = backtopfg->width;
+	//INT32 backtopheight = backtopfg->height;
+	INT32 fronttopwidth = fronttopfg->width;
+	//INT32 fronttopheight = fronttopfg->height;
 
 	// bottom
 	patch_t *backbottomfg = W_CachePatchName("NTSATKB1", PU_PATCH);
 	patch_t *frontbottomfg = W_CachePatchName("NTSATKB2", PU_PATCH);
-	INT32 backbottomwidth = SHORT(backbottomfg->width);
-	INT32 backbottomheight = SHORT(backbottomfg->height);
-	INT32 frontbottomwidth = SHORT(frontbottomfg->width);
-	INT32 frontbottomheight = SHORT(frontbottomfg->height);
+	INT32 backbottomwidth = backbottomfg->width;
+	INT32 backbottomheight = backbottomfg->height;
+	INT32 frontbottomwidth = frontbottomfg->width;
+	INT32 frontbottomheight = frontbottomfg->height;
 
 	// background
 	M_DrawNightsAttackMountains();
@@ -6151,7 +6151,7 @@ static void M_DrawMessageMenu(void)
 		}
 
 		V_DrawString((BASEVIDWIDTH - V_StringWidth(string, 0))/2,y,V_ALLOWLOWERCASE,string);
-		y += 8; //SHORT(hu_font[0]->height);
+		y += 8; //hu_font[0]->height;
 	}
 }
 
@@ -9165,10 +9165,10 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	patch_t *charbg = W_CachePatchName("CHARBG", PU_PATCH);
 	patch_t *charfg = W_CachePatchName("CHARFG", PU_PATCH);
-	INT16 bgheight = SHORT(charbg->height);
-	INT16 fgheight = SHORT(charfg->height);
-	INT16 bgwidth = SHORT(charbg->width);
-	INT16 fgwidth = SHORT(charfg->width);
+	INT16 bgheight = charbg->height;
+	INT16 fgheight = charfg->height;
+	INT16 bgwidth = charbg->width;
+	INT16 fgwidth = charfg->width;
 	INT32 x, y;
 	INT32 w = (vid.width/vid.dupx);
 
@@ -9260,14 +9260,14 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			curoutlinecolor = col = skincolors[charskin->prefcolor].invcolor;
 
 		txsh = oxsh;
-		ox = 8 + SHORT((description[char_on].charpic)->width)/2;
+		ox = 8 + ((description[char_on].charpic)->width)/2;
 		y = my + 144;
 
 		// cur
 		{
 			x = ox - txsh;
 			if (curpatch)
-				x -= (SHORT(curpatch->width)/2);
+				x -= curpatch->width / 2;
 
 			if (curtext[0] != '\0')
 			{
@@ -9300,7 +9300,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 				x = (ox - txsh) - w;
 				if (prevpatch)
-					x -= (SHORT(prevpatch->width)/2);
+					x -= prevpatch->width / 2;
 
 				if (prevtext[0] != '\0')
 				{
@@ -9330,7 +9330,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 				x = (ox - txsh) + w;
 				if (nextpatch)
-					x -= (SHORT(nextpatch->width)/2);
+					x -= nextpatch->width / 2;
 
 				if (nexttext[0] != '\0')
 				{
@@ -9352,7 +9352,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	{
 		patch_t *header = W_CachePatchName("M_PICKP", PU_PATCH);
 		INT32 xtitle = 146;
-		INT32 ytitle = (35 - SHORT(header->height))/2;
+		INT32 ytitle = (35 - header->height) / 2;
 		V_DrawFixedPatch(xtitle<<FRACBITS, ytitle<<FRACBITS, FRACUNIT/2, 0, header, NULL);
 	}
 #endif // CHOOSEPLAYER_DRAWHEADER
@@ -9818,8 +9818,8 @@ void M_DrawTimeAttackMenu(void)
 
 			empatch = W_CachePatchName(M_GetEmblemPatch(em, true), PU_PATCH);
 
-			empatx = SHORT(empatch->leftoffset)/2;
-			empaty = SHORT(empatch->topoffset)/2;
+			empatx = empatch->leftoffset / 2;
+			empaty = empatch->topoffset / 2;
 
 			if (em->collected)
 				V_DrawSmallMappedPatch(104+76+empatx, yHeight+lsheadingheight/2+empaty, 0, empatch,
@@ -10055,7 +10055,7 @@ void M_DrawNightsAttackMenu(void)
 		// Super Sonic
 		M_DrawNightsAttackSuperSonic();
 		//if (P_HasGrades(cv_nextmap.value, 0))
-		//	V_DrawScaledPatch(235 - (SHORT((ngradeletters[bestoverall])->width)*3)/2, 135, 0, ngradeletters[bestoverall]);
+		//	V_DrawScaledPatch(235 - (((ngradeletters[bestoverall])->width)*3)/2, 135, 0, ngradeletters[bestoverall]);
 
 		if (P_HasGrades(cv_nextmap.value, cv_dummymares.value))
 			{//make bigger again
@@ -10612,7 +10612,7 @@ void M_DrawMarathon(void)
 	{
 		patch_t *fg = W_CachePatchName("RECATKFG", PU_PATCH);
 		INT32 trans = V_60TRANS+((cnt&~3)<<(V_ALPHASHIFT-2));
-		INT32 height = (SHORT(fg->height)/2);
+		INT32 height = fg->height / 2;
 		char patchname[7] = "CEMGx0";
 
 		dupz = (w*7)/6; //(w*42*120)/(360*6); -- I don't know why this works but I'm not going to complain.
@@ -11382,7 +11382,7 @@ static void M_DrawServerMenu(void)
 		else
 			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_PATCH);
 
-		V_DrawSmallScaledPatch(319 - (currentMenu->x + (SHORT(PictureOfLevel->width)/2)), currentMenu->y + imgheight, 0, PictureOfLevel);
+		V_DrawSmallScaledPatch(319 - (currentMenu->x + (PictureOfLevel->width / 2)), currentMenu->y + imgheight, 0, PictureOfLevel);
 	}
 }
 

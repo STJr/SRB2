@@ -305,16 +305,16 @@ static int patch_get(lua_State *L)
 		lua_pushboolean(L, patch != NULL);
 		break;
 	case patch_width:
-		lua_pushinteger(L, SHORT(patch->width));
+		lua_pushinteger(L, patch->width);
 		break;
 	case patch_height:
-		lua_pushinteger(L, SHORT(patch->height));
+		lua_pushinteger(L, patch->height);
 		break;
 	case patch_leftoffset:
-		lua_pushinteger(L, SHORT(patch->leftoffset));
+		lua_pushinteger(L, patch->leftoffset);
 		break;
 	case patch_topoffset:
-		lua_pushinteger(L, SHORT(patch->topoffset));
+		lua_pushinteger(L, patch->topoffset);
 		break;
 	}
 	return 1;

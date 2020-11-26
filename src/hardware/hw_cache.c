@@ -585,6 +585,21 @@ static GLMapTexture_t *gl_textures; // For all textures
 static GLMapTexture_t *gl_flats; // For all (texture) flats, as normal flats don't need to be cached
 boolean gl_maptexturesloaded = false;
 
+void HWR_FreeTextureData(patch_t *patch)
+{
+	GLPatch_t *grPatch;
+
+	if (!patch || !patch->hardware)
+		return;
+
+	grPatch = patch->hardware;
+
+	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+		HWD.pfnDeleteTexture(grPatch->mipmap);
+	if (grPatch->mipmap->data)
+		Z_Free(grPatch->mipmap->data);
+}
+
 void HWR_FreeTexture(patch_t *patch)
 {
 	if (!patch)
@@ -598,10 +613,7 @@ void HWR_FreeTexture(patch_t *patch)
 
 		if (grPatch->mipmap)
 		{
-			if (vid.glstate == VID_GL_LIBRARY_LOADED)
-				HWD.pfnDeleteTexture(grPatch->mipmap);
-			if (grPatch->mipmap->data)
-				Z_Free(grPatch->mipmap->data);
+			HWR_FreeTextureData(patch);
 			Z_Free(grPatch->mipmap);
 		}
 
@@ -636,7 +648,7 @@ void HWR_FreeTextureColormaps(patch_t *patch)
 		if (!pat->mipmap)
 			break;
 
-		// No colormap mipmap either.
+		// No colormap mipmaps either.
 		if (!pat->mipmap->nextcolormap)
 			break;
 
@@ -667,18 +679,13 @@ static void HWR_FreePatchCache(boolean freeall)
 	}
 }
 
+// free all textures after each level
 void HWR_ClearAllTextures(void)
 {
-	HWR_FreeMapTextures();
-
-	// free references to the textures
-	HWD.pfnClearMipMapCache();
-
-	// Alam: free the Z_Blocks before freeing it's users
+	HWD.pfnClearMipMapCache(); // free references to the textures
 	HWR_FreePatchCache(true);
 }
 
-// free all patch colormaps after each level: must be done after ClearMipMapCache!
 void HWR_FreeColormapCache(void)
 {
 	HWR_FreePatchCache(false);
@@ -696,6 +703,7 @@ static void FreeMapTexture(GLMapTexture_t *tex)
 	HWD.pfnDeleteTexture(&tex->mipmap);
 	if (tex->mipmap.data)
 		Z_Free(tex->mipmap.data);
+	tex->mipmap.data = NULL;
 }
 
 void HWR_FreeMapTextures(void)
@@ -722,18 +730,15 @@ void HWR_FreeMapTextures(void)
 
 void HWR_LoadMapTextures(size_t pnumtextures)
 {
-	// we must free it since numtextures changed
+	// we must free it since numtextures may have changed
 	HWR_FreeMapTextures();
 
-	// Why not Z_Malloc?
 	gl_numtextures = pnumtextures;
 	gl_textures = calloc(gl_numtextures, sizeof(*gl_textures));
 	gl_flats = calloc(gl_numtextures, sizeof(*gl_flats));
 
-	// Doesn't tell you which it _is_, but hopefully
-	// should never ever happen (right?!)
 	if ((gl_textures == NULL) || (gl_flats == NULL))
-		I_Error("HWR_LoadMapTextures: ran out of memory for OpenGL textures. Sad!");
+		I_Error("HWR_LoadMapTextures: ran out of memory for OpenGL textures");
 
 	gl_maptexturesloaded = true;
 }
@@ -1201,8 +1206,8 @@ static void HWR_DrawFadeMaskInCache(GLMipmap_t *mipmap, INT32 pblockwidth, INT32
 	W_ReadLump(fademasklumpnum, Z_Malloc(W_LumpLength(fademasklumpnum),
 		PU_HWRCACHE, &flat));
 
-	stepy = ((INT32)SHORT(fmheight)<<FRACBITS)/pblockheight;
-	stepx = ((INT32)SHORT(fmwidth)<<FRACBITS)/pblockwidth;
+	stepy = ((INT32)fmheight<<FRACBITS)/pblockheight;
+	stepx = ((INT32)fmwidth<<FRACBITS)/pblockwidth;
 	posy = 0;
 	for (j = 0; j < pblockheight; j++)
 	{

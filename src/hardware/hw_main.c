@@ -1145,7 +1145,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				texturevpegtop += gl_sidedef->rowoffset;
 
 				// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-				texturevpegtop %= SHORT(textures[gl_toptexture]->height)<<FRACBITS;
+				texturevpegtop %= (textures[gl_toptexture]->height)<<FRACBITS;
 
 				wallVerts[3].t = wallVerts[2].t = texturevpegtop * grTex->scaleY;
 				wallVerts[0].t = wallVerts[1].t = (texturevpegtop + gl_frontsector->ceilingheight - gl_backsector->ceilingheight) * grTex->scaleY;
@@ -1211,7 +1211,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				texturevpegbottom += gl_sidedef->rowoffset;
 
 				// This is so that it doesn't overflow and screw up the wall, it doesn't need to go higher than the texture's height anyway
-				texturevpegbottom %= SHORT(textures[gl_bottomtexture]->height)<<FRACBITS;
+				texturevpegbottom %= (textures[gl_bottomtexture]->height)<<FRACBITS;
 
 				wallVerts[3].t = wallVerts[2].t = texturevpegbottom * grTex->scaleY;
 				wallVerts[0].t = wallVerts[1].t = (texturevpegbottom + gl_backsector->floorheight - gl_frontsector->floorheight) * grTex->scaleY;
@@ -6221,17 +6221,6 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 
 void HWR_LoadLevel(void)
 {
-	// Lactozilla (December 8, 2019)
-	// Level setup used to free EVERY mipmap from memory.
-	// Even mipmaps that aren't related to level textures.
-	// Presumably, the hardware render code used to store textures as level data.
-	// Meaning, they had memory allocated and marked with the PU_LEVEL tag.
-	// Level textures are only reloaded after R_LoadTextures, which is
-	// when the texture list is loaded.
-
-	// Sal: Unfortunately, NOT freeing them causes the dreaded Color Bug.
-	HWR_FreeColormapCache();
-
 #ifdef ALAM_LIGHTING
 	// BP: reset light between levels (we draw preview frame lights on current frame)
 	HWR_ResetLights();
@@ -6394,7 +6383,10 @@ void HWR_Switch(void)
 
 	// Create plane polygons
 	if (!gl_maploaded && (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)))
+	{
+		HWR_ClearAllTextures();
 		HWR_LoadLevel();
+	}
 }
 
 // --------------------------------------------------------------------------

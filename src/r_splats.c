@@ -419,9 +419,7 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 	// Lactozilla: I don't know what I'm doing
 	if (pSplat->tilted)
 	{
-		ds_sup = &ds_su[0];
-		ds_svp = &ds_sv[0];
-		ds_szp = &ds_sz[0];
+		R_SetTiltedSpan(0);
 		R_CalculateSlopeVectors(&pSplat->slope, viewx, viewy, viewz, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, viewangle, pSplat->angle, 1.0f);
 		spanfunctype = SPANDRAWFUNC_TILTEDSPRITE;
 	}

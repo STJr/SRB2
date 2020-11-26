@@ -43,20 +43,19 @@ typedef enum GLTextureFormat_e
 //                NULL if the texture is not in Doom heap cache.
 struct GLMipmap_s
 {
-	//for TexDownloadMipMap
-	GLTextureFormat_t format;
-	void              *data;
+	// for TexDownloadMipMap
+	GLTextureFormat_t     format;
+	void                 *data;
 
-	UINT32          flags;
-	UINT16          height;
-	UINT16          width;
-	UINT32          downloaded;     // the dll driver have it in there cache ?
+	UINT32                flags;
+	UINT16                height;
+	UINT16                width;
+	UINT32                downloaded;     // The GPU has this texture.
 
 	struct GLMipmap_s    *nextcolormap;
 	const UINT8          *colormap;
 
-	// opengl
-	struct GLMipmap_s *nextmipmap; // opengl : liste of all texture in opengl driver
+	struct GLMipmap_s    *nextmipmap; // Linked list of all textures
 };
 typedef struct GLMipmap_s GLMipmap_t;
 
