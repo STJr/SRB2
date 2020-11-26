@@ -1491,10 +1491,10 @@ void P_PlayLivesJingle(player_t *player)
 	if (player && !P_IsLocalPlayer(player))
 		return;
 
-	if (use1upSound || cv_1upsound.value)
-		S_StartSound(NULL, sfx_oneup);
-	else if (mariomode)
+	if (mariomode)
 		S_StartSound(NULL, sfx_marioa);
+	else if (use1upSound || cv_1upsound.value)
+		S_StartSound(NULL, sfx_oneup);
 	else
 	{
 		P_PlayJingle(player, JT_1UP);
