@@ -295,6 +295,13 @@ static int colormap_set(lua_State *L)
 	return 0;
 }
 
+static int colormap_free(lua_State *L)
+{
+	UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	Z_Free(colormap);
+	return 0;
+}
+
 static int patch_get(lua_State *L)
 {
 	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
@@ -921,7 +928,7 @@ static int libd_getColormap(lua_State *L)
 
 	// all was successful above, now we generate the colormap at last!
 
-	colormap = R_GetTranslationColormap(skinnum, color, GTC_CACHE);
+	colormap = R_GetTranslationColormap(skinnum, color, 0);
 	LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
 	return 1;
 }
@@ -930,10 +937,14 @@ static int libd_getStringColormap(lua_State *L)
 {
 	INT32 flags = luaL_checkinteger(L, 1);
 	UINT8* colormap = NULL;
+	UINT8* lua_colormap = NULL;
 	HUDONLY
 	colormap = V_GetStringColormap(flags & V_CHARCOLORMASK);
 	if (colormap) {
-		LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
+		lua_colormap = Z_Malloc(256 * sizeof(UINT8), PU_LUA, NULL);
+		memcpy(lua_colormap, colormap, 256 * sizeof(UINT8));
+
+		LUA_PushUserdata(L, lua_colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
 		return 1;
 	}
 	return 0;
@@ -1243,6 +1254,9 @@ int LUA_HudLib(lua_State *L)
 
 		lua_pushcfunction(L, colormap_set);
 		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, colormap_free);
+		lua_setfield(L, -2, "__gc");
 	lua_pop(L,1);
 
 	luaL_newmetatable(L, META_PATCH);
