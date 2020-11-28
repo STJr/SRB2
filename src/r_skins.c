@@ -511,6 +511,9 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(MULTIABILITY)
 	GETFLAG(NONIGHTSROTATION)
 	GETFLAG(NONIGHTSSUPER)
+	GETFLAG(NOSUPERSPRITES)
+	GETFLAG(NOSUPERJUMPBOOST)
+	GETFLAG(CANBUSTWALLS)
 #undef GETFLAG
 
 	else // let's check if it's a sound, otherwise error out
