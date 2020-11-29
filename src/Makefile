@@ -465,6 +465,9 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/d_netfil.o \
 		$(OBJDIR)/d_netcmd.o \
 		$(OBJDIR)/dehacked.o \
+		$(OBJDIR)/deh_soc.o  \
+		$(OBJDIR)/deh_lua.o  \
+		$(OBJDIR)/deh_tables.o \
 		$(OBJDIR)/z_zone.o   \
 		$(OBJDIR)/f_finale.o \
 		$(OBJDIR)/f_wipe.o   \
