@@ -19,11 +19,11 @@
 #include "sounds.h"
 #include "m_fixed.h"
 
-// dehacked.c now has lists for the more named enums! PLEASE keep them up to date!
+// deh_tables.c now has lists for the more named enums! PLEASE keep them up to date!
 // For great modding!!
 
 // IMPORTANT NOTE: If you add/remove from this list of action
-// functions, don't forget to update them in dehacked.c!
+// functions, don't forget to update them in deh_tables.c!
 void A_Explode();
 void A_Pain();
 void A_Fall();

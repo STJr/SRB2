@@ -425,7 +425,7 @@ static CV_PossibleValue_t skins_cons_t[MAXSKINS+1] = {{1, DEFAULTSKIN}};
 consvar_t cv_chooseskin = CVAR_INIT ("chooseskin", DEFAULTSKIN, CV_HIDEN|CV_CALL, skins_cons_t, Nextmap_OnChange);
 
 // This gametype list is integral for many different reasons.
-// When you add gametypes here, don't forget to update them in dehacked.c and doomstat.h!
+// When you add gametypes here, don't forget to update them in deh_tables.c and doomstat.h!
 CV_PossibleValue_t gametype_cons_t[NUMGAMETYPES+1];
 
 consvar_t cv_newgametype = CVAR_INIT ("newgametype", "Co-op", CV_HIDEN|CV_CALL, gametype_cons_t, Newgametype_OnChange);
