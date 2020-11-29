@@ -1677,9 +1677,25 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		}
 	}
 
-	// Note: Lat originally made the PlayerCmd hook for SRB2 Kart so credit goes to him.
+	// At this point, cmd doesn't contain the final angle yet,
+	// So we need to temporarily transform it so Lua scripters
+	// don't need to handle it differently than in other hooks.
 	if (gamestate == GS_LEVEL)
+	{
+		INT16 extra = ticcmd_oldangleturn[forplayer] - player->oldrelangleturn;
+		INT16 origangle = cmd->angleturn;
+		INT16 orighookangle = (INT16)(origangle + player->angleturn + extra);
+		INT16 origaiming = cmd->aiming;
+
+		cmd->angleturn = orighookangle;
+
 		LUAh_PlayerCmd(player, cmd);
+
+		extra = cmd->angleturn - orighookangle;
+		cmd->angleturn = origangle + extra;
+		*myangle += extra << 16;
+		*myaiming += (cmd->aiming - origaiming) << 16;
+	}
 
 	//Reset away view if a command is given.
 	if (ssplayer == 1 && (cmd->forwardmove || cmd->sidemove || cmd->buttons)
