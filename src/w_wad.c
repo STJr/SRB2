@@ -66,6 +66,7 @@
 #include "p_setup.h" // P_ScanThings
 #endif
 #include "m_misc.h" // M_MapNumber
+#include "g_game.h" // G_SetGameModified
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -683,9 +684,9 @@ static UINT16 W_InitFileError (const char *filename, boolean exitworthy)
 	if (exitworthy)
 	{
 #ifdef _DEBUG
-		CONS_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
+		CONS_Error(va("%s was not found or not valid.\nCheck the log for more details.\n", filename));
 #else
-		I_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
+		I_Error("%s was not found or not valid.\nCheck the log for more details.\n", filename);
 #endif
 	}
 	else
@@ -746,12 +747,12 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	if ((handle = W_OpenWadFile(&filename, true)) == NULL)
 		return W_InitFileError(filename, startup);
 
-	important = W_VerifyNMUSlumps(filename);
+	important = W_VerifyNMUSlumps(filename, startup);
 
 	if (important == -1)
 	{
 		fclose(handle);
-		return W_InitFileError(filename, startup);
+		return INT16_MAX;
 	}
 
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
@@ -818,6 +819,9 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		fclose(handle);
 		return W_InitFileError(filename, startup);
 	}
+
+	if (important && !mainfile)
+		G_SetGameModified(true);
 
 	//
 	// link wad file to search files
@@ -2088,12 +2092,13 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
   * be sent.
   *
   * \param filename Filename of the wad to check.
+  * \param exit_on_error Whether to exit upon file error.
   * \return 1 if file contains only music/sound lumps, 0 if it contains other
   *         stuff (maps, sprites, dehacked lumps, and so on). -1 if there no
   *         file exists with that filename
   * \author Alam Arias
   */
-int W_VerifyNMUSlumps(const char *filename)
+int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 {
 	// MIDI, MOD/S3M/IT/XM/OGG/MP3/WAV, WAVE SFX
 	// ENDOOM text and palette lumps
@@ -2167,7 +2172,13 @@ int W_VerifyNMUSlumps(const char *filename)
 
 		{NULL, 0},
 	};
-	return W_VerifyFile(filename, NMUSlist, false);
+
+	int status = W_VerifyFile(filename, NMUSlist, false);
+
+	if (status == -1)
+		W_InitFileError(filename, exit_on_error);
+
+	return status;
 }
 
 /** \brief Generates a virtual resource used for level data loading.
