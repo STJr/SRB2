@@ -16,6 +16,7 @@
 #include "doomdef.h" // Constants
 #include "d_think.h" // actionf_t
 #include "info.h" // Mobj, state, sprite, etc constants
+#include "lua_script.h"
 
 // Free slot names
 // The crazy word-reading stuff uses these.

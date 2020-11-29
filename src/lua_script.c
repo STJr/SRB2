@@ -134,6 +134,19 @@ int LUA_GetErrorMessage(lua_State *L)
 	return 1;
 }
 
+int LUA_Call(lua_State *L, int nargs, int nresults, int errorhandlerindex)
+{
+	int err = lua_pcall(L, nargs, nresults, errorhandlerindex);
+
+	if (err)
+	{
+		CONS_Alert(CONS_WARNING, "%s\n", lua_tostring(L, -1));
+		lua_pop(L, 1);
+	}
+
+	return err;
+}
+
 // Moved here from lib_getenum.
 int LUA_PushGlobals(lua_State *L, const char *word)
 {
@@ -427,6 +440,7 @@ static int setglobals(lua_State *L)
 {
 	const char *csname;
 	char *name;
+	enum actionnum actionnum;
 
 	lua_remove(L, 1); // we're not gonna be using _G
 	csname = lua_tostring(L, 1);
@@ -444,6 +458,10 @@ static int setglobals(lua_State *L)
 		lua_pushvalue(L, 2); // function
 		lua_rawset(L, -3); // rawset doesn't trigger this metatable again.
 		// otherwise we would've used setfield, obviously.
+
+		actionnum = LUA_GetActionNumByName(name);
+		if (actionnum < NUMACTIONS)
+			actionsoverridden[actionnum] = true;
 
 		Z_Free(name);
 		return 0;
@@ -476,7 +494,7 @@ static void LUA_ClearState(void)
 
 	// open base libraries
 	luaL_openlibs(L);
-	lua_pop(L, -1);
+	lua_settop(L, 0);
 
 	// make LREG_VALID table for all pushed userdata cache.
 	lua_newtable(L);
@@ -679,7 +697,7 @@ fixed_t LUA_EvalMath(const char *word)
 	*b = '\0';
 
 	// eval string.
-	lua_pop(L, -1);
+	lua_settop(L, 0);
 	if (luaL_dostring(L, buf))
 	{
 		p = lua_tostring(L, -1);
