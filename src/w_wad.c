@@ -716,7 +716,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 #endif
 	size_t packetsize;
 	UINT8 md5sum[16];
-	boolean important;
+	int important;
 
 	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
 		refreshdirmenu = REFRESHDIR_NORMAL|REFRESHDIR_ADDFILE; // clean out cons_alerts that happened earlier
@@ -746,10 +746,18 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	if ((handle = W_OpenWadFile(&filename, true)) == NULL)
 		return W_InitFileError(filename, startup);
 
+	important = W_VerifyNMUSlumps(filename);
+
+	if (important == -1)
+	{
+		fclose(handle);
+		return W_InitFileError(filename, startup);
+	}
+
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
 	// see PutFileNeeded in d_netfil.c
-	if ((important = !W_VerifyNMUSlumps(filename)))
+	if ((important = !important))
 	{
 		packetsize = packetsizetally + nameonlylength(filename) + 22;
 
@@ -1919,8 +1927,16 @@ static lumpchecklist_t folderblacklist[] =
 static int
 W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 {
+	int verified = true;
+
     zend_t zend;
     zentry_t zentry;
+    zlentry_t zlentry;
+
+	long file_size;/* size of zip file */
+	long data_size;/* size of data inside zip file */
+
+	long old_position;
 
 	UINT16 numlumps;
 	size_t i;
@@ -1936,12 +1952,16 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 	// Central directory bullshit
 
 	fseek(fp, 0, SEEK_END);
+	file_size = ftell(fp);
+
 	if (!ResFindSignature(fp, pat_end, max(0, ftell(fp) - (22 + 65536))))
 		return true;
 
 	fseek(fp, -4, SEEK_CUR);
 	if (fread(&zend, 1, sizeof zend, fp) < sizeof zend)
 		return true;
+
+	data_size = sizeof zend;
 
 	numlumps = zend.entries;
 
@@ -1957,40 +1977,79 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 		if (memcmp(zentry.signature, pat_central, 4))
 			return true;
 
-		fullname = malloc(zentry.namelen + 1);
-		if (fgets(fullname, zentry.namelen + 1, fp) != fullname)
-			return true;
-
-		// Strip away file address and extension for the 8char name.
-		if ((trimname = strrchr(fullname, '/')) != 0)
-			trimname++;
-		else
-			trimname = fullname; // Care taken for root files.
-
-		if (*trimname) // Ignore directories, well kinda
+		if (verified == true)
 		{
-			if ((dotpos = strrchr(trimname, '.')) == 0)
-				dotpos = fullname + strlen(fullname); // Watch for files without extension.
+			fullname = malloc(zentry.namelen + 1);
+			if (fgets(fullname, zentry.namelen + 1, fp) != fullname)
+				return true;
 
-			memset(lumpname, '\0', 9); // Making sure they're initialized to 0. Is it necessary?
-			strncpy(lumpname, trimname, min(8, dotpos - trimname));
+			// Strip away file address and extension for the 8char name.
+			if ((trimname = strrchr(fullname, '/')) != 0)
+				trimname++;
+			else
+				trimname = fullname; // Care taken for root files.
 
-			if (! W_VerifyName(lumpname, checklist, status))
-				return false;
+			if (*trimname) // Ignore directories, well kinda
+			{
+				if ((dotpos = strrchr(trimname, '.')) == 0)
+					dotpos = fullname + strlen(fullname); // Watch for files without extension.
 
-			// Check for directories next, if it's blacklisted it will return false
-			if (W_VerifyName(fullname, folderblacklist, status))
-				return false;
+				memset(lumpname, '\0', 9); // Making sure they're initialized to 0. Is it necessary?
+				strncpy(lumpname, trimname, min(8, dotpos - trimname));
+
+				if (! W_VerifyName(lumpname, checklist, status))
+					verified = false;
+
+				// Check for directories next, if it's blacklisted it will return false
+				else if (W_VerifyName(fullname, folderblacklist, status))
+					verified = false;
+			}
+
+			free(fullname);
+
+			// skip and ignore comments/extra fields
+			if (fseek(fp, zentry.xtralen + zentry.commlen, SEEK_CUR) != 0)
+				return true;
+		}
+		else
+		{
+			if (fseek(fp, zentry.namelen + zentry.xtralen + zentry.commlen, SEEK_CUR) != 0)
+				return true;
 		}
 
-		free(fullname);
+		data_size +=
+			sizeof zentry + zentry.namelen + zentry.xtralen + zentry.commlen;
 
-		// skip and ignore comments/extra fields
-		if (fseek(fp, zentry.xtralen + zentry.commlen, SEEK_CUR) != 0)
+		old_position = ftell(fp);
+
+		if (fseek(fp, zentry.offset, SEEK_SET) != 0)
 			return true;
+
+		if (fread(&zlentry, 1, sizeof(zlentry_t), fp) < sizeof (zlentry_t))
+			return true;
+
+		data_size +=
+			sizeof zlentry + zlentry.namelen + zlentry.xtralen + zlentry.compsize;
+
+		fseek(fp, old_position, SEEK_SET);
 	}
 
-	return true;
+	if (data_size < file_size)
+	{
+		const char * error = "ZIP file has holes (%ld extra bytes)\n";
+		CONS_Alert(CONS_ERROR, error, (file_size - data_size));
+		return -1;
+	}
+	else if (data_size > file_size)
+	{
+		const char * error = "Reported size of ZIP file contents exceeds file size (%ld extra bytes)\n";
+		CONS_Alert(CONS_ERROR, error, (data_size - file_size));
+		return -1;
+	}
+	else
+	{
+		return verified;
+	}
 }
 
 // Note: This never opens lumps themselves and therefore doesn't have to
