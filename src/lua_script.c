@@ -401,6 +401,7 @@ static int setglobals(lua_State *L)
 {
 	const char *csname;
 	char *name;
+	enum actionnum actionnum;
 
 	lua_remove(L, 1); // we're not gonna be using _G
 	csname = lua_tostring(L, 1);
@@ -418,6 +419,10 @@ static int setglobals(lua_State *L)
 		lua_pushvalue(L, 2); // function
 		lua_rawset(L, -3); // rawset doesn't trigger this metatable again.
 		// otherwise we would've used setfield, obviously.
+
+		actionnum = LUA_GetActionNumByName(name);
+		if (actionnum < NUMACTIONS)
+			actionsoverridden[actionnum] = true;
 
 		Z_Free(name);
 		return 0;
