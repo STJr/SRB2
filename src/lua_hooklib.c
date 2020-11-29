@@ -1846,7 +1846,7 @@ boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 }
 
 // Hook for game quitting
-void LUAh_GameQuit(void)
+void LUAh_GameQuit(boolean quitting)
 {
 	hook_p hookp;
 	if (!gL || !(hooksAvailable[hook_GameQuit/8] & (1<<(hook_GameQuit%8))))
@@ -1860,7 +1860,8 @@ void LUAh_GameQuit(void)
 			continue;
 
 		PushHook(gL, hookp);
-		if (lua_pcall(gL, 0, 0, 1)) {
+		lua_pushboolean(gL, quitting);
+		if (lua_pcall(gL, 1, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);

@@ -3027,7 +3027,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	if (pnum == consoleplayer)
 	{
 		if (Playing())
-			LUAh_GameQuit();
+			LUAh_GameQuit(false);
 #ifdef DUMPCONSISTENCY
 		if (msg == KICK_MSG_CON_FAIL) SV_SavedGame();
 #endif
@@ -3728,7 +3728,7 @@ static void HandleShutdown(SINT8 node)
 {
 	(void)node;
 	if (Playing())
-		LUAh_GameQuit();
+		LUAh_GameQuit(false);
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -3744,7 +3744,7 @@ static void HandleTimeout(SINT8 node)
 {
 	(void)node;
 	if (Playing())
-		LUAh_GameQuit();
+		LUAh_GameQuit(false);
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();

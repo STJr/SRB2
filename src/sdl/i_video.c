@@ -1058,7 +1058,7 @@ void I_GetEvent(void)
 			 	break;
 			case SDL_QUIT:
 				if (Playing())
-					LUAh_GameQuit();
+					LUAh_GameQuit(true);
 				I_Quit();
 				break;
 		}
