@@ -6937,8 +6937,7 @@ static void M_SelectableClearMenus(INT32 choice)
 static void M_UltimateCheat(INT32 choice)
 {
 	(void)choice;
-	if (Playing())
-		LUAh_GameQuit(true);
+	LUAh_GameQuit(true);
 	I_Quit();
 }
 
