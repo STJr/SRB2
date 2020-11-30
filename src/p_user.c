@@ -1342,7 +1342,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_TRANS1);
 
 	if (giverings) && player->rings > 50
-		player->rings = 50
+		player->rings = 50;
 
 	// Just in case.
 	if (!(mapheaderinfo[gamemap-1]->levelflags & LF_NOSSMUSIC))
