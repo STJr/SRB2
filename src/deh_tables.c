@@ -25,6 +25,11 @@
 
 #include "deh_tables.h"
 
+char *FREE_STATES[NUMSTATEFREESLOTS];
+char *FREE_MOBJS[NUMMOBJFREESLOTS];
+char *FREE_SKINCOLORS[NUMCOLORFREESLOTS];
+UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite freeslot in use! I would use ceil() here if I could, but it only saves 1 byte of memory anyway.
+
 const char NIGHTSGRADE_LIST[] = {
 	'F', // GRADE_F
 	'E', // GRADE_E
@@ -61,9 +66,8 @@ struct flickytypes_s FLICKYTYPES[] = {
 	{NULL, 0}
 };
 
-/** Array mapping action names to action functions.
-  * Names must be in ALL CAPS for case insensitive comparisons.
-  */
+// IMPORTANT!
+// DO NOT FORGET TO SYNC THIS LIST WITH THE ACTIONNUM ENUM IN INFO.H
 actionpointer_t actionpointers[] =
 {
 	{{A_Explode},                "A_EXPLODE"},
@@ -323,7 +327,7 @@ actionpointer_t actionpointers[] =
 	{{A_PterabyteHover},         "A_PTERABYTEHOVER"},
 	{{A_RolloutSpawn},           "A_ROLLOUTSPAWN"},
 	{{A_RolloutRock},            "A_ROLLOUTROCK"},
-	{{A_DragonbomberSpawn},      "A_DRAGONBOMERSPAWN"},
+	{{A_DragonbomberSpawn},      "A_DRAGONBOMBERSPAWN"},
 	{{A_DragonWing},             "A_DRAGONWING"},
 	{{A_DragonSegment},          "A_DRAGONSEGMENT"},
 	{{A_ChangeHeight},           "A_CHANGEHEIGHT"},
