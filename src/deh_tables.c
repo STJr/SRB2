@@ -25,6 +25,11 @@
 
 #include "deh_tables.h"
 
+char *FREE_STATES[NUMSTATEFREESLOTS];
+char *FREE_MOBJS[NUMMOBJFREESLOTS];
+char *FREE_SKINCOLORS[NUMCOLORFREESLOTS];
+UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite freeslot in use! I would use ceil() here if I could, but it only saves 1 byte of memory anyway.
+
 const char NIGHTSGRADE_LIST[] = {
 	'F', // GRADE_F
 	'E', // GRADE_E

@@ -20,10 +20,10 @@
 
 // Free slot names
 // The crazy word-reading stuff uses these.
-char *FREE_STATES[NUMSTATEFREESLOTS];
-char *FREE_MOBJS[NUMMOBJFREESLOTS];
-char *FREE_SKINCOLORS[NUMCOLORFREESLOTS];
-UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite freeslot in use! I would use ceil() here if I could, but it only saves 1 byte of memory anyway.
+extern char *FREE_STATES[NUMSTATEFREESLOTS];
+extern char *FREE_MOBJS[NUMMOBJFREESLOTS];
+extern char *FREE_SKINCOLORS[NUMCOLORFREESLOTS];
+extern UINT8 used_spr[(NUMSPRITEFREESLOTS / 8) + 1]; // Bitwise flag for sprite freeslot in use! I would use ceil() here if I could, but it only saves 1 byte of memory anyway.
 
 #define initfreeslots() {\
 	memset(FREE_STATES,0,sizeof(char *) * NUMSTATEFREESLOTS);\
