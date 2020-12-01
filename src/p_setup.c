@@ -1628,9 +1628,9 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 			return;
 		lines[i].args[argnum] = atol(val);
 	}
-	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
+	else if (strlen(param) == 7 && fastncmp(param, "arg", 3) && fastncmp(param + 4, "str", 3))
 	{
-		size_t argnum = param[9] - '0';
+		size_t argnum = param[3] - '0';
 		if (argnum >= NUMLINESTRINGARGS)
 			return;
 		lines[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
@@ -1727,9 +1727,9 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 			return;
 		mapthings[i].args[argnum] = atol(val);
 	}
-	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
+	else if (strlen(param) == 7 && fastncmp(param, "arg", 3) && fastncmp(param + 4, "str", 3))
 	{
-		size_t argnum = param[9] - '0';
+		size_t argnum = param[3] - '0';
 		if (argnum >= NUMMAPTHINGSTRINGARGS)
 			return;
 		mapthings[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
