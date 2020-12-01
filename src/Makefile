@@ -465,6 +465,9 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/d_netfil.o \
 		$(OBJDIR)/d_netcmd.o \
 		$(OBJDIR)/dehacked.o \
+		$(OBJDIR)/deh_soc.o  \
+		$(OBJDIR)/deh_lua.o  \
+		$(OBJDIR)/deh_tables.o \
 		$(OBJDIR)/z_zone.o   \
 		$(OBJDIR)/f_finale.o \
 		$(OBJDIR)/f_wipe.o   \
@@ -519,6 +522,8 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_splats.o \
 		$(OBJDIR)/r_things.o \
 		$(OBJDIR)/r_textures.o \
+		$(OBJDIR)/r_patch.o \
+		$(OBJDIR)/r_patchrotation.o \
 		$(OBJDIR)/r_picformats.o \
 		$(OBJDIR)/r_portal.o \
 		$(OBJDIR)/screen.o   \
@@ -538,6 +543,15 @@ OBJS:=$(i_main_o) \
 		$(i_system_o)   \
 		$(i_sound_o)    \
 		$(OBJS)
+
+
+ifndef ECHO
+ifndef NOECHOFILENAMES
+define echoName =
+	@echo -- $< ...
+endef
+endif
+endif
 
 # List of languages to compile.
 # For reference, this is the command I use to build a srb2.pot file from the source code.
@@ -699,6 +713,7 @@ $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h 
  hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
  am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
  p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 else
 $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
@@ -708,6 +723,7 @@ $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h 
  hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
  am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
  p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -I/usr/X11R6/include -c $< -o $@
 endif
 endif
@@ -736,43 +752,55 @@ endif
 
 ifdef VALGRIND
 $(OBJDIR)/z_zone.o: z_zone.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -DHAVE_VALGRIND $(VALGRIND_CFLAGS) -c $< -o $@
 endif
 
 $(OBJDIR)/comptime.o: comptime.c pre-build
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 $(BIN)/%.mo: locale/%.po
 	-$(MKDIR) $(BIN)
+	$(echoName)
 	$(MSGFMT) -f -o $@ $<
 
 $(OBJDIR)/%.o: %.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: $(INTERFACE)/%.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 ifdef MACOSX
 $(OBJDIR)/%.o: sdl/macosx/%.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 endif
 
 $(OBJDIR)/%.o: hardware/%.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: blua/%.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(LUA_CFLAGS) $(WFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: %.nas
+	$(echoName)
 	$(NASM) $(NASMOPTS) -o $@ -f $(NASMFORMAT) $<
 
 $(OBJDIR)/vid_copy.o: vid_copy.s asm_defs.inc
+	$(echoName)
 	$(CC) $(OPTS) $(ASFLAGS) -x assembler-with-cpp -c $< -o $@
 
 $(OBJDIR)/%.o: %.s
+	$(echoName)
 	$(CC) $(OPTS) -x assembler-with-cpp -c $< -o $@
 
 $(OBJDIR)/SRB2.res: win32/Srb2win.rc win32/afxres.h win32/resource.h
+	$(echoName)
 	$(WINDRES) -i $< -O rc $(WINDRESFLAGS) --include-dir=win32 -o $@ -O coff
 
 
@@ -786,6 +814,7 @@ $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h 
  hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
  am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
  p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
 
 $(OBJDIR)/ogl_win.o: hardware/r_opengl/ogl_win.c hardware/r_opengl/r_opengl.h \
@@ -795,6 +824,7 @@ $(OBJDIR)/ogl_win.o: hardware/r_opengl/ogl_win.c hardware/r_opengl/r_opengl.h \
  hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
  am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
  p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
 endif
 
@@ -805,31 +835,37 @@ ifdef SDL
 
 ifdef MINGW
 $(OBJDIR)/win_dbg.o: win32/win_dbg.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 endif
 
 ifdef STATICHS
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 $(OBJDIR)/s_fmod.o: hardware/s_fmod/s_fmod.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 ifdef MINGW
 $(OBJDIR)/s_ds3d.o: hardware/s_ds3d/s_ds3d.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 endif
 else
 
 $(OBJDIR)/s_fmod.o: hardware/s_fmod/s_fmod.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_fmod.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_fmod/s_fmod.c
 
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_openal.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_openal/s_openal.c
 endif
 endif

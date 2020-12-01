@@ -24,6 +24,7 @@ typedef enum
 	// Doom formats
 	PICFMT_PATCH,
 	PICFMT_FLAT,
+	PICFMT_DOOMPATCH,
 
 	// PNG
 	PICFMT_PNG,
@@ -31,10 +32,12 @@ typedef enum
 	// 16bpp
 	PICFMT_PATCH16,
 	PICFMT_FLAT16,
+	PICFMT_DOOMPATCH16,
 
 	// 32bpp
 	PICFMT_PATCH32,
-	PICFMT_FLAT32
+	PICFMT_FLAT32,
+	PICFMT_DOOMPATCH32
 } pictureformat_t;
 
 typedef enum
@@ -76,8 +79,10 @@ void *Picture_TextureToFlat(size_t trickytex);
 
 INT32 Picture_FormatBPP(pictureformat_t format);
 boolean Picture_IsPatchFormat(pictureformat_t format);
+boolean Picture_IsInternalPatchFormat(pictureformat_t format);
+boolean Picture_IsDoomPatchFormat(pictureformat_t format);
 boolean Picture_IsFlatFormat(pictureformat_t format);
-boolean Picture_CheckIfPatch(patch_t *patch, size_t size);
+boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size);
 
 // Structs
 typedef enum
@@ -120,15 +125,4 @@ extern spriteinfo_t spriteinfo[NUMSPRITES];
 void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps);
 void R_ParseSPRTINFOLump(UINT16 wadNum, UINT16 lumpNum);
 
-// Sprite rotation
-#ifdef ROTSPRITE
-INT32 R_GetRollAngle(angle_t rollangle);
-void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip);
-void R_FreeSingleRotSprite(spritedef_t *spritedef);
-void R_FreeSkinRotSprite(size_t skinnum);
-extern fixed_t rollcosang[ROTANGLES];
-extern fixed_t rollsinang[ROTANGLES];
-void R_FreeAllRotSprite(void);
-#endif
-
-#endif // __R_PATCH__
+#endif // __R_PICFORMATS__

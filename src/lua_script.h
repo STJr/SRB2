@@ -40,6 +40,7 @@ void LUA_ClearExtVars(void);
 extern INT32 lua_lumploading; // is LUA_LoadLump being called?
 
 int LUA_GetErrorMessage(lua_State *L);
+int LUA_Call(lua_State *L, int nargs, int nresults, int errorhandlerindex);
 void LUA_LoadLump(UINT16 wad, UINT16 lump, boolean noresults);
 #ifdef LUA_ALLOW_BYTECODE
 void LUA_DumpFile(const char *filename);
@@ -64,14 +65,6 @@ void LUAh_NetArchiveHook(lua_CFunction archFunc);
 
 // Console wrapper
 void COM_Lua_f(void);
-
-#define LUA_Call(L,a)\
-{\
-	if (lua_pcall(L, a, 0, 0)) {\
-		CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(L,-1));\
-		lua_pop(L, 1);\
-	}\
-}
 
 #define LUA_ErrInvalid(L, type) luaL_error(L, "accessed " type " doesn't exist anymore, please check 'valid' before using " type ".");
 

@@ -15,10 +15,15 @@
 #include "z_zone.h"
 #include "r_data.h"
 
+// Taggroups are used to list elements of the same tag, for iteration.
+// Since elements can now have multiple tags, it means an element may appear
+// in several taggroups at the same time. These are built on level load.
 taggroup_t* tags_sectors[MAXTAGS + 1];
 taggroup_t* tags_lines[MAXTAGS + 1];
 taggroup_t* tags_mapthings[MAXTAGS + 1];
 
+/// Adds a tag to a given element's taglist.
+/// \warning This does not rebuild the global taggroups, which are used for iteration.
 void Tag_Add (taglist_t* list, const mtag_t tag)
 {
 	list->tags = Z_Realloc(list->tags, (list->count + 1) * sizeof(list->tags), PU_LEVEL, NULL);
@@ -26,6 +31,7 @@ void Tag_Add (taglist_t* list, const mtag_t tag)
 }
 
 /// Sets the first tag entry in a taglist.
+/// Replicates the old way of accessing element->tag.
 void Tag_FSet (taglist_t* list, const mtag_t tag)
 {
 	if (!list->count)
@@ -38,6 +44,7 @@ void Tag_FSet (taglist_t* list, const mtag_t tag)
 }
 
 /// Gets the first tag entry in a taglist.
+/// Replicates the old way of accessing element->tag.
 mtag_t Tag_FGet (const taglist_t* list)
 {
 	if (list->count)
@@ -46,6 +53,7 @@ mtag_t Tag_FGet (const taglist_t* list)
 	return 0;
 }
 
+/// Returns true if the given tag exist inside the list.
 boolean Tag_Find (const taglist_t* list, const mtag_t tag)
 {
 	size_t i;
@@ -56,6 +64,7 @@ boolean Tag_Find (const taglist_t* list, const mtag_t tag)
 	return false;
 }
 
+/// Returns true if at least one tag is shared between two given lists.
 boolean Tag_Share (const taglist_t* list1, const taglist_t* list2)
 {
 	size_t i;
@@ -66,6 +75,7 @@ boolean Tag_Share (const taglist_t* list1, const taglist_t* list2)
 	return false;
 }
 
+/// Returns true if both lists are identical.
 boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2)
 {
 	size_t i;
@@ -80,7 +90,7 @@ boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2)
 	return true;
 }
 
-
+/// Search for an element inside a global taggroup.
 size_t Taggroup_Find (const taggroup_t *group, const size_t id)
 {
 	size_t i;
@@ -95,6 +105,7 @@ size_t Taggroup_Find (const taggroup_t *group, const size_t id)
 	return -1;
 }
 
+/// Add an element to a global taggroup.
 void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 {
 	taggroup_t *group;
@@ -135,6 +146,7 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 	group->elements[i] = id;
 }
 
+/// Remove an element from a global taggroup.
 void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 {
 	taggroup_t *group;
@@ -191,6 +203,8 @@ static void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid)
 	Taggroup_Add(tags_mapthings, tag, itemid);
 }
 
+/// After all taglists have been built for each element (sectors, lines, things),
+/// the global taggroups, made for iteration, are built here.
 void Taglist_InitGlobalTables(void)
 {
 	size_t i, j;
@@ -338,6 +352,7 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 
 // Ingame list manipulation.
 
+/// Changes the first tag for a given sector, and updates the global taggroups.
 void Tag_SectorFSet (const size_t id, const mtag_t tag)
 {
 	sector_t* sec = &sectors[id];

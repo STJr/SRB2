@@ -13,6 +13,7 @@
 #include "doomdef.h"
 #include "fastcmp.h"
 #include "dehacked.h"
+#include "deh_lua.h"
 #include "z_zone.h"
 #include "w_wad.h"
 #include "p_setup.h"
@@ -131,6 +132,19 @@ int LUA_GetErrorMessage(lua_State *L)
 	}
 	lua_concat(L, lua_gettop(L));
 	return 1;
+}
+
+int LUA_Call(lua_State *L, int nargs, int nresults, int errorhandlerindex)
+{
+	int err = lua_pcall(L, nargs, nresults, errorhandlerindex);
+
+	if (err)
+	{
+		CONS_Alert(CONS_WARNING, "%s\n", lua_tostring(L, -1));
+		lua_pop(L, 1);
+	}
+
+	return err;
 }
 
 // Moved here from lib_getenum.
@@ -376,6 +390,44 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 		redscore = (UINT32)luaL_checkinteger(L, 2);
 	else if (fastcmp(word, "bluescore"))
 		bluescore = (UINT32)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "skincolor_redteam"))
+		skincolor_redteam = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "skincolor_blueteam"))
+		skincolor_blueteam = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "skincolor_redring"))
+		skincolor_redring = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "skincolor_bluering"))
+		skincolor_bluering = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "emeralds"))
+		emeralds = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "token"))
+		token = (UINT32)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "gravity"))
+		gravity = (fixed_t)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "stoppedclock"))
+		stoppedclock = luaL_checkboolean(L, 2);
+	else if (fastcmp(word, "displayplayer"))
+	{
+		player_t *player = *((player_t **)luaL_checkudata(L, 2, META_PLAYER));
+
+		if (player)
+			displayplayer = player - players;
+	}
+	else if (fastcmp(word, "mapmusname"))
+	{
+		size_t strlength;
+		const char *str = luaL_checklstring(L, 2, &strlength);
+
+		if (strlength > 6)
+			return luaL_error(L, "string length out of range (maximum 6 characters)");
+
+		if (strlen(str) < strlength)
+			return luaL_error(L, "string must not contain embedded zeros!");
+
+		strncpy(mapmusname, str, strlength);
+	}
+	else if (fastcmp(word, "mapmusflags"))
+		mapmusflags = (UINT16)luaL_checkinteger(L, 2);
 	else
 		return 0;
 
@@ -388,6 +440,7 @@ static int setglobals(lua_State *L)
 {
 	const char *csname;
 	char *name;
+	enum actionnum actionnum;
 
 	lua_remove(L, 1); // we're not gonna be using _G
 	csname = lua_tostring(L, 1);
@@ -405,6 +458,10 @@ static int setglobals(lua_State *L)
 		lua_pushvalue(L, 2); // function
 		lua_rawset(L, -3); // rawset doesn't trigger this metatable again.
 		// otherwise we would've used setfield, obviously.
+
+		actionnum = LUA_GetActionNumByName(name);
+		if (actionnum < NUMACTIONS)
+			actionsoverridden[actionnum] = true;
 
 		Z_Free(name);
 		return 0;
@@ -437,7 +494,7 @@ static void LUA_ClearState(void)
 
 	// open base libraries
 	luaL_openlibs(L);
-	lua_pop(L, -1);
+	lua_settop(L, 0);
 
 	// make LREG_VALID table for all pushed userdata cache.
 	lua_newtable(L);
@@ -640,7 +697,7 @@ fixed_t LUA_EvalMath(const char *word)
 	*b = '\0';
 
 	// eval string.
-	lua_pop(L, -1);
+	lua_settop(L, 0);
 	if (luaL_dostring(L, buf))
 	{
 		p = lua_tostring(L, -1);
