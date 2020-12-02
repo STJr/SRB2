@@ -2235,7 +2235,7 @@ state_t states[NUMSTATES] =
 	{SPR_BMCE, 0, -1, {NULL}, 0, 0, S_NULL}, // S_BIGMACE
 	{SPR_SMCH, 1, -1, {NULL}, 0, 0, S_NULL}, // S_SMALLGRABCHAIN
 	{SPR_BMCH, 1, -1, {NULL}, 0, 0, S_NULL}, // S_BIGGRABCHAIN
-	
+
 	// Blue spring on a ball
 	{SPR_BSPB, 0, -1, {NULL},   0, 0, S_NULL},            // S_BLUESPRINGBALL
 	{SPR_BSPB, 4,  4, {A_Pain}, 0, 0, S_BLUESPRINGBALL3}, // S_BLUESPRINGBALL2
@@ -11519,7 +11519,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MF_SCENERY|MF_SPECIAL|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
-	
+
 	{            // MT_BLUESPRINGBALL
 		1133,           // doomednum
 		S_BLUESPRINGBALL, // spawnstate
