@@ -2237,7 +2237,7 @@ state_t states[NUMSTATES] =
 	{SPR_BMCH, 1, -1, {NULL}, 0, 0, S_NULL}, // S_BIGGRABCHAIN
 	
 	// Blue spring on a ball
-	{SPR_BSPB, 0, -1, {NULL},   0, 0, S_NULL},              // S_BLUESPRINGBALL
+	{SPR_BSPB, 0, -1, {NULL},   0, 0, S_NULL},            // S_BLUESPRINGBALL
 	{SPR_BSPB, 4,  4, {A_Pain}, 0, 0, S_BLUESPRINGBALL3}, // S_BLUESPRINGBALL2
 	{SPR_BSPB, 3,  1, {NULL},   0, 0, S_BLUESPRINGBALL4}, // S_BLUESPRINGBALL3
 	{SPR_BSPB, 2,  1, {NULL},   0, 0, S_BLUESPRINGBALL5}, // S_BLUESPRINGBALL4
