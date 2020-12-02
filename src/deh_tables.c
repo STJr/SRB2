@@ -1867,6 +1867,13 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_SMALLGRABCHAIN",
 	"S_BIGGRABCHAIN",
 
+	// Blue spring on a ball
+	"S_BLUESPRINGBALL",
+	"S_BLUESPRINGBALL2",
+	"S_BLUESPRINGBALL3",
+	"S_BLUESPRINGBALL4",
+	"S_BLUESPRINGBALL5",
+
 	// Yellow spring on a ball
 	"S_YELLOWSPRINGBALL",
 	"S_YELLOWSPRINGBALL2",
