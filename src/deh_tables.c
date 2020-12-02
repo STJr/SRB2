@@ -3822,6 +3822,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_BIGMACE", // Big Mace
 	"MT_SMALLGRABCHAIN", // Small Grab Chain
 	"MT_BIGGRABCHAIN", // Big Grab Chain
+	"MT_BLUESPRINGBALL", // Blue spring on a ball
 	"MT_YELLOWSPRINGBALL", // Yellow spring on a ball
 	"MT_REDSPRINGBALL", // Red spring on a ball
 	"MT_SMALLFIREBAR", // Small Firebar
