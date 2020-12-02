@@ -1477,10 +1477,18 @@ static void R_RenderSegLoop (void)
 		}
 
 		for (i = 0; i < numffloors; i++)
+		{
+			if (curline->polyseg && (ffloor[i].polyobj != curline->polyseg))
+				continue;
+
 			ffloor[i].f_frac += ffloor[i].f_step;
+		}
 
 		for (i = 0; i < numbackffloors; i++)
 		{
+			if (curline->polyseg && (ffloor[i].polyobj != curline->polyseg))
+				continue;
+
 			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)((ffloor[i].b_frac >> HEIGHTBITS) & 0xFFFF);
 			ffloor[i].b_frac += ffloor[i].b_step;
 		}
