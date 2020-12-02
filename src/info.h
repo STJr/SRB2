@@ -2677,7 +2677,6 @@ typedef enum state
 	S_BLUESPRINGBALL4,
 	S_BLUESPRINGBALL5,
 
-
 	// Yellow spring on a ball
 	S_YELLOWSPRINGBALL,
 	S_YELLOWSPRINGBALL2,
