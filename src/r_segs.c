@@ -540,7 +540,7 @@ static boolean R_IsFFloorTranslucent(visffloor_t *pfloor)
 
 	// Polyobjects have no ffloors, and they're handled in the conditional above.
 	if (pfloor->ffloor != NULL)
-		return (pfloor->ffloor->flags & FF_TRANSLUCENT);
+		return (pfloor->ffloor->flags & (FF_TRANSLUCENT|FF_FOG));
 
 	return false;
 }
