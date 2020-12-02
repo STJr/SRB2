@@ -245,6 +245,7 @@ char sprnames[NUMSPRITES + 1][5] =
 	"BMCH", // Big Mace Chain
 	"SMCE", // Small Mace
 	"BMCE", // Big Mace
+	"BSPB", // Blue spring on a ball
 	"YSPB", // Yellow spring on a ball
 	"RSPB", // Red spring on a ball
 	"SFBR", // Small Firebar
