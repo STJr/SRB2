@@ -264,18 +264,10 @@ static void write_backtrace(INT32 signal)
 	const char *error = "An error occurred within SRB2! Send this stack trace to someone who can help!\n";
 	const char *error2 = "(Or find crash-log.txt in your SRB2 directory.)\n"; // Shown only to stderr.
 
-	if (!crashstream)
-		crashstream = fopen(va("%s" PATHSEP "%s", srb2home, "crash-log.txt"), "at");
+	fd = open(va("%s" PATHSEP "%s", srb2home, "crash-log.txt"), O_CREAT|O_APPEND|O_RDWR, S_IRUSR|S_IWUSR);
 
-	if (!crashstream)
+	if (fd == -1)
 		I_OutputMsg("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
-	else
-	{
-		fd = fileno(crashstream);
-
-		if (fd == -1)
-			fd = open(va("%s" PATHSEP "%s", srb2home, "crash-log.txt"), O_CREAT|O_APPEND);
-	}
 
 	time(&rawtime);
 	timeinfo = localtime(&rawtime);
