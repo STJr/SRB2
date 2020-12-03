@@ -556,10 +556,11 @@ static void Polyobj_moveToSpawnSpot(mapthing_t *anchor)
 	polyobj_t *po;
 	vertex_t  dist, sspot;
 	size_t i;
+	mtag_t tag = Tag_FGet(&anchor->tags);
 
-	if (!(po = Polyobj_GetForNum(anchor->tag)))
+	if (!(po = Polyobj_GetForNum(tag)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "Bad polyobject %d for anchor point\n", anchor->tag);
+		CONS_Debug(DBG_POLYOBJ, "Bad polyobject %d for anchor point\n", tag);
 		return;
 	}
 
@@ -1342,7 +1343,7 @@ void Polyobj_InitLevel(void)
 		{
 			qitem = (mobjqitem_t *)M_QueueIterator(&spawnqueue);
 
-			Polyobj_spawnPolyObj(i, qitem->mo, qitem->mo->spawnpoint->tag);
+			Polyobj_spawnPolyObj(i, qitem->mo, Tag_FGet(&qitem->mo->spawnpoint->tags));
 		}
 
 		// move polyobjects to spawn points
@@ -2444,10 +2445,11 @@ boolean EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 	polymove_t *th;
 	size_t i;
 	INT32 start;
+	mtag_t tag = pfdata->polyObjNum;
 
-	if (!(po = Polyobj_GetForNum(pfdata->polyObjNum)))
+	if (!(po = Polyobj_GetForNum(tag)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: bad polyobj %d\n", pfdata->polyObjNum);
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: bad polyobj %d\n", tag);
 		return false;
 	}
 
@@ -2470,7 +2472,7 @@ boolean EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 	po->thinker = &th->thinker;
 
 	// set fields
-	th->polyObjNum = pfdata->polyObjNum;
+	th->polyObjNum = tag;
 	th->distance   = 0;
 	th->speed      = pfdata->speed;
 	th->angle      = pfdata->angle;

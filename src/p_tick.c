@@ -643,7 +643,15 @@ void P_Ticker(boolean run)
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
 		if (demoplayback)
-			G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
+		{
+			player_t* p = &players[consoleplayer];
+			G_ReadDemoTiccmd(&p->cmd, 0);
+			if (!cv_freedemocamera.value)
+			{
+				P_ForceLocalAngle(p, p->cmd.angleturn << 16);
+				localaiming = p->aiming;
+			}
+		}
 
 		ps_lua_mobjhooks = 0;
 		ps_checkposition_calls = 0;

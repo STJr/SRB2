@@ -194,6 +194,7 @@ typedef enum
 	MF2_AMBUSH         = 1<<27, // Alternate behaviour typically set by MTF_AMBUSH
 	MF2_LINKDRAW       = 1<<28, // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	MF2_SHIELD         = 1<<29, // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
+	MF2_SPLAT          = 1<<30, // Renders as a splat
 	// free: to and including 1<<31
 } mobjflag2_t;
 
@@ -264,6 +265,7 @@ typedef enum {
 	// Ran the thinker this tic.
 	PCF_THUNK = 32,
 } precipflag_t;
+
 // Map Object definition.
 typedef struct mobj_s
 {
@@ -284,6 +286,12 @@ typedef struct mobj_s
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
+
+	UINT32 renderflags; // render flags
+	INT32 blendmode; // blend mode
+	fixed_t spritexscale, spriteyscale;
+	fixed_t spritexoffset, spriteyoffset;
+	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
 
 	struct msecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
 
@@ -399,12 +407,18 @@ typedef struct precipmobj_s
 	struct precipmobj_s **sprev; // killough 8/11/98: change to ptr-to-ptr
 
 	// More drawing info: to determine current sprite.
-	angle_t angle, pitch, roll;  // orientation
+	angle_t angle, pitch, roll; // orientation
 	angle_t rollangle;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
+
+	UINT32 renderflags; // render flags
+	INT32 blendmode; // blend mode
+	fixed_t spritexscale, spriteyscale;
+	fixed_t spritexoffset, spriteyoffset;
+	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
 
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
 
@@ -462,6 +476,8 @@ void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime);
 void P_SpawnHoopOfSomething(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, angle_t rotangle);
 void P_SpawnPrecipitation(void);
 void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, statenum_t nstate, angle_t rotangle, boolean spawncenter);
+void *P_CreateFloorSpriteSlope(mobj_t *mobj);
+void P_RemoveFloorSpriteSlope(mobj_t *mobj);
 boolean P_BossTargetPlayer(mobj_t *actor, boolean closest);
 boolean P_SupermanLook4Players(mobj_t *actor);
 void P_DestroyRobots(void);

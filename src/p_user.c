@@ -4836,6 +4836,8 @@ void P_DoJumpShield(player_t *player)
 		}
 #undef limitangle
 #undef numangles
+		player->pflags &= ~PF_NOJUMPDAMAGE;
+		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 		S_StartSound(player->mo, sfx_s3k45);
 	}
 	else
@@ -5108,6 +5110,8 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 							P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
 							player->drawangle = player->mo->angle;
+							player->pflags &= ~PF_NOJUMPDAMAGE;
+							P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 							S_StartSound(player->mo, sfx_s3k43);
 						default:
 							break;
@@ -8692,12 +8696,6 @@ void P_MovePlayer(player_t *player)
 		player->fovadd = 0;
 #endif
 
-#ifdef FLOORSPLATS
-	if (cv_shadow.value && rendermode == render_soft)
-		R_AddFloorSplat(player->mo->subsector, player->mo, "SHADOW", player->mo->x,
-			player->mo->y, player->mo->floorz, SPLATDRAWMODE_OPAQUE);
-#endif
-
 	// Look for blocks to bust up
 	// Because of FF_SHATTER, we should look for blocks constantly,
 	// not just when spinning or playing as Knuckles
@@ -10579,6 +10577,7 @@ static void P_CalcPostImg(player_t *player)
 	postimg_t *type;
 	INT32 *param;
 	fixed_t pviewheight;
+	size_t i;
 
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		pviewheight = player->mo->z + player->mo->height - player->viewheight;
@@ -10603,28 +10602,45 @@ static void P_CalcPostImg(player_t *player)
 	}
 
 	// see if we are in heat (no, not THAT kind of heat...)
-
-	if (P_FindSpecialLineFromTag(13, sector->tag, -1) != -1)
-		*type = postimg_heat;
-	else if (sector->ffloors)
+	for (i = 0; i < sector->tags.count; i++)
 	{
-		ffloor_t *rover;
-		fixed_t topheight;
-		fixed_t bottomheight;
-
-		for (rover = sector->ffloors; rover; rover = rover->next)
+		if (Tag_FindLineSpecial(13, sector->tags.tags[i]) != -1)
 		{
-			if (!(rover->flags & FF_EXISTS))
-				continue;
+			*type = postimg_heat;
+			break;
+		}
+		else if (sector->ffloors)
+		{
+			ffloor_t *rover;
+			fixed_t topheight;
+			fixed_t bottomheight;
+			boolean gotres = false;
 
-			topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
-			bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
+			for (rover = sector->ffloors; rover; rover = rover->next)
+			{
+				size_t j;
 
-			if (pviewheight >= topheight || pviewheight <= bottomheight)
-				continue;
+				if (!(rover->flags & FF_EXISTS))
+					continue;
 
-			if (P_FindSpecialLineFromTag(13, rover->master->frontsector->tag, -1) != -1)
-				*type = postimg_heat;
+				topheight    = P_GetFFloorTopZAt   (rover, player->mo->x, player->mo->y);
+				bottomheight = P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y);
+
+				if (pviewheight >= topheight || pviewheight <= bottomheight)
+					continue;
+
+				for (j = 0; j < rover->master->frontsector->tags.count; j++)
+				{
+					if (Tag_FindLineSpecial(13, rover->master->frontsector->tags.tags[j]) != -1)
+					{
+						*type = postimg_heat;
+						gotres = true;
+						break;
+					}
+				}
+			}
+			if (gotres)
+				break;
 		}
 	}
 
@@ -10723,22 +10739,21 @@ static sector_t *P_GetMinecartSector(fixed_t x, fixed_t y, fixed_t z, fixed_t *n
 static INT32 P_GetMinecartSpecialLine(sector_t *sec)
 {
 	INT32 line = -1;
+	size_t i;
 
 	if (!sec)
 		return line;
 
-	if (sec->tag != 0)
-		line = P_FindSpecialLineFromTag(16, sec->tag, -1);
+	for (i = 0; i < sec->tags.count; i++)
+		if (sec->tags.tags[i] != 0)
+			line = Tag_FindLineSpecial(16, sec->tags.tags[i]);
 
 	// Also try for lines facing the sector itself, with tag 0.
+	for (i = 0; i < sec->linecount; i++)
 	{
-		UINT32 i;
-		for (i = 0; i < sec->linecount; i++)
-		{
-			line_t *li = sec->lines[i];
-			if (li->tag == 0 && li->special == 16 && li->frontsector == sec)
-				line = li - lines;
-		}
+		line_t *li = sec->lines[i];
+		if (Tag_Find(&li->tags, 0) && li->special == 16 && li->frontsector == sec)
+			line = li - lines;
 	}
 
 	return line;
@@ -12297,12 +12312,14 @@ void P_PlayerThink(player_t *player)
 		sector_t *controlsec;
 		for (j=0; j<numsectors; j++)
 		{
+			mtag_t sectag = Tag_FGet(&sectors[j].tags);
 			controlsec = NULL;
 			// Does this sector have a water linedef?
 			for (i=0; i<numlines;i++)
 			{
+				mtag_t linetag = Tag_FGet(&lines[i].tags);
 				if ((lines[i].special == 121 || lines[i].special == 123)
-				&& lines[i].tag == sectors[j].tag)
+				&& linetag == sectag)
 				{
 					controlsec = lines[i].frontsector;
 					break;
@@ -12311,15 +12328,16 @@ void P_PlayerThink(player_t *player)
 
 			if (i < numlines && controlsec)
 			{
+				controlsectag = Tag_FGet(&controlsec->tags);
 				// Does this sector have a colormap?
 				for (i=0; i<numlines;i++)
 				{
-					if (lines[i].special == 606 && lines[i].tag == controlsec->tag)
+					if (lines[i].special == 606 && linetag == controlsectag)
 						break;
 				}
 
 				if (i == numlines)
-					CONS_Debug(DBG_GAMELOGIC, "%d, %d\n", j, sectors[j].tag);
+					CONS_Debug(DBG_GAMELOGIC, "%d, %d\n", j, sectag);
 			}
 		}
 

@@ -2501,10 +2501,14 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 		}
 
 		count--;
-		spheres = players[playernum].spheres;
-		rings = players[playernum].rings;
-		sincrement = spheres/count;
-		rincrement = rings/count;
+		sincrement = spheres = players[playernum].spheres;
+		rincrement = rings = players[playernum].rings;
+
+		if (count)
+		{
+			sincrement /= count;
+			rincrement /= count;
+		}
 
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
