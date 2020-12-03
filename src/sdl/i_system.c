@@ -137,6 +137,11 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <errno.h>
 #endif
 
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+#include <execinfo.h>
+#include <time.h>
+#endif
+
 // Locations for searching the srb2.pk3
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #define DEFAULTWADLOCATION1 "/usr/local/share/games/SRB2"
@@ -238,6 +243,75 @@ SDL_bool framebuffer = SDL_FALSE;
 
 UINT8 keyboard_started = false;
 
+#define STDERR_WRITE(string) if (fd != -1) I_OutputMsg("%s", string)
+#define CRASHLOG_WRITE(string) if (fd != -1) write(fd, string, strlen(string))
+#define CRASHLOG_STDERR_WRITE(string) \
+	if (fd != -1)\
+		write(fd, string, strlen(string));\
+	I_OutputMsg("%s", string)
+
+static void write_backtrace(INT32 signal)
+{
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+	int fd = -1;
+	size_t size;
+	time_t rawtime;
+	struct tm * timeinfo;
+
+	enum { MAX_SIZE = 1024 };
+	void *array[MAX_SIZE];
+
+	const char *error = "An error occurred within SRB2! Send this stack trace to someone who can help!\n";
+	const char *error2 = "(Or find crash-log.txt in your SRB2 directory.)\n"; // Shown only to stderr.
+
+	if (!crashstream)
+		crashstream = fopen(va("%s" PATHSEP "%s", srb2home, "crash-log.txt"), "at");
+
+	if (!crashstream)
+		I_OutputMsg("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
+	else
+	{
+		fd = fileno(crashstream);
+
+		if (fd == -1)
+			fd = open(va("%s" PATHSEP "%s", srb2home, "crash-log.txt"), O_CREAT|O_APPEND);
+	}
+
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+
+	CRASHLOG_WRITE("------------------------\n"); // Nice looking seperator
+
+	CRASHLOG_STDERR_WRITE("\n"); // Newline to look nice for both outputs.
+	CRASHLOG_STDERR_WRITE(error); // "Oops, SRB2 crashed" message
+	STDERR_WRITE(error2); // Tell the user where the crash log is.
+
+	// Tell the log when we crashed.
+	CRASHLOG_WRITE("Time of crash: ");
+	CRASHLOG_WRITE(asctime(timeinfo));
+
+	// Give the crash log the cause and a nice 'Backtrace:' thing
+	// The signal is given to the user when the parent process sees we crashed.
+	CRASHLOG_WRITE("Cause: ");
+	CRASHLOG_WRITE(strsignal(signal));
+	CRASHLOG_WRITE("\n"); // Newline for the signal name
+
+	CRASHLOG_STDERR_WRITE("\nBacktrace:\n");
+
+		// Flood the output and log with the backtrace
+	size = backtrace(array, MAX_SIZE);
+	backtrace_symbols_fd(array, size, fd);
+	backtrace_symbols_fd(array, size, STDERR_FILENO);
+
+	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
+
+	close(fd);
+#endif
+}
+#undef STDERR_WRITE
+#undef CRASHLOG_WRITE
+#undef CRASHLOG_STDERR_WRITE
+
 static void I_ReportSignal(int num, int coredumped)
 {
 	//static char msg[] = "oh no! back to reality!\r\n";
@@ -298,6 +372,9 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 	D_QuitNetGame(); // Fix server freezes
 	CL_AbortDownloadResume();
 	I_ReportSignal(num, 0);
+
+	write_backtrace(num);
+
 	I_ShutdownSystem();
 	signal(num, SIG_DFL);               //default signal action
 	raise(num);
@@ -686,6 +763,26 @@ static void I_RegisterSignals (void)
 	signal(SIGFPE , signal_handler);
 #endif
 }
+
+#ifdef NEWSIGNALHANDLER
+static void signal_handler_child(INT32 num)
+{
+	write_backtrace(num);
+
+	signal(num, SIG_DFL);               //default signal action
+	raise(num);
+}
+
+static void I_RegisterChildSignals(void)
+{
+	// If these defines don't exist,
+	// then compilation would have failed above us...
+	signal(SIGILL , signal_handler_child);
+	signal(SIGSEGV , signal_handler_child);
+	signal(SIGABRT , signal_handler_child);
+	signal(SIGFPE , signal_handler_child);
+}
+#endif
 
 //
 //I_OutputMsg
@@ -2123,6 +2220,7 @@ static void I_Fork(void)
 			newsignalhandler_Warn("fork()");
 			break;
 		case 0:
+			I_RegisterChildSignals();
 			break;
 		default:
 			if (logstream)
