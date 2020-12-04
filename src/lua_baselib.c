@@ -184,12 +184,15 @@ static const struct {
 	{META_CVAR,         "consvar_t"},
 
 	{META_SECTORLINES,  "sector_t.lines"},
+	{META_SECTORTAGLIST, "sector_t.taglist"},
 	{META_SIDENUM,      "line_t.sidenum"},
 	{META_LINEARGS,     "line_t.args"},
 	{META_LINESTRINGARGS, "line_t.stringargs"},
+	{META_LINETAGLIST,  "line_t.taglist"},
 
 	{META_THINGARGS,     "mapthing.args"},
 	{META_THINGSTRINGARGS, "mapthing.stringargs"},
+	{META_THINGTAGLIST,  "mapthing_t.taglist"},
 #ifdef HAVE_LUA_SEGS
 	{META_NODEBBOX,     "node_t.bbox"},
 	{META_NODECHILDREN, "node_t.children"},

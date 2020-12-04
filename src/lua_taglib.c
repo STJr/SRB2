@@ -150,6 +150,137 @@ static int lib_numTaggroupElements(lua_State *L)
 	return 1;
 }
 
+static void push_taglist(lua_State *L, int idx)
+{
+	lua_getmetatable(L, idx);
+	lua_pushliteral(L, "taglist");
+	lua_rawget(L, -2);
+	lua_remove(L, -2);
+}
+
+static int has_valid_field(lua_State *L)
+{
+	int equal;
+	lua_pushliteral(L, "valid");
+	equal = lua_rawequal(L, 2, -1);
+	lua_pop(L, 1);
+	return equal;
+}
+
+static taglist_t * valid_taglist(lua_State *L, int idx, boolean getting)
+{
+	taglist_t *list = *(taglist_t **)lua_touserdata(L, idx);
+
+	if (list == NULL)
+	{
+		if (getting && has_valid_field(L))
+			lua_pushboolean(L, 0);
+		else
+			LUA_ErrInvalid(L, "taglist_t");/* doesn't actually return */
+		return NULL;
+	}
+	else
+		return list;
+}
+
+static taglist_t * check_taglist(lua_State *L, int idx)
+{
+	luaL_checktype(L, idx, LUA_TUSERDATA);
+	push_taglist(L, idx);
+	luaL_argcheck(L, lua_toboolean(L, -1), idx, "must be a tag list");
+	return valid_taglist(L, idx, false);
+}
+
+static int taglist_get(lua_State *L)
+{
+	const taglist_t *list = valid_taglist(L, 1, true);
+
+	if (list == NULL)/* valid check */
+		return 1;
+
+	if (lua_isnumber(L, 2))
+	{
+		const size_t i = lua_tonumber(L, 2);
+
+		if (list && i <= list->count)
+		{
+			lua_pushnumber(L, list->tags[i - 1]);
+			return 1;
+		}
+		else
+			return 0;
+	}
+	else if (has_valid_field(L))
+	{
+		lua_pushboolean(L, 1);
+		return 1;
+	}
+	else
+	{
+		push_taglist(L, 1);
+		lua_replace(L, 1);
+		lua_rawget(L, 1);
+		return 1;
+	}
+}
+
+static int taglist_len(lua_State *L)
+{
+	const taglist_t *list = valid_taglist(L, 1, false);
+	lua_pushnumber(L, list->count);
+	return 1;
+}
+
+static int taglist_equal(lua_State *L)
+{
+	const taglist_t *lhs = check_taglist(L, 1);
+	const taglist_t *rhs = check_taglist(L, 2);
+	lua_pushboolean(L, Tag_Compare(lhs, rhs));
+	return 1;
+}
+
+static int taglist_iterator(lua_State *L)
+{
+	const taglist_t *list = valid_taglist(L, 1, false);
+	const size_t i = 1 + lua_tonumber(L, lua_upvalueindex(1));
+	if (i <= list->count)
+	{
+		lua_pushnumber(L, list->tags[i - 1]);
+		/* watch me exploit an upvalue as a control because
+			I want to use the control as the value */
+		lua_pushnumber(L, i);
+		lua_replace(L, lua_upvalueindex(1));
+		return 1;
+	}
+	else
+		return 0;
+}
+
+static int taglist_iterate(lua_State *L)
+{
+	check_taglist(L, 1);
+	lua_pushnumber(L, 0);
+	lua_pushcclosure(L, taglist_iterator, 1);
+	lua_pushvalue(L, 1);
+	return 2;
+}
+
+static int taglist_find(lua_State *L)
+{
+	const taglist_t *list = check_taglist(L, 1);
+	const mtag_t tag = luaL_checknumber(L, 2);
+	lua_pushboolean(L, Tag_Find(list, tag));
+	return 1;
+}
+
+static int taglist_shares(lua_State *L)
+{
+	const taglist_t *lhs = check_taglist(L, 1);
+	const taglist_t *rhs = check_taglist(L, 2);
+	lua_pushboolean(L, Tag_Share(lhs, rhs));
+	return 1;
+}
+
 void LUA_InsertTaggroupIterator
 (		lua_State *L,
 		taggroup_t *garray[],
@@ -179,6 +310,13 @@ void LUA_InsertTaggroupIterator
 	lua_setfield(L, -2, "tagged");
 }
 
+static luaL_Reg taglist_lib[] = {
+	{"iterate", taglist_iterate},
+	{"find", taglist_find},
+	{"shares", taglist_shares},
+	{0}
+};
+
 int LUA_TagLib(lua_State *L)
 {
 	lua_newuserdata(L, 0);
@@ -192,6 +330,24 @@ int LUA_TagLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "tags");
+
+	luaL_newmetatable(L, META_THINGTAGLIST);
+		luaL_register(L, "taglist", taglist_lib);
+			lua_getfield(L, -1, "find");
+			lua_setfield(L, -2, "has");
+		lua_setfield(L, -2, "taglist");
+
+		lua_pushcfunction(L, taglist_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, taglist_len);
+		lua_setfield(L, -2, "__len");
+
+		lua_pushcfunction(L, taglist_equal);
+		lua_setfield(L, -2, "__eq");
+	lua_pushvalue(L, -1);
+	lua_setfield(L, LUA_REGISTRYINDEX, META_LINETAGLIST);
+	lua_setfield(L, LUA_REGISTRYINDEX, META_SECTORTAGLIST);
 
 	return 0;
 }

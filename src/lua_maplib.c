@@ -37,6 +37,7 @@ enum sector_e {
 	sector_lightlevel,
 	sector_special,
 	sector_tag,
+	sector_taglist,
 	sector_thinglist,
 	sector_heightsec,
 	sector_camsec,
@@ -55,6 +56,7 @@ static const char *const sector_opt[] = {
 	"lightlevel",
 	"special",
 	"tag",
+	"taglist",
 	"thinglist",
 	"heightsec",
 	"camsec",
@@ -89,6 +91,7 @@ enum line_e {
 	line_flags,
 	line_special,
 	line_tag,
+	line_taglist,
 	line_args,
 	line_stringargs,
 	line_sidenum,
@@ -113,6 +116,7 @@ static const char *const line_opt[] = {
 	"flags",
 	"special",
 	"tag",
+	"taglist",
 	"args",
 	"stringargs",
 	"sidenum",
@@ -581,6 +585,9 @@ static int sector_get(lua_State *L)
 	case sector_tag:
 		lua_pushinteger(L, Tag_FGet(&sector->tags));
 		return 1;
+	case sector_taglist:
+		LUA_PushUserdata(L, &sector->tags, META_SECTORTAGLIST);
+		return 1;
 	case sector_thinglist: // thinglist
 		lua_pushcfunction(L, lib_iterateSectorThinglist);
 		LUA_PushUserdata(L, sector->thinglist, META_MOBJ);
@@ -682,6 +689,8 @@ static int sector_set(lua_State *L)
 	case sector_tag:
 		Tag_SectorFSet((UINT32)(sector - sectors), (INT16)luaL_checkinteger(L, 3));
 		break;
+	case sector_taglist:
+		return LUA_ErrSetDirectly(L, "sector_t", "taglist");
 	}
 	return 0;
 }
@@ -820,6 +829,9 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_tag:
 		lua_pushinteger(L, Tag_FGet(&line->tags));
+		return 1;
+	case line_taglist:
+		LUA_PushUserdata(L, &line->tags, META_LINETAGLIST);
 		return 1;
 	case line_args:
 		LUA_PushUserdata(L, line->args, META_LINEARGS);

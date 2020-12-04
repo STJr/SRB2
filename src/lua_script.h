@@ -102,6 +102,8 @@ void COM_Lua_f(void);
 
 #define LUA_ErrInvalid(L, type) luaL_error(L, "accessed " type " doesn't exist anymore, please check 'valid' before using " type ".");
 
+#define LUA_ErrSetDirectly(L, type, field) luaL_error(L, type " field " LUA_QL(field) " cannot be set directly.")
+
 // Deprecation warnings
 // Shows once upon use. Then doesn't show again.
 #define LUA_Deprecated(L,this_func,use_instead)\
