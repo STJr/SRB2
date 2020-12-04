@@ -1385,23 +1385,13 @@ static int lib_iterateSectors(lua_State *L)
 
 static int lib_getSector(lua_State *L)
 {
-	int field;
 	INLEVEL
-	lua_settop(L, 2);
-	lua_remove(L, 1); // dummy userdata table is unused.
-	if (lua_isnumber(L, 1))
+	if (lua_isnumber(L, 2))
 	{
-		size_t i = lua_tointeger(L, 1);
+		size_t i = lua_tointeger(L, 2);
 		if (i >= numsectors)
 			return 0;
 		LUA_PushUserdata(L, &sectors[i], META_SECTOR);
-		return 1;
-	}
-	field = luaL_checkoption(L, 1, NULL, array_opt);
-	switch(field)
-	{
-	case 0: // iterate
-		lua_pushcfunction(L, lib_iterateSectors);
 		return 1;
 	}
 	return 0;
@@ -1489,23 +1479,13 @@ static int lib_iterateLines(lua_State *L)
 
 static int lib_getLine(lua_State *L)
 {
-	int field;
 	INLEVEL
-	lua_settop(L, 2);
-	lua_remove(L, 1); // dummy userdata table is unused.
-	if (lua_isnumber(L, 1))
+	if (lua_isnumber(L, 2))
 	{
-		size_t i = lua_tointeger(L, 1);
+		size_t i = lua_tointeger(L, 2);
 		if (i >= numlines)
 			return 0;
 		LUA_PushUserdata(L, &lines[i], META_LINE);
-		return 1;
-	}
-	field = luaL_checkoption(L, 1, NULL, array_opt);
-	switch(field)
-	{
-	case 0: // iterate
-		lua_pushcfunction(L, lib_iterateLines);
 		return 1;
 	}
 	return 0;
@@ -2358,15 +2338,13 @@ int LUA_MapLib(lua_State *L)
 		//lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSector);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numsectors);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "sectors");
+	LUA_PushTaggableObjectArray(L, "sectors",
+			lib_iterateSectors,
+			lib_getSector,
+			lib_numsectors,
+			tags_sectors,
+			&numsectors, &sectors,
+			sizeof (sector_t), META_SECTOR);
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
@@ -2378,15 +2356,13 @@ int LUA_MapLib(lua_State *L)
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "subsectors");
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getLine);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numlines);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "lines");
+	LUA_PushTaggableObjectArray(L, "lines",
+			lib_iterateLines,
+			lib_getLine,
+			lib_numlines,
+			tags_lines,
+			&numlines, &lines,
+			sizeof (line_t), META_LINE);
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);

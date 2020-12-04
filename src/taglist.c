@@ -15,6 +15,11 @@
 #include "z_zone.h"
 #include "r_data.h"
 
+// Bit array of whether a tag exists for sectors/lines/things.
+bitarray_t tags_available[BIT_ARRAY_SIZE (MAXTAGS)];
+
+size_t num_tags;
+
 // Taggroups are used to list elements of the same tag, for iteration.
 // Since elements can now have multiple tags, it means an element may appear
 // in several taggroups at the same time. These are built on level load.
@@ -105,6 +110,33 @@ size_t Taggroup_Find (const taggroup_t *group, const size_t id)
 	return -1;
 }
 
+/// Iterate thru elements in a global taggroup.
+INT32 Taggroup_Iterate
+(		taggroup_t *garray[],
+		const size_t max_elements,
+		const mtag_t tag,
+		const size_t p)
+{
+	const taggroup_t *group;
+
+	if (tag == MTAG_GLOBAL)
+	{
+		if (p < max_elements)
+			return p;
+		return -1;
+	}
+
+	group = garray[(UINT16)tag];
+
+	if (group)
+	{
+		if (p < group->count)
+			return group->elements[p];
+		return -1;
+	}
+	return -1;
+}
+
 /// Add an element to a global taggroup.
 void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 {
@@ -119,6 +151,11 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 	// Don't add duplicate entries.
 	if (Taggroup_Find(group, id) != (size_t)-1)
 		return;
+
+	if (! in_bit_array(tags_available, tag))
+		num_tags++;
+
+	set_bit_array(tags_available, tag);
 
 	// Create group if empty.
 	if (!group)
@@ -160,6 +197,11 @@ void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 
 	if ((rempos = Taggroup_Find(group, id)) == (size_t)-1)
 		return;
+
+	if (in_bit_array(tags_available, tag))
+		num_tags--;
+
+	unset_bit_array(tags_available, tag);
 
 	// Strip away taggroup if no elements left.
 	if (!(newcount = --group->count))
@@ -209,6 +251,9 @@ void Taglist_InitGlobalTables(void)
 {
 	size_t i, j;
 
+	memset(tags_available, 0, sizeof tags_available);
+	num_tags = 0;
+
 	for (i = 0; i < MAXTAGS; i++)
 	{
 		tags_sectors[i] = NULL;
@@ -236,56 +281,17 @@ void Taglist_InitGlobalTables(void)
 
 INT32 Tag_Iterate_Sectors (const mtag_t tag, const size_t p)
 {
-	if (tag == MTAG_GLOBAL)
-	{
-		if (p < numsectors)
-			return p;
-		return -1;
-	}
-
-	if (tags_sectors[(UINT16)tag])
-	{
-		if (p < tags_sectors[(UINT16)tag]->count)
-			return tags_sectors[(UINT16)tag]->elements[p];
-		return -1;
-	}
-	return -1;
+	return Taggroup_Iterate(tags_sectors, numsectors, tag, p);
 }
 
 INT32 Tag_Iterate_Lines (const mtag_t tag, const size_t p)
 {
-	if (tag == MTAG_GLOBAL)
-	{
-		if (p < numlines)
-			return p;
-		return -1;
-	}
-
-	if (tags_lines[(UINT16)tag])
-	{
-		if (p < tags_lines[(UINT16)tag]->count)
-			return tags_lines[(UINT16)tag]->elements[p];
-		return -1;
-	}
-	return -1;
+	return Taggroup_Iterate(tags_lines, numlines, tag, p);
 }
 
 INT32 Tag_Iterate_Things (const mtag_t tag, const size_t p)
 {
-	if (tag == MTAG_GLOBAL)
-	{
-		if (p < nummapthings)
-			return p;
-		return -1;
-	}
-
-	if (tags_mapthings[(UINT16)tag])
-	{
-		if (p < tags_mapthings[(UINT16)tag]->count)
-			return tags_mapthings[(UINT16)tag]->elements[p];
-		return -1;
-	}
-	return -1;
+	return Taggroup_Iterate(tags_mapthings, nummapthings, tag, p);
 }
 
 INT32 Tag_FindLineSpecial(const INT16 special, const mtag_t tag)
