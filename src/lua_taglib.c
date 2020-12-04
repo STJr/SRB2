@@ -71,16 +71,9 @@ struct element_iterator_state {
 static int element_iterator(lua_State *L)
 {
 	struct element_iterator_state * state = lua_touserdata(L, 1);
-	const INT32 element = next_element(L, state->tag, state->p);
-
-	if (element == -1)
-		return 0;
-	else
-	{
-		push_next_element(L, element);
-		state->p++;
-		return 1;
-	}
+	lua_pushnumber(L, ++state->p);
+	lua_gettable(L, 1);
+	return 1;
 }
 
 static int lib_iterateTags(lua_State *L)
@@ -129,6 +122,21 @@ static int lib_getTaggroup(lua_State *L)
 	return 1;
 }
 
+static int lib_getTaggroupElement(lua_State *L)
+{
+	const size_t p = luaL_checknumber(L, 2) - 1;
+	const mtag_t tag = *(mtag_t *)lua_touserdata(L, 1);
+	const INT32 element = next_element(L, tag, p);
+
+	if (element == -1)
+		return 0;
+	else
+	{
+		push_next_element(L, element);
+		return 1;
+	}
+}
+
 static int lib_numTaggroupElements(lua_State *L)
 {
 	const mtag_t tag = *(mtag_t *)lua_touserdata(L, 1);
@@ -150,7 +158,7 @@ void LUA_InsertTaggroupIterator
 		size_t sizeof_element,
 		const char * meta)
 {
-	lua_createtable(L, 0, 2);
+	lua_createtable(L, 0, 3);
 		lua_pushlightuserdata(L, garray);
 		lua_pushlightuserdata(L, max_elements);
 
@@ -159,11 +167,14 @@ void LUA_InsertTaggroupIterator
 		lua_pushlightuserdata(L, element_array);
 		lua_pushnumber(L, sizeof_element);
 		luaL_getmetatable(L, meta);
-		lua_pushcclosure(L, element_iterator, 5);
-		lua_setfield(L, -4, "__call");
+		lua_pushcclosure(L, lib_getTaggroupElement, 5);
+		lua_setfield(L, -4, "__index");
 
 		lua_pushcclosure(L, lib_numTaggroupElements, 2);
 		lua_setfield(L, -2, "__len");
+
+		lua_pushcfunction(L, element_iterator);
+		lua_setfield(L, -2, "__call");
 	lua_pushcclosure(L, lib_getTaggroup, 1);
 	lua_setfield(L, -2, "tagged");
 }
