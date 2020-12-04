@@ -340,7 +340,7 @@ static int lib_getSkinSprite(lua_State *L)
 	playersprite_t i = luaL_checkinteger(L, 2);
 
 	if (i < 0 || i >= NUMPLAYERSPRITES*2)
-		return luaL_error(L, "skin.sprites[] index %d out of range (0 - %d)", i, (NUMPLAYERSPRITES*2)-1);
+		return luaL_error(L, LUA_QL("skin_t") " field 'sprites' index %d out of range (0 - %d)", i, (NUMPLAYERSPRITES*2)-1);
 
 	LUA_PushLightUserdata(L, &sprites[i], META_SKINSPRITESLIST);
 	return 1;
