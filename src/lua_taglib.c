@@ -145,7 +145,7 @@ static int lib_numTaggroupElements(lua_State *L)
 	else
 	{
 		const taggroup_t ** garray = lua_touserdata(L, up_garray);
-		lua_pushnumber(L, garray[tag] ? garray[tag]->count : 0);
+		lua_pushnumber(L, Taggroup_Count(garray[tag]));
 	}
 	return 1;
 }

@@ -54,6 +54,7 @@ extern taggroup_t* tags_mapthings[];
 void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id);
 void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id);
 size_t Taggroup_Find (const taggroup_t *group, const size_t id);
+size_t Taggroup_Count (const taggroup_t *group);
 
 INT32 Taggroup_Iterate
 (		taggroup_t *garray[],

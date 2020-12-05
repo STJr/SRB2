@@ -110,6 +110,12 @@ size_t Taggroup_Find (const taggroup_t *group, const size_t id)
 	return -1;
 }
 
+/// group->count, but also checks for NULL
+size_t Taggroup_Count (const taggroup_t *group)
+{
+	return group ? group->count : 0;
+}
+
 /// Iterate thru elements in a global taggroup.
 INT32 Taggroup_Iterate
 (		taggroup_t *garray[],
@@ -153,9 +159,10 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 		return;
 
 	if (! in_bit_array(tags_available, tag))
+	{
 		num_tags++;
-
-	set_bit_array(tags_available, tag);
+		set_bit_array(tags_available, tag);
+	}
 
 	// Create group if empty.
 	if (!group)
@@ -182,6 +189,16 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 	group->elements[i] = id;
 }
 
+static size_t total_elements_with_tag (const mtag_t tag)
+{
+	return
+		(
+				Taggroup_Count(tags_sectors[tag]) +
+				Taggroup_Count(tags_lines[tag]) +
+				Taggroup_Count(tags_mapthings[tag])
+		);
+}
+
 /// Remove an element from a global taggroup.
 void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 {
@@ -197,10 +214,11 @@ void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 	if ((rempos = Taggroup_Find(group, id)) == (size_t)-1)
 		return;
 
-	if (in_bit_array(tags_available, tag))
+	if (group->count == 1 && total_elements_with_tag(tag) == 1)
+	{
 		num_tags--;
-
-	unset_bit_array(tags_available, tag);
+		unset_bit_array(tags_available, tag);
+	}
 
 	// Strip away taggroup if no elements left.
 	if (!(oldcount = group->count--))
