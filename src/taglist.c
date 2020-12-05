@@ -170,16 +170,15 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 		for (i = 0; i < group->count; i++)
 			if (group->elements[i] > id)
 				break;
-
-		group->elements = Z_Realloc(group->elements, (group->count + 1) * sizeof(size_t), PU_LEVEL, NULL);
-
-		// Offset existing elements to make room for the new one.
-		if (i < group->count)
-			memmove(&group->elements[i + 1], &group->elements[i], group->count - i);
 	}
 
+	group->elements = Z_Realloc(group->elements, (group->count + 1) * sizeof(size_t), PU_LEVEL, NULL);
+
+	// Offset existing elements to make room for the new one.
+	if (i < group->count)
+		memmove(&group->elements[i + 1], &group->elements[i], group->count - i);
+
 	group->count++;
-	group->elements = Z_Realloc(group->elements, group->count * sizeof(size_t), PU_LEVEL, NULL);
 	group->elements[i] = id;
 }
 
