@@ -182,7 +182,7 @@ static taglist_t * valid_taglist(lua_State *L, int idx, boolean getting)
 		if (getting && has_valid_field(L))
 			lua_pushboolean(L, 0);
 		else
-			LUA_ErrInvalid(L, "taglist_t");/* doesn't actually return */
+			LUA_ErrInvalid(L, "taglist");/* doesn't actually return */
 		return NULL;
 	}
 	else

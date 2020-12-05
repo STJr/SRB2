@@ -846,6 +846,7 @@ void LUA_InvalidateLevel(void)
 	{
 		LUA_InvalidateUserdata(&sectors[i]);
 		LUA_InvalidateUserdata(&sectors[i].lines);
+		LUA_InvalidateUserdata(&sectors[i].tags);
 		if (sectors[i].ffloors)
 		{
 			for (rover = sectors[i].ffloors; rover; rover = rover->next)
@@ -855,6 +856,7 @@ void LUA_InvalidateLevel(void)
 	for (i = 0; i < numlines; i++)
 	{
 		LUA_InvalidateUserdata(&lines[i]);
+		LUA_InvalidateUserdata(&lines[i].tags);
 		LUA_InvalidateUserdata(lines[i].sidenum);
 	}
 	for (i = 0; i < numsides; i++)
@@ -886,7 +888,10 @@ void LUA_InvalidateMapthings(void)
 		return;
 
 	for (i = 0; i < nummapthings; i++)
+	{
 		LUA_InvalidateUserdata(&mapthings[i]);
+		LUA_InvalidateUserdata(&mapthings[i].tags);
+	}
 }
 
 void LUA_InvalidatePlayer(player_t *player)
