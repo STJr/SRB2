@@ -17,6 +17,10 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 
+#ifdef MUTABLE_TAGS
+#include "z_zone.h"
+#endif
+
 static int tag_iterator(lua_State *L)
 {
 	INT32 tag = lua_isnil(L, 2) ? -1 : lua_tonumber(L, 2);
@@ -281,6 +285,63 @@ static int taglist_shares(lua_State *L)
 	return 1;
 }
 
+/* only sector tags are mutable... */
+
+#ifdef MUTABLE_TAGS
+static size_t sector_of_taglist(taglist_t *list)
+{
+	return (sector_t *)((char *)list - offsetof (sector_t, tags)) - sectors;
+}
+
+static int this_taglist(lua_State *L)
+{
+	lua_settop(L, 1);
+	return 1;
+}
+
+static int taglist_add(lua_State *L)
+{
+	taglist_t *list = *(taglist_t **)luaL_checkudata(L, 1, META_SECTORTAGLIST);
+	const mtag_t tag = luaL_checknumber(L, 2);
+
+	if (! Tag_Find(list, tag))
+	{
+		Taggroup_Add(tags_sectors, tag, sector_of_taglist(list));
+		Tag_Add(list, tag);
+	}
+
+	return this_taglist(L);
+}
+
+static int taglist_remove(lua_State *L)
+{
+	taglist_t *list = *(taglist_t **)luaL_checkudata(L, 1, META_SECTORTAGLIST);
+	const mtag_t tag = luaL_checknumber(L, 2);
+
+	size_t i;
+
+	for (i = 0; i < list->count; ++i)
+	{
+		if (list->tags[i] == tag)
+		{
+			if (list->count > 1)
+			{
+				memmove(&list->tags[i], &list->tags[i + 1],
+						(list->count - 1 - i) * sizeof (mtag_t));
+				list->tags = Z_Realloc(list->tags,
+						(--list->count) * sizeof (mtag_t), PU_LEVEL, NULL);
+				Taggroup_Remove(tags_sectors, tag, sector_of_taglist(list));
+			}
+			else/* reset to default tag */
+				Tag_SectorFSet(sector_of_taglist(list), 0);
+			break;
+		}
+	}
+
+	return this_taglist(L);
+}
+#endif/*MUTABLE_TAGS*/
+
 void LUA_InsertTaggroupIterator
 (		lua_State *L,
 		taggroup_t *garray[],
@@ -314,8 +375,37 @@ static luaL_Reg taglist_lib[] = {
 	{"iterate", taglist_iterate},
 	{"find", taglist_find},
 	{"shares", taglist_shares},
+#ifdef MUTABLE_TAGS
+	{"add", taglist_add},
+	{"remove", taglist_remove},
+#endif
 	{0}
 };
+
+static void open_taglist(lua_State *L)
+{
+	luaL_register(L, "taglist", taglist_lib);
+
+	lua_getfield(L, -1, "find");
+	lua_setfield(L, -2, "has");
+}
+
+static void set_taglist_metatable(lua_State *L, const char *meta)
+{
+	lua_createtable(L, 0, 4);
+		lua_getglobal(L, "taglist");
+		lua_setfield(L, -2, "taglist");
+
+		lua_pushcfunction(L, taglist_get);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, taglist_len);
+		lua_setfield(L, -2, "__len");
+
+		lua_pushcfunction(L, taglist_equal);
+		lua_setfield(L, -2, "__eq");
+	lua_setfield(L, LUA_REGISTRYINDEX, meta);
+}
 
 int LUA_TagLib(lua_State *L)
 {
@@ -331,23 +421,13 @@ int LUA_TagLib(lua_State *L)
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "tags");
 
-	luaL_newmetatable(L, META_THINGTAGLIST);
-		luaL_register(L, "taglist", taglist_lib);
-			lua_getfield(L, -1, "find");
-			lua_setfield(L, -2, "has");
-		lua_setfield(L, -2, "taglist");
+	open_taglist(L);
 
-		lua_pushcfunction(L, taglist_get);
-		lua_setfield(L, -2, "__index");
+	set_taglist_metatable(L, META_TAGLIST);
 
-		lua_pushcfunction(L, taglist_len);
-		lua_setfield(L, -2, "__len");
-
-		lua_pushcfunction(L, taglist_equal);
-		lua_setfield(L, -2, "__eq");
-	lua_pushvalue(L, -1);
-	lua_setfield(L, LUA_REGISTRYINDEX, META_LINETAGLIST);
-	lua_setfield(L, LUA_REGISTRYINDEX, META_SECTORTAGLIST);
+#ifdef MUTABLE_TAGS
+	set_taglist_metatable(L, META_SECTORTAGLIST);
+#endif
 
 	return 0;
 }

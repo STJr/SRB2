@@ -904,7 +904,7 @@ static int mapthing_get(lua_State *L)
 		number = Tag_FGet(&mt->tags);
 	else if(fastcmp(field,"taglist"))
 	{
-		LUA_PushUserdata(L, &mt->tags, META_THINGTAGLIST);
+		LUA_PushUserdata(L, &mt->tags, META_TAGLIST);
 		return 1;
 	}
 	else if(fastcmp(field,"args"))

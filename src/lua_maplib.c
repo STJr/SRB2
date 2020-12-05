@@ -831,7 +831,7 @@ static int line_get(lua_State *L)
 		lua_pushinteger(L, Tag_FGet(&line->tags));
 		return 1;
 	case line_taglist:
-		LUA_PushUserdata(L, &line->tags, META_LINETAGLIST);
+		LUA_PushUserdata(L, &line->tags, META_TAGLIST);
 		return 1;
 	case line_args:
 		LUA_PushUserdata(L, line->args, META_LINEARGS);
