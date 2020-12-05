@@ -75,6 +75,8 @@ struct element_iterator_state {
 static int element_iterator(lua_State *L)
 {
 	struct element_iterator_state * state = lua_touserdata(L, 1);
+	if (lua_isnoneornil(L, 3))
+		state->p = 0;
 	lua_pushnumber(L, ++state->p);
 	lua_gettable(L, 1);
 	return 1;
