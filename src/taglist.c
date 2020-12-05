@@ -188,7 +188,7 @@ void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 {
 	taggroup_t *group;
 	size_t rempos;
-	size_t newcount;
+	size_t oldcount;
 
 	if (tag == MTAG_GLOBAL)
 		return;
@@ -204,7 +204,7 @@ void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 	unset_bit_array(tags_available, tag);
 
 	// Strip away taggroup if no elements left.
-	if (!(newcount = --group->count))
+	if (!(oldcount = group->count--))
 	{
 		Z_Free(group->elements);
 		Z_Free(group);
@@ -212,19 +212,18 @@ void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 	}
 	else
 	{
-		size_t *newelements = Z_Malloc(newcount * sizeof(size_t), PU_LEVEL, NULL);
+		size_t *newelements = Z_Malloc(group->count * sizeof(size_t), PU_LEVEL, NULL);
 		size_t i;
 
 		// Copy the previous entries save for the one to remove.
 		for (i = 0; i < rempos; i++)
 			newelements[i] = group->elements[i];
 
-		for (i = rempos + 1; i < group->count; i++)
+		for (i = rempos + 1; i < oldcount; i++)
 			newelements[i - 1] = group->elements[i];
 
 		Z_Free(group->elements);
 		group->elements = newelements;
-		group->count = newcount;
 	}
 }
 
