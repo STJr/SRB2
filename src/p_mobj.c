@@ -9651,6 +9651,12 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		break;
 	}
 	case MT_SALOONDOOR:
+		if (!mobj->tracer) // Door center is gone or not spawned?
+		{
+			P_RemoveMobj(mobj); // Die
+			return false;
+		}
+
 		P_SaloonDoorThink(mobj);
 		break;
 	case MT_MINECARTSPAWNER:
