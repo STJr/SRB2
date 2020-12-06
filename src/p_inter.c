@@ -1641,6 +1641,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				// Can't jump first frame
 				player->pflags |= PF_JUMPSTASIS;
 
+				// Disable interaction with ground
+				player->mo->flags |= MF_NOCLIPHEIGHT;
+
 				return;
 			}
 		case MT_EGGMOBILE2_POGO:
