@@ -1085,9 +1085,6 @@ void P_ResetPlayer(player_t *player)
 		player->powers[pw_carry] = CR_NONE;
 	}
 
-	if (player->powers[pw_carry] == CR_MACESPIN || player->powers[pw_carry] == CR_GENERIC)
-		player->mo->flags &= ~MF_NOCLIPHEIGHT;
-
 	if (!(player->powers[pw_carry] == CR_NIGHTSMODE || player->powers[pw_carry] == CR_NIGHTSFALL || player->powers[pw_carry] == CR_BRAKGOOP || player->powers[pw_carry] == CR_MINECART))
 		player->powers[pw_carry] = CR_NONE;
 
@@ -4429,8 +4426,6 @@ void P_DoJump(player_t *player, boolean soundandstate)
 			if (!(player->mo->tracer->flags & MF_MISSILE)) // Missiles remember their owner!
 				P_SetTarget(&player->mo->tracer->target, NULL);
 			P_SetTarget(&player->mo->tracer, NULL);
-			player->mo->flags &= ~MF_NOCLIPHEIGHT;
-
 		}
 		else if (player->powers[pw_carry] == CR_ROPEHANG)
 		{
@@ -5262,7 +5257,6 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			player->powers[pw_carry] = CR_NONE;
 			P_SetTarget(&player->mo->tracer, NULL);
 			player->powers[pw_flashing] = TICRATE/4;
-			player->mo->flags &= ~MF_NOCLIPHEIGHT;
 		}
 		// can't jump while in air, can't jump while jumping
 		else if (onground || player->climbing || player->powers[pw_carry])
