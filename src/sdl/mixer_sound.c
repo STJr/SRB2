@@ -1299,7 +1299,8 @@ boolean I_PlaySong(boolean looping)
 	{
 		gme_equalizer_t eq = {GME_TREBLE, GME_BASS, 0,0,0,0,0,0,0,0};
 #if GME_VERSION >= 0x000603
-        gme_set_autoload_playback_limit(gme, 0);
+        if (looping)
+            gme_set_autoload_playback_limit(gme, 0);
 #endif        
 		gme_set_equalizer(gme, &eq);
 		gme_start_track(gme, 0);
