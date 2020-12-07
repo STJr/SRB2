@@ -4823,6 +4823,8 @@ DoneSection2:
 
 					if (player->laps >= (UINT8)cv_numlaps.value)
 						CONS_Printf(M_GetText("%s has finished the race.\n"), player_names[player-players]);
+					else if (player->laps == (UINT8)cv_numlaps.value-1)
+						CONS_Printf(M_GetText("%s started the %c%s%c!\n"), player_names[player-players], 0x85, M_GetText("final lap"), 0x80);
 					else
 						CONS_Printf(M_GetText("%s started lap %u\n"), player_names[player-players], (UINT32)player->laps+1);
 
