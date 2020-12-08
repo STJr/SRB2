@@ -4600,7 +4600,7 @@ DoneSection2:
 
 					HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
 					HU_SetCEchoDuration(5);
-					HU_DoCEcho(va(M_GetText("%s%s%s\\CAPTURED THE %sBLUE FLAG%s.\\\\\\\\"), "\x85", player_names[player-players], "\x80", "\x84", "\x80"));
+					HU_DoCEcho(va(M_GetText("\205%s\200\\CAPTURED THE \204BLUE FLAG\200.\\\\\\\\"), player_names[player-players]));
 
 					if (splitscreen || players[consoleplayer].ctfteam == 1)
 						S_StartSound(NULL, sfx_flgcap);
@@ -4633,7 +4633,7 @@ DoneSection2:
 
 					HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
 					HU_SetCEchoDuration(5);
-					HU_DoCEcho(va(M_GetText("%s%s%s\\CAPTURED THE %sRED FLAG%s.\\\\\\\\"), "\x84", player_names[player-players], "\x80", "\x85", "\x80"));
+					HU_DoCEcho(va(M_GetText("\204%s\200\\CAPTURED THE \205RED FLAG\200.\\\\\\\\"), player_names[player-players]));
 
 					if (splitscreen || players[consoleplayer].ctfteam == 2)
 						S_StartSound(NULL, sfx_flgcap);
