@@ -1341,7 +1341,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	// Transformation animation
 	P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_TRANS1);
 
-	if (giverings)
+	if (giverings && player->rings < 50)
 		player->rings = 50;
 
 	// Just in case.
