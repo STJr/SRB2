@@ -8609,12 +8609,6 @@ void P_MovePlayer(player_t *player)
 		player->climbing--;
 	}
 
-	if (!player->climbing)
-	{
-		player->lastsidehit = -1;
-		player->lastlinehit = -1;
-	}
-
 	// Make sure you're not teetering when you shouldn't be.
 	if (player->panim == PA_EDGE
 	&& (player->mo->momx || player->mo->momy || player->mo->momz))
