@@ -621,7 +621,7 @@ static void GIF_framewrite(void)
 		{
 			float delayf = ceil(100.0f/NEWTICRATE);
 
-			delay = (UINT16)((I_GetTimeMicros() - gif_prevframeus)/10/1000);
+			delay = (UINT16)I_PreciseToMicros((I_GetPreciseTime() - gif_prevframetime))/10/1000;
 
 			if (delay < (UINT16)(delayf))
 				delay = (UINT16)(delayf);
