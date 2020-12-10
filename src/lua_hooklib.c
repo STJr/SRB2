@@ -74,6 +74,8 @@ static int * hookRefs;
 // After a hook errors once, don't print the error again.
 static UINT8 * hooksErrored;
 
+static int errorRef;
+
 static boolean mobj_hook_available(int hook_type, mobjtype_t mobj_type)
 {
 	return
@@ -231,7 +233,11 @@ static int lib_addHook(lua_State *L)
 
 int LUA_HookLib(lua_State *L)
 {
+	lua_pushcfunction(L, LUA_GetErrorMessage);
+	errorRef = luaL_ref(L, LUA_REGISTRYINDEX);
+
 	lua_register(L, "addHook", lib_addHook);
+
 	return 0;
 }
 
@@ -258,7 +264,7 @@ enum {
 
 static void push_error_handler(void)
 {
-	lua_pushcfunction(gL, LUA_GetErrorMessage);
+	lua_getref(gL, errorRef);
 }
 
 /* repush hook string */
