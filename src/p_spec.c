@@ -4420,15 +4420,19 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			// clear the special so you can't push the button twice.
 			sector->special = 0;
 
+			// Initialize my junk
+			junk.tags.tags = NULL;
+			junk.tags.count = 0;
+
 			// Move the button down
-			Tag_FSet(&junk.tags, 680);
+			Tag_FSet(&junk.tags, LE_CAPSULE0);
 			EV_DoElevator(&junk, elevateDown, false);
 
 			// Open the top FOF
-			Tag_FSet(&junk.tags, 681);
+			Tag_FSet(&junk.tags, LE_CAPSULE1);
 			EV_DoFloor(&junk, raiseFloorToNearestFast);
 			// Open the bottom FOF
-			Tag_FSet(&junk.tags, 682);
+			Tag_FSet(&junk.tags, LE_CAPSULE2);
 			EV_DoCeiling(&junk, lowerToLowestFast);
 
 			// Mark all players with the time to exit thingy!

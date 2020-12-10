@@ -3924,6 +3924,10 @@ void A_BossDeath(mobj_t *mo)
 	}
 	else
 	{
+		// Initialize my junk
+		junk.tags.tags = NULL;
+		junk.tags.count = 0;
+
 		// Bring the egg trap up to the surface
 		// Incredibly shitty code ahead
 		Tag_FSet(&junk.tags, LE_CAPSULE0);
@@ -4053,6 +4057,10 @@ bossjustdie:
 		}
 		case MT_KOOPA:
 		{
+			// Initialize my junk
+			junk.tags.tags = NULL;
+			junk.tags.count = 0;
+			
 			Tag_FSet(&junk.tags, LE_KOOPA);
 			EV_DoCeiling(&junk, raiseToHighest);
 			return;
