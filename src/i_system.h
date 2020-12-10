@@ -46,7 +46,13 @@ UINT32 I_GetFreeMem(UINT32 *total);
 */
 tic_t I_GetTime(void);
 
-int I_GetTimeMicros(void);// provides microsecond counter for render stats
+/**	\brief	Returns precise time value for performance measurement.
+  */
+precise_t I_GetPreciseTime(void);
+
+/**	\brief	Returns the difference between precise times as microseconds.
+  */
+int I_PreciseToMicros(precise_t);
 
 /**	\brief	The I_Sleep function
 

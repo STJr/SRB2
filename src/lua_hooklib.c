@@ -25,7 +25,7 @@
 
 #include "m_perfstats.h"
 #include "d_netcmd.h" // for cv_perfstats
-#include "i_system.h" // I_GetTimeMicros
+#include "i_system.h" // I_GetPreciseTime
 
 #undef LUA_Hook
 
@@ -602,7 +602,7 @@ void LUA_HookThinkFrame(void)
 {
 	// variables used by perf stats
 	int hook_index = 0;
-	int time_taken = 0;
+	precise_t time_taken = 0;
 
 	Hook_State hook;
 
@@ -623,7 +623,7 @@ void LUA_HookThinkFrame(void)
 			if (cv_perfstats.value == 3)
 			{
 				lua_pushvalue(gL, -1);/* need the function again */
-				time_taken = I_GetTimeMicros();
+				time_taken = I_GetPreciseTime();
 			}
 
 			call_single_hook(&hook);
@@ -631,7 +631,7 @@ void LUA_HookThinkFrame(void)
 			if (cv_perfstats.value == 3)
 			{
 				lua_Debug ar;
-				time_taken = I_GetTimeMicros() - time_taken;
+				time_taken = I_PreciseToMicros(I_GetPreciseTime() - time_taken);
 				lua_getinfo(gL, ">S", &ar);
 				PS_SetThinkFrameHookInfo(hook_index, time_taken, ar.short_src);
 				hook_index++;
