@@ -4794,6 +4794,7 @@ struct int_const_s const INT_CONST[] = {
 
 	// fixed_t constants, from m_fixed.h
 	{"FRACUNIT",FRACUNIT},
+	{"FU"      ,FRACUNIT},
 	{"FRACBITS",FRACBITS},
 
 	// doomdef.h constants
