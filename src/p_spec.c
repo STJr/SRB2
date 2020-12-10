@@ -4503,7 +4503,7 @@ DoneSection2:
 
 				P_InstaThrust(player->mo, player->mo->angle, linespeed);
 
-				if ((lines[i].flags & ML_EFFECT5) && (player->charability2 == CA2_SPINDASH)) // Roll!
+				if (lines[i].flags & ML_EFFECT5) // Roll!
 				{
 					if (!(player->pflags & PF_SPINNING))
 						player->pflags |= PF_SPINNING;
@@ -4669,7 +4669,7 @@ DoneSection2:
 			break;
 
 		case 7: // Make player spin
-			if (!(player->pflags & PF_SPINNING) && P_IsObjectOnGround(player->mo) && (player->charability2 == CA2_SPINDASH))
+			if (!(player->pflags & PF_SPINNING))
 			{
 				player->pflags |= PF_SPINNING;
 				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
