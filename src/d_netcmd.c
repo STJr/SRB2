@@ -3294,7 +3294,13 @@ static void Command_Addfile(void)
 			if (!isprint(fn[i]) || fn[i] == ';')
 				return;
 
-		musiconly = W_VerifyNMUSlumps(fn);
+		musiconly = W_VerifyNMUSlumps(fn, false);
+
+		if (musiconly == -1)
+		{
+			addedfiles[numfilesadded++] = fn;
+			continue;
+		}
 
 		if (!musiconly)
 		{
