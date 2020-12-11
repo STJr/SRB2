@@ -79,7 +79,7 @@ typedef struct
 	// for textures
 	UINT8 *picture;
 #ifdef HWRENDER
-	void *texture;
+	void *hwrTexture;
 #endif
 } levelflat_t;
 

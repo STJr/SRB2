@@ -922,7 +922,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 	else if (levelflat->type == LEVELFLAT_PNG)
 	{
 		INT32 pngwidth = 0, pngheight = 0;
-		HWRTexture_t *texture = levelflat->texture;
+		HWRTexture_t *texture = levelflat->hwrTexture;
 		UINT8 *flat;
 		size_t size;
 
@@ -940,7 +940,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 			texture = Z_Calloc(sizeof(HWRTexture_t), PU_LEVEL, NULL);
 			texture->format = GPU_TEXFMT_P_8;
 			texture->flags = TF_WRAPXY|TF_CHROMAKEYED;
-			levelflat->texture = texture;
+			levelflat->hwrTexture = texture;
 		}
 
 		if (!texture->data && !texture->downloaded)
