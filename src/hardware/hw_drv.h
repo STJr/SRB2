@@ -35,21 +35,20 @@ EXPORT void HWRAPI(GetModeList) (vmode_t **pvidmodes, INT32 *numvidmodes);
 EXPORT void HWRAPI(SetPalette) (RGBA_t *ppal);
 EXPORT void HWRAPI(FinishUpdate) (INT32 waitvbl);
 EXPORT void HWRAPI(Draw2DLine) (F2DCoord *v1, F2DCoord *v2, RGBA_t Color);
-EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags);
-EXPORT void HWRAPI(DrawIndexedTriangles) (FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags, UINT32 *IndexArray);
-EXPORT void HWRAPI(RenderSkyDome) (gl_sky_t *sky);
-EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags);
-EXPORT void HWRAPI(ClearBuffer) (FBOOLEAN ColorMask, FBOOLEAN DepthMask, FRGBAFloat *ClearColor);
-EXPORT void HWRAPI(SetTexture) (FTextureInfo *TexInfo);
-EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *TexInfo);
-EXPORT void HWRAPI(DeleteTexture) (FTextureInfo *TexInfo);
+EXPORT void HWRAPI(DrawPolygon) (FSurfaceInfo *pSurf, FOutVector *pOutVerts, UINT32 iNumPts, UINT32 PolyFlags);
+EXPORT void HWRAPI(DrawIndexedTriangles) (FSurfaceInfo *pSurf, FOutVector *pOutVerts, UINT32 iNumPts, UINT32 PolyFlags, UINT32 *IndexArray);
+EXPORT void HWRAPI(RenderSkyDome) (FSkyDome *sky);
+EXPORT void HWRAPI(SetBlend) (UINT32 PolyFlags);
+EXPORT void HWRAPI(ClearBuffer) (boolean ColorMask, boolean DepthMask, FRGBAFloat *ClearColor);
+EXPORT void HWRAPI(SetTexture) (HWRTexture_t *TexInfo);
+EXPORT void HWRAPI(UpdateTexture) (HWRTexture_t *TexInfo);
+EXPORT void HWRAPI(DeleteTexture) (HWRTexture_t *TexInfo);
 EXPORT void HWRAPI(ReadRect) (INT32 x, INT32 y, INT32 width, INT32 height, INT32 dst_stride, UINT16 *dst_data);
 EXPORT void HWRAPI(GClipRect) (INT32 minx, INT32 miny, INT32 maxx, INT32 maxy, float nearclip);
-EXPORT void HWRAPI(ClearMipMapCache) (void);
-EXPORT void HWRAPI(ClearCacheList) (void);
+EXPORT void HWRAPI(ClearTextureCache) (void);
 
 //Hurdler: added for backward compatibility
-EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value);
+EXPORT void HWRAPI(SetState) (INT32 State, INT32 Value);
 
 //Hurdler: added for new development
 EXPORT void HWRAPI(DrawModel) (model_t *model, INT32 frameIndex, INT32 duration, INT32 tics, INT32 nextFrameIndex, FTransform *pos, float scale, UINT8 flipped, UINT8 hflipped, FSurfaceInfo *Surface);
@@ -75,7 +74,7 @@ EXPORT void HWRAPI(CleanShaders) (void);
 EXPORT void HWRAPI(SetShader) (int type);
 EXPORT void HWRAPI(UnSetShader) (void);
 
-EXPORT void HWRAPI(SetShaderInfo) (hwdshaderinfo_t info, INT32 value);
+EXPORT void HWRAPI(SetShaderInfo) (INT32 info, INT32 value);
 EXPORT void HWRAPI(LoadCustomShader) (int number, char *code, size_t size, boolean isfragment);
 
 // ==========================================================================
@@ -100,9 +99,8 @@ struct hwdriver_s
 	DeleteTexture       pfnDeleteTexture;
 	ReadRect            pfnReadRect;
 	GClipRect           pfnGClipRect;
-	ClearMipMapCache    pfnClearMipMapCache;
-	ClearCacheList      pfnClearCacheList;
-	SetSpecialState     pfnSetSpecialState;//Hurdler: added for backward compatibility
+	ClearTextureCache   pfnClearTextureCache;
+	SetState            pfnSetState;
 	DrawModel           pfnDrawModel;
 	CreateModelVBOs     pfnCreateModelVBOs;
 	SetTransform        pfnSetTransform;

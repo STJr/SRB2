@@ -65,9 +65,9 @@ static void HWR_ProjectSprite(mobj_t *thing);
 static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing);
 #endif
 
-void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, boolean fogplane, extracolormap_t *planecolormap);
+void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, UINT32 blend, boolean fogplane, extracolormap_t *planecolormap);
 void HWR_AddTransparentPolyobjectFloor(levelflat_t *levelflat, polyobj_t *polysector, boolean isceiling, fixed_t fixedheight,
-                             INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, extracolormap_t *planecolormap);
+                             INT32 lightlevel, INT32 alpha, sector_t *FOFSector, UINT32 blend, extracolormap_t *planecolormap);
 
 boolean drawsky = true;
 
@@ -178,8 +178,8 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 	RGBA_t poly_color, tint_color, fade_color;
 
 	poly_color.rgba = 0xFFFFFFFF;
-	tint_color.rgba = (colormap != NULL) ? (UINT32)colormap->rgba : GL_DEFAULTMIX;
-	fade_color.rgba = (colormap != NULL) ? (UINT32)colormap->fadergba : GL_DEFAULTFOG;
+	tint_color.rgba = (colormap != NULL) ? (UINT32)colormap->rgba : GPU_DEFAULTMIX;
+	fade_color.rgba = (colormap != NULL) ? (UINT32)colormap->fadergba : GPU_DEFAULTFOG;
 
 	// Crappy backup coloring if you can't do shaders
 	if (!cv_glshaders.value || !gl_shadersavailable)
@@ -224,9 +224,9 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 	Surface->PolyColor.rgba = poly_color.rgba;
 	Surface->TintColor.rgba = tint_color.rgba;
 	Surface->FadeColor.rgba = fade_color.rgba;
-	Surface->LightInfo.light_level = light_level;
-	Surface->LightInfo.fade_start = (colormap != NULL) ? colormap->fadestart : 0;
-	Surface->LightInfo.fade_end = (colormap != NULL) ? colormap->fadeend : 31;
+	Surface->LightInfo.LightLevel = light_level;
+	Surface->LightInfo.FadeStart = (colormap != NULL) ? colormap->fadestart : 0;
+	Surface->LightInfo.FadeEnd = (colormap != NULL) ? colormap->fadeend : 31;
 }
 
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap) // Let's see if this can work
@@ -234,7 +234,7 @@ UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap) // Let's see if 
 	RGBA_t realcolor, surfcolor;
 	INT32 alpha;
 
-	realcolor.rgba = (colormap != NULL) ? colormap->rgba : GL_DEFAULTMIX;
+	realcolor.rgba = (colormap != NULL) ? colormap->rgba : GPU_DEFAULTMIX;
 
 	if (cv_glshaders.value && gl_shadersavailable)
 	{
@@ -259,7 +259,7 @@ UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap) // Let's see if 
 	return surfcolor.s.alpha;
 }
 
-static FUINT HWR_CalcWallLight(FUINT lightnum, fixed_t v1x, fixed_t v1y, fixed_t v2x, fixed_t v2y)
+static UINT32 HWR_CalcWallLight(UINT32 lightnum, fixed_t v1x, fixed_t v1y, fixed_t v2x, fixed_t v2y)
 {
 	INT16 finallight = lightnum;
 
@@ -295,10 +295,10 @@ static FUINT HWR_CalcWallLight(FUINT lightnum, fixed_t v1x, fixed_t v1y, fixed_t
 		}
 	}
 
-	return (FUINT)finallight;
+	return (UINT32)finallight;
 }
 
-static FUINT HWR_CalcSlopeLight(FUINT lightnum, angle_t dir, fixed_t delta)
+static UINT32 HWR_CalcSlopeLight(UINT32 lightnum, angle_t dir, fixed_t delta)
 {
 	INT16 finallight = lightnum;
 
@@ -339,7 +339,7 @@ static FUINT HWR_CalcSlopeLight(FUINT lightnum, angle_t dir, fixed_t delta)
 		}
 	}
 
-	return (FUINT)finallight;
+	return (UINT32)finallight;
 }
 
 // ==========================================================================
@@ -351,7 +351,7 @@ static FUINT HWR_CalcSlopeLight(FUINT lightnum, angle_t dir, fixed_t delta)
 // -----------------+
 // HWR_RenderPlane  : Render a floor or ceiling convex polygon
 // -----------------+
-static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, FBITFIELD PolyFlags, INT32 lightlevel, levelflat_t *levelflat, sector_t *FOFsector, UINT8 alpha, extracolormap_t *planecolormap)
+static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, UINT32 PolyFlags, INT32 lightlevel, levelflat_t *levelflat, sector_t *FOFsector, UINT8 alpha, extracolormap_t *planecolormap)
 {
 	polyvertex_t *  pv;
 	float           height; //constant y for all points on the convex flat polygon
@@ -702,7 +702,7 @@ static void HWR_RenderSkyPlane(extrasubsector_t *xsub, fixed_t fixedheight)
 
 #endif //doplanes
 
-FBITFIELD HWR_GetBlendModeFlag(INT32 ast)
+UINT32 HWR_GetBlendModeFlag(INT32 ast)
 {
 	switch (ast)
 	{
@@ -742,7 +742,7 @@ UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
 	return 0xff;
 }
 
-FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf)
+UINT32 HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf)
 {
 	if (!transtablenum)
 	{
@@ -754,7 +754,7 @@ FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf
 	return HWR_GetBlendModeFlag(style);
 }
 
-FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
+UINT32 HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
 {
 	if (!transtablenum)
 	{
@@ -766,7 +766,7 @@ FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
 	return PF_Translucent;
 }
 
-static void HWR_AddTransparentWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, INT32 texnum, FBITFIELD blend, boolean fogwall, INT32 lightlevel, extracolormap_t *wallcolormap);
+static void HWR_AddTransparentWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, INT32 texnum, UINT32 blend, boolean fogwall, INT32 lightlevel, extracolormap_t *wallcolormap);
 
 // ==========================================================================
 // Wall generation from subsector segs
@@ -783,7 +783,7 @@ static void HWR_AddTransparentWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, I
 //
 // HWR_ProjectWall
 //
-static void HWR_ProjectWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIELD blendmode, INT32 lightlevel, extracolormap_t *wallcolormap)
+static void HWR_ProjectWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, UINT32 blendmode, INT32 lightlevel, extracolormap_t *wallcolormap)
 {
 	HWR_Lighting(pSurf, lightlevel, wallcolormap);
 	HWR_ProcessPolygon(pSurf, wallVerts, 4, blendmode|PF_Modulated|PF_Occlude, SHADER_WALL, false); // wall shader
@@ -857,7 +857,7 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 	INT32 solid, i;
 	lightlist_t *  list = sector->lightlist;
 	const UINT8 alpha = Surf->PolyColor.s.alpha;
-	FUINT lightnum = HWR_CalcWallLight(sector->lightlevel, v1x, v1y, v2x, v2y);
+	UINT32 lightnum = HWR_CalcWallLight(sector->lightlevel, v1x, v1y, v2x, v2y);
 	extracolormap_t *colormap = NULL;
 
 	realtop = top = wallVerts[3].y;
@@ -1046,7 +1046,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 	fixed_t h, l; // 3D sides and 2s middle textures
 	fixed_t hS, lS;
 
-	FUINT lightnum = 0; // shut up compiler
+	UINT32 lightnum = 0; // shut up compiler
 	extracolormap_t *colormap;
 	FSurfaceInfo Surf;
 
@@ -1184,7 +1184,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 			if (gl_frontsector->numlights)
 				HWR_SplitWall(gl_frontsector, wallVerts, gl_toptexture, &Surf, FF_CUTLEVEL, NULL);
-			else if (grTex->mipmap.flags & TF_TRANSPARENT)
+			else if (grTex->texture.flags & TF_TRANSPARENT)
 				HWR_AddTransparentWall(wallVerts, &Surf, gl_toptexture, PF_Environment, false, lightnum, colormap);
 			else
 				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
@@ -1250,7 +1250,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 			if (gl_frontsector->numlights)
 				HWR_SplitWall(gl_frontsector, wallVerts, gl_bottomtexture, &Surf, FF_CUTLEVEL, NULL);
-			else if (grTex->mipmap.flags & TF_TRANSPARENT)
+			else if (grTex->texture.flags & TF_TRANSPARENT)
 				HWR_AddTransparentWall(wallVerts, &Surf, gl_bottomtexture, PF_Environment, false, lightnum, colormap);
 			else
 				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
@@ -1258,7 +1258,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		gl_midtexture = R_GetTextureNum(gl_sidedef->midtexture);
 		if (gl_midtexture)
 		{
-			FBITFIELD blendmode;
+			UINT32 blendmode;
 			sector_t *front, *back;
 			fixed_t  popentop, popenbottom, polytop, polybottom, lowcut, highcut;
 			fixed_t     texturevpeg = 0;
@@ -1557,7 +1557,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				HWR_SplitWall(gl_frontsector, wallVerts, gl_midtexture, &Surf, FF_CUTLEVEL, NULL);
 			else
 			{
-				if (grTex->mipmap.flags & TF_TRANSPARENT)
+				if (grTex->texture.flags & TF_TRANSPARENT)
 					HWR_AddTransparentWall(wallVerts, &Surf, gl_midtexture, PF_Environment, false, lightnum, colormap);
 				else
 					HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
@@ -1707,7 +1707,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				}
 				if (rover->flags & FF_FOG)
 				{
-					FBITFIELD blendmode;
+					UINT32 blendmode;
 
 					blendmode = PF_Fog|PF_NoTexture;
 
@@ -1723,7 +1723,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				}
 				else
 				{
-					FBITFIELD blendmode = PF_Masked;
+					UINT32 blendmode = PF_Masked;
 
 					if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256)
 					{
@@ -1819,7 +1819,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 				if (rover->flags & FF_FOG)
 				{
-					FBITFIELD blendmode;
+					UINT32 blendmode;
 
 					blendmode = PF_Fog|PF_NoTexture;
 
@@ -1835,7 +1835,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				}
 				else
 				{
-					FBITFIELD blendmode = PF_Masked;
+					UINT32 blendmode = PF_Masked;
 
 					if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256)
 					{
@@ -2656,7 +2656,7 @@ static inline void HWR_AddPolyObjectSegs(void)
 }
 
 static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, fixed_t fixedheight,
-									FBITFIELD blendmode, UINT8 lightlevel, levelflat_t *levelflat, sector_t *FOFsector,
+									UINT32 blendmode, UINT8 lightlevel, levelflat_t *levelflat, sector_t *FOFsector,
 									UINT8 alpha, extracolormap_t *planecolormap)
 {
 	float           height; //constant y for all points on the convex flat polygon
@@ -2875,7 +2875,7 @@ static void HWR_AddPolyObjectPlanes(void)
 			if (po_ptrs[i]->translucency > 0)
 			{
 				FSurfaceInfo Surf;
-				FBITFIELD blendmode;
+				UINT32 blendmode;
 				memset(&Surf, 0x00, sizeof(Surf));
 				blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
 				HWR_AddTransparentPolyobjectFloor(&levelflats[polyobjsector->floorpic], po_ptrs[i], false, polyobjsector->floorheight,
@@ -2898,7 +2898,7 @@ static void HWR_AddPolyObjectPlanes(void)
 			if (po_ptrs[i]->translucency > 0)
 			{
 				FSurfaceInfo Surf;
-				FBITFIELD blendmode;
+				UINT32 blendmode;
 				memset(&Surf, 0x00, sizeof(Surf));
 				blendmode = HWR_TranstableToAlpha(po_ptrs[i]->translucency, &Surf);
 				HWR_AddTransparentPolyobjectFloor(&levelflats[polyobjsector->ceilingpic], po_ptrs[i], true, polyobjsector->ceilingheight,
@@ -3506,9 +3506,9 @@ static void HWR_LinkDrawHackFinish(void)
 	surf.PolyColor.rgba = 0xFFFFFFFF;
 	surf.TintColor.rgba = 0xFFFFFFFF;
 	surf.FadeColor.rgba = 0xFFFFFFFF;
-	surf.LightInfo.light_level = 0;
-	surf.LightInfo.fade_start = 0;
-	surf.LightInfo.fade_end = 31;
+	surf.LightInfo.LightLevel = 0;
+	surf.LightInfo.FadeStart = 0;
+	surf.LightInfo.FadeEnd = 31;
 	for (i = 0; i < linkdrawcount; i++)
 	{
 		// draw sprite shape, only to z-buffer
@@ -3588,7 +3588,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	alpha = 255 - alpha;
 
 	gpatch = (patch_t *)W_CachePatchName("DSHADOW", PU_SPRITE);
-	if (!(gpatch && ((GLPatch_t *)gpatch->hardware)->mipmap->format)) return;
+	if (!(gpatch && ((GLPatch_t *)gpatch->hardware)->texture->format)) return;
 	HWR_GetPatch(gpatch);
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
@@ -3702,10 +3702,10 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	patch_t *gpatch;
 	FSurfaceInfo Surf;
 	extracolormap_t *colormap = NULL;
-	FUINT lightlevel;
+	UINT32 lightlevel;
 	boolean lightset = true;
-	FBITFIELD blend = 0;
-	FBITFIELD occlusion;
+	UINT32 blend = 0;
+	UINT32 occlusion;
 	boolean use_linkdraw_hack = false;
 	boolean splat = R_ThingIsFloorSprite(spr->mobj);
 	UINT8 alpha;
@@ -4219,8 +4219,8 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 	}
 
 	{
-		FBITFIELD blend = 0;
-		FBITFIELD occlusion;
+		UINT32 blend = 0;
+		UINT32 occlusion;
 		boolean use_linkdraw_hack = false;
 
 		// if sprite has linkdraw, then dont write to z-buffer (by not using PF_Occlude)
@@ -4282,7 +4282,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 // Sprite drawer for precipitation
 static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 {
-	FBITFIELD blend = 0;
+	UINT32 blend = 0;
 	FOutVector wallVerts[4];
 	patch_t *gpatch; // sprite patch converted to hardware
 	FSurfaceInfo Surf;
@@ -4469,7 +4469,7 @@ typedef struct
 	FOutVector    wallVerts[4];
 	FSurfaceInfo  Surf;
 	INT32         texnum;
-	FBITFIELD     blend;
+	UINT32        blend;
 	INT32         drawcount;
 	boolean fogwall;
 	INT32 lightlevel;
@@ -4479,7 +4479,7 @@ typedef struct
 static wallinfo_t *wallinfo = NULL;
 static size_t numwalls = 0; // a list of transparent walls to be drawn
 
-void HWR_RenderWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIELD blend, boolean fogwall, INT32 lightlevel, extracolormap_t *wallcolormap);
+void HWR_RenderWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, UINT32 blend, boolean fogwall, INT32 lightlevel, extracolormap_t *wallcolormap);
 
 #define MAX_TRANSPARENTWALL 256
 
@@ -4492,7 +4492,7 @@ typedef struct
 	levelflat_t *levelflat;
 	INT32 alpha;
 	sector_t *FOFSector;
-	FBITFIELD blend;
+	UINT32 blend;
 	boolean fogplane;
 	extracolormap_t *planecolormap;
 	INT32 drawcount;
@@ -4510,7 +4510,7 @@ typedef struct
 	levelflat_t *levelflat;
 	INT32 alpha;
 	sector_t *FOFSector;
-	FBITFIELD blend;
+	UINT32 blend;
 	extracolormap_t *planecolormap;
 	INT32 drawcount;
 } polyplaneinfo_t;
@@ -4535,7 +4535,7 @@ static INT32 drawcount = 0;
 #define MAX_TRANSPARENTFLOOR 512
 
 // This will likely turn into a copy of HWR_Add3DWater and replace it.
-void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, boolean fogplane, extracolormap_t *planecolormap)
+void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, UINT32 blend, boolean fogplane, extracolormap_t *planecolormap)
 {
 	static size_t allocedplanes = 0;
 
@@ -4566,7 +4566,7 @@ void HWR_AddTransparentFloor(levelflat_t *levelflat, extrasubsector_t *xsub, boo
 
 // Adding this for now until I can create extrasubsector info for polyobjects
 // When that happens it'll just be done through HWR_AddTransparentFloor and HWR_RenderPlane
-void HWR_AddTransparentPolyobjectFloor(levelflat_t *levelflat, polyobj_t *polysector, boolean isceiling, fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, FBITFIELD blend, extracolormap_t *planecolormap)
+void HWR_AddTransparentPolyobjectFloor(levelflat_t *levelflat, polyobj_t *polysector, boolean isceiling, fixed_t fixedheight, INT32 lightlevel, INT32 alpha, sector_t *FOFSector, UINT32 blend, extracolormap_t *planecolormap)
 {
 	static size_t allocedpolyplanes = 0;
 
@@ -4768,7 +4768,7 @@ static void HWR_DrawSprites(void)
 {
 	UINT32 i;
 	boolean skipshadow = false; // skip shadow if it was drawn already for a linkdraw sprite encountered earlier in the list
-	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, cv_glmodellighting.value);
+	HWD.pfnSetState(GPU_STATE_MODEL_LIGHTING, cv_glmodellighting.value);
 	for (i = 0; i < gl_visspritecount; i++)
 	{
 		gl_vissprite_t *spr = gl_vsprorder[i];
@@ -4826,7 +4826,7 @@ static void HWR_DrawSprites(void)
 			}
 		}
 	}
-	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, 0);
+	HWD.pfnSetState(GPU_STATE_MODEL_LIGHTING, 0);
 
 	// At the end of sprite drawing, draw shapes of linkdraw sprites to z-buffer, so they
 	// don't get drawn over by transparent surfaces.
@@ -5420,9 +5420,9 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 // Sky dome rendering, ported from PrBoom+
 // ==========================================================================
 
-static gl_sky_t gl_sky;
+static FSkyDome SkyDome;
 
-static void HWR_SkyDomeVertex(gl_sky_t *sky, gl_skyvertex_t *vbo, int r, int c, signed char yflip, float delta, boolean foglayer)
+static void HWR_SkyDomeVertex(FSkyDome *sky, FSkyVertex *vbo, int r, int c, signed char yflip, float delta, boolean foglayer)
 {
 	const float radians = (float)(M_PIl / 180.0f);
 	const float scale = 10000.0f;
@@ -5466,7 +5466,7 @@ static void HWR_SkyDomeVertex(gl_sky_t *sky, gl_skyvertex_t *vbo, int r, int c, 
 // Clears the sky dome.
 void HWR_ClearSkyDome(void)
 {
-	gl_sky_t *sky = &gl_sky;
+	FSkyDome *sky = &SkyDome;
 
 	if (sky->loops)
 		free(sky->loops);
@@ -5495,8 +5495,8 @@ void HWR_BuildSkyDome(void)
 	int col_count = 4;
 	float delta;
 
-	gl_sky_t *sky = &gl_sky;
-	gl_skyvertex_t *vertex_p;
+	FSkyDome *sky = &SkyDome;
+	FSkyVertex *vertex_p;
 	texture_t *texture = textures[texturetranslation[skytexture]];
 
 	sky->detail = 16;
@@ -5525,7 +5525,7 @@ void HWR_BuildSkyDome(void)
 
 	for (yflip = 0; yflip < 2; yflip++)
 	{
-		sky->loops[sky->loopcount].mode = HWD_SKYLOOP_FAN;
+		sky->loops[sky->loopcount].mode = GPU_SKYLOOP_FAN;
 		sky->loops[sky->loopcount].vertexindex = vertex_p - &sky->data[0];
 		sky->loops[sky->loopcount].vertexcount = col_count;
 		sky->loops[sky->loopcount].use_texture = false;
@@ -5547,7 +5547,7 @@ void HWR_BuildSkyDome(void)
 
 		for (r = 0; r < row_count; r++)
 		{
-			sky->loops[sky->loopcount].mode = HWD_SKYLOOP_STRIP;
+			sky->loops[sky->loopcount].mode = GPU_SKYLOOP_STRIP;
 			sky->loops[sky->loopcount].vertexindex = vertex_p - &sky->data[0];
 			sky->loops[sky->loopcount].vertexcount = 2 * col_count + 2;
 			sky->loops[sky->loopcount].use_texture = true;
@@ -5604,7 +5604,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 		HWR_GetTexture(texturetranslation[skytexture]);
 
-		if (gl_sky.texture != texturetranslation[skytexture])
+		if (SkyDome.texture != texturetranslation[skytexture])
 		{
 			HWR_ClearSkyDome();
 			HWR_BuildSkyDome();
@@ -5612,7 +5612,7 @@ static void HWR_DrawSkyBackground(player_t *player)
 
 		HWD.pfnSetShader(SHADER_SKY); // sky shader
 		HWD.pfnSetTransform(&dometransform);
-		HWD.pfnRenderSkyDome(&gl_sky);
+		HWD.pfnRenderSkyDome(&SkyDome);
 	}
 	else
 	{
@@ -5787,12 +5787,12 @@ static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean 
 //
 static void HWR_SetShaderState(void)
 {
-	hwdshaderoption_t state = cv_glshaders.value;
+	INT32 state = cv_glshaders.value;
 
 	if (!cv_glallowshaders.value)
-		state = (cv_glshaders.value == HWD_SHADEROPTION_ON ? HWD_SHADEROPTION_NOCUSTOM : cv_glshaders.value);
+		state = (cv_glshaders.value == GPU_SHADEROPTION_ON ? GPU_SHADEROPTION_NOCUSTOM : cv_glshaders.value);
 
-	HWD.pfnSetSpecialState(HWD_SET_SHADERS, (INT32)state);
+	HWD.pfnSetState(GPU_STATE_SHADERS, (INT32)state);
 	HWD.pfnSetShader(SHADER_DEFAULT);
 }
 
@@ -6012,7 +6012,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	ClearColor.alpha = 1.0f;
 
 	if (cv_glshaders.value)
-		HWD.pfnSetShaderInfo(HWD_SHADERINFO_LEVELTIME, (INT32)leveltime); // The water surface shader needs the leveltime.
+		HWD.pfnSetShaderInfo(GPU_SHADERINFO_LEVELTIME, (INT32)leveltime); // The water surface shader needs the leveltime.
 
 	if (viewnumber == 0) // Only do it if it's the first screen being rendered
 		HWD.pfnClearBuffer(true, false, &ClearColor); // Clear the Color Buffer, stops HOMs. Also seems to fix the skybox issue on Intel GPUs.
@@ -6239,7 +6239,7 @@ void HWR_LoadLevel(void)
 //                                                         3D ENGINE COMMANDS
 // ==========================================================================
 
-static CV_PossibleValue_t glshaders_cons_t[] = {{HWD_SHADEROPTION_OFF, "Off"}, {HWD_SHADEROPTION_ON, "On"}, {HWD_SHADEROPTION_NOCUSTOM, "Ignore custom shaders"}, {0, NULL}};
+static CV_PossibleValue_t glshaders_cons_t[] = {{GPU_SHADEROPTION_OFF, "Off"}, {GPU_SHADEROPTION_ON, "On"}, {GPU_SHADEROPTION_NOCUSTOM, "Ignore custom shaders"}, {0, NULL}};
 static CV_PossibleValue_t glmodelinterpolation_cons_t[] = {{0, "Off"}, {1, "Sometimes"}, {2, "Always"}, {0, NULL}};
 static CV_PossibleValue_t glfakecontrast_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Smooth"}, {0, NULL}};
 static CV_PossibleValue_t glshearing_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Third-person"}, {0, NULL}};
@@ -6247,11 +6247,11 @@ static CV_PossibleValue_t glshearing_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Thi
 static void CV_glfiltermode_OnChange(void);
 static void CV_glanisotropic_OnChange(void);
 
-static CV_PossibleValue_t glfiltermode_cons_t[]= {{HWD_SET_TEXTUREFILTER_POINTSAMPLED, "Nearest"},
-	{HWD_SET_TEXTUREFILTER_BILINEAR, "Bilinear"}, {HWD_SET_TEXTUREFILTER_TRILINEAR, "Trilinear"},
-	{HWD_SET_TEXTUREFILTER_MIXED1, "Linear_Nearest"},
-	{HWD_SET_TEXTUREFILTER_MIXED2, "Nearest_Linear"},
-	{HWD_SET_TEXTUREFILTER_MIXED3, "Nearest_Mipmap"},
+static CV_PossibleValue_t glfiltermode_cons_t[]= {{GPU_TEXFILTER_POINTSAMPLED, "Nearest"},
+	{GPU_TEXFILTER_BILINEAR, "Bilinear"}, {GPU_TEXFILTER_TRILINEAR, "Trilinear"},
+	{GPU_TEXFILTER_MIXED1, "Linear_Nearest"},
+	{GPU_TEXFILTER_MIXED2, "Nearest_Linear"},
+	{GPU_TEXFILTER_MIXED3, "Nearest_Mipmap"},
 	{0, NULL}};
 CV_PossibleValue_t glanisotropicmode_cons_t[] = {{1, "MIN"}, {16, "MAX"}, {0, NULL}};
 
@@ -6286,13 +6286,13 @@ consvar_t cv_glbatching = CVAR_INIT ("gr_batching", "On", 0, CV_OnOff, NULL);
 static void CV_glfiltermode_OnChange(void)
 {
 	if (rendermode == render_opengl)
-		HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_glfiltermode.value);
+		HWD.pfnSetState(GPU_STATE_TEXTUREFILTERMODE, cv_glfiltermode.value);
 }
 
 static void CV_glanisotropic_OnChange(void)
 {
 	if (rendermode == render_opengl)
-		HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_glanisotropicmode.value);
+		HWD.pfnSetState(GPU_STATE_TEXTUREANISOTROPICMODE, cv_glanisotropicmode.value);
 }
 
 //added by Hurdler: console varibale that are saved
@@ -6358,9 +6358,7 @@ void HWR_Startup(void)
 			gl_shadersavailable = false;
 	}
 
-	if (rendermode == render_opengl)
-		textureformat = patchformat = GL_TEXFMT_RGBA;
-
+	gl_patchformat = gl_textureformat = GPU_TEXFMT_RGBA;
 	gl_init = true;
 }
 
@@ -6374,8 +6372,8 @@ void HWR_Switch(void)
 		HWR_AddSessionCommands();
 
 	// Set special states from CVARs
-	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_glfiltermode.value);
-	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_glanisotropicmode.value);
+	HWD.pfnSetState(GPU_STATE_TEXTUREFILTERMODE, cv_glfiltermode.value);
+	HWD.pfnSetState(GPU_STATE_TEXTUREANISOTROPICMODE, cv_glanisotropicmode.value);
 
 	// Load textures
 	if (!gl_maptexturesloaded)
@@ -6383,10 +6381,7 @@ void HWR_Switch(void)
 
 	// Create plane polygons
 	if (!gl_maploaded && (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction)))
-	{
-		HWR_ClearAllTextures();
 		HWR_LoadLevel();
-	}
 }
 
 // --------------------------------------------------------------------------
@@ -6424,7 +6419,7 @@ void transform(float *cx, float *cy, float *cz)
 	*cx *= gl_fovlud;
 }
 
-void HWR_AddTransparentWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, INT32 texnum, FBITFIELD blend, boolean fogwall, INT32 lightlevel, extracolormap_t *wallcolormap)
+void HWR_AddTransparentWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, INT32 texnum, UINT32 blend, boolean fogwall, INT32 lightlevel, extracolormap_t *wallcolormap)
 {
 	static size_t allocedwalls = 0;
 
@@ -6449,9 +6444,9 @@ void HWR_AddTransparentWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, INT32 te
 	numwalls++;
 }
 
-void HWR_RenderWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIELD blend, boolean fogwall, INT32 lightlevel, extracolormap_t *wallcolormap)
+void HWR_RenderWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, UINT32 blend, boolean fogwall, INT32 lightlevel, extracolormap_t *wallcolormap)
 {
-	FBITFIELD blendmode = blend;
+	UINT32 blendmode = blend;
 	UINT8 alpha = pSurf->PolyColor.s.alpha; // retain the alpha
 
 	int shader;
@@ -6666,7 +6661,7 @@ boolean HWR_CompileShaders(void)
 	return HWD.pfnCompileShaders();
 }
 
-customshaderxlat_t shaderxlat[] =
+FShaderReferenceArray shaderxlat[] =
 {
 	{"Flat", SHADER_FLOOR},
 	{"WallTexture", SHADER_WALL},

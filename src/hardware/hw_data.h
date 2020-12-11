@@ -22,28 +22,27 @@
 #include "../doomdef.h"
 #include "../screen.h"
 
-
 // ==========================================================================
 //                                                               TEXTURE INFO
 // ==========================================================================
 
-typedef enum GLTextureFormat_e
+enum GLTextureFormat_e
 {
-	GL_TEXFMT_P_8                 = 0x01, /* 8-bit palette */
-	GL_TEXFMT_AP_88               = 0x02, /* 8-bit alpha, 8-bit palette */
+	GPU_TEXFMT_P_8                 = 0x01, /* 8-bit palette */
+	GPU_TEXFMT_AP_88               = 0x02, /* 8-bit alpha, 8-bit palette */
 
-	GL_TEXFMT_RGBA                = 0x10, /* 32 bit RGBA! */
+	GPU_TEXFMT_RGBA                = 0x10, /* 32 bit RGBA! */
 
-	GL_TEXFMT_ALPHA_8             = 0x20, /* (0..0xFF) alpha     */
-	GL_TEXFMT_INTENSITY_8         = 0x21, /* (0..0xFF) intensity */
-	GL_TEXFMT_ALPHA_INTENSITY_88  = 0x22,
-} GLTextureFormat_t;
+	GPU_TEXFMT_ALPHA_8             = 0x20, /* (0..0xFF) alpha     */
+	GPU_TEXFMT_INTENSITY_8         = 0x21, /* (0..0xFF) intensity */
+	GPU_TEXFMT_ALPHA_INTENSITY_88  = 0x22,
+};
+typedef enum GLTextureFormat_e GLTextureFormat_t;
 
 // data holds the address of the graphics data cached in heap memory
-//                NULL if the texture is not in Doom heap cache.
-struct GLMipmap_s
+// NULL if the texture is not in Doom heap cache.
+struct HWRTexture_s
 {
-	// for TexDownloadMipMap
 	GLTextureFormat_t     format;
 	void                 *data;
 
@@ -52,32 +51,26 @@ struct GLMipmap_s
 	UINT16                width;
 	UINT32                downloaded;     // The GPU has this texture.
 
-	struct GLMipmap_s    *nextcolormap;
+	struct HWRTexture_s  *nextcolormap;
 	const UINT8          *colormap;
-
-	struct GLMipmap_s    *nextmipmap; // Linked list of all textures
 };
-typedef struct GLMipmap_s GLMipmap_t;
+typedef struct HWRTexture_s HWRTexture_t;
 
-
-//
-// Doom texture info, as cached for hardware rendering
-//
+// Texture info, as cached for hardware rendering
 struct GLMapTexture_s
 {
-	GLMipmap_t  mipmap;
-	float       scaleX;             //used for scaling textures on walls
-	float       scaleY;
+	HWRTexture_t  texture;
+	float         scaleX;
+	float         scaleY;
 };
 typedef struct GLMapTexture_s GLMapTexture_t;
 
-
-// a cached patch as converted to hardware format
+// A cached patch, as converted to hardware format
 struct GLPatch_s
 {
 	float               max_s,max_t;
-	GLMipmap_t          *mipmap;
-} ATTRPACK;
+	HWRTexture_t       *texture;
+};
 typedef struct GLPatch_s GLPatch_t;
 
 #endif //_HWR_DATA_

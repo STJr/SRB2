@@ -141,7 +141,7 @@ void *Patch_AllocateHardwarePatch(patch_t *patch)
 	if (!patch->hardware)
 	{
 		GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, &patch->hardware);
-		grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, &grPatch->mipmap);
+		grPatch->texture = Z_Calloc(sizeof(HWRTexture_t), PU_HWRPATCHINFO, &grPatch->texture);
 	}
 	return (void *)(patch->hardware);
 }
@@ -153,8 +153,8 @@ void *Patch_AllocateHardwarePatch(patch_t *patch)
 void *Patch_CreateGL(patch_t *patch)
 {
 	GLPatch_t *grPatch = (GLPatch_t *)Patch_AllocateHardwarePatch(patch);
-	if (!grPatch->mipmap->data) // Run HWR_MakePatch in all cases, to recalculate some things
-		HWR_MakePatch(patch, grPatch, grPatch->mipmap, false);
+	if (!grPatch->texture->data) // Run HWR_MakePatch in all cases, to recalculate some things
+		HWR_MakePatch(patch, grPatch, grPatch->texture, false);
 	return grPatch;
 }
 #endif // HWRENDER

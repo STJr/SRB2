@@ -121,10 +121,9 @@ void HWR_GetLevelFlat(levelflat_t *levelflat);
 void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum);
 
 void HWR_FreeTexture(patch_t *patch);
-void HWR_FreeTextureData(patch_t *patch);
 void HWR_FreeTextureColormaps(patch_t *patch);
 void HWR_ClearAllTextures(void);
-void HWR_FreeColormapCache(void);
+void HWR_ClearColormapCache(void);
 void HWR_UnlockCachedPatch(GLPatch_t *gpatch);
 
 void HWR_SetPalette(RGBA_t *palette);
@@ -133,7 +132,7 @@ void HWR_SetPalette(RGBA_t *palette);
 // --------
 // hw_draw.c
 // --------
-extern INT32 patchformat;
-extern INT32 textureformat;
+extern INT32 gl_patchformat;
+extern INT32 gl_textureformat;
 
 #endif //_HW_GLOB_

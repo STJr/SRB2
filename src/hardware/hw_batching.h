@@ -16,21 +16,21 @@
 #include "hw_data.h"
 #include "hw_drv.h"
 
-typedef struct 
+typedef struct
 {
 	FSurfaceInfo surf;// surf also has its own polyflags for some reason, but it seems unused
 	unsigned int vertsIndex;// location of verts in unsortedVertexArray
-	FUINT numVerts;
-	FBITFIELD polyFlags;
-	GLMipmap_t *texture;
+	UINT32 numVerts;
+	UINT32 polyFlags;
+	HWRTexture_t *texture;
 	int shader;
 	// this tells batching that the plane belongs to a horizon line and must be drawn in correct order with the skywalls
 	boolean horizonSpecial;
 } PolygonArrayEntry;
 
 void HWR_StartBatching(void);
-void HWR_SetCurrentTexture(GLMipmap_t *texture);
-void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags, int shader, boolean horizonSpecial);
+void HWR_SetCurrentTexture(HWRTexture_t *texture);
+void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, UINT32 iNumPts, UINT32 PolyFlags, int shader, boolean horizonSpecial);
 void HWR_RenderBatches(void);
 
 #endif

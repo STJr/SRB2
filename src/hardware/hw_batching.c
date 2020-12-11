@@ -16,7 +16,7 @@
 
 // The texture for the next polygon given to HWR_ProcessPolygon.
 // Set with HWR_SetCurrentTexture.
-GLMipmap_t *current_texture = NULL;
+HWRTexture_t *current_texture = NULL;
 
 boolean currently_batching = false;
 
@@ -61,7 +61,7 @@ void HWR_StartBatching(void)
 // This replaces the direct calls to pfnSetTexture in cases where batching is available.
 // The texture selection is saved for the next HWR_ProcessPolygon call.
 // Doing this was easier than getting a texture pointer to HWR_ProcessPolygon.
-void HWR_SetCurrentTexture(GLMipmap_t *texture)
+void HWR_SetCurrentTexture(HWRTexture_t *texture)
 {
     if (currently_batching)
     {
@@ -76,7 +76,7 @@ void HWR_SetCurrentTexture(GLMipmap_t *texture)
 // If batching is enabled, this function collects the polygon data and the chosen texture
 // for later use in HWR_RenderBatches. Otherwise the rendering backend is used to
 // render the polygon immediately.
-void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FUINT iNumPts, FBITFIELD PolyFlags, int shader, boolean horizonSpecial)
+void HWR_ProcessPolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, UINT32 iNumPts, UINT32 PolyFlags, int shader, boolean horizonSpecial)
 {
     if (currently_batching)
 	{
@@ -165,11 +165,11 @@ static int comparePolygons(const void *p1, const void *p2)
 	diff64 = poly1->surf.FadeColor.rgba - poly2->surf.FadeColor.rgba;
 	if (diff64 < 0) return -1; else if (diff64 > 0) return 1;
 
-	diff = poly1->surf.LightInfo.light_level - poly2->surf.LightInfo.light_level;
+	diff = poly1->surf.LightInfo.LightLevel - poly2->surf.LightInfo.LightLevel;
 	if (diff != 0) return diff;
-	diff = poly1->surf.LightInfo.fade_start - poly2->surf.LightInfo.fade_start;
+	diff = poly1->surf.LightInfo.FadeStart - poly2->surf.LightInfo.FadeStart;
 	if (diff != 0) return diff;
-	diff = poly1->surf.LightInfo.fade_end - poly2->surf.LightInfo.fade_end;
+	diff = poly1->surf.LightInfo.FadeEnd - poly2->surf.LightInfo.FadeEnd;
 	return diff;
 }
 
@@ -182,8 +182,8 @@ static int comparePolygonsNoShaders(const void *p1, const void *p2)
 	int diff;
 	INT64 diff64;
 
-	GLMipmap_t *texture1 = poly1->texture;
-	GLMipmap_t *texture2 = poly2->texture;
+	HWRTexture_t *texture1 = poly1->texture;
+	HWRTexture_t *texture2 = poly2->texture;
 	if (poly1->polyFlags & PF_NoTexture || poly1->horizonSpecial)
 		texture1 = NULL;
 	if (poly2->polyFlags & PF_NoTexture || poly2->horizonSpecial)
@@ -215,10 +215,10 @@ void HWR_RenderBatches(void)
 
 	int currentShader;
 	int nextShader = 0;
-	GLMipmap_t *currentTexture;
-	GLMipmap_t *nextTexture = NULL;
-	FBITFIELD currentPolyFlags = 0;
-	FBITFIELD nextPolyFlags = 0;
+	HWRTexture_t *currentTexture;
+	HWRTexture_t *nextTexture = NULL;
+	UINT32 currentPolyFlags = 0;
+	UINT32 nextPolyFlags = 0;
 	FSurfaceInfo currentSurfaceInfo;
 	FSurfaceInfo nextSurfaceInfo;
 
@@ -227,9 +227,9 @@ void HWR_RenderBatches(void)
     if (!currently_batching)
 		I_Error("HWR_RenderBatches called without starting batching");
 
-	nextSurfaceInfo.LightInfo.fade_end = 0;
-	nextSurfaceInfo.LightInfo.fade_start = 0;
-	nextSurfaceInfo.LightInfo.light_level = 0;
+	nextSurfaceInfo.LightInfo.FadeEnd = 0;
+	nextSurfaceInfo.LightInfo.FadeStart = 0;
+	nextSurfaceInfo.LightInfo.LightLevel = 0;
 
 	currently_batching = false;// no longer collecting batches
 	if (!polygonArraySize)
@@ -374,9 +374,9 @@ void HWR_RenderBatches(void)
 				if (currentSurfaceInfo.PolyColor.rgba != nextSurfaceInfo.PolyColor.rgba ||
 					currentSurfaceInfo.TintColor.rgba != nextSurfaceInfo.TintColor.rgba ||
 					currentSurfaceInfo.FadeColor.rgba != nextSurfaceInfo.FadeColor.rgba ||
-					currentSurfaceInfo.LightInfo.light_level != nextSurfaceInfo.LightInfo.light_level ||
-					currentSurfaceInfo.LightInfo.fade_start != nextSurfaceInfo.LightInfo.fade_start ||
-					currentSurfaceInfo.LightInfo.fade_end != nextSurfaceInfo.LightInfo.fade_end)
+					currentSurfaceInfo.LightInfo.LightLevel != nextSurfaceInfo.LightInfo.LightLevel ||
+					currentSurfaceInfo.LightInfo.FadeStart != nextSurfaceInfo.LightInfo.FadeStart ||
+					currentSurfaceInfo.LightInfo.FadeEnd != nextSurfaceInfo.LightInfo.FadeEnd)
 				{
 					changeState = true;
 					changeSurfaceInfo = true;

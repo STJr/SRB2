@@ -19,50 +19,24 @@
 #define NZCLIP_PLANE 0.9f // Seems to be only used for the HUD and screen textures
 
 // ==========================================================================
-//                                                               SIMPLE TYPES
-// ==========================================================================
-
-typedef long            FINT;
-typedef unsigned long   FUINT;
-typedef unsigned char   FUBYTE;
-typedef unsigned long   FBITFIELD;
-#ifndef __MINGW32__
-typedef float           FLOAT;
-#endif
-typedef unsigned char   FBOOLEAN;
-
-// ==========================================================================
 //                                                                     COLORS
 // ==========================================================================
 
 // byte value for paletted graphics, which represent the transparent color
-#define HWR_PATCHES_CHROMAKEY_COLORINDEX   255
-//#define HWR_CHROMAKEY_EQUIVALENTCOLORINDEX 130
+#define GPU_PATCHES_CHROMAKEY_COLORINDEX   255
 
 // the chroma key color shows on border sprites, set it to black
-#define HWR_PATCHES_CHROMAKEY_COLORVALUE     (0x00000000)    //RGBA format as in grSstWinOpen()
+#define GPU_PATCHES_CHROMAKEY_COLORVALUE     (0x00000000)    //RGBA format as in grSstWinOpen()
+
+#define GPU_DEFAULTMIX 0x00000000
+#define GPU_DEFAULTFOG 0xFF000000
 
 // RGBA Color components with float type ranging [ 0 ... 1 ]
 struct FRGBAFloat
 {
-	FLOAT   red;
-	FLOAT   green;
-	FLOAT   blue;
-	FLOAT   alpha;
+	float red, green, blue, alpha;
 };
 typedef struct FRGBAFloat FRGBAFloat;
-
-struct FColorARGB
-{
-	FUBYTE  alpha;
-	FUBYTE  red;
-	FUBYTE  green;
-	FUBYTE  blue;
-};
-typedef struct FColorARGB ARGB_t;
-typedef struct FColorARGB FColorARGB;
-
-
 
 // ==========================================================================
 //                                                                    VECTORS
@@ -71,20 +45,14 @@ typedef struct FColorARGB FColorARGB;
 // Simple 2D coordinate
 typedef struct
 {
-	FLOAT x,y;
+	float x,y;
 } F2DCoord, v2d_t;
 
 // Simple 3D vector
 typedef struct FVector
 {
-	FLOAT x,y,z;
+	float x,y,z;
 } FVector;
-
-// ======================
-//      wallVert3D
-// ----------------------
-// :crab: IS GONE! :crab:
-// ======================
 
 // -----------
 // structures
@@ -102,21 +70,21 @@ typedef struct FVector
 
 typedef struct
 {
-	FLOAT       x,y,z;           // position
+	float       x,y,z;           // position
 #ifdef USE_FTRANSFORM_ANGLEZ
-	FLOAT       anglex,angley,anglez;   // aimingangle / viewangle
+	float       anglex,angley,anglez;   // aimingangle / viewangle
 #else
-	FLOAT       anglex,angley;   // aimingangle / viewangle
+	float       anglex,angley;   // aimingangle / viewangle
 #endif
-	FLOAT       scalex,scaley,scalez;
-	FLOAT       fovxangle, fovyangle;
+	float       scalex,scaley,scalez;
+	float       fovxangle, fovyangle;
 	UINT8       splitscreen;
 	boolean     flip;            // screenflip
 	boolean     roll;
 	SINT8       rollflip;
-	FLOAT       rollangle; // done to not override USE_FTRANSFORM_ANGLEZ
+	float       rollangle; // done to not override USE_FTRANSFORM_ANGLEZ
 	UINT8       rotaxis;
-	FLOAT       centerx, centery;
+	float       centerx, centery;
 #ifdef USE_FTRANSFORM_MIRROR
 	boolean     mirror;          // SRB2Kart: Encore Mode
 #endif
@@ -127,82 +95,10 @@ typedef struct
 // Transformed vector, as passed to HWR API
 typedef struct
 {
-	FLOAT       x,y,z;
-	FLOAT       s;            // s texture ordinate (s over w)
-	FLOAT       t;            // t texture ordinate (t over w)
+	float       x, y, z;
+	float       s;            // s texture ordinate (s over w)
+	float       t;            // t texture ordinate (t over w)
 } FOutVector;
-
-#ifdef GL_SHADERS
-// Predefined shader types
-enum
-{
-	SHADER_DEFAULT = 0,
-
-	SHADER_FLOOR,
-	SHADER_WALL,
-	SHADER_SPRITE,
-	SHADER_MODEL, SHADER_MODEL_LIGHTING,
-	SHADER_WATER,
-	SHADER_FOG,
-	SHADER_SKY,
-
-	NUMBASESHADERS,
-};
-
-// Maximum amount of shader programs
-// Must be higher than NUMBASESHADERS
-#define HWR_MAXSHADERS 16
-
-// Shader sources (vertex and fragment)
-typedef struct
-{
-	char *vertex;
-	char *fragment;
-} shadersource_t;
-
-// Custom shader reference table
-typedef struct
-{
-	const char *type;
-	INT32 id;
-} customshaderxlat_t;
-
-#endif
-
-typedef struct vbo_vertex_s
-{
-	float x, y, z;
-	float u, v;
-	unsigned char r, g, b, a;
-} gl_skyvertex_t;
-
-typedef enum gl_skyloopmode_e
-{
-	HWD_SKYLOOP_FAN,
-	HWD_SKYLOOP_STRIP
-} gl_skyloopmode_t;
-
-typedef struct
-{
-	gl_skyloopmode_t mode;
-	int vertexcount;
-	int vertexindex;
-	boolean use_texture;
-} gl_skyloopdef_t;
-
-typedef struct
-{
-	unsigned int vbo;
-	int rows, columns;
-	int loopcount;
-
-	int detail, vertex_count;
-	int texture, width, height;
-	boolean rebuild; // VBO needs to be rebuilt
-
-	gl_skyloopdef_t *loops;
-	gl_skyvertex_t *data;
-} gl_sky_t;
 
 // ==========================================================================
 //                                                               RENDER MODES
@@ -240,7 +136,6 @@ enum EPolyFlags
 	PF_ForceWrapY       = 0x00040000    // Forces repeat texture on Y
 };
 
-
 enum ESurfFlags
 {
 	SF_DYNLIGHT         = 0x00000001,
@@ -255,71 +150,141 @@ enum ETextureFlags
 	TF_TRANSPARENT = 0x00000040,        // texture with some alpha == 0
 };
 
-typedef struct GLMipmap_s FTextureInfo;
+struct FTextureInfo
+{
+	UINT32 width, height;
+	UINT32 name;
+	UINT32 format;
 
-// jimita 14032019
+	struct HWRTexture_s *texture;
+	struct FTextureInfo *prev, *next;
+};
+typedef struct FTextureInfo FTextureInfo;
+
 struct FLightInfo
 {
-	FUINT			light_level;
-	FUINT			fade_start;
-	FUINT			fade_end;
+	UINT32 LightLevel;
+	UINT32 FadeStart, FadeEnd;
 };
 typedef struct FLightInfo FLightInfo;
 
 // Description of a renderable surface
 struct FSurfaceInfo
 {
-	FUINT			PolyFlags;
+	UINT32			PolyFlags;
 	RGBA_t			PolyColor;
 	RGBA_t			TintColor;
 	RGBA_t			FadeColor;
-	FLightInfo		LightInfo;	// jimita 14032019
+	FLightInfo		LightInfo;
 };
 typedef struct FSurfaceInfo FSurfaceInfo;
 
-#define GL_DEFAULTMIX 0x00000000
-#define GL_DEFAULTFOG 0xFF000000
-
-//Hurdler: added for backward compatibility
-enum hwdsetspecialstate
+// Hurdler: added for backward compatibility
+enum EGPUState
 {
-	HWD_SET_MODEL_LIGHTING = 1,
-	HWD_SET_SHADERS,
-	HWD_SET_TEXTUREFILTERMODE,
-	HWD_SET_TEXTUREANISOTROPICMODE,
-	HWD_NUMSTATE
+	GPU_STATE_TEXTUREFILTERMODE,
+	GPU_STATE_TEXTUREANISOTROPICMODE,
+	GPU_STATE_SHADERS,
+	GPU_STATE_MODEL_LIGHTING
 };
 
-typedef enum hwdsetspecialstate hwdspecialstate_t;
-
-// Lactozilla: Shader options
-enum hwdshaderoption
+enum EShaderOption
 {
-	HWD_SHADEROPTION_OFF,
-	HWD_SHADEROPTION_ON,
-	HWD_SHADEROPTION_NOCUSTOM,
+	GPU_SHADEROPTION_OFF,
+	GPU_SHADEROPTION_ON,
+	GPU_SHADEROPTION_NOCUSTOM,
 };
 
-typedef enum hwdshaderoption hwdshaderoption_t;
-
-// Lactozilla: Shader info
-// Generally set at the start of the frame.
-enum hwdshaderinfo
+enum EShaderInfo
 {
-	HWD_SHADERINFO_LEVELTIME = 1,
+	GPU_SHADERINFO_LEVELTIME = 1,
 };
 
-typedef enum hwdshaderinfo hwdshaderinfo_t;
-
-enum hwdfiltermode
+enum EFilterMode
 {
-	HWD_SET_TEXTUREFILTER_POINTSAMPLED,
-	HWD_SET_TEXTUREFILTER_BILINEAR,
-	HWD_SET_TEXTUREFILTER_TRILINEAR,
-	HWD_SET_TEXTUREFILTER_MIXED1,
-	HWD_SET_TEXTUREFILTER_MIXED2,
-	HWD_SET_TEXTUREFILTER_MIXED3,
+	GPU_TEXFILTER_POINTSAMPLED,
+	GPU_TEXFILTER_BILINEAR,
+	GPU_TEXFILTER_TRILINEAR,
+	GPU_TEXFILTER_MIXED1,
+	GPU_TEXFILTER_MIXED2,
+	GPU_TEXFILTER_MIXED3,
 };
 
+#ifdef GL_SHADERS
+// Predefined shader types
+enum
+{
+	SHADER_DEFAULT = 0,
+
+	SHADER_FLOOR,
+	SHADER_WALL,
+	SHADER_SPRITE,
+	SHADER_MODEL, SHADER_MODEL_LIGHTING,
+	SHADER_WATER,
+	SHADER_FOG,
+	SHADER_SKY,
+
+	NUMBASESHADERS,
+};
+
+// Maximum amount of shader programs
+// Must be higher than NUMBASESHADERS
+#define HWR_MAXSHADERS 16
+
+// Shader sources (vertex and fragment)
+struct FShaderSource
+{
+	char *vertex;
+	char *fragment;
+};
+typedef struct FShaderSource FShaderSource;
+
+// Custom shader reference table
+struct FShaderReferenceArray
+{
+	const char *type;
+	INT32 id;
+};
+typedef struct FShaderReferenceArray FShaderReferenceArray;
+
+#endif
+
+struct FSkyVertex
+{
+	float x, y, z;
+	float u, v;
+	unsigned char r, g, b, a;
+};
+typedef struct FSkyVertex FSkyVertex;
+
+enum ESkyLoopMode
+{
+	GPU_SKYLOOP_FAN,
+	GPU_SKYLOOP_STRIP
+};
+
+struct FSkyLoopDef
+{
+	int mode;
+	int vertexcount;
+	int vertexindex;
+	boolean use_texture;
+};
+typedef struct FSkyLoopDef FSkyLoopDef;
+
+struct FSkyDome
+{
+	unsigned int vbo;
+	int rows, columns;
+	int loopcount;
+
+	int detail, vertex_count;
+	int texture, width, height;
+	boolean rebuild; // VBO needs to be rebuilt
+
+	FSkyLoopDef *loops;
+	FSkyVertex *data;
+};
+typedef struct FSkyDome FSkyDome;
 
 #endif //_HWR_DEFS_

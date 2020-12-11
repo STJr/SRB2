@@ -58,7 +58,6 @@ PFNglGetString pglGetString;
 
 #define MAX_VIDEO_MODES   32
 static  vmode_t     video_modes[MAX_VIDEO_MODES];
-INT32     oglflags = 0;
 
 // **************************************************************************
 //                                                                  FUNCTIONS
@@ -239,7 +238,6 @@ int SetupPixelFormat(INT32 WantColorBits, INT32 WantStencilBits, INT32 WantDepth
 // -----------------+
 static INT32 WINAPI SetRes(viddef_t *lvid, vmode_t *pcurrentmode)
 {
-	LPCSTR renderer;
 	BOOL WantFullScreen = !(lvid->u.windowed);  //(lvid->u.windowed ? 0 : CDS_FULLSCREEN);
 
 	UNREFERENCED_PARAMETER(pcurrentmode);
@@ -332,40 +330,37 @@ static INT32 WINAPI SetRes(viddef_t *lvid, vmode_t *pcurrentmode)
 		}
 	}
 
-	gl_extensions = pglGetString(GL_EXTENSIONS);
 	// Get info and extensions.
 	//BP: why don't we make it earlier ?
 	//Hurdler: we cannot do that before intialising gl context
-	renderer = (LPCSTR)pglGetString(GL_RENDERER);
-	GL_DBG_Printf("Vendor     : %s\n", pglGetString(GL_VENDOR));
-	GL_DBG_Printf("Renderer   : %s\n", renderer);
-	GL_DBG_Printf("Version    : %s\n", pglGetString(GL_VERSION));
-	GL_DBG_Printf("Extensions : %s\n", gl_extensions);
+	GLVersion = pglGetString(GL_VERSION);
+	GLRenderer = pglGetString(GL_RENDERER);
+	GLExtensions = pglGetString(GL_EXTENSIONS);
 
-	// BP: disable advenced feature that don't work on somes hardware
-	// Hurdler: Now works on G400 with bios 1.6 and certified drivers 6.04
-	if (strstr(renderer, "810"))   oglflags |= GLF_NOZBUFREAD;
-	GL_DBG_Printf("oglflags   : 0x%X\n", oglflags);
+	GL_DBG_Printf("OpenGL %s\n", GLVersion);
+	GL_DBG_Printf("GPU: %s\n", GLRenderer);
+	GL_DBG_Printf("Vendor: %s\n", pglGetString(GL_VENDOR));
+	GL_DBG_Printf("Extensions: %s\n", GLExtensions);
 
 #ifdef USE_WGL_SWAP
-	if (isExtAvailable("WGL_EXT_swap_control",gl_extensions))
+	if (isExtAvailable("WGL_EXT_swap_control", GLExtensions))
 		wglSwapIntervalEXT = GetGLFunc("wglSwapIntervalEXT");
 	else
 		wglSwapIntervalEXT = NULL;
 #endif
 
-	if (isExtAvailable("GL_EXT_texture_filter_anisotropic",gl_extensions))
-		pglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maximumAnisotropy);
+	if (isExtAvailable("GL_EXT_texture_filter_anisotropic", GLExtensions))
+		pglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &GPUMaximumAnisotropy);
 	else
-		maximumAnisotropy = 0;
+		GPUMaximumAnisotropy = 0;
 
 	SetupGLFunc13();
 
-	screen_depth = (GLbyte)(lvid->bpp*8);
-	if (screen_depth > 16)
-		textureformatGL = GL_RGBA;
+	GPUScreenDepth = (GLbyte)(lvid->bpp*8);
+	if (GPUScreenDepth > 16)
+		GPUTextureFormat = GL_RGBA;
 	else
-		textureformatGL = GL_RGB5_A1;
+		GPUTextureFormat = GL_RGB5_A1;
 
 	SetModelView(lvid->width, lvid->height);
 	SetStates();
@@ -568,9 +563,9 @@ EXPORT void HWRAPI(SetPalette) (RGBA_t *pal)
 {
 	size_t palsize = (sizeof(RGBA_t) * 256);
 	// on a palette change, you have to reload all of the textures
-	if (memcmp(&myPaletteData, pal, palsize))
+	if (memcmp(&GPUTexturePalette, pal, palsize))
 	{
-		memcpy(&myPaletteData, pal, palsize);
+		memcpy(&GPUTexturePalette, pal, palsize);
 		Flush();
 	}
 }

@@ -4134,9 +4134,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	R_FlushTranslationColormapCache();
 
 #ifdef HWRENDER
-	// Free GPU textures before freeing patches.
 	if (vid.glstate == VID_GL_LIBRARY_LOADED)
-		HWR_ClearAllTextures();
+		HWR_ClearColormapCache();
 #endif
 
 	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
@@ -4499,7 +4498,7 @@ boolean P_AddWadFile(const char *wadfilename)
 		CONS_Printf(M_GetText("%s digital musics replaced\n"), sizeu1(digmreplaces));
 
 #ifdef HWRENDER
-	// Free GPU textures before freeing patches.
+	// Free all GPU textures.
 	if (vid.glstate == VID_GL_LIBRARY_LOADED)
 		HWR_ClearAllTextures();
 #endif

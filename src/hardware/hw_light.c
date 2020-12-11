@@ -1206,8 +1206,8 @@ void HWR_DL_AddLight(gl_vissprite_t *spr, GLPatch_t *patch)
 	dynlights->nb++;
 }
 
-static GLMipmap_t lightmappatchmipmap;
-static GLPatch_t lightmappatch = { .mipmap = &lightmappatchmipmap };
+static HWRTexture_t lightmappatchtexture;
+static GLPatch_t lightmappatch = { .texture = &lightmappatchtexture };
 
 void HWR_InitLight(void)
 {
@@ -1217,7 +1217,7 @@ void HWR_InitLight(void)
 	for (i = 0;i < NUMLIGHTS;i++)
 		lspr[i].dynamic_sqrradius = lspr[i].dynamic_radius*lspr[i].dynamic_radius;
 
-	lightmappatch.mipmap->downloaded = false;
+	lightmappatch.texture->downloaded = false;
 	coronalumpnum = W_CheckNumForName("CORONA");
 }
 
@@ -1228,10 +1228,10 @@ static void HWR_SetLight(void)
 {
 	int    i, j;
 
-	if (!lightmappatch.mipmap->downloaded && !lightmappatch.mipmap->data)
+	if (!lightmappatch.texture->downloaded && !lightmappatch.texture->data)
 	{
 
-		UINT16 *Data = Z_Malloc(129*128*sizeof (UINT16), PU_HWRCACHE, &lightmappatch.mipmap->data);
+		UINT16 *Data = Z_Malloc(129*128*sizeof (UINT16), PU_HWRCACHE, &lightmappatch.texture->data);
 
 		for (i = 0; i < 128; i++)
 		{
@@ -1244,18 +1244,18 @@ static void HWR_SetLight(void)
 					Data[i*128+j] = 0;
 			}
 		}
-		lightmappatch.mipmap->format = GL_TEXFMT_ALPHA_INTENSITY_88;
+		lightmappatch.texture->format = GPU_TEXFMT_ALPHA_INTENSITY_88;
 
 		lightmappatch.width = 128;
 		lightmappatch.height = 128;
-		lightmappatch.mipmap->width = 128;
-		lightmappatch.mipmap->height = 128;
-		lightmappatch.mipmap->flags = 0; //TF_WRAPXY; // DEBUG: view the overdraw !
+		lightmappatch.texture->width = 128;
+		lightmappatch.texture->height = 128;
+		lightmappatch.texture->flags = 0; //TF_WRAPXY; // DEBUG: view the overdraw !
 	}
-	HWD.pfnSetTexture(lightmappatch.mipmap);
+	HWD.pfnSetTexture(lightmappatch.texture);
 
 	// The system-memory data can be purged now.
-	Z_ChangeTag(lightmappatch.mipmap->data, PU_HWRCACHE_UNLOCKED);
+	Z_ChangeTag(lightmappatch.texture->data, PU_HWRCACHE_UNLOCKED);
 }
 
 //**********************************************************

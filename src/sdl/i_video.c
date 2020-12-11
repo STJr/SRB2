@@ -1568,6 +1568,9 @@ boolean VID_CheckRenderer(void)
 		}
 
 		SCR_SetDrawFuncs();
+
+		if (vid.glstate == VID_GL_LIBRARY_LOADED)
+			HWR_ClearAllTextures();
 	}
 #ifdef HWRENDER
 	else if (rendermode == render_opengl && rendererchanged)
@@ -1861,9 +1864,8 @@ void VID_StartupOpenGL(void)
 		HWD.pfnDeleteTexture    = hwSym("DeleteTexture",NULL);
 		HWD.pfnReadRect         = hwSym("ReadRect",NULL);
 		HWD.pfnGClipRect        = hwSym("GClipRect",NULL);
-		HWD.pfnClearMipMapCache = hwSym("ClearMipMapCache",NULL);
-		HWD.pfnClearCacheList   = hwSym("ClearCacheList",NULL);
-		HWD.pfnSetSpecialState  = hwSym("SetSpecialState",NULL);
+		HWD.pfnClearTextureCache= hwSym("ClearTextureCache",NULL);
+		HWD.pfnSetState         = hwSym("SetState",NULL);
 		HWD.pfnSetPalette       = hwSym("SetPalette",NULL);
 		HWD.pfnGetTextureUsed   = hwSym("GetTextureUsed",NULL);
 		HWD.pfnDrawModel        = hwSym("DrawModel",NULL);

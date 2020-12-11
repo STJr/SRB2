@@ -117,25 +117,15 @@ static PFNglEnableClientState pglEnableClientState;
 //                                                                     GLOBAL
 // ==========================================================================
 
-extern const GLubyte	*gl_version;
-extern const GLubyte	*gl_renderer;
-extern const GLubyte	*gl_extensions;
+extern const GLubyte	*GLVersion;
+extern const GLubyte	*GLRenderer;
+extern const GLubyte	*GLExtensions;
 
-extern RGBA_t			myPaletteData[];
-extern GLint			screen_width;
-extern GLint			screen_height;
-extern GLbyte			screen_depth;
-extern GLint			maximumAnisotropy;
-
-/**	\brief OpenGL flags for video driver
-*/
-extern INT32            oglflags;
-extern GLint            textureformatGL;
-
-typedef enum
-{
-	GLF_NOZBUFREAD = 0x01,
-	GLF_NOTEXENV   = 0x02,
-} oglflags_t;
+extern GLint            GPUTextureFormat;
+extern RGBA_t			GPUTexturePalette[256];
+extern GLint			GPUScreenWidth;
+extern GLint			GPUScreenHeight;
+extern GLbyte			GPUScreenDepth;
+extern GLint			GPUMaximumAnisotropy;
 
 #endif

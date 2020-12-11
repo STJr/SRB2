@@ -69,7 +69,6 @@ PFNglGetString pglGetString;
 
 /**	\brief SDL video display surface
 */
-INT32 oglflags = 0;
 void *GLUhandle = NULL;
 SDL_GLContext sdlglcontext = 0;
 
@@ -156,20 +155,18 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 	INT32 cbpp = cv_scr_depth.value < 16 ? 16 : cv_scr_depth.value;
 	static boolean first_init = false;
 
-	oglflags = 0;
-
 	if (!first_init)
 	{
-		gl_version = pglGetString(GL_VERSION);
-		gl_renderer = pglGetString(GL_RENDERER);
-		gl_extensions = pglGetString(GL_EXTENSIONS);
+		GLVersion = pglGetString(GL_VERSION);
+		GLRenderer = pglGetString(GL_RENDERER);
+		GLExtensions = pglGetString(GL_EXTENSIONS);
 
-		GL_DBG_Printf("OpenGL %s\n", gl_version);
-		GL_DBG_Printf("GPU: %s\n", gl_renderer);
-		GL_DBG_Printf("Extensions: %s\n", gl_extensions);
+		GL_DBG_Printf("OpenGL %s\n", GLVersion);
+		GL_DBG_Printf("GPU: %s\n", GLRenderer);
+		GL_DBG_Printf("Extensions: %s\n", GLExtensions);
 
-		if (strcmp((const char*)gl_renderer, "GDI Generic") == 0 &&
-			strcmp((const char*)gl_version, "1.1.0") == 0)
+		if (strcmp((const char*)GLRenderer, "GDI Generic") == 0 &&
+			strcmp((const char*)GLVersion, "1.1.0") == 0)
 		{
 			// Oh no... Windows gave us the GDI Generic rasterizer, so something is wrong...
 			// The game will crash later on when unsupported OpenGL commands are encountered.
@@ -182,14 +179,14 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 	}
 	first_init = true;
 
-	if (isExtAvailable("GL_EXT_texture_filter_anisotropic", gl_extensions))
-		pglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &maximumAnisotropy);
+	if (isExtAvailable("GL_EXT_texture_filter_anisotropic", GLExtensions))
+		pglGetIntegerv(GL_MAX_TEXTURE_MAX_ANISOTROPY_EXT, &GPUMaximumAnisotropy);
 	else
-		maximumAnisotropy = 1;
+		GPUMaximumAnisotropy = 1;
 
 	SetupGLFunc4();
 
-	glanisotropicmode_cons_t[1].value = maximumAnisotropy;
+	glanisotropicmode_cons_t[1].value = GPUMaximumAnisotropy;
 
 	SDL_GL_SetSwapInterval(cv_vidwait.value ? 1 : 0);
 
@@ -198,7 +195,7 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
 	HWR_Startup();
-	textureformatGL = cbpp > 16 ? GL_RGBA : GL_RGB5_A1;
+	GPUTextureFormat = cbpp > 16 ? GL_RGBA : GL_RGB5_A1;
 
 	return true;
 }
@@ -237,9 +234,9 @@ EXPORT void HWRAPI(OglSdlSetPalette) (RGBA_t *palette)
 {
 	size_t palsize = (sizeof(RGBA_t) * 256);
 	// on a palette change, you have to reload all of the textures
-	if (memcmp(&myPaletteData, palette, palsize))
+	if (memcmp(&GPUTexturePalette, palette, palsize))
 	{
-		memcpy(&myPaletteData, palette, palsize);
+		memcpy(&GPUTexturePalette, palette, palsize);
 		Flush();
 	}
 }
