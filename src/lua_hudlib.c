@@ -660,6 +660,45 @@ static int libd_drawStretched(lua_State *L)
 	return 0;
 }
 
+static int libd_drawCropped(lua_State *L)
+{
+	fixed_t x, y, hscale, vscale, sx, sy, w, h;
+	INT32 flags;
+	patch_t *patch;
+	const UINT8 *colormap = NULL;
+
+	HUDONLY
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	hscale = luaL_checkinteger(L, 3);
+	if (hscale < 0)
+		return luaL_error(L, "negative horizontal scale");
+	vscale = luaL_checkinteger(L, 4);
+	if (vscale < 0)
+		return luaL_error(L, "negative vertical scale");
+	patch = *((patch_t **)luaL_checkudata(L, 5, META_PATCH));
+	flags = luaL_checkinteger(L, 6);
+	if (!lua_isnoneornil(L, 7))
+		colormap = *((UINT8 **)luaL_checkudata(L, 7, META_COLORMAP));
+	sx = luaL_checkinteger(L, 8);
+	if (sx < 0) // Don't crash. Now, we could do "x-=sx*FRACUNIT; sx=0;" here...
+		return luaL_error(L, "negative crop sx");
+	sy = luaL_checkinteger(L, 9);
+	if (sy < 0) // ...but it's more truthful to just deny it, as negative values would crash
+		return luaL_error(L, "negative crop sy");
+	w = luaL_checkinteger(L, 10);
+	if (w < 0) // Again, don't crash
+		return luaL_error(L, "negative crop w");
+	h = luaL_checkinteger(L, 11);
+	if (h < 0)
+		return luaL_error(L, "negative crop h");
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawCroppedPatch(x, y, hscale, vscale, flags, patch, colormap, sx, sy, w, h);
+	return 0;
+}
+
 static int libd_drawNum(lua_State *L)
 {
 	INT32 x, y, flags, num;
@@ -1084,6 +1123,7 @@ static luaL_Reg lib_draw[] = {
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
 	{"drawStretched", libd_drawStretched},
+	{"drawCropped", libd_drawCropped},
 	{"drawNum", libd_drawNum},
 	{"drawPaddedNum", libd_drawPaddedNum},
 	{"drawFill", libd_drawFill},

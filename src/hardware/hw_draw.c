@@ -317,7 +317,7 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 		}
 	}
 
-	if (pscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
+	if (pscale != FRACUNIT || vscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
 	{
 		fwidth = (float)(gpatch->width) * fscalew * dupx;
 		fheight = (float)(gpatch->height) * fscaleh * dupy;
@@ -382,7 +382,7 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 		HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
 
-void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, INT32 option, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
+void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
 {
 	FOutVector v[4];
 	FBITFIELD flags;
@@ -395,13 +395,19 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 //  | /|
 //  |/ |
 //  0--1
-	float dupx, dupy, fscale, fwidth, fheight;
+	float dupx, dupy, fscalew, fscaleh, fwidth, fheight;
+
+	UINT8 perplayershuffle = 0;
 
 	if (alphalevel >= 10 && alphalevel < 13)
 		return;
 
 	// make patch ready in hardware cache
-	HWR_GetPatch(gpatch);
+	if (!colormap)
+		HWR_GetPatch(gpatch);
+	else
+		HWR_GetMappedPatch(gpatch, colormap);
+
 	hwrPatch = ((GLPatch_t *)gpatch->hardware);
 
 	dupx = (float)vid.dupx;
@@ -423,12 +429,80 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	}
 
 	dupx = dupy = (dupx < dupy ? dupx : dupy);
-	fscale = FIXED_TO_FLOAT(pscale);
+	fscalew = fscaleh = FIXED_TO_FLOAT(pscale);
+	if (vscale != pscale)
+		fscaleh = FIXED_TO_FLOAT(vscale);
 
-	// fuck it, no GL support for croppedpatch v_perplayer right now. it's not like it's accessible to Lua or anything, and we only use it for menus...
+	cx -= (float)(gpatch->leftoffset) * fscalew;
+	cy -= (float)(gpatch->topoffset) * fscaleh;
 
-	cy -= (float)(gpatch->topoffset) * fscale;
-	cx -= (float)(gpatch->leftoffset) * fscale;
+	if (splitscreen && (option & V_PERPLAYER))
+	{
+		float adjusty = ((option & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)/2.0f;
+		fscaleh /= 2;
+		cy /= 2;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			float adjustx = ((option & V_NOSCALESTART) ? vid.width : BASEVIDWIDTH)/2.0f;
+			fscalew /= 2;
+			cx /= 2;
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				option &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				cx += adjustx;
+				option &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[fourthdisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				cx += adjustx;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle = 1;
+				option &= ~V_SNAPTOBOTTOM;
+			}
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle = 2;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP;
+			}
+		}
+	}
 
 	if (!(option & V_NOSCALESTART))
 	{
@@ -437,18 +511,9 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 		if (!(option & V_SCALEPATCHMASK))
 		{
-			// if it's meant to cover the whole screen, black out the rest (ONLY IF TOP LEFT ISN'T TRANSPARENT)
-			// cx and cy are possibly *slightly* off from float maths
-			// This is done before here compared to software because we directly alter cx and cy to centre
-			if (cx >= -0.1f && cx <= 0.1f && gpatch->width == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && gpatch->height == BASEVIDHEIGHT)
-			{
-				const column_t *column = (const column_t *)((const UINT8 *)(gpatch->columns) + (gpatch->columnofs[0]));
-				if (!column->topdelta)
-				{
-					const UINT8 *source = (const UINT8 *)(column) + 3;
-					HWR_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
-				}
-			}
+			// if it's meant to cover the whole screen, black out the rest
+			// no the patch is cropped do not do this ever
+
 			// centre screen
 			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
 			{
@@ -456,6 +521,10 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 				else if (!(option & V_SNAPTOLEFT))
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
+				if (perplayershuffle & 4)
+					cx -= ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
+				else if (perplayershuffle & 8)
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
 			}
 			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
 			{
@@ -463,23 +532,27 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
 				else if (!(option & V_SNAPTOTOP))
 					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/2;
+				if (perplayershuffle & 1)
+					cy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/4;
+				else if (perplayershuffle & 2)
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/4;
 			}
 		}
 	}
 
-	fwidth = w;
-	fheight = h;
+	fwidth = FIXED_TO_FLOAT(w);
+	fheight = FIXED_TO_FLOAT(h);
 
-	if (fwidth > gpatch->width)
-		fwidth = gpatch->width;
+	if (sx + w > gpatch->width<<FRACBITS)
+		fwidth = FIXED_TO_FLOAT((gpatch->width<<FRACBITS) - sx);
 
-	if (fheight > gpatch->height)
-		fheight = gpatch->height;
+	if (sy + h > gpatch->height<<FRACBITS)
+		fheight = FIXED_TO_FLOAT((gpatch->height<<FRACBITS) - sy);
 
-	if (pscale != FRACUNIT)
+	if (pscale != FRACUNIT || vscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
 	{
-		fwidth *=  fscale * dupx;
-		fheight *=  fscale * dupy;
+		fwidth *= fscalew * dupx;
+		fheight *= fscaleh * dupy;
 	}
 	else
 	{
@@ -504,17 +577,17 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	v[0].s = v[3].s = ((sx)/(float)(gpatch->width))*hwrPatch->max_s;
-	if (sx + w > gpatch->width)
-		v[2].s = v[1].s = hwrPatch->max_s - ((sx+w)/(float)(gpatch->width))*hwrPatch->max_s;
+	v[0].s = v[3].s = (FIXED_TO_FLOAT(sx)/(float)(gpatch->width))*hwrPatch->max_s;
+	if (sx + w > gpatch->width<<FRACBITS)
+		v[2].s = v[1].s = hwrPatch->max_s;
 	else
-		v[2].s = v[1].s = ((sx+w)/(float)(gpatch->width))*hwrPatch->max_s;
+		v[2].s = v[1].s = (FIXED_TO_FLOAT(sx+w)/(float)(gpatch->width))*hwrPatch->max_s;
 
-	v[0].t = v[1].t = ((sy)/(float)(gpatch->height))*hwrPatch->max_t;
-	if (sy + h > gpatch->height)
-		v[2].t = v[3].t = hwrPatch->max_t - ((sy+h)/(float)(gpatch->height))*hwrPatch->max_t;
+	v[0].t = v[1].t = (FIXED_TO_FLOAT(sy)/(float)(gpatch->height))*hwrPatch->max_t;
+	if (sy + h > gpatch->height<<FRACBITS)
+		v[2].t = v[3].t = hwrPatch->max_t;
 	else
-		v[2].t = v[3].t = ((sy+h)/(float)(gpatch->height))*hwrPatch->max_t;
+		v[2].t = v[3].t = (FIXED_TO_FLOAT(sy+h)/(float)(gpatch->height))*hwrPatch->max_t;
 
 	flags = PF_Translucent|PF_NoDepthTest;
 

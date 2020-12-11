@@ -808,13 +808,13 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 }
 
 // Draws a patch cropped and scaled to arbitrary size.
-void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_t *patch, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
+void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
 {
 	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
 	UINT32 alphalevel = 0;
 	// boolean flip = false;
 
-	fixed_t col, ofs, colfrac, rowfrac, fdup;
+	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
 	INT32 dupx, dupy;
 	const column_t *column;
 	UINT8 *desttop, *dest;
@@ -829,7 +829,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 	//if (rendermode != render_soft && !con_startup)		// Not this again
 	if (rendermode == render_opengl)
 	{
-		HWR_DrawCroppedPatch(patch,x,y,pscale,scrn,sx,sy,w,h);
+		HWR_DrawCroppedPatch(patch,x,y,pscale,vscale,scrn,colormap,sx,sy,w,h);
 		return;
 	}
 #endif
@@ -856,31 +856,56 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		}
 	}
 
-	// only use one dup, to avoid stretching (har har)
-	dupx = dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	fdup = FixedMul(dupx<<FRACBITS, pscale);
-	colfrac = FixedDiv(FRACUNIT, fdup);
-	rowfrac = FixedDiv(FRACUNIT, fdup);
+	v_colormap = NULL;
+	if (colormap)
+	{
+		v_colormap = colormap;
+		patchdrawfunc = (v_translevel) ? transmappedpdraw : mappedpdraw;
+	}
 
-	y -= FixedMul(patch->topoffset<<FRACBITS, pscale);
+	dupx = vid.dupx;
+	dupy = vid.dupy;
+	if (scrn & V_SCALEPATCHMASK) switch ((scrn & V_SCALEPATCHMASK) >> V_SCALEPATCHSHIFT)
+	{
+		case 1: // V_NOSCALEPATCH
+			dupx = dupy = 1;
+			break;
+		case 2: // V_SMALLSCALEPATCH
+			dupx = vid.smalldupx;
+			dupy = vid.smalldupy;
+			break;
+		case 3: // V_MEDSCALEPATCH
+			dupx = vid.meddupx;
+			dupy = vid.meddupy;
+			break;
+		default:
+			break;
+	}
+
+	// only use one dup, to avoid stretching (har har)
+	dupx = dupy = (dupx < dupy ? dupx : dupy);
+	fdup = vdup = FixedMul(dupx<<FRACBITS, pscale);
+	if (vscale != pscale)
+		vdup = FixedMul(dupx<<FRACBITS, vscale);
+	colfrac = FixedDiv(FRACUNIT, fdup);
+	rowfrac = FixedDiv(FRACUNIT, vdup);
+
 	x -= FixedMul(patch->leftoffset<<FRACBITS, pscale);
+	y -= FixedMul(patch->topoffset<<FRACBITS, vscale);
 
 	if (splitscreen && (scrn & V_PERPLAYER))
 	{
 		fixed_t adjusty = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1);
-		fdup >>= 1;
+		vdup >>= 1;
 		rowfrac <<= 1;
 		y >>= 1;
-		sy >>= 1;
-		h >>= 1;
 #ifdef QUADS
 		if (splitscreen > 1) // 3 or 4 players
 		{
 			fixed_t adjustx = ((scrn & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)<<(FRACBITS-1));
+			fdup >>= 1;
 			colfrac <<= 1;
 			x >>= 1;
-			sx >>= 1;
-			w >>= 1;
 			if (stplyr == &players[displayplayer])
 			{
 				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
@@ -896,7 +921,6 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
 					perplayershuffle |= 8;
 				x += adjustx;
-				sx += adjustx;
 				scrn &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
 			}
 			else if (stplyr == &players[thirddisplayplayer])
@@ -906,7 +930,6 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
 					perplayershuffle |= 4;
 				y += adjusty;
-				sy += adjusty;
 				scrn &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
 			}
 			else //if (stplyr == &players[fourthdisplayplayer])
@@ -916,9 +939,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				if (!(scrn & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
 					perplayershuffle |= 8;
 				x += adjustx;
-				sx += adjustx;
 				y += adjusty;
-				sy += adjusty;
 				scrn &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
 			}
 		}
@@ -937,7 +958,6 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 				if (!(scrn & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
 					perplayershuffle |= 2;
 				y += adjusty;
-				sy += adjusty;
 				scrn &= ~V_SNAPTOTOP;
 			}
 		}
@@ -950,7 +970,8 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 
 	deststop = desttop + vid.rowbytes * vid.height;
 
-	if (scrn & V_NOSCALESTART) {
+	if (scrn & V_NOSCALESTART)
+	{
 		x >>= FRACBITS;
 		y >>= FRACBITS;
 		desttop += (y*vid.width) + x;
@@ -998,7 +1019,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 		desttop += (y*vid.width) + x;
 	}
 
-	for (col = sx<<FRACBITS; (col>>FRACBITS) < patch->width && ((col>>FRACBITS) - sx) < w; col += colfrac, ++x, desttop++)
+	for (col = sx; (col>>FRACBITS) < patch->width && (col - sx) < w; col += colfrac, ++x, desttop++)
 	{
 		INT32 topdelta, prevdelta = -1;
 		if (x < 0) // don't draw off the left of the screen (WRAP PREVENTION)
@@ -1015,15 +1036,15 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, INT32 scrn, patch_
 			prevdelta = topdelta;
 			source = (const UINT8 *)(column) + 3;
 			dest = desttop;
-			if (topdelta-sy > 0)
+			if ((topdelta<<FRACBITS)-sy > 0)
 			{
-				dest += FixedInt(FixedMul((topdelta-sy)<<FRACBITS,fdup))*vid.width;
+				dest += FixedInt(FixedMul((topdelta<<FRACBITS)-sy,vdup))*vid.width;
 				ofs = 0;
 			}
 			else
-				ofs = (sy-topdelta)<<FRACBITS;
+				ofs = sy-(topdelta<<FRACBITS);
 
-			for (; dest < deststop && (ofs>>FRACBITS) < column->length && (((ofs>>FRACBITS) - sy) + topdelta) < h; ofs += rowfrac)
+			for (; dest < deststop && (ofs>>FRACBITS) < column->length && ((ofs - sy) + (topdelta<<FRACBITS)) < h; ofs += rowfrac)
 			{
 				if (dest >= screens[scrn&V_PARAMMASK]) // don't draw off the top of the screen (CRASH PREVENTION)
 					*dest = patchdrawfunc(dest, source, ofs);
