@@ -10438,18 +10438,11 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->x = x;
 	mobj->y = y;
 
-	// TODO: Make this a special map header
-	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
-		mobj->destscale = FRACUNIT/2;
-
 	P_SetMobjSpawnDefaults(mobj);
 
 	// set subsector and/or block links
 	P_SetThingPosition(mobj);
 	I_Assert(mobj->subsector != NULL);
-
-	// Make sure scale matches destscale immediately when spawned
-	P_SetScale(mobj, mobj->destscale);
 
 	mobj->floorz   = P_GetSectorFloorZAt  (mobj->subsector->sector, x, y);
 	mobj->ceilingz = P_GetSectorCeilingZAt(mobj->subsector->sector, x, y);
@@ -10816,9 +10809,16 @@ void P_SetMobjSpawnDefaults(mobj_t *mobj)
 	mobj->destscale = mobj->scale;
 	mobj->scalespeed = FRACUNIT/12;
 
+	// TODO: Make this a special map header
+	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
+		mobj->destscale = FRACUNIT/2;
+
+	// Make sure scale matches destscale immediately when spawned
+	P_SetScale(mobj, mobj->destscale);
+
 	// Sprite rendering
 	mobj->blendmode = AST_TRANSLUCENT;
-	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
+	mobj->spritexscale = mobj->spriteyscale = FRACUNIT;
 	mobj->spritexoffset = mobj->spriteyoffset = 0;
 	mobj->floorspriteslope = NULL;
 }
