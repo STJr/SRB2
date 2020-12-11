@@ -117,15 +117,15 @@ static PFNglEnableClientState pglEnableClientState;
 //                                                                     GLOBAL
 // ==========================================================================
 
-extern const GLubyte	*GLVersion;
-extern const GLubyte	*GLRenderer;
-extern const GLubyte	*GLExtensions;
+extern const GLubyte   *GLVersion;
+extern const GLubyte   *GLRenderer;
+extern const GLubyte   *GLExtensions;
 
 extern GLint            GPUTextureFormat;
-extern RGBA_t			GPUTexturePalette[256];
-extern GLint			GPUScreenWidth;
-extern GLint			GPUScreenHeight;
-extern GLbyte			GPUScreenDepth;
-extern GLint			GPUMaximumAnisotropy;
+extern RGBA_t           GPUTexturePalette[256];
+extern GLint            GPUScreenWidth;
+extern GLint            GPUScreenHeight;
+extern GLbyte           GPUScreenDepth;
+extern GLint            GPUMaximumAnisotropy;
 
 #endif
