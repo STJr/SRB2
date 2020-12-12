@@ -2991,7 +2991,7 @@ boolean R_ThingVisibleWithinDist (mobj_t *thing,
 	if (! R_ThingVisible(thing))
 		return false;
 
-	approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
+	approx_dist = FixedHypot(viewx-thing->x, viewy-thing->y);
 
 	if (thing->sprite == SPR_HOOP)
 	{
@@ -3016,7 +3016,7 @@ boolean R_PrecipThingVisible (precipmobj_t *precipthing,
 	if (( precipthing->precipflags & PCF_INVISIBLE ))
 		return false;
 
-	approx_dist = P_AproxDistance(viewx-precipthing->x, viewy-precipthing->y);
+	approx_dist = FixedHypot(viewx-precipthing->x, viewy-precipthing->y);
 
 	return ( approx_dist <= limit_dist );
 }

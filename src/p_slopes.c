@@ -885,7 +885,7 @@ void P_ButteredSlope(mobj_t *mo)
 	}
 
 	if (mo->momx || mo->momy) // Slightly increase thrust based on the object's speed
-		thrust = FixedMul(thrust, FRACUNIT+P_AproxDistance(mo->momx, mo->momy)/16);
+		thrust = FixedMul(thrust, FRACUNIT+FixedHypot(mo->momx, mo->momy)/16);
 	// This makes it harder to zigzag up steep slopes, as well as allows greater top speed when rolling down
 
 	// Let's get the gravity strength for the object...
