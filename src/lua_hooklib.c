@@ -947,7 +947,6 @@ int LUA_HookViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolea
 	return hook.status;
 }
 
-#ifdef SEENAMES
 int LUA_HookSeenPlayer(player_t *player, player_t *seenfriend)
 {
 	Hook_State hook;
@@ -962,7 +961,6 @@ int LUA_HookSeenPlayer(player_t *player, player_t *seenfriend)
 	}
 	return hook.status;
 }
-#endif // SEENAMES
 
 int LUA_HookShouldJingleContinue(player_t *player, const char *musname)
 {
