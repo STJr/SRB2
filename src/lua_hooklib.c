@@ -27,17 +27,15 @@
 #include "d_netcmd.h" // for cv_perfstats
 #include "i_system.h" // I_GetPreciseTime
 
-#undef LUA_Hook
-
 /* =========================================================================
                                   ABSTRACTION
    ========================================================================= */
 
-static const char * const mobjHookNames[] = { Mobj_Hook_List (TOSTR)  NULL };
-static const char * const     hookNames[] = {      Hook_List (TOSTR)  NULL };
+static const char * const mobjHookNames[] = { MOBJ_HOOK_LIST (TOSTR)  NULL };
+static const char * const     hookNames[] = {      HOOK_LIST (TOSTR)  NULL };
 
 static const char * const stringHookNames[] = {
-	String_Hook_List (TOSTR)  NULL
+	STRING_HOOK_LIST (TOSTR)  NULL
 };
 
 /* TODO: remove when doomtype version is merged */
@@ -62,11 +60,11 @@ typedef struct {
 	int ref;
 } stringhook_t;
 
-static hook_t hookIds[Hook(MAX)];
-static hook_t mobjHookIds[NUMMOBJTYPES][Mobj_Hook(MAX)];
+static hook_t hookIds[HOOK(MAX)];
+static hook_t mobjHookIds[NUMMOBJTYPES][MOBJ_HOOK(MAX)];
 
 // Lua tables are used to lookup string hook ids.
-static stringhook_t stringHooks[String_Hook(MAX)];
+static stringhook_t stringHooks[STRING_HOOK(MAX)];
 
 // This will be indexed by hook id, the value of which fetches the registry.
 static int * hookRefs;
@@ -132,8 +130,8 @@ static void add_string_hook(lua_State *L, int type, int id)
 
 	switch (type)
 	{
-		case String_Hook(BotAI):
-		case String_Hook(ShouldJingleContinue):
+		case STRING_HOOK(BotAI):
+		case STRING_HOOK(ShouldJingleContinue):
 			if (lua_isstring(L, 3))
 			{ // lowercase copy
 				string = Z_StrDup(lua_tostring(L, 3));
@@ -141,7 +139,7 @@ static void add_string_hook(lua_State *L, int type, int id)
 			}
 			break;
 
-		case String_Hook(LinedefExecute):
+		case STRING_HOOK(LinedefExecute):
 			string = Z_StrDup(luaL_checkstring(L, 3));
 			strupr(string);
 			break;
@@ -197,15 +195,15 @@ static int lib_addHook(lua_State *L)
 	luaL_checktype(L, 2, LUA_TFUNCTION);
 
 	/* this is a very special case */
-	if (( type = hook_in_list(name, stringHookNames) ) < String_Hook(MAX))
+	if (( type = hook_in_list(name, stringHookNames) ) < STRING_HOOK(MAX))
 	{
 		add_string_hook(L, type, nextid);
 	}
-	else if (( type = hook_in_list(name, mobjHookNames) ) < Mobj_Hook(MAX))
+	else if (( type = hook_in_list(name, mobjHookNames) ) < MOBJ_HOOK(MAX))
 	{
 		add_mobj_hook(L, type, nextid);
 	}
-	else if (( type = hook_in_list(name, hookNames) ) < Hook(MAX))
+	else if (( type = hook_in_list(name, hookNames) ) < HOOK(MAX))
 	{
 		add_hook(&hookIds[type], nextid);
 	}
@@ -544,7 +542,7 @@ int LUA_Hook2Mobj(mobj_t *t1, mobj_t *t2, int hook_type)
 	return hook.status;
 }
 
-void LUA_Hook(int type)
+void LUA_HookVoid(int type)
 {
 	Hook_State hook;
 	if (prepare_hook(&hook, 0, type))
@@ -590,12 +588,12 @@ int LUA_HookTiccmd(player_t *player, ticcmd_t *cmd, int hook_type)
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, cmd, META_TICCMD);
 
-		if (hook_type == Hook(PlayerCmd))
+		if (hook_type == HOOK(PlayerCmd))
 			hook_cmd_running = true;
 
 		call_hooks(&hook, 2, 1, res_true);
 
-		if (hook_type == Hook(PlayerCmd))
+		if (hook_type == HOOK(PlayerCmd))
 			hook_cmd_running = false;
 	}
 	return hook.status;
@@ -607,7 +605,7 @@ int LUA_HookTiccmd(player_t *player, ticcmd_t *cmd, int hook_type)
 
 void LUA_HookThinkFrame(void)
 {
-	const int type = Hook(ThinkFrame);
+	const int type = HOOK(ThinkFrame);
 
 	// variables used by perf stats
 	int hook_index = 0;
@@ -651,7 +649,7 @@ void LUA_HookThinkFrame(void)
 int LUA_HookMobjLineCollide(mobj_t *mobj, line_t *line)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, 0, Mobj_Hook(MobjLineCollide), mobj->type))
+	if (prepare_mobj_hook(&hook, 0, MOBJ_HOOK(MobjLineCollide), mobj->type))
 	{
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
 		LUA_PushUserdata(gL, line, META_LINE);
@@ -663,7 +661,7 @@ int LUA_HookMobjLineCollide(mobj_t *mobj, line_t *line)
 int LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, false, Mobj_Hook(TouchSpecial), special->type))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(TouchSpecial), special->type))
 	{
 		LUA_PushUserdata(gL, special, META_MOBJ);
 		LUA_PushUserdata(gL, toucher, META_MOBJ);
@@ -700,19 +698,19 @@ static int damage_hook
 int LUA_HookShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	return damage_hook(target, inflictor, source, damage, damagetype,
-			Mobj_Hook(ShouldDamage), 5, res_force);
+			MOBJ_HOOK(ShouldDamage), 5, res_force);
 }
 
 int LUA_HookMobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
 	return damage_hook(target, inflictor, source, damage, damagetype,
-			Mobj_Hook(MobjDamage), 5, res_true);
+			MOBJ_HOOK(MobjDamage), 5, res_true);
 }
 
 int LUA_HookMobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	return damage_hook(target, inflictor, source, 0, damagetype,
-			Mobj_Hook(MobjDeath), 4, res_true);
+			MOBJ_HOOK(MobjDeath), 4, res_true);
 }
 
 typedef struct {
@@ -737,12 +735,12 @@ static void res_botai(Hook_State *hook)
 	if (lua_istable(gL, -8)) {
 		lua_pushnil(gL); // key
 		while (lua_next(gL, -9)) {
-#define check(n, f) (checkbotkey(f) ? (k[(n)-1] = 1) : 0)
+#define CHECK(n, f) (checkbotkey(f) ? (k[(n)-1] = 1) : 0)
 			if (
-					check(1,    "forward") || check(2,    "backward") ||
-					check(3,       "left") || check(4,       "right") ||
-					check(5, "strafeleft") || check(6, "straferight") ||
-					check(7,       "jump") || check(8,        "spin")
+					CHECK(1,    "forward") || CHECK(2,    "backward") ||
+					CHECK(3,       "left") || CHECK(4,       "right") ||
+					CHECK(5, "strafeleft") || CHECK(6, "straferight") ||
+					CHECK(7,       "jump") || CHECK(8,        "spin")
 			){
 				if (8 <= ++fields)
 				{
@@ -752,7 +750,7 @@ static void res_botai(Hook_State *hook)
 			}
 
 			lua_pop(gL, 1); // pop value
-#undef check
+#undef CHECK
 		}
 	} else {
 		while (fields < 8)
@@ -775,7 +773,7 @@ int LUA_HookBotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	Hook_State hook;
 	BotAI_State botai;
 
-	if (prepare_string_hook(&hook, false, String_Hook(BotAI), skin))
+	if (prepare_string_hook(&hook, false, STRING_HOOK(BotAI), skin))
 	{
 		LUA_PushUserdata(gL, sonic, META_MOBJ);
 		LUA_PushUserdata(gL, tails, META_MOBJ);
@@ -795,7 +793,7 @@ void LUA_HookLinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 {
 	Hook_State hook;
 	if (prepare_string_hook
-			(&hook, 0, String_Hook(LinedefExecute), line->stringargs[0]))
+			(&hook, 0, STRING_HOOK(LinedefExecute), line->stringargs[0]))
 	{
 		LUA_PushUserdata(gL, line, META_LINE);
 		LUA_PushUserdata(gL, mo, META_MOBJ);
@@ -807,7 +805,7 @@ void LUA_HookLinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 int LUA_HookPlayerMsg(int source, int target, int flags, char *msg)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, false, Hook(PlayerMsg)))
+	if (prepare_hook(&hook, false, HOOK(PlayerMsg)))
 	{
 		LUA_PushUserdata(gL, &players[source], META_PLAYER); // Source player
 		if (flags & 2 /*HU_CSAY*/) { // csay TODO: make HU_CSAY accessible outside hu_stuff.c
@@ -832,7 +830,7 @@ int LUA_HookPlayerMsg(int source, int target, int flags, char *msg)
 int LUA_HookHurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, false, Hook(HurtMsg)))
+	if (prepare_hook(&hook, false, HOOK(HurtMsg)))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, inflictor, META_MOBJ);
@@ -845,7 +843,7 @@ int LUA_HookHurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 d
 
 void LUA_HookNetArchive(lua_CFunction archFunc)
 {
-	const hook_t * map = &hookIds[Hook(NetVars)];
+	const hook_t * map = &hookIds[HOOK(NetVars)];
 	Hook_State hook;
 	/* this is a remarkable case where the stack isn't reset */
 	if (map->numHooks > 0)
@@ -874,7 +872,7 @@ void LUA_HookNetArchive(lua_CFunction archFunc)
 int LUA_HookMapThingSpawn(mobj_t *mobj, mapthing_t *mthing)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, false, Mobj_Hook(MapThingSpawn), mobj->type))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(MapThingSpawn), mobj->type))
 	{
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
 		LUA_PushUserdata(gL, mthing, META_MAPTHING);
@@ -886,7 +884,7 @@ int LUA_HookMapThingSpawn(mobj_t *mobj, mapthing_t *mthing)
 int LUA_HookFollowMobj(player_t *player, mobj_t *mobj)
 {
 	Hook_State hook;
-	if (prepare_mobj_hook(&hook, false, Mobj_Hook(FollowMobj), mobj->type))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(FollowMobj), mobj->type))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
@@ -898,7 +896,7 @@ int LUA_HookFollowMobj(player_t *player, mobj_t *mobj)
 int LUA_HookPlayerCanDamage(player_t *player, mobj_t *mobj)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, 0, Hook(PlayerCanDamage)))
+	if (prepare_hook(&hook, 0, HOOK(PlayerCanDamage)))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, mobj, META_MOBJ);
@@ -910,7 +908,7 @@ int LUA_HookPlayerCanDamage(player_t *player, mobj_t *mobj)
 void LUA_HookPlayerQuit(player_t *plr, kickreason_t reason)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, 0, Hook(PlayerQuit)))
+	if (prepare_hook(&hook, 0, HOOK(PlayerQuit)))
 	{
 		LUA_PushUserdata(gL, plr, META_PLAYER); // Player that quit
 		lua_pushinteger(gL, reason); // Reason for quitting
@@ -921,7 +919,7 @@ void LUA_HookPlayerQuit(player_t *plr, kickreason_t reason)
 int LUA_HookTeamSwitch(player_t *player, int newteam, boolean fromspectators, boolean tryingautobalance, boolean tryingscramble)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, true, Hook(TeamSwitch)))
+	if (prepare_hook(&hook, true, HOOK(TeamSwitch)))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		lua_pushinteger(gL, newteam);
@@ -936,7 +934,7 @@ int LUA_HookTeamSwitch(player_t *player, int newteam, boolean fromspectators, bo
 int LUA_HookViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean forced)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, 0, Hook(ViewpointSwitch)))
+	if (prepare_hook(&hook, 0, HOOK(ViewpointSwitch)))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, newdisplayplayer, META_PLAYER);
@@ -953,7 +951,7 @@ int LUA_HookViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolea
 int LUA_HookSeenPlayer(player_t *player, player_t *seenfriend)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, true, Hook(SeenPlayer)))
+	if (prepare_hook(&hook, true, HOOK(SeenPlayer)))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, seenfriend, META_PLAYER);
@@ -970,7 +968,7 @@ int LUA_HookShouldJingleContinue(player_t *player, const char *musname)
 {
 	Hook_State hook;
 	if (prepare_string_hook
-			(&hook, false, String_Hook(ShouldJingleContinue), musname))
+			(&hook, false, STRING_HOOK(ShouldJingleContinue), musname))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		push_string();
@@ -1033,7 +1031,7 @@ static void res_musicchange(Hook_State *hook)
 
 int LUA_HookMusicChange(const char *oldname, struct MusicChange *param)
 {
-	const int type = Hook(MusicChange);
+	const int type = HOOK(MusicChange);
 	const hook_t * map = &hookIds[type];
 
 	Hook_State hook;

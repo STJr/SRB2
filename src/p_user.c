@@ -1860,7 +1860,7 @@ void P_SpawnShieldOrb(player_t *player)
 		I_Error("P_SpawnShieldOrb: player->mo is NULL!\n");
 #endif
 
-	if (LUA_HookPlayer(player, Hook(ShieldSpawn)))
+	if (LUA_HookPlayer(player, HOOK(ShieldSpawn)))
 		return;
 
 	if (player->powers[pw_shield] & SH_FORCE)
@@ -4581,7 +4581,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 
 	if (cmd->buttons & BT_SPIN)
 	{
-		if (LUA_HookPlayer(player, Hook(SpinSpecial)))
+		if (LUA_HookPlayer(player, HOOK(SpinSpecial)))
 			return;
 	}
 
@@ -5047,7 +5047,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 				}
 			}
 		}
-		if (cmd->buttons & BT_SPIN && !LUA_HookPlayer(player, Hook(ShieldSpecial))) // Spin button effects
+		if (cmd->buttons & BT_SPIN && !LUA_HookPlayer(player, HOOK(ShieldSpecial))) // Spin button effects
 		{
 			// Force stop
 			if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
@@ -5171,7 +5171,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 				// and you don't have a shield, do it!
 				P_DoSuperTransformation(player, false);
 			}
-			else if (!LUA_HookPlayer(player, Hook(JumpSpinSpecial)))
+			else if (!LUA_HookPlayer(player, HOOK(JumpSpinSpecial)))
 				switch (player->charability)
 				{
 					case CA_THOK:
@@ -5244,7 +5244,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 
 	if (cmd->buttons & BT_JUMP && !player->exiting && !P_PlayerInPain(player))
 	{
-		if (LUA_HookPlayer(player, Hook(JumpSpecial)))
+		if (LUA_HookPlayer(player, HOOK(JumpSpecial)))
 			;
 		// all situations below this require jump button not to be pressed already
 		else if (player->pflags & PF_JUMPDOWN)
@@ -5279,7 +5279,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		}*/
 		else if (player->pflags & PF_JUMPED)
 		{
-			if (!LUA_HookPlayer(player, Hook(AbilitySpecial)))
+			if (!LUA_HookPlayer(player, HOOK(AbilitySpecial)))
 			switch (player->charability)
 			{
 				case CA_THOK:
@@ -5472,7 +5472,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		}
 		else if (player->pflags & PF_THOKKED)
 		{
-			if (!LUA_HookPlayer(player, Hook(AbilitySpecial)))
+			if (!LUA_HookPlayer(player, HOOK(AbilitySpecial)))
 				switch (player->charability)
 				{
 					case CA_FLY:
@@ -11479,7 +11479,7 @@ void P_PlayerThink(player_t *player)
 		}
 		if (player->playerstate == PST_REBORN)
 		{
-			LUA_HookPlayer(player, Hook(PlayerThink));
+			LUA_HookPlayer(player, HOOK(PlayerThink));
 			return;
 		}
 	}
@@ -11583,7 +11583,7 @@ void P_PlayerThink(player_t *player)
 
 			if (player->playerstate == PST_DEAD)
 			{
-				LUA_HookPlayer(player, Hook(PlayerThink));
+				LUA_HookPlayer(player, HOOK(PlayerThink));
 				return;
 			}
 		}
@@ -11704,7 +11704,7 @@ void P_PlayerThink(player_t *player)
 	{
 		player->mo->flags2 &= ~MF2_SHADOW;
 		P_DeathThink(player);
-		LUA_HookPlayer(player, Hook(PlayerThink));
+		LUA_HookPlayer(player, HOOK(PlayerThink));
 		return;
 	}
 
@@ -11746,7 +11746,7 @@ void P_PlayerThink(player_t *player)
 	{
 		if (P_SpectatorJoinGame(player))
 		{
-			LUA_HookPlayer(player, Hook(PlayerThink));
+			LUA_HookPlayer(player, HOOK(PlayerThink));
 			return; // player->mo was removed.
 		}
 	}
@@ -11851,7 +11851,7 @@ void P_PlayerThink(player_t *player)
 
 	if (!player->mo)
 	{
-		LUA_HookPlayer(player, Hook(PlayerThink));
+		LUA_HookPlayer(player, HOOK(PlayerThink));
 		return; // P_MovePlayer removed player->mo.
 	}
 
@@ -12305,7 +12305,7 @@ void P_PlayerThink(player_t *player)
 	}
 #undef dashmode
 
-	LUA_HookPlayer(player, Hook(PlayerThink));
+	LUA_HookPlayer(player, HOOK(PlayerThink));
 
 /*
 //	Colormap verification

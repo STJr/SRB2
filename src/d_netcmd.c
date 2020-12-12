@@ -2103,7 +2103,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	}
 
 	mapnumber = M_MapNumber(mapname[3], mapname[4]);
-	LUA_HookInt(mapnumber, Hook(MapChange));
+	LUA_HookInt(mapnumber, HOOK(MapChange));
 
 	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene, FLS);
 	if (demoplayback && !timingdemo)
@@ -3612,7 +3612,7 @@ static void Command_Playintro_f(void)
   */
 FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void)
 {
-	LUA_HookBool(true, Hook(GameQuit));
+	LUA_HookBool(true, HOOK(GameQuit));
 	I_Quit();
 }
 
@@ -4274,7 +4274,7 @@ void Command_ExitGame_f(void)
 {
 	INT32 i;
 
-	LUA_HookBool(false, Hook(GameQuit));
+	LUA_HookBool(false, HOOK(GameQuit));
 
 	D_QuitNetGame();
 	CL_Reset();

@@ -14,7 +14,14 @@
 #include "d_player.h"
 #include "s_sound.h"
 
-#define Mobj_Hook_List(X) \
+/*
+Do you know what an 'X Macro' is? Such a macro is called over each element of
+a list and expands the input. I use it for the hook lists because both an enum
+and array of hook names need to be kept in order. The X Macro handles this
+automatically.
+*/
+
+#define MOBJ_HOOK_LIST(X) \
 	X (MobjSpawn),/* P_SpawnMobj */\
 	X (MobjCollide),/* PIT_CheckThing */\
 	X (MobjLineCollide),/* ditto */\
@@ -33,7 +40,7 @@
 	X (MapThingSpawn),/* P_SpawnMapThing */\
 	X (FollowMobj),/* P_PlayerAfterThink Smiles mobj-following */\
 
-#define Hook_List(X) \
+#define HOOK_LIST(X) \
 	X (NetVars),/* add to archive table (netsave) */\
 	X (MapChange),/* (before map load) */\
 	X (MapLoad),\
@@ -62,24 +69,33 @@
 	X (PlayerCmd),/* building the player's ticcmd struct (Ported from SRB2Kart) */\
 	X (MusicChange),\
 
-#define String_Hook_List(X) \
+#define STRING_HOOK_LIST(X) \
 	X (BotAI),/* B_BuildTailsTiccmd by skin name */\
 	X (LinedefExecute),\
 	X (ShouldJingleContinue),/* should jingle of the given music continue playing */\
 
-#define   Mobj_Hook(name)   mobjhook_ ## name
-#define        Hook(name)       hook_ ## name
-#define String_Hook(name) stringhook_ ## name
+/*
+I chose to access the hook enums through a macro as well. This could provide
+a hint to lookup the macro's definition instead of the enum's definition.
+(Since each enumeration is not defined in the source code, but by the list
+macros above, it is not greppable.) The name passed to the macro can also be
+grepped and found in the lists above.
+*/
 
-enum {   Mobj_Hook_List   (Mobj_Hook)    Mobj_Hook(MAX) };
-enum {        Hook_List        (Hook)         Hook(MAX) };
-enum { String_Hook_List (String_Hook)  String_Hook(MAX) };
+#define   MOBJ_HOOK(name)   mobjhook_ ## name
+#define        HOOK(name)       hook_ ## name
+#define STRING_HOOK(name) stringhook_ ## name
+
+enum {   MOBJ_HOOK_LIST   (MOBJ_HOOK)    MOBJ_HOOK(MAX) };
+enum {        HOOK_LIST        (HOOK)         HOOK(MAX) };
+enum { STRING_HOOK_LIST (STRING_HOOK)  STRING_HOOK(MAX) };
+
+/* dead simple, LUA_HOOK(GameQuit) */
+#define LUA_HOOK(type) LUA_HookVoid(HOOK(type))
 
 extern boolean hook_cmd_running;
 
-/* dead simple, LUA_Hook(GameQuit) */
-void    LUA_Hook(int hook);
-#define LUA_Hook(type) LUA_Hook(Hook(type))
+void LUA_HookVoid(int hook);
 
 int  LUA_HookMobj(mobj_t *, int hook);
 int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);

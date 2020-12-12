@@ -4271,7 +4271,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
-		LUA_HookInt(gamemap, Hook(MapLoad));
+		LUA_HookInt(gamemap, HOOK(MapLoad));
 	}
 
 	// No render mode or reloading gamestate, stop here.

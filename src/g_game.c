@@ -1689,7 +1689,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		cmd->angleturn = orighookangle;
 
-		LUA_HookTiccmd(player, cmd, Hook(PlayerCmd));
+		LUA_HookTiccmd(player, cmd, HOOK(PlayerCmd));
 
 		extra = cmd->angleturn - orighookangle;
 		cmd->angleturn = origangle + extra;
@@ -2740,7 +2740,7 @@ void G_SpawnPlayer(INT32 playernum)
 
 	P_SpawnPlayer(playernum);
 	G_MovePlayerToSpawnOrStarpost(playernum);
-	LUA_HookPlayer(&players[playernum], Hook(PlayerSpawn)); // Lua hook for player spawning :)
+	LUA_HookPlayer(&players[playernum], HOOK(PlayerSpawn)); // Lua hook for player spawning :)
 }
 
 void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
@@ -3119,7 +3119,7 @@ void G_DoReborn(INT32 playernum)
 		}
 		else
 		{
-			LUA_HookInt(gamemap, Hook(MapChange));
+			LUA_HookInt(gamemap, HOOK(MapChange));
 			titlecardforreload = true;
 			G_DoLoadLevel(true);
 			titlecardforreload = false;

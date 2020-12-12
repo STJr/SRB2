@@ -656,7 +656,7 @@ void P_Ticker(boolean run)
 		ps_lua_mobjhooks = 0;
 		ps_checkposition_calls = 0;
 
-		LUA_Hook(PreThinkFrame);
+		LUA_HOOK(PreThinkFrame);
 
 		ps_playerthink_time = I_GetPreciseTime();
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -760,7 +760,7 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 
-		LUA_Hook(PostThinkFrame);
+		LUA_HOOK(PostThinkFrame);
 	}
 
 	P_MapEnd();
@@ -783,7 +783,7 @@ void P_PreTicker(INT32 frames)
 	{
 		P_MapStart();
 
-		LUA_Hook(PreThinkFrame);
+		LUA_HOOK(PreThinkFrame);
 
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
@@ -819,7 +819,7 @@ void P_PreTicker(INT32 frames)
 		P_UpdateSpecials();
 		P_RespawnSpecials();
 
-		LUA_Hook(PostThinkFrame);
+		LUA_HOOK(PostThinkFrame);
 
 		P_MapEnd();
 	}

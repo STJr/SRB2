@@ -363,7 +363,7 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 	CV_SetValue(&cv_analog[1], false);
 
 	// Let Lua scripts build ticcmds
-	if (LUA_HookTiccmd(player, cmd, Hook(BotTiccmd)))
+	if (LUA_HookTiccmd(player, cmd, HOOK(BotTiccmd)))
 		return;
 
 	// We don't have any main character AI, sorry. D:
@@ -461,7 +461,7 @@ boolean B_CheckRespawn(player_t *player)
 
 	// B_RespawnBot doesn't do anything if the condition above this isn't met
 	{
-		UINT8 shouldForce = LUA_Hook2Mobj(sonic, tails, Mobj_Hook(BotRespawn));
+		UINT8 shouldForce = LUA_Hook2Mobj(sonic, tails, MOBJ_HOOK(BotRespawn));
 
 		if (P_MobjWasRemoved(sonic) || P_MobjWasRemoved(tails))
 			return (shouldForce == 1); // mobj was removed
