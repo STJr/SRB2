@@ -47,6 +47,8 @@
 #include "deh_lua.h" // included due to some LUA_SetLuaAction hack smh
 #include "deh_tables.h"
 
+static UINT16 get_mus(const char *word, UINT8 dehacked_mode);
+
 // Loops through every constant and operation in word and performs its calculations, returning the final value.
 fixed_t get_number(const char *word)
 {
@@ -1573,6 +1575,15 @@ void readlevelheader(MYFILE *f, INT32 num)
 					deh_strlcpy(mapheaderinfo[num-1]->musname, word2,
 						sizeof(mapheaderinfo[num-1]->musname), va("Level header %d: music", num));
 				}
+			}
+			else if (fastcmp(word, "MUSICSLOT"))
+			{
+				i = get_mus(word2, true);
+				if (i && i <= 1035)
+					snprintf(mapheaderinfo[num-1]->musname, 7, "%sM", G_BuildMapName(i));
+				else
+					mapheaderinfo[num-1]->musname[0] = 0; // becomes empty string
+				mapheaderinfo[num-1]->musname[6] = 0;
 			}
 			else if (fastcmp(word, "MUSICTRACK"))
 				mapheaderinfo[num-1]->mustrack = ((UINT16)i - 1);
@@ -4123,6 +4134,41 @@ sfxenum_t get_sfx(const char *word)
 			return i;
 	deh_warning("Couldn't find sfx named 'SFX_%s'",word);
 	return sfx_None;
+}
+
+static UINT16 get_mus(const char *word, UINT8 dehacked_mode)
+{ // Returns the value of MUS_ enumerations
+	UINT16 i;
+	char lumptmp[4];
+
+	if (*word >= '0' && *word <= '9')
+		return atoi(word);
+	if (!word[2] && toupper(word[0]) >= 'A' && toupper(word[0]) <= 'Z')
+		return (UINT16)M_MapNumber(word[0], word[1]);
+
+	if (fastncmp("MUS_",word,4))
+		word += 4; // take off the MUS_
+	else if (fastncmp("O_",word,2) || fastncmp("D_",word,2))
+		word += 2; // take off the O_ or D_
+
+	strncpy(lumptmp, word, 4);
+	lumptmp[3] = 0;
+	if (fasticmp("MAP",lumptmp))
+	{
+		word += 3;
+		if (toupper(word[0]) >= 'A' && toupper(word[0]) <= 'Z')
+			return (UINT16)M_MapNumber(word[0], word[1]);
+		else if ((i = atoi(word)))
+			return i;
+
+		word -= 3;
+		if (dehacked_mode)
+			deh_warning("Couldn't find music named 'MUS_%s'",word);
+		return 0;
+	}
+	if (dehacked_mode)
+		deh_warning("Couldn't find music named 'MUS_%s'",word);
+	return 0;
 }
 
 hudnum_t get_huditem(const char *word)
