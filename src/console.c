@@ -1421,7 +1421,7 @@ void CONS_Printf(const char *fmt, ...)
 	if (con_started)
 		CON_Print(txt);
 
-	CON_LogMessage(txt);	
+	CON_LogMessage(txt);
 
 	Lock_state();
 

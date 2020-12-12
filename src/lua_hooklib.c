@@ -1793,6 +1793,6 @@ void LUAh_GameQuit(void)
 			hookp->error = true;
 		}
 	}
-	
+
 	lua_pop(gL, 1); // Pop error handler
 }

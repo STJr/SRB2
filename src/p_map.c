@@ -1681,7 +1681,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 					{
 						fixed_t setmomz = -*momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
-					
+
 						if (elementalpierce == 2) // Reset bubblewrap, part 1
 							P_DoBubbleBounce(player);
 						*momz = setmomz; // Therefore, you should be thrust in the opposite direction, vertically.
@@ -1690,7 +1690,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 						if (elementalpierce == 2) // Reset bubblewrap, part 2
 						{
 							boolean underwater = tmthing->eflags & MFE_UNDERWATER;
-							
+
 							if (underwater)
 								*momz /= 2;
 							*momz -= (*momz/(underwater ? 8 : 4)); // Cap the height!
