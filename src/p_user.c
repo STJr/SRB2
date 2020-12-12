@@ -2613,10 +2613,10 @@ static void P_CheckBustableBlocks(player_t *player)
 
 	if ((netgame || multiplayer) && player->spectator)
 		return;
-	
+
 	oldx = player->mo->x;
 	oldy = player->mo->y;
-	
+
 	if (!(player->pflags & PF_BOUNCING)) // Bouncers only get to break downwards, not sideways
 	{
 		P_UnsetThingPosition(player->mo);
@@ -2635,7 +2635,7 @@ static void P_CheckBustableBlocks(player_t *player)
 
 		if (!node->m_sector->ffloors)
 			continue;
-		
+
 		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
 			if (!P_PlayerCanBust(player, rover))
@@ -4525,7 +4525,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
 	player->pflags |= P_GetJumpFlags(player);;
-	
+
 	if (player->charflags & SF_NOJUMPDAMAGE)
 		player->pflags &= ~PF_SPINNING;
 

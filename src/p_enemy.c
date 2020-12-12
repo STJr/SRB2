@@ -4060,7 +4060,7 @@ bossjustdie:
 			// Initialize my junk
 			junk.tags.tags = NULL;
 			junk.tags.count = 0;
-			
+
 			Tag_FSet(&junk.tags, LE_KOOPA);
 			EV_DoCeiling(&junk, raiseToHighest);
 			return;

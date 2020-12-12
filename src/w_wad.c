@@ -2144,7 +2144,7 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{"LT", 2}, // Titlecard changes
 
 		{"SLID", 4}, // Continue
-		{"CONT", 4}, 
+		{"CONT", 4},
 
 		{"MINICAPS", 8}, // NiGHTS graphics here and below
 		{"BLUESTAT", 8}, // Sphere status
