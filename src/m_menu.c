@@ -6937,7 +6937,7 @@ static void M_SelectableClearMenus(INT32 choice)
 static void M_UltimateCheat(INT32 choice)
 {
 	(void)choice;
-	LUAh_GameQuit(true);
+	LUA_HookBool(true, Hook(GameQuit));
 	I_Quit();
 }
 
@@ -13371,7 +13371,7 @@ void M_QuitResponse(INT32 ch)
 
 	if (ch != 'y' && ch != KEY_ENTER)
 		return;
-	LUAh_GameQuit(true);
+	LUA_HookBool(true, Hook(GameQuit));
 	if (!(netgame || cv_debug))
 	{
 		S_ResetCaptions();

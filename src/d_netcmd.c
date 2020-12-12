@@ -3612,7 +3612,7 @@ static void Command_Playintro_f(void)
   */
 FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void)
 {
-	LUAh_GameQuit(true);
+	LUA_HookBool(true, Hook(GameQuit));
 	I_Quit();
 }
 
@@ -4274,7 +4274,7 @@ void Command_ExitGame_f(void)
 {
 	INT32 i;
 
-	LUAh_GameQuit(false);
+	LUA_HookBool(false, Hook(GameQuit));
 
 	D_QuitNetGame();
 	CL_Reset();

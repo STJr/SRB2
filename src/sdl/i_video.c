@@ -1057,7 +1057,7 @@ void I_GetEvent(void)
 					M_SetupJoystickMenu(0);
 			 	break;
 			case SDL_QUIT:
-				LUAh_GameQuit(true);
+				LUA_HookBool(true, Hook(GameQuit));
 				I_Quit();
 				break;
 		}

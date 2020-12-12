@@ -84,6 +84,7 @@ void    LUA_Hook(int hook);
 int  LUA_HookMobj(mobj_t *, int hook);
 int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);
 void LUA_HookInt(INT32 integer, int hook);
+void LUA_HookBool(boolean value, int hook);
 int  LUA_HookPlayer(player_t *, int hook);
 int  LUA_HookTiccmd(player_t *, ticcmd_t *, int hook);
 
