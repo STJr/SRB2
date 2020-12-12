@@ -1574,6 +1574,8 @@ void readlevelheader(MYFILE *f, INT32 num)
 						sizeof(mapheaderinfo[num-1]->musname), va("Level header %d: music", num));
 				}
 			}
+			else if (fastcmp(word, "MUSICSLOT"))
+				deh_warning("Level header %d: MusicSlot parameter is deprecated and will be removed.\nUse \"Music\" instead.", num);
 			else if (fastcmp(word, "MUSICTRACK"))
 				mapheaderinfo[num-1]->mustrack = ((UINT16)i - 1);
 			else if (fastcmp(word, "MUSICPOS"))
