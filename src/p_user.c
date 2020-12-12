@@ -11482,7 +11482,6 @@ void P_PlayerThink(player_t *player)
 		}
 	}
 
-#ifdef SEENAMES
 	if (netgame && player == &players[displayplayer] && !(leveltime % (TICRATE/5)))
 	{
 		seenplayer = NULL;
@@ -11507,7 +11506,6 @@ void P_PlayerThink(player_t *player)
 			}
 		}
 	}
-#endif
 
 	if (player->awayviewmobj && P_MobjWasRemoved(player->awayviewmobj))
 	{

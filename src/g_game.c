@@ -444,9 +444,7 @@ consvar_t cv_firenaxis2 = CVAR_INIT ("joyaxis2_firenormal", "Z-Axis", CV_SAVE, j
 consvar_t cv_deadzone2 = CVAR_INIT ("joy_deadzone2", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 consvar_t cv_digitaldeadzone2 = CVAR_INIT ("joy_digdeadzone2", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 
-#ifdef SEENAMES
 player_t *seenplayer; // player we're aiming at right now
-#endif
 
 // now automatically allocated in D_RegisterClientCommands
 // so that it doesn't have to be updated depending on the value of MAXPLAYERS

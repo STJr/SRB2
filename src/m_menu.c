@@ -1356,9 +1356,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Score/Time/Rings",          &cv_timetic,          71},
 	{IT_STRING | IT_CVAR, NULL, "Show Powerups",             &cv_powerupdisplay,   76},
 	{IT_STRING | IT_CVAR, NULL, "Local ping display",		&cv_showping,			81}, // shows ping next to framerate if we want to.
-#ifdef SEENAMES
 	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         86},
-#endif
 
 	{IT_HEADER, NULL, "Console", NULL, 95},
 	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      101},

@@ -727,9 +727,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	|| (thing->player && thing->player->spectator))
 		return true;
 
-#ifdef SEENAMES
-  // Do name checks all the way up here
-  // So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
+	// Do name checks all the way up here
+	// So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
 	if (tmthing->type == MT_NAMECHECK)
 	{
 		// Ignore things that aren't players, ignore spectators, ignore yourself.
@@ -753,7 +752,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		seenplayer = thing->player;
 		return false;
 	}
-#endif
 
 	// Metal Sonic destroys tiny baby objects.
 	if (tmthing->type == MT_METALSONIC_RACE
