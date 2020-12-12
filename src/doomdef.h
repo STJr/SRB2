@@ -582,9 +582,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 ///	Dumps the contents of a network save game upon consistency failure for debugging.
 //#define DUMPCONSISTENCY
 
-///	See name of player in your crosshair
-#define SEENAMES
-
 ///	Who put weights on my recycler?  ... Inuyasha did.
 ///	\note	XMOD port.
 //#define WEIGHTEDRECYCLER

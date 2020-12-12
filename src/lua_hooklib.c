@@ -1754,7 +1754,6 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 }
 
 // Hook for MT_NAMECHECK
-#ifdef SEENAMES
 boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 {
 	hook_p hookp;
@@ -1798,7 +1797,6 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 
 	return hasSeenPlayer;
 }
-#endif // SEENAMES
 
 boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 {

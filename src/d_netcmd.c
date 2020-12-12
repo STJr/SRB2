@@ -214,11 +214,9 @@ consvar_t cv_respawntime = CVAR_INIT ("respawndelay", "3", CV_SAVE|CV_NETVAR|CV_
 
 consvar_t cv_competitionboxes = CVAR_INIT ("competitionboxes", "Mystery", CV_SAVE|CV_NETVAR|CV_CHEAT, competitionboxes_cons_t, NULL);
 
-#ifdef SEENAMES
 static CV_PossibleValue_t seenames_cons_t[] = {{0, "Off"}, {1, "Colorless"}, {2, "Team"}, {3, "Ally/Foe"}, {0, NULL}};
 consvar_t cv_seenames = CVAR_INIT ("seenames", "Ally/Foe", CV_SAVE, seenames_cons_t, 0);
 consvar_t cv_allowseenames = CVAR_INIT ("allowseenames", "Yes", CV_SAVE|CV_NETVAR, CV_YesNo, NULL);
-#endif
 
 // names
 consvar_t cv_playername = CVAR_INIT ("name", "Sonic", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name_OnChange);
@@ -597,9 +595,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_pingtimeout);
 	CV_RegisterVar(&cv_showping);
 
-#ifdef SEENAMES
-	 CV_RegisterVar(&cv_allowseenames);
-#endif
+	CV_RegisterVar(&cv_allowseenames);
 
 	CV_RegisterVar(&cv_dummyconsvar);
 }
@@ -690,9 +686,7 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_defaultplayercolor2);
 	CV_RegisterVar(&cv_defaultskin2);
 
-#ifdef SEENAMES
 	CV_RegisterVar(&cv_seenames);
-#endif
 	CV_RegisterVar(&cv_rollingdemos);
 	CV_RegisterVar(&cv_netstat);
 	CV_RegisterVar(&cv_netticbuffer);
