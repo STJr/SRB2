@@ -1341,7 +1341,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	// Transformation animation
 	P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_TRANS1);
 
-	if (giverings)
+	if (giverings && player->rings < 50)
 		player->rings = 50;
 
 	// Just in case.
@@ -1491,10 +1491,10 @@ void P_PlayLivesJingle(player_t *player)
 	if (player && !P_IsLocalPlayer(player))
 		return;
 
-	if (use1upSound || cv_1upsound.value)
-		S_StartSound(NULL, sfx_oneup);
-	else if (mariomode)
+	if (mariomode)
 		S_StartSound(NULL, sfx_marioa);
+	else if (use1upSound || cv_1upsound.value)
+		S_StartSound(NULL, sfx_oneup);
 	else
 	{
 		P_PlayJingle(player, JT_1UP);
@@ -2329,7 +2329,8 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 			P_MobjCheckWater(player->mo);
 			if (player->pflags & PF_SPINNING)
 			{
-				if (player->mo->state-states != S_PLAY_ROLL && !(player->pflags & PF_STARTDASH))
+				if (!(player->pflags & PF_STARTDASH) && player->panim != PA_ROLL && player->panim != PA_ETC
+				&& player->panim != PA_ABILITY && player->panim != PA_ABILITY2)
 				{
 					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					S_StartSound(player->mo, sfx_spin);
@@ -4524,6 +4525,9 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	player->mo->eflags &= ~MFE_APPLYPMOMZ;
 
 	player->pflags |= P_GetJumpFlags(player);;
+	
+	if (player->charflags & SF_NOJUMPDAMAGE)
+		player->pflags &= ~PF_SPINNING;
 
 	if (soundandstate)
 	{
@@ -8605,12 +8609,6 @@ void P_MovePlayer(player_t *player)
 		player->climbing--;
 	}
 
-	if (!player->climbing)
-	{
-		player->lastsidehit = -1;
-		player->lastlinehit = -1;
-	}
-
 	// Make sure you're not teetering when you shouldn't be.
 	if (player->panim == PA_EDGE
 	&& (player->mo->momx || player->mo->momy || player->mo->momz))
@@ -8635,6 +8633,7 @@ void P_MovePlayer(player_t *player)
 		P_DoFiring(player, cmd);
 
 	{
+		boolean atspinheight = false;
 		fixed_t oldheight = player->mo->height;
 
 		// Less height while spinning. Good for spinning under things...?
@@ -8644,32 +8643,35 @@ void P_MovePlayer(player_t *player)
 		|| player->powers[pw_tailsfly] || player->pflags & PF_GLIDING
 		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
 		|| (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
+		{
 			player->mo->height = P_GetPlayerSpinHeight(player);
+			atspinheight = true;
+		}
 		else
 			player->mo->height = P_GetPlayerHeight(player);
 
 		if (player->mo->eflags & MFE_VERTICALFLIP && player->mo->height != oldheight) // adjust z height for reverse gravity, similar to how it's done for scaling
 			player->mo->z -= player->mo->height - oldheight;
-	}
 
-	// Crush test...
-	if ((player->mo->ceilingz - player->mo->floorz < player->mo->height)
-		&& !(player->mo->flags & MF_NOCLIP))
-	{
-		if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_SPINNING))
+		// Crush test...
+		if ((player->mo->ceilingz - player->mo->floorz < player->mo->height)
+			&& !(player->mo->flags & MF_NOCLIP))
 		{
-			player->pflags |= PF_SPINNING;
-			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-		}
-		else if (player->mo->ceilingz - player->mo->floorz < player->mo->height)
-		{
-			if ((netgame || multiplayer) && player->spectator)
-				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPECTATOR); // Respawn crushed spectators
-			else
-				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_CRUSHED);
+			if (!atspinheight)
+			{
+				player->pflags |= PF_SPINNING;
+				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+			}
+			else if (player->mo->ceilingz - player->mo->floorz < player->mo->height)
+			{
+				if ((netgame || multiplayer) && player->spectator)
+					P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPECTATOR); // Respawn crushed spectators
+				else
+					P_DamageMobj(player->mo, NULL, NULL, 1, DMG_CRUSHED);
 
-			if (player->playerstate == PST_DEAD)
-				return;
+				if (player->playerstate == PST_DEAD)
+					return;
+			}
 		}
 	}
 
@@ -12578,13 +12580,16 @@ void P_PlayerAfterThink(player_t *player)
 					player->powers[pw_carry] = CR_NONE;
 				else
 				{
-					P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*FRACUNIT), true);
+					if (tails->player)
+						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*FRACUNIT), true);
+					else
+						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->angle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->angle, 4*FRACUNIT), true);
 					player->mo->momx = tails->momx;
 					player->mo->momy = tails->momy;
 					player->mo->momz = tails->momz;
 				}
 
-				if (G_CoopGametype() && (!tails->player || tails->player->bot != 1))
+				if (G_CoopGametype() && tails->player && tails->player->bot != 1)
 				{
 					player->mo->angle = tails->angle;
 
@@ -12599,7 +12604,7 @@ void P_PlayerAfterThink(player_t *player)
 				{
 					if (player->mo->state-states != S_PLAY_RIDE)
 						P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
-					if ((tails->skin && ((skin_t *)(tails->skin))->sprites[SPR2_SWIM].numframes) && (tails->eflags & MFE_UNDERWATER))
+					if (tails->player && (tails->skin && ((skin_t *)(tails->skin))->sprites[SPR2_SWIM].numframes) && (tails->eflags & MFE_UNDERWATER))
 						tails->player->powers[pw_tailsfly] = 0;
 				}
 				else

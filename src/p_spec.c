@@ -4420,15 +4420,19 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			// clear the special so you can't push the button twice.
 			sector->special = 0;
 
+			// Initialize my junk
+			junk.tags.tags = NULL;
+			junk.tags.count = 0;
+
 			// Move the button down
-			Tag_FSet(&junk.tags, 680);
+			Tag_FSet(&junk.tags, LE_CAPSULE0);
 			EV_DoElevator(&junk, elevateDown, false);
 
 			// Open the top FOF
-			Tag_FSet(&junk.tags, 681);
+			Tag_FSet(&junk.tags, LE_CAPSULE1);
 			EV_DoFloor(&junk, raiseFloorToNearestFast);
 			// Open the bottom FOF
-			Tag_FSet(&junk.tags, 682);
+			Tag_FSet(&junk.tags, LE_CAPSULE2);
 			EV_DoCeiling(&junk, lowerToLowestFast);
 
 			// Mark all players with the time to exit thingy!
@@ -4503,7 +4507,7 @@ DoneSection2:
 
 				P_InstaThrust(player->mo, player->mo->angle, linespeed);
 
-				if ((lines[i].flags & ML_EFFECT5) && (player->charability2 == CA2_SPINDASH)) // Roll!
+				if (lines[i].flags & ML_EFFECT5) // Roll!
 				{
 					if (!(player->pflags & PF_SPINNING))
 						player->pflags |= PF_SPINNING;
@@ -4669,7 +4673,7 @@ DoneSection2:
 			break;
 
 		case 7: // Make player spin
-			if (!(player->pflags & PF_SPINNING) && P_IsObjectOnGround(player->mo) && (player->charability2 == CA2_SPINDASH))
+			if (!(player->pflags & PF_SPINNING))
 			{
 				player->pflags |= PF_SPINNING;
 				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);

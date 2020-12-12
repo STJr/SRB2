@@ -3294,7 +3294,13 @@ static void Command_Addfile(void)
 			if (!isprint(fn[i]) || fn[i] == ';')
 				return;
 
-		musiconly = W_VerifyNMUSlumps(fn);
+		musiconly = W_VerifyNMUSlumps(fn, false);
+
+		if (musiconly == -1)
+		{
+			addedfiles[numfilesadded++] = fn;
+			continue;
+		}
 
 		if (!musiconly)
 		{
@@ -3606,8 +3612,7 @@ static void Command_Playintro_f(void)
   */
 FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void)
 {
-	if (Playing())
-		LUA_Hook(GameQuit);
+	LUAh_GameQuit(true);
 	I_Quit();
 }
 
@@ -4269,8 +4274,7 @@ void Command_ExitGame_f(void)
 {
 	INT32 i;
 
-	if (Playing())
-		LUA_Hook(GameQuit);
+	LUAh_GameQuit(false);
 
 	D_QuitNetGame();
 	CL_Reset();

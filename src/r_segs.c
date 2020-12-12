@@ -540,7 +540,7 @@ static boolean R_IsFFloorTranslucent(visffloor_t *pfloor)
 
 	// Polyobjects have no ffloors, and they're handled in the conditional above.
 	if (pfloor->ffloor != NULL)
-		return (pfloor->ffloor->flags & FF_TRANSLUCENT);
+		return (pfloor->ffloor->flags & (FF_TRANSLUCENT|FF_FOG));
 
 	return false;
 }
@@ -1191,7 +1191,7 @@ static void R_RenderSegLoop (void)
 
 							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
 							// "bottom" is the top pixel of the floor column
-							if (ffbottom >= bottom-1 && R_FFloorCanClip(&ffloor[i]))
+							if (ffbottom >= bottom-1 && R_FFloorCanClip(&ffloor[i]) && !curline->polyseg)
 							{
 								rw_floormarked = true;
 								floorclip[rw_x] = fftop;
@@ -1239,7 +1239,7 @@ static void R_RenderSegLoop (void)
 
 							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
 							// "top" is the height of the ceiling column
-							if (fftop <= top+1 && R_FFloorCanClip(&ffloor[i]))
+							if (fftop <= top+1 && R_FFloorCanClip(&ffloor[i]) && !curline->polyseg)
 							{
 								rw_ceilingmarked = true;
 								ceilingclip[rw_x] = ffbottom;

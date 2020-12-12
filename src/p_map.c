@@ -982,7 +982,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	if (thing->type == MT_SALOONDOOR && tmthing->player)
 	{
 		mobj_t *ref = (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)) ? tmthing->tracer : tmthing;
-		if ((thing->flags2 & MF2_AMBUSH) || ref != tmthing)
+		if (((thing->flags2 & MF2_AMBUSH) && (tmthing->z <= thing->z + thing->height) && (tmthing->z + tmthing->height >= thing->z))
+			|| ref != tmthing)
 		{
 			fixed_t dm = min(FixedHypot(ref->momx, ref->momy), 16*FRACUNIT);
 			angle_t ang = R_PointToAngle2(0, 0, ref->momx, ref->momy) - thing->angle;
@@ -995,7 +996,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (thing->type == MT_SALOONDOORCENTER && tmthing->player)
 	{
-		if ((thing->flags2 & MF2_AMBUSH) || (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)))
+		if (((thing->flags2 & MF2_AMBUSH) && (tmthing->z <= thing->z + thing->height) && (tmthing->z + tmthing->height >= thing->z))
+			|| (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)))
 			return true;
 	}
 
@@ -3443,9 +3445,17 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 			P_ProcessSpecialSector(slidemo->player, slidemo->subsector->sector, li->polyobj->lines[0]->backsector);
 	}
 
-	if (slidemo->player && slidemo->player->charability == CA_GLIDEANDCLIMB
-		&& (slidemo->player->pflags & PF_GLIDING || slidemo->player->climbing))
-		PTR_GlideClimbTraverse(li);
+	if (slidemo->player)
+	{
+		if (slidemo->player->charability == CA_GLIDEANDCLIMB
+			&& (slidemo->player->pflags & PF_GLIDING || slidemo->player->climbing))
+			PTR_GlideClimbTraverse(li);
+		else
+		{
+			slidemo->player->lastsidehit = li->sidenum[P_PointOnLineSide(slidemo->x, slidemo->y, li)];
+			slidemo->player->lastlinehit = (INT16)(li - lines);
+		}
+	}
 
 	if (in->frac < bestslidefrac && (!slidemo->player || !slidemo->player->climbing))
 	{

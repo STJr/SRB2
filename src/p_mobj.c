@@ -3366,7 +3366,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 			}
 
 			// skipping stone!
-			if (p && (p->charability2 == CA2_SPINDASH) && p->speed/2 > abs(mobj->momz)
+			if (p && p->speed/2 > abs(mobj->momz)
 				&& ((p->pflags & (PF_SPINNING|PF_JUMPED)) == PF_SPINNING)
 				&& ((!(mobj->eflags & MFE_VERTICALFLIP) && thingtop - mobj->momz > mobj->watertop)
 				|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->z - mobj->momz < mobj->waterbottom)))
@@ -5654,14 +5654,10 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (P_RandomRange(1,(dist>>FRACBITS)/16) == 1)
 					break;
 			}
-			if (spawner)
+			if (spawner && dist)
 			{
 				mobj_t *missile = P_SpawnMissile(spawner, mobj, MT_MSGATHER);
-
-				if (dist == 0)
-					missile->fuse = 0;
-				else
-					missile->fuse = (dist/P_AproxDistance(missile->momx, missile->momy));
+				missile->fuse = (dist/P_AproxDistance(missile->momx, missile->momy));
 
 				if (missile->fuse > mobj->fuse)
 					P_RemoveMobj(missile);
@@ -7937,7 +7933,7 @@ static boolean P_MobjPushableThink(mobj_t *mobj)
 	P_PushableThinker(mobj);
 
 	// Extinguish fire objects in water. (Yes, it's extraordinarily rare to have a pushable flame object, but Brak uses such a case.)
-	if (mobj->flags & MF_FIRE && mobj->type != MT_PUMA && mobj->type != MT_FIREBALL
+	if ((mobj->flags & MF_FIRE) && !(mobj->eflags & MFE_TOUCHLAVA)
 		&& (mobj->eflags & (MFE_UNDERWATER | MFE_TOUCHWATER)))
 	{
 		P_KillMobj(mobj, NULL, NULL, 0);
@@ -9651,6 +9647,12 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		break;
 	}
 	case MT_SALOONDOOR:
+		if (!mobj->tracer) // Door center is gone or not spawned?
+		{
+			P_RemoveMobj(mobj); // Die
+			return false;
+		}
+
 		P_SaloonDoorThink(mobj);
 		break;
 	case MT_MINECARTSPAWNER:
@@ -9705,7 +9707,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		P_MobjCheckWater(mobj);
 
 		// Extinguish fire objects in water
-		if (mobj->flags & MF_FIRE && mobj->type != MT_PUMA && mobj->type != MT_FIREBALL
+		if ((mobj->flags & MF_FIRE) && !(mobj->eflags & MFE_TOUCHLAVA)
 			&& (mobj->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
 		{
 			P_KillMobj(mobj, NULL, NULL, 0);
@@ -11396,6 +11398,10 @@ void P_SpawnPlayer(INT32 playernum)
 		p->normalspeed = skins[p->skin].normalspeed;
 		p->jumpfactor = skins[p->skin].jumpfactor;
 	}
+	
+	// Clear lastlinehit and lastsidehit
+	p->lastsidehit = -1;
+	p->lastlinehit = -1;
 
 	//awayview stuff
 	p->awayviewmobj = NULL;
