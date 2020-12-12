@@ -3924,9 +3924,7 @@ state_t states[NUMSTATES] =
 	{SPR_BRIB, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 31, 1, S_NULL}, // S_BLUEBRICKDEBRIS
 	{SPR_BRIY, FF_ANIMATE|FF_RANDOMANIM, -1, {NULL}, 31, 1, S_NULL}, // S_YELLOWBRICKDEBRIS
 
-#ifdef SEENAMES
 	{SPR_NULL, 0, 1, {NULL}, 0, 0, S_NULL}, // S_NAMECHECK
-#endif
 };
 
 mobjinfo_t mobjinfo[NUMMOBJTYPES] =
@@ -21653,7 +21651,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-#ifdef SEENAMES
 	{           // MT_NAMECHECK
 		-1,             // doomednum
 		S_NAMECHECK,    // spawnstate
@@ -21680,7 +21677,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		MF_NOBLOCKMAP|MF_MISSILE|MF_NOGRAVITY|MF_NOSECTOR, // flags
 		S_NULL          // raisestate
 	},
-#endif
 };
 
 skincolor_t skincolors[MAXSKINCOLORS] = {

@@ -214,7 +214,7 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_sprites:
 		LUA_PushLightUserdata(L, skin->sprites, META_SKINSPRITES);
-		break;	
+		break;
 	}
 	return 1;
 }

@@ -1356,9 +1356,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Score/Time/Rings",          &cv_timetic,          71},
 	{IT_STRING | IT_CVAR, NULL, "Show Powerups",             &cv_powerupdisplay,   76},
 	{IT_STRING | IT_CVAR, NULL, "Local ping display",		&cv_showping,			81}, // shows ping next to framerate if we want to.
-#ifdef SEENAMES
 	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         86},
-#endif
 
 	{IT_HEADER, NULL, "Console", NULL, 95},
 	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      101},
@@ -1551,18 +1549,19 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits,           57},
 
 	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 64},
-	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_movie_option,              70},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_movie_folder, 	  75},
-	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                 90},
+	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_movie_option,               70},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_movie_folder, 	   75},
+	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                  90},
 
-	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,              95},
-	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,             100},
+	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,              95},
+	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,              100},
 	{IT_STRING|IT_CVAR, NULL, "Local Color Table", &cv_gif_localcolortable,       105},
 
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,              95},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,               100},
-	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,            105},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,         110},
+	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_apng_downscale,             95},
+	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,              100},
+	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,               105},
+	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,            110},
+	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,         115},
 };
 
 enum
@@ -1575,7 +1574,7 @@ enum
 	op_screenshot_gif_start = 13,
 	op_screenshot_gif_end = 15,
 	op_screenshot_apng_start = 16,
-	op_screenshot_apng_end = 19,
+	op_screenshot_apng_end = 20,
 };
 
 static menuitem_t OP_EraseDataMenu[] =

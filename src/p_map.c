@@ -727,9 +727,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	|| (thing->player && thing->player->spectator))
 		return true;
 
-#ifdef SEENAMES
-  // Do name checks all the way up here
-  // So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
+	// Do name checks all the way up here
+	// So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
 	if (tmthing->type == MT_NAMECHECK)
 	{
 		// Ignore things that aren't players, ignore spectators, ignore yourself.
@@ -753,7 +752,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		seenplayer = thing->player;
 		return false;
 	}
-#endif
 
 	// Metal Sonic destroys tiny baby objects.
 	if (tmthing->type == MT_METALSONIC_RACE
@@ -1685,7 +1683,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 					{
 						fixed_t setmomz = -*momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
-					
+
 						if (elementalpierce == 2) // Reset bubblewrap, part 1
 							P_DoBubbleBounce(player);
 						*momz = setmomz; // Therefore, you should be thrust in the opposite direction, vertically.
@@ -1694,7 +1692,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 						if (elementalpierce == 2) // Reset bubblewrap, part 2
 						{
 							boolean underwater = tmthing->eflags & MFE_UNDERWATER;
-							
+
 							if (underwater)
 								*momz /= 2;
 							*momz -= (*momz/(underwater ? 8 : 4)); // Cap the height!
