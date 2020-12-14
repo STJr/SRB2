@@ -2491,7 +2491,6 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 					player->mo->momx = player->mo->momy = 0;
 					clipmomz = false;
 				}
-
 				else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP) // Bubble shield's bounce attack.
 				{
 					P_DoBubbleBounce(player);
