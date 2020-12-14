@@ -156,13 +156,9 @@ static int lib_numTaggroupElements(lua_State *L)
 	return 1;
 }
 
-static void push_taglist(lua_State *L, int idx)
-{
-	lua_getmetatable(L, idx);
-	lua_pushliteral(L, "taglist");
-	lua_rawget(L, -2);
-	lua_remove(L, -2);
-}
+#ifdef MUTABLE_TAGS
+static int meta_ref[2];
+#endif
 
 static int has_valid_field(lua_State *L)
 {
@@ -191,10 +187,19 @@ static taglist_t * valid_taglist(lua_State *L, int idx, boolean getting)
 
 static taglist_t * check_taglist(lua_State *L, int idx)
 {
-	luaL_checktype(L, idx, LUA_TUSERDATA);
-	push_taglist(L, idx);
-	luaL_argcheck(L, lua_toboolean(L, -1), idx, "must be a tag list");
-	return valid_taglist(L, idx, false);
+	if (lua_isuserdata(L, idx) && lua_getmetatable(L, idx))
+	{
+		lua_getref(L, meta_ref[0]);
+		lua_getref(L, meta_ref[1]);
+
+		if (lua_rawequal(L, -3, -2) || lua_rawequal(L, -3, -1))
+		{
+			lua_pop(L, 3);
+			return valid_taglist(L, idx, false);
+		}
+	}
+
+	return luaL_argerror(L, idx, "must be a tag list"), NULL;
 }
 
 static int taglist_get(lua_State *L)
@@ -223,7 +228,7 @@ static int taglist_get(lua_State *L)
 	}
 	else
 	{
-		push_taglist(L, 1);
+		lua_getmetatable(L, 1);
 		lua_replace(L, 1);
 		lua_rawget(L, 1);
 		return 1;
@@ -395,12 +400,14 @@ static void open_taglist(lua_State *L)
 #define new_literal(L, s) \
 	(lua_pushliteral(L, s), luaL_ref(L, -2))
 
-static void set_taglist_metatable(lua_State *L, const char *meta)
+#ifdef MUTABLE_TAGS
+static int
+#else
+static void
+#endif
+set_taglist_metatable(lua_State *L, const char *meta)
 {
-	lua_createtable(L, 0, 4);
-		lua_getglobal(L, "taglist");
-		lua_setfield(L, -2, "taglist");
-
+	luaL_newmetatable(L, meta);
 		lua_pushcfunction(L, taglist_get);
 		lua_createtable(L, 0, 1);
 			new_literal(L, "valid");
@@ -412,7 +419,9 @@ static void set_taglist_metatable(lua_State *L, const char *meta)
 
 		lua_pushcfunction(L, taglist_equal);
 		lua_setfield(L, -2, "__eq");
-	lua_setfield(L, LUA_REGISTRYINDEX, meta);
+#ifdef MUTABLE_TAGS
+	return luaL_ref(L, LUA_REGISTRYINDEX);
+#endif
 }
 
 int LUA_TagLib(lua_State *L)
@@ -431,10 +440,11 @@ int LUA_TagLib(lua_State *L)
 
 	open_taglist(L);
 
-	set_taglist_metatable(L, META_TAGLIST);
-
 #ifdef MUTABLE_TAGS
-	set_taglist_metatable(L, META_SECTORTAGLIST);
+	meta_ref[0] = set_taglist_metatable(L, META_TAGLIST);
+	meta_ref[1] = set_taglist_metatable(L, META_SECTORTAGLIST);
+#else
+	set_taglist_metatable(L, META_TAGLIST);
 #endif
 
 	return 0;
