@@ -167,7 +167,7 @@ static void push_taglist(lua_State *L, int idx)
 static int has_valid_field(lua_State *L)
 {
 	int equal;
-	lua_pushliteral(L, "valid");
+	lua_rawgeti(L, LUA_ENVIRONINDEX, 1);
 	equal = lua_rawequal(L, 2, -1);
 	lua_pop(L, 1);
 	return equal;
@@ -392,6 +392,9 @@ static void open_taglist(lua_State *L)
 	lua_setfield(L, -2, "has");
 }
 
+#define new_literal(L, s) \
+	(lua_pushliteral(L, s), luaL_ref(L, -2))
+
 static void set_taglist_metatable(lua_State *L, const char *meta)
 {
 	lua_createtable(L, 0, 4);
@@ -399,6 +402,9 @@ static void set_taglist_metatable(lua_State *L, const char *meta)
 		lua_setfield(L, -2, "taglist");
 
 		lua_pushcfunction(L, taglist_get);
+		lua_createtable(L, 0, 1);
+			new_literal(L, "valid");
+		lua_setfenv(L, -2);
 		lua_setfield(L, -2, "__index");
 
 		lua_pushcfunction(L, taglist_len);
