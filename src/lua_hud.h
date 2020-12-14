@@ -38,6 +38,7 @@ enum hud {
 	// Intermission
 	hud_intermissiontally,
 	hud_intermissionmessages,
+	hud_intermissionemeralds,
 	hud_MAX
 };
 

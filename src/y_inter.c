@@ -638,6 +638,7 @@ void Y_IntermissionDrawer(void)
 
 		// draw the emeralds
 		//if (intertic & 1)
+		if (LUA_HudEnabled(hud_intermissionemeralds))
 		{
 			boolean drawthistic = !(ALL7EMERALDS(emeralds) && (intertic & 1));
 			INT32 emeraldx = 152 - 3*28;

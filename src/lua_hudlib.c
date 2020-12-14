@@ -64,6 +64,7 @@ static const char *const hud_disable_options[] = {
 
 	"intermissiontally",
 	"intermissionmessages",
+	"intermissionemeralds",
 	NULL};
 
 enum hudinfo {
