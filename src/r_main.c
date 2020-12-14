@@ -34,7 +34,7 @@
 #include "m_random.h" // quake camera shake
 #include "r_portal.h"
 #include "r_main.h"
-#include "i_system.h" // I_GetTimeMicros
+#include "i_system.h" // I_GetPreciseTime
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -100,17 +100,17 @@ lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 extracolormap_t *extra_colormaps = NULL;
 
 // Render stats
-int ps_prevframetime = 0;
-int ps_rendercalltime = 0;
-int ps_uitime = 0;
-int ps_swaptime = 0;
+precise_t ps_prevframetime = 0;
+precise_t ps_rendercalltime = 0;
+precise_t ps_uitime = 0;
+precise_t ps_swaptime = 0;
 
-int ps_bsptime = 0;
+precise_t ps_bsptime = 0;
 
-int ps_sw_spritecliptime = 0;
-int ps_sw_portaltime = 0;
-int ps_sw_planetime = 0;
-int ps_sw_maskedtime = 0;
+precise_t ps_sw_spritecliptime = 0;
+precise_t ps_sw_portaltime = 0;
+precise_t ps_sw_planetime = 0;
+precise_t ps_sw_maskedtime = 0;
 
 int ps_numbspcalls = 0;
 int ps_numsprites = 0;
@@ -959,6 +959,16 @@ void R_ExecuteSetViewSize(void)
 			dy = FixedMul(abs(dy), fovtan);
 			yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
 		}
+
+		if (ds_su)
+			Z_Free(ds_su);
+		if (ds_sv)
+			Z_Free(ds_sv);
+		if (ds_sz)
+			Z_Free(ds_sz);
+
+		ds_su = ds_sv = ds_sz = NULL;
+		ds_sup = ds_svp = ds_szp = NULL;
 	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
@@ -1011,8 +1021,8 @@ void R_Init(void)
 	//I_OutputMsg("\nR_InitLightTables");
 	R_InitLightTables();
 
-	//I_OutputMsg("\nR_InitTranslationTables\n");
-	R_InitTranslationTables();
+	//I_OutputMsg("\nR_InitTranslucencyTables\n");
+	R_InitTranslucencyTables();
 
 	R_InitDrawNodes();
 
@@ -1473,9 +1483,6 @@ void R_RenderPlayerView(player_t *player)
 	}
 	R_ClearDrawSegs();
 	R_ClearSprites();
-#ifdef FLOORSPLATS
-	R_ClearVisibleFloorSplats();
-#endif
 	Portal_InitList();
 
 	// check for new console commands.
@@ -1491,9 +1498,9 @@ void R_RenderPlayerView(player_t *player)
 	ProfZeroTimer();
 #endif
 	ps_numbspcalls = ps_numpolyobjects = ps_numdrawnodes = 0;
-	ps_bsptime = I_GetTimeMicros();
+	ps_bsptime = I_GetPreciseTime();
 	R_RenderBSPNode((INT32)numnodes - 1);
-	ps_bsptime = I_GetTimeMicros() - ps_bsptime;
+	ps_bsptime = I_GetPreciseTime() - ps_bsptime;
 	ps_numsprites = visspritecount;
 #ifdef TIMING
 	RDMSR(0x10, &mycount);
@@ -1504,9 +1511,9 @@ void R_RenderPlayerView(player_t *player)
 //profile stuff ---------------------------------------------------------
 	Mask_Post(&masks[nummasks - 1]);
 
-	ps_sw_spritecliptime = I_GetTimeMicros();
+	ps_sw_spritecliptime = I_GetPreciseTime();
 	R_ClipSprites(drawsegs, NULL);
-	ps_sw_spritecliptime = I_GetTimeMicros() - ps_sw_spritecliptime;
+	ps_sw_spritecliptime = I_GetPreciseTime() - ps_sw_spritecliptime;
 
 
 	// Add skybox portals caused by sky visplanes.
@@ -1514,7 +1521,7 @@ void R_RenderPlayerView(player_t *player)
 		Portal_AddSkyboxPortals();
 
 	// Portal rendering. Hijacks the BSP traversal.
-	ps_sw_portaltime = I_GetTimeMicros();
+	ps_sw_portaltime = I_GetPreciseTime();
 	if (portal_base)
 	{
 		portal_t *portal;
@@ -1554,40 +1561,19 @@ void R_RenderPlayerView(player_t *player)
 			Portal_Remove(portal);
 		}
 	}
-	ps_sw_portaltime = I_GetTimeMicros() - ps_sw_portaltime;
+	ps_sw_portaltime = I_GetPreciseTime() - ps_sw_portaltime;
 
-	ps_sw_planetime = I_GetTimeMicros();
+	ps_sw_planetime = I_GetPreciseTime();
 	R_DrawPlanes();
-#ifdef FLOORSPLATS
-	R_DrawVisibleFloorSplats();
-#endif
-	ps_sw_planetime = I_GetTimeMicros() - ps_sw_planetime;
+	ps_sw_planetime = I_GetPreciseTime() - ps_sw_planetime;
 
 	// draw mid texture and sprite
 	// And now 3D floors/sides!
-	ps_sw_maskedtime = I_GetTimeMicros();
+	ps_sw_maskedtime = I_GetPreciseTime();
 	R_DrawMasked(masks, nummasks);
-	ps_sw_maskedtime = I_GetTimeMicros() - ps_sw_maskedtime;
+	ps_sw_maskedtime = I_GetPreciseTime() - ps_sw_maskedtime;
 
 	free(masks);
-}
-
-#ifdef HWRENDER
-void R_InitHardwareMode(void)
-{
-	HWR_AddSessionCommands();
-	HWR_Switch();
-	HWR_LoadTextures(numtextures);
-	if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction))
-		HWR_SetupLevel();
-}
-#endif
-
-void R_ReloadHUDGraphics(void)
-{
-	ST_LoadGraphics();
-	HU_LoadGraphics();
-	ST_ReloadSkinFaceGraphics();
 }
 
 // =========================================================================

@@ -1,7 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,17 +16,17 @@
 #include "lua_script.h"
 #include "p_local.h"
 
-extern int ps_tictime;
+extern precise_t ps_tictime;
 
-extern int ps_playerthink_time;
-extern int ps_thinkertime;
+extern precise_t ps_playerthink_time;
+extern precise_t ps_thinkertime;
 
-extern int ps_thlist_times[];
+extern precise_t ps_thlist_times[];
 
-extern int ps_checkposition_calls;
+extern int       ps_checkposition_calls;
 
-extern int ps_lua_thinkframe_time;
-extern int ps_lua_mobjhooks;
+extern precise_t ps_lua_thinkframe_time;
+extern int       ps_lua_mobjhooks;
 
 typedef struct
 {

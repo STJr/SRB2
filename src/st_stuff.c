@@ -203,9 +203,7 @@ void ST_doPaletteStuff(void)
 {
 	INT32 palette;
 
-	if (paused || P_AutoPause())
-		palette = 0;
-	else if (stplyr && stplyr->flashcount)
+	if (stplyr && stplyr->flashcount)
 		palette = stplyr->flashpal;
 	else
 		palette = 0;
@@ -214,8 +212,6 @@ void ST_doPaletteStuff(void)
 	if (rendermode == render_opengl)
 		palette = 0; // No flashpals here in OpenGL
 #endif
-
-	palette = min(max(palette, 0), 13);
 
 	if (palette != st_palette)
 	{
@@ -232,7 +228,7 @@ void ST_doPaletteStuff(void)
 
 void ST_UnloadGraphics(void)
 {
-	Z_FreeTag(PU_HUDGFX);
+	Patch_FreeTag(PU_HUDGFX);
 }
 
 void ST_LoadGraphics(void)
@@ -458,7 +454,7 @@ boolean st_overlay;
 static void ST_DrawNightsOverlayNum(fixed_t x /* right border */, fixed_t y, fixed_t s, INT32 a,
 	UINT32 num, patch_t **numpat, skincolornum_t colornum)
 {
-	fixed_t w = SHORT(numpat[0]->width)*s;
+	fixed_t w = numpat[0]->width * s;
 	const UINT8 *colormap;
 
 	// I want my V_SNAPTOx flags. :< -Red
@@ -676,7 +672,7 @@ static void ST_drawRaceNum(INT32 time)
 		if (!(P_AutoPause() || paused) && !bounce)
 				S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
 	}
-	V_DrawScaledPatch(((BASEVIDWIDTH - SHORT(racenum->width))/2), height, V_PERPLAYER, racenum);
+	V_DrawScaledPatch(((BASEVIDWIDTH - racenum->width)/2), height, V_PERPLAYER, racenum);
 }
 
 static void ST_drawTime(void)
@@ -1625,8 +1621,8 @@ static void ST_drawFirstPersonHUD(void)
 	p = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 
 	// Display the countdown drown numbers!
-	if (p && !F_GetPromptHideHud(60 - SHORT(p->topoffset)))
-		V_DrawScaledPatch((BASEVIDWIDTH/2) - (SHORT(p->width)/2) + SHORT(p->leftoffset), 60 - SHORT(p->topoffset),
+	if (p && !F_GetPromptHideHud(60 - p->topoffset))
+		V_DrawScaledPatch((BASEVIDWIDTH/2) - (p->width / 2) + SHORT(p->leftoffset), 60 - SHORT(p->topoffset),
 			V_PERPLAYER|V_PERPLAYER|V_TRANSLUCENT, p);
 }
 
@@ -2080,21 +2076,21 @@ static void ST_drawNiGHTSHUD(void)
 			if (stplyr->powers[pw_nights_superloop])
 			{
 				pwr = stplyr->powers[pw_nights_superloop];
-				V_DrawSmallScaledPatch(110, 44, 0, W_CachePatchName("NPRUA0",PU_CACHE));
+				V_DrawSmallScaledPatch(110, 44, 0, W_CachePatchName("NPRUA0",PU_SPRITE));
 				V_DrawThinString(106, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
 			}
 
 			if (stplyr->powers[pw_nights_helper])
 			{
 				pwr = stplyr->powers[pw_nights_helper];
-				V_DrawSmallScaledPatch(150, 44, 0, W_CachePatchName("NPRUC0",PU_CACHE));
+				V_DrawSmallScaledPatch(150, 44, 0, W_CachePatchName("NPRUC0",PU_SPRITE));
 				V_DrawThinString(146, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
 			}
 
 			if (stplyr->powers[pw_nights_linkfreeze])
 			{
 				pwr = stplyr->powers[pw_nights_linkfreeze];
-				V_DrawSmallScaledPatch(190, 44, 0, W_CachePatchName("NPRUE0",PU_CACHE));
+				V_DrawSmallScaledPatch(190, 44, 0, W_CachePatchName("NPRUE0",PU_SPRITE));
 				V_DrawThinString(186, 52, V_MONOSPACE, va("%2d.%02d", pwr/TICRATE, G_TicsToCentiseconds(pwr)));
 			}
 		}
@@ -2379,7 +2375,7 @@ static void ST_drawTeamHUD(void)
 		p = bmatcico;
 
 	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
+		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (p->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
 
 	if (gametyperules & GTR_TEAMFLAGS)
 		p = rflagico;
@@ -2387,7 +2383,7 @@ static void ST_drawTeamHUD(void)
 		p = rmatcico;
 
 	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
+		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (p->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
 
 	if (!(gametyperules & GTR_TEAMFLAGS))
 		goto num;
@@ -2400,11 +2396,11 @@ static void ST_drawTeamHUD(void)
 		{
 			// Blue flag isn't at base
 			if (players[i].gotflag & GF_BLUEFLAG && LUA_HudEnabled(hud_teamscores))
-				V_DrawScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(nonicon->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon);
+				V_DrawScaledPatch(BASEVIDWIDTH/2 - SEP - (nonicon->width / 2), 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon);
 
 			// Red flag isn't at base
 			if (players[i].gotflag & GF_REDFLAG && LUA_HudEnabled(hud_teamscores))
-				V_DrawScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(nonicon2->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon2);
+				V_DrawScaledPatch(BASEVIDWIDTH/2 + SEP - (nonicon2->width / 2), 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon2);
 
 			whichflag |= players[i].gotflag;
 
@@ -2677,7 +2673,7 @@ static void ST_overlayDrawer(void)
 			else
 			{
 				tic_t num = time;
-				INT32 sz = SHORT(tallnum[0]->width)/2, width = 0;
+				INT32 sz = tallnum[0]->width / 2, width = 0;
 				do
 				{
 					width += sz;
@@ -2755,10 +2751,6 @@ static void ST_overlayDrawer(void)
 
 void ST_Drawer(void)
 {
-	if (needpatchrecache)
-		R_ReloadHUDGraphics();
-
-#ifdef SEENAMES
 	if (cv_seenames.value && cv_allowseenames.value && displayplayer == consoleplayer && seenplayer && seenplayer->mo)
 	{
 		INT32 c = 0;
@@ -2782,7 +2774,6 @@ void ST_Drawer(void)
 
 		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF|c, player_names[seenplayer-players]);
 	}
-#endif
 
 	// Doom's status bar only updated if necessary.
 	// However, ours updates every frame regardless, so the "refresh" param was removed

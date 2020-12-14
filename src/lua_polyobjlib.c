@@ -99,7 +99,7 @@ static int polyobjvertices_get(lua_State *L)
 		}
 	}
 
-	numofverts = (size_t)(*(size_t *)(((size_t)polyverts) - (offsetof(polyobj_t, vertices) - offsetof(polyobj_t, numVertices))));
+	numofverts = *(size_t *)FIELDFROM (polyobj_t, polyverts, vertices,/* -> */numVertices);
 
 	if (!numofverts)
 		return luaL_error(L, "no vertices found!");
@@ -120,7 +120,7 @@ static int polyobjvertices_num(lua_State *L)
 	if (!polyverts || !(*polyverts))
 		return luaL_error(L, "accessed polyobj_t.vertices doesn't exist anymore.");
 
-	numofverts = (size_t)(*(size_t *)(((size_t)polyverts) - (offsetof(polyobj_t, vertices) - offsetof(polyobj_t, numVertices))));
+	numofverts = *(size_t *)FIELDFROM (polyobj_t, polyverts, vertices,/* -> */numVertices);
 	lua_pushinteger(L, numofverts);
 	return 1;
 }
@@ -156,7 +156,7 @@ static int polyobjlines_get(lua_State *L)
 		}
 	}
 
-	numoflines = (size_t)(*(size_t *)(((size_t)polylines) - (offsetof(polyobj_t, lines) - offsetof(polyobj_t, numLines))));
+	numoflines = *(size_t *)FIELDFROM (polyobj_t, polylines, lines,/* -> */numLines);
 
 	if (!numoflines)
 		return luaL_error(L, "no lines found!");
@@ -177,7 +177,7 @@ static int polyobjlines_num(lua_State *L)
 	if (!polylines || !(*polylines))
 		return luaL_error(L, "accessed polyobj_t.lines doesn't exist anymore.");
 
-	numoflines = (size_t)(*(size_t *)(((size_t)polylines) - (offsetof(polyobj_t, lines) - offsetof(polyobj_t, numLines))));
+	numoflines = *(size_t *)FIELDFROM (polyobj_t, polylines, lines,/* -> */numLines);
 	lua_pushinteger(L, numoflines);
 	return 1;
 }

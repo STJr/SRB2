@@ -13,8 +13,7 @@
 #     -DHAVE_SDL  -> use for the SDL interface
 #
 # Sets:
-#     Compile the DirectX/Mingw version with 'make MINGW=1'
-#     Compile the SDL/Mingw version with 'make MINGW=1 SDL=1'
+#     Compile the SDL/Mingw version with 'make MINGW=1'
 #     Compile the SDL/Linux version with 'make LINUX=1'
 #     Compile the SDL/Solaris version with 'make SOLARIS=1'
 #     Compile the SDL/FreeBSD version with 'gmake FREEBSD=1'
@@ -103,7 +102,6 @@ ifeq ($(OS),Windows_NT) # all windows are Windows_NT...
 
  # go for a 32-bit sdl mingw exe by default
  MINGW=1
- SDL=1
  WINDOWSHELL=1
 
 else # if you on the *nix
@@ -277,7 +275,7 @@ OPTS += -DCOMPVERSION
 
 ifndef NONX86
 ifndef GCC29
-	ARCHOPTS?=-march=pentium
+	ARCHOPTS?=-msse3 -mfpmath=sse
 else
 	ARCHOPTS?=-mpentium
 endif
@@ -465,6 +463,9 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/d_netfil.o \
 		$(OBJDIR)/d_netcmd.o \
 		$(OBJDIR)/dehacked.o \
+		$(OBJDIR)/deh_soc.o  \
+		$(OBJDIR)/deh_lua.o  \
+		$(OBJDIR)/deh_tables.o \
 		$(OBJDIR)/z_zone.o   \
 		$(OBJDIR)/f_finale.o \
 		$(OBJDIR)/f_wipe.o   \
@@ -519,9 +520,12 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_splats.o \
 		$(OBJDIR)/r_things.o \
 		$(OBJDIR)/r_textures.o \
+		$(OBJDIR)/r_patch.o \
+		$(OBJDIR)/r_patchrotation.o \
 		$(OBJDIR)/r_picformats.o \
 		$(OBJDIR)/r_portal.o \
 		$(OBJDIR)/screen.o   \
+		$(OBJDIR)/taglist.o  \
 		$(OBJDIR)/v_video.o  \
 		$(OBJDIR)/s_sound.o  \
 		$(OBJDIR)/sounds.o   \
@@ -538,6 +542,15 @@ OBJS:=$(i_main_o) \
 		$(i_sound_o)    \
 		$(OBJS)
 
+
+ifndef ECHO
+ifndef NOECHOFILENAMES
+define echoName =
+	@echo -- $< ...
+endef
+endif
+endif
+
 # List of languages to compile.
 # For reference, this is the command I use to build a srb2.pot file from the source code.
 # (The listed source files are the ones containing translated strings).
@@ -552,12 +565,6 @@ ifdef PANDORA
 all:	pre-build $(BIN)/$(PNDNAME)
 endif
 
-
-ifdef MINGW
-ifndef SDL
-all:	 pre-build $(BIN)/$(EXENAME) dll
-endif
-endif
 
 ifdef SDL
 all:	 pre-build $(BIN)/$(EXENAME)
@@ -638,57 +645,6 @@ endif
 $(OBJDIR):
 	-$(MKDIR) $(OBJDIR)
 
-ifndef SDL
-ifdef NOHW
-dll :
-else
-dll : opengl_dll
-endif
-ifdef MINGW
-all_dll: opengl_dll ds3d_dll fmod_dll openal_dll
-
-opengl_dll: $(BIN)/r_opengl.dll
-$(BIN)/r_opengl.dll: $(OBJDIR)/ogl_win.o $(OBJDIR)/r_opengl.o
-	-$(MKDIR) $(BIN)
-	@echo Linking R_OpenGL.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lgdi32 -static-libgcc
-ifndef NOUPX
-	-$(UPX) $(UPX_OPTS) $@
-endif
-
-ds3d_dll: $(BIN)/s_ds3d.dll
-$(BIN)/s_ds3d.dll: $(OBJDIR)/s_ds3d.o
-	@echo Linking S_DS3d.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -ldsound -luuid
-
-fmod_dll: $(BIN)/s_fmod.dll
-$(BIN)/s_fmod.dll: $(OBJDIR)/s_fmod.o
-	-$(MKDIR) $(BIN)
-	@echo Linking S_FMOD.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lfmod
-
-openal_dll: $(BIN)/s_openal.dll
-$(BIN)/s_openal.dll: $(OBJDIR)/s_openal.o
-	-$(MKDIR) $(BIN)
-	@echo Linking S_OpenAL.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lopenal32
-else
-all_dll: fmod_so openal_so
-
-fmod_so: $(BIN)/s_fmod.so
-$(BIN)/s_fmod.so: $(OBJDIR)/s_fmod.o
-	-$(MKDIR) $(BIN)
-	@echo Linking S_FMOD.so...
-	$(CC) --shared $^ -o $@ -g --nostartfiles -lm -lfmod
-
-openal_so: $(BIN)/s_openal.so
-$(BIN)/s_openal.so: $(OBJDIR)/s_openal.o
-	-$(MKDIR) $(BIN)
-	@echo Linking S_OpenAL.so...
-	$(CC) --shared $^ -o $@ -g --nostartfiles -lm -lopenal
-endif
-
-else
 ifdef SDL
 ifdef MINGW
 $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
@@ -698,6 +654,7 @@ $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h 
  hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
  am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
  p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 else
 $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
@@ -707,10 +664,9 @@ $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h 
  hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
  am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
  p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -I/usr/X11R6/include -c $< -o $@
 endif
-endif
-
 endif
 
 #dependecy made by gcc itself !
@@ -735,100 +691,93 @@ endif
 
 ifdef VALGRIND
 $(OBJDIR)/z_zone.o: z_zone.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -DHAVE_VALGRIND $(VALGRIND_CFLAGS) -c $< -o $@
 endif
 
 $(OBJDIR)/comptime.o: comptime.c pre-build
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 $(BIN)/%.mo: locale/%.po
 	-$(MKDIR) $(BIN)
+	$(echoName)
 	$(MSGFMT) -f -o $@ $<
 
 $(OBJDIR)/%.o: %.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: $(INTERFACE)/%.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 ifdef MACOSX
 $(OBJDIR)/%.o: sdl/macosx/%.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 endif
 
 $(OBJDIR)/%.o: hardware/%.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: blua/%.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(LUA_CFLAGS) $(WFLAGS) -c $< -o $@
 
 $(OBJDIR)/%.o: %.nas
+	$(echoName)
 	$(NASM) $(NASMOPTS) -o $@ -f $(NASMFORMAT) $<
 
 $(OBJDIR)/vid_copy.o: vid_copy.s asm_defs.inc
+	$(echoName)
 	$(CC) $(OPTS) $(ASFLAGS) -x assembler-with-cpp -c $< -o $@
 
 $(OBJDIR)/%.o: %.s
+	$(echoName)
 	$(CC) $(OPTS) -x assembler-with-cpp -c $< -o $@
 
 $(OBJDIR)/SRB2.res: win32/Srb2win.rc win32/afxres.h win32/resource.h
+	$(echoName)
 	$(WINDRES) -i $< -O rc $(WINDRESFLAGS) --include-dir=win32 -o $@ -O coff
 
-
-ifdef MINGW
-ifndef SDL
-ifndef NOHW
-$(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
- doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
- command.h hardware/hw_data.h hardware/hw_defs.h \
- hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h \
- hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
- am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
- p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
-	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
-
-$(OBJDIR)/ogl_win.o: hardware/r_opengl/ogl_win.c hardware/r_opengl/r_opengl.h \
- doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
- command.h hardware/hw_data.h hardware/hw_defs.h \
- hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h \
- hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
- am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
- p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
-	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
-endif
-
-endif
-endif
 
 ifdef SDL
 
 ifdef MINGW
 $(OBJDIR)/win_dbg.o: win32/win_dbg.c
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 endif
 
 ifdef STATICHS
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 $(OBJDIR)/s_fmod.o: hardware/s_fmod/s_fmod.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 
 ifdef MINGW
 $(OBJDIR)/s_ds3d.o: hardware/s_ds3d/s_ds3d.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -c $< -o $@
 endif
 else
 
 $(OBJDIR)/s_fmod.o: hardware/s_fmod/s_fmod.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_fmod.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_fmod/s_fmod.c
 
 $(OBJDIR)/s_openal.o: hardware/s_openal/s_openal.c hardware/hw3dsdrv.h \
  hardware/hw_dll.h
+	$(echoName)
 	$(CC) $(ARCHOPTS) -Os -o $(OBJDIR)/s_openal.o -DHW3SOUND -DUNIXCOMMON -shared -nostartfiles -c hardware/s_openal/s_openal.c
 endif
 endif

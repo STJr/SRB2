@@ -165,6 +165,8 @@ void COM_BufAddTextEx(const char *ptext, int flags)
   */
 void COM_BufInsertTextEx(const char *ptext, int flags)
 {
+	const INT32 old_wait = com_wait;
+
 	char *temp = NULL;
 	size_t templen;
 
@@ -176,9 +178,13 @@ void COM_BufInsertTextEx(const char *ptext, int flags)
 		VS_Clear(&com_text);
 	}
 
+	com_wait = 0;
+
 	// add the entire text of the file (or alias)
 	COM_BufAddTextEx(ptext, flags);
 	COM_BufExecute(); // do it right away
+
+	com_wait += old_wait;
 
 	// add the copied off data
 	if (templen)

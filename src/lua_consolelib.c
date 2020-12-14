@@ -40,6 +40,10 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 	// like sending random junk lua commands to crash the server
 
 	if (!gL) goto deny;
+
+	lua_settop(gL, 0); // Just in case...
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	lua_getfield(gL, LUA_REGISTRYINDEX, "COM_Command"); // push COM_Command
 	if (!lua_istable(gL, -1)) goto deny;
 
@@ -76,7 +80,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 		READSTRINGN(*cp, buf, 255);
 		lua_pushstring(gL, buf);
 	}
-	LUA_Call(gL, (int)argc); // argc is 1-based, so this will cover the player we passed too.
+	LUA_Call(gL, (int)argc, 0, 1); // argc is 1-based, so this will cover the player we passed too.
 	return;
 
 deny:
@@ -98,6 +102,10 @@ void COM_Lua_f(void)
 	INT32 playernum = consoleplayer;
 
 	I_Assert(gL != NULL);
+
+	lua_settop(gL, 0); // Just in case...
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	lua_getfield(gL, LUA_REGISTRYINDEX, "COM_Command"); // push COM_Command
 	I_Assert(lua_istable(gL, -1));
 
@@ -167,7 +175,7 @@ void COM_Lua_f(void)
 	LUA_PushUserdata(gL, &players[playernum], META_PLAYER);
 	for (i = 1; i < COM_Argc(); i++)
 		lua_pushstring(gL, COM_Argv(i));
-	LUA_Call(gL, (int)COM_Argc()); // COM_Argc is 1-based, so this will cover the player we passed too.
+	LUA_Call(gL, (int)COM_Argc(), 0, 1); // COM_Argc is 1-based, so this will cover the player we passed too.
 }
 
 // Wrapper for COM_AddCommand
@@ -277,6 +285,9 @@ static void Lua_OnChange(void)
 
 	/// \todo Network this! XD_LUAVAR
 
+	lua_settop(gL, 0); // Just in case...
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	// From CV_OnChange registry field, get the function for this cvar by name.
 	lua_getfield(gL, LUA_REGISTRYINDEX, "CV_OnChange");
 	I_Assert(lua_istable(gL, -1));
@@ -288,7 +299,7 @@ static void Lua_OnChange(void)
 	lua_getfield(gL, -1, cvname); // get consvar_t* userdata.
 	lua_remove(gL, -2); // pop the CV_Vars table.
 
-	LUA_Call(gL, 1); // call function(cvar)
+	LUA_Call(gL, 1, 0, 1); // call function(cvar)
 	lua_pop(gL, 1); // pop CV_OnChange table
 }
 
@@ -432,6 +443,54 @@ static int lib_cvFindVar(lua_State *L)
 	return 1;
 }
 
+static int CVarSetFunction
+(
+		lua_State *L,
+		void (*Set)(consvar_t *, const char *),
+		void (*SetValue)(consvar_t *, INT32)
+){
+	consvar_t *cvar = (consvar_t *)luaL_checkudata(L, 1, META_CVAR);
+
+	if (cvar->flags & CV_NOLUA)
+		return luaL_error(L, "Variable %s cannot be set from Lua.", cvar->name);
+
+	switch (lua_type(L, 2))
+	{
+		case LUA_TSTRING:
+			(*Set)(cvar, lua_tostring(L, 2));
+			break;
+		case LUA_TNUMBER:
+			(*SetValue)(cvar, (INT32)lua_tonumber(L, 2));
+			break;
+		default:
+			return luaL_typerror(L, 1, "string or number");
+	}
+
+	return 0;
+}
+
+static int lib_cvSet(lua_State *L)
+{
+	return CVarSetFunction(L, CV_Set, CV_SetValue);
+}
+
+static int lib_cvStealthSet(lua_State *L)
+{
+	return CVarSetFunction(L, CV_StealthSet, CV_StealthSetValue);
+}
+
+static int lib_cvAddValue(lua_State *L)
+{
+	consvar_t *cvar = (consvar_t *)luaL_checkudata(L, 1, META_CVAR);
+
+	if (cvar->flags & CV_NOLUA)
+		return luaL_error(L, "Variable %s cannot be set from Lua.", cvar->name);
+
+	CV_AddValue(cvar, (INT32)luaL_checknumber(L, 2));
+
+	return 0;
+}
+
 // CONS_Printf for a single player
 // Use 'print' in baselib for a global message.
 static int lib_consPrintf(lua_State *L)
@@ -472,6 +531,9 @@ static luaL_Reg lib[] = {
 	{"COM_BufInsertText", lib_comBufInsertText},
 	{"CV_RegisterVar", lib_cvRegisterVar},
 	{"CV_FindVar", lib_cvFindVar},
+	{"CV_Set", lib_cvSet},
+	{"CV_StealthSet", lib_cvStealthSet},
+	{"CV_AddValue", lib_cvAddValue},
 	{"CONS_Printf", lib_consPrintf},
 	{NULL, NULL}
 };

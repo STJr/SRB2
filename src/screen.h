@@ -72,10 +72,16 @@ typedef struct viddef_s
 #ifdef HWRENDER
 	INT32/*fixed_t*/ fsmalldupx, fsmalldupy;
 	INT32/*fixed_t*/ fmeddupx, fmeddupy;
+	INT32 glstate;
 #endif
 } viddef_t;
-#define VIDWIDTH vid.width
-#define VIDHEIGHT vid.height
+
+enum
+{
+	VID_GL_LIBRARY_NOTLOADED  = 0,
+	VID_GL_LIBRARY_LOADED     = 1,
+	VID_GL_LIBRARY_ERROR      = -1,
+};
 
 // internal additional info for vesa modes only
 typedef struct
@@ -134,18 +140,22 @@ enum
 {
 	SPANDRAWFUNC_BASE = BASEDRAWFUNC,
 	SPANDRAWFUNC_TRANS,
-	SPANDRAWFUNC_SPLAT,
-	SPANDRAWFUNC_TRANSSPLAT,
-	SPANDRAWFUNC_FOG,
-#ifndef NOWATER
-	SPANDRAWFUNC_WATER,
-#endif
 	SPANDRAWFUNC_TILTED,
 	SPANDRAWFUNC_TILTEDTRANS,
+
+	SPANDRAWFUNC_SPLAT,
+	SPANDRAWFUNC_TRANSSPLAT,
 	SPANDRAWFUNC_TILTEDSPLAT,
-#ifndef NOWATER
+
+	SPANDRAWFUNC_SPRITE,
+	SPANDRAWFUNC_TRANSSPRITE,
+	SPANDRAWFUNC_TILTEDSPRITE,
+	SPANDRAWFUNC_TILTEDTRANSSPRITE,
+
+	SPANDRAWFUNC_WATER,
 	SPANDRAWFUNC_TILTEDWATER,
-#endif
+
+	SPANDRAWFUNC_FOG,
 
 	SPANDRAWFUNC_MAX
 };
@@ -170,10 +180,11 @@ extern boolean R_SSE2;
 // ----------------
 extern viddef_t vid;
 extern INT32 setmodeneeded; // mode number to set if needed, or 0
+extern UINT8 setrenderneeded;
 
 void SCR_ChangeRenderer(void);
-void SCR_ChangeRendererCVars(INT32 mode);
-extern UINT8 setrenderneeded;
+
+extern CV_PossibleValue_t cv_renderer_t[];
 
 extern INT32 scr_bpp;
 extern UINT8 *scr_borderpatch; // patch used to fill the view borders
@@ -182,17 +193,23 @@ extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_re
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
 
+// Initialize the screen
+void SCR_Startup(void);
+
 // Change video mode, only at the start of a refresh.
 void SCR_SetMode(void);
+
+// Set drawer functions for Software
 void SCR_SetDrawFuncs(void);
+
 // Recalc screen size dependent stuff
 void SCR_Recalc(void);
+
 // Check parms once at startup
 void SCR_CheckDefaultMode(void);
-// Set the mode number which is saved in the config
-void SCR_SetDefaultMode (void);
 
-void SCR_Startup (void);
+// Set the mode number which is saved in the config
+void SCR_SetDefaultMode(void);
 
 FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 

@@ -29,10 +29,7 @@
 #include "fastcmp.h"
 #include "m_misc.h" // for tunes command
 #include "m_cond.h" // for conditionsets
-
-#ifdef HAVE_LUA_MUSICPLUS
 #include "lua_hook.h" // MusicChange hook
-#endif
 
 #ifdef HW3SOUND
 // 3D Sound Interface
@@ -2146,7 +2143,7 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 static lumpnum_t S_GetMusicLumpNum(const char *mname)
 {
 	boolean midipref = cv_musicpref.value;
-	
+
 	if (S_PrefAvailable(midipref, mname))
 		return W_GetNumForName(va(midipref ? "d_%s":"o_%s", mname));
 	else if (S_PrefAvailable(!midipref, mname))
@@ -2272,10 +2269,8 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 
 	strncpy(newmusic, mmusic, 7);
-#ifdef HAVE_LUA_MUSICPLUS
-	if(LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
+	if (LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
 		return;
-#endif
 	newmusic[6] = 0;
 
  	// No Music (empty string)
@@ -2296,7 +2291,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		I_FadeSong(0, prefadems, S_ChangeMusicToQueue);
 		return;
 	}
-	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET) || 
+	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET) ||
 		(midipref != currentmidi && S_PrefAvailable(midipref, newmusic)))
  	{
 		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
