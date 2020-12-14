@@ -675,7 +675,7 @@ void LUA_DumpFile(const char *filename)
 
 fixed_t LUA_EvalMath(const char *word)
 {
-	static int fenv_ref = LUA_NOREF;
+	static int enum_env = LUA_NOREF;
 
 	lua_State *L = LUA_EnumState();
 	char buf[1024], *b;
@@ -693,19 +693,19 @@ fixed_t LUA_EvalMath(const char *word)
 	}
 	*b = '\0';
 
-	if (fenv_ref == LUA_NOREF)
+	if (enum_env == LUA_NOREF)
 	{
 		lua_createtable(L, 0, 1);
 		lua_getmetatable(L, LUA_GLOBALSINDEX);
 		lua_setmetatable(L, -2);
-		fenv_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+		enum_env = luaL_ref(L, LUA_REGISTRYINDEX);
 	}
 
 	lua_settop(L, 0);
-	lua_pushthread(L);
+	lua_pushvalue(L, LUA_GLOBALSINDEX);
 
-	lua_getref(L, fenv_ref);
-	lua_setfenv(L, 1);
+	lua_getref(L, enum_env);
+	lua_replace(L, LUA_GLOBALSINDEX);
 
 	lua_mathlib = true;
 
@@ -722,8 +722,8 @@ fixed_t LUA_EvalMath(const char *word)
 
 	lua_mathlib = false;
 
-	lua_pushvalue(L, LUA_GLOBALSINDEX);
-	lua_setfenv(L, 1);
+	lua_settop(L, 1);
+	lua_replace(L, LUA_GLOBALSINDEX);
 
 	return res;
 }
