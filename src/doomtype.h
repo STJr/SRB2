@@ -379,4 +379,8 @@ Needed for some lua shenanigans.
 #define FIELDFROM( type, field, have, want ) \
 	(void *)((intptr_t)(field) - offsetof (type, have) + offsetof (type, want))
 
+#ifdef HAVE_SDL
+typedef UINT64 precise_t;
+#endif
+
 #endif //__DOOMTYPE__

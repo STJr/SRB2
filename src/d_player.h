@@ -53,6 +53,7 @@ typedef enum
 	SF_NOSUPERJUMPBOOST = 1<<17, // Disable the jump boost given while super (i.e. Knuckles)
 	SF_CANBUSTWALLS     = 1<<18, // Can naturally bust walls on contact? (i.e. Knuckles)
 	SF_NOSHIELDABILITY  = 1<<19, // Disable shield abilities
+
 	// free up to and including 1<<31
 } skinflags_t;
 

@@ -59,6 +59,12 @@ ATTRINLINE static FUNCINLINE char myfget_color(MYFILE *f)
 
 	if (c >= '0' && c <= '9')
 		return 0x80+(c-'0');
+
+	c = tolower(c);
+
+	if (c >= 'a' && c <= 'f')
+		return 0x80+10+(c-'a');
+
 	return 0x80; // Unhandled -- default to no color
 }
 
