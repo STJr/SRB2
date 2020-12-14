@@ -39,9 +39,10 @@
 
 lua_State *gL = NULL;
 
+static lua_State *soc_lua_state;
+
 // List of internal libraries to load from SRB2
 static lua_CFunction liblist[] = {
-	LUA_EnumLib, // global metatable for enums
 	LUA_SOCLib, // A_Action functions, freeslot
 	LUA_BaseLib, // string concatination by +, CONS_Printf, p_local.h stuff (P_InstaThrust, P_Move), etc.
 	LUA_MathLib, // fixed_t and angle_t math functions
@@ -474,23 +475,27 @@ static int setglobals(lua_State *L)
 	return luaL_error(L, "Implicit global " LUA_QS " prevented. Create a local variable instead.", csname);
 }
 
+static lua_State * LUA_EnumState (void)
+{
+	lua_State *L = soc_lua_state;
+	if (!L)
+	{
+		L = lua_newstate(LUA_Alloc, NULL);
+		lua_atpanic(L, LUA_Panic);
+		LUA_EnumLib(L); // global metatable for enums
+		soc_lua_state = L;
+	}
+	return L;
+}
+
 // Clear and create a new Lua state, laddo!
 // There's SCRIPTIN to be had!
 static void LUA_ClearState(void)
 {
-	lua_State *L;
+	lua_State *L = LUA_EnumState();
 	int i;
 
-	// close previous state
-	if (gL)
-		lua_close(gL);
-	gL = NULL;
-
 	CONS_Printf(M_GetText("Pardon me while I initialize the Lua scripting interface...\n"));
-
-	// allocate state
-	L = lua_newstate(LUA_Alloc, NULL);
-	lua_atpanic(L, LUA_Panic);
 
 	// open base libraries
 	luaL_openlibs(L);
@@ -670,20 +675,12 @@ void LUA_DumpFile(const char *filename)
 
 fixed_t LUA_EvalMath(const char *word)
 {
-	lua_State *L = NULL;
+	static int fenv_ref = LUA_NOREF;
+
+	lua_State *L = LUA_EnumState();
 	char buf[1024], *b;
 	const char *p;
 	fixed_t res = 0;
-
-	// make a new state so SOC can't interefere with scripts
-	// allocate state
-	L = lua_newstate(LUA_Alloc, NULL);
-	lua_atpanic(L, LUA_Panic);
-
-	// open only enum lib
-	lua_pushcfunction(L, LUA_EnumLib);
-	lua_pushboolean(L, true);
-	lua_call(L, 1, 0);
 
 	// change ^ into ^^ for Lua.
 	strcpy(buf, "return ");
@@ -696,8 +693,23 @@ fixed_t LUA_EvalMath(const char *word)
 	}
 	*b = '\0';
 
-	// eval string.
+	if (fenv_ref == LUA_NOREF)
+	{
+		lua_createtable(L, 0, 1);
+		lua_getmetatable(L, LUA_GLOBALSINDEX);
+		lua_setmetatable(L, -2);
+		fenv_ref = luaL_ref(L, LUA_REGISTRYINDEX);
+	}
+
 	lua_settop(L, 0);
+	lua_pushthread(L);
+
+	lua_getref(L, fenv_ref);
+	lua_setfenv(L, 1);
+
+	lua_mathlib = true;
+
+	// eval string.
 	if (luaL_dostring(L, buf))
 	{
 		p = lua_tostring(L, -1);
@@ -708,8 +720,11 @@ fixed_t LUA_EvalMath(const char *word)
 	else
 		res = lua_tointeger(L, -1);
 
-	// clean up and return.
-	lua_close(L);
+	lua_mathlib = false;
+
+	lua_pushvalue(L, LUA_GLOBALSINDEX);
+	lua_setfenv(L, 1);
+
 	return res;
 }
 

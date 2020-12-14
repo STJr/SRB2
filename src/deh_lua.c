@@ -29,6 +29,8 @@
 #include "deh_soc.h" // for get_mus
 #endif
 
+boolean lua_mathlib;
+
 // freeslot takes a name (string only!)
 // and allocates it to the appropriate free slot.
 // Returns the slot number allocated for it or nil if failed.
@@ -224,7 +226,6 @@ static inline int lib_getenum(lua_State *L)
 {
 	const char *word, *p;
 	fixed_t i;
-	boolean mathlib = lua_toboolean(L, lua_upvalueindex(1));
 	if (lua_type(L,2) != LUA_TSTRING)
 		return 0;
 	word = lua_tostring(L,2);
@@ -234,7 +235,7 @@ static inline int lib_getenum(lua_State *L)
 			lua_pushinteger(L, *word-'A');
 			return 1;
 		}
-		if (mathlib) return luaL_error(L, "constant '%s' could not be parsed.\n", word);
+		if (lua_mathlib) return luaL_error(L, "constant '%s' could not be parsed.\n", word);
 		return 0;
 	}
 	else if (fastncmp("MF_", word, 3)) {
@@ -244,7 +245,7 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "mobjflag '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "mobjflag '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("MF2_", word, 4)) {
@@ -254,7 +255,7 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "mobjflag2 '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "mobjflag2 '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("MFE_", word, 4)) {
@@ -264,7 +265,7 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "mobjeflag '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "mobjeflag '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("MTF_", word, 4)) {
@@ -274,7 +275,7 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "mapthingflag '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "mapthingflag '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("PF_", word, 3)) {
@@ -294,7 +295,7 @@ static inline int lib_getenum(lua_State *L)
 			lua_pushinteger(L, (lua_Integer)PF_SPINDOWN);
 			return 1;
 		}
-		if (mathlib) return luaL_error(L, "playerflag '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "playerflag '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("GT_", word, 3)) {
@@ -304,7 +305,7 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, i);
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "gametype '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "gametype '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("GTR_", word, 4)) {
@@ -314,7 +315,7 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "game type rule '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "game type rule '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("TOL_", word, 4)) {
@@ -324,7 +325,7 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, TYPEOFLEVEL[i].flag);
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "typeoflevel '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "typeoflevel '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("ML_", word, 3)) {
@@ -334,7 +335,7 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "linedef flag '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "linedef flag '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("S_",word,2)) {
@@ -378,7 +379,7 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, i);
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "sprite '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "sprite '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("SPR2_",word,5)) {
@@ -399,10 +400,10 @@ static inline int lib_getenum(lua_State *L)
 					return 1;
 				}
 			}
-		if (mathlib) return luaL_error(L, "player sprite '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "player sprite '%s' could not be found.\n", word);
 		return 0;
 	}
-	else if (!mathlib && fastncmp("sfx_",word,4)) {
+	else if (!lua_mathlib && fastncmp("sfx_",word,4)) {
 		p = word+4;
 		for (i = 0; i < NUMSFX; i++)
 			if (S_sfx[i].name && fastcmp(p, S_sfx[i].name)) {
@@ -411,7 +412,7 @@ static inline int lib_getenum(lua_State *L)
 			}
 		return 0;
 	}
-	else if (mathlib && fastncmp("SFX_",word,4)) { // SOCs are ALL CAPS!
+	else if (lua_mathlib && fastncmp("SFX_",word,4)) { // SOCs are ALL CAPS!
 		p = word+4;
 		for (i = 0; i < NUMSFX; i++)
 			if (S_sfx[i].name && fasticmp(p, S_sfx[i].name)) {
@@ -420,32 +421,32 @@ static inline int lib_getenum(lua_State *L)
 			}
 		return luaL_error(L, "sfx '%s' could not be found.\n", word);
 	}
-	else if (mathlib && fastncmp("DS",word,2)) {
+	else if (lua_mathlib && fastncmp("DS",word,2)) {
 		p = word+2;
 		for (i = 0; i < NUMSFX; i++)
 			if (S_sfx[i].name && fasticmp(p, S_sfx[i].name)) {
 				lua_pushinteger(L, i);
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "sfx '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "sfx '%s' could not be found.\n", word);
 		return 0;
 	}
 #ifdef MUSICSLOT_COMPATIBILITY
-	else if (!mathlib && fastncmp("mus_",word,4)) {
+	else if (!lua_mathlib && fastncmp("mus_",word,4)) {
 		p = word+4;
 		if ((i = get_mus(p, false)) == 0)
 			return 0;
 		lua_pushinteger(L, i);
 		return 1;
 	}
-	else if (mathlib && fastncmp("MUS_",word,4)) { // SOCs are ALL CAPS!
+	else if (lua_mathlib && fastncmp("MUS_",word,4)) { // SOCs are ALL CAPS!
 		p = word+4;
 		if ((i = get_mus(p, false)) == 0)
 			return luaL_error(L, "music '%s' could not be found.\n", word);
 		lua_pushinteger(L, i);
 		return 1;
 	}
-	else if (mathlib && (fastncmp("O_",word,2) || fastncmp("D_",word,2))) {
+	else if (lua_mathlib && (fastncmp("O_",word,2) || fastncmp("D_",word,2))) {
 		p = word+2;
 		if ((i = get_mus(p, false)) == 0)
 			return luaL_error(L, "music '%s' could not be found.\n", word);
@@ -453,7 +454,7 @@ static inline int lib_getenum(lua_State *L)
 		return 1;
 	}
 #endif
-	else if (!mathlib && fastncmp("pw_",word,3)) {
+	else if (!lua_mathlib && fastncmp("pw_",word,3)) {
 		p = word+3;
 		for (i = 0; i < NUMPOWERS; i++)
 			if (fasticmp(p, POWERS_LIST[i])) {
@@ -462,7 +463,7 @@ static inline int lib_getenum(lua_State *L)
 			}
 		return 0;
 	}
-	else if (mathlib && fastncmp("PW_",word,3)) { // SOCs are ALL CAPS!
+	else if (lua_mathlib && fastncmp("PW_",word,3)) { // SOCs are ALL CAPS!
 		p = word+3;
 		for (i = 0; i < NUMPOWERS; i++)
 			if (fastcmp(p, POWERS_LIST[i])) {
@@ -478,7 +479,7 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, i);
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "huditem '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "huditem '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("SKINCOLOR_",word,10)) {
@@ -507,7 +508,7 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, i);
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "NiGHTS grade '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "NiGHTS grade '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("MN_",word,3)) {
@@ -517,10 +518,10 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, i);
 				return 1;
 			}
-		if (mathlib) return luaL_error(L, "menutype '%s' could not be found.\n", word);
+		if (lua_mathlib) return luaL_error(L, "menutype '%s' could not be found.\n", word);
 		return 0;
 	}
-	else if (!mathlib && fastncmp("A_",word,2)) {
+	else if (!lua_mathlib && fastncmp("A_",word,2)) {
 		char *caps;
 		// Try to get a Lua action first.
 		/// \todo Push a closure that sets superactions[] and superstack.
@@ -545,7 +546,7 @@ static inline int lib_getenum(lua_State *L)
 			}
 		return 0;
 	}
-	else if (!mathlib && fastcmp("super",word))
+	else if (!lua_mathlib && fastcmp("super",word))
 	{
 		if (!superstack)
 		{
@@ -572,7 +573,7 @@ static inline int lib_getenum(lua_State *L)
 			return 1;
 		}
 
-	if (mathlib) return luaL_error(L, "constant '%s' could not be parsed.\n", word);
+	if (lua_mathlib) return luaL_error(L, "constant '%s' could not be parsed.\n", word);
 
 	// DYNAMIC variables too!!
 	// Try not to add anything that would break netgames or timeattack replays here.
@@ -582,13 +583,9 @@ static inline int lib_getenum(lua_State *L)
 
 int LUA_EnumLib(lua_State *L)
 {
-	if (lua_gettop(L) == 0)
-		lua_pushboolean(L, 0);
-
 	// Set the global metatable
 	lua_createtable(L, 0, 1);
-	lua_pushvalue(L, 1); // boolean passed to LUA_EnumLib as first argument.
-	lua_pushcclosure(L, lib_getenum, 1);
+	lua_pushcfunction(L, lib_getenum);
 	lua_setfield(L, -2, "__index");
 	lua_setmetatable(L, LUA_GLOBALSINDEX);
 	return 0;

@@ -13,6 +13,8 @@
 #ifndef __DEH_LUA_H__
 #define __DEH_LUA_H__
 
+extern boolean lua_mathlib;
+
 boolean LUA_SetLuaAction(void *state, const char *actiontocompare);
 const char *LUA_GetActionName(void *action);
 void LUA_SetActionByName(void *state, const char *actiontocompare);
