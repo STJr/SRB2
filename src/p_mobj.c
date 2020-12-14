@@ -11798,7 +11798,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		if (!(G_CoopGametype() || (mthing->options & MTF_EXTRA)))
 			return false; // she doesn't hang out here
 
-		if (!mariomode && !(netgame || multiplayer) && players[consoleplayer].skin == 3)
+		if (!(netgame || multiplayer) && players[consoleplayer].skin == 3)
 			return false; // no doubles
 
 		break;
