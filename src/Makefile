@@ -13,8 +13,7 @@
 #     -DHAVE_SDL  -> use for the SDL interface
 #
 # Sets:
-#     Compile the DirectX/Mingw version with 'make MINGW=1'
-#     Compile the SDL/Mingw version with 'make MINGW=1 SDL=1'
+#     Compile the SDL/Mingw version with 'make MINGW=1'
 #     Compile the SDL/Linux version with 'make LINUX=1'
 #     Compile the SDL/Solaris version with 'make SOLARIS=1'
 #     Compile the SDL/FreeBSD version with 'gmake FREEBSD=1'
@@ -103,7 +102,6 @@ ifeq ($(OS),Windows_NT) # all windows are Windows_NT...
 
  # go for a 32-bit sdl mingw exe by default
  MINGW=1
- SDL=1
  WINDOWSHELL=1
 
 else # if you on the *nix
@@ -568,12 +566,6 @@ all:	pre-build $(BIN)/$(PNDNAME)
 endif
 
 
-ifdef MINGW
-ifndef SDL
-all:	 pre-build $(BIN)/$(EXENAME) dll
-endif
-endif
-
 ifdef SDL
 all:	 pre-build $(BIN)/$(EXENAME)
 endif
@@ -653,57 +645,6 @@ endif
 $(OBJDIR):
 	-$(MKDIR) $(OBJDIR)
 
-ifndef SDL
-ifdef NOHW
-dll :
-else
-dll : opengl_dll
-endif
-ifdef MINGW
-all_dll: opengl_dll ds3d_dll fmod_dll openal_dll
-
-opengl_dll: $(BIN)/r_opengl.dll
-$(BIN)/r_opengl.dll: $(OBJDIR)/ogl_win.o $(OBJDIR)/r_opengl.o
-	-$(MKDIR) $(BIN)
-	@echo Linking R_OpenGL.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lgdi32 -static-libgcc
-ifndef NOUPX
-	-$(UPX) $(UPX_OPTS) $@
-endif
-
-ds3d_dll: $(BIN)/s_ds3d.dll
-$(BIN)/s_ds3d.dll: $(OBJDIR)/s_ds3d.o
-	@echo Linking S_DS3d.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -ldsound -luuid
-
-fmod_dll: $(BIN)/s_fmod.dll
-$(BIN)/s_fmod.dll: $(OBJDIR)/s_fmod.o
-	-$(MKDIR) $(BIN)
-	@echo Linking S_FMOD.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lfmod
-
-openal_dll: $(BIN)/s_openal.dll
-$(BIN)/s_openal.dll: $(OBJDIR)/s_openal.o
-	-$(MKDIR) $(BIN)
-	@echo Linking S_OpenAL.dll...
-	$(CC) --shared  $^ -o $@ -g -Wl,--add-stdcall-alias -lopenal32
-else
-all_dll: fmod_so openal_so
-
-fmod_so: $(BIN)/s_fmod.so
-$(BIN)/s_fmod.so: $(OBJDIR)/s_fmod.o
-	-$(MKDIR) $(BIN)
-	@echo Linking S_FMOD.so...
-	$(CC) --shared $^ -o $@ -g --nostartfiles -lm -lfmod
-
-openal_so: $(BIN)/s_openal.so
-$(BIN)/s_openal.so: $(OBJDIR)/s_openal.o
-	-$(MKDIR) $(BIN)
-	@echo Linking S_OpenAL.so...
-	$(CC) --shared $^ -o $@ -g --nostartfiles -lm -lopenal
-endif
-
-else
 ifdef SDL
 ifdef MINGW
 $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
@@ -726,8 +667,6 @@ $(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h 
 	$(echoName)
 	$(CC) $(CFLAGS) $(WFLAGS) -I/usr/X11R6/include -c $< -o $@
 endif
-endif
-
 endif
 
 #dependecy made by gcc itself !
@@ -803,33 +742,6 @@ $(OBJDIR)/SRB2.res: win32/Srb2win.rc win32/afxres.h win32/resource.h
 	$(echoName)
 	$(WINDRES) -i $< -O rc $(WINDRESFLAGS) --include-dir=win32 -o $@ -O coff
 
-
-ifdef MINGW
-ifndef SDL
-ifndef NOHW
-$(OBJDIR)/r_opengl.o: hardware/r_opengl/r_opengl.c hardware/r_opengl/r_opengl.h \
- doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
- command.h hardware/hw_data.h hardware/hw_defs.h \
- hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h \
- hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
- am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
- p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
-	$(echoName)
-	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
-
-$(OBJDIR)/ogl_win.o: hardware/r_opengl/ogl_win.c hardware/r_opengl/r_opengl.h \
- doomdef.h doomtype.h g_state.h m_swap.h hardware/hw_drv.h screen.h \
- command.h hardware/hw_data.h hardware/hw_defs.h \
- hardware/hw_md2.h hardware/hw_glob.h hardware/hw_main.h hardware/hw_clip.h \
- hardware/hw_md2load.h hardware/hw_md3load.h hardware/hw_model.h hardware/u_list.h \
- am_map.h d_event.h d_player.h p_pspr.h m_fixed.h tables.h info.h d_think.h \
- p_mobj.h doomdata.h d_ticcmd.h r_defs.h hardware/hw_dll.h
-	$(echoName)
-	$(CC) $(CFLAGS) $(WFLAGS) -D_WINDOWS -mwindows -c $< -o $@
-endif
-
-endif
-endif
 
 ifdef SDL
 

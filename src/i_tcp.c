@@ -20,127 +20,121 @@
 #endif
 
 #ifndef NO_IPV6
-#define HAVE_IPV6
+	#define HAVE_IPV6
 #endif
 
 #ifdef _WIN32
-#define USE_WINSOCK
-#if defined (_WIN64) || defined (HAVE_IPV6)
-#define USE_WINSOCK2
-#else //_WIN64/HAVE_IPV6
-#define USE_WINSOCK1
-#endif
+	#define USE_WINSOCK
+	#if defined (_WIN64) || defined (HAVE_IPV6)
+		#define USE_WINSOCK2
+	#else //_WIN64/HAVE_IPV6
+		#define USE_WINSOCK1
+	#endif
 #endif //WIN32 OS
 
 #ifdef USE_WINSOCK2
-#include <ws2tcpip.h>
+	#include <ws2tcpip.h>
 #endif
 
 #include "doomdef.h"
 
 #if defined (NOMD5) && !defined (NONET)
-//#define NONET
+	//#define NONET
 #endif
 
 #ifdef NONET
-#undef HAVE_MINIUPNPC
+	#undef HAVE_MINIUPNPC
 #else
-#ifdef USE_WINSOCK1
-#include <winsock.h>
-#elif !defined (SCOUW2) && !defined (SCOUW7)
-#ifndef USE_WINSOCK
-#include <arpa/inet.h>
-#endif //normal BSD API
+	#ifdef USE_WINSOCK1
+		#include <winsock.h>
+	#else
+		#ifndef USE_WINSOCK
+			#include <arpa/inet.h>
+			#ifdef __APPLE_CC__
+				#ifndef _BSD_SOCKLEN_T_
+					#define _BSD_SOCKLEN_T_
+				#endif //_BSD_SOCKLEN_T_
+			#endif //__APPLE_CC__
+			#include <sys/socket.h>
+			#include <netinet/in.h>
+			#include <netdb.h>
+			#include <sys/ioctl.h>
+		#endif //normal BSD API
 
-#ifndef USE_WINSOCK
-#ifdef __APPLE_CC__
-#ifndef _BSD_SOCKLEN_T_
-#define _BSD_SOCKLEN_T_
-#endif //_BSD_SOCKLEN_T_
-#endif //__APPLE_CC__
-#include <sys/socket.h>
-#include <netinet/in.h>
-#endif //normal BSD API
+		#include <errno.h>
+		#include <time.h>
 
-#ifndef USE_WINSOCK
-#include <netdb.h>
-#include <sys/ioctl.h>
-#endif //normal BSD API
+		#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+			#include <sys/time.h>
+		#endif // UNIXCOMMON
+	#endif
 
-#include <errno.h>
-#include <time.h>
+	#ifdef USE_WINSOCK
+		// some undefined under win32
+		#undef errno
+		//#define errno WSAGetLastError() //Alam_GBC: this is the correct way, right?
+		#define errno h_errno // some very strange things happen when not using h_error?!?
+		#ifdef EWOULDBLOCK
+		#undef EWOULDBLOCK
+		#endif
+		#define EWOULDBLOCK WSAEWOULDBLOCK
+		#ifdef EMSGSIZE
+		#undef EMSGSIZE
+		#endif
+		#define EMSGSIZE WSAEMSGSIZE
+		#ifdef ECONNREFUSED
+		#undef ECONNREFUSED
+		#endif
+		#define ECONNREFUSED WSAECONNREFUSED
+		#ifdef ETIMEDOUT
+		#undef ETIMEDOUT
+		#endif
+		#define ETIMEDOUT WSAETIMEDOUT
+		#ifndef IOC_VENDOR
+		#define IOC_VENDOR 0x18000000
+		#endif
+		#ifndef _WSAIOW
+		#define _WSAIOW(x,y) (IOC_IN|(x)|(y))
+		#endif
+		#ifndef SIO_UDP_CONNRESET
+		#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR,12)
+		#endif
+		#ifndef AI_ADDRCONFIG
+		#define AI_ADDRCONFIG 0x00000400
+		#endif
+		#ifndef STATUS_INVALID_PARAMETER
+		#define STATUS_INVALID_PARAMETER 0xC000000D
+		#endif
+	#endif // USE_WINSOCK
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
-	#include <sys/time.h>
-#endif // UNIXCOMMON
-#endif // !NONET
+	#ifdef __DJGPP__
+		#ifdef WATTCP // Alam_GBC: Wattcp may need this
+			#include <tcp.h>
+			#define strerror strerror_s
+		#else // wattcp
+			#include <lsck/lsck.h>
+		#endif // libsocket
+	#endif // djgpp
 
-#ifdef USE_WINSOCK
-	// some undefined under win32
-	#undef errno
-	//#define errno WSAGetLastError() //Alam_GBC: this is the correct way, right?
-	#define errno h_errno // some very strange things happen when not using h_error?!?
-	#ifdef EWOULDBLOCK
-	#undef EWOULDBLOCK
+	typedef union
+	{
+		struct sockaddr     any;
+		struct sockaddr_in  ip4;
+	#ifdef HAVE_IPV6
+		struct sockaddr_in6 ip6;
 	#endif
-	#define EWOULDBLOCK WSAEWOULDBLOCK
-	#ifdef EMSGSIZE
-	#undef EMSGSIZE
-	#endif
-	#define EMSGSIZE WSAEMSGSIZE
-	#ifdef ECONNREFUSED
-	#undef ECONNREFUSED
-	#endif
-	#define ECONNREFUSED WSAECONNREFUSED
-	#ifdef ETIMEDOUT
-	#undef ETIMEDOUT
-	#endif
-	#define ETIMEDOUT WSAETIMEDOUT
-	#ifndef IOC_VENDOR
-	#define IOC_VENDOR 0x18000000
-	#endif
-	#ifndef _WSAIOW
-	#define _WSAIOW(x,y) (IOC_IN|(x)|(y))
-	#endif
-	#ifndef SIO_UDP_CONNRESET
-	#define SIO_UDP_CONNRESET _WSAIOW(IOC_VENDOR,12)
-	#endif
-	#ifndef AI_ADDRCONFIG
-	#define AI_ADDRCONFIG 0x00000400
-	#endif
-	#ifndef STATUS_INVALID_PARAMETER
-	#define STATUS_INVALID_PARAMETER 0xC000000D
-	#endif
-#endif
+	} mysockaddr_t;
 
-#ifdef __DJGPP__
-#ifdef WATTCP // Alam_GBC: Wattcp may need this
-#include <tcp.h>
-#define strerror strerror_s
-#else // wattcp
-#include <lsck/lsck.h>
-#endif // libsocket
-#endif // djgpp
-
-typedef union
-{
-	struct sockaddr     any;
-	struct sockaddr_in  ip4;
-#ifdef HAVE_IPV6
-	struct sockaddr_in6 ip6;
-#endif
-} mysockaddr_t;
-
-#ifdef HAVE_MINIUPNPC
-#ifdef STATIC_MINIUPNPC
-#define STATICLIB
-#endif
-#include "miniupnpc/miniwget.h"
-#include "miniupnpc/miniupnpc.h"
-#include "miniupnpc/upnpcommands.h"
-#undef STATICLIB
-static UINT8 UPNP_support = TRUE;
-#endif
+	#ifdef HAVE_MINIUPNPC
+		#ifdef STATIC_MINIUPNPC
+			#define STATICLIB
+		#endif
+		#include "miniupnpc/miniwget.h"
+		#include "miniupnpc/miniupnpc.h"
+		#include "miniupnpc/upnpcommands.h"
+		#undef STATICLIB
+		static UINT8 UPNP_support = TRUE;
+	#endif // HAVE_MINIUPNC
 
 #endif // !NONET
 
@@ -177,32 +171,32 @@ static UINT8 UPNP_support = TRUE;
 #define DEFAULTPORT "5029"
 
 #if defined (USE_WINSOCK) && !defined (NONET)
-typedef SOCKET SOCKET_TYPE;
-#define ERRSOCKET (SOCKET_ERROR)
+	typedef SOCKET SOCKET_TYPE;
+	#define ERRSOCKET (SOCKET_ERROR)
 #else
-#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
-typedef int SOCKET_TYPE;
-#else
-typedef unsigned long SOCKET_TYPE;
-#endif
-#define ERRSOCKET (-1)
-#endif
-
-#if (defined (WATTCP) && !defined (__libsocket_socklen_t)) || defined (USE_WINSOCK1)
-typedef int socklen_t;
+	#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
+		typedef int SOCKET_TYPE;
+	#else
+		typedef unsigned long SOCKET_TYPE;
+	#endif
+	#define ERRSOCKET (-1)
 #endif
 
 #ifndef NONET
-static SOCKET_TYPE mysockets[MAXNETNODES+1] = {ERRSOCKET};
-static size_t mysocketses = 0;
-static int myfamily[MAXNETNODES+1] = {0};
-static SOCKET_TYPE nodesocket[MAXNETNODES+1] = {ERRSOCKET};
-static mysockaddr_t clientaddress[MAXNETNODES+1];
-static mysockaddr_t broadcastaddress[MAXNETNODES+1];
-static size_t broadcastaddresses = 0;
-static boolean nodeconnected[MAXNETNODES+1];
-static mysockaddr_t banned[MAXBANS];
-static UINT8 bannedmask[MAXBANS];
+	// define socklen_t in DOS/Windows if it is not already defined
+	#if (defined (WATTCP) && !defined (__libsocket_socklen_t)) || defined (USE_WINSOCK1)
+		typedef int socklen_t;
+	#endif
+	static SOCKET_TYPE mysockets[MAXNETNODES+1] = {ERRSOCKET};
+	static size_t mysocketses = 0;
+	static int myfamily[MAXNETNODES+1] = {0};
+	static SOCKET_TYPE nodesocket[MAXNETNODES+1] = {ERRSOCKET};
+	static mysockaddr_t clientaddress[MAXNETNODES+1];
+	static mysockaddr_t broadcastaddress[MAXNETNODES+1];
+	static size_t broadcastaddresses = 0;
+	static boolean nodeconnected[MAXNETNODES+1];
+	static mysockaddr_t banned[MAXBANS];
+	static UINT8 bannedmask[MAXBANS];
 #endif
 
 static size_t numbans = 0;
