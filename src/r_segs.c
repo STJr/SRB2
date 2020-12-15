@@ -87,6 +87,9 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 {
 	INT32 topscreen, bottomscreen;
 
+	if (!cv_renderwalls.value)
+		return;
+
 	topscreen = sprtopscreen; // + spryscale*column->topdelta;  topdelta is 0 for the wall
 	bottomscreen = topscreen + spryscale * lengthcol;
 
@@ -314,6 +317,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	}
 	else
 		repeats = 1;
+
+	if (!cv_renderwalls.value)
+		return;
 
 	for (times = 0; times < repeats; times++)
 	{
@@ -858,6 +864,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		bottom_frac += bottom_step * (x1 - ds->x1);
 	}
 
+	if (!cv_renderwalls.value)
+		return;
+
 	// draw the columns
 	for (dc_x = x1; dc_x <= x2; dc_x++)
 	{
@@ -1347,7 +1356,8 @@ static void R_RenderSegLoop (void)
 #ifdef TIMING
 				ProfZeroTimer();
 #endif
-				colfunc();
+				if (cv_renderwalls.value)
+					colfunc();
 #ifdef TIMING
 				RDMSR(0x10,&mycount);
 				mytotal += mycount;      //64bit add
@@ -1403,7 +1413,8 @@ static void R_RenderSegLoop (void)
 						dc_texturemid = rw_toptexturemid;
 						dc_source = R_GetColumn(toptexture,texturecolumn);
 						dc_texheight = textureheight[toptexture]>>FRACBITS;
-						colfunc();
+						if (cv_renderwalls.value)
+							colfunc();
 						ceilingclip[rw_x] = (INT16)mid;
 					}
 					else if (!rw_ceilingmarked) // entirely off top of screen
@@ -1440,7 +1451,8 @@ static void R_RenderSegLoop (void)
 						dc_source = R_GetColumn(bottomtexture,
 							texturecolumn);
 						dc_texheight = textureheight[bottomtexture]>>FRACBITS;
-						colfunc();
+						if (cv_renderwalls.value)
+							colfunc();
 						floorclip[rw_x] = (INT16)mid;
 					}
 					else if (!rw_floormarked)  // entirely off bottom of screen

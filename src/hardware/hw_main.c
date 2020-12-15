@@ -800,6 +800,9 @@ static void HWR_ProjectWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIEL
 {
 	INT32 shader = SHADER_DEFAULT;
 
+	if (!cv_renderwalls.value)
+		return;
+
 	HWR_Lighting(pSurf, lightlevel, wallcolormap);
 
 	if (HWR_UseShader())
@@ -881,6 +884,9 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 	const UINT8 alpha = Surf->PolyColor.s.alpha;
 	FUINT lightnum = HWR_CalcWallLight(sector->lightlevel, v1x, v1y, v2x, v2y);
 	extracolormap_t *colormap = NULL;
+
+	if (!cv_renderwalls.value)
+		return;
 
 	realtop = top = wallVerts[3].y;
 	realbot = bot = wallVerts[0].y;
@@ -6492,6 +6498,9 @@ void HWR_AddTransparentWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, INT32 te
 {
 	static size_t allocedwalls = 0;
 
+	if (!cv_renderwalls.value)
+		return;
+
 	// Force realloc if buffer has been freed
 	if (!wallinfo)
 		allocedwalls = 0;
@@ -6519,6 +6528,9 @@ void HWR_RenderWall(FOutVector *wallVerts, FSurfaceInfo *pSurf, FBITFIELD blend,
 	UINT8 alpha = pSurf->PolyColor.s.alpha; // retain the alpha
 
 	INT32 shader = SHADER_DEFAULT;
+
+	if (!cv_renderwalls.value)
+		return;
 
 	// Lighting is done here instead so that fog isn't drawn incorrectly on transparent walls after sorting
 	HWR_Lighting(pSurf, lightlevel, wallcolormap);
