@@ -4992,6 +4992,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	INT32 rollangle = 0;
 #endif
 
+	if (!cv_renderthings.value)
+		return;
+
 	if (!thing)
 		return;
 

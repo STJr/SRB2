@@ -1450,6 +1450,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	INT32 rollangle = 0;
 #endif
 
+	if (!cv_renderthings.value)
+		return;
+
 	// transform the origin point
 	tr_x = thing->x - viewx;
 	tr_y = thing->y - viewy;

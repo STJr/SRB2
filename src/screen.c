@@ -70,6 +70,7 @@ consvar_t cv_scr_depth = CVAR_INIT ("scr_depth", "16 bits", CV_SAVE, scr_depth_c
 consvar_t cv_renderview = CVAR_INIT ("renderview", "On", 0, CV_OnOff, NULL);
 consvar_t cv_renderwalls = CVAR_INIT ("renderwalls", "On", 0, CV_OnOff, NULL);
 consvar_t cv_renderfloors = CVAR_INIT ("renderfloors", "On", 0, CV_OnOff, NULL);
+consvar_t cv_renderthings = CVAR_INIT ("renderthings", "On", 0, CV_OnOff, NULL);
 
 CV_PossibleValue_t cv_renderer_t[] = {
 	{1, "Software"},
