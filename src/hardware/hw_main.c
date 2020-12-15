@@ -585,6 +585,9 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		PolyFlags |= PF_ColorMapped;
 	}
 
+	if (!cv_renderfloors.value)
+		return;
+
 	HWR_ProcessPolygon(&Surf, planeVerts, nrPlaneVerts, PolyFlags, shader, false);
 
 	if (subsector)

@@ -576,6 +576,9 @@ void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 //
 void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 {
+	if (!cv_renderfloors.value)
+		return;
+
 	//    Alam: from r_splats's R_RasterizeFloorSplat
 	if (t1 >= vid.height) t1 = vid.height-1;
 	if (b1 >= vid.height) b1 = vid.height-1;
