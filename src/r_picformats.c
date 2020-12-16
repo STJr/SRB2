@@ -544,21 +544,22 @@ void *Picture_GetPatchPixel(
 	UINT16 *s16 = NULL;
 	UINT32 *s32 = NULL;
 	softwarepatch_t *doompatch = (softwarepatch_t *)patch;
+	boolean isdoompatch = Picture_IsDoomPatchFormat(informat);
 	INT16 width;
 
 	if (patch == NULL)
 		I_Error("Picture_GetPatchPixel: patch == NULL");
 
-	width = (Picture_IsDoomPatchFormat(informat) ? patch->width : SHORT(patch->width));
+	width = (isdoompatch ? SHORT(doompatch->width) : patch->width);
 
 	if (x >= 0 && x < width)
 	{
 		INT32 colx = (flags & PICFLAGS_XFLIP) ? (width-1)-x : x;
 		INT32 topdelta, prevdelta = -1;
-		INT32 colofs = (Picture_IsDoomPatchFormat(informat) ? LONG(patch->columnofs[colx]) : patch->columnofs[colx]);
+		INT32 colofs = (isdoompatch ? LONG(doompatch->columnofs[colx]) : patch->columnofs[colx]);
 
-		// Column offsets are pointers so no casting required
-		if (Picture_IsDoomPatchFormat(informat))
+		// Column offsets are pointers, so no casting is required.
+		if (isdoompatch)
 			column = (column_t *)((UINT8 *)doompatch + colofs);
 		else
 			column = (column_t *)((UINT8 *)patch->columns + colofs);
