@@ -607,6 +607,7 @@ void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 void R_DrawPlanes(void)
 {
 	visplane_t *pl;
+	angle_t va = viewangle;
 	INT32 i;
 
 	R_UpdatePlaneRipple();
@@ -621,6 +622,8 @@ void R_DrawPlanes(void)
 			R_DrawSinglePlane(pl);
 		}
 	}
+
+	viewangle = va;
 }
 
 // R_DrawSkyPlane
@@ -705,9 +708,9 @@ void R_CalculateSlopeVectors(pslope_t *slope, fixed_t planeviewx, fixed_t planev
 	n.z = -xscale * cos(ang);
 
 	ang = ANG2RAD(planeangle);
-	temp = P_GetSlopeZAt(slope, planeviewx + yscale * FLOAT_TO_FIXED(sin(ang)), planeviewy + yscale * FLOAT_TO_FIXED(cos(ang)));
+	temp = P_GetSlopeZAt(slope, planeviewx + FLOAT_TO_FIXED(yscale * sin(ang)), planeviewy + FLOAT_TO_FIXED(yscale * cos(ang)));
 	m.y = FIXED_TO_FLOAT(temp) - zeroheight;
-	temp = P_GetSlopeZAt(slope, planeviewx + xscale * FLOAT_TO_FIXED(cos(ang)), planeviewy - xscale * FLOAT_TO_FIXED(sin(ang)));
+	temp = P_GetSlopeZAt(slope, planeviewx + FLOAT_TO_FIXED(xscale * cos(ang)), planeviewy - FLOAT_TO_FIXED(xscale * sin(ang)));
 	n.y = FIXED_TO_FLOAT(temp) - zeroheight;
 
 	if (ds_powersoftwo)
@@ -788,7 +791,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 	ffloor_t *rover;
 	int type;
 	int spanfunctype = BASEDRAWFUNC;
-	angle_t viewang = viewangle;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -1153,8 +1155,6 @@ using the palette colors.
 		}
 	}
 #endif
-
-	viewangle = viewang;
 }
 
 void R_PlaneBounds(visplane_t *plane)

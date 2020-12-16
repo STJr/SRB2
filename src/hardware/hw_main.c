@@ -5295,7 +5295,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			vis->colormap = R_GetTranslationColormap(TC_DEFAULT, vis->mobj->color ? vis->mobj->color : SKINCOLOR_CYAN, GTC_CACHE);
 	}
 	else
-		vis->colormap = colormaps;
+		vis->colormap = NULL;
 
 	// set top/bottom coords
 	vis->gzt = gzt;
@@ -5396,7 +5396,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
 
-	vis->colormap = colormaps;
+	vis->colormap = NULL;
 
 	// set top/bottom coords
 	vis->gzt = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset);

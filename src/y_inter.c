@@ -1229,7 +1229,10 @@ void Y_StartIntermission(void)
 			data.coop.tics = players[consoleplayer].realtime;
 
 			for (i = 0; i < 4; ++i)
-				data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_PATCH);
+			{
+				if (strlen(data.coop.bonuses[i].patch))
+					data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_PATCH);
+			}
 			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_PATCH);
 
 			// get act number
@@ -1733,7 +1736,6 @@ static void Y_SetNullBonus(player_t *player, y_bonus_t *bstruct)
 {
 	(void)player;
 	memset(bstruct, 0, sizeof(y_bonus_t));
-	strncpy(bstruct->patch, "MISSING", sizeof(bstruct->patch));
 }
 
 //

@@ -5024,7 +5024,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 	if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SPINDOWN)
 		&& ((!(player->pflags & PF_THOKKED) || (((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP || (player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT) && player->secondjump == UINT8_MAX) ))) // thokked is optional if you're bubblewrapped / 3dblasted
 	{
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT && !(player->charflags & SF_NOSHIELDABILITY))
 		{
 			if ((lockonshield = P_LookForEnemies(player, false, false)))
 			{
@@ -5047,7 +5047,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 				}
 			}
 		}
-		if (cmd->buttons & BT_SPIN && !LUA_HookPlayer(player, HOOK(ShieldSpecial))) // Spin button effects
+		if ((!(player->charflags & SF_NOSHIELDABILITY)) && (cmd->buttons & BT_SPIN && !LUA_HookPlayer(player, HOOK(ShieldSpecial)))) // Spin button effects
 		{
 			// Force stop
 			if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
@@ -5495,7 +5495,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						break;
 				}
 		}
-		else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_WHIRLWIND && !player->powers[pw_super])
+		else if ((!(player->charflags & SF_NOSHIELDABILITY)) && ((player->powers[pw_shield] & SH_NOSTACK) == SH_WHIRLWIND && !player->powers[pw_super] && !LUA_HookPlayer(player, HOOK(ShieldSpecial))))
 			P_DoJumpShield(player);
 	}
 
@@ -7756,6 +7756,11 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
 			P_InstaThrust(flame, flame->angle, FixedMul(3*FRACUNIT, flame->scale));
 			P_SetObjectMomZ(flame, 3*FRACUNIT, false);
+			if (!(gametyperules & GTR_FRIENDLY))
+			{
+				P_SetMobjState(flame, S_TEAM_SPINFIRE1);
+				flame->color = player->mo->color;
+			}
 		}
 #undef limitangle
 #undef numangles
@@ -7783,6 +7788,11 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
+			if (!(gametyperules & GTR_FRIENDLY))
+			{
+				P_SetMobjState(flame, S_TEAM_SPINFIRE1);
+				flame->color = player->mo->color;
+			}
 
 			flame->momx = 8; // this is a hack which is used to ensure it still behaves as a missile and can damage others
 			P_XYMovement(flame);
