@@ -684,6 +684,7 @@ typedef enum sprite
 	SPR_SIGN, // Level end sign
 	SPR_SPIK, // Spike Ball
 	SPR_SFLM, // Spin fire
+	SPR_TFLM, // Spin fire (team)
 	SPR_USPK, // Floor spike
 	SPR_WSPK, // Wall spike
 	SPR_WSPB, // Wall spike base
@@ -2323,6 +2324,13 @@ typedef enum state
 	S_SPINFIRE4,
 	S_SPINFIRE5,
 	S_SPINFIRE6,
+
+	S_TEAM_SPINFIRE1,
+	S_TEAM_SPINFIRE2,
+	S_TEAM_SPINFIRE3,
+	S_TEAM_SPINFIRE4,
+	S_TEAM_SPINFIRE5,
+	S_TEAM_SPINFIRE6,
 
 	// Spikes
 	S_SPIKE1,

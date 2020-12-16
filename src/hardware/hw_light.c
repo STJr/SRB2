@@ -253,6 +253,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SIGN
 	&lspr[NOLIGHT],     // SPR_SPIK
 	&lspr[NOLIGHT],     // SPR_SFLM
+	&lspr[NOLIGHT],     // SPR_TFLM
 	&lspr[NOLIGHT],     // SPR_USPK
 	&lspr[NOLIGHT],     // SPR_WSPK
 	&lspr[NOLIGHT],     // SPR_WSPB

@@ -8421,7 +8421,7 @@ static void M_DrawLoadGameData(void)
 				sprdef = &charbotskin->sprites[SPR2_SIGN];
 				if (!sprdef->numframes)
 					goto skipbot;
-				colormap = R_GetTranslationColormap(savegameinfo[savetodraw].botskin-1, charbotskin->prefcolor, 0);
+				colormap = R_GetTranslationColormap(savegameinfo[savetodraw].botskin-1, charbotskin->prefcolor, GTC_CACHE);
 				sprframe = &sprdef->spriteframes[0];
 				patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 
@@ -8431,8 +8431,6 @@ static void M_DrawLoadGameData(void)
 					charbotskin->highresscale,
 					0, patch, colormap);
 
-				Z_Free(colormap);
-
 				tempx -= (20<<FRACBITS);
 				//flip = V_FLIP;
 			}
@@ -8441,7 +8439,7 @@ skipbot:
 			if (!charskin) // shut up compiler
 				goto skipsign;
 			sprdef = &charskin->sprites[SPR2_SIGN];
-			colormap = R_GetTranslationColormap(savegameinfo[savetodraw].skinnum, charskin->prefcolor, 0);
+			colormap = R_GetTranslationColormap(savegameinfo[savetodraw].skinnum, charskin->prefcolor, GTC_CACHE);
 			if (!sprdef->numframes)
 				goto skipsign;
 			sprframe = &sprdef->spriteframes[0];
@@ -8481,8 +8479,6 @@ skipsign:
 				charskin->highresscale/2,
 				0, patch, colormap);
 skiplife:
-			if (colormap)
-				Z_Free(colormap);
 
 			patch = W_CachePatchName("STLIVEX", PU_PATCH);
 
@@ -11753,7 +11749,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		goto faildraw;
 
 	// ok, draw player sprite for sure now
-	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, 0);
+	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, GTC_CACHE);
 
 	if (multi_frame >= sprdef->numframes)
 		multi_frame = 0;
@@ -11771,7 +11767,6 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		FixedDiv(skins[setupm_fakeskin].highresscale, skins[setupm_fakeskin].shieldscale),
 		flags, patch, colormap);
 
-	Z_Free(colormap);
 	goto colordraw;
 
 faildraw:
