@@ -2266,7 +2266,11 @@ void G_Ticker(boolean run)
 	{
 		if (playeringame[i])
 		{
+			INT16 received;
+
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+
+			received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
 
 			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
 			players[i].oldrelangleturn = players[i].cmd.angleturn;
@@ -2274,6 +2278,9 @@ void G_Ticker(boolean run)
 				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
 			else
 				players[i].cmd.angleturn = players[i].angleturn;
+
+			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
+			players[i].cmd.angleturn |= received;
 		}
 	}
 
