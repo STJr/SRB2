@@ -38,18 +38,6 @@ static const char * const stringHookNames[] = {
 	STRING_HOOK_LIST (TOSTR)  NULL
 };
 
-/* TODO: remove when doomtype version is merged */
-
-#define BIT_ARRAY_LENGTH(n) (((n) + 7) >> 3)
-
-static inline void set_bit_array (UINT8 *array, const int n) {
-	array[n >> 3] |= 1 << (n & 7);
-}
-
-static inline int in_bit_array (const UINT8 *array, const int n) {
-	return array[n >> 3] & (1 << (n & 7));
-}
-
 typedef struct {
 	int numHooks;
 	int *ids;
@@ -215,7 +203,7 @@ static int lib_addHook(lua_State *L)
 	if (!(nextid & 7))
 	{
 		Z_Realloc(hooksErrored,
-				BIT_ARRAY_LENGTH (nextid + 1) * sizeof *hooksErrored,
+				BIT_ARRAY_SIZE (nextid + 1) * sizeof *hooksErrored,
 				PU_STATIC, &hooksErrored);
 		hooksErrored[nextid >> 3] = 0;
 	}
