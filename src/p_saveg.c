@@ -1506,7 +1506,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 {
 	const mobj_t *mobj = (const mobj_t *)th;
 	UINT32 diff;
-	UINT16 diff2;
+	UINT32 diff2;
 
 	// Ignore stationary hoops - these will be respawned from mapthings.
 	if (mobj->type == MT_HOOP)
@@ -1638,7 +1638,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_SHADOWSCALE;
 	if (mobj->renderflags)
 		diff2 |= MD2_RENDERFLAGS;
-	if (mobj->renderflags)
+	if (mobj->blendmode != AST_TRANSLUCENT)
 		diff2 |= MD2_BLENDMODE;
 	if (mobj->spritexscale != FRACUNIT)
 		diff2 |= MD2_SPRITEXSCALE;
@@ -1646,6 +1646,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_SPRITEYSCALE;
 	if (mobj->spritexoffset)
 		diff2 |= MD2_SPRITEXOFFSET;
+	if (mobj->spriteyoffset)
+		diff2 |= MD2_SPRITEYOFFSET;
 	if (mobj->floorspriteslope)
 	{
 		pslope_t *slope = mobj->floorspriteslope;
@@ -1667,7 +1669,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, type);
 	WRITEUINT32(save_p, diff);
 	if (diff & MD_MORE)
-		WRITEUINT16(save_p, diff2);
+		WRITEUINT32(save_p, diff2);
 
 	// save pointer, at load time we will search this pointer to reinitilize pointers
 	WRITEUINT32(save_p, (size_t)mobj);
@@ -2615,14 +2617,14 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	thinker_t *next;
 	mobj_t *mobj;
 	UINT32 diff;
-	UINT16 diff2;
+	UINT32 diff2;
 	INT32 i;
 	fixed_t z, floorz, ceilingz;
 	ffloor_t *floorrover = NULL, *ceilingrover = NULL;
 
 	diff = READUINT32(save_p);
 	if (diff & MD_MORE)
-		diff2 = READUINT16(save_p);
+		diff2 = READUINT32(save_p);
 	else
 		diff2 = 0;
 
@@ -2690,7 +2692,10 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		}
 		mobj->type = i;
 	}
+
 	mobj->info = &mobjinfo[mobj->type];
+	P_SetMobjSpawnDefaults(mobj);
+
 	if (diff & MD_POS)
 	{
 		mobj->x = READFIXED(save_p);
@@ -2716,35 +2721,21 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 
 	if (diff & MD_RADIUS)
 		mobj->radius = READFIXED(save_p);
-	else
-		mobj->radius = mobj->info->radius;
 	if (diff & MD_HEIGHT)
 		mobj->height = READFIXED(save_p);
-	else
-		mobj->height = mobj->info->height;
 	if (diff & MD_FLAGS)
 		mobj->flags = READUINT32(save_p);
-	else
-		mobj->flags = mobj->info->flags;
 	if (diff & MD_FLAGS2)
 		mobj->flags2 = READUINT32(save_p);
 	if (diff & MD_HEALTH)
 		mobj->health = READINT32(save_p);
-	else
-		mobj->health = mobj->info->spawnhealth;
 	if (diff & MD_RTIME)
 		mobj->reactiontime = READINT32(save_p);
-	else
-		mobj->reactiontime = mobj->info->reactiontime;
 
 	if (diff & MD_STATE)
 		mobj->state = &states[READUINT16(save_p)];
-	else
-		mobj->state = &states[mobj->info->spawnstate];
 	if (diff & MD_TICS)
 		mobj->tics = READINT32(save_p);
-	else
-		mobj->tics = mobj->state->tics;
 	if (diff & MD_SPRITE) {
 		mobj->sprite = READUINT16(save_p);
 		if (mobj->sprite == SPR_PLAY)
@@ -2759,11 +2750,6 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	{
 		mobj->frame = READUINT32(save_p);
 		mobj->anim_duration = READUINT16(save_p);
-	}
-	else
-	{
-		mobj->frame = mobj->state->frame;
-		mobj->anim_duration = (UINT16)mobj->state->var2;
 	}
 	if (diff & MD_EFLAGS)
 		mobj->eflags = READUINT16(save_p);
@@ -2781,20 +2767,14 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->threshold = READINT32(save_p);
 	if (diff & MD_LASTLOOK)
 		mobj->lastlook = READINT32(save_p);
-	else
-		mobj->lastlook = -1;
 	if (diff & MD_TARGET)
 		mobj->target = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff & MD_TRACER)
 		mobj->tracer = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff & MD_FRICTION)
 		mobj->friction = READFIXED(save_p);
-	else
-		mobj->friction = ORIG_FRICTION;
 	if (diff & MD_MOVEFACTOR)
 		mobj->movefactor = READFIXED(save_p);
-	else
-		mobj->movefactor = FRACUNIT;
 	if (diff & MD_FUSE)
 		mobj->fuse = READINT32(save_p);
 	if (diff & MD_WATERTOP)
@@ -2803,16 +2783,10 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->waterbottom = READFIXED(save_p);
 	if (diff & MD_SCALE)
 		mobj->scale = READFIXED(save_p);
-	else
-		mobj->scale = FRACUNIT;
 	if (diff & MD_DSCALE)
 		mobj->destscale = READFIXED(save_p);
-	else
-		mobj->destscale = mobj->scale;
 	if (diff2 & MD2_SCALESPEED)
 		mobj->scalespeed = READFIXED(save_p);
-	else
-		mobj->scalespeed = FRACUNIT/12;
 	if (diff2 & MD2_CUSVAL)
 		mobj->cusval = READINT32(save_p);
 	if (diff2 & MD2_CVMEM)

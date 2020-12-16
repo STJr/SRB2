@@ -3366,7 +3366,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 			}
 
 			// skipping stone!
-			if (p && (p->charability2 == CA2_SPINDASH) && p->speed/2 > abs(mobj->momz)
+			if (p && p->speed/2 > abs(mobj->momz)
 				&& ((p->pflags & (PF_SPINNING|PF_JUMPED)) == PF_SPINNING)
 				&& ((!(mobj->eflags & MFE_VERTICALFLIP) && thingtop - mobj->momz > mobj->watertop)
 				|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->z - mobj->momz < mobj->waterbottom)))
@@ -5654,14 +5654,10 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (P_RandomRange(1,(dist>>FRACBITS)/16) == 1)
 					break;
 			}
-			if (spawner)
+			if (spawner && dist)
 			{
 				mobj_t *missile = P_SpawnMissile(spawner, mobj, MT_MSGATHER);
-
-				if (dist == 0)
-					missile->fuse = 0;
-				else
-					missile->fuse = (dist/P_AproxDistance(missile->momx, missile->momy));
+				missile->fuse = (dist/P_AproxDistance(missile->momx, missile->momy));
 
 				if (missile->fuse > mobj->fuse)
 					P_RemoveMobj(missile);
@@ -7937,7 +7933,7 @@ static boolean P_MobjPushableThink(mobj_t *mobj)
 	P_PushableThinker(mobj);
 
 	// Extinguish fire objects in water. (Yes, it's extraordinarily rare to have a pushable flame object, but Brak uses such a case.)
-	if (mobj->flags & MF_FIRE && mobj->type != MT_PUMA && mobj->type != MT_FIREBALL
+	if ((mobj->flags & MF_FIRE) && !(mobj->eflags & MFE_TOUCHLAVA)
 		&& (mobj->eflags & (MFE_UNDERWATER | MFE_TOUCHWATER)))
 	{
 		P_KillMobj(mobj, NULL, NULL, 0);
@@ -9651,6 +9647,12 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		break;
 	}
 	case MT_SALOONDOOR:
+		if (!mobj->tracer) // Door center is gone or not spawned?
+		{
+			P_RemoveMobj(mobj); // Die
+			return false;
+		}
+
 		P_SaloonDoorThink(mobj);
 		break;
 	case MT_MINECARTSPAWNER:
@@ -9705,7 +9707,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		P_MobjCheckWater(mobj);
 
 		// Extinguish fire objects in water
-		if (mobj->flags & MF_FIRE && mobj->type != MT_PUMA && mobj->type != MT_FIREBALL
+		if ((mobj->flags & MF_FIRE) && !(mobj->eflags & MFE_TOUCHLAVA)
 			&& (mobj->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
 		{
 			P_KillMobj(mobj, NULL, NULL, 0);
@@ -9835,7 +9837,7 @@ static void P_FlagFuseThink(mobj_t *mobj)
 	if (mobj->type == MT_REDFLAG)
 	{
 		if (!(mobj->flags2 & MF2_JUSTATTACKED))
-			CONS_Printf(M_GetText("The %c%s%c has returned to base.\n"), 0x85, M_GetText("Red flag"), 0x80);
+			CONS_Printf(M_GetText("The \205Red flag\200 has returned to base.\n"));
 
 		// Assumedly in splitscreen players will be on opposing teams
 		if (players[consoleplayer].ctfteam == 1 || splitscreen)
@@ -9848,7 +9850,7 @@ static void P_FlagFuseThink(mobj_t *mobj)
 	else // MT_BLUEFLAG
 	{
 		if (!(mobj->flags2 & MF2_JUSTATTACKED))
-			CONS_Printf(M_GetText("The %c%s%c has returned to base.\n"), 0x84, M_GetText("Blue flag"), 0x80);
+			CONS_Printf(M_GetText("The \204Blue flag\200 has returned to base.\n"));
 
 		// Assumedly in splitscreen players will be on opposing teams
 		if (players[consoleplayer].ctfteam == 2 || splitscreen)
@@ -10438,51 +10440,11 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->x = x;
 	mobj->y = y;
 
-	mobj->radius = info->radius;
-	mobj->height = info->height;
-	mobj->flags = info->flags;
-
-	mobj->health = (info->spawnhealth ? info->spawnhealth : 1);
-
-	mobj->reactiontime = info->reactiontime;
-
-	mobj->lastlook = -1; // stuff moved in P_enemy.P_LookForPlayer
-
-	// do not set the state with P_SetMobjState,
-	// because action routines can not be called yet
-	st = &states[info->spawnstate];
-
-	mobj->state = st;
-	mobj->tics = st->tics;
-	mobj->sprite = st->sprite;
-	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
-	P_SetupStateAnimation(mobj, st);
-
-	mobj->friction = ORIG_FRICTION;
-
-	mobj->movefactor = FRACUNIT;
-
-	// All mobjs are created at 100% scale.
-	mobj->scale = FRACUNIT;
-	mobj->destscale = mobj->scale;
-	mobj->scalespeed = FRACUNIT/12;
-
-	// TODO: Make this a special map header
-	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
-		mobj->destscale = FRACUNIT/2;
-
-	// Sprite rendering
-	mobj->blendmode = AST_TRANSLUCENT;
-	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
-	mobj->spritexoffset = mobj->spriteyoffset = 0;
-	mobj->floorspriteslope = NULL;
+	P_SetMobjSpawnDefaults(mobj);
 
 	// set subsector and/or block links
 	P_SetThingPosition(mobj);
 	I_Assert(mobj->subsector != NULL);
-
-	// Make sure scale matches destscale immediately when spawned
-	P_SetScale(mobj, mobj->destscale);
 
 	mobj->floorz   = P_GetSectorFloorZAt  (mobj->subsector->sector, x, y);
 	mobj->ceilingz = P_GetSectorCeilingZAt(mobj->subsector->sector, x, y);
@@ -10785,6 +10747,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		mobj->frame &= ~FF_FRAMEMASK;
 	}
 
+	st = &states[info->spawnstate];
+
 	// Call action functions when the state is set
 	if (st->action.acp1 && (mobj->flags & MF_RUNSPAWNFUNC))
 	{
@@ -10813,6 +10777,52 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		P_CheckGravity(mobj, false);
 
 	return mobj;
+}
+
+void P_SetMobjSpawnDefaults(mobj_t *mobj)
+{
+	const mobjinfo_t *info = mobj->info;
+	state_t *st = &states[info->spawnstate];
+
+	mobj->radius = info->radius;
+	mobj->height = info->height;
+	mobj->flags = info->flags;
+
+	mobj->health = (info->spawnhealth ? info->spawnhealth : 1);
+
+	mobj->reactiontime = info->reactiontime;
+
+	mobj->lastlook = -1; // stuff moved in P_enemy.P_LookForPlayer
+
+	// do not set the state with P_SetMobjState,
+	// because action routines can not be called yet
+	mobj->state = st;
+	mobj->tics = st->tics;
+	mobj->sprite = st->sprite;
+	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
+	P_SetupStateAnimation(mobj, st);
+
+	mobj->friction = ORIG_FRICTION;
+
+	mobj->movefactor = FRACUNIT;
+
+	// All mobjs are created at 100% scale.
+	mobj->scale = FRACUNIT;
+	mobj->destscale = mobj->scale;
+	mobj->scalespeed = FRACUNIT/12;
+
+	// TODO: Make this a special map header
+	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
+		mobj->destscale = FRACUNIT/2;
+
+	// Make sure scale matches destscale immediately when spawned
+	P_SetScale(mobj, mobj->destscale);
+
+	// Sprite rendering
+	mobj->blendmode = AST_TRANSLUCENT;
+	mobj->spritexscale = mobj->spriteyscale = FRACUNIT;
+	mobj->spritexoffset = mobj->spriteyoffset = 0;
+	mobj->floorspriteslope = NULL;
 }
 
 static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
@@ -11397,6 +11407,10 @@ void P_SpawnPlayer(INT32 playernum)
 		p->jumpfactor = skins[p->skin].jumpfactor;
 	}
 
+	// Clear lastlinehit and lastsidehit
+	p->lastsidehit = -1;
+	p->lastlinehit = -1;
+
 	//awayview stuff
 	p->awayviewmobj = NULL;
 	p->awayviewtics = 0;
@@ -11792,7 +11806,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		if (!(G_CoopGametype() || (mthing->options & MTF_EXTRA)))
 			return false; // she doesn't hang out here
 
-		if (!mariomode && !(netgame || multiplayer) && players[consoleplayer].skin == 3)
+		if (!(netgame || multiplayer) && players[consoleplayer].skin == 3)
 			return false; // no doubles
 
 		break;

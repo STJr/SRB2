@@ -2181,6 +2181,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->levelflags);
 	else if (fastcmp(field,"menuflags"))
 		lua_pushinteger(L, header->menuflags);
+	else if (fastcmp(field,"selectheading"))
+		lua_pushstring(L, header->selectheading);
 	else if (fastcmp(field,"startrings"))
 		lua_pushinteger(L, header->startrings);
 	else if (fastcmp(field, "sstimer"))

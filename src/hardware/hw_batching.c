@@ -248,12 +248,12 @@ void HWR_RenderBatches(void)
 	}
 
 	// sort polygons
-	ps_hw_batchsorttime = I_GetTimeMicros();
+	ps_hw_batchsorttime = I_GetPreciseTime();
 	if (cv_glshaders.value && gl_shadersavailable)
 		qsort(polygonIndexArray, polygonArraySize, sizeof(unsigned int), comparePolygons);
 	else
 		qsort(polygonIndexArray, polygonArraySize, sizeof(unsigned int), comparePolygonsNoShaders);
-	ps_hw_batchsorttime = I_GetTimeMicros() - ps_hw_batchsorttime;
+	ps_hw_batchsorttime = I_GetPreciseTime() - ps_hw_batchsorttime;
 	// sort order
 	// 1. shader
 	// 2. texture
@@ -261,7 +261,7 @@ void HWR_RenderBatches(void)
 	// 4. colors + light level
 	// not sure about what order of the last 2 should be, or if it even matters
 
-	ps_hw_batchdrawtime = I_GetTimeMicros();
+	ps_hw_batchdrawtime = I_GetPreciseTime();
 
 	currentShader = polygonArray[polygonIndexArray[0]].shader;
 	currentTexture = polygonArray[polygonIndexArray[0]].texture;
@@ -446,7 +446,7 @@ void HWR_RenderBatches(void)
 	polygonArraySize = 0;
 	unsortedVertexArraySize = 0;
 
-	ps_hw_batchdrawtime = I_GetTimeMicros() - ps_hw_batchdrawtime;
+	ps_hw_batchdrawtime = I_GetPreciseTime() - ps_hw_batchdrawtime;
 }
 
 

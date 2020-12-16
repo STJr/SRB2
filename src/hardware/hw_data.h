@@ -39,6 +39,15 @@ typedef enum GLTextureFormat_e
 	GL_TEXFMT_ALPHA_INTENSITY_88  = 0x22,
 } GLTextureFormat_t;
 
+// Colormap structure for mipmaps.
+struct GLColormap_s
+{
+	const UINT8 *source;
+	UINT8 data[256];
+};
+typedef struct GLColormap_s GLColormap_t;
+
+
 // data holds the address of the graphics data cached in heap memory
 //                NULL if the texture is not in Doom heap cache.
 struct GLMipmap_s
@@ -53,7 +62,7 @@ struct GLMipmap_s
 	UINT32                downloaded;     // The GPU has this texture.
 
 	struct GLMipmap_s    *nextcolormap;
-	const UINT8          *colormap;
+	struct GLColormap_s  *colormap;
 
 	struct GLMipmap_s    *nextmipmap; // Linked list of all textures
 };
@@ -77,7 +86,7 @@ struct GLPatch_s
 {
 	float               max_s,max_t;
 	GLMipmap_t          *mipmap;
-} ATTRPACK;
+};
 typedef struct GLPatch_s GLPatch_t;
 
 #endif //_HWR_DATA_

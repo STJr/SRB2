@@ -684,6 +684,7 @@ typedef enum sprite
 	SPR_SIGN, // Level end sign
 	SPR_SPIK, // Spike Ball
 	SPR_SFLM, // Spin fire
+	SPR_TFLM, // Spin fire (team)
 	SPR_USPK, // Floor spike
 	SPR_WSPK, // Wall spike
 	SPR_WSPB, // Wall spike base
@@ -2323,6 +2324,13 @@ typedef enum state
 	S_SPINFIRE4,
 	S_SPINFIRE5,
 	S_SPINFIRE6,
+
+	S_TEAM_SPINFIRE1,
+	S_TEAM_SPINFIRE2,
+	S_TEAM_SPINFIRE3,
+	S_TEAM_SPINFIRE4,
+	S_TEAM_SPINFIRE5,
+	S_TEAM_SPINFIRE6,
 
 	// Spikes
 	S_SPIKE1,
@@ -4280,9 +4288,7 @@ typedef enum state
 	S_BLUEBRICKDEBRIS, // for CEZ3
 	S_YELLOWBRICKDEBRIS, // for CEZ3
 
-#ifdef SEENAMES
 	S_NAMECHECK,
-#endif
 
 	S_FIRSTFREESLOT,
 	S_LASTFREESLOT = S_FIRSTFREESLOT + NUMSTATEFREESLOTS - 1,
@@ -5082,9 +5088,7 @@ typedef enum mobj_type
 	MT_BLUEBRICKDEBRIS, // for CEZ3
 	MT_YELLOWBRICKDEBRIS, // for CEZ3
 
-#ifdef SEENAMES
 	MT_NAMECHECK,
-#endif
 
 	MT_FIRSTFREESLOT,
 	MT_LASTFREESLOT = MT_FIRSTFREESLOT + NUMMOBJFREESLOTS - 1,

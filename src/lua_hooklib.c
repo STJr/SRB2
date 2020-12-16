@@ -25,7 +25,7 @@
 
 #include "m_perfstats.h"
 #include "d_netcmd.h" // for cv_perfstats
-#include "i_system.h" // I_GetTimeMicros
+#include "i_system.h" // I_GetPreciseTime
 
 static UINT8 hooksAvailable[(hook_MAX/8)+1];
 
@@ -481,7 +481,7 @@ void LUAh_ThinkFrame(void)
 			continue;
 
 		if (cv_perfstats.value == 3)
-			time_taken = I_GetTimeMicros();
+			time_taken = I_GetPreciseTime();
 		PushHook(gL, hookp);
 		if (lua_pcall(gL, 0, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
@@ -492,7 +492,7 @@ void LUAh_ThinkFrame(void)
 		if (cv_perfstats.value == 3)
 		{
 			lua_Debug ar;
-			time_taken = I_GetTimeMicros() - time_taken;
+			time_taken = I_GetPreciseTime() - time_taken;
 			// we need the function, let's just retrieve it again
 			PushHook(gL, hookp);
 			lua_getinfo(gL, ">S", &ar);
@@ -1754,7 +1754,6 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 }
 
 // Hook for MT_NAMECHECK
-#ifdef SEENAMES
 boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 {
 	hook_p hookp;
@@ -1798,7 +1797,6 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 
 	return hasSeenPlayer;
 }
-#endif // SEENAMES
 
 boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 {
@@ -1846,7 +1844,7 @@ boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 }
 
 // Hook for game quitting
-void LUAh_GameQuit(void)
+void LUAh_GameQuit(boolean quitting)
 {
 	hook_p hookp;
 	if (!gL || !(hooksAvailable[hook_GameQuit/8] & (1<<(hook_GameQuit%8))))
@@ -1860,7 +1858,8 @@ void LUAh_GameQuit(void)
 			continue;
 
 		PushHook(gL, hookp);
-		if (lua_pcall(gL, 0, 0, 1)) {
+		lua_pushboolean(gL, quitting);
+		if (lua_pcall(gL, 1, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);

@@ -413,7 +413,7 @@ static void D_Display(void)
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
-				ps_rendercalltime = I_GetTimeMicros();
+				ps_rendercalltime = I_GetPreciseTime();
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
@@ -460,7 +460,7 @@ static void D_Display(void)
 					if (postimgtype2)
 						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
-				ps_rendercalltime = I_GetTimeMicros() - ps_rendercalltime;
+				ps_rendercalltime = I_GetPreciseTime() - ps_rendercalltime;
 			}
 
 			if (lastdraw)
@@ -474,7 +474,7 @@ static void D_Display(void)
 				lastdraw = false;
 			}
 
-			ps_uitime = I_GetTimeMicros();
+			ps_uitime = I_GetPreciseTime();
 
 			if (gamestate == GS_LEVEL)
 			{
@@ -487,7 +487,7 @@ static void D_Display(void)
 		}
 		else
 		{
-			ps_uitime = I_GetTimeMicros();
+			ps_uitime = I_GetPreciseTime();
 		}
 	}
 
@@ -529,7 +529,7 @@ static void D_Display(void)
 
 	CON_Drawer();
 
-	ps_uitime = I_GetTimeMicros() - ps_uitime;
+	ps_uitime = I_GetPreciseTime() - ps_uitime;
 
 	//
 	// wipe update
@@ -615,9 +615,9 @@ static void D_Display(void)
 			M_DrawPerfStats();
 		}
 
-		ps_swaptime = I_GetTimeMicros();
+		ps_swaptime = I_GetPreciseTime();
 		I_FinishUpdate(); // page flip or blit buffer
-		ps_swaptime = I_GetTimeMicros() - ps_swaptime;
+		ps_swaptime = I_GetPreciseTime() - ps_swaptime;
 	}
 }
 
@@ -998,7 +998,7 @@ static void IdentifyVersion(void)
 #define MUSICTEST(str) \
 		{\
 			const char *musicpath = va(pandf,srb2waddir,str);\
-			int ms = W_VerifyNMUSlumps(musicpath); \
+			int ms = W_VerifyNMUSlumps(musicpath, false); \
 			if (ms == 1) \
 				D_AddFile(startupwadfiles, musicpath); \
 			else if (ms == 0) \
@@ -1187,11 +1187,7 @@ void D_SRB2Main(void)
 				const char *s = M_GetNextParm();
 
 				if (s) // Check for NULL?
-				{
-					if (!W_VerifyNMUSlumps(s))
-						G_SetGameModified(true);
 					D_AddFile(startuppwads, s);
-				}
 			}
 		}
 	}

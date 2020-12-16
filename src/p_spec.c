@@ -4304,7 +4304,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			if (leveltime % (TICRATE/2) == 0 && player->rings > 0)
 			{
 				player->rings--;
-				S_StartSound(player->mo, sfx_itemup);
+				S_StartSound(player->mo, sfx_antiri);
 			}
 			break;
 		case 11: // Special Stage Damage
@@ -4420,15 +4420,19 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			// clear the special so you can't push the button twice.
 			sector->special = 0;
 
+			// Initialize my junk
+			junk.tags.tags = NULL;
+			junk.tags.count = 0;
+
 			// Move the button down
-			Tag_FSet(&junk.tags, 680);
+			Tag_FSet(&junk.tags, LE_CAPSULE0);
 			EV_DoElevator(&junk, elevateDown, false);
 
 			// Open the top FOF
-			Tag_FSet(&junk.tags, 681);
+			Tag_FSet(&junk.tags, LE_CAPSULE1);
 			EV_DoFloor(&junk, raiseFloorToNearestFast);
 			// Open the bottom FOF
-			Tag_FSet(&junk.tags, 682);
+			Tag_FSet(&junk.tags, LE_CAPSULE2);
 			EV_DoCeiling(&junk, lowerToLowestFast);
 
 			// Mark all players with the time to exit thingy!
@@ -4503,7 +4507,7 @@ DoneSection2:
 
 				P_InstaThrust(player->mo, player->mo->angle, linespeed);
 
-				if ((lines[i].flags & ML_EFFECT5) && (player->charability2 == CA2_SPINDASH)) // Roll!
+				if (lines[i].flags & ML_EFFECT5) // Roll!
 				{
 					if (!(player->pflags & PF_SPINNING))
 						player->pflags |= PF_SPINNING;
@@ -4600,7 +4604,7 @@ DoneSection2:
 
 					HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
 					HU_SetCEchoDuration(5);
-					HU_DoCEcho(va(M_GetText("%s%s%s\\CAPTURED THE %sBLUE FLAG%s.\\\\\\\\"), "\x85", player_names[player-players], "\x80", "\x84", "\x80"));
+					HU_DoCEcho(va(M_GetText("\205%s\200\\CAPTURED THE \204BLUE FLAG\200.\\\\\\\\"), player_names[player-players]));
 
 					if (splitscreen || players[consoleplayer].ctfteam == 1)
 						S_StartSound(NULL, sfx_flgcap);
@@ -4633,7 +4637,7 @@ DoneSection2:
 
 					HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
 					HU_SetCEchoDuration(5);
-					HU_DoCEcho(va(M_GetText("%s%s%s\\CAPTURED THE %sRED FLAG%s.\\\\\\\\"), "\x84", player_names[player-players], "\x80", "\x85", "\x80"));
+					HU_DoCEcho(va(M_GetText("\204%s\200\\CAPTURED THE \205RED FLAG\200.\\\\\\\\"), player_names[player-players]));
 
 					if (splitscreen || players[consoleplayer].ctfteam == 2)
 						S_StartSound(NULL, sfx_flgcap);
@@ -4669,7 +4673,7 @@ DoneSection2:
 			break;
 
 		case 7: // Make player spin
-			if (!(player->pflags & PF_SPINNING) && P_IsObjectOnGround(player->mo) && (player->charability2 == CA2_SPINDASH))
+			if (!(player->pflags & PF_SPINNING))
 			{
 				player->pflags |= PF_SPINNING;
 				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
@@ -4823,6 +4827,8 @@ DoneSection2:
 
 					if (player->laps >= (UINT8)cv_numlaps.value)
 						CONS_Printf(M_GetText("%s has finished the race.\n"), player_names[player-players]);
+					else if (player->laps == (UINT8)cv_numlaps.value-1)
+						CONS_Printf(M_GetText("%s started the \205final lap\200!\n"), player_names[player-players]);
 					else
 						CONS_Printf(M_GetText("%s started lap %u\n"), player_names[player-players], (UINT32)player->laps+1);
 
