@@ -4304,7 +4304,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			if (leveltime % (TICRATE/2) == 0 && player->rings > 0)
 			{
 				player->rings--;
-				S_StartSound(player->mo, sfx_itemup);
+				S_StartSound(player->mo, sfx_antiri);
 			}
 			break;
 		case 11: // Special Stage Damage
