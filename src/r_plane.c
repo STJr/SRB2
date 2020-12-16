@@ -607,6 +607,7 @@ void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 void R_DrawPlanes(void)
 {
 	visplane_t *pl;
+	angle_t va = viewangle;
 	INT32 i;
 
 	R_UpdatePlaneRipple();
@@ -621,6 +622,8 @@ void R_DrawPlanes(void)
 			R_DrawSinglePlane(pl);
 		}
 	}
+
+	viewangle = va;
 }
 
 // R_DrawSkyPlane
@@ -788,7 +791,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 	ffloor_t *rover;
 	int type;
 	int spanfunctype = BASEDRAWFUNC;
-	angle_t viewang = viewangle;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -1153,8 +1155,6 @@ using the palette colors.
 		}
 	}
 #endif
-
-	viewangle = viewang;
 }
 
 void R_PlaneBounds(visplane_t *plane)
