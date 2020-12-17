@@ -37,6 +37,7 @@ enum hud {
 	hud_tabemblems,
 	// Intermission
 	hud_intermissiontally,
+	hud_intermissiontitletext,
 	hud_intermissionmessages,
 	hud_intermissionemeralds,
 	hud_MAX

@@ -63,6 +63,7 @@ static const char *const hud_disable_options[] = {
 	"tabemblems",
 
 	"intermissiontally",
+	"intermissiontitletext",
 	"intermissionmessages",
 	"intermissionemeralds",
 	NULL};
