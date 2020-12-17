@@ -1386,7 +1386,7 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 	hud_running = false;
 }
 
-void LUAh_IntermissionHUD(void)
+void LUAh_IntermissionHUD(boolean failedstage)
 {
 	if (!gL || !(hudAvailable & (1<<hudhook_intermission)))
 		return;
@@ -1404,10 +1404,14 @@ void LUAh_IntermissionHUD(void)
 	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
 	I_Assert(lua_istable(gL, -1));
 	lua_remove(gL, -3); // pop HUD
+
+	lua_pushboolean(gL, failedstage); // stagefailed
 	lua_pushnil(gL);
-	while (lua_next(gL, -3) != 0) {
-		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1, 0, 1);
+
+	while (lua_next(gL, -4) != 0) {
+		lua_pushvalue(gL, -4); // graphics library (HUD[1])
+		lua_pushvalue(gL, -4); // stagefailed
+		LUA_Call(gL, 2, 0, 1);
 	}
 	lua_settop(gL, 0);
 	hud_running = false;

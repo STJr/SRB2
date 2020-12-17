@@ -1633,7 +1633,7 @@ void LUAh_PlayerQuit(player_t *plr, kickreason_t reason)
 }
 
 // Hook for Y_Ticker
-void LUAh_IntermissionThinker(void)
+void LUAh_IntermissionThinker(boolean failedstage)
 {
 	hook_p hookp;
 	if (!gL || !(hooksAvailable[hook_IntermissionThinker/8] & (1<<(hook_IntermissionThinker%8))))
@@ -1646,8 +1646,11 @@ void LUAh_IntermissionThinker(void)
 		if (hookp->type != hook_IntermissionThinker)
 			continue;
 
+		lua_pushboolean(gL, failedstage); // stagefailed
+
 		PushHook(gL, hookp);
-		if (lua_pcall(gL, 0, 0, 1)) {
+		lua_pushvalue(gL, -2); // stagefailed
+		if (lua_pcall(gL, 1, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);

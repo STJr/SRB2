@@ -430,7 +430,7 @@ void Y_IntermissionDrawer(void)
 	else if (bgtile)
 		V_DrawPatchFill(bgtile);
 
-	LUAh_IntermissionHUD();
+	LUAh_IntermissionHUD(intertype == int_spec && stagefailed);
 	if (!LUA_HudEnabled(hud_intermissiontally))
 		goto skiptallydrawer;
 
@@ -1021,7 +1021,7 @@ void Y_Ticker(void)
 	if (paused || P_AutoPause())
 		return;
 
-	LUAh_IntermissionThinker();
+	LUAh_IntermissionThinker(intertype == int_spec && stagefailed);
 
 	intertic++;
 
