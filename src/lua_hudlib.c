@@ -859,6 +859,26 @@ static int libd_drawScaledNameTag(lua_State *L)
 	return 0;
 }
 
+static int libd_drawLevelTitle(lua_State *L)
+{
+	INT32 x;
+	INT32 y;
+	const char *str;
+	INT32 flags;
+
+	HUDONLY
+
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	str = luaL_checkstring(L, 3);
+	flags = luaL_optinteger(L, 4, 0);
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawLevelTitle(x, y, flags, str);
+	return 0;
+}
+
 static int libd_stringWidth(lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);
@@ -885,6 +905,20 @@ static int libd_nameTagWidth(lua_State *L)
 {
 	HUDONLY
 	lua_pushinteger(L, V_NameTagWidth(luaL_checkstring(L, 1)));
+	return 1;
+}
+
+static int libd_levelTitleWidth(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, V_LevelNameWidth(luaL_checkstring(L, 1)));
+	return 1;
+}
+
+static int libd_levelTitleHeight(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, V_LevelNameHeight(luaL_checkstring(L, 1)));
 	return 1;
 }
 
@@ -1093,10 +1127,13 @@ static luaL_Reg lib_draw[] = {
 	{"drawString", libd_drawString},
 	{"drawNameTag", libd_drawNameTag},
 	{"drawScaledNameTag", libd_drawScaledNameTag},
+	{"drawLevelTitle", libd_drawLevelTitle},
 	{"fadeScreen", libd_fadeScreen},
 	// misc
 	{"stringWidth", libd_stringWidth},
 	{"nameTagWidth", libd_nameTagWidth},
+	{"levelTitleWidth", libd_levelTitleWidth},
+	{"levelTitleHeight", libd_levelTitleHeight},
 	// m_random
 	{"RandomFixed",libd_RandomFixed},
 	{"RandomByte",libd_RandomByte},
