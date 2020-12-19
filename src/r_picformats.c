@@ -540,9 +540,7 @@ void *Picture_GetPatchPixel(
 {
 	fixed_t ofs;
 	column_t *column;
-	UINT8 *s8 = NULL;
-	UINT16 *s16 = NULL;
-	UINT32 *s32 = NULL;
+	INT32 inbpp = Picture_FormatBPP(informat);
 	softwarepatch_t *doompatch = (softwarepatch_t *)patch;
 	boolean isdoompatch = Picture_IsDoomPatchFormat(informat);
 	INT16 width;
@@ -566,30 +564,36 @@ void *Picture_GetPatchPixel(
 
 		while (column->topdelta != 0xff)
 		{
+			UINT8 *s8 = NULL;
+			UINT16 *s16 = NULL;
+			UINT32 *s32 = NULL;
+
 			topdelta = column->topdelta;
 			if (topdelta <= prevdelta)
 				topdelta += prevdelta;
 			prevdelta = topdelta;
-			s8 = (UINT8 *)(column) + 3;
-			if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
-				s32 = (UINT32 *)s8;
-			else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
-				s16 = (UINT16 *)s8;
-			for (ofs = 0; ofs < column->length; ofs++)
+
+			ofs = (y - topdelta);
+
+			if (y >= topdelta && ofs < column->length)
 			{
-				if ((topdelta + ofs) == y)
+				s8 = (UINT8 *)(column) + 3;
+				switch (inbpp)
 				{
-					if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
+					case PICDEPTH_32BPP:
+						s32 = (UINT32 *)s8;
 						return &s32[ofs];
-					else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
+					case PICDEPTH_16BPP:
+						s16 = (UINT16 *)s8;
 						return &s16[ofs];
-					else // PICDEPTH_8BPP
+					default: // PICDEPTH_8BPP
 						return &s8[ofs];
 				}
 			}
-			if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
+
+			if (inbpp == PICDEPTH_32BPP)
 				column = (column_t *)((UINT32 *)column + column->length);
-			else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
+			else if (inbpp == PICDEPTH_16BPP)
 				column = (column_t *)((UINT16 *)column + column->length);
 			else
 				column = (column_t *)((UINT8 *)column + column->length);
