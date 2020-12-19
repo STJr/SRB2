@@ -155,6 +155,8 @@ static const struct {
 	{META_PIVOTLIST,    "spriteframepivot_t[]"},
 	{META_FRAMEPIVOT,   "spriteframepivot_t"},
 
+	{META_TAGLIST,      "taglist"},
+
 	{META_MOBJ,         "mobj_t"},
 	{META_MAPTHING,     "mapthing_t"},
 
@@ -186,6 +188,9 @@ static const struct {
 	{META_CVAR,         "consvar_t"},
 
 	{META_SECTORLINES,  "sector_t.lines"},
+#ifdef MUTABLE_TAGS
+	{META_SECTORTAGLIST, "sector_t.taglist"},
+#endif
 	{META_SIDENUM,      "line_t.sidenum"},
 	{META_LINEARGS,     "line_t.args"},
 	{META_LINESTRINGARGS, "line_t.stringargs"},

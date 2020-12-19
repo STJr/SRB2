@@ -22,8 +22,6 @@
 #include "lua_hud.h" // hud_running errors
 #include "lua_hook.h" // hook_cmd_running errors
 
-static const char *const array_opt[] ={"iterate",NULL};
-
 enum mobj_e {
 	mobj_valid = 0,
 	mobj_x,
@@ -904,6 +902,11 @@ static int mapthing_get(lua_State *L)
 		number = mt->extrainfo;
 	else if(fastcmp(field,"tag"))
 		number = Tag_FGet(&mt->tags);
+	else if(fastcmp(field,"taglist"))
+	{
+		LUA_PushUserdata(L, &mt->tags, META_TAGLIST);
+		return 1;
+	}
 	else if(fastcmp(field,"args"))
 	{
 		LUA_PushUserdata(L, mt->args, META_THINGARGS);
@@ -966,6 +969,8 @@ static int mapthing_set(lua_State *L)
 	}
 	else if (fastcmp(field,"tag"))
 		Tag_FSet(&mt->tags, (INT16)luaL_checkinteger(L, 3));
+	else if (fastcmp(field,"taglist"))
+		return LUA_ErrSetDirectly(L, "mapthing_t", "taglist");
 	else if(fastcmp(field,"mobj"))
 		mt->mobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 	else
@@ -1003,23 +1008,13 @@ static int lib_iterateMapthings(lua_State *L)
 
 static int lib_getMapthing(lua_State *L)
 {
-	int field;
 	INLEVEL
-	lua_settop(L, 2);
-	lua_remove(L, 1); // dummy userdata table is unused.
-	if (lua_isnumber(L, 1))
+	if (lua_isnumber(L, 2))
 	{
-		size_t i = lua_tointeger(L, 1);
+		size_t i = lua_tointeger(L, 2);
 		if (i >= nummapthings)
 			return 0;
 		LUA_PushUserdata(L, &mapthings[i], META_MAPTHING);
-		return 1;
-	}
-	field = luaL_checkoption(L, 1, NULL, array_opt);
-	switch(field)
-	{
-	case 0: // iterate
-		lua_pushcfunction(L, lib_iterateMapthings);
 		return 1;
 	}
 	return 0;
@@ -1068,14 +1063,13 @@ int LUA_MobjLib(lua_State *L)
 		lua_setfield(L, -2, "__len");
 	lua_pop(L,1);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getMapthing);
-			lua_setfield(L, -2, "__index");
+	LUA_PushTaggableObjectArray(L, "mapthings",
+			lib_iterateMapthings,
+			lib_getMapthing,
+			lib_nummapthings,
+			tags_mapthings,
+			&nummapthings, &mapthings,
+			sizeof (mapthing_t), META_MAPTHING);
 
-			lua_pushcfunction(L, lib_nummapthings);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "mapthings");
 	return 0;
 }
