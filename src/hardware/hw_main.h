@@ -116,11 +116,11 @@ extern FTransform atransform;
 
 
 // Render stats
-extern int ps_hw_skyboxtime;
-extern int ps_hw_nodesorttime;
-extern int ps_hw_nodedrawtime;
-extern int ps_hw_spritesorttime;
-extern int ps_hw_spritedrawtime;
+extern precise_t ps_hw_skyboxtime;
+extern precise_t ps_hw_nodesorttime;
+extern precise_t ps_hw_nodedrawtime;
+extern precise_t ps_hw_spritesorttime;
+extern precise_t ps_hw_spritedrawtime;
 
 // Render stats for batching
 extern int ps_hw_numpolys;
@@ -130,8 +130,8 @@ extern int ps_hw_numshaders;
 extern int ps_hw_numtextures;
 extern int ps_hw_numpolyflags;
 extern int ps_hw_numcolors;
-extern int ps_hw_batchsorttime;
-extern int ps_hw_batchdrawtime;
+extern precise_t ps_hw_batchsorttime;
+extern precise_t ps_hw_batchdrawtime;
 
 extern boolean gl_init;
 extern boolean gl_maploaded;

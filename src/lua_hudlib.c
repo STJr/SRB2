@@ -305,16 +305,16 @@ static int patch_get(lua_State *L)
 		lua_pushboolean(L, patch != NULL);
 		break;
 	case patch_width:
-		lua_pushinteger(L, SHORT(patch->width));
+		lua_pushinteger(L, patch->width);
 		break;
 	case patch_height:
-		lua_pushinteger(L, SHORT(patch->height));
+		lua_pushinteger(L, patch->height);
 		break;
 	case patch_leftoffset:
-		lua_pushinteger(L, SHORT(patch->leftoffset));
+		lua_pushinteger(L, patch->leftoffset);
 		break;
 	case patch_topoffset:
-		lua_pushinteger(L, SHORT(patch->topoffset));
+		lua_pushinteger(L, patch->topoffset);
 		break;
 	}
 	return 1;
@@ -896,8 +896,10 @@ static int libd_getColormap(lua_State *L)
 	else if (lua_type(L, 1) == LUA_TNUMBER) // skin number
 	{
 		skinnum = (INT32)luaL_checkinteger(L, 1);
-		if (skinnum < TC_BLINK || skinnum >= MAXSKINS)
-			return luaL_error(L, "skin number %d is out of range (%d - %d)", skinnum, TC_BLINK, MAXSKINS-1);
+		if (skinnum >= MAXSKINS)
+			return luaL_error(L, "skin number %d is out of range (>%d)", skinnum, MAXSKINS-1);
+		else if (skinnum < 0 && skinnum > TC_DEFAULT)
+			return luaL_error(L, "translation colormap index is out of range");
 	}
 	else // skin name
 	{
@@ -1261,7 +1263,9 @@ void LUAh_GameHUD(player_t *stplayr)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1283,9 +1287,9 @@ void LUAh_GameHUD(player_t *stplayr)
 		lua_pushvalue(gL, -5); // graphics library (HUD[1])
 		lua_pushvalue(gL, -5); // stplayr
 		lua_pushvalue(gL, -5); // camera
-		LUA_Call(gL, 3);
+		LUA_Call(gL, 3, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1295,7 +1299,9 @@ void LUAh_ScoresHUD(void)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1308,9 +1314,9 @@ void LUAh_ScoresHUD(void)
 	lua_pushnil(gL);
 	while (lua_next(gL, -3) != 0) {
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1);
+		LUA_Call(gL, 1, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1320,7 +1326,9 @@ void LUAh_TitleHUD(void)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1333,9 +1341,9 @@ void LUAh_TitleHUD(void)
 	lua_pushnil(gL);
 	while (lua_next(gL, -3) != 0) {
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1);
+		LUA_Call(gL, 1, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1345,7 +1353,9 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1366,10 +1376,10 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 		lua_pushvalue(gL, -6); // stplayr
 		lua_pushvalue(gL, -6); // lt_ticker
 		lua_pushvalue(gL, -6); // lt_endtime
-		LUA_Call(gL, 4);
+		LUA_Call(gL, 4, 0, 1);
 	}
 
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1379,7 +1389,9 @@ void LUAh_IntermissionHUD(void)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1392,8 +1404,8 @@ void LUAh_IntermissionHUD(void)
 	lua_pushnil(gL);
 	while (lua_next(gL, -3) != 0) {
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1);
+		LUA_Call(gL, 1, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }

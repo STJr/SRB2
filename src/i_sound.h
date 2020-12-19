@@ -21,15 +21,12 @@
 // copied from SDL mixer, plus GME
 typedef enum {
 	MU_NONE,
-	MU_CMD,
 	MU_WAV,
 	MU_MOD,
 	MU_MID,
 	MU_OGG,
 	MU_MP3,
-	MU_MP3_MAD_UNUSED, // use MU_MP3 instead
 	MU_FLAC,
-	MU_MODPLUG_UNUSED, // use MU_MOD instead
 	MU_GME,
 	MU_MOD_EX, // libopenmpt
 	MU_MID_EX // Non-native MIDI

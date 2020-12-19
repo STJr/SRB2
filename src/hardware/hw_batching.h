@@ -16,7 +16,7 @@
 #include "hw_data.h"
 #include "hw_drv.h"
 
-typedef struct 
+typedef struct
 {
 	FSurfaceInfo surf;// surf also has its own polyflags for some reason, but it seems unused
 	unsigned int vertsIndex;// location of verts in unsortedVertexArray

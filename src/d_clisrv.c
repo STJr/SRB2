@@ -1595,9 +1595,7 @@ static void CL_ReloadReceivedSavegame(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-#ifdef HAVE_BLUA
 		LUA_InvalidatePlayer(&players[i]);
-#endif
 		sprintf(player_names[i], "Player %d", i + 1);
 	}
 
@@ -2258,11 +2256,15 @@ void D_SaveBan(void)
 	size_t i;
 	banreason_t *reasonlist = reasonhead;
 	const char *address, *mask;
+	const char *path = va("%s"PATHSEP"%s", srb2home, "ban.txt");
 
 	if (!reasonhead)
+	{
+		remove(path);
 		return;
+	}
 
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "w");
+	f = fopen(path, "w");
 
 	if (!f)
 	{
@@ -2306,16 +2308,14 @@ static void Ban_Add(const char *reason)
 	reasontail = reasonlist;
 }
 
-static void Command_ClearBans(void)
+static void Ban_Clear(void)
 {
 	banreason_t *temp;
 
-	if (!I_ClearBans)
-		return;
-
 	I_ClearBans();
-	D_SaveBan();
+
 	reasontail = NULL;
+
 	while (reasonhead)
 	{
 		temp = reasonhead->next;
@@ -2325,12 +2325,24 @@ static void Command_ClearBans(void)
 	}
 }
 
+static void Command_ClearBans(void)
+{
+	if (!I_ClearBans)
+		return;
+
+	Ban_Clear();
+	D_SaveBan();
+}
+
 static void Ban_Load_File(boolean warning)
 {
 	FILE *f;
 	size_t i;
 	const char *address, *mask;
 	char buffer[MAX_WADPATH];
+
+	if (!I_ClearBans)
+		return;
 
 	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "r");
 
@@ -2341,13 +2353,7 @@ static void Ban_Load_File(boolean warning)
 		return;
 	}
 
-	if (I_ClearBans)
-		Command_ClearBans();
-	else
-	{
-		fclose(f);
-		return;
-	}
+	Ban_Clear();
 
 	for (i=0; fgets(buffer, (int)sizeof(buffer), f); i++)
 	{
@@ -3024,8 +3030,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	if (pnum == consoleplayer)
 	{
-		if (Playing())
-			LUAh_GameQuit();
+		LUAh_GameQuit(false);
 #ifdef DUMPCONSISTENCY
 		if (msg == KICK_MSG_CON_FAIL) SV_SavedGame();
 #endif
@@ -3725,8 +3730,7 @@ static void HandleConnect(SINT8 node)
 static void HandleShutdown(SINT8 node)
 {
 	(void)node;
-	if (Playing())
-		LUAh_GameQuit();
+	LUAh_GameQuit(false);
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -3741,8 +3745,7 @@ static void HandleShutdown(SINT8 node)
 static void HandleTimeout(SINT8 node)
 {
 	(void)node;
-	if (Playing())
-		LUAh_GameQuit();
+	LUAh_GameQuit(false);
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -4845,14 +4848,14 @@ void TryRunTics(tic_t realtics)
 			{
 				DEBFILE(va("============ Running tic %d (local %d)\n", gametic, localgametic));
 
-				ps_tictime = I_GetTimeMicros();
+				ps_tictime = I_GetPreciseTime();
 
 				G_Ticker((gametic % NEWTICRATERATIO) == 0);
 				ExtraDataTicker();
 				gametic++;
 				consistancy[gametic%BACKUPTICS] = Consistancy();
 
-				ps_tictime = I_GetTimeMicros() - ps_tictime;
+				ps_tictime = I_GetPreciseTime() - ps_tictime;
 
 				// Leave a certain amount of tics present in the net buffer as long as we've ran at least one tic this frame.
 				if (client && gamestate == GS_LEVEL && leveltime > 3 && neededtic <= gametic + cv_netticbuffer.value)

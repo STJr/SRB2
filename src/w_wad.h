@@ -206,6 +206,6 @@ void W_UnlockCachedPatch(void *patch);
 
 void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5);
 
-int W_VerifyNMUSlumps(const char *filename);
+int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error);
 
 #endif // __W_WAD__

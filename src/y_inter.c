@@ -183,7 +183,7 @@ static void Y_IntermissionTokenDrawer(void)
 
 	offs = 0;
 	lowy = BASEVIDHEIGHT - 32 - 8;
-	temp = SHORT(tokenicon->height)/2;
+	temp = tokenicon->height / 2;
 
 	em = 0;
 	while (emeralds & (1 << em))
@@ -212,7 +212,7 @@ static void Y_IntermissionTokenDrawer(void)
 	calc = (lowy - y)*2;
 
 	if (calc > 0)
-		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 0, 0, SHORT(tokenicon->width), calc);
+		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 0, 0, tokenicon->width, calc);
 }
 
 //
@@ -402,7 +402,7 @@ void Y_IntermissionDrawer(void)
 		// Total
 		V_DrawScaledPatch(152, bonusy, 0, data.coop.ptotal);
 		V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.total);
-		bonusy -= (3*SHORT(tallnum[0]->height)/2) + 1;
+		bonusy -= (3*(tallnum[0]->height)/2) + 1;
 
 		// Draw bonuses
 		for (i = 3; i >= 0; --i)
@@ -412,7 +412,7 @@ void Y_IntermissionDrawer(void)
 				V_DrawScaledPatch(152, bonusy, 0, data.coop.bonuspatches[i]);
 				V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.bonuses[i].points);
 			}
-			bonusy -= (3*SHORT(tallnum[0]->height)/2) + 1;
+			bonusy -= (3*(tallnum[0]->height)/2) + 1;
 		}
 	}
 	else if (intertype == int_spec)
@@ -749,10 +749,10 @@ void Y_IntermissionDrawer(void)
 		char name[MAXPLAYERNAME+1];
 
 		// Show the team flags and the team score at the top instead of "RESULTS"
-		V_DrawSmallScaledPatch(128 - SHORT(data.match.blueflag->width)/4, 2, 0, data.match.blueflag);
+		V_DrawSmallScaledPatch(128 - (data.match.blueflag->width / 4), 2, 0, data.match.blueflag);
 		V_DrawCenteredString(128, 16, 0, va("%u", bluescore));
 
-		V_DrawSmallScaledPatch(192 - SHORT(data.match.redflag->width)/4, 2, 0, data.match.redflag);
+		V_DrawSmallScaledPatch(192 - (data.match.redflag->width / 4), 2, 0, data.match.redflag);
 		V_DrawCenteredString(192, 16, 0, va("%u", redscore));
 
 		// draw the level name
@@ -1229,7 +1229,10 @@ void Y_StartIntermission(void)
 			data.coop.tics = players[consoleplayer].realtime;
 
 			for (i = 0; i < 4; ++i)
-				data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_PATCH);
+			{
+				if (strlen(data.coop.bonuses[i].patch))
+					data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_PATCH);
+			}
 			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_PATCH);
 
 			// get act number
@@ -1733,7 +1736,6 @@ static void Y_SetNullBonus(player_t *player, y_bonus_t *bstruct)
 {
 	(void)player;
 	memset(bstruct, 0, sizeof(y_bonus_t));
-	strncpy(bstruct->patch, "MISSING", sizeof(bstruct->patch));
 }
 
 //

@@ -183,7 +183,6 @@ extern INT32 setmodeneeded; // mode number to set if needed, or 0
 extern UINT8 setrenderneeded;
 
 void SCR_ChangeRenderer(void);
-void SCR_SetTargetRenderer(void);
 
 extern CV_PossibleValue_t cv_renderer_t[];
 

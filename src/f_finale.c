@@ -1074,6 +1074,7 @@ static const char *credits[] = {
 	"\1Programming",
 	"Alam \"GBC\" Arias",
 	"Logan \"GBA\" Arias",
+	"Zolton \"Zippy_Zolton\" Auburn",
 	"Colette \"fickleheart\" Bordelon",
 	"Andrew \"orospakr\" Clunis",
 	"Sally \"TehRealSalt\" Cochenour",
@@ -1104,6 +1105,7 @@ static const char *credits[] = {
 	"Sean \"Sryder13\" Ryder",
 	"Ehab \"Wolfy\" Saeed",
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
+	"Riku \"Ors\" Salminen", // Demo consistency improvements
 	"Jonas \"MascaraSnake\" Sauer",
 	"Wessel \"sphere\" Smit",
 	"\"SSNTails\"",
@@ -2336,8 +2338,8 @@ void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
 
 	pat = W_CachePatchName(patchname, PU_PATCH_LOWPRIORITY);
 
-	patwidth = SHORT(pat->width);
-	patheight = SHORT(pat->height);
+	patwidth = pat->width;
+	patheight = pat->height;
 	pw = patwidth * dupz;
 	ph = patheight * dupz;
 

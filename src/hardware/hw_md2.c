@@ -527,7 +527,7 @@ void HWR_InitModels(void)
 			return;
 		}
 	}
-	
+
 	// length of the player model prefix
 	prefixlen = strlen(PLAYERMODELPREFIX);
 
@@ -1106,11 +1106,19 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 	for (grMipmap = grPatch->mipmap; grMipmap->nextcolormap; )
 	{
 		grMipmap = grMipmap->nextcolormap;
-		if (grMipmap->colormap == colormap)
+		if (grMipmap->colormap && grMipmap->colormap->source == colormap)
 		{
 			if (grMipmap->downloaded && grMipmap->data)
 			{
-				HWD.pfnSetTexture(grMipmap); // found the colormap, set it to the correct texture
+				if (memcmp(grMipmap->colormap->data, colormap, 256 * sizeof(UINT8)))
+				{
+					M_Memcpy(grMipmap->colormap->data, colormap, 256 * sizeof(UINT8));
+					HWR_CreateBlendedTexture(patch, blendpatch, grMipmap, skinnum, color);
+					HWD.pfnUpdateTexture(grMipmap);
+				}
+				else
+					HWD.pfnSetTexture(grMipmap); // found the colormap, set it to the correct texture
+
 				Z_ChangeTag(grMipmap->data, PU_HWRMODELTEXTURE_UNLOCKED);
 				return;
 			}
@@ -1128,7 +1136,10 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 	if (newMipmap == NULL)
 		I_Error("%s: Out of memory", "HWR_GetBlendedTexture");
 	grMipmap->nextcolormap = newMipmap;
-	newMipmap->colormap = colormap;
+
+	newMipmap->colormap = Z_Calloc(sizeof(*newMipmap->colormap), PU_HWRPATCHCOLMIPMAP, NULL);
+	newMipmap->colormap->source = colormap;
+	M_Memcpy(newMipmap->colormap->data, colormap, 256 * sizeof(UINT8));
 
 	HWR_CreateBlendedTexture(patch, blendpatch, newMipmap, skinnum, color);
 
@@ -1470,7 +1481,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			// Instead of the != operator, memcmp is used to avoid a compiler warning.
 			if (memcmp(&(hwrPatch->max_s), &(md2->model->max_s), sizeof(md2->model->max_s)) != 0 ||
 				memcmp(&(hwrPatch->max_t), &(md2->model->max_t), sizeof(md2->model->max_t)) != 0)
-				adjustTextureCoords(md2->model, gpatch);
+				adjustTextureCoords(md2->model, spr->gpatch);
 			HWR_GetMappedPatch(spr->gpatch, spr->colormap);
 		}
 
