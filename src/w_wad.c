@@ -1747,6 +1747,9 @@ void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag)
 
 void W_UnlockCachedPatch(void *patch)
 {
+	if (!patch)
+		return;
+
 	// The hardware code does its own memory management, as its patches
 	// have different lifetimes from software's.
 #ifdef HWRENDER
@@ -2144,7 +2147,7 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{"LT", 2}, // Titlecard changes
 
 		{"SLID", 4}, // Continue
-		{"CONT", 4}, 
+		{"CONT", 4},
 
 		{"MINICAPS", 8}, // NiGHTS graphics here and below
 		{"BLUESTAT", 8}, // Sphere status

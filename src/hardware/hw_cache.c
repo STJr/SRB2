@@ -108,7 +108,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, HWRTex
 
 			//Hurdler: 25/04/2000: now support colormap in hardware mode
 			if (texture->colormap)
-				texel = texture->colormap[texel];
+				texel = texture->colormap->data[texel];
 
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
@@ -218,7 +218,7 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 
 			//Hurdler: 25/04/2000: now support colormap in hardware mode
 			if (texture->colormap)
-				texel = texture->colormap[texel];
+				texel = texture->colormap->data[texel];
 
 			// hope compiler will get this switch out of the loops (dreams...)
 			// gcc do it ! but vcc not ! (why don't use cygwin gcc for win32 ?)
@@ -647,7 +647,8 @@ void HWR_FreeTextureColormaps(patch_t *patch)
 		// Free image data from memory.
 		if (next->data)
 			Z_Free(next->data);
-		next->data = NULL;
+		if (next->colormap)
+			Z_Free(next->colormap);
 
 		if (vid.glstate == VID_GL_LIBRARY_LOADED)
 			HWD.pfnDeleteTexture(next);
@@ -963,7 +964,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 }
 
 // --------------------+
-// HWR_LoadPatchTexture : Generates a patch into a texture, usually the texture inside the patch itself
+// HWR_LoadPatchTexture: Generates a patch into a texture, usually the texture inside the patch itself
 // --------------------+
 static void HWR_LoadPatchTexture(patch_t *patch, HWRTexture_t *hwrTexture)
 {
@@ -980,8 +981,28 @@ static void HWR_LoadPatchTexture(patch_t *patch, HWRTexture_t *hwrTexture)
 	Z_ChangeTag(hwrTexture->data, PU_HWRCACHE_UNLOCKED);
 }
 
+// ----------------------+
+// HWR_UpdatePatchTexture: Updates a texture.
+// ----------------------+
+static void HWR_UpdatePatchTexture(patch_t *patch, HWRTexture_t *hwrTexture)
+{
+	GLPatch_t *grPatch = patch->hardware;
+	HWR_MakePatch(patch, grPatch, hwrTexture, true);
+
+	// If hardware does not have the texture, then call pfnSetTexture to upload it
+	// If it does have the texture, then call pfnUpdateTexture to update it
+	if (!hwrTexture->downloaded)
+		HWD.pfnSetTexture(hwrTexture);
+	else
+		HWD.pfnUpdateTexture(hwrTexture);
+	HWR_SetCurrentTexture(hwrTexture);
+
+	// The system-memory data can be purged now.
+	Z_ChangeTag(hwrTexture->data, PU_HWRCACHE_UNLOCKED);
+}
+
 // -----------------+
-// HWR_GetPatch     : Download a patch to the hardware cache and make it ready for use
+// HWR_GetPatch     : Downloads a patch to the hardware cache, and makes it ready for use
 // -----------------+
 void HWR_GetPatch(patch_t *patch)
 {
@@ -1009,14 +1030,20 @@ void HWR_GetMappedPatch(patch_t *patch, const UINT8 *colormap)
 		return;
 	}
 
-	// search for the mimmap
+	// search for the texture
 	// skip the first (no colormap translated)
 	for (hwrTexture = grPatch->texture; hwrTexture->nextcolormap; )
 	{
 		hwrTexture = hwrTexture->nextcolormap;
-		if (hwrTexture->colormap == colormap)
+		if (hwrTexture->colormap && hwrTexture->colormap->source == colormap)
 		{
-			HWR_LoadPatchTexture(patch, hwrTexture);
+			if (memcmp(hwrTexture->colormap->data, colormap, 256 * sizeof(UINT8)))
+			{
+				M_Memcpy(hwrTexture->colormap->data, colormap, 256 * sizeof(UINT8));
+				HWR_UpdatePatchTexture(patch, hwrTexture);
+			}
+			else
+				HWR_LoadPatchTexture(patch, hwrTexture);
 			return;
 		}
 	}
@@ -1028,7 +1055,10 @@ void HWR_GetMappedPatch(patch_t *patch, const UINT8 *colormap)
 		I_Error("%s: Out of memory", "HWR_GetMappedPatch");
 	hwrTexture->nextcolormap = newTexture;
 
-	newTexture->colormap = colormap;
+	newTexture->colormap = Z_Calloc(sizeof(*newTexture->colormap), PU_HWRPATCHCOLTEXTURE, NULL);
+	newTexture->colormap->source = colormap;
+	M_Memcpy(newTexture->colormap->data, colormap, 256 * sizeof(UINT8));
+
 	HWR_LoadPatchTexture(patch, newTexture);
 }
 

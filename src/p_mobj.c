@@ -9837,7 +9837,7 @@ static void P_FlagFuseThink(mobj_t *mobj)
 	if (mobj->type == MT_REDFLAG)
 	{
 		if (!(mobj->flags2 & MF2_JUSTATTACKED))
-			CONS_Printf(M_GetText("The %c%s%c has returned to base.\n"), 0x85, M_GetText("Red flag"), 0x80);
+			CONS_Printf(M_GetText("The \205Red flag\200 has returned to base.\n"));
 
 		// Assumedly in splitscreen players will be on opposing teams
 		if (players[consoleplayer].ctfteam == 1 || splitscreen)
@@ -9850,7 +9850,7 @@ static void P_FlagFuseThink(mobj_t *mobj)
 	else // MT_BLUEFLAG
 	{
 		if (!(mobj->flags2 & MF2_JUSTATTACKED))
-			CONS_Printf(M_GetText("The %c%s%c has returned to base.\n"), 0x84, M_GetText("Blue flag"), 0x80);
+			CONS_Printf(M_GetText("The \204Blue flag\200 has returned to base.\n"));
 
 		// Assumedly in splitscreen players will be on opposing teams
 		if (players[consoleplayer].ctfteam == 2 || splitscreen)
@@ -11398,7 +11398,7 @@ void P_SpawnPlayer(INT32 playernum)
 		p->normalspeed = skins[p->skin].normalspeed;
 		p->jumpfactor = skins[p->skin].jumpfactor;
 	}
-	
+
 	// Clear lastlinehit and lastsidehit
 	p->lastsidehit = -1;
 	p->lastlinehit = -1;
@@ -11798,7 +11798,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		if (!(G_CoopGametype() || (mthing->options & MTF_EXTRA)))
 			return false; // she doesn't hang out here
 
-		if (!mariomode && !(netgame || multiplayer) && players[consoleplayer].skin == 3)
+		if (!(netgame || multiplayer) && players[consoleplayer].skin == 3)
 			return false; // no doubles
 
 		break;

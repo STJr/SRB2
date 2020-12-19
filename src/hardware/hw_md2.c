@@ -1106,11 +1106,19 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 	for (hwrTexture = grPatch->texture; hwrTexture->nextcolormap; )
 	{
 		hwrTexture = hwrTexture->nextcolormap;
-		if (hwrTexture->colormap == colormap)
+		if (hwrTexture->colormap && hwrTexture->colormap->source == colormap)
 		{
 			if (hwrTexture->downloaded && hwrTexture->data)
 			{
-				HWD.pfnSetTexture(hwrTexture); // found the colormap, set it to the correct texture
+				if (memcmp(hwrTexture->colormap->data, colormap, 256 * sizeof(UINT8)))
+				{
+					M_Memcpy(hwrTexture->colormap->data, colormap, 256 * sizeof(UINT8));
+					HWR_CreateBlendedTexture(patch, blendpatch, hwrTexture, skinnum, color);
+					HWD.pfnUpdateTexture(hwrTexture);
+				}
+				else
+					HWD.pfnSetTexture(hwrTexture); // found the colormap, set it to the correct texture
+
 				Z_ChangeTag(hwrTexture->data, PU_HWRMODELTEXTURE_UNLOCKED);
 				return;
 			}
@@ -1123,7 +1131,10 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 	if (newTexture == NULL)
 		I_Error("%s: Out of memory", "HWR_GetBlendedTexture");
 	hwrTexture->nextcolormap = newTexture;
-	newTexture->colormap = colormap;
+
+	newTexture->colormap = Z_Calloc(sizeof(*newTexture->colormap), PU_HWRPATCHCOLTEXTURE, NULL);
+	newTexture->colormap->source = colormap;
+	M_Memcpy(newTexture->colormap->data, colormap, 256 * sizeof(UINT8));
 
 	HWR_CreateBlendedTexture(patch, blendpatch, newTexture, skinnum, color);
 

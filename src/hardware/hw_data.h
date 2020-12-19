@@ -39,6 +39,15 @@ enum GLTextureFormat_e
 };
 typedef enum GLTextureFormat_e GLTextureFormat_t;
 
+// Colormap structure for textures.
+struct HWRColormap_s
+{
+	const UINT8 *source;
+	UINT8 data[256];
+};
+typedef struct HWRColormap_s HWRColormap_t;
+
+
 // data holds the address of the graphics data cached in heap memory
 // NULL if the texture is not in Doom heap cache.
 struct HWRTexture_s
@@ -52,7 +61,7 @@ struct HWRTexture_s
 	UINT32                downloaded;     // The GPU has this texture.
 
 	struct HWRTexture_s  *nextcolormap;
-	const UINT8          *colormap;
+	struct HWRColormap_s *colormap;
 };
 typedef struct HWRTexture_s HWRTexture_t;
 

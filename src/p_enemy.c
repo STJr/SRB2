@@ -1834,7 +1834,7 @@ void A_SnailerThink(mobj_t *actor)
 			fixed_t dist;
 			fixed_t dx, dy;
 
-			dist = P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y);
+			dist = R_PointToDist2(0, 0, actor->x - actor->target->x, actor->y - actor->target->y);
 
 			if (an > ANGLE_45 && an <= ANGLE_90) // fire at 45 degrees to the left
 			{
@@ -4060,7 +4060,7 @@ bossjustdie:
 			// Initialize my junk
 			junk.tags.tags = NULL;
 			junk.tags.count = 0;
-			
+
 			Tag_FSet(&junk.tags, LE_KOOPA);
 			EV_DoCeiling(&junk, raiseToHighest);
 			return;

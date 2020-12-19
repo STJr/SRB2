@@ -1522,6 +1522,13 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_SPINFIRE5",
 	"S_SPINFIRE6",
 
+	"S_TEAM_SPINFIRE1",
+	"S_TEAM_SPINFIRE2",
+	"S_TEAM_SPINFIRE3",
+	"S_TEAM_SPINFIRE4",
+	"S_TEAM_SPINFIRE5",
+	"S_TEAM_SPINFIRE6",
+
 	// Spikes
 	"S_SPIKE1",
 	"S_SPIKE2",
@@ -3478,9 +3485,7 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_BLUEBRICKDEBRIS",
 	"S_YELLOWBRICKDEBRIS",
 
-#ifdef SEENAMES
 	"S_NAMECHECK",
-#endif
 };
 
 // RegEx to generate this from info.h: ^\tMT_([^,]+), --> \t"MT_\1",
@@ -4260,9 +4265,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_BLUEBRICKDEBRIS",
 	"MT_YELLOWBRICKDEBRIS",
 
-#ifdef SEENAMES
 	"MT_NAMECHECK",
-#endif
 };
 
 const char *const MOBJFLAG_LIST[] = {
@@ -5019,6 +5022,7 @@ struct int_const_s const INT_CONST[] = {
 	{"SF_NOSUPERSPRITES",SF_NOSUPERSPRITES},
 	{"SF_NOSUPERJUMPBOOST",SF_NOSUPERJUMPBOOST},
 	{"SF_CANBUSTWALLS",SF_CANBUSTWALLS},
+	{"SF_NOSHIELDABILITY",SF_NOSHIELDABILITY},
 
 	// Dashmode constants
 	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
