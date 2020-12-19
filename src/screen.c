@@ -518,7 +518,11 @@ boolean SCR_UseDelayedOverlay(void)
 
 boolean SCR_NeedsDelayedOverlay(void)
 {
-	return (moviemode == MM_GIF);
+#ifdef HAVE_ANIGIF
+	return (moviemode == MM_GIF && GIF_candisplayinfo());
+#else
+	return false;
+#endif
 }
 
 // XMOD FPS display

@@ -51,15 +51,15 @@ consvar_t cv_gif_optimize = CVAR_INIT ("gif_optimize", "On", CV_SAVE, CV_OnOff, 
 consvar_t cv_gif_downscale =  CVAR_INIT ("gif_downscale", "On", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_gif_dynamicdelay = CVAR_INIT ("gif_dynamicdelay", "On", CV_SAVE, gif_dynamicdelay_cons_t, NULL);
 consvar_t cv_gif_localcolortable =  CVAR_INIT ("gif_localcolortable", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_gif_split = CVAR_INIT ("gif_split", "Use last filename", CV_SAVE, gif_split_cons_t, NULL);
-consvar_t cv_gif_sizelimit = CVAR_INIT ("gif_sizelimit", "8192", (CV_SAVE | CV_CALL), CV_Unsigned, CV_gifsizelimit_OnChange);
-consvar_t cv_gif_showfilesize = CVAR_INIT ("gif_showfilesize", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_gif_showsplitcount = CVAR_INIT ("gif_showsplitcount", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_gif_split = CVAR_INIT ("gif_split", "Off", CV_SAVE, gif_split_cons_t, NULL);
+consvar_t cv_gif_sizelimit = CVAR_INIT ("gif_sizelimit", "0", (CV_SAVE | CV_CALL), CV_Unsigned, CV_gifsizelimit_OnChange);
+consvar_t cv_gif_showfilesize = CVAR_INIT ("gif_showfilesize", "Off", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_gif_showsplitcount = CVAR_INIT ("gif_showsplitcount", "Off", CV_SAVE, CV_OnOff, NULL);
 
 #ifdef HAVE_ANIGIF
 static boolean gif_optimize = false; // So nobody can do something dumb
 static boolean gif_downscale = false; // like changing cvars mid output
-static UINT8 gif_dynamicdelay = (UINT8)0; // and messing something up
+static UINT8 gif_dynamicdelay = 0; // and messing something up
 
 // Palette handling
 static boolean gif_localcolortable = false;
@@ -984,17 +984,22 @@ void GIF_displayinfo(void)
 		y += ((vid.dupx > 1) ? 5 : 10); \
 	}
 
-	if (!gif_sizelimit)
+	if (!gif_out)
 		return;
 
 	if (cv_gif_showfilesize.value)
 	{
 		GIF_getinfosize(gif_totalsize, &filesize[0], &unit[0][0]);
-		GIF_getinfosize(gif_sizelimit, &filesize[1], &unit[1][0]);
 
-		string = va("%.2f%s/%.2f%s", filesize[0], unit[0], filesize[1], unit[1]);
+		if (gif_sizelimit)
+		{
+			GIF_getinfosize(gif_sizelimit, &filesize[1], &unit[1][0]);
+			string = va(M_GetText("GIF size: %.2f%s/%.2f%s"), filesize[0], unit[0], filesize[1], unit[1]);
+		}
+		else
+			string = va(M_GetText("GIF size: %.2f%s"), filesize[0], unit[0]);
 
-		if ((!cv_gif_split.value)
+		if (gif_sizelimit && (!cv_gif_split.value)
 		&& (gif_totalsize > (gif_sizelimit - (gif_sizelimit / 4)))
 		&& (gif_frames/5 & 1)) // flashing
 			stringflags |= V_REDMAP;
@@ -1008,6 +1013,22 @@ void GIF_displayinfo(void)
 		string = va("GIF count: %d\n", (gif_splitcount + 1));
 		infoline(string);
 	}
+
+#undef infoline
+}
+
+boolean GIF_candisplayinfo(void)
+{
+	if (!gif_out)
+		return false;
+
+	if (cv_gif_showfilesize.value)
+		return true;
+
+	if (cv_gif_split.value && gif_splitcount && cv_gif_showsplitcount.value)
+		return true;
+
+	return false;
 }
 
 //
