@@ -217,7 +217,7 @@ void SCR_SetMode(void)
 
 	// Set the video mode in the video interface.
 	if (setmodeneeded)
-		VID_SetMode(--setmodeneeded);
+		VID_SetMode(setmodeneeded - 1);
 
 	V_SetPalette(0);
 
