@@ -4912,7 +4912,7 @@ void A_ThrownRing(mobj_t *actor)
 		}
 
 		if (actor->tracer && (actor->tracer->health)
-			&& (actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC))// Already found someone to follow.
+			&& (actor->tracer->player && actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC))// Already found someone to follow.
 		{
 			const INT32 temp = actor->threshold;
 			actor->threshold = 32000;
