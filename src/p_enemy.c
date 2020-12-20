@@ -7521,7 +7521,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 	}
 
 	// Target hit, retreat!
-	if (actor->target->player->powers[pw_flashing] > TICRATE || actor->flags2 & MF2_FRET)
+	if ((actor->target->player && actor->target->player->powers[pw_flashing] > TICRATE) || actor->flags2 & MF2_FRET)
 	{
 		UINT8 prandom = P_RandomByte();
 		actor->z++; // unstick from the floor
@@ -7532,7 +7532,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 	// Try to land on top of the player.
 	else if (P_AproxDistance(actor->x-actor->target->x, actor->y-actor->target->y) < FixedMul(512*FRACUNIT, actor->scale))
 	{
-		fixed_t airtime, gravityadd, zoffs;
+		fixed_t airtime, gravityadd, zoffs, height;
 
 		// check gravity in the sector (for later math)
 		P_CheckGravity(actor, true);
@@ -7554,7 +7554,13 @@ void A_Boss2PogoTarget(mobj_t *actor)
 		// Remember, kids!
 		// Reduced down Calculus lets you avoid bad 'logic math' loops!
 		//airtime = FixedDiv(-actor->momz<<1, gravityadd)<<1; // going from 0 to 0 is much simpler
-		zoffs = (P_GetPlayerHeight(actor->target->player)>>1) + (actor->target->floorz - actor->floorz); // offset by the difference in floor height plus half the player height,
+
+		if (actor->target->player)
+			height = P_GetPlayerHeight(actor->target->player) >> 1;
+		else
+			height = actor->target->height >> 1;
+
+		zoffs = height + (actor->target->floorz - actor->floorz); // offset by the difference in floor height plus half the player height,
 		airtime = FixedDiv((-actor->momz - FixedSqrt(FixedMul(actor->momz,actor->momz)+zoffs)), gravityadd)<<1; // to try and land on their head rather than on their feet
 
 		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
