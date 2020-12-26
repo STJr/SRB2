@@ -1275,9 +1275,13 @@ void D_SRB2Main(void)
 
 	I_RegisterSysCommands();
 
+	CON_StopRefresh(); // Temporarily stop refreshing the screen for wad loading
+
 	CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
 	W_InitMultipleFiles(startuppwads);
 	D_CleanFile(startuppwads);
+
+	CON_StartRefresh(); // Restart the refresh!
 
 	CONS_Printf("HU_LoadGraphics()...\n");
 	HU_LoadGraphics();
