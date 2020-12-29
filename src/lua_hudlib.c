@@ -39,6 +39,7 @@ static UINT8 hudAvailable; // hud hooks field
 static const char *const hud_disable_options[] = {
 	"stagetitle",
 	"textspectator",
+	"crosshair",
 
 	"score",
 	"time",
