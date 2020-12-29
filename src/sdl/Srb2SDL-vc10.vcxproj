@@ -154,6 +154,28 @@
       <AdditionalDependencies>setupapi.lib;winmm.lib;imm32.lib;version.lib;ole32.lib;advapi32.lib;shell32.lib;gdi32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
+    <ClCompile />
+    <ClCompile>
+      <WarningLevel>Level3</WarningLevel>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <MinimalRebuild />
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
+    <ClCompile>
+      <MinimalRebuild />
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <BrowseInformation>true</BrowseInformation>
+    </ClCompile>
+    <Bscmake>
+      <PreserveSbr>true</PreserveSbr>
+    </Bscmake>
+  </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\libs\libpng-src\projects\visualc10\libpng.vcxproj">
       <Project>{72b01aca-7a1a-4f7b-acef-2607299cf052}</Project>
@@ -198,6 +220,7 @@
     <ClInclude Include="..\dehacked.h" />
     <ClInclude Include="..\doomdata.h" />
     <ClInclude Include="..\doomdef.h" />
+    <ClInclude Include="..\doomdef_ver.h" />
     <ClInclude Include="..\doomstat.h" />
     <ClInclude Include="..\doomtype.h" />
     <ClInclude Include="..\d_clisrv.h" />
@@ -305,6 +328,7 @@
     <ClInclude Include="hwsym_sdl.h" />
     <ClInclude Include="i_ttf.h" />
     <ClInclude Include="ogl_sdl.h" />
+    <ClInclude Include="resource.h" />
     <ClInclude Include="sdlmain.h" />
   </ItemGroup>
   <ItemGroup>
@@ -500,6 +524,9 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="Srb2SDL.ico" />
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\win32\Srb2Win.rc" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
