@@ -24,6 +24,7 @@
 #define _MATH_DEFINES_DEFINED
 
 #ifdef _MSC_VER
+#undef _MATH_DEFINES_DEFINED // for M_PI in visual studio
 #pragma warning(disable : 4214 4244)
 #endif
 
