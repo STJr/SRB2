@@ -588,21 +588,23 @@ static inline void R_InitLightTables(void)
 //#define WOUGHMP_WOUGHMP // I got a fish-eye lens - I'll make a rap video with a couple of friends
 // it's kinda laggy sometimes
 
-static struct {
+struct t_viewmorph {
 	angle_t rollangle; // pre-shifted by fineshift
 #ifdef WOUGHMP_WOUGHMP
 	fixed_t fisheye;
 #endif
 
 	fixed_t zoomneeded;
-	INT32 *scrmap;
+	INT32* scrmap;
 	INT32 scrmapsize;
 
 	INT32 x1; // clip rendering horizontally for efficiency
 	INT16 ceilingclip[MAXVIDWIDTH], floorclip[MAXVIDWIDTH];
 
 	boolean use;
-} viewmorph = {
+} ;
+
+static struct t_viewmorph viewmorph = {
 	0,
 #ifdef WOUGHMP_WOUGHMP
 	0,
@@ -613,7 +615,7 @@ static struct {
 	0,
 
 	0,
-	{}, {},
+	0, 0,
 
 	false
 };

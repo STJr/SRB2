@@ -12,7 +12,7 @@
 #include <stddef.h>
 
 #ifdef _MSC_VER
-#define INT32 __int32
+#include <basetsd.h> //just for #define INT32 __int32
 #else
 #include <stdint.h>
 #define INT32 int32_t

@@ -156,9 +156,9 @@ FUNCINLINE static ATTRINLINE UINT32 readulong(void *ptr)
 
 #define SKIPSTRING(p)       while (READCHAR(p) != '\0')
 
-#define READSTRINGN(p,s,n)  ({ size_t tmp_i = 0; for (; tmp_i < n && (s[tmp_i] = READCHAR(p)) != '\0'; tmp_i++); s[tmp_i] = '\0';})
-#define READSTRING(p,s)     ({ size_t tmp_i = 0; for (;              (s[tmp_i] = READCHAR(p)) != '\0'; tmp_i++); s[tmp_i] = '\0';})
-#define READMEM(p,s,n)      ({ memcpy(s, p, n); p += n; })
+#define READSTRINGN(p,s,n)  { size_t tmp_i = 0; for (; tmp_i < n && (s[tmp_i] = READCHAR(p)) != '\0'; tmp_i++); s[tmp_i] = '\0';}
+#define READSTRING(p,s)     { size_t tmp_i = 0; for (;              (s[tmp_i] = READCHAR(p)) != '\0'; tmp_i++); s[tmp_i] = '\0';}
+#define READMEM(p,s,n)      { memcpy(s, p, n); p += n; }
 
 #if 0 // old names
 #define WRITEBYTE(p,b)      WRITEUINT8(p,b)

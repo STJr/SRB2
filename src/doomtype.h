@@ -37,7 +37,10 @@
 #define UINT16 unsigned __int16
 #define INT16 __int16
 
-#define INT32 __int32
+#if _MSC_VER 
+#include <basetsd.h> //for #define INT32 __int32
+#define boolean bool
+#endif
 #define UINT32 unsigned __int32
 
 #define INT64  __int64

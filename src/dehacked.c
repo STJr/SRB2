@@ -802,7 +802,7 @@ static void readskincolor(MYFILE *f, INT32 num)
 			if (fastcmp(word, "NAME"))
 			{
 				size_t namesize = sizeof(skincolors[num].name);
-				char truncword[namesize];
+				char  truncword[50];//harcoded len, must be namesize
 				UINT16 dupecheck;
 
 				deh_strlcpy(truncword, word2, namesize, va("Skincolor %d: name", num)); // truncate here to check for dupes
@@ -810,7 +810,7 @@ static void readskincolor(MYFILE *f, INT32 num)
 				if (truncword[0] != '\0' && (!stricmp(truncword, skincolors[SKINCOLOR_NONE].name) || (dupecheck && dupecheck != num)))
 				{
 					size_t lastchar = strlen(truncword);
-					char oldword[lastchar+1];
+					char oldword[50]; //harcoded len, must be lastchar+1
 					char dupenum = '1';
 
 					strlcpy(oldword, truncword, lastchar+1);
@@ -1238,7 +1238,42 @@ static void readsprite2(MYFILE *f, INT32 num)
 }
 
 // copypasted from readPlayer :]
-static const char *const GAMETYPERULE_LIST[];
+static const char* const GAMETYPERULE_LIST[] = {
+	"CAMPAIGN",
+	"RINGSLINGER",
+	"SPECTATORS",
+	"LIVES",
+	"TEAMS",
+	"FIRSTPERSON",
+	"POWERSTONES",
+	"TEAMFLAGS",
+	"FRIENDLY",
+	"SPECIALSTAGES",
+	"EMERALDTOKENS",
+	"EMERALDHUNT",
+	"RACE",
+	"TAG",
+	"POINTLIMIT",
+	"TIMELIMIT",
+	"OVERTIME",
+	"HURTMESSAGES",
+	"FRIENDLYFIRE",
+	"STARTCOUNTDOWN",
+	"HIDEFROZEN",
+	"BLINDFOLDED",
+	"RESPAWNDELAY",
+	"PITYSHIELD",
+	"DEATHPENALTY",
+	"NOSPECTATORSPAWN",
+	"DEATHMATCHSTARTS",
+	"SPAWNINVUL",
+	"SPAWNENEMIES",
+	"ALLOWEXIT",
+	"NOTITLECARD",
+	"CUTSCENES",
+	NULL
+};
+
 static void readgametype(MYFILE *f, char *gtname)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -9126,7 +9161,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 
 	NULL // stop loop here.
 };
-
+/*
 static const char *const GAMETYPERULE_LIST[] = {
 	"CAMPAIGN",
 	"RINGSLINGER",
@@ -9162,7 +9197,7 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"CUTSCENES",
 	NULL
 };
-
+*/
 // Linedef flags
 static const char *const ML_LIST[16] = {
 	"IMPASSIBLE",
