@@ -1104,7 +1104,6 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 		SLOPEPARAMS(gl_backsector->c_slope, worldhigh, worldhighslope, gl_backsector->ceilingheight)
 		SLOPEPARAMS(gl_backsector->f_slope, worldlow,  worldlowslope,  gl_backsector->floorheight)
-#undef SLOPEPARAMS
 
 		// hack to allow height changes in outdoor areas
 		// This is what gets rid of the upper textures if there should be sky
@@ -1589,14 +1588,18 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 	{
 		ffloor_t * rover;
 		fixed_t    highcut = 0, lowcut = 0;
+		fixed_t lowcutslope, highcutslope;
+
+		// Used for height comparisons and etc across FOFs and slopes
+		fixed_t high1, highslope1, low1, lowslope1;
 
 		INT32 texnum;
 		line_t * newline = NULL; // Multi-Property FOF
 
-        ///TODO add slope support (fixing cutoffs, proper wall clipping) - maybe just disable highcut/lowcut if either sector or FOF has a slope
-        ///     to allow fun plane intersecting in OGL? But then people would abuse that and make software look bad. :C
-		highcut = gl_frontsector->ceilingheight < gl_backsector->ceilingheight ? gl_frontsector->ceilingheight : gl_backsector->ceilingheight;
-		lowcut = gl_frontsector->floorheight > gl_backsector->floorheight ? gl_frontsector->floorheight : gl_backsector->floorheight;
+		lowcut = max(worldbottom, worldlow);
+		highcut = min(worldtop, worldhigh);
+		lowcutslope = max(worldbottomslope, worldlowslope);
+		highcutslope = min(worldtopslope, worldhighslope);
 
 		if (gl_backsector->ffloors)
 		{
@@ -1618,7 +1621,11 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					continue;
 				if (!(rover->flags & FF_ALLSIDES) && rover->flags & FF_INVERTSIDES)
 					continue;
-				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
+
+				SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
+				SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
+
+				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
 				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
@@ -1764,7 +1771,11 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					continue;
 				if (!(rover->flags & FF_ALLSIDES || rover->flags & FF_INVERTSIDES))
 					continue;
-				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
+
+				SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
+				SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
+
+				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
 				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
@@ -1856,6 +1867,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			}
 		}
 	}
+#undef SLOPEPARAMS
 //Hurdler: end of 3d-floors test
 }
 
