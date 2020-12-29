@@ -483,6 +483,8 @@
     <ClInclude Include="..\r_portal.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
+    <ClInclude Include="..\doomdef_ver.h" />
+    <ClInclude Include="resource.h" />
   </ItemGroup>
   <ItemGroup>
     <CustomBuild Include="..\tmap.nas">
@@ -907,9 +909,6 @@
       <Filter>SDLApp</Filter>
     </ClCompile>
     <ClCompile Include="hwsym_sdl.c">
-      <Filter>SDLApp</Filter>
-    </ClCompile>
-    <ClCompile Include="i_cdmus.c">
       <Filter>SDLApp</Filter>
     </ClCompile>
     <ClCompile Include="i_main.c">
