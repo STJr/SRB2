@@ -4662,9 +4662,13 @@ DoneSection2:
 			if (player->mo->momz > mobjinfo[MT_FAN].mass)
 				player->mo->momz = mobjinfo[MT_FAN].mass;
 
-			P_ResetPlayer(player);
-			if (player->panim != PA_FALL)
+			if (!player->powers[pw_carry])
+			{
+				P_ResetPlayer(player);
 				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+				P_SetTarget(&player->mo->tracer, player->mo);
+				player->powers[pw_carry] = CR_FAN;
+			}
 			break;
 
 		case 6: // Super Sonic transformer
