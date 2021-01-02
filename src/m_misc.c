@@ -62,9 +62,9 @@ typedef off_t off64_t;
 
 #if defined(__MINGW32__) && ((__GNUC__ > 7) || (__GNUC__ == 6 && __GNUC_MINOR__ >= 3)) && (__GNUC__ < 8)
 #define PRIdS "u"
-#elif defined (_WIN32)
+#elif defined(_WIN32) && !defined(__MINGW64__)
 #define PRIdS "Iu"
-#elif defined (DJGPP)
+#elif defined(__DJGPP__)
 #define PRIdS "u"
 #else
 #define PRIdS "zu"
