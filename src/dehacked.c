@@ -802,7 +802,12 @@ static void readskincolor(MYFILE *f, INT32 num)
 			if (fastcmp(word, "NAME"))
 			{
 				size_t namesize = sizeof(skincolors[num].name);
-				char  truncword[50];//harcoded len, must be namesize
+				#ifndef _MSC_VER
+				char truncword[namesize];
+				#else	
+				//MSVC can't create variable lenght arrays
+				char  truncword[50];
+				#endif
 				UINT16 dupecheck;
 
 				deh_strlcpy(truncword, word2, namesize, va("Skincolor %d: name", num)); // truncate here to check for dupes
@@ -810,7 +815,13 @@ static void readskincolor(MYFILE *f, INT32 num)
 				if (truncword[0] != '\0' && (!stricmp(truncword, skincolors[SKINCOLOR_NONE].name) || (dupecheck && dupecheck != num)))
 				{
 					size_t lastchar = strlen(truncword);
-					char oldword[50]; //harcoded len, must be lastchar+1
+					#ifndef _MSC_VER
+					char oldword[lastchar+1];
+					#else
+					//MSVC can't create variable lenght arrays
+					char oldword[50];
+					#endif
+					
 					char dupenum = '1';
 
 					strlcpy(oldword, truncword, lastchar+1);
