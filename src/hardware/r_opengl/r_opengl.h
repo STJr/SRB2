@@ -21,10 +21,11 @@
 #define _R_OPENGL_H_
 
 #ifdef HAVE_SDL
+#ifndef _MSC_VER // Not for  visual studio, this define invalidate the load of math.h and  M_PI 
 #define _MATH_DEFINES_DEFINED
+#endif
 
 #ifdef _MSC_VER
-#undef _MATH_DEFINES_DEFINED // for M_PI in visual studio
 #pragma warning(disable : 4214 4244)
 #endif
 
