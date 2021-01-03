@@ -1648,8 +1648,11 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 
 		range++; // fencepost problem
-
+		#ifdef _MSC_VER
 		scalestep = ((yscale2 - yscale)/range) ? 0 : 1;
+		#else
+		scalestep = ((yscale2 - yscale)/range) ?: 1;
+		#endif
 		xscale = FixedDiv(range<<FRACBITS, abs(offset2));
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
