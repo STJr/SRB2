@@ -1249,6 +1249,9 @@ static void readsprite2(MYFILE *f, INT32 num)
 }
 
 // copypasted from readPlayer :]
+#ifndef _MSC_VER 
+static const char *const GAMETYPERULE_LIST[];
+#else //move up the definition for MSVC 
 static const char* const GAMETYPERULE_LIST[] = {
 	"CAMPAIGN",
 	"RINGSLINGER",
@@ -1284,7 +1287,7 @@ static const char* const GAMETYPERULE_LIST[] = {
 	"CUTSCENES",
 	NULL
 };
-
+#endif
 static void readgametype(MYFILE *f, char *gtname)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -9172,7 +9175,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 
 	NULL // stop loop here.
 };
-/*
+#ifndef _MSC_VER  //For MSCV is moved up only one declaration; can be defined up for the rest of compilers??
 static const char *const GAMETYPERULE_LIST[] = {
 	"CAMPAIGN",
 	"RINGSLINGER",
@@ -9208,7 +9211,7 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"CUTSCENES",
 	NULL
 };
-*/
+#endif
 // Linedef flags
 static const char *const ML_LIST[16] = {
 	"IMPASSIBLE",
