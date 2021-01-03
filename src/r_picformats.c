@@ -406,8 +406,13 @@ void *Picture_FlatConvert(
 
 	for (y = 0; y < inheight; y++)
 		for (x = 0; x < inwidth; x++)
-		{
+		{	
+			#ifdef _MSC_VER
 			void *input=0;
+			#else
+			void *input;
+			#endif
+			
 			size_t offs = ((y * inwidth) + x);
 
 			// Read pixel
