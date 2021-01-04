@@ -3920,12 +3920,13 @@ static void G_DoCompleted(void)
 	{
 		token--;
 
-		for (i = 0; i < 7; i++)
-			if (!(emeralds & (1<<i)))
-			{
-				nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
-				break;
-			}
+		if (!nextmapoverride)
+			for (i = 0; i < 7; i++)
+				if (!(emeralds & (1<<i)))
+				{
+					nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
+					break;
+				}
 
 		if (i == 7)
 		{
