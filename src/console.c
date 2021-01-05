@@ -826,6 +826,12 @@ static void CON_InputDelSelection(void)
 
 	Lock_state();
 
+	if (!input_cur)
+	{
+		Unlock_state();
+		return;
+	}
+
 	if (input_cur > input_sel)
 	{
 		start = input_sel;
