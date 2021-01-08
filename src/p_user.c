@@ -4880,22 +4880,28 @@ void P_DoBubbleBounce(player_t *player)
 //
 void P_DoAbilityBounce(player_t *player, boolean changemomz)
 {
-	fixed_t prevmomz;
 	if (player->mo->state-states == S_PLAY_BOUNCE_LANDING)
 		return;
+
 	if (changemomz)
 	{
-		fixed_t minmomz;
-		prevmomz = player->mo->momz;
+		fixed_t prevmomz = player->mo->momz, minmomz;
+
 		if (P_MobjFlip(player->mo)*prevmomz < 0)
 			prevmomz = 0;
 		else if (player->mo->eflags & MFE_UNDERWATER)
 			prevmomz /= 2;
+
 		P_DoJump(player, false);
 		player->pflags &= ~(PF_STARTJUMP|PF_JUMPED);
 		minmomz = FixedMul(player->mo->momz, 3*FRACUNIT/2);
-		player->mo->momz = max(minmomz, (minmomz + prevmomz)/2);
+
+		if (player->mo->eflags & MFE_VERTICALFLIP) // Use "min" or "max" depending on if the player is flipped
+			player->mo->momz = min(minmomz, (minmomz + prevmomz)/2);
+		else
+			player->mo->momz = max(minmomz, (minmomz + prevmomz)/2);
 	}
+
 	S_StartSound(player->mo, sfx_boingf);
 	P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE_LANDING);
 	player->pflags |= PF_BOUNCING|PF_THOKKED;
