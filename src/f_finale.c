@@ -1149,6 +1149,7 @@ static const char *credits[] = {
 	"Daniel \"Inazuma\" Trinh",
 	"\"VelocitOni\"",
 	"Jarrett \"JEV3\" Voight",
+	"Logan \"Hyperchaotix\" McCloud",
 	"",
 	"\1Music and Sound",
 	"\1Production",
