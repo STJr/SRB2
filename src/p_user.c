@@ -12774,13 +12774,13 @@ void P_PlayerAfterThink(player_t *player)
 				if (!ptera->movefactor)
 					goto dropoff;
 
-				if (ptera->cusval >= 50)
+				if (ptera->cusval >= 30)
 				{
 					player->powers[pw_carry] = CR_NONE;
 					P_SetTarget(&player->mo->tracer, NULL);
 					P_KillMobj(ptera, player->mo, player->mo, 0);
 					player->mo->momz = 9*FRACUNIT;
-					player->pflags |= PF_APPLYAUTOBRAKE|PF_JUMPED|PF_THOKKED;
+					player->pflags |= PF_APPLYAUTOBRAKE|PF_JUMPED;
 					P_SetMobjState(player->mo, S_PLAY_ROLL);
 					break;
 				}
