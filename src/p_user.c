@@ -8652,7 +8652,9 @@ void P_MovePlayer(player_t *player)
 		|| (player->pflags & PF_SPINNING)
 		|| player->powers[pw_tailsfly] || player->pflags & PF_GLIDING
 		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
-		|| (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
+		|| (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED)
+		|| (player->dashmode >= DASHMODE_THRESHOLD && (player->charflags & SF_MACHINE)
+			&& player->mo->state-states == S_PLAY_DASH && (player->mo->sprite2 & ~FF_SPR2SUPER) == player->mo->state->frame))
 		{
 			player->mo->height = P_GetPlayerSpinHeight(player);
 			atspinheight = true;
