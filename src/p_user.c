@@ -11357,7 +11357,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	mobj_t *mo = player->mo;
 	angle_t angle = player->drawangle;
 	fixed_t dist;
-	fixed_t playerheight = P_GetPlayerHeight(player);
+	fixed_t heightoffset = ((mo->eflags & MFE_VERTICALFLIP) ? mo->height - (P_GetPlayerHeight(player) >> 1) : (P_GetPlayerHeight(player) >> 1));
 	panim_t panim = player->panim;
 	tic_t dashmode = player->dashmode;
 	boolean underwater = mo->eflags & MFE_UNDERWATER;
@@ -11391,7 +11391,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 				offsetV = i*P_ReturnThrustY(fume, fume->movedir, radiusV);
 				x = mo->x + radiusX + FixedMul(offsetH, factorX);
 				y = mo->y + radiusY + FixedMul(offsetH, factorY);
-				z = mo->z + (playerheight >> 1) + offsetV;
+				z = mo->z + heightoffset + offsetV;
 				P_SpawnMobj(x, y, z, MT_SMALLBUBBLE)->scale = mo->scale >> 1;
 			}
 
@@ -11454,7 +11454,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	P_UnsetThingPosition(fume);
 	fume->x = mo->x + P_ReturnThrustX(fume, angle, dist);
 	fume->y = mo->y + P_ReturnThrustY(fume, angle, dist);
-	fume->z = mo->z + ((playerheight - fume->height) >> 1);
+	fume->z = mo->z + heightoffset - (fume->height >> 1);
 	P_SetThingPosition(fume);
 
 	// If dashmode is high enough, spawn a trail
