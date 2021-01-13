@@ -1348,6 +1348,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		spriteframe_t *sprframe;
 		spriteinfo_t *sprinfo;
 		angle_t ang;
+		angle_t mobjangle = (spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle);
 		INT32 mod;
 		float finalscale;
 
@@ -1574,10 +1575,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 
 		if (sprframe->rotate || papersprite)
 		{
-			fixed_t anglef = AngleFixed(spr->mobj->angle);
-
-			if (spr->mobj->player)
-				anglef = AngleFixed(spr->mobj->player->drawangle);
+			fixed_t anglef = AngleFixed(mobjangle);
 
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
@@ -1605,7 +1603,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 				p.rotaxis = (UINT8)(sprinfo->pivot[(spr->mobj->frame & FF_FRAMEMASK)].rotaxis);
 
 			// for NiGHTS specifically but should work everywhere else
-			ang = R_PointToAngle (spr->mobj->x, spr->mobj->y) - (spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle);
+			ang = R_PointToAngle (spr->mobj->x, spr->mobj->y) - mobjangle;
 			if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
 				p.rollflip = 1;
 			else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
@@ -1618,8 +1616,10 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		p.anglex = 0.0f;
 
 #ifdef USE_FTRANSFORM_ANGLEZ
-		// Slope rotation from Kart
 		p.anglez = 0.0f;
+#ifdef STANDINGSLOPE_MODEL_ROTATION
+		// Slope rotation from Kart
+		// (needs a different method to work in SRB2)
 		if (spr->mobj->standingslope)
 		{
 			fixed_t tempz = spr->mobj->standingslope->normal.z;
@@ -1630,6 +1630,11 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			tempangle = -AngleFixed(R_PointToAngle2(0, 0, tempz, tempy));
 			p.anglex = FIXED_TO_FLOAT(tempangle);
 		}
+#endif
+		if (spr->mobj->roll)
+			p.anglex += FIXED_TO_FLOAT(AngleFixed(spr->mobj->roll));
+		if (spr->mobj->pitch)
+			p.anglez -= FIXED_TO_FLOAT(AngleFixed(spr->mobj->pitch));
 #endif
 
 		// SRB2CBTODO: MD2 scaling support

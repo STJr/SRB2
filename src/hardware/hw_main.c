@@ -5065,10 +5065,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
 #ifdef ROTSPRITE
-	if (thing->rollangle
+	rollangle = FixedMul(FINECOSINE((ang) >> ANGLETOFINESHIFT), thing->roll)
+		+ FixedMul(FINESINE((ang) >> ANGLETOFINESHIFT), thing->pitch)
+		+ thing->rollangle;
+	if (rollangle
 	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{
-		rollangle = R_GetRollAngle(thing->rollangle);
+		rollangle = R_GetRollAngle(rollangle);
 		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
 
 		if (rotsprite != NULL)

@@ -1420,6 +1420,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t iscale;
 	fixed_t scalestep;
 	fixed_t offset, offset2;
+	angle_t mobjangle = (thing->player ? thing->player->drawangle : thing->angle);
 
 	fixed_t sheartan = 0;
 	fixed_t shadowscale = FRACUNIT;
@@ -1528,7 +1529,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (sprframe->rotate != SRF_SINGLE || papersprite)
 	{
-		ang = R_PointToAngle (thing->x, thing->y) - (thing->player ? thing->player->drawangle : thing->angle);
+		ang = R_PointToAngle (thing->x, thing->y) - mobjangle;
 		if (mirrored)
 			ang = InvAngle(ang);
 	}
@@ -1543,7 +1544,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else
 	{
 		// choose a different rotation based on player view
-		//ang = R_PointToAngle (thing->x, thing->y) - thing->angle;
+		//ang = R_PointToAngle (thing->x, thing->y) - mobjangle;
 
 		if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
 			rot = 6; // F7 slot
@@ -1577,10 +1578,13 @@ static void R_ProjectSprite(mobj_t *thing)
 	patch = W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 
 #ifdef ROTSPRITE
-	if (thing->rollangle
+	rollangle = FixedMul(FINECOSINE((ang) >> ANGLETOFINESHIFT), thing->roll)
+		+ FixedMul(FINESINE((ang) >> ANGLETOFINESHIFT), thing->pitch)
+		+ thing->rollangle;
+	if (rollangle
 	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{
-		rollangle = R_GetRollAngle(thing->rollangle);
+		rollangle = R_GetRollAngle(rollangle);
 		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
 
 		if (rotsprite != NULL)
@@ -1643,8 +1647,8 @@ static void R_ProjectSprite(mobj_t *thing)
 			offset2 *= -1;
 		}
 
-		cosmul = FINECOSINE(thing->angle>>ANGLETOFINESHIFT);
-		sinmul = FINESINE(thing->angle>>ANGLETOFINESHIFT);
+		cosmul = FINECOSINE(mobjangle>>ANGLETOFINESHIFT);
+		sinmul = FINESINE(mobjangle>>ANGLETOFINESHIFT);
 
 		tr_x += FixedMul(offset, cosmul);
 		tr_y += FixedMul(offset, sinmul);
@@ -1660,7 +1664,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			paperoffset = -paperoffset;
 			paperdistance = -paperdistance;
 		}
-		centerangle = viewangle - thing->angle;
+		centerangle = viewangle - mobjangle;
 
 		tr_x += FixedMul(offset2, cosmul);
 		tr_y += FixedMul(offset2, sinmul);
