@@ -1387,6 +1387,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				if (player->bot && player->bot != 3)
 					return;
+					
+				// Initialize my junk
+				junk.tags.tags = NULL;
+				junk.tags.count = 0;
 
 				Tag_FSet(&junk.tags, LE_AXE);
 				EV_DoElevator(&junk, bridgeFall, false);
