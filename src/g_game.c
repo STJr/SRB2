@@ -2974,7 +2974,8 @@ void G_DoReborn(INT32 playernum)
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
 
-	if (player->bot && playernum != consoleplayer)
+	// Tailsbot
+	if (player->bot && player->bot != 3 && playernum != consoleplayer)
 	{ // Bots respawn next to their master.
 		mobj_t *oldmo = NULL;
 
@@ -2991,6 +2992,28 @@ void G_DoReborn(INT32 playernum)
 			G_ChangePlayerReferences(oldmo, players[playernum].mo);
 
 		return;
+	}
+	
+	// Additional players (e.g. independent bots) in Single Player
+	if (playernum != consoleplayer && !(netgame || multiplayer)) 
+	{		
+		mobj_t *oldmo = NULL;
+		// Do nothing if out of lives
+		if (player->lives <= 0)
+			return;
+		
+		// Otherwise do respawn, starting by removing the player object
+		if (player->mo)
+		{
+			oldmo = player->mo;
+			P_RemoveMobj(player->mo);
+		}
+		// Do spawning
+		G_SpawnPlayer(playernum);
+		if (oldmo)
+			G_ChangePlayerReferences(oldmo, players[playernum].mo);
+		
+		return; //Exit function to avoid proccing other SP related mechanics
 	}
 
 	if (countdowntimeup || (!(netgame || multiplayer) && (gametyperules & GTR_CAMPAIGN)))
