@@ -777,7 +777,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	UINT8 oldmare, oldmarelap, oldmarebonuslap;
 
 	// Bots can't be NiGHTSerized, silly!1 :P
-	if (player->bot)
+	if (player->bot && player->bot != 3)
 		return;
 
 	if (player->powers[pw_carry] != CR_NIGHTSMODE)
@@ -1189,7 +1189,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 	if (!player)
 		return;
 
-	if (player->bot)
+	if (player->bot && player->bot != 3)
 		player = &players[consoleplayer];
 
 	if (!player->mo)
@@ -1234,7 +1234,7 @@ void P_GivePlayerSpheres(player_t *player, INT32 num_spheres)
 	if (!player)
 		return;
 
-	if (player->bot)
+	if (player->bot && player->bot != 3)
 		player = &players[consoleplayer];
 
 	if (!player->mo)
@@ -1261,7 +1261,7 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 	if (!player)
 		return;
 
-	if (player->bot)
+	if (player->bot && player->bot != 3)
 		player = &players[consoleplayer];
 
 	if (gamestate == GS_LEVEL)
@@ -1367,7 +1367,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 {
 	UINT32 oldscore;
 
-	if (player->bot)
+	if (player->bot && player->bot != 3)
 		player = &players[consoleplayer];
 
 	// NiGHTS does it different!
@@ -5957,7 +5957,7 @@ static void P_3dMovement(player_t *player)
 		acceleration = 96 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * 40;
 		topspeed = normalspd;
 	}
-	else if (player->bot)
+	else if (player->bot && player->bot != 3)
 	{ // Bot steals player 1's stats
 		normalspd = FixedMul(players[consoleplayer].normalspeed, player->mo->scale);
 		thrustfactor = players[consoleplayer].thrustfactor;
@@ -9497,11 +9497,11 @@ static void P_DeathThink(player_t *player)
 	if (player->deadtimer < INT32_MAX)
 		player->deadtimer++;
 
-	if (player->bot) // don't allow bots to do any of the below, B_CheckRespawn does all they need for respawning already
+	if (player->bot && player->bot != 3) // don't allow bots to do any of the below, B_CheckRespawn does all they need for respawning already
 		goto notrealplayer;
 
 	// continue logic
-	if (!(netgame || multiplayer) && player->lives <= 0)
+	if (!(netgame || multiplayer) && player->lives <= 0 && player == &players[consoleplayer]) //Extra players in SP can't be allowed to continue or end game
 	{
 		if (player->deadtimer > (3*TICRATE) && (cmd->buttons & BT_SPIN || cmd->buttons & BT_JUMP) && (!continuesInSession || player->continues > 0))
 			G_UseContinue();
@@ -11480,7 +11480,7 @@ void P_PlayerThink(player_t *player)
 		player->playerstate = PST_DEAD;
 	}
 
-	if (player->bot)
+	if (player->bot && player->bot != 3)
 	{
 		if (player->playerstate == PST_LIVE || player->playerstate == PST_DEAD)
 		{
