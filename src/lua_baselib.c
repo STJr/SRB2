@@ -155,8 +155,6 @@ static const struct {
 	{META_PIVOTLIST,    "spriteframepivot_t[]"},
 	{META_FRAMEPIVOT,   "spriteframepivot_t"},
 
-	{META_TAGLIST,      "taglist"},
-
 	{META_MOBJ,         "mobj_t"},
 	{META_MAPTHING,     "mapthing_t"},
 
@@ -165,8 +163,6 @@ static const struct {
 	{META_SKIN,         "skin_t"},
 	{META_POWERS,       "player_t.powers"},
 	{META_SOUNDSID,     "skin_t.soundsid"},
-	{META_SKINSPRITES,  "skin_t.sprites"},
-	{META_SKINSPRITESLIST,  "skin_t.sprites[]"},
 
 	{META_VERTEX,       "vertex_t"},
 	{META_LINE,         "line_t"},
@@ -188,9 +184,6 @@ static const struct {
 	{META_CVAR,         "consvar_t"},
 
 	{META_SECTORLINES,  "sector_t.lines"},
-#ifdef MUTABLE_TAGS
-	{META_SECTORTAGLIST, "sector_t.taglist"},
-#endif
 	{META_SIDENUM,      "line_t.sidenum"},
 	{META_LINEARGS,     "line_t.args"},
 	{META_LINESTRINGARGS, "line_t.stringargs"},
@@ -2639,7 +2632,7 @@ static int lib_rSkinUsable(lua_State *L)
 	else // skin name
 	{
 		const char *skinname = luaL_checkstring(L, 2);
-		i = R_SkinAvailable(skinname);
+		if (R_SkinAvailable(skinname) >= 0)
 		if (i == -1)
 			return luaL_error(L, "skin %s (argument 2) is not loaded", skinname);
 	}
@@ -3407,6 +3400,85 @@ static int lib_gAddGametype(lua_State *L)
 	return 0;
 }
 
+// Bot adding function!
+// Partly lifted from Got_AddPlayer
+static int lib_gAddPlayer(lua_State *L)
+{
+	INT16 i, newplayernum, botcount = 1;
+	player_t *newplayer;
+	INT8 skinnum = 0, bot;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			break;
+
+		if (players[i].bot)
+			botcount++; // How many of us are there already?
+	}
+	if (i >= MAXPLAYERS)
+	{
+		lua_pushnil(L);
+		return 1;
+	}
+	
+
+	newplayernum = i;
+
+	//if (!splitscreen && !botingame)
+		CL_ClearPlayer(newplayernum);
+
+	playeringame[newplayernum] = true;
+	G_AddPlayer(newplayernum);
+	newplayer = &players[newplayernum];
+
+	newplayer->jointime = 0;
+	newplayer->quittime = 0;
+
+	// I hereby name you Bot X
+	strcpy(player_names[newplayernum], va("Bot %d", botcount));
+
+	// Read the skin string!
+	if (!lua_isnoneornil(L, 1))
+	{
+		skinnum = R_SkinAvailable(luaL_checkstring(L, 1));
+		skinnum = skinnum < 0 ? 0 : skinnum;
+
+		// Bots can be whatever they want
+		if (!R_SkinUsable(newplayernum, skinnum))
+			newplayer->availabilities |= 1 << skinnum;
+	}
+
+	// Read the color!
+	if (!lua_isnoneornil(L, 2))
+		newplayer->skincolor = R_GetColorByName(luaL_checkstring(L, 2));
+	else
+		newplayer->skincolor = skins[newplayer->skin].prefcolor;
+
+	// Read the bot name, if given!
+	if (!lua_isnoneornil(L, 3))
+		strcpy(player_names[newplayernum], luaL_checkstring(L, 3));
+	
+	bot = luaL_optinteger(L, 4, 3);
+	newplayer->bot = (bot >= 0 && bot <= 3) ? bot : 3;
+
+	// Set the skin
+	SetPlayerSkinByNum(newplayernum, skinnum);
+
+
+	if (netgame)
+	{
+		char joinmsg[256];
+
+		strcpy(joinmsg, M_GetText("\x82*Bot %s has joined the game (player %d)"));
+		strcpy(joinmsg, va(joinmsg, player_names[newplayernum], newplayernum));
+		HU_AddChatText(joinmsg, false);
+	}
+	
+	LUA_PushUserdata(L, newplayer, META_PLAYER);
+	return 0;
+}
+
 static int Lcheckmapnumber (lua_State *L, int idx, const char *fun)
 {
 	if (ISINLEVEL)
@@ -3987,6 +4059,7 @@ static luaL_Reg lib[] = {
 
 	// g_game
 	{"G_AddGametype", lib_gAddGametype},
+	{"G_AddPlayer", lib_gAddPlayer},
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_BuildMapTitle",lib_gBuildMapTitle},
 	{"G_FindMap",lib_gFindMap},
