@@ -39,7 +39,7 @@
 #define ASSET_HASH_ZONES_PK3  "f7e88afb6af7996a834c7d663144bead"
 #define ASSET_HASH_PLAYER_DTA "49dad7b24634c89728cc3e0b689e12bb"
 #ifdef USE_PATCH_DTA
-#define ASSET_HASH_PATCH_PK3  "26f4da9a44a4361e53ddc104cbf072bf"
+#define ASSET_HASH_PATCH_PK3  "ccafaa97cf78b76189d9d54d00e80e6d"
 #endif
 
 #endif
