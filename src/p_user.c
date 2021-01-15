@@ -1189,7 +1189,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 	if (!player)
 		return;
 
-	if (player->bot)
+	if (player->bot && player->bot != 3)
 		player = &players[consoleplayer];
 
 	if (!player->mo)
@@ -1234,7 +1234,7 @@ void P_GivePlayerSpheres(player_t *player, INT32 num_spheres)
 	if (!player)
 		return;
 
-	if (player->bot)
+	if (player->bot && player->bot != 3)
 		player = &players[consoleplayer];
 
 	if (!player->mo)
@@ -1261,7 +1261,7 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 	if (!player)
 		return;
 
-	if (player->bot)
+	if (player->bot && player->bot != 3)
 		player = &players[consoleplayer];
 
 	if (gamestate == GS_LEVEL)
@@ -1341,7 +1341,7 @@ void P_DoSuperTransformation(player_t *player, boolean giverings)
 	// Transformation animation
 	P_SetPlayerMobjState(player->mo, S_PLAY_SUPER_TRANS1);
 
-	if (giverings && player->rings < 50)
+	if (giverings)
 		player->rings = 50;
 
 	// Just in case.
@@ -1367,7 +1367,7 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 {
 	UINT32 oldscore;
 
-	if (player->bot)
+	if (player->bot && player->bot != 3)
 		player = &players[consoleplayer];
 
 	// NiGHTS does it different!
@@ -1491,10 +1491,10 @@ void P_PlayLivesJingle(player_t *player)
 	if (player && !P_IsLocalPlayer(player))
 		return;
 
-	if (mariomode)
-		S_StartSound(NULL, sfx_marioa);
-	else if (use1upSound || cv_1upsound.value)
+	if (use1upSound || cv_1upsound.value)
 		S_StartSound(NULL, sfx_oneup);
+	else if (mariomode)
+		S_StartSound(NULL, sfx_marioa);
 	else
 	{
 		P_PlayJingle(player, JT_1UP);
@@ -2329,8 +2329,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff)
 			P_MobjCheckWater(player->mo);
 			if (player->pflags & PF_SPINNING)
 			{
-				if (!(player->pflags & PF_STARTDASH) && player->panim != PA_ROLL && player->panim != PA_ETC
-				&& player->panim != PA_ABILITY && player->panim != PA_ABILITY2)
+				if (player->mo->state-states != S_PLAY_ROLL && !(player->pflags & PF_STARTDASH))
 				{
 					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					S_StartSound(player->mo, sfx_spin);
@@ -2613,10 +2612,10 @@ static void P_CheckBustableBlocks(player_t *player)
 
 	if ((netgame || multiplayer) && player->spectator)
 		return;
-
+	
 	oldx = player->mo->x;
 	oldy = player->mo->y;
-
+	
 	if (!(player->pflags & PF_BOUNCING)) // Bouncers only get to break downwards, not sideways
 	{
 		P_UnsetThingPosition(player->mo);
@@ -2635,7 +2634,7 @@ static void P_CheckBustableBlocks(player_t *player)
 
 		if (!node->m_sector->ffloors)
 			continue;
-
+		
 		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
 			if (!P_PlayerCanBust(player, rover))
@@ -2993,7 +2992,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 		player->powers[pw_spacetime] = 0;
 
 	// Underwater audio cues
-	if (P_IsLocalPlayer(player) && !player->bot)
+	if (P_IsLocalPlayer(player) && !player->bot && player->bot != 3)
 	{
 		if ((player->powers[pw_underwater] == 25*TICRATE + 1)
 		|| (player->powers[pw_underwater] == 20*TICRATE + 1)
@@ -4526,9 +4525,6 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 	player->pflags |= P_GetJumpFlags(player);;
 
-	if (player->charflags & SF_NOJUMPDAMAGE)
-		player->pflags &= ~PF_SPINNING;
-
 	if (soundandstate)
 	{
 		if (!player->spectator)
@@ -5024,7 +5020,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 	if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SPINDOWN)
 		&& ((!(player->pflags & PF_THOKKED) || (((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP || (player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT) && player->secondjump == UINT8_MAX) ))) // thokked is optional if you're bubblewrapped / 3dblasted
 	{
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT && !(player->charflags & SF_NOSHIELDABILITY))
+		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
 		{
 			if ((lockonshield = P_LookForEnemies(player, false, false)))
 			{
@@ -5047,7 +5043,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 				}
 			}
 		}
-		if ((!(player->charflags & SF_NOSHIELDABILITY)) && (cmd->buttons & BT_SPIN && !LUAh_ShieldSpecial(player))) // Spin button effects
+		if (cmd->buttons & BT_SPIN && !LUAh_ShieldSpecial(player)) // Spin button effects
 		{
 			// Force stop
 			if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
@@ -5495,7 +5491,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						break;
 				}
 		}
-		else if ((!(player->charflags & SF_NOSHIELDABILITY)) && ((player->powers[pw_shield] & SH_NOSTACK) == SH_WHIRLWIND && !player->powers[pw_super] && !LUAh_ShieldSpecial(player)))
+		else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_WHIRLWIND && !player->powers[pw_super])
 			P_DoJumpShield(player);
 	}
 
@@ -5924,7 +5920,7 @@ static void P_3dMovement(player_t *player)
 	player->rmomy = player->mo->momy - player->cmomy;
 
 	// Calculates player's speed based on distance-of-a-line formula
-	player->speed = R_PointToDist2(0, 0, player->rmomx, player->rmomy);
+	player->speed = P_AproxDistance(player->rmomx, player->rmomy);
 
 	// Monster Iestyn - 04-11-13
 	// Quadrants are stupid, excessive and broken, let's do this a much simpler way!
@@ -5956,22 +5952,6 @@ static void P_3dMovement(player_t *player)
 		thrustfactor = 5;
 		acceleration = 96 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * 40;
 		topspeed = normalspd;
-	}
-	else if (player->bot)
-	{ // Bot steals player 1's stats
-		normalspd = FixedMul(players[consoleplayer].normalspeed, player->mo->scale);
-		thrustfactor = players[consoleplayer].thrustfactor;
-		acceleration = players[consoleplayer].accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * players[consoleplayer].acceleration;
-
-		if (player->powers[pw_tailsfly])
-			topspeed = normalspd/2;
-		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
-		{
-			topspeed = normalspd/2;
-			acceleration = 2*acceleration/3;
-		}
-		else
-			topspeed = normalspd;
 	}
 	else
 	{
@@ -7756,11 +7736,6 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
 			P_InstaThrust(flame, flame->angle, FixedMul(3*FRACUNIT, flame->scale));
 			P_SetObjectMomZ(flame, 3*FRACUNIT, false);
-			if (!(gametyperules & GTR_FRIENDLY))
-			{
-				P_SetMobjState(flame, S_TEAM_SPINFIRE1);
-				flame->color = player->mo->color;
-			}
 		}
 #undef limitangle
 #undef numangles
@@ -7788,11 +7763,6 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
-			if (!(gametyperules & GTR_FRIENDLY))
-			{
-				P_SetMobjState(flame, S_TEAM_SPINFIRE1);
-				flame->color = player->mo->color;
-			}
 
 			flame->momx = 8; // this is a hack which is used to ensure it still behaves as a missile and can damage others
 			P_XYMovement(flame);
@@ -8619,6 +8589,12 @@ void P_MovePlayer(player_t *player)
 		player->climbing--;
 	}
 
+	if (!player->climbing)
+	{
+		player->lastsidehit = -1;
+		player->lastlinehit = -1;
+	}
+
 	// Make sure you're not teetering when you shouldn't be.
 	if (player->panim == PA_EDGE
 	&& (player->mo->momx || player->mo->momy || player->mo->momz))
@@ -8643,7 +8619,6 @@ void P_MovePlayer(player_t *player)
 		P_DoFiring(player, cmd);
 
 	{
-		boolean atspinheight = false;
 		fixed_t oldheight = player->mo->height;
 
 		// Less height while spinning. Good for spinning under things...?
@@ -8653,35 +8628,32 @@ void P_MovePlayer(player_t *player)
 		|| player->powers[pw_tailsfly] || player->pflags & PF_GLIDING
 		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
 		|| (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
-		{
 			player->mo->height = P_GetPlayerSpinHeight(player);
-			atspinheight = true;
-		}
 		else
 			player->mo->height = P_GetPlayerHeight(player);
 
 		if (player->mo->eflags & MFE_VERTICALFLIP && player->mo->height != oldheight) // adjust z height for reverse gravity, similar to how it's done for scaling
 			player->mo->z -= player->mo->height - oldheight;
+	}
 
-		// Crush test...
-		if ((player->mo->ceilingz - player->mo->floorz < player->mo->height)
-			&& !(player->mo->flags & MF_NOCLIP))
+	// Crush test...
+	if ((player->mo->ceilingz - player->mo->floorz < player->mo->height)
+		&& !(player->mo->flags & MF_NOCLIP))
+	{
+		if ((player->charability2 == CA2_SPINDASH) && !(player->pflags & PF_SPINNING))
 		{
-			if (!atspinheight)
-			{
-				player->pflags |= PF_SPINNING;
-				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-			}
-			else if (player->mo->ceilingz - player->mo->floorz < player->mo->height)
-			{
-				if ((netgame || multiplayer) && player->spectator)
-					P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPECTATOR); // Respawn crushed spectators
-				else
-					P_DamageMobj(player->mo, NULL, NULL, 1, DMG_CRUSHED);
+			player->pflags |= PF_SPINNING;
+			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+		}
+		else if (player->mo->ceilingz - player->mo->floorz < player->mo->height)
+		{
+			if ((netgame || multiplayer) && player->spectator)
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPECTATOR); // Respawn crushed spectators
+			else
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_CRUSHED);
 
-				if (player->playerstate == PST_DEAD)
-					return;
-			}
+			if (player->playerstate == PST_DEAD)
+				return;
 		}
 	}
 
@@ -9497,11 +9469,11 @@ static void P_DeathThink(player_t *player)
 	if (player->deadtimer < INT32_MAX)
 		player->deadtimer++;
 
-	if (player->bot) // don't allow bots to do any of the below, B_CheckRespawn does all they need for respawning already
+	if (player->bot && player->bot != 3) // don't allow bots to do any of the below, B_CheckRespawn does all they need for respawning already
 		goto notrealplayer;
 
 	// continue logic
-	if (!(netgame || multiplayer) && player->lives <= 0)
+	if (!(netgame || multiplayer) && player->lives <= 0 && player ==&players[consoleplayer]) //Extra players in SP can't be allowed to continue or end game
 	{
 		if (player->deadtimer > (3*TICRATE) && (cmd->buttons & BT_SPIN || cmd->buttons & BT_JUMP) && (!continuesInSession || player->continues > 0))
 			G_UseContinue();
@@ -11480,7 +11452,7 @@ void P_PlayerThink(player_t *player)
 		player->playerstate = PST_DEAD;
 	}
 
-	if (player->bot)
+	if (player->bot && player->bot != 3)
 	{
 		if (player->playerstate == PST_LIVE || player->playerstate == PST_DEAD)
 		{
@@ -11494,6 +11466,7 @@ void P_PlayerThink(player_t *player)
 		}
 	}
 
+#ifdef SEENAMES
 	if (netgame && player == &players[displayplayer] && !(leveltime % (TICRATE/5)))
 	{
 		seenplayer = NULL;
@@ -11518,6 +11491,7 @@ void P_PlayerThink(player_t *player)
 			}
 		}
 	}
+#endif
 
 	if (player->awayviewmobj && P_MobjWasRemoved(player->awayviewmobj))
 	{
@@ -12588,16 +12562,13 @@ void P_PlayerAfterThink(player_t *player)
 					player->powers[pw_carry] = CR_NONE;
 				else
 				{
-					if (tails->player)
-						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*FRACUNIT), true);
-					else
-						P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->angle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->angle, 4*FRACUNIT), true);
+					P_TryMove(player->mo, tails->x + P_ReturnThrustX(tails, tails->player->drawangle, 4*FRACUNIT), tails->y + P_ReturnThrustY(tails, tails->player->drawangle, 4*FRACUNIT), true);
 					player->mo->momx = tails->momx;
 					player->mo->momy = tails->momy;
 					player->mo->momz = tails->momz;
 				}
 
-				if (G_CoopGametype() && tails->player && tails->player->bot != 1)
+				if (G_CoopGametype() && (!tails->player || tails->player->bot != 1))
 				{
 					player->mo->angle = tails->angle;
 
@@ -12612,7 +12583,7 @@ void P_PlayerAfterThink(player_t *player)
 				{
 					if (player->mo->state-states != S_PLAY_RIDE)
 						P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
-					if (tails->player && (tails->skin && ((skin_t *)(tails->skin))->sprites[SPR2_SWIM].numframes) && (tails->eflags & MFE_UNDERWATER))
+					if ((tails->skin && ((skin_t *)(tails->skin))->sprites[SPR2_SWIM].numframes) && (tails->eflags & MFE_UNDERWATER))
 						tails->player->powers[pw_tailsfly] = 0;
 				}
 				else
