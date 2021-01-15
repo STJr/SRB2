@@ -198,6 +198,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
 		|| (netgame && (cv_forceskin.value == skinnum)) // Force 2.
 		|| (metalrecording && skinnum == 5) // Force 3.
+		|| players[playernum].bot //Force (player is a bot)
 		);
 }
 
@@ -511,10 +512,6 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(MULTIABILITY)
 	GETFLAG(NONIGHTSROTATION)
 	GETFLAG(NONIGHTSSUPER)
-	GETFLAG(NOSUPERSPRITES)
-	GETFLAG(NOSUPERJUMPBOOST)
-	GETFLAG(CANBUSTWALLS)
-	GETFLAG(NOSHIELDABILITY)
 #undef GETFLAG
 
 	else // let's check if it's a sound, otherwise error out
