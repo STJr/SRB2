@@ -743,7 +743,7 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if (player->mo->health <= 0)
 			continue; // dead
 
-		if (player->bot)
+		if (player->bot && player->bot != 3)
 			continue; // ignore bots
 
 		if (player->quittime)
