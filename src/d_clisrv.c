@@ -2815,17 +2815,21 @@ static void Command_Kick(void)
 		return;
 	}
 
-	if (!netgame) // Don't kick Tails in splitscreen!
-	{
-		CONS_Printf(M_GetText("This only works in a netgame.\n"));
-		return;
-	}
-
 	if (server || IsPlayerAdmin(consoleplayer))
 	{
 		UINT8 buf[3 + MAX_REASONLENGTH];
 		UINT8 *p = buf;
 		const SINT8 pn = nametonum(COM_Argv(1));
+
+        // Unlike bans, kicks are used especially to remove bot players, so we'll
+        // need to run a more specific check which allows kicking offline, but
+        // not against splitscreen players.
+		if (splitscreen && (pn == 0 || pn == 1))
+		{
+			CONS_Printf(M_GetText("Splitscreen players cannot be kicked.\n"));
+			return;
+		}
+
 
 		if (pn == -1 || pn == 0)
 			return;
