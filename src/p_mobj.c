@@ -1840,7 +1840,7 @@ void P_XYMovement(mobj_t *mo)
 		moved = false;
 
 		if (player) {
-			if (player->bot and player->bot != 3)
+			if (player->bot && player->bot != 3)
 				B_MoveBlocked(player);
 		}
 
