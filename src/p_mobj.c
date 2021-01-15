@@ -1840,7 +1840,7 @@ void P_XYMovement(mobj_t *mo)
 		moved = false;
 
 		if (player) {
-			if (player->bot)
+			if (player->bot and player->bot != 3)
 				B_MoveBlocked(player);
 		}
 
@@ -4135,7 +4135,7 @@ boolean P_BossTargetPlayer(mobj_t *actor, boolean closest)
 
 		player = &players[actor->lastlook];
 
-		if (player->pflags & PF_INVIS || player->bot || player->spectator)
+		if (player->pflags & PF_INVIS || (player->bot && player->bot != 3) || player->spectator)
 			continue; // ignore notarget
 
 		if (!player->mo || P_MobjWasRemoved(player->mo))
