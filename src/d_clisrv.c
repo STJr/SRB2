@@ -1595,7 +1595,9 @@ static void CL_ReloadReceivedSavegame(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
+#ifdef HAVE_BLUA
 		LUA_InvalidatePlayer(&players[i]);
+#endif
 		sprintf(player_names[i], "Player %d", i + 1);
 	}
 
@@ -2258,15 +2260,11 @@ void D_SaveBan(void)
 	size_t i;
 	banreason_t *reasonlist = reasonhead;
 	const char *address, *mask;
-	const char *path = va("%s"PATHSEP"%s", srb2home, "ban.txt");
 
 	if (!reasonhead)
-	{
-		remove(path);
 		return;
-	}
 
-	f = fopen(path, "w");
+	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "w");
 
 	if (!f)
 	{
@@ -2310,14 +2308,16 @@ static void Ban_Add(const char *reason)
 	reasontail = reasonlist;
 }
 
-static void Ban_Clear(void)
+static void Command_ClearBans(void)
 {
 	banreason_t *temp;
 
+	if (!I_ClearBans)
+		return;
+
 	I_ClearBans();
-
+	D_SaveBan();
 	reasontail = NULL;
-
 	while (reasonhead)
 	{
 		temp = reasonhead->next;
@@ -2327,24 +2327,12 @@ static void Ban_Clear(void)
 	}
 }
 
-static void Command_ClearBans(void)
-{
-	if (!I_ClearBans)
-		return;
-
-	Ban_Clear();
-	D_SaveBan();
-}
-
 static void Ban_Load_File(boolean warning)
 {
 	FILE *f;
 	size_t i;
 	const char *address, *mask;
 	char buffer[MAX_WADPATH];
-
-	if (!I_ClearBans)
-		return;
 
 	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "r");
 
@@ -2355,7 +2343,13 @@ static void Ban_Load_File(boolean warning)
 		return;
 	}
 
-	Ban_Clear();
+	if (I_ClearBans)
+		Command_ClearBans();
+	else
+	{
+		fclose(f);
+		return;
+	}
 
 	for (i=0; fgets(buffer, (int)sizeof(buffer), f); i++)
 	{
@@ -2815,11 +2809,11 @@ static void Command_Kick(void)
 		return;
 	}
 
-	if (!netgame) // Don't kick Tails in splitscreen!
-	{
-		CONS_Printf(M_GetText("This only works in a netgame.\n"));
-		return;
-	}
+	//if (!netgame) // Don't kick Tails in splitscreen!
+	//{
+	//	CONS_Printf(M_GetText("This only works in a netgame.\n"));
+	//	return;
+	//}
 
 	if (server || IsPlayerAdmin(consoleplayer))
 	{
@@ -2827,9 +2821,14 @@ static void Command_Kick(void)
 		UINT8 *p = buf;
 		const SINT8 pn = nametonum(COM_Argv(1));
 
+		if (splitscreen && (pn == 0 || pn == 1))
+		{
+			CONS_Printf(M_GetText("Splitscreen players cannot be kicked.\n"));
+			return;
+		}
 		if (pn == -1 || pn == 0)
 			return;
-
+		
 		// Special case if we are trying to kick a player who is downloading the game state:
 		// trigger a timeout instead of kicking them, because a kick would only
 		// take effect after they have finished downloading
@@ -3032,7 +3031,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	if (pnum == consoleplayer)
 	{
-		LUAh_GameQuit(false);
+		if (Playing())
+			LUAh_GameQuit();
 #ifdef DUMPCONSISTENCY
 		if (msg == KICK_MSG_CON_FAIL) SV_SavedGame();
 #endif
@@ -3732,7 +3732,8 @@ static void HandleConnect(SINT8 node)
 static void HandleShutdown(SINT8 node)
 {
 	(void)node;
-	LUAh_GameQuit(false);
+	if (Playing())
+		LUAh_GameQuit();
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -3747,7 +3748,8 @@ static void HandleShutdown(SINT8 node)
 static void HandleTimeout(SINT8 node)
 {
 	(void)node;
-	LUAh_GameQuit(false);
+	if (Playing())
+		LUAh_GameQuit();
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -4850,14 +4852,14 @@ void TryRunTics(tic_t realtics)
 			{
 				DEBFILE(va("============ Running tic %d (local %d)\n", gametic, localgametic));
 
-				ps_tictime = I_GetPreciseTime();
+				ps_tictime = I_GetTimeMicros();
 
 				G_Ticker((gametic % NEWTICRATERATIO) == 0);
 				ExtraDataTicker();
 				gametic++;
 				consistancy[gametic%BACKUPTICS] = Consistancy();
 
-				ps_tictime = I_GetPreciseTime() - ps_tictime;
+				ps_tictime = I_GetTimeMicros() - ps_tictime;
 
 				// Leave a certain amount of tics present in the net buffer as long as we've ran at least one tic this frame.
 				if (client && gamestate == GS_LEVEL && leveltime > 3 && neededtic <= gametic + cv_netticbuffer.value)
