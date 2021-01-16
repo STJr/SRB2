@@ -2627,8 +2627,10 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->totalring = totalring;
 
 	p->mare = mare;
-	if (bot)
+	if (bot == 2)
 		p->bot = 1; // reset to AI-controlled
+	else
+		p->bot = bot;
 	p->pity = pity;
 	p->rings = rings;
 	p->spheres = spheres;
