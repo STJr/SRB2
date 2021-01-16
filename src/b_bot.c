@@ -362,6 +362,12 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 	// Bot AI isn't programmed in analog.
 	CV_SetValue(&cv_analog[1], false);
 
+	// Bot cmd functions and hooks are not currently netplay compatible
+	// Necessary failsafe, as a bot in the P2 position in a netgame can inherit
+	// the last input from a hook triggered in splitscreen or SP.
+	if (netgame)
+		return; 
+
 	// Let Lua scripts build ticcmds
 	if (LUAh_BotTiccmd(player, cmd))
 		return;
