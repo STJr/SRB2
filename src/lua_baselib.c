@@ -3479,7 +3479,7 @@ static int lib_gAddPlayer(lua_State *L)
 	}
 	
 	LUA_PushUserdata(L, newplayer, META_PLAYER);
-	return 0;
+	return 1;
 }
 
 
