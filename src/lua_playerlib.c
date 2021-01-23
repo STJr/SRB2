@@ -370,6 +370,10 @@ static int player_get(lua_State *L)
 		lua_pushboolean(L, plr->outofcoop);
 	else if (fastcmp(field,"bot"))
 		lua_pushinteger(L, plr->bot);
+	else if (fastcmp(field,"botleader"))
+		LUA_PushUserdata(L, plr->botleader, META_PLAYER);
+	else if (fastcmp(field,"buttons_last"))
+		lua_pushinteger(L, plr->buttons_last);
 	else if (fastcmp(field,"jointime"))
 		lua_pushinteger(L, plr->jointime);
 	else if (fastcmp(field,"quittime"))
