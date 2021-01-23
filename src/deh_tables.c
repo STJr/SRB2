@@ -5167,6 +5167,12 @@ struct int_const_s const INT_CONST[] = {
 	{"GF_REDFLAG",GF_REDFLAG},
 	{"GF_BLUEFLAG",GF_BLUEFLAG},
 
+	// Bot types
+	{"BOT_NONE",BOT_NONE},
+	{"BOT_2PAI",BOT_2PAI},
+	{"BOT_2PHUMAN",BOT_2PHUMAN},
+	{"BOT_MPAI",BOT_MPAI},
+
 	// Customisable sounds for Skins, from sounds.h
 	{"SKSSPIN",SKSSPIN},
 	{"SKSPUTPUT",SKSPUTPUT},
