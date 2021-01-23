@@ -1087,7 +1087,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
 	boolean strafeisturn; // Simple controls only
 	player_t *player = &players[ssplayer == 2 ? secondarydisplayplayer : consoleplayer];
-	camera_t *thiscam = ((ssplayer == 1 || player->bot == 2) ? &camera : &camera2);
+	camera_t *thiscam = ((ssplayer == 1 || player->bot == BOT_2PHUMAN) ? &camera : &camera2);
 	angle_t *myangle = (ssplayer == 1 ? &localangle : &localangle2);
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 
@@ -1560,23 +1560,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	cmd->forwardmove = (SINT8)(cmd->forwardmove + forward);
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
-	if (player->bot == 1) { // Tailsbot for P2
-		if (!player->powers[pw_tailsfly] && (cmd->forwardmove || cmd->sidemove || cmd->buttons))
-		{
-			player->bot = 2; // A player-controlled bot. Returns to AI when it respawns.
-			CV_SetValue(&cv_analog[1], true);
-		}
-		else
-		{
-			G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
-			B_BuildTiccmd(player, cmd);
-		}
-		B_HandleFlightIndicator(player);
-	}
-	else if (player->bot == 2)
+	//Note: Majority of botstuffs are handled in G_Ticker now.
+	if (player->bot == BOT_2PHUMAN) //Player-controlled bot
+	{
+		G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
 		// Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Legacy
 		cmd->angleturn = (INT16)((localangle - *myangle) >> 16);
-
+	}	
+	
 	*myangle += (cmd->angleturn<<16);
 
 	if (controlstyle == CS_LMAOGALOG) {
@@ -2290,22 +2281,51 @@ void G_Ticker(boolean run)
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (playeringame[i])
-		{
+		{ //!!!
 			INT16 received;
+			//Save last frame's button readings
+			players[i].lastbuttons = players[i].cmd.buttons;
 
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+			//Bot ticcmd handling
+			//Yes, ordinarily this would be handled in G_BuildTiccmd...
+			//...however, bot players won't have a corresponding consoleplayer or splitscreen player 2 to send that information.
+			//Therefore, this has to be done after ticcmd sends are received.
+			if (players[i].bot == BOT_2PAI) { // Tailsbot for P2
+				if (!players[i].powers[pw_tailsfly] && (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons))
+				{
+					players[i].bot = BOT_2PHUMAN; // A player-controlled bot. Returns to AI when it respawns.
+					CV_SetValue(&cv_analog[1], true);
+				}
+				else
+				{
+					B_BuildTiccmd(&players[i], &players[i].cmd);
+				}
+				B_HandleFlightIndicator(&players[i]);
+			}
+			else if (players[i].bot == BOT_MPAI) {
+				B_BuildTiccmd(&players[i], &players[i].cmd);
+			}
+			
+			// Do angle adjustments.
+			if (players[i].bot == BOT_NONE || players[i].bot == BOT_2PHUMAN)
+			{
+				received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
+				players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
+				players[i].oldrelangleturn = players[i].cmd.angleturn;
+				if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
+					P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
+				else
+					players[i].cmd.angleturn = players[i].angleturn;
 
-			received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
-
-			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
-			players[i].oldrelangleturn = players[i].cmd.angleturn;
-			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
-				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
-			else
-				players[i].cmd.angleturn = players[i].angleturn;
-
-			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
-			players[i].cmd.angleturn |= received;
+				players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
+				players[i].cmd.angleturn |= received;
+			}
+			else // Less work is required if we're building a bot ticcmd.
+			{
+				players[i].angleturn = players[i].cmd.angleturn;
+				players[i].oldrelangleturn = players[i].cmd.angleturn;				
+			}
 		}
 	}
 
@@ -2627,8 +2647,8 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->totalring = totalring;
 
 	p->mare = mare;
-	if (bot == 2)
-		p->bot = 1; // reset to AI-controlled
+	if (bot == BOT_2PHUMAN)
+		p->bot = BOT_2PAI; // reset to AI-controlled
 	else
 		p->bot = bot;
 	p->pity = pity;
@@ -2976,8 +2996,8 @@ void G_DoReborn(INT32 playernum)
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
 
-	// Tailsbot
-	if (player->bot && player->bot != 3 && playernum != consoleplayer)
+	//! Tailsbot
+	if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
 	{ // Bots respawn next to their master.
 		mobj_t *oldmo = NULL;
 
@@ -3198,7 +3218,7 @@ void G_AddPlayer(INT32 playernum)
 			if (!playeringame[i])
 				continue;
 
-			if (players[i].bot) // ignore dumb, stupid tails
+			if (players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // ignore dumb, stupid tails
 				continue;
 
 			countplayers++;
@@ -3239,7 +3259,7 @@ boolean G_EnoughPlayersFinished(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i] || players[i].spectator || players[i].bot)
+		if (!playeringame[i] || players[i].spectator || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 			continue;
 		if (players[i].quittime > 30 * TICRATE)
 			continue;
