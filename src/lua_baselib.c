@@ -28,6 +28,7 @@
 #include "console.h"
 #include "d_netcmd.h" // IsPlayerAdmin
 #include "m_menu.h" // Player Setup menu color stuff
+#include "b_bot.h" // B_UpdateBotleader
 
 #include "lua_script.h"
 #include "lua_libs.h"
