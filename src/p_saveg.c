@@ -2717,10 +2717,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		}
 		mobj->type = i;
 	}
-
 	mobj->info = &mobjinfo[mobj->type];
-	P_SetMobjSpawnDefaults(mobj);
-
 	if (diff & MD_POS)
 	{
 		mobj->x = READFIXED(save_p);
@@ -2746,21 +2743,35 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 
 	if (diff & MD_RADIUS)
 		mobj->radius = READFIXED(save_p);
+	else
+		mobj->radius = mobj->info->radius;
 	if (diff & MD_HEIGHT)
 		mobj->height = READFIXED(save_p);
+	else
+		mobj->height = mobj->info->height;
 	if (diff & MD_FLAGS)
 		mobj->flags = READUINT32(save_p);
+	else
+		mobj->flags = mobj->info->flags;
 	if (diff & MD_FLAGS2)
 		mobj->flags2 = READUINT32(save_p);
 	if (diff & MD_HEALTH)
 		mobj->health = READINT32(save_p);
+	else
+		mobj->health = mobj->info->spawnhealth;
 	if (diff & MD_RTIME)
 		mobj->reactiontime = READINT32(save_p);
+	else
+		mobj->reactiontime = mobj->info->reactiontime;
 
 	if (diff & MD_STATE)
 		mobj->state = &states[READUINT16(save_p)];
+	else
+		mobj->state = &states[mobj->info->spawnstate];
 	if (diff & MD_TICS)
 		mobj->tics = READINT32(save_p);
+	else
+		mobj->tics = mobj->state->tics;
 	if (diff & MD_SPRITE) {
 		mobj->sprite = READUINT16(save_p);
 		if (mobj->sprite == SPR_PLAY)
@@ -2775,6 +2786,11 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	{
 		mobj->frame = READUINT32(save_p);
 		mobj->anim_duration = READUINT16(save_p);
+	}
+	else
+	{
+		mobj->frame = mobj->state->frame;
+		mobj->anim_duration = (UINT16)mobj->state->var2;
 	}
 	if (diff & MD_EFLAGS)
 		mobj->eflags = READUINT16(save_p);
@@ -2792,14 +2808,20 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->threshold = READINT32(save_p);
 	if (diff & MD_LASTLOOK)
 		mobj->lastlook = READINT32(save_p);
+	else
+		mobj->lastlook = -1;
 	if (diff & MD_TARGET)
 		mobj->target = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff & MD_TRACER)
 		mobj->tracer = (mobj_t *)(size_t)READUINT32(save_p);
 	if (diff & MD_FRICTION)
 		mobj->friction = READFIXED(save_p);
+	else
+		mobj->friction = ORIG_FRICTION;
 	if (diff & MD_MOVEFACTOR)
 		mobj->movefactor = READFIXED(save_p);
+	else
+		mobj->movefactor = FRACUNIT;
 	if (diff & MD_FUSE)
 		mobj->fuse = READINT32(save_p);
 	if (diff & MD_WATERTOP)
@@ -2808,10 +2830,16 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->waterbottom = READFIXED(save_p);
 	if (diff & MD_SCALE)
 		mobj->scale = READFIXED(save_p);
+	else
+		mobj->scale = FRACUNIT;
 	if (diff & MD_DSCALE)
 		mobj->destscale = READFIXED(save_p);
+	else
+		mobj->destscale = mobj->scale;
 	if (diff2 & MD2_SCALESPEED)
 		mobj->scalespeed = READFIXED(save_p);
+	else
+		mobj->scalespeed = FRACUNIT/12;
 	if (diff2 & MD2_CUSVAL)
 		mobj->cusval = READINT32(save_p);
 	if (diff2 & MD2_CVMEM)
@@ -2842,10 +2870,16 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->renderflags = READUINT32(save_p);
 	if (diff2 & MD2_BLENDMODE)
 		mobj->blendmode = READINT32(save_p);
+	else
+		mobj->blendmode = AST_TRANSLUCENT;
 	if (diff2 & MD2_SPRITEXSCALE)
 		mobj->spritexscale = READFIXED(save_p);
+	else
+		mobj->spritexscale = FRACUNIT;
 	if (diff2 & MD2_SPRITEYSCALE)
 		mobj->spriteyscale = READFIXED(save_p);
+	else
+		mobj->spriteyscale = FRACUNIT;
 	if (diff2 & MD2_SPRITEXOFFSET)
 		mobj->spritexoffset = READFIXED(save_p);
 	if (diff2 & MD2_SPRITEYOFFSET)
