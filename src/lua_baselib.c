@@ -3432,8 +3432,7 @@ static int lib_gAddPlayer(lua_State *L)
 
 	newplayernum = i;
 
-	//if (!splitscreen && !botingame)
-		CL_ClearPlayer(newplayernum);
+	CL_ClearPlayer(newplayernum);
 
 	playeringame[newplayernum] = true;
 	G_AddPlayer(newplayernum);
@@ -3442,30 +3441,34 @@ static int lib_gAddPlayer(lua_State *L)
 	newplayer->jointime = 0;
 	newplayer->quittime = 0;
 
-	// I hereby name you Bot X
+	// Set the bot name (defaults to Bot #)
 	strcpy(player_names[newplayernum], va("Bot %d", botcount));
 
-	// Read the skin string!
+	// Read the skin argument (defaults to Sonic)
 	if (!lua_isnoneornil(L, 1))
 	{
 		skinnum = R_SkinAvailable(luaL_checkstring(L, 1));
 		skinnum = skinnum < 0 ? 0 : skinnum;
 	}
 
-	// Read the color!
+	// Read the color (defaults to skin prefcolor)
 	if (!lua_isnoneornil(L, 2))
 		newplayer->skincolor = R_GetColorByName(luaL_checkstring(L, 2));
 	else
 		newplayer->skincolor = skins[newplayer->skin].prefcolor;
 
-	// Read the bot name, if given!
+	// Read the bot name, if given
 	if (!lua_isnoneornil(L, 3))
 		strcpy(player_names[newplayernum], luaL_checkstring(L, 3));
 	
 	bot = luaL_optinteger(L, 4, 3);
 	newplayer->bot = (bot >= 0 && bot <= 3) ? bot : 3;
-
-	// Set the skin (needed to set bot first!)
+	
+	// If our bot is a 2P type, we'll need to set its leader so it can spawn
+	if (newplayer->bot == BOT_2PAI || newplayer->bot == BOT_2PHUMAN)
+		B_UpdateBotleader(newplayer);
+	
+	// Set the skin (can't do this until AFTER bot type is set!)
 	SetPlayerSkinByNum(newplayernum, skinnum);
 
 
