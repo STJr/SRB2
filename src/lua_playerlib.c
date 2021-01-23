@@ -374,6 +374,8 @@ static int player_get(lua_State *L)
 		LUA_PushUserdata(L, plr->botleader, META_PLAYER);
 	else if (fastcmp(field,"lastbuttons"))
 		lua_pushinteger(L, plr->lastbuttons);
+	else if (fastcmp(field,"blocked"))
+		lua_pushboolean(L, plr->blocked);
 	else if (fastcmp(field,"jointime"))
 		lua_pushinteger(L, plr->jointime);
 	else if (fastcmp(field,"quittime"))
@@ -732,6 +734,8 @@ static int player_set(lua_State *L)
 	}
 	else if (fastcmp(field,"lastbuttons"))
 		plr->lastbuttons = (UINT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"blocked"))
+		plr->blocked = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"jointime"))
 		plr->jointime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"quittime"))
