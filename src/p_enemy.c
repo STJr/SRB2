@@ -743,8 +743,8 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if (player->mo->health <= 0)
 			continue; // dead
 
-		if (player->bot && player->bot != 3)
-			continue; // ignore bots
+		if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
+			continue; // ignore followbots
 
 		if (player->quittime)
 			continue; // Ignore uncontrolled bodies
@@ -3590,7 +3590,7 @@ void A_1upThinker(mobj_t *actor)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i] || players[i].bot || players[i].spectator)
+		if (!playeringame[i] || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN || players[i].spectator)
 			continue;
 
 		if (!players[i].mo)
