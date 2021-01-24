@@ -777,7 +777,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	UINT8 oldmare, oldmarelap, oldmarebonuslap;
 
 	//! Bots can't be NiGHTSerized, silly!1 :P
-	if (player->bot == BOT_2PAI || player->bot || BOT_2PHUMAN)
+	if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
 		return;
 
 	if (player->powers[pw_carry] != CR_NIGHTSMODE)
