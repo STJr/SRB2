@@ -29,6 +29,7 @@
 #include "d_netcmd.h" // IsPlayerAdmin
 #include "m_menu.h" // Player Setup menu color stuff
 #include "b_bot.h" // B_UpdateBotleader
+#include "d_clisrv.h" // CL_RemovePlayer
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -3463,7 +3464,7 @@ static int lib_gAddPlayer(lua_State *L)
 		strcpy(player_names[newplayernum], luaL_checkstring(L, 3));
 	
 	bot = luaL_optinteger(L, 4, 3);
-	newplayer->bot = (bot >= 0 && bot <= 3) ? bot : 3;
+	newplayer->bot = (bot >= BOT_NONE && bot <= BOT_MPAI) ? bot : BOT_MPAI;
 	
 	// If our bot is a 2P type, we'll need to set its leader so it can spawn
 	if (newplayer->bot == BOT_2PAI || newplayer->bot == BOT_2PHUMAN)
@@ -3483,6 +3484,37 @@ static int lib_gAddPlayer(lua_State *L)
 	}
 	
 	LUA_PushUserdata(L, newplayer, META_PLAYER);
+	return 1;
+}
+
+
+// Bot removing function
+static int lib_gRemovePlayer(lua_State *L)
+{
+	UINT8 pnum = -1;
+	//const char *kickreason = luaL_checkstring(L, 2);
+	
+	if (!lua_isnoneornil(L, 1))
+		pnum = luaL_checkinteger(L, 1);
+	if (&players[pnum])
+	{
+		if (players[pnum].bot != BOT_NONE)
+		{
+//			CL_RemovePlayer(pnum, *kickreason);
+			CL_RemovePlayer(pnum, pnum);
+			if (netgame)
+			{
+				char kickmsg[256];
+
+				strcpy(kickmsg, M_GetText("\x82*Bot %s has been removed"));
+				strcpy(kickmsg, va(kickmsg, player_names[pnum], pnum));
+				HU_AddChatText(kickmsg, false);
+			}
+			lua_pushboolean(L, true);
+			return 1;
+		}
+	}
+	lua_pushboolean(L, false);
 	return 1;
 }
 
@@ -4068,6 +4100,7 @@ static luaL_Reg lib[] = {
 	// g_game
 	{"G_AddGametype", lib_gAddGametype},
 	{"G_AddPlayer", lib_gAddPlayer},
+	{"G_RemovePlayer", lib_gRemovePlayer},
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_BuildMapTitle",lib_gBuildMapTitle},
 	{"G_FindMap",lib_gFindMap},

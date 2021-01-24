@@ -401,6 +401,7 @@ void CL_Reset(void);
 void CL_ClearPlayer(INT32 playernum);
 void CL_QueryServerList(msg_server_t *list);
 void CL_UpdateServerList(boolean internetsearch, INT32 room);
+void CL_RemovePlayer(INT32 playernum, kickreason_t reason);
 // Is there a game running
 boolean Playing(void);
 
