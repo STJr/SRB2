@@ -41,7 +41,6 @@ typedef boolean (*traverser_t)(intercept_t *in);
 boolean P_PathTraverse(fixed_t px1, fixed_t py1, fixed_t px2, fixed_t py2,
 	INT32 pflags, traverser_t ptrav);
 
-FUNCMATH fixed_t P_AproxDistance(fixed_t dx, fixed_t dy);
 void P_ClosestPointOnLine(fixed_t x, fixed_t y, line_t *line, vertex_t *result);
 void P_ClosestPointOnLine3D(const vector3_t *p, const vector3_t *line, vector3_t *result);
 INT32 P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line);

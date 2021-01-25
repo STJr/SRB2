@@ -334,7 +334,7 @@ boolean P_CheckMeleeRange(mobj_t *actor)
 		return false;
 
 	pl = actor->target;
-	dist = P_AproxDistance(pl->x-actor->x, pl->y-actor->y);
+	dist = FixedHypot(pl->x-actor->x, pl->y-actor->y);
 
 	if (dist >= FixedMul(MELEERANGE - 20*FRACUNIT, actor->scale) + pl->radius)
 		return false;
@@ -360,7 +360,7 @@ boolean P_JetbCheckMeleeRange(mobj_t *actor)
 		return false;
 
 	pl = actor->target;
-	dist = P_AproxDistance(pl->x-actor->x, pl->y-actor->y);
+	dist = FixedHypot(pl->x-actor->x, pl->y-actor->y);
 
 	if (dist >= (actor->radius + pl->radius)*2)
 		return false;
@@ -389,7 +389,7 @@ boolean P_FaceStabCheckMeleeRange(mobj_t *actor)
 		return false;
 
 	pl = actor->target;
-	dist = P_AproxDistance(pl->x-actor->x, pl->y-actor->y);
+	dist = FixedHypot(pl->x-actor->x, pl->y-actor->y);
 
 	if (dist >= (actor->radius + pl->radius)*4)
 		return false;
@@ -413,7 +413,7 @@ boolean P_SkimCheckMeleeRange(mobj_t *actor)
 		return false;
 
 	pl = actor->target;
-	dist = P_AproxDistance(pl->x-actor->x, pl->y-actor->y);
+	dist = FixedHypot(pl->x-actor->x, pl->y-actor->y);
 
 	if (dist >= FixedMul(MELEERANGE - 20*FRACUNIT, actor->scale) + pl->radius)
 		return false;
@@ -449,7 +449,7 @@ boolean P_CheckMissileRange(mobj_t *actor)
 		return false;
 
 	// OPTIMIZE: get this from a global checksight
-	dist = P_AproxDistance(actor->x-actor->target->x, actor->y-actor->target->y) - FixedMul(64*FRACUNIT, actor->scale);
+	dist = FixedHypot(actor->x-actor->target->x, actor->y-actor->target->y) - FixedMul(64*FRACUNIT, actor->scale);
 
 	if (!actor->info->meleestate)
 		dist -= FixedMul(128*FRACUNIT, actor->scale); // no melee attack, so fire more
@@ -750,7 +750,7 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 			continue; // Ignore uncontrolled bodies
 
 		if (dist > 0
-			&& P_AproxDistance(P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y), player->mo->z - actor->z) > dist)
+			&& FixedHypot(FixedHypot(player->mo->x - actor->x, player->mo->y - actor->y), player->mo->z - actor->z) > dist)
 			continue; // Too far away
 
 		if (!allaround)
@@ -758,7 +758,7 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 			an = R_PointToAngle2(actor->x, actor->y, player->mo->x, player->mo->y) - actor->angle;
 			if (an > ANGLE_90 && an < ANGLE_270)
 			{
-				dist = P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y);
+				dist = FixedHypot(player->mo->x - actor->x, player->mo->y - actor->y);
 				// if real close, react anyway
 				if (dist > FixedMul(MELEERANGE, actor->scale))
 					continue; // behind back
@@ -821,7 +821,7 @@ static boolean P_LookForShield(mobj_t *actor)
 			continue;
 
 		if ((player->powers[pw_shield] & SH_PROTECTELECTRIC)
-			&& (P_AproxDistance(P_AproxDistance(actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
+			&& (FixedHypot(FixedHypot(actor->x-player->mo->x, actor->y-player->mo->y), actor->z-player->mo->z) < FixedMul(RING_DIST, player->mo->scale)))
 		{
 			P_SetTarget(&actor->tracer, player->mo);
 
@@ -1548,8 +1548,8 @@ void A_PointyThink(mobj_t *actor)
 		}
 		else
 		{
-			if (P_AproxDistance(players[i].mo->x - actor->x, players[i].mo->y - actor->y) <
-				P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y))
+			if (FixedHypot(players[i].mo->x - actor->x, players[i].mo->y - actor->y) <
+				FixedHypot(player->mo->x - actor->x, player->mo->y - actor->y))
 				player = &players[i];
 		}
 	}
@@ -1561,7 +1561,7 @@ void A_PointyThink(mobj_t *actor)
 	P_SetTarget(&actor->target, player->mo);
 	A_FaceTarget(actor);
 
-	if (P_AproxDistance(player->mo->x - actor->x, player->mo->y - actor->y) < P_AproxDistance(player->mo->x + player->mo->momx - actor->x, player->mo->y + player->mo->momy - actor->y))
+	if (FixedHypot(player->mo->x - actor->x, player->mo->y - actor->y) < FixedHypot(player->mo->x + player->mo->momx - actor->x, player->mo->y + player->mo->momy - actor->y))
 		sign = -1; // Player is moving away
 	else
 		sign = 1; // Player is moving closer
@@ -1638,7 +1638,7 @@ static void P_ParabolicMove(mobj_t *actor, fixed_t x, fixed_t y, fixed_t z, fixe
 	y -= actor->y;
 	z -= actor->z;
 
-	dh = P_AproxDistance(x, y);
+	dh = FixedHypot(x, y);
 
 	actor->momx = FixedMul(FixedDiv(x, dh), speed);
 	actor->momy = FixedMul(FixedDiv(y, dh), speed);
@@ -1706,7 +1706,7 @@ void A_HoodThink(mobj_t *actor)
 	}
 
 	dx = (actor->target->x - actor->x), dy = (actor->target->y - actor->y), dz = (actor->target->z - actor->z);
-	dm = P_AproxDistance(dx, dy);
+	dm = FixedHypot(dx, dy);
 	// Target dangerously close to robohood, retreat then.
 	if ((dm < 256<<FRACBITS) && (abs(dz) < 128<<FRACBITS))
 	{
@@ -2094,7 +2094,7 @@ void A_CrushclawAim(mobj_t *actor)
 	if (!crab->target || !crab->info->missilestate || (statenum_t)(crab->state-states) == crab->info->missilestate)
 		return;
 
-	if (((ang + ANG1) < ANG2) || P_AproxDistance(crab->x - crab->target->x, crab->y - crab->target->y) < 333*crab->scale)
+	if (((ang + ANG1) < ANG2) || FixedHypot(crab->x - crab->target->x, crab->y - crab->target->y) < 333*crab->scale)
 		P_SetMobjState(crab, crab->info->missilestate);
 }
 
@@ -2703,7 +2703,7 @@ void A_LobShot(mobj_t *actor)
 	shot->angle = an = actor->angle;
 	an >>= ANGLETOFINESHIFT;
 
-	dist = P_AproxDistance(actor->target->x - shot->x, actor->target->y - shot->y);
+	dist = FixedHypot(actor->target->x - shot->x, actor->target->y - shot->y);
 
 	horizontal = dist / airtime;
 	vertical = FixedMul((gravity*airtime)/2, shot->scale);
@@ -2721,7 +2721,7 @@ void A_LobShot(mobj_t *actor)
 
 		diff = actor->z - actor->target->z;
 		{
-			launchhyp = P_AproxDistance(horizontal, vertical);
+			launchhyp = FixedHypot(horizontal, vertical);
 
 			orig = FixedMul(FixedDiv(vertical, horizontal), diff);
 
@@ -3325,7 +3325,7 @@ void A_SkullAttack(mobj_t *actor)
 		S_StartSound(actor, actor->info->activesound);
 	A_FaceTarget(actor);
 
-	dist = P_AproxDistance(dest->x - actor->x, dest->y - actor->y);
+	dist = FixedHypot(dest->x - actor->x, dest->y - actor->y);
 
 	if (locvar1 == 1)
 		actor->angle += ANGLE_180;
@@ -3443,7 +3443,7 @@ void A_BossZoom(mobj_t *actor)
 	an = actor->angle >> ANGLETOFINESHIFT;
 	actor->momx = FixedMul(FixedMul(actor->info->speed*5*FRACUNIT, actor->scale), FINECOSINE(an));
 	actor->momy = FixedMul(FixedMul(actor->info->speed*5*FRACUNIT, actor->scale), FINESINE(an));
-	dist = P_AproxDistance(dest->x - actor->x, dest->y - actor->y);
+	dist = FixedHypot(dest->x - actor->x, dest->y - actor->y);
 	dist = dist / FixedMul(actor->info->speed*5*FRACUNIT, actor->scale);
 
 	if (dist < 1)
@@ -3599,7 +3599,7 @@ void A_1upThinker(mobj_t *actor)
 		if ((netgame || multiplayer) && players[i].playerstate != PST_LIVE)
 			continue;
 
-		temp = P_AproxDistance(players[i].mo->x-actor->x, players[i].mo->y-actor->y);
+		temp = FixedHypot(players[i].mo->x-actor->x, players[i].mo->y-actor->y);
 
 		if (temp < dist)
 		{
@@ -4144,8 +4144,8 @@ bossjustdie:
 
 				// If this one's further then the last one, don't go for it.
 				if (mo->target &&
-					P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) >
-					P_AproxDistance(P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y), mo->z - mo->target->z))
+					FixedHypot(FixedHypot(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) >
+					FixedHypot(FixedHypot(mo->x - mo->target->x, mo->y - mo->target->y), mo->z - mo->target->z))
 						continue;
 
 				// Otherwise... Do!
@@ -4536,7 +4536,7 @@ void A_BubbleSpawn(mobj_t *actor)
 		// Don't spawn bubbles unless a player is relatively close by (var1).
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
-			 && P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (locvar1<<FRACBITS))
+			 && FixedHypot(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (locvar1<<FRACBITS))
 				break; // Stop looking.
 		if (i == MAXPLAYERS)
 			return; // don't make bubble!
@@ -4584,7 +4584,7 @@ void A_FanBubbleSpawn(mobj_t *actor)
 	// Don't spawn bubbles unless a player is relatively close by (var2).
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
-			 && P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (locvar1<<FRACBITS))
+			 && FixedHypot(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (locvar1<<FRACBITS))
 				break; // Stop looking.
 		if (i == MAXPLAYERS)
 			return; // don't make bubble!
@@ -4759,7 +4759,7 @@ void A_DropMine(mobj_t *actor)
 		if (!target)
 			return;
 
-		dist = P_AproxDistance(actor->x-target->x, actor->y-target->y)>>FRACBITS;
+		dist = FixedHypot(actor->x-target->x, actor->y-target->y)>>FRACBITS;
 
 		if (dist > FixedMul((locvar2 & 65535), actor->scale))
 			return;
@@ -4800,7 +4800,7 @@ void A_FishJump(mobj_t *actor)
 		// Don't spawn trail unless a player is nearby.
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
-				&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed))
+				&& FixedHypot(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed))
 				break; // Stop looking.
 		if (i < MAXPLAYERS)
 		{
@@ -4905,7 +4905,7 @@ void A_ThrownRing(mobj_t *actor)
 		// magnetic player. If he gets too far away, make
 		// sure to stop the attraction!
 		if ((!actor->tracer->health) || (actor->tracer->player && (actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC)
-		    && P_AproxDistance(P_AproxDistance(actor->tracer->x-actor->x,
+		    && FixedHypot(FixedHypot(actor->tracer->x-actor->x,
 		    actor->tracer->y-actor->y), actor->tracer->z-actor->z) > FixedMul(RING_DIST/4, actor->tracer->scale)))
 		{
 			P_SetTarget(&actor->tracer, NULL);
@@ -4964,7 +4964,7 @@ void A_ThrownRing(mobj_t *actor)
 				continue;
 		}
 
-		dist = P_AproxDistance(P_AproxDistance(player->mo->x-actor->x,
+		dist = FixedHypot(FixedHypot(player->mo->x-actor->x,
 			player->mo->y-actor->y), player->mo->z-actor->z);
 
 		// check distance
@@ -5345,7 +5345,7 @@ void A_JetChase(mobj_t *actor)
 			return; // got a new target
 
 	// If the player is over 3072 fracunits away, then look for another player
-	if (P_AproxDistance(P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y),
+	if (FixedHypot(FixedHypot(actor->target->x - actor->x, actor->target->y - actor->y),
 		actor->target->z - actor->z) > FixedMul(3072*FRACUNIT, actor->scale) && P_LookForPlayers(actor, true, false, FixedMul(3072*FRACUNIT, actor->scale)))
 	{
 		return; // got a new target
@@ -5460,7 +5460,7 @@ void A_JetgShoot(mobj_t *actor)
 	if (actor->reactiontime)
 		return;
 
-	dist = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
+	dist = FixedHypot(actor->target->x - actor->x, actor->target->y - actor->y);
 
 	if (dist > FixedMul(actor->info->painchance*FRACUNIT, actor->scale))
 		return;
@@ -5497,7 +5497,7 @@ void A_ShootBullet(mobj_t *actor)
 	if (!actor->target)
 		return;
 
-	dist = P_AproxDistance(P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y), actor->target->z - actor->z);
+	dist = FixedHypot(FixedHypot(actor->target->x - actor->x, actor->target->y - actor->y), actor->target->z - actor->z);
 
 	if (dist > FixedMul(actor->info->painchance*FRACUNIT, actor->scale))
 		return;
@@ -5522,7 +5522,7 @@ static boolean PIT_MinusCarry(mobj_t *thing)
 	if (!(thing->flags & (MF_PUSHABLE|MF_ENEMY)))
 		return true;
 
-	if (P_AproxDistance(minus->x - thing->x, minus->y - thing->y) >= minus->radius*3)
+	if (FixedHypot(minus->x - thing->x, minus->y - thing->y) >= minus->radius*3)
 		return true;
 
 	if (abs(thing->z - minus->z) > minus->height)
@@ -5566,7 +5566,7 @@ void A_MinusDigging(mobj_t *actor)
 	P_TryMove(par, x, y, false);
 
 	// If close enough, prepare to attack
-	if (P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) < actor->radius*2)
+	if (FixedHypot(actor->x - actor->target->x, actor->y - actor->target->y) < actor->radius*2)
 	{
 		P_SetMobjState(actor, actor->info->meleestate);
 		P_TryMove(actor, actor->target->x, actor->target->y, false);
@@ -5858,7 +5858,7 @@ void A_DetonChase(mobj_t *actor)
 		}
 	}*/
 	// movedir is up/down angle: how much it has to go up as it goes over to the player
-	xydist = P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
+	xydist = FixedHypot(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
 	exact = R_PointToAngle2(0, 0, xydist, actor->tracer->z - actor->z);
 	actor->movedir = exact;
 	/*if (exact != actor->movedir)
@@ -5880,7 +5880,7 @@ void A_DetonChase(mobj_t *actor)
 	// check for melee attack
 	if (actor->tracer)
 	{
-		if (P_AproxDistance(actor->tracer->x-actor->x, actor->tracer->y-actor->y) < actor->radius+actor->tracer->radius)
+		if (FixedHypot(actor->tracer->x-actor->x, actor->tracer->y-actor->y) < actor->radius+actor->tracer->radius)
 		{
 			if (!((actor->tracer->z > actor->z + actor->height) || (actor->z > actor->tracer->z + actor->tracer->height)))
 			{
@@ -5891,7 +5891,7 @@ void A_DetonChase(mobj_t *actor)
 	}
 
 	// chase towards player
-	if ((dist = P_AproxDistance(xydist, actor->tracer->z-actor->z))
+	if ((dist = FixedHypot(xydist, actor->tracer->z-actor->z))
 		> FixedMul((actor->info->painchance << FRACBITS), actor->scale))
 	{
 		P_SetTarget(&actor->tracer, NULL); // Too far away
@@ -5933,7 +5933,7 @@ void A_DetonChase(mobj_t *actor)
 		actor->momy = FixedMul(xyspeed, FINESINE(exact));
 
 		// Variable re-use
-		xyspeed = (P_AproxDistance(actor->tracer->x - actor->x, P_AproxDistance(actor->tracer->y - actor->y, actor->tracer->z - actor->z))>>(FRACBITS+6));
+		xyspeed = (FixedHypot(actor->tracer->x - actor->x, FixedHypot(actor->tracer->y - actor->y, actor->tracer->z - actor->z))>>(FRACBITS+6));
 
 		if (xyspeed < 1)
 			xyspeed = 1;
@@ -6081,7 +6081,7 @@ void A_UnidusBall(mobj_t *actor)
 
 	if (actor->movecount)
 	{
-		if (P_AproxDistance(actor->momx, actor->momy) < FixedMul(actor->info->damage/2, actor->scale))
+		if (FixedHypot(actor->momx, actor->momy) < FixedMul(actor->info->damage/2, actor->scale))
 			P_ExplodeMissile(actor);
 		return;
 	}
@@ -6113,7 +6113,7 @@ void A_UnidusBall(mobj_t *actor)
 
 	if (locvar1 == 1 && canthrow)
 	{
-		if (P_AproxDistance(actor->target->target->x - actor->target->x, actor->target->target->y - actor->target->y) > FixedMul(MISSILERANGE>>1, actor->scale)
+		if (FixedHypot(actor->target->target->x - actor->target->x, actor->target->target->y - actor->target->y) > FixedMul(MISSILERANGE>>1, actor->scale)
 		|| !P_CheckSight(actor, actor->target->target))
 			return;
 
@@ -6188,7 +6188,7 @@ void A_RockSpawn(mobj_t *actor)
 		return;
 	}
 
-	dist = P_AproxDistance(line->dx, line->dy)/16;
+	dist = FixedHypot(line->dx, line->dy)/16;
 
 	if (dist < 1)
 		dist = 1;
@@ -6354,7 +6354,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 		return;
 	}
 
-	dist = P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y);
+	dist = FixedHypot(actor->x - actor->target->x, actor->y - actor->target->y);
 
 	if (actor->target->player && (!hovermode || actor->reactiontime <= 2*TICRATE))
 	{
@@ -6391,7 +6391,7 @@ void A_CrawlaCommanderThink(mobj_t *actor)
 		{
 			fixed_t mom;
 			P_Thrust(actor, actor->angle, 2*actor->scale);
-			mom = P_AproxDistance(actor->momx, actor->momy);
+			mom = FixedHypot(actor->momx, actor->momy);
 			if (mom > 20*actor->scale)
 			{
 				mom += 20*actor->scale;
@@ -6479,7 +6479,7 @@ void A_RingExplode(mobj_t *actor)
 		if (mo2 == actor) // Don't explode yourself! Endless loop!
 			continue;
 
-		if (P_AproxDistance(P_AproxDistance(mo2->x - actor->x, mo2->y - actor->y), mo2->z - actor->z) > FixedMul(actor->info->painchance, actor->scale))
+		if (FixedHypot(FixedHypot(mo2->x - actor->x, mo2->y - actor->y), mo2->z - actor->z) > FixedMul(actor->info->painchance, actor->scale))
 			continue;
 
 		if (mo2->flags & MF_SHOOTABLE)
@@ -7078,7 +7078,7 @@ nomissile:
 	}
 
 	// chase towards player
-	if (P_AproxDistance(actor->target->x-actor->x, actor->target->y-actor->y) > actor->radius+actor->target->radius)
+	if (FixedHypot(actor->target->x-actor->x, actor->target->y-actor->y) > actor->radius+actor->target->radius)
 	{
 		if (--actor->movecount < 0 || !P_Move(actor, actor->info->speed))
 			P_NewChaseDir(actor);
@@ -7317,7 +7317,7 @@ void A_Boss7Chase(mobj_t *actor)
 	// Self-adjust if stuck on the edge
 	if (actor->tracer)
 	{
-		if (P_AproxDistance(actor->x - actor->tracer->x, actor->y - actor->tracer->y) > 128*FRACUNIT - actor->radius)
+		if (FixedHypot(actor->x - actor->tracer->x, actor->y - actor->tracer->y) > 128*FRACUNIT - actor->radius)
 			P_InstaThrust(actor, R_PointToAngle2(actor->x, actor->y, actor->tracer->x, actor->tracer->y), FRACUNIT);
 	}
 
@@ -7353,7 +7353,7 @@ void A_Boss7Chase(mobj_t *actor)
 		if (players[i].mo->health <= 0)
 			continue;
 
-		if (P_AproxDistance(players[i].mo->x - actor->x, players[i].mo->y - actor->y) > actor->radius)
+		if (FixedHypot(players[i].mo->x - actor->x, players[i].mo->y - actor->y) > actor->radius)
 			continue;
 
 		if (players[i].mo->z > actor->z + actor->height - 2*FRACUNIT
@@ -7476,7 +7476,7 @@ void A_Boss2PogoSFX(mobj_t *actor)
 	}
 
 	// Boing!
-	if (P_AproxDistance(actor->x-actor->target->x, actor->y-actor->target->y) < FixedMul(256*FRACUNIT, actor->scale))
+	if (FixedHypot(actor->x-actor->target->x, actor->y-actor->target->y) < FixedMul(256*FRACUNIT, actor->scale))
 	{
 		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
 		P_InstaThrust(actor, actor->angle, FixedMul(actor->info->speed, actor->scale));
@@ -7509,7 +7509,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 		return;
 
 	if (!actor->target || !(actor->target->flags & MF_SHOOTABLE) || (actor->target->player && actor->target->player->powers[pw_flashing])
-	|| P_AproxDistance(actor->x-actor->target->x, actor->y-actor->target->y) >= FixedMul(512*FRACUNIT, actor->scale))
+	|| FixedHypot(actor->x-actor->target->x, actor->y-actor->target->y) >= FixedMul(512*FRACUNIT, actor->scale))
 	{
 		// look for a new target
 		if (P_LookForPlayers(actor, true, false, 512*FRACUNIT))
@@ -7530,7 +7530,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 		P_InstaThrust(actor, actor->angle+ANGLE_180, FixedMul(FixedMul(actor->info->speed,(locvar2)), actor->scale)); // Move at wandering speed
 	}
 	// Try to land on top of the player.
-	else if (P_AproxDistance(actor->x-actor->target->x, actor->y-actor->target->y) < FixedMul(512*FRACUNIT, actor->scale))
+	else if (FixedHypot(actor->x-actor->target->x, actor->y-actor->target->y) < FixedMul(512*FRACUNIT, actor->scale))
 	{
 		fixed_t airtime, gravityadd, zoffs;
 
@@ -7558,7 +7558,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 		airtime = FixedDiv((-actor->momz - FixedSqrt(FixedMul(actor->momz,actor->momz)+zoffs)), gravityadd)<<1; // to try and land on their head rather than on their feet
 
 		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
-		P_InstaThrust(actor, actor->angle, FixedDiv(P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y), airtime));
+		P_InstaThrust(actor, actor->angle, FixedDiv(FixedHypot(actor->x - actor->target->x, actor->y - actor->target->y), airtime));
 	}
 	// Wander semi-randomly towards the player to get closer.
 	else
@@ -7629,7 +7629,7 @@ void A_TurretFire(mobj_t *actor)
 
 	while (P_SupermanLook4Players(actor) && count < MAXPLAYERS)
 	{
-		if (P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) < dist)
+		if (FixedHypot(actor->x - actor->target->x, actor->y - actor->target->y) < dist)
 		{
 			actor->flags2 |= MF2_FIRING;
 			actor->extravalue1 = locvar1;
@@ -7667,7 +7667,7 @@ void A_SuperTurretFire(mobj_t *actor)
 
 	while (P_SupermanLook4Players(actor) && count < MAXPLAYERS)
 	{
-		if (P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) < dist)
+		if (FixedHypot(actor->x - actor->target->x, actor->y - actor->target->y) < dist)
 		{
 			actor->flags2 |= MF2_FIRING;
 			actor->flags2 |= MF2_SUPERFIRE;
@@ -7788,7 +7788,7 @@ void A_BuzzFly(mobj_t *actor)
 	}
 
 	// If the player is over 3072 fracunits away, then look for another player
-	if (P_AproxDistance(P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y),
+	if (FixedHypot(FixedHypot(actor->target->x - actor->x, actor->target->y - actor->y),
 		actor->target->z - actor->z) > FixedMul(3072*FRACUNIT, actor->scale))
 	{
 		if (multiplayer || netgame)
@@ -7807,7 +7807,7 @@ void A_BuzzFly(mobj_t *actor)
 		else
 			realspeed = FixedMul(actor->info->speed, actor->scale);
 
-		dist = P_AproxDistance(P_AproxDistance(actor->target->x - actor->x,
+		dist = FixedHypot(FixedHypot(actor->target->x - actor->x,
 			actor->target->y - actor->y), actor->target->z - actor->z);
 
 		if (dist < 1)
@@ -8165,7 +8165,7 @@ void A_Boss3Path(mobj_t *actor)
 
 		if (actor->target->x == actor->x && actor->target->y == actor->y)
 		{
-			dist = P_AproxDistance(P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y), actor->target->z + actor->movefactor - actor->z);
+			dist = FixedHypot(FixedHypot(actor->target->x - actor->x, actor->target->y - actor->y), actor->target->z + actor->movefactor - actor->z);
 
 			if (dist < 1)
 				dist = 1;
@@ -9575,7 +9575,7 @@ void A_SetObjectTypeState(mobj_t *actor)
 
 		if (mo2->type == (mobjtype_t)loc2lw)
 		{
-			dist = P_AproxDistance(mo2->x - actor->x, mo2->y - actor->y);
+			dist = FixedHypot(mo2->x - actor->x, mo2->y - actor->y);
 
 			if (mo2->health > 0)
 			{
@@ -10081,9 +10081,9 @@ void A_CheckRange(mobj_t *actor)
 		return;
 
 	if (!(locvar1 >> 16)) //target
-		dist = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
+		dist = FixedHypot(actor->target->x - actor->x, actor->target->y - actor->y);
 	else //tracer
-		dist = P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
+		dist = FixedHypot(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
 
 	if (dist <= FixedMul((locvar1 & 65535)*FRACUNIT, actor->scale))
 		P_SetMobjState(actor, locvar2);
@@ -10145,16 +10145,16 @@ void A_CheckTrueRange(mobj_t *actor)
 	if (!(locvar1 >> 16)) // target
 	{
 		height = actor->target->z - actor->z;
-		dist = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
+		dist = FixedHypot(actor->target->x - actor->x, actor->target->y - actor->y);
 
 	}
 	else // tracer
 	{
 		height = actor->tracer->z - actor->z;
-		dist = P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
+		dist = FixedHypot(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
 	}
 
-	l = P_AproxDistance(dist, height);
+	l = FixedHypot(dist, height);
 
 	if (l <= FixedMul((locvar1 & 65535)*FRACUNIT, actor->scale))
 		P_SetMobjState(actor, locvar2);
@@ -10199,7 +10199,7 @@ void A_CheckThingCount(mobj_t *actor)
 
 		if (mo2->type == (mobjtype_t)loc1up)
 		{
-			dist = P_AproxDistance(mo2->x - actor->x, mo2->y - actor->y);
+			dist = FixedHypot(mo2->x - actor->x, mo2->y - actor->y);
 
 			if (loc2up == 0)
 				count++;
@@ -10808,7 +10808,7 @@ void A_HomingChase(mobj_t *actor)
 
 	actor->angle = R_PointToAngle2(actor->x, actor->y, dest->x, dest->y);
 
-	dist = P_AproxDistance(P_AproxDistance(dest->x - actor->x, dest->y - actor->y), dest->z - actor->z);
+	dist = FixedHypot(FixedHypot(dest->x - actor->x, dest->y - actor->y), dest->z - actor->z);
 
 	if (dist < 1)
 		dist = 1;
@@ -11394,14 +11394,14 @@ void A_BrakLobShot(mobj_t *actor)
 		g = gravity;
 
 	// Look up distance between actor and its target
-	x = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
+	x = FixedHypot(actor->target->x - actor->x, actor->target->y - actor->y);
 	if (!aimDirect)
 	{
 		// Distance should actually be a third of the way over
 		x = FixedDiv(x, 3<<FRACBITS);
 		newTargetX = actor->x + P_ReturnThrustX(actor, actor->angle, x);
 		newTargetY = actor->y + P_ReturnThrustY(actor, actor->angle, x);
-		x = P_AproxDistance(newTargetX - actor->x, newTargetY - actor->y);
+		x = FixedHypot(newTargetX - actor->x, newTargetY - actor->y);
 		// Look up height difference between actor and the ground 1/3 of the way to its target
 		y = P_FloorzAtPos(newTargetX, newTargetY, actor->target->z, actor->target->height) - (actor->z + FixedMul(locvar2*FRACUNIT, actor->scale));
 	}
@@ -11753,7 +11753,7 @@ void A_FlickyCenter(mobj_t *actor)
 
 		P_LookForPlayers(actor, true, false, actor->extravalue1);
 
-		if (actor->target && P_AproxDistance(actor->target->x - originx, actor->target->y - originy) < actor->extravalue1)
+		if (actor->target && FixedHypot(actor->target->x - originx, actor->target->y - originy) < actor->extravalue1)
 		{
 			actor->extravalue2 = 1;
 		 	P_TeleportMove(actor, actor->target->x, actor->target->y, actor->target->z);
@@ -11809,7 +11809,7 @@ void A_FlickyAim(mobj_t *actor)
 	if ((actor->momx == actor->momy && actor->momy == 0)
 		|| (actor->target && P_IsFlickyCenter(actor->target->type)
 			&& actor->target->extravalue1 && (actor->target->flags & MF_SLIDEME)
-			&& P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) >= actor->target->extravalue1))
+			&& FixedHypot(actor->x - actor->target->x, actor->y - actor->target->y) >= actor->target->extravalue1))
 		flickyhitwall = true;
 
 	P_InternalFlickyBubble(actor);
@@ -11831,12 +11831,12 @@ void A_FlickyAim(mobj_t *actor)
 			actor->movedir *= -1;
 
 		posvar = ((R_PointToAngle2(actor->target->x, actor->target->y, actor->x, actor->y) + actor->movedir*locvar1) >> ANGLETOFINESHIFT) & FINEMASK;
-		chasevar = FixedSqrt(max(FRACUNIT, P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y) - locvar2)) + locvar2;
+		chasevar = FixedSqrt(max(FRACUNIT, FixedHypot(actor->target->x - actor->x, actor->target->y - actor->y) - locvar2)) + locvar2;
 
 		chasex = actor->target->x + FixedMul(FINECOSINE(posvar), chasevar);
 		chasey = actor->target->y + FixedMul(FINESINE(posvar), chasevar);
 
-		if (P_AproxDistance(chasex - actor->x, chasey - actor->y))
+		if (FixedHypot(chasex - actor->x, chasey - actor->y))
 			actor->angle = R_PointToAngle2(actor->x, actor->y, chasex, chasey);
 	}
 	else if (flickyhitwall)
@@ -11878,7 +11878,7 @@ void P_InternalFlickyFly(mobj_t *actor, fixed_t flyspeed, fixed_t targetdist, fi
 		targetdist = 16*FRACUNIT; //Default!
 
 	if (actor->target && abs(chasez - actor->z) > targetdist)
-		targetdist = P_AproxDistance(actor->target->x - actor->x, actor->target->y - actor->y);
+		targetdist = FixedHypot(actor->target->x - actor->x, actor->target->y - actor->y);
 
 	if (actor->target
 		&& P_IsFlickyCenter(actor->target->type)
@@ -11956,7 +11956,7 @@ void A_FlickyCoast(mobj_t *actor)
 		actor->momy = (11*actor->momy)/12;
 		actor->momz = (11*actor->momz)/12;
 
-		if (P_AproxDistance(P_AproxDistance(actor->momx, actor->momy), actor->momz) < locvar1)
+		if (FixedHypot(FixedHypot(actor->momx, actor->momy), actor->momz) < locvar1)
 			P_SetMobjState(actor, locvar2);
 
 		return;
@@ -12220,7 +12220,7 @@ void A_Boss5Jump(mobj_t *actor)
 		g = gravity;
 
 	// Look up distance between actor and its tracer
-	x = P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
+	x = FixedHypot(actor->tracer->x - actor->x, actor->tracer->y - actor->y);
 	// Look up height difference between actor and its tracer
 	y = actor->tracer->z - actor->z;
 
@@ -12341,7 +12341,7 @@ void A_MineExplode(mobj_t *actor)
 				actor->z+P_RandomRange(((actor->eflags & MFE_UNDERWATER) ? -dist : 0), dist)*FRACUNIT,
 				type);
 			fixed_t dx = b->x - actor->x, dy = b->y - actor->y, dz = b->z - actor->z;
-			fixed_t dm = P_AproxDistance(dz, P_AproxDistance(dy, dx));
+			fixed_t dm = FixedHypot(dz, FixedHypot(dy, dx));
 			b->momx = FixedDiv(dx, dm)*3;
 			b->momy = FixedDiv(dy, dm)*3;
 			b->momz = FixedDiv(dz, dm)*3;
@@ -12373,7 +12373,7 @@ void A_MineRange(mobj_t *actor)
 	if (!actor->target)
 		return;
 
-	dm = P_AproxDistance(actor->z - actor->target->z, P_AproxDistance(actor->y - actor->target->y, actor->x - actor->target->x));
+	dm = FixedHypot(actor->z - actor->target->z, FixedHypot(actor->y - actor->target->y, actor->x - actor->target->x));
 	if ((dm>>FRACBITS) < locvar1)
 		P_SetMobjState(actor, actor->info->meleestate);
 }
@@ -12499,7 +12499,7 @@ void A_MultiShotDist(mobj_t *actor)
 		// Don't spawn dust unless a player is relatively close by (var1).
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
-			 && P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (1600<<FRACBITS))
+			 && FixedHypot(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (1600<<FRACBITS))
 				break; // Stop looking.
 		if (i == MAXPLAYERS)
 			return; // don't make bubble!
@@ -12669,8 +12669,8 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 
 			// If this one's further then the last one, don't go for it.
 			if (actor->tracer &&
-				P_AproxDistance(P_AproxDistance(actor->x - mo2->x, actor->y - mo2->y), actor->z - mo2->z) >
-				P_AproxDistance(P_AproxDistance(actor->x - actor->tracer->x, actor->y - actor->tracer->y), actor->z - actor->tracer->z))
+				FixedHypot(FixedHypot(actor->x - mo2->x, actor->y - mo2->y), actor->z - mo2->z) >
+				FixedHypot(FixedHypot(actor->x - actor->tracer->x, actor->y - actor->tracer->y), actor->z - actor->tracer->z))
 					continue;
 
 			// Otherwise... Do!
@@ -13047,7 +13047,7 @@ void A_Boss5CheckOnGround(mobj_t *actor)
 			P_SetMobjState(actor, locvar1);
 	}
 
-	if (actor->tracer && P_AproxDistance(actor->tracer->x - actor->x, actor->tracer->y - actor->y) < 2*actor->radius)
+	if (actor->tracer && FixedHypot(actor->tracer->x - actor->x, actor->tracer->y - actor->y) < 2*actor->radius)
 	{
 		actor->momx = (4*actor->momx)/5;
 		actor->momy = (4*actor->momy)/5;
@@ -13507,7 +13507,7 @@ static boolean PIT_TNTExplode(mobj_t *nearby)
 	dx = nearby->x - barrel->x;
 	dy = nearby->y - barrel->y;
 	dz = nearby->z - barrel->z + (nearby->height - barrel->height/2)/2;
-	dm = P_AproxDistance(P_AproxDistance(dx, dy), dz);
+	dm = FixedHypot(FixedHypot(dx, dy), dz);
 
 	if (dm >= exploderadius || !P_CheckSight(barrel, nearby)) // out of range or not visible
 		return true;
@@ -13910,7 +13910,7 @@ void A_SnapperThinker(mobj_t *actor)
 
 	// Look for nearby, valid players to chase angrily at.
 	if ((actor->target || P_LookForPlayers(actor, true, false, 1024*FRACUNIT))
-		&& P_AproxDistance(actor->target->x - xs, actor->target->y - ys) < 2048*FRACUNIT
+		&& FixedHypot(actor->target->x - xs, actor->target->y - ys) < 2048*FRACUNIT
 		&& abs(actor->target->z - actor->z) < 80*FRACUNIT
 		&& P_CheckSight(actor, actor->target))
 	{
@@ -13925,7 +13925,7 @@ void A_SnapperThinker(mobj_t *actor)
 		y1 = ys;
 	}
 
-	dist = P_AproxDistance(x1 - x0, y1 - y0);
+	dist = FixedHypot(x1 - x0, y1 - y0);
 
 	// The snapper either chases what it considers to be a nearby player, or instead decides to go back to its spawnpoint.
 	if (chasing || dist > 32*FRACUNIT)
@@ -14110,7 +14110,7 @@ void A_LavafallRocks(mobj_t *actor)
 	// Don't spawn rocks unless a player is relatively close by.
 	for (i = 0; i < MAXPLAYERS; ++i)
 		if (playeringame[i] && players[i].mo
-			&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed >> 1))
+			&& FixedHypot(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed >> 1))
 			break; // Stop looking.
 
 	if (i < MAXPLAYERS)
@@ -14144,7 +14144,7 @@ void A_LavafallLava(mobj_t *actor)
 	// Don't spawn lava unless a player is nearby.
 	for (i = 0; i < MAXPLAYERS; ++i)
 		if (playeringame[i] && players[i].mo
-			&& P_AproxDistance(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed))
+			&& FixedHypot(actor->x - players[i].mo->x, actor->y - players[i].mo->y) < (actor->info->speed))
 			break; // Stop looking.
 
 	if (i >= MAXPLAYERS)
@@ -14274,7 +14274,7 @@ void A_RolloutSpawn(mobj_t *actor)
 
 	if (!(actor->target)
 		|| P_MobjWasRemoved(actor->target)
-		|| P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y) > locvar1)
+		|| FixedHypot(actor->x - actor->target->x, actor->y - actor->target->y) > locvar1)
 	{
 		actor->target = P_SpawnMobj(actor->x, actor->y, actor->z, locvar2);
 		actor->target->flags2 |= (actor->flags2 & (MF2_AMBUSH | MF2_OBJECTFLIP)) | MF2_SLIDEPUSH;
@@ -14302,7 +14302,7 @@ void A_RolloutRock(mobj_t *actor)
 	UINT8 maxframes = actor->info->reactiontime; // number of frames the mobj cycles through
 	fixed_t pi = (22*FRACUNIT/7);
 	fixed_t circumference = FixedMul(2 * pi, actor->radius); // used to calculate when to change frame
-	fixed_t speed = P_AproxDistance(actor->momx, actor->momy), topspeed = FixedMul(actor->info->speed, actor->scale);
+	fixed_t speed = FixedHypot(actor->momx, actor->momy), topspeed = FixedMul(actor->info->speed, actor->scale);
 	boolean inwater = actor->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER);
 
 	if (LUA_CallAction(A_ROLLOUTROCK, actor))
@@ -14344,7 +14344,7 @@ void A_RolloutRock(mobj_t *actor)
 		actor->momy = FixedMul(actor->momy, locvar1);
 	}
 
-	speed = P_AproxDistance(actor->momx, actor->momy); // recalculate speed for visual rolling
+	speed = FixedHypot(actor->momx, actor->momy); // recalculate speed for visual rolling
 
 	if (speed < actor->scale >> 1) // stop moving if speed is insignificant
 	{
@@ -14466,7 +14466,7 @@ void A_DragonSegment(mobj_t *actor)
 		return;
 	}
 
-	dist = P_AproxDistance(P_AproxDistance(actor->x - target->x, actor->y - target->y), actor->z - target->z);
+	dist = FixedHypot(FixedHypot(actor->x - target->x, actor->y - target->y), actor->z - target->z);
 	radius = actor->radius + target->radius;
 	hangle = R_PointToAngle2(target->x, target->y, actor->x, actor->y);
 	zangle = R_PointToAngle2(0, target->z, dist, actor->z);

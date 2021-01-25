@@ -18,8 +18,10 @@
  #define HAVE_SQRTF
  #endif
 #endif
+
 #include "doomdef.h"
 #include "m_fixed.h"
+#include "tables.h" // ANGLETOFINESHIFT
 
 #ifdef __USE_C_FIXEDMUL__
 
@@ -105,20 +107,34 @@ fixed_t FixedSqrt(fixed_t x)
 
 fixed_t FixedHypot(fixed_t x, fixed_t y)
 {
-	fixed_t ax, yx, yx2, yx1;
-	if (abs(y) > abs(x)) // |y|>|x|
+	// Moved the code from R_PointToDist2 to here,
+	// since R_PointToDist2 did the same thing,
+	// except less prone to overflowing.
+
+	angle_t angle;
+	fixed_t dist;
+
+	x = abs(x);
+	y = abs(y);
+
+	if (y > x)
 	{
-		ax = abs(y); // |y| => ax
-		yx = FixedDiv(x, y); // (x/y)
+		fixed_t temp;
+
+		temp = x;
+		x = y;
+		y = temp;
 	}
-	else // |x|>|y|
-	{
-		ax = abs(x); // |x| => ax
-		yx = FixedDiv(y, x); // (x/y)
-	}
-	yx2 = FixedMul(yx, yx); // (x/y)^2
-	yx1 = FixedSqrt(1 * FRACUNIT + yx2); // (1 + (x/y)^2)^1/2
-	return FixedMul(ax, yx1); // |x|*((1 + (x/y)^2)^1/2)
+
+	if (!y)
+		return x;
+
+	angle = (tantoangle[FixedDiv(y, x)>>DBITS] + ANGLE_90) >> ANGLETOFINESHIFT;
+
+	// use as cosine
+	dist = FixedDiv(x, FINESINE(angle));
+
+	return dist;
 }
 
 vector2_t *FV2_Load(vector2_t *vec, fixed_t x, fixed_t y)
