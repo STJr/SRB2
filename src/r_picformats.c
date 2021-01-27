@@ -979,8 +979,8 @@ static png_bytep *PNG_Read(
 
 				for (i = 0; i < 256; i++)
 				{
-					UINT32 rgb = R_PutRgbaRGBA(pal->red, pal->green, pal->blue, 0xFF);
-					if (rgb != pMasterPalette[i].rgba)
+					byteColor_t *curpal = &(pMasterPalette[i].s);
+					if (pal->red != curpal->red || pal->green != curpal->green || pal->blue != curpal->blue)
 					{
 						usepal = false;
 						break;
@@ -996,12 +996,12 @@ static png_bytep *PNG_Read(
 		{
 			png_get_tRNS(png_ptr, png_info_ptr, &trans, &trans_num, &trans_values);
 
-			if (trans && trans_num == 256)
+			if (trans && trans_num > 0)
 			{
 				INT32 i;
 				for (i = 0; i < trans_num; i++)
 				{
-					// libpng will transform this image into RGB even if
+					// libpng will transform this image into RGBA even if
 					// the transparent index does not exist in the image,
 					// and there is no way around that.
 					if (trans[i] < 0xFF)
