@@ -64,8 +64,6 @@ struct GLMipmap_s
 
 	struct GLMipmap_s    *nextcolormap;
 	struct GLColormap_s  *colormap;
-
-	struct GLMipmap_s    *nextmipmap; // Linked list of all textures
 };
 typedef struct GLMipmap_s GLMipmap_t;
 
