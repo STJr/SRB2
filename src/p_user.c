@@ -4499,7 +4499,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	if (twodlevel || (player->mo->flags2 & MF2_TWOD))
 		factor += player->jumpfactor / 10;
 
-	if (player->charflags & SF_MULTIABILITY && player->charability == CA_DOUBLEJUMP)
+	if (player->charflags & SF_MULTIABILITY && player->charability == CA_DOUBLEJUMP && (player->actionspd >> FRACBITS) != -1)
 		factor -= max(0, player->secondjump * player->jumpfactor / ((player->actionspd >> FRACBITS) + 1)); // Reduce the jump height each time
 
 	//if (maptol & TOL_NIGHTS)
