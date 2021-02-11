@@ -81,14 +81,6 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start);
 #define TAG_ITER_THINGS(tag, return_varname)  TAG_ITER(Tag_Iterate_Things, tag, return_varname)
 
 /* ITERATION MACROS
-TAG_ITER_DECLARECOUNTER must be used before using the iterators.
-
-'level':
-For each nested iteration, an additional TAG_ITER_DECLARECOUNTER
-must be used with a different level number to avoid conflict with
-the outer iterations.
-Most cases don't have nested iterations and thus the level is just 0.
-
 'tag':
 Pretty much the elements' tag to iterate through.
 
@@ -98,17 +90,12 @@ Target variable's name to return the iteration results to.
 
 EXAMPLE:
 {
-	TAG_ITER_DECLARECOUNTER(0);
-	TAG_ITER_DECLARECOUNTER(1); // For the nested iteration.
-
 	size_t li;
-	size_t sec;
-
 	INT32 tag1 = 4;
 
 	...
 
-	TAG_ITER_LINES(0, tag1, li)
+	TAG_ITER_LINES(tag1, li)
 	{
 		line_t *line = lines + li;
 
@@ -116,11 +103,11 @@ EXAMPLE:
 
 		if (something)
 		{
+			size_t sec;
 			mtag_t tag2 = 8;
 
-			// Nested iteration; just make sure the level is higher
-			// and that it has its own counter declared in scope.
-			TAG_ITER_SECTORS(1, tag2, sec)
+			// Nested iteration.
+			TAG_ITER_SECTORS(tag2, sec)
 			{
 				sector_t *sector = sectors + sec;
 
