@@ -71,7 +71,9 @@ INT32 Tag_Iterate_Things (const mtag_t tag, const size_t p);
 INT32 Tag_FindLineSpecial(const INT16 special, const mtag_t tag);
 INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start);
 
-#define TAG_ITER(fn, tag, return_varname) for(size_t ICNT_ ## __LINE__ = 0; (return_varname = fn(tag, ICNT_ ## __LINE__)) >= 0; ICNT_ ## __LINE__++)
+#define ICNAME2(id) ICNT_##id
+#define ICNAME(id) ICNAME2(id)
+#define TAG_ITER(fn, tag, return_varname) for(size_t ICNAME(__LINE__) = 0; (return_varname = fn(tag, ICNAME(__LINE__))) >= 0; ICNAME(__LINE__)++)
 
 // Use these macros as wrappers for a taglist iteration.
 #define TAG_ITER_SECTORS(tag, return_varname) TAG_ITER(Tag_Iterate_Sectors, tag, return_varname)
