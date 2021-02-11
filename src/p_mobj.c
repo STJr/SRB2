@@ -4607,9 +4607,8 @@ static boolean P_Boss4MoveCage(mobj_t *mobj, fixed_t delta)
 	INT32 snum;
 	sector_t *sector;
 	boolean gotcage = false;
-	TAG_ITER_DECLARECOUNTER(0);
 
-	TAG_ITER_SECTORS(0, tag, snum)
+	TAG_ITER_SECTORS(tag, snum)
 	{
 		sector = &sectors[snum];
 		sector->floorheight += delta;
@@ -4693,9 +4692,8 @@ static void P_Boss4DestroyCage(mobj_t *mobj)
 	size_t a;
 	sector_t *sector, *rsec;
 	ffloor_t *rover;
-	TAG_ITER_DECLARECOUNTER(0);
 
-	TAG_ITER_SECTORS(0, tag, snum)
+	TAG_ITER_SECTORS(tag, snum)
 	{
 		sector = &sectors[snum];
 

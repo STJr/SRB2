@@ -71,15 +71,12 @@ INT32 Tag_Iterate_Things (const mtag_t tag, const size_t p);
 INT32 Tag_FindLineSpecial(const INT16 special, const mtag_t tag);
 INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start);
 
-// Use this macro to declare an iterator position variable.
-#define TAG_ITER_DECLARECOUNTER(level) size_t ICNT_##level
-
-#define TAG_ITER(level, fn, tag, return_varname) for(ICNT_##level = 0; (return_varname = fn(tag, ICNT_##level)) >= 0; ICNT_##level++)
+#define TAG_ITER(fn, tag, return_varname) for(size_t ICNT_ ## __LINE__ = 0; (return_varname = fn(tag, ICNT_ ## __LINE__)) >= 0; ICNT_ ## __LINE__++)
 
 // Use these macros as wrappers for a taglist iteration.
-#define TAG_ITER_SECTORS(level, tag, return_varname) TAG_ITER(level, Tag_Iterate_Sectors, tag, return_varname)
-#define TAG_ITER_LINES(level, tag, return_varname)   TAG_ITER(level, Tag_Iterate_Lines, tag, return_varname)
-#define TAG_ITER_THINGS(level, tag, return_varname)  TAG_ITER(level, Tag_Iterate_Things, tag, return_varname)
+#define TAG_ITER_SECTORS(tag, return_varname) TAG_ITER(Tag_Iterate_Sectors, tag, return_varname)
+#define TAG_ITER_LINES(tag, return_varname)   TAG_ITER(Tag_Iterate_Lines, tag, return_varname)
+#define TAG_ITER_THINGS(tag, return_varname)  TAG_ITER(Tag_Iterate_Things, tag, return_varname)
 
 /* ITERATION MACROS
 TAG_ITER_DECLARECOUNTER must be used before using the iterators.
