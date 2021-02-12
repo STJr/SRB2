@@ -333,7 +333,7 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	// local player variables, by popular request
 	} else if (fastcmp(word,"consoleplayer")) { // player controlling console (aka local player 1)
-		if (consoleplayer < 0 || !playeringame[consoleplayer])
+		if (!addedtogame || consoleplayer < 0 || !playeringame[consoleplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[consoleplayer], META_PLAYER);
 		return 1;
