@@ -357,7 +357,29 @@ angle_t R_PointToAngle2(fixed_t pviewx, fixed_t pviewy, fixed_t x, fixed_t y)
 
 fixed_t R_PointToDist2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1)
 {
-	return FixedHypot(px1 - px2, py1 - py2);
+	angle_t angle;
+	fixed_t dx, dy, dist;
+
+	dx = abs(px1 - px2);
+	dy = abs(py1 - py2);
+
+	if (dy > dx)
+	{
+		fixed_t temp;
+
+		temp = dx;
+		dx = dy;
+		dy = temp;
+	}
+	if (!dy)
+		return dx;
+
+	angle = (tantoangle[FixedDiv(dy, dx)>>DBITS] + ANGLE_90) >> ANGLETOFINESHIFT;
+
+	// use as cosine
+	dist = FixedDiv(dx, FINESINE(angle));
+
+	return dist;
 }
 
 // Little extra utility. Works in the same way as R_PointToAngle2

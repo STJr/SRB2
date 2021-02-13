@@ -1736,7 +1736,7 @@ static void P_PushableCheckBustables(mobj_t *mo)
 
 			// Run a linedef executor??
 			if (rover->master->flags & ML_EFFECT5)
-				P_LinedefExecute((INT16)(FixedHypot(rover->master->dx, rover->master->dy)>>FRACBITS), mo, node->m_sector);
+				P_LinedefExecute((INT16)(P_AproxDistance(rover->master->dx, rover->master->dy)>>FRACBITS), mo, node->m_sector);
 
 			goto bustupdone;
 		}
@@ -2512,7 +2512,7 @@ boolean P_ZMovement(mobj_t *mo)
 		// float down towards target if too close
 		if (!(mo->flags2 & MF2_SKULLFLY) && !(mo->flags2 & MF2_INFLOAT))
 		{
-			dist = FixedHypot(mo->x - mo->target->x, mo->y - mo->target->y);
+			dist = P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y);
 
 			delta = (mo->target->z + (mo->height>>1)) - mo->z;
 
@@ -3665,11 +3665,11 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 				P_ResetCamera(player, thiscam);
 			else
 			{
-				fixed_t camspeed = FixedHypot(thiscam->momx, thiscam->momy);
+				fixed_t camspeed = P_AproxDistance(thiscam->momx, thiscam->momy);
 
 				P_SlideCameraMove(thiscam);
 
-				if (!resetcalled && FixedHypot(thiscam->momx, thiscam->momy) == camspeed)
+				if (!resetcalled && P_AproxDistance(thiscam->momx, thiscam->momy) == camspeed)
 				{
 					P_ResetCamera(player, thiscam);
 					resetcalled = true;
@@ -4152,7 +4152,7 @@ boolean P_BossTargetPlayer(mobj_t *actor, boolean closest)
 
 		if (closest)
 		{
-			dist = FixedHypot(actor->x - player->mo->x, actor->y - player->mo->y);
+			dist = P_AproxDistance(actor->x - player->mo->x, actor->y - player->mo->y);
 			if (!lastdist || dist < lastdist)
 			{
 				lastdist = dist+1;
@@ -4521,7 +4521,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 		if (mobj->tracer->x == mobj->x && mobj->tracer->y == mobj->y)
 		{
 			// apply ambush for old routing, otherwise whack a mole only
-			dist = FixedHypot(FixedHypot(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z + mobj->movefactor - mobj->z);
+			dist = P_AproxDistance(P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z + mobj->movefactor - mobj->z);
 
 			if (dist < 1)
 				dist = 1;
@@ -5045,7 +5045,7 @@ static void P_Boss5Thinker(mobj_t *mobj)
 		}
 		if (mobj->state == &states[mobj->info->xdeathstate])
 			mobj->momz -= (2*FRACUNIT)/3;
-		else if (mobj->tracer && FixedHypot(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y) < 2*mobj->radius)
+		else if (mobj->tracer && P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y) < 2*mobj->radius)
 			mobj->flags &= ~MF_NOCLIP;
 	}
 	else
@@ -5171,7 +5171,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			if (players[i].mo->health <= 0)
 				continue;
 
-			if (FixedHypot(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y) > (mobj->radius + players[i].mo->radius))
+			if (P_AproxDistance(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y) > (mobj->radius + players[i].mo->radius))
 				continue;
 
 			if (players[i].mo->z > mobj->z + mobj->height - FRACUNIT
@@ -5275,7 +5275,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 					if (mobj->health <= mobj->info->damage && !(mo2->spawnpoint->options & 7))
 						continue; // don't jump to center
 
-					dist = FixedHypot(players[i].mo->x - mo2->x, players[i].mo->y - mo2->y);
+					dist = P_AproxDistance(players[i].mo->x - mo2->x, players[i].mo->y - mo2->y);
 
 					if (!(closestNum == -1 || dist < closestdist))
 						continue;
@@ -5348,7 +5348,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		an = mobj->angle;
 		an >>= ANGLETOFINESHIFT;
 
-		dist = FixedHypot(hitspot->x - mobj->x, hitspot->y - mobj->y);
+		dist = P_AproxDistance(hitspot->x - mobj->x, hitspot->y - mobj->y);
 
 		horizontal = dist / airtime;
 		vertical = (gravity*airtime)/2;
@@ -5399,7 +5399,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			if (players[i].mo->health <= 0)
 				continue;
 
-			if (FixedHypot(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y) > mobj->radius*4)
+			if (P_AproxDistance(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y) > mobj->radius*4)
 				continue;
 
 			if (players[i].mo->z > mobj->z + 128*FRACUNIT)
@@ -5653,14 +5653,14 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			// Spawn energy particles
 			for (spawner = mobj->hnext; spawner; spawner = spawner->hnext)
 			{
-				dist = FixedHypot(spawner->x - mobj->x, spawner->y - mobj->y);
+				dist = P_AproxDistance(spawner->x - mobj->x, spawner->y - mobj->y);
 				if (P_RandomRange(1,(dist>>FRACBITS)/16) == 1)
 					break;
 			}
 			if (spawner && dist)
 			{
 				mobj_t *missile = P_SpawnMissile(spawner, mobj, MT_MSGATHER);
-				missile->fuse = (dist/FixedHypot(missile->momx, missile->momy));
+				missile->fuse = (dist/P_AproxDistance(missile->momx, missile->momy));
 
 				if (missile->fuse > mobj->fuse)
 					P_RemoveMobj(missile);
@@ -6092,7 +6092,7 @@ nodanger:
 			mobj->flags2 |= MF2_INVERTAIMABLE;
 
 			// Move normally: Approach the player using normal thrust and simulated friction.
-			dist = FixedHypot(mobj->x-mobj->target->x, mobj->y-mobj->target->y);
+			dist = P_AproxDistance(mobj->x-mobj->target->x, mobj->y-mobj->target->y);
 			P_Thrust(mobj, R_PointToAngle2(0, 0, mobj->momx, mobj->momy), -3*FRACUNIT/8);
 			if (dist < 64*FRACUNIT && !(mobj->target->player && mobj->target->player->homing))
 				P_Thrust(mobj, mobj->angle, -4*FRACUNIT);
@@ -6100,7 +6100,7 @@ nodanger:
 				P_Thrust(mobj, mobj->angle, FRACUNIT);
 			else
 				P_Thrust(mobj, mobj->angle + ANGLE_90, FINECOSINE((((angle_t)(leveltime*ANG1))>>ANGLETOFINESHIFT) & FINEMASK)>>1);
-			mobj->momz += FixedHypot(mobj->momx, mobj->momy)/12; // Move up higher the faster you're going.
+			mobj->momz += P_AproxDistance(mobj->momx, mobj->momy)/12; // Move up higher the faster you're going.
 		}
 	}
 }
@@ -6306,7 +6306,7 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 		mobj->angle = R_PointToAngle2(mobj->x, mobj->y, x, y);
 
 		// change slope
-		dist = FixedHypot(FixedHypot(x - mobj->x, y - mobj->y), z - mobj->z);
+		dist = P_AproxDistance(P_AproxDistance(x - mobj->x, y - mobj->y), z - mobj->z);
 
 		if (dist < 1)
 			dist = 1;
@@ -6380,7 +6380,7 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 	fixed_t tx = dest->x;
 	fixed_t ty = dest->y;
 	fixed_t tz = dest->z + (dest->height/2); // Aim for center
-	fixed_t xydist = FixedHypot(tx - source->x, ty - source->y);
+	fixed_t xydist = P_AproxDistance(tx - source->x, ty - source->y);
 
 	if (!dest || dest->health <= 0 || !dest->player || !source->tracer)
 		return;
@@ -6389,7 +6389,7 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 	source->angle = R_PointToAngle2(source->x, source->y, tx, ty);
 
 	// change slope
-	dist = FixedHypot(xydist, tz - source->z);
+	dist = P_AproxDistance(xydist, tz - source->z);
 
 	if (dist < 1)
 		dist = 1;
@@ -6415,9 +6415,9 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 	else
 	{
 		if (nightsgrab)
-			speedmul = FixedHypot(dest->momx, dest->momy) + FixedMul(8*FRACUNIT, source->scale);
+			speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(8*FRACUNIT, source->scale);
 		else
-			speedmul = FixedHypot(dest->momx, dest->momy) + FixedMul(source->info->speed, source->scale);
+			speedmul = P_AproxDistance(dest->momx, dest->momy) + FixedMul(source->info->speed, source->scale);
 
 		source->momx = FixedMul(FixedDiv(tx - source->x, dist), speedmul);
 		source->momy = FixedMul(FixedDiv(ty - source->y, dist), speedmul);
@@ -6425,7 +6425,7 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 	}
 
 	// Instead of just unsetting NOCLIP like an idiot, let's check the distance to our target.
-	ndist = FixedHypot(FixedHypot(tx - (source->x+source->momx),
+	ndist = P_AproxDistance(P_AproxDistance(tx - (source->x+source->momx),
 	                                        ty - (source->y+source->momy)),
 	                                        tz - (source->z+source->momz));
 
@@ -7076,7 +7076,7 @@ static void P_MaceSceneryThink(mobj_t *mobj)
 		// The below is selected based on CEZ2's first room. I promise you it is a coincidence that it looks like the weed number.
 		for (i = 0; i < MAXPLAYERS; ++i)
 			if (playeringame[i] && players[i].mo
-				&& FixedHypot(FixedHypot(mobj->x - players[i].mo->x, mobj->y - players[i].mo->y), mobj->z - players[i].mo->z) < (4200 << FRACBITS))
+				&& P_AproxDistance(P_AproxDistance(mobj->x - players[i].mo->x, mobj->y - players[i].mo->y), mobj->z - players[i].mo->z) < (4200 << FRACBITS))
 				break; // Stop looking.
 		if (i == MAXPLAYERS)
 		{
@@ -8052,7 +8052,7 @@ static boolean P_MobjBossThink(mobj_t *mobj)
 			{
 				if (mobj->target)
 				{
-					mobj->momz = FixedMul(FixedDiv(mobj->target->z - mobj->z, FixedHypot(mobj->x - mobj->target->x, mobj->y - mobj->target->y)), mobj->scale << 1);
+					mobj->momz = FixedMul(FixedDiv(mobj->target->z - mobj->z, P_AproxDistance(mobj->x - mobj->target->x, mobj->y - mobj->target->y)), mobj->scale << 1);
 					mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 				}
 				else
@@ -8296,7 +8296,7 @@ static void P_ArrowThink(mobj_t *mobj)
 		0------dist(momx,momy)
 		*/
 
-		fixed_t dist = FixedHypot(mobj->momx, mobj->momy);
+		fixed_t dist = P_AproxDistance(mobj->momx, mobj->momy);
 		angle_t angle = R_PointToAngle2(0, 0, dist, mobj->momz);
 
 		if (angle > ANG20 && angle <= ANGLE_180)
@@ -8578,7 +8578,7 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 						continue;
 					if (players[i].mo->z + players[i].mo->height < mobj->z - 8*mobj->scale)
 						continue;
-					compdist = FixedHypot(
+					compdist = P_AproxDistance(
 						players[i].mo->x + players[i].mo->momx - basex,
 						players[i].mo->y + players[i].mo->momy - basey);
 					if (compdist >= dist)
@@ -8593,7 +8593,7 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 					mobj->frame = 3 + ((leveltime & 2) >> 1);
 					mobj->angle = R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y);
 
-					if (FixedHypot(
+					if (P_AproxDistance(
 						mobj->x - basex,
 						mobj->y - basey)
 						< mobj->scale)
@@ -8624,7 +8624,7 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 
 			if (!didmove)
 			{
-				if (FixedHypot(mobj->x - basex, mobj->y - basey) < mobj->scale)
+				if (P_AproxDistance(mobj->x - basex, mobj->y - basey) < mobj->scale)
 					P_TeleportMove(mobj, basex, basey, mobj->z);
 				else
 					P_TeleportMove(mobj,
@@ -9014,7 +9014,7 @@ static void P_PyreFlyThink(mobj_t *mobj)
 	{
 		//Aim for player z position. If too close to floor/ceiling, aim just above/below them.
 		fixed_t destz = min(max(mobj->target->z, mobj->target->floorz + 70*FRACUNIT), mobj->target->ceilingz - 80*FRACUNIT - mobj->height);
-		fixed_t dist = FixedHypot(hdist, destz - mobj->z);
+		fixed_t dist = P_AproxDistance(hdist, destz - mobj->z);
 		P_InstaThrust(mobj, R_PointToAngle2(mobj->x, mobj->y, mobj->target->x, mobj->target->y), 2*FRACUNIT);
 		mobj->momz = FixedMul(FixedDiv(destz - mobj->z, dist), 2*FRACUNIT);
 	}
@@ -9116,7 +9116,7 @@ static void P_PterabyteThink(mobj_t *mobj)
 		var1 = 2*mobj->info->speed;
 		var2 = 1;
 		A_HomingChase(mobj);
-		if (FixedHypot(mobj->x - mobj->tracer->x, mobj->y - mobj->tracer->y) <= mobj->info->speed)
+		if (P_AproxDistance(mobj->x - mobj->tracer->x, mobj->y - mobj->tracer->y) <= mobj->info->speed)
 		{
 			mobj->extravalue1 -= 2;
 			mobj->momx = mobj->momy = mobj->momz = 0;
@@ -9141,7 +9141,7 @@ static void P_DragonbomberThink(mobj_t *mobj)
 			{
 				mobj_t *mine = P_SpawnMobjFromMobj(segment, 0, 0, 0, segment->info->painchance);
 				mine->angle = segment->angle;
-				P_InstaThrust(mine, mobj->angle, FixedHypot(mobj->momx, mobj->momy) >> 1);
+				P_InstaThrust(mine, mobj->angle, P_AproxDistance(mobj->momx, mobj->momy) >> 1);
 				P_SetObjectMomZ(mine, -2*FRACUNIT, true);
 				S_StartSound(mine, mine->info->seesound);
 				P_SetMobjState(segment, segment->info->raisestate);
@@ -9151,7 +9151,7 @@ static void P_DragonbomberThink(mobj_t *mobj)
 	}
 	if (mobj->target) // Are we chasing a player?
 	{
-		fixed_t dist = FixedHypot(mobj->x - mobj->target->x, mobj->y - mobj->target->y);
+		fixed_t dist = P_AproxDistance(mobj->x - mobj->target->x, mobj->y - mobj->target->y);
 		if (dist > 2000*mobj->scale) // Not anymore!
 			P_SetTarget(&mobj->target, NULL);
 		else
@@ -9259,7 +9259,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		mobj->eflags |= MFE_UNDERWATER; //P_MobjCheckWater(mobj); // solely for MFE_UNDERWATER for A_FlickySpawn
 		{
 			if (mobj->tracer && mobj->tracer->player && mobj->tracer->health > 0
-				&& FixedHypot(FixedHypot(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z - mobj->z) <= mobj->radius*16)
+				&& P_AproxDistance(P_AproxDistance(mobj->tracer->x - mobj->x, mobj->tracer->y - mobj->y), mobj->tracer->z - mobj->z) <= mobj->radius*16)
 			{
 				var1 = mobj->info->speed;
 				var2 = 1;
@@ -9394,7 +9394,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 				if (playeringame[i] && players[i].mo
 					&& players[i].mare == mobj->threshold && players[i].spheres > 0)
 				{
-					fixed_t dist = FixedHypot(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y);
+					fixed_t dist = P_AproxDistance(players[i].mo->x - mobj->x, players[i].mo->y - mobj->y);
 					if (dist < shortest)
 					{
 						P_SetTarget(&mobj->target, players[i].mo);
@@ -9425,7 +9425,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		P_KoopaThinker(mobj);
 		break;
 	case MT_FIREBALL:
-		if (FixedHypot(mobj->momx, mobj->momy) <= 16*FRACUNIT) // Once fireballs lose enough speed, kill them
+		if (P_AproxDistance(mobj->momx, mobj->momy) <= 16*FRACUNIT) // Once fireballs lose enough speed, kill them
 		{
 			P_KillMobj(mobj, NULL, NULL, 0);
 			return false;
@@ -13530,7 +13530,7 @@ mobj_t *P_SpawnXYZMissile(mobj_t *source, mobj_t *dest, mobjtype_t type,
 	th->momx = FixedMul(speed, FINECOSINE(an));
 	th->momy = FixedMul(speed, FINESINE(an));
 
-	dist = FixedHypot(dest->x - x, dest->y - y);
+	dist = P_AproxDistance(dest->x - x, dest->y - y);
 	dist = dist / speed;
 
 	if (dist < 1)
@@ -13592,7 +13592,7 @@ mobj_t *P_SpawnAlteredDirectionMissile(mobj_t *source, mobjtype_t type, fixed_t 
 	th->momx = FixedMul(speed, FINECOSINE(an));
 	th->momy = FixedMul(speed, FINESINE(an));
 
-	dist = FixedHypot(source->momx*800, source->momy*800);
+	dist = P_AproxDistance(source->momx*800, source->momy*800);
 	dist = dist / speed;
 
 	if (dist < 1)
@@ -13657,7 +13657,7 @@ mobj_t *P_SpawnPointMissile(mobj_t *source, fixed_t xa, fixed_t ya, fixed_t za, 
 	th->momx = FixedMul(speed, FINECOSINE(an));
 	th->momy = FixedMul(speed, FINESINE(an));
 
-	dist = FixedHypot(xa - x, ya - y);
+	dist = P_AproxDistance(xa - x, ya - y);
 	dist = dist / speed;
 
 	if (dist < 1)
@@ -13737,9 +13737,9 @@ mobj_t *P_SpawnMissile(mobj_t *source, mobj_t *dest, mobjtype_t type)
 	th->momy = FixedMul(speed, FINESINE(an));
 
 	if (type == MT_TURRETLASER || type == MT_ENERGYBALL) // More accurate!
-		dist = FixedHypot(dest->x+(dest->momx*gsf) - source->x, dest->y+(dest->momy*gsf) - source->y);
+		dist = P_AproxDistance(dest->x+(dest->momx*gsf) - source->x, dest->y+(dest->momy*gsf) - source->y);
 	else
-		dist = FixedHypot(dest->x - source->x, dest->y - source->y);
+		dist = P_AproxDistance(dest->x - source->x, dest->y - source->y);
 
 	dist = dist / speed;
 

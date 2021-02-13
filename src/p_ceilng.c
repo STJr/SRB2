@@ -468,7 +468,7 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 
 			//  Linedef executor excellence
 			case moveCeilingByFrontSector:
-				ceiling->speed = FixedHypot(line->dx, line->dy);
+				ceiling->speed = P_AproxDistance(line->dx, line->dy);
 				ceiling->speed = FixedDiv(ceiling->speed,8*FRACUNIT);
 				if (line->frontsector->ceilingheight >= sec->ceilingheight) // Move up
 				{
@@ -547,7 +547,7 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 */
 
 			case bounceCeiling:
-				ceiling->speed = FixedHypot(line->dx, line->dy); // same speed as elevateContinuous
+				ceiling->speed = P_AproxDistance(line->dx, line->dy); // same speed as elevateContinuous
 				ceiling->speed = FixedDiv(ceiling->speed,4*FRACUNIT);
 				ceiling->origspeed = ceiling->speed;
 				if (line->frontsector->ceilingheight >= sec->ceilingheight) // Move up
