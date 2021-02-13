@@ -1649,23 +1649,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// left
 		temp = xtoviewangle[start]+viewangle;
 
+#define FIXED_TO_DOUBLE(x) (((double)(x)) / ((double)FRACUNIT))
+#define DOUBLE_TO_FIXED(x) (fixed_t)((x) * ((double)FRACUNIT))
+
 		{
 			// Both lines can be written in slope-intercept form, so figure out line intersection
-			float a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
-			///TODO: convert to FPU
+			double a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
+			///TODO: convert to fixed point
 
-			a1 = FIXED_TO_FLOAT(curline->v2->y-curline->v1->y);
-			b1 = FIXED_TO_FLOAT(curline->v1->x-curline->v2->x);
-			c1 = a1*FIXED_TO_FLOAT(curline->v1->x) + b1*FIXED_TO_FLOAT(curline->v1->y);
+			a1 = FIXED_TO_DOUBLE(curline->v2->y-curline->v1->y);
+			b1 = FIXED_TO_DOUBLE(curline->v1->x-curline->v2->x);
+			c1 = a1*FIXED_TO_DOUBLE(curline->v1->x) + b1*FIXED_TO_DOUBLE(curline->v1->y);
 
-			a2 = -FIXED_TO_FLOAT(FINESINE(temp>>ANGLETOFINESHIFT));
-			b2 = FIXED_TO_FLOAT(FINECOSINE(temp>>ANGLETOFINESHIFT));
-			c2 = a2*FIXED_TO_FLOAT(viewx) + b2*FIXED_TO_FLOAT(viewy);
+			a2 = -FIXED_TO_DOUBLE(FINESINE(temp>>ANGLETOFINESHIFT));
+			b2 = FIXED_TO_DOUBLE(FINECOSINE(temp>>ANGLETOFINESHIFT));
+			c2 = a2*FIXED_TO_DOUBLE(viewx) + b2*FIXED_TO_DOUBLE(viewy);
 
 			det = a1*b2 - a2*b1;
 
-			ds_p->leftpos.x = segleft.x = FLOAT_TO_FIXED((b2*c1 - b1*c2)/det);
-			ds_p->leftpos.y = segleft.y = FLOAT_TO_FIXED((a1*c2 - a2*c1)/det);
+			ds_p->leftpos.x = segleft.x = DOUBLE_TO_FIXED((b2*c1 - b1*c2)/det);
+			ds_p->leftpos.y = segleft.y = DOUBLE_TO_FIXED((a1*c2 - a2*c1)/det);
 		}
 
 		// right
@@ -1673,22 +1676,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		{
 			// Both lines can be written in slope-intercept form, so figure out line intersection
-			float a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
-			///TODO: convert to FPU
+			double a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
+			///TODO: convert to fixed point
 
-			a1 = FIXED_TO_FLOAT(curline->v2->y-curline->v1->y);
-			b1 = FIXED_TO_FLOAT(curline->v1->x-curline->v2->x);
-			c1 = a1*FIXED_TO_FLOAT(curline->v1->x) + b1*FIXED_TO_FLOAT(curline->v1->y);
+			a1 = FIXED_TO_DOUBLE(curline->v2->y-curline->v1->y);
+			b1 = FIXED_TO_DOUBLE(curline->v1->x-curline->v2->x);
+			c1 = a1*FIXED_TO_DOUBLE(curline->v1->x) + b1*FIXED_TO_DOUBLE(curline->v1->y);
 
-			a2 = -FIXED_TO_FLOAT(FINESINE(temp>>ANGLETOFINESHIFT));
-			b2 = FIXED_TO_FLOAT(FINECOSINE(temp>>ANGLETOFINESHIFT));
-			c2 = a2*FIXED_TO_FLOAT(viewx) + b2*FIXED_TO_FLOAT(viewy);
+			a2 = -FIXED_TO_DOUBLE(FINESINE(temp>>ANGLETOFINESHIFT));
+			b2 = FIXED_TO_DOUBLE(FINECOSINE(temp>>ANGLETOFINESHIFT));
+			c2 = a2*FIXED_TO_DOUBLE(viewx) + b2*FIXED_TO_DOUBLE(viewy);
 
 			det = a1*b2 - a2*b1;
 
-			ds_p->rightpos.x = segright.x = FLOAT_TO_FIXED((b2*c1 - b1*c2)/det);
-			ds_p->rightpos.y = segright.y = FLOAT_TO_FIXED((a1*c2 - a2*c1)/det);
+			ds_p->rightpos.x = segright.x = DOUBLE_TO_FIXED((b2*c1 - b1*c2)/det);
+			ds_p->rightpos.y = segright.y = DOUBLE_TO_FIXED((a1*c2 - a2*c1)/det);
 		}
+
+#undef FIXED_TO_DOUBLE
+#undef DOUBLE_TO_FIXED
+
 	}
 
 

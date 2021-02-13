@@ -1612,53 +1612,54 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Max Friends",                      &cv_maxplayers,          21},
 	{IT_STRING | IT_CVAR,    NULL, "Allow Moderator Downloading",         &cv_downloading,         26},
 	{IT_STRING | IT_CVAR,    NULL, "Allow new friends",            &cv_allownewplayer,      31},
+	{IT_STRING | IT_CVAR,    NULL, "Minutes for reconnecting",         &cv_rejointimeout,       36},
 #endif
-	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          36},
-	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             41},
+	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          41},
+	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             46},
 
-	{IT_HEADER, NULL, "Pet types", NULL, 50},
-	{IT_STRING | IT_CVAR,    NULL, "Force pet type",                &cv_forceskin,           56},
-	{IT_STRING | IT_CVAR,    NULL, "Restrict pet changes",       &cv_restrictskinchange,  61},
+	{IT_HEADER, NULL, "Pet types", NULL, 55},
+	{IT_STRING | IT_CVAR,    NULL, "Force pet type",                &cv_forceskin,           61},
+	{IT_STRING | IT_CVAR,    NULL, "Restrict pet changes",       &cv_restrictskinchange,  66},
 
-	{IT_HEADER, NULL, "Objects", NULL, 70},
-	{IT_STRING | IT_CVAR,    NULL, "Item farm delay",               &cv_itemrespawntime,     76},
-	{IT_STRING | IT_SUBMENU, NULL, "Who uses that menu anyway...",  &OP_MonitorToggleDef,    81},
+	{IT_HEADER, NULL, "Objects", NULL, 75},
+	{IT_STRING | IT_CVAR,    NULL, "Item farm delay",               &cv_itemrespawntime,     81},
+	{IT_STRING | IT_SUBMENU, NULL, "Who uses that menu anyway...",  &OP_MonitorToggleDef,    86},
 
-	{IT_HEADER, NULL, "Friendship", NULL, 90},
-	{IT_STRING | IT_CVAR,    NULL, "Pets required for exit",        &cv_playersforexit,      96},
-	{IT_STRING | IT_CVAR,    NULL, "Checkpoints",                        &cv_coopstarposts,      101},
-	{IT_STRING | IT_CVAR,    NULL, "Live sharing",                     &cv_cooplives,          106},
-	{IT_STRING | IT_CVAR,    NULL, "Post-goal hangout",           &cv_exitmove,           111},
+	{IT_HEADER, NULL, "Friendship", NULL, 95},
+	{IT_STRING | IT_CVAR,    NULL, "Pets required for exit",        &cv_playersforexit,     101},
+	{IT_STRING | IT_CVAR,    NULL, "Checkpoints",                        &cv_coopstarposts,      106},
+	{IT_STRING | IT_CVAR,    NULL, "Live sharing",                     &cv_cooplives,          111},
+	{IT_STRING | IT_CVAR,    NULL, "Post-goal hangout",           &cv_exitmove,           116},
 
-	{IT_HEADER, NULL, "Species, Competition", NULL, 120},
-	{IT_STRING | IT_CVAR,    NULL, "Map completion countdown",       &cv_countdowntime,      126},
-	{IT_STRING | IT_CVAR,    NULL, "Item televisions",                    &cv_competitionboxes,   131},
+	{IT_HEADER, NULL, "Species, Competition", NULL, 125},
+	{IT_STRING | IT_CVAR,    NULL, "Map completion countdown",       &cv_countdowntime,      131},
+	{IT_STRING | IT_CVAR,    NULL, "Item televisions",                    &cv_competitionboxes,   136},
 
-	{IT_HEADER, NULL, "DooM (Match, CTF, Tag, H&S)", NULL, 140},
-	{IT_STRING | IT_CVAR,    NULL, "Time before bored",                       &cv_timelimit,          146},
-	{IT_STRING | IT_CVAR,    NULL, "Points before bored",                      &cv_pointlimit,         151},
-	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           156},
-	{IT_STRING | IT_CVAR,    NULL, "Pet revive delay",             &cv_respawntime,        161},
+	{IT_HEADER, NULL, "DooM (Match, CTF, Tag, H&S)", NULL, 145},
+	{IT_STRING | IT_CVAR,    NULL, "Time before bored",                       &cv_timelimit,          151},
+	{IT_STRING | IT_CVAR,    NULL, "Points before bored",                      &cv_pointlimit,         156},
+	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           161},
+	{IT_STRING | IT_CVAR,    NULL, "Pet revive delay",             &cv_respawntime,        166},
 
-	{IT_STRING | IT_CVAR,    NULL, "Televisions",                    &cv_matchboxes,         171},
-	{IT_STRING | IT_CVAR,    NULL, "Guns",                     &cv_specialrings,       176},
-	{IT_STRING | IT_CVAR,    NULL, "Magic Gems",                     &cv_powerstones,        181},
+	{IT_STRING | IT_CVAR,    NULL, "Televisions",                    &cv_matchboxes,         176},
+	{IT_STRING | IT_CVAR,    NULL, "Guns",                     &cv_specialrings,       181},
+	{IT_STRING | IT_CVAR,    NULL, "Magic Gems",                     &cv_powerstones,        186},
 
-	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           191},
-	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           196},
+	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           196},
+	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           201},
 
-	{IT_HEADER, NULL, "Groups", NULL, 205},
-	{IT_STRING | IT_CVAR,    NULL, "Autobalance sizes",                &cv_autobalance,        211},
-	{IT_STRING | IT_CVAR,    NULL, "Break Friendships on Exit",           &cv_scrambleonchange,   216},
+	{IT_HEADER, NULL, "Groups", NULL, 210},
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance sizes",                &cv_autobalance,        216},
+	{IT_STRING | IT_CVAR,    NULL, "Break Friendships on Exit",           &cv_scrambleonchange,   221},
 
 #ifndef NONET
-	{IT_HEADER, NULL, "Advanced", NULL, 225},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,       231},
+	{IT_HEADER, NULL, "Advanced", NULL, 230},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,       236},
 
-	{IT_STRING | IT_CVAR,    NULL, "Join delay",                       &cv_joindelay,          246},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,    251},
+	{IT_STRING | IT_CVAR,    NULL, "Join delay",                       &cv_joindelay,          251},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,    256},
 
-	{IT_STRING | IT_CVAR,    NULL, "Show IPv1 Address of New Pets",       &cv_showjoinaddress,    256},
+	{IT_STRING | IT_CVAR,    NULL, "Show Home Address of New Pets",       &cv_showjoinaddress,    261},
 #endif
 };
 
