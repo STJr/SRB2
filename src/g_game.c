@@ -1423,7 +1423,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			newtarget = P_SpawnMobj(ticcmd_ztargetfocus[forplayer]->x, ticcmd_ztargetfocus[forplayer]->y, ticcmd_ztargetfocus[forplayer]->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 			P_SetTarget(&newtarget->target, ticcmd_ztargetfocus[forplayer]);
 
-			if (FixedHypot(
+			if (P_AproxDistance(
 				player->mo->x - ticcmd_ztargetfocus[forplayer]->x,
 				player->mo->y - ticcmd_ztargetfocus[forplayer]->y
 			) > 50*player->mo->scale)

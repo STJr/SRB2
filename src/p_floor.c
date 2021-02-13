@@ -1164,7 +1164,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 				if (players[i].mo->z > thwomp->sector->ceilingheight)
 					continue;
 
-				if (FixedHypot(thwompx - players[i].mo->x, thwompy - players[i].mo->y) > 96*FRACUNIT)
+				if (P_AproxDistance(thwompx - players[i].mo->x, thwompy - players[i].mo->y) > 96*FRACUNIT)
 					continue;
 
 				thwomp->direction = -1;
@@ -1892,7 +1892,7 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 			// Linedef executor command, linetype 106.
 			// Line length = speed, front sector floor = destination height.
 			case moveFloorByFrontSector:
-				dofloor->speed = FixedHypot(line->dx, line->dy);
+				dofloor->speed = P_AproxDistance(line->dx, line->dy);
 				dofloor->speed = FixedDiv(dofloor->speed,8*FRACUNIT);
 				dofloor->floordestheight = line->frontsector->floorheight;
 
@@ -1958,7 +1958,7 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 			// Linetypes 2/3.
 			// Move floor up and down indefinitely like the old elevators.
 			case bounceFloor:
-				dofloor->speed = FixedHypot(line->dx, line->dy); // same speed as elevateContinuous
+				dofloor->speed = P_AproxDistance(line->dx, line->dy); // same speed as elevateContinuous
 				dofloor->speed = FixedDiv(dofloor->speed,4*FRACUNIT);
 				dofloor->origspeed = dofloor->speed; // it gets slowed down at the top and bottom
 				dofloor->floordestheight = line->frontsector->floorheight;
@@ -2104,7 +2104,7 @@ void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 			case elevateContinuous:
 				if (customspeed)
 				{
-					elevator->origspeed = FixedHypot(line->dx, line->dy);
+					elevator->origspeed = P_AproxDistance(line->dx, line->dy);
 					elevator->origspeed = FixedDiv(elevator->origspeed,4*FRACUNIT);
 					elevator->speed = elevator->origspeed;
 				}
@@ -2266,7 +2266,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 
 					if (flags & ML_EFFECT1)
 					{
-						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(FixedHypot(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
+						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(P_AproxDistance(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
 						P_SetObjectMomZ(spawned, FixedDiv((c - bottomz), heightfactor), false);
 					}
 

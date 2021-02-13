@@ -1636,7 +1636,7 @@ void T_PolyObjWaypoint(polywaypoint_t *th)
 		distx = target->x - pox;
 		disty = target->y - poy;
 		distz = target->z - poz;
-		dist = FixedHypot(FixedHypot(distx, disty), distz);
+		dist = P_AproxDistance(P_AproxDistance(distx, disty), distz);
 
 		if (dist < 1)
 			dist = 1;
