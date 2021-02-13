@@ -496,16 +496,16 @@ consvar_t cv_dummyloadless = CVAR_INIT ("dummyloadless", "In-game", CV_HIDEN, lo
 // ---------
 static menuitem_t MainMenu[] =
 {
-	{IT_STRING|IT_CALL,    NULL, "1  Player",   M_SinglePlayerMenu,      76},
+	{IT_STRING|IT_CALL,    NULL, "Alone Mode",   M_SinglePlayerMenu,      76},
 #ifndef NONET
-	{IT_STRING|IT_SUBMENU, NULL, "Multiplayer", &MP_MainDef,             84},
+	{IT_STRING|IT_SUBMENU, NULL, "Hangout Mode", &MP_MainDef,             84},
 #else
-	{IT_STRING|IT_CALL,    NULL, "Multiplayer", M_StartSplitServerMenu,  84},
+	{IT_STRING|IT_CALL,    NULL, "Hangout Mode", M_StartSplitServerMenu,  84},
 #endif
-	{IT_STRING|IT_CALL,    NULL, "Extras",      M_SecretsMenu,           92},
-	{IT_CALL   |IT_STRING, NULL, "Addons",      M_Addons,               100},
-	{IT_STRING|IT_CALL,    NULL, "Options",     M_Options,              108},
-	{IT_STRING|IT_CALL,    NULL, "Quit  Game",  M_QuitSRB2,             116},
+	{IT_STRING|IT_CALL,    NULL, "More Stuff",      M_SecretsMenu,           92},
+	{IT_CALL   |IT_STRING, NULL, "Mods",      M_Addons,               100},
+	{IT_STRING|IT_CALL,    NULL, "Settings",     M_Options,              108},
+	{IT_STRING|IT_CALL,    NULL, "EXIT TO DOS",  M_QuitSRB2,             116},
 };
 
 typedef enum
@@ -532,7 +532,7 @@ static menuitem_t MAPauseMenu[] =
 
 	{IT_CALL | IT_STRING,    NULL, "Continue",             M_SelectableClearMenus,48},
 	{IT_CALL | IT_STRING,    NULL, "Retry",                M_ModeAttackRetry,     56},
-	{IT_CALL | IT_STRING,    NULL, "Abort",                M_ModeAttackEndGame,   64},
+	{IT_CALL | IT_STRING,    NULL, "Give up",                M_ModeAttackEndGame,   64},
 };
 
 typedef enum
@@ -548,22 +548,22 @@ typedef enum
 // ---------------------
 static menuitem_t MPauseMenu[] =
 {
-	{IT_STRING | IT_CALL,    NULL, "Add-ons...",                M_Addons,               8},
-	{IT_STRING | IT_SUBMENU, NULL, "Scramble Teams...",         &MISC_ScrambleTeamDef, 16},
-	{IT_STRING | IT_CALL,    NULL, "Switch Gametype/Level...",  M_MapChange,           24},
+	{IT_STRING | IT_CALL,    NULL, "Plugins...",                M_Addons,               8},
+	{IT_STRING | IT_SUBMENU, NULL, "Scramble Groups...",         &MISC_ScrambleTeamDef, 16},
+	{IT_STRING | IT_CALL,    NULL, "Can We Play Tag?",  M_MapChange,           24},
 
-	{IT_STRING | IT_CALL,    NULL, "Continue",                  M_SelectableClearMenus,40},
-	{IT_STRING | IT_CALL,    NULL, "Player 1 Setup",            M_SetupMultiPlayer,    48}, // splitscreen
-	{IT_STRING | IT_CALL,    NULL, "Player 2 Setup",            M_SetupMultiPlayer2,   56}, // splitscreen
+	{IT_STRING | IT_CALL,    NULL, "Keep going",                  M_SelectableClearMenus,40},
+	{IT_STRING | IT_CALL,    NULL, "Pet 1 Setup",            M_SetupMultiPlayer,    48}, // splitscreen
+	{IT_STRING | IT_CALL,    NULL, "Pet 2 Setup",            M_SetupMultiPlayer2,   56}, // splitscreen
 
 	{IT_STRING | IT_CALL,    NULL, "Spectate",                  M_ConfirmSpectate,     48},
-	{IT_STRING | IT_CALL,    NULL, "Enter Game",                M_ConfirmEnterGame,    48},
-	{IT_STRING | IT_SUBMENU, NULL, "Switch Team...",            &MISC_ChangeTeamDef,   48},
-	{IT_STRING | IT_CALL,    NULL, "Player Setup",              M_SetupMultiPlayer,    56}, // alone
+	{IT_STRING | IT_CALL,    NULL, "Enter Playground",                M_ConfirmEnterGame,    48},
+	{IT_STRING | IT_SUBMENU, NULL, "Join Group...",            &MISC_ChangeTeamDef,   48},
+	{IT_STRING | IT_CALL,    NULL, "Customise Pet",              M_SetupMultiPlayer,    56}, // alone
 	{IT_STRING | IT_CALL,    NULL, "Options",                   M_Options,             64},
 
-	{IT_STRING | IT_CALL,    NULL, "Return to Title",           M_EndGame,             80},
-	{IT_STRING | IT_CALL,    NULL, "Quit Game",                 M_QuitSRB2,            88},
+	{IT_STRING | IT_CALL,    NULL, "Leave Group",           M_EndGame,             80},
+	{IT_STRING | IT_CALL,    NULL, "EXIT TO DOS",                 M_QuitSRB2,            88},
 };
 
 typedef enum
@@ -591,16 +591,16 @@ typedef enum
 static menuitem_t SPauseMenu[] =
 {
 	// Pandora's Box will be shifted up if both options are available
-	{IT_CALL | IT_STRING,    NULL, "Pandora's Box...",     M_PandorasBox,         16},
-	{IT_CALL | IT_STRING,    NULL, "Emblem Hints...",      M_EmblemHints,         24},
-	{IT_CALL | IT_STRING,    NULL, "Level Select...",      M_LoadGameLevelSelect, 32},
+	{IT_CALL | IT_STRING,    NULL, "Enable Hacks",     M_PandorasBox,         16},
+	{IT_CALL | IT_STRING,    NULL, "where are the emblems help",      M_EmblemHints,         24},
+	{IT_CALL | IT_STRING,    NULL, "What Map??",      M_LoadGameLevelSelect, 32},
 
-	{IT_CALL | IT_STRING,    NULL, "Continue",             M_SelectableClearMenus,48},
-	{IT_CALL | IT_STRING,    NULL, "Retry",                M_Retry,               56},
-	{IT_CALL | IT_STRING,    NULL, "Options",              M_Options,             64},
+	{IT_CALL | IT_STRING,    NULL, "Keep Going",             M_SelectableClearMenus,48},
+	{IT_CALL | IT_STRING,    NULL, "Try Again",                M_Retry,               56},
+	{IT_CALL | IT_STRING,    NULL, "Settings",              M_Options,             64},
 
-	{IT_CALL | IT_STRING,    NULL, "Return to Title",      M_EndGame,             80},
-	{IT_CALL | IT_STRING,    NULL, "Quit Game",            M_QuitSRB2,            88},
+	{IT_CALL | IT_STRING,    NULL, "Bored Already?",      M_EndGame,             80},
+	{IT_CALL | IT_STRING,    NULL, "EXIT TO DOS",            M_QuitSRB2,            88},
 };
 
 typedef enum
@@ -635,14 +635,14 @@ static menuitem_t MISC_ChangeTeamMenu[] =
 
 gtdesc_t gametypedesc[NUMGAMETYPES] =
 {
-	{{ 54,  54}, "Play through the single-player campaign with your friends, teaming up to beat Dr Eggman's nefarious challenges!"},
-	{{103, 103}, "Speed your way through the main acts, competing in several different categories to see who's the best."},
-	{{190, 190}, "There's not much to it - zoom through the level faster than everyone else."},
-	{{ 66,  66}, "Sling rings at your foes in a free-for-all battle. Use the special weapon rings to your advantage!"},
-	{{153,  37}, "Sling rings at your foes in a color-coded battle. Use the special weapon rings to your advantage!"},
-	{{123, 123}, "Whoever's IT has to hunt down everyone else. If you get caught, you have to turn on your former friends!"},
-	{{150, 150}, "Try and find a good hiding place in these maps - we dare you."},
-	{{ 37, 153}, "Steal the flag from the enemy's base and bring it back to your own, but watch out - they could just as easily steal yours!"},
+	{{ 54,  54}, "Hang out with your friends!"},
+	{{103, 103}, "Challenge your friends in this epic coding competition!"},
+	{{190, 190}, "Mash the thok button until you find the exit sign."},
+	{{ 66,  66}, "Use your thok to locate targets with a ping higher than yours and keep shooting them with rail rings until they ragequit!"},
+	{{153,  37}, "Join the team with the highest score and shoot in random directions until your team wins!"},
+	{{123, 123}, "Normally the IT guy is the one being chased, but for some reason it's the opposite in this gametype."},
+	{{150, 150}, "Play PropHunt but without the ability to fuse with your environment!"},
+	{{ 37, 153}, "Join the team with the most points, steal the payload, find a safe spot to hide until your friends bring back your team's payload to the base, then rush to your base!"},
 };
 
 static menuitem_t MISC_ChangeLevelMenu[] =
@@ -669,18 +669,18 @@ static menuitem_t SR_PandorasBox[] =
 {
 	{IT_STRING | IT_CALL, NULL, "Mid-game add-ons...", M_Addons,             0},
 
-	{IT_STRING | IT_CVAR, NULL, "Rings",               &cv_dummyrings,      20},
-	{IT_STRING | IT_CVAR, NULL, "Lives",               &cv_dummylives,      30},
+	{IT_STRING | IT_CVAR, NULL, "Coins",               &cv_dummyrings,      20},
+	{IT_STRING | IT_CVAR, NULL, "Lifes",               &cv_dummylives,      30},
 	{IT_STRING | IT_CVAR, NULL, "Continues",           &cv_dummycontinues,  40},
 
-	{IT_STRING | IT_CVAR, NULL, "Gravity",             &cv_gravity,         60},
-	{IT_STRING | IT_CVAR, NULL, "Throw Rings",         &cv_ringslinger,     70},
+	{IT_STRING | IT_CVAR, NULL, "Fall Speed",             &cv_gravity,         60},
+	{IT_STRING | IT_CVAR, NULL, "DooM Mode",         &cv_ringslinger,     70},
 
 	{IT_STRING | IT_CALL, NULL, "Enable Super form",   M_AllowSuper,        90},
-	{IT_STRING | IT_CALL, NULL, "Get All Emeralds",    M_GetAllEmeralds,   100},
-	{IT_STRING | IT_CALL, NULL, "Destroy All Robots",  M_DestroyRobots,    110},
+	{IT_STRING | IT_CALL, NULL, "Get All Gems",    M_GetAllEmeralds,   100},
+	{IT_STRING | IT_CALL, NULL, "Peaceful Mode",  M_DestroyRobots,    110},
 
-	{IT_STRING | IT_CALL, NULL, "Ultimate Cheat",      M_UltimateCheat,    130},
+	{IT_STRING | IT_CALL, NULL, "Crysis Mode",      M_UltimateCheat,    130},
 };
 
 // Sky Room Custom Unlocks
@@ -753,11 +753,11 @@ static menuitem_t SR_EmblemHintMenu[] =
 static menuitem_t SP_MainMenu[] =
 {
 	// Note: If changing the positions here, also change them in M_SinglePlayerMenu()
-	{IT_CALL | IT_STRING,                       NULL, "Start Game",    M_LoadGame,                 76},
+	{IT_CALL | IT_STRING,                       NULL, "GO!!",    M_LoadGame,                 76},
 	{IT_SECRET,                                 NULL, "Record Attack", M_TimeAttack,               84},
 	{IT_SECRET,                                 NULL, "NiGHTS Mode",   M_NightsAttack,             92},
 	{IT_SECRET,                                 NULL, "Marathon Run",  M_Marathon,                100},
-	{IT_CALL | IT_STRING,                       NULL, "Tutorial",      M_StartTutorial,           108},
+	{IT_CALL | IT_STRING,                       NULL, "how do i jump",      M_StartTutorial,           108},
 	{IT_CALL | IT_STRING | IT_CALL_NOTMODIFIED, NULL, "Statistics",    M_Statistics,              116}
 };
 
@@ -953,37 +953,37 @@ static menuitem_t MP_SplitServerMenu[] =
 {
 	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_MapChange,         100},
 #ifdef NONET // In order to keep player setup accessible.
-	{IT_STRING|IT_CALL,              NULL, "Player 1 setup...",        M_SetupMultiPlayer,  110},
-	{IT_STRING|IT_CALL,              NULL, "Player 2 setup...",        M_SetupMultiPlayer2, 120},
+	{IT_STRING|IT_CALL,              NULL, "Pet 1 setup...",        M_SetupMultiPlayer,  110},
+	{IT_STRING|IT_CALL,              NULL, "Pet 2 setup...",        M_SetupMultiPlayer2, 120},
 #endif
 	{IT_STRING|IT_CALL,              NULL, "More Options...",          M_ServerOptions,     130},
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                    M_StartServer,       140},
+	{IT_WHITESTRING|IT_CALL,         NULL, "GO!!!",                    M_StartServer,       140},
 };
 
 #ifndef NONET
 
 static menuitem_t MP_MainMenu[] =
 {
-	{IT_HEADER, NULL, "Join a game", NULL, 0},
-	{IT_STRING|IT_CALL,       NULL, "Server browser...",     M_ConnectMenuModChecks,          12},
-	{IT_STRING|IT_KEYHANDLER, NULL, "Specify IPv4 address:", M_HandleConnectIP,      22},
-	{IT_HEADER, NULL, "Host a game", NULL, 54},
-	{IT_STRING|IT_CALL,       NULL, "Internet/LAN...",       M_StartServerMenu,      66},
-	{IT_STRING|IT_CALL,       NULL, "Splitscreen...",        M_StartSplitServerMenu, 76},
-	{IT_HEADER, NULL, "Player setup", NULL, 94},
-	{IT_STRING|IT_CALL,       NULL, "Player 1...",           M_SetupMultiPlayer,    106},
-	{IT_STRING|IT_CALL,       NULL, "Player 2... ",          M_SetupMultiPlayer2,   116},
+	{IT_HEADER, NULL, "Input lag mode", NULL, 0},
+	{IT_STRING|IT_CALL,       NULL, "Searching for friends...",     M_ConnectMenuModChecks,          12},
+	{IT_STRING|IT_KEYHANDLER, NULL, "Specify IPv1 address:", M_HandleConnectIP,      22},
+	{IT_HEADER, NULL, "Free admin mode", NULL, 54},
+	{IT_STRING|IT_CALL,       NULL, "ARPANET/LAN...",       M_StartServerMenu,      66},
+	{IT_STRING|IT_CALL,       NULL, "Stretchscreen...",        M_StartSplitServerMenu, 76},
+	{IT_HEADER, NULL, "Customise pets", NULL, 94},
+	{IT_STRING|IT_CALL,       NULL, "Pet 1...",           M_SetupMultiPlayer,    106},
+	{IT_STRING|IT_CALL,       NULL, "Pet 2... ",          M_SetupMultiPlayer2,   116},
 };
 
 static menuitem_t MP_ServerMenu[] =
 {
-	{IT_STRING|IT_CALL,              NULL, "Room...",                  M_RoomMenu,          10},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Server Name",              &cv_servername,      20},
-	{IT_STRING|IT_CVAR,              NULL, "Max Players",              &cv_maxplayers,      46},
+	{IT_STRING|IT_CALL,              NULL, "The Room...",                  M_RoomMenu,          10},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Call server how?",              &cv_servername,      20},
+	{IT_STRING|IT_CVAR,              NULL, "Max friends",              &cv_maxplayers,      46},
 	{IT_STRING|IT_CVAR,              NULL, "Allow Add-on Downloading", &cv_downloading,     56},
-	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_MapChange,        100},
-	{IT_STRING|IT_CALL,              NULL, "More Options...",          M_ServerOptions,    130},
-	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                    M_StartServer,      140},
+	{IT_STRING|IT_CALL,              NULL, "What Gametype/Level??", M_MapChange,        100},
+	{IT_STRING|IT_CALL,              NULL, "Moar...",          M_ServerOptions,    130},
+	{IT_WHITESTRING|IT_CALL,         NULL, "Go!!",                    M_StartServer,      140},
 };
 
 enum
@@ -1064,95 +1064,95 @@ static menuitem_t MP_PlayerSetupMenu[] =
 // Prefix: OP_
 static menuitem_t OP_MainMenu[] =
 {
-	{IT_SUBMENU | IT_STRING, NULL, "Player 1 Controls...", &OP_P1ControlsDef,   10},
-	{IT_SUBMENU | IT_STRING, NULL, "Player 2 Controls...", &OP_P2ControlsDef,   20},
-	{IT_CVAR    | IT_STRING, NULL, "Controls per key",     &cv_controlperkey,   30},
+	{IT_SUBMENU | IT_STRING, NULL, "Pet 1 Buttons...", &OP_P1ControlsDef,   10},
+	{IT_SUBMENU | IT_STRING, NULL, "Pet 2 Buttons...", &OP_P2ControlsDef,   20},
+	{IT_CVAR    | IT_STRING, NULL, "Buttons per key",     &cv_controlperkey,   30},
 
-	{IT_CALL    | IT_STRING, NULL, "Video Options...",     M_VideoOptions,      50},
-	{IT_SUBMENU | IT_STRING, NULL, "Sound Options...",     &OP_SoundOptionsDef, 60},
+	{IT_CALL    | IT_STRING, NULL, "Eye Options...",     M_VideoOptions,      50},
+	{IT_SUBMENU | IT_STRING, NULL, "Ear Options...",     &OP_SoundOptionsDef, 60},
 
 	{IT_CALL    | IT_STRING, NULL, "Server Options...",    M_ServerOptions,     80},
 
-	{IT_SUBMENU | IT_STRING, NULL, "Data Options...",      &OP_DataOptionsDef, 100},
+	{IT_SUBMENU | IT_STRING, NULL, "Datum Options...",      &OP_DataOptionsDef, 100},
 };
 
 static menuitem_t OP_P1ControlsMenu[] =
 {
-	{IT_CALL    | IT_STRING, NULL, "Control Configuration...", M_Setup1PControlsMenu,   10},
-	{IT_SUBMENU | IT_STRING, NULL, "Mouse Options...", &OP_MouseOptionsDef, 20},
+	{IT_CALL    | IT_STRING, NULL, "Button Configuration...", M_Setup1PControlsMenu,   10},
+	{IT_SUBMENU | IT_STRING, NULL, "Rat Options...", &OP_MouseOptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Gamepad Options...", &OP_Joystick1Def  ,  30},
 
-	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_CameraOptionsDef,	50},
+	{IT_SUBMENU | IT_STRING, NULL, "Hire new cameraman", &OP_CameraOptionsDef,	50},
 
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake,  70},
+	{IT_STRING  | IT_CVAR, NULL, "EBA", &cv_autobrake,  70},
 	{IT_CALL    | IT_STRING, NULL, "Play Style...", M_Setup1PPlaystyleMenu, 80},
 };
 
 static menuitem_t OP_P2ControlsMenu[] =
 {
-	{IT_CALL    | IT_STRING, NULL, "Control Configuration...", M_Setup2PControlsMenu,   10},
-	{IT_SUBMENU | IT_STRING, NULL, "Second Mouse Options...", &OP_Mouse2OptionsDef, 20},
+	{IT_CALL    | IT_STRING, NULL, "Button Configuration...", M_Setup2PControlsMenu,   10},
+	{IT_SUBMENU | IT_STRING, NULL, "Second Rat Options...", &OP_Mouse2OptionsDef, 20},
 	{IT_SUBMENU | IT_STRING, NULL, "Second Gamepad Options...", &OP_Joystick2Def  ,  30},
 
-	{IT_SUBMENU | IT_STRING, NULL, "Camera Options...", &OP_Camera2OptionsDef,	50},
+	{IT_SUBMENU | IT_STRING, NULL, "Hire new cameraman", &OP_Camera2OptionsDef,	50},
 
-	{IT_STRING  | IT_CVAR, NULL, "Automatic braking", &cv_autobrake2,  70},
+	{IT_STRING  | IT_CVAR, NULL, "EBA", &cv_autobrake2,  70},
 	{IT_CALL    | IT_STRING, NULL, "Play Style...", M_Setup2PPlaystyleMenu, 80},
 };
 
 static menuitem_t OP_ChangeControlsMenu[] =
 {
-	{IT_HEADER, NULL, "Movement", NULL, 0},
+	{IT_HEADER, NULL, "Driving", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
-	{IT_CALL | IT_STRING2, NULL, "Move Forward",     M_ChangeControl, gc_forward     },
-	{IT_CALL | IT_STRING2, NULL, "Move Backward",    M_ChangeControl, gc_backward    },
-	{IT_CALL | IT_STRING2, NULL, "Move Left",        M_ChangeControl, gc_strafeleft  },
-	{IT_CALL | IT_STRING2, NULL, "Move Right",       M_ChangeControl, gc_straferight },
-	{IT_CALL | IT_STRING2, NULL, "Jump",             M_ChangeControl, gc_jump      },
-	{IT_CALL | IT_STRING2, NULL, "Spin",             M_ChangeControl, gc_spin     },
-	{IT_HEADER, NULL, "Camera", NULL, 0},
+	{IT_CALL | IT_STRING2, NULL, "Accelerate",     M_ChangeControl, gc_forward     },
+	{IT_CALL | IT_STRING2, NULL, "Brake/Reverse",    M_ChangeControl, gc_backward    },
+	{IT_CALL | IT_STRING2, NULL, "Drift Left",        M_ChangeControl, gc_strafeleft  },
+	{IT_CALL | IT_STRING2, NULL, "Drift Right",       M_ChangeControl, gc_straferight },
+	{IT_CALL | IT_STRING2, NULL, "Hop",             M_ChangeControl, gc_jump      },
+	{IT_CALL | IT_STRING2, NULL, "Trick",             M_ChangeControl, gc_spin     },
+	{IT_HEADER, NULL, "Cameraman", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
-	{IT_CALL | IT_STRING2, NULL, "Look Up",        M_ChangeControl, gc_lookup      },
-	{IT_CALL | IT_STRING2, NULL, "Look Down",      M_ChangeControl, gc_lookdown    },
+	{IT_CALL | IT_STRING2, NULL, "Look at the Stars",        M_ChangeControl, gc_lookup      },
+	{IT_CALL | IT_STRING2, NULL, "Look at Your Feet",      M_ChangeControl, gc_lookdown    },
 	{IT_CALL | IT_STRING2, NULL, "Look Left",      M_ChangeControl, gc_turnleft    },
 	{IT_CALL | IT_STRING2, NULL, "Look Right",     M_ChangeControl, gc_turnright   },
-	{IT_CALL | IT_STRING2, NULL, "Center View",      M_ChangeControl, gc_centerview  },
+	{IT_CALL | IT_STRING2, NULL, "Look Ahead",      M_ChangeControl, gc_centerview  },
 	{IT_CALL | IT_STRING2, NULL, "Toggle Mouselook", M_ChangeControl, gc_mouseaiming },
-	{IT_CALL | IT_STRING2, NULL, "Toggle Third-Person", M_ChangeControl, gc_camtoggle},
-	{IT_CALL | IT_STRING2, NULL, "Reset Camera",     M_ChangeControl, gc_camreset    },
-	{IT_HEADER, NULL, "Meta", NULL, 0},
+	{IT_CALL | IT_STRING2, NULL, "Toggle Cameraman Position", M_ChangeControl, gc_camtoggle},
+	{IT_CALL | IT_STRING2, NULL, "Hire Back Previous Cameraman",     M_ChangeControl, gc_camreset    },
+	{IT_HEADER, NULL, "Too Meta", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
-	{IT_CALL | IT_STRING2, NULL, "Game Status",
+	{IT_CALL | IT_STRING2, NULL, "Playground Status",
     M_ChangeControl, gc_scores      },
 	{IT_CALL | IT_STRING2, NULL, "Pause / Run Retry", M_ChangeControl, gc_pause      },
-	{IT_CALL | IT_STRING2, NULL, "Screenshot",            M_ChangeControl, gc_screenshot },
-	{IT_CALL | IT_STRING2, NULL, "Toggle GIF Recording",  M_ChangeControl, gc_recordgif  },
+	{IT_CALL | IT_STRING2, NULL, "Photo",            M_ChangeControl, gc_screenshot },
+	{IT_CALL | IT_STRING2, NULL, "Export Slideshow",  M_ChangeControl, gc_recordgif  },
 	{IT_CALL | IT_STRING2, NULL, "Open/Close Menu (ESC)", M_ChangeControl, gc_systemmenu },
-	{IT_CALL | IT_STRING2, NULL, "Change Viewpoint",      M_ChangeControl, gc_viewpoint  },
-	{IT_CALL | IT_STRING2, NULL, "Console",          M_ChangeControl, gc_console     },
-	{IT_HEADER, NULL, "Multiplayer", NULL, 0},
+	{IT_CALL | IT_STRING2, NULL, "Spy Someone Else",      M_ChangeControl, gc_viewpoint  },
+	{IT_CALL | IT_STRING2, NULL, "Terminal",          M_ChangeControl, gc_console     },
+	{IT_HEADER, NULL, "Social Networks", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
-	{IT_CALL | IT_STRING2, NULL, "Talk",             M_ChangeControl, gc_talkkey     },
-	{IT_CALL | IT_STRING2, NULL, "Talk (Team only)", M_ChangeControl, gc_teamkey     },
-	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 0},
+	{IT_CALL | IT_STRING2, NULL, "Post",             M_ChangeControl, gc_talkkey     },
+	{IT_CALL | IT_STRING2, NULL, "Post (Group)", M_ChangeControl, gc_teamkey     },
+	{IT_HEADER, NULL, "DooM (Match, CTF, Tag, H&S)", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
-	{IT_CALL | IT_STRING2, NULL, "Fire",             M_ChangeControl, gc_fire        },
-	{IT_CALL | IT_STRING2, NULL, "Fire Normal",      M_ChangeControl, gc_firenormal  },
-	{IT_CALL | IT_STRING2, NULL, "Toss Flag",        M_ChangeControl, gc_tossflag    },
+	{IT_CALL | IT_STRING2, NULL, "Shoot",             M_ChangeControl, gc_fire        },
+	{IT_CALL | IT_STRING2, NULL, "Fist",      M_ChangeControl, gc_firenormal  },
+	{IT_CALL | IT_STRING2, NULL, "Abandon Payload",        M_ChangeControl, gc_tossflag    },
 	{IT_CALL | IT_STRING2, NULL, "Next Weapon",      M_ChangeControl, gc_weaponnext  },
 	{IT_CALL | IT_STRING2, NULL, "Prev Weapon",      M_ChangeControl, gc_weaponprev  },
-	{IT_CALL | IT_STRING2, NULL, "Normal / Infinity",   M_ChangeControl, gc_wepslot1    },
-	{IT_CALL | IT_STRING2, NULL, "Automatic",        M_ChangeControl, gc_wepslot2    },
-	{IT_CALL | IT_STRING2, NULL, "Bounce",           M_ChangeControl, gc_wepslot3    },
-	{IT_CALL | IT_STRING2, NULL, "Scatter",          M_ChangeControl, gc_wepslot4    },
+	{IT_CALL | IT_STRING2, NULL, "Pistol",   M_ChangeControl, gc_wepslot1    },
+	{IT_CALL | IT_STRING2, NULL, "Machine Gun",        M_ChangeControl, gc_wepslot2    },
+	{IT_CALL | IT_STRING2, NULL, "Boomerang",           M_ChangeControl, gc_wepslot3    },
+	{IT_CALL | IT_STRING2, NULL, "Dual Pistol",          M_ChangeControl, gc_wepslot4    },
 	{IT_CALL | IT_STRING2, NULL, "Grenade",          M_ChangeControl, gc_wepslot5    },
-	{IT_CALL | IT_STRING2, NULL, "Explosion",        M_ChangeControl, gc_wepslot6    },
-	{IT_CALL | IT_STRING2, NULL, "Rail",             M_ChangeControl, gc_wepslot7    },
-	{IT_HEADER, NULL, "Add-ons", NULL, 0},
+	{IT_CALL | IT_STRING2, NULL, "ShotGun",        M_ChangeControl, gc_wepslot6    },
+	{IT_CALL | IT_STRING2, NULL, "Rail Gun",             M_ChangeControl, gc_wepslot7    },
+	{IT_HEADER, NULL, "Minecraft", NULL, 0},
 	{IT_SPACE, NULL, NULL, NULL, 0}, // padding
-	{IT_CALL | IT_STRING2, NULL, "Custom Action 1",  M_ChangeControl, gc_custom1     },
-	{IT_CALL | IT_STRING2, NULL, "Custom Action 2",  M_ChangeControl, gc_custom2     },
-	{IT_CALL | IT_STRING2, NULL, "Custom Action 3",  M_ChangeControl, gc_custom3     },
+	{IT_CALL | IT_STRING2, NULL, "Destroy Block",  M_ChangeControl, gc_custom1     },
+	{IT_CALL | IT_STRING2, NULL, "Place Block",  M_ChangeControl, gc_custom2     },
+	{IT_CALL | IT_STRING2, NULL, "Sneak",  M_ChangeControl, gc_custom3     },
 };
 
 static menuitem_t OP_Joystick1Menu[] =
@@ -1195,27 +1195,27 @@ static menuitem_t OP_JoystickSetMenu[1+MAX_JOYSTICKS];
 
 static menuitem_t OP_MouseOptionsMenu[] =
 {
-	{IT_STRING | IT_CVAR, NULL, "Use Mouse",        &cv_usemouse,         10},
+	{IT_STRING | IT_CVAR, NULL, "Use Rat",        &cv_usemouse,         10},
 
 
 	{IT_STRING | IT_CVAR, NULL, "First-Person MouseLook", &cv_alwaysfreelook,   30},
 	{IT_STRING | IT_CVAR, NULL, "Third-Person MouseLook", &cv_chasefreelook,   40},
-	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove,        50},
+	{IT_STRING | IT_CVAR, NULL, "Rat Move",       &cv_mousemove,        50},
 	{IT_STRING | IT_CVAR, NULL, "Invert Y Axis",     &cv_invertmouse,      60},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse X Sensitivity",    &cv_mousesens,        70},
+	                      NULL, "Rat X Sensitivity",    &cv_mousesens,        70},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
-	                      NULL, "Mouse Y Sensitivity",    &cv_mouseysens,        80},
+	                      NULL, "Rat Y Sensitivity",    &cv_mouseysens,        80},
 };
 
 static menuitem_t OP_Mouse2OptionsMenu[] =
 {
-	{IT_STRING | IT_CVAR, NULL, "Use Mouse 2",      &cv_usemouse2,        10},
+	{IT_STRING | IT_CVAR, NULL, "Use Rat 2",      &cv_usemouse2,        10},
 	{IT_STRING | IT_CVAR, NULL, "Second Mouse Serial Port",
 	                                                &cv_mouse2port,       20},
 	{IT_STRING | IT_CVAR, NULL, "First-Person MouseLook", &cv_alwaysfreelook2,  30},
 	{IT_STRING | IT_CVAR, NULL, "Third-Person MouseLook", &cv_chasefreelook2,  40},
-	{IT_STRING | IT_CVAR, NULL, "Mouse Move",       &cv_mousemove2,       50},
+	{IT_STRING | IT_CVAR, NULL, "Rat Move",       &cv_mousemove2,       50},
 	{IT_STRING | IT_CVAR, NULL, "Invert Y Axis",     &cv_invertmouse2,     60},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "Mouse X Sensitivity",    &cv_mousesens2,       70},
@@ -1226,54 +1226,54 @@ static menuitem_t OP_Mouse2OptionsMenu[] =
 static menuitem_t OP_CameraOptionsMenu[] =
 {
 	{IT_HEADER,            NULL, "General Toggles", NULL, 0},
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 6},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 11},
+	{IT_STRING  | IT_CVAR, NULL, "Cameraman Behind You"  , &cv_chasecam , 6},
+	{IT_STRING  | IT_CVAR, NULL, "Cameraman Can Walk on Ceiling"  , &cv_flipcam , 11},
 	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 16},
 	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 21},
 
-	{IT_HEADER,                                NULL, "Camera Positioning", NULL, 30},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_savedist[0][0], 36},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_saveheight[0][0], 41},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Spacial Speed", &cv_cam_speed, 46},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Rotation Speed", &cv_cam_turnmultiplier, 51},
+	{IT_HEADER,                                NULL, "Cameraman Positioning", NULL, 30},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Cameraman Distance", &cv_cam_savedist[0][0], 36},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Cameraman Height", &cv_cam_saveheight[0][0], 41},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Cameraman Space Speed", &cv_cam_speed, 46},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Turn how fast??", &cv_cam_turnmultiplier, 51},
 
-	{IT_HEADER,            NULL, "Display Options", NULL, 60},
+	{IT_HEADER,            NULL, "The Display Option", NULL, 60},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 66},
 };
 
 static menuitem_t OP_Camera2OptionsMenu[] =
 {
 	{IT_HEADER,            NULL, "General Toggles", NULL, 0},
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam2 , 6},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam2 , 11},
+	{IT_STRING  | IT_CVAR, NULL, "Cameraman Behind You"  , &cv_chasecam2 , 6},
+	{IT_STRING  | IT_CVAR, NULL, "Cameraman Can Walk on Ceiling"  , &cv_flipcam2 , 11},
 	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam2_orbit , 16},
 	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam2_adjust, 21},
 
-	{IT_HEADER,                                NULL, "Camera Positioning", NULL, 30},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_savedist[0][1], 36},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_saveheight[0][1], 41},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Spacial Speed", &cv_cam2_speed, 46},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Rotation Speed", &cv_cam2_turnmultiplier, 51},
+	{IT_HEADER,                                NULL, "Cameraman Positioning", NULL, 30},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Cameraman Distance", &cv_cam_savedist[0][1], 36},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Cameraman Height", &cv_cam_saveheight[0][1], 41},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Cameraman Space Speed", &cv_cam2_speed, 46},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Turn Speed", &cv_cam2_turnmultiplier, 51},
 
-	{IT_HEADER,            NULL, "Display Options", NULL, 60},
+	{IT_HEADER,            NULL, "The Display Option", NULL, 60},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair2, 66},
 };
 
 static menuitem_t OP_CameraExtendedOptionsMenu[] =
 {
 	{IT_HEADER,            NULL, "General Toggles", NULL, 0},
-	{IT_STRING  | IT_CVAR, NULL, "Third-person Camera"  , &cv_chasecam , 6},
-	{IT_STRING  | IT_CVAR, NULL, "Flip Camera with Gravity"  , &cv_flipcam , 11},
+	{IT_STRING  | IT_CVAR, NULL, "Cameraman Behind You"  , &cv_chasecam , 6},
+	{IT_STRING  | IT_CVAR, NULL, "Cameraman Can Walk on Ceiling"  , &cv_flipcam , 11},
 	{IT_STRING  | IT_CVAR, NULL, "Orbital Looking"  , &cv_cam_orbit , 16},
 	{IT_STRING  | IT_CVAR, NULL, "Downhill Slope Adjustment", &cv_cam_adjust, 21},
 
-	{IT_HEADER,                                NULL, "Camera Positioning", NULL, 30},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Distance", &cv_cam_savedist[1][0], 36},
-	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Camera Height", &cv_cam_saveheight[1][0], 41},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Camera Spacial Speed", &cv_cam_speed, 46},
-	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Rotation Speed", &cv_cam_turnmultiplier, 51},
+	{IT_HEADER,                                NULL, "Cameraman Positioning", NULL, 30},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Cameraman Distance", &cv_cam_savedist[1][0], 36},
+	{IT_STRING  | IT_CVAR | IT_CV_INTEGERSTEP, NULL, "Cameraman Height", &cv_cam_saveheight[1][0], 41},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Cameraman Space Speed", &cv_cam_speed, 46},
+	{IT_STRING  | IT_CVAR | IT_CV_FLOATSLIDER, NULL, "Turn how fast??", &cv_cam_turnmultiplier, 51},
 
-	{IT_HEADER,                           NULL, "Automatic Camera Options", NULL, 60},
+	{IT_HEADER,                           NULL, "Magic Cameraman", NULL, 60},
 	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Shift to player angle", &cv_cam_shiftfacing[0],  66},
 	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to player angle", &cv_cam_turnfacing[0],  71},
 	{IT_STRING  | IT_CVAR | IT_CV_SLIDER, NULL, "Turn to ability", &cv_cam_turnfacingability[0],  76},
@@ -1285,7 +1285,7 @@ static menuitem_t OP_CameraExtendedOptionsMenu[] =
 	{IT_STRING  | IT_CVAR, NULL, "Sideways movement", &cv_cam_lockedinput[0],  106},
 	{IT_STRING  | IT_CVAR, NULL, "Targeting assist", &cv_cam_lockonboss[0],  111},
 
-	{IT_HEADER,            NULL, "Display Options", NULL, 120},
+	{IT_HEADER,            NULL, "The Display Option", NULL, 120},
 	{IT_STRING  | IT_CVAR, NULL, "Crosshair", &cv_crosshair, 126},
 };
 
@@ -1332,10 +1332,10 @@ enum
 static menuitem_t OP_VideoOptionsMenu[] =
 {
 	{IT_HEADER, NULL, "Screen", NULL, 0},
-	{IT_STRING | IT_CALL,  NULL, "Set Resolution...",       M_VideoModeMenu,          6},
+	{IT_STRING | IT_CALL,  NULL, "Screen how big?",       M_VideoModeMenu,          6},
 
 #if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
-	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",             &cv_fullscreen,         11},
+	{IT_STRING|IT_CVAR,      NULL, "Make big screen",             &cv_fullscreen,         11},
 #endif
 	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",                &cv_vidwait,         16},
 #ifdef HWRENDER
@@ -1349,41 +1349,41 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation", &cv_globalsaturation, 41},
 	{IT_SUBMENU|IT_STRING, NULL, "Advanced Settings...",     &OP_ColorOptionsDef,  46},
 
-	{IT_HEADER, NULL, "Heads-Up Display", NULL, 55},
+	{IT_HEADER, NULL, "Hedgehog Useful Details", NULL, 55},
 	{IT_STRING | IT_CVAR, NULL, "Show HUD",                  &cv_showhud,          61},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER,
 	                      NULL, "HUD Transparency",          &cv_translucenthud,   66},
 	{IT_STRING | IT_CVAR, NULL, "Score/Time/Rings",          &cv_timetic,          71},
 	{IT_STRING | IT_CVAR, NULL, "Show Powerups",             &cv_powerupdisplay,   76},
-	{IT_STRING | IT_CVAR, NULL, "Local ping display",		&cv_showping,			81}, // shows ping next to framerate if we want to.
-	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         86},
+	{IT_STRING | IT_CVAR, NULL, "Show my lag",		&cv_showping,			81}, // shows ping next to framerate if we want to.
+	{IT_STRING | IT_CVAR, NULL, "Show other pets' names",         &cv_seenames,         86},
 
 	{IT_HEADER, NULL, "Console", NULL, 95},
-	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      101},
-	{IT_STRING | IT_CVAR, NULL, "Text Size",                 &cv_constextsize,    106},
+	{IT_STRING | IT_CVAR, NULL, "Color behind letters",          &cons_backcolor,      101},
+	{IT_STRING | IT_CVAR, NULL, "Size of letters",                 &cv_constextsize,    106},
 
-	{IT_HEADER, NULL, "Chat", NULL, 115},
-	{IT_STRING | IT_CVAR, NULL, "Chat Mode",            		 	 &cv_consolechat,  121},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Width",    &cv_chatwidth,     126},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Chat Box Height",   &cv_chatheight,    131},
-	{IT_STRING | IT_CVAR, NULL, "Message Fadeout Time",              &cv_chattime,    136},
-	{IT_STRING | IT_CVAR, NULL, "Chat Notifications",           	 &cv_chatnotifications,  141},
+	{IT_HEADER, NULL, "Instant Messaging Mode", NULL, 115},
+	{IT_STRING | IT_CVAR, NULL, "Messaging Mode",            		 	 &cv_consolechat,  121},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Box Width",    &cv_chatwidth,     126},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Box Height",   &cv_chatheight,    131},
+	{IT_STRING | IT_CVAR, NULL, "Fadded Time",              &cv_chattime,    136},
+	{IT_STRING | IT_CVAR, NULL, "Beep continuously",           	 &cv_chatnotifications,  141},
 	{IT_STRING | IT_CVAR, NULL, "Spam Protection",           		 &cv_chatspamprotection,  146},
-	{IT_STRING | IT_CVAR, NULL, "Chat background tint",           	 &cv_chatbacktint,  151},
+	{IT_STRING | IT_CVAR, NULL, "Background tint",           	 &cv_chatbacktint,  151},
 
-	{IT_HEADER, NULL, "Level", NULL, 160},
-	{IT_STRING | IT_CVAR, NULL, "Draw Distance",             &cv_drawdist,        166},
-	{IT_STRING | IT_CVAR, NULL, "Weather Draw Dist.",        &cv_drawdist_precip, 171},
-	{IT_STRING | IT_CVAR, NULL, "NiGHTS Hoop Draw Dist.",    &cv_drawdist_nights, 176},
+	{IT_HEADER, NULL, "Map", NULL, 160},
+	{IT_STRING | IT_CVAR, NULL, "Draw Very Far?",             &cv_drawdist,        166},
+	{IT_STRING | IT_CVAR, NULL, "Draw Weather How Far?",        &cv_drawdist_precip, 171},
+	{IT_STRING | IT_CVAR, NULL, "And NiGHTS Hoop??",    &cv_drawdist_nights, 176},
 
 	{IT_HEADER, NULL, "Diagnostic", NULL, 184},
-	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         190},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      195},
-	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   200},
+	{IT_STRING | IT_CVAR, NULL, "Show Slideshow Speed",                  &cv_ticrate,         190},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Next Slide",       &cv_homremoval,      195},
+	{IT_STRING | IT_CVAR, NULL, "Complain about lost focus",       &cv_showfocuslost,   200},
 
 #ifdef HWRENDER
 	{IT_HEADER, NULL, "Renderer", NULL, 208},
-	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",         M_OpenGLOptionsMenu, 214},
+	{IT_CALL | IT_STRING, NULL, "OpenGraphicsLibrary...",         M_OpenGLOptionsMenu, 214},
 #endif
 };
 
@@ -1396,37 +1396,37 @@ static menuitem_t OP_ColorOptionsMenu[] =
 {
 	{IT_STRING | IT_CALL, NULL, "Reset to defaults", M_ResetCvars, 0},
 
-	{IT_HEADER, NULL, "Red", NULL, 9},
+	{IT_HEADER, NULL, "Crimson", NULL, 9},
 	{IT_DISABLED, NULL, NULL, NULL, 35},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_rhue,         15},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_rsaturation,  20},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_rgamma,       25},
 
-	{IT_HEADER, NULL, "Yellow", NULL, 34},
+	{IT_HEADER, NULL, "Gold", NULL, 34},
 	{IT_DISABLED, NULL, NULL, NULL, 73},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_yhue,         40},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_ysaturation,  45},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_ygamma,       50},
 
-	{IT_HEADER, NULL, "Green", NULL, 59},
+	{IT_HEADER, NULL, "Emerald", NULL, 59},
 	{IT_DISABLED, NULL, NULL, NULL, 112},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_ghue,         65},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_gsaturation,  70},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_ggamma,       75},
 
-	{IT_HEADER, NULL, "Cyan", NULL, 84},
+	{IT_HEADER, NULL, "Aqua", NULL, 84},
 	{IT_DISABLED, NULL, NULL, NULL, 255},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_chue,         90},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_csaturation,  95},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_cgamma,      100},
 
-	{IT_HEADER, NULL, "Blue", NULL, 109},
+	{IT_HEADER, NULL, "Lapis-Lazuli", NULL, 109},
 	{IT_DISABLED, NULL, NULL, NULL, 152},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_bhue,        115},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_bsaturation, 120},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Brightness",   &cv_bgamma,      125},
 
-	{IT_HEADER, NULL, "Magenta", NULL, 134},
+	{IT_HEADER, NULL, "Pink", NULL, 134},
 	{IT_DISABLED, NULL, NULL, NULL, 181},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Hue",          &cv_mhue,        140},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Saturation",   &cv_msaturation, 145},
@@ -1436,17 +1436,17 @@ static menuitem_t OP_ColorOptionsMenu[] =
 #ifdef HWRENDER
 static menuitem_t OP_OpenGLOptionsMenu[] =
 {
-	{IT_HEADER, NULL, "3D Models", NULL, 0},
-	{IT_STRING|IT_CVAR,         NULL, "Models",              &cv_glmodels,             12},
-	{IT_STRING|IT_CVAR,         NULL, "Frame interpolation", &cv_glmodelinterpolation, 22},
+	{IT_HEADER, NULL, "3D Sprites", NULL, 0},
+	{IT_STRING|IT_CVAR,         NULL, "3D sprites",              &cv_glmodels,             12},
+	{IT_STRING|IT_CVAR,         NULL, "Slide interpolation", &cv_glmodelinterpolation, 22},
 	{IT_STRING|IT_CVAR,         NULL, "Ambient lighting",    &cv_glmodellighting,      32},
 
-	{IT_HEADER, NULL, "General", NULL, 51},
-	{IT_STRING|IT_CVAR,         NULL, "Shaders",             &cv_glshaders,            63},
-	{IT_STRING|IT_CVAR,         NULL, "Lack of perspective", &cv_glshearing,           73},
-	{IT_STRING|IT_CVAR,         NULL, "Field of view",       &cv_fov,                  83},
+	{IT_HEADER, NULL, "Main Stuff", NULL, 51},
+	{IT_STRING|IT_CVAR,         NULL, "Cool effects",             &cv_glshaders,            63},
+	{IT_STRING|IT_CVAR,         NULL, "Vertical walls", &cv_glshearing,           73},
+	{IT_STRING|IT_CVAR,         NULL, "Quake pro rate",       &cv_fov,                  83},
 
-	{IT_HEADER, NULL, "Miscellaneous", NULL, 102},
+	{IT_HEADER, NULL, "The Other Stuff", NULL, 102},
 	{IT_STRING|IT_CVAR,         NULL, "Bit depth",           &cv_scr_depth,           114},
 	{IT_STRING|IT_CVAR,         NULL, "Texture filter",      &cv_glfiltermode,        124},
 	{IT_STRING|IT_CVAR,         NULL, "Anisotropic",         &cv_glanisotropicmode,   134},
@@ -1454,17 +1454,17 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",         &OP_OpenGLLightingDef,   144},
 #endif
 #if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
-	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",          &cv_fullscreen,          154},
+	{IT_STRING|IT_CVAR,         NULL, "Make big screen",          &cv_fullscreen,          154},
 #endif
 };
 
 #ifdef ALAM_LIGHTING
 static menuitem_t OP_OpenGLLightingMenu[] =
 {
-	{IT_STRING|IT_CVAR, NULL, "Coronas",          &cv_glcoronas,          0},
-	{IT_STRING|IT_CVAR, NULL, "Coronas size",     &cv_glcoronasize,      10},
-	{IT_STRING|IT_CVAR, NULL, "Dynamic lighting", &cv_gldynamiclighting, 20},
-	{IT_STRING|IT_CVAR, NULL, "Static lighting",  &cv_glstaticlighting,  30},
+	{IT_STRING|IT_CVAR, NULL, "Coronavirus",          &cv_glcoronas,          0},
+	{IT_STRING|IT_CVAR, NULL, "Coronavirus size",     &cv_glcoronasize,      10},
+	{IT_STRING|IT_CVAR, NULL, "Moving lighting", &cv_gldynamiclighting, 20},
+	{IT_STRING|IT_CVAR, NULL, "Lazy lighting",  &cv_glstaticlighting,  30},
 };
 #endif // ALAM_LIGHTING
 
@@ -1472,24 +1472,24 @@ static menuitem_t OP_OpenGLLightingMenu[] =
 
 static menuitem_t OP_SoundOptionsMenu[] =
 {
-	{IT_HEADER, NULL, "Game Audio", NULL, 0},
-	{IT_STRING | IT_CVAR,  NULL,  "Sound Effects", &cv_gamesounds, 6},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Sound Volume", &cv_soundvolume, 11},
+	{IT_HEADER, NULL, "Game Noise", NULL, 0},
+	{IT_STRING | IT_CVAR,  NULL,  "Noise", &cv_gamesounds, 6},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "How Noisy?", &cv_soundvolume, 11},
 
 	{IT_STRING | IT_CVAR,  NULL,  "Digital Music", &cv_gamedigimusic, 21},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Volume", &cv_digmusicvolume,  26},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "Digital Music Noise", &cv_digmusicvolume,  26},
 
-	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 36},
-	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 41},
+	{IT_STRING | IT_CVAR,  NULL,  "M.I.D.I. Music", &cv_gamemidimusic, 36},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "M.I.D.I. Music Noise", &cv_midimusicvolume, 41},
 
-	{IT_STRING | IT_CVAR,  NULL,  "Music Preference", &cv_musicpref, 51},
+	{IT_STRING | IT_CVAR,  NULL,  "Musical Preferences", &cv_musicpref, 51},
 
-	{IT_HEADER, NULL, "Miscellaneous", NULL, 61},
-	{IT_STRING | IT_CVAR, NULL, "Closed Captioning", &cv_closedcaptioning, 67},
-	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 72},
+	{IT_HEADER, NULL, "Etc etc etc", NULL, 61},
+	{IT_STRING | IT_CVAR, NULL, "Opened Captioning", &cv_closedcaptioning, 67},
+	{IT_STRING | IT_CVAR, NULL, "Dying Kills Music Too", &cv_resetmusic, 72},
 	{IT_STRING | IT_CVAR, NULL, "Default 1-Up sound", &cv_1upsound, 77},
 
-	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 87},
+	{IT_STRING | IT_SUBMENU, NULL, "Pro Settings...", &OP_SoundAdvancedDef, 87},
 };
 
 #ifdef HAVE_OPENMPT
@@ -1519,8 +1519,8 @@ static menuitem_t OP_SoundAdvancedMenu[] =
 #endif
 
 	{IT_HEADER, NULL, "Miscellaneous", NULL, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET},
-	{IT_STRING | IT_CVAR, NULL, "Play Sound Effects if Unfocused", &cv_playsoundsifunfocused, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET+12},
-	{IT_STRING | IT_CVAR, NULL, "Play Music if Unfocused", &cv_playmusicifunfocused, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET+22},
+	{IT_STRING | IT_CVAR, NULL, "Play Sound Effects if AFK", &cv_playsoundsifunfocused, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET+12},
+	{IT_STRING | IT_CVAR, NULL, "Play Music if AFK", &cv_playmusicifunfocused, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET+22},
 	{IT_STRING | IT_CVAR, NULL, "Let Levels Force Reset Music", &cv_resetmusicbyheader, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET+32},
 };
 
@@ -1529,10 +1529,10 @@ static menuitem_t OP_SoundAdvancedMenu[] =
 
 static menuitem_t OP_DataOptionsMenu[] =
 {
-	{IT_STRING | IT_CALL,    NULL, "Add-on Options...",     M_AddonsOptions,     10},
-	{IT_STRING | IT_CALL,    NULL, "Screenshot Options...", M_ScreenshotOptions, 20},
+	{IT_STRING | IT_CALL,    NULL, "Mod Options...",     M_AddonsOptions,     10},
+	{IT_STRING | IT_CALL,    NULL, "Photo Options...", M_ScreenshotOptions, 20},
 
-	{IT_STRING | IT_SUBMENU, NULL, "\x85" "Erase Data...",  &OP_EraseDataDef,    40},
+	{IT_STRING | IT_SUBMENU, NULL, "\x85" "Format Hard-Drive...",  &OP_EraseDataDef,    40},
 };
 
 static menuitem_t OP_ScreenshotOptionsMenu[] =
@@ -1540,17 +1540,17 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 	{IT_HEADER, NULL, "General", NULL, 0},
 	{IT_STRING|IT_CVAR, NULL, "Use color profile", &cv_screenshot_colorprofile,     6},
 
-	{IT_HEADER, NULL, "Screenshots (F8)", NULL, 16},
-	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_screenshot_option,          22},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_screenshot_folder, 27},
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memory,                42},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_level,                 47},
+	{IT_HEADER, NULL, "Photos (F8)", NULL, 16},
+	{IT_STRING|IT_CVAR, NULL, "Store Location",  &cv_screenshot_option,          22},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Directory", &cv_screenshot_folder, 27},
+	{IT_STRING|IT_CVAR, NULL, "Thicc Level",      &cv_zlib_memory,                42},
+	{IT_STRING|IT_CVAR, NULL, "Crush Level", &cv_zlib_level,                 47},
 	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategy,              52},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits,           57},
+	{IT_STRING|IT_CVAR, NULL, "Window Bigness",       &cv_zlib_window_bits,           57},
 
-	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 64},
-	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_movie_option,               70},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_movie_folder, 	   75},
+	{IT_HEADER, NULL, "Cinema Mode (F9)", NULL, 64},
+	{IT_STRING|IT_CVAR, NULL, "Store Location",  &cv_movie_option,               70},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Directory", &cv_movie_folder, 	   75},
 	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                  90},
 
 	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,              95},
@@ -1558,10 +1558,10 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 	{IT_STRING|IT_CVAR, NULL, "Local Color Table", &cv_gif_localcolortable,       105},
 
 	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_apng_downscale,             95},
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,              100},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,               105},
+	{IT_STRING|IT_CVAR, NULL, "Thicc Level",      &cv_zlib_memorya,              100},
+	{IT_STRING|IT_CVAR, NULL, "Crush Level", &cv_zlib_levela,               105},
 	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,            110},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,         115},
+	{IT_STRING|IT_CVAR, NULL, "Window Bigness",       &cv_zlib_window_bitsa,         115},
 };
 
 enum
@@ -1579,23 +1579,23 @@ enum
 
 static menuitem_t OP_EraseDataMenu[] =
 {
-	{IT_STRING | IT_CALL, NULL, "Erase Record Data", M_EraseData, 10},
-	{IT_STRING | IT_CALL, NULL, "Erase Extras Data", M_EraseData, 20},
+	{IT_STRING | IT_CALL, NULL, "Erase Record Datums", M_EraseData, 10},
+	{IT_STRING | IT_CALL, NULL, "Erase Extras Datums", M_EraseData, 20},
 
-	{IT_STRING | IT_CALL, NULL, "\x85" "Erase ALL Data", M_EraseData, 40},
+	{IT_STRING | IT_CALL, NULL, "\x85" "Erase ALL Datums", M_EraseData, 40},
 };
 
 static menuitem_t OP_AddonsOptionsMenu[] =
 {
 	{IT_HEADER,                      NULL, "Menu",                        NULL,                     0},
 	{IT_STRING|IT_CVAR,              NULL, "Location",                    &cv_addons_option,       12},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder",               &cv_addons_folder,       22},
-	{IT_STRING|IT_CVAR,              NULL, "Identify add-ons via",        &cv_addons_md5,          50},
-	{IT_STRING|IT_CVAR,              NULL, "Show unsupported file types", &cv_addons_showall,      60},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Directory",               &cv_addons_folder,       22},
+	{IT_STRING|IT_CVAR,              NULL, "Identify mods via",        &cv_addons_md5,          50},
+	{IT_STRING|IT_CVAR,              NULL, "Show Unidentified File Otypes", &cv_addons_showall,      60},
 
-	{IT_HEADER,                      NULL, "Search",                      NULL,                    78},
+	{IT_HEADER,                      NULL, "Find",                      NULL,                    78},
 	{IT_STRING|IT_CVAR,              NULL, "Matching",                    &cv_addons_search_type,  90},
-	{IT_STRING|IT_CVAR,              NULL, "Case-sensitive",              &cv_addons_search_case, 100},
+	{IT_STRING|IT_CVAR,              NULL, "Case matters?",              &cv_addons_search_case, 100},
 };
 
 enum
@@ -1608,48 +1608,48 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_HEADER, NULL, "General", NULL, 0},
 #ifndef NONET
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
-	                         NULL, "Server name",                      &cv_servername,           7},
-	{IT_STRING | IT_CVAR,    NULL, "Max Players",                      &cv_maxplayers,          21},
-	{IT_STRING | IT_CVAR,    NULL, "Allow Add-on Downloading",         &cv_downloading,         26},
-	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",            &cv_allownewplayer,      31},
+	                         NULL, "Playroom name",                      &cv_servername,           7},
+	{IT_STRING | IT_CVAR,    NULL, "Max Friends",                      &cv_maxplayers,          21},
+	{IT_STRING | IT_CVAR,    NULL, "Allow Moderator Downloading",         &cv_downloading,         26},
+	{IT_STRING | IT_CVAR,    NULL, "Allow new friends",            &cv_allownewplayer,      31},
 #endif
 	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          36},
 	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             41},
 
-	{IT_HEADER, NULL, "Characters", NULL, 50},
-	{IT_STRING | IT_CVAR,    NULL, "Force a character",                &cv_forceskin,           56},
-	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",       &cv_restrictskinchange,  61},
+	{IT_HEADER, NULL, "Pet types", NULL, 50},
+	{IT_STRING | IT_CVAR,    NULL, "Force pet type",                &cv_forceskin,           56},
+	{IT_STRING | IT_CVAR,    NULL, "Restrict pet changes",       &cv_restrictskinchange,  61},
 
-	{IT_HEADER, NULL, "Items", NULL, 70},
-	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     76},
-	{IT_STRING | IT_SUBMENU, NULL, "Mystery Item Monitor Toggles...",  &OP_MonitorToggleDef,    81},
+	{IT_HEADER, NULL, "Objects", NULL, 70},
+	{IT_STRING | IT_CVAR,    NULL, "Item farm delay",               &cv_itemrespawntime,     76},
+	{IT_STRING | IT_SUBMENU, NULL, "Who uses that menu anyway...",  &OP_MonitorToggleDef,    81},
 
-	{IT_HEADER, NULL, "Cooperative", NULL, 90},
-	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      96},
-	{IT_STRING | IT_CVAR,    NULL, "Starposts",                        &cv_coopstarposts,      101},
-	{IT_STRING | IT_CVAR,    NULL, "Life sharing",                     &cv_cooplives,          106},
-	{IT_STRING | IT_CVAR,    NULL, "Post-goal free roaming",           &cv_exitmove,           111},
+	{IT_HEADER, NULL, "Friendship", NULL, 90},
+	{IT_STRING | IT_CVAR,    NULL, "Pets required for exit",        &cv_playersforexit,      96},
+	{IT_STRING | IT_CVAR,    NULL, "Checkpoints",                        &cv_coopstarposts,      101},
+	{IT_STRING | IT_CVAR,    NULL, "Live sharing",                     &cv_cooplives,          106},
+	{IT_STRING | IT_CVAR,    NULL, "Post-goal hangout",           &cv_exitmove,           111},
 
-	{IT_HEADER, NULL, "Race, Competition", NULL, 120},
-	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      126},
-	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_competitionboxes,   131},
+	{IT_HEADER, NULL, "Species, Competition", NULL, 120},
+	{IT_STRING | IT_CVAR,    NULL, "Map completion countdown",       &cv_countdowntime,      126},
+	{IT_STRING | IT_CVAR,    NULL, "Item televisions",                    &cv_competitionboxes,   131},
 
-	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 140},
-	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          146},
-	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         151},
+	{IT_HEADER, NULL, "DooM (Match, CTF, Tag, H&S)", NULL, 140},
+	{IT_STRING | IT_CVAR,    NULL, "Time before bored",                       &cv_timelimit,          146},
+	{IT_STRING | IT_CVAR,    NULL, "Points before bored",                      &cv_pointlimit,         151},
 	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           156},
-	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        161},
+	{IT_STRING | IT_CVAR,    NULL, "Pet revive delay",             &cv_respawntime,        161},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_matchboxes,         171},
-	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       176},
-	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        181},
+	{IT_STRING | IT_CVAR,    NULL, "Televisions",                    &cv_matchboxes,         171},
+	{IT_STRING | IT_CVAR,    NULL, "Guns",                     &cv_specialrings,       176},
+	{IT_STRING | IT_CVAR,    NULL, "Magic Gems",                     &cv_powerstones,        181},
 
 	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           191},
 	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           196},
 
-	{IT_HEADER, NULL, "Teams", NULL, 205},
+	{IT_HEADER, NULL, "Groups", NULL, 205},
 	{IT_STRING | IT_CVAR,    NULL, "Autobalance sizes",                &cv_autobalance,        211},
-	{IT_STRING | IT_CVAR,    NULL, "Scramble on Map Change",           &cv_scrambleonchange,   216},
+	{IT_STRING | IT_CVAR,    NULL, "Break Friendships on Exit",           &cv_scrambleonchange,   216},
 
 #ifndef NONET
 	{IT_HEADER, NULL, "Advanced", NULL, 225},
@@ -1658,7 +1658,7 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Join delay",                       &cv_joindelay,          246},
 	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,    251},
 
-	{IT_STRING | IT_CVAR,    NULL, "Show IP Address of Joiners",       &cv_showjoinaddress,    256},
+	{IT_STRING | IT_CVAR,    NULL, "Show IPv1 Address of New Pets",       &cv_showjoinaddress,    256},
 #endif
 };
 
@@ -1666,18 +1666,18 @@ static menuitem_t OP_MonitorToggleMenu[] =
 {
 	// Printing handled by drawing function
 	{IT_STRING|IT_CALL, NULL, "Reset to defaults", M_ResetCvars, 15},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Recycler",          &cv_recycler,      30},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Teleport",          &cv_teleporters,   40},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Super Ring",        &cv_superring,     50},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Super Sneakers",    &cv_supersneakers, 60},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Invincibility",     &cv_invincibility, 70},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Whirlwind Shield",  &cv_jumpshield,    80},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Elemental Shield",  &cv_watershield,   90},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Attraction Shield", &cv_ringshield,   100},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Force Shield",      &cv_forceshield,  110},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Armageddon Shield", &cv_bombshield,   120},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "1 Up",              &cv_1up,          130},
-	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "Eggman Box",        &cv_eggmanbox,    140},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "POLLUTION FIXER",          &cv_recycler,      30},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "WHOOSH",          &cv_teleporters,   40},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "BIG RING",        &cv_superring,     50},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "SUPER FAST",    &cv_supersneakers, 60},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "CHUCK NORRIS",     &cv_invincibility, 70},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "FLY SHIELD",  &cv_jumpshield,    80},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "POKEMON SHIELD",  &cv_watershield,   90},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "SEDUCTION SHIELD", &cv_ringshield,   100},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "FORCE FIELD",      &cv_forceshield,  110},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "BOOM SHIELD", &cv_bombshield,   120},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "LIFE",              &cv_1up,          130},
+	{IT_STRING|IT_CVAR|IT_CV_INVISSLIDER, NULL, "PASTABOX",        &cv_eggmanbox,    140},
 };
 
 // ==========================================================================
@@ -11697,7 +11697,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	// draw title (or big pic)
 	M_DrawMenuTitle();
 
-	M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), "Name", true, false);
+	M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), "Nick", true, false);
 	if (itemOn == 0)
 		cursory = y;
 	y += 11;
@@ -11711,7 +11711,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 
 	y += 20;
 
-	M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), "Character", true, false);
+	M_DrawLevelPlatterHeader(y - (lsheadingheight - 12), "Pet Type", true, false);
 	if (itemOn == 1)
 		cursory = y;
 

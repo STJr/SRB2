@@ -2131,7 +2131,7 @@ void HU_Drawer(void)
 
 		// Animate the dots
 		resynch_ticker++;
-		strcpy(resynch_text, "Resynching");
+		strcpy(resynch_text, "RESYNCH OMG");
 		for (i = 0; i < (resynch_ticker / 16) % 4; i++)
 			strcat(resynch_text, ".");
 
