@@ -1222,6 +1222,7 @@ void PT_FileFragment(void)
 		&& strcmp(filename, "zones.pk3")
 		&& strcmp(filename, "player.dta")
 		&& strcmp(filename, "patch.pk3")
+		&& strcmp(filename, "patch_next.pk3")
 		&& strcmp(filename, "music.dta")
 		))
 		I_Error("Tried to download \"%s\"", filename);
