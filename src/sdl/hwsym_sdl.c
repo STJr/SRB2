@@ -90,7 +90,6 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(ReadRect);
 	GETFUNC(GClipRect);
 	GETFUNC(ClearMipMapCache);
-	GETFUNC(ClearCacheList);
 	GETFUNC(SetSpecialState);
 	GETFUNC(GetTextureUsed);
 	GETFUNC(DrawModel);
