@@ -14319,6 +14319,14 @@ void A_RolloutRock(mobj_t *actor)
 	if (LUA_CallAction(A_ROLLOUTROCK, actor))
 		return;
 
+	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
+		actor->flags |= MF_PUSHABLE;
+	else
+	{
+		actor->flags2 = (actor->flags2 & ~MF2_OBJECTFLIP) | (actor->tracer->flags2 & MF2_OBJECTFLIP);
+		actor->eflags = (actor->eflags & ~MFE_VERTICALFLIP) | (actor->tracer->eflags & MFE_VERTICALFLIP);
+	}
+
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
 
 	if (actor->eflags & MFE_JUSTHITFLOOR)
@@ -14357,7 +14365,8 @@ void A_RolloutRock(mobj_t *actor)
 
 	speed = P_AproxDistance(actor->momx, actor->momy); // recalculate speed for visual rolling
 
-	if (speed < actor->scale >> 1) // stop moving if speed is insignificant
+	if (((actor->flags & MF_PUSHABLE) || !(actor->flags2 & MF2_STRONGBOX))
+		&& speed < actor->scale) // stop moving if speed is insignificant
 	{
 		actor->momx = 0;
 		actor->momy = 0;
@@ -14376,9 +14385,6 @@ void A_RolloutRock(mobj_t *actor)
 	}
 
 	actor->frame = actor->reactiontime % maxframes; // set frame
-
-	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
-		actor->flags |= MF_PUSHABLE;
 
 	if (!(actor->flags & MF_PUSHABLE) || (actor->movecount != 1)) // if being ridden or haven't moved, don't disappear
 		actor->fuse = actor->info->painchance;
