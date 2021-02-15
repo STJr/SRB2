@@ -2307,10 +2307,11 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 			//	V_DrawSmallString(x+ 246, y+4, V_YELLOWMAP, "SERVER");
 		}
 
-		V_DrawString(x + 20, y,
-		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | (greycheck ? V_60TRANS : 0)
-		             | V_ALLOWLOWERCASE, tab[i].name);
+		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
+			V_DrawString(x + 20, y,
+		                 ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
+		                 | (greycheck ? V_60TRANS : 0)
+		                 | V_ALLOWLOWERCASE, tab[i].name);
 
 		// Draw emeralds
 		if (players[tab[i].num].powers[pw_invulnerability] && (players[tab[i].num].powers[pw_invulnerability] == players[tab[i].num].powers[pw_sneakers]) && ((leveltime/7) & 1))
@@ -2458,10 +2459,11 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		supercheck = supercheckdef;
 
 		strlcpy(name, tab[i].name, 8);
-		V_DrawString(x + 10, y,
-		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | (greycheck ? 0 : V_TRANSLUCENT)
-		             | V_ALLOWLOWERCASE, name);
+		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
+			V_DrawString(x + 10, y,
+			             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
+			             | (greycheck ? 0 : V_TRANSLUCENT)
+			             | V_ALLOWLOWERCASE, name);
 
 		if (gametyperules & GTR_TEAMFLAGS)
 		{
@@ -2586,10 +2588,11 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		supercheck = supercheckdef;
 
 		strlcpy(name, tab[i].name, 7);
-		V_DrawString(x + 20, y,
-		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | (greycheck ? V_TRANSLUCENT : 0)
-		             | V_ALLOWLOWERCASE, name);
+		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
+			V_DrawString(x + 20, y,
+			             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
+			             | (greycheck ? V_TRANSLUCENT : 0)
+			             | V_ALLOWLOWERCASE, name);
 
 		if (gametyperules & GTR_TEAMFLAGS)
 		{
@@ -2660,10 +2663,11 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 		//else
 		//	V_DrawSmallString(x+ 94, y+4, V_YELLOWMAP, "SERVER");
 
-		V_DrawString(x + 20, y,
-		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | (greycheck ? V_TRANSLUCENT : 0)
-		             | V_ALLOWLOWERCASE, name);
+		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
+			V_DrawString(x + 20, y,
+			             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
+			             | (greycheck ? V_TRANSLUCENT : 0)
+			             | V_ALLOWLOWERCASE, name);
 
 		if (G_GametypeUsesLives() && !(G_GametypeUsesCoopLives() && (cv_cooplives.value == 0 || cv_cooplives.value == 3)) && (players[tab[i].num].lives != INFLIVES)) //show lives
 			V_DrawRightAlignedString(x, y+4, V_ALLOWLOWERCASE, va("%dx", players[tab[i].num].lives));
@@ -2769,10 +2773,11 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 		//	V_DrawSmallString(x+ 129, y+4, V_YELLOWMAP, "HOST");
 		}
 
-		V_DrawString(x + 10, y,
-		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | (greycheck ? 0 : V_TRANSLUCENT)
-		             | V_ALLOWLOWERCASE, name);
+		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
+			V_DrawString(x + 10, y,
+			             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
+			             | (greycheck ? 0 : V_TRANSLUCENT)
+			             | V_ALLOWLOWERCASE, name);
 
 		if (G_GametypeUsesLives()) //show lives
 			V_DrawRightAlignedThinString(x-1, y, V_ALLOWLOWERCASE, va("%d", players[tab[i].num].lives));
