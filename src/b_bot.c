@@ -54,11 +54,11 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	boolean _2d = (tails->flags2 & MF2_TWOD) || twodlevel;
 	fixed_t scale = tails->scale;
 
-	fixed_t dist = FixedHypot(sonic->x - tails->x, sonic->y - tails->y);
+	fixed_t dist = P_AproxDistance(sonic->x - tails->x, sonic->y - tails->y);
 	fixed_t zdist = flip * (sonic->z - tails->z);
 	angle_t ang = sonic->angle;
-	fixed_t pmom = FixedHypot(sonic->momx, sonic->momy);
-	fixed_t bmom = FixedHypot(tails->momx, tails->momy);
+	fixed_t pmom = P_AproxDistance(sonic->momx, sonic->momy);
+	fixed_t bmom = P_AproxDistance(tails->momx, tails->momy);
 	fixed_t followmax = 128 * 8 * scale; // Max follow distance before AI begins to enter "panic" state
 	fixed_t followthres = 92 * scale; // Distance that AI will try to reach
 	fixed_t followmin = 32 * scale;
@@ -81,7 +81,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	if (tails->player->powers[pw_carry] == CR_MACESPIN || tails->player->powers[pw_carry] == CR_GENERIC)
 	{
 		boolean isrelevant = (sonic->player->powers[pw_carry] == CR_MACESPIN || sonic->player->powers[pw_carry] == CR_GENERIC);
-		dist = FixedHypot(tails->x-sonic->x, tails->y-sonic->y);
+		dist = P_AproxDistance(tails->x-sonic->x, tails->y-sonic->y);
 		if (sonic->player->cmd.buttons & BT_JUMP && (sonic->player->pflags & PF_JUMPED) && isrelevant)
 			cmd->buttons |= BT_JUMP;
 		if (isrelevant)
@@ -496,7 +496,7 @@ boolean B_CheckRespawn(player_t *player)
 	}
 
 	// If you can't see Sonic, I guess we should?
-	if (!P_CheckSight(sonic, tails) && FixedHypot(FixedHypot(tails->x-sonic->x, tails->y-sonic->y), tails->z-sonic->z) > FixedMul(1024*FRACUNIT, tails->scale))
+	if (!P_CheckSight(sonic, tails) && P_AproxDistance(P_AproxDistance(tails->x-sonic->x, tails->y-sonic->y), tails->z-sonic->z) > FixedMul(1024*FRACUNIT, tails->scale))
 		return true;
 	return false;
 }

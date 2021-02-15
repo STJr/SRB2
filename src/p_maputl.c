@@ -25,6 +25,19 @@
 #include "z_zone.h"
 
 //
+// P_AproxDistance
+// Gives an estimation of distance (not exact)
+//
+fixed_t P_AproxDistance(fixed_t dx, fixed_t dy)
+{
+	dx = abs(dx);
+	dy = abs(dy);
+	if (dx < dy)
+		return dx + dy - (dx>>1);
+	return dx + dy - (dy>>1);
+}
+
+//
 // P_ClosestPointOnLine
 // Finds the closest point on a given line to the supplied point
 //

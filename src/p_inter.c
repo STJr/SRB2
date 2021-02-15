@@ -1002,7 +1002,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				x = (x/count)<<FRACBITS;
 				y = (y/count)<<FRACBITS;
 				z = (z/count)<<FRACBITS;
-				gatherradius = FixedHypot(FixedHypot(special->x - x, special->y - y), special->z - z);
+				gatherradius = P_AproxDistance(P_AproxDistance(special->x - x, special->y - y), special->z - z);
 				P_RemoveMobj(special);
 
 				if (player->powers[pw_nights_superloop])
@@ -1028,7 +1028,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 					mo2 = (mobj_t *)th;
 
-					if (FixedHypot(FixedHypot(mo2->x - x, mo2->y - y), mo2->z - z) > gatherradius)
+					if (P_AproxDistance(P_AproxDistance(mo2->x - x, mo2->y - y), mo2->z - z) > gatherradius)
 						continue;
 
 					if (mo2->flags & MF_SHOOTABLE)
@@ -1450,8 +1450,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				fixed_t touchx, touchy, touchspeed;
 				angle_t angle;
 
-				if (FixedHypot(toucher->x-special->x, toucher->y-special->y) >
-					FixedHypot((toucher->x-toucher->momx)-special->x, (toucher->y-toucher->momy)-special->y))
+				if (P_AproxDistance(toucher->x-special->x, toucher->y-special->y) >
+					P_AproxDistance((toucher->x-toucher->momx)-special->x, (toucher->y-toucher->momy)-special->y))
 				{
 					touchx = toucher->x + toucher->momx;
 					touchy = toucher->y + toucher->momy;
@@ -1463,7 +1463,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				}
 
 				angle = R_PointToAngle2(special->x, special->y, touchx, touchy);
-				touchspeed = FixedHypot(toucher->momx, toucher->momy);
+				touchspeed = P_AproxDistance(toucher->momx, toucher->momy);
 
 				toucher->momx = P_ReturnThrustX(special, angle, touchspeed);
 				toucher->momy = P_ReturnThrustY(special, angle, touchspeed);
@@ -1509,7 +1509,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_EGGSHIELD:
 			{
 				angle_t angle = R_PointToAngle2(special->x, special->y, toucher->x, toucher->y) - special->angle;
-				fixed_t touchspeed = FixedHypot(toucher->momx, toucher->momy);
+				fixed_t touchspeed = P_AproxDistance(toucher->momx, toucher->momy);
 				if (touchspeed < special->scale)
 					touchspeed = special->scale;
 
@@ -1590,7 +1590,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				special->momx = toucher->momx;
 				special->momy = toucher->momy;
-				special->momz = FixedHypot(toucher->momx, toucher->momy)/4;
+				special->momz = P_AproxDistance(toucher->momx, toucher->momy)/4;
 
 				if (toucher->momz > 0)
 					special->momz += toucher->momz/8;
@@ -1762,7 +1762,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				toucher->momx = toucher->tracer->momx/2;
 				toucher->momy = toucher->tracer->momy/2;
-				toucher->momz = toucher->tracer->momz + FixedHypot(toucher->tracer->momx, toucher->tracer->momy)/2;
+				toucher->momz = toucher->tracer->momz + P_AproxDistance(toucher->tracer->momx, toucher->tracer->momy)/2;
 				P_ResetPlayer(player);
 				player->pflags &= ~PF_APPLYAUTOBRAKE;
 				P_SetPlayerMobjState(toucher, S_PLAY_FALL);
@@ -2666,7 +2666,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		case MT_BUGGLE:
 			if (inflictor && inflictor->player // did a player kill you? Spawn relative to the player so they're bound to get it
-			&& FixedHypot(inflictor->x - target->x, inflictor->y - target->y) <= inflictor->radius + target->radius + FixedMul(8*FRACUNIT, inflictor->scale) // close enough?
+			&& P_AproxDistance(inflictor->x - target->x, inflictor->y - target->y) <= inflictor->radius + target->radius + FixedMul(8*FRACUNIT, inflictor->scale) // close enough?
 			&& inflictor->z <= target->z + target->height + FixedMul(8*FRACUNIT, inflictor->scale)
 			&& inflictor->z + inflictor->height >= target->z - FixedMul(8*FRACUNIT, inflictor->scale))
 				mo = P_SpawnMobj(inflictor->x + inflictor->momx, inflictor->y + inflictor->momy, inflictor->z + (inflictor->height / 2) + inflictor->momz, MT_EXTRALARGEBUBBLE);
@@ -3305,7 +3305,7 @@ static void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, I
 	// to recover
 	if (inflictor->flags2 & MF2_SCATTER && source)
 	{
-		fixed_t dist = FixedHypot(FixedHypot(source->x-player->mo->x, source->y-player->mo->y), source->z-player->mo->z);
+		fixed_t dist = P_AproxDistance(P_AproxDistance(source->x-player->mo->x, source->y-player->mo->y), source->z-player->mo->z);
 
 		dist = FixedMul(128*FRACUNIT, inflictor->scale) - dist/4;
 
