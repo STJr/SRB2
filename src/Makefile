@@ -81,8 +81,15 @@
 #
 #############################################################################
 
+,=,
+
+ifeq (,$(filter-out cleandep clean distclean,$(or $(MAKECMDGOALS),all)))
+CLEANONLY=1
+else ifndef SILENT
+echo=@echo "$(1)"
 ifndef MAKE_RESTARTS
 print=$(info $(1))
+endif
 endif
 
 ALL_SYSTEMS=\
@@ -104,7 +111,7 @@ ALL_SYSTEMS=\
 ifeq (,$(filter $(ALL_SYSTEMS),$(.VARIABLES)))
 ifeq ($(OS),Windows_NT) # all windows are Windows_NT...
 
- $(call print,Detected a Windows system, compiling for 32-bit MinGW SDL2...)
+ $(call print,Detected a Windows system$(,) compiling for 32-bit MinGW SDL2...)
 
  # go for a 32-bit sdl mingw exe by default
  MINGW=1
@@ -243,6 +250,12 @@ endif
 
 MSGFMT?=msgfmt
 
+ifdef WINDOWSHELL
+	COMPTIME=-..\comptime.bat
+else
+	COMPTIME=-../comptime.sh
+endif
+
 ifndef ECHO
 	NASM:=@$(NASM)
 	REMOVE:=@$(REMOVE)
@@ -257,6 +270,7 @@ ifndef ECHO
 	MSGFMT:=@$(MSGFMT)
 	UPX:=@$(UPX)
 	UPX_OPTS+=-q
+	COMPTIME:=@$(COMPTIME)
 endif
 
 ifdef NONET
@@ -543,11 +557,13 @@ OBJS:=$(i_main_o) \
 DEPS:=$(patsubst $(OBJDIR)/%.o,$(DEPDIR)/%.d,$(OBJS))
 OBJS+=$(OBJDIR)/comptime.o
 
+ifndef SILENT
 ifndef ECHO
 ifndef NOECHOFILENAMES
 define echoName =
 	@echo -- $< ...
 endef
+endif
 endif
 endif
 
@@ -603,11 +619,11 @@ asm:
 
 $(BIN)/$(EXENAME): $(POS) $(OBJS)
 	-$(MKDIR) $(BIN)
-	@echo Linking $(EXENAME)...
+	$(call echo,Linking $(EXENAME)...)
 	$(LD) $(LDFLAGS) $(OBJS) -o $(BIN)/$(EXENAME) $(LIBS)
 ifndef VALGRIND
 ifndef NOOBJDUMP
-	@echo Dumping debugging info
+	$(call echo,Dumping debugging info)
 	$(OBJDUMP) $(OBJDUMP_OPTS) $(BIN)/$(EXENAME) > $(BIN)/$(DBGNAME).txt
 ifdef WINDOWSHELL
 	-$(GZIP) $(GZIP_OPTS) $(BIN)/$(DBGNAME).txt
@@ -626,10 +642,10 @@ ifndef NOUPX
 	-$(UPX) $(UPX_OPTS) $(BIN)/$(EXENAME)
 endif
 endif
-	@echo Build is done, please look for $(EXENAME) in $(BIN), \(checking for post steps\)
+	$(call echo,Build is done$(,) please look for $(EXENAME) in $(BIN)$(,) (checking for post steps))
 
 reobjdump:
-	@echo Redumping debugging info
+	$(call echo,Redumping debugging info)
 	$(OBJDUMP) $(OBJDUMP_OPTS) $(BIN)/$(DBGNAME) > $(BIN)/$(DBGNAME).txt
 ifdef WINDOWSHELL
 	-$(GZIP) $(GZIP_OPTS) $(BIN)/$(DBGNAME).txt
@@ -666,7 +682,7 @@ endif
 
 #dependecy made by gcc itself !
 ifndef DUMMY
-ifneq (,$(filter-out cleandep clean distclean,$(or $(MAKECMDGOALS),all)))
+ifndef CLEANONLY
 $(call print,Checking dependency files...)
 -include $(DEPS)
 endif
@@ -675,7 +691,7 @@ endif
 $(DEPDIR)/%.d: %.c
 # windows makes it too hard !
 ifndef WINDOWSHELL
-ifndef ECHO
+ifdef echoName
 	@printf "%-20.20s\r" $<
 endif
 endif
@@ -688,11 +704,10 @@ $(OBJDIR)/z_zone.o: z_zone.c
 endif
 
 $(OBJDIR)/comptime.o::
-ifdef WINDOWSHELL
-	-..\comptime.bat .
-else
-	-../comptime.sh .
+ifdef echoName
+	@echo -- comptime.c ...
 endif
+	$(COMPTIME) .
 	$(CC) $(CFLAGS) $(WFLAGS) -c comptime.c -o $@
 
 $(BIN)/%.mo: locale/%.po
