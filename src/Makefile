@@ -2,7 +2,7 @@
 #     GNU Make makefile for SRB2
 #############################################################################
 # Copyright (C) 1998-2000 by DooM Legacy Team.
-# Copyright (C) 2003-2020 by Sonic Team Junior.
+# Copyright (C) 2003-2021 by Sonic Team Junior.
 #
 # This program is free software distributed under the
 # terms of the GNU General Public License, version 2.
@@ -79,6 +79,10 @@
 #
 #############################################################################
 
+ifndef MAKE_RESTARTS
+print=$(info $(1))
+endif
+
 ALL_SYSTEMS=\
 	PANDORA\
 	LINUX64\
@@ -98,7 +102,7 @@ ALL_SYSTEMS=\
 ifeq (,$(filter $(ALL_SYSTEMS),$(.VARIABLES)))
 ifeq ($(OS),Windows_NT) # all windows are Windows_NT...
 
- $(info Detected a Windows system, compiling for 32-bit MinGW SDL2...)
+ $(call print,Detected a Windows system, compiling for 32-bit MinGW SDL2...)
 
  # go for a 32-bit sdl mingw exe by default
  MINGW=1
@@ -123,7 +127,7 @@ else # if you on the *nix
  new_system:=$(new_system)64
  endif
 
- $(info Detected $(system) ($(new_system))...)
+ $(call print,Detected $(system) ($(new_system))...)
  $(new_system)=1
 
 endif
