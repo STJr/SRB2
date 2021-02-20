@@ -11618,8 +11618,7 @@ static void M_DrawMPMainMenu(void)
 	INT32 y = currentMenu->y;
 	const INT32 boxwidth = /*16*8 + 6*/ (BASEVIDWIDTH - 2*(x+5));
 	const INT32 maxstrwidth = boxwidth - 5;
-	char drawnstr[CONNIP_LEN];
-	char *drawnstrptr = malloc(sizeof(setupm_ip));
+	char *drawnstr = malloc(sizeof(setupm_ip));
 	boolean drawthin, shorten = false;
 
 	// use generic drawer for cursor, items and title
@@ -11638,36 +11637,36 @@ static void M_DrawMPMainMenu(void)
 
 	V_DrawFill(x+5, y+4+5, boxwidth, 8+6, 159);
 
-	strcpy(drawnstrptr, setupm_ip);
-	drawthin = V_StringWidth(drawnstrptr, V_ALLOWLOWERCASE) + V_StringWidth("_", V_ALLOWLOWERCASE) > maxstrwidth;
+	strcpy(drawnstr, setupm_ip);
+	drawthin = V_StringWidth(drawnstr, V_ALLOWLOWERCASE) + V_StringWidth("_", V_ALLOWLOWERCASE) > maxstrwidth;
 
 	// draw name string
 	if (drawthin)
 	{
 		INT32 dotswidth = V_ThinStringWidth(DOTS, V_ALLOWLOWERCASE);
 		//UINT32 color = 0;
-		while (V_ThinStringWidth(drawnstrptr, V_ALLOWLOWERCASE) + V_ThinStringWidth("_", V_ALLOWLOWERCASE) >= maxstrwidth)
+		while (V_ThinStringWidth(drawnstr, V_ALLOWLOWERCASE) + V_ThinStringWidth("_", V_ALLOWLOWERCASE) >= maxstrwidth)
 		{
 			shorten = true;
-			drawnstrptr++;
+			drawnstr++;
 		}
 
 		if (shorten)
 		{
-			INT32 initiallen = V_ThinStringWidth(drawnstrptr, V_ALLOWLOWERCASE);
+			INT32 initiallen = V_ThinStringWidth(drawnstr, V_ALLOWLOWERCASE);
 			INT32 cutofflen = 0;
-			while ((cutofflen = initiallen - V_ThinStringWidth(drawnstrptr, V_ALLOWLOWERCASE)) < dotswidth)
-				drawnstrptr++;
+			while ((cutofflen = initiallen - V_ThinStringWidth(drawnstr, V_ALLOWLOWERCASE)) < dotswidth)
+				drawnstr++;
 
 			V_DrawThinString(x+8,y+13, V_ALLOWLOWERCASE|V_GRAYMAP, DOTS);
 			x += V_ThinStringWidth(DOTS, V_ALLOWLOWERCASE);
 		}
 
-		V_DrawThinString(x+8,y+13, V_ALLOWLOWERCASE, drawnstrptr);
+		V_DrawThinString(x+8,y+13, V_ALLOWLOWERCASE, drawnstr);
 	}
 	else
 	{
-		V_DrawString(x+8,y+12, V_ALLOWLOWERCASE, drawnstrptr);
+		V_DrawString(x+8,y+12, V_ALLOWLOWERCASE, drawnstr);
 	}
 
 	// draw text cursor for name
@@ -11675,9 +11674,9 @@ static void M_DrawMPMainMenu(void)
 		&& skullAnimCounter < 4)   //blink cursor
 	{
 		if (drawthin)
-			V_DrawCharacter(x+8+V_ThinStringWidth(drawnstrptr, V_ALLOWLOWERCASE),y+12,'_',false);
+			V_DrawCharacter(x+8+V_ThinStringWidth(drawnstr, V_ALLOWLOWERCASE),y+12,'_',false);
 		else
-			V_DrawCharacter(x+8+V_StringWidth(drawnstrptr, V_ALLOWLOWERCASE),y+12,'_',false);
+			V_DrawCharacter(x+8+V_StringWidth(drawnstr, V_ALLOWLOWERCASE),y+12,'_',false);
 	}
 }
 
