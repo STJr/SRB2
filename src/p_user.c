@@ -12254,7 +12254,8 @@ void P_PlayerThink(player_t *player)
 	if ((player->charflags & SF_DASHMODE) && !player->gotflag && !player->powers[pw_carry] && !player->exiting && !(maptol & TOL_NIGHTS) && !metalrecording) // woo, dashmode! no nights tho.
 	{
 		tic_t prevdashmode = dashmode;
-		boolean totallyradical = player->speed >= FixedMul(player->runspeed, player->mo->scale);
+		fixed_t speed = P_AproxDistance(player->rmomx, player->rmomy); // this only exists for consistency between 2.2 patches and should be reverted to player->speed in a future release.
+		boolean totallyradical = speed >= FixedMul(player->runspeed, player->mo->scale);
 		boolean floating = (player->secondjump == 1);
 
 		if ((totallyradical && !floating) || (player->pflags & PF_STARTDASH))
