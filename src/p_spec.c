@@ -8458,6 +8458,9 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 	if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
 		return false;
 
+	if (!tmpusher->source)
+		return false;
+
 	// Allow this to affect pushable objects at some point?
 	if (thing->player && (!(thing->flags & (MF_NOGRAVITY | MF_NOCLIP)) || thing->player->powers[pw_carry] == CR_NIGHTSMODE))
 	{
