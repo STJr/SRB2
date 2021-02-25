@@ -1,7 +1,10 @@
-# Kitchen Sink Faucet SRB2
+# Sonic Robo Blast 2
 
-[![Build status](https://ci.appveyor.com/api/projects/status/gv49pw5mra2sad1j?svg=true)](https://ci.appveyor.com/project/jimita/kitchensinkfaucetsrb2)
-[![CircleCI](https://circleci.com/gh/Jimita/KitchenSinkFaucetSRB2/tree/master.svg?style=svg)](https://app.circleci.com/pipelines/github/Jimita/KitchenSinkFaucetSRB2)
+[![Build status](https://ci.appveyor.com/api/projects/status/399d4hcw9yy7hg2y?svg=true)](https://ci.appveyor.com/project/STJr/srb2)
+[![Build status](https://travis-ci.org/STJr/SRB2.svg?branch=master)](https://travis-ci.org/STJr/SRB2)
+[![CircleCI](https://circleci.com/gh/STJr/SRB2/tree/master.svg?style=svg)](https://circleci.com/gh/STJr/SRB2/tree/master)
+
+[Sonic Robo Blast 2](https://srb2.org/) is a 3D Sonic the Hedgehog fangame based on a modified version of [Doom Legacy](http://doomlegacy.sourceforge.net/).
 
 ## Dependencies
 - NASM (x86 builds only)
