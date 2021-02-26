@@ -1072,7 +1072,7 @@ void D_SRB2Main(void)
 	G_LoadGameSettings();
 
 	// Test Dehacked lists
-	DEH_Check();
+	DEH_TableCheck();
 
 	// Netgame URL special case: change working dir to EXE folder.
 	ChangeDirForUrlHandler();
