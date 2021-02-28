@@ -134,8 +134,42 @@ UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 #define DEFAULT_STARTTRANSCOLOR 96
 #define NUM_PALETTE_ENTRIES 256
 
-static UINT8** translationtablecache[MAXSKINS + 7] = {NULL};
+static UINT8 **translationtablecache[MAXSKINS + 7] = {NULL};
 UINT8 skincolor_modified[MAXSKINCOLORS];
+
+static INT32 SkinToCacheIndex(INT32 skinnum)
+{
+	switch (skinnum)
+	{
+		case TC_DEFAULT:    return DEFAULT_TT_CACHE_INDEX;
+		case TC_BOSS:       return BOSS_TT_CACHE_INDEX;
+		case TC_METALSONIC: return METALSONIC_TT_CACHE_INDEX;
+		case TC_ALLWHITE:   return ALLWHITE_TT_CACHE_INDEX;
+		case TC_RAINBOW:    return RAINBOW_TT_CACHE_INDEX;
+		case TC_BLINK:      return BLINK_TT_CACHE_INDEX;
+		case TC_DASHMODE:   return DASHMODE_TT_CACHE_INDEX;
+		     default:       break;
+	}
+
+	return skinnum;
+}
+
+static INT32 CacheIndexToSkin(INT32 ttc)
+{
+	switch (ttc)
+	{
+		case DEFAULT_TT_CACHE_INDEX:    return TC_DEFAULT;
+		case BOSS_TT_CACHE_INDEX:       return TC_BOSS;
+		case METALSONIC_TT_CACHE_INDEX: return TC_METALSONIC;
+		case ALLWHITE_TT_CACHE_INDEX:   return TC_ALLWHITE;
+		case RAINBOW_TT_CACHE_INDEX:    return TC_RAINBOW;
+		case BLINK_TT_CACHE_INDEX:      return TC_BLINK;
+		case DASHMODE_TT_CACHE_INDEX:   return TC_DASHMODE;
+		     default:                   break;
+	}
+
+	return ttc;
+}
 
 CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
 
@@ -308,7 +342,7 @@ static void R_RainbowColormap(UINT8 *dest_colormap, UINT16 skincolor)
 /**	\brief	Generates a translation colormap.
 
 	\param	dest_colormap	colormap to populate
-	\param	skinnum		number of skin, TC_DEFAULT or TC_BOSS
+	\param	skinnum		skin number, or a translation mode
 	\param	color		translation color
 
 	\return	void
@@ -412,6 +446,9 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 	if (color >= numskincolors)
 		I_Error("Invalid skin color #%hu.", (UINT16)color);
 
+	if (skinnum < 0 && skinnum > TC_DEFAULT)
+		I_Error("Invalid non-translation skin number %d.", skinnum);
+
 	starttranscolor = (skinnum != TC_DEFAULT) ? skins[skinnum].starttranscolor : DEFAULT_STARTTRANSCOLOR;
 
 	if (starttranscolor >= NUM_PALETTE_ENTRIES)
@@ -448,25 +485,11 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags)
 {
 	UINT8* ret;
-	INT32 skintableindex;
+	INT32 skintableindex = SkinToCacheIndex(skinnum); // Adjust if we want the default colormap
 	INT32 i;
-
-	// Adjust if we want the default colormap
-	switch (skinnum)
-	{
-		case TC_DEFAULT:    skintableindex = DEFAULT_TT_CACHE_INDEX; break;
-		case TC_BOSS:       skintableindex = BOSS_TT_CACHE_INDEX; break;
-		case TC_METALSONIC: skintableindex = METALSONIC_TT_CACHE_INDEX; break;
-		case TC_ALLWHITE:   skintableindex = ALLWHITE_TT_CACHE_INDEX; break;
-		case TC_RAINBOW:    skintableindex = RAINBOW_TT_CACHE_INDEX; break;
-		case TC_BLINK:      skintableindex = BLINK_TT_CACHE_INDEX; break;
-		case TC_DASHMODE:   skintableindex = DASHMODE_TT_CACHE_INDEX; break;
-		     default:       skintableindex = skinnum; break;
-	}
 
 	if (flags & GTC_CACHE)
 	{
-
 		// Allocate table for skin if necessary
 		if (!translationtablecache[skintableindex])
 			translationtablecache[skintableindex] = Z_Calloc(MAXSKINCOLORS * sizeof(UINT8**), PU_STATIC, NULL);
@@ -479,7 +502,8 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags
 		{
 			for (i = 0; i < (INT32)(sizeof(translationtablecache) / sizeof(translationtablecache[0])); i++)
 				if (translationtablecache[i] && translationtablecache[i][color])
-					R_GenerateTranslationColormap(translationtablecache[i][color], i>=MAXSKINS ? MAXSKINS-i-1 : i, color);
+					R_GenerateTranslationColormap(translationtablecache[i][color], CacheIndexToSkin(i), color);
+
 			skincolor_modified[color] = false;
 		}
 	}
