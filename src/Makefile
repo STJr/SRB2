@@ -554,7 +554,7 @@ OBJS:=$(i_main_o) \
 		$(i_sound_o)    \
 		$(OBJS)
 
-DEPS:=$(patsubst $(OBJDIR)/%.o,$(DEPDIR)/%.d,$(OBJS))
+DEPS:=$(patsubst $(OBJDIR)/%.o,$(DEPDIR)/%.d,$(filter %.o,$(OBJS)))
 OBJS+=$(OBJDIR)/comptime.o
 
 ifndef SILENT
@@ -688,14 +688,33 @@ $(call print,Checking dependency files...)
 endif
 endif
 
-$(DEPDIR)/%.d: %.c
+undefine deps_rule
+
 # windows makes it too hard !
 ifndef WINDOWSHELL
 ifdef echoName
+define deps_rule =
 	@printf "%-20.20s\r" $<
+
+endef
 endif
 endif
+
+define deps_rule +=
 	$(CC) $(CFLAGS) -M -MF $@ -MT $(OBJDIR)/$< $<
+endef
+
+$(DEPDIR)/%.d: %.c
+	$(deps_rule)
+
+$(DEPDIR)/%.d: $(INTERFACE)/%.c
+	$(deps_rule)
+
+$(DEPDIR)/%.d: hardware/%.c
+	$(deps_rule)
+
+$(DEPDIR)/%.d: blua/%.c
+	$(deps_rule)
 
 ifdef VALGRIND
 $(OBJDIR)/z_zone.o: z_zone.c
