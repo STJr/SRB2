@@ -24,12 +24,6 @@
 #include <unistd.h> // for getcwd
 #endif
 
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-int	snprintf(char *str, size_t n, const char *fmt, ...);
-//int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
-#endif
-
 #ifdef _WIN32
 #include <direct.h>
 #include <malloc.h>
@@ -46,6 +40,7 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "hu_stuff.h"
 #include "i_sound.h"
 #include "i_system.h"
+#include "i_threads.h"
 #include "i_video.h"
 #include "m_argv.h"
 #include "m_menu.h"
@@ -66,12 +61,13 @@ int	snprintf(char *str, size_t n, const char *fmt, ...);
 #include "p_local.h" // chasecam
 #include "mserv.h" // ms_RoomId
 #include "m_misc.h" // screenshot functionality
-#include "dehacked.h" // Dehacked list test
+#include "deh_tables.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
 #include "keys.h"
 #include "filesrch.h" // refreshdirmenu, mainwadstally
 #include "g_input.h" // tutorial mode control scheming
+#include "m_perfstats.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -104,13 +100,12 @@ UINT8 window_notinfocus = false;
 // DEMO LOOP
 //
 static char *startupwadfiles[MAX_WADFILES];
+static char *startuppwads[MAX_WADFILES];
 
 boolean devparm = false; // started game with -devparm
 
 boolean singletics = false; // timedemo
 boolean lastdraw = false;
-
-static void D_CheckRendererState(void);
 
 postimg_t postimgtype = postimg_none;
 INT32 postimgparam;
@@ -162,10 +157,6 @@ void D_PostEvent(const event_t *ev)
 	events[eventhead] = *ev;
 	eventhead = (eventhead+1) & (MAXEVENTS-1);
 }
-// just for lock this function
-#if defined (PC_DOS) && !defined (DOXYGEN)
-void D_PostEvent_end(void) {};
-#endif
 
 // modifier keys
 // Now handled in I_OsPolling
@@ -182,6 +173,8 @@ void D_ProcessEvents(void)
 {
 	event_t *ev;
 
+	boolean eaten;
+
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
 		ev = &events[eventtail];
@@ -197,11 +190,31 @@ void D_ProcessEvents(void)
 		}
 
 		// Menu input
-		if (M_Responder(ev))
+#ifdef HAVE_THREADS
+		I_lock_mutex(&m_menu_mutex);
+#endif
+		{
+			eaten = M_Responder(ev);
+		}
+#ifdef HAVE_THREADS
+		I_unlock_mutex(m_menu_mutex);
+#endif
+
+		if (eaten)
 			continue; // menu ate the event
 
 		// console input
-		if (CON_Responder(ev))
+#ifdef HAVE_THREADS
+		I_lock_mutex(&con_mutex);
+#endif
+		{
+			eaten = CON_Responder(ev);
+		}
+#ifdef HAVE_THREADS
+		I_unlock_mutex(con_mutex);
+#endif
+
+		if (eaten)
 			continue; // ate the event
 
 		G_Responder(ev);
@@ -222,7 +235,6 @@ INT16 wipetypepost = -1;
 
 static void D_Display(void)
 {
-	INT32 setrenderstillneeded = 0;
 	boolean forcerefresh = false;
 	static boolean wipe = false;
 	INT32 wipedefindex = 0;
@@ -245,47 +257,27 @@ static void D_Display(void)
 	//    create plane polygons, if necessary.
 	// 3. Functions related to switching video
 	//    modes (resolution) are called.
-	// 4. Patch data is freed from memory,
-	//    and recached if necessary.
-	// 5. The frame is ready to be drawn!
+	// 4. The frame is ready to be drawn!
 
-	// stop movie if needs to change renderer
-	if (setrenderneeded && (moviemode == MM_APNG))
-		M_StopMovie();
-
-	// check for change of renderer or screen size (video mode)
+	// Check for change of renderer or screen size (video mode)
 	if ((setrenderneeded || setmodeneeded) && !wipe)
-	{
-		if (setrenderneeded)
-		{
-			CONS_Debug(DBG_RENDER, "setrenderneeded set (%d)\n", setrenderneeded);
-			setrenderstillneeded = setrenderneeded;
-		}
 		SCR_SetMode(); // change video mode
-	}
 
-	if (vid.recalc || setrenderstillneeded)
-	{
+	// Recalc the screen
+	if (vid.recalc)
 		SCR_Recalc(); // NOTE! setsizeneeded is set by SCR_Recalc()
-#ifdef HWRENDER
-		// Shoot! The screen texture was flushed!
-		if ((rendermode == render_opengl) && (gamestate == GS_INTERMISSION))
-			usebuffer = false;
-#endif
-	}
 
+	// View morph
 	if (rendermode == render_soft && !splitscreen)
 		R_CheckViewMorph();
 
-	// change the view size if needed
-	if (setsizeneeded || setrenderstillneeded)
+	// Change the view size if needed
+	// Set by changing video mode or renderer
+	if (setsizeneeded)
 	{
 		R_ExecuteSetViewSize();
 		forcerefresh = true; // force background redraw
 	}
-
-	// Lactozilla: Renderer switching
-	D_CheckRendererState();
 
 	// draw buffered stuff to screen
 	// Used only by linux GGI version
@@ -421,7 +413,7 @@ static void D_Display(void)
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
-				rs_rendercalltime = I_GetTimeMicros();
+				ps_rendercalltime = I_GetPreciseTime();
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
@@ -468,7 +460,7 @@ static void D_Display(void)
 					if (postimgtype2)
 						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
-				rs_rendercalltime = I_GetTimeMicros() - rs_rendercalltime;
+				ps_rendercalltime = I_GetPreciseTime() - ps_rendercalltime;
 			}
 
 			if (lastdraw)
@@ -482,6 +474,8 @@ static void D_Display(void)
 				lastdraw = false;
 			}
 
+			ps_uitime = I_GetPreciseTime();
+
 			if (gamestate == GS_LEVEL)
 			{
 				ST_Drawer();
@@ -490,6 +484,10 @@ static void D_Display(void)
 			}
 			else
 				F_TitleScreenDrawer();
+		}
+		else
+		{
+			ps_uitime = I_GetPreciseTime();
 		}
 	}
 
@@ -509,7 +507,7 @@ static void D_Display(void)
 		else
 			py = viewwindowy + 4;
 		patch = W_CachePatchName("M_PAUSE", PU_PATCH);
-		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - SHORT(patch->width))/2, py, 0, patch);
+		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - patch->width)/2, py, 0, patch);
 #else
 		INT32 y = ((automapactive) ? (32) : (BASEVIDHEIGHT/2));
 		M_DrawTextBox((BASEVIDWIDTH/2) - (60), y - (16), 13, 2);
@@ -520,10 +518,18 @@ static void D_Display(void)
 	// vid size change is now finished if it was on...
 	vid.recalc = 0;
 
+#ifdef HAVE_THREADS
+	I_lock_mutex(&m_menu_mutex);
+#endif
 	M_Drawer(); // menu is drawn even on top of everything
+#ifdef HAVE_THREADS
+	I_unlock_mutex(m_menu_mutex);
+#endif
 	// focus lost moved to M_Drawer
 
 	CON_Drawer();
+
+	ps_uitime = I_GetPreciseTime() - ps_uitime;
 
 	//
 	// wipe update
@@ -604,103 +610,15 @@ static void D_Display(void)
 			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
 		}
 
-		if (cv_renderstats.value)
+		if (cv_perfstats.value)
 		{
-			char s[50];
-			int frametime = I_GetTimeMicros() - rs_prevframetime;
-			int divisor = 1;
-			rs_prevframetime = I_GetTimeMicros();
-
-			if (rs_rendercalltime > 10000) divisor = 1000;
-
-			snprintf(s, sizeof s - 1, "ft   %d", frametime / divisor);
-			V_DrawThinString(30, 10, V_MONOSPACE | V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "rtot %d", rs_rendercalltime / divisor);
-			V_DrawThinString(30, 20, V_MONOSPACE | V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "bsp  %d", rs_bsptime / divisor);
-			V_DrawThinString(30, 30, V_MONOSPACE | V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "nbsp %d", rs_numbspcalls);
-			V_DrawThinString(80, 10, V_MONOSPACE | V_BLUEMAP, s);
-			snprintf(s, sizeof s - 1, "nspr %d", rs_numsprites);
-			V_DrawThinString(80, 20, V_MONOSPACE | V_BLUEMAP, s);
-			snprintf(s, sizeof s - 1, "nnod %d", rs_numdrawnodes);
-			V_DrawThinString(80, 30, V_MONOSPACE | V_BLUEMAP, s);
-			snprintf(s, sizeof s - 1, "npob %d", rs_numpolyobjects);
-			V_DrawThinString(80, 40, V_MONOSPACE | V_BLUEMAP, s);
-			if (rendermode == render_opengl) // OpenGL specific stats
-			{
-#ifdef HWRENDER
-				snprintf(s, sizeof s - 1, "nsrt %d", rs_hw_nodesorttime / divisor);
-				V_DrawThinString(30, 40, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ndrw %d", rs_hw_nodedrawtime / divisor);
-				V_DrawThinString(30, 50, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ssrt %d", rs_hw_spritesorttime / divisor);
-				V_DrawThinString(30, 60, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "sdrw %d", rs_hw_spritedrawtime / divisor);
-				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
-				V_DrawThinString(30, 80, V_MONOSPACE | V_YELLOWMAP, s);
-				if (cv_grbatching.value)
-				{
-					snprintf(s, sizeof s - 1, "bsrt %d", rs_hw_batchsorttime / divisor);
-					V_DrawThinString(80, 55, V_MONOSPACE | V_REDMAP, s);
-					snprintf(s, sizeof s - 1, "bdrw %d", rs_hw_batchdrawtime / divisor);
-					V_DrawThinString(80, 65, V_MONOSPACE | V_REDMAP, s);
-
-					snprintf(s, sizeof s - 1, "npol %d", rs_hw_numpolys);
-					V_DrawThinString(130, 10, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "ndc  %d", rs_hw_numcalls);
-					V_DrawThinString(130, 20, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "nshd %d", rs_hw_numshaders);
-					V_DrawThinString(130, 30, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "nvrt %d", rs_hw_numverts);
-					V_DrawThinString(130, 40, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "ntex %d", rs_hw_numtextures);
-					V_DrawThinString(185, 10, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "npf  %d", rs_hw_numpolyflags);
-					V_DrawThinString(185, 20, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "ncol %d", rs_hw_numcolors);
-					V_DrawThinString(185, 30, V_MONOSPACE | V_PURPLEMAP, s);
-				}
-#endif
-			}
-			else // software specific stats
-			{
-				snprintf(s, sizeof s - 1, "prtl %d", rs_sw_portaltime / divisor);
-				V_DrawThinString(30, 40, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "plns %d", rs_sw_planetime / divisor);
-				V_DrawThinString(30, 50, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "mskd %d", rs_sw_maskedtime / divisor);
-				V_DrawThinString(30, 60, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
-				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
-			}
+			M_DrawPerfStats();
 		}
 
-		rs_swaptime = I_GetTimeMicros();
+		ps_swaptime = I_GetPreciseTime();
 		I_FinishUpdate(); // page flip or blit buffer
-		rs_swaptime = I_GetTimeMicros() - rs_swaptime;
+		ps_swaptime = I_GetPreciseTime() - ps_swaptime;
 	}
-
-	needpatchflush = false;
-	needpatchrecache = false;
-}
-
-// Check the renderer's state
-// after a possible renderer switch.
-void D_CheckRendererState(void)
-{
-	// flush all patches from memory
-	if (needpatchflush)
-	{
-		Z_FlushCachedPatches();
-		needpatchflush = false;
-	}
-
-	// some patches have been freed,
-	// so cache them again
-	if (needpatchrecache)
-		R_ReloadHUDGraphics();
 }
 
 // =========================================================================
@@ -712,6 +630,7 @@ tic_t rendergametic;
 void D_SRB2Loop(void)
 {
 	tic_t oldentertics = 0, entertic = 0, realtics = 0, rendertimeout = INFTICS;
+	static lumpnum_t gstartuplumpnum;
 
 	if (dedicated)
 		server = true;
@@ -726,11 +645,14 @@ void D_SRB2Loop(void)
 	oldentertics = I_GetTime();
 
 	// end of loading screen: CONS_Printf() will no more call FinishUpdate()
+	con_refresh = false;
 	con_startup = false;
 
 	// make sure to do a d_display to init mode _before_ load a level
 	SCR_SetMode(); // change video mode
 	SCR_Recalc();
+
+	chosenrendermode = render_none;
 
 	// Check and print which version is executed.
 	// Use this as the border between setup and the main game loop being entered.
@@ -751,7 +673,12 @@ void D_SRB2Loop(void)
 	*/
 	/* Smells like a hack... Don't fade Sonic's ass into the title screen. */
 	if (gamestate != GS_TITLESCREEN)
-		V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(W_GetNumForName("CONSBACK"), PU_PATCH));
+	{
+		gstartuplumpnum = W_CheckNumForName("STARTUP");
+		if (gstartuplumpnum == LUMPERROR)
+			gstartuplumpnum = W_GetNumForName("MISSING");
+		V_DrawScaledPatch(0, 0, 0, W_CachePatchNum(gstartuplumpnum, PU_PATCH));
+	}
 
 	for (;;)
 	{
@@ -826,9 +753,6 @@ void D_SRB2Loop(void)
 		// consoleplayer -> displayplayer (hear sounds from viewpoint)
 		S_UpdateSounds(); // move positional sounds
 		S_UpdateClosedCaptions();
-
-		// check for media change, loop music..
-		I_UpdateCD();
 
 #ifdef HW3SOUND
 		HW3S_EndFrameUpdate();
@@ -939,12 +863,12 @@ void D_StartTitle(void)
 //
 // D_AddFile
 //
-static void D_AddFile(const char *file)
+static void D_AddFile(char **list, const char *file)
 {
 	size_t pnumwadfiles;
 	char *newfile;
 
-	for (pnumwadfiles = 0; startupwadfiles[pnumwadfiles]; pnumwadfiles++)
+	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
 		;
 
 	newfile = malloc(strlen(file) + 1);
@@ -954,16 +878,16 @@ static void D_AddFile(const char *file)
 	}
 	strcpy(newfile, file);
 
-	startupwadfiles[pnumwadfiles] = newfile;
+	list[pnumwadfiles] = newfile;
 }
 
-static inline void D_CleanFile(void)
+static inline void D_CleanFile(char **list)
 {
 	size_t pnumwadfiles;
-	for (pnumwadfiles = 0; startupwadfiles[pnumwadfiles]; pnumwadfiles++)
+	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
 	{
-		free(startupwadfiles[pnumwadfiles]);
-		startupwadfiles[pnumwadfiles] = NULL;
+		free(list[pnumwadfiles]);
+		list[pnumwadfiles] = NULL;
 	}
 }
 
@@ -1048,7 +972,7 @@ static void IdentifyVersion(void)
 
 	// Load the IWAD
 	if (srb2wad != NULL && FIL_ReadFileOK(srb2wad))
-		D_AddFile(srb2wad);
+		D_AddFile(startupwadfiles, srb2wad);
 	else
 		I_Error("srb2.pk3 not found! Expected in %s, ss file: %s\n", srb2waddir, srb2wad);
 
@@ -1059,14 +983,14 @@ static void IdentifyVersion(void)
 	// checking in D_SRB2Main
 
 	// Add the maps
-	D_AddFile(va(pandf,srb2waddir,"zones.pk3"));
+	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"zones.pk3"));
 
 	// Add the players
-	D_AddFile(va(pandf,srb2waddir, "player.dta"));
+	D_AddFile(startupwadfiles, va(pandf,srb2waddir, "player.dta"));
 
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	D_AddFile(va(pandf,srb2waddir,"patch.pk3"));
+	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"patch.pk3"));
 #endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
@@ -1074,9 +998,9 @@ static void IdentifyVersion(void)
 #define MUSICTEST(str) \
 		{\
 			const char *musicpath = va(pandf,srb2waddir,str);\
-			int ms = W_VerifyNMUSlumps(musicpath); \
+			int ms = W_VerifyNMUSlumps(musicpath, false); \
 			if (ms == 1) \
-				D_AddFile(musicpath); \
+				D_AddFile(startupwadfiles, musicpath); \
 			else if (ms == 0) \
 				I_Error("File "str" has been modified with non-music/sound lumps"); \
 		}
@@ -1089,64 +1013,6 @@ static void IdentifyVersion(void)
 	}
 #endif
 }
-
-#ifdef PC_DOS
-/* ======================================================================== */
-// Code for printing SRB2's title bar in DOS
-/* ======================================================================== */
-
-//
-// Center the title string, then add the date and time of compilation.
-//
-static inline void D_MakeTitleString(char *s)
-{
-	char temp[82];
-	char *t;
-	const char *u;
-	INT32 i;
-
-	for (i = 0, t = temp; i < 82; i++)
-		*t++=' ';
-
-	for (t = temp + (80-strlen(s))/2, u = s; *u != '\0' ;)
-		*t++ = *u++;
-
-	u = compdate;
-	for (t = temp + 1, i = 11; i-- ;)
-		*t++ = *u++;
-	u = comptime;
-	for (t = temp + 71, i = 8; i-- ;)
-		*t++ = *u++;
-
-	temp[80] = '\0';
-	strcpy(s, temp);
-}
-
-static inline void D_Titlebar(void)
-{
-	char title1[82]; // srb2 title banner
-	char title2[82];
-
-	strcpy(title1, "Sonic Robo Blast 2");
-	strcpy(title2, "Sonic Robo Blast 2");
-
-	D_MakeTitleString(title1);
-
-	// SRB2 banner
-	clrscr();
-	textattr((BLUE<<4)+WHITE);
-	clreol();
-	cputs(title1);
-
-	// standard srb2 banner
-	textattr((RED<<4)+WHITE);
-	clreol();
-	gotoxy((80-strlen(title2))/2, 2);
-	cputs(title2);
-	normvideo();
-	gotoxy(1,3);
-}
-#endif
 
 static void
 D_ConvertVersionNumbers (void)
@@ -1191,7 +1057,7 @@ void D_SRB2Main(void)
 	"in this program.\n\n");
 
 	// keep error messages until the final flush(stderr)
-#if !defined (PC_DOS) && !defined(NOTERMIOS)
+#if !defined(NOTERMIOS)
 	if (setvbuf(stderr, NULL, _IOFBF, 1000))
 		I_OutputMsg("setvbuf didnt work\n");
 #endif
@@ -1206,7 +1072,7 @@ void D_SRB2Main(void)
 	G_LoadGameSettings();
 
 	// Test Dehacked lists
-	DEH_Check();
+	DEH_TableCheck();
 
 	// Netgame URL special case: change working dir to EXE folder.
 	ChangeDirForUrlHandler();
@@ -1227,10 +1093,6 @@ void D_SRB2Main(void)
 	// for dedicated server
 #if !defined (_WINDOWS) //already check in win_main.c
 	dedicated = M_CheckParm("-dedicated") != 0;
-#endif
-
-#ifdef PC_DOS
-	D_Titlebar();
 #endif
 
 	if (devparm)
@@ -1325,11 +1187,7 @@ void D_SRB2Main(void)
 				const char *s = M_GetNextParm();
 
 				if (s) // Check for NULL?
-				{
-					if (!W_VerifyNMUSlumps(s))
-						G_SetGameModified(true);
-					D_AddFile(s);
-				}
+					D_AddFile(startuppwads, s);
 			}
 		}
 	}
@@ -1369,8 +1227,8 @@ void D_SRB2Main(void)
 
 	// load wad, including the main wad file
 	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
-	W_InitMultipleFiles(startupwadfiles, mainwads);
-	D_CleanFile();
+	W_InitMultipleFiles(startupwadfiles);
+	D_CleanFile(startupwadfiles);
 
 #ifndef DEVELOP // md5s last updated 22/02/20 (ddmmyy)
 
@@ -1406,8 +1264,6 @@ void D_SRB2Main(void)
 	// setup loading screen
 	SCR_Startup();
 
-	// we need the font of the console
-	CONS_Printf("HU_Init(): Setting up heads up display.\n");
 	HU_Init();
 
 	CON_Init();
@@ -1418,6 +1274,13 @@ void D_SRB2Main(void)
 	S_RegisterSoundStuff();
 
 	I_RegisterSysCommands();
+
+	CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
+	W_InitMultipleFiles(startuppwads);
+	D_CleanFile(startuppwads);
+
+	CONS_Printf("HU_LoadGraphics()...\n");
+	HU_LoadGraphics();
 
 	//--------------------------------------------------------- CONFIG.CFG
 	M_FirstLoadConfig(); // WARNING : this do a "COM_BufExecute()"
@@ -1430,24 +1293,6 @@ void D_SRB2Main(void)
 
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
-
-	// Lactozilla: Does the render mode need to change?
-	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
-	{
-		CONS_Printf(M_GetText("Switching the renderer...\n"));
-		Z_PreparePatchFlush();
-
-		// set needpatchflush / needpatchrecache true for D_CheckRendererState
-		needpatchflush = true;
-		needpatchrecache = true;
-
-		// Set cv_renderer to the new render mode
-		VID_CheckRenderer();
-		SCR_ChangeRendererCVars(rendermode);
-
-		// check the renderer's state
-		D_CheckRendererState();
-	}
 
 	wipegamestate = gamestate;
 
@@ -1471,10 +1316,6 @@ void D_SRB2Main(void)
 			autostart = true;
 		}
 	}
-
-	// Initialize CD-Audio
-	if (M_CheckParm("-usecd") && !dedicated)
-		I_InitCD();
 
 	if (M_CheckParm("-noupload"))
 		COM_BufAddText("downloading 0\n");
@@ -1611,6 +1452,12 @@ void D_SRB2Main(void)
 		ultimatemode = true;
 	}
 
+	if (M_CheckParm("-splitscreen"))
+	{
+		autostart = true;
+		splitscreen = true;
+	}
+
 	// rei/miru: bootmap (Idea: starts the game on a predefined map)
 	if (bootmap && !(M_CheckParm("-warp") && M_IsNextParm()))
 	{
@@ -1689,7 +1536,7 @@ void D_SRB2Main(void)
 	{
 		levelstarttic = gametic;
 		G_SetGamestate(GS_LEVEL);
-		if (!P_LoadLevel(&players[consoleplayer], false, false))
+		if (!P_LoadLevel(&players[consoleplayer], false, false, false))
 			I_Quit(); // fail so reset game stuff
 	}
 }

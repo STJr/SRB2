@@ -25,6 +25,7 @@
 #include "z_zone.h"
 
 #include "i_system.h"
+#include "i_threads.h"
 #include "m_menu.h"
 #include "console.h"
 #include "d_main.h"
@@ -292,7 +293,7 @@ static void F_DoWipe(fademask_t *fademask)
 			else
 			{
 				// pointer to transtable that this mask would use
-				transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
+				transtbl = R_GetTranslucencyTable((9 - *mask) + 1);
 
 				// DRAWING LOOP
 				while (draw_linestogo--)
@@ -595,7 +596,15 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 		I_UpdateNoBlit();
 
 		if (drawMenu)
+		{
+#ifdef HAVE_THREADS
+			I_lock_mutex(&m_menu_mutex);
+#endif
 			M_Drawer(); // menu is drawn even on top of wipes
+#ifdef HAVE_THREADS
+			I_unlock_mutex(m_menu_mutex);
+#endif
+		}
 
 		I_FinishUpdate(); // page flip or blit buffer
 

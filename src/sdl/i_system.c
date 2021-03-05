@@ -54,12 +54,6 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #include <fcntl.h>
 #endif
 
-#if defined (_WIN32)
-DWORD TimeFunction(int requested_frequency);
-#else
-int TimeFunction(int requested_frequency);
-#endif
-
 #include <stdio.h>
 #ifdef _WIN32
 #include <conio.h>
@@ -173,6 +167,7 @@ static char returnWadPath[256];
 #include "../i_video.h"
 #include "../i_sound.h"
 #include "../i_system.h"
+#include "../i_threads.h"
 #include "../screen.h" //vid.WndParent
 #include "../d_net.h"
 #include "../g_game.h"
@@ -559,14 +554,12 @@ static void Impl_HandleKeyboardConsoleEvent(KEY_EVENT_RECORD evt, HANDLE co)
 			case VK_TAB:
 				event.data1 = KEY_NULL;
 				break;
-			case VK_SHIFT:
-				event.data1 = KEY_LSHIFT;
-				break;
 			case VK_RETURN:
 				entering_con_command = false;
 				/* FALLTHRU */
 			default:
-				event.data1 = MapVirtualKey(evt.wVirtualKeyCode,2); // convert in to char
+				//event.data1 = MapVirtualKey(evt.wVirtualKeyCode,2); // convert in to char
+				event.data1 = evt.uChar.AsciiChar;
 		}
 		if (co != INVALID_HANDLE_VALUE && GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &t))
 		{
@@ -583,18 +576,6 @@ static void Impl_HandleKeyboardConsoleEvent(KEY_EVENT_RECORD evt, HANDLE co)
 			{
 				WriteConsoleOutputCharacterA(co, " ",1, CSBI.dwCursorPosition, &t);
 			}
-		}
-	}
-	else
-	{
-		event.type = ev_keyup;
-		switch (evt.wVirtualKeyCode)
-		{
-			case VK_SHIFT:
-				event.data1 = KEY_LSHIFT;
-				break;
-			default:
-				break;
 		}
 	}
 	if (event.data1) D_PostEvent(&event);
@@ -2057,112 +2038,36 @@ ticcmd_t *I_BaseTiccmd2(void)
 	return &emptycmd2;
 }
 
-#if defined (_WIN32)
-static HMODULE winmm = NULL;
-static DWORD starttickcount = 0; // hack for win2k time bug
-static p_timeGetTime pfntimeGetTime = NULL;
-
-// ---------
-// I_GetTime
-// Use the High Resolution Timer if available,
-// else use the multimedia timer which has 1 millisecond precision on Windowz 95,
-// but lower precision on Windows NT
-// ---------
-
-DWORD TimeFunction(int requested_frequency)
-{
-	DWORD newtics = 0;
-	// this var acts as a multiplier if sub-millisecond precision is asked but is not available
-	int excess_frequency = requested_frequency / 1000;
-
-	if (!starttickcount) // high precision timer
-	{
-		LARGE_INTEGER currtime; // use only LowPart if high resolution counter is not available
-		static LARGE_INTEGER basetime = {{0, 0}};
-
-		// use this if High Resolution timer is found
-		static LARGE_INTEGER frequency;
-
-		if (!basetime.LowPart)
-		{
-			if (!QueryPerformanceFrequency(&frequency))
-				frequency.QuadPart = 0;
-			else
-				QueryPerformanceCounter(&basetime);
-		}
-
-		if (frequency.LowPart && QueryPerformanceCounter(&currtime))
-		{
-			newtics = (INT32)((currtime.QuadPart - basetime.QuadPart) * requested_frequency
-				/ frequency.QuadPart);
-		}
-		else if (pfntimeGetTime)
-		{
-			currtime.LowPart = pfntimeGetTime();
-			if (!basetime.LowPart)
-				basetime.LowPart = currtime.LowPart;
-			if (requested_frequency > 1000)
-				newtics = currtime.LowPart - basetime.LowPart * excess_frequency;
-			else
-				newtics = (currtime.LowPart - basetime.LowPart)/(1000/requested_frequency);
-		}
-	}
-	else
-	{
-		if (requested_frequency > 1000)
-			newtics = (GetTickCount() - starttickcount) * excess_frequency;
-		else
-			newtics = (GetTickCount() - starttickcount)/(1000/requested_frequency);
-	}
-
-	return newtics;
-}
-
-static void I_ShutdownTimer(void)
-{
-	pfntimeGetTime = NULL;
-	if (winmm)
-	{
-		p_timeEndPeriod pfntimeEndPeriod = (p_timeEndPeriod)(LPVOID)GetProcAddress(winmm, "timeEndPeriod");
-		if (pfntimeEndPeriod)
-			pfntimeEndPeriod(1);
-		FreeLibrary(winmm);
-		winmm = NULL;
-	}
-}
-#else
 //
 // I_GetTime
 // returns time in 1/TICRATE second tics
 //
 
-// millisecond precision only
-int TimeFunction(int requested_frequency)
-{
-	static Uint64 basetime = 0;
-		   Uint64 ticks = SDL_GetTicks();
+static Uint64 timer_frequency;
 
-	if (!basetime)
-		basetime = ticks;
-
-	ticks -= basetime;
-
-	ticks = (ticks*requested_frequency);
-
-	ticks = (ticks/1000);
-
-	return ticks;
-}
-#endif
+static double tic_frequency;
+static Uint64 tic_epoch;
 
 tic_t I_GetTime(void)
 {
-	return TimeFunction(NEWTICRATE);
+	static double elapsed;
+
+	const Uint64 now = SDL_GetPerformanceCounter();
+
+	elapsed += (now - tic_epoch) / tic_frequency;
+	tic_epoch = now; // moving epoch
+
+	return (tic_t)elapsed;
 }
 
-int I_GetTimeMicros(void)
+precise_t I_GetPreciseTime(void)
 {
-	return TimeFunction(1000000);
+	return SDL_GetPerformanceCounter();
+}
+
+int I_PreciseToMicros(precise_t d)
+{
+	return (int)(d / (timer_frequency / 1000000.0));
 }
 
 //
@@ -2170,26 +2075,11 @@ int I_GetTimeMicros(void)
 //
 void I_StartupTimer(void)
 {
-#ifdef _WIN32
-	// for win2k time bug
-	if (M_CheckParm("-gettickcount"))
-	{
-		starttickcount = GetTickCount();
-		CONS_Printf("%s", M_GetText("Using GetTickCount()\n"));
-	}
-	winmm = LoadLibraryA("winmm.dll");
-	if (winmm)
-	{
-		p_timeEndPeriod pfntimeBeginPeriod = (p_timeEndPeriod)(LPVOID)GetProcAddress(winmm, "timeBeginPeriod");
-		if (pfntimeBeginPeriod)
-			pfntimeBeginPeriod(1);
-		pfntimeGetTime = (p_timeGetTime)(LPVOID)GetProcAddress(winmm, "timeGetTime");
-	}
-	I_AddExitFunc(I_ShutdownTimer);
-#endif
+	timer_frequency = SDL_GetPerformanceFrequency();
+	tic_epoch       = SDL_GetPerformanceCounter();
+
+	tic_frequency   = timer_frequency / (double)NEWTICRATE;
 }
-
-
 
 void I_Sleep(void)
 {
@@ -2282,6 +2172,10 @@ INT32 I_StartupSystem(void)
 	SDL_version SDLlinked;
 	SDL_VERSION(&SDLcompiled)
 	SDL_GetVersion(&SDLlinked);
+#ifdef HAVE_THREADS
+	I_start_threads();
+	I_AddExitFunc(I_stop_threads);
+#endif
 	I_StartupConsole();
 #ifdef NEWSIGNALHANDLER
 	I_Fork();
@@ -2328,7 +2222,6 @@ void I_Quit(void)
 	M_FreePlayerSetupColors();
 	I_ShutdownMusic();
 	I_ShutdownSound();
-	I_ShutdownCD();
 	// use this for 1.28 19990220 by Kin
 	I_ShutdownGraphics();
 	I_ShutdownInput();
@@ -2389,16 +2282,14 @@ void I_Error(const char *error, ...)
 		if (errorcount == 3)
 			I_ShutdownSound();
 		if (errorcount == 4)
-			I_ShutdownCD();
-		if (errorcount == 5)
 			I_ShutdownGraphics();
-		if (errorcount == 6)
+		if (errorcount == 5)
 			I_ShutdownInput();
-		if (errorcount == 7)
+		if (errorcount == 6)
 			I_ShutdownSystem();
-		if (errorcount == 8)
+		if (errorcount == 7)
 			SDL_Quit();
-		if (errorcount == 9)
+		if (errorcount == 8)
 		{
 			M_SaveConfig(NULL);
 			G_SaveGameData();
@@ -2446,7 +2337,6 @@ void I_Error(const char *error, ...)
 	M_FreePlayerSetupColors();
 	I_ShutdownMusic();
 	I_ShutdownSound();
-	I_ShutdownCD();
 	// use this for 1.28 19990220 by Kin
 	I_ShutdownGraphics();
 	I_ShutdownInput();
@@ -2601,7 +2491,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 	return;
 #else // Both Linux and BSD have this, apparently.
 	struct statfs stfs;
-	if (statfs(".", &stfs) == -1)
+	if (statfs(srb2home, &stfs) == -1)
 	{
 		*freespace = INT32_MAX;
 		return;
@@ -2620,7 +2510,7 @@ void I_GetDiskFreeSpace(INT64 *freespace)
 	}
 	if (pfnGetDiskFreeSpaceEx)
 	{
-		if (pfnGetDiskFreeSpaceEx(NULL, &lfreespace, &usedbytes, NULL))
+		if (pfnGetDiskFreeSpaceEx(srb2home, &lfreespace, &usedbytes, NULL))
 			*freespace = lfreespace.QuadPart;
 		else
 			*freespace = INT32_MAX;
@@ -2726,10 +2616,10 @@ const char *I_ClipboardPaste(void)
 
 	if (!SDL_HasClipboardText())
 		return NULL;
+
 	clipboard_contents = SDL_GetClipboardText();
-	memcpy(clipboard_modified, clipboard_contents, 255);
+	strlcpy(clipboard_modified, clipboard_contents, 256);
 	SDL_free(clipboard_contents);
-	clipboard_modified[255] = 0;
 
 	while (*i)
 	{

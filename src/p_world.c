@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2020 by Sonic Team Junior.
-// Copyright (C) 2020 by Jaime Ita Passos.
+// Copyright (C) 2020-2021 by Jaime Ita Passos.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -29,6 +29,7 @@
 #include "r_data.h"
 #include "r_draw.h"
 #include "r_sky.h"
+#include "r_patch.h"
 
 #include "s_sound.h"
 #include "w_wad.h"
@@ -36,6 +37,10 @@
 
 #include "lua_script.h"
 #include "lua_hook.h"
+
+#ifdef HWRENDER
+#include "hardware/hw_glob.h"
+#endif
 
 world_t *world = NULL;
 world_t *baseworld = NULL;
@@ -113,6 +118,10 @@ void P_SetGameWorld(world_t *w)
 	bmaporgy = world->bmaporgy;
 	blocklinks = world->blocklinks;
 	polyblocklinks = world->polyblocklinks;
+
+	tags_sectors = world->tags_sectors;
+	tags_lines = world->tags_lines;
+	tags_mapthings = world->tags_mapthings;
 }
 
 //
@@ -412,6 +421,14 @@ void P_UnloadWorldList(void)
 	// Clear pointers that would be left dangling by the purge
 	R_FlushTranslationColormapCache();
 
+#ifdef HWRENDER
+	// Free GPU textures before freeing patches.
+	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+		HWR_ClearAllTextures();
+#endif
+
+	Patch_FreeTag(PU_PATCH_LOWPRIORITY);
+	Patch_FreeTag(PU_PATCH_ROTATED);
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
 
 	world = localworld = viewworld = NULL;

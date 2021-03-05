@@ -17,6 +17,7 @@
 #include "d_player.h"
 #include "r_data.h"
 #include "p_world.h"
+#include "r_textures.h"
 
 //
 // POV related.
@@ -64,6 +65,7 @@ extern lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 INT32 R_PointOnSide(fixed_t x, fixed_t y, node_t *node);
 INT32 R_PointOnSegSide(fixed_t x, fixed_t y, seg_t *line);
 angle_t R_PointToAngle(fixed_t x, fixed_t y);
+angle_t R_PointToAngle64(INT64 x, INT64 y);
 angle_t R_PointToAngle2(fixed_t px2, fixed_t py2, fixed_t px1, fixed_t py1);
 angle_t R_PointToAngleEx(INT32 x2, INT32 y2, INT32 x1, INT32 y1);
 fixed_t R_PointToDist(fixed_t x, fixed_t y);
@@ -79,22 +81,22 @@ boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixe
 
 // Render stats
 
-extern consvar_t cv_renderstats;
+extern precise_t ps_prevframetime;// time when previous frame was rendered
+extern precise_t ps_rendercalltime;
+extern precise_t ps_uitime;
+extern precise_t ps_swaptime;
 
-extern int rs_prevframetime;// time when previous frame was rendered
-extern int rs_rendercalltime;
-extern int rs_swaptime;
+extern precise_t ps_bsptime;
 
-extern int rs_bsptime;
+extern precise_t ps_sw_spritecliptime;
+extern precise_t ps_sw_portaltime;
+extern precise_t ps_sw_planetime;
+extern precise_t ps_sw_maskedtime;
 
-extern int rs_sw_portaltime;
-extern int rs_sw_planetime;
-extern int rs_sw_maskedtime;
-
-extern int rs_numbspcalls;
-extern int rs_numsprites;
-extern int rs_numdrawnodes;
-extern int rs_numpolyobjects;
+extern int ps_numbspcalls;
+extern int ps_numsprites;
+extern int ps_numdrawnodes;
+extern int ps_numpolyobjects;
 
 //
 // REFRESH - the actual rendering functions.
@@ -106,6 +108,7 @@ extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
 
 extern consvar_t cv_shadow;
+extern consvar_t cv_ffloorclip;
 extern consvar_t cv_translucency;
 extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
 extern consvar_t cv_fov;
@@ -114,10 +117,6 @@ extern consvar_t cv_tailspickup;
 
 // Called by startup code.
 void R_Init(void);
-#ifdef HWRENDER
-void R_InitHardwareMode(void);
-#endif
-void R_ReloadHUDGraphics(void);
 
 void R_CheckViewMorph(void);
 void R_ApplyViewMorph(void);

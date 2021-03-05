@@ -21,6 +21,8 @@
 #include "m_random.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "m_perfstats.h"
+#include "i_system.h" // I_GetPreciseTime
 
 // Object place
 #include "m_cheat.h"
@@ -341,6 +343,7 @@ static inline void P_RunThinkers(void)
 	size_t i;
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
+		ps_thlist_times[i] = I_GetPreciseTime();
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
 #ifdef PARANOIA
@@ -348,6 +351,7 @@ static inline void P_RunThinkers(void)
 #endif
 			currentthinker->function.acp1(currentthinker);
 		}
+		ps_thlist_times[i] = I_GetPreciseTime() - ps_thlist_times[i];
 	}
 }
 
@@ -355,9 +359,12 @@ static inline void P_RunWorldThinkers(void)
 {
 	INT32 i;
 
+	ps_thinkertime = I_GetPreciseTime();
+
 	if (!(netgame || multiplayer) || (numworlds < 2))
 	{
 		P_RunThinkers();
+		ps_thinkertime = I_GetPreciseTime() - ps_thinkertime;
 		return;
 	}
 
@@ -371,6 +378,8 @@ static inline void P_RunWorldThinkers(void)
 		P_SetWorld(w);
 		P_RunThinkers();
 	}
+
+	ps_thinkertime = I_GetPreciseTime() - ps_thinkertime;
 }
 
 //
@@ -753,10 +762,22 @@ void P_Ticker(boolean run)
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
 		if (demoplayback)
-			G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
+		{
+			player_t* p = &players[consoleplayer];
+			G_ReadDemoTiccmd(&p->cmd, 0);
+			if (!cv_freedemocamera.value)
+			{
+				P_ForceLocalAngle(p, p->cmd.angleturn << 16);
+				localaiming = p->aiming;
+			}
+		}
+
+		ps_lua_mobjhooks = 0;
+		ps_checkposition_calls = 0;
 
 		LUAh_PreThinkFrame();
 
+		ps_playerthink_time = I_GetPreciseTime();
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 			{
@@ -767,6 +788,7 @@ void P_Ticker(boolean run)
 
 				P_PlayerThink(player);
 			}
+		ps_playerthink_time = I_GetPreciseTime() - ps_playerthink_time;
 	}
 
 	// Keep track of how long they've been playing!
@@ -796,7 +818,9 @@ void P_Ticker(boolean run)
 			}
 	}
 
+	ps_lua_thinkframe_time = I_GetPreciseTime();
 	P_WorldRunVoid(LUAh_ThinkFrame);
+	ps_lua_thinkframe_time = I_GetPreciseTime() - ps_lua_thinkframe_time;
 
 	// Run shield positioning
 	P_RunWorldSpecials();

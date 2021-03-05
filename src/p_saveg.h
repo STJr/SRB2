@@ -24,9 +24,9 @@
 // These are the load / save game routines.
 
 void P_SaveGame(INT16 mapnum);
-void P_SaveNetGame(void);
+void P_SaveNetGame(boolean resending);
 boolean P_LoadGame(INT16 mapoverride);
-boolean P_LoadNetGame(void);
+boolean P_LoadNetGame(boolean reloading);
 
 mobj_t *P_FindNewPosition(world_t *w, UINT32 oldposition);
 

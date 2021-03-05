@@ -58,8 +58,9 @@ static  GLuint      tex_downloaded  = 0;
 static  GLfloat     fov             = 90.0f;
 static  FBITFIELD   CurrentPolyFlags;
 
-static  FTextureInfo *gr_cachetail = NULL;
-static  FTextureInfo *gr_cachehead = NULL;
+// Linked list of all textures.
+static FTextureInfo *TexCacheTail = NULL;
+static FTextureInfo *TexCacheHead = NULL;
 
 RGBA_t  myPaletteData[256];
 GLint   screen_width    = 0;               // used by Draw2DLine()
@@ -90,10 +91,6 @@ static GLuint screentexture = 0;
 static GLuint startScreenWipe = 0;
 static GLuint endScreenWipe = 0;
 static GLuint finalScreenTexture = 0;
-
-// Lactozilla: Set shader programs and uniforms
-static void *Shader_Load(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *tint, GLRGBAFloat *fade);
-static void Shader_SetUniforms(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *tint, GLRGBAFloat *fade);
 
 // shortcut for ((float)1/i)
 static const GLfloat byte2float[256] = {
@@ -423,6 +420,10 @@ static PFNglBufferData pglBufferData;
 typedef void (APIENTRY * PFNglDeleteBuffers) (GLsizei n, const GLuint *buffers);
 static PFNglDeleteBuffers pglDeleteBuffers;
 
+/* 2.0 functions */
+typedef void (APIENTRY * PFNglBlendEquation) (GLenum mode);
+static PFNglBlendEquation pglBlendEquation;
+
 
 /* 1.2 Parms */
 /* GL_CLAMP_TO_EDGE_EXT */
@@ -530,8 +531,8 @@ boolean SetupGLfunc(void)
 	return true;
 }
 
-static boolean gl_allowshaders = false;
 static boolean gl_shadersenabled = false;
+static hwdshaderoption_t gl_allowshaders = HWD_SHADEROPTION_OFF;
 
 #ifdef GL_SHADERS
 typedef GLuint 	(APIENTRY *PFNglCreateShader)		(GLenum);
@@ -541,6 +542,7 @@ typedef void 	(APIENTRY *PFNglGetShaderiv)		(GLuint, GLenum, GLint*);
 typedef void 	(APIENTRY *PFNglGetShaderInfoLog)	(GLuint, GLsizei, GLsizei*, GLchar*);
 typedef void 	(APIENTRY *PFNglDeleteShader)		(GLuint);
 typedef GLuint 	(APIENTRY *PFNglCreateProgram)		(void);
+typedef void  	(APIENTRY *PFNglDeleteProgram)		(GLuint);
 typedef void 	(APIENTRY *PFNglAttachShader)		(GLuint, GLuint);
 typedef void 	(APIENTRY *PFNglLinkProgram)		(GLuint);
 typedef void 	(APIENTRY *PFNglGetProgramiv)		(GLuint, GLenum, GLint*);
@@ -562,6 +564,7 @@ static PFNglGetShaderiv pglGetShaderiv;
 static PFNglGetShaderInfoLog pglGetShaderInfoLog;
 static PFNglDeleteShader pglDeleteShader;
 static PFNglCreateProgram pglCreateProgram;
+static PFNglDeleteProgram pglDeleteProgram;
 static PFNglAttachShader pglAttachShader;
 static PFNglLinkProgram pglLinkProgram;
 static PFNglGetProgramiv pglGetProgramiv;
@@ -575,15 +578,6 @@ static PFNglUniform1fv pglUniform1fv;
 static PFNglUniform2fv pglUniform2fv;
 static PFNglUniform3fv pglUniform3fv;
 static PFNglGetUniformLocation pglGetUniformLocation;
-
-#define MAXSHADERS 16
-#define MAXSHADERPROGRAMS 16
-
-// 18032019
-static char *gl_customvertexshaders[MAXSHADERS];
-static char *gl_customfragmentshaders[MAXSHADERS];
-static GLuint gl_currentshaderprogram = 0;
-static boolean gl_shaderprogramchanged = true;
 
 // 13062019
 typedef enum
@@ -602,23 +596,85 @@ typedef enum
 	gluniform_max,
 } gluniform_t;
 
-typedef struct gl_shaderprogram_s
+typedef struct gl_shader_s
 {
 	GLuint program;
-	boolean custom;
 	GLint uniforms[gluniform_max+1];
-} gl_shaderprogram_t;
-static gl_shaderprogram_t gl_shaderprograms[MAXSHADERPROGRAMS];
+	boolean custom;
+} gl_shader_t;
+
+static gl_shader_t gl_shaders[HWR_MAXSHADERS];
+static gl_shader_t gl_usershaders[HWR_MAXSHADERS];
+static shadersource_t gl_customshaders[HWR_MAXSHADERS];
+
+// 09102020
+typedef struct gl_shaderstate_s
+{
+	gl_shader_t *current;
+	GLuint type;
+	GLuint program;
+	boolean changed;
+} gl_shaderstate_t;
+static gl_shaderstate_t gl_shaderstate;
 
 // Shader info
 static INT32 shader_leveltime = 0;
 
-// ========================
-//  Fragment shader macros
-// ========================
+// Lactozilla: Shader functions
+static boolean Shader_CompileProgram(gl_shader_t *shader, GLint i, const GLchar *vert_shader, const GLchar *frag_shader);
+static void Shader_CompileError(const char *message, GLuint program, INT32 shadernum);
+static void Shader_SetUniforms(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *tint, GLRGBAFloat *fade);
+
+static GLRGBAFloat shader_defaultcolor = {1.0f, 1.0f, 1.0f, 1.0f};
+
+// ================
+//  Vertex shaders
+// ================
 
 //
-// GLSL Software fragment shader
+// Generic vertex shader
+//
+
+#define GLSL_DEFAULT_VERTEX_SHADER \
+	"void main()\n" \
+	"{\n" \
+		"gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;\n" \
+		"gl_FrontColor = gl_Color;\n" \
+		"gl_TexCoord[0].xy = gl_MultiTexCoord0.xy;\n" \
+		"gl_ClipVertex = gl_ModelViewMatrix * gl_Vertex;\n" \
+	"}\0"
+
+// replicates the way fixed function lighting is used by the model lighting option,
+// stores the lighting result to gl_Color
+// (ambient lighting of 0.75 and diffuse lighting from above)
+#define GLSL_MODEL_LIGHTING_VERTEX_SHADER \
+	"void main()\n" \
+	"{\n" \
+		"float nDotVP = dot(gl_Normal, vec3(0, 1, 0));\n" \
+		"float light = 0.75 + max(nDotVP, 0.0);\n" \
+		"gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;\n" \
+		"gl_FrontColor = vec4(light, light, light, 1.0);\n" \
+		"gl_TexCoord[0].xy = gl_MultiTexCoord0.xy;\n" \
+		"gl_ClipVertex = gl_ModelViewMatrix * gl_Vertex;\n" \
+	"}\0"
+
+// ==================
+//  Fragment shaders
+// ==================
+
+//
+// Generic fragment shader
+//
+
+#define GLSL_DEFAULT_FRAGMENT_SHADER \
+	"uniform sampler2D tex;\n" \
+	"uniform vec4 poly_color;\n" \
+	"void main(void) {\n" \
+		"gl_FragColor = texture2D(tex, gl_TexCoord[0].st) * poly_color;\n" \
+	"}\0"
+
+//
+// Software fragment shader
 //
 
 #define GLSL_DOOM_COLORMAP \
@@ -674,6 +730,29 @@ static INT32 shader_leveltime = 0;
 		"vec4 final_color = base_color;\n" \
 		GLSL_SOFTWARE_TINT_EQUATION \
 		GLSL_SOFTWARE_FADE_EQUATION \
+		"final_color.a = texel.a * poly_color.a;\n" \
+		"gl_FragColor = final_color;\n" \
+	"}\0"
+
+// same as above but multiplies results with the lighting value from the
+// accompanying vertex shader (stored in gl_Color)
+#define GLSL_SOFTWARE_MODEL_LIGHTING_FRAGMENT_SHADER \
+	"uniform sampler2D tex;\n" \
+	"uniform vec4 poly_color;\n" \
+	"uniform vec4 tint_color;\n" \
+	"uniform vec4 fade_color;\n" \
+	"uniform float lighting;\n" \
+	"uniform float fade_start;\n" \
+	"uniform float fade_end;\n" \
+	GLSL_DOOM_COLORMAP \
+	GLSL_DOOM_LIGHT_EQUATION \
+	"void main(void) {\n" \
+		"vec4 texel = texture2D(tex, gl_TexCoord[0].st);\n" \
+		"vec4 base_color = texel * poly_color;\n" \
+		"vec4 final_color = base_color;\n" \
+		GLSL_SOFTWARE_TINT_EQUATION \
+		GLSL_SOFTWARE_FADE_EQUATION \
+		"final_color *= gl_Color;\n" \
 		"final_color.a = texel.a * poly_color.a;\n" \
 		"gl_FragColor = final_color;\n" \
 	"}\0"
@@ -737,90 +816,52 @@ static INT32 shader_leveltime = 0;
 	"}\0"
 
 //
-// GLSL generic fragment shader
+// Sky fragment shader
+// Modulates poly_color with gl_Color
 //
-
-#define GLSL_DEFAULT_FRAGMENT_SHADER \
+#define GLSL_SKY_FRAGMENT_SHADER \
 	"uniform sampler2D tex;\n" \
 	"uniform vec4 poly_color;\n" \
 	"void main(void) {\n" \
-		"gl_FragColor = texture2D(tex, gl_TexCoord[0].st) * poly_color;\n" \
+		"gl_FragColor = texture2D(tex, gl_TexCoord[0].st) * gl_Color * poly_color;\n" \
 	"}\0"
 
-static const char *fragment_shaders[] = {
-	// Default fragment shader
-	GLSL_DEFAULT_FRAGMENT_SHADER,
+// ================
+//  Shader sources
+// ================
 
-	// Floor fragment shader
-	GLSL_SOFTWARE_FRAGMENT_SHADER,
+static struct {
+	const char *vertex;
+	const char *fragment;
+} const gl_shadersources[] = {
+	// Default shader
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_DEFAULT_FRAGMENT_SHADER},
 
-	// Wall fragment shader
-	GLSL_SOFTWARE_FRAGMENT_SHADER,
+	// Floor shader
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER},
 
-	// Sprite fragment shader
-	GLSL_SOFTWARE_FRAGMENT_SHADER,
+	// Wall shader
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER},
 
-	// Model fragment shader
-	GLSL_SOFTWARE_FRAGMENT_SHADER,
+	// Sprite shader
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER},
 
-	// Water fragment shader
-	GLSL_WATER_FRAGMENT_SHADER,
+	// Model shader
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER},
 
-	// Fog fragment shader
-	GLSL_FOG_FRAGMENT_SHADER,
+	// Model shader + diffuse lighting from above
+	{GLSL_MODEL_LIGHTING_VERTEX_SHADER, GLSL_SOFTWARE_MODEL_LIGHTING_FRAGMENT_SHADER},
 
-	// Sky fragment shader
-	"uniform sampler2D tex;\n"
-	"void main(void) {\n"
-		"gl_FragColor = texture2D(tex, gl_TexCoord[0].st);\n"
-	"}\0",
+	// Water shader
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_WATER_FRAGMENT_SHADER},
 
-	NULL,
-};
+	// Fog shader
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_FOG_FRAGMENT_SHADER},
 
-// ======================
-//  Vertex shader macros
-// ======================
+	// Sky shader
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SKY_FRAGMENT_SHADER},
 
-//
-// GLSL generic vertex shader
-//
-
-#define GLSL_DEFAULT_VERTEX_SHADER \
-	"void main()\n" \
-	"{\n" \
-		"gl_Position = gl_ProjectionMatrix * gl_ModelViewMatrix * gl_Vertex;\n" \
-		"gl_FrontColor = gl_Color;\n" \
-		"gl_TexCoord[0].xy = gl_MultiTexCoord0.xy;\n" \
-		"gl_ClipVertex = gl_ModelViewMatrix * gl_Vertex;\n" \
-	"}\0"
-
-static const char *vertex_shaders[] = {
-	// Default vertex shader
-	GLSL_DEFAULT_VERTEX_SHADER,
-
-	// Floor vertex shader
-	GLSL_DEFAULT_VERTEX_SHADER,
-
-	// Wall vertex shader
-	GLSL_DEFAULT_VERTEX_SHADER,
-
-	// Sprite vertex shader
-	GLSL_DEFAULT_VERTEX_SHADER,
-
-	// Model vertex shader
-	GLSL_DEFAULT_VERTEX_SHADER,
-
-	// Water vertex shader
-	GLSL_DEFAULT_VERTEX_SHADER,
-
-	// Fog vertex shader
-	GLSL_DEFAULT_VERTEX_SHADER,
-
-	// Sky vertex shader
-	GLSL_DEFAULT_VERTEX_SHADER,
-
-	NULL,
+	{NULL, NULL},
 };
 
 #endif	// GL_SHADERS
@@ -838,6 +879,9 @@ void SetupGLFunc4(void)
 	pglBufferData = GetGLFunc("glBufferData");
 	pglDeleteBuffers = GetGLFunc("glDeleteBuffers");
 
+	/* 2.0 funcs */
+	pglBlendEquation = GetGLFunc("glBlendEquation");
+
 #ifdef GL_SHADERS
 	pglCreateShader = GetGLFunc("glCreateShader");
 	pglShaderSource = GetGLFunc("glShaderSource");
@@ -846,6 +890,7 @@ void SetupGLFunc4(void)
 	pglGetShaderInfoLog = GetGLFunc("glGetShaderInfoLog");
 	pglDeleteShader = GetGLFunc("glDeleteShader");
 	pglCreateProgram = GetGLFunc("glCreateProgram");
+	pglDeleteProgram = GetGLFunc("glDeleteProgram");
 	pglAttachShader = GetGLFunc("glAttachShader");
 	pglLinkProgram = GetGLFunc("glLinkProgram");
 	pglGetProgramiv = GetGLFunc("glGetProgramiv");
@@ -866,136 +911,63 @@ void SetupGLFunc4(void)
 }
 
 // jimita
-EXPORT boolean HWRAPI(LoadShaders) (void)
+EXPORT boolean HWRAPI(CompileShaders) (void)
 {
 #ifdef GL_SHADERS
-	GLuint gl_vertShader, gl_fragShader;
-	GLint i, result;
+	GLint i;
 
-	if (!pglUseProgram) return false;
+	if (!pglUseProgram)
+		return false;
 
-	gl_customvertexshaders[0] = NULL;
-	gl_customfragmentshaders[0] = NULL;
+	gl_customshaders[SHADER_DEFAULT].vertex = NULL;
+	gl_customshaders[SHADER_DEFAULT].fragment = NULL;
 
-	for (i = 0; vertex_shaders[i] && fragment_shaders[i]; i++)
+	for (i = 0; gl_shadersources[i].vertex && gl_shadersources[i].fragment; i++)
 	{
-		gl_shaderprogram_t *shader;
-		const GLchar* vert_shader = vertex_shaders[i];
-		const GLchar* frag_shader = fragment_shaders[i];
-		boolean custom = ((gl_customvertexshaders[i] || gl_customfragmentshaders[i]) && (i > 0));
+		gl_shader_t *shader, *usershader;
+		const GLchar *vert_shader = gl_shadersources[i].vertex;
+		const GLchar *frag_shader = gl_shadersources[i].fragment;
+
+		if (i >= HWR_MAXSHADERS)
+			break;
+
+		shader = &gl_shaders[i];
+		usershader = &gl_usershaders[i];
+
+		if (shader->program)
+			pglDeleteProgram(shader->program);
+		if (usershader->program)
+			pglDeleteProgram(usershader->program);
+
+		shader->program = 0;
+		usershader->program = 0;
+
+		if (!Shader_CompileProgram(shader, i, vert_shader, frag_shader))
+			shader->program = 0;
+
+		// Compile custom shader
+		if ((i == SHADER_DEFAULT) || !(gl_customshaders[i].vertex || gl_customshaders[i].fragment))
+			continue;
 
 		// 18032019
-		if (gl_customvertexshaders[i])
-			vert_shader = gl_customvertexshaders[i];
-		if (gl_customfragmentshaders[i])
-			frag_shader = gl_customfragmentshaders[i];
+		if (gl_customshaders[i].vertex)
+			vert_shader = gl_customshaders[i].vertex;
+		if (gl_customshaders[i].fragment)
+			frag_shader = gl_customshaders[i].fragment;
 
-		if (i >= MAXSHADERS)
-			break;
-		if (i >= MAXSHADERPROGRAMS)
-			break;
-
-		shader = &gl_shaderprograms[i];
-		shader->program = 0;
-		shader->custom = custom;
-
-		//
-		// Load and compile vertex shader
-		//
-		gl_vertShader = pglCreateShader(GL_VERTEX_SHADER);
-		if (!gl_vertShader)
+		if (!Shader_CompileProgram(usershader, i, vert_shader, frag_shader))
 		{
-			GL_MSG_Error("LoadShaders: Error creating vertex shader %d\n", i);
-			continue;
+			GL_MSG_Warning("CompileShaders: Could not compile custom shader program for %s\n", HWR_GetShaderName(i));
+			usershader->program = 0;
 		}
-
-		pglShaderSource(gl_vertShader, 1, &vert_shader, NULL);
-		pglCompileShader(gl_vertShader);
-
-		// check for compile errors
-		pglGetShaderiv(gl_vertShader, GL_COMPILE_STATUS, &result);
-		if (result == GL_FALSE)
-		{
-			GLchar* infoLog;
-			GLint logLength;
-
-			pglGetShaderiv(gl_vertShader, GL_INFO_LOG_LENGTH, &logLength);
-
-			infoLog = malloc(logLength);
-			pglGetShaderInfoLog(gl_vertShader, logLength, NULL, infoLog);
-
-			GL_MSG_Error("LoadShaders: Error compiling vertex shader %d\n%s", i, infoLog);
-			continue;
-		}
-
-		//
-		// Load and compile fragment shader
-		//
-		gl_fragShader = pglCreateShader(GL_FRAGMENT_SHADER);
-		if (!gl_fragShader)
-		{
-			GL_MSG_Error("LoadShaders: Error creating fragment shader %d\n", i);
-			continue;
-		}
-
-		pglShaderSource(gl_fragShader, 1, &frag_shader, NULL);
-		pglCompileShader(gl_fragShader);
-
-		// check for compile errors
-		pglGetShaderiv(gl_fragShader, GL_COMPILE_STATUS, &result);
-		if (result == GL_FALSE)
-		{
-			GLchar* infoLog;
-			GLint logLength;
-
-			pglGetShaderiv(gl_fragShader, GL_INFO_LOG_LENGTH, &logLength);
-
-			infoLog = malloc(logLength);
-			pglGetShaderInfoLog(gl_fragShader, logLength, NULL, infoLog);
-
-			GL_MSG_Error("LoadShaders: Error compiling fragment shader %d\n%s", i, infoLog);
-			continue;
-		}
-
-		shader->program = pglCreateProgram();
-		pglAttachShader(shader->program, gl_vertShader);
-		pglAttachShader(shader->program, gl_fragShader);
-		pglLinkProgram(shader->program);
-
-		// check link status
-		pglGetProgramiv(shader->program, GL_LINK_STATUS, &result);
-
-		// delete the shader objects
-		pglDeleteShader(gl_vertShader);
-		pglDeleteShader(gl_fragShader);
-
-		// couldn't link?
-		if (result != GL_TRUE)
-		{
-			shader->program = 0;
-			shader->custom = false;
-			GL_MSG_Error("LoadShaders: Error linking shader program %d\n", i);
-			continue;
-		}
-
-		// 13062019
-#define GETUNI(uniform) pglGetUniformLocation(shader->program, uniform);
-
-		// lighting
-		shader->uniforms[gluniform_poly_color] = GETUNI("poly_color");
-		shader->uniforms[gluniform_tint_color] = GETUNI("tint_color");
-		shader->uniforms[gluniform_fade_color] = GETUNI("fade_color");
-		shader->uniforms[gluniform_lighting] = GETUNI("lighting");
-		shader->uniforms[gluniform_fade_start] = GETUNI("fade_start");
-		shader->uniforms[gluniform_fade_end] = GETUNI("fade_end");
-
-		// misc. (custom shaders)
-		shader->uniforms[gluniform_leveltime] = GETUNI("leveltime");
-
-#undef GETUNI
 	}
-#endif
+
+	SetShader(SHADER_DEFAULT);
+
 	return true;
+#else
+	return false;
+#endif
 }
 
 //
@@ -1023,25 +995,34 @@ EXPORT void HWRAPI(SetShaderInfo) (hwdshaderinfo_t info, INT32 value)
 //
 // Custom shader loading
 //
-EXPORT void HWRAPI(LoadCustomShader) (int number, char *shader, size_t size, boolean fragment)
+EXPORT void HWRAPI(LoadCustomShader) (int number, char *code, size_t size, boolean isfragment)
 {
 #ifdef GL_SHADERS
-	if (!pglUseProgram) return;
-	if (number < 1 || number > MAXSHADERS)
-		I_Error("LoadCustomShader(): cannot load shader %d (max %d)", number, MAXSHADERS);
+	shadersource_t *shader;
 
-	if (fragment)
-	{
-		gl_customfragmentshaders[number] = malloc(size+1);
-		strncpy(gl_customfragmentshaders[number], shader, size);
-		gl_customfragmentshaders[number][size] = 0;
+	if (!pglUseProgram)
+		return;
+
+	if (number < 1 || number > HWR_MAXSHADERS)
+		I_Error("LoadCustomShader: cannot load shader %d (min 1, max %d)", number, HWR_MAXSHADERS);
+	else if (code == NULL)
+		I_Error("LoadCustomShader: empty shader");
+
+	shader = &gl_customshaders[number];
+
+#define COPYSHADER(source) { \
+	if (shader->source) \
+		free(shader->source); \
+	shader->source = malloc(size+1); \
+	strncpy(shader->source, code, size); \
+	shader->source[size] = 0; \
 	}
+
+	if (isfragment)
+		COPYSHADER(fragment)
 	else
-	{
-		gl_customvertexshaders[number] = malloc(size+1);
-		strncpy(gl_customvertexshaders[number], shader, size);
-		gl_customvertexshaders[number][size] = 0;
-	}
+		COPYSHADER(vertex)
+
 #else
 	(void)number;
 	(void)shader;
@@ -1050,29 +1031,45 @@ EXPORT void HWRAPI(LoadCustomShader) (int number, char *shader, size_t size, boo
 #endif
 }
 
-EXPORT boolean HWRAPI(InitCustomShaders) (void)
+EXPORT void HWRAPI(SetShader) (int type)
 {
 #ifdef GL_SHADERS
-	KillShaders();
-	return LoadShaders();
-#endif
-}
-
-EXPORT void HWRAPI(SetShader) (int shader)
-{
-#ifdef GL_SHADERS
-	if (gl_allowshaders)
+	if (gl_allowshaders != HWD_SHADEROPTION_OFF)
 	{
-		if ((GLuint)shader != gl_currentshaderprogram)
+		gl_shader_t *shader = gl_shaderstate.current;
+
+		// If using model lighting, set the appropriate shader.
+		// However don't override a custom shader.
+		if (type == SHADER_MODEL && model_lighting
+		&& !(gl_shaders[SHADER_MODEL].custom && !gl_shaders[SHADER_MODEL_LIGHTING].custom))
+			type = SHADER_MODEL_LIGHTING;
+
+		if ((shader == NULL) || (GLuint)type != gl_shaderstate.type)
 		{
-			gl_currentshaderprogram = shader;
-			gl_shaderprogramchanged = true;
+			gl_shader_t *baseshader = &gl_shaders[type];
+			gl_shader_t *usershader = &gl_usershaders[type];
+
+			if (usershader->program)
+				shader = (gl_allowshaders == HWD_SHADEROPTION_NOCUSTOM) ? baseshader : usershader;
+			else
+				shader = baseshader;
+
+			gl_shaderstate.current = shader;
+			gl_shaderstate.type = type;
+			gl_shaderstate.changed = true;
 		}
-		gl_shadersenabled = true;
+
+		if (gl_shaderstate.program != shader->program)
+		{
+			gl_shaderstate.program = shader->program;
+			gl_shaderstate.changed = true;
+		}
+
+		gl_shadersenabled = (shader->program != 0);
 		return;
 	}
 #else
-	(void)shader;
+	(void)type;
 #endif
 	gl_shadersenabled = false;
 }
@@ -1080,16 +1077,34 @@ EXPORT void HWRAPI(SetShader) (int shader)
 EXPORT void HWRAPI(UnSetShader) (void)
 {
 #ifdef GL_SHADERS
-	gl_shadersenabled = false;
-	gl_currentshaderprogram = 0;
-	if (!pglUseProgram) return;
-	pglUseProgram(0);
+	gl_shaderstate.current = NULL;
+	gl_shaderstate.type = 0;
+	gl_shaderstate.program = 0;
+
+	if (pglUseProgram)
+		pglUseProgram(0);
 #endif
+
+	gl_shadersenabled = false;
 }
 
-EXPORT void HWRAPI(KillShaders) (void)
+EXPORT void HWRAPI(CleanShaders) (void)
 {
-	// unused.........................
+	INT32 i;
+
+	for (i = 1; i < HWR_MAXSHADERS; i++)
+	{
+		shadersource_t *shader = &gl_customshaders[i];
+
+		if (shader->vertex)
+			free(shader->vertex);
+
+		if (shader->fragment)
+			free(shader->fragment);
+
+		shader->vertex = NULL;
+		shader->fragment = NULL;
+	}
 }
 
 // -----------------+
@@ -1200,7 +1215,7 @@ void SetModelView(GLint w, GLint h)
 	pglLoadIdentity();
 
 	GLPerspective(fov, ASPECT_RATIO);
-	//pglScalef(1.0f, 320.0f/200.0f, 1.0f);  // gr_scalefrustum (ORIGINAL_ASPECT)
+	//pglScalef(1.0f, 320.0f/200.0f, 1.0f);  // gl_scalefrustum (ORIGINAL_ASPECT)
 
 	// added for new coronas' code (without depth buffer)
 	pglGetIntegerv(GL_VIEWPORT, viewport);
@@ -1227,6 +1242,7 @@ void SetStates(void)
 
 	pglTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
+	pglEnable(GL_ALPHA_TEST);
 	pglAlphaFunc(GL_NOTEQUAL, 0.0f);
 
 	//pglBlendFunc(GL_ONE, GL_ZERO); // copy pixel to frame buffer (opaque)
@@ -1270,6 +1286,37 @@ void SetStates(void)
 
 
 // -----------------+
+// DeleteTexture    : Deletes a texture from the GPU and frees its data
+// -----------------+
+EXPORT void HWRAPI(DeleteTexture) (GLMipmap_t *pTexInfo)
+{
+	FTextureInfo *head = TexCacheHead;
+
+	if (!pTexInfo)
+		return;
+	else if (pTexInfo->downloaded)
+		pglDeleteTextures(1, (GLuint *)&pTexInfo->downloaded);
+
+	while (head)
+	{
+		if (head->downloaded == pTexInfo->downloaded)
+		{
+			if (head->next)
+				head->next->prev = head->prev;
+			if (head->prev)
+				head->prev->next = head->next;
+			free(head);
+			break;
+		}
+
+		head = head->next;
+	}
+
+	pTexInfo->downloaded = 0;
+}
+
+
+// -----------------+
 // Flush            : flush OpenGL textures
 //                  : Clear list of downloaded mipmaps
 // -----------------+
@@ -1277,15 +1324,25 @@ void Flush(void)
 {
 	//GL_DBG_Printf ("HWR_Flush()\n");
 
-	while (gr_cachehead)
+	while (TexCacheHead)
 	{
-		if (gr_cachehead->downloaded)
-			pglDeleteTextures(1, (GLuint *)&gr_cachehead->downloaded);
-		gr_cachehead->downloaded = 0;
-		gr_cachehead = gr_cachehead->nextmipmap;
-	}
-	gr_cachetail = gr_cachehead = NULL; //Hurdler: well, gr_cachehead is already NULL
+		FTextureInfo *pTexInfo = TexCacheHead;
+		GLMipmap_t *texture = pTexInfo->texture;
 
+		if (pTexInfo->downloaded)
+		{
+			pglDeleteTextures(1, (GLuint *)&pTexInfo->downloaded);
+			pTexInfo->downloaded = 0;
+		}
+
+		if (texture)
+			texture->downloaded = 0;
+
+		TexCacheHead = pTexInfo->next;
+		free(pTexInfo);
+	}
+
+	TexCacheTail = TexCacheHead = NULL; //Hurdler: well, TexCacheHead is already NULL
 	tex_downloaded = 0;
 }
 
@@ -1486,64 +1543,110 @@ EXPORT void HWRAPI(Draw2DLine) (F2DCoord * v1,
 	pglEnable(GL_TEXTURE_2D);
 }
 
-static void Clamp2D(GLenum pname)
-{
-	pglTexParameteri(GL_TEXTURE_2D, pname, GL_CLAMP); // fallback clamp
-	pglTexParameteri(GL_TEXTURE_2D, pname, GL_CLAMP_TO_EDGE);
-}
-
 
 // -----------------+
 // SetBlend         : Set render mode
 // -----------------+
 // PF_Masked - we could use an ALPHA_TEST of GL_EQUAL, and alpha ref of 0,
 //             is it faster when pixels are discarded ?
+
+static void Clamp2D(GLenum pname)
+{
+	pglTexParameteri(GL_TEXTURE_2D, pname, GL_CLAMP); // fallback clamp
+	pglTexParameteri(GL_TEXTURE_2D, pname, GL_CLAMP_TO_EDGE);
+}
+
+static void SetBlendEquation(GLenum mode)
+{
+	if (pglBlendEquation)
+		pglBlendEquation(mode);
+}
+
+static void SetBlendMode(FBITFIELD flags)
+{
+	// Set blending function
+	switch (flags)
+	{
+		case PF_Translucent & PF_Blending:
+			pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
+			break;
+		case PF_Masked & PF_Blending:
+			// Hurdler: does that mean lighting is only made by alpha src?
+			// it sounds ok, but not for polygonsmooth
+			pglBlendFunc(GL_SRC_ALPHA, GL_ZERO);                // 0 alpha = holes in texture
+			break;
+		case PF_Additive & PF_Blending:
+		case PF_Subtractive & PF_Blending:
+		case PF_ReverseSubtract & PF_Blending:
+		case PF_Environment & PF_Blending:
+			pglBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
+			break;
+		case PF_AdditiveSource & PF_Blending:
+			pglBlendFunc(GL_SRC_ALPHA, GL_ONE); // src * alpha + dest
+			break;
+		case PF_Multiplicative & PF_Blending:
+			pglBlendFunc(GL_DST_COLOR, GL_ZERO);
+			break;
+		case PF_Fog & PF_Fog:
+			// Sryder: Fog
+			// multiplies input colour by input alpha, and destination colour by input colour, then adds them
+			pglBlendFunc(GL_SRC_ALPHA, GL_SRC_COLOR);
+			break;
+		default: // must be 0, otherwise it's an error
+			// No blending
+			pglBlendFunc(GL_ONE, GL_ZERO);   // the same as no blending
+			break;
+	}
+
+	// Set blending equation
+	switch (flags)
+	{
+		case PF_Subtractive & PF_Blending:
+			SetBlendEquation(GL_FUNC_SUBTRACT);
+			break;
+		case PF_ReverseSubtract & PF_Blending:
+			// good for shadow
+			// not really but what else ?
+			SetBlendEquation(GL_FUNC_REVERSE_SUBTRACT);
+			break;
+		default:
+			SetBlendEquation(GL_FUNC_ADD);
+			break;
+	}
+
+	// Alpha test
+	switch (flags)
+	{
+		case PF_Masked & PF_Blending:
+			pglAlphaFunc(GL_GREATER, 0.5f);
+			break;
+		case PF_Translucent & PF_Blending:
+		case PF_Additive & PF_Blending:
+		case PF_AdditiveSource & PF_Blending:
+		case PF_Subtractive & PF_Blending:
+		case PF_ReverseSubtract & PF_Blending:
+		case PF_Environment & PF_Blending:
+		case PF_Multiplicative & PF_Blending:
+			pglAlphaFunc(GL_NOTEQUAL, 0.0f);
+			break;
+		case PF_Fog & PF_Fog:
+			pglAlphaFunc(GL_ALWAYS, 0.0f); // Don't discard zero alpha fragments
+			break;
+		default:
+			pglAlphaFunc(GL_GREATER, 0.5f);
+			break;
+	}
+}
+
 EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 {
 	FBITFIELD Xor;
 	Xor = CurrentPolyFlags^PolyFlags;
-	if (Xor & (PF_Blending|PF_RemoveYWrap|PF_ForceWrapX|PF_ForceWrapY|PF_Occlude|PF_NoTexture|PF_Modulated|PF_NoDepthTest|PF_Decal|PF_Invisible|PF_NoAlphaTest))
+	if (Xor & (PF_Blending|PF_RemoveYWrap|PF_ForceWrapX|PF_ForceWrapY|PF_Occlude|PF_NoTexture|PF_Modulated|PF_NoDepthTest|PF_Decal|PF_Invisible))
 	{
-		if (Xor&(PF_Blending)) // if blending mode must be changed
-		{
-			switch (PolyFlags & PF_Blending) {
-				case PF_Translucent & PF_Blending:
-					pglBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA); // alpha = level of transparency
-					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
-					break;
-				case PF_Masked & PF_Blending:
-					// Hurdler: does that mean lighting is only made by alpha src?
-					// it sounds ok, but not for polygonsmooth
-					pglBlendFunc(GL_SRC_ALPHA, GL_ZERO);                // 0 alpha = holes in texture
-					pglAlphaFunc(GL_GREATER, 0.5f);
-					break;
-				case PF_Additive & PF_Blending:
-					pglBlendFunc(GL_SRC_ALPHA, GL_ONE);                 // src * alpha + dest
-					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
-					break;
-				case PF_Environment & PF_Blending:
-					pglBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
-					break;
-				case PF_Substractive & PF_Blending:
-					// good for shadow
-					// not really but what else ?
-					pglBlendFunc(GL_ZERO, GL_ONE_MINUS_SRC_COLOR);
-					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
-					break;
-				case PF_Fog & PF_Fog:
-					// Sryder: Fog
-					// multiplies input colour by input alpha, and destination colour by input colour, then adds them
-					pglBlendFunc(GL_SRC_ALPHA, GL_SRC_COLOR);
-					pglAlphaFunc(GL_NOTEQUAL, 0.0f);
-					break;
-				default : // must be 0, otherwise it's an error
-					// No blending
-					pglBlendFunc(GL_ONE, GL_ZERO);   // the same as no blending
-					pglAlphaFunc(GL_GREATER, 0.5f);
-					break;
-			}
-		}
+		if (Xor & PF_Blending) // if blending mode must be changed
+			SetBlendMode(PolyFlags & PF_Blending);
+
 		if (Xor & PF_NoAlphaTest)
 		{
 			if (PolyFlags & PF_NoAlphaTest)
@@ -1560,7 +1663,7 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 				pglDisable(GL_POLYGON_OFFSET_FILL);
 		}
 
-		if (Xor&PF_NoDepthTest)
+		if (Xor & PF_NoDepthTest)
 		{
 			if (PolyFlags & PF_NoDepthTest)
 				pglDepthFunc(GL_ALWAYS); //pglDisable(GL_DEPTH_TEST);
@@ -1568,25 +1671,25 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 				pglDepthFunc(GL_LEQUAL); //pglEnable(GL_DEPTH_TEST);
 		}
 
-		if (Xor&PF_RemoveYWrap)
+		if (Xor & PF_RemoveYWrap)
 		{
 			if (PolyFlags & PF_RemoveYWrap)
 				Clamp2D(GL_TEXTURE_WRAP_T);
 		}
 
-		if (Xor&PF_ForceWrapX)
+		if (Xor & PF_ForceWrapX)
 		{
 			if (PolyFlags & PF_ForceWrapX)
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		}
 
-		if (Xor&PF_ForceWrapY)
+		if (Xor & PF_ForceWrapY)
 		{
 			if (PolyFlags & PF_ForceWrapY)
 				pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 		}
 
-		if (Xor&PF_Modulated)
+		if (Xor & PF_Modulated)
 		{
 #if defined (__unix__) || defined (UNIXCOMMON)
 			if (oglflags & GLF_NOTEXENV)
@@ -1639,7 +1742,7 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 // -----------------+
 // UpdateTexture    : Updates the texture data.
 // -----------------+
-EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
+EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 {
 	// Download a mipmap
 	boolean updatemipmap = true;
@@ -1657,15 +1760,15 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 	else
 		texnum = pTexInfo->downloaded;
 
-	//GL_DBG_Printf ("DownloadMipmap %d %x\n",(INT32)texnum,pTexInfo->grInfo.data);
+	//GL_DBG_Printf ("DownloadMipmap %d %x\n",(INT32)texnum,pTexInfo->data);
 
 	w = pTexInfo->width;
 	h = pTexInfo->height;
 
-	if ((pTexInfo->grInfo.format == GR_TEXFMT_P_8) ||
-		(pTexInfo->grInfo.format == GR_TEXFMT_AP_88))
+	if ((pTexInfo->format == GL_TEXFMT_P_8) ||
+		(pTexInfo->format == GL_TEXFMT_AP_88))
 	{
-		const GLubyte *pImgData = (const GLubyte *)pTexInfo->grInfo.data;
+		const GLubyte *pImgData = (const GLubyte *)pTexInfo->data;
 		INT32 i, j;
 
 		for (j = 0; j < h; j++)
@@ -1691,7 +1794,7 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 
 				pImgData++;
 
-				if (pTexInfo->grInfo.format == GR_TEXFMT_AP_88)
+				if (pTexInfo->format == GL_TEXFMT_AP_88)
 				{
 					if (!(pTexInfo->flags & TF_CHROMAKEYED))
 						tex[w*j+i].s.alpha = *pImgData;
@@ -1701,15 +1804,15 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 			}
 		}
 	}
-	else if (pTexInfo->grInfo.format == GR_RGBA)
+	else if (pTexInfo->format == GL_TEXFMT_RGBA)
 	{
 		// corona test : passed as ARGB 8888, which is not in glide formats
 		// Hurdler: not used for coronas anymore, just for dynamic lighting
-		ptex = pTexInfo->grInfo.data;
+		ptex = pTexInfo->data;
 	}
-	else if (pTexInfo->grInfo.format == GR_TEXFMT_ALPHA_INTENSITY_88)
+	else if (pTexInfo->format == GL_TEXFMT_ALPHA_INTENSITY_88)
 	{
-		const GLubyte *pImgData = (const GLubyte *)pTexInfo->grInfo.data;
+		const GLubyte *pImgData = (const GLubyte *)pTexInfo->data;
 		INT32 i, j;
 
 		for (j = 0; j < h; j++)
@@ -1725,9 +1828,9 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 			}
 		}
 	}
-	else if (pTexInfo->grInfo.format == GR_TEXFMT_ALPHA_8) // Used for fade masks
+	else if (pTexInfo->format == GL_TEXFMT_ALPHA_8) // Used for fade masks
 	{
-		const GLubyte *pImgData = (const GLubyte *)pTexInfo->grInfo.data;
+		const GLubyte *pImgData = (const GLubyte *)pTexInfo->data;
 		INT32 i, j;
 
 		for (j = 0; j < h; j++)
@@ -1743,7 +1846,7 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 		}
 	}
 	else
-		GL_MSG_Warning ("SetTexture(bad format) %ld\n", pTexInfo->grInfo.format);
+		GL_MSG_Warning ("SetTexture(bad format) %ld\n", pTexInfo->format);
 
 	// the texture number was already generated by pglGenTextures
 	pglBindTexture(GL_TEXTURE_2D, texnum);
@@ -1761,7 +1864,7 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, min_filter);
 	}
 
-	if (pTexInfo->grInfo.format == GR_TEXFMT_ALPHA_INTENSITY_88)
+	if (pTexInfo->format == GL_TEXFMT_ALPHA_INTENSITY_88)
 	{
 		//pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		if (MipMap)
@@ -1782,7 +1885,7 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 				pglTexImage2D(GL_TEXTURE_2D, 0, GL_LUMINANCE_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		}
 	}
-	else if (pTexInfo->grInfo.format == GR_TEXFMT_ALPHA_8)
+	else if (pTexInfo->format == GL_TEXFMT_ALPHA_8)
 	{
 		//pglTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		if (MipMap)
@@ -1841,7 +1944,7 @@ EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *pTexInfo)
 // -----------------+
 // SetTexture       : The mipmap becomes the current texture source
 // -----------------+
-EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
+EXPORT void HWRAPI(SetTexture) (GLMipmap_t *pTexInfo)
 {
 	if (!pTexInfo)
 	{
@@ -1858,54 +1961,54 @@ EXPORT void HWRAPI(SetTexture) (FTextureInfo *pTexInfo)
 	}
 	else
 	{
+		FTextureInfo *newTex = calloc(1, sizeof (*newTex));
+
 		UpdateTexture(pTexInfo);
-		pTexInfo->nextmipmap = NULL;
-		if (gr_cachetail)
-		{ // insertion at the tail
-			gr_cachetail->nextmipmap = pTexInfo;
-			gr_cachetail = pTexInfo;
+
+		newTex->texture = pTexInfo;
+		newTex->downloaded = (UINT32)pTexInfo->downloaded;
+		newTex->width = (UINT32)pTexInfo->width;
+		newTex->height = (UINT32)pTexInfo->height;
+		newTex->format = (UINT32)pTexInfo->format;
+
+		// insertion at the tail
+		if (TexCacheTail)
+		{
+			newTex->prev = TexCacheTail;
+			TexCacheTail->next = newTex;
+			TexCacheTail = newTex;
 		}
 		else // initialization of the linked list
-			gr_cachetail = gr_cachehead =  pTexInfo;
+			TexCacheTail = TexCacheHead = newTex;
 	}
-}
-
-static void *Shader_Load(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *tint, GLRGBAFloat *fade)
-{
-#ifdef GL_SHADERS
-	if (gl_shadersenabled && pglUseProgram)
-	{
-		gl_shaderprogram_t *shader = &gl_shaderprograms[gl_currentshaderprogram];
-		if (shader->program)
-		{
-			if (gl_shaderprogramchanged)
-			{
-				pglUseProgram(gl_shaderprograms[gl_currentshaderprogram].program);
-				gl_shaderprogramchanged = false;
-			}
-			Shader_SetUniforms(Surface, poly, tint, fade);
-			return shader;
-		}
-		else
-			pglUseProgram(0);
-	}
-#else
-	(void)Surface;
-	(void)poly;
-	(void)tint;
-	(void)fade;
-#endif
-	return NULL;
 }
 
 static void Shader_SetUniforms(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAFloat *tint, GLRGBAFloat *fade)
 {
 #ifdef GL_SHADERS
-	if (gl_shadersenabled)
+	gl_shader_t *shader = gl_shaderstate.current;
+
+	if (gl_shadersenabled && (shader != NULL) && pglUseProgram)
 	{
-		gl_shaderprogram_t *shader = &gl_shaderprograms[gl_currentshaderprogram];
 		if (!shader->program)
+		{
+			pglUseProgram(0);
 			return;
+		}
+
+		if (gl_shaderstate.changed)
+		{
+			pglUseProgram(shader->program);
+			gl_shaderstate.changed = false;
+		}
+
+		// Color uniforms can be left NULL and will be set to white (1.0f, 1.0f, 1.0f, 1.0f)
+		if (poly == NULL)
+			poly = &shader_defaultcolor;
+		if (tint == NULL)
+			tint = &shader_defaultcolor;
+		if (fade == NULL)
+			fade = &shader_defaultcolor;
 
 		#define UNIFORM_1(uniform, a, function) \
 			if (uniform != -1) \
@@ -1927,12 +2030,14 @@ static void Shader_SetUniforms(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAF
 		UNIFORM_4(shader->uniforms[gluniform_poly_color], poly->red, poly->green, poly->blue, poly->alpha, pglUniform4f);
 		UNIFORM_4(shader->uniforms[gluniform_tint_color], tint->red, tint->green, tint->blue, tint->alpha, pglUniform4f);
 		UNIFORM_4(shader->uniforms[gluniform_fade_color], fade->red, fade->green, fade->blue, fade->alpha, pglUniform4f);
+
 		if (Surface != NULL)
 		{
 			UNIFORM_1(shader->uniforms[gluniform_lighting], Surface->LightInfo.light_level, pglUniform1f);
 			UNIFORM_1(shader->uniforms[gluniform_fade_start], Surface->LightInfo.fade_start, pglUniform1f);
 			UNIFORM_1(shader->uniforms[gluniform_fade_end], Surface->LightInfo.fade_end, pglUniform1f);
 		}
+
 		UNIFORM_1(shader->uniforms[gluniform_leveltime], ((float)shader_leveltime) / TICRATE, pglUniform1f);
 
 		#undef UNIFORM_1
@@ -1946,6 +2051,116 @@ static void Shader_SetUniforms(FSurfaceInfo *Surface, GLRGBAFloat *poly, GLRGBAF
 	(void)tint;
 	(void)fade;
 #endif
+}
+
+static boolean Shader_CompileProgram(gl_shader_t *shader, GLint i, const GLchar *vert_shader, const GLchar *frag_shader)
+{
+	GLuint gl_vertShader, gl_fragShader;
+	GLint result;
+
+	//
+	// Load and compile vertex shader
+	//
+	gl_vertShader = pglCreateShader(GL_VERTEX_SHADER);
+	if (!gl_vertShader)
+	{
+		GL_MSG_Error("Shader_CompileProgram: Error creating vertex shader %s\n", HWR_GetShaderName(i));
+		return false;
+	}
+
+	pglShaderSource(gl_vertShader, 1, &vert_shader, NULL);
+	pglCompileShader(gl_vertShader);
+
+	// check for compile errors
+	pglGetShaderiv(gl_vertShader, GL_COMPILE_STATUS, &result);
+	if (result == GL_FALSE)
+	{
+		Shader_CompileError("Error compiling vertex shader", gl_vertShader, i);
+		pglDeleteShader(gl_vertShader);
+		return false;
+	}
+
+	//
+	// Load and compile fragment shader
+	//
+	gl_fragShader = pglCreateShader(GL_FRAGMENT_SHADER);
+	if (!gl_fragShader)
+	{
+		GL_MSG_Error("Shader_CompileProgram: Error creating fragment shader %s\n", HWR_GetShaderName(i));
+		pglDeleteShader(gl_vertShader);
+		pglDeleteShader(gl_fragShader);
+		return false;
+	}
+
+	pglShaderSource(gl_fragShader, 1, &frag_shader, NULL);
+	pglCompileShader(gl_fragShader);
+
+	// check for compile errors
+	pglGetShaderiv(gl_fragShader, GL_COMPILE_STATUS, &result);
+	if (result == GL_FALSE)
+	{
+		Shader_CompileError("Error compiling fragment shader", gl_fragShader, i);
+		pglDeleteShader(gl_vertShader);
+		pglDeleteShader(gl_fragShader);
+		return false;
+	}
+
+	shader->program = pglCreateProgram();
+	pglAttachShader(shader->program, gl_vertShader);
+	pglAttachShader(shader->program, gl_fragShader);
+	pglLinkProgram(shader->program);
+
+	// check link status
+	pglGetProgramiv(shader->program, GL_LINK_STATUS, &result);
+
+	// delete the shader objects
+	pglDeleteShader(gl_vertShader);
+	pglDeleteShader(gl_fragShader);
+
+	// couldn't link?
+	if (result != GL_TRUE)
+	{
+		GL_MSG_Error("Shader_CompileProgram: Error linking shader program %s\n", HWR_GetShaderName(i));
+		pglDeleteProgram(shader->program);
+		return false;
+	}
+
+	// 13062019
+#define GETUNI(uniform) pglGetUniformLocation(shader->program, uniform);
+
+	// lighting
+	shader->uniforms[gluniform_poly_color] = GETUNI("poly_color");
+	shader->uniforms[gluniform_tint_color] = GETUNI("tint_color");
+	shader->uniforms[gluniform_fade_color] = GETUNI("fade_color");
+	shader->uniforms[gluniform_lighting] = GETUNI("lighting");
+	shader->uniforms[gluniform_fade_start] = GETUNI("fade_start");
+	shader->uniforms[gluniform_fade_end] = GETUNI("fade_end");
+
+	// misc. (custom shaders)
+	shader->uniforms[gluniform_leveltime] = GETUNI("leveltime");
+
+#undef GETUNI
+
+	return true;
+}
+
+static void Shader_CompileError(const char *message, GLuint program, INT32 shadernum)
+{
+	GLchar *infoLog = NULL;
+	GLint logLength;
+
+	pglGetShaderiv(program, GL_INFO_LOG_LENGTH, &logLength);
+
+	if (logLength)
+	{
+		infoLog = malloc(logLength);
+		pglGetShaderInfoLog(program, logLength, NULL, infoLog);
+	}
+
+	GL_MSG_Error("Shader_CompileProgram: %s (%s)\n%s", message, HWR_GetShaderName(shadernum), (infoLog ? infoLog : ""));
+
+	if (infoLog)
+		free(infoLog);
 }
 
 // code that is common between DrawPolygon and DrawIndexedTriangles
@@ -2052,7 +2267,7 @@ static void PreparePolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FBITFIELD
 		pglColor4ubv(c);
 	}
 
-	Shader_Load(pSurf, &poly, &tint, &fade);
+	Shader_SetUniforms(pSurf, &poly, &tint, &fade);
 }
 
 // -----------------+
@@ -2087,233 +2302,83 @@ EXPORT void HWRAPI(DrawIndexedTriangles) (FSurfaceInfo *pSurf, FOutVector *pOutV
 	// the DrawPolygon variant of this has some code about polyflags and wrapping here but havent noticed any problems from omitting it?
 }
 
-typedef struct vbo_vertex_s
-{
-	float x, y, z;
-	float u, v;
-	unsigned char r, g, b, a;
-} vbo_vertex_t;
-
-typedef struct
-{
-	int mode;
-	int vertexcount;
-	int vertexindex;
-	int use_texture;
-} GLSkyLoopDef;
-
-typedef struct
-{
-	unsigned int id;
-	int rows, columns;
-	int loopcount;
-	GLSkyLoopDef *loops;
-	vbo_vertex_t *data;
-} GLSkyVBO;
-
 static const boolean gl_ext_arb_vertex_buffer_object = true;
 
-#define NULL_VBO_VERTEX ((vbo_vertex_t*)NULL)
-#define sky_vbo_x (gl_ext_arb_vertex_buffer_object ? &NULL_VBO_VERTEX->x : &vbo->data[0].x)
-#define sky_vbo_u (gl_ext_arb_vertex_buffer_object ? &NULL_VBO_VERTEX->u : &vbo->data[0].u)
-#define sky_vbo_r (gl_ext_arb_vertex_buffer_object ? &NULL_VBO_VERTEX->r : &vbo->data[0].r)
+#define NULL_VBO_VERTEX ((gl_skyvertex_t*)NULL)
+#define sky_vbo_x (gl_ext_arb_vertex_buffer_object ? &NULL_VBO_VERTEX->x : &sky->data[0].x)
+#define sky_vbo_u (gl_ext_arb_vertex_buffer_object ? &NULL_VBO_VERTEX->u : &sky->data[0].u)
+#define sky_vbo_r (gl_ext_arb_vertex_buffer_object ? &NULL_VBO_VERTEX->r : &sky->data[0].r)
 
-// The texture offset to be applied to the texture coordinates in SkyVertex().
-static int rows, columns;
-static signed char yflip;
-static int texw, texh;
-static boolean foglayer;
-static float delta = 0.0f;
-
-static int gl_sky_detail = 16;
-
-static INT32 lasttex = -1;
-
-#define MAP_COEFF 128.0f
-
-static void SkyVertex(vbo_vertex_t *vbo, int r, int c)
-{
-	const float radians = (float)(M_PIl / 180.0f);
-	const float scale = 10000.0f;
-	const float maxSideAngle = 60.0f;
-
-	float topAngle = (c / (float)columns * 360.0f);
-	float sideAngle = (maxSideAngle * (rows - r) / rows);
-	float height = (float)(sin(sideAngle * radians));
-	float realRadius = (float)(scale * cos(sideAngle * radians));
-	float x = (float)(realRadius * cos(topAngle * radians));
-	float y = (!yflip) ? scale * height : -scale * height;
-	float z = (float)(realRadius * sin(topAngle * radians));
-	float timesRepeat = (4 * (256.0f / texw));
-	if (fpclassify(timesRepeat) == FP_ZERO)
-		timesRepeat = 1.0f;
-
-	if (!foglayer)
-	{
-		vbo->r = 255;
-		vbo->g = 255;
-		vbo->b = 255;
-		vbo->a = (r == 0 ? 0 : 255);
-
-		// And the texture coordinates.
-		vbo->u = (-timesRepeat * c / (float)columns);
-		if (!yflip)	// Flipped Y is for the lower hemisphere.
-			vbo->v = (r / (float)rows) + 0.5f;
-		else
-			vbo->v = 1.0f + ((rows - r) / (float)rows) + 0.5f;
-	}
-
-	if (r != 4)
-	{
-		y += 300.0f;
-	}
-
-	// And finally the vertex.
-	vbo->x = x;
-	vbo->y = y + delta;
-	vbo->z = z;
-}
-
-static GLSkyVBO sky_vbo;
-
-static void gld_BuildSky(int row_count, int col_count)
-{
-	int c, r;
-	vbo_vertex_t *vertex_p;
-	int vertex_count = 2 * row_count * (col_count * 2 + 2) + col_count * 2;
-
-	GLSkyVBO *vbo = &sky_vbo;
-
-	if ((vbo->columns != col_count) || (vbo->rows != row_count))
-	{
-		free(vbo->loops);
-		free(vbo->data);
-		memset(vbo, 0, sizeof(&vbo));
-	}
-
-	if (!vbo->data)
-	{
-		memset(vbo, 0, sizeof(&vbo));
-		vbo->loops = malloc((row_count * 2 + 2) * sizeof(vbo->loops[0]));
-		// create vertex array
-		vbo->data = malloc(vertex_count * sizeof(vbo->data[0]));
-	}
-
-	vbo->columns = col_count;
-	vbo->rows = row_count;
-
-	vertex_p = &vbo->data[0];
-	vbo->loopcount = 0;
-
-	for (yflip = 0; yflip < 2; yflip++)
-	{
-		vbo->loops[vbo->loopcount].mode = GL_TRIANGLE_FAN;
-		vbo->loops[vbo->loopcount].vertexindex = vertex_p - &vbo->data[0];
-		vbo->loops[vbo->loopcount].vertexcount = col_count;
-		vbo->loops[vbo->loopcount].use_texture = false;
-		vbo->loopcount++;
-
-		delta = 0.0f;
-		foglayer = true;
-		for (c = 0; c < col_count; c++)
-		{
-			SkyVertex(vertex_p, 1, c);
-			vertex_p->r = 255;
-			vertex_p->g = 255;
-			vertex_p->b = 255;
-			vertex_p->a = 255;
-			vertex_p++;
-		}
-		foglayer = false;
-
-		delta = (yflip ? 5.0f : -5.0f) / MAP_COEFF;
-
-		for (r = 0; r < row_count; r++)
-		{
-			vbo->loops[vbo->loopcount].mode = GL_TRIANGLE_STRIP;
-			vbo->loops[vbo->loopcount].vertexindex = vertex_p - &vbo->data[0];
-			vbo->loops[vbo->loopcount].vertexcount = 2 * col_count + 2;
-			vbo->loops[vbo->loopcount].use_texture = true;
-			vbo->loopcount++;
-
-			for (c = 0; c <= col_count; c++)
-			{
-				SkyVertex(vertex_p++, r + (yflip ? 1 : 0), (c ? c : 0));
-				SkyVertex(vertex_p++, r + (yflip ? 0 : 1), (c ? c : 0));
-			}
-		}
-	}
-}
-
-//-----------------------------------------------------------------------------
-//
-//
-//
-//-----------------------------------------------------------------------------
-
-static void RenderDome(INT32 skytexture)
+EXPORT void HWRAPI(RenderSkyDome) (gl_sky_t *sky)
 {
 	int i, j;
-	int vbosize;
-	GLSkyVBO *vbo = &sky_vbo;
 
-	rows = 4;
-	columns = 4 * gl_sky_detail;
-
-	vbosize = 2 * rows * (columns * 2 + 2) + columns * 2;
+	Shader_SetUniforms(NULL, NULL, NULL, NULL);
 
 	// Build the sky dome! Yes!
-	if (lasttex != skytexture)
+	if (sky->rebuild)
 	{
 		// delete VBO when already exists
 		if (gl_ext_arb_vertex_buffer_object)
 		{
-			if (vbo->id)
-				pglDeleteBuffers(1, &vbo->id);
+			if (sky->vbo)
+				pglDeleteBuffers(1, &sky->vbo);
 		}
-
-		lasttex = skytexture;
-		gld_BuildSky(rows, columns);
 
 		if (gl_ext_arb_vertex_buffer_object)
 		{
 			// generate a new VBO and get the associated ID
-			pglGenBuffers(1, &vbo->id);
+			pglGenBuffers(1, &sky->vbo);
 
 			// bind VBO in order to use
-			pglBindBuffer(GL_ARRAY_BUFFER, vbo->id);
+			pglBindBuffer(GL_ARRAY_BUFFER, sky->vbo);
 
 			// upload data to VBO
-			pglBufferData(GL_ARRAY_BUFFER, vbosize * sizeof(vbo->data[0]), vbo->data, GL_STATIC_DRAW);
+			pglBufferData(GL_ARRAY_BUFFER, sky->vertex_count * sizeof(sky->data[0]), sky->data, GL_STATIC_DRAW);
 		}
+
+		sky->rebuild = false;
 	}
 
 	// bind VBO in order to use
 	if (gl_ext_arb_vertex_buffer_object)
-		pglBindBuffer(GL_ARRAY_BUFFER, vbo->id);
+		pglBindBuffer(GL_ARRAY_BUFFER, sky->vbo);
 
 	// activate and specify pointers to arrays
-	pglVertexPointer(3, GL_FLOAT, sizeof(vbo->data[0]), sky_vbo_x);
-	pglTexCoordPointer(2, GL_FLOAT, sizeof(vbo->data[0]), sky_vbo_u);
-	pglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(vbo->data[0]), sky_vbo_r);
+	pglVertexPointer(3, GL_FLOAT, sizeof(sky->data[0]), sky_vbo_x);
+	pglTexCoordPointer(2, GL_FLOAT, sizeof(sky->data[0]), sky_vbo_u);
+	pglColorPointer(4, GL_UNSIGNED_BYTE, sizeof(sky->data[0]), sky_vbo_r);
 
 	// activate color arrays
 	pglEnableClientState(GL_COLOR_ARRAY);
 
 	// set transforms
-	pglScalef(1.0f, (float)texh / 230.0f, 1.0f);
+	pglScalef(1.0f, (float)sky->height / 200.0f, 1.0f);
 	pglRotatef(270.0f, 0.0f, 1.0f, 0.0f);
 
 	for (j = 0; j < 2; j++)
 	{
-		for (i = 0; i < vbo->loopcount; i++)
+		for (i = 0; i < sky->loopcount; i++)
 		{
-			GLSkyLoopDef *loop = &vbo->loops[i];
+			gl_skyloopdef_t *loop = &sky->loops[i];
+			unsigned int mode = 0;
 
 			if (j == 0 ? loop->use_texture : !loop->use_texture)
 				continue;
 
-			pglDrawArrays(loop->mode, loop->vertexindex, loop->vertexcount);
+			switch (loop->mode)
+			{
+				case HWD_SKYLOOP_FAN:
+					mode = GL_TRIANGLE_FAN;
+					break;
+				case HWD_SKYLOOP_STRIP:
+					mode = GL_TRIANGLE_STRIP;
+					break;
+				default:
+					continue;
+			}
+
+			pglDrawArrays(mode, loop->vertexindex, loop->vertexcount);
 		}
 	}
 
@@ -2328,16 +2393,6 @@ static void RenderDome(INT32 skytexture)
 	pglDisableClientState(GL_COLOR_ARRAY);
 }
 
-EXPORT void HWRAPI(RenderSkyDome) (INT32 tex, INT32 texture_width, INT32 texture_height, FTransform transform)
-{
-	SetBlend(PF_Translucent|PF_NoDepthTest|PF_Modulated);
-	SetTransform(&transform);
-	texw = texture_width;
-	texh = texture_height;
-	RenderDome(tex);
-	SetBlend(0);
-}
-
 // ==========================================================================
 //
 // ==========================================================================
@@ -2350,15 +2405,7 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 			break;
 
 		case HWD_SET_SHADERS:
-			switch (Value)
-			{
-				case 1:
-					gl_allowshaders = true;
-					break;
-				default:
-					gl_allowshaders = false;
-					break;
-			}
+			gl_allowshaders = (hwdshaderoption_t)Value;
 			break;
 
 		case HWD_SET_TEXTUREFILTERMODE:
@@ -2626,6 +2673,9 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 
 	boolean useTinyFrames;
 
+	boolean useVBO = true;
+
+	FBITFIELD flags;
 	int i;
 
 	// Because otherwise, scaling the screen negatively vertically breaks the lighting
@@ -2660,37 +2710,38 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	poly.alpha  = byte2float[Surface->PolyColor.s.alpha];
 
 #ifdef GL_LIGHT_MODEL_AMBIENT
-	if (model_lighting && (!gl_shadersenabled)) // doesn't work with shaders anyway
+	if (model_lighting)
 	{
-		ambient[0] = poly.red;
-		ambient[1] = poly.green;
-		ambient[2] = poly.blue;
-		ambient[3] = poly.alpha;
+		if (!gl_shadersenabled)
+		{
+			ambient[0] = poly.red;
+			ambient[1] = poly.green;
+			ambient[2] = poly.blue;
+			ambient[3] = poly.alpha;
 
-		diffuse[0] = poly.red;
-		diffuse[1] = poly.green;
-		diffuse[2] = poly.blue;
-		diffuse[3] = poly.alpha;
+			diffuse[0] = poly.red;
+			diffuse[1] = poly.green;
+			diffuse[2] = poly.blue;
+			diffuse[3] = poly.alpha;
 
-		if (ambient[0] > 0.75f)
-			ambient[0] = 0.75f;
-		if (ambient[1] > 0.75f)
-			ambient[1] = 0.75f;
-		if (ambient[2] > 0.75f)
-			ambient[2] = 0.75f;
+			if (ambient[0] > 0.75f)
+				ambient[0] = 0.75f;
+			if (ambient[1] > 0.75f)
+				ambient[1] = 0.75f;
+			if (ambient[2] > 0.75f)
+				ambient[2] = 0.75f;
 
-		pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
+			pglLightfv(GL_LIGHT0, GL_POSITION, LightPos);
+
+			pglEnable(GL_LIGHTING);
+			pglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
+			pglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
+		}
 		pglShadeModel(GL_SMOOTH);
-
-		pglEnable(GL_LIGHTING);
-		pglMaterialfv(GL_FRONT_AND_BACK, GL_AMBIENT, ambient);
-		pglMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, diffuse);
 	}
 #endif
 	else
 		pglColor4ubv((GLubyte*)&Surface->PolyColor.s);
-
-	SetBlend((poly.alpha < 1 ? PF_Translucent : (PF_Masked|PF_Occlude))|PF_Modulated);
 
 	tint.red   = byte2float[Surface->TintColor.s.red];
 	tint.green = byte2float[Surface->TintColor.s.green];
@@ -2702,7 +2753,14 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	fade.blue  = byte2float[Surface->FadeColor.s.blue];
 	fade.alpha = byte2float[Surface->FadeColor.s.alpha];
 
-	Shader_Load(Surface, &poly, &tint, &fade);
+	flags = (Surface->PolyFlags | PF_Modulated);
+	if (Surface->PolyFlags & (PF_Additive|PF_AdditiveSource|PF_Subtractive|PF_ReverseSubtract|PF_Multiplicative))
+		flags |= PF_Occlude;
+	else if (Surface->PolyColor.s.alpha == 0xFF)
+		flags |= (PF_Occlude | PF_Masked);
+
+	SetBlend(flags);
+	Shader_SetUniforms(Surface, &poly, &tint, &fade);
 
 	pglEnable(GL_CULL_FACE);
 	pglEnable(GL_NORMALIZE);
@@ -2766,6 +2824,15 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	if (useTinyFrames)
 		pglScalef(1 / 64.0f, 1 / 64.0f, 1 / 64.0f);
 
+	// Don't use the VBO if it does not have the correct texture coordinates.
+	// (Can happen when model uses a sprite as a texture and the sprite changes)
+	// Comparing floats with the != operator here should be okay because they
+	// are just copies of glpatches' max_s and max_t values.
+	// Instead of the != operator, memcmp is used to avoid a compiler warning.
+	if (memcmp(&(model->vbo_max_s), &(model->max_s), sizeof(model->max_s)) != 0 ||
+		memcmp(&(model->vbo_max_t), &(model->max_t), sizeof(model->max_t)) != 0)
+		useVBO = false;
+
 	pglEnableClientState(GL_NORMAL_ARRAY);
 
 	for (i = 0; i < model->numMeshes; i++)
@@ -2782,13 +2849,23 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 
 			if (!nextframe || fpclassify(pol) == FP_ZERO)
 			{
-				pglBindBuffer(GL_ARRAY_BUFFER, frame->vboID);
-				pglVertexPointer(3, GL_SHORT, sizeof(vbotiny_t), BUFFER_OFFSET(0));
-				pglNormalPointer(GL_BYTE, sizeof(vbotiny_t), BUFFER_OFFSET(sizeof(short)*3));
-				pglTexCoordPointer(2, GL_FLOAT, sizeof(vbotiny_t), BUFFER_OFFSET(sizeof(short) * 3 + sizeof(char) * 6));
+				if (useVBO)
+				{
+					pglBindBuffer(GL_ARRAY_BUFFER, frame->vboID);
+					pglVertexPointer(3, GL_SHORT, sizeof(vbotiny_t), BUFFER_OFFSET(0));
+					pglNormalPointer(GL_BYTE, sizeof(vbotiny_t), BUFFER_OFFSET(sizeof(short)*3));
+					pglTexCoordPointer(2, GL_FLOAT, sizeof(vbotiny_t), BUFFER_OFFSET(sizeof(short) * 3 + sizeof(char) * 6));
 
-				pglDrawElements(GL_TRIANGLES, mesh->numTriangles * 3, GL_UNSIGNED_SHORT, mesh->indices);
-				pglBindBuffer(GL_ARRAY_BUFFER, 0);
+					pglDrawElements(GL_TRIANGLES, mesh->numTriangles * 3, GL_UNSIGNED_SHORT, mesh->indices);
+					pglBindBuffer(GL_ARRAY_BUFFER, 0);
+				}
+				else
+				{
+					pglVertexPointer(3, GL_SHORT, 0, frame->vertices);
+					pglNormalPointer(GL_BYTE, 0, frame->normals);
+					pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
+					pglDrawElements(GL_TRIANGLES, mesh->numTriangles * 3, GL_UNSIGNED_SHORT, mesh->indices);
+				}
 			}
 			else
 			{
@@ -2824,21 +2901,25 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 
 			if (!nextframe || fpclassify(pol) == FP_ZERO)
 			{
-				// Zoom! Take advantage of just shoving the entire arrays to the GPU.
-/*				pglVertexPointer(3, GL_FLOAT, 0, frame->vertices);
-				pglNormalPointer(GL_FLOAT, 0, frame->normals);
-				pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
-				pglDrawArrays(GL_TRIANGLES, 0, mesh->numTriangles * 3);*/
+				if (useVBO)
+				{
+					pglBindBuffer(GL_ARRAY_BUFFER, frame->vboID);
+					pglVertexPointer(3, GL_FLOAT, sizeof(vbo64_t), BUFFER_OFFSET(0));
+					pglNormalPointer(GL_FLOAT, sizeof(vbo64_t), BUFFER_OFFSET(sizeof(float) * 3));
+					pglTexCoordPointer(2, GL_FLOAT, sizeof(vbo64_t), BUFFER_OFFSET(sizeof(float) * 6));
 
-				pglBindBuffer(GL_ARRAY_BUFFER, frame->vboID);
-				pglVertexPointer(3, GL_FLOAT, sizeof(vbo64_t), BUFFER_OFFSET(0));
-				pglNormalPointer(GL_FLOAT, sizeof(vbo64_t), BUFFER_OFFSET(sizeof(float) * 3));
-				pglTexCoordPointer(2, GL_FLOAT, sizeof(vbo64_t), BUFFER_OFFSET(sizeof(float) * 6));
-
-				pglDrawArrays(GL_TRIANGLES, 0, mesh->numTriangles * 3);
-				// No tinyframes, no mesh indices
-				//pglDrawElements(GL_TRIANGLES, mesh->numTriangles * 3, GL_UNSIGNED_SHORT, mesh->indices);
-				pglBindBuffer(GL_ARRAY_BUFFER, 0);
+					pglDrawArrays(GL_TRIANGLES, 0, mesh->numTriangles * 3);
+					// No tinyframes, no mesh indices
+					//pglDrawElements(GL_TRIANGLES, mesh->numTriangles * 3, GL_UNSIGNED_SHORT, mesh->indices);
+					pglBindBuffer(GL_ARRAY_BUFFER, 0);
+				}
+				else
+				{
+					pglVertexPointer(3, GL_FLOAT, 0, frame->vertices);
+					pglNormalPointer(GL_FLOAT, 0, frame->normals);
+					pglTexCoordPointer(2, GL_FLOAT, 0, mesh->uvs);
+					pglDrawArrays(GL_TRIANGLES, 0, mesh->numTriangles * 3);
+				}
 			}
 			else
 			{
@@ -2874,9 +2955,10 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	pglDisable(GL_NORMALIZE);
 
 #ifdef GL_LIGHT_MODEL_AMBIENT
-	if (model_lighting && (!gl_shadersenabled))
+	if (model_lighting)
 	{
-		pglDisable(GL_LIGHTING);
+		if (!gl_shadersenabled)
+			pglDisable(GL_LIGHTING);
 		pglShadeModel(GL_FLAT);
 	}
 #endif
@@ -2961,7 +3043,7 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 
 EXPORT INT32  HWRAPI(GetTextureUsed) (void)
 {
-	FTextureInfo *tmp = gr_cachehead;
+	FTextureInfo *tmp = TexCacheHead;
 	INT32 res = 0;
 
 	while (tmp)
@@ -2970,19 +3052,15 @@ EXPORT INT32  HWRAPI(GetTextureUsed) (void)
 		// I don't know which one the game actually _uses_ but this
 		// follows format2bpp in hw_cache.c
 		int bpp = 1;
-		int format = tmp->grInfo.format;
-		if (format == GR_RGBA)
+		int format = tmp->format;
+		if (format == GL_TEXFMT_RGBA)
 			bpp = 4;
-		else if (format == GR_TEXFMT_RGB_565
-			|| format == GR_TEXFMT_ARGB_1555
-			|| format == GR_TEXFMT_ARGB_4444
-			|| format == GR_TEXFMT_ALPHA_INTENSITY_88
-			|| format == GR_TEXFMT_AP_88)
+		else if (format == GL_TEXFMT_ALPHA_INTENSITY_88 || format == GL_TEXFMT_AP_88)
 			bpp = 2;
 
 		// Add it up!
 		res += tmp->height*tmp->width*bpp;
-		tmp = tmp->nextmipmap;
+		tmp = tmp->next;
 	}
 
 	return res;
@@ -3251,7 +3329,7 @@ EXPORT void HWRAPI(DoScreenWipe)(void)
 
 	pglClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT);
 
-	SetBlend(PF_Modulated|PF_NoDepthTest|PF_Clip|PF_NoZClip);
+	SetBlend(PF_Modulated|PF_NoDepthTest);
 	pglEnable(GL_TEXTURE_2D);
 
 	// Draw the original screen
@@ -3261,7 +3339,7 @@ EXPORT void HWRAPI(DoScreenWipe)(void)
 	pglVertexPointer(3, GL_FLOAT, 0, screenVerts);
 	pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 
-	SetBlend(PF_Modulated|PF_Translucent|PF_NoDepthTest|PF_Clip|PF_NoZClip);
+	SetBlend(PF_Modulated|PF_Translucent|PF_NoDepthTest);
 
 	// Draw the end screen that fades in
 	pglActiveTexture(GL_TEXTURE0);

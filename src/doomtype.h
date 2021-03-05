@@ -371,4 +371,38 @@ typedef UINT32 tic_t;
 #define WSTRING2(s) L ## s
 #define WSTRING(s) WSTRING2 (s)
 
+/*
+A hack by Monster Iestyn: Return a pointer to a field of
+a struct from a pointer to another field in the struct.
+Needed for some lua shenanigans.
+*/
+#define FIELDFROM( type, field, have, want ) \
+	(void *)((intptr_t)(field) - offsetof (type, have) + offsetof (type, want))
+
+typedef UINT8 bitarray_t;
+
+#define BIT_ARRAY_SIZE(n) (((n) + 7) >> 3)
+
+static inline int
+in_bit_array (const bitarray_t * const array, const int value)
+{
+	return (array[value >> 3] & (1<<(value & 7)));
+}
+
+static inline void
+set_bit_array (bitarray_t * const array, const int value)
+{
+	array[value >> 3] |= (1<<(value & 7));
+}
+
+static inline void
+unset_bit_array (bitarray_t * const array, const int value)
+{
+	array[value >> 3] &= ~(1<<(value & 7));
+}
+
+#ifdef HAVE_SDL
+typedef UINT64 precise_t;
+#endif
+
 #endif //__DOOMTYPE__

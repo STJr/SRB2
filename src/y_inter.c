@@ -43,12 +43,6 @@
 #include "hardware/hw_main.h"
 #endif
 
-#ifdef PC_DOS
-#include <stdio.h> // for snprintf
-int	snprintf(char *str, size_t n, const char *fmt, ...);
-//int	vsnprintf(char *str, size_t n, const char *fmt, va_list ap);
-#endif
-
 typedef struct
 {
 	char patch[9];
@@ -141,7 +135,6 @@ static y_data data;
 
 // graphics
 static patch_t *bgpatch = NULL;     // INTERSCR
-static patch_t *widebgpatch = NULL; // INTERSCW
 static patch_t *bgtile = NULL;      // SPECTILE/SRB2BACK
 static patch_t *interpic = NULL;    // custom picture defined in map header
 static boolean usetile;
@@ -159,7 +152,6 @@ typedef struct
 
 boolean usebuffer = false;
 static boolean useinterpic;
-static boolean safetorender = true;
 static y_buffer_t *y_buffer;
 
 static INT32 intertic;
@@ -176,7 +168,6 @@ static void Y_CalculateCompetitionWinners(void);
 static void Y_CalculateTimeRaceWinners(void);
 static void Y_CalculateMatchWinners(void);
 static void Y_UnloadData(void);
-static void Y_CleanupData(void);
 
 // Stuff copy+pasted from st_stuff.c
 #define ST_DrawNumFromHud(h,n)        V_DrawTallNum(hudinfo[h].x, hudinfo[h].y, hudinfo[h].f, n)
@@ -192,7 +183,7 @@ static void Y_IntermissionTokenDrawer(void)
 
 	offs = 0;
 	lowy = BASEVIDHEIGHT - 32 - 8;
-	temp = SHORT(tokenicon->height)/2;
+	temp = tokenicon->height / 2;
 
 	em = 0;
 	while (emeralds & (1 << em))
@@ -221,7 +212,7 @@ static void Y_IntermissionTokenDrawer(void)
 	calc = (lowy - y)*2;
 
 	if (calc > 0)
-		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 0, 0, SHORT(tokenicon->width), calc);
+		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 0, 0, tokenicon->width, calc);
 }
 
 //
@@ -323,19 +314,6 @@ void Y_IntermissionDrawer(void)
 	if (intertype == int_none || rendermode == render_none)
 		return;
 
-	// Lactozilla: Renderer switching
-	if (needpatchrecache)
-	{
-		Y_CleanupData();
-		safetorender = false;
-	}
-
-	if (!usebuffer || !safetorender)
-		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
-
-	if (!safetorender)
-		goto dontdrawbg;
-
 	if (useinterpic)
 		V_DrawScaledPatch(0, 0, 0, interpic);
 	else if (!usetile)
@@ -359,12 +337,11 @@ void Y_IntermissionDrawer(void)
 		else if (rendermode != render_soft && usebuffer)
 			HWR_DrawIntermissionBG();
 #endif
-		else
+		else if (bgpatch)
 		{
-			if (widebgpatch && rendermode == render_soft && vid.width / vid.dupx == 400)
-				V_DrawScaledPatch(0, 0, V_SNAPTOLEFT, widebgpatch);
-			else if (bgpatch)
-				V_DrawScaledPatch(0, 0, 0, bgpatch);
+			fixed_t hs = vid.width  * FRACUNIT / BASEVIDWIDTH;
+			fixed_t vs = vid.height * FRACUNIT / BASEVIDHEIGHT;
+			V_DrawStretchyFixedPatch(0, 0, hs, vs, V_NOSCALEPATCH, bgpatch, NULL);
 		}
 	}
 	else if (bgtile)
@@ -374,7 +351,6 @@ void Y_IntermissionDrawer(void)
 	if (!LUA_HudEnabled(hud_intermissiontally))
 		goto skiptallydrawer;
 
-dontdrawbg:
 	if (intertype == int_coop)
 	{
 		INT32 bonusy;
@@ -424,22 +400,19 @@ dontdrawbg:
 
 		bonusy = 150;
 		// Total
-		if (safetorender)
-		{
-			V_DrawScaledPatch(152, bonusy, 0, data.coop.ptotal);
-			V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.total);
-		}
-		bonusy -= (3*SHORT(tallnum[0]->height)/2) + 1;
+		V_DrawScaledPatch(152, bonusy, 0, data.coop.ptotal);
+		V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.total);
+		bonusy -= (3*(tallnum[0]->height)/2) + 1;
 
 		// Draw bonuses
 		for (i = 3; i >= 0; --i)
 		{
-			if (data.coop.bonuses[i].display && safetorender)
+			if (data.coop.bonuses[i].display)
 			{
 				V_DrawScaledPatch(152, bonusy, 0, data.coop.bonuspatches[i]);
 				V_DrawTallNum(BASEVIDWIDTH - 68, bonusy + 1, 0, data.coop.bonuses[i].points);
 			}
-			bonusy -= (3*SHORT(tallnum[0]->height)/2) + 1;
+			bonusy -= (3*(tallnum[0]->height)/2) + 1;
 		}
 	}
 	else if (intertype == int_spec)
@@ -663,8 +636,7 @@ dontdrawbg:
 		char strtime[10];
 
 		// draw the header
-		if (safetorender)
-			V_DrawScaledPatch(112, 2, 0, data.match.result);
+		V_DrawScaledPatch(112, 2, 0, data.match.result);
 
 		// draw the level name
 		V_DrawCenteredString(BASEVIDWIDTH/2, 20, 0, data.match.levelstring);
@@ -777,10 +749,10 @@ dontdrawbg:
 		char name[MAXPLAYERNAME+1];
 
 		// Show the team flags and the team score at the top instead of "RESULTS"
-		V_DrawSmallScaledPatch(128 - SHORT(data.match.blueflag->width)/4, 2, 0, data.match.blueflag);
+		V_DrawSmallScaledPatch(128 - (data.match.blueflag->width / 4), 2, 0, data.match.blueflag);
 		V_DrawCenteredString(128, 16, 0, va("%u", bluescore));
 
-		V_DrawSmallScaledPatch(192 - SHORT(data.match.redflag->width)/4, 2, 0, data.match.redflag);
+		V_DrawSmallScaledPatch(192 - (data.match.redflag->width / 4), 2, 0, data.match.redflag);
 		V_DrawCenteredString(192, 16, 0, va("%u", redscore));
 
 		// draw the level name
@@ -1017,7 +989,7 @@ void Y_Ticker(void)
 			return;
 
 		for (i = 0; i < MAXPLAYERS; i++)
-			if (playeringame[i] && (players[i].cmd.buttons & BT_USE))
+			if (playeringame[i] && (players[i].cmd.buttons & BT_SPIN))
 				skip = true;
 
 		// bonuses count down by 222 each tic
@@ -1094,7 +1066,7 @@ void Y_Ticker(void)
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
 			{
-				if (players[i].cmd.buttons & BT_USE)
+				if (players[i].cmd.buttons & BT_SPIN)
 					skip = true;
 				if (players[i].charflags & SF_SUPER)
 					super = true;
@@ -1220,8 +1192,6 @@ void Y_StartIntermission(void)
 		I_Error("endtic is dirty");
 #endif
 
-	safetorender = true;
-
 	if (!multiplayer)
 	{
 		timer = 0;
@@ -1259,14 +1229,16 @@ void Y_StartIntermission(void)
 			data.coop.tics = players[consoleplayer].realtime;
 
 			for (i = 0; i < 4; ++i)
-				data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_PATCH);
+			{
+				if (strlen(data.coop.bonuses[i].patch))
+					data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_PATCH);
+			}
 			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_PATCH);
 
 			// get act number
 			data.coop.actnum = mapheaderinfo[gamemap-1]->actnum;
 
 			// get background patches
-			widebgpatch = W_CachePatchName("INTERSCW", PU_PATCH);
 			bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 
 			// grab an interscreen if appropriate
@@ -1764,7 +1736,6 @@ static void Y_SetNullBonus(player_t *player, y_bonus_t *bstruct)
 {
 	(void)player;
 	memset(bstruct, 0, sizeof(y_bonus_t));
-	strncpy(bstruct->patch, "MISSING", sizeof(bstruct->patch));
 }
 
 //
@@ -2069,22 +2040,15 @@ void Y_EndIntermission(void)
 	usebuffer = false;
 }
 
-#define UNLOAD(x) if (x) {Z_ChangeTag(x, PU_CACHE);} x = NULL;
-#define CLEANUP(x) x = NULL;
+#define UNLOAD(x) if (x) {Patch_Free(x);} x = NULL;
 
 //
 // Y_UnloadData
 //
 static void Y_UnloadData(void)
 {
-	// In hardware mode, don't Z_ChangeTag a pointer returned by W_CachePatchName().
-	// It doesn't work and is unnecessary.
-	if (rendermode != render_soft)
-		return;
-
 	// unload the background patches
 	UNLOAD(bgpatch);
-	UNLOAD(widebgpatch);
 	UNLOAD(bgtile);
 	UNLOAD(interpic);
 
@@ -2118,49 +2082,6 @@ static void Y_UnloadData(void)
 		default:
 			//without this default,
 			//int_none, int_tag, int_chaos, and int_comp
-			//are not handled
-			break;
-	}
-}
-
-static void Y_CleanupData(void)
-{
-	// unload the background patches
-	CLEANUP(bgpatch);
-	CLEANUP(widebgpatch);
-	CLEANUP(bgtile);
-	CLEANUP(interpic);
-
-	switch (intertype)
-	{
-		case int_coop:
-			// unload the coop and single player patches
-			CLEANUP(data.coop.bonuspatches[3]);
-			CLEANUP(data.coop.bonuspatches[2]);
-			CLEANUP(data.coop.bonuspatches[1]);
-			CLEANUP(data.coop.bonuspatches[0]);
-			CLEANUP(data.coop.ptotal);
-			break;
-		case int_spec:
-			// unload the special stage patches
-			//CLEANUP(data.spec.cemerald);
-			//CLEANUP(data.spec.nowsuper);
-			CLEANUP(data.spec.bonuspatches[1]);
-			CLEANUP(data.spec.bonuspatches[0]);
-			CLEANUP(data.spec.pscore);
-			CLEANUP(data.spec.pcontinues);
-			break;
-		case int_match:
-		case int_race:
-			CLEANUP(data.match.result);
-			break;
-		case int_ctf:
-			CLEANUP(data.match.blueflag);
-			CLEANUP(data.match.redflag);
-			break;
-		default:
-			//without this default,
-			//int_none, int_tag, int_chaos, and int_classicrace
 			//are not handled
 			break;
 	}

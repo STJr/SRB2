@@ -33,6 +33,7 @@
 #include "p_setup.h"
 #include "lua_script.h"
 #include "d_netfil.h" // findfile
+#include "r_data.h" // Color_cons_t
 
 //========
 // protos.
@@ -56,7 +57,13 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr);
 static boolean CV_Command(void);
 consvar_t *CV_FindVar(const char *name);
 static const char *CV_StringValue(const char *var_name);
+
 static consvar_t *consvar_vars; // list of registered console variables
+static UINT16     consvar_number_of_netids = 0;
+
+#ifdef OLD22DEMOCOMPAT
+static old_demo_var_t *consvar_old_demo_vars;
+#endif
 
 static char com_token[1024];
 static char *COM_Parse(char *data);
@@ -72,7 +79,7 @@ CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
 // Also set CV_HIDEN during runtime, after config is loaded
 static boolean execversion_enabled = false;
-consvar_t cv_execversion = {"execversion","25",CV_CALL,CV_Unsigned, CV_EnforceExecVersion, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_execversion = CVAR_INIT ("execversion","25",CV_CALL,CV_Unsigned, CV_EnforceExecVersion);
 
 // for default joyaxis detection
 static boolean joyaxis_default = false;
@@ -158,6 +165,8 @@ void COM_BufAddTextEx(const char *ptext, int flags)
   */
 void COM_BufInsertTextEx(const char *ptext, int flags)
 {
+	const INT32 old_wait = com_wait;
+
 	char *temp = NULL;
 	size_t templen;
 
@@ -169,9 +178,13 @@ void COM_BufInsertTextEx(const char *ptext, int flags)
 		VS_Clear(&com_text);
 	}
 
+	com_wait = 0;
+
 	// add the entire text of the file (or alias)
 	COM_BufAddTextEx(ptext, flags);
 	COM_BufExecute(); // do it right away
+
+	com_wait += old_wait;
 
 	// add the copied off data
 	if (templen)
@@ -553,7 +566,7 @@ static boolean COM_Exists(const char *com_name)
   * \param partial The partial name of the command (potentially).
   * \param skips   Number of commands to skip.
   * \return The complete command name, or NULL.
-  * \sa CV_CompleteVar
+  * \sa CV_CompleteAlias, CV_CompleteVar
   */
 const char *COM_CompleteCommand(const char *partial, INT32 skips)
 {
@@ -570,6 +583,32 @@ const char *COM_CompleteCommand(const char *partial, INT32 skips)
 		if (!strncmp(partial, cmd->name, len))
 			if (!skips--)
 				return cmd->name;
+
+	return NULL;
+}
+
+/** Completes the name of an alias.
+  *
+  * \param partial The partial name of the alias (potentially).
+  * \param skips   Number of aliases to skip.
+  * \return The complete alias name, or NULL.
+  * \sa CV_CompleteCommand, CV_CompleteVar
+  */
+const char *COM_CompleteAlias(const char *partial, INT32 skips)
+{
+	cmdalias_t *a;
+	size_t len;
+
+	len = strlen(partial);
+
+	if (!len)
+		return NULL;
+
+	// check functions
+	for (a = com_alias; a; a = a->next)
+		if (!strncmp(partial, a->name, len))
+			if (!skips--)
+				return a->name;
 
 	return NULL;
 }
@@ -620,7 +659,7 @@ static void COM_ExecuteString(char *ptext)
 
 	// check cvars
 	// Hurdler: added at Ebola's request ;)
-	// (don't flood the console in software mode with bad gr_xxx command)
+	// (don't flood the console in software mode with bad gl_xxx command)
 	if (!CV_Command() && con_destlines)
 		CONS_Printf(M_GetText("Unknown command '%s'\n"), COM_Argv(0));
 }
@@ -812,6 +851,18 @@ static void COM_Help_f(void)
 					CONS_Printf("  Yes or No (On or Off, 1 or 0)\n");
 				else if (cvar->PossibleValue == CV_OnOff)
 					CONS_Printf("  On or Off (Yes or No, 1 or 0)\n");
+				else if (cvar->PossibleValue == Color_cons_t)
+				{
+					for (i = 1; i < numskincolors; ++i)
+					{
+						if (skincolors[i].accessible)
+						{
+							CONS_Printf("  %-2d : %s\n", i, skincolors[i].name);
+							if (i == cvar->value)
+								cvalue = skincolors[i].name;
+						}
+					}
+				}
 				else
 				{
 #define MINVAL 0
@@ -856,6 +907,9 @@ static void COM_Help_f(void)
 				CONS_Printf(" Current value: %s\n", cvar->string);
 			else
 				CONS_Printf(" Current value: %d\n", cvar->value);
+
+			if (cvar->revert.v.string != NULL && strcmp(cvar->revert.v.string, cvar->string) != 0)
+				CONS_Printf(" Value before netgame: %s\n", cvar->revert.v.string);
 		}
 		else
 		{
@@ -1121,14 +1175,16 @@ consvar_t *CV_FindVar(const char *name)
 	return NULL;
 }
 
-/** Builds a unique Net Variable identifier number, which is used
-  * in network packets instead of the full name.
+#ifdef OLD22DEMOCOMPAT
+/** Builds a unique Net Variable identifier number, which was used
+  * in network packets and demos instead of the full name.
+  *
+  * This function only still exists to keep compatibility with old demos.
   *
   * \param s Name of the variable.
   * \return A new unique identifier.
-  * \sa CV_FindNetVar
   */
-static inline UINT16 CV_ComputeNetid(const char *s)
+static inline UINT16 CV_ComputeOldDemoID(const char *s)
 {
 	UINT16 ret = 0, i = 0;
 	static UINT16 premiers[16] = {2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53};
@@ -1142,15 +1198,46 @@ static inline UINT16 CV_ComputeNetid(const char *s)
 	return ret;
 }
 
+/** Finds a net variable based on its old style hash. If a hash collides, a
+  * warning is printed and this function returns NULL.
+  *
+  * \param chk The variable's old style hash.
+  * \return A pointer to the variable itself if found, or NULL.
+  */
+static old_demo_var_t *CV_FindOldDemoVar(UINT16 chk)
+{
+	old_demo_var_t *demovar;
+
+	for (demovar = consvar_old_demo_vars; demovar; demovar = demovar->next)
+	{
+		if (demovar->checksum == chk)
+		{
+			if (demovar->collides)
+			{
+				CONS_Alert(CONS_WARNING,
+						"Old demo netvar id %hu is a collision\n", chk);
+				return NULL;
+			}
+
+			return demovar;
+		}
+	}
+
+	return NULL;
+}
+#endif/*OLD22DEMOCOMPAT*/
+
 /** Finds a net variable based on its identifier number.
   *
   * \param netid The variable's identifier number.
   * \return A pointer to the variable itself if found, or NULL.
-  * \sa CV_ComputeNetid
   */
 static consvar_t *CV_FindNetVar(UINT16 netid)
 {
 	consvar_t *cvar;
+
+	if (netid > consvar_number_of_netids)
+		return NULL;
 
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
 		if (cvar->netid == netid)
@@ -1160,6 +1247,32 @@ static consvar_t *CV_FindNetVar(UINT16 netid)
 }
 
 static void Setvalue(consvar_t *var, const char *valstr, boolean stealth);
+
+#ifdef OLD22DEMOCOMPAT
+/* Sets up a netvar for compatibility with old demos. */
+static void CV_RegisterOldDemoVar(consvar_t *variable)
+{
+	old_demo_var_t *demovar;
+	UINT16 old_demo_id;
+
+	old_demo_id = CV_ComputeOldDemoID(variable->name);
+
+	demovar = CV_FindOldDemoVar(old_demo_id);
+
+	if (demovar)
+		demovar->collides = true;
+	else
+	{
+		demovar = ZZ_Calloc(sizeof *demovar);
+
+		demovar->checksum = old_demo_id;
+		demovar->cvar = variable;
+
+		demovar->next = consvar_old_demo_vars;
+		consvar_old_demo_vars = demovar;
+	}
+}
+#endif
 
 /** Registers a variable for later use from the console.
   *
@@ -1184,11 +1297,15 @@ void CV_RegisterVar(consvar_t *variable)
 	// check net variables
 	if (variable->flags & CV_NETVAR)
 	{
-		const consvar_t *netvar;
-		variable->netid = CV_ComputeNetid(variable->name);
-		netvar = CV_FindNetVar(variable->netid);
-		if (netvar)
-			I_Error("Variables %s and %s have same netid\n", variable->name, netvar->name);
+		/* in case of overflow... */
+		if (consvar_number_of_netids == UINT16_MAX)
+			I_Error("Way too many netvars");
+
+		variable->netid = ++consvar_number_of_netids;
+
+#ifdef OLD22DEMOCOMPAT
+		CV_RegisterOldDemoVar(variable);
+#endif
 	}
 
 	// link the variable in
@@ -1198,6 +1315,7 @@ void CV_RegisterVar(consvar_t *variable)
 		consvar_vars = variable;
 	}
 	variable->string = variable->zstring = NULL;
+	memset(&variable->revert, 0, sizeof variable->revert);
 	variable->changed = 0; // new variable has not been modified by the user
 
 #ifdef PARANOIA
@@ -1239,7 +1357,7 @@ static const char *CV_StringValue(const char *var_name)
   * \param partial The partial name of the variable (potentially).
   * \param skips   Number of variables to skip.
   * \return The complete variable name, or NULL.
-  * \sa COM_CompleteCommand
+  * \sa COM_CompleteCommand, CV_CompleteAlias
   */
 const char *CV_CompleteVar(char *partial, INT32 skips)
 {
@@ -1310,6 +1428,18 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 			for (i = MAXVAL+1; var->PossibleValue[i].strvalue; i++)
 				if (v == var->PossibleValue[i].value || !stricmp(var->PossibleValue[i].strvalue, valstr))
 				{
+					if (client && execversion_enabled)
+					{
+						if (var->revert.allocated)
+						{
+							Z_Free(var->revert.v.string);
+						}
+
+						var->revert.v.const_munge = var->PossibleValue[i].strvalue;
+
+						return;
+					}
+
 					var->value = var->PossibleValue[i].value;
 					var->string = var->PossibleValue[i].strvalue;
 					goto finish;
@@ -1370,10 +1500,34 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 			// ...or not.
 			goto badinput;
 found:
+			if (client && execversion_enabled)
+			{
+				if (var->revert.allocated)
+				{
+					Z_Free(var->revert.v.string);
+				}
+
+				var->revert.v.const_munge = var->PossibleValue[i].strvalue;
+
+				return;
+			}
+
 			var->value = var->PossibleValue[i].value;
 			var->string = var->PossibleValue[i].strvalue;
 			goto finish;
 		}
+	}
+
+	if (client && execversion_enabled)
+	{
+		if (var->revert.allocated)
+		{
+			Z_Free(var->revert.v.string);
+		}
+
+		var->revert.v.string = Z_StrDup(valstr);
+
+		return;
 	}
 
 	// free the old value string
@@ -1448,12 +1602,100 @@ badinput:
 
 static boolean serverloading = false;
 
+static consvar_t *
+ReadNetVar (UINT8 **p, char **return_value, boolean *return_stealth)
+{
+	UINT16  netid;
+	char   *val;
+	boolean stealth;
+
+	consvar_t *cvar;
+
+	netid   = READUINT16 (*p);
+	val     = (char *)*p;
+	SKIPSTRING (*p);
+	stealth = READUINT8  (*p);
+
+	cvar = CV_FindNetVar(netid);
+
+	if (cvar)
+	{
+		(*return_value)   = val;
+		(*return_stealth) = stealth;
+
+		DEBFILE(va("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, val));
+	}
+	else
+		CONS_Alert(CONS_WARNING, "Netvar not found with netid %hu\n", netid);
+
+	return cvar;
+}
+
+#ifdef OLD22DEMOCOMPAT
+static consvar_t *
+ReadOldDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
+{
+	UINT16  id;
+	char   *val;
+	boolean stealth;
+
+	old_demo_var_t *demovar;
+
+	id      = READUINT16 (*p);
+	val     = (char *)*p;
+	SKIPSTRING (*p);
+	stealth = READUINT8  (*p);
+
+	demovar = CV_FindOldDemoVar(id);
+
+	if (demovar)
+	{
+		(*return_value)   = val;
+		(*return_stealth) = stealth;
+
+		return demovar->cvar;
+	}
+	else
+	{
+		CONS_Alert(CONS_WARNING, "Netvar not found with old demo id %hu\n", id);
+		return NULL;
+	}
+}
+#endif/*OLD22DEMOCOMPAT*/
+
+static consvar_t *
+ReadDemoVar (UINT8 **p, char **return_value, boolean *return_stealth)
+{
+	char   *name;
+	char   *val;
+	boolean stealth;
+
+	consvar_t *cvar;
+
+	name    = (char *)*p;
+	SKIPSTRING (*p);
+	val     = (char *)*p;
+	SKIPSTRING (*p);
+	stealth = READUINT8  (*p);
+
+	cvar = CV_FindVar(name);
+
+	if (cvar)
+	{
+		(*return_value)   = val;
+		(*return_stealth) = stealth;
+	}
+	else
+		CONS_Alert(CONS_WARNING, "Netvar not found with name %s\n", name);
+
+	return cvar;
+}
+
 static void Got_NetVar(UINT8 **p, INT32 playernum)
 {
 	consvar_t *cvar;
-	UINT16 netid;
 	char *svalue;
-	UINT8 stealth = false;
+	boolean stealth;
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum) && !serverloading)
 	{
@@ -1463,23 +1705,14 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
 		return;
 	}
-	netid = READUINT16(*p);
-	cvar = CV_FindNetVar(netid);
-	svalue = (char *)*p;
-	SKIPSTRING(*p);
-	stealth = READUINT8(*p);
 
-	if (!cvar)
-	{
-		CONS_Alert(CONS_WARNING, "Netvar not found with netid %hu\n", netid);
-		return;
-	}
-	DEBFILE(va("Netvar received: %s [netid=%d] value %s\n", cvar->name, netid, svalue));
+	cvar = ReadNetVar(p, &svalue, &stealth);
 
-	Setvalue(cvar, svalue, stealth);
+	if (cvar)
+		Setvalue(cvar, svalue, stealth);
 }
 
-void CV_SaveNetVars(UINT8 **p)
+void CV_SaveVars(UINT8 **p, boolean in_demo)
 {
 	consvar_t *cvar;
 	UINT8 *count_p = *p;
@@ -1491,7 +1724,10 @@ void CV_SaveNetVars(UINT8 **p)
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
 		if ((cvar->flags & CV_NETVAR) && !CV_IsSetToDefault(cvar))
 		{
-			WRITEUINT16(*p, cvar->netid);
+			if (in_demo)
+				WRITESTRING(*p, cvar->name);
+			else
+				WRITEUINT16(*p, cvar->netid);
 			WRITESTRING(*p, cvar->string);
 			WRITEUINT8(*p, false);
 			++count;
@@ -1499,23 +1735,80 @@ void CV_SaveNetVars(UINT8 **p)
 	WRITEUINT16(count_p, count);
 }
 
-void CV_LoadNetVars(UINT8 **p)
+static void CV_LoadVars(UINT8 **p,
+		consvar_t *(*got)(UINT8 **p, char **ret_value, boolean *ret_stealth))
 {
 	consvar_t *cvar;
 	UINT16 count;
+
+	char *val;
+	boolean stealth;
 
 	// prevent "invalid command received"
 	serverloading = true;
 
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
+	{
 		if (cvar->flags & CV_NETVAR)
+		{
+			if (client && cvar->revert.v.string == NULL)
+			{
+				cvar->revert.v.const_munge = cvar->string;
+				cvar->revert.allocated = ( cvar->zstring != NULL );
+				cvar->zstring = NULL;/* don't free this */
+			}
+
 			Setvalue(cvar, cvar->defaultvalue, true);
+		}
+	}
 
 	count = READUINT16(*p);
 	while (count--)
-		Got_NetVar(p, 0);
+	{
+		cvar = (*got)(p, &val, &stealth);
+
+		if (cvar)
+			Setvalue(cvar, val, stealth);
+	}
 
 	serverloading = false;
+}
+
+void CV_RevertNetVars(void)
+{
+	consvar_t * cvar;
+
+	for (cvar = consvar_vars; cvar; cvar = cvar->next)
+	{
+		if (cvar->revert.v.string != NULL)
+		{
+			Setvalue(cvar, cvar->revert.v.string, false);
+
+			if (cvar->revert.allocated)
+			{
+				Z_Free(cvar->revert.v.string);
+			}
+
+			cvar->revert.v.string = NULL;
+		}
+	}
+}
+
+void CV_LoadNetVars(UINT8 **p)
+{
+	CV_LoadVars(p, ReadNetVar);
+}
+
+#ifdef OLD22DEMOCOMPAT
+void CV_LoadOldDemoVars(UINT8 **p)
+{
+	CV_LoadVars(p, ReadOldDemoVar);
+}
+#endif
+
+void CV_LoadDemoVars(UINT8 **p)
+{
+	CV_LoadVars(p, ReadDemoVar);
 }
 
 static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth);
@@ -1574,6 +1867,14 @@ static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth)
 		// send the value of the variable
 		UINT8 buf[128];
 		UINT8 *p = buf;
+
+		// Loading from a config in a netgame? Set revert value.
+		if (client && execversion_enabled)
+		{
+			Setvalue(var, value, true);
+			return;
+		}
+
 		if (!(server || (addedtogame && IsPlayerAdmin(consoleplayer))))
 		{
 			CONS_Printf(M_GetText("Only the server or admin can change: %s %s\n"), var->name, var->string);
@@ -2107,18 +2408,43 @@ void CV_SaveVariables(FILE *f)
 		{
 			char stringtowrite[MAXTEXTCMD+1];
 
-			// Silly hack for Min/Max vars
-			if (!strcmp(cvar->string, "MAX") || !strcmp(cvar->string, "MIN"))
+			const char * string;
+
+			if (cvar->revert.v.string != NULL)
 			{
-				if (cvar->flags & CV_FLOAT)
-					sprintf(stringtowrite, "%f", FIXED_TO_FLOAT(cvar->value));
-				else
-					sprintf(stringtowrite, "%d", cvar->value);
+				string = cvar->revert.v.string;
 			}
 			else
-				strcpy(stringtowrite, cvar->string);
+			{
+				string = cvar->string;
+			}
 
-			fprintf(f, "%s \"%s\"\n", cvar->name, stringtowrite);
+			// Silly hack for Min/Max vars
+#define MINVAL 0
+#define MAXVAL 1
+			if (
+					cvar->PossibleValue != NULL &&
+					cvar->PossibleValue[0].strvalue &&
+					stricmp(cvar->PossibleValue[0].strvalue, "MIN") == 0
+			){ // bounded cvar
+				int which = stricmp(string, "MAX") == 0;
+
+				if (which || stricmp(string, "MIN") == 0)
+				{
+					INT32 value = cvar->PossibleValue[which].value;
+
+					if (cvar->flags & CV_FLOAT)
+						sprintf(stringtowrite, "%f", FIXED_TO_FLOAT(value));
+					else
+						sprintf(stringtowrite, "%d", value);
+
+					string = stringtowrite;
+				}
+			}
+#undef MINVAL
+#undef MAXVAL
+
+			fprintf(f, "%s \"%s\"\n", cvar->name, string);
 		}
 }
 
@@ -2180,15 +2506,6 @@ skipwhite:
 		}
 	}
 
-	// parse single characters
-	if (c == '{' || c == '}' || c == ')' || c == '(' || c == '\'')
-	{
-		com_token[len] = c;
-		len++;
-		com_token[len] = 0;
-		return data + 1;
-	}
-
 	// parse a regular word
 	do
 	{
@@ -2208,8 +2525,6 @@ skipwhite:
 			len++;
 			c = *data;
 		}
-		if (c == '{' || c == '}' || c == ')'|| c == '(' || c == '\'')
-			break;
 	} while (c > 32);
 
 	com_token[len] = 0;

@@ -25,6 +25,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "i_system.h"
+#include "i_threads.h"
 #include "m_menu.h"
 #include "dehacked.h"
 #include "g_input.h"
@@ -224,6 +225,9 @@ static INT32 cutscene_textspeed = 0;
 static UINT8 cutscene_boostspeed = 0;
 static tic_t cutscene_lasttextwrite = 0;
 
+// STJR Intro
+char stjrintro[9] = "STJRI000";
+
 //
 // This alters the text string cutscene_disptext.
 // Use the typical string drawing functions to display it.
@@ -311,7 +315,7 @@ const char *introtext[NUMINTROSCENES];
 
 static tic_t introscenetime[NUMINTROSCENES] =
 {
-	 7*TICRATE + (TICRATE/2),	// STJr Presents
+	5*TICRATE,	// STJr Presents
 	11*TICRATE + (TICRATE/2),	// Two months had passed since...
 	15*TICRATE + (TICRATE/2),	// As it was about to drain the rings...
 	14*TICRATE,					// What Sonic, Tails, and Knuckles...
@@ -526,80 +530,81 @@ static void F_IntroDrawScene(void)
 	switch (intro_scenenum)
 	{
 		case 0:
+			bgxoffs = 28;
 			break;
 		case 1:
-			background = W_CachePatchName("INTRO1", PU_PATCH);
+			background = W_CachePatchName("INTRO1", PU_PATCH_LOWPRIORITY);
 			break;
 		case 2:
-			background = W_CachePatchName("INTRO2", PU_PATCH);
+			background = W_CachePatchName("INTRO2", PU_PATCH_LOWPRIORITY);
 			break;
 		case 3:
-			background = W_CachePatchName("INTRO3", PU_PATCH);
+			background = W_CachePatchName("INTRO3", PU_PATCH_LOWPRIORITY);
 			break;
 		case 4:
-			background = W_CachePatchName("INTRO4", PU_PATCH);
+			background = W_CachePatchName("INTRO4", PU_PATCH_LOWPRIORITY);
 			break;
 		case 5:
 			if (intro_curtime >= 5*TICRATE)
-				background = W_CachePatchName("RADAR", PU_PATCH);
+				background = W_CachePatchName("RADAR", PU_PATCH_LOWPRIORITY);
 			else
-				background = W_CachePatchName("DRAT", PU_PATCH);
+				background = W_CachePatchName("DRAT", PU_PATCH_LOWPRIORITY);
 			break;
 		case 6:
-			background = W_CachePatchName("INTRO6", PU_PATCH);
+			background = W_CachePatchName("INTRO6", PU_PATCH_LOWPRIORITY);
 			cx = 180;
 			cy = 8;
 			break;
 		case 7:
 		{
 			if (intro_curtime >= 7*TICRATE + ((TICRATE/7)*2))
-				background = W_CachePatchName("SGRASS5", PU_PATCH);
+				background = W_CachePatchName("SGRASS5", PU_PATCH_LOWPRIORITY);
 			else if (intro_curtime >= 7*TICRATE + (TICRATE/7))
-				background = W_CachePatchName("SGRASS4", PU_PATCH);
+				background = W_CachePatchName("SGRASS4", PU_PATCH_LOWPRIORITY);
 			else if (intro_curtime >= 7*TICRATE)
-				background = W_CachePatchName("SGRASS3", PU_PATCH);
+				background = W_CachePatchName("SGRASS3", PU_PATCH_LOWPRIORITY);
 			else if (intro_curtime >= 6*TICRATE)
-				background = W_CachePatchName("SGRASS2", PU_PATCH);
+				background = W_CachePatchName("SGRASS2", PU_PATCH_LOWPRIORITY);
 			else
-				background = W_CachePatchName("SGRASS1", PU_PATCH);
+				background = W_CachePatchName("SGRASS1", PU_PATCH_LOWPRIORITY);
 			break;
 		}
 		case 8:
-			background = W_CachePatchName("WATCHING", PU_PATCH);
+			background = W_CachePatchName("WATCHING", PU_PATCH_LOWPRIORITY);
 			break;
 		case 9:
-			background = W_CachePatchName("ZOOMING", PU_PATCH);
+			background = W_CachePatchName("ZOOMING", PU_PATCH_LOWPRIORITY);
 			break;
 		case 10:
 			break;
 		case 11:
-			background = W_CachePatchName("INTRO5", PU_PATCH);
+			background = W_CachePatchName("INTRO5", PU_PATCH_LOWPRIORITY);
 			break;
 		case 12:
-			background = W_CachePatchName("REVENGE", PU_PATCH);
+			background = W_CachePatchName("REVENGE", PU_PATCH_LOWPRIORITY);
 			cx = 208;
 			cy = 8;
 			break;
 		case 13:
-			background = W_CachePatchName("CONFRONT", PU_PATCH);
+			background = W_CachePatchName("CONFRONT", PU_PATCH_LOWPRIORITY);
 			cy += 48;
 			break;
 		case 14:
-			background = W_CachePatchName("TAILSSAD", PU_PATCH);
+			background = W_CachePatchName("TAILSSAD", PU_PATCH_LOWPRIORITY);
 			bgxoffs = 144;
 			cx = 8;
 			cy = 8;
 			break;
 		case 15:
 			if (intro_curtime >= 7*TICRATE)
-				background = W_CachePatchName("SONICDO2", PU_PATCH);
+				background = W_CachePatchName("SONICDO2", PU_PATCH_LOWPRIORITY);
 			else
-				background = W_CachePatchName("SONICDO1", PU_PATCH);
+				background = W_CachePatchName("SONICDO1", PU_PATCH_LOWPRIORITY);
 			cx = 224;
 			cy = 8;
 			break;
 		case 16:
-			background = W_CachePatchName("INTRO7", PU_PATCH);
+			background = W_CachePatchName("INTRO7", PU_PATCH_LOWPRIORITY);
 			break;
 		default:
 			break;
@@ -616,97 +621,34 @@ static void F_IntroDrawScene(void)
 	}
 	else if (intro_scenenum == 0) // STJr presents
 	{
-		// "Waaaaaaah" intro
-		if (finalecount-TICRATE/2 < 4*TICRATE+23) {
-			// aspect is FRACUNIT/2 for 4:3 (source) resolutions, smaller for 16:10 (SRB2) resolutions
-			fixed_t aspect = (FRACUNIT + (FRACUNIT*4/3 - FRACUNIT*vid.width/vid.height)/2)>>1;
-			fixed_t x,y;
-			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 2);
-			if (finalecount < 30) { // Cry!
-				if (finalecount < 4)
-					S_StopMusic();
-				if (finalecount == 4)
-					S_ChangeMusicInternal("_stjr", false);
-				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(334<<FRACBITS, aspect)/2;
-				y = (BASEVIDHEIGHT<<FRACBITS)/2 - FixedMul(358<<FRACBITS, aspect)/2;
-				V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH1", PU_PATCH)), aspect);
-				W_UnlockCachedPatch(patch);
-				if (finalecount > 6) {
-					V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH2", PU_PATCH)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
-				if (finalecount > 10) {
-					V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH3", PU_PATCH)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
-				if (finalecount > 14) {
-					V_DrawSciencePatch(x, y, 0, (patch = W_CachePatchName("WAHH4", PU_PATCH)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
-			}
-			else if (finalecount-30 < 20) { // Big eggy
-				background = W_CachePatchName("FEEDIN", PU_PATCH);
-				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2;
-				y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, aspect);
-				V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, aspect);
-			}
-			else if (finalecount-50 < 30) { // Zoom out
-				fixed_t scale = FixedDiv(aspect, FixedDiv((finalecount-50)<<FRACBITS, (15<<FRACBITS))+FRACUNIT);
-				background = W_CachePatchName("FEEDIN", PU_PATCH);
-				x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2 + (FixedMul(560<<FRACBITS, aspect) - FixedMul(560<<FRACBITS, scale));
-				y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, scale);
-				V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, scale);
-			}
-			else
+		if (intro_curtime > 1 && intro_curtime < (INT32)introscenetime[intro_scenenum])
+		{
+			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+			if (intro_curtime < TICRATE-5) // Make the text shine!
+				sprintf(stjrintro, "STJRI%03u", intro_curtime-1);
+			else if (intro_curtime >= TICRATE-6 && intro_curtime < 2*TICRATE-20) // Pause on black screen for just a second
+				return;
+			else if (intro_curtime == 2*TICRATE-19)
 			{
-				{
-					// Draw tiny eggy
-					fixed_t scale = FixedMul(FRACUNIT/3, aspect);
-					background = W_CachePatchName("FEEDIN", PU_PATCH);
-					x = (BASEVIDWIDTH<<FRACBITS)/2 - FixedMul(560<<FRACBITS, aspect)/2 + (FixedMul(560<<FRACBITS, aspect) - FixedMul(560<<FRACBITS, scale));
-					y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(477<<FRACBITS, scale);
-					V_DrawSciencePatch(x, y, V_SNAPTOBOTTOM, background, scale);
-				}
+				// Fade in the text
+				// The text fade out is automatically handled when switching to a new intro scene
+				strncpy(stjrintro, "STJRI029", 9);
+				S_ChangeMusicInternal("_stjr", false);
 
-				if (finalecount-84 < 58) { // Pure Fat is driving up!
-					int ftime = (finalecount-84);
-					x = (-189*FRACUNIT) + (FixedMul((6<<FRACBITS)+FRACUNIT/3, ftime<<FRACBITS) - FixedMul((6<<FRACBITS)+FRACUNIT/3, FixedDiv(FixedMul(ftime<<FRACBITS, ftime<<FRACBITS), 120<<FRACBITS)));
-					y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(417<<FRACBITS, aspect);
-					// Draw the body
-					V_DrawSciencePatch(x, y, V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT1", PU_PATCH)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the door
-					V_DrawSciencePatch(x+FixedMul(344<<FRACBITS, aspect), y+FixedMul(292<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT2", PU_PATCH)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel
-					V_DrawSciencePatch(x+FixedMul(178<<FRACBITS, aspect), y+FixedMul(344<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName(va("TYRE%02u",(abs(finalecount-144)/3)%16), PU_PATCH)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel cover
-					V_DrawSciencePatch(x+FixedMul(88<<FRACBITS, aspect), y+FixedMul(238<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT3", PU_PATCH)), aspect);
-					W_UnlockCachedPatch(patch);
-				} else { // Pure Fat has stopped!
-					y = (BASEVIDHEIGHT<<FRACBITS) - FixedMul(417<<FRACBITS, aspect);
-					// Draw the body
-					V_DrawSciencePatch(0, y, V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT1", PU_PATCH)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel
-					V_DrawSciencePatch(FixedMul(178<<FRACBITS, aspect), y+FixedMul(344<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("TYRE00", PU_PATCH)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the wheel cover
-					V_DrawSciencePatch(FixedMul(88<<FRACBITS, aspect), y+FixedMul(238<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT3", PU_PATCH)), aspect);
-					W_UnlockCachedPatch(patch);
-					// Draw the door
-					if (finalecount-TICRATE/2 > 4*TICRATE) { // Door is being raised!
-						int ftime = (finalecount-TICRATE/2-4*TICRATE);
-						y -= FixedDiv((ftime*ftime)<<FRACBITS, 23<<FRACBITS);
-					}
-					V_DrawSciencePatch(FixedMul(344<<FRACBITS, aspect), y+FixedMul(292<<FRACBITS, aspect), V_SNAPTOLEFT|V_SNAPTOBOTTOM, (patch = W_CachePatchName("PUREFAT2", PU_PATCH)), aspect);
-					W_UnlockCachedPatch(patch);
-				}
+				background = W_CachePatchName(stjrintro, PU_PATCH_LOWPRIORITY);
+				wipestyleflags = WSF_FADEIN;
+				F_WipeStartScreen();
+				F_TryColormapFade(31);
+				V_DrawSmallScaledPatch(bgxoffs, 84, 0, background);
+				F_WipeEndScreen();
+				F_RunWipe(0,true);
 			}
-		} else {
-			V_DrawCreditString((160 - V_CreditStringWidth("SONIC TEAM JR")/2)<<FRACBITS, 80<<FRACBITS, 0, "SONIC TEAM JR");
-			V_DrawCreditString((160 - V_CreditStringWidth("PRESENTS")/2)<<FRACBITS, 96<<FRACBITS, 0, "PRESENTS");
+
+			if (!WipeInAction) // Draw the patch if not in a wipe
+			{
+				background = W_CachePatchName(stjrintro, PU_PATCH_LOWPRIORITY);
+				V_DrawSmallScaledPatch(bgxoffs, 84, 0, background);
+			}
 		}
 	}
 	else if (intro_scenenum == 10) // Sky Runner
@@ -714,27 +656,27 @@ static void F_IntroDrawScene(void)
 		if (timetonext > 5*TICRATE && timetonext < 6*TICRATE)
 		{
 			if (!(finalecount & 3))
-				background = W_CachePatchName("BRITEGG1", PU_PATCH);
+				background = W_CachePatchName("BRITEGG1", PU_PATCH_LOWPRIORITY);
 			else
-				background = W_CachePatchName("DARKEGG1", PU_PATCH);
+				background = W_CachePatchName("DARKEGG1", PU_PATCH_LOWPRIORITY);
 
 			V_DrawSmallScaledPatch(0, 0, 0, background);
 		}
 		else if (timetonext > 3*TICRATE && timetonext < 4*TICRATE)
 		{
 			if (!(finalecount & 3))
-				background = W_CachePatchName("BRITEGG2", PU_PATCH);
+				background = W_CachePatchName("BRITEGG2", PU_PATCH_LOWPRIORITY);
 			else
-				background = W_CachePatchName("DARKEGG2", PU_PATCH);
+				background = W_CachePatchName("DARKEGG2", PU_PATCH_LOWPRIORITY);
 
 			V_DrawSmallScaledPatch(0, 0, 0, background);
 		}
 		else if (timetonext > 1*TICRATE && timetonext < 2*TICRATE)
 		{
 			if (!(finalecount & 3))
-				background = W_CachePatchName("BRITEGG3", PU_PATCH);
+				background = W_CachePatchName("BRITEGG3", PU_PATCH_LOWPRIORITY);
 			else
-				background = W_CachePatchName("DARKEGG3", PU_PATCH);
+				background = W_CachePatchName("DARKEGG3", PU_PATCH_LOWPRIORITY);
 
 			V_DrawSmallScaledPatch(0, 0, 0, background);
 		}
@@ -766,79 +708,79 @@ static void F_IntroDrawScene(void)
 			knucklesx += sonicx;
 			sonicx += P_ReturnThrustX(NULL, finalecount * ANG10, 3);
 
-			V_DrawSmallScaledPatch(skyx, 0, 0, (patch = W_CachePatchName("INTROSKY", PU_PATCH)));
+			V_DrawSmallScaledPatch(skyx, 0, 0, (patch = W_CachePatchName("INTROSKY", PU_PATCH_LOWPRIORITY)));
 			V_DrawSmallScaledPatch(skyx - 320, 0, 0, patch);
 			W_UnlockCachedPatch(patch);
-			V_DrawSmallScaledPatch(grassx, 0, 0, (patch = W_CachePatchName("INTROGRS", PU_PATCH)));
+			V_DrawSmallScaledPatch(grassx, 0, 0, (patch = W_CachePatchName("INTROGRS", PU_PATCH_LOWPRIORITY)));
 			V_DrawSmallScaledPatch(grassx - 320, 0, 0, patch);
 			W_UnlockCachedPatch(patch);
 
 			if (finalecount & 1)
 			{
 				// Sonic
-				V_DrawSmallScaledPatch(sonicx, 54, 0, (patch = W_CachePatchName("RUN2", PU_PATCH)));
+				V_DrawSmallScaledPatch(sonicx, 54, 0, (patch = W_CachePatchName("RUN2", PU_PATCH_LOWPRIORITY)));
 				W_UnlockCachedPatch(patch);
 
 				// Appendages
 				if (finalecount & 2)
 				{
 					// Sonic's feet
-					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT4", PU_PATCH)));
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT4", PU_PATCH_LOWPRIORITY)));
 					W_UnlockCachedPatch(patch);
 					// Tails' tails
-					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP2", PU_PATCH)));
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP2", PU_PATCH_LOWPRIORITY)));
 					W_UnlockCachedPatch(patch);
 				}
 				else
 				{
 					// Sonic's feet
-					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT2", PU_PATCH)));
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT2", PU_PATCH_LOWPRIORITY)));
 					W_UnlockCachedPatch(patch);
 					// Tails' tails
-					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP1", PU_PATCH)));
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP1", PU_PATCH_LOWPRIORITY)));
 					W_UnlockCachedPatch(patch);
 				}
 
 				// Tails
-				V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("FLY2", PU_PATCH)));
+				V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("FLY2", PU_PATCH_LOWPRIORITY)));
 				W_UnlockCachedPatch(patch);
 
 				// Knuckles
-				V_DrawSmallScaledPatch(knucklesx, knucklesy, 0, (patch = W_CachePatchName("GLIDE2", PU_PATCH)));
+				V_DrawSmallScaledPatch(knucklesx, knucklesy, 0, (patch = W_CachePatchName("GLIDE2", PU_PATCH_LOWPRIORITY)));
 				W_UnlockCachedPatch(patch);
 			}
 			else
 			{
 				// Sonic
-				V_DrawSmallScaledPatch(sonicx, 54, 0, (patch = W_CachePatchName("RUN1", PU_PATCH)));
+				V_DrawSmallScaledPatch(sonicx, 54, 0, (patch = W_CachePatchName("RUN1", PU_PATCH_LOWPRIORITY)));
 				W_UnlockCachedPatch(patch);
 
 				// Appendages
 				if (finalecount & 2)
 				{
 					// Sonic's feet
-					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT3", PU_PATCH)));
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT3", PU_PATCH_LOWPRIORITY)));
 					W_UnlockCachedPatch(patch);
 					// Tails' tails
-					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP2", PU_PATCH)));
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP2", PU_PATCH_LOWPRIORITY)));
 					W_UnlockCachedPatch(patch);
 				}
 				else
 				{
 					// Sonic's feet
-					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT1", PU_PATCH)));
+					V_DrawSmallScaledPatch(sonicx - 8, 92, 0, (patch = W_CachePatchName("PEELOUT1", PU_PATCH_LOWPRIORITY)));
 					W_UnlockCachedPatch(patch);
 					// Tails' tails
-					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP1", PU_PATCH)));
+					V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("HELICOP1", PU_PATCH_LOWPRIORITY)));
 					W_UnlockCachedPatch(patch);
 				}
 
 				// Tails
-				V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("FLY1", PU_PATCH)));
+				V_DrawSmallScaledPatch(tailsx, tailsy, 0, (patch = W_CachePatchName("FLY1", PU_PATCH_LOWPRIORITY)));
 				W_UnlockCachedPatch(patch);
 
 				// Knuckles
-				V_DrawSmallScaledPatch(knucklesx, knucklesy, 0, (patch = W_CachePatchName("GLIDE1", PU_PATCH)));
+				V_DrawSmallScaledPatch(knucklesx, knucklesy, 0, (patch = W_CachePatchName("GLIDE1", PU_PATCH_LOWPRIORITY)));
 				W_UnlockCachedPatch(patch);
 			}
 
@@ -871,8 +813,8 @@ static void F_IntroDrawScene(void)
 				y += (30*(FRACUNIT-scale));
 			}
 
-			rockpat = W_CachePatchName(va("ROID00%.2d", 34 - (worktics % 35)), PU_PATCH);
-			glow = W_CachePatchName(va("ENDGLOW%.1d", 2+(worktics & 1)), PU_PATCH);
+			rockpat = W_CachePatchName(va("ROID00%.2d", 34 - (worktics % 35)), PU_PATCH_LOWPRIORITY);
+			glow = W_CachePatchName(va("ENDGLOW%.1d", 2+(worktics & 1)), PU_PATCH_LOWPRIORITY);
 
 			if (worktics >= 5)
 				trans = (worktics-5)>>1;
@@ -959,7 +901,13 @@ void F_IntroDrawer(void)
 
 					I_OsPolling();
 					I_UpdateNoBlit();
+#ifdef HAVE_THREADS
+					I_lock_mutex(&m_menu_mutex);
+#endif
 					M_Drawer(); // menu is drawn even on top of wipes
+#ifdef HAVE_THREADS
+					I_unlock_mutex(m_menu_mutex);
+#endif
 					I_FinishUpdate(); // Update the screen with the image Tails 06-19-2001
 
 					if (moviemode) // make sure we save frames for the white hold too
@@ -986,7 +934,7 @@ void F_IntroDrawer(void)
 	{
 		if (intro_scenenum == 5 && intro_curtime == 5*TICRATE)
 		{
-			patch_t *radar = W_CachePatchName("RADAR", PU_PATCH);
+			patch_t *radar = W_CachePatchName("RADAR", PU_PATCH_LOWPRIORITY);
 
 			F_WipeStartScreen();
 			F_WipeColorFill(31);
@@ -999,7 +947,7 @@ void F_IntroDrawer(void)
 		}
 		else if (intro_scenenum == 7 && intro_curtime == 6*TICRATE) // Force a wipe here
 		{
-			patch_t *grass = W_CachePatchName("SGRASS2", PU_PATCH);
+			patch_t *grass = W_CachePatchName("SGRASS2", PU_PATCH_LOWPRIORITY);
 
 			F_WipeStartScreen();
 			F_WipeColorFill(31);
@@ -1010,9 +958,9 @@ void F_IntroDrawer(void)
 			F_WipeEndScreen();
 			F_RunWipe(99,true);
 		}
-		/*else if (intro_scenenum == 12 && intro_curtime == 7*TICRATE)
+		/*else if (intro_scenenum == 11 && intro_curtime == 7*TICRATE)
 		{
-			patch_t *confront = W_CachePatchName("CONFRONT", PU_PATCH);
+			patch_t *confront = W_CachePatchName("CONFRONT", PU_PATCH_LOWPRIORITY);
 
 			F_WipeStartScreen();
 			F_WipeColorFill(31);
@@ -1025,7 +973,7 @@ void F_IntroDrawer(void)
 		}*/
 		if (intro_scenenum == 15 && intro_curtime == 7*TICRATE)
 		{
-			patch_t *sdo = W_CachePatchName("SONICDO2", PU_PATCH);
+			patch_t *sdo = W_CachePatchName("SONICDO2", PU_PATCH_LOWPRIORITY);
 
 			F_WipeStartScreen();
 			F_WipeColorFill(31);
@@ -1119,61 +1067,60 @@ static const char *credits[] = {
 	"\1Credits",
 	"",
 	"\1Game Design",
-	"Ben \"Mystic\" Geyer",
+	"Sonic Team Junior",
 	"\"SSNTails\"",
 	"Johnny \"Sonikku\" Wallbank",
 	"",
 	"\1Programming",
 	"Alam \"GBC\" Arias",
 	"Logan \"GBA\" Arias",
+	"Zolton \"Zippy_Zolton\" Auburn",
+	"Colette \"fickleheart\" Bordelon",
+	"Andrew \"orospakr\" Clunis",
+	"Sally \"TehRealSalt\" Cochenour",
+	"Gregor \"Oogaland\" Dick",
 	"Callum Dickinson",
 	"Scott \"Graue\" Feeney",
 	"Victor \"SteelT\" Fuentes",
 	"Nathan \"Jazz\" Giroux",
+	"\"Golden\"",
 	"Vivian \"toaster\" Grannell",
+	"Julio \"Chaos Zero 64\" Guir",
+	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"\"james\"",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"\"Jimita\"",
-	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
-	"Louis-Antoine \"LJ Sonic\" de Moulins", // de Rochefort doesn't quite fit on the screen sorry lol
-	"John \"JTE\" Muniz",
-	"Ehab \"Wolfy\" Saeed",
-	"Jonas \"MascaraSnake\" Sauer",
 	"\"Kaito Sinclaire\"",
-	"\"SSNTails\"",
-	"Lachlan \"Lach\" Wright",
-	"Marco \"mazmazz\" Zafra",
-	"",
-	"\1Programming",
-	"\1Assistance",
-	"Colette \"fickleheart\" Bordelon",
-	"\"chi.miru\"", // helped port slope drawing code from ZDoom
-	"Andrew \"orospakr\" Clunis",
-	"Sally \"TehRealSalt\" Cochenour",
-	"Gregor \"Oogaland\" Dick",
-	"Julio \"Chaos Zero 64\" Guir",
-	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
+	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
 	"Matthew \"Shuffle\" Marsalko",
 	"Steven \"StroggOnMeth\" McGranahan",
 	"\"Morph\"", // For SRB2Morphed stuff
+	"Louis-Antoine \"LJ Sonic\" de Moulins", // de Rochefort doesn't quite fit on the screen sorry lol
+	"John \"JTE\" Muniz",
 	"Colin \"Sonict\" Pfaff",
 	"Sean \"Sryder13\" Ryder",
+	"Ehab \"Wolfy\" Saeed",
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
+	"Riku \"Ors\" Salminen", // Demo consistency improvements
+	"Jonas \"MascaraSnake\" Sauer",
 	"Wessel \"sphere\" Smit",
-	"Ben \"Cue\" Woodford",
+	"\"SSNTails\"",
+	"\"Varren\"",
 	"\"VelocitOni\"", // Wrote the original dashmode script
 	"Ikaro \"Tatsuru\" Vinhas",
-	// Git contributors with 5+ approved merges of substantive quality,
-	// or contributors with at least one groundbreaking merge, may be named.
-	// Everyone else is acknowledged under "Special Thanks > SRB2 Community Contributors".
+	"Ben \"Cue\" Woodford",
+	"Lachlan \"Lach\" Wright",
+	"Marco \"mazmazz\" Zafra",
 	"",
 	"\1Art",
 	"Victor \"VAdaPEGA\" Ara\x1Fjo", // Araújo -- sorry for our limited font! D:
+	"\"Arrietty\"",
 	"Ryan \"Blaze Hedgehog\" Bloom",
+	"Graeme P. \"SuperPhanto\" Caldwell", // for the new brak render
 	"\"ChrispyPixels\"",
 	"Paul \"Boinciel\" Clempson",
 	"Sally \"TehRealSalt\" Cochenour",
@@ -1181,6 +1128,8 @@ static const char *credits[] = {
 	"Desmond \"Blade\" DesJardins",
 	"Sherman \"CoatRack\" DesJardins",
 	"\"DirkTheHusky\"",
+	"Jesse \"Jeck Jims\" Emerick",
+	"\"Fighter_Builder\"", // for the CEZ3 button debris
 	"Buddy \"KinkaJoy\" Fischer",
 	"Vivian \"toaster\" Grannell",
 	"James \"SwitchKaze\" Hale",
@@ -1189,10 +1138,12 @@ static const char *credits[] = {
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"William \"GuyWithThePie\" Kloppenberg",
 	"Alice \"Alacroix\" de Lemos",
+	"Logan \"Hyperchaotix\" McCloud",
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"Andrew \"Senku Niola\" Moran",
 	"\"MotorRoach\"",
 	"Phillip \"TelosTurntable\" Robinson",
+	"\"Scizor300\"",
 	"Wessel \"sphere\" Smit",
 	"David \"Instant Sonic\" Spencer Jr.",
 	"\"SSNTails\"",
@@ -1206,9 +1157,9 @@ static const char *credits[] = {
 	"Malcolm \"RedXVI\" Brown",
 	"Dave \"DemonTomatoDave\" Bulmer",
 	"Paul \"Boinciel\" Clempson",
+	"\"Cyan Helkaraxe\"",
 	"Shane \"CobaltBW\" Ellis",
 	"James \"SeventhSentinel\" Hall",
-	"Cyan Helkaraxe",
 	"Kepa \"Nev3r\" Iceta",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"Jarel \"Arrow\" Jones",
@@ -1235,8 +1186,9 @@ static const char *credits[] = {
 	"James \"SeventhSentinel\" Hall",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
-	"Alexander \"DrTapeworm\" Moench-Ford",
 	"\"Kaito Sinclaire\"",
+	"Alexander \"DrTapeworm\" Moench-Ford",
+	"\"Revan\"",
 	"Anna \"QueenDelta\" Sandlin",
 	"Wessel \"sphere\" Smit",
 	"\"Spazzo\"",
@@ -1259,7 +1211,7 @@ static const char *credits[] = {
 	"\1Testing",
 	"Discord Community Testers",
 	"Hank \"FuriousFox\" Brannock",
-	"Cody \"SRB2 Playah\" Koester",
+	"Cody \"Playah\" Koester",
 	"Skye \"OmegaVelocity\" Meredith",
 	"Stephen \"HEDGESMFG\" Moellering",
 	"Rosalie \"ST218\" Molina",
@@ -1276,13 +1228,6 @@ static const char *credits[] = {
 	"Pascal \"CodeImp\" vd Heiden", // Doom Builder developer
 	"Randi Heit (<!>)", // For their MSPaint <!> sprite that we nicked
 	"Simon \"sirjuddington\" Judd", // SLADE developer
-	// Acknowledged here are the following:
-	// Minor merge request authors, see guideline above
-	// - Golden - Expanded thin font
-	// Creators of small quantities of sprite/texture assets
-	// - Arietty - New Green Hill-styled textures
-	// - Scizor300 - the only other contributor to the 2.0 SRB2 Asset Pack
-	// - Revan/Icefox - the new Nimbus Ruins skybox
 	"SRB2 Community Contributors",
 	"",
 	"\1Produced By",
@@ -1361,14 +1306,14 @@ void F_CreditDrawer(void)
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 	// Zig Zagz
-	V_DrawScaledPatch(-16,               zagpos,       V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_PATCH));
-	V_DrawScaledPatch(-16,               zagpos - 320, V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_PATCH));
-	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos,       V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH));
-	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos - 320, V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH));
+	V_DrawScaledPatch(-16,               zagpos,       V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
+	V_DrawScaledPatch(-16,               zagpos - 320, V_SNAPTOLEFT,         W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
+	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos,       V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
+	V_DrawScaledPatch(BASEVIDWIDTH + 16, zagpos - 320, V_SNAPTORIGHT|V_FLIP, W_CachePatchName("LTZIGZAG", PU_PATCH_LOWPRIORITY));
 
 	// Draw background pictures first
 	for (i = 0; credits_pics[i].patch; i++)
-		V_DrawSciencePatch(credits_pics[i].x<<FRACBITS, (280<<FRACBITS) + (((i*credits_height)<<FRACBITS)/(credits_numpics)) - 4*(animtimer<<FRACBITS)/5, 0, W_CachePatchName(credits_pics[i].patch, PU_PATCH), FRACUNIT>>1);
+		V_DrawSciencePatch(credits_pics[i].x<<FRACBITS, (280<<FRACBITS) + (((i*credits_height)<<FRACBITS)/(credits_numpics)) - 4*(animtimer<<FRACBITS)/5, 0, W_CachePatchName(credits_pics[i].patch, PU_PATCH_LOWPRIORITY), FRACUNIT>>1);
 
 	// Dim the background
 	V_DrawFadeScreen(0xFF00, 16);
@@ -1577,14 +1522,14 @@ void F_GameEvaluationDrawer(void)
 
 		if (goodending)
 		{
-			rockpat = W_CachePatchName(va("ROID00%.2d", 34 - (finalecount % 35)), PU_PATCH);
-			glow = W_CachePatchName(va("ENDGLOW%.1d", 2+(finalecount & 1)), PU_PATCH);
+			rockpat = W_CachePatchName(va("ROID00%.2d", 34 - (finalecount % 35)), PU_PATCH_LOWPRIORITY);
+			glow = W_CachePatchName(va("ENDGLOW%.1d", 2+(finalecount & 1)), PU_PATCH_LOWPRIORITY);
 			x -= FRACUNIT;
 		}
 		else
 		{
-			rockpat = W_CachePatchName("ROID0000", PU_LEVEL);
-			glow = W_CachePatchName(va("ENDGLOW%.1d", (finalecount & 1)), PU_PATCH);
+			rockpat = W_CachePatchName("ROID0000", PU_PATCH_LOWPRIORITY);
+			glow = W_CachePatchName(va("ENDGLOW%.1d", (finalecount & 1)), PU_PATCH_LOWPRIORITY);
 		}
 
 		if (finalecount >= 5)
@@ -1616,20 +1561,20 @@ void F_GameEvaluationDrawer(void)
 					// if j == 0 - alternate between 0 and 1
 					//         1 -                   1 and 2
 					//         2 -                   2 and not rendered
-					V_DrawFixedPatch(x+sparkloffs[j-1][0], y+sparkloffs[j-1][1], FRACUNIT, 0, W_CachePatchName(va("ENDSPKL%.1d", (j - ((sparklloop & 1) ? 0 : 1))), PU_PATCH), R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_AQUA, GTC_CACHE));
+					V_DrawFixedPatch(x+sparkloffs[j-1][0], y+sparkloffs[j-1][1], FRACUNIT, 0, W_CachePatchName(va("ENDSPKL%.1d", (j - ((sparklloop & 1) ? 0 : 1))), PU_PATCH_LOWPRIORITY), R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_AQUA, GTC_CACHE));
 				}
 				j--;
 			}
 		}
 		else
 		{
-			patch_t *eggrock = W_CachePatchName("ENDEGRK5", PU_PATCH);
+			patch_t *eggrock = W_CachePatchName("ENDEGRK5", PU_PATCH_LOWPRIORITY);
 			V_DrawFixedPatch(x, y, scale, 0, eggrock, colormap[0]);
 			if (trans < 10)
 				V_DrawFixedPatch(x, y, scale, trans<<V_ALPHASHIFT, eggrock, colormap[1]);
 			else if (sparklloop)
 				V_DrawFixedPatch(x, y, scale, (10-sparklloop)<<V_ALPHASHIFT,
-					W_CachePatchName("ENDEGRK0", PU_PATCH), colormap[1]);
+					W_CachePatchName("ENDEGRK0", PU_PATCH_LOWPRIORITY), colormap[1]);
 		}
 	}
 
@@ -1643,7 +1588,7 @@ void F_GameEvaluationDrawer(void)
 		eemeralds_cur += (360<<FRACBITS)/7;
 
 		patchname[4] = 'A'+(char)i;
-		V_DrawFixedPatch(x, y, FRACUNIT, ((emeralds & (1<<i)) ? 0 : V_80TRANS), W_CachePatchName(patchname, PU_PATCH), NULL);
+		V_DrawFixedPatch(x, y, FRACUNIT, ((emeralds & (1<<i)) ? 0 : V_80TRANS), W_CachePatchName(patchname, PU_PATCH_LOWPRIORITY), NULL);
 	}
 
 	V_DrawCreditString((BASEVIDWIDTH - V_CreditStringWidth(endingtext))<<(FRACBITS-1), (BASEVIDHEIGHT-100)<<(FRACBITS-1), 0, endingtext);
@@ -1684,7 +1629,7 @@ void F_GameEvaluationDrawer(void)
 			endingtext = va("%s & %s, %s%s", skins[players[consoleplayer].skin].realname, skins[botskin-1].realname, rtatext, cuttext);
 		else
 			endingtext = va("%s, %s%s", skins[players[consoleplayer].skin].realname, rtatext, cuttext);
-		V_DrawCenteredString(BASEVIDWIDTH/2, 182, (ultimatemode ? V_REDMAP : V_YELLOWMAP), endingtext);
+		V_DrawCenteredString(BASEVIDWIDTH/2, 182, V_SNAPTOBOTTOM|(ultimatemode ? V_REDMAP : V_YELLOWMAP), endingtext);
 	}
 }
 
@@ -1772,32 +1717,32 @@ void F_GameEvaluationTicker(void)
 
 static void F_CacheEnding(void)
 {
-	endbrdr[1] = W_CachePatchName("ENDBRDR1", PU_PATCH);
+	endbrdr[1] = W_CachePatchName("ENDBRDR1", PU_PATCH_LOWPRIORITY);
 
-	endegrk[0] = W_CachePatchName("ENDEGRK0", PU_PATCH);
-	endegrk[1] = W_CachePatchName("ENDEGRK1", PU_PATCH);
+	endegrk[0] = W_CachePatchName("ENDEGRK0", PU_PATCH_LOWPRIORITY);
+	endegrk[1] = W_CachePatchName("ENDEGRK1", PU_PATCH_LOWPRIORITY);
 
-	endglow[0] = W_CachePatchName("ENDGLOW0", PU_PATCH);
-	endglow[1] = W_CachePatchName("ENDGLOW1", PU_PATCH);
+	endglow[0] = W_CachePatchName("ENDGLOW0", PU_PATCH_LOWPRIORITY);
+	endglow[1] = W_CachePatchName("ENDGLOW1", PU_PATCH_LOWPRIORITY);
 
-	endbgsp[0] = W_CachePatchName("ENDBGSP0", PU_PATCH);
-	endbgsp[1] = W_CachePatchName("ENDBGSP1", PU_PATCH);
-	endbgsp[2] = W_CachePatchName("ENDBGSP2", PU_PATCH);
+	endbgsp[0] = W_CachePatchName("ENDBGSP0", PU_PATCH_LOWPRIORITY);
+	endbgsp[1] = W_CachePatchName("ENDBGSP1", PU_PATCH_LOWPRIORITY);
+	endbgsp[2] = W_CachePatchName("ENDBGSP2", PU_PATCH_LOWPRIORITY);
 
-	endspkl[0] = W_CachePatchName("ENDSPKL0", PU_PATCH);
-	endspkl[1] = W_CachePatchName("ENDSPKL1", PU_PATCH);
-	endspkl[2] = W_CachePatchName("ENDSPKL2", PU_PATCH);
+	endspkl[0] = W_CachePatchName("ENDSPKL0", PU_PATCH_LOWPRIORITY);
+	endspkl[1] = W_CachePatchName("ENDSPKL1", PU_PATCH_LOWPRIORITY);
+	endspkl[2] = W_CachePatchName("ENDSPKL2", PU_PATCH_LOWPRIORITY);
 
-	endxpld[0] = W_CachePatchName("ENDXPLD0", PU_PATCH);
-	endxpld[1] = W_CachePatchName("ENDXPLD1", PU_PATCH);
-	endxpld[2] = W_CachePatchName("ENDXPLD2", PU_PATCH);
-	endxpld[3] = W_CachePatchName("ENDXPLD3", PU_PATCH);
+	endxpld[0] = W_CachePatchName("ENDXPLD0", PU_PATCH_LOWPRIORITY);
+	endxpld[1] = W_CachePatchName("ENDXPLD1", PU_PATCH_LOWPRIORITY);
+	endxpld[2] = W_CachePatchName("ENDXPLD2", PU_PATCH_LOWPRIORITY);
+	endxpld[3] = W_CachePatchName("ENDXPLD3", PU_PATCH_LOWPRIORITY);
 
-	endescp[0] = W_CachePatchName("ENDESCP0", PU_PATCH);
-	endescp[1] = W_CachePatchName("ENDESCP1", PU_PATCH);
-	endescp[2] = W_CachePatchName("ENDESCP2", PU_PATCH);
-	endescp[3] = W_CachePatchName("ENDESCP3", PU_PATCH);
-	endescp[4] = W_CachePatchName("ENDESCP4", PU_PATCH);
+	endescp[0] = W_CachePatchName("ENDESCP0", PU_PATCH_LOWPRIORITY);
+	endescp[1] = W_CachePatchName("ENDESCP1", PU_PATCH_LOWPRIORITY);
+	endescp[2] = W_CachePatchName("ENDESCP2", PU_PATCH_LOWPRIORITY);
+	endescp[3] = W_CachePatchName("ENDESCP3", PU_PATCH_LOWPRIORITY);
+	endescp[4] = W_CachePatchName("ENDESCP4", PU_PATCH_LOWPRIORITY);
 
 	// so we only need to check once
 	if ((goodending = ALL7EMERALDS(emeralds)))
@@ -1810,41 +1755,41 @@ static void F_CacheEnding(void)
 			sprdef = &skins[skinnum].sprites[SPR2_XTRA];
 			// character head, skin specific
 			sprframe = &sprdef->spriteframes[XTRA_ENDING];
-			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+			endfwrk[0] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH_LOWPRIORITY);
 			sprframe = &sprdef->spriteframes[XTRA_ENDING+1];
-			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+			endfwrk[1] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH_LOWPRIORITY);
 			sprframe = &sprdef->spriteframes[XTRA_ENDING+2];
-			endfwrk[2] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
+			endfwrk[2] = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH_LOWPRIORITY);
 		}
 		else // Show a star if your character doesn't have an ending firework display. (Basically the MISSINGs for this)
 		{
-			endfwrk[0] = W_CachePatchName("ENDFWRK3", PU_PATCH);
-			endfwrk[1] = W_CachePatchName("ENDFWRK4", PU_PATCH);
-			endfwrk[2] = W_CachePatchName("ENDFWRK5", PU_PATCH);
+			endfwrk[0] = W_CachePatchName("ENDFWRK3", PU_PATCH_LOWPRIORITY);
+			endfwrk[1] = W_CachePatchName("ENDFWRK4", PU_PATCH_LOWPRIORITY);
+			endfwrk[2] = W_CachePatchName("ENDFWRK5", PU_PATCH_LOWPRIORITY);
 		}
 
-		endbrdr[0] = W_CachePatchName("ENDBRDR2", PU_PATCH);
+		endbrdr[0] = W_CachePatchName("ENDBRDR2", PU_PATCH_LOWPRIORITY);
 	}
 	else
 	{
 		// eggman, skin nonspecific
-		endfwrk[0] = W_CachePatchName("ENDFWRK0", PU_PATCH);
-		endfwrk[1] = W_CachePatchName("ENDFWRK1", PU_PATCH);
-		endfwrk[2] = W_CachePatchName("ENDFWRK2", PU_PATCH);
+		endfwrk[0] = W_CachePatchName("ENDFWRK0", PU_PATCH_LOWPRIORITY);
+		endfwrk[1] = W_CachePatchName("ENDFWRK1", PU_PATCH_LOWPRIORITY);
+		endfwrk[2] = W_CachePatchName("ENDFWRK2", PU_PATCH_LOWPRIORITY);
 
-		endbrdr[0] = W_CachePatchName("ENDBRDR0", PU_LEVEL);
+		endbrdr[0] = W_CachePatchName("ENDBRDR0", PU_PATCH_LOWPRIORITY);
 	}
 }
 
 static void F_CacheGoodEnding(void)
 {
-	endegrk[0] = W_CachePatchName("ENDEGRK2", PU_PATCH);
-	endegrk[1] = W_CachePatchName("ENDEGRK3", PU_PATCH);
+	endegrk[0] = W_CachePatchName("ENDEGRK2", PU_PATCH_LOWPRIORITY);
+	endegrk[1] = W_CachePatchName("ENDEGRK3", PU_PATCH_LOWPRIORITY);
 
-	endglow[0] = W_CachePatchName("ENDGLOW2", PU_PATCH);
-	endglow[1] = W_CachePatchName("ENDGLOW3", PU_PATCH);
+	endglow[0] = W_CachePatchName("ENDGLOW2", PU_PATCH_LOWPRIORITY);
+	endglow[1] = W_CachePatchName("ENDGLOW3", PU_PATCH_LOWPRIORITY);
 
-	endxpld[0] = W_CachePatchName("ENDEGRK4", PU_PATCH);
+	endxpld[0] = W_CachePatchName("ENDEGRK4", PU_PATCH_LOWPRIORITY);
 }
 
 void F_StartEnding(void)
@@ -1901,17 +1846,10 @@ void F_EndingDrawer(void)
 	INT32 x, y, i, j, parallaxticker;
 	patch_t *rockpat;
 
-	if (needpatchrecache)
-	{
-		F_CacheEnding();
-		if (goodending && finalecount >= INFLECTIONPOINT) // time to swap some assets
-			F_CacheGoodEnding();
-	}
-
 	if (!goodending || finalecount < INFLECTIONPOINT)
-		rockpat = W_CachePatchName("ROID0000", PU_PATCH);
+		rockpat = W_CachePatchName("ROID0000", PU_PATCH_LOWPRIORITY);
 	else
-		rockpat = W_CachePatchName(va("ROID00%.2d", 34 - ((finalecount - INFLECTIONPOINT) % 35)), PU_PATCH);
+		rockpat = W_CachePatchName(va("ROID00%.2d", 34 - ((finalecount - INFLECTIONPOINT) % 35)), PU_PATCH_LOWPRIORITY);
 
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
@@ -2248,7 +2186,7 @@ void F_EndingDrawer(void)
 				eemeralds_cur[0] += (360<<FRACBITS)/7;
 
 				patchname[4] = 'A'+(char)i;
-				V_DrawFixedPatch(x, y, FRACUNIT, 0, W_CachePatchName(patchname, PU_LEVEL), NULL);
+				V_DrawFixedPatch(x, y, FRACUNIT, 0, W_CachePatchName(patchname, PU_PATCH_LOWPRIORITY), NULL);
 			}
 		} // if (goodending...
 	} // (finalecount > 20)
@@ -2395,14 +2333,14 @@ void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
 
 	if (!scrollxspeed && !scrollyspeed)
 	{
-		V_DrawPatchFill(W_CachePatchName(patchname, PU_PATCH));
+		V_DrawPatchFill(W_CachePatchName(patchname, PU_PATCH_LOWPRIORITY));
 		return;
 	}
 
-	pat = W_CachePatchName(patchname, PU_PATCH);
+	pat = W_CachePatchName(patchname, PU_PATCH_LOWPRIORITY);
 
-	patwidth = SHORT(pat->width);
-	patheight = SHORT(pat->height);
+	patwidth = pat->width;
+	patheight = pat->height;
 	pw = patwidth * dupz;
 	ph = patheight * dupz;
 
@@ -2438,7 +2376,7 @@ void F_SkyScroll(INT32 scrollxspeed, INT32 scrollyspeed, const char *patchname)
 lumpnum = W_CheckNumForName(name); \
 if (lumpnum != LUMPERROR) \
 { \
-	arr[0] = W_CachePatchName(name, PU_LEVEL); \
+	arr[0] = W_CachePatchName(name, PU_PATCH_LOWPRIORITY); \
 	arr[min(1, maxf-1)] = 0; \
 } \
 else if (strlen(name) <= 6) \
@@ -2451,7 +2389,7 @@ else if (strlen(name) <= 6) \
 		lumpname[8] = 0; \
 		lumpnum = W_CheckNumForName(lumpname); \
 		if (lumpnum != LUMPERROR) \
-			arr[i] = W_CachePatchName(lumpname, PU_LEVEL); \
+			arr[i] = W_CachePatchName(lumpname, PU_PATCH_LOWPRIORITY); \
 		else \
 			break; \
 	} \
@@ -2466,21 +2404,21 @@ static void F_CacheTitleScreen(void)
 	{
 		case TTMODE_OLD:
 		case TTMODE_NONE:
-			ttbanner = W_CachePatchName("TTBANNER", PU_LEVEL);
-			ttwing = W_CachePatchName("TTWING", PU_LEVEL);
-			ttsonic = W_CachePatchName("TTSONIC", PU_LEVEL);
-			ttswave1 = W_CachePatchName("TTSWAVE1", PU_LEVEL);
-			ttswave2 = W_CachePatchName("TTSWAVE2", PU_LEVEL);
-			ttswip1 = W_CachePatchName("TTSWIP1", PU_LEVEL);
-			ttsprep1 = W_CachePatchName("TTSPREP1", PU_LEVEL);
-			ttsprep2 = W_CachePatchName("TTSPREP2", PU_LEVEL);
-			ttspop1 = W_CachePatchName("TTSPOP1", PU_LEVEL);
-			ttspop2 = W_CachePatchName("TTSPOP2", PU_LEVEL);
-			ttspop3 = W_CachePatchName("TTSPOP3", PU_LEVEL);
-			ttspop4 = W_CachePatchName("TTSPOP4", PU_LEVEL);
-			ttspop5 = W_CachePatchName("TTSPOP5", PU_LEVEL);
-			ttspop6 = W_CachePatchName("TTSPOP6", PU_LEVEL);
-			ttspop7 = W_CachePatchName("TTSPOP7", PU_LEVEL);
+			ttbanner = W_CachePatchName("TTBANNER", PU_PATCH_LOWPRIORITY);
+			ttwing = W_CachePatchName("TTWING", PU_PATCH_LOWPRIORITY);
+			ttsonic = W_CachePatchName("TTSONIC", PU_PATCH_LOWPRIORITY);
+			ttswave1 = W_CachePatchName("TTSWAVE1", PU_PATCH_LOWPRIORITY);
+			ttswave2 = W_CachePatchName("TTSWAVE2", PU_PATCH_LOWPRIORITY);
+			ttswip1 = W_CachePatchName("TTSWIP1", PU_PATCH_LOWPRIORITY);
+			ttsprep1 = W_CachePatchName("TTSPREP1", PU_PATCH_LOWPRIORITY);
+			ttsprep2 = W_CachePatchName("TTSPREP2", PU_PATCH_LOWPRIORITY);
+			ttspop1 = W_CachePatchName("TTSPOP1", PU_PATCH_LOWPRIORITY);
+			ttspop2 = W_CachePatchName("TTSPOP2", PU_PATCH_LOWPRIORITY);
+			ttspop3 = W_CachePatchName("TTSPOP3", PU_PATCH_LOWPRIORITY);
+			ttspop4 = W_CachePatchName("TTSPOP4", PU_PATCH_LOWPRIORITY);
+			ttspop5 = W_CachePatchName("TTSPOP5", PU_PATCH_LOWPRIORITY);
+			ttspop6 = W_CachePatchName("TTSPOP6", PU_PATCH_LOWPRIORITY);
+			ttspop7 = W_CachePatchName("TTSPOP7", PU_PATCH_LOWPRIORITY);
 			break;
 
 		// don't load alacroix gfx yet; we do that upon first draw.
@@ -2601,7 +2539,7 @@ void F_StartTitleScreen(void)
 
 static void F_UnloadAlacroixGraphics(SINT8 oldttscale)
 {
-	// This all gets freed by PU_LEVEL when exiting the menus.
+	// This all gets freed by PU_PATCH_LOWPRIORITY when exiting the menus.
 	// When re-visiting the menus (e.g., from exiting in-game), the gfx are force-reloaded.
 	// So leftover addresses here should not be a problem.
 
@@ -2609,28 +2547,28 @@ static void F_UnloadAlacroixGraphics(SINT8 oldttscale)
 	oldttscale--; // zero-based index
 	for (i = 0; i < TTMAX_ALACROIX; i++)
 	{
-		if(ttembl[oldttscale][i]) { Z_Free(ttembl[oldttscale][i]); ttembl[oldttscale][i] = 0; }
-		if(ttribb[oldttscale][i]) { Z_Free(ttribb[oldttscale][i]); ttribb[oldttscale][i] = 0; }
-		if(ttsont[oldttscale][i]) { Z_Free(ttsont[oldttscale][i]); ttsont[oldttscale][i] = 0; }
-		if(ttrobo[oldttscale][i]) { Z_Free(ttrobo[oldttscale][i]); ttrobo[oldttscale][i] = 0; }
-		if(tttwot[oldttscale][i]) { Z_Free(tttwot[oldttscale][i]); tttwot[oldttscale][i] = 0; }
-		if(ttrbtx[oldttscale][i]) { Z_Free(ttrbtx[oldttscale][i]); ttrbtx[oldttscale][i] = 0; }
-		if(ttsoib[oldttscale][i]) { Z_Free(ttsoib[oldttscale][i]); ttsoib[oldttscale][i] = 0; }
-		if(ttsoif[oldttscale][i]) { Z_Free(ttsoif[oldttscale][i]); ttsoif[oldttscale][i] = 0; }
-		if(ttsoba[oldttscale][i]) { Z_Free(ttsoba[oldttscale][i]); ttsoba[oldttscale][i] = 0; }
-		if(ttsobk[oldttscale][i]) { Z_Free(ttsobk[oldttscale][i]); ttsobk[oldttscale][i] = 0; }
-		if(ttsodh[oldttscale][i]) { Z_Free(ttsodh[oldttscale][i]); ttsodh[oldttscale][i] = 0; }
-		if(tttaib[oldttscale][i]) { Z_Free(tttaib[oldttscale][i]); tttaib[oldttscale][i] = 0; }
-		if(tttaif[oldttscale][i]) { Z_Free(tttaif[oldttscale][i]); tttaif[oldttscale][i] = 0; }
-		if(tttaba[oldttscale][i]) { Z_Free(tttaba[oldttscale][i]); tttaba[oldttscale][i] = 0; }
-		if(tttabk[oldttscale][i]) { Z_Free(tttabk[oldttscale][i]); tttabk[oldttscale][i] = 0; }
-		if(tttabt[oldttscale][i]) { Z_Free(tttabt[oldttscale][i]); tttabt[oldttscale][i] = 0; }
-		if(tttaft[oldttscale][i]) { Z_Free(tttaft[oldttscale][i]); tttaft[oldttscale][i] = 0; }
-		if(ttknib[oldttscale][i]) { Z_Free(ttknib[oldttscale][i]); ttknib[oldttscale][i] = 0; }
-		if(ttknif[oldttscale][i]) { Z_Free(ttknif[oldttscale][i]); ttknif[oldttscale][i] = 0; }
-		if(ttknba[oldttscale][i]) { Z_Free(ttknba[oldttscale][i]); ttknba[oldttscale][i] = 0; }
-		if(ttknbk[oldttscale][i]) { Z_Free(ttknbk[oldttscale][i]); ttknbk[oldttscale][i] = 0; }
-		if(ttkndh[oldttscale][i]) { Z_Free(ttkndh[oldttscale][i]); ttkndh[oldttscale][i] = 0; }
+		if(ttembl[oldttscale][i]) { Patch_Free(ttembl[oldttscale][i]); ttembl[oldttscale][i] = 0; }
+		if(ttribb[oldttscale][i]) { Patch_Free(ttribb[oldttscale][i]); ttribb[oldttscale][i] = 0; }
+		if(ttsont[oldttscale][i]) { Patch_Free(ttsont[oldttscale][i]); ttsont[oldttscale][i] = 0; }
+		if(ttrobo[oldttscale][i]) { Patch_Free(ttrobo[oldttscale][i]); ttrobo[oldttscale][i] = 0; }
+		if(tttwot[oldttscale][i]) { Patch_Free(tttwot[oldttscale][i]); tttwot[oldttscale][i] = 0; }
+		if(ttrbtx[oldttscale][i]) { Patch_Free(ttrbtx[oldttscale][i]); ttrbtx[oldttscale][i] = 0; }
+		if(ttsoib[oldttscale][i]) { Patch_Free(ttsoib[oldttscale][i]); ttsoib[oldttscale][i] = 0; }
+		if(ttsoif[oldttscale][i]) { Patch_Free(ttsoif[oldttscale][i]); ttsoif[oldttscale][i] = 0; }
+		if(ttsoba[oldttscale][i]) { Patch_Free(ttsoba[oldttscale][i]); ttsoba[oldttscale][i] = 0; }
+		if(ttsobk[oldttscale][i]) { Patch_Free(ttsobk[oldttscale][i]); ttsobk[oldttscale][i] = 0; }
+		if(ttsodh[oldttscale][i]) { Patch_Free(ttsodh[oldttscale][i]); ttsodh[oldttscale][i] = 0; }
+		if(tttaib[oldttscale][i]) { Patch_Free(tttaib[oldttscale][i]); tttaib[oldttscale][i] = 0; }
+		if(tttaif[oldttscale][i]) { Patch_Free(tttaif[oldttscale][i]); tttaif[oldttscale][i] = 0; }
+		if(tttaba[oldttscale][i]) { Patch_Free(tttaba[oldttscale][i]); tttaba[oldttscale][i] = 0; }
+		if(tttabk[oldttscale][i]) { Patch_Free(tttabk[oldttscale][i]); tttabk[oldttscale][i] = 0; }
+		if(tttabt[oldttscale][i]) { Patch_Free(tttabt[oldttscale][i]); tttabt[oldttscale][i] = 0; }
+		if(tttaft[oldttscale][i]) { Patch_Free(tttaft[oldttscale][i]); tttaft[oldttscale][i] = 0; }
+		if(ttknib[oldttscale][i]) { Patch_Free(ttknib[oldttscale][i]); ttknib[oldttscale][i] = 0; }
+		if(ttknif[oldttscale][i]) { Patch_Free(ttknif[oldttscale][i]); ttknif[oldttscale][i] = 0; }
+		if(ttknba[oldttscale][i]) { Patch_Free(ttknba[oldttscale][i]); ttknba[oldttscale][i] = 0; }
+		if(ttknbk[oldttscale][i]) { Patch_Free(ttknbk[oldttscale][i]); ttknbk[oldttscale][i] = 0; }
+		if(ttkndh[oldttscale][i]) { Patch_Free(ttkndh[oldttscale][i]); ttkndh[oldttscale][i] = 0; }
 	}
 	ttloaded[oldttscale] = false;
 }
@@ -2707,17 +2645,12 @@ static void F_FigureActiveTtScale(void)
 	SINT8 newttscale = max(1, min(6, vid.dupx));
 	SINT8 oldttscale = activettscale;
 
-	if (needpatchrecache)
-		ttloaded[0] = ttloaded[1] = ttloaded[2] = ttloaded[3] = ttloaded[4] = ttloaded[5] = 0;
-	else
-	{
-		if (newttscale == testttscale)
-			return;
+	if (newttscale == testttscale)
+		return;
 
-		// We have a new ttscale, so load gfx
-		if(oldttscale > 0)
-			F_UnloadAlacroixGraphics(oldttscale);
-	}
+	// We have a new ttscale, so load gfx
+	if(oldttscale > 0)
+		F_UnloadAlacroixGraphics(oldttscale);
 
 	testttscale = newttscale;
 
@@ -2750,9 +2683,6 @@ void F_TitleScreenDrawer(void)
 
 	if (modeattacking)
 		return; // We likely came here from retrying. Don't do a damn thing.
-
-	if (needpatchrecache && (curttmode != TTMODE_ALACROIX))
-		F_CacheTitleScreen();
 
 	// Draw that sky!
 	if (curbgcolor >= 0)
@@ -3717,7 +3647,7 @@ void F_ContinueDrawer(void)
 	V_DrawLevelTitle(x - (V_LevelNameWidth("Continue?")>>1), 16, 0, "Continue?");
 
 	// Two stars...
-	patch = W_CachePatchName("CONTSTAR", PU_PATCH);
+	patch = W_CachePatchName("CONTSTAR", PU_PATCH_LOWPRIORITY);
 	V_DrawScaledPatch(x-32, 160, 0, patch);
 	V_DrawScaledPatch(x+32, 160, 0, patch);
 
@@ -3725,14 +3655,14 @@ void F_ContinueDrawer(void)
 	if (timeleft > 9)
 	{
 		numbuf[7] = '1';
-		V_DrawScaledPatch(x - 10, 160, 0, W_CachePatchName(numbuf, PU_PATCH));
+		V_DrawScaledPatch(x - 10, 160, 0, W_CachePatchName(numbuf, PU_PATCH_LOWPRIORITY));
 		numbuf[7] = '0';
-		V_DrawScaledPatch(x + 10, 160, 0, W_CachePatchName(numbuf, PU_PATCH));
+		V_DrawScaledPatch(x + 10, 160, 0, W_CachePatchName(numbuf, PU_PATCH_LOWPRIORITY));
 	}
 	else
 	{
 		numbuf[7] = '0'+timeleft;
-		V_DrawScaledPatch(x, 160, 0, W_CachePatchName(numbuf, PU_PATCH));
+		V_DrawScaledPatch(x, 160, 0, W_CachePatchName(numbuf, PU_PATCH_LOWPRIORITY));
 	}
 
 	// Draw the continue markers! Show continues.
@@ -3761,7 +3691,7 @@ void F_ContinueDrawer(void)
 	}
 
 	// Spotlight
-	V_DrawScaledPatch(x, 140, 0, W_CachePatchName("CONTSPOT", PU_PATCH));
+	V_DrawScaledPatch(x, 140, 0, W_CachePatchName("CONTSPOT", PU_PATCH_LOWPRIORITY));
 
 	// warping laser
 	if (continuetime)
@@ -3798,7 +3728,7 @@ void F_ContinueDrawer(void)
 #define drawchar(dx, dy, n)	{\
 								sprdef = &contskins[n]->sprites[cont_spr2[n][0]];\
 								sprframe = &sprdef->spriteframes[cont_spr2[n][1]];\
-								patch = W_CachePatchNum(sprframe->lumppat[cont_spr2[n][2]], PU_PATCH);\
+								patch = W_CachePatchNum(sprframe->lumppat[cont_spr2[n][2]], PU_PATCH_LOWPRIORITY);\
 								V_DrawFixedPatch((dx), (dy), contskins[n]->highresscale, (sprframe->flip & (1<<cont_spr2[n][2])) ? V_FLIP : 0, patch, contcolormaps[n]);\
 							}
 
@@ -4063,10 +3993,10 @@ void F_CutsceneDrawer(void)
 	{
 		if (cutscenes[cutnum]->scene[scenenum].pichires[picnum])
 			V_DrawSmallScaledPatch(picxpos, picypos, 0,
-				W_CachePatchName(cutscenes[cutnum]->scene[scenenum].picname[picnum], PU_PATCH));
+				W_CachePatchName(cutscenes[cutnum]->scene[scenenum].picname[picnum], PU_PATCH_LOWPRIORITY));
 		else
 			V_DrawScaledPatch(picxpos,picypos, 0,
-				W_CachePatchName(cutscenes[cutnum]->scene[scenenum].picname[picnum], PU_PATCH));
+				W_CachePatchName(cutscenes[cutnum]->scene[scenenum].picname[picnum], PU_PATCH_LOWPRIORITY));
 	}
 
 	if (dofadenow && rendermode != render_none)
@@ -4098,7 +4028,7 @@ void F_CutsceneTicker(void)
 		if (netgame && i != serverplayer && !IsPlayerAdmin(i))
 			continue;
 
-		if (players[i].cmd.buttons & BT_USE)
+		if (players[i].cmd.buttons & BT_SPIN)
 		{
 			keypressed = false;
 			cutscene_boostspeed = 1;
@@ -4438,11 +4368,11 @@ static boolean F_GetTextPromptTutorialTag(char *tag, INT32 length)
 	else if (!strncmp(tag, "TAJ", 3)) // Jump
 		gcs = G_GetControlScheme(gamecontrol, gcl_jump, num_gcl_jump);
 	else if (!strncmp(tag, "TAS", 3)) // Spin
-		gcs = G_GetControlScheme(gamecontrol, gcl_use, num_gcl_use);
+		gcs = G_GetControlScheme(gamecontrol, gcl_spin, num_gcl_spin);
 	else if (!strncmp(tag, "TAA", 3)) // Char ability
 		gcs = G_GetControlScheme(gamecontrol, gcl_jump, num_gcl_jump);
 	else if (!strncmp(tag, "TAW", 3)) // Shield ability
-		gcs = G_GetControlScheme(gamecontrol, gcl_jump_use, num_gcl_jump_use);
+		gcs = G_GetControlScheme(gamecontrol, gcl_jump_spin, num_gcl_jump_spin);
 	else
 		gcs = G_GetControlScheme(gamecontrol, gcl_tutorial_used, num_gcl_tutorial_used);
 
@@ -4552,10 +4482,10 @@ void F_TextPromptDrawer(void)
 	{
 		if (textprompts[cutnum]->page[scenenum].pichires[picnum])
 			V_DrawSmallScaledPatch(picxpos, picypos, 0,
-				W_CachePatchName(textprompts[cutnum]->page[scenenum].picname[picnum], PU_PATCH));
+				W_CachePatchName(textprompts[cutnum]->page[scenenum].picname[picnum], PU_PATCH_LOWPRIORITY));
 		else
 			V_DrawScaledPatch(picxpos,picypos, 0,
-				W_CachePatchName(textprompts[cutnum]->page[scenenum].picname[picnum], PU_PATCH));
+				W_CachePatchName(textprompts[cutnum]->page[scenenum].picname[picnum], PU_PATCH_LOWPRIORITY));
 	}
 
 	// Draw background
@@ -4565,7 +4495,7 @@ void F_TextPromptDrawer(void)
 	if (iconlump != LUMPERROR)
 	{
 		INT32 iconx, icony, scale, scaledsize;
-		patch = W_CachePatchName(textprompts[cutnum]->page[scenenum].iconname, PU_PATCH);
+		patch = W_CachePatchName(textprompts[cutnum]->page[scenenum].iconname, PU_PATCH_LOWPRIORITY);
 
 		// scale and center
 		if (patch->width > patch->height)
@@ -4699,7 +4629,7 @@ void F_TextPromptTicker(void)
 				else
 					continue;
 
-				if ((players[i].cmd.buttons & BT_USE) || (players[i].cmd.buttons & BT_JUMP))
+				if ((players[i].cmd.buttons & BT_SPIN) || (players[i].cmd.buttons & BT_JUMP))
 				{
 					if (timetonext > 1)
 						timetonext--;
@@ -4722,7 +4652,7 @@ void F_TextPromptTicker(void)
 					}
 					keypressed = true; // prevent repeat events
 				}
-				else if (!(players[i].cmd.buttons & BT_USE) && !(players[i].cmd.buttons & BT_JUMP))
+				else if (!(players[i].cmd.buttons & BT_SPIN) && !(players[i].cmd.buttons & BT_JUMP))
 					keypressed = false;
 
 				if (!splitscreen)

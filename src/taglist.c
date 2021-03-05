@@ -1,0 +1,380 @@
+// SONIC ROBO BLAST 2
+//-----------------------------------------------------------------------------
+// Copyright (C) 1998-2000 by DooM Legacy Team.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C)      2020 by Nev3r.
+//
+// This program is free software distributed under the
+// terms of the GNU General Public License, version 2.
+// See the 'LICENSE' file for more details.
+//-----------------------------------------------------------------------------
+/// \file  taglist.c
+/// \brief Ingame sector/line/mapthing tagging.
+
+#include "taglist.h"
+#include "z_zone.h"
+#include "r_data.h"
+
+taggroup_t** tags_sectors;
+taggroup_t** tags_lines;
+taggroup_t** tags_mapthings;
+
+/// Adds a tag to a given element's taglist.
+/// \warning This does not rebuild the global taggroups, which are used for iteration.
+void Tag_Add (taglist_t* list, const mtag_t tag)
+{
+	list->tags = Z_Realloc(list->tags, (list->count + 1) * sizeof(list->tags), PU_LEVEL, NULL);
+	list->tags[list->count++] = tag;
+}
+
+/// Sets the first tag entry in a taglist.
+/// Replicates the old way of accessing element->tag.
+void Tag_FSet (taglist_t* list, const mtag_t tag)
+{
+	if (!list->count)
+	{
+		Tag_Add(list, tag);
+		return;
+	}
+
+	list->tags[0] = tag;
+}
+
+/// Gets the first tag entry in a taglist.
+/// Replicates the old way of accessing element->tag.
+mtag_t Tag_FGet (const taglist_t* list)
+{
+	if (list->count)
+		return list->tags[0];
+
+	return 0;
+}
+
+/// Returns true if the given tag exist inside the list.
+boolean Tag_Find (const taglist_t* list, const mtag_t tag)
+{
+	size_t i;
+	for (i = 0; i < list->count; i++)
+		if (list->tags[i] == tag)
+			return true;
+
+	return false;
+}
+
+/// Returns true if at least one tag is shared between two given lists.
+boolean Tag_Share (const taglist_t* list1, const taglist_t* list2)
+{
+	size_t i;
+	for (i = 0; i < list1->count; i++)
+		if (Tag_Find(list2, list1->tags[i]))
+			return true;
+
+	return false;
+}
+
+/// Returns true if both lists are identical.
+boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2)
+{
+	size_t i;
+
+	if (list1->count != list2->count)
+		return false;
+
+	for (i = 0; i < list1->count; i++)
+		if (list1->tags[i] != list2->tags[i])
+			return false;
+
+	return true;
+}
+
+/// Search for an element inside a global taggroup.
+size_t Taggroup_Find (const taggroup_t *group, const size_t id)
+{
+	size_t i;
+
+	if (!group)
+		return -1;
+
+	for (i = 0; i < group->count; i++)
+		if (group->elements[i] == id)
+			return i;
+
+	return -1;
+}
+
+/// group->count, but also checks for NULL
+size_t Taggroup_Count (const taggroup_t *group)
+{
+	return group ? group->count : 0;
+}
+
+/// Iterate thru elements in a global taggroup.
+INT32 Taggroup_Iterate
+(		taggroup_t *garray[],
+		const size_t max_elements,
+		const mtag_t tag,
+		const size_t p)
+{
+	const taggroup_t *group;
+
+	if (tag == MTAG_GLOBAL)
+	{
+		if (p < max_elements)
+			return p;
+		return -1;
+	}
+
+	group = garray[(UINT16)tag];
+
+	if (group)
+	{
+		if (p < group->count)
+			return group->elements[p];
+		return -1;
+	}
+	return -1;
+}
+
+/// Add an element to a global taggroup.
+void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
+{
+	taggroup_t *group;
+	size_t i; // Insert position.
+
+	if (tag == MTAG_GLOBAL)
+		return;
+
+	group = garray[(UINT16)tag];
+
+	// Don't add duplicate entries.
+	if (Taggroup_Find(group, id) != (size_t)-1)
+		return;
+
+	if (! in_bit_array(world->tags_available, tag))
+	{
+		world->num_tags++;
+		set_bit_array(world->tags_available, tag);
+	}
+
+	// Create group if empty.
+	if (!group)
+	{
+		i = 0;
+		group = garray[(UINT16)tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
+	}
+	else
+	{
+		// Keep the group element ids in an ascending order.
+		// Find the location to insert the element to.
+		for (i = 0; i < group->count; i++)
+			if (group->elements[i] > id)
+				break;
+	}
+
+	group->elements = Z_Realloc(group->elements, (group->count + 1) * sizeof(size_t), PU_LEVEL, NULL);
+
+	// Offset existing elements to make room for the new one.
+	if (i < group->count)
+		memmove(&group->elements[i + 1], &group->elements[i], group->count - i);
+
+	group->count++;
+	group->elements[i] = id;
+}
+
+static size_t total_elements_with_tag (const mtag_t tag)
+{
+	return
+		(
+				Taggroup_Count(world->tags_sectors[tag]) +
+				Taggroup_Count(world->tags_lines[tag]) +
+				Taggroup_Count(world->tags_mapthings[tag])
+		);
+}
+
+/// Remove an element from a global taggroup.
+void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
+{
+	taggroup_t *group;
+	size_t rempos;
+	size_t oldcount;
+
+	if (tag == MTAG_GLOBAL)
+		return;
+
+	group = garray[(UINT16)tag];
+
+	if ((rempos = Taggroup_Find(group, id)) == (size_t)-1)
+		return;
+
+	if (group->count == 1 && total_elements_with_tag(tag) == 1)
+	{
+		world->num_tags--;
+		unset_bit_array(world->tags_available, tag);
+	}
+
+	// Strip away taggroup if no elements left.
+	if (!(oldcount = group->count--))
+	{
+		Z_Free(group->elements);
+		Z_Free(group);
+		garray[(UINT16)tag] = NULL;
+	}
+	else
+	{
+		size_t *newelements = Z_Malloc(group->count * sizeof(size_t), PU_LEVEL, NULL);
+		size_t i;
+
+		// Copy the previous entries save for the one to remove.
+		for (i = 0; i < rempos; i++)
+			newelements[i] = group->elements[i];
+
+		for (i = rempos + 1; i < oldcount; i++)
+			newelements[i - 1] = group->elements[i];
+
+		Z_Free(group->elements);
+		group->elements = newelements;
+	}
+}
+
+// Initialization.
+
+static void Taglist_AddToSectors (const mtag_t tag, const size_t itemid)
+{
+	Taggroup_Add(world->tags_sectors, tag, itemid);
+}
+
+static void Taglist_AddToLines (const mtag_t tag, const size_t itemid)
+{
+	Taggroup_Add(world->tags_lines, tag, itemid);
+}
+
+static void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid)
+{
+	Taggroup_Add(world->tags_mapthings, tag, itemid);
+}
+
+/// After all taglists have been built for each element (sectors, lines, things),
+/// the global taggroups, made for iteration, are built here.
+void Taglist_InitGlobalTables(void)
+{
+	size_t i, j;
+
+	memset(world->tags_available, 0, sizeof world->tags_available);
+	world->num_tags = 0;
+
+	for (i = 0; i < MAXTAGS; i++)
+	{
+		world->tags_sectors[i] = NULL;
+		world->tags_lines[i] = NULL;
+		world->tags_mapthings[i] = NULL;
+	}
+	for (i = 0; i < world->numsectors; i++)
+	{
+		for (j = 0; j < world->sectors[i].tags.count; j++)
+			Taglist_AddToSectors(world->sectors[i].tags.tags[j], i);
+	}
+	for (i = 0; i < world->numlines; i++)
+	{
+		for (j = 0; j < world->lines[i].tags.count; j++)
+			Taglist_AddToLines(world->lines[i].tags.tags[j], i);
+	}
+	for (i = 0; i < world->nummapthings; i++)
+	{
+		for (j = 0; j < world->mapthings[i].tags.count; j++)
+			Taglist_AddToMapthings(world->mapthings[i].tags.tags[j], i);
+	}
+}
+
+// Iteration, ingame search.
+
+INT32 Tag_Iterate_Sectors (const mtag_t tag, const size_t p)
+{
+	return Taggroup_Iterate(world->tags_sectors, world->numsectors, tag, p);
+}
+
+INT32 Tag_Iterate_Lines (const mtag_t tag, const size_t p)
+{
+	return Taggroup_Iterate(world->tags_lines, world->numlines, tag, p);
+}
+
+INT32 Tag_Iterate_Things (const mtag_t tag, const size_t p)
+{
+	return Taggroup_Iterate(world->tags_mapthings, world->nummapthings, tag, p);
+}
+
+INT32 Tag_FindLineSpecial(const INT16 special, const mtag_t tag)
+{
+	size_t i;
+
+	if (tag == MTAG_GLOBAL)
+	{
+		for (i = 0; i < world->numlines; i++)
+			if (world->lines[i].special == special)
+				return i;
+	}
+	else if (world->tags_lines[(UINT16)tag])
+	{
+		taggroup_t *tagged = world->tags_lines[(UINT16)tag];
+		for (i = 0; i < tagged->count; i++)
+			if (world->lines[tagged->elements[i]].special == special)
+				return tagged->elements[i];
+	}
+	return -1;
+}
+
+/// Backwards compatibility iteration function for Lua scripts.
+INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
+{
+	if (tag == -1)
+	{
+		start++;
+
+		if (start >= (INT32)world->numlines)
+			return -1;
+
+		while (start < (INT32)world->numlines && world->lines[start].special != special)
+			start++;
+
+		return start;
+	}
+	else
+	{
+		size_t p = 0;
+		INT32 id;
+
+		// For backwards compatibility's sake, simulate the old linked taglist behavior:
+		// Iterate through the taglist and find the "start" line's position in the list,
+		// And start checking with the next one (if it exists).
+		if (start != -1)
+		{
+			for (; (id = Tag_Iterate_Lines(tag, p)) >= 0; p++)
+				if (id == start)
+				{
+					p++;
+					break;
+				}
+		}
+
+		for (; (id = Tag_Iterate_Lines(tag, p)) >= 0; p++)
+			if (world->lines[id].special == special)
+				return id;
+
+		return -1;
+	}
+}
+
+
+// Ingame list manipulation.
+
+/// Changes the first tag for a given sector, and updates the global taggroups.
+void Tag_SectorFSet (const size_t id, const mtag_t tag)
+{
+	sector_t* sec = &world->sectors[id];
+	mtag_t curtag = Tag_FGet(&sec->tags);
+	if (curtag == tag)
+		return;
+
+	Taggroup_Remove(world->tags_sectors, curtag, id);
+	Taggroup_Add(world->tags_sectors, tag, id);
+	Tag_FSet(&sec->tags, tag);
+}

@@ -193,7 +193,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		{
 			cmd->forwardmove = pcmd->forwardmove;
 			cmd->sidemove = pcmd->sidemove;
-			if (pcmd->buttons & BT_USE)
+			if (pcmd->buttons & BT_SPIN)
 			{
 				spin = true;
 				jump = false;
@@ -441,7 +441,7 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 	if (jump)
 		cmd->buttons |= BT_JUMP;
 	if (spin)
-		cmd->buttons |= BT_USE;
+		cmd->buttons |= BT_SPIN;
 }
 
 void B_MoveBlocked(player_t *player)

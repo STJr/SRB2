@@ -15,6 +15,9 @@
 // SPANS
 // ==========================================================================
 
+#define SPANSIZE 16
+#define INVSPAN 0.0625f
+
 /**	\brief The R_DrawSpan_NPO2_8 function
 	Draws the actual span.
 */
@@ -23,6 +26,8 @@ void R_DrawSpan_NPO2_8 (void)
 	fixed_t xposition;
 	fixed_t yposition;
 	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
 
 	UINT8 *source;
 	UINT8 *colormap;
@@ -41,27 +46,45 @@ void R_DrawSpan_NPO2_8 (void)
 	if (dest+8 > deststop)
 		return;
 
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
 	while (count-- && dest <= deststop)
 	{
-		fixed_t x = (xposition >> FRACBITS);
-		fixed_t y = (yposition >> FRACBITS);
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
 
-		// Carefully align all of my Friends.
-		if (x < 0)
-			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
-		if (y < 0)
-			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-		x %= ds_flatwidth;
-		y %= ds_flatheight;
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
 
 		*dest++ = colormap[source[((y * ds_flatwidth) + x)]];
 		xposition += xstep;
 		yposition += ystep;
 	}
 }
-
-#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f * FIXED_TO_FLOAT(fovtan))
 
 /**	\brief The R_DrawTiltedSpan_NPO2_8 function
 	Draw slopes! Holy sheit!
@@ -137,9 +160,6 @@ void R_DrawTiltedSpan_NPO2_8(void)
 		vz += ds_svp->x;
 	} while (--width >= 0);
 #else
-#define SPANSIZE 16
-#define INVSPAN	0.0625f
-
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
@@ -332,9 +352,6 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 		vz += ds_svp->x;
 	} while (--width >= 0);
 #else
-#define SPANSIZE 16
-#define INVSPAN	0.0625f
-
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
@@ -531,9 +548,6 @@ void R_DrawTiltedSplat_NPO2_8(void)
 		vz += ds_svp->x;
 	} while (--width >= 0);
 #else
-#define SPANSIZE 16
-#define INVSPAN	0.0625f
-
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
@@ -668,6 +682,8 @@ void R_DrawSplat_NPO2_8 (void)
 	fixed_t xposition;
 	fixed_t yposition;
 	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
 
 	UINT8 *source;
 	UINT8 *colormap;
@@ -684,20 +700,39 @@ void R_DrawSplat_NPO2_8 (void)
 	colormap = ds_colormap;
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
 	while (count-- && dest <= deststop)
 	{
-		fixed_t x = (xposition >> FRACBITS);
-		fixed_t y = (yposition >> FRACBITS);
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
 
-		// Carefully align all of my Friends.
-		if (x < 0)
-			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
-		if (y < 0)
-			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-		x %= ds_flatwidth;
-		y %= ds_flatheight;
-
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
 		val = source[((y * ds_flatwidth) + x)];
 		if (val != TRANSPARENTPIXEL)
 			*dest = colormap[val];
@@ -715,6 +750,8 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 	fixed_t xposition;
 	fixed_t yposition;
 	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
 
 	UINT8 *source;
 	UINT8 *colormap;
@@ -731,26 +768,485 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 	colormap = ds_colormap;
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
 	while (count-- && dest <= deststop)
 	{
-		fixed_t x = (xposition >> FRACBITS);
-		fixed_t y = (yposition >> FRACBITS);
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
 
-		// Carefully align all of my Friends.
-		if (x < 0)
-			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
-		if (y < 0)
-			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-		x %= ds_flatwidth;
-		y %= ds_flatheight;
-
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
 		val = source[((y * ds_flatwidth) + x)];
 		if (val != TRANSPARENTPIXEL)
 			*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
 		dest++;
 		xposition += xstep;
 		yposition += ystep;
+	}
+}
+
+/**	\brief The R_DrawFloorSprite_NPO2_8 function
+	Just like R_DrawSplat_NPO2_8, but for floor sprites.
+*/
+void R_DrawFloorSprite_NPO2_8 (void)
+{
+	fixed_t xposition;
+	fixed_t yposition;
+	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
+
+	UINT16 *source;
+	UINT8 *translation;
+	UINT8 *colormap;
+	UINT8 *dest;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+
+	size_t count = (ds_x2 - ds_x1 + 1);
+	UINT32 val;
+
+	xposition = ds_xfrac; yposition = ds_yfrac;
+	xstep = ds_xstep; ystep = ds_ystep;
+
+	source = (UINT16 *)ds_source;
+	colormap = ds_colormap;
+	translation = ds_translation;
+	dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
+	while (count-- && dest <= deststop)
+	{
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
+
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
+		val = source[((y * ds_flatwidth) + x)];
+		if (val & 0xFF00)
+			*dest = colormap[translation[val & 0xFF]];
+		dest++;
+		xposition += xstep;
+		yposition += ystep;
+	}
+}
+
+/**	\brief The R_DrawTranslucentFloorSprite_NPO2_8 function
+	Just like R_DrawFloorSprite_NPO2_8, but is translucent!
+*/
+void R_DrawTranslucentFloorSprite_NPO2_8 (void)
+{
+	fixed_t xposition;
+	fixed_t yposition;
+	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
+
+	UINT16 *source;
+	UINT8 *translation;
+	UINT8 *colormap;
+	UINT8 *dest;
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+
+	size_t count = (ds_x2 - ds_x1 + 1);
+	UINT32 val;
+
+	xposition = ds_xfrac; yposition = ds_yfrac;
+	xstep = ds_xstep; ystep = ds_ystep;
+
+	source = (UINT16 *)ds_source;
+	colormap = ds_colormap;
+	translation = ds_translation;
+	dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
+	while (count-- && dest <= deststop)
+	{
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
+
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
+		val = source[((y * ds_flatwidth) + x)];
+		if (val & 0xFF00)
+			*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+		dest++;
+		xposition += xstep;
+		yposition += ystep;
+	}
+}
+
+/**	\brief The R_DrawTiltedFloorSprite_NPO2_8 function
+	Draws a tilted floor sprite.
+*/
+void R_DrawTiltedFloorSprite_NPO2_8(void)
+{
+	// x1, x2 = ds_x1, ds_x2
+	int width = ds_x2 - ds_x1;
+	double iz, uz, vz;
+	UINT32 u, v;
+	int i;
+
+	UINT16 *source;
+	UINT8 *colormap;
+	UINT8 *translation;
+	UINT8 *dest;
+	UINT16 val;
+
+	double startz, startu, startv;
+	double izstep, uzstep, vzstep;
+	double endz, endu, endv;
+	UINT32 stepu, stepv;
+
+	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
+	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+
+	dest = ylookup[ds_y] + columnofs[ds_x1];
+	source = (UINT16 *)ds_source;
+	colormap = ds_colormap;
+	translation = ds_translation;
+
+	startz = 1.f/iz;
+	startu = uz*startz;
+	startv = vz*startz;
+
+	izstep = ds_szp->x * SPANSIZE;
+	uzstep = ds_sup->x * SPANSIZE;
+	vzstep = ds_svp->x * SPANSIZE;
+	//x1 = 0;
+	width++;
+
+	while (width >= SPANSIZE)
+	{
+		iz += izstep;
+		uz += uzstep;
+		vz += vzstep;
+
+		endz = 1.f/iz;
+		endu = uz*endz;
+		endv = vz*endz;
+		stepu = (INT64)((endu - startu) * INVSPAN);
+		stepv = (INT64)((endv - startv) * INVSPAN);
+		u = (INT64)(startu) + viewx;
+		v = (INT64)(startv) + viewy;
+
+		for (i = SPANSIZE-1; i >= 0; i--)
+		{
+			// Lactozilla: Non-powers-of-two
+			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+
+			// Carefully align all of my Friends.
+			if (x < 0)
+				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+			if (y < 0)
+				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+			x %= ds_flatwidth;
+			y %= ds_flatheight;
+
+			val = source[((y * ds_flatwidth) + x)];
+			if (val & 0xFF00)
+				*dest = colormap[translation[val & 0xFF]];
+			dest++;
+
+			u += stepu;
+			v += stepv;
+		}
+		startu = endu;
+		startv = endv;
+		width -= SPANSIZE;
+	}
+	if (width > 0)
+	{
+		if (width == 1)
+		{
+			u = (INT64)(startu);
+			v = (INT64)(startv);
+			// Lactozilla: Non-powers-of-two
+			{
+				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+
+				// Carefully align all of my Friends.
+				if (x < 0)
+					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				if (y < 0)
+					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+				x %= ds_flatwidth;
+				y %= ds_flatheight;
+
+				val = source[((y * ds_flatwidth) + x)];
+				if (val & 0xFF00)
+					*dest = colormap[translation[val & 0xFF]];
+			}
+		}
+		else
+		{
+			double left = width;
+			iz += ds_szp->x * left;
+			uz += ds_sup->x * left;
+			vz += ds_svp->x * left;
+
+			endz = 1.f/iz;
+			endu = uz*endz;
+			endv = vz*endz;
+			left = 1.f/left;
+			stepu = (INT64)((endu - startu) * left);
+			stepv = (INT64)((endv - startv) * left);
+			u = (INT64)(startu) + viewx;
+			v = (INT64)(startv) + viewy;
+
+			for (; width != 0; width--)
+			{
+				// Lactozilla: Non-powers-of-two
+				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+
+				// Carefully align all of my Friends.
+				if (x < 0)
+					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				if (y < 0)
+					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+				x %= ds_flatwidth;
+				y %= ds_flatheight;
+
+				val = source[((y * ds_flatwidth) + x)];
+				if (val & 0xFF00)
+					*dest = colormap[translation[val & 0xFF]];
+				dest++;
+
+				u += stepu;
+				v += stepv;
+			}
+		}
+	}
+}
+
+/**	\brief The R_DrawTiltedTranslucentFloorSprite_NPO2_8 function
+	Draws a tilted, translucent, floor sprite.
+*/
+void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
+{
+	// x1, x2 = ds_x1, ds_x2
+	int width = ds_x2 - ds_x1;
+	double iz, uz, vz;
+	UINT32 u, v;
+	int i;
+
+	UINT16 *source;
+	UINT8 *colormap;
+	UINT8 *translation;
+	UINT8 *dest;
+	UINT16 val;
+
+	double startz, startu, startv;
+	double izstep, uzstep, vzstep;
+	double endz, endu, endv;
+	UINT32 stepu, stepv;
+
+	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
+	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+
+	dest = ylookup[ds_y] + columnofs[ds_x1];
+	source = (UINT16 *)ds_source;
+	colormap = ds_colormap;
+	translation = ds_translation;
+
+	startz = 1.f/iz;
+	startu = uz*startz;
+	startv = vz*startz;
+
+	izstep = ds_szp->x * SPANSIZE;
+	uzstep = ds_sup->x * SPANSIZE;
+	vzstep = ds_svp->x * SPANSIZE;
+	//x1 = 0;
+	width++;
+
+	while (width >= SPANSIZE)
+	{
+		iz += izstep;
+		uz += uzstep;
+		vz += vzstep;
+
+		endz = 1.f/iz;
+		endu = uz*endz;
+		endv = vz*endz;
+		stepu = (INT64)((endu - startu) * INVSPAN);
+		stepv = (INT64)((endv - startv) * INVSPAN);
+		u = (INT64)(startu) + viewx;
+		v = (INT64)(startv) + viewy;
+
+		for (i = SPANSIZE-1; i >= 0; i--)
+		{
+			// Lactozilla: Non-powers-of-two
+			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+
+			// Carefully align all of my Friends.
+			if (x < 0)
+				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+			if (y < 0)
+				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+			x %= ds_flatwidth;
+			y %= ds_flatheight;
+
+			val = source[((y * ds_flatwidth) + x)];
+			if (val & 0xFF00)
+				*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+			dest++;
+
+			u += stepu;
+			v += stepv;
+		}
+		startu = endu;
+		startv = endv;
+		width -= SPANSIZE;
+	}
+	if (width > 0)
+	{
+		if (width == 1)
+		{
+			u = (INT64)(startu);
+			v = (INT64)(startv);
+			// Lactozilla: Non-powers-of-two
+			{
+				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+
+				// Carefully align all of my Friends.
+				if (x < 0)
+					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				if (y < 0)
+					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+				x %= ds_flatwidth;
+				y %= ds_flatheight;
+
+				val = source[((y * ds_flatwidth) + x)];
+				if (val & 0xFF00)
+					*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+			}
+		}
+		else
+		{
+			double left = width;
+			iz += ds_szp->x * left;
+			uz += ds_sup->x * left;
+			vz += ds_svp->x * left;
+
+			endz = 1.f/iz;
+			endu = uz*endz;
+			endv = vz*endz;
+			left = 1.f/left;
+			stepu = (INT64)((endu - startu) * left);
+			stepv = (INT64)((endv - startv) * left);
+			u = (INT64)(startu) + viewx;
+			v = (INT64)(startv) + viewy;
+
+			for (; width != 0; width--)
+			{
+				// Lactozilla: Non-powers-of-two
+				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
+				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+
+				// Carefully align all of my Friends.
+				if (x < 0)
+					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				if (y < 0)
+					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
+
+				x %= ds_flatwidth;
+				y %= ds_flatheight;
+
+				val = source[((y * ds_flatwidth) + x)];
+				if (val & 0xFF00)
+					*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+				dest++;
+
+				u += stepu;
+				v += stepv;
+			}
+		}
 	}
 }
 
@@ -762,6 +1258,8 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 	fixed_t xposition;
 	fixed_t yposition;
 	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
 
 	UINT8 *source;
 	UINT8 *colormap;
@@ -778,20 +1276,39 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 	colormap = ds_colormap;
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
 	while (count-- && dest <= deststop)
 	{
-		fixed_t x = (xposition >> FRACBITS);
-		fixed_t y = (yposition >> FRACBITS);
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
 
-		// Carefully align all of my Friends.
-		if (x < 0)
-			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
-		if (y < 0)
-			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-		x %= ds_flatwidth;
-		y %= ds_flatheight;
-
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
 		val = ((y * ds_flatwidth) + x);
 		*dest = *(ds_transmap + (colormap[source[val]] << 8) + *dest);
 		dest++;
@@ -800,12 +1317,13 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 	}
 }
 
-#ifndef NOWATER
 void R_DrawTranslucentWaterSpan_NPO2_8(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
 	fixed_t xstep, ystep;
+	fixed_t x, y;
+	fixed_t fixedwidth, fixedheight;
 
 	UINT8 *source;
 	UINT8 *colormap;
@@ -823,20 +1341,39 @@ void R_DrawTranslucentWaterSpan_NPO2_8(void)
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 
+	fixedwidth = ds_flatwidth << FRACBITS;
+	fixedheight = ds_flatheight << FRACBITS;
+
+	// Fix xposition and yposition if they are out of bounds.
+	if (xposition < 0)
+		xposition = fixedwidth - ((UINT32)(fixedwidth - xposition) % fixedwidth);
+	else if (xposition >= fixedwidth)
+		xposition %= fixedwidth;
+	if (yposition < 0)
+		yposition = fixedheight - ((UINT32)(fixedheight - yposition) % fixedheight);
+	else if (yposition >= fixedheight)
+		yposition %= fixedheight;
+
 	while (count-- && dest <= deststop)
 	{
-		fixed_t x = (xposition >> FRACBITS);
-		fixed_t y = (yposition >> FRACBITS);
+		// The loops here keep the texture coordinates within the texture.
+		// They will rarely iterate multiple times, and are cheaper than a modulo operation,
+		// even if using libdivide.
+		if (xstep < 0) // These if statements are hopefully hoisted by the compiler to above this loop
+			while (xposition < 0)
+				xposition += fixedwidth;
+		else
+			while (xposition >= fixedwidth)
+				xposition -= fixedwidth;
+		if (ystep < 0)
+			while (yposition < 0)
+				yposition += fixedheight;
+		else
+			while (yposition >= fixedheight)
+				yposition -= fixedheight;
 
-		// Carefully align all of my Friends.
-		if (x < 0)
-			x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
-		if (y < 0)
-			y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-		x %= ds_flatwidth;
-		y %= ds_flatheight;
-
+		x = (xposition >> FRACBITS);
+		y = (yposition >> FRACBITS);
 		*dest++ = colormap[*(ds_transmap + (source[((y * ds_flatwidth) + x)] << 8) + *dsrc++)];
 		xposition += xstep;
 		yposition += ystep;
@@ -918,9 +1455,6 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 		vz += ds_svp->x;
 	} while (--width >= 0);
 #else
-#define SPANSIZE 16
-#define INVSPAN	0.0625f
-
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
@@ -1039,4 +1573,3 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 	}
 #endif
 }
-#endif // NOWATER

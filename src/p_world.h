@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2020 by Sonic Team Junior.
-// Copyright (C) 2020 by Jaime Ita Passos.
+// Copyright (C) 2020-2021 by Jaime Ita Passos.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,7 @@
 #include "r_state.h"
 #include "p_polyobj.h"
 #include "p_slopes.h"
+#include "taglist.h"
 #include "doomstat.h"
 
 // Player spawn spots for deathmatch.
@@ -106,6 +107,18 @@ typedef struct
 	INT32 numPolyObjects;
 	polymaplink_t **polyblocklinks; // Polyobject Blockmap -- initialized in P_LoadBlockMap
 	polymaplink_t *po_bmap_freelist; // free list of blockmap links
+
+	// Bit array of whether a tag exists for sectors/lines/things.
+	bitarray_t tags_available[BIT_ARRAY_SIZE (MAXTAGS)];
+
+	size_t num_tags;
+
+	// Taggroups are used to list elements of the same tag, for iteration.
+	// Since elements can now have multiple tags, it means an element may appear
+	// in several taggroups at the same time. These are built on level load.
+	taggroup_t* tags_sectors[MAXTAGS + 1];
+	taggroup_t* tags_lines[MAXTAGS + 1];
+	taggroup_t* tags_mapthings[MAXTAGS + 1];
 } world_t;
 
 extern world_t *world;

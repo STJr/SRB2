@@ -32,9 +32,7 @@ enum
 	LEVELFLAT_NONE,/* HOM time my friend */
 	LEVELFLAT_FLAT,
 	LEVELFLAT_PATCH,
-#ifndef NO_PNG_LUMPS
 	LEVELFLAT_PNG,
-#endif
 	LEVELFLAT_TEXTURE,
 };
 
@@ -67,15 +65,18 @@ typedef struct
 	u;
 
 	UINT16 width, height;
-	fixed_t topoffset, leftoffset;
 
 	// for flat animation
 	INT32 animseq; // start pos. in the anim sequence
 	INT32 numpics;
 	INT32 speed;
 
-	// for patchflats
-	UINT8 *flatpatch;
+	// for textures
+	UINT8 *picture;
+#ifdef HWRENDER
+	void *mipmap;
+	void *mippic;
+#endif
 } levelflat_t;
 
 INT32 P_AddLevelFlat(const char *flatname, levelflat_t *levelflat);
@@ -91,16 +92,16 @@ void P_SetupSkyTexture(INT32 skynum);
 void P_ScanThings(INT16 mapnum, INT16 wadnum, INT16 lumpnum);
 #endif
 void P_RespawnThings(void);
-boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave);
+boolean P_LoadLevel(player_t *player, boolean addworld, boolean fromnetsave, boolean reloadinggamestate);
 #ifdef HWRENDER
-void HWR_SetupLevel(void);
+void HWR_LoadLevel(void);
 #endif
 
 boolean P_AddWadFile(const char *wadfilename);
 boolean P_RunSOC(const char *socfilename);
 void P_LoadSoundsRange(UINT16 wadnum, UINT16 first, UINT16 num);
 void P_LoadMusicsRange(UINT16 wadnum, UINT16 first, UINT16 num);
-void P_WriteThings(lumpnum_t lump);
+void P_WriteThings(void);
 size_t P_PrecacheLevelFlats(void);
 void P_AllocMapHeader(INT16 i);
 

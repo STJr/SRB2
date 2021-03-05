@@ -15,6 +15,35 @@
 
 #include "m_fixed.h" // Vectors
 
+typedef enum
+{
+	TMSP_FRONTFLOOR,
+	TMSP_FRONTCEILING,
+	TMSP_BACKFLOOR,
+	TMSP_BACKCEILING,
+} textmapslopeplane_t;
+
+typedef enum
+{
+	TMSC_FRONTTOBACKFLOOR   = 1,
+	TMSC_BACKTOFRONTFLOOR   = 1<<1,
+	TMSC_FRONTTOBACKCEILING = 1<<2,
+	TMSC_BACKTOFRONTCEILING = 1<<3,
+} textmapslopecopy_t;
+
+typedef enum
+{
+	TMS_NONE,
+	TMS_FRONT,
+	TMS_BACK,
+} textmapside_t;
+
+typedef enum
+{
+	TMSL_NOPHYSICS = 1,
+	TMSL_DYNAMIC = 2,
+} textmapslopeflags_t;
+
 void P_LinkSlopeThinkers (void);
 
 void P_CalculateSlopeNormal(pslope_t *slope);
@@ -27,7 +56,7 @@ void P_SpawnSlopes(const boolean fromsave);
 //
 void P_CopySectorSlope(line_t *line);
 
-pslope_t *P_SlopeById(UINT16 id);
+pslope_t *P_SlopeById(pslope_t *list, UINT16 id);
 
 // Returns the height of the sloped plane at (x, y) as a fixed_t
 fixed_t P_GetSlopeZAt(const pslope_t *slope, fixed_t x, fixed_t y);

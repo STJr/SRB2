@@ -196,9 +196,9 @@ static void MidiSoundfontPath_Onchange(void)
 // make sure that s_sound.c does not already verify these
 // which happens when: defined(HAVE_MIXERX) && !defined(HAVE_MIXER)
 static CV_PossibleValue_t midiplayer_cons_t[] = {{MIDI_OPNMIDI, "OPNMIDI"}, {MIDI_Fluidsynth, "Fluidsynth"}, {MIDI_Timidity, "Timidity"}, {MIDI_Native, "Native"}, {0, NULL}};
-consvar_t cv_midiplayer = {"midiplayer", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, Midiplayer_Onchange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_midisoundfontpath = {"midisoundfont", "sf2/8bitsf.SF2", CV_CALL|CV_NOINIT|CV_SAVE, NULL, MidiSoundfontPath_Onchange, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_miditimiditypath = {"midisoundbank", "./timidity", CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_midiplayer = CVAR_INIT ("midiplayer", "OPNMIDI" /*MIDI_OPNMIDI*/, CV_CALL|CV_NOINIT|CV_SAVE, midiplayer_cons_t, Midiplayer_Onchange);
+consvar_t cv_midisoundfontpath = CVAR_INIT ("midisoundfont", "sf2/8bitsf.SF2", CV_CALL|CV_NOINIT|CV_SAVE, NULL, MidiSoundfontPath_Onchange);
+consvar_t cv_miditimiditypath = CVAR_INIT ("midisoundbank", "./timidity", CV_SAVE, NULL, NULL);
 #endif
 
 static void var_cleanup(void)
@@ -1298,6 +1298,10 @@ boolean I_PlaySong(boolean looping)
 	if (gme)
 	{
 		gme_equalizer_t eq = {GME_TREBLE, GME_BASS, 0,0,0,0,0,0,0,0};
+#if defined (GME_VERSION) && GME_VERSION >= 0x000603
+		if (looping)
+			gme_set_autoload_playback_limit(gme, 0);
+#endif        
 		gme_set_equalizer(gme, &eq);
 		gme_start_track(gme, 0);
 		current_track = 0;
