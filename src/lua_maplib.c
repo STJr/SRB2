@@ -583,17 +583,6 @@ static int sector_get(lua_State *L)
 		lua_pushinteger(L, sector->special);
 		return 1;
 	case sector_tag:
-		// HELLO
-		// THIS IS LJ SONIC
-		// HOW IS YOUR DAY?
-		// BY THE WAY WHEN 2.3 OR 3.0 OR 4.0 OR SRB3 OR SRB4 OR WHATEVER IS OUT
-		// YOU SHOULD REMEMBER TO CHANGE THIS SO IT ALWAYS RETURNS A UNSIGNED VALUE
-		// HAVE A NICE DAY
-		//
-		//
-		//
-		//
-		// you are ugly
 		lua_pushinteger(L, (UINT16)Tag_FGet(&sector->tags));
 		return 1;
 	case sector_taglist:
