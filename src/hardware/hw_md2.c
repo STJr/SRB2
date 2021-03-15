@@ -1405,6 +1405,11 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			|| ((!hwrBlendPatch->mipmap->format || !hwrBlendPatch->mipmap->downloaded) && !md2->noblendfile)))
 			md2_loadBlendTexture(md2);
 
+		// Load it again, because it isn't being loaded into blendgpatch after md2_loadblendtexture...
+		blendgpatch = md2->blendgrpatch;
+		if (blendgpatch)
+			hwrBlendPatch = ((GLPatch_t *)blendgpatch->hardware);
+
 		if (md2->error)
 			return false; // we already failed loading this before :(
 		if (!md2->model)
