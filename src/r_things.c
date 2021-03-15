@@ -1424,7 +1424,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	fixed_t sheartan = 0;
 	fixed_t shadowscale = FRACUNIT;
-	fixed_t basetx; // drop shadows
+	fixed_t basetx, basetz; // drop shadows
 
 	boolean shadowdraw, shadoweffects, shadowskew;
 	boolean splat = R_ThingIsFloorSprite(thing);
@@ -1454,7 +1454,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	tr_x = thing->x - viewx;
 	tr_y = thing->y - viewy;
 
-	tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin); // near/far distance
+	basetz = tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin); // near/far distance
 
 	// thing is behind view plane?
 	if (!papersprite && (tz < FixedMul(MINZ, this_scale))) // papersprite clipping is handled later
@@ -2054,7 +2054,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		R_SplitSprite(vis);
 
 	if (oldthing->shadowscale && cv_shadow.value)
-		R_ProjectDropShadow(oldthing, vis, oldthing->shadowscale, basetx, tz);
+		R_ProjectDropShadow(oldthing, vis, oldthing->shadowscale, basetx, basetz);
 
 	// Debug
 	++objectsdrawn;
