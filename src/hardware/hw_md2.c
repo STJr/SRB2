@@ -158,7 +158,7 @@ static GLTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_
 	jmp_buf jmpbuf;
 #endif
 #endif
-	png_FILE_p png_FILE;
+	volatile png_FILE_p png_FILE;
 	//Filename checking fixed ~Monster Iestyn and Golden
 	char *pngfilename = va("%s"PATHSEP"models"PATHSEP"%s", srb2home, filename);
 
