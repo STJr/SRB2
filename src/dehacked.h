@@ -30,15 +30,15 @@ typedef enum
 void DEH_LoadDehackedLump(lumpnum_t lumpnum);
 void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump, boolean mainfile);
 
-void DEH_Check(void);
-
 fixed_t get_number(const char *word);
-
-boolean LUA_SetLuaAction(void *state, const char *actiontocompare);
-const char *LUA_GetActionName(void *action);
-void LUA_SetActionByName(void *state, const char *actiontocompare);
+FUNCPRINTF void deh_warning(const char *first, ...);
+void deh_strlcpy(char *dst, const char *src, size_t size, const char *warntext);
 
 extern boolean deh_loaded;
+
+extern boolean gamedataadded;
+extern boolean titlechanged;
+extern boolean introchanged;
 
 #define MAXRECURSION 30
 extern const char *superactions[MAXRECURSION];
@@ -60,4 +60,5 @@ typedef struct
 } MYFILE;
 #define myfeof(a) (a->data + a->size <= a->curpos)
 char *myfgets(char *buf, size_t bufsize, MYFILE *f);
+char *myhashfgets(char *buf, size_t bufsize, MYFILE *f);
 #endif

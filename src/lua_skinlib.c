@@ -21,7 +21,6 @@
 enum skin {
 	skin_valid = 0,
 	skin_name,
-	skin_spritedef,
 	skin_wadnum,
 	skin_flags,
 	skin_realname,
@@ -54,12 +53,12 @@ enum skin {
 	skin_contspeed,
 	skin_contangle,
 	skin_soundsid,
-	skin_availability
+	skin_availability,
+	skin_sprites
 };
 static const char *const skin_opt[] = {
 	"valid",
 	"name",
-	"spritedef",
 	"wadnum",
 	"flags",
 	"realname",
@@ -93,6 +92,7 @@ static const char *const skin_opt[] = {
 	"contangle",
 	"soundsid",
 	"availability",
+	"sprites",
 	NULL};
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("skin_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", skin_opt[field])
@@ -113,8 +113,6 @@ static int skin_get(lua_State *L)
 	case skin_name:
 		lua_pushstring(L, skin->name);
 		break;
-	case skin_spritedef:
-		return UNIMPLEMENTED;
 	case skin_wadnum:
 		// !!WARNING!! May differ between clients due to music wads, therefore NOT NETWORK SAFE
 		return UNIMPLEMENTED;
@@ -213,6 +211,9 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_availability:
 		lua_pushinteger(L, skin->availability);
+		break;
+	case skin_sprites:
+		LUA_PushLightUserdata(L, skin->sprites, META_SKINSPRITES);
 		break;
 	}
 	return 1;
@@ -324,6 +325,49 @@ static int soundsid_num(lua_State *L)
 	return 1;
 }
 
+enum spritesopt {
+	numframes = 0
+};
+
+static const char *const sprites_opt[] = {
+	"numframes",
+	NULL};
+
+// skin.sprites[i] -> sprites[i]
+static int lib_getSkinSprite(lua_State *L)
+{
+	spritedef_t *sprites = (spritedef_t *)luaL_checkudata(L, 1, META_SKINSPRITES);
+	playersprite_t i = luaL_checkinteger(L, 2);
+
+	if (i < 0 || i >= NUMPLAYERSPRITES*2)
+		return luaL_error(L, LUA_QL("skin_t") " field 'sprites' index %d out of range (0 - %d)", i, (NUMPLAYERSPRITES*2)-1);
+
+	LUA_PushLightUserdata(L, &sprites[i], META_SKINSPRITESLIST);
+	return 1;
+}
+
+// #skin.sprites -> NUMPLAYERSPRITES*2
+static int lib_numSkinsSprites(lua_State *L)
+{
+	lua_pushinteger(L, NUMPLAYERSPRITES*2);
+	return 1;
+}
+
+static int sprite_get(lua_State *L)
+{
+	spritedef_t *sprite = (spritedef_t *)luaL_checkudata(L, 1, META_SKINSPRITESLIST);
+	enum spritesopt field = luaL_checkoption(L, 2, NULL, sprites_opt);
+
+	switch (field)
+	{
+	case numframes:
+		lua_pushinteger(L, sprite->numframes);
+		break;
+	}
+	return 1;
+}
+
+
 int LUA_SkinLib(lua_State *L)
 {
 	luaL_newmetatable(L, META_SKIN);
@@ -343,6 +387,19 @@ int LUA_SkinLib(lua_State *L)
 
 		lua_pushcfunction(L, soundsid_num);
 		lua_setfield(L, -2, "__len");
+	lua_pop(L,1);
+
+	luaL_newmetatable(L, META_SKINSPRITES);
+		lua_pushcfunction(L, lib_getSkinSprite);
+		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, lib_numSkinsSprites);
+		lua_setfield(L, -2, "__len");
+	lua_pop(L,1);
+
+	luaL_newmetatable(L, META_SKINSPRITESLIST);
+		lua_pushcfunction(L, sprite_get);
+		lua_setfield(L, -2, "__index");
 	lua_pop(L,1);
 
 	lua_newuserdata(L, 0);

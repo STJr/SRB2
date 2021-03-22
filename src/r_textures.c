@@ -20,6 +20,7 @@
 #include "m_misc.h"
 #include "r_data.h"
 #include "r_textures.h"
+#include "r_patch.h"
 #include "r_picformats.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -33,7 +34,7 @@
 #endif
 
 #ifdef HWRENDER
-#include "hardware/hw_main.h" // HWR_LoadTextures
+#include "hardware/hw_glob.h" // HWR_LoadMapTextures
 #endif
 
 #include <errno.h>
@@ -266,7 +267,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	UINT8 *blocktex;
 	texture_t *texture;
 	texpatch_t *patch;
-	patch_t *realpatch;
+	softwarepatch_t *realpatch;
 	UINT8 *pdata;
 	int x, x1, x2, i, width, height;
 	size_t blocksize;
@@ -296,7 +297,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
-		realpatch = (patch_t *)pdata;
+		realpatch = (softwarepatch_t *)pdata;
 
 #ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
@@ -392,17 +393,17 @@ UINT8 *R_GenerateTexture(size_t texnum)
 		lumpnum = patch->lump;
 		pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 		lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-		realpatch = (patch_t *)pdata;
+		realpatch = (softwarepatch_t *)pdata;
 		dealloc = true;
 
 #ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = (patch_t *)Picture_PNGConvert((UINT8 *)realpatch, PICFMT_PATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
+			realpatch = (softwarepatch_t *)Picture_PNGConvert((UINT8 *)realpatch, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
 		else
 #endif
 #ifdef WALLFLATS
 		if (texture->type == TEXTURETYPE_FLAT)
-			realpatch = (patch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_PATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
+			realpatch = (softwarepatch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_DOOMPATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
 		else
 #endif
 		{
@@ -597,13 +598,13 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 			{
 				UINT8 *converted;
 				size_t size;
-				patch_t *patch = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE);
+				softwarepatch_t *patch = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE);
 
 				levelflat->width = ds_flatwidth = SHORT(patch->width);
 				levelflat->height = ds_flatheight = SHORT(patch->height);
 
 				levelflat->picture = Z_Malloc(levelflat->width * levelflat->height, PU_LEVEL, NULL);
-				converted = Picture_FlatConvert(PICFMT_PATCH, patch, PICFMT_FLAT, 0, &size, levelflat->width, levelflat->height, patch->topoffset, patch->leftoffset, 0);
+				converted = Picture_FlatConvert(PICFMT_DOOMPATCH, patch, PICFMT_FLAT, 0, &size, levelflat->width, levelflat->height, SHORT(patch->topoffset), SHORT(patch->leftoffset), 0);
 				M_Memcpy(levelflat->picture, converted, size);
 				Z_Free(converted);
 			}
@@ -839,7 +840,7 @@ Rloadtextures (INT32 i, INT32 w)
 	UINT16 j;
 	UINT16 texstart, texend, texturesLumpPos;
 	texture_t *texture;
-	patch_t *patchlump;
+	softwarepatch_t *patchlump;
 	texpatch_t *patch;
 
 	// Get the lump numbers for the markers in the WAD, if they exist.
@@ -1062,7 +1063,7 @@ void R_LoadTextures(void)
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-		HWR_LoadTextures(numtextures);
+		HWR_LoadMapTextures(numtextures);
 #endif
 }
 

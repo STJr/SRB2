@@ -37,13 +37,12 @@ void HWR_DrawViewBorder(INT32 clearlines);
 void HWR_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum);
 void HWR_InitTextureMapping(void);
 void HWR_SetViewSize(void);
-void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option);
-void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap);
-void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t scale, INT32 option, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
+void HWR_DrawPatch(patch_t *gpatch, INT32 x, INT32 y, INT32 option);
+void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap);
+void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t scale, INT32 option, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
 void HWR_MakePatch(const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap);
 void HWR_CreatePlanePolygons(INT32 bspnum);
 void HWR_CreateStaticLightmaps(INT32 bspnum);
-void HWR_LoadTextures(size_t pnumtextures);
 void HWR_DrawFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color);
 void HWR_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT16 actualcolor, UINT8 strength);
 void HWR_DrawConsoleFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 color, UINT32 actualcolor);	// Lat: separate flags from color since color needs to be an uint to work right.
@@ -55,7 +54,6 @@ boolean HWR_Screenshot(const char *pathname);
 void HWR_AddCommands(void);
 void HWR_AddSessionCommands(void);
 void transform(float *cx, float *cy, float *cz);
-FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
 INT32 HWR_GetTextureUsed(void);
 void HWR_DoPostProcessor(player_t *player);
 void HWR_StartScreenWipe(void);
@@ -66,9 +64,14 @@ void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum);
 void HWR_MakeScreenFinalTexture(void);
 void HWR_DrawScreenFinalTexture(int width, int height);
 
-// This stuff is put here so MD2's can use them
+// This stuff is put here so models can use them
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap);
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
+
+UINT8 HWR_GetTranstableAlpha(INT32 transtablenum);
+FBITFIELD HWR_GetBlendModeFlag(INT32 ast);
+FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf);
+FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
 
 boolean HWR_CompileShaders(void);
 
@@ -113,11 +116,11 @@ extern FTransform atransform;
 
 
 // Render stats
-extern int ps_hw_skyboxtime;
-extern int ps_hw_nodesorttime;
-extern int ps_hw_nodedrawtime;
-extern int ps_hw_spritesorttime;
-extern int ps_hw_spritedrawtime;
+extern precise_t ps_hw_skyboxtime;
+extern precise_t ps_hw_nodesorttime;
+extern precise_t ps_hw_nodedrawtime;
+extern precise_t ps_hw_spritesorttime;
+extern precise_t ps_hw_spritedrawtime;
 
 // Render stats for batching
 extern int ps_hw_numpolys;
@@ -127,9 +130,13 @@ extern int ps_hw_numshaders;
 extern int ps_hw_numtextures;
 extern int ps_hw_numpolyflags;
 extern int ps_hw_numcolors;
-extern int ps_hw_batchsorttime;
-extern int ps_hw_batchdrawtime;
+extern precise_t ps_hw_batchsorttime;
+extern precise_t ps_hw_batchdrawtime;
 
+extern boolean gl_init;
+extern boolean gl_maploaded;
+extern boolean gl_maptexturesloaded;
+extern boolean gl_sessioncommandsadded;
 extern boolean gl_shadersavailable;
 
 #endif

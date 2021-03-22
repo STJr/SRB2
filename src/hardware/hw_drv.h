@@ -40,8 +40,9 @@ EXPORT void HWRAPI(DrawIndexedTriangles) (FSurfaceInfo *pSurf, FOutVector *pOutV
 EXPORT void HWRAPI(RenderSkyDome) (gl_sky_t *sky);
 EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags);
 EXPORT void HWRAPI(ClearBuffer) (FBOOLEAN ColorMask, FBOOLEAN DepthMask, FRGBAFloat *ClearColor);
-EXPORT void HWRAPI(SetTexture) (FTextureInfo *TexInfo);
-EXPORT void HWRAPI(UpdateTexture) (FTextureInfo *TexInfo);
+EXPORT void HWRAPI(SetTexture) (GLMipmap_t *TexInfo);
+EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *TexInfo);
+EXPORT void HWRAPI(DeleteTexture) (GLMipmap_t *TexInfo);
 EXPORT void HWRAPI(ReadRect) (INT32 x, INT32 y, INT32 width, INT32 height, INT32 dst_stride, UINT16 *dst_data);
 EXPORT void HWRAPI(GClipRect) (INT32 minx, INT32 miny, INT32 maxx, INT32 maxy, float nearclip);
 EXPORT void HWRAPI(ClearMipMapCache) (void);
@@ -95,6 +96,7 @@ struct hwdriver_s
 	ClearBuffer         pfnClearBuffer;
 	SetTexture          pfnSetTexture;
 	UpdateTexture       pfnUpdateTexture;
+	DeleteTexture       pfnDeleteTexture;
 	ReadRect            pfnReadRect;
 	GClipRect           pfnGClipRect;
 	ClearMipMapCache    pfnClearMipMapCache;

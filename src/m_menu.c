@@ -425,7 +425,7 @@ static CV_PossibleValue_t skins_cons_t[MAXSKINS+1] = {{1, DEFAULTSKIN}};
 consvar_t cv_chooseskin = CVAR_INIT ("chooseskin", DEFAULTSKIN, CV_HIDEN|CV_CALL, skins_cons_t, Nextmap_OnChange);
 
 // This gametype list is integral for many different reasons.
-// When you add gametypes here, don't forget to update them in dehacked.c and doomstat.h!
+// When you add gametypes here, don't forget to update them in deh_tables.c and doomstat.h!
 CV_PossibleValue_t gametype_cons_t[NUMGAMETYPES+1];
 
 consvar_t cv_newgametype = CVAR_INIT ("newgametype", "Co-op", CV_HIDEN|CV_CALL, gametype_cons_t, Newgametype_OnChange);
@@ -1356,9 +1356,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Score/Time/Rings",          &cv_timetic,          71},
 	{IT_STRING | IT_CVAR, NULL, "Show Powerups",             &cv_powerupdisplay,   76},
 	{IT_STRING | IT_CVAR, NULL, "Local ping display",		&cv_showping,			81}, // shows ping next to framerate if we want to.
-#ifdef SEENAMES
 	{IT_STRING | IT_CVAR, NULL, "Show player names",         &cv_seenames,         86},
-#endif
 
 	{IT_HEADER, NULL, "Console", NULL, 95},
 	{IT_STRING | IT_CVAR, NULL, "Background color",          &cons_backcolor,      101},
@@ -1483,7 +1481,7 @@ static menuitem_t OP_SoundOptionsMenu[] =
 
 	{IT_STRING | IT_CVAR,  NULL,  "MIDI Music", &cv_gamemidimusic, 36},
 	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Music Volume", &cv_midimusicvolume, 41},
-	
+
 	{IT_STRING | IT_CVAR,  NULL,  "Music Preference", &cv_musicpref, 51},
 
 	{IT_HEADER, NULL, "Miscellaneous", NULL, 61},
@@ -1551,18 +1549,19 @@ static menuitem_t OP_ScreenshotOptionsMenu[] =
 	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bits,           57},
 
 	{IT_HEADER, NULL, "Movie Mode (F9)", NULL, 64},
-	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_movie_option,              70},
-	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_movie_folder, 	  75},
-	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                 90},
+	{IT_STRING|IT_CVAR, NULL, "Storage Location",  &cv_movie_option,               70},
+	{IT_STRING|IT_CVAR|IT_CV_STRING, NULL, "Custom Folder", &cv_movie_folder, 	   75},
+	{IT_STRING|IT_CVAR, NULL, "Capture Mode",      &cv_moviemode,                  90},
 
-	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,              95},
-	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,             100},
+	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_gif_downscale,              95},
+	{IT_STRING|IT_CVAR, NULL, "Region Optimizing", &cv_gif_optimize,              100},
 	{IT_STRING|IT_CVAR, NULL, "Local Color Table", &cv_gif_localcolortable,       105},
 
-	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,              95},
-	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,               100},
-	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,            105},
-	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,         110},
+	{IT_STRING|IT_CVAR, NULL, "Downscaling",       &cv_apng_downscale,             95},
+	{IT_STRING|IT_CVAR, NULL, "Memory Level",      &cv_zlib_memorya,              100},
+	{IT_STRING|IT_CVAR, NULL, "Compression Level", &cv_zlib_levela,               105},
+	{IT_STRING|IT_CVAR, NULL, "Strategy",          &cv_zlib_strategya,            110},
+	{IT_STRING|IT_CVAR, NULL, "Window Size",       &cv_zlib_window_bitsa,         115},
 };
 
 enum
@@ -1575,7 +1574,7 @@ enum
 	op_screenshot_gif_start = 13,
 	op_screenshot_gif_end = 15,
 	op_screenshot_apng_start = 16,
-	op_screenshot_apng_end = 19,
+	op_screenshot_apng_end = 20,
 };
 
 static menuitem_t OP_EraseDataMenu[] =
@@ -1613,53 +1612,54 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Max Players",                      &cv_maxplayers,          21},
 	{IT_STRING | IT_CVAR,    NULL, "Allow Add-on Downloading",         &cv_downloading,         26},
 	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",            &cv_allownewplayer,      31},
+	{IT_STRING | IT_CVAR,    NULL, "Minutes for reconnecting",         &cv_rejointimeout,       36},
 #endif
-	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          36},
-	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             41},
+	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          41},
+	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             46},
 
-	{IT_HEADER, NULL, "Characters", NULL, 50},
-	{IT_STRING | IT_CVAR,    NULL, "Force a character",                &cv_forceskin,           56},
-	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",       &cv_restrictskinchange,  61},
+	{IT_HEADER, NULL, "Characters", NULL, 55},
+	{IT_STRING | IT_CVAR,    NULL, "Force a character",                &cv_forceskin,           61},
+	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",       &cv_restrictskinchange,  66},
 
-	{IT_HEADER, NULL, "Items", NULL, 70},
-	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     76},
-	{IT_STRING | IT_SUBMENU, NULL, "Mystery Item Monitor Toggles...",  &OP_MonitorToggleDef,    81},
+	{IT_HEADER, NULL, "Items", NULL, 75},
+	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     81},
+	{IT_STRING | IT_SUBMENU, NULL, "Mystery Item Monitor Toggles...",  &OP_MonitorToggleDef,    86},
 
-	{IT_HEADER, NULL, "Cooperative", NULL, 90},
-	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      96},
-	{IT_STRING | IT_CVAR,    NULL, "Starposts",                        &cv_coopstarposts,      101},
-	{IT_STRING | IT_CVAR,    NULL, "Life sharing",                     &cv_cooplives,          106},
-	{IT_STRING | IT_CVAR,    NULL, "Post-goal free roaming",           &cv_exitmove,           111},
+	{IT_HEADER, NULL, "Cooperative", NULL, 95},
+	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,     101},
+	{IT_STRING | IT_CVAR,    NULL, "Starposts",                        &cv_coopstarposts,      106},
+	{IT_STRING | IT_CVAR,    NULL, "Life sharing",                     &cv_cooplives,          111},
+	{IT_STRING | IT_CVAR,    NULL, "Post-goal free roaming",           &cv_exitmove,           116},
 
-	{IT_HEADER, NULL, "Race, Competition", NULL, 120},
-	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      126},
-	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_competitionboxes,   131},
+	{IT_HEADER, NULL, "Race, Competition", NULL, 125},
+	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      131},
+	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_competitionboxes,   136},
 
-	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 140},
-	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          146},
-	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         151},
-	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           156},
-	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        161},
+	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 145},
+	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          151},
+	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         156},
+	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           161},
+	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        166},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_matchboxes,         171},
-	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       176},
-	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        181},
+	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_matchboxes,         176},
+	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       181},
+	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        186},
 
-	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           191},
-	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           196},
+	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           196},
+	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           201},
 
-	{IT_HEADER, NULL, "Teams", NULL, 205},
-	{IT_STRING | IT_CVAR,    NULL, "Autobalance sizes",                &cv_autobalance,        211},
-	{IT_STRING | IT_CVAR,    NULL, "Scramble on Map Change",           &cv_scrambleonchange,   216},
+	{IT_HEADER, NULL, "Teams", NULL, 210},
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance sizes",                &cv_autobalance,        216},
+	{IT_STRING | IT_CVAR,    NULL, "Scramble on Map Change",           &cv_scrambleonchange,   221},
 
 #ifndef NONET
-	{IT_HEADER, NULL, "Advanced", NULL, 225},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,       231},
+	{IT_HEADER, NULL, "Advanced", NULL, 230},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,       236},
 
-	{IT_STRING | IT_CVAR,    NULL, "Join delay",                       &cv_joindelay,          246},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,    251},
+	{IT_STRING | IT_CVAR,    NULL, "Join delay",                       &cv_joindelay,          251},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,    256},
 
-	{IT_STRING | IT_CVAR,    NULL, "Show IP Address of Joiners",       &cv_showjoinaddress,    256},
+	{IT_STRING | IT_CVAR,    NULL, "Show IP Address of Joiners",       &cv_showjoinaddress,    261},
 #endif
 };
 
@@ -2145,15 +2145,20 @@ menu_t OP_PlaystyleDef = {
 static void M_VideoOptions(INT32 choice)
 {
 	(void)choice;
-#ifdef HWRENDER
-	if (vid_opengl_state == -1)
-	{
-		OP_VideoOptionsMenu[op_video_renderer].status = (IT_TRANSTEXT | IT_PAIR);
-		OP_VideoOptionsMenu[op_video_renderer].patch = "Renderer";
-		OP_VideoOptionsMenu[op_video_renderer].text = "Software";
-	}
 
+	OP_VideoOptionsMenu[op_video_renderer].status = (IT_TRANSTEXT | IT_PAIR);
+	OP_VideoOptionsMenu[op_video_renderer].patch = "Renderer";
+	OP_VideoOptionsMenu[op_video_renderer].text = "Software";
+
+#ifdef HWRENDER
+	if (vid.glstate != VID_GL_LIBRARY_ERROR)
+	{
+		OP_VideoOptionsMenu[op_video_renderer].status = (IT_STRING | IT_CVAR);
+		OP_VideoOptionsMenu[op_video_renderer].patch = NULL;
+		OP_VideoOptionsMenu[op_video_renderer].text = "Renderer";
+	}
 #endif
+
 	M_SetupNextMenu(&OP_VideoOptionsDef);
 }
 
@@ -4026,7 +4031,7 @@ static void M_DrawThermo(INT32 x, INT32 y, consvar_t *cv)
 	cursorlump = W_GetNumForName("M_THERMO");
 
 	V_DrawScaledPatch(xx, y, 0, p = W_CachePatchNum(leftlump,PU_PATCH));
-	xx += SHORT(p->width) - SHORT(p->leftoffset);
+	xx += p->width - p->leftoffset;
 	for (i = 0; i < 16; i++)
 	{
 		V_DrawScaledPatch(xx, y, V_WRAPX, W_CachePatchNum(centerlump[i & 1], PU_PATCH));
@@ -4165,7 +4170,7 @@ static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_
 	fixed_t sw, pw;
 
 	patch = W_CachePatchName("LSSTATIC", PU_PATCH);
-	pw = SHORT(patch->width) - (sw = w*2); //FixedDiv(w, scale); -- for scale FRACUNIT/2
+	pw = patch->width - (sw = w*2); //FixedDiv(w, scale); -- for scale FRACUNIT/2
 
 	/*if (pw > 0) -- model code for modders providing weird LSSTATIC
 	{
@@ -4262,8 +4267,8 @@ static void M_DrawMenuTitle(void)
 
 		if (p->height > 24) // title is larger than normal
 		{
-			INT32 xtitle = (BASEVIDWIDTH - (SHORT(p->width)/2))/2;
-			INT32 ytitle = (30 - (SHORT(p->height)/2))/2;
+			INT32 xtitle = (BASEVIDWIDTH - (p->width/2))/2;
+			INT32 ytitle = (30 - (p->height/2))/2;
 
 			if (xtitle < 0)
 				xtitle = 0;
@@ -4274,8 +4279,8 @@ static void M_DrawMenuTitle(void)
 		}
 		else
 		{
-			INT32 xtitle = (BASEVIDWIDTH - SHORT(p->width))/2;
-			INT32 ytitle = (30 - SHORT(p->height))/2;
+			INT32 xtitle = (BASEVIDWIDTH - p->width)/2;
+			INT32 ytitle = (30 - p->height)/2;
 
 			if (xtitle < 0)
 				xtitle = 0;
@@ -4311,7 +4316,7 @@ static void M_DrawGenericMenu(void)
 					{
 						patch_t *p;
 						p = W_CachePatchName(currentMenu->menuitems[i].patch, PU_PATCH);
-						V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, y, 0, p);
+						V_DrawScaledPatch((BASEVIDWIDTH - p->width)/2, y, 0, p);
 					}
 					else
 					{
@@ -4842,7 +4847,7 @@ static void M_DrawCenteredMenu(void)
 					{
 						patch_t *p;
 						p = W_CachePatchName(currentMenu->menuitems[i].patch, PU_PATCH);
-						V_DrawScaledPatch((BASEVIDWIDTH - SHORT(p->width))/2, y, 0, p);
+						V_DrawScaledPatch((BASEVIDWIDTH - p->width)/2, y, 0, p);
 					}
 					else
 					{
@@ -5585,9 +5590,6 @@ static void M_DrawLevelPlatterWideMap(UINT8 row, UINT8 col, INT32 x, INT32 y, bo
 	if (map <= 0)
 		return;
 
-	if (needpatchrecache)
-		M_CacheLevelPlatter();
-
 	//  A 564x100 image of the level as entry MAPxxW
 	if (!(levelselect.rows[row].mapavailable[col]))
 	{
@@ -5618,9 +5620,6 @@ static void M_DrawLevelPlatterMap(UINT8 row, UINT8 col, INT32 x, INT32 y, boolea
 	INT32 map = levelselect.rows[row].maplist[col];
 	if (map <= 0)
 		return;
-
-	if (needpatchrecache)
-		M_CacheLevelPlatter();
 
 	//  A 160x100 image of the level as entry MAPxxP
 	if (!(levelselect.rows[row].mapavailable[col]))
@@ -5696,7 +5695,7 @@ static void M_DrawRecordAttackForeground(void)
 	angle_t fa;
 
 	INT32 i;
-	INT32 height = (SHORT(fg->height)/2);
+	INT32 height = (fg->height / 2);
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 
 	for (i = -12; i < (BASEVIDHEIGHT/height) + 12; i++)
@@ -5731,9 +5730,9 @@ static void M_DrawNightsAttackMountains(void)
 	static INT32 bgscrollx;
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
 	patch_t *background = W_CachePatchName(curbgname, PU_PATCH);
-	INT16 w = SHORT(background->width);
+	INT16 w = background->width;
 	INT32 x = FixedInt(-bgscrollx) % w;
-	INT32 y = BASEVIDHEIGHT - SHORT(background->height)*2;
+	INT32 y = BASEVIDHEIGHT - (background->height * 2);
 
 	if (vid.height != BASEVIDHEIGHT * dupz)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 158);
@@ -5758,18 +5757,18 @@ static void M_DrawNightsAttackBackground(void)
 	// top
 	patch_t *backtopfg = W_CachePatchName("NTSATKT1", PU_PATCH);
 	patch_t *fronttopfg = W_CachePatchName("NTSATKT2", PU_PATCH);
-	INT32 backtopwidth = SHORT(backtopfg->width);
-	//INT32 backtopheight = SHORT(backtopfg->height);
-	INT32 fronttopwidth = SHORT(fronttopfg->width);
-	//INT32 fronttopheight = SHORT(fronttopfg->height);
+	INT32 backtopwidth = backtopfg->width;
+	//INT32 backtopheight = backtopfg->height;
+	INT32 fronttopwidth = fronttopfg->width;
+	//INT32 fronttopheight = fronttopfg->height;
 
 	// bottom
 	patch_t *backbottomfg = W_CachePatchName("NTSATKB1", PU_PATCH);
 	patch_t *frontbottomfg = W_CachePatchName("NTSATKB2", PU_PATCH);
-	INT32 backbottomwidth = SHORT(backbottomfg->width);
-	INT32 backbottomheight = SHORT(backbottomfg->height);
-	INT32 frontbottomwidth = SHORT(frontbottomfg->width);
-	INT32 frontbottomheight = SHORT(frontbottomfg->height);
+	INT32 backbottomwidth = backbottomfg->width;
+	INT32 backbottomheight = backbottomfg->height;
+	INT32 frontbottomwidth = frontbottomfg->width;
+	INT32 frontbottomheight = frontbottomfg->height;
 
 	// background
 	M_DrawNightsAttackMountains();
@@ -5831,8 +5830,6 @@ static void M_DrawNightsAttackSuperSonic(void)
 	const UINT8 *colormap = R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_YELLOW, GTC_CACHE);
 	INT32 timer = (ntsatkdrawtimer/4) % 2;
 	angle_t fa = (FixedAngle(((ntsatkdrawtimer * 4) % 360)<<FRACBITS)>>ANGLETOFINESHIFT) & FINEMASK;
-	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_PATCH);
-	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_PATCH);
 	V_DrawFixedPatch(235<<FRACBITS, (120<<FRACBITS) - (8*FINESINE(fa)), FRACUNIT, 0, ntssupersonic[timer], colormap);
 }
 
@@ -6154,7 +6151,7 @@ static void M_DrawMessageMenu(void)
 		}
 
 		V_DrawString((BASEVIDWIDTH - V_StringWidth(string, 0))/2,y,V_ALLOWLOWERCASE,string);
-		y += 8; //SHORT(hu_font[0]->height);
+		y += 8; //hu_font[0]->height;
 	}
 }
 
@@ -6176,7 +6173,7 @@ static void M_StopMessage(INT32 choice)
 static void M_DrawImageDef(void)
 {
 	// Grr.  Need to autodetect for pic_ts.
-	pic_t *pictest = (pic_t *)W_CachePatchName(currentMenu->menuitems[itemOn].text,PU_CACHE);
+	pic_t *pictest = (pic_t *)W_CacheLumpName(currentMenu->menuitems[itemOn].text,PU_CACHE);
 	if (!pictest->zero)
 		V_DrawScaledPic(0,0,0,W_GetNumForName(currentMenu->menuitems[itemOn].text));
 	else
@@ -6443,10 +6440,6 @@ static void M_DrawAddons(void)
 		M_DrawMessageMenu();
 		return;
 	}
-
-	// Lactozilla: Load addons menu patches.
-	if (needpatchrecache)
-		M_LoadAddonsPatches();
 
 	if (Playing())
 		V_DrawCenteredString(BASEVIDWIDTH/2, 5, warningflags, "Adding files mid-game may cause problems.");
@@ -6944,8 +6937,7 @@ static void M_SelectableClearMenus(INT32 choice)
 static void M_UltimateCheat(INT32 choice)
 {
 	(void)choice;
-	if (Playing())
-		LUAh_GameQuit();
+	LUAh_GameQuit(true);
 	I_Quit();
 }
 
@@ -7602,9 +7594,6 @@ static void M_DrawSoundTest(void)
 	fixed_t hscale = FRACUNIT/2, vscale = FRACUNIT/2, bounce = 0;
 	UINT8 frame[4] = {0, 0, -1, SKINCOLOR_RUBY};
 
-	if (needpatchrecache)
-		M_CacheSoundTest();
-
 	// let's handle the ticker first. ideally we'd tick this somewhere else, BUT...
 	if (curplaying)
 	{
@@ -8252,9 +8241,6 @@ static void M_DrawLoadGameData(void)
 	if (vid.width != BASEVIDWIDTH*vid.dupx)
 		hsep = (hsep*vid.width)/(BASEVIDWIDTH*vid.dupx);
 
-	if (needpatchrecache)
-		M_CacheLoadGameData();
-
 	for (i = 2; prev_i; i = -(i + ((UINT32)i >> 31))) // draws from outwards in; 2, -2, 1, -1, 0
 	{
 		prev_i = i;
@@ -8436,7 +8422,7 @@ static void M_DrawLoadGameData(void)
 				sprdef = &charbotskin->sprites[SPR2_SIGN];
 				if (!sprdef->numframes)
 					goto skipbot;
-				colormap = R_GetTranslationColormap(savegameinfo[savetodraw].botskin-1, charbotskin->prefcolor, 0);
+				colormap = R_GetTranslationColormap(savegameinfo[savetodraw].botskin-1, charbotskin->prefcolor, GTC_CACHE);
 				sprframe = &sprdef->spriteframes[0];
 				patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 
@@ -8446,8 +8432,6 @@ static void M_DrawLoadGameData(void)
 					charbotskin->highresscale,
 					0, patch, colormap);
 
-				Z_Free(colormap);
-
 				tempx -= (20<<FRACBITS);
 				//flip = V_FLIP;
 			}
@@ -8456,7 +8440,7 @@ skipbot:
 			if (!charskin) // shut up compiler
 				goto skipsign;
 			sprdef = &charskin->sprites[SPR2_SIGN];
-			colormap = R_GetTranslationColormap(savegameinfo[savetodraw].skinnum, charskin->prefcolor, 0);
+			colormap = R_GetTranslationColormap(savegameinfo[savetodraw].skinnum, charskin->prefcolor, GTC_CACHE);
 			if (!sprdef->numframes)
 				goto skipsign;
 			sprframe = &sprdef->spriteframes[0];
@@ -8496,8 +8480,6 @@ skipsign:
 				charskin->highresscale/2,
 				0, patch, colormap);
 skiplife:
-			if (colormap)
-				Z_Free(colormap);
 
 			patch = W_CachePatchName("STLIVEX", PU_PATCH);
 
@@ -8958,6 +8940,7 @@ void M_ForceSaveSlotSelected(INT32 sslot)
 // ================
 // CHARACTER SELECT
 // ================
+
 static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 {
 	if (!(description[i].picname[0]))
@@ -8976,22 +8959,6 @@ static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 
 	if (description[i].nametag[0])
 		description[i].namepic = W_CachePatchName(description[i].nametag, PU_PATCH);
-}
-
-static void M_CacheCharacterSelect(void)
-{
-	INT32 i, skinnum;
-
-	for (i = 0; i < MAXSKINS; i++)
-	{
-		if (!description[i].used)
-			continue;
-
-		// Already set in M_SetupChoosePlayer
-		skinnum = description[i].skinnum[0];
-		if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
-			M_CacheCharacterSelectEntry(i, skinnum);
-	}
 }
 
 static UINT8 M_SetupChoosePlayerDirect(INT32 choice)
@@ -9193,15 +9160,12 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	patch_t *charbg = W_CachePatchName("CHARBG", PU_PATCH);
 	patch_t *charfg = W_CachePatchName("CHARFG", PU_PATCH);
-	INT16 bgheight = SHORT(charbg->height);
-	INT16 fgheight = SHORT(charfg->height);
-	INT16 bgwidth = SHORT(charbg->width);
-	INT16 fgwidth = SHORT(charfg->width);
+	INT16 bgheight = charbg->height;
+	INT16 fgheight = charfg->height;
+	INT16 bgwidth = charbg->width;
+	INT16 fgwidth = charfg->width;
 	INT32 x, y;
 	INT32 w = (vid.width/vid.dupx);
-
-	if (needpatchrecache)
-		M_CacheCharacterSelect();
 
 	if (abs(char_scroll) > FRACUNIT)
 		char_scroll -= (char_scroll>>2);
@@ -9291,14 +9255,14 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			curoutlinecolor = col = skincolors[charskin->prefcolor].invcolor;
 
 		txsh = oxsh;
-		ox = 8 + SHORT((description[char_on].charpic)->width)/2;
+		ox = 8 + ((description[char_on].charpic)->width)/2;
 		y = my + 144;
 
 		// cur
 		{
 			x = ox - txsh;
 			if (curpatch)
-				x -= (SHORT(curpatch->width)/2);
+				x -= curpatch->width / 2;
 
 			if (curtext[0] != '\0')
 			{
@@ -9331,7 +9295,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 				x = (ox - txsh) - w;
 				if (prevpatch)
-					x -= (SHORT(prevpatch->width)/2);
+					x -= prevpatch->width / 2;
 
 				if (prevtext[0] != '\0')
 				{
@@ -9361,7 +9325,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 				x = (ox - txsh) + w;
 				if (nextpatch)
-					x -= (SHORT(nextpatch->width)/2);
+					x -= nextpatch->width / 2;
 
 				if (nexttext[0] != '\0')
 				{
@@ -9383,7 +9347,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	{
 		patch_t *header = W_CachePatchName("M_PICKP", PU_PATCH);
 		INT32 xtitle = 146;
-		INT32 ytitle = (35 - SHORT(header->height))/2;
+		INT32 ytitle = (35 - header->height) / 2;
 		V_DrawFixedPatch(xtitle<<FRACBITS, ytitle<<FRACBITS, FRACUNIT/2, 0, header, NULL);
 	}
 #endif // CHOOSEPLAYER_DRAWHEADER
@@ -9849,8 +9813,8 @@ void M_DrawTimeAttackMenu(void)
 
 			empatch = W_CachePatchName(M_GetEmblemPatch(em, true), PU_PATCH);
 
-			empatx = SHORT(empatch->leftoffset)/2;
-			empaty = SHORT(empatch->topoffset)/2;
+			empatx = empatch->leftoffset / 2;
+			empaty = empatch->topoffset / 2;
 
 			if (em->collected)
 				V_DrawSmallMappedPatch(104+76+empatx, yHeight+lsheadingheight/2+empaty, 0, empatch,
@@ -10086,7 +10050,7 @@ void M_DrawNightsAttackMenu(void)
 		// Super Sonic
 		M_DrawNightsAttackSuperSonic();
 		//if (P_HasGrades(cv_nextmap.value, 0))
-		//	V_DrawScaledPatch(235 - (SHORT((ngradeletters[bestoverall])->width)*3)/2, 135, 0, ngradeletters[bestoverall]);
+		//	V_DrawScaledPatch(235 - (((ngradeletters[bestoverall])->width)*3)/2, 135, 0, ngradeletters[bestoverall]);
 
 		if (P_HasGrades(cv_nextmap.value, cv_dummymares.value))
 			{//make bigger again
@@ -10172,6 +10136,9 @@ static void M_NightsAttack(INT32 choice)
 	}
 	// This is really just to make sure Sonic is the played character, just in case
 	M_PatchSkinNameTable();
+
+	ntssupersonic[0] = W_CachePatchName("NTSSONC1", PU_PATCH);
+	ntssupersonic[1] = W_CachePatchName("NTSSONC2", PU_PATCH);
 
 	G_SetGamestate(GS_TIMEATTACK); // do this before M_SetupNextMenu so that menu meta state knows that we're switching
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
@@ -10574,10 +10541,6 @@ void M_DrawMarathon(void)
 	angle_t fa;
 	INT32 dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy), xspan = (vid.width/dupz), yspan = (vid.height/dupz), diffx = (xspan - BASEVIDWIDTH)/2, diffy = (yspan - BASEVIDHEIGHT)/2, maxy = BASEVIDHEIGHT + diffy;
 
-	// lactozilla: the renderer changed so recache patches
-	if (needpatchrecache)
-		M_CacheCharacterSelect();
-
 	curbgxspeed = 0;
 	curbgyspeed = 18;
 
@@ -10644,7 +10607,7 @@ void M_DrawMarathon(void)
 	{
 		patch_t *fg = W_CachePatchName("RECATKFG", PU_PATCH);
 		INT32 trans = V_60TRANS+((cnt&~3)<<(V_ALPHASHIFT-2));
-		INT32 height = (SHORT(fg->height)/2);
+		INT32 height = fg->height / 2;
 		char patchname[7] = "CEMGx0";
 
 		dupz = (w*7)/6; //(w*42*120)/(360*6); -- I don't know why this works but I'm not going to complain.
@@ -11414,7 +11377,7 @@ static void M_DrawServerMenu(void)
 		else
 			PictureOfLevel = W_CachePatchName("BLANKLVL", PU_PATCH);
 
-		V_DrawSmallScaledPatch(319 - (currentMenu->x + (SHORT(PictureOfLevel->width)/2)), currentMenu->y + imgheight, 0, PictureOfLevel);
+		V_DrawSmallScaledPatch(319 - (currentMenu->x + (PictureOfLevel->width / 2)), currentMenu->y + imgheight, 0, PictureOfLevel);
 	}
 }
 
@@ -11787,7 +11750,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		goto faildraw;
 
 	// ok, draw player sprite for sure now
-	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, 0);
+	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, GTC_CACHE);
 
 	if (multi_frame >= sprdef->numframes)
 		multi_frame = 0;
@@ -11805,7 +11768,6 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		FixedDiv(skins[setupm_fakeskin].highresscale, skins[setupm_fakeskin].shieldscale),
 		flags, patch, colormap);
 
-	Z_Free(colormap);
 	goto colordraw;
 
 faildraw:
@@ -13404,8 +13366,7 @@ void M_QuitResponse(INT32 ch)
 
 	if (ch != 'y' && ch != KEY_ENTER)
 		return;
-	if (Playing())
-		LUAh_GameQuit();
+	LUAh_GameQuit(true);
 	if (!(netgame || cv_debug))
 	{
 		S_ResetCaptions();

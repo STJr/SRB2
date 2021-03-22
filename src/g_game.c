@@ -444,9 +444,7 @@ consvar_t cv_firenaxis2 = CVAR_INIT ("joyaxis2_firenormal", "Z-Axis", CV_SAVE, j
 consvar_t cv_deadzone2 = CVAR_INIT ("joy_deadzone2", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 consvar_t cv_digitaldeadzone2 = CVAR_INIT ("joy_digdeadzone2", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 
-#ifdef SEENAMES
 player_t *seenplayer; // player we're aiming at right now
-#endif
 
 // now automatically allocated in D_RegisterClientCommands
 // so that it doesn't have to be updated depending on the value of MAXPLAYERS
@@ -1677,9 +1675,25 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		}
 	}
 
-	// Note: Lat originally made the PlayerCmd hook for SRB2 Kart so credit goes to him.
-	if (gamestate == GS_LEVEL)
+	// At this point, cmd doesn't contain the final angle yet,
+	// So we need to temporarily transform it so Lua scripters
+	// don't need to handle it differently than in other hooks.
+	if (addedtogame && gamestate == GS_LEVEL)
+	{
+		INT16 extra = ticcmd_oldangleturn[forplayer] - player->oldrelangleturn;
+		INT16 origangle = cmd->angleturn;
+		INT16 orighookangle = (INT16)(origangle + player->angleturn + extra);
+		INT16 origaiming = cmd->aiming;
+
+		cmd->angleturn = orighookangle;
+
 		LUAh_PlayerCmd(player, cmd);
+
+		extra = cmd->angleturn - orighookangle;
+		cmd->angleturn = origangle + extra;
+		*myangle += extra << 16;
+		*myaiming += (cmd->aiming - origaiming) << 16;
+	}
 
 	//Reset away view if a command is given.
 	if (ssplayer == 1 && (cmd->forwardmove || cmd->sidemove || cmd->buttons)
@@ -2216,8 +2230,35 @@ void G_Ticker(boolean run)
 				// Costs a life to retry ... unless the player in question is dead already, or you haven't even touched the first starpost in marathon run.
 				if (marathonmode && gamemap == spmarathon_start && !players[consoleplayer].starposttime)
 				{
+					player_t *p = &players[consoleplayer];
 					marathonmode |= MA_INIT;
 					marathontime = 0;
+
+					numgameovers = tokenlist = token = 0;
+					countdown = countdown2 = exitfadestarted = 0;
+
+					p->playerstate = PST_REBORN;
+					p->starpostx = p->starposty = p->starpostz = 0;
+
+					p->lives = startinglivesbalance[0];
+					p->continues = 1;
+
+					p->score = 0;
+
+					// The latter two should clear by themselves, but just in case
+					p->pflags &= ~(PF_TAGIT|PF_GAMETYPEOVER|PF_FULLSTASIS);
+
+					// Clear cheatcodes too, just in case.
+					p->pflags &= ~(PF_GODMODE|PF_NOCLIP|PF_INVIS);
+
+					p->xtralife = 0;
+
+					// Reset unlockable triggers
+					unlocktriggers = 0;
+
+					emeralds = 0;
+
+					memset(&luabanks, 0, sizeof(luabanks));
 				}
 				else if (G_GametypeUsesLives() && players[consoleplayer].playerstate == PST_LIVE && players[consoleplayer].lives != INFLIVES)
 					players[consoleplayer].lives -= 1;
@@ -2250,7 +2291,11 @@ void G_Ticker(boolean run)
 	{
 		if (playeringame[i])
 		{
+			INT16 received;
+
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+
+			received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
 
 			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
 			players[i].oldrelangleturn = players[i].cmd.angleturn;
@@ -2258,6 +2303,9 @@ void G_Ticker(boolean run)
 				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
 			else
 				players[i].cmd.angleturn = players[i].angleturn;
+
+			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
+			players[i].cmd.angleturn |= received;
 		}
 	}
 

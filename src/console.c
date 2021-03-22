@@ -56,7 +56,8 @@ I_mutex con_mutex;
 #endif/*HAVE_THREADS*/
 
 static boolean con_started = false; // console has been initialised
-       boolean con_startup = false; // true at game startup, screen need refreshing
+       boolean con_startup = false; // true at game startup
+       boolean con_refresh = false; // screen needs refreshing
 static boolean con_forcepic = true; // at startup toggle console translucency when first off
        boolean con_recalc;          // set true when screen size has changed
 
@@ -359,29 +360,47 @@ static void CON_SetupColormaps(void)
 	for (i = 0; i < (256*15); i++, ++memorysrc)
 		*memorysrc = (UINT8)(i & 0xFF); // remap each color to itself...
 
-#define colset(map, a, b, c) \
-	map[1] = (UINT8)a;\
-	map[3] = (UINT8)b;\
-	map[9] = (UINT8)c
+#define colset(map, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) \
+	map[0x0] = (UINT8)a;\
+	map[0x1] = (UINT8)b;\
+	map[0x2] = (UINT8)c;\
+	map[0x3] = (UINT8)d;\
+	map[0x4] = (UINT8)e;\
+	map[0x5] = (UINT8)f;\
+	map[0x6] = (UINT8)g;\
+	map[0x7] = (UINT8)h;\
+	map[0x8] = (UINT8)i;\
+	map[0x9] = (UINT8)j;\
+	map[0xA] = (UINT8)k;\
+	map[0xB] = (UINT8)l;\
+	map[0xC] = (UINT8)m;\
+	map[0xD] = (UINT8)n;\
+	map[0xE] = (UINT8)o;\
+	map[0xF] = (UINT8)p;
 
-	colset(magentamap, 177, 178, 184);
-	colset(yellowmap,   82,  73,  66);
-	colset(lgreenmap,   97,  98, 106);
-	colset(bluemap,    146, 147, 155);
-	colset(redmap,     210,  32,  39);
-	colset(graymap,      6,  8,   14);
-	colset(orangemap,   51,  52,  57);
-	colset(skymap,     129, 130, 133);
-	colset(purplemap,  160, 161, 163);
-	colset(aquamap,    120, 121, 123);
-	colset(peridotmap,  88, 188, 190);
-	colset(azuremap,   144, 145, 170);
-	colset(brownmap,   219, 221, 224);
-	colset(rosymap,    200, 201, 203);
-	colset(invertmap,   27,  26,  22);
-	invertmap[26] = (UINT8)3;
+	// Tried to keep the colors vanilla while adding some shades in between them ~SonicX8000
+
+	//                      0x1       0x3                           0x9                           0xF
+	colset(magentamap, 177, 177, 178, 178, 178, 180, 180, 180, 182, 182, 182, 182, 184, 184, 184, 185);
+	colset(yellowmap,   82,  82,  73,  73,  73,  64,  64,  64,  66,  66,  66,  66,  67,  67,  67,  68);
+	colset(lgreenmap,   96,  96,  98,  98,  98, 101, 101, 101, 104, 104, 104, 104, 106, 106, 106, 107);
+	colset(bluemap,    146, 146, 147, 147, 147, 149, 149, 149, 152, 152, 152, 152, 155, 155, 155, 157);
+	colset(redmap,      32,  32,  33,  33,  33,  35,  35,  35,  39,  39,  39,  39,  42,  42,  42,  44);
+	colset(graymap,      8,   9,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23);
+	colset(orangemap,   50,  50,  52,  52,  52,  54,  54,  54,  56,  56,  56,  56,  59,  59,  59,  60);
+	colset(skymap,     129, 129, 130, 130, 130, 131, 131, 131, 133, 133, 133, 133, 135, 135, 135, 136);
+	colset(purplemap,  160, 160, 161, 161, 161, 162, 162, 162, 163, 163, 163, 163, 164, 164, 164, 165);
+	colset(aquamap,    120, 120, 121, 121, 121, 122, 122, 122, 123, 123, 123, 123, 124, 124, 124, 125);
+	colset(peridotmap,  72,  72, 188, 188, 189, 189, 189, 189, 190, 190, 190, 190, 191, 191, 191,  94);
+	colset(azuremap,   144, 144, 145, 145, 145, 146, 146, 146, 170, 170, 170, 170, 171, 171, 171, 172);
+	colset(brownmap,   219, 219, 221, 221, 221, 222, 222, 222, 224, 224, 224, 224, 227, 227, 227, 229);
+	colset(rosymap,    200, 200, 201, 201, 201, 202, 202, 202, 203, 203, 203, 203, 204, 204, 204, 205);
 
 #undef colset
+
+	// Yeah just straight up invert it like a normal person
+	for (i = 0x00; i <= 0x1F; i++)
+		invertmap[0x1F - i] = i;
 
 	// Init back colormap
 	CON_SetupBackColormap();
@@ -439,7 +458,8 @@ void CON_Init(void)
 		Lock_state();
 
 		con_started = true;
-		con_startup = true; // need explicit screen refresh until we are in Doom loop
+		con_startup = true;
+		con_refresh = true; // needs explicit screen refresh until we are in the main game loop
 		consoletoggle = false;
 
 		Unlock_state();
@@ -457,7 +477,8 @@ void CON_Init(void)
 		Lock_state();
 
 		con_started = true;
-		con_startup = false; // need explicit screen refresh until we are in Doom loop
+		con_startup = false;
+		con_refresh = false; // disable explicit screen refresh
 		consoletoggle = true;
 
 		Unlock_state();
@@ -804,6 +825,12 @@ static void CON_InputDelSelection(void)
 	size_t start, end, len;
 
 	Lock_state();
+
+	if (!input_cur)
+	{
+		Unlock_state();
+		return;
+	}
 
 	if (input_cur > input_sel)
 	{
@@ -1438,7 +1465,7 @@ void CONS_Printf(const char *fmt, ...)
 {
 	va_list argptr;
 	static char *txt = NULL;
-	boolean startup;
+	boolean refresh;
 
 	if (txt == NULL)
 		txt = malloc(8192);
@@ -1454,32 +1481,21 @@ void CONS_Printf(const char *fmt, ...)
 	if (con_started)
 		CON_Print(txt);
 
-	CON_LogMessage(txt);	
+	CON_LogMessage(txt);
 
 	Lock_state();
 
 	// make sure new text is visible
 	con_scrollup = 0;
-	startup = con_startup;
+	refresh = con_refresh;
 
 	Unlock_state();
 
 	// if not in display loop, force screen update
-	if (startup && (!setrenderneeded))
+	if (refresh)
 	{
-#ifdef _WINDOWS
-		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
-
-		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
-		V_DrawScaledPatch(0, 0, 0, con_backpic);
-
-		W_UnlockCachedPatch(con_backpic);
-		I_LoadingScreen(txt);				// Win32/OS2 only
-#else
-		// here we display the console text
-		CON_Drawer();
+		CON_Drawer(); // here we display the console text
 		I_FinishUpdate(); // page flip or blit buffer
-#endif
 	}
 }
 
@@ -1541,7 +1557,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...)
 //
 void CONS_Error(const char *msg)
 {
-#ifdef RPC_NO_WINDOWS_H
+#if defined(RPC_NO_WINDOWS_H) && defined(_WINDOWS)
 	if (!graphics_started)
 	{
 		MessageBoxA(vid.WndParent, msg, "SRB2 Warning", MB_OK);
@@ -1690,7 +1706,7 @@ static void CON_DrawHudlines(void)
 				;//charwidth = 4 * con_scalefactor;
 			else
 			{
-				//charwidth = SHORT(hu_font['A'-HU_FONTSTART]->width) * con_scalefactor;
+				//charwidth = (hu_font['A'-HU_FONTSTART]->width) * con_scalefactor;
 				V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 			}
 		}
@@ -1719,8 +1735,8 @@ static void CON_DrawBackpic(void)
 	if (piclump == LUMPERROR)
 		piclump = W_GetNumForName("MISSING");
 
-	// Cache the Software patch.
-	con_backpic = W_CacheSoftwarePatchNum(piclump, PU_PATCH);
+	// Cache the patch.
+	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
 
 	// Center the backpic, and draw a vertically cropped patch.
 	w = (con_backpic->width * vid.dupx);
@@ -1731,7 +1747,7 @@ static void CON_DrawBackpic(void)
 	// then fill the sides with a solid color.
 	if (x > 0)
 	{
-		column_t *column = (column_t *)((UINT8 *)(con_backpic) + LONG(con_backpic->columnofs[0]));
+		column_t *column = (column_t *)((UINT8 *)(con_backpic->columns) + (con_backpic->columnofs[0]));
 		if (!column->topdelta)
 		{
 			UINT8 *source = (UINT8 *)(column) + 3;
@@ -1743,8 +1759,7 @@ static void CON_DrawBackpic(void)
 		}
 	}
 
-	// Cache the patch normally.
-	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
+	// Draw the patch.
 	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, V_NOSCALESTART, con_backpic,
 			0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
 
@@ -1828,9 +1843,6 @@ void CON_Drawer(void)
 		Unlock_state();
 		return;
 	}
-
-	if (needpatchrecache)
-		HU_LoadGraphics();
 
 	if (con_recalc)
 	{

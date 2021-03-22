@@ -27,6 +27,7 @@
 
 #include "doomdef.h"
 #include "doomstat.h"
+#include "r_patch.h"
 #include "r_picformats.h"
 #include "i_system.h" // I_GetFreeMem
 #include "i_video.h" // rendermode
@@ -495,35 +496,36 @@ void Z_FreeTags(INT32 lowtag, INT32 hightag)
 	}
 }
 
+/** Iterates through all memory for a given set of tags.
+  *
+  * \param lowtag The lowest tag to consider.
+  * \param hightag The highest tag to consider.
+  * \param iterfunc The iterator function.
+  */
+void Z_IterateTags(INT32 lowtag, INT32 hightag, boolean (*iterfunc)(void *))
+{
+	memblock_t *block, *next;
+
+	if (!iterfunc)
+		I_Error("Z_IterateTags: no iterator function was given");
+
+	for (block = head.next; block != &head; block = next)
+	{
+		next = block->next; // get link before possibly freeing
+
+		if (block->tag >= lowtag && block->tag <= hightag)
+		{
+			void *mem = (UINT8 *)block->hdr + sizeof *block->hdr;
+			boolean free = iterfunc(mem);
+			if (free)
+				Z_Free(mem);
+		}
+	}
+}
+
 // -----------------
 // Utility functions
 // -----------------
-
-// for renderer switching
-boolean needpatchflush = false;
-boolean needpatchrecache = false;
-
-// flush all patches from memory
-void Z_FlushCachedPatches(void)
-{
-	CONS_Debug(DBG_RENDER, "Z_FlushCachedPatches()...\n");
-	Z_FreeTag(PU_PATCH);
-	Z_FreeTag(PU_HUDGFX);
-	Z_FreeTag(PU_HWRPATCHINFO);
-	Z_FreeTag(PU_HWRMODELTEXTURE);
-	Z_FreeTag(PU_HWRCACHE);
-	Z_FreeTag(PU_HWRCACHE_UNLOCKED);
-	Z_FreeTag(PU_HWRPATCHINFO_UNLOCKED);
-	Z_FreeTag(PU_HWRMODELTEXTURE_UNLOCKED);
-}
-
-void Z_PreparePatchFlush(void)
-{
-	CONS_Debug(DBG_RENDER, "Z_PreparePatchFlush()...\n");
-#ifdef ROTSPRITE
-	R_FreeAllRotSprite();
-#endif
-}
 
 // starting value of nextcleanup
 #define CLEANUPCOUNT 2000
@@ -793,25 +795,30 @@ static void Command_Memfree_f(void)
 
 	Z_CheckHeap(-1);
 	CONS_Printf("\x82%s", M_GetText("Memory Info\n"));
-	CONS_Printf(M_GetText("Total heap used   : %7s KB\n"), sizeu1(Z_TotalUsage()>>10));
-	CONS_Printf(M_GetText("Static            : %7s KB\n"), sizeu1(Z_TagUsage(PU_STATIC)>>10));
-	CONS_Printf(M_GetText("Static (sound)    : %7s KB\n"), sizeu1(Z_TagUsage(PU_SOUND)>>10));
-	CONS_Printf(M_GetText("Static (music)    : %7s KB\n"), sizeu1(Z_TagUsage(PU_MUSIC)>>10));
-	CONS_Printf(M_GetText("Locked cache      : %7s KB\n"), sizeu1(Z_TagUsage(PU_CACHE)>>10));
-	CONS_Printf(M_GetText("Level             : %7s KB\n"), sizeu1(Z_TagUsage(PU_LEVEL)>>10));
-	CONS_Printf(M_GetText("Special thinker   : %7s KB\n"), sizeu1(Z_TagUsage(PU_LEVSPEC)>>10));
-	CONS_Printf(M_GetText("All purgable      : %7s KB\n"),
+	CONS_Printf(M_GetText("Total heap used        : %7s KB\n"), sizeu1(Z_TotalUsage()>>10));
+	CONS_Printf(M_GetText("Static                 : %7s KB\n"), sizeu1(Z_TagUsage(PU_STATIC)>>10));
+	CONS_Printf(M_GetText("Static (sound)         : %7s KB\n"), sizeu1(Z_TagUsage(PU_SOUND)>>10));
+	CONS_Printf(M_GetText("Static (music)         : %7s KB\n"), sizeu1(Z_TagUsage(PU_MUSIC)>>10));
+	CONS_Printf(M_GetText("Patches                : %7s KB\n"), sizeu1(Z_TagUsage(PU_PATCH)>>10));
+	CONS_Printf(M_GetText("Patches (low priority) : %7s KB\n"), sizeu1(Z_TagUsage(PU_PATCH_LOWPRIORITY)>>10));
+	CONS_Printf(M_GetText("Patches (rotated)      : %7s KB\n"), sizeu1(Z_TagUsage(PU_PATCH_ROTATED)>>10));
+	CONS_Printf(M_GetText("Sprites                : %7s KB\n"), sizeu1(Z_TagUsage(PU_SPRITE)>>10));
+	CONS_Printf(M_GetText("HUD graphics           : %7s KB\n"), sizeu1(Z_TagUsage(PU_HUDGFX)>>10));
+	CONS_Printf(M_GetText("Locked cache           : %7s KB\n"), sizeu1(Z_TagUsage(PU_CACHE)>>10));
+	CONS_Printf(M_GetText("Level                  : %7s KB\n"), sizeu1(Z_TagUsage(PU_LEVEL)>>10));
+	CONS_Printf(M_GetText("Special thinker        : %7s KB\n"), sizeu1(Z_TagUsage(PU_LEVSPEC)>>10));
+	CONS_Printf(M_GetText("All purgable           : %7s KB\n"),
 		sizeu1(Z_TagsUsage(PU_PURGELEVEL, INT32_MAX)>>10));
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 	{
-		CONS_Printf(M_GetText("Patch info headers: %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHINFO)>>10));
-		CONS_Printf(M_GetText("Mipmap patches    : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHCOLMIPMAP)>>10));
-		CONS_Printf(M_GetText("HW Texture cache  : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRCACHE)>>10));
-		CONS_Printf(M_GetText("Plane polygons    : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPLANE)>>10));
-		CONS_Printf(M_GetText("HW model textures : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRMODELTEXTURE)>>10));
-		CONS_Printf(M_GetText("HW Texture used   : %7d KB\n"), HWR_GetTextureUsed()>>10);
+		CONS_Printf(M_GetText("Patch info headers     : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHINFO)>>10));
+		CONS_Printf(M_GetText("Cached textures        : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRCACHE)>>10));
+		CONS_Printf(M_GetText("Texture colormaps      : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPATCHCOLMIPMAP)>>10));
+		CONS_Printf(M_GetText("Model textures         : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRMODELTEXTURE)>>10));
+		CONS_Printf(M_GetText("Plane polygons         : %7s KB\n"), sizeu1(Z_TagUsage(PU_HWRPLANE)>>10));
+		CONS_Printf(M_GetText("All GPU textures       : %7d KB\n"), HWR_GetTextureUsed()>>10);
 	}
 #endif
 

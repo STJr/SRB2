@@ -62,19 +62,32 @@ typedef struct
 typedef struct gl_vissprite_s
 {
 	float x1, x2;
-	float tz, ty;
+	float z1, z2;
+	float gz, gzt;
+
+	float tz;
 	float tracertz; // for MF2_LINKDRAW sprites, this contains tracer's tz for use in sorting
-	//lumpnum_t patchlumpnum;
-	GLPatch_t *gpatch;
-	boolean flip;
-	UINT8 translucency;       //alpha level 0-255
-	mobj_t *mobj; // NOTE: This is a precipmobj_t if precip is true !!! Watch out.
+
+	float scale;
+	float shadowheight, shadowscale;
+
+	float spritexscale, spriteyscale;
+	float spritexoffset, spriteyoffset;
+
+	UINT32 renderflags;
+	UINT8 rotateflags;
+
+	boolean flip, vflip;
 	boolean precip; // Tails 08-25-2002
-	boolean vflip;
-   //Hurdler: 25/04/2000: now support colormap in hardware mode
+	boolean rotated;
+	UINT8 translucency;       //alpha level 0-255
+
+	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	UINT8 *colormap;
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
-	float z1, z2;
+
+	patch_t *gpatch;
+	mobj_t *mobj; // NOTE: This is a precipmobj_t if precip is true !!! Watch out.
 } gl_vissprite_t;
 
 // --------
@@ -86,25 +99,36 @@ extern size_t addsubsector;
 void HWR_InitPolyPool(void);
 void HWR_FreePolyPool(void);
 
+void HWR_FreeExtraSubsectors(void);
+
 // --------
 // hw_cache.c
 // --------
-void HWR_InitTextureCache(void);
-void HWR_FreeTextureCache(void);
-void HWR_FreeMipmapCache(void);
-void HWR_FreeExtraSubsectors(void);
+void HWR_InitMapTextures(void);
+void HWR_LoadMapTextures(size_t pnumtextures);
+void HWR_FreeMapTextures(void);
 
-void HWR_GetLevelFlat(levelflat_t *levelflat);
-void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum);
-GLMapTexture_t *HWR_GetTexture(INT32 tex);
-void HWR_GetPatch(GLPatch_t *gpatch);
-void HWR_GetMappedPatch(GLPatch_t *gpatch, const UINT8 *colormap);
-void HWR_UnlockCachedPatch(GLPatch_t *gpatch);
-GLPatch_t *HWR_GetPic(lumpnum_t lumpnum);
-void HWR_SetPalette(RGBA_t *palette);
-GLPatch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
-GLPatch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
+patch_t *HWR_GetCachedGLPatchPwad(UINT16 wad, UINT16 lump);
+patch_t *HWR_GetCachedGLPatch(lumpnum_t lumpnum);
+
+void HWR_GetPatch(patch_t *patch);
+void HWR_GetMappedPatch(patch_t *patch, const UINT8 *colormap);
 void HWR_GetFadeMask(lumpnum_t fademasklumpnum);
+patch_t *HWR_GetPic(lumpnum_t lumpnum);
+
+GLMapTexture_t *HWR_GetTexture(INT32 tex);
+void HWR_GetLevelFlat(levelflat_t *levelflat);
+void HWR_GetRawFlat(lumpnum_t flatlumpnum);
+
+void HWR_FreeTexture(patch_t *patch);
+void HWR_FreeTextureData(patch_t *patch);
+void HWR_FreeTextureColormaps(patch_t *patch);
+void HWR_ClearAllTextures(void);
+void HWR_FreeColormapCache(void);
+void HWR_UnlockCachedPatch(GLPatch_t *gpatch);
+
+void HWR_SetPalette(RGBA_t *palette);
+
 
 // --------
 // hw_draw.c
