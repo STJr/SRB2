@@ -303,7 +303,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 
 	if ((i != -1) && R_SkinUsable(playernum, i))
 	{
-		SetSkin(playernum, i);
+		SetSkin(player, i);
 		return;
 	}
 
