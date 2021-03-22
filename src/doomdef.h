@@ -100,7 +100,7 @@
 #include <sys/stat.h>
 #include <ctype.h>
 
-#if defined (_WIN32) || defined (__DJGPP__)
+#ifdef _WIN32
 #include <io.h>
 #endif
 
