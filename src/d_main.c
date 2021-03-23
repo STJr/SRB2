@@ -873,10 +873,26 @@ static void D_AddFile(char **list, const char *file)
 
 	newfile = malloc(strlen(file) + 1);
 	if (!newfile)
-	{
 		I_Error("No more free memory to AddFile %s",file);
-	}
+
 	strcpy(newfile, file);
+	list[pnumwadfiles] = newfile;
+}
+
+static void D_AddFolder(char **list, const char *file)
+{
+	size_t pnumwadfiles, len = strlen(file);
+	char *newfile;
+
+	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
+		;
+
+	newfile = malloc(len + 2); // NULL terminator + path separator
+	if (!newfile)
+		I_Error("No more free memory to AddFolder %s",file);
+
+	strcpy(newfile, file);
+	strcat(newfile, PATHSEP);
 
 	list[pnumwadfiles] = newfile;
 }
@@ -1180,7 +1196,7 @@ void D_SRB2Main(void)
 	{
 		if (M_CheckParm("-file"))
 		{
-			// the parms after p are wadfile/lump names,
+			// the parms after p are wadfile names,
 			// until end of parms or another - preceded parm
 			while (M_IsNextParm())
 			{
@@ -1188,6 +1204,19 @@ void D_SRB2Main(void)
 
 				if (s) // Check for NULL?
 					D_AddFile(startuppwads, s);
+			}
+		}
+
+		if (M_CheckParm("-folder"))
+		{
+			// the parms after p are folder names,
+			// until end of parms or another - preceded parm
+			while (M_IsNextParm())
+			{
+				const char *s = M_GetNextParm();
+
+				if (s) // Check for NULL?
+					D_AddFolder(startuppwads, s);
 			}
 		}
 	}

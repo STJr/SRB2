@@ -38,6 +38,7 @@ typedef enum
 typedef struct
 {
 	UINT8 willsend; // Is the server willing to send it?
+	UINT8 folder; // File is a folder
 	char filename[MAX_WADPATH];
 	UINT8 md5sum[16];
 	filestatus_t status; // The value returned by recsearch
@@ -53,6 +54,8 @@ typedef struct
 	UINT32 totalsize;
 	UINT32 ackresendposition; // Used when resuming downloads
 } fileneeded_t;
+
+#define FILENEEDEDSIZE 23
 
 extern INT32 fileneedednum;
 extern fileneeded_t fileneeded[MAX_WADFILES];
@@ -132,6 +135,9 @@ boolean fileexist(char *filename, time_t ptime);
 filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum,
 	boolean completepath);
 filestatus_t checkfilemd5(char *filename, const UINT8 *wantedmd5sum);
+
+// Searches for a folder
+filestatus_t findfolder(const char *path);
 
 void nameonly(char *s);
 size_t nameonlylength(const char *s);

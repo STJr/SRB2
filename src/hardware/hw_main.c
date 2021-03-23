@@ -6681,7 +6681,7 @@ void HWR_LoadAllCustomShaders(void)
 
 	// read every custom shader
 	for (i = 0; i < numwadfiles; i++)
-		HWR_LoadCustomShadersFromFile(i, (wadfiles[i]->type == RET_PK3));
+		HWR_LoadCustomShadersFromFile(i, W_FileHasFolders(wadfiles[i]));
 }
 
 void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3)

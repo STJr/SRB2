@@ -443,6 +443,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
 		break;
 	case RET_PK3:
+	case RET_FOLDER:
 		start = W_CheckNumForFolderStartPK3("Sprites/", wadnum, 0);
 		end = W_CheckNumForFolderEndPK3("Sprites/", wadnum, start);
 		break;

@@ -4385,10 +4385,9 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 // Add a wadfile to the active wad files,
 // replace sounds, musics, patches, textures, sprites and maps
 //
-boolean P_AddWadFile(const char *wadfilename)
+static boolean P_LoadAddon(UINT16 wadnum, UINT16 numlumps)
 {
 	size_t i, j, sreplaces = 0, mreplaces = 0, digmreplaces = 0;
-	UINT16 numlumps, wadnum;
 	char *name;
 	lumpinfo_t *lumpinfo;
 
@@ -4409,18 +4408,10 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 flaPos, flaNum = 0;
 //	UINT16 mapPos, mapNum = 0;
 
-	// Init file.
-	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
-	{
-		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		return false;
-	}
-	else
-		wadnum = (UINT16)(numwadfiles-1);
-
 	switch(wadfiles[wadnum]->type)
 	{
 	case RET_PK3:
+	case RET_FOLDER:
 		// Look for the lumps that act as resource delimitation markers.
 		lumpinfo = wadfiles[wadnum]->lumpinfo;
 		for (i = 0; i < numlumps; i++, lumpinfo++)
@@ -4583,4 +4574,36 @@ boolean P_AddWadFile(const char *wadfilename)
 	}
 
 	return true;
+}
+
+boolean P_AddWadFile(const char *wadfilename)
+{
+	UINT16 numlumps, wadnum;
+
+	// Init file.
+	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
+	{
+		refreshdirmenu |= REFRESHDIR_NOTLOADED;
+		return false;
+	}
+	else
+		wadnum = (UINT16)(numwadfiles-1);
+
+	return P_LoadAddon(wadnum, numlumps);
+}
+
+boolean P_AddFolder(const char *folderpath)
+{
+	UINT16 numlumps, wadnum;
+
+	// Init file.
+	if ((numlumps = W_InitFolder(folderpath, false, false)) == INT16_MAX)
+	{
+		refreshdirmenu |= REFRESHDIR_NOTLOADED;
+		return false;
+	}
+	else
+		wadnum = (UINT16)(numwadfiles-1);
+
+	return P_LoadAddon(wadnum, numlumps);
 }
