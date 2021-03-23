@@ -5012,7 +5012,7 @@ void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 
 static void P_DoTwinSpin(player_t *player)
 {
-	player->pflags &= ~PF_NOJUMPDAMAGE;
+	player->pflags &= ~(PF_NOJUMPDAMAGE|PF_SPINNING);
 	player->pflags |= P_GetJumpFlags(player) | PF_THOKKED;
 	S_StartSound(player->mo, sfx_s3k42);
 	player->mo->frame = 0;
@@ -5059,6 +5059,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 			if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
 			{
 				player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+				player->pflags &= ~PF_SPINNING;
 				player->mo->momx = player->mo->momy = player->mo->momz = 0;
 				S_StartSound(player->mo, sfx_ngskid);
 			}
@@ -5074,11 +5075,13 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 					// Armageddon pow
 					case SH_ARMAGEDDON:
 						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+						player->pflags &= ~PF_SPINNING;
 						P_BlackOw(player);
 						break;
 					// Attraction blast
 					case SH_ATTRACT:
 						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+						player->pflags &= ~PF_SPINNING;
 						player->homing = 2;
 						P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockonshield));
 						if (lockonshield)
@@ -5098,6 +5101,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 							{
 								boolean elem = ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL);
 								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+								player->pflags &= ~PF_SPINNING;
 								if (elem)
 								{
 									player->mo->momx = player->mo->momy = 0;
@@ -5120,7 +5124,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 							P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
 							player->drawangle = player->mo->angle;
-							player->pflags &= ~PF_NOJUMPDAMAGE;
+							player->pflags &= ~(PF_NOJUMPDAMAGE|PF_SPINNING);
 							P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 							S_StartSound(player->mo, sfx_s3k43);
 						default:
@@ -5413,7 +5417,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					if (!(player->pflags & PF_THOKKED) || ((player->charflags & SF_MULTIABILITY) && (player->secondjump < (player->actionspd >> FRACBITS))))
 					{
 						player->pflags |= PF_THOKKED;
-						player->pflags &= ~PF_JUMPED;
+						player->pflags &= ~(PF_JUMPED|PF_SPINNING);
 						P_DoJump(player, true);
 						player->secondjump++;
 					}
@@ -5439,6 +5443,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						P_Telekinesis(player,
 							FixedMul(player->actionspd, player->mo->scale), // +ve thrust (pushing away from player)
 							FixedMul(384*FRACUNIT, player->mo->scale));
+						player->pflags &= ~PF_SPINNING;
 					}
 					break;
 				case CA_FALLSWITCH:
@@ -5447,6 +5452,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->mo->momz = -player->mo->momz;
 						P_SpawnThokMobj(player);
 						player->pflags |= PF_THOKKED;
+						player->pflags &= ~PF_SPINNING;
 					}
 					break;
 				case CA_AIRDRILL:
@@ -5454,6 +5460,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					{
 						player->flyangle = 56 + (60-(player->actionspd>>FRACBITS))/3;
 						player->pflags |= PF_THOKKED;
+						player->pflags &= ~PF_SPINNING;
 						S_StartSound(player->mo, sfx_spndsh);
 					}
 					break;
@@ -5461,7 +5468,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
 						P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE);
-						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
+						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING);
 						player->pflags |= PF_THOKKED|PF_BOUNCING;
 						player->mo->momx >>= 1;
 						player->mo->momy >>= 1;
