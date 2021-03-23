@@ -5012,7 +5012,7 @@ void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 
 static void P_DoTwinSpin(player_t *player)
 {
-	player->pflags &= ~(PF_NOJUMPDAMAGE|PF_SPINNING);
+	player->pflags &= ~PF_NOJUMPDAMAGE;
 	player->pflags |= P_GetJumpFlags(player) | PF_THOKKED;
 	S_StartSound(player->mo, sfx_s3k42);
 	player->mo->frame = 0;
@@ -5286,197 +5286,194 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 		else if (player->pflags & PF_JUMPED)
 		{
 			if (!LUAh_AbilitySpecial(player))
+			switch (player->charability)
 			{
-				switch (player->charability)
-				{
-					case CA_THOK:
-					case CA_HOMINGTHOK:
-					case CA_JUMPTHOK: // Credit goes to CZ64 and Sryder13 for the original
-						// Now it's Sonic's abilities turn!
-						// THOK!
-						if (!(player->pflags & PF_THOKKED) || (player->charflags & SF_MULTIABILITY))
+				case CA_THOK:
+				case CA_HOMINGTHOK:
+				case CA_JUMPTHOK: // Credit goes to CZ64 and Sryder13 for the original
+					// Now it's Sonic's abilities turn!
+					// THOK!
+					if (!(player->pflags & PF_THOKKED) || (player->charflags & SF_MULTIABILITY))
+					{
+						// Catapult the player
+						fixed_t actionspd = player->actionspd;
+
+						if (player->charflags & SF_DASHMODE)
+							actionspd = max(player->normalspeed, FixedDiv(player->speed, player->mo->scale));
+
+						if (player->mo->eflags & MFE_UNDERWATER)
+							actionspd >>= 1;
+
+						if ((player->charability == CA_JUMPTHOK) && !(player->pflags & PF_THOKKED))
 						{
-							// Catapult the player
-							fixed_t actionspd = player->actionspd;
-
-							if (player->charflags & SF_DASHMODE)
-								actionspd = max(player->normalspeed, FixedDiv(player->speed, player->mo->scale));
-
-							if (player->mo->eflags & MFE_UNDERWATER)
-								actionspd >>= 1;
-
-							if ((player->charability == CA_JUMPTHOK) && !(player->pflags & PF_THOKKED))
-							{
-								player->pflags &= ~PF_JUMPED;
-								P_DoJump(player, false);
-							}
-
-							P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
-
-							if (maptol & TOL_2D)
-							{
-								player->mo->momx /= 2;
-								player->mo->momy /= 2;
-							}
-							if (player->charability == CA_HOMINGTHOK)
-							{
-								player->mo->momx /= 2;
-								player->mo->momy /= 2;
-							}
-
-							if (player->charability == CA_HOMINGTHOK)
-							{
-								P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockonthok));
-								if (lockonthok)
-								{
-									P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-									player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockonthok->x, lockonthok->y);
-									player->homing = 3*TICRATE;
-								}
-								else
-								{
-									P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
-									player->pflags &= ~PF_JUMPED;
-									player->mo->height = P_GetPlayerHeight(player);
-								}
-								player->pflags &= ~PF_NOJUMPDAMAGE;
-							}
-
-							player->drawangle = player->mo->angle;
-
-							if (player->mo->info->attacksound && !player->spectator)
-								S_StartSound(player->mo, player->mo->info->attacksound); // Play the THOK sound
-
-							P_SpawnThokMobj(player);
-
-							player->pflags &= ~(PF_STARTDASH);
-							player->pflags |= PF_THOKKED;
-
-							// Change localangle to match for simple controls? (P.S. chalupa)
-							// disabled because it seemed to disorient people and Z-targeting exists now
-							/*if (!demoplayback)
-							{
-								if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0 && !(PLAYER1INPUTDOWN(gc_turnleft) || PLAYER1INPUTDOWN(gc_turnright)))
-									P_SetPlayerAngle(player, player->mo->angle);;
-								else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0 && !(PLAYER2INPUTDOWN(gc_turnleft) || PLAYER2INPUTDOWN(gc_turnright)))
-									P_SetPlayerAngle(player, player->mo->angle);
-							}*/
-						}
-						break;
-
-					case CA_FLY:
-					case CA_SWIM:
-						// If currently in the air from a jump, and you pressed the
-						// button again and have the ability to fly, do so!
-						if (player->charability == CA_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
-							; // Can't do anything if you're a fish out of water!
-						else if (!(player->pflags & PF_THOKKED) && !(player->powers[pw_tailsfly]))
-						{
-							P_SetPlayerMobjState(player->mo, S_PLAY_FLY); // Change to the flying animation
-
-							player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
-
-							player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_STARTDASH);
-							if (player->bot == 1)
-								player->pflags |= PF_THOKKED;
-							else
-								player->pflags |= (PF_THOKKED|PF_CANCARRY);
-						}
-						break;
-					case CA_GLIDEANDCLIMB:
-						// Now Knuckles-type abilities are checked.
-						if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
-						{
-							fixed_t glidespeed = FixedMul(player->actionspd, player->mo->scale);
-							fixed_t playerspeed = player->speed;
-
-							if (player->mo->eflags & MFE_UNDERWATER)
-							{
-								glidespeed >>= 1;
-								playerspeed = 2*playerspeed/3;
-								if (!(player->powers[pw_super] || player->powers[pw_sneakers]))
-								{
-									player->mo->momx = (2*(player->mo->momx - player->cmomx)/3) + player->cmomx;
-									player->mo->momy = (2*(player->mo->momy - player->cmomy)/3) + player->cmomy;
-								}
-							}
-
-							player->pflags |= PF_GLIDING|PF_THOKKED;
-							player->glidetime = 0;
-
-							P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
-							if (playerspeed < glidespeed)
-								P_Thrust(player->mo, player->mo->angle, glidespeed - playerspeed);
-							player->pflags &= ~(PF_STARTDASH);
-						}
-						break;
-					case CA_DOUBLEJUMP: // Double-Jump
-						if (!(player->pflags & PF_THOKKED) || ((player->charflags & SF_MULTIABILITY) && (player->secondjump < (player->actionspd >> FRACBITS))))
-						{
-							player->pflags |= PF_THOKKED;
 							player->pflags &= ~PF_JUMPED;
-							P_DoJump(player, true);
-							player->secondjump++;
+							P_DoJump(player, false);
 						}
-						break;
-					case CA_FLOAT: // Float
-					case CA_SLOWFALL: // Slow descent hover
-						if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
+
+						P_InstaThrust(player->mo, player->mo->angle, FixedMul(actionspd, player->mo->scale));
+
+						if (maptol & TOL_2D)
 						{
-							if (player->charflags & SF_DASHMODE && player->dashmode >= DASHMODE_THRESHOLD)
-								P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
-							else if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
-								P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
+							player->mo->momx /= 2;
+							player->mo->momy /= 2;
+						}
+						if (player->charability == CA_HOMINGTHOK)
+						{
+							player->mo->momx /= 2;
+							player->mo->momy /= 2;
+						}
+
+						if (player->charability == CA_HOMINGTHOK)
+						{
+							P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockonthok));
+							if (lockonthok)
+							{
+								P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+								player->mo->angle = R_PointToAngle2(player->mo->x, player->mo->y, lockonthok->x, lockonthok->y);
+								player->homing = 3*TICRATE;
+							}
 							else
-								P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
+							{
+								P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+								player->pflags &= ~PF_JUMPED;
+								player->mo->height = P_GetPlayerHeight(player);
+							}
+							player->pflags &= ~PF_NOJUMPDAMAGE;
+						}
+
+						player->drawangle = player->mo->angle;
+
+						if (player->mo->info->attacksound && !player->spectator)
+							S_StartSound(player->mo, player->mo->info->attacksound); // Play the THOK sound
+
+						P_SpawnThokMobj(player);
+
+						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
+						player->pflags |= PF_THOKKED;
+
+						// Change localangle to match for simple controls? (P.S. chalupa)
+						// disabled because it seemed to disorient people and Z-targeting exists now
+						/*if (!demoplayback)
+						{
+							if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0 && !(PLAYER1INPUTDOWN(gc_turnleft) || PLAYER1INPUTDOWN(gc_turnright)))
+								P_SetPlayerAngle(player, player->mo->angle);;
+							else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0 && !(PLAYER2INPUTDOWN(gc_turnleft) || PLAYER2INPUTDOWN(gc_turnright)))
+								P_SetPlayerAngle(player, player->mo->angle);
+						}*/
+					}
+					break;
+
+				case CA_FLY:
+				case CA_SWIM:
+					// If currently in the air from a jump, and you pressed the
+					// button again and have the ability to fly, do so!
+					if (player->charability == CA_SWIM && !(player->mo->eflags & MFE_UNDERWATER))
+						; // Can't do anything if you're a fish out of water!
+					else if (!(player->pflags & PF_THOKKED) && !(player->powers[pw_tailsfly]))
+					{
+						P_SetPlayerMobjState(player->mo, S_PLAY_FLY); // Change to the flying animation
+
+						player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
+
+						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_STARTDASH);
+						if (player->bot == 1)
 							player->pflags |= PF_THOKKED;
-							player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
-							player->secondjump = 1;
-						}
-						break;
-					case CA_TELEKINESIS:
-						if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
+						else
+							player->pflags |= (PF_THOKKED|PF_CANCARRY);
+					}
+					break;
+				case CA_GLIDEANDCLIMB:
+					// Now Knuckles-type abilities are checked.
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
+					{
+						fixed_t glidespeed = FixedMul(player->actionspd, player->mo->scale);
+						fixed_t playerspeed = player->speed;
+
+						if (player->mo->eflags & MFE_UNDERWATER)
 						{
-							P_Telekinesis(player,
-								FixedMul(player->actionspd, player->mo->scale), // +ve thrust (pushing away from player)
-								FixedMul(384*FRACUNIT, player->mo->scale));
+							glidespeed >>= 1;
+							playerspeed = 2*playerspeed/3;
+							if (!(player->powers[pw_super] || player->powers[pw_sneakers]))
+							{
+								player->mo->momx = (2*(player->mo->momx - player->cmomx)/3) + player->cmomx;
+								player->mo->momy = (2*(player->mo->momy - player->cmomy)/3) + player->cmomy;
+							}
 						}
-						break;
-					case CA_FALLSWITCH:
-						if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
-						{
-							player->mo->momz = -player->mo->momz;
-							P_SpawnThokMobj(player);
-							player->pflags |= PF_THOKKED;
-						}
-						break;
-					case CA_AIRDRILL:
-						if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
-						{
-							player->flyangle = 56 + (60-(player->actionspd>>FRACBITS))/3;
-							player->pflags |= PF_THOKKED;
-							S_StartSound(player->mo, sfx_spndsh);
-						}
-						break;
-					case CA_BOUNCE:
-						if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
-						{
-							P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE);
-							player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
-							player->pflags |= PF_THOKKED|PF_BOUNCING;
-							player->mo->momx >>= 1;
-							player->mo->momy >>= 1;
-							player->mo->momz >>= 1;
-						}
-						break;
-					case CA_TWINSPIN:
-						if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
-							P_DoTwinSpin(player);
-						break;
-					default:
-						break;
-				}
-				player->pflags &= ~PF_SPINNING;
+
+						player->pflags |= PF_GLIDING|PF_THOKKED;
+						player->glidetime = 0;
+
+						P_SetPlayerMobjState(player->mo, S_PLAY_GLIDE);
+						if (playerspeed < glidespeed)
+							P_Thrust(player->mo, player->mo->angle, glidespeed - playerspeed);
+						player->pflags &= ~(PF_SPINNING|PF_STARTDASH);
+					}
+					break;
+				case CA_DOUBLEJUMP: // Double-Jump
+					if (!(player->pflags & PF_THOKKED) || ((player->charflags & SF_MULTIABILITY) && (player->secondjump < (player->actionspd >> FRACBITS))))
+					{
+						player->pflags |= PF_THOKKED;
+						player->pflags &= ~PF_JUMPED;
+						P_DoJump(player, true);
+						player->secondjump++;
+					}
+					break;
+				case CA_FLOAT: // Float
+				case CA_SLOWFALL: // Slow descent hover
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
+					{
+						if (player->charflags & SF_DASHMODE && player->dashmode >= DASHMODE_THRESHOLD)
+							P_SetPlayerMobjState(player->mo, S_PLAY_DASH);
+						else if (player->speed >= FixedMul(player->runspeed, player->mo->scale))
+							P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT_RUN);
+						else
+							P_SetPlayerMobjState(player->mo, S_PLAY_FLOAT);
+						player->pflags |= PF_THOKKED;
+						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING);
+						player->secondjump = 1;
+					}
+					break;
+				case CA_TELEKINESIS:
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
+					{
+						P_Telekinesis(player,
+							FixedMul(player->actionspd, player->mo->scale), // +ve thrust (pushing away from player)
+							FixedMul(384*FRACUNIT, player->mo->scale));
+					}
+					break;
+				case CA_FALLSWITCH:
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
+					{
+						player->mo->momz = -player->mo->momz;
+						P_SpawnThokMobj(player);
+						player->pflags |= PF_THOKKED;
+					}
+					break;
+				case CA_AIRDRILL:
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
+					{
+						player->flyangle = 56 + (60-(player->actionspd>>FRACBITS))/3;
+						player->pflags |= PF_THOKKED;
+						S_StartSound(player->mo, sfx_spndsh);
+					}
+					break;
+				case CA_BOUNCE:
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
+					{
+						P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE);
+						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
+						player->pflags |= PF_THOKKED|PF_BOUNCING;
+						player->mo->momx >>= 1;
+						player->mo->momy >>= 1;
+						player->mo->momz >>= 1;
+					}
+					break;
+				case CA_TWINSPIN:
+					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
+						P_DoTwinSpin(player);
+					break;
+				default:
+					break;
 			}
 		}
 		else if (player->pflags & PF_THOKKED)
