@@ -1955,6 +1955,12 @@ static boolean PIT_CheckLine(line_t *ld)
 	// set openrange, opentop, openbottom
 	P_LineOpening(ld, tmthing);
 
+	// players should not always cross into sectors that they could not at full height
+	if (tmthing->player
+		&& openrange < P_GetPlayerHeight(tmthing->player)
+		&& !P_PlayerCanEnterSpinGaps(tmthing->player))
+			return false;
+
 	// adjust floor / ceiling heights
 	if (opentop < tmceilingz)
 	{
@@ -3330,6 +3336,11 @@ static boolean PTR_LineIsBlocking(line_t *li)
 
 	if (openbottom - slidemo->z > FixedMul(MAXSTEPMOVE, slidemo->scale))
 		return true; // too big a step up
+
+	if (slidemo->player
+		&& openrange < P_GetPlayerHeight(slidemo->player)
+		&& !P_PlayerCanEnterSpinGaps(slidemo->player))
+			return true; // nonspin character should not take this path
 
 	return false;
 }
