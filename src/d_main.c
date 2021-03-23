@@ -175,6 +175,10 @@ void D_ProcessEvents(void)
 
 	boolean eaten;
 
+	// Reset possibly stale mouse info
+	G_SetMouseData(0, 0, 1);
+	G_SetMouseData(0, 0, 2);
+
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
 		ev = &events[eventtail];
@@ -219,6 +223,11 @@ void D_ProcessEvents(void)
 
 		G_Responder(ev);
 	}
+
+	if (mouse.rdx || mouse.rdy)
+		G_SetMouseData(mouse.rdx, mouse.rdy, 1);
+	if (mouse2.rdx || mouse2.rdy)
+		G_SetMouseData(mouse2.rdx, mouse2.rdy, 2);
 }
 
 //

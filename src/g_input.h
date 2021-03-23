@@ -116,9 +116,17 @@ extern consvar_t cv_mousesens, cv_mouseysens;
 extern consvar_t cv_mousesens2, cv_mouseysens2;
 extern consvar_t cv_controlperkey;
 
-extern INT32 mousex, mousey;
-extern INT32 mlooky; //mousey with mlookSensitivity
-extern INT32 mouse2x, mouse2y, mlook2y;
+typedef struct
+{
+	INT32 dx; // deltas with mousemove sensitivity
+	INT32 dy;
+	INT32 mlookdy; // dy with mouselook sensitivity
+	INT32 rdx; // deltas without sensitivity
+	INT32 rdy;
+} mouse_t;
+
+extern mouse_t mouse;
+extern mouse_t mouse2;
 
 extern INT32 joyxmove[JOYAXISSET], joyymove[JOYAXISSET], joy2xmove[JOYAXISSET], joy2ymove[JOYAXISSET];
 
@@ -174,5 +182,8 @@ INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gc
 void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
 void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis)[2]);
 INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify);
+
+// sets the members of a mouse_t given position deltas
+void G_SetMouseData(INT32 realdx, INT32 realdy, UINT8 ssplayer);
 
 #endif

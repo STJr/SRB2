@@ -31,10 +31,8 @@ consvar_t cv_mouseysens = CVAR_INIT ("mouseysens", "20", CV_SAVE, mousesens_cons
 consvar_t cv_mouseysens2 = CVAR_INIT ("mouseysens2", "20", CV_SAVE, mousesens_cons_t, NULL);
 consvar_t cv_controlperkey = CVAR_INIT ("controlperkey", "One", CV_SAVE, onecontrolperkey_cons_t, NULL);
 
-INT32 mousex, mousey;
-INT32 mlooky; // like mousey but with a custom sensitivity for mlook
-
-INT32 mouse2x, mouse2y, mlook2y;
+mouse_t mouse;
+mouse_t mouse2;
 
 // joystick values are repeated
 INT32 joyxmove[JOYAXISSET], joyymove[JOYAXISSET], joy2xmove[JOYAXISSET], joy2ymove[JOYAXISSET];
@@ -142,9 +140,8 @@ void G_MapEventsToControls(event_t *ev)
 		case ev_mouse: // buttons are virtual keys
 			if (menuactive || CON_Ready() || chat_on)
 				break;
-			mousex = (INT32)(ev->data2*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1f));
-			mousey = (INT32)(ev->data3*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1f));
-			mlooky = (INT32)(ev->data3*((cv_mouseysens.value*cv_mousesens.value)/110.0f + 0.1f));
+			mouse.rdx = ev->data2;
+			mouse.rdy = ev->data3;
 			break;
 
 		case ev_joystick: // buttons are virtual keys
@@ -166,9 +163,8 @@ void G_MapEventsToControls(event_t *ev)
 		case ev_mouse2: // buttons are virtual keys
 			if (menuactive || CON_Ready() || chat_on)
 				break;
-			mouse2x = (INT32)(ev->data2*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1f));
-			mouse2y = (INT32)(ev->data3*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1f));
-			mlook2y = (INT32)(ev->data3*((cv_mouseysens2.value*cv_mousesens2.value)/110.0f + 0.1f));
+			mouse2.rdx = ev->data2;
+			mouse2.rdy = ev->data3;
 			break;
 
 		default:
@@ -1072,4 +1068,22 @@ void Command_Setcontrol2_f(void)
 	}
 
 	setcontrol(gamecontrolbis);
+}
+
+void G_SetMouseData(INT32 realdx, INT32 realdy, UINT8 ssplayer)
+{
+	mouse_t *m = ssplayer == 1 ? &mouse : &mouse2;
+	consvar_t *cvsens, *cvysens;
+
+	if (!realdx && !realdy) {
+		memset(m, 0, sizeof(*m));
+		return;
+	}
+	cvsens = ssplayer == 1 ? &cv_mousesens : &cv_mousesens2;
+	cvysens = ssplayer == 1 ? &cv_mouseysens : &cv_mouseysens2;
+	m->rdx = realdx;
+	m->rdy = realdy;
+	m->dx = (INT32)(m->rdx*((cvsens->value*cvsens->value)/110.0f + 0.1f));
+	m->dy = (INT32)(m->rdy*((cvsens->value*cvsens->value)/110.0f + 0.1f));
+	m->mlookdy = (INT32)(m->rdy*((cvysens->value*cvsens->value)/110.0f + 0.1f));
 }
