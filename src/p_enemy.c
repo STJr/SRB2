@@ -9879,22 +9879,23 @@ void A_Custom3DRotate(mobj_t *actor)
 	if (LUA_CallAction(A_CUSTOM3DROTATE, actor))
 		return;
 
+	if (!actor->target) // Ensure we actually have a target first.
+	{
+		CONS_Printf("Error: A_Custom3DRotate: Object has no target.\n");
+		P_RemoveMobj(actor);
+		return;
+	}
+
 	if (actor->target->health == 0)
 	{
 		P_RemoveMobj(actor);
 		return;
 	}
 
-	if (!actor->target) // This should NEVER happen.
-	{
-		if (cv_debug)
-			CONS_Printf("Error: Object has no target\n");
-		P_RemoveMobj(actor);
-		return;
-	}
 	if (hspeed==0 && vspeed==0)
 	{
-		CONS_Printf("Error: A_Custom3DRotate: Object has no speed.\n");
+		if (cv_debug)
+			CONS_Printf("Error: A_Custom3DRotate: Object has no speed.\n");
 		return;
 	}
 
