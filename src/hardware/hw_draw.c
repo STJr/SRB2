@@ -437,18 +437,9 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 		if (!(option & V_SCALEPATCHMASK))
 		{
-			// if it's meant to cover the whole screen, black out the rest (ONLY IF TOP LEFT ISN'T TRANSPARENT)
-			// cx and cy are possibly *slightly* off from float maths
-			// This is done before here compared to software because we directly alter cx and cy to centre
-			if (cx >= -0.1f && cx <= 0.1f && gpatch->width == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && gpatch->height == BASEVIDHEIGHT)
-			{
-				const column_t *column = (const column_t *)((const UINT8 *)(gpatch->columns) + (gpatch->columnofs[0]));
-				if (!column->topdelta)
-				{
-					const UINT8 *source = (const UINT8 *)(column) + 3;
-					HWR_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
-				}
-			}
+			// if it's meant to cover the whole screen, black out the rest
+			// no the patch is cropped do not do this ever
+
 			// centre screen
 			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
 			{
@@ -470,11 +461,11 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	fwidth = w;
 	fheight = h;
 
-	if (fwidth > gpatch->width)
-		fwidth = gpatch->width;
+	if (sx + w > gpatch->width)
+		fwidth = gpatch->width - sx;
 
-	if (fheight > gpatch->height)
-		fheight = gpatch->height;
+	if (sy + h > gpatch->height)
+		fheight = gpatch->height - sy;
 
 	if (pscale != FRACUNIT)
 	{
@@ -506,13 +497,13 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 
 	v[0].s = v[3].s = ((sx)/(float)(gpatch->width))*hwrPatch->max_s;
 	if (sx + w > gpatch->width)
-		v[2].s = v[1].s = hwrPatch->max_s - ((sx+w)/(float)(gpatch->width))*hwrPatch->max_s;
+		v[2].s = v[1].s = hwrPatch->max_s;
 	else
 		v[2].s = v[1].s = ((sx+w)/(float)(gpatch->width))*hwrPatch->max_s;
 
 	v[0].t = v[1].t = ((sy)/(float)(gpatch->height))*hwrPatch->max_t;
 	if (sy + h > gpatch->height)
-		v[2].t = v[3].t = hwrPatch->max_t - ((sy+h)/(float)(gpatch->height))*hwrPatch->max_t;
+		v[2].t = v[3].t = hwrPatch->max_t;
 	else
 		v[2].t = v[3].t = ((sy+h)/(float)(gpatch->height))*hwrPatch->max_t;
 
