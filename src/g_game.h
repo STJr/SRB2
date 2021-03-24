@@ -85,6 +85,25 @@ typedef enum
 } lockassist_e;
 
 
+typedef enum
+{
+	JA_NONE = 0,
+	JA_TURN,
+	JA_MOVE,
+	JA_LOOK,
+	JA_STRAFE,
+
+	JA_DIGITAL, // axes below this use digital deadzone
+
+	JA_JUMP,
+	JA_SPIN,
+	JA_FIRE,
+	JA_FIRENORMAL,
+} joyaxis_e;
+
+INT32 JoyAxis(joyaxis_e axissel);
+INT32 Joy2Axis(joyaxis_e axissel);
+
 // mouseaiming (looking up/down with the mouse or keyboard)
 #define KB_LOOKSPEED (1<<25)
 #define MAXPLMOVE (50)
@@ -204,6 +223,7 @@ void G_EndGame(void); // moved from y_inter.c/h and renamed
 
 void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);
+boolean G_LuaResponder(event_t *ev);
 
 void G_AddPlayer(INT32 playernum);
 

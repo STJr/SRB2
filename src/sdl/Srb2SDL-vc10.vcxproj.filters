@@ -720,6 +720,9 @@
     <ClCompile Include="..\lua_infolib.c">
       <Filter>LUA</Filter>
     </ClCompile>
+    <ClCompile Include="..\lua_inputlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
     <ClCompile Include="..\lua_maplib.c">
       <Filter>LUA</Filter>
     </ClCompile>

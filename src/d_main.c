@@ -181,6 +181,8 @@ void D_ProcessEvents(void)
 
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
+		boolean hooked = false;
+
 		ev = &events[eventtail];
 
 		// Screenshots over everything so that they can be taken anywhere.
@@ -191,6 +193,12 @@ void D_ProcessEvents(void)
 		{
 			if (cht_Responder(ev))
 				continue;
+		}
+
+		if (!CON_Ready() && !menuactive) {
+			if (G_LuaResponder(ev))
+				continue;
+			hooked = true;
 		}
 
 		// Menu input
@@ -207,6 +215,12 @@ void D_ProcessEvents(void)
 		if (eaten)
 			continue; // menu ate the event
 
+		if (!hooked && !CON_Ready()) {
+			if (G_LuaResponder(ev))
+				continue;
+			hooked = true;
+		}
+
 		// console input
 #ifdef HAVE_THREADS
 		I_lock_mutex(&con_mutex);
@@ -220,6 +234,9 @@ void D_ProcessEvents(void)
 
 		if (eaten)
 			continue; // ate the event
+
+		if (!hooked && G_LuaResponder(ev))
+			continue;
 
 		G_Responder(ev);
 	}

@@ -281,6 +281,7 @@ set(SRB2_LUA_SOURCES
 	lua_mobjlib.c
 	lua_playerlib.c
 	lua_polyobjlib.c
+	lua_inputlib.c
 	lua_script.c
 	lua_skinlib.c
 	lua_thinkerlib.c

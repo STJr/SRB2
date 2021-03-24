@@ -212,6 +212,8 @@ static const struct {
 	{META_ACTION,       "action"},
 
 	{META_LUABANKS,     "luabanks[]"},
+	
+	{META_MOUSE,        "mouse_t"},
 	{NULL,              NULL}
 };
 

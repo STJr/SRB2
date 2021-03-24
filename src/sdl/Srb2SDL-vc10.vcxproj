@@ -406,6 +406,7 @@
     <ClCompile Include="..\lua_hooklib.c" />
     <ClCompile Include="..\lua_hudlib.c" />
     <ClCompile Include="..\lua_infolib.c" />
+    <ClCompile Include="..\lua_inputlib.c" />
     <ClCompile Include="..\lua_maplib.c" />
     <ClCompile Include="..\lua_mathlib.c" />
     <ClCompile Include="..\lua_mobjlib.c" />

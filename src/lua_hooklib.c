@@ -79,6 +79,8 @@ const char *const hookNames[hook_MAX+1] = {
 	"MusicChange",
 	"PlayerHeight",
 	"PlayerCanEnterSpinGaps",
+	"KeyDown",
+	"KeyUp",
 	NULL
 };
 
@@ -2060,4 +2062,74 @@ UINT8 LUAh_PlayerCanEnterSpinGaps(player_t *player)
 
 	lua_settop(gL, 0);
 	return canEnter;
+}
+
+// Hook for key press
+boolean LUAh_KeyDown(INT32 keycode)
+{
+	hook_p hookp;
+	boolean override = false;
+	if (!gL || !(hooksAvailable[hook_KeyDown/8] & (1<<(hook_KeyDown%8))))
+		return false;
+
+	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_KeyDown)
+			continue;
+
+		PushHook(gL, hookp);
+		lua_pushinteger(gL, keycode);
+		if (lua_pcall(gL, 1, 1, 1)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			override = true;
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+
+	return override;
+}
+
+// Hook for key release
+boolean LUAh_KeyUp(INT32 keycode)
+{
+	hook_p hookp;
+	boolean override = false;
+	if (!gL || !(hooksAvailable[hook_KeyUp/8] & (1<<(hook_KeyUp%8))))
+		return false;
+
+	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	for (hookp = roothook; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_KeyUp)
+			continue;
+
+		PushHook(gL, hookp);
+		lua_pushinteger(gL, keycode);
+		if (lua_pcall(gL, 1, 1, 1)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			override = true;
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+
+	return override;
 }

@@ -63,6 +63,8 @@ enum hook {
 	hook_MusicChange,
 	hook_PlayerHeight,
 	hook_PlayerCanEnterSpinGaps,
+	hook_KeyDown,
+	hook_KeyUp,
 
 	hook_MAX // last hook
 };
@@ -122,3 +124,5 @@ boolean LUAh_PlayerCmd(player_t *player, ticcmd_t *cmd); // Hook for building pl
 boolean LUAh_MusicChange(const char *oldname, char *newname, UINT16 *mflags, boolean *looping, UINT32 *position, UINT32 *prefadems, UINT32 *fadeinms); // Hook for music changes
 fixed_t LUAh_PlayerHeight(player_t *player);
 UINT8 LUAh_PlayerCanEnterSpinGaps(player_t *player);
+boolean LUAh_KeyDown(INT32 keycode); // Hooks for key events
+boolean LUAh_KeyUp(INT32 keycode);
