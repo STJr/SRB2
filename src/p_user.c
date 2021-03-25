@@ -12958,9 +12958,7 @@ boolean P_PlayerFullbright(player_t *player)
 
 #define JUMPCURLED(player) ((player->pflags & PF_JUMPED)\
 	&& (!(player->charflags & SF_NOJUMPSPIN))\
-	&& (!(player->pflags & PF_NOJUMPDAMAGE)\
-		|| ((player->charflags & SF_NOJUMPDAMAGE)\
-		&& (player->panim == PA_JUMP || player->panim == PA_ROLL))))\
+	&& (player->panim == PA_JUMP || player->panim == PA_ROLL))\
 
 // returns true if the player can enter a sector that they could not if standing at their skin's full height
 boolean P_PlayerCanEnterSpinGaps(player_t *player)
