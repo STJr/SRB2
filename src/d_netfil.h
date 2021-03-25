@@ -100,6 +100,7 @@ typedef struct luafiletransfer_s
 	INT32 id; // Callback ID
 	boolean ongoing;
 	luafiletransfernodestatus_t nodestatus[MAXNETNODES];
+	tic_t nodetimeouts[MAXNETNODES];
 	struct luafiletransfer_s *next;
 } luafiletransfer_t;
 

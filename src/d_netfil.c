@@ -570,6 +570,7 @@ static void SV_PrepareSendLuaFileToNextNode(void)
 				I_Error("Failed to send a PT_SENDINGLUAFILE packet\n"); // !!! Todo: Handle failure a bit better lol
 
 			luafiletransfers->nodestatus[i] = LFTNS_ASKED;
+			luafiletransfers->nodetimeouts[i] = I_GetTime() + 30 * TICRATE;
 
 			return;
 		}
@@ -929,6 +930,22 @@ void FileSendTicker(void)
 	size_t fragmentsize;
 	filetx_t *f;
 	INT32 packetsent, ram, i, j;
+
+	// If someone is taking too long to download, kick them with a timeout
+	// to prevent blocking the rest of the server...
+	if (luafiletransfers)
+	{
+		for (i = 1; i < MAXNETNODES; i++)
+		{
+			luafiletransfernodestatus_t status = luafiletransfers->nodestatus[i];
+
+			if (status != LFTNS_NONE && status != LFTNS_WAITING && status != LFTNS_SENT
+				&& I_GetTime() > luafiletransfers->nodetimeouts[i])
+			{
+				Net_ConnectionTimeout(i);
+			}
+		}
+	}
 
 	if (!filestosend) // No file to send
 		return;
