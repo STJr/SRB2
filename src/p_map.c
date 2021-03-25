@@ -1955,12 +1955,6 @@ static boolean PIT_CheckLine(line_t *ld)
 	// set openrange, opentop, openbottom
 	P_LineOpening(ld, tmthing);
 
-	// players should not always cross into sectors that they could not at full height
-	if (tmthing->player
-		&& openrange < P_GetPlayerHeight(tmthing->player)
-		&& !P_PlayerCanEnterSpinGaps(tmthing->player))
-			return false;
-
 	// adjust floor / ceiling heights
 	if (opentop < tmceilingz)
 	{
@@ -2729,7 +2723,10 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			if (thing->type == MT_SKIM)
 				maxstep = 0;
 
-			if (tmceilingz - tmfloorz < thing->height)
+			if (tmceilingz - tmfloorz < thing->height
+				|| (thing->player
+					&& tmceilingz - tmfloorz < P_GetPlayerHeight(thing->player)
+					&& !P_PlayerCanEnterSpinGaps(thing->player)))
 			{
 				if (tmfloorthing)
 					tmhitthing = tmfloorthing;
