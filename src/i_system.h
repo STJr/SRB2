@@ -318,7 +318,7 @@ void I_RegisterSysCommands(void);
 */
 void I_GetCursorPosition(INT32 *x, INT32 *y);
 
-/** \brief Retursn whether the mouse is grabbed
+/** \brief Returns whether the mouse is grabbed
 */
 boolean I_GetMouseGrab(void);
 
