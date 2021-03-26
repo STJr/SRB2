@@ -93,9 +93,9 @@ typedef enum
 	JA_LOOK,
 	JA_STRAFE,
 
-	JA_DIGITAL, // axes below this use digital deadzone
+	JA_DIGITAL, // axes henceforth use digital deadzone
 
-	JA_JUMP,
+	JA_JUMP = JA_DIGITAL,
 	JA_SPIN,
 	JA_FIRE,
 	JA_FIRENORMAL,

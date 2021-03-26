@@ -887,7 +887,7 @@ INT32 JoyAxis(joyaxis_e axissel)
 	if (retaxis > (+JOYAXISRANGE))
 		retaxis = +JOYAXISRANGE;
 
-	if (!Joystick.bGamepadStyle && axissel > JA_DIGITAL)
+	if (!Joystick.bGamepadStyle && axissel >= JA_DIGITAL)
 	{
 		const INT32 jdeadzone = ((JOYAXISRANGE-1) * cv_digitaldeadzone.value) >> FRACBITS;
 		if (-jdeadzone < retaxis && retaxis < jdeadzone)
@@ -962,7 +962,7 @@ INT32 Joy2Axis(joyaxis_e axissel)
 	if (retaxis > (+JOYAXISRANGE))
 		retaxis = +JOYAXISRANGE;
 
-	if (!Joystick2.bGamepadStyle && axissel > JA_DIGITAL)
+	if (!Joystick2.bGamepadStyle && axissel >= JA_DIGITAL)
 	{
 		const INT32 jdeadzone = ((JOYAXISRANGE-1) * cv_digitaldeadzone2.value) >> FRACBITS;
 		if (-jdeadzone < retaxis && retaxis < jdeadzone)
