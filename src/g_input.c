@@ -624,7 +624,7 @@ void G_ClearAllControlKeys(void)
 // Returns the name of a key (or virtual key for mouse and joy)
 // the input value being an keynum
 //
-const char *G_KeyNumToString(INT32 keynum)
+const char *G_KeynumToString(INT32 keynum)
 {
 	static char keynamestr[8];
 
@@ -648,7 +648,7 @@ const char *G_KeyNumToString(INT32 keynum)
 	return keynamestr;
 }
 
-INT32 G_KeyStringToNum(const char *keystr)
+INT32 G_KeyStringtoNum(const char *keystr)
 {
 	UINT32 j;
 
@@ -811,10 +811,10 @@ void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis
 	for (i = 1; i < num_gamecontrols; i++)
 	{
 		fprintf(f, "setcontrol \"%s\" \"%s\"", gamecontrolname[i],
-			G_KeyNumToString(fromcontrols[i][0]));
+			G_KeynumToString(fromcontrols[i][0]));
 
 		if (fromcontrols[i][1])
-			fprintf(f, " \"%s\"\n", G_KeyNumToString(fromcontrols[i][1]));
+			fprintf(f, " \"%s\"\n", G_KeynumToString(fromcontrols[i][1]));
 		else
 			fprintf(f, "\n");
 	}
@@ -822,10 +822,10 @@ void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis
 	for (i = 1; i < num_gamecontrols; i++)
 	{
 		fprintf(f, "setcontrol2 \"%s\" \"%s\"", gamecontrolname[i],
-			G_KeyNumToString(fromcontrolsbis[i][0]));
+			G_KeynumToString(fromcontrolsbis[i][0]));
 
 		if (fromcontrolsbis[i][1])
-			fprintf(f, " \"%s\"\n", G_KeyNumToString(fromcontrolsbis[i][1]));
+			fprintf(f, " \"%s\"\n", G_KeynumToString(fromcontrolsbis[i][1]));
 		else
 			fprintf(f, "\n");
 	}
@@ -1001,8 +1001,8 @@ static void setcontrol(INT32 (*gc)[2])
 		CONS_Printf(M_GetText("Control '%s' unknown\n"), namectrl);
 		return;
 	}
-	keynum1 = G_KeyStringToNum(COM_Argv(2));
-	keynum2 = G_KeyStringToNum(COM_Argv(3));
+	keynum1 = G_KeyStringtoNum(COM_Argv(2));
+	keynum2 = G_KeyStringtoNum(COM_Argv(3));
 	keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2, &nestedoverride);
 
 	if (keynum >= 0)

@@ -13,7 +13,6 @@
 #include "fastcmp.h"
 #include "g_input.h"
 #include "g_game.h"
-#include "hu_stuff.h"
 #include "i_system.h"
 
 #include "lua_script.h"
@@ -22,44 +21,6 @@
 ///////////////
 // FUNCTIONS //
 ///////////////
-
-static int lib_gameControlDown(lua_State *L)
-{
-	int i = luaL_checkinteger(L, 1);
-	if (i < 0 || i >= num_gamecontrols)
-		return luaL_error(L, "gc_* constant %d out of range (0 - %d)", i, num_gamecontrols-1);
-	lua_pushinteger(L, PLAYER1INPUTDOWN(i));
-	return 1;
-}
-
-static int lib_gameControl2Down(lua_State *L)
-{
-	int i = luaL_checkinteger(L, 1);
-	if (i < 0 || i >= num_gamecontrols)
-		return luaL_error(L, "gc_* constant %d out of range (0 - %d)", i, num_gamecontrols-1);
-	lua_pushinteger(L, PLAYER2INPUTDOWN(i));
-	return 1;
-}
-
-static int lib_gameControlToKeyNum(lua_State *L)
-{
-	int i = luaL_checkinteger(L, 1);
-	if (i < 0 || i >= num_gamecontrols)
-		return luaL_error(L, "gc_* constant %d out of range (0 - %d)", i, num_gamecontrols-1);
-	lua_pushinteger(L, gamecontrol[i][0]);
-	lua_pushinteger(L, gamecontrol[i][1]);
-	return 2;
-}
-
-static int lib_gameControl2ToKeyNum(lua_State *L)
-{
-	int i = luaL_checkinteger(L, 1);
-	if (i < 0 || i >= num_gamecontrols)
-		return luaL_error(L, "gc_* constant %d out of range (0 - %d)", i, num_gamecontrols-1);
-	lua_pushinteger(L, gamecontrolbis[i][0]);
-	lua_pushinteger(L, gamecontrolbis[i][1]);
-	return 2;
-}
 
 static int lib_joyAxis(lua_State *L)
 {
@@ -72,35 +33,6 @@ static int lib_joy2Axis(lua_State *L)
 {
 	int i = luaL_checkinteger(L, 1);
 	lua_pushinteger(L, Joy2Axis(i));
-	return 1;
-}
-
-static int lib_keyNumToString(lua_State *L)
-{
-	int i = luaL_checkinteger(L, 1);
-	lua_pushstring(L, G_KeyNumToString(i));
-	return 1;
-}
-
-static int lib_keyStringToNum(lua_State *L)
-{
-	const char *str = luaL_checkstring(L, 1);
-	lua_pushinteger(L, G_KeyStringToNum(str));
-	return 1;
-}
-
-static int lib_keyNumPrintable(lua_State *L)
-{
-	int i = luaL_checkinteger(L, 1);
-	lua_pushboolean(L, i >= 32 && i <= 127);
-	return 1;
-}
-
-static int lib_shiftKeyNum(lua_State *L)
-{
-	int i = luaL_checkinteger(L, 1);
-	if (i >= 32 && i <= 127)
-		lua_pushinteger(L, shiftxform[i]);
 	return 1;
 }
 
@@ -127,50 +59,13 @@ static boolean lib_getCursorPosition(lua_State *L)
 }
 
 static luaL_Reg lib[] = {
-	{"G_GameControlDown", lib_gameControlDown},
-	{"G_GameControl2Down", lib_gameControl2Down},
-	{"G_GameControlToKeyNum", lib_gameControlToKeyNum},
-	{"G_GameControl2ToKeyNum", lib_gameControl2ToKeyNum},
 	{"G_JoyAxis", lib_joyAxis},
 	{"G_Joy2Axis", lib_joy2Axis},
-	{"G_KeyNumToString", lib_keyNumToString},
-	{"G_KeyStringToNum", lib_keyStringToNum},
-	{"HU_KeyNumPrintable", lib_keyNumPrintable},
-	{"HU_ShiftKeyNum", lib_shiftKeyNum},
 	{"I_GetMouseGrab", lib_getMouseGrab},
 	{"I_SetMouseGrab", lib_setMouseGrab},
 	{"I_GetCursorPosition", lib_getCursorPosition},
 	{NULL, NULL}
 };
-
-///////////////////
-// gamekeydown[] //
-///////////////////
-
-static int lib_getGameKeyDown(lua_State *L)
-{
-	int i = luaL_checkinteger(L, 2);
-	if (i < 0 || i >= NUMINPUTS)
-		return luaL_error(L, "gamekeydown[] index %d out of range (0 - %d)", i, NUMINPUTS-1);
-	lua_pushboolean(L, gamekeydown[i]);
-	return 1;
-}
-
-static int lib_setGameKeyDown(lua_State *L)
-{
-	int i = luaL_checkinteger(L, 2);
-	boolean j = luaL_checkboolean(L, 3);
-	if (i < 0 || i >= NUMINPUTS)
-		return luaL_error(L, "gamekeydown[] index %d out of range (0 - %d)", i, NUMINPUTS-1);
-	gamekeydown[i] = j;
-	return 0;
-}
-
-static int lib_lenGameKeyDown(lua_State *L)
-{
-	lua_pushinteger(L, NUMINPUTS);
-	return 1;
-}
 
 ///////////
 // MOUSE //
@@ -214,19 +109,6 @@ static int mouse_num(lua_State *L)
 
 int LUA_InputLib(lua_State *L)
 {
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getGameKeyDown);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_setGameKeyDown);
-			lua_setfield(L, -2, "__newindex");
-
-			lua_pushcfunction(L, lib_lenGameKeyDown);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "gamekeydown");
-
 	luaL_newmetatable(L, META_MOUSE);
 		lua_pushcfunction(L, mouse_get);
 		lua_setfield(L, -2, "__index");

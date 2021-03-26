@@ -24,7 +24,6 @@
 #include "g_state.h" // gamestate_t (for lua)
 #include "g_game.h" // Joystick axes (for lua)
 #include "i_joy.h"
-#include "g_input.h" // Game controls (for lua)
 
 #include "deh_tables.h"
 
@@ -5470,51 +5469,6 @@ struct int_const_s const INT_CONST[] = {
 	{"JA_FIRE",JA_FIRE},
 	{"JA_FIRENORMAL",JA_FIRENORMAL},
 	{"JOYAXISRANGE",JOYAXISRANGE},
-
-	// Game controls
-	{"gc_null",gc_null},
-	{"gc_forward",gc_forward},
-	{"gc_backward",gc_backward},
-	{"gc_strafeleft",gc_strafeleft},
-	{"gc_straferight",gc_straferight},
-	{"gc_turnleft",gc_turnleft},
-	{"gc_turnright",gc_turnright},
-	{"gc_weaponnext",gc_weaponnext},
-	{"gc_weaponprev",gc_weaponprev},
-	{"gc_wepslot1",gc_wepslot1},
-	{"gc_wepslot2",gc_wepslot2},
-	{"gc_wepslot3",gc_wepslot3},
-	{"gc_wepslot4",gc_wepslot4},
-	{"gc_wepslot5",gc_wepslot5},
-	{"gc_wepslot6",gc_wepslot6},
-	{"gc_wepslot7",gc_wepslot7},
-	{"gc_wepslot8",gc_wepslot8},
-	{"gc_wepslot9",gc_wepslot9},
-	{"gc_wepslot10",gc_wepslot10},
-	{"gc_fire",gc_fire},
-	{"gc_firenormal",gc_firenormal},
-	{"gc_tossflag",gc_tossflag},
-	{"gc_spin",gc_spin},
-	{"gc_camtoggle",gc_camtoggle},
-	{"gc_camreset",gc_camreset},
-	{"gc_lookup",gc_lookup},
-	{"gc_lookdown",gc_lookdown},
-	{"gc_centerview",gc_centerview},
-	{"gc_mouseaiming",gc_mouseaiming},
-	{"gc_talkkey",gc_talkkey},
-	{"gc_teamkey",gc_teamkey},
-	{"gc_scores",gc_scores},
-	{"gc_jump",gc_jump},
-	{"gc_console",gc_console},
-	{"gc_pause",gc_pause},
-	{"gc_systemmenu",gc_systemmenu},
-	{"gc_screenshot",gc_screenshot},
-	{"gc_recordgif",gc_recordgif},
-	{"gc_viewpoint",gc_viewpoint},
-	{"gc_custom1",gc_custom1},
-	{"gc_custom2",gc_custom2},
-	{"gc_custom3",gc_custom3},
-	{"num_gamecontrols",num_gamecontrols},
 
 	// Mouse buttons
 	{"MB_BUTTON1",MB_BUTTON1},

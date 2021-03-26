@@ -223,7 +223,6 @@ void G_EndGame(void); // moved from y_inter.c/h and renamed
 
 void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);
-boolean G_LuaResponder(event_t *ev);
 
 void G_AddPlayer(INT32 playernum);
 
