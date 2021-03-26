@@ -1078,7 +1078,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	angle_t drawangleoffset = (player->powers[pw_carry] == CR_ROLLOUT) ? ANGLE_180 : 0;
 	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, invertmouse, turnmultiplier, mousemove;
 	controlstyle_e controlstyle = G_ControlStyle(ssplayer);
-	mouse_t *m = &mouse;
+	INT32 mdx, mdy, mldy;
 
 	static INT32 turnheld[2]; // for accelerative turning
 	static boolean keyboard_look[2]; // true if lookup/down using keyboard
@@ -1101,6 +1101,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		invertmouse = cv_invertmouse.value;
 		turnmultiplier = cv_cam_turnmultiplier.value;
 		mousemove = cv_mousemove.value;
+		mdx = mouse.dx;
+		mdy = -mouse.dy;
+		mldy = -mouse.mlookdy;
 		G_CopyTiccmd(cmd, I_BaseTiccmd(), 1); // empty, or external driver
 	}
 	else
@@ -1112,9 +1115,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		invertmouse = cv_invertmouse2.value;
 		turnmultiplier = cv_cam2_turnmultiplier.value;
 		mousemove = cv_mousemove2.value;
-		m = &mouse2;
+		mdx = mouse2.dx;
+		mdy = -mouse2.dy;
+		mldy = -mouse2.mlookdy;
 		G_CopyTiccmd(cmd, I_BaseTiccmd2(), 1); // empty, or external driver
 	}
+
+	if (menuactive || CON_Ready() || chat_on)
+		mdx = mdy = mldy = 0;
 
 	strafeisturn = controlstyle == CS_SIMPLE && ticcmd_centerviewdown[forplayer] &&
 		((cv_cam_lockedinput[forplayer].value && !ticcmd_ztargetfocus[forplayer]) || (player->pflags & PF_STARTDASH)) &&
@@ -1455,7 +1463,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			keyboard_look[forplayer] = false;
 
 			// looking up/down
-			*myaiming += (m->mlookdy<<19)*player_invert*screen_invert;
+			*myaiming += (mldy<<19)*player_invert*screen_invert;
 		}
 
 		if (analogjoystickmove && joyaiming[forplayer] && lookjoystickvector.yaxis != 0 && configlookaxis != 0)
@@ -1489,22 +1497,22 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	}
 
 	if (!mouseaiming && mousemove)
-		forward += m->dy;
+		forward += mdy;
 
 	if ((!demoplayback && (player->pflags & PF_SLIDING))) // Analog for mouse
-		side += m->dx*2;
+		side += mdx*2;
 	else if (controlstyle == CS_LMAOGALOG)
 	{
-		if (m->dx)
+		if (mdx)
 		{
-			if (m->dx > 0)
+			if (mdx > 0)
 				cmd->buttons |= BT_CAMRIGHT;
 			else
 				cmd->buttons |= BT_CAMLEFT;
 		}
 	}
 	else
-		cmd->angleturn = (INT16)(cmd->angleturn - (m->dx*8));
+		cmd->angleturn = (INT16)(cmd->angleturn - (mdx*8));
 
 	if (forward > MAXPLMOVE)
 		forward = MAXPLMOVE;
@@ -1850,8 +1858,8 @@ void G_DoLoadLevel(boolean resetplayer)
 		joyxmove[i] = joyymove[i] = 0;
 		joy2xmove[i] = joy2ymove[i] = 0;
 	}
-	G_SetMouseData(0, 0, 1);
-	G_SetMouseData(0, 0, 2);
+	G_SetMouseDeltas(0, 0, 1);
+	G_SetMouseDeltas(0, 0, 2);
 
 	// clear hud messages remains (usually from game startup)
 	CON_ClearHUD();
@@ -3082,8 +3090,8 @@ void G_DoReborn(INT32 playernum)
 				joyxmove[i] = joyymove[i] = 0;
 				joy2xmove[i] = joy2ymove[i] = 0;
 			}
-			G_SetMouseData(0, 0, 1);
-			G_SetMouseData(0, 0, 2);
+			G_SetMouseDeltas(0, 0, 1);
+			G_SetMouseDeltas(0, 0, 2);
 
 			// clear hud messages remains (usually from game startup)
 			CON_ClearHUD();

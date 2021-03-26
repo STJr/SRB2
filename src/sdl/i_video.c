@@ -405,6 +405,19 @@ void I_UpdateMouseGrab(void)
 		SDLdoGrabMouse();
 }
 
+boolean I_GetMouseGrab(void)
+{
+	return SDL_GetWindowGrab(window);
+}
+
+void I_SetMouseGrab(boolean grab)
+{
+	if (grab)
+		SDLdoGrabMouse();
+	else
+		SDLdoUngrabMouse();
+}
+
 static void VID_Command_NumModes_f (void)
 {
 	CONS_Printf(M_GetText("%d video mode(s) available(s)\n"), VID_NumModes());
@@ -673,8 +686,8 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		{
 			if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 			{
-				mousemovex +=  evt.xrel;
-				mousemovey += -evt.yrel;
+				mousemovex += evt.xrel;
+				mousemovey += evt.yrel;
 				SDL_SetWindowGrab(window, SDL_TRUE);
 			}
 			firstmove = false;
@@ -1938,3 +1951,8 @@ void I_ShutdownGraphics(void)
 	framebuffer = SDL_FALSE;
 }
 #endif
+
+void I_GetCursorPosition(INT32 *x, INT32 *y)
+{
+	SDL_GetMouseState(x, y);
+}

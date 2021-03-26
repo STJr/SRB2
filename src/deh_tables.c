@@ -23,6 +23,7 @@
 #include "i_sound.h" // musictype_t (for lua)
 #include "g_state.h" // gamestate_t (for lua)
 #include "g_game.h" // Joystick axes (for lua)
+#include "i_joy.h"
 #include "g_input.h" // Game controls (for lua)
 
 #include "deh_tables.h"
@@ -5468,6 +5469,7 @@ struct int_const_s const INT_CONST[] = {
 	{"JA_SPIN",JA_SPIN},
 	{"JA_FIRE",JA_FIRE},
 	{"JA_FIRENORMAL",JA_FIRENORMAL},
+	{"JOYAXISRANGE",JOYAXISRANGE},
 
 	// Game controls
 	{"gc_null",gc_null},
@@ -5513,6 +5515,18 @@ struct int_const_s const INT_CONST[] = {
 	{"gc_custom2",gc_custom2},
 	{"gc_custom3",gc_custom3},
 	{"num_gamecontrols",num_gamecontrols},
+
+	// Mouse buttons
+	{"MB_BUTTON1",MB_BUTTON1},
+	{"MB_BUTTON2",MB_BUTTON2},
+	{"MB_BUTTON3",MB_BUTTON3},
+	{"MB_BUTTON4",MB_BUTTON4},
+	{"MB_BUTTON5",MB_BUTTON5},
+	{"MB_BUTTON6",MB_BUTTON6},
+	{"MB_BUTTON7",MB_BUTTON7},
+	{"MB_BUTTON8",MB_BUTTON8},
+	{"MB_SCROLLUP",MB_SCROLLUP},
+	{"MB_SCROLLDOWN",MB_SCROLLDOWN},
 
 	{NULL,0}
 };

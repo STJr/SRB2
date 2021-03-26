@@ -14,6 +14,7 @@
 #include "g_input.h"
 #include "g_game.h"
 #include "hu_stuff.h"
+#include "i_system.h"
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -103,6 +104,28 @@ static int lib_shiftKeyNum(lua_State *L)
 	return 1;
 }
 
+static int lib_getMouseGrab(lua_State *L)
+{
+	lua_pushboolean(L, I_GetMouseGrab());
+	return 1;
+}
+
+static int lib_setMouseGrab(lua_State *L)
+{
+	boolean grab = luaL_checkboolean(L, 1);
+	I_SetMouseGrab(grab);
+	return 0;
+}
+
+static boolean lib_getCursorPosition(lua_State *L)
+{
+	int x, y;
+	I_GetCursorPosition(&x, &y);
+	lua_pushinteger(L, x);
+	lua_pushinteger(L, y);
+	return 2;
+}
+
 static luaL_Reg lib[] = {
 	{"G_GameControlDown", lib_gameControlDown},
 	{"G_GameControl2Down", lib_gameControl2Down},
@@ -114,6 +137,9 @@ static luaL_Reg lib[] = {
 	{"G_KeyStringToNum", lib_keyStringToNum},
 	{"HU_KeyNumPrintable", lib_keyNumPrintable},
 	{"HU_ShiftKeyNum", lib_shiftKeyNum},
+	{"I_GetMouseGrab", lib_getMouseGrab},
+	{"I_SetMouseGrab", lib_setMouseGrab},
+	{"I_GetCursorPosition", lib_getCursorPosition},
 	{NULL, NULL}
 };
 
@@ -167,6 +193,8 @@ static int mouse_get(lua_State *L)
 		lua_pushinteger(L, m->rdx);
 	else if (fastcmp(field,"rdy"))
 		lua_pushinteger(L, m->rdy);
+	else if (fastcmp(field,"buttons"))
+		lua_pushinteger(L, m->buttons);
 	else
 		return luaL_error(L, "mouse_t has no field named %s", field);
 

@@ -138,8 +138,6 @@ void G_MapEventsToControls(event_t *ev)
 			break;
 
 		case ev_mouse: // buttons are virtual keys
-			if (menuactive || CON_Ready() || chat_on)
-				break;
 			mouse.rdx = ev->data2;
 			mouse.rdy = ev->data3;
 			break;
@@ -1070,19 +1068,15 @@ void Command_Setcontrol2_f(void)
 	setcontrol(gamecontrolbis);
 }
 
-void G_SetMouseData(INT32 realdx, INT32 realdy, UINT8 ssplayer)
+void G_SetMouseDeltas(INT32 dx, INT32 dy, UINT8 ssplayer)
 {
 	mouse_t *m = ssplayer == 1 ? &mouse : &mouse2;
 	consvar_t *cvsens, *cvysens;
 
-	if (!realdx && !realdy) {
-		memset(m, 0, sizeof(*m));
-		return;
-	}
 	cvsens = ssplayer == 1 ? &cv_mousesens : &cv_mousesens2;
 	cvysens = ssplayer == 1 ? &cv_mouseysens : &cv_mouseysens2;
-	m->rdx = realdx;
-	m->rdy = realdy;
+	m->rdx = dx;
+	m->rdy = dy;
 	m->dx = (INT32)(m->rdx*((cvsens->value*cvsens->value)/110.0f + 0.1f));
 	m->dy = (INT32)(m->rdy*((cvsens->value*cvsens->value)/110.0f + 0.1f));
 	m->mlookdy = (INT32)(m->rdy*((cvysens->value*cvsens->value)/110.0f + 0.1f));

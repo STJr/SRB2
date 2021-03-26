@@ -123,7 +123,19 @@ typedef struct
 	INT32 mlookdy; // dy with mouselook sensitivity
 	INT32 rdx; // deltas without sensitivity
 	INT32 rdy;
+	UINT16 buttons;
 } mouse_t;
+
+#define MB_BUTTON1    0x0001
+#define MB_BUTTON2    0x0002
+#define MB_BUTTON3    0x0004
+#define MB_BUTTON4    0x0008
+#define MB_BUTTON5    0x0010
+#define MB_BUTTON6    0x0020
+#define MB_BUTTON7    0x0040
+#define MB_BUTTON8    0x0080
+#define MB_SCROLLUP   0x0100
+#define MB_SCROLLDOWN 0x0200
 
 extern mouse_t mouse;
 extern mouse_t mouse2;
@@ -184,6 +196,6 @@ void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis
 INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify);
 
 // sets the members of a mouse_t given position deltas
-void G_SetMouseData(INT32 realdx, INT32 realdy, UINT8 ssplayer);
+void G_SetMouseDeltas(INT32 dx, INT32 dy, UINT8 ssplayer);
 
 #endif
