@@ -1982,7 +1982,7 @@ fixed_t LUAh_PlayerHeight(player_t *player)
 	hook_p hookp;
 	fixed_t newheight = -1;
 	if (!gL || !(hooksAvailable[hook_PlayerHeight/8] & (1<<(hook_PlayerHeight%8))))
-		return 0;
+		return newheight;
 
 	lua_settop(gL, 0);
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
