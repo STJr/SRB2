@@ -4135,7 +4135,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 #ifdef HWRENDER
 	// Free GPU textures before freeing patches.
-	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
 #endif
 
@@ -4500,7 +4500,7 @@ boolean P_AddWadFile(const char *wadfilename)
 
 #ifdef HWRENDER
 	// Free GPU textures before freeing patches.
-	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
 #endif
 
