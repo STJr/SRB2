@@ -2616,6 +2616,10 @@ static int lib_rSetPlayerSkin(lua_State *L)
 
 	if (!R_SkinUsable(j, i))
 		return luaL_error(L, "skin %d (argument 2) not usable - check with R_SkinUsable(player_t, skin) first.", i);
+
+	if (!CanChangeSkin(j))
+		return luaL_error(L, "Skin cannot be changed at the moment.");
+
 	SetPlayerSkinByNum(j, i);
 	return 0;
 }

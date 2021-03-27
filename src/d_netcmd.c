@@ -1131,6 +1131,13 @@ static void SetPlayerName(INT32 playernum, char *newname)
 
 UINT8 CanChangeSkin(INT32 playernum)
 {
+    //Call the lua hook for CanChangeSkin
+	UINT8 canchangeskin = LUAh_PlayerCanChangeSkin(&players[playernum]);
+	if (canchangeskin == 1)
+		return true; // force yes
+	else if (canchangeskin == 2)
+		return false; // force no
+
 	// Of course we can change if we're not playing
 	if (!Playing() || !addedtogame)
 		return true;

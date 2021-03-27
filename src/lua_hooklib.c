@@ -67,6 +67,7 @@ const char *const hookNames[hook_MAX+1] = {
 	"MapThingSpawn",
 	"FollowMobj",
 	"PlayerCanDamage",
+	"PlayerCanChangeSkin",
 	"PlayerQuit",
 	"IntermissionThinker",
 	"TeamSwitch",
@@ -215,6 +216,7 @@ static int lib_addHook(lua_State *L)
 	case hook_JumpSpinSpecial:
 	case hook_PlayerSpawn:
 	case hook_PlayerCanDamage:
+	case hook_PlayerCanChangeSkin:
 	case hook_TeamSwitch:
 	case hook_ViewpointSwitch:
 	case hook_SeenPlayer:
@@ -825,6 +827,53 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
 
 	lua_settop(gL, 0);
 	return hooked;
+}
+
+/* 
+ * Executes when player is about to change skin
+ * Return true to force skin change
+ * Return false to force stop skin change
+ */
+UINT8 LUAh_PlayerCanChangeSkin(player_t *player)
+{
+	hook_p hookp;
+	UINT8 canchangeskin = 0; // 0 = default, 1 = force yes, 2 = force no.
+	if (!gL || !(hooksAvailable[hook_PlayerCanChangeSkin/8] & (1<<(hook_PlayerCanChangeSkin%8))))
+		return 0;
+
+	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	for (hookp = playerhooks; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_PlayerCanChangeSkin)
+			continue;
+
+		if (lua_gettop(gL) == 1)
+		{
+			LUA_PushUserdata(gL, player, META_PLAYER);
+		}
+		PushHook(gL, hookp);
+		lua_pushvalue(gL, -2);
+		if (lua_pcall(gL, 1, 1, 1)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1))
+		{
+			if (lua_toboolean(gL, -1))
+				canchangeskin = 1; // Force yes
+			else
+				canchangeskin = 2; // Force no
+		}
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return canchangeskin;
 }
 
 // Hook for P_DamageMobj by mobj type (Should mobj take damage?)
