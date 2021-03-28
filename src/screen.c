@@ -33,6 +33,11 @@
 #include "s_sound.h" // ditto
 #include "g_game.h" // ditto
 #include "p_local.h" // P_AutoPause()
+#ifdef HWRENDER
+#include "hardware/hw_main.h"
+#include "hardware/hw_light.h"
+#include "hardware/hw_model.h"
+#endif
 
 
 #if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
@@ -423,6 +428,10 @@ void SCR_ChangeRenderer(void)
 			CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
 		return;
 	}
+
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED)) // Clear these out before switching to software
+		HWR_ClearAllTextures();
+
 #endif
 
 	// Set the new render mode
