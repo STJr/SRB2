@@ -61,7 +61,7 @@
 #include "p_local.h" // chasecam
 #include "mserv.h" // ms_RoomId
 #include "m_misc.h" // screenshot functionality
-#include "dehacked.h" // Dehacked list test
+#include "deh_tables.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
 #include "keys.h"
@@ -1072,7 +1072,7 @@ void D_SRB2Main(void)
 	G_LoadGameSettings();
 
 	// Test Dehacked lists
-	DEH_Check();
+	DEH_TableCheck();
 
 	// Netgame URL special case: change working dir to EXE folder.
 	ChangeDirForUrlHandler();

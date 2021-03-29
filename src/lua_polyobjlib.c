@@ -417,7 +417,7 @@ static int lib_getPolyObject(lua_State *L)
 	{
 		i = luaL_checkinteger(L, 2);
 		if (i < 0 || i >= numPolyObjects)
-			return luaL_error(L, "PolyObjects[] index %d out of range (0 - %d)", i, numPolyObjects-1);
+			return luaL_error(L, "polyobjects[] index %d out of range (0 - %d)", i, numPolyObjects-1);
 		LUA_PushUserdata(L, &PolyObjects[i], META_POLYOBJ);
 		return 1;
 	}
@@ -481,6 +481,6 @@ int LUA_PolyObjLib(lua_State *L)
 			lua_pushcfunction(L, lib_numPolyObjects);
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
-	lua_setglobal(L, "PolyObjects");
+	lua_setglobal(L, "polyobjects");
 	return 0;
 }
