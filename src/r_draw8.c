@@ -1227,9 +1227,9 @@ void R_DrawSplat_8 (void)
 		// need!
 		//
 		// <Callum> 4194303 = (2048x2048)-1 (2048x2048 is maximum flat size)
-		// Why decimal? 0x3FFFF == 4194303... ~Golden
+		// Why decimal? 0x3FFFFF == 4194303... ~Golden
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 0x3FFFF;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[0] = colormap[val];
@@ -1237,7 +1237,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 0x3FFFF;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[1] = colormap[val];
@@ -1245,7 +1245,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 0x3FFFF;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[2] = colormap[val];
@@ -1253,7 +1253,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 0x3FFFF;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[3] = colormap[val];
@@ -1261,7 +1261,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 0x3FFFF;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[4] = colormap[val];
@@ -1269,7 +1269,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 0x3FFFF;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[5] = colormap[val];
@@ -1277,7 +1277,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 0x3FFFF;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[6] = colormap[val];
@@ -1285,7 +1285,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 0x3FFFF;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[7] = colormap[val];
