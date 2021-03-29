@@ -834,7 +834,7 @@ boolean LUAh_TouchSpecial(mobj_t *special, mobj_t *toucher)
  * Return true to force skin change
  * Return false to force stop skin change
  */
-UINT8 LUAh_PlayerCanChangeSkin(player_t *player)
+UINT8 LUAh_PlayerCanChangeSkin(player_t *player, skin_t *current_skin, skin_t *next_skin)
 {
 	hook_p hookp;
 	UINT8 canchangeskin = 0; // 0 = default, 1 = force yes, 2 = force no.
@@ -852,10 +852,14 @@ UINT8 LUAh_PlayerCanChangeSkin(player_t *player)
 		if (lua_gettop(gL) == 1)
 		{
 			LUA_PushUserdata(gL, player, META_PLAYER);
+			LUA_PushUserdata(gL, current_skin, META_SKIN);
+			LUA_PushUserdata(gL, next_skin, META_SKIN);
 		}
 		PushHook(gL, hookp);
-		lua_pushvalue(gL, -2);
-		if (lua_pcall(gL, 1, 1, 1)) {
+		lua_pushvalue(gL, -4);
+		lua_pushvalue(gL, -4);
+		lua_pushvalue(gL, -4);
+		if (lua_pcall(gL, 3, 1, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);

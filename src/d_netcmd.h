@@ -207,6 +207,6 @@ void ItemFinder_OnChange(void);
 void D_SetPassword(const char *pw);
 
 // used for the player setup menu
-UINT8 CanChangeSkin(INT32 playernum);
+UINT8 CanChangeSkin(INT32 playernum, INT32 skinnum);
 
 #endif
