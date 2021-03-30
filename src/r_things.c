@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1956,6 +1956,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->paperoffset = paperoffset;
 	vis->paperdistance = paperdistance;
 	vis->centerangle = centerangle;
+	vis->viewangle = viewangle;
 	vis->shear.tan = sheartan;
 	vis->shear.offset = 0;
 
@@ -2783,7 +2784,7 @@ static void R_DrawSprite(vissprite_t *spr)
 	mceilingclip = spr->cliptop;
 
 	if (spr->cut & SC_SPLAT)
-		R_DrawFloorSprite(spr);
+		R_DrawFloorSplat(spr);
 	else
 		R_DrawVisSprite(spr);
 }
