@@ -64,7 +64,7 @@
 		#include <errno.h>
 		#include <time.h>
 
-		#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+		#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 			#include <sys/time.h>
 		#endif // UNIXCOMMON
 	#endif
@@ -155,7 +155,7 @@
 	typedef SOCKET SOCKET_TYPE;
 	#define ERRSOCKET (SOCKET_ERROR)
 #else
-	#if (defined (__unix__) && !defined (MSDOS)) || defined (__APPLE__) || defined (__HAIKU__)
+	#if defined (__unix__) || defined (__APPLE__) || defined (__HAIKU__)
 		typedef int SOCKET_TYPE;
 	#else
 		typedef unsigned long SOCKET_TYPE;
