@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -198,42 +198,14 @@ void R_InitTranslucencyTables(void)
 	R_GenerateBlendTables();
 }
 
-void R_GenerateBlendTables(void)
-{
-	INT32 i;
-
-	for (i = 0; i < NUMBLENDMAPS; i++)
-	{
-		if (i == blendtab_modulate)
-			continue;
-		blendtables[i] = Z_MallocAlign((NUMTRANSTABLES + 1) * 0x10000, PU_STATIC, NULL, 16);
-	}
-
-	for (i = 0; i <= 9; i++)
-	{
-		const size_t offs = (0x10000 * i);
-		const UINT8 alpha = TRANSTAB_AMTMUL10 * i;
-
-		R_GenerateTranslucencyTable(blendtables[blendtab_add] + offs, AST_ADD, alpha);
-		R_GenerateTranslucencyTable(blendtables[blendtab_subtract] + offs, AST_SUBTRACT, alpha);
-		R_GenerateTranslucencyTable(blendtables[blendtab_reversesubtract] + offs, AST_REVERSESUBTRACT, alpha);
-	}
-
-	// Modulation blending only requires a single table
-	blendtables[blendtab_modulate] = Z_MallocAlign(0x10000, PU_STATIC, NULL, 16);
-	R_GenerateTranslucencyTable(blendtables[blendtab_modulate], AST_MODULATE, 0);
-}
-
 static colorlookup_t transtab_lut;
 
-void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt)
+static void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt)
 {
 	INT16 bg, fg;
 
 	if (table == NULL)
 		I_Error("R_GenerateTranslucencyTable: input table was NULL!");
-
-	InitColorLUT(&transtab_lut, pMasterPalette, false);
 
 	for (bg = 0; bg < 0xFF; bg++)
 	{
@@ -243,12 +215,117 @@ void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt)
 			RGBA_t frontrgba = V_GetMasterColor(fg);
 			RGBA_t result;
 
-			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, blendamt);
+			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, 0xFF);
+			result.rgba = ASTBlendPixel(result, frontrgba, AST_TRANSLUCENT, blendamt);
+
 			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
 		}
 	}
 }
 
+static void R_GenerateSubtractiveTable(UINT8 *table, int style, UINT8 blendamt)
+{
+	INT16 bg, fg;
+
+	if (table == NULL)
+		I_Error("R_GenerateSubtractiveTable: input table was NULL!");
+
+	blendamt = 0xFF - blendamt;
+	if (!blendamt)
+	{
+		memset(table, GetColorLUT(&transtab_lut, 0, 0, 0), 0x10000);
+		return;
+	}
+
+	for (bg = 0; bg < 0xFF; bg++)
+	{
+		for (fg = 0; fg < 0xFF; fg++)
+		{
+			RGBA_t backrgba = V_GetMasterColor(bg);
+			RGBA_t frontrgba = V_GetMasterColor(fg);
+			RGBA_t result;
+
+			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, 0xFF);
+			result.s.red = (result.s.red * blendamt) / 0xFF;
+			result.s.green = (result.s.green * blendamt) / 0xFF;
+			result.s.blue = (result.s.blue * blendamt) / 0xFF;
+
+			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
+		}
+	}
+}
+
+static void R_GenerateModulationTable(UINT8 *table)
+{
+	INT16 bg, fg;
+
+	if (table == NULL)
+		I_Error("R_GenerateModulationTable: input table was NULL!");
+
+	for (bg = 0; bg < 0xFF; bg++)
+	{
+		for (fg = 0; fg < 0xFF; fg++)
+		{
+			RGBA_t backrgba = V_GetMasterColor(bg);
+			RGBA_t frontrgba = V_GetMasterColor(fg);
+			RGBA_t result;
+			result.rgba = ASTBlendPixel(backrgba, frontrgba, AST_MODULATE, 0);
+			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
+		}
+	}
+}
+
+static INT32 R_GetBlendTableCount(INT32 style)
+{
+	INT32 count = NUMTRANSTABLES;
+	if (style == blendtab_subtract || style == blendtab_reversesubtract)
+		count++;
+	return count;
+}
+
+static void R_GenerateBlendTableMaps(INT32 tab, INT32 style, void (*genfunc)(UINT8 *, int, UINT8))
+{
+	INT32 i = 0;
+	for (; i <= R_GetBlendTableCount(tab); i++)
+	{
+		const size_t offs = (0x10000 * i);
+		const UINT16 alpha = min(TRANSTAB_AMTMUL10 * i, 0xFF);
+		genfunc(blendtables[tab] + offs, style, alpha);
+	}
+}
+
+void R_GenerateBlendTables(void)
+{
+	INT32 i;
+
+	for (i = 0; i < NUMBLENDMAPS; i++)
+	{
+		if (i == blendtab_modulate)
+			continue;
+		blendtables[i] = Z_MallocAlign((R_GetBlendTableCount(i) + 1) * 0x10000, PU_STATIC, NULL, 16);
+	}
+
+	InitColorLUT(&transtab_lut, pMasterPalette, false);
+
+	// Additive
+	R_GenerateBlendTableMaps(blendtab_add, AST_ADD, R_GenerateTranslucencyTable);
+
+	// Subtractive
+#if 1
+	R_GenerateBlendTableMaps(blendtab_subtract, AST_SUBTRACT, R_GenerateSubtractiveTable);
+#else
+	R_GenerateBlendTableMaps(blendtab_subtract, AST_SUBTRACT, R_GenerateTranslucencyTable);
+#endif
+
+	// Reverse subtractive
+	R_GenerateBlendTableMaps(blendtab_reversesubtract, AST_REVERSESUBTRACT, R_GenerateTranslucencyTable);
+
+	// Modulation blending only requires a single table
+	blendtables[blendtab_modulate] = Z_MallocAlign(0x10000, PU_STATIC, NULL, 16);
+	R_GenerateModulationTable(blendtables[blendtab_modulate]);
+}
+
+#define ClipBlendLevel(style, trans) max(min((trans), R_GetBlendTableCount(style)+1), 0)
 #define ClipTransLevel(trans) max(min((trans), NUMTRANSMAPS-2), 0)
 
 UINT8 *R_GetTranslucencyTable(INT32 alphalevel)
@@ -258,7 +335,7 @@ UINT8 *R_GetTranslucencyTable(INT32 alphalevel)
 
 UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 {
-	size_t offs = (ClipTransLevel(alphalevel) << FF_TRANSSHIFT);
+	size_t offs = (ClipBlendLevel(style, alphalevel) << FF_TRANSSHIFT);
 
 	// Lactozilla: Returns the equivalent to AST_TRANSLUCENT
 	// if no alpha style matches any of the blend tables.
@@ -281,6 +358,13 @@ UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 		return transtables + (ClipTransLevel(alphalevel) << FF_TRANSSHIFT);
 	else
 		return NULL;
+}
+
+boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel)
+{
+	if (blendmode == AST_COPY || blendmode == AST_SUBTRACT || blendmode == AST_MODULATE)
+		return true;
+	return (alphalevel < R_GetBlendTableCount(blendmode));
 }
 
 // Define for getting accurate color brightness readings according to how the human eye sees them.

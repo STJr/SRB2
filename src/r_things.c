@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1803,7 +1803,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else if (oldthing->frame & FF_TRANSMASK)
 	{
 		trans = (oldthing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
-		if (oldthing->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
+		if (!R_BlendLevelVisible(oldthing->blendmode, trans))
 			return;
 	}
 	else
@@ -2199,7 +2199,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	// specific translucency
 	if (thing->frame & FF_TRANSMASK)
-		vis->transmap = (thing->frame & FF_TRANSMASK) - 0x10000 + transtables;
+		vis->transmap = R_GetTranslucencyTable((thing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT);
 	else
 		vis->transmap = NULL;
 
