@@ -12,6 +12,7 @@
 
 #include "r_defs.h"
 #include "d_player.h"
+#include "r_skins.h"
 
 enum hook {
 	hook_NetVars=0,
@@ -109,7 +110,7 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 
 boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing); // Hook for P_SpawnMapThing by mobj type
 boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj); // Hook for P_PlayerAfterThink Smiles mobj-following
 UINT8 LUAh_PlayerCanDamage(player_t *player, mobj_t *mobj); // Hook for P_PlayerCanDamage
-UINT8 LUAh_PlayerCanChangeSkin(player_t *player); // Hook for CanChangeSkin
+UINT8 LUAh_PlayerCanChangeSkin(player_t *player, skin_t *current_skin, skin_t *next_skin); // Hook for CanChangeSkin
 void LUAh_PlayerQuit(player_t *plr, kickreason_t reason); // Hook for player quitting
 void LUAh_IntermissionThinker(void); // Hook for Y_Ticker
 boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, boolean tryingautobalance, boolean tryingscramble); // Hook for team switching in... uh....

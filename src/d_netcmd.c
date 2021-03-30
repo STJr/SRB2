@@ -1129,14 +1129,35 @@ static void SetPlayerName(INT32 playernum, char *newname)
 	}
 }
 
-UINT8 CanChangeSkin(INT32 playernum)
+
+/** Checks if a player can change skin under any circumstance.
+  *  If this function gets called by the Player Setup Menu, the skinnum will be -2.
+  *
+  *  \param playernum Player number who is checking the skin change conditions.
+  *  \param skinnum   Index of the requested skin.
+  */
+UINT8 CanChangeSkin(INT32 playernum, INT32 skinnum)
 {
-    //Call the lua hook for CanChangeSkin
-	UINT8 canchangeskin = LUAh_PlayerCanChangeSkin(&players[playernum]);
+	// if the function wasn't called from the Player Setup Menu
+	if (skinnum != -2)
+	{
+		// needed checks that can't be ignored by the lua hook
+		if (!R_SkinUsable(consoleplayer, skinnum))
+		{
+			CONS_Alert(CONS_NOTICE, M_GetText("You can't use that skin at the moment.\n"));
+			return false;
+		}
+	}
+	
+	//Call the lua hook for CanChangeSkin
+	UINT8 canchangeskin = LUAh_PlayerCanChangeSkin(&players[playernum], &skins[players[playernum].skin], (skinnum < 0 ? NULL : &skins[skinnum]));
 	if (canchangeskin == 1)
 		return true; // force yes
 	else if (canchangeskin == 2)
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
 		return false; // force no
+	}
 
 	// Of course we can change if we're not playing
 	if (!Playing() || !addedtogame)
@@ -1144,11 +1165,21 @@ UINT8 CanChangeSkin(INT32 playernum)
 
 	// Force skin in effect.
 	if ((cv_forceskin.value != -1) || (mapheaderinfo[gamemap-1] && mapheaderinfo[gamemap-1]->forcecharacter[0] != '\0'))
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
 		return false;
+	}
 
 	// Can change skin in intermission and whatnot.
 	if (gamestate != GS_LEVEL)
 		return true;
+
+	// Can't change when moving
+	if (P_PlayerMoving(playernum))
+	{
+		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin when moving.\n"));
+		return false;
+	}
 
 	// Server has skin change restrictions.
 	if (cv_restrictskinchange.value)
@@ -1173,10 +1204,10 @@ UINT8 CanChangeSkin(INT32 playernum)
 
 		if (players[playernum].spectator || players[playernum].playerstate == PST_DEAD || players[playernum].playerstate == PST_REBORN)
 			return true;
-
+		
+		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
 		return false;
 	}
-
 	return true;
 }
 
@@ -1248,11 +1279,11 @@ static void SendNameAndColor(void)
 	if (!Playing())
 		return;
 
+	INT32 foundskin = R_SkinAvailable(cv_skin.string);
+
 	// If you're not in a netgame, merely update the skin, color, and name.
 	if (!netgame)
 	{
-		INT32 foundskin;
-
 		CleanupPlayerName(consoleplayer, cv_playername.zstring);
 		strcpy(player_names[consoleplayer], cv_playername.zstring);
 
@@ -1266,7 +1297,7 @@ static void SendNameAndColor(void)
 			SetPlayerSkinByNum(consoleplayer, 5);
 			CV_StealthSet(&cv_skin, skins[5].name);
 		}
-		else if ((foundskin = R_SkinAvailable(cv_skin.string)) != -1 && R_SkinUsable(consoleplayer, foundskin))
+		else if (CanChangeSkin(consoleplayer, foundskin))
 		{
 			//boolean notsame;
 
@@ -1312,7 +1343,7 @@ static void SendNameAndColor(void)
 		CleanupPlayerName(consoleplayer, cv_playername.zstring);
 
 	// Don't change skin if the server doesn't want you to.
-	if (!CanChangeSkin(consoleplayer))
+	if (!CanChangeSkin(consoleplayer, foundskin))
 		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
 
 	// check if player has the skin loaded (cv_skin may have
@@ -1388,7 +1419,7 @@ static void SendNameAndColor2(void)
 	}
 	else if (!netgame)
 	{
-		INT32 foundskin;
+		INT32 foundskin = R_SkinAvailable(cv_skin2.string);
 
 		CleanupPlayerName(secondplaya, cv_playername2.zstring);
 		strcpy(player_names[secondplaya], cv_playername2.zstring);
@@ -1405,7 +1436,7 @@ static void SendNameAndColor2(void)
 			SetPlayerSkinByNum(secondplaya, forcedskin);
 			CV_StealthSet(&cv_skin2, skins[forcedskin].name);
 		}
-		else if ((foundskin = R_SkinAvailable(cv_skin2.string)) != -1 && R_SkinUsable(secondplaya, foundskin))
+		else if (CanChangeSkin(secondplaya, foundskin))
 		{
 			//boolean notsame;
 
@@ -4500,13 +4531,8 @@ static void Skin_OnChange(void)
 		return;
 	}
 
-	if (CanChangeSkin(consoleplayer) && !P_PlayerMoving(consoleplayer))
-		SendNameAndColor();
-	else
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
-		CV_StealthSet(&cv_skin, skins[players[consoleplayer].skin].name);
-	}
+	// checks are now done internally
+	SendNameAndColor();
 }
 
 /** Sends a skin change for the secondary splitscreen player, unless that
@@ -4519,13 +4545,8 @@ static void Skin2_OnChange(void)
 	if (!Playing() || !splitscreen)
 		return; // do whatever you want
 
-	if (CanChangeSkin(secondarydisplayplayer) && !P_PlayerMoving(secondarydisplayplayer))
-		SendNameAndColor2();
-	else
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("You can't change your skin at the moment.\n"));
-		CV_StealthSet(&cv_skin2, skins[players[secondarydisplayplayer].skin].name);
-	}
+	// checks are now done internally
+	SendNameAndColor2();
 }
 
 /** Sends a color change for the console player, unless that player is moving.
