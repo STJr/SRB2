@@ -12,4 +12,4 @@
 #define MODVERSION 50
 
 // Define this as a prerelease version suffix
-#define BETAVERSION "Test Build 2021-02-13"
+#define BETAVERSION "Test Build 2021-04-01"

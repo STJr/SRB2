@@ -8651,14 +8651,16 @@ void P_MovePlayer(player_t *player)
 	{
 		boolean atspinheight = false;
 		fixed_t oldheight = player->mo->height;
+		fixed_t luaheight = LUAh_PlayerHeight(player);
 
+		if (luaheight != -1)
+		{
+			player->mo->height = luaheight;
+			if (luaheight <= P_GetPlayerSpinHeight(player))
+				atspinheight = true; // spinning will not save you from being crushed
+		}
 		// Less height while spinning. Good for spinning under things...?
-		if ((player->mo->state == &states[player->mo->info->painstate])
-		|| ((player->pflags & PF_JUMPED) && !(player->pflags & PF_NOJUMPDAMAGE))
-		|| (player->pflags & PF_SPINNING)
-		|| player->powers[pw_tailsfly] || player->pflags & PF_GLIDING
-		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
-		|| (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
+		else if (P_PlayerShouldUseSpinHeight(player))
 		{
 			player->mo->height = P_GetPlayerSpinHeight(player);
 			atspinheight = true;
@@ -12952,4 +12954,34 @@ boolean P_PlayerFullbright(player_t *player)
 		&& (player->exiting
 			|| !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6])))); // Note the < instead of <=
+}
+
+#define JUMPCURLED(player) ((player->pflags & PF_JUMPED)\
+	&& (!(player->charflags & SF_NOJUMPSPIN))\
+	&& (player->panim == PA_JUMP || player->panim == PA_ROLL))\
+
+// returns true if the player can enter a sector that they could not if standing at their skin's full height
+boolean P_PlayerCanEnterSpinGaps(player_t *player)
+{
+	UINT8 canEnter = LUAh_PlayerCanEnterSpinGaps(player);
+	if (canEnter == 1)
+		return true;
+	else if (canEnter == 2)
+		return false;
+
+	return ((player->pflags & (PF_SPINNING|PF_GLIDING)) // players who are spinning or gliding
+		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING) // players who are landing from a glide
+		|| JUMPCURLED(player)); // players who are jumpcurled, but only if they would normally jump that way
+}
+
+// returns true if the player should use their skin's spinheight instead of their skin's height
+boolean P_PlayerShouldUseSpinHeight(player_t *player)
+{
+	return ((player->pflags & (PF_SPINNING|PF_GLIDING))
+		|| (player->mo->state == &states[player->mo->info->painstate])
+		|| (player->panim == PA_ROLL)
+		|| ((player->powers[pw_tailsfly] || (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
+			&& !(player->charflags & SF_NOJUMPSPIN))
+		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
+		|| JUMPCURLED(player));
 }

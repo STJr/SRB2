@@ -2723,7 +2723,10 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			if (thing->type == MT_SKIM)
 				maxstep = 0;
 
-			if (tmceilingz - tmfloorz < thing->height)
+			if (tmceilingz - tmfloorz < thing->height
+				|| (thing->player
+					&& tmceilingz - tmfloorz < P_GetPlayerHeight(thing->player)
+					&& !P_PlayerCanEnterSpinGaps(thing->player)))
 			{
 				if (tmfloorthing)
 					tmhitthing = tmfloorthing;
@@ -3330,6 +3333,11 @@ static boolean PTR_LineIsBlocking(line_t *li)
 
 	if (openbottom - slidemo->z > FixedMul(MAXSTEPMOVE, slidemo->scale))
 		return true; // too big a step up
+
+	if (slidemo->player
+		&& openrange < P_GetPlayerHeight(slidemo->player)
+		&& !P_PlayerCanEnterSpinGaps(slidemo->player))
+			return true; // nonspin character should not take this path
 
 	return false;
 }
