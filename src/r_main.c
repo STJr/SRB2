@@ -1089,8 +1089,6 @@ subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
 // 18/08/18: (No it's actually 16*viewheight, thanks Jimita for finding this out)
 static void R_SetupFreelook(player_t *player, boolean skybox)
 {
-	INT32 dy = 0;
-
 #ifndef HWRENDER
 	(void)player;
 	(void)skybox;
@@ -1109,14 +1107,15 @@ static void R_SetupFreelook(player_t *player, boolean skybox)
 		G_SoftwareClipAimingPitch((INT32 *)&aimingangle);
 	}
 
-	if (rendermode == render_soft)
-	{
-		dy = (AIMINGTODY(aimingangle)>>FRACBITS) * viewwidth/BASEVIDWIDTH;
-		yslope = &yslopetab[viewheight*8 - (viewheight/2 + dy)];
-	}
+	centeryfrac = (viewheight/2)<<FRACBITS;
 
-	centery = (viewheight/2) + dy;
-	centeryfrac = centery<<FRACBITS;
+	if (rendermode == render_soft)
+		centeryfrac += FixedMul(AIMINGTODY(aimingangle), FixedDiv(viewwidth<<FRACBITS, BASEVIDWIDTH<<FRACBITS));
+
+	centery = FixedInt(FixedRound(centeryfrac));
+
+	if (rendermode == render_soft)
+		yslope = &yslopetab[viewheight*8 - centery];
 }
 
 void R_SetupFrame(player_t *player)
