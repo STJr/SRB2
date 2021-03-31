@@ -164,6 +164,7 @@ typedef struct vissprite_s
 	fixed_t xiscale; // negative if flipped
 
 	angle_t centerangle; // for paper sprites
+	angle_t viewangle; // for floor sprites, the viewpoint's current angle
 
 	struct {
 		fixed_t tan; // The amount to shear the sprite vertically per row
