@@ -143,6 +143,8 @@ angle_t P_GetLocalAngle(player_t *player);
 void P_SetLocalAngle(player_t *player, angle_t angle);
 void P_ForceLocalAngle(player_t *player, angle_t angle);
 boolean P_PlayerFullbright(player_t *player);
+boolean P_PlayerCanEnterSpinGaps(player_t *player);
+boolean P_PlayerShouldUseSpinHeight(player_t *player);
 
 boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
