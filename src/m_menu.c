@@ -1612,53 +1612,54 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Max Players",                      &cv_maxplayers,          21},
 	{IT_STRING | IT_CVAR,    NULL, "Allow Add-on Downloading",         &cv_downloading,         26},
 	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",            &cv_allownewplayer,      31},
+	{IT_STRING | IT_CVAR,    NULL, "Minutes for reconnecting",         &cv_rejointimeout,       36},
 #endif
-	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          36},
-	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             41},
+	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          41},
+	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             46},
 
-	{IT_HEADER, NULL, "Characters", NULL, 50},
-	{IT_STRING | IT_CVAR,    NULL, "Force a character",                &cv_forceskin,           56},
-	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",       &cv_restrictskinchange,  61},
+	{IT_HEADER, NULL, "Characters", NULL, 55},
+	{IT_STRING | IT_CVAR,    NULL, "Force a character",                &cv_forceskin,           61},
+	{IT_STRING | IT_CVAR,    NULL, "Restrict character changes",       &cv_restrictskinchange,  66},
 
-	{IT_HEADER, NULL, "Items", NULL, 70},
-	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     76},
-	{IT_STRING | IT_SUBMENU, NULL, "Mystery Item Monitor Toggles...",  &OP_MonitorToggleDef,    81},
+	{IT_HEADER, NULL, "Items", NULL, 75},
+	{IT_STRING | IT_CVAR,    NULL, "Item respawn delay",               &cv_itemrespawntime,     81},
+	{IT_STRING | IT_SUBMENU, NULL, "Mystery Item Monitor Toggles...",  &OP_MonitorToggleDef,    86},
 
-	{IT_HEADER, NULL, "Cooperative", NULL, 90},
-	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,      96},
-	{IT_STRING | IT_CVAR,    NULL, "Starposts",                        &cv_coopstarposts,      101},
-	{IT_STRING | IT_CVAR,    NULL, "Life sharing",                     &cv_cooplives,          106},
-	{IT_STRING | IT_CVAR,    NULL, "Post-goal free roaming",           &cv_exitmove,           111},
+	{IT_HEADER, NULL, "Cooperative", NULL, 95},
+	{IT_STRING | IT_CVAR,    NULL, "Players required for exit",        &cv_playersforexit,     101},
+	{IT_STRING | IT_CVAR,    NULL, "Starposts",                        &cv_coopstarposts,      106},
+	{IT_STRING | IT_CVAR,    NULL, "Life sharing",                     &cv_cooplives,          111},
+	{IT_STRING | IT_CVAR,    NULL, "Post-goal free roaming",           &cv_exitmove,           116},
 
-	{IT_HEADER, NULL, "Race, Competition", NULL, 120},
-	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      126},
-	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_competitionboxes,   131},
+	{IT_HEADER, NULL, "Race, Competition", NULL, 125},
+	{IT_STRING | IT_CVAR,    NULL, "Level completion countdown",       &cv_countdowntime,      131},
+	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_competitionboxes,   136},
 
-	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 140},
-	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          146},
-	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         151},
-	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           156},
-	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        161},
+	{IT_HEADER, NULL, "Ringslinger (Match, CTF, Tag, H&S)", NULL, 145},
+	{IT_STRING | IT_CVAR,    NULL, "Time Limit",                       &cv_timelimit,          151},
+	{IT_STRING | IT_CVAR,    NULL, "Score Limit",                      &cv_pointlimit,         156},
+	{IT_STRING | IT_CVAR,    NULL, "Overtime on Tie",                  &cv_overtime,           161},
+	{IT_STRING | IT_CVAR,    NULL, "Player respawn delay",             &cv_respawntime,        166},
 
-	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_matchboxes,         171},
-	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       176},
-	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        181},
+	{IT_STRING | IT_CVAR,    NULL, "Item Monitors",                    &cv_matchboxes,         176},
+	{IT_STRING | IT_CVAR,    NULL, "Weapon Rings",                     &cv_specialrings,       181},
+	{IT_STRING | IT_CVAR,    NULL, "Power Stones",                     &cv_powerstones,        186},
 
-	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           191},
-	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           196},
+	{IT_STRING | IT_CVAR,    NULL, "Flag respawn delay",               &cv_flagtime,           196},
+	{IT_STRING | IT_CVAR,    NULL, "Hiding time",                      &cv_hidetime,           201},
 
-	{IT_HEADER, NULL, "Teams", NULL, 205},
-	{IT_STRING | IT_CVAR,    NULL, "Autobalance sizes",                &cv_autobalance,        211},
-	{IT_STRING | IT_CVAR,    NULL, "Scramble on Map Change",           &cv_scrambleonchange,   216},
+	{IT_HEADER, NULL, "Teams", NULL, 210},
+	{IT_STRING | IT_CVAR,    NULL, "Autobalance sizes",                &cv_autobalance,        216},
+	{IT_STRING | IT_CVAR,    NULL, "Scramble on Map Change",           &cv_scrambleonchange,   221},
 
 #ifndef NONET
-	{IT_HEADER, NULL, "Advanced", NULL, 225},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,       231},
+	{IT_HEADER, NULL, "Advanced", NULL, 230},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,       236},
 
-	{IT_STRING | IT_CVAR,    NULL, "Join delay",                       &cv_joindelay,          246},
-	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,    251},
+	{IT_STRING | IT_CVAR,    NULL, "Join delay",                       &cv_joindelay,          251},
+	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,    256},
 
-	{IT_STRING | IT_CVAR,    NULL, "Show IP Address of Joiners",       &cv_showjoinaddress,    256},
+	{IT_STRING | IT_CVAR,    NULL, "Show IP Address of Joiners",       &cv_showjoinaddress,    261},
 #endif
 };
 
@@ -8421,7 +8422,7 @@ static void M_DrawLoadGameData(void)
 				sprdef = &charbotskin->sprites[SPR2_SIGN];
 				if (!sprdef->numframes)
 					goto skipbot;
-				colormap = R_GetTranslationColormap(savegameinfo[savetodraw].botskin-1, charbotskin->prefcolor, 0);
+				colormap = R_GetTranslationColormap(savegameinfo[savetodraw].botskin-1, charbotskin->prefcolor, GTC_CACHE);
 				sprframe = &sprdef->spriteframes[0];
 				patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
 
@@ -8431,8 +8432,6 @@ static void M_DrawLoadGameData(void)
 					charbotskin->highresscale,
 					0, patch, colormap);
 
-				Z_Free(colormap);
-
 				tempx -= (20<<FRACBITS);
 				//flip = V_FLIP;
 			}
@@ -8441,7 +8440,7 @@ skipbot:
 			if (!charskin) // shut up compiler
 				goto skipsign;
 			sprdef = &charskin->sprites[SPR2_SIGN];
-			colormap = R_GetTranslationColormap(savegameinfo[savetodraw].skinnum, charskin->prefcolor, 0);
+			colormap = R_GetTranslationColormap(savegameinfo[savetodraw].skinnum, charskin->prefcolor, GTC_CACHE);
 			if (!sprdef->numframes)
 				goto skipsign;
 			sprframe = &sprdef->spriteframes[0];
@@ -8481,8 +8480,6 @@ skipsign:
 				charskin->highresscale/2,
 				0, patch, colormap);
 skiplife:
-			if (colormap)
-				Z_Free(colormap);
 
 			patch = W_CachePatchName("STLIVEX", PU_PATCH);
 
@@ -11753,7 +11750,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		goto faildraw;
 
 	// ok, draw player sprite for sure now
-	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, 0);
+	colormap = R_GetTranslationColormap(setupm_fakeskin, setupm_fakecolor->color, GTC_CACHE);
 
 	if (multi_frame >= sprdef->numframes)
 		multi_frame = 0;
@@ -11771,7 +11768,6 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		FixedDiv(skins[setupm_fakeskin].highresscale, skins[setupm_fakeskin].shieldscale),
 		flags, patch, colormap);
 
-	Z_Free(colormap);
 	goto colordraw;
 
 faildraw:

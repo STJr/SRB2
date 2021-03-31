@@ -1635,8 +1635,10 @@ static int skincolor_get(lua_State *L)
 		lua_pushinteger(L, info->chatcolor);
 	else if (fastcmp(field,"accessible"))
 		lua_pushboolean(L, info->accessible);
-	else
+	else {
 		CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "skincolor_t", field);
+		return 0;
+	}
 	return 1;
 }
 

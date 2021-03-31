@@ -190,7 +190,7 @@ fixed_t P_ReturnThrustY(mobj_t *mo, angle_t angle, fixed_t move)
 boolean P_AutoPause(void)
 {
 	// Don't pause even on menu-up or focus-lost in netgames or record attack
-	if (netgame || modeattacking || gamestate == GS_TITLESCREEN)
+	if (netgame || modeattacking || gamestate == GS_TITLESCREEN || (marathonmode && gamestate == GS_INTERMISSION))
 		return false;
 
 	return (menuactive || ( window_notinfocus && cv_pauseifunfocused.value ));
@@ -4499,7 +4499,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	if (twodlevel || (player->mo->flags2 & MF2_TWOD))
 		factor += player->jumpfactor / 10;
 
-	if (player->charflags & SF_MULTIABILITY && player->charability == CA_DOUBLEJUMP)
+	if (player->charflags & SF_MULTIABILITY && player->charability == CA_DOUBLEJUMP && (player->actionspd >> FRACBITS) != -1)
 		factor -= max(0, player->secondjump * player->jumpfactor / ((player->actionspd >> FRACBITS) + 1)); // Reduce the jump height each time
 
 	//if (maptol & TOL_NIGHTS)
@@ -4880,22 +4880,28 @@ void P_DoBubbleBounce(player_t *player)
 //
 void P_DoAbilityBounce(player_t *player, boolean changemomz)
 {
-	fixed_t prevmomz;
 	if (player->mo->state-states == S_PLAY_BOUNCE_LANDING)
 		return;
+
 	if (changemomz)
 	{
-		fixed_t minmomz;
-		prevmomz = player->mo->momz;
+		fixed_t prevmomz = player->mo->momz, minmomz;
+
 		if (P_MobjFlip(player->mo)*prevmomz < 0)
 			prevmomz = 0;
 		else if (player->mo->eflags & MFE_UNDERWATER)
 			prevmomz /= 2;
+
 		P_DoJump(player, false);
 		player->pflags &= ~(PF_STARTJUMP|PF_JUMPED);
 		minmomz = FixedMul(player->mo->momz, 3*FRACUNIT/2);
-		player->mo->momz = max(minmomz, (minmomz + prevmomz)/2);
+
+		if (player->mo->eflags & MFE_VERTICALFLIP) // Use "min" or "max" depending on if the player is flipped
+			player->mo->momz = min(minmomz, (minmomz + prevmomz)/2);
+		else
+			player->mo->momz = max(minmomz, (minmomz + prevmomz)/2);
 	}
+
 	S_StartSound(player->mo, sfx_boingf);
 	P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE_LANDING);
 	player->pflags |= PF_BOUNCING|PF_THOKKED;
@@ -5024,7 +5030,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 	if ((player->powers[pw_shield] & SH_NOSTACK) && !player->powers[pw_super] && !(player->pflags & PF_SPINDOWN)
 		&& ((!(player->pflags & PF_THOKKED) || (((player->powers[pw_shield] & SH_NOSTACK) == SH_BUBBLEWRAP || (player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT) && player->secondjump == UINT8_MAX) ))) // thokked is optional if you're bubblewrapped / 3dblasted
 	{
-		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT)
+		if ((player->powers[pw_shield] & SH_NOSTACK) == SH_ATTRACT && !(player->charflags & SF_NOSHIELDABILITY))
 		{
 			if ((lockonshield = P_LookForEnemies(player, false, false)))
 			{
@@ -5047,7 +5053,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 				}
 			}
 		}
-		if (cmd->buttons & BT_SPIN && !LUAh_ShieldSpecial(player)) // Spin button effects
+		if ((!(player->charflags & SF_NOSHIELDABILITY)) && (cmd->buttons & BT_SPIN && !LUAh_ShieldSpecial(player))) // Spin button effects
 		{
 			// Force stop
 			if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
@@ -5495,7 +5501,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						break;
 				}
 		}
-		else if ((player->powers[pw_shield] & SH_NOSTACK) == SH_WHIRLWIND && !player->powers[pw_super])
+		else if ((!(player->charflags & SF_NOSHIELDABILITY)) && ((player->powers[pw_shield] & SH_NOSTACK) == SH_WHIRLWIND && !player->powers[pw_super] && !LUAh_ShieldSpecial(player)))
 			P_DoJumpShield(player);
 	}
 
@@ -5924,7 +5930,7 @@ static void P_3dMovement(player_t *player)
 	player->rmomy = player->mo->momy - player->cmomy;
 
 	// Calculates player's speed based on distance-of-a-line formula
-	player->speed = R_PointToDist2(0, 0, player->rmomx, player->rmomy);
+	player->speed = P_AproxDistance(player->rmomx, player->rmomy);
 
 	// Monster Iestyn - 04-11-13
 	// Quadrants are stupid, excessive and broken, let's do this a much simpler way!
@@ -7756,6 +7762,11 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
 			P_InstaThrust(flame, flame->angle, FixedMul(3*FRACUNIT, flame->scale));
 			P_SetObjectMomZ(flame, 3*FRACUNIT, false);
+			if (!(gametyperules & GTR_FRIENDLY))
+			{
+				P_SetMobjState(flame, S_TEAM_SPINFIRE1);
+				flame->color = player->mo->color;
+			}
 		}
 #undef limitangle
 #undef numangles
@@ -7783,6 +7794,11 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
+			if (!(gametyperules & GTR_FRIENDLY))
+			{
+				P_SetMobjState(flame, S_TEAM_SPINFIRE1);
+				flame->color = player->mo->color;
+			}
 
 			flame->momx = 8; // this is a hack which is used to ensure it still behaves as a missile and can damage others
 			P_XYMovement(flame);

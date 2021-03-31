@@ -3188,13 +3188,16 @@ boolean P_SceneryZMovement(mobj_t *mo)
 //
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover)
 {
-	fixed_t topheight = P_GetFFloorTopZAt(rover, player->mo->x, player->mo->y);
+	boolean flip = player->mo->eflags & MFE_VERTICALFLIP;
+	fixed_t surfaceheight = flip ? P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y) : P_GetFFloorTopZAt(rover, player->mo->x, player->mo->y);
+	fixed_t playerbottom = flip ? (player->mo->z + player->mo->height) : player->mo->z;
+	boolean doifit = flip ? (surfaceheight - player->mo->floorz >= player->mo->height) : (player->mo->ceilingz - surfaceheight >= player->mo->height);
 
 	if (!player->powers[pw_carry] && !player->homing
-		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= DASHMODE_THRESHOLD) && player->mo->ceilingz-topheight >= player->mo->height)
+		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= DASHMODE_THRESHOLD) && doifit)
 		&& (rover->flags & FF_SWIMMABLE) && !(player->pflags & PF_SPINNING) && player->speed > FixedMul(player->runspeed, player->mo->scale)
 		&& !(player->pflags & PF_SLIDING)
-		&& abs(player->mo->z - topheight) < FixedMul(30*FRACUNIT, player->mo->scale))
+		&& abs(playerbottom - surfaceheight) < FixedMul(30*FRACUNIT, player->mo->scale))
 		return true;
 
 	return false;
@@ -9837,7 +9840,7 @@ static void P_FlagFuseThink(mobj_t *mobj)
 	if (mobj->type == MT_REDFLAG)
 	{
 		if (!(mobj->flags2 & MF2_JUSTATTACKED))
-			CONS_Printf(M_GetText("The %c%s%c has returned to base.\n"), 0x85, M_GetText("Red flag"), 0x80);
+			CONS_Printf(M_GetText("The \205Red flag\200 has returned to base.\n"));
 
 		// Assumedly in splitscreen players will be on opposing teams
 		if (players[consoleplayer].ctfteam == 1 || splitscreen)
@@ -9850,7 +9853,7 @@ static void P_FlagFuseThink(mobj_t *mobj)
 	else // MT_BLUEFLAG
 	{
 		if (!(mobj->flags2 & MF2_JUSTATTACKED))
-			CONS_Printf(M_GetText("The %c%s%c has returned to base.\n"), 0x84, M_GetText("Blue flag"), 0x80);
+			CONS_Printf(M_GetText("The \204Blue flag\200 has returned to base.\n"));
 
 		// Assumedly in splitscreen players will be on opposing teams
 		if (players[consoleplayer].ctfteam == 2 || splitscreen)
@@ -10482,9 +10485,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	// set subsector and/or block links
 	P_SetThingPosition(mobj);
 	I_Assert(mobj->subsector != NULL);
-
-	// Make sure scale matches destscale immediately when spawned
-	P_SetScale(mobj, mobj->destscale);
 
 	mobj->floorz   = P_GetSectorFloorZAt  (mobj->subsector->sector, x, y);
 	mobj->ceilingz = P_GetSectorCeilingZAt(mobj->subsector->sector, x, y);
@@ -11798,7 +11798,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		if (!(G_CoopGametype() || (mthing->options & MTF_EXTRA)))
 			return false; // she doesn't hang out here
 
-		if (!mariomode && !(netgame || multiplayer) && players[consoleplayer].skin == 3)
+		if (!(netgame || multiplayer) && players[consoleplayer].skin == 3)
 			return false; // no doubles
 
 		break;

@@ -15,6 +15,7 @@
 #include "tables.h"
 #include "p_local.h"
 #include "doomstat.h" // for ALL7EMERALDS
+#include "r_main.h" // for R_PointToDist2
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -129,7 +130,7 @@ static int lib_fixedsqrt(lua_State *L)
 
 static int lib_fixedhypot(lua_State *L)
 {
-	lua_pushfixed(L, FixedHypot(luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
+	lua_pushfixed(L, R_PointToDist2(0, 0, luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
 	return 1;
 }
 

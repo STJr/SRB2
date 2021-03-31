@@ -3665,7 +3665,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 static void HWR_RotateSpritePolyToAim(gl_vissprite_t *spr, FOutVector *wallVerts, const boolean precip)
 {
 	if (cv_glspritebillboarding.value
-		&& spr && spr->mobj && !(spr->mobj->frame & FF_PAPERSPRITE)
+		&& spr && spr->mobj && !R_ThingIsPaperSprite(spr->mobj)
 		&& wallVerts)
 	{
 		float basey = FIXED_TO_FLOAT(spr->mobj->z);
@@ -3707,7 +3707,6 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	FBITFIELD blend = 0;
 	FBITFIELD occlusion;
 	boolean use_linkdraw_hack = false;
-	boolean splat = R_ThingIsFloorSprite(spr->mobj);
 	UINT8 alpha;
 
 	INT32 i;
@@ -3766,21 +3765,18 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		baseWallVerts[0].t = baseWallVerts[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
 	}
 
-	if (!splat)
-	{
-		// if it has a dispoffset, push it a little towards the camera
-		if (spr->dispoffset) {
-			float co = -gl_viewcos*(0.05f*spr->dispoffset);
-			float si = -gl_viewsin*(0.05f*spr->dispoffset);
-			baseWallVerts[0].z = baseWallVerts[3].z = baseWallVerts[0].z+si;
-			baseWallVerts[1].z = baseWallVerts[2].z = baseWallVerts[1].z+si;
-			baseWallVerts[0].x = baseWallVerts[3].x = baseWallVerts[0].x+co;
-			baseWallVerts[1].x = baseWallVerts[2].x = baseWallVerts[1].x+co;
-		}
-
-		// Let dispoffset work first since this adjust each vertex
-		HWR_RotateSpritePolyToAim(spr, baseWallVerts, false);
+	// if it has a dispoffset, push it a little towards the camera
+	if (spr->dispoffset) {
+		float co = -gl_viewcos*(0.05f*spr->dispoffset);
+		float si = -gl_viewsin*(0.05f*spr->dispoffset);
+		baseWallVerts[0].z = baseWallVerts[3].z = baseWallVerts[0].z+si;
+		baseWallVerts[1].z = baseWallVerts[2].z = baseWallVerts[1].z+si;
+		baseWallVerts[0].x = baseWallVerts[3].x = baseWallVerts[0].x+co;
+		baseWallVerts[1].x = baseWallVerts[2].x = baseWallVerts[1].x+co;
 	}
+
+	// Let dispoffset work first since this adjust each vertex
+	HWR_RotateSpritePolyToAim(spr, baseWallVerts, false);
 
 	realtop = top = baseWallVerts[3].y;
 	realbot = bot = baseWallVerts[0].y;
@@ -3914,7 +3910,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 
 		// The x and y only need to be adjusted in the case that it's not a papersprite
 		if (cv_glspritebillboarding.value
-			&& spr->mobj && !(spr->mobj->frame & FF_PAPERSPRITE))
+			&& spr->mobj && !R_ThingIsPaperSprite(spr->mobj))
 		{
 			// Get the x and z of the vertices so billboarding draws correctly
 			realheight = realbot - realtop;
@@ -3983,7 +3979,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 static void HWR_DrawSprite(gl_vissprite_t *spr)
 {
 	FOutVector wallVerts[4];
-	patch_t *gpatch; // sprite patch converted to hardware
+	patch_t *gpatch;
 	FSurfaceInfo Surf;
 	const boolean splat = R_ThingIsFloorSprite(spr->mobj);
 
@@ -4284,7 +4280,7 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 {
 	FBITFIELD blend = 0;
 	FOutVector wallVerts[4];
-	patch_t *gpatch; // sprite patch converted to hardware
+	patch_t *gpatch;
 	FSurfaceInfo Surf;
 
 	if (!spr->mobj)
@@ -4337,7 +4333,7 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 			// Always use the light at the top instead of whatever I was doing before
 			INT32 light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false);
 
-			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+			if (!R_ThingIsFullBright(spr->mobj))
 				lightlevel = *sector->lightlist[light].lightlevel > 255 ? 255 : *sector->lightlist[light].lightlevel;
 
 			if (*sector->lightlist[light].extra_colormap)
@@ -4345,7 +4341,7 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 		}
 		else
 		{
-			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+			if (!R_ThingIsFullBright(spr->mobj))
 				lightlevel = sector->lightlevel > 255 ? 255 : sector->lightlevel;
 
 			if (sector->extra_colormap)
@@ -4921,8 +4917,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	angle_t ang;
 	INT32 heightsec, phs;
-	const boolean papersprite = R_ThingIsPaperSprite(thing);
 	const boolean splat = R_ThingIsFloorSprite(thing);
+	const boolean papersprite = (R_ThingIsPaperSprite(thing) && !splat);
 	angle_t mobjangle = (thing->player ? thing->player->drawangle : thing->angle);
 	float z1, z2;
 
@@ -5295,7 +5291,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			vis->colormap = R_GetTranslationColormap(TC_DEFAULT, vis->mobj->color ? vis->mobj->color : SKINCOLOR_CYAN, GTC_CACHE);
 	}
 	else
-		vis->colormap = colormaps;
+		vis->colormap = NULL;
 
 	// set top/bottom coords
 	vis->gzt = gzt;
@@ -5396,7 +5392,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
 
-	vis->colormap = colormaps;
+	vis->colormap = NULL;
 
 	// set top/bottom coords
 	vis->gzt = FIXED_TO_FLOAT(thing->z + spritecachedinfo[lumpoff].topoffset);

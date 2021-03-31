@@ -80,6 +80,7 @@ typedef struct
 	UINT8 *picture;
 #ifdef HWRENDER
 	void *mipmap;
+	void *mippic;
 #endif
 } levelflat_t;
 

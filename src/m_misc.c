@@ -165,7 +165,9 @@ consvar_t cv_zlib_window_bitsa = CVAR_INIT ("apng_window_size", "32k", CV_SAVE, 
 consvar_t cv_apng_delay = CVAR_INIT ("apng_speed", "1x", CV_SAVE, apng_delay_t, NULL);
 consvar_t cv_apng_downscale = CVAR_INIT ("apng_downscale", "On", CV_SAVE, CV_OnOff, NULL);
 
+#ifdef USE_APNG
 static boolean apng_downscale = false; // So nobody can do something dumb like changing cvars mid output
+#endif
 
 boolean takescreenshot = false; // Take a screenshot this tic
 

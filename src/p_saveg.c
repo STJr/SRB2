@@ -1506,7 +1506,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 {
 	const mobj_t *mobj = (const mobj_t *)th;
 	UINT32 diff;
-	UINT16 diff2;
+	UINT32 diff2;
 
 	// Ignore stationary hoops - these will be respawned from mapthings.
 	if (mobj->type == MT_HOOP)
@@ -1638,7 +1638,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_SHADOWSCALE;
 	if (mobj->renderflags)
 		diff2 |= MD2_RENDERFLAGS;
-	if (mobj->renderflags)
+	if (mobj->blendmode != AST_TRANSLUCENT)
 		diff2 |= MD2_BLENDMODE;
 	if (mobj->spritexscale != FRACUNIT)
 		diff2 |= MD2_SPRITEXSCALE;
@@ -1646,6 +1646,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_SPRITEYSCALE;
 	if (mobj->spritexoffset)
 		diff2 |= MD2_SPRITEXOFFSET;
+	if (mobj->spriteyoffset)
+		diff2 |= MD2_SPRITEYOFFSET;
 	if (mobj->floorspriteslope)
 	{
 		pslope_t *slope = mobj->floorspriteslope;
@@ -1667,7 +1669,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, type);
 	WRITEUINT32(save_p, diff);
 	if (diff & MD_MORE)
-		WRITEUINT16(save_p, diff2);
+		WRITEUINT32(save_p, diff2);
 
 	// save pointer, at load time we will search this pointer to reinitilize pointers
 	WRITEUINT32(save_p, (size_t)mobj);
@@ -2615,14 +2617,14 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	thinker_t *next;
 	mobj_t *mobj;
 	UINT32 diff;
-	UINT16 diff2;
+	UINT32 diff2;
 	INT32 i;
 	fixed_t z, floorz, ceilingz;
 	ffloor_t *floorrover = NULL, *ceilingrover = NULL;
 
 	diff = READUINT32(save_p);
 	if (diff & MD_MORE)
-		diff2 = READUINT16(save_p);
+		diff2 = READUINT32(save_p);
 	else
 		diff2 = 0;
 
@@ -2843,10 +2845,16 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->renderflags = READUINT32(save_p);
 	if (diff2 & MD2_BLENDMODE)
 		mobj->blendmode = READINT32(save_p);
+	else
+		mobj->blendmode = AST_TRANSLUCENT;
 	if (diff2 & MD2_SPRITEXSCALE)
 		mobj->spritexscale = READFIXED(save_p);
+	else
+		mobj->spritexscale = FRACUNIT;
 	if (diff2 & MD2_SPRITEYSCALE)
 		mobj->spriteyscale = READFIXED(save_p);
+	else
+		mobj->spriteyscale = FRACUNIT;
 	if (diff2 & MD2_SPRITEXOFFSET)
 		mobj->spritexoffset = READFIXED(save_p);
 	if (diff2 & MD2_SPRITEYOFFSET)

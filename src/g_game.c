@@ -1678,7 +1678,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// At this point, cmd doesn't contain the final angle yet,
 	// So we need to temporarily transform it so Lua scripters
 	// don't need to handle it differently than in other hooks.
-	if (gamestate == GS_LEVEL)
+	if (addedtogame && gamestate == GS_LEVEL)
 	{
 		INT16 extra = ticcmd_oldangleturn[forplayer] - player->oldrelangleturn;
 		INT16 origangle = cmd->angleturn;
@@ -2291,7 +2291,11 @@ void G_Ticker(boolean run)
 	{
 		if (playeringame[i])
 		{
+			INT16 received;
+
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+
+			received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
 
 			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
 			players[i].oldrelangleturn = players[i].cmd.angleturn;
@@ -2299,6 +2303,9 @@ void G_Ticker(boolean run)
 				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
 			else
 				players[i].cmd.angleturn = players[i].angleturn;
+
+			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
+			players[i].cmd.angleturn |= received;
 		}
 	}
 

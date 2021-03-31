@@ -1522,6 +1522,13 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_SPINFIRE5",
 	"S_SPINFIRE6",
 
+	"S_TEAM_SPINFIRE1",
+	"S_TEAM_SPINFIRE2",
+	"S_TEAM_SPINFIRE3",
+	"S_TEAM_SPINFIRE4",
+	"S_TEAM_SPINFIRE5",
+	"S_TEAM_SPINFIRE6",
+
 	// Spikes
 	"S_SPIKE1",
 	"S_SPIKE2",
@@ -5015,6 +5022,7 @@ struct int_const_s const INT_CONST[] = {
 	{"SF_NOSUPERSPRITES",SF_NOSUPERSPRITES},
 	{"SF_NOSUPERJUMPBOOST",SF_NOSUPERJUMPBOOST},
 	{"SF_CANBUSTWALLS",SF_CANBUSTWALLS},
+	{"SF_NOSHIELDABILITY",SF_NOSHIELDABILITY},
 
 	// Dashmode constants
 	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
@@ -5449,3 +5457,27 @@ struct int_const_s const INT_CONST[] = {
 
 	{NULL,0}
 };
+
+// For this to work compile-time without being in this file,
+// this function would need to check sizes at runtime, without sizeof
+void DEH_TableCheck(void)
+{
+#if defined(_DEBUG) || defined(PARANOIA)
+	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
+	const size_t dehmobjs  = sizeof(MOBJTYPE_LIST)/sizeof(const char*);
+	const size_t dehpowers = sizeof(POWERS_LIST)/sizeof(const char*);
+	const size_t dehcolors = sizeof(COLOR_ENUMS)/sizeof(const char*);
+
+	if (dehstates != S_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked states list, you dolt!\n(%d states defined, versus %s in the Dehacked list)\n", S_FIRSTFREESLOT, sizeu1(dehstates));
+
+	if (dehmobjs != MT_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked mobjtype list, you dolt!\n(%d mobj types defined, versus %s in the Dehacked list)\n", MT_FIRSTFREESLOT, sizeu1(dehmobjs));
+
+	if (dehpowers != NUMPOWERS)
+		I_Error("You forgot to update the Dehacked powers list, you dolt!\n(%d powers defined, versus %s in the Dehacked list)\n", NUMPOWERS, sizeu1(dehpowers));
+
+	if (dehcolors != SKINCOLOR_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", SKINCOLOR_FIRSTFREESLOT, sizeu1(dehcolors));
+#endif
+}

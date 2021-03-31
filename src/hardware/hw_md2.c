@@ -158,7 +158,7 @@ static GLTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_
 	jmp_buf jmpbuf;
 #endif
 #endif
-	png_FILE_p png_FILE;
+	volatile png_FILE_p png_FILE;
 	//Filename checking fixed ~Monster Iestyn and Golden
 	char *pngfilename = va("%s"PATHSEP"models"PATHSEP"%s", srb2home, filename);
 
@@ -1106,11 +1106,19 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 	for (grMipmap = grPatch->mipmap; grMipmap->nextcolormap; )
 	{
 		grMipmap = grMipmap->nextcolormap;
-		if (grMipmap->colormap == colormap)
+		if (grMipmap->colormap && grMipmap->colormap->source == colormap)
 		{
 			if (grMipmap->downloaded && grMipmap->data)
 			{
-				HWD.pfnSetTexture(grMipmap); // found the colormap, set it to the correct texture
+				if (memcmp(grMipmap->colormap->data, colormap, 256 * sizeof(UINT8)))
+				{
+					M_Memcpy(grMipmap->colormap->data, colormap, 256 * sizeof(UINT8));
+					HWR_CreateBlendedTexture(patch, blendpatch, grMipmap, skinnum, color);
+					HWD.pfnUpdateTexture(grMipmap);
+				}
+				else
+					HWD.pfnSetTexture(grMipmap); // found the colormap, set it to the correct texture
+
 				Z_ChangeTag(grMipmap->data, PU_HWRMODELTEXTURE_UNLOCKED);
 				return;
 			}
@@ -1128,7 +1136,10 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 	if (newMipmap == NULL)
 		I_Error("%s: Out of memory", "HWR_GetBlendedTexture");
 	grMipmap->nextcolormap = newMipmap;
-	newMipmap->colormap = colormap;
+
+	newMipmap->colormap = Z_Calloc(sizeof(*newMipmap->colormap), PU_HWRPATCHCOLMIPMAP, NULL);
+	newMipmap->colormap->source = colormap;
+	M_Memcpy(newMipmap->colormap->data, colormap, 256 * sizeof(UINT8));
 
 	HWR_CreateBlendedTexture(patch, blendpatch, newMipmap, skinnum, color);
 
@@ -1303,7 +1314,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 
 			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
 
-			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+			if (!R_ThingIsFullBright(spr->mobj))
 				lightlevel = *sector->lightlist[light].lightlevel > 255 ? 255 : *sector->lightlist[light].lightlevel;
 
 			if (*sector->lightlist[light].extra_colormap)
@@ -1311,7 +1322,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		}
 		else
 		{
-			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+			if (!R_ThingIsFullBright(spr->mobj))
 				lightlevel = sector->lightlevel > 255 ? 255 : sector->lightlevel;
 
 			if (sector->extra_colormap)
@@ -1329,10 +1340,9 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		GLPatch_t *hwrPatch = NULL, *hwrBlendPatch = NULL;
 		INT32 durs = spr->mobj->state->tics;
 		INT32 tics = spr->mobj->tics;
-		//mdlframe_t *next = NULL;
-		const boolean papersprite = (spr->mobj->frame & FF_PAPERSPRITE);
-		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
-		const UINT8 hflip = (UINT8)(!(spr->mobj->mirrored) != !(spr->mobj->frame & FF_HORIZONTALFLIP));
+		const boolean papersprite = (R_ThingIsPaperSprite(spr->mobj) && !R_ThingIsFloorSprite(spr->mobj));
+		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(spr->mobj));
+		const UINT8 hflip = (UINT8)(!(spr->mobj->mirrored) != !R_ThingHorizontallyFlipped(spr->mobj));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
 		spriteinfo_t *sprinfo;
@@ -1393,6 +1403,11 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			&& (!blendgpatch || !hwrBlendPatch
 			|| ((!hwrBlendPatch->mipmap->format || !hwrBlendPatch->mipmap->downloaded) && !md2->noblendfile)))
 			md2_loadBlendTexture(md2);
+
+		// Load it again, because it isn't being loaded into blendgpatch after md2_loadblendtexture...
+		blendgpatch = md2->blendgrpatch;
+		if (blendgpatch)
+			hwrBlendPatch = ((GLPatch_t *)blendgpatch->hardware);
 
 		if (md2->error)
 			return false; // we already failed loading this before :(
