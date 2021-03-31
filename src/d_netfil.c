@@ -562,7 +562,7 @@ static void SV_PrepareSendLuaFileToNextNode(void)
 
     // Find a client to send the file to
 	for (i = 1; i < MAXNETNODES; i++)
-		if (nodeingame[i] && luafiletransfers->nodestatus[i] == LFTNS_WAITING) // Node waiting
+		if (luafiletransfers->nodestatus[i] == LFTNS_WAITING) // Node waiting
 		{
 			// Tell the client we're about to send them the file
 			netbuffer->packettype = PT_SENDINGLUAFILE;
@@ -570,6 +570,7 @@ static void SV_PrepareSendLuaFileToNextNode(void)
 				I_Error("Failed to send a PT_SENDINGLUAFILE packet\n"); // !!! Todo: Handle failure a bit better lol
 
 			luafiletransfers->nodestatus[i] = LFTNS_ASKED;
+			luafiletransfers->nodetimeouts[i] = I_GetTime() + 30 * TICRATE;
 
 			return;
 		}
@@ -588,7 +589,7 @@ void SV_PrepareSendLuaFile(void)
 
 	// Set status to "waiting" for everyone
 	for (i = 0; i < MAXNETNODES; i++)
-		luafiletransfers->nodestatus[i] = LFTNS_WAITING;
+		luafiletransfers->nodestatus[i] = (nodeingame[i] ? LFTNS_WAITING : LFTNS_NONE);
 
 	if (FIL_ReadFileOK(luafiletransfers->realfilename))
 	{
@@ -649,12 +650,14 @@ void RemoveAllLuaFileTransfers(void)
 
 void SV_AbortLuaFileTransfer(INT32 node)
 {
-	if (luafiletransfers
-	&& (luafiletransfers->nodestatus[node] == LFTNS_ASKED
-	||  luafiletransfers->nodestatus[node] == LFTNS_SENDING))
+	if (luafiletransfers)
 	{
-		luafiletransfers->nodestatus[node] = LFTNS_WAITING;
-		SV_PrepareSendLuaFileToNextNode();
+		if (luafiletransfers->nodestatus[node] == LFTNS_ASKED
+			|| luafiletransfers->nodestatus[node] == LFTNS_SENDING)
+		{
+			SV_PrepareSendLuaFileToNextNode();
+		}
+		luafiletransfers->nodestatus[node] = LFTNS_NONE;
 	}
 }
 
@@ -927,6 +930,22 @@ void FileSendTicker(void)
 	size_t fragmentsize;
 	filetx_t *f;
 	INT32 packetsent, ram, i, j;
+
+	// If someone is taking too long to download, kick them with a timeout
+	// to prevent blocking the rest of the server...
+	if (luafiletransfers)
+	{
+		for (i = 1; i < MAXNETNODES; i++)
+		{
+			luafiletransfernodestatus_t status = luafiletransfers->nodestatus[i];
+
+			if (status != LFTNS_NONE && status != LFTNS_WAITING && status != LFTNS_SENT
+				&& I_GetTime() > luafiletransfers->nodetimeouts[i])
+			{
+				Net_ConnectionTimeout(i);
+			}
+		}
+	}
 
 	if (!filestosend) // No file to send
 		return;
