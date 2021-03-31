@@ -707,6 +707,7 @@ FBITFIELD HWR_GetBlendModeFlag(INT32 ast)
 	switch (ast)
 	{
 		case AST_COPY:
+		case AST_OVERLAY:
 			return PF_Masked;
 		case AST_ADD:
 			return PF_Additive;
@@ -746,7 +747,7 @@ UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
 
 FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf)
 {
-	if (!transtablenum || style == AST_COPY)
+	if (!transtablenum || style == AST_COPY || style == AST_OVERLAY)
 	{
 		pSurf->PolyColor.s.alpha = 0xff;
 		return PF_Masked;
