@@ -2184,6 +2184,16 @@ boolean G_Responder(event_t *ev)
 }
 
 //
+// G_LuaResponder
+// Let Lua handle key events.
+//
+boolean G_LuaResponder(event_t *ev)
+{
+	return (ev->type == ev_keydown && LUAh_KeyDown(ev->data1)) ||
+		(ev->type == ev_keyup && LUAh_KeyUp(ev->data1));
+}
+
+//
 // G_Ticker
 // Make ticcmd_ts for the players.
 //

@@ -1944,7 +1944,7 @@ boolean LUAh_MusicChange(const char *oldname, char *newname, UINT16 *mflags, boo
 			lua_pushinteger(gL, *prefadems);
 			lua_pushinteger(gL, *fadeinms);
 			if (lua_pcall(gL, 7, 6, 1)) {
-				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL,-1));
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 				lua_pop(gL, 1);
 				continue;
 			}
