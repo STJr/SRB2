@@ -1301,8 +1301,12 @@ EXPORT void HWRAPI(DeleteTexture) (GLMipmap_t *pTexInfo)
 		{
 			if (head->next)
 				head->next->prev = head->prev;
+			else // no next -> tail is being deleted -> update TexCacheTail
+				TexCacheTail = head->prev;
 			if (head->prev)
 				head->prev->next = head->next;
+			else // no prev -> head is being deleted -> update TexCacheHead
+				TexCacheHead = head->next;
 			free(head);
 			break;
 		}
