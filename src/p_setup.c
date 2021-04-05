@@ -989,6 +989,8 @@ static void P_InitializeSector(sector_t *ss)
 	ss->floordata = NULL;
 	ss->ceilingdata = NULL;
 	ss->lightingdata = NULL;
+	ss->portals[0] = NULL;
+	ss->portals[1] = NULL;
 	ss->fadecolormapdata = NULL;
 
 	ss->heightsec = -1;

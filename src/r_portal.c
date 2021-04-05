@@ -16,11 +16,13 @@
 #include "r_main.h"
 #include "doomstat.h"
 #include "p_spec.h" // Skybox viewpoints
+#include "p_local.h"
 #include "z_zone.h"
 #include "r_things.h"
 #include "r_sky.h"
 
 UINT8 portalrender;			/**< When rendering a portal, it establishes the depth of the current BSP traversal. */
+UINT8 floorportalrender;	/**< Same deal, but for floorportals. */
 
 // Linked list for portals.
 portal_t *portal_base, *portal_cap;
@@ -34,6 +36,7 @@ boolean portalline; // is curline a portal seg?
 void Portal_InitList (void)
 {
 	portalrender = 0;
+	floorportalrender = 0;
 	portal_base = portal_cap = NULL;
 }
 
@@ -306,6 +309,45 @@ void Portal_AddSkybox (const visplane_t* plane)
 	portal->clipline = -1;
 }
 
+/** Creates a floor portal out of a visplane.
+ *
+ * Mostly the same as Portal_AddSkybox.
+ */
+void Portal_AddFloorPortal (const visplane_t* plane)
+{
+	INT16 start, end;
+	portal_t* portal;
+	sector_t *portalsector = plane->sector;
+	mobj_t *portalmobj = portalsector->portals[0];
+	mobj_t *refmobj = portalsector->portals[1];
+	fixed_t refx, refy;
+
+	if (TrimVisplaneBounds(plane, &start, &end))
+		return;
+
+	portal = Portal_Add(start, end);
+
+	Portal_ClipVisplane(plane, portal);
+
+	if ((refmobj != NULL) && !(P_MobjWasRemoved(refmobj)))
+	{
+		refx = (refmobj->x - viewx);
+		refy = (refmobj->y - viewy);
+	}
+	else
+	{
+		refx = (portalsector->soundorg.x - viewx);
+		refy = (portalsector->soundorg.y - viewy);
+	}
+
+	portal->viewx = portalmobj->x - refx;
+	portal->viewy = portalmobj->y - refy;
+	portal->viewz = portalmobj->z + viewz;
+	portal->viewangle = viewangle + portalmobj->angle;
+
+	portal->clipline = -1;
+}
+
 /** Creates portals for the currently existing sky visplanes.
  * The visplanes are also removed and cleared from the list.
  */
@@ -319,13 +361,35 @@ void Portal_AddSkyboxPortals (void)
 	{
 		for (pl = visplanes[i]; pl; pl = pl->next)
 		{
+			// true if added a portal for this visplane
+			boolean addedportal = false;
+			boolean floorportalpresent = (pl->sector->portals[0] != NULL && !P_MobjWasRemoved(pl->sector->portals[0]));
+
+			// skybox portal
 			if (pl->picnum == skyflatnum)
 			{
-				Portal_AddSkybox(pl);
+				if (cv_skybox.value && skyboxmo[0])
+				{
+					Portal_AddSkybox(pl);
+					addedportal = true;
+				}
+			}
+			// floor portal
+			else if (floorportalpresent)
+			{
+				if (floorportalrender < cv_maxportals.value)
+				{
+					Portal_AddFloorPortal(pl);
+					floorportalrender++;
+					addedportal = true;
+				}
+			}
 
+			// don't render this visplane anymore
+			if (addedportal)
+			{
 				pl->minx = 0;
 				pl->maxx = -1;
-
 				count++;
 			}
 		}

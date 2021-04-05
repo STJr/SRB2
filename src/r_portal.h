@@ -44,15 +44,17 @@ typedef struct portal_s
 extern portal_t* portal_base;
 extern portal_t* portal_cap;
 extern UINT8 portalrender;
+extern UINT8 floorportalrender;
 
 extern line_t *portalclipline;
 extern sector_t *portalcullsector;
 extern INT32 portalclipstart, portalclipend;
 
-void Portal_InitList	(void);
-void Portal_Remove		(portal_t* portal);
-void Portal_Add2Lines	(const INT32 line1, const INT32 line2, const INT32 x1, const INT32 x2);
-void Portal_AddSkybox	(const visplane_t* plane);
+void Portal_InitList		(void);
+void Portal_Remove			(portal_t* portal);
+void Portal_Add2Lines		(const INT32 line1, const INT32 line2, const INT32 x1, const INT32 x2);
+void Portal_AddSkybox		(const visplane_t* plane);
+void Portal_AddFloorPortal	(const visplane_t* plane);
 
 void Portal_ClipRange (portal_t* portal);
 void Portal_ClipApply (const portal_t* portal);

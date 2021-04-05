@@ -494,6 +494,9 @@ typedef struct sector_s
 
 	// colormap structure
 	extracolormap_t *spawn_extra_colormap;
+
+	// floor portals
+	mobj_t *portals[2];
 } sector_t;
 
 //

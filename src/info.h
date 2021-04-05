@@ -5114,8 +5114,9 @@ typedef enum mobj_type
 	MT_POLYANCHOR,
 	MT_POLYSPAWN,
 
-	// Skybox objects
+	// Portal objects
 	MT_SKYBOX,
+	MT_PORTALREFPOINT,
 
 	// Debris
 	MT_SPARK, //spark
