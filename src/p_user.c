@@ -11310,7 +11310,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	angle_t angle = player->drawangle;
 	fixed_t dist;
 	panim_t panim = player->panim;
-	tic_t dashmode = player->dashmode;
+	tic_t dashmode = min(player->dashmode, DASHMODE_MAX);
 	boolean underwater = mo->eflags & MFE_UNDERWATER;
 	statenum_t stat = fume->state-states;
 
