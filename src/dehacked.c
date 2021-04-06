@@ -188,25 +188,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 	dbg_line = -1; // start at -1 so the first line is 0.
 	while (!myfeof(f))
 	{
-		char origpos[128];
-		INT32 size = 0;
-		char *traverse;
-
 		myfgets(s, MAXLINELEN, f);
 		memcpy(textline, s, MAXLINELEN);
 		if (s[0] == '\n' || s[0] == '#')
 			continue;
-
-		traverse = s;
-
-		while (traverse[0] != '\n')
-		{
-			traverse++;
-			size++;
-		}
-
-		strncpy(origpos, s, size);
-		origpos[size] = '\0';
 
 		if (NULL != (word = strtok(s, " "))) {
 			strupr(word);
