@@ -215,6 +215,86 @@ static void Y_IntermissionTokenDrawer(void)
 		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 0, 0, tokenicon->width, calc);
 }
 
+
+//
+// Y_LoadData
+//
+// Load patches for drawing the intermission, if acceptable
+//
+void Y_LoadIntermisionData(void)
+{
+	INT32 i;
+
+	if (dedicated)
+		return;
+
+	switch (intertype)
+	{
+		case int_coop:
+		{
+			for (i = 0; i < 4; ++i)
+			{
+				if (strlen(data.coop.bonuses[i].patch))
+					data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_PATCH);
+			}
+			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_PATCH);
+
+			// get background patches
+			bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
+
+			// grab an interscreen if appropriate
+			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
+				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
+			break;
+		}
+		case int_spec:
+		{
+			for (i = 0; i < 2; ++i)
+				data.spec.bonuspatches[i] = W_CachePatchName(data.spec.bonuses[i].patch, PU_PATCH);
+
+			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_PATCH);
+			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_PATCH);
+
+			// get background tile
+			bgtile = W_CachePatchName("SPECTILE", PU_PATCH);
+
+			// grab an interscreen if appropriate
+			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
+				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
+			break;
+		}
+		case int_match:
+		case int_race:
+		case int_teammatch:
+		case int_ctf:
+		{
+			if (intertype == int_match || intertype == int_race)
+			{
+				// get RESULT header
+				data.match.result = W_CachePatchName("RESULT", PU_PATCH);
+			}
+
+			if (intertype == int_ctf)
+			{
+				data.match.redflag = rflagico;
+				data.match.blueflag = bflagico;
+			}
+			else // team match
+			{
+				data.match.redflag = rmatcico;
+				data.match.blueflag = bmatcico;
+			}
+
+			// get background tile
+			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
+			break;
+		}
+		case int_none:
+		default:
+			break;
+	}
+}
+
 //
 // Y_ConsiderScreenBuffer
 //
@@ -1181,10 +1261,13 @@ void Y_DetermineIntermissionType(void)
 //
 // Called by G_DoCompleted. Sets up data for intermission drawer/ticker.
 //
+//
+// Y_StartIntermission
+//
+// Called by G_DoCompleted. Sets up data for intermission drawer/ticker.
+//
 void Y_StartIntermission(void)
 {
-	INT32 i;
-
 	intertic = -1;
 
 #ifdef PARANOIA
@@ -1228,23 +1311,12 @@ void Y_StartIntermission(void)
 			// setup time data
 			data.coop.tics = players[consoleplayer].realtime;
 
-			for (i = 0; i < 4; ++i)
-			{
-				if (strlen(data.coop.bonuses[i].patch))
-					data.coop.bonuspatches[i] = W_CachePatchName(data.coop.bonuses[i].patch, PU_PATCH);
-			}
-			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_PATCH);
-
 			// get act number
 			data.coop.actnum = mapheaderinfo[gamemap-1]->actnum;
-
-			// get background patches
-			bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
 			{
-				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
 				useinterpic = true;
 				usebuffer = false;
 			}
@@ -1301,21 +1373,9 @@ void Y_StartIntermission(void)
 			// give out ring bonuses
 			Y_AwardSpecialStageBonus();
 
-			for (i = 0; i < 2; ++i)
-				data.spec.bonuspatches[i] = W_CachePatchName(data.spec.bonuses[i].patch, PU_PATCH);
-
-			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_PATCH);
-			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_PATCH);
-
-			// get background tile
-			bgtile = W_CachePatchName("SPECTILE", PU_PATCH);
-
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
-			{
-				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
 				useinterpic = true;
-			}
 			else
 				useinterpic = false;
 
@@ -1408,11 +1468,6 @@ void Y_StartIntermission(void)
 
 			data.match.levelstring[sizeof data.match.levelstring - 1] = '\0';
 
-			// get RESULT header
-			data.match.result =
-				W_CachePatchName("RESULT", PU_PATCH);
-
-			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1437,10 +1492,6 @@ void Y_StartIntermission(void)
 
 			data.match.levelstring[sizeof data.match.levelstring - 1] = '\0';
 
-			// get RESULT header
-			data.match.result = W_CachePatchName("RESULT", PU_PATCH);
-
-			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1466,18 +1517,6 @@ void Y_StartIntermission(void)
 
 			data.match.levelstring[sizeof data.match.levelstring - 1] = '\0';
 
-			if (intertype == int_ctf)
-			{
-				data.match.redflag = rflagico;
-				data.match.blueflag = bflagico;
-			}
-			else // team match
-			{
-				data.match.redflag = rmatcico;
-				data.match.blueflag = bmatcico;
-			}
-
-			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
@@ -1502,8 +1541,6 @@ void Y_StartIntermission(void)
 
 			data.competition.levelstring[sizeof data.competition.levelstring - 1] = '\0';
 
-			// get background tile
-			bgtile = W_CachePatchName("SRB2BACK", PU_PATCH);
 			usetile = true;
 			useinterpic = false;
 			break;
