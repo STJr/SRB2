@@ -230,9 +230,9 @@ void readPlayer(MYFILE *f, INT32 num)
 				SLOTFOUND
 
 				// A friendly neighborhood alias for brevity's sake
-				const size_t note_size = sizeof(description[num].notes);
+#define NOTE_SIZE sizeof(description[num].notes)
 
-				for (i = 0; i < MAXLINELEN-note_size-3; i++)
+				for (i = 0; i < (INT32)(MAXLINELEN-NOTE_SIZE-3); i++)
 				{
 					if (s[i] == '=')
 					{
@@ -242,9 +242,9 @@ void readPlayer(MYFILE *f, INT32 num)
 				}
 				if (playertext)
 				{
-					strlcpy(description[num].notes, playertext, note_size);
+					strlcpy(description[num].notes, playertext, NOTE_SIZE);
 					strlcat(description[num].notes,
-						myhashfgets(playertext, note_size, f), note_size);
+						myhashfgets(playertext, NOTE_SIZE, f), NOTE_SIZE);
 				}
 				else
 					strcpy(description[num].notes, "");
@@ -253,7 +253,7 @@ void readPlayer(MYFILE *f, INT32 num)
 				// It works down here, though.
 				{
 					INT32 numline = 0;
-					for (i = 0; (size_t)i < note_size-1; i++)
+					for (i = 0; (size_t)i < NOTE_SIZE-1; i++)
 					{
 						if (numline < 20 && description[num].notes[i] == '\n')
 							numline++;
@@ -264,6 +264,7 @@ void readPlayer(MYFILE *f, INT32 num)
 				}
 				description[num].notes[strlen(description[num].notes)-1] = '\0';
 				description[num].notes[i] = '\0';
+#undef NOTE_SIZE
 				continue;
 			}
 
