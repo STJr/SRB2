@@ -708,7 +708,7 @@ endif
 endif
 
 define deps_rule +=
-	$(CC) $(CFLAGS) -M -MF $@ -MT $(OBJDIR)/$< $<
+	$(CC) $(CFLAGS) -M -MF $@ -MT $(OBJDIR)/$(<:.c=.o) $<
 endef
 
 $(DEPDIR)/%.d: %.c
