@@ -217,11 +217,11 @@ static void Y_IntermissionTokenDrawer(void)
 
 
 //
-// Y_LoadIntermisionData
+// Y_LoadIntermissionData
 //
 // Load patches for drawing the intermission, if acceptable
 //
-void Y_LoadIntermisionData(void)
+void Y_LoadIntermissionData(void)
 {
 	INT32 i;
 
