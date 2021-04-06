@@ -1262,10 +1262,6 @@ void Y_DetermineIntermissionType(void)
 // Called by G_DoCompleted. Sets up data for intermission drawer/ticker.
 //
 //
-// Y_StartIntermission
-//
-// Called by G_DoCompleted. Sets up data for intermission drawer/ticker.
-//
 void Y_StartIntermission(void)
 {
 	intertic = -1;
