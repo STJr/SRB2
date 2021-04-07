@@ -274,7 +274,7 @@ void Y_LoadIntermissionData(void)
 		case int_race:
 		case int_comp:
 		{
-			if (intertype == int_match || intertype == int_race || intertype == int_comp)
+			if (intertype == int_match || intertype == int_race)
 			{
 				// get RESULT header
 				data.match.result = W_CachePatchName("RESULT", PU_PATCH);
