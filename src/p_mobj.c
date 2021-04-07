@@ -325,9 +325,7 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 		mobj->tics = st->tics;
 
 		// Adjust the player's animation speed to match their velocity.
-		if (state == S_PLAY_STND && player->powers[pw_super] && skins[player->skin].sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0) // if no super wait, don't wait at all
-			mobj->tics = -1;
-		else if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
+		if (player->panim == PA_EDGE && (player->charflags & SF_FASTEDGE))
 			mobj->tics = 2;
 		else if (!(disableSpeedAdjust || player->charflags & SF_NOSPEEDADJUST))
 		{
@@ -396,8 +394,26 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 
 			if (skin)
 			{
-				spr2 = P_GetSkinSprite2(skin, (((player->powers[pw_super] && !(player->charflags & SF_NOSUPERSPRITES)) ? FF_SPR2SUPER : 0)|st->frame) & FF_FRAMEMASK, mobj->player);
+				UINT16 stateframe = st->frame;
+				
+				// Add/Remove FF_SPR2SUPER based on certain conditions
+				if (player->powers[pw_super] && !(player->charflags & SF_NOSUPERSPRITES))
+					stateframe = stateframe | FF_SPR2SUPER;
+				
+				if (stateframe & FF_SPR2SUPER)
+				{
+					if (mobj->renderflags & RF_FORCENOSUPER)
+						stateframe = stateframe & ~FF_SPR2SUPER;
+				}
+				else if (mobj->renderflags & RF_FORCESUPER)
+					stateframe = stateframe | FF_SPR2SUPER;
+					
+				// Get the sprite2 and frame number
+				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), mobj->player);
 				numframes = skin->sprites[spr2].numframes;
+				
+				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
+					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
 			else
 			{
@@ -522,8 +538,23 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 
 			if (skin)
 			{
-				spr2 = P_GetSkinSprite2(skin, st->frame & FF_FRAMEMASK, mobj->player);
+				UINT16 stateframe = st->frame;
+				
+				// Add/Remove FF_SPR2SUPER based on certain conditions
+				if (stateframe & FF_SPR2SUPER)
+				{
+					if (mobj->renderflags & RF_FORCENOSUPER)
+						stateframe = stateframe & ~FF_SPR2SUPER;
+				}
+				else if (mobj->renderflags & RF_FORCESUPER)
+					stateframe = stateframe | FF_SPR2SUPER;
+					
+				// Get the sprite2 and frame number
+				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), NULL);
 				numframes = skin->sprites[spr2].numframes;
+				
+				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
+					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
 			else
 			{
