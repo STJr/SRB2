@@ -263,26 +263,21 @@ void Y_LoadIntermissionData(void)
 				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
 			break;
 		}
+		case int_ctf:
+		case int_teammatch:
+		{
+			data.match.redflag = (intertype == int_ctf) ? rflagico : rmatcico;
+			data.match.blueflag = (intertype == int_ctf) ? bflagico : bmatcico;
+		}
+		/* FALLTHRU */
 		case int_match:
 		case int_race:
-		case int_teammatch:
-		case int_ctf:
+		case int_comp:
 		{
-			if (intertype == int_match || intertype == int_race)
+			if (intertype == int_match || intertype == int_race || intertype == int_comp)
 			{
 				// get RESULT header
 				data.match.result = W_CachePatchName("RESULT", PU_PATCH);
-			}
-
-			if (intertype == int_ctf)
-			{
-				data.match.redflag = rflagico;
-				data.match.blueflag = bflagico;
-			}
-			else // team match
-			{
-				data.match.redflag = rmatcico;
-				data.match.blueflag = bmatcico;
 			}
 
 			// get background tile
