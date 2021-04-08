@@ -407,6 +407,16 @@ typedef struct
 	boolean triggerOnExit;
 } eachtime_t;
 
+typedef struct
+{
+	thinker_t thinker;
+	sector_t *sector;
+	sector_t *actionsector;
+	fixed_t *height;
+	fixed_t *dist;
+	INT32 rotate;
+} scanner_t;
+
 typedef enum
 {
 	RF_REVERSE  = 1,    //Lower when stood on
@@ -464,7 +474,7 @@ void T_MarioBlockChecker(mariocheck_t *block);
 void T_ThwompSector(thwomp_t *thwomp);
 void T_NoEnemiesSector(noenemies_t *nobaddies);
 void T_EachTimeThinker(eachtime_t *eachtime);
-void T_CameraScanner(elevator_t *elevator);
+void T_CameraScanner(scanner_t *scanner);
 void T_RaiseSector(raise_t *raise);
 
 typedef struct

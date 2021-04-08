@@ -3755,6 +3755,9 @@ static void P_SetupCamera(void)
 			camera.subsector = R_PointInSubsector(camera.x, camera.y); // make sure camera has a subsector set -- Monster Iestyn (12/11/18)
 		}
 	}
+
+	P_ResetCameraScanner(&camera);
+	P_ResetCameraScanner(&camera2);
 }
 
 static void P_InitCamera(void)

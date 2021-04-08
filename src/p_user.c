@@ -9721,13 +9721,6 @@ void CV_UpdateCam2Dist(void)
 	CV_Set(&cv_cam2_height, va("%f", FIXED_TO_FLOAT(cv_cam_saveheight[cv_useranalog[1].value][1].value)));
 }
 
-fixed_t t_cam_dist = -42;
-fixed_t t_cam_height = -42;
-fixed_t t_cam_rotate = -42;
-fixed_t t_cam2_dist = -42;
-fixed_t t_cam2_height = -42;
-fixed_t t_cam2_rotate = -42;
-
 #define MAXCAMERADIST 140*FRACUNIT // Max distance the camera can be in front of the player (2D mode)
 
 void P_ResetCamera(player_t *player, camera_t *thiscam)
@@ -9915,6 +9908,13 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camheight = FixedMul(cv_cam2_height.value, mo->scale);
 	}
 
+	if (thiscam->scanner.height)
+		camheight = (*thiscam->scanner.height);
+	if (thiscam->scanner.dist)
+		camdist = (*thiscam->scanner.dist);
+	if (thiscam->scanner.rotate)
+		camrotate = (*thiscam->scanner.rotate);
+
 	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
 		camheight = FixedMul(camheight, player->camerascale);
 
@@ -9966,8 +9966,7 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	else
 		angle = focusangle + FixedAngle(camrotate*FRACUNIT);
 
-	if (!resetcalled && (cv_analog[0].value || demoplayback) && ((thiscam == &camera && t_cam_rotate != -42) || (thiscam == &camera2
-		&& t_cam2_rotate != -42)))
+	if (!resetcalled && (cv_analog[0].value || demoplayback) && thiscam->scanner.rotate)
 	{
 		angle = FixedAngle(camrotate*FRACUNIT);
 		thiscam->angle = angle;
@@ -10468,7 +10467,13 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 	}
 
 	return (x == thiscam->x && y == thiscam->y && z == thiscam->z && angle == thiscam->aiming);
+}
 
+void P_ResetCameraScanner(camera_t *thiscam)
+{
+	thiscam->scanner.height = NULL;
+	thiscam->scanner.dist = NULL;
+	thiscam->scanner.rotate = NULL;
 }
 
 boolean P_SpectatorJoinGame(player_t *player)

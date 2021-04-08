@@ -2210,6 +2210,15 @@ static inline void SaveDynamicSlopeThinker(const thinker_t *th, const UINT8 type
     WRITEMEM(save_p, ht->vex, sizeof(ht->vex));
 }
 
+static void SaveScannerThinker(const thinker_t *th, const UINT8 type)
+{
+	const scanner_t *ht = (const void *)th;
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveSector(ht->sector));
+	WRITEUINT32(save_p, SaveSector(ht->actionsector));
+	WRITEINT32(save_p, ht->rotate);
+}
+
 static inline void SavePolyrotatetThinker(const thinker_t *th, const UINT8 type)
 {
 	const polyrotate_t *ht = (const void *)th;
@@ -2407,7 +2416,7 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_CameraScanner)
 			{
-				SaveElevatorThinker(th, tc_camerascanner);
+				SaveScannerThinker(th, tc_camerascanner);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_Scroll)
@@ -3381,6 +3390,18 @@ static inline thinker_t* LoadDynamicSlopeThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
+static thinker_t* LoadScannerThinker(actionf_p1 thinker)
+{
+	scanner_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+	ht->sector = LoadSector(READUINT32(save_p));
+	ht->actionsector = LoadSector(READUINT32(save_p));
+	ht->height = &ht->sector->floorheight;
+	ht->dist = &ht->sector->ceilingheight;
+	ht->rotate = READINT32(save_p);
+	return &ht->thinker;
+}
+
 static inline thinker_t* LoadPolyrotatetThinker(actionf_p1 thinker)
 {
 	polyrotate_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3602,7 +3623,7 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_camerascanner:
-					th = LoadElevatorThinker((actionf_p1)T_CameraScanner, false);
+					th = LoadScannerThinker((actionf_p1)T_CameraScanner);
 					break;
 
 				case tc_bouncecheese:

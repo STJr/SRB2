@@ -89,10 +89,7 @@ typedef struct camera_s
 	angle_t startangle;
 
 	// Camera demobjerization
-	// Info for drawing: position.
 	fixed_t x, y, z;
-
-	//More drawing info: to determine current sprite.
 	angle_t angle; // orientation
 
 	struct subsector_s *subsector;
@@ -109,6 +106,14 @@ typedef struct camera_s
 
 	// Momentums, used to update position.
 	fixed_t momx, momy, momz;
+
+	// Camera scanner effect (linedef type 5).
+	struct
+	{
+		fixed_t *height;
+		fixed_t *dist;
+		INT32 *rotate;
+	} scanner;
 } camera_t;
 
 extern camera_t camera, camera2;
@@ -122,16 +127,15 @@ extern consvar_t cv_cam_savedist[2][2], cv_cam_saveheight[2][2];
 void CV_UpdateCamDist(void);
 void CV_UpdateCam2Dist(void);
 
-extern fixed_t t_cam_dist, t_cam_height, t_cam_rotate;
-extern fixed_t t_cam2_dist, t_cam2_height, t_cam2_rotate;
+void P_ResetCamera(player_t *player, camera_t *thiscam);
+void P_ResetCameraScanner(camera_t *thiscam);
+boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam);
+void P_SlideCameraMove(camera_t *thiscam);
+boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled);
 
 INT32 P_GetPlayerControlDirection(player_t *player);
 void P_AddPlayerScore(player_t *player, UINT32 amount);
 void P_StealPlayerScore(player_t *player, UINT32 amount);
-void P_ResetCamera(player_t *player, camera_t *thiscam);
-boolean P_TryCameraMove(fixed_t x, fixed_t y, camera_t *thiscam);
-void P_SlideCameraMove(camera_t *thiscam);
-boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcalled);
 pflags_t P_GetJumpFlags(player_t *player);
 boolean P_PlayerInPain(player_t *player);
 void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor);

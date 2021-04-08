@@ -5896,21 +5896,21 @@ static void P_AddEachTimeThinker(line_t *sourceline)
   */
 static inline void P_AddCameraScanner(sector_t *sourcesec, sector_t *actionsector, angle_t angle)
 {
-	elevator_t *elevator; // Why not? LOL
+	scanner_t *scanner;
 
-	CONS_Alert(CONS_WARNING, M_GetText("Detected a camera scanner effect (linedef type 5). This effect is deprecated and will be removed in the future!\n"));
+	//CONS_Alert(CONS_WARNING, M_GetText("Detected a camera scanner effect (linedef type 5). This effect is deprecated and will be removed in the future!\n"));
 
-	// create and initialize new elevator thinker
-	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
-	P_AddThinker(THINK_MAIN, &elevator->thinker);
+	// create and initialize the new scanner thinker
+	scanner = Z_Calloc(sizeof (*scanner), PU_LEVSPEC, NULL);
+	P_AddThinker(THINK_MAIN, &scanner->thinker);
 
-	elevator->thinker.function.acp1 = (actionf_p1)T_CameraScanner;
-	elevator->type = elevateBounce;
+	scanner->thinker.function.acp1 = (actionf_p1)T_CameraScanner;
+	scanner->sector = sourcesec;
+	scanner->actionsector = actionsector;
 
-	// set up the fields according to the type of elevator action
-	elevator->sector = sourcesec;
-	elevator->actionsector = actionsector;
-	elevator->distance = FixedInt(AngleFixed(angle));
+	scanner->height = &sourcesec->floorheight;
+	scanner->dist = &sourcesec->ceilingheight;
+	scanner->rotate = FixedInt(AngleFixed(angle));
 }
 
 /** Flashes a laser block.
