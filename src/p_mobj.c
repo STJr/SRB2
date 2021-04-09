@@ -3697,11 +3697,16 @@ boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled
 			// clip movement
 			if (thiscam->z <= thiscam->floorz) // hit the floor
 			{
-				fixed_t cam_height = cv_cam_height.value;
+				fixed_t cam_height;
 				thiscam->z = thiscam->floorz;
 
-				if (player == &players[secondarydisplayplayer])
+				if (thiscam->scanner.height)
+					cam_height = (*thiscam->scanner.height);
+				else if (player == &players[secondarydisplayplayer])
 					cam_height = cv_cam2_height.value;
+				else
+					cam_height = cv_cam_height.value;
+
 				if (thiscam->z > player->mo->z + player->mo->height + FixedMul(cam_height*FRACUNIT + 16*FRACUNIT, player->mo->scale))
 				{
 					if (!resetcalled)

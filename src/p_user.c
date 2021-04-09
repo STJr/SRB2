@@ -9831,7 +9831,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 			focusangle = localangle2;
 		else
 			focusangle = mo->angle;
-		if (thiscam == &camera)
+		if (thiscam->scanner.rotate)
+			camrotate = (*thiscam->scanner.rotate);
+		else if (thiscam == &camera)
 			camrotate = cv_cam_rotate.value;
 		else if (thiscam == &camera2)
 			camrotate = cv_cam2_rotate.value;
@@ -9886,8 +9888,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camstill = (!stricmp(cv_cam_still.defaultvalue, "off")) ? false : true;
 		camorbit = (!stricmp(cv_cam_orbit.defaultvalue, "off")) ? false : true;
 		camrotate = atoi(cv_cam_rotate.defaultvalue);
-		camdist = FixedMul((INT32)(atof(cv_cam_dist.defaultvalue) * FRACUNIT), mo->scale);
-		camheight = FixedMul((INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT), mo->scale);
+		camdist = (INT32)(atof(cv_cam_dist.defaultvalue) * FRACUNIT);
+		camheight = (INT32)(atof(cv_cam_height.defaultvalue) * FRACUNIT);
 	}
 	else if (thiscam == &camera)
 	{
@@ -9895,8 +9897,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camstill = cv_cam_still.value;
 		camorbit = cv_cam_orbit.value;
 		camrotate = cv_cam_rotate.value;
-		camdist = FixedMul(cv_cam_dist.value, mo->scale);
-		camheight = FixedMul(cv_cam_height.value, mo->scale);
+		camdist = cv_cam_dist.value;
+		camheight = cv_cam_height.value;
 	}
 	else // Camera 2
 	{
@@ -9904,8 +9906,8 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camstill = cv_cam2_still.value;
 		camorbit = cv_cam2_orbit.value;
 		camrotate = cv_cam2_rotate.value;
-		camdist = FixedMul(cv_cam2_dist.value, mo->scale);
-		camheight = FixedMul(cv_cam2_height.value, mo->scale);
+		camdist = cv_cam2_dist.value;
+		camheight = cv_cam2_height.value;
 	}
 
 	if (thiscam->scanner.height)
@@ -9914,6 +9916,9 @@ boolean P_MoveChaseCamera(player_t *player, camera_t *thiscam, boolean resetcall
 		camdist = (*thiscam->scanner.dist);
 	if (thiscam->scanner.rotate)
 		camrotate = (*thiscam->scanner.rotate);
+
+	camdist = FixedMul(camdist, mo->scale);
+	camheight = FixedMul(camheight, mo->scale);
 
 	if (!(twodlevel || (mo->flags2 & MF2_TWOD)) && !(player->powers[pw_carry] == CR_NIGHTSMODE))
 		camheight = FixedMul(camheight, player->camerascale);
