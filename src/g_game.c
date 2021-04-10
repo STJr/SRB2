@@ -3973,6 +3973,7 @@ static void G_DoCompleted(void)
 	{
 		G_SetGamestate(GS_INTERMISSION);
 		Y_StartIntermission();
+		Y_LoadIntermissionData();
 		G_UpdateVisited();
 		G_HandleSaveLevel();
 	}
