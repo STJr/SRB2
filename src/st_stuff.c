@@ -299,10 +299,6 @@ void ST_LoadGraphics(void)
 	gravboots = W_CachePatchName("TVGVICON", PU_HUDGFX);
 
 	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
-	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
-	bflagico = W_CachePatchName("BFLAGICO", PU_HUDGFX);
-	rmatcico = W_CachePatchName("RMATCICO", PU_HUDGFX);
-	bmatcico = W_CachePatchName("BMATCICO", PU_HUDGFX);
 	gotrflag = W_CachePatchName("GOTRFLAG", PU_HUDGFX);
 	gotbflag = W_CachePatchName("GOTBFLAG", PU_HUDGFX);
 	fnshico = W_CachePatchName("FNSHICO", PU_HUDGFX);
@@ -2363,27 +2359,29 @@ static inline void ST_drawRaceHUD(void)
 
 static void ST_drawTeamHUD(void)
 {
-	patch_t *p;
 #define SEP 20
 
 	if (F_GetPromptHideHud(0)) // y base is 0
 		return;
 
-	if (gametyperules & GTR_TEAMFLAGS)
-		p = bflagico;
-	else
-		p = bmatcico;
+	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
+	bflagico = W_CachePatchName("BFLAGICO", PU_HUDGFX);
+	rmatcico = W_CachePatchName("RMATCICO", PU_HUDGFX);
+	bmatcico = W_CachePatchName("BMATCICO", PU_HUDGFX);
 
 	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (p->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
-
-	if (gametyperules & GTR_TEAMFLAGS)
-		p = rflagico;
-	else
-		p = rmatcico;
-
-	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (p->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
+	{
+		if (gametyperules & GTR_TEAMFLAGS)
+		{
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (bflagico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, bflagico);
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (rflagico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, rflagico);
+		}
+		else
+		{
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (bmatcico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, bmatcico);
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (rmatcico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, rmatcico);
+		}
+	}
 
 	if (!(gametyperules & GTR_TEAMFLAGS))
 		goto num;
