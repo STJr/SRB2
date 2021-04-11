@@ -1580,11 +1580,10 @@ static void SetBlendMode(FBITFIELD flags)
 		case PF_Additive & PF_Blending:
 		case PF_Subtractive & PF_Blending:
 		case PF_ReverseSubtract & PF_Blending:
+			pglBlendFunc(GL_SRC_ALPHA, GL_ONE); // src * alpha + dest
+			break;
 		case PF_Environment & PF_Blending:
 			pglBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-			break;
-		case PF_AdditiveSource & PF_Blending:
-			pglBlendFunc(GL_SRC_ALPHA, GL_ONE); // src * alpha + dest
 			break;
 		case PF_Multiplicative & PF_Blending:
 			pglBlendFunc(GL_DST_COLOR, GL_ZERO);
@@ -1624,7 +1623,6 @@ static void SetBlendMode(FBITFIELD flags)
 			break;
 		case PF_Translucent & PF_Blending:
 		case PF_Additive & PF_Blending:
-		case PF_AdditiveSource & PF_Blending:
 		case PF_Subtractive & PF_Blending:
 		case PF_ReverseSubtract & PF_Blending:
 		case PF_Environment & PF_Blending:
@@ -2756,7 +2754,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	fade.alpha = byte2float[Surface->FadeColor.s.alpha];
 
 	flags = (Surface->PolyFlags | PF_Modulated);
-	if (Surface->PolyFlags & (PF_Additive|PF_AdditiveSource|PF_Subtractive|PF_ReverseSubtract|PF_Multiplicative))
+	if (Surface->PolyFlags & (PF_Additive|PF_Subtractive|PF_ReverseSubtract|PF_Multiplicative))
 		flags |= PF_Occlude;
 	else if (Surface->PolyColor.s.alpha == 0xFF)
 		flags |= (PF_Occlude | PF_Masked);

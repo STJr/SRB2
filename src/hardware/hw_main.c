@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -706,6 +706,9 @@ FBITFIELD HWR_GetBlendModeFlag(INT32 ast)
 {
 	switch (ast)
 	{
+		case AST_COPY:
+		case AST_OVERLAY:
+			return PF_Masked;
 		case AST_ADD:
 			return PF_Additive;
 		case AST_SUBTRACT:
@@ -744,7 +747,7 @@ UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
 
 FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf)
 {
-	if (!transtablenum)
+	if (!transtablenum || style == AST_COPY || style == AST_OVERLAY)
 	{
 		pSurf->PolyColor.s.alpha = 0xff;
 		return PF_Masked;
@@ -3813,8 +3816,6 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	else if (spr->mobj->frame & FF_TRANSMASK)
 	{
 		INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
-		if (spr->mobj->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
-			return;
 		blend = HWR_SurfaceBlend(spr->mobj->blendmode, trans, &Surf);
 	}
 	else
@@ -4240,8 +4241,6 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		else if (spr->mobj->frame & FF_TRANSMASK)
 		{
 			INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
-			if (spr->mobj->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
-				return;
 			blend = HWR_SurfaceBlend(spr->mobj->blendmode, trans, &Surf);
 		}
 		else
@@ -4354,9 +4353,7 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 	if (spr->mobj->frame & FF_TRANSMASK)
 	{
 		INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
-		if (spr->mobj->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
-			return;
-		blend = HWR_SurfaceBlend(spr->mobj->blendmode, trans, &Surf);
+		blend = HWR_SurfaceBlend(AST_TRANSLUCENT, trans, &Surf);
 	}
 	else
 	{
@@ -4935,6 +4932,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->spritexscale < 1 || thing->spriteyscale < 1)
 		return;
 
+	// Visibility check by the blend mode.
+	if (thing->frame & FF_TRANSMASK)
+	{
+		if (!R_BlendLevelVisible(thing->blendmode, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT))
+			return;
+	}
+
 	dispoffset = thing->info->dispoffset;
 
 	this_scale = FIXED_TO_FLOAT(thing->scale);
@@ -5321,6 +5325,13 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	unsigned rot = 0;
 	UINT8 flip;
 
+	// Visibility check by the blend mode.
+	if (thing->frame & FF_TRANSMASK)
+	{
+		if (!R_BlendLevelVisible(thing->blendmode, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT))
+			return;
+	}
+
 	// transform the origin point
 	tr_x = FIXED_TO_FLOAT(thing->x) - gl_viewx;
 	tr_y = FIXED_TO_FLOAT(thing->y) - gl_viewy;
@@ -5354,7 +5365,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 		return;
 #endif
 
-	sprframe = &sprdef->spriteframes[ thing->frame & FF_FRAMEMASK];
+	sprframe = &sprdef->spriteframes[thing->frame & FF_FRAMEMASK];
 
 	// use single rotation for all views
 	lumpoff = sprframe->lumpid[0];
@@ -6510,7 +6521,7 @@ void HWR_DoPostProcessor(player_t *player)
 
 		Surf.PolyColor.s.alpha = 0xc0; // match software mode
 
-		HWD.pfnDrawPolygon(&Surf, v, 4, PF_Modulated|PF_AdditiveSource|PF_NoTexture|PF_NoDepthTest);
+		HWD.pfnDrawPolygon(&Surf, v, 4, PF_Modulated|PF_Additive|PF_NoTexture|PF_NoDepthTest);
 	}
 
 	// Capture the screen for intermission and screen waving
