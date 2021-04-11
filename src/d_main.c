@@ -990,7 +990,7 @@ static void IdentifyVersion(void)
 
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"patch.pk3"));
+	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"patch_next.pk3"));
 #endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
