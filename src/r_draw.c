@@ -274,7 +274,7 @@ static void BlendTab_Modulative(UINT8 *table)
 
 static INT32 BlendTab_Count[NUMBLENDMAPS] =
 {
-	NUMTRANSTABLES,   // blendtab_add
+	NUMTRANSTABLES+1, // blendtab_add
 	NUMTRANSTABLES+1, // blendtab_subtract
 	NUMTRANSTABLES+1, // blendtab_reversesubtract
 	1                 // blendtab_modulate
@@ -294,7 +294,7 @@ static INT32 BlendTab_FromStyle[] =
 static void BlendTab_GenerateMaps(INT32 tab, INT32 style, void (*genfunc)(UINT8 *, int, UINT8))
 {
 	INT32 i = 0, num = BlendTab_Count[tab];
-	const float amtmul = (256.0f / (float)(NUMTRANSTABLES));
+	const float amtmul = (256.0f / (float)(NUMTRANSTABLES + 1));
 	for (; i < num; i++)
 	{
 		const size_t offs = (0x10000 * i);
