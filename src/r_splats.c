@@ -419,7 +419,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	if (pSplat->tilted)
 	{
 		R_SetTiltedSpan(0);
-		R_SetSlopePlaneScaled(&pSplat->slope, viewx, viewy, viewz, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewangle, pSplat->angle);
+		R_SetScaledSlopePlane(&pSplat->slope, viewx, viewy, viewz, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewangle, pSplat->angle);
 		R_CalculateSlopeVectors();
 		spanfunctype = SPANDRAWFUNC_TILTEDSPRITE;
 	}

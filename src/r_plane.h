@@ -95,7 +95,7 @@ void R_DrawSinglePlane(visplane_t *pl);
 
 // Calculates the slope vectors needed for tilted span drawing.
 void R_SetSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
-void R_SetSlopePlaneScaled(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
+void R_SetScaledSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
 void R_CalculateSlopeVectors(void);
 
 // Sets the slope vector pointers for the current tilted span.

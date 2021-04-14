@@ -663,7 +663,7 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	}
 }
 
-// Sets the origin vector of the sloped plane.
+// Sets the texture origin vector of the sloped plane.
 static void R_SetSlopePlaneOrigin(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, fixed_t angle)
 {
 	floatv3_t *p = &ds_slope_origin;
@@ -683,7 +683,7 @@ static void R_SetSlopePlaneOrigin(pslope_t *slope, fixed_t xpos, fixed_t ypos, f
 	p->y = FixedToFloat(P_GetSlopeZAt(slope, -xoff, yoff)) - vz;
 }
 
-// This function calculates all of the vectors necessary for drawing a tilted span.
+// This function calculates all of the vectors necessary for drawing a sloped plane.
 void R_SetSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle)
 {
 	// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
@@ -710,8 +710,8 @@ void R_SetSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, 
 	n->y = FixedToFloat(temp) - zeroheight;
 }
 
-// This function calculates all of the vectors necessary for drawing a scaled, tilted span.
-void R_SetSlopePlaneScaled(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle)
+// This function calculates all of the vectors necessary for drawing a sloped and scaled plane.
+void R_SetScaledSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle)
 {
 	floatv3_t *m = &ds_slope_v, *n = &ds_slope_u;
 	fixed_t temp;
@@ -740,6 +740,8 @@ void R_SetSlopePlaneScaled(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t 
 
 void R_CalculateSlopeVectors(void)
 {
+	float sfmult = 65536.f;
+
 	// Eh. I tried making this stuff fixed-point and it exploded on me. Here's a macro for the only floating-point vector function I recall using.
 #define CROSS(d, v1, v2) \
 d->x = (v1.y * v2.z) - (v1.z * v2.y);\
@@ -755,27 +757,15 @@ d->z = (v1.x * v2.y) - (v1.y * v2.x)
 	ds_szp->z *= focallengthf;
 
 	// Premultiply the texture vectors with the scale factors
-#define SFMULT 65536.f
 	if (ds_powersoftwo)
-	{
-		ds_sup->x *= (SFMULT * (1<<nflatshiftup));
-		ds_sup->y *= (SFMULT * (1<<nflatshiftup));
-		ds_sup->z *= (SFMULT * (1<<nflatshiftup));
-		ds_svp->x *= (SFMULT * (1<<nflatshiftup));
-		ds_svp->y *= (SFMULT * (1<<nflatshiftup));
-		ds_svp->z *= (SFMULT * (1<<nflatshiftup));
-	}
-	else
-	{
-		// Lactozilla: I'm essentially multiplying the vectors by FRACUNIT...
-		ds_sup->x *= SFMULT;
-		ds_sup->y *= SFMULT;
-		ds_sup->z *= SFMULT;
-		ds_svp->x *= SFMULT;
-		ds_svp->y *= SFMULT;
-		ds_svp->z *= SFMULT;
-	}
-#undef SFMULT
+		sfmult *= (1 << nflatshiftup);
+
+	ds_sup->x *= sfmult;
+	ds_sup->y *= sfmult;
+	ds_sup->z *= sfmult;
+	ds_svp->x *= sfmult;
+	ds_svp->y *= sfmult;
+	ds_svp->z *= sfmult;
 }
 
 void R_SetTiltedSpan(INT32 span)
@@ -977,8 +967,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	if (pl->slope)
 	{
-		const fixed_t modmaskw = (ds_flatwidth << FRACBITS) - 1;
-		const fixed_t modmaskh = (ds_flatheight << FRACBITS) - 1;
+		const fixed_t modmaskw = (ds_powersoftwo) ? (ds_flatwidth  << FRACBITS) - 1 : (signed)(0xFFFFFFFF);
+		const fixed_t modmaskh = (ds_powersoftwo) ? (ds_flatheight << FRACBITS) - 1 : (signed)(0xFFFFFFFF);
 
 		/*
 		Essentially: We can't & the components along the regular axes when the plane is rotated.
