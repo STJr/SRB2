@@ -133,15 +133,15 @@ void R_DrawTiltedSpan_NPO2_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 
 		// Lactozilla: Non-powers-of-two
 		{
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
@@ -181,16 +181,16 @@ void R_DrawTiltedSpan_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -220,8 +220,8 @@ void R_DrawTiltedSpan_NPO2_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -248,16 +248,16 @@ void R_DrawTiltedSpan_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 				// Lactozilla: Non-powers-of-two
 				{
-					fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-					fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+					fixed_t x = (((fixed_t)u) >> FRACBITS);
+					fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 					// Carefully align all of my Friends.
 					if (x < 0)
@@ -326,14 +326,14 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		// Lactozilla: Non-powers-of-two
 		{
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
@@ -373,16 +373,16 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -412,8 +412,8 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -440,16 +440,16 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 				// Lactozilla: Non-powers-of-two
 				{
-					fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-					fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+					fixed_t x = (((fixed_t)u) >> FRACBITS);
+					fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 					// Carefully align all of my Friends.
 					if (x < 0)
@@ -517,15 +517,15 @@ void R_DrawTiltedSplat_NPO2_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 
 		// Lactozilla: Non-powers-of-two
 		{
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
@@ -569,16 +569,16 @@ void R_DrawTiltedSplat_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -610,8 +610,8 @@ void R_DrawTiltedSplat_NPO2_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -640,8 +640,8 @@ void R_DrawTiltedSplat_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
@@ -649,8 +649,8 @@ void R_DrawTiltedSplat_NPO2_8(void)
 				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				// Lactozilla: Non-powers-of-two
 				{
-					fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-					fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+					fixed_t x = (((fixed_t)u) >> FRACBITS);
+					fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 					// Carefully align all of my Friends.
 					if (x < 0)
@@ -1002,14 +1002,14 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			// Lactozilla: Non-powers-of-two
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
@@ -1040,8 +1040,8 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 			v = (INT64)(startv);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -1070,14 +1070,14 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
 				// Lactozilla: Non-powers-of-two
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -1152,14 +1152,14 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			// Lactozilla: Non-powers-of-two
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
@@ -1190,8 +1190,8 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 			v = (INT64)(startv);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -1220,14 +1220,14 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
 				// Lactozilla: Non-powers-of-two
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -1429,14 +1429,14 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		// Lactozilla: Non-powers-of-two
 		{
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
@@ -1476,16 +1476,16 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -1515,8 +1515,8 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
@@ -1543,16 +1543,16 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 				// Lactozilla: Non-powers-of-two
 				{
-					fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-					fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+					fixed_t x = (((fixed_t)u) >> FRACBITS);
+					fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 					// Carefully align all of my Friends.
 					if (x < 0)

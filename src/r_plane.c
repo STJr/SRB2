@@ -104,6 +104,7 @@ fixed_t cachedxstep[MAXVIDHEIGHT];
 fixed_t cachedystep[MAXVIDHEIGHT];
 
 static fixed_t xoffs, yoffs;
+static floatv3_t ds_slope_origin, ds_slope_u, ds_slope_v;
 
 //
 // R_InitPlanes
@@ -662,69 +663,91 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	}
 }
 
-// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
-// I copied ZDoom's code and adapted it to SRB2... -Red
-void R_CalculateSlopeVectors(pslope_t *slope, fixed_t planeviewx, fixed_t planeviewy, fixed_t planeviewz, fixed_t planexscale, fixed_t planeyscale, fixed_t planexoffset, fixed_t planeyoffset, angle_t planeviewangle, angle_t planeangle, float fudge)
+// Sets the origin vector of the sloped plane.
+static void R_SetSlopePlaneOrigin(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, fixed_t angle)
 {
-	floatv3_t p, m, n;
-	float ang;
-	float vx, vy, vz;
-	float xscale = FIXED_TO_FLOAT(planexscale);
-	float yscale = FIXED_TO_FLOAT(planeyscale);
-	// compiler complains when P_GetSlopeZAt is used in FLOAT_TO_FIXED directly
-	// use this as a temp var to store P_GetSlopeZAt's return value each time
-	fixed_t temp;
+	floatv3_t *p = &ds_slope_origin;
 
-	vx = FIXED_TO_FLOAT(planeviewx+planexoffset);
-	vy = FIXED_TO_FLOAT(planeviewy-planeyoffset);
-	vz = FIXED_TO_FLOAT(planeviewz);
+	float vx = FixedToFloat(xpos + xoff);
+	float vy = FixedToFloat(ypos - yoff);
+	float vz = FixedToFloat(zpos);
+	float ang = ANG2RAD(ANGLE_270 - angle);
 
-	temp = P_GetSlopeZAt(slope, planeviewx, planeviewy);
-	zeroheight = FIXED_TO_FLOAT(temp);
+	zeroheight = FixedToFloat(P_GetSlopeZAt(slope, xpos, ypos));
 
 	// p is the texture origin in view space
 	// Don't add in the offsets at this stage, because doing so can result in
 	// errors if the flat is rotated.
-	ang = ANG2RAD(ANGLE_270 - planeviewangle);
-	p.x = vx * cos(ang) - vy * sin(ang);
-	p.z = vx * sin(ang) + vy * cos(ang);
-	temp = P_GetSlopeZAt(slope, -planexoffset, planeyoffset);
-	p.y = FIXED_TO_FLOAT(temp) - vz;
+	p->x = vx * cos(ang) - vy * sin(ang);
+	p->z = vx * sin(ang) + vy * cos(ang);
+	p->y = FixedToFloat(P_GetSlopeZAt(slope, -xoff, yoff)) - vz;
+}
+
+// This function calculates all of the vectors necessary for drawing a tilted span.
+void R_SetSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle)
+{
+	// Potentially override other stuff for now cus we're mean. :< But draw a slope plane!
+	// I copied ZDoom's code and adapted it to SRB2... -Red
+	floatv3_t *m = &ds_slope_v, *n = &ds_slope_u;
+	fixed_t temp;
+	float ang;
+
+	R_SetSlopePlaneOrigin(slope, xpos, ypos, zpos, xoff, yoff, angle);
 
 	// m is the v direction vector in view space
-	ang = ANG2RAD(ANGLE_180 - (planeviewangle + planeangle));
-	m.x = yscale * cos(ang);
-	m.z = yscale * sin(ang);
+	ang = ANG2RAD(ANGLE_180 - (angle + plangle));
+	m->x = cos(ang);
+	m->z = sin(ang);
 
 	// n is the u direction vector in view space
-	n.x = xscale * sin(ang);
-	n.z = -xscale * cos(ang);
+	n->x = sin(ang);
+	n->z = -cos(ang);
 
-	ang = ANG2RAD(planeangle);
-	temp = P_GetSlopeZAt(slope, planeviewx + FLOAT_TO_FIXED(yscale * sin(ang)), planeviewy + FLOAT_TO_FIXED(yscale * cos(ang)));
-	m.y = FIXED_TO_FLOAT(temp) - zeroheight;
-	temp = P_GetSlopeZAt(slope, planeviewx + FLOAT_TO_FIXED(xscale * cos(ang)), planeviewy - FLOAT_TO_FIXED(xscale * sin(ang)));
-	n.y = FIXED_TO_FLOAT(temp) - zeroheight;
+	ang = ANG2RAD(plangle);
+	temp = P_GetSlopeZAt(slope, xpos + FloatToFixed(sin(ang)), ypos + FloatToFixed(cos(ang)));
+	m->y = FixedToFloat(temp) - zeroheight;
+	temp = P_GetSlopeZAt(slope, xpos + FloatToFixed(cos(ang)), ypos - FloatToFixed(sin(ang)));
+	n->y = FixedToFloat(temp) - zeroheight;
+}
 
-	if (ds_powersoftwo)
-	{
-		m.x /= fudge;
-		m.y /= fudge;
-		m.z /= fudge;
+// This function calculates all of the vectors necessary for drawing a scaled, tilted span.
+void R_SetSlopePlaneScaled(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle)
+{
+	floatv3_t *m = &ds_slope_v, *n = &ds_slope_u;
+	fixed_t temp;
 
-		n.x *= fudge;
-		n.y *= fudge;
-		n.z *= fudge;
-	}
+	float xscale = FixedToFloat(xs);
+	float yscale = FixedToFloat(ys);
+	float ang;
 
+	R_SetSlopePlaneOrigin(slope, xpos, ypos, zpos, xoff, yoff, angle);
+
+	// m is the v direction vector in view space
+	ang = ANG2RAD(ANGLE_180 - (angle + plangle));
+	m->x = yscale * cos(ang);
+	m->z = yscale * sin(ang);
+
+	// n is the u direction vector in view space
+	n->x = xscale * sin(ang);
+	n->z = -xscale * cos(ang);
+
+	ang = ANG2RAD(plangle);
+	temp = P_GetSlopeZAt(slope, xpos + FloatToFixed(yscale * sin(ang)), ypos + FloatToFixed(yscale * cos(ang)));
+	m->y = FixedToFloat(temp) - zeroheight;
+	temp = P_GetSlopeZAt(slope, xpos + FloatToFixed(xscale * cos(ang)), ypos - FloatToFixed(xscale * sin(ang)));
+	n->y = FixedToFloat(temp) - zeroheight;
+}
+
+void R_CalculateSlopeVectors(void)
+{
 	// Eh. I tried making this stuff fixed-point and it exploded on me. Here's a macro for the only floating-point vector function I recall using.
 #define CROSS(d, v1, v2) \
 d->x = (v1.y * v2.z) - (v1.z * v2.y);\
 d->y = (v1.z * v2.x) - (v1.x * v2.z);\
 d->z = (v1.x * v2.y) - (v1.y * v2.x)
-		CROSS(ds_sup, p, m);
-		CROSS(ds_svp, p, n);
-		CROSS(ds_szp, m, n);
+	CROSS(ds_sup, ds_slope_origin, ds_slope_v);
+	CROSS(ds_svp, ds_slope_origin, ds_slope_u);
+	CROSS(ds_szp, ds_slope_v, ds_slope_u);
 #undef CROSS
 
 	ds_sup->z *= focallengthf;
@@ -769,10 +792,11 @@ void R_SetTiltedSpan(INT32 span)
 	ds_szp = &ds_sz[span];
 }
 
-static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_t yoff, float fudge)
+static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_t yoff)
 {
 	R_SetTiltedSpan(y);
-	R_CalculateSlopeVectors(pl->slope, pl->viewx, pl->viewy, pl->viewz, FRACUNIT, FRACUNIT, xoff, yoff, pl->viewangle, pl->plangle, fudge);
+	R_SetSlopePlane(pl->slope, pl->viewx, pl->viewy, pl->viewz, xoff, yoff, pl->viewangle, pl->plangle);
+	R_CalculateSlopeVectors();
 }
 
 void R_DrawSinglePlane(visplane_t *pl)
@@ -782,8 +806,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 	INT32 x;
 	INT32 stop, angle;
 	ffloor_t *rover;
-	int type;
-	int spanfunctype = BASEDRAWFUNC;
+	INT32 type;
+	INT32 spanfunctype = BASEDRAWFUNC;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -953,61 +977,38 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	if (pl->slope)
 	{
-		float fudgecanyon = 0;
-		angle_t hack = (pl->plangle & (ANGLE_90-1));
+		const fixed_t modmaskw = (ds_flatwidth << FRACBITS) - 1;
+		const fixed_t modmaskh = (ds_flatheight << FRACBITS) - 1;
 
-		yoffs *= 1;
+		/*
+		Essentially: We can't & the components along the regular axes when the plane is rotated.
+		This is because the distance on each regular axis in order to loop is different.
+		We rotate them, & the components, add them together, & them again, and then rotate them back.
+		These three seperate & operations are done per axis in order to prevent overflows.
+		toast 10/04/17
+		*/
+		const fixed_t cosinecomponent = FINECOSINE(pl->plangle>>ANGLETOFINESHIFT);
+		const fixed_t sinecomponent = FINESINE(pl->plangle>>ANGLETOFINESHIFT);
 
-		if (ds_powersoftwo)
-		{
-			fixed_t temp;
-			// Okay, look, don't ask me why this works, but without this setup there's a disgusting-looking misalignment with the textures. -Red
-			fudgecanyon = ((1<<nflatshiftup)+1.0f)/(1<<nflatshiftup);
-			if (hack)
-			{
-				/*
-				Essentially: We can't & the components along the regular axes when the plane is rotated.
-				This is because the distance on each regular axis in order to loop is different.
-				We rotate them, & the components, add them together, & them again, and then rotate them back.
-				These three seperate & operations are done per axis in order to prevent overflows.
-				toast 10/04/17
-				*/
-				const fixed_t cosinecomponent = FINECOSINE(hack>>ANGLETOFINESHIFT);
-				const fixed_t sinecomponent = FINESINE(hack>>ANGLETOFINESHIFT);
+		fixed_t ox = (FixedMul(pl->slope->o.x,cosinecomponent) & modmaskw) - (FixedMul(pl->slope->o.y,sinecomponent) & modmaskh);
+		fixed_t oy = (-FixedMul(pl->slope->o.x,sinecomponent) & modmaskw) - (FixedMul(pl->slope->o.y,cosinecomponent) & modmaskh);
 
-				const fixed_t modmask = ((1 << (32-nflatshiftup)) - 1);
+		fixed_t temp = ox & modmaskw;
+		oy &= modmaskh;
+		ox = FixedMul(temp,cosinecomponent)+FixedMul(oy,-sinecomponent); // negative sine for opposite direction
+		oy = -FixedMul(temp,-sinecomponent)+FixedMul(oy,cosinecomponent);
 
-				fixed_t ox = (FixedMul(pl->slope->o.x,cosinecomponent) & modmask) - (FixedMul(pl->slope->o.y,sinecomponent) & modmask);
-				fixed_t oy = (-FixedMul(pl->slope->o.x,sinecomponent) & modmask) - (FixedMul(pl->slope->o.y,cosinecomponent) & modmask);
+		temp = xoffs;
+		xoffs = (FixedMul(temp,cosinecomponent) & modmaskw) + (FixedMul(yoffs,sinecomponent) & modmaskh);
+		yoffs = (-FixedMul(temp,sinecomponent) & modmaskw) + (FixedMul(yoffs,cosinecomponent) & modmaskh);
 
-				temp = ox & modmask;
-				oy &= modmask;
-				ox = FixedMul(temp,cosinecomponent)+FixedMul(oy,-sinecomponent); // negative sine for opposite direction
-				oy = -FixedMul(temp,-sinecomponent)+FixedMul(oy,cosinecomponent);
+		temp = xoffs & modmaskw;
+		yoffs &= modmaskh;
+		xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
+		yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
 
-				temp = xoffs;
-				xoffs = (FixedMul(temp,cosinecomponent) & modmask) + (FixedMul(yoffs,sinecomponent) & modmask);
-				yoffs = (-FixedMul(temp,sinecomponent) & modmask) + (FixedMul(yoffs,cosinecomponent) & modmask);
-
-				temp = xoffs & modmask;
-				yoffs &= modmask;
-				xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
-				yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
-
-				xoffs -= (pl->slope->o.x - ox);
-				yoffs += (pl->slope->o.y + oy);
-			}
-			else
-			{
-				xoffs &= ((1 << (32-nflatshiftup))-1);
-				yoffs &= ((1 << (32-nflatshiftup))-1);
-				xoffs -= (pl->slope->o.x + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
-				yoffs += (pl->slope->o.y + (1 << (31-nflatshiftup))) & ~((1 << (32-nflatshiftup))-1);
-			}
-
-			xoffs = (fixed_t)(xoffs*fudgecanyon);
-			yoffs = (fixed_t)(yoffs/fudgecanyon);
-		}
+		xoffs -= (pl->slope->o.x - ox);
+		yoffs += (pl->slope->o.y + oy);
 
 		if (planeripple.active)
 		{
@@ -1018,11 +1019,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 			for (x = pl->high; x < pl->low; x++)
 			{
 				R_CalculatePlaneRipple(pl, x, plheight, true);
-				R_SetSlopePlaneVectors(pl, x, (xoffs + planeripple.xfrac), (yoffs + planeripple.yfrac), fudgecanyon);
+				R_SetSlopePlaneVectors(pl, x, (xoffs + planeripple.xfrac), (yoffs + planeripple.yfrac));
 			}
 		}
 		else
-			R_SetSlopePlaneVectors(pl, 0, xoffs, yoffs, fudgecanyon);
+			R_SetSlopePlaneVectors(pl, 0, xoffs, yoffs);
 
 		switch (spanfunctype)
 		{

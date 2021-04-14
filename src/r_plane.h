@@ -94,7 +94,9 @@ boolean R_CheckPowersOfTwo(void);
 void R_DrawSinglePlane(visplane_t *pl);
 
 // Calculates the slope vectors needed for tilted span drawing.
-void R_CalculateSlopeVectors(pslope_t *slope, fixed_t planeviewx, fixed_t planeviewy, fixed_t planeviewz, fixed_t planexscale, fixed_t planeyscale, fixed_t planexoffset, fixed_t planeyoffset, angle_t planeviewangle, angle_t planeangle, float fudge);
+void R_SetSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
+void R_SetSlopePlaneScaled(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
+void R_CalculateSlopeVectors(void);
 
 // Sets the slope vector pointers for the current tilted span.
 void R_SetTiltedSpan(INT32 span);
