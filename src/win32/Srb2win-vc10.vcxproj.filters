@@ -475,6 +475,7 @@
     <ClCompile Include="..\r_portal.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
+    <ClCompile Include="..\r_textures.c" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="afxres.h">

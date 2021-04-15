@@ -909,9 +909,6 @@
     <ClCompile Include="hwsym_sdl.c">
       <Filter>SDLApp</Filter>
     </ClCompile>
-    <ClCompile Include="i_cdmus.c">
-      <Filter>SDLApp</Filter>
-    </ClCompile>
     <ClCompile Include="i_main.c">
       <Filter>SDLApp</Filter>
     </ClCompile>
@@ -966,5 +963,8 @@
     <Image Include="Srb2SDL.ico">
       <Filter>SDLApp</Filter>
     </Image>
+  </ItemGroup>
+  <ItemGroup>
+    <ResourceCompile Include="..\win32\Srb2Win.rc" />
   </ItemGroup>
 </Project>

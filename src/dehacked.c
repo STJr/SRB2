@@ -802,7 +802,12 @@ static void readskincolor(MYFILE *f, INT32 num)
 			if (fastcmp(word, "NAME"))
 			{
 				size_t namesize = sizeof(skincolors[num].name);
+				#ifndef _MSC_VER
 				char truncword[namesize];
+				#else	
+				//MSVC can't create variable lenght arrays
+				char  truncword[50];
+				#endif
 				UINT16 dupecheck;
 
 				deh_strlcpy(truncword, word2, namesize, va("Skincolor %d: name", num)); // truncate here to check for dupes
@@ -810,7 +815,13 @@ static void readskincolor(MYFILE *f, INT32 num)
 				if (truncword[0] != '\0' && (!stricmp(truncword, skincolors[SKINCOLOR_NONE].name) || (dupecheck && dupecheck != num)))
 				{
 					size_t lastchar = strlen(truncword);
+					#ifndef _MSC_VER
 					char oldword[lastchar+1];
+					#else
+					//MSVC can't create variable lenght arrays
+					char oldword[50];
+					#endif
+					
 					char dupenum = '1';
 
 					strlcpy(oldword, truncword, lastchar+1);
@@ -1238,7 +1249,45 @@ static void readsprite2(MYFILE *f, INT32 num)
 }
 
 // copypasted from readPlayer :]
+#ifndef _MSC_VER 
 static const char *const GAMETYPERULE_LIST[];
+#else //move up the definition for MSVC 
+static const char* const GAMETYPERULE_LIST[] = {
+	"CAMPAIGN",
+	"RINGSLINGER",
+	"SPECTATORS",
+	"LIVES",
+	"TEAMS",
+	"FIRSTPERSON",
+	"POWERSTONES",
+	"TEAMFLAGS",
+	"FRIENDLY",
+	"SPECIALSTAGES",
+	"EMERALDTOKENS",
+	"EMERALDHUNT",
+	"RACE",
+	"TAG",
+	"POINTLIMIT",
+	"TIMELIMIT",
+	"OVERTIME",
+	"HURTMESSAGES",
+	"FRIENDLYFIRE",
+	"STARTCOUNTDOWN",
+	"HIDEFROZEN",
+	"BLINDFOLDED",
+	"RESPAWNDELAY",
+	"PITYSHIELD",
+	"DEATHPENALTY",
+	"NOSPECTATORSPAWN",
+	"DEATHMATCHSTARTS",
+	"SPAWNINVUL",
+	"SPAWNENEMIES",
+	"ALLOWEXIT",
+	"NOTITLECARD",
+	"CUTSCENES",
+	NULL
+};
+#endif
 static void readgametype(MYFILE *f, char *gtname)
 {
 	char *s = Z_Malloc(MAXLINELEN, PU_STATIC, NULL);
@@ -9126,7 +9175,7 @@ static const char *const PLAYERFLAG_LIST[] = {
 
 	NULL // stop loop here.
 };
-
+#ifndef _MSC_VER  //For MSCV is moved up only one declaration; can be defined up for the rest of compilers??
 static const char *const GAMETYPERULE_LIST[] = {
 	"CAMPAIGN",
 	"RINGSLINGER",
@@ -9162,7 +9211,7 @@ static const char *const GAMETYPERULE_LIST[] = {
 	"CUTSCENES",
 	NULL
 };
-
+#endif
 // Linedef flags
 static const char *const ML_LIST[16] = {
 	"IMPASSIBLE",

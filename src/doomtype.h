@@ -37,7 +37,12 @@
 #define UINT16 unsigned __int16
 #define INT16 __int16
 
+#if _MSC_VER 
+#include <basetsd.h> //for define INT32 because if is defined here like in the other compilers will conflit with the definition in this library
+#define boolean bool //boolean is not defined in MSCV
+#else
 #define INT32 __int32
+#endif
 #define UINT32 unsigned __int32
 
 #define INT64  __int64
