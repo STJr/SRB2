@@ -2772,16 +2772,9 @@ static void P_CheckBouncySectors(player_t *player)
 				player->mo->momx = -FixedMul(player->mo->momx,bouncestrength);
 				player->mo->momy = -FixedMul(player->mo->momy,bouncestrength);
 
-				if (player->pflags & PF_SPINNING)
-				{
-					player->pflags &= ~PF_SPINNING;
-					player->pflags |= P_GetJumpFlags(player);
-					player->pflags |= PF_THOKKED;
-				}
 			}
 			else
 			{
-				fixed_t newmom;
 				pslope_t *slope = (abs(oldz - topheight) < abs(oldz + player->mo->height - bottomheight)) ? *rover->t_slope : *rover->b_slope;
 
 				momentum.x = player->mo->momx;
@@ -2791,53 +2784,28 @@ static void P_CheckBouncySectors(player_t *player)
 				if (slope)
 					P_ReverseQuantizeMomentumToSlope(&momentum, slope);
 
-				newmom = momentum.z = -FixedMul(momentum.z,bouncestrength)/2;
+				momentum.z = -FixedMul(momentum.z,bouncestrength)/2;
 
-				if (abs(newmom) < (bouncestrength*2))
+				if (abs(momentum.z) < (bouncestrength*2))
 					goto bouncydone;
 
-				if (!(rover->master->flags & ML_BOUNCY))
-				{
-					if (newmom > 0)
-					{
-						if (newmom < 8*FRACUNIT)
-							newmom = 8*FRACUNIT;
-					}
-					else if (newmom < 0)
-					{
-						if (newmom > -8*FRACUNIT)
-							newmom = -8*FRACUNIT;
-					}
-				}
-
-				if (newmom > P_GetPlayerHeight(player)/2)
-					newmom = P_GetPlayerHeight(player)/2;
-				else if (newmom < -P_GetPlayerHeight(player)/2)
-					newmom = -P_GetPlayerHeight(player)/2;
-
-				momentum.z = newmom*2;
+				if (momentum.z > FixedMul(24*FRACUNIT, player->mo->scale)) //half of the default player height
+					momentum.z = FixedMul(24*FRACUNIT, player->mo->scale);
+				else if (momentum.z < -FixedMul(24*FRACUNIT, player->mo->scale))
+					momentum.z = -FixedMul(24*FRACUNIT, player->mo->scale);
 
 				if (slope)
 					P_QuantizeMomentumToSlope(&momentum, slope);
 
 				player->mo->momx = momentum.x;
 				player->mo->momy = momentum.y;
-				player->mo->momz = momentum.z/2;
+				player->mo->momz = momentum.z;
 
 				if (player->pflags & PF_SPINNING)
 				{
-					player->pflags &= ~PF_SPINNING;
-					player->pflags |= P_GetJumpFlags(player);
 					player->pflags |= PF_THOKKED;
 				}
 			}
-
-			if ((player->pflags & PF_SPINNING) && player->speed < FixedMul(1<<FRACBITS, player->mo->scale) && player->mo->momz)
-			{
-				player->pflags &= ~PF_SPINNING;
-				player->pflags |= P_GetJumpFlags(player);
-			}
-
 			goto bouncydone;
 		}
 	}
