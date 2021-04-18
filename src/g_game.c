@@ -169,7 +169,7 @@ static boolean exitgame = false;
 static boolean retrying = false;
 static boolean retryingmodeattack = false;
 
-UINT8 stagefailed; // Used for GEMS BONUS? Also to see if you beat the stage.
+boolean stagefailed = false; // Used for GEMS BONUS? Also to see if you beat the stage.
 
 UINT16 emeralds;
 INT32 luabanks[NUM_LUABANKS];
@@ -3742,7 +3742,7 @@ static void G_UpdateVisited(void)
 	// Update visitation flags?
 	if ((!modifiedgame || savemoddata) // Not modified
 		&& !multiplayer && !demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
-		&& !(spec && stagefailed)) // Not failed the special stage
+		&& !stagefailed) // Did not fail the stage
 	{
 		UINT8 earnedEmblems;
 
@@ -3963,7 +3963,7 @@ static void G_DoCompleted(void)
 	// If the current gametype has no intermission screen set, then don't start it.
 	Y_DetermineIntermissionType();
 
-	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed) || (intertype == int_none))
+	if ((skipstats && !modeattacking) || (modeattacking && stagefailed) || (intertype == int_none))
 	{
 		G_UpdateVisited();
 		G_HandleSaveLevel();
@@ -3994,8 +3994,15 @@ void G_AfterIntermission(void)
 
 	HU_ClearCEcho();
 
-	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1 && (gamecomplete || !(marathonmode & MA_NOCUTSCENES))) // Start a custom cutscene.
+	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum
+		&& !modeattacking
+		&& skipstats <= 1
+		&& (gamecomplete || !(marathonmode & MA_NOCUTSCENES))
+		&& stagefailed == false)
+	{
+		// Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
+	}
 	else
 	{
 		if (nextmap < 1100-1)
