@@ -1771,21 +1771,30 @@ static void Y_SetTimeBonus(player_t *player, y_bonus_t *bstruct)
 	strncpy(bstruct->patch, "YB_TIME", sizeof(bstruct->patch));
 	bstruct->display = true;
 
-	// calculate time bonus
-	secs = player->realtime / TICRATE;
-	if      (secs <  30) /*   :30 */ bonus = 50000;
-	else if (secs <  60) /*  1:00 */ bonus = 10000;
-	else if (secs <  90) /*  1:30 */ bonus = 5000;
-	else if (secs < 120) /*  2:00 */ bonus = 4000;
-	else if (secs < 180) /*  3:00 */ bonus = 3000;
-	else if (secs < 240) /*  4:00 */ bonus = 2000;
-	else if (secs < 300) /*  5:00 */ bonus = 1000;
-	else if (secs < 360) /*  6:00 */ bonus = 500;
-	else if (secs < 420) /*  7:00 */ bonus = 400;
-	else if (secs < 480) /*  8:00 */ bonus = 300;
-	else if (secs < 540) /*  9:00 */ bonus = 200;
-	else if (secs < 600) /* 10:00 */ bonus = 100;
-	else  /* TIME TAKEN: TOO LONG */ bonus = 0;
+	if (stagefailed == true)
+	{
+		// Time Bonus would be very easy to cheese by failing immediately.
+		bonus = 0;
+	}
+	else
+	{
+		// calculate time bonus
+		secs = player->realtime / TICRATE;
+		if      (secs <  30) /*   :30 */ bonus = 50000;
+		else if (secs <  60) /*  1:00 */ bonus = 10000;
+		else if (secs <  90) /*  1:30 */ bonus = 5000;
+		else if (secs < 120) /*  2:00 */ bonus = 4000;
+		else if (secs < 180) /*  3:00 */ bonus = 3000;
+		else if (secs < 240) /*  4:00 */ bonus = 2000;
+		else if (secs < 300) /*  5:00 */ bonus = 1000;
+		else if (secs < 360) /*  6:00 */ bonus = 500;
+		else if (secs < 420) /*  7:00 */ bonus = 400;
+		else if (secs < 480) /*  8:00 */ bonus = 300;
+		else if (secs < 540) /*  9:00 */ bonus = 200;
+		else if (secs < 600) /* 10:00 */ bonus = 100;
+		else  /* TIME TAKEN: TOO LONG */ bonus = 0;
+	}
+
 	bstruct->points = bonus;
 }
 
@@ -1838,12 +1847,21 @@ static void Y_SetGuardBonus(player_t *player, y_bonus_t *bstruct)
 	strncpy(bstruct->patch, "YB_GUARD", sizeof(bstruct->patch));
 	bstruct->display = true;
 
-	if      (player->timeshit == 0) bonus = 10000;
-	else if (player->timeshit == 1) bonus = 5000;
-	else if (player->timeshit == 2) bonus = 1000;
-	else if (player->timeshit == 3) bonus = 500;
-	else if (player->timeshit == 4) bonus = 100;
-	else                            bonus = 0;
+	if (stagefailed == true)
+	{
+		// "No-hit" runs would be very easy to cheese by failing immediately.
+		bonus = 0;
+	}
+	else
+	{
+		if      (player->timeshit == 0) bonus = 10000;
+		else if (player->timeshit == 1) bonus = 5000;
+		else if (player->timeshit == 2) bonus = 1000;
+		else if (player->timeshit == 3) bonus = 500;
+		else if (player->timeshit == 4) bonus = 100;
+		else                            bonus = 0;
+	}
+
 	bstruct->points = bonus;
 }
 
