@@ -4138,6 +4138,11 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		wallVerts[1].z = wallVerts[2].z = spr->z2;
 	}
 
+	// cache the patch in the graphics card memory
+	//12/12/99: Hurdler: same comment as above (for md2)
+	//Hurdler: 25/04/2000: now support colormap in hardware mode
+	HWR_GetMappedPatch(gpatch, spr->colormap);
+
 	if (spr->flip)
 	{
 		wallVerts[0].s = wallVerts[3].s = ((GLPatch_t *)gpatch->hardware)->max_s;
@@ -4156,11 +4161,6 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		wallVerts[3].t = wallVerts[2].t = 0;
 		wallVerts[0].t = wallVerts[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
 	}
-
-	// cache the patch in the graphics card memory
-	//12/12/99: Hurdler: same comment as above (for md2)
-	//Hurdler: 25/04/2000: now support colormap in hardware mode
-	HWR_GetMappedPatch(gpatch, spr->colormap);
 
 	if (!splat)
 	{
