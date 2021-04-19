@@ -3395,7 +3395,7 @@ static void P_InitLevelSettings(void)
 	ssspheres = timeinmap = 0;
 
 	// Assume Special Stages were failed in unless proven otherwise - via P_GiveEmerald or emerald touchspecial
-	// Normal stages will default to be OK, unless a Lua script sets to false.
+	// Normal stages will default to be OK, until a Lua script / linedef executor says otherwise.
 	stagefailed = G_IsSpecialStage(gamemap);
 
 	// Reset temporary record data

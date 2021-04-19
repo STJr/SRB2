@@ -3902,6 +3902,21 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 466: // Set level failure state
+			{
+				if (line->flags & ML_NOCLIMB)
+				{
+					stagefailed = false;
+					CONS_Debug(DBG_GAMELOGIC, "Stage can be completed successfully!\n");
+				}
+				else
+				{
+					stagefailed = true;
+					CONS_Debug(DBG_GAMELOGIC, "Stage will end in failure...\n");
+				}
+			}
+			break;
+
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
 			PolyDoor(line);
