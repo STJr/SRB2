@@ -397,15 +397,17 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				UINT16 stateframe = st->frame;
 				
 				// Add/Remove FF_SPR2SUPER based on certain conditions
-				if (player->powers[pw_super] && !(player->charflags & SF_NOSUPERSPRITES))
+				if (player->charflags & SF_NOSUPERSPRITES)
+					stateframe = stateframe & ~FF_SPR2SUPER;
+				else if (player->powers[pw_super])
 					stateframe = stateframe | FF_SPR2SUPER;
 				
 				if (stateframe & FF_SPR2SUPER)
 				{
-					if (mobj->renderflags & RF_FORCENOSUPER)
+					if (mobj->eflags & MFE_FORCENOSUPER)
 						stateframe = stateframe & ~FF_SPR2SUPER;
 				}
-				else if (mobj->renderflags & RF_FORCESUPER)
+				else if (mobj->eflags & MFE_FORCESUPER)
 					stateframe = stateframe | FF_SPR2SUPER;
 					
 				// Get the sprite2 and frame number
@@ -543,10 +545,10 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 				// Add/Remove FF_SPR2SUPER based on certain conditions
 				if (stateframe & FF_SPR2SUPER)
 				{
-					if (mobj->renderflags & RF_FORCENOSUPER)
+					if (mobj->eflags & MFE_FORCENOSUPER)
 						stateframe = stateframe & ~FF_SPR2SUPER;
 				}
-				else if (mobj->renderflags & RF_FORCESUPER)
+				else if (mobj->eflags & MFE_FORCESUPER)
 					stateframe = stateframe | FF_SPR2SUPER;
 					
 				// Get the sprite2 and frame number

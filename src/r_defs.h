@@ -738,10 +738,6 @@ typedef enum
 	RF_SHADOWDRAW       = 0x10000,  // Stretches and skews the sprite like a shadow.
 	RF_SHADOWEFFECTS    = 0x20000,  // Scales and becomes transparent like a shadow.
 	RF_DROPSHADOW       = (RF_SHADOWDRAW | RF_SHADOWEFFECTS | RF_FULLDARK),
-	
-	RF_FORCESUPER    	= 0x40000,  // Forces an object to use super sprites with SPR_PLAY.
-	RF_FORCENOSUPER    	= 0x80000,  // Forces an object to NOT use super sprites with SPR_PLAY.
-	RF_REVERSESUPER    	= (RF_FORCESUPER | RF_FORCENOSUPER), //Use normal sprites in place of super sprites and vice-versa
 } renderflags_t;
 
 typedef enum

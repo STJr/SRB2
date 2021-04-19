@@ -4351,6 +4351,8 @@ const char *const MOBJEFLAG_LIST[] = {
 	"SPRUNG", // Mobj was already sprung this tic
 	"APPLYPMOMZ", // Platform movement
 	"TRACERANGLE", // Compute and trigger on mobj angle relative to tracer
+	"FORCESUPER", // Forces an object to use super sprites with SPR_PLAY.
+	"FORCENOSUPER", // Forces an object to NOT use super sprites with SPR_PLAY.
 	NULL
 };
 
@@ -4905,9 +4907,6 @@ struct int_const_s const INT_CONST[] = {
 	{"RF_SHADOWDRAW",RF_SHADOWDRAW},
 	{"RF_SHADOWEFFECTS",RF_SHADOWEFFECTS},
 	{"RF_DROPSHADOW",RF_DROPSHADOW},
-	{"RF_FORCESUPER",RF_FORCESUPER},
-	{"RF_FORCENOSUPER",RF_FORCENOSUPER},
-	{"RF_REVERSESUPER",RF_REVERSESUPER},
 
 	// Level flags
 	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},
