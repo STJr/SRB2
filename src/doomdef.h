@@ -220,7 +220,8 @@ extern char logfilename[1024];
 // NOTE: it needs more than this to increase the number of players...
 
 #define MAXPLAYERS 32
-#define MAXSKINS 32
+#define MAXSKINS 256
+#define MAXCHARACTERSLOTS (MAXSKINS * 2)
 #define PLAYERSMASK (MAXPLAYERS-1)
 #define MAXPLAYERNAME 21
 

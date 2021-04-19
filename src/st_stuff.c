@@ -50,8 +50,8 @@ UINT16 objectsdrawn = 0;
 // STATUS BAR DATA
 //
 
-patch_t *faceprefix[MAXSKINS]; // face status patches
-patch_t *superprefix[MAXSKINS]; // super face status patches
+patch_t **faceprefix; // face status patches
+patch_t **superprefix; // super face status patches
 
 // ------------------------------------------
 //             status bar overlay
@@ -367,6 +367,17 @@ void ST_LoadFaceGraphics(INT32 skinnum)
 void ST_ReloadSkinFaceGraphics(void)
 {
 	INT32 i;
+
+	if (faceprefix)
+		Z_Free(faceprefix);
+	if (superprefix)
+		Z_Free(superprefix);
+
+	if (!numskins)
+		return;
+
+	faceprefix = Z_Malloc(sizeof(patch_t *) * numskins, PU_STATIC, NULL);
+	superprefix = Z_Malloc(sizeof(patch_t *) * numskins, PU_STATIC, NULL);
 
 	for (i = 0; i < numskins; i++)
 		ST_LoadFaceGraphics(i);

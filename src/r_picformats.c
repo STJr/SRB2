@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 2005-2009 by Andrey "entryway" Budko.
-// Copyright (C) 2018-2020 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2018-2021 by Jaime "Lactozilla" Passos.
 // Copyright (C) 2019-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
@@ -1494,7 +1494,7 @@ static void R_ParseSpriteInfo(boolean spr2)
 	spritenum_t sprnum = NUMSPRITES;
 	playersprite_t spr2num = NUMPLAYERSPRITES;
 	INT32 i;
-	INT32 skinnumbers[MAXSKINS];
+	INT32 *skinnumbers = NULL;
 	INT32 foundskins = 0;
 
 	// Sprite name
@@ -1592,6 +1592,8 @@ static void R_ParseSpriteInfo(boolean spr2)
 				if (skinnum == -1)
 					I_Error("Error parsing SPRTINFO lump: Unknown skin \"%s\"", skinName);
 
+				if (skinnumbers == NULL)
+					skinnumbers = Z_Malloc(sizeof(INT32) * numskins, PU_STATIC, NULL);
 				skinnumbers[foundskins] = skinnum;
 				foundskins++;
 			}
@@ -1630,8 +1632,11 @@ static void R_ParseSpriteInfo(boolean spr2)
 	{
 		I_Error("Error parsing SPRTINFO lump: Expected \"{\" for sprite \"%s\", got \"%s\"",newSpriteName,sprinfoToken);
 	}
+
 	Z_Free(sprinfoToken);
 	Z_Free(info);
+	if (skinnumbers)
+		Z_Free(skinnumbers);
 }
 
 //

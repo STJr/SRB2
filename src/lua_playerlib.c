@@ -16,6 +16,7 @@
 #include "d_player.h"
 #include "g_game.h"
 #include "p_local.h"
+#include "r_skins.h"
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -161,7 +162,7 @@ static int player_get(lua_State *L)
 	else if (fastcmp(field,"skin"))
 		lua_pushinteger(L, plr->skin);
 	else if (fastcmp(field,"availabilities"))
-		lua_pushinteger(L, plr->availabilities);
+		lua_pushinteger(L, R_GetAvailabilitiesBits(plr->availabilities));
 	else if (fastcmp(field,"score"))
 		lua_pushinteger(L, plr->score);
 	else if (fastcmp(field,"dashspeed"))

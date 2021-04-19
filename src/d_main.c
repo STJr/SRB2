@@ -813,7 +813,8 @@ void D_StartTitle(void)
 	for (i = 0; i < MAXPLAYERS; i++)
 		CL_ClearPlayer(i);
 
-	players[consoleplayer].availabilities = players[1].availabilities = R_GetSkinAvailabilities(); // players[1] is supposed to be for 2p
+	R_GetSkinAvailabilities(&players[consoleplayer].availabilities);
+	R_GetSkinAvailabilities(&players[1].availabilities); // players[1] is supposed to be for 2p
 
 	splitscreen = false;
 	SplitScreen_OnChange();
@@ -1215,10 +1216,6 @@ void D_SRB2Main(void)
 
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
-
-	// Setup character tables
-	// Have to be done here before files are loaded
-	M_InitCharacterTables();
 
 	mainwads = 3; // doesn't include music.dta
 #ifdef USE_PATCH_DTA

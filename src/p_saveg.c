@@ -139,7 +139,7 @@ static void P_NetArchivePlayers(void)
 
 		WRITEUINT8(save_p, players[i].skincolor);
 		WRITEINT32(save_p, players[i].skin);
-		WRITEUINT32(save_p, players[i].availabilities);
+		WRITEMEM(save_p, players[i].availabilities, sizeof(bitarray_t) * numskins);
 		WRITEUINT32(save_p, players[i].score);
 		WRITEFIXED(save_p, players[i].dashspeed);
 		WRITESINT8(save_p, players[i].lives);
@@ -353,7 +353,7 @@ static void P_NetUnArchivePlayers(void)
 
 		players[i].skincolor = READUINT8(save_p);
 		players[i].skin = READINT32(save_p);
-		players[i].availabilities = READUINT32(save_p);
+		READMEM(save_p, players[i].availabilities, sizeof(bitarray_t) * numskins);
 		players[i].score = READUINT32(save_p);
 		players[i].dashspeed = READFIXED(save_p); // dashing speed
 		players[i].lives = READSINT8(save_p);

@@ -71,7 +71,7 @@
 #endif
 
 md2_t md2_models[NUMSPRITES];
-md2_t md2_playermodels[MAXSKINS];
+md2_t *md2_playermodels = NULL;
 
 
 /*
@@ -490,7 +490,11 @@ void HWR_InitModels(void)
 	size_t prefixlen;
 
 	CONS_Printf("HWR_InitModels()...\n");
-	for (s = 0; s < MAXSKINS; s++)
+
+	if (numskins && md2_playermodels == NULL)
+		md2_playermodels = Z_Malloc(sizeof(md2_t), PU_STATIC, NULL);
+
+	for (s = 0; s < numskins; s++)
 	{
 		md2_playermodels[s].scale = -1.0f;
 		md2_playermodels[s].model = NULL;
@@ -501,6 +505,7 @@ void HWR_InitModels(void)
 		md2_playermodels[s].notfound = true;
 		md2_playermodels[s].error = false;
 	}
+
 	for (i = 0; i < NUMSPRITES; i++)
 	{
 		md2_models[i].scale = -1.0f;
@@ -561,7 +566,7 @@ void HWR_InitModels(void)
 
 addskinmodel:
 		// add player model
-		for (s = 0; s < MAXSKINS; s++)
+		for (s = 0; s < numskins; s++)
 		{
 			if (stricmp(skinname, skins[s].name) == 0)
 			{
@@ -581,7 +586,7 @@ modelfound:
 	fclose(f);
 }
 
-void HWR_AddPlayerModel(int skin) // For skins that were added after startup
+void HWR_AddPlayerModel(INT32 skin) // For skins that were added after startup
 {
 	FILE *f;
 	char name[24], filename[32];
@@ -607,6 +612,9 @@ void HWR_AddPlayerModel(int skin) // For skins that were added after startup
 			return;
 		}
 	}
+
+	// realloc player models table
+	md2_playermodels = Z_Realloc(md2_playermodels, sizeof(md2_t) * numskins, PU_STATIC, NULL);
 
 	// length of the player model prefix
 	prefixlen = strlen(PLAYERMODELPREFIX);

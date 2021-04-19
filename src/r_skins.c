@@ -18,6 +18,7 @@
 #include "st_stuff.h"
 #include "w_wad.h"
 #include "z_zone.h"
+#include "m_menu.h"
 #include "m_misc.h"
 #include "info.h" // spr2names
 #include "i_video.h" // rendermode
@@ -32,13 +33,7 @@
 #endif
 
 INT32 numskins = 0;
-skin_t skins[MAXSKINS];
-
-// FIXTHIS: don't work because it must be inistilised before the config load
-//#define SKINVALUES
-#ifdef SKINVALUES
-CV_PossibleValue_t skin_cons_t[MAXSKINS+1];
-#endif
+skin_t *skins = NULL;
 
 //
 // P_GetSkinSprite2
@@ -160,30 +155,37 @@ static void Sk_SetDefaultValue(skin_t *skin)
 //
 void R_InitSkins(void)
 {
-#ifdef SKINVALUES
-	INT32 i;
-
-	for (i = 0; i <= MAXSKINS; i++)
-	{
-		skin_cons_t[i].value = 0;
-		skin_cons_t[i].strvalue = NULL;
-	}
-#endif
-
 	// no default skin!
 	numskins = 0;
 }
 
-UINT32 R_GetSkinAvailabilities(void)
+void R_GetSkinAvailabilities(bitarray_t **response)
+{
+	INT32 s;
+
+	if (*response == NULL)
+		(*response) = Z_Calloc(sizeof(bitarray_t) * numskins, PU_STATIC, NULL);
+
+	for (s = 0; s < numskins; s++)
+	{
+		if (skins[s].availability && unlockables[skins[s].availability - 1].unlocked)
+			set_bit_array((*response), s);
+		else
+			unset_bit_array((*response), s);
+	}
+}
+
+UINT32 R_GetAvailabilitiesBits(bitarray_t *availabilities)
 {
 	INT32 s;
 	UINT32 response = 0;
 
-	for (s = 0; s < MAXSKINS; s++)
+	for (s = 0; s < min(numskins, 32); s++)
 	{
-		if (skins[s].availability && unlockables[skins[s].availability - 1].unlocked)
+		if (in_bit_array(availabilities, s))
 			response |= (1 << s);
 	}
+
 	return response;
 }
 
@@ -193,7 +195,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 {
 	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
 		|| (!skins[skinnum].availability)
-		|| (((netgame || multiplayer) && playernum != -1) ? (players[playernum].availabilities & (1 << skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
+		|| (((netgame || multiplayer) && playernum != -1) ? (in_bit_array(players[playernum].availabilities, skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
 		|| (modeattacking) // If you have someone else's run you might as well take a look
 		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
 		|| (netgame && (cv_forceskin.value == skinnum)) // Force 2.
@@ -594,6 +596,7 @@ void R_AddSkins(UINT16 wadnum)
 		buf2[size] = '\0';
 
 		// set defaults
+		skins = Z_Realloc(skins, sizeof(skin_t) * (numskins + 1), PU_STATIC, NULL);
 		skin = &skins[numskins];
 		Sk_SetDefaultValue(skin);
 		skin->wadnum = wadnum;
@@ -695,17 +698,13 @@ next_token:
 
 		if (!skin->availability) // Safe to print...
 			CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
-#ifdef SKINVALUES
-		skin_cons_t[numskins].value = numskins;
-		skin_cons_t[numskins].strvalue = skin->name;
-#endif
+
+		numskins++;
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
-			HWR_AddPlayerModel(numskins);
+			HWR_AddPlayerModel(numskins-1);
 #endif
-
-		numskins++;
 	}
 	return;
 }

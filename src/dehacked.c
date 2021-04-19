@@ -241,7 +241,7 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 				i = 0;
 			if (fastcmp(word, "CHARACTER"))
 			{
-				if (i >= 0 && i < 32)
+				if (i >= 0 && i < MAXCHARACTERSLOTS)
 					readPlayer(f, i);
 				else
 				{

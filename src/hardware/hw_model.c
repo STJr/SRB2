@@ -10,6 +10,7 @@
 #include "../doomdef.h"
 #include "../doomtype.h"
 #include "../info.h"
+#include "../r_skins.h"
 #include "../z_zone.h"
 #include "hw_model.h"
 #include "hw_md2load.h"
@@ -238,7 +239,7 @@ void HWR_ReloadModels(void)
 	size_t i;
 	INT32 s;
 
-	for (s = 0; s < MAXSKINS; s++)
+	for (s = 0; s < numskins; s++)
 	{
 		if (md2_playermodels[s].model)
 			LoadModelSprite2(md2_playermodels[s].model);

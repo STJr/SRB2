@@ -162,23 +162,20 @@ void clear_levels(void)
 
 static boolean findFreeSlot(INT32 *num)
 {
-	// Send the character select entry to a free slot.
-	while (*num < MAXSKINS && (description[*num].used))
-		*num = *num+1;
+	if (description)
+	{
+		// Send the character select entry to a free slot.
+		while (*num < numdescriptions && (description[*num].used))
+			(*num)++;
+	}
 
-	// No more free slots. :(
-	if (*num >= MAXSKINS)
+	// No more free slots.
+	if (*num >= MAXCHARACTERSLOTS)
 		return false;
+	else if (*num >= numdescriptions)
+		M_InitCharacterTables((*num) + 1);
 
-	// Redesign your logo. (See M_DrawSetupChoosePlayerMenu in m_menu.c...)
-	description[*num].picname[0] = '\0';
-	description[*num].nametag[0] = '\0';
-	description[*num].displayname[0] = '\0';
-	description[*num].oppositecolor = SKINCOLOR_NONE;
-	description[*num].tagtextcolor = SKINCOLOR_NONE;
-	description[*num].tagoutlinecolor = SKINCOLOR_NONE;
-
-	// Found one! ^_^
+	// Found one!
 	return (description[*num].used = true);
 }
 
@@ -891,7 +888,7 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 	INT32 value;
 #endif
 	char *lastline;
-	INT32 skinnumbers[MAXSKINS];
+	INT32 *skinnumbers = NULL;
 	INT32 foundskins = 0;
 
 	// allocate a spriteinfo
@@ -980,6 +977,8 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 					break;
 				}
 
+				if (skinnumbers == NULL)
+					skinnumbers = Z_Malloc(sizeof(INT32) * numskins, PU_STATIC, NULL);
 				skinnumbers[foundskins] = skinnum;
 				foundskins++;
 			}
@@ -1043,6 +1042,8 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 
 	Z_Free(s);
 	Z_Free(info);
+	if (skinnumbers)
+		Z_Free(skinnumbers);
 }
 
 void readsprite2(MYFILE *f, INT32 num)

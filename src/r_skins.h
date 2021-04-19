@@ -86,7 +86,7 @@ typedef struct
 
 /// Externs
 extern INT32 numskins;
-extern skin_t skins[MAXSKINS];
+extern skin_t *skins;
 
 /// Function prototypes
 void R_InitSkins(void);
@@ -94,7 +94,8 @@ void R_InitSkins(void);
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
 boolean R_SkinUsable(INT32 playernum, INT32 skinnum);
-UINT32 R_GetSkinAvailabilities(void);
+void R_GetSkinAvailabilities(bitarray_t **response);
+UINT32 R_GetAvailabilitiesBits(bitarray_t *availabilities);
 INT32 R_SkinAvailable(const char *name);
 void R_PatchSkins(UINT16 wadnum);
 void R_AddSkins(UINT16 wadnum);

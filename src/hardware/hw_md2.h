@@ -37,7 +37,7 @@ typedef struct
 } md2_t;
 
 extern md2_t md2_models[NUMSPRITES];
-extern md2_t md2_playermodels[MAXSKINS];
+extern md2_t *md2_playermodels;
 
 void HWR_InitModels(void);
 void HWR_AddPlayerModel(INT32 skin);

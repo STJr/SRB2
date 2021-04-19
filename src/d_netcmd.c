@@ -1235,7 +1235,7 @@ static void SendNameAndColor(void)
 	&& !strcmp(cv_skin.string, skins[players[consoleplayer].skin].name))
 		return;
 
-	players[consoleplayer].availabilities = R_GetSkinAvailabilities();
+	R_GetSkinAvailabilities(&players[consoleplayer].availabilities);
 
 	// We'll handle it later if we're not playing.
 	if (!Playing())
@@ -1319,9 +1319,9 @@ static void SendNameAndColor(void)
 
 	// Finally write out the complete packet and send it off.
 	WRITESTRINGN(p, cv_playername.zstring, MAXPLAYERNAME);
-	WRITEUINT32(p, (UINT32)players[consoleplayer].availabilities);
 	WRITEUINT16(p, (UINT16)cv_playercolor.value);
 	WRITEUINT8(p, (UINT8)cv_skin.value);
+	WRITEMEM(p, players[consoleplayer].availabilities, sizeof(bitarray_t) * numskins);
 	SendNetXCmd(XD_NAMEANDCOLOR, buf, p - buf);
 }
 
@@ -1363,7 +1363,7 @@ static void SendNameAndColor2(void)
 		}
 	}
 
-	players[secondplaya].availabilities = R_GetSkinAvailabilities();
+	R_GetSkinAvailabilities(&players[secondplaya].availabilities);
 
 	// We'll handle it later if we're not playing.
 	if (!Playing())
@@ -1455,9 +1455,12 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 #endif
 
 	READSTRINGN(*cp, name, MAXPLAYERNAME);
-	p->availabilities = READUINT32(*cp);
 	color = READUINT16(*cp);
 	skin = READUINT8(*cp);
+
+	if (p->availabilities == NULL)
+		p->availabilities = Z_Malloc(sizeof(bitarray_t) * numskins, PU_STATIC, NULL);
+	READMEM(*cp, p->availabilities, sizeof(bitarray_t) * numskins);
 
 	// set name
 	if (player_name_changes[playernum] < MAXNAMECHANGES)
@@ -1491,9 +1494,9 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 			kick = true;
 
 		// availabilities
-		for (s = 0; s < MAXSKINS; s++)
+		for (s = 0; s < numskins; s++)
 		{
-			if (!skins[s].availability && (p->availabilities & (1 << s)))
+			if (!skins[s].availability && in_bit_array(p->availabilities, s))
 			{
 				kick = true;
 				break;
@@ -4278,7 +4281,8 @@ void Command_ExitGame_f(void)
 	for (i = 0; i < MAXPLAYERS; i++)
 		CL_ClearPlayer(i);
 
-	players[consoleplayer].availabilities = players[1].availabilities = R_GetSkinAvailabilities(); // players[1] is supposed to be for 2p
+	R_GetSkinAvailabilities(&players[consoleplayer].availabilities);
+	R_GetSkinAvailabilities(&players[1].availabilities); // players[1] is supposed to be for 2p
 
 	splitscreen = false;
 	SplitScreen_OnChange();

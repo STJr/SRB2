@@ -2486,7 +2486,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	UINT8 mare;
 	UINT16 skincolor;
 	INT32 skin;
-	UINT32 availabilities;
+	bitarray_t *availabilities;
 	tic_t jointime;
 	tic_t quittime;
 	boolean spectator;
