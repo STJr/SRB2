@@ -3322,7 +3322,7 @@ static void Command_Addfile(void)
 				break;
 		++p;
 
-		// check total packet size and no of files currently loaded
+		// check no of files currently loaded
 		// See W_LoadWadFile in w_wad.c
 		if (numwadfiles >= MAX_WADFILES)
 		{
@@ -3400,7 +3400,6 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	// See W_LoadWadFile in w_wad.c
 	if (numwadfiles >= MAX_WADFILES)
 		toomany = true;
 	else
@@ -3483,7 +3482,13 @@ static void Command_ListWADS_f(void)
 {
 	INT32 i = numwadfiles;
 	char *tempname;
-	CONS_Printf(M_GetText("There are %d/%d wads loaded:\n"),numwadfiles,MAX_WADFILES);
+
+#ifdef ENFORCE_WAD_LIMIT
+	CONS_Printf(M_GetText("There are %d/%d files loaded:\n"),numwadfiles,MAX_WADFILES);
+#else
+	CONS_Printf(M_GetText("There are %d files loaded:\n"),numwadfiles);
+#endif
+
 	for (i--; i >= 0; i--)
 	{
 		nameonly(tempname = va("%s", wadfiles[i]->filename));

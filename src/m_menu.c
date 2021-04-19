@@ -6307,6 +6307,7 @@ static void M_Addons(INT32 choice)
 	M_SetupNextMenu(&MISC_AddonsDef);
 }
 
+#ifdef ENFORCE_WAD_LIMIT
 #define width 4
 #define vpadding 27
 #define h (BASEVIDHEIGHT-(2*vpadding))
@@ -6354,6 +6355,7 @@ static void M_DrawTemperature(INT32 x, fixed_t t)
 #undef vpadding
 #undef h
 #undef NUMCOLOURS
+#endif
 
 static char *M_AddonsHeaderPath(void)
 {
@@ -6447,6 +6449,7 @@ static void M_DrawAddons(void)
 		V_DrawCenteredString(BASEVIDWIDTH/2, 5, 0, LOCATIONSTRING1);
 			// (recommendedflags == V_SKYMAP ? LOCATIONSTRING2 : LOCATIONSTRING1)
 
+#ifdef ENFORCE_WAD_LIMIT
 	if (numwadfiles <= mainwads+1)
 		y = 0;
 	else if (numwadfiles >= MAX_WADFILES)
@@ -6459,6 +6462,7 @@ static void M_DrawAddons(void)
 	}
 
 	M_DrawTemperature(BASEVIDWIDTH - 19 - 5, y);
+#endif
 
 	// DRAW MENU
 	x = currentMenu->x;

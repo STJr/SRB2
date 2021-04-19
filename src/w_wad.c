@@ -734,9 +734,8 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		refreshdirname = NULL;
 
 	//CONS_Debug(DBG_SETUP, "Loading %s\n", filename);
-	//
-	// check if limit of active wadfiles
-	//
+
+	// Check if the game reached the limit of active wadfiles.
 	if (numwadfiles >= MAX_WADFILES)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
@@ -900,7 +899,7 @@ void W_InitMultipleFiles(addfilelist_t *list)
   */
 static boolean TestValidLump(UINT16 wad, UINT16 lump)
 {
-	I_Assert(wad < MAX_WADFILES);
+	I_Assert(wad < numwadfiles);
 	if (!wadfiles[wad]) // make sure the wad file exists
 		return false;
 
