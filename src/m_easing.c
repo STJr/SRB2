@@ -144,7 +144,11 @@ static INT32 fixexp(fixed_t a)
 #define fixintdiv(x, y) FixedDiv(x, (y) * FRACUNIT)
 #define fixinterp(start, end, t) FixedMul((FRACUNIT - (t)), start) + FixedMul(t, end)
 
-#define EASINGFUNC(type) fixed_t Easing_ ## type (fixed_t start, fixed_t end, fixed_t t)
+// ==================
+//  EASING FUNCTIONS
+// ==================
+
+#define EASINGFUNC(type) fixed_t Easing_ ## type (fixed_t t, fixed_t start, fixed_t end)
 
 //
 // Linear
@@ -327,17 +331,20 @@ EASINGFUNC(InOutExpo)
 #define EASEBACKCONST1 111514 // 1.70158
 #define EASEBACKCONST2 99942 // 1.525
 
-EASINGFUNC(InBack)
+static fixed_t EaseInBack(fixed_t t, fixed_t start, fixed_t end, fixed_t c1)
 {
-	const fixed_t c1 = EASEBACKCONST1;
 	const fixed_t c3 = c1 + FRACUNIT;
 	fixed_t x = FixedMul(FixedMul(t, t), FixedMul(c3, t) - c1);
 	return fixinterp(start, end, x);
 }
 
-EASINGFUNC(OutBack)
+EASINGFUNC(InBack)
 {
-	const fixed_t c1 = EASEBACKCONST1;
+	return EaseInBack(t, start, end, EASEBACKCONST1);
+}
+
+static fixed_t EaseOutBack(fixed_t t, fixed_t start, fixed_t end, fixed_t c1)
+{
 	const fixed_t c3 = c1 + FRACUNIT;
 	fixed_t x;
 	t -= FRACUNIT;
@@ -345,32 +352,56 @@ EASINGFUNC(OutBack)
 	return fixinterp(start, end, x);
 }
 
-static fixed_t DoEaseInOutBack(fixed_t start, fixed_t end, fixed_t t, fixed_t c2)
+EASINGFUNC(OutBack)
 {
-	fixed_t x;
+	return EaseOutBack(t, start, end, EASEBACKCONST1);
+}
 
-	c2 += FRACUNIT;
+static fixed_t EaseInOutBack(fixed_t t, fixed_t start, fixed_t end, fixed_t c2)
+{
+	fixed_t x, y;
+	const fixed_t f2 = 2*FRACUNIT;
 
 	if (t < FRACUNIT / 2)
 	{
-		x = fixintmul(7, t) - c2;
-		x = fixintmul(2, x);
-		x = FixedMul(FixedMul(t, t), x);
+		x = fixpow(FixedMul(t, f2), f2);
+		y = FixedMul(c2 + FRACUNIT, FixedMul(t, f2));
+		x = FixedMul(x, y - c2);
 	}
 	else
 	{
-		t -= FRACUNIT;
-		x = fixintmul(2, fixintmul(7, t) + c2);
-		x = FixedMul(FixedMul(t, t), x);
-		x = FRACUNIT + x;
+		x = fixpow(-(FixedMul(t, f2) - f2), f2);
+		y = FixedMul(c2 + FRACUNIT, FixedMul(t, f2) - f2);
+		x = FixedMul(x, y + c2);
+		x += f2;
 	}
+
+	x /= 2;
 
 	return fixinterp(start, end, x);
 }
 
 EASINGFUNC(InOutBack)
 {
-	return DoEaseInOutBack(start, end, t, EASEBACKCONST2);
+	return EaseInOutBack(t, start, end, EASEBACKCONST2);
+}
+
+#undef EASINGFUNC
+#define EASINGFUNC(type) fixed_t Easing_ ## type (fixed_t t, fixed_t start, fixed_t end, fixed_t param)
+
+EASINGFUNC(InBackParameterized)
+{
+	return EaseInBack(t, start, end, param);
+}
+
+EASINGFUNC(OutBackParameterized)
+{
+	return EaseOutBack(t, start, end, param);
+}
+
+EASINGFUNC(InOutBackParameterized)
+{
+	return EaseInOutBack(t, start, end, param);
 }
 
 #undef EASINGFUNC
