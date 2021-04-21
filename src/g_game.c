@@ -1693,6 +1693,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		cmd->angleturn = origangle + extra;
 		*myangle += extra << 16;
 		*myaiming += (cmd->aiming - origaiming) << 16;
+
+		// Send leveltime when this tic was generated to the server for control lag calculations.
+		// Only do this when in a level. Also do this after the hook, so that it can't overwrite this.
+		cmd->latency = (leveltime & 0xFF); 
 	}
 
 	//Reset away view if a command is given.
@@ -1724,6 +1728,7 @@ ticcmd_t *G_MoveTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n)
 		dest[i].angleturn = SHORT(src[i].angleturn);
 		dest[i].aiming = (INT16)SHORT(src[i].aiming);
 		dest[i].buttons = (UINT16)SHORT(src[i].buttons);
+		dest[i].latency = src[i].latency;
 	}
 	return dest;
 }
@@ -2306,6 +2311,9 @@ void G_Ticker(boolean run)
 
 			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
 			players[i].cmd.angleturn |= received;
+
+			// Use the leveltime sent in the player's ticcmd to determine control lag
+			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
 		}
 	}
 

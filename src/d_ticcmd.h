@@ -21,6 +21,8 @@
 #pragma interface
 #endif
 
+#define MAXPREDICTTICS 12
+
 // Button/action code definitions.
 typedef enum
 {
@@ -63,6 +65,7 @@ typedef struct
 	INT16 angleturn; // <<16 for angle delta - saved as 1 byte into demos
 	INT16 aiming; // vertical aiming, see G_BuildTicCmd
 	UINT16 buttons;
+	UINT8 latency; // Netgames: how many tics ago was this ticcmd generated from this player's end?
 } ATTRPACK ticcmd_t;
 
 #if defined(_MSC_VER)
