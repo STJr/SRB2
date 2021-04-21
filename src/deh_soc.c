@@ -2850,6 +2850,9 @@ void readsound(MYFILE *f, INT32 num)
 			if (s == tmp)
 				continue; // Skip comment lines, but don't break.
 
+			// Set / reset word
+			word = s;
+
 			// Get the part before the " = "
 			tmp = strchr(s, '=');
 			if (tmp)
