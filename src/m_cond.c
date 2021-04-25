@@ -508,9 +508,14 @@ INT32 M_UnlockableSkinNum(unlockable_t *unlock)
 	if (unlock->stringVar && strcmp(unlock->stringVar, ""))
 	{
 		// Get the skin from the string.
-		return R_SkinAvailable(unlock->stringVar);
+		INT32 skinnum = R_SkinAvailable(unlock->stringVar);
+		if (skinnum != -1)
+		{
+			return skinnum;
+		}
 	}
-	else if (unlock->variable >= 0 && unlock->variable < numskins)
+
+	if (unlock->variable >= 0 && unlock->variable < numskins)
 	{
 		// Use the number directly.
 		return unlock->variable;
@@ -532,9 +537,14 @@ INT32 M_EmblemSkinNum(emblem_t *emblem)
 	if (emblem->stringVar && strcmp(emblem->stringVar, ""))
 	{
 		// Get the skin from the string.
-		return R_SkinAvailable(emblem->stringVar);
+		INT32 skinnum = R_SkinAvailable(emblem->stringVar);
+		if (skinnum != -1)
+		{
+			return skinnum;
+		}
 	}
-	else if (emblem->var >= 0 && emblem->var < numskins)
+
+	if (emblem->var >= 0 && emblem->var < numskins)
 	{
 		// Use the number directly.
 		return emblem->var;
