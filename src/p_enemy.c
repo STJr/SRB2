@@ -25,6 +25,7 @@
 #include "i_video.h"
 #include "z_zone.h"
 #include "lua_hook.h"
+#include "m_cond.h" // SECRET_SKIN
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -5101,6 +5102,28 @@ void A_SignSpin(mobj_t *actor)
 	}
 }
 
+static boolean SignSkinCheck(player_t *player, INT32 num)
+{
+	INT32 i;
+
+	if (player != NULL)
+	{
+		// Use player's availabilities
+		return R_SkinUsable(player - players, num);
+	}
+
+	// Player invalid, only show characters that are unlocked from the start.
+	for (i = 0; i < MAXUNLOCKABLES; i++)
+	{
+		if (unlockables[i].type == SECRET_SKIN && unlockables[i].variable == num)
+		{
+			return false;
+		}
+	}
+
+	return true;
+}
+
 // Function: A_SignPlayer
 //
 // Description: Changes the state of a level end sign to reflect the player that hit it.
@@ -5161,23 +5184,21 @@ void A_SignPlayer(mobj_t *actor)
 		// I turned this function into a fucking mess. I'm so sorry. -Lach
 		if (locvar1 == -2) // random skin
 		{
-#define skincheck(num) (player ? !R_SkinUsable(player-players, num) : skins[num].availability > 0)
 			player_t *player = actor->target ? actor->target->player : NULL;
 			UINT8 skinnum;
 			UINT8 skincount = 0;
 			for (skinnum = 0; skinnum < numskins; skinnum++)
-				if (!skincheck(skinnum))
+				if (SignSkinCheck(player, skinnum))
 					skincount++;
 			skinnum = P_RandomKey(skincount);
 			for (skincount = 0; skincount < numskins; skincount++)
 			{
 				if (skincount > skinnum)
 					break;
-				if (skincheck(skincount))
+				if (!SignSkinCheck(player, skincount))
 					skinnum++;
 			}
 			skin = &skins[skinnum];
-#undef skincheck
 		}
 		else // specific skin
 			skin = &skins[locvar1];

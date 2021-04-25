@@ -3219,19 +3219,30 @@ void readunlockable(MYFILE *f, INT32 num)
 						unlockables[num].type = SECRET_WARP;
 					else if (fastcmp(word2, "SOUNDTEST"))
 						unlockables[num].type = SECRET_SOUNDTEST;
+					else if (fastcmp(word2, "SKIN"))
+						unlockables[num].type = SECRET_SKIN;
 					else
 						unlockables[num].type = (INT16)i;
 				}
 				else if (fastcmp(word, "VAR"))
 				{
-					// Support using the actual map name,
-					// i.e., Level AB, Level FZ, etc.
+					INT32 skinnum = R_SkinAvailable(word2);
 
-					// Convert to map number
-					if (word2[0] >= 'A' && word2[0] <= 'Z')
-						i = M_MapNumber(word2[0], word2[1]);
+					if (skinnum != -1)
+					{
+						unlockables[num].variable = (INT16)skinnum;
+					}
+					else
+					{
+						// Support using the actual map name,
+						// i.e., Level AB, Level FZ, etc.
 
-					unlockables[num].variable = (INT16)i;
+						// Convert to map number
+						if (word2[0] >= 'A' && word2[0] <= 'Z')
+							i = M_MapNumber(word2[0], word2[1]);
+
+						unlockables[num].variable = (INT16)i;
+					}
 				}
 				else
 					deh_warning("Unlockable %d: unknown word '%s'", num+1, word);

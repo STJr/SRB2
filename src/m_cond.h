@@ -132,6 +132,7 @@ typedef struct
 #define SECRET_WARP			 2 // Selectable warp
 #define SECRET_SOUNDTEST	 3 // Sound Test
 #define SECRET_CREDITS		 4 // Enables Credits
+#define SECRET_SKIN			 5 // Unlocks a skin
 
 // If you have more secrets than these variables allow in your game,
 // you seriously need to get a life.
