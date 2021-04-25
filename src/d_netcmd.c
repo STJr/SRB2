@@ -1313,8 +1313,9 @@ static void SendNameAndColor(void)
 	cv_skin.value = R_SkinAvailable(cv_skin.string);
 	if ((cv_skin.value < 0) || !R_SkinUsable(consoleplayer, cv_skin.value))
 	{
-		CV_StealthSet(&cv_skin, DEFAULTSKIN);
-		cv_skin.value = 0;
+		INT32 defaultSkinNum = GetPlayerDefaultSkin(consoleplayer);
+		CV_StealthSet(&cv_skin, skins[defaultSkinNum].name);
+		cv_skin.value = defaultSkinNum;
 	}
 
 	// Finally write out the complete packet and send it off.

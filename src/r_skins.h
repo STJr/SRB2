@@ -89,6 +89,8 @@ extern skin_t skins[MAXSKINS];
 /// Function prototypes
 void R_InitSkins(void);
 
+INT32 GetPlayerDefaultSkin(INT32 playernum);
+void SetPlayerDefaultSkin(INT32 playernum);
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
 boolean R_SkinUsable(INT32 playernum, INT32 skinnum);

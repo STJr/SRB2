@@ -5115,9 +5115,14 @@ static boolean SignSkinCheck(player_t *player, INT32 num)
 	// Player invalid, only show characters that are unlocked from the start.
 	for (i = 0; i < MAXUNLOCKABLES; i++)
 	{
-		if (unlockables[i].type == SECRET_SKIN && unlockables[i].variable == num)
+		if (unlockables[i].type == SECRET_SKIN)
 		{
-			return false;
+			INT32 lockedSkin = M_UnlockableSkinNum(&unlockables[i]);
+
+			if (lockedSkin == num)
+			{
+				return false;
+			}
 		}
 	}
 

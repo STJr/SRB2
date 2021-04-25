@@ -562,13 +562,10 @@ static void DEH_LoadDehackedFile(MYFILE *f, boolean mainfile)
 					}
 
 					if (clearall || fastcmp(word2, "UNLOCKABLES"))
-						memset(&unlockables, 0, sizeof(unlockables));
+						clear_unlockables();
 
 					if (clearall || fastcmp(word2, "EMBLEMS"))
-					{
-						memset(&emblemlocations, 0, sizeof(emblemlocations));
-						numemblems = 0;
-					}
+						clear_emblems();
 
 					if (clearall || fastcmp(word2, "EXTRAEMBLEMS"))
 					{

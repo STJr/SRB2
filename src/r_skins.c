@@ -247,12 +247,16 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 
 	for (i = 0; i < MAXUNLOCKABLES; i++)
 	{
+		INT32 unlockSkin = -1;
+
 		if (unlockables[i].type != SECRET_SKIN)
 		{
 			continue;
 		}
 
-		if (unlockables[i].variable == skinnum)
+		unlockSkin = M_UnlockableSkinNum(&unlockables[i]);
+
+		if (unlockSkin == skinnum)
 		{
 			unlockID = i;
 			break;
@@ -294,8 +298,7 @@ INT32 R_SkinAvailable(const char *name)
 	return -1;
 }
 
-// Gets the player to the first usuable skin in the game. (If your mod locked them all, then you kinda stupid)
-void SetPlayerDefaultSkin(INT32 playernum)
+INT32 GetPlayerDefaultSkin(INT32 playernum)
 {
 	INT32 i;
 
@@ -303,12 +306,18 @@ void SetPlayerDefaultSkin(INT32 playernum)
 	{
 		if (R_SkinUsable(playernum, i))
 		{
-			SetPlayerSkinByNum(playernum, i);
-			return;
+			return i;
 		}
 	}
 
-	I_Error("All characters are locked.");
+	I_Error("All characters are locked!");
+	return 0;
+}
+
+// Gets the player to the first usuable skin in the game. (If your mod locked them all, then you kinda stupid)
+void SetPlayerDefaultSkin(INT32 playernum)
+{
+	SetPlayerSkinByNum(playernum, GetPlayerDefaultSkin(playernum));
 }
 
 // network code calls this when a 'skin change' is received
@@ -325,7 +334,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Skin '%s' not found.\n"), skinname);
-	else if(server || IsPlayerAdmin(consoleplayer))
+	else if (server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, M_GetText("Player %d (%s) skin '%s' not found\n"), playernum, player_names[playernum], skinname);
 
 	SetPlayerDefaultSkin(playernum);
@@ -417,7 +426,7 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Requested skin %d not found\n"), skinnum);
-	else if(server || IsPlayerAdmin(consoleplayer))
+	else if (server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
 
 	SetPlayerDefaultSkin(playernum);
