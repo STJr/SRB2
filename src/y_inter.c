@@ -2069,7 +2069,8 @@ static void Y_AwardSpecialStageBonus(void)
 //
 void Y_EndIntermission(void)
 {
-	Y_UnloadData();
+	if (!dedicated)
+		Y_UnloadData();
 
 	endtic = -1;
 	intertype = int_none;
