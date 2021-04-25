@@ -8963,7 +8963,7 @@ static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 
 static UINT8 M_SetupChoosePlayerDirect(INT32 choice)
 {
-	INT32 skinnum, botskin;
+	INT32 skinnum, botskinnum;
 	UINT8 i;
 	UINT8 firstvalid = 255, lastvalid = 255;
 	boolean allowed = false;
@@ -8995,8 +8995,8 @@ static UINT8 M_SetupChoosePlayerDirect(INT32 choice)
 				skinnum = description[i].skinnum[0];
 				if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
 				{
-					botskin = description[i].skinnum[1];
-					if ((botskin != -1) && (!R_SkinUsable(-1, botskin)))
+					botskinnum = description[i].skinnum[1];
+					if ((botskinnum != -1) && (!R_SkinUsable(-1, botskinnum)))
 					{
 						// Bot skin isn't unlocked
 						continue;
