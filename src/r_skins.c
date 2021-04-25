@@ -294,6 +294,23 @@ INT32 R_SkinAvailable(const char *name)
 	return -1;
 }
 
+// Gets the player to the first usuable skin in the game. (If your mod locked them all, then you kinda stupid)
+void SetPlayerDefaultSkin(INT32 playernum)
+{
+	INT32 i;
+
+	for (i = 0; i < numskins; i++)
+	{
+		if (R_SkinUsable(playernum, i))
+		{
+			SetPlayerSkinByNum(playernum, i);
+			return;
+		}
+	}
+
+	I_Error("All characters are locked.");
+}
+
 // network code calls this when a 'skin change' is received
 void SetPlayerSkin(INT32 playernum, const char *skinname)
 {
@@ -311,7 +328,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 	else if(server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, M_GetText("Player %d (%s) skin '%s' not found\n"), playernum, player_names[playernum], skinname);
 
-	SetPlayerSkinByNum(playernum, 0);
+	SetPlayerDefaultSkin(playernum);
 }
 
 // Same as SetPlayerSkin, but uses the skin #.
@@ -402,7 +419,8 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 		CONS_Alert(CONS_WARNING, M_GetText("Requested skin %d not found\n"), skinnum);
 	else if(server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
-	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
+
+	SetPlayerDefaultSkin(playernum);
 }
 
 //
