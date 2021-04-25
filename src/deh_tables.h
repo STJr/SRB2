@@ -72,4 +72,7 @@ extern const char *const MENUTYPES_LIST[];
 
 extern struct int_const_s const INT_CONST[];
 
+// Moved to this file because it can't work compile-time otherwise
+void DEH_TableCheck(void);
+
 #endif

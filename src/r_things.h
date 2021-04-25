@@ -151,10 +151,12 @@ typedef struct vissprite_s
 	INT32 x1, x2;
 
 	fixed_t gx, gy; // for line side calculation
-	fixed_t gz, gzt; // global bottom/top for silhouette clipping and sorting with 3D floors
+	fixed_t gz, gzt; // global bottom/top for silhouette clipping
+	fixed_t pz, pzt; // physical bottom/top for sorting with 3D floors
 
 	fixed_t startfrac; // horizontal position of x1
-	fixed_t scale;
+	fixed_t xscale, scale; // projected horizontal and vertical scales
+	fixed_t thingscale; // the object's scale
 	fixed_t sortscale; // sortscale only differs from scale for paper sprites, floor sprites, and MF2_LINKDRAW
 	fixed_t sortsplat; // the sortscale from behind the floor sprite
 	fixed_t scalestep; // only for paper sprites, 0 otherwise
@@ -162,6 +164,7 @@ typedef struct vissprite_s
 	fixed_t xiscale; // negative if flipped
 
 	angle_t centerangle; // for paper sprites
+	angle_t viewangle; // for floor sprites, the viewpoint's current angle
 
 	struct {
 		fixed_t tan; // The amount to shear the sprite vertically per row
@@ -182,9 +185,8 @@ typedef struct vissprite_s
 
 	extracolormap_t *extra_colormap; // global colormaps
 
-	fixed_t xscale;
-
 	// Precalculated top and bottom screen coords for the sprite.
+	fixed_t thingheight; // The actual height of the thing (for 3D floors)
 	sector_t *sector; // The sector containing the thing.
 	INT16 sz, szt;
 

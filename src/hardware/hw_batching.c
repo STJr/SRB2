@@ -137,6 +137,8 @@ static int comparePolygons(const void *p1, const void *p2)
 	PolygonArrayEntry* poly2 = &polygonArray[index2];
 	int diff;
 	INT64 diff64;
+	UINT32 downloaded1 = 0;
+	UINT32 downloaded2 = 0;
 
 	int shader1 = poly1->shader;
 	int shader2 = poly2->shader;
@@ -152,7 +154,11 @@ static int comparePolygons(const void *p1, const void *p2)
 	if (shader1 == -1 && shader2 == -1)
 		return index1 - index2;
 
-	diff64 = poly1->texture - poly2->texture;
+	if (poly1->texture)
+		downloaded1 = poly1->texture->downloaded; // there should be a opengl texture name here, usable for comparisons
+	if (poly2->texture)
+		downloaded2 = poly2->texture->downloaded;
+	diff64 = downloaded1 - downloaded2;
 	if (diff64 != 0) return diff64;
 
 	diff = poly1->polyFlags - poly2->polyFlags;
@@ -184,16 +190,21 @@ static int comparePolygonsNoShaders(const void *p1, const void *p2)
 
 	GLMipmap_t *texture1 = poly1->texture;
 	GLMipmap_t *texture2 = poly2->texture;
+	UINT32 downloaded1 = 0;
+	UINT32 downloaded2 = 0;
 	if (poly1->polyFlags & PF_NoTexture || poly1->horizonSpecial)
 		texture1 = NULL;
 	if (poly2->polyFlags & PF_NoTexture || poly2->horizonSpecial)
 		texture2 = NULL;
-	diff64 = texture1 - texture2;
-	if (diff64 != 0) return diff64;
-
+	if (texture1)
+		downloaded1 = texture1->downloaded; // there should be a opengl texture name here, usable for comparisons
+	if (texture2)
+		downloaded2 = texture2->downloaded;
 	// skywalls and horizon lines must retain their order for horizon lines to work
-	if (texture1 == NULL && texture2 == NULL)
+	if (!texture1 && !texture2)
 		return index1 - index2;
+	diff64 = downloaded1 - downloaded2;
+	if (diff64 != 0) return diff64;
 
 	diff = poly1->polyFlags - poly2->polyFlags;
 	if (diff != 0) return diff;

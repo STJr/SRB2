@@ -31,9 +31,7 @@ extern consvar_t cv_defaultskin;
 extern consvar_t cv_defaultplayercolor2;
 extern consvar_t cv_defaultskin2;
 
-#ifdef SEENAMES
 extern consvar_t cv_seenames, cv_allowseenames;
-#endif
 extern consvar_t cv_usemouse;
 extern consvar_t cv_usejoystick;
 extern consvar_t cv_usejoystick2;

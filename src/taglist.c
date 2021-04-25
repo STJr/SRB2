@@ -15,6 +15,11 @@
 #include "z_zone.h"
 #include "r_data.h"
 
+// Bit array of whether a tag exists for sectors/lines/things.
+bitarray_t tags_available[BIT_ARRAY_SIZE (MAXTAGS)];
+
+size_t num_tags;
+
 // Taggroups are used to list elements of the same tag, for iteration.
 // Since elements can now have multiple tags, it means an element may appear
 // in several taggroups at the same time. These are built on level load.
@@ -105,6 +110,39 @@ size_t Taggroup_Find (const taggroup_t *group, const size_t id)
 	return -1;
 }
 
+/// group->count, but also checks for NULL
+size_t Taggroup_Count (const taggroup_t *group)
+{
+	return group ? group->count : 0;
+}
+
+/// Iterate thru elements in a global taggroup.
+INT32 Taggroup_Iterate
+(		taggroup_t *garray[],
+		const size_t max_elements,
+		const mtag_t tag,
+		const size_t p)
+{
+	const taggroup_t *group;
+
+	if (tag == MTAG_GLOBAL)
+	{
+		if (p < max_elements)
+			return p;
+		return -1;
+	}
+
+	group = garray[(UINT16)tag];
+
+	if (group)
+	{
+		if (p < group->count)
+			return group->elements[p];
+		return -1;
+	}
+	return -1;
+}
+
 /// Add an element to a global taggroup.
 void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 {
@@ -120,6 +158,12 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 	if (Taggroup_Find(group, id) != (size_t)-1)
 		return;
 
+	if (! in_bit_array(tags_available, tag))
+	{
+		num_tags++;
+		set_bit_array(tags_available, tag);
+	}
+
 	// Create group if empty.
 	if (!group)
 	{
@@ -133,17 +177,26 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 		for (i = 0; i < group->count; i++)
 			if (group->elements[i] > id)
 				break;
-
-		group->elements = Z_Realloc(group->elements, (group->count + 1) * sizeof(size_t), PU_LEVEL, NULL);
-
-		// Offset existing elements to make room for the new one.
-		if (i < group->count)
-			memmove(&group->elements[i + 1], &group->elements[i], group->count - i);
 	}
 
+	group->elements = Z_Realloc(group->elements, (group->count + 1) * sizeof(size_t), PU_LEVEL, NULL);
+
+	// Offset existing elements to make room for the new one.
+	if (i < group->count)
+		memmove(&group->elements[i + 1], &group->elements[i], group->count - i);
+
 	group->count++;
-	group->elements = Z_Realloc(group->elements, group->count * sizeof(size_t), PU_LEVEL, NULL);
 	group->elements[i] = id;
+}
+
+static size_t total_elements_with_tag (const mtag_t tag)
+{
+	return
+		(
+				Taggroup_Count(tags_sectors[tag]) +
+				Taggroup_Count(tags_lines[tag]) +
+				Taggroup_Count(tags_mapthings[tag])
+		);
 }
 
 /// Remove an element from a global taggroup.
@@ -151,7 +204,7 @@ void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 {
 	taggroup_t *group;
 	size_t rempos;
-	size_t newcount;
+	size_t oldcount;
 
 	if (tag == MTAG_GLOBAL)
 		return;
@@ -161,8 +214,14 @@ void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 	if ((rempos = Taggroup_Find(group, id)) == (size_t)-1)
 		return;
 
+	if (group->count == 1 && total_elements_with_tag(tag) == 1)
+	{
+		num_tags--;
+		unset_bit_array(tags_available, tag);
+	}
+
 	// Strip away taggroup if no elements left.
-	if (!(newcount = --group->count))
+	if (!(oldcount = group->count--))
 	{
 		Z_Free(group->elements);
 		Z_Free(group);
@@ -170,19 +229,18 @@ void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 	}
 	else
 	{
-		size_t *newelements = Z_Malloc(newcount * sizeof(size_t), PU_LEVEL, NULL);
+		size_t *newelements = Z_Malloc(group->count * sizeof(size_t), PU_LEVEL, NULL);
 		size_t i;
 
 		// Copy the previous entries save for the one to remove.
 		for (i = 0; i < rempos; i++)
 			newelements[i] = group->elements[i];
 
-		for (i = rempos + 1; i < group->count; i++)
+		for (i = rempos + 1; i < oldcount; i++)
 			newelements[i - 1] = group->elements[i];
 
 		Z_Free(group->elements);
 		group->elements = newelements;
-		group->count = newcount;
 	}
 }
 
@@ -208,6 +266,9 @@ static void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid)
 void Taglist_InitGlobalTables(void)
 {
 	size_t i, j;
+
+	memset(tags_available, 0, sizeof tags_available);
+	num_tags = 0;
 
 	for (i = 0; i < MAXTAGS; i++)
 	{
@@ -236,56 +297,17 @@ void Taglist_InitGlobalTables(void)
 
 INT32 Tag_Iterate_Sectors (const mtag_t tag, const size_t p)
 {
-	if (tag == MTAG_GLOBAL)
-	{
-		if (p < numsectors)
-			return p;
-		return -1;
-	}
-
-	if (tags_sectors[(UINT16)tag])
-	{
-		if (p < tags_sectors[(UINT16)tag]->count)
-			return tags_sectors[(UINT16)tag]->elements[p];
-		return -1;
-	}
-	return -1;
+	return Taggroup_Iterate(tags_sectors, numsectors, tag, p);
 }
 
 INT32 Tag_Iterate_Lines (const mtag_t tag, const size_t p)
 {
-	if (tag == MTAG_GLOBAL)
-	{
-		if (p < numlines)
-			return p;
-		return -1;
-	}
-
-	if (tags_lines[(UINT16)tag])
-	{
-		if (p < tags_lines[(UINT16)tag]->count)
-			return tags_lines[(UINT16)tag]->elements[p];
-		return -1;
-	}
-	return -1;
+	return Taggroup_Iterate(tags_lines, numlines, tag, p);
 }
 
 INT32 Tag_Iterate_Things (const mtag_t tag, const size_t p)
 {
-	if (tag == MTAG_GLOBAL)
-	{
-		if (p < nummapthings)
-			return p;
-		return -1;
-	}
-
-	if (tags_mapthings[(UINT16)tag])
-	{
-		if (p < tags_mapthings[(UINT16)tag]->count)
-			return tags_mapthings[(UINT16)tag]->elements[p];
-		return -1;
-	}
-	return -1;
+	return Taggroup_Iterate(tags_mapthings, nummapthings, tag, p);
 }
 
 INT32 Tag_FindLineSpecial(const INT16 special, const mtag_t tag)

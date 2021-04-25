@@ -4060,7 +4060,7 @@ bossjustdie:
 			// Initialize my junk
 			junk.tags.tags = NULL;
 			junk.tags.count = 0;
-			
+
 			Tag_FSet(&junk.tags, LE_KOOPA);
 			EV_DoCeiling(&junk, raiseToHighest);
 			return;
@@ -4912,7 +4912,7 @@ void A_ThrownRing(mobj_t *actor)
 		}
 
 		if (actor->tracer && (actor->tracer->health)
-			&& (actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC))// Already found someone to follow.
+			&& (actor->tracer->player && actor->tracer->player->powers[pw_shield] & SH_PROTECTELECTRIC))// Already found someone to follow.
 		{
 			const INT32 temp = actor->threshold;
 			actor->threshold = 32000;
@@ -5920,13 +5920,18 @@ void A_DetonChase(mobj_t *actor)
 
 	if (actor->reactiontime == -42)
 	{
-		fixed_t xyspeed;
+		fixed_t xyspeed, speed;
+
+		if (actor->target->player)
+			speed = actor->target->player->normalspeed;
+		else
+			speed = actor->target->info->speed;
 
 		actor->reactiontime = -42;
 
 		exact = actor->movedir>>ANGLETOFINESHIFT;
-		xyspeed = FixedMul(FixedMul(actor->tracer->player->normalspeed,3*FRACUNIT/4), FINECOSINE(exact));
-		actor->momz = FixedMul(FixedMul(actor->tracer->player->normalspeed,3*FRACUNIT/4), FINESINE(exact));
+		xyspeed = FixedMul(FixedMul(speed,3*FRACUNIT/4), FINECOSINE(exact));
+		actor->momz = FixedMul(FixedMul(speed,3*FRACUNIT/4), FINESINE(exact));
 
 		exact = actor->angle>>ANGLETOFINESHIFT;
 		actor->momx = FixedMul(xyspeed, FINECOSINE(exact));
@@ -7521,7 +7526,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 	}
 
 	// Target hit, retreat!
-	if (actor->target->player->powers[pw_flashing] > TICRATE || actor->flags2 & MF2_FRET)
+	if ((actor->target->player && actor->target->player->powers[pw_flashing] > TICRATE) || actor->flags2 & MF2_FRET)
 	{
 		UINT8 prandom = P_RandomByte();
 		actor->z++; // unstick from the floor
@@ -7532,7 +7537,7 @@ void A_Boss2PogoTarget(mobj_t *actor)
 	// Try to land on top of the player.
 	else if (P_AproxDistance(actor->x-actor->target->x, actor->y-actor->target->y) < FixedMul(512*FRACUNIT, actor->scale))
 	{
-		fixed_t airtime, gravityadd, zoffs;
+		fixed_t airtime, gravityadd, zoffs, height;
 
 		// check gravity in the sector (for later math)
 		P_CheckGravity(actor, true);
@@ -7554,7 +7559,13 @@ void A_Boss2PogoTarget(mobj_t *actor)
 		// Remember, kids!
 		// Reduced down Calculus lets you avoid bad 'logic math' loops!
 		//airtime = FixedDiv(-actor->momz<<1, gravityadd)<<1; // going from 0 to 0 is much simpler
-		zoffs = (P_GetPlayerHeight(actor->target->player)>>1) + (actor->target->floorz - actor->floorz); // offset by the difference in floor height plus half the player height,
+
+		if (actor->target->player)
+			height = P_GetPlayerHeight(actor->target->player) >> 1;
+		else
+			height = actor->target->height >> 1;
+
+		zoffs = height + (actor->target->floorz - actor->floorz); // offset by the difference in floor height plus half the player height,
 		airtime = FixedDiv((-actor->momz - FixedSqrt(FixedMul(actor->momz,actor->momz)+zoffs)), gravityadd)<<1; // to try and land on their head rather than on their feet
 
 		actor->angle = R_PointToAngle2(actor->x, actor->y, actor->target->x, actor->target->y);
@@ -9868,22 +9879,23 @@ void A_Custom3DRotate(mobj_t *actor)
 	if (LUA_CallAction(A_CUSTOM3DROTATE, actor))
 		return;
 
+	if (!actor->target) // Ensure we actually have a target first.
+	{
+		CONS_Printf("Error: A_Custom3DRotate: Object has no target.\n");
+		P_RemoveMobj(actor);
+		return;
+	}
+
 	if (actor->target->health == 0)
 	{
 		P_RemoveMobj(actor);
 		return;
 	}
 
-	if (!actor->target) // This should NEVER happen.
-	{
-		if (cv_debug)
-			CONS_Printf("Error: Object has no target\n");
-		P_RemoveMobj(actor);
-		return;
-	}
 	if (hspeed==0 && vspeed==0)
 	{
-		CONS_Printf("Error: A_Custom3DRotate: Object has no speed.\n");
+		if (cv_debug)
+			CONS_Printf("Error: A_Custom3DRotate: Object has no speed.\n");
 		return;
 	}
 

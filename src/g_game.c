@@ -444,9 +444,7 @@ consvar_t cv_firenaxis2 = CVAR_INIT ("joyaxis2_firenormal", "Z-Axis", CV_SAVE, j
 consvar_t cv_deadzone2 = CVAR_INIT ("joy_deadzone2", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 consvar_t cv_digitaldeadzone2 = CVAR_INIT ("joy_digdeadzone2", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
 
-#ifdef SEENAMES
 player_t *seenplayer; // player we're aiming at right now
-#endif
 
 // now automatically allocated in D_RegisterClientCommands
 // so that it doesn't have to be updated depending on the value of MAXPLAYERS
@@ -1680,7 +1678,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// At this point, cmd doesn't contain the final angle yet,
 	// So we need to temporarily transform it so Lua scripters
 	// don't need to handle it differently than in other hooks.
-	if (gamestate == GS_LEVEL)
+	if (addedtogame && gamestate == GS_LEVEL)
 	{
 		INT16 extra = ticcmd_oldangleturn[forplayer] - player->oldrelangleturn;
 		INT16 origangle = cmd->angleturn;
@@ -2293,7 +2291,11 @@ void G_Ticker(boolean run)
 	{
 		if (playeringame[i])
 		{
+			INT16 received;
+
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+
+			received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
 
 			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
 			players[i].oldrelangleturn = players[i].cmd.angleturn;
@@ -2301,6 +2303,9 @@ void G_Ticker(boolean run)
 				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
 			else
 				players[i].cmd.angleturn = players[i].angleturn;
+
+			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
+			players[i].cmd.angleturn |= received;
 		}
 	}
 
@@ -3968,6 +3973,7 @@ static void G_DoCompleted(void)
 	{
 		G_SetGamestate(GS_INTERMISSION);
 		Y_StartIntermission();
+		Y_LoadIntermissionData();
 		G_UpdateVisited();
 		G_HandleSaveLevel();
 	}

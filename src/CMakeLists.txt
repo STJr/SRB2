@@ -276,6 +276,7 @@ set(SRB2_LUA_SOURCES
 	lua_hudlib.c
 	lua_infolib.c
 	lua_maplib.c
+	lua_taglib.c
 	lua_mathlib.c
 	lua_mobjlib.c
 	lua_playerlib.c
