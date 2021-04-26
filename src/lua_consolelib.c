@@ -400,23 +400,23 @@ static int lib_cvRegisterVar(lua_State *L)
 						{
 							memmove(&cvpv[2], &cvpv[0],
 									i * sizeof *cvpv);
+							i += 2;
 						}
 						cvpv[n].strvalue = MINMAX[n];
 						minmax_unset &= ~(1 << n);
 					}
 					else
 					{
-						n = i;
+						n = i++;
 						cvpv[n].strvalue = Z_StrDup(strval);
 					}
 
 					cvpv[n].value = (INT32)lua_tonumber(L, 6);
 
-					i++;
 					lua_pop(L, 1);
 				}
 
-				if (minmax_unset)
+				if (minmax_unset && minmax_unset != 3)
 					FIELDERROR("PossibleValue", "custom PossibleValue table requires requires both MIN and MAX keys if one is present");
 
 				cvpv[i].value = 0;
