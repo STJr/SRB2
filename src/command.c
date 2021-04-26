@@ -1441,6 +1441,10 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 						return;
 					}
 
+					// free the old value string
+					Z_Free(var->zstring);
+					var->zstring = NULL;
+
 					var->value = var->PossibleValue[i].value;
 					var->string = var->PossibleValue[i].strvalue;
 					goto finish;
@@ -1503,14 +1507,7 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 found:
 			if (client && execversion_enabled)
 			{
-				if (var->revert.allocated)
-				{
-					Z_Free(var->revert.v.string);
-					var->revert.allocated = false; // the below value is not allocated in zone memory, don't try to free it!
-				}
-
 				var->revert.v.const_munge = var->PossibleValue[i].strvalue;
-
 				return;
 			}
 
