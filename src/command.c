@@ -1441,6 +1441,10 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 						return;
 					}
 
+					// free the old value string
+					Z_Free(var->zstring);
+					var->zstring = NULL;
+
 					var->value = var->PossibleValue[i].value;
 					var->string = var->PossibleValue[i].strvalue;
 					goto finish;
