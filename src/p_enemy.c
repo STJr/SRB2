@@ -197,6 +197,7 @@ void A_ZThrust(mobj_t *actor);
 void A_SetTargetsTarget(mobj_t *actor);
 void A_SetObjectFlags(mobj_t *actor);
 void A_SetObjectFlags2(mobj_t *actor);
+void A_SetBlendMode(mobj_t *actor);
 void A_RandomState(mobj_t *actor);
 void A_RandomStateRange(mobj_t *actor);
 void A_DualAction(mobj_t *actor);
@@ -9083,6 +9084,29 @@ void A_SetObjectFlags2(mobj_t *actor)
 		actor->flags2 &= ~locvar1;
 	else
 		actor->flags2 = locvar1;
+}
+
+// Function: A_SetBlendMode
+//
+// Description: Sets the blend mode of an object
+//
+// var1 = blend mode to set
+// var2 = unused
+//
+void A_SetBlendMode(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+
+	if (LUA_CallAction(A_SETBLENDMODE, actor))
+		return;
+
+	if (locvar1 < 0 || locvar1 > AST_OVERLAY)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Blend mode %d out of range!\n", locvar1);
+		return;
+	}
+
+	actor->blendmode = locvar1;
 }
 
 // Function: A_BossJetFume

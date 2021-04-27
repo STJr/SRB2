@@ -219,6 +219,7 @@ actionpointer_t actionpointers[] =
 	{{A_SetTargetsTarget},       "A_SETTARGETSTARGET"},
 	{{A_SetObjectFlags},         "A_SETOBJECTFLAGS"},
 	{{A_SetObjectFlags2},        "A_SETOBJECTFLAGS2"},
+	{{A_SetBlendMode},           "A_SETBLENDMODE"},
 	{{A_RandomState},            "A_RANDOMSTATE"},
 	{{A_RandomStateRange},       "A_RANDOMSTATERANGE"},
 	{{A_DualAction},             "A_DUALACTION"},

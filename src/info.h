@@ -175,6 +175,7 @@ enum actionnum
 	A_SETTARGETSTARGET,
 	A_SETOBJECTFLAGS,
 	A_SETOBJECTFLAGS2,
+	A_SETBLENDMODE,
 	A_RANDOMSTATE,
 	A_RANDOMSTATERANGE,
 	A_DUALACTION,
@@ -441,6 +442,7 @@ void A_ZThrust();
 void A_SetTargetsTarget();
 void A_SetObjectFlags();
 void A_SetObjectFlags2();
+void A_SetBlendMode();
 void A_RandomState();
 void A_RandomStateRange();
 void A_DualAction();
