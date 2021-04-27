@@ -1019,6 +1019,37 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 		desttop += (y*vid.width) + x;
 	}
 
+	// Auto-crop at splitscreen borders!
+	if (splitscreen && (scrn & V_PERPLAYER))
+	{
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			#error Auto-cropping doesnt take quadscreen into account! Fix it!
+			// Hint: For player 1/2, copy player 1's code below. For player 3/4, copy player 2's code below
+			// For player 1/3 and 2/4, hijack the X wrap prevention lines? That's probably easiest
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer]) // Player 1's screen, crop at the bottom
+			{
+				// Just put a big old stop sign halfway through the screen
+				deststop -= vid.rowbytes * (vid.height>>1);
+			}
+			else //if (stplyr == &players[secondarydisplayplayer]) // Player 2's screen, crop at the top
+			{
+				if (y < (vid.height>>1)) // If the top is above the border
+				{
+					sy += ((vid.height>>1) - y) * rowfrac; // Start further down on the patch
+					h -= ((vid.height>>1) - y) * rowfrac; // Draw less downwards from the start
+					desttop += ((vid.height>>1) - y) * vid.width; // Start drawing at the border
+				}
+			}
+		}
+	}
+
 	for (col = sx; (col>>FRACBITS) < patch->width && (col - sx) < w; col += colfrac, ++x, desttop++)
 	{
 		INT32 topdelta, prevdelta = -1;

@@ -596,6 +596,76 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	if (option & V_WRAPY)
 		flags |= PF_ForceWrapY;
 
+	// Auto-crop at splitscreen borders!
+	if (splitscreen && (option & V_PERPLAYER))
+	{
+#define flerp(a,b,amount) (((a) * (1.0f - (amount))) + ((b) * (amount))) // Float lerp
+
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			#error Auto-cropping doesnt take quadscreen into account! Fix it!
+			// Hint: For player 1/2, copy player 1's code below. For player 3/4, copy player 2's code below
+			// For player 1/3 and 2/4, mangle the below code to apply horizontally instead of vertically
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer]) // Player 1's screen, crop at the bottom
+			{
+				if ((cy - fheight) < 0) // If the bottom is below the border
+				{
+					if (cy <= 0) // If the whole patch is beyond the border...
+						return; // ...crop away the entire patch, don't draw anything
+
+					if (fheight <= 0) // Don't divide by zero
+						return;
+
+					v[2].y = v[3].y = 0; // Clamp the polygon edge vertex position
+					// Now for the UV-map... Uh-oh, math time!
+
+					// On second thought, a basic linear interpolation suffices
+					//float full_height = fheight;
+					//float cropped_height = fheight - cy;
+					//float remaining_height = cy;
+					//float cropped_percentage = (fheight - cy) / fheight;
+					//float remaining_percentage = cy / fheight;
+					//v[2].t = v[3].t = lerp(v[2].t, v[0].t, cropped_percentage);
+					// By swapping v[2] and v[0], we can use remaining_percentage for less operations
+					//v[2].t = v[3].t = lerp(v[0].t, v[2].t, remaining_percentage);
+
+					v[2].t = v[3].t = flerp(v[0].t, v[2].t, cy/fheight);
+				}
+			}
+			else //if (stplyr == &players[secondarydisplayplayer]) // Player 2's screen, crop at the top
+			{
+				if (cy > 0) // If the top is above the border
+				{
+					if ((cy - fheight) >= 0) // If the whole patch is beyond the border...
+						return; // ...crop away the entire patch, don't draw anything
+
+					if (fheight <= 0) // Don't divide by zero
+						return;
+
+					v[0].y = v[1].y = 0; // Clamp the polygon edge vertex position
+					// Now for the UV-map... Uh-oh, math time!
+
+					// On second thought, a basic linear interpolation suffices
+					//float full_height = fheight;
+					//float cropped_height = cy;
+					//float remaining_height = fheight - cy;
+					//float cropped_percentage = cy / fheight;
+					//float remaining_percentage = (fheight - cy) / fheight;
+					//v[0].t = v[1].t = lerp(v[0].t, v[2].t, cropped_percentage);
+
+					v[0].t = v[1].t = flerp(v[0].t, v[2].t, cy/fheight);
+				}
+			}
+		}
+#undef flerp
+	}
+
 	// clip it since it is used for bunny scroll in doom I
 	if (alphalevel)
 	{
