@@ -690,6 +690,18 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	}
 }
 
+// Returns the height of the sloped plane at (px, py) as a floating point number
+static float R_GetSlopeZAt(const pslope_t *slope, fixed_t px, fixed_t py)
+{
+	float x = FixedToFloat(px - slope->o.x);
+	float y = FixedToFloat(py - slope->o.y);
+
+	x = (x * FixedToFloat(slope->d.x));
+	y = (y * FixedToFloat(slope->d.y));
+
+	return FixedToFloat(slope->o.z) + ((x + y) * FixedToFloat(slope->zdelta));
+}
+
 // Sets the texture origin vector of the sloped plane.
 static void R_SetSlopePlaneOrigin(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, fixed_t angle)
 {
@@ -697,6 +709,7 @@ static void R_SetSlopePlaneOrigin(pslope_t *slope, fixed_t xpos, fixed_t ypos, f
 
 	float vx = FixedToFloat(xpos + xoff);
 	float vy = FixedToFloat(ypos - yoff);
+	float vz = FixedToFloat(zpos);
 	float ang = ANG2RAD(ANGLE_270 - angle);
 
 	// p is the texture origin in view space
@@ -704,7 +717,7 @@ static void R_SetSlopePlaneOrigin(pslope_t *slope, fixed_t xpos, fixed_t ypos, f
 	// errors if the flat is rotated.
 	p->x = vx * cos(ang) - vy * sin(ang);
 	p->z = vx * sin(ang) + vy * cos(ang);
-	p->y = FixedToFloat(P_GetSlopeZAt(slope, -xoff, yoff) - zpos);
+	p->y = R_GetSlopeZAt(slope, -xoff, yoff) - vz;
 }
 
 // This function calculates all of the vectors necessary for drawing a sloped plane.
