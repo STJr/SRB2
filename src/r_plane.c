@@ -127,21 +127,20 @@ struct
 	boolean active;
 } planeripple;
 
-static void R_CalculatePlaneRipple(visplane_t *plane, INT32 y, fixed_t plheight, boolean calcfrac)
+// ripples da water texture
+static fixed_t R_CalculateRippleOffset(INT32 y)
 {
-	fixed_t distance = FixedMul(plheight, yslope[y]);
+	fixed_t distance = FixedMul(planeheight, yslope[y]);
 	const INT32 yay = (planeripple.offset + (distance>>9)) & 8191;
+	return FixedDiv(FINESINE(yay), (1<<12) + (distance>>11));
+}
 
-	// ripples da water texture
-	ds_bgofs = FixedDiv(FINESINE(yay), (1<<12) + (distance>>11))>>FRACBITS;
-
-	if (calcfrac)
-	{
-		angle_t angle = (plane->viewangle + plane->plangle)>>ANGLETOFINESHIFT;
-		angle = (angle + 2048) & 8191; // 90 degrees
-		planeripple.xfrac = FixedMul(FINECOSINE(angle), (ds_bgofs<<FRACBITS));
-		planeripple.yfrac = FixedMul(FINESINE(angle), (ds_bgofs<<FRACBITS));
-	}
+static void R_CalculatePlaneRipple(angle_t angle)
+{
+	angle >>= ANGLETOFINESHIFT;
+	angle = (angle + 2048) & 8191; // 90 degrees
+	planeripple.xfrac = FixedMul(FINECOSINE(angle), ds_bgofs);
+	planeripple.yfrac = FixedMul(FINESINE(angle), ds_bgofs);
 }
 
 static void R_UpdatePlaneRipple(void)
@@ -213,8 +212,7 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	// Water ripple effect
 	if (planeripple.active)
 	{
-		// Needed for ds_bgofs
-		R_CalculatePlaneRipple(currentplane, y, planeheight, (!currentplane->slope));
+		ds_bgofs = R_CalculateRippleOffset(y);
 
 		if (currentplane->slope)
 		{
@@ -224,9 +222,12 @@ void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		}
 		else
 		{
+			R_CalculatePlaneRipple(currentplane->viewangle + currentplane->plangle);
 			ds_xfrac += planeripple.xfrac;
 			ds_yfrac += planeripple.yfrac;
 		}
+
+		ds_bgofs >>= FRACBITS;
 
 		if ((y + ds_bgofs) >= viewheight)
 			ds_bgofs = viewheight-y-1;
@@ -943,7 +944,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	xoffs = pl->xoffs;
 	yoffs = pl->yoffs;
-	planeheight = abs(pl->height - pl->viewz);
 
 	if (light >= LIGHTLEVELS)
 		light = LIGHTLEVELS-1;
@@ -1011,13 +1011,14 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		if (planeripple.active)
 		{
-			fixed_t plheight = abs(P_GetSlopeZAt(pl->slope, pl->viewx, pl->viewy) - pl->viewz);
+			planeheight = abs(P_GetSlopeZAt(pl->slope, pl->viewx, pl->viewy) - pl->viewz);
 
 			R_PlaneBounds(pl);
 
 			for (x = pl->high; x < pl->low; x++)
 			{
-				R_CalculatePlaneRipple(pl, x, plheight, true);
+				ds_bgofs = R_CalculateRippleOffset(x);
+				R_CalculatePlaneRipple(pl->viewangle + pl->plangle);
 				R_SetSlopePlaneVectors(pl, x, (xoffs + planeripple.xfrac), (yoffs + planeripple.yfrac), fudgecanyon);
 			}
 		}
@@ -1043,7 +1044,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 		planezlight = scalelight[light];
 	}
 	else
+	{
+		planeheight = abs(pl->height - pl->viewz);
 		planezlight = zlight[light];
+	}
 
 	// Use the correct span drawer depending on the powers-of-twoness
 	if (!ds_powersoftwo)
