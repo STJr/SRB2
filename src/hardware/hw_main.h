@@ -69,7 +69,7 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
 
 UINT8 HWR_GetTranstableAlpha(INT32 transtablenum);
-FBITFIELD HWR_GetBlendModeFlag(INT32 ast);
+FBITFIELD HWR_GetBlendModeFlag(INT32 style);
 FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf);
 FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
 

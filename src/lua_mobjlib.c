@@ -12,6 +12,7 @@
 
 #include "doomdef.h"
 #include "fastcmp.h"
+#include "r_data.h"
 #include "r_skins.h"
 #include "p_local.h"
 #include "g_game.h"
@@ -654,8 +655,13 @@ static int mobj_set(lua_State *L)
 		break;
 	}
 	case mobj_blendmode:
-		mo->blendmode = (INT32)luaL_checkinteger(L, 3);
+	{
+		INT32 blendmode = (INT32)luaL_checkinteger(L, 3);
+		if (blendmode < 0 || blendmode > AST_OVERLAY)
+			return luaL_error(L, "mobj.blendmode %d out of range (0 - %d).", blendmode, AST_OVERLAY);
+		mo->blendmode = blendmode;
 		break;
+	}
 	case mobj_bnext:
 		return NOSETPOS;
 	case mobj_bprev:
