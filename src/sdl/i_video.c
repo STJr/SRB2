@@ -1057,8 +1057,7 @@ void I_GetEvent(void)
 					M_SetupJoystickMenu(0);
 			 	break;
 			case SDL_QUIT:
-				if (Playing())
-					LUAh_GameQuit();
+				LUAh_GameQuit(true);
 				I_Quit();
 				break;
 		}
@@ -1863,7 +1862,6 @@ void VID_StartupOpenGL(void)
 		HWD.pfnReadRect         = hwSym("ReadRect",NULL);
 		HWD.pfnGClipRect        = hwSym("GClipRect",NULL);
 		HWD.pfnClearMipMapCache = hwSym("ClearMipMapCache",NULL);
-		HWD.pfnClearCacheList   = hwSym("ClearCacheList",NULL);
 		HWD.pfnSetSpecialState  = hwSym("SetSpecialState",NULL);
 		HWD.pfnSetPalette       = hwSym("SetPalette",NULL);
 		HWD.pfnGetTextureUsed   = hwSym("GetTextureUsed",NULL);

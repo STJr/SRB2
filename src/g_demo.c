@@ -1956,9 +1956,7 @@ void G_DoPlayDemo(char *defdemoname)
 	// Set skin
 	SetPlayerSkin(0, skin);
 
-#ifdef HAVE_BLUA
 	LUAh_MapChange(gamemap);
-#endif
 	displayplayer = consoleplayer = 0;
 	memset(playeringame,0,sizeof(playeringame));
 	playeringame[0] = true;

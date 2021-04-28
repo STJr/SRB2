@@ -59,6 +59,12 @@ ATTRINLINE static FUNCINLINE char myfget_color(MYFILE *f)
 
 	if (c >= '0' && c <= '9')
 		return 0x80+(c-'0');
+
+	c = tolower(c);
+
+	if (c >= 'a' && c <= 'f')
+		return 0x80+10+(c-'a');
+
 	return 0x80; // Unhandled -- default to no color
 }
 
@@ -638,26 +644,4 @@ void DEH_LoadDehackedLumpPwad(UINT16 wad, UINT16 lump, boolean mainfile)
 void DEH_LoadDehackedLump(lumpnum_t lumpnum)
 {
 	DEH_LoadDehackedLumpPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum), false);
-}
-
-void DEH_Check(void)
-{
-#if defined(_DEBUG) || defined(PARANOIA)
-	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
-	const size_t dehmobjs  = sizeof(MOBJTYPE_LIST)/sizeof(const char*);
-	const size_t dehpowers = sizeof(POWERS_LIST)/sizeof(const char*);
-	const size_t dehcolors = sizeof(COLOR_ENUMS)/sizeof(const char*);
-
-	if (dehstates != S_FIRSTFREESLOT)
-		I_Error("You forgot to update the Dehacked states list, you dolt!\n(%d states defined, versus %s in the Dehacked list)\n", S_FIRSTFREESLOT, sizeu1(dehstates));
-
-	if (dehmobjs != MT_FIRSTFREESLOT)
-		I_Error("You forgot to update the Dehacked mobjtype list, you dolt!\n(%d mobj types defined, versus %s in the Dehacked list)\n", MT_FIRSTFREESLOT, sizeu1(dehmobjs));
-
-	if (dehpowers != NUMPOWERS)
-		I_Error("You forgot to update the Dehacked powers list, you dolt!\n(%d powers defined, versus %s in the Dehacked list)\n", NUMPOWERS, sizeu1(dehpowers));
-
-	if (dehcolors != SKINCOLOR_FIRSTFREESLOT)
-		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", SKINCOLOR_FIRSTFREESLOT, sizeu1(dehcolors));
-#endif
 }

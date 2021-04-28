@@ -85,10 +85,11 @@ boolean PT_RequestFile(INT32 node);
 
 typedef enum
 {
+	LFTNS_NONE,    // This node is not connected
 	LFTNS_WAITING, // This node is waiting for the server to send the file
-	LFTNS_ASKED, // The server has told the node they're ready to send the file
+	LFTNS_ASKED,   // The server has told the node they're ready to send the file
 	LFTNS_SENDING, // The server is sending the file to this node
-	LFTNS_SENT // The node already has the file
+	LFTNS_SENT     // The node already has the file
 } luafiletransfernodestatus_t;
 
 typedef struct luafiletransfer_s
@@ -99,6 +100,7 @@ typedef struct luafiletransfer_s
 	INT32 id; // Callback ID
 	boolean ongoing;
 	luafiletransfernodestatus_t nodestatus[MAXNETNODES];
+	tic_t nodetimeouts[MAXNETNODES];
 	struct luafiletransfer_s *next;
 } luafiletransfer_t;
 

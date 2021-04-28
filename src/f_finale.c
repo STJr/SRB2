@@ -1074,6 +1074,7 @@ static const char *credits[] = {
 	"\1Programming",
 	"Alam \"GBC\" Arias",
 	"Logan \"GBA\" Arias",
+	"Zolton \"Zippy_Zolton\" Auburn",
 	"Colette \"fickleheart\" Bordelon",
 	"Andrew \"orospakr\" Clunis",
 	"Sally \"TehRealSalt\" Cochenour",
@@ -1104,6 +1105,7 @@ static const char *credits[] = {
 	"Sean \"Sryder13\" Ryder",
 	"Ehab \"Wolfy\" Saeed",
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
+	"Riku \"Ors\" Salminen", // Demo consistency improvements
 	"Jonas \"MascaraSnake\" Sauer",
 	"Wessel \"sphere\" Smit",
 	"\"SSNTails\"",
@@ -1136,6 +1138,7 @@ static const char *credits[] = {
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"William \"GuyWithThePie\" Kloppenberg",
 	"Alice \"Alacroix\" de Lemos",
+	"Logan \"Hyperchaotix\" McCloud",
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"Andrew \"Senku Niola\" Moran",
 	"\"MotorRoach\"",
@@ -2543,28 +2546,28 @@ static void F_UnloadAlacroixGraphics(SINT8 oldttscale)
 	oldttscale--; // zero-based index
 	for (i = 0; i < TTMAX_ALACROIX; i++)
 	{
-		if(ttembl[oldttscale][i]) { Z_Free(ttembl[oldttscale][i]); ttembl[oldttscale][i] = 0; }
-		if(ttribb[oldttscale][i]) { Z_Free(ttribb[oldttscale][i]); ttribb[oldttscale][i] = 0; }
-		if(ttsont[oldttscale][i]) { Z_Free(ttsont[oldttscale][i]); ttsont[oldttscale][i] = 0; }
-		if(ttrobo[oldttscale][i]) { Z_Free(ttrobo[oldttscale][i]); ttrobo[oldttscale][i] = 0; }
-		if(tttwot[oldttscale][i]) { Z_Free(tttwot[oldttscale][i]); tttwot[oldttscale][i] = 0; }
-		if(ttrbtx[oldttscale][i]) { Z_Free(ttrbtx[oldttscale][i]); ttrbtx[oldttscale][i] = 0; }
-		if(ttsoib[oldttscale][i]) { Z_Free(ttsoib[oldttscale][i]); ttsoib[oldttscale][i] = 0; }
-		if(ttsoif[oldttscale][i]) { Z_Free(ttsoif[oldttscale][i]); ttsoif[oldttscale][i] = 0; }
-		if(ttsoba[oldttscale][i]) { Z_Free(ttsoba[oldttscale][i]); ttsoba[oldttscale][i] = 0; }
-		if(ttsobk[oldttscale][i]) { Z_Free(ttsobk[oldttscale][i]); ttsobk[oldttscale][i] = 0; }
-		if(ttsodh[oldttscale][i]) { Z_Free(ttsodh[oldttscale][i]); ttsodh[oldttscale][i] = 0; }
-		if(tttaib[oldttscale][i]) { Z_Free(tttaib[oldttscale][i]); tttaib[oldttscale][i] = 0; }
-		if(tttaif[oldttscale][i]) { Z_Free(tttaif[oldttscale][i]); tttaif[oldttscale][i] = 0; }
-		if(tttaba[oldttscale][i]) { Z_Free(tttaba[oldttscale][i]); tttaba[oldttscale][i] = 0; }
-		if(tttabk[oldttscale][i]) { Z_Free(tttabk[oldttscale][i]); tttabk[oldttscale][i] = 0; }
-		if(tttabt[oldttscale][i]) { Z_Free(tttabt[oldttscale][i]); tttabt[oldttscale][i] = 0; }
-		if(tttaft[oldttscale][i]) { Z_Free(tttaft[oldttscale][i]); tttaft[oldttscale][i] = 0; }
-		if(ttknib[oldttscale][i]) { Z_Free(ttknib[oldttscale][i]); ttknib[oldttscale][i] = 0; }
-		if(ttknif[oldttscale][i]) { Z_Free(ttknif[oldttscale][i]); ttknif[oldttscale][i] = 0; }
-		if(ttknba[oldttscale][i]) { Z_Free(ttknba[oldttscale][i]); ttknba[oldttscale][i] = 0; }
-		if(ttknbk[oldttscale][i]) { Z_Free(ttknbk[oldttscale][i]); ttknbk[oldttscale][i] = 0; }
-		if(ttkndh[oldttscale][i]) { Z_Free(ttkndh[oldttscale][i]); ttkndh[oldttscale][i] = 0; }
+		if(ttembl[oldttscale][i]) { Patch_Free(ttembl[oldttscale][i]); ttembl[oldttscale][i] = 0; }
+		if(ttribb[oldttscale][i]) { Patch_Free(ttribb[oldttscale][i]); ttribb[oldttscale][i] = 0; }
+		if(ttsont[oldttscale][i]) { Patch_Free(ttsont[oldttscale][i]); ttsont[oldttscale][i] = 0; }
+		if(ttrobo[oldttscale][i]) { Patch_Free(ttrobo[oldttscale][i]); ttrobo[oldttscale][i] = 0; }
+		if(tttwot[oldttscale][i]) { Patch_Free(tttwot[oldttscale][i]); tttwot[oldttscale][i] = 0; }
+		if(ttrbtx[oldttscale][i]) { Patch_Free(ttrbtx[oldttscale][i]); ttrbtx[oldttscale][i] = 0; }
+		if(ttsoib[oldttscale][i]) { Patch_Free(ttsoib[oldttscale][i]); ttsoib[oldttscale][i] = 0; }
+		if(ttsoif[oldttscale][i]) { Patch_Free(ttsoif[oldttscale][i]); ttsoif[oldttscale][i] = 0; }
+		if(ttsoba[oldttscale][i]) { Patch_Free(ttsoba[oldttscale][i]); ttsoba[oldttscale][i] = 0; }
+		if(ttsobk[oldttscale][i]) { Patch_Free(ttsobk[oldttscale][i]); ttsobk[oldttscale][i] = 0; }
+		if(ttsodh[oldttscale][i]) { Patch_Free(ttsodh[oldttscale][i]); ttsodh[oldttscale][i] = 0; }
+		if(tttaib[oldttscale][i]) { Patch_Free(tttaib[oldttscale][i]); tttaib[oldttscale][i] = 0; }
+		if(tttaif[oldttscale][i]) { Patch_Free(tttaif[oldttscale][i]); tttaif[oldttscale][i] = 0; }
+		if(tttaba[oldttscale][i]) { Patch_Free(tttaba[oldttscale][i]); tttaba[oldttscale][i] = 0; }
+		if(tttabk[oldttscale][i]) { Patch_Free(tttabk[oldttscale][i]); tttabk[oldttscale][i] = 0; }
+		if(tttabt[oldttscale][i]) { Patch_Free(tttabt[oldttscale][i]); tttabt[oldttscale][i] = 0; }
+		if(tttaft[oldttscale][i]) { Patch_Free(tttaft[oldttscale][i]); tttaft[oldttscale][i] = 0; }
+		if(ttknib[oldttscale][i]) { Patch_Free(ttknib[oldttscale][i]); ttknib[oldttscale][i] = 0; }
+		if(ttknif[oldttscale][i]) { Patch_Free(ttknif[oldttscale][i]); ttknif[oldttscale][i] = 0; }
+		if(ttknba[oldttscale][i]) { Patch_Free(ttknba[oldttscale][i]); ttknba[oldttscale][i] = 0; }
+		if(ttknbk[oldttscale][i]) { Patch_Free(ttknbk[oldttscale][i]); ttknbk[oldttscale][i] = 0; }
+		if(ttkndh[oldttscale][i]) { Patch_Free(ttkndh[oldttscale][i]); ttkndh[oldttscale][i] = 0; }
 	}
 	ttloaded[oldttscale] = false;
 }

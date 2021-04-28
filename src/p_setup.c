@@ -1621,20 +1621,20 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		P_SetLinedefV1(i, atol(val));
 	else if (fastcmp(param, "v2"))
 		P_SetLinedefV2(i, atol(val));
+	else if (strlen(param) == 7 && fastncmp(param, "arg", 3) && fastncmp(param + 4, "str", 3))
+	{
+		size_t argnum = param[3] - '0';
+		if (argnum >= NUMLINESTRINGARGS)
+			return;
+		lines[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+		M_Memcpy(lines[i].stringargs[argnum], val, strlen(val) + 1);
+	}
 	else if (fastncmp(param, "arg", 3) && strlen(param) > 3)
 	{
 		size_t argnum = atol(param + 3);
 		if (argnum >= NUMLINEARGS)
 			return;
 		lines[i].args[argnum] = atol(val);
-	}
-	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
-	{
-		size_t argnum = param[9] - '0';
-		if (argnum >= NUMLINESTRINGARGS)
-			return;
-		lines[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
-		M_Memcpy(lines[i].stringargs[argnum], val, strlen(val) + 1);
 	}
 	else if (fastcmp(param, "sidefront"))
 		lines[i].sidenum[0] = atol(val);
@@ -1720,20 +1720,20 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 	else if (fastcmp(param, "ambush") && fastcmp("true", val))
 		mapthings[i].options |= MTF_AMBUSH;
 
+	else if (strlen(param) == 7 && fastncmp(param, "arg", 3) && fastncmp(param + 4, "str", 3))
+	{
+		size_t argnum = param[3] - '0';
+		if (argnum >= NUMMAPTHINGSTRINGARGS)
+			return;
+		mapthings[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+		M_Memcpy(mapthings[i].stringargs[argnum], val, strlen(val) + 1);
+	}
 	else if (fastncmp(param, "arg", 3) && strlen(param) > 3)
 	{
 		size_t argnum = atol(param + 3);
 		if (argnum >= NUMMAPTHINGARGS)
 			return;
 		mapthings[i].args[argnum] = atol(val);
-	}
-	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
-	{
-		size_t argnum = param[9] - '0';
-		if (argnum >= NUMMAPTHINGSTRINGARGS)
-			return;
-		mapthings[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
-		M_Memcpy(mapthings[i].stringargs[argnum], val, strlen(val) + 1);
 	}
 }
 
@@ -3171,7 +3171,7 @@ static void P_ConvertBinaryMap(void)
 		switch (mapthings[i].type)
 		{
 		case 750:
-			Tag_Add(&mapthings[i].tags, mapthings[i].angle);
+			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
 			break;
 		case 760:
 		case 761:
@@ -4135,7 +4135,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 #ifdef HWRENDER
 	// Free GPU textures before freeing patches.
-	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
 #endif
 
@@ -4500,7 +4500,7 @@ boolean P_AddWadFile(const char *wadfilename)
 
 #ifdef HWRENDER
 	// Free GPU textures before freeing patches.
-	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
 #endif
 

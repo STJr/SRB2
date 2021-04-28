@@ -34,7 +34,7 @@
 #include "m_random.h" // quake camera shake
 #include "r_portal.h"
 #include "r_main.h"
-#include "i_system.h" // I_GetTimeMicros
+#include "i_system.h" // I_GetPreciseTime
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -100,17 +100,17 @@ lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 extracolormap_t *extra_colormaps = NULL;
 
 // Render stats
-int ps_prevframetime = 0;
-int ps_rendercalltime = 0;
-int ps_uitime = 0;
-int ps_swaptime = 0;
+precise_t ps_prevframetime = 0;
+precise_t ps_rendercalltime = 0;
+precise_t ps_uitime = 0;
+precise_t ps_swaptime = 0;
 
-int ps_bsptime = 0;
+precise_t ps_bsptime = 0;
 
-int ps_sw_spritecliptime = 0;
-int ps_sw_portaltime = 0;
-int ps_sw_planetime = 0;
-int ps_sw_maskedtime = 0;
+precise_t ps_sw_spritecliptime = 0;
+precise_t ps_sw_portaltime = 0;
+precise_t ps_sw_planetime = 0;
+precise_t ps_sw_maskedtime = 0;
 
 int ps_numbspcalls = 0;
 int ps_numsprites = 0;
@@ -1089,8 +1089,6 @@ subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
 // 18/08/18: (No it's actually 16*viewheight, thanks Jimita for finding this out)
 static void R_SetupFreelook(player_t *player, boolean skybox)
 {
-	INT32 dy = 0;
-
 #ifndef HWRENDER
 	(void)player;
 	(void)skybox;
@@ -1109,14 +1107,15 @@ static void R_SetupFreelook(player_t *player, boolean skybox)
 		G_SoftwareClipAimingPitch((INT32 *)&aimingangle);
 	}
 
-	if (rendermode == render_soft)
-	{
-		dy = (AIMINGTODY(aimingangle)>>FRACBITS) * viewwidth/BASEVIDWIDTH;
-		yslope = &yslopetab[viewheight*8 - (viewheight/2 + dy)];
-	}
+	centeryfrac = (viewheight/2)<<FRACBITS;
 
-	centery = (viewheight/2) + dy;
-	centeryfrac = centery<<FRACBITS;
+	if (rendermode == render_soft)
+		centeryfrac += FixedMul(AIMINGTODY(aimingangle), FixedDiv(viewwidth<<FRACBITS, BASEVIDWIDTH<<FRACBITS));
+
+	centery = FixedInt(FixedRound(centeryfrac));
+
+	if (rendermode == render_soft)
+		yslope = &yslopetab[viewheight*8 - centery];
 }
 
 void R_SetupFrame(player_t *player)
@@ -1498,9 +1497,9 @@ void R_RenderPlayerView(player_t *player)
 	ProfZeroTimer();
 #endif
 	ps_numbspcalls = ps_numpolyobjects = ps_numdrawnodes = 0;
-	ps_bsptime = I_GetTimeMicros();
+	ps_bsptime = I_GetPreciseTime();
 	R_RenderBSPNode((INT32)numnodes - 1);
-	ps_bsptime = I_GetTimeMicros() - ps_bsptime;
+	ps_bsptime = I_GetPreciseTime() - ps_bsptime;
 	ps_numsprites = visspritecount;
 #ifdef TIMING
 	RDMSR(0x10, &mycount);
@@ -1511,9 +1510,9 @@ void R_RenderPlayerView(player_t *player)
 //profile stuff ---------------------------------------------------------
 	Mask_Post(&masks[nummasks - 1]);
 
-	ps_sw_spritecliptime = I_GetTimeMicros();
+	ps_sw_spritecliptime = I_GetPreciseTime();
 	R_ClipSprites(drawsegs, NULL);
-	ps_sw_spritecliptime = I_GetTimeMicros() - ps_sw_spritecliptime;
+	ps_sw_spritecliptime = I_GetPreciseTime() - ps_sw_spritecliptime;
 
 
 	// Add skybox portals caused by sky visplanes.
@@ -1521,7 +1520,7 @@ void R_RenderPlayerView(player_t *player)
 		Portal_AddSkyboxPortals();
 
 	// Portal rendering. Hijacks the BSP traversal.
-	ps_sw_portaltime = I_GetTimeMicros();
+	ps_sw_portaltime = I_GetPreciseTime();
 	if (portal_base)
 	{
 		portal_t *portal;
@@ -1561,17 +1560,17 @@ void R_RenderPlayerView(player_t *player)
 			Portal_Remove(portal);
 		}
 	}
-	ps_sw_portaltime = I_GetTimeMicros() - ps_sw_portaltime;
+	ps_sw_portaltime = I_GetPreciseTime() - ps_sw_portaltime;
 
-	ps_sw_planetime = I_GetTimeMicros();
+	ps_sw_planetime = I_GetPreciseTime();
 	R_DrawPlanes();
-	ps_sw_planetime = I_GetTimeMicros() - ps_sw_planetime;
+	ps_sw_planetime = I_GetPreciseTime() - ps_sw_planetime;
 
 	// draw mid texture and sprite
 	// And now 3D floors/sides!
-	ps_sw_maskedtime = I_GetTimeMicros();
+	ps_sw_maskedtime = I_GetPreciseTime();
 	R_DrawMasked(masks, nummasks);
-	ps_sw_maskedtime = I_GetTimeMicros() - ps_sw_maskedtime;
+	ps_sw_maskedtime = I_GetPreciseTime() - ps_sw_maskedtime;
 
 	free(masks);
 }

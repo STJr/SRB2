@@ -16,25 +16,25 @@
 #include "lua_script.h"
 #include "p_local.h"
 
-extern int ps_tictime;
+extern precise_t ps_tictime;
 
-extern int ps_playerthink_time;
-extern int ps_thinkertime;
+extern precise_t ps_playerthink_time;
+extern precise_t ps_thinkertime;
 
-extern int ps_thlist_times[];
+extern precise_t ps_thlist_times[];
 
-extern int ps_checkposition_calls;
+extern int       ps_checkposition_calls;
 
-extern int ps_lua_thinkframe_time;
-extern int ps_lua_mobjhooks;
+extern precise_t ps_lua_thinkframe_time;
+extern int       ps_lua_mobjhooks;
 
 typedef struct
 {
-	UINT32 time_taken;
+	precise_t time_taken;
 	char short_src[LUA_IDSIZE];
 } ps_hookinfo_t;
 
-void PS_SetThinkFrameHookInfo(int index, UINT32 time_taken, char* short_src);
+void PS_SetThinkFrameHookInfo(int index, precise_t time_taken, char* short_src);
 
 void M_DrawPerfStats(void);
 

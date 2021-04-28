@@ -25,7 +25,7 @@
 
 #include "m_perfstats.h"
 #include "d_netcmd.h" // for cv_perfstats
-#include "i_system.h" // I_GetTimeMicros
+#include "i_system.h" // I_GetPreciseTime
 
 static UINT8 hooksAvailable[(hook_MAX/8)+1];
 
@@ -77,6 +77,8 @@ const char *const hookNames[hook_MAX+1] = {
 	"GameQuit",
 	"PlayerCmd",
 	"MusicChange",
+	"PlayerHeight",
+	"PlayerCanEnterSpinGaps",
 	NULL
 };
 
@@ -221,6 +223,8 @@ static int lib_addHook(lua_State *L)
 	case hook_ShieldSpawn:
 	case hook_ShieldSpecial:
 	case hook_PlayerThink:
+	case hook_PlayerHeight:
+	case hook_PlayerCanEnterSpinGaps:
 		lastp = &playerhooks;
 		break;
 	case hook_LinedefExecute:
@@ -469,7 +473,7 @@ void LUAh_ThinkFrame(void)
 	hook_p hookp;
 	// variables used by perf stats
 	int hook_index = 0;
-	int time_taken = 0;
+	precise_t time_taken = 0;
 	if (!gL || !(hooksAvailable[hook_ThinkFrame/8] & (1<<(hook_ThinkFrame%8))))
 		return;
 
@@ -481,7 +485,7 @@ void LUAh_ThinkFrame(void)
 			continue;
 
 		if (cv_perfstats.value == 3)
-			time_taken = I_GetTimeMicros();
+			time_taken = I_GetPreciseTime();
 		PushHook(gL, hookp);
 		if (lua_pcall(gL, 0, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
@@ -492,7 +496,7 @@ void LUAh_ThinkFrame(void)
 		if (cv_perfstats.value == 3)
 		{
 			lua_Debug ar;
-			time_taken = I_GetTimeMicros() - time_taken;
+			time_taken = I_GetPreciseTime() - time_taken;
 			// we need the function, let's just retrieve it again
 			PushHook(gL, hookp);
 			lua_getinfo(gL, ">S", &ar);
@@ -1754,7 +1758,6 @@ UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean
 }
 
 // Hook for MT_NAMECHECK
-#ifdef SEENAMES
 boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 {
 	hook_p hookp;
@@ -1798,7 +1801,6 @@ boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend)
 
 	return hasSeenPlayer;
 }
-#endif // SEENAMES
 
 boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 {
@@ -1846,7 +1848,7 @@ boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname)
 }
 
 // Hook for game quitting
-void LUAh_GameQuit(void)
+void LUAh_GameQuit(boolean quitting)
 {
 	hook_p hookp;
 	if (!gL || !(hooksAvailable[hook_GameQuit/8] & (1<<(hook_GameQuit%8))))
@@ -1860,7 +1862,8 @@ void LUAh_GameQuit(void)
 			continue;
 
 		PushHook(gL, hookp);
-		if (lua_pcall(gL, 0, 0, 1)) {
+		lua_pushboolean(gL, quitting);
+		if (lua_pcall(gL, 1, 0, 1)) {
 			if (!hookp->error || cv_debug & DBG_LUA)
 				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
 			lua_pop(gL, 1);
@@ -1971,4 +1974,90 @@ boolean LUAh_MusicChange(const char *oldname, char *newname, UINT16 *mflags, boo
 	lua_settop(gL, 0);
 	newname[6] = 0;
 	return hooked;
+}
+
+// Hook for determining player height
+fixed_t LUAh_PlayerHeight(player_t *player)
+{
+	hook_p hookp;
+	fixed_t newheight = -1;
+	if (!gL || !(hooksAvailable[hook_PlayerHeight/8] & (1<<(hook_PlayerHeight%8))))
+		return newheight;
+
+	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	for (hookp = playerhooks; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_PlayerHeight)
+			continue;
+
+		ps_lua_mobjhooks++;
+		if (lua_gettop(gL) == 1)
+			LUA_PushUserdata(gL, player, META_PLAYER);
+		PushHook(gL, hookp);
+		lua_pushvalue(gL, -2);
+		if (lua_pcall(gL, 1, 1, 1)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1))
+		{
+			fixed_t returnedheight = lua_tonumber(gL, -1);
+			// 0 height has... strange results, but it's not problematic like negative heights are.
+			// when an object's height is set to a negative number directly with lua, it's forced to 0 instead.
+			// here, I think it's better to ignore negatives so that they don't replace any results of previous hooks!
+			if (returnedheight >= 0)
+				newheight = returnedheight;
+		}
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return newheight;
+}
+
+// Hook for determining whether players are allowed passage through spin gaps
+UINT8 LUAh_PlayerCanEnterSpinGaps(player_t *player)
+{
+	hook_p hookp;
+	UINT8 canEnter = 0; // 0 = default, 1 = force yes, 2 = force no.
+	if (!gL || !(hooksAvailable[hook_PlayerCanEnterSpinGaps/8] & (1<<(hook_PlayerCanEnterSpinGaps%8))))
+		return 0;
+
+	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	for (hookp = playerhooks; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_PlayerCanEnterSpinGaps)
+			continue;
+
+		ps_lua_mobjhooks++;
+		if (lua_gettop(gL) == 1)
+			LUA_PushUserdata(gL, player, META_PLAYER);
+		PushHook(gL, hookp);
+		lua_pushvalue(gL, -2);
+		if (lua_pcall(gL, 1, 1, 1)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (!lua_isnil(gL, -1))
+		{ // if nil, leave canEnter = 0.
+			if (lua_toboolean(gL, -1))
+				canEnter = 1; // Force yes
+			else
+				canEnter = 2; // Force no
+		}
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return canEnter;
 }

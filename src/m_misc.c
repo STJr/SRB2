@@ -163,6 +163,11 @@ consvar_t cv_zlib_levela = CVAR_INIT ("apng_compress_level", "4", CV_SAVE, zlib_
 consvar_t cv_zlib_strategya = CVAR_INIT ("apng_strategy", "RLE", CV_SAVE, zlib_strategy_t, NULL);
 consvar_t cv_zlib_window_bitsa = CVAR_INIT ("apng_window_size", "32k", CV_SAVE, zlib_window_bits_t, NULL);
 consvar_t cv_apng_delay = CVAR_INIT ("apng_speed", "1x", CV_SAVE, apng_delay_t, NULL);
+consvar_t cv_apng_downscale = CVAR_INIT ("apng_downscale", "On", CV_SAVE, CV_OnOff, NULL);
+
+#ifdef USE_APNG
+static boolean apng_downscale = false; // So nobody can do something dumb like changing cvars mid output
+#endif
 
 boolean takescreenshot = false; // Take a screenshot this tic
 
@@ -981,25 +986,38 @@ static inline boolean M_PNGLib(void)
 
 static void M_PNGFrame(png_structp png_ptr, png_infop png_info_ptr, png_bytep png_buf)
 {
+	png_uint_16 downscale = apng_downscale ? vid.dupx : 1;
+
 	png_uint_32 pitch = png_get_rowbytes(png_ptr, png_info_ptr);
-	PNG_CONST png_uint_32 height = vid.height;
-	png_bytepp row_pointers = png_malloc(png_ptr, height* sizeof (png_bytep));
-	png_uint_32 y;
+	PNG_CONST png_uint_32 width = vid.width / downscale;
+	PNG_CONST png_uint_32 height = vid.height / downscale;
+	png_bytepp row_pointers = png_malloc(png_ptr, height * sizeof (png_bytep));
+	png_uint_32 x, y;
 	png_uint_16 framedelay = (png_uint_16)cv_apng_delay.value;
 
 	apng_frames++;
 
 	for (y = 0; y < height; y++)
 	{
-		row_pointers[y] = png_buf;
-		png_buf += pitch;
+		row_pointers[y] = malloc(pitch * sizeof(png_byte));
+		for (x = 0; x < width; x++)
+			row_pointers[y][x] = png_buf[x * downscale];
+		png_buf += pitch * (downscale * downscale);
 	}
+		//for (x = 0; x < width; x++)
+		//{
+		//	printf("%d", x);
+		//	row_pointers[y][x] = 0;
+		//}
+	/*	row_pointers[y] = calloc(1, sizeof(png_bytep));
+		png_buf += pitch * 2;
+	}*/
 
 #ifndef PNG_STATIC
 	if (aPNG_write_frame_head)
 #endif
 		aPNG_write_frame_head(apng_ptr, apng_info_ptr, row_pointers,
-			vid.width, /* width */
+			width,     /* width */
 			height,    /* height */
 			0,         /* x offset */
 			0,         /* y offset */
@@ -1030,6 +1048,12 @@ static void M_PNGfix_acTL(png_structp png_ptr, png_infop png_info_ptr,
 
 static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
 {
+	png_uint_16 downscale;
+
+	apng_downscale = (!!cv_apng_downscale.value);
+
+	downscale = apng_downscale ? vid.dupx : 1;
+
 	apng_FILE = fopen(filename,"wb+"); // + mode for reading
 	if (!apng_FILE)
 	{
@@ -1080,7 +1104,7 @@ static boolean M_SetupaPNG(png_const_charp filename, png_bytep pal)
 	png_set_compression_strategy(apng_ptr, cv_zlib_strategya.value);
 	png_set_compression_window_bits(apng_ptr, cv_zlib_window_bitsa.value);
 
-	M_PNGhdr(apng_ptr, apng_info_ptr, vid.width, vid.height, pal);
+	M_PNGhdr(apng_ptr, apng_info_ptr, vid.width / downscale, vid.height / downscale, pal);
 
 	M_PNGText(apng_ptr, apng_info_ptr, true);
 

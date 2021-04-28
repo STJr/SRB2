@@ -285,8 +285,8 @@ static void Lua_OnChange(void)
 
 	/// \todo Network this! XD_LUAVAR
 
-	lua_settop(gL, 0); // Just in case...
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
+	lua_insert(gL, 1); // Because LUA_Call wants it at index 1.
 
 	// From CV_OnChange registry field, get the function for this cvar by name.
 	lua_getfield(gL, LUA_REGISTRYINDEX, "CV_OnChange");
@@ -301,6 +301,7 @@ static void Lua_OnChange(void)
 
 	LUA_Call(gL, 1, 0, 1); // call function(cvar)
 	lua_pop(gL, 1); // pop CV_OnChange table
+	lua_remove(gL, 1); // remove LUA_GetErrorMessage
 }
 
 static int lib_cvRegisterVar(lua_State *L)

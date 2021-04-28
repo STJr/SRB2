@@ -1522,6 +1522,13 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_SPINFIRE5",
 	"S_SPINFIRE6",
 
+	"S_TEAM_SPINFIRE1",
+	"S_TEAM_SPINFIRE2",
+	"S_TEAM_SPINFIRE3",
+	"S_TEAM_SPINFIRE4",
+	"S_TEAM_SPINFIRE5",
+	"S_TEAM_SPINFIRE6",
+
 	// Spikes
 	"S_SPIKE1",
 	"S_SPIKE2",
@@ -3478,9 +3485,7 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_BLUEBRICKDEBRIS",
 	"S_YELLOWBRICKDEBRIS",
 
-#ifdef SEENAMES
 	"S_NAMECHECK",
-#endif
 };
 
 // RegEx to generate this from info.h: ^\tMT_([^,]+), --> \t"MT_\1",
@@ -4260,9 +4265,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_BLUEBRICKDEBRIS",
 	"MT_YELLOWBRICKDEBRIS",
 
-#ifdef SEENAMES
 	"MT_NAMECHECK",
-#endif
 };
 
 const char *const MOBJFLAG_LIST[] = {
@@ -4331,6 +4334,7 @@ const char *const MOBJFLAG2_LIST[] = {
 	"AMBUSH",         // Alternate behaviour typically set by MTF_AMBUSH
 	"LINKDRAW",       // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	"SHIELD",         // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
+	"SPLAT",          // Object is a splat
 	NULL
 };
 
@@ -4794,6 +4798,7 @@ struct int_const_s const INT_CONST[] = {
 
 	// fixed_t constants, from m_fixed.h
 	{"FRACUNIT",FRACUNIT},
+	{"FU"      ,FRACUNIT},
 	{"FRACBITS",FRACBITS},
 
 	// doomdef.h constants
@@ -4870,6 +4875,36 @@ struct int_const_s const INT_CONST[] = {
 	{"tr_trans80",tr_trans80},
 	{"tr_trans90",tr_trans90},
 	{"NUMTRANSMAPS",NUMTRANSMAPS},
+
+	// Alpha styles (blend modes)
+	{"AST_COPY",AST_COPY},
+	{"AST_TRANSLUCENT",AST_TRANSLUCENT},
+	{"AST_ADD",AST_ADD},
+	{"AST_SUBTRACT",AST_SUBTRACT},
+	{"AST_REVERSESUBTRACT",AST_REVERSESUBTRACT},
+	{"AST_MODULATE",AST_MODULATE},
+	{"AST_OVERLAY",AST_OVERLAY},
+
+	// Render flags
+	{"RF_HORIZONTALFLIP",RF_HORIZONTALFLIP},
+	{"RF_VERTICALFLIP",RF_VERTICALFLIP},
+	{"RF_ABSOLUTEOFFSETS",RF_ABSOLUTEOFFSETS},
+	{"RF_FLIPOFFSETS",RF_FLIPOFFSETS},
+	{"RF_SPLATMASK",RF_SPLATMASK},
+	{"RF_SLOPESPLAT",RF_SLOPESPLAT},
+	{"RF_OBJECTSLOPESPLAT",RF_OBJECTSLOPESPLAT},
+	{"RF_NOSPLATBILLBOARD",RF_NOSPLATBILLBOARD},
+	{"RF_NOSPLATROLLANGLE",RF_NOSPLATROLLANGLE},
+	{"RF_BLENDMASK",RF_BLENDMASK},
+	{"RF_FULLBRIGHT",RF_FULLBRIGHT},
+	{"RF_FULLDARK",RF_FULLDARK},
+	{"RF_NOCOLORMAPS",RF_NOCOLORMAPS},
+	{"RF_SPRITETYPEMASK",RF_SPRITETYPEMASK},
+	{"RF_PAPERSPRITE",RF_PAPERSPRITE},
+	{"RF_FLOORSPRITE",RF_FLOORSPRITE},
+	{"RF_SHADOWDRAW",RF_SHADOWDRAW},
+	{"RF_SHADOWEFFECTS",RF_SHADOWEFFECTS},
+	{"RF_DROPSHADOW",RF_DROPSHADOW},
 
 	// Level flags
 	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},
@@ -4987,6 +5022,7 @@ struct int_const_s const INT_CONST[] = {
 	{"SF_NOSUPERSPRITES",SF_NOSUPERSPRITES},
 	{"SF_NOSUPERJUMPBOOST",SF_NOSUPERJUMPBOOST},
 	{"SF_CANBUSTWALLS",SF_CANBUSTWALLS},
+	{"SF_NOSHIELDABILITY",SF_NOSHIELDABILITY},
 
 	// Dashmode constants
 	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
@@ -5421,3 +5457,27 @@ struct int_const_s const INT_CONST[] = {
 
 	{NULL,0}
 };
+
+// For this to work compile-time without being in this file,
+// this function would need to check sizes at runtime, without sizeof
+void DEH_TableCheck(void)
+{
+#if defined(_DEBUG) || defined(PARANOIA)
+	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
+	const size_t dehmobjs  = sizeof(MOBJTYPE_LIST)/sizeof(const char*);
+	const size_t dehpowers = sizeof(POWERS_LIST)/sizeof(const char*);
+	const size_t dehcolors = sizeof(COLOR_ENUMS)/sizeof(const char*);
+
+	if (dehstates != S_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked states list, you dolt!\n(%d states defined, versus %s in the Dehacked list)\n", S_FIRSTFREESLOT, sizeu1(dehstates));
+
+	if (dehmobjs != MT_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked mobjtype list, you dolt!\n(%d mobj types defined, versus %s in the Dehacked list)\n", MT_FIRSTFREESLOT, sizeu1(dehmobjs));
+
+	if (dehpowers != NUMPOWERS)
+		I_Error("You forgot to update the Dehacked powers list, you dolt!\n(%d powers defined, versus %s in the Dehacked list)\n", NUMPOWERS, sizeu1(dehpowers));
+
+	if (dehcolors != SKINCOLOR_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", SKINCOLOR_FIRSTFREESLOT, sizeu1(dehcolors));
+#endif
+}

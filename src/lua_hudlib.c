@@ -39,6 +39,7 @@ static UINT8 hudAvailable; // hud hooks field
 static const char *const hud_disable_options[] = {
 	"stagetitle",
 	"textspectator",
+	"crosshair",
 
 	"score",
 	"time",
@@ -896,8 +897,10 @@ static int libd_getColormap(lua_State *L)
 	else if (lua_type(L, 1) == LUA_TNUMBER) // skin number
 	{
 		skinnum = (INT32)luaL_checkinteger(L, 1);
-		if (skinnum < TC_BLINK || skinnum >= MAXSKINS)
-			return luaL_error(L, "skin number %d is out of range (%d - %d)", skinnum, TC_BLINK, MAXSKINS-1);
+		if (skinnum >= MAXSKINS)
+			return luaL_error(L, "skin number %d is out of range (>%d)", skinnum, MAXSKINS-1);
+		else if (skinnum < 0 && skinnum > TC_DEFAULT)
+			return luaL_error(L, "translation colormap index is out of range");
 	}
 	else // skin name
 	{

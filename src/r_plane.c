@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -154,14 +154,10 @@ static void R_UpdatePlaneRipple(void)
 // R_MapPlane
 //
 // Uses global vars:
+//  planeheight
 //  basexscale
 //  baseyscale
 //  centerx
-//  viewx
-//  viewy
-//  viewsin
-//  viewcos
-//  viewheight
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 {
@@ -580,7 +576,7 @@ void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 //
 void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 {
-	//    Alam: from r_splats's R_RenderFloorSplat
+	//    Alam: from r_splats's R_RasterizeFloorSplat
 	if (t1 >= vid.height) t1 = vid.height-1;
 	if (b1 >= vid.height) b1 = vid.height-1;
 	if (t2 >= vid.height) t2 = vid.height-1;
@@ -705,9 +701,9 @@ void R_CalculateSlopeVectors(pslope_t *slope, fixed_t planeviewx, fixed_t planev
 	n.z = -xscale * cos(ang);
 
 	ang = ANG2RAD(planeangle);
-	temp = P_GetSlopeZAt(slope, planeviewx + yscale * FLOAT_TO_FIXED(sin(ang)), planeviewy + yscale * FLOAT_TO_FIXED(cos(ang)));
+	temp = P_GetSlopeZAt(slope, planeviewx + FLOAT_TO_FIXED(yscale * sin(ang)), planeviewy + FLOAT_TO_FIXED(yscale * cos(ang)));
 	m.y = FIXED_TO_FLOAT(temp) - zeroheight;
-	temp = P_GetSlopeZAt(slope, planeviewx + xscale * FLOAT_TO_FIXED(cos(ang)), planeviewy - xscale * FLOAT_TO_FIXED(sin(ang)));
+	temp = P_GetSlopeZAt(slope, planeviewx + FLOAT_TO_FIXED(xscale * cos(ang)), planeviewy - FLOAT_TO_FIXED(xscale * sin(ang)));
 	n.y = FIXED_TO_FLOAT(temp) - zeroheight;
 
 	if (ds_powersoftwo)
@@ -788,7 +784,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 	ffloor_t *rover;
 	int type;
 	int spanfunctype = BASEDRAWFUNC;
-	angle_t viewang = viewangle;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -1153,8 +1148,6 @@ using the palette colors.
 		}
 	}
 #endif
-
-	viewangle = viewang;
 }
 
 void R_PlaneBounds(visplane_t *plane)
