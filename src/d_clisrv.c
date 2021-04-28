@@ -1565,14 +1565,6 @@ static void CL_LoadReceivedSavegame(boolean reloading)
 		}
 		CONS_Printf("\"\n");
 	}
-	else
-	{
-		Z_Free(savebuffer);
-		save_p = NULL;
-		if (unlink(tmpsave) == -1)
-			CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
-		return;
-	}
 
 	// done
 	Z_Free(savebuffer);
@@ -4485,9 +4477,9 @@ static INT16 Consistancy(void)
 		{
 			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 				continue;
-	
+
 			mo = (mobj_t *)th;
-	
+
 			if (mo->flags & (MF_SPECIAL | MF_SOLID | MF_PUSHABLE | MF_BOSS | MF_MISSILE | MF_SPRING | MF_MONITOR | MF_FIRE | MF_ENEMY | MF_PAIN | MF_STICKY))
 			{
 				ret -= mo->type;
