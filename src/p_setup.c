@@ -1350,8 +1350,11 @@ static void P_LoadSidedefs(UINT8 *data)
 				if (msd->toptexture[0] == '#')
 				{
 					char *col = msd->toptexture;
-					sd->toptexture = sd->bottomtexture =
-						((col[1]-'0')*100 + (col[2]-'0')*10 + col[3]-'0') + 1;
+					sd->toptexture =
+						((col[1]-'0')*100 + (col[2]-'0')*10 + col[3]-'0')+1;
+					if (col[4]) // extra num for blendmode
+						sd->toptexture += (col[4]-'0')*1000;
+					sd->bottomtexture = sd->toptexture;
 					sd->midtexture = R_TextureNumForName(msd->midtexture);
 				}
 				else

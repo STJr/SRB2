@@ -716,15 +716,15 @@ FBITFIELD HWR_GetBlendModeFlag(INT32 ast)
 {
 	switch (ast)
 	{
-		case AST_COPY:
+		//case AST_COPY: -- intentionally defaults to translucent
 		case AST_OVERLAY:
 			return PF_Masked;
 		case AST_ADD:
 			return PF_Additive;
 		case AST_SUBTRACT:
-			return PF_Subtractive;
-		case AST_REVERSESUBTRACT:
 			return PF_ReverseSubtract;
+		case AST_REVERSESUBTRACT:
+			return PF_Subtractive;
 		case AST_MODULATE:
 			return PF_Multiplicative;
 		default:
@@ -757,11 +757,13 @@ UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
 
 FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf)
 {
-	if (!transtablenum || style == AST_COPY || style == AST_OVERLAY)
-	{
-		pSurf->PolyColor.s.alpha = 0xff;
-		return PF_Masked;
-	}
+	pSurf->PolyColor.s.alpha = 0xff;
+
+	if (style == AST_MODULATE)
+		return PF_Multiplicative;
+
+	if (!transtablenum && !style)
+
 
 	pSurf->PolyColor.s.alpha = HWR_GetTranstableAlpha(transtablenum);
 	return HWR_GetBlendModeFlag(style);
@@ -853,7 +855,7 @@ static float HWR_ClipViewSegment(INT32 x, polyvertex_t *v1, polyvertex_t *v2)
 //
 // HWR_SplitWall
 //
-static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum, FSurfaceInfo* Surf, INT32 cutflag, ffloor_t *pfloor, FBITFIELD polyflags)
+static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum, FSurfaceInfo* Surf, INT32 cutflag, ffloor_t *pfloor, FBITFIELD blendmode)
 {
 	/* SoM: split up and light walls according to the
 	 lightlist. This may also include leaving out parts
@@ -990,12 +992,12 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 		wallVerts[0].y = bot;
 		wallVerts[1].y = endbot;
 
-		if (cutflag & FF_FOG)
-			HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Fog|PF_NoTexture|polyflags, true, lightnum, colormap);
-		else if (cutflag & FF_TRANSLUCENT)
-			HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Translucent|polyflags, false, lightnum, colormap);
+		if (blendmode & PF_Fog)
+			HWR_AddTransparentWall(wallVerts, Surf, texnum, blendmode, true, lightnum, colormap);
+		else if (blendmode & (PF_Translucent|PF_Additive|PF_Subtractive|PF_Environment))
+			HWR_AddTransparentWall(wallVerts, Surf, texnum, blendmode, false, lightnum, colormap);
 		else
-			HWR_ProjectWall(wallVerts, Surf, PF_Masked|polyflags, lightnum, colormap);
+			HWR_ProjectWall(wallVerts, Surf, blendmode, lightnum, colormap);
 
 		top = bot;
 		endtop = endbot;
@@ -1019,12 +1021,12 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 	wallVerts[0].y = bot;
 	wallVerts[1].y = endbot;
 
-	if (cutflag & FF_FOG)
-		HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Fog|PF_NoTexture|polyflags, true, lightnum, colormap);
-	else if (cutflag & FF_TRANSLUCENT)
-		HWR_AddTransparentWall(wallVerts, Surf, texnum, PF_Translucent|polyflags, false, lightnum, colormap);
+	if (blendmode & PF_Fog)
+		HWR_AddTransparentWall(wallVerts, Surf, texnum, blendmode, true, lightnum, colormap);
+	else if (blendmode & (PF_Translucent|PF_Additive|PF_Subtractive|PF_Environment))
+		HWR_AddTransparentWall(wallVerts, Surf, texnum, blendmode, false, lightnum, colormap);
 	else
-		HWR_ProjectWall(wallVerts, Surf, PF_Masked|polyflags, lightnum, colormap);
+		HWR_ProjectWall(wallVerts, Surf, blendmode, lightnum, colormap);
 }
 
 // HWR_DrawSkyWall
@@ -1204,12 +1206,19 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			wallVerts[2].y = FIXED_TO_FLOAT(worldtopslope);
 			wallVerts[1].y = FIXED_TO_FLOAT(worldhighslope);
 
-			if (gl_frontsector->numlights)
-				HWR_SplitWall(gl_frontsector, wallVerts, gl_toptexture, &Surf, FF_CUTLEVEL, NULL, 0);
-			else if (grTex->mipmap.flags & TF_TRANSPARENT)
-				HWR_AddTransparentWall(wallVerts, &Surf, gl_toptexture, PF_Environment, false, lightnum, colormap);
-			else
-				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
+			{
+				FBITFIELD blendmode = PF_Masked;
+
+				if (grTex->mipmap.flags & TF_TRANSPARENT)
+					blendmode = PF_Environment;
+
+				if (gl_frontsector->numlights)
+					HWR_SplitWall(gl_frontsector, wallVerts, gl_toptexture, &Surf, FF_CUTLEVEL, NULL, blendmode);
+				else if (grTex->mipmap.flags & TF_TRANSPARENT)
+					HWR_AddTransparentWall(wallVerts, &Surf, gl_toptexture, blendmode, false, lightnum, colormap);
+				else
+					HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
+			}
 		}
 
 		// check BOTTOM TEXTURE
@@ -1270,12 +1279,19 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			wallVerts[2].y = FIXED_TO_FLOAT(worldlowslope);
 			wallVerts[1].y = FIXED_TO_FLOAT(worldbottomslope);
 
-			if (gl_frontsector->numlights)
-				HWR_SplitWall(gl_frontsector, wallVerts, gl_bottomtexture, &Surf, FF_CUTLEVEL, NULL, 0);
-			else if (grTex->mipmap.flags & TF_TRANSPARENT)
-				HWR_AddTransparentWall(wallVerts, &Surf, gl_bottomtexture, PF_Environment, false, lightnum, colormap);
-			else
-				HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
+			{
+				FBITFIELD blendmode = PF_Masked;
+
+				if (grTex->mipmap.flags & TF_TRANSPARENT)
+					blendmode = PF_Environment;
+
+				if (gl_frontsector->numlights)
+					HWR_SplitWall(gl_frontsector, wallVerts, gl_bottomtexture, &Surf, FF_CUTLEVEL, NULL, blendmode);
+				else if (grTex->mipmap.flags & TF_TRANSPARENT)
+					HWR_AddTransparentWall(wallVerts, &Surf, gl_bottomtexture, blendmode, false, lightnum, colormap);
+				else
+					HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
+			}
 		}
 		gl_midtexture = R_GetTextureNum(gl_sidedef->midtexture);
 		if (gl_midtexture)
@@ -1468,12 +1484,26 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				case 256:
 					blendmode = PF_Translucent;
 					break;
-				default:
-					if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
-						blendmode = HWR_TranstableToAlpha(R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
-					else
-						blendmode = PF_Masked;
+				case 913:
+					blendmode = PF_Multiplicative;
+					Surf.PolyColor.s.alpha = 0xff;
 					break;
+				default:
+				{
+					UINT32 blend = 0;
+					transnum_t transtable = R_GetLinedefTransTable(gl_linedef);
+					if (transtable == NUMTRANSMAPS)
+						transtable = 0;
+					if (gl_linedef->special == 910)
+						blend = AST_ADD;
+					else if (gl_linedef->special == 911)
+						blend = AST_SUBTRACT;
+					else if (gl_linedef->special == 912)
+						blend = AST_REVERSESUBTRACT;
+
+					blendmode = HWR_SurfaceBlend(blend, transtable, &Surf);
+					break;
+				}
 			}
 
 			if (gl_curline->polyseg && gl_curline->polyseg->translucency > 0)
@@ -1494,10 +1524,10 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			if (gl_frontsector->numlights)
 			{
 				if (!(blendmode & PF_Masked))
-					HWR_SplitWall(gl_frontsector, wallVerts, gl_midtexture, &Surf, FF_TRANSLUCENT, NULL, PF_Decal);
+					HWR_SplitWall(gl_frontsector, wallVerts, gl_midtexture, &Surf, FF_TRANSLUCENT, NULL, blendmode);
 				else
 				{
-					HWR_SplitWall(gl_frontsector, wallVerts, gl_midtexture, &Surf, FF_CUTLEVEL, NULL, PF_Decal);
+					HWR_SplitWall(gl_frontsector, wallVerts, gl_midtexture, &Surf, FF_CUTLEVEL, NULL, blendmode);
 				}
 			}
 			else if (!(blendmode & PF_Masked))
@@ -1578,15 +1608,21 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			wallVerts[2].y = FIXED_TO_FLOAT(worldtopslope);
 			wallVerts[1].y = FIXED_TO_FLOAT(worldbottomslope);
 
-			// I don't think that solid walls can use translucent linedef types...
-			if (gl_frontsector->numlights)
-				HWR_SplitWall(gl_frontsector, wallVerts, gl_midtexture, &Surf, FF_CUTLEVEL, NULL, 0);
-			else
 			{
+				FBITFIELD blendmode = PF_Masked;
 				if (grTex->mipmap.flags & TF_TRANSPARENT)
-					HWR_AddTransparentWall(wallVerts, &Surf, gl_midtexture, PF_Environment, false, lightnum, colormap);
+					blendmode = PF_Environment;
+
+				// I don't think that solid walls can use translucent linedef types...
+				if (gl_frontsector->numlights)
+					HWR_SplitWall(gl_frontsector, wallVerts, gl_midtexture, &Surf, FF_CUTLEVEL, NULL, blendmode);
 				else
-					HWR_ProjectWall(wallVerts, &Surf, PF_Masked, lightnum, colormap);
+				{
+					if (grTex->mipmap.flags & TF_TRANSPARENT)
+						HWR_AddTransparentWall(wallVerts, &Surf, gl_midtexture, blendmode, false, lightnum, colormap);
+					else
+						HWR_ProjectWall(wallVerts, &Surf, blendmode, lightnum, colormap);
+				}
 			}
 		}
 
@@ -1743,7 +1779,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel, rover->master->frontsector->extra_colormap);
 
 					if (gl_frontsector->numlights)
-						HWR_SplitWall(gl_frontsector, wallVerts, 0, &Surf, rover->flags, rover, 0);
+						HWR_SplitWall(gl_frontsector, wallVerts, 0, &Surf, rover->flags, rover, blendmode);
 					else
 						HWR_AddTransparentWall(wallVerts, &Surf, 0, blendmode, true, lightnum, colormap);
 				}
@@ -1751,14 +1787,14 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				{
 					FBITFIELD blendmode = PF_Masked;
 
-					if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256)
+					if ((rover->flags & FF_TRANSLUCENT) && (rover->alpha < 256 || rover->blend))
 					{
-						blendmode = PF_Translucent;
-						Surf.PolyColor.s.alpha = (UINT8)rover->alpha-1 > 255 ? 255 : rover->alpha-1;
+						blendmode = HWR_GetBlendModeFlag(rover->blend);
+						Surf.PolyColor.s.alpha = (UINT8)(rover->alpha-1);
 					}
 
 					if (gl_frontsector->numlights)
-						HWR_SplitWall(gl_frontsector, wallVerts, texnum, &Surf, rover->flags, rover, 0);
+						HWR_SplitWall(gl_frontsector, wallVerts, texnum, &Surf, rover->flags, rover, blendmode);
 					else
 					{
 						if (blendmode != PF_Masked)
@@ -1855,7 +1891,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel, rover->master->frontsector->extra_colormap);
 
 					if (gl_backsector->numlights)
-						HWR_SplitWall(gl_backsector, wallVerts, 0, &Surf, rover->flags, rover, 0);
+						HWR_SplitWall(gl_backsector, wallVerts, 0, &Surf, rover->flags, rover, blendmode);
 					else
 						HWR_AddTransparentWall(wallVerts, &Surf, 0, blendmode, true, lightnum, colormap);
 				}
@@ -1863,14 +1899,14 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				{
 					FBITFIELD blendmode = PF_Masked;
 
-					if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256)
+					if ((rover->flags & FF_TRANSLUCENT) && (rover->alpha < 256 || rover->blend))
 					{
-						blendmode = PF_Translucent;
-						Surf.PolyColor.s.alpha = (UINT8)rover->alpha-1 > 255 ? 255 : rover->alpha-1;
+						blendmode = HWR_GetBlendModeFlag(rover->blend);
+						Surf.PolyColor.s.alpha = (UINT8)(rover->alpha-1);
 					}
 
 					if (gl_backsector->numlights)
-						HWR_SplitWall(gl_backsector, wallVerts, texnum, &Surf, rover->flags, rover, 0);
+						HWR_SplitWall(gl_backsector, wallVerts, texnum, &Surf, rover->flags, rover, blendmode);
 					else
 					{
 						if (blendmode != PF_Masked)
@@ -2946,6 +2982,13 @@ static void HWR_AddPolyObjectPlanes(void)
 	}
 }
 
+static FBITFIELD HWR_RippleBlend(sector_t *sector, ffloor_t *rover, boolean ceiling)
+{
+	(void)sector;
+	(void)ceiling;
+	return /*R_IsRipplePlane(sector, rover, ceiling)*/ (rover->flags & FF_RIPPLE) ? PF_Ripple : 0;
+}
+
 // -----------------+
 // HWR_Subsector    : Determine floor/ceiling planes.
 //                  : Add sprites of things in sector.
@@ -3136,8 +3179,10 @@ static void HWR_Subsector(size_t num)
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, rover->master->frontsector->extra_colormap);
 				}
-				else if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256) // SoM: Flags are more efficient
+				else if (rover->flags & FF_TRANSLUCENT && (rover->alpha < 256 || rover->blend)) // SoM: Flags are more efficient
 				{
+					FBITFIELD blendmode = HWR_GetBlendModeFlag(rover->blend) | HWR_RippleBlend(gl_frontsector, rover, false);
+
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 
 					HWR_AddTransparentFloor(&levelflats[*rover->bottompic],
@@ -3145,14 +3190,14 @@ static void HWR_Subsector(size_t num)
 										   false,
 					                       *rover->bottomheight,
 					                       *gl_frontsector->lightlist[light].lightlevel,
-					                       rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector, (rover->flags & FF_RIPPLE ? PF_Ripple : 0)|PF_Translucent,
+					                       rover->alpha-1, rover->master->frontsector, blendmode,
 					                       false, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 				else
 				{
 					HWR_GetLevelFlat(&levelflats[*rover->bottompic]);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
-					HWR_RenderPlane(sub, &extrasubsectors[num], false, *rover->bottomheight, (rover->flags & FF_RIPPLE ? PF_Ripple : 0)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->bottompic],
+					HWR_RenderPlane(sub, &extrasubsectors[num], false, *rover->bottomheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->bottompic],
 					                rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 			}
@@ -3181,8 +3226,10 @@ static void HWR_Subsector(size_t num)
 					                       alpha, rover->master->frontsector, PF_Fog|PF_NoTexture,
 										   true, rover->master->frontsector->extra_colormap);
 				}
-				else if (rover->flags & FF_TRANSLUCENT && rover->alpha < 256)
+				else if (rover->flags & FF_TRANSLUCENT && (rover->alpha < 256 || rover->blend))
 				{
+					FBITFIELD blendmode = HWR_GetBlendModeFlag(rover->blend) | HWR_RippleBlend(gl_frontsector, rover, false);
+
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
 
 					HWR_AddTransparentFloor(&levelflats[*rover->toppic],
@@ -3190,14 +3237,14 @@ static void HWR_Subsector(size_t num)
 											true,
 					                        *rover->topheight,
 					                        *gl_frontsector->lightlist[light].lightlevel,
-					                        rover->alpha-1 > 255 ? 255 : rover->alpha-1, rover->master->frontsector, (rover->flags & FF_RIPPLE ? PF_Ripple : 0)|PF_Translucent,
+					                        rover->alpha-1, rover->master->frontsector, blendmode,
 					                        false, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 				else
 				{
 					HWR_GetLevelFlat(&levelflats[*rover->toppic]);
 					light = R_GetPlaneLight(gl_frontsector, centerHeight, dup_viewz < cullHeight ? true : false);
-					HWR_RenderPlane(sub, &extrasubsectors[num], true, *rover->topheight, (rover->flags & FF_RIPPLE ? PF_Ripple : 0)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->toppic],
+					HWR_RenderPlane(sub, &extrasubsectors[num], true, *rover->topheight, HWR_RippleBlend(gl_frontsector, rover, false)|PF_Occlude, *gl_frontsector->lightlist[light].lightlevel, &levelflats[*rover->toppic],
 					                  rover->master->frontsector, 255, *gl_frontsector->lightlist[light].extra_colormap);
 				}
 			}
@@ -3839,31 +3886,33 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	else
 		occlusion = PF_Occlude;
 
-	if (!cv_translucency.value) // translucency disabled
+	// Determine the blendmode and translucency value
 	{
-		Surf.PolyColor.s.alpha = 0xFF;
-		blend = PF_Translucent|occlusion;
-		if (!occlusion) use_linkdraw_hack = true;
-	}
-	else if (spr->mobj->flags2 & MF2_SHADOW)
-	{
-		Surf.PolyColor.s.alpha = 0x40;
-		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode);
-	}
-	else if (spr->mobj->frame & FF_TRANSMASK)
-	{
-		INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
-		blend = HWR_SurfaceBlend(spr->mobj->blendmode, trans, &Surf);
-	}
-	else
-	{
-		// BP: i agree that is little better in environement but it don't
-		//     work properly under glide nor with fogcolor to ffffff :(
-		// Hurdler: PF_Environement would be cool, but we need to fix
-		//          the issue with the fog before
-		Surf.PolyColor.s.alpha = 0xFF;
-		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode)|occlusion;
-		if (!occlusion) use_linkdraw_hack = true;
+		UINT32 blendmode, trans;
+		if (spr->mobj->renderflags & RF_BLENDMASK)
+			blendmode = (spr->mobj->renderflags & RF_BLENDMASK) >> RF_BLENDSHIFT;
+		else
+			blendmode = (spr->mobj->frame & FF_BLENDMASK) >> FF_BLENDSHIFT;
+		if (blendmode)
+			blendmode++; // realign to constants
+
+		if (spr->mobj->renderflags & RF_TRANSMASK)
+			trans = (spr->mobj->renderflags & RF_TRANSMASK) >> RF_TRANSSHIFT;
+		else
+			trans = (spr->mobj->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
+		if (trans >= NUMTRANSMAPS)
+			return; // cap
+
+		blend = HWR_SurfaceBlend(blendmode, trans, &Surf);
+		if (!trans && !blendmode)
+		{
+			// BP: i agree that is little better in environement but it don't
+			//     work properly under glide nor with fogcolor to ffffff :(
+			// Hurdler: PF_Environement would be cool, but we need to fix
+			//          the issue with the fog before
+			blend |= occlusion;
+			if (!occlusion) use_linkdraw_hack = true;
+		}
 	}
 
 	if (HWR_UseShader())
@@ -3901,6 +3950,9 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 			break;
 		}
 	}
+
+	if (R_ThingIsSemiBright(spr->mobj))
+		lightlevel = 128 + (lightlevel>>1);
 
 	for (i = 0; i < sector->numlights; i++)
 	{
@@ -4255,6 +4307,9 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		else if (!lightset)
 			lightlevel = sector->lightlevel > 255 ? 255 : sector->lightlevel;
 
+		if (R_ThingIsSemiBright(spr->mobj))
+			lightlevel = 128 + (lightlevel>>1);
+
 		HWR_Lighting(&Surf, lightlevel, colormap);
 	}
 
@@ -4271,31 +4326,33 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		else
 			occlusion = PF_Occlude;
 
-		if (!cv_translucency.value) // translucency disabled
+		// Determine the blendmode and translucency value
 		{
-			Surf.PolyColor.s.alpha = 0xFF;
-			blend = PF_Translucent|occlusion;
-			if (!occlusion) use_linkdraw_hack = true;
-		}
-		else if (spr->mobj->flags2 & MF2_SHADOW)
-		{
-			Surf.PolyColor.s.alpha = 0x40;
-			blend = HWR_GetBlendModeFlag(spr->mobj->blendmode);
-		}
-		else if (spr->mobj->frame & FF_TRANSMASK)
-		{
-			INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
-			blend = HWR_SurfaceBlend(spr->mobj->blendmode, trans, &Surf);
-		}
-		else
-		{
-			// BP: i agree that is little better in environement but it don't
-			//     work properly under glide nor with fogcolor to ffffff :(
-			// Hurdler: PF_Environement would be cool, but we need to fix
-			//          the issue with the fog before
-			Surf.PolyColor.s.alpha = 0xFF;
-			blend = HWR_GetBlendModeFlag(spr->mobj->blendmode)|occlusion;
-			if (!occlusion) use_linkdraw_hack = true;
+			UINT32 blendmode, trans;
+			if (spr->mobj->renderflags & RF_BLENDMASK)
+				blendmode = (spr->mobj->renderflags & RF_BLENDMASK) >> RF_BLENDSHIFT;
+			else
+				blendmode = (spr->mobj->frame & FF_BLENDMASK) >> FF_BLENDSHIFT;
+			if (blendmode)
+				blendmode++; // realign to constants
+
+			if (spr->mobj->renderflags & RF_TRANSMASK)
+				trans = (spr->mobj->renderflags & RF_TRANSMASK) >> RF_TRANSSHIFT;
+			else
+				trans = (spr->mobj->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
+			if (trans >= NUMTRANSMAPS)
+				return; // cap
+
+			blend = HWR_SurfaceBlend(blendmode, trans, &Surf);
+			if (!trans && !blendmode)
+			{
+				// BP: i agree that is little better in environement but it don't
+				//     work properly under glide nor with fogcolor to ffffff :(
+				// Hurdler: PF_Environement would be cool, but we need to fix
+				//          the issue with the fog before
+				blend |= occlusion;
+				if (!occlusion) use_linkdraw_hack = true;
+			}
 		}
 
 		if (spr->renderflags & RF_SHADOWEFFECTS)
@@ -4401,19 +4458,32 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 		HWR_Lighting(&Surf, lightlevel, colormap);
 	}
 
-	if (spr->mobj->frame & FF_TRANSMASK)
+	// Determine the blendmode and translucency value
 	{
-		INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
-		blend = HWR_SurfaceBlend(AST_TRANSLUCENT, trans, &Surf);
-	}
-	else
-	{
-		// BP: i agree that is little better in environement but it don't
-		//     work properly under glide nor with fogcolor to ffffff :(
-		// Hurdler: PF_Environement would be cool, but we need to fix
-		//          the issue with the fog before
-		Surf.PolyColor.s.alpha = 0xFF;
-		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode)|PF_Occlude;
+		UINT32 blendmode, trans;
+		if (spr->mobj->renderflags & RF_BLENDMASK)
+			blendmode = (spr->mobj->renderflags & RF_BLENDMASK) >> RF_BLENDSHIFT;
+		else
+			blendmode = (spr->mobj->frame & FF_BLENDMASK) >> FF_BLENDSHIFT;
+		if (blendmode)
+			blendmode++; // realign to constants
+
+		if (spr->mobj->renderflags & RF_TRANSMASK)
+			trans = (spr->mobj->renderflags & RF_TRANSMASK) >> RF_TRANSSHIFT;
+		else
+			trans = (spr->mobj->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
+		if (trans >= NUMTRANSMAPS)
+			return; // cap
+
+		blend = HWR_SurfaceBlend(blendmode, trans, &Surf);
+		if (!trans && !blendmode)
+		{
+			// BP: i agree that is little better in environement but it don't
+			//     work properly under glide nor with fogcolor to ffffff :(
+			// Hurdler: PF_Environement would be cool, but we need to fix
+			//          the issue with the fog before
+			blend |= PF_Occlude;
+		}
 	}
 
 	if (HWR_UseShader())
@@ -4989,13 +5059,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->spritexscale < 1 || thing->spriteyscale < 1)
 		return;
 
-	// Visibility check by the blend mode.
-	if (thing->frame & FF_TRANSMASK)
-	{
-		if (!R_BlendLevelVisible(thing->blendmode, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT))
-			return;
-	}
-
 	dispoffset = thing->info->dispoffset;
 
 	this_scale = FIXED_TO_FLOAT(thing->scale);
@@ -5381,13 +5444,6 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	size_t lumpoff;
 	unsigned rot = 0;
 	UINT8 flip;
-
-	// Visibility check by the blend mode.
-	if (thing->frame & FF_TRANSMASK)
-	{
-		if (!R_BlendLevelVisible(thing->blendmode, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT))
-			return;
-	}
 
 	// transform the origin point
 	tr_x = FIXED_TO_FLOAT(thing->x) - gl_viewx;

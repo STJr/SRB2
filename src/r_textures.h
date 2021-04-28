@@ -33,7 +33,7 @@ typedef struct
 	UINT16 wad, lump;
 	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
 	UINT8 alpha; // Translucency value
-	enum patchalphastyle style;
+	patchalphastyle_t style;
 } texpatch_t;
 
 // texture type

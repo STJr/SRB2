@@ -184,6 +184,7 @@ typedef struct ffloor_s
 
 	INT32 lastlight;
 	INT32 alpha;
+	UINT8 blend;
 	tic_t norender; // for culling
 
 	// these are saved for netgames, so do not let Lua touch these!
@@ -713,6 +714,9 @@ typedef struct
 #pragma pack()
 #endif
 
+// Possible alpha types for a patch.
+typedef enum {AST_COPY, AST_TRANSLUCENT, AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY} patchalphastyle_t;
+
 typedef enum
 {
 	RF_HORIZONTALFLIP   = 0x0001,   // Flip sprite horizontally
@@ -726,18 +730,51 @@ typedef enum
 	RF_NOSPLATBILLBOARD = 0x0040,   // Don't billboard floor sprites (faces forward from the view angle)
 	RF_NOSPLATROLLANGLE = 0x0080,   // Don't rotate floor sprites by the object's rollangle (uses rotated patches instead)
 
-	RF_BLENDMASK        = 0x0F00,   // --Blending modes
-	RF_FULLBRIGHT       = 0x0100,   // Sprite is drawn at full brightness
-	RF_FULLDARK         = 0x0200,   // Sprite is drawn completely dark
-	RF_NOCOLORMAPS      = 0x0400,   // Sprite is not drawn with colormaps
+RF_BRIGHTMASK       = 0x00000300,   // --Bright modes
+	RF_FULLBRIGHT       = 0x00000100,   // Sprite is drawn at full brightness
+	RF_FULLDARK         = 0x00000200,   // Sprite is drawn completely dark
+	RF_SEMIBRIGHT       = (RF_FULLBRIGHT | RF_FULLDARK), // between sector bright and full bright
 
-	RF_SPRITETYPEMASK   = 0x7000,   // ---Different sprite types
-	RF_PAPERSPRITE      = 0x1000,   // Paper sprite
-	RF_FLOORSPRITE      = 0x2000,   // Floor sprite
+	RF_NOCOLORMAPS      = 0x00000400,   // Sprite is not drawn with colormaps
 
-	RF_SHADOWDRAW       = 0x10000,  // Stretches and skews the sprite like a shadow.
-	RF_SHADOWEFFECTS    = 0x20000,  // Scales and becomes transparent like a shadow.
+	RF_SPRITETYPEMASK   = 0x00003000,   // --Different sprite types
+	RF_PAPERSPRITE      = 0x00001000,   // Paper sprite
+	RF_FLOORSPRITE      = 0x00002000,   // Floor sprite
+
+	RF_SHADOWDRAW       = 0x00004000,  // Stretches and skews the sprite like a shadow.
+	RF_SHADOWEFFECTS    = 0x00008000,  // Scales and becomes transparent like a shadow.
 	RF_DROPSHADOW       = (RF_SHADOWDRAW | RF_SHADOWEFFECTS | RF_FULLDARK),
+
+	RF_DONTDRAW         = 0x00F00000,   // --Don't generate a vissprite
+#if 0 // kart compat, ask sal if you're gonna implement - this is why RF_DONTDRAW *must* take four bits
+	RF_DONTDRAWP1       = 0x00100000,   // No P1
+	RF_DONTDRAWP2       = 0x00200000,   // No P2
+	RF_DONTDRAWP3       = 0x00400000,   // No P3
+	RF_DONTDRAWP4       = 0x00800000,   // No P4
+#endif
+
+	RF_BLENDMASK       	= 0x07000000,   // --Blending override - see patchalphastyle_t
+	RF_BLENDSHIFT		= (6*4),
+	// minus 1 as effects don't distinguish between AST_COPY and AST_TRANSLUCENT
+	RF_ADD				= ((AST_ADD-1)<<RF_BLENDSHIFT),
+	RF_SUBTRACT			= ((AST_SUBTRACT-1)<<RF_BLENDSHIFT),
+	RF_REVERSESUBTRACT	= ((AST_REVERSESUBTRACT-1)<<RF_BLENDSHIFT),
+	RF_MODULATE			= ((AST_MODULATE-1)<<RF_BLENDSHIFT),
+	RF_OVERLAY			= ((AST_OVERLAY-1)<<RF_BLENDSHIFT),
+
+	RF_TRANSMASK       	= 0xF0000000,   // --Transparency override
+	RF_TRANSSHIFT		= (7*4),
+	RF_TRANS10       	= (1<<RF_TRANSSHIFT),   // 10%
+	RF_TRANS20       	= (2<<RF_TRANSSHIFT),   // 20%
+	RF_TRANS30       	= (3<<RF_TRANSSHIFT),   // 30%
+	RF_TRANS40       	= (4<<RF_TRANSSHIFT),   // 40%
+	RF_TRANS50       	= (5<<RF_TRANSSHIFT),   // 50%
+	RF_TRANS60       	= (6<<RF_TRANSSHIFT),   // 60%
+	RF_TRANS70       	= (7<<RF_TRANSSHIFT),   // 70%
+	RF_TRANS80       	= (8<<RF_TRANSSHIFT),   // 80%
+	RF_TRANS90       	= (9<<RF_TRANSSHIFT),   // 90%
+	RF_GHOSTLY			= (RF_TRANS80 | RF_FULLBRIGHT),
+	RF_GHOSTLYMASK		= (RF_TRANSMASK | RF_FULLBRIGHT),
 } renderflags_t;
 
 typedef enum

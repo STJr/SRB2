@@ -1072,7 +1072,7 @@ static texpatch_t *R_ParsePatch(boolean actuallyLoadPatch)
 	INT16 patchYPos;
 	UINT8 flip = 0;
 	UINT8 alpha = 255;
-	enum patchalphastyle style = AST_COPY;
+	patchalphastyle_t style = AST_COPY;
 	texpatch_t *resultPatch = NULL;
 	lumpnum_t patchLumpNum;
 

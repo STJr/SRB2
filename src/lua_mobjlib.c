@@ -316,7 +316,12 @@ static int mobj_get(lua_State *L)
 		lua_pushinteger(L, mo->color);
 		break;
 	case mobj_blendmode:
-		lua_pushinteger(L, mo->blendmode);
+		{
+			INT32 backcompat = (mo->renderflags & RF_BLENDMASK) >> RF_BLENDSHIFT;
+			if (backcompat)
+				backcompat++;
+			lua_pushinteger(L, backcompat);
+		}
 		break;
 	case mobj_bnext:
 		LUA_PushUserdata(L, mo->bnext, META_MOBJ);
@@ -654,8 +659,15 @@ static int mobj_set(lua_State *L)
 		break;
 	}
 	case mobj_blendmode:
-		mo->blendmode = (INT32)luaL_checkinteger(L, 3);
+	{
+		INT32 backcompat = (INT32)luaL_checkinteger(L, 3);
+		if (backcompat < 0 || backcompat > AST_OVERLAY)
+			return luaL_error(L, "mobj.blendmode %d out of range (0 - %d).", backcompat, AST_OVERLAY);
+		if (backcompat)
+			backcompat--;
+		mo->renderflags = (mo->renderflags & ~RF_BLENDMASK)|(backcompat << RF_BLENDSHIFT);
 		break;
+	}
 	case mobj_bnext:
 		return NOSETPOS;
 	case mobj_bprev:

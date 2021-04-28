@@ -1869,7 +1869,7 @@ static void HU_DrawChat_Old(void)
 
 static inline void HU_DrawCrosshair(void)
 {
-	INT32 i, y;
+	INT32 i, y, dupz;
 
 	i = cv_crosshair.value & 3;
 	if (!i)
@@ -1885,12 +1885,14 @@ static inline void HU_DrawCrosshair(void)
 #endif
 		y = viewwindowy + (viewheight>>1);
 
-	V_DrawScaledPatch(vid.width>>1, y, V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, crosshair[i - 1]);
+	dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+
+	V_DrawFixedPatch(vid.width<<(FRACBITS-1), y<<FRACBITS, FRACUNIT/dupz, V_TRANSLUCENT, crosshair[i - 1], NULL);
 }
 
 static inline void HU_DrawCrosshair2(void)
 {
-	INT32 i, y;
+	INT32 i, y, dupz;
 
 	i = cv_crosshair2.value & 3;
 	if (!i)
@@ -1906,17 +1908,19 @@ static inline void HU_DrawCrosshair2(void)
 #endif
 		y = viewwindowy + (viewheight>>1);
 
-	if (splitscreen)
-	{
-#ifdef HWRENDER
-		if (rendermode != render_soft)
-			y += (INT32)gl_viewheight;
-		else
-#endif
-			y += viewheight;
+	if (!splitscreen)
+		return;
 
-		V_DrawScaledPatch(vid.width>>1, y, V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, crosshair[i - 1]);
-	}
+#ifdef HWRENDER
+	if (rendermode != render_soft)
+		y += (INT32)gl_viewheight;
+	else
+#endif
+		y += viewheight;
+
+	dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+
+	V_DrawFixedPatch(vid.width<<(FRACBITS-1), y<<FRACBITS, FRACUNIT/dupz, V_TRANSLUCENT, crosshair[i - 1], NULL);
 }
 
 static void HU_DrawCEcho(void)

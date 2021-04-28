@@ -94,7 +94,7 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 #define clamp(c) max(min(c, 0xFF), 0x00);
 	else
 	{
-		float falpha = ((float)alpha / 256.0f);
+		float falpha = ((float)alpha / 255.0f);
 		float fr = ((float)foreground.s.red * falpha);
 		float fg = ((float)foreground.s.green * falpha);
 		float fb = ((float)foreground.s.blue * falpha);

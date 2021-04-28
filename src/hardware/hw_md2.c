@@ -414,7 +414,7 @@ static void md2_loadTexture(md2_t *model)
 		size = w*h;
 		while (size--)
 		{
-			V_CubeApply(&image->s.red, &image->s.green, &image->s.blue);
+			image->rgba = V_CubeApply(image);
 			image++;
 		}
 	}
@@ -1354,12 +1354,24 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		//if (tics > durs)
 			//durs = tics;
 
-		if (spr->mobj->frame & FF_TRANSMASK)
-			Surf.PolyFlags = HWR_SurfaceBlend(spr->mobj->blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
-		else
+		// Determine the blendmode and translucency value
 		{
-			Surf.PolyColor.s.alpha = (spr->mobj->flags2 & MF2_SHADOW) ? 0x40 : 0xff;
-			Surf.PolyFlags = HWR_GetBlendModeFlag(spr->mobj->blendmode);
+			UINT32 blendmode, trans;
+			if (spr->mobj->renderflags & RF_BLENDMASK)
+				blendmode = (spr->mobj->renderflags & RF_BLENDMASK) >> RF_BLENDSHIFT;
+			else
+				blendmode = (spr->mobj->frame & FF_BLENDMASK) >> FF_BLENDSHIFT;
+			if (blendmode)
+				blendmode++; // realign to constants
+
+			if (spr->mobj->renderflags & RF_TRANSMASK)
+				trans = (spr->mobj->renderflags & RF_TRANSMASK) >> RF_TRANSSHIFT;
+			else
+				trans = (spr->mobj->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
+			if (trans >= NUMTRANSMAPS)
+				return false; // cap
+
+			Surf.PolyFlags = HWR_SurfaceBlend(blendmode, trans, &Surf);
 		}
 
 		// don't forget to enable the depth test because we can't do this

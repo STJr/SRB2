@@ -173,6 +173,8 @@ static INT32 CacheIndexToSkin(INT32 ttc)
 
 CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
 
+#define TRANSTAB_AMTMUL10 (255.0f / 10.0f)
+
 /** \brief Initializes the translucency tables used by the Software renderer.
 */
 void R_InitTranslucencyTables(void)
@@ -196,140 +198,58 @@ void R_InitTranslucencyTables(void)
 	R_GenerateBlendTables();
 }
 
-static colorlookup_t transtab_lut;
-
-static void BlendTab_Translucent(UINT8 *table, int style, UINT8 blendamt)
-{
-	INT16 bg, fg;
-
-	if (table == NULL)
-		I_Error("BlendTab_Translucent: input table was NULL!");
-
-	for (bg = 0; bg < 0xFF; bg++)
-	{
-		for (fg = 0; fg < 0xFF; fg++)
-		{
-			RGBA_t backrgba = V_GetMasterColor(bg);
-			RGBA_t frontrgba = V_GetMasterColor(fg);
-			RGBA_t result;
-
-			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, 0xFF);
-			result.rgba = ASTBlendPixel(result, frontrgba, AST_TRANSLUCENT, blendamt);
-
-			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
-		}
-	}
-}
-
-static void BlendTab_Subtractive(UINT8 *table, int style, UINT8 blendamt)
-{
-	INT16 bg, fg;
-
-	if (table == NULL)
-		I_Error("BlendTab_Subtractive: input table was NULL!");
-
-	if (blendamt == 0xFF)
-	{
-		memset(table, GetColorLUT(&transtab_lut, 0, 0, 0), 0x10000);
-		return;
-	}
-
-	for (bg = 0; bg < 0xFF; bg++)
-	{
-		for (fg = 0; fg < 0xFF; fg++)
-		{
-			RGBA_t backrgba = V_GetMasterColor(bg);
-			RGBA_t frontrgba = V_GetMasterColor(fg);
-			RGBA_t result;
-
-			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, 0xFF);
-			result.s.red = max(0, result.s.red - blendamt);
-			result.s.green = max(0, result.s.green - blendamt);
-			result.s.blue = max(0, result.s.blue - blendamt);
-
-			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
-		}
-	}
-}
-
-static void BlendTab_Modulative(UINT8 *table)
-{
-	INT16 bg, fg;
-
-	if (table == NULL)
-		I_Error("BlendTab_Modulative: input table was NULL!");
-
-	for (bg = 0; bg < 0xFF; bg++)
-	{
-		for (fg = 0; fg < 0xFF; fg++)
-		{
-			RGBA_t backrgba = V_GetMasterColor(bg);
-			RGBA_t frontrgba = V_GetMasterColor(fg);
-			RGBA_t result;
-			result.rgba = ASTBlendPixel(backrgba, frontrgba, AST_MODULATE, 0);
-			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
-		}
-	}
-}
-
-static INT32 BlendTab_Count[NUMBLENDMAPS] =
-{
-	NUMTRANSTABLES+1, // blendtab_add
-	NUMTRANSTABLES+1, // blendtab_subtract
-	NUMTRANSTABLES+1, // blendtab_reversesubtract
-	1                 // blendtab_modulate
-};
-
-static INT32 BlendTab_FromStyle[] =
-{
-	0,                        // AST_COPY
-	0,                        // AST_TRANSLUCENT
-	blendtab_add,             // AST_ADD
-	blendtab_subtract,        // AST_SUBTRACT
-	blendtab_reversesubtract, // AST_REVERSESUBTRACT
-	blendtab_modulate,        // AST_MODULATE
-	0                         // AST_OVERLAY
-};
-
-static void BlendTab_GenerateMaps(INT32 tab, INT32 style, void (*genfunc)(UINT8 *, int, UINT8))
-{
-	INT32 i = 0, num = BlendTab_Count[tab];
-	const float amtmul = (256.0f / (float)(NUMTRANSTABLES + 1));
-	for (; i < num; i++)
-	{
-		const size_t offs = (0x10000 * i);
-		const UINT16 alpha = min(amtmul * i, 0xFF);
-		genfunc(blendtables[tab] + offs, style, alpha);
-	}
-}
-
 void R_GenerateBlendTables(void)
 {
 	INT32 i;
 
 	for (i = 0; i < NUMBLENDMAPS; i++)
-		blendtables[i] = Z_MallocAlign(BlendTab_Count[i] * 0x10000, PU_STATIC, NULL, 16);
+	{
+		if (i == blendtab_modulate)
+			continue;
+		blendtables[i] = Z_MallocAlign((NUMTRANSTABLES + 1) * 0x10000, PU_STATIC, NULL, 16);
+	}
 
-	InitColorLUT(&transtab_lut, pMasterPalette, false);
+	for (i = 0; i <= 9; i++)
+	{
+		const size_t offs = (0x10000 * i);
+		const UINT8 alpha = (TRANSTAB_AMTMUL10 * ((float)(10-i)));
 
-	// Additive
-	BlendTab_GenerateMaps(blendtab_add, AST_ADD, BlendTab_Translucent);
+		R_GenerateTranslucencyTable(blendtables[blendtab_add] + offs, AST_ADD, alpha);
+		R_GenerateTranslucencyTable(blendtables[blendtab_subtract] + offs, AST_SUBTRACT, alpha);
+		R_GenerateTranslucencyTable(blendtables[blendtab_reversesubtract] + offs, AST_REVERSESUBTRACT, alpha);
+	}
 
-	// Subtractive
-#if 1
-	BlendTab_GenerateMaps(blendtab_subtract, AST_SUBTRACT, BlendTab_Subtractive);
-#else
-	BlendTab_GenerateMaps(blendtab_subtract, AST_SUBTRACT, BlendTab_Translucent);
-#endif
-
-	// Reverse subtractive
-	BlendTab_GenerateMaps(blendtab_reversesubtract, AST_REVERSESUBTRACT, BlendTab_Translucent);
-
-	// Modulative blending only requires a single table
-	BlendTab_Modulative(blendtables[blendtab_modulate]);
+	// Modulation blending only requires a single table
+	blendtables[blendtab_modulate] = Z_MallocAlign(0x10000, PU_STATIC, NULL, 16);
+	R_GenerateTranslucencyTable(blendtables[blendtab_modulate], AST_MODULATE, 0);
 }
 
-#define ClipBlendLevel(style, trans) max(min((trans), BlendTab_Count[BlendTab_FromStyle[style]]-1), 0)
+void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt)
+{
+	INT16 bg, fg;
+	RGBA_t backrgba, frontrgba, result;
+
+	if (table == NULL)
+		I_Error("R_GenerateTranslucencyTable: input table was NULL!");
+
+	for (bg = 0; bg <= 0xFF; bg++)
+	{
+		backrgba = pGammaCorrectedPalette[bg];
+		for (fg = 0; fg <= 0xFF; fg++)
+		{
+			frontrgba = pGammaCorrectedPalette[fg];
+
+#if 0 // perfect implementation
+			result.rgba = V_GammaEncode(ASTBlendPixel(backrgba, frontrgba, style, blendamt));
+			table[((fg * 0x100) + bg)] = NearestPaletteColor(result.s.red, result.s.green, result.s.blue, pMasterPalette);
+#else // performance scrabbler
+			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, blendamt);
+			table[((fg * 0x100) + bg)] = NearestPaletteColor(result.s.red, result.s.green, result.s.blue, pGammaCorrectedPalette);
+#endif
+		}
+	}
+}
+
 #define ClipTransLevel(trans) max(min((trans), NUMTRANSMAPS-2), 0)
 
 UINT8 *R_GetTranslucencyTable(INT32 alphalevel)
@@ -339,12 +259,7 @@ UINT8 *R_GetTranslucencyTable(INT32 alphalevel)
 
 UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 {
-	size_t offs;
-
-	if (style == AST_COPY || style == AST_OVERLAY)
-		return NULL;
-
-	offs = (ClipBlendLevel(style, alphalevel) << FF_TRANSSHIFT);
+	size_t offs = (ClipTransLevel(alphalevel) << FF_TRANSSHIFT);
 
 	// Lactozilla: Returns the equivalent to AST_TRANSLUCENT
 	// if no alpha style matches any of the blend tables.
@@ -363,18 +278,9 @@ UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 	}
 
 	// Return a normal translucency table
-	if (--alphalevel >= 0)
-		return transtables + (ClipTransLevel(alphalevel) << FF_TRANSSHIFT);
-	else
+	if (--alphalevel < 0)
 		return NULL;
-}
-
-boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel)
-{
-	if (blendmode == AST_COPY || blendmode == AST_SUBTRACT || blendmode == AST_MODULATE || blendmode == AST_OVERLAY)
-		return true;
-
-	return (alphalevel < BlendTab_Count[BlendTab_FromStyle[blendmode]]);
+	return transtables + (ClipTransLevel(alphalevel) << FF_TRANSSHIFT);
 }
 
 // Define for getting accurate color brightness readings according to how the human eye sees them.

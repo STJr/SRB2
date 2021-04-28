@@ -288,7 +288,6 @@ typedef struct mobj_s
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	UINT32 renderflags; // render flags
-	INT32 blendmode; // blend mode
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
 	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
@@ -415,7 +414,6 @@ typedef struct precipmobj_s
 	UINT16 anim_duration; // for FF_ANIMATE states
 
 	UINT32 renderflags; // render flags
-	INT32 blendmode; // blend mode
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
 	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
