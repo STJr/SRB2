@@ -690,16 +690,16 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	}
 }
 
-// Returns the height of the sloped plane at (px, py) as a floating point number
-static float R_GetSlopeZAt(const pslope_t *slope, fixed_t px, fixed_t py)
+// Returns the height of the sloped plane at (x, y) as a 32.16 fixed_t
+static INT64 R_GetSlopeZAt(const pslope_t *slope, fixed_t x, fixed_t y)
 {
-	float x = FixedToFloat(px - slope->o.x);
-	float y = FixedToFloat(py - slope->o.y);
+	x = ((INT64)x - (INT64)slope->o.x);
+	y = ((INT64)y - (INT64)slope->o.y);
 
-	x = (x * FixedToFloat(slope->d.x));
-	y = (y * FixedToFloat(slope->d.y));
+	x = (x * (INT64)slope->d.x) / FRACUNIT;
+	y = (y * (INT64)slope->d.y) / FRACUNIT;
 
-	return FixedToFloat(slope->o.z) + ((x + y) * FixedToFloat(slope->zdelta));
+	return (INT64)slope->o.z + ((x + y) * (INT64)slope->zdelta) / FRACUNIT;
 }
 
 // Sets the texture origin vector of the sloped plane.
@@ -709,7 +709,6 @@ static void R_SetSlopePlaneOrigin(pslope_t *slope, fixed_t xpos, fixed_t ypos, f
 
 	float vx = FixedToFloat(xpos + xoff);
 	float vy = FixedToFloat(ypos - yoff);
-	float vz = FixedToFloat(zpos);
 	float ang = ANG2RAD(ANGLE_270 - angle);
 
 	// p is the texture origin in view space
@@ -717,7 +716,7 @@ static void R_SetSlopePlaneOrigin(pslope_t *slope, fixed_t xpos, fixed_t ypos, f
 	// errors if the flat is rotated.
 	p->x = vx * cos(ang) - vy * sin(ang);
 	p->z = vx * sin(ang) + vy * cos(ang);
-	p->y = R_GetSlopeZAt(slope, -xoff, yoff) - vz;
+	p->y = (R_GetSlopeZAt(slope, -xoff, yoff) - zpos) / (float)FRACUNIT;
 }
 
 // This function calculates all of the vectors necessary for drawing a sloped plane.
@@ -844,14 +843,37 @@ static inline void R_AdjustSlopeCoordinates(visplane_t *pl)
 	const fixed_t cosinecomponent = FINECOSINE(pl->plangle>>ANGLETOFINESHIFT);
 	const fixed_t sinecomponent = FINESINE(pl->plangle>>ANGLETOFINESHIFT);
 
-	fixed_t temp = xoffs;
-	xoffs = (FixedMul(temp,cosinecomponent) & modmask) + (FixedMul(yoffs,sinecomponent) & modmask);
-	yoffs = (-FixedMul(temp,sinecomponent) & modmask) + (FixedMul(yoffs,cosinecomponent) & modmask);
+	fixed_t ox, oy, temp;
 
-	temp = xoffs & modmask;
-	yoffs &= modmask;
-	xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // negative sine for opposite direction
-	yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
+	if (!pl->plangle)
+	{
+		ox = (FixedMul(pl->slope->o.x,cosinecomponent) & modmask) - (FixedMul(pl->slope->o.y,sinecomponent) & modmask);
+		oy = (-FixedMul(pl->slope->o.x,sinecomponent) & modmask) - (FixedMul(pl->slope->o.y,cosinecomponent) & modmask);
+
+		temp = ox & modmask;
+		oy &= modmask;
+
+		ox = FixedMul(temp,cosinecomponent)+FixedMul(oy,-sinecomponent); // negative sine for opposite direction
+		oy = -FixedMul(temp,-sinecomponent)+FixedMul(oy,cosinecomponent);
+	}
+
+	if (xoffs || yoffs)
+	{
+		temp = xoffs;
+		xoffs = (FixedMul(temp,cosinecomponent) & modmask) + (FixedMul(yoffs,sinecomponent) & modmask);
+		yoffs = (-FixedMul(temp,sinecomponent) & modmask) + (FixedMul(yoffs,cosinecomponent) & modmask);
+
+		temp = xoffs & modmask;
+		yoffs &= modmask;
+		xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
+		yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
+	}
+
+	if (!pl->plangle)
+	{
+		xoffs -= (pl->slope->o.x - ox);
+		yoffs += (pl->slope->o.y + oy);
+	}
 }
 
 static inline void R_AdjustSlopeCoordinatesNPO2(visplane_t *pl)
@@ -862,14 +884,37 @@ static inline void R_AdjustSlopeCoordinatesNPO2(visplane_t *pl)
 	const fixed_t cosinecomponent = FINECOSINE(pl->plangle>>ANGLETOFINESHIFT);
 	const fixed_t sinecomponent = FINESINE(pl->plangle>>ANGLETOFINESHIFT);
 
-	fixed_t temp = xoffs;
-	xoffs = (FixedMul(temp,cosinecomponent) % modmaskw) + (FixedMul(yoffs,sinecomponent) % modmaskh);
-	yoffs = (-FixedMul(temp,sinecomponent) % modmaskw) + (FixedMul(yoffs,cosinecomponent) % modmaskh);
+	fixed_t ox, oy, temp;
 
-	temp = xoffs % modmaskw;
-	yoffs %= modmaskh;
-	xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
-	yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
+	if (!pl->plangle)
+	{
+		ox = (FixedMul(pl->slope->o.x,cosinecomponent) % modmaskw) - (FixedMul(pl->slope->o.y,sinecomponent) % modmaskh);
+		oy = (-FixedMul(pl->slope->o.x,sinecomponent) % modmaskw) - (FixedMul(pl->slope->o.y,cosinecomponent) % modmaskh);
+
+		temp = ox % modmaskw;
+		oy %= modmaskh;
+
+		ox = FixedMul(temp,cosinecomponent)+FixedMul(oy,-sinecomponent); // negative sine for opposite direction
+		oy = -FixedMul(temp,-sinecomponent)+FixedMul(oy,cosinecomponent);
+	}
+
+	if (xoffs || yoffs)
+	{
+		temp = xoffs;
+		xoffs = (FixedMul(temp,cosinecomponent) % modmaskw) + (FixedMul(yoffs,sinecomponent) % modmaskh);
+		yoffs = (-FixedMul(temp,sinecomponent) % modmaskw) + (FixedMul(yoffs,cosinecomponent) % modmaskh);
+
+		temp = xoffs % modmaskw;
+		yoffs %= modmaskh;
+		xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
+		yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
+	}
+
+	if (!pl->plangle)
+	{
+		xoffs -= (pl->slope->o.x - ox);
+		yoffs += (pl->slope->o.y + oy);
+	}
 }
 
 void R_DrawSinglePlane(visplane_t *pl)
@@ -1049,13 +1094,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	if (pl->slope)
 	{
-		if (xoffs || yoffs)
-		{
-			if (ds_powersoftwo)
-				R_AdjustSlopeCoordinates(pl);
-			else
-				R_AdjustSlopeCoordinatesNPO2(pl);
-		}
+		if (ds_powersoftwo)
+			R_AdjustSlopeCoordinates(pl);
+		else
+			R_AdjustSlopeCoordinatesNPO2(pl);
 
 		if (planeripple.active)
 		{
