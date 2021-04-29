@@ -693,13 +693,13 @@ static void R_DrawSkyPlane(visplane_t *pl)
 // Returns the height of the sloped plane at (x, y) as a 32.16 fixed_t
 static INT64 R_GetSlopeZAt(const pslope_t *slope, fixed_t x, fixed_t y)
 {
-	x = ((INT64)x - (INT64)slope->o.x);
-	y = ((INT64)y - (INT64)slope->o.y);
+	INT64 x64 = ((INT64)x - (INT64)slope->o.x);
+	INT64 y64 = ((INT64)y - (INT64)slope->o.y);
 
-	x = (x * (INT64)slope->d.x) / FRACUNIT;
-	y = (y * (INT64)slope->d.y) / FRACUNIT;
+	x64 = (x64 * (INT64)slope->d.x) / FRACUNIT;
+	y64 = (y64 * (INT64)slope->d.y) / FRACUNIT;
 
-	return (INT64)slope->o.z + ((x + y) * (INT64)slope->zdelta) / FRACUNIT;
+	return (INT64)slope->o.z + ((x64 + y64) * (INT64)slope->zdelta) / FRACUNIT;
 }
 
 // Sets the texture origin vector of the sloped plane.
