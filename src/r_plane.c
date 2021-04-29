@@ -829,92 +829,33 @@ static void R_SetSlopePlaneVectors(visplane_t *pl, INT32 y, fixed_t xoff, fixed_
 	R_CalculateSlopeVectors();
 }
 
-/*
-	Essentially: We can't & the components along the regular axes when the plane is rotated.
-	This is because the distance on each regular axis in order to loop is different.
-	We rotate them, & the components, add them together, & them again, and then rotate them back.
-	These three seperate & operations are done per axis in order to prevent overflows.
-	toast 10/04/17
-*/
-static inline void R_AdjustSlopeCoordinates(visplane_t *pl)
+static inline void R_AdjustSlopeCoordinates(vector3_t *origin)
 {
 	const fixed_t modmask = ((1 << (32-nflatshiftup)) - 1);
 
-	const fixed_t cosinecomponent = FINECOSINE(pl->plangle>>ANGLETOFINESHIFT);
-	const fixed_t sinecomponent = FINESINE(pl->plangle>>ANGLETOFINESHIFT);
+	fixed_t ox = (origin->x & modmask);
+	fixed_t oy = -(origin->y & modmask);
 
-	fixed_t ox, oy, temp;
+	xoffs &= modmask;
+	yoffs &= modmask;
 
-	if (!pl->plangle)
-	{
-		ox = (FixedMul(pl->slope->o.x,cosinecomponent) & modmask) - (FixedMul(pl->slope->o.y,sinecomponent) & modmask);
-		oy = (-FixedMul(pl->slope->o.x,sinecomponent) & modmask) - (FixedMul(pl->slope->o.y,cosinecomponent) & modmask);
-
-		temp = ox & modmask;
-		oy &= modmask;
-
-		ox = FixedMul(temp,cosinecomponent)+FixedMul(oy,-sinecomponent); // negative sine for opposite direction
-		oy = -FixedMul(temp,-sinecomponent)+FixedMul(oy,cosinecomponent);
-	}
-
-	if (xoffs || yoffs)
-	{
-		temp = xoffs;
-		xoffs = (FixedMul(temp,cosinecomponent) & modmask) + (FixedMul(yoffs,sinecomponent) & modmask);
-		yoffs = (-FixedMul(temp,sinecomponent) & modmask) + (FixedMul(yoffs,cosinecomponent) & modmask);
-
-		temp = xoffs & modmask;
-		yoffs &= modmask;
-		xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
-		yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
-	}
-
-	if (!pl->plangle)
-	{
-		xoffs -= (pl->slope->o.x - ox);
-		yoffs += (pl->slope->o.y + oy);
-	}
+	xoffs -= (origin->x - ox);
+	yoffs += (origin->y + oy);
 }
 
-static inline void R_AdjustSlopeCoordinatesNPO2(visplane_t *pl)
+static inline void R_AdjustSlopeCoordinatesNPO2(vector3_t *origin)
 {
 	const fixed_t modmaskw = (ds_flatwidth << FRACBITS);
 	const fixed_t modmaskh = (ds_flatheight << FRACBITS);
 
-	const fixed_t cosinecomponent = FINECOSINE(pl->plangle>>ANGLETOFINESHIFT);
-	const fixed_t sinecomponent = FINESINE(pl->plangle>>ANGLETOFINESHIFT);
+	fixed_t ox = (origin->x % modmaskw);
+	fixed_t oy = -(origin->y % modmaskh);
 
-	fixed_t ox, oy, temp;
+	xoffs %= modmaskw;
+	yoffs %= modmaskh;
 
-	if (!pl->plangle)
-	{
-		ox = (FixedMul(pl->slope->o.x,cosinecomponent) % modmaskw) - (FixedMul(pl->slope->o.y,sinecomponent) % modmaskh);
-		oy = (-FixedMul(pl->slope->o.x,sinecomponent) % modmaskw) - (FixedMul(pl->slope->o.y,cosinecomponent) % modmaskh);
-
-		temp = ox % modmaskw;
-		oy %= modmaskh;
-
-		ox = FixedMul(temp,cosinecomponent)+FixedMul(oy,-sinecomponent); // negative sine for opposite direction
-		oy = -FixedMul(temp,-sinecomponent)+FixedMul(oy,cosinecomponent);
-	}
-
-	if (xoffs || yoffs)
-	{
-		temp = xoffs;
-		xoffs = (FixedMul(temp,cosinecomponent) % modmaskw) + (FixedMul(yoffs,sinecomponent) % modmaskh);
-		yoffs = (-FixedMul(temp,sinecomponent) % modmaskw) + (FixedMul(yoffs,cosinecomponent) % modmaskh);
-
-		temp = xoffs % modmaskw;
-		yoffs %= modmaskh;
-		xoffs = FixedMul(temp,cosinecomponent)+FixedMul(yoffs,-sinecomponent); // ditto
-		yoffs = -FixedMul(temp,-sinecomponent)+FixedMul(yoffs,cosinecomponent);
-	}
-
-	if (!pl->plangle)
-	{
-		xoffs -= (pl->slope->o.x - ox);
-		yoffs += (pl->slope->o.y + oy);
-	}
+	xoffs -= (origin->x - ox);
+	yoffs += (origin->y + oy);
 }
 
 void R_DrawSinglePlane(visplane_t *pl)
@@ -1094,10 +1035,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	if (pl->slope)
 	{
-		if (ds_powersoftwo)
-			R_AdjustSlopeCoordinates(pl);
-		else
-			R_AdjustSlopeCoordinatesNPO2(pl);
+		if (!pl->plangle)
+		{
+			if (ds_powersoftwo)
+				R_AdjustSlopeCoordinates(&pl->slope->o);
+			else
+				R_AdjustSlopeCoordinatesNPO2(&pl->slope->o);
+		}
 
 		if (planeripple.active)
 		{
