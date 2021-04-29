@@ -707,15 +707,18 @@ static void R_SetSlopePlaneOrigin(pslope_t *slope, fixed_t xpos, fixed_t ypos, f
 {
 	floatv3_t *p = &ds_slope_origin;
 
-	float vx = FixedToFloat(xpos + xoff);
-	float vy = FixedToFloat(ypos - yoff);
+	INT64 vx = (INT64)xpos + (INT64)xoff;
+	INT64 vy = (INT64)ypos - (INT64)yoff;
+
+	float vxf = vx / (float)FRACUNIT;
+	float vyf = vy / (float)FRACUNIT;
 	float ang = ANG2RAD(ANGLE_270 - angle);
 
 	// p is the texture origin in view space
 	// Don't add in the offsets at this stage, because doing so can result in
 	// errors if the flat is rotated.
-	p->x = vx * cos(ang) - vy * sin(ang);
-	p->z = vx * sin(ang) + vy * cos(ang);
+	p->x = vxf * cos(ang) - vyf * sin(ang);
+	p->z = vxf * sin(ang) + vyf * cos(ang);
 	p->y = (R_GetSlopeZAt(slope, -xoff, yoff) - zpos) / (float)FRACUNIT;
 }
 
