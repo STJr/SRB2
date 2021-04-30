@@ -1414,6 +1414,80 @@ void LUAh_NetArchiveHook(lua_CFunction archFunc)
 	// stack: tables
 }
 
+boolean LUAh_MobjMoveBlocked(mobj_t *mo, mobj_t *thing, line_t *line)
+{
+	hook_p hookp;
+	boolean hooked = false;
+	if (!gL || !(hooksAvailable[hook_MobjMoveBlocked/8] & (1<<(hook_MobjMoveBlocked%8))))
+		return false;
+	
+	if (!(mobjhooks[MT_NULL] || mobjhooks[mo->type]))
+		return false;
+
+	lua_settop(gL, 0);
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
+	// Look for all generic mobj move blocked hooks
+	for (hookp = mobjhooks[MT_NULL]; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_MobjMoveBlocked)
+			continue;
+
+		ps_lua_mobjhooks++;
+		if (lua_gettop(gL) == 1)
+		{
+			LUA_PushUserdata(gL, mo, META_MOBJ);
+			LUA_PushUserdata(gL, thing, META_MOBJ);
+			LUA_PushUserdata(gL, line, META_LINE);
+		}
+		PushHook(gL, hookp);
+		lua_pushvalue(gL, -4);
+		lua_pushvalue(gL, -4);
+		lua_pushvalue(gL, -4);
+		if (lua_pcall(gL, 3, 1, 1)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			hooked = true;
+		lua_pop(gL, 1);
+	}
+
+	for (hookp = mobjhooks[mo->type]; hookp; hookp = hookp->next)
+	{
+		if (hookp->type != hook_MobjMoveBlocked)
+			continue;
+
+		ps_lua_mobjhooks++;
+		if (lua_gettop(gL) == 1)
+		{
+			LUA_PushUserdata(gL, mo, META_MOBJ);
+			LUA_PushUserdata(gL, thing, META_MOBJ);
+			LUA_PushUserdata(gL, line, META_LINE);
+		}
+		PushHook(gL, hookp);
+		lua_pushvalue(gL, -4);
+		lua_pushvalue(gL, -4);
+		lua_pushvalue(gL, -4);
+		if (lua_pcall(gL, 3, 1, 1)) {
+			if (!hookp->error || cv_debug & DBG_LUA)
+				CONS_Alert(CONS_WARNING,"%s\n",lua_tostring(gL, -1));
+			lua_pop(gL, 1);
+			hookp->error = true;
+			continue;
+		}
+		if (lua_toboolean(gL, -1))
+			hooked = true;
+		lua_pop(gL, 1);
+	}
+
+	lua_settop(gL, 0);
+	return hooked;
+}
+
 boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing)
 {
 	hook_p hookp;

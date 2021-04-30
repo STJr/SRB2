@@ -1844,7 +1844,7 @@ void P_XYMovement(mobj_t *mo)
 				B_MoveBlocked(player);
 		}
 
-		if (LUAh_MobjMoveBlocked(mo))
+		if (LUAh_MobjMoveBlocked(mo, tmhitthing, blockingline))
 		{
 			if (P_MobjWasRemoved(mo))
 				return;

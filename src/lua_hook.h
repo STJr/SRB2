@@ -106,7 +106,7 @@ boolean LUAh_HurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 
 #define LUAh_PlayerSpawn(player) LUAh_PlayerHook(player, hook_PlayerSpawn) // Hook for G_SpawnPlayer
 #define LUAh_ShieldSpawn(player) LUAh_PlayerHook(player, hook_ShieldSpawn) // Hook for P_SpawnShieldOrb
 #define LUAh_ShieldSpecial(player) LUAh_PlayerHook(player, hook_ShieldSpecial) // Hook for shield abilities
-#define LUAh_MobjMoveBlocked(mo) LUAh_MobjHook(mo, hook_MobjMoveBlocked) // Hook for P_XYMovement (when movement is blocked)
+boolean LUAh_MobjMoveBlocked(mobj_t *mo, mobj_t *thing, line_t *line); // Hook for P_XYMovement (when movement is blocked)
 boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing); // Hook for P_SpawnMapThing by mobj type
 boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj); // Hook for P_PlayerAfterThink Smiles mobj-following
 UINT8 LUAh_PlayerCanDamage(player_t *player, mobj_t *mobj); // Hook for P_PlayerCanDamage
