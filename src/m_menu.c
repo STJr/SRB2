@@ -6235,7 +6235,7 @@ static void M_AddonsOptions(INT32 choice)
 }
 
 #define LOCATIONSTRING1 "Visit \x83SRB2.ORG/ADDONS\x80 to get & make addons!"
-//#define LOCATIONSTRING2 "Visit \x88SRB2.ORG/MODS\x80 to get & make add-ons!"
+//#define LOCATIONSTRING2 "Visit \x88SRB2.ORG/ADDONS\x80 to get & make addons!"
 
 static void M_LoadAddonsPatches(void)
 {
