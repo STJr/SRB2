@@ -1,215 +1,23 @@
-# vim: ft=make
 #
-# Makefile.cfg for SRB2
-#
-
-#
-# GNU compiler & tools' flags
-# and other things
+# Flags to put a sock in GCC!
 #
 
-# See the following variable don't start with 'GCC'. This is
-# to avoid a false positive with the version detection...
-
-SUPPORTED_GCC_VERSIONS:=\
-	101 102\
-	91 92 93\
-	81 82 83 84\
-	71 72 73 74 75\
-	61 62 63 64\
-	51 52 53 54 55\
-	40 41 42 43 44 45 46 47 48 49
-
-LATEST_GCC_VERSION=10.2
-
-# gcc or g++
-ifdef PREFIX
-	CC=$(PREFIX)-gcc
-	CXX=$(PREFIX)-g++
-	OBJCOPY=$(PREFIX)-objcopy
-	OBJDUMP=$(PREFIX)-objdump
-	STRIP=$(PREFIX)-strip
-	WINDRES=$(PREFIX)-windres
-else
-	OBJCOPY=objcopy
-	OBJDUMP=objdump
-	STRIP=strip
-	WINDRES=windres
+# See the versions list in detect.mk
+# This will define all version flags going backward.
+# Yes, it's magic.
+define _predecessor =
+ifdef GCC$(firstword $(1))
+GCC$(lastword $(1)):=1
 endif
+endef
+_n:=$(words $(gcc_versions))
+$(foreach v,$(join $(wordlist 2,$(_n),- $(gcc_versions)),\
+	$(addprefix =,$(wordlist 2,$(_n),$(gcc_versions)))),\
+	$(and $(findstring =,$(v)),\
+	$(eval $(call _predecessor,$(subst =, ,$(v))))))
 
-# because Apple screws with us on this
-# need to get bintools from homebrew
-ifdef MACOSX
-	CC=clang
-	CXX=clang
-	OBJCOPY=gobjcopy
-	OBJDUMP=gobjdump
-endif
-
-# Automatically set version flag, but not if one was manually set
-# And don't bother if this is a clean only run
-ifeq   (,$(filter GCC% CLEANONLY,$(.VARIABLES)))
- version:=$(shell $(CC) --version)
- # check if this is in fact GCC
- ifneq (,$(or $(findstring gcc,$(version)),$(findstring GCC,$(version))))
-  version:=$(shell $(CC) -dumpversion)
-
-  # Turn version into words of major, minor
-  v:=$(subst ., ,$(version))
-  # concat. major minor
-  v:=$(word 1,$(v))$(word 2,$(v))
-
-  # If this version is not in the list, default to the latest supported
-  ifeq (,$(filter $(v),$(SUPPORTED_GCC_VERSIONS)))
-	define line =
-	Your compiler version, GCC $(version), is not supported by the Makefile.
-	The Makefile will assume GCC $(LATEST_GCC_VERSION).))
-	endef
-   $(call print,$(line))
-   GCC$(subst .,,$(LATEST_GCC_VERSION))=1
-  else
-   $(call print,Detected GCC $(version) (GCC$(v)))
-   GCC$(v)=1
-  endif
- endif
-endif
-
-ifdef GCC102
-GCC101=1
-endif
-
-ifdef GCC101
-GCC93=1
-endif
-
-ifdef GCC93
-GCC92=1
-endif
-
-ifdef GCC92
-GCC91=1
-endif
-
-ifdef GCC91
-GCC84=1
-endif
-
-ifdef GCC84
-GCC83=1
-endif
-
-ifdef GCC83
-GCC82=1
-endif
-
-ifdef GCC82
-GCC81=1
-endif
-
-ifdef GCC81
-GCC75=1
-endif
-
-ifdef GCC75
-GCC74=1
-endif
-
-ifdef GCC74
-GCC73=1
-endif
-
-ifdef GCC73
-GCC72=1
-endif
-
-ifdef GCC72
-GCC71=1
-endif
-
-ifdef GCC71
-GCC64=1
-endif
-
-ifdef GCC64
-GCC63=1
-endif
-
-ifdef GCC63
-GCC62=1
-endif
-
-ifdef GCC62
-GCC61=1
-endif
-
-ifdef GCC61
-GCC55=1
-endif
-
-ifdef GCC55
-GCC54=1
-endif
-
-ifdef GCC54
-GCC53=1
-endif
-
-ifdef GCC53
-GCC52=1
-endif
-
-ifdef GCC52
-GCC51=1
-endif
-
-ifdef GCC51
-GCC49=1
-endif
-
-ifdef GCC49
-GCC48=1
-endif
-
-ifdef GCC48
-GCC47=1
-endif
-
-ifdef GCC47
-GCC46=1
-endif
-
-ifdef GCC46
-GCC45=1
-endif
-
-ifdef GCC45
-GCC44=1
-endif
-
-ifdef GCC44
-GCC43=1
-endif
-
-ifdef GCC43
-GCC42=1
-endif
-
-ifdef GCC42
-GCC41=1
-endif
-
-ifdef GCC41
-GCC40=1
-VCHELP=1
-endif
-
-ifdef GCC295
-GCC29=1
-endif
-
-OLDWFLAGS:=$(WFLAGS)
 # -W -Wno-unused
-WFLAGS=-Wall
+WFLAGS:=-Wall
 ifndef GCC295
 #WFLAGS+=-Wno-packed
 endif
@@ -222,15 +30,13 @@ endif
 #WFLAGS+=-Wsystem-headers
 WFLAGS+=-Wfloat-equal
 #WFLAGS+=-Wtraditional
-ifdef VCHELP
- WFLAGS+=-Wdeclaration-after-statement
- WFLAGS+=-Wno-error=declaration-after-statement
-endif
  WFLAGS+=-Wundef
 ifndef GCC295
  WFLAGS+=-Wendif-labels
 endif
 ifdef GCC41
+ WFLAGS+=-Wdeclaration-after-statement
+ WFLAGS+=-Wno-error=declaration-after-statement
  WFLAGS+=-Wshadow
 endif
 #WFLAGS+=-Wlarger-than-%len%
@@ -308,8 +114,6 @@ ifdef ERRORMODE
 WFLAGS+=-Werror
 endif
 
-WFLAGS+=$(OLDWFLAGS)
-
 ifdef GCC43
  #WFLAGS+=-Wno-error=clobbered
 endif
@@ -338,141 +142,36 @@ ifdef GCC81
  WFLAGS+=-Wno-error=multistatement-macros
 endif
 
-
-#indicate platform and what interface use with
-ifndef LINUX
-ifndef FREEBSD
-ifndef CYGWIN32
-ifndef MINGW
-ifndef MINGW64
-ifndef SDL
-ifndef DUMMY
-$(error No interface or platform flag defined)
-endif
-endif
-endif
-endif
-endif
-endif
-endif
-
-#determine the interface directory (where you put all i_*.c)
-i_net_o=$(OBJDIR)/i_net.o
-i_system_o=$(OBJDIR)/i_system.o
-i_sound_o=$(OBJDIR)/i_sound.o
-i_main_o=$(OBJDIR)/i_main.o
-#set OBJDIR and BIN's starting place
-OBJDIR=../objs
-BIN=../bin
-DEPDIR=../dep
-#Nasm ASM and rm
-ifdef YASM
-NASM?=yasm
+ifdef NONX86
+  ifdef X86_64 # yeah that SEEMS contradictory
+  opts+=-march=nocona
+  endif
 else
-NASM?=nasm
-endif
-REMOVE?=rm -f
-MKDIR?=mkdir -p
-GZIP?=gzip
-GZIP_OPTS?=-9 -f -n
-GZIP_OPT2=$(GZIP_OPTS) --rsyncable
-UPX?=upx
-UPX_OPTS?=--best --preserve-build-id
-ifndef ECHO
-UPX_OPTS+=-q
+  ifndef GCC29
+  opts+=-msse3 -mfpmath=sse
+  else
+  opts+=-mpentium
+  endif
 endif
 
-#Interface Setup
-ifdef DUMMY
-	INTERFACE=dummy
-	OBJDIR:=$(OBJDIR)/dummy
-	BIN:=$(BIN)/dummy
-	DEPDIR:=$(DEPDIR)/dummy
-else
-ifdef LINUX
-	NASMFORMAT=elf -DLINUX
-	SDL=1
-ifdef LINUX64
-	OBJDIR:=$(OBJDIR)/Linux64
-	BIN:=$(BIN)/Linux64
-	DEPDIR:=$(DEPDIR)/Linux64
-else
-	OBJDIR:=$(OBJDIR)/Linux
-	BIN:=$(BIN)/Linux
-	DEPDIR:=$(DEPDIR)/Linux
-endif
-else
-ifdef FREEBSD
-	INTERFACE=sdl
-	NASMFORMAT=elf -DLINUX
-	SDL=1
-
-	OBJDIR:=$(OBJDIR)/FreeBSD
-	BIN:=$(BIN)/FreeBSD
-	DEPDIR:=$(DEPDIR)/Linux
-else
-ifdef SOLARIS
-	INTERFACE=sdl
-	NASMFORMAT=elf -DLINUX
-	SDL=1
-
-	OBJDIR:=$(OBJDIR)/Solaris
-	BIN:=$(BIN)/Solaris
-	DEPDIR:=$(DEPDIR)/Solaris
-else
-ifdef CYGWIN32
-	INTERFACE=sdl
-	NASMFORMAT=win32
-	SDL=1
-
-	OBJDIR:=$(OBJDIR)/cygwin
-	BIN:=$(BIN)/Cygwin
-	DEPDIR:=$(DEPDIR)/Cygwin
-else
-ifdef MINGW64
-	#NASMFORMAT=win64
-	SDL=1
-	OBJDIR:=$(OBJDIR)/Mingw64
-	BIN:=$(BIN)/Mingw64
-	DEPDIR:=$(DEPDIR)/Mingw64
-else
-ifdef MINGW
-	NASMFORMAT=win32
-	SDL=1
-	OBJDIR:=$(OBJDIR)/Mingw
-	BIN:=$(BIN)/Mingw
-	DEPDIR:=$(DEPDIR)/Mingw
-endif
-endif
-endif
-endif
-endif
-endif
-endif
-
-ifdef ARCHNAME
-	OBJDIR:=$(OBJDIR)/$(ARCHNAME)
-	BIN:=$(BIN)/$(ARCHNAME)
-	DEPDIR:=$(DEPDIR)/$(ARCHNAME)
-endif
-
-OBJDUMP_OPTS?=--wide --source --line-numbers
-LD=$(CC)
-
-ifdef SDL
-	INTERFACE=sdl
-	OBJDIR:=$(OBJDIR)/SDL
-	DEPDIR:=$(DEPDIR)/SDL
-endif
-
-ifndef DUMMY
 ifdef DEBUGMODE
-	OBJDIR:=$(OBJDIR)/Debug
-	BIN:=$(BIN)/Debug
-	DEPDIR:=$(DEPDIR)/Debug
+ifdef GCC48
+opts+=-Og
 else
-	OBJDIR:=$(OBJDIR)/Release
-	BIN:=$(BIN)/Release
-	DEPDIR:=$(DEPDIR)/Release
+opts+=O0
+endif
+endif
+
+ifdef VALGRIND
+ifdef GCC46
+WFLAGS+=-Wno-error=unused-but-set-variable
+WFLAGS+=-Wno-unused-but-set-variable
+endif
+endif
+
+# Lua
+ifdef GCC43
+ifndef GCC44
+WFLAGS+=-Wno-logical-op
 endif
 endif

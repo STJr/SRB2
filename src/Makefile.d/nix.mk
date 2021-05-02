@@ -1,74 +1,40 @@
 #
-# sdl/makeNIX.cfg for SRB2/?nix
+# Makefile options for unices (linux, bsd...)
 #
 
-#Valgrind support
-ifdef VALGRIND
-VALGRIND_PKGCONFIG?=valgrind
-VALGRIND_CFLAGS?=$(shell $(PKG_CONFIG) $(VALGRIND_PKGCONFIG) --cflags)
-VALGRIND_LDFLAGS?=$(shell $(PKG_CONFIG) $(VALGRIND_PKGCONFIG) --libs)
-ZDEBUG=1
-LIBS+=$(VALGRIND_LDFLAGS)
-ifdef GCC46
-WFLAGS+=-Wno-error=unused-but-set-variable
-WFLAGS+=-Wno-unused-but-set-variable
-endif
-endif
+EXENAME?=lsdl2srb2
 
-#
-#here is GNU/Linux and other
-#
+opts+=-DUNIXCOMMON -DLUA_USE_POSIX
+libs+=-lm
 
-	OPTS=-DUNIXCOMMON
-
-	#LDFLAGS = -L/usr/local/lib
-	LIBS=-lm
-ifdef LINUX
-	LIBS+=-lrt
-ifdef NOTERMIOS
-	OPTS+=-DNOTERMIOS
-endif
-endif
-
-ifdef LINUX64
-	OPTS+=-DLINUX64
-endif
-
-#
-#here is Solaris
-#
-ifdef SOLARIS
-	NOIPX=1
-	NOASM=1
-	OPTS+=-DSOLARIS -DINADDR_NONE=INADDR_ANY -DBSD_COMP
-	OPTS+=-I/usr/local/include -I/opt/sfw/include
-	LDFLAGS+=-L/opt/sfw/lib
-	LIBS+=-lsocket -lnsl
-endif
-
-#
-#here is FreeBSD
-#
-ifdef FREEBSD
-	OPTS+=-DLINUX -DFREEBSD -I/usr/X11R6/include
-	SDL_CONFIG?=sdl11-config
-	LDFLAGS+=-L/usr/X11R6/lib
-	LIBS+=-lipx -lkvm
-endif
-
-#
-#here is Mac OS X
-#
-ifdef MACOSX
-	OBJS+=$(OBJDIR)/mac_resources.o
-	OBJS+=$(OBJDIR)/mac_alert.o
-	LIBS+=-framework CoreFoundation
+ifndef nasm_format
+nasm_format:=elf -DLINUX
 endif
 
 ifndef NOHW
-	OPTS+=-I/usr/X11R6/include
-	LDFLAGS+=-L/usr/X11R6/lib
+opts+=-I/usr/X11R6/include
+libs+=-L/usr/X11R6/lib
 endif
 
-	# name of the exefile
-	EXENAME?=lsdl2srb2
+SDL=1
+
+# In common usage.
+ifdef LINUX
+libs+=-lrt
+passthru_opts+=NOTERMIOS
+endif
+
+# Tested by Steel, as of release 2.2.8.
+ifdef FREEBSD
+opts+=-I/usr/X11R6/include -DLINUX -DFREEBSD
+libs+=-L/usr/X11R6/lib -lipx -lkvm
+endif
+
+# FIXME
+#ifdef SOLARIS
+#NOIPX=1
+#NOASM=1
+#opts+=-I/usr/local/include -I/opt/sfw/include \
+#		-DSOLARIS -DINADDR_NONE=INADDR_ANY -DBSD_COMP
+#libs+=-L/opt/sfw/lib -lsocket -lnsl
+#endif
