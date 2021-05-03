@@ -1577,7 +1577,7 @@ finish:
 	}
 	var->flags |= CV_MODIFIED;
 	// raise 'on change' code
-	LUA_CVarChanged(var->name); // let consolelib know what cvar this is.
+	LUA_CVarChanged(var); // let consolelib know what cvar this is.
 	if (var->flags & CV_CALL && !stealth)
 		var->func();
 
