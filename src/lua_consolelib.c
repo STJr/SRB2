@@ -440,8 +440,22 @@ static int lib_cvRegisterVar(lua_State *L)
 
 static int lib_cvFindVar(lua_State *L)
 {
-	LUA_PushLightUserdata(L, CV_FindVar(luaL_checkstring(L,1)), META_CVAR);
-	return 1;
+	consvar_t *cv;
+	if (( cv = CV_FindVar(luaL_checkstring(L,1)) ))
+	{
+		lua_settop(L,1);/* We only want one argument in the stack. */
+		lua_pushlightuserdata(L, cv);/* Now the second value on stack. */
+		luaL_getmetatable(L, META_CVAR);
+		/*
+		The metatable is the last value on the stack, so this
+		applies it to the second value, which is the cvar.
+		*/
+		lua_setmetatable(L,2);
+		lua_pushvalue(L,2);
+		return 1;
+	}
+	else
+		return 0;
 }
 
 static int CVarSetFunction

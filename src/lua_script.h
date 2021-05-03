@@ -87,7 +87,6 @@ typedef enum {
 	LPUSHED_EXISTING,
 } lpushed_t;
 
-void LUA_PushLightUserdata(lua_State *L, void *data, const char *meta);
 void LUA_PushUserdata(lua_State *L, void *data, const char *meta);
 lpushed_t LUA_RawPushUserdata(lua_State *L, void *data);
 
