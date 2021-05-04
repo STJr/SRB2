@@ -100,9 +100,9 @@ build_script:
 
 after_build:
 - if [%X86_64%] == [1] (
-    set "BUILD_PATH=bin\Mingw64\Release"
+    set "BUILD_PATH=bin\64"
   ) else (
-    set "BUILD_PATH=bin\Mingw\Release"
+    set "BUILD_PATH=bin"
   )
 - if [%X86_64%] == [1] ( set "CONFIGURATION=%CONFIGURATION%64" )
 - ccache -s
