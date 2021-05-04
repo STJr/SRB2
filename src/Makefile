@@ -285,7 +285,7 @@ ifndef SILENT
 # makefile will 'restart' when it finishes including the
 # dependencies.
 ifndef MAKE_RESTARTS
-ifndef destrutive
+ifndef destructive
 $(shell $(CC) -v)
 define flags =
 
