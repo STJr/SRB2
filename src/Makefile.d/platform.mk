@@ -5,11 +5,11 @@
 PKG_CONFIG?=pkg-config
 
 ifdef WINDOWSHELL
-rmrf?=DEL /S /Q
-mkdir?=MD
+rmrf=2>NUL DEL /S /Q
+mkdir=-2>NUL MD
 else
-rmrf?=rm -rf
-mkdir?=mkdir -p
+rmrf=rm -rf
+mkdir=mkdir -p
 endif
 
 ifdef LINUX64

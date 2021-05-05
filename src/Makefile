@@ -315,7 +315,7 @@ WINDRES:=$(WINDRES) $(WINDRESFLAGS)\
 	$(debug_opts) --include-dir=win32 -O coff
 
 %/ :
-	$(.)$(mkdir) $@
+	$(.)$(mkdir) $(call Windows_path,$@)
 
 # this is needed so the target can be referenced in the
 # prerequisites
@@ -385,14 +385,16 @@ $(eval $(call _recipe,o,nas,$(NASM) -o $$@ $$<))
 $(eval $(call _recipe,o,s,$(CC) $(ASFLAGS) -c -o $$@ $$<))
 $(eval $(call _recipe,res,rc,$(WINDRES) -i $$< -o $$@))
 
+_rm=$(.)$(rmrf) $(call Windows_path,$(1))
+
 cleandep :
-	$(.)$(rmrf) $(depends) comptime.h
+	$(call _rm,$(depends) comptime.h)
 
 clean :
-	$(.)$(rmrf) $(exe) $(dbg) $(dbg).txt $(objects)
+	$(call _rm,$(exe) $(dbg) $(dbg).txt $(objects))
 
 distclean :
-	$(.)$(rmrf) ../bin ../objs ../deps comptime.h
+	$(call _rm,../bin ../objs ../deps comptime.h)
 
 info:
 ifdef WINDOWSHELL

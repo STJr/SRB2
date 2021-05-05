@@ -12,6 +12,9 @@ Wildvar=$(foreach v,$(filter $(1),$(.VARIABLES)),$($(v)))
 # directory of the file.
 List=$(addprefix $(dir $(1)),$(file < $(1)))
 
+# Convert path separators to backslash on Windows.
+Windows_path=$(if $(WINDOWSHELL),$(subst /,\,$(1)),$(1))
+
 define Propogate_flags =
 opts+=$$($(1)_CFLAGS)
 libs+=$$($(1)_LDFLAGS)
@@ -73,7 +76,7 @@ Echo_name=
 Print=
 
 ifndef SILENT
-Echo=@echo "$(1)"
+Echo=@echo $(1)
 ifndef ECHO
 ifndef NOECHOFILENAMES
 Echo_name=$(call Echo,-- $(1) ...)
