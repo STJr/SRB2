@@ -62,6 +62,8 @@
 
 #include "i_joy.h" // for joystick menu controls
 
+#include "p_saveg.h" // Only for NEWSKINSAVES
+
 // Condition Sets
 #include "m_cond.h"
 
@@ -8580,7 +8582,7 @@ static void M_LoadSelect(INT32 choice)
 
 #define VERSIONSIZE 16
 #define BADSAVE { savegameinfo[slot].lives = -666; Z_Free(savebuffer); return; }
-#define CHECKPOS if (save_p >= end_p) BADSAVE
+#define CHECKPOS if (sav_p >= end_p) BADSAVE
 // Reads the save file to list lives, level, player, etc.
 // Tails 05-29-2003
 static void M_ReadSavegameInfo(UINT32 slot)
@@ -8589,10 +8591,13 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	char savename[255];
 	UINT8 *savebuffer;
 	UINT8 *end_p; // buffer end point, don't read past here
-	UINT8 *save_p;
+	UINT8 *sav_p;
 	INT32 fake; // Dummy variable
 	char temp[sizeof(timeattackfolder)];
 	char vcheck[VERSIONSIZE];
+#ifdef NEWSKINSAVES
+	INT16 backwardsCompat = 0;
+#endif
 
 	sprintf(savename, savegamename, slot);
 
@@ -8608,19 +8613,19 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	end_p = savebuffer + length;
 
 	// skip the description field
-	save_p = savebuffer;
+	sav_p = savebuffer;
 
 	// Version check
 	memset(vcheck, 0, sizeof (vcheck));
 	sprintf(vcheck, "version %d", VERSION);
-	if (strcmp((const char *)save_p, (const char *)vcheck)) BADSAVE
-	save_p += VERSIONSIZE;
+	if (strcmp((const char *)sav_p, (const char *)vcheck)) BADSAVE
+	sav_p += VERSIONSIZE;
 
 	// dearchive all the modifications
 	// P_UnArchiveMisc()
 
 	CHECKPOS
-	fake = READINT16(save_p);
+	fake = READINT16(sav_p);
 
 	if (((fake-1) & 8191) >= NUMMAPS) BADSAVE
 
@@ -8637,54 +8642,104 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	savegameinfo[slot].gamemap = fake;
 
 	CHECKPOS
-	savegameinfo[slot].numemeralds = READUINT16(save_p)-357; // emeralds
+	savegameinfo[slot].numemeralds = READUINT16(sav_p)-357; // emeralds
 
 	CHECKPOS
-	READSTRINGN(save_p, temp, sizeof(temp)); // mod it belongs to
+	READSTRINGN(sav_p, temp, sizeof(temp)); // mod it belongs to
 
 	if (strcmp(temp, timeattackfolder)) BADSAVE
 
 	// P_UnArchivePlayer()
+#ifdef NEWSKINSAVES
 	CHECKPOS
-	fake = READUINT16(save_p);
-	savegameinfo[slot].skinnum = fake & ((1<<5) - 1);
-	if (savegameinfo[slot].skinnum >= numskins
-	|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
-		BADSAVE
-	savegameinfo[slot].botskin = fake >> 5;
-	if (savegameinfo[slot].botskin-1 >= numskins
-	|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
-		BADSAVE
+	backwardsCompat = READUINT16(sav_p);
+
+	if (backwardsCompat != NEWSKINSAVES)
+	{
+		CONS_Printf("Old behavior for %d\n", slot);
+
+		// Backwards compat
+		savegameinfo[slot].skinnum = backwardsCompat & ((1<<5) - 1);
+
+		if (savegameinfo[slot].skinnum >= numskins
+		|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
+			BADSAVE
+
+		CONS_Printf("Read skinnum successfully\n");
+
+		savegameinfo[slot].botskin = backwardsCompat >> 5;
+		if (savegameinfo[slot].botskin-1 >= numskins
+		|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
+			BADSAVE
+
+		CONS_Printf("Read botskin successfully\n");
+	}
+	else
+#endif
+	{
+		boolean haveBot = false;
+		char ourSkinName[SKINNAMESIZE+1];
+
+		CONS_Printf("New behavior for %d\n", slot);
+
+		CHECKPOS
+		READSTRINGN(sav_p, ourSkinName, SKINNAMESIZE);
+		savegameinfo[slot].skinnum = R_SkinAvailable(ourSkinName);
+
+		if (savegameinfo[slot].skinnum >= numskins
+		|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
+			BADSAVE
+
+		CONS_Printf("Read skinnum successfully\n");
+
+		CHECKPOS
+		haveBot = (boolean)READUINT8(sav_p);
+
+		if (haveBot == true)
+		{
+			char botSkinName[SKINNAMESIZE+1];
+
+			CHECKPOS
+			READSTRINGN(sav_p, botSkinName, SKINNAMESIZE);
+			savegameinfo[slot].botskin = (R_SkinAvailable(botSkinName) + 1);
+
+			if (savegameinfo[slot].botskin-1 >= numskins
+			|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
+				BADSAVE
+		}
+
+		CONS_Printf("Read botskin successfully\n");
+	}
 
 	CHECKPOS
-	savegameinfo[slot].numgameovers = READUINT8(save_p); // numgameovers
+	savegameinfo[slot].numgameovers = READUINT8(sav_p); // numgameovers
 	CHECKPOS
-	savegameinfo[slot].lives = READSINT8(save_p); // lives
+	savegameinfo[slot].lives = READSINT8(sav_p); // lives
 	CHECKPOS
-	savegameinfo[slot].continuescore = READINT32(save_p); // score
+	savegameinfo[slot].continuescore = READINT32(sav_p); // score
 	CHECKPOS
-	fake = READINT32(save_p); // continues
+	fake = READINT32(sav_p); // continues
 	if (useContinues)
 		savegameinfo[slot].continuescore = fake;
 
 	// File end marker check
 	CHECKPOS
-	switch (READUINT8(save_p))
+	switch (READUINT8(sav_p))
 	{
 		case 0xb7:
 			{
 				UINT8 i, banksinuse;
 				CHECKPOS
-				banksinuse = READUINT8(save_p);
+				banksinuse = READUINT8(sav_p);
 				CHECKPOS
 				if (banksinuse > NUM_LUABANKS)
 					BADSAVE
 				for (i = 0; i < banksinuse; i++)
 				{
-					(void)READINT32(save_p);
+					(void)READINT32(sav_p);
 					CHECKPOS
 				}
-				if (READUINT8(save_p) != 0x1d)
+				if (READUINT8(sav_p) != 0x1d)
 					BADSAVE
 			}
 		case 0x1d:

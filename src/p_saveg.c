@@ -64,12 +64,26 @@ typedef enum
 static inline void P_ArchivePlayer(void)
 {
 	const player_t *player = &players[consoleplayer];
-	INT16 skininfo = player->skin + (botskin<<5);
 	SINT8 pllives = player->lives;
 	if (pllives < startinglivesbalance[numgameovers]) // Bump up to 3 lives if the player
 		pllives = startinglivesbalance[numgameovers]; // has less than that.
 
-	WRITEUINT16(save_p, skininfo);
+#ifdef NEWSKINSAVES
+	WRITEUINT16(save_p, NEWSKINSAVES);
+#endif
+
+	WRITESTRINGN(save_p, skins[player->skin].name, SKINNAMESIZE);
+
+	if (botskin != 0)
+	{
+		WRITEUINT8(save_p, 1);
+		WRITESTRINGN(save_p, skins[botskin-1].name, SKINNAMESIZE);
+	}
+	else
+	{
+		WRITEUINT8(save_p, 0);
+	}
+
 	WRITEUINT8(save_p, numgameovers);
 	WRITESINT8(save_p, pllives);
 	WRITEUINT32(save_p, player->score);
@@ -78,9 +92,34 @@ static inline void P_ArchivePlayer(void)
 
 static inline void P_UnArchivePlayer(void)
 {
-	INT16 skininfo = READUINT16(save_p);
-	savedata.skin = skininfo & ((1<<5) - 1);
-	savedata.botskin = skininfo >> 5;
+#ifdef NEWSKINSAVES
+	INT16 backwardsCompat = READUINT16(save_p);
+
+	if (backwardsCompat != NEWSKINSAVES)
+	{
+		// Backwards compat
+		savedata.skin = backwardsCompat & ((1<<5) - 1);
+		savedata.botskin = backwardsCompat >> 5;
+	}
+	else
+#endif
+	{
+		boolean haveBot = false;
+		char ourSkinName[SKINNAMESIZE+1];
+
+		READSTRINGN(save_p, ourSkinName, SKINNAMESIZE);
+		savedata.skin = R_SkinAvailable(ourSkinName);
+
+		haveBot = (boolean)READUINT8(save_p);
+
+		if (haveBot == true)
+		{
+			char botSkinName[SKINNAMESIZE+1];
+
+			READSTRINGN(save_p, botSkinName, SKINNAMESIZE);
+			savedata.botskin = R_SkinAvailable(botSkinName) + 1;
+		}
+	}
 
 	savedata.numgameovers = READUINT8(save_p);
 	savedata.lives = READSINT8(save_p);
