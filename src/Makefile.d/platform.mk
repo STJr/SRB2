@@ -33,10 +33,10 @@ endif
 else ifdef FREEBSD
 UNIX=1
 platform=freebsd
-else ifdef SOLARIS # FIXME
+else ifdef SOLARIS # FIXME: UNTESTED
 UNIX=1
 platform=solaris
-else ifdef CYGWIN32 # FIXME
+else ifdef CYGWIN32 # FIXME: UNTESTED
 nasm_format=win32
 platform=cygwin
 else ifdef MINGW

@@ -30,7 +30,7 @@ opts+=-I/usr/X11R6/include -DLINUX -DFREEBSD
 libs+=-L/usr/X11R6/lib -lipx -lkvm
 endif
 
-# FIXME
+# FIXME: UNTESTED
 #ifdef SOLARIS
 #NOIPX=1
 #NOASM=1

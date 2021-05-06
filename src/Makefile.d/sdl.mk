@@ -13,12 +13,12 @@ makedir:=$(makedir)/SDL
 sources+=$(call List,sdl/Sourcefile)
 opts+=-DDIRECTFULLSCREEN -DHAVE_SDL
 
-# FIXME
+# FIXME: UNTESTED
 #ifdef PANDORA
 #include sdl/SRB2Pandora/Makefile.cfg
 #endif #ifdef PANDORA
 
-# FIXME
+# FIXME: UNTESTED
 #ifdef CYGWIN32
 #include sdl/MakeCYG.cfg
 #endif #ifdef CYGWIN32
@@ -62,25 +62,6 @@ ifndef NOASM
 USEASM=1
 endif
 endif
-
-# FIXME
-#ifdef SDL_TTF
-#	OPTS+=-DHAVE_TTF
-#	SDL_LDFLAGS+=-lSDL2_ttf -lfreetype -lz
-#	OBJS+=$(OBJDIR)/i_ttf.o
-#endif
-
-# FIXME
-#ifdef SDL_IMAGE
-#	OPTS+=-DHAVE_IMAGE
-#	SDL_LDFLAGS+=-lSDL2_image
-#endif
-
-# FIXME
-#ifdef SDL_NET
-#	OPTS+=-DHAVE_SDLNET
-#	SDL_LDFLAGS+=-lSDL2_net
-#endif
 
 ifdef MINGW
 ifndef NOSDLMAIN
