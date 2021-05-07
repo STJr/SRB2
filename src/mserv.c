@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 1999-2021 by Sonic Team Junior.
-// Copyright (C)      2021 by James R.
+// Copyright (C) 2020-2021 by James R.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
