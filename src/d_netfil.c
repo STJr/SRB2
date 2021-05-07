@@ -15,7 +15,7 @@
 
 #include <time.h>
 
-#if defined (_WIN32) || defined (__DJGPP__)
+#ifdef _WIN32
 #include <io.h>
 #include <direct.h>
 #else
@@ -29,10 +29,6 @@
 #include <limits.h>
 #elif defined (_WIN32)
 #include <sys/utime.h>
-#endif
-#ifdef __DJGPP__
-#include <dir.h>
-#include <utime.h>
 #endif
 
 #include "doomdef.h"
