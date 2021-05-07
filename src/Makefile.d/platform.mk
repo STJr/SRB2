@@ -47,9 +47,9 @@ NOASM=1
 # but we make that assumption elsewhere
 # Once that changes, remove this
 X86_64=1
-platform=mingw
-else
 platform=mingw/64
+else
+platform=mingw
 endif
 include Makefile.d/win32.mk
 endif
