@@ -229,7 +229,10 @@ void readPlayer(MYFILE *f, INT32 num)
 
 				SLOTFOUND
 
-				for (i = 0; i < MAXLINELEN-3; i++)
+				// A friendly neighborhood alias for brevity's sake
+#define NOTE_SIZE sizeof(description[num].notes)
+
+				for (i = 0; i < (INT32)(MAXLINELEN-NOTE_SIZE-3); i++)
 				{
 					if (s[i] == '=')
 					{
@@ -239,8 +242,9 @@ void readPlayer(MYFILE *f, INT32 num)
 				}
 				if (playertext)
 				{
-					strcpy(description[num].notes, playertext);
-					strcat(description[num].notes, myhashfgets(playertext, sizeof (description[num].notes), f));
+					strlcpy(description[num].notes, playertext, NOTE_SIZE);
+					strlcat(description[num].notes,
+						myhashfgets(playertext, NOTE_SIZE, f), NOTE_SIZE);
 				}
 				else
 					strcpy(description[num].notes, "");
@@ -249,7 +253,7 @@ void readPlayer(MYFILE *f, INT32 num)
 				// It works down here, though.
 				{
 					INT32 numline = 0;
-					for (i = 0; (size_t)i < sizeof(description[num].notes)-1; i++)
+					for (i = 0; (size_t)i < NOTE_SIZE-1; i++)
 					{
 						if (numline < 20 && description[num].notes[i] == '\n')
 							numline++;
@@ -260,6 +264,7 @@ void readPlayer(MYFILE *f, INT32 num)
 				}
 				description[num].notes[strlen(description[num].notes)-1] = '\0';
 				description[num].notes[i] = '\0';
+#undef NOTE_SIZE
 				continue;
 			}
 
@@ -1140,8 +1145,10 @@ void readgametype(MYFILE *f, char *gtname)
 				}
 				if (descr)
 				{
-					strcpy(gtdescription, descr);
-					strcat(gtdescription, myhashfgets(descr, sizeof (gtdescription), f));
+					strlcpy(gtdescription, descr, sizeof (gtdescription));
+					strlcat(gtdescription,
+						myhashfgets(descr, sizeof (gtdescription), f),
+						sizeof (gtdescription));
 				}
 				else
 					strcpy(gtdescription, "");
