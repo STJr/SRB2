@@ -39,59 +39,53 @@ typedef enum GLTextureFormat_e
 	GL_TEXFMT_ALPHA_INTENSITY_88  = 0x22,
 } GLTextureFormat_t;
 
-// data holds the address of the graphics data cached in heap memory
-//                NULL if the texture is not in Doom heap cache.
+// Colormap structure for mipmaps.
+struct GLColormap_s
+{
+	const UINT8 *source;
+	UINT8 data[256];
+};
+typedef struct GLColormap_s GLColormap_t;
+
+
+// Texture information (misleadingly named "mipmap" all over the code.)
+// The *data pointer holds the address of the graphics data cached in heap memory.
+// NULL if the texture is not in SRB2's heap cache.
 struct GLMipmap_s
 {
-	//for TexDownloadMipMap
-	GLTextureFormat_t format;
-	void              *data;
+	// for UpdateTexture
+	GLTextureFormat_t     format;
+	void                 *data;
 
-	UINT32          flags;
-	UINT16          height;
-	UINT16          width;
-	UINT32          downloaded;     // the dll driver have it in there cache ?
+	UINT32                flags;
+	UINT16                height;
+	UINT16                width;
+	UINT32                downloaded; // The GPU has this texture.
 
 	struct GLMipmap_s    *nextcolormap;
-	const UINT8          *colormap;
-
-	// opengl
-	struct GLMipmap_s *nextmipmap; // opengl : liste of all texture in opengl driver
+	struct GLColormap_s  *colormap;
 };
 typedef struct GLMipmap_s GLMipmap_t;
 
 
 //
-// Doom texture info, as cached for hardware rendering
+// Level textures, as cached for hardware rendering.
 //
 struct GLMapTexture_s
 {
 	GLMipmap_t  mipmap;
-	float       scaleX;             //used for scaling textures on walls
+	float       scaleX; // Used for scaling textures on walls
 	float       scaleY;
 };
 typedef struct GLMapTexture_s GLMapTexture_t;
 
 
-// a cached patch as converted to hardware format, holding the original patch_t
-// header so that the existing code can retrieve ->width, ->height as usual
-// This is returned by W_CachePatchNum()/W_CachePatchName(), when rendermode
-// is 'render_opengl'. Else it returns the normal patch_t data.
-
+// Patch information for the hardware renderer.
 struct GLPatch_s
 {
-	// the 4 first fields come right away from the original patch_t
-	INT16               width;
-	INT16               height;
-	INT16               leftoffset;     // pixels to the left of origin
-	INT16               topoffset;      // pixels below the origin
-	//
-	float               max_s,max_t;
-	UINT16              wadnum;      // the software patch lump num for when the hardware patch
-	UINT16              lumpnum;     // was flushed, and we need to re-create it
-	void                *rawpatch;   // :^)
-	GLMipmap_t          *mipmap;
-} ATTRPACK;
+	GLMipmap_t *mipmap; // Texture data. Allocated whenever the patch is.
+	float       max_s, max_t;
+};
 typedef struct GLPatch_s GLPatch_t;
 
 #endif //_HWR_DATA_

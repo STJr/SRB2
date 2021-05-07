@@ -1,7 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -138,6 +137,8 @@ static int comparePolygons(const void *p1, const void *p2)
 	PolygonArrayEntry* poly2 = &polygonArray[index2];
 	int diff;
 	INT64 diff64;
+	UINT32 downloaded1 = 0;
+	UINT32 downloaded2 = 0;
 
 	int shader1 = poly1->shader;
 	int shader2 = poly2->shader;
@@ -153,7 +154,11 @@ static int comparePolygons(const void *p1, const void *p2)
 	if (shader1 == -1 && shader2 == -1)
 		return index1 - index2;
 
-	diff64 = poly1->texture - poly2->texture;
+	if (poly1->texture)
+		downloaded1 = poly1->texture->downloaded; // there should be a opengl texture name here, usable for comparisons
+	if (poly2->texture)
+		downloaded2 = poly2->texture->downloaded;
+	diff64 = downloaded1 - downloaded2;
 	if (diff64 != 0) return diff64;
 
 	diff = poly1->polyFlags - poly2->polyFlags;
@@ -185,16 +190,21 @@ static int comparePolygonsNoShaders(const void *p1, const void *p2)
 
 	GLMipmap_t *texture1 = poly1->texture;
 	GLMipmap_t *texture2 = poly2->texture;
+	UINT32 downloaded1 = 0;
+	UINT32 downloaded2 = 0;
 	if (poly1->polyFlags & PF_NoTexture || poly1->horizonSpecial)
 		texture1 = NULL;
 	if (poly2->polyFlags & PF_NoTexture || poly2->horizonSpecial)
 		texture2 = NULL;
-	diff64 = texture1 - texture2;
-	if (diff64 != 0) return diff64;
-
+	if (texture1)
+		downloaded1 = texture1->downloaded; // there should be a opengl texture name here, usable for comparisons
+	if (texture2)
+		downloaded2 = texture2->downloaded;
 	// skywalls and horizon lines must retain their order for horizon lines to work
-	if (texture1 == NULL && texture2 == NULL)
+	if (!texture1 && !texture2)
 		return index1 - index2;
+	diff64 = downloaded1 - downloaded2;
+	if (diff64 != 0) return diff64;
 
 	diff = poly1->polyFlags - poly2->polyFlags;
 	if (diff != 0) return diff;
@@ -235,13 +245,13 @@ void HWR_RenderBatches(void)
 	currently_batching = false;// no longer collecting batches
 	if (!polygonArraySize)
 	{
-		rs_hw_numpolys = rs_hw_numcalls = rs_hw_numshaders = rs_hw_numtextures = rs_hw_numpolyflags = rs_hw_numcolors = 0;
+		ps_hw_numpolys = ps_hw_numcalls = ps_hw_numshaders = ps_hw_numtextures = ps_hw_numpolyflags = ps_hw_numcolors = 0;
 		return;// nothing to draw
 	}
 	// init stats vars
-	rs_hw_numpolys = polygonArraySize;
-	rs_hw_numcalls = rs_hw_numverts = 0;
-	rs_hw_numshaders = rs_hw_numtextures = rs_hw_numpolyflags = rs_hw_numcolors = 1;
+	ps_hw_numpolys = polygonArraySize;
+	ps_hw_numcalls = ps_hw_numverts = 0;
+	ps_hw_numshaders = ps_hw_numtextures = ps_hw_numpolyflags = ps_hw_numcolors = 1;
 	// init polygonIndexArray
 	for (i = 0; i < polygonArraySize; i++)
 	{
@@ -249,12 +259,12 @@ void HWR_RenderBatches(void)
 	}
 
 	// sort polygons
-	rs_hw_batchsorttime = I_GetTimeMicros();
+	ps_hw_batchsorttime = I_GetPreciseTime();
 	if (cv_glshaders.value && gl_shadersavailable)
 		qsort(polygonIndexArray, polygonArraySize, sizeof(unsigned int), comparePolygons);
 	else
 		qsort(polygonIndexArray, polygonArraySize, sizeof(unsigned int), comparePolygonsNoShaders);
-	rs_hw_batchsorttime = I_GetTimeMicros() - rs_hw_batchsorttime;
+	ps_hw_batchsorttime = I_GetPreciseTime() - ps_hw_batchsorttime;
 	// sort order
 	// 1. shader
 	// 2. texture
@@ -262,7 +272,7 @@ void HWR_RenderBatches(void)
 	// 4. colors + light level
 	// not sure about what order of the last 2 should be, or if it even matters
 
-	rs_hw_batchdrawtime = I_GetTimeMicros();
+	ps_hw_batchdrawtime = I_GetPreciseTime();
 
 	currentShader = polygonArray[polygonIndexArray[0]].shader;
 	currentTexture = polygonArray[polygonIndexArray[0]].texture;
@@ -398,8 +408,8 @@ void HWR_RenderBatches(void)
 			// execute draw call
             HWD.pfnDrawIndexedTriangles(&currentSurfaceInfo, finalVertexArray, finalIndexWritePos, currentPolyFlags, finalVertexIndexArray);
 			// update stats
-			rs_hw_numcalls++;
-			rs_hw_numverts += finalIndexWritePos;
+			ps_hw_numcalls++;
+			ps_hw_numverts += finalIndexWritePos;
 			// reset write positions
 			finalVertexWritePos = 0;
 			finalIndexWritePos = 0;
@@ -416,7 +426,7 @@ void HWR_RenderBatches(void)
 			currentShader = nextShader;
 			changeShader = false;
 
-			rs_hw_numshaders++;
+			ps_hw_numshaders++;
 		}
 		if (changeTexture)
 		{
@@ -425,21 +435,21 @@ void HWR_RenderBatches(void)
 			currentTexture = nextTexture;
 			changeTexture = false;
 
-			rs_hw_numtextures++;
+			ps_hw_numtextures++;
 		}
 		if (changePolyFlags)
 		{
 			currentPolyFlags = nextPolyFlags;
 			changePolyFlags = false;
 
-			rs_hw_numpolyflags++;
+			ps_hw_numpolyflags++;
 		}
 		if (changeSurfaceInfo)
 		{
 			currentSurfaceInfo = nextSurfaceInfo;
 			changeSurfaceInfo = false;
 
-			rs_hw_numcolors++;
+			ps_hw_numcolors++;
 		}
 		// and that should be it?
 	}
@@ -447,7 +457,7 @@ void HWR_RenderBatches(void)
 	polygonArraySize = 0;
 	unsortedVertexArraySize = 0;
 
-	rs_hw_batchdrawtime = I_GetTimeMicros() - rs_hw_batchdrawtime;
+	ps_hw_batchdrawtime = I_GetPreciseTime() - ps_hw_batchdrawtime;
 }
 
 

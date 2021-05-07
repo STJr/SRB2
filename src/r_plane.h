@@ -19,7 +19,10 @@
 #include "r_textures.h"
 #include "p_polyobj.h"
 
-#define MAXVISPLANES 512
+#define VISPLANEHASHBITS 9
+#define VISPLANEHASHMASK ((1<<VISPLANEHASHBITS)-1)
+// the last visplane list is outside of the hash table and is used for fof planes
+#define MAXVISPLANES ((1<<VISPLANEHASHBITS)+1)
 
 //
 // Now what is a visplane, anyway?
@@ -84,10 +87,17 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);
 void R_PlaneBounds(visplane_t *plane);
 
-// Draws a single visplane.
-void R_DrawSinglePlane(visplane_t *pl);
 void R_CheckFlatLength(size_t size);
 boolean R_CheckPowersOfTwo(void);
+
+// Draws a single visplane.
+void R_DrawSinglePlane(visplane_t *pl);
+
+// Calculates the slope vectors needed for tilted span drawing.
+void R_CalculateSlopeVectors(pslope_t *slope, fixed_t planeviewx, fixed_t planeviewy, fixed_t planeviewz, fixed_t planexscale, fixed_t planeyscale, fixed_t planexoffset, fixed_t planeyoffset, angle_t planeviewangle, angle_t planeangle, float fudge);
+
+// Sets the slope vector pointers for the current tilted span.
+void R_SetTiltedSpan(INT32 span);
 
 typedef struct planemgr_s
 {

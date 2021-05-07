@@ -35,15 +35,11 @@ static UINT8 hud_enabled[(hud_MAX/8)+1];
 
 static UINT8 hudAvailable; // hud hooks field
 
-#ifdef LUA_PATCH_SAFETY
-static patchinfo_t *patchinfo, *patchinfohead;
-static int numluapatches;
-#endif
-
 // must match enum hud in lua_hud.h
 static const char *const hud_disable_options[] = {
 	"stagetitle",
 	"textspectator",
+	"crosshair",
 
 	"score",
 	"time",
@@ -292,11 +288,7 @@ static int colormap_get(lua_State *L)
 
 static int patch_get(lua_State *L)
 {
-#ifdef LUA_PATCH_SAFETY
 	patch_t *patch = *((patch_t **)luaL_checkudata(L, 1, META_PATCH));
-#else
-	patchinfo_t *patch = *((patchinfo_t **)luaL_checkudata(L, 1, META_PATCH));
-#endif
 	enum patch field = luaL_checkoption(L, 2, NULL, patch_opt);
 
 	// patches are invalidated when switching renderers
@@ -314,16 +306,16 @@ static int patch_get(lua_State *L)
 		lua_pushboolean(L, patch != NULL);
 		break;
 	case patch_width:
-		lua_pushinteger(L, SHORT(patch->width));
+		lua_pushinteger(L, patch->width);
 		break;
 	case patch_height:
-		lua_pushinteger(L, SHORT(patch->height));
+		lua_pushinteger(L, patch->height);
 		break;
 	case patch_leftoffset:
-		lua_pushinteger(L, SHORT(patch->leftoffset));
+		lua_pushinteger(L, patch->leftoffset);
 		break;
 	case patch_topoffset:
-		lua_pushinteger(L, SHORT(patch->topoffset));
+		lua_pushinteger(L, patch->topoffset);
 		break;
 	}
 	return 1;
@@ -403,59 +395,8 @@ static int libd_patchExists(lua_State *L)
 
 static int libd_cachePatch(lua_State *L)
 {
-#ifdef LUA_PATCH_SAFETY
-	int i;
-	lumpnum_t lumpnum;
-	patchinfo_t *luapat;
-	patch_t *realpatch;
-
-	HUDONLY
-
-	luapat = patchinfohead;
-	lumpnum = W_CheckNumForLongName(luaL_checkstring(L, 1));
-	if (lumpnum == LUMPERROR)
-		lumpnum = W_GetNumForLongName("MISSING");
-
-	for (i = 0; i < numluapatches; i++)
-	{
-		// check if already cached
-		if (luapat->wadnum == WADFILENUM(lumpnum) && luapat->lumpnum == LUMPNUM(lumpnum))
-		{
-			LUA_PushUserdata(L, luapat, META_PATCH);
-			return 1;
-		}
-		luapat = luapat->next;
-		if (!luapat)
-			break;
-	}
-
-	if (numluapatches > 0)
-	{
-		patchinfo->next = Z_Malloc(sizeof(patchinfo_t), PU_STATIC, NULL);
-		patchinfo = patchinfo->next;
-	}
-	else
-	{
-		patchinfo = Z_Malloc(sizeof(patchinfo_t), PU_STATIC, NULL);
-		patchinfohead = patchinfo;
-	}
-
-	realpatch = W_CachePatchNum(lumpnum, PU_PATCH);
-
-	patchinfo->width = realpatch->width;
-	patchinfo->height = realpatch->height;
-	patchinfo->leftoffset = realpatch->leftoffset;
-	patchinfo->topoffset = realpatch->topoffset;
-
-	patchinfo->wadnum = WADFILENUM(lumpnum);
-	patchinfo->lumpnum = LUMPNUM(lumpnum);
-
-	LUA_PushUserdata(L, patchinfo, META_PATCH);
-	numluapatches++;
-#else
 	HUDONLY
 	LUA_PushUserdata(L, W_CachePatchLongName(luaL_checkstring(L, 1), PU_PATCH), META_PATCH);
-#endif
 	return 1;
 }
 
@@ -518,9 +459,8 @@ static int libd_getSpritePatch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			if (!(sprframe->rotsprite.cached & (1<<angle)))
-				R_CacheRotSprite(i, frame, NULL, sprframe, angle, sprframe->flip & (1<<angle));
-			LUA_PushUserdata(L, sprframe->rotsprite.patch[angle][rot], META_PATCH);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), true, &spriteinfo[i], rot);
+			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
 			return 3;
@@ -529,7 +469,7 @@ static int libd_getSpritePatch(lua_State *L)
 #endif
 
 	// push both the patch and it's "flip" value
-	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_PATCH), META_PATCH);
+	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_SPRITE), META_PATCH);
 	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
 	return 2;
 }
@@ -631,9 +571,8 @@ static int libd_getSprite2Patch(lua_State *L)
 		INT32 rot = R_GetRollAngle(rollangle);
 
 		if (rot) {
-			if (!(sprframe->rotsprite.cached & (1<<angle)))
-				R_CacheRotSprite(SPR_PLAY, frame, &skins[i].sprinfo[j], sprframe, angle, sprframe->flip & (1<<angle));
-			LUA_PushUserdata(L, sprframe->rotsprite.patch[angle][rot], META_PATCH);
+			patch_t *rotsprite = Patch_GetRotatedSprite(sprframe, frame, angle, sprframe->flip & (1<<angle), true, &skins[i].sprinfo[j], rot);
+			LUA_PushUserdata(L, rotsprite, META_PATCH);
 			lua_pushboolean(L, false);
 			lua_pushboolean(L, true);
 			return 3;
@@ -642,7 +581,7 @@ static int libd_getSprite2Patch(lua_State *L)
 #endif
 
 	// push both the patch and it's "flip" value
-	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_PATCH), META_PATCH);
+	LUA_PushUserdata(L, W_CachePatchNum(sprframe->lumppat[angle], PU_SPRITE), META_PATCH);
 	lua_pushboolean(L, (sprframe->flip & (1<<angle)) != 0);
 	return 2;
 }
@@ -651,22 +590,14 @@ static int libd_draw(lua_State *L)
 {
 	INT32 x, y, flags;
 	patch_t *patch;
-#ifdef LUA_PATCH_SAFETY
-	patchinfo_t *luapat;
-#endif
 	const UINT8 *colormap = NULL;
 
 	HUDONLY
 	x = luaL_checkinteger(L, 1);
 	y = luaL_checkinteger(L, 2);
-#ifdef LUA_PATCH_SAFETY
-	luapat = *((patchinfo_t **)luaL_checkudata(L, 3, META_PATCH));
-	patch = W_CachePatchNum((luapat->wadnum<<16)+luapat->lumpnum, PU_PATCH);
-#else
 	patch = *((patch_t **)luaL_checkudata(L, 3, META_PATCH));
 	if (!patch)
 		return LUA_ErrInvalid(L, "patch_t");
-#endif
 	flags = luaL_optinteger(L, 4, 0);
 	if (!lua_isnoneornil(L, 5))
 		colormap = *((UINT8 **)luaL_checkudata(L, 5, META_COLORMAP));
@@ -682,9 +613,6 @@ static int libd_drawScaled(lua_State *L)
 	fixed_t x, y, scale;
 	INT32 flags;
 	patch_t *patch;
-#ifdef LUA_PATCH_SAFETY
-	patchinfo_t *luapat;
-#endif
 	const UINT8 *colormap = NULL;
 
 	HUDONLY
@@ -693,14 +621,9 @@ static int libd_drawScaled(lua_State *L)
 	scale = luaL_checkinteger(L, 3);
 	if (scale < 0)
 		return luaL_error(L, "negative scale");
-#ifdef LUA_PATCH_SAFETY
-	luapat = *((patchinfo_t **)luaL_checkudata(L, 4, META_PATCH));
-	patch = W_CachePatchNum((luapat->wadnum<<16)+luapat->lumpnum, PU_PATCH);
-#else
 	patch = *((patch_t **)luaL_checkudata(L, 4, META_PATCH));
 	if (!patch)
 		return LUA_ErrInvalid(L, "patch_t");
-#endif
 	flags = luaL_optinteger(L, 5, 0);
 	if (!lua_isnoneornil(L, 6))
 		colormap = *((UINT8 **)luaL_checkudata(L, 6, META_COLORMAP));
@@ -974,8 +897,10 @@ static int libd_getColormap(lua_State *L)
 	else if (lua_type(L, 1) == LUA_TNUMBER) // skin number
 	{
 		skinnum = (INT32)luaL_checkinteger(L, 1);
-		if (skinnum < TC_BLINK || skinnum >= MAXSKINS)
-			return luaL_error(L, "skin number %d is out of range (%d - %d)", skinnum, TC_BLINK, MAXSKINS-1);
+		if (skinnum >= MAXSKINS)
+			return luaL_error(L, "skin number %d is out of range (>%d)", skinnum, MAXSKINS-1);
+		else if (skinnum < 0 && skinnum > TC_DEFAULT)
+			return luaL_error(L, "translation colormap index is out of range");
 	}
 	else // skin name
 	{
@@ -990,6 +915,19 @@ static int libd_getColormap(lua_State *L)
 	colormap = R_GetTranslationColormap(skinnum, color, GTC_CACHE);
 	LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
 	return 1;
+}
+
+static int libd_getStringColormap(lua_State *L)
+{
+	INT32 flags = luaL_checkinteger(L, 1);
+	UINT8* colormap = NULL;
+	HUDONLY
+	colormap = V_GetStringColormap(flags & V_CHARCOLORMASK);
+	if (colormap) {
+		LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
+		return 1;
+	}
+	return 0;
 }
 
 static int libd_fadeScreen(lua_State *L)
@@ -1142,6 +1080,7 @@ static luaL_Reg lib_draw[] = {
 	{"getSpritePatch", libd_getSpritePatch},
 	{"getSprite2Patch", libd_getSprite2Patch},
 	{"getColormap", libd_getColormap},
+	{"getStringColormap", libd_getStringColormap},
 	// drawing
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
@@ -1247,10 +1186,6 @@ int LUA_HudLib(lua_State *L)
 {
 	memset(hud_enabled, 0xff, (hud_MAX/8)+1);
 
-#ifdef LUA_PATCH_SAFETY
-	numluapatches = 0;
-#endif
-
 	lua_newtable(L); // HUD registry table
 		lua_newtable(L);
 		luaL_register(L, NULL, lib_draw);
@@ -1329,7 +1264,9 @@ void LUAh_GameHUD(player_t *stplayr)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1351,9 +1288,9 @@ void LUAh_GameHUD(player_t *stplayr)
 		lua_pushvalue(gL, -5); // graphics library (HUD[1])
 		lua_pushvalue(gL, -5); // stplayr
 		lua_pushvalue(gL, -5); // camera
-		LUA_Call(gL, 3);
+		LUA_Call(gL, 3, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1363,7 +1300,9 @@ void LUAh_ScoresHUD(void)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1376,9 +1315,9 @@ void LUAh_ScoresHUD(void)
 	lua_pushnil(gL);
 	while (lua_next(gL, -3) != 0) {
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1);
+		LUA_Call(gL, 1, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1388,7 +1327,9 @@ void LUAh_TitleHUD(void)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1401,9 +1342,9 @@ void LUAh_TitleHUD(void)
 	lua_pushnil(gL);
 	while (lua_next(gL, -3) != 0) {
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1);
+		LUA_Call(gL, 1, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1413,7 +1354,9 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1434,10 +1377,10 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 		lua_pushvalue(gL, -6); // stplayr
 		lua_pushvalue(gL, -6); // lt_ticker
 		lua_pushvalue(gL, -6); // lt_endtime
-		LUA_Call(gL, 4);
+		LUA_Call(gL, 4, 0, 1);
 	}
 
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1447,7 +1390,9 @@ void LUAh_IntermissionHUD(void)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1460,8 +1405,8 @@ void LUAh_IntermissionHUD(void)
 	lua_pushnil(gL);
 	while (lua_next(gL, -3) != 0) {
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1);
+		LUA_Call(gL, 1, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }

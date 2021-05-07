@@ -15,6 +15,7 @@
 #include "tables.h"
 #include "p_local.h"
 #include "doomstat.h" // for ALL7EMERALDS
+#include "r_main.h" // for R_PointToDist2
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -129,7 +130,7 @@ static int lib_fixedsqrt(lua_State *L)
 
 static int lib_fixedhypot(lua_State *L)
 {
-	lua_pushfixed(L, FixedHypot(luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
+	lua_pushfixed(L, R_PointToDist2(0, 0, luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
 	return 1;
 }
 
@@ -192,18 +193,30 @@ static luaL_Reg lib[] = {
 	{"cos", lib_finecosine},
 	{"tan", lib_finetangent},
 	{"FixedAngle", lib_fixedangle},
+	{"fixangle"  , lib_fixedangle},
 	{"AngleFixed", lib_anglefixed},
+	{"anglefix"  , lib_anglefixed},
 	{"InvAngle", lib_invangle},
 	{"FixedMul", lib_fixedmul},
+	{"fixmul"  , lib_fixedmul},
 	{"FixedInt", lib_fixedint},
+	{"fixint"  , lib_fixedint},
 	{"FixedDiv", lib_fixeddiv},
+	{"fixdiv"  , lib_fixeddiv},
 	{"FixedRem", lib_fixedrem},
+	{"fixrem"  , lib_fixedrem},
 	{"FixedSqrt", lib_fixedsqrt},
+	{"fixsqrt"  , lib_fixedsqrt},
 	{"FixedHypot", lib_fixedhypot},
+	{"fixhypot"  , lib_fixedhypot},
 	{"FixedFloor", lib_fixedfloor},
+	{"fixfloor"  , lib_fixedfloor},
 	{"FixedTrunc", lib_fixedtrunc},
+	{"fixtrunc"  , lib_fixedtrunc},
 	{"FixedCeil", lib_fixedceil},
+	{"fixceil"  , lib_fixedceil},
 	{"FixedRound", lib_fixedround},
+	{"fixround"  , lib_fixedround},
 	{"GetSecSpecial", lib_getsecspecial},
 	{"All7Emeralds", lib_all7emeralds},
 	{"ColorOpposite", lib_coloropposite},

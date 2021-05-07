@@ -94,7 +94,7 @@ demoghost *ghosts = NULL;
 // DEMO RECORDING
 //
 
-#define DEMOVERSION 0x000d
+#define DEMOVERSION 0x000e
 #define DEMOHEADER  "\xF0" "SRB2Replay" "\x0F"
 
 #define DF_GHOST        0x01 // This demo contains ghost data too!
@@ -345,32 +345,29 @@ void G_WriteGhostTic(mobj_t *ghost)
 	else
 	{
 		// For moving normally:
-		// Store one full byte of movement, plus one byte of fractional movement.
-		INT16 momx = (INT16)((ghost->x-oldghost.x)>>8);
-		INT16 momy = (INT16)((ghost->y-oldghost.y)>>8);
+		fixed_t momx = ghost->x-oldghost.x;
+		fixed_t momy = ghost->y-oldghost.y;
 		if (momx != oldghost.momx
 		|| momy != oldghost.momy)
 		{
 			oldghost.momx = momx;
 			oldghost.momy = momy;
 			ziptic |= GZT_MOMXY;
-			WRITEINT16(demo_p,momx);
-			WRITEINT16(demo_p,momy);
+			WRITEFIXED(demo_p,momx);
+			WRITEFIXED(demo_p,momy);
 		}
-		momx = (INT16)((ghost->z-oldghost.z)>>8);
+		momx = ghost->z-oldghost.z;
 		if (momx != oldghost.momz)
 		{
 			oldghost.momz = momx;
 			ziptic |= GZT_MOMZ;
-			WRITEINT16(demo_p,momx);
+			WRITEFIXED(demo_p,momx);
 		}
 
 		// This SHOULD set oldghost.x/y/z to match ghost->x/y/z
-		// but it keeps the fractional loss of one byte,
-		// so it will hopefully be made up for in future tics.
-		oldghost.x += oldghost.momx<<8;
-		oldghost.y += oldghost.momy<<8;
-		oldghost.z += oldghost.momz<<8;
+		oldghost.x += oldghost.momx;
+		oldghost.y += oldghost.momy;
+		oldghost.z += oldghost.momz;
 	}
 
 	#undef MAXMOM
@@ -456,15 +453,14 @@ void G_WriteGhostTic(mobj_t *ghost)
 			WRITEUINT16(demo_p,oldghost.sprite);
 		if (ghostext.flags & EZT_HEIGHT)
 		{
-			height >>= FRACBITS;
-			WRITEINT16(demo_p, height);
+			WRITEFIXED(demo_p, height);
 		}
 		ghostext.flags = 0;
 	}
 
 	if (ghost->player && ghost->player->followmobj && !(ghost->player->followmobj->sprite == SPR_NULL || (ghost->player->followmobj->flags2 & MF2_DONTDRAW))) // bloats tails runs but what can ya do
 	{
-		INT16 temp;
+		fixed_t temp;
 		UINT8 *followtic_p = demo_p++;
 		UINT8 followtic = 0;
 
@@ -492,12 +488,12 @@ void G_WriteGhostTic(mobj_t *ghost)
 			WRITEFIXED(demo_p,ghost->player->followmobj->scale);
 		}
 
-		temp = (INT16)((ghost->player->followmobj->x-ghost->x)>>8);
-		WRITEINT16(demo_p,temp);
-		temp = (INT16)((ghost->player->followmobj->y-ghost->y)>>8);
-		WRITEINT16(demo_p,temp);
-		temp = (INT16)((ghost->player->followmobj->z-ghost->z)>>8);
-		WRITEINT16(demo_p,temp);
+		temp = ghost->player->followmobj->x-ghost->x;
+		WRITEFIXED(demo_p,temp);
+		temp = ghost->player->followmobj->y-ghost->y;
+		WRITEFIXED(demo_p,temp);
+		temp = ghost->player->followmobj->z-ghost->z;
+		WRITEFIXED(demo_p,temp);
 		if (followtic & FZT_SKIN)
 			WRITEUINT8(demo_p,ghost->player->followmobj->sprite2);
 		WRITEUINT16(demo_p,ghost->player->followmobj->sprite);
@@ -547,11 +543,11 @@ void G_ConsGhostTic(void)
 	{
 		if (ziptic & GZT_MOMXY)
 		{
-			oldghost.momx = READINT16(demo_p)<<8;
-			oldghost.momy = READINT16(demo_p)<<8;
+			oldghost.momx = (demoversion < 0x000e) ? READINT16(demo_p)<<8 : READFIXED(demo_p);
+			oldghost.momy = (demoversion < 0x000e) ? READINT16(demo_p)<<8 : READFIXED(demo_p);
 		}
 		if (ziptic & GZT_MOMZ)
-			oldghost.momz = READINT16(demo_p)<<8;
+			oldghost.momz = (demoversion < 0x000e) ? READINT16(demo_p)<<8 : READFIXED(demo_p);
 		oldghost.x += oldghost.momx;
 		oldghost.y += oldghost.momy;
 		oldghost.z += oldghost.momz;
@@ -613,7 +609,7 @@ void G_ConsGhostTic(void)
 		if (xziptic & EZT_SPRITE)
 			demo_p += sizeof(UINT16);
 		if (xziptic & EZT_HEIGHT)
-			demo_p += sizeof(INT16);
+			demo_p += (demoversion < 0x000e) ? sizeof(INT16) : sizeof(fixed_t);
 	}
 
 	if (ziptic & GZT_FOLLOW)
@@ -627,9 +623,8 @@ void G_ConsGhostTic(void)
 		}
 		if (followtic & FZT_SCALE)
 			demo_p += sizeof(fixed_t);
-		demo_p += sizeof(INT16);
-		demo_p += sizeof(INT16);
-		demo_p += sizeof(INT16);
+		// momx, momy and momz
+		demo_p += (demoversion < 0x000e) ? sizeof(INT16) * 3 : sizeof(fixed_t) * 3;
 		if (followtic & FZT_SKIN)
 			demo_p++;
 		demo_p += sizeof(UINT16);
@@ -697,11 +692,11 @@ void G_GhostTicker(void)
 		{
 			if (ziptic & GZT_MOMXY)
 			{
-				g->oldmo.momx = READINT16(g->p)<<8;
-				g->oldmo.momy = READINT16(g->p)<<8;
+				g->oldmo.momx = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
+				g->oldmo.momy = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
 			}
 			if (ziptic & GZT_MOMZ)
-				g->oldmo.momz = READINT16(g->p)<<8;
+				g->oldmo.momz = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
 			g->oldmo.x += g->oldmo.momx;
 			g->oldmo.y += g->oldmo.momy;
 			g->oldmo.z += g->oldmo.momz;
@@ -846,7 +841,7 @@ void G_GhostTicker(void)
 				g->mo->sprite = READUINT16(g->p);
 			if (xziptic & EZT_HEIGHT)
 			{
-				fixed_t temp = READINT16(g->p)<<FRACBITS;
+				fixed_t temp = (g->version < 0x000e) ? READINT16(g->p)<<FRACBITS : READFIXED(g->p);
 				g->mo->height = FixedMul(temp, g->mo->scale);
 			}
 		}
@@ -905,11 +900,11 @@ void G_GhostTicker(void)
 					P_SetScale(follow, follow->destscale);
 
 				P_UnsetThingPosition(follow);
-				temp = READINT16(g->p)<<8;
+				temp = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
 				follow->x = g->mo->x + temp;
-				temp = READINT16(g->p)<<8;
+				temp = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
 				follow->y = g->mo->y + temp;
-				temp = READINT16(g->p)<<8;
+				temp = (g->version < 0x000e) ? READINT16(g->p)<<8 : READFIXED(g->p);
 				follow->z = g->mo->z + temp;
 				P_SetThingPosition(follow);
 				if (followtic & FZT_SKIN)
@@ -1010,11 +1005,11 @@ void G_ReadMetalTic(mobj_t *metal)
 	{
 		if (ziptic & GZT_MOMXY)
 		{
-			oldmetal.momx = READINT16(metal_p)<<8;
-			oldmetal.momy = READINT16(metal_p)<<8;
+			oldmetal.momx = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
+			oldmetal.momy = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 		}
 		if (ziptic & GZT_MOMZ)
-			oldmetal.momz = READINT16(metal_p)<<8;
+			oldmetal.momz = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 		oldmetal.x += oldmetal.momx;
 		oldmetal.y += oldmetal.momy;
 		oldmetal.z += oldmetal.momz;
@@ -1110,7 +1105,7 @@ void G_ReadMetalTic(mobj_t *metal)
 			metal->sprite = READUINT16(metal_p);
 		if (xziptic & EZT_HEIGHT)
 		{
-			fixed_t temp = READINT16(metal_p)<<FRACBITS;
+			fixed_t temp = (metalversion < 0x000e) ? READINT16(metal_p)<<FRACBITS : READFIXED(metal_p);
 			metal->height = FixedMul(temp, metal->scale);
 		}
 	}
@@ -1149,11 +1144,11 @@ void G_ReadMetalTic(mobj_t *metal)
 					P_SetScale(follow, follow->destscale);
 
 				P_UnsetThingPosition(follow);
-				temp = READINT16(metal_p)<<8;
+				temp = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 				follow->x = metal->x + temp;
-				temp = READINT16(metal_p)<<8;
+				temp = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 				follow->y = metal->y + temp;
-				temp = READINT16(metal_p)<<8;
+				temp = (metalversion < 0x000e) ? READINT16(metal_p)<<8 : READFIXED(metal_p);
 				follow->z = metal->z + temp;
 				P_SetThingPosition(follow);
 				if (followtic & FZT_SKIN)
@@ -1213,32 +1208,30 @@ void G_WriteMetalTic(mobj_t *metal)
 	else
 	{
 		// For moving normally:
-		// Store one full byte of movement, plus one byte of fractional movement.
-		INT16 momx = (INT16)((metal->x-oldmetal.x)>>8);
-		INT16 momy = (INT16)((metal->y-oldmetal.y)>>8);
+		// Store movement as a fixed value
+		fixed_t momx = metal->x-oldmetal.x;
+		fixed_t momy = metal->y-oldmetal.y;
 		if (momx != oldmetal.momx
 		|| momy != oldmetal.momy)
 		{
 			oldmetal.momx = momx;
 			oldmetal.momy = momy;
 			ziptic |= GZT_MOMXY;
-			WRITEINT16(demo_p,momx);
-			WRITEINT16(demo_p,momy);
+			WRITEFIXED(demo_p,momx);
+			WRITEFIXED(demo_p,momy);
 		}
-		momx = (INT16)((metal->z-oldmetal.z)>>8);
+		momx = metal->z-oldmetal.z;
 		if (momx != oldmetal.momz)
 		{
 			oldmetal.momz = momx;
 			ziptic |= GZT_MOMZ;
-			WRITEINT16(demo_p,momx);
+			WRITEFIXED(demo_p,momx);
 		}
 
 		// This SHOULD set oldmetal.x/y/z to match metal->x/y/z
-		// but it keeps the fractional loss of one byte,
-		// so it will hopefully be made up for in future tics.
-		oldmetal.x += oldmetal.momx<<8;
-		oldmetal.y += oldmetal.momy<<8;
-		oldmetal.z += oldmetal.momz<<8;
+		oldmetal.x += oldmetal.momx;
+		oldmetal.y += oldmetal.momy;
+		oldmetal.z += oldmetal.momz;
 	}
 
 	#undef MAXMOM
@@ -1299,15 +1292,14 @@ void G_WriteMetalTic(mobj_t *metal)
 			WRITEUINT16(demo_p,oldmetal.sprite);
 		if (ghostext.flags & EZT_HEIGHT)
 		{
-			height >>= FRACBITS;
-			WRITEINT16(demo_p, height);
+			WRITEFIXED(demo_p, height);
 		}
 		ghostext.flags = 0;
 	}
 
 	if (metal->player && metal->player->followmobj && !(metal->player->followmobj->sprite == SPR_NULL || (metal->player->followmobj->flags2 & MF2_DONTDRAW)))
 	{
-		INT16 temp;
+		fixed_t temp;
 		UINT8 *followtic_p = demo_p++;
 		UINT8 followtic = 0;
 
@@ -1335,12 +1327,12 @@ void G_WriteMetalTic(mobj_t *metal)
 			WRITEFIXED(demo_p,metal->player->followmobj->scale);
 		}
 
-		temp = (INT16)((metal->player->followmobj->x-metal->x)>>8);
-		WRITEINT16(demo_p,temp);
-		temp = (INT16)((metal->player->followmobj->y-metal->y)>>8);
-		WRITEINT16(demo_p,temp);
-		temp = (INT16)((metal->player->followmobj->z-metal->z)>>8);
-		WRITEINT16(demo_p,temp);
+		temp = metal->player->followmobj->x-metal->x;
+		WRITEFIXED(demo_p,temp);
+		temp = metal->player->followmobj->y-metal->y;
+		WRITEFIXED(demo_p,temp);
+		temp = metal->player->followmobj->z-metal->z;
+		WRITEFIXED(demo_p,temp);
 		if (followtic & FZT_SKIN)
 			WRITEUINT8(demo_p,metal->player->followmobj->sprite2);
 		WRITEUINT16(demo_p,metal->player->followmobj->sprite);
@@ -1480,8 +1472,8 @@ void G_BeginRecording(void)
 	WRITEUINT8(demo_p,player->thrustfactor);
 	WRITEUINT8(demo_p,player->accelstart);
 	WRITEUINT8(demo_p,player->acceleration);
-	WRITEUINT8(demo_p,player->height>>FRACBITS);
-	WRITEUINT8(demo_p,player->spinheight>>FRACBITS);
+	WRITEFIXED(demo_p,player->height);
+	WRITEFIXED(demo_p,player->spinheight);
 	WRITEUINT8(demo_p,player->camerascale>>FRACBITS);
 	WRITEUINT8(demo_p,player->shieldscale>>FRACBITS);
 
@@ -1818,6 +1810,7 @@ void G_DoPlayDemo(char *defdemoname)
 	demoversion = READUINT16(demo_p);
 	switch(demoversion)
 	{
+	case 0x000d:
 	case DEMOVERSION: // latest always supported
 		cnamelen = MAXCOLORNAME;
 		break;
@@ -1906,8 +1899,8 @@ void G_DoPlayDemo(char *defdemoname)
 	thrustfactor = READUINT8(demo_p);
 	accelstart = READUINT8(demo_p);
 	acceleration = READUINT8(demo_p);
-	height = (fixed_t)READUINT8(demo_p)<<FRACBITS;
-	spinheight = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	height = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	spinheight = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
 	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	jumpfactor = READFIXED(demo_p);
@@ -1963,9 +1956,7 @@ void G_DoPlayDemo(char *defdemoname)
 	// Set skin
 	SetPlayerSkin(0, skin);
 
-#ifdef HAVE_BLUA
 	LUAh_MapChange(gamemap);
-#endif
 	displayplayer = consoleplayer = 0;
 	memset(playeringame,0,sizeof(playeringame));
 	playeringame[0] = true;
@@ -2072,6 +2063,7 @@ void G_AddGhost(char *defdemoname)
 	ghostversion = READUINT16(p);
 	switch(ghostversion)
 	{
+	case 0x000d:
 	case DEMOVERSION: // latest always supported
 		cnamelen = MAXCOLORNAME;
 		break;
@@ -2154,8 +2146,7 @@ void G_AddGhost(char *defdemoname)
 	p++; // thrustfactor
 	p++; // accelstart
 	p++; // acceleration
-	p++; // height
-	p++; // spinheight
+	p += (ghostversion < 0x000e) ? 2 : 2 * sizeof(fixed_t); // height and spinheight
 	p++; // camerascale
 	p++; // shieldscale
 	p += 4; // jumpfactor
@@ -2167,7 +2158,7 @@ void G_AddGhost(char *defdemoname)
 	count = READUINT16(p);
 	while (count--)
 	{
-		p += 2;
+		SKIPSTRING(p);
 		SKIPSTRING(p);
 		p++;
 	}
@@ -2323,6 +2314,7 @@ void G_DoPlayMetal(void)
 	switch(metalversion)
 	{
 	case DEMOVERSION: // latest always supported
+	case 0x000d: // There are checks wheter the momentum is from older demo versions or not
 	case 0x000c: // all that changed between then and now was longer color name
 		break;
 	// too old, cannot support.

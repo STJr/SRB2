@@ -16,11 +16,13 @@
 #include "p_setup.h"
 #include "z_zone.h"
 #include "p_slopes.h"
+#include "p_polyobj.h"
 #include "r_main.h"
 
 #include "lua_script.h"
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
+#include "lua_hook.h" // hook_cmd_running errors
 
 #include "dehacked.h"
 #include "fastcmp.h"
@@ -35,6 +37,7 @@ enum sector_e {
 	sector_lightlevel,
 	sector_special,
 	sector_tag,
+	sector_taglist,
 	sector_thinglist,
 	sector_heightsec,
 	sector_camsec,
@@ -53,6 +56,7 @@ static const char *const sector_opt[] = {
 	"lightlevel",
 	"special",
 	"tag",
+	"taglist",
 	"thinglist",
 	"heightsec",
 	"camsec",
@@ -67,6 +71,7 @@ enum subsector_e {
 	subsector_sector,
 	subsector_numlines,
 	subsector_firstline,
+	subsector_polyList
 };
 
 static const char *const subsector_opt[] = {
@@ -74,6 +79,7 @@ static const char *const subsector_opt[] = {
 	"sector",
 	"numlines",
 	"firstline",
+	"polyList",
 	NULL};
 
 enum line_e {
@@ -85,6 +91,7 @@ enum line_e {
 	line_flags,
 	line_special,
 	line_tag,
+	line_taglist,
 	line_args,
 	line_stringargs,
 	line_sidenum,
@@ -95,8 +102,7 @@ enum line_e {
 	line_slopetype,
 	line_frontsector,
 	line_backsector,
-	line_firsttag,
-	line_nexttag,
+	line_polyobj,
 	line_text,
 	line_callcount
 };
@@ -110,6 +116,7 @@ static const char *const line_opt[] = {
 	"flags",
 	"special",
 	"tag",
+	"taglist",
 	"args",
 	"stringargs",
 	"sidenum",
@@ -120,8 +127,7 @@ static const char *const line_opt[] = {
 	"slopetype",
 	"frontsector",
 	"backsector",
-	"firsttag",
-	"nexttag",
+	"polyobj",
 	"text",
 	"callcount",
 	NULL};
@@ -222,6 +228,7 @@ enum seg_e {
 	seg_linedef,
 	seg_frontsector,
 	seg_backsector,
+	seg_polyseg
 };
 
 static const char *const seg_opt[] = {
@@ -235,6 +242,7 @@ static const char *const seg_opt[] = {
 	"linedef",
 	"frontsector",
 	"backsector",
+	"polyseg",
 	NULL};
 
 enum node_e {
@@ -324,9 +332,9 @@ static const char *const vector_opt[] = {
 static const char *const array_opt[] ={"iterate",NULL};
 static const char *const valid_opt[] ={"valid",NULL};
 
-///////////////////////////////////
-// sector list iterate functions //
-///////////////////////////////////
+/////////////////////////////////////////////
+// sector/subsector list iterate functions //
+/////////////////////////////////////////////
 
 // iterates through a sector's thinglist!
 static int lib_iterateSectorThinglist(lua_State *L)
@@ -398,6 +406,41 @@ static int lib_iterateSectorFFloors(lua_State *L)
 	return 0;
 }
 
+// iterates through a subsector's polyList! (for polyobj_t)
+static int lib_iterateSubSectorPolylist(lua_State *L)
+{
+	polyobj_t *state = NULL;
+	polyobj_t *po = NULL;
+
+	INLEVEL
+
+	if (lua_gettop(L) < 2)
+		return luaL_error(L, "Don't call subsector.polyList() directly, use it as 'for polyobj in subsector.polyList do <block> end'.");
+
+	if (!lua_isnil(L, 1))
+		state = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
+	else
+		return 0; // no polylist to iterate through sorry!
+
+	lua_settop(L, 2);
+	lua_remove(L, 1); // remove state now.
+
+	if (!lua_isnil(L, 1))
+	{
+		po = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
+		po = (polyobj_t *)(po->link.next);
+	}
+	else
+		po = state; // state is used as the "start" of the polylist
+
+	if (po)
+	{
+		LUA_PushUserdata(L, po, META_POLYOBJ);
+		return 1;
+	}
+	return 0;
+}
+
 static int sector_iterate(lua_State *L)
 {
 	lua_pushvalue(L, lua_upvalueindex(1)); // iterator function, or the "generator"
@@ -446,7 +489,7 @@ static int sectorlines_get(lua_State *L)
 	// get the "linecount" by shifting our retrieved memory address of "lines" to where "linecount" is in the sector_t, then dereferencing the result
 	// we need this to determine the array's actual size, and therefore also the maximum value allowed as an index
 	// this only works if seclines is actually a pointer to a sector's lines member in memory, oh boy
-	numoflines = (size_t)(*(size_t *)(((size_t)seclines) - (offsetof(sector_t, lines) - offsetof(sector_t, linecount))));
+	numoflines = *(size_t *)FIELDFROM (sector_t, seclines, lines,/* -> */linecount);
 
 /* OLD HACK
 	// check first linedef to figure which of its sectors owns this sector->lines pointer
@@ -480,7 +523,7 @@ static int sectorlines_num(lua_State *L)
 		return luaL_error(L, "accessed sector_t.lines doesn't exist anymore.");
 
 	// see comments in the _get function above
-	numoflines = (size_t)(*(size_t *)(((size_t)seclines) - (offsetof(sector_t, lines) - offsetof(sector_t, linecount))));
+	numoflines = *(size_t *)FIELDFROM (sector_t, seclines, lines,/* -> */linecount);
 	lua_pushinteger(L, numoflines);
 	return 1;
 }
@@ -540,7 +583,10 @@ static int sector_get(lua_State *L)
 		lua_pushinteger(L, sector->special);
 		return 1;
 	case sector_tag:
-		lua_pushinteger(L, sector->tag);
+		lua_pushinteger(L, (UINT16)Tag_FGet(&sector->tags));
+		return 1;
+	case sector_taglist:
+		LUA_PushUserdata(L, &sector->tags, META_SECTORTAGLIST);
 		return 1;
 	case sector_thinglist: // thinglist
 		lua_pushcfunction(L, lib_iterateSectorThinglist);
@@ -585,6 +631,8 @@ static int sector_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter sector_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter sector_t in CMD building code!");
 
 	switch(field)
 	{
@@ -639,8 +687,10 @@ static int sector_set(lua_State *L)
 		sector->special = (INT16)luaL_checkinteger(L, 3);
 		break;
 	case sector_tag:
-		P_ChangeSectorTag((UINT32)(sector - sectors), (INT16)luaL_checkinteger(L, 3));
+		Tag_SectorFSet((UINT32)(sector - sectors), (INT16)luaL_checkinteger(L, 3));
 		break;
+	case sector_taglist:
+		return LUA_ErrSetDirectly(L, "sector_t", "taglist");
 	}
 	return 0;
 }
@@ -683,6 +733,11 @@ static int subsector_get(lua_State *L)
 		return 1;
 	case subsector_firstline:
 		lua_pushinteger(L, subsector->firstline);
+		return 1;
+	case subsector_polyList: // polyList
+		lua_pushcfunction(L, lib_iterateSubSectorPolylist);
+		LUA_PushUserdata(L, subsector->polyList, META_POLYOBJ);
+		lua_pushcclosure(L, sector_iterate, 2); // push lib_iterateSubSectorPolylist and subsector->polyList as upvalues for the function
 		return 1;
 	}
 	return 0;
@@ -773,7 +828,21 @@ static int line_get(lua_State *L)
 		lua_pushinteger(L, line->special);
 		return 1;
 	case line_tag:
-		lua_pushinteger(L, line->tag);
+		// HELLO
+		// THIS IS LJ SONIC
+		// HOW IS YOUR DAY?
+		// BY THE WAY WHEN 2.3 OR 3.0 OR 4.0 OR SRB3 OR SRB4 OR WHATEVER IS OUT
+		// YOU SHOULD REMEMBER TO CHANGE THIS SO IT ALWAYS RETURNS A UNSIGNED VALUE
+		// HAVE A NICE DAY
+		//
+		//
+		//
+		//
+		// you are ugly
+		lua_pushinteger(L, Tag_FGet(&line->tags));
+		return 1;
+	case line_taglist:
+		LUA_PushUserdata(L, &line->tags, META_TAGLIST);
 		return 1;
 	case line_args:
 		LUA_PushUserdata(L, line->args, META_LINEARGS);
@@ -821,11 +890,8 @@ static int line_get(lua_State *L)
 	case line_backsector:
 		LUA_PushUserdata(L, line->backsector, META_SECTOR);
 		return 1;
-	case line_firsttag:
-		lua_pushinteger(L, line->firsttag);
-		return 1;
-	case line_nexttag:
-		lua_pushinteger(L, line->nexttag);
+	case line_polyobj:
+		LUA_PushUserdata(L, line->polyobj, META_POLYOBJ);
 		return 1;
 	case line_text:
 		lua_pushstring(L, line->text);
@@ -1089,6 +1155,9 @@ static int seg_get(lua_State *L)
 	case seg_backsector:
 		LUA_PushUserdata(L, seg->backsector, META_SECTOR);
 		return 1;
+	case seg_polyseg:
+		LUA_PushUserdata(L, seg->polyseg, META_POLYOBJ);
+		return 1;
 	}
 	return 0;
 }
@@ -1339,23 +1408,13 @@ static int lib_iterateSectors(lua_State *L)
 
 static int lib_getSector(lua_State *L)
 {
-	int field;
 	INLEVEL
-	lua_settop(L, 2);
-	lua_remove(L, 1); // dummy userdata table is unused.
-	if (lua_isnumber(L, 1))
+	if (lua_isnumber(L, 2))
 	{
-		size_t i = lua_tointeger(L, 1);
+		size_t i = lua_tointeger(L, 2);
 		if (i >= numsectors)
 			return 0;
 		LUA_PushUserdata(L, &sectors[i], META_SECTOR);
-		return 1;
-	}
-	field = luaL_checkoption(L, 1, NULL, array_opt);
-	switch(field)
-	{
-	case 0: // iterate
-		lua_pushcfunction(L, lib_iterateSectors);
 		return 1;
 	}
 	return 0;
@@ -1443,23 +1502,13 @@ static int lib_iterateLines(lua_State *L)
 
 static int lib_getLine(lua_State *L)
 {
-	int field;
 	INLEVEL
-	lua_settop(L, 2);
-	lua_remove(L, 1); // dummy userdata table is unused.
-	if (lua_isnumber(L, 1))
+	if (lua_isnumber(L, 2))
 	{
-		size_t i = lua_tointeger(L, 1);
+		size_t i = lua_tointeger(L, 2);
 		if (i >= numlines)
 			return 0;
 		LUA_PushUserdata(L, &lines[i], META_LINE);
-		return 1;
-	}
-	field = luaL_checkoption(L, 1, NULL, array_opt);
-	switch(field)
-	{
-	case 0: // iterate
-		lua_pushcfunction(L, lib_iterateLines);
 		return 1;
 	}
 	return 0;
@@ -1772,6 +1821,8 @@ static int ffloor_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter ffloor_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter ffloor_t in CMD building code!");
 
 	switch(field)
 	{
@@ -1896,6 +1947,8 @@ static int slope_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter pslope_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter pslope_t in CMD building code!");
 
 	switch(field) // todo: reorganize this shit
 	{
@@ -2139,6 +2192,8 @@ static int mapheaderinfo_get(lua_State *L)
 		lua_pushinteger(L, header->levelflags);
 	else if (fastcmp(field,"menuflags"))
 		lua_pushinteger(L, header->menuflags);
+	else if (fastcmp(field,"selectheading"))
+		lua_pushstring(L, header->selectheading);
 	else if (fastcmp(field,"startrings"))
 		lua_pushinteger(L, header->startrings);
 	else if (fastcmp(field, "sstimer"))
@@ -2308,15 +2363,13 @@ int LUA_MapLib(lua_State *L)
 		//lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getSector);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numsectors);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "sectors");
+	LUA_PushTaggableObjectArray(L, "sectors",
+			lib_iterateSectors,
+			lib_getSector,
+			lib_numsectors,
+			tags_sectors,
+			&numsectors, &sectors,
+			sizeof (sector_t), META_SECTOR);
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);
@@ -2328,15 +2381,13 @@ int LUA_MapLib(lua_State *L)
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "subsectors");
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getLine);
-			lua_setfield(L, -2, "__index");
-
-			lua_pushcfunction(L, lib_numlines);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "lines");
+	LUA_PushTaggableObjectArray(L, "lines",
+			lib_iterateLines,
+			lib_getLine,
+			lib_numlines,
+			tags_lines,
+			&numlines, &lines,
+			sizeof (line_t), META_LINE);
 
 	lua_newuserdata(L, 0);
 		lua_createtable(L, 0, 2);

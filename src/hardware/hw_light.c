@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -35,8 +35,7 @@
 
 #define DL_HIGH_QUALITY
 //#define STATICLIGHT  //Hurdler: TODO!
-//#define LIGHTMAPFLAGS  (PF_Masked|PF_Clip|PF_NoAlphaTest)  // debug see overdraw
-#define LIGHTMAPFLAGS (PF_Modulated|PF_Additive|PF_Clip)
+#define LIGHTMAPFLAGS (PF_Modulated|PF_Additive)
 
 #ifdef ALAM_LIGHTING
 static dynlights_t view_dynlights[2]; // 2 players in splitscreen mode
@@ -254,6 +253,7 @@ light_t *t_lspr[NUMSPRITES] =
 	&lspr[NOLIGHT],     // SPR_SIGN
 	&lspr[NOLIGHT],     // SPR_SPIK
 	&lspr[NOLIGHT],     // SPR_SFLM
+	&lspr[NOLIGHT],     // SPR_TFLM
 	&lspr[NOLIGHT],     // SPR_USPK
 	&lspr[NOLIGHT],     // SPR_WSPK
 	&lspr[NOLIGHT],     // SPR_WSPB
@@ -1056,7 +1056,7 @@ void HWR_DoCoronasLighting(FOutVector *outVerts, gl_vissprite_t *spr)
 
 		HWR_GetPic(coronalumpnum);  /// \todo use different coronas
 
-		HWD.pfnDrawPolygon (&Surf, light, 4, PF_Modulated | PF_Additive | PF_Clip | PF_Corona | PF_NoDepthTest);
+		HWD.pfnDrawPolygon (&Surf, light, 4, PF_Modulated | PF_Additive | PF_Corona | PF_NoDepthTest);
 	}
 }
 #endif
@@ -1144,7 +1144,7 @@ void HWR_DrawCoronas(void)
 		light[3].y = cy+size*1.33f;
 		light[3].s = 0.0f;   light[3].t = 1.0f;
 
-		HWD.pfnDrawPolygon (&Surf, light, 4, PF_Modulated | PF_Additive | PF_Clip | PF_NoDepthTest | PF_Corona);
+		HWD.pfnDrawPolygon (&Surf, light, 4, PF_Modulated | PF_Additive | PF_NoDepthTest | PF_Corona);
 	}
 }
 #endif

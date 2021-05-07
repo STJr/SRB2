@@ -49,6 +49,8 @@ size_t COM_FirstOption(void);
 // match existing command or NULL
 const char *COM_CompleteCommand(const char *partial, INT32 skips);
 
+const char *COM_CompleteAlias(const char *partial, INT32 skips);
+
 // insert at queu (at end of other command)
 #define COM_BufAddText(s) COM_BufAddTextEx(s, 0)
 void COM_BufAddTextEx(const char *btext, int flags);
@@ -138,11 +140,25 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 	const char *string;   // value in string
 	char *zstring;        // Either NULL or same as string.
 	                      // If non-NULL, must be Z_Free'd later.
+	struct
+	{
+		char allocated; // whether to Z_Free
+		union
+		{
+			char       * string;
+			const char * const_munge;
+		} v;
+	} revert;             // value of netvar before joining netgame
+
 	UINT16 netid; // used internaly : netid for send end receive
 	                      // used only with CV_NETVAR
 	char changed;         // has variable been changed by the user? 0 = no, 1 = yes
 	struct consvar_s *next;
 } consvar_t;
+
+/* name, defaultvalue, flags, PossibleValue, func */
+#define CVAR_INIT( ... ) \
+{ __VA_ARGS__, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL }
 
 #ifdef OLD22DEMOCOMPAT
 typedef struct old_demo_var old_demo_var_t;
@@ -201,6 +217,9 @@ void CV_SaveVars(UINT8 **p, boolean in_demo);
 
 #define CV_SaveNetVars(p) CV_SaveVars(p, false)
 void CV_LoadNetVars(UINT8 **p);
+
+// then revert after leaving a netgame
+void CV_RevertNetVars(void);
 
 #define CV_SaveDemoVars(p) CV_SaveVars(p, true)
 void CV_LoadDemoVars(UINT8 **p);

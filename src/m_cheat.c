@@ -967,10 +967,10 @@ static CV_PossibleValue_t op_speed_t[] = {{1, "MIN"}, {128, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t op_flags_t[] = {{0, "MIN"}, {15, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t op_hoopflags_t[] = {{0, "MIN"}, {15, "MAX"}, {0, NULL}};
 
-consvar_t cv_mapthingnum = {"op_mapthingnum", "0", CV_NOTINNET, op_mapthing_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_speed = {"op_speed", "16", CV_NOTINNET, op_speed_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_opflags = {"op_flags", "0", CV_NOTINNET, op_flags_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_ophoopflags = {"op_hoopflags", "4", CV_NOTINNET, op_hoopflags_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_mapthingnum = CVAR_INIT ("op_mapthingnum", "0", CV_NOTINNET, op_mapthing_t, NULL);
+consvar_t cv_speed = CVAR_INIT ("op_speed", "16", CV_NOTINNET, op_speed_t, NULL);
+consvar_t cv_opflags = CVAR_INIT ("op_flags", "0", CV_NOTINNET, op_flags_t, NULL);
+consvar_t cv_ophoopflags = CVAR_INIT ("op_hoopflags", "4", CV_NOTINNET, op_hoopflags_t, NULL);
 
 boolean objectplacing = false;
 mobjtype_t op_currentthing = 0; // For the object placement mode
@@ -1108,7 +1108,6 @@ static mapthing_t *OP_CreateNewMapThing(player_t *player, UINT16 type, boolean c
 
 	mt->options = (mt->z << ZSHIFT) | (UINT16)cv_opflags.value;
 	mt->scale = player->mo->scale;
-	mt->tag = 0;
 	memset(mt->args, 0, NUMMAPTHINGARGS*sizeof(*mt->args));
 	memset(mt->stringargs, 0x00, NUMMAPTHINGSTRINGARGS*sizeof(*mt->stringargs));
 	mt->pitch = mt->roll = 0;
@@ -1435,19 +1434,26 @@ void Command_Writethings_f(void)
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_OBJECTPLACE;
 
-	P_WriteThings(W_GetNumForName(G_BuildMapName(gamemap)) + ML_THINGS);
+	P_WriteThings();
 }
 
 void Command_ObjectPlace_f(void)
 {
+	size_t thingarg;
+	size_t silent;
+
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_NOULTIMATE;
 
 	G_SetGameModified(multiplayer);
 
+	silent = COM_CheckParm("-silent");
+
+	thingarg = 2 - ( silent != 1 );
+
 	// Entering objectplace?
-	if (!objectplacing || COM_Argc() > 1)
+	if (!objectplacing || thingarg < COM_Argc())
 	{
 		if (!objectplacing)
 		{
@@ -1456,7 +1462,7 @@ void Command_ObjectPlace_f(void)
 			if (players[0].powers[pw_carry] == CR_NIGHTSMODE)
 				return;
 
-			if (!COM_CheckParm("-silent"))
+			if (! silent)
 			{
 				HU_SetCEchoFlags(V_RETURN8|V_MONOSPACE|V_AUTOFADEOUT);
 				HU_SetCEchoDuration(10);
@@ -1507,9 +1513,9 @@ void Command_ObjectPlace_f(void)
 				op_oldstate = (statenum_t)(players[0].mo->state-states);
 		}
 
-		if (COM_Argc() > 1)
+		if (thingarg < COM_Argc())
 		{
-			UINT16 mapthingnum = atoi(COM_Argv(1));
+			UINT16 mapthingnum = atoi(COM_Argv(thingarg));
 			mobjtype_t type = P_GetMobjtype(mapthingnum);
 			if (type == MT_UNKNOWN)
 				CONS_Printf(M_GetText("No mobj type delegated to thing type %d.\n"), mapthingnum);

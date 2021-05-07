@@ -20,8 +20,7 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 #include "lua_hud.h" // hud_running errors
-
-static const char *const array_opt[] ={"iterate",NULL};
+#include "lua_hook.h" // hook_cmd_running errors
 
 enum mobj_e {
 	mobj_valid = 0,
@@ -38,6 +37,11 @@ enum mobj_e {
 	mobj_frame,
 	mobj_sprite2,
 	mobj_anim_duration,
+	mobj_spritexscale,
+	mobj_spriteyscale,
+	mobj_spritexoffset,
+	mobj_spriteyoffset,
+	mobj_floorspriteslope,
 	mobj_touching_sectorlist,
 	mobj_subsector,
 	mobj_floorz,
@@ -55,8 +59,10 @@ enum mobj_e {
 	mobj_flags,
 	mobj_flags2,
 	mobj_eflags,
+	mobj_renderflags,
 	mobj_skin,
 	mobj_color,
+	mobj_blendmode,
 	mobj_bnext,
 	mobj_bprev,
 	mobj_hnext,
@@ -107,6 +113,11 @@ static const char *const mobj_opt[] = {
 	"frame",
 	"sprite2",
 	"anim_duration",
+	"spritexscale",
+	"spriteyscale",
+	"spritexoffset",
+	"spriteyoffset",
+	"floorspriteslope",
 	"touching_sectorlist",
 	"subsector",
 	"floorz",
@@ -124,8 +135,10 @@ static const char *const mobj_opt[] = {
 	"flags",
 	"flags2",
 	"eflags",
+	"renderflags",
 	"skin",
 	"color",
+	"blendmode",
 	"bnext",
 	"bprev",
 	"hnext",
@@ -226,6 +239,21 @@ static int mobj_get(lua_State *L)
 	case mobj_anim_duration:
 		lua_pushinteger(L, mo->anim_duration);
 		break;
+	case mobj_spritexscale:
+		lua_pushfixed(L, mo->spritexscale);
+		break;
+	case mobj_spriteyscale:
+		lua_pushfixed(L, mo->spriteyscale);
+		break;
+	case mobj_spritexoffset:
+		lua_pushfixed(L, mo->spritexoffset);
+		break;
+	case mobj_spriteyoffset:
+		lua_pushfixed(L, mo->spriteyoffset);
+		break;
+	case mobj_floorspriteslope:
+		LUA_PushUserdata(L, mo->floorspriteslope, META_SLOPE);
+		break;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
 	case mobj_subsector:
@@ -276,6 +304,9 @@ static int mobj_get(lua_State *L)
 	case mobj_eflags:
 		lua_pushinteger(L, mo->eflags);
 		break;
+	case mobj_renderflags:
+		lua_pushinteger(L, mo->renderflags);
+		break;
 	case mobj_skin: // skin name or nil, not struct
 		if (!mo->skin)
 			return 0;
@@ -283,6 +314,9 @@ static int mobj_get(lua_State *L)
 		break;
 	case mobj_color:
 		lua_pushinteger(L, mo->color);
+		break;
+	case mobj_blendmode:
+		lua_pushinteger(L, mo->blendmode);
 		break;
 	case mobj_bnext:
 		LUA_PushUserdata(L, mo->bnext, META_MOBJ);
@@ -437,6 +471,8 @@ static int mobj_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter mobj_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter mobj_t in CMD building code!");
 
 	switch(field)
 	{
@@ -489,6 +525,20 @@ static int mobj_set(lua_State *L)
 	case mobj_anim_duration:
 		mo->anim_duration = (UINT16)luaL_checkinteger(L, 3);
 		break;
+	case mobj_spritexscale:
+		mo->spritexscale = luaL_checkfixed(L, 3);
+		break;
+	case mobj_spriteyscale:
+		mo->spriteyscale = luaL_checkfixed(L, 3);
+		break;
+	case mobj_spritexoffset:
+		mo->spritexoffset = luaL_checkfixed(L, 3);
+		break;
+	case mobj_spriteyoffset:
+		mo->spriteyoffset = luaL_checkfixed(L, 3);
+		break;
+	case mobj_floorspriteslope:
+		return NOSET;
 	case mobj_touching_sectorlist:
 		return UNIMPLEMENTED;
 	case mobj_subsector:
@@ -577,6 +627,9 @@ static int mobj_set(lua_State *L)
 	case mobj_eflags:
 		mo->eflags = (UINT32)luaL_checkinteger(L, 3);
 		break;
+	case mobj_renderflags:
+		mo->renderflags = (UINT32)luaL_checkinteger(L, 3);
+		break;
 	case mobj_skin: // set skin by name
 	{
 		INT32 i;
@@ -600,6 +653,9 @@ static int mobj_set(lua_State *L)
 		mo->color = newcolor;
 		break;
 	}
+	case mobj_blendmode:
+		mo->blendmode = (INT32)luaL_checkinteger(L, 3);
+		break;
 	case mobj_bnext:
 		return NOSETPOS;
 	case mobj_bprev:
@@ -845,7 +901,12 @@ static int mapthing_get(lua_State *L)
 	else if(fastcmp(field,"extrainfo"))
 		number = mt->extrainfo;
 	else if(fastcmp(field,"tag"))
-		number = mt->tag;
+		number = Tag_FGet(&mt->tags);
+	else if(fastcmp(field,"taglist"))
+	{
+		LUA_PushUserdata(L, &mt->tags, META_TAGLIST);
+		return 1;
+	}
 	else if(fastcmp(field,"args"))
 	{
 		LUA_PushUserdata(L, mt->args, META_THINGARGS);
@@ -878,6 +939,8 @@ static int mapthing_set(lua_State *L)
 
 	if (hud_running)
 		return luaL_error(L, "Do not alter mapthing_t in HUD rendering code!");
+	if (hook_cmd_running)
+		return luaL_error(L, "Do not alter mapthing_t in CMD building code!");
 
 	if(fastcmp(field,"x"))
 		mt->x = (INT16)luaL_checkinteger(L, 3);
@@ -905,7 +968,9 @@ static int mapthing_set(lua_State *L)
 		mt->extrainfo = (UINT8)extrainfo;
 	}
 	else if (fastcmp(field,"tag"))
-		mt->tag = (INT16)luaL_checkinteger(L, 3);
+		Tag_FSet(&mt->tags, (INT16)luaL_checkinteger(L, 3));
+	else if (fastcmp(field,"taglist"))
+		return LUA_ErrSetDirectly(L, "mapthing_t", "taglist");
 	else if(fastcmp(field,"mobj"))
 		mt->mobj = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 	else
@@ -943,23 +1008,13 @@ static int lib_iterateMapthings(lua_State *L)
 
 static int lib_getMapthing(lua_State *L)
 {
-	int field;
 	INLEVEL
-	lua_settop(L, 2);
-	lua_remove(L, 1); // dummy userdata table is unused.
-	if (lua_isnumber(L, 1))
+	if (lua_isnumber(L, 2))
 	{
-		size_t i = lua_tointeger(L, 1);
+		size_t i = lua_tointeger(L, 2);
 		if (i >= nummapthings)
 			return 0;
 		LUA_PushUserdata(L, &mapthings[i], META_MAPTHING);
-		return 1;
-	}
-	field = luaL_checkoption(L, 1, NULL, array_opt);
-	switch(field)
-	{
-	case 0: // iterate
-		lua_pushcfunction(L, lib_iterateMapthings);
 		return 1;
 	}
 	return 0;
@@ -1008,14 +1063,13 @@ int LUA_MobjLib(lua_State *L)
 		lua_setfield(L, -2, "__len");
 	lua_pop(L,1);
 
-	lua_newuserdata(L, 0);
-		lua_createtable(L, 0, 2);
-			lua_pushcfunction(L, lib_getMapthing);
-			lua_setfield(L, -2, "__index");
+	LUA_PushTaggableObjectArray(L, "mapthings",
+			lib_iterateMapthings,
+			lib_getMapthing,
+			lib_nummapthings,
+			tags_mapthings,
+			&nummapthings, &mapthings,
+			sizeof (mapthing_t), META_MAPTHING);
 
-			lua_pushcfunction(L, lib_nummapthings);
-			lua_setfield(L, -2, "__len");
-		lua_setmetatable(L, -2);
-	lua_setglobal(L, "mapthings");
 	return 0;
 }

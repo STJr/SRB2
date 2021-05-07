@@ -3658,7 +3658,7 @@ const CPUInfoFlags *I_CPUInfo(void)
 }
 
 static void CPUAffinity_OnChange(void);
-static consvar_t cv_cpuaffinity = {"cpuaffinity", "-1", CV_CALL, NULL, CPUAffinity_OnChange, 0, NULL, NULL, 0, 0, NULL};
+static consvar_t cv_cpuaffinity = CVAR_INIT ("cpuaffinity", "-1", CV_CALL, NULL, CPUAffinity_OnChange);
 
 typedef HANDLE (WINAPI *p_GetCurrentProcess) (VOID);
 static p_GetCurrentProcess pfnGetCurrentProcess = NULL;

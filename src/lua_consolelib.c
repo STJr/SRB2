@@ -28,7 +28,7 @@ return luaL_error(L, "HUD rendering code should not call this function!");
 #define NOHOOK if (!lua_lumploading)\
 		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
 
-static const char *cvname = NULL;
+static consvar_t *this_cvar;
 
 void Got_Luacmd(UINT8 **cp, INT32 playernum)
 {
@@ -40,6 +40,10 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 	// like sending random junk lua commands to crash the server
 
 	if (!gL) goto deny;
+
+	lua_settop(gL, 0); // Just in case...
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	lua_getfield(gL, LUA_REGISTRYINDEX, "COM_Command"); // push COM_Command
 	if (!lua_istable(gL, -1)) goto deny;
 
@@ -76,7 +80,7 @@ void Got_Luacmd(UINT8 **cp, INT32 playernum)
 		READSTRINGN(*cp, buf, 255);
 		lua_pushstring(gL, buf);
 	}
-	LUA_Call(gL, (int)argc); // argc is 1-based, so this will cover the player we passed too.
+	LUA_Call(gL, (int)argc, 0, 1); // argc is 1-based, so this will cover the player we passed too.
 	return;
 
 deny:
@@ -98,6 +102,10 @@ void COM_Lua_f(void)
 	INT32 playernum = consoleplayer;
 
 	I_Assert(gL != NULL);
+
+	lua_settop(gL, 0); // Just in case...
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+
 	lua_getfield(gL, LUA_REGISTRYINDEX, "COM_Command"); // push COM_Command
 	I_Assert(lua_istable(gL, -1));
 
@@ -167,7 +175,7 @@ void COM_Lua_f(void)
 	LUA_PushUserdata(gL, &players[playernum], META_PLAYER);
 	for (i = 1; i < COM_Argc(); i++)
 		lua_pushstring(gL, COM_Argv(i));
-	LUA_Call(gL, (int)COM_Argc()); // COM_Argc is 1-based, so this will cover the player we passed too.
+	LUA_Call(gL, (int)COM_Argc(), 0, 1); // COM_Argc is 1-based, so this will cover the player we passed too.
 }
 
 // Wrapper for COM_AddCommand
@@ -265,31 +273,29 @@ static int lib_comBufInsertText(lua_State *L)
 	return 0;
 }
 
-void LUA_CVarChanged(const char *name)
+void LUA_CVarChanged(void *cvar)
 {
-	cvname = name;
+	this_cvar = cvar;
 }
 
 static void Lua_OnChange(void)
 {
-	I_Assert(gL != NULL);
-	I_Assert(cvname != NULL);
-
 	/// \todo Network this! XD_LUAVAR
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
+	lua_insert(gL, 1); // Because LUA_Call wants it at index 1.
 
 	// From CV_OnChange registry field, get the function for this cvar by name.
 	lua_getfield(gL, LUA_REGISTRYINDEX, "CV_OnChange");
 	I_Assert(lua_istable(gL, -1));
-	lua_getfield(gL, -1, cvname); // get function
+	lua_pushlightuserdata(gL, this_cvar);
+	lua_rawget(gL, -2); // get function
 
-	// From the CV_Vars registry field, get the cvar's userdata by name.
-	lua_getfield(gL, LUA_REGISTRYINDEX, "CV_Vars");
-	I_Assert(lua_istable(gL, -1));
-	lua_getfield(gL, -1, cvname); // get consvar_t* userdata.
-	lua_remove(gL, -2); // pop the CV_Vars table.
+	LUA_RawPushUserdata(gL, this_cvar);
 
-	LUA_Call(gL, 1); // call function(cvar)
+	LUA_Call(gL, 1, 0, 1); // call function(cvar)
 	lua_pop(gL, 1); // pop CV_OnChange table
+	lua_remove(gL, 1); // remove LUA_GetErrorMessage
 }
 
 static int lib_cvRegisterVar(lua_State *L)
@@ -300,14 +306,11 @@ static int lib_cvRegisterVar(lua_State *L)
 	luaL_checktype(L, 1, LUA_TTABLE);
 	lua_settop(L, 1); // Clear out all other possible arguments, leaving only the first one.
 	NOHOOK
-	cvar = lua_newuserdata(L, sizeof(consvar_t));
-	luaL_getmetatable(L, META_CVAR);
-	lua_setmetatable(L, -2);
+	cvar = ZZ_Calloc(sizeof(consvar_t));
+	LUA_PushUserdata(L, cvar, META_CVAR);
 
 #define FIELDERROR(f, e) luaL_error(L, "bad value for " LUA_QL(f) " in table passed to " LUA_QL("CV_RegisterVar") " (%s)", e);
 #define TYPEERROR(f, t) FIELDERROR(f, va("%s expected, got %s", lua_typename(L, t), luaL_typename(L, -1)))
-
-	memset(cvar, 0x00, sizeof(consvar_t)); // zero everything by default
 
 	lua_pushnil(L);
 	while (lua_next(L, 1)) {
@@ -357,7 +360,7 @@ static int lib_cvRegisterVar(lua_State *L)
 
 				lua_getfield(L, LUA_REGISTRYINDEX, "CV_PossibleValue");
 				I_Assert(lua_istable(L, 5));
-				lua_pushvalue(L, 2); // cvar userdata
+				lua_pushlightuserdata(L, cvar);
 				cvpv = lua_newuserdata(L, sizeof(CV_PossibleValue_t) * (count+1));
 				lua_rawset(L, 5);
 				lua_pop(L, 1); // pop CV_PossibleValue registry table
@@ -385,8 +388,9 @@ static int lib_cvRegisterVar(lua_State *L)
 				TYPEERROR("func", LUA_TFUNCTION)
 			lua_getfield(L, LUA_REGISTRYINDEX, "CV_OnChange");
 			I_Assert(lua_istable(L, 5));
+			lua_pushlightuserdata(L, cvar);
 			lua_pushvalue(L, 4);
-			lua_setfield(L, 5, cvar->name);
+			lua_rawset(L, 5);
 			lua_pop(L, 1);
 			cvar->func = Lua_OnChange;
 		}
@@ -403,19 +407,6 @@ static int lib_cvRegisterVar(lua_State *L)
 	if ((cvar->flags & CV_CALL) && !cvar->func)
 		return luaL_error(L, M_GetText("Variable %s has CV_CALL without a function\n"), cvar->name);
 
-	// stack: cvar table, cvar userdata
-	lua_getfield(L, LUA_REGISTRYINDEX, "CV_Vars");
-	I_Assert(lua_istable(L, 3));
-
-	lua_getfield(L, 3, cvar->name);
-	if (lua_type(L, -1) != LUA_TNIL)
-		return luaL_error(L, M_GetText("Variable %s is already defined\n"), cvar->name);
-	lua_pop(L, 1);
-
-	lua_pushvalue(L, 2);
-	lua_setfield(L, 3, cvar->name);
-	lua_pop(L, 1);
-
 	// actually time to register it to the console now! Finally!
 	cvar->flags |= CV_MODIFIED;
 	CV_RegisterVar(cvar);
@@ -428,8 +419,57 @@ static int lib_cvRegisterVar(lua_State *L)
 
 static int lib_cvFindVar(lua_State *L)
 {
-	LUA_PushLightUserdata(L, CV_FindVar(luaL_checkstring(L,1)), META_CVAR);
+	const char *name = luaL_checkstring(L, 1);
+	LUA_PushUserdata(L, CV_FindVar(name), META_CVAR);
 	return 1;
+}
+
+static int CVarSetFunction
+(
+		lua_State *L,
+		void (*Set)(consvar_t *, const char *),
+		void (*SetValue)(consvar_t *, INT32)
+){
+	consvar_t *cvar = *(consvar_t **)luaL_checkudata(L, 1, META_CVAR);
+
+	if (cvar->flags & CV_NOLUA)
+		return luaL_error(L, "Variable %s cannot be set from Lua.", cvar->name);
+
+	switch (lua_type(L, 2))
+	{
+		case LUA_TSTRING:
+			(*Set)(cvar, lua_tostring(L, 2));
+			break;
+		case LUA_TNUMBER:
+			(*SetValue)(cvar, (INT32)lua_tonumber(L, 2));
+			break;
+		default:
+			return luaL_typerror(L, 1, "string or number");
+	}
+
+	return 0;
+}
+
+static int lib_cvSet(lua_State *L)
+{
+	return CVarSetFunction(L, CV_Set, CV_SetValue);
+}
+
+static int lib_cvStealthSet(lua_State *L)
+{
+	return CVarSetFunction(L, CV_StealthSet, CV_StealthSetValue);
+}
+
+static int lib_cvAddValue(lua_State *L)
+{
+	consvar_t *cvar = *(consvar_t **)luaL_checkudata(L, 1, META_CVAR);
+
+	if (cvar->flags & CV_NOLUA)
+		return luaL_error(L, "Variable %s cannot be set from Lua.", cvar->name);
+
+	CV_AddValue(cvar, (INT32)luaL_checknumber(L, 2));
+
+	return 0;
 }
 
 // CONS_Printf for a single player
@@ -472,13 +512,16 @@ static luaL_Reg lib[] = {
 	{"COM_BufInsertText", lib_comBufInsertText},
 	{"CV_RegisterVar", lib_cvRegisterVar},
 	{"CV_FindVar", lib_cvFindVar},
+	{"CV_Set", lib_cvSet},
+	{"CV_StealthSet", lib_cvStealthSet},
+	{"CV_AddValue", lib_cvAddValue},
 	{"CONS_Printf", lib_consPrintf},
 	{NULL, NULL}
 };
 
 static int cvar_get(lua_State *L)
 {
-	consvar_t *cvar = (consvar_t *)luaL_checkudata(L, 1, META_CVAR);
+	consvar_t *cvar = *(consvar_t **)luaL_checkudata(L, 1, META_CVAR);
 	const char *field = luaL_checkstring(L, 2);
 
 	if(fastcmp(field,"name"))

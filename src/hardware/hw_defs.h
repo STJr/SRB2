@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -132,6 +132,43 @@ typedef struct
 	FLOAT       t;            // t texture ordinate (t over w)
 } FOutVector;
 
+#ifdef GL_SHADERS
+// Predefined shader types
+enum
+{
+	SHADER_DEFAULT = 0,
+
+	SHADER_FLOOR,
+	SHADER_WALL,
+	SHADER_SPRITE,
+	SHADER_MODEL, SHADER_MODEL_LIGHTING,
+	SHADER_WATER,
+	SHADER_FOG,
+	SHADER_SKY,
+
+	NUMBASESHADERS,
+};
+
+// Maximum amount of shader programs
+// Must be higher than NUMBASESHADERS
+#define HWR_MAXSHADERS 16
+
+// Shader sources (vertex and fragment)
+typedef struct
+{
+	char *vertex;
+	char *fragment;
+} shadersource_t;
+
+// Custom shader reference table
+typedef struct
+{
+	const char *type;
+	INT32 id;
+} customshaderxlat_t;
+
+#endif
+
 typedef struct vbo_vertex_s
 {
 	float x, y, z;
@@ -175,35 +212,32 @@ typedef struct
 // You pass a combination of these flags to DrawPolygon()
 enum EPolyFlags
 {
-		// the first 5 are mutually exclusive
-
-	PF_Masked           = 0x00000001,   // Poly is alpha scaled and 0 alpha pels are discarded (holes in texture)
+	// Mutually exclusive blend flags
+	PF_Masked           = 0x00000001,   // Poly is alpha scaled and 0 alpha pixels are discarded (holes in texture)
 	PF_Translucent      = 0x00000002,   // Poly is transparent, alpha = level of transparency
-	PF_Additive         = 0x00000004,   // Poly is added to the frame buffer
-	PF_Environment      = 0x00000008,   // Poly should be drawn environment mapped.
-	                                    // Hurdler: used for text drawing
-	PF_Substractive     = 0x00000010,   // for splat
-	PF_NoAlphaTest      = 0x00000020,   // hiden param
-	PF_Fog              = 0x00000040,   // Fog blocks
-	PF_Blending         = (PF_Environment|PF_Additive|PF_Translucent|PF_Masked|PF_Substractive|PF_Fog)&~PF_NoAlphaTest,
+	PF_Environment      = 0x00000004,   // Poly should be drawn environment mapped. (Hurdler: used for text drawing)
+	PF_Additive         = 0x00000008,   // Source blending factor is additive.
+	PF_Subtractive      = 0x00000010,   // Subtractive color blending
+	PF_ReverseSubtract  = 0x00000020,   // Reverse subtract, used in wall splats (decals)
+	PF_Multiplicative   = 0x00000040,   // Multiplicative color blending
+	PF_Fog              = 0x20000000,   // Fog blocks
+	PF_NoAlphaTest      = 0x40000000,   // Disables alpha testing
+	PF_Blending         = (PF_Masked|PF_Translucent|PF_Environment|PF_Additive|PF_Subtractive|PF_ReverseSubtract|PF_Multiplicative|PF_Fog) & ~PF_NoAlphaTest,
 
-		// other flag bits
-
-	PF_Occlude          = 0x00000100,   // Update the depth buffer
-	PF_NoDepthTest      = 0x00000200,   // Disable the depth test mode
-	PF_Invisible        = 0x00000400,   // Disable write to color buffer
-	PF_Decal            = 0x00000800,   // Enable polygon offset
-	PF_Modulated        = 0x00001000,   // Modulation (multiply output with constant ARGB)
+	// other flag bits
+	PF_Occlude          = 0x00000100,   // Updates the depth buffer
+	PF_NoDepthTest      = 0x00000200,   // Disables the depth test mode
+	PF_Invisible        = 0x00000400,   // Disables write to color buffer
+	PF_Decal            = 0x00000800,   // Enables polygon offset
+	PF_Modulated        = 0x00001000,   // Modulation (multiply output with constant RGBA)
 	                                    // When set, pass the color constant into the FSurfaceInfo -> PolyColor
-	PF_NoTexture        = 0x00002000,   // Use the small white texture
-	PF_Corona           = 0x00004000,   // Tell the rendrer we are drawing a corona
-	PF_Ripple           = 0x00008000,   // Water shader effect
-	PF_RemoveYWrap      = 0x00010000,   // Force clamp texture on Y
-	PF_ForceWrapX       = 0x00020000,   // Force repeat texture on X
-	PF_ForceWrapY       = 0x00040000,   // Force repeat texture on Y
-	PF_Clip             = 0x40000000,   // clip to frustum and nearz plane (glide only, automatic in opengl)
-	PF_NoZClip          = 0x20000000,   // in conjonction with PF_Clip
-	PF_Debug            = 0x80000000    // print debug message in driver :)
+	PF_NoTexture        = 0x00002000,   // Disables texturing
+	PF_Corona           = 0x00004000,   // Tells the renderer we are drawing a corona
+	PF_ColorMapped      = 0x00008000,   // Surface has "tint" and "fade" colors, which are sent as uniforms to a shader.
+	PF_RemoveYWrap      = 0x00010000,   // Forces clamp texture on Y
+	PF_ForceWrapX       = 0x00020000,   // Forces repeat texture on X
+	PF_ForceWrapY       = 0x00040000,   // Forces repeat texture on Y
+	PF_Ripple           = 0x00100000    // Water ripple effect. The current backend doesn't use it for anything.
 };
 
 
@@ -221,9 +255,17 @@ enum ETextureFlags
 	TF_TRANSPARENT = 0x00000040,        // texture with some alpha == 0
 };
 
-typedef struct GLMipmap_s FTextureInfo;
+struct FTextureInfo
+{
+	UINT32 width, height;
+	UINT32 downloaded;
+	UINT32 format;
 
-// jimita 14032019
+	struct GLMipmap_s *texture;
+	struct FTextureInfo *prev, *next;
+};
+typedef struct FTextureInfo FTextureInfo;
+
 struct FLightInfo
 {
 	FUINT			light_level;
@@ -239,7 +281,7 @@ struct FSurfaceInfo
 	RGBA_t			PolyColor;
 	RGBA_t			TintColor;
 	RGBA_t			FadeColor;
-	FLightInfo		LightInfo;	// jimita 14032019
+	FLightInfo		LightInfo;
 };
 typedef struct FSurfaceInfo FSurfaceInfo;
 
@@ -257,6 +299,16 @@ enum hwdsetspecialstate
 };
 
 typedef enum hwdsetspecialstate hwdspecialstate_t;
+
+// Lactozilla: Shader options
+enum hwdshaderoption
+{
+	HWD_SHADEROPTION_OFF,
+	HWD_SHADEROPTION_ON,
+	HWD_SHADEROPTION_NOCUSTOM,
+};
+
+typedef enum hwdshaderoption hwdshaderoption_t;
 
 // Lactozilla: Shader info
 // Generally set at the start of the frame.

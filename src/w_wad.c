@@ -57,6 +57,7 @@
 #include "r_defs.h"
 #include "r_data.h"
 #include "r_textures.h"
+#include "r_patch.h"
 #include "r_picformats.h"
 #include "i_system.h"
 #include "md5.h"
@@ -65,6 +66,7 @@
 #include "p_setup.h" // P_ScanThings
 #endif
 #include "m_misc.h" // M_MapNumber
+#include "g_game.h" // G_SetGameModified
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -682,9 +684,9 @@ static UINT16 W_InitFileError (const char *filename, boolean exitworthy)
 	if (exitworthy)
 	{
 #ifdef _DEBUG
-		CONS_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
+		CONS_Error(va("%s was not found or not valid.\nCheck the log for more details.\n", filename));
 #else
-		I_Error("A WAD file was not found or not valid.\nCheck the log to see which ones.\n");
+		I_Error("%s was not found or not valid.\nCheck the log for more details.\n", filename);
 #endif
 	}
 	else
@@ -715,7 +717,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 #endif
 	size_t packetsize;
 	UINT8 md5sum[16];
-	boolean important;
+	int important;
 
 	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
 		refreshdirmenu = REFRESHDIR_NORMAL|REFRESHDIR_ADDFILE; // clean out cons_alerts that happened earlier
@@ -745,10 +747,18 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	if ((handle = W_OpenWadFile(&filename, true)) == NULL)
 		return W_InitFileError(filename, startup);
 
+	important = W_VerifyNMUSlumps(filename, startup);
+
+	if (important == -1)
+	{
+		fclose(handle);
+		return INT16_MAX;
+	}
+
 	// Check if wad files will overflow fileneededbuffer. Only the filename part
 	// is send in the packet; cf.
 	// see PutFileNeeded in d_netfil.c
-	if ((important = !W_VerifyNMUSlumps(filename)))
+	if ((important = !important))
 	{
 		packetsize = packetsizetally + nameonlylength(filename) + 22;
 
@@ -810,6 +820,12 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		return W_InitFileError(filename, startup);
 	}
 
+	if (important && !mainfile)
+	{
+		//G_SetGameModified(true);
+		modifiedgame = true; // avoid savemoddata being set to false
+	}
+
 	//
 	// link wad file to search files
 	//
@@ -833,11 +849,6 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
 	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
 
-#ifdef HWRENDER
-	// allocates GLPatch info structures and store them in a tree
-	wadfile->hwrcache = M_AATreeAlloc(AATREE_ZUSER);
-#endif
-
 	//
 	// add the wadfile
 	//
@@ -847,10 +858,10 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 #ifdef HWRENDER
 	// Read shaders from file
-	if (rendermode == render_opengl && (vid_opengl_state == 1))
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 	{
-		HWR_ReadShaders(numwadfiles - 1, (type == RET_PK3));
-		HWR_LoadShaders();
+		HWR_LoadCustomShadersFromFile(numwadfiles - 1, (type == RET_PK3));
+		HWR_CompileShaders();
 	}
 #endif // HWRENDER
 
@@ -1670,30 +1681,21 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	if (!lumpcache[lump])
 	{
 		size_t len = W_LumpLengthPwad(wad, lump);
-		void *ptr, *lumpdata;
-#ifndef NO_PNG_LUMPS
-		void *srcdata = NULL;
-#endif
-
-		ptr = Z_Malloc(len, tag, &lumpcache[lump]);
-		lumpdata = Z_Malloc(len, tag, NULL);
+		void *ptr, *dest, *lumpdata = Z_Malloc(len, PU_STATIC, NULL);
 
 		// read the lump in full
 		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
+		ptr = lumpdata;
 
 #ifndef NO_PNG_LUMPS
-		// lump is a png so convert it
 		if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
-		{
-			size_t newlen;
-			srcdata = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_PATCH, NULL, NULL, NULL, NULL, len, &newlen, 0);
-			ptr = Z_Realloc(ptr, newlen, tag, &lumpcache[lump]);
-			M_Memcpy(ptr, srcdata, newlen);
-			Z_Free(srcdata);
-		}
-		else // just copy it into the patch cache
+			ptr = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, len, &len, 0);
 #endif
-			M_Memcpy(ptr, lumpdata, len);
+
+		dest = Z_Calloc(sizeof(patch_t), tag, &lumpcache[lump]);
+		Patch_Create(ptr, len, dest);
+
+		Z_Free(ptr);
 	}
 	else
 		Z_ChangeTag(lumpcache[lump], tag);
@@ -1708,45 +1710,22 @@ void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag)
 
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
-#ifdef HWRENDER
-	GLPatch_t *grPatch;
-#endif
+	patch_t *patch;
 
 	if (!TestValidLump(wad, lump))
 		return NULL;
+
+	patch = W_CacheSoftwarePatchNumPwad(wad, lump, tag);
 
 #ifdef HWRENDER
 	// Software-only compile cache the data without conversion
 	if (rendermode == render_soft || rendermode == render_none)
 #endif
-	{
-		return W_CacheSoftwarePatchNumPwad(wad, lump, tag);
-	}
+		return (void *)patch;
+
 #ifdef HWRENDER
-
-	grPatch = HWR_GetCachedGLPatchPwad(wad, lump);
-
-	if (grPatch->mipmap->data)
-	{
-		if (tag == PU_CACHE)
-			tag = PU_HWRCACHE;
-		Z_ChangeTag(grPatch->mipmap->data, tag);
-	}
-	else
-	{
-		patch_t *ptr = NULL;
-
-		// Only load the patch if we haven't initialised the grPatch yet
-		if (grPatch->mipmap->width == 0)
-			ptr = W_CacheLumpNumPwad(grPatch->wadnum, grPatch->lumpnum, PU_STATIC);
-
-		// Run HWR_MakePatch in all cases, to recalculate some things
-		HWR_MakePatch(ptr, grPatch, grPatch->mipmap, false);
-		Z_Free(ptr);
-	}
-
-	// return GLPatch_t, which can be casted to (patch_t) with valid patch header info
-	return (void *)grPatch;
+	Patch_CreateGL(patch);
+	return (void *)patch;
 #endif
 }
 
@@ -1757,11 +1736,14 @@ void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag)
 
 void W_UnlockCachedPatch(void *patch)
 {
+	if (!patch)
+		return;
+
 	// The hardware code does its own memory management, as its patches
 	// have different lifetimes from software's.
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
-		HWR_UnlockCachedPatch((GLPatch_t*)patch);
+		HWR_UnlockCachedPatch((GLPatch_t *)((patch_t *)patch)->hardware);
 	else
 #endif
 		Z_Unlock(patch);
@@ -1941,8 +1923,16 @@ static lumpchecklist_t folderblacklist[] =
 static int
 W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 {
+	int verified = true;
+
     zend_t zend;
     zentry_t zentry;
+    zlentry_t zlentry;
+
+	long file_size;/* size of zip file */
+	long data_size;/* size of data inside zip file */
+
+	long old_position;
 
 	UINT16 numlumps;
 	size_t i;
@@ -1958,12 +1948,16 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 	// Central directory bullshit
 
 	fseek(fp, 0, SEEK_END);
+	file_size = ftell(fp);
+
 	if (!ResFindSignature(fp, pat_end, max(0, ftell(fp) - (22 + 65536))))
 		return true;
 
 	fseek(fp, -4, SEEK_CUR);
 	if (fread(&zend, 1, sizeof zend, fp) < sizeof zend)
 		return true;
+
+	data_size = sizeof zend;
 
 	numlumps = zend.entries;
 
@@ -1979,40 +1973,79 @@ W_VerifyPK3 (FILE *fp, lumpchecklist_t *checklist, boolean status)
 		if (memcmp(zentry.signature, pat_central, 4))
 			return true;
 
-		fullname = malloc(zentry.namelen + 1);
-		if (fgets(fullname, zentry.namelen + 1, fp) != fullname)
-			return true;
-
-		// Strip away file address and extension for the 8char name.
-		if ((trimname = strrchr(fullname, '/')) != 0)
-			trimname++;
-		else
-			trimname = fullname; // Care taken for root files.
-
-		if (*trimname) // Ignore directories, well kinda
+		if (verified == true)
 		{
-			if ((dotpos = strrchr(trimname, '.')) == 0)
-				dotpos = fullname + strlen(fullname); // Watch for files without extension.
+			fullname = malloc(zentry.namelen + 1);
+			if (fgets(fullname, zentry.namelen + 1, fp) != fullname)
+				return true;
 
-			memset(lumpname, '\0', 9); // Making sure they're initialized to 0. Is it necessary?
-			strncpy(lumpname, trimname, min(8, dotpos - trimname));
+			// Strip away file address and extension for the 8char name.
+			if ((trimname = strrchr(fullname, '/')) != 0)
+				trimname++;
+			else
+				trimname = fullname; // Care taken for root files.
 
-			if (! W_VerifyName(lumpname, checklist, status))
-				return false;
+			if (*trimname) // Ignore directories, well kinda
+			{
+				if ((dotpos = strrchr(trimname, '.')) == 0)
+					dotpos = fullname + strlen(fullname); // Watch for files without extension.
 
-			// Check for directories next, if it's blacklisted it will return false
-			if (W_VerifyName(fullname, folderblacklist, status))
-				return false;
+				memset(lumpname, '\0', 9); // Making sure they're initialized to 0. Is it necessary?
+				strncpy(lumpname, trimname, min(8, dotpos - trimname));
+
+				if (! W_VerifyName(lumpname, checklist, status))
+					verified = false;
+
+				// Check for directories next, if it's blacklisted it will return false
+				else if (W_VerifyName(fullname, folderblacklist, status))
+					verified = false;
+			}
+
+			free(fullname);
+
+			// skip and ignore comments/extra fields
+			if (fseek(fp, zentry.xtralen + zentry.commlen, SEEK_CUR) != 0)
+				return true;
+		}
+		else
+		{
+			if (fseek(fp, zentry.namelen + zentry.xtralen + zentry.commlen, SEEK_CUR) != 0)
+				return true;
 		}
 
-		free(fullname);
+		data_size +=
+			sizeof zentry + zentry.namelen + zentry.xtralen + zentry.commlen;
 
-		// skip and ignore comments/extra fields
-		if (fseek(fp, zentry.xtralen + zentry.commlen, SEEK_CUR) != 0)
+		old_position = ftell(fp);
+
+		if (fseek(fp, zentry.offset, SEEK_SET) != 0)
 			return true;
+
+		if (fread(&zlentry, 1, sizeof(zlentry_t), fp) < sizeof (zlentry_t))
+			return true;
+
+		data_size +=
+			sizeof zlentry + zlentry.namelen + zlentry.xtralen + zlentry.compsize;
+
+		fseek(fp, old_position, SEEK_SET);
 	}
 
-	return true;
+	if (data_size < file_size)
+	{
+		const char * error = "ZIP file has holes (%ld extra bytes)\n";
+		CONS_Alert(CONS_ERROR, error, (file_size - data_size));
+		return -1;
+	}
+	else if (data_size > file_size)
+	{
+		const char * error = "Reported size of ZIP file contents exceeds file size (%ld extra bytes)\n";
+		CONS_Alert(CONS_ERROR, error, (data_size - file_size));
+		return -1;
+	}
+	else
+	{
+		return verified;
+	}
 }
 
 // Note: This never opens lumps themselves and therefore doesn't have to
@@ -2051,12 +2084,13 @@ static int W_VerifyFile(const char *filename, lumpchecklist_t *checklist,
   * be sent.
   *
   * \param filename Filename of the wad to check.
+  * \param exit_on_error Whether to exit upon file error.
   * \return 1 if file contains only music/sound lumps, 0 if it contains other
   *         stuff (maps, sprites, dehacked lumps, and so on). -1 if there no
   *         file exists with that filename
   * \author Alam Arias
   */
-int W_VerifyNMUSlumps(const char *filename)
+int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 {
 	// MIDI, MOD/S3M/IT/XM/OGG/MP3/WAV, WAVE SFX
 	// ENDOOM text and palette lumps
@@ -2074,18 +2108,69 @@ int W_VerifyNMUSlumps(const char *filename)
 		{"CLM", 3}, // Colormap changes
 		{"TRANS", 5}, // Translucency map changes
 
+		{"CONSBACK", 8}, // Console Background graphic
+
+		{"SAVE", 4}, // Save Select graphics here and below
+		{"BLACXLVL", 8},
+		{"GAMEDONE", 8},
+		{"CONT", 4}, // Continue icons on saves (probably not used anymore)
+		{"STNONEX", 7}, // "X" graphic
+		{"ULTIMATE", 8}, // Ultimate no-save
+
+		{"CRFNT", 5}, // Sonic 1 font changes
+		{"NTFNT", 5}, // Character Select font changes
+		{"NTFNO", 5}, // Character Select font (outline)
 		{"LTFNT", 5}, // Level title font changes
 		{"TTL", 3}, // Act number changes
 		{"STCFN", 5}, // Console font changes
 		{"TNYFN", 5}, // Tiny console font changes
+
+		{"STLIVE", 6}, // Life graphics, background and the "X" that shows under skin's HUDNAME
+		{"CROSHAI", 7}, // First person crosshairs
+		{"INTERSC", 7}, // Default intermission backgrounds (co-op)
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
-		{"M_", 2}, // As does menu stuff
+		{"RESULT", 6}, // Used in intermission for competitive modes, above too :3
+		{"RACE", 4}, // Race mode graphics, 321go
+		{"M_", 2}, // Menu stuff
+		{"LT", 2}, // Titlecard changes
+
+		{"SLID", 4}, // Continue
+		{"CONT", 4},
+
+		{"MINICAPS", 8}, // NiGHTS graphics here and below
+		{"BLUESTAT", 8}, // Sphere status
+		{"BYELSTAT", 8},
+		{"ORNGSTAT", 8},
+		{"REDSTAT", 7},
+		{"YELSTAT", 7},
+		{"NBRACKET", 8},
+		{"NGHTLINK", 8},
+		{"NGT", 3}, // Link numbers
+		{"NARROW", 6},
+		{"NREDAR", 6},
+		{"NSS", 3},
+		{"NBON", 4},
+		{"NRNG", 4},
+		{"NHUD", 4},
+		{"CAPS", 4},
+		{"DRILL", 5},
+		{"GRADE", 5},
+		{"MINUS5", 6},
+
 		{"MUSICDEF", 8}, // Song definitions (thanks kart)
+		{"SHADERS", 7}, // OpenGL shader definitions
+		{"SH_", 3}, // GLSL shader
 
 		{NULL, 0},
 	};
-	return W_VerifyFile(filename, NMUSlist, false);
+
+	int status = W_VerifyFile(filename, NMUSlist, false);
+
+	if (status == -1)
+		W_InitFileError(filename, exit_on_error);
+
+	return status;
 }
 
 /** \brief Generates a virtual resource used for level data loading.

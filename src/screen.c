@@ -28,10 +28,16 @@
 #include "d_main.h"
 #include "d_clisrv.h"
 #include "f_finale.h"
+#include "y_inter.h" // usebuffer
 #include "i_sound.h" // closed captions
 #include "s_sound.h" // ditto
 #include "g_game.h" // ditto
 #include "p_local.h" // P_AutoPause()
+#ifdef HWRENDER
+#include "hardware/hw_main.h"
+#include "hardware/hw_light.h"
+#include "hardware/hw_model.h"
+#endif
 
 
 #if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
@@ -58,24 +64,24 @@ UINT8 setrenderneeded = 0;
 static CV_PossibleValue_t scr_depth_cons_t[] = {{8, "8 bits"}, {16, "16 bits"}, {24, "24 bits"}, {32, "32 bits"}, {0, NULL}};
 
 //added : 03-02-98: default screen mode, as loaded/saved in config
-consvar_t cv_scr_width = {"scr_width", "1280", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_scr_height = {"scr_height", "800", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_scr_depth = {"scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
-consvar_t cv_renderview = {"renderview", "On", 0, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_scr_width = CVAR_INIT ("scr_width", "1280", CV_SAVE, CV_Unsigned, NULL);
+consvar_t cv_scr_height = CVAR_INIT ("scr_height", "800", CV_SAVE, CV_Unsigned, NULL);
+consvar_t cv_scr_depth = CVAR_INIT ("scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL);
+consvar_t cv_renderview = CVAR_INIT ("renderview", "On", 0, CV_OnOff, NULL);
 
-static void SCR_ActuallyChangeRenderer(void);
-static CV_PossibleValue_t cv_renderer_t[] = {
+CV_PossibleValue_t cv_renderer_t[] = {
 	{1, "Software"},
 #ifdef HWRENDER
 	{2, "OpenGL"},
 #endif
 	{0, NULL}
 };
-consvar_t cv_renderer = {"renderer", "Software", CV_SAVE|CV_NOLUA|CV_CALL, cv_renderer_t, SCR_ChangeRenderer, 0, NULL, NULL, 0, 0, NULL};
+
+consvar_t cv_renderer = CVAR_INIT ("renderer", "Software", CV_SAVE|CV_NOLUA|CV_CALL, cv_renderer_t, SCR_ChangeRenderer);
 
 static void SCR_ChangeFullscreen(void);
 
-consvar_t cv_fullscreen = {"fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_fullscreen = CVAR_INIT ("fullscreen", "Yes", CV_SAVE|CV_CALL, CV_YesNo, SCR_ChangeFullscreen);
 
 // =========================================================================
 //                           SCREEN VARIABLES
@@ -121,34 +127,34 @@ void SCR_SetDrawFuncs(void)
 		colfuncs[COLDRAWFUNC_FOG] = R_DrawFogColumn_8;
 
 		spanfuncs[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_8;
-		spanfuncs[SPANDRAWFUNC_SPLAT] = R_DrawSplat_8;
-		spanfuncs[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_8;
-		spanfuncs[SPANDRAWFUNC_FOG] = R_DrawFogSpan_8;
-#ifndef NOWATER
-		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_8;
-#endif
 		spanfuncs[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_8;
 		spanfuncs[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_8;
-#ifndef NOWATER
-		spanfuncs[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_8;
-#endif
+		spanfuncs[SPANDRAWFUNC_SPLAT] = R_DrawSplat_8;
+		spanfuncs[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_8;
 		spanfuncs[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_8;
+		spanfuncs[SPANDRAWFUNC_SPRITE] = R_DrawFloorSprite_8;
+		spanfuncs[SPANDRAWFUNC_TRANSSPRITE] = R_DrawTranslucentFloorSprite_8;
+		spanfuncs[SPANDRAWFUNC_TILTEDSPRITE] = R_DrawTiltedFloorSprite_8;
+		spanfuncs[SPANDRAWFUNC_TILTEDTRANSSPRITE] = R_DrawTiltedTranslucentFloorSprite_8;
+		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_8;
+		spanfuncs[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_8;
+		spanfuncs[SPANDRAWFUNC_FOG] = R_DrawFogSpan_8;
 
 		// Lactozilla: Non-powers-of-two
 		spanfuncs_npo2[BASEDRAWFUNC] = R_DrawSpan_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_SPLAT] = R_DrawSplat_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_FOG] = NULL; // Not needed
-#ifndef NOWATER
-		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_8;
-#endif
 		spanfuncs_npo2[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_NPO2_8;
-#ifndef NOWATER
-		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_NPO2_8;
-#endif
+		spanfuncs_npo2[SPANDRAWFUNC_SPLAT] = R_DrawSplat_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_SPRITE] = R_DrawFloorSprite_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPRITE] = R_DrawTranslucentFloorSprite_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPRITE] = R_DrawTiltedFloorSprite_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANSSPRITE] = R_DrawTiltedTranslucentFloorSprite_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_NPO2_8;
+		spanfuncs_npo2[SPANDRAWFUNC_FOG] = NULL; // Not needed
 
 #ifdef RUSEASM
 		if (R_ASM)
@@ -202,16 +208,21 @@ void SCR_SetMode(void)
 	// Lactozilla: Renderer switching
 	if (setrenderneeded)
 	{
-		Z_PreparePatchFlush();
-		needpatchflush = true;
-		needpatchrecache = true;
-		VID_CheckRenderer();
+		// stop recording movies (APNG only)
+		if (setrenderneeded && (moviemode == MM_APNG))
+			M_StopMovie();
+
+		// VID_SetMode will call VID_CheckRenderer itself,
+		// so no need to do this in here.
 		if (!setmodeneeded)
-			VID_SetMode(vid.modenum);
+			VID_CheckRenderer();
+
+		vid.recalc = 1;
 	}
 
+	// Set the video mode in the video interface.
 	if (setmodeneeded)
-		VID_SetMode(--setmodeneeded);
+		VID_SetMode(setmodeneeded - 1);
 
 	V_SetPalette(0);
 
@@ -279,34 +290,9 @@ void SCR_Startup(void)
 
 	vid.modenum = 0;
 
-	vid.dupx = vid.width / BASEVIDWIDTH;
-	vid.dupy = vid.height / BASEVIDHEIGHT;
-	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	vid.fdupx = FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT);
-	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
-
-#ifdef HWRENDER
-	if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
-#endif
-		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
-
-	vid.meddupx = (UINT8)(vid.dupx >> 1) + 1;
-	vid.meddupy = (UINT8)(vid.dupy >> 1) + 1;
-#ifdef HWRENDER
-	vid.fmeddupx = vid.meddupx*FRACUNIT;
-	vid.fmeddupy = vid.meddupy*FRACUNIT;
-#endif
-
-	vid.smalldupx = (UINT8)(vid.dupx / 3) + 1;
-	vid.smalldupy = (UINT8)(vid.dupy / 3) + 1;
-#ifdef HWRENDER
-	vid.fsmalldupx = vid.smalldupx*FRACUNIT;
-	vid.fsmalldupy = vid.smalldupy*FRACUNIT;
-#endif
-
-	vid.baseratio = FRACUNIT;
-
 	V_Init();
+	V_Recalc();
+
 	CV_RegisterVar(&cv_ticrate);
 	CV_RegisterVar(&cv_constextsize);
 
@@ -323,38 +309,7 @@ void SCR_Recalc(void)
 	// bytes per pixel quick access
 	scr_bpp = vid.bpp;
 
-	// scale 1,2,3 times in x and y the patches for the menus and overlays...
-	// calculated once and for all, used by routines in v_video.c
-	vid.dupx = vid.width / BASEVIDWIDTH;
-	vid.dupy = vid.height / BASEVIDHEIGHT;
-	vid.dupx = vid.dupy = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-	vid.fdupx = FixedDiv(vid.width*FRACUNIT, BASEVIDWIDTH*FRACUNIT);
-	vid.fdupy = FixedDiv(vid.height*FRACUNIT, BASEVIDHEIGHT*FRACUNIT);
-
-#ifdef HWRENDER
-	//if (rendermode != render_opengl && rendermode != render_none) // This was just placing it incorrectly at non aspect correct resolutions in opengl
-	// 13/11/18:
-	// The above is no longer necessary, since we want OpenGL to be just like software now
-	// -- Monster Iestyn
-#endif
-		vid.fdupx = vid.fdupy = (vid.fdupx < vid.fdupy ? vid.fdupx : vid.fdupy);
-
-	//vid.baseratio = FixedDiv(vid.height << FRACBITS, BASEVIDHEIGHT << FRACBITS);
-	vid.baseratio = FRACUNIT;
-
-	vid.meddupx = (UINT8)(vid.dupx >> 1) + 1;
-	vid.meddupy = (UINT8)(vid.dupy >> 1) + 1;
-#ifdef HWRENDER
-	vid.fmeddupx = vid.meddupx*FRACUNIT;
-	vid.fmeddupy = vid.meddupy*FRACUNIT;
-#endif
-
-	vid.smalldupx = (UINT8)(vid.dupx / 3) + 1;
-	vid.smalldupy = (UINT8)(vid.dupy / 3) + 1;
-#ifdef HWRENDER
-	vid.fsmalldupx = vid.smalldupx*FRACUNIT;
-	vid.fsmalldupy = vid.smalldupy*FRACUNIT;
-#endif
+	V_Recalc();
 
 	// toggle off (then back on) the automap because some screensize-dependent values will
 	// be calculated next time the automap is activated.
@@ -374,6 +329,12 @@ void SCR_Recalc(void)
 	// vid.recalc lasts only for the next refresh...
 	con_recalc = true;
 	am_recalc = true;
+
+#ifdef HWRENDER
+	// Shoot! The screen texture was flushed!
+	if ((rendermode == render_opengl) && (gamestate == GS_INTERMISSION))
+		usebuffer = false;
+#endif
 }
 
 // Check for screen cmd-line parms: to force a resolution.
@@ -411,7 +372,16 @@ void SCR_CheckDefaultMode(void)
 		setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
 	}
 
-	SCR_ActuallyChangeRenderer();
+	if (cv_renderer.value != (signed)rendermode)
+	{
+		if (chosenrendermode == render_none) // nothing set at command line
+			SCR_ChangeRenderer();
+		else
+		{
+			// Set cv_renderer to the current render mode
+			CV_StealthSetValue(&cv_renderer, rendermode);
+		}
+	}
 }
 
 // sets the modenum as the new default video mode to be saved in the config file
@@ -441,64 +411,31 @@ void SCR_ChangeFullscreen(void)
 #endif
 }
 
-static int target_renderer = 0;
-
-void SCR_ActuallyChangeRenderer(void)
+void SCR_ChangeRenderer(void)
 {
-	setrenderneeded = target_renderer;
+	if (chosenrendermode != render_none
+	|| (signed)rendermode == cv_renderer.value)
+		return;
 
 #ifdef HWRENDER
-	// Well, it didn't even load anyway.
-	if ((vid_opengl_state == -1) && (setrenderneeded == render_opengl))
+	// Check if OpenGL loaded successfully (or wasn't disabled) before switching to it.
+	if ((vid.glstate == VID_GL_LIBRARY_ERROR)
+	&& (cv_renderer.value == render_opengl))
 	{
 		if (M_CheckParm("-nogl"))
 			CONS_Alert(CONS_ERROR, "OpenGL rendering was disabled!\n");
 		else
 			CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
-		setrenderneeded = 0;
-		return;
-	}
-#endif
-
-	// setting the same renderer twice WILL crash your game, so let's not, please
-	if (rendermode == setrenderneeded)
-		setrenderneeded = 0;
-}
-
-// Lactozilla: Renderer switching
-void SCR_ChangeRenderer(void)
-{
-	setrenderneeded = 0;
-
-	if (con_startup)
-	{
-		target_renderer = cv_renderer.value;
-#ifdef HWRENDER
-		if (M_CheckParm("-opengl") && (vid_opengl_state == 1))
-			target_renderer = rendermode = render_opengl;
-		else
-#endif
-		if (M_CheckParm("-software"))
-			target_renderer = rendermode = render_soft;
-		// set cv_renderer back
-		SCR_ChangeRendererCVars(rendermode);
 		return;
 	}
 
-	if (cv_renderer.value == 1)
-		target_renderer = render_soft;
-	else if (cv_renderer.value == 2)
-		target_renderer = render_opengl;
-	SCR_ActuallyChangeRenderer();
-}
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED)) // Clear these out before switching to software
+		HWR_ClearAllTextures();
 
-void SCR_ChangeRendererCVars(INT32 mode)
-{
-	// set cv_renderer back
-	if (mode == render_soft)
-		CV_StealthSetValue(&cv_renderer, 1);
-	else if (mode == render_opengl)
-		CV_StealthSetValue(&cv_renderer, 2);
+#endif
+
+	// Set the new render mode
+	setrenderneeded = cv_renderer.value;
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)

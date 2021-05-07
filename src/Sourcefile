@@ -5,6 +5,9 @@ d_net.c
 d_netfil.c
 d_netcmd.c
 dehacked.c
+deh_soc.c
+deh_lua.c
+deh_tables.c
 z_zone.c
 f_finale.c
 f_wipe.c
@@ -26,6 +29,7 @@ m_cond.c
 m_fixed.c
 m_menu.c
 m_misc.c
+m_perfstats.c
 m_random.c
 m_queue.c
 info.c
@@ -58,9 +62,12 @@ r_sky.c
 r_splats.c
 r_things.c
 r_textures.c
+r_patch.c
+r_patchrotation.c
 r_picformats.c
 r_portal.c
 screen.c
+taglist.c
 v_video.c
 s_sound.c
 sounds.c
@@ -83,5 +90,7 @@ lua_playerlib.c
 lua_skinlib.c
 lua_thinkerlib.c
 lua_maplib.c
+lua_taglib.c
+lua_polyobjlib.c
 lua_blockmaplib.c
 lua_hudlib.c

@@ -9,7 +9,6 @@ passthru_opts+=\
 
 # build with debugging information
 ifdef DEBUGMODE
-MOBJCONSISTANCY=1
 PACKETDROP=1
 opts+=-DPARANOIA -DRANGECHECK
 endif

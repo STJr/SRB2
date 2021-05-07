@@ -16,10 +16,11 @@
 #include "dehacked.h"
 #include "i_video.h"
 #include "r_data.h"
-#include "r_textures.h"
-#include "r_draw.h"
+#include "r_patch.h"
 #include "r_picformats.h"
+#include "r_textures.h"
 #include "r_things.h"
+#include "r_draw.h"
 #include "v_video.h"
 #include "z_zone.h"
 #include "w_wad.h"
@@ -142,10 +143,21 @@ void *Picture_PatchConvert(
 	if (Picture_IsPatchFormat(informat))
 	{
 		inpatch = (patch_t *)picture;
-		inwidth = SHORT(inpatch->width);
-		inheight = SHORT(inpatch->height);
-		inleftoffset = SHORT(inpatch->leftoffset);
-		intopoffset = SHORT(inpatch->topoffset);
+		if (Picture_IsDoomPatchFormat(informat))
+		{
+			softwarepatch_t *doompatch = (softwarepatch_t *)picture;
+			inwidth = SHORT(doompatch->width);
+			inheight = SHORT(doompatch->height);
+			inleftoffset = SHORT(doompatch->leftoffset);
+			intopoffset = SHORT(doompatch->topoffset);
+		}
+		else
+		{
+			inwidth = inpatch->width;
+			inheight = inpatch->height;
+			inleftoffset = inpatch->leftoffset;
+			intopoffset = inpatch->topoffset;
+		}
 	}
 
 	// Write image size and offset
@@ -275,6 +287,7 @@ void *Picture_PatchConvert(
 			switch (outformat)
 			{
 				case PICFMT_PATCH32:
+				case PICFMT_DOOMPATCH32:
 				{
 					if (inbpp == PICDEPTH_32BPP)
 					{
@@ -294,6 +307,7 @@ void *Picture_PatchConvert(
 					break;
 				}
 				case PICFMT_PATCH16:
+				case PICFMT_DOOMPATCH16:
 					if (inbpp == PICDEPTH_32BPP)
 					{
 						RGBA_t in = *(RGBA_t *)input;
@@ -338,9 +352,26 @@ void *Picture_PatchConvert(
 	img = Z_Malloc(size, PU_STATIC, NULL);
 	memcpy(img, imgbuf, size);
 
-	if (outsize != NULL)
-		*outsize = size;
-	return img;
+	if (Picture_IsInternalPatchFormat(outformat))
+	{
+		patch_t *converted = Patch_Create((softwarepatch_t *)img, size, NULL);
+
+#ifdef HWRENDER
+		Patch_CreateGL(converted);
+#endif
+
+		Z_Free(img);
+
+		if (outsize != NULL)
+			*outsize = sizeof(patch_t);
+		return converted;
+	}
+	else
+	{
+		if (outsize != NULL)
+			*outsize = size;
+		return img;
+	}
 }
 
 /** Converts a picture to a flat.
@@ -391,8 +422,17 @@ void *Picture_FlatConvert(
 	if (Picture_IsPatchFormat(informat))
 	{
 		inpatch = (patch_t *)picture;
-		inwidth = SHORT(inpatch->width);
-		inheight = SHORT(inpatch->height);
+		if (Picture_IsDoomPatchFormat(informat))
+		{
+			softwarepatch_t *doompatch = ((softwarepatch_t *)picture);
+			inwidth = SHORT(doompatch->width);
+			inheight = SHORT(doompatch->height);
+		}
+		else
+		{
+			inwidth = inpatch->width;
+			inheight = inpatch->height;
+		}
 	}
 
 	size = (inwidth * inheight) * (outbpp / 8);
@@ -503,22 +543,26 @@ void *Picture_GetPatchPixel(
 	UINT8 *s8 = NULL;
 	UINT16 *s16 = NULL;
 	UINT32 *s32 = NULL;
+	softwarepatch_t *doompatch = (softwarepatch_t *)patch;
+	boolean isdoompatch = Picture_IsDoomPatchFormat(informat);
+	INT16 width;
 
 	if (patch == NULL)
 		I_Error("Picture_GetPatchPixel: patch == NULL");
 
-	if (x >= 0 && x < SHORT(patch->width))
+	width = (isdoompatch ? SHORT(doompatch->width) : patch->width);
+
+	if (x >= 0 && x < width)
 	{
+		INT32 colx = (flags & PICFLAGS_XFLIP) ? (width-1)-x : x;
 		INT32 topdelta, prevdelta = -1;
-		INT32 colofs = 0;
+		INT32 colofs = (isdoompatch ? LONG(doompatch->columnofs[colx]) : patch->columnofs[colx]);
 
-		if (flags & PICFLAGS_XFLIP)
-			colofs = LONG(patch->columnofs[(SHORT(patch->width)-1)-x]);
+		// Column offsets are pointers, so no casting is required.
+		if (isdoompatch)
+			column = (column_t *)((UINT8 *)doompatch + colofs);
 		else
-			colofs = LONG(patch->columnofs[x]);
-
-		// Column offsets are pointers so no casting required
-		column = (column_t *)((UINT8 *)patch + colofs);
+			column = (column_t *)((UINT8 *)patch->columns + colofs);
 
 		while (column->topdelta != 0xff)
 		{
@@ -527,25 +571,25 @@ void *Picture_GetPatchPixel(
 				topdelta += prevdelta;
 			prevdelta = topdelta;
 			s8 = (UINT8 *)(column) + 3;
-			if (informat == PICFMT_PATCH32)
+			if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
 				s32 = (UINT32 *)s8;
-			else if (informat == PICFMT_PATCH16)
+			else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
 				s16 = (UINT16 *)s8;
 			for (ofs = 0; ofs < column->length; ofs++)
 			{
 				if ((topdelta + ofs) == y)
 				{
-					if (informat == PICFMT_PATCH32)
+					if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
 						return &s32[ofs];
-					else if (informat == PICFMT_PATCH16)
+					else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
 						return &s16[ofs];
-					else // PICFMT_PATCH
+					else // PICDEPTH_8BPP
 						return &s8[ofs];
 				}
 			}
-			if (informat == PICFMT_PATCH32)
+			if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
 				column = (column_t *)((UINT32 *)column + column->length);
-			else if (informat == PICFMT_PATCH16)
+			else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
 				column = (column_t *)((UINT16 *)column + column->length);
 			else
 				column = (column_t *)((UINT8 *)column + column->length);
@@ -568,15 +612,18 @@ INT32 Picture_FormatBPP(pictureformat_t format)
 	{
 		case PICFMT_PATCH32:
 		case PICFMT_FLAT32:
+		case PICFMT_DOOMPATCH32:
 		case PICFMT_PNG:
 			bpp = PICDEPTH_32BPP;
 			break;
 		case PICFMT_PATCH16:
 		case PICFMT_FLAT16:
+		case PICFMT_DOOMPATCH16:
 			bpp = PICDEPTH_16BPP;
 			break;
 		case PICFMT_PATCH:
 		case PICFMT_FLAT:
+		case PICFMT_DOOMPATCH:
 			bpp = PICDEPTH_8BPP;
 			break;
 		default:
@@ -592,7 +639,43 @@ INT32 Picture_FormatBPP(pictureformat_t format)
   */
 boolean Picture_IsPatchFormat(pictureformat_t format)
 {
-	return (format == PICFMT_PATCH || format == PICFMT_PATCH16 || format == PICFMT_PATCH32);
+	return (Picture_IsInternalPatchFormat(format) || Picture_IsDoomPatchFormat(format));
+}
+
+/** Checks if the specified picture format is an internal patch.
+  *
+  * \param format Input picture format.
+  * \return True if the picture format is an internal patch, false if not.
+  */
+boolean Picture_IsInternalPatchFormat(pictureformat_t format)
+{
+	switch (format)
+	{
+		case PICFMT_PATCH:
+		case PICFMT_PATCH16:
+		case PICFMT_PATCH32:
+			return true;
+		default:
+			return false;
+	}
+}
+
+/** Checks if the specified picture format is a Doom patch.
+  *
+  * \param format Input picture format.
+  * \return True if the picture format is a Doom patch, false if not.
+  */
+boolean Picture_IsDoomPatchFormat(pictureformat_t format)
+{
+	switch (format)
+	{
+		case PICFMT_DOOMPATCH:
+		case PICFMT_DOOMPATCH16:
+		case PICFMT_DOOMPATCH32:
+			return true;
+		default:
+			return false;
+	}
 }
 
 /** Checks if the specified picture format is a flat.
@@ -605,14 +688,14 @@ boolean Picture_IsFlatFormat(pictureformat_t format)
 	return (format == PICFMT_FLAT || format == PICFMT_FLAT16 || format == PICFMT_FLAT32);
 }
 
-/** Returns true if the lump is a valid patch.
-  * PICFMT_PATCH only, I think??
+/** Returns true if the lump is a valid Doom patch.
+  * PICFMT_DOOMPATCH only.
   *
   * \param patch Input patch.
   * \param picture Input patch size.
   * \return True if the input patch is valid.
   */
-boolean Picture_CheckIfPatch(patch_t *patch, size_t size)
+boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size)
 {
 	INT16 width, height;
 	boolean result;
@@ -887,26 +970,45 @@ static png_bytep *PNG_Read(
 		// matches the color count of SRB2's palette: 256 colors.
 		if (png_get_PLTE(png_ptr, png_info_ptr, &palette, &palette_size))
 		{
-			if (palette_size == 256)
+			if (palette_size == 256 && pMasterPalette)
+			{
+				png_colorp pal = palette;
+				INT32 i;
+
 				usepal = true;
+
+				for (i = 0; i < 256; i++)
+				{
+					UINT32 rgb = R_PutRgbaRGBA(pal->red, pal->green, pal->blue, 0xFF);
+					if (rgb != pMasterPalette[i].rgba)
+					{
+						usepal = false;
+						break;
+					}
+					pal++;
+				}
+			}
 		}
 
 		// If any of the tRNS colors have an alpha lower than 0xFF, and that
 		// color is present on the image, the palette flag is disabled.
-		png_get_tRNS(png_ptr, png_info_ptr, &trans, &trans_num, &trans_values);
-
-		if (trans && trans_num == 256)
+		if (usepal)
 		{
-			int i;
-			for (i = 0; i < trans_num; i++)
+			png_get_tRNS(png_ptr, png_info_ptr, &trans, &trans_num, &trans_values);
+
+			if (trans && trans_num == 256)
 			{
-				// libpng will transform this image into RGB even if
-				// the transparent index does not exist in the image,
-				// and there is no way around that.
-				if (trans[i] < 0xFF)
+				INT32 i;
+				for (i = 0; i < trans_num; i++)
 				{
-					usepal = false;
-					break;
+					// libpng will transform this image into RGB even if
+					// the transparent index does not exist in the image,
+					// and there is no way around that.
+					if (trans[i] < 0xFF)
+					{
+						usepal = false;
+						break;
+					}
 				}
 			}
 		}
@@ -1446,11 +1548,6 @@ static void R_ParseSpriteInfo(boolean spr2)
 	info = Z_Calloc(sizeof(spriteinfo_t), PU_STATIC, NULL);
 	info->available = true;
 
-#ifdef ROTSPRITE
-	if ((sprites != NULL) && (!spr2))
-		R_FreeSingleRotSprite(&sprites[sprnum]);
-#endif
-
 	// Left Curly Brace
 	sprinfoToken = M_GetToken(NULL);
 	if (sprinfoToken == NULL)
@@ -1511,9 +1608,6 @@ static void R_ParseSpriteInfo(boolean spr2)
 						size_t skinnum = skinnumbers[i];
 						skin_t *skin = &skins[skinnum];
 						spriteinfo_t *sprinfo = skin->sprinfo;
-#ifdef ROTSPRITE
-						R_FreeSkinRotSprite(skinnum);
-#endif
 						M_Memcpy(&sprinfo[spr2num], info, sizeof(spriteinfo_t));
 					}
 				}
@@ -1603,316 +1697,3 @@ void R_LoadSpriteInfoLumps(UINT16 wadnum, UINT16 numlumps)
 			R_ParseSPRTINFOLump(wadnum, i);
 	}
 }
-
-#ifdef ROTSPRITE
-//
-// R_GetRollAngle
-//
-// Angles precalculated in R_InitSprites.
-//
-fixed_t rollcosang[ROTANGLES];
-fixed_t rollsinang[ROTANGLES];
-INT32 R_GetRollAngle(angle_t rollangle)
-{
-	INT32 ra = AngleFixed(rollangle)>>FRACBITS;
-#if (ROTANGDIFF > 1)
-	ra += (ROTANGDIFF/2);
-#endif
-	ra /= ROTANGDIFF;
-	ra %= ROTANGLES;
-	return ra;
-}
-
-//
-// R_CacheRotSprite
-//
-// Create a rotated sprite.
-//
-void R_CacheRotSprite(spritenum_t sprnum, UINT8 frame, spriteinfo_t *sprinfo, spriteframe_t *sprframe, INT32 rot, UINT8 flip)
-{
-	INT32 angle;
-	patch_t *patch;
-	patch_t *newpatch;
-	UINT16 *rawdst;
-	size_t size;
-	pictureflags_t bflip = (flip) ? PICFLAGS_XFLIP : 0;
-
-#define SPRITE_XCENTER (leftoffset)
-#define SPRITE_YCENTER (height / 2)
-#define ROTSPRITE_XCENTER (newwidth / 2)
-#define ROTSPRITE_YCENTER (newheight / 2)
-
-	if (!(sprframe->rotsprite.cached & (1<<rot)))
-	{
-		INT32 dx, dy;
-		INT32 px, py;
-		INT32 width, height, leftoffset;
-		fixed_t ca, sa;
-		lumpnum_t lump = sprframe->lumppat[rot];
-#ifndef NO_PNG_LUMPS
-		size_t lumplength;
-#endif
-
-		if (lump == LUMPERROR)
-			return;
-
-		patch = (patch_t *)W_CacheLumpNum(lump, PU_STATIC);
-#ifndef NO_PNG_LUMPS
-		lumplength = W_LumpLength(lump);
-
-		if (Picture_IsLumpPNG((const UINT8 *)patch, lumplength))
-			patch = (patch_t *)Picture_PNGConvert((const UINT8 *)patch, PICFMT_PATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
-		else
-#endif
-		// Because there's something wrong with SPR_DFLM, I guess
-		if (!Picture_CheckIfPatch(patch, lumplength))
-			return;
-
-		width = SHORT(patch->width);
-		height = SHORT(patch->height);
-		leftoffset = SHORT(patch->leftoffset);
-
-		// rotation pivot
-		px = SPRITE_XCENTER;
-		py = SPRITE_YCENTER;
-
-		// get correct sprite info for sprite
-		if (sprinfo == NULL)
-			sprinfo = &spriteinfo[sprnum];
-		if (sprinfo->available)
-		{
-			px = sprinfo->pivot[frame].x;
-			py = sprinfo->pivot[frame].y;
-		}
-		if (bflip)
-		{
-			px = width - px;
-			leftoffset = width - leftoffset;
-		}
-
-		// Don't cache angle = 0
-		for (angle = 1; angle < ROTANGLES; angle++)
-		{
-			INT32 newwidth, newheight;
-
-			ca = rollcosang[angle];
-			sa = rollsinang[angle];
-
-			// Find the dimensions of the rotated patch.
-			{
-				INT32 w1 = abs(FixedMul(width << FRACBITS, ca) - FixedMul(height << FRACBITS, sa));
-				INT32 w2 = abs(FixedMul(-(width << FRACBITS), ca) - FixedMul(height << FRACBITS, sa));
-				INT32 h1 = abs(FixedMul(width << FRACBITS, sa) + FixedMul(height << FRACBITS, ca));
-				INT32 h2 = abs(FixedMul(-(width << FRACBITS), sa) + FixedMul(height << FRACBITS, ca));
-				w1 = FixedInt(FixedCeil(w1 + (FRACUNIT/2)));
-				w2 = FixedInt(FixedCeil(w2 + (FRACUNIT/2)));
-				h1 = FixedInt(FixedCeil(h1 + (FRACUNIT/2)));
-				h2 = FixedInt(FixedCeil(h2 + (FRACUNIT/2)));
-				newwidth = max(width, max(w1, w2));
-				newheight = max(height, max(h1, h2));
-			}
-
-			// check boundaries
-			{
-				fixed_t top[2][2];
-				fixed_t bottom[2][2];
-
-				top[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				top[0][1] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-				top[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				top[1][1] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-
-				bottom[0][0] = FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				bottom[0][1] = -FixedMul((-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-				bottom[1][0] = FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, ca) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, sa) + (px << FRACBITS);
-				bottom[1][1] = -FixedMul((newwidth-ROTSPRITE_XCENTER) << FRACBITS, sa) + FixedMul((newheight-ROTSPRITE_YCENTER) << FRACBITS, ca) + (py << FRACBITS);
-
-				top[0][0] >>= FRACBITS;
-				top[0][1] >>= FRACBITS;
-				top[1][0] >>= FRACBITS;
-				top[1][1] >>= FRACBITS;
-
-				bottom[0][0] >>= FRACBITS;
-				bottom[0][1] >>= FRACBITS;
-				bottom[1][0] >>= FRACBITS;
-				bottom[1][1] >>= FRACBITS;
-
-#define BOUNDARYWCHECK(b) (b[0] < 0 || b[0] >= width)
-#define BOUNDARYHCHECK(b) (b[1] < 0 || b[1] >= height)
-#define BOUNDARYADJUST(x) x *= 2
-				// top left/right
-				if (BOUNDARYWCHECK(top[0]) || BOUNDARYWCHECK(top[1]))
-					BOUNDARYADJUST(newwidth);
-				// bottom left/right
-				else if (BOUNDARYWCHECK(bottom[0]) || BOUNDARYWCHECK(bottom[1]))
-					BOUNDARYADJUST(newwidth);
-				// top left/right
-				if (BOUNDARYHCHECK(top[0]) || BOUNDARYHCHECK(top[1]))
-					BOUNDARYADJUST(newheight);
-				// bottom left/right
-				else if (BOUNDARYHCHECK(bottom[0]) || BOUNDARYHCHECK(bottom[1]))
-					BOUNDARYADJUST(newheight);
-#undef BOUNDARYWCHECK
-#undef BOUNDARYHCHECK
-#undef BOUNDARYADJUST
-			}
-
-			// Draw the rotated sprite to a temporary buffer.
-			size = (newwidth * newheight);
-			if (!size)
-				size = (width * height);
-			rawdst = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
-
-			for (dy = 0; dy < newheight; dy++)
-			{
-				for (dx = 0; dx < newwidth; dx++)
-				{
-					INT32 x = (dx-ROTSPRITE_XCENTER) << FRACBITS;
-					INT32 y = (dy-ROTSPRITE_YCENTER) << FRACBITS;
-					INT32 sx = FixedMul(x, ca) + FixedMul(y, sa) + (px << FRACBITS);
-					INT32 sy = -FixedMul(x, sa) + FixedMul(y, ca) + (py << FRACBITS);
-					sx >>= FRACBITS;
-					sy >>= FRACBITS;
-					if (sx >= 0 && sy >= 0 && sx < width && sy < height)
-					{
-						void *input = Picture_GetPatchPixel(patch, PICFMT_PATCH, sx, sy, bflip);
-						if (input != NULL)
-							rawdst[(dy*newwidth)+dx] = (0xFF00 | (*(UINT8 *)input));
-					}
-				}
-			}
-
-			// make patch
-			newpatch = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawdst, PICFMT_PATCH, 0, &size, newwidth, newheight, 0, 0, 0);
-			{
-				newpatch->leftoffset = (newpatch->width / 2) + (leftoffset - px);
-				newpatch->topoffset = (newpatch->height / 2) + (SHORT(patch->topoffset) - py);
-			}
-
-			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-			if (rendermode != render_none) // not for psprite
-				newpatch->topoffset += FEETADJUST>>FRACBITS;
-
-			// P_PrecacheLevel
-			if (devparm) spritememory += size;
-
-			// convert everything to little-endian, for big-endian support
-			newpatch->width = SHORT(newpatch->width);
-			newpatch->height = SHORT(newpatch->height);
-			newpatch->leftoffset = SHORT(newpatch->leftoffset);
-			newpatch->topoffset = SHORT(newpatch->topoffset);
-
-#ifdef HWRENDER
-			if (rendermode == render_opengl)
-			{
-				GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, NULL);
-				grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, NULL);
-				grPatch->rawpatch = newpatch;
-				sprframe->rotsprite.patch[rot][angle] = (patch_t *)grPatch;
-				HWR_MakePatch(newpatch, grPatch, grPatch->mipmap, false);
-			}
-			else
-#endif // HWRENDER
-				sprframe->rotsprite.patch[rot][angle] = newpatch;
-
-			// free rotated image data
-			Z_Free(rawdst);
-		}
-
-		// This rotation is cached now
-		sprframe->rotsprite.cached |= (1<<rot);
-
-		// free image data
-		Z_Free(patch);
-	}
-#undef SPRITE_XCENTER
-#undef SPRITE_YCENTER
-#undef ROTSPRITE_XCENTER
-#undef ROTSPRITE_YCENTER
-}
-
-//
-// R_FreeSingleRotSprite
-//
-// Free sprite rotation data from memory, for a single spritedef.
-//
-void R_FreeSingleRotSprite(spritedef_t *spritedef)
-{
-	UINT8 frame;
-	INT32 rot, ang;
-
-	for (frame = 0; frame < spritedef->numframes; frame++)
-	{
-		spriteframe_t *sprframe = &spritedef->spriteframes[frame];
-		for (rot = 0; rot < 16; rot++)
-		{
-			if (sprframe->rotsprite.cached & (1<<rot))
-			{
-				for (ang = 0; ang < ROTANGLES; ang++)
-				{
-					patch_t *rotsprite = sprframe->rotsprite.patch[rot][ang];
-					if (rotsprite)
-					{
-#ifdef HWRENDER
-						if (rendermode == render_opengl)
-						{
-							GLPatch_t *grPatch = (GLPatch_t *)rotsprite;
-							if (grPatch->rawpatch)
-							{
-								Z_Free(grPatch->rawpatch);
-								grPatch->rawpatch = NULL;
-							}
-							if (grPatch->mipmap)
-							{
-								if (grPatch->mipmap->data)
-								{
-									Z_Free(grPatch->mipmap->data);
-									grPatch->mipmap->data = NULL;
-								}
-								Z_Free(grPatch->mipmap);
-								grPatch->mipmap = NULL;
-							}
-						}
-#endif
-						Z_Free(rotsprite);
-					}
-				}
-				sprframe->rotsprite.cached &= ~(1<<rot);
-			}
-		}
-	}
-}
-
-//
-// R_FreeSkinRotSprite
-//
-// Free sprite rotation data from memory, for a skin.
-// Calls R_FreeSingleRotSprite.
-//
-void R_FreeSkinRotSprite(size_t skinnum)
-{
-	size_t i;
-	skin_t *skin = &skins[skinnum];
-	spritedef_t *skinsprites = skin->sprites;
-	for (i = 0; i < NUMPLAYERSPRITES*2; i++)
-	{
-		R_FreeSingleRotSprite(skinsprites);
-		skinsprites++;
-	}
-}
-
-//
-// R_FreeAllRotSprite
-//
-// Free ALL sprite rotation data from memory.
-//
-void R_FreeAllRotSprite(void)
-{
-	INT32 i;
-	size_t s;
-	for (s = 0; s < numsprites; s++)
-		R_FreeSingleRotSprite(&sprites[s]);
-	for (i = 0; i < numskins; ++i)
-		R_FreeSkinRotSprite(i);
-}
-#endif
