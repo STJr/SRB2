@@ -1565,10 +1565,6 @@ static void CL_LoadReceivedSavegame(boolean reloading)
 		}
 		CONS_Printf("\"\n");
 	}
-	else
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("Can't load the level!\n"));
-	}
 
 	// done
 	Z_Free(savebuffer);
