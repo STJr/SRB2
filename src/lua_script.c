@@ -355,8 +355,21 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	// end local player variables
 	} else if (fastcmp(word,"server")) {
-		if ((!multiplayer || !netgame) && !playeringame[serverplayer])
-			return 0;
+		if (!playeringame[serverplayer])
+		{
+			static UINT8 seen = 0;
+			if (!seen && server_is_dedicated) {
+				seen = 1;
+				CONS_Alert(CONS_WARNING,
+						"Using \"server\" on a dedicated"
+						" server is deprecated and will be"
+						" removed. (Check \"isdedicatedserver\""
+						" first.)\n");
+			}
+			/* this case lets it always return online */
+			if (!multiplayer || !netgame)
+				return 0;
+		}
 		LUA_PushUserdata(L, &players[serverplayer], META_PLAYER);
 		return 1;
 	} else if (fastcmp(word,"emeralds")) {
