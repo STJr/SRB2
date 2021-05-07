@@ -154,6 +154,7 @@ typedef struct
 
 	UINT8 gametype;
 	UINT8 modifiedgame;
+	UINT8 dedicated;
 
 	char server_context[8]; // Unique context id, generated at server startup.
 } ATTRPACK serverconfig_pak;
@@ -365,6 +366,9 @@ extern boolean dedicated; // For dedicated server
 extern UINT16 software_MAXPACKETLENGTH;
 extern boolean acceptnewnode;
 extern SINT8 servernode;
+
+/* True for client and server. */
+extern boolean server_is_dedicated;
 
 void Command_Ping_f(void);
 extern tic_t connectiontimeout;

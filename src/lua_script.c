@@ -351,7 +351,7 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushboolean(L, server);
 		return 1;
 	} else if (fastcmp(word,"isdedicatedserver")) {
-		lua_pushboolean(L, dedicated);
+		lua_pushboolean(L, server_is_dedicated);
 		return 1;
 	// end local player variables
 	} else if (fastcmp(word,"server")) {

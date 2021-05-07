@@ -1095,6 +1095,8 @@ void D_SRB2Main(void)
 	dedicated = M_CheckParm("-dedicated") != 0;
 #endif
 
+	server_is_dedicated = dedicated;
+
 	if (devparm)
 		CONS_Printf(M_GetText("Development mode ON.\n"));
 

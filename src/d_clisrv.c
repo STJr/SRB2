@@ -127,6 +127,7 @@ static UINT8 localtextcmd[MAXTEXTCMD];
 static UINT8 localtextcmd2[MAXTEXTCMD]; // splitscreen
 static tic_t neededtic;
 SINT8 servernode = 0; // the number of the server node
+boolean server_is_dedicated;
 /// \brief do we accept new players?
 /// \todo WORK!
 boolean acceptnewnode = true;
@@ -1354,6 +1355,7 @@ static boolean SV_SendServerConfig(INT32 node)
 	netbuffer->u.servercfg.gamestate = (UINT8)gamestate;
 	netbuffer->u.servercfg.gametype = (UINT8)gametype;
 	netbuffer->u.servercfg.modifiedgame = (UINT8)modifiedgame;
+	netbuffer->u.servercfg.dedicated = (UINT8)dedicated;
 
 	memcpy(netbuffer->u.servercfg.server_context, server_context, 8);
 
@@ -3915,6 +3917,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				maketic = gametic = neededtic = (tic_t)LONG(netbuffer->u.servercfg.gametic);
 				G_SetGametype(netbuffer->u.servercfg.gametype);
 				modifiedgame = netbuffer->u.servercfg.modifiedgame;
+				server_is_dedicated = netbuffer->u.servercfg.dedicated;
 				memcpy(server_context, netbuffer->u.servercfg.server_context, 8);
 			}
 
