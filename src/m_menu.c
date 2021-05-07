@@ -8656,8 +8656,6 @@ static void M_ReadSavegameInfo(UINT32 slot)
 
 	if (backwardsCompat != NEWSKINSAVES)
 	{
-		CONS_Printf("Old behavior for %d\n", slot);
-
 		// Backwards compat
 		savegameinfo[slot].skinnum = backwardsCompat & ((1<<5) - 1);
 
@@ -8665,22 +8663,16 @@ static void M_ReadSavegameInfo(UINT32 slot)
 		|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
 			BADSAVE
 
-		CONS_Printf("Read skinnum successfully\n");
-
 		savegameinfo[slot].botskin = backwardsCompat >> 5;
 		if (savegameinfo[slot].botskin-1 >= numskins
 		|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
 			BADSAVE
-
-		CONS_Printf("Read botskin successfully\n");
 	}
 	else
 #endif
 	{
 		boolean haveBot = false;
 		char ourSkinName[SKINNAMESIZE+1];
-
-		CONS_Printf("New behavior for %d\n", slot);
 
 		CHECKPOS
 		READSTRINGN(sav_p, ourSkinName, SKINNAMESIZE);
@@ -8689,8 +8681,6 @@ static void M_ReadSavegameInfo(UINT32 slot)
 		if (savegameinfo[slot].skinnum >= numskins
 		|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
 			BADSAVE
-
-		CONS_Printf("Read skinnum successfully\n");
 
 		CHECKPOS
 		haveBot = (boolean)READUINT8(sav_p);
@@ -8707,8 +8697,6 @@ static void M_ReadSavegameInfo(UINT32 slot)
 			|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
 				BADSAVE
 		}
-
-		CONS_Printf("Read botskin successfully\n");
 	}
 
 	CHECKPOS
