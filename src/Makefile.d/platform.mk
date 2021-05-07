@@ -5,7 +5,7 @@
 PKG_CONFIG?=pkg-config
 
 ifdef WINDOWSHELL
-rmrf=2>NUL DEL /S /Q
+rmrf=-2>NUL DEL /S /Q
 mkdir=-2>NUL MD
 else
 rmrf=rm -rf
