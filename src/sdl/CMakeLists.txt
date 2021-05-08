@@ -56,8 +56,6 @@ endif()
 
 if(${SDL2_FOUND})
 	if(${SRB2_USEASM})
-		target_sources(SRB2SDL2 PRIVATE ${SRB2_ASM_SOURCES}
-			${SRB2_NASM_SOURCES})
 		set_source_files_properties(${SRB2_ASM_SOURCES} PROPERTIES LANGUAGE C)
 		set_source_files_properties(${SRB2_ASM_SOURCES} PROPERTIES COMPILE_FLAGS "-x assembler-with-cpp")
 	endif()

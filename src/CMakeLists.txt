@@ -1,5 +1,7 @@
 # SRB2 Core
 
+add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32)
+
 # Core sources
 target_sourcefile(c)
 target_sources(SRB2SDL2 PRIVATE comptime.c md5.c config.h)
@@ -206,9 +208,13 @@ if(${SRB2_CONFIG_USEASM})
 		set(CMAKE_ASM_NASM_FLAGS "${SRB2_ASM_FLAGS}" CACHE STRING "Flags used by the assembler during all build types.")
 		enable_language(ASM_NASM)
 	endif()
+
 	set(SRB2_USEASM ON)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DUSEASM)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -mfpmath=sse")
+
+	target_sources(SRB2SDL2 PRIVATE ${SRB2_ASM_SOURCES}
+		${SRB2_NASM_SOURCES})
 else()
 	set(SRB2_USEASM OFF)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DNONX86 -DNORUSEASM)

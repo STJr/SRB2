@@ -117,8 +117,6 @@ set(SRB2_SDL2_EXE_NAME srb2 CACHE STRING "Executable binary output name")
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src)
 
-add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32)
-
 add_subdirectory(src)
 add_subdirectory(assets)
 
