@@ -98,7 +98,6 @@ ALL_SYSTEMS=\
 	MINGW64\
 	HAIKU\
 	DUMMY\
-	DJGPPDOS\
 	MINGW\
 	UNIX\
 	LINUX\
@@ -622,8 +621,6 @@ asm:
 	$(REMOVE) $(OBJDIR)/tmp.exe
 
 # executable
-# NOTE: DJGPP's objcopy do not have --add-gnu-debuglink
-
 $(BIN)/$(EXENAME): $(POS) $(OBJS)
 	-$(MKDIR) $(BIN)
 	$(call echo,Linking $(EXENAME)...)

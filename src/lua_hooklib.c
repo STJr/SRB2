@@ -1959,13 +1959,13 @@ boolean LUAh_MusicChange(const char *oldname, char *newname, UINT16 *mflags, boo
 			if (lua_isboolean(gL, -4))
 				*looping = lua_toboolean(gL, -4);
 			// output 4: position override
-			if (lua_isboolean(gL, -3))
+			if (lua_isnumber(gL, -3))
 				*position = lua_tonumber(gL, -3);
 			// output 5: prefadems override
-			if (lua_isboolean(gL, -2))
+			if (lua_isnumber(gL, -2))
 				*prefadems = lua_tonumber(gL, -2);
 			// output 6: fadeinms override
-			if (lua_isboolean(gL, -1))
+			if (lua_isnumber(gL, -1))
 				*fadeinms = lua_tonumber(gL, -1);
 
 			lua_pop(gL, 7);  // Pop returned values and error handler

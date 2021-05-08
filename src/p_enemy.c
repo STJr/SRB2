@@ -4202,7 +4202,7 @@ void A_CustomPower(mobj_t *actor)
 		return;
 	}
 
-	if (locvar1 >= NUMPOWERS)
+	if (locvar1 >= NUMPOWERS || locvar1 < 0)
 	{
 		CONS_Debug(DBG_GAMELOGIC, "Power #%d out of range!\n", locvar1);
 		return;

@@ -230,7 +230,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	UINT8 rotation;
 	lumpinfo_t *lumpinfo;
 	softwarepatch_t patch;
-	UINT8 numadded = 0;
+	UINT16 numadded = 0;
 
 	memset(sprtemp,0xFF, sizeof (sprtemp));
 	maxframe = (size_t)-1;

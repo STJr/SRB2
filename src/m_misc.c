@@ -64,8 +64,6 @@ typedef off_t off64_t;
 #define PRIdS "u"
 #elif defined (_WIN32)
 #define PRIdS "Iu"
-#elif defined (DJGPP)
-#define PRIdS "u"
 #else
 #define PRIdS "zu"
 #endif
