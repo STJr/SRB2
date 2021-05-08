@@ -12727,7 +12727,10 @@ void P_PlayerAfterThink(player_t *player)
 				if (player->cmd.forwardmove || player->cmd.sidemove)
 				{
 					rock->flags2 |= MF2_STRONGBOX; // signifies the rock should not slow to a halt
-					rock->movedir = (player->cmd.angleturn << FRACBITS) + R_PointToAngle2(0, 0, player->cmd.forwardmove << FRACBITS, -player->cmd.sidemove << FRACBITS);
+					if (twodlevel || (mo->flags2 & MF2_TWOD))
+						rock->movedir = mo->angle;
+					else
+						rock->movedir = (player->cmd.angleturn << FRACBITS) + R_PointToAngle2(0, 0, player->cmd.forwardmove << FRACBITS, -player->cmd.sidemove << FRACBITS);
 					P_Thrust(rock, rock->movedir, rock->scale >> 1);
 				}
 				else
