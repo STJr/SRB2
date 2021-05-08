@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -154,14 +154,10 @@ static void R_UpdatePlaneRipple(void)
 // R_MapPlane
 //
 // Uses global vars:
+//  planeheight
 //  basexscale
 //  baseyscale
 //  centerx
-//  viewx
-//  viewy
-//  viewsin
-//  viewcos
-//  viewheight
 
 void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 {
@@ -580,7 +576,7 @@ void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 //
 void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 {
-	//    Alam: from r_splats's R_RenderFloorSplat
+	//    Alam: from r_splats's R_RasterizeFloorSplat
 	if (t1 >= vid.height) t1 = vid.height-1;
 	if (b1 >= vid.height) b1 = vid.height-1;
 	if (t2 >= vid.height) t2 = vid.height-1;
@@ -607,7 +603,6 @@ void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 void R_DrawPlanes(void)
 {
 	visplane_t *pl;
-	angle_t va = viewangle;
 	INT32 i;
 
 	R_UpdatePlaneRipple();
@@ -622,8 +617,6 @@ void R_DrawPlanes(void)
 			R_DrawSinglePlane(pl);
 		}
 	}
-
-	viewangle = va;
 }
 
 // R_DrawSkyPlane

@@ -216,6 +216,85 @@ INT32 R_SkinAvailable(const char *name)
 	return -1;
 }
 
+// Auxillary function that actually sets the skin
+static void SetSkin(player_t *player, INT32 skinnum)
+{
+	skin_t *skin = &skins[skinnum];
+	UINT16 newcolor = 0;
+
+	player->skin = skinnum;
+
+	player->camerascale = skin->camerascale;
+	player->shieldscale = skin->shieldscale;
+
+	player->charability = (UINT8)skin->ability;
+	player->charability2 = (UINT8)skin->ability2;
+
+	player->charflags = (UINT32)skin->flags;
+
+	player->thokitem = skin->thokitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].painchance : (UINT32)skin->thokitem;
+	player->spinitem = skin->spinitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].damage : (UINT32)skin->spinitem;
+	player->revitem = skin->revitem < 0 ? (mobjtype_t)mobjinfo[MT_PLAYER].raisestate : (UINT32)skin->revitem;
+	player->followitem = skin->followitem;
+
+	if (((player->powers[pw_shield] & SH_NOSTACK) == SH_PINK) && (player->revitem == MT_LHRT || player->spinitem == MT_LHRT || player->thokitem == MT_LHRT)) // Healers can't keep their buff.
+		player->powers[pw_shield] &= SH_STACK;
+
+	player->actionspd = skin->actionspd;
+	player->mindash = skin->mindash;
+	player->maxdash = skin->maxdash;
+
+	player->normalspeed = skin->normalspeed;
+	player->runspeed = skin->runspeed;
+	player->thrustfactor = skin->thrustfactor;
+	player->accelstart = skin->accelstart;
+	player->acceleration = skin->acceleration;
+
+	player->jumpfactor = skin->jumpfactor;
+
+	player->height = skin->height;
+	player->spinheight = skin->spinheight;
+
+	if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
+	{
+		if (player == &players[consoleplayer])
+			CV_StealthSetValue(&cv_playercolor, skin->prefcolor);
+		else if (player == &players[secondarydisplayplayer])
+			CV_StealthSetValue(&cv_playercolor2, skin->prefcolor);
+		player->skincolor = newcolor = skin->prefcolor;
+		if (player->bot && botingame)
+		{
+			botskin = (UINT8)(skinnum + 1);
+			botcolor = skin->prefcolor;
+		}
+	}
+
+	if (player->followmobj)
+	{
+		P_RemoveMobj(player->followmobj);
+		P_SetTarget(&player->followmobj, NULL);
+	}
+
+	if (player->mo)
+	{
+		fixed_t radius = FixedMul(skin->radius, player->mo->scale);
+		if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NFLY].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+		{
+			skin = &skins[DEFAULTNIGHTSSKIN];
+			player->followitem = skin->followitem;
+			if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
+				newcolor = skin->prefcolor; // will be updated in thinker to flashing
+		}
+		player->mo->skin = skin;
+		if (newcolor)
+			player->mo->color = newcolor;
+		P_SetScale(player->mo, player->mo->scale);
+		player->mo->radius = radius;
+
+		P_SetPlayerMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
+	}
+}
+
 // network code calls this when a 'skin change' is received
 void SetPlayerSkin(INT32 playernum, const char *skinname)
 {
@@ -224,7 +303,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 
 	if ((i != -1) && R_SkinUsable(playernum, i))
 	{
-		SetPlayerSkinByNum(playernum, i);
+		SetSkin(player, i);
 		return;
 	}
 
@@ -233,7 +312,7 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 	else if(server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, M_GetText("Player %d (%s) skin '%s' not found\n"), playernum, player_names[playernum], skinname);
 
-	SetPlayerSkinByNum(playernum, 0);
+	SetSkin(player, 0);
 }
 
 // Same as SetPlayerSkin, but uses the skin #.
@@ -241,82 +320,10 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 {
 	player_t *player = &players[playernum];
-	skin_t *skin = &skins[skinnum];
-	UINT16 newcolor = 0;
 
 	if (skinnum >= 0 && skinnum < numskins && R_SkinUsable(playernum, skinnum)) // Make sure it exists!
 	{
-		player->skin = skinnum;
-
-		player->camerascale = skin->camerascale;
-		player->shieldscale = skin->shieldscale;
-
-		player->charability = (UINT8)skin->ability;
-		player->charability2 = (UINT8)skin->ability2;
-
-		player->charflags = (UINT32)skin->flags;
-
-		player->thokitem = skin->thokitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].painchance : (UINT32)skin->thokitem;
-		player->spinitem = skin->spinitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].damage : (UINT32)skin->spinitem;
-		player->revitem = skin->revitem < 0 ? (mobjtype_t)mobjinfo[MT_PLAYER].raisestate : (UINT32)skin->revitem;
-		player->followitem = skin->followitem;
-
-		if (((player->powers[pw_shield] & SH_NOSTACK) == SH_PINK) && (player->revitem == MT_LHRT || player->spinitem == MT_LHRT || player->thokitem == MT_LHRT)) // Healers can't keep their buff.
-			player->powers[pw_shield] &= SH_STACK;
-
-		player->actionspd = skin->actionspd;
-		player->mindash = skin->mindash;
-		player->maxdash = skin->maxdash;
-
-		player->normalspeed = skin->normalspeed;
-		player->runspeed = skin->runspeed;
-		player->thrustfactor = skin->thrustfactor;
-		player->accelstart = skin->accelstart;
-		player->acceleration = skin->acceleration;
-
-		player->jumpfactor = skin->jumpfactor;
-
-		player->height = skin->height;
-		player->spinheight = skin->spinheight;
-
-		if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
-		{
-			if (playernum == consoleplayer)
-				CV_StealthSetValue(&cv_playercolor, skin->prefcolor);
-			else if (playernum == secondarydisplayplayer)
-				CV_StealthSetValue(&cv_playercolor2, skin->prefcolor);
-			player->skincolor = newcolor = skin->prefcolor;
-			if (player->bot && botingame)
-			{
-				botskin = (UINT8)(skinnum + 1);
-				botcolor = skin->prefcolor;
-			}
-		}
-
-		if (player->followmobj)
-		{
-			P_RemoveMobj(player->followmobj);
-			P_SetTarget(&player->followmobj, NULL);
-		}
-
-		if (player->mo)
-		{
-			fixed_t radius = FixedMul(skin->radius, player->mo->scale);
-			if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NFLY].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
-			{
-				skin = &skins[DEFAULTNIGHTSSKIN];
-				player->followitem = skin->followitem;
-				if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
-					newcolor = skin->prefcolor; // will be updated in thinker to flashing
-			}
-			player->mo->skin = skin;
-			if (newcolor)
-				player->mo->color = newcolor;
-			P_SetScale(player->mo, player->mo->scale);
-			player->mo->radius = radius;
-
-			P_SetPlayerMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
-		}
+		SetSkin(player, skinnum);
 		return;
 	}
 
@@ -324,7 +331,8 @@ void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 		CONS_Alert(CONS_WARNING, M_GetText("Requested skin %d not found\n"), skinnum);
 	else if(server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
-	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
+
+	SetSkin(player, 0); // not found put the sonic skin
 }
 
 //

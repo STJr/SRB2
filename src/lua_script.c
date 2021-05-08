@@ -333,7 +333,7 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	// local player variables, by popular request
 	} else if (fastcmp(word,"consoleplayer")) { // player controlling console (aka local player 1)
-		if (consoleplayer < 0 || !playeringame[consoleplayer])
+		if (!addedtogame || consoleplayer < 0 || !playeringame[consoleplayer])
 			return 0;
 		LUA_PushUserdata(L, &players[consoleplayer], META_PLAYER);
 		return 1;
@@ -712,27 +712,6 @@ fixed_t LUA_EvalMath(const char *word)
 	// clean up and return.
 	lua_close(L);
 	return res;
-}
-
-/*
-LUA_PushUserdata but no userdata is created.
-You can't invalidate it therefore.
-*/
-
-void LUA_PushLightUserdata (lua_State *L, void *data, const char *meta)
-{
-	if (data)
-	{
-		lua_pushlightuserdata(L, data);
-		luaL_getmetatable(L, meta);
-		/*
-		The metatable is the last value on the stack, so this
-		applies it to the second value, which is the userdata.
-		*/
-		lua_setmetatable(L, -2);
-	}
-	else
-		lua_pushnil(L);
 }
 
 // Takes a pointer, any pointer, and a metatable name

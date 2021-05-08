@@ -15,6 +15,7 @@
 #include "tables.h"
 #include "p_local.h"
 #include "doomstat.h" // for ALL7EMERALDS
+#include "r_main.h" // for R_PointToDist2
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -86,6 +87,12 @@ static int lib_finetangent(lua_State *L)
 	return 1;
 }
 
+static int lib_fixedacos(lua_State *L)
+{
+	lua_pushangle(L, FixedAcos(luaL_checkfixed(L, 1)));
+	return 1;
+}
+
 // Fixed math
 ////////////////
 
@@ -129,7 +136,7 @@ static int lib_fixedsqrt(lua_State *L)
 
 static int lib_fixedhypot(lua_State *L)
 {
-	lua_pushfixed(L, FixedHypot(luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
+	lua_pushfixed(L, R_PointToDist2(0, 0, luaL_checkfixed(L, 1), luaL_checkfixed(L, 2)));
 	return 1;
 }
 
@@ -191,6 +198,7 @@ static luaL_Reg lib[] = {
 	{"sin", lib_finesine},
 	{"cos", lib_finecosine},
 	{"tan", lib_finetangent},
+	{"acos", lib_fixedacos},
 	{"FixedAngle", lib_fixedangle},
 	{"fixangle"  , lib_fixedangle},
 	{"AngleFixed", lib_anglefixed},

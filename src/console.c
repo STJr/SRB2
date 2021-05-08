@@ -1303,10 +1303,6 @@ boolean CON_Responder(event_t *ev)
 	if (key < 32 || key > 127)
 		return true;
 
-	// add key to cmd line here
-	if (key >= 'A' && key <= 'Z' && !(shiftdown ^ capslock)) //this is only really necessary for dedicated servers
-		key = key + 'a' - 'A';
-
 	if (input_sel != input_cur)
 		CON_InputDelSelection();
 	CON_InputAddChar(key);
