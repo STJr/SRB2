@@ -8652,6 +8652,12 @@ static void M_DrawLoad(void)
 		loadgameoffset = 0;
 
 	M_DrawLoadGameData();
+
+	if (modifiedgame && !savemoddata)
+	{
+		V_DrawCenteredThinString(BASEVIDWIDTH/2, 184, 0, "\x85WARNING: \x80The game is modified.");
+		V_DrawCenteredThinString(BASEVIDWIDTH/2, 192, 0, "Progress will not be saved.");
+	}
 }
 
 //
