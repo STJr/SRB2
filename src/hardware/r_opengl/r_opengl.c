@@ -910,7 +910,6 @@ void SetupGLFunc4(void)
 	pgluBuild2DMipmaps = GetGLFunc("gluBuild2DMipmaps");
 }
 
-// jimita
 EXPORT boolean HWRAPI(CompileShaders) (void)
 {
 #ifdef GL_SHADERS
@@ -961,8 +960,6 @@ EXPORT boolean HWRAPI(CompileShaders) (void)
 			usershader->program = 0;
 		}
 	}
-
-	SetShader(SHADER_DEFAULT);
 
 	return true;
 #else
@@ -1303,8 +1300,12 @@ EXPORT void HWRAPI(DeleteTexture) (GLMipmap_t *pTexInfo)
 		{
 			if (head->next)
 				head->next->prev = head->prev;
+			else // no next -> tail is being deleted -> update TexCacheTail
+				TexCacheTail = head->prev;
 			if (head->prev)
 				head->prev->next = head->next;
+			else // no prev -> head is being deleted -> update TexCacheHead
+				TexCacheHead = head->next;
 			free(head);
 			break;
 		}
@@ -1578,11 +1579,10 @@ static void SetBlendMode(FBITFIELD flags)
 		case PF_Additive & PF_Blending:
 		case PF_Subtractive & PF_Blending:
 		case PF_ReverseSubtract & PF_Blending:
+			pglBlendFunc(GL_SRC_ALPHA, GL_ONE); // src * alpha + dest
+			break;
 		case PF_Environment & PF_Blending:
 			pglBlendFunc(GL_ONE, GL_ONE_MINUS_SRC_ALPHA);
-			break;
-		case PF_AdditiveSource & PF_Blending:
-			pglBlendFunc(GL_SRC_ALPHA, GL_ONE); // src * alpha + dest
 			break;
 		case PF_Multiplicative & PF_Blending:
 			pglBlendFunc(GL_DST_COLOR, GL_ZERO);
@@ -1622,7 +1622,6 @@ static void SetBlendMode(FBITFIELD flags)
 			break;
 		case PF_Translucent & PF_Blending:
 		case PF_Additive & PF_Blending:
-		case PF_AdditiveSource & PF_Blending:
 		case PF_Subtractive & PF_Blending:
 		case PF_ReverseSubtract & PF_Blending:
 		case PF_Environment & PF_Blending:
@@ -2176,32 +2175,34 @@ static void PreparePolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FBITFIELD
 
 	SetBlend(PolyFlags);    //TODO: inline (#pragma..)
 
-	// PolyColor
 	if (pSurf)
 	{
-		// If Modulated, mix the surface colour to the texture
+		// If modulated, mix the surface colour to the texture
 		if (CurrentPolyFlags & PF_Modulated)
-		{
-			// Poly color
-			poly.red    = byte2float[pSurf->PolyColor.s.red];
-			poly.green  = byte2float[pSurf->PolyColor.s.green];
-			poly.blue   = byte2float[pSurf->PolyColor.s.blue];
-			poly.alpha  = byte2float[pSurf->PolyColor.s.alpha];
-
 			pglColor4ubv((GLubyte*)&pSurf->PolyColor.s);
+
+		// If the surface is either modulated or colormapped, or both
+		if (CurrentPolyFlags & (PF_Modulated | PF_ColorMapped))
+		{
+			poly.red   = byte2float[pSurf->PolyColor.s.red];
+			poly.green = byte2float[pSurf->PolyColor.s.green];
+			poly.blue  = byte2float[pSurf->PolyColor.s.blue];
+			poly.alpha = byte2float[pSurf->PolyColor.s.alpha];
 		}
 
-		// Tint color
-		tint.red   = byte2float[pSurf->TintColor.s.red];
-		tint.green = byte2float[pSurf->TintColor.s.green];
-		tint.blue  = byte2float[pSurf->TintColor.s.blue];
-		tint.alpha = byte2float[pSurf->TintColor.s.alpha];
+		// Only if the surface is colormapped
+		if (CurrentPolyFlags & PF_ColorMapped)
+		{
+			tint.red   = byte2float[pSurf->TintColor.s.red];
+			tint.green = byte2float[pSurf->TintColor.s.green];
+			tint.blue  = byte2float[pSurf->TintColor.s.blue];
+			tint.alpha = byte2float[pSurf->TintColor.s.alpha];
 
-		// Fade color
-		fade.red   = byte2float[pSurf->FadeColor.s.red];
-		fade.green = byte2float[pSurf->FadeColor.s.green];
-		fade.blue  = byte2float[pSurf->FadeColor.s.blue];
-		fade.alpha = byte2float[pSurf->FadeColor.s.alpha];
+			fade.red   = byte2float[pSurf->FadeColor.s.red];
+			fade.green = byte2float[pSurf->FadeColor.s.green];
+			fade.blue  = byte2float[pSurf->FadeColor.s.blue];
+			fade.alpha = byte2float[pSurf->FadeColor.s.alpha];
+		}
 	}
 
 	// this test is added for new coronas' code (without depth buffer)
@@ -2754,7 +2755,7 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 	fade.alpha = byte2float[Surface->FadeColor.s.alpha];
 
 	flags = (Surface->PolyFlags | PF_Modulated);
-	if (Surface->PolyFlags & (PF_Additive|PF_AdditiveSource|PF_Subtractive|PF_ReverseSubtract|PF_Multiplicative))
+	if (Surface->PolyFlags & (PF_Additive|PF_Subtractive|PF_ReverseSubtract|PF_Multiplicative))
 		flags |= PF_Occlude;
 	else if (Surface->PolyColor.s.alpha == 0xFF)
 		flags |= (PF_Occlude | PF_Masked);
@@ -3015,7 +3016,6 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 	pglMatrixMode(GL_PROJECTION);
 	pglLoadIdentity();
 
-	// jimita 14042019
 	// Simulate Software's y-shearing
 	// https://zdoom.org/wiki/Y-shearing
 	if (shearing)

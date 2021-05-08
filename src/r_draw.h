@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -140,10 +140,11 @@ extern UINT8 *blendtables[NUMBLENDMAPS];
 
 void R_InitTranslucencyTables(void);
 void R_GenerateBlendTables(void);
-void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt);
 
 UINT8 *R_GetTranslucencyTable(INT32 alphalevel);
 UINT8 *R_GetBlendTable(int style, INT32 alphalevel);
+
+boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel);
 
 // Color ramp modification should force a recache
 extern UINT8 skincolor_modified[];

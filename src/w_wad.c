@@ -821,7 +821,10 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	}
 
 	if (important && !mainfile)
-		G_SetGameModified(true);
+	{
+		//G_SetGameModified(true);
+		modifiedgame = true; // avoid savemoddata being set to false
+	}
 
 	//
 	// link wad file to search files

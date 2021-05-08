@@ -1834,7 +1834,7 @@ void A_SnailerThink(mobj_t *actor)
 			fixed_t dist;
 			fixed_t dx, dy;
 
-			dist = R_PointToDist2(0, 0, actor->x - actor->target->x, actor->y - actor->target->y);
+			dist = P_AproxDistance(actor->x - actor->target->x, actor->y - actor->target->y);
 
 			if (an > ANGLE_45 && an <= ANGLE_90) // fire at 45 degrees to the left
 			{
@@ -4201,7 +4201,7 @@ void A_CustomPower(mobj_t *actor)
 		return;
 	}
 
-	if (locvar1 >= NUMPOWERS)
+	if (locvar1 >= NUMPOWERS || locvar1 < 0)
 	{
 		CONS_Debug(DBG_GAMELOGIC, "Power #%d out of range!\n", locvar1);
 		return;
@@ -9879,22 +9879,23 @@ void A_Custom3DRotate(mobj_t *actor)
 	if (LUA_CallAction(A_CUSTOM3DROTATE, actor))
 		return;
 
+	if (!actor->target) // Ensure we actually have a target first.
+	{
+		CONS_Printf("Error: A_Custom3DRotate: Object has no target.\n");
+		P_RemoveMobj(actor);
+		return;
+	}
+
 	if (actor->target->health == 0)
 	{
 		P_RemoveMobj(actor);
 		return;
 	}
 
-	if (!actor->target) // This should NEVER happen.
-	{
-		if (cv_debug)
-			CONS_Printf("Error: Object has no target\n");
-		P_RemoveMobj(actor);
-		return;
-	}
 	if (hspeed==0 && vspeed==0)
 	{
-		CONS_Printf("Error: A_Custom3DRotate: Object has no speed.\n");
+		if (cv_debug)
+			CONS_Printf("Error: A_Custom3DRotate: Object has no speed.\n");
 		return;
 	}
 

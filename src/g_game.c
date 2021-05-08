@@ -3507,6 +3507,7 @@ tolinfo_t TYPEOFLEVEL[NUMTOLNAMES] = {
 	{"MARIO",TOL_MARIO},
 	{"NIGHTS",TOL_NIGHTS},
 	{"OLDBRAK",TOL_ERZ3},
+	{"ERZ3",TOL_ERZ3},
 
 	{"XMAS",TOL_XMAS},
 	{"CHRISTMAS",TOL_XMAS},
@@ -3973,6 +3974,7 @@ static void G_DoCompleted(void)
 	{
 		G_SetGamestate(GS_INTERMISSION);
 		Y_StartIntermission();
+		Y_LoadIntermissionData();
 		G_UpdateVisited();
 		G_HandleSaveLevel();
 	}

@@ -71,7 +71,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FloatToFixed(float f)
 		value   [eax]       \
 		modify exact [eax edx]
 #elif defined (__GNUC__) && defined (__i386__) && !defined (NOASM)
-	// DJGPP, i386 linux, cygwin or mingw
+	// i386 linux, cygwin or mingw
 	FUNCMATH FUNCINLINE static inline fixed_t FixedMul(fixed_t a, fixed_t b) // asm
 	{
 		fixed_t ret;
