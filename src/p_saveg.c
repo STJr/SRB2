@@ -69,19 +69,22 @@ static inline void P_ArchivePlayer(void)
 		pllives = startinglivesbalance[numgameovers]; // has less than that.
 
 #ifdef NEWSKINSAVES
+	// Write a specific value into the old skininfo location.
+	// If we read something other than this, it's an older save file that used skin numbers.
 	WRITEUINT16(save_p, NEWSKINSAVES);
 #endif
 
+	// Write skin names, so that loading skins in different orders
+	// doesn't change who the save file is for!
 	WRITESTRINGN(save_p, skins[player->skin].name, SKINNAMESIZE);
 
 	if (botskin != 0)
 	{
-		WRITEUINT8(save_p, 1);
 		WRITESTRINGN(save_p, skins[botskin-1].name, SKINNAMESIZE);
 	}
 	else
 	{
-		WRITEUINT8(save_p, 0);
+		WRITESTRINGN(save_p, "\0", SKINNAMESIZE);
 	}
 
 	WRITEUINT8(save_p, numgameovers);
@@ -97,28 +100,21 @@ static inline void P_UnArchivePlayer(void)
 
 	if (backwardsCompat != NEWSKINSAVES)
 	{
-		// Backwards compat
+		// This is an older save file, which used direct skin numbers.
 		savedata.skin = backwardsCompat & ((1<<5) - 1);
 		savedata.botskin = backwardsCompat >> 5;
 	}
 	else
 #endif
 	{
-		boolean haveBot = false;
 		char ourSkinName[SKINNAMESIZE+1];
+		char botSkinName[SKINNAMESIZE+1];
 
 		READSTRINGN(save_p, ourSkinName, SKINNAMESIZE);
 		savedata.skin = R_SkinAvailable(ourSkinName);
 
-		haveBot = (boolean)READUINT8(save_p);
-
-		if (haveBot == true)
-		{
-			char botSkinName[SKINNAMESIZE+1];
-
-			READSTRINGN(save_p, botSkinName, SKINNAMESIZE);
-			savedata.botskin = R_SkinAvailable(botSkinName) + 1;
-		}
+		READSTRINGN(save_p, botSkinName, SKINNAMESIZE);
+		savedata.botskin = R_SkinAvailable(botSkinName) + 1;
 	}
 
 	savedata.numgameovers = READUINT8(save_p);

@@ -8671,8 +8671,8 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	else
 #endif
 	{
-		boolean haveBot = false;
 		char ourSkinName[SKINNAMESIZE+1];
+		char botSkinName[SKINNAMESIZE+1];
 
 		CHECKPOS
 		READSTRINGN(sav_p, ourSkinName, SKINNAMESIZE);
@@ -8683,20 +8683,12 @@ static void M_ReadSavegameInfo(UINT32 slot)
 			BADSAVE
 
 		CHECKPOS
-		haveBot = (boolean)READUINT8(sav_p);
+		READSTRINGN(sav_p, botSkinName, SKINNAMESIZE);
+		savegameinfo[slot].botskin = (R_SkinAvailable(botSkinName) + 1);
 
-		if (haveBot == true)
-		{
-			char botSkinName[SKINNAMESIZE+1];
-
-			CHECKPOS
-			READSTRINGN(sav_p, botSkinName, SKINNAMESIZE);
-			savegameinfo[slot].botskin = (R_SkinAvailable(botSkinName) + 1);
-
-			if (savegameinfo[slot].botskin-1 >= numskins
-			|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
-				BADSAVE
-		}
+		if (savegameinfo[slot].botskin-1 >= numskins
+		|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
+			BADSAVE
 	}
 
 	CHECKPOS

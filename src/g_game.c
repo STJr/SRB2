@@ -4647,20 +4647,14 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 		if (backwardsCompat == NEWSKINSAVES) // New save, read skin names
 #endif
 		{
-			boolean haveBot = false;
 			char ourSkinName[SKINNAMESIZE+1];
+			char botSkinName[SKINNAMESIZE+1];
 
 			READSTRINGN(save_p, ourSkinName, SKINNAMESIZE);
 			CHECKPOS
-			haveBot = (boolean)READUINT8(save_p);
-			CHECKPOS
 
-			if (haveBot == true)
-			{
-				char botSkinName[SKINNAMESIZE+1];
-				READSTRINGN(save_p, botSkinName, SKINNAMESIZE);
-				CHECKPOS
-			}
+			READSTRINGN(save_p, botSkinName, SKINNAMESIZE);
+			CHECKPOS
 		}
 
 		WRITEUINT8(save_p, numgameovers);
