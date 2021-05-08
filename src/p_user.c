@@ -12972,6 +12972,8 @@ boolean P_PlayerCanEnterSpinGaps(player_t *player)
 
 	return ((player->pflags & (PF_SPINNING|PF_GLIDING)) // players who are spinning or gliding
 		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING) // players who are landing from a glide
+		|| ((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+			&& player->dashmode >= DASHMODE_THRESHOLD && player->mo->state-states == S_PLAY_DASH) // machine players in dashmode
 		|| JUMPCURLED(player)); // players who are jumpcurled, but only if they would normally jump that way
 }
 
