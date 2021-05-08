@@ -3362,7 +3362,7 @@ const char *Gametype_Names[NUMGAMETYPES] =
 	"Tag", // GT_TAG
 	"Hide & Seek", // GT_HIDEANDSEEK
 
-	"CTF" // GT_CTF
+	"Capture the Flag" // GT_CTF
 };
 
 // For dehacked

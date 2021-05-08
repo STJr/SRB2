@@ -5765,13 +5765,13 @@ static void M_DrawLevelPlatterRow(UINT8 row, INT32 y)
 		if (!char_notes)
 			char_notes = V_WordWrap(0, 282 - 8, V_ALLOWLOWERCASE, gametypedesc[cv_newgametype.value].notes);
 
-		V_DrawFill(lsbasex, y, 282, 50, 27);
-		V_DrawString(lsbasex + 4, y + 4, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
+		V_DrawFill(lsbasex, y, 282, 60, 27);
 
-		V_DrawFill(lsbasex,     y+50, 141, 8, gametypedesc[cv_newgametype.value].col[0]);
-		V_DrawFill(lsbasex+141, y+50, 141, 8, gametypedesc[cv_newgametype.value].col[1]);
+		V_DrawFill(lsbasex+1,   y+1, 140, 22, gametypedesc[cv_newgametype.value].col[0]);
+		V_DrawFill(lsbasex+141, y+1, 140, 22, gametypedesc[cv_newgametype.value].col[1]);
 
-		V_DrawString(lsbasex, y+50, 0, gametype_cons_t[cv_newgametype.value].strvalue);
+		V_DrawLevelTitle(lsbasex+4, y+2, 0, gametype_cons_t[cv_newgametype.value].strvalue);
+		V_DrawString(lsbasex+4,     y+24, V_RETURN8|V_ALLOWLOWERCASE, char_notes);
 
 		if (!lsrow)
 		{
