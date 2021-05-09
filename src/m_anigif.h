@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2013-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 2013-2020 by Sonic Team Junior.
+// Copyright (C) 2013-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
