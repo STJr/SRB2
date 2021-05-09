@@ -7187,12 +7187,19 @@ static void M_HandleChecklist(INT32 choice)
 
 static void M_DrawChecklist(void)
 {
-	INT32 i = check_on, j = 0, y = currentMenu->y;
+	INT32 i = check_on, j = 0, y = currentMenu->y, emblems = numemblems+numextraemblems;
 	UINT32 condnum, previd, maxcond;
 	condition_t *cond;
 
 	// draw title (or big pic)
 	M_DrawMenuTitle();
+
+	// draw emblem counter
+	if (emblems > 0)
+	{
+		V_DrawString(42, 20, (emblems == M_CountEmblems()) ? V_GREENMAP : 0, va("%d/%d", M_CountEmblems(), emblems));
+		V_DrawSmallScaledPatch(28, 20, 0, W_CachePatchName("EMBLICON", PU_PATCH));
+	}
 
 	if (check_on)
 		V_DrawString(10, y-(skullAnimCounter/5), V_YELLOWMAP, "\x1A");
