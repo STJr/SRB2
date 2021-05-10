@@ -1644,7 +1644,8 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		p.mirror = atransform.mirror; // from Kart
 #endif
 
-		HWD.pfnSetShader(SHADER_MODEL);	// model shader
+		if (HWR_UseShader())
+			HWD.pfnSetShader(HWR_GetShaderFromTarget(SHADER_MODEL));
 		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, hflip, &Surf);
 	}
 

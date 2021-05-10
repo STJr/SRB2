@@ -133,32 +133,26 @@ typedef struct
 } FOutVector;
 
 #ifdef GL_SHADERS
-// Predefined shader types
+
+// Shader targets used to render specific types of geometry.
+// A shader target is resolved to an actual shader with HWR_GetShaderFromTarget.
+// The shader returned may be a base shader or a custom shader.
 enum
 {
-	SHADER_DEFAULT = 0,
-
 	SHADER_FLOOR,
 	SHADER_WALL,
 	SHADER_SPRITE,
-	SHADER_MODEL, SHADER_MODEL_LIGHTING,
+	SHADER_MODEL,
 	SHADER_WATER,
 	SHADER_FOG,
 	SHADER_SKY,
 
-	NUMBASESHADERS,
+	NUMSHADERTARGETS,
 };
 
 // Maximum amount of shader programs
-// Must be higher than NUMBASESHADERS
-#define HWR_MAXSHADERS 16
-
-// Shader sources (vertex and fragment)
-typedef struct
-{
-	char *vertex;
-	char *fragment;
-} shadersource_t;
+// Must be at least NUMSHADERTARGETS*2 to fit base and custom shaders for each shader target.
+#define HWR_MAXSHADERS NUMSHADERTARGETS*2
 
 // Custom shader reference table
 typedef struct
@@ -299,6 +293,14 @@ enum hwdsetspecialstate
 };
 
 typedef enum hwdsetspecialstate hwdspecialstate_t;
+
+enum hwdshaderstage
+{
+	HWD_SHADERSTAGE_VERTEX,
+	HWD_SHADERSTAGE_FRAGMENT,
+};
+
+typedef enum hwdshaderstage hwdshaderstage_t;
 
 // Lactozilla: Shader options
 enum hwdshaderoption

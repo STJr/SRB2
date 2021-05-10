@@ -859,10 +859,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 #ifdef HWRENDER
 	// Read shaders from file
 	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
-	{
 		HWR_LoadCustomShadersFromFile(numwadfiles - 1, (type == RET_PK3));
-		HWR_CompileShaders();
-	}
 #endif // HWRENDER
 
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.

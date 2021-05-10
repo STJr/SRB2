@@ -1878,13 +1878,13 @@ void VID_StartupOpenGL(void)
 		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
 		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 
-		HWD.pfnCompileShaders   = hwSym("CompileShaders",NULL);
-		HWD.pfnCleanShaders     = hwSym("CleanShaders",NULL);
+		HWD.pfnInitShaders      = hwSym("InitShaders",NULL);
+		HWD.pfnLoadShader       = hwSym("LoadShader",NULL);
+		HWD.pfnCompileShader    = hwSym("CompileShader",NULL);
 		HWD.pfnSetShader        = hwSym("SetShader",NULL);
 		HWD.pfnUnSetShader      = hwSym("UnSetShader",NULL);
 
 		HWD.pfnSetShaderInfo    = hwSym("SetShaderInfo",NULL);
-		HWD.pfnLoadCustomShader = hwSym("LoadCustomShader",NULL);
 
 		vid.glstate = HWD.pfnInit() ? VID_GL_LIBRARY_LOADED : VID_GL_LIBRARY_ERROR; // let load the OpenGL library
 

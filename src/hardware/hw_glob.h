@@ -136,4 +136,18 @@ void HWR_SetPalette(RGBA_t *palette);
 extern INT32 patchformat;
 extern INT32 textureformat;
 
+// --------
+// hw_shaders.c
+// --------
+boolean HWR_InitShaders(void);
+void HWR_CompileShaders(void);
+
+int HWR_GetShaderFromTarget(int shader_target);
+
+void HWR_LoadAllCustomShaders(void);
+void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3);
+const char *HWR_GetShaderName(INT32 shader);
+
+extern customshaderxlat_t shaderxlat[];
+
 #endif //_HW_GLOB_

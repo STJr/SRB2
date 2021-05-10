@@ -105,13 +105,13 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(MakeScreenFinalTexture);
 	GETFUNC(DrawScreenFinalTexture);
 
-	GETFUNC(CompileShaders);
-	GETFUNC(CleanShaders);
+	GETFUNC(InitShaders);
+	GETFUNC(LoadShader);
+	GETFUNC(CompileShader);
 	GETFUNC(SetShader);
 	GETFUNC(UnSetShader);
 
 	GETFUNC(SetShaderInfo);
-	GETFUNC(LoadCustomShader);
 
 #else //HWRENDER
 	if (0 == strcmp("FinishUpdate", funcName))

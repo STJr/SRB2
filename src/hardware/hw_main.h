@@ -65,6 +65,7 @@ void HWR_MakeScreenFinalTexture(void);
 void HWR_DrawScreenFinalTexture(int width, int height);
 
 // This stuff is put here so models can use them
+boolean HWR_UseShader(void);
 void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *colormap);
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap); // Let's see if this can work
 
@@ -72,14 +73,6 @@ UINT8 HWR_GetTranstableAlpha(INT32 transtablenum);
 FBITFIELD HWR_GetBlendModeFlag(INT32 ast);
 FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf);
 FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
-
-boolean HWR_CompileShaders(void);
-
-void HWR_LoadAllCustomShaders(void);
-void HWR_LoadCustomShadersFromFile(UINT16 wadnum, boolean PK3);
-const char *HWR_GetShaderName(INT32 shader);
-
-extern customshaderxlat_t shaderxlat[];
 
 extern CV_PossibleValue_t glanisotropicmode_cons_t[];
 
