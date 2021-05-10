@@ -5301,7 +5301,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						fixed_t actionspd = player->actionspd;
 
 						if (player->charflags & SF_DASHMODE)
-							actionspd = max(player->normalspeed, FixedDiv(player->speed, player->mo->scale));
+							actionspd = max(player->actionspd, FixedDiv(player->speed, player->mo->scale));
 
 						if (player->mo->eflags & MFE_UNDERWATER)
 							actionspd >>= 1;
