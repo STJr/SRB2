@@ -532,7 +532,7 @@ boolean SetupGLfunc(void)
 }
 
 static boolean gl_shadersenabled = false;
-static hwdshaderoption_t gl_allowshaders = HWD_SHADEROPTION_OFF;
+static INT32 gl_allowshaders = 0;
 
 #ifdef GL_SHADERS
 typedef GLuint 	(APIENTRY *PFNglCreateShader)		(GLenum);
@@ -796,7 +796,7 @@ EXPORT void HWRAPI(SetShaderInfo) (hwdshaderinfo_t info, INT32 value)
 EXPORT void HWRAPI(SetShader) (int slot)
 {
 #ifdef GL_SHADERS
-	if (gl_allowshaders != HWD_SHADEROPTION_OFF)
+	if (gl_allowshaders)
 	{
 		gl_shader_t *next_shader = &gl_shaders[slot]; // the gl_shader_t we are going to switch to
 
@@ -2160,7 +2160,7 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 			break;
 
 		case HWD_SET_SHADERS:
-			gl_allowshaders = (hwdshaderoption_t)Value;
+			gl_allowshaders = Value;
 			break;
 
 		case HWD_SET_TEXTUREFILTERMODE:
