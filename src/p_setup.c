@@ -2950,6 +2950,24 @@ static void P_LinkMapData(void)
 	}
 }
 
+// For maps in binary format, add multi-tags from linedef specials. This must be done
+// before any linedef specials have been processed.
+static void P_AddBinaryMapTags(void)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		// 97: Apply Tag to Front Sector
+		// 98: Apply Tag to Back Sector
+		// 99: Apply Tag to Front and Back Sectors
+		if (lines[i].special == 97 || lines[i].special == 99)
+			Tag_Add(&lines[i].frontsector->tags, Tag_FGet(&lines[i].tags));
+		if (lines[i].special == 98 || lines[i].special == 99)
+			Tag_Add(&lines[i].backsector->tags, Tag_FGet(&lines[i].tags));
+	}
+}
+
 //For maps in binary format, converts setup of specials to UDMF format.
 static void P_ConvertBinaryMap(void)
 {
@@ -3286,6 +3304,9 @@ static boolean P_LoadMapFromFile(void)
 	P_LoadMapLUT(virt);
 
 	P_LinkMapData();
+
+	if (!udmf)
+		P_AddBinaryMapTags();
 
 	Taglist_InitGlobalTables();
 
