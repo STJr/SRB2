@@ -3159,6 +3159,34 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[1] = tag;
 			lines[i].special = 720;
 			break;
+		case 723: //Copy back side floor slope
+		case 724: //Copy back side ceiling slope
+		case 725: //Copy back side floor and ceiling slope
+			if (lines[i].special != 724)
+				lines[i].args[2] = tag;
+			if (lines[i].special != 723)
+				lines[i].args[3] = tag;
+			lines[i].special = 720;
+			break;
+		case 730: //Copy front side floor slope to back side
+		case 731: //Copy front side ceiling slope to back side
+		case 732: //Copy front side floor and ceiling slope to back side
+			if (lines[i].special != 731)
+				lines[i].args[4] |= TMSC_FRONTTOBACKFLOOR;
+			if (lines[i].special != 730)
+				lines[i].args[4] |= TMSC_FRONTTOBACKCEILING;
+			lines[i].special = 720;
+			break;
+		case 733: //Copy back side floor slope to front side
+		case 734: //Copy back side ceiling slope to front side
+		case 735: //Copy back side floor and ceiling slope to front side
+			if (lines[i].special != 734)
+				lines[i].args[4] |= TMSC_BACKTOFRONTFLOOR;
+			if (lines[i].special != 733)
+				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
+			lines[i].special = 720;
+			break;
+		
 		case 900: //Translucent wall (10%)
 		case 901: //Translucent wall (20%)
 		case 902: //Translucent wall (30%)
