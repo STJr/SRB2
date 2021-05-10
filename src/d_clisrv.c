@@ -127,9 +127,13 @@ static UINT8 localtextcmd[MAXTEXTCMD];
 static UINT8 localtextcmd2[MAXTEXTCMD]; // splitscreen
 static tic_t neededtic;
 SINT8 servernode = 0; // the number of the server node
+
 /// \brief do we accept new players?
 /// \todo WORK!
 boolean acceptnewnode = true;
+
+static boolean serverisfull = false; //lets us be aware if the server was full after we check files, but before downloading, so we can ask if the user still wants to download or not
+static tic_t firstconnectattempttime = 0;
 
 // engine
 
@@ -510,17 +514,23 @@ static INT16 Consistancy(void);
 typedef enum
 {
 	CL_SEARCHING,
+	CL_CHECKFILES,
 	CL_DOWNLOADFILES,
 	CL_ASKJOIN,
+	CL_LOADFILES,
 	CL_WAITJOINRESPONSE,
 	CL_DOWNLOADSAVEGAME,
 	CL_CONNECTED,
-	CL_ABORTED
+	CL_ABORTED,
+	CL_ASKFULLFILELIST,
+	CL_CONFIRMCONNECT
 } cl_mode_t;
 
 static void GetPackets(void);
 
 static cl_mode_t cl_mode = CL_SEARCHING;
+
+static UINT16 cl_lastcheckedfilecount = 0;	// used for full file list
 
 #ifndef NONET
 #define SNAKE_SPEED 5
@@ -919,6 +929,8 @@ static void Snake_Draw(void)
 	INT16 i;
 
 	// Background
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+
 	V_DrawFlatFill(
 		SNAKE_LEFT_X + SNAKE_BORDER_SIZE,
 		SNAKE_TOP_Y  + SNAKE_BORDER_SIZE,
@@ -1020,6 +1032,13 @@ static void Snake_Draw(void)
 		);
 }
 
+static void CL_DrawConnectionStatusBox(void)
+{
+	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
+	if (cl_mode != CL_CONFIRMCONNECT)
+		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
+}
+
 //
 // CL_DrawConnectionStatus
 //
@@ -1030,28 +1049,32 @@ static inline void CL_DrawConnectionStatus(void)
 	INT32 ccstime = I_GetTime();
 
 	// Draw background fade
-	if (!menuactive) // menu already draws its own fade
-		V_DrawFadeScreen(0xFF00, 16); // force default
+	V_DrawFadeScreen(0xFF00, 16); // force default
 
-	// Draw the bottom box.
-	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
-	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
-
-	if (cl_mode != CL_DOWNLOADFILES)
+	if (cl_mode != CL_DOWNLOADFILES && cl_mode != CL_LOADFILES)
 	{
 		INT32 i, animtime = ((ccstime / 4) & 15) + 16;
-		UINT8 palstart = (cl_mode == CL_SEARCHING) ? 32 : 96;
-		// 15 pal entries total.
+		UINT8 palstart;
 		const char *cltext;
 
+		// Draw the bottom box.
+		CL_DrawConnectionStatusBox();
+
+		if (cl_mode == CL_SEARCHING)
+			palstart = 32; // Red
+		else if (cl_mode == CL_CONFIRMCONNECT)
+			palstart = 48; // Orange
+		else
+			palstart = 96; // Green
+
 		if (!(cl_mode == CL_DOWNLOADSAVEGAME && lastfilenum != -1))
-			for (i = 0; i < 16; ++i)
+			for (i = 0; i < 16; ++i) // 15 pal entries total.
 				V_DrawFill((BASEVIDWIDTH/2-128) + (i * 16), BASEVIDHEIGHT-16, 16, 8, palstart + ((animtime - i) & 15));
 
 		switch (cl_mode)
 		{
 			case CL_DOWNLOADSAVEGAME:
-				if (lastfilenum != -1)
+				if (fileneeded && lastfilenum != -1)
 				{
 					UINT32 currentsize = fileneeded[lastfilenum].currentsize;
 					UINT32 totalsize = fileneeded[lastfilenum].totalsize;
@@ -1075,9 +1098,22 @@ static inline void CL_DrawConnectionStatus(void)
 				else
 					cltext = M_GetText("Waiting to download game state...");
 				break;
+			case CL_ASKFULLFILELIST:
+			case CL_CHECKFILES:
+				cltext = M_GetText("Checking server addon list ...");
+				break;
+			case CL_CONFIRMCONNECT:
+				cltext = "";
+				break;
+			case CL_LOADFILES:
+				cltext = M_GetText("Loading server addons...");
+				break;
 			case CL_ASKJOIN:
 			case CL_WAITJOINRESPONSE:
-				cltext = M_GetText("Requesting to join...");
+				if (serverisfull)
+					cltext = M_GetText("Server full, waiting for a slot...");
+				else
+					cltext = M_GetText("Requesting to join...");
 				break;
 			default:
 				cltext = M_GetText("Connecting to server...");
@@ -1087,14 +1123,51 @@ static inline void CL_DrawConnectionStatus(void)
 	}
 	else
 	{
-		if (lastfilenum != -1)
+		if (cl_mode == CL_LOADFILES)
+		{
+			INT32 totalfileslength;
+			INT32 loadcompletednum = 0;
+			INT32 i;
+
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
+
+			//ima just count files here
+			if (fileneeded)
+			{
+				for (i = 0; i < fileneedednum; i++)
+					if (fileneeded[i].status == FS_OPEN)
+						loadcompletednum++;
+			}
+
+			// Loading progress
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP, "Loading server addons...");
+			totalfileslength = (INT32)((loadcompletednum/(double)(fileneedednum)) * 256);
+			M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
+			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
+			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, totalfileslength, 8, 96);
+			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
+				va(" %2u/%2u Files",loadcompletednum,fileneedednum));
+		}
+		else if (lastfilenum != -1)
 		{
 			INT32 dldlength;
 			static char tempname[28];
-			fileneeded_t *file = &fileneeded[lastfilenum];
-			char *filename = file->filename;
+			fileneeded_t *file;
+			char *filename;
 
-			Snake_Draw();
+			if (snake)
+				Snake_Draw();
+
+			// Draw the bottom box.
+			CL_DrawConnectionStatusBox();
+
+			if (fileneeded)
+			{
+				file = &fileneeded[lastfilenum];
+				filename = file->filename;
+			}
+			else
+				return;
 
 			Net_GetNetStat();
 			dldlength = (INT32)((file->currentsize/(double)file->totalsize) * 256);
@@ -1127,11 +1200,25 @@ static inline void CL_DrawConnectionStatus(void)
 				va("%3.1fK/s ", ((double)getbps)/1024));
 		}
 		else
+		{
+			if (snake)
+				Snake_Draw();
+
+			CL_DrawConnectionStatusBox();
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP,
 				M_GetText("Waiting to download files..."));
+		}
 	}
 }
 #endif
+
+static boolean CL_AskFileList(INT32 firstfile)
+{
+	netbuffer->packettype = PT_TELLFILESNEEDED;
+	netbuffer->u.filesneedednum = firstfile;
+
+	return HSendPacket(servernode, false, 0, sizeof (INT32));
+}
 
 /** Sends a special packet to declare how many players in local
   * Used only in arbitratrenetstart()
@@ -1139,8 +1226,6 @@ static inline void CL_DrawConnectionStatus(void)
   *
   * \return True if the packet was successfully sent
   * \todo Improve the description...
-  *       Because to be honest, I have no idea what arbitratrenetstart is...
-  *       Is it even used...?
   *
   */
 static boolean CL_SendJoin(void)
@@ -1232,7 +1317,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 			sizeof netbuffer->u.serverinfo.gametypename);
 	netbuffer->u.serverinfo.modifiedgame = (UINT8)modifiedgame;
 	netbuffer->u.serverinfo.cheatsenabled = CV_CheatsEnabled();
-	netbuffer->u.serverinfo.isdedicated = (UINT8)dedicated;
+	netbuffer->u.serverinfo.flags = (dedicated ? SV_DEDICATED : 0);
 	strncpy(netbuffer->u.serverinfo.servername, cv_servername.string,
 		MAXSERVERNAME);
 	strncpy(netbuffer->u.serverinfo.mapname, G_BuildMapName(gamemap), 7);
@@ -1267,7 +1352,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	if (mapheaderinfo[gamemap-1])
 		netbuffer->u.serverinfo.actnum = mapheaderinfo[gamemap-1]->actnum;
 
-	p = PutFileNeeded();
+	p = PutFileNeeded(0);
 
 	HSendPacket(node, false, 0, p - ((UINT8 *)&netbuffer->u));
 }
@@ -1520,6 +1605,8 @@ static void CL_LoadReceivedSavegame(boolean reloading)
 	UINT8 *savebuffer = NULL;
 	size_t length, decompressedlen;
 	char tmpsave[256];
+
+	FreeFileNeeded();
 
 	sprintf(tmpsave, "%s" PATHSEP TMPSAVENAME, srb2home);
 
@@ -1829,6 +1916,162 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 
 #endif // ifndef NONET
 
+static void M_ConfirmConnect(event_t *ev)
+{
+#ifndef NONET
+	if (ev->type == ev_keydown)
+	{
+		if (ev->data1 == ' ' || ev->data1 == 'y' || ev->data1 == KEY_ENTER)
+		{
+			if (totalfilesrequestednum > 0)
+			{
+				if (CL_SendFileRequest())
+				{
+					cl_mode = CL_DOWNLOADFILES;
+					Snake_Initialise();
+				}
+			}
+			else
+				cl_mode = CL_LOADFILES;
+
+			M_ClearMenus(true);
+		}
+		else if (ev->data1 == 'n' || ev->data1 == KEY_ESCAPE)
+		{
+			cl_mode = CL_ABORTED;
+			M_ClearMenus(true);
+		}
+	}
+#else
+	(void)ev;
+#endif
+}
+
+static boolean CL_FinishedFileList(void)
+{
+	INT32 i;
+	char *downloadsize = NULL;
+	//CONS_Printf(M_GetText("Checking files...\n"));
+	i = CL_CheckFiles();
+	if (i == 4) // still checking ...
+	{
+		return true;
+	}
+	else if (i == 3) // too many files
+	{
+		D_QuitNetGame();
+		CL_Reset();
+		D_StartTitle();
+		M_StartMessage(M_GetText(
+			"You have too many WAD files loaded\n"
+			"to add ones the server is using.\n"
+			"Please restart SRB2 before connecting.\n\n"
+			"Press ESC\n"
+		), NULL, MM_NOTHING);
+		return false;
+	}
+	else if (i == 2) // cannot join for some reason
+	{
+		D_QuitNetGame();
+		CL_Reset();
+		D_StartTitle();
+		M_StartMessage(M_GetText(
+			"You have the wrong addons loaded.\n\n"
+			"To play on this server, restart\n"
+			"the game and don't load any addons.\n"
+			"SRB2 will automatically add\n"
+			"everything you need when you join.\n\n"
+			"Press ESC\n"
+		), NULL, MM_NOTHING);
+		return false;
+	}
+	else if (i == 1)
+	{
+		if (serverisfull)
+		{
+			M_StartMessage(M_GetText(
+				"This server is full!\n"
+				"\n"
+				"You may load server addons (if any), and wait for a slot.\n"
+				"\n"
+				"Press ENTER to continue\nor ESC to cancel.\n\n"
+			), M_ConfirmConnect, MM_EVENTHANDLER);
+			cl_mode = CL_CONFIRMCONNECT;
+			curfadevalue = 0;
+		}
+		else
+			cl_mode = CL_LOADFILES;
+	}
+	else
+	{
+		// must download something
+		// can we, though?
+		if (!CL_CheckDownloadable()) // nope!
+		{
+			D_QuitNetGame();
+			CL_Reset();
+			D_StartTitle();
+			M_StartMessage(M_GetText(
+				"An error occured when trying to\n"
+				"download missing addons.\n"
+				"(This is almost always a problem\n"
+				"with the server, not your game.)\n\n"
+				"See the console or log file\n"
+				"for additional details.\n\n"
+				"Press ESC\n"
+			), NULL, MM_NOTHING);
+			return false;
+		}
+
+#ifndef NONET
+		downloadcompletednum = 0;
+		downloadcompletedsize = 0;
+		totalfilesrequestednum = 0;
+		totalfilesrequestedsize = 0;
+
+		if (fileneeded == NULL)
+			I_Error("CL_FinishedFileList: fileneeded == NULL");
+#endif
+
+		for (i = 0; i < fileneedednum; i++)
+			if (fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD)
+			{
+#ifndef NONET
+				totalfilesrequestednum++;
+				totalfilesrequestedsize += fileneeded[i].totalsize;
+#endif
+			}
+
+#ifndef NONET
+		if (totalfilesrequestedsize>>20 >= 100)
+			downloadsize = Z_StrDup(va("%uM",totalfilesrequestedsize>>20));
+		else
+			downloadsize = Z_StrDup(va("%uK",totalfilesrequestedsize>>10));
+#endif
+
+		if (serverisfull)
+			M_StartMessage(va(M_GetText(
+				"This server is full!\n"
+				"Download of %s additional content\nis required to join.\n"
+				"\n"
+				"You may download, load server addons,\nand wait for a slot.\n"
+				"\n"
+				"Press ENTER to continue\nor ESC to cancel.\n"
+			), downloadsize), M_ConfirmConnect, MM_EVENTHANDLER);
+		else
+			M_StartMessage(va(M_GetText(
+				"Download of %s additional content\nis required to join.\n"
+				"\n"
+				"Press ENTER to continue\nor ESC to cancel.\n"
+			), downloadsize), M_ConfirmConnect, MM_EVENTHANDLER);
+
+		Z_Free(downloadsize);
+		cl_mode = CL_CONFIRMCONNECT;
+		curfadevalue = 0;
+	}
+	return true;
+}
+
 /** Called by CL_ServerConnectionTicker
   *
   * \param asksent The last time we asked the server to join. We re-ask every second in case our request got lost in transmit.
@@ -1860,15 +2103,15 @@ static boolean CL_ServerConnectionSearchTicker(tic_t *asksent)
 		}
 
 		// Quit here rather than downloading files and being refused later.
-		if (serverlist[i].info.refusereason)
+		if (serverlist[i].info.refusereason == 2)
+			serverisfull = true;
+		else if (serverlist[i].info.refusereason)
 		{
 			D_QuitNetGame();
 			CL_Reset();
 			D_StartTitle();
 			if (serverlist[i].info.refusereason == 1)
 				M_StartMessage(M_GetText("The server is not accepting\njoins for the moment.\n\nPress ESC\n"), NULL, MM_NOTHING);
-			else if (serverlist[i].info.refusereason == 2)
-				M_StartMessage(va(M_GetText("Maximum players reached: %d\n\nPress ESC\n"), serverlist[i].info.maxplayer), NULL, MM_NOTHING);
 			else
 				M_StartMessage(M_GetText("You can't join.\nI don't know why,\nbut you can't join.\n\nPress ESC\n"), NULL, MM_NOTHING);
 			return false;
@@ -1876,71 +2119,22 @@ static boolean CL_ServerConnectionSearchTicker(tic_t *asksent)
 
 		if (client)
 		{
-			D_ParseFileneeded(serverlist[i].info.fileneedednum,
-				serverlist[i].info.fileneeded);
-			CONS_Printf(M_GetText("Checking files...\n"));
-			i = CL_CheckFiles();
-			if (i == 3) // too many files
+			D_ParseFileneeded(serverlist[i].info.fileneedednum, serverlist[i].info.fileneeded, 0);
+
+			if (serverlist[i].info.flags & SV_LOTSOFADDONS)
 			{
-				D_QuitNetGame();
-				CL_Reset();
-				D_StartTitle();
-				M_StartMessage(M_GetText(
-					"You have too many WAD files loaded\n"
-					"to add ones the server is using.\n"
-					"Please restart SRB2 before connecting.\n\n"
-					"Press ESC\n"
-				), NULL, MM_NOTHING);
-				return false;
+				cl_mode = CL_ASKFULLFILELIST;
+				cl_lastcheckedfilecount = 0;
+				return true;
 			}
-			else if (i == 2) // cannot join for some reason
-			{
-				D_QuitNetGame();
-				CL_Reset();
-				D_StartTitle();
-				M_StartMessage(M_GetText(
-					"You have the wrong addons loaded.\n\n"
-					"To play on this server, restart\n"
-					"the game and don't load any addons.\n"
-					"SRB2 will automatically add\n"
-					"everything you need when you join.\n\n"
-					"Press ESC\n"
-				), NULL, MM_NOTHING);
-				return false;
-			}
-			else if (i == 1)
-				cl_mode = CL_ASKJOIN;
-			else
-			{
-				// must download something
-				// can we, though?
-				if (!CL_CheckDownloadable()) // nope!
-				{
-					D_QuitNetGame();
-					CL_Reset();
-					D_StartTitle();
-					M_StartMessage(M_GetText(
-						"You cannot connect to this server\n"
-						"because you cannot download the files\n"
-						"that you are missing from the server.\n\n"
-						"See the console or log file for\n"
-						"more details.\n\n"
-						"Press ESC\n"
-					), NULL, MM_NOTHING);
-					return false;
-				}
-				// no problem if can't send packet, we will retry later
-				if (CL_SendFileRequest())
-				{
-					cl_mode = CL_DOWNLOADFILES;
-#ifndef NONET
-					Snake_Initialise();
-#endif
-				}
-			}
+
+			cl_mode = CL_CHECKFILES;
 		}
 		else
+		{
 			cl_mode = CL_ASKJOIN; // files need not be checked for the server.
+			*asksent = 0;
+		}
 
 		return true;
 	}
@@ -1986,6 +2180,22 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 				return false;
 			break;
 
+		case CL_ASKFULLFILELIST:
+			if (cl_lastcheckedfilecount == UINT16_MAX) // All files retrieved
+				cl_mode = CL_CHECKFILES;
+			else if (fileneedednum != cl_lastcheckedfilecount || I_GetTime() >= *asksent)
+			{
+				if (CL_AskFileList(fileneedednum))
+				{
+					cl_lastcheckedfilecount = fileneedednum;
+					*asksent = I_GetTime() + NEWTICRATE;
+				}
+			}
+			break;
+		case CL_CHECKFILES:
+			if (!CL_FinishedFileList())
+				return false;
+			break;
 		case CL_DOWNLOADFILES:
 			waitmore = false;
 			for (i = 0; i < fileneedednum; i++)
@@ -2006,21 +2216,50 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			}
 #endif
 
-			cl_mode = CL_ASKJOIN; // don't break case continue to cljoin request now
-			/* FALLTHRU */
-
+			cl_mode = CL_LOADFILES;
+			break;
+		case CL_LOADFILES:
+			if (CL_LoadServerFiles())
+			{
+				*asksent = 0; //This ensure the first join ask is right away
+				firstconnectattempttime = I_GetTime();
+				cl_mode = CL_ASKJOIN;
+			}
+			break;
 		case CL_ASKJOIN:
-			CL_LoadServerFiles();
+			if (firstconnectattempttime + NEWTICRATE*300 < I_GetTime() && !server)
+			{
+				CONS_Printf(M_GetText("5 minute wait time exceeded.\n"));
+				CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
+				D_QuitNetGame();
+				CL_Reset();
+				D_StartTitle();
+				M_StartMessage(M_GetText(
+					"5 minute wait time exceeded.\n"
+					"You may retry connection.\n"
+					"\n"
+					"Press ESC\n"
+				), NULL, MM_NOTHING);
+				return false;
+			}
 #ifndef NONET
 			// prepare structures to save the file
 			// WARNING: this can be useless in case of server not in GS_LEVEL
 			// but since the network layer doesn't provide ordered packets...
 			CL_PrepareDownloadSaveGame(tmpsave);
 #endif
-			if (CL_SendJoin())
+			if (I_GetTime() >= *asksent && CL_SendJoin())
+			{
+				*asksent = I_GetTime() + NEWTICRATE*3;
 				cl_mode = CL_WAITJOINRESPONSE;
+			}
 			break;
-
+		case CL_WAITJOINRESPONSE:
+			if (I_GetTime() >= *asksent)
+			{
+				cl_mode = CL_ASKJOIN;
+			}
+			break;
 #ifndef NONET
 		case CL_DOWNLOADSAVEGAME:
 			// At this state, the first (and only) needed file is the gamestate
@@ -2034,8 +2273,8 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 				break;
 #endif
 
-		case CL_WAITJOINRESPONSE:
 		case CL_CONNECTED:
+		case CL_CONFIRMCONNECT: //logic is handled by M_ConfirmConnect
 		default:
 			break;
 
@@ -2043,7 +2282,6 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 		case CL_ABORTED:
 			cl_mode = CL_SEARCHING;
 			return false;
-
 	}
 
 	GetPackets();
@@ -2053,13 +2291,19 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 	if (*oldtic != I_GetTime())
 	{
 		I_OsPolling();
-		for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
-			G_MapEventsToControls(&events[eventtail]);
 
-		if (gamekeydown[KEY_ESCAPE] || gamekeydown[KEY_JOY1+1])
+		if (cl_mode == CL_CONFIRMCONNECT)
+			D_ProcessEvents(); //needed for menu system to receive inputs
+		else
+		{
+			for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
+				G_MapEventsToControls(&events[eventtail]);
+		}
+
+		if (gamekeydown[KEY_ESCAPE] || gamekeydown[KEY_JOY1+1] || cl_mode == CL_ABORTED)
 		{
 			CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
-//				M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
+			M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
 
 #ifndef NONET
 			if (snake)
@@ -2092,13 +2336,20 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 #ifndef NONET
 		if (client && cl_mode != CL_CONNECTED && cl_mode != CL_ABORTED)
 		{
-			if (cl_mode != CL_DOWNLOADFILES && cl_mode != CL_DOWNLOADSAVEGAME)
+			if (!snake)
 			{
 				F_MenuPresTicker(true); // title sky
 				F_TitleScreenTicker(true);
 				F_TitleScreenDrawer();
 			}
 			CL_DrawConnectionStatus();
+#ifdef HAVE_THREADS
+			I_lock_mutex(&m_menu_mutex);
+#endif
+			M_Drawer(); //Needed for drawing messageboxes on the connection screen
+#ifdef HAVE_THREADS
+			I_unlock_mutex(m_menu_mutex);
+#endif
 			I_UpdateNoVsync(); // page flip or blit buffer
 			if (moviemode)
 				M_SaveFrame();
@@ -2160,8 +2411,10 @@ static void CL_ConnectToServer(void)
 	ClearAdminPlayers();
 	pnumnodes = 1;
 	oldtic = I_GetTime() - 1;
+
 #ifndef NONET
 	asksent = (tic_t) - TICRATE;
+	firstconnectattempttime = I_GetTime();
 
 	i = SL_SearchServer(servernode);
 
@@ -2602,8 +2855,16 @@ void CL_Reset(void)
 	CV_RevertNetVars();
 
 	// make sure we don't leave any fileneeded gunk over from a failed join
+	FreeFileNeeded();
 	fileneedednum = 0;
-	memset(fileneeded, 0, sizeof(fileneeded));
+
+#ifndef NONET
+	totalfilesrequestednum = 0;
+	totalfilesrequestedsize = 0;
+#endif
+	firstconnectattempttime = 0;
+	serverisfull = false;
+	connectiontimeout = (tic_t)cv_nettimeout.value; //reset this temporary hack
 
 	// D_StartTitle should get done now, but the calling function will handle it
 }
@@ -3830,31 +4091,40 @@ static void HandlePacketFromAwayNode(SINT8 node)
 	switch (netbuffer->packettype)
 	{
 		case PT_ASKINFOVIAMS:
-#if 0
+			Net_CloseConnection(node);
+			break;
+
+		case PT_TELLFILESNEEDED:
 			if (server && serverrunning)
 			{
-				INT32 clientnode;
-				if (ms_RoomId < 0) // ignore if we're not actually on the MS right now
-				{
-					Net_CloseConnection(node); // and yes, close connection
-					return;
-				}
-				clientnode = I_NetMakeNode(netbuffer->u.msaskinfo.clientaddr);
-				if (clientnode != -1)
-				{
-					SV_SendServerInfo(clientnode, (tic_t)LONG(netbuffer->u.msaskinfo.time));
-					SV_SendPlayerInfo(clientnode); // Send extra info
-					Net_CloseConnection(clientnode);
-					// Don't close connection to MS...
-				}
-				else
-					Net_CloseConnection(node); // ...unless the IP address is not valid
+				UINT8 *p;
+				INT32 firstfile = netbuffer->u.filesneedednum;
+
+				netbuffer->packettype = PT_MOREFILESNEEDED;
+				netbuffer->u.filesneededcfg.first = firstfile;
+				netbuffer->u.filesneededcfg.more = 0;
+
+				p = PutFileNeeded(firstfile);
+
+				HSendPacket(node, false, 0, p - ((UINT8 *)&netbuffer->u));
 			}
-			else
-				Net_CloseConnection(node); // you're not supposed to get it, so ignore it
-#else
-			Net_CloseConnection(node);
-#endif
+			else // Shouldn't get this if you aren't the server...?
+				Net_CloseConnection(node);
+			break;
+
+		case PT_MOREFILESNEEDED:
+			if (server && serverrunning)
+			{ // But wait I thought I'm the server?
+				Net_CloseConnection(node);
+				break;
+			}
+			SERVERONLY
+			if (cl_mode == CL_ASKFULLFILELIST && netbuffer->u.filesneededcfg.first == fileneedednum)
+			{
+				D_ParseFileneeded(netbuffer->u.filesneededcfg.num, netbuffer->u.filesneededcfg.files, netbuffer->u.filesneededcfg.first);
+				if (!netbuffer->u.filesneededcfg.more)
+					cl_lastcheckedfilecount = UINT16_MAX; // Got the whole file list
+			}
 			break;
 
 		case PT_ASKINFO:
@@ -3880,12 +4150,23 @@ static void HandlePacketFromAwayNode(SINT8 node)
 				if (!reason)
 					I_Error("Out of memory!\n");
 
-				D_QuitNetGame();
-				CL_Reset();
-				D_StartTitle();
+				if (strstr(reason, "Maximum players reached"))
+				{
+					serverisfull = true;
+					//Special timeout for when refusing due to player cap. The client will wait 3 seconds between join requests when waiting for a slot, so we need this to be much longer
+					//We set it back to the value of cv_nettimeout.value in CL_Reset
+					connectiontimeout = NEWTICRATE*7;
+					cl_mode = CL_ASKJOIN;
+					free(reason);
+					break;
+				}
 
 				M_StartMessage(va(M_GetText("Server refuses connection\n\nReason:\n%s"),
 					reason), NULL, MM_NOTHING);
+
+				D_QuitNetGame();
+				CL_Reset();
+				D_StartTitle();
 
 				free(reason);
 

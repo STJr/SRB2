@@ -96,9 +96,15 @@ virtlump_t* vres_Find(const virtres_t*, const char*);
 //                         DYNAMIC WAD LOADING
 // =========================================================================
 
+// Maximum of files that can be loaded
+// (there is a max of simultaneous open files anyway)
+#ifdef ENFORCE_WAD_LIMIT
+#define MAX_WADFILES 2048 // This cannot be any higher than UINT16_MAX.
+#else
+#define MAX_WADFILES UINT16_MAX
+#endif
+
 #define MAX_WADPATH 512
-#define MAX_WADFILES 48 // maximum of wad files used at the same time
-// (there is a max of simultaneous open files anyway, and this should be plenty)
 
 #define lumpcache_t void *
 
@@ -127,11 +133,17 @@ typedef struct wadfile_s
 	boolean important; // also network - !W_VerifyNMUSlumps
 } wadfile_t;
 
-#define WADFILENUM(lumpnum) (UINT16)((lumpnum)>>16) // wad flumpnum>>16) // wad file number in upper word
+#define WADFILENUM(lumpnum) (UINT16)((lumpnum)>>16) // wad file number in upper word
 #define LUMPNUM(lumpnum) (UINT16)((lumpnum)&0xFFFF) // lump number for this pwad
 
 extern UINT16 numwadfiles;
-extern wadfile_t *wadfiles[MAX_WADFILES];
+extern wadfile_t **wadfiles;
+
+typedef struct
+{
+	char **files;
+	size_t numfiles;
+} addfilelist_t;
 
 // =========================================================================
 
@@ -143,7 +155,7 @@ FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup);
 
 // W_InitMultipleFiles exits if a file was not found, but not if all is okay.
-void W_InitMultipleFiles(char **filenames);
+void W_InitMultipleFiles(addfilelist_t *list);
 
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);

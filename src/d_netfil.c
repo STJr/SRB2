@@ -87,7 +87,7 @@ static filetran_t transfer[MAXNETNODES];
 
 // Receiver structure
 INT32 fileneedednum; // Number of files needed to join the server
-fileneeded_t fileneeded[MAX_WADFILES]; // List of needed files
+fileneeded_t *fileneeded; // List of needed files
 static tic_t lasttimeackpacketsent = 0;
 char downloaddir[512] = "DOWNLOAD";
 
@@ -105,6 +105,10 @@ static pauseddownload_t *pauseddownload = NULL;
 #ifndef NONET
 // for cl loading screen
 INT32 lastfilenum = -1;
+INT32 downloadcompletednum = 0;
+UINT32 downloadcompletedsize = 0;
+INT32 totalfilesrequestednum = 0;
+UINT32 totalfilesrequestedsize = 0;
 #endif
 
 luafiletransfer_t *luafiletransfers = NULL;
@@ -119,18 +123,39 @@ char luafiledir[256 + 16] = "luafiles";
   * Used to have size limiting built in - now handled via W_LoadWadFile in w_wad.c
   *
   */
-UINT8 *PutFileNeeded(void)
+UINT8 *PutFileNeeded(UINT16 firstfile)
 {
-	size_t i, count = 0;
-	UINT8 *p = netbuffer->u.serverinfo.fileneeded;
+	size_t i;
+	UINT8 count = 0;
+	UINT8 *p_start = netbuffer->packettype == PT_MOREFILESNEEDED ? netbuffer->u.filesneededcfg.files : netbuffer->u.serverinfo.fileneeded;
+	UINT8 *p = p_start;
 	char wadfilename[MAX_WADPATH] = "";
 	UINT8 filestatus;
 
-	for (i = 0; i < numwadfiles; i++)
+	for (i = mainwads+1; i < numwadfiles; i++) //mainwads+1, otherwise we start on the first mainwad
 	{
 		// If it has only music/sound lumps, don't put it in the list
 		if (!wadfiles[i]->important)
 			continue;
+
+		if (firstfile)
+		{ // Skip files until we reach the first file.
+			firstfile--;
+			continue;
+		}
+
+		nameonly(strcpy(wadfilename, wadfiles[i]->filename));
+
+		// Look below at the WRITE macros to understand what these numbers mean.
+		if (p + 1 + 4 + min(strlen(wadfilename) + 1, MAX_WADPATH) + 16 > p_start + MAXFILENEEDED)
+		{
+			// Too many files to send all at once
+			if (netbuffer->packettype == PT_MOREFILESNEEDED)
+				netbuffer->u.filesneededcfg.more = 1;
+			else
+				netbuffer->u.serverinfo.flags |= SV_LOTSOFADDONS;
+			break;
+		}
 
 		filestatus = 1; // Importance - not really used any more, holds 1 by default for backwards compat with MS
 
@@ -146,13 +171,29 @@ UINT8 *PutFileNeeded(void)
 
 		count++;
 		WRITEUINT32(p, wadfiles[i]->filesize);
-		nameonly(strcpy(wadfilename, wadfiles[i]->filename));
 		WRITESTRINGN(p, wadfilename, MAX_WADPATH);
 		WRITEMEM(p, wadfiles[i]->md5sum, 16);
 	}
-	netbuffer->u.serverinfo.fileneedednum = (UINT8)count;
+
+	if (netbuffer->packettype == PT_MOREFILESNEEDED)
+		netbuffer->u.filesneededcfg.num = count;
+	else
+		netbuffer->u.serverinfo.fileneedednum = count;
 
 	return p;
+}
+
+void AllocFileNeeded(INT32 size)
+{
+	if (fileneeded == NULL)
+		fileneeded = Z_Calloc(sizeof(fileneeded_t) * size, PU_STATIC, NULL);
+}
+
+void FreeFileNeeded(void)
+{
+	if (fileneeded == NULL)
+		Z_Free(fileneeded);
+	fileneeded = NULL;
 }
 
 /** Parses the serverinfo packet and fills the fileneeded table on client
@@ -161,17 +202,21 @@ UINT8 *PutFileNeeded(void)
   * \param fileneededstr The memory block containing the list of needed files
   *
   */
-void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr)
+void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr, UINT16 firstfile)
 {
 	INT32 i;
 	UINT8 *p;
 	UINT8 filestatus;
 
-	fileneedednum = fileneedednum_parm;
+	fileneedednum = firstfile + fileneedednum_parm;
 	p = (UINT8 *)fileneededstr;
-	for (i = 0; i < fileneedednum; i++)
+
+	AllocFileNeeded(fileneedednum);
+
+	for (i = firstfile; i < fileneedednum; i++)
 	{
-		fileneeded[i].status = FS_NOTFOUND; // We haven't even started looking for the file yet
+		fileneeded[i].type = FILENEEDED_WAD;
+		fileneeded[i].status = FS_NOTCHECKED; // We haven't even started looking for the file yet
 		fileneeded[i].justdownloaded = false;
 		filestatus = READUINT8(p); // The first byte is the file status
 		fileneeded[i].willsend = (UINT8)(filestatus >> 4);
@@ -188,7 +233,10 @@ void CL_PrepareDownloadSaveGame(const char *tmpsave)
 	lastfilenum = -1;
 #endif
 
+	AllocFileNeeded(1);
+
 	fileneedednum = 1;
+	fileneeded[0].type = FILENEEDED_SAVEGAME;
 	fileneeded[0].status = FS_REQUESTED;
 	fileneeded[0].justdownloaded = false;
 	fileneeded[0].totalsize = UINT32_MAX;
@@ -371,17 +419,8 @@ INT32 CL_CheckFiles(void)
 {
 	INT32 i, j;
 	char wadfilename[MAX_WADPATH];
-	INT32 ret = 1;
-	size_t packetsize = 0;
-	size_t filestoget = 0;
-
-//	if (M_CheckParm("-nofiles"))
-//		return 1;
-
-	// the first is the iwad (the main wad file)
-	// we don't care if it's called srb2.pk3 or not.
-	// Never download the IWAD, just assume it's there and identical
-	fileneeded[0].status = FS_OPEN;
+	size_t filestoload = 0;
+	boolean downloadrequired = false;
 
 	// Modified game handling -- check for an identical file list
 	// must be identical in files loaded AND in order
@@ -389,7 +428,7 @@ INT32 CL_CheckFiles(void)
 	if (modifiedgame)
 	{
 		CONS_Debug(DBG_NETPLAY, "game is modified; only doing basic checks\n");
-		for (i = 1, j = 1; i < fileneedednum || j < numwadfiles;)
+		for (i = 0, j = mainwads+1; i < fileneedednum || j < numwadfiles;)
 		{
 			if (j < numwadfiles && !wadfiles[j]->important)
 			{
@@ -416,15 +455,21 @@ INT32 CL_CheckFiles(void)
 		return 1;
 	}
 
-	// See W_LoadWadFile in w_wad.c
-	packetsize = packetsizetally;
-
-	for (i = 1; i < fileneedednum; i++)
+	for (i = 0; i < fileneedednum; i++)
 	{
+		if (fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD)
+			downloadrequired = true;
+
+		if (fileneeded[i].status != FS_OPEN)
+			filestoload++;
+
+		if (fileneeded[i].status != FS_NOTCHECKED) //since we're running this over multiple tics now, its possible for us to come across files checked in previous tics
+			continue;
+
 		CONS_Debug(DBG_NETPLAY, "searching for '%s' ", fileneeded[i].filename);
 
 		// Check in already loaded files
-		for (j = 1; wadfiles[j]; j++)
+		for (j = mainwads+1; wadfiles[j]; j++)
 		{
 			nameonly(strcpy(wadfilename, wadfiles[j]->filename));
 			if (!stricmp(wadfilename, fileneeded[i].filename) &&
@@ -432,37 +477,30 @@ INT32 CL_CheckFiles(void)
 			{
 				CONS_Debug(DBG_NETPLAY, "already loaded\n");
 				fileneeded[i].status = FS_OPEN;
-				break;
+				return 4;
 			}
 		}
-		if (fileneeded[i].status != FS_NOTFOUND)
-			continue;
 
-		packetsize += nameonlylength(fileneeded[i].filename) + 22;
-
-		if ((numwadfiles+filestoget >= MAX_WADFILES)
-		|| (packetsize > MAXFILENEEDED*sizeof(UINT8)))
-			return 3;
-
-		filestoget++;
-
-		fileneeded[i].status = findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
+		fileneeded[i].status = FS_NOTFOUND; //findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
 		CONS_Debug(DBG_NETPLAY, "found %d\n", fileneeded[i].status);
-		if (fileneeded[i].status != FS_FOUND)
-			ret = 0;
+		return 4;
 	}
-	return ret;
+
+	//now making it here means we've checked the entire list and no FS_NOTCHECKED files remain
+	if (numwadfiles+filestoload > MAX_WADFILES)
+		return 3;
+	else if (downloadrequired)
+		return 0; //some stuff is FS_NOTFOUND, needs download
+	else
+		return 1; //everything is FS_OPEN or FS_FOUND, proceed to loading
 }
 
 // Load it now
-void CL_LoadServerFiles(void)
+boolean CL_LoadServerFiles(void)
 {
 	INT32 i;
 
-//	if (M_CheckParm("-nofiles"))
-//		return;
-
-	for (i = 1; i < fileneedednum; i++)
+	for (i = 0; i < fileneedednum; i++)
 	{
 		if (fileneeded[i].status == FS_OPEN)
 			continue; // Already loaded
@@ -471,6 +509,7 @@ void CL_LoadServerFiles(void)
 			P_AddWadFile(fileneeded[i].filename);
 			G_SetGameModified(true);
 			fileneeded[i].status = FS_OPEN;
+			return false;
 		}
 		else if (fileneeded[i].status == FS_MD5SUMBAD)
 			I_Error("Wrong version of file %s", fileneeded[i].filename);
@@ -496,6 +535,7 @@ void CL_LoadServerFiles(void)
 				fileneeded[i].status, s);
 		}
 	}
+	return true;
 }
 
 void AddLuaFileTransfer(const char *filename, const char *mode)
@@ -677,7 +717,10 @@ void CL_PrepareDownloadLuaFile(void)
 	netbuffer->packettype = PT_ASKLUAFILE;
 	HSendPacket(servernode, true, 0, 0);
 
+	AllocFileNeeded(1);
+
 	fileneedednum = 1;
+	fileneeded[0].type = FILENEEDED_LUAFILE;
 	fileneeded[0].status = FS_REQUESTED;
 	fileneeded[0].justdownloaded = false;
 	fileneeded[0].totalsize = UINT32_MAX;
@@ -756,7 +799,7 @@ static boolean AddFileToSendQueue(INT32 node, const char *filename, UINT8 fileid
 		// This formerly checked if (!findfile(p->id.filename, NULL, true))
 
 		// Not found
-		// Don't inform client (probably someone who thought they could leak 2.2 ACZ)
+		// Don't inform client
 		DEBFILE(va("Client %d request %s: not found\n", node, filename));
 		free(p->id.filename);
 		free(p);
@@ -1341,6 +1384,7 @@ void PT_FileFragment(void)
 					// Tell the server we have received the file
 					netbuffer->packettype = PT_HASLUAFILE;
 					HSendPacket(servernode, true, 0, 0);
+					FreeFileNeeded();
 				}
 			}
 		}
@@ -1411,32 +1455,37 @@ void CloseNetFile(void)
 		SV_AbortSendFiles(i);
 
 	// Receiving a file?
-	for (i = 0; i < MAX_WADFILES; i++)
-		if (fileneeded[i].status == FS_DOWNLOADING && fileneeded[i].file)
-		{
-			fclose(fileneeded[i].file);
-			free(fileneeded[i].ackpacket);
-
-			if (!pauseddownload && i != 0) // 0 is either srb2.srb or the gamestate...
+	if (fileneeded)
+	{
+		for (i = 0; i < fileneedednum; i++)
+			if (fileneeded[i].status == FS_DOWNLOADING && fileneeded[i].file)
 			{
-				// Don't remove the file, save it for later in case we resume the download
-				pauseddownload = malloc(sizeof(*pauseddownload));
-				if (!pauseddownload)
-					I_Error("CloseNetFile: No more memory\n");
+				fclose(fileneeded[i].file);
+				free(fileneeded[i].ackpacket);
 
-				strcpy(pauseddownload->filename, fileneeded[i].filename);
-				memcpy(pauseddownload->md5sum, fileneeded[i].md5sum, 16);
-				pauseddownload->currentsize = fileneeded[i].currentsize;
-				pauseddownload->receivedfragments = fileneeded[i].receivedfragments;
-				pauseddownload->fragmentsize = fileneeded[i].fragmentsize;
+				if (!pauseddownload && (fileneeded[i].type == FILENEEDED_WAD || i != 0)) // 0 is the gamestate...
+				{
+					// Don't remove the file, save it for later in case we resume the download
+					pauseddownload = malloc(sizeof(*pauseddownload));
+					if (!pauseddownload)
+						I_Error("CloseNetFile: No more memory\n");
+
+					strcpy(pauseddownload->filename, fileneeded[i].filename);
+					memcpy(pauseddownload->md5sum, fileneeded[i].md5sum, 16);
+					pauseddownload->currentsize = fileneeded[i].currentsize;
+					pauseddownload->receivedfragments = fileneeded[i].receivedfragments;
+					pauseddownload->fragmentsize = fileneeded[i].fragmentsize;
+				}
+				else
+				{
+					// File is not complete, delete it.
+					free(fileneeded[i].receivedfragments);
+					remove(fileneeded[i].filename);
+				}
 			}
-			else
-			{
-				free(fileneeded[i].receivedfragments);
-				// File is not complete delete it
-				remove(fileneeded[i].filename);
-			}
-		}
+	}
+
+	FreeFileNeeded();
 }
 
 void Command_Downloads_f(void)

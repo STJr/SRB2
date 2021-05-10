@@ -104,7 +104,7 @@ static UINT16 lumpnumcacheindex = 0;
 //                                                                    GLOBALS
 //===========================================================================
 UINT16 numwadfiles; // number of active wadfiles
-wadfile_t *wadfiles[MAX_WADFILES]; // 0 to numwadfiles-1 are valid
+wadfile_t **wadfiles; // 0 to numwadfiles-1 are valid
 
 // W_Shutdown
 // Closes all of the WAD files before quitting
@@ -128,6 +128,8 @@ void W_Shutdown(void)
 		Z_Free(wad->lumpinfo);
 		Z_Free(wad);
 	}
+
+	Z_Free(wadfiles);
 }
 
 //===========================================================================
@@ -715,7 +717,6 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 #ifndef NOMD5
 	size_t i;
 #endif
-	size_t packetsize;
 	UINT8 md5sum[16];
 	int important;
 
@@ -733,9 +734,8 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		refreshdirname = NULL;
 
 	//CONS_Debug(DBG_SETUP, "Loading %s\n", filename);
-	//
-	// check if limit of active wadfiles
-	//
+
+	// Check if the game reached the limit of active wadfiles.
 	if (numwadfiles >= MAX_WADFILES)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
@@ -755,24 +755,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		return INT16_MAX;
 	}
 
-	// Check if wad files will overflow fileneededbuffer. Only the filename part
-	// is send in the packet; cf.
-	// see PutFileNeeded in d_netfil.c
-	if ((important = !important))
-	{
-		packetsize = packetsizetally + nameonlylength(filename) + 22;
-
-		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
-			refreshdirmenu |= REFRESHDIR_MAX;
-			if (handle)
-				fclose(handle);
-			return W_InitFileError(filename, startup);
-		}
-
-		packetsizetally = packetsize;
-	}
+	important = !important;
 
 #ifndef NOMD5
 	//
@@ -782,16 +765,17 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	//
 	W_MakeFileMD5(filename, md5sum);
 
-	for (i = 0; i < numwadfiles; i++)
+	if (wadfiles)
 	{
-		if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
+		for (i = 0; i < numwadfiles; i++)
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
-			if (important)
-				packetsizetally -= nameonlylength(filename) + 22;
-			if (handle)
-				fclose(handle);
-			return W_InitFileError(filename, false);
+			if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
+				if (handle)
+					fclose(handle);
+				return W_InitFileError(filename, false);
+			}
 		}
 	}
 #endif
@@ -853,6 +837,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// add the wadfile
 	//
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
+	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t) * (numwadfiles + 1), PU_STATIC, NULL);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
@@ -898,13 +883,14 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
   *
   * \param filenames A null-terminated list of files to use.
   */
-void W_InitMultipleFiles(char **filenames)
+void W_InitMultipleFiles(addfilelist_t *list)
 {
-	// will be realloced as lumps are added
-	for (; *filenames; filenames++)
+	size_t i = 0;
+
+	for (; i < list->numfiles; i++)
 	{
 		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
-		W_InitFile(*filenames, numwadfiles < mainwads, true);
+		W_InitFile(list->files[i], numwadfiles < mainwads, true);
 	}
 }
 
@@ -913,7 +899,7 @@ void W_InitMultipleFiles(char **filenames)
   */
 static boolean TestValidLump(UINT16 wad, UINT16 lump)
 {
-	I_Assert(wad < MAX_WADFILES);
+	I_Assert(wad < numwadfiles);
 	if (!wadfiles[wad]) // make sure the wad file exists
 		return false;
 
@@ -1838,7 +1824,7 @@ void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5)
 #else
 		I_Error
 #endif
-			(M_GetText("File is old, is corrupt or has been modified: %s (found md5: %s, wanted: %s)\n"), wadfiles[wadfilenum]->filename, actualmd5text, matchmd5);
+			(M_GetText("File is old, is corrupt or has been modified:\n%s\nFound MD5: %s\nWanted MD5: %s\n"), wadfiles[wadfilenum]->filename, actualmd5text, matchmd5);
 	}
 #endif
 }

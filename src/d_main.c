@@ -65,7 +65,7 @@
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
 #include "keys.h"
-#include "filesrch.h" // refreshdirmenu, mainwadstally
+#include "filesrch.h" // refreshdirmenu
 #include "g_input.h" // tutorial mode control scheming
 #include "m_perfstats.h"
 
@@ -96,11 +96,8 @@ int SUBVERSION;
 // platform independant focus loss
 UINT8 window_notinfocus = false;
 
-//
-// DEMO LOOP
-//
-static char *startupwadfiles[MAX_WADFILES];
-static char *startuppwads[MAX_WADFILES];
+static addfilelist_t startupwadfiles;
+static addfilelist_t startuppwads;
 
 boolean devparm = false; // started game with -devparm
 
@@ -119,6 +116,9 @@ boolean midi_disabled = false;
 boolean sound_disabled = false;
 boolean digital_disabled = false;
 
+//
+// DEMO LOOP
+//
 boolean advancedemo;
 #ifdef DEBUGFILE
 INT32 debugload = 0;
@@ -860,35 +860,47 @@ void D_StartTitle(void)
 	tutorialmode = false;
 }
 
-//
-// D_AddFile
-//
-static void D_AddFile(char **list, const char *file)
+static void D_AddFile(addfilelist_t *list, const char *file)
 {
-	size_t pnumwadfiles;
 	char *newfile;
+	size_t index = 0;
 
-	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
-		;
+	if (list->files == NULL)
+	{
+		list->files = calloc(sizeof(list->files), 2);
+		list->numfiles = 1;
+	}
+	else
+	{
+		index = list->numfiles;
+		list->files = realloc(list->files, sizeof(list->files) * ((++list->numfiles) + 1));
+		if (list->files == NULL)
+			I_Error("D_AddFile: No more free memory to add file %s (list reallocation)", file);
+	}
 
 	newfile = malloc(strlen(file) + 1);
 	if (!newfile)
-	{
-		I_Error("No more free memory to AddFile %s",file);
-	}
+		I_Error("D_AddFile: No more free memory to add file %s (filename allocation)", file);
 	strcpy(newfile, file);
 
-	list[pnumwadfiles] = newfile;
+	list->files[index] = newfile;
+	list->files[index + 1] = NULL;
 }
 
-static inline void D_CleanFile(char **list)
+static inline void D_CleanFile(addfilelist_t *list)
 {
-	size_t pnumwadfiles;
-	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
+	if (list->files)
 	{
-		free(list[pnumwadfiles]);
-		list[pnumwadfiles] = NULL;
+		size_t pnumwadfiles = 0;
+
+		for (; pnumwadfiles < list->numfiles; pnumwadfiles++)
+			free(list->files[pnumwadfiles]);
+
+		free(list->files);
+		list->files = NULL;
 	}
+
+	list->numfiles = 0;
 }
 
 ///\brief Checks if a netgame URL is being handled, and changes working directory to the EXE's if so.
@@ -972,7 +984,7 @@ static void IdentifyVersion(void)
 
 	// Load the IWAD
 	if (srb2wad != NULL && FIL_ReadFileOK(srb2wad))
-		D_AddFile(startupwadfiles, srb2wad);
+		D_AddFile(&startupwadfiles, srb2wad);
 	else
 		I_Error("srb2.pk3 not found! Expected in %s, ss file: %s\n", srb2waddir, srb2wad);
 
@@ -983,14 +995,14 @@ static void IdentifyVersion(void)
 	// checking in D_SRB2Main
 
 	// Add the maps
-	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"zones.pk3"));
+	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "zones.pk3"));
 
 	// Add the players
-	D_AddFile(startupwadfiles, va(pandf,srb2waddir, "player.dta"));
+	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "player.dta"));
 
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"patch.pk3"));
+	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "patch.pk3"));
 #endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
@@ -1000,7 +1012,7 @@ static void IdentifyVersion(void)
 			const char *musicpath = va(pandf,srb2waddir,str);\
 			int ms = W_VerifyNMUSlumps(musicpath, false); \
 			if (ms == 1) \
-				D_AddFile(startupwadfiles, musicpath); \
+				D_AddFile(&startupwadfiles, musicpath); \
 			else if (ms == 0) \
 				I_Error("File "str" has been modified with non-music/sound lumps"); \
 		}
@@ -1187,7 +1199,7 @@ void D_SRB2Main(void)
 				const char *s = M_GetNextParm();
 
 				if (s) // Check for NULL?
-					D_AddFile(startuppwads, s);
+					D_AddFile(&startuppwads, s);
 			}
 		}
 	}
@@ -1227,8 +1239,8 @@ void D_SRB2Main(void)
 
 	// load wad, including the main wad file
 	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
-	W_InitMultipleFiles(startupwadfiles);
-	D_CleanFile(startupwadfiles);
+	W_InitMultipleFiles(&startupwadfiles);
+	D_CleanFile(&startupwadfiles);
 
 #ifndef DEVELOP // md5s last updated 22/02/20 (ddmmyy)
 
@@ -1242,8 +1254,6 @@ void D_SRB2Main(void)
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif //ifndef DEVELOP
-
-	mainwadstally = packetsizetally; // technically not accurate atm, remember to port the two-stage -file process from kart in 2.2.x
 
 	cht_Init();
 
@@ -1275,9 +1285,12 @@ void D_SRB2Main(void)
 
 	I_RegisterSysCommands();
 
-	CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
-	W_InitMultipleFiles(startuppwads);
-	D_CleanFile(startuppwads);
+	if (startuppwads.numfiles)
+	{
+		CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
+		W_InitMultipleFiles(&startuppwads);
+		D_CleanFile(&startuppwads);
+	}
 
 	CONS_Printf("HU_LoadGraphics()...\n");
 	HU_LoadGraphics();
