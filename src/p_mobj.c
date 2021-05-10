@@ -3286,11 +3286,9 @@ void P_MobjCheckWater(mobj_t *mobj)
 			boolean electric = !!(p->powers[pw_shield] & SH_PROTECTELECTRIC);
 			if (electric || ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER) && !(mobj->eflags & MFE_TOUCHLAVA)))
 			{ // Water removes electric and non-water fire shields...
-				P_FlashPal(p,
-				electric
-				? PAL_WHITE
-				: PAL_NUKE,
-				1);
+			    if (electric)
+				    P_FlashPal(p, PAL_WHITE, 1);
+				
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
 			}
 		}
