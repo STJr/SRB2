@@ -1667,20 +1667,24 @@ static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
 		if (serverlistcount >= MAXSERVERLIST)
 			return; // list full
 
-		if (info->_255 != 255)
-			return;/* old packet format */
+		/* check it later if connecting to this one */
+		if (node != servernode)
+		{
+			if (info->_255 != 255)
+				return;/* old packet format */
 
-		if (info->packetversion != PACKETVERSION)
-			return;/* old new packet format */
+			if (info->packetversion != PACKETVERSION)
+				return;/* old new packet format */
 
-		if (info->version != VERSION)
-			return; // Not same version.
+			if (info->version != VERSION)
+				return; // Not same version.
 
-		if (info->subversion != SUBVERSION)
-			return; // Close, but no cigar.
+			if (info->subversion != SUBVERSION)
+				return; // Close, but no cigar.
 
-		if (strcmp(info->application, SRB2APPLICATION))
-			return;/* that's a different mod */
+			if (strcmp(info->application, SRB2APPLICATION))
+				return;/* that's a different mod */
+		}
 
 		i = serverlistcount++;
 	}
@@ -1829,6 +1833,65 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 
 #endif // ifndef NONET
 
+static const char * InvalidServerReason (INT32 i)
+{
+#define EOT "\nPress ESC\n"
+
+	serverinfo_pak *info = &serverlist[i].info;
+
+	/* magic number for new packet format */
+	if (info->_255 != 255)
+	{
+		return
+			"Outdated server (version unknown).\n" EOT;
+	}
+
+	if (strncmp(info->application, SRB2APPLICATION, sizeof
+				info->application))
+	{
+		return va(
+				"%s cannot connect\n"
+				"to %s servers.\n" EOT,
+				SRB2APPLICATION,
+				info->application);
+	}
+
+	if (
+			info->packetversion != PACKETVERSION ||
+			info->version != VERSION ||
+			info->subversion != SUBVERSION
+	){
+		return va(
+				"Incompatible %s versions.\n"
+				"(server version %d.%d.%d)\n" EOT,
+				SRB2APPLICATION,
+				info->version / 100,
+				info->version % 100,
+				info->subversion);
+	}
+
+	if (info->refusereason)
+	{
+		if (serverlist[i].info.refusereason == 1)
+			return
+				"The server is not accepting\n"
+				"joins for the moment.\n" EOT;
+		else if (serverlist[i].info.refusereason == 2)
+			return va(
+					"Maximum players reached: %d\n" EOT,
+					info->maxplayer);
+		else
+			return
+				"You can't join.\n"
+				"I don't know why,\n"
+				"but you can't join.\n" EOT;
+	}
+
+	return NULL;
+
+#undef EOT
+}
+
 /** Called by CL_ServerConnectionTicker
   *
   * \param asksent The last time we asked the server to join. We re-ask every second in case our request got lost in transmit.
@@ -1859,23 +1922,23 @@ static boolean CL_ServerConnectionSearchTicker(tic_t *asksent)
 				return true;
 		}
 
-		// Quit here rather than downloading files and being refused later.
-		if (serverlist[i].info.refusereason)
-		{
-			D_QuitNetGame();
-			CL_Reset();
-			D_StartTitle();
-			if (serverlist[i].info.refusereason == 1)
-				M_StartMessage(M_GetText("The server is not accepting\njoins for the moment.\n\nPress ESC\n"), NULL, MM_NOTHING);
-			else if (serverlist[i].info.refusereason == 2)
-				M_StartMessage(va(M_GetText("Maximum players reached: %d\n\nPress ESC\n"), serverlist[i].info.maxplayer), NULL, MM_NOTHING);
-			else
-				M_StartMessage(M_GetText("You can't join.\nI don't know why,\nbut you can't join.\n\nPress ESC\n"), NULL, MM_NOTHING);
-			return false;
-		}
-
 		if (client)
 		{
+			const char *reason = InvalidServerReason(i);
+
+			// Quit here rather than downloading files
+			// and being refused later.
+			if (reason)
+			{
+				char *message = Z_StrDup(reason);
+				D_QuitNetGame();
+				CL_Reset();
+				D_StartTitle();
+				M_StartMessage(message, NULL, MM_NOTHING);
+				Z_Free(message);
+				return false;
+			}
+
 			D_ParseFileneeded(serverlist[i].info.fileneedednum,
 				serverlist[i].info.fileneeded);
 			CONS_Printf(M_GetText("Checking files...\n"));
