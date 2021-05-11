@@ -141,9 +141,6 @@ typedef struct
 
 typedef struct
 {
-	UINT8 version; // Different versions don't work
-	UINT8 subversion; // Contains build version
-
 	// Server launch stuffs
 	UINT8 serverplayer;
 	UINT8 totalslotnum; // "Slots": highest player number in use plus one.
@@ -190,11 +187,8 @@ typedef struct
 
 typedef struct
 {
-	UINT8 _255;/* see serverinfo_pak */
-	UINT8 packetversion;
+	UINT8 modversion;
 	char application[MAXAPPLICATION];
-	UINT8 version; // Different versions don't work
-	UINT8 subversion; // Contains build version
 	UINT8 localplayers;
 	UINT8 mode;
 	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME];

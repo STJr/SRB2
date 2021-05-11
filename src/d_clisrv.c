@@ -1150,15 +1150,14 @@ static boolean CL_SendJoin(void)
 		CONS_Printf(M_GetText("Sending join request...\n"));
 	netbuffer->packettype = PT_CLIENTJOIN;
 
+	netbuffer->u.clientcfg.modversion = MODVERSION;
+	strncpy(netbuffer->u.clientcfg.application,
+			SRB2APPLICATION,
+			sizeof netbuffer->u.clientcfg.application);
+
 	if (splitscreen || botingame)
 		localplayers++;
 	netbuffer->u.clientcfg.localplayers = localplayers;
-	netbuffer->u.clientcfg._255 = 255;
-	netbuffer->u.clientcfg.packetversion = PACKETVERSION;
-	netbuffer->u.clientcfg.version = VERSION;
-	netbuffer->u.clientcfg.subversion = SUBVERSION;
-	strncpy(netbuffer->u.clientcfg.application, SRB2APPLICATION,
-			sizeof netbuffer->u.clientcfg.application);
 
 	CleanupPlayerName(consoleplayer, cv_playername.zstring);
 	if (splitscreen)
@@ -1343,9 +1342,6 @@ static boolean SV_SendServerConfig(INT32 node)
 	boolean waspacketsent;
 
 	netbuffer->packettype = PT_SERVERCFG;
-
-	netbuffer->u.servercfg.version = VERSION;
-	netbuffer->u.servercfg.subversion = SUBVERSION;
 
 	netbuffer->u.servercfg.serverplayer = (UINT8)serverplayer;
 	netbuffer->u.servercfg.totalslotnum = (UINT8)(doomcom->numslots);
@@ -3683,6 +3679,78 @@ static size_t TotalTextCmdPerTic(tic_t tic)
 	return total;
 }
 
+static const char *
+ConnectionRefused (SINT8 node, INT32 rejoinernum)
+{
+	clientconfig_pak *cc = &netbuffer->u.clientcfg;
+
+	boolean rejoining = (rejoinernum != -1);
+
+	if (!node)/* server connecting to itself */
+		return NULL;
+
+	if (
+			cc->modversion != MODVERSION ||
+			strncmp(cc->application, SRB2APPLICATION,
+				sizeof cc->application)
+	){
+		return/* this is probably client's fault */
+			"Incompatible.";
+	}
+	else if (bannednode && bannednode[node])
+	{
+		return
+			"You have been banned\n"
+			"from the server.";
+	}
+	else if (cc->localplayers != 1)
+	{
+		return
+			"Wrong player count.";
+	}
+
+	if (!rejoining)
+	{
+		if (!cv_allownewplayer.value)
+		{
+			return
+				"The server is not accepting\n"
+				"joins for the moment.";
+		}
+		else if (D_NumPlayers() >= cv_maxplayers.value)
+		{
+			return va(
+					"Maximum players reached: %d",
+					cv_maxplayers.value);
+		}
+	}
+
+	if (luafiletransfers)
+	{
+		return
+			"The serveris broadcasting a file\n"
+			"requested by a Lua script.\n"
+			"Please wait a bit and then\n"
+			"try rejoining.";
+	}
+
+	if (netgame)
+	{
+		const tic_t th = 2 * cv_joindelay.value * TICRATE;
+
+		if (joindelay > th)
+		{
+			return va(
+					"Too many people are connecting.\n"
+					"Please wait %d seconds and then\n"
+					"try rejoining.",
+					(joindelay - th) / TICRATE);
+		}
+	}
+
+	return NULL;
+}
+
 /** Called when a PT_CLIENTJOIN packet is received
   *
   * \param node The packet sender
@@ -3693,33 +3761,14 @@ static void HandleConnect(SINT8 node)
 	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME + 1];
 	INT32 rejoinernum;
 	INT32 i;
+	const char *refuse;
 
 	rejoinernum = FindRejoinerNum(node);
 
-	if (bannednode && bannednode[node])
-		SV_SendRefuse(node, M_GetText("You have been banned\nfrom the server."));
-	else if (netbuffer->u.clientcfg._255 != 255 ||
-			netbuffer->u.clientcfg.packetversion != PACKETVERSION)
-		SV_SendRefuse(node, "Incompatible packet formats.");
-	else if (strncmp(netbuffer->u.clientcfg.application, SRB2APPLICATION,
-				sizeof netbuffer->u.clientcfg.application))
-		SV_SendRefuse(node, "Different SRB2 modifications\nare not compatible.");
-	else if (netbuffer->u.clientcfg.version != VERSION
-		|| netbuffer->u.clientcfg.subversion != SUBVERSION)
-		SV_SendRefuse(node, va(M_GetText("Different SRB2 versions cannot\nplay a netgame!\n(server version %d.%d.%d)"), VERSION/100, VERSION%100, SUBVERSION));
-	else if (!cv_allownewplayer.value && node && rejoinernum == -1)
-		SV_SendRefuse(node, M_GetText("The server is not accepting\njoins for the moment."));
-	else if (D_NumPlayers() >= cv_maxplayers.value && rejoinernum == -1)
-		SV_SendRefuse(node, va(M_GetText("Maximum players reached: %d"), cv_maxplayers.value));
-	else if (netgame && netbuffer->u.clientcfg.localplayers > 1) // Hacked client?
-		SV_SendRefuse(node, M_GetText("Too many players from\nthis node."));
-	else if (netgame && !netbuffer->u.clientcfg.localplayers) // Stealth join?
-		SV_SendRefuse(node, M_GetText("No players from\nthis node."));
-	else if (luafiletransfers)
-		SV_SendRefuse(node, M_GetText("The server is broadcasting a file\nrequested by a Lua script.\nPlease wait a bit and then\ntry rejoining."));
-	else if (netgame && joindelay > 2 * (tic_t)cv_joindelay.value * TICRATE)
-		SV_SendRefuse(node, va(M_GetText("Too many people are connecting.\nPlease wait %d seconds and then\ntry rejoining."),
-			(joindelay - 2 * cv_joindelay.value * TICRATE) / TICRATE));
+	refuse = ConnectionRefused(node, rejoinernum);
+
+	if (refuse)
+		SV_SendRefuse(node, refuse);
 	else
 	{
 #ifndef NONET
