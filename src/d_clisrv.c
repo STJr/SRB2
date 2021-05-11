@@ -1205,6 +1205,8 @@ GetRefuseReason (INT32 node)
 {
 	if (!node || FindRejoinerNum(node) != -1)
 		return 0;
+	else if (bannednode && bannednode[node])
+		return REFUSE_BANNED;
 	else if (!cv_allownewplayer.value)
 		return REFUSE_JOINS_DISABLED;
 	else if (D_NumPlayers() >= cv_maxplayers.value)
@@ -1874,6 +1876,10 @@ static const char * InvalidServerReason (INT32 i)
 
 	switch (info->refusereason)
 	{
+		case REFUSE_BANNED:
+			return
+				"You have been banned\n"
+				"from the server.\n" EOT;
 		case REFUSE_JOINS_DISABLED:
 			return
 				"The server is not accepting\n"

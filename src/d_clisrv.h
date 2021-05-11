@@ -22,11 +22,15 @@
 #include "mserv.h"
 
 /*
-The 'packet version' is used to distinguish packet formats.
-This version is independent of VERSION and SUBVERSION. Different
-applications may follow different packet versions.
+The 'packet version' is used to distinguish packet
+formats. This version is independent of VERSION and
+SUBVERSION. Different applications may follow different
+packet versions.
+
+If you change the struct or the meaning of a field
+therein, increment this number.
 */
-#define PACKETVERSION 3
+#define PACKETVERSION 4
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -197,6 +201,7 @@ typedef struct
 enum {
 	REFUSE_JOINS_DISABLED = 1,
 	REFUSE_SLOTS_FULL,
+	REFUSE_BANNED,
 };
 
 #define MAXSERVERNAME 32
