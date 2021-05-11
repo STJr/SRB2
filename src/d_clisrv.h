@@ -194,6 +194,11 @@ typedef struct
 	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME];
 } ATTRPACK clientconfig_pak;
 
+enum {
+	REFUSE_JOINS_DISABLED = 1,
+	REFUSE_SLOTS_FULL,
+};
+
 #define MAXSERVERNAME 32
 #define MAXFILENEEDED 915
 // This packet is too large
@@ -211,7 +216,7 @@ typedef struct
 	UINT8 subversion;
 	UINT8 numberofplayer;
 	UINT8 maxplayer;
-	UINT8 refusereason; // 0: joinable, 1: joins disabled, 2: full
+	UINT8 refusereason; // 0: joinable, REFUSE enum
 	char gametypename[24];
 	UINT8 modifiedgame;
 	UINT8 cheatsenabled;

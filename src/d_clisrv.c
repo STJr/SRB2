@@ -1200,6 +1200,19 @@ static INT32 FindRejoinerNum(SINT8 node)
 	return -1;
 }
 
+static UINT8
+GetRefuseReason (INT32 node)
+{
+	if (!node || FindRejoinerNum(node) != -1)
+		return 0;
+	else if (!cv_allownewplayer.value)
+		return REFUSE_JOINS_DISABLED;
+	else if (D_NumPlayers() >= cv_maxplayers.value)
+		return REFUSE_SLOTS_FULL;
+	else
+		return 0;
+}
+
 static void SV_SendServerInfo(INT32 node, tic_t servertime)
 {
 	UINT8 *p;
@@ -1218,14 +1231,7 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumPlayers();
 	netbuffer->u.serverinfo.maxplayer = (UINT8)cv_maxplayers.value;
 
-	if (!node || FindRejoinerNum(node) != -1)
-		netbuffer->u.serverinfo.refusereason = 0;
-	else if (!cv_allownewplayer.value)
-		netbuffer->u.serverinfo.refusereason = 1;
-	else if (D_NumPlayers() >= cv_maxplayers.value)
-		netbuffer->u.serverinfo.refusereason = 2;
-	else
-		netbuffer->u.serverinfo.refusereason = 0;
+	netbuffer->u.serverinfo.refusereason = GetRefuseReason(node);
 
 	strncpy(netbuffer->u.serverinfo.gametypename, Gametype_Names[gametype],
 			sizeof netbuffer->u.serverinfo.gametypename);
@@ -1866,21 +1872,24 @@ static const char * InvalidServerReason (INT32 i)
 				info->subversion);
 	}
 
-	if (info->refusereason)
+	switch (info->refusereason)
 	{
-		if (serverlist[i].info.refusereason == 1)
+		case REFUSE_JOINS_DISABLED:
 			return
 				"The server is not accepting\n"
 				"joins for the moment.\n" EOT;
-		else if (serverlist[i].info.refusereason == 2)
+		case REFUSE_SLOTS_FULL:
 			return va(
 					"Maximum players reached: %d\n" EOT,
 					info->maxplayer);
-		else
-			return
-				"You can't join.\n"
-				"I don't know why,\n"
-				"but you can't join.\n" EOT;
+		default:
+			if (info->refusereason)
+			{
+				return
+					"You can't join.\n"
+					"I don't know why,\n"
+					"but you can't join.\n" EOT;
+			}
 	}
 
 	return NULL;
