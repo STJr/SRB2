@@ -126,26 +126,6 @@ static line_t *gl_linedef;
 static sector_t *gl_frontsector;
 static sector_t *gl_backsector;
 
-// --------------------------------------------------------------------------
-//                                              STUFF FOR THE PROJECTION CODE
-// --------------------------------------------------------------------------
-
-FTransform atransform;
-// duplicates of the main code, set after R_SetupFrame() passed them into sharedstruct,
-// copied here for local use
-static fixed_t dup_viewx, dup_viewy, dup_viewz;
-static angle_t dup_viewangle;
-
-static float gl_viewx, gl_viewy, gl_viewz;
-static float gl_viewsin, gl_viewcos;
-
-// Maybe not necessary with the new T&L code (needs to be checked!)
-static float gl_viewludsin, gl_viewludcos; // look up down kik test
-static float gl_fovlud;
-
-static angle_t gl_aimingangle;
-static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean skybox);
-
 // Render stats
 precise_t ps_hw_skyboxtime = 0;
 precise_t ps_hw_nodesorttime = 0;
@@ -169,6 +149,29 @@ boolean gl_maploaded = false;
 boolean gl_sessioncommandsadded = false;
 // false if shaders have not been initialized yet, or if shaders are not available
 boolean gl_shadersavailable = false;
+
+// Whether the internal state is set to palette rendering or not.
+static boolean gl_palette_rendering_state = false;
+
+// --------------------------------------------------------------------------
+//                                              STUFF FOR THE PROJECTION CODE
+// --------------------------------------------------------------------------
+
+FTransform atransform;
+// duplicates of the main code, set after R_SetupFrame() passed them into sharedstruct,
+// copied here for local use
+static fixed_t dup_viewx, dup_viewy, dup_viewz;
+static angle_t dup_viewangle;
+
+static float gl_viewx, gl_viewy, gl_viewz;
+static float gl_viewsin, gl_viewcos;
+
+// Maybe not necessary with the new T&L code (needs to be checked!)
+static float gl_viewludsin, gl_viewludcos; // look up down kik test
+static float gl_fovlud;
+
+static angle_t gl_aimingangle;
+static void HWR_SetTransformAiming(FTransform *trans, player_t *player, boolean skybox);
 
 // ==========================================================================
 // Lighting
@@ -234,6 +237,33 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 	Surface->LightInfo.light_level = light_level;
 	Surface->LightInfo.fade_start = (colormap != NULL) ? colormap->fadestart : 0;
 	Surface->LightInfo.fade_end = (colormap != NULL) ? colormap->fadeend : 31;
+
+	if (HWR_ShouldUsePaletteRendering())
+	{
+		boolean default_colormap = false;
+		if (!colormap)
+		{
+			colormap = R_GetDefaultColormap(); // a place to store the hw lighttable id
+			// alternatively could just store the id in a global variable if there are issues
+			default_colormap = true;
+		}
+		// create hw lighttable if there isn't one
+		if (!colormap->gl_lighttable_id)
+		{
+			UINT8 *colormap_pointer;
+
+			if (default_colormap)
+				colormap_pointer = colormaps; // don't actually use the data from the "default colormap"
+			else
+				colormap_pointer = colormap->colormap;
+			colormap->gl_lighttable_id = HWR_CreateLightTable(colormap_pointer);
+		}
+		Surface->LightTableId = colormap->gl_lighttable_id;
+	}
+	else
+	{
+		Surface->LightTableId = 0;
+	}
 }
 
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap) // Let's see if this can work
@@ -905,13 +935,15 @@ static void HWR_SplitWall(sector_t *sector, FOutVector *wallVerts, INT32 texnum,
 		{
 			if (pfloor && (pfloor->flags & FF_FOG))
 			{
-				lightnum = HWR_CalcWallLight(pfloor->master->frontsector->lightlevel, v1x, v1y, v2x, v2y);
+				lightnum = pfloor->master->frontsector->lightlevel;
 				colormap = pfloor->master->frontsector->extra_colormap;
+				lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, v1x, v1y, v2x, v2y);
 			}
 			else
 			{
-				lightnum = HWR_CalcWallLight(*list[i].lightlevel, v1x, v1y, v2x, v2y);
+				lightnum = *list[i].lightlevel;
 				colormap = *list[i].extra_colormap;
+				lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, v1x, v1y, v2x, v2y);
 			}
 		}
 
@@ -1113,8 +1145,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 		cliphigh = (float)(texturehpeg + (gl_curline->flength*FRACUNIT));
 	}
 
-	lightnum = HWR_CalcWallLight(gl_frontsector->lightlevel, vs.x, vs.y, ve.x, ve.y);
+	lightnum = gl_frontsector->lightlevel;
 	colormap = gl_frontsector->extra_colormap;
+	lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, vs.x, vs.y, ve.x, ve.y);
 
 	if (gl_frontsector)
 		Surf.PolyColor.s.alpha = 255;
@@ -1739,8 +1772,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 					blendmode = PF_Fog|PF_NoTexture;
 
-					lightnum = HWR_CalcWallLight(rover->master->frontsector->lightlevel, vs.x, vs.y, ve.x, ve.y);
+					lightnum = rover->master->frontsector->lightlevel;
 					colormap = rover->master->frontsector->extra_colormap;
+					lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, vs.x, vs.y, ve.x, ve.y);
 
 					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel, rover->master->frontsector->extra_colormap);
 
@@ -1851,8 +1885,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 					blendmode = PF_Fog|PF_NoTexture;
 
-					lightnum = HWR_CalcWallLight(rover->master->frontsector->lightlevel, vs.x, vs.y, ve.x, ve.y);
+					lightnum = rover->master->frontsector->lightlevel;
 					colormap = rover->master->frontsector->extra_colormap;
+					lightnum = colormap ? lightnum : HWR_CalcWallLight(lightnum, vs.x, vs.y, ve.x, ve.y);
 
 					Surf.PolyColor.s.alpha = HWR_FogBlockAlpha(rover->master->frontsector->lightlevel, rover->master->frontsector->extra_colormap);
 
@@ -5867,6 +5902,7 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	else
 		type = &postimgtype;
 
+	if (!HWR_ShouldUsePaletteRendering())
 	{
 		// do we really need to save player (is it not the same)?
 		player_t *saved_player = stplyr;
@@ -6080,6 +6116,7 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 		HWR_RenderSkyboxView(viewnumber, player); // This is drawn before everything else so it is placed behind
 	ps_hw_skyboxtime = I_GetPreciseTime() - ps_hw_skyboxtime;
 
+	if (!HWR_ShouldUsePaletteRendering())
 	{
 		// do we really need to save player (is it not the same)?
 		player_t *saved_player = stplyr;
@@ -6277,6 +6314,56 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	HWD.pfnGClipRect(0, 0, vid.width, vid.height, NZCLIP_PLANE);
 }
 
+// Returns whether palette rendering is "actually enabled."
+// Can't have palette rendering if shaders are disabled.
+boolean HWR_ShouldUsePaletteRendering(void)
+{
+	return (cv_glpaletterendering.value && HWR_UseShader());
+}
+
+// enable or disable palette rendering state depending on settings and availability
+// called when relevant settings change
+// shader recompilation is done in the cvar callback
+static void HWR_TogglePaletteRendering(void)
+{
+	// which state should we go to?
+	if (HWR_ShouldUsePaletteRendering())
+	{
+		// are we not in that state already?
+		if (!gl_palette_rendering_state)
+		{
+			gl_palette_rendering_state = true;
+
+			// The textures will still be converted to RGBA by r_opengl.
+			// This however makes hw_cache use paletted blending for composite textures!
+			// (patchformat is not touched)
+			textureformat = GL_TEXFMT_P_8;
+
+			HWR_SetMapPalette();
+			HWR_SetPalette(pLocalPalette);
+
+			// If the r_opengl "texture palette" stays the same during this switch, the textures
+			// will not be cleared out. However they are still out of date since the
+			// composite texture blending method has changed. Therefore they need to be cleared.
+			HWD.pfnClearMipMapCache();
+		}
+	}
+	else
+	{
+		// are we not in that state already?
+		if (gl_palette_rendering_state)
+		{
+			gl_palette_rendering_state = false;
+			textureformat = GL_TEXFMT_RGBA;
+			HWR_SetPalette(pLocalPalette);
+			// If the r_opengl "texture palette" stays the same during this switch, the textures
+			// will not be cleared out. However they are still out of date since the
+			// composite texture blending method has changed. Therefore they need to be cleared.
+			HWD.pfnClearMipMapCache();
+		}
+	}
+}
+
 void HWR_LoadLevel(void)
 {
 #ifdef ALAM_LIGHTING
@@ -6289,6 +6376,9 @@ void HWR_LoadLevel(void)
 	// Build the sky dome
 	HWR_ClearSkyDome();
 	HWR_BuildSkyDome();
+
+	if (HWR_ShouldUsePaletteRendering())
+		HWR_SetMapPalette();
 
 	gl_maploaded = true;
 }
@@ -6305,6 +6395,9 @@ static CV_PossibleValue_t glshearing_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Thi
 static void CV_glfiltermode_OnChange(void);
 static void CV_glanisotropic_OnChange(void);
 static void CV_glmodellighting_OnChange(void);
+static void CV_glpaletterendering_OnChange(void);
+static void CV_glpalettedepth_OnChange(void);
+static void CV_glshaders_OnChange(void);
 
 static CV_PossibleValue_t glfiltermode_cons_t[]= {{HWD_SET_TEXTUREFILTER_POINTSAMPLED, "Nearest"},
 	{HWD_SET_TEXTUREFILTER_BILINEAR, "Bilinear"}, {HWD_SET_TEXTUREFILTER_TRILINEAR, "Trilinear"},
@@ -6314,7 +6407,7 @@ static CV_PossibleValue_t glfiltermode_cons_t[]= {{HWD_SET_TEXTUREFILTER_POINTSA
 	{0, NULL}};
 CV_PossibleValue_t glanisotropicmode_cons_t[] = {{1, "MIN"}, {16, "MAX"}, {0, NULL}};
 
-consvar_t cv_glshaders = CVAR_INIT ("gr_shaders", "On", CV_SAVE, glshaders_cons_t, NULL);
+consvar_t cv_glshaders = CVAR_INIT ("gr_shaders", "On", CV_SAVE|CV_CALL, glshaders_cons_t, CV_glshaders_OnChange);
 consvar_t cv_glallowshaders = CVAR_INIT ("gr_allowclientshaders", "On", CV_NETVAR, CV_OnOff, NULL);
 consvar_t cv_fovchange = CVAR_INIT ("gr_fovchange", "Off", CV_SAVE, CV_OnOff, NULL);
 
@@ -6342,6 +6435,11 @@ consvar_t cv_glsolvetjoin = CVAR_INIT ("gr_solvetjoin", "On", 0, CV_OnOff, NULL)
 
 consvar_t cv_glbatching = CVAR_INIT ("gr_batching", "On", 0, CV_OnOff, NULL);
 
+static CV_PossibleValue_t glpalettedepth_cons_t[] = {{16, "16 bits"}, {24, "24 bits"}, {0, NULL}};
+
+consvar_t cv_glpaletterendering = CVAR_INIT ("gr_paletterendering", "Off", CV_SAVE|CV_CALL, CV_OnOff, CV_glpaletterendering_OnChange);
+consvar_t cv_glpalettedepth = CVAR_INIT ("gr_palettedepth", "16 bits", CV_SAVE|CV_CALL, glpalettedepth_cons_t, CV_glpalettedepth_OnChange);
+
 static void CV_glfiltermode_OnChange(void)
 {
 	if (rendermode == render_opengl)
@@ -6359,6 +6457,31 @@ static void CV_glmodellighting_OnChange(void)
 	// if shaders have been compiled, then they now need to be recompiled.
 	if (gl_shadersavailable)
 		HWR_CompileShaders();
+}
+
+static void CV_glpaletterendering_OnChange(void)
+{
+	if (gl_shadersavailable)
+	{
+		HWR_CompileShaders();
+		HWR_TogglePaletteRendering();
+	}
+}
+
+static void CV_glpalettedepth_OnChange(void)
+{
+	// refresh the screen palette
+	if (HWR_ShouldUsePaletteRendering())
+		HWR_SetPalette(pLocalPalette);
+}
+
+static void CV_glshaders_OnChange(void)
+{
+	if (cv_glpaletterendering.value)
+	{
+		// can't do palette rendering without shaders, so update the state if needed
+		HWR_TogglePaletteRendering();
+	}
 }
 
 //added by Hurdler: console varibale that are saved
@@ -6389,6 +6512,9 @@ void HWR_AddCommands(void)
 
 	CV_RegisterVar(&cv_glbatching);
 
+	CV_RegisterVar(&cv_glpaletterendering);
+	CV_RegisterVar(&cv_glpalettedepth);
+
 #ifndef NEWCLIP
 	CV_RegisterVar(&cv_glclipwalls);
 #endif
@@ -6411,6 +6537,8 @@ void HWR_Startup(void)
 	{
 		CONS_Printf("HWR_Startup()...\n");
 
+		textureformat = patchformat = GL_TEXFMT_RGBA;
+
 		HWR_InitPolyPool();
 		HWR_AddSessionCommands();
 		HWR_InitMapTextures();
@@ -6421,10 +6549,8 @@ void HWR_Startup(void)
 
 		gl_shadersavailable = HWR_InitShaders();
 		HWR_LoadAllCustomShaders();
+		HWR_TogglePaletteRendering();
 	}
-
-	if (rendermode == render_opengl)
-		textureformat = patchformat = GL_TEXFMT_RGBA;
 
 	gl_init = true;
 }
@@ -6564,7 +6690,7 @@ void HWR_DoPostProcessor(player_t *player)
 
 	// Armageddon Blast Flash!
 	// Could this even be considered postprocessor?
-	if (player->flashcount)
+	if (player->flashcount && !HWR_ShouldUsePaletteRendering())
 	{
 		FOutVector      v[4];
 		FSurfaceInfo Surf;

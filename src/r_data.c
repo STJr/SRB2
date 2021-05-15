@@ -30,6 +30,10 @@
 #include "byteptr.h"
 #include "dehacked.h"
 
+#ifdef HWRENDER
+#include "hardware/hw_glob.h" // HWR_ClearLightTables
+#endif
+
 //
 // Graphics.
 // SRB2 graphics for walls and sprites
@@ -425,6 +429,9 @@ void R_ClearColormaps(void)
 {
 	// Purged by PU_LEVEL, just overwrite the pointer
 	extra_colormaps = R_CreateDefaultColormap(true);
+#ifdef HWRENDER
+	HWR_ClearLightTables();
+#endif
 }
 
 //

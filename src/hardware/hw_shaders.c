@@ -38,7 +38,7 @@
 #define GLSL_MODEL_VERTEX_SHADER \
 	"void main()\n" \
 	"{\n" \
-		"#ifdef MODEL_LIGHTING\n" \
+		"#ifdef SRB2_MODEL_LIGHTING\n" \
 		"float nDotVP = dot(gl_Normal, vec3(0, 1, 0));\n" \
 		"float light = 0.75 + max(nDotVP, 0.0);\n" \
 		"gl_FrontColor = vec4(light, light, light, 1.0);\n" \
@@ -69,6 +69,7 @@
 // Software fragment shader
 //
 
+// Include GLSL_FLOOR_FUDGES or GLSL_WALL_FUDGES or define the fudges in shaders that use this macro.
 #define GLSL_DOOM_COLORMAP \
 	"float R_DoomColormap(float light, float z)\n" \
 	"{\n" \
@@ -76,8 +77,12 @@
 		"float lightz = clamp(z / 16.0, 0.0, 127.0);\n" \
 		"float startmap = (15.0 - lightnum) * 4.0;\n" \
 		"float scale = 160.0 / (lightz + 1.0);\n" \
-		"return startmap - scale * 0.5;\n" \
+		"float cap = (155.0 - light) * 0.26;\n" \
+		"return max(startmap * STARTMAP_FUDGE - scale * 0.5 * SCALE_FUDGE, cap);\n" \
 	"}\n"
+// lighting cap adjustment:
+// first num (155.0), increase to make it start to go dark sooner
+// second num (0.26), increase to make it go dark faster
 
 #define GLSL_DOOM_LIGHT_EQUATION \
 	"float R_DoomLightingEquation(float light)\n" \
@@ -106,7 +111,28 @@
 	"}\n" \
 	"final_color = mix(final_color, fade_color, darkness);\n"
 
+#define GLSL_PALETTE_RENDERING \
+	"float tex_pal_idx = texture3D(palette_lookup_tex, vec3((texel * 63.0 + 0.5) / 64.0))[0] * 255.0;\n" \
+	"float z = gl_FragCoord.z / gl_FragCoord.w;\n" \
+	"float light_y = clamp(floor(R_DoomColormap(lighting, z)), 0.0, 31.0);\n" \
+	"vec2 lighttable_coord = vec2((tex_pal_idx + 0.5) / 256.0, (light_y + 0.5) / 32.0);\n" \
+	"vec4 final_color = texture2D(lighttable_tex, lighttable_coord);\n" \
+	"final_color.a = texel.a * poly_color.a;\n" \
+	"gl_FragColor = final_color;\n" \
+
 #define GLSL_SOFTWARE_FRAGMENT_SHADER \
+	"#ifdef SRB2_PALETTE_RENDERING\n" \
+	"uniform sampler2D tex;\n" \
+	"uniform sampler3D palette_lookup_tex;\n" \
+	"uniform sampler2D lighttable_tex;\n" \
+	"uniform vec4 poly_color;\n" \
+	"uniform float lighting;\n" \
+	GLSL_DOOM_COLORMAP \
+	"void main(void) {\n" \
+		"vec4 texel = texture2D(tex, gl_TexCoord[0].st);\n" \
+		GLSL_PALETTE_RENDERING \
+	"}\n" \
+	"#else\n" \
 	"uniform sampler2D tex;\n" \
 	"uniform vec4 poly_color;\n" \
 	"uniform vec4 tint_color;\n" \
@@ -124,11 +150,45 @@
 		GLSL_SOFTWARE_FADE_EQUATION \
 		"final_color.a = texel.a * poly_color.a;\n" \
 		"gl_FragColor = final_color;\n" \
-	"}\0"
+	"}\n" \
+	"#endif\0"
+
+// hand tuned adjustments for light level calculation
+#define GLSL_FLOOR_FUDGES \
+	"#define STARTMAP_FUDGE 1.06\n" \
+	"#define SCALE_FUDGE 1.15\n"
+
+#define GLSL_WALL_FUDGES \
+	"#define STARTMAP_FUDGE 1.05\n" \
+	"#define SCALE_FUDGE 2.2\n"
+
+#define GLSL_SOFTWARE_FRAGMENT_SHADER_FLOORS \
+	GLSL_FLOOR_FUDGES \
+	GLSL_SOFTWARE_FRAGMENT_SHADER
+
+#define GLSL_SOFTWARE_FRAGMENT_SHADER_WALLS \
+	GLSL_WALL_FUDGES \
+	GLSL_SOFTWARE_FRAGMENT_SHADER
 
 // same as above but multiplies results with the lighting value from the
-// accompanying vertex shader (stored in gl_Color)
+// accompanying vertex shader (stored in gl_Color) if model lighting is enabled
 #define GLSL_SOFTWARE_MODEL_FRAGMENT_SHADER \
+	GLSL_WALL_FUDGES \
+	"#ifdef SRB2_PALETTE_RENDERING\n" \
+	"uniform sampler2D tex;\n" \
+	"uniform sampler3D palette_lookup_tex;\n" \
+	"uniform sampler2D lighttable_tex;\n" \
+	"uniform vec4 poly_color;\n" \
+	"uniform float lighting;\n" \
+	GLSL_DOOM_COLORMAP \
+	"void main(void) {\n" \
+		"vec4 texel = texture2D(tex, gl_TexCoord[0].st);\n" \
+		"#ifdef SRB2_MODEL_LIGHTING\n" \
+		"texel *= gl_Color;\n" \
+		"#endif\n" \
+		GLSL_PALETTE_RENDERING \
+	"}\n" \
+	"#else\n" \
 	"uniform sampler2D tex;\n" \
 	"uniform vec4 poly_color;\n" \
 	"uniform vec4 tint_color;\n" \
@@ -144,12 +204,13 @@
 		"vec4 final_color = base_color;\n" \
 		GLSL_SOFTWARE_TINT_EQUATION \
 		GLSL_SOFTWARE_FADE_EQUATION \
-		"#ifdef MODEL_LIGHTING\n" \
+		"#ifdef SRB2_MODEL_LIGHTING\n" \
 		"final_color *= gl_Color;\n" \
 		"#endif\n" \
 		"final_color.a = texel.a * poly_color.a;\n" \
 		"gl_FragColor = final_color;\n" \
-	"}\0"
+	"}\n" \
+	"#endif\0"
 
 //
 // Water surface shader
@@ -158,7 +219,32 @@
 // Still needs to distort things underneath/around the water...
 //
 
+#define GLSL_WATER_TEXEL \
+	"float water_z = (gl_FragCoord.z / gl_FragCoord.w) / 2.0;\n" \
+	"float a = -pi * (water_z * freq) + (leveltime * speed);\n" \
+	"float sdistort = sin(a) * amp;\n" \
+	"float cdistort = cos(a) * amp;\n" \
+	"vec4 texel = texture2D(tex, vec2(gl_TexCoord[0].s - sdistort, gl_TexCoord[0].t - cdistort));\n"
+
 #define GLSL_WATER_FRAGMENT_SHADER \
+	GLSL_FLOOR_FUDGES \
+	"const float freq = 0.025;\n" \
+	"const float amp = 0.025;\n" \
+	"const float speed = 2.0;\n" \
+	"const float pi = 3.14159;\n" \
+	"#ifdef SRB2_PALETTE_RENDERING\n" \
+	"uniform sampler2D tex;\n" \
+	"uniform sampler3D palette_lookup_tex;\n" \
+	"uniform sampler2D lighttable_tex;\n" \
+	"uniform vec4 poly_color;\n" \
+	"uniform float lighting;\n" \
+	"uniform float leveltime;\n" \
+	GLSL_DOOM_COLORMAP \
+	"void main(void) {\n" \
+		GLSL_WATER_TEXEL \
+		GLSL_PALETTE_RENDERING \
+	"}\n" \
+	"#else\n" \
 	"uniform sampler2D tex;\n" \
 	"uniform vec4 poly_color;\n" \
 	"uniform vec4 tint_color;\n" \
@@ -167,25 +253,18 @@
 	"uniform float fade_start;\n" \
 	"uniform float fade_end;\n" \
 	"uniform float leveltime;\n" \
-	"const float freq = 0.025;\n" \
-	"const float amp = 0.025;\n" \
-	"const float speed = 2.0;\n" \
-	"const float pi = 3.14159;\n" \
 	GLSL_DOOM_COLORMAP \
 	GLSL_DOOM_LIGHT_EQUATION \
 	"void main(void) {\n" \
-		"float z = (gl_FragCoord.z / gl_FragCoord.w) / 2.0;\n" \
-		"float a = -pi * (z * freq) + (leveltime * speed);\n" \
-		"float sdistort = sin(a) * amp;\n" \
-		"float cdistort = cos(a) * amp;\n" \
-		"vec4 texel = texture2D(tex, vec2(gl_TexCoord[0].s - sdistort, gl_TexCoord[0].t - cdistort));\n" \
+		GLSL_WATER_TEXEL \
 		"vec4 base_color = texel * poly_color;\n" \
 		"vec4 final_color = base_color;\n" \
 		GLSL_SOFTWARE_TINT_EQUATION \
 		GLSL_SOFTWARE_FADE_EQUATION \
 		"final_color.a = texel.a * poly_color.a;\n" \
 		"gl_FragColor = final_color;\n" \
-	"}\0"
+	"}\n" \
+	"#endif\0"
 
 //
 // Fog block shader
@@ -193,7 +272,10 @@
 // Alpha of the planes themselves are still slightly off -- see HWR_FogBlockAlpha
 //
 
+// The floor fudges are used, but should the wall fudges be used instead? or something inbetween?
+// or separate values for floors and walls? (need to change more than this shader for that)
 #define GLSL_FOG_FRAGMENT_SHADER \
+	GLSL_FLOOR_FUDGES \
 	"uniform vec4 tint_color;\n" \
 	"uniform vec4 fade_color;\n" \
 	"uniform float lighting;\n" \
@@ -220,6 +302,19 @@
 		"gl_FragColor = texture2D(tex, gl_TexCoord[0].st) * gl_Color * poly_color;\n" \
 	"}\0"
 
+// Shader for the palette rendering postprocess step
+#define GLSL_PALETTE_POSTPROCESS_SHADER \
+	"uniform sampler2D tex;\n" \
+	"uniform sampler3D palette_lookup_tex;\n" \
+	"uniform sampler1D screen_palette_tex;\n" \
+	"void main(void) {\n" \
+		"vec4 texel = texture2D(tex, gl_TexCoord[0].st);\n" \
+		"float tex_pal_idx = texture3D(palette_lookup_tex, vec3((texel * 63.0 + 0.5) / 64.0))[0] * 255.0;\n" \
+		"float palette_coord = (tex_pal_idx + 0.5) / 256.0;\n" \
+		"vec4 final_color = texture1D(screen_palette_tex, palette_coord);\n" \
+		"gl_FragColor = final_color;\n" \
+	"}\0"
+
 // ================
 //  Shader sources
 // ================
@@ -229,13 +324,13 @@ static struct {
 	const char *fragment;
 } const gl_shadersources[] = {
 	// Floor shader
-	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER},
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER_FLOORS},
 
 	// Wall shader
-	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER},
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER_WALLS},
 
 	// Sprite shader
-	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER},
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER_WALLS},
 
 	// Model shader
 	{GLSL_MODEL_VERTEX_SHADER, GLSL_SOFTWARE_MODEL_FRAGMENT_SHADER},
@@ -248,6 +343,9 @@ static struct {
 
 	// Sky shader
 	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SKY_FRAGMENT_SHADER},
+
+	// Palette postprocess shader
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_PALETTE_POSTPROCESS_SHADER},
 
 	{NULL, NULL},
 };
@@ -272,7 +370,8 @@ static shader_t gl_shaders[NUMSHADERTARGETS*2];
 
 static shadertarget_t gl_shadertargets[NUMSHADERTARGETS];
 
-#define MODEL_LIGHTING_DEFINE "#define MODEL_LIGHTING"
+#define MODEL_LIGHTING_DEFINE "#define SRB2_MODEL_LIGHTING"
+#define PALETTE_RENDERING_DEFINE "#define SRB2_PALETTE_RENDERING"
 
 // Initialize shader variables and the backend's shader system. Load the base shaders.
 // Returns false if shaders cannot be used.
@@ -446,6 +545,8 @@ static char *HWR_PreprocessShader(char *original)
 	new_len = original_len;
 	if (cv_glmodellighting.value)
 		new_len += sizeof(MODEL_LIGHTING_DEFINE) - 1 + 2 * line_ending_len;
+	if (cv_glpaletterendering.value)
+		new_len += sizeof(PALETTE_RENDERING_DEFINE) - 1 + 2 * line_ending_len;
 
 	// Allocate memory for modified shader.
 	new_shader = Z_Malloc(new_len + 1, PU_STATIC, NULL);
@@ -458,16 +559,23 @@ static char *HWR_PreprocessShader(char *original)
 	read_pos += insertion_pos;
 	write_pos += insertion_pos;
 
+#define WRITE_DEFINE(define) \
+	{ \
+		strcpy(write_pos, line_ending); \
+		write_pos += line_ending_len; \
+		strcpy(write_pos, define); \
+		write_pos += sizeof(define) - 1; \
+		strcpy(write_pos, line_ending); \
+		write_pos += line_ending_len; \
+	}
+
 	// Write the additions.
 	if (cv_glmodellighting.value)
-	{
-		strcpy(write_pos, line_ending);
-		write_pos += line_ending_len;
-		strcpy(write_pos, MODEL_LIGHTING_DEFINE);
-		write_pos += sizeof(MODEL_LIGHTING_DEFINE) - 1;
-		strcpy(write_pos, line_ending);
-		write_pos += line_ending_len;
-	}
+		WRITE_DEFINE(MODEL_LIGHTING_DEFINE)
+	if (cv_glpaletterendering.value)
+		WRITE_DEFINE(PALETTE_RENDERING_DEFINE)
+
+#undef WRITE_DEFINE
 
 	// Copy the part after our additions.
 	M_Memcpy(write_pos, read_pos, original_len - insertion_pos);
@@ -557,6 +665,7 @@ customshaderxlat_t shaderxlat[] =
 	{"WaterRipple", SHADER_WATER},
 	{"Fog", SHADER_FOG},
 	{"Sky", SHADER_SKY},
+	{"PalettePostprocess", SHADER_PALETTE_POSTPROCESS},
 	{NULL, 0},
 };
 
@@ -739,18 +848,13 @@ const char *HWR_GetShaderName(INT32 shader)
 {
 	INT32 i;
 
-	if (shader)
+	for (i = 0; shaderxlat[i].type; i++)
 	{
-		for (i = 0; shaderxlat[i].type; i++)
-		{
-			if (shaderxlat[i].id == shader)
-				return shaderxlat[i].type;
-		}
-
-		return "Unknown";
+		if (shaderxlat[i].id == shader)
+			return shaderxlat[i].type;
 	}
 
-	return "Default";
+	return "Unknown";
 }
 
 #endif // HWRENDER

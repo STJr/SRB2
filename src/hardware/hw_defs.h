@@ -18,6 +18,12 @@
 #define ZCLIP_PLANE 4.0f // Used for the actual game drawing
 #define NZCLIP_PLANE 0.9f // Seems to be only used for the HUD and screen textures
 
+// The width/height/depth of the palette lookup table used by palette rendering.
+// Changing this also requires changing the shader code!
+// Also assumed to be a power of two in some parts of the code.
+// 64 seems to work perfectly for the vanilla palette.
+#define HWR_PALETTE_LUT_SIZE 64
+
 // ==========================================================================
 //                                                               SIMPLE TYPES
 // ==========================================================================
@@ -146,6 +152,7 @@ enum
 	SHADER_WATER,
 	SHADER_FOG,
 	SHADER_SKY,
+	SHADER_PALETTE_POSTPROCESS,
 
 	NUMSHADERTARGETS,
 };
@@ -275,6 +282,7 @@ struct FSurfaceInfo
 	RGBA_t			PolyColor;
 	RGBA_t			TintColor;
 	RGBA_t			FadeColor;
+	UINT32			LightTableId;
 	FLightInfo		LightInfo;
 };
 typedef struct FSurfaceInfo FSurfaceInfo;
@@ -282,7 +290,7 @@ typedef struct FSurfaceInfo FSurfaceInfo;
 #define GL_DEFAULTMIX 0x00000000
 #define GL_DEFAULTFOG 0xFF000000
 
-//Hurdler: added for backward compatibility
+// Various settings and states for the rendering backend.
 enum hwdsetspecialstate
 {
 	HWD_SET_MODEL_LIGHTING = 1,

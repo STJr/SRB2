@@ -69,6 +69,11 @@ typedef struct extracolormap_s
 
 	lighttable_t *colormap;
 
+#ifdef HWRENDER
+	// The id of the hardware lighttable. Zero means it does not exist yet.
+	UINT32 gl_lighttable_id;
+#endif
+
 #ifdef EXTRACOLORMAPLUMPS
 	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
 	char lumpname[9]; // for netsyncing

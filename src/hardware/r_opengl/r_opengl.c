@@ -34,11 +34,20 @@ struct GLRGBAFloat
 	GLfloat alpha;
 };
 typedef struct GLRGBAFloat GLRGBAFloat;
-static const GLubyte white[4] = { 255, 255, 255, 255 };
+
+// lighttable list item
+struct LTListItem
+{
+	UINT32 id;
+	struct LTListItem *next;
+};
+typedef struct LTListItem LTListItem;
 
 // ==========================================================================
 //                                                                  CONSTANTS
 // ==========================================================================
+
+static const GLubyte white[4] = { 255, 255, 255, 255 };
 
 // With OpenGL 1.1+, the first texture should be 1
 static GLuint NOTEXTURE_NUM = 0;
@@ -55,6 +64,7 @@ static float NEAR_CLIPPING_PLANE =   NZCLIP_PLANE;
 
 
 static  GLuint      tex_downloaded  = 0;
+static  GLuint      lt_downloaded   = 0; // currently bound lighttable texture
 static  GLfloat     fov             = 90.0f;
 static  FBITFIELD   CurrentPolyFlags;
 
@@ -62,7 +72,14 @@ static  FBITFIELD   CurrentPolyFlags;
 static FTextureInfo *TexCacheTail = NULL;
 static FTextureInfo *TexCacheHead = NULL;
 
-RGBA_t  myPaletteData[256];
+// Linked list of all lighttables.
+static LTListItem *LightTablesTail = NULL;
+static LTListItem *LightTablesHead = NULL;
+
+static RGBA_t screenPalette[256] = {0}; // the palette for the postprocessing step in palette rendering
+static GLuint screenPaletteTex = 0; // 1D texture containing the screen palette
+static GLuint paletteLookupTex = 0; // 3D texture containing RGB -> palette index lookup table
+RGBA_t  myPaletteData[256]; // the palette for converting textures to RGBA
 GLint   screen_width    = 0;               // used by Draw2DLine()
 GLint   screen_height   = 0;
 GLbyte  screen_depth    = 0;
@@ -377,6 +394,8 @@ typedef void (APIENTRY * PFNglTexEnvi) (GLenum target, GLenum pname, GLint param
 static PFNglTexEnvi pglTexEnvi;
 typedef void (APIENTRY * PFNglTexParameteri) (GLenum target, GLenum pname, GLint param);
 static PFNglTexParameteri pglTexParameteri;
+typedef void (APIENTRY * PFNglTexImage1D) (GLenum target, GLint level, GLint internalFormat, GLsizei width, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+static PFNglTexImage1D pglTexImage1D;
 typedef void (APIENTRY * PFNglTexImage2D) (GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
 static PFNglTexImage2D pglTexImage2D;
 typedef void (APIENTRY * PFNglTexSubImage2D) (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const GLvoid *pixels);
@@ -399,6 +418,10 @@ static PFNglCopyTexSubImage2D pglCopyTexSubImage2D;
 /* GLU functions */
 typedef GLint (APIENTRY * PFNgluBuild2DMipmaps) (GLenum target, GLint internalFormat, GLsizei width, GLsizei height, GLenum format, GLenum type, const void *data);
 static PFNgluBuild2DMipmaps pgluBuild2DMipmaps;
+
+/* 1.2 functions for 3D textures */
+typedef void (APIENTRY * PFNglTexImage3D) (GLenum target, GLint level, GLint internalFormat, GLsizei width, GLsizei height, GLsizei depth, GLint border, GLenum format, GLenum type, const GLvoid *pixels);
+static PFNglTexImage3D pglTexImage3D;
 
 /* 1.3 functions for multitexturing */
 typedef void (APIENTRY *PFNglActiveTexture) (GLenum);
@@ -443,6 +466,9 @@ static PFNglBlendEquation pglBlendEquation;
 #endif
 #ifndef GL_TEXTURE1
 #define GL_TEXTURE1 0x84C1
+#endif
+#ifndef GL_TEXTURE2
+#define GL_TEXTURE2 0x84C2
 #endif
 
 /* 1.5 Parms */
@@ -515,6 +541,7 @@ boolean SetupGLfunc(void)
 
 	GETOPENGLFUNC(pglTexEnvi, glTexEnvi)
 	GETOPENGLFUNC(pglTexParameteri, glTexParameteri)
+	GETOPENGLFUNC(pglTexImage1D, glTexImage1D)
 	GETOPENGLFUNC(pglTexImage2D, glTexImage2D)
 	GETOPENGLFUNC(pglTexSubImage2D, glTexSubImage2D)
 
@@ -590,7 +617,12 @@ typedef enum
 	gluniform_fade_start,
 	gluniform_fade_end,
 
-	// misc. (custom shaders)
+	// palette rendering
+	gluniform_screen_palette_tex,
+	gluniform_palette_lookup_tex,
+	gluniform_lighttable_tex,
+
+	// misc.
 	gluniform_leveltime,
 
 	gluniform_max,
@@ -656,6 +688,9 @@ static GLRGBAFloat shader_defaultcolor = {1.0f, 1.0f, 1.0f, 1.0f};
 
 void SetupGLFunc4(void)
 {
+	/* 1.2 funcs */
+	pglTexImage3D = GetGLFunc("glTexImage3D");
+	/* 1.3 funcs */
 	pglActiveTexture = GetGLFunc("glActiveTexture");
 	pglMultiTexCoord2f = GetGLFunc("glMultiTexCoord2f");
 	pglClientActiveTexture = GetGLFunc("glClientActiveTexture");
@@ -1496,6 +1531,9 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 	w = pTexInfo->width;
 	h = pTexInfo->height;
 
+	if (w*h > 2048*2048 && pTexInfo->format != GL_TEXFMT_RGBA)
+		I_Error("Tried to convert too big texture: %dx%d", w, h);
+
 	if ((pTexInfo->format == GL_TEXFMT_P_8) ||
 		(pTexInfo->format == GL_TEXFMT_AP_88))
 	{
@@ -1889,10 +1927,30 @@ static boolean Shader_CompileProgram(gl_shader_t *shader, GLint i)
 	shader->uniforms[gluniform_fade_start] = GETUNI("fade_start");
 	shader->uniforms[gluniform_fade_end] = GETUNI("fade_end");
 
-	// misc. (custom shaders)
-	shader->uniforms[gluniform_leveltime] = GETUNI("leveltime");
+	// palette rendering
+	shader->uniforms[gluniform_screen_palette_tex] = GETUNI("screen_palette_tex");
+	shader->uniforms[gluniform_palette_lookup_tex] = GETUNI("palette_lookup_tex");
+	shader->uniforms[gluniform_lighttable_tex] = GETUNI("lighttable_tex");
 
+	// misc.
+	shader->uniforms[gluniform_leveltime] = GETUNI("leveltime");
 #undef GETUNI
+
+	// set permanent uniform values
+#define UNIFORM_1(uniform, a, function) \
+	if (uniform != -1) \
+		function (uniform, a);
+
+	pglUseProgram(shader->program);
+
+	// texture unit numbers for the samplers used for palette rendering
+	UNIFORM_1(shader->uniforms[gluniform_screen_palette_tex], 2, pglUniform1i);
+	UNIFORM_1(shader->uniforms[gluniform_palette_lookup_tex], 1, pglUniform1i);
+	UNIFORM_1(shader->uniforms[gluniform_lighttable_tex], 2, pglUniform1i);
+
+	// restore gl shader state
+	pglUseProgram(gl_shaderstate.program);
+#undef UNIFORM_1
 
 	return true;
 }
@@ -1956,6 +2014,14 @@ static void PreparePolygon(FSurfaceInfo *pSurf, FOutVector *pOutVerts, FBITFIELD
 			fade.green = byte2float[pSurf->FadeColor.s.green];
 			fade.blue  = byte2float[pSurf->FadeColor.s.blue];
 			fade.alpha = byte2float[pSurf->FadeColor.s.alpha];
+
+			if (pSurf->LightTableId && pSurf->LightTableId != lt_downloaded)
+			{
+				pglActiveTexture(GL_TEXTURE2);
+				pglBindTexture(GL_TEXTURE_2D, pSurf->LightTableId);
+				pglActiveTexture(GL_TEXTURE0);
+				lt_downloaded = pSurf->LightTableId;
+			}
 		}
 	}
 
@@ -2148,9 +2214,6 @@ EXPORT void HWRAPI(RenderSkyDome) (gl_sky_t *sky)
 	pglDisableClientState(GL_COLOR_ARRAY);
 }
 
-// ==========================================================================
-//
-// ==========================================================================
 EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 {
 	switch (IdState)
@@ -2513,6 +2576,14 @@ static void DrawModelEx(model_t *model, INT32 frameIndex, INT32 duration, INT32 
 		flags |= PF_Occlude;
 	else if (Surface->PolyColor.s.alpha == 0xFF)
 		flags |= (PF_Occlude | PF_Masked);
+
+	if (Surface->LightTableId && Surface->LightTableId != lt_downloaded)
+	{
+		pglActiveTexture(GL_TEXTURE2);
+		pglBindTexture(GL_TEXTURE_2D, Surface->LightTableId);
+		pglActiveTexture(GL_TEXTURE0);
+		lt_downloaded = Surface->LightTableId;
+	}
 
 	SetBlend(flags);
 	Shader_SetUniforms(Surface, &poly, &tint, &fade);
@@ -3249,6 +3320,9 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 	ClearBuffer(true, false, &clearColour);
 	pglBindTexture(GL_TEXTURE_2D, finalScreenTexture);
 
+	// prepare shader, if it is enabled
+	Shader_SetUniforms(NULL, NULL, NULL, NULL);
+
 	pglColor4ubv(white);
 
 	pglTexCoordPointer(2, GL_FLOAT, 0, fix);
@@ -3256,6 +3330,78 @@ EXPORT void HWRAPI(DrawScreenFinalTexture)(int width, int height)
 
 	pglDrawArrays(GL_TRIANGLE_FAN, 0, 4);
 	tex_downloaded = finalScreenTexture;
+}
+
+EXPORT void HWRAPI(SetPaletteLookup)(UINT8 *lut)
+{
+	if (!paletteLookupTex)
+		pglGenTextures(1, &paletteLookupTex);
+	pglActiveTexture(GL_TEXTURE1);
+	pglBindTexture(GL_TEXTURE_3D, paletteLookupTex);
+	pglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	pglTexParameteri(GL_TEXTURE_3D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	pglTexImage3D(GL_TEXTURE_3D, 0, GL_R8, HWR_PALETTE_LUT_SIZE, HWR_PALETTE_LUT_SIZE, HWR_PALETTE_LUT_SIZE,
+		0, GL_RED, GL_UNSIGNED_BYTE, lut);
+	pglActiveTexture(GL_TEXTURE0);
+}
+
+EXPORT UINT32 HWRAPI(CreateLightTable)(RGBA_t *hw_lighttable)
+{
+	LTListItem *item = malloc(sizeof(LTListItem));
+	if (!LightTablesTail)
+	{
+		LightTablesHead = LightTablesTail = item;
+	}
+	else
+	{
+		LightTablesTail->next = item;
+		LightTablesTail = item;
+	}
+	item->next = NULL;
+	pglGenTextures(1, &item->id);
+	pglBindTexture(GL_TEXTURE_2D, item->id);
+	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	pglTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 256, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, hw_lighttable);
+
+	// restore previously bound texture
+	pglBindTexture(GL_TEXTURE_2D, tex_downloaded);
+
+	return item->id;
+}
+
+// Delete light table textures, ids given before become invalid and must not be used.
+EXPORT void HWRAPI(ClearLightTables)(void)
+{
+	while (LightTablesHead)
+	{
+		LTListItem *item = LightTablesHead;
+		pglDeleteTextures(1, (GLuint *)&item->id);
+		LightTablesHead = item->next;
+		free(item);
+	}
+
+	LightTablesTail = NULL;
+
+	// we no longer have a bound light table (if we had one), we just deleted it!
+	lt_downloaded = 0;
+}
+
+// This palette is used for the palette rendering postprocessing step.
+EXPORT void HWRAPI(SetScreenPalette)(RGBA_t *palette)
+{
+	if (memcmp(screenPalette, palette, sizeof(screenPalette)))
+	{
+		memcpy(screenPalette, palette, sizeof(screenPalette));
+		if (!screenPaletteTex)
+			pglGenTextures(1, &screenPaletteTex);
+		pglActiveTexture(GL_TEXTURE2);
+		pglBindTexture(GL_TEXTURE_1D, screenPaletteTex);
+		pglTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+		pglTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+		pglTexImage1D(GL_TEXTURE_1D, 0, GL_RGBA, 256, 0, GL_RGBA, GL_UNSIGNED_BYTE, palette);
+		pglActiveTexture(GL_TEXTURE0);
+	}
 }
 
 #endif //HWRENDER

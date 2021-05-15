@@ -74,6 +74,8 @@ FBITFIELD HWR_GetBlendModeFlag(INT32 ast);
 FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf);
 FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf);
 
+boolean HWR_ShouldUsePaletteRendering(void);
+
 extern CV_PossibleValue_t glanisotropicmode_cons_t[];
 
 #ifdef ALAM_LIGHTING
@@ -96,8 +98,9 @@ extern consvar_t cv_glspritebillboarding;
 extern consvar_t cv_glskydome;
 extern consvar_t cv_glfakecontrast;
 extern consvar_t cv_glslopecontrast;
-
 extern consvar_t cv_glbatching;
+extern consvar_t cv_glpaletterendering;
+extern consvar_t cv_glpalettedepth;
 
 extern float gl_viewwidth, gl_viewheight, gl_baseviewwindowy;
 
