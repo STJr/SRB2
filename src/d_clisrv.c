@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1568,11 +1568,6 @@ static void CL_LoadReceivedSavegame(boolean reloading)
 	else
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Can't load the level!\n"));
-		Z_Free(savebuffer);
-		save_p = NULL;
-		if (unlink(tmpsave) == -1)
-			CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
-		return;
 	}
 
 	// done
@@ -4268,7 +4263,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_RECEIVEDGAMESTATE:
 			sendingsavegame[node] = false;
 			resendingsavegame[node] = false;
-			savegameresendcooldown[node] = I_GetTime() + 15 * TICRATE;
+			savegameresendcooldown[node] = I_GetTime() + 5 * TICRATE;
 			break;
 // -------------------------------------------- CLIENT RECEIVE ----------
 		case PT_SERVERTICS:
@@ -4486,9 +4481,9 @@ static INT16 Consistancy(void)
 		{
 			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 				continue;
-	
+
 			mo = (mobj_t *)th;
-	
+
 			if (mo->flags & (MF_SPECIAL | MF_SOLID | MF_PUSHABLE | MF_BOSS | MF_MISSILE | MF_SPRING | MF_MONITOR | MF_FIRE | MF_ENEMY | MF_PAIN | MF_STICKY))
 			{
 				ret -= mo->type;

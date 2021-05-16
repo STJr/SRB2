@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -473,7 +473,7 @@ void LUAh_ThinkFrame(void)
 	hook_p hookp;
 	// variables used by perf stats
 	int hook_index = 0;
-	int time_taken = 0;
+	precise_t time_taken = 0;
 	if (!gL || !(hooksAvailable[hook_ThinkFrame/8] & (1<<(hook_ThinkFrame%8))))
 		return;
 
@@ -1959,13 +1959,13 @@ boolean LUAh_MusicChange(const char *oldname, char *newname, UINT16 *mflags, boo
 			if (lua_isboolean(gL, -4))
 				*looping = lua_toboolean(gL, -4);
 			// output 4: position override
-			if (lua_isboolean(gL, -3))
+			if (lua_isnumber(gL, -3))
 				*position = lua_tonumber(gL, -3);
 			// output 5: prefadems override
-			if (lua_isboolean(gL, -2))
+			if (lua_isnumber(gL, -2))
 				*prefadems = lua_tonumber(gL, -2);
 			// output 6: fadeinms override
-			if (lua_isboolean(gL, -1))
+			if (lua_isnumber(gL, -1))
 				*fadeinms = lua_tonumber(gL, -1);
 
 			lua_pop(gL, 7);  // Pop returned values and error handler

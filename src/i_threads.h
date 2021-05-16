@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 by James R.
+// Copyright (C) 2020-2021 by James R.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.

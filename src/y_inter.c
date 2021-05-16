@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2020 by Sonic Team Junior.
+// Copyright (C) 2004-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -266,6 +266,14 @@ void Y_LoadIntermissionData(void)
 		case int_ctf:
 		case int_teammatch:
 		{
+			if (!rflagico) //prevent a crash if we haven't cached our team graphics yet
+			{
+				rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
+				bflagico = W_CachePatchName("BFLAGICO", PU_HUDGFX);
+				rmatcico = W_CachePatchName("RMATCICO", PU_HUDGFX);
+				bmatcico = W_CachePatchName("BMATCICO", PU_HUDGFX);
+			}
+
 			data.match.redflag = (intertype == int_ctf) ? rflagico : rmatcico;
 			data.match.blueflag = (intertype == int_ctf) ? bflagico : bmatcico;
 		}
@@ -2061,7 +2069,8 @@ static void Y_AwardSpecialStageBonus(void)
 //
 void Y_EndIntermission(void)
 {
-	Y_UnloadData();
+	if (!dedicated)
+		Y_UnloadData();
 
 	endtic = -1;
 	intertype = int_none;
