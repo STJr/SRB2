@@ -1581,19 +1581,8 @@ void readlevelheader(MYFILE *f, INT32 num)
 						sizeof(mapheaderinfo[num-1]->musname), va("Level header %d: music", num));
 				}
 			}
-#ifdef MUSICSLOT_COMPATIBILITY
 			else if (fastcmp(word, "MUSICSLOT"))
-			{
-				i = get_mus(word2, true);
-				if (i && i <= 1035)
-					snprintf(mapheaderinfo[num-1]->musname, 7, "%sM", G_BuildMapName(i));
-				else if (i && i <= 1050)
-					strncpy(mapheaderinfo[num-1]->musname, compat_special_music_slots[i - 1036], 7);
-				else
-					mapheaderinfo[num-1]->musname[0] = 0; // becomes empty string
-				mapheaderinfo[num-1]->musname[6] = 0;
-			}
-#endif
+				deh_warning("Level header %d: MusicSlot parameter is deprecated and will be removed.\nUse \"Music\" instead.", num);
 			else if (fastcmp(word, "MUSICTRACK"))
 				mapheaderinfo[num-1]->mustrack = ((UINT16)i - 1);
 			else if (fastcmp(word, "MUSICPOS"))
@@ -1971,19 +1960,6 @@ static void readcutscenescene(MYFILE *f, INT32 num, INT32 scenenum)
 				strncpy(cutscenes[num]->scene[scenenum].musswitch, word2, 7);
 				cutscenes[num]->scene[scenenum].musswitch[6] = 0;
 			}
-#ifdef MUSICSLOT_COMPATIBILITY
-			else if (fastcmp(word, "MUSICSLOT"))
-			{
-				i = get_mus(word2, true);
-				if (i && i <= 1035)
-					snprintf(cutscenes[num]->scene[scenenum].musswitch, 7, "%sM", G_BuildMapName(i));
-				else if (i && i <= 1050)
-					strncpy(cutscenes[num]->scene[scenenum].musswitch, compat_special_music_slots[i - 1036], 7);
-				else
-					cutscenes[num]->scene[scenenum].musswitch[0] = 0; // becomes empty string
-				cutscenes[num]->scene[scenenum].musswitch[6] = 0;
-			}
-#endif
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
 				cutscenes[num]->scene[scenenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
@@ -2246,19 +2222,6 @@ static void readtextpromptpage(MYFILE *f, INT32 num, INT32 pagenum)
 				strncpy(textprompts[num]->page[pagenum].musswitch, word2, 7);
 				textprompts[num]->page[pagenum].musswitch[6] = 0;
 			}
-#ifdef MUSICSLOT_COMPATIBILITY
-			else if (fastcmp(word, "MUSICSLOT"))
-			{
-				i = get_mus(word2, true);
-				if (i && i <= 1035)
-					snprintf(textprompts[num]->page[pagenum].musswitch, 7, "%sM", G_BuildMapName(i));
-				else if (i && i <= 1050)
-					strncpy(textprompts[num]->page[pagenum].musswitch, compat_special_music_slots[i - 1036], 7);
-				else
-					textprompts[num]->page[pagenum].musswitch[0] = 0; // becomes empty string
-				textprompts[num]->page[pagenum].musswitch[6] = 0;
-			}
-#endif
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
 				textprompts[num]->page[pagenum].musswitchflags = ((UINT16)i) & MUSIC_TRACKMASK;
@@ -2584,20 +2547,6 @@ void readmenu(MYFILE *f, INT32 num)
 				menupres[num].musname[6] = 0;
 				titlechanged = true;
 			}
-#ifdef MUSICSLOT_COMPATIBILITY
-			else if (fastcmp(word, "MUSICSLOT"))
-			{
-				value = get_mus(word2, true);
-				if (value && value <= 1035)
-					snprintf(menupres[num].musname, 7, "%sM", G_BuildMapName(value));
-				else if (value && value <= 1050)
-					strncpy(menupres[num].musname, compat_special_music_slots[value - 1036], 7);
-				else
-					menupres[num].musname[0] = 0; // becomes empty string
-				menupres[num].musname[6] = 0;
-				titlechanged = true;
-			}
-#endif
 			else if (fastcmp(word, "MUSICTRACK"))
 			{
 				menupres[num].mustrack = ((UINT16)value - 1);
@@ -4190,46 +4139,6 @@ sfxenum_t get_sfx(const char *word)
 	return sfx_None;
 }
 
-#ifdef MUSICSLOT_COMPATIBILITY
-UINT16 get_mus(const char *word, UINT8 dehacked_mode)
-{ // Returns the value of MUS_ enumerations
-	UINT16 i;
-	char lumptmp[4];
-
-	if (*word >= '0' && *word <= '9')
-		return atoi(word);
-	if (!word[2] && toupper(word[0]) >= 'A' && toupper(word[0]) <= 'Z')
-		return (UINT16)M_MapNumber(word[0], word[1]);
-
-	if (fastncmp("MUS_",word,4))
-		word += 4; // take off the MUS_
-	else if (fastncmp("O_",word,2) || fastncmp("D_",word,2))
-		word += 2; // take off the O_ or D_
-
-	strncpy(lumptmp, word, 4);
-	lumptmp[3] = 0;
-	if (fasticmp("MAP",lumptmp))
-	{
-		word += 3;
-		if (toupper(word[0]) >= 'A' && toupper(word[0]) <= 'Z')
-			return (UINT16)M_MapNumber(word[0], word[1]);
-		else if ((i = atoi(word)))
-			return i;
-
-		word -= 3;
-		if (dehacked_mode)
-			deh_warning("Couldn't find music named 'MUS_%s'",word);
-		return 0;
-	}
-	for (i = 0; compat_special_music_slots[i][0]; ++i)
-		if (fasticmp(word, compat_special_music_slots[i]))
-			return i + 1036;
-	if (dehacked_mode)
-		deh_warning("Couldn't find music named 'MUS_%s'",word);
-	return 0;
-}
-#endif
-
 hudnum_t get_huditem(const char *word)
 { // Returns the value of HUD_ enumerations
 	hudnum_t i;
@@ -4460,13 +4369,6 @@ static fixed_t find_const(const char **rword)
 		free(word);
 		return r;
 	}
-#ifdef MUSICSLOT_COMPATIBILITY
-	else if (fastncmp("MUS_",word,4) || fastncmp("O_",word,2)) {
-		r = get_mus(word, true);
-		free(word);
-		return r;
-	}
-#endif
 	else if (fastncmp("PW_",word,3)) {
 		r = get_power(word);
 		free(word);
