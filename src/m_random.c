@@ -60,7 +60,7 @@ UINT8 M_RandomByte(void)
   */
 INT32 M_RandomKey(INT32 a)
 {
-	return (INT32)((rand()/((unsigned)RAND_MAX+1.0f))*a);
+	return (INT32)((rand()/((float)RAND_MAX+1.0f))*a);
 }
 
 /** Provides a random integer in a given range.
@@ -73,7 +73,7 @@ INT32 M_RandomKey(INT32 a)
   */
 INT32 M_RandomRange(INT32 a, INT32 b)
 {
-	return (INT32)((rand()/((unsigned)RAND_MAX+1.0f))*(b-a+1))+a;
+	return (INT32)((rand()/((float)RAND_MAX+1.0f))*(b-a+1))+a;
 }
 
 
