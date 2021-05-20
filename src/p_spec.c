@@ -6923,33 +6923,10 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 			}
 
-			// 500 is used for a scroller
-			// 501 is used for a scroller
-			// 502 is used for a scroller
-			// 503 is used for a scroller
-			// 504 is used for a scroller
-			// 505 is used for a scroller
-			// 506 is used for a scroller
-			// 507 is used for a scroller
-			// 508 is used for a scroller
-			// 510 is used for a scroller
-			// 511 is used for a scroller
-			// 512 is used for a scroller
-			// 513 is used for a scroller
-			// 514 is used for a scroller
-			// 515 is used for a scroller
-			// 520 is used for a scroller
-			// 521 is used for a scroller
-			// 522 is used for a scroller
-			// 523 is used for a scroller
-			// 524 is used for a scroller
-			// 525 is used for a scroller
-			// 530 is used for a scroller
-			// 531 is used for a scroller
-			// 532 is used for a scroller
-			// 533 is used for a scroller
-			// 534 is used for a scroller
-			// 535 is used for a scroller
+			// 500, 501, 502, 503, 504, 505, 506, 507 and 508 are used for wall scrollers
+			// 510, 511, 512, 513, 514, 515, 516, 517 and 518 are used for plane scrollers (scrolling textures)
+			// 520, 521, 522, 523, 524, 525, 526, 527 and 528 are used for plane scrollers (carrying objects)
+			// 530, 531, 532, 533, 534, 535, 536, 537 and 538 are used for plane scrollers (scrolling textures and carrying objects)
 			// 540 is used for friction
 			// 541 is used for wind
 			// 542 is used for upwards wind
@@ -7405,6 +7382,8 @@ static void P_SpawnScrollers(void)
 	{
 		fixed_t dx = l->dx >> SCROLL_SHIFT; // direction and speed of scrolling
 		fixed_t dy = l->dy >> SCROLL_SHIFT;
+		fixed_t cx = FixedMul(dx, CARRYFACTOR); // carry strength
+		fixed_t cy = FixedMul(dy, CARRYFACTOR);
 		INT32 control = -1, accel = 0; // no control sector or acceleration
 		INT32 special = l->special;
 
@@ -7415,26 +7394,17 @@ static void P_SpawnScrollers(void)
 		// this linedef controls the direction and speed of the scrolling. The
 		// most complicated linedef since donuts, but powerful :)
 
-		if (special == 515 || special == 512 || special == 522 || special == 532 || special == 504) // displacement scrollers
-		{
-			special -= 2;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 514 || special == 511 || special == 521 || special == 531 || special == 503) // accelerative scrollers
-		{
-			special--;
-			accel = 1;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 535 || special == 525) // displacement scrollers
-		{
-			special -= 2;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 534 || special == 524) // accelerative scrollers
+		// accelerative scrollers (503 for walls, or 511, 514, 517, 521, 524, 527, 531, 534, 537 for planes)
+		if (special == 503 || (special >= 510 && special < 540 && (special % 10 == 1 || special % 10 == 4 || special % 10 == 7)))
 		{
 			accel = 1;
 			special--;
+			control = (INT32)(sides[*l->sidenum].sector - sectors);
+		}
+		// displacement scrollers (504 for walls, or 512, 515, 518, 522, 525, 528, 532, 535, 538 for planes)
+		if (special == 504 || (special >= 510 && special < 540 && (special % 10 == 2 || special % 10 == 5 || special % 10 == 8)))
+		{
+			special -= 2;
 			control = (INT32)(sides[*l->sidenum].sector - sectors);
 		}
 
@@ -7442,44 +7412,48 @@ static void P_SpawnScrollers(void)
 		{
 			register INT32 s;
 
-			case 513: // scroll effect ceiling
-			case 533: // scroll and carry objects on ceiling
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				if (special != 533)
-					break;
-				/* FALLTHRU */
-
-			case 523:	// carry objects on ceiling
-				dx = FixedMul(dx, CARRYFACTOR);
-				dy = FixedMul(dy, CARRYFACTOR);
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_carry_ceiling, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				break;
-
-			case 510: // scroll effect floor
+			case 510: // scroll floor
+			case 513: // scroll ceiling
+			case 516: // scroll floor and ceiling
 			case 530: // scroll and carry objects on floor
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				if (special != 530)
+			case 533: // scroll and carry objects on ceiling
+			case 536: // scroll and carry objects on floor and ceiling
+				if (tag == 0)
+					{
+						if (special % 10 != 3) Add_Scroller(sc_floor, -dx, dy, control, l->frontsector - sectors, accel, l->flags & ML_NOCLIMB);
+						if (special % 10 != 0) Add_Scroller(sc_ceiling, -dx, dy, control, l->frontsector - sectors, accel, l->flags & ML_NOCLIMB);
+					}
+				else
+					TAG_ITER_SECTORS(tag, s)
+					{
+						if (special % 10 != 3) Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+						if (special % 10 != 0) Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+					}
+				if (special < 530)
 					break;
 				/* FALLTHRU */
 
-			case 520:	// carry objects on floor
-				dx = FixedMul(dx, CARRYFACTOR);
-				dy = FixedMul(dy, CARRYFACTOR);
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_carry, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+			case 520: // carry objects on floor
+			case 523: // carry objects on ceiling
+			case 526: // carry objects on floor and ceilingz
+				if (tag == 0)
+				{
+					if (special % 10 != 3) Add_Scroller(sc_carry, cx, cy, control, l->frontsector - sectors, accel, l->flags & ML_NOCLIMB);
+					if (special % 10 != 0) Add_Scroller(sc_carry_ceiling, cx, cy, control, l->frontsector - sectors, accel, l->flags & ML_NOCLIMB);
+				}
+				else
+					TAG_ITER_SECTORS(tag, s)
+					{
+						if (special % 10 != 3) Add_Scroller(sc_carry, cx, cy, control, s, accel, l->flags & ML_NOCLIMB);
+						if (special % 10 != 0) Add_Scroller(sc_carry_ceiling, cx, cy, control, s, accel, l->flags & ML_NOCLIMB);
+					}
 				break;
 
-			// scroll wall according to linedef
-			// (same direction and speed as scrolling floors)
-			case 502:
-			{
+			case 502: // scroll tagged walls
 				TAG_ITER_LINES(tag, s)
 					if (s != (INT32)i)
 					{
-						if (l->flags & ML_EFFECT2) // use texture offsets instead
+						if (l->flags & ML_EFFECT2) // use front side offsets instead
 						{
 							dx = sides[l->sidenum[0]].textureoffset;
 							dy = sides[l->sidenum[0]].rowoffset;
@@ -7493,14 +7467,13 @@ static void P_SpawnScrollers(void)
 							Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
 					}
 				break;
-			}
 
-			case 505:
+			case 505: // scroll front wall by front side offsets
 				s = lines[i].sidenum[0];
 				Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, s, accel, 0);
 				break;
 
-			case 506:
+			case 506: // scroll front wall by back side offsets
 				s = lines[i].sidenum[1];
 
 				if (s != 0xffff)
@@ -7509,7 +7482,7 @@ static void P_SpawnScrollers(void)
 					CONS_Debug(DBG_GAMELOGIC, "Line special 506 (line #%s) missing back side!\n", sizeu1(i));
 				break;
 
-			case 507:
+			case 507: // scroll back wall by front side offsets
 				s = lines[i].sidenum[0];
 
 				if (lines[i].sidenum[1] != 0xffff)
@@ -7518,7 +7491,7 @@ static void P_SpawnScrollers(void)
 					CONS_Debug(DBG_GAMELOGIC, "Line special 507 (line #%s) missing back side!\n", sizeu1(i));
 				break;
 
-			case 508:
+			case 508: // scroll back wall by back side offsets
 				s = lines[i].sidenum[1];
 
 				if (s != 0xffff)
