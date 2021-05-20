@@ -604,6 +604,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Wno-absolute-value)
 endif()
 
+set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Wno-trigraphs)
+
 add_definitions(-DCMAKECONFIG)
 
 #add_library(SRB2Core STATIC
