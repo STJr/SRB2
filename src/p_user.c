@@ -5624,15 +5624,9 @@ INT32 P_GetPlayerControlDirection(player_t *player)
 {
 	ticcmd_t *cmd = &player->cmd;
 	angle_t controllerdirection, controlplayerdirection;
-	camera_t *thiscam;
 	angle_t dangle;
 	fixed_t tempx = 0, tempy = 0;
 	angle_t tempangle, origtempangle;
-
-	if (splitscreen && player == &players[secondarydisplayplayer])
-		thiscam = &camera2;
-	else
-		thiscam = &camera;
 
 	if (!cmd->forwardmove && !cmd->sidemove)
 		return 0;
@@ -5649,17 +5643,15 @@ INT32 P_GetPlayerControlDirection(player_t *player)
 		origtempangle = tempangle = 0; // relative to the axis rather than the player!
 		controlplayerdirection = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
 	}
-	else if ((P_ControlStyle(player) & CS_LMAOGALOG) && thiscam->chase)
+	else
 	{
 		if (player->awayviewtics)
 			origtempangle = tempangle = player->awayviewmobj->angle;
+		else if (P_ControlStyle(player) & CS_LMAOGALOG)
+			origtempangle = tempangle = (cmd->angleturn << 16);
 		else
-			origtempangle = tempangle = thiscam->angle;
-		controlplayerdirection = player->mo->angle;
-	}
-	else
-	{
-		origtempangle = tempangle = player->mo->angle;
+			origtempangle = tempangle = player->mo->angle;
+
 		controlplayerdirection = R_PointToAngle2(0, 0, player->mo->momx, player->mo->momy);
 	}
 
