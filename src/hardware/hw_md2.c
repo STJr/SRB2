@@ -777,24 +777,7 @@ static void HWR_CreateBlendedTexture(patch_t *gpatch, patch_t *blendgpatch, GLMi
 
 	while (size--)
 	{
-		if (skinnum == TC_BOSS)
-		{
-			// Turn everything below a certain threshold white
-			if ((image->s.red == image->s.green) && (image->s.green == image->s.blue) && image->s.blue < 127)
-			{
-				// Lactozilla: Invert the colors
-				cur->s.red = cur->s.green = cur->s.blue = (255 - image->s.blue);
-			}
-			else
-			{
-				cur->s.red = image->s.red;
-				cur->s.green = image->s.green;
-				cur->s.blue = image->s.blue;
-			}
-
-			cur->s.alpha = image->s.alpha;
-		}
-		else if (skinnum == TC_ALLWHITE)
+		if (skinnum == TC_ALLWHITE)
 		{
 			// Turn everything white
 			cur->s.red = cur->s.green = cur->s.blue = 255;
@@ -1064,6 +1047,15 @@ skippixel:
 					}
 
 					cur->s.alpha = image->s.alpha;
+				}
+				else if (skinnum == TC_BOSS)
+				{
+					// Turn everything below a certain threshold white
+					if ((image->s.red == image->s.green) && (image->s.green == image->s.blue) && image->s.blue < 127)
+					{
+						// Lactozilla: Invert the colors
+						cur->s.red = cur->s.green = cur->s.blue = (255 - image->s.blue);
+					}
 				}
 			}
 		}
