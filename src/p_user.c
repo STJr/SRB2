@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -190,7 +190,7 @@ fixed_t P_ReturnThrustY(mobj_t *mo, angle_t angle, fixed_t move)
 boolean P_AutoPause(void)
 {
 	// Don't pause even on menu-up or focus-lost in netgames or record attack
-	if (netgame || modeattacking || gamestate == GS_TITLESCREEN)
+	if (netgame || modeattacking || gamestate == GS_TITLESCREEN || (marathonmode && gamestate == GS_INTERMISSION))
 		return false;
 
 	return (menuactive || ( window_notinfocus && cv_pauseifunfocused.value ));
@@ -2015,6 +2015,8 @@ void P_SwitchShield(player_t *player, UINT16 shieldtype)
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 {
 	mobj_t *ghost = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_GHOST);
+
+	P_SetTarget(&ghost->target, mobj);
 
 	P_SetScale(ghost, mobj->scale);
 	ghost->destscale = mobj->scale;
@@ -4499,7 +4501,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	if (twodlevel || (player->mo->flags2 & MF2_TWOD))
 		factor += player->jumpfactor / 10;
 
-	if (player->charflags & SF_MULTIABILITY && player->charability == CA_DOUBLEJUMP)
+	if (player->charflags & SF_MULTIABILITY && player->charability == CA_DOUBLEJUMP && (player->actionspd >> FRACBITS) != -1)
 		factor -= max(0, player->secondjump * player->jumpfactor / ((player->actionspd >> FRACBITS) + 1)); // Reduce the jump height each time
 
 	//if (maptol & TOL_NIGHTS)
@@ -4880,22 +4882,28 @@ void P_DoBubbleBounce(player_t *player)
 //
 void P_DoAbilityBounce(player_t *player, boolean changemomz)
 {
-	fixed_t prevmomz;
 	if (player->mo->state-states == S_PLAY_BOUNCE_LANDING)
 		return;
+
 	if (changemomz)
 	{
-		fixed_t minmomz;
-		prevmomz = player->mo->momz;
+		fixed_t prevmomz = player->mo->momz, minmomz;
+
 		if (P_MobjFlip(player->mo)*prevmomz < 0)
 			prevmomz = 0;
 		else if (player->mo->eflags & MFE_UNDERWATER)
 			prevmomz /= 2;
+
 		P_DoJump(player, false);
 		player->pflags &= ~(PF_STARTJUMP|PF_JUMPED);
 		minmomz = FixedMul(player->mo->momz, 3*FRACUNIT/2);
-		player->mo->momz = max(minmomz, (minmomz + prevmomz)/2);
+
+		if (player->mo->eflags & MFE_VERTICALFLIP) // Use "min" or "max" depending on if the player is flipped
+			player->mo->momz = min(minmomz, (minmomz + prevmomz)/2);
+		else
+			player->mo->momz = max(minmomz, (minmomz + prevmomz)/2);
 	}
+
 	S_StartSound(player->mo, sfx_boingf);
 	P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE_LANDING);
 	player->pflags |= PF_BOUNCING|PF_THOKKED;
@@ -5293,7 +5301,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						fixed_t actionspd = player->actionspd;
 
 						if (player->charflags & SF_DASHMODE)
-							actionspd = max(player->normalspeed, FixedDiv(player->speed, player->mo->scale));
+							actionspd = max(player->actionspd, FixedDiv(player->speed, player->mo->scale));
 
 						if (player->mo->eflags & MFE_UNDERWATER)
 							actionspd >>= 1;
@@ -5924,7 +5932,7 @@ static void P_3dMovement(player_t *player)
 	player->rmomy = player->mo->momy - player->cmomy;
 
 	// Calculates player's speed based on distance-of-a-line formula
-	player->speed = R_PointToDist2(0, 0, player->rmomx, player->rmomy);
+	player->speed = P_AproxDistance(player->rmomx, player->rmomy);
 
 	// Monster Iestyn - 04-11-13
 	// Quadrants are stupid, excessive and broken, let's do this a much simpler way!
@@ -8645,14 +8653,16 @@ void P_MovePlayer(player_t *player)
 	{
 		boolean atspinheight = false;
 		fixed_t oldheight = player->mo->height;
+		fixed_t luaheight = LUAh_PlayerHeight(player);
 
+		if (luaheight != -1)
+		{
+			player->mo->height = luaheight;
+			if (luaheight <= P_GetPlayerSpinHeight(player))
+				atspinheight = true; // spinning will not save you from being crushed
+		}
 		// Less height while spinning. Good for spinning under things...?
-		if ((player->mo->state == &states[player->mo->info->painstate])
-		|| ((player->pflags & PF_JUMPED) && !(player->pflags & PF_NOJUMPDAMAGE))
-		|| (player->pflags & PF_SPINNING)
-		|| player->powers[pw_tailsfly] || player->pflags & PF_GLIDING
-		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
-		|| (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
+		else if (P_PlayerShouldUseSpinHeight(player))
 		{
 			player->mo->height = P_GetPlayerSpinHeight(player);
 			atspinheight = true;
@@ -11356,7 +11366,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	angle_t angle = player->drawangle;
 	fixed_t dist;
 	panim_t panim = player->panim;
-	tic_t dashmode = player->dashmode;
+	tic_t dashmode = min(player->dashmode, DASHMODE_MAX);
 	boolean underwater = mo->eflags & MFE_UNDERWATER;
 	statenum_t stat = fume->state-states;
 
@@ -12946,4 +12956,34 @@ boolean P_PlayerFullbright(player_t *player)
 		&& (player->exiting
 			|| !(player->mo->state >= &states[S_PLAY_NIGHTS_TRANS1]
 			&& player->mo->state < &states[S_PLAY_NIGHTS_TRANS6])))); // Note the < instead of <=
+}
+
+#define JUMPCURLED(player) ((player->pflags & PF_JUMPED)\
+	&& (!(player->charflags & SF_NOJUMPSPIN))\
+	&& (player->panim == PA_JUMP || player->panim == PA_ROLL))\
+
+// returns true if the player can enter a sector that they could not if standing at their skin's full height
+boolean P_PlayerCanEnterSpinGaps(player_t *player)
+{
+	UINT8 canEnter = LUAh_PlayerCanEnterSpinGaps(player);
+	if (canEnter == 1)
+		return true;
+	else if (canEnter == 2)
+		return false;
+
+	return ((player->pflags & (PF_SPINNING|PF_GLIDING)) // players who are spinning or gliding
+		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING) // players who are landing from a glide
+		|| JUMPCURLED(player)); // players who are jumpcurled, but only if they would normally jump that way
+}
+
+// returns true if the player should use their skin's spinheight instead of their skin's height
+boolean P_PlayerShouldUseSpinHeight(player_t *player)
+{
+	return ((player->pflags & (PF_SPINNING|PF_GLIDING))
+		|| (player->mo->state == &states[player->mo->info->painstate])
+		|| (player->panim == PA_ROLL)
+		|| ((player->powers[pw_tailsfly] || (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
+			&& !(player->charflags & SF_NOJUMPSPIN))
+		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
+		|| JUMPCURLED(player));
 }

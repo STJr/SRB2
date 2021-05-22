@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -583,7 +583,7 @@ static int sector_get(lua_State *L)
 		lua_pushinteger(L, sector->special);
 		return 1;
 	case sector_tag:
-		lua_pushinteger(L, Tag_FGet(&sector->tags));
+		lua_pushinteger(L, (UINT16)Tag_FGet(&sector->tags));
 		return 1;
 	case sector_taglist:
 		LUA_PushUserdata(L, &sector->tags, META_SECTORTAGLIST);
@@ -828,6 +828,17 @@ static int line_get(lua_State *L)
 		lua_pushinteger(L, line->special);
 		return 1;
 	case line_tag:
+		// HELLO
+		// THIS IS LJ SONIC
+		// HOW IS YOUR DAY?
+		// BY THE WAY WHEN 2.3 OR 3.0 OR 4.0 OR SRB3 OR SRB4 OR WHATEVER IS OUT
+		// YOU SHOULD REMEMBER TO CHANGE THIS SO IT ALWAYS RETURNS A UNSIGNED VALUE
+		// HAVE A NICE DAY
+		//
+		//
+		//
+		//
+		// you are ugly
 		lua_pushinteger(L, Tag_FGet(&line->tags));
 		return 1;
 	case line_taglist:

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -511,6 +511,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			if (spring->state != &states[S_STEAM1]) // Only when it bursts
 				break;
 
+			object->eflags |= MFE_SPRUNG;
 			object->momz = flipval*FixedMul(speed, FixedSqrt(FixedMul(spring->scale, object->scale))); // scale the speed with both objects' scales, just like with springs!
 
 			if (p)
@@ -2257,6 +2258,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			{
 				if (!P_BlockThingsIterator(bx, by, PIT_CheckThing))
 					blockval = false;
+				else
+					tmhitthing = tmfloorthing;
 				if (P_MobjWasRemoved(tmthing))
 					return false;
 			}
@@ -2721,7 +2724,10 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			if (thing->type == MT_SKIM)
 				maxstep = 0;
 
-			if (tmceilingz - tmfloorz < thing->height)
+			if (tmceilingz - tmfloorz < thing->height
+				|| (thing->player
+					&& tmceilingz - tmfloorz < P_GetPlayerHeight(thing->player)
+					&& !P_PlayerCanEnterSpinGaps(thing->player)))
 			{
 				if (tmfloorthing)
 					tmhitthing = tmfloorthing;
@@ -3328,6 +3334,11 @@ static boolean PTR_LineIsBlocking(line_t *li)
 
 	if (openbottom - slidemo->z > FixedMul(MAXSTEPMOVE, slidemo->scale))
 		return true; // too big a step up
+
+	if (slidemo->player
+		&& openrange < P_GetPlayerHeight(slidemo->player)
+		&& !P_PlayerCanEnterSpinGaps(slidemo->player))
+			return true; // nonspin character should not take this path
 
 	return false;
 }

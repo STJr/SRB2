@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2950,6 +2950,24 @@ static void P_LinkMapData(void)
 	}
 }
 
+// For maps in binary format, add multi-tags from linedef specials. This must be done
+// before any linedef specials have been processed.
+static void P_AddBinaryMapTags(void)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		// 97: Apply Tag to Front Sector
+		// 98: Apply Tag to Back Sector
+		// 99: Apply Tag to Front and Back Sectors
+		if (lines[i].special == 97 || lines[i].special == 99)
+			Tag_Add(&lines[i].frontsector->tags, Tag_FGet(&lines[i].tags));
+		if (lines[i].special == 98 || lines[i].special == 99)
+			Tag_Add(&lines[i].backsector->tags, Tag_FGet(&lines[i].tags));
+	}
+}
+
 //For maps in binary format, converts setup of specials to UDMF format.
 static void P_ConvertBinaryMap(void)
 {
@@ -3141,6 +3159,34 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[1] = tag;
 			lines[i].special = 720;
 			break;
+		case 723: //Copy back side floor slope
+		case 724: //Copy back side ceiling slope
+		case 725: //Copy back side floor and ceiling slope
+			if (lines[i].special != 724)
+				lines[i].args[2] = tag;
+			if (lines[i].special != 723)
+				lines[i].args[3] = tag;
+			lines[i].special = 720;
+			break;
+		case 730: //Copy front side floor slope to back side
+		case 731: //Copy front side ceiling slope to back side
+		case 732: //Copy front side floor and ceiling slope to back side
+			if (lines[i].special != 731)
+				lines[i].args[4] |= TMSC_FRONTTOBACKFLOOR;
+			if (lines[i].special != 730)
+				lines[i].args[4] |= TMSC_FRONTTOBACKCEILING;
+			lines[i].special = 720;
+			break;
+		case 733: //Copy back side floor slope to front side
+		case 734: //Copy back side ceiling slope to front side
+		case 735: //Copy back side floor and ceiling slope to front side
+			if (lines[i].special != 734)
+				lines[i].args[4] |= TMSC_BACKTOFRONTFLOOR;
+			if (lines[i].special != 733)
+				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
+			lines[i].special = 720;
+			break;
+		
 		case 900: //Translucent wall (10%)
 		case 901: //Translucent wall (20%)
 		case 902: //Translucent wall (30%)
@@ -3286,6 +3332,9 @@ static boolean P_LoadMapFromFile(void)
 	P_LoadMapLUT(virt);
 
 	P_LinkMapData();
+
+	if (!udmf)
+		P_AddBinaryMapTags();
 
 	Taglist_InitGlobalTables();
 
@@ -4135,7 +4184,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 #ifdef HWRENDER
 	// Free GPU textures before freeing patches.
-	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
 #endif
 
@@ -4500,7 +4549,7 @@ boolean P_AddWadFile(const char *wadfilename)
 
 #ifdef HWRENDER
 	// Free GPU textures before freeing patches.
-	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
 #endif
 

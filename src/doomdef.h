@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -100,7 +100,7 @@
 #include <sys/stat.h>
 #include <ctype.h>
 
-#if defined (_WIN32) || defined (__DJGPP__)
+#ifdef _WIN32
 #include <io.h>
 #endif
 
@@ -112,7 +112,7 @@
 //#define PARANOIA // do some tests that never fail but maybe
 // turn this on by make etc.. DEBUGMODE = 1 or use the Debug profile in the VC++ projects
 //#endif
-#if defined (_WIN32) || (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (macintosh)
+#if defined (_WIN32) || defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) || defined (macintosh)
 #define LOGMESSAGES // write message in log.txt
 #endif
 
@@ -415,7 +415,7 @@ enum {
 };
 
 // Name of local directory for config files and savegames
-#if (((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)) && !defined (__APPLE__)
+#if (defined (__unix__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__) && !defined (__APPLE__)
 #define DEFAULTDIR ".srb2"
 #else
 #define DEFAULTDIR "srb2"
@@ -603,10 +603,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Experimental tweaks to analog mode. (Needs a lot of work before it's ready for primetime.)
 //#define REDSANALOG
-
-/// Backwards compatibility with musicslots.
-/// \note	You should leave this enabled unless you're working with a future SRB2 version.
-#define MUSICSLOT_COMPATIBILITY
 
 /// Experimental attempts at preventing MF_PAPERCOLLISION objects from getting stuck in walls.
 //#define PAPER_COLLISIONCORRECTION

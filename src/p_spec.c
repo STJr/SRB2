@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -8456,6 +8456,9 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 		return false;
 
 	if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
+		return false;
+
+	if (!tmpusher->source)
 		return false;
 
 	// Allow this to affect pushable objects at some point?

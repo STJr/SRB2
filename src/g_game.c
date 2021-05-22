@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1678,7 +1678,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// At this point, cmd doesn't contain the final angle yet,
 	// So we need to temporarily transform it so Lua scripters
 	// don't need to handle it differently than in other hooks.
-	if (gamestate == GS_LEVEL)
+	if (addedtogame && gamestate == GS_LEVEL)
 	{
 		INT16 extra = ticcmd_oldangleturn[forplayer] - player->oldrelangleturn;
 		INT16 origangle = cmd->angleturn;
@@ -3507,6 +3507,7 @@ tolinfo_t TYPEOFLEVEL[NUMTOLNAMES] = {
 	{"MARIO",TOL_MARIO},
 	{"NIGHTS",TOL_NIGHTS},
 	{"OLDBRAK",TOL_ERZ3},
+	{"ERZ3",TOL_ERZ3},
 
 	{"XMAS",TOL_XMAS},
 	{"CHRISTMAS",TOL_XMAS},
@@ -3973,6 +3974,7 @@ static void G_DoCompleted(void)
 	{
 		G_SetGamestate(GS_INTERMISSION);
 		Y_StartIntermission();
+		Y_LoadIntermissionData();
 		G_UpdateVisited();
 		G_HandleSaveLevel();
 	}

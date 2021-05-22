@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -242,16 +242,10 @@ static const char *GetUserdataUType(lua_State *L)
 //   or players[0].powers -> "player_t.powers"
 static int lib_userdataType(lua_State *L)
 {
-	int type;
 	lua_settop(L, 1); // pop everything except arg 1 (in case somebody decided to add more)
-	type = lua_type(L, 1);
-	if (type == LUA_TLIGHTUSERDATA || type == LUA_TUSERDATA)
-	{
-		lua_pushstring(L, GetUserdataUType(L));
-		return 1;
-	}
-	else
-		return luaL_typerror(L, 1, "userdata");
+	luaL_checktype(L, 1, LUA_TUSERDATA);
+	lua_pushstring(L, GetUserdataUType(L));
+	return 1;
 }
 
 // Takes a metatable as first and only argument
@@ -432,7 +426,7 @@ static int lib_pAproxDistance(lua_State *L)
 	fixed_t dx = luaL_checkfixed(L, 1);
 	fixed_t dy = luaL_checkfixed(L, 2);
 	//HUDSAFE
-	lua_pushfixed(L, P_AproxDistance(dx, dy));
+	lua_pushfixed(L, R_PointToDist2(0, 0, dx, dy));
 	return 1;
 }
 
@@ -1671,6 +1665,26 @@ static int lib_pSwitchShield(lua_State *L)
 	return 0;
 }
 
+static int lib_pPlayerCanEnterSpinGaps(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushboolean(L, P_PlayerCanEnterSpinGaps(player));
+	return 1;
+}
+
+static int lib_pPlayerShouldUseSpinHeight(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushboolean(L, P_PlayerShouldUseSpinHeight(player));
+	return 1;
+}
+
 // P_MAP
 ///////////
 
@@ -2808,46 +2822,13 @@ static int lib_sStopSoundByID(lua_State *L)
 
 static int lib_sChangeMusic(lua_State *L)
 {
-#ifdef MUSICSLOT_COMPATIBILITY
-	const char *music_name;
-	UINT32 music_num, position, prefadems, fadeinms;
-	char music_compat_name[7];
+	UINT32 position, prefadems, fadeinms;
 
-	boolean looping;
-	player_t *player = NULL;
-	UINT16 music_flags = 0;
-	//NOHUD
-
-	if (lua_isnumber(L, 1))
-	{
-		music_num = (UINT32)luaL_checkinteger(L, 1);
-		music_flags = (UINT16)(music_num & 0x0000FFFF);
-		if (music_flags && music_flags <= 1035)
-			snprintf(music_compat_name, 7, "%sM", G_BuildMapName((INT32)music_flags));
-		else if (music_flags && music_flags <= 1050)
-			strncpy(music_compat_name, compat_special_music_slots[music_flags - 1036], 7);
-		else
-			music_compat_name[0] = 0; // becomes empty string
-		music_compat_name[6] = 0;
-		music_name = (const char *)&music_compat_name;
-		music_flags = 0;
-	}
-	else
-	{
-		music_num = 0;
-		music_name = luaL_checkstring(L, 1);
-	}
-
-	looping = (boolean)lua_opttrueboolean(L, 2);
-
-#else
 	const char *music_name = luaL_checkstring(L, 1);
 	boolean looping = (boolean)lua_opttrueboolean(L, 2);
 	player_t *player = NULL;
 	UINT16 music_flags = 0;
-	//NOHUD
 
-#endif
 	if (!lua_isnone(L, 3) && lua_isuserdata(L, 3))
 	{
 		player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
@@ -2855,13 +2836,7 @@ static int lib_sChangeMusic(lua_State *L)
 			return LUA_ErrInvalid(L, "player_t");
 	}
 
-#ifdef MUSICSLOT_COMPATIBILITY
-	if (music_num)
-		music_flags = (UINT16)((music_num & 0x7FFF0000) >> 16);
-	else
-#endif
 	music_flags = (UINT16)luaL_optinteger(L, 4, 0);
-
 	position = (UINT32)luaL_optinteger(L, 5, 0);
 	prefadems = (UINT32)luaL_optinteger(L, 6, 0);
 	fadeinms = (UINT32)luaL_optinteger(L, 7, 0);
@@ -3158,33 +3133,7 @@ static int lib_sMusicExists(lua_State *L)
 {
 	boolean checkMIDI = lua_opttrueboolean(L, 2);
 	boolean checkDigi = lua_opttrueboolean(L, 3);
-#ifdef MUSICSLOT_COMPATIBILITY
-	const char *music_name;
-	UINT32 music_num;
-	char music_compat_name[7];
-	UINT16 music_flags = 0;
-	NOHUD
-	if (lua_isnumber(L, 1))
-	{
-		music_num = (UINT32)luaL_checkinteger(L, 1);
-		music_flags = (UINT16)(music_num & 0x0000FFFF);
-		if (music_flags && music_flags <= 1035)
-			snprintf(music_compat_name, 7, "%sM", G_BuildMapName((INT32)music_flags));
-		else if (music_flags && music_flags <= 1050)
-			strncpy(music_compat_name, compat_special_music_slots[music_flags - 1036], 7);
-		else
-			music_compat_name[0] = 0; // becomes empty string
-		music_compat_name[6] = 0;
-		music_name = (const char *)&music_compat_name;
-	}
-	else
-	{
-		music_num = 0;
-		music_name = luaL_checkstring(L, 1);
-	}
-#else
 	const char *music_name = luaL_checkstring(L, 1);
-#endif
 	NOHUD
 	lua_pushboolean(L, S_MusicExists(music_name, checkMIDI, checkDigi));
 	return 1;
@@ -3872,6 +3821,8 @@ static luaL_Reg lib[] = {
 	{"P_SpawnSpinMobj",lib_pSpawnSpinMobj},
 	{"P_Telekinesis",lib_pTelekinesis},
 	{"P_SwitchShield",lib_pSwitchShield},
+	{"P_PlayerCanEnterSpinGaps",lib_pPlayerCanEnterSpinGaps},
+	{"P_PlayerShouldUseSpinHeight",lib_pPlayerShouldUseSpinHeight},
 
 	// p_map
 	{"P_CheckPosition",lib_pCheckPosition},

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1302,10 +1302,6 @@ boolean CON_Responder(event_t *ev)
 	// enter a char into the command prompt
 	if (key < 32 || key > 127)
 		return true;
-
-	// add key to cmd line here
-	if (key >= 'A' && key <= 'Z' && !(shiftdown ^ capslock)) //this is only really necessary for dedicated servers
-		key = key + 'a' - 'A';
 
 	if (input_sel != input_cur)
 		CON_InputDelSelection();

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -24,10 +24,6 @@
 #include "dehacked.h"
 #include "deh_lua.h"
 #include "deh_tables.h"
-
-#ifdef MUSICSLOT_COMPATIBILITY
-#include "deh_soc.h" // for get_mus
-#endif
 
 // freeslot takes a name (string only!)
 // and allocates it to the appropriate free slot.
@@ -430,29 +426,6 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "sfx '%s' could not be found.\n", word);
 		return 0;
 	}
-#ifdef MUSICSLOT_COMPATIBILITY
-	else if (!mathlib && fastncmp("mus_",word,4)) {
-		p = word+4;
-		if ((i = get_mus(p, false)) == 0)
-			return 0;
-		lua_pushinteger(L, i);
-		return 1;
-	}
-	else if (mathlib && fastncmp("MUS_",word,4)) { // SOCs are ALL CAPS!
-		p = word+4;
-		if ((i = get_mus(p, false)) == 0)
-			return luaL_error(L, "music '%s' could not be found.\n", word);
-		lua_pushinteger(L, i);
-		return 1;
-	}
-	else if (mathlib && (fastncmp("O_",word,2) || fastncmp("D_",word,2))) {
-		p = word+2;
-		if ((i = get_mus(p, false)) == 0)
-			return luaL_error(L, "music '%s' could not be found.\n", word);
-		lua_pushinteger(L, i);
-		return 1;
-	}
-#endif
 	else if (!mathlib && fastncmp("pw_",word,3)) {
 		p = word+3;
 		for (i = 0; i < NUMPOWERS; i++)
