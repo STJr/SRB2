@@ -62,6 +62,9 @@ static  FBITFIELD   CurrentPolyFlags;
 static FTextureInfo *TexCacheTail = NULL;
 static FTextureInfo *TexCacheHead = NULL;
 
+static RGBA_t *textureBuffer = NULL;
+static size_t textureBufferSize = 0;
+
 RGBA_t  myPaletteData[256];
 GLint   screen_width    = 0;               // used by Draw2DLine()
 GLint   screen_height   = 0;
@@ -200,32 +203,6 @@ static void GL_MSG_Error(const char *format, ...)
 		gllogstream = fopen("ogllog.txt", "w");
 	fwrite(str, strlen(str), 1, gllogstream);
 #endif
-}
-
-// ----------------------+
-// GetTextureFormatName  : Returns the corresponding texture format string from the texture format enumeration.
-// ----------------------+
-static const char *GetTextureFormatName(INT32 format)
-{
-	static char num[12];
-
-	switch (format)
-	{
-		case GL_TEXFMT_P_8:                return "GL_TEXFMT_P_8";
-		case GL_TEXFMT_AP_88:              return "GL_TEXFMT_AP_88";
-		case GL_TEXFMT_RGBA:               return "GL_TEXFMT_RGBA";
-		case GL_TEXFMT_ALPHA_8:            return "GL_TEXFMT_ALPHA_8";
-		case GL_TEXFMT_INTENSITY_8:        return "GL_TEXFMT_INTENSITY_8";
-		case GL_TEXFMT_ALPHA_INTENSITY_88: return "GL_TEXFMT_ALPHA_INTENSITY_88";
-		default:                           break;
-	}
-
-	// If the texture format is not known (due to it being invalid),
-	// return a string containing the format index instead.
-	format = INT32_MIN;
-	snprintf(num, sizeof(num), "%d", format);
-
-	return num;
 }
 
 #ifdef STATIC_OPENGL
@@ -1366,6 +1343,10 @@ void Flush(void)
 
 	TexCacheTail = TexCacheHead = NULL; //Hurdler: well, TexCacheHead is already NULL
 	tex_downloaded = 0;
+
+	free(textureBuffer);
+	textureBuffer = NULL;
+	textureBufferSize = 0;
 }
 
 
@@ -1758,28 +1739,16 @@ EXPORT void HWRAPI(SetBlend) (FBITFIELD PolyFlags)
 	CurrentPolyFlags = PolyFlags;
 }
 
-// -------------------+
-// AllocTextureBuffer : Allocates memory for converting a non-RGBA texture into an RGBA texture.
-// -------------------+
-static RGBA_t *AllocTextureBuffer(GLMipmap_t *pTexInfo)
+static void AllocTextureBuffer(GLMipmap_t *pTexInfo)
 {
-	size_t len = (pTexInfo->width * pTexInfo->height);
-	RGBA_t *tex = calloc(len, sizeof(RGBA_t));
-
-	if (tex == NULL)
-		I_Error("AllocTextureBuffer: out of memory allocating %s bytes for texture %d, format %s",
-		sizeu1(len * sizeof(RGBA_t)), pTexInfo->downloaded, GetTextureFormatName(pTexInfo->format));
-
-	return tex;
-}
-
-// ------------------+
-// FreeTextureBuffer : Frees memory allocated by AllocTextureBuffer.
-// ------------------+
-static void FreeTextureBuffer(RGBA_t *tex)
-{
-	if (tex)
-		free(tex);
+	size_t size = pTexInfo->width * pTexInfo->height;
+	if (size > textureBufferSize)
+	{
+		textureBuffer = realloc(textureBuffer, size * sizeof(RGBA_t));
+		if (textureBuffer == NULL)
+			I_Error("AllocTextureBuffer: out of memory allocating %s bytes", sizeu1(size * sizeof(RGBA_t)));
+		textureBufferSize = size;
+	}
 }
 
 // -----------------+
@@ -1810,7 +1779,8 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 
 	if ((pTexInfo->format == GL_TEXFMT_P_8) || (pTexInfo->format == GL_TEXFMT_AP_88))
 	{
-		ptex = tex = AllocTextureBuffer(pTexInfo);
+		AllocTextureBuffer(pTexInfo);
+		ptex = tex = textureBuffer;
 
 		for (j = 0; j < h; j++)
 		{
@@ -1851,7 +1821,8 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 	}
 	else if (pTexInfo->format == GL_TEXFMT_ALPHA_INTENSITY_88)
 	{
-		ptex = tex = AllocTextureBuffer(pTexInfo);
+		AllocTextureBuffer(pTexInfo);
+		ptex = tex = textureBuffer;
 
 		for (j = 0; j < h; j++)
 		{
@@ -1868,7 +1839,8 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 	}
 	else if (pTexInfo->format == GL_TEXFMT_ALPHA_8) // Used for fade masks
 	{
-		ptex = tex = AllocTextureBuffer(pTexInfo);
+		AllocTextureBuffer(pTexInfo);
+		ptex = tex = textureBuffer;
 
 		for (j = 0; j < h; j++)
 		{
@@ -1962,9 +1934,6 @@ EXPORT void HWRAPI(UpdateTexture) (GLMipmap_t *pTexInfo)
 				pglTexImage2D(GL_TEXTURE_2D, 0, textureformatGL, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, ptex);
 		}
 	}
-
-	// Free the texture buffer
-	FreeTextureBuffer(tex);
 
 	if (pTexInfo->flags & TF_WRAPX)
 		pglTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
