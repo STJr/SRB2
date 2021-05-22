@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -42,7 +42,6 @@ typedef struct floorsplat_s
 	mobj_t *mobj; // Mobj it is tied to
 } floorsplat_t;
 
-void R_DrawFloorSprite(vissprite_t *spr);
-void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis);
+void R_DrawFloorSplat(vissprite_t *spr);
 
 #endif /*__R_SPLATS_H__*/

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -821,7 +821,10 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	}
 
 	if (important && !mainfile)
-		G_SetGameModified(true);
+	{
+		//G_SetGameModified(true);
+		modifiedgame = true; // avoid savemoddata being set to false
+	}
 
 	//
 	// link wad file to search files

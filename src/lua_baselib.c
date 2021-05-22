@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -242,16 +242,10 @@ static const char *GetUserdataUType(lua_State *L)
 //   or players[0].powers -> "player_t.powers"
 static int lib_userdataType(lua_State *L)
 {
-	int type;
 	lua_settop(L, 1); // pop everything except arg 1 (in case somebody decided to add more)
-	type = lua_type(L, 1);
-	if (type == LUA_TLIGHTUSERDATA || type == LUA_TUSERDATA)
-	{
-		lua_pushstring(L, GetUserdataUType(L));
-		return 1;
-	}
-	else
-		return luaL_typerror(L, 1, "userdata");
+	luaL_checktype(L, 1, LUA_TUSERDATA);
+	lua_pushstring(L, GetUserdataUType(L));
+	return 1;
 }
 
 // Takes a metatable as first and only argument
@@ -1669,6 +1663,26 @@ static int lib_pSwitchShield(lua_State *L)
 		return LUA_ErrInvalid(L, "player_t");
 	P_SwitchShield(player, shield);
 	return 0;
+}
+
+static int lib_pPlayerCanEnterSpinGaps(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushboolean(L, P_PlayerCanEnterSpinGaps(player));
+	return 1;
+}
+
+static int lib_pPlayerShouldUseSpinHeight(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushboolean(L, P_PlayerShouldUseSpinHeight(player));
+	return 1;
 }
 
 // P_MAP
@@ -3872,6 +3886,8 @@ static luaL_Reg lib[] = {
 	{"P_SpawnSpinMobj",lib_pSpawnSpinMobj},
 	{"P_Telekinesis",lib_pTelekinesis},
 	{"P_SwitchShield",lib_pSwitchShield},
+	{"P_PlayerCanEnterSpinGaps",lib_pPlayerCanEnterSpinGaps},
+	{"P_PlayerShouldUseSpinHeight",lib_pPlayerShouldUseSpinHeight},
 
 	// p_map
 	{"P_CheckPosition",lib_pCheckPosition},

@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014-2020 by Sonic Team Junior.
+// Copyright (C) 2014-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1301,7 +1301,7 @@ boolean I_PlaySong(boolean looping)
 #if defined (GME_VERSION) && GME_VERSION >= 0x000603
 		if (looping)
 			gme_set_autoload_playback_limit(gme, 0);
-#endif        
+#endif
 		gme_set_equalizer(gme, &eq);
 		gme_start_track(gme, 0);
 		current_track = 0;
