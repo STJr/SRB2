@@ -2486,7 +2486,7 @@ static void P_LoadMapBSP(const virtres_t *virt)
 		if (numsubsectors <= 0)
 			I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
 		if (numnodes <= 0)
-			I_Error("Level has no nodes");
+			I_Error("Level has no nodes (does your map have at least 2 sectors?)");
 		if (numsegs <= 0)
 			I_Error("Level has no segs");
 

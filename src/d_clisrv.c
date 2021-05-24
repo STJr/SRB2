@@ -2952,7 +2952,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	{
 		case KICK_MSG_GO_AWAY:
 			if (!players[pnum].quittime)
-				HU_AddChatText(va("\x82*%s has been kicked (Go away)", player_names[pnum]), false);
+				HU_AddChatText(va("\x82*%s has been kicked (No reason given)", player_names[pnum]), false);
 			kickreason = KR_KICK;
 			break;
 		case KICK_MSG_PING_HIGH:
@@ -2960,7 +2960,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			kickreason = KR_PINGLIMIT;
 			break;
 		case KICK_MSG_CON_FAIL:
-			HU_AddChatText(va("\x82*%s left the game (Synch Failure)", player_names[pnum]), false);
+			HU_AddChatText(va("\x82*%s left the game (Synch failure)", player_names[pnum]), false);
 			kickreason = KR_SYNCH;
 
 			if (M_CheckParm("-consisdump")) // Helps debugging some problems
@@ -3006,7 +3006,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			kickreason = KR_LEAVE;
 			break;
 		case KICK_MSG_BANNED:
-			HU_AddChatText(va("\x82*%s has been banned (Don't come back)", player_names[pnum]), false);
+			HU_AddChatText(va("\x82*%s has been banned (No reason given)", player_names[pnum]), false);
 			kickreason = KR_BAN;
 			break;
 		case KICK_MSG_CUSTOM_KICK:
