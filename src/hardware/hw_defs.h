@@ -108,6 +108,7 @@ typedef struct
 #else
 	FLOAT       anglex,angley;   // aimingangle / viewangle
 #endif
+	FLOAT       facing;          // angle based on spritedef
 	FLOAT       scalex,scaley,scalez;
 	FLOAT       fovxangle, fovyangle;
 	UINT8       splitscreen;

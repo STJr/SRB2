@@ -1577,16 +1577,13 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 
 		sprframe = &sprdef->spriteframes[spr->mobj->frame & FF_FRAMEMASK];
 
+		p.angley = FIXED_TO_FLOAT(AngleFixed(mobjangle));
 		if (sprframe->rotate || papersprite)
-		{
-			fixed_t anglef = AngleFixed(mobjangle);
-
-			p.angley = FIXED_TO_FLOAT(anglef);
-		}
+			p.facing = p.angley;
 		else
 		{
 			const fixed_t anglef = AngleFixed((R_PointToAngle(spr->mobj->x, spr->mobj->y))-ANGLE_180);
-			p.angley = FIXED_TO_FLOAT(anglef);
+			p.facing = FIXED_TO_FLOAT(anglef);
 		}
 
 		p.rollangle = 0.0f;
@@ -1597,10 +1594,6 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			fixed_t anglef = AngleFixed(spr->mobj->rollangle);
 			p.rollangle = FIXED_TO_FLOAT(anglef);
 			p.roll = true;
-
-			// rotation pivot
-			p.centerx = FIXED_TO_FLOAT(spr->mobj->radius/2);
-			p.centery = FIXED_TO_FLOAT(spr->mobj->height/(flip ? -2 : 2));
 
 			// rotation axis
 			if (sprinfo->available)
@@ -1617,8 +1610,11 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 				p.rollflip *= -1;
 		}
 
-		p.anglex = 0.0f;
+		// rotation pivot
+		p.centerx = FIXED_TO_FLOAT(spr->mobj->radius/2);
+		p.centery = FIXED_TO_FLOAT(spr->mobj->height/(flip ? -2 : 2));
 
+		p.anglex = 0.0f;
 #ifdef USE_FTRANSFORM_ANGLEZ
 		p.anglez = 0.0f;
 #ifdef STANDINGSLOPE_MODEL_ROTATION
@@ -1633,13 +1629,17 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			p.anglez = FIXED_TO_FLOAT(tempangle);
 			tempangle = -AngleFixed(R_PointToAngle2(0, 0, tempz, tempy));
 			p.anglex = FIXED_TO_FLOAT(tempangle);
+			p.roll = true;
 		}
-#endif
-		if (spr->mobj->roll)
-			p.anglex += FIXED_TO_FLOAT(AngleFixed(spr->mobj->roll));
-		if (spr->mobj->pitch)
-			p.anglez -= FIXED_TO_FLOAT(AngleFixed(spr->mobj->pitch));
-#endif
+#endif // STANDINGSLOPE_MODEL_ROTATION
+		if (spr->mobj->roll || spr->mobj->pitch)
+		{
+			SINT8 flipfactor = flip ? -1 : 1;
+			p.anglex += flipfactor*FIXED_TO_FLOAT(AngleFixed(spr->mobj->roll));
+			p.anglez -= flipfactor*FIXED_TO_FLOAT(AngleFixed(spr->mobj->pitch));
+			p.roll = true;
+		}
+#endif // USE_FTRANSFORM_ANGLEZ
 
 		// SRB2CBTODO: MD2 scaling support
 		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
