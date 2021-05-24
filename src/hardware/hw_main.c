@@ -5122,9 +5122,15 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spr_topoffset = spritecachedinfo[lumpoff].topoffset;
 
 #ifdef ROTSPRITE
-	rollangle = FixedMul(FINECOSINE((ang) >> ANGLETOFINESHIFT), thing->roll)
-		+ FixedMul(FINESINE((ang) >> ANGLETOFINESHIFT), thing->pitch)
-		+ thing->rollangle;
+	if (papersprite)
+		rollangle = thing->pitch // pitch should flip the sprite rotation on one side of the papersprite (OpenGL does this by default)
+			+ (ang >= ANGLE_180 ? -1 : 1) * thing->rollangle; // rollangle should use the same rotation for both sides of a papersprite (Software behavior parity)
+	else
+	{
+		rollangle = FixedMul(FINECOSINE((ang) >> ANGLETOFINESHIFT), thing->roll)
+			+ FixedMul(FINESINE((ang) >> ANGLETOFINESHIFT), thing->pitch)
+			+ thing->rollangle;
+	}
 	if (rollangle
 	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{

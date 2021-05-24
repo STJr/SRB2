@@ -1579,9 +1579,15 @@ static void R_ProjectSprite(mobj_t *thing)
 	patch = W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 
 #ifdef ROTSPRITE
-	rollangle = FixedMul(FINECOSINE((ang) >> ANGLETOFINESHIFT), thing->roll)
-		+ FixedMul(FINESINE((ang) >> ANGLETOFINESHIFT), thing->pitch)
-		+ thing->rollangle;
+	if (papersprite)
+		rollangle = (ang >= ANGLE_180 ? -1 : 1) * thing->pitch // pitch should flip the sprite rotation on one side of the papersprite
+			+ thing->rollangle; // rollangle should use the same rotation for both sides of a papersprite
+	else
+	{
+		rollangle = FixedMul(FINECOSINE((ang) >> ANGLETOFINESHIFT), thing->roll)
+			+ FixedMul(FINESINE((ang) >> ANGLETOFINESHIFT), thing->pitch)
+			+ thing->rollangle;
+	}
 	if (rollangle
 	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{
