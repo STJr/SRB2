@@ -12971,7 +12971,7 @@ boolean P_PlayerCanEnterSpinGaps(player_t *player)
 	else if (canEnter == 2)
 		return false;
 
-	return ((player->pflags & (PF_SPINNING|PF_GLIDING)) // players who are spinning or gliding
+	return ((player->pflags & (PF_SPINNING|PF_SLIDING|PF_GLIDING)) // players who are spinning, sliding, or gliding
 		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING) // players who are landing from a glide
 		|| JUMPCURLED(player)); // players who are jumpcurled, but only if they would normally jump that way
 }
