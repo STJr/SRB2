@@ -12979,7 +12979,7 @@ boolean P_PlayerCanEnterSpinGaps(player_t *player)
 // returns true if the player should use their skin's spinheight instead of their skin's height
 boolean P_PlayerShouldUseSpinHeight(player_t *player)
 {
-	return ((player->pflags & (PF_SPINNING|PF_GLIDING))
+	return ((player->pflags & (PF_SPINNING|PF_SLIDING|PF_GLIDING))
 		|| (player->mo->state == &states[player->mo->info->painstate])
 		|| (player->panim == PA_ROLL)
 		|| ((player->powers[pw_tailsfly] || (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
