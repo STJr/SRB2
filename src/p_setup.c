@@ -4295,6 +4295,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	P_RunCachedActions();
 
+	P_MapEnd(); // tmthing is no longer needed from this point onwards
+
 	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
 	if (!titlemapinaction)
 	{
@@ -4318,10 +4320,10 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
+		P_MapStart(); // just in case MapLoad modifies tmthing
 		LUAh_MapLoad();
+		P_MapEnd(); // just in case MapLoad modifies tmthing
 	}
-
-	P_MapEnd(); // tmthing is no longer needed from this point onwards
 
 	// No render mode or reloading gamestate, stop here.
 	if (rendermode == render_none || reloadinggamestate)
