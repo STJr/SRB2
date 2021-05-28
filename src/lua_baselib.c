@@ -1044,48 +1044,56 @@ static int lib_pSceneryXYMovement(lua_State *L)
 static int lib_pZMovement(lua_State *L)
 {
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *ptmthing = tmthing;
 	NOHUD
 	INLEVEL
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushboolean(L, P_ZMovement(actor));
 	P_CheckPosition(actor, actor->x, actor->y);
+	P_SetTarget(&tmthing, ptmthing);
 	return 1;
 }
 
 static int lib_pRingZMovement(lua_State *L)
 {
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *ptmthing = tmthing;
 	NOHUD
 	INLEVEL
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	P_RingZMovement(actor);
 	P_CheckPosition(actor, actor->x, actor->y);
+	P_SetTarget(&tmthing, ptmthing);
 	return 0;
 }
 
 static int lib_pSceneryZMovement(lua_State *L)
 {
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *ptmthing = tmthing;
 	NOHUD
 	INLEVEL
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushboolean(L, P_SceneryZMovement(actor));
 	P_CheckPosition(actor, actor->x, actor->y);
+	P_SetTarget(&tmthing, ptmthing);
 	return 1;
 }
 
 static int lib_pPlayerZMovement(lua_State *L)
 {
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *ptmthing = tmthing;
 	NOHUD
 	INLEVEL
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	P_PlayerZMovement(actor);
 	P_CheckPosition(actor, actor->x, actor->y);
+	P_SetTarget(&tmthing, ptmthing);
 	return 0;
 }
 
@@ -1472,11 +1480,13 @@ static int lib_pSpawnSkidDust(lua_State *L)
 static int lib_pMovePlayer(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *ptmthing = tmthing;
 	NOHUD
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	P_MovePlayer(player);
+	P_SetTarget(&tmthing, ptmthing);
 	return 0;
 }
 
