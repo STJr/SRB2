@@ -2952,19 +2952,44 @@ static void P_LinkMapData(void)
 
 // For maps in binary format, add multi-tags from linedef specials. This must be done
 // before any linedef specials have been processed.
+static void P_AddBinaryMapTagsFromLine(sector_t *sector, line_t *line)
+{
+	Tag_Add(&sector->tags, Tag_FGet(&line->tags));
+	if (line->flags & ML_EFFECT6) {
+		if (sides[line->sidenum[0]].textureoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].textureoffset);
+		if (sides[line->sidenum[0]].rowoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].rowoffset);
+	}
+	if (line->flags & ML_TFERLINE) {
+		if (sides[line->sidenum[1]].textureoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].textureoffset);
+		if (sides[line->sidenum[1]].rowoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].rowoffset);
+	}
+}
+
 static void P_AddBinaryMapTags(void)
 {
 	size_t i;
 
 	for (i = 0; i < numlines; i++)
 	{
+		// 96: Apply Tag to Tagged Sectors
 		// 97: Apply Tag to Front Sector
 		// 98: Apply Tag to Back Sector
 		// 99: Apply Tag to Front and Back Sectors
-		if (lines[i].special == 97 || lines[i].special == 99)
-			Tag_Add(&lines[i].frontsector->tags, Tag_FGet(&lines[i].tags));
-		if (lines[i].special == 98 || lines[i].special == 99)
-			Tag_Add(&lines[i].backsector->tags, Tag_FGet(&lines[i].tags));
+		if (lines[i].special == 96) {
+			mtag_t tag = Tag_FGet(&lines[i].frontsector->tags);
+			INT32 s;
+			TAG_ITER_DECLARECOUNTER(0);
+			TAG_ITER_SECTORS(0, tag, s)
+				P_AddBinaryMapTagsFromLine(&sectors[s], &lines[i]);
+		} else if (lines[i].special == 97 || lines[i].special == 99) {
+			P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
+		} else if (lines[i].special == 98 || lines[i].special == 99) {
+			P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
+		}
 	}
 }
 
