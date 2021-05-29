@@ -2980,12 +2980,36 @@ static void P_AddBinaryMapTags(void)
 		// 98: Apply Tag to Back Sector
 		// 99: Apply Tag to Front and Back Sectors
 		if (lines[i].special == 96) {
+			size_t j;
 			mtag_t tag = Tag_FGet(&lines[i].frontsector->tags);
-			INT32 s;
-			TAG_ITER_DECLARECOUNTER(0);
-			TAG_ITER_SECTORS(0, tag, s) {
-				if (s != lines[i].frontsector - sectors)  // Skip the control sector
-					P_AddBinaryMapTagsFromLine(&sectors[s], &lines[i]);
+			mtag_t target_tags[5];
+			target_tags[0] = Tag_FGet(&lines[i].tags);
+			if (lines[i].flags & ML_EFFECT6) {
+				target_tags[1] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
+				target_tags[2] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
+			} else {
+				target_tags[1] = target_tags[2] = 0;
+			}
+			if (lines[i].flags & ML_TFERLINE) {
+				target_tags[3] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
+				target_tags[4] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
+			} else {
+				target_tags[3] = target_tags[4] = 0;
+			}
+
+			for (j = 0; j < numsectors; j++) {
+				CONS_Printf("Sector %zu (tag %d):\n", j, Tag_FGet(&sectors[j].tags));
+				size_t k; for (k = 0; k < 5; k++) {
+					if (k > 0 && !target_tags[k])
+						continue;
+					if (Tag_Find(&sectors[j].tags, target_tags[k])) {
+						Tag_Add(&sectors[j].tags, tag);
+						CONS_Printf("  Tag %d found, added tag %d\n", target_tags[k], tag);
+						break;
+					} else {
+						CONS_Printf("  Tag %d not found\n", target_tags[k]);
+					}
+				}
 			}
 		} else if (lines[i].special == 97 || lines[i].special == 99) {
 			P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
