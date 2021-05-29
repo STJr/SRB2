@@ -93,6 +93,7 @@ set(SRB2_CORE_HEADERS
 	i_video.h
 	info.h
 	keys.h
+	libdivide.h
 	lzf.h
 	m_aatree.h
 	m_anigif.h
