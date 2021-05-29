@@ -11962,6 +11962,7 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 	INT32 j;
 	emblem_t* emblem = M_GetLevelEmblems(gamemap);
 	skincolornum_t emcolor;
+	boolean validEmblem = true;
 
 	while (emblem)
 	{
@@ -11986,8 +11987,19 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 	emcolor = M_GetEmblemColor(&emblemlocations[j]); // workaround for compiler complaint about bad function casting
 	mobj->color = (UINT16)emcolor;
 
-	if (emblemlocations[j].collected
-		|| (emblemlocations[j].type == ET_SKIN && emblemlocations[j].var != players[0].skin))
+	validEmblem = !emblemlocations[j].collected;
+
+	if (emblemlocations[j].type == ET_SKIN)
+	{
+		INT32 skinnum = M_EmblemSkinNum(&emblemlocations[j]);
+
+		if (players[0].skin != skinnum)
+		{
+			validEmblem = false;
+		}
+	}
+
+	if (validEmblem == false)
 	{
 		P_UnsetThingPosition(mobj);
 		mobj->flags |= MF_NOCLIP;

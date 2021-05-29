@@ -1313,8 +1313,9 @@ static void SendNameAndColor(void)
 	cv_skin.value = R_SkinAvailable(cv_skin.string);
 	if ((cv_skin.value < 0) || !R_SkinUsable(consoleplayer, cv_skin.value))
 	{
-		CV_StealthSet(&cv_skin, DEFAULTSKIN);
-		cv_skin.value = 0;
+		INT32 defaultSkinNum = GetPlayerDefaultSkin(consoleplayer);
+		CV_StealthSet(&cv_skin, skins[defaultSkinNum].name);
+		cv_skin.value = defaultSkinNum;
 	}
 
 	// Finally write out the complete packet and send it off.
@@ -1475,7 +1476,8 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	if (server && (p != &players[consoleplayer] && p != &players[secondarydisplayplayer]))
 	{
 		boolean kick = false;
-		INT32 s;
+		UINT32 unlockShift = 0;
+		UINT32 i;
 
 		// team colors
 		if (G_GametypeHasTeams())
@@ -1491,12 +1493,29 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 			kick = true;
 
 		// availabilities
-		for (s = 0; s < MAXSKINS; s++)
+		for (i = 0; i < MAXUNLOCKABLES; i++)
 		{
-			if (!skins[s].availability && (p->availabilities & (1 << s)))
+			if (unlockables[i].type != SECRET_SKIN)
+			{
+				continue;
+			}
+
+			unlockShift++;
+		}
+
+		// If they set an invalid bit to true, then likely a modified client
+		if (unlockShift < 32) // 32 is the max the data type allows
+		{
+			UINT32 illegalMask = UINT32_MAX;
+
+			for (i = 0; i < unlockShift; i++)
+			{
+				illegalMask &= ~(1 << i);
+			}
+			
+			if ((p->availabilities & illegalMask) != 0)
 			{
 				kick = true;
-				break;
 			}
 		}
 

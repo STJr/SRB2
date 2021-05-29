@@ -4576,8 +4576,8 @@ boolean P_AddWadFile(const char *wadfilename)
 	//
 	// look for skins
 	//
-	R_AddSkins(wadnum); // faB: wadfile index in wadfiles[]
-	R_PatchSkins(wadnum); // toast: PATCH PATCH
+	R_AddSkins(wadnum, false); // faB: wadfile index in wadfiles[]
+	R_PatchSkins(wadnum, false); // toast: PATCH PATCH
 	ST_ReloadSkinFaceGraphics();
 
 	//

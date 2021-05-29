@@ -81,6 +81,8 @@ void readskincolor(MYFILE *f, INT32 num);
 void readthing(MYFILE *f, INT32 num);
 void readfreeslots(MYFILE *f);
 void readPlayer(MYFILE *f, INT32 num);
+void clear_emblems(void);
+void clear_unlockables(void);
 void clear_levels(void);
 void clear_conditionsets(void);
 #endif
