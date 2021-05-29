@@ -4626,6 +4626,9 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 		UINT8 *end_p = savebuffer + length;
 		UINT8 *lives_p;
 		SINT8 pllives;
+#ifdef NEWSKINSAVES
+		INT16 backwardsCompat = 0;
+#endif
 
 		save_p = savebuffer;
 		// Version check
@@ -4644,8 +4647,22 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 
 		// P_UnArchivePlayer()
 		CHECKPOS
-		(void)READUINT16(save_p);
+#ifdef NEWSKINSAVES
+		backwardsCompat = READUINT16(save_p);
 		CHECKPOS
+
+		if (backwardsCompat == NEWSKINSAVES) // New save, read skin names
+#endif
+		{
+			char ourSkinName[SKINNAMESIZE+1];
+			char botSkinName[SKINNAMESIZE+1];
+
+			READSTRINGN(save_p, ourSkinName, SKINNAMESIZE);
+			CHECKPOS
+
+			READSTRINGN(save_p, botSkinName, SKINNAMESIZE);
+			CHECKPOS
+		}
 
 		WRITEUINT8(save_p, numgameovers);
 		CHECKPOS
