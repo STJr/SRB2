@@ -2983,8 +2983,10 @@ static void P_AddBinaryMapTags(void)
 			mtag_t tag = Tag_FGet(&lines[i].frontsector->tags);
 			INT32 s;
 			TAG_ITER_DECLARECOUNTER(0);
-			TAG_ITER_SECTORS(0, tag, s)
-				P_AddBinaryMapTagsFromLine(&sectors[s], &lines[i]);
+			TAG_ITER_SECTORS(0, tag, s) {
+				if (s != lines[i].frontsector - sectors)  // Skip the control sector
+					P_AddBinaryMapTagsFromLine(&sectors[s], &lines[i]);
+			}
 		} else if (lines[i].special == 97 || lines[i].special == 99) {
 			P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
 		} else if (lines[i].special == 98 || lines[i].special == 99) {
