@@ -2957,15 +2957,15 @@ static void P_AddBinaryMapTagsFromLine(sector_t *sector, line_t *line)
 	Tag_Add(&sector->tags, Tag_FGet(&line->tags));
 	if (line->flags & ML_EFFECT6) {
 		if (sides[line->sidenum[0]].textureoffset)
-			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].textureoffset);
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].textureoffset / FRACUNIT);
 		if (sides[line->sidenum[0]].rowoffset)
-			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].rowoffset);
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].rowoffset / FRACUNIT);
 	}
 	if (line->flags & ML_TFERLINE) {
 		if (sides[line->sidenum[1]].textureoffset)
-			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].textureoffset);
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].textureoffset / FRACUNIT);
 		if (sides[line->sidenum[1]].rowoffset)
-			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].rowoffset);
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].rowoffset / FRACUNIT);
 	}
 }
 
