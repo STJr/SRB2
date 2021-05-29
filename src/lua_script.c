@@ -380,6 +380,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word, "gamestate")) {
 		lua_pushinteger(L, gamestate);
 		return 1;
+	} else if (fastcmp(word, "stagefailed")) {
+		lua_pushboolean(L, stagefailed);
+		return 1;
 	}
 	return 0;
 }
@@ -429,6 +432,8 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 	}
 	else if (fastcmp(word, "mapmusflags"))
 		mapmusflags = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "stagefailed"))
+		stagefailed = luaL_checkboolean(L, 2);
 	else
 		return 0;
 

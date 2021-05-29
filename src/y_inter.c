@@ -1330,24 +1330,40 @@ void Y_StartIntermission(void)
 			usetile = false;
 
 			// set up the "got through act" message according to skin name
-			// too long so just show "YOU GOT THROUGH THE ACT"
-			if (strlen(skins[players[consoleplayer].skin].realname) > 13)
+			if (stagefailed)
 			{
-				strcpy(data.coop.passed1, "you got");
-				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
+				strcpy(data.coop.passed1, mapheaderinfo[gamemap-1]->lvlttl);
+
+				if (mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE)
+				{
+					data.spec.passed2[0] = '\0';
+				}
+				else
+				{
+					strcpy(data.coop.passed2, "Zone");
+				}
 			}
-			// long enough that "X GOT" won't fit so use "X PASSED THE ACT"
-			else if (strlen(skins[players[consoleplayer].skin].realname) > 8)
-			{
-				strcpy(data.coop.passed1, skins[players[consoleplayer].skin].realname);
-				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "passed act" : "passed the act");
-			}
-			// length is okay for normal use
 			else
 			{
-				snprintf(data.coop.passed1, sizeof data.coop.passed1, "%s got",
-					skins[players[consoleplayer].skin].realname);
-				strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
+				// too long so just show "YOU GOT THROUGH THE ACT"
+				if (strlen(skins[players[consoleplayer].skin].realname) > 13)
+				{
+					strcpy(data.coop.passed1, "you got");
+					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
+				}
+				// long enough that "X GOT" won't fit so use "X PASSED THE ACT"
+				else if (strlen(skins[players[consoleplayer].skin].realname) > 8)
+				{
+					strcpy(data.coop.passed1, skins[players[consoleplayer].skin].realname);
+					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "passed act" : "passed the act");
+				}
+				// length is okay for normal use
+				else
+				{
+					snprintf(data.coop.passed1, sizeof data.coop.passed1, "%s got",
+						skins[players[consoleplayer].skin].realname);
+					strcpy(data.coop.passed2, (mapheaderinfo[gamemap-1]->actnum) ? "through act" : "through the act");
+				}
 			}
 
 			// set X positions
@@ -1364,6 +1380,13 @@ void Y_StartIntermission(void)
 			// The above value is not precalculated because it needs only be computed once
 			// at the start of intermission, and precalculating it would preclude mods
 			// changing the font to one of a slightly different width.
+
+			if ((stagefailed) && !(mapheaderinfo[gamemap-1]->levelflags & LF_NOZONE))
+			{
+				// Bit of a hack, offset so that the "Zone" text is right aligned like title cards.
+				data.coop.passedx2 = (data.coop.passedx1 + V_LevelNameWidth(data.coop.passed1)) - V_LevelNameWidth(data.coop.passed2);
+			}
+
 			break;
 		}
 
@@ -1784,21 +1807,30 @@ static void Y_SetTimeBonus(player_t *player, y_bonus_t *bstruct)
 	strncpy(bstruct->patch, "YB_TIME", sizeof(bstruct->patch));
 	bstruct->display = true;
 
-	// calculate time bonus
-	secs = player->realtime / TICRATE;
-	if      (secs <  30) /*   :30 */ bonus = 50000;
-	else if (secs <  60) /*  1:00 */ bonus = 10000;
-	else if (secs <  90) /*  1:30 */ bonus = 5000;
-	else if (secs < 120) /*  2:00 */ bonus = 4000;
-	else if (secs < 180) /*  3:00 */ bonus = 3000;
-	else if (secs < 240) /*  4:00 */ bonus = 2000;
-	else if (secs < 300) /*  5:00 */ bonus = 1000;
-	else if (secs < 360) /*  6:00 */ bonus = 500;
-	else if (secs < 420) /*  7:00 */ bonus = 400;
-	else if (secs < 480) /*  8:00 */ bonus = 300;
-	else if (secs < 540) /*  9:00 */ bonus = 200;
-	else if (secs < 600) /* 10:00 */ bonus = 100;
-	else  /* TIME TAKEN: TOO LONG */ bonus = 0;
+	if (stagefailed == true)
+	{
+		// Time Bonus would be very easy to cheese by failing immediately.
+		bonus = 0;
+	}
+	else
+	{
+		// calculate time bonus
+		secs = player->realtime / TICRATE;
+		if      (secs <  30) /*   :30 */ bonus = 50000;
+		else if (secs <  60) /*  1:00 */ bonus = 10000;
+		else if (secs <  90) /*  1:30 */ bonus = 5000;
+		else if (secs < 120) /*  2:00 */ bonus = 4000;
+		else if (secs < 180) /*  3:00 */ bonus = 3000;
+		else if (secs < 240) /*  4:00 */ bonus = 2000;
+		else if (secs < 300) /*  5:00 */ bonus = 1000;
+		else if (secs < 360) /*  6:00 */ bonus = 500;
+		else if (secs < 420) /*  7:00 */ bonus = 400;
+		else if (secs < 480) /*  8:00 */ bonus = 300;
+		else if (secs < 540) /*  9:00 */ bonus = 200;
+		else if (secs < 600) /* 10:00 */ bonus = 100;
+		else  /* TIME TAKEN: TOO LONG */ bonus = 0;
+	}
+
 	bstruct->points = bonus;
 }
 
@@ -1851,12 +1883,21 @@ static void Y_SetGuardBonus(player_t *player, y_bonus_t *bstruct)
 	strncpy(bstruct->patch, "YB_GUARD", sizeof(bstruct->patch));
 	bstruct->display = true;
 
-	if      (player->timeshit == 0) bonus = 10000;
-	else if (player->timeshit == 1) bonus = 5000;
-	else if (player->timeshit == 2) bonus = 1000;
-	else if (player->timeshit == 3) bonus = 500;
-	else if (player->timeshit == 4) bonus = 100;
-	else                            bonus = 0;
+	if (stagefailed == true)
+	{
+		// "No-hit" runs would be very easy to cheese by failing immediately.
+		bonus = 0;
+	}
+	else
+	{
+		if      (player->timeshit == 0) bonus = 10000;
+		else if (player->timeshit == 1) bonus = 5000;
+		else if (player->timeshit == 2) bonus = 1000;
+		else if (player->timeshit == 3) bonus = 500;
+		else if (player->timeshit == 4) bonus = 100;
+		else                            bonus = 0;
+	}
+
 	bstruct->points = bonus;
 }
 

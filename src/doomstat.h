@@ -496,7 +496,7 @@ extern UINT32 lastcustomtol;
 
 extern tic_t totalplaytime;
 
-extern UINT8 stagefailed;
+extern boolean stagefailed;
 
 // Emeralds stored as bits to throw savegame hackers off.
 extern UINT16 emeralds;

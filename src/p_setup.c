@@ -3443,8 +3443,10 @@ static void P_InitLevelSettings(void)
 	numstarposts = 0;
 	ssspheres = timeinmap = 0;
 
-	// special stage
-	stagefailed = true; // assume failed unless proven otherwise - P_GiveEmerald or emerald touchspecial
+	// Assume Special Stages were failed in unless proven otherwise - via P_GiveEmerald or emerald touchspecial
+	// Normal stages will default to be OK, until a Lua script / linedef executor says otherwise.
+	stagefailed = G_IsSpecialStage(gamemap);
+
 	// Reset temporary record data
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
 
