@@ -3004,7 +3004,6 @@ static void P_AddBinaryMapTags(void)
 					if (Tag_Find(&sectors[j].tags, target_tags[k])) {
 						Tag_Add(&sectors[j].tags, tag);
 						break;
-					} else {
 					}
 				}
 			}
