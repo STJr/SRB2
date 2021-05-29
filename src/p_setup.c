@@ -3007,10 +3007,11 @@ static void P_AddBinaryMapTags(void)
 					}
 				}
 			}
-		} else if (lines[i].special == 97 || lines[i].special == 99) {
-			P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
-		} else if (lines[i].special == 98 || lines[i].special == 99) {
-			P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
+		} else {
+			if (lines[i].special == 97 || lines[i].special == 99)
+				P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
+			if (lines[i].special == 98 || lines[i].special == 99)
+				P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
 		}
 	}
 }
