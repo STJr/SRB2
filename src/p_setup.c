@@ -2982,28 +2982,31 @@ static void P_AddBinaryMapTags(void)
 		if (lines[i].special == 96) {
 			size_t j;
 			mtag_t tag = Tag_FGet(&lines[i].frontsector->tags);
-			mtag_t target_tags[5];
-			target_tags[0] = Tag_FGet(&lines[i].tags);
+			mtag_t target_tag = Tag_FGet(&lines[i].tags);
+			mtag_t offset_tags[4];
+			memset(offset_tags, 0, sizeof(mtag_t)*4);
 			if (lines[i].flags & ML_EFFECT6) {
-				target_tags[1] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
-				target_tags[2] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
-			} else {
-				target_tags[1] = target_tags[2] = 0;
+				offset_tags[1] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
+				offset_tags[2] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
 			}
 			if (lines[i].flags & ML_TFERLINE) {
-				target_tags[3] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
-				target_tags[4] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
-			} else {
-				target_tags[3] = target_tags[4] = 0;
+				offset_tags[3] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
+				offset_tags[4] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
 			}
 
 			for (j = 0; j < numsectors; j++) {
-				size_t k; for (k = 0; k < 5; k++) {
-					if (k > 0 && !target_tags[k])
-						continue;
-					if (Tag_Find(&sectors[j].tags, target_tags[k])) {
-						Tag_Add(&sectors[j].tags, tag);
-						break;
+				boolean matches_target_tag = Tag_Find(&sectors[j].tags, target_tag);
+				size_t k; for (k = 0; k < 4; k++) {
+					if (lines[i].flags & ML_EFFECT5) {
+						if (matches_target_tag || offset_tags[k] && Tag_Find(&sectors[j].tags, offset_tags[k])) {
+							Tag_Add(&sectors[j].tags, tag);
+							break;
+						}
+					} else if (matches_target_tag) {
+						if (k == 0)
+							Tag_Add(&sectors[j].tags, tag);
+						if (offset_tags[k])
+							Tag_Add(&sectors[j].tags, offset_tags[k]);
 					}
 				}
 			}
