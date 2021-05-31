@@ -2992,7 +2992,7 @@ static void P_CheckUnderwaterAndSpaceTimer(player_t *player)
 		player->powers[pw_spacetime] = 0;
 
 	// Underwater audio cues
-	if (P_IsLocalPlayer(player) && !player->bot)
+	if (P_IsLocalPlayer(player) && !player->bot && !(player->mo->eflags & MFE_COLDWATER))
 	{
 		if ((player->powers[pw_underwater] == 25*TICRATE + 1)
 		|| (player->powers[pw_underwater] == 20*TICRATE + 1)
