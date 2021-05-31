@@ -32,6 +32,7 @@ set(SRB2_CORE_SOURCES
 	m_bbox.c
 	m_cheat.c
 	m_cond.c
+	m_easing.c
 	m_fixed.c
 	m_menu.c
 	m_misc.c
@@ -102,6 +103,7 @@ set(SRB2_CORE_HEADERS
 	m_cheat.h
 	m_cond.h
 	m_dllist.h
+	m_easing.h
 	m_fixed.h
 	m_menu.h
 	m_misc.h
