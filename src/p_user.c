@@ -12621,14 +12621,14 @@ void P_PlayerAfterThink(player_t *player)
 				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > player->mo->radius)
 					player->powers[pw_carry] = CR_NONE;
 
-				if (player->powers[pw_carry] != CR_NONE)
+				if (player->powers[pw_carry] == CR_PLAYER)
 				{
 					if (player->mo->state-states != S_PLAY_RIDE)
 						P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 					if (tails->player && (tails->skin && ((skin_t *)(tails->skin))->sprites[SPR2_SWIM].numframes) && (tails->eflags & MFE_UNDERWATER))
 						tails->player->powers[pw_tailsfly] = 0;
 				}
-				else
+				else if (player->powers[pw_carry] == CR_NONE)
 					P_SetTarget(&player->mo->tracer, NULL);
 
 				if (player-players == consoleplayer && botingame)
@@ -12731,9 +12731,15 @@ void P_PlayerAfterThink(player_t *player)
 
 				if (player->cmd.forwardmove || player->cmd.sidemove)
 				{
-					rock->movedir = (player->cmd.angleturn << FRACBITS) + R_PointToAngle2(0, 0, player->cmd.forwardmove << FRACBITS, -player->cmd.sidemove << FRACBITS);
+					rock->flags2 |= MF2_STRONGBOX; // signifies the rock should not slow to a halt
+					if (twodlevel || (mo->flags2 & MF2_TWOD))
+						rock->movedir = mo->angle;
+					else
+						rock->movedir = (player->cmd.angleturn << FRACBITS) + R_PointToAngle2(0, 0, player->cmd.forwardmove << FRACBITS, -player->cmd.sidemove << FRACBITS);
 					P_Thrust(rock, rock->movedir, rock->scale >> 1);
 				}
+				else
+					rock->flags2 &= ~MF2_STRONGBOX;
 
 				mo->momx = rock->momx;
 				mo->momy = rock->momy;
@@ -12749,7 +12755,7 @@ void P_PlayerAfterThink(player_t *player)
 					mo->tics = walktics;
 				}
 
-				P_TeleportMove(player->mo, rock->x, rock->y, rock->z + rock->height);
+				P_TeleportMove(player->mo, rock->x, rock->y, rock->z + ((mo->eflags & MFE_VERTICALFLIP) ? -mo->height : rock->height));
 				break;
 			}
 			case CR_PTERABYTE: // being carried by a Pterabyte

@@ -429,6 +429,13 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		else
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 	}
+	else if (horizspeed
+		&& object->tracer
+		&& object->tracer->player
+		&& object->tracer->player->powers[pw_carry] != CR_NONE
+		&& object->tracer->tracer == object
+		&& (!demoplayback || P_ControlStyle(object->tracer->player) == CS_LMAOGALOG))
+			P_SetPlayerAngle(object->tracer->player, spring->angle);
 
 	object->standingslope = NULL; // And again.
 
