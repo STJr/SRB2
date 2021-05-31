@@ -337,9 +337,9 @@ typedef struct
 	fixed_t gravity;        ///< Map-wide gravity.
 
 	// Title card.
-	char ltzzpatch[8];      ///< Zig zag patch.
-	char ltzztext[8];       ///< Zig zag text.
-	char ltactdiamond[8];   ///< Act diamond.
+	char ltzzpatch[9];      ///< Zig zag patch.
+	char ltzztext[9];       ///< Zig zag text.
+	char ltactdiamond[9];   ///< Act diamond.
 
 	// Freed animals stuff.
 	UINT8 numFlickies;     ///< Internal. For freed flicky support.
