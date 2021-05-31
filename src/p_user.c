@@ -12971,7 +12971,7 @@ boolean P_PlayerCanEnterSpinGaps(player_t *player)
 	else if (canEnter == 2)
 		return false;
 
-	return ((player->pflags & (PF_SPINNING|PF_GLIDING)) // players who are spinning or gliding
+	return ((player->pflags & (PF_SPINNING|PF_SLIDING|PF_GLIDING)) // players who are spinning, sliding, or gliding
 		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING) // players who are landing from a glide
 		|| JUMPCURLED(player)); // players who are jumpcurled, but only if they would normally jump that way
 }
@@ -12979,7 +12979,7 @@ boolean P_PlayerCanEnterSpinGaps(player_t *player)
 // returns true if the player should use their skin's spinheight instead of their skin's height
 boolean P_PlayerShouldUseSpinHeight(player_t *player)
 {
-	return ((player->pflags & (PF_SPINNING|PF_GLIDING))
+	return ((player->pflags & (PF_SPINNING|PF_SLIDING|PF_GLIDING))
 		|| (player->mo->state == &states[player->mo->info->painstate])
 		|| (player->panim == PA_ROLL)
 		|| ((player->powers[pw_tailsfly] || (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
