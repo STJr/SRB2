@@ -143,6 +143,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	INT64 overflow_test;
 	INT32 range;
 
+	if (!cv_renderwalls.value)
+		return;
+
 	// Calculate light table.
 	// Use different light tables
 	//   for horizontal / vertical / diagonal. Diagonal?
@@ -317,9 +320,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	}
 	else
 		repeats = 1;
-
-	if (!cv_renderwalls.value)
-		return;
 
 	for (times = 0; times < repeats; times++)
 	{
@@ -581,6 +581,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	pslope_t      *skewslope = NULL;
 
 	void (*colfunc_2s) (column_t *);
+
+	if (!cv_renderwalls.value)
+		return;
 
 	// Calculate light table.
 	// Use different light tables
@@ -863,9 +866,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		top_frac += top_step * (x1 - ds->x1);
 		bottom_frac += bottom_step * (x1 - ds->x1);
 	}
-
-	if (!cv_renderwalls.value)
-		return;
 
 	// draw the columns
 	for (dc_x = x1; dc_x <= x2; dc_x++)
@@ -1346,27 +1346,29 @@ static void R_RenderSegLoop (void)
 			// single sided line
 			if (yl <= yh && yh >= 0 && yl < viewheight)
 			{
-				dc_yl = yl;
-				dc_yh = yh;
-				dc_texturemid = rw_midtexturemid;
-				dc_source = R_GetColumn(midtexture,texturecolumn);
-				dc_texheight = textureheight[midtexture]>>FRACBITS;
-
-				//profile stuff ---------------------------------------------------------
-#ifdef TIMING
-				ProfZeroTimer();
-#endif
 				if (cv_renderwalls.value)
+				{
+					dc_yl = yl;
+					dc_yh = yh;
+					dc_texturemid = rw_midtexturemid;
+					dc_source = R_GetColumn(midtexture,texturecolumn);
+					dc_texheight = textureheight[midtexture]>>FRACBITS;
+
+					//profile stuff ---------------------------------------------------------
+#ifdef TIMING
+					ProfZeroTimer();
+#endif
 					colfunc();
 #ifdef TIMING
-				RDMSR(0x10,&mycount);
-				mytotal += mycount;      //64bit add
+					RDMSR(0x10,&mycount);
+					mytotal += mycount;      //64bit add
 
-				if (nombre--==0)
-					I_Error("R_DrawColumn CPU Spy reports: 0x%d %d\n", *((INT32 *)&mytotal+1),
-						(INT32)mytotal);
+					if (nombre--==0)
+						I_Error("R_DrawColumn CPU Spy reports: 0x%d %d\n", *((INT32 *)&mytotal+1),
+							(INT32)mytotal);
 #endif
-				//profile stuff ---------------------------------------------------------
+					//profile stuff ---------------------------------------------------------
+				}
 
 				// dont draw anything more for this column, since
 				// a midtexture blocks the view
@@ -1408,13 +1410,15 @@ static void R_RenderSegLoop (void)
 					}
 					else if (mid >= 0) // safe to draw top texture
 					{
-						dc_yl = yl;
-						dc_yh = mid;
-						dc_texturemid = rw_toptexturemid;
-						dc_source = R_GetColumn(toptexture,texturecolumn);
-						dc_texheight = textureheight[toptexture]>>FRACBITS;
 						if (cv_renderwalls.value)
+						{
+							dc_yl = yl;
+							dc_yh = mid;
+							dc_texturemid = rw_toptexturemid;
+							dc_source = R_GetColumn(toptexture,texturecolumn);
+							dc_texheight = textureheight[toptexture]>>FRACBITS;
 							colfunc();
+						}
 						ceilingclip[rw_x] = (INT16)mid;
 					}
 					else if (!rw_ceilingmarked) // entirely off top of screen
@@ -1445,14 +1449,16 @@ static void R_RenderSegLoop (void)
 					}
 					else if (mid < viewheight) // safe to draw bottom texture
 					{
-						dc_yl = mid;
-						dc_yh = yh;
-						dc_texturemid = rw_bottomtexturemid;
-						dc_source = R_GetColumn(bottomtexture,
-							texturecolumn);
-						dc_texheight = textureheight[bottomtexture]>>FRACBITS;
 						if (cv_renderwalls.value)
+						{
+							dc_yl = mid;
+							dc_yh = yh;
+							dc_texturemid = rw_bottomtexturemid;
+							dc_source = R_GetColumn(bottomtexture,
+								texturecolumn);
+							dc_texheight = textureheight[bottomtexture]>>FRACBITS;
 							colfunc();
+						}
 						floorclip[rw_x] = (INT16)mid;
 					}
 					else if (!rw_floormarked)  // entirely off bottom of screen
