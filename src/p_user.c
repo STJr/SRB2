@@ -9019,8 +9019,11 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 		if (mo->type == MT_MINUS && !(mo->flags & (MF_SPECIAL|MF_SHOOTABLE)))
 			mo->flags = (mo->flags & ~MF_NOCLIPTHING)|MF_SPECIAL|MF_SHOOTABLE;
 
-		if (mo->type == MT_EGGGUARD && mo->tracer) //nuke Egg Guard's shield!
+		if (mo->type == MT_EGGGUARD && mo->tracer) // Egg Guard's shield needs to be removed if it has one!
+		{
 			P_KillMobj(mo->tracer, inflictor, source, DMG_NUKE);
+			P_KillMobj(mo, inflictor, source, DMG_NUKE);
+		}
 
 		if (mo->flags & MF_BOSS || mo->type == MT_PLAYER) //don't OHKO bosses nor players!
 			P_DamageMobj(mo, inflictor, source, 1, DMG_NUKE);
