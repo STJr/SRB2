@@ -4221,7 +4221,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	P_ResetWaypoints();
 
-	P_MapStart();
+	P_MapStart(); // tmthing can be used starting from this point
 
 	if (!P_LoadMapFromFile())
 		return false;
@@ -4274,8 +4274,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// clear special respawning que
 	iquehead = iquetail = 0;
 
-	P_MapEnd();
-
 	// Remove the loading shit from the screen
 	if (rendermode != render_none && !(titlemapinaction || reloadinggamestate))
 		F_WipeColorFill(levelfadecol);
@@ -4294,6 +4292,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	levelloading = false;
 
 	P_RunCachedActions();
+
+	P_MapEnd(); // tmthing is no longer needed from this point onwards
 
 	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
 	if (!titlemapinaction)
@@ -4318,7 +4318,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
+		P_MapStart(); // just in case MapLoad modifies tmthing
 		LUAh_MapLoad();
+		P_MapEnd(); // just in case MapLoad modifies tmthing
 	}
 
 	// No render mode or reloading gamestate, stop here.
