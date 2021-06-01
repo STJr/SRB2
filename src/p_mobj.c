@@ -3290,7 +3290,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 			{ // Water removes electric and non-water fire shields...
 			    if (electric)
 				    P_FlashPal(p, PAL_WHITE, 1);
-				
+
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
 			}
 		}
@@ -3750,6 +3750,7 @@ static void P_CheckCrumblingPlatforms(mobj_t *mobj)
 	for (node = mobj->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
 		ffloor_t *rover;
+		INT32 respawntimer = 0;
 
 		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
@@ -3770,7 +3771,10 @@ static void P_CheckCrumblingPlatforms(mobj_t *mobj)
 					continue;
 			}
 
-			EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), mobj->player, rover->alpha, !(rover->flags & FF_NORETURN));
+			if (rover->master->flags & ML_EFFECT3)
+				respawntimer = sides[rover->master->sidenum[0]].textureoffset >> FRACBITS;
+
+			EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), mobj->player, rover->alpha, !(rover->flags & FF_NORETURN), respawntimer);
 		}
 	}
 }

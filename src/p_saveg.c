@@ -2116,6 +2116,7 @@ static void SaveCrumbleThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->direction);
 	WRITEINT32(save_p, ht->origalpha);
 	WRITEINT32(save_p, ht->timer);
+	WRITEINT32(save_p, ht->respawntimer);
 	WRITEFIXED(save_p, ht->speed);
 	WRITEFIXED(save_p, ht->floorwasheight);
 	WRITEFIXED(save_p, ht->ceilingwasheight);
@@ -3248,6 +3249,7 @@ static thinker_t* LoadCrumbleThinker(actionf_p1 thinker)
 	ht->direction = READINT32(save_p);
 	ht->origalpha = READINT32(save_p);
 	ht->timer = READINT32(save_p);
+	ht->respawntimer = READINT32(save_p);
 	ht->speed = READFIXED(save_p);
 	ht->floorwasheight = READFIXED(save_p);
 	ht->ceilingwasheight = READFIXED(save_p);

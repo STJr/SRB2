@@ -3342,7 +3342,12 @@ static void P_DoClimbing(player_t *player)
 					if (floorclimb)
 					{
 						if (rover->flags & FF_CRUMBLE && !(netgame && player->spectator))
-							EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, !(rover->flags & FF_NORETURN));
+						{
+							INT32 respawntimer = 0;
+							if (rover->master->flags & ML_EFFECT3)
+								respawntimer = sides[rover->master->sidenum[0]].textureoffset >> FRACBITS;
+							EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, !(rover->flags & FF_NORETURN), respawntimer);
+						}
 						break;
 					}
 				}

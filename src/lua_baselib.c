@@ -2530,6 +2530,7 @@ static int lib_evStartCrumble(lua_State *L)
 	player_t *player = NULL;
 	fixed_t origalpha;
 	boolean crumblereturn = lua_optboolean(L, 6);
+	int respawntimer = luaL_optinteger(L, 7, 0);
 	NOHUD
 	if (!sec)
 		return LUA_ErrInvalid(L, "sector_t");
@@ -2545,7 +2546,7 @@ static int lib_evStartCrumble(lua_State *L)
 		origalpha = luaL_checkfixed(L, 5);
 	else
 		origalpha = rover->alpha;
-	lua_pushboolean(L, EV_StartCrumble(sec, rover, floating, player, origalpha, crumblereturn) != 0);
+	lua_pushboolean(L, EV_StartCrumble(sec, rover, floating, player, origalpha, crumblereturn, respawntimer) != 0);
 	return 0;
 }
 

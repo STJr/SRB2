@@ -790,8 +790,8 @@ void T_StartCrumble(crumble_t *crumble)
 	{
 		if (crumble->timer > 0) // Count down the timer
 		{
-			if (--crumble->timer <= 0)
-				crumble->timer = -15*TICRATE; // Timer until platform returns to original position.
+			if (--crumble->timer <= 0) // Set timer until the platform returns to its original position
+				crumble->timer = (crumble->respawntimer == 0) ? -15*TICRATE : -crumble->respawntimer;
 			else
 			{
 				// Timer isn't up yet, so just keep waiting.
@@ -836,7 +836,7 @@ void T_StartCrumble(crumble_t *crumble)
 		}
 
 		// Flash to indicate that the platform is about to return.
-		if (crumble->timer > -224 && (leveltime % ((abs(crumble->timer)/8) + 1) == 0))
+		if (crumble->timer >= -105 && (leveltime % ((abs(crumble->timer)/8) + 1) == 0))
 		{
 			TAG_ITER_SECTORS(tag, i)
 			{
@@ -859,7 +859,7 @@ void T_StartCrumble(crumble_t *crumble)
 					if (rover->alpha == crumble->origalpha)
 					{
 						rover->flags |= FF_TRANSLUCENT;
-						rover->alpha = 0x00;
+						rover->alpha = abs(crumble->timer) < crumble->origalpha ? abs(crumble->timer) : 0x00;
 					}
 					else
 					{
@@ -2322,7 +2322,7 @@ void EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boole
 
 // Some other 3dfloor special things Tails 03-11-2002 (Search p_mobj.c for description)
 INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
-	player_t *player, fixed_t origalpha, boolean crumblereturn)
+	player_t *player, fixed_t origalpha, boolean crumblereturn, INT32 respawntimer)
 {
 	crumble_t *crumble;
 	sector_t *foundsec;
@@ -2356,6 +2356,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	crumble->floorwasheight = crumble->sector->floorheight;
 	crumble->ceilingwasheight = crumble->sector->ceilingheight;
 	crumble->timer = TICRATE;
+	crumble->respawntimer = respawntimer;
 	crumble->player = player;
 	crumble->origalpha = origalpha;
 

@@ -3174,12 +3174,16 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				boolean foundrover = false; // for debug, "Can't find a FOF" message
 				player_t *player = NULL; // player that caused FOF to fall
 				boolean respawn = true; // should the fallen FOF respawn?
+				INT32 respawntimer = 0; // time before respawning
 
 				if (mo) // NULL check
 					player = mo->player;
 
 				if (line->flags & ML_NOCLIMB) // don't respawn!
 					respawn = false;
+
+				if (line->flags & ML_EFFECT3) // Set respawn time via X offset, so ACTUALLY use the tag for the sector tag :p
+					sectag = Tag_FGet(&line->tags);
 
 				TAG_ITER_SECTORS(sectag, secnum)
 				{
@@ -3200,7 +3204,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							if (line->flags & ML_BLOCKMONSTERS) // FOF flags determine respawn ability instead?
 								respawn = !(rover->flags & FF_NORETURN) ^ !!(line->flags & ML_NOCLIMB); // no climb inverts
 
-							EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, respawn);
+							if (line->flags & ML_EFFECT3)
+								respawntimer = sides[line->sidenum[0]].textureoffset >> FRACBITS;
+
+							EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, respawn, respawntimer);
 						}
 					}
 

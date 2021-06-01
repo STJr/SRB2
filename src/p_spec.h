@@ -322,6 +322,7 @@ typedef struct
 	INT32 direction;
 	INT32 origalpha;
 	INT32 timer;
+	INT32 respawntimer;
 	fixed_t speed;
 	fixed_t floorwasheight; // Height the floor WAS at
 	fixed_t ceilingwasheight; // Height the ceiling WAS at
@@ -446,7 +447,7 @@ void EV_BounceSector(sector_t *sector, fixed_t momz, line_t *sourceline);
 
 // Some other special 3dfloor types
 INT32 EV_StartCrumble(sector_t *sector, ffloor_t *rover,
-	boolean floating, player_t *player, fixed_t origalpha, boolean crumblereturn);
+	boolean floating, player_t *player, fixed_t origalpha, boolean crumblereturn, INT32 respawntimer);
 
 void EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boolean backwards);
 
