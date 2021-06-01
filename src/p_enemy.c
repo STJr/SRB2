@@ -9899,8 +9899,8 @@ void A_Custom3DRotate(mobj_t *actor)
 
 	const fixed_t radius = FixedMul(loc1lw*FRACUNIT, actor->scale);
 	const fixed_t hOff = FixedMul(loc1up*FRACUNIT, actor->scale);
-	const fixed_t hspeed = FixedMul(loc2up*FRACUNIT/10, actor->scale);
-	const fixed_t vspeed = FixedMul(loc2lw*FRACUNIT/10, actor->scale);
+	const fixed_t hspeed = loc2up*FRACUNIT/10; // Monster's note (29/05/21): DO NOT SCALE, this is an angular speed!
+	const fixed_t vspeed = loc2lw*FRACUNIT/10; // ditto
 
 	if (LUA_CallAction(A_CUSTOM3DROTATE, actor))
 		return;
