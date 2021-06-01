@@ -2986,12 +2986,12 @@ static void P_AddBinaryMapTags(void)
 			mtag_t offset_tags[4];
 			memset(offset_tags, 0, sizeof(mtag_t)*4);
 			if (lines[i].flags & ML_EFFECT6) {
-				offset_tags[1] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
-				offset_tags[2] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
+				offset_tags[0] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
+				offset_tags[1] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
 			}
 			if (lines[i].flags & ML_TFERLINE) {
-				offset_tags[3] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
-				offset_tags[4] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
+				offset_tags[2] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
+				offset_tags[3] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
 			}
 
 			for (j = 0; j < numsectors; j++) {
