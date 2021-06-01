@@ -5344,7 +5344,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
 			vis->colormap = R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
 		else
-			vis->colormap = R_GetTranslationColormap(TC_BOSS, 0, GTC_CACHE);
+			vis->colormap = R_GetTranslationColormap(TC_BOSS, vis->mobj->color, GTC_CACHE);
 	}
 	else if (thing->color)
 	{
