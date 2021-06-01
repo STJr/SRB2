@@ -2952,19 +2952,70 @@ static void P_LinkMapData(void)
 
 // For maps in binary format, add multi-tags from linedef specials. This must be done
 // before any linedef specials have been processed.
+static void P_AddBinaryMapTagsFromLine(sector_t *sector, line_t *line)
+{
+	Tag_Add(&sector->tags, Tag_FGet(&line->tags));
+	if (line->flags & ML_EFFECT6) {
+		if (sides[line->sidenum[0]].textureoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].textureoffset / FRACUNIT);
+		if (sides[line->sidenum[0]].rowoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].rowoffset / FRACUNIT);
+	}
+	if (line->flags & ML_TFERLINE) {
+		if (sides[line->sidenum[1]].textureoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].textureoffset / FRACUNIT);
+		if (sides[line->sidenum[1]].rowoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].rowoffset / FRACUNIT);
+	}
+}
+
 static void P_AddBinaryMapTags(void)
 {
 	size_t i;
 
 	for (i = 0; i < numlines; i++)
 	{
+		// 96: Apply Tag to Tagged Sectors
 		// 97: Apply Tag to Front Sector
 		// 98: Apply Tag to Back Sector
 		// 99: Apply Tag to Front and Back Sectors
-		if (lines[i].special == 97 || lines[i].special == 99)
-			Tag_Add(&lines[i].frontsector->tags, Tag_FGet(&lines[i].tags));
-		if (lines[i].special == 98 || lines[i].special == 99)
-			Tag_Add(&lines[i].backsector->tags, Tag_FGet(&lines[i].tags));
+		if (lines[i].special == 96) {
+			size_t j;
+			mtag_t tag = Tag_FGet(&lines[i].frontsector->tags);
+			mtag_t target_tag = Tag_FGet(&lines[i].tags);
+			mtag_t offset_tags[4];
+			memset(offset_tags, 0, sizeof(mtag_t)*4);
+			if (lines[i].flags & ML_EFFECT6) {
+				offset_tags[0] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
+				offset_tags[1] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
+			}
+			if (lines[i].flags & ML_TFERLINE) {
+				offset_tags[2] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
+				offset_tags[3] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
+			}
+
+			for (j = 0; j < numsectors; j++) {
+				boolean matches_target_tag = Tag_Find(&sectors[j].tags, target_tag);
+				size_t k; for (k = 0; k < 4; k++) {
+					if (lines[i].flags & ML_EFFECT5) {
+						if (matches_target_tag || (offset_tags[k] && Tag_Find(&sectors[j].tags, offset_tags[k]))) {
+							Tag_Add(&sectors[j].tags, tag);
+							break;
+						}
+					} else if (matches_target_tag) {
+						if (k == 0)
+							Tag_Add(&sectors[j].tags, tag);
+						if (offset_tags[k])
+							Tag_Add(&sectors[j].tags, offset_tags[k]);
+					}
+				}
+			}
+		} else {
+			if (lines[i].special == 97 || lines[i].special == 99)
+				P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
+			if (lines[i].special == 98 || lines[i].special == 99)
+				P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
+		}
 	}
 }
 
