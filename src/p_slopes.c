@@ -817,7 +817,7 @@ void P_SlopeLaunch(mobj_t *mo)
 		mo->momx = slopemom.x;
 		mo->momy = slopemom.y;
 		mo->momz = slopemom.z/2;
-		
+
 	    if (mo->player)
 		    mo->player->powers[pw_justlaunched] = 1;
 	}
