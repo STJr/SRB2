@@ -4274,6 +4274,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	P_MapStart(); // tmthing can be used starting from this point
 
+	P_InitSlopes();
+
 	if (!P_LoadMapFromFile())
 		return false;
 

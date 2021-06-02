@@ -635,9 +635,6 @@ pslope_t *P_SlopeById(UINT16 id)
 void P_SpawnSlopes(const boolean fromsave) {
 	size_t i;
 
-	slopelist = NULL;
-	slopecount = 0;
-
 	/// Generates vertex slopes.
 	SpawnVertexSlopes();
 
@@ -669,6 +666,13 @@ void P_SpawnSlopes(const boolean fromsave) {
 			default:
 				break;
 		}
+}
+
+/// Initializes slopes.
+void P_InitSlopes(void)
+{
+	slopelist = NULL;
+	slopecount = 0;
 }
 
 // ============================================================================
