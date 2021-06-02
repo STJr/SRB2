@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -821,7 +821,10 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	}
 
 	if (important && !mainfile)
-		G_SetGameModified(true);
+	{
+		//G_SetGameModified(true);
+		modifiedgame = true; // avoid savemoddata being set to false
+	}
 
 	//
 	// link wad file to search files
@@ -1682,26 +1685,12 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 		// read the lump in full
 		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
+		ptr = lumpdata;
 
 #ifndef NO_PNG_LUMPS
-		// lump is a png so convert it
 		if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
-		{
-			size_t newlen;
-			void *converted = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, len, &newlen, 0);
-			ptr = Z_Malloc(newlen, PU_STATIC, NULL);
-			M_Memcpy(ptr, converted, newlen);
-			Z_Free(converted);
-			len = newlen;
-		}
-		else // just copy it into the patch cache
+			ptr = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, len, &len, 0);
 #endif
-		{
-			ptr = Z_Malloc(len, PU_STATIC, NULL);
-			M_Memcpy(ptr, lumpdata, len);
-		}
-
-		Z_Free(lumpdata);
 
 		dest = Z_Calloc(sizeof(patch_t), tag, &lumpcache[lump]);
 		Patch_Create(ptr, len, dest);

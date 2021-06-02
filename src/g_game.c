@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -169,7 +169,7 @@ static boolean exitgame = false;
 static boolean retrying = false;
 static boolean retryingmodeattack = false;
 
-UINT8 stagefailed; // Used for GEMS BONUS? Also to see if you beat the stage.
+boolean stagefailed = false; // Used for GEMS BONUS? Also to see if you beat the stage.
 
 UINT16 emeralds;
 INT32 luabanks[NUM_LUABANKS];
@@ -1669,7 +1669,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// At this point, cmd doesn't contain the final angle yet,
 	// So we need to temporarily transform it so Lua scripters
 	// don't need to handle it differently than in other hooks.
-	if (gamestate == GS_LEVEL)
+	if (addedtogame && gamestate == GS_LEVEL)
 	{
 		INT16 extra = ticcmd_oldangleturn[forplayer] - player->oldrelangleturn;
 		INT16 origangle = cmd->angleturn;
@@ -3552,6 +3552,7 @@ tolinfo_t TYPEOFLEVEL[NUMTOLNAMES] = {
 	{"MARIO",TOL_MARIO},
 	{"NIGHTS",TOL_NIGHTS},
 	{"OLDBRAK",TOL_ERZ3},
+	{"ERZ3",TOL_ERZ3},
 
 	{"XMAS",TOL_XMAS},
 	{"CHRISTMAS",TOL_XMAS},
@@ -3787,7 +3788,7 @@ static void G_UpdateVisited(void)
 	// Update visitation flags?
 	if ((!modifiedgame || savemoddata) // Not modified
 		&& !multiplayer && !demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
-		&& !(spec && stagefailed)) // Not failed the special stage
+		&& !stagefailed) // Did not fail the stage
 	{
 		UINT8 earnedEmblems;
 
@@ -3972,12 +3973,13 @@ static void G_DoCompleted(void)
 	{
 		token--;
 
-		for (i = 0; i < 7; i++)
-			if (!(emeralds & (1<<i)))
-			{
-				nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
-				break;
-			}
+		if (!nextmapoverride)
+			for (i = 0; i < 7; i++)
+				if (!(emeralds & (1<<i)))
+				{
+					nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
+					break;
+				}
 
 		if (i == 7)
 		{
@@ -4008,7 +4010,7 @@ static void G_DoCompleted(void)
 	// If the current gametype has no intermission screen set, then don't start it.
 	Y_DetermineIntermissionType();
 
-	if ((skipstats && !modeattacking) || (spec && modeattacking && stagefailed) || (intertype == int_none))
+	if ((skipstats && !modeattacking) || (modeattacking && stagefailed) || (intertype == int_none))
 	{
 		G_UpdateVisited();
 		G_HandleSaveLevel();
@@ -4018,6 +4020,7 @@ static void G_DoCompleted(void)
 	{
 		G_SetGamestate(GS_INTERMISSION);
 		Y_StartIntermission();
+		Y_LoadIntermissionData();
 		G_UpdateVisited();
 		G_HandleSaveLevel();
 	}
@@ -4039,8 +4042,15 @@ void G_AfterIntermission(void)
 
 	HU_ClearCEcho();
 
-	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum && !modeattacking && skipstats <= 1 && (gamecomplete || !(marathonmode & MA_NOCUTSCENES))) // Start a custom cutscene.
+	if ((gametyperules & GTR_CUTSCENES) && mapheaderinfo[gamemap-1]->cutscenenum
+		&& !modeattacking
+		&& skipstats <= 1
+		&& (gamecomplete || !(marathonmode & MA_NOCUTSCENES))
+		&& stagefailed == false)
+	{
+		// Start a custom cutscene.
 		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
+	}
 	else
 	{
 		if (nextmap < 1100-1)
@@ -4662,6 +4672,9 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 		UINT8 *end_p = savebuffer + length;
 		UINT8 *lives_p;
 		SINT8 pllives;
+#ifdef NEWSKINSAVES
+		INT16 backwardsCompat = 0;
+#endif
 
 		save_p = savebuffer;
 		// Version check
@@ -4680,8 +4693,22 @@ void G_SaveGameOver(UINT32 slot, boolean modifylives)
 
 		// P_UnArchivePlayer()
 		CHECKPOS
-		(void)READUINT16(save_p);
+#ifdef NEWSKINSAVES
+		backwardsCompat = READUINT16(save_p);
 		CHECKPOS
+
+		if (backwardsCompat == NEWSKINSAVES) // New save, read skin names
+#endif
+		{
+			char ourSkinName[SKINNAMESIZE+1];
+			char botSkinName[SKINNAMESIZE+1];
+
+			READSTRINGN(save_p, ourSkinName, SKINNAMESIZE);
+			CHECKPOS
+
+			READSTRINGN(save_p, botSkinName, SKINNAMESIZE);
+			CHECKPOS
+		}
 
 		WRITEUINT8(save_p, numgameovers);
 		CHECKPOS
