@@ -87,6 +87,7 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope);
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope);
 void P_ButteredSlope(mobj_t *mo);
 
+pslope_t *MakeViaEquationConstants(const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d);
 
 /// Dynamic plane type enum for the thinker. Will have a different functionality depending on this.
 typedef enum {

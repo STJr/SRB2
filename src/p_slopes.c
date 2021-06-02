@@ -90,6 +90,36 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 	}
 }
 
+/// Setup slope via constants.
+static void ReconfigureViaConstants (pslope_t *slope, const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d)
+{
+	fixed_t m;
+	vector3_t *normal = &slope->normal;
+
+	// Set origin.
+	FV3_Load(&slope->o, 0, 0, c ? -FixedDiv(d, c) : 0);
+
+	// Get slope's normal.
+	FV3_Load(normal, a, b, c);
+	FV3_Normalize(normal);
+
+	// Invert normal if it's facing down.
+	if (normal->z < 0)
+		FV3_Negate(normal);
+
+	// Get direction vector
+	m = FixedHypot(normal->x, normal->y);
+	slope->d.x = -FixedDiv(normal->x, m);
+	slope->d.y = -FixedDiv(normal->y, m);
+
+	// Z delta
+	slope->zdelta = FixedDiv(m, normal->z);
+
+	// Get angles
+	slope->xydirection = R_PointToAngle2(0, 0, slope->d.x, slope->d.y)+ANGLE_180;
+	slope->zangle = InvAngle(R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta));
+}
+
 /// Recalculate dynamic slopes.
 void T_DynamicSlopeLine (dynplanethink_t* th)
 {
@@ -628,6 +658,16 @@ pslope_t *P_SlopeById(UINT16 id)
 {
 	pslope_t *ret;
 	for (ret = slopelist; ret && ret->id != id; ret = ret->next);
+	return ret;
+}
+
+/// Creates a new slope from equation constants.
+pslope_t *MakeViaEquationConstants(const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d)
+{
+	pslope_t* ret = Slope_Add(0);
+
+	ReconfigureViaConstants(ret, a, b, c, d);
+
 	return ret;
 }
 
