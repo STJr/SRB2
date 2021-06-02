@@ -7165,35 +7165,46 @@ static void P_AddFakeFloorsByLine2(size_t li)
 
 		// Solid
 		if (dtype == 1)
-			ffloorflags |= FF_CUTSOLIDS|FF_SOLID|FF_CUTLEVEL;
+		{
+			ffloorflags |= FF_SOLID;
+			if (dopacity >= 255)
+				ffloorflags |= FF_CUTLEVEL;
+			else
+				ffloorflags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
+		}
 		// Water
 		else if (dtype == 2)
-			ffloorflags |= FF_SWIMMABLE|FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA|FF_RIPPLE;
+		{
+			ffloorflags |= FF_SWIMMABLE|FF_RIPPLE|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
+			if (dopacity >= 255)
+				ffloorflags |= 0;
+			else
+				ffloorflags |= FF_TRANSLUCENT;
+		}
 		// Intangible
 		else if (dtype == 3)
+		{
 			ffloorflags |= FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA;
+
+			if (dopacity >= 255)
+				ffloorflags |= 0;
+			else
+				ffloorflags |= FF_TRANSLUCENT;
+		}
+
 	}
 
-	// Non-opaque
-	if (dopacity < 255)
+	// Invisible
+	if (dopacity == 0)
 	{
-		// Invisible
-		if (dopacity == 0)
-		{
-			// True invisible
-			if (ffloorflags & FF_NOSHADE)
-				ffloorflags &= ~(FF_RENDERALL|FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTLEVEL);
-			// Shadow block
-			else
-			{
-				ffloorflags |= FF_CUTSPRITES;
-				ffloorflags &= ~(FF_RENDERALL|FF_CUTEXTRA|FF_EXTRA|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTLEVEL);
-			}
-		}
+		// True invisible
+		if (ffloorflags & FF_NOSHADE)
+			ffloorflags &= ~(FF_RENDERALL|FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTLEVEL);
+		// Shadow block
 		else
 		{
-			ffloorflags |= FF_TRANSLUCENT|FF_CUTEXTRA|FF_EXTRA;
-			ffloorflags &= ~FF_CUTLEVEL;
+			ffloorflags |= FF_CUTSPRITES;
+			ffloorflags &= ~(FF_RENDERALL|FF_CUTEXTRA|FF_EXTRA|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTLEVEL);
 		}
 	}
 
