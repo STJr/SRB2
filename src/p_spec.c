@@ -118,6 +118,7 @@ static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
 static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
+static void P_AddFakeFloorsByLine2(size_t li);
 static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
 static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer);
 static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, INT32 affectee, UINT8 reverse);
@@ -6826,6 +6827,12 @@ void P_SpawnSpecials(boolean fromnetsave)
 					I_Error("Custom FOF (tag %d) found without a linedef back side!", tag);
 				break;
 
+			case 260:
+				if (udmf)
+					P_AddFakeFloorsByLine2(i);
+
+				break;
+
 			case 300: // Linedef executor (combines with sector special 974/975) and commands
 			case 302:
 			case 303:
@@ -7122,6 +7129,79 @@ static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinker
 	line_t* li = lines + line;
 	TAG_ITER_SECTORS(tag, s)
 		P_AddFakeFloor(&sectors[s], &sectors[sec], li, ffloorflags, secthinkers);
+}
+
+static void P_AddFakeFloorsByLine2(size_t li)
+{
+	INT32 s;
+	line_t *line = lines + li;
+	sector_t *control = sides[*line->sidenum].sector;
+
+	mtag_t tag = line->args[0];
+	UINT8 dtype = line->args[1] & 3;
+	UINT8 dflags1 = line->args[1] - dtype;
+	UINT8 dflags2 = line->args[2];
+	UINT8 dopacity = line->args[3];
+	boolean isfog = false;
+
+	ffloortype_e ffloorflags = FF_EXISTS;
+
+	if (dtype == 0)
+		dtype = 1;
+
+	if (dflags2 & 1) ffloorflags |= FF_NOSHADE; // Disable light effects (Means no shadowcast)
+	if (dflags2 & 2) ffloorflags |= FF_DOUBLESHADOW; // Restrict light inside (Means doubleshadow)
+	if (dflags2 & 4) isfog = true; // Fog effect (Explicitly render like a fog block)
+
+	if (dflags1 & 4) ffloorflags |= FF_BOTHPLANES|FF_ALLSIDES; // Render-inside
+	if (dflags1 & 16) ffloorflags |= FF_INVERTSIDES|FF_INVERTPLANES; // Invert visibility rules
+
+	// Fog block
+	if (isfog)
+		ffloorflags |= FF_RENDERALL|FF_CUTEXTRA|FF_CUTSPRITES|FF_BOTHPLANES|FF_EXTRA|FF_FOG|FF_INVERTPLANES|FF_ALLSIDES|FF_INVERTSIDES;
+	else
+	{
+		ffloorflags |= FF_RENDERALL;
+
+		// Solid
+		if (dtype == 1)
+			ffloorflags |= FF_CUTSOLIDS|FF_SOLID|FF_CUTLEVEL;
+		// Water
+		else if (dtype == 2)
+			ffloorflags |= FF_SWIMMABLE|FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA|FF_RIPPLE;
+		// Intangible
+		else if (dtype == 3)
+			ffloorflags |= FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA;
+	}
+
+	// Non-opaque
+	if (dopacity < 255)
+	{
+		// Invisible
+		if (dopacity == 0)
+		{
+			// True invisible
+			if (ffloorflags & FF_NOSHADE)
+				ffloorflags &= ~(FF_RENDERALL|FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTLEVEL);
+			// Shadow block
+			else
+			{
+				ffloorflags |= FF_CUTSPRITES;
+				ffloorflags &= ~(FF_RENDERALL|FF_CUTEXTRA|FF_EXTRA|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTLEVEL);
+			}
+		}
+		else
+		{
+			ffloorflags |= FF_TRANSLUCENT|FF_CUTEXTRA|FF_EXTRA;
+			ffloorflags &= ~FF_CUTLEVEL;
+		}
+	}
+
+	TAG_ITER_SECTORS(tag, s)
+	{
+		ffloor_t *ff = P_AddFakeFloor(&sectors[s], control, line, ffloorflags, NULL);
+		ff->alpha = dopacity;
+	}
 }
 
 /*
