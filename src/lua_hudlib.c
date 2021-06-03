@@ -798,15 +798,15 @@ static int libd_drawLevelActNum(lua_State *L)
 {
 	INT32 x;
 	INT32 y;
-	INT32 flags;
 	UINT8 num;
+	INT32 flags;
 
 	HUDONLY
 
 	x = luaL_checkinteger(L, 1);
 	y = luaL_checkinteger(L, 2);
-	flags = luaL_optinteger(L, 3, 0);
-	num = luaL_checkinteger(L, 4);
+	num = luaL_checkinteger(L, 3);
+	flags = luaL_optinteger(L, 4, 0);
 
 	flags &= ~V_PARAMMASK; // Don't let crashes happen.
 
