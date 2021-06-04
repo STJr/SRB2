@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2020 by Sonic Team Junior.
+// Copyright (C) 2014-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -213,7 +213,7 @@ static int skin_get(lua_State *L)
 		lua_pushinteger(L, skin->availability);
 		break;
 	case skin_sprites:
-		LUA_PushLightUserdata(L, skin->sprites, META_SKINSPRITES);
+		LUA_PushUserdata(L, skin->sprites, META_SKINSPRITES);
 		break;
 	}
 	return 1;
@@ -336,13 +336,13 @@ static const char *const sprites_opt[] = {
 // skin.sprites[i] -> sprites[i]
 static int lib_getSkinSprite(lua_State *L)
 {
-	spritedef_t *sprites = (spritedef_t *)luaL_checkudata(L, 1, META_SKINSPRITES);
+	spritedef_t *sprites = *(spritedef_t **)luaL_checkudata(L, 1, META_SKINSPRITES);
 	playersprite_t i = luaL_checkinteger(L, 2);
 
 	if (i < 0 || i >= NUMPLAYERSPRITES*2)
 		return luaL_error(L, LUA_QL("skin_t") " field 'sprites' index %d out of range (0 - %d)", i, (NUMPLAYERSPRITES*2)-1);
 
-	LUA_PushLightUserdata(L, &sprites[i], META_SKINSPRITESLIST);
+	LUA_PushUserdata(L, &sprites[i], META_SKINSPRITESLIST);
 	return 1;
 }
 
@@ -355,7 +355,7 @@ static int lib_numSkinsSprites(lua_State *L)
 
 static int sprite_get(lua_State *L)
 {
-	spritedef_t *sprite = (spritedef_t *)luaL_checkudata(L, 1, META_SKINSPRITESLIST);
+	spritedef_t *sprite = *(spritedef_t **)luaL_checkudata(L, 1, META_SKINSPRITESLIST);
 	enum spritesopt field = luaL_checkoption(L, 2, NULL, sprites_opt);
 
 	switch (field)
