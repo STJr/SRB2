@@ -185,7 +185,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		transtable = 0;
 		blendmode = AST_MODULATE;
 	}
-	if ((dc_transmap = R_GetBlendTable(blendmode, transtable)))
+	if (transtable != NUMTRANSMAPS && (dc_transmap = R_GetBlendTable(blendmode, transtable)))
 	{
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
