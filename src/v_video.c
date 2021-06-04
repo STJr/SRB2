@@ -333,7 +333,13 @@ static void LoadPalette(const char *lumpname)
 		if (!Cubeapply)
 			continue;
 
-		pLocalPalette[i].rgba = V_GammaEncode(V_CubeApply(&pGammaCorrectedPalette[i]));
+		pLocalPalette[i].rgba =
+#if 0
+			V_GammaEncode(V_CubeApply(&pGammaCorrectedPalette[i])) // ideal, needs a rewrite to take advantage of it though
+#else
+			V_CubeApply(&pMasterPalette[i]) // until then we live in imperfection
+#endif
+			;
 	}
 }
 
