@@ -184,6 +184,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word,"modeattacking")) {
 		lua_pushboolean(L, modeattacking);
 		return 1;
+	} else if (fastcmp(word,"metalrecording")) {
+		lua_pushboolean(L, metalrecording);
+		return 1;
 	} else if (fastcmp(word,"splitscreen")) {
 		lua_pushboolean(L, splitscreen);
 		return 1;
