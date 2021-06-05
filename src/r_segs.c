@@ -162,25 +162,25 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		return;
 
 	transtable = R_GetLinedefTransTable(ldef);
-	if (ldef->special == 910)
+	if (ldef->special >= 910 && ldef->special <= 919)
 	{
 		if (transtable == NUMTRANSMAPS)
 			transtable = 0;
 		blendmode = AST_ADD;
 	}
-	else if (ldef->special == 911)
+	else if (ldef->special >= 920 && ldef->special <= 929)
 	{
 		if (transtable == NUMTRANSMAPS)
 			transtable = 0;
 		blendmode = AST_SUBTRACT;
 	}
-	else if (ldef->special == 912)
+	else if (ldef->special >= 930 && ldef->special <= 939)
 	{
 		if (transtable == NUMTRANSMAPS)
 			transtable = 0;
 		blendmode = AST_REVERSESUBTRACT;
 	}
-	else if (ldef->special == 913)
+	else if (ldef->special == 940)
 	{
 		transtable = 0;
 		blendmode = AST_MODULATE;
