@@ -3156,6 +3156,18 @@ static void P_ConvertBinaryMap(void)
 		if (lines[i].special >= 910 && lines[i].special <= 939)
 			lines[i].alpha = ((10 - lines[i].special % 10) << FRACBITS)/10;
 
+		if (lines[i].special >= 910 && lines[i].special <= 919) // additive
+			lines[i].blendmode = AST_ADD;
+
+		if (lines[i].special >= 920 && lines[i].special <= 929) // subtractive
+			lines[i].blendmode = AST_SUBTRACT;
+
+		if (lines[i].special >= 930 && lines[i].special <= 939) // reverse subtractive
+			lines[i].blendmode = AST_REVERSESUBTRACT;
+
+		if (lines[i].special == 940) // modulate
+			lines[i].blendmode = AST_MODULATE;
+
 		//Linedef executor delay
 		if (lines[i].special >= 400 && lines[i].special < 500)
 		{

@@ -1494,12 +1494,8 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					transnum_t transtable = R_GetLinedefTransTable(gl_linedef);
 					if (transtable == NUMTRANSMAPS)
 						transtable = 0;
-					if (gl_linedef->special >= 910 && gl_linedef->special <= 919)
-						blend = AST_ADD;
-					else if (gl_linedef->special >= 920 && gl_linedef->special <= 929)
-						blend = AST_SUBTRACT;
-					else if (gl_linedef->special >= 930 && gl_linedef->special <= 939)
-						blend = AST_REVERSESUBTRACT;
+					if (gl_linedef->blendmode == AST_ADD || gl_linedef->blendmode == AST_SUBTRACT || gl_linedef->blendmode == AST_REVERSESUBTRACT)
+						blend = gl_linedef->blendmode;
 
 					blendmode = HWR_SurfaceBlend(blend, transtable, &Surf);
 					break;
