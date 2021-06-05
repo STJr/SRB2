@@ -342,7 +342,7 @@ UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 {
 	size_t offs;
 
-	if (style == AST_COPY || style == AST_OVERLAY)
+	if (style <= AST_COPY || style >= AST_OVERLAY)
 		return NULL;
 
 	offs = (ClipBlendLevel(style, alphalevel) << FF_TRANSSHIFT);
@@ -372,7 +372,7 @@ UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 
 boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel)
 {
-	if (blendmode == AST_COPY || blendmode == AST_SUBTRACT || blendmode == AST_MODULATE || blendmode == AST_OVERLAY)
+	if (blendmode <= AST_COPY || blendmode == AST_SUBTRACT || blendmode == AST_MODULATE || blendmode >= AST_OVERLAY)
 		return true;
 
 	return (alphalevel < BlendTab_Count[BlendTab_FromStyle[blendmode]]);

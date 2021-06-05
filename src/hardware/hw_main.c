@@ -703,13 +703,12 @@ static void HWR_RenderSkyPlane(extrasubsector_t *xsub, fixed_t fixedheight)
 
 #endif //doplanes
 
-FBITFIELD HWR_GetBlendModeFlag(INT32 ast)
+FBITFIELD HWR_GetBlendModeFlag(INT32 style)
 {
-	switch (ast)
+	switch (style)
 	{
-		case AST_COPY:
-		case AST_OVERLAY:
-			return PF_Masked;
+		case AST_TRANSLUCENT:
+			return PF_Translucent;
 		case AST_ADD:
 			return PF_Additive;
 		case AST_SUBTRACT:
@@ -719,10 +718,8 @@ FBITFIELD HWR_GetBlendModeFlag(INT32 ast)
 		case AST_MODULATE:
 			return PF_Multiplicative;
 		default:
-			return PF_Translucent;
+			return PF_Masked;
 	}
-
-	return 0;
 }
 
 UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
@@ -748,7 +745,7 @@ UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
 
 FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf)
 {
-	if (!transtablenum || style == AST_COPY || style == AST_OVERLAY)
+	if (!transtablenum || style <= AST_COPY || style >= AST_OVERLAY)
 	{
 		pSurf->PolyColor.s.alpha = 0xff;
 		return PF_Masked;
