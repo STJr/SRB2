@@ -1484,19 +1484,12 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				case 256:
 					blendmode = PF_Translucent;
 					break;
-				case 913:
-					blendmode = PF_Multiplicative;
-					Surf.PolyColor.s.alpha = 0xff;
-					break;
 				default:
 				{
 					UINT32 blend = 0;
 					transnum_t transtable = R_GetLinedefTransTable(gl_linedef);
-					if (transtable == NUMTRANSMAPS)
+					if ((blend = gl_linedef->blendmode) && (transtable == NUMTRANSMAPS || blendmode == AST_MODULATE))
 						transtable = 0;
-					if (gl_linedef->blendmode == AST_ADD || gl_linedef->blendmode == AST_SUBTRACT || gl_linedef->blendmode == AST_REVERSESUBTRACT)
-						blend = gl_linedef->blendmode;
-
 					blendmode = HWR_SurfaceBlend(blend, transtable, &Surf);
 					break;
 				}
