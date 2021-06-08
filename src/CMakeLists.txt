@@ -253,6 +253,8 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Wno-absolute-value)
 endif()
 
+set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Wno-trigraphs)
+
 target_compile_definitions(SRB2SDL2 PRIVATE -DCMAKECONFIG)
 
 #add_library(SRB2Core STATIC
