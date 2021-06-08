@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -955,7 +955,7 @@ void R_ExecuteSetViewSize(void)
 		j = viewheight*16;
 		for (i = 0; i < j; i++)
 		{
-			dy = ((i - viewheight*8)<<FRACBITS) + FRACUNIT/2;
+			dy = (i - viewheight*8)<<FRACBITS;
 			dy = FixedMul(abs(dy), fovtan);
 			yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
 		}
@@ -1089,8 +1089,6 @@ subsector_t *R_PointInSubsectorOrNull(fixed_t x, fixed_t y)
 // 18/08/18: (No it's actually 16*viewheight, thanks Jimita for finding this out)
 static void R_SetupFreelook(player_t *player, boolean skybox)
 {
-	INT32 dy = 0;
-
 #ifndef HWRENDER
 	(void)player;
 	(void)skybox;
@@ -1109,14 +1107,15 @@ static void R_SetupFreelook(player_t *player, boolean skybox)
 		G_SoftwareClipAimingPitch((INT32 *)&aimingangle);
 	}
 
-	if (rendermode == render_soft)
-	{
-		dy = (AIMINGTODY(aimingangle)>>FRACBITS) * viewwidth/BASEVIDWIDTH;
-		yslope = &yslopetab[viewheight*8 - (viewheight/2 + dy)];
-	}
+	centeryfrac = (viewheight/2)<<FRACBITS;
 
-	centery = (viewheight/2) + dy;
-	centeryfrac = centery<<FRACBITS;
+	if (rendermode == render_soft)
+		centeryfrac += FixedMul(AIMINGTODY(aimingangle), FixedDiv(viewwidth<<FRACBITS, BASEVIDWIDTH<<FRACBITS));
+
+	centery = FixedInt(FixedRound(centeryfrac));
+
+	if (rendermode == render_soft)
+		yslope = &yslopetab[viewheight*8 - centery];
 }
 
 void R_SetupFrame(player_t *player)

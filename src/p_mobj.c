@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3188,13 +3188,16 @@ boolean P_SceneryZMovement(mobj_t *mo)
 //
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover)
 {
-	fixed_t topheight = P_GetFFloorTopZAt(rover, player->mo->x, player->mo->y);
+	boolean flip = player->mo->eflags & MFE_VERTICALFLIP;
+	fixed_t surfaceheight = flip ? P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y) : P_GetFFloorTopZAt(rover, player->mo->x, player->mo->y);
+	fixed_t playerbottom = flip ? (player->mo->z + player->mo->height) : player->mo->z;
+	boolean doifit = flip ? (surfaceheight - player->mo->floorz >= player->mo->height) : (player->mo->ceilingz - surfaceheight >= player->mo->height);
 
 	if (!player->powers[pw_carry] && !player->homing
-		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= DASHMODE_THRESHOLD) && player->mo->ceilingz-topheight >= player->mo->height)
+		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= DASHMODE_THRESHOLD) && doifit)
 		&& (rover->flags & FF_SWIMMABLE) && !(player->pflags & PF_SPINNING) && player->speed > FixedMul(player->runspeed, player->mo->scale)
 		&& !(player->pflags & PF_SLIDING)
-		&& abs(player->mo->z - topheight) < FixedMul(30*FRACUNIT, player->mo->scale))
+		&& abs(playerbottom - surfaceheight) < FixedMul(30*FRACUNIT, player->mo->scale))
 		return true;
 
 	return false;
@@ -3283,11 +3286,9 @@ void P_MobjCheckWater(mobj_t *mobj)
 			boolean electric = !!(p->powers[pw_shield] & SH_PROTECTELECTRIC);
 			if (electric || ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER) && !(mobj->eflags & MFE_TOUCHLAVA)))
 			{ // Water removes electric and non-water fire shields...
-				P_FlashPal(p,
-				electric
-				? PAL_WHITE
-				: PAL_NUKE,
-				1);
+			    if (electric)
+				    P_FlashPal(p, PAL_WHITE, 1);
+				
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
 			}
 		}
@@ -4604,9 +4605,8 @@ static boolean P_Boss4MoveCage(mobj_t *mobj, fixed_t delta)
 	INT32 snum;
 	sector_t *sector;
 	boolean gotcage = false;
-	TAG_ITER_DECLARECOUNTER(0);
 
-	TAG_ITER_SECTORS(0, tag, snum)
+	TAG_ITER_SECTORS(tag, snum)
 	{
 		sector = &sectors[snum];
 		sector->floorheight += delta;
@@ -4690,9 +4690,8 @@ static void P_Boss4DestroyCage(mobj_t *mobj)
 	size_t a;
 	sector_t *sector, *rsec;
 	ffloor_t *rover;
-	TAG_ITER_DECLARECOUNTER(0);
 
-	TAG_ITER_SECTORS(0, tag, snum)
+	TAG_ITER_SECTORS(tag, snum)
 	{
 		sector = &sectors[snum];
 
@@ -10440,7 +10439,44 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->x = x;
 	mobj->y = y;
 
-	P_SetMobjSpawnDefaults(mobj);
+	mobj->radius = info->radius;
+	mobj->height = info->height;
+	mobj->flags = info->flags;
+
+	mobj->health = (info->spawnhealth ? info->spawnhealth : 1);
+
+	mobj->reactiontime = info->reactiontime;
+
+	mobj->lastlook = -1; // stuff moved in P_enemy.P_LookForPlayer
+
+	// do not set the state with P_SetMobjState,
+	// because action routines can not be called yet
+	st = &states[info->spawnstate];
+
+	mobj->state = st;
+	mobj->tics = st->tics;
+	mobj->sprite = st->sprite;
+	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
+	P_SetupStateAnimation(mobj, st);
+
+	mobj->friction = ORIG_FRICTION;
+
+	mobj->movefactor = FRACUNIT;
+
+	// All mobjs are created at 100% scale.
+	mobj->scale = FRACUNIT;
+	mobj->destscale = mobj->scale;
+	mobj->scalespeed = FRACUNIT/12;
+
+	// TODO: Make this a special map header
+	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
+		mobj->destscale = FRACUNIT/2;
+
+	// Sprite rendering
+	mobj->blendmode = AST_TRANSLUCENT;
+	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
+	mobj->spritexoffset = mobj->spriteyoffset = 0;
+	mobj->floorspriteslope = NULL;
 
 	// set subsector and/or block links
 	P_SetThingPosition(mobj);
@@ -10747,8 +10783,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		mobj->frame &= ~FF_FRAMEMASK;
 	}
 
-	st = &states[info->spawnstate];
-
 	// Call action functions when the state is set
 	if (st->action.acp1 && (mobj->flags & MF_RUNSPAWNFUNC))
 	{
@@ -10777,52 +10811,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		P_CheckGravity(mobj, false);
 
 	return mobj;
-}
-
-void P_SetMobjSpawnDefaults(mobj_t *mobj)
-{
-	const mobjinfo_t *info = mobj->info;
-	state_t *st = &states[info->spawnstate];
-
-	mobj->radius = info->radius;
-	mobj->height = info->height;
-	mobj->flags = info->flags;
-
-	mobj->health = (info->spawnhealth ? info->spawnhealth : 1);
-
-	mobj->reactiontime = info->reactiontime;
-
-	mobj->lastlook = -1; // stuff moved in P_enemy.P_LookForPlayer
-
-	// do not set the state with P_SetMobjState,
-	// because action routines can not be called yet
-	mobj->state = st;
-	mobj->tics = st->tics;
-	mobj->sprite = st->sprite;
-	mobj->frame = st->frame; // FF_FRAMEMASK for frame, and other bits..
-	P_SetupStateAnimation(mobj, st);
-
-	mobj->friction = ORIG_FRICTION;
-
-	mobj->movefactor = FRACUNIT;
-
-	// All mobjs are created at 100% scale.
-	mobj->scale = FRACUNIT;
-	mobj->destscale = mobj->scale;
-	mobj->scalespeed = FRACUNIT/12;
-
-	// TODO: Make this a special map header
-	if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
-		mobj->destscale = FRACUNIT/2;
-
-	// Make sure scale matches destscale immediately when spawned
-	P_SetScale(mobj, mobj->destscale);
-
-	// Sprite rendering
-	mobj->blendmode = AST_TRANSLUCENT;
-	mobj->spritexscale = mobj->spriteyscale = FRACUNIT;
-	mobj->spritexoffset = mobj->spriteyoffset = 0;
-	mobj->floorspriteslope = NULL;
 }
 
 static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
@@ -11972,6 +11960,7 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 	INT32 j;
 	emblem_t* emblem = M_GetLevelEmblems(gamemap);
 	skincolornum_t emcolor;
+	boolean validEmblem = true;
 
 	while (emblem)
 	{
@@ -11996,8 +11985,19 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 	emcolor = M_GetEmblemColor(&emblemlocations[j]); // workaround for compiler complaint about bad function casting
 	mobj->color = (UINT16)emcolor;
 
-	if (emblemlocations[j].collected
-		|| (emblemlocations[j].type == ET_SKIN && emblemlocations[j].var != players[0].skin))
+	validEmblem = !emblemlocations[j].collected;
+
+	if (emblemlocations[j].type == ET_SKIN)
+	{
+		INT32 skinnum = M_EmblemSkinNum(&emblemlocations[j]);
+
+		if (players[0].skin != skinnum)
+		{
+			validEmblem = false;
+		}
+	}
+
+	if (validEmblem == false)
 	{
 		P_UnsetThingPosition(mobj);
 		mobj->flags |= MF_NOCLIP;

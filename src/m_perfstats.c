@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 by Sonic Team Junior.
+// Copyright (C) 2020-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -62,7 +62,7 @@ int thinkframe_hooks_capacity = 16;
 
 static INT32 draw_row;
 
-void PS_SetThinkFrameHookInfo(int index, UINT32 time_taken, char* short_src)
+void PS_SetThinkFrameHookInfo(int index, precise_t time_taken, char* short_src)
 {
 	if (!thinkframe_hooks)
 	{
@@ -565,7 +565,7 @@ void M_DrawPerfStats(void)
 				len = (int)strlen(str);
 				if (len > 20)
 					str += len - 20;
-				snprintf(s, sizeof s - 1, "%20s: %u", str, thinkframe_hooks[i].time_taken);
+				snprintf(s, sizeof s - 1, "%20s: %d", str, I_PreciseToMicros(thinkframe_hooks[i].time_taken));
 				V_DrawSmallString(x, y, V_MONOSPACE | V_ALLOWLOWERCASE | text_color, s);
 				y += 4; // repeated code!
 				if (y > 192)

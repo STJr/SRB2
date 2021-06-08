@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -418,7 +418,7 @@ void V_SetPalette(INT32 palettenum)
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 		HWR_SetPalette(&pLocalPalette[palettenum*256]);
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	else
 #endif
 #endif
@@ -432,7 +432,7 @@ void V_SetPaletteLump(const char *pal)
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
 		HWR_SetPalette(pLocalPalette);
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	else
 #endif
 #endif
@@ -455,7 +455,8 @@ void VID_BlitLinearScreen_ASM(const UINT8 *srcptr, UINT8 *destptr, INT32 width, 
 
 static void CV_constextsize_OnChange(void)
 {
-	con_recalc = true;
+	if (!con_refresh)
+		con_recalc = true;
 }
 
 

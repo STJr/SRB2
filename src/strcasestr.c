@@ -2,7 +2,7 @@
 strcasestr -- case insensitive substring searching function.
 */
 /*
-Copyright 2019-2020 James R.
+Copyright 2019-2021 James R.
 All rights reserved.
 
 Redistribution and use in source forms, with or without modification, is
