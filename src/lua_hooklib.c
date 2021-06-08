@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -231,7 +231,7 @@ typedef struct Hook_State Hook_State;
 typedef void (*Hook_Callback)(Hook_State *);
 
 struct Hook_State {
-	int          status;/* return status to calling function */
+	INT32        status;/* return status to calling function */
 	void       * userdata;
 	int          hook_type;
 	mobjtype_t   mobj_type;/* >0 if mobj hook */
@@ -1005,13 +1005,13 @@ static void res_musicchange(Hook_State *hook)
 	if (lua_isboolean(gL, -4))
 		*musicchange->looping = lua_toboolean(gL, -4);
 	// output 4: position override
-	if (lua_isboolean(gL, -3))
+	if (lua_isnumber(gL, -3))
 		*musicchange->position = lua_tonumber(gL, -3);
 	// output 5: prefadems override
-	if (lua_isboolean(gL, -2))
+	if (lua_isnumber(gL, -2))
 		*musicchange->prefadems = lua_tonumber(gL, -2);
 	// output 6: fadeinms override
-	if (lua_isboolean(gL, -1))
+	if (lua_isnumber(gL, -1))
 		*musicchange->fadeinms = lua_tonumber(gL, -1);
 }
 
@@ -1050,5 +1050,40 @@ int LUA_HookMusicChange(const char *oldname, struct MusicChange *param)
 		lua_settop(gL, 0);
 	}
 
+	return hook.status;
+}
+
+static void res_playerheight(Hook_State *hook)
+{
+	if (!lua_isnil(gL, -1))
+	{
+		fixed_t returnedheight = lua_tonumber(gL, -1);
+		// 0 height has... strange results, but it's not problematic like negative heights are.
+		// when an object's height is set to a negative number directly with lua, it's forced to 0 instead.
+		// here, I think it's better to ignore negatives so that they don't replace any results of previous hooks!
+		if (returnedheight >= 0)
+			hook->status = returnedheight;
+	}
+}
+
+fixed_t LUA_HookPlayerHeight(player_t *player)
+{
+	Hook_State hook;
+	if (prepare_hook(&hook, -1, HOOK(PlayerHeight)))
+	{
+		LUA_PushUserdata(gL, player, META_PLAYER);
+		call_hooks(&hook, 1, 1, res_playerheight);
+	}
+	return hook.status;
+}
+
+int LUA_HookPlayerCanEnterSpinGaps(player_t *player)
+{
+	Hook_State hook;
+	if (prepare_hook(&hook, 0, HOOK(PlayerCanEnterSpinGaps)))
+	{
+		LUA_PushUserdata(gL, player, META_PLAYER);
+		call_hooks(&hook, 1, 1, res_force);
+	}
 	return hook.status;
 }
