@@ -463,7 +463,8 @@ void G_WriteGhostTic(mobj_t *ghost)
 			WRITEUINT16(demo_p,oldghost.sprite);
 		if (ghostext.flags & EZT_HEIGHT)
 		{
-			WRITEFIXED(demo_p, height);
+			height >>= FRACBITS;
+			WRITEINT16(demo_p, height);
 		}
 		ghostext.flags = 0;
 	}
@@ -619,7 +620,7 @@ void G_ConsGhostTic(void)
 		if (xziptic & EZT_SPRITE)
 			demo_p += sizeof(UINT16);
 		if (xziptic & EZT_HEIGHT)
-			demo_p += (demoversion < 0x000e) ? sizeof(INT16) : sizeof(fixed_t);
+			demo_p += sizeof(INT16);
 	}
 
 	if (ziptic & GZT_FOLLOW)
@@ -853,7 +854,7 @@ void G_GhostTicker(void)
 				g->mo->sprite = READUINT16(g->p);
 			if (xziptic & EZT_HEIGHT)
 			{
-				fixed_t temp = (g->version < 0x000e) ? READINT16(g->p)<<FRACBITS : READFIXED(g->p);
+				fixed_t temp = READINT16(g->p)<<FRACBITS;
 				g->mo->height = FixedMul(temp, g->mo->scale);
 			}
 		}
@@ -1117,7 +1118,7 @@ void G_ReadMetalTic(mobj_t *metal)
 			metal->sprite = READUINT16(metal_p);
 		if (xziptic & EZT_HEIGHT)
 		{
-			fixed_t temp = (metalversion < 0x000e) ? READINT16(metal_p)<<FRACBITS : READFIXED(metal_p);
+			fixed_t temp = READINT16(metal_p)<<FRACBITS;
 			metal->height = FixedMul(temp, metal->scale);
 		}
 	}
@@ -1304,7 +1305,8 @@ void G_WriteMetalTic(mobj_t *metal)
 			WRITEUINT16(demo_p,oldmetal.sprite);
 		if (ghostext.flags & EZT_HEIGHT)
 		{
-			WRITEFIXED(demo_p, height);
+			height >>= FRACBITS;
+			WRITEINT16(demo_p, height);
 		}
 		ghostext.flags = 0;
 	}
@@ -1484,8 +1486,8 @@ void G_BeginRecording(void)
 	WRITEUINT8(demo_p,player->thrustfactor);
 	WRITEUINT8(demo_p,player->accelstart);
 	WRITEUINT8(demo_p,player->acceleration);
-	WRITEFIXED(demo_p,player->height);
-	WRITEFIXED(demo_p,player->spinheight);
+	WRITEUINT8(demo_p,player->height>>FRACBITS);
+	WRITEUINT8(demo_p,player->spinheight>>FRACBITS);
 	WRITEUINT8(demo_p,player->camerascale>>FRACBITS);
 	WRITEUINT8(demo_p,player->shieldscale>>FRACBITS);
 
@@ -1911,8 +1913,8 @@ void G_DoPlayDemo(char *defdemoname)
 	thrustfactor = READUINT8(demo_p);
 	accelstart = READUINT8(demo_p);
 	acceleration = READUINT8(demo_p);
-	height = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
-	spinheight = (demoversion < 0x000e) ? (fixed_t)READUINT8(demo_p)<<FRACBITS : READFIXED(demo_p);
+	height = (fixed_t)READUINT8(demo_p)<<FRACBITS;
+	spinheight = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	camerascale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	shieldscale = (fixed_t)READUINT8(demo_p)<<FRACBITS;
 	jumpfactor = READFIXED(demo_p);
@@ -2158,7 +2160,8 @@ void G_AddGhost(char *defdemoname)
 	p++; // thrustfactor
 	p++; // accelstart
 	p++; // acceleration
-	p += (ghostversion < 0x000e) ? 2 : 2 * sizeof(fixed_t); // height and spinheight
+	p++; // height
+	p++; // spinheight
 	p++; // camerascale
 	p++; // shieldscale
 	p += 4; // jumpfactor
