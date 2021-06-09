@@ -2698,6 +2698,17 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		{
 			//All things are affected by their scale.
 			fixed_t maxstep = FixedMul(MAXSTEPMOVE, thing->scale);
+			
+			if (thing->flags & MF_PUSHABLE)
+			{
+				// If using type Section1:13, double the maxstep.
+				if (GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 13)
+					maxstep <<= 1;
+
+				// If using type Section1:14, no maxstep.
+				if (GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+					maxstep = 0;
+			}
 
 			if (thing->player)
 			{
