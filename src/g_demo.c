@@ -726,7 +726,6 @@ void G_GhostTicker(void)
 		g->mo->y = g->oldmo.y;
 		g->mo->z = g->oldmo.z;
 		P_SetThingPosition(g->mo);
-
 		g->mo->frame = g->oldmo.frame | tr_trans30<<FF_TRANSSHIFT;
 		if (g->fadein)
 		{
