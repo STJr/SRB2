@@ -352,6 +352,7 @@ static void get_hook_from_table(Hook_State *hook, int n)
 {
 	lua_rawgeti(gL, -1, n);
 	hook->id = lua_tonumber(gL, -1);
+	lua_pop(gL, 1);
 	lua_getref(gL, hookRefs[hook->id]);
 }
 
