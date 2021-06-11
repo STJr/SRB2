@@ -851,7 +851,7 @@ void LUA_HookNetArchive(lua_CFunction archFunc)
 		init_hook_call(&hook, 1, 0, res_none);
 		call_mapped(&hook, map);
 
-		lua_pop(gL, 2); // pop hook table and archFunc
+		lua_pop(gL, 1); // pop archFunc
 		lua_remove(gL, EINDEX); // pop error handler
 		// stack: tables
 	}
