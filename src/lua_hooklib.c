@@ -624,7 +624,7 @@ void LUA_HookThinkFrame(void)
 			if (cv_perfstats.value == 3)
 			{
 				lua_Debug ar;
-				time_taken = I_PreciseToMicros(I_GetPreciseTime() - time_taken);
+				time_taken = I_GetPreciseTime() - time_taken;
 				lua_getinfo(gL, ">S", &ar);
 				PS_SetThinkFrameHookInfo(hook_index, time_taken, ar.short_src);
 				hook_index++;
