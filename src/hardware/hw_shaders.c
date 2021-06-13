@@ -834,6 +834,12 @@ skip_field:
 		{
 			int shader_index = i + NUMSHADERTARGETS; // index to gl_shaders
 			gl_shadertargets[i].custom_shader = shader_index;
+			// if only one stage (vertex/fragment) is defined, the other one
+			// is copied from the base shaders.
+			if (!gl_shaders[shader_index].fragment)
+				gl_shaders[shader_index].fragment = Z_StrDup(gl_shadersources[i].fragment);
+			if (!gl_shaders[shader_index].vertex)
+				gl_shaders[shader_index].vertex = Z_StrDup(gl_shadersources[i].vertex);
 			HWR_CompileShader(shader_index);
 			if (!gl_shaders[shader_index].compiled)
 				CONS_Alert(CONS_ERROR, "HWR_LoadCustomShadersFromFile: A compilation error occured for the %s shader in file %s. See the console messages above for more information.\n", shaderxlat[i].type, wadfiles[wadnum]->filename);
