@@ -27,6 +27,7 @@
 #include "r_main.h"
 #include "r_state.h"
 #include "r_defs.h"
+#include "r_dynseg.h"
 
 /*
    Theory behind Polyobjects:
@@ -601,13 +602,17 @@ static void Polyobj_moveToSpawnSpot(mapthing_t *anchor)
 // Attaches a polyobject to its appropriate subsector.
 static void Polyobj_attachToSubsec(polyobj_t *po)
 {
-	subsector_t  *ss;
+	subsector_t *ss;
 	fixed_t center_x = 0, center_y = 0;
 	fixed_t numVertices;
 	size_t i;
 
 	// never attach a bad polyobject
 	if (po->isBad)
+		return;
+
+	// already attached?
+	if (po->attached)
 		return;
 
 	numVertices = (fixed_t)(po->numVertices*FRACUNIT);
@@ -622,25 +627,24 @@ static void Polyobj_attachToSubsec(polyobj_t *po)
 	po->centerPt.y = center_y;
 
 	ss = R_PointInSubsector(po->centerPt.x, po->centerPt.y);
-
 	M_DLListInsert(&po->link, (mdllistitem_t **)(void *)(&ss->polyList));
 
-#ifdef R_LINKEDPORTALS
-	// set spawnSpot's groupid for correct portal sound behavior
-	po->spawnSpot.groupid = ss->sector->groupid;
-#endif
-
-	po->attached = true;
+	R_AttachPolyObject(po);
 }
 
 // Removes a polyobject from the subsector to which it is attached.
 static void Polyobj_removeFromSubsec(polyobj_t *po)
 {
-	if (po->attached)
-	{
-		M_DLListRemove(&po->link);
-		po->attached = false;
-	}
+	// a bad polyobject should never have been attached in the first place
+	if (po->isBad)
+		return;
+
+	// not attached?
+	if (!po->attached)
+		return;
+
+	M_DLListRemove(&po->link);
+	R_DetachPolyObject(po);
 }
 
 // Blockmap Functions

@@ -45,6 +45,7 @@ FUNCMATH fixed_t P_AproxDistance(fixed_t dx, fixed_t dy);
 void P_ClosestPointOnLine(fixed_t x, fixed_t y, line_t *line, vertex_t *result);
 void P_ClosestPointOnLine3D(const vector3_t *p, const vector3_t *line, vector3_t *result);
 INT32 P_PointOnLineSide(fixed_t x, fixed_t y, line_t *line);
+INT32 P_PointOnDivlineSidePrecise(fixed_t x, fixed_t y, const divline_t *line);
 void P_MakeDivline(line_t *li, divline_t *dl);
 void P_CameraLineOpening(line_t *plinedef);
 fixed_t P_InterceptVector(divline_t *v2, divline_t *v1);

@@ -131,6 +131,8 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_bsp.c
 	r_data.c
 	r_draw.c
+	r_dynabsp.c
+	r_dynseg.c
 	r_main.c
 	r_plane.c
 	r_segs.c
@@ -148,6 +150,8 @@ set(SRB2_CORE_RENDER_SOURCES
 	r_data.h
 	r_defs.h
 	r_draw.h
+	r_dynabsp.h
+	r_dynseg.h
 	r_local.h
 	r_main.h
 	r_plane.h

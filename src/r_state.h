@@ -72,6 +72,7 @@ extern subsector_t *subsectors;
 
 extern size_t numnodes;
 extern node_t *nodes;
+extern fnode_t *fnodes;
 
 extern size_t numlines;
 extern line_t *lines;

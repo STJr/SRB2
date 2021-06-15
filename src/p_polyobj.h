@@ -76,8 +76,12 @@ typedef struct polyobj_s
 
 	INT32 parent; // numeric id of parent polyobject
 
-	size_t segCount;        // number of segs in polyobject
-	size_t numSegsAlloc;    // number of segs allocated
+	struct subsector_s **dynaSubsecs;  // list of subsectors holding fragments
+	INT32 numDSS;                      // number of subsector pointers
+	INT32 numDSSAlloc;                 // number of subsector pointers allocated
+
+	size_t segCount;     // number of segs in polyobject
+	size_t numSegsAlloc; // number of segs allocated
 	struct seg_s **segs; // the segs, a reallocating array.
 
 	size_t numVertices;            // number of vertices (generally == segCount)
@@ -88,16 +92,16 @@ typedef struct polyobj_s
 
 	size_t numLines;          // number of linedefs (generally <= segCount)
 	size_t numLinesAlloc;     // number of linedefs allocated
-	struct line_s **lines; // linedefs this polyobject must move
+	struct line_s **lines;    // linedefs this polyobject must move
 
 	degenmobj_t spawnSpot; // location of spawn spot
 	vertex_t    centerPt;  // center point
 	fixed_t zdist;         // viewz distance for sorting
 	angle_t angle;         // for rotation
-	UINT8 attached;         // if true, is attached to a subsector
+	UINT8 attached;        // if true, is attached to a subsector
 
 	fixed_t blockbox[4]; // bounding box for clipping
-	UINT8 linked;         // is linked to blockmap
+	UINT8 linked;        // is linked to blockmap
 	size_t validcount;   // for clipping: prevents multiple checks
 	INT32 damage;        // damage to inflict on stuck things
 	fixed_t thrust;      // amount of thrust to put on blocking objects
@@ -105,7 +109,7 @@ typedef struct polyobj_s
 
 	thinker_t *thinker;  // pointer to a thinker affecting this polyobj
 
-	UINT8 isBad;         // a bad polyobject: should not be rendered/manipulated
+	UINT8 isBad;        // a bad polyobject: should not be rendered/manipulated
 	INT32 translucency; // index to translucency tables
 	INT16 triggertag;   // Tag of linedef executor to trigger on touch
 

@@ -140,13 +140,9 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	INT64 overflow_test;
 	INT32 range;
 
-	// Calculate light table.
-	// Use different light tables
-	//   for horizontal / vertical / diagonal. Diagonal?
-	// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
 	curline = ds->curline;
 
-	frontsector = curline->frontsector;
+	frontsector = curline->polyseg ? curline->polysector : curline->frontsector;
 	backsector = curline->backsector;
 	texnum = R_GetTextureNum(curline->sidedef->midtexture);
 	windowbottom = windowtop = sprbotscreen = INT32_MAX;
@@ -159,7 +155,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	{
 		dc_transmap = R_GetTranslucencyTable(R_GetLinedefTransTable(ldef->alpha));
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
-
 	}
 	else if (ldef->special == 909)
 	{
@@ -229,8 +224,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			rlight->height     = (centeryfrac) - FixedMul(leftheight , ds->scale1);
 			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
 			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
-			//if (x1 > ds->x1)
-				//rlight->height -= (x1 - ds->x1)*rlight->heightstep;
 			rlight->startheight = rlight->height; // keep starting value here to reset for each repeat
 			rlight->lightlevel = *light->lightlevel;
 			rlight->extra_colormap = *light->extra_colormap;
@@ -255,6 +248,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	}
 	else
 	{
+		// Calculate light table.
+		// Use different light tables
+		//   for horizontal / vertical / diagonal. Diagonal?
+		// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
 		if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
 			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);

@@ -16,6 +16,8 @@
 #include "r_local.h"
 #include "r_state.h"
 #include "r_portal.h" // Add seg portals
+#include "r_dynabsp.h"
+#include "r_dynseg.h"
 
 #include "r_splats.h"
 #include "p_local.h" // camera
@@ -716,106 +718,53 @@ void R_SortPolyObjects(subsector_t *sub)
 }
 
 //
-// R_PolysegCompare
+// Recurse through a polynode mini-BSP
 //
-// Callback for qsort to sort the segs of a polyobject. Returns such that the
-// closer one is sorted first. I sure hope this doesn't break anything. -Red
-//
-static int R_PolysegCompare(const void *p1, const void *p2)
+static void R_renderPolyNode(const rpolynode_t *node)
 {
-	const seg_t *seg1 = *(const seg_t * const *)p1;
-	const seg_t *seg2 = *(const seg_t * const *)p2;
-	fixed_t dist1v1, dist1v2, dist2v1, dist2v2;
+	while(node)
+	{
+		seg_t *seg = &node->partition->seg;
 
-	// TODO might be a better way to get distance?
-#define pdist(x, y) (FixedMul(R_PointToDist(x, y), FINECOSINE((R_PointToAngle(x, y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF)
-#define vxdist(v) pdist(v->x, v->y)
+		// render frontspace
+		int side = R_PointOnDynaSegSide(node->partition, FixedToFloat(viewx), FixedToFloat(viewy));
+		R_renderPolyNode(node->children[side]);
 
-	dist1v1 = vxdist(seg1->v1);
-	dist1v2 = vxdist(seg1->v2);
-	dist2v1 = vxdist(seg2->v1);
-	dist2v2 = vxdist(seg2->v2);
+		// render partition seg
+		seg->angle = R_PointToAngleEx(seg->v1->x, seg->v1->y, seg->v2->x, seg->v2->y);
+		seg->polyseg = node->partition->polyobj;
+		R_AddLine(seg);
 
-	if (min(dist1v1, dist1v2) != min(dist2v1, dist2v2))
-		return min(dist1v1, dist1v2) - min(dist2v1, dist2v2);
-
-	{ // That didn't work, so now let's try this.......
-		fixed_t delta1, delta2, x1, y1, x2, y2;
-		vertex_t *near1, *near2, *far1, *far2; // wherever you are~
-
-		delta1 = R_PointToDist2(seg1->v1->x, seg1->v1->y, seg1->v2->x, seg1->v2->y);
-		delta2 = R_PointToDist2(seg2->v1->x, seg2->v1->y, seg2->v2->x, seg2->v2->y);
-
-		delta1 = FixedDiv(128<<FRACBITS, delta1);
-		delta2 = FixedDiv(128<<FRACBITS, delta2);
-
-		if (dist1v1 < dist1v2)
-		{
-			near1 = seg1->v1;
-			far1 = seg1->v2;
-		}
-		else
-		{
-			near1 = seg1->v2;
-			far1 = seg1->v1;
-		}
-
-		if (dist2v1 < dist2v2)
-		{
-			near2 = seg2->v1;
-			far2 = seg2->v2;
-		}
-		else
-		{
-			near2 = seg2->v2;
-			far2 = seg2->v1;
-		}
-
-		x1 = near1->x + FixedMul(far1->x-near1->x, delta1);
-		y1 = near1->y + FixedMul(far1->y-near1->y, delta1);
-
-		x2 = near2->x + FixedMul(far2->x-near2->x, delta2);
-		y2 = near2->y + FixedMul(far2->y-near2->y, delta2);
-
-		return pdist(x1, y1)-pdist(x2, y2);
+		// continue to render backspace
+		node = node->children[side^1];
 	}
-#undef vxdist
-#undef pdist
 }
 
 //
-// R_AddPolyObjects
+// haleyjd: Adds dynamic segs contained in all of the rpolyobj_t fragments
+// contained inside the given subsector into a mini-BSP tree and then
+// renders the BSP. BSPs are only recomputed when polyobject fragments
+// move into or out of the subsector. This is the ultimate heart of the
+// polyobject code.
 //
-// haleyjd 02/19/06
-// Adds all segs in all polyobjects in the given subsector.
+// See r_dynseg.c to see how dynasegs get attached to a subsector in the
+// first place :)
 //
-static void R_AddPolyObjects(subsector_t *sub)
+// See r_dynabsp.c for rpolybsp generation.
+//
+static void R_addDynaSegs(subsector_t *sub)
 {
-	polyobj_t *po = sub->polyList;
-	size_t i, j;
+	boolean needbsp = (!sub->bsp || sub->bsp->dirty);
 
-	numpolys = 0;
-
-	// count polyobjects
-	while (po)
+	if(needbsp)
 	{
-		++numpolys;
-		po = (polyobj_t *)(po->link.next);
+		if(sub->bsp)
+			R_FreeDynaBSP(sub->bsp);
+		sub->bsp = R_BuildDynaBSP(sub);
 	}
 
-	// for render stats
-	ps_numpolyobjects += numpolys;
-
-	// sort polyobjects
-	R_SortPolyObjects(sub);
-
-	// render polyobjects
-	for (i = 0; i < numpolys; ++i)
-	{
-		qsort(po_ptrs[i]->segs, po_ptrs[i]->segCount, sizeof(seg_t *), R_PolysegCompare);
-		for (j = 0; j < po_ptrs[i]->segCount; ++j)
-			R_AddLine(po_ptrs[i]->segs[j]);
-	}
+	if(sub->bsp)
+		R_renderPolyNode(sub->bsp->root);
 }
 
 //
@@ -988,19 +937,21 @@ static void R_Subsector(size_t num)
 	}
 
 	// Polyobjects have planes, too!
-	if (sub->polyList)
+	if (sub->renderPolyList)
 	{
-		polyobj_t *po = sub->polyList;
+		rpolyobj_t *rpo = sub->renderPolyList;
 		sector_t *polysec;
 
-		while (po)
+		while (rpo)
 		{
+			polyobj_t *po = rpo->polyobj;
+
 			if (numffloors >= MAXFFLOORS)
 				break;
 
 			if (!(po->flags & POF_RENDERPLANES)) // Don't draw planes
 			{
-				po = (polyobj_t *)(po->link.next);
+				rpo = (rpolyobj_t *)(rpo->link.next);
 				continue;
 			}
 
@@ -1049,7 +1000,7 @@ static void R_Subsector(size_t num)
 				numffloors++;
 			}
 
-			po = (polyobj_t *)(po->link.next);
+			rpo = (rpolyobj_t *)(rpo->link.next);
 		}
 	}
 
@@ -1070,8 +1021,8 @@ static void R_Subsector(size_t num)
 	firstseg = NULL;
 
 	// haleyjd 02/19/06: draw polyobjects before static lines
-	if (sub->polyList)
-		R_AddPolyObjects(sub);
+	if (sub->renderPolyList)
+		R_addDynaSegs(sub);
 
 	while (count--)
 	{

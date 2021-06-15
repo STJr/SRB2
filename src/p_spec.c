@@ -5188,13 +5188,13 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 				continue;
 			}
 
-			// We're inside it! Yess...
 			if (!polysec->special)
 			{
 				po = (polyobj_t *)(po->link.next);
 				continue;
 			}
 
+			// We're inside it! Yess...
 			if (!(po->flags & POF_TESTHEIGHT)) // Don't do height checking
 				;
 			else if (po->flags & POF_SOLID)

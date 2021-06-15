@@ -444,7 +444,7 @@ static poly_t *CutOutSubsecPoly(seg_t *lseg, INT32 count, poly_t *poly)
 	{
 		line_t *line = lseg->linedef;
 
-		if (lseg->glseg)
+		if (lseg->glseg || lseg->polyseg)
 			continue;
 
 		//x,y,dx,dy (like a divline)

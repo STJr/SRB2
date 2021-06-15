@@ -33,6 +33,7 @@
 #include "r_picformats.h"
 #include "r_sky.h"
 #include "r_draw.h"
+#include "r_dynseg.h"
 
 #include "s_sound.h"
 #include "st_stuff.h"
@@ -103,6 +104,7 @@ seg_t *segs;
 sector_t *sectors;
 subsector_t *subsectors;
 node_t *nodes;
+fnode_t *fnodes;
 line_t *lines;
 side_t *sides;
 mapthing_t *mapthings;
@@ -948,6 +950,12 @@ void P_WriteThings(void)
 // MAP LOADING FUNCTIONS
 //
 
+static void P_InitializeVertex(vertex_t *vt)
+{
+	vt->floorzset = vt->ceilingzset = false;
+	vt->floorz = vt->ceilingz = 0;
+}
+
 static void P_LoadVertices(UINT8 *data)
 {
 	mapvertex_t *mv = (mapvertex_t *)data;
@@ -959,8 +967,7 @@ static void P_LoadVertices(UINT8 *data)
 	{
 		v->x = SHORT(mv->x)<<FRACBITS;
 		v->y = SHORT(mv->y)<<FRACBITS;
-		v->floorzset = v->ceilingzset = false;
-		v->floorz = v->ceilingz = 0;
+		P_InitializeVertex(v);
 	}
 }
 
@@ -1136,6 +1143,23 @@ static void P_SetLinedefV2(size_t i, UINT16 vertex_num)
 	lines[i].v2 = &vertexes[vertex_num];
 }
 
+//
+// P_MakeLineNormal
+//
+// Calculates a 2D normal for the given line and stores it in the line
+//
+static void P_MakeLineNormal(line_t *line)
+{
+	float linedx, linedy, length;
+
+	linedx = FixedToFloat(line->v2->x) - FixedToFloat(line->v1->x);
+	linedy = FixedToFloat(line->v2->y) - FixedToFloat(line->v1->y);
+
+	length   = (float)sqrt(linedx * linedx + linedy * linedy);
+	line->nx =  linedy / length;
+	line->ny = -linedx / length;
+}
+
 static void P_LoadLinedefs(UINT8 *data)
 {
 	maplinedef_t *mld = (maplinedef_t *)data;
@@ -1158,6 +1182,7 @@ static void P_LoadLinedefs(UINT8 *data)
 		ld->sidenum[1] = SHORT(mld->sidenum[1]);
 
 		P_InitializeLinedef(ld);
+		P_MakeLineNormal(ld);
 	}
 }
 
@@ -1828,8 +1853,7 @@ static void P_LoadTextmap(void)
 	{
 		// Defaults.
 		vt->x = vt->y = INT32_MAX;
-		vt->floorzset = vt->ceilingzset = false;
-		vt->floorz = vt->ceilingz = 0;
+		P_InitializeVertex(vt);
 
 		TextmapParse(vertexesPos[i], i, ParseTextmapVertexParameter);
 
@@ -1905,6 +1929,7 @@ static void P_LoadTextmap(void)
 			I_Error("P_LoadTextmap: linedef %s has no sidefront value set!\n", sizeu1(i));
 
 		P_InitializeLinedef(ld);
+		P_MakeLineNormal(ld);
 	}
 
 	for (i = 0, sd = sides; i < numsides; i++, sd++)
@@ -2121,6 +2146,29 @@ static inline void P_LoadSubsectors(UINT8 *data)
 	}
 }
 
+//
+// P_CalcNodeCoefficients
+//
+// haleyjd 06/14/10: Separated from P_LoadNodes, this routine precalculates
+// general line equation coefficients for a node, which are used during the
+// process of dynaseg generation.
+//
+static void P_CalcNodeCoefficients(node_t *node, fnode_t *fnode)
+{
+	// haleyjd 05/16/08: keep floating point versions as well for dynamic
+	// seg splitting operations
+	double fx = (double)FixedToFloat(node->x);
+	double fy = (double)FixedToFloat(node->y);
+	double fdx = (double)FixedToFloat(node->dx);
+	double fdy = (double)FixedToFloat(node->dy);
+
+	// haleyjd 05/20/08: precalculate general line equation coefficients
+	fnode->a = -fdy;
+	fnode->b = fdx;
+	fnode->c = fdy * fx - fdx * fy;
+	fnode->len = sqrt(fdx * fdx + fdy * fdy);
+}
+
 static void P_LoadNodes(UINT8 *data)
 {
 	UINT8 j, k;
@@ -2134,6 +2182,10 @@ static void P_LoadNodes(UINT8 *data)
 		no->y = SHORT(mn->y)<<FRACBITS;
 		no->dx = SHORT(mn->dx)<<FRACBITS;
 		no->dy = SHORT(mn->dy)<<FRACBITS;
+
+		// haleyjd: calculate floating-point data
+		P_CalcNodeCoefficients(no, &fnodes[i]);
+
 		for (j = 0; j < 2; j++)
 		{
 			no->children[j] = SHORT(mn->children[j]);
@@ -2148,7 +2200,7 @@ static void P_LoadNodes(UINT8 *data)
   * \param seg Seg to compute length for.
   * \return Length in fracunits.
   */
-static fixed_t P_SegLength(seg_t *seg)
+fixed_t P_SegLength(seg_t *seg)
 {
 	INT64 dx = (seg->v2->x - seg->v1->x)>>1;
 	INT64 dy = (seg->v2->y - seg->v1->y)>>1;
@@ -2446,6 +2498,7 @@ static void P_LoadExtendedNodes(UINT8 **data, nodetype_t nodetype)
 
 	numnodes = READINT32((*data));
 	nodes = Z_Calloc(numnodes*sizeof(*nodes), PU_LEVEL, NULL);
+	fnodes = Z_Calloc(numnodes*sizeof(*fnodes), PU_LEVEL, NULL);
 
 	for (i = 0, mn = nodes; i < numnodes; i++, mn++)
 	{
@@ -2454,6 +2507,9 @@ static void P_LoadExtendedNodes(UINT8 **data, nodetype_t nodetype)
 		mn->y = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
 		mn->dx = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
 		mn->dy = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
+
+		// haleyjd: calculate floating-point data
+		P_CalcNodeCoefficients(mn, &fnodes[i]);
 
 		// Bounding boxes
 		for (j = 0; j < 2; j++)
@@ -2492,6 +2548,7 @@ static void P_LoadMapBSP(const virtres_t *virt)
 
 		subsectors = Z_Calloc(numsubsectors * sizeof(*subsectors), PU_LEVEL, NULL);
 		nodes      = Z_Calloc(numnodes * sizeof(*nodes), PU_LEVEL, NULL);
+		fnodes     = Z_Calloc(numnodes * sizeof(*fnodes), PU_LEVEL, NULL);
 		segs       = Z_Calloc(numsegs * sizeof(*segs), PU_LEVEL, NULL);
 
 		P_LoadSubsectors(virtssectors->data);
@@ -3235,7 +3292,7 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
 			lines[i].special = 720;
 			break;
-		
+
 		case 900: //Translucent wall (10%)
 		case 901: //Translucent wall (20%)
 		case 902: //Translucent wall (30%)
@@ -4227,6 +4284,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		Z_Free(ss->attached);
 		Z_Free(ss->attachedsolid);
 	}
+
+	// haleyjd 05/16/08: clear dynamic segs
+	R_ClearDynaSegs();
 
 	// Clear pointers that would be left dangling by the purge
 	R_FlushTranslationColormapCache();

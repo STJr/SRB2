@@ -241,6 +241,37 @@ static INT32 P_PointOnDivlineSide(fixed_t x, fixed_t y, divline_t *line)
 	return 1; // back side
 }
 
+INT32 P_PointOnDivlineSidePrecise(fixed_t x, fixed_t y, const divline_t *line)
+{
+	fixed_t dx, dy;
+	INT64 left, right;
+
+	if (!line->dx)
+	{
+		if (x <= line->x)
+			return line->dy > 0;
+
+		return line->dy < 0;
+	}
+	if (!line->dy)
+	{
+		if (y <= line->y)
+			return line->dx < 0;
+
+		return line->dx > 0;
+	}
+
+	dx = (x - line->x);
+	dy = (y - line->y);
+
+	left = line->dy * dx;
+	right = dy * line->dx;
+
+	if (right < left)
+		return 0; // front side
+	return 1; // back side
+}
+
 //
 // P_MakeDivline
 //

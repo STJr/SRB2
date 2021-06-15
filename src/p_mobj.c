@@ -3288,7 +3288,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 			{ // Water removes electric and non-water fire shields...
 			    if (electric)
 				    P_FlashPal(p, PAL_WHITE, 1);
-				
+
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
 			}
 		}

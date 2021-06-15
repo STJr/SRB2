@@ -24,10 +24,6 @@
 
 #include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
 
-#ifdef HWRENDER
-#include "m_aatree.h"
-#endif
-
 #include "taglist.h"
 
 //
@@ -386,6 +382,7 @@ typedef struct line_s
 	vertex_t *v2;
 
 	fixed_t dx, dy; // Precalculated v2 - v1 for side checking.
+	float nx, ny; // SoM 05/11/09: Pre-calculated 2D normal for the line
 
 	// Animation related.
 	INT16 flags;
@@ -453,7 +450,9 @@ typedef struct subsector_s
 	sector_t *sector;
 	INT16 numlines;
 	UINT16 firstline;
-	struct polyobj_s *polyList; // haleyjd 02/19/06: list of polyobjects
+	struct polyobj_s *polyList; // List of polyobjects that physically exist in this subsector.
+	struct rpolyobj_s *renderPolyList; // haleyjd 02/19/06: list of polyobjects
+	struct rpolybsp_s *bsp; // haleyjd 05/05/13: sub-BSP tree
 	size_t validcount;
 } subsector_t;
 
@@ -523,8 +522,11 @@ typedef struct lightmap_s
 //
 typedef struct seg_s
 {
-	vertex_t *v1;
-	vertex_t *v2;
+	union
+	{
+		struct { vertex_t *v1, *v2; };
+		struct { struct dynavertex_s *dyv1, *dyv2; };
+	};
 
 	INT32 side;
 
@@ -541,6 +543,7 @@ typedef struct seg_s
 	sector_t *backsector;
 
 	fixed_t length;	// precalculated seg length
+
 #ifdef HWRENDER
 	// new pointers so that AdjustSegs doesn't mess with v1/v2
 	void *pv1; // polyvertex_t
@@ -550,10 +553,13 @@ typedef struct seg_s
 	lightmap_t *lightmaps; // for static lightmap
 #endif
 
+	polyobj_t *polyseg;
+	sector_t *polysector;
+
 	// Why slow things down by calculating lightlists for every thick side?
 	size_t numlights;
 	r_lightlist_t *rlights;
-	polyobj_t *polyseg;
+
 	boolean dontrenderme;
 	boolean glseg;
 } seg_t;
@@ -573,6 +579,20 @@ typedef struct
 	// If NF_SUBSECTOR its a subsector.
 	UINT16 children[2];
 } node_t;
+
+//
+// fnode
+//
+// haleyjd 12/07/12: The fnode structure holds floating-point general line
+// equation coefficients and float versions of partition line coordinates and
+// lengths. It is kept separate from node_t for purposes of not causing that
+// structure to become cache inefficient.
+//
+typedef struct fnode_s
+{
+	double a, b, c;          // haleyjd 05/20/08: coefficients for general line equation
+	double len;              // length of partition line, for normalization
+} fnode_t;
 
 #if defined(_MSC_VER)
 #pragma pack(1)

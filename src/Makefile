@@ -531,6 +531,8 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_bsp.o    \
 		$(OBJDIR)/r_data.o   \
 		$(OBJDIR)/r_draw.o   \
+		$(OBJDIR)/r_dynabsp.o\
+		$(OBJDIR)/r_dynseg.o \
 		$(OBJDIR)/r_main.o   \
 		$(OBJDIR)/r_plane.o  \
 		$(OBJDIR)/r_segs.o   \

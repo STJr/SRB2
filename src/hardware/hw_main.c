@@ -28,6 +28,7 @@
 #include "../r_patch.h"
 #include "../r_picformats.h"
 #include "../r_bsp.h"
+#include "../r_dynseg.h"
 #include "../d_clisrv.h"
 #include "../w_wad.h"
 #include "../z_zone.h"
@@ -2677,10 +2678,10 @@ static inline void HWR_AddPolyObjectSegs(void)
 			M_Memcpy(gl_fakeline, po_ptrs[i]->segs[j], sizeof(seg_t));
 
 			// Now convert the line to float and add it to be rendered
-			pv1->x = FIXED_TO_FLOAT(gl_fakeline->v1->x);
-			pv1->y = FIXED_TO_FLOAT(gl_fakeline->v1->y);
-			pv2->x = FIXED_TO_FLOAT(gl_fakeline->v2->x);
-			pv2->y = FIXED_TO_FLOAT(gl_fakeline->v2->y);
+			pv1->x = FIXED_TO_FLOAT(gl_fakeline->dyv1->x);
+			pv1->y = FIXED_TO_FLOAT(gl_fakeline->dyv1->y);
+			pv2->x = FIXED_TO_FLOAT(gl_fakeline->dyv2->x);
+			pv2->y = FIXED_TO_FLOAT(gl_fakeline->dyv2->y);
 
 			gl_fakeline->pv1 = pv1;
 			gl_fakeline->pv2 = pv2;
@@ -3227,7 +3228,7 @@ static void HWR_Subsector(size_t num)
 
 		numpolys = 0;
 
-		// Count all the polyobjects, reset the list, and recount them
+		// Count all the polyobjects
 		while (po)
 		{
 			++numpolys;

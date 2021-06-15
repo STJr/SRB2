@@ -50,8 +50,13 @@ FUNCINLINE static ATTRINLINE void M_DLListRemove(mdllistitem_t *item)
 	mdllistitem_t **prev = item->prev;
 	mdllistitem_t *next  = item->next;
 
-	if ((*prev = next))
+	// haleyjd 05/07/13: safety #1: only if prev is non-null
+	if (prev && (*prev = next))
 		next->prev = prev;
+
+	// haleyjd 05/07/13: safety #2: clear links.
+	item->prev = NULL;
+	item->next = NULL;
 }
 
 #endif
