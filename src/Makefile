@@ -237,7 +237,7 @@ exe:=$(bin)/$(EXENAME)
 dbg:=$(bin)/$(DBGNAME)
 
 build_done==== Build is done, look for \
-           $(<F) in $(abspath $(<D)) ===
+           $(<F) at $(abspath $(<D)) ===
 
 all : $(exe)
 	$(call Echo,$(build_done))
