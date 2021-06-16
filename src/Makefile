@@ -15,6 +15,7 @@
 # cleandep - remove dependency files for this build
 # distclean - remove entire executable, object and
 #             dependency file directory structure.
+# dump - disassemble executable
 # info - print settings
 #
 # This Makefile can automatically detect the host system
@@ -83,8 +84,8 @@
 # STATIC=1 - Use static linking.
 # DISTCC=1
 # CCACHE=1
-# NOOBJDUMP=1 - Don't disassemble executable.
-# NOUPX=1 - Don't compress executable.
+# UPX= - UPX command to use for compressing final
+#        executable.
 # WINDOWSHELL=1 - Use Windows commands.
 # PREFIX= - Prefix to many commands, for cross compiling.
 # YASM=1 - Use Yasm instead of NASM assembler.
@@ -165,7 +166,6 @@ ifdef WINDOWSHELL
 GZIP_OPTS+=--rsyncable
 endif
 
-UPX?=upx
 UPX_OPTS?=--best --preserve-build-id
 ifndef ECHO
 UPX_OPTS+=-qq
@@ -242,9 +242,7 @@ all : $(exe)
 	$(call Echo,$(build_done))
 
 ifndef VALGRIND
-ifndef NOOBJDUMP
-all : $(dbg).txt
-endif
+dump : $(dbg).txt
 endif
 
 ifdef STATIC
@@ -310,7 +308,9 @@ LD:=$(CC)
 CC:=$(CC) $(CFLAGS)
 NASM:=$(NASM) $(NASMOPTS) -f $(nasm_format)
 GZIP:=$(GZIP) $(GZIP_OPTS)
+ifdef UPX
 UPX:=$(UPX) $(UPX_OPTS)
+endif
 WINDRES:=$(WINDRES) $(WINDRESFLAGS)\
 	$(debug_opts) --include-dir=win32 -O coff
 
@@ -321,11 +321,14 @@ WINDRES:=$(WINDRES) $(WINDRESFLAGS)\
 # prerequisites
 .SECONDEXPANSION :
 
+# 'UPX' is also recognized in the enviornment by upx
+unexport UPX
+
 # executable stripped of debugging symbols
 $(exe) : $(dbg) | $$(@D)/
 	$(.)$(OBJCOPY) --strip-debug $< $@
 	$(.)-$(OBJCOPY) --add-gnu-debuglink=$< $@
-ifndef NOUPX
+ifdef UPX
 	$(call Echo,Compressing final executable...)
 	$(.)-$(UPX) $@
 endif
