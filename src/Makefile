@@ -236,7 +236,8 @@ DBGNAME?=$(EXENAME).debug
 exe:=$(bin)/$(EXENAME)
 dbg:=$(bin)/$(DBGNAME)
 
-build_done=Build is done, please look for $(<F) in $(<D)
+build_done==== Build is done, look for \
+           $(<F) in $(abspath $(<D)) ===
 
 all : $(exe)
 	$(call Echo,$(build_done))
