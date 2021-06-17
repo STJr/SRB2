@@ -1498,6 +1498,8 @@ void R_RenderPlayerView(player_t *player)
 #endif
 	ps_numbspcalls = ps_numpolyobjects = ps_numdrawnodes = 0;
 	ps_bsptime = I_GetPreciseTime();
+	// Link the polyobjects right before drawing the scene to reduce the amounts of calls to this function
+	Polyobj_LinkToSubsectors();
 	R_RenderBSPNode((INT32)numnodes - 1);
 	ps_bsptime = I_GetPreciseTime() - ps_bsptime;
 	ps_numsprites = visspritecount;

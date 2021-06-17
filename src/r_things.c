@@ -2430,7 +2430,7 @@ static drawnode_t *R_CreateDrawNode(drawnode_t *link);
 
 static drawnode_t nodebankhead;
 
-static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean tempskip)
+static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head)
 {
 	drawnode_t *entry;
 	drawseg_t *ds;
@@ -2455,21 +2455,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				entry->ffloor = ds->thicksides[i];
 			}
 		}
-		// Check for a polyobject plane, but only if this is a front line
-		if (ds->curline->polyseg && ds->curline->polyseg->visplane && !ds->curline->side) {
-			plane = ds->curline->polyseg->visplane;
-			R_PlaneBounds(plane);
-
-			if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low)
-				;
-			else {
-				// Put it in!
-				entry = R_CreateDrawNode(head);
-				entry->plane = plane;
-				entry->seg = ds;
-			}
-			ds->curline->polyseg->visplane = NULL;
-		}
 		if (ds->maskedtexturecol)
 		{
 			entry = R_CreateDrawNode(head);
@@ -2488,7 +2473,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 					plane = ds->ffloorplanes[p];
 					R_PlaneBounds(plane);
 
-					if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low || plane->polyobj)
+					if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low || (plane->polyobj && !ds->curline->side))
 					{
 						ds->ffloorplanes[p] = NULL;
 						continue;
@@ -2512,30 +2497,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 					break;
 			}
 		}
-	}
-
-	if (tempskip)
-		return;
-
-	// find all the remaining polyobject planes and add them on the end of the list
-	// probably this is a terrible idea if we wanted them to be sorted properly
-	// but it works getting them in for now
-	for (i = 0; i < numPolyObjects; i++)
-	{
-		if (!PolyObjects[i].visplane)
-			continue;
-		plane = PolyObjects[i].visplane;
-		R_PlaneBounds(plane);
-
-		if (plane->low < 0 || plane->high > vid.height || plane->high > plane->low)
-		{
-			PolyObjects[i].visplane = NULL;
-			continue;
-		}
-		entry = R_CreateDrawNode(head);
-		entry->plane = plane;
-		// note: no seg is set, for what should be obvious reasons
-		PolyObjects[i].visplane = NULL;
 	}
 
 	// No vissprites in this mask?
@@ -3160,7 +3121,7 @@ void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
 		viewz = masks[i].viewz;
 		viewsector = masks[i].viewsector;
 
-		R_CreateDrawNodes(&masks[i], &heads[i], false);
+		R_CreateDrawNodes(&masks[i], &heads[i]);
 	}
 
 	//for (i = 0; i < nummasks; i++)

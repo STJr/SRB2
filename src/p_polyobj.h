@@ -66,6 +66,8 @@ typedef enum
 // Polyobject Structure
 //
 
+struct polynode_s;
+
 typedef struct polyobj_s
 {
 	mdllistitem_t link; // for subsector links; must be first
@@ -76,8 +78,8 @@ typedef struct polyobj_s
 
 	INT32 parent; // numeric id of parent polyobject
 
-	size_t segCount;        // number of segs in polyobject
-	size_t numSegsAlloc;    // number of segs allocated
+	size_t segCount;     // number of segs in polyobject
+	size_t numSegsAlloc; // number of segs allocated
 	struct seg_s **segs; // the segs, a reallocating array.
 
 	size_t numVertices;            // number of vertices (generally == segCount)
@@ -86,18 +88,19 @@ typedef struct polyobj_s
 	vertex_t *tmpVerts;  // temporary vertex backups for rotation
 	vertex_t **vertices; // vertices this polyobject must move
 
-	size_t numLines;          // number of linedefs (generally <= segCount)
-	size_t numLinesAlloc;     // number of linedefs allocated
+	size_t numLines;       // number of linedefs (generally <= segCount)
+	size_t numLinesAlloc;  // number of linedefs allocated
 	struct line_s **lines; // linedefs this polyobject must move
 
 	degenmobj_t spawnSpot; // location of spawn spot
 	vertex_t    centerPt;  // center point
 	fixed_t zdist;         // viewz distance for sorting
 	angle_t angle;         // for rotation
-	UINT8 attached;         // if true, is attached to a subsector
+	UINT8 attached;        // if true, is attached to a subsector
+	struct polynode_s *subsectorlinks;
 
 	fixed_t blockbox[4]; // bounding box for clipping
-	UINT8 linked;         // is linked to blockmap
+	UINT8 linked;        // is linked to blockmap
 	size_t validcount;   // for clipping: prevents multiple checks
 	INT32 damage;        // damage to inflict on stuck things
 	fixed_t thrust;      // amount of thrust to put on blocking objects
@@ -105,16 +108,40 @@ typedef struct polyobj_s
 
 	thinker_t *thinker;  // pointer to a thinker affecting this polyobj
 
-	UINT8 isBad;         // a bad polyobject: should not be rendered/manipulated
+	UINT8 isBad;        // a bad polyobject: should not be rendered/manipulated
 	INT32 translucency; // index to translucency tables
 	INT16 triggertag;   // Tag of linedef executor to trigger on touch
-
-	struct visplane_s *visplane; // polyobject's visplane, for ease of putting into the list later
 
 	// these are saved for netgames, so do not let Lua touch these!
 	INT32 spawnflags; // Flags the polyobject originally spawned with
 	INT32 spawntrans; // Translucency the polyobject originally spawned with
 } polyobj_t;
+
+typedef struct polyobjvertex_s
+{
+	double x, y;
+} polyobjvertex_t;
+
+typedef struct polyseg_s
+{
+	polyobjvertex_t v1;
+	polyobjvertex_t v2;
+
+	struct seg_s *wall;
+} polyseg_t;
+
+typedef struct polynode_s
+{
+	polyobj_t *poly;			// owning polyobject
+	struct polynode_s *pnext;	// next polyobj in list
+	struct polynode_s *pprev;	// previous polyobj
+
+	struct subsector_s *subsector;	// containing subsector
+	struct polynode_s *snext;		// next subsector
+
+	polyseg_t *segs;			// segs for this node
+	size_t numsegs;
+} polynode_t;
 
 //
 // Polyobject Blockmap Link Structure
@@ -336,10 +363,14 @@ typedef struct polyfadedata_s
 // Functions
 //
 
+void Polyobj_InitLevel(void);
+void Polyobj_LinkToSubsectors(void);
+void Polyobj_ClearSubsectorLinks(polyobj_t *polyobj);
+void Polyobj_ClearAllSubsectorLinks(void);
+
 boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y, boolean checkmobjs);
 boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean checkmobjs);
 polyobj_t *Polyobj_GetForNum(INT32 id);
-void Polyobj_InitLevel(void);
 void Polyobj_MoveOnLoad(polyobj_t *po, angle_t angle, fixed_t x, fixed_t y);
 boolean P_PointInsidePolyobj(polyobj_t *po, fixed_t x, fixed_t y);
 boolean P_MobjTouchingPolyobj(polyobj_t *po, mobj_t *mo);

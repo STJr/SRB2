@@ -54,6 +54,7 @@
 #include "m_argv.h"
 
 #include "p_polyobj.h"
+#include "nodebuilder.h"
 
 #include "v_video.h"
 
@@ -2134,6 +2135,7 @@ static void P_LoadNodes(UINT8 *data)
 		no->y = SHORT(mn->y)<<FRACBITS;
 		no->dx = SHORT(mn->dx)<<FRACBITS;
 		no->dy = SHORT(mn->dy)<<FRACBITS;
+		no->length = FixedHypot(no->dx>>1, no->dy>>1)<<1;
 		for (j = 0; j < 2; j++)
 		{
 			no->children[j] = SHORT(mn->children[j]);
@@ -2196,10 +2198,9 @@ static void P_InitializeSeg(seg_t *seg)
 	seg->lightmaps = NULL; // list of static lightmap for this seg
 #endif
 
-	seg->numlights = 0;
-	seg->rlights = NULL;
 	seg->polyseg = NULL;
-	seg->dontrenderme = false;
+	seg->polysector = NULL;
+	seg->polybackside = false;
 }
 
 static void P_LoadSegs(UINT8 *data)
@@ -2454,6 +2455,7 @@ static void P_LoadExtendedNodes(UINT8 **data, nodetype_t nodetype)
 		mn->y = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
 		mn->dx = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
 		mn->dy = xgl3 ? READINT32((*data)) : (READINT16((*data)) << FRACBITS);
+		mn->length = FixedHypot(mn->dx>>1, mn->dy>>1)<<1;
 
 		// Bounding boxes
 		for (j = 0; j < 2; j++)
@@ -3235,7 +3237,7 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
 			lines[i].special = 720;
 			break;
-		
+
 		case 900: //Translucent wall (10%)
 		case 901: //Translucent wall (20%)
 		case 902: //Translucent wall (30%)
@@ -4227,6 +4229,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		Z_Free(ss->attached);
 		Z_Free(ss->attachedsolid);
 	}
+
+	Polyobj_ClearAllSubsectorLinks();
+	NodeBuilder_Clear();
 
 	// Clear pointers that would be left dangling by the purge
 	R_FlushTranslationColormapCache();

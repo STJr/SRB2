@@ -543,6 +543,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/r_patchrotation.o \
 		$(OBJDIR)/r_picformats.o \
 		$(OBJDIR)/r_portal.o \
+		$(OBJDIR)/nodebuilder.o \
 		$(OBJDIR)/screen.o   \
 		$(OBJDIR)/taglist.o  \
 		$(OBJDIR)/v_video.o  \

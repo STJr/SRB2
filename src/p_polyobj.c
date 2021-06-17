@@ -11,8 +11,6 @@
 /// \brief Movable segs like in Hexen, but more flexible
 ///        due to application of dynamic binary space partitioning theory.
 
-// haleyjd: temporary define
-
 #include "z_zone.h"
 
 #include "doomstat.h"
@@ -358,7 +356,7 @@ static void Polyobj_findSegs(polyobj_t *po, seg_t *seg)
 	if (!(po->flags & POF_ONESIDE))
 	{
 		// Find backfacings
-		for (s = 0;  s < numsegs; s++)
+		for (s = 0; s < numsegs; s++)
 		{
 			size_t r;
 
@@ -380,7 +378,7 @@ static void Polyobj_findSegs(polyobj_t *po, seg_t *seg)
 			if (r != po->segCount)
 				continue;
 
-			segs[s].dontrenderme = true;
+			segs[s].polybackside = true;
 
 			Polyobj_addSeg(po, &segs[s]);
 		}
@@ -450,7 +448,7 @@ newseg:
 				if (r != po->segCount)
 					continue;
 
-				segs[q].dontrenderme = true;
+				segs[q].polybackside = true;
 				Polyobj_addSeg(po, &segs[q]);
 			}
 		}
@@ -640,6 +638,457 @@ static void Polyobj_removeFromSubsec(polyobj_t *po)
 	{
 		M_DLListRemove(&po->link);
 		po->attached = false;
+	}
+}
+
+//==========================================================================
+//
+// TArray for segs
+//
+//==========================================================================
+
+typedef struct segarray_s
+{
+	size_t size;
+	size_t alloc;
+	polyseg_t *elements;
+} segarray_t;
+
+static void SegArray_Clear(segarray_t *array)
+{
+	array->size = 0;
+	array->alloc = 0;
+
+	Z_Free(array->elements);
+	array->elements = NULL;
+}
+
+static void SegArray_Push(segarray_t *array, polyseg_t *element)
+{
+	array->size++;
+	if (array->size >= array->alloc)
+	{
+		array->alloc = array->alloc ? array->alloc*2 : 8;
+		array->elements = Z_Realloc(array->elements, array->alloc * sizeof(polyseg_t), PU_STATIC, NULL);
+	}
+	memcpy(&array->elements[array->size - 1], element, sizeof(polyseg_t));
+}
+
+static polyseg_t *SegArray_Last(segarray_t *array)
+{
+	return &(array->elements[array->size - 1]);
+}
+
+static void SegArray_Copy(segarray_t *list, polynode_t *node)
+{
+	size_t i;
+
+	node->numsegs = list->size;
+	node->segs = Z_Malloc(node->numsegs * sizeof(polyseg_t), PU_LEVEL, NULL);
+
+	for (i = 0; i < list->size; i++)
+	{
+		polyseg_t *src = &list->elements[i];
+		polyseg_t *pseg = &node->segs[i];
+		pseg->v1.x = src->v1.x;
+		pseg->v1.y = src->v1.y;
+		pseg->v2.x = src->v2.x;
+		pseg->v2.y = src->v2.y;
+		pseg->wall = src->wall;
+	}
+}
+
+//==========================================================================
+//
+// NewPolyNode
+//
+//==========================================================================
+
+static polynode_t *FreePolyNodes;
+
+static polynode_t *NewPolyNode(void)
+{
+	polynode_t *node;
+
+	if (FreePolyNodes != NULL)
+	{
+		node = FreePolyNodes;
+		FreePolyNodes = node->pnext;
+	}
+	else
+		node = Z_Malloc(sizeof(polynode_t), PU_LEVEL, NULL);
+
+	node->poly = NULL;
+	node->pnext = NULL;
+	node->pprev = NULL;
+	node->subsector = NULL;
+	node->snext = NULL;
+
+	return node;
+}
+
+//==========================================================================
+//
+// FreePolyNode
+//
+//==========================================================================
+
+static void FreePolyNode(polynode_t *node)
+{
+	Z_Free(node->segs);
+	node->segs = NULL;
+	node->numsegs = 0;
+	node->pnext = FreePolyNodes;
+	FreePolyNodes = node;
+}
+
+//==========================================================================
+//
+// ReleaseAllPolyNodes
+//
+//==========================================================================
+
+static void ReleaseAllPolyNodes(void)
+{
+	polynode_t *node, *next;
+
+	for (node = FreePolyNodes; node != NULL; node = next)
+	{
+		next = node->pnext;
+		Z_Free(node);
+	}
+
+	FreePolyNodes = NULL;
+}
+
+//==========================================================================
+//
+// ClearSubsectorLinks
+//
+//==========================================================================
+
+void Polyobj_ClearSubsectorLinks(polyobj_t *polyobj)
+{
+	while (polyobj->subsectorlinks != NULL)
+	{
+		polynode_t *link = polyobj->subsectorlinks;
+		polynode_t *next = link->snext;
+
+		if (link->pnext != NULL)
+			link->pnext->pprev = link->pprev;
+
+		if (link->pprev != NULL)
+			link->pprev->pnext = link->pnext;
+		else
+			link->subsector->polynodes = link->pnext;
+
+		if (link->subsector->BSP != NULL)
+			link->subsector->BSP->dirty = true;
+
+		FreePolyNode(link);
+		polyobj->subsectorlinks = next;
+	}
+
+	polyobj->subsectorlinks = NULL;
+}
+
+void Polyobj_ClearAllSubsectorLinks(void)
+{
+	INT32 i;
+
+	for (i = 0; i < numPolyObjects; i++)
+	{
+		if (PolyObjects[i].subsectorlinks == NULL)
+			Polyobj_ClearSubsectorLinks(&PolyObjects[i]);
+	}
+
+	ReleaseAllPolyNodes();
+}
+
+//==========================================================================
+//
+// GetIntersection
+//
+// adapted from P_InterceptVector
+//
+//==========================================================================
+
+static boolean GetIntersection(polyseg_t *seg, node_t *bsp, polyobjvertex_t *v)
+{
+	double frac;
+	double num;
+	double den;
+
+	double v2x = seg->v1.x;
+	double v2y = seg->v1.y;
+	double v2dx = seg->v2.x - v2x;
+	double v2dy = seg->v2.y - v2y;
+	double v1x =  FixedToDouble(bsp->x);
+	double v1y =  FixedToDouble(bsp->y);
+	double v1dx = FixedToDouble(bsp->dx);
+	double v1dy = FixedToDouble(bsp->dy);
+
+	den = v1dy*v2dx - v1dx*v2dy;
+
+	if (den == 0.0)
+		return false;		// parallel
+
+	num = (v1x - v2x)*v1dy + (v2y - v1y)*v1dx;
+	frac = num / den;
+
+	if (frac < 0.0 || frac > 1.0)
+		return false;
+
+	v->x = v2x + frac * v2dx;
+	v->y = v2y + frac * v2dy;
+
+	return true;
+}
+
+//==========================================================================
+//
+// PartitionDistance
+//
+// Determine the distance of a vertex to a node's partition line.
+//
+//==========================================================================
+
+static double PartitionDistance(polyobjvertex_t *vt, node_t *node)
+{
+	double a = FixedToDouble(-node->dy) * (vt->x - FixedToDouble(node->x));
+	double b = FixedToDouble(node->dx) * (vt->y - FixedToDouble(node->y));
+	double len = FixedToDouble(node->length);
+	return fabs(a + b) / len;
+}
+
+//==========================================================================
+//
+// AddToBBox
+//
+//==========================================================================
+
+static void AddToBBox(fixed_t child[4], fixed_t parent[4])
+{
+	if (child[BOXTOP] > parent[BOXTOP])
+		parent[BOXTOP] = child[BOXTOP];
+	if (child[BOXBOTTOM] < parent[BOXBOTTOM])
+		parent[BOXBOTTOM] = child[BOXBOTTOM];
+	if (child[BOXLEFT] < parent[BOXLEFT])
+		parent[BOXLEFT] = child[BOXLEFT];
+	if (child[BOXRIGHT] > parent[BOXRIGHT])
+		parent[BOXRIGHT] = child[BOXRIGHT];
+}
+
+//==========================================================================
+//
+// AddPolyVertexToBBox
+//
+//==========================================================================
+
+static void AddPolyVertexToBBox(polyobjvertex_t *v, fixed_t bbox[4])
+{
+	fixed_t x = DoubleToFixed(v->x);
+	fixed_t y = DoubleToFixed(v->y);
+	if (x < bbox[BOXLEFT])
+		bbox[BOXLEFT] = x;
+	if (x > bbox[BOXRIGHT])
+		bbox[BOXRIGHT] = x;
+	if (y < bbox[BOXBOTTOM])
+		bbox[BOXBOTTOM] = y;
+	if (y > bbox[BOXTOP])
+		bbox[BOXTOP] = y;
+}
+
+//==========================================================================
+//
+// SplitPoly
+//
+//==========================================================================
+
+static void SplitPoly(polynode_t *pnode, INT32 bspnum, fixed_t bbox[4])
+{
+	static segarray_t lists[2];
+	static const double POLY_EPSILON = 0.3125;
+	size_t i;
+
+	if (!(bspnum & NF_SUBSECTOR))  // Keep going until found a subsector
+	{
+		node_t *bsp = &nodes[bspnum];
+
+		INT32 centerside = R_PointOnSide(pnode->poly->centerPt.x, pnode->poly->centerPt.y, bsp);
+
+		SegArray_Clear(&lists[0]);
+		SegArray_Clear(&lists[1]);
+
+		for (i = 0; i < pnode->numsegs; i++)
+		{
+			polyseg_t *seg = &pnode->segs[i];
+
+			// Parts of the following code were taken from Eternity and are
+			// being used with permission.
+
+			// get distance of vertices from partition line
+			// If the distance is too small, we may decide to
+			// change our idea of sidedness.
+			double dist_v1 = PartitionDistance(&seg->v1, bsp);
+			double dist_v2 = PartitionDistance(&seg->v2, bsp);
+
+			// If the distances are less than epsilon, consider the points as being
+			// on the same side as the polyobj origin. Why? People like to build
+			// polyobject doors flush with their door tracks. This breaks using the
+			// usual assumptions.
+
+			// Addition to Eternity code: We must also check any seg with only one
+			// vertex inside the epsilon threshold. If not, these lines will get split but
+			// adjoining ones with both vertices inside the threshold won't thus messing up
+			// the order in which they get drawn.
+
+			if(dist_v1 <= POLY_EPSILON)
+			{
+				if (dist_v2 <= POLY_EPSILON)
+					SegArray_Push(&lists[centerside], seg);
+				else
+				{
+					INT32 side = R_PointOnSide(DoubleToFixed(seg->v2.x), DoubleToFixed(seg->v2.y), bsp);
+					SegArray_Push(&lists[side], seg);
+				}
+			}
+			else if (dist_v2 <= POLY_EPSILON)
+			{
+				INT32 side = R_PointOnSide(DoubleToFixed(seg->v1.x), DoubleToFixed(seg->v1.y), bsp);
+				SegArray_Push(&lists[side], seg);
+			}
+			else
+			{
+				INT32 side1 = R_PointOnSide(DoubleToFixed(seg->v1.x), DoubleToFixed(seg->v1.y), bsp);
+				INT32 side2 = R_PointOnSide(DoubleToFixed(seg->v2.x), DoubleToFixed(seg->v2.y), bsp);
+
+				if (side1 != side2)
+				{
+					// if the partition line crosses this seg, we must split it.
+					polyobjvertex_t vert;
+
+					if (GetIntersection(seg, bsp, &vert))
+					{
+						SegArray_Push(&lists[0], seg);
+						SegArray_Push(&lists[1], seg);
+						SegArray_Last(&lists[side1])->v2.x = vert.x;
+						SegArray_Last(&lists[side1])->v2.y = vert.y;
+						SegArray_Last(&lists[side2])->v1.x = vert.x;
+						SegArray_Last(&lists[side2])->v1.y = vert.y;
+					}
+					else
+					{
+						// should never happen
+						SegArray_Push(&lists[side1], seg);
+					}
+				}
+				else
+				{
+					// both points on the same side.
+					SegArray_Push(&lists[side1], seg);
+				}
+			}
+		}
+
+		if (lists[1].size == 0)
+		{
+			SplitPoly(pnode, bsp->children[0], bsp->bbox[0]);
+			AddToBBox(bsp->bbox[0], bbox);
+		}
+		else if (lists[0].size == 0)
+		{
+			SplitPoly(pnode, bsp->children[1], bsp->bbox[1]);
+			AddToBBox(bsp->bbox[1], bbox);
+		}
+		else
+		{
+			// create the new node
+			polynode_t *newnode = NewPolyNode();
+			newnode->poly = pnode->poly;
+			SegArray_Copy(&lists[1], newnode);
+
+			// set segs for original node
+			SegArray_Copy(&lists[0], pnode);
+
+			// recurse back side
+			SplitPoly(newnode, bsp->children[1], bsp->bbox[1]);
+
+			// recurse front side
+			SplitPoly(pnode, bsp->children[0], bsp->bbox[0]);
+
+			AddToBBox(bsp->bbox[0], bbox);
+			AddToBBox(bsp->bbox[1], bbox);
+		}
+	}
+	else
+	{
+		// we reached a subsector so we can link the node with this subsector
+		subsector_t *sub = &subsectors[bspnum == -1 ? 0 : bspnum & ~NF_SUBSECTOR];
+		fixed_t subbbox[4] = { INT32_MIN, INT32_MAX, INT32_MAX, INT32_MIN };
+
+		// Link node to subsector
+		pnode->pnext = sub->polynodes;
+		if (pnode->pnext != NULL)
+			pnode->pnext->pprev = pnode;
+		pnode->pprev = NULL;
+		sub->polynodes = pnode;
+
+		// link node to polyobject
+		pnode->snext = pnode->poly->subsectorlinks;
+		pnode->poly->subsectorlinks = pnode;
+		pnode->subsector = sub;
+
+		// calculate bounding box for this polynode
+		for (i = 0; i < pnode->numsegs; ++i)
+		{
+			AddPolyVertexToBBox(&pnode->segs[i].v1, subbbox);
+			AddPolyVertexToBBox(&pnode->segs[i].v2, subbbox);
+		}
+
+		// Potentially expand the parent node's bounding box to contain these bits of polyobject.
+		AddToBBox(subbbox, bbox);
+	}
+}
+
+static void Polyobj_CreateSubsectorLinks(polyobj_t *polyobj)
+{
+	polynode_t *node = NewPolyNode();
+	size_t i;
+
+	// Even though we don't care about it, we need to initialize this
+	// bounding box to something so that Valgrind won't complain about it
+	// when SplitPoly modifies it.
+	fixed_t dummybbox[4] = { 0, 0, 0, 0 };
+
+	node->poly = polyobj;
+	node->numsegs = polyobj->segCount;
+	node->segs = Z_Malloc(node->numsegs * sizeof(polyseg_t), PU_LEVEL, NULL);
+
+	for (i = 0; i < node->numsegs; i++)
+	{
+		polyseg_t *seg = &node->segs[i];
+		seg_t *line = polyobj->segs[i];
+
+		seg->v1.x = FixedToDouble(line->v1->x);
+		seg->v1.y = FixedToDouble(line->v1->y);
+		seg->v2.x = FixedToDouble(line->v2->x);
+		seg->v2.y = FixedToDouble(line->v2->y);
+
+		seg->wall = line;
+	}
+
+	SplitPoly(node, (INT32)numnodes - 1, dummybbox);
+}
+
+void Polyobj_LinkToSubsectors(void)
+{
+	INT32 i;
+
+	for (i = 0; i < numPolyObjects; i++)
+	{
+		if (PolyObjects[i].subsectorlinks == NULL)
+			Polyobj_CreateSubsectorLinks(&PolyObjects[i]);
 	}
 }
 
@@ -1027,6 +1476,7 @@ boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y, boolean checkmobjs)
 		Polyobj_removeFromSubsec(po);   // unlink it from its subsector
 		Polyobj_linkToBlockmap(po);     // relink to blockmap
 		Polyobj_attachToSubsec(po);     // relink to subsector
+		Polyobj_ClearSubsectorLinks(po);// clear its subsector links
 	}
 
 	return !(hitflags & 2);
@@ -1224,9 +1674,10 @@ boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean c
 		po->angle += delta;
 
 		Polyobj_removeFromBlockmap(po); // unlink it from the blockmap
-		Polyobj_removeFromSubsec(po);   // remove from subsector
+		Polyobj_removeFromSubsec(po);   // unlink it from its subsector
 		Polyobj_linkToBlockmap(po);     // relink to blockmap
 		Polyobj_attachToSubsec(po);     // relink to subsector
+		Polyobj_ClearSubsectorLinks(po);// clear its subsector links
 	}
 
 	return !(hitflags & 2);
@@ -2436,6 +2887,7 @@ void T_PolyObjFlag(polymove_t *th)
 	Polyobj_removeFromSubsec(po);   // unlink it from its subsector
 	Polyobj_linkToBlockmap(po);     // relink to blockmap
 	Polyobj_attachToSubsec(po);     // relink to subsector
+	Polyobj_ClearSubsectorLinks(po);// clear its subsector links
 }
 
 boolean EV_DoPolyObjFlag(polyflagdata_t *pfdata)

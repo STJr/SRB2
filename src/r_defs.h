@@ -442,6 +442,8 @@ typedef struct
 	extracolormap_t *colormap_data; // storage for colormaps; not applied to sectors.
 } side_t;
 
+struct minibsp_s;
+
 //
 // A subsector.
 // References a sector.
@@ -453,8 +455,12 @@ typedef struct subsector_s
 	sector_t *sector;
 	INT16 numlines;
 	UINT16 firstline;
-	struct polyobj_s *polyList; // haleyjd 02/19/06: list of polyobjects
 	size_t validcount;
+
+	struct polyobj_s *polyList; // haleyjd 02/19/06: list of polyobjects
+
+	struct minibsp_s *BSP;
+	struct polynode_s *polynodes;
 } subsector_t;
 
 // Sector list node showing all sectors an object appears in.
@@ -528,6 +534,7 @@ typedef struct seg_s
 
 	INT32 side;
 
+	fixed_t length;	// precalculated seg length
 	fixed_t offset;
 
 	angle_t angle;
@@ -540,7 +547,6 @@ typedef struct seg_s
 	sector_t *frontsector;
 	sector_t *backsector;
 
-	fixed_t length;	// precalculated seg length
 #ifdef HWRENDER
 	// new pointers so that AdjustSegs doesn't mess with v1/v2
 	void *pv1; // polyvertex_t
@@ -550,11 +556,10 @@ typedef struct seg_s
 	lightmap_t *lightmaps; // for static lightmap
 #endif
 
-	// Why slow things down by calculating lightlists for every thick side?
-	size_t numlights;
-	r_lightlist_t *rlights;
 	polyobj_t *polyseg;
-	boolean dontrenderme;
+	sector_t *polysector;
+	boolean polybackside;
+
 	boolean glseg;
 } seg_t;
 
@@ -566,13 +571,30 @@ typedef struct
 	// Partition line.
 	fixed_t x, y;
 	fixed_t dx, dy;
+	fixed_t length;
 
 	// Bounding box for each child.
 	fixed_t bbox[2][4];
 
-	// If NF_SUBSECTOR its a subsector.
+	// If NF_SUBSECTOR, it's a subsector.
 	UINT16 children[2];
 } node_t;
+
+// An entire BSP tree.
+typedef struct minibsp_s
+{
+	boolean dirty;
+
+	node_t *nodes;
+	seg_t *segs;
+	subsector_t *subsectors;
+	vertex_t *verts;
+
+	size_t numnodes;
+	size_t numsegs;
+	size_t numsubsectors;
+	size_t numverts;
+} minibsp_t;
 
 #if defined(_MSC_VER)
 #pragma pack(1)

@@ -136,17 +136,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	void (*colfunc_2s)(column_t *);
 	line_t *ldef;
 	sector_t *front, *back;
-	INT32 times, repeats;
+	INT32 times, repeats = 1;
 	INT64 overflow_test;
 	INT32 range;
 
-	// Calculate light table.
-	// Use different light tables
-	//   for horizontal / vertical / diagonal. Diagonal?
-	// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
 	curline = ds->curline;
 
-	frontsector = curline->frontsector;
+	frontsector = curline->polyseg ? curline->polysector : curline->frontsector;
 	backsector = curline->backsector;
 	texnum = R_GetTextureNum(curline->sidedef->midtexture);
 	windowbottom = windowtop = sprbotscreen = INT32_MAX;
@@ -159,7 +155,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	{
 		dc_transmap = R_GetTranslucencyTable(R_GetLinedefTransTable(ldef->alpha));
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
-
 	}
 	else if (ldef->special == 909)
 	{
@@ -229,8 +224,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			rlight->height     = (centeryfrac) - FixedMul(leftheight , ds->scale1);
 			rlight->heightstep = (centeryfrac) - FixedMul(rightheight, ds->scale2);
 			rlight->heightstep = (rlight->heightstep-rlight->height)/(range);
-			//if (x1 > ds->x1)
-				//rlight->height -= (x1 - ds->x1)*rlight->heightstep;
 			rlight->startheight = rlight->height; // keep starting value here to reset for each repeat
 			rlight->lightlevel = *light->lightlevel;
 			rlight->extra_colormap = *light->extra_colormap;
@@ -255,6 +248,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	}
 	else
 	{
+		// Calculate light table.
+		// Use different light tables
+		//   for horizontal / vertical / diagonal. Diagonal?
+		// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
 		if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
 			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
@@ -292,28 +289,29 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	else
 		back = backsector;
 
-	if (ds->curline->sidedef->repeatcnt)
-		repeats = 1 + ds->curline->sidedef->repeatcnt;
-	else if (ldef->flags & ML_EFFECT5)
+	if (!curline->polyseg)
 	{
-		fixed_t high, low;
+		if (ds->curline->sidedef->repeatcnt)
+			repeats += ds->curline->sidedef->repeatcnt;
+		else if (ldef->flags & ML_EFFECT5)
+		{
+			fixed_t high, low;
 
-		if (front->ceilingheight > back->ceilingheight)
-			high = back->ceilingheight;
-		else
-			high = front->ceilingheight;
+			if (front->ceilingheight > back->ceilingheight)
+				high = back->ceilingheight;
+			else
+				high = front->ceilingheight;
 
-		if (front->floorheight > back->floorheight)
-			low = front->floorheight;
-		else
-			low = back->floorheight;
+			if (front->floorheight > back->floorheight)
+				low = front->floorheight;
+			else
+				low = back->floorheight;
 
-		repeats = (high - low)/textureheight[texnum];
-		if ((high-low)%textureheight[texnum])
-			repeats++; // tile an extra time to fill the gap -- Monster Iestyn
+			repeats = (high - low)/textureheight[texnum];
+			if ((high-low)%textureheight[texnum])
+				repeats++; // tile an extra time to fill the gap -- Monster Iestyn
+		}
 	}
-	else
-		repeats = 1;
 
 	for (times = 0; times < repeats; times++)
 	{
@@ -452,7 +450,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				col = (column_t *)((UINT8 *)R_GetColumn(texnum, maskedtexturecol[dc_x]) - 3);
 
 #if 0 // Disabling this allows inside edges to render below the planes, for until the clipping is fixed to work right when POs are near the camera. -Red
-				if (curline->dontrenderme && curline->polyseg && (curline->polyseg->flags & POF_RENDERPLANES))
+				if (curline->polybackside && curline->polyseg && (curline->polyseg->flags & POF_RENDERPLANES))
 				{
 					fixed_t my_topscreen;
 					fixed_t my_bottomscreen;
@@ -1159,7 +1157,7 @@ static void R_RenderSegLoop (void)
 
 			for (i = 0; i < numffloors; i++)
 			{
-				if (ffloor[i].polyobj && (!curline->polyseg || ffloor[i].polyobj != curline->polyseg))
+				if (ffloor[i].polyobj && ffloor[i].polyobj != curline->polyseg)
 					continue;
 
 				if (ffloor[i].height < viewz)
@@ -1179,33 +1177,30 @@ static void R_RenderSegLoop (void)
 						ffloor[i].plane->top[rw_x] = 0xFFFF;
 						ffloor[i].plane->bottom[rw_x] = 0x0000; // fix for sky plane drawing crashes - Monster Iestyn 25/05/18
 					}
-					else
+					else if (top_w <= bottom_w)
 					{
-						if (top_w <= bottom_w)
+						fftop = (INT16)top_w;
+						ffbottom = (INT16)bottom_w;
+
+						ffloor[i].plane->top[rw_x] = fftop;
+						ffloor[i].plane->bottom[rw_x] = ffbottom;
+
+						// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
+						// "bottom" is the top pixel of the floor column
+						if (ffbottom >= bottom-1 && R_FFloorCanClip(&ffloor[i]) && !curline->polyseg)
 						{
-							fftop = (INT16)top_w;
-							ffbottom = (INT16)bottom_w;
+							rw_floormarked = true;
+							floorclip[rw_x] = fftop;
+							if (yh > fftop)
+								yh = fftop;
 
-							ffloor[i].plane->top[rw_x] = fftop;
-							ffloor[i].plane->bottom[rw_x] = ffbottom;
+							if (markfloor && floorplane)
+								floorplane->top[rw_x] = bottom;
 
-							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
-							// "bottom" is the top pixel of the floor column
-							if (ffbottom >= bottom-1 && R_FFloorCanClip(&ffloor[i]) && !curline->polyseg)
+							if (rw_silhouette)
 							{
-								rw_floormarked = true;
-								floorclip[rw_x] = fftop;
-								if (yh > fftop)
-									yh = fftop;
-
-								if (markfloor && floorplane)
-									floorplane->top[rw_x] = bottom;
-
-								if (rw_silhouette)
-								{
-									(*rw_silhouette) |= SIL_BOTTOM;
-									(*rw_bsilheight) = INT32_MAX;
-								}
+								(*rw_silhouette) |= SIL_BOTTOM;
+								(*rw_bsilheight) = INT32_MAX;
 							}
 						}
 					}
@@ -1227,33 +1222,30 @@ static void R_RenderSegLoop (void)
 						ffloor[i].plane->top[rw_x] = 0xFFFF;
 						ffloor[i].plane->bottom[rw_x] = 0x0000; // fix for sky plane drawing crashes - Monster Iestyn 25/05/18
 					}
-					else
+					else if (top_w <= bottom_w)
 					{
-						if (top_w <= bottom_w)
+						fftop = (INT16)top_w;
+						ffbottom = (INT16)bottom_w;
+
+						ffloor[i].plane->top[rw_x] = fftop;
+						ffloor[i].plane->bottom[rw_x] = ffbottom;
+
+						// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
+						// "top" is the height of the ceiling column
+						if (fftop <= top+1 && R_FFloorCanClip(&ffloor[i]) && !curline->polyseg)
 						{
-							fftop = (INT16)top_w;
-							ffbottom = (INT16)bottom_w;
+							rw_ceilingmarked = true;
+							ceilingclip[rw_x] = ffbottom;
+							if (yl < ffbottom)
+								yl = ffbottom;
 
-							ffloor[i].plane->top[rw_x] = fftop;
-							ffloor[i].plane->bottom[rw_x] = ffbottom;
+							if (markceiling && ceilingplane)
+								ceilingplane->bottom[rw_x] = top;
 
-							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
-							// "top" is the height of the ceiling column
-							if (fftop <= top+1 && R_FFloorCanClip(&ffloor[i]) && !curline->polyseg)
+							if (rw_silhouette)
 							{
-								rw_ceilingmarked = true;
-								ceilingclip[rw_x] = ffbottom;
-								if (yl < ffbottom)
-									yl = ffbottom;
-
-								if (markceiling && ceilingplane)
-									ceilingplane->bottom[rw_x] = top;
-
-								if (rw_silhouette)
-								{
-									(*rw_silhouette) |= SIL_TOP;
-									(*rw_tsilheight) = INT32_MIN;
-								}
+								(*rw_silhouette) |= SIL_TOP;
+								(*rw_tsilheight) = INT32_MIN;
 							}
 						}
 					}
@@ -1282,7 +1274,7 @@ static void R_RenderSegLoop (void)
 			// calculate lighting
 			pindex = FixedMul(rw_scale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
-			if (pindex >=  MAXLIGHTSCALE)
+			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE-1;
 
 			dc_colormap = walllights[pindex];
@@ -1466,29 +1458,18 @@ static void R_RenderSegLoop (void)
 			}
 		}
 
-		if (dc_numlights)
+		for (i = 0; i < dc_numlights; i++)
 		{
-			for (i = 0; i < dc_numlights; i++)
-			{
-				dc_lightlist[i].height += dc_lightlist[i].heightstep;
-				if (dc_lightlist[i].flags & FF_CUTSOLIDS)
-					dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
-			}
+			dc_lightlist[i].height += dc_lightlist[i].heightstep;
+			if (dc_lightlist[i].flags & FF_CUTSOLIDS)
+				dc_lightlist[i].botheight += dc_lightlist[i].botheightstep;
 		}
 
 		for (i = 0; i < numffloors; i++)
-		{
-			if (curline->polyseg && (ffloor[i].polyobj != curline->polyseg))
-				continue;
-
 			ffloor[i].f_frac += ffloor[i].f_step;
-		}
 
 		for (i = 0; i < numbackffloors; i++)
 		{
-			if (curline->polyseg && (ffloor[i].polyobj != curline->polyseg))
-				continue;
-
 			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)((ffloor[i].b_frac >> HEIGHTBITS) & 0xFFFF);
 			ffloor[i].b_frac += ffloor[i].b_step;
 		}
@@ -1731,16 +1712,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	for (i = 0; i < MAXFFLOORS; i++)
 		ds_p->thicksides[i] = NULL;
 
-	if (numffloors)
+	for (i = 0; i < numffloors; i++)
 	{
-		for (i = 0; i < numffloors; i++)
-		{
-			if (ffloor[i].polyobj && (!ds_p->curline->polyseg || ffloor[i].polyobj != ds_p->curline->polyseg))
-				continue;
-
-			ffloor[i].f_pos       = P_GetZAt(ffloor[i].slope, segleft .x, segleft .y, ffloor[i].height) - viewz;
-			ffloor[i].f_pos_slope = P_GetZAt(ffloor[i].slope, segright.x, segright.y, ffloor[i].height) - viewz;
-		}
+		ffloor[i].f_pos       = P_GetZAt(ffloor[i].slope, segleft .x, segleft .y, ffloor[i].height) - viewz;
+		ffloor[i].f_pos_slope = P_GetZAt(ffloor[i].slope, segright.x, segright.y, ffloor[i].height) - viewz;
 	}
 
 	// Set up texture Y offset slides for sloped walls
@@ -2040,17 +2015,16 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		rw_bottomtexturemid += sidedef->rowoffset;
 
 		// allocate space for masked texture tables
-		if (frontsector && backsector && !Tag_Compare(&frontsector->tags, &backsector->tags) && (backsector->ffloors || frontsector->ffloors))
+		if (backsector && !Tag_Compare(&frontsector->tags, &backsector->tags) && (backsector->ffloors || frontsector->ffloors))
 		{
 			ffloor_t *rover;
 			ffloor_t *r2;
-			fixed_t   lowcut, highcut;
+			fixed_t lowcut, highcut;
 			fixed_t lowcutslope, highcutslope;
 
 			// Used for height comparisons and etc across FOFs and slopes
 			fixed_t high1, highslope1, low1, lowslope1, high2, highslope2, low2, lowslope2;
 
-			//markceiling = markfloor = true;
 			maskedtexture = true;
 
 			ds_p->thicksidecol = maskedtexturecol = lastopening - rw_x;
@@ -2459,23 +2433,20 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		dc_numlights = p;
 	}
 
-	if (numffloors)
+	for (i = 0; i < numffloors; i++)
 	{
-		for (i = 0; i < numffloors; i++)
+		ffloor[i].f_pos >>= 4;
+		ffloor[i].f_pos_slope >>= 4;
+		if (linedef->special == HORIZONSPECIAL) // Horizon lines extend FOFs in contact with them too.
 		{
-			ffloor[i].f_pos >>= 4;
-			ffloor[i].f_pos_slope >>= 4;
-			if (linedef->special == HORIZONSPECIAL) // Horizon lines extend FOFs in contact with them too.
-			{
-				ffloor[i].f_step = 0;
-				ffloor[i].f_frac = (centeryfrac>>4);
-				topfrac++; // Prevent 1px HOM
-			}
-			else
-			{
-				ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
-				ffloor[i].f_step = ((centeryfrac>>4) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(range);
-			}
+			ffloor[i].f_step = 0;
+			ffloor[i].f_frac = (centeryfrac>>4);
+			topfrac++; // Prevent 1px HOM
+		}
+		else
+		{
+			ffloor[i].f_frac = (centeryfrac>>4) - FixedMul(ffloor[i].f_pos, rw_scale);
+			ffloor[i].f_step = ((centeryfrac>>4) - FixedMul(ffloor[i].f_pos_slope, ds_p->scale2) - ffloor[i].f_frac)/(range);
 		}
 	}
 
@@ -2507,10 +2478,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 
+		if (backsector->ffloors || frontsector->ffloors)
 		{
-			ffloor_t * rover;
+			ffloor_t *rover;
 			fixed_t roverleft, roverright;
 			fixed_t planevistest;
+
 			i = 0;
 
 			if (backsector->ffloors)
@@ -2535,7 +2508,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					    ((viewz < planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
 					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
-						//ffloor[i].slope = *rover->b_slope;
 						ffloor[i].b_pos = roverleft;
 						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
@@ -2558,7 +2530,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					    ((viewz > planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
 					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
-						//ffloor[i].slope = *rover->t_slope;
 						ffloor[i].b_pos = roverleft;
 						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
@@ -2570,7 +2541,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					}
 				}
 			}
-			else if (frontsector && frontsector->ffloors)
+			else if (frontsector->ffloors)
 			{
 				for (rover = frontsector->ffloors; rover && i < MAXFFLOORS; rover = rover->next)
 				{
@@ -2592,7 +2563,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					    ((viewz < planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
 					     (viewz > planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
-						//ffloor[i].slope = *rover->b_slope;
 						ffloor[i].b_pos = roverleft;
 						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
@@ -2615,7 +2585,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					    ((viewz > planevistest && (rover->flags & FF_BOTHPLANES || !(rover->flags & FF_INVERTPLANES))) ||
 					     (viewz < planevistest && (rover->flags & FF_BOTHPLANES || rover->flags & FF_INVERTPLANES))))
 					{
-						//ffloor[i].slope = *rover->t_slope;
 						ffloor[i].b_pos = roverleft;
 						ffloor[i].b_pos_slope = roverright;
 						ffloor[i].b_pos >>= 4;
@@ -2627,46 +2596,52 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 					}
 				}
 			}
-			if (curline->polyseg && frontsector && (curline->polyseg->flags & POF_RENDERPLANES))
-			{
-				while (i < numffloors && ffloor[i].polyobj != curline->polyseg) i++;
-				if (i < numffloors && backsector->floorheight <= frontsector->ceilingheight &&
-					backsector->floorheight >= frontsector->floorheight &&
-					(viewz < backsector->floorheight))
-				{
-					if (ffloor[i].plane->minx > ds_p->x1)
-						ffloor[i].plane->minx = ds_p->x1;
-
-					if (ffloor[i].plane->maxx < ds_p->x2)
-						ffloor[i].plane->maxx = ds_p->x2;
-
-					ffloor[i].slope = NULL;
-					ffloor[i].b_pos = backsector->floorheight;
-					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
-					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-					i++;
-				}
-				if (i < numffloors && backsector->ceilingheight >= frontsector->floorheight &&
-					backsector->ceilingheight <= frontsector->ceilingheight &&
-					(viewz > backsector->ceilingheight))
-				{
-					if (ffloor[i].plane->minx > ds_p->x1)
-						ffloor[i].plane->minx = ds_p->x1;
-
-					if (ffloor[i].plane->maxx < ds_p->x2)
-						ffloor[i].plane->maxx = ds_p->x2;
-
-					ffloor[i].slope = NULL;
-					ffloor[i].b_pos = backsector->ceilingheight;
-					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
-					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-					i++;
-				}
-			}
 
 			numbackffloors = i;
+		}
+	}
+
+	for (i = 0; i < numffloors; i++)
+	{
+		sector_t *polysec = curline->frontsector;
+		if (numbackffloors >= MAXFFLOORS)
+			break;
+		if (ffloor[i].polyobj && polysec->floorheight <= frontsector->ceilingheight &&
+			polysec->floorheight >= frontsector->floorheight &&
+			(viewz < polysec->floorheight))
+		{
+			if (ffloor[i].plane->minx > ds_p->x1)
+				ffloor[i].plane->minx = ds_p->x1;
+
+			if (ffloor[i].plane->maxx < ds_p->x2)
+				ffloor[i].plane->maxx = ds_p->x2;
+
+			ffloor[i].b_pos = polysec->floorheight;
+			ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+			ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
+			ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+
+			i++;
+			numbackffloors++;
+		}
+		if (numbackffloors >= MAXFFLOORS)
+			break;
+		if (ffloor[i].polyobj && polysec->ceilingheight >= frontsector->floorheight &&
+			polysec->ceilingheight <= frontsector->ceilingheight &&
+			(viewz > polysec->ceilingheight))
+		{
+			if (ffloor[i].plane->minx > ds_p->x1)
+				ffloor[i].plane->minx = ds_p->x1;
+
+			if (ffloor[i].plane->maxx < ds_p->x2)
+				ffloor[i].plane->maxx = ds_p->x2;
+
+			ffloor[i].b_pos = polysec->ceilingheight;
+			ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+			ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
+			ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+
+			numbackffloors++;
 		}
 	}
 
@@ -2718,6 +2693,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			for (i = 0; i < numffloors; i++)
 				R_ExpandPlane(ffloor[i].plane, rw_x, rw_stopx - 1);
 		}
+
 		// FIXME hack to fix planes disappearing when a seg goes behind the camera. This NEEDS to be changed to be done properly. -Red
 		if (curline->polyseg)
 		{

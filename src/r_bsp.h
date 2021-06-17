@@ -38,7 +38,11 @@ extern INT32 doorclosed;
 void R_ClearClipSegs(void);
 void R_PortalClearClipSegs(INT32 start, INT32 end);
 void R_ClearDrawSegs(void);
+
+void R_Subsector(size_t num);
 void R_RenderBSPNode(INT32 bspnum);
+void R_RenderMiniBSPNode(INT32 bspnum);
+void R_BuildPolyBSP(subsector_t *sub);
 
 void R_SortPolyObjects(subsector_t *sub);
 

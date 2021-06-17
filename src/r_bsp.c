@@ -23,11 +23,15 @@
 #include "z_zone.h" // Check R_Prep3DFloors
 #include "taglist.h"
 
+#include "nodebuilder.h"
+
 seg_t *curline;
 side_t *sidedef;
 line_t *linedef;
 sector_t *frontsector;
 sector_t *backsector;
+
+static minibsp_t *minibsp = NULL;
 
 // very ugly realloc() of drawsegs at run-time, I upped it to 512
 // instead of 256.. and someone managed to send me a level with
@@ -394,7 +398,6 @@ static void R_AddLine(seg_t *line)
 	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
 		return;
 
-	// big room fix
 	angle1 = R_PointToAngleEx(viewx, viewy, line->v1->x, line->v1->y);
 	angle2 = R_PointToAngleEx(viewx, viewy, line->v2->x, line->v2->y);
 	curline = line;
@@ -651,6 +654,70 @@ static boolean R_CheckBBox(const fixed_t *bspcoord)
 	return true;
 }
 
+static NodeBuilder *PolyNodeBuilder = NULL;
+
+void R_BuildPolyBSP(subsector_t *sub)
+{
+	polynode_t *pn;
+	UINT32 i;
+
+	if (PolyNodeBuilder == NULL)
+		PolyNodeBuilder = Z_Calloc(sizeof(NodeBuilder), PU_STATIC, NULL);
+
+	NodeBuilder_Set(PolyNodeBuilder);
+	NodeBuilder_Clear();
+
+	// Feed segs to the nodebuilder and build the nodes.
+	NodeBuilder_AddSegs(&segs[sub->firstline], sub->numlines);
+	for (pn = sub->polynodes; pn != NULL; pn = pn->pnext)
+	{
+		NodeBuilder_AddPolySegs(pn);
+		ps_numpolyobjects++;	// for render stats
+	}
+
+	NodeBuilder_BuildMini();
+	if (sub->BSP == NULL)
+		sub->BSP = Z_Malloc(sizeof(minibsp_t), PU_LEVEL, NULL);
+	NodeBuilder_ExtractMini(sub->BSP);
+
+	for (i = 0; i < sub->BSP->numsubsectors; ++i)
+	{
+		subsector_t *minisub = &sub->BSP->subsectors[i];
+		seg_t *line = &sub->BSP->segs[minisub->firstline];
+		INT32 count = minisub->numlines;
+
+		while (count--)
+		{
+			if (line->polyseg)
+			{
+				minisub->polynodes = sub->polynodes;
+				break;
+			}
+			line++;
+		}
+
+		minisub->sector = sub->sector;
+	}
+}
+
+static void R_AddPolyobjs(subsector_t *sub)
+{
+	INT32 nodecount;
+
+	if (sub->BSP == NULL || sub->BSP->dirty)
+		R_BuildPolyBSP(sub);
+
+	minibsp = sub->BSP;
+	nodecount = minibsp->numnodes-1;
+
+	if (nodecount == 0)
+		R_Subsector(0);
+	else
+		R_RenderMiniBSPNode(nodecount);
+
+	minibsp = NULL;
+}
+
 size_t numpolys;        // number of polyobjects in current subsector
 size_t num_po_ptrs;     // number of polyobject pointers allocated
 polyobj_t **po_ptrs; // temp ptr array to sort polyobject pointers
@@ -716,109 +783,6 @@ void R_SortPolyObjects(subsector_t *sub)
 }
 
 //
-// R_PolysegCompare
-//
-// Callback for qsort to sort the segs of a polyobject. Returns such that the
-// closer one is sorted first. I sure hope this doesn't break anything. -Red
-//
-static int R_PolysegCompare(const void *p1, const void *p2)
-{
-	const seg_t *seg1 = *(const seg_t * const *)p1;
-	const seg_t *seg2 = *(const seg_t * const *)p2;
-	fixed_t dist1v1, dist1v2, dist2v1, dist2v2;
-
-	// TODO might be a better way to get distance?
-#define pdist(x, y) (FixedMul(R_PointToDist(x, y), FINECOSINE((R_PointToAngle(x, y)-viewangle)>>ANGLETOFINESHIFT))+0xFFFFFFF)
-#define vxdist(v) pdist(v->x, v->y)
-
-	dist1v1 = vxdist(seg1->v1);
-	dist1v2 = vxdist(seg1->v2);
-	dist2v1 = vxdist(seg2->v1);
-	dist2v2 = vxdist(seg2->v2);
-
-	if (min(dist1v1, dist1v2) != min(dist2v1, dist2v2))
-		return min(dist1v1, dist1v2) - min(dist2v1, dist2v2);
-
-	{ // That didn't work, so now let's try this.......
-		fixed_t delta1, delta2, x1, y1, x2, y2;
-		vertex_t *near1, *near2, *far1, *far2; // wherever you are~
-
-		delta1 = R_PointToDist2(seg1->v1->x, seg1->v1->y, seg1->v2->x, seg1->v2->y);
-		delta2 = R_PointToDist2(seg2->v1->x, seg2->v1->y, seg2->v2->x, seg2->v2->y);
-
-		delta1 = FixedDiv(128<<FRACBITS, delta1);
-		delta2 = FixedDiv(128<<FRACBITS, delta2);
-
-		if (dist1v1 < dist1v2)
-		{
-			near1 = seg1->v1;
-			far1 = seg1->v2;
-		}
-		else
-		{
-			near1 = seg1->v2;
-			far1 = seg1->v1;
-		}
-
-		if (dist2v1 < dist2v2)
-		{
-			near2 = seg2->v1;
-			far2 = seg2->v2;
-		}
-		else
-		{
-			near2 = seg2->v2;
-			far2 = seg2->v1;
-		}
-
-		x1 = near1->x + FixedMul(far1->x-near1->x, delta1);
-		y1 = near1->y + FixedMul(far1->y-near1->y, delta1);
-
-		x2 = near2->x + FixedMul(far2->x-near2->x, delta2);
-		y2 = near2->y + FixedMul(far2->y-near2->y, delta2);
-
-		return pdist(x1, y1)-pdist(x2, y2);
-	}
-#undef vxdist
-#undef pdist
-}
-
-//
-// R_AddPolyObjects
-//
-// haleyjd 02/19/06
-// Adds all segs in all polyobjects in the given subsector.
-//
-static void R_AddPolyObjects(subsector_t *sub)
-{
-	polyobj_t *po = sub->polyList;
-	size_t i, j;
-
-	numpolys = 0;
-
-	// count polyobjects
-	while (po)
-	{
-		++numpolys;
-		po = (polyobj_t *)(po->link.next);
-	}
-
-	// for render stats
-	ps_numpolyobjects += numpolys;
-
-	// sort polyobjects
-	R_SortPolyObjects(sub);
-
-	// render polyobjects
-	for (i = 0; i < numpolys; ++i)
-	{
-		qsort(po_ptrs[i]->segs, po_ptrs[i]->segCount, sizeof(seg_t *), R_PolysegCompare);
-		for (j = 0; j < po_ptrs[i]->segCount; ++j)
-			R_AddLine(po_ptrs[i]->segs[j]);
-	}
-}
-
-//
 // R_Subsector
 // Determine floor/ceiling planes.
 // Add sprites of things in sector.
@@ -827,7 +791,7 @@ static void R_AddPolyObjects(subsector_t *sub)
 
 drawseg_t *firstseg;
 
-static void R_Subsector(size_t num)
+void R_Subsector(size_t num)
 {
 	INT32 count, floorlightlevel, ceilinglightlevel, light;
 	seg_t *line;
@@ -837,19 +801,45 @@ static void R_Subsector(size_t num)
 	extracolormap_t *ceilingcolormap;
 	fixed_t floorcenterz, ceilingcenterz;
 
+	if (minibsp)
+	{
+		size_t numsubsecs = minibsp->numsubsectors;
+		if (num >= numsubsecs)
+		{
 #ifdef RANGECHECK
-	if (num >= numsubsectors)
-		I_Error("R_Subsector: ss %s with numss = %s\n", sizeu1(num), sizeu2(numsubsectors));
+			I_Error("R_Subsector: ss %s with numss = %s (miniBSP)\n", sizeu1(num), sizeu2(numsubsecs));
 #endif
+			return;
+		}
 
-	// subsectors added at run-time
-	if (num >= numsubsectors)
-		return;
+		sub = &minibsp->subsectors[num];
+		line = &minibsp->segs[sub->firstline];
+	}
+	else
+	{
+		size_t numsubsecs = numsubsectors;
+		if (num >= numsubsecs) // subsectors added at run-time
+		{
+#ifdef RANGECHECK
+			I_Error("R_Subsector: ss %s with numss = %s\n", sizeu1(num), sizeu2(numsubsecs));
+#endif
+			return;
+		}
 
-	sub = &subsectors[num];
+		sub = &subsectors[num];
+
+		// Render the polyobjs in the subsector first
+		if (sub->polynodes)
+		{
+			R_AddPolyobjs(sub);
+			return;
+		}
+
+		line = &segs[sub->firstline];
+	}
+
 	frontsector = sub->sector;
 	count = sub->numlines;
-	line = &segs[sub->firstline];
 
 	// Deep water/fake ceiling effect.
 	frontsector = R_FakeFlat(frontsector, &tempsec, &floorlightlevel, &ceilinglightlevel, false);
@@ -988,21 +978,20 @@ static void R_Subsector(size_t num)
 	}
 
 	// Polyobjects have planes, too!
-	if (sub->polyList)
+	if (minibsp && sub->polynodes)
 	{
-		polyobj_t *po = sub->polyList;
-		sector_t *polysec;
+		polynode_t *pn = sub->polynodes;
 
-		while (po)
+		for (; pn != NULL; pn = pn->pnext)
 		{
+			polyobj_t *po = pn->poly;
+			sector_t *polysec;
+
 			if (numffloors >= MAXFFLOORS)
 				break;
 
 			if (!(po->flags & POF_RENDERPLANES)) // Don't draw planes
-			{
-				po = (polyobj_t *)(po->link.next);
 				continue;
-			}
 
 			polysec = po->lines[0]->backsector;
 			ffloor[numffloors].plane = NULL;
@@ -1016,13 +1005,11 @@ static void R_Subsector(size_t num)
 					(light == -1 ? frontsector->lightlevel : *frontsector->lightlist[light].lightlevel), polysec->floor_xoffs, polysec->floor_yoffs,
 					polysec->floorpic_angle-po->angle,
 					(light == -1 ? frontsector->extra_colormap : *frontsector->lightlist[light].extra_colormap), NULL, po,
-					NULL); // will ffloors be slopable eventually?
+					NULL); // will polyobjects be slopable eventually?
 
 				ffloor[numffloors].height = polysec->floorheight;
 				ffloor[numffloors].polyobj = po;
 				ffloor[numffloors].slope = NULL;
-				//ffloor[numffloors].ffloor = rover;
-				po->visplane = ffloor[numffloors].plane;
 				numffloors++;
 			}
 
@@ -1039,44 +1026,35 @@ static void R_Subsector(size_t num)
 				ffloor[numffloors].plane = R_FindPlane(polysec->ceilingheight, polysec->ceilingpic,
 					(light == -1 ? frontsector->lightlevel : *frontsector->lightlist[light].lightlevel), polysec->ceiling_xoffs, polysec->ceiling_yoffs, polysec->ceilingpic_angle-po->angle,
 					(light == -1 ? frontsector->extra_colormap : *frontsector->lightlist[light].extra_colormap), NULL, po,
-					NULL); // will ffloors be slopable eventually?
+					NULL); // will polyobjects be slopable eventually?
 
 				ffloor[numffloors].polyobj = po;
 				ffloor[numffloors].height = polysec->ceilingheight;
 				ffloor[numffloors].slope = NULL;
-				//ffloor[numffloors].ffloor = rover;
-				po->visplane = ffloor[numffloors].plane;
 				numffloors++;
 			}
-
-			po = (polyobj_t *)(po->link.next);
 		}
 	}
 
-   // killough 9/18/98: Fix underwater slowdown, by passing real sector
-   // instead of fake one. Improve sprite lighting by basing sprite
-   // lightlevels on floor & ceiling lightlevels in the surrounding area.
-   //
-   // 10/98 killough:
-   //
-   // NOTE: TeamTNT fixed this bug incorrectly, messing up sprite lighting!!!
-   // That is part of the 242 effect!!!  If you simply pass sub->sector to
-   // the old code you will not get correct lighting for underwater sprites!!!
-   // Either you must pass the fake sector and handle validcount here, on the
-   // real sector, or you must account for the lighting in some other way,
-   // like passing it as an argument.
+	// killough 9/18/98: Fix underwater slowdown, by passing real sector
+	// instead of fake one. Improve sprite lighting by basing sprite
+	// lightlevels on floor & ceiling lightlevels in the surrounding area.
+	//
+	// 10/98 killough:
+	//
+	// NOTE: TeamTNT fixed this bug incorrectly, messing up sprite lighting!!!
+	// That is part of the 242 effect!!!  If you simply pass sub->sector to
+	// the old code you will not get correct lighting for underwater sprites!!!
+	// Either you must pass the fake sector and handle validcount here, on the
+	// real sector, or you must account for the lighting in some other way,
+	// like passing it as an argument.
 	R_AddSprites(sub->sector, (floorlightlevel+ceilinglightlevel)/2);
 
 	firstseg = NULL;
 
-	// haleyjd 02/19/06: draw polyobjects before static lines
-	if (sub->polyList)
-		R_AddPolyObjects(sub);
-
 	while (count--)
 	{
-//		CONS_Debug(DBG_GAMELOGIC, "Adding normal line %d...(%d)\n", line->linedef-lines, leveltime);
-		if (!line->glseg && !line->polyseg) // ignore segs that belong to polyobjects
+		if (!line->glseg && !(line->polyseg && !minibsp)) // ignore segs that belong to polyobjects
 			R_AddLine(line);
 		line++;
 		curline = NULL; /* cph 2001/11/18 - must clear curline now we're done with it, so stuff doesn't try using it for other things */
@@ -1247,11 +1225,11 @@ void R_RenderBSPNode(INT32 bspnum)
 
 		// Decide which side the view point is on.
 		side = R_PointOnSide(viewx, viewy, bsp);
+
 		// Recursively divide front space.
 		R_RenderBSPNode(bsp->children[side]);
 
 		// Possibly divide back space.
-
 		if (!R_CheckBBox(bsp->bbox[side^1]))
 			return;
 
@@ -1264,6 +1242,33 @@ void R_RenderBSPNode(INT32 bspnum)
 		if (sect != portalcullsector)
 			return;
 		portalcullsector = NULL;
+	}
+
+	R_Subsector(bspnum == -1 ? 0 : bspnum & ~NF_SUBSECTOR);
+}
+
+void R_RenderMiniBSPNode(INT32 bspnum)
+{
+	node_t *bsp;
+	INT32 side;
+
+	ps_numbspcalls++;
+
+	while (!(bspnum & NF_SUBSECTOR))  // Found a subsector?
+	{
+		bsp = &minibsp->nodes[bspnum];
+
+		// Decide which side the view point is on.
+		side = R_PointOnSide(viewx, viewy, bsp);
+
+		// Recursively divide front space.
+		R_RenderMiniBSPNode(bsp->children[side]);
+
+		// Possibly divide back space.
+		if (!R_CheckBBox(bsp->bbox[side^1]))
+			return;
+
+		bspnum = bsp->children[side^1];
 	}
 
 	R_Subsector(bspnum == -1 ? 0 : bspnum & ~NF_SUBSECTOR);
