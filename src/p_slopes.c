@@ -664,6 +664,9 @@ void P_SpawnSlopes(const boolean fromsave) {
 	for (i = 0; i < numlines; i++)
 		switch (lines[i].special)
 		{
+			case 700:
+				if (lines[i].flags & ML_TFERLINE) P_CopySectorSlope(&lines[i]);
+				break;
 			case 720:
 				P_CopySectorSlope(&lines[i]);
 			default:

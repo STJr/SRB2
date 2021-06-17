@@ -3154,6 +3154,12 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].flags & ML_NONET)
 				lines[i].args[2] |= TMSL_DYNAMIC;
 
+			if (lines[i].flags & ML_TFERLINE)
+			{
+					lines[i].args[4] |= backfloor ? TMSC_BACKTOFRONTFLOOR : (frontfloor ? TMSC_FRONTTOBACKFLOOR : 0);
+					lines[i].args[4] |= backceil ? TMSC_BACKTOFRONTCEILING : (frontceil ? TMSC_FRONTTOBACKCEILING : 0);
+			}
+
 			lines[i].special = 700;
 			break;
 		}
