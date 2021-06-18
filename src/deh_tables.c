@@ -361,8 +361,9 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_XDEATHSTATE",
 	"S_RAISESTATE",
 
-	// Thok
+	// Thok effect and spin trail
 	"S_THOK",
+	"S_THOKEFFECT",
 
 	// Player
 	"S_PLAY_STND",
@@ -3490,7 +3491,8 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_NULL",
 	"MT_UNKNOWN",
 
-	"MT_THOK", // Thok! mobj
+	"MT_THOK", // Spin trail mobj
+	"MT_THOKEFFECT", // Thok boom effect
 	"MT_PLAYER",
 	"MT_TAILSOVERLAY", // c:
 	"MT_METALJETFUME",
