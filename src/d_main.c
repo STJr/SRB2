@@ -562,20 +562,9 @@ static void D_Display(void)
 	// draw pause pic
 	if (paused && cv_showhud.value && (!menuactive || netgame))
 	{
-#if 0
-		INT32 py;
 		patch_t *patch;
-		if (automapactive)
-			py = 4;
-		else
-			py = viewwindowy + 4;
 		patch = W_CachePatchName("M_PAUSE", PU_PATCH);
-		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - patch->width)/2, py, 0, patch);
-#else
-		INT32 y = ((automapactive) ? (32) : (BASEVIDHEIGHT/2));
-		M_DrawTextBox((BASEVIDWIDTH/2) - (60), y - (16), 13, 2);
-		V_DrawCenteredString(BASEVIDWIDTH/2, y - (4), V_YELLOWMAP, "Game Paused");
-#endif
+		V_DrawScaledPatch(BASEVIDWIDTH - (patch->width + 1), 1, V_SNAPTOTOP|V_SNAPTORIGHT, patch);
 	}
 
 	// vid size change is now finished if it was on...
