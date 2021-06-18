@@ -2077,11 +2077,11 @@ void P_SpawnThokMobj(player_t *player)
 		mobj = P_SpawnGhostMobj(player->mo); // virtually does everything here for us
 	else if (type == MT_THOKEFFECT) // Thok boom effect for Sonic
 	{
-		mobj = P_SpawnMobjFromMobj(player->mo, 0, 0, player->mo->scale * 24, type);
+		mobj = P_SpawnMobjFromMobj(player->mo, 0, 0, FRACUNIT * 24, type);
 		mobj->angle = player->mo->angle + ANGLE_90;
 		mobj->fuse = 7;
-		mobj->scale = FRACUNIT / 3;
-		mobj->destscale = 10*FRACUNIT;
+		mobj->scale = player->mo->scale / 3;
+		mobj->destscale = 10 * player->mo->scale;
 		mobj->colorized = true;
 		mobj->color = player->mo->color;
 		mobj->momx = -player->mo->momx / 2;
