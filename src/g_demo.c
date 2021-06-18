@@ -786,11 +786,11 @@ void G_GhostTicker(void)
 					}
 					else if (type == MT_THOKEFFECT)
 					{
-					    mobj = P_SpawnMobjFromMobj(g->mo, 0, 0, g->mo->scale * 24, type);
+					    mobj = P_SpawnMobjFromMobj(g->mo, 0, 0, FRACUNIT * 24, type);
                 		mobj->angle = g->mo->angle + ANGLE_90;
                 		mobj->fuse = 7;
-                		mobj->scale = FRACUNIT / 3;
-                		mobj->destscale = 10*FRACUNIT;
+                		mobj->scale = g->mo->scale / 3;
+                		mobj->destscale = 10 * g->mo->scale;
                 		mobj->colorized = true;
                 		mobj->color = g->mo->color;
                 		mobj->momx = -g->mo->momx / 2;
@@ -1089,11 +1089,11 @@ void G_ReadMetalTic(mobj_t *metal)
 				}
 				else if (type == MT_THOKEFFECT)
 				{
-					mobj = P_SpawnMobjFromMobj(metal, 0, 0, metal->scale * 24, type);
+					mobj = P_SpawnMobjFromMobj(metal, 0, 0, FRACUNIT * 24, type);
                 	mobj->angle = metal->angle + ANGLE_90;
                 	mobj->fuse = 7;
-                	mobj->scale = FRACUNIT / 3;
-                	mobj->destscale = 10*FRACUNIT;
+                	mobj->scale = metal->scale / 3;
+                	mobj->destscale = 10 * metal->scale;
                 	mobj->colorized = true;
                 	mobj->color = metal->color;
                 	mobj->momx = -metal->momx / 2;
