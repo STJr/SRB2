@@ -4016,7 +4016,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 	
 	{           // MT_THOKEFFECT
 		-1,             // doomednum
-		S_THOK,         // spawnstate
+		S_THOKEFFECT,   // spawnstate
 		1000,           // spawnhealth
 		S_NULL,         // seestate
 		sfx_None,       // seesound
