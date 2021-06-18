@@ -162,29 +162,8 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		return;
 
 	transtable = R_GetLinedefTransTable(ldef);
-	if (ldef->special == 910)
-	{
-		if (transtable == NUMTRANSMAPS)
-			transtable = 0;
-		blendmode = AST_ADD;
-	}
-	else if (ldef->special == 911)
-	{
-		if (transtable == NUMTRANSMAPS)
-			transtable = 0;
-		blendmode = AST_SUBTRACT;
-	}
-	else if (ldef->special == 912)
-	{
-		if (transtable == NUMTRANSMAPS)
-			transtable = 0;
-		blendmode = AST_REVERSESUBTRACT;
-	}
-	else if (ldef->special == 913)
-	{
+	if ((blendmode = ldef->blendmode) && (transtable == NUMTRANSMAPS || blendmode == AST_MODULATE))
 		transtable = 0;
-		blendmode = AST_MODULATE;
-	}
 	if (transtable != NUMTRANSMAPS && (dc_transmap = R_GetBlendTable(blendmode, transtable)))
 	{
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
