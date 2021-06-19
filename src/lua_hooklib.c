@@ -1088,3 +1088,14 @@ int LUA_HookPlayerCanEnterSpinGaps(player_t *player)
 	}
 	return hook.status;
 }
+
+int LUA_HookKey(INT32 keycode, int hooktype)
+{
+	Hook_State hook;
+	if (prepare_hook(&hook, 0, hooktype))
+	{
+		lua_pushinteger(gL, keycode);
+		call_hooks(&hook, 1, 0, res_true);
+	}
+	return hook.status;
+}

@@ -3307,7 +3307,7 @@ boolean M_Responder(event_t *ev)
 		}
 		else if (ev->type == ev_mouse && mousewait < I_GetTime())
 		{
-			pmousey += ev->data3;
+			pmousey -= ev->data3;
 			if (pmousey < lasty-30)
 			{
 				ch = KEY_DOWNARROW;
@@ -12826,13 +12826,13 @@ static void M_DrawControl(void)
 			else
 			{
 				if (keys[0] != KEY_NULL)
-					strcat (tmp, G_KeynumToString (keys[0]));
+					strcat (tmp, G_KeyNumToString (keys[0]));
 
 				if (keys[0] != KEY_NULL && keys[1] != KEY_NULL)
 					strcat(tmp," or ");
 
 				if (keys[1] != KEY_NULL)
-					strcat (tmp, G_KeynumToString (keys[1]));
+					strcat (tmp, G_KeyNumToString (keys[1]));
 
 
 			}

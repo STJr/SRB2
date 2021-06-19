@@ -2995,7 +2995,7 @@ static void P_AddBinaryMapTags(void)
 			}
 
 			for (j = 0; j < numsectors; j++) {
-				boolean matches_target_tag = Tag_Find(&sectors[j].tags, target_tag);
+				boolean matches_target_tag = target_tag && Tag_Find(&sectors[j].tags, target_tag);
 				size_t k; for (k = 0; k < 4; k++) {
 					if (lines[i].flags & ML_EFFECT5) {
 						if (matches_target_tag || (offset_tags[k] && Tag_Find(&sectors[j].tags, offset_tags[k]))) {

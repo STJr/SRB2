@@ -70,6 +70,8 @@ automatically.
 	X (MusicChange),\
 	X (PlayerHeight),/* override player height */\
 	X (PlayerCanEnterSpinGaps),\
+	X (KeyDown),\
+	X (KeyUp),\
 
 #define STRING_HOOK_LIST(X) \
 	X (BotAI),/* B_BuildTailsTiccmd by skin name */\
@@ -128,3 +130,4 @@ int  LUA_HookPlayerCmd(player_t *, ticcmd_t *);
 int  LUA_HookMusicChange(const char *oldname, struct MusicChange *);
 fixed_t LUA_HookPlayerHeight(player_t *player);
 int  LUA_HookPlayerCanEnterSpinGaps(player_t *player);
+int  LUA_HookKey(INT32 keycode, int hooktype); // Hooks for key events
