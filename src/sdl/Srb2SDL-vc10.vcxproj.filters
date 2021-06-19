@@ -402,6 +402,9 @@
     <ClInclude Include="..\tables.h">
       <Filter>P_Play</Filter>
     </ClInclude>
+    <ClInclude Include="..\libdivide.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
     <ClInclude Include="..\r_bsp.h">
       <Filter>R_Rend</Filter>
     </ClInclude>

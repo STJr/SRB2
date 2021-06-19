@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -113,7 +113,7 @@ boolean LUAh_MapThingSpawn(mobj_t *mo, mapthing_t *mthing); // Hook for P_SpawnM
 boolean LUAh_FollowMobj(player_t *player, mobj_t *mobj); // Hook for P_PlayerAfterThink Smiles mobj-following
 UINT8 LUAh_PlayerCanDamage(player_t *player, mobj_t *mobj); // Hook for P_PlayerCanDamage
 void LUAh_PlayerQuit(player_t *plr, kickreason_t reason); // Hook for player quitting
-void LUAh_IntermissionThinker(void); // Hook for Y_Ticker
+void LUAh_IntermissionThinker(boolean stagefailed); // Hook for Y_Ticker
 boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, boolean tryingautobalance, boolean tryingscramble); // Hook for team switching in... uh....
 UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean forced); // Hook for spy mode
 boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend); // Hook for MT_NAMECHECK

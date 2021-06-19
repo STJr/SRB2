@@ -98,7 +98,6 @@ ALL_SYSTEMS=\
 	MINGW64\
 	HAIKU\
 	DUMMY\
-	DJGPPDOS\
 	MINGW\
 	UNIX\
 	LINUX\
@@ -503,6 +502,7 @@ OBJS:=$(i_main_o) \
 		$(OBJDIR)/m_bbox.o   \
 		$(OBJDIR)/m_cheat.o  \
 		$(OBJDIR)/m_cond.o   \
+		$(OBJDIR)/m_easing.o \
 		$(OBJDIR)/m_fixed.o  \
 		$(OBJDIR)/m_menu.o   \
 		$(OBJDIR)/m_misc.o   \
@@ -622,8 +622,6 @@ asm:
 	$(REMOVE) $(OBJDIR)/tmp.exe
 
 # executable
-# NOTE: DJGPP's objcopy do not have --add-gnu-debuglink
-
 $(BIN)/$(EXENAME): $(POS) $(OBJS)
 	-$(MKDIR) $(BIN)
 	$(call echo,Linking $(EXENAME)...)
@@ -708,7 +706,7 @@ endif
 endif
 
 define deps_rule +=
-	$(CC) $(CFLAGS) -M -MF $@ -MT $(OBJDIR)/$< $<
+	$(CC) $(CFLAGS) -M -MF $@ -MT $(OBJDIR)/$(<:.c=.o) $<
 endef
 
 $(DEPDIR)/%.d: %.c

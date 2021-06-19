@@ -230,7 +230,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	UINT8 rotation;
 	lumpinfo_t *lumpinfo;
 	softwarepatch_t patch;
-	UINT8 numadded = 0;
+	UINT16 numadded = 0;
 
 	memset(sprtemp,0xFF, sizeof (sprtemp));
 	maxframe = (size_t)-1;
@@ -547,8 +547,8 @@ void R_InitSprites(void)
 	R_InitSkins();
 	for (i = 0; i < numwadfiles; i++)
 	{
-		R_AddSkins((UINT16)i);
-		R_PatchSkins((UINT16)i);
+		R_AddSkins((UINT16)i, true);
+		R_PatchSkins((UINT16)i, true);
 		R_LoadSpriteInfoLumps(i, wadfiles[i]->numlumps);
 	}
 	ST_ReloadSkinFaceGraphics();
@@ -753,7 +753,7 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
 			return R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
 		else
-			return R_GetTranslationColormap(TC_BOSS, 0, GTC_CACHE);
+			return R_GetTranslationColormap(TC_BOSS, vis->mobj->color, GTC_CACHE);
 	}
 	else if (vis->mobj->color)
 	{
@@ -1803,7 +1803,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else if (oldthing->frame & FF_TRANSMASK)
 	{
 		trans = (oldthing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
-		if (oldthing->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
+		if (!R_BlendLevelVisible(oldthing->blendmode, trans))
 			return;
 	}
 	else
@@ -2200,7 +2200,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	// specific translucency
 	if (thing->frame & FF_TRANSMASK)
-		vis->transmap = (thing->frame & FF_TRANSMASK) - 0x10000 + transtables;
+		vis->transmap = R_GetTranslucencyTable((thing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT);
 	else
 		vis->transmap = NULL;
 

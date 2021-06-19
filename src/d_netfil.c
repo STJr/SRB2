@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,7 +15,7 @@
 
 #include <time.h>
 
-#if defined (_WIN32) || defined (__DJGPP__)
+#ifdef _WIN32
 #include <io.h>
 #include <direct.h>
 #else
@@ -29,10 +29,6 @@
 #include <limits.h>
 #elif defined (_WIN32)
 #include <sys/utime.h>
-#endif
-#ifdef __DJGPP__
-#include <dir.h>
-#include <utime.h>
 #endif
 
 #include "doomdef.h"

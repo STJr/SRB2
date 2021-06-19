@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2015,6 +2015,8 @@ void P_SwitchShield(player_t *player, UINT16 shieldtype)
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 {
 	mobj_t *ghost = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_GHOST);
+
+	P_SetTarget(&ghost->target, mobj);
 
 	P_SetScale(ghost, mobj->scale);
 	ghost->destscale = mobj->scale;
@@ -5299,7 +5301,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						fixed_t actionspd = player->actionspd;
 
 						if (player->charflags & SF_DASHMODE)
-							actionspd = max(player->normalspeed, FixedDiv(player->speed, player->mo->scale));
+							actionspd = max(player->actionspd, FixedDiv(player->speed, player->mo->scale));
 
 						if (player->mo->eflags & MFE_UNDERWATER)
 							actionspd >>= 1;
@@ -9017,8 +9019,11 @@ void P_NukeEnemies(mobj_t *inflictor, mobj_t *source, fixed_t radius)
 		if (mo->type == MT_MINUS && !(mo->flags & (MF_SPECIAL|MF_SHOOTABLE)))
 			mo->flags = (mo->flags & ~MF_NOCLIPTHING)|MF_SPECIAL|MF_SHOOTABLE;
 
-		if (mo->type == MT_EGGGUARD && mo->tracer) //nuke Egg Guard's shield!
+		if (mo->type == MT_EGGGUARD && mo->tracer) // Egg Guard's shield needs to be removed if it has one!
+		{
 			P_KillMobj(mo->tracer, inflictor, source, DMG_NUKE);
+			P_KillMobj(mo, inflictor, source, DMG_NUKE);
+		}
 
 		if (mo->flags & MF_BOSS || mo->type == MT_PLAYER) //don't OHKO bosses nor players!
 			P_DamageMobj(mo, inflictor, source, 1, DMG_NUKE);
@@ -11363,8 +11368,9 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	mobj_t *mo = player->mo;
 	angle_t angle = player->drawangle;
 	fixed_t dist;
+	fixed_t heightoffset = ((mo->eflags & MFE_VERTICALFLIP) ? mo->height - (P_GetPlayerHeight(player) >> 1) : (P_GetPlayerHeight(player) >> 1));
 	panim_t panim = player->panim;
-	tic_t dashmode = player->dashmode;
+	tic_t dashmode = min(player->dashmode, DASHMODE_MAX);
 	boolean underwater = mo->eflags & MFE_UNDERWATER;
 	statenum_t stat = fume->state-states;
 
@@ -11396,7 +11402,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 				offsetV = i*P_ReturnThrustY(fume, fume->movedir, radiusV);
 				x = mo->x + radiusX + FixedMul(offsetH, factorX);
 				y = mo->y + radiusY + FixedMul(offsetH, factorY);
-				z = mo->z + (mo->height >> 1) + offsetV;
+				z = mo->z + heightoffset + offsetV;
 				P_SpawnMobj(x, y, z, MT_SMALLBUBBLE)->scale = mo->scale >> 1;
 			}
 
@@ -11459,7 +11465,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	P_UnsetThingPosition(fume);
 	fume->x = mo->x + P_ReturnThrustX(fume, angle, dist);
 	fume->y = mo->y + P_ReturnThrustY(fume, angle, dist);
-	fume->z = mo->z + ((mo->height - fume->height) >> 1);
+	fume->z = mo->z + heightoffset - (fume->height >> 1);
 	P_SetThingPosition(fume);
 
 	// If dashmode is high enough, spawn a trail
@@ -12616,14 +12622,14 @@ void P_PlayerAfterThink(player_t *player)
 				if (P_AproxDistance(player->mo->x - tails->x, player->mo->y - tails->y) > player->mo->radius)
 					player->powers[pw_carry] = CR_NONE;
 
-				if (player->powers[pw_carry] != CR_NONE)
+				if (player->powers[pw_carry] == CR_PLAYER)
 				{
 					if (player->mo->state-states != S_PLAY_RIDE)
 						P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 					if (tails->player && (tails->skin && ((skin_t *)(tails->skin))->sprites[SPR2_SWIM].numframes) && (tails->eflags & MFE_UNDERWATER))
 						tails->player->powers[pw_tailsfly] = 0;
 				}
-				else
+				else if (player->powers[pw_carry] == CR_NONE)
 					P_SetTarget(&player->mo->tracer, NULL);
 
 				if (player-players == consoleplayer && botingame)
@@ -12726,9 +12732,15 @@ void P_PlayerAfterThink(player_t *player)
 
 				if (player->cmd.forwardmove || player->cmd.sidemove)
 				{
-					rock->movedir = (player->cmd.angleturn << FRACBITS) + R_PointToAngle2(0, 0, player->cmd.forwardmove << FRACBITS, -player->cmd.sidemove << FRACBITS);
+					rock->flags2 |= MF2_STRONGBOX; // signifies the rock should not slow to a halt
+					if (twodlevel || (mo->flags2 & MF2_TWOD))
+						rock->movedir = mo->angle;
+					else
+						rock->movedir = (player->cmd.angleturn << FRACBITS) + R_PointToAngle2(0, 0, player->cmd.forwardmove << FRACBITS, -player->cmd.sidemove << FRACBITS);
 					P_Thrust(rock, rock->movedir, rock->scale >> 1);
 				}
+				else
+					rock->flags2 &= ~MF2_STRONGBOX;
 
 				mo->momx = rock->momx;
 				mo->momy = rock->momy;
@@ -12744,7 +12756,7 @@ void P_PlayerAfterThink(player_t *player)
 					mo->tics = walktics;
 				}
 
-				P_TeleportMove(player->mo, rock->x, rock->y, rock->z + rock->height);
+				P_TeleportMove(player->mo, rock->x, rock->y, rock->z + ((mo->eflags & MFE_VERTICALFLIP) ? -mo->height : rock->height));
 				break;
 			}
 			case CR_PTERABYTE: // being carried by a Pterabyte
@@ -12969,19 +12981,23 @@ boolean P_PlayerCanEnterSpinGaps(player_t *player)
 	else if (canEnter == 2)
 		return false;
 
-	return ((player->pflags & (PF_SPINNING|PF_GLIDING)) // players who are spinning or gliding
+	return ((player->pflags & (PF_SPINNING|PF_SLIDING|PF_GLIDING)) // players who are spinning, sliding, or gliding
 		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING) // players who are landing from a glide
+		|| ((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+			&& player->dashmode >= DASHMODE_THRESHOLD && player->mo->state-states == S_PLAY_DASH) // machine players in dashmode
 		|| JUMPCURLED(player)); // players who are jumpcurled, but only if they would normally jump that way
 }
 
 // returns true if the player should use their skin's spinheight instead of their skin's height
 boolean P_PlayerShouldUseSpinHeight(player_t *player)
 {
-	return ((player->pflags & (PF_SPINNING|PF_GLIDING))
+	return ((player->pflags & (PF_SPINNING|PF_SLIDING|PF_GLIDING))
 		|| (player->mo->state == &states[player->mo->info->painstate])
 		|| (player->panim == PA_ROLL)
 		|| ((player->powers[pw_tailsfly] || (player->charability == CA_FLY && player->mo->state-states == S_PLAY_FLY_TIRED))
 			&& !(player->charflags & SF_NOJUMPSPIN))
 		|| (player->charability == CA_GLIDEANDCLIMB && player->mo->state-states == S_PLAY_GLIDE_LANDING)
+		|| ((player->charflags & (SF_DASHMODE|SF_MACHINE)) == (SF_DASHMODE|SF_MACHINE)
+			&& player->dashmode >= DASHMODE_THRESHOLD && player->mo->state-states == S_PLAY_DASH)
 		|| JUMPCURLED(player));
 }

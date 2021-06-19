@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1565,15 +1565,6 @@ static void CL_LoadReceivedSavegame(boolean reloading)
 		}
 		CONS_Printf("\"\n");
 	}
-	else
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("Can't load the level!\n"));
-		Z_Free(savebuffer);
-		save_p = NULL;
-		if (unlink(tmpsave) == -1)
-			CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
-		return;
-	}
 
 	// done
 	Z_Free(savebuffer);
@@ -2961,7 +2952,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	{
 		case KICK_MSG_GO_AWAY:
 			if (!players[pnum].quittime)
-				HU_AddChatText(va("\x82*%s has been kicked (Go away)", player_names[pnum]), false);
+				HU_AddChatText(va("\x82*%s has been kicked (No reason given)", player_names[pnum]), false);
 			kickreason = KR_KICK;
 			break;
 		case KICK_MSG_PING_HIGH:
@@ -2969,7 +2960,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			kickreason = KR_PINGLIMIT;
 			break;
 		case KICK_MSG_CON_FAIL:
-			HU_AddChatText(va("\x82*%s left the game (Synch Failure)", player_names[pnum]), false);
+			HU_AddChatText(va("\x82*%s left the game (Synch failure)", player_names[pnum]), false);
 			kickreason = KR_SYNCH;
 
 			if (M_CheckParm("-consisdump")) // Helps debugging some problems
@@ -3015,7 +3006,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			kickreason = KR_LEAVE;
 			break;
 		case KICK_MSG_BANNED:
-			HU_AddChatText(va("\x82*%s has been banned (Don't come back)", player_names[pnum]), false);
+			HU_AddChatText(va("\x82*%s has been banned (No reason given)", player_names[pnum]), false);
 			kickreason = KR_BAN;
 			break;
 		case KICK_MSG_CUSTOM_KICK:
@@ -4268,7 +4259,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_RECEIVEDGAMESTATE:
 			sendingsavegame[node] = false;
 			resendingsavegame[node] = false;
-			savegameresendcooldown[node] = I_GetTime() + 15 * TICRATE;
+			savegameresendcooldown[node] = I_GetTime() + 5 * TICRATE;
 			break;
 // -------------------------------------------- CLIENT RECEIVE ----------
 		case PT_SERVERTICS:
@@ -4486,9 +4477,9 @@ static INT16 Consistancy(void)
 		{
 			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 				continue;
-	
+
 			mo = (mobj_t *)th;
-	
+
 			if (mo->flags & (MF_SPECIAL | MF_SOLID | MF_PUSHABLE | MF_BOSS | MF_MISSILE | MF_SPRING | MF_MONITOR | MF_FIRE | MF_ENEMY | MF_PAIN | MF_STICKY))
 			{
 				ret -= mo->type;
