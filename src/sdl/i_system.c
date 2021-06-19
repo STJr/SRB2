@@ -1969,7 +1969,7 @@ void I_GetMouseEvents(void)
 		event.data1 = 0;
 //		event.data1 = buttons; // not needed
 		event.data2 = handlermouse2x << 1;
-		event.data3 = -handlermouse2y << 1;
+		event.data3 = handlermouse2y << 1;
 		handlermouse2x = 0;
 		handlermouse2y = 0;
 

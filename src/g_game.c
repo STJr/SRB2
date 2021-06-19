@@ -406,22 +406,6 @@ consvar_t cv_cam_lockonboss[2] = {
 	CVAR_INIT ("cam2_lockaimassist", "Bosses", CV_SAVE, lockedassist_cons_t, NULL),
 };
 
-typedef enum
-{
-	AXISNONE = 0,
-	AXISTURN,
-	AXISMOVE,
-	AXISLOOK,
-	AXISSTRAFE,
-
-	AXISDIGITAL, // axes below this use digital deadzone
-
-	AXISJUMP,
-	AXISSPIN,
-	AXISFIRE,
-	AXISFIRENORMAL,
-} axis_input_e;
-
 consvar_t cv_turnaxis = CVAR_INIT ("joyaxis_turn", "X-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_moveaxis = CVAR_INIT ("joyaxis_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_sideaxis = CVAR_INIT ("joyaxis_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL);
@@ -841,7 +825,7 @@ INT16 G_SoftwareClipAimingPitch(INT32 *aiming)
 	return (INT16)((*aiming)>>16);
 }
 
-static INT32 JoyAxis(axis_input_e axissel)
+INT32 JoyAxis(joyaxis_e axissel)
 {
 	INT32 retaxis;
 	INT32 axisval;
@@ -850,28 +834,28 @@ static INT32 JoyAxis(axis_input_e axissel)
 	//find what axis to get
 	switch (axissel)
 	{
-		case AXISTURN:
+		case JA_TURN:
 			axisval = cv_turnaxis.value;
 			break;
-		case AXISMOVE:
+		case JA_MOVE:
 			axisval = cv_moveaxis.value;
 			break;
-		case AXISLOOK:
+		case JA_LOOK:
 			axisval = cv_lookaxis.value;
 			break;
-		case AXISSTRAFE:
+		case JA_STRAFE:
 			axisval = cv_sideaxis.value;
 			break;
-		case AXISJUMP:
+		case JA_JUMP:
 			axisval = cv_jumpaxis.value;
 			break;
-		case AXISSPIN:
+		case JA_SPIN:
 			axisval = cv_spinaxis.value;
 			break;
-		case AXISFIRE:
+		case JA_FIRE:
 			axisval = cv_fireaxis.value;
 			break;
-		case AXISFIRENORMAL:
+		case JA_FIRENORMAL:
 			axisval = cv_firenaxis.value;
 			break;
 		default:
@@ -903,7 +887,7 @@ static INT32 JoyAxis(axis_input_e axissel)
 	if (retaxis > (+JOYAXISRANGE))
 		retaxis = +JOYAXISRANGE;
 
-	if (!Joystick.bGamepadStyle && axissel > AXISDIGITAL)
+	if (!Joystick.bGamepadStyle && axissel >= JA_DIGITAL)
 	{
 		const INT32 jdeadzone = ((JOYAXISRANGE-1) * cv_digitaldeadzone.value) >> FRACBITS;
 		if (-jdeadzone < retaxis && retaxis < jdeadzone)
@@ -914,7 +898,7 @@ static INT32 JoyAxis(axis_input_e axissel)
 	return retaxis;
 }
 
-static INT32 Joy2Axis(axis_input_e axissel)
+INT32 Joy2Axis(joyaxis_e axissel)
 {
 	INT32 retaxis;
 	INT32 axisval;
@@ -923,28 +907,28 @@ static INT32 Joy2Axis(axis_input_e axissel)
 	//find what axis to get
 	switch (axissel)
 	{
-		case AXISTURN:
+		case JA_TURN:
 			axisval = cv_turnaxis2.value;
 			break;
-		case AXISMOVE:
+		case JA_MOVE:
 			axisval = cv_moveaxis2.value;
 			break;
-		case AXISLOOK:
+		case JA_LOOK:
 			axisval = cv_lookaxis2.value;
 			break;
-		case AXISSTRAFE:
+		case JA_STRAFE:
 			axisval = cv_sideaxis2.value;
 			break;
-		case AXISJUMP:
+		case JA_JUMP:
 			axisval = cv_jumpaxis2.value;
 			break;
-		case AXISSPIN:
+		case JA_SPIN:
 			axisval = cv_spinaxis2.value;
 			break;
-		case AXISFIRE:
+		case JA_FIRE:
 			axisval = cv_fireaxis2.value;
 			break;
-		case AXISFIRENORMAL:
+		case JA_FIRENORMAL:
 			axisval = cv_firenaxis2.value;
 			break;
 		default:
@@ -978,7 +962,7 @@ static INT32 Joy2Axis(axis_input_e axissel)
 	if (retaxis > (+JOYAXISRANGE))
 		retaxis = +JOYAXISRANGE;
 
-	if (!Joystick2.bGamepadStyle && axissel > AXISDIGITAL)
+	if (!Joystick2.bGamepadStyle && axissel >= JA_DIGITAL)
 	{
 		const INT32 jdeadzone = ((JOYAXISRANGE-1) * cv_digitaldeadzone2.value) >> FRACBITS;
 		if (-jdeadzone < retaxis && retaxis < jdeadzone)
@@ -1094,7 +1078,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	angle_t drawangleoffset = (player->powers[pw_carry] == CR_ROLLOUT) ? ANGLE_180 : 0;
 	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, invertmouse, turnmultiplier, mousemove;
 	controlstyle_e controlstyle = G_ControlStyle(ssplayer);
-	INT32 *mx; INT32 *my; INT32 *mly;
+	INT32 mdx, mdy, mldy;
 
 	static INT32 turnheld[2]; // for accelerative turning
 	static boolean keyboard_look[2]; // true if lookup/down using keyboard
@@ -1117,9 +1101,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		invertmouse = cv_invertmouse.value;
 		turnmultiplier = cv_cam_turnmultiplier.value;
 		mousemove = cv_mousemove.value;
-		mx = &mousex;
-		my = &mousey;
-		mly = &mlooky;
+		mdx = mouse.dx;
+		mdy = -mouse.dy;
+		mldy = -mouse.mlookdy;
 		G_CopyTiccmd(cmd, I_BaseTiccmd(), 1); // empty, or external driver
 	}
 	else
@@ -1131,11 +1115,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		invertmouse = cv_invertmouse2.value;
 		turnmultiplier = cv_cam2_turnmultiplier.value;
 		mousemove = cv_mousemove2.value;
-		mx = &mouse2x;
-		my = &mouse2y;
-		mly = &mlook2y;
+		mdx = mouse2.dx;
+		mdy = -mouse2.dy;
+		mldy = -mouse2.mlookdy;
 		G_CopyTiccmd(cmd, I_BaseTiccmd2(), 1); // empty, or external driver
 	}
+
+	if (menuactive || CON_Ready() || chat_on)
+		mdx = mdy = mldy = 0;
 
 	strafeisturn = controlstyle == CS_SIMPLE && ticcmd_centerviewdown[forplayer] &&
 		((cv_cam_lockedinput[forplayer].value && !ticcmd_ztargetfocus[forplayer]) || (player->pflags & PF_STARTDASH)) &&
@@ -1179,10 +1166,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		*myaiming = 0;
 	joyaiming[forplayer] = thisjoyaiming;
 
-	turnaxis = PlayerJoyAxis(ssplayer, AXISTURN);
+	turnaxis = PlayerJoyAxis(ssplayer, JA_TURN);
 	if (strafeisturn)
-		turnaxis += PlayerJoyAxis(ssplayer, AXISSTRAFE);
-	lookaxis = PlayerJoyAxis(ssplayer, AXISLOOK);
+		turnaxis += PlayerJoyAxis(ssplayer, JA_STRAFE);
+	lookaxis = PlayerJoyAxis(ssplayer, JA_LOOK);
 	lookjoystickvector.xaxis = turnaxis;
 	lookjoystickvector.yaxis = lookaxis;
 	G_HandleAxisDeadZone(forplayer, &lookjoystickvector);
@@ -1261,8 +1248,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			tta_factor[forplayer] = 0; // suspend turn to angle
 	}
 
-	strafeaxis = strafeisturn ? 0 : PlayerJoyAxis(ssplayer, AXISSTRAFE);
-	moveaxis = PlayerJoyAxis(ssplayer, AXISMOVE);
+	strafeaxis = strafeisturn ? 0 : PlayerJoyAxis(ssplayer, JA_STRAFE);
+	moveaxis = PlayerJoyAxis(ssplayer, JA_MOVE);
 	movejoystickvector.xaxis = strafeaxis;
 	movejoystickvector.yaxis = moveaxis;
 	G_HandleAxisDeadZone(forplayer, &movejoystickvector);
@@ -1318,12 +1305,12 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		}
 
 	// fire with any button/key
-	axis = PlayerJoyAxis(ssplayer, AXISFIRE);
+	axis = PlayerJoyAxis(ssplayer, JA_FIRE);
 	if (PLAYERINPUTDOWN(ssplayer, gc_fire) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_ATTACK;
 
 	// fire normal with any button/key
-	axis = PlayerJoyAxis(ssplayer, AXISFIRENORMAL);
+	axis = PlayerJoyAxis(ssplayer, JA_FIRENORMAL);
 	if (PLAYERINPUTDOWN(ssplayer, gc_firenormal) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_FIRENORMAL;
 
@@ -1339,7 +1326,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
-	axis = PlayerJoyAxis(ssplayer, AXISSPIN);
+	axis = PlayerJoyAxis(ssplayer, JA_SPIN);
 	if (PLAYERINPUTDOWN(ssplayer, gc_spin) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_SPIN;
 
@@ -1457,7 +1444,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 
 	// jump button
-	axis = PlayerJoyAxis(ssplayer, AXISJUMP);
+	axis = PlayerJoyAxis(ssplayer, JA_JUMP);
 	if (PLAYERINPUTDOWN(ssplayer, gc_jump) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_JUMP;
 
@@ -1476,7 +1463,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			keyboard_look[forplayer] = false;
 
 			// looking up/down
-			*myaiming += (*mly<<19)*player_invert*screen_invert;
+			*myaiming += (mldy<<19)*player_invert*screen_invert;
 		}
 
 		if (analogjoystickmove && joyaiming[forplayer] && lookjoystickvector.yaxis != 0 && configlookaxis != 0)
@@ -1510,24 +1497,22 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	}
 
 	if (!mouseaiming && mousemove)
-		forward += *my;
+		forward += mdy;
 
 	if ((!demoplayback && (player->pflags & PF_SLIDING))) // Analog for mouse
-		side += *mx*2;
+		side += mdx*2;
 	else if (controlstyle == CS_LMAOGALOG)
 	{
-		if (*mx)
+		if (mdx)
 		{
-			if (*mx > 0)
+			if (mdx > 0)
 				cmd->buttons |= BT_CAMRIGHT;
 			else
 				cmd->buttons |= BT_CAMLEFT;
 		}
 	}
 	else
-		cmd->angleturn = (INT16)(cmd->angleturn - (*mx*8));
-
-	*mx = *my = *mly = 0;
+		cmd->angleturn = (INT16)(cmd->angleturn - (mdx*8));
 
 	if (forward > MAXPLMOVE)
 		forward = MAXPLMOVE;
@@ -1878,8 +1863,8 @@ void G_DoLoadLevel(boolean resetplayer)
 		joyxmove[i] = joyymove[i] = 0;
 		joy2xmove[i] = joy2ymove[i] = 0;
 	}
-	mousex = mousey = 0;
-	mouse2x = mouse2y = 0;
+	G_SetMouseDeltas(0, 0, 1);
+	G_SetMouseDeltas(0, 0, 2);
 
 	// clear hud messages remains (usually from game startup)
 	CON_ClearHUD();
@@ -2201,6 +2186,16 @@ boolean G_Responder(event_t *ev)
 	}
 
 	return false;
+}
+
+//
+// G_LuaResponder
+// Let Lua handle key events.
+//
+boolean G_LuaResponder(event_t *ev)
+{
+	return (ev->type == ev_keydown && LUAh_KeyDown(ev->data1)) ||
+		(ev->type == ev_keyup && LUAh_KeyUp(ev->data1));
 }
 
 //
@@ -3103,8 +3098,8 @@ void G_DoReborn(INT32 playernum)
 				joyxmove[i] = joyymove[i] = 0;
 				joy2xmove[i] = joy2ymove[i] = 0;
 			}
-			mousex = mousey = 0;
-			mouse2x = mouse2y = 0;
+			G_SetMouseDeltas(0, 0, 1);
+			G_SetMouseDeltas(0, 0, 2);
 
 			// clear hud messages remains (usually from game startup)
 			CON_ClearHUD();
