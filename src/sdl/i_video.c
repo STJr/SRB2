@@ -407,7 +407,7 @@ void I_UpdateMouseGrab(void)
 
 boolean I_GetMouseGrab(void)
 {
-	return SDL_GetWindowGrab(window);
+	return (boolean)SDL_GetWindowGrab(window);
 }
 
 void I_SetMouseGrab(boolean grab)
