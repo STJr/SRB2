@@ -812,6 +812,7 @@ static int power_len(lua_State *L)
 }
 
 #define NOFIELD luaL_error(L, LUA_QL("ticcmd_t") " has no field named " LUA_QS, field)
+#define NOSET luaL_error(L, LUA_QL("ticcmd_t") " field " LUA_QS " should not be set directly.", field)
 
 static int ticcmd_get(lua_State *L)
 {
@@ -830,6 +831,8 @@ static int ticcmd_get(lua_State *L)
 		lua_pushinteger(L, cmd->aiming);
 	else if (fastcmp(field,"buttons"))
 		lua_pushinteger(L, cmd->buttons);
+	else if (fastcmp(field,"latency"))
+		lua_pushinteger(L, cmd->latency);
 	else
 		return NOFIELD;
 
@@ -856,6 +859,8 @@ static int ticcmd_set(lua_State *L)
 		cmd->aiming = (INT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"buttons"))
 		cmd->buttons = (UINT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"latency"))
+		return NOSET;
 	else
 		return NOFIELD;
 
@@ -863,6 +868,7 @@ static int ticcmd_set(lua_State *L)
 }
 
 #undef NOFIELD
+#undef NOSET
 
 int LUA_PlayerLib(lua_State *L)
 {

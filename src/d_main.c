@@ -175,9 +175,52 @@ void D_ProcessEvents(void)
 
 	boolean eaten;
 
+	// Reset possibly stale mouse info
+	G_SetMouseDeltas(0, 0, 1);
+	G_SetMouseDeltas(0, 0, 2);
+	mouse.buttons &= ~(MB_SCROLLUP|MB_SCROLLDOWN);
+	mouse2.buttons &= ~(MB_SCROLLUP|MB_SCROLLDOWN);
+
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
+		boolean hooked = false;
+
 		ev = &events[eventtail];
+
+		// Set mouse buttons early in case event is eaten later
+		if (ev->type == ev_keydown || ev->type == ev_keyup)
+		{
+			// Mouse buttons
+			if ((UINT32)(ev->data1 - KEY_MOUSE1) < MOUSEBUTTONS)
+			{
+				if (ev->type == ev_keydown)
+					mouse.buttons |= 1 << (ev->data1 - KEY_MOUSE1);
+				else
+					mouse.buttons &= ~(1 << (ev->data1 - KEY_MOUSE1));
+			}
+			else if ((UINT32)(ev->data1 - KEY_2MOUSE1) < MOUSEBUTTONS)
+			{
+				if (ev->type == ev_keydown)
+					mouse2.buttons |= 1 << (ev->data1 - KEY_2MOUSE1);
+				else
+					mouse2.buttons &= ~(1 << (ev->data1 - KEY_2MOUSE1));
+			}
+			// Scroll (has no keyup event)
+			else switch (ev->data1) {
+				case KEY_MOUSEWHEELUP:
+					mouse.buttons |= MB_SCROLLUP;
+					break;
+				case KEY_MOUSEWHEELDOWN:
+					mouse.buttons |= MB_SCROLLDOWN;
+					break;
+				case KEY_2MOUSEWHEELUP:
+					mouse2.buttons |= MB_SCROLLUP;
+					break;
+				case KEY_2MOUSEWHEELDOWN:
+					mouse2.buttons |= MB_SCROLLDOWN;
+					break;
+			}
+		}
 
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
@@ -187,6 +230,12 @@ void D_ProcessEvents(void)
 		{
 			if (cht_Responder(ev))
 				continue;
+		}
+
+		if (!CON_Ready() && !menuactive) {
+			if (G_LuaResponder(ev))
+				continue;
+			hooked = true;
 		}
 
 		// Menu input
@@ -203,6 +252,12 @@ void D_ProcessEvents(void)
 		if (eaten)
 			continue; // menu ate the event
 
+		if (!hooked && !CON_Ready()) {
+			if (G_LuaResponder(ev))
+				continue;
+			hooked = true;
+		}
+
 		// console input
 #ifdef HAVE_THREADS
 		I_lock_mutex(&con_mutex);
@@ -217,8 +272,16 @@ void D_ProcessEvents(void)
 		if (eaten)
 			continue; // ate the event
 
+		if (!hooked && G_LuaResponder(ev))
+			continue;
+
 		G_Responder(ev);
 	}
+
+	if (mouse.rdx || mouse.rdy)
+		G_SetMouseDeltas(mouse.rdx, mouse.rdy, 1);
+	if (mouse2.rdx || mouse2.rdy)
+		G_SetMouseDeltas(mouse2.rdx, mouse2.rdy, 2);
 }
 
 //

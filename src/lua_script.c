@@ -20,6 +20,7 @@
 #include "r_state.h"
 #include "r_sky.h"
 #include "g_game.h"
+#include "g_input.h"
 #include "f_finale.h"
 #include "byteptr.h"
 #include "p_saveg.h"
@@ -57,6 +58,7 @@ static lua_CFunction liblist[] = {
 	LUA_PolyObjLib, // polyobj_t
 	LUA_BlockmapLib, // blockmap stuff
 	LUA_HudLib, // HUD stuff
+	LUA_InputLib, // inputs
 	NULL
 };
 
@@ -183,6 +185,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	} else if (fastcmp(word,"modeattacking")) {
 		lua_pushboolean(L, modeattacking);
+		return 1;
+	} else if (fastcmp(word,"metalrecording")) {
+		lua_pushboolean(L, metalrecording);
 		return 1;
 	} else if (fastcmp(word,"splitscreen")) {
 		lua_pushboolean(L, splitscreen);
@@ -382,6 +387,11 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	} else if (fastcmp(word, "stagefailed")) {
 		lua_pushboolean(L, stagefailed);
+	} else if (fastcmp(word, "mouse")) {
+		LUA_PushUserdata(L, &mouse, META_MOUSE);
+		return 1;
+	} else if (fastcmp(word, "mouse2")) {
+		LUA_PushUserdata(L, &mouse2, META_MOUSE);
 		return 1;
 	}
 	return 0;
@@ -918,6 +928,7 @@ enum
 	ARCH_SLOPE,
 	ARCH_MAPHEADER,
 	ARCH_SKINCOLOR,
+	ARCH_MOUSE,
 
 	ARCH_TEND=0xFF,
 };
@@ -945,6 +956,7 @@ static const struct {
 	{META_SLOPE,    ARCH_SLOPE},
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{META_SKINCOLOR,   ARCH_SKINCOLOR},
+	{META_MOUSE,    ARCH_MOUSE},
 	{NULL,          ARCH_NULL}
 };
 
@@ -1252,12 +1264,18 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
-
 		case ARCH_SKINCOLOR:
 		{
 			skincolor_t *info = *((skincolor_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_SKINCOLOR);
 			WRITEUINT16(save_p, info - skincolors);
+			break;
+		}
+		case ARCH_MOUSE:
+		{
+			mouse_t *m = *((mouse_t **)lua_touserdata(gL, myindex));
+			WRITEUINT8(save_p, ARCH_MOUSE);
+			WRITEUINT8(save_p, m == &mouse ? 1 : 2);
 			break;
 		}
 		default:
@@ -1510,6 +1528,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 		break;
 	case ARCH_SKINCOLOR:
 		LUA_PushUserdata(gL, &skincolors[READUINT16(save_p)], META_SKINCOLOR);
+		break;
+	case ARCH_MOUSE:
+		LUA_PushUserdata(gL, READUINT16(save_p) == 1 ? &mouse : &mouse2, META_MOUSE);
 		break;
 	case ARCH_TEND:
 		return 1;

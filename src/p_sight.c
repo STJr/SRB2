@@ -307,7 +307,7 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 			for (rover = front->ffloors; rover; rover = rover->next)
 			{
 				if (!(rover->flags & FF_EXISTS)
-					|| !(rover->flags & FF_RENDERSIDES) || rover->flags & FF_TRANSLUCENT)
+					|| !(rover->flags & FF_RENDERSIDES) || (rover->flags & (FF_TRANSLUCENT|FF_FOG)))
 				{
 					continue;
 				}
@@ -323,7 +323,7 @@ static boolean P_CrossSubsector(size_t num, register los_t *los)
 			for (rover = back->ffloors; rover; rover = rover->next)
 			{
 				if (!(rover->flags & FF_EXISTS)
-					|| !(rover->flags & FF_RENDERSIDES) || rover->flags & FF_TRANSLUCENT)
+					|| !(rover->flags & FF_RENDERSIDES) || (rover->flags & (FF_TRANSLUCENT|FF_FOG)))
 				{
 					continue;
 				}
@@ -452,7 +452,7 @@ boolean P_CheckSight(mobj_t *t1, mobj_t *t2)
 			/// \todo Improve by checking fog density/translucency
 			/// and setting a sight limit.
 			if (!(rover->flags & FF_EXISTS)
-				|| !(rover->flags & FF_RENDERPLANES) || rover->flags & FF_TRANSLUCENT)
+				|| !(rover->flags & FF_RENDERPLANES) || (rover->flags & (FF_TRANSLUCENT|FF_FOG)))
 			{
 				continue;
 			}
