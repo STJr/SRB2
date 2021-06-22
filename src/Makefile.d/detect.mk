@@ -29,6 +29,7 @@ $(call Print,$(_m))
 
 # go for a 32-bit sdl mingw exe by default
 MINGW:=1
+CC:=i686-w64-mingw32-gcc # Mingw-w64
 WINDOWSHELL:=1
 
 else # if you on the *nix
