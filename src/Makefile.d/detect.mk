@@ -94,7 +94,7 @@ ifeq (,$(filter $(v),$(gcc_versions)))
 define line =
 Your compiler version, GCC $(version), \
 is not supported by the Makefile.
-The Makefile will assume GCC $(latest_gcc_version).))
+The Makefile will assume GCC $(latest_gcc_version).
 endef
 $(call Print,$(line))
 GCC$(subst .,,$(latest_gcc_version)):=1
