@@ -88,6 +88,12 @@ static int lib_finetangent(lua_State *L)
 	return 1;
 }
 
+static int lib_fixedasin(lua_State *L)
+{
+	lua_pushangle(L, -FixedAcos(luaL_checkfixed(L, 1)) + ANGLE_90);
+	return 1;
+}
+
 static int lib_fixedacos(lua_State *L)
 {
 	lua_pushangle(L, FixedAcos(luaL_checkfixed(L, 1)));
@@ -199,6 +205,7 @@ static luaL_Reg lib_math[] = {
 	{"sin", lib_finesine},
 	{"cos", lib_finecosine},
 	{"tan", lib_finetangent},
+	{"asin", lib_fixedasin},
 	{"acos", lib_fixedacos},
 	{"FixedAngle", lib_fixedangle},
 	{"fixangle"  , lib_fixedangle},
