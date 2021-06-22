@@ -1672,7 +1672,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		cmd->angleturn = orighookangle;
 
-		LUAh_PlayerCmd(player, cmd);
+		LUA_HookTiccmd(player, cmd, HOOK(PlayerCmd));
 
 		extra = cmd->angleturn - orighookangle;
 		cmd->angleturn = origangle + extra;
@@ -1681,7 +1681,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		// Send leveltime when this tic was generated to the server for control lag calculations.
 		// Only do this when in a level. Also do this after the hook, so that it can't overwrite this.
-		cmd->latency = (leveltime & 0xFF); 
+		cmd->latency = (leveltime & 0xFF);
 	}
 
 	//Reset away view if a command is given.
@@ -1690,7 +1690,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	{
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
-		LUAh_ViewpointSwitch(player, &players[consoleplayer], true);
+		LUA_HookViewpointSwitch(player, &players[consoleplayer], true);
 		displayplayer = consoleplayer;
 	}
 
@@ -2064,7 +2064,7 @@ boolean G_Responder(event_t *ev)
 					continue;
 
 				// Call ViewpointSwitch hooks here.
-				canSwitchView = LUAh_ViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
+				canSwitchView = LUA_HookViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
 				if (canSwitchView == 1) // Set viewpoint to this player
 					break;
 				else if (canSwitchView == 2) // Skip this player
@@ -2194,8 +2194,8 @@ boolean G_Responder(event_t *ev)
 //
 boolean G_LuaResponder(event_t *ev)
 {
-	return (ev->type == ev_keydown && LUAh_KeyDown(ev->data1)) ||
-		(ev->type == ev_keyup && LUAh_KeyUp(ev->data1));
+	return (ev->type == ev_keydown && LUA_HookKey(ev->data1, HOOK(KeyDown))) ||
+		(ev->type == ev_keyup && LUA_HookKey(ev->data1, HOOK(KeyUp)));
 }
 
 //
@@ -2748,7 +2748,7 @@ void G_SpawnPlayer(INT32 playernum)
 
 	P_SpawnPlayer(playernum);
 	G_MovePlayerToSpawnOrStarpost(playernum);
-	LUAh_PlayerSpawn(&players[playernum]); // Lua hook for player spawning :)
+	LUA_HookPlayer(&players[playernum], HOOK(PlayerSpawn)); // Lua hook for player spawning :)
 }
 
 void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
@@ -3127,7 +3127,7 @@ void G_DoReborn(INT32 playernum)
 		}
 		else
 		{
-			LUAh_MapChange(gamemap);
+			LUA_HookInt(gamemap, HOOK(MapChange));
 			titlecardforreload = true;
 			G_DoLoadLevel(true);
 			titlecardforreload = false;

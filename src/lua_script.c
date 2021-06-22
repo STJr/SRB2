@@ -1658,7 +1658,7 @@ void LUA_Archive(void)
 
 	WRITEUINT32(save_p, UINT32_MAX); // end of mobjs marker, replaces mobjnum.
 
-	LUAh_NetArchiveHook(NetArchive); // call the NetArchive hook in archive mode
+	LUA_HookNetArchive(NetArchive); // call the NetArchive hook in archive mode
 	ArchiveTables();
 
 	if (gL)
@@ -1693,7 +1693,7 @@ void LUA_UnArchive(void)
 		}
 	} while(mobjnum != UINT32_MAX); // repeat until end of mobjs marker.
 
-	LUAh_NetArchiveHook(NetUnArchive); // call the NetArchive hook in unarchive mode
+	LUA_HookNetArchive(NetUnArchive); // call the NetArchive hook in unarchive mode
 	UnArchiveTables();
 
 	if (gL)
