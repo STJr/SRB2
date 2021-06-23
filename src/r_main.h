@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -78,17 +78,17 @@ boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixe
 
 // Render stats
 
-extern int ps_prevframetime;// time when previous frame was rendered
-extern int ps_rendercalltime;
-extern int ps_uitime;
-extern int ps_swaptime;
+extern precise_t ps_prevframetime;// time when previous frame was rendered
+extern precise_t ps_rendercalltime;
+extern precise_t ps_uitime;
+extern precise_t ps_swaptime;
 
-extern int ps_bsptime;
+extern precise_t ps_bsptime;
 
-extern int ps_sw_spritecliptime;
-extern int ps_sw_portaltime;
-extern int ps_sw_planetime;
-extern int ps_sw_maskedtime;
+extern precise_t ps_sw_spritecliptime;
+extern precise_t ps_sw_portaltime;
+extern precise_t ps_sw_planetime;
+extern precise_t ps_sw_maskedtime;
 
 extern int ps_numbspcalls;
 extern int ps_numsprites;

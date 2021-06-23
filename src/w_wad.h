@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -206,6 +206,6 @@ void W_UnlockCachedPatch(void *patch);
 
 void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5);
 
-int W_VerifyNMUSlumps(const char *filename);
+int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error);
 
 #endif // __W_WAD__

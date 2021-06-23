@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1849,7 +1849,7 @@ void P_XYMovement(mobj_t *mo)
 				B_MoveBlocked(player);
 		}
 
-		if (LUAh_MobjMoveBlocked(mo))
+		if (LUA_HookMobj(mo, MOBJ_HOOK(MobjMoveBlocked)))
 		{
 			if (P_MobjWasRemoved(mo))
 				return;
@@ -3193,13 +3193,16 @@ boolean P_SceneryZMovement(mobj_t *mo)
 //
 boolean P_CanRunOnWater(player_t *player, ffloor_t *rover)
 {
-	fixed_t topheight = P_GetFFloorTopZAt(rover, player->mo->x, player->mo->y);
+	boolean flip = player->mo->eflags & MFE_VERTICALFLIP;
+	fixed_t surfaceheight = flip ? P_GetFFloorBottomZAt(rover, player->mo->x, player->mo->y) : P_GetFFloorTopZAt(rover, player->mo->x, player->mo->y);
+	fixed_t playerbottom = flip ? (player->mo->z + player->mo->height) : player->mo->z;
+	boolean doifit = flip ? (surfaceheight - player->mo->floorz >= player->mo->height) : (player->mo->ceilingz - surfaceheight >= player->mo->height);
 
 	if (!player->powers[pw_carry] && !player->homing
-		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= DASHMODE_THRESHOLD) && player->mo->ceilingz-topheight >= player->mo->height)
+		&& ((player->powers[pw_super] || player->charflags & SF_RUNONWATER || player->dashmode >= DASHMODE_THRESHOLD) && doifit)
 		&& (rover->flags & FF_SWIMMABLE) && !(player->pflags & PF_SPINNING) && player->speed > FixedMul(player->runspeed, player->mo->scale)
 		&& !(player->pflags & PF_SLIDING)
-		&& abs(player->mo->z - topheight) < FixedMul(30*FRACUNIT, player->mo->scale))
+		&& abs(playerbottom - surfaceheight) < FixedMul(30*FRACUNIT, player->mo->scale))
 		return true;
 
 	return false;
@@ -3288,11 +3291,9 @@ void P_MobjCheckWater(mobj_t *mobj)
 			boolean electric = !!(p->powers[pw_shield] & SH_PROTECTELECTRIC);
 			if (electric || ((p->powers[pw_shield] & SH_PROTECTFIRE) && !(p->powers[pw_shield] & SH_PROTECTWATER) && !(mobj->eflags & MFE_TOUCHLAVA)))
 			{ // Water removes electric and non-water fire shields...
-				P_FlashPal(p,
-				electric
-				? PAL_WHITE
-				: PAL_NUKE,
-				1);
+			    if (electric)
+				    P_FlashPal(p, PAL_WHITE, 1);
+				
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
 			}
 		}
@@ -3371,7 +3372,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 			}
 
 			// skipping stone!
-			if (p && (p->charability2 == CA2_SPINDASH) && p->speed/2 > abs(mobj->momz)
+			if (p && p->speed/2 > abs(mobj->momz)
 				&& ((p->pflags & (PF_SPINNING|PF_JUMPED)) == PF_SPINNING)
 				&& ((!(mobj->eflags & MFE_VERTICALFLIP) && thingtop - mobj->momz > mobj->watertop)
 				|| ((mobj->eflags & MFE_VERTICALFLIP) && mobj->z - mobj->momz < mobj->waterbottom)))
@@ -4609,9 +4610,8 @@ static boolean P_Boss4MoveCage(mobj_t *mobj, fixed_t delta)
 	INT32 snum;
 	sector_t *sector;
 	boolean gotcage = false;
-	TAG_ITER_DECLARECOUNTER(0);
 
-	TAG_ITER_SECTORS(0, tag, snum)
+	TAG_ITER_SECTORS(tag, snum)
 	{
 		sector = &sectors[snum];
 		sector->floorheight += delta;
@@ -4695,9 +4695,8 @@ static void P_Boss4DestroyCage(mobj_t *mobj)
 	size_t a;
 	sector_t *sector, *rsec;
 	ffloor_t *rover;
-	TAG_ITER_DECLARECOUNTER(0);
 
-	TAG_ITER_SECTORS(0, tag, snum)
+	TAG_ITER_SECTORS(tag, snum)
 	{
 		sector = &sectors[snum];
 
@@ -5659,14 +5658,10 @@ static void P_Boss9Thinker(mobj_t *mobj)
 				if (P_RandomRange(1,(dist>>FRACBITS)/16) == 1)
 					break;
 			}
-			if (spawner)
+			if (spawner && dist)
 			{
 				mobj_t *missile = P_SpawnMissile(spawner, mobj, MT_MSGATHER);
-
-				if (dist == 0)
-					missile->fuse = 0;
-				else
-					missile->fuse = (dist/P_AproxDistance(missile->momx, missile->momy));
+				missile->fuse = (dist/P_AproxDistance(missile->momx, missile->momy));
 
 				if (missile->fuse > mobj->fuse)
 					P_RemoveMobj(missile);
@@ -7518,7 +7513,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 
 static void P_MobjSceneryThink(mobj_t *mobj)
 {
-	if (LUAh_MobjThinker(mobj))
+	if (LUA_HookMobj(mobj, MOBJ_HOOK(MobjThinker)))
 		return;
 	if (P_MobjWasRemoved(mobj))
 		return;
@@ -7866,7 +7861,7 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 
 		if (!mobj->fuse)
 		{
-			if (!LUAh_MobjFuse(mobj))
+			if (!LUA_HookMobj(mobj, MOBJ_HOOK(MobjFuse)))
 				P_RemoveMobj(mobj);
 			return;
 		}
@@ -7925,7 +7920,7 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 			mobj->fuse--;
 			if (!mobj->fuse)
 			{
-				if (!LUAh_MobjFuse(mobj))
+				if (!LUA_HookMobj(mobj, MOBJ_HOOK(MobjFuse)))
 					P_RemoveMobj(mobj);
 				return;
 			}
@@ -7942,7 +7937,7 @@ static boolean P_MobjPushableThink(mobj_t *mobj)
 	P_PushableThinker(mobj);
 
 	// Extinguish fire objects in water. (Yes, it's extraordinarily rare to have a pushable flame object, but Brak uses such a case.)
-	if (mobj->flags & MF_FIRE && mobj->type != MT_PUMA && mobj->type != MT_FIREBALL
+	if ((mobj->flags & MF_FIRE) && !(mobj->eflags & MFE_TOUCHLAVA)
 		&& (mobj->eflags & (MFE_UNDERWATER | MFE_TOUCHWATER)))
 	{
 		P_KillMobj(mobj, NULL, NULL, 0);
@@ -7954,7 +7949,7 @@ static boolean P_MobjPushableThink(mobj_t *mobj)
 
 static boolean P_MobjBossThink(mobj_t *mobj)
 {
-	if (LUAh_BossThinker(mobj))
+	if (LUA_HookMobj(mobj, MOBJ_HOOK(BossThinker)))
 	{
 		if (P_MobjWasRemoved(mobj))
 			return false;
@@ -9656,6 +9651,12 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		break;
 	}
 	case MT_SALOONDOOR:
+		if (!mobj->tracer) // Door center is gone or not spawned?
+		{
+			P_RemoveMobj(mobj); // Die
+			return false;
+		}
+
 		P_SaloonDoorThink(mobj);
 		break;
 	case MT_MINECARTSPAWNER:
@@ -9710,7 +9711,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		P_MobjCheckWater(mobj);
 
 		// Extinguish fire objects in water
-		if (mobj->flags & MF_FIRE && mobj->type != MT_PUMA && mobj->type != MT_FIREBALL
+		if ((mobj->flags & MF_FIRE) && !(mobj->eflags & MFE_TOUCHLAVA)
 			&& (mobj->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
 		{
 			P_KillMobj(mobj, NULL, NULL, 0);
@@ -9840,7 +9841,7 @@ static void P_FlagFuseThink(mobj_t *mobj)
 	if (mobj->type == MT_REDFLAG)
 	{
 		if (!(mobj->flags2 & MF2_JUSTATTACKED))
-			CONS_Printf(M_GetText("The %c%s%c has returned to base.\n"), 0x85, M_GetText("Red flag"), 0x80);
+			CONS_Printf(M_GetText("The \205Red flag\200 has returned to base.\n"));
 
 		// Assumedly in splitscreen players will be on opposing teams
 		if (players[consoleplayer].ctfteam == 1 || splitscreen)
@@ -9853,7 +9854,7 @@ static void P_FlagFuseThink(mobj_t *mobj)
 	else // MT_BLUEFLAG
 	{
 		if (!(mobj->flags2 & MF2_JUSTATTACKED))
-			CONS_Printf(M_GetText("The %c%s%c has returned to base.\n"), 0x84, M_GetText("Blue flag"), 0x80);
+			CONS_Printf(M_GetText("The \204Blue flag\200 has returned to base.\n"));
 
 		// Assumedly in splitscreen players will be on opposing teams
 		if (players[consoleplayer].ctfteam == 2 || splitscreen)
@@ -9875,7 +9876,7 @@ static boolean P_FuseThink(mobj_t *mobj)
 	if (mobj->fuse)
 		return true;
 
-	if (LUAh_MobjFuse(mobj) || P_MobjWasRemoved(mobj))
+	if (LUA_HookMobj(mobj, MOBJ_HOOK(MobjFuse)) || P_MobjWasRemoved(mobj))
 		;
 	else if (mobj->info->flags & MF_MONITOR)
 	{
@@ -10051,13 +10052,13 @@ void P_MobjThinker(mobj_t *mobj)
 	// Check for a Lua thinker first
 	if (!mobj->player)
 	{
-		if (LUAh_MobjThinker(mobj) || P_MobjWasRemoved(mobj))
+		if (LUA_HookMobj(mobj, MOBJ_HOOK(MobjThinker)) || P_MobjWasRemoved(mobj))
 			return;
 	}
 	else if (!mobj->player->spectator)
 	{
 		// You cannot short-circuit the player thinker like you can other thinkers.
-		LUAh_MobjThinker(mobj);
+		LUA_HookMobj(mobj, MOBJ_HOOK(MobjThinker));
 		if (P_MobjWasRemoved(mobj))
 			return;
 	}
@@ -10486,9 +10487,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	P_SetThingPosition(mobj);
 	I_Assert(mobj->subsector != NULL);
 
-	// Make sure scale matches destscale immediately when spawned
-	P_SetScale(mobj, mobj->destscale);
-
 	mobj->floorz   = P_GetSectorFloorZAt  (mobj->subsector->sector, x, y);
 	mobj->ceilingz = P_GetSectorCeilingZAt(mobj->subsector->sector, x, y);
 
@@ -10528,7 +10526,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 	// DANGER! This can cause P_SpawnMobj to return NULL!
 	// Avoid using P_RemoveMobj on the newly created mobj in "MobjSpawn" Lua hooks!
-	if (LUAh_MobjSpawn(mobj))
+	if (LUA_HookMobj(mobj, MOBJ_HOOK(MobjSpawn)))
 	{
 		if (P_MobjWasRemoved(mobj))
 			return NULL;
@@ -10915,7 +10913,7 @@ void P_RemoveMobj(mobj_t *mobj)
 		return; // something already removing this mobj.
 
 	mobj->thinker.function.acp1 = (actionf_p1)P_RemoveThinkerDelayed; // shh. no recursing.
-	LUAh_MobjRemoved(mobj);
+	LUA_HookMobj(mobj, MOBJ_HOOK(MobjRemoved));
 	mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker; // needed for P_UnsetThingPosition, etc. to work.
 
 	// Rings only, please!
@@ -11402,6 +11400,10 @@ void P_SpawnPlayer(INT32 playernum)
 		p->jumpfactor = skins[p->skin].jumpfactor;
 	}
 
+	// Clear lastlinehit and lastsidehit
+	p->lastsidehit = -1;
+	p->lastlinehit = -1;
+
 	//awayview stuff
 	p->awayviewmobj = NULL;
 	p->awayviewtics = 0;
@@ -11797,7 +11799,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		if (!(G_CoopGametype() || (mthing->options & MTF_EXTRA)))
 			return false; // she doesn't hang out here
 
-		if (!mariomode && !(netgame || multiplayer) && players[consoleplayer].skin == 3)
+		if (!(netgame || multiplayer) && players[consoleplayer].skin == 3)
 			return false; // no doubles
 
 		break;
@@ -11963,6 +11965,7 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 	INT32 j;
 	emblem_t* emblem = M_GetLevelEmblems(gamemap);
 	skincolornum_t emcolor;
+	boolean validEmblem = true;
 
 	while (emblem)
 	{
@@ -11987,8 +11990,19 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 	emcolor = M_GetEmblemColor(&emblemlocations[j]); // workaround for compiler complaint about bad function casting
 	mobj->color = (UINT16)emcolor;
 
-	if (emblemlocations[j].collected
-		|| (emblemlocations[j].type == ET_SKIN && emblemlocations[j].var != players[0].skin))
+	validEmblem = !emblemlocations[j].collected;
+
+	if (emblemlocations[j].type == ET_SKIN)
+	{
+		INT32 skinnum = M_EmblemSkinNum(&emblemlocations[j]);
+
+		if (players[0].skin != skinnum)
+		{
+			validEmblem = false;
+		}
+	}
+
+	if (validEmblem == false)
 	{
 		P_UnsetThingPosition(mobj);
 		mobj->flags |= MF_NOCLIP;
@@ -12561,7 +12575,7 @@ static boolean P_SetupBooster(mapthing_t* mthing, mobj_t* mobj, boolean strong)
 
 static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 {
-	boolean override = LUAh_MapThingSpawn(mobj, mthing);
+	boolean override = LUA_HookMapThingSpawn(mobj, mthing);
 
 	if (P_MobjWasRemoved(mobj))
 		return false;

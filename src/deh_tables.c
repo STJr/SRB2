@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,6 +22,9 @@
 #include "v_video.h" // video flags (for lua)
 #include "i_sound.h" // musictype_t (for lua)
 #include "g_state.h" // gamestate_t (for lua)
+#include "g_game.h" // Joystick axes (for lua)
+#include "i_joy.h"
+#include "g_input.h" // Game controls (for lua)
 
 #include "deh_tables.h"
 
@@ -1521,6 +1524,13 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_SPINFIRE4",
 	"S_SPINFIRE5",
 	"S_SPINFIRE6",
+
+	"S_TEAM_SPINFIRE1",
+	"S_TEAM_SPINFIRE2",
+	"S_TEAM_SPINFIRE3",
+	"S_TEAM_SPINFIRE4",
+	"S_TEAM_SPINFIRE5",
+	"S_TEAM_SPINFIRE6",
 
 	// Spikes
 	"S_SPIKE1",
@@ -3478,9 +3488,7 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_BLUEBRICKDEBRIS",
 	"S_YELLOWBRICKDEBRIS",
 
-#ifdef SEENAMES
 	"S_NAMECHECK",
-#endif
 };
 
 // RegEx to generate this from info.h: ^\tMT_([^,]+), --> \t"MT_\1",
@@ -4260,9 +4268,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_BLUEBRICKDEBRIS",
 	"MT_YELLOWBRICKDEBRIS",
 
-#ifdef SEENAMES
 	"MT_NAMECHECK",
-#endif
 };
 
 const char *const MOBJFLAG_LIST[] = {
@@ -4331,6 +4337,7 @@ const char *const MOBJFLAG2_LIST[] = {
 	"AMBUSH",         // Alternate behaviour typically set by MTF_AMBUSH
 	"LINKDRAW",       // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	"SHIELD",         // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
+	"SPLAT",          // Object is a splat
 	NULL
 };
 
@@ -4794,6 +4801,7 @@ struct int_const_s const INT_CONST[] = {
 
 	// fixed_t constants, from m_fixed.h
 	{"FRACUNIT",FRACUNIT},
+	{"FU"      ,FRACUNIT},
 	{"FRACBITS",FRACBITS},
 
 	// doomdef.h constants
@@ -4870,6 +4878,36 @@ struct int_const_s const INT_CONST[] = {
 	{"tr_trans80",tr_trans80},
 	{"tr_trans90",tr_trans90},
 	{"NUMTRANSMAPS",NUMTRANSMAPS},
+
+	// Alpha styles (blend modes)
+	{"AST_COPY",AST_COPY},
+	{"AST_TRANSLUCENT",AST_TRANSLUCENT},
+	{"AST_ADD",AST_ADD},
+	{"AST_SUBTRACT",AST_SUBTRACT},
+	{"AST_REVERSESUBTRACT",AST_REVERSESUBTRACT},
+	{"AST_MODULATE",AST_MODULATE},
+	{"AST_OVERLAY",AST_OVERLAY},
+
+	// Render flags
+	{"RF_HORIZONTALFLIP",RF_HORIZONTALFLIP},
+	{"RF_VERTICALFLIP",RF_VERTICALFLIP},
+	{"RF_ABSOLUTEOFFSETS",RF_ABSOLUTEOFFSETS},
+	{"RF_FLIPOFFSETS",RF_FLIPOFFSETS},
+	{"RF_SPLATMASK",RF_SPLATMASK},
+	{"RF_SLOPESPLAT",RF_SLOPESPLAT},
+	{"RF_OBJECTSLOPESPLAT",RF_OBJECTSLOPESPLAT},
+	{"RF_NOSPLATBILLBOARD",RF_NOSPLATBILLBOARD},
+	{"RF_NOSPLATROLLANGLE",RF_NOSPLATROLLANGLE},
+	{"RF_BLENDMASK",RF_BLENDMASK},
+	{"RF_FULLBRIGHT",RF_FULLBRIGHT},
+	{"RF_FULLDARK",RF_FULLDARK},
+	{"RF_NOCOLORMAPS",RF_NOCOLORMAPS},
+	{"RF_SPRITETYPEMASK",RF_SPRITETYPEMASK},
+	{"RF_PAPERSPRITE",RF_PAPERSPRITE},
+	{"RF_FLOORSPRITE",RF_FLOORSPRITE},
+	{"RF_SHADOWDRAW",RF_SHADOWDRAW},
+	{"RF_SHADOWEFFECTS",RF_SHADOWEFFECTS},
+	{"RF_DROPSHADOW",RF_DROPSHADOW},
 
 	// Level flags
 	{"LF_SCRIPTISFILE",LF_SCRIPTISFILE},
@@ -4987,6 +5025,7 @@ struct int_const_s const INT_CONST[] = {
 	{"SF_NOSUPERSPRITES",SF_NOSUPERSPRITES},
 	{"SF_NOSUPERJUMPBOOST",SF_NOSUPERJUMPBOOST},
 	{"SF_CANBUSTWALLS",SF_CANBUSTWALLS},
+	{"SF_NOSHIELDABILITY",SF_NOSHIELDABILITY},
 
 	// Dashmode constants
 	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
@@ -5429,5 +5468,99 @@ struct int_const_s const INT_CONST[] = {
 	{"GS_DEDICATEDSERVER",GS_DEDICATEDSERVER},
 	{"GS_WAITINGPLAYERS",GS_WAITINGPLAYERS},
 
+	// Joystick axes
+	{"JA_NONE",JA_NONE},
+	{"JA_TURN",JA_TURN},
+	{"JA_MOVE",JA_MOVE},
+	{"JA_LOOK",JA_LOOK},
+	{"JA_STRAFE",JA_STRAFE},
+	{"JA_DIGITAL",JA_DIGITAL},
+	{"JA_JUMP",JA_JUMP},
+	{"JA_SPIN",JA_SPIN},
+	{"JA_FIRE",JA_FIRE},
+	{"JA_FIRENORMAL",JA_FIRENORMAL},
+	{"JOYAXISRANGE",JOYAXISRANGE},
+
+	// Game controls
+	{"gc_null",gc_null},
+	{"gc_forward",gc_forward},
+	{"gc_backward",gc_backward},
+	{"gc_strafeleft",gc_strafeleft},
+	{"gc_straferight",gc_straferight},
+	{"gc_turnleft",gc_turnleft},
+	{"gc_turnright",gc_turnright},
+	{"gc_weaponnext",gc_weaponnext},
+	{"gc_weaponprev",gc_weaponprev},
+	{"gc_wepslot1",gc_wepslot1},
+	{"gc_wepslot2",gc_wepslot2},
+	{"gc_wepslot3",gc_wepslot3},
+	{"gc_wepslot4",gc_wepslot4},
+	{"gc_wepslot5",gc_wepslot5},
+	{"gc_wepslot6",gc_wepslot6},
+	{"gc_wepslot7",gc_wepslot7},
+	{"gc_wepslot8",gc_wepslot8},
+	{"gc_wepslot9",gc_wepslot9},
+	{"gc_wepslot10",gc_wepslot10},
+	{"gc_fire",gc_fire},
+	{"gc_firenormal",gc_firenormal},
+	{"gc_tossflag",gc_tossflag},
+	{"gc_spin",gc_spin},
+	{"gc_camtoggle",gc_camtoggle},
+	{"gc_camreset",gc_camreset},
+	{"gc_lookup",gc_lookup},
+	{"gc_lookdown",gc_lookdown},
+	{"gc_centerview",gc_centerview},
+	{"gc_mouseaiming",gc_mouseaiming},
+	{"gc_talkkey",gc_talkkey},
+	{"gc_teamkey",gc_teamkey},
+	{"gc_scores",gc_scores},
+	{"gc_jump",gc_jump},
+	{"gc_console",gc_console},
+	{"gc_pause",gc_pause},
+	{"gc_systemmenu",gc_systemmenu},
+	{"gc_screenshot",gc_screenshot},
+	{"gc_recordgif",gc_recordgif},
+	{"gc_viewpoint",gc_viewpoint},
+	{"gc_custom1",gc_custom1},
+	{"gc_custom2",gc_custom2},
+	{"gc_custom3",gc_custom3},
+	{"num_gamecontrols",num_gamecontrols},
+
+	// Mouse buttons
+	{"MB_BUTTON1",MB_BUTTON1},
+	{"MB_BUTTON2",MB_BUTTON2},
+	{"MB_BUTTON3",MB_BUTTON3},
+	{"MB_BUTTON4",MB_BUTTON4},
+	{"MB_BUTTON5",MB_BUTTON5},
+	{"MB_BUTTON6",MB_BUTTON6},
+	{"MB_BUTTON7",MB_BUTTON7},
+	{"MB_BUTTON8",MB_BUTTON8},
+	{"MB_SCROLLUP",MB_SCROLLUP},
+	{"MB_SCROLLDOWN",MB_SCROLLDOWN},
+
 	{NULL,0}
 };
+
+// For this to work compile-time without being in this file,
+// this function would need to check sizes at runtime, without sizeof
+void DEH_TableCheck(void)
+{
+#if defined(_DEBUG) || defined(PARANOIA)
+	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
+	const size_t dehmobjs  = sizeof(MOBJTYPE_LIST)/sizeof(const char*);
+	const size_t dehpowers = sizeof(POWERS_LIST)/sizeof(const char*);
+	const size_t dehcolors = sizeof(COLOR_ENUMS)/sizeof(const char*);
+
+	if (dehstates != S_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked states list, you dolt!\n(%d states defined, versus %s in the Dehacked list)\n", S_FIRSTFREESLOT, sizeu1(dehstates));
+
+	if (dehmobjs != MT_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked mobjtype list, you dolt!\n(%d mobj types defined, versus %s in the Dehacked list)\n", MT_FIRSTFREESLOT, sizeu1(dehmobjs));
+
+	if (dehpowers != NUMPOWERS)
+		I_Error("You forgot to update the Dehacked powers list, you dolt!\n(%d powers defined, versus %s in the Dehacked list)\n", NUMPOWERS, sizeu1(dehpowers));
+
+	if (dehcolors != SKINCOLOR_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", SKINCOLOR_FIRSTFREESLOT, sizeu1(dehcolors));
+#endif
+}

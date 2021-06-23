@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -64,12 +64,29 @@ typedef enum
 static inline void P_ArchivePlayer(void)
 {
 	const player_t *player = &players[consoleplayer];
-	INT16 skininfo = player->skin + (botskin<<5);
 	SINT8 pllives = player->lives;
 	if (pllives < startinglivesbalance[numgameovers]) // Bump up to 3 lives if the player
 		pllives = startinglivesbalance[numgameovers]; // has less than that.
 
-	WRITEUINT16(save_p, skininfo);
+#ifdef NEWSKINSAVES
+	// Write a specific value into the old skininfo location.
+	// If we read something other than this, it's an older save file that used skin numbers.
+	WRITEUINT16(save_p, NEWSKINSAVES);
+#endif
+
+	// Write skin names, so that loading skins in different orders
+	// doesn't change who the save file is for!
+	WRITESTRINGN(save_p, skins[player->skin].name, SKINNAMESIZE);
+
+	if (botskin != 0)
+	{
+		WRITESTRINGN(save_p, skins[botskin-1].name, SKINNAMESIZE);
+	}
+	else
+	{
+		WRITESTRINGN(save_p, "\0", SKINNAMESIZE);
+	}
+
 	WRITEUINT8(save_p, numgameovers);
 	WRITESINT8(save_p, pllives);
 	WRITEUINT32(save_p, player->score);
@@ -78,9 +95,27 @@ static inline void P_ArchivePlayer(void)
 
 static inline void P_UnArchivePlayer(void)
 {
-	INT16 skininfo = READUINT16(save_p);
-	savedata.skin = skininfo & ((1<<5) - 1);
-	savedata.botskin = skininfo >> 5;
+#ifdef NEWSKINSAVES
+	INT16 backwardsCompat = READUINT16(save_p);
+
+	if (backwardsCompat != NEWSKINSAVES)
+	{
+		// This is an older save file, which used direct skin numbers.
+		savedata.skin = backwardsCompat & ((1<<5) - 1);
+		savedata.botskin = backwardsCompat >> 5;
+	}
+	else
+#endif
+	{
+		char ourSkinName[SKINNAMESIZE+1];
+		char botSkinName[SKINNAMESIZE+1];
+
+		READSTRINGN(save_p, ourSkinName, SKINNAMESIZE);
+		savedata.skin = R_SkinAvailable(ourSkinName);
+
+		READSTRINGN(save_p, botSkinName, SKINNAMESIZE);
+		savedata.botskin = R_SkinAvailable(botSkinName) + 1;
+	}
 
 	savedata.numgameovers = READUINT8(save_p);
 	savedata.lives = READSINT8(save_p);
@@ -1506,7 +1541,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 {
 	const mobj_t *mobj = (const mobj_t *)th;
 	UINT32 diff;
-	UINT16 diff2;
+	UINT32 diff2;
 
 	// Ignore stationary hoops - these will be respawned from mapthings.
 	if (mobj->type == MT_HOOP)
@@ -1638,7 +1673,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_SHADOWSCALE;
 	if (mobj->renderflags)
 		diff2 |= MD2_RENDERFLAGS;
-	if (mobj->renderflags)
+	if (mobj->blendmode != AST_TRANSLUCENT)
 		diff2 |= MD2_BLENDMODE;
 	if (mobj->spritexscale != FRACUNIT)
 		diff2 |= MD2_SPRITEXSCALE;
@@ -1646,6 +1681,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		diff2 |= MD2_SPRITEYSCALE;
 	if (mobj->spritexoffset)
 		diff2 |= MD2_SPRITEXOFFSET;
+	if (mobj->spriteyoffset)
+		diff2 |= MD2_SPRITEYOFFSET;
 	if (mobj->floorspriteslope)
 	{
 		pslope_t *slope = mobj->floorspriteslope;
@@ -1667,7 +1704,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, type);
 	WRITEUINT32(save_p, diff);
 	if (diff & MD_MORE)
-		WRITEUINT16(save_p, diff2);
+		WRITEUINT32(save_p, diff2);
 
 	// save pointer, at load time we will search this pointer to reinitilize pointers
 	WRITEUINT32(save_p, (size_t)mobj);
@@ -2615,14 +2652,14 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	thinker_t *next;
 	mobj_t *mobj;
 	UINT32 diff;
-	UINT16 diff2;
+	UINT32 diff2;
 	INT32 i;
 	fixed_t z, floorz, ceilingz;
 	ffloor_t *floorrover = NULL, *ceilingrover = NULL;
 
 	diff = READUINT32(save_p);
 	if (diff & MD_MORE)
-		diff2 = READUINT16(save_p);
+		diff2 = READUINT32(save_p);
 	else
 		diff2 = 0;
 
@@ -2843,10 +2880,16 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->renderflags = READUINT32(save_p);
 	if (diff2 & MD2_BLENDMODE)
 		mobj->blendmode = READINT32(save_p);
+	else
+		mobj->blendmode = AST_TRANSLUCENT;
 	if (diff2 & MD2_SPRITEXSCALE)
 		mobj->spritexscale = READFIXED(save_p);
+	else
+		mobj->spritexscale = FRACUNIT;
 	if (diff2 & MD2_SPRITEYSCALE)
 		mobj->spriteyscale = READFIXED(save_p);
+	else
+		mobj->spriteyscale = FRACUNIT;
 	if (diff2 & MD2_SPRITEXOFFSET)
 		mobj->spritexoffset = READFIXED(save_p);
 	if (diff2 & MD2_SPRITEYOFFSET)
@@ -4182,7 +4225,10 @@ static inline boolean P_NetUnArchiveMisc(boolean reloading)
 	tokenlist = READUINT32(save_p);
 
 	if (!P_LoadLevel(true, reloading))
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Can't load the level!\n"));
 		return false;
+	}
 
 	// get the time
 	leveltime = READUINT32(save_p);
@@ -4260,19 +4306,26 @@ static inline boolean P_UnArchiveLuabanksAndConsistency(void)
 {
 	switch (READUINT8(save_p))
 	{
-		case 0xb7:
+		case 0xb7: // luabanks marker
 			{
 				UINT8 i, banksinuse = READUINT8(save_p);
 				if (banksinuse > NUM_LUABANKS)
+				{
+					CONS_Alert(CONS_ERROR, M_GetText("Corrupt Luabanks! (Too many banks in use)\n"));
 					return false;
+				}
 				for (i = 0; i < banksinuse; i++)
 					luabanks[i] = READINT32(save_p);
-				if (READUINT8(save_p) != 0x1d)
+				if (READUINT8(save_p) != 0x1d) // consistency marker
+				{
+					CONS_Alert(CONS_ERROR, M_GetText("Corrupt Luabanks! (Failed consistency check)\n"));
 					return false;
+				}
 			}
-		case 0x1d:
+		case 0x1d: // consistency marker
 			break;
-		default:
+		default: // anything else is nonsense
+			CONS_Alert(CONS_ERROR, M_GetText("Failed consistency check (???)\n"));
 			return false;
 	}
 

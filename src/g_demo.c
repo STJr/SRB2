@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -109,6 +109,7 @@ demoghost *ghosts = NULL;
 #define ZT_ANGLE   0x04
 #define ZT_BUTTONS 0x08
 #define ZT_AIMING  0x10
+#define ZT_LATENCY 0x20
 #define DEMOMARKER 0x80 // demoend
 #define METALDEATH 0x44
 #define METALSNICE 0x69
@@ -181,6 +182,8 @@ void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 		oldcmd.buttons = (oldcmd.buttons & (BT_CAMLEFT|BT_CAMRIGHT)) | (READUINT16(demo_p) & ~(BT_CAMLEFT|BT_CAMRIGHT));
 	if (ziptic & ZT_AIMING)
 		oldcmd.aiming = READINT16(demo_p);
+	if (ziptic & ZT_LATENCY)
+		oldcmd.latency = READUINT8(demo_p);
 
 	G_CopyTiccmd(cmd, &oldcmd, 1);
 	players[playernum].angleturn = cmd->angleturn;
@@ -236,6 +239,13 @@ void G_WriteDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 		WRITEINT16(demo_p,cmd->aiming);
 		oldcmd.aiming = cmd->aiming;
 		ziptic |= ZT_AIMING;
+	}
+
+	if (cmd->latency != oldcmd.latency)
+	{
+		WRITEUINT8(demo_p,cmd->latency);
+		oldcmd.latency = cmd->latency;
+		ziptic |= ZT_LATENCY;
 	}
 
 	*ziptic_p = ziptic;
@@ -679,6 +689,8 @@ void G_GhostTicker(void)
 			g->p += 2;
 		if (ziptic & ZT_AIMING)
 			g->p += 2;
+		if (ziptic & ZT_LATENCY)
+			g->p++;
 
 		// Grab ghost data.
 		ziptic = READUINT8(g->p);
@@ -1956,9 +1968,7 @@ void G_DoPlayDemo(char *defdemoname)
 	// Set skin
 	SetPlayerSkin(0, skin);
 
-#ifdef HAVE_BLUA
-	LUAh_MapChange(gamemap);
-#endif
+	LUA_HookInt(gamemap, HOOK(MapChange));
 	displayplayer = consoleplayer = 0;
 	memset(playeringame,0,sizeof(playeringame));
 	playeringame[0] = true;

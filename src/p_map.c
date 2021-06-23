@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -419,16 +419,23 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 			else if (object->player->dashmode >= DASHMODE_THRESHOLD)
 				P_SetPlayerMobjState(object, S_PLAY_DASH);
-			else if (P_IsObjectOnGround(object) && horizspeed >= FixedMul(object->player->runspeed, object->scale))
-				P_SetPlayerMobjState(object, S_PLAY_RUN);
+			else if (P_IsObjectOnGround(object))
+				P_SetPlayerMobjState(object, (horizspeed >= FixedMul(object->player->runspeed, object->scale)) ? S_PLAY_RUN : S_PLAY_WALK);
 			else
-				P_SetPlayerMobjState(object, S_PLAY_WALK);
+				P_SetPlayerMobjState(object, (object->momz > 0) ? S_PLAY_SPRING : S_PLAY_FALL);
 		}
 		else if (P_MobjFlip(object)*vertispeed > 0)
 			P_SetPlayerMobjState(object, S_PLAY_SPRING);
 		else
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 	}
+	else if (horizspeed
+		&& object->tracer
+		&& object->tracer->player
+		&& object->tracer->player->powers[pw_carry] != CR_NONE
+		&& object->tracer->tracer == object
+		&& (!demoplayback || P_ControlStyle(object->tracer->player) == CS_LMAOGALOG))
+			P_SetPlayerAngle(object->tracer->player, spring->angle);
 
 	object->standingslope = NULL; // And again.
 
@@ -511,6 +518,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			if (spring->state != &states[S_STEAM1]) // Only when it bursts
 				break;
 
+			object->eflags |= MFE_SPRUNG;
 			object->momz = flipval*FixedMul(speed, FixedSqrt(FixedMul(spring->scale, object->scale))); // scale the speed with both objects' scales, just like with springs!
 
 			if (p)
@@ -727,9 +735,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	|| (thing->player && thing->player->spectator))
 		return true;
 
-#ifdef SEENAMES
-  // Do name checks all the way up here
-  // So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
+	// Do name checks all the way up here
+	// So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
 	if (tmthing->type == MT_NAMECHECK)
 	{
 		// Ignore things that aren't players, ignore spectators, ignore yourself.
@@ -747,13 +754,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 
 		// REX HAS SEEN YOU
-		if (!LUAh_SeenPlayer(tmthing->target->player, thing->player))
+		if (!LUA_HookSeenPlayer(tmthing->target->player, thing->player))
 			return false;
 
 		seenplayer = thing->player;
 		return false;
 	}
-#endif
 
 	// Metal Sonic destroys tiny baby objects.
 	if (tmthing->type == MT_METALSONIC_RACE
@@ -937,7 +943,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 
 	{
-		UINT8 shouldCollide = LUAh_MobjCollide(thing, tmthing); // checks hook for thing's type
+		UINT8 shouldCollide = LUA_Hook2Mobj(thing, tmthing, MOBJ_HOOK(MobjCollide)); // checks hook for thing's type
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -945,7 +951,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (shouldCollide == 2)
 			return true; // force no collide
 
-		shouldCollide = LUAh_MobjMoveCollide(tmthing, thing); // checks hook for tmthing's type
+		shouldCollide = LUA_Hook2Mobj(tmthing, thing, MOBJ_HOOK(MobjMoveCollide)); // checks hook for tmthing's type
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -982,7 +988,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	if (thing->type == MT_SALOONDOOR && tmthing->player)
 	{
 		mobj_t *ref = (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)) ? tmthing->tracer : tmthing;
-		if ((thing->flags2 & MF2_AMBUSH) || ref != tmthing)
+		if (((thing->flags2 & MF2_AMBUSH) && (tmthing->z <= thing->z + thing->height) && (tmthing->z + tmthing->height >= thing->z))
+			|| ref != tmthing)
 		{
 			fixed_t dm = min(FixedHypot(ref->momx, ref->momy), 16*FRACUNIT);
 			angle_t ang = R_PointToAngle2(0, 0, ref->momx, ref->momy) - thing->angle;
@@ -995,7 +1002,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (thing->type == MT_SALOONDOORCENTER && tmthing->player)
 	{
-		if ((thing->flags2 & MF2_AMBUSH) || (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)))
+		if (((thing->flags2 & MF2_AMBUSH) && (tmthing->z <= thing->z + thing->height) && (tmthing->z + tmthing->height >= thing->z))
+			|| (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)))
 			return true;
 	}
 
@@ -1683,7 +1691,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 					if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 					{
 						fixed_t setmomz = -*momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
-					
+
 						if (elementalpierce == 2) // Reset bubblewrap, part 1
 							P_DoBubbleBounce(player);
 						*momz = setmomz; // Therefore, you should be thrust in the opposite direction, vertically.
@@ -1692,7 +1700,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 						if (elementalpierce == 2) // Reset bubblewrap, part 2
 						{
 							boolean underwater = tmthing->eflags & MFE_UNDERWATER;
-							
+
 							if (underwater)
 								*momz /= 2;
 							*momz -= (*momz/(underwater ? 8 : 4)); // Cap the height!
@@ -1927,7 +1935,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	blockingline = ld;
 
 	{
-		UINT8 shouldCollide = LUAh_MobjLineCollide(tmthing, blockingline); // checks hook for thing's type
+		UINT8 shouldCollide = LUA_HookMobjLineCollide(tmthing, blockingline); // checks hook for thing's type
 		if (P_MobjWasRemoved(tmthing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -2257,6 +2265,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			{
 				if (!P_BlockThingsIterator(bx, by, PIT_CheckThing))
 					blockval = false;
+				else
+					tmhitthing = tmfloorthing;
 				if (P_MobjWasRemoved(tmthing))
 					return false;
 			}
@@ -2721,7 +2731,10 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			if (thing->type == MT_SKIM)
 				maxstep = 0;
 
-			if (tmceilingz - tmfloorz < thing->height)
+			if (tmceilingz - tmfloorz < thing->height
+				|| (thing->player
+					&& tmceilingz - tmfloorz < P_GetPlayerHeight(thing->player)
+					&& !P_PlayerCanEnterSpinGaps(thing->player)))
 			{
 				if (tmfloorthing)
 					tmhitthing = tmfloorthing;
@@ -3329,6 +3342,11 @@ static boolean PTR_LineIsBlocking(line_t *li)
 	if (openbottom - slidemo->z > FixedMul(MAXSTEPMOVE, slidemo->scale))
 		return true; // too big a step up
 
+	if (slidemo->player
+		&& openrange < P_GetPlayerHeight(slidemo->player)
+		&& !P_PlayerCanEnterSpinGaps(slidemo->player))
+			return true; // nonspin character should not take this path
+
 	return false;
 }
 
@@ -3443,9 +3461,17 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 			P_ProcessSpecialSector(slidemo->player, slidemo->subsector->sector, li->polyobj->lines[0]->backsector);
 	}
 
-	if (slidemo->player && slidemo->player->charability == CA_GLIDEANDCLIMB
-		&& (slidemo->player->pflags & PF_GLIDING || slidemo->player->climbing))
-		PTR_GlideClimbTraverse(li);
+	if (slidemo->player)
+	{
+		if (slidemo->player->charability == CA_GLIDEANDCLIMB
+			&& (slidemo->player->pflags & PF_GLIDING || slidemo->player->climbing))
+			PTR_GlideClimbTraverse(li);
+		else
+		{
+			slidemo->player->lastsidehit = li->sidenum[P_PointOnLineSide(slidemo->x, slidemo->y, li)];
+			slidemo->player->lastlinehit = (INT16)(li - lines);
+		}
+	}
 
 	if (in->frac < bestslidefrac && (!slidemo->player || !slidemo->player->climbing))
 	{

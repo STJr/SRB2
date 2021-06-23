@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -65,7 +65,7 @@
 
 #include "md5.h" // map MD5
 
-// for LUAh_MapLoad
+// for MapLoad hook
 #include "lua_script.h"
 #include "lua_hook.h"
 
@@ -1621,20 +1621,20 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		P_SetLinedefV1(i, atol(val));
 	else if (fastcmp(param, "v2"))
 		P_SetLinedefV2(i, atol(val));
+	else if (strlen(param) == 7 && fastncmp(param, "arg", 3) && fastncmp(param + 4, "str", 3))
+	{
+		size_t argnum = param[3] - '0';
+		if (argnum >= NUMLINESTRINGARGS)
+			return;
+		lines[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+		M_Memcpy(lines[i].stringargs[argnum], val, strlen(val) + 1);
+	}
 	else if (fastncmp(param, "arg", 3) && strlen(param) > 3)
 	{
 		size_t argnum = atol(param + 3);
 		if (argnum >= NUMLINEARGS)
 			return;
 		lines[i].args[argnum] = atol(val);
-	}
-	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
-	{
-		size_t argnum = param[9] - '0';
-		if (argnum >= NUMLINESTRINGARGS)
-			return;
-		lines[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
-		M_Memcpy(lines[i].stringargs[argnum], val, strlen(val) + 1);
 	}
 	else if (fastcmp(param, "sidefront"))
 		lines[i].sidenum[0] = atol(val);
@@ -1720,20 +1720,20 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 	else if (fastcmp(param, "ambush") && fastcmp("true", val))
 		mapthings[i].options |= MTF_AMBUSH;
 
+	else if (strlen(param) == 7 && fastncmp(param, "arg", 3) && fastncmp(param + 4, "str", 3))
+	{
+		size_t argnum = param[3] - '0';
+		if (argnum >= NUMMAPTHINGSTRINGARGS)
+			return;
+		mapthings[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
+		M_Memcpy(mapthings[i].stringargs[argnum], val, strlen(val) + 1);
+	}
 	else if (fastncmp(param, "arg", 3) && strlen(param) > 3)
 	{
 		size_t argnum = atol(param + 3);
 		if (argnum >= NUMMAPTHINGARGS)
 			return;
 		mapthings[i].args[argnum] = atol(val);
-	}
-	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
-	{
-		size_t argnum = param[9] - '0';
-		if (argnum >= NUMMAPTHINGSTRINGARGS)
-			return;
-		mapthings[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
-		M_Memcpy(mapthings[i].stringargs[argnum], val, strlen(val) + 1);
 	}
 }
 
@@ -2486,7 +2486,7 @@ static void P_LoadMapBSP(const virtres_t *virt)
 		if (numsubsectors <= 0)
 			I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
 		if (numnodes <= 0)
-			I_Error("Level has no nodes");
+			I_Error("Level has no nodes (does your map have at least 2 sectors?)");
 		if (numsegs <= 0)
 			I_Error("Level has no segs");
 
@@ -2950,6 +2950,75 @@ static void P_LinkMapData(void)
 	}
 }
 
+// For maps in binary format, add multi-tags from linedef specials. This must be done
+// before any linedef specials have been processed.
+static void P_AddBinaryMapTagsFromLine(sector_t *sector, line_t *line)
+{
+	Tag_Add(&sector->tags, Tag_FGet(&line->tags));
+	if (line->flags & ML_EFFECT6) {
+		if (sides[line->sidenum[0]].textureoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].textureoffset / FRACUNIT);
+		if (sides[line->sidenum[0]].rowoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].rowoffset / FRACUNIT);
+	}
+	if (line->flags & ML_TFERLINE) {
+		if (sides[line->sidenum[1]].textureoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].textureoffset / FRACUNIT);
+		if (sides[line->sidenum[1]].rowoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].rowoffset / FRACUNIT);
+	}
+}
+
+static void P_AddBinaryMapTags(void)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++)
+	{
+		// 96: Apply Tag to Tagged Sectors
+		// 97: Apply Tag to Front Sector
+		// 98: Apply Tag to Back Sector
+		// 99: Apply Tag to Front and Back Sectors
+		if (lines[i].special == 96) {
+			size_t j;
+			mtag_t tag = Tag_FGet(&lines[i].frontsector->tags);
+			mtag_t target_tag = Tag_FGet(&lines[i].tags);
+			mtag_t offset_tags[4];
+			memset(offset_tags, 0, sizeof(mtag_t)*4);
+			if (lines[i].flags & ML_EFFECT6) {
+				offset_tags[0] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
+				offset_tags[1] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
+			}
+			if (lines[i].flags & ML_TFERLINE) {
+				offset_tags[2] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
+				offset_tags[3] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
+			}
+
+			for (j = 0; j < numsectors; j++) {
+				boolean matches_target_tag = target_tag && Tag_Find(&sectors[j].tags, target_tag);
+				size_t k; for (k = 0; k < 4; k++) {
+					if (lines[i].flags & ML_EFFECT5) {
+						if (matches_target_tag || (offset_tags[k] && Tag_Find(&sectors[j].tags, offset_tags[k]))) {
+							Tag_Add(&sectors[j].tags, tag);
+							break;
+						}
+					} else if (matches_target_tag) {
+						if (k == 0)
+							Tag_Add(&sectors[j].tags, tag);
+						if (offset_tags[k])
+							Tag_Add(&sectors[j].tags, offset_tags[k]);
+					}
+				}
+			}
+		} else {
+			if (lines[i].special == 97 || lines[i].special == 99)
+				P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
+			if (lines[i].special == 98 || lines[i].special == 99)
+				P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
+		}
+	}
+}
+
 //For maps in binary format, converts setup of specials to UDMF format.
 static void P_ConvertBinaryMap(void)
 {
@@ -2966,9 +3035,7 @@ static void P_ConvertBinaryMap(void)
 			INT32 check = -1;
 			INT32 paramline = -1;
 
-			TAG_ITER_DECLARECOUNTER(0);
-
-			TAG_ITER_LINES(0, tag, check)
+			TAG_ITER_LINES(tag, check)
 			{
 				if (lines[check].special == 22)
 				{
@@ -3542,6 +3609,34 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[1] = tag;
 			lines[i].special = 720;
 			break;
+		case 723: //Copy back side floor slope
+		case 724: //Copy back side ceiling slope
+		case 725: //Copy back side floor and ceiling slope
+			if (lines[i].special != 724)
+				lines[i].args[2] = tag;
+			if (lines[i].special != 723)
+				lines[i].args[3] = tag;
+			lines[i].special = 720;
+			break;
+		case 730: //Copy front side floor slope to back side
+		case 731: //Copy front side ceiling slope to back side
+		case 732: //Copy front side floor and ceiling slope to back side
+			if (lines[i].special != 731)
+				lines[i].args[4] |= TMSC_FRONTTOBACKFLOOR;
+			if (lines[i].special != 730)
+				lines[i].args[4] |= TMSC_FRONTTOBACKCEILING;
+			lines[i].special = 720;
+			break;
+		case 733: //Copy back side floor slope to front side
+		case 734: //Copy back side ceiling slope to front side
+		case 735: //Copy back side floor and ceiling slope to front side
+			if (lines[i].special != 734)
+				lines[i].args[4] |= TMSC_BACKTOFRONTFLOOR;
+			if (lines[i].special != 733)
+				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
+			lines[i].special = 720;
+			break;
+		
 		case 900: //Translucent wall (10%)
 		case 901: //Translucent wall (20%)
 		case 902: //Translucent wall (30%)
@@ -3570,7 +3665,7 @@ static void P_ConvertBinaryMap(void)
 		switch (mapthings[i].type)
 		{
 		case 750:
-			Tag_Add(&mapthings[i].tags, mapthings[i].angle);
+			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
 			break;
 		case 760:
 		case 761:
@@ -3582,11 +3677,9 @@ static void P_ConvertBinaryMap(void)
 			INT32 firstline = -1;
 			mtag_t tag = mapthings[i].angle;
 
-			TAG_ITER_DECLARECOUNTER(0);
-
 			Tag_FSet(&mapthings[i].tags, tag);
 
-			TAG_ITER_LINES(0, tag, check)
+			TAG_ITER_LINES(tag, check)
 			{
 				if (lines[check].special == 20)
 				{
@@ -3685,6 +3778,9 @@ static boolean P_LoadMapFromFile(void)
 	P_LoadMapLUT(virt);
 
 	P_LinkMapData();
+
+	if (!udmf)
+		P_AddBinaryMapTags();
 
 	Taglist_InitGlobalTables();
 
@@ -3793,8 +3889,10 @@ static void P_InitLevelSettings(void)
 	numstarposts = 0;
 	ssspheres = timeinmap = 0;
 
-	// special stage
-	stagefailed = true; // assume failed unless proven otherwise - P_GiveEmerald or emerald touchspecial
+	// Assume Special Stages were failed in unless proven otherwise - via P_GiveEmerald or emerald touchspecial
+	// Normal stages will default to be OK, until a Lua script / linedef executor says otherwise.
+	stagefailed = G_IsSpecialStage(gamemap);
+
 	// Reset temporary record data
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
 
@@ -4534,7 +4632,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 #ifdef HWRENDER
 	// Free GPU textures before freeing patches.
-	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
 #endif
 
@@ -4573,7 +4671,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	P_ResetWaypoints();
 
-	P_MapStart();
+	P_MapStart(); // tmthing can be used starting from this point
 
 	if (!P_LoadMapFromFile())
 		return false;
@@ -4626,8 +4724,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// clear special respawning que
 	iquehead = iquetail = 0;
 
-	P_MapEnd();
-
 	// Remove the loading shit from the screen
 	if (rendermode != render_none && !(titlemapinaction || reloadinggamestate))
 		F_WipeColorFill(levelfadecol);
@@ -4646,6 +4742,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	levelloading = false;
 
 	P_RunCachedActions();
+
+	P_MapEnd(); // tmthing is no longer needed from this point onwards
 
 	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
 	if (!titlemapinaction)
@@ -4670,7 +4768,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
-		LUAh_MapLoad();
+		P_MapStart(); // just in case MapLoad modifies tmthing
+		LUA_HookInt(gamemap, HOOK(MapLoad));
+		P_MapEnd(); // just in case MapLoad modifies tmthing
 	}
 
 	// No render mode or reloading gamestate, stop here.
@@ -4899,7 +4999,7 @@ boolean P_AddWadFile(const char *wadfilename)
 
 #ifdef HWRENDER
 	// Free GPU textures before freeing patches.
-	if (vid.glstate == VID_GL_LIBRARY_LOADED)
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
 		HWR_ClearAllTextures();
 #endif
 
@@ -4926,8 +5026,8 @@ boolean P_AddWadFile(const char *wadfilename)
 	//
 	// look for skins
 	//
-	R_AddSkins(wadnum); // faB: wadfile index in wadfiles[]
-	R_PatchSkins(wadnum); // toast: PATCH PATCH
+	R_AddSkins(wadnum, false); // faB: wadfile index in wadfiles[]
+	R_PatchSkins(wadnum, false); // toast: PATCH PATCH
 	ST_ReloadSkinFaceGraphics();
 
 	//

@@ -686,6 +686,15 @@ static void codearith (FuncState *fs, OpCode op, expdesc *e1, expdesc *e2) {
 }
 
 
+static void codeunaryarith (FuncState *fs, OpCode op, expdesc *e) {
+  expdesc e2;
+  e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
+  if (op == OP_LEN || !isnumeral(e))
+    luaK_exp2anyreg(fs, e);  /* cannot operate on non-numeric constants */
+  codearith(fs, op, e, &e2);
+}
+
+
 static void codecomp (FuncState *fs, OpCode op, int cond, expdesc *e1,
                                                           expdesc *e2) {
   int o1 = luaK_exp2RK(fs, e1);
@@ -703,27 +712,11 @@ static void codecomp (FuncState *fs, OpCode op, int cond, expdesc *e1,
 
 
 void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e) {
-  expdesc e2;
-  e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
   switch (op) {
-    case OPR_MINUS: {
-      if (!isnumeral(e))
-        luaK_exp2anyreg(fs, e);  /* cannot operate on non-numeric constants */
-      codearith(fs, OP_UNM, e, &e2);
-      break;
-    }
-    case OPR_BNOT: {
-      if (e->k == VK)
-        luaK_exp2anyreg(fs, e);  /* cannot operate on non-numeric constants */
-      codearith(fs, OP_BNOT, e, &e2);
-      break;
-    }
+    case OPR_MINUS: codeunaryarith(fs, OP_UNM, e); break;
+    case OPR_BNOT: codeunaryarith(fs, OP_BNOT, e); break;
     case OPR_NOT: codenot(fs, e); break;
-    case OPR_LEN: {
-      luaK_exp2anyreg(fs, e);  /* cannot operate on constants */
-      codearith(fs, OP_LEN, e, &e2);
-      break;
-    }
+    case OPR_LEN: codeunaryarith(fs, OP_LEN, e); break;
     default: lua_assert(0);
   }
 }
