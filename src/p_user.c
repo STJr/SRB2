@@ -2761,6 +2761,17 @@ static void P_CheckBouncySectors(player_t *player)
 			if (!(rover->flags & FF_EXISTS))
 				continue; // FOFs should not be bouncy if they don't even "exist"
 
+			// Handle deprecated bouncy FOF sector type
+			if (GETSECSPECIAL(rover->master->frontsector->special, 1) == 15)
+			{
+				rover->flags |= FF_BOUNCY;
+				rover->bouncestrength = P_AproxDistance(rover->master->dx, rover->master->dy)/100;
+				if (rover->master->flags & ML_BOUNCY)
+					rover->specialflags |= FS_DAMPEN;
+				else
+					rover->specialflags &= ~FS_DAMPEN;
+			}
+
 			if (!(rover->flags & FF_BOUNCY))
 				continue;
 
@@ -2772,8 +2783,6 @@ static void P_CheckBouncySectors(player_t *player)
 
 			if (player->mo->z + player->mo->height < bottomheight)
 				continue;
-
-			//bouncestrength = P_AproxDistance(rover->master->dx, rover->master->dy)/100;
 
 			if (oldz < P_GetFOFTopZ(player->mo, node->m_sector, rover, oldx, oldy, NULL)
 					&& oldz + player->mo->height > P_GetFOFBottomZ(player->mo, node->m_sector, rover, oldx, oldy, NULL))

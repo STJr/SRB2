@@ -4336,7 +4336,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 		case 13: // Ramp Sector (Increase step-up/down)
 		case 14: // Non-Ramp Sector (Don't step-down)
-		case 15: // Unused
+		case 15: // Bouncy FOF (deprecated)
 			break;
 	}
 
@@ -6139,6 +6139,10 @@ void P_SpawnSpecials(boolean fromnetsave)
 				//Spike damage automatically sets SF_TRIGGERSPECIAL_TOUCH.
 				//Yes, this also affects other specials on the same sector. Sorry.
 				sector->flags |= SF_TRIGGERSPECIAL_TOUCH;
+				break;
+			case 15: // Bouncy FOF
+				CONS_Alert(CONS_WARNING, M_GetText("Deprecated bouncy FOF sector type detected. Please use linedef type 76 instead.\n"));
+				CheckForBouncySector = true;
 				break;
 		}
 
