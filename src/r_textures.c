@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,11 +27,6 @@
 #include "p_setup.h" // levelflats
 #include "byteptr.h"
 #include "dehacked.h"
-
-// I don't know what this is even for, but r_data.c had it.
-#ifdef _WIN32
-#include <malloc.h> // alloca(sizeof)
-#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_glob.h" // HWR_LoadMapTextures
@@ -626,7 +621,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 //
 // R_CheckPowersOfTwo
 //
-// Self-explanatory?
+// Sets ds_powersoftwo true if the flat's dimensions are powers of two, and returns that.
 //
 boolean R_CheckPowersOfTwo(void)
 {

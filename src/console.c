@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -221,7 +221,7 @@ static void CONS_Bind_f(void)
 		for (key = 0; key < NUMINPUTS; key++)
 			if (bindtable[key])
 			{
-				CONS_Printf("%s : \"%s\"\n", G_KeynumToString(key), bindtable[key]);
+				CONS_Printf("%s : \"%s\"\n", G_KeyNumToString(key), bindtable[key]);
 				na = 1;
 			}
 		if (!na)
@@ -229,7 +229,7 @@ static void CONS_Bind_f(void)
 		return;
 	}
 
-	key = G_KeyStringtoNum(COM_Argv(1));
+	key = G_KeyStringToNum(COM_Argv(1));
 	if (key <= 0 || key >= NUMINPUTS)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Invalid key name\n"));
@@ -1303,10 +1303,6 @@ boolean CON_Responder(event_t *ev)
 	if (key < 32 || key > 127)
 		return true;
 
-	// add key to cmd line here
-	if (key >= 'A' && key <= 'Z' && !(shiftdown ^ capslock)) //this is only really necessary for dedicated servers
-		key = key + 'a' - 'A';
-
 	if (input_sel != input_cur)
 		CON_InputDelSelection();
 	CON_InputAddChar(key);
@@ -1701,7 +1697,10 @@ static void CON_DrawHudlines(void)
 			{
 				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
 				p++;
+				c++;
 			}
+			if (c >= con_width)
+				break;
 			if (*p < HU_FONTSTART)
 				;//charwidth = 4 * con_scalefactor;
 			else
@@ -1822,7 +1821,10 @@ static void CON_DrawConsole(void)
 			{
 				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
 				p++;
+				c++;
 			}
+			if (c >= con_width)
+				break;
 			V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 		}
 	}

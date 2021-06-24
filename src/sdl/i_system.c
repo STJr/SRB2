@@ -5,7 +5,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2020 by Sonic Team Junior.
+// Copyright (C) 2014-2021 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -102,7 +102,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
-#if (defined (__unix__) && !defined (_MSDOS)) || (defined (UNIXCOMMON) && !defined(__APPLE__))
+#if defined (__unix__) || (defined (UNIXCOMMON) && !defined (__APPLE__))
 #include <errno.h>
 #include <sys/wait.h>
 #define NEWSIGNALHANDLER
@@ -140,6 +140,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 #include <execinfo.h>
 #include <time.h>
+#define UNIXBACKTRACE
 #endif
 
 // Locations for searching the srb2.pk3
@@ -243,6 +244,7 @@ SDL_bool framebuffer = SDL_FALSE;
 
 UINT8 keyboard_started = false;
 
+#ifdef UNIXBACKTRACE
 #define STDERR_WRITE(string) if (fd != -1) I_OutputMsg("%s", string)
 #define CRASHLOG_WRITE(string) if (fd != -1) write(fd, string, strlen(string))
 #define CRASHLOG_STDERR_WRITE(string) \
@@ -252,7 +254,6 @@ UINT8 keyboard_started = false;
 
 static void write_backtrace(INT32 signal)
 {
-#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
 	int fd = -1;
 	size_t size;
 	time_t rawtime;
@@ -302,11 +303,11 @@ static void write_backtrace(INT32 signal)
 	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
 
 	close(fd);
-#endif
 }
 #undef STDERR_WRITE
 #undef CRASHLOG_WRITE
 #undef CRASHLOG_STDERR_WRITE
+#endif // UNIXBACKTRACE
 
 static void I_ReportSignal(int num, int coredumped)
 {
@@ -367,7 +368,9 @@ FUNCNORETURN static ATTRNORETURN void signal_handler(INT32 num)
 {
 	D_QuitNetGame(); // Fix server freezes
 	CL_AbortDownloadResume();
+#ifdef UNIXBACKTRACE
 	write_backtrace(num);
+#endif
 	I_ReportSignal(num, 0);
 	I_ShutdownSystem();
 	signal(num, SIG_DFL);               //default signal action
@@ -761,7 +764,9 @@ static void I_RegisterSignals (void)
 #ifdef NEWSIGNALHANDLER
 static void signal_handler_child(INT32 num)
 {
+#ifdef UNIXBACKTRACE
 	write_backtrace(num);
+#endif
 
 	signal(num, SIG_DFL);               //default signal action
 	raise(num);
@@ -1964,7 +1969,7 @@ void I_GetMouseEvents(void)
 		event.data1 = 0;
 //		event.data1 = buttons; // not needed
 		event.data2 = handlermouse2x << 1;
-		event.data3 = -handlermouse2y << 1;
+		event.data3 = handlermouse2y << 1;
 		handlermouse2x = 0;
 		handlermouse2y = 0;
 

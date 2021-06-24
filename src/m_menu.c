@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2011-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -61,6 +61,8 @@
 #include "fastcmp.h"
 
 #include "i_joy.h" // for joystick menu controls
+
+#include "p_saveg.h" // Only for NEWSKINSAVES
 
 // Condition Sets
 #include "m_cond.h"
@@ -1322,7 +1324,7 @@ static menuitem_t OP_Camera2ExtendedOptionsMenu[] =
 enum
 {
 	op_video_resolution = 1,
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	op_video_fullscreen,
 #endif
 	op_video_vsync,
@@ -1334,7 +1336,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 	{IT_HEADER, NULL, "Screen", NULL, 0},
 	{IT_STRING | IT_CALL,  NULL, "Set Resolution...",       M_VideoModeMenu,          6},
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	{IT_STRING|IT_CVAR,      NULL, "Fullscreen",             &cv_fullscreen,         11},
 #endif
 	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",                &cv_vidwait,         16},
@@ -1453,7 +1455,7 @@ static menuitem_t OP_OpenGLOptionsMenu[] =
 #ifdef ALAM_LIGHTING
 	{IT_SUBMENU|IT_STRING,      NULL, "Lighting...",         &OP_OpenGLLightingDef,   144},
 #endif
-#if defined (_WINDOWS) && (!((defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
+#if defined (_WINDOWS) && (!(defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)))
 	{IT_STRING|IT_CVAR,         NULL, "Fullscreen",          &cv_fullscreen,          154},
 #endif
 };
@@ -3305,7 +3307,7 @@ boolean M_Responder(event_t *ev)
 		}
 		else if (ev->type == ev_mouse && mousewait < I_GetTime())
 		{
-			pmousey += ev->data3;
+			pmousey -= ev->data3;
 			if (pmousey < lasty-30)
 			{
 				ch = KEY_DOWNARROW;
@@ -5166,34 +5168,75 @@ static boolean M_GametypeHasLevels(INT32 gt)
 
 static INT32 M_CountRowsToShowOnPlatter(INT32 gt)
 {
-	INT32 mapnum = 0, prevmapnum = 0, col = 0, rows = 0;
+	INT32 col = 0, rows = 0;
+	INT32 mapIterate = 0;
+	INT32 headingIterate = 0;
+	boolean mapAddedAlready[NUMMAPS];
 
-	while (mapnum < NUMMAPS)
+	memset(mapAddedAlready, 0, sizeof mapAddedAlready);
+
+	for (mapIterate = 0; mapIterate < NUMMAPS; mapIterate++)
 	{
-		if (M_CanShowLevelOnPlatter(mapnum, gt))
+		boolean forceNewRow = true;
+
+		if (mapAddedAlready[mapIterate] == true)
 		{
-			if (rows == 0)
+			// Already added under another heading
+			continue;
+		}
+
+		if (M_CanShowLevelOnPlatter(mapIterate, gt) == false)
+		{
+			// Don't show this one
+			continue;
+		}
+
+		for (headingIterate = mapIterate; headingIterate < NUMMAPS; headingIterate++)
+		{
+			boolean wide = false;
+
+			if (mapAddedAlready[headingIterate] == true)
+			{
+				// Already added under another heading
+				continue;
+			}
+
+			if (M_CanShowLevelOnPlatter(headingIterate, gt) == false)
+			{
+				// Don't show this one
+				continue;
+			}
+
+			if (!fastcmp(mapheaderinfo[mapIterate]->selectheading, mapheaderinfo[headingIterate]->selectheading))
+			{
+				// Headers don't match
+				continue;
+			}
+
+			wide = (mapheaderinfo[headingIterate]->menuflags & LF2_WIDEICON);
+
+			// preparing next position to drop mapnum into
+			if (col == 2 // no more space on the row?
+				|| wide || forceNewRow)
+			{
+				col = 0;
 				rows++;
+			}
 			else
 			{
-				if (col == 2
-				|| (mapheaderinfo[prevmapnum]->menuflags & LF2_WIDEICON)
-				|| (mapheaderinfo[mapnum]->menuflags & LF2_WIDEICON)
-				|| !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[prevmapnum]->selectheading)))
-				{
-					col = 0;
-					rows++;
-				}
-				else
-					col++;
+				col++;
 			}
-			prevmapnum = mapnum;
+
+			// Done adding this one
+			mapAddedAlready[headingIterate] = true;
+			forceNewRow = wide;
 		}
-		mapnum++;
 	}
 
 	if (levellistmode == LLM_CREATESERVER)
+	{
 		rows++;
+	}
 
 	return rows;
 }
@@ -5223,7 +5266,10 @@ static void M_CacheLevelPlatter(void)
 static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 {
 	INT32 numrows = M_CountRowsToShowOnPlatter(gt);
-	INT32 mapnum = 0, prevmapnum = 0, col = 0, row = 0, startrow = 0;
+	INT32 col = 0, row = 0, startrow = 0;
+	INT32 mapIterate = 0; // First level of map loop -- find starting points for select headings
+	INT32 headingIterate = 0; // Second level of map loop -- finding maps that match mapIterate's heading.
+	boolean mapAddedAlready[NUMMAPS];
 
 	if (!numrows)
 		return false;
@@ -5240,6 +5286,8 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 	// done here so lsrow and lscol can be set if cv_nextmap is on the platter
 	lsrow = lscol = lshli = lsoffs[0] = lsoffs[1] = 0;
 
+	memset(mapAddedAlready, 0, sizeof mapAddedAlready);
+
 	if (levellistmode == LLM_CREATESERVER)
 	{
 		sprintf(levelselect.rows[0].header, "Gametype");
@@ -5251,31 +5299,75 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 		char_notes = NULL;
 	}
 
-	while (mapnum < NUMMAPS)
+	for (mapIterate = 0; mapIterate < NUMMAPS; mapIterate++)
 	{
-		if (M_CanShowLevelOnPlatter(mapnum, gt))
+		INT32 headerRow = -1;
+		boolean anyAvailable = false;
+		boolean forceNewRow = true;
+
+		if (mapAddedAlready[mapIterate] == true)
 		{
-			const UINT8 actnum = mapheaderinfo[mapnum]->actnum;
-			const boolean headingisname = (fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[mapnum]->lvlttl));
-			const boolean wide = (mapheaderinfo[mapnum]->menuflags & LF2_WIDEICON);
+			// Already added under another heading
+			continue;
+		}
+
+		if (M_CanShowLevelOnPlatter(mapIterate, gt) == false)
+		{
+			// Don't show this one
+			continue;
+		}
+
+		for (headingIterate = mapIterate; headingIterate < NUMMAPS; headingIterate++)
+		{
+			UINT8 actnum = 0;
+			boolean headingisname = false;
+			boolean wide = false;
+
+			if (mapAddedAlready[headingIterate] == true)
+			{
+				// Already added under another heading
+				continue;
+			}
+
+			if (M_CanShowLevelOnPlatter(headingIterate, gt) == false)
+			{
+				// Don't show this one
+				continue;
+			}
+
+			if (!fastcmp(mapheaderinfo[mapIterate]->selectheading, mapheaderinfo[headingIterate]->selectheading))
+			{
+				// Headers don't match
+				continue;
+			}
+
+			actnum = mapheaderinfo[headingIterate]->actnum;
+			headingisname = (fastcmp(mapheaderinfo[headingIterate]->selectheading, mapheaderinfo[headingIterate]->lvlttl));
+			wide = (mapheaderinfo[headingIterate]->menuflags & LF2_WIDEICON);
 
 			// preparing next position to drop mapnum into
 			if (levelselect.rows[startrow].maplist[0])
 			{
 				if (col == 2 // no more space on the row?
-				|| wide
-				|| (mapheaderinfo[prevmapnum]->menuflags & LF2_WIDEICON)
-				|| !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[prevmapnum]->selectheading))) // a new heading is starting?
+					|| wide || forceNewRow)
 				{
 					col = 0;
 					row++;
 				}
 				else
+				{
 					col++;
+				}
 			}
 
-			levelselect.rows[row].maplist[col] = mapnum+1; // putting the map on the platter
-			levelselect.rows[row].mapavailable[col] = M_LevelAvailableOnPlatter(mapnum);
+			if (headerRow == -1)
+			{
+				// Set where the header row is meant to be
+				headerRow = row;
+			}
+
+			levelselect.rows[row].maplist[col] = headingIterate+1; // putting the map on the platter
+			levelselect.rows[row].mapavailable[col] = M_LevelAvailableOnPlatter(headingIterate);
 
 			if ((lswide(row) = wide)) // intentionally assignment
 			{
@@ -5283,7 +5375,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 				levelselect.rows[row].mapavailable[2] = levelselect.rows[row].mapavailable[1] = levelselect.rows[row].mapavailable[0];
 			}
 
-			if (nextmappick && cv_nextmap.value == mapnum+1) // A little quality of life improvement.
+			if (nextmappick && cv_nextmap.value == headingIterate+1) // A little quality of life improvement.
 			{
 				lsrow = row;
 				lscol = col;
@@ -5292,6 +5384,8 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 			// individual map name
 			if (levelselect.rows[row].mapavailable[col])
 			{
+				anyAvailable = true;
+
 				if (headingisname)
 				{
 					if (actnum)
@@ -5302,7 +5396,7 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 				else if (wide)
 				{
 					// Yes, with LF2_WIDEICON it'll continue on over into the next 17+1 char block. That's alright; col is always zero, the string is contiguous, and the maximum length is lvlttl[22] + ' ' + ZONE + ' ' + INT32, which is about 39 or so - barely crossing into the third column.
-					char* mapname = G_BuildMapTitle(mapnum+1);
+					char* mapname = G_BuildMapTitle(headingIterate+1);
 					strcpy(levelselect.rows[row].mapnames[col], (const char *)mapname);
 					Z_Free(mapname);
 				}
@@ -5311,9 +5405,9 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 					char mapname[22+1+11]; // lvlttl[22] + ' ' + INT32
 
 					if (actnum)
-						sprintf(mapname, "%s %d", mapheaderinfo[mapnum]->lvlttl, actnum);
+						sprintf(mapname, "%s %d", mapheaderinfo[headingIterate]->lvlttl, actnum);
 					else
-						strcpy(mapname, mapheaderinfo[mapnum]->lvlttl);
+						strcpy(mapname, mapheaderinfo[headingIterate]->lvlttl);
 
 					if (strlen(mapname) >= 17)
 						strcpy(mapname+17-3, "...");
@@ -5322,27 +5416,36 @@ static boolean M_PrepareLevelPlatter(INT32 gt, boolean nextmappick)
 				}
 			}
 			else
-				sprintf(levelselect.rows[row].mapnames[col], "???");
-
-			// creating header text
-			if (!col && ((row == startrow) || !(fastcmp(mapheaderinfo[mapnum]->selectheading, mapheaderinfo[levelselect.rows[row-1].maplist[0]-1]->selectheading))))
 			{
-				if (!levelselect.rows[row].mapavailable[col])
-					sprintf(levelselect.rows[row].header, "???");
-				else
-				{
-					sprintf(levelselect.rows[row].header, "%s", mapheaderinfo[mapnum]->selectheading);
-					if (!(mapheaderinfo[mapnum]->levelflags & LF_NOZONE) && headingisname)
-					{
-						sprintf(levelselect.rows[row].header + strlen(levelselect.rows[row].header), " ZONE");
-					}
-				}
+				sprintf(levelselect.rows[row].mapnames[col], "???");
 			}
 
-			prevmapnum = mapnum;
+			// Done adding this one
+			mapAddedAlready[headingIterate] = true;
+			forceNewRow = wide;
 		}
 
-		mapnum++;
+		if (headerRow == -1)
+		{
+			// Shouldn't happen
+			continue;
+		}
+
+		// creating header text
+		if (anyAvailable == false)
+		{
+			sprintf(levelselect.rows[headerRow].header, "???");
+		}
+		else
+		{
+			sprintf(levelselect.rows[headerRow].header, "%s", mapheaderinfo[mapIterate]->selectheading);
+
+			if (!(mapheaderinfo[mapIterate]->levelflags & LF_NOZONE)
+				&& fastcmp(mapheaderinfo[mapIterate]->selectheading, mapheaderinfo[mapIterate]->lvlttl))
+			{
+				sprintf(levelselect.rows[headerRow].header + strlen(levelselect.rows[headerRow].header), " ZONE");
+			}
+		}
 	}
 
 #ifdef SYMMETRICAL_PLATTER
@@ -6234,8 +6337,8 @@ static void M_AddonsOptions(INT32 choice)
 	M_SetupNextMenu(&OP_AddonsOptionsDef);
 }
 
-#define LOCATIONSTRING1 "Visit \x83SRB2.ORG/MODS\x80 to get & make add-ons!"
-//#define LOCATIONSTRING2 "Visit \x88SRB2.ORG/MODS\x80 to get & make add-ons!"
+#define LOCATIONSTRING1 "Visit \x83SRB2.ORG/ADDONS\x80 to get & make addons!"
+//#define LOCATIONSTRING2 "Visit \x88SRB2.ORG/ADDONS\x80 to get & make addons!"
 
 static void M_LoadAddonsPatches(void)
 {
@@ -6937,7 +7040,7 @@ static void M_SelectableClearMenus(INT32 choice)
 static void M_UltimateCheat(INT32 choice)
 {
 	(void)choice;
-	LUAh_GameQuit(true);
+	LUA_HookBool(true, HOOK(GameQuit));
 	I_Quit();
 }
 
@@ -8580,7 +8683,7 @@ static void M_LoadSelect(INT32 choice)
 
 #define VERSIONSIZE 16
 #define BADSAVE { savegameinfo[slot].lives = -666; Z_Free(savebuffer); return; }
-#define CHECKPOS if (save_p >= end_p) BADSAVE
+#define CHECKPOS if (sav_p >= end_p) BADSAVE
 // Reads the save file to list lives, level, player, etc.
 // Tails 05-29-2003
 static void M_ReadSavegameInfo(UINT32 slot)
@@ -8589,10 +8692,13 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	char savename[255];
 	UINT8 *savebuffer;
 	UINT8 *end_p; // buffer end point, don't read past here
-	UINT8 *save_p;
+	UINT8 *sav_p;
 	INT32 fake; // Dummy variable
 	char temp[sizeof(timeattackfolder)];
 	char vcheck[VERSIONSIZE];
+#ifdef NEWSKINSAVES
+	INT16 backwardsCompat = 0;
+#endif
 
 	sprintf(savename, savegamename, slot);
 
@@ -8608,19 +8714,19 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	end_p = savebuffer + length;
 
 	// skip the description field
-	save_p = savebuffer;
+	sav_p = savebuffer;
 
 	// Version check
 	memset(vcheck, 0, sizeof (vcheck));
 	sprintf(vcheck, "version %d", VERSION);
-	if (strcmp((const char *)save_p, (const char *)vcheck)) BADSAVE
-	save_p += VERSIONSIZE;
+	if (strcmp((const char *)sav_p, (const char *)vcheck)) BADSAVE
+	sav_p += VERSIONSIZE;
 
 	// dearchive all the modifications
 	// P_UnArchiveMisc()
 
 	CHECKPOS
-	fake = READINT16(save_p);
+	fake = READINT16(sav_p);
 
 	if (((fake-1) & 8191) >= NUMMAPS) BADSAVE
 
@@ -8637,54 +8743,84 @@ static void M_ReadSavegameInfo(UINT32 slot)
 	savegameinfo[slot].gamemap = fake;
 
 	CHECKPOS
-	savegameinfo[slot].numemeralds = READUINT16(save_p)-357; // emeralds
+	savegameinfo[slot].numemeralds = READUINT16(sav_p)-357; // emeralds
 
 	CHECKPOS
-	READSTRINGN(save_p, temp, sizeof(temp)); // mod it belongs to
+	READSTRINGN(sav_p, temp, sizeof(temp)); // mod it belongs to
 
 	if (strcmp(temp, timeattackfolder)) BADSAVE
 
 	// P_UnArchivePlayer()
+#ifdef NEWSKINSAVES
 	CHECKPOS
-	fake = READUINT16(save_p);
-	savegameinfo[slot].skinnum = fake & ((1<<5) - 1);
-	if (savegameinfo[slot].skinnum >= numskins
-	|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
-		BADSAVE
-	savegameinfo[slot].botskin = fake >> 5;
-	if (savegameinfo[slot].botskin-1 >= numskins
-	|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
-		BADSAVE
+	backwardsCompat = READUINT16(sav_p);
+
+	if (backwardsCompat != NEWSKINSAVES)
+	{
+		// Backwards compat
+		savegameinfo[slot].skinnum = backwardsCompat & ((1<<5) - 1);
+
+		if (savegameinfo[slot].skinnum >= numskins
+		|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
+			BADSAVE
+
+		savegameinfo[slot].botskin = backwardsCompat >> 5;
+		if (savegameinfo[slot].botskin-1 >= numskins
+		|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
+			BADSAVE
+	}
+	else
+#endif
+	{
+		char ourSkinName[SKINNAMESIZE+1];
+		char botSkinName[SKINNAMESIZE+1];
+
+		CHECKPOS
+		READSTRINGN(sav_p, ourSkinName, SKINNAMESIZE);
+		savegameinfo[slot].skinnum = R_SkinAvailable(ourSkinName);
+
+		if (savegameinfo[slot].skinnum >= numskins
+		|| !R_SkinUsable(-1, savegameinfo[slot].skinnum))
+			BADSAVE
+
+		CHECKPOS
+		READSTRINGN(sav_p, botSkinName, SKINNAMESIZE);
+		savegameinfo[slot].botskin = (R_SkinAvailable(botSkinName) + 1);
+
+		if (savegameinfo[slot].botskin-1 >= numskins
+		|| !R_SkinUsable(-1, savegameinfo[slot].botskin-1))
+			BADSAVE
+	}
 
 	CHECKPOS
-	savegameinfo[slot].numgameovers = READUINT8(save_p); // numgameovers
+	savegameinfo[slot].numgameovers = READUINT8(sav_p); // numgameovers
 	CHECKPOS
-	savegameinfo[slot].lives = READSINT8(save_p); // lives
+	savegameinfo[slot].lives = READSINT8(sav_p); // lives
 	CHECKPOS
-	savegameinfo[slot].continuescore = READINT32(save_p); // score
+	savegameinfo[slot].continuescore = READINT32(sav_p); // score
 	CHECKPOS
-	fake = READINT32(save_p); // continues
+	fake = READINT32(sav_p); // continues
 	if (useContinues)
 		savegameinfo[slot].continuescore = fake;
 
 	// File end marker check
 	CHECKPOS
-	switch (READUINT8(save_p))
+	switch (READUINT8(sav_p))
 	{
 		case 0xb7:
 			{
 				UINT8 i, banksinuse;
 				CHECKPOS
-				banksinuse = READUINT8(save_p);
+				banksinuse = READUINT8(sav_p);
 				CHECKPOS
 				if (banksinuse > NUM_LUABANKS)
 					BADSAVE
 				for (i = 0; i < banksinuse; i++)
 				{
-					(void)READINT32(save_p);
+					(void)READINT32(sav_p);
 					CHECKPOS
 				}
-				if (READUINT8(save_p) != 0x1d)
+				if (READUINT8(sav_p) != 0x1d)
 					BADSAVE
 			}
 		case 0x1d:
@@ -8963,7 +9099,7 @@ static void M_CacheCharacterSelectEntry(INT32 i, INT32 skinnum)
 
 static UINT8 M_SetupChoosePlayerDirect(INT32 choice)
 {
-	INT32 skinnum;
+	INT32 skinnum, botskinnum;
 	UINT8 i;
 	UINT8 firstvalid = 255, lastvalid = 255;
 	boolean allowed = false;
@@ -8995,6 +9131,13 @@ static UINT8 M_SetupChoosePlayerDirect(INT32 choice)
 				skinnum = description[i].skinnum[0];
 				if ((skinnum != -1) && (R_SkinUsable(-1, skinnum)))
 				{
+					botskinnum = description[i].skinnum[1];
+					if ((botskinnum != -1) && (!R_SkinUsable(-1, botskinnum)))
+					{
+						// Bot skin isn't unlocked
+						continue;
+					}
+
 					// Handling order.
 					if (firstvalid == 255)
 						firstvalid = i;
@@ -11419,9 +11562,9 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[ 2].status = IT_GRAYEDOUT; // Max players
 		OP_ServerOptionsMenu[ 3].status = IT_GRAYEDOUT; // Allow add-on downloading
 		OP_ServerOptionsMenu[ 4].status = IT_GRAYEDOUT; // Allow players to join
-		OP_ServerOptionsMenu[35].status = IT_GRAYEDOUT; // Master server
-		OP_ServerOptionsMenu[36].status = IT_GRAYEDOUT; // Minimum delay between joins
-		OP_ServerOptionsMenu[37].status = IT_GRAYEDOUT; // Attempts to resynchronise
+		OP_ServerOptionsMenu[36].status = IT_GRAYEDOUT; // Master server
+		OP_ServerOptionsMenu[37].status = IT_GRAYEDOUT; // Minimum delay between joins
+		OP_ServerOptionsMenu[38].status = IT_GRAYEDOUT; // Attempts to resynchronise
 	}
 	else
 	{
@@ -11429,11 +11572,11 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[ 2].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[ 3].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[ 4].status = IT_STRING | IT_CVAR;
-		OP_ServerOptionsMenu[35].status = (netgame
+		OP_ServerOptionsMenu[36].status = (netgame
 			? IT_GRAYEDOUT
 			: (IT_STRING | IT_CVAR | IT_CV_STRING));
-		OP_ServerOptionsMenu[36].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[37].status = IT_STRING | IT_CVAR;
+		OP_ServerOptionsMenu[38].status = IT_STRING | IT_CVAR;
 	}
 #endif
 
@@ -12683,13 +12826,13 @@ static void M_DrawControl(void)
 			else
 			{
 				if (keys[0] != KEY_NULL)
-					strcat (tmp, G_KeynumToString (keys[0]));
+					strcat (tmp, G_KeyNumToString (keys[0]));
 
 				if (keys[0] != KEY_NULL && keys[1] != KEY_NULL)
 					strcat(tmp," or ");
 
 				if (keys[1] != KEY_NULL)
-					strcat (tmp, G_KeynumToString (keys[1]));
+					strcat (tmp, G_KeyNumToString (keys[1]));
 
 
 			}
@@ -12923,7 +13066,7 @@ static void M_VideoModeMenu(INT32 choice)
 
 	memset(modedescs, 0, sizeof(modedescs));
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // FIXME: hack
 #endif
 	vidm_nummodes = 0;
@@ -13366,7 +13509,7 @@ void M_QuitResponse(INT32 ch)
 
 	if (ch != 'y' && ch != KEY_ENTER)
 		return;
-	LUAh_GameQuit(true);
+	LUA_HookBool(true, HOOK(GameQuit));
 	if (!(netgame || cv_debug))
 	{
 		S_ResetCaptions();

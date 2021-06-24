@@ -76,8 +76,8 @@ END
 #include "../doomdef.h" // Needed for version string
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 2,2,8,0
- PRODUCTVERSION 2,2,8,0
+ FILEVERSION 2,2,9,0
+ PRODUCTVERSION 2,2,9,0
  FILEFLAGSMASK 0x3fL
 #ifdef _DEBUG
  FILEFLAGS 0x1L
@@ -97,7 +97,7 @@ BEGIN
             VALUE "FileDescription", "Sonic Robo Blast 2\0"
             VALUE "FileVersion", VERSIONSTRING_RC
             VALUE "InternalName", "srb2\0"
-            VALUE "LegalCopyright", "Copyright 1998-2020 by Sonic Team Junior\0"
+            VALUE "LegalCopyright", "Copyright 1998-2021 by Sonic Team Junior\0"
             VALUE "LegalTrademarks", "Sonic the Hedgehog and related characters are trademarks of Sega.\0"
             VALUE "OriginalFilename", "srb2win.exe\0"
             VALUE "PrivateBuild", "\0"

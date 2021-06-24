@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,7 +15,7 @@
 ///        plus functions to parse command line parameters, configure game
 ///        parameters, and call the startup functions.
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 #include <sys/stat.h>
 #include <sys/types.h>
 #endif
@@ -175,9 +175,52 @@ void D_ProcessEvents(void)
 
 	boolean eaten;
 
+	// Reset possibly stale mouse info
+	G_SetMouseDeltas(0, 0, 1);
+	G_SetMouseDeltas(0, 0, 2);
+	mouse.buttons &= ~(MB_SCROLLUP|MB_SCROLLDOWN);
+	mouse2.buttons &= ~(MB_SCROLLUP|MB_SCROLLDOWN);
+
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
+		boolean hooked = false;
+
 		ev = &events[eventtail];
+
+		// Set mouse buttons early in case event is eaten later
+		if (ev->type == ev_keydown || ev->type == ev_keyup)
+		{
+			// Mouse buttons
+			if ((UINT32)(ev->data1 - KEY_MOUSE1) < MOUSEBUTTONS)
+			{
+				if (ev->type == ev_keydown)
+					mouse.buttons |= 1 << (ev->data1 - KEY_MOUSE1);
+				else
+					mouse.buttons &= ~(1 << (ev->data1 - KEY_MOUSE1));
+			}
+			else if ((UINT32)(ev->data1 - KEY_2MOUSE1) < MOUSEBUTTONS)
+			{
+				if (ev->type == ev_keydown)
+					mouse2.buttons |= 1 << (ev->data1 - KEY_2MOUSE1);
+				else
+					mouse2.buttons &= ~(1 << (ev->data1 - KEY_2MOUSE1));
+			}
+			// Scroll (has no keyup event)
+			else switch (ev->data1) {
+				case KEY_MOUSEWHEELUP:
+					mouse.buttons |= MB_SCROLLUP;
+					break;
+				case KEY_MOUSEWHEELDOWN:
+					mouse.buttons |= MB_SCROLLDOWN;
+					break;
+				case KEY_2MOUSEWHEELUP:
+					mouse2.buttons |= MB_SCROLLUP;
+					break;
+				case KEY_2MOUSEWHEELDOWN:
+					mouse2.buttons |= MB_SCROLLDOWN;
+					break;
+			}
+		}
 
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
@@ -187,6 +230,12 @@ void D_ProcessEvents(void)
 		{
 			if (cht_Responder(ev))
 				continue;
+		}
+
+		if (!CON_Ready() && !menuactive) {
+			if (G_LuaResponder(ev))
+				continue;
+			hooked = true;
 		}
 
 		// Menu input
@@ -203,6 +252,12 @@ void D_ProcessEvents(void)
 		if (eaten)
 			continue; // menu ate the event
 
+		if (!hooked && !CON_Ready()) {
+			if (G_LuaResponder(ev))
+				continue;
+			hooked = true;
+		}
+
 		// console input
 #ifdef HAVE_THREADS
 		I_lock_mutex(&con_mutex);
@@ -217,8 +272,16 @@ void D_ProcessEvents(void)
 		if (eaten)
 			continue; // ate the event
 
+		if (!hooked && G_LuaResponder(ev))
+			continue;
+
 		G_Responder(ev);
 	}
+
+	if (mouse.rdx || mouse.rdy)
+		G_SetMouseDeltas(mouse.rdx, mouse.rdy, 1);
+	if (mouse2.rdx || mouse2.rdy)
+		G_SetMouseDeltas(mouse2.rdx, mouse2.rdy, 2);
 }
 
 //
@@ -950,7 +1013,7 @@ static void IdentifyVersion(void)
 	char *srb2wad;
 	const char *srb2waddir = NULL;
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	// change to the directory where 'srb2.pk3' is found
 	srb2waddir = I_LocateWad();
 #endif
@@ -1061,7 +1124,7 @@ void D_SRB2Main(void)
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
-	"Copyright (C) 1998-2020 by Sonic Team Junior\n\n"
+	"Copyright (C) 1998-2021 by Sonic Team Junior\n\n"
 	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
 	"This is free software, and you are welcome to redistribute it\n"
 	"and/or modify it under the terms of the GNU General Public License\n"
@@ -1123,7 +1186,7 @@ void D_SRB2Main(void)
 
 		if (!userhome)
 		{
-#if ((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)
+#if (defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)
 			I_Error("Please set $HOME to your home directory\n");
 #else
 			if (dedicated)
@@ -1316,7 +1379,7 @@ void D_SRB2Main(void)
 
 	G_LoadGameData();
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
 #endif
 
@@ -1582,7 +1645,7 @@ const char *D_Home(void)
 		userhome = M_GetNextParm();
 	else
 	{
-#if !((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__APPLE__)
+#if !(defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON))
 		if (FIL_FileOK(CONFIGFILENAME))
 			usehome = false; // Let's NOT use home
 		else
