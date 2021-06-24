@@ -29,7 +29,10 @@ $(call Print,$(_m))
 
 # go for a 32-bit sdl mingw exe by default
 MINGW:=1
+# cmd.exe uses native Windows semicolon delimited PATH
+ifneq (,$(findstring ;,$(PATH)))
 WINDOWSHELL:=1
+endif
 
 else # if you on the *nix
 
@@ -91,7 +94,7 @@ ifeq (,$(filter $(v),$(gcc_versions)))
 define line =
 Your compiler version, GCC $(version), \
 is not supported by the Makefile.
-The Makefile will assume GCC $(latest_gcc_version).))
+The Makefile will assume GCC $(latest_gcc_version).
 endef
 $(call Print,$(line))
 GCC$(subst .,,$(latest_gcc_version)):=1
