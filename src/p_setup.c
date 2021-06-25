@@ -3516,6 +3516,9 @@ static void P_ConvertBinaryMap(void)
 		case 400: //Set tagged sector's floor height/texture
 		case 401: //Set tagged sector's ceiling height/texture
 			lines[i].args[0] = tag;
+			lines[i].args[1] = lines[i].special - 399;
+			lines[i].args[2] = (lines[i].flags & ML_NOCLIMB) ? 0 : lines[i].special - 399;
+			lines[i].special = 400;
 			break;
 		case 403: //Move tagged sector's floor
 		case 404: //Move tagged sector's ceiling

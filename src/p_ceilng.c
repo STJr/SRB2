@@ -80,7 +80,6 @@ void T_MoveCeiling(ceiling_t *ceiling)
 							ceiling->sector->ceilingpic = ceiling->texture;
 						/* FALLTHRU */
 					case raiseToHighest:
-//					case raiseCeilingByLine:
 					case moveCeilingByFrontTexture:
 						ceiling->sector->ceilingdata = NULL;
 						ceiling->sector->ceilspeed = 0;
@@ -202,10 +201,6 @@ void T_MoveCeiling(ceiling_t *ceiling)
 						/* FALLTHRU */
 
 					// in all other cases, just remove the active ceiling
-					case lowerAndCrush:
-					case lowerToLowest:
-					case raiseToLowest:
-//					case lowerCeilingByLine:
 					case moveCeilingByFrontTexture:
 						ceiling->sector->ceilingdata = NULL;
 						ceiling->sector->ceilspeed = 0;
@@ -279,7 +274,6 @@ void T_MoveCeiling(ceiling_t *ceiling)
 				switch (ceiling->type)
 				{
 					case crushAndRaise:
-					case lowerAndCrush:
 						ceiling->speed = FixedDiv(CEILSPEED,8*FRACUNIT);
 						break;
 
@@ -426,8 +420,6 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 			case crushAndRaise:
 				ceiling->crush = true;
 				ceiling->topheight = sec->ceilingheight;
-				/* FALLTHRU */
-			case lowerAndCrush:
 				ceiling->bottomheight = sec->floorheight;
 				ceiling->bottomheight += 4*FRACUNIT;
 				ceiling->direction = -1;
@@ -438,19 +430,6 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 				ceiling->topheight = P_FindHighestCeilingSurrounding(sec);
 				ceiling->direction = 1;
 				ceiling->speed = CEILSPEED;
-				break;
-
-			//SoM: 3/6/2000: Added Boom types
-			case lowerToLowest:
-				ceiling->bottomheight = P_FindLowestCeilingSurrounding(sec);
-				ceiling->direction = -1;
-				ceiling->speed = CEILSPEED;
-				break;
-
-			case raiseToLowest: // Graue 09-07-2004
-				ceiling->topheight = P_FindLowestCeilingSurrounding(sec) - 4*FRACUNIT;
-				ceiling->direction = 1;
-				ceiling->speed = line->dx; // hack
 				break;
 
 			case lowerToLowestFast:
@@ -502,17 +481,27 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 			case instantMoveCeilingByFrontSector:
 				ceiling->speed = INT32_MAX/2;
 
-				if (line->frontsector->ceilingheight >= sec->ceilingheight) // Move up
+				if (lines->args[1] & 2)
+				{
+					if (line->frontsector->ceilingheight >= sec->ceilingheight) // Move up
+					{
+						ceiling->direction = 1;
+						ceiling->topheight = line->frontsector->ceilingheight;
+					}
+					else // Move down
+					{
+						ceiling->direction = -1;
+						ceiling->bottomheight = line->frontsector->ceilingheight;
+					}
+				}
+				else
 				{
 					ceiling->direction = 1;
-					ceiling->topheight = line->frontsector->ceilingheight;
+					ceiling->topheight = sec->ceilingheight;
 				}
-				else // Move down
-				{
-					ceiling->direction = -1;
-					ceiling->bottomheight = line->frontsector->ceilingheight;
-				}
-				ceiling->texture = line->frontsector->ceilingpic;
+
+				// If flag is set, change ceiling texture after moving
+				ceiling->texture = (line->args[2] & 2) ? line->frontsector->ceilingpic : -1;
 				break;
 
 			case moveCeilingByFrontTexture:
@@ -530,20 +519,6 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 					ceiling->bottomheight = sec->ceilingheight + sides[line->sidenum[0]].rowoffset; // texture y offset
 				}
 				break;
-
-/*
-			case lowerCeilingByLine:
-				ceiling->speed = FixedDiv(abs(line->dx),8*FRACUNIT);
-				ceiling->direction = -1; // Move down
-				ceiling->bottomheight = sec->ceilingheight - abs(line->dy);
-				break;
-
-			case raiseCeilingByLine:
-				ceiling->speed = FixedDiv(abs(line->dx),8*FRACUNIT);
-				ceiling->direction = 1; // Move up
-				ceiling->topheight = sec->ceilingheight + abs(line->dy);
-				break;
-*/
 
 			case bounceCeiling:
 				ceiling->speed = P_AproxDistance(line->dx, line->dy); // same speed as elevateContinuous

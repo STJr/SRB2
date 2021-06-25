@@ -2233,12 +2233,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 	// note: only commands with linedef types >= 400 && < 500 can be used
 	switch (line->special)
 	{
-		case 400: // Set tagged sector's floor height/pic
-			EV_DoFloor(line->args[0], line, instantMoveFloorByFrontSector);
-			break;
-
-		case 401: // Set tagged sector's ceiling height/pic
-			EV_DoCeiling(line->args[0], line, instantMoveCeilingByFrontSector);
+		case 400: // Set tagged sector's heights/flats
+			if (line->args[1] & 1 || line->args[2] & 1)
+				EV_DoFloor(line->args[0], line, instantMoveFloorByFrontSector);
+			if (line->args[1] & 2 || line->args[2] & 2)
+				EV_DoCeiling(line->args[0], line, instantMoveCeilingByFrontSector);
 			break;
 
 		case 402: // Set tagged sector's light level

@@ -1834,23 +1834,15 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 
 		switch (floortype)
 		{
-			// Lowers a floor to the lowest surrounding floor.
-			case lowerFloorToLowest:
-				dofloor->direction = -1; // down
-				dofloor->speed = FLOORSPEED*2; // 2 fracunits per tic
-				dofloor->floordestheight = P_FindLowestFloorSurrounding(sec);
-				break;
-
-			// Used for part of the Egg Capsule, when an FOF with type 666 is
-			// contacted by the player.
+			// Used to open the top of an Egg Capsule.
 			case raiseFloorToNearestFast:
 				dofloor->direction = -1; // down
 				dofloor->speed = FLOORSPEED*4; // 4 fracunits per tic
 				dofloor->floordestheight = P_FindNextHighestFloor(sec, sec->floorheight);
 				break;
 
-			// Used for sectors tagged to 50 linedefs (effectively
-			// changing the base height for placing things in that sector).
+			// Instantly lower floor to surrounding sectors.
+			// Used as a hack in the binary map format to allow thing heights above 4096.
 			case instantLower:
 				dofloor->direction = -1; // down
 				dofloor->speed = INT32_MAX/2; // "instant" means "takes one tic"
@@ -1861,22 +1853,15 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 			// Front sector floor = destination height.
 			case instantMoveFloorByFrontSector:
 				dofloor->speed = INT32_MAX/2; // as above, "instant" is one tic
-				dofloor->floordestheight = line->frontsector->floorheight;
+				dofloor->floordestheight = (line->args[1] & 1) ? line->frontsector->floorheight : sec->floorheight;
 
 				if (dofloor->floordestheight >= sec->floorheight)
 					dofloor->direction = 1; // up
 				else
 					dofloor->direction = -1; // down
 
-				// New for 1.09: now you can use the no climb flag to
-				// DISABLE the flat changing. This makes it work
-				// totally opposite the way linetype 106 does. Yet
-				// another reason I'll be glad to break backwards
-				// compatibility for the final.
-				if (line->flags & ML_NOCLIMB)
-					dofloor->texture = -1; // don't mess with the floorpic
-				else
-					dofloor->texture = line->frontsector->floorpic;
+				// If flag is set, change floor texture after moving
+				dofloor->texture = (line->args[2] & 1) ? line->frontsector->floorpic : -1;
 				break;
 
 			// Linedef executor command, linetype 106.
@@ -1922,28 +1907,6 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 				else
 					dofloor->direction = -1; // down
 				break;
-
-/*
-			// Linedef executor command, linetype 108.
-			// dx = speed, dy = amount to lower.
-			case lowerFloorByLine:
-				dofloor->direction = -1; // down
-				dofloor->speed = FixedDiv(abs(line->dx),8*FRACUNIT);
-				dofloor->floordestheight = sec->floorheight - abs(line->dy);
-				if (dofloor->floordestheight > sec->floorheight) // wrapped around
-					I_Error("Can't lower sector %d\n", secnum);
-				break;
-
-			// Linedef executor command, linetype 109.
-			// dx = speed, dy = amount to raise.
-			case raiseFloorByLine:
-				dofloor->direction = 1; // up
-				dofloor->speed = FixedDiv(abs(line->dx),8*FRACUNIT);
-				dofloor->floordestheight = sec->floorheight + abs(line->dy);
-				if (dofloor->floordestheight < sec->floorheight) // wrapped around
-					I_Error("Can't raise sector %d\n", secnum);
-				break;
-*/
 
 			// Linetypes 2/3.
 			// Move floor up and down indefinitely like the old elevators.

@@ -259,13 +259,10 @@ typedef enum
 typedef enum
 {
 	raiseToHighest,
-	lowerToLowest,
-	raiseToLowest,
 	lowerToLowestFast,
 
 	instantRaise, // instant-move for ceilings
 
-	lowerAndCrush,
 	crushAndRaise,
 	fastCrushAndRaise,
 	crushCeilOnce,
@@ -319,9 +316,6 @@ void T_MoveCeiling(ceiling_t *ceiling);
 //
 typedef enum
 {
-	// lower floor to lowest surrounding floor
-	lowerFloorToLowest,
-
 	// raise floor to next highest surrounding floor
 	raiseFloorToNearestFast,
 
