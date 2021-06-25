@@ -2021,13 +2021,13 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 //
 // jff 2/22/98 new type to move floor and ceiling in parallel
 //
-void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype, boolean customspeed)
+void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 {
 	INT32 secnum = -1;
 	sector_t *sec;
 	elevator_t *elevator;
 
-	// act on all sectors with the same tag as the triggering linedef
+	// act on all sectors with the given tag
 	TAG_ITER_SECTORS(tag, secnum)
 	{
 		sec = &sectors[secnum];
@@ -2055,8 +2055,6 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype, boolean custom
 				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED/2; // half speed
 				elevator->floordestheight = P_FindNextLowestFloor(sec, sec->floorheight);
-				elevator->ceilingdestheight = elevator->floordestheight
-					+ sec->ceilingheight - sec->floorheight;
 				break;
 
 			// elevator up to next floor
@@ -2065,8 +2063,6 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype, boolean custom
 				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED/4; // quarter speed
 				elevator->floordestheight = P_FindNextHighestFloor(sec, sec->floorheight);
-				elevator->ceilingdestheight = elevator->floordestheight
-					+ sec->ceilingheight - sec->floorheight;
 				break;
 
 			// elevator up to highest floor
@@ -2075,8 +2071,6 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype, boolean custom
 				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED/4; // quarter speed
 				elevator->floordestheight = P_FindHighestFloorSurrounding(sec);
-				elevator->ceilingdestheight = elevator->floordestheight
-					+ sec->ceilingheight - sec->floorheight;
 				break;
 
 			// elevator to floor height of activating switch's front sector
@@ -2084,23 +2078,12 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype, boolean custom
 				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED;
 				elevator->floordestheight = line->frontsector->floorheight;
-				elevator->ceilingdestheight = elevator->floordestheight
-					+ sec->ceilingheight - sec->floorheight;
 				elevator->direction = elevator->floordestheight > sec->floorheight?  1 : -1;
 				break;
 
 			case elevateContinuous:
-				if (customspeed)
-				{
-					elevator->origspeed = P_AproxDistance(line->dx, line->dy);
-					elevator->origspeed = FixedDiv(elevator->origspeed,4*FRACUNIT);
-					elevator->speed = elevator->origspeed;
-				}
-				else
-				{
-					elevator->speed = ELEVATORSPEED/2;
-					elevator->origspeed = elevator->speed;
-				}
+				elevator->origspeed = line->args[1] << (FRACBITS - 2);
+				elevator->speed = elevator->origspeed;
 
 				elevator->sector = sec;
 				elevator->low = !(line->flags & ML_NOCLIMB); // go down first unless noclimb is on
@@ -2108,15 +2091,11 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype, boolean custom
 				{
 					elevator->direction = 1;
 					elevator->floordestheight = P_FindNextHighestFloor(sec, sec->floorheight);
-					elevator->ceilingdestheight = elevator->floordestheight
-						+ sec->ceilingheight - sec->floorheight;
 				}
 				else
 				{
 					elevator->direction = -1;
 					elevator->floordestheight = P_FindNextLowestFloor(sec,sec->floorheight);
-					elevator->ceilingdestheight = elevator->floordestheight
-						+ sec->ceilingheight - sec->floorheight;
 				}
 				elevator->floorwasheight = elevator->sector->floorheight;
 				elevator->ceilingwasheight = elevator->sector->ceilingheight;
@@ -2130,13 +2109,13 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype, boolean custom
 				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED*4; // quadruple speed
 				elevator->floordestheight = P_FindNextLowestFloor(sec, sec->floorheight);
-				elevator->ceilingdestheight = elevator->floordestheight
-					+ sec->ceilingheight - sec->floorheight;
 				break;
 
 			default:
 				break;
 		}
+
+		elevator->ceilingdestheight = elevator->floordestheight + sec->ceilingheight - sec->floorheight;
 	}
 }
 

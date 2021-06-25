@@ -3089,15 +3089,21 @@ static void P_ConvertBinaryMap(void)
 		case 54: //Continuous floor mover
 		case 55: //Continuous ceiling mover
 			lines[i].args[0] = tag;
+			lines[i].args[1] = (lines[i].special == 53) ? 2 : lines[i].special - 54;
+			lines[i].special = 53;
 			break;
 		case 56: //Continuous two-speed floor/ceiling mover
 		case 57: //Continuous two-speed floor mover
 		case 58: //Continuous two-speed ceiling mover
 			lines[i].args[0] = tag;
+			lines[i].args[1] = (lines[i].special == 56) ? 2 : lines[i].special - 57;
+			lines[i].special = 56;
 			break;
 		case 59: //Activate moving platform
 		case 60: //Activate moving platform (adjustable speed)
 			lines[i].args[0] = tag;
+			lines[i].args[1] = (lines[i].special == 60) ? P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS : 8;
+			lines[i].special = 60;
 			break;
 		case 61: //Crusher (Ceiling to floor)
 		case 62: //Crusher (Floor to ceiling)
@@ -3518,6 +3524,7 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 428: //Start platform movement
 			lines[i].args[0] = tag;
+			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 			break;
 		case 429: //Crush ceiling once
 		case 430: //Crush floor once

@@ -521,7 +521,7 @@ typedef enum
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crush,
 	boolean ceiling, INT32 direction);
 void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype);
-void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype, boolean customspeed);
+void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype);
 void EV_CrumbleChain(sector_t *sec, ffloor_t *rover);
 void EV_BounceSector(sector_t *sector, fixed_t momz, line_t *sourceline);
 

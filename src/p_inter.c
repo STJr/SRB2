@@ -1387,7 +1387,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (player->bot)
 					return;
 
-				EV_DoElevator(LE_AXE, NULL, bridgeFall, false);
+				EV_DoElevator(LE_AXE, NULL, bridgeFall);
 
 				// scan the remaining thinkers to find koopa
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)

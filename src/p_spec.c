@@ -2870,7 +2870,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 428: // Start floating platform movement
-			EV_DoElevator(line->args[0], line, elevateContinuous, true);
+			EV_DoElevator(line->args[0], line, elevateContinuous);
 			break;
 
 		case 429: // Crush Ceiling Down Once
@@ -4418,7 +4418,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			sector->special = 0;
 
 			// Move the button down
-			EV_DoElevator(LE_CAPSULE0, NULL, elevateDown, false);
+			EV_DoElevator(LE_CAPSULE0, NULL, elevateDown);
 
 			// Open the top FOF
 			EV_DoFloor(LE_CAPSULE1, NULL, raiseFloorToNearestFast);
@@ -6318,50 +6318,41 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 50: // Insta-Lower Sector
-				EV_DoFloor(lines[i].args[0], &lines[i], instantLower);
+				if (!udmf)
+					EV_DoFloor(lines[i].args[0], &lines[i], instantLower);
 				break;
 
 			case 51: // Instant raise for ceilings
-				EV_DoCeiling(lines[i].args[0], &lines[i], instantRaise);
+				if (!udmf)
+					EV_DoCeiling(lines[i].args[1], &lines[i], instantRaise);
 				break;
 
 			case 52: // Continuously Falling sector
 				EV_DoContinuousFall(lines[i].frontsector, lines[i].backsector, P_AproxDistance(lines[i].dx, lines[i].dy), (lines[i].flags & ML_NOCLIMB));
 				break;
 
-			case 53: // New super cool and awesome moving floor and ceiling type
-			case 54: // New super cool and awesome moving floor type
+			case 53: // Continuous plane movement (slowdown)
 				if (lines[i].backsector)
-					EV_DoFloor(lines[i].args[0], &lines[i], bounceFloor);
-				if (lines[i].special == 54)
-					break;
-				/* FALLTHRU */
-
-			case 55: // New super cool and awesome moving ceiling type
-				if (lines[i].backsector)
-					EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeiling);
+				{
+					if (lines[i].args[1] != 1)
+						EV_DoFloor(lines[i].args[0], &lines[i], bounceFloor);
+					if (lines[i].args[1] != 0)
+						EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeiling);
+				}
 				break;
 
-			case 56: // New super cool and awesome moving floor and ceiling crush type
-			case 57: // New super cool and awesome moving floor crush type
+			case 56: // Continuous plane movement (constant)
 				if (lines[i].backsector)
-					EV_DoFloor(lines[i].args[0], &lines[i], bounceFloorCrush);
-
-				if (lines[i].special == 57)
-					break; //only move the floor
-				/* FALLTHRU */
-
-			case 58: // New super cool and awesome moving ceiling crush type
-				if (lines[i].backsector)
-					EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeilingCrush);
+				{
+					if (lines[i].args[1] != 1)
+						EV_DoFloor(lines[i].args[0], &lines[i], bounceFloorCrush);
+					if (lines[i].args[1] != 0)
+						EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeilingCrush);
+				}
 				break;
 
-			case 59: // Activate floating platform
-				EV_DoElevator(lines[i].args[0], &lines[i], elevateContinuous, false);
-				break;
-
-			case 60: // Floating platform with adjustable speed
-				EV_DoElevator(lines[i].args[0], &lines[i], elevateContinuous, true);
+			case 60: // Moving platform
+				EV_DoElevator(lines[i].args[0], &lines[i], elevateContinuous);
 				break;
 
 			case 61: // Crusher!
