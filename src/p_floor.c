@@ -2045,6 +2045,7 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 		elevator->type = elevtype;
 		elevator->sourceline = line;
 		elevator->distance = 1; // Always crush unless otherwise
+		elevator->sector = sec;
 
 		// set up the fields according to the type of elevator action
 		switch (elevtype)
@@ -2052,7 +2053,6 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 			// elevator down to next floor
 			case elevateDown:
 				elevator->direction = -1;
-				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED/2; // half speed
 				elevator->floordestheight = P_FindNextLowestFloor(sec, sec->floorheight);
 				break;
@@ -2060,7 +2060,6 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 			// elevator up to next floor
 			case elevateUp:
 				elevator->direction = 1;
-				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED/4; // quarter speed
 				elevator->floordestheight = P_FindNextHighestFloor(sec, sec->floorheight);
 				break;
@@ -2068,14 +2067,12 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 			// elevator up to highest floor
 			case elevateHighest:
 				elevator->direction = 1;
-				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED/4; // quarter speed
 				elevator->floordestheight = P_FindHighestFloorSurrounding(sec);
 				break;
 
 			// elevator to floor height of activating switch's front sector
 			case elevateCurrent:
-				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED;
 				elevator->floordestheight = line->frontsector->floorheight;
 				elevator->direction = elevator->floordestheight > sec->floorheight?  1 : -1;
@@ -2085,8 +2082,7 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 				elevator->origspeed = line->args[1] << (FRACBITS - 2);
 				elevator->speed = elevator->origspeed;
 
-				elevator->sector = sec;
-				elevator->low = !(line->flags & ML_NOCLIMB); // go down first unless noclimb is on
+				elevator->low = !line->args[4]; // go down first unless args[4] is set
 				if (elevator->low)
 				{
 					elevator->direction = 1;
@@ -2100,13 +2096,12 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 				elevator->floorwasheight = elevator->sector->floorheight;
 				elevator->ceilingwasheight = elevator->sector->ceilingheight;
 
-				elevator->delay = sides[line->sidenum[0]].textureoffset >> FRACBITS;
-				elevator->delaytimer = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Initial delay
+				elevator->delay = line->args[3];
+				elevator->delaytimer = line->args[2]; // Initial delay
 				break;
 
 			case bridgeFall:
 				elevator->direction = -1;
-				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED*4; // quadruple speed
 				elevator->floordestheight = P_FindNextLowestFloor(sec, sec->floorheight);
 				break;
