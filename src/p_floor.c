@@ -2071,13 +2071,6 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 				elevator->floordestheight = P_FindHighestFloorSurrounding(sec);
 				break;
 
-			// elevator to floor height of activating switch's front sector
-			case elevateCurrent:
-				elevator->speed = ELEVATORSPEED;
-				elevator->floordestheight = line->frontsector->floorheight;
-				elevator->direction = elevator->floordestheight > sec->floorheight?  1 : -1;
-				break;
-
 			case elevateContinuous:
 				elevator->origspeed = line->args[1] << (FRACBITS - 2);
 				elevator->speed = elevator->origspeed;

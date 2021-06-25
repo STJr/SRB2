@@ -343,7 +343,6 @@ typedef enum
 {
 	elevateUp,
 	elevateDown,
-	elevateCurrent,
 	elevateContinuous,
 	elevateBounce,
 	elevateHighest,
