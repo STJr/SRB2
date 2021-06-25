@@ -6476,7 +6476,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						if (lines[l].special < 100 || lines[l].special >= 300)
 							continue;
 
-						P_AddThwompThinker(lines[l].frontsector, &lines[l], lines[i].args[1] << FRACBITS, lines[i].args[2] << FRACBITS, sound);
+						P_AddThwompThinker(lines[l].frontsector, &lines[l], lines[i].args[1] << (FRACBITS - 3), lines[i].args[2] << (FRACBITS - 3), sound);
 					}
 				}
 				break;
@@ -6731,7 +6731,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 251: // A THWOMP!
 			{
 				UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
-				P_AddThwompThinker(lines[i].frontsector, &lines[i], lines[i].args[1] << FRACBITS, lines[i].args[2] << FRACBITS, sound);
+				P_AddThwompThinker(lines[i].frontsector, &lines[i], lines[i].args[1] << (FRACBITS - 3), lines[i].args[2] << (FRACBITS - 3), sound);
 				P_AddFakeFloorsByLine(i, 0xff, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				break;
 			}
