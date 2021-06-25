@@ -1805,13 +1805,12 @@ void T_PlaneDisplace(planedisplace_t *pd)
 // (egg capsule button), P_PlayerInSpecialSector (buttons),
 // and P_SpawnSpecials (continuous floor movers and instant lower).
 //
-void EV_DoFloor(line_t *line, floor_e floortype)
+void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 {
 	INT32 firstone = 1;
 	INT32 secnum = -1;
 	sector_t *sec;
 	floormove_t *dofloor;
-	mtag_t tag = Tag_FGet(&line->tags);
 
 	TAG_ITER_SECTORS(tag, secnum)
 	{
@@ -2022,12 +2021,11 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 //
 // jff 2/22/98 new type to move floor and ceiling in parallel
 //
-void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
+void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype, boolean customspeed)
 {
 	INT32 secnum = -1;
 	sector_t *sec;
 	elevator_t *elevator;
-	mtag_t tag = Tag_FGet(&line->tags);
 
 	// act on all sectors with the same tag as the triggering linedef
 	TAG_ITER_SECTORS(tag, secnum)

@@ -383,18 +383,18 @@ void T_CrushCeiling(ceiling_t *ceiling)
 
 /** Starts a ceiling mover.
   *
+  * \param tag Tag.
   * \param line The source line.
   * \param type The type of ceiling movement.
   * \return 1 if at least one ceiling mover was started, 0 otherwise.
   * \sa EV_DoCrush, EV_DoFloor, EV_DoElevator, T_MoveCeiling
   */
-INT32 EV_DoCeiling(line_t *line, ceiling_e type)
+INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 {
 	INT32 rtn = 0, firstone = 1;
 	INT32 secnum = -1;
 	sector_t *sec;
 	ceiling_t *ceiling;
-	mtag_t tag = Tag_FGet(&line->tags);
 
 	TAG_ITER_SECTORS(tag, secnum)
 	{
@@ -603,19 +603,19 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 
 /** Starts a ceiling crusher.
   *
+  * \param tag Tag.
   * \param line The source line.
   * \param type The type of ceiling, either ::crushAndRaise or
   *             ::fastCrushAndRaise.
   * \return 1 if at least one crusher was started, 0 otherwise.
   * \sa EV_DoCeiling, EV_DoFloor, EV_DoElevator, T_CrushCeiling
   */
-INT32 EV_DoCrush(line_t *line, ceiling_e type)
+INT32 EV_DoCrush(mtag_t tag, line_t *line, ceiling_e type)
 {
 	INT32 rtn = 0;
 	INT32 secnum = -1;
 	sector_t *sec;
 	ceiling_t *ceiling;
-	mtag_t tag = Tag_FGet(&line->tags);
 
 	TAG_ITER_SECTORS(tag, secnum)
 	{

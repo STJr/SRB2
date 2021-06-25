@@ -1381,19 +1381,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 		case MT_AXE:
 			{
-				line_t junk;
 				thinker_t  *th;
 				mobj_t *mo2;
 
 				if (player->bot)
 					return;
 
-				// Initialize my junk
-				junk.tags.tags = NULL;
-				junk.tags.count = 0;
-
-				Tag_FSet(&junk.tags, LE_AXE);
-				EV_DoElevator(&junk, bridgeFall, false);
+				EV_DoElevator(LE_AXE, NULL, bridgeFall, false);
 
 				// scan the remaining thinkers to find koopa
 				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)

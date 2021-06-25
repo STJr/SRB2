@@ -3081,6 +3081,28 @@ static void P_ConvertBinaryMap(void)
 
 			break;
 		}
+		case 50: //Instantly lower floor on level load
+		case 51: //Instantly raise ceiling on level load
+			lines[i].args[0] = tag;
+			break;
+		case 53: //Continuous floor/ceiling mover
+		case 54: //Continuous floor mover
+		case 55: //Continuous ceiling mover
+			lines[i].args[0] = tag;
+			break;
+		case 56: //Continuous two-speed floor/ceiling mover
+		case 57: //Continuous two-speed floor mover
+		case 58: //Continuous two-speed ceiling mover
+			lines[i].args[0] = tag;
+			break;
+		case 59: //Activate moving platform
+		case 60: //Activate moving platform (adjustable speed)
+			lines[i].args[0] = tag;
+			break;
+		case 61: //Crusher (Ceiling to floor)
+		case 62: //Crusher (Floor to ceiling)
+			lines[i].args[0] = tag;
+			break;
 		case 76: //Make FOF bouncy
 			lines[i].args[0] = tag;
 			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
@@ -3481,6 +3503,26 @@ static void P_ConvertBinaryMap(void)
 			}
 			else
 				lines[i].args[1] = 255;
+			break;
+		case 400: //Set tagged sector's floor height/texture
+		case 401: //Set tagged sector's ceiling height/texture
+			lines[i].args[0] = tag;
+			break;
+		case 403: //Move tagged sector's floor
+		case 404: //Move tagged sector's ceiling
+			lines[i].args[0] = tag;
+			break;
+		case 405: //Move floor according to front texture offsets
+		case 407: //Move ceiling according to front texture offsets
+			lines[i].args[0] = tag;
+			break;
+		case 428: //Start platform movement
+			lines[i].args[0] = tag;
+			break;
+		case 429: //Crush ceiling once
+		case 430: //Crush floor once
+		case 431: //Crush floor and ceiling once
+			lines[i].args[0] = tag;
 			break;
 		case 443: //Call Lua function
 			if (lines[i].text)

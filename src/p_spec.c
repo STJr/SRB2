@@ -2234,11 +2234,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 	switch (line->special)
 	{
 		case 400: // Set tagged sector's floor height/pic
-			EV_DoFloor(line, instantMoveFloorByFrontSector);
+			EV_DoFloor(line->args[0], line, instantMoveFloorByFrontSector);
 			break;
 
 		case 401: // Set tagged sector's ceiling height/pic
-			EV_DoCeiling(line, instantMoveCeilingByFrontSector);
+			EV_DoCeiling(line->args[0], line, instantMoveCeilingByFrontSector);
 			break;
 
 		case 402: // Set tagged sector's light level
@@ -2272,36 +2272,20 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 403: // Move floor, linelen = speed, frontsector floor = dest height
-			EV_DoFloor(line, moveFloorByFrontSector);
+			EV_DoFloor(line->args[0], line, moveFloorByFrontSector);
 			break;
 
 		case 404: // Move ceiling, linelen = speed, frontsector ceiling = dest height
-			EV_DoCeiling(line, moveCeilingByFrontSector);
+			EV_DoCeiling(line->args[0], line, moveCeilingByFrontSector);
 			break;
 
 		case 405: // Move floor by front side texture offsets, offset x = speed, offset y = amount to raise/lower
-			EV_DoFloor(line, moveFloorByFrontTexture);
+			EV_DoFloor(line->args[0], line, moveFloorByFrontTexture);
 			break;
 
 		case 407: // Move ceiling by front side texture offsets, offset x = speed, offset y = amount to raise/lower
-			EV_DoCeiling(line, moveCeilingByFrontTexture);
+			EV_DoCeiling(line->args[0], line, moveCeilingByFrontTexture);
 			break;
-
-/*		case 405: // Lower floor by line, dx = speed, dy = amount to lower
-			EV_DoFloor(line, lowerFloorByLine);
-			break;
-
-		case 406: // Raise floor by line, dx = speed, dy = amount to raise
-			EV_DoFloor(line, raiseFloorByLine);
-			break;
-
-		case 407: // Lower ceiling by line, dx = speed, dy = amount to lower
-			EV_DoCeiling(line, lowerCeilingByLine);
-			break;
-
-		case 408: // Raise ceiling by line, dx = speed, dy = amount to raise
-			EV_DoCeiling(line, raiseCeilingByLine);
-			break;*/
 
 		case 409: // Change tagged sectors' tag
 		// (formerly "Change calling sectors' tag", but behavior was changed)
@@ -2886,19 +2870,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 428: // Start floating platform movement
-			EV_DoElevator(line, elevateContinuous, true);
+			EV_DoElevator(line->args[0], line, elevateContinuous, true);
 			break;
 
 		case 429: // Crush Ceiling Down Once
-			EV_DoCrush(line, crushCeilOnce);
+			EV_DoCrush(line->args[0], line, crushCeilOnce);
 			break;
 
 		case 430: // Crush Floor Up Once
-			EV_DoFloor(line, crushFloorOnce);
+			EV_DoFloor(line->args[0], line, crushFloorOnce);
 			break;
 
 		case 431: // Crush Floor & Ceiling to middle Once
-			EV_DoCrush(line, crushBothOnce);
+			EV_DoCrush(line->args[0], line, crushBothOnce);
 			break;
 
 		case 432: // Enable 2D Mode (Disable if noclimb)
@@ -4414,7 +4398,6 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		{
 			thinker_t *th;
 			mobj_t *mo2;
-			line_t junk;
 
 			if (player->bot || sector->ceilingdata || sector->floordata)
 				return;
@@ -4434,20 +4417,13 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			// clear the special so you can't push the button twice.
 			sector->special = 0;
 
-			// Initialize my junk
-			junk.tags.tags = NULL;
-			junk.tags.count = 0;
-
 			// Move the button down
-			Tag_FSet(&junk.tags, LE_CAPSULE0);
-			EV_DoElevator(&junk, elevateDown, false);
+			EV_DoElevator(LE_CAPSULE0, NULL, elevateDown, false);
 
 			// Open the top FOF
-			Tag_FSet(&junk.tags, LE_CAPSULE1);
-			EV_DoFloor(&junk, raiseFloorToNearestFast);
+			EV_DoFloor(LE_CAPSULE1, NULL, raiseFloorToNearestFast);
 			// Open the bottom FOF
-			Tag_FSet(&junk.tags, LE_CAPSULE2);
-			EV_DoCeiling(&junk, lowerToLowestFast);
+			EV_DoCeiling(LE_CAPSULE2, NULL, lowerToLowestFast);
 
 			// Mark all players with the time to exit thingy!
 			for (i = 0; i < MAXPLAYERS; i++)
@@ -6342,11 +6318,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 50: // Insta-Lower Sector
-				EV_DoFloor(&lines[i], instantLower);
+				EV_DoFloor(lines[i].args[0], &lines[i], instantLower);
 				break;
 
 			case 51: // Instant raise for ceilings
-				EV_DoCeiling(&lines[i], instantRaise);
+				EV_DoCeiling(lines[i].args[0], &lines[i], instantRaise);
 				break;
 
 			case 52: // Continuously Falling sector
@@ -6356,20 +6332,20 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 53: // New super cool and awesome moving floor and ceiling type
 			case 54: // New super cool and awesome moving floor type
 				if (lines[i].backsector)
-					EV_DoFloor(&lines[i], bounceFloor);
+					EV_DoFloor(lines[i].args[0], &lines[i], bounceFloor);
 				if (lines[i].special == 54)
 					break;
 				/* FALLTHRU */
 
 			case 55: // New super cool and awesome moving ceiling type
 				if (lines[i].backsector)
-					EV_DoCeiling(&lines[i], bounceCeiling);
+					EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeiling);
 				break;
 
 			case 56: // New super cool and awesome moving floor and ceiling crush type
 			case 57: // New super cool and awesome moving floor crush type
 				if (lines[i].backsector)
-					EV_DoFloor(&lines[i], bounceFloorCrush);
+					EV_DoFloor(lines[i].args[0], &lines[i], bounceFloorCrush);
 
 				if (lines[i].special == 57)
 					break; //only move the floor
@@ -6377,23 +6353,23 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 58: // New super cool and awesome moving ceiling crush type
 				if (lines[i].backsector)
-					EV_DoCeiling(&lines[i], bounceCeilingCrush);
+					EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeilingCrush);
 				break;
 
 			case 59: // Activate floating platform
-				EV_DoElevator(&lines[i], elevateContinuous, false);
+				EV_DoElevator(lines[i].args[0], &lines[i], elevateContinuous, false);
 				break;
 
 			case 60: // Floating platform with adjustable speed
-				EV_DoElevator(&lines[i], elevateContinuous, true);
+				EV_DoElevator(lines[i].args[0], &lines[i], elevateContinuous, true);
 				break;
 
 			case 61: // Crusher!
-				EV_DoCrush(&lines[i], crushAndRaise);
+				EV_DoCrush(lines[i].args[0], &lines[i], crushAndRaise);
 				break;
 
 			case 62: // Crusher (up and then down)!
-				EV_DoCrush(&lines[i], fastCrushAndRaise);
+				EV_DoCrush(lines[i].args[0], &lines[i], fastCrushAndRaise);
 				break;
 
 			case 63: // support for drawn heights coming from different sector

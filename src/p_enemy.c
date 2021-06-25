@@ -3873,7 +3873,6 @@ void A_BossDeath(mobj_t *mo)
 {
 	thinker_t *th;
 	mobj_t *mo2;
-	line_t junk;
 	INT32 i;
 
 	if (LUA_CallAction(A_BOSSDEATH, mo))
@@ -3925,18 +3924,11 @@ void A_BossDeath(mobj_t *mo)
 	}
 	else
 	{
-		// Initialize my junk
-		junk.tags.tags = NULL;
-		junk.tags.count = 0;
-
 		// Bring the egg trap up to the surface
 		// Incredibly shitty code ahead
-		Tag_FSet(&junk.tags, LE_CAPSULE0);
-		EV_DoElevator(&junk, elevateHighest, false);
-		Tag_FSet(&junk.tags, LE_CAPSULE1);
-		EV_DoElevator(&junk, elevateUp, false);
-		Tag_FSet(&junk.tags, LE_CAPSULE2);
-		EV_DoElevator(&junk, elevateHighest, false);
+		EV_DoElevator(LE_CAPSULE0, NULL, elevateHighest, false);
+		EV_DoElevator(LE_CAPSULE1, NULL, elevateUp, false);
+		EV_DoElevator(LE_CAPSULE2, NULL, elevateHighest, false);
 
 		if (mapheaderinfo[gamemap-1]->muspostbossname[0] &&
 			S_MusicExists(mapheaderinfo[gamemap-1]->muspostbossname, !midi_disabled, !digital_disabled))
@@ -4058,12 +4050,7 @@ bossjustdie:
 		}
 		case MT_KOOPA:
 		{
-			// Initialize my junk
-			junk.tags.tags = NULL;
-			junk.tags.count = 0;
-
-			Tag_FSet(&junk.tags, LE_KOOPA);
-			EV_DoCeiling(&junk, raiseToHighest);
+			EV_DoCeiling(LE_KOOPA, NULL, raiseToHighest);
 			return;
 		}
 		case MT_FANG:

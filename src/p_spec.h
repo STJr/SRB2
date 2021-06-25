@@ -307,9 +307,9 @@ typedef struct
 
 #define CEILSPEED (FRACUNIT)
 
-INT32 EV_DoCeiling(line_t *line, ceiling_e type);
+INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type);
 
-INT32 EV_DoCrush(line_t *line, ceiling_e type);
+INT32 EV_DoCrush(mtag_t tag, line_t *line, ceiling_e type);
 void T_CrushCeiling(ceiling_t *ceiling);
 
 void T_MoveCeiling(ceiling_t *ceiling);
@@ -520,8 +520,8 @@ typedef enum
 
 result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crush,
 	boolean ceiling, INT32 direction);
-void EV_DoFloor(line_t *line, floor_e floortype);
-void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed);
+void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype);
+void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype, boolean customspeed);
 void EV_CrumbleChain(sector_t *sec, ffloor_t *rover);
 void EV_BounceSector(sector_t *sector, fixed_t momz, line_t *sourceline);
 
