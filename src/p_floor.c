@@ -162,7 +162,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crus
 void T_MoveFloor(floormove_t *movefloor)
 {
 	result_e res = 0;
-	boolean dontupdate = false;
+	boolean remove = false;
 
 	if (movefloor->delaytimer)
 	{
@@ -190,113 +190,66 @@ void T_MoveFloor(floormove_t *movefloor)
 
 	if (res == pastdest)
 	{
-		if (movefloor->direction == 1)
+		switch (movefloor->type)
 		{
-			switch (movefloor->type)
-			{
-				case moveFloorByFrontSector:
-					if (movefloor->texture < -1) // chained linedef executing
-						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
-					/* FALLTHRU */
-				case instantMoveFloorByFrontSector:
-					if (movefloor->texture > -1) // flat changing
-						movefloor->sector->floorpic = movefloor->texture;
-					break;
-				case bounceFloor: // Graue 03-12-2004
-					if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
-						movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
-					else
-						movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
-					movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
-					movefloor->sector->floorspeed = movefloor->speed * movefloor->direction;
-					movefloor->delaytimer = movefloor->delay;
-					P_RecalcPrecipInSector(movefloor->sector);
-					return; // not break, why did this work? Graue 04-03-2004
-				case bounceFloorCrush: // Graue 03-27-2004
-					if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
-					{
-						movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
-						movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dy),4*FRACUNIT); // return trip, use dy
-					}
-					else
-					{
-						movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
-						movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dx),4*FRACUNIT); // forward again, use dx
-					}
-					movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
-					movefloor->sector->floorspeed = movefloor->speed * movefloor->direction;
-					movefloor->delaytimer = movefloor->delay;
-					P_RecalcPrecipInSector(movefloor->sector);
-					return; // not break, why did this work? Graue 04-03-2004
-				case crushFloorOnce:
+			case moveFloorByFrontSector:
+				if (movefloor->texture < -1) // chained linedef executing
+					P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+				/* FALLTHRU */
+			case instantMoveFloorByFrontSector:
+				if (movefloor->texture > -1) // flat changing
+					movefloor->sector->floorpic = movefloor->texture;
+				remove = true;
+				break;
+			case bounceFloor: // Graue 03-12-2004
+				if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
+					movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
+				else
+					movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
+				movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
+				movefloor->delaytimer = movefloor->delay;
+				remove = false;
+				break;
+			case bounceFloorCrush: // Graue 03-27-2004
+				if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
+				{
+					movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
+					movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dy), 4*FRACUNIT); // return trip, use dy
+				}
+				else
+				{
+					movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
+					movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dx), 4*FRACUNIT); // forward again, use dx
+				}
+				movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
+				movefloor->delaytimer = movefloor->delay;
+				remove = false;
+				break;
+			case crushFloorOnce:
+				if (movefloor->direction == 1)
+				{
 					movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
 					movefloor->direction = -1;
 					movefloor->sector->soundorg.z = movefloor->sector->floorheight;
-					S_StartSound(&movefloor->sector->soundorg,sfx_pstop);
-					P_RecalcPrecipInSector(movefloor->sector);
-					return;
-				default:
-					break;
-			}
+					S_StartSound(&movefloor->sector->soundorg, sfx_pstop);
+					remove = false;
+				}
+				else
+					remove = true;
+				break;
+			default:
+				break;
 		}
-		else if (movefloor->direction == -1)
-		{
-			switch (movefloor->type)
-			{
-				case moveFloorByFrontSector:
-					if (movefloor->texture < -1) // chained linedef executing
-						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
-					/* FALLTHRU */
-				case instantMoveFloorByFrontSector:
-					if (movefloor->texture > -1) // flat changing
-						movefloor->sector->floorpic = movefloor->texture;
-					break;
-				case bounceFloor: // Graue 03-12-2004
-					if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
-						movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
-					else
-						movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
-					movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
-					movefloor->sector->floorspeed = movefloor->speed * movefloor->direction;
-					movefloor->delaytimer = movefloor->delay;
-					P_RecalcPrecipInSector(movefloor->sector);
-					return; // not break, why did this work? Graue 04-03-2004
-				case bounceFloorCrush: // Graue 03-27-2004
-					if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
-					{
-						movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
-						movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dy),4*FRACUNIT); // return trip, use dy
-					}
-					else
-					{
-						movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
-						movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dx),4*FRACUNIT); // forward again, use dx
-					}
-					movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
-					movefloor->sector->floorspeed = movefloor->speed * movefloor->direction;
-					movefloor->delaytimer = movefloor->delay;
-					P_RecalcPrecipInSector(movefloor->sector);
-					return; // not break, why did this work? Graue 04-03-2004
-				case crushFloorOnce:
-					movefloor->sector->floordata = NULL; // Clear up the thinker so others can use it
-					P_RemoveThinker(&movefloor->thinker);
-					movefloor->sector->floorspeed = 0;
-					P_RecalcPrecipInSector(movefloor->sector);
-					return;
-				default:
-					break;
-			}
-		}
+	}
 
+	if (remove)
+	{
 		movefloor->sector->floordata = NULL; // Clear up the thinker so others can use it
 		movefloor->sector->floorspeed = 0;
 		P_RemoveThinker(&movefloor->thinker);
-		dontupdate = true;
 	}
-	if (!dontupdate)
-		movefloor->sector->floorspeed = movefloor->speed*movefloor->direction;
 	else
-		movefloor->sector->floorspeed = 0;
+		movefloor->sector->floorspeed = movefloor->speed*movefloor->direction;
 
 	P_RecalcPrecipInSector(movefloor->sector);
 }
