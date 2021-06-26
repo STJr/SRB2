@@ -261,7 +261,8 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 
 				// chained linedef executing ability
 				// only set it on ONE of the moving sectors (the smallest numbered)
-				if (line->args[3] > 0)
+				// only set it if there isn't also a floor mover
+				if (line->args[3] > 0 && line->args[1] == 1)
 					ceiling->texture = firstone ? line->args[3] - INT16_MAX - 2 : -1;
 				// flat changing ability
 				else if (line->args[4])
