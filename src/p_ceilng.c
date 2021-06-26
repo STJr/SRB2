@@ -301,7 +301,7 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 					ceiling->speed = INT32_MAX/2; // as above, "instant" is one tic
 				else
 					ceiling->speed = line->args[3] << (FRACBITS - 3);
-				if (sides[line->sidenum[0]].rowoffset > 0)
+				if (line->args[2] > 0)
 				{
 					ceiling->direction = 1; // up
 					ceiling->topheight = sec->ceilingheight + (line->args[2] << FRACBITS);
