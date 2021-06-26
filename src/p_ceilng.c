@@ -79,28 +79,6 @@ void T_MoveCeiling(ceiling_t *ceiling)
 				P_RemoveThinker(&ceiling->thinker);
 				return;
 			case bounceCeiling:
-			{
-				fixed_t dest = (ceiling->direction == 1) ? ceiling->topheight : ceiling->bottomheight;
-
-				if (dest == lines[ceiling->texture].frontsector->ceilingheight)
-					dest = lines[ceiling->texture].backsector->ceilingheight;
-				else
-					dest = lines[ceiling->texture].frontsector->ceilingheight;
-
-				if (dest < ceiling->sector->ceilingheight) // must move down
-				{
-					ceiling->direction = -1;
-					ceiling->bottomheight = dest;
-				}
-				else // must move up
-				{
-					ceiling->direction = 1;
-					ceiling->topheight = dest;
-				}
-
-				ceiling->delaytimer = ceiling->delay;
-				break;
-			}
 			case bounceCeilingCrush:
 			{
 				fixed_t dest = (ceiling->direction == 1) ? ceiling->topheight : ceiling->bottomheight;
@@ -108,12 +86,12 @@ void T_MoveCeiling(ceiling_t *ceiling)
 				if (dest == lines[ceiling->texture].frontsector->ceilingheight)
 				{
 					dest = lines[ceiling->texture].backsector->ceilingheight;
-					ceiling->speed = ceiling->origspeed = FixedDiv(abs(lines[ceiling->texture].dy), 4*FRACUNIT); // return trip, use dy
+					ceiling->speed = ceiling->origspeed = lines[ceiling->texture].args[3] << (FRACBITS - 2); // return trip, use args[3]
 				}
 				else
 				{
 					dest = lines[ceiling->texture].frontsector->ceilingheight;
-					ceiling->speed = ceiling->origspeed = FixedDiv(abs(lines[ceiling->texture].dx), 4*FRACUNIT); // going frontways, use dx
+					ceiling->speed = ceiling->origspeed = lines[ceiling->texture].args[2] << (FRACBITS - 2); // going frontways, use args[2]
 				}
 
 				if (dest < ceiling->sector->ceilingheight) // must move down
@@ -344,30 +322,8 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 				break;
 
 			case bounceCeiling:
-				ceiling->speed = P_AproxDistance(line->dx, line->dy); // same speed as elevateContinuous
-				ceiling->speed = FixedDiv(ceiling->speed,4*FRACUNIT);
-				ceiling->origspeed = ceiling->speed;
-				if (line->frontsector->ceilingheight >= sec->ceilingheight) // Move up
-				{
-					ceiling->direction = 1;
-					ceiling->topheight = line->frontsector->ceilingheight;
-				}
-				else // Move down
-				{
-					ceiling->direction = -1;
-					ceiling->bottomheight = line->frontsector->ceilingheight;
-				}
-
-				// Any delay?
-				ceiling->delay = sides[line->sidenum[0]].textureoffset >> FRACBITS;
-				ceiling->delaytimer = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Initial delay
-
-				ceiling->texture = (fixed_t)(line - lines); // hack: use texture to store sourceline number
-				break;
-
 			case bounceCeilingCrush:
-				ceiling->speed = abs(line->dx); // same speed as elevateContinuous
-				ceiling->speed = FixedDiv(ceiling->speed,4*FRACUNIT);
+				ceiling->speed = line->args[2] << (FRACBITS - 2); // same speed as elevateContinuous
 				ceiling->origspeed = ceiling->speed;
 				if (line->frontsector->ceilingheight >= sec->ceilingheight) // Move up
 				{
@@ -381,8 +337,8 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 				}
 
 				// Any delay?
-				ceiling->delay = sides[line->sidenum[0]].textureoffset >> FRACBITS;
-				ceiling->delaytimer = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Initial delay
+				ceiling->delay = line->args[5];
+				ceiling->delaytimer = line->args[4]; // Initial delay
 
 				ceiling->texture = (fixed_t)(line - lines); // hack: use texture to store sourceline number
 				break;

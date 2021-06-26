@@ -3090,6 +3090,10 @@ static void P_ConvertBinaryMap(void)
 		case 55: //Continuous ceiling mover
 			lines[i].args[0] = tag;
 			lines[i].args[1] = (lines[i].special == 53) ? 2 : lines[i].special - 54;
+			lines[i].args[2] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			lines[i].args[3] = lines[i].args[2];
+			lines[i].args[4] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[5] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].special = 53;
 			break;
 		case 56: //Continuous two-speed floor/ceiling mover
@@ -3097,6 +3101,10 @@ static void P_ConvertBinaryMap(void)
 		case 58: //Continuous two-speed ceiling mover
 			lines[i].args[0] = tag;
 			lines[i].args[1] = (lines[i].special == 56) ? 2 : lines[i].special - 57;
+			lines[i].args[2] = abs(lines[i].dx) >> FRACBITS;
+			lines[i].args[3] = abs(lines[i].dy) >> FRACBITS;
+			lines[i].args[4] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[5] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].special = 56;
 			break;
 		case 59: //Activate moving platform

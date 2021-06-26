@@ -202,24 +202,16 @@ void T_MoveFloor(floormove_t *movefloor)
 				remove = true;
 				break;
 			case bounceFloor: // Graue 03-12-2004
-				if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
-					movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
-				else
-					movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
-				movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
-				movefloor->delaytimer = movefloor->delay;
-				remove = false;
-				break;
 			case bounceFloorCrush: // Graue 03-27-2004
 				if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
 				{
 					movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
-					movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dy), 4*FRACUNIT); // return trip, use dy
+					movefloor->speed = movefloor->origspeed = lines[movefloor->texture].args[3] << (FRACBITS - 2); // return trip, use args[3]
 				}
 				else
 				{
 					movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
-					movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dx), 4*FRACUNIT); // forward again, use dx
+					movefloor->speed = movefloor->origspeed = lines[movefloor->texture].args[2] << (FRACBITS - 2); // forward again, use args[2]
 				}
 				movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
 				movefloor->delaytimer = movefloor->delay;
@@ -1850,32 +1842,11 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 					dofloor->direction = -1; // down
 				break;
 
-			// Linetypes 2/3.
-			// Move floor up and down indefinitely like the old elevators.
+			// Move floor up and down indefinitely.
+			// bounceFloor has slowdown at the top and bottom of movement.
 			case bounceFloor:
-				dofloor->speed = P_AproxDistance(line->dx, line->dy); // same speed as elevateContinuous
-				dofloor->speed = FixedDiv(dofloor->speed,4*FRACUNIT);
-				dofloor->origspeed = dofloor->speed; // it gets slowed down at the top and bottom
-				dofloor->floordestheight = line->frontsector->floorheight;
-
-				if (dofloor->floordestheight >= sec->floorheight)
-					dofloor->direction = 1; // up
-				else
-					dofloor->direction = -1; // down
-
-				// Any delay?
-				dofloor->delay = sides[line->sidenum[0]].textureoffset >> FRACBITS;
-				dofloor->delaytimer = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Initial delay
-
-				dofloor->texture = (fixed_t)(line - lines); // hack: store source line number
-				break;
-
-			// Linetypes 6/7.
-			// Like 2/3, but no slowdown at the top and bottom of movement,
-			// and the speed is line->dx the first way, line->dy for the
-			// return trip. Good for crushers.
 			case bounceFloorCrush:
-				dofloor->speed = FixedDiv(abs(line->dx),4*FRACUNIT);
+				dofloor->speed = line->args[2] << (FRACBITS - 2); // same speed as elevateContinuous
 				dofloor->origspeed = dofloor->speed;
 				dofloor->floordestheight = line->frontsector->floorheight;
 
@@ -1885,8 +1856,8 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 					dofloor->direction = -1; // down
 
 				// Any delay?
-				dofloor->delay = sides[line->sidenum[0]].textureoffset >> FRACBITS;
-				dofloor->delaytimer = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Initial delay
+				dofloor->delay = line->args[5];
+				dofloor->delaytimer = line->args[4]; // Initial delay
 
 				dofloor->texture = (fixed_t)(line - lines); // hack: store source line number
 				break;
