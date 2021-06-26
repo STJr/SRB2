@@ -2270,12 +2270,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
-		case 403: // Move floor, linelen = speed, frontsector floor = dest height
-			EV_DoFloor(line->args[0], line, moveFloorByFrontSector);
-			break;
-
-		case 404: // Move ceiling, linelen = speed, frontsector ceiling = dest height
-			EV_DoCeiling(line->args[0], line, moveCeilingByFrontSector);
+		case 403: // Move planes by front sector
+			if (line->args[1] != 1)
+				EV_DoFloor(line->args[0], line, moveFloorByFrontSector);
+			if (line->args[1] != 0)
+				EV_DoCeiling(line->args[0], line, moveCeilingByFrontSector);
 			break;
 
 		case 405: // Move floor by front side texture offsets, offset x = speed, offset y = amount to raise/lower

@@ -3523,6 +3523,22 @@ static void P_ConvertBinaryMap(void)
 		case 403: //Move tagged sector's floor
 		case 404: //Move tagged sector's ceiling
 			lines[i].args[0] = tag;
+			lines[i].args[1] = lines[i].special - 403;
+			lines[i].args[2] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+			{
+				if (sides[lines[i].sidenum[0]].textureoffset > 0)
+					lines[i].args[3] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+				else
+					lines[i].args[3] = 0;
+				lines[i].args[4] = 0;
+			}
+			else
+			{
+				lines[i].args[3] = 0;
+				lines[i].args[4] = !!(lines[i].flags & ML_NOCLIMB);
+			}
+			lines[i].special = 403;
 			break;
 		case 405: //Move floor according to front texture offsets
 		case 407: //Move ceiling according to front texture offsets

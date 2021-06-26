@@ -448,8 +448,7 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 
 			//  Linedef executor excellence
 			case moveCeilingByFrontSector:
-				ceiling->speed = P_AproxDistance(line->dx, line->dy);
-				ceiling->speed = FixedDiv(ceiling->speed,8*FRACUNIT);
+				ceiling->speed = line->args[2] << (FRACBITS - 3);
 				if (line->frontsector->ceilingheight >= sec->ceilingheight) // Move up
 				{
 					ceiling->direction = 1;
@@ -462,18 +461,11 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 				}
 
 				// chained linedef executing ability
-				if (line->flags & ML_BLOCKMONSTERS)
-				{
-					// only set it on ONE of the moving sectors (the smallest numbered)
-					// and front side x offset must be positive
-					if (firstone && sides[line->sidenum[0]].textureoffset > 0)
-						ceiling->texture = (sides[line->sidenum[0]].textureoffset>>FRACBITS) - 32769;
-					else
-						ceiling->texture = -1;
-				}
-
+				// only set it on ONE of the moving sectors (the smallest numbered)
+				if (line->args[3] > 0)
+					ceiling->texture = firstone ? line->args[3] - INT16_MAX - 2 : -1;
 				// flat changing ability
-				else if (line->flags & ML_NOCLIMB)
+				else if (line->args[4])
 					ceiling->texture = line->frontsector->ceilingpic;
 				else
 					ceiling->texture = -1;

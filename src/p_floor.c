@@ -1864,11 +1864,8 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 				dofloor->texture = (line->args[2] & 1) ? line->frontsector->floorpic : -1;
 				break;
 
-			// Linedef executor command, linetype 106.
-			// Line length = speed, front sector floor = destination height.
 			case moveFloorByFrontSector:
-				dofloor->speed = P_AproxDistance(line->dx, line->dy);
-				dofloor->speed = FixedDiv(dofloor->speed,8*FRACUNIT);
+				dofloor->speed = line->args[2] << (FRACBITS - 3);
 				dofloor->floordestheight = line->frontsector->floorheight;
 
 				if (dofloor->floordestheight >= sec->floorheight)
@@ -1877,19 +1874,11 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 					dofloor->direction = -1; // down
 
 				// chained linedef executing ability
-				if (line->flags & ML_BLOCKMONSTERS)
-				{
-					// Only set it on one of the moving sectors (the
-					// smallest numbered) and only if the front side
-					// x offset is positive, indicating a valid tag.
-					if (firstone && sides[line->sidenum[0]].textureoffset > 0)
-						dofloor->texture = (sides[line->sidenum[0]].textureoffset>>FRACBITS) - 32769;
-					else
-						dofloor->texture = -1;
-				}
-
+				// Only set it on one of the moving sectors (the smallest numbered)
+				if (line->args[3] > 0)
+					dofloor->texture = firstone ? line->args[3] - INT16_MAX - 2 : -1;
 				// flat changing ability
-				else if (line->flags & ML_NOCLIMB)
+				else if (line->args[4])
 					dofloor->texture = line->frontsector->floorpic;
 				else
 					dofloor->texture = -1; // nothing special to do after movement completes
