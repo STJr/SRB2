@@ -88,11 +88,6 @@ void T_MoveCeiling(ceiling_t *ceiling)
 						dontupdate = true;
 						break;
 
-					case fastCrushAndRaise:
-					case crushAndRaise:
-						ceiling->direction = -1;
-						break;
-
 					case bounceCeiling:
 					{
 						fixed_t dest = ceiling->topheight;
@@ -176,15 +171,6 @@ void T_MoveCeiling(ceiling_t *ceiling)
 			{
 				switch (ceiling->type)
 				{
-					// make platform stop at bottom of all crusher strokes
-					// except generalized ones, reset speed, start back up
-					case crushAndRaise:
-						ceiling->speed = CEILSPEED;
-						/* FALLTHRU */
-					case fastCrushAndRaise:
-						ceiling->direction = 1;
-						break;
-
 					case instantMoveCeilingByFrontSector:
 						if (ceiling->texture > -1) // flat changing
 							ceiling->sector->ceilingpic = ceiling->texture;
@@ -266,18 +252,6 @@ void T_MoveCeiling(ceiling_t *ceiling)
 						// That's it. Do not set dontupdate, do not remove the thinker.
 						break;
 					}
-
-					default:
-						break;
-				}
-			}
-			else if (res == crushed)
-			{
-				switch (ceiling->type)
-				{
-					case crushAndRaise:
-						ceiling->speed = FixedDiv(CEILSPEED,8*FRACUNIT);
-						break;
 
 					default:
 						break;
@@ -411,23 +385,6 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 
 		switch (type)
 		{
-			case fastCrushAndRaise:
-				ceiling->crush = true;
-				ceiling->topheight = sec->ceilingheight;
-				ceiling->bottomheight = sec->floorheight + (8*FRACUNIT);
-				ceiling->direction = -1;
-				ceiling->speed = CEILSPEED * 2;
-				break;
-
-			case crushAndRaise:
-				ceiling->crush = true;
-				ceiling->topheight = sec->ceilingheight;
-				ceiling->bottomheight = sec->floorheight;
-				ceiling->bottomheight += 4*FRACUNIT;
-				ceiling->direction = -1;
-				ceiling->speed = line->dx;
-				break;
-
 			case raiseToHighest:
 				ceiling->topheight = P_FindHighestCeilingSurrounding(sec);
 				ceiling->direction = 1;
