@@ -2277,12 +2277,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				EV_DoCeiling(line->args[0], line, moveCeilingByFrontSector);
 			break;
 
-		case 405: // Move floor by front side texture offsets, offset x = speed, offset y = amount to raise/lower
-			EV_DoFloor(line->args[0], line, moveFloorByFrontTexture);
-			break;
-
-		case 407: // Move ceiling by front side texture offsets, offset x = speed, offset y = amount to raise/lower
-			EV_DoCeiling(line->args[0], line, moveCeilingByFrontTexture);
+		case 405: // Move planes by distance
+			if (line->args[1] != 1)
+				EV_DoFloor(line->args[0], line, moveFloorByDistance);
+			if (line->args[1] != 0)
+				EV_DoCeiling(line->args[0], line, moveCeilingByDistance);
 			break;
 
 		case 409: // Change tagged sectors' tag

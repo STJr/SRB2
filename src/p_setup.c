@@ -3543,6 +3543,11 @@ static void P_ConvertBinaryMap(void)
 		case 405: //Move floor according to front texture offsets
 		case 407: //Move ceiling according to front texture offsets
 			lines[i].args[0] = tag;
+			lines[i].args[1] = (lines[i].special == 405) ? 0 : 1;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[3] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[4] = !!(lines[i].flags & ML_NOCLIMB);
+			lines[i].special = 405;
 			break;
 		case 428: //Start platform movement
 			lines[i].args[0] = tag;

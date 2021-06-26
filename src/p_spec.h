@@ -271,7 +271,7 @@ typedef enum
 	moveCeilingByFrontSector,
 	instantMoveCeilingByFrontSector,
 
-	moveCeilingByFrontTexture,
+	moveCeilingByDistance,
 
 	bounceCeiling,
 	bounceCeilingCrush,
@@ -325,7 +325,7 @@ typedef enum
 	moveFloorByFrontSector,
 	instantMoveFloorByFrontSector,
 
-	moveFloorByFrontTexture,
+	moveFloorByDistance,
 
 	bounceFloor,
 	bounceFloorCrush,

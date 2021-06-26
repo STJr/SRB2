@@ -81,7 +81,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 							ceiling->sector->ceilingpic = ceiling->texture;
 						/* FALLTHRU */
 					case raiseToHighest:
-					case moveCeilingByFrontTexture:
+					case moveCeilingByDistance:
 						ceiling->sector->ceilingdata = NULL;
 						ceiling->sector->ceilspeed = 0;
 						P_RemoveThinker(&ceiling->thinker);
@@ -203,7 +203,7 @@ void T_MoveCeiling(ceiling_t *ceiling)
 						/* FALLTHRU */
 
 					// in all other cases, just remove the active ceiling
-					case moveCeilingByFrontTexture:
+					case moveCeilingByDistance:
 						ceiling->sector->ceilingdata = NULL;
 						ceiling->sector->ceilspeed = 0;
 						P_RemoveThinker(&ceiling->thinker);
@@ -498,19 +498,19 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 				ceiling->texture = (line->args[2] & 2) ? line->frontsector->ceilingpic : -1;
 				break;
 
-			case moveCeilingByFrontTexture:
-				if (line->flags & ML_NOCLIMB)
+			case moveCeilingByDistance:
+				if (line->args[4])
 					ceiling->speed = INT32_MAX/2; // as above, "instant" is one tic
 				else
-					ceiling->speed = FixedDiv(sides[line->sidenum[0]].textureoffset,8*FRACUNIT); // texture x offset
+					ceiling->speed = line->args[3] << (FRACBITS - 3);
 				if (sides[line->sidenum[0]].rowoffset > 0)
 				{
 					ceiling->direction = 1; // up
-					ceiling->topheight = sec->ceilingheight + sides[line->sidenum[0]].rowoffset; // texture y offset
+					ceiling->topheight = sec->ceilingheight + (line->args[2] << FRACBITS);
 				}
 				else {
 					ceiling->direction = -1; // down
-					ceiling->bottomheight = sec->ceilingheight + sides[line->sidenum[0]].rowoffset; // texture y offset
+					ceiling->bottomheight = sec->ceilingheight + (line->args[2] << FRACBITS);
 				}
 				break;
 

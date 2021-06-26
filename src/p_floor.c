@@ -1885,12 +1885,12 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 
 				break;
 
-			case moveFloorByFrontTexture:
-				if (line->flags & ML_NOCLIMB)
+			case moveFloorByDistance:
+				if (line->args[4])
 					dofloor->speed = INT32_MAX/2; // as above, "instant" is one tic
 				else
-					dofloor->speed = FixedDiv(sides[line->sidenum[0]].textureoffset,8*FRACUNIT); // texture x offset
-				dofloor->floordestheight = sec->floorheight + sides[line->sidenum[0]].rowoffset; // texture y offset
+					dofloor->speed = line->args[3] << (FRACBITS - 3);
+				dofloor->floordestheight = sec->floorheight + (line->args[2] << FRACBITS);
 				if (dofloor->floordestheight > sec->floorheight)
 					dofloor->direction = 1; // up
 				else
