@@ -1985,14 +1985,12 @@ static void SaveCeilingThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->bottomheight);
 	WRITEFIXED(save_p, ht->topheight);
 	WRITEFIXED(save_p, ht->speed);
-	WRITEFIXED(save_p, ht->oldspeed);
 	WRITEFIXED(save_p, ht->delay);
 	WRITEFIXED(save_p, ht->delaytimer);
 	WRITEUINT8(save_p, ht->crush);
 	WRITEINT32(save_p, ht->texture);
 	WRITEINT32(save_p, ht->direction);
 	WRITEINT16(save_p, ht->tag);
-	WRITEINT32(save_p, ht->olddirection);
 	WRITEFIXED(save_p, ht->origspeed);
 	WRITEFIXED(save_p, ht->sourceline);
 }
@@ -3092,14 +3090,12 @@ static thinker_t* LoadCeilingThinker(actionf_p1 thinker)
 	ht->bottomheight = READFIXED(save_p);
 	ht->topheight = READFIXED(save_p);
 	ht->speed = READFIXED(save_p);
-	ht->oldspeed = READFIXED(save_p);
 	ht->delay = READFIXED(save_p);
 	ht->delaytimer = READFIXED(save_p);
 	ht->crush = READUINT8(save_p);
 	ht->texture = READINT32(save_p);
 	ht->direction = READINT32(save_p);
 	ht->tag = READINT16(save_p);
-	ht->olddirection = READINT32(save_p);
 	ht->origspeed = READFIXED(save_p);
 	ht->sourceline = READFIXED(save_p);
 	if (ht->sector)

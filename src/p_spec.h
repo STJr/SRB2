@@ -287,7 +287,6 @@ typedef struct
 	fixed_t bottomheight; ///< The lowest height to move to.
 	fixed_t topheight;    ///< The highest height to move to.
 	fixed_t speed;        ///< Ceiling speed.
-	fixed_t oldspeed;
 	fixed_t delay;
 	fixed_t delaytimer;
 	UINT8 crush;           ///< Whether to crush things or not.
@@ -297,7 +296,6 @@ typedef struct
 
 	// ID
 	INT16 tag;            ///< Tag of linedef executor to run when movement is done.
-	INT32 olddirection;
 	fixed_t origspeed;    ///< The original, "real" speed.
 	INT32 sourceline;     ///< Index of the source linedef
 } ceiling_t;

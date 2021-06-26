@@ -377,7 +377,7 @@ INT32 EV_DoCrush(mtag_t tag, line_t *line, ceiling_e type)
 		ceiling->sector = sec;
 		ceiling->crush = true;
 		ceiling->sourceline = (INT32)(line-lines);
-		ceiling->speed = ceiling->oldspeed = line->args[2] << (FRACBITS - 2);
+		ceiling->speed = ceiling->origspeed = line->args[2] << (FRACBITS - 2);
 
 		switch(type)
 		{
