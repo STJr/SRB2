@@ -34,7 +34,6 @@ INT32 ceilmovesound = sfx_None;
 void T_MoveCeiling(ceiling_t *ceiling)
 {
 	result_e res;
-	boolean dontupdate = false;
 
 	if (ceiling->delaytimer)
 	{
@@ -42,227 +41,100 @@ void T_MoveCeiling(ceiling_t *ceiling)
 		return;
 	}
 
-	switch (ceiling->direction)
+	res = T_MovePlane(ceiling->sector, ceiling->speed, (ceiling->direction == 1) ? ceiling->topheight : ceiling->bottomheight, false, true, ceiling->direction);
+
+	if (ceiling->type == bounceCeiling)
 	{
-		case 0: // IN STASIS
-			break;
-		case 1: // UP
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->topheight, false, true, ceiling->direction);
-
-			if (ceiling->type == bounceCeiling)
-			{
-				const fixed_t origspeed = FixedDiv(ceiling->origspeed,(ELEVATORSPEED/2));
-				const fixed_t fs = abs(ceiling->sector->ceilingheight - lines[ceiling->texture].frontsector->ceilingheight);
-				const fixed_t bs = abs(ceiling->sector->ceilingheight - lines[ceiling->texture].backsector->ceilingheight);
-				if (fs < bs)
-					ceiling->speed = FixedDiv(fs,25*FRACUNIT) + FRACUNIT/4;
-				else
-					ceiling->speed = FixedDiv(bs,25*FRACUNIT) + FRACUNIT/4;
-
-				ceiling->speed = FixedMul(ceiling->speed,origspeed);
-			}
-
-			if (res == pastdest)
-			{
-				switch (ceiling->type)
-				{
-					case instantMoveCeilingByFrontSector:
-						if (ceiling->texture > -1) // flat changing
-							ceiling->sector->ceilingpic = ceiling->texture;
-						ceiling->sector->ceilingdata = NULL;
-						ceiling->sector->ceilspeed = 0;
-						P_RemoveThinker(&ceiling->thinker);
-						dontupdate = true;
-						break;
-					case moveCeilingByFrontSector:
-						if (ceiling->texture < -1) // chained linedef executing
-							P_LinedefExecute((INT16)(ceiling->texture + INT16_MAX + 2), NULL, NULL);
-						if (ceiling->texture > -1) // flat changing
-							ceiling->sector->ceilingpic = ceiling->texture;
-						/* FALLTHRU */
-					case raiseToHighest:
-					case moveCeilingByDistance:
-						ceiling->sector->ceilingdata = NULL;
-						ceiling->sector->ceilspeed = 0;
-						P_RemoveThinker(&ceiling->thinker);
-						dontupdate = true;
-						break;
-
-					case bounceCeiling:
-					{
-						fixed_t dest = ceiling->topheight;
-
-						if (dest == lines[ceiling->texture].frontsector->ceilingheight)
-							dest = lines[ceiling->texture].backsector->ceilingheight;
-						else
-							dest = lines[ceiling->texture].frontsector->ceilingheight;
-
-						if (dest < ceiling->sector->ceilingheight) // must move down
-						{
-							ceiling->direction = -1;
-							ceiling->bottomheight = dest;
-						}
-						else // must move up
-						{
-							ceiling->direction = 1;
-							ceiling->topheight = dest;
-						}
-
-						ceiling->delaytimer = ceiling->delay;
-
-						// That's it. Do not set dontupdate, do not remove the thinker.
-						break;
-					}
-
-					case bounceCeilingCrush:
-					{
-						fixed_t dest = ceiling->topheight;
-
-						if (dest == lines[ceiling->texture].frontsector->ceilingheight)
-						{
-							dest = lines[ceiling->texture].backsector->ceilingheight;
-							ceiling->speed = ceiling->origspeed = FixedDiv(abs(lines[ceiling->texture].dy),4*FRACUNIT); // return trip, use dy
-						}
-						else
-						{
-							dest = lines[ceiling->texture].frontsector->ceilingheight;
-							ceiling->speed = ceiling->origspeed = FixedDiv(abs(lines[ceiling->texture].dx),4*FRACUNIT); // going frontways, use dx
-						}
-
-						if (dest < ceiling->sector->ceilingheight) // must move down
-						{
-							ceiling->direction = -1;
-							ceiling->bottomheight = dest;
-						}
-						else // must move up
-						{
-							ceiling->direction = 1;
-							ceiling->topheight = dest;
-						}
-
-						ceiling->delaytimer = ceiling->delay;
-
-						// That's it. Do not set dontupdate, do not remove the thinker.
-						break;
-					}
-
-					default:
-						break;
-				}
-			}
-			break;
-
-		case -1: // DOWN
-			res = T_MovePlane(ceiling->sector, ceiling->speed, ceiling->bottomheight, ceiling->crush, true, ceiling->direction);
-
-			if (ceiling->type == bounceCeiling)
-			{
-				const fixed_t origspeed = FixedDiv(ceiling->origspeed,(ELEVATORSPEED/2));
-				const fixed_t fs = abs(ceiling->sector->ceilingheight - lines[ceiling->texture].frontsector->ceilingheight);
-				const fixed_t bs = abs(ceiling->sector->ceilingheight - lines[ceiling->texture].backsector->ceilingheight);
-				if (fs < bs)
-					ceiling->speed = FixedDiv(fs,25*FRACUNIT) + FRACUNIT/4;
-				else
-					ceiling->speed = FixedDiv(bs,25*FRACUNIT) + FRACUNIT/4;
-				ceiling->speed = FixedMul(ceiling->speed,origspeed);
-			}
-
-			if (res == pastdest)
-			{
-				switch (ceiling->type)
-				{
-					case instantMoveCeilingByFrontSector:
-						if (ceiling->texture > -1) // flat changing
-							ceiling->sector->ceilingpic = ceiling->texture;
-						ceiling->sector->ceilingdata = NULL;
-						ceiling->sector->ceilspeed = 0;
-						P_RemoveThinker(&ceiling->thinker);
-						dontupdate = true;
-						break;
-
-					case moveCeilingByFrontSector:
-						if (ceiling->texture < -1) // chained linedef executing
-							P_LinedefExecute((INT16)(ceiling->texture + INT16_MAX + 2), NULL, NULL);
-						if (ceiling->texture > -1) // flat changing
-							ceiling->sector->ceilingpic = ceiling->texture;
-						// don't break
-						/* FALLTHRU */
-
-					// in all other cases, just remove the active ceiling
-					case moveCeilingByDistance:
-						ceiling->sector->ceilingdata = NULL;
-						ceiling->sector->ceilspeed = 0;
-						P_RemoveThinker(&ceiling->thinker);
-						dontupdate = true;
-						break;
-					case bounceCeiling:
-					{
-						fixed_t dest = ceiling->bottomheight;
-
-						if (dest == lines[ceiling->texture].frontsector->ceilingheight)
-							dest = lines[ceiling->texture].backsector->ceilingheight;
-						else
-							dest = lines[ceiling->texture].frontsector->ceilingheight;
-
-						if (dest < ceiling->sector->ceilingheight) // must move down
-						{
-							ceiling->direction = -1;
-							ceiling->bottomheight = dest;
-						}
-						else // must move up
-						{
-							ceiling->direction = 1;
-							ceiling->topheight = dest;
-						}
-
-						ceiling->delaytimer = ceiling->delay;
-
-						// That's it. Do not set dontupdate, do not remove the thinker.
-						break;
-					}
-
-					case bounceCeilingCrush:
-					{
-						fixed_t dest = ceiling->bottomheight;
-
-						if (dest == lines[ceiling->texture].frontsector->ceilingheight)
-						{
-							dest = lines[ceiling->texture].backsector->ceilingheight;
-							ceiling->speed = ceiling->origspeed = FixedDiv(abs(lines[ceiling->texture].dy),4*FRACUNIT); // return trip, use dy
-						}
-						else
-						{
-							dest = lines[ceiling->texture].frontsector->ceilingheight;
-							ceiling->speed = ceiling->origspeed = FixedDiv(abs(lines[ceiling->texture].dx),4*FRACUNIT); // going frontways, use dx
-						}
-
-						if (dest < ceiling->sector->ceilingheight) // must move down
-						{
-							ceiling->direction = -1;
-							ceiling->bottomheight = dest;
-						}
-						else // must move up
-						{
-							ceiling->direction = 1;
-							ceiling->topheight = dest;
-						}
-
-						ceiling->delaytimer = ceiling->delay;
-
-						// That's it. Do not set dontupdate, do not remove the thinker.
-						break;
-					}
-
-					default:
-						break;
-				}
-			}
-		break;
+		const fixed_t origspeed = FixedDiv(ceiling->origspeed, (ELEVATORSPEED/2));
+		const fixed_t fs = abs(ceiling->sector->ceilingheight - lines[ceiling->texture].frontsector->ceilingheight);
+		const fixed_t bs = abs(ceiling->sector->ceilingheight - lines[ceiling->texture].backsector->ceilingheight);
+		if (fs < bs)
+			ceiling->speed = FixedDiv(fs, 25*FRACUNIT) + FRACUNIT/4;
+		else
+			ceiling->speed = FixedDiv(bs, 25*FRACUNIT) + FRACUNIT/4;
+		ceiling->speed = FixedMul(ceiling->speed, origspeed);
 	}
-	if (!dontupdate)
-		ceiling->sector->ceilspeed = ceiling->speed*ceiling->direction;
-	else
-		ceiling->sector->ceilspeed = 0;
+
+	if (res == pastdest)
+	{
+		switch (ceiling->type)
+		{
+			case instantMoveCeilingByFrontSector:
+				if (ceiling->texture > -1) // flat changing
+					ceiling->sector->ceilingpic = ceiling->texture;
+				ceiling->sector->ceilingdata = NULL;
+				ceiling->sector->ceilspeed = 0;
+				P_RemoveThinker(&ceiling->thinker);
+				return;
+			case moveCeilingByFrontSector:
+				if (ceiling->texture < -1) // chained linedef executing
+					P_LinedefExecute((INT16)(ceiling->texture + INT16_MAX + 2), NULL, NULL);
+				if (ceiling->texture > -1) // flat changing
+					ceiling->sector->ceilingpic = ceiling->texture;
+				/* FALLTHRU */
+			case raiseToHighest:
+			case moveCeilingByDistance:
+				ceiling->sector->ceilingdata = NULL;
+				ceiling->sector->ceilspeed = 0;
+				P_RemoveThinker(&ceiling->thinker);
+				return;
+			case bounceCeiling:
+			{
+				fixed_t dest = (ceiling->direction == 1) ? ceiling->topheight : ceiling->bottomheight;
+
+				if (dest == lines[ceiling->texture].frontsector->ceilingheight)
+					dest = lines[ceiling->texture].backsector->ceilingheight;
+				else
+					dest = lines[ceiling->texture].frontsector->ceilingheight;
+
+				if (dest < ceiling->sector->ceilingheight) // must move down
+				{
+					ceiling->direction = -1;
+					ceiling->bottomheight = dest;
+				}
+				else // must move up
+				{
+					ceiling->direction = 1;
+					ceiling->topheight = dest;
+				}
+
+				ceiling->delaytimer = ceiling->delay;
+				break;
+			}
+			case bounceCeilingCrush:
+			{
+				fixed_t dest = (ceiling->direction == 1) ? ceiling->topheight : ceiling->bottomheight;
+
+				if (dest == lines[ceiling->texture].frontsector->ceilingheight)
+				{
+					dest = lines[ceiling->texture].backsector->ceilingheight;
+					ceiling->speed = ceiling->origspeed = FixedDiv(abs(lines[ceiling->texture].dy), 4*FRACUNIT); // return trip, use dy
+				}
+				else
+				{
+					dest = lines[ceiling->texture].frontsector->ceilingheight;
+					ceiling->speed = ceiling->origspeed = FixedDiv(abs(lines[ceiling->texture].dx), 4*FRACUNIT); // going frontways, use dx
+				}
+
+				if (dest < ceiling->sector->ceilingheight) // must move down
+				{
+					ceiling->direction = -1;
+					ceiling->bottomheight = dest;
+				}
+				else // must move up
+				{
+					ceiling->direction = 1;
+					ceiling->topheight = dest;
+				}
+
+				ceiling->delaytimer = ceiling->delay;
+				break;
+			}
+			default:
+				break;
+		}
+	}
+	ceiling->sector->ceilspeed = ceiling->speed*ceiling->direction;
 }
 
 /** Moves a ceiling crusher.
