@@ -140,11 +140,7 @@ void T_CrushCeiling(ceiling_t *ceiling)
 			if (res == pastdest)
 			{
 				ceiling->direction = -1;
-
-				if (lines[ceiling->sourceline].flags & ML_EFFECT4)
-					ceiling->speed = ceiling->oldspeed;
-				else
-					ceiling->speed = ceiling->oldspeed*2;
+				ceiling->speed = lines[ceiling->sourceline].args[2] << (FRACBITS - 2);
 
 				if (ceiling->type == crushCeilOnce
 					|| ceiling->type == crushBothOnce)
@@ -185,12 +181,8 @@ void T_CrushCeiling(ceiling_t *ceiling)
 				ceiling->sector->soundorg.z = ceiling->sector->floorheight;
 				S_StartSound(mp,sfx_pstop);
 
-				if (lines[ceiling->sourceline].flags & ML_EFFECT4)
-					ceiling->speed = ceiling->oldspeed;
-				else
-					ceiling->speed = ceiling->oldspeed/2;
-
 				ceiling->direction = 1;
+				ceiling->speed = lines[ceiling->sourceline].args[3] << (FRACBITS - 2);
 			}
 			break;
 	}
@@ -387,41 +379,29 @@ INT32 EV_DoCrush(mtag_t tag, line_t *line, ceiling_e type)
 		ceiling->sector = sec;
 		ceiling->crush = true;
 		ceiling->sourceline = (INT32)(line-lines);
-
-		if (line->flags & ML_EFFECT4)
-			ceiling->oldspeed = FixedDiv(abs(line->dx),4*FRACUNIT);
-		else
-			ceiling->oldspeed = (R_PointToDist2(line->v2->x, line->v2->y, line->v1->x, line->v1->y)/16);
+		ceiling->speed = ceiling->oldspeed = line->args[2] << (FRACBITS - 2);
 
 		switch(type)
 		{
-			case fastCrushAndRaise: // Up and then down
+			case raiseAndCrush: // Up and then down
 				ceiling->topheight = P_FindHighestCeilingSurrounding(sec);
 				ceiling->direction = 1;
-				ceiling->speed = ceiling->oldspeed;
+				// Retain stupid behavior for backwards compatibility
+				if (!udmf && !(line->flags & ML_EFFECT4))
+					ceiling->speed /= 2;
+				else
+					ceiling->speed = line->args[3] << (FRACBITS - 2);
 				ceiling->bottomheight = sec->floorheight + FRACUNIT;
 				break;
 			case crushBothOnce:
 				ceiling->topheight = sec->ceilingheight;
 				ceiling->bottomheight = sec->floorheight + (sec->ceilingheight-sec->floorheight)/2;
 				ceiling->direction = -1;
-
-				if (line->flags & ML_EFFECT4)
-					ceiling->speed = ceiling->oldspeed;
-				else
-					ceiling->speed = ceiling->oldspeed*2;
-
 				break;
 			case crushCeilOnce:
 			default: // Down and then up.
 				ceiling->topheight = sec->ceilingheight;
 				ceiling->direction = -1;
-
-				if (line->flags & ML_EFFECT4)
-					ceiling->speed = ceiling->oldspeed;
-				else
-					ceiling->speed = ceiling->oldspeed*2;
-
 				ceiling->bottomheight = sec->floorheight + FRACUNIT;
 				break;
 		}

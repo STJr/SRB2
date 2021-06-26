@@ -3119,6 +3119,18 @@ static void P_ConvertBinaryMap(void)
 		case 61: //Crusher (Ceiling to floor)
 		case 62: //Crusher (Floor to ceiling)
 			lines[i].args[0] = tag;
+			lines[i].args[1] = lines[i].special - 61;
+			if (lines[i].flags & ML_EFFECT4)
+			{
+				lines[i].args[2] = abs(lines[i].dx) >> FRACBITS;
+				lines[i].args[3] = lines[i].args[2];
+			}
+			else
+			{
+				lines[i].args[2] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> (FRACBITS + 1);
+				lines[i].args[3] = lines[i].args[2] / 4;
+			}
+			lines[i].special = 61;
 			break;
 		case 76: //Make FOF bouncy
 			lines[i].args[0] = tag;
@@ -3568,6 +3580,18 @@ static void P_ConvertBinaryMap(void)
 		case 430: //Crush floor once
 		case 431: //Crush floor and ceiling once
 			lines[i].args[0] = tag;
+			lines[i].args[1] = (lines[i].special == 429) ? 1 : ((lines[i].special == 430) ? 0 : 2);
+			if (lines[i].special == 430 || lines[i].flags & ML_EFFECT4)
+			{
+				lines[i].args[2] = abs(lines[i].dx) >> FRACBITS;
+				lines[i].args[3] = lines[i].args[2];
+			}
+			else
+			{
+				lines[i].args[2] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> (FRACBITS + 1);
+				lines[i].args[3] = lines[i].args[2] / 4;
+			}
+			lines[i].special = 429;
 			break;
 		case 443: //Call Lua function
 			if (lines[i].text)

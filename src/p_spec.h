@@ -264,7 +264,7 @@ typedef enum
 	instantRaise, // instant-move for ceilings
 
 	crushAndRaise,
-	fastCrushAndRaise,
+	raiseAndCrush,
 	crushCeilOnce,
 	crushBothOnce,
 

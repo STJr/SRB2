@@ -2870,16 +2870,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			EV_DoElevator(line->args[0], line, elevateContinuous);
 			break;
 
-		case 429: // Crush Ceiling Down Once
-			EV_DoCrush(line->args[0], line, crushCeilOnce);
-			break;
-
-		case 430: // Crush Floor Up Once
-			EV_DoFloor(line->args[0], line, crushFloorOnce);
-			break;
-
-		case 431: // Crush Floor & Ceiling to middle Once
-			EV_DoCrush(line->args[0], line, crushBothOnce);
+		case 429: // Crush planes once
+			if (line->args[1] == 0)
+				EV_DoFloor(line->args[0], line, crushFloorOnce);
+			else if (line->args[1] == 1)
+				EV_DoCrush(line->args[0], line, crushCeilOnce);
+			else
+				EV_DoCrush(line->args[0], line, crushBothOnce);
 			break;
 
 		case 432: // Enable 2D Mode (Disable if noclimb)
@@ -6353,11 +6350,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 61: // Crusher!
-				EV_DoCrush(lines[i].args[0], &lines[i], crushAndRaise);
-				break;
-
-			case 62: // Crusher (up and then down)!
-				EV_DoCrush(lines[i].args[0], &lines[i], fastCrushAndRaise);
+				EV_DoCrush(lines[i].args[0], &lines[i], lines[i].args[1] ? raiseAndCrush : crushAndRaise);
 				break;
 
 			case 63: // support for drawn heights coming from different sector

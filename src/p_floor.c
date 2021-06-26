@@ -222,6 +222,7 @@ void T_MoveFloor(floormove_t *movefloor)
 				{
 					movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
 					movefloor->direction = -1;
+					movefloor->speed = lines[movefloor->texture].args[3] << (FRACBITS - 2);
 					movefloor->sector->soundorg.z = movefloor->sector->floorheight;
 					S_StartSound(&movefloor->sector->soundorg, sfx_pstop);
 					remove = false;
@@ -1863,18 +1864,13 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 				break;
 
 			case crushFloorOnce:
-				dofloor->speed = FixedDiv(abs(line->dx),4*FRACUNIT);
-				dofloor->origspeed = dofloor->speed;
+				dofloor->speed = dofloor->origspeed = line->args[2] << (FRACBITS - 2);
 				dofloor->floordestheight = line->frontsector->ceilingheight;
 
 				if (dofloor->floordestheight >= sec->floorheight)
 					dofloor->direction = 1; // up
 				else
 					dofloor->direction = -1; // down
-
-				// Any delay?
-				dofloor->delay = sides[line->sidenum[0]].textureoffset >> FRACBITS;
-				dofloor->delaytimer = sides[line->sidenum[0]].rowoffset >> FRACBITS;
 
 				dofloor->texture = (fixed_t)(line - lines); // hack: store source line number
 				break;
