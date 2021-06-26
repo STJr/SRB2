@@ -1042,6 +1042,7 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		case MT_THUNDERCOIN_ORB:
 		case MT_IVSP:
 		case MT_SUPERSPARK:
+		case MT_BOXSPARKLE:
 		case MT_RAIN:
 		case MT_SNOWFLAKE:
 		case MT_SPLISH:
@@ -1062,7 +1063,6 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		case MT_HOOPCOLLIDE:
 		case MT_NIGHTSCORE:
 		case MT_NAMECHECK: // DEFINITELY not this, because it is client-side.
-		case MT_BOXSPARKLE:
 			continue;
 		default:
 			break;
