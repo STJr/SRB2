@@ -355,6 +355,7 @@ typedef struct
 	fixed_t delay;
 	fixed_t delaytimer;
 	INT16 tag;
+	INT32 sourceline;
 } floormove_t;
 
 typedef struct

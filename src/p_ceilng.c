@@ -46,8 +46,8 @@ void T_MoveCeiling(ceiling_t *ceiling)
 	if (ceiling->type == bounceCeiling)
 	{
 		const fixed_t origspeed = FixedDiv(ceiling->origspeed, (ELEVATORSPEED/2));
-		const fixed_t fs = abs(ceiling->sector->ceilingheight - lines[ceiling->texture].frontsector->ceilingheight);
-		const fixed_t bs = abs(ceiling->sector->ceilingheight - lines[ceiling->texture].backsector->ceilingheight);
+		const fixed_t fs = abs(ceiling->sector->ceilingheight - lines[ceiling->sourceline].frontsector->ceilingheight);
+		const fixed_t bs = abs(ceiling->sector->ceilingheight - lines[ceiling->sourceline].backsector->ceilingheight);
 		if (fs < bs)
 			ceiling->speed = FixedDiv(fs, 25*FRACUNIT) + FRACUNIT/4;
 		else
@@ -83,15 +83,15 @@ void T_MoveCeiling(ceiling_t *ceiling)
 			{
 				fixed_t dest = (ceiling->direction == 1) ? ceiling->topheight : ceiling->bottomheight;
 
-				if (dest == lines[ceiling->texture].frontsector->ceilingheight)
+				if (dest == lines[ceiling->sourceline].frontsector->ceilingheight)
 				{
-					dest = lines[ceiling->texture].backsector->ceilingheight;
-					ceiling->speed = ceiling->origspeed = lines[ceiling->texture].args[3] << (FRACBITS - 2); // return trip, use args[3]
+					dest = lines[ceiling->sourceline].backsector->ceilingheight;
+					ceiling->speed = ceiling->origspeed = lines[ceiling->sourceline].args[3] << (FRACBITS - 2); // return trip, use args[3]
 				}
 				else
 				{
-					dest = lines[ceiling->texture].frontsector->ceilingheight;
-					ceiling->speed = ceiling->origspeed = lines[ceiling->texture].args[2] << (FRACBITS - 2); // going frontways, use args[2]
+					dest = lines[ceiling->sourceline].frontsector->ceilingheight;
+					ceiling->speed = ceiling->origspeed = lines[ceiling->sourceline].args[2] << (FRACBITS - 2); // going frontways, use args[2]
 				}
 
 				if (dest < ceiling->sector->ceilingheight) // must move down
@@ -330,8 +330,6 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 				// Any delay?
 				ceiling->delay = line->args[5];
 				ceiling->delaytimer = line->args[4]; // Initial delay
-
-				ceiling->texture = (fixed_t)(line - lines); // hack: use texture to store sourceline number
 				break;
 
 			default:

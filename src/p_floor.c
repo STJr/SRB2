@@ -178,8 +178,8 @@ void T_MoveFloor(floormove_t *movefloor)
 	if (movefloor->type == bounceFloor)
 	{
 		const fixed_t origspeed = FixedDiv(movefloor->origspeed,(ELEVATORSPEED/2));
-		const fixed_t fs = abs(movefloor->sector->floorheight - lines[movefloor->texture].frontsector->floorheight);
-		const fixed_t bs = abs(movefloor->sector->floorheight - lines[movefloor->texture].backsector->floorheight);
+		const fixed_t fs = abs(movefloor->sector->floorheight - lines[movefloor->sourceline].frontsector->floorheight);
+		const fixed_t bs = abs(movefloor->sector->floorheight - lines[movefloor->sourceline].backsector->floorheight);
 		if (fs < bs)
 			movefloor->speed = FixedDiv(fs,25*FRACUNIT) + FRACUNIT/4;
 		else
@@ -203,15 +203,15 @@ void T_MoveFloor(floormove_t *movefloor)
 				break;
 			case bounceFloor: // Graue 03-12-2004
 			case bounceFloorCrush: // Graue 03-27-2004
-				if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
+				if (movefloor->floordestheight == lines[movefloor->sourceline].frontsector->floorheight)
 				{
-					movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
-					movefloor->speed = movefloor->origspeed = lines[movefloor->texture].args[3] << (FRACBITS - 2); // return trip, use args[3]
+					movefloor->floordestheight = lines[movefloor->sourceline].backsector->floorheight;
+					movefloor->speed = movefloor->origspeed = lines[movefloor->sourceline].args[3] << (FRACBITS - 2); // return trip, use args[3]
 				}
 				else
 				{
-					movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
-					movefloor->speed = movefloor->origspeed = lines[movefloor->texture].args[2] << (FRACBITS - 2); // forward again, use args[2]
+					movefloor->floordestheight = lines[movefloor->sourceline].frontsector->floorheight;
+					movefloor->speed = movefloor->origspeed = lines[movefloor->sourceline].args[2] << (FRACBITS - 2); // forward again, use args[2]
 				}
 				movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
 				movefloor->delaytimer = movefloor->delay;
@@ -220,9 +220,9 @@ void T_MoveFloor(floormove_t *movefloor)
 			case crushFloorOnce:
 				if (movefloor->direction == 1)
 				{
-					movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
+					movefloor->floordestheight = lines[movefloor->sourceline].frontsector->floorheight;
 					movefloor->direction = -1;
-					movefloor->speed = lines[movefloor->texture].args[3] << (FRACBITS - 2);
+					movefloor->speed = lines[movefloor->sourceline].args[3] << (FRACBITS - 2);
 					movefloor->sector->soundorg.z = movefloor->sector->floorheight;
 					S_StartSound(&movefloor->sector->soundorg, sfx_pstop);
 					remove = false;
@@ -1777,6 +1777,7 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 		dofloor->type = floortype;
 		dofloor->crush = false; // default: types that crush will change this
 		dofloor->sector = sec;
+		dofloor->sourceline = (INT32)(line - lines);
 
 		switch (floortype)
 		{
@@ -1856,8 +1857,6 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 				// Any delay?
 				dofloor->delay = line->args[5];
 				dofloor->delaytimer = line->args[4]; // Initial delay
-
-				dofloor->texture = (fixed_t)(line - lines); // hack: store source line number
 				break;
 
 			case crushFloorOnce:
@@ -1868,8 +1867,6 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 					dofloor->direction = 1; // up
 				else
 					dofloor->direction = -1; // down
-
-				dofloor->texture = (fixed_t)(line - lines); // hack: store source line number
 				break;
 
 			default:

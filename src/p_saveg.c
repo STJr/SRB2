@@ -2010,6 +2010,7 @@ static void SaveFloormoveThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->delay);
 	WRITEFIXED(save_p, ht->delaytimer);
 	WRITEINT16(save_p, ht->tag);
+	WRITEFIXED(save_p, ht->sourceline);
 }
 
 static void SaveLightflashThinker(const thinker_t *th, const UINT8 type)
@@ -3118,6 +3119,7 @@ static thinker_t* LoadFloormoveThinker(actionf_p1 thinker)
 	ht->delay = READFIXED(save_p);
 	ht->delaytimer = READFIXED(save_p);
 	ht->tag = READINT16(save_p);
+	ht->sourceline = READFIXED(save_p);
 	if (ht->sector)
 		ht->sector->floordata = ht;
 	return &ht->thinker;
