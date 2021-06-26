@@ -193,8 +193,8 @@ void T_MoveFloor(floormove_t *movefloor)
 		switch (movefloor->type)
 		{
 			case moveFloorByFrontSector:
-				if (movefloor->texture < -1) // chained linedef executing
-					P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
+				if (movefloor->tag) // chained linedef executing
+					P_LinedefExecute(movefloor->tag, NULL, NULL);
 				/* FALLTHRU */
 			case instantMoveFloorByFrontSector:
 				if (movefloor->texture > -1) // flat changing
@@ -1821,14 +1821,11 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 
 				// chained linedef executing ability
 				// Only set it on one of the moving sectors (the smallest numbered)
-				if (line->args[3] > 0)
-					dofloor->texture = firstone ? line->args[3] - INT16_MAX - 2 : -1;
-				// flat changing ability
-				else if (line->args[4])
-					dofloor->texture = line->frontsector->floorpic;
-				else
-					dofloor->texture = -1; // nothing special to do after movement completes
+				if (line->args[3])
+					dofloor->tag = firstone ? (INT16)line->args[3] : -1;
 
+				// flat changing ability
+				dofloor->texture = line->args[4] ? line->frontsector->floorpic : -1;
 				break;
 
 			case moveFloorByDistance:

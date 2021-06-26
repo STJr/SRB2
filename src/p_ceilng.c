@@ -67,8 +67,8 @@ void T_MoveCeiling(ceiling_t *ceiling)
 				P_RemoveThinker(&ceiling->thinker);
 				return;
 			case moveCeilingByFrontSector:
-				if (ceiling->texture < -1) // chained linedef executing
-					P_LinedefExecute((INT16)(ceiling->texture + INT16_MAX + 2), NULL, NULL);
+				if (ceiling->tag) // chained linedef executing
+					P_LinedefExecute(ceiling->tag, NULL, NULL);
 				if (ceiling->texture > -1) // flat changing
 					ceiling->sector->ceilingpic = ceiling->texture;
 				/* FALLTHRU */
@@ -262,13 +262,11 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 				// chained linedef executing ability
 				// only set it on ONE of the moving sectors (the smallest numbered)
 				// only set it if there isn't also a floor mover
-				if (line->args[3] > 0 && line->args[1] == 1)
-					ceiling->texture = firstone ? line->args[3] - INT16_MAX - 2 : -1;
+				if (line->args[3] && line->args[1] == 1)
+					ceiling->tag = firstone ? (INT16)line->args[3] : 0;
+
 				// flat changing ability
-				else if (line->args[4])
-					ceiling->texture = line->frontsector->ceilingpic;
-				else
-					ceiling->texture = -1;
+				ceiling->texture = line->args[4] ? line->frontsector->ceilingpic : -1;
 				break;
 
 			// More linedef executor junk
@@ -341,7 +339,6 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 
 		}
 
-		ceiling->tag = tag;
 		ceiling->type = type;
 		firstone = 0;
 	}
@@ -407,7 +404,6 @@ INT32 EV_DoCrush(mtag_t tag, line_t *line, ceiling_e type)
 				break;
 		}
 
-		ceiling->tag = tag;
 		ceiling->type = type;
 	}
 	return rtn;

@@ -296,7 +296,7 @@ typedef struct
 	INT32 direction;      ///< 1 = up, 0 = waiting, -1 = down.
 
 	// ID
-	INT32 tag;
+	INT16 tag;            ///< Tag of linedef executor to run when movement is done.
 	INT32 olddirection;
 	fixed_t origspeed;    ///< The original, "real" speed.
 	INT32 sourceline;     ///< Index of the source linedef
@@ -356,6 +356,7 @@ typedef struct
 	fixed_t origspeed;
 	fixed_t delay;
 	fixed_t delaytimer;
+	INT16 tag;
 } floormove_t;
 
 typedef struct

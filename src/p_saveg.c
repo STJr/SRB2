@@ -1991,7 +1991,7 @@ static void SaveCeilingThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->crush);
 	WRITEINT32(save_p, ht->texture);
 	WRITEINT32(save_p, ht->direction);
-	WRITEINT32(save_p, ht->tag);
+	WRITEINT16(save_p, ht->tag);
 	WRITEINT32(save_p, ht->olddirection);
 	WRITEFIXED(save_p, ht->origspeed);
 	WRITEFIXED(save_p, ht->sourceline);
@@ -2011,6 +2011,7 @@ static void SaveFloormoveThinker(const thinker_t *th, const UINT8 type)
 	WRITEFIXED(save_p, ht->origspeed);
 	WRITEFIXED(save_p, ht->delay);
 	WRITEFIXED(save_p, ht->delaytimer);
+	WRITEINT16(save_p, ht->tag);
 }
 
 static void SaveLightflashThinker(const thinker_t *th, const UINT8 type)
@@ -3097,7 +3098,7 @@ static thinker_t* LoadCeilingThinker(actionf_p1 thinker)
 	ht->crush = READUINT8(save_p);
 	ht->texture = READINT32(save_p);
 	ht->direction = READINT32(save_p);
-	ht->tag = READINT32(save_p);
+	ht->tag = READINT16(save_p);
 	ht->olddirection = READINT32(save_p);
 	ht->origspeed = READFIXED(save_p);
 	ht->sourceline = READFIXED(save_p);
@@ -3120,6 +3121,7 @@ static thinker_t* LoadFloormoveThinker(actionf_p1 thinker)
 	ht->origspeed = READFIXED(save_p);
 	ht->delay = READFIXED(save_p);
 	ht->delaytimer = READFIXED(save_p);
+	ht->tag = READINT16(save_p);
 	if (ht->sector)
 		ht->sector->floordata = ht;
 	return &ht->thinker;
