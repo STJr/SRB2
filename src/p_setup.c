@@ -3085,6 +3085,10 @@ static void P_ConvertBinaryMap(void)
 		case 51: //Instantly raise ceiling on level load
 			lines[i].args[0] = tag;
 			break;
+		case 52: //Continuously falling sector
+			lines[i].args[0] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
 		case 53: //Continuous floor/ceiling mover
 		case 54: //Continuous floor mover
 		case 55: //Continuous ceiling mover
@@ -3131,6 +3135,14 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[3] = lines[i].args[2] / 4;
 			}
 			lines[i].special = 61;
+			break;
+		case 66: //Move floor by displacement
+		case 67: //Move ceiling by displacement
+		case 68: //Move floor and ceiling by displacement
+			lines[i].args[0] = tag;
+			lines[i].args[1] = lines[i].special - 66;
+			lines[i].args[2] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			lines[i].special = 66;
 			break;
 		case 76: //Make FOF bouncy
 			lines[i].args[0] = tag;
@@ -3557,6 +3569,9 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[3] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[4] = !!(lines[i].flags & ML_NOCLIMB);
 			lines[i].special = 405;
+			break;
+		case 411: //Stop plane movement
+			lines[i].args[0] = tag;
 			break;
 		case 428: //Start platform movement
 			lines[i].args[0] = tag;

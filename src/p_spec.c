@@ -2297,7 +2297,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 411: // Stop floor/ceiling movement in tagged sector(s)
-			TAG_ITER_SECTORS(tag, secnum)
+			TAG_ITER_SECTORS(line->args[0], secnum)
 			{
 				if (sectors[secnum].floordata)
 				{
@@ -6322,7 +6322,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 52: // Continuously Falling sector
-				EV_DoContinuousFall(lines[i].frontsector, lines[i].backsector, P_AproxDistance(lines[i].dx, lines[i].dy), (lines[i].flags & ML_NOCLIMB));
+				EV_DoContinuousFall(lines[i].frontsector, lines[i].backsector, lines[i].args[0] << FRACBITS, lines[i].args[1]);
 				break;
 
 			case 53: // Continuous plane movement (slowdown)
@@ -6377,17 +6377,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
-			case 66: // Displace floor by front sector
-				TAG_ITER_SECTORS(tag, s)
-					P_AddPlaneDisplaceThinker(pd_floor, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
-				break;
-			case 67: // Displace ceiling by front sector
-				TAG_ITER_SECTORS(tag, s)
-					P_AddPlaneDisplaceThinker(pd_ceiling, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
-				break;
-			case 68: // Displace both floor AND ceiling by front sector
-				TAG_ITER_SECTORS(tag, s)
-					P_AddPlaneDisplaceThinker(pd_both, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
+			case 66: // Displace planes by front sector
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+					P_AddPlaneDisplaceThinker(lines[i].args[1], abs(lines[i].args[2])<<8, sides[lines[i].sidenum[0]].sector-sectors, s, lines[i].args[2] < 0);
 				break;
 
 			case 70: // Add raise thinker to FOF
