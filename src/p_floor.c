@@ -1796,11 +1796,9 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 				dofloor->floordestheight = P_FindLowestFloorSurrounding(sec);
 				break;
 
-			// Linedef executor command, linetype 101.
-			// Front sector floor = destination height.
 			case instantMoveFloorByFrontSector:
 				dofloor->speed = INT32_MAX/2; // as above, "instant" is one tic
-				dofloor->floordestheight = (line->args[1] & 1) ? line->frontsector->floorheight : sec->floorheight;
+				dofloor->floordestheight = line->frontsector->floorheight;
 
 				if (dofloor->floordestheight >= sec->floorheight)
 					dofloor->direction = 1; // up
@@ -1808,7 +1806,7 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 					dofloor->direction = -1; // down
 
 				// If flag is set, change floor texture after moving
-				dofloor->texture = (line->args[2] & 1) ? line->frontsector->floorpic : -1;
+				dofloor->texture = line->args[2] ? line->frontsector->floorpic : -1;
 				break;
 
 			case moveFloorByFrontSector:

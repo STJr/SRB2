@@ -273,27 +273,19 @@ INT32 EV_DoCeiling(mtag_t tag, line_t *line, ceiling_e type)
 			case instantMoveCeilingByFrontSector:
 				ceiling->speed = INT32_MAX/2;
 
-				if (lines->args[1] & 2)
-				{
-					if (line->frontsector->ceilingheight >= sec->ceilingheight) // Move up
-					{
-						ceiling->direction = 1;
-						ceiling->topheight = line->frontsector->ceilingheight;
-					}
-					else // Move down
-					{
-						ceiling->direction = -1;
-						ceiling->bottomheight = line->frontsector->ceilingheight;
-					}
-				}
-				else
+				if (line->frontsector->ceilingheight >= sec->ceilingheight) // Move up
 				{
 					ceiling->direction = 1;
-					ceiling->topheight = sec->ceilingheight;
+					ceiling->topheight = line->frontsector->ceilingheight;
+				}
+				else // Move down
+				{
+					ceiling->direction = -1;
+					ceiling->bottomheight = line->frontsector->ceilingheight;
 				}
 
 				// If flag is set, change ceiling texture after moving
-				ceiling->texture = (line->args[2] & 2) ? line->frontsector->ceilingpic : -1;
+				ceiling->texture = line->args[2] ? line->frontsector->ceilingpic : -1;
 				break;
 
 			case moveCeilingByDistance:

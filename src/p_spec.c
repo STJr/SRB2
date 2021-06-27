@@ -2234,9 +2234,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 	switch (line->special)
 	{
 		case 400: // Set tagged sector's heights/flats
-			if (line->args[1] & 1 || line->args[2] & 1)
+			if (line->args[1] != 1)
 				EV_DoFloor(line->args[0], line, instantMoveFloorByFrontSector);
-			if (line->args[1] & 2 || line->args[2] & 2)
+			if (line->args[1] != 0)
 				EV_DoCeiling(line->args[0], line, instantMoveCeilingByFrontSector);
 			break;
 
