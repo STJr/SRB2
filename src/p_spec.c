@@ -6664,7 +6664,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						ffloorflags |= FF_CUTLEVEL;
 				}
 
-				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
 				P_AddRaiseThinker(lines[i].frontsector, lines[i].args[0], lines[i].args[4] << FRACBITS, ceilingtop, ceilingbottom, !!(lines[i].args[5] & TMFR_REVERSE), !!(lines[i].args[5] & TMFR_SPINDASH));
 				break;
 			}
@@ -6711,7 +6711,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[2] & TMFA_SPLAT)
 					ffloorflags |= FF_SPLAT;
 
-				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
 				break;
 
 			case 223: // FOF (intangible, invisible) - for combining specials in a sector
