@@ -3093,7 +3093,7 @@ static void P_ConvertBinaryMap(void)
 		case 54: //Continuous floor mover
 		case 55: //Continuous ceiling mover
 			lines[i].args[0] = tag;
-			lines[i].args[1] = (lines[i].special == 53) ? 2 : lines[i].special - 54;
+			lines[i].args[1] = (lines[i].special == 53) ? TMP_BOTH : lines[i].special - 54;
 			lines[i].args[2] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 			lines[i].args[3] = lines[i].args[2];
 			lines[i].args[4] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
@@ -3104,7 +3104,7 @@ static void P_ConvertBinaryMap(void)
 		case 57: //Continuous two-speed floor mover
 		case 58: //Continuous two-speed ceiling mover
 			lines[i].args[0] = tag;
-			lines[i].args[1] = (lines[i].special == 56) ? 2 : lines[i].special - 57;
+			lines[i].args[1] = (lines[i].special == 56) ? TMP_BOTH : lines[i].special - 57;
 			lines[i].args[2] = abs(lines[i].dx) >> FRACBITS;
 			lines[i].args[3] = abs(lines[i].dy) >> FRACBITS;
 			lines[i].args[4] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
@@ -3564,7 +3564,7 @@ static void P_ConvertBinaryMap(void)
 		case 405: //Move floor according to front texture offsets
 		case 407: //Move ceiling according to front texture offsets
 			lines[i].args[0] = tag;
-			lines[i].args[1] = (lines[i].special == 405) ? 0 : 1;
+			lines[i].args[1] = (lines[i].special == 405) ? TMP_FLOOR : TMP_CEILING;
 			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			lines[i].args[3] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[4] = !!(lines[i].flags & ML_NOCLIMB);
@@ -3578,11 +3578,11 @@ static void P_ConvertBinaryMap(void)
 				lines[i].special = 0;
 			}
 			else if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[1] = 1;
+				lines[i].args[1] = TMP_CEILING;
 			else if (lines[i].flags & ML_EFFECT4)
-				lines[i].args[1] = 0;
+				lines[i].args[1] = TMP_FLOOR;
 			else
-				lines[i].args[1] = 2;
+				lines[i].args[1] = TMP_BOTH;
 			break;
 		case 411: //Stop plane movement
 			lines[i].args[0] = tag;
@@ -3598,7 +3598,7 @@ static void P_ConvertBinaryMap(void)
 		case 430: //Crush floor once
 		case 431: //Crush floor and ceiling once
 			lines[i].args[0] = tag;
-			lines[i].args[1] = (lines[i].special == 429) ? 1 : ((lines[i].special == 430) ? 0 : 2);
+			lines[i].args[1] = (lines[i].special == 429) ? TMP_CEILING : ((lines[i].special == 430) ? TMP_FLOOR : TMP_BOTH);
 			if (lines[i].special == 430 || lines[i].flags & ML_EFFECT4)
 			{
 				lines[i].args[2] = abs(lines[i].dx) >> FRACBITS;

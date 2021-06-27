@@ -2234,9 +2234,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 	switch (line->special)
 	{
 		case 400: // Set tagged sector's heights/flats
-			if (line->args[1] != 1)
+			if (line->args[1] != TMP_CEILING)
 				EV_DoFloor(line->args[0], line, instantMoveFloorByFrontSector);
-			if (line->args[1] != 0)
+			if (line->args[1] != TMP_FLOOR)
 				EV_DoCeiling(line->args[0], line, instantMoveCeilingByFrontSector);
 			break;
 
@@ -2271,16 +2271,16 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 403: // Move planes by front sector
-			if (line->args[1] != 1)
+			if (line->args[1] != TMP_CEILING)
 				EV_DoFloor(line->args[0], line, moveFloorByFrontSector);
-			if (line->args[1] != 0)
+			if (line->args[1] != TMP_FLOOR)
 				EV_DoCeiling(line->args[0], line, moveCeilingByFrontSector);
 			break;
 
 		case 405: // Move planes by distance
-			if (line->args[1] != 1)
+			if (line->args[1] != TMP_CEILING)
 				EV_DoFloor(line->args[0], line, moveFloorByDistance);
-			if (line->args[1] != 0)
+			if (line->args[1] != TMP_FLOOR)
 				EV_DoCeiling(line->args[0], line, moveCeilingByDistance);
 			break;
 
@@ -2288,9 +2288,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		{
 			TAG_ITER_SECTORS(line->args[0], secnum)
 			{
-				if (line->args[1] != 1)
+				if (line->args[1] != TMP_CEILING)
 					sectors[secnum].floorpic = line->frontsector->floorpic;
-				if (line->args[1] != 0)
+				if (line->args[1] != TMP_FLOOR)
 					sectors[secnum].ceilingpic = line->frontsector->ceilingpic;
 			}
 			break;
@@ -2883,9 +2883,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 429: // Crush planes once
-			if (line->args[1] == 0)
+			if (line->args[1] == TMP_FLOOR)
 				EV_DoFloor(line->args[0], line, crushFloorOnce);
-			else if (line->args[1] == 1)
+			else if (line->args[1] == TMP_CEILING)
 				EV_DoCrush(line->args[0], line, crushCeilOnce);
 			else
 				EV_DoCrush(line->args[0], line, crushBothOnce);
@@ -6340,9 +6340,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 53: // Continuous plane movement (slowdown)
 				if (lines[i].backsector)
 				{
-					if (lines[i].args[1] != 1)
+					if (lines[i].args[1] != TMP_CEILING)
 						EV_DoFloor(lines[i].args[0], &lines[i], bounceFloor);
-					if (lines[i].args[1] != 0)
+					if (lines[i].args[1] != TMP_FLOOR)
 						EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeiling);
 				}
 				break;
@@ -6350,9 +6350,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 56: // Continuous plane movement (constant)
 				if (lines[i].backsector)
 				{
-					if (lines[i].args[1] != 1)
+					if (lines[i].args[1] != TMP_CEILING)
 						EV_DoFloor(lines[i].args[0], &lines[i], bounceFloorCrush);
-					if (lines[i].args[1] != 0)
+					if (lines[i].args[1] != TMP_FLOOR)
 						EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeilingCrush);
 				}
 				break;

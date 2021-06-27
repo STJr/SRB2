@@ -102,6 +102,13 @@ typedef enum
 	TMFL_SPLAT    = 1<<1,
 } textmapfoflaserflags_t;
 
+typedef enum
+{
+	TMP_FLOOR = 0,
+	TMP_CEILING = 1,
+	TMP_BOTH = 2,
+} textmapplanes_t;
+
 // GETSECSPECIAL (specialval, section)
 //
 // Pulls out the special # from a particular section.
