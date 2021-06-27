@@ -6318,7 +6318,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 51: // Instant raise for ceilings
 				if (!udmf)
-					EV_DoCeiling(lines[i].args[1], &lines[i], instantRaise);
+					EV_DoCeiling(lines[i].args[0], &lines[i], instantRaise);
 				break;
 
 			case 52: // Continuously Falling sector
