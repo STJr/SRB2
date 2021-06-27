@@ -6776,6 +6776,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], ffloorflags, secthinkers);
+					if (!fflr)
+						continue;
 					fflr->busttype = busttype;
 					fflr->specialflags = bustflags;
 					fflr->busttag = lines[i].args[4];
@@ -6790,6 +6792,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, 0xff, ffloorflags, secthinkers);
+					if (!fflr)
+						continue;
 					fflr->sinkspeed = abs(lines[i].args[2]) << (FRACBITS - 1);
 					fflr->friction = abs(lines[i].args[3]) << (FRACBITS - 6);
 				}
@@ -6807,6 +6811,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], lines[i].args[2], secthinkers);
+					if (!fflr)
+						continue;
 					if (!udmf) // Ugly backwards compatibility stuff
 					{
 						if (lines[i].args[2] & FF_QUICKSAND)
