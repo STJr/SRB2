@@ -3570,6 +3570,20 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[4] = !!(lines[i].flags & ML_NOCLIMB);
 			lines[i].special = 405;
 			break;
+		case 408: //Set flats
+			lines[i].args[0] = tag;
+			if ((lines[i].flags & (ML_NOCLIMB|ML_EFFECT4)) == (ML_NOCLIMB|ML_EFFECT4))
+			{
+				CONS_Alert(CONS_WARNING, M_GetText("Set flats linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"), tag);
+				lines[i].special = 0;
+			}
+			else if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] = 1;
+			else if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[1] = 0;
+			else
+				lines[i].args[1] = 2;
+			break;
 		case 411: //Stop plane movement
 			lines[i].args[0] = tag;
 			break;

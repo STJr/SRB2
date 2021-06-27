@@ -2284,6 +2284,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				EV_DoCeiling(line->args[0], line, moveCeilingByDistance);
 			break;
 
+		case 408: // Set flats
+		{
+			TAG_ITER_SECTORS(line->args[0], secnum)
+			{
+				if (line->args[1] != 1)
+					sectors[secnum].floorpic = line->frontsector->floorpic;
+				if (line->args[1] != 0)
+					sectors[secnum].ceilingpic = line->frontsector->ceilingpic;
+			}
+			break;
+		}
+
 		case 409: // Change tagged sectors' tag
 		// (formerly "Change calling sectors' tag", but behavior was changed)
 		{
