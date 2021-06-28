@@ -773,6 +773,7 @@ void Polyobj_ClearSubsectorLinks(polyobj_t *polyobj)
 	{
 		polynode_t *link = polyobj->subsectorlinks;
 		polynode_t *next = link->snext;
+		subsector_t *sub = link->subsector;
 
 		if (link->pnext != NULL)
 			link->pnext->pprev = link->pprev;
@@ -780,10 +781,10 @@ void Polyobj_ClearSubsectorLinks(polyobj_t *polyobj)
 		if (link->pprev != NULL)
 			link->pprev->pnext = link->pnext;
 		else
-			link->subsector->polynodes = link->pnext;
+			sub->polynodes = link->pnext;
 
-		if (link->subsector->BSP != NULL)
-			link->subsector->BSP->dirty = true;
+		if (sub->BSP != NULL)
+			sub->BSP->dirty = true;
 
 		FreePolyNode(link);
 		polyobj->subsectorlinks = next;
@@ -830,7 +831,7 @@ static boolean GetIntersection(polyseg_t *seg, node_t *bsp, polyobjvertex_t *v)
 
 	den = v1dy*v2dx - v1dx*v2dy;
 
-	if (den == 0.0)
+	if (fpclassify(den) == FP_ZERO)
 		return false;		// parallel
 
 	num = (v1x - v2x)*v1dy + (v2y - v1y)*v1dx;
@@ -1079,6 +1080,7 @@ static void Polyobj_CreateSubsectorLinks(polyobj_t *polyobj)
 	}
 
 	SplitPoly(node, (INT32)numnodes - 1, dummybbox);
+	ReleaseAllPolyNodes();
 }
 
 void Polyobj_LinkToSubsectors(void)
@@ -1156,7 +1158,7 @@ static void Polyobj_linkToBlockmap(polyobj_t *po)
 		{
 			if (!(x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight))
 			{
-				polymaplink_t  *l = Polyobj_getLink();
+				polymaplink_t *l = Polyobj_getLink();
 
 				l->po = po;
 

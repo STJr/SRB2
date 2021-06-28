@@ -80,6 +80,15 @@ void NodeBuilder_Clear(void)
 	if (builder == NULL)
 		return;
 
+	Z_Free(builder->Nodes);
+	Z_Free(builder->Subsectors);
+	Z_Free(builder->SubsectorSets);
+	Z_Free(builder->Segs);
+	Z_Free(builder->Vertices);
+	Z_Free(builder->SegList);
+	Z_Free(builder->PlaneChecked);
+	Z_Free(builder->Planes);
+
 	builder->Nodes = NULL;
 	builder->Subsectors = NULL;
 	builder->SubsectorSets = NULL;
@@ -246,7 +255,7 @@ static double InterceptVector(const node_t *splitter, const FPrivSeg *seg)
 	double v1x, v1y;
 	double num, frac;
 
-	if (den == 0.0)
+	if (fpclassify(den) == FP_ZERO)
 		return 0.0;		// parallel
 
 	v1x = FixedToDouble(splitter->x);
@@ -820,6 +829,7 @@ static void CreateSubsectorsForReal(void)
 			PushSegPtr(&ptr);
 			set = ptr.SegPtr->next;
 		}
+
 		sub.numlines = (UINT32)(builder->SegListSize - firstline);
 		sub.firstline = (UINT16)firstline;
 
@@ -850,15 +860,20 @@ void NodeBuilder_BuildMini(void)
 	BuildTree();
 }
 
+#define TryRealloc(oldsize, newsize, dest, type) \
+	size = (size_t)builder->newsize; \
+	if (size != bsp->oldsize) { \
+		bsp->oldsize = size; \
+		bsp->dest = Z_Realloc(bsp->dest, size * sizeof(type), PU_LEVEL, NULL); \
+	} \
+	size *= sizeof(type);
+
 void NodeBuilder_ExtractMini(minibsp_t *bsp)
 {
 	UINT32 i;
 	size_t size;
 
-	bsp->dirty = false;
-
-	bsp->numverts = (size_t)builder->NumVertices;
-	bsp->verts = Z_Malloc(bsp->numverts * sizeof(vertex_t), PU_LEVEL, NULL);
+	TryRealloc(numverts, NumVertices, verts, vertex_t);
 
 	for (i = 0; i < bsp->numverts; ++i)
 	{
@@ -869,18 +884,13 @@ void NodeBuilder_ExtractMini(minibsp_t *bsp)
 		vert->floorz = vert->ceilingz = 0;
 	}
 
-	bsp->numnodes = (size_t)builder->NumNodes;
-	size = bsp->numnodes * sizeof(node_t);
-	bsp->nodes = Z_Malloc(size, PU_LEVEL, NULL);
+	TryRealloc(numnodes, NumNodes, nodes, node_t);
 	memcpy(bsp->nodes, builder->Nodes, size);
 
-	bsp->numsubsectors = (size_t)builder->NumSubsectors;
-	size = bsp->numsubsectors * sizeof(subsector_t);
-	bsp->subsectors = Z_Malloc(size, PU_LEVEL, NULL);
+	TryRealloc(numsubsectors, NumSubsectors, subsectors, subsector_t);
 	memcpy(bsp->subsectors, builder->Subsectors, size);
 
-	bsp->numsegs = (size_t)builder->NumSegs;
-	bsp->segs = Z_Malloc(bsp->numsegs * sizeof(seg_t), PU_LEVEL, NULL);
+	TryRealloc(numsegs, NumSegs, segs, seg_t);
 
 	for (i = 0; i < bsp->numsegs; ++i)
 	{
@@ -906,7 +916,11 @@ void NodeBuilder_ExtractMini(minibsp_t *bsp)
 		out->polybackside = org->backside;
 		out->glseg = false;
 	}
+
+	bsp->dirty = false;
 }
+
+#undef TryRealloc
 
 void NodeBuilder_AddSegs(seg_t *seglist, size_t segcount)
 {

@@ -448,6 +448,42 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	return check;
 }
 
+static visplane_t *R_CreateVisplane(visplane_t *pl, INT32 start, INT32 stop)
+{
+	visplane_t *new_pl;
+
+	if (pl->ffloor || pl->polyobj)
+	{
+		new_pl = new_visplane(MAXVISPLANES - 1);
+	}
+	else
+	{
+		unsigned hash =
+			visplane_hash(pl->picnum, pl->lightlevel, pl->height);
+		new_pl = new_visplane(hash);
+	}
+
+	new_pl->height = pl->height;
+	new_pl->picnum = pl->picnum;
+	new_pl->lightlevel = pl->lightlevel;
+	new_pl->xoffs = pl->xoffs;
+	new_pl->yoffs = pl->yoffs;
+	new_pl->extra_colormap = pl->extra_colormap;
+	new_pl->ffloor = pl->ffloor;
+	new_pl->viewx = pl->viewx;
+	new_pl->viewy = pl->viewy;
+	new_pl->viewz = pl->viewz;
+	new_pl->viewangle = pl->viewangle;
+	new_pl->plangle = pl->plangle;
+	new_pl->polyobj = pl->polyobj;
+	new_pl->slope = pl->slope;
+	new_pl->minx = start;
+	new_pl->maxx = stop;
+	memset(new_pl->top, 0xff, sizeof new_pl->top);
+	memset(new_pl->bottom, 0x00, sizeof new_pl->bottom);
+	return new_pl;
+}
+
 //
 // R_CheckPlane: return same visplane or alloc a new one if needed
 //
@@ -456,6 +492,9 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 	INT32 intrl, intrh;
 	INT32 unionl, unionh;
 	INT32 x;
+
+	if (pl->polyobj)
+		return R_CreateVisplane(pl, start, stop);
 
 	if (start < pl->minx)
 	{
@@ -488,92 +527,29 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 	{
 		pl->minx = unionl;
 		pl->maxx = unionh;
+		return pl;
 	}
-	else /* Cannot use existing plane; create a new one */
-	{
-		visplane_t *new_pl;
-		if (pl->ffloor)
-		{
-			new_pl = new_visplane(MAXVISPLANES - 1);
-		}
-		else
-		{
-			unsigned hash =
-				visplane_hash(pl->picnum, pl->lightlevel, pl->height);
-			new_pl = new_visplane(hash);
-		}
 
-		new_pl->height = pl->height;
-		new_pl->picnum = pl->picnum;
-		new_pl->lightlevel = pl->lightlevel;
-		new_pl->xoffs = pl->xoffs;
-		new_pl->yoffs = pl->yoffs;
-		new_pl->extra_colormap = pl->extra_colormap;
-		new_pl->ffloor = pl->ffloor;
-		new_pl->viewx = pl->viewx;
-		new_pl->viewy = pl->viewy;
-		new_pl->viewz = pl->viewz;
-		new_pl->viewangle = pl->viewangle;
-		new_pl->plangle = pl->plangle;
-		new_pl->polyobj = pl->polyobj;
-		new_pl->slope = pl->slope;
-		pl = new_pl;
-		pl->minx = start;
-		pl->maxx = stop;
-		memset(pl->top, 0xff, sizeof pl->top);
-		memset(pl->bottom, 0x00, sizeof pl->bottom);
-	}
-	return pl;
+	/* Cannot use existing plane; create a new one */
+	return R_CreateVisplane(pl, start, stop);
 }
-
 
 //
 // R_ExpandPlane
 //
-// This function basically expands the visplane or I_Errors.
+// This function basically expands the visplane.
 // The reason for this is that when creating 3D floor planes, there is no
 // need to create new ones with R_CheckPlane, because 3D floor planes
 // are created by subsector and there is no way a subsector can graphically
 // overlap.
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 {
-//	INT32 unionl, unionh;
-//	INT32 x;
-
 	// Don't expand polyobject planes here - we do that on our own.
 	if (pl->polyobj)
 		return;
 
 	if (pl->minx > start) pl->minx = start;
 	if (pl->maxx < stop)  pl->maxx = stop;
-/*
-	if (start < pl->minx)
-	{
-		unionl = start;
-	}
-	else
-	{
-		unionl = pl->minx;
-	}
-
-	if (stop > pl->maxx)
-	{
-		unionh = stop;
-	}
-	else
-	{
-		unionh = pl->maxx;
-	}
-	for (x = start; x <= stop; x++)
-		if (pl->top[x] != 0xffff || pl->bottom[x] != 0x0000)
-			break;
-
-	if (x <= stop)
-		I_Error("R_ExpandPlane: planes in same subsector overlap?!\nminx: %d, maxx: %d, start: %d, stop: %d\n", pl->minx, pl->maxx, start, stop);
-
-	pl->minx = unionl, pl->maxx = unionh;
-*/
-
 }
 
 static void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)

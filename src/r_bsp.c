@@ -30,6 +30,7 @@ side_t *sidedef;
 line_t *linedef;
 sector_t *frontsector;
 sector_t *backsector;
+polynode_t *polynodes;
 
 static minibsp_t *minibsp = NULL;
 
@@ -393,14 +394,11 @@ static void R_AddLine(seg_t *line)
 	static sector_t tempsec;
 	boolean bothceilingssky = false, bothfloorssky = false;
 
-	portalline = false;
-
-	if (line->polyseg && !(line->polyseg->flags & POF_RENDERSIDES))
-		return;
-
 	angle1 = R_PointToAngleEx(viewx, viewy, line->v1->x, line->v1->y);
 	angle2 = R_PointToAngleEx(viewx, viewy, line->v2->x, line->v2->y);
+
 	curline = line;
+	portalline = false;
 
 	// Clip to view edges.
 	span = angle1 - angle2;
@@ -677,7 +675,7 @@ void R_BuildPolyBSP(subsector_t *sub)
 
 	NodeBuilder_BuildMini();
 	if (sub->BSP == NULL)
-		sub->BSP = Z_Malloc(sizeof(minibsp_t), PU_LEVEL, NULL);
+		sub->BSP = Z_Calloc(sizeof(minibsp_t), PU_LEVEL, NULL);
 	NodeBuilder_ExtractMini(sub->BSP);
 
 	for (i = 0; i < sub->BSP->numsubsectors; ++i)
@@ -981,6 +979,7 @@ void R_Subsector(size_t num)
 	if (minibsp && sub->polynodes)
 	{
 		polynode_t *pn = sub->polynodes;
+		polynodes = pn;
 
 		for (; pn != NULL; pn = pn->pnext)
 		{
@@ -1059,6 +1058,8 @@ void R_Subsector(size_t num)
 		line++;
 		curline = NULL; /* cph 2001/11/18 - must clear curline now we're done with it, so stuff doesn't try using it for other things */
 	}
+
+	polynodes = NULL;
 }
 
 //

@@ -1466,10 +1466,16 @@ static void R_RenderSegLoop (void)
 		}
 
 		for (i = 0; i < numffloors; i++)
+		{
+			if (ffloor[i].polyobj && ffloor[i].polyobj != curline->polyseg)
+				continue;
 			ffloor[i].f_frac += ffloor[i].f_step;
+		}
 
 		for (i = 0; i < numbackffloors; i++)
 		{
+			if (ffloor[i].polyobj && ffloor[i].polyobj != curline->polyseg)
+				continue;
 			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)((ffloor[i].b_frac >> HEIGHTBITS) & 0xFFFF);
 			ffloor[i].b_frac += ffloor[i].b_step;
 		}
@@ -2206,7 +2212,9 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			ds_p->numthicksides = numthicksides = i;
 		}
-		if (sidedef->midtexture > 0 && sidedef->midtexture < numtextures)
+
+		if (sidedef->midtexture > 0 && sidedef->midtexture < numtextures
+		&& !(curline->polyseg && !(curline->polyseg->flags & POF_RENDERSIDES)))
 		{
 			// masked midtexture
 			if (!ds_p->thicksidecol)
@@ -2217,10 +2225,11 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			else
 				ds_p->maskedtexturecol = ds_p->thicksidecol;
 
-			maskedtextureheight = ds_p->maskedtextureheight; // note to red, this == &(ds_p->maskedtextureheight[0])
+			maskedtextureheight = ds_p->maskedtextureheight;
 
+			// use REAL front and back floors please, so midtexture rendering isn't mucked up
 			if (curline->polyseg)
-			{ // use REAL front and back floors please, so midtexture rendering isn't mucked up
+			{
 				rw_midtextureslide = rw_midtexturebackslide = 0;
 				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
 					rw_midtexturemid = rw_midtextureback = max(curline->frontsector->floorheight, curline->backsector->floorheight) - viewz;
@@ -2478,13 +2487,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			}
 		}
 
+		i = 0;
+
 		if (backsector->ffloors || frontsector->ffloors)
 		{
 			ffloor_t *rover;
 			fixed_t roverleft, roverright;
 			fixed_t planevistest;
-
-			i = 0;
 
 			if (backsector->ffloors)
 			{
@@ -2599,49 +2608,65 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			numbackffloors = i;
 		}
+
+		if (polynodes && numbackffloors < MAXFFLOORS)
+		{
+			polynode_t *pn = polynodes;
+
+			for (; pn != NULL; pn = pn->pnext)
+			{
+				polyobj_t *po = pn->poly;
+				sector_t *polysec;
+
+				if (!(po->flags & POF_RENDERPLANES)) // Don't draw planes
+					continue;
+
+				i = 0;
+				while (i < numffloors && ffloor[i].polyobj != po) i++;
+
+				polysec = po->lines[0]->backsector;
+
+				if (polysec->floorheight <= frontsector->ceilingheight &&
+					polysec->floorheight >= frontsector->floorheight &&
+					(viewz < polysec->floorheight))
+				{
+					ffloor[i].b_pos = polysec->floorheight;
+					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
+					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					i++;
+				}
+
+				if (i >= MAXFFLOORS)
+					break;
+
+				if (polysec->ceilingheight >= frontsector->floorheight &&
+					polysec->ceilingheight <= frontsector->ceilingheight &&
+					(viewz > polysec->ceilingheight))
+				{
+					ffloor[i].b_pos = polysec->ceilingheight;
+					ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
+					ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
+					ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
+					i++;
+				}
+
+				if (i >= MAXFFLOORS)
+					break;
+			}
+
+			numbackffloors = i;
+		}
 	}
 
 	for (i = 0; i < numffloors; i++)
 	{
-		sector_t *polysec = curline->frontsector;
-		if (numbackffloors >= MAXFFLOORS)
-			break;
-		if (ffloor[i].polyobj && polysec->floorheight <= frontsector->ceilingheight &&
-			polysec->floorheight >= frontsector->floorheight &&
-			(viewz < polysec->floorheight))
+		if (curline->polyseg == ffloor[i].polyobj)
 		{
 			if (ffloor[i].plane->minx > ds_p->x1)
 				ffloor[i].plane->minx = ds_p->x1;
-
 			if (ffloor[i].plane->maxx < ds_p->x2)
 				ffloor[i].plane->maxx = ds_p->x2;
-
-			ffloor[i].b_pos = polysec->floorheight;
-			ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
-			ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-			ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-
-			i++;
-			numbackffloors++;
-		}
-		if (numbackffloors >= MAXFFLOORS)
-			break;
-		if (ffloor[i].polyobj && polysec->ceilingheight >= frontsector->floorheight &&
-			polysec->ceilingheight <= frontsector->ceilingheight &&
-			(viewz > polysec->ceilingheight))
-		{
-			if (ffloor[i].plane->minx > ds_p->x1)
-				ffloor[i].plane->minx = ds_p->x1;
-
-			if (ffloor[i].plane->maxx < ds_p->x2)
-				ffloor[i].plane->maxx = ds_p->x2;
-
-			ffloor[i].b_pos = polysec->ceilingheight;
-			ffloor[i].b_pos = (ffloor[i].b_pos - viewz) >> 4;
-			ffloor[i].b_step = FixedMul(-rw_scalestep, ffloor[i].b_pos);
-			ffloor[i].b_frac = (centeryfrac >> 4) - FixedMul(ffloor[i].b_pos, rw_scale);
-
-			numbackffloors++;
 		}
 	}
 
@@ -2692,21 +2717,6 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			for (i = 0; i < numffloors; i++)
 				R_ExpandPlane(ffloor[i].plane, rw_x, rw_stopx - 1);
-		}
-
-		// FIXME hack to fix planes disappearing when a seg goes behind the camera. This NEEDS to be changed to be done properly. -Red
-		if (curline->polyseg)
-		{
-			for (i = 0; i < numffloors; i++)
-			{
-				if (!ffloor[i].polyobj || ffloor[i].polyobj != curline->polyseg)
-					continue;
-				if (ffloor[i].plane->minx > rw_x)
-					ffloor[i].plane->minx = rw_x;
-
-				if (ffloor[i].plane->maxx < rw_stopx - 1)
-					ffloor[i].plane->maxx = rw_stopx - 1;
-			}
 		}
 	}
 
