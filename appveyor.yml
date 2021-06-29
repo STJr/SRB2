@@ -63,7 +63,7 @@ configuration:
 
 before_build:
 - set "Path=%MINGW_SDK%\bin;%Path%"
-- %CC% --help=warnings | grep fallthrough
+- i686-w64-mingw32-gcc --help=warnings | grep fallthrough
 - mingw32-make --version
 - nasm -v
 - if not [%NOUPX%] == [1] ( upx -V )
