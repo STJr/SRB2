@@ -29,10 +29,6 @@ $(call Print,$(_m))
 
 # go for a 32-bit sdl mingw exe by default
 MINGW:=1
-# cmd.exe uses native Windows semicolon delimited PATH
-ifneq (,$(findstring ;,$(PATH)))
-WINDOWSHELL:=1
-endif
 
 else # if you on the *nix
 
