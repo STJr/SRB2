@@ -594,7 +594,7 @@ int LUA_HookKey(INT32 keycode, int hook_type)
 	if (prepare_hook(&hook, false, hook_type))
 	{
 		lua_pushinteger(gL, keycode);
-		call_hooks(&hook, 1, 0, res_true);
+		call_hooks(&hook, 1, 1, res_true);
 	}
 	return hook.status;
 }
