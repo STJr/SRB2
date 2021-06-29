@@ -407,7 +407,7 @@ void I_UpdateMouseGrab(void)
 
 boolean I_GetMouseGrab(void)
 {
-	return SDL_GetWindowGrab(window);
+	return (boolean)SDL_GetWindowGrab(window);
 }
 
 void I_SetMouseGrab(boolean grab)
@@ -1070,7 +1070,7 @@ void I_GetEvent(void)
 					M_SetupJoystickMenu(0);
 			 	break;
 			case SDL_QUIT:
-				LUAh_GameQuit(true);
+				LUA_HookBool(true, HOOK(GameQuit));
 				I_Quit();
 				break;
 		}

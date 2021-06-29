@@ -2238,6 +2238,16 @@ static void S_ChangeMusicToQueue(void)
 void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
 	char newmusic[7];
+
+	struct MusicChange hook_param = {
+		newmusic,
+		&mflags,
+		&looping,
+		&position,
+		&prefadems,
+		&fadeinms
+	};
+
 	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
 	boolean midipref = cv_musicpref.value;
 
@@ -2245,7 +2255,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 
 	strncpy(newmusic, mmusic, 7);
-	if (LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
+	if (LUA_HookMusicChange(music_name, &hook_param))
 		return;
 	newmusic[6] = 0;
 

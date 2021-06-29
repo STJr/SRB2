@@ -117,7 +117,7 @@ static int lib_setMouseGrab(lua_State *L)
 	return 0;
 }
 
-static boolean lib_getCursorPosition(lua_State *L)
+static int lib_getCursorPosition(lua_State *L)
 {
 	int x, y;
 	I_GetCursorPosition(&x, &y);
