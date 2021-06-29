@@ -286,7 +286,6 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 		// We want to check our global unlockables.
 		return (unlockables[unlockID].unlocked);
 	}
->>>>>>> src/r_skins.c
 }
 
 // returns true if the skin name is found (loaded from pwad)

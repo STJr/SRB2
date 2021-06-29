@@ -2317,16 +2317,13 @@ void G_Ticker(boolean run)
 					P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
 				else
 					players[i].cmd.angleturn = players[i].angleturn;
-    			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
-    			players[i].oldrelangleturn = players[i].cmd.angleturn;
     			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
     				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
     			else
     				players[i].cmd.angleturn = players[i].angleturn;
     
     			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
-    		
-    			// Use the leveltime sent in the player's ticcmd to determine control lag
+				// Use the leveltime sent in the player's ticcmd to determine control lag
     			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
 			}
 			else // Less work is required if we're building a bot ticcmd.
