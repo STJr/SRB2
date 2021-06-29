@@ -6,7 +6,6 @@ environment:
  WINDRES: windres
  # c:\mingw-w64 i686 has gcc 6.3.0, so use c:\msys64 7.3.0 instead
  MINGW_SDK: c:\msys64\mingw32
- CFLAGS: -Werror=implicit-fallthrough=4
  NASM_ZIP: nasm-2.12.01
  NASM_URL: http://www.nasm.us/pub/nasm/releasebuilds/2.12.01/win64/nasm-2.12.01-win64.zip
  UPX_ZIP: upx391w
@@ -64,6 +63,7 @@ configuration:
 
 before_build:
 - set "Path=%MINGW_SDK%\bin;%Path%"
+- %CC% --help=warnings | grep fallthrough
 - mingw32-make --version
 - nasm -v
 - if not [%NOUPX%] == [1] ( upx -V )
