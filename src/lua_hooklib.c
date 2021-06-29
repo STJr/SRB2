@@ -588,6 +588,17 @@ int LUA_HookTiccmd(player_t *player, ticcmd_t *cmd, int hook_type)
 	return hook.status;
 }
 
+int LUA_HookKey(INT32 keycode, int hook_type)
+{
+	Hook_State hook;
+	if (prepare_hook(&hook, false, hook_type))
+	{
+		lua_pushinteger(gL, keycode);
+		call_hooks(&hook, 1, 0, res_true);
+	}
+	return hook.status;
+}
+
 /* =========================================================================
                                SPECIALIZED HOOKS
    ========================================================================= */
@@ -1085,17 +1096,6 @@ int LUA_HookPlayerCanEnterSpinGaps(player_t *player)
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		call_hooks(&hook, 1, 1, res_force);
-	}
-	return hook.status;
-}
-
-int LUA_HookKey(INT32 keycode, int hooktype)
-{
-	Hook_State hook;
-	if (prepare_hook(&hook, 0, hooktype))
-	{
-		lua_pushinteger(gL, keycode);
-		call_hooks(&hook, 1, 0, res_true);
 	}
 	return hook.status;
 }
