@@ -404,7 +404,7 @@ clean :
 	$(call _rm,$(exe) $(dbg) $(dbg).txt $(objects))
 
 distclean :
-	$(call _rm,../bin ../objs ../deps ../make comptime.h)
+	$(call _rm,../bin ../objs ../dep ../make comptime.h)
 
 info:
 ifdef WINDOWSHELL
