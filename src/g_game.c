@@ -3005,7 +3005,7 @@ void G_DoReborn(INT32 playernum)
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
 
-	//! Tailsbot
+	// Tailsbot
 	if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
 	{ // Bots respawn next to their master.
 		mobj_t *oldmo = NULL;
