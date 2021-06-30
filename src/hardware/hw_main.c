@@ -4823,6 +4823,149 @@ static void HWR_CreateDrawNodes(void)
 	Z_Free(sortindex);
 }
 
+// HWR_DrawCollisionBox
+// Modified from HWR_DrawDropShadow
+static void HWR_DrawCollisionBox(mobj_t *thing)
+{
+	fixed_t scale = thing->scale;
+	patch_t *gpatch;
+	FOutVector sideA[4];
+	FOutVector sideB[4];
+	FOutVector sideC[4];
+	FOutVector sideD[4];
+	FOutVector sideE[4]; //Top
+	//FOutVector sideF[4]; //Bottom. Doesn't look very nice against shadows, so I decided against it.
+	FSurfaceInfo sSurf;
+	float fscale; float fx; float fy; float offset;
+	extracolormap_t *colormap = NULL;
+
+	INT32 light;
+	fixed_t scalemul;
+	UINT16 alpha = 64;
+	UINT16 alpha2 = 128;
+	UINT16 alpha3 = 192;
+	
+	gpatch = (patch_t *)W_CachePatchName("~103", PU_SPRITE);
+	if (!(gpatch && ((GLPatch_t *)gpatch->hardware)->mipmap->format)) return;
+	HWR_GetPatch(gpatch);
+
+	scalemul = FixedMul(scale, (thing->radius*2) / gpatch->height);
+
+	fscale = FIXED_TO_FLOAT(scalemul);
+	fx = FIXED_TO_FLOAT(thing->x);
+	fy = FIXED_TO_FLOAT(thing->y);
+
+	if (thing && fabsf(fscale - 1.0f) > 1.0E-36f)
+		offset = ((gpatch->height)/2) * fscale;
+	else
+		offset = (float)((gpatch->height)/2);
+
+	//  3--2
+	//  | /|
+	//  |/ |
+	//  0--1
+	sideA[2].x = sideA[3].x = fx + offset;
+	sideB[2].x = sideB[3].x = fx + offset;
+	sideC[2].x = sideC[1].x = fx + offset; //Side X+
+	sideD[2].x = sideD[1].x = fx - offset; //Side X-
+	sideE[2].x = sideE[3].x = fx + offset;
+	//sideF[2].x = sideF[3].x = fx + offset;
+
+	sideA[1].x = sideA[0].x = fx - offset;
+	sideB[1].x = sideB[0].x = fx - offset;
+	sideC[3].x = sideC[0].x = fx + offset; //Side X+
+	sideD[3].x = sideD[0].x = fx - offset; //Side X-
+	sideE[1].x = sideE[0].x = fx - offset;
+	//sideF[1].x = sideF[0].x = fx - offset;
+
+	sideA[1].z = sideA[2].z = fy + offset; //Side Y+
+	sideB[1].z = sideB[2].z = fy - offset;
+	sideC[3].z = sideC[2].z = fy - offset; //Side X+
+	sideD[3].z = sideD[2].z = fy - offset; //Side X-
+	sideE[1].z = sideE[2].z = fy - offset;
+	//sideF[1].z = sideF[2].z = fy - offset;
+
+	sideA[0].z = sideA[3].z = fy + offset;
+	sideB[0].z = sideB[3].z = fy - offset; //Side Y-
+	sideC[0].z = sideC[1].z = fy + offset; //Side X+
+	sideD[0].z = sideD[1].z = fy + offset; //Side X-
+	sideE[0].z = sideE[3].z = fy + offset;
+	//sideF[0].z = sideF[3].z = fy + offset;
+	
+	sideA[0].y = sideA[3].y = FIXED_TO_FLOAT(thing->z);
+	sideB[0].y = sideB[3].y = FIXED_TO_FLOAT(thing->z);
+	sideC[0].y = sideC[3].y = FIXED_TO_FLOAT(thing->z);
+	sideD[0].y = sideD[3].y = FIXED_TO_FLOAT(thing->z);
+	sideE[0].y = sideE[3].y = FIXED_TO_FLOAT(thing->z + thing->height); //Top side
+	//sideF[0].y = sideF[3].y = FIXED_TO_FLOAT(thing->z);
+
+	sideA[1].y = sideA[2].y = FIXED_TO_FLOAT(thing->z + thing->height);
+	sideB[1].y = sideB[2].y = FIXED_TO_FLOAT(thing->z + thing->height);
+	sideC[1].y = sideC[2].y = FIXED_TO_FLOAT(thing->z + thing->height);
+	sideD[1].y = sideD[2].y = FIXED_TO_FLOAT(thing->z + thing->height);
+	sideE[1].y = sideE[2].y = FIXED_TO_FLOAT(thing->z + thing->height);
+	//sideF[1].y = sideF[2].y = FIXED_TO_FLOAT(thing->z); //Bottom side
+	
+	//UV Coords
+	sideA[0].s = sideA[3].s = 0;
+	sideB[0].s = sideB[3].s = 0;
+	sideC[0].s = sideC[3].s = 0;
+	sideD[0].s = sideD[3].s = 0;
+	sideE[0].s = sideE[3].s = 0;
+	//sideF[0].s = sideF[3].s = 0;
+	
+	sideA[2].s = sideA[1].s = ((GLPatch_t *)gpatch->hardware)->max_s;
+	sideB[2].s = sideB[1].s = ((GLPatch_t *)gpatch->hardware)->max_s;
+	sideC[2].s = sideC[1].s = ((GLPatch_t *)gpatch->hardware)->max_s;
+	sideD[2].s = sideD[1].s = ((GLPatch_t *)gpatch->hardware)->max_s;
+	sideE[2].s = sideE[1].s = ((GLPatch_t *)gpatch->hardware)->max_s;
+	//sideF[2].s = sideF[1].s = ((GLPatch_t *)gpatch->hardware)->max_s;
+	
+	sideA[3].t = sideA[2].t = 0;
+	sideB[3].t = sideB[2].t = 0;
+	sideC[3].t = sideC[2].t = 0;
+	sideD[3].t = sideD[2].t = 0;
+	sideE[3].t = sideE[2].t = 0;
+	//sideF[3].t = sideF[2].t = 0;
+	
+	sideA[0].t = sideA[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
+	sideB[0].t = sideB[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
+	sideC[0].t = sideC[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
+	sideD[0].t = sideD[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
+	sideE[0].t = sideE[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
+	//sideF[0].t = sideF[1].t = ((GLPatch_t *)gpatch->hardware)->max_t;
+		
+
+	//Lighting stuff.
+	//Again, pulled from shadows. Don't know if everything here is necessary, but someone smarter than me could probably curate it.
+	if (!(thing->renderflags & RF_NOCOLORMAPS))
+	{
+		if (thing->subsector->sector->numlights)
+		{
+			// Always use the light at the top instead of whatever I was doing before
+			light = R_GetPlaneLight(thing->subsector->sector, thing->z, false);
+
+			if (*thing->subsector->sector->lightlist[light].extra_colormap)
+				colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
+		}
+		else if (thing->subsector->sector->extra_colormap)
+			colormap = thing->subsector->sector->extra_colormap;
+	}
+
+	HWR_Lighting(&sSurf, 0, colormap);
+
+	//Process
+	sSurf.PolyColor.s.alpha = alpha; //Lightest shade
+	HWR_ProcessPolygon(&sSurf, sideA, 4, PF_Translucent|PF_Modulated, SHADER_SPRITE, false);
+	HWR_ProcessPolygon(&sSurf, sideE, 4, PF_Translucent|PF_Modulated, SHADER_SPRITE, false);
+	sSurf.PolyColor.s.alpha = alpha2;
+	HWR_ProcessPolygon(&sSurf, sideC, 4, PF_Translucent|PF_Modulated, SHADER_SPRITE, false);
+	HWR_ProcessPolygon(&sSurf, sideD, 4, PF_Translucent|PF_Modulated, SHADER_SPRITE, false);
+	sSurf.PolyColor.s.alpha = alpha3; //Darkest Shade
+	HWR_ProcessPolygon(&sSurf, sideB, 4, PF_Translucent|PF_Modulated, SHADER_SPRITE, false);
+	//HWR_ProcessPolygon(&sSurf, sideF, 4, PF_Translucent|PF_Modulated, SHADER_SPRITE, false);
+}
+
 // --------------------------------------------------------------------------
 //  Draw all vissprites
 // --------------------------------------------------------------------------
@@ -4888,6 +5031,9 @@ static void HWR_DrawSprites(void)
 						HWR_DrawSprite(spr);
 				}
 			}
+			//Draw debug collision box
+			if (cv_debug & DBG_GAMELOGIC)
+				HWR_DrawCollisionBox(spr->mobj);
 		}
 	}
 	HWD.pfnSetSpecialState(HWD_SET_MODEL_LIGHTING, 0);
