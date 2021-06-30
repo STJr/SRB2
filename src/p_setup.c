@@ -3741,8 +3741,8 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[2] = ((lines[i].special - 510)/10 + 1) % 3;
 			lines[i].args[3] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
 			lines[i].args[4] = (lines[i].special % 10) % 3;
-			if (lines[i].args[2] != 1 && lines[i].flags & ML_NOCLIMB)
-				lines[i].args[4] |= 4;
+			if (lines[i].args[2] != TMS_SCROLLONLY && !(lines[i].flags & ML_NOCLIMB))
+				lines[i].args[4] |= TMST_NONEXCLUSIVE;
 			lines[i].special = 510;
 			break;
 		case 606: //Colormap

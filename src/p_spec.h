@@ -132,7 +132,7 @@ typedef enum
 	TMST_ACCELERATIVE = 1,
 	TMST_DISPLACEMENT = 2,
 	TMST_TYPEMASK = 3,
-	TMST_EXCLUSIVE = 4,
+	TMST_NONEXCLUSIVE = 4,
 } textmapscrolltype_t;
 
 // GETSECSPECIAL (specialval, section)
