@@ -75,7 +75,7 @@ before_build:
 # for pull requests, take the owner's name only, if this isn't the same repo of course
 - set "REPO=%APPVEYOR_REPO_BRANCH%"
 - if not [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [] ( if not [%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%] == [%APPVEYOR_REPO_NAME%] (  for /f "delims=/" %%a in ("%APPVEYOR_PULL_REQUEST_HEAD_REPO_NAME%") do set "REPO=%%a-%APPVEYOR_PULL_REQUEST_HEAD_REPO_BRANCH%" ) )
-- set "SRB2_MFLAGS=-C src CCACHE=1 EXENAME=srb2win-%REPO%-%GITSHORT%.exe"
+- set "SRB2_MFLAGS=-C src NOECHOFILENAMES=1 CCACHE=1 EXENAME=srb2win-%REPO%-%GITSHORT%.exe"
 
 build_script:
 - cmd: mingw32-make.exe %SRB2_MFLAGS% clean
