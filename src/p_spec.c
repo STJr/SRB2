@@ -51,9 +51,6 @@ mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
 mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
 mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 
-// Amount (dx, dy) vector linedef is shifted right to get scroll amount
-#define SCROLL_SHIFT 5
-
 /** Animated texture descriptor
   * This keeps track of an animated texture or an animated flat.
   * \sa P_UpdateSpecials, P_InitPicAnims, animdef_t
@@ -7596,6 +7593,24 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 	P_AddThinker(THINK_MAIN, &s->thinker);
 }
 
+static void P_SpawnPlaneScroller(line_t *l, fixed_t dx, fixed_t dy, INT32 control, INT32 affectee, INT32 accel, INT32 exclusive)
+{
+	if (l->args[1] != TMP_CEILING)
+	{
+		if (l->args[2] != TMS_SCROLLONLY)
+			Add_Scroller(sc_carry, FixedMul(dx, CARRYFACTOR), FixedMul(dy, CARRYFACTOR), control, affectee, accel, exclusive);
+		if (l->args[2] != TMS_CARRYONLY)
+			Add_Scroller(sc_floor, -dx, dy, control, affectee, accel, exclusive);
+	}
+	if (l->args[1] != TMP_FLOOR)
+	{
+		if (l->args[2] != TMS_SCROLLONLY)
+			Add_Scroller(sc_carry_ceiling, FixedMul(dx, CARRYFACTOR), FixedMul(dy, CARRYFACTOR), control, affectee, accel, exclusive);
+		if (l->args[2] != TMS_CARRYONLY)
+			Add_Scroller(sc_ceiling, -dx, dy, control, affectee, accel, exclusive);
+	}
+}
+
 /** Initializes the scrollers.
   *
   * \todo Get rid of all the magic numbers.
@@ -7605,140 +7620,65 @@ static void P_SpawnScrollers(void)
 {
 	size_t i;
 	line_t *l = lines;
-	mtag_t tag;
 
 	for (i = 0; i < numlines; i++, l++)
 	{
-		fixed_t dx = l->dx >> SCROLL_SHIFT; // direction and speed of scrolling
-		fixed_t dy = l->dy >> SCROLL_SHIFT;
 		INT32 control = -1, accel = 0; // no control sector or acceleration
-		INT32 special = l->special;
 
-		tag = Tag_FGet(&l->tags);
-
-		// These types are same as the ones they get set to except that the
-		// first side's sector's heights cause scrolling when they change, and
-		// this linedef controls the direction and speed of the scrolling. The
-		// most complicated linedef since donuts, but powerful :)
-
-		if (special == 515 || special == 512 || special == 522 || special == 532 || special == 504) // displacement scrollers
+		if (l->special == 502 || l->special == 510)
 		{
-			special -= 2;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 514 || special == 511 || special == 521 || special == 531 || special == 503) // accelerative scrollers
-		{
-			special--;
-			accel = 1;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 535 || special == 525) // displacement scrollers
-		{
-			special -= 2;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 534 || special == 524) // accelerative scrollers
-		{
-			accel = 1;
-			special--;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
+			if ((l->args[4] & TMST_TYPEMASK) != TMST_REGULAR)
+				control = (INT32)(sides[*l->sidenum].sector - sectors);
+			if ((l->args[4] & TMST_TYPEMASK) == TMST_ACCELERATIVE)
+				accel = 1;
 		}
 
-		switch (special)
+		switch (l->special)
 		{
 			register INT32 s;
 
-			case 513: // scroll effect ceiling
-			case 533: // scroll and carry objects on ceiling
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				if (special != 533)
-					break;
-				/* FALLTHRU */
+			case 510: // plane scroller
+			{
+				fixed_t length = R_PointToDist2(l->v2->x, l->v2->y, l->v1->x, l->v1->y);
+				fixed_t speed = l->args[3] << FRACBITS;
+				fixed_t dx = FixedMul(FixedDiv(l->dx, length), speed) >> SCROLL_SHIFT;
+				fixed_t dy = FixedMul(FixedDiv(l->dy, length), speed) >> SCROLL_SHIFT;
 
-			case 523:	// carry objects on ceiling
-				dx = FixedMul(dx, CARRYFACTOR);
-				dy = FixedMul(dy, CARRYFACTOR);
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_carry_ceiling, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				if (l->args[0] == 0)
+					P_SpawnPlaneScroller(l, dx, dy, control, (INT32)(l->frontsector - sectors), accel, l->args[4] & TMST_EXCLUSIVE);
+				else
+				{
+					TAG_ITER_SECTORS(l->args[0], s)
+						P_SpawnPlaneScroller(l, dx, dy, control, s, accel, l->args[4] & TMST_EXCLUSIVE);
+				}
 				break;
-
-			case 510: // scroll effect floor
-			case 530: // scroll and carry objects on floor
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				if (special != 530)
-					break;
-				/* FALLTHRU */
-
-			case 520:	// carry objects on floor
-				dx = FixedMul(dx, CARRYFACTOR);
-				dy = FixedMul(dy, CARRYFACTOR);
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_carry, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				break;
+			}
 
 			// scroll wall according to linedef
 			// (same direction and speed as scrolling floors)
 			case 502:
 			{
-				TAG_ITER_LINES(tag, s)
+				TAG_ITER_LINES(l->args[0], s)
 					if (s != (INT32)i)
 					{
-						if (l->flags & ML_EFFECT2) // use texture offsets instead
-						{
-							dx = sides[l->sidenum[0]].textureoffset;
-							dy = sides[l->sidenum[0]].rowoffset;
-						}
-						if (l->flags & ML_EFFECT3)
-						{
-							if (lines[s].sidenum[1] != 0xffff)
-								Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[1], accel, 0);
-						}
-						else
-							Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
+						if (l->args[1] != TMSD_BACK)
+							Add_Scroller(sc_side, l->args[2] << FRACBITS, l->args[3] << FRACBITS, control, lines[s].sidenum[0], accel, 0);
+						if (l->args[1] != TMSD_FRONT && lines[s].sidenum[1] != 0xffff)
+							Add_Scroller(sc_side, l->args[2] << FRACBITS, l->args[3] << FRACBITS, control, lines[s].sidenum[1], accel, 0);
 					}
 				break;
 			}
 
-			case 505:
-				s = lines[i].sidenum[0];
-				Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, s, accel, 0);
-				break;
-
-			case 506:
-				s = lines[i].sidenum[1];
-
-				if (s != 0xffff)
-					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, lines[i].sidenum[0], accel, 0);
-				else
-					CONS_Debug(DBG_GAMELOGIC, "Line special 506 (line #%s) missing back side!\n", sizeu1(i));
-				break;
-
-			case 507:
-				s = lines[i].sidenum[0];
-
-				if (lines[i].sidenum[1] != 0xffff)
-					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, lines[i].sidenum[1], accel, 0);
-				else
-					CONS_Debug(DBG_GAMELOGIC, "Line special 507 (line #%s) missing back side!\n", sizeu1(i));
-				break;
-
-			case 508:
-				s = lines[i].sidenum[1];
-
-				if (s != 0xffff)
-					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, s, accel, 0);
-				else
-					CONS_Debug(DBG_GAMELOGIC, "Line special 508 (line #%s) missing back side!\n", sizeu1(i));
-				break;
-
-			case 500: // scroll first side
-				Add_Scroller(sc_side, FRACUNIT, 0, -1, lines[i].sidenum[0], accel, 0);
-				break;
-
-			case 501: // jff 1/30/98 2-way scroll
-				Add_Scroller(sc_side, -FRACUNIT, 0, -1, lines[i].sidenum[0], accel, 0);
+			case 500:
+				if (l->args[0] != TMSD_BACK)
+					Add_Scroller(sc_side, -l->args[1] << FRACBITS, l->args[2] << FRACBITS, -1, l->sidenum[0], accel, 0);
+				if (l->args[0] != TMSD_FRONT)
+				{
+					if (l->sidenum[1] != 0xffff)
+						Add_Scroller(sc_side, -l->args[1] << FRACBITS, l->args[2] << FRACBITS, -1, l->sidenum[1], accel, 0);
+					else
+						CONS_Debug(DBG_GAMELOGIC, "Line special 500 (line #%s) missing back side!\n", sizeu1(i));
+				}
 				break;
 		}
 	}

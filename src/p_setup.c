@@ -3659,6 +3659,92 @@ static void P_ConvertBinaryMap(void)
 		case 456: //Stop fading colormap
 			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			break;
+		case 500: //Scroll front wall left
+		case 501: //Scroll front wall right
+			lines[i].args[0] = 0;
+			lines[i].args[1] = (lines[i].special == 500) ? -1 : 1;
+			lines[i].args[2] = 0;
+			lines[i].special = 500;
+			break;
+		case 502: //Scroll tagged wall
+		case 503: //Scroll tagged wall (accelerative)
+		case 504: //Scroll tagged wall (displacement)
+			lines[i].args[0] = tag;
+			if (lines[i].flags & ML_EFFECT3)
+			{
+				if (lines[i].sidenum[1] == 0xffff)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line special %d (line #%s) missing back side!\n", lines[i].special, sizeu1(i));
+					lines[i].special = 0;
+					break;
+				}
+				lines[i].args[1] = 1;
+			}
+			else
+				lines[i].args[1] = 0;
+			if (lines[i].flags & ML_EFFECT2)
+			{
+				lines[i].args[2] = lines[i].dx >> (FRACBITS + SCROLL_SHIFT);
+				lines[i].args[3] = lines[i].dy >> (FRACBITS + SCROLL_SHIFT);
+			}
+			else
+			{
+				lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+				lines[i].args[3] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			}
+			lines[i].args[4] = lines[i].special - 502;
+			lines[i].special = 502;
+			break;
+		case 505: //Scroll front wall by front side offsets
+		case 506: //Scroll front wall by back side offsets
+		case 507: //Scroll back wall by front side offsets
+		case 508: //Scroll back wall by back side offsets
+			lines[i].args[0] = lines[i].special >= 507;
+			if (lines[i].special % 2 == 0)
+			{
+				if (lines[i].sidenum[1] == 0xffff)
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Line special %d (line #%s) missing back side!\n", lines[i].special, sizeu1(i));
+					lines[i].special = 0;
+					break;
+				}
+				lines[i].args[1] = sides[lines[i].sidenum[1]].rowoffset >> FRACBITS;
+				lines[i].args[2] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
+			}
+			else
+			{
+				lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+				lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			}
+			lines[i].special = 500;
+			break;
+		case 510: //Scroll floor texture
+		case 511: //Scroll floor texture (accelerative)
+		case 512: //Scroll floor texture (displacement)
+		case 513: //Scroll ceiling texture
+		case 514: //Scroll ceiling texture (accelerative)
+		case 515: //Scroll ceiling texture (displacement)
+		case 520: //Carry objects on floor
+		case 521: //Carry objects on floor (accelerative)
+		case 522: //Carry objects on floor (displacement)
+		case 523: //Carry objects on ceiling
+		case 524: //Carry objects on ceiling (accelerative)
+		case 525: //Carry objects on ceiling (displacement)
+		case 530: //Scroll floor texture and carry objects
+		case 531: //Scroll floor texture and carry objects (accelerative)
+		case 532: //Scroll floor texture and carry objects (displacement)
+		case 533: //Scroll ceiling texture and carry objects
+		case 534: //Scroll ceiling texture and carry objects (accelerative)
+		case 535: //Scroll ceiling texture and carry objects (displacement)
+			lines[i].args[0] = tag;
+			lines[i].args[1] = ((lines[i].special % 10) < 3) ? TMP_FLOOR : TMP_CEILING;
+			lines[i].args[2] = ((lines[i].special - 510)/10 + 1) % 3;
+			lines[i].args[3] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+			lines[i].args[4] = (lines[i].special % 10) % 3;
+			if (lines[i].args[2] != 1 && lines[i].flags & ML_NOCLIMB)
+				lines[i].args[4] |= 4;
+			lines[i].special = 510;
+			break;
 		case 606: //Colormap
 			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			break;

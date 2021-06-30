@@ -21,6 +21,9 @@ extern mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpo
 extern mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
 extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 
+// Amount (dx, dy) vector linedef is shifted right to get scroll amount
+#define SCROLL_SHIFT 5
+
 //FOF flags
 typedef enum
 {
@@ -108,6 +111,29 @@ typedef enum
 	TMP_CEILING = 1,
 	TMP_BOTH = 2,
 } textmapplanes_t;
+
+typedef enum
+{
+	TMSD_FRONT = 0,
+	TMSD_BACK = 1,
+	TMSD_FRONTBACK = 2,
+} textmapsides_t;
+
+typedef enum
+{
+	TMS_SCROLLCARRY = 0,
+	TMS_SCROLLONLY = 1,
+	TMS_CARRYONLY = 2,
+} textmapscroll_t;
+
+typedef enum
+{
+	TMST_REGULAR = 0,
+	TMST_ACCELERATIVE = 1,
+	TMST_DISPLACEMENT = 2,
+	TMST_TYPEMASK = 3,
+	TMST_EXCLUSIVE = 4,
+} textmapscrolltype_t;
 
 // GETSECSPECIAL (specialval, section)
 //
