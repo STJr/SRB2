@@ -392,8 +392,6 @@ unset_bit_array (bitarray_t * const array, const int value)
 	array[value >> 3] &= ~(1<<(value & 7));
 }
 
-#ifdef HAVE_SDL
 typedef UINT64 precise_t;
-#endif
 
 #endif //__DOOMTYPE__
