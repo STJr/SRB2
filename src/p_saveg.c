@@ -2128,13 +2128,9 @@ static inline void SavePusherThinker(const thinker_t *th, const UINT8 type)
 	const pusher_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
 	WRITEUINT8(save_p, ht->type);
-	WRITEINT32(save_p, ht->x_mag);
-	WRITEINT32(save_p, ht->y_mag);
-	WRITEINT32(save_p, ht->magnitude);
-	WRITEINT32(save_p, ht->radius);
-	WRITEINT32(save_p, ht->x);
-	WRITEINT32(save_p, ht->y);
-	WRITEINT32(save_p, ht->z);
+	WRITEFIXED(save_p, ht->x_mag);
+	WRITEFIXED(save_p, ht->y_mag);
+	WRITEFIXED(save_p, ht->z_mag);
 	WRITEINT32(save_p, ht->affectee);
 	WRITEUINT8(save_p, ht->roverpusher);
 	WRITEINT32(save_p, ht->referrer);
@@ -3285,19 +3281,14 @@ static thinker_t* LoadPusherThinker(actionf_p1 thinker)
 	pusher_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 	ht->type = READUINT8(save_p);
-	ht->x_mag = READINT32(save_p);
-	ht->y_mag = READINT32(save_p);
-	ht->magnitude = READINT32(save_p);
-	ht->radius = READINT32(save_p);
-	ht->x = READINT32(save_p);
-	ht->y = READINT32(save_p);
-	ht->z = READINT32(save_p);
+	ht->x_mag = READFIXED(save_p);
+	ht->y_mag = READFIXED(save_p);
+	ht->z_mag = READFIXED(save_p);
 	ht->affectee = READINT32(save_p);
 	ht->roverpusher = READUINT8(save_p);
 	ht->referrer = READINT32(save_p);
 	ht->exclusive = READINT32(save_p);
 	ht->slider = READINT32(save_p);
-	ht->source = P_GetPushThing(ht->affectee);
 	return &ht->thinker;
 }
 

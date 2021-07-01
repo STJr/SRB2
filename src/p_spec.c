@@ -99,7 +99,7 @@ static void P_SpawnScrollers(void);
 static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
 static void Add_PointPusher(INT32 magnitude, mobj_t *source, INT32 affectee, INT32 exclusive);
-static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
+static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t z_mag, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
 static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize);
 #define P_RemoveFakeFloorFader(l) P_ResetFakeFloorFader(l, NULL, false);
@@ -5499,6 +5499,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	thinker_t *th;
 	friction_t *f;
 	pusher_t *p;
+	pointpusher_t *pp;
 	size_t sec2num;
 	size_t i;
 
@@ -5607,11 +5608,11 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 			p = (pusher_t *)th;
 
 			if (p->affectee == (INT32)sec2num)
-				Add_Pusher(p->type, p->x_mag<<FRACBITS, p->y_mag<<FRACBITS, p->source, (INT32)(sec-sectors), p->affectee, p->exclusive, p->slider);
+				Add_Pusher(p->type, p->x_mag, p->y_mag, p->z_mag, (INT32)(sec-sectors), p->affectee, p->exclusive, p->slider);
 		}
 		else if (th->function.acp1 == (actionf_p1)T_PointPusher)
 		{
-			pointpusher_t *pp = (pointpusher_t *)th;
+			pp = (pointpusher_t *)th;
 
 			if (pp->affectee == (INT32)sec2num)
 				Add_PointPusher(pp->magnitude, pp->source, pp->affectee, pp->exclusive);
@@ -8534,20 +8535,20 @@ static void Add_PointPusher(INT32 magnitude, mobj_t *source, INT32 affectee, INT
   * \param type     Type of push/pull effect.
   * \param x_mag    X magnitude.
   * \param y_mag    Y magnitude.
-  * \param source   For a point pusher/puller, the source object.
+  * \param z_mag    Z magnitude.
   * \param affectee Target sector.
   * \param referrer What sector set it
   * \sa T_Pusher, P_GetPushThing, P_SpawnPushers
   */
-static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider)
+static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t z_mag, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider)
 {
 	pusher_t *p = Z_Calloc(sizeof *p, PU_LEVSPEC, NULL);
 
 	p->thinker.function.acp1 = (actionf_p1)T_Pusher;
-	p->source = source;
 	p->type = type;
-	p->x_mag = x_mag>>FRACBITS;
-	p->y_mag = y_mag>>FRACBITS;
+	p->x_mag = x_mag;
+	p->y_mag = y_mag;
+	p->z_mag = z_mag;
 	p->exclusive = exclusive;
 	p->slider = slider;
 
@@ -8559,19 +8560,6 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 	else
 		p->roverpusher = false;
 
-	// "The right triangle of the square of the length of the hypotenuse is equal to the sum of the squares of the lengths of the other two sides."
-	// "Bah! Stupid brains! Don't you know anything besides the Pythagorean Theorem?" - Earthworm Jim
-	if (type == p_downcurrent || type == p_upcurrent || type == p_upwind || type == p_downwind)
-		p->magnitude = P_AproxDistance(p->x_mag,p->y_mag)<<(FRACBITS-PUSH_FACTOR);
-	else
-		p->magnitude = P_AproxDistance(p->x_mag,p->y_mag);
-	if (source) // point source exist?
-	{
-		p->radius = (p->magnitude)<<(FRACBITS+1);
-		p->x = p->source->x;
-		p->y = p->source->y;
-		p->z = p->source->z;
-	}
 	p->affectee = affectee;
 	P_AddThinker(THINK_MAIN, &p->thinker);
 }
@@ -8761,12 +8749,15 @@ void T_Pusher(pusher_t *p)
 	sector_t *sec, *referrer = NULL;
 	mobj_t *thing;
 	msecnode_t *node;
-	INT32 xspeed = 0,yspeed = 0;
+	fixed_t x_mag, y_mag, z_mag;
+	fixed_t xspeed = 0, yspeed = 0, zspeed = 0;
 	boolean inFOF;
 	boolean touching;
 	boolean moved;
 
-	xspeed = yspeed = 0;
+	x_mag = p->x_mag >> PUSH_FACTOR;
+	y_mag = p->y_mag >> PUSH_FACTOR;
+	z_mag = p->z_mag >> PUSH_FACTOR;
 
 	sec = sectors + p->affectee;
 
@@ -8875,83 +8866,35 @@ void T_Pusher(pusher_t *p)
 		if (!touching && !inFOF) // Object is out of range of effect
 			continue;
 
-		if (p->type == p_wind)
+		if (inFOF || (p->type == p_current && touching))
 		{
-			if (touching) // on ground
-			{
-				xspeed = (p->x_mag)>>1; // half force
-				yspeed = (p->y_mag)>>1;
-				moved = true;
-			}
-			else if (inFOF)
-			{
-				xspeed = (p->x_mag); // full force
-				yspeed = (p->y_mag);
-				moved = true;
-			}
+			xspeed = x_mag; // full force
+			yspeed = y_mag;
+			zspeed = z_mag;
+			moved = true;
 		}
-		else if (p->type == p_upwind)
+		else if (p->type == p_wind && touching)
 		{
-			if (touching) // on ground
-			{
-				thing->momz += (p->magnitude)>>1;
-				moved = true;
-			}
-			else if (inFOF)
-			{
-				thing->momz += p->magnitude;
-				moved = true;
-			}
-		}
-		else if (p->type == p_downwind)
-		{
-			if (touching) // on ground
-			{
-				thing->momz -= (p->magnitude)>>1;
-				moved = true;
-			}
-			else if (inFOF)
-			{
-				thing->momz -= p->magnitude;
-				moved = true;
-			}
-		}
-		else // p_current
-		{
-			if (!touching && !inFOF) // Not in water at all
-				xspeed = yspeed = 0; // no force
-			else // underwater / touching water
-			{
-				if (p->type == p_upcurrent)
-					thing->momz += p->magnitude;
-				else if (p->type == p_downcurrent)
-					thing->momz -= p->magnitude;
-				else
-				{
-					xspeed = p->x_mag; // full force
-					yspeed = p->y_mag;
-				}
-				moved = true;
-			}
+			xspeed = x_mag>>1; // half force
+			yspeed = y_mag>>1;
+			zspeed = z_mag>>1;
+			moved = true;
 		}
 
-		if (p->type != p_downcurrent && p->type != p_upcurrent
-			&& p->type != p_upwind && p->type != p_downwind)
+		thing->momx += xspeed;
+		thing->momy += yspeed;
+		thing->momz += xspeed;
+		if (thing->player)
 		{
-			thing->momx += xspeed<<(FRACBITS-PUSH_FACTOR);
-			thing->momy += yspeed<<(FRACBITS-PUSH_FACTOR);
-			if (thing->player)
-			{
-				thing->player->cmomx += xspeed<<(FRACBITS-PUSH_FACTOR);
-				thing->player->cmomy += yspeed<<(FRACBITS-PUSH_FACTOR);
-				thing->player->cmomx = FixedMul(thing->player->cmomx, ORIG_FRICTION);
-				thing->player->cmomy = FixedMul(thing->player->cmomy, ORIG_FRICTION);
-			}
-
-			// Tumbleweeds bounce a bit...
-			if (thing->type == MT_LITTLETUMBLEWEED || thing->type == MT_BIGTUMBLEWEED)
-				thing->momz += P_AproxDistance(xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR)) >> 2;
+			thing->player->cmomx += xspeed;
+			thing->player->cmomy += yspeed;
+			thing->player->cmomx = FixedMul(thing->player->cmomx, ORIG_FRICTION);
+			thing->player->cmomy = FixedMul(thing->player->cmomy, ORIG_FRICTION);
 		}
+
+		// Tumbleweeds bounce a bit...
+		if (thing->type == MT_LITTLETUMBLEWEED || thing->type == MT_BIGTUMBLEWEED)
+			thing->momz += P_AproxDistance(xspeed, yspeed) >> 2;
 
 		if (moved)
 		{
@@ -8964,7 +8907,7 @@ void T_Pusher(pusher_t *p)
 					thing->player->pflags |= jumped;
 
 				thing->player->pflags |= PF_SLIDING;
-				thing->angle = R_PointToAngle2 (0, 0, xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR));
+				thing->angle = R_PointToAngle2(0, 0, xspeed, yspeed);
 
 				if (!demoplayback || P_ControlStyle(thing->player) == CS_LMAOGALOG)
 				{
@@ -9033,11 +8976,11 @@ static void P_SpawnPushers(void)
 		{
 			case 541: // wind
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_wind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_wind, l->dx, l->dy, 0, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 			case 544: // current
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_current, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_current, l->dx, l->dy, 0, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 			case 547: // push/pull
 				TAG_ITER_SECTORS(tag, s)
@@ -9049,19 +8992,19 @@ static void P_SpawnPushers(void)
 				break;
 			case 545: // current up
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_upcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_current, 0, 0, P_AproxDistance(l->dx, l->dy), s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 			case 546: // current down
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_downcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_current, 0, 0, -P_AproxDistance(l->dx, l->dy), s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 			case 542: // wind up
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_upwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_wind, 0, 0, P_AproxDistance(l->dx, l->dy), s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 			case 543: // wind down
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_downwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_wind, 0, 0, -P_AproxDistance(l->dx, l->dy), s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 		}
 	}

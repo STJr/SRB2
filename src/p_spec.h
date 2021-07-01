@@ -634,27 +634,18 @@ typedef enum
 {
 	p_wind,        ///< Wind.
 	p_current,     ///< Current.
-	p_upcurrent,   ///< Upwards current.
-	p_downcurrent, ///< Downwards current.
-	p_upwind,      ///< Upwards wind.
-	p_downwind     ///< Downwards wind.
 } pushertype_e;
 
 // Model for pushers for push/pull effects
 typedef struct
 {
-	thinker_t thinker; ///< Thinker structure for push/pull effect.
-	/** Types of push/pull effects.
-	*/
-	pushertype_e type;  ///< Type of push/pull effect.
-	mobj_t *source;     ///< Point source if point pusher/puller.
-	INT32 x_mag;        ///< X strength.
-	INT32 y_mag;        ///< Y strength.
-	INT32 magnitude;    ///< Vector strength for point pusher/puller.
-	INT32 radius;       ///< Effective radius for point pusher/puller.
-	INT32 x, y, z;      ///< Point source if point pusher/puller.
+	thinker_t thinker;  ///< Thinker structure for pusher effect.
+	pushertype_e type;  ///< Type of pusher effect.
+	fixed_t x_mag;      ///< X strength.
+	fixed_t y_mag;      ///< Y strength.
+	fixed_t z_mag;      ///< Z strength.
 	INT32 affectee;     ///< Number of affected sector.
-	UINT8 roverpusher;   ///< flag for whether pusher originated from a FOF or not
+	UINT8 roverpusher;  ///< flag for whether pusher originated from a FOF or not
 	INT32 referrer;     ///< If roverpusher == true, then this will contain the sector # of the control sector where the effect was applied.
 	INT32 exclusive;    /// < Once this affect has been applied to a mobj, no other pushers may affect it.
 	INT32 slider;       /// < Should the player go into an uncontrollable slide?
