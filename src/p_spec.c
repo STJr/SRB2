@@ -8988,8 +8988,13 @@ static void P_SpawnPushers(void)
 				fixed_t dx = FixedMul(FixedDiv(l->dx, length), hspeed);
 				fixed_t dy = FixedMul(FixedDiv(l->dy, length), hspeed);
 
-				TAG_ITER_SECTORS(l->args[0], s)
-					Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, s, -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
+				if (l->args[0] == 0)
+					Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, (INT32)(l->frontsector - sectors), -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
+				else
+				{
+					TAG_ITER_SECTORS(l->args[0], s)
+						Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, s, -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
+				}
 				break;
 			}
 			case 547: // push/pull
