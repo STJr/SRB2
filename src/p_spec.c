@@ -98,6 +98,7 @@ typedef struct
 static void P_SpawnScrollers(void);
 static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
+static void Add_PointPusher(INT32 magnitude, mobj_t *source, INT32 affectee, INT32 exclusive);
 static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
 static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize);
@@ -5608,6 +5609,13 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 			if (p->affectee == (INT32)sec2num)
 				Add_Pusher(p->type, p->x_mag<<FRACBITS, p->y_mag<<FRACBITS, p->source, (INT32)(sec-sectors), p->affectee, p->exclusive, p->slider);
 		}
+		else if (th->function.acp1 == (actionf_p1)T_PointPusher)
+		{
+			pointpusher_t *pp = (pointpusher_t *)th;
+
+			if (pp->affectee == (INT32)sec2num)
+				Add_PointPusher(pp->magnitude, pp->source, pp->affectee, pp->exclusive);
+		}
 
 		if(secthinkers) i++;
 		else th = th->next;
@@ -6169,6 +6177,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 			secthinkers[((friction_t *)th)->affectee].count++;
 		else if (th->function.acp1 == (actionf_p1)T_Pusher)
 			secthinkers[((pusher_t *)th)->affectee].count++;
+		else if (th->function.acp1 == (actionf_p1)T_PointPusher)
+			secthinkers[((pointpusher_t *)th)->affectee].count++;
 	}
 
 	// Allocate each list, and then zero the count so we can use it to track
@@ -6189,6 +6199,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 			secnum = ((friction_t *)th)->affectee;
 		else if (th->function.acp1 == (actionf_p1)T_Pusher)
 			secnum = ((pusher_t *)th)->affectee;
+		else if (th->function.acp1 == (actionf_p1)T_PointPusher)
+			secnum = ((pointpusher_t *)th)->affectee;
 
 		if (secnum != (size_t)-1)
 			secthinkers[secnum].thinkers[secthinkers[secnum].count++] = th;
@@ -8497,6 +8509,26 @@ static void P_SpawnFriction(void)
 
 #define PUSH_FACTOR 7
 
+static void Add_PointPusher(INT32 magnitude, mobj_t *source, INT32 affectee, INT32 exclusive)
+{
+	pointpusher_t *p = Z_Calloc(sizeof * p, PU_LEVSPEC, NULL);
+
+	p->thinker.function.acp1 = (actionf_p1)T_PointPusher;
+	p->source = source;
+	p->magnitude = magnitude;
+	p->exclusive = exclusive;
+
+	if (source) // point source exist?
+	{
+		p->radius = AngleFixed(source->angle);
+		p->x = p->source->x;
+		p->y = p->source->y;
+		p->z = p->source->z;
+	}
+	p->affectee = affectee;
+	P_AddThinker(THINK_MAIN, &p->thinker);
+}
+
 /** Adds a pusher.
   *
   * \param type     Type of push/pull effect.
@@ -8535,12 +8567,7 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 		p->magnitude = P_AproxDistance(p->x_mag,p->y_mag);
 	if (source) // point source exist?
 	{
-		// where force goes to zero
-		if (type == p_push)
-			p->radius = AngleFixed(source->angle);
-		else
-			p->radius = (p->magnitude)<<(FRACBITS+1);
-
+		p->radius = (p->magnitude)<<(FRACBITS+1);
 		p->x = p->source->x;
 		p->y = p->source->y;
 		p->z = p->source->z;
@@ -8549,10 +8576,9 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 	P_AddThinker(THINK_MAIN, &p->thinker);
 }
 
-
 // PIT_PushThing determines the angle and magnitude of the effect.
 // The object's x and y momentum values are changed.
-static pusher_t *tmpusher; // pusher structure for blockmap searches
+static pointpusher_t *tmpusher; // pointpusher structure for blockmap searches
 
 /** Applies a point pusher/puller to a thing.
   *
@@ -8702,6 +8728,28 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 	return true;
 }
 
+void T_PointPusher(pointpusher_t *p)
+{
+	INT32 xl, xh, yl, yh, bx, by;
+
+	// Seek out all pushable things within the force radius of this
+	// point pusher. Crosses sectors, so use blockmap.
+
+	tmpusher = p; // MT_PUSH/MT_PULL point source
+	tmbbox[BOXTOP] = p->y + p->radius;
+	tmbbox[BOXBOTTOM] = p->y - p->radius;
+	tmbbox[BOXRIGHT] = p->x + p->radius;
+	tmbbox[BOXLEFT] = p->x - p->radius;
+
+	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+	for (bx = xl; bx <= xh; bx++)
+		for (by = yl; by <= yh; by++)
+			P_BlockThingsIterator(bx, by, PIT_PushThing);
+}
+
 /** Applies a pusher to all affected objects.
   *
   * \param p Thinker for the pusher effect.
@@ -8714,9 +8762,6 @@ void T_Pusher(pusher_t *p)
 	mobj_t *thing;
 	msecnode_t *node;
 	INT32 xspeed = 0,yspeed = 0;
-	INT32 xl, xh, yl, yh, bx, by;
-	INT32 radius;
-	//INT32 ht = 0;
 	boolean inFOF;
 	boolean touching;
 	boolean moved;
@@ -8755,29 +8800,6 @@ void T_Pusher(pusher_t *p)
 	// Apply the effect to clipped players only for now.
 	//
 	// In Phase II, you can apply these effects to Things other than players.
-
-	if (p->type == p_push)
-	{
-
-		// Seek out all pushable things within the force radius of this
-		// point pusher. Crosses sectors, so use blockmap.
-
-		tmpusher = p; // MT_PUSH/MT_PULL point source
-		radius = p->radius; // where force goes to zero
-		tmbbox[BOXTOP]    = p->y + radius;
-		tmbbox[BOXBOTTOM] = p->y - radius;
-		tmbbox[BOXRIGHT]  = p->x + radius;
-		tmbbox[BOXLEFT]   = p->x - radius;
-
-		xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-		xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-		yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-		yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
-		for (bx = xl; bx <= xh; bx++)
-			for (by = yl; by <= yh; by++)
-				P_BlockThingsIterator(bx,by, PIT_PushThing);
-		return;
-	}
 
 	// constant pushers p_wind and p_current
 	node = sec->touching_thinglist; // things touching this sector
@@ -9022,7 +9044,7 @@ static void P_SpawnPushers(void)
 				{
 					thing = P_GetPushThing(s);
 					if (thing) // No MT_P* means no effect
-						Add_Pusher(p_push, l->dx, l->dy, thing, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+						Add_PointPusher(P_AproxDistance(l->dx >> FRACBITS, l->dy >> FRACBITS), thing, s, l->flags & ML_NOCLIMB);
 				}
 				break;
 			case 545: // current up
