@@ -3745,6 +3745,32 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[4] |= TMST_NONEXCLUSIVE;
 			lines[i].special = 510;
 			break;
+		case 541: //Wind
+		case 542: //Upwards wind
+		case 543: //Downwards wind
+		case 544: //Current
+		case 545: //Upwards current
+		case 546: //Downwards current
+			lines[i].args[0] = tag;
+			switch ((lines[i].special - 541) % 3)
+			{
+				case 0:
+					lines[i].args[1] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+					break;
+				case 1:
+					lines[i].args[2] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+					break;
+				case 2:
+					lines[i].args[2] = -R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+					break;
+			}
+			lines[i].args[3] = (lines[i].special >= 544) ? p_current : p_wind;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[4] |= TMPF_SLIDE;
+			if (!(lines[i].flags & ML_NOCLIMB))
+				lines[i].args[4] |= TMPF_NONEXCLUSIVE;
+			lines[i].special = 541;
+			break;
 		case 606: //Colormap
 			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			break;

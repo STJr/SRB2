@@ -8883,7 +8883,7 @@ void T_Pusher(pusher_t *p)
 
 		thing->momx += xspeed;
 		thing->momy += yspeed;
-		thing->momz += xspeed;
+		thing->momz += zspeed;
 		if (thing->player)
 		{
 			thing->player->cmomx += xspeed;
@@ -8974,14 +8974,17 @@ static void P_SpawnPushers(void)
 		tag = Tag_FGet(&l->tags);
 		switch (l->special)
 		{
-			case 541: // wind
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_wind, l->dx, l->dy, 0, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+			case 541: // wind/current
+			{
+				fixed_t length = R_PointToDist2(l->v2->x, l->v2->y, l->v1->x, l->v1->y);
+				fixed_t hspeed = l->args[1] << FRACBITS;
+				fixed_t dx = FixedMul(FixedDiv(l->dx, length), hspeed);
+				fixed_t dy = FixedMul(FixedDiv(l->dy, length), hspeed);
+
+				TAG_ITER_SECTORS(l->args[0], s)
+					Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, s, -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
 				break;
-			case 544: // current
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_current, l->dx, l->dy, 0, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
+			}
 			case 547: // push/pull
 				TAG_ITER_SECTORS(tag, s)
 				{
@@ -8989,22 +8992,6 @@ static void P_SpawnPushers(void)
 					if (thing) // No MT_P* means no effect
 						Add_PointPusher(P_AproxDistance(l->dx >> FRACBITS, l->dy >> FRACBITS), thing, s, l->flags & ML_NOCLIMB);
 				}
-				break;
-			case 545: // current up
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_current, 0, 0, P_AproxDistance(l->dx, l->dy), s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 546: // current down
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_current, 0, 0, -P_AproxDistance(l->dx, l->dy), s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 542: // wind up
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_wind, 0, 0, P_AproxDistance(l->dx, l->dy), s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 543: // wind down
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_wind, 0, 0, -P_AproxDistance(l->dx, l->dy), s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 		}
 	}

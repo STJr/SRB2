@@ -135,6 +135,12 @@ typedef enum
 	TMST_NONEXCLUSIVE = 4,
 } textmapscrolltype_t;
 
+typedef enum
+{
+	TMPF_SLIDE = 1,
+	TMPF_NONEXCLUSIVE = 1<<1,
+} textmappusherflags_t;
+
 // GETSECSPECIAL (specialval, section)
 //
 // Pulls out the special # from a particular section.
