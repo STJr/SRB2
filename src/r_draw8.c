@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1444,10 +1444,7 @@ void R_DrawFloorSprite_8 (void)
 		// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
 		// have the uber complicated math to calculate it now, so that was a memory write we didn't
 		// need!
-		//
-		// <Callum> 4194303 = (2048x2048)-1 (2048x2048 is maximum flat size)
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[0] = colormap[translation[val & 0xFF]];
@@ -1455,7 +1452,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[1] = colormap[translation[val & 0xFF]];
@@ -1463,7 +1459,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[2] = colormap[translation[val & 0xFF]];
@@ -1471,7 +1466,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[3] = colormap[translation[val & 0xFF]];
@@ -1479,7 +1473,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[4] = colormap[translation[val & 0xFF]];
@@ -1487,7 +1480,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[5] = colormap[translation[val & 0xFF]];
@@ -1495,7 +1487,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[6] = colormap[translation[val & 0xFF]];
@@ -1503,7 +1494,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[7] = colormap[translation[val & 0xFF]];

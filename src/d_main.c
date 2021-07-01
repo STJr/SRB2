@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -61,7 +61,7 @@
 #include "p_local.h" // chasecam
 #include "mserv.h" // ms_RoomId
 #include "m_misc.h" // screenshot functionality
-#include "dehacked.h" // Dehacked list test
+#include "deh_tables.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
 #include "keys.h"
@@ -413,7 +413,7 @@ static void D_Display(void)
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
-				ps_rendercalltime = I_GetTimeMicros();
+				ps_rendercalltime = I_GetPreciseTime();
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
@@ -468,7 +468,7 @@ static void D_Display(void)
 					if (postimgtype2)
 						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
-				ps_rendercalltime = I_GetTimeMicros() - ps_rendercalltime;
+				ps_rendercalltime = I_GetPreciseTime() - ps_rendercalltime;
 			}
 
 			if (lastdraw)
@@ -482,7 +482,7 @@ static void D_Display(void)
 				lastdraw = false;
 			}
 
-			ps_uitime = I_GetTimeMicros();
+			ps_uitime = I_GetPreciseTime();
 
 			if (gamestate == GS_LEVEL)
 			{
@@ -495,7 +495,7 @@ static void D_Display(void)
 		}
 		else
 		{
-			ps_uitime = I_GetTimeMicros();
+			ps_uitime = I_GetPreciseTime();
 		}
 	}
 
@@ -515,7 +515,7 @@ static void D_Display(void)
 		else
 			py = viewwindowy + 4;
 		patch = W_CachePatchName("M_PAUSE", PU_PATCH);
-		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - SHORT(patch->width))/2, py, 0, patch);
+		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - patch->width)/2, py, 0, patch);
 #else
 		INT32 y = ((automapactive) ? (32) : (BASEVIDHEIGHT/2));
 		M_DrawTextBox((BASEVIDWIDTH/2) - (60), y - (16), 13, 2);
@@ -537,7 +537,7 @@ static void D_Display(void)
 
 	CON_Drawer();
 
-	ps_uitime = I_GetTimeMicros() - ps_uitime;
+	ps_uitime = I_GetPreciseTime() - ps_uitime;
 
 	//
 	// wipe update
@@ -623,9 +623,9 @@ static void D_Display(void)
 			M_DrawPerfStats();
 		}
 
-		ps_swaptime = I_GetTimeMicros();
+		ps_swaptime = I_GetPreciseTime();
 		I_FinishUpdate(); // page flip or blit buffer
-		ps_swaptime = I_GetTimeMicros() - ps_swaptime;
+		ps_swaptime = I_GetPreciseTime() - ps_swaptime;
 	}
 }
 
@@ -1027,7 +1027,7 @@ static void IdentifyVersion(void)
 #define MUSICTEST(str) \
 		{\
 			const char *musicpath = va(pandf,srb2waddir,str);\
-			int ms = W_VerifyNMUSlumps(musicpath); \
+			int ms = W_VerifyNMUSlumps(musicpath, false); \
 			if (ms == 1) \
 				D_AddFile(startupwadfiles, musicpath); \
 			else if (ms == 0) \
@@ -1074,7 +1074,7 @@ void D_SRB2Main(void)
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
-	"Copyright (C) 1998-2020 by Sonic Team Junior\n\n"
+	"Copyright (C) 1998-2021 by Sonic Team Junior\n\n"
 	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
 	"This is free software, and you are welcome to redistribute it\n"
 	"and/or modify it under the terms of the GNU General Public License\n"
@@ -1101,7 +1101,7 @@ void D_SRB2Main(void)
 	G_LoadGameSettings();
 
 	// Test Dehacked lists
-	DEH_Check();
+	DEH_TableCheck();
 
 	// Netgame URL special case: change working dir to EXE folder.
 	ChangeDirForUrlHandler();
@@ -1216,11 +1216,7 @@ void D_SRB2Main(void)
 				const char *s = M_GetNextParm();
 
 				if (s) // Check for NULL?
-				{
-					if (!W_VerifyNMUSlumps(s))
-						G_SetGameModified(true);
 					D_AddFile(startuppwads, s);
-				}
 			}
 		}
 	}

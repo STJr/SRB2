@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -31,9 +31,7 @@ extern consvar_t cv_defaultskin;
 extern consvar_t cv_defaultplayercolor2;
 extern consvar_t cv_defaultskin2;
 
-#ifdef SEENAMES
 extern consvar_t cv_seenames, cv_allowseenames;
-#endif
 extern consvar_t cv_usemouse;
 extern consvar_t cv_usejoystick;
 extern consvar_t cv_usejoystick2;
@@ -117,6 +115,8 @@ extern char timedemo_name[256];
 extern boolean timedemo_csv;
 extern char timedemo_csv_id[256];
 extern boolean timedemo_quit;
+
+extern consvar_t cv_freedemocamera;
 
 typedef enum
 {

@@ -196,6 +196,9 @@
     <ClInclude Include="..\comptime.h" />
     <ClInclude Include="..\console.h" />
     <ClInclude Include="..\dehacked.h" />
+    <ClInclude Include="..\deh_soc.h" />
+    <ClInclude Include="..\deh_lua.h" />
+    <ClInclude Include="..\deh_tables.h" />
     <ClInclude Include="..\doomdata.h" />
     <ClInclude Include="..\doomdef.h" />
     <ClInclude Include="..\doomstat.h" />
@@ -363,6 +366,9 @@
     <ClCompile Include="..\comptime.c" />
     <ClCompile Include="..\console.c" />
     <ClCompile Include="..\dehacked.c" />
+    <ClCompile Include="..\deh_soc.c" />
+    <ClCompile Include="..\deh_lua.c" />
+    <ClCompile Include="..\deh_tables.c" />
     <ClCompile Include="..\d_clisrv.c" />
     <ClCompile Include="..\d_main.c" />
     <ClCompile Include="..\d_net.c" />

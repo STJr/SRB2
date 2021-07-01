@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -33,11 +33,12 @@ static void prepare_rastertab(void);
 //                                                               FLOOR SPLATS
 // ==========================================================================
 
+static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis);
+
 #ifdef USEASM
 void ASMCALL rasterize_segment_tex_asm(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2, INT32 tc, INT32 dir);
 #endif
 
-// Lactozilla
 static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2, INT32 tc, INT32 dir)
 {
 #ifdef USEASM
@@ -142,7 +143,7 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 	}
 }
 
-void R_DrawFloorSprite(vissprite_t *spr)
+void R_DrawFloorSplat(vissprite_t *spr)
 {
 	floorsplat_t splat;
 	patch_t *patch = spr->patch;
@@ -203,7 +204,7 @@ void R_DrawFloorSprite(vissprite_t *spr)
 	if (spr->rotateflags & SRF_3D || renderflags & RF_NOSPLATBILLBOARD)
 		splatangle = mobj->angle;
 	else
-		splatangle = viewangle;
+		splatangle = spr->viewangle;
 
 	if (!(spr->cut & SC_ISROTATED))
 		splatangle += mobj->rollangle;
@@ -281,7 +282,6 @@ void R_DrawFloorSprite(vissprite_t *spr)
 
 	if (splat.tilted)
 	{
-		// Lactozilla: Just copy the entire slope LMFAOOOO
 		pslope_t *s = &splat.slope;
 
 		s->o.x = slope->o.x;
@@ -346,7 +346,7 @@ void R_DrawFloorSprite(vissprite_t *spr)
 		v2d[i].y = (centeryfrac + FixedMul(rot_z, yscale))>>FRACBITS;
 	}
 
-	R_RenderFloorSplat(&splat, v2d, spr);
+	R_RasterizeFloorSplat(&splat, v2d, spr);
 }
 
 // --------------------------------------------------------------------------
@@ -354,7 +354,7 @@ void R_DrawFloorSprite(vissprite_t *spr)
 // fill the polygon with linear interpolation, call span drawer for each
 // scan line
 // --------------------------------------------------------------------------
-void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis)
+static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis)
 {
 	// rasterizing
 	INT32 miny = viewheight + 1, maxy = 0;
@@ -433,13 +433,10 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 	if (R_CheckPowersOfTwo())
 		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
 
-	// Lactozilla: I don't know what I'm doing
 	if (pSplat->tilted)
 	{
-		ds_sup = &ds_su[0];
-		ds_svp = &ds_sv[0];
-		ds_szp = &ds_sz[0];
-		R_CalculateSlopeVectors(&pSplat->slope, viewx, viewy, viewz, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, viewangle, pSplat->angle, 1.0f);
+		R_SetTiltedSpan(0);
+		R_CalculateSlopeVectors(&pSplat->slope, viewx, viewy, viewz, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewangle, pSplat->angle, 1.0f);
 		spanfunctype = SPANDRAWFUNC_TILTEDSPRITE;
 	}
 	else
@@ -597,7 +594,7 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 			fixed_t xstep, ystep;
 			fixed_t distance, span;
 
-			angle_t angle = (viewangle + pSplat->angle)>>ANGLETOFINESHIFT;
+			angle_t angle = (vis->viewangle + pSplat->angle)>>ANGLETOFINESHIFT;
 			angle_t planecos = FINECOSINE(angle);
 			angle_t planesin = FINESINE(angle);
 
@@ -607,17 +604,13 @@ void R_RenderFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis
 				distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
 				span = abs(centery - y);
 
-				if (span) // don't divide by zero
+				if (span) // Don't divide by zero
 				{
 					xstep = FixedMul(planesin, planeheight) / span;
 					ystep = FixedMul(planecos, planeheight) / span;
 				}
 				else
-				{
-					// ah
-					xstep = FRACUNIT;
-					ystep = FRACUNIT;
-				}
+					xstep = ystep = FRACUNIT;
 
 				cachedxstep[y] = xstep;
 				cachedystep[y] = ystep;

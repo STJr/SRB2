@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -581,9 +581,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 ///	Dumps the contents of a network save game upon consistency failure for debugging.
 //#define DUMPCONSISTENCY
-
-///	See name of player in your crosshair
-#define SEENAMES
 
 ///	Who put weights on my recycler?  ... Inuyasha did.
 ///	\note	XMOD port.

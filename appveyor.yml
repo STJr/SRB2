@@ -1,4 +1,4 @@
-version: 2.2.8.{branch}-{build}
+version: 2.2.9.{branch}-{build}
 os: MinGW
 
 environment:
@@ -99,16 +99,11 @@ build_script:
 - cmd: mingw32-make.exe %SRB2_MFLAGS% ERRORMODE=1 -k
 
 after_build:
-- if [%X86_64%] == [1] (
-    set "BUILD_PATH=bin\Mingw64\Release"
-  ) else (
-    set "BUILD_PATH=bin\Mingw\Release"
-  )
 - if [%X86_64%] == [1] ( set "CONFIGURATION=%CONFIGURATION%64" )
 - ccache -s
 - set BUILD_ARCHIVE=%REPO%-%GITSHORT%-%CONFIGURATION%.7z
 - set BUILDSARCHIVE=%REPO%-%CONFIGURATION%.7z
-- cmd: 7z a %BUILD_ARCHIVE% %BUILD_PATH% -xr!.gitignore
+- cmd: 7z a %BUILD_ARCHIVE% bin -xr!.gitignore
 - appveyor PushArtifact %BUILD_ARCHIVE%
 #- cmd: copy %BUILD_ARCHIVE% %BUILDSARCHIVE%
 #- appveyor PushArtifact %BUILDSARCHIVE%

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -378,5 +378,31 @@ Needed for some lua shenanigans.
 */
 #define FIELDFROM( type, field, have, want ) \
 	(void *)((intptr_t)(field) - offsetof (type, have) + offsetof (type, want))
+
+typedef UINT8 bitarray_t;
+
+#define BIT_ARRAY_SIZE(n) (((n) + 7) >> 3)
+
+static inline int
+in_bit_array (const bitarray_t * const array, const int value)
+{
+	return (array[value >> 3] & (1<<(value & 7)));
+}
+
+static inline void
+set_bit_array (bitarray_t * const array, const int value)
+{
+	array[value >> 3] |= (1<<(value & 7));
+}
+
+static inline void
+unset_bit_array (bitarray_t * const array, const int value)
+{
+	array[value >> 3] &= ~(1<<(value & 7));
+}
+
+#ifdef HAVE_SDL
+typedef UINT64 precise_t;
+#endif
 
 #endif //__DOOMTYPE__

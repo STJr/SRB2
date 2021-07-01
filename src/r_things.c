@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -238,7 +238,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	UINT8 rotation;
 	lumpinfo_t *lumpinfo;
 	softwarepatch_t patch;
-	UINT8 numadded = 0;
+	UINT16 numadded = 0;
 
 	memset(sprtemp,0xFF, sizeof (sprtemp));
 	maxframe = (size_t)-1;
@@ -305,10 +305,10 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 #endif
 			{
 				W_ReadLumpHeaderPwad(wadnum, l, &patch, sizeof(INT16) * 4, 0);
-				width = SHORT(patch.width);
-				height = SHORT(patch.height);
-				topoffset = SHORT(patch.topoffset);
-				leftoffset = SHORT(patch.leftoffset);
+				width = (INT32)(SHORT(patch.width));
+				height = (INT32)(SHORT(patch.height));
+				topoffset = (INT16)(SHORT(patch.topoffset));
+				leftoffset = (INT16)(SHORT(patch.leftoffset));
 			}
 
 			spritecachedinfo[numspritelumps].width = width<<FRACBITS;
@@ -316,14 +316,8 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 			spritecachedinfo[numspritelumps].topoffset = topoffset<<FRACBITS;
 			spritecachedinfo[numspritelumps].height = height<<FRACBITS;
 
-			//BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
-			if (rendermode != render_none) // not for psprite
-				spritecachedinfo[numspritelumps].topoffset += FEETADJUST;
-			// Being selective with this causes bad things. :( Like the special stage tokens breaking apart.
-			/*if (rendermode != render_none // not for psprite
-			 && SHORT(patch.topoffset)>0 && SHORT(patch.topoffset)<SHORT(patch.height))
-				// perfect is patch.height but sometime it is too high
-				spritecachedinfo[numspritelumps].topoffset = min(SHORT(patch.topoffset)+(FEETADJUST>>FRACBITS),SHORT(patch.height))<<FRACBITS;*/
+			// BP: we cannot use special tric in hardware mode because feet in ground caused by z-buffer
+			spritecachedinfo[numspritelumps].topoffset += FEETADJUST;
 
 			//----------------------------------------------------
 
@@ -832,7 +826,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	INT32 pwidth;
 	fixed_t frac;
 	patch_t *patch = vis->patch;
-	fixed_t this_scale = vis->mobj->scale;
+	fixed_t this_scale = vis->thingscale;
 	INT32 x1, x2;
 	INT64 overflow_test;
 
@@ -964,7 +958,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		vis->x2 = vid.width-1;
 
 	localcolfunc = (vis->cut & SC_VFLIP) ? R_DrawFlippedMaskedColumn : R_DrawMaskedColumn;
-	lengthcol = SHORT(patch->height);
+	lengthcol = patch->height;
 
 	// Split drawing loops for paper and non-paper to reduce conditional checks per sprite
 	if (vis->scalestep)
@@ -972,7 +966,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		fixed_t horzscale = FixedMul(vis->spritexscale, this_scale);
 		fixed_t scalestep = FixedMul(vis->scalestep, vis->spriteyscale);
 
-		pwidth = SHORT(patch->width);
+		pwidth = patch->width;
 
 		// Papersprite drawing loop
 		for (dc_x = vis->x1; dc_x <= vis->x2; dc_x++, spryscale += scalestep)
@@ -997,7 +991,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	else if (vis->cut & SC_SHEAR)
 	{
 #ifdef RANGECHECK
-		pwidth = SHORT(patch->width);
+		pwidth = patch->width;
 #endif
 
 		// Vertically sheared sprite
@@ -1019,7 +1013,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	else
 	{
 #ifdef RANGECHECK
-		pwidth = SHORT(patch->width);
+		pwidth = patch->width;
 #endif
 
 		// Non-paper drawing loop
@@ -1102,7 +1096,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 #ifdef RANGECHECK
 		texturecolumn = frac>>FRACBITS;
 
-		if (texturecolumn < 0 || texturecolumn >= SHORT(patch->width))
+		if (texturecolumn < 0 || texturecolumn >= patch->width)
 			I_Error("R_DrawPrecipitationSpriteRange: bad texturecolumn");
 
 		column = (column_t *)((UINT8 *)patch->columns + (patch->columnofs[texturecolumn]));
@@ -1435,6 +1429,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	shadow->xscale = FixedMul(xscale, shadowxscale); //SoM: 4/17/2000
 	shadow->scale = FixedMul(yscale, shadowyscale);
+	shadow->thingscale = thing->scale;
 	shadow->sector = vis->sector;
 	shadow->szt = (INT16)((centeryfrac - FixedMul(shadow->gzt - viewz, yscale))>>FRACBITS);
 	shadow->sz = (INT16)((centeryfrac - FixedMul(shadow->gz - viewz, yscale))>>FRACBITS);
@@ -1534,7 +1529,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	fixed_t sheartan = 0;
 	fixed_t shadowscale = FRACUNIT;
-	fixed_t basetx; // drop shadows
+	fixed_t basetx, basetz; // drop shadows
 
 	boolean shadowdraw, shadoweffects, shadowskew;
 	boolean splat = R_ThingIsFloorSprite(thing);
@@ -1564,7 +1559,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	tr_x = thing->x - viewx;
 	tr_y = thing->y - viewy;
 
-	tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin); // near/far distance
+	basetz = tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin); // near/far distance
 
 	// thing is behind view plane?
 	if (!papersprite && (tz < FixedMul(MINZ, this_scale))) // papersprite clipping is handled later
@@ -1918,7 +1913,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else if (oldthing->frame & FF_TRANSMASK)
 	{
 		trans = (oldthing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
-		if (oldthing->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
+		if (!R_BlendLevelVisible(oldthing->blendmode, trans))
 			return;
 	}
 	else
@@ -2085,6 +2080,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->paperoffset = paperoffset;
 	vis->paperdistance = paperdistance;
 	vis->centerangle = centerangle;
+	vis->viewangle = viewangle;
 	vis->shear.tan = sheartan;
 	vis->shear.offset = 0;
 
@@ -2105,6 +2101,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->xscale = FixedMul(spritexscale, xscale); //SoM: 4/17/2000
 	vis->scale = FixedMul(spriteyscale, yscale); //<<detailshift;
+	vis->thingscale = oldthing->scale;
 
 	vis->spritexscale = spritexscale;
 	vis->spriteyscale = spriteyscale;
@@ -2198,7 +2195,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		R_SplitSprite(vis);
 
 	if (oldthing->shadowscale && cv_shadow.value)
-		R_ProjectDropShadow(oldthing, vis, oldthing->shadowscale, basetx, tz);
+		R_ProjectDropShadow(oldthing, vis, oldthing->shadowscale, basetx, basetz);
 
 	// Debug
 	++objectsdrawn;
@@ -2962,7 +2959,7 @@ static void R_DrawSprite(vissprite_t *spr)
 	R_SetSpriteStyle(spr);
 
 	if (spr->cut & SC_SPLAT)
-		R_DrawFloorSprite(spr);
+		R_DrawFloorSplat(spr);
 	else
 		R_DrawVisSprite(spr);
 }

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -410,7 +410,7 @@ enum GameType
 	GT_LASTFREESLOT = GT_FIRSTFREESLOT + NUMGAMETYPEFREESLOTS - 1,
 	NUMGAMETYPES
 };
-// If you alter this list, update dehacked.c, MISC_ChangeGameTypeMenu in m_menu.c, and Gametype_Names in g_game.c
+// If you alter this list, update deh_tables.c, MISC_ChangeGameTypeMenu in m_menu.c, and Gametype_Names in g_game.c
 
 // Gametype rules
 enum GameTypeRules

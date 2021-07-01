@@ -4,7 +4,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2020 by Sonic Team Junior.
+// Copyright (C) 2014-2021 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -1068,8 +1068,7 @@ void I_GetEvent(void)
 					M_SetupJoystickMenu(0);
 			 	break;
 			case SDL_QUIT:
-				if (Playing())
-					LUAh_GameQuit();
+				LUAh_GameQuit(true);
 				I_Quit();
 				break;
 		}
@@ -1510,7 +1509,6 @@ boolean VID_CheckRenderer(void)
 {
 	boolean rendererchanged = false;
 	boolean contextcreated = false;
-	SDL_bool centerscreen = SDL_FALSE;
 
 #ifdef HWRENDER
 	rendermode_t oldrenderer = rendermode;
@@ -1578,10 +1576,7 @@ boolean VID_CheckRenderer(void)
 		setrenderneeded = 0;
 	}
 
-	if (setmodeneeded)
-		centerscreen = SDL_TRUE;
-
-	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, centerscreen);
+	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, (setmodeneeded ? SDL_TRUE : SDL_FALSE));
 	Impl_VideoSetupBuffer();
 
 	if (VID_InSoftwareRenderer())
@@ -1591,12 +1586,6 @@ boolean VID_CheckRenderer(void)
 			SDL_FreeSurface(bufSurface);
 			bufSurface = NULL;
 		}
-
-#ifdef HWRENDER
-		if (rendererchanged && oldrenderer == render_opengl
-		&& vid.glstate == VID_GL_LIBRARY_LOADED) // Only if OpenGL ever loaded!
-			HWR_ClearAllTextures();
-#endif
 
 		SCR_SetDrawFuncs();
 	}

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2020 by Sonic Team Junior.
+// Copyright (C) 2014-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -13,6 +13,7 @@
 enum hud {
 	hud_stagetitle = 0,
 	hud_textspectator,
+	hud_crosshair,
 	// Singleplayer / Co-op
 	hud_score,
 	hud_time,

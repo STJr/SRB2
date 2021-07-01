@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -116,11 +116,11 @@ extern FTransform atransform;
 
 
 // Render stats
-extern int ps_hw_skyboxtime;
-extern int ps_hw_nodesorttime;
-extern int ps_hw_nodedrawtime;
-extern int ps_hw_spritesorttime;
-extern int ps_hw_spritedrawtime;
+extern precise_t ps_hw_skyboxtime;
+extern precise_t ps_hw_nodesorttime;
+extern precise_t ps_hw_nodedrawtime;
+extern precise_t ps_hw_spritesorttime;
+extern precise_t ps_hw_spritedrawtime;
 
 // Render stats for batching
 extern int ps_hw_numpolys;
@@ -130,8 +130,8 @@ extern int ps_hw_numshaders;
 extern int ps_hw_numtextures;
 extern int ps_hw_numpolyflags;
 extern int ps_hw_numcolors;
-extern int ps_hw_batchsorttime;
-extern int ps_hw_batchdrawtime;
+extern precise_t ps_hw_batchsorttime;
+extern precise_t ps_hw_batchdrawtime;
 
 extern boolean gl_init;
 extern boolean gl_maploaded;

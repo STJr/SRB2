@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
-// Copyright (C)      2020 by Nev3r.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 2020-2021 by Nev3r.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -43,6 +43,10 @@ typedef struct
 	size_t count;
 } taggroup_t;
 
+extern bitarray_t tags_available[];
+
+extern size_t num_tags;
+
 extern taggroup_t* tags_sectors[];
 extern taggroup_t* tags_lines[];
 extern taggroup_t* tags_mapthings[];
@@ -50,6 +54,13 @@ extern taggroup_t* tags_mapthings[];
 void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id);
 void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id);
 size_t Taggroup_Find (const taggroup_t *group, const size_t id);
+size_t Taggroup_Count (const taggroup_t *group);
+
+INT32 Taggroup_Iterate
+(		taggroup_t *garray[],
+		const size_t max_elements,
+		const mtag_t tag,
+		const size_t p);
 
 void Taglist_InitGlobalTables(void);
 
