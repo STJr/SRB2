@@ -5495,8 +5495,9 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 								player->fly1 /= 2;
 
 							// Slow down!
-							if (player->speed > FixedMul(8*FRACUNIT, player->mo->scale) && player->speed > FixedMul(player->normalspeed>>1, player->mo->scale))
-								P_Thrust(player->mo, R_PointToAngle2(0,0,player->mo->momx,player->mo->momy), FixedMul(-4*FRACUNIT, player->mo->scale));
+							//!
+							//if (player->speed > FixedMul(8*FRACUNIT, player->mo->scale) && player->speed > FixedMul(player->normalspeed>>1, player->mo->scale))
+								//P_Thrust(player->mo, R_PointToAngle2(0,0,player->mo->momx,player->mo->momy), FixedMul(-4*FRACUNIT, player->mo->scale));
 						}
 						break;
 					default:
@@ -5690,6 +5691,23 @@ INT32 P_GetPlayerControlDirection(player_t *player)
 		return 1; // Controls pointing in player's general direction
 }
 
+//! Formula for quickly getting an appropriate player acceleration value
+static fixed_t P_GetPlayerAcceleration(player_t *player, fixed_t scale)
+{
+	if (!(mapheaderinfo[gamemap-1]->typeoflevel & TOL_2D))
+		return FixedMul(player->accelstart + player->acceleration, scale)*3/2;
+	else
+		return FixedMul(player->accelstart + player->acceleration, scale);
+}
+
+//! Formula for friction compensation during movement
+static fixed_t P_CounterFriction(player_t *player)
+{
+	if (player->mo->friction == 0)
+		return 0;
+	return FixedDiv(player->speed, player->mo->friction) - player->speed;
+}
+
 // Control scheme for 2d levels.
 static void P_2dMovement(player_t *player)
 {
@@ -5698,6 +5716,7 @@ static void P_2dMovement(player_t *player)
 	fixed_t movepushforward = 0;
 	angle_t movepushangle = 0;
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
+	fixed_t subfriction = P_CounterFriction(player);
 
 	cmd = &player->cmd;
 
@@ -5796,10 +5815,13 @@ static void P_2dMovement(player_t *player)
 	if (player->powers[pw_super] || player->powers[pw_sneakers])
 	{
 		thrustfactor = player->thrustfactor*2;
-		acceleration = player->accelstart/2 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/2;
+		acceleration = P_GetPlayerAcceleration(player, FRACUNIT/2);
 
-		if (player->powers[pw_tailsfly])
-			topspeed = normalspd;
+		//!
+		/*if (player->powers[pw_tailsfly])
+			topspeed = normalspd;*/
+		if (player->powers[pw_tailsfly] && player->fly1)
+			topspeed = normalspd/2;
 		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER) && !(player->pflags & PF_SLIDING))
 		{
 			topspeed = normalspd;
@@ -5811,10 +5833,13 @@ static void P_2dMovement(player_t *player)
 	else
 	{
 		thrustfactor = player->thrustfactor;
-		acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
+		acceleration = P_GetPlayerAcceleration(player, FRACUNIT);
 
-		if (player->powers[pw_tailsfly])
-			topspeed = normalspd/2;
+		//!
+		/*if (player->powers[pw_tailsfly])
+			topspeed = normalspd/2;*/
+		if (player->powers[pw_tailsfly] && player->fly1)
+			topspeed = normalspd/4;
 		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER) && !(player->pflags & PF_SLIDING))
 		{
 			topspeed = normalspd/2;
@@ -5835,26 +5860,52 @@ static void P_2dMovement(player_t *player)
 	else if (cmd->sidemove != 0 && !(player->pflags & PF_GLIDING || player->exiting
 		|| (P_PlayerInPain(player) && !onground)))
 	{
-		movepushforward = abs(cmd->sidemove) * (thrustfactor * acceleration);
+		if (abs(player->rmomx) < topspeed)
+			movepushforward = abs(cmd->sidemove) * (thrustfactor * acceleration);
+		//!
+		if ((//Prevent friction from counteracting ground forward momentum
+			onground
+			&& !(player->mo->eflags & MFE_JUSTHITFLOOR) // Frame-perfect bunny-hopping allows players to circumvent friction. Avoid this.
+			)
+		|| (!onground && (cmd->sidemove > 0) != (player->mo->momx > 0))) //Also apply "brakes" in the air when pushing against our momentum
+			 movepushforward += subfriction;
+		//Push back Tails if flying over the speedlimit
+		if (!onground && player->fly1 && abs(player->rmomx) > topspeed && (cmd->sidemove > 0) == (player->mo->momx > 0))
+			 movepushforward -= subfriction>>2;
 
+		/*//!
 		// allow very small movement while in air for gameplay
 		if (!onground)
 			movepushforward >>= 1; // Proper air movement
+		*/
 
 		// Allow a bit of movement while spinning
 		if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
 		{
 			if (!(player->pflags & PF_STARTDASH))
-				movepushforward = movepushforward/48;
+				//!
+				//movepushforward = movepushforward/48;
+				if ((cmd->sidemove > 0) != (player->mo->momx > 0))//Pushing against
+					movepushforward /= 4;
+				else //Pushing toward move direction
+					movepushforward /= 48;
 			else
 				movepushforward = 0;
 		}
 
 		movepushforward = FixedMul(movepushforward, player->mo->scale);
+
+		//!
+		if (cmd->sidemove > 0) // Sonic's Speed
+			P_Thrust(player->mo, movepushangle, movepushforward);
+		else if (cmd->sidemove < 0)
+			P_Thrust(player->mo, movepushangle, movepushforward);
+		/*
 		if (player->rmomx < topspeed && cmd->sidemove > 0) // Sonic's Speed
 			P_Thrust(player->mo, movepushangle, movepushforward);
 		else if (player->rmomx > -topspeed && cmd->sidemove < 0)
 			P_Thrust(player->mo, movepushangle, movepushforward);
+		*/
 	}
 }
 
@@ -5872,7 +5923,10 @@ static void P_3dMovement(player_t *player)
 	boolean spin = ((onground = P_IsObjectOnGround(player->mo)) && (player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
 	fixed_t oldMagnitude, newMagnitude;
 	vector3_t totalthrust;
-
+	//!
+	fixed_t subfriction = P_CounterFriction(player);
+	fixed_t oldspeed;
+	
 	totalthrust.x = totalthrust.y = 0; // I forget if this is needed
 	totalthrust.z = FRACUNIT*P_MobjFlip(player->mo)/3; // A bit of extra push-back on slopes
 
@@ -5881,7 +5935,7 @@ static void P_3dMovement(player_t *player)
 
 	controlstyle = P_ControlStyle(player);
 
-	cmd = &player->cmd;
+	cmd = &player->cmd;		
 
 	if (player->exiting || player->pflags & PF_STASIS)
 	{
@@ -5932,8 +5986,11 @@ static void P_3dMovement(player_t *player)
 	player->rmomy = player->mo->momy - player->cmomy;
 
 	// Calculates player's speed based on distance-of-a-line formula
-	player->speed = P_AproxDistance(player->rmomx, player->rmomy);
-
+	//! No fucking way I'm trusting P_AproxDistance with this. Too inaccurate.
+	//player->speed = P_AproxDistance(player->rmomx, player->rmomy);
+	oldspeed = R_PointToDist2(0, 0, player->rmomx, player->rmomy);
+	player->speed = oldspeed;
+	
 	// Monster Iestyn - 04-11-13
 	// Quadrants are stupid, excessive and broken, let's do this a much simpler way!
 	// Get delta angle from rmom angle and player angle first
@@ -5971,7 +6028,7 @@ static void P_3dMovement(player_t *player)
 		thrustfactor = players[consoleplayer].thrustfactor;
 		acceleration = players[consoleplayer].accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * players[consoleplayer].acceleration;
 
-		if (player->powers[pw_tailsfly])
+		if (player->powers[pw_tailsfly] && player->fly1)
 			topspeed = normalspd/2;
 		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
 		{
@@ -5987,30 +6044,39 @@ static void P_3dMovement(player_t *player)
 		{
 			topspeed = 5 * normalspd / 3; // 1.67x
 			thrustfactor = player->thrustfactor*2;
-			acceleration = player->accelstart/2 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/2;
+			//!
+			//acceleration = player->accelstart/2 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/2;
+			acceleration = P_GetPlayerAcceleration(player, FRACUNIT>>1);
+
 		}
 		else
 		{
 			topspeed = normalspd;
 			thrustfactor = player->thrustfactor;
-			acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
+			//!
+			//acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
+			acceleration = P_GetPlayerAcceleration(player, FRACUNIT);
 		}
 
-		if (player->powers[pw_tailsfly])
-			topspeed >>= 1;
-		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
+		//!
+		/*if (player->powers[pw_tailsfly])
+			topspeed >>= 1;*/
+		if (player->powers[pw_tailsfly] && player->fly1)
+			topspeed >>= 2;
+		//else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
+		if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
 		{
 			topspeed >>= 1;
 			acceleration = 2*acceleration/3;
 		}
 	}
-
 	if (spin) // Prevent gaining speed whilst rolling!
 	{
 		const fixed_t ns = FixedDiv(549*ORIG_FRICTION,500*FRACUNIT); // P_XYFriction
 		topspeed = FixedMul(oldMagnitude, ns);
 	}
-
+	//!
+	/*
 	// Better maneuverability while flying
 	if (player->powers[pw_tailsfly])
 	{
@@ -6018,25 +6084,28 @@ static void P_3dMovement(player_t *player)
 		acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
 	}
 	else
+	*/
+	if (player->pflags & PF_BOUNCING)
 	{
-		if (player->pflags & PF_BOUNCING)
+		if (player->mo->state-states == S_PLAY_BOUNCE_LANDING)
 		{
-			if (player->mo->state-states == S_PLAY_BOUNCE_LANDING)
-			{
-				thrustfactor = player->thrustfactor*8;
-				acceleration = player->accelstart/8 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/8;
-			}
-			else
-			{
-				thrustfactor = (3*player->thrustfactor)/4;
-				acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
-			}
+			thrustfactor = player->thrustfactor*8;
+			//!
+			//acceleration = player->accelstart/8 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration/8;
+			acceleration = P_GetPlayerAcceleration(player, FRACUNIT>>3);
 		}
-
-		if (player->mo->movefactor != FRACUNIT) // Friction-scaled acceleration...
-			acceleration = FixedMul(acceleration<<FRACBITS, player->mo->movefactor)>>FRACBITS;
+		else
+		{
+			thrustfactor = (3*player->thrustfactor)/4;
+			//!
+			//acceleration = player->accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * player->acceleration;
+			acceleration = P_GetPlayerAcceleration(player, FRACUNIT);				
+		}
 	}
 
+	if (player->mo->movefactor != FRACUNIT) // Friction-scaled acceleration...
+		acceleration = FixedMul(acceleration<<FRACBITS, player->mo->movefactor)>>FRACBITS;
+	
 	// Forward movement
 	if (player->climbing)
 	{
@@ -6052,6 +6121,7 @@ static void P_3dMovement(player_t *player)
 		&& cmd->forwardmove != 0 && !(player->pflags & PF_GLIDING || player->exiting
 		|| (P_PlayerInPain(player) && !onground)))
 	{
+		//!
 		movepushforward = cmd->forwardmove * (thrustfactor * acceleration);
 
 		// Allow a bit of movement while spinning
@@ -6060,15 +6130,21 @@ static void P_3dMovement(player_t *player)
 			if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0)
 			|| (player->pflags & PF_STARTDASH))
 				movepushforward = 0;
+			//!
+			/*
 			else if (onground)
 				movepushforward >>= 4;
 			else
 				movepushforward >>= 3;
+			*/
+			else if (!onground)
+				movepushforward >>= 1;
 		}
+		/*//!
 		// allow very small movement while in air for gameplay
 		else if (!onground)
 			movepushforward >>= 2; // proper air movement
-
+		*/
 		movepushforward = FixedMul(movepushforward, player->mo->scale);
 
 		totalthrust.x += P_ReturnThrustX(player->mo, movepushangle, movepushforward);
@@ -6102,14 +6178,21 @@ static void P_3dMovement(player_t *player)
 				if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0)
 				|| (player->pflags & PF_STARTDASH))
 					movepushforward = 0;
+				//!
+				/*
 				else if (onground)
 					movepushforward >>= 4;
 				else
 					movepushforward >>= 3;
+				*/
+				else if (!onground)
+					movepushforward >>= 1;
 			}
+			/*//!
 			// allow very small movement while in air for gameplay
 			else if (!onground)
 				movepushforward >>= 2; // proper air movement
+			*/
 
 			movepushsideangle = controldirection;
 
@@ -6123,6 +6206,8 @@ static void P_3dMovement(player_t *player)
 	{
 		movepushside = cmd->sidemove * (thrustfactor * acceleration);
 
+		/*
+		//!
 		// allow very small movement while in air for gameplay
 		if (!onground)
 		{
@@ -6131,15 +6216,22 @@ static void P_3dMovement(player_t *player)
 			if (((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING) || (player->powers[pw_tailsfly] && player->speed > topspeed))
 				movepushside >>= 2;
 		}
+		*/
 		// Allow a bit of movement while spinning
-		else if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
+		//else if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
+		if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
 		{
 			if (player->pflags & PF_STARTDASH)
 				movepushside = 0;
+			//!
+			/*
 			else if (onground)
 				movepushside >>= 4;
 			else
 				movepushside >>= 3;
+			*/
+			else if (!onground)
+				movepushside >>= 1;
 		}
 
 		// Finally move the player now that their speed/direction has been decided.
@@ -6165,9 +6257,51 @@ static void P_3dMovement(player_t *player)
 			}
 		}
 	}
+	//! Compensate for friction
+	if (onground && (!spin) && (totalthrust.x || totalthrust.y))
+	{
+		angle_t thrustangle = R_PointToAngle2(0, 0, totalthrust.x, totalthrust.y);
+		totalthrust.x += P_ReturnThrustX(player->mo, thrustangle, subfriction);
+		totalthrust.y += P_ReturnThrustY(player->mo, thrustangle, subfriction);
+	}
+	//! Apply "brakes" in the air
+	if ((!onground) && (totalthrust.x || totalthrust.y))
+	{
+		//Get friction vector
+		fixed_t fx = player->rmomx-FixedMul(player->rmomx, player->mo->friction);
+		fixed_t fy = player->rmomy-FixedMul(player->rmomy, player->mo->friction);
+		//Apply thrust vector
+		if (totalthrust.x || totalthrust.y)
+		{
+			fixed_t thrustangle = R_PointToAngle2(0, 0, totalthrust.x, totalthrust.y);
+			fx -= P_ReturnThrustX(player->mo, thrustangle, subfriction);
+			fy -= P_ReturnThrustY(player->mo, thrustangle, subfriction);
+		}
+		//Reduce friction amount -- allowing players to change direction too quickly feels unnatural
+		fx /= 4;
+		fy /= 4;
+		
+		totalthrust.x -= fx;
+		totalthrust.y -= fy;
+	}
+	//Apply Tails flight slowdown
+	if (player->powers[pw_tailsfly] && player->fly1) //&& player->speed > topspeed)
+	{
+		fixed_t momangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
+		totalthrust.x -= P_ReturnThrustX(player->mo, momangle, subfriction)>>1;
+		totalthrust.y -= P_ReturnThrustY(player->mo, momangle, subfriction)>>1;
+	}
 
+	
+	
 	player->mo->momx += totalthrust.x;
 	player->mo->momy += totalthrust.y;
+
+	/*
+	player->score = R_PointToDist2(0, 0, totalthrust.x, totalthrust.y) * 100 /FRACUNIT; //!Debug
+	player->rings = player->fly1; //!Debug
+	*/
+
 
 	// Time to ask three questions:
 	// 1) Are we over topspeed?
@@ -6180,26 +6314,64 @@ static void P_3dMovement(player_t *player)
 	// If "no" to 1, we're not reaching any limits yet, so ignore this entirely!
 	// -Shadow Hog
 	newMagnitude = R_PointToDist2(player->mo->momx - player->cmomx, player->mo->momy - player->cmomy, 0, 0);
-	if (newMagnitude > topspeed)
-	{
+	//!
+	//player->rings = 0; //!debug
+	//if (newMagnitude > topspeed)
+	//{ //Over top speed
+		//player->rings = 1; //!debug
 		fixed_t tempmomx, tempmomy;
 		if (oldMagnitude > topspeed && !spin)
-		{
+		//else if (oldMagnitude > topspeed)
+		{ // Previously over top speed (not spinning)
+			//player->rings = 2; //!debug
 			if (newMagnitude > oldMagnitude)
-			{
+			{ // Speed is increasing
+				//player->rings = 3; //!debug
+				// Normalize momentum
 				tempmomx = FixedMul(FixedDiv(player->mo->momx - player->cmomx, newMagnitude), oldMagnitude);
 				tempmomy = FixedMul(FixedDiv(player->mo->momy - player->cmomy, newMagnitude), oldMagnitude);
-				player->mo->momx = tempmomx + player->cmomx;
-				player->mo->momy = tempmomy + player->cmomy;
+				player->speed = R_PointToDist2(0, 0, tempmomx, tempmomy);
+				//!
+				//player->mo->momx = tempmomx + player->cmomx;
+				//player->mo->momy = tempmomy + player->cmomy;
+				if (onground && !(player->mo->eflags & MFE_JUSTHITFLOOR)) //Counteract friction
+					player->speed += abs(P_CounterFriction(player));
+
+				P_InstaThrust(player->mo,
+					R_PointToAngle2(0, 0, tempmomx, tempmomy),
+					player->speed);
+				player->mo->momx += player->cmomx;
+				player->mo->momy += player->cmomy;
 			}
-			// else do nothing
-		}
+		//}
+		/*
 		else
-		{
+		{ // Over top speed; speed not increasing
 			tempmomx = FixedMul(FixedDiv(player->mo->momx - player->cmomx, newMagnitude), topspeed);
 			tempmomy = FixedMul(FixedDiv(player->mo->momy - player->cmomy, newMagnitude), topspeed);
+			//!
 			player->mo->momx = tempmomx + player->cmomx;
 			player->mo->momy = tempmomy + player->cmomy;
+			//if (!spin && onground && !(player->mo->eflags & MFE_JUSTHITFLOOR)) //Counteract friction
+				//player->speed += abs(P_CounterFriction(player));
+
+			//P_InstaThrust(player->mo,
+			//	R_PointToAngle2(0, 0, tempmomx, tempmomy),
+			//	player->speed);
+			//player->mo->momx += player->cmomx;
+			//player->mo->momy += player->cmomy;
+		}
+		*/
+		//Did we lose speed this frame?
+		if (!spin && onground && !(player->mo->eflags & MFE_JUSTHITFLOOR) 
+			&& (totalthrust.x || totalthrust.y)
+			&& (R_PointToDist2(0, 0, player->mo->momx - player->cmomx, player->mo->momy - player->cmomy) < oldspeed) )
+		{ //Spawn some dust
+			fixed_t z = 0;
+			if (P_MobjFlip(player->mo) == -1)
+				z = player->mo->height - mobjinfo[MT_DUST].height;
+			P_SpawnMobjFromMobj(player->mo, 0, 0, z, MT_DUST);
+			S_StartSound(player->mo, sfx_s3k7e);
 		}
 	}
 }
