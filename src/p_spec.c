@@ -8719,6 +8719,13 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 void T_PointPusher(pointpusher_t *p)
 {
 	INT32 xl, xh, yl, yh, bx, by;
+	sector_t *sec = sectors + p->affectee;
+
+	// Be sure the special sector type is still turned on. If so, proceed.
+	// Else, bail out; the sector type has been changed on us.
+
+	if (GETSECSPECIAL(sec->special, 3) != 2)
+		return;
 
 	// Seek out all pushable things within the force radius of this
 	// point pusher. Crosses sectors, so use blockmap.
