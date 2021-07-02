@@ -3854,7 +3854,7 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 			if (!(twodlevel || (player->mo->flags2 & MF2_TWOD)))
 				mo->momy = FixedMul(FINESINE(fa),ns);
 
-			P_SetObjectMomZ(mo, 8*FRACUNIT, false);
+			P_SetObjectMomZ(mo, 12*FRACUNIT, false);
 			mo->fuse = 20*TICRATE; // Adjust fuse for NiGHTS
 
 			// Toggle bonus time colors
@@ -3867,12 +3867,12 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 			if (i > 15)
 			{
 				momxy = 3*FRACUNIT;
-				momz = 4*FRACUNIT;
+				momz = 6*FRACUNIT;
 			}
 			else
 			{
 				momxy = 2*FRACUNIT;
-				momz = 3*FRACUNIT;
+				momz = 5*FRACUNIT;
 			}
 
 			ns = FixedMul(FixedMul(momxy, FRACUNIT + FixedDiv(player->losstime<<FRACBITS, 10*TICRATE<<FRACBITS)), mo->scale);

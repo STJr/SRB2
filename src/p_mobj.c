@@ -2008,7 +2008,7 @@ void P_XYMovement(mobj_t *mo)
 						FIXED_TO_FLOAT(predictedz)
 						);*/
 		if (ANGLE_MAX-newangle > ANG30 && newangle > ANGLE_180) {
-			mo->momz = P_MobjFlip(mo)*FRACUNIT/2;
+			mo->momz = P_MobjFlip(mo)*FRACUNIT/2; //!
 			mo->z = predictedz + P_MobjFlip(mo);
 			mo->standingslope = NULL;
 			//CONS_Printf("Launched off of flat surface running into downward slope\n");

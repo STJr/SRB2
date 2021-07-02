@@ -13403,6 +13403,10 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 		fixed_t s = FINESINE(fa);
 		fixed_t thresh = dustdevil->scale * 20;
 
+		//! gravity mod
+		//thrust = FixedSqrt(FixedMul(thrust,thrust)*3/2);
+
+
 		//Player in the swirl part.
 		if (dustdevil->height - pos > thresh)
 		{
@@ -13436,7 +13440,9 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 		{ //Player on the top of the tornado.
 			P_ResetPlayer(player);
 			thing->z = dustdevil->z + dustdevil->height;
-			thrust = 20 * FRACUNIT;
+			//!
+			//thrust = 20 * FRACUNIT;
+			thrust = 26 * FRACUNIT;
 			player->powers[pw_carry] = CR_NONE;
 			player->powers[pw_nocontrol] = 0;
 			P_SetTarget(&thing->tracer, NULL);

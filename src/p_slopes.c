@@ -808,7 +808,8 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 
 	slopemom.x = mo->momx;
 	slopemom.y = mo->momy;
-	slopemom.z = 3*(mo->momz/2);
+	//slopemom.z = 3*(mo->momz/2); //!
+	slopemom.z = mo->momz; //!
 
 	axis.x = -slope->d.y;
 	axis.y = slope->d.x;
@@ -816,7 +817,8 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 
 	FV3_Rotate(&slopemom, &axis, ang >> ANGLETOFINESHIFT);
 
-	return 2*(slopemom.z/3);
+	//return 2*(slopemom.z/3); //!
+	return slopemom.z; //!
 }
 
 // Function to help handle landing on slopes
@@ -835,7 +837,9 @@ void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope)
 
 	mom.x = thing->momx;
 	mom.y = thing->momy;
-	mom.z = thing->momz*2;
+	//!
+	mom.z = thing->momz;
+	//mom.z = thing->momz*2;
 
 	P_ReverseQuantizeMomentumToSlope(&mom, slope);
 
