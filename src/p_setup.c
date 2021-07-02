@@ -3663,6 +3663,14 @@ static void P_ConvertBinaryMap(void)
 		case 456: //Stop fading colormap
 			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			break;
+		case 480: //Polyobject - door slide
+		case 481: //Polyobject - door move
+			lines[i].args[0] = tag;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			if (lines[i].sidenum[1] != 0xffff)
+				lines[i].args[3] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
+			break;
 		case 500: //Scroll front wall left
 		case 501: //Scroll front wall right
 			lines[i].args[0] = 0;

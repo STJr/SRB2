@@ -992,30 +992,22 @@ static boolean PolyDoor(line_t *line)
 {
 	polydoordata_t pdd;
 
-	pdd.polyObjNum = Tag_FGet(&line->tags); // polyobject id
+	pdd.polyObjNum = line->args[0]; // polyobject id
 
 	switch(line->special)
 	{
 		case 480: // Polyobj_DoorSlide
 			pdd.doorType = POLY_DOOR_SLIDE;
-			pdd.speed    = sides[line->sidenum[0]].textureoffset / 8;
+			pdd.speed    = line->args[1] << (FRACBITS - 3);
 			pdd.angle    = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y); // angle of motion
-			pdd.distance = sides[line->sidenum[0]].rowoffset;
-
-			if (line->sidenum[1] != 0xffff)
-				pdd.delay = sides[line->sidenum[1]].textureoffset >> FRACBITS; // delay in tics
-			else
-				pdd.delay = 0;
+			pdd.distance = line->args[2] << FRACBITS;
+			pdd.delay    = line->args[3]; // delay in tics
 			break;
 		case 481: // Polyobj_DoorSwing
 			pdd.doorType = POLY_DOOR_SWING;
-			pdd.speed    = sides[line->sidenum[0]].textureoffset >> FRACBITS; // angular speed
-			pdd.distance = sides[line->sidenum[0]].rowoffset >> FRACBITS; // angular distance
-
-			if (line->sidenum[1] != 0xffff)
-				pdd.delay = sides[line->sidenum[1]].textureoffset >> FRACBITS; // delay in tics
-			else
-				pdd.delay = 0;
+			pdd.speed    = line->args[1]; // angular speed
+			pdd.distance = line->args[2]; // angular distance
+			pdd.delay    = line->args[3]; // delay in tics
 			break;
 		default:
 			return 0; // ???
