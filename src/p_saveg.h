@@ -18,6 +18,8 @@
 #pragma interface
 #endif
 
+#define NEWSKINSAVES (INT16_MAX) // Purely for backwards compatibility, remove this for 2.3
+
 // Persistent storage/archiving.
 // These are the load / save game routines.
 

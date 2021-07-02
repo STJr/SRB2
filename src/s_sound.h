@@ -265,6 +265,16 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst);
 // Music Playback
 //
 
+/* this is for the sake of the hook */
+struct MusicChange {
+	char    * newname;
+	UINT16  * mflags;
+	boolean * looping;
+	UINT32  * position;
+	UINT32  * prefadems;
+	UINT32  * fadeinms;
+};
+
 // Start music track, arbitrary, given its name, and set whether looping
 // note: music flags 12 bits for tracknum (gme, other formats with more than one track)
 //       13-15 aren't used yet
@@ -317,12 +327,6 @@ void S_StopSoundByNum(sfxenum_t sfxnum);
 #ifndef HW3SOUND
 #define S_StartAttackSound S_StartSound
 #define S_StartScreamSound S_StartSound
-#endif
-
-#ifdef MUSICSLOT_COMPATIBILITY
-// For compatibility with code/scripts relying on older versions
-// This is a list of all the "special" slot names and their associated numbers
-extern const char *compat_special_music_slots[16];
 #endif
 
 #endif

@@ -116,9 +116,29 @@ extern consvar_t cv_mousesens, cv_mouseysens;
 extern consvar_t cv_mousesens2, cv_mouseysens2;
 extern consvar_t cv_controlperkey;
 
-extern INT32 mousex, mousey;
-extern INT32 mlooky; //mousey with mlookSensitivity
-extern INT32 mouse2x, mouse2y, mlook2y;
+typedef struct
+{
+	INT32 dx; // deltas with mousemove sensitivity
+	INT32 dy;
+	INT32 mlookdy; // dy with mouselook sensitivity
+	INT32 rdx; // deltas without sensitivity
+	INT32 rdy;
+	UINT16 buttons;
+} mouse_t;
+
+#define MB_BUTTON1    0x0001
+#define MB_BUTTON2    0x0002
+#define MB_BUTTON3    0x0004
+#define MB_BUTTON4    0x0008
+#define MB_BUTTON5    0x0010
+#define MB_BUTTON6    0x0020
+#define MB_BUTTON7    0x0040
+#define MB_BUTTON8    0x0080
+#define MB_SCROLLUP   0x0100
+#define MB_SCROLLDOWN 0x0200
+
+extern mouse_t mouse;
+extern mouse_t mouse2;
 
 extern INT32 joyxmove[JOYAXISSET], joyymove[JOYAXISSET], joy2xmove[JOYAXISSET], joy2ymove[JOYAXISSET];
 
@@ -161,8 +181,8 @@ extern const INT32 gcl_jump_spin[num_gcl_jump_spin];
 void G_MapEventsToControls(event_t *ev);
 
 // returns the name of a key
-const char *G_KeynumToString(INT32 keynum);
-INT32 G_KeyStringtoNum(const char *keystr);
+const char *G_KeyNumToString(INT32 keynum);
+INT32 G_KeyStringToNum(const char *keystr);
 
 // detach any keys associated to the given game control
 void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);
@@ -174,5 +194,8 @@ INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gc
 void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
 void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis)[2]);
 INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify);
+
+// sets the members of a mouse_t given position deltas
+void G_SetMouseDeltas(INT32 dx, INT32 dy, UINT8 ssplayer);
 
 #endif

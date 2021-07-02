@@ -5,7 +5,9 @@
 EXENAME?=lsdl2srb2
 
 opts+=-DUNIXCOMMON -DLUA_USE_POSIX
-libs+=-lm
+# Use -rdynamic so a backtrace log shows function names
+# instead of addresses
+libs+=-lm -rdynamic
 
 ifndef nasm_format
 nasm_format:=elf -DLINUX

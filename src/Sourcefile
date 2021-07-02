@@ -26,6 +26,7 @@ m_argv.c
 m_bbox.c
 m_cheat.c
 m_cond.c
+m_easing.c
 m_fixed.c
 m_menu.c
 m_misc.c
@@ -94,3 +95,4 @@ lua_taglib.c
 lua_polyobjlib.c
 lua_blockmaplib.c
 lua_hudlib.c
+lua_inputlib.c

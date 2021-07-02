@@ -496,6 +496,64 @@ UINT8 M_GotHighEnoughRings(INT32 trings)
 	return false;
 }
 
+// Gets the skin number for a SECRET_SKIN unlockable.
+INT32 M_UnlockableSkinNum(unlockable_t *unlock)
+{
+	if (unlock->type != SECRET_SKIN)
+	{
+		// This isn't a skin unlockable...
+		return -1;
+	}
+
+	if (unlock->stringVar && strcmp(unlock->stringVar, ""))
+	{
+		// Get the skin from the string.
+		INT32 skinnum = R_SkinAvailable(unlock->stringVar);
+		if (skinnum != -1)
+		{
+			return skinnum;
+		}
+	}
+
+	if (unlock->variable >= 0 && unlock->variable < numskins)
+	{
+		// Use the number directly.
+		return unlock->variable;
+	}
+
+	// Invalid skin unlockable.
+	return -1;
+}
+
+// Gets the skin number for a ET_SKIN emblem.
+INT32 M_EmblemSkinNum(emblem_t *emblem)
+{
+	if (emblem->type != ET_SKIN)
+	{
+		// This isn't a skin emblem...
+		return -1;
+	}
+
+	if (emblem->stringVar && strcmp(emblem->stringVar, ""))
+	{
+		// Get the skin from the string.
+		INT32 skinnum = R_SkinAvailable(emblem->stringVar);
+		if (skinnum != -1)
+		{
+			return skinnum;
+		}
+	}
+
+	if (emblem->var >= 0 && emblem->var < numskins)
+	{
+		// Use the number directly.
+		return emblem->var;
+	}
+
+	// Invalid skin emblem.
+	return -1;
+}
+
 // ----------------
 // Misc Emblem shit
 // ----------------

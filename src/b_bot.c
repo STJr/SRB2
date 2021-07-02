@@ -75,7 +75,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 		return;
 
 	// Lua can handle it!
-	if (LUAh_BotAI(sonic, tails, cmd))
+	if (LUA_HookBotAI(sonic, tails, cmd))
 		return;
 
 	if (tails->player->powers[pw_carry] == CR_MACESPIN || tails->player->powers[pw_carry] == CR_GENERIC)
@@ -363,7 +363,7 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 	CV_SetValue(&cv_analog[1], false);
 
 	// Let Lua scripts build ticcmds
-	if (LUAh_BotTiccmd(player, cmd))
+	if (LUA_HookTiccmd(player, cmd, HOOK(BotTiccmd)))
 		return;
 
 	// We don't have any main character AI, sorry. D:
@@ -461,7 +461,7 @@ boolean B_CheckRespawn(player_t *player)
 
 	// B_RespawnBot doesn't do anything if the condition above this isn't met
 	{
-		UINT8 shouldForce = LUAh_BotRespawn(sonic, tails);
+		UINT8 shouldForce = LUA_Hook2Mobj(sonic, tails, MOBJ_HOOK(BotRespawn));
 
 		if (P_MobjWasRemoved(sonic) || P_MobjWasRemoved(tails))
 			return (shouldForce == 1); // mobj was removed

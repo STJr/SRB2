@@ -25,6 +25,7 @@
 #include "i_video.h"
 #include "z_zone.h"
 #include "lua_hook.h"
+#include "m_cond.h" // SECRET_SKIN
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -1708,7 +1709,7 @@ void A_HoodThink(mobj_t *actor)
 	dx = (actor->target->x - actor->x), dy = (actor->target->y - actor->y), dz = (actor->target->z - actor->z);
 	dm = P_AproxDistance(dx, dy);
 	// Target dangerously close to robohood, retreat then.
-	if ((dm < 256<<FRACBITS) && (abs(dz) < 128<<FRACBITS))
+	if ((dm < 256<<FRACBITS) && (abs(dz) < 128<<FRACBITS) && !(actor->flags2 & MF2_AMBUSH))
 	{
 		S_StartSound(actor, actor->info->attacksound);
 		P_SetMobjState(actor, actor->info->raisestate);
@@ -3961,7 +3962,7 @@ void A_BossDeath(mobj_t *mo)
 	}
 
 bossjustdie:
-	if (LUAh_BossDeath(mo))
+	if (LUA_HookMobj(mo, MOBJ_HOOK(BossDeath)))
 		return;
 	else if (P_MobjWasRemoved(mo))
 		return;
@@ -5101,6 +5102,33 @@ void A_SignSpin(mobj_t *actor)
 	}
 }
 
+static boolean SignSkinCheck(player_t *player, INT32 num)
+{
+	INT32 i;
+
+	if (player != NULL)
+	{
+		// Use player's availabilities
+		return R_SkinUsable(player - players, num);
+	}
+
+	// Player invalid, only show characters that are unlocked from the start.
+	for (i = 0; i < MAXUNLOCKABLES; i++)
+	{
+		if (unlockables[i].type == SECRET_SKIN)
+		{
+			INT32 lockedSkin = M_UnlockableSkinNum(&unlockables[i]);
+
+			if (lockedSkin == num)
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 // Function: A_SignPlayer
 //
 // Description: Changes the state of a level end sign to reflect the player that hit it.
@@ -5161,23 +5189,21 @@ void A_SignPlayer(mobj_t *actor)
 		// I turned this function into a fucking mess. I'm so sorry. -Lach
 		if (locvar1 == -2) // random skin
 		{
-#define skincheck(num) (player ? !R_SkinUsable(player-players, num) : skins[num].availability > 0)
 			player_t *player = actor->target ? actor->target->player : NULL;
 			UINT8 skinnum;
 			UINT8 skincount = 0;
 			for (skinnum = 0; skinnum < numskins; skinnum++)
-				if (!skincheck(skinnum))
+				if (SignSkinCheck(player, skinnum))
 					skincount++;
 			skinnum = P_RandomKey(skincount);
 			for (skincount = 0; skincount < numskins; skincount++)
 			{
 				if (skincount > skinnum)
 					break;
-				if (skincheck(skincount))
+				if (!SignSkinCheck(player, skincount))
 					skinnum++;
 			}
 			skin = &skins[skinnum];
-#undef skincheck
 		}
 		else // specific skin
 			skin = &skins[locvar1];
@@ -9873,8 +9899,8 @@ void A_Custom3DRotate(mobj_t *actor)
 
 	const fixed_t radius = FixedMul(loc1lw*FRACUNIT, actor->scale);
 	const fixed_t hOff = FixedMul(loc1up*FRACUNIT, actor->scale);
-	const fixed_t hspeed = FixedMul(loc2up*FRACUNIT/10, actor->scale);
-	const fixed_t vspeed = FixedMul(loc2lw*FRACUNIT/10, actor->scale);
+	const fixed_t hspeed = loc2up*FRACUNIT/10; // Monster's note (29/05/21): DO NOT SCALE, this is an angular speed!
+	const fixed_t vspeed = loc2lw*FRACUNIT/10; // ditto
 
 	if (LUA_CallAction(A_CUSTOM3DROTATE, actor))
 		return;
@@ -14320,6 +14346,14 @@ void A_RolloutRock(mobj_t *actor)
 	if (LUA_CallAction(A_ROLLOUTROCK, actor))
 		return;
 
+	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
+		actor->flags |= MF_PUSHABLE;
+	else
+	{
+		actor->flags2 = (actor->flags2 & ~MF2_OBJECTFLIP) | (actor->tracer->flags2 & MF2_OBJECTFLIP);
+		actor->eflags = (actor->eflags & ~MFE_VERTICALFLIP) | (actor->tracer->eflags & MFE_VERTICALFLIP);
+	}
+
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
 
 	if (actor->eflags & MFE_JUSTHITFLOOR)
@@ -14358,7 +14392,8 @@ void A_RolloutRock(mobj_t *actor)
 
 	speed = P_AproxDistance(actor->momx, actor->momy); // recalculate speed for visual rolling
 
-	if (speed < actor->scale >> 1) // stop moving if speed is insignificant
+	if (((actor->flags & MF_PUSHABLE) || !(actor->flags2 & MF2_STRONGBOX))
+		&& speed < actor->scale) // stop moving if speed is insignificant
 	{
 		actor->momx = 0;
 		actor->momy = 0;
@@ -14377,9 +14412,6 @@ void A_RolloutRock(mobj_t *actor)
 	}
 
 	actor->frame = actor->reactiontime % maxframes; // set frame
-
-	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
-		actor->flags |= MF_PUSHABLE;
 
 	if (!(actor->flags & MF_PUSHABLE) || (actor->movecount != 1)) // if being ridden or haven't moved, don't disappear
 		actor->fuse = actor->info->painchance;

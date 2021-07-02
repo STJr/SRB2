@@ -1289,8 +1289,8 @@ void R_DrawTiltedSpan_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -1326,8 +1326,8 @@ void R_DrawTiltedSpan_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -1353,8 +1353,8 @@ void R_DrawTiltedSpan_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -1390,8 +1390,8 @@ void R_DrawTiltedSpan_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -1418,8 +1418,8 @@ void R_DrawTiltedSpan_32(void)
 			endv = vz*endz;
 			stepu = (INT64)((endu - startu) * INVSPAN);
 			stepv = (INT64)((endv - startv) * INVSPAN);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
@@ -1455,8 +1455,8 @@ void R_DrawTiltedSpan_32(void)
 				left = 1.f/left;
 				stepu = (INT64)((endu - startu) * left);
 				stepv = (INT64)((endv - startv) * left);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (; width != 0; width--)
 				{
@@ -1541,8 +1541,8 @@ void R_DrawTiltedTranslucentSpan_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -1578,8 +1578,8 @@ void R_DrawTiltedTranslucentSpan_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -1605,8 +1605,8 @@ void R_DrawTiltedTranslucentSpan_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -1642,8 +1642,8 @@ void R_DrawTiltedTranslucentSpan_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -1670,8 +1670,8 @@ void R_DrawTiltedTranslucentSpan_32(void)
 			endv = vz*endz;
 			stepu = (INT64)((endu - startu) * INVSPAN);
 			stepv = (INT64)((endv - startv) * INVSPAN);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
@@ -1707,8 +1707,8 @@ void R_DrawTiltedTranslucentSpan_32(void)
 				left = 1.f/left;
 				stepu = (INT64)((endu - startu) * left);
 				stepv = (INT64)((endv - startv) * left);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (; width != 0; width--)
 				{
@@ -1795,8 +1795,8 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -1832,8 +1832,8 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -1859,8 +1859,8 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -1896,8 +1896,8 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -1924,8 +1924,8 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 			endv = vz*endz;
 			stepu = (INT64)((endu - startu) * INVSPAN);
 			stepv = (INT64)((endv - startv) * INVSPAN);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
@@ -1961,8 +1961,8 @@ void R_DrawTiltedTranslucentWaterSpan_32(void)
 				left = 1.f/left;
 				stepu = (INT64)((endu - startu) * left);
 				stepv = (INT64)((endv - startv) * left);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (; width != 0; width--)
 				{
@@ -2047,8 +2047,8 @@ void R_DrawTiltedSplat_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -2088,8 +2088,8 @@ void R_DrawTiltedSplat_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -2117,8 +2117,8 @@ void R_DrawTiltedSplat_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -2158,8 +2158,8 @@ void R_DrawTiltedSplat_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -2188,8 +2188,8 @@ void R_DrawTiltedSplat_32(void)
 			endv = vz*endz;
 			stepu = (INT64)((endu - startu) * INVSPAN);
 			stepv = (INT64)((endv - startv) * INVSPAN);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
@@ -2229,8 +2229,8 @@ void R_DrawTiltedSplat_32(void)
 				left = 1.f/left;
 				stepu = (INT64)((endu - startu) * left);
 				stepv = (INT64)((endv - startv) * left);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (; width != 0; width--)
 				{
@@ -3048,8 +3048,8 @@ void R_DrawTiltedFloorSprite_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -3087,8 +3087,8 @@ void R_DrawTiltedFloorSprite_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -3115,8 +3115,8 @@ void R_DrawTiltedFloorSprite_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -3154,8 +3154,8 @@ void R_DrawTiltedFloorSprite_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -3183,8 +3183,8 @@ void R_DrawTiltedFloorSprite_32(void)
 			endv = vz*endz;
 			stepu = (INT64)((endu - startu) * INVSPAN);
 			stepv = (INT64)((endv - startv) * INVSPAN);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
@@ -3222,8 +3222,8 @@ void R_DrawTiltedFloorSprite_32(void)
 				left = 1.f/left;
 				stepu = (INT64)((endu - startu) * left);
 				stepv = (INT64)((endv - startv) * left);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (; width != 0; width--)
 				{
@@ -3304,8 +3304,8 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -3343,8 +3343,8 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -3371,8 +3371,8 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 				endv = vz*endz;
 				stepu = (INT64)((endu - startu) * INVSPAN);
 				stepv = (INT64)((endv - startv) * INVSPAN);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
@@ -3409,8 +3409,8 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 					left = 1.f/left;
 					stepu = (INT64)((endu - startu) * left);
 					stepv = (INT64)((endv - startv) * left);
-					u = (INT64)(startu) + viewx;
-					v = (INT64)(startv) + viewy;
+					u = (INT64)(startu);
+					v = (INT64)(startv);
 
 					for (; width != 0; width--)
 					{
@@ -3438,8 +3438,8 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 			endv = vz*endz;
 			stepu = (INT64)((endu - startu) * INVSPAN);
 			stepv = (INT64)((endv - startv) * INVSPAN);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (i = SPANSIZE-1; i >= 0; i--)
 			{
@@ -3477,8 +3477,8 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 				left = 1.f/left;
 				stepu = (INT64)((endu - startu) * left);
 				stepv = (INT64)((endv - startv) * left);
-				u = (INT64)(startu) + viewx;
-				v = (INT64)(startv) + viewy;
+				u = (INT64)(startu);
+				v = (INT64)(startv);
 
 				for (; width != 0; width--)
 				{

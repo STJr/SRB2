@@ -102,7 +102,7 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #endif
 #endif
 
-#if (defined (__unix__) && !defined (_MSDOS)) || (defined (UNIXCOMMON) && !defined(__APPLE__))
+#if defined (__unix__) || (defined (UNIXCOMMON) && !defined (__APPLE__))
 #include <errno.h>
 #include <sys/wait.h>
 #define NEWSIGNALHANDLER
@@ -1969,7 +1969,7 @@ void I_GetMouseEvents(void)
 		event.data1 = 0;
 //		event.data1 = buttons; // not needed
 		event.data2 = handlermouse2x << 1;
-		event.data3 = -handlermouse2y << 1;
+		event.data3 = handlermouse2y << 1;
 		handlermouse2x = 0;
 		handlermouse2y = 0;
 

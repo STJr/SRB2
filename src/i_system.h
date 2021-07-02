@@ -314,4 +314,16 @@ const char *I_ClipboardPaste(void);
 
 void I_RegisterSysCommands(void);
 
+/** \brief Return the position of the cursor relative to the top-left window corner.
+*/
+void I_GetCursorPosition(INT32 *x, INT32 *y);
+
+/** \brief Returns whether the mouse is grabbed
+*/
+boolean I_GetMouseGrab(void);
+
+/** \brief Sets whether the mouse is grabbed
+*/
+void I_SetMouseGrab(boolean grab);
+
 #endif

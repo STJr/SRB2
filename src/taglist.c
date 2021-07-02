@@ -27,11 +27,13 @@ taggroup_t* tags_sectors[MAXTAGS + 1];
 taggroup_t* tags_lines[MAXTAGS + 1];
 taggroup_t* tags_mapthings[MAXTAGS + 1];
 
-/// Adds a tag to a given element's taglist.
+/// Adds a tag to a given element's taglist. It will not add a duplicate.
 /// \warning This does not rebuild the global taggroups, which are used for iteration.
 void Tag_Add (taglist_t* list, const mtag_t tag)
 {
-	list->tags = Z_Realloc(list->tags, (list->count + 1) * sizeof(list->tags), PU_LEVEL, NULL);
+	if (Tag_Find(list, tag))
+		return;
+	list->tags = Z_Realloc(list->tags, (list->count + 1) * sizeof(mtag_t), PU_LEVEL, NULL);
 	list->tags[list->count++] = tag;
 }
 

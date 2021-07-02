@@ -53,7 +53,6 @@ enum skin {
 	skin_contspeed,
 	skin_contangle,
 	skin_soundsid,
-	skin_availability,
 	skin_sprites
 };
 static const char *const skin_opt[] = {
@@ -91,7 +90,6 @@ static const char *const skin_opt[] = {
 	"contspeed",
 	"contangle",
 	"soundsid",
-	"availability",
 	"sprites",
 	NULL};
 
@@ -208,9 +206,6 @@ static int skin_get(lua_State *L)
 		break;
 	case skin_soundsid:
 		LUA_PushUserdata(L, skin->soundsid, META_SOUNDSID);
-		break;
-	case skin_availability:
-		lua_pushinteger(L, skin->availability);
 		break;
 	case skin_sprites:
 		LUA_PushUserdata(L, skin->sprites, META_SKINSPRITES);

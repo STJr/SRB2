@@ -546,11 +546,10 @@ static boolean P_SetSlopeFromTag(sector_t *sec, INT32 tag, boolean ceiling)
 {
 	INT32 i;
 	pslope_t **secslope = ceiling ? &sec->c_slope : &sec->f_slope;
-	TAG_ITER_DECLARECOUNTER(0);
 
 	if (!tag || *secslope)
 		return false;
-	TAG_ITER_SECTORS(0, tag, i)
+	TAG_ITER_SECTORS(tag, i)
 	{
 		pslope_t *srcslope = ceiling ? sectors[i].c_slope : sectors[i].f_slope;
 		if (srcslope)
@@ -774,13 +773,13 @@ void P_SlopeLaunch(mobj_t *mo)
 		mo->momx = slopemom.x;
 		mo->momy = slopemom.y;
 		mo->momz = slopemom.z/2;
+		
+	    if (mo->player)
+		    mo->player->powers[pw_justlaunched] = 1;
 	}
 
 	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
-
-	if (mo->player)
-		mo->player->powers[pw_justlaunched] = 1;
 }
 
 //
