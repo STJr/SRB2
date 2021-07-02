@@ -94,7 +94,7 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 		}
 		return output.rgba;
 	}
-#define clamp(c) max(min(c, 0xFF), 0x00);
+#define clamp(c) max(min(c, 0xFF), 0x00)
 	else
 	{
 		float falpha = ((float)alpha / 256.0f);
@@ -293,7 +293,7 @@ static void R_CreateFadeColormaps(void)
 	for (i = 0; i < len*2; i++)
 		fadecolormap[i] = (i%256);
 
-	// Load in the light tables, now 64k aligned for smokie...
+	// Load in the light tables
 	{
 		lumpnum_t lump = W_CheckNumForName("FADECMAP");
 		lumpnum_t wlump = W_CheckNumForName("FADEWMAP");
@@ -377,7 +377,6 @@ static void R_InitColormaps32(UINT32 lastcolor)
 	extracolormap_t *exc = Z_Calloc(sizeof(*exc), PU_STATIC, NULL);
 	exc->fadestart = 0;
 	exc->fadeend = 31;
-	//exc->fog = 0;
 	exc->rgba = 0;
 	exc->fadergba = lastcolor;
 
@@ -406,7 +405,6 @@ static void R_InitColormaps(void)
 	colormaps = Z_MallocAlign(len, PU_STATIC, NULL, 8);
 	W_ReadLump(lump, colormaps);
 
-
 #ifdef TRUECOLOR
 	// Make 32bpp colormap
 	R_InitColormaps32(0xFF000000);
@@ -415,7 +413,6 @@ static void R_InitColormaps(void)
 	defaultextracolormap = Z_Calloc(sizeof(extracolormap_t), PU_STATIC, NULL);
 	defaultextracolormap->fadestart = 0;
 	defaultextracolormap->fadeend = 31;
-	//defaultextracolormap->fog = 0;
 	defaultextracolormap->rgba = 0;
 	defaultextracolormap->fadergba = 0x19000000;
 #endif
@@ -438,7 +435,7 @@ void R_ReInitColormaps(UINT16 num)
 	if (num > 0 && num <= 10000)
 		snprintf(colormap, 8, "CLM%04u", num-1);
 
-	// Load in the light tables, now 64k aligned for smokie...
+	// Load in the light tables
 	lump = W_GetNumForName(colormap);
 	if (lump == LUMPERROR)
 		lump = basecolormaplump;

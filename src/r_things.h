@@ -177,8 +177,9 @@ typedef struct vissprite_s
 	lighttable_t *colormap; // for color translation and shadow draw
 	                        // maxbright frames as well
 
-	INT32 transnum; // which translucency level to use
+	UINT8 alpha;     // alpha level
 	UINT8 *transmap; // which translucency table to use
+	INT32 blendmode; // which blending mode to use
 
 	INT32 mobjflags;
 

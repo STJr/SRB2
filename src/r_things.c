@@ -845,8 +845,6 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // ditto
 	}
 
-	colfunc = colfuncs[BASEDRAWFUNC]; // hack: this isn't resetting properly somewhere.
-	dc_alpha = 0xFF;
 	dc_colormap = vis->colormap;
 	dc_translation = R_GetSpriteTranslation(vis);
 
@@ -858,10 +856,15 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
+	else
+		colfunc = colfuncs[BASEDRAWFUNC];
 
 #ifdef TRUECOLOR
-	if (truecolor && vis->transnum)
-		dc_alpha = V_AlphaTrans(vis->transnum);
+	if (truecolor)
+	{
+		dc_alpha = vis->alpha;
+		TC_SetColumnBlendingFunction(vis->blendmode);
+	}
 	else
 #endif
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
@@ -1063,7 +1066,16 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 	if (vis->transmap)
 	{
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
-		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
+
+#ifdef TRUECOLOR
+		if (truecolor)
+		{
+			TC_SetColumnBlendingFunction(vis->blendmode);
+			dc_alpha = vis->alpha;
+		}
+		else
+#endif
+			dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
 
 #ifdef TRUECOLOR
@@ -1471,8 +1483,10 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 			shadow->extra_colormap = thing->subsector->sector->extra_colormap;
 	}
 
-	shadow->transnum = (trans + 1);
-	shadow->transmap = R_GetTranslucencyTable(shadow->transnum);
+	trans++;
+	shadow->alpha = R_TransnumToAlpha(trans);
+	shadow->transmap = R_GetTranslucencyTable(trans);
+	shadow->blendmode = AST_TRANSLUCENT;
 
 	// full dark!
 #ifdef TRUECOLOR
@@ -2136,14 +2150,16 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->scale += FixedMul(scalestep, spriteyscale) * (vis->x1 - x1);
 	}
 
-	if ((oldthing->blendmode != AST_COPY) && cv_translucency.value)
+	vis->blendmode = oldthing->blendmode;
+
+	if (vis->blendmode != AST_COPY && cv_translucency.value)
 	{
-		vis->transnum = trans;
-		vis->transmap = R_GetBlendTable(oldthing->blendmode, vis->transnum);
+		vis->alpha = R_GetBlendModeAlpha(vis->blendmode, trans);
+		vis->transmap = R_GetBlendTable(vis->blendmode, trans);
 	}
 	else
 	{
-		vis->transnum = 0;
+		vis->alpha = 0xFF;
 		vis->transmap = NULL;
 	}
 
@@ -2341,12 +2357,15 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	// specific translucency
 	if (thing->frame & FF_TRANSMASK)
 	{
-		vis->transnum = (thing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
-		vis->transmap = R_GetTranslucencyTable(vis->transnum);
+		INT32 transnum = (thing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
+		vis->alpha = R_TransnumToAlpha(transnum);
+		vis->transmap = R_GetTranslucencyTable(transnum);
+		vis->blendmode = AST_TRANSLUCENT;
 	}
 	else
 	{
-		vis->transnum = 0;
+		vis->blendmode = AST_COPY;
+		vis->alpha = 0xFF;
 		vis->transmap = NULL;
 	}
 
@@ -2941,11 +2960,8 @@ static void R_SetSpriteStyle(vissprite_t *spr)
 {
 #ifdef TRUECOLOR
 	dc_picfmt = R_SpriteIsPaletted(spr) ? PICFMT_PATCH : PICFMT_PATCH32;
-	dc_colmapstyle = (tc_colormaps) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
+	dc_colmapstyle = tc_colormaps ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 #endif
-
-	mfloorclip = spr->clipbot;
-	mceilingclip = spr->cliptop;
 }
 
 //
@@ -2958,6 +2974,9 @@ static void R_DrawSprite(vissprite_t *spr)
 {
 	R_SetSpriteStyle(spr);
 
+	mfloorclip = spr->clipbot;
+	mceilingclip = spr->cliptop;
+
 	if (spr->cut & SC_SPLAT)
 		R_DrawFloorSplat(spr);
 	else
@@ -2967,6 +2986,9 @@ static void R_DrawSprite(vissprite_t *spr)
 // Special drawer for precipitation sprites Tails 08-18-2002
 static void R_DrawPrecipitationSprite(vissprite_t *spr)
 {
+	mfloorclip = spr->clipbot;
+	mceilingclip = spr->cliptop;
+
 	R_SetSpriteStyle(spr);
 	R_DrawPrecipitationVisSprite(spr);
 }

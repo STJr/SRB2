@@ -226,7 +226,7 @@ typedef struct r_lightlist_s
 	ffloortype_e flags;
 	INT32 lightnum;
 #ifdef TRUECOLOR
-	UINT8 blendlight; // Lactozilla: truecolor
+	UINT8 blendlight;
 #endif
 } r_lightlist_t;
 

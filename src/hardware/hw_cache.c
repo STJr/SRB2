@@ -44,6 +44,7 @@ static INT32 format2bpp(GLTextureFormat_t format)
 
 static colorlookup_t texel_colorlookup;
 
+#ifdef COLORMAP_RGBA_PIXELS
 // Lactozilla: Compare the pixel's RGB color with the palette's.
 // If they match, remap it.
 static void ColormapRGBAPixel(RGBA_t *texelu32, UINT8 *texel, const UINT8 *colormap)
@@ -77,6 +78,7 @@ static void ColormapRGBAPixel(RGBA_t *texelu32, UINT8 *texel, const UINT8 *color
 		basepal += 3;
 	}
 }
+#endif
 
 // This code was originally placed directly in HWR_DrawPatchInCache.
 // It is now split from it for my sanity! (and the sanity of others)
@@ -185,6 +187,7 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 			}
 
 			//Hurdler: 25/04/2000: now support colormap in hardware mode
+#ifdef COLORMAP_RGBA_PIXELS
 			if (mipmap->colormap)
 			{
 				if (sourcebpp == PICDEPTH_32BPP)
@@ -192,6 +195,10 @@ static void HWR_DrawColumnInCache(const column_t *patchcol, UINT8 *block, GLMipm
 				else
 					texel = mipmap->colormap->data[texel];
 			}
+#else
+			if (mipmap->colormap && sourcebpp == PICDEPTH_8BPP)
+				texel = mipmap->colormap->data[texel];
+#endif
 
 			// Convert to the target bit depth
 			if ((sourcebpp <= 16) && (bpp >= 3))
@@ -353,6 +360,7 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 			}
 
 			//Hurdler: 25/04/2000: now support colormap in hardware mode
+#ifdef COLORMAP_RGBA_PIXELS
 			if (mipmap->colormap)
 			{
 				if (sourcebpp == PICDEPTH_32BPP)
@@ -360,6 +368,10 @@ static void HWR_DrawFlippedColumnInCache(const column_t *patchcol, UINT8 *block,
 				else
 					texel = mipmap->colormap->data[texel];
 			}
+#else
+			if (mipmap->colormap && sourcebpp == PICDEPTH_8BPP)
+				texel = mipmap->colormap->data[texel];
+#endif
 
 			// Convert to the target bit depth
 			if ((sourcebpp <= 16) && (bpp >= 3))

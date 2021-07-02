@@ -116,10 +116,6 @@ extern consvar_t cv_fov;
 extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 
-#ifdef TRUECOLOR
-extern consvar_t cv_truecolor_colormaps;
-#endif
-
 // Called by startup code.
 void R_Init(void);
 

@@ -102,7 +102,6 @@ boolean truecolor = false;
 
 // synchronize page flipping with screen refresh
 consvar_t cv_vidwait = CVAR_INIT ("vid_wait", "On", CV_SAVE, CV_OnOff, NULL);
-static consvar_t cv_stretch = CVAR_INIT ("stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL);
 static consvar_t cv_alwaysgrabmouse = CVAR_INIT ("alwaysgrabmouse", "Off", CV_SAVE, CV_OnOff, NULL);
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
@@ -496,16 +495,9 @@ static void VID_Command_Info_f (void)
 
 static void VID_Command_ModeList_f(void)
 {
-	// List windowed modes
 	INT32 i = 0;
-	CONS_Printf("NOTE: Under SDL2, all modes are supported on all platforms.\n");
-	CONS_Printf("Under opengl, fullscreen only supports native desktop resolution.\n");
-	CONS_Printf("Under software, the mode is stretched up to desktop resolution.\n");
 	for (i = 0; i < MAXWINMODES; i++)
-	{
 		CONS_Printf("%2d: %dx%d\n", i, windowedModes[i][0], windowedModes[i][1]);
-	}
-
 }
 
 static void VID_Command_Mode_f (void)
@@ -1527,7 +1519,7 @@ boolean VID_CheckRenderer(void)
 
 #ifdef TRUECOLOR
 		truecolor = (setrenderneeded == render_software_truecolor);
-		vid.bpp = (truecolor) ? 4 : 1;
+		vid.bpp = truecolor ? 4 : 1;
 #endif
 
 #ifdef HWRENDER
@@ -1610,7 +1602,6 @@ INT32 VID_SetMode(INT32 modeNum)
 	SDLdoUngrabMouse();
 
 	vid.recalc = 1;
-	vid.bpp = 1;
 
 	if (modeNum < 0)
 		modeNum = 0;
@@ -1621,7 +1612,6 @@ INT32 VID_SetMode(INT32 modeNum)
 	vid.height = windowedModes[modeNum][1];
 	vid.modenum = modeNum;
 
-	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 	VID_CheckRenderer();
 	return SDL_TRUE;
 }
@@ -1660,7 +1650,6 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 	// Create a window
 	window = SDL_CreateWindow("SRB2 "VERSIONSTRING, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
 			realwidth, realheight, flags);
-
 
 	if (window == NULL)
 	{
@@ -1741,48 +1730,8 @@ static void Impl_VideoSetupBuffer(void)
 	}
 }
 
-void I_StartupGraphics(void)
+static void Impl_ChooseRenderer(void)
 {
-	if (dedicated)
-	{
-		rendermode = render_none;
-		return;
-	}
-	if (graphics_started)
-		return;
-
-	COM_AddCommand ("vid_nummodes", VID_Command_NumModes_f);
-	COM_AddCommand ("vid_info", VID_Command_Info_f);
-	COM_AddCommand ("vid_modelist", VID_Command_ModeList_f);
-	COM_AddCommand ("vid_mode", VID_Command_Mode_f);
-	CV_RegisterVar (&cv_vidwait);
-	CV_RegisterVar (&cv_stretch);
-	CV_RegisterVar (&cv_alwaysgrabmouse);
-	disable_mouse = M_CheckParm("-nomouse");
-	disable_fullscreen = M_CheckParm("-win") ? 1 : 0;
-
-	keyboard_started = true;
-
-#if !defined(HAVE_TTF)
-	// Previously audio was init here for questionable reasons?
-	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
-	{
-		CONS_Printf(M_GetText("Couldn't initialize SDL's Video System: %s\n"), SDL_GetError());
-		return;
-	}
-#endif
-	{
-		const char *vd = SDL_GetCurrentVideoDriver();
-		//CONS_Printf(M_GetText("Starting up with video driver: %s\n"), vd);
-		if (vd && (
-			strncasecmp(vd, "gcvideo", 8) == 0 ||
-			strncasecmp(vd, "fbcon", 6) == 0 ||
-			strncasecmp(vd, "wii", 4) == 0 ||
-			strncasecmp(vd, "psl1ght", 8) == 0
-		))
-			framebuffer = SDL_TRUE;
-	}
-
 	// Renderer choices
 	// Takes priority over the config.
 	if (M_CheckParm("-renderer"))
@@ -1821,11 +1770,57 @@ void I_StartupGraphics(void)
 
 	if (chosenrendermode != render_none)
 		rendermode = chosenrendermode;
+}
 
-	usesdl2soft = M_CheckParm("-softblit");
-	borderlesswindow = M_CheckParm("-borderless");
+void I_StartupGraphics(void)
+{
+	if (dedicated)
+	{
+		rendermode = render_none;
+		return;
+	}
+	if (graphics_started)
+		return;
 
-	//SDL_EnableKeyRepeat(SDL_DEFAULT_REPEAT_DELAY>>1,SDL_DEFAULT_REPEAT_INTERVAL<<2);
+	COM_AddCommand ("vid_nummodes", VID_Command_NumModes_f);
+	COM_AddCommand ("vid_info", VID_Command_Info_f);
+	COM_AddCommand ("vid_modelist", VID_Command_ModeList_f);
+	COM_AddCommand ("vid_mode", VID_Command_Mode_f);
+	CV_RegisterVar (&cv_vidwait);
+	CV_RegisterVar (&cv_alwaysgrabmouse);
+
+	disable_mouse = M_CheckParm("-nomouse") ? SDL_TRUE : SDL_FALSE;
+	disable_fullscreen = M_CheckParm("-win") ? SDL_TRUE : SDL_FALSE;
+	usesdl2soft = M_CheckParm("-softblit") ? SDL_TRUE : SDL_FALSE;
+	borderlesswindow = M_CheckParm("-borderless") ? SDL_TRUE : SDL_FALSE;
+
+	keyboard_started = true;
+
+#if !defined(HAVE_TTF)
+	// Previously audio was init here for questionable reasons?
+	if (SDL_InitSubSystem(SDL_INIT_VIDEO) < 0)
+	{
+		CONS_Printf(M_GetText("Couldn't initialize SDL's Video System: %s\n"), SDL_GetError());
+		return;
+	}
+#endif
+	{
+		const char *vd = SDL_GetCurrentVideoDriver();
+		//CONS_Printf(M_GetText("Starting up with video driver: %s\n"), vd);
+		if (vd && (
+			strncasecmp(vd, "gcvideo", 8) == 0 ||
+			strncasecmp(vd, "fbcon", 6) == 0 ||
+			strncasecmp(vd, "wii", 4) == 0 ||
+			strncasecmp(vd, "psl1ght", 8) == 0
+		))
+			framebuffer = SDL_TRUE;
+	}
+
+#ifdef HAVE_TTF
+	I_ShutdownTTF();
+#endif
+
+	Impl_ChooseRenderer();
 	VID_Command_ModeList_f();
 
 #ifdef HWRENDER
@@ -1838,44 +1833,22 @@ void I_StartupGraphics(void)
 	icoSurface = IMG_ReadXPMFromArray(SDL_icon_xpm);
 #endif
 
-	// Fury: we do window initialization after GL setup to allow
-	// SDL_GL_LoadLibrary to work well on Windows
+	// This is the game engine's Bpp
+#ifdef TRUECOLOR
+	truecolor = (rendermode == render_software_truecolor);
+	vid.bpp = truecolor ? 4 : 1;
+#else
+	vid.bpp = 1;
+#endif
 
 	// Create window
-	//Impl_CreateWindow(USE_FULLSCREEN);
-	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
-	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
-
-	vid.width = BASEVIDWIDTH; // Default size for startup
-	vid.height = BASEVIDHEIGHT; // BitsPerPixel is the SDL interface's
-	vid.recalc = true; // Set up the console stufff
-	vid.direct = NULL; // Maybe direct access?
-	vid.WndParent = NULL; //For the window?
-	vid.bpp = 1; // This is the game engine's Bpp
-
-#ifdef TRUECOLOR
-	if (truecolor)
-		vid.bpp = 4;
-#endif
-
-#ifdef HAVE_TTF
-	I_ShutdownTTF();
-#endif
-
+	// Fury: we do window initialization after GL setup to allow
+	// SDL_GL_LoadLibrary to work well on Windows
 	VID_SetMode(VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT));
 
 	if (M_CheckParm("-nomousegrab"))
 		mousegrabok = SDL_FALSE;
-#if 0 // defined (_DEBUG)
-	else
-	{
-		char videodriver[4] = {'S','D','L',0};
-		if (!M_CheckParm("-mousegrab") &&
-		    *strncpy(videodriver, SDL_GetCurrentVideoDriver(), 4) != '\0' &&
-		    strncasecmp("x11",videodriver,4) == 0)
-			mousegrabok = SDL_FALSE; //X11's XGrabPointer not good
-	}
-#endif
+
 	realwidth = (Uint16)vid.width;
 	realheight = (Uint16)vid.height;
 

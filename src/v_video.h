@@ -69,7 +69,6 @@ extern lumpnum_t basePaletteLump;
 
 void ColorCube_Apply(UINT8 *red, UINT8 *green, UINT8 *blue);
 UINT32 ColorCube_ApplyRGBA(UINT32 color);
-UINT8 V_AlphaTrans(INT32 num);
 
 enum v_patchdrawfunc
 {

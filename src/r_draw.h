@@ -24,10 +24,16 @@ extern UINT8 *ylookup1[MAXVIDHEIGHT*4];
 extern UINT8 *ylookup2[MAXVIDHEIGHT*4];
 extern INT32 columnofs[MAXVIDWIDTH*4];
 extern UINT8 *topleft;
+
+// ----------------------
+// COMMON STUFF FOR 32bpp
+// ----------------------
+
+extern boolean tc_colormaps;
+
 extern UINT32 *topleft_u32;
 
-// Color blending
-extern UINT8 dp_lighting; // dp_ = draw pixel
+extern UINT8 dp_lighting;
 extern extracolormap_t *dp_extracolormap;
 extern extracolormap_t *defaultextracolormap;
 
@@ -156,6 +162,9 @@ UINT8 *R_GetTranslucencyTable(INT32 alphalevel);
 UINT8 *R_GetBlendTable(int style, INT32 alphalevel);
 
 boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel);
+
+UINT8 R_TransnumToAlpha(INT32 num);
+UINT8 R_GetBlendModeAlpha(int style, INT32 num);
 
 // Color ramp modification should force a recache
 extern UINT8 skincolor_modified[];
@@ -308,12 +317,16 @@ void R_DrawTranslucentWaterSpan_NPO2_32(void);
 void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void);
 
 //
-// truecolor states
+// Color math
 //
 
-extern boolean tc_colormaps;
+extern UINT32 (*TC_BlendModeMix)(UINT32, UINT32, UINT8);
+void TC_SetColumnBlendingFunction(INT32 blendmode);
+void TC_SetSpanBlendingFunction(INT32 blendmode);
 
 FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt);
+void TC_ClearMixCache(void);
+
 #define TC_CalcScaleLight(light_p) (((scalelight_u32[0][0] - light_p) / 256) * 8)
 #define TC_CalcScaleLightPaletted(light_p) (((scalelight[0][0] - light_p) / 256) * 8)
 
@@ -323,15 +336,11 @@ enum
 	TC_COLORMAPSTYLE_32BPP
 };
 
-//
-// color blending math
-//
-
 #define GetTrueColor(c) ((st_palette > 0) ? V_GetPalNumColor(c,st_palette) : V_GetColor(c)).rgba
 
 #define MIX_ALPHA(a) (0xFF-(a))
 
-#define TC_BlendTrueColor(bg, fg, alpha) \
+#define TC_TranslucentMix(bg, fg, alpha) \
 	((alpha) == 0) ? (bg) : ( ((alpha)==0xFF) ? (fg) \
 	:( ( (R_GetRgbaR(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaR(fg) * (alpha)) ) >> 8) \
 	|( ( (R_GetRgbaG(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaG(fg) * (alpha)) ) >> 8) << 8 \

@@ -166,10 +166,14 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	{
 #ifdef TRUECOLOR
 		if (truecolor)
-			dc_alpha = FixedInt(ldef->alpha);
+		{
+			dc_alpha = FixedInt(ldef->alpha*255);
+			TC_SetColumnBlendingFunction(AST_TRANSLUCENT);
+		}
 		else
 #endif
 			dc_transmap = R_GetTranslucencyTable(R_GetLinedefTransTable(ldef->alpha));
+
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
 	else if (ldef->special == 909)
@@ -189,7 +193,10 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 #ifdef TRUECOLOR
 		if (truecolor)
-			dc_alpha = V_AlphaTrans(alphaval-1);
+		{
+			dc_alpha = R_TransnumToAlpha(alphaval);
+			TC_SetColumnBlendingFunction(AST_TRANSLUCENT);
+		}
 		else
 #endif
 			dc_transmap = R_GetTranslucencyTable(alphaval);
@@ -199,7 +206,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 #ifdef TRUECOLOR
 	dc_picfmt = textures[texnum]->format;
-	dc_colmapstyle = (tc_colormaps) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
+	dc_colmapstyle = tc_colormaps ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 #endif
 
 	range = max(ds->x2-ds->x1, 1);
@@ -702,7 +709,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			else if (pfloor->alpha < 1)
 				return; // Don't even draw it
 			else
+			{
 				dc_alpha = pfloor->alpha;
+				TC_SetColumnBlendingFunction(AST_TRANSLUCENT);
+			}
 		}
 		else
 #endif
@@ -740,7 +750,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 #ifdef TRUECOLOR
 	dc_picfmt = textures[texnum]->format;
-	dc_colmapstyle = (tc_colormaps) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
+	dc_colmapstyle = tc_colormaps ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 #endif
 
 	range = max(ds->x2-ds->x1, 1);
@@ -3038,7 +3048,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	rw_bsilheight = &(ds_p->bsilheight);
 
 #ifdef TRUECOLOR
-	dc_colmapstyle = (tc_colormaps) ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
+	dc_colmapstyle = tc_colormaps ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 #endif
 
 	R_RenderSegLoop();

@@ -853,7 +853,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 					x %= ds_flatwidth;
 					y %= ds_flatheight;
 
-					*dest = TC_TranslucentColorMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
+					*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
 				}
 				dest++;
 				u += stepu;
@@ -884,7 +884,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 					x %= ds_flatwidth;
 					y %= ds_flatheight;
 
-					*dest = TC_TranslucentColorMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
+					*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
 				}
 			}
 			else
@@ -920,7 +920,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 						x %= ds_flatwidth;
 						y %= ds_flatheight;
 
-						*dest = TC_TranslucentColorMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
+						*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
 					}
 					dest++;
 					u += stepu;
@@ -1243,7 +1243,7 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void)
 					x %= ds_flatwidth;
 					y %= ds_flatheight;
 
-					*dest = TC_TranslucentColorMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
+					*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
 				}
 				dest++;
 				u += stepu;
@@ -1274,7 +1274,7 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void)
 					x %= ds_flatwidth;
 					y %= ds_flatheight;
 
-					*dest = TC_TranslucentColorMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
+					*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
 				}
 			}
 			else
@@ -1310,7 +1310,7 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void)
 						x %= ds_flatwidth;
 						y %= ds_flatheight;
 
-						*dest = TC_TranslucentColorMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
+						*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
 					}
 					dest++;
 					u += stepu;
@@ -2013,7 +2013,7 @@ void R_DrawTranslucentSplat_NPO2_32 (void)
 
 			val = sourceu32[((y * ds_flatwidth) + x)];
 			if (R_GetRgbaA(val))
-				*dest = TC_TranslucentColorMix(val, *dest, ds_alpha);
+				*dest = TC_BlendModeMix(val, *dest, ds_alpha);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;
@@ -2314,7 +2314,7 @@ void R_DrawTranslucentFloorSprite_NPO2_32 (void)
 
 			val = sourceu32[((y * ds_flatwidth) + x)];
 			if (R_GetRgbaA(val))
-				*dest = TC_TranslucentColorMix(val, *dest, ds_alpha);
+				*dest = TC_BlendModeMix(val, *dest, ds_alpha);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;
@@ -3013,7 +3013,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 				val = sourceu32[((y * ds_flatwidth) + x)];
 				if (R_GetRgbaA(val))
-					*dest = TC_TranslucentColorMix(val, *dest, ds_alpha);
+					*dest = TC_BlendModeMix(val, *dest, ds_alpha);
 				dest++;
 				u += stepu;
 				v += stepv;
@@ -3044,7 +3044,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 					val = sourceu32[((y * ds_flatwidth) + x)];
 					if (R_GetRgbaA(val))
-						*dest = TC_TranslucentColorMix(val, *dest, ds_alpha);
+						*dest = TC_BlendModeMix(val, *dest, ds_alpha);
 				}
 			}
 			else
@@ -3080,7 +3080,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 					val = sourceu32[((y * ds_flatwidth) + x)];
 					if (R_GetRgbaA(val))
-						*dest = TC_TranslucentColorMix(val, *dest, ds_alpha);
+						*dest = TC_BlendModeMix(val, *dest, ds_alpha);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -3226,7 +3226,7 @@ void R_DrawTranslucentSpan_NPO2_32 (void)
 			y = (yposition >> FRACBITS);
 
 			val = sourceu32[((y * ds_flatwidth) + x)];
-			*dest = TC_TranslucentColorMix(val, *dest, ds_alpha);
+			*dest = TC_BlendModeMix(val, *dest, ds_alpha);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;
@@ -3365,7 +3365,7 @@ void R_DrawTranslucentWaterSpan_NPO2_32(void)
 			x = (xposition >> FRACBITS);
 			y = (yposition >> FRACBITS);
 
-			*dest = TC_TranslucentColorMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
+			*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;

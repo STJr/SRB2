@@ -21,7 +21,6 @@
 
 #ifdef TRUECOLOR
 #include "i_video.h" // truecolor
-#include "v_video.h" // V_AlphaTrans
 #endif
 
 struct rastery_s *prastertab; // for ASM code
@@ -507,10 +506,15 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 #endif
 
 #ifdef TRUECOLOR
-	if (truecolor && vis->transnum)
+	if (truecolor)
 	{
-		dc_alpha = V_AlphaTrans(vis->transnum);
-		translucent = true;
+		ds_alpha = vis->alpha;
+
+		if (vis->transmap)
+		{
+			TC_SetSpanBlendingFunction(vis->blendmode);
+			translucent = true;
+		}
 	}
 	else
 #endif

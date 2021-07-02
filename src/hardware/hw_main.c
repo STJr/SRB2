@@ -734,27 +734,6 @@ FBITFIELD HWR_GetBlendModeFlag(INT32 ast)
 	return 0;
 }
 
-UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
-{
-	transtablenum = max(min(transtablenum, tr_trans90), 0);
-
-	switch (transtablenum)
-	{
-		case 0          : return 0xff;
-		case tr_trans10 : return 0xe6;
-		case tr_trans20 : return 0xcc;
-		case tr_trans30 : return 0xb3;
-		case tr_trans40 : return 0x99;
-		case tr_trans50 : return 0x80;
-		case tr_trans60 : return 0x66;
-		case tr_trans70 : return 0x4c;
-		case tr_trans80 : return 0x33;
-		case tr_trans90 : return 0x19;
-	}
-
-	return 0xff;
-}
-
 FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf)
 {
 	if (!transtablenum || style == AST_COPY || style == AST_OVERLAY)
@@ -763,7 +742,7 @@ FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf
 		return PF_Masked;
 	}
 
-	pSurf->PolyColor.s.alpha = HWR_GetTranstableAlpha(transtablenum);
+	pSurf->PolyColor.s.alpha = R_TransnumToAlpha(transtablenum);
 	return HWR_GetBlendModeFlag(style);
 }
 
@@ -775,7 +754,7 @@ FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
 		return PF_Masked;
 	}
 
-	pSurf->PolyColor.s.alpha = HWR_GetTranstableAlpha(transtablenum);
+	pSurf->PolyColor.s.alpha = R_TransnumToAlpha(transtablenum);
 	return PF_Translucent;
 }
 

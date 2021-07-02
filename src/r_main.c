@@ -168,10 +168,6 @@ consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, dr
 //consvar_t cv_precipdensity = CVAR_INIT ("precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL);
 consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
 
-#ifdef TRUECOLOR
-consvar_t cv_truecolor_colormaps = CVAR_INIT ("truecolor_colormaps", "On", CV_SAVE, CV_OnOff, NULL);
-#endif
-
 // Okay, whoever said homremoval causes a performance hit should be shot.
 consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
 
@@ -1478,9 +1474,8 @@ void R_RenderPlayerView(player_t *player)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 32+(timeinmap&15));
 	}
 
-	// Lactozilla: truecolor
 #ifdef TRUECOLOR
-	tc_colormaps = (truecolor && (!!cv_truecolor_colormaps.value));
+	tc_colormaps = false;
 #endif
 
 	R_SetupFrame(player);
@@ -1627,10 +1622,6 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_shadow);
 	CV_RegisterVar(&cv_skybox);
 	CV_RegisterVar(&cv_ffloorclip);
-
-#ifdef TRUECOLOR
-	CV_RegisterVar(&cv_truecolor_colormaps);
-#endif
 
 	CV_RegisterVar(&cv_cam_dist);
 	CV_RegisterVar(&cv_cam_still);

@@ -677,18 +677,23 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	// (that is, unless we'll need to switch drawers in future for some reason)
 	colfunc = colfuncs[BASEDRAWFUNC];
 
-	// set drawer vars
-	dc_colmapstyle = TC_COLORMAPSTYLE_8BPP;
-	dc_picfmt = textures[skytexture]->format;
-
 	// use correct aspect ratio scale
 	dc_iscale = skyscale;
+
+#ifdef TRUECOLOR
+	dc_picfmt = textures[skytexture]->format;
+	dc_colmapstyle = tc_colormaps ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 
 	// Sky is always drawn full bright,
 	//  i.e. colormaps[0] is used.
 	// Because of this hack, sky is not affected
 	//  by sector colormaps (INVUL inverse mapping is not implemented in SRB2 so is irrelevant).
-	dc_colormap = colormaps;
+	if (tc_colormaps)
+		dc_colormap = (UINT8 *)colormaps_u32;
+	else
+#endif
+		dc_colormap = colormaps;
+
 	dc_texturemid = skytexturemid;
 	dc_texheight = textureheight[skytexture]
 		>>FRACBITS;
@@ -857,7 +862,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 #ifdef TRUECOLOR
 			if (truecolor)
-				ds_alpha = V_AlphaTrans(transval-1);
+			{
+				TC_SetSpanBlendingFunction(AST_TRANSLUCENT);
+				ds_alpha = R_TransnumToAlpha(transval);
+			}
 			else
 #endif
 				ds_transmap = R_GetTranslucencyTable(transval);
@@ -867,7 +875,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else if (pl->polyobj->flags & POF_SPLAT) // Opaque, but allow transparent flat pixels
 		{
 			spanfunctype = SPANDRAWFUNC_SPLAT;
+
 #ifdef TRUECOLOR
+			TC_SetSpanBlendingFunction(AST_COPY);
 			ds_alpha = 0xFF;
 #endif
 		}
@@ -908,12 +918,16 @@ void R_DrawSinglePlane(visplane_t *pl)
 					if (pl->ffloor->alpha >= 255) // Opaque, but allow transparent flat pixels
 					{
 						spanfunctype = SPANDRAWFUNC_SPLAT;
+						TC_SetSpanBlendingFunction(AST_COPY);
 						ds_alpha = 0xFF;
 					}
 					else if (pl->ffloor->alpha < 1)
 						return; // Don't even draw it
 					else
+					{
+						TC_SetSpanBlendingFunction(AST_TRANSLUCENT);
 						ds_alpha = pl->ffloor->alpha;
+					}
 				}
 				else
 #endif
@@ -1134,7 +1148,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else
 #endif
 			planezlight = scalelight[light];
-	} // if (pl->slope)
+	}
 	else
 	{
 #ifdef TRUECOLOR
