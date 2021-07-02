@@ -3611,6 +3611,10 @@ static void P_ConvertBinaryMap(void)
 			}
 			lines[i].special = 429;
 			break;
+		case 435: //Change plane scroller direction
+			lines[i].args[0] = tag;
+			lines[i].args[1] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{

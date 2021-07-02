@@ -2945,17 +2945,22 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				scroll_t *scroller;
 				thinker_t *th;
 
+				fixed_t length = R_PointToDist2(line->v2->x, line->v2->y, line->v1->x, line->v1->y);
+				fixed_t speed = line->args[1] << FRACBITS;
+				fixed_t dx = FixedMul(FixedMul(FixedDiv(line->dx, length), speed) >> SCROLL_SHIFT, CARRYFACTOR);
+				fixed_t dy = FixedMul(FixedMul(FixedDiv(line->dy, length), speed) >> SCROLL_SHIFT, CARRYFACTOR);
+
 				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)T_Scroll)
 						continue;
 
 					scroller = (scroll_t *)th;
-					if (!Tag_Find(&sectors[scroller->affectee].tags, tag))
+					if (!Tag_Find(&sectors[scroller->affectee].tags, line->args[0]))
 						continue;
 
-					scroller->dx = FixedMul(line->dx>>SCROLL_SHIFT, CARRYFACTOR);
-					scroller->dy = FixedMul(line->dy>>SCROLL_SHIFT, CARRYFACTOR);
+					scroller->dx = dx;
+					scroller->dy = dy;
 				}
 			}
 			break;
