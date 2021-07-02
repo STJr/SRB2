@@ -295,6 +295,8 @@ ifndef destructive
 $(shell $(CC) -v)
 define flags =
 
+SHELL ..... $(SHELL)
+
 CC ........ $(cc)
 
 CFLAGS .... $(opts)
