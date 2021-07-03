@@ -1350,14 +1350,16 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		}
 	}
 
-	if (centerviewdown)
+	if (centerviewdown && leveltime > 5) // hacky check, but prevents some targetting oddities
 	{
-		if (controlstyle == CS_SIMPLE && !ticcmd_centerviewdown[forplayer] && !G_RingSlingerGametype())
+		if (controlstyle == CS_SIMPLE && !ticcmd_ztargetfocus[forplayer])
 		{
-			CV_SetValue(&cv_directionchar[forplayer], 2);
-			cmd->angleturn = (INT16)((player->mo->angle - *myangle) >> 16);
-			*myaiming = 0;
-
+			if (!ticcmd_centerviewdown[forplayer])
+			{
+				CV_SetValue(&cv_directionchar[forplayer], 2);
+				cmd->angleturn = (INT16)((player->mo->angle - *myangle) >> 16);
+				*myaiming = 0;
+			}
 			if (cv_cam_lockonboss[forplayer].value)
 				P_SetTarget(&ticcmd_ztargetfocus[forplayer], P_LookForFocusTarget(player, NULL, 0, cv_cam_lockonboss[forplayer].value));
 		}
@@ -1380,7 +1382,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		if (
 			P_MobjWasRemoved(ticcmd_ztargetfocus[forplayer]) ||
 			!ticcmd_ztargetfocus[forplayer]->health ||
-			(ticcmd_ztargetfocus[forplayer]->flags2 & MF2_FRET) ||
 			(ticcmd_ztargetfocus[forplayer]->type == MT_EGGMOBILE3 && !ticcmd_ztargetfocus[forplayer]->movecount) // Sea Egg is moving around underground and shouldn't be tracked
 		)
 			P_SetTarget(&ticcmd_ztargetfocus[forplayer], NULL);

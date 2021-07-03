@@ -9114,7 +9114,33 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 			if (lockonflags & LOCK_INTERESTS)
 				break;
 			/*FALLTHRU*/
-		case MT_PLAYER: // Don't chase other players!
+		case MT_PLAYER:
+			// Cooperative
+			if ((gametyperules & GTR_FRIENDLY && lockonflags & LOCK_INTERESTS))
+				break;
+			// Competitive
+			if (!(gametyperules & (GTR_FRIENDLY|GTR_TEAMS)) && lockonflags & LOCK_ENEMY
+				&& (!(gametyperules & GTR_TAG)
+				|| (mo->player && (mo->player->pflags & PF_TAGIT) != (player->pflags & PF_TAGIT))))
+				break;
+			// Team mode sanity check
+			if (!(gametyperules & GTR_TEAMS))
+				continue;
+			// Teammate
+			if (mo->player && mo->player->ctfteam == player->ctfteam && lockonflags & LOCK_INTERESTS)
+				break;
+			// Enemy team
+			if (mo->player && mo->player->ctfteam != player->ctfteam && lockonflags & LOCK_ENEMY)
+				break;
+			// Flagrunner
+			if (mo->player && mo->player->gotflag && lockonflags & LOCK_BOSS)
+				break;
+			continue;
+		case MT_REDFLAG:
+		case MT_BLUEFLAG:
+			if (!(lockonflags & (LOCK_BOSS|LOCK_INTERESTS))) // They're a collectible, but they're also an objective, so we consider them "boss priority"
+				continue;
+			break;
 		case MT_DETON:
 			continue; // Don't be STUPID, Sonic!
 
@@ -9135,12 +9161,8 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 		default:
 
 			if ((lockonflags & LOCK_BOSS) && ((mo->flags & (MF_BOSS|MF_SHOOTABLE)) == (MF_BOSS|MF_SHOOTABLE))) // allows if it has the flags desired XOR it has the invert aimable flag
-			{
-				if (mo->flags2 & MF2_FRET)
-					continue;
 				break;
-			}
-
+				
 			if ((lockonflags & LOCK_ENEMY) && (!((mo->flags & (MF_ENEMY|MF_SHOOTABLE)) == (MF_ENEMY|MF_SHOOTABLE)) != !(mo->flags2 & MF2_INVERTAIMABLE))) // allows if it has the flags desired XOR it has the invert aimable flag
 				break;
 
@@ -9190,7 +9212,7 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 		if (closestmo && (exclude ? (dangle > closestdangle) : (dist > closestdist)))
 			continue;
 
-		if (!P_CheckSight(player->mo, mo))
+		if (!(mo->flags & MF_BOSS) && !P_CheckSight(player->mo, mo))
 			continue; // out of sight
 
 		closestmo = mo;
