@@ -5696,11 +5696,10 @@ INT32 P_GetPlayerControlDirection(player_t *player)
 //! Formula for quickly getting an appropriate player acceleration value
 static fixed_t P_GetPlayerAcceleration(player_t *player, fixed_t scale)
 {
-	//if (!(mapheaderinfo[gamemap-1]->typeoflevel & TOL_2D))
-	//	return FixedMul(player->accelstart + player->acceleration, scale)*3/2;
-	//else
-	//	return FixedMul(player->accelstart + player->acceleration, scale);
-	return FixedMul(player->acceleration * 15, scale);
+	if (!(mapheaderinfo[gamemap-1]->typeoflevel & TOL_2D))
+		return FixedMul(player->acceleration * 20, scale);
+	else
+		return FixedMul(player->acceleration * 15, scale);
 }
 
 //! Formula for friction compensation during movement
@@ -6174,6 +6173,31 @@ static void P_3dMovement(player_t *player)
 		totalthrust.y += P_ReturnThrustY(player->mo, movepushsideangle, movepushside);
 	}
 
+	//! Steering
+	if (!spin && (totalthrust.x || totalthrust.y))
+	{
+		fixed_t ang1 = AngleFixed(R_PointToAngle2(0, 0, player->rmomx,  player->rmomy));
+		fixed_t ang2 = AngleFixed(R_PointToAngle2(0, 0, totalthrust.x, totalthrust.y));
+		fixed_t angdiff = ang2 - ang1;
+		if (angdiff >= 180 * FRACUNIT)
+			angdiff -= 360 * FRACUNIT;
+		else if (angdiff <= -180 * FRACUNIT)
+			angdiff += 360 * FRACUNIT;
+	
+		//player->score = (angdiff) / FRACUNIT; //!debug
+		if (abs(angdiff) > FRACUNIT && abs(angdiff) < FRACUNIT * 135)
+		{
+			fixed_t newang = ang1;
+			fixed_t turnspd = (FRACUNIT * thrustfactor * (onground + 1))/4;
+			if (angdiff > 0)
+				newang += min(angdiff/10 * min(10,thrustfactor), turnspd);
+			else
+				newang -= min(-angdiff/10 * min(10,thrustfactor), turnspd);
+			player->mo->momx = P_ReturnThrustX(player->mo, FixedAngle(newang), player->speed) + player->cmomx;
+			player->mo->momy = P_ReturnThrustY(player->mo, FixedAngle(newang), player->speed) + player->cmomy;
+		}
+	}
+
 	//! Apply deceleration
 	if ((onground && !spin)
 		|| (!onground && (totalthrust.x || totalthrust.y))
@@ -6194,7 +6218,7 @@ static void P_3dMovement(player_t *player)
 			mult *= (1+thrustfactor); //Better thrustfactor? Better handling!
 			if (!onground)
 				mult /= 4;
-				
+			mult = FixedMul(mult, FixedDiv(player->speed,topspeed));
 			dx += totalthrust.x;
 			dy += totalthrust.y;
 			dx = FixedMul(mult, dx);
