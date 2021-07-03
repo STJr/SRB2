@@ -5886,7 +5886,7 @@ static void P_2dMovement(player_t *player)
 	{
 		// Friction and deceleration
 		fixed_t frictionmove = 0;
-		fixed_t deceleration = (50 * acceleration);
+		fixed_t deceleration = FixedMul(50 * acceleration, player->mo->scale);
 		if ((//Prevent friction from counteracting ground forward momentum
 			onground
 			&& !(player->mo->eflags & MFE_JUSTHITFLOOR) // Frame-perfect bunny-hopping allows players to circumvent friction. Avoid this.
@@ -6177,12 +6177,10 @@ static void P_3dMovement(player_t *player)
 	//! Apply deceleration
 	if ((onground && !spin)
 		|| (!onground && (totalthrust.x || totalthrust.y))
-		//|| (totalthrust.x || totalthrust.y || player->fly1
-		//||  (player->pflags & PF_JUMPED && P_MobjFlip(player->mo) * player->mo->momz > gravity * 6))
 		)
 	{
 		angle_t moveangle = R_PointToAngle2(0, 0, player->rmomx,  player->rmomy);
-		fixed_t deceleration = 50*acceleration;
+		fixed_t deceleration = FixedMul(50*acceleration, player->mo->scale);
 		fixed_t dx; fixed_t dy;
 		deceleration = min(deceleration, player->speed);
 		//Get deceleration vector
@@ -6193,8 +6191,10 @@ static void P_3dMovement(player_t *player)
 		{
 			// Multiplier will be the force of "brakes" if we're vectoring against our move direction.
 			fixed_t mult = R_PointToDist2(0,0, cmd->sidemove*FRACUNIT/50, cmd -> forwardmove*FRACUNIT/50);
-			if (onground)
-				mult *= thrustfactor; //Better thrustfactor? Better handling!
+			mult *= (1+thrustfactor); //Better thrustfactor? Better handling!
+			if (!onground)
+				mult /= 4;
+				
 			dx += totalthrust.x;
 			dy += totalthrust.y;
 			dx = FixedMul(mult, dx);
@@ -6277,7 +6277,8 @@ static void P_3dMovement(player_t *player)
 	newMagnitude = R_PointToDist2(player->mo->momx - player->cmomx, player->mo->momy - player->cmomy, 0, 0);
 	if (onground && !spin)
 		newMagnitude -= subfriction;
-	speedclip = topspeed * 5/2;
+	//speedclip = topspeed * 5/2;
+	speedclip = topspeed * 4;
 	//player->rings = 0; //!debug
 	if (newMagnitude > topspeed)
 	{
@@ -6325,8 +6326,8 @@ static void P_3dMovement(player_t *player)
 		mobj_t* dust;
 		angle_t ang = P_RandomRange(1,10) * ANG1 + player->mo->angle;
 		
-		if (P_MobjFlip(player->mo) == -1)
-			z = player->mo->height - mobjinfo[MT_DUST].height;
+		//if (P_MobjFlip(player->mo) == -1)
+			//z = player->mo->height - mobjinfo[MT_DUST].height;
 		dust = P_SpawnMobjFromMobj(player->mo, 0, 0, z, MT_DUST);
 		dust->momz = P_MobjFlip(player->mo) * P_RandomRange(1,3) * FRACUNIT;
 		P_InstaThrust(dust, ang, P_RandomRange(1,3) * 10 * dust->scale);
