@@ -1253,34 +1253,25 @@ void D_SRB2Main(void)
 	// Do this up here so that WADs loaded through the command line can use ExecCfg
 	COM_Init();
 
-	// add any files specified on the command line with -file wadfile
-	// to the wad list
+	// Add any files specified on the command line with
+	// "-file <file>" or "-folder <folder>" to the add-on list
 	if (!((M_GetUrlProtocolArg() || M_CheckParm("-connect")) && !M_CheckParm("-server")))
 	{
-		if (M_CheckParm("-file"))
+		INT32 addontype = 0;
+		INT32 i;
+
+		for (i = 1; i < myargc; i++)
 		{
-			// the parms after p are wadfile names,
-			// until end of parms or another - preceded parm
-			while (M_IsNextParm())
-			{
-				const char *s = M_GetNextParm();
-
-				if (s) // Check for NULL?
-					D_AddFile(startuppwads, s);
-			}
-		}
-
-		if (M_CheckParm("-folder"))
-		{
-			// the parms after p are folder names,
-			// until end of parms or another - preceded parm
-			while (M_IsNextParm())
-			{
-				const char *s = M_GetNextParm();
-
-				if (s) // Check for NULL?
-					D_AddFolder(startuppwads, s);
-			}
+			if (!strcasecmp(myargv[i], "-file"))
+				addontype = 1;
+			else if (!strcasecmp(myargv[i], "-folder"))
+				addontype = 2;
+			else if (myargv[i][0] == '-' || myargv[i][0] == '+')
+				addontype = 0;
+			else if (addontype == 1)
+				D_AddFile(startuppwads, myargv[i]);
+			else if (addontype == 2)
+				D_AddFolder(startuppwads, myargv[i]);
 		}
 	}
 
