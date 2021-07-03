@@ -488,8 +488,8 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_DoAbilityBounce(player, false);
 			if (special->info->spawnhealth > 1) // Multi-hit? Bounce back!
 			{
-				toucher->momx = -toucher->momx;
-				toucher->momy = -toucher->momy;
+				toucher->momx /= -2;
+				toucher->momy /= -2;
 				if (player->charability == CA_FLY && player->panim == PA_ABILITY)
 					toucher->momz = -toucher->momz/2;
 				else if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
