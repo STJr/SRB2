@@ -1090,10 +1090,9 @@ static void PolyTranslucency(line_t *line)
 // Makes a polyobject translucency fade and applies tangibility
 static boolean PolyFade(line_t *line)
 {
-	INT32 polyObjNum = Tag_FGet(&line->tags);
+	INT32 polyObjNum = line->args[0];
 	polyobj_t *po;
 	polyfadedata_t pfd;
-	INT32 value;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
@@ -1106,7 +1105,7 @@ static boolean PolyFade(line_t *line)
 		return 0;
 
 	// Prevent continuous execs from interfering on an existing fade
-	if (!(line->flags & ML_EFFECT5)
+	if (!(line->args[3] & TMPF_OVERRIDE)
 		&& po->thinker
 		&& po->thinker->function.acp1 == (actionf_p1)T_PolyObjFade)
 	{
@@ -1116,17 +1115,10 @@ static boolean PolyFade(line_t *line)
 
 	pfd.polyObjNum = polyObjNum;
 
-	// If Front X Offset is specified, use that. Else, use floorheight.
-	value = (sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : line->frontsector->floorheight) >> FRACBITS;
-
-	// If DONTPEGBOTTOM, specify raw translucency value. Else, take it out of 1000.
-	if (!(line->flags & ML_DONTPEGBOTTOM))
-		value /= 100;
-
-	if (line->flags & ML_EFFECT3) // relative calc
-		pfd.destvalue = po->translucency + value;
+	if (line->args[3] & TMPF_RELATIVE) // relative calc
+		pfd.destvalue = po->translucency + line->args[1];
 	else
-		pfd.destvalue = value;
+		pfd.destvalue = line->args[1];
 
 	pfd.destvalue = max(min(pfd.destvalue, NUMTRANSMAPS), 0);
 
@@ -1134,15 +1126,11 @@ static boolean PolyFade(line_t *line)
 	if (po->translucency == pfd.destvalue)
 		return 1;
 
-	pfd.docollision = !(line->flags & ML_BOUNCY);         // do not handle collision flags
-	pfd.doghostfade = (line->flags & ML_EFFECT1);         // do ghost fade (no collision flags during fade)
-	pfd.ticbased = (line->flags & ML_EFFECT4);            // Speed = Tic Duration
+	pfd.docollision = !(line->args[3] & TMPF_IGNORECOLLISION); // do not handle collision flags
+	pfd.doghostfade = (line->args[3] & TMPF_GHOSTFADE);        // do ghost fade (no collision flags during fade)
+	pfd.ticbased = (line->args[3] & TMPF_TICBASED);            // Speed = Tic Duration
 
-	// allow Back Y Offset to be consistent with other fade specials
-	pfd.speed = (line->sidenum[1] != 0xFFFF && !sides[line->sidenum[0]].rowoffset) ?
-		abs(sides[line->sidenum[1]].rowoffset>>FRACBITS)
-		: abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
-
+	pfd.speed = line->args[2];
 
 	return EV_DoPolyObjFade(&pfd);
 }

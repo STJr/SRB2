@@ -349,6 +349,15 @@ typedef struct polyflagdata_s
 	fixed_t momx;
 } polyflagdata_t;
 
+typedef enum
+{
+	TMPF_RELATIVE        = 1,
+	TMPF_OVERRIDE        = 1<<1,
+	TMPF_TICBASED        = 1<<2,
+	TMPF_IGNORECOLLISION = 1<<3,
+	TMPF_GHOSTFADE       = 1<<4,
+} textmappolyfade_t;
+
 typedef struct polyfadedata_s
 {
 	INT32 polyObjNum;

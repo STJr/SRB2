@@ -3750,6 +3750,28 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[1] /= 100;
 			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT3);
 			break;
+		case 492: //Polyobject - fade translucency
+			lines[i].args[0] = tag;
+			// If Front X Offset is specified, use that. Else, use floorheight.
+			lines[i].args[1] = (sides[lines[i].sidenum[0]].textureoffset ? sides[lines[i].sidenum[0]].textureoffset : lines[i].frontsector->floorheight) >> FRACBITS;
+			// If DONTPEGBOTTOM, specify raw translucency value. Else, take it out of 1000.
+			if (!(lines[i].flags & ML_DONTPEGBOTTOM))
+				lines[i].args[1] /= 100;
+			// allow Back Y Offset to be consistent with other fade specials
+			lines[i].args[2] = (lines[i].sidenum[1] != 0xffff && !sides[lines[i].sidenum[0]].rowoffset) ?
+				abs(sides[lines[i].sidenum[1]].rowoffset >> FRACBITS)
+				: abs(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS);
+			if (lines[i].flags & ML_EFFECT3)
+				lines[i].args[3] |= TMPF_RELATIVE;
+			if (lines[i].flags & ML_EFFECT5)
+				lines[i].args[3] |= TMPF_OVERRIDE;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[3] |= TMPF_TICBASED;
+			if (lines[i].flags & ML_BOUNCY)
+				lines[i].args[3] |= TMPF_IGNORECOLLISION;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[3] |= TMPF_GHOSTFADE;
+			break;
 		case 500: //Scroll front wall left
 		case 501: //Scroll front wall right
 			lines[i].args[0] = 0;
