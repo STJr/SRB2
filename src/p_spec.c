@@ -1201,12 +1201,14 @@ static boolean PolyFlag(line_t *line)
 static boolean PolyDisplace(line_t *line)
 {
 	polydisplacedata_t pdd;
+	fixed_t length = R_PointToDist2(line->v2->x, line->v2->y, line->v1->x, line->v1->y);
+	fixed_t speed = line->args[1] << FRACBITS;
 
-	pdd.polyObjNum = Tag_FGet(&line->tags);
+	pdd.polyObjNum = line->args[0];
 
 	pdd.controlSector = line->frontsector;
-	pdd.dx = line->dx>>8;
-	pdd.dy = line->dy>>8;
+	pdd.dx = FixedMul(FixedDiv(line->dx, length), speed) >> 8;
+	pdd.dy = FixedMul(FixedDiv(line->dy, length), speed) >> 8;
 
 	return EV_DoPolyObjDisplace(&pdd);
 }
@@ -1218,22 +1220,16 @@ static boolean PolyRotDisplace(line_t *line)
 	polyrotdisplacedata_t pdd;
 	fixed_t anginter, distinter;
 
-	pdd.polyObjNum = Tag_FGet(&line->tags);
+	pdd.polyObjNum = line->args[0];
 	pdd.controlSector = line->frontsector;
 
 	// Rotate 'anginter' interval for each 'distinter' interval from the control sector.
-	// Use default values if not provided as fallback.
-	anginter	= sides[line->sidenum[0]].rowoffset ? sides[line->sidenum[0]].rowoffset : 90*FRACUNIT;
-	distinter	= sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : 128*FRACUNIT;
+	anginter	= line->args[2] << FRACBITS;
+	distinter	= line->args[1] << FRACBITS;
 	pdd.rotscale = FixedDiv(anginter, distinter);
 
 	// Same behavior as other rotators when carrying things.
-	if (line->flags & ML_NOCLIMB)
-		pdd.turnobjs = 0;
-	else if (line->flags & ML_EFFECT4)
-		pdd.turnobjs = PTF_PLAYERS|PTF_OTHERS;
-	else
-		pdd.turnobjs = PTF_OTHERS;
+	pdd.turnobjs = line->args[3];
 
 	return EV_DoPolyObjRotDisplace(&pdd);
 }

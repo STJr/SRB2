@@ -3086,6 +3086,19 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 			lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			break;
+		case 31: //Polyobject - displacement by front sector
+			lines[i].args[0] = tag;
+			lines[i].args[1] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+			break;
+		case 32: //Polyobject - angular displacement by front sector
+			lines[i].args[0] = tag;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset ? sides[lines[i].sidenum[0]].textureoffset >> FRACBITS : 128;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset ? sides[lines[i].sidenum[0]].rowoffset >> FRACBITS : 90;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[3] |= TMPR_DONTROTATEOTHERS;
+			else if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[3] |= TMPR_ROTATEPLAYERS;
+			break;
 		case 50: //Instantly lower floor on level load
 		case 51: //Instantly raise ceiling on level load
 			lines[i].args[0] = tag;
