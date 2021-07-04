@@ -3081,6 +3081,11 @@ static void P_ConvertBinaryMap(void)
 
 			break;
 		}
+		case 30: //Polyobject - waving flag
+			lines[i].args[0] = tag;
+			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			break;
 		case 50: //Instantly lower floor on level load
 		case 51: //Instantly raise ceiling on level load
 			lines[i].args[0] = tag;
