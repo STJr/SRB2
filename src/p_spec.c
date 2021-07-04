@@ -1178,24 +1178,11 @@ static boolean PolyWaypoint(line_t *line)
 {
 	polywaypointdata_t pwd;
 
-	pwd.polyObjNum = Tag_FGet(&line->tags);
-	pwd.speed      = sides[line->sidenum[0]].textureoffset / 8;
-	pwd.sequence   = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Sequence #
-
-	// Behavior after reaching the last waypoint?
-	if (line->flags & ML_EFFECT3)
-		pwd.returnbehavior = PWR_WRAP; // Wrap back to first waypoint
-	else if (line->flags & ML_EFFECT2)
-		pwd.returnbehavior = PWR_COMEBACK; // Go through sequence in reverse
-	else
-		pwd.returnbehavior = PWR_STOP; // Stop
-
-	// Flags
-	pwd.flags = 0;
-	if (line->flags & ML_EFFECT1)
-		pwd.flags |= PWF_REVERSE;
-	if (line->flags & ML_EFFECT4)
-		pwd.flags |= PWF_LOOP;
+	pwd.polyObjNum     = line->args[0];
+	pwd.speed          = line->args[1] << (FRACBITS - 3);
+	pwd.sequence       = line->args[2];
+	pwd.returnbehavior = line->args[3];
+	pwd.flags          = line->args[4];
 
 	return EV_DoPolyObjWaypoint(&pwd);
 }

@@ -3700,6 +3700,21 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[3] |= TMPR_OVERRIDE;
 			lines[i].special = 484;
 			break;
+		case 488: //Polyobject - move by waypoints
+			lines[i].args[0] = tag;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			if (lines[i].flags & ML_EFFECT3)
+				lines[i].args[3] = PWR_WRAP;
+			else if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[3] = PWR_COMEBACK;
+			else
+				lines[i].args[3] = PWR_STOP;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[4] |= PWF_REVERSE;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[4] |= PWF_LOOP;
+			break;
 		case 500: //Scroll front wall left
 		case 501: //Scroll front wall right
 			lines[i].args[0] = 0;
