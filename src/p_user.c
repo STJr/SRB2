@@ -11238,9 +11238,9 @@ static void P_MinecartThink(player_t *player)
 					minecart->eflags &= ~MFE_ONGROUND;
 				minecart->z += P_MobjFlip(minecart);
 				if (sidelock)
-					P_ParabolicMove(minecart, sidelock->x, sidelock->y, sidelock->z, gravity, max(currentSpeed, 10 * FRACUNIT));
+					P_ParabolicMove(minecart, sidelock->x, sidelock->y, sidelock->z, gravity, max(currentSpeed, 25 * FRACUNIT) / 2);
 				else
-					minecart->momz = 10 * FRACUNIT;
+					minecart->momz = 25 * FRACUNIT / 2;
 
 				S_StartSound(minecart, sfx_s3k51);
 				jumped = true;
@@ -12841,9 +12841,9 @@ void P_PlayerAfterThink(player_t *player)
 
 				player->mo->height = P_GetPlayerSpinHeight(player);
 				// tracer is what you're hanging onto....
-				player->mo->momx = (chain->x - player->mo->x)*2;
-				player->mo->momy = (chain->y - player->mo->y)*2;
-				player->mo->momz = (chain->z - (player->mo->height-chain->height/2) - player->mo->z)*2;
+				player->mo->momx = (chain->x - player->mo->x)*5/2;
+				player->mo->momy = (chain->y - player->mo->y)*5/2;
+				player->mo->momz = (chain->z - (player->mo->height-chain->height/2) - player->mo->z)*5/2;
 				P_TeleportMove(player->mo, chain->x, chain->y, chain->z - (player->mo->height-chain->height/2));
 				if (!player->powers[pw_flashing]) // handle getting hurt
 				{
