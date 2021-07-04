@@ -1016,17 +1016,17 @@ static boolean PolyDoor(line_t *line)
 	return EV_DoPolyDoor(&pdd);
 }
 
-// Parses arguments for parameterized polyobject move specials
+// Parses arguments for parameterized polyobject move special
 static boolean PolyMove(line_t *line)
 {
 	polymovedata_t pmd;
 
-	pmd.polyObjNum = Tag_FGet(&line->tags);
-	pmd.speed      = sides[line->sidenum[0]].textureoffset / 8;
+	pmd.polyObjNum = line->args[0];
+	pmd.speed      = line->args[1] << (FRACBITS - 3);
 	pmd.angle      = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y);
-	pmd.distance   = sides[line->sidenum[0]].rowoffset;
+	pmd.distance   = line->args[2] << FRACBITS;
 
-	pmd.overRide = (line->special == 483); // Polyobj_OR_Move
+	pmd.overRide = !!line->args[3]; // Polyobj_OR_Move
 
 	return EV_DoPolyObjMove(&pmd);
 }
@@ -1200,27 +1200,16 @@ static boolean PolyWaypoint(line_t *line)
 	return EV_DoPolyObjWaypoint(&pwd);
 }
 
-// Parses arguments for parameterized polyobject rotate specials
+// Parses arguments for parameterized polyobject rotate special
 static boolean PolyRotate(line_t *line)
 {
 	polyrotdata_t prd;
 
-	prd.polyObjNum = Tag_FGet(&line->tags);
-	prd.speed      = sides[line->sidenum[0]].textureoffset >> FRACBITS; // angular speed
-	prd.distance   = sides[line->sidenum[0]].rowoffset >> FRACBITS; // angular distance
-
-	// Polyobj_(OR_)RotateRight have dir == -1
-	prd.direction = (line->special == 484 || line->special == 485) ? -1 : 1;
-
-	// Polyobj_OR types have override set to true
-	prd.overRide  = (line->special == 485 || line->special == 487);
-
-	if (line->flags & ML_NOCLIMB)
-		prd.turnobjs = 0;
-	else if (line->flags & ML_EFFECT4)
-		prd.turnobjs = 2;
-	else
-		prd.turnobjs = 1;
+	prd.polyObjNum = line->args[0];
+	prd.speed      = line->args[1]; // angular speed
+	prd.distance   = abs(line->args[2]); // angular distance
+	prd.direction  = (line->args[2] < 0) ? -1 : 1;
+	prd.flags      = line->args[3];
 
 	return EV_DoPolyObjRotate(&prd);
 }
@@ -1272,9 +1261,9 @@ static boolean PolyRotDisplace(line_t *line)
 	if (line->flags & ML_NOCLIMB)
 		pdd.turnobjs = 0;
 	else if (line->flags & ML_EFFECT4)
-		pdd.turnobjs = 2;
+		pdd.turnobjs = PTF_PLAYERS|PTF_OTHERS;
 	else
-		pdd.turnobjs = 1;
+		pdd.turnobjs = PTF_OTHERS;
 
 	return EV_DoPolyObjRotDisplace(&pdd);
 }
@@ -3906,13 +3895,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			PolyDoor(line);
 			break;
 		case 482: // Polyobj_Move
-		case 483: // Polyobj_OR_Move
 			PolyMove(line);
 			break;
 		case 484: // Polyobj_RotateRight
-		case 485: // Polyobj_OR_RotateRight
-		case 486: // Polyobj_RotateLeft
-		case 487: // Polyobj_OR_RotateLeft
 			PolyRotate(line);
 			break;
 		case 488: // Polyobj_Waypoint

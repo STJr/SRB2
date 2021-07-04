@@ -3671,6 +3671,35 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].sidenum[1] != 0xffff)
 				lines[i].args[3] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
 			break;
+		case 482: //Polyobject - move
+		case 483: //Polyobject - move, override
+			lines[i].args[0] = tag;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[3] = lines[i].special == 483;
+			lines[i].special = 482;
+			break;
+		case 484: //Polyobject - rotate right
+		case 485: //Polyobject - rotate right, override
+		case 486: //Polyobject - rotate left
+		case 487: //Polyobject - rotate left, override
+			lines[i].args[0] = tag;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			if (lines[i].args[2] == 360)
+				lines[i].args[3] |= TMPR_CONTINUOUS;
+			else if (lines[i].args[2] == 0)
+				lines[i].args[2] = 360;
+			if (lines[i].special < 486)
+				lines[i].args[2] *= -1;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[3] |= TMPR_DONTROTATEOTHERS;
+			else if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[3] |= TMPR_ROTATEPLAYERS;
+			if (lines[i].special % 2 == 1)
+				lines[i].args[3] |= TMPR_OVERRIDE;
+			lines[i].special = 484;
+			break;
 		case 500: //Scroll front wall left
 		case 501: //Scroll front wall right
 			lines[i].args[0] = 0;
