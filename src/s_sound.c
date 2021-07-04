@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -29,13 +29,17 @@
 #include "fastcmp.h"
 #include "m_misc.h" // for tunes command
 #include "m_cond.h" // for conditionsets
+
+#ifdef HAVE_LUA_MUSICPLUS
 #include "lua_hook.h" // MusicChange hook
+#endif
 
 #ifdef HW3SOUND
 // 3D Sound Interface
 #include "hardware/hw3sound.h"
 #else
-static INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, INT32 *vol, INT32 *sep, INT32 *pitch, sfxinfo_t *sfxinfo);
+// static INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, INT32 *vol, INT32 *sep, INT32 *pitch, sfxinfo_t *sfxinfo);
+static INT32 S_AdjustSoundParams(const mobj_t *listener, fixed_t x, fixed_t y, fixed_t z, INT32 *vol, INT32 *sep, INT32 *pitch, sfxinfo_t *sfxinfo);
 #endif
 
 CV_PossibleValue_t soundvolume_cons_t[] = {{0, "MIN"}, {31, "MAX"}, {0, NULL}};
@@ -62,21 +66,21 @@ static boolean S_CheckQueue(void);
 #endif
 
 #ifdef _WINDOWS
-consvar_t cv_samplerate = CVAR_INIT ("samplerate", "44100", 0, CV_Unsigned, NULL); //Alam: For easy hacking?
+consvar_t cv_samplerate = {"samplerate", "44100", 0, CV_Unsigned, NULL, 44100, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
 #else
-consvar_t cv_samplerate = CVAR_INIT ("samplerate", "22050", 0, CV_Unsigned, NULL); //Alam: For easy hacking?
+consvar_t cv_samplerate = {"samplerate", "22050", 0, CV_Unsigned, NULL, 22050, NULL, NULL, 0, 0, NULL}; //Alam: For easy hacking?
 #endif
 
 // stereo reverse
-consvar_t stereoreverse = CVAR_INIT ("stereoreverse", "Off", CV_SAVE, CV_OnOff, NULL);
+consvar_t stereoreverse = {"stereoreverse", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // if true, all sounds are loaded at game startup
-static consvar_t precachesound = CVAR_INIT ("precachesound", "Off", CV_SAVE, CV_OnOff, NULL);
+static consvar_t precachesound = {"precachesound", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // actual general (maximum) sound & music volume, saved into the config
-consvar_t cv_soundvolume = CVAR_INIT ("soundvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
-consvar_t cv_digmusicvolume = CVAR_INIT ("digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
-consvar_t cv_midimusicvolume = CVAR_INIT ("midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_soundvolume = {"soundvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_digmusicvolume = {"digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_midimusicvolume = {"midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static void Captioning_OnChange(void)
 {
@@ -85,27 +89,27 @@ static void Captioning_OnChange(void)
 		S_StartSound(NULL, sfx_menu1);
 }
 
-consvar_t cv_closedcaptioning = CVAR_INIT ("closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_OnOff, Captioning_OnChange);
+consvar_t cv_closedcaptioning = {"closedcaptioning", "Off", CV_SAVE|CV_CALL, CV_OnOff, Captioning_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // number of channels available
-consvar_t cv_numChannels = CVAR_INIT ("snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum);
+consvar_t cv_numChannels = {"snd_channels", "32", CV_SAVE|CV_CALL, CV_Unsigned, SetChannelsNum, 0, NULL, NULL, 0, 0, NULL};
 
-static consvar_t surround = CVAR_INIT ("surround", "Off", CV_SAVE, CV_OnOff, NULL);
+static consvar_t surround = {"surround", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
-consvar_t cv_resetmusic = CVAR_INIT ("resetmusic", "Off", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_resetmusicbyheader = CVAR_INIT ("resetmusicbyheader", "Yes", CV_SAVE, CV_YesNo, NULL);
+consvar_t cv_resetmusic = {"resetmusic", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_resetmusicbyheader = {"resetmusicbyheader", "Yes", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t cons_1upsound_t[] = {
 	{0, "Jingle"},
 	{1, "Sound"},
 	{0, NULL}
 };
-consvar_t cv_1upsound = CVAR_INIT ("1upsound", "Jingle", CV_SAVE, cons_1upsound_t, NULL);
+consvar_t cv_1upsound = {"1upsound", "Jingle", CV_SAVE, cons_1upsound_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // Sound system toggles, saved into the config
-consvar_t cv_gamedigimusic = CVAR_INIT ("digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange);
-consvar_t cv_gamemidimusic = CVAR_INIT ("midimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameMIDIMusic_OnChange);
-consvar_t cv_gamesounds = CVAR_INIT ("sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameSounds_OnChange);
+consvar_t cv_gamedigimusic = {"digimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameDigiMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gamemidimusic = {"midimusic", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameMIDIMusic_OnChange, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gamesounds = {"sounds", "On", CV_SAVE|CV_CALL|CV_NOINIT, CV_OnOff, GameSounds_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // Music preference
 static CV_PossibleValue_t cons_musicpref_t[] = {
@@ -113,16 +117,16 @@ static CV_PossibleValue_t cons_musicpref_t[] = {
 	{1, "MIDI"},
 	{0, NULL}
 };
-consvar_t cv_musicpref = CVAR_INIT ("musicpref", "Digital", CV_SAVE|CV_CALL|CV_NOINIT, cons_musicpref_t, MusicPref_OnChange);
+consvar_t cv_musicpref = {"musicpref", "Digital", CV_SAVE|CV_CALL|CV_NOINIT, cons_musicpref_t, MusicPref_OnChange, 0, NULL, NULL, 0, 0, NULL};
 
 // Window focus sound sytem toggles
-consvar_t cv_playmusicifunfocused = CVAR_INIT ("playmusicifunfocused", "No", CV_SAVE, CV_YesNo, NULL);
-consvar_t cv_playsoundsifunfocused = CVAR_INIT ("playsoundsifunfocused", "No", CV_SAVE, CV_YesNo, NULL);
+consvar_t cv_playmusicifunfocused = {"playmusicifunfocused", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_playsoundsifunfocused = {"playsoundsifunfocused", "No", CV_SAVE, CV_YesNo, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifdef HAVE_OPENMPT
 openmpt_module *openmpt_mhandle = NULL;
 static CV_PossibleValue_t interpolationfilter_cons_t[] = {{0, "Default"}, {1, "None"}, {2, "Linear"}, {4, "Cubic"}, {8, "Windowed sinc"}, {0, NULL}};
-consvar_t cv_modfilter = CVAR_INIT ("modfilter", "0", CV_SAVE|CV_CALL, interpolationfilter_cons_t, ModFilter_OnChange);
+consvar_t cv_modfilter = {"modfilter", "0", CV_SAVE|CV_CALL, interpolationfilter_cons_t, ModFilter_OnChange, 0, NULL, NULL, 0, 0, NULL};
 #endif
 
 #define S_MAX_VOLUME 127
@@ -254,6 +258,7 @@ static INT32 S_getChannel(const void *origin, sfxinfo_t *sfxinfo)
 	// channel is decided to be cnum.
 	c->sfxinfo = sfxinfo;
 	c->origin = origin;
+	c->isdetached = false;
 
 	return cnum;
 }
@@ -538,6 +543,18 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 	if (sfx_id == sfx_None)
 		return;
 
+	// local player sounds play immediately during simulations
+	// if (gamestate == GS_LEVEL) // and when we are actually playing
+		// if (((simtic != targetsimtic - 1 && origin == listenmobj)
+		// 	|| (origin != listenmobj && issimulation)))
+			// return;
+
+	// local player sounds play immediately during simulations, this is controlled
+	// in TryRunTics and RunSimulations in d_clisrv.c
+	if (gamestate == GS_LEVEL) // and when we are actually playing
+		if (((simtic != targetsimtic - 1 && origin == listenmobj) || (origin != listenmobj && issimulation)))
+				return;
+
 	if (players[displayplayer].awayviewtics)
 		listenmobj = players[displayplayer].awayviewmobj;
 
@@ -614,7 +631,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 		if (origin && origin != listenmobj2)
 		{
 			INT32 rc;
-			rc = S_AdjustSoundParams(listenmobj2, origin, &volume, &sep, &pitch, sfx);
+			rc = S_AdjustSoundParams(listenmobj2, origin->x, origin->y, origin->z, &volume, &sep, &pitch, sfx);
 
 			if (!rc)
 				goto dontplay; // Maybe the other player can hear it...
@@ -672,7 +689,7 @@ dontplay:
 	if (origin && origin != listenmobj)
 	{
 		INT32 rc;
-		rc = S_AdjustSoundParams(listenmobj, origin, &volume, &sep, &pitch, sfx);
+		rc = S_AdjustSoundParams(listenmobj, origin->x, origin->y, origin->z, &volume, &sep, &pitch, sfx);
 
 		if (!rc)
 			return;
@@ -927,6 +944,7 @@ void S_UpdateSounds(void)
 		{
 			if (I_SoundIsPlaying(c->handle))
 			{
+				boolean isspatial = c->origin || c->isdetached;
 				// initialize parameters
 				volume = c->volume; // 8 bits internal volume precision
 				pitch = NORM_PITCH;
@@ -934,28 +952,44 @@ void S_UpdateSounds(void)
 
 				// check non-local sounds for distance clipping
 				//  or modify their params
-				if (c->origin && ((c->origin != players[consoleplayer].mo) ||
-					(splitscreen && c->origin != players[secondarydisplayplayer].mo)))
+				if (isspatial &&
+					((c->origin && ((c->origin != players[consoleplayer].mo) ||
+					(splitscreen && c->origin != players[secondarydisplayplayer].mo)))))
 				{
+					fixed_t x, y, z;
+					const mobj_t *soundmobj = c->origin;
+
+					if (c->isdetached)
+					{
+						x = c->detachedx;
+						y = c->detachedy;
+						z = c->detachedz;
+					}
+					else
+					{
+						x = soundmobj->x;
+						y = soundmobj->y;
+						z = soundmobj->z;
+					}
 					// Whomever is closer gets the sound, but only in splitscreen.
 					if (listenmobj && listenmobj2 && splitscreen)
 					{
 						const mobj_t *soundmobj = c->origin;
 
 						fixed_t dist1, dist2;
-						dist1 = P_AproxDistance(listener.x-soundmobj->x, listener.y-soundmobj->y);
-						dist2 = P_AproxDistance(listener2.x-soundmobj->x, listener2.y-soundmobj->y);
+						dist1 = P_AproxDistance(listener.x-x, listener.y-y);
+						dist2 = P_AproxDistance(listener2.x-x, listener2.y-y);
 
 						if (dist1 <= dist2)
 						{
 							// Player 1 gets the sound
-							audible = S_AdjustSoundParams(listenmobj, c->origin, &volume, &sep, &pitch,
+							audible = S_AdjustSoundParams(listenmobj, x, y, z, &volume, &sep, &pitch,
 								c->sfxinfo);
 						}
 						else
 						{
 							// Player 2 gets the sound
-							audible = S_AdjustSoundParams(listenmobj2, c->origin, &volume, &sep, &pitch,
+							audible = S_AdjustSoundParams(listenmobj2, x, y, z, &volume, &sep, &pitch,
 								c->sfxinfo);
 						}
 
@@ -967,7 +1001,7 @@ void S_UpdateSounds(void)
 					else if (listenmobj && !splitscreen)
 					{
 						// In the case of a single player, he or she always should get updated sound.
-						audible = S_AdjustSoundParams(listenmobj, c->origin, &volume, &sep, &pitch,
+						audible = S_AdjustSoundParams(listenmobj, x, y, z, &volume, &sep, &pitch,
 							c->sfxinfo);
 
 						if (audible)
@@ -1042,6 +1076,7 @@ void S_ClearSfx(void)
 
 static void S_StopChannel(INT32 cnum)
 {
+	INT32 i;
 	channel_t *c = &channels[cnum];
 
 	if (c->sfxinfo)
@@ -1050,12 +1085,44 @@ static void S_StopChannel(INT32 cnum)
 		if (I_SoundIsPlaying(c->handle))
 			I_StopSound(c->handle);
 
+		// check to see
+		//  if other channels are playing the sound
+		for (i = 0; i < numofchannels; i++)
+			if (cnum != i && c->sfxinfo == channels[i].sfxinfo)
+				break;
+
 		// degrade usefulness of sound data
 		c->sfxinfo->usefulness--;
+
 		c->sfxinfo = 0;
 	}
+}
 
-	c->origin = NULL;
+//
+// S_DetachChannelFromSource
+//
+// Detaches a sound channel from the object it came from, leaving it loose
+//
+void S_DetachChannelsFromOrigin(void* origin)
+{
+	int i;
+	mobj_t* originmobj = (mobj_t*)origin;
+	for (i = 0; i < numofchannels; i++)
+	{
+		if (channels[i].origin == origin)
+		{
+			// small hack: player-made sounds should stay hearable
+			if (originmobj->player != &players[displayplayer])
+			{
+				channels[i].isdetached = true;
+				channels[i].detachedx = originmobj->x;
+				channels[i].detachedy = originmobj->y;
+				channels[i].detachedz = originmobj->z;
+			}
+
+			channels[i].origin = NULL;
+		}
+	}
 }
 
 //
@@ -1092,7 +1159,7 @@ fixed_t S_CalculateSoundDistance(fixed_t sx1, fixed_t sy1, fixed_t sz1, fixed_t 
 // If the sound is not audible, returns a 0.
 // Otherwise, modifies parameters and returns 1.
 //
-INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, INT32 *vol, INT32 *sep, INT32 *pitch,
+INT32 S_AdjustSoundParams(const mobj_t *listener, fixed_t x, fixed_t y, fixed_t z, INT32 *vol, INT32 *sep, INT32 *pitch,
 	sfxinfo_t *sfxinfo)
 {
 	fixed_t approx_dist;
@@ -1158,7 +1225,7 @@ INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, INT32 *v
 	else
 	{
 		approx_dist = S_CalculateSoundDistance(listensource.x, listensource.y, listensource.z,
-												source->x, source->y, source->z);
+												x, y, 	z);
 	}
 
 	// Ring loss, deaths, etc, should all be heard louder.
@@ -1176,7 +1243,7 @@ INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, INT32 *v
 		return 0;
 
 	// angle of source to listener
-	angle = R_PointToAngle2(listensource.x, listensource.y, source->x, source->y);
+	angle = R_PointToAngle2(listensource.x, listensource.y, x, y);
 
 	if (angle > listensource.angle)
 		angle = angle - listensource.angle;
@@ -2269,8 +2336,10 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 
 	strncpy(newmusic, mmusic, 7);
-	if (LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
+#ifdef HAVE_LUA_MUSICPLUS
+	if(LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
 		return;
+#endif
 	newmusic[6] = 0;
 
  	// No Music (empty string)

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,7 +21,6 @@
 #include "p_local.h" // camera
 #include "p_slopes.h"
 #include "z_zone.h" // Check R_Prep3DFloors
-#include "taglist.h"
 
 seg_t *curline;
 side_t *sidedef;
@@ -375,7 +374,7 @@ boolean R_IsEmptyLine(seg_t *line, sector_t *front, sector_t *back)
 		// Consider colormaps
 		&& back->extra_colormap == front->extra_colormap
 		&& ((!front->ffloors && !back->ffloors)
-		|| Tag_Compare(&front->tags, &back->tags)));
+		|| front->tag == back->tag));
 }
 
 //
@@ -449,25 +448,21 @@ static void R_AddLine(seg_t *line)
 	// Portal line
 	if (line->linedef->special == 40 && line->side == 0)
 	{
-		// Render portal if recursiveness limit hasn't been reached.
-		// Otherwise, render the wall normally.
 		if (portalrender < cv_maxportals.value)
 		{
-			size_t p;
-			mtag_t tag = Tag_FGet(&line->linedef->tags);
-			INT32 li1 = line->linedef-lines;
-			INT32 li2;
-
-			for (p = 0; (li2 = Tag_Iterate_Lines(tag, p)) >= 0; p++)
+			// Find the other side!
+			INT32 line2 = P_FindSpecialLineFromTag(40, line->linedef->tag, -1);
+			if (line->linedef == &lines[line2])
+				line2 = P_FindSpecialLineFromTag(40, line->linedef->tag, line2);
+			if (line2 >= 0) // found it!
 			{
-				// Skip invalid lines.
-				if ((tag != Tag_FGet(&lines[li2].tags)) || (lines[li1].special != lines[li2].special) || (li1 == li2))
-					continue;
-
-				Portal_Add2Lines(li1, li2, x1, x2);
+				Portal_Add2Lines(line->linedef-lines, line2, x1, x2); // Remember the lines for later rendering
+				//return; // Don't fill in that space now!
 				goto clipsolid;
 			}
 		}
+		// Recursed TOO FAR (viewing a portal within a portal)
+		// So uhhh, render it as a normal wall instead or something ???
 	}
 
 	// Single sided line?
@@ -488,7 +483,7 @@ static void R_AddLine(seg_t *line)
 		if (!line->polyseg &&
 			!line->sidedef->midtexture
 			&& ((!frontsector->ffloors && !backsector->ffloors)
-				|| Tag_Compare(&frontsector->tags, &backsector->tags)))
+				|| (frontsector->tag == backsector->tag)))
 			return; // line is empty, don't even bother
 
 		goto clippass; // treat like wide open window instead
@@ -804,7 +799,7 @@ static void R_AddPolyObjects(subsector_t *sub)
 	}
 
 	// for render stats
-	ps_numpolyobjects += numpolys;
+	rs_numpolyobjects += numpolys;
 
 	// sort polyobjects
 	R_SortPolyObjects(sub);
@@ -1053,6 +1048,11 @@ static void R_Subsector(size_t num)
 		}
 	}
 
+#ifdef FLOORSPLATS
+	if (sub->splats)
+		R_AddVisibleFloorSplats(sub);
+#endif
+
    // killough 9/18/98: Fix underwater slowdown, by passing real sector
    // instead of fake one. Improve sprite lighting by basing sprite
    // lightlevels on floor & ceiling lightlevels in the surrounding area.
@@ -1239,7 +1239,7 @@ void R_RenderBSPNode(INT32 bspnum)
 	node_t *bsp;
 	INT32 side;
 
-	ps_numbspcalls++;
+	rs_numbspcalls++;
 
 	while (!(bspnum & NF_SUBSECTOR))  // Found a subsector?
 	{

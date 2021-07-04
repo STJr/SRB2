@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,7 +17,6 @@
 #include "info.h"
 #include "sounds.h"
 #include "d_player.h" // skinflags
-#include "r_patch.h"
 #include "r_picformats.h" // spriteinfo_t
 #include "r_defs.h" // spritedef_t
 

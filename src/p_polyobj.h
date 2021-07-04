@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2021 by Sonic Team Junior.
+// Copyright (C) 2006-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -114,6 +114,9 @@ typedef struct polyobj_s
 	// these are saved for netgames, so do not let Lua touch these!
 	INT32 spawnflags; // Flags the polyobject originally spawned with
 	INT32 spawntrans; // Translucency the polyobject originally spawned with
+
+	fixed_t origx, origy, origz;
+	INT16 origangle;
 } polyobj_t;
 
 //
@@ -172,6 +175,7 @@ typedef struct polywaypoint_s
 	UINT8 returnbehavior;  // behavior after reaching the last waypoint
 	UINT8 continuous;      // continuously move - used with PWR_WRAP or PWR_COMEBACK
 	UINT8 stophere;        // Will stop after it reaches the next waypoint
+	mobj_t *target; // next waypoint mobj
 } polywaypoint_t;
 
 typedef struct polyslidedoor_s
@@ -336,8 +340,6 @@ typedef struct polyfadedata_s
 // Functions
 //
 
-boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y, boolean checkmobjs);
-boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean checkmobjs);
 polyobj_t *Polyobj_GetForNum(INT32 id);
 void Polyobj_InitLevel(void);
 void Polyobj_MoveOnLoad(polyobj_t *po, angle_t angle, fixed_t x, fixed_t y);

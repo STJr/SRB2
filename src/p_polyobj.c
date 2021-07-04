@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2021 by Sonic Team Junior.
+// Copyright (C) 2006-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -556,11 +556,10 @@ static void Polyobj_moveToSpawnSpot(mapthing_t *anchor)
 	polyobj_t *po;
 	vertex_t  dist, sspot;
 	size_t i;
-	mtag_t tag = Tag_FGet(&anchor->tags);
 
-	if (!(po = Polyobj_GetForNum(tag)))
+	if (!(po = Polyobj_GetForNum(anchor->tag)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "Bad polyobject %d for anchor point\n", tag);
+		CONS_Debug(DBG_POLYOBJ, "Bad polyobject %d for anchor point\n", anchor->tag);
 		return;
 	}
 
@@ -977,7 +976,7 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 
 
 // Moves a polyobject on the x-y plane.
-boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y, boolean checkmobjs)
+static boolean Polyobj_moveXY(polyobj_t *po, fixed_t x, fixed_t y, boolean checkmobjs)
 {
 	size_t i;
 	vertex_t vec;
@@ -1163,7 +1162,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta,
 }
 
 // Rotates a polyobject around its start point.
-boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean checkmobjs)
+static boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean checkmobjs)
 {
 	size_t i;
 	angle_t angle;
@@ -1343,7 +1342,11 @@ void Polyobj_InitLevel(void)
 		{
 			qitem = (mobjqitem_t *)M_QueueIterator(&spawnqueue);
 
-			Polyobj_spawnPolyObj(i, qitem->mo, Tag_FGet(&qitem->mo->spawnpoint->tags));
+			Polyobj_spawnPolyObj(i, qitem->mo, qitem->mo->spawnpoint->tag);
+			PolyObjects[i].origx = qitem->mo->x;
+			PolyObjects[i].origy = qitem->mo->y;
+			PolyObjects[i].origz = qitem->mo->z;
+			PolyObjects[i].origangle = qitem->mo->spawnpoint->angle;
 		}
 
 		// move polyobjects to spawn points
@@ -2445,11 +2448,10 @@ boolean EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 	polymove_t *th;
 	size_t i;
 	INT32 start;
-	mtag_t tag = pfdata->polyObjNum;
 
-	if (!(po = Polyobj_GetForNum(tag)))
+	if (!(po = Polyobj_GetForNum(pfdata->polyObjNum)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: bad polyobj %d\n", tag);
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyFlag: bad polyobj %d\n", pfdata->polyObjNum);
 		return false;
 	}
 
@@ -2472,7 +2474,7 @@ boolean EV_DoPolyObjFlag(polyflagdata_t *pfdata)
 	po->thinker = &th->thinker;
 
 	// set fields
-	th->polyObjNum = tag;
+	th->polyObjNum = pfdata->polyObjNum;
 	th->distance   = 0;
 	th->speed      = pfdata->speed;
 	th->angle      = pfdata->angle;

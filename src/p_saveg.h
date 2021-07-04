@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,12 +21,24 @@
 // Persistent storage/archiving.
 // These are the load / save game routines.
 
+extern char netDebugText[10000];
+
+typedef struct
+{
+	UINT8* buffer;
+} savestate_t;
+
 void P_SaveGame(INT16 mapnum);
-void P_SaveNetGame(boolean resending);
+void P_SaveNetGame(void);
+void P_SaveGameState(savestate_t* savestate);
+void P_GameStateFreeMemory(savestate_t* savestate);
 boolean P_LoadGame(INT16 mapoverride);
-boolean P_LoadNetGame(boolean reloading);
+boolean P_LoadNetGame(boolean preserveLevel);
+boolean P_LoadGameState(const savestate_t* savestate);
 
 mobj_t *P_FindNewPosition(UINT32 oldposition);
+
+
 
 typedef struct
 {

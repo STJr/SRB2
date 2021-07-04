@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2021 by Sonic Team Junior.
+// Copyright (C) 2015-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -139,7 +139,7 @@ void T_DynamicSlopeVert (dynplanethink_t* th)
 	INT32 l;
 
 	for (i = 0; i < 3; i++) {
-		l = Tag_FindLineSpecial(799, th->tags[i]);
+		l = P_FindSpecialLineFromTag(799, th->tags[i], -1);
 		if (l != -1) {
 			th->vex[i].z = lines[l].frontsector->floorheight;
 		}
@@ -405,6 +405,9 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 				P_AddDynSlopeThinker(cslope, DP_BACKCEIL, line, extent, NULL, NULL);
 		}
 	}
+
+	if(!line->tag)
+		return;
 }
 
 /// Creates a new slope from three mapthings with the specified IDs
@@ -423,11 +426,11 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 		if (mt->type != 750) // Haha, I'm hijacking the old Chaos Spawn thingtype for something!
 			continue;
 
-		if (!vertices[0] && Tag_Find(&mt->tags, tag1))
+		if (!vertices[0] && mt->tag == tag1)
 			vertices[0] = mt;
-		else if (!vertices[1] && Tag_Find(&mt->tags, tag2))
+		else if (!vertices[1] && mt->tag == tag2)
 			vertices[1] = mt;
-		else if (!vertices[2] && Tag_Find(&mt->tags, tag3))
+		else if (!vertices[2] && mt->tag == tag3)
 			vertices[2] = mt;
 	}
 
@@ -546,11 +549,11 @@ static boolean P_SetSlopeFromTag(sector_t *sec, INT32 tag, boolean ceiling)
 {
 	INT32 i;
 	pslope_t **secslope = ceiling ? &sec->c_slope : &sec->f_slope;
-	TAG_ITER_DECLARECOUNTER(0);
 
 	if (!tag || *secslope)
 		return false;
-	TAG_ITER_SECTORS(0, tag, i)
+
+	for (i = -1; (i = P_FindSectorFromTag(tag, i)) >= 0;)
 	{
 		pslope_t *srcslope = ceiling ? sectors[i].c_slope : sectors[i].f_slope;
 		if (srcslope)

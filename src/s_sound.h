@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -93,6 +93,12 @@ typedef struct
 	// handle of the sound being played
 	INT32 handle;
 
+	// whether the sound is detached from its source (sound panning should not be changed)
+	boolean isdetached;
+
+	// positioning for detached sounds
+	fixed_t detachedx, detachedy, detachedz;
+
 } channel_t;
 
 typedef struct {
@@ -149,6 +155,9 @@ void S_StartSoundAtVolume(const void *origin, sfxenum_t sound_id, INT32 volume);
 
 // Stop sound for thing at <origin>
 void S_StopSound(void *origin);
+
+// Detaches a sound from an object, leaving it in the air at the object's original position
+void S_DetachChannelsFromOrigin(void* origin);
 
 //
 // Music Status

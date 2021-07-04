@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -125,6 +125,13 @@ void CV_UpdateCam2Dist(void);
 extern fixed_t t_cam_dist, t_cam_height, t_cam_rotate;
 extern fixed_t t_cam2_dist, t_cam2_height, t_cam2_rotate;
 
+void P_AddPlayerHitCount(player_t *player);
+void P_AddPlayerTimesHitCount(player_t *player);
+void P_AddPlayerKillCount(player_t *player);
+void P_AddPlayerDeathCount(player_t *player);
+void P_ClearMatchStatsForPlayer(player_t *player);
+void P_ClearMatchStatsForPlayers();
+
 INT32 P_GetPlayerControlDirection(player_t *player);
 void P_AddPlayerScore(player_t *player, UINT32 amount);
 void P_StealPlayerScore(player_t *player, UINT32 amount);
@@ -143,8 +150,6 @@ angle_t P_GetLocalAngle(player_t *player);
 void P_SetLocalAngle(player_t *player, angle_t angle);
 void P_ForceLocalAngle(player_t *player, angle_t angle);
 boolean P_PlayerFullbright(player_t *player);
-boolean P_PlayerCanEnterSpinGaps(player_t *player);
-boolean P_PlayerShouldUseSpinHeight(player_t *player);
 
 boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
@@ -287,7 +292,7 @@ void P_PrecipitationEffects(void);
 
 void P_RemoveMobj(mobj_t *th);
 boolean P_MobjWasRemoved(mobj_t *th);
-void P_RemoveSavegameMobj(mobj_t *th);
+void P_RemoveSavegameMobj(mobj_t *th, boolean preserveLevel);
 boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state);
 boolean P_SetMobjState(mobj_t *mobj, statenum_t state);
 void P_RunShields(void);
@@ -328,11 +333,14 @@ mobj_t *P_SpawnPointMissile(mobj_t *source, fixed_t xa, fixed_t ya, fixed_t za, 
 mobj_t *P_SpawnAlteredDirectionMissile(mobj_t *source, mobjtype_t type, fixed_t x, fixed_t y, fixed_t z, INT32 shiftingAngle);
 mobj_t *P_SPMAngle(mobj_t *source, mobjtype_t type, angle_t angle, UINT8 aimtype, UINT32 flags2);
 #define P_SpawnPlayerMissile(s,t,f) P_SPMAngle(s,t,s->angle,true,f)
+#ifdef SEENAMES
 #define P_SpawnNameFinder(s,t) P_SPMAngle(s,t,s->angle,true,0)
+#endif
 void P_ColorTeamMissile(mobj_t *missile, player_t *source);
 SINT8 P_MobjFlip(mobj_t *mobj);
 fixed_t P_GetMobjGravity(mobj_t *mo);
 FUNCMATH boolean P_WeaponOrPanel(mobjtype_t type);
+FUNCMATH boolean P_IsProjectile(mobjtype_t type);
 
 void P_CalcChasePostImg(player_t *player, camera_t *thiscam);
 boolean P_CameraThinker(player_t *player, camera_t *thiscam, boolean resetcalled);
@@ -428,7 +436,6 @@ void P_Initsecnode(void);
 void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 damagetype, boolean sightcheck);
 
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
-fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height);
 boolean PIT_PushableMoved(mobj_t *thing);
 
 boolean P_DoSpring(mobj_t *spring, mobj_t *object);
