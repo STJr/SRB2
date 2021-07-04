@@ -51,6 +51,9 @@ mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
 mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
 mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 
+// Amount (dx, dy) vector linedef is shifted right to get scroll amount
+#define SCROLL_SHIFT 5
+
 /** Animated texture descriptor
   * This keeps track of an animated texture or an animated flat.
   * \sa P_UpdateSpecials, P_InitPicAnims, animdef_t
@@ -98,8 +101,7 @@ typedef struct
 static void P_SpawnScrollers(void);
 static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
-static void Add_PointPusher(INT32 magnitude, mobj_t *source, INT32 affectee, INT32 exclusive);
-static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t z_mag, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
+static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
 static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize);
 #define P_RemoveFakeFloorFader(l) P_ResetFakeFloorFader(l, NULL, false);
@@ -992,22 +994,30 @@ static boolean PolyDoor(line_t *line)
 {
 	polydoordata_t pdd;
 
-	pdd.polyObjNum = line->args[0]; // polyobject id
+	pdd.polyObjNum = Tag_FGet(&line->tags); // polyobject id
 
 	switch(line->special)
 	{
 		case 480: // Polyobj_DoorSlide
 			pdd.doorType = POLY_DOOR_SLIDE;
-			pdd.speed    = line->args[1] << (FRACBITS - 3);
+			pdd.speed    = sides[line->sidenum[0]].textureoffset / 8;
 			pdd.angle    = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y); // angle of motion
-			pdd.distance = line->args[2] << FRACBITS;
-			pdd.delay    = line->args[3]; // delay in tics
+			pdd.distance = sides[line->sidenum[0]].rowoffset;
+
+			if (line->sidenum[1] != 0xffff)
+				pdd.delay = sides[line->sidenum[1]].textureoffset >> FRACBITS; // delay in tics
+			else
+				pdd.delay = 0;
 			break;
 		case 481: // Polyobj_DoorSwing
 			pdd.doorType = POLY_DOOR_SWING;
-			pdd.speed    = line->args[1]; // angular speed
-			pdd.distance = line->args[2]; // angular distance
-			pdd.delay    = line->args[3]; // delay in tics
+			pdd.speed    = sides[line->sidenum[0]].textureoffset >> FRACBITS; // angular speed
+			pdd.distance = sides[line->sidenum[0]].rowoffset >> FRACBITS; // angular distance
+
+			if (line->sidenum[1] != 0xffff)
+				pdd.delay = sides[line->sidenum[1]].textureoffset >> FRACBITS; // delay in tics
+			else
+				pdd.delay = 0;
 			break;
 		default:
 			return 0; // ???
@@ -1016,62 +1026,31 @@ static boolean PolyDoor(line_t *line)
 	return EV_DoPolyDoor(&pdd);
 }
 
-// Parses arguments for parameterized polyobject move special
+// Parses arguments for parameterized polyobject move specials
 static boolean PolyMove(line_t *line)
 {
 	polymovedata_t pmd;
 
-	pmd.polyObjNum = line->args[0];
-	pmd.speed      = line->args[1] << (FRACBITS - 3);
+	pmd.polyObjNum = Tag_FGet(&line->tags);
+	pmd.speed      = sides[line->sidenum[0]].textureoffset / 8;
 	pmd.angle      = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y);
-	pmd.distance   = line->args[2] << FRACBITS;
+	pmd.distance   = sides[line->sidenum[0]].rowoffset;
 
-	pmd.overRide = !!line->args[3]; // Polyobj_OR_Move
+	pmd.overRide = (line->special == 483); // Polyobj_OR_Move
 
 	return EV_DoPolyObjMove(&pmd);
 }
 
-static void PolySetVisibilityTangibility(line_t *line)
+// Makes a polyobject invisible and intangible
+// If NOCLIMB is ticked, the polyobject will still be tangible, just not visible.
+static void PolyInvisible(line_t *line)
 {
-	INT32 polyObjNum = line->args[0];
-	polyobj_t* po;
-
-	if (!(po = Polyobj_GetForNum(polyObjNum)))
-	{
-		CONS_Debug(DBG_POLYOBJ, "PolySetVisibilityTangibility: bad polyobj %d\n", polyObjNum);
-		return;
-	}
-
-	// don't allow line actions to affect bad polyobjects
-	if (po->isBad)
-		return;
-
-	if (line->args[1] == TMPV_VISIBLE)
-	{
-		po->flags &= ~POF_NOSPECIALS;
-		po->flags |= (po->spawnflags & POF_RENDERALL);
-	}
-	else if (line->args[1] == TMPV_INVISIBLE)
-	{
-		po->flags |= POF_NOSPECIALS;
-		po->flags &= ~POF_RENDERALL;
-	}
-
-	if (line->args[2] == TMPT_TANGIBLE)
-		po->flags |= POF_SOLID;
-	else if (line->args[2] == TMPT_INTANGIBLE)
-		po->flags &= ~POF_SOLID;
-}
-
-// Sets the translucency of a polyobject
-static void PolyTranslucency(line_t *line)
-{
-	INT32 polyObjNum = line->args[0];
+	INT32 polyObjNum = Tag_FGet(&line->tags);
 	polyobj_t *po;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "PolyTranslucency: bad polyobj %d\n", polyObjNum);
+		CONS_Debug(DBG_POLYOBJ, "PolyInvisible: bad polyobj %d\n", polyObjNum);
 		return;
 	}
 
@@ -1079,10 +1058,67 @@ static void PolyTranslucency(line_t *line)
 	if (po->isBad)
 		return;
 
-	if (lines->args[2]) // relative calc
-		po->translucency += line->args[1];
+	if (!(line->flags & ML_NOCLIMB))
+		po->flags &= ~POF_SOLID;
+
+	po->flags |= POF_NOSPECIALS;
+	po->flags &= ~POF_RENDERALL;
+}
+
+// Makes a polyobject visible and tangible
+// If NOCLIMB is ticked, the polyobject will not be tangible, just visible.
+static void PolyVisible(line_t *line)
+{
+	INT32 polyObjNum = Tag_FGet(&line->tags);
+	polyobj_t *po;
+
+	if (!(po = Polyobj_GetForNum(polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "PolyVisible: bad polyobj %d\n", polyObjNum);
+		return;
+	}
+
+	// don't allow line actions to affect bad polyobjects
+	if (po->isBad)
+		return;
+
+	if (!(line->flags & ML_NOCLIMB))
+		po->flags |= POF_SOLID;
+
+	po->flags &= ~POF_NOSPECIALS;
+	po->flags |= (po->spawnflags & POF_RENDERALL);
+}
+
+
+// Sets the translucency of a polyobject
+// Frontsector floor / 100 = translevel
+static void PolyTranslucency(line_t *line)
+{
+	INT32 polyObjNum = Tag_FGet(&line->tags);
+	polyobj_t *po;
+	INT32 value;
+
+	if (!(po = Polyobj_GetForNum(polyObjNum)))
+	{
+		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: bad polyobj %d\n", polyObjNum);
+		return;
+	}
+
+	// don't allow line actions to affect bad polyobjects
+	if (po->isBad)
+		return;
+
+	// If Front X Offset is specified, use that. Else, use floorheight.
+	value = (sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : line->frontsector->floorheight) >> FRACBITS;
+
+	// If DONTPEGBOTTOM, specify raw translucency value. Else, take it out of 1000.
+	if (!(line->flags & ML_DONTPEGBOTTOM))
+		value /= 100;
+
+	if (line->flags & ML_EFFECT3) // relative calc
+		po->translucency += value;
 	else
-		po->translucency = line->args[1];
+		po->translucency = value;
 
 	po->translucency = max(min(po->translucency, NUMTRANSMAPS), 0);
 }
@@ -1152,25 +1188,49 @@ static boolean PolyWaypoint(line_t *line)
 {
 	polywaypointdata_t pwd;
 
-	pwd.polyObjNum     = line->args[0];
-	pwd.speed          = line->args[1] << (FRACBITS - 3);
-	pwd.sequence       = line->args[2];
-	pwd.returnbehavior = line->args[3];
-	pwd.flags          = line->args[4];
+	pwd.polyObjNum = Tag_FGet(&line->tags);
+	pwd.speed      = sides[line->sidenum[0]].textureoffset / 8;
+	pwd.sequence   = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Sequence #
+
+	// Behavior after reaching the last waypoint?
+	if (line->flags & ML_EFFECT3)
+		pwd.returnbehavior = PWR_WRAP; // Wrap back to first waypoint
+	else if (line->flags & ML_EFFECT2)
+		pwd.returnbehavior = PWR_COMEBACK; // Go through sequence in reverse
+	else
+		pwd.returnbehavior = PWR_STOP; // Stop
+
+	// Flags
+	pwd.flags = 0;
+	if (line->flags & ML_EFFECT1)
+		pwd.flags |= PWF_REVERSE;
+	if (line->flags & ML_EFFECT4)
+		pwd.flags |= PWF_LOOP;
 
 	return EV_DoPolyObjWaypoint(&pwd);
 }
 
-// Parses arguments for parameterized polyobject rotate special
+// Parses arguments for parameterized polyobject rotate specials
 static boolean PolyRotate(line_t *line)
 {
 	polyrotdata_t prd;
 
-	prd.polyObjNum = line->args[0];
-	prd.speed      = line->args[1]; // angular speed
-	prd.distance   = abs(line->args[2]); // angular distance
-	prd.direction  = (line->args[2] < 0) ? -1 : 1;
-	prd.flags      = line->args[3];
+	prd.polyObjNum = Tag_FGet(&line->tags);
+	prd.speed      = sides[line->sidenum[0]].textureoffset >> FRACBITS; // angular speed
+	prd.distance   = sides[line->sidenum[0]].rowoffset >> FRACBITS; // angular distance
+
+	// Polyobj_(OR_)RotateRight have dir == -1
+	prd.direction = (line->special == 484 || line->special == 485) ? -1 : 1;
+
+	// Polyobj_OR types have override set to true
+	prd.overRide  = (line->special == 485 || line->special == 487);
+
+	if (line->flags & ML_NOCLIMB)
+		prd.turnobjs = 0;
+	else if (line->flags & ML_EFFECT4)
+		prd.turnobjs = 2;
+	else
+		prd.turnobjs = 1;
 
 	return EV_DoPolyObjRotate(&prd);
 }
@@ -1180,10 +1240,10 @@ static boolean PolyFlag(line_t *line)
 {
 	polyflagdata_t pfd;
 
-	pfd.polyObjNum = line->args[0];
-	pfd.speed = line->args[1];
+	pfd.polyObjNum = Tag_FGet(&line->tags);
+	pfd.speed = P_AproxDistance(line->dx, line->dy) >> FRACBITS;
 	pfd.angle = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y) >> ANGLETOFINESHIFT;
-	pfd.momx = line->args[2];
+	pfd.momx = sides[line->sidenum[0]].textureoffset >> FRACBITS;
 
 	return EV_DoPolyObjFlag(&pfd);
 }
@@ -1192,14 +1252,12 @@ static boolean PolyFlag(line_t *line)
 static boolean PolyDisplace(line_t *line)
 {
 	polydisplacedata_t pdd;
-	fixed_t length = R_PointToDist2(line->v2->x, line->v2->y, line->v1->x, line->v1->y);
-	fixed_t speed = line->args[1] << FRACBITS;
 
-	pdd.polyObjNum = line->args[0];
+	pdd.polyObjNum = Tag_FGet(&line->tags);
 
 	pdd.controlSector = line->frontsector;
-	pdd.dx = FixedMul(FixedDiv(line->dx, length), speed) >> 8;
-	pdd.dy = FixedMul(FixedDiv(line->dy, length), speed) >> 8;
+	pdd.dx = line->dx>>8;
+	pdd.dy = line->dy>>8;
 
 	return EV_DoPolyObjDisplace(&pdd);
 }
@@ -1211,16 +1269,22 @@ static boolean PolyRotDisplace(line_t *line)
 	polyrotdisplacedata_t pdd;
 	fixed_t anginter, distinter;
 
-	pdd.polyObjNum = line->args[0];
+	pdd.polyObjNum = Tag_FGet(&line->tags);
 	pdd.controlSector = line->frontsector;
 
 	// Rotate 'anginter' interval for each 'distinter' interval from the control sector.
-	anginter	= line->args[2] << FRACBITS;
-	distinter	= line->args[1] << FRACBITS;
+	// Use default values if not provided as fallback.
+	anginter	= sides[line->sidenum[0]].rowoffset ? sides[line->sidenum[0]].rowoffset : 90*FRACUNIT;
+	distinter	= sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : 128*FRACUNIT;
 	pdd.rotscale = FixedDiv(anginter, distinter);
 
 	// Same behavior as other rotators when carrying things.
-	pdd.turnobjs = line->args[3];
+	if (line->flags & ML_NOCLIMB)
+		pdd.turnobjs = 0;
+	else if (line->flags & ML_EFFECT4)
+		pdd.turnobjs = 2;
+	else
+		pdd.turnobjs = 1;
 
 	return EV_DoPolyObjRotDisplace(&pdd);
 }
@@ -2169,11 +2233,12 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 	// note: only commands with linedef types >= 400 && < 500 can be used
 	switch (line->special)
 	{
-		case 400: // Set tagged sector's heights/flats
-			if (line->args[1] != TMP_CEILING)
-				EV_DoFloor(line->args[0], line, instantMoveFloorByFrontSector);
-			if (line->args[1] != TMP_FLOOR)
-				EV_DoCeiling(line->args[0], line, instantMoveCeilingByFrontSector);
+		case 400: // Set tagged sector's floor height/pic
+			EV_DoFloor(line, instantMoveFloorByFrontSector);
+			break;
+
+		case 401: // Set tagged sector's ceiling height/pic
+			EV_DoCeiling(line, instantMoveCeilingByFrontSector);
 			break;
 
 		case 402: // Set tagged sector's light level
@@ -2206,31 +2271,37 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
-		case 403: // Move planes by front sector
-			if (line->args[1] != TMP_CEILING)
-				EV_DoFloor(line->args[0], line, moveFloorByFrontSector);
-			if (line->args[1] != TMP_FLOOR)
-				EV_DoCeiling(line->args[0], line, moveCeilingByFrontSector);
+		case 403: // Move floor, linelen = speed, frontsector floor = dest height
+			EV_DoFloor(line, moveFloorByFrontSector);
 			break;
 
-		case 405: // Move planes by distance
-			if (line->args[1] != TMP_CEILING)
-				EV_DoFloor(line->args[0], line, moveFloorByDistance);
-			if (line->args[1] != TMP_FLOOR)
-				EV_DoCeiling(line->args[0], line, moveCeilingByDistance);
+		case 404: // Move ceiling, linelen = speed, frontsector ceiling = dest height
+			EV_DoCeiling(line, moveCeilingByFrontSector);
 			break;
 
-		case 408: // Set flats
-		{
-			TAG_ITER_SECTORS(line->args[0], secnum)
-			{
-				if (line->args[1] != TMP_CEILING)
-					sectors[secnum].floorpic = line->frontsector->floorpic;
-				if (line->args[1] != TMP_FLOOR)
-					sectors[secnum].ceilingpic = line->frontsector->ceilingpic;
-			}
+		case 405: // Move floor by front side texture offsets, offset x = speed, offset y = amount to raise/lower
+			EV_DoFloor(line, moveFloorByFrontTexture);
 			break;
-		}
+
+		case 407: // Move ceiling by front side texture offsets, offset x = speed, offset y = amount to raise/lower
+			EV_DoCeiling(line, moveCeilingByFrontTexture);
+			break;
+
+/*		case 405: // Lower floor by line, dx = speed, dy = amount to lower
+			EV_DoFloor(line, lowerFloorByLine);
+			break;
+
+		case 406: // Raise floor by line, dx = speed, dy = amount to raise
+			EV_DoFloor(line, raiseFloorByLine);
+			break;
+
+		case 407: // Lower ceiling by line, dx = speed, dy = amount to lower
+			EV_DoCeiling(line, lowerCeilingByLine);
+			break;
+
+		case 408: // Raise ceiling by line, dx = speed, dy = amount to raise
+			EV_DoCeiling(line, raiseCeilingByLine);
+			break;*/
 
 		case 409: // Change tagged sectors' tag
 		// (formerly "Change calling sectors' tag", but behavior was changed)
@@ -2245,7 +2316,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 411: // Stop floor/ceiling movement in tagged sector(s)
-			TAG_ITER_SECTORS(line->args[0], secnum)
+			TAG_ITER_SECTORS(tag, secnum)
 			{
 				if (sectors[secnum].floordata)
 				{
@@ -2815,16 +2886,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 428: // Start floating platform movement
-			EV_DoElevator(line->args[0], line, elevateContinuous);
+			EV_DoElevator(line, elevateContinuous, true);
 			break;
 
-		case 429: // Crush planes once
-			if (line->args[1] == TMP_FLOOR)
-				EV_DoFloor(line->args[0], line, crushFloorOnce);
-			else if (line->args[1] == TMP_CEILING)
-				EV_DoCrush(line->args[0], line, crushCeilOnce);
-			else
-				EV_DoCrush(line->args[0], line, crushBothOnce);
+		case 429: // Crush Ceiling Down Once
+			EV_DoCrush(line, crushCeilOnce);
+			break;
+
+		case 430: // Crush Floor Up Once
+			EV_DoFloor(line, crushFloorOnce);
+			break;
+
+		case 431: // Crush Floor & Ceiling to middle Once
+			EV_DoCrush(line, crushBothOnce);
 			break;
 
 		case 432: // Enable 2D Mode (Disable if noclimb)
@@ -2883,22 +2957,17 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				scroll_t *scroller;
 				thinker_t *th;
 
-				fixed_t length = R_PointToDist2(line->v2->x, line->v2->y, line->v1->x, line->v1->y);
-				fixed_t speed = line->args[1] << FRACBITS;
-				fixed_t dx = FixedMul(FixedMul(FixedDiv(line->dx, length), speed) >> SCROLL_SHIFT, CARRYFACTOR);
-				fixed_t dy = FixedMul(FixedMul(FixedDiv(line->dy, length), speed) >> SCROLL_SHIFT, CARRYFACTOR);
-
 				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)T_Scroll)
 						continue;
 
 					scroller = (scroll_t *)th;
-					if (!Tag_Find(&sectors[scroller->affectee].tags, line->args[0]))
+					if (!Tag_Find(&sectors[scroller->affectee].tags, tag))
 						continue;
 
-					scroller->dx = dx;
-					scroller->dy = dy;
+					scroller->dx = FixedMul(line->dx>>SCROLL_SHIFT, CARRYFACTOR);
+					scroller->dy = FixedMul(line->dy>>SCROLL_SHIFT, CARRYFACTOR);
 				}
 			}
 			break;
@@ -3852,16 +3921,23 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			PolyDoor(line);
 			break;
 		case 482: // Polyobj_Move
+		case 483: // Polyobj_OR_Move
 			PolyMove(line);
 			break;
 		case 484: // Polyobj_RotateRight
+		case 485: // Polyobj_OR_RotateRight
+		case 486: // Polyobj_RotateLeft
+		case 487: // Polyobj_OR_RotateLeft
 			PolyRotate(line);
 			break;
 		case 488: // Polyobj_Waypoint
 			PolyWaypoint(line);
 			break;
 		case 489:
-			PolySetVisibilityTangibility(line);
+			PolyInvisible(line);
+			break;
+		case 490:
+			PolyVisible(line);
 			break;
 		case 491:
 			PolyTranslucency(line);
@@ -4260,7 +4336,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 		case 13: // Ramp Sector (Increase step-up/down)
 		case 14: // Non-Ramp Sector (Don't step-down)
-		case 15: // Bouncy FOF (deprecated)
+		case 15: // Unused
 			break;
 	}
 
@@ -4338,6 +4414,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		{
 			thinker_t *th;
 			mobj_t *mo2;
+			line_t junk;
 
 			if (player->bot || sector->ceilingdata || sector->floordata)
 				return;
@@ -4357,13 +4434,20 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			// clear the special so you can't push the button twice.
 			sector->special = 0;
 
+			// Initialize my junk
+			junk.tags.tags = NULL;
+			junk.tags.count = 0;
+
 			// Move the button down
-			EV_DoElevator(LE_CAPSULE0, NULL, elevateDown);
+			Tag_FSet(&junk.tags, LE_CAPSULE0);
+			EV_DoElevator(&junk, elevateDown, false);
 
 			// Open the top FOF
-			EV_DoFloor(LE_CAPSULE1, NULL, raiseFloorToNearestFast);
+			Tag_FSet(&junk.tags, LE_CAPSULE1);
+			EV_DoFloor(&junk, raiseFloorToNearestFast);
 			// Open the bottom FOF
-			EV_DoCeiling(LE_CAPSULE2, NULL, lowerToLowestFast);
+			Tag_FSet(&junk.tags, LE_CAPSULE2);
+			EV_DoCeiling(&junk, lowerToLowestFast);
 
 			// Mark all players with the time to exit thingy!
 			for (i = 0; i < MAXPLAYERS; i++)
@@ -5435,7 +5519,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	thinker_t *th;
 	friction_t *f;
 	pusher_t *p;
-	pointpusher_t *pp;
 	size_t sec2num;
 	size_t i;
 
@@ -5544,14 +5627,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 			p = (pusher_t *)th;
 
 			if (p->affectee == (INT32)sec2num)
-				Add_Pusher(p->type, p->x_mag, p->y_mag, p->z_mag, (INT32)(sec-sectors), p->affectee, p->exclusive, p->slider);
-		}
-		else if (th->function.acp1 == (actionf_p1)T_PointPusher)
-		{
-			pp = (pointpusher_t *)th;
-
-			if (pp->affectee == (INT32)sec2num)
-				Add_PointPusher(pp->magnitude, pp->source, pp->affectee, pp->exclusive);
+				Add_Pusher(p->type, p->x_mag<<FRACBITS, p->y_mag<<FRACBITS, p->source, (INT32)(sec-sectors), p->affectee, p->exclusive, p->slider);
 		}
 
 		if(secthinkers) i++;
@@ -5997,11 +6073,12 @@ static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flata
 static void P_MakeFOFBouncy(line_t *paramline, line_t *masterline)
 {
 	INT32 s;
+	TAG_ITER_DECLARECOUNTER(0);
 
 	if (masterline->special < 100 || masterline->special >= 300)
 		return;
 
-	TAG_ITER_SECTORS(masterline->args[0], s)
+	TAG_ITER_SECTORS(0, masterline->args[0], s)
 	{
 		ffloor_t *rover;
 
@@ -6040,6 +6117,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 	INT32 j;
 	thinkerlist_t *secthinkers;
 	thinker_t *th;
+	TAG_ITER_DECLARECOUNTER(0);
 	// This used to be used, and *should* be used in the future,
 	// but currently isn't.
 	(void)fromnetsave;
@@ -6063,10 +6141,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				//Spike damage automatically sets SF_TRIGGERSPECIAL_TOUCH.
 				//Yes, this also affects other specials on the same sector. Sorry.
 				sector->flags |= SF_TRIGGERSPECIAL_TOUCH;
-				break;
-			case 15: // Bouncy FOF
-				CONS_Alert(CONS_WARNING, M_GetText("Deprecated bouncy FOF sector type detected. Please use linedef type 76 instead.\n"));
-				CheckForBouncySector = true;
 				break;
 		}
 
@@ -6114,8 +6188,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 			secthinkers[((friction_t *)th)->affectee].count++;
 		else if (th->function.acp1 == (actionf_p1)T_Pusher)
 			secthinkers[((pusher_t *)th)->affectee].count++;
-		else if (th->function.acp1 == (actionf_p1)T_PointPusher)
-			secthinkers[((pointpusher_t *)th)->affectee].count++;
 	}
 
 	// Allocate each list, and then zero the count so we can use it to track
@@ -6136,8 +6208,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 			secnum = ((friction_t *)th)->affectee;
 		else if (th->function.acp1 == (actionf_p1)T_Pusher)
 			secnum = ((pusher_t *)th)->affectee;
-		else if (th->function.acp1 == (actionf_p1)T_PointPusher)
-			secnum = ((pointpusher_t *)th)->affectee;
 
 		if (secnum != (size_t)-1)
 			secthinkers[secnum].thinkers[secthinkers[secnum].count++] = th;
@@ -6270,45 +6340,58 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 50: // Insta-Lower Sector
-				if (!udmf)
-					EV_DoFloor(lines[i].args[0], &lines[i], instantLower);
+				EV_DoFloor(&lines[i], instantLower);
 				break;
 
 			case 51: // Instant raise for ceilings
-				if (!udmf)
-					EV_DoCeiling(lines[i].args[0], &lines[i], instantRaise);
+				EV_DoCeiling(&lines[i], instantRaise);
 				break;
 
 			case 52: // Continuously Falling sector
-				EV_DoContinuousFall(lines[i].frontsector, lines[i].backsector, lines[i].args[0] << FRACBITS, lines[i].args[1]);
+				EV_DoContinuousFall(lines[i].frontsector, lines[i].backsector, P_AproxDistance(lines[i].dx, lines[i].dy), (lines[i].flags & ML_NOCLIMB));
 				break;
 
-			case 53: // Continuous plane movement (slowdown)
+			case 53: // New super cool and awesome moving floor and ceiling type
+			case 54: // New super cool and awesome moving floor type
 				if (lines[i].backsector)
-				{
-					if (lines[i].args[1] != TMP_CEILING)
-						EV_DoFloor(lines[i].args[0], &lines[i], bounceFloor);
-					if (lines[i].args[1] != TMP_FLOOR)
-						EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeiling);
-				}
-				break;
+					EV_DoFloor(&lines[i], bounceFloor);
+				if (lines[i].special == 54)
+					break;
+				/* FALLTHRU */
 
-			case 56: // Continuous plane movement (constant)
+			case 55: // New super cool and awesome moving ceiling type
 				if (lines[i].backsector)
-				{
-					if (lines[i].args[1] != TMP_CEILING)
-						EV_DoFloor(lines[i].args[0], &lines[i], bounceFloorCrush);
-					if (lines[i].args[1] != TMP_FLOOR)
-						EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeilingCrush);
-				}
+					EV_DoCeiling(&lines[i], bounceCeiling);
 				break;
 
-			case 60: // Moving platform
-				EV_DoElevator(lines[i].args[0], &lines[i], elevateContinuous);
+			case 56: // New super cool and awesome moving floor and ceiling crush type
+			case 57: // New super cool and awesome moving floor crush type
+				if (lines[i].backsector)
+					EV_DoFloor(&lines[i], bounceFloorCrush);
+
+				if (lines[i].special == 57)
+					break; //only move the floor
+				/* FALLTHRU */
+
+			case 58: // New super cool and awesome moving ceiling crush type
+				if (lines[i].backsector)
+					EV_DoCeiling(&lines[i], bounceCeilingCrush);
+				break;
+
+			case 59: // Activate floating platform
+				EV_DoElevator(&lines[i], elevateContinuous, false);
+				break;
+
+			case 60: // Floating platform with adjustable speed
+				EV_DoElevator(&lines[i], elevateContinuous, true);
 				break;
 
 			case 61: // Crusher!
-				EV_DoCrush(lines[i].args[0], &lines[i], lines[i].args[1] ? raiseAndCrush : crushAndRaise);
+				EV_DoCrush(&lines[i], crushAndRaise);
+				break;
+
+			case 62: // Crusher (up and then down)!
+				EV_DoCrush(&lines[i], fastCrushAndRaise);
 				break;
 
 			case 63: // support for drawn heights coming from different sector
@@ -6335,9 +6418,17 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
-			case 66: // Displace planes by front sector
-				TAG_ITER_SECTORS(lines[i].args[0], s)
-					P_AddPlaneDisplaceThinker(lines[i].args[1], abs(lines[i].args[2])<<8, sides[lines[i].sidenum[0]].sector-sectors, s, lines[i].args[2] < 0);
+			case 66: // Displace floor by front sector
+				TAG_ITER_SECTORS(tag, s)
+					P_AddPlaneDisplaceThinker(pd_floor, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
+				break;
+			case 67: // Displace ceiling by front sector
+				TAG_ITER_SECTORS(tag, s)
+					P_AddPlaneDisplaceThinker(pd_ceiling, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
+				break;
+			case 68: // Displace both floor AND ceiling by front sector
+				TAG_ITER_SECTORS(tag, s)
+					P_AddPlaneDisplaceThinker(pd_both, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
 				break;
 
 			case 70: // Add raise thinker to FOF
@@ -6346,7 +6437,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					fixed_t destheight = lines[i].args[2] << FRACBITS;
 					fixed_t startheight, topheight, bottomheight;
 
-					TAG_ITER_LINES(lines[i].args[0], l)
+					TAG_ITER_LINES(0, lines[i].args[0], l)
 					{
 						if (lines[l].special < 100 || lines[l].special >= 300)
 							continue;
@@ -6363,7 +6454,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 71: // Add air bob thinker to FOF
 				if (udmf)
 				{
-					TAG_ITER_LINES(lines[i].args[0], l)
+					TAG_ITER_LINES(0, lines[i].args[0], l)
 					{
 						if (lines[l].special < 100 || lines[l].special >= 300)
 							continue;
@@ -6378,7 +6469,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				{
 					UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
 
-					TAG_ITER_LINES(lines[i].args[0], l)
+					TAG_ITER_LINES(0, lines[i].args[0], l)
 					{
 						if (lines[l].special < 100 || lines[l].special >= 300)
 							continue;
@@ -6391,7 +6482,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 73: // Add laser thinker to FOF
 				if (udmf)
 				{
-					TAG_ITER_LINES(lines[i].args[0], l)
+					TAG_ITER_LINES(0, lines[i].args[0], l)
 					{
 						if (lines[l].special < 100 || lines[l].special >= 300)
 							continue;
@@ -6680,7 +6771,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (busttype != BT_TOUCH || bustflags & FS_ONLYBOTTOM)
 					ffloorflags |= FF_BLOCKPLAYER;
 
-				TAG_ITER_SECTORS(lines[i].args[0], s)
+				TAG_ITER_SECTORS(0, lines[i].args[0], s)
 				{
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], ffloorflags, secthinkers);
 					fflr->busttype = busttype;
@@ -6694,7 +6785,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (!(lines[i].args[1]))
 					ffloorflags |= FF_RIPPLE;
 
-				TAG_ITER_SECTORS(lines[i].args[0], s)
+				TAG_ITER_SECTORS(0, lines[i].args[0], s)
 				{
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, 0xff, ffloorflags, secthinkers);
 					fflr->sinkspeed = abs(lines[i].args[2]) << (FRACBITS - 1);
@@ -6711,7 +6802,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 259: // Custom FOF
-				TAG_ITER_SECTORS(lines[i].args[0], s)
+				TAG_ITER_SECTORS(0, lines[i].args[0], s)
 				{
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], lines[i].args[2], secthinkers);
 					if (!udmf) // Ugly backwards compatibility stuff
@@ -7105,12 +7196,13 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[2] & TMFB_ONLYBOTTOM)
 					bustflags |= FS_ONLYBOTTOM;
 
-				TAG_ITER_LINES(lines[i].args[0], l)
+				TAG_ITER_LINES(0, lines[i].args[0], l)
 				{
+					TAG_ITER_DECLARECOUNTER(1);
 					if (lines[l].special < 100 || lines[l].special >= 300)
 						continue;
 
-					TAG_ITER_SECTORS(lines[l].args[0], s)
+					TAG_ITER_SECTORS(1, lines[l].args[0], s)
 					{
 						ffloor_t *rover;
 
@@ -7137,12 +7229,13 @@ void P_SpawnSpecials(boolean fromnetsave)
 			{
 				if (!udmf)
 					break;
-				TAG_ITER_LINES(lines[i].args[0], l)
+				TAG_ITER_LINES(0, lines[i].args[0], l)
 				{
+					TAG_ITER_DECLARECOUNTER(1);
 					if (lines[l].special < 100 || lines[l].special >= 300)
 						continue;
 
-					TAG_ITER_SECTORS(lines[l].args[0], s)
+					TAG_ITER_SECTORS(1, lines[l].args[0], s)
 					{
 						ffloor_t *rover;
 
@@ -7167,12 +7260,12 @@ void P_SpawnSpecials(boolean fromnetsave)
 			{
 				if (udmf)
 				{
-					TAG_ITER_LINES(lines[i].args[0], l)
+					TAG_ITER_LINES(0, lines[i].args[0], l)
 						P_MakeFOFBouncy(lines + i, lines + l);
 				}
 				else
 				{
-					TAG_ITER_SECTORS(lines[i].args[0], s)
+					TAG_ITER_SECTORS(0, lines[i].args[0], s)
 						for (j = 0; (unsigned)j < sectors[s].linecount; j++)
 							P_MakeFOFBouncy(lines + i, sectors[s].lines[j]);
 				}
@@ -7231,9 +7324,14 @@ static void P_AddFakeFloorsByLine(size_t line, INT32 alpha, ffloortype_e ffloorf
 	mtag_t tag = lines[line].args[0];
 	size_t sec = sides[*lines[line].sidenum].sector-sectors;
 
+<<<<<<< HEAD
+	TAG_ITER_SECTORS(0, tag, s)
+		P_AddFakeFloor(&sectors[s], &sectors[sec], lines+line, alpha, ffloorflags, secthinkers);
+=======
 	line_t* li = lines + line;
 	TAG_ITER_SECTORS(tag, s)
-		P_AddFakeFloor(&sectors[s], &sectors[sec], li, alpha, ffloorflags, secthinkers);
+		P_AddFakeFloor(&sectors[s], &sectors[sec], li, ffloorflags, secthinkers);
+>>>>>>> next
 }
 
 /*
@@ -7542,24 +7640,6 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 	P_AddThinker(THINK_MAIN, &s->thinker);
 }
 
-static void P_SpawnPlaneScroller(line_t *l, fixed_t dx, fixed_t dy, INT32 control, INT32 affectee, INT32 accel, INT32 exclusive)
-{
-	if (l->args[1] != TMP_CEILING)
-	{
-		if (l->args[2] != TMS_SCROLLONLY)
-			Add_Scroller(sc_carry, FixedMul(dx, CARRYFACTOR), FixedMul(dy, CARRYFACTOR), control, affectee, accel, exclusive);
-		if (l->args[2] != TMS_CARRYONLY)
-			Add_Scroller(sc_floor, -dx, dy, control, affectee, accel, exclusive);
-	}
-	if (l->args[1] != TMP_FLOOR)
-	{
-		if (l->args[2] != TMS_SCROLLONLY)
-			Add_Scroller(sc_carry_ceiling, FixedMul(dx, CARRYFACTOR), FixedMul(dy, CARRYFACTOR), control, affectee, accel, exclusive);
-		if (l->args[2] != TMS_CARRYONLY)
-			Add_Scroller(sc_ceiling, -dx, dy, control, affectee, accel, exclusive);
-	}
-}
-
 /** Initializes the scrollers.
   *
   * \todo Get rid of all the magic numbers.
@@ -7569,65 +7649,140 @@ static void P_SpawnScrollers(void)
 {
 	size_t i;
 	line_t *l = lines;
+	mtag_t tag;
 
 	for (i = 0; i < numlines; i++, l++)
 	{
+		fixed_t dx = l->dx >> SCROLL_SHIFT; // direction and speed of scrolling
+		fixed_t dy = l->dy >> SCROLL_SHIFT;
 		INT32 control = -1, accel = 0; // no control sector or acceleration
+		INT32 special = l->special;
 
-		if (l->special == 502 || l->special == 510)
+		tag = Tag_FGet(&l->tags);
+
+		// These types are same as the ones they get set to except that the
+		// first side's sector's heights cause scrolling when they change, and
+		// this linedef controls the direction and speed of the scrolling. The
+		// most complicated linedef since donuts, but powerful :)
+
+		if (special == 515 || special == 512 || special == 522 || special == 532 || special == 504) // displacement scrollers
 		{
-			if ((l->args[4] & TMST_TYPEMASK) != TMST_REGULAR)
-				control = (INT32)(sides[*l->sidenum].sector - sectors);
-			if ((l->args[4] & TMST_TYPEMASK) == TMST_ACCELERATIVE)
-				accel = 1;
+			special -= 2;
+			control = (INT32)(sides[*l->sidenum].sector - sectors);
+		}
+		else if (special == 514 || special == 511 || special == 521 || special == 531 || special == 503) // accelerative scrollers
+		{
+			special--;
+			accel = 1;
+			control = (INT32)(sides[*l->sidenum].sector - sectors);
+		}
+		else if (special == 535 || special == 525) // displacement scrollers
+		{
+			special -= 2;
+			control = (INT32)(sides[*l->sidenum].sector - sectors);
+		}
+		else if (special == 534 || special == 524) // accelerative scrollers
+		{
+			accel = 1;
+			special--;
+			control = (INT32)(sides[*l->sidenum].sector - sectors);
 		}
 
-		switch (l->special)
+		switch (special)
 		{
 			register INT32 s;
 
-			case 510: // plane scroller
-			{
-				fixed_t length = R_PointToDist2(l->v2->x, l->v2->y, l->v1->x, l->v1->y);
-				fixed_t speed = l->args[3] << FRACBITS;
-				fixed_t dx = FixedMul(FixedDiv(l->dx, length), speed) >> SCROLL_SHIFT;
-				fixed_t dy = FixedMul(FixedDiv(l->dy, length), speed) >> SCROLL_SHIFT;
+			case 513: // scroll effect ceiling
+			case 533: // scroll and carry objects on ceiling
+				TAG_ITER_SECTORS(tag, s)
+					Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				if (special != 533)
+					break;
+				/* FALLTHRU */
 
-				if (l->args[0] == 0)
-					P_SpawnPlaneScroller(l, dx, dy, control, (INT32)(l->frontsector - sectors), accel, l->args[4] & TMST_NONEXCLUSIVE);
-				else
-				{
-					TAG_ITER_SECTORS(l->args[0], s)
-						P_SpawnPlaneScroller(l, dx, dy, control, s, accel, l->args[4] & TMST_NONEXCLUSIVE);
-				}
+			case 523:	// carry objects on ceiling
+				dx = FixedMul(dx, CARRYFACTOR);
+				dy = FixedMul(dy, CARRYFACTOR);
+				TAG_ITER_SECTORS(tag, s)
+					Add_Scroller(sc_carry_ceiling, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
 				break;
-			}
+
+			case 510: // scroll effect floor
+			case 530: // scroll and carry objects on floor
+				TAG_ITER_SECTORS(tag, s)
+					Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				if (special != 530)
+					break;
+				/* FALLTHRU */
+
+			case 520:	// carry objects on floor
+				dx = FixedMul(dx, CARRYFACTOR);
+				dy = FixedMul(dy, CARRYFACTOR);
+				TAG_ITER_SECTORS(tag, s)
+					Add_Scroller(sc_carry, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				break;
 
 			// scroll wall according to linedef
 			// (same direction and speed as scrolling floors)
 			case 502:
 			{
-				TAG_ITER_LINES(l->args[0], s)
+				TAG_ITER_LINES(tag, s)
 					if (s != (INT32)i)
 					{
-						if (l->args[1] != TMSD_BACK)
-							Add_Scroller(sc_side, l->args[2] << FRACBITS, l->args[3] << FRACBITS, control, lines[s].sidenum[0], accel, 0);
-						if (l->args[1] != TMSD_FRONT && lines[s].sidenum[1] != 0xffff)
-							Add_Scroller(sc_side, l->args[2] << FRACBITS, l->args[3] << FRACBITS, control, lines[s].sidenum[1], accel, 0);
+						if (l->flags & ML_EFFECT2) // use texture offsets instead
+						{
+							dx = sides[l->sidenum[0]].textureoffset;
+							dy = sides[l->sidenum[0]].rowoffset;
+						}
+						if (l->flags & ML_EFFECT3)
+						{
+							if (lines[s].sidenum[1] != 0xffff)
+								Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[1], accel, 0);
+						}
+						else
+							Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
 					}
 				break;
 			}
 
-			case 500:
-				if (l->args[0] != TMSD_BACK)
-					Add_Scroller(sc_side, -l->args[1] << FRACBITS, l->args[2] << FRACBITS, -1, l->sidenum[0], accel, 0);
-				if (l->args[0] != TMSD_FRONT)
-				{
-					if (l->sidenum[1] != 0xffff)
-						Add_Scroller(sc_side, -l->args[1] << FRACBITS, l->args[2] << FRACBITS, -1, l->sidenum[1], accel, 0);
-					else
-						CONS_Debug(DBG_GAMELOGIC, "Line special 500 (line #%s) missing back side!\n", sizeu1(i));
-				}
+			case 505:
+				s = lines[i].sidenum[0];
+				Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, s, accel, 0);
+				break;
+
+			case 506:
+				s = lines[i].sidenum[1];
+
+				if (s != 0xffff)
+					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, lines[i].sidenum[0], accel, 0);
+				else
+					CONS_Debug(DBG_GAMELOGIC, "Line special 506 (line #%s) missing back side!\n", sizeu1(i));
+				break;
+
+			case 507:
+				s = lines[i].sidenum[0];
+
+				if (lines[i].sidenum[1] != 0xffff)
+					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, lines[i].sidenum[1], accel, 0);
+				else
+					CONS_Debug(DBG_GAMELOGIC, "Line special 507 (line #%s) missing back side!\n", sizeu1(i));
+				break;
+
+			case 508:
+				s = lines[i].sidenum[1];
+
+				if (s != 0xffff)
+					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, s, accel, 0);
+				else
+					CONS_Debug(DBG_GAMELOGIC, "Line special 508 (line #%s) missing back side!\n", sizeu1(i));
+				break;
+
+			case 500: // scroll first side
+				Add_Scroller(sc_side, FRACUNIT, 0, -1, lines[i].sidenum[0], accel, 0);
+				break;
+
+			case 501: // jff 1/30/98 2-way scroll
+				Add_Scroller(sc_side, -FRACUNIT, 0, -1, lines[i].sidenum[0], accel, 0);
 				break;
 		}
 	}
@@ -8446,45 +8601,25 @@ static void P_SpawnFriction(void)
 
 #define PUSH_FACTOR 7
 
-static void Add_PointPusher(INT32 magnitude, mobj_t *source, INT32 affectee, INT32 exclusive)
-{
-	pointpusher_t *p = Z_Calloc(sizeof * p, PU_LEVSPEC, NULL);
-
-	p->thinker.function.acp1 = (actionf_p1)T_PointPusher;
-	p->source = source;
-	p->magnitude = magnitude;
-	p->exclusive = exclusive;
-
-	if (source) // point source exist?
-	{
-		p->radius = AngleFixed(source->angle);
-		p->x = p->source->x;
-		p->y = p->source->y;
-		p->z = p->source->z;
-	}
-	p->affectee = affectee;
-	P_AddThinker(THINK_MAIN, &p->thinker);
-}
-
 /** Adds a pusher.
   *
   * \param type     Type of push/pull effect.
   * \param x_mag    X magnitude.
   * \param y_mag    Y magnitude.
-  * \param z_mag    Z magnitude.
+  * \param source   For a point pusher/puller, the source object.
   * \param affectee Target sector.
   * \param referrer What sector set it
   * \sa T_Pusher, P_GetPushThing, P_SpawnPushers
   */
-static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t z_mag, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider)
+static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider)
 {
 	pusher_t *p = Z_Calloc(sizeof *p, PU_LEVSPEC, NULL);
 
 	p->thinker.function.acp1 = (actionf_p1)T_Pusher;
+	p->source = source;
 	p->type = type;
-	p->x_mag = x_mag;
-	p->y_mag = y_mag;
-	p->z_mag = z_mag;
+	p->x_mag = x_mag>>FRACBITS;
+	p->y_mag = y_mag>>FRACBITS;
 	p->exclusive = exclusive;
 	p->slider = slider;
 
@@ -8496,13 +8631,32 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t 
 	else
 		p->roverpusher = false;
 
+	// "The right triangle of the square of the length of the hypotenuse is equal to the sum of the squares of the lengths of the other two sides."
+	// "Bah! Stupid brains! Don't you know anything besides the Pythagorean Theorem?" - Earthworm Jim
+	if (type == p_downcurrent || type == p_upcurrent || type == p_upwind || type == p_downwind)
+		p->magnitude = P_AproxDistance(p->x_mag,p->y_mag)<<(FRACBITS-PUSH_FACTOR);
+	else
+		p->magnitude = P_AproxDistance(p->x_mag,p->y_mag);
+	if (source) // point source exist?
+	{
+		// where force goes to zero
+		if (type == p_push)
+			p->radius = AngleFixed(source->angle);
+		else
+			p->radius = (p->magnitude)<<(FRACBITS+1);
+
+		p->x = p->source->x;
+		p->y = p->source->y;
+		p->z = p->source->z;
+	}
 	p->affectee = affectee;
 	P_AddThinker(THINK_MAIN, &p->thinker);
 }
 
+
 // PIT_PushThing determines the angle and magnitude of the effect.
 // The object's x and y momentum values are changed.
-static pointpusher_t *tmpusher; // pointpusher structure for blockmap searches
+static pusher_t *tmpusher; // pusher structure for blockmap searches
 
 /** Applies a point pusher/puller to a thing.
   *
@@ -8652,35 +8806,6 @@ static inline boolean PIT_PushThing(mobj_t *thing)
 	return true;
 }
 
-void T_PointPusher(pointpusher_t *p)
-{
-	INT32 xl, xh, yl, yh, bx, by;
-	sector_t *sec = sectors + p->affectee;
-
-	// Be sure the special sector type is still turned on. If so, proceed.
-	// Else, bail out; the sector type has been changed on us.
-
-	if (GETSECSPECIAL(sec->special, 3) != 2)
-		return;
-
-	// Seek out all pushable things within the force radius of this
-	// point pusher. Crosses sectors, so use blockmap.
-
-	tmpusher = p; // MT_PUSH/MT_PULL point source
-	tmbbox[BOXTOP] = p->y + p->radius;
-	tmbbox[BOXBOTTOM] = p->y - p->radius;
-	tmbbox[BOXRIGHT] = p->x + p->radius;
-	tmbbox[BOXLEFT] = p->x - p->radius;
-
-	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
-	for (bx = xl; bx <= xh; bx++)
-		for (by = yl; by <= yh; by++)
-			P_BlockThingsIterator(bx, by, PIT_PushThing);
-}
-
 /** Applies a pusher to all affected objects.
   *
   * \param p Thinker for the pusher effect.
@@ -8692,15 +8817,15 @@ void T_Pusher(pusher_t *p)
 	sector_t *sec, *referrer = NULL;
 	mobj_t *thing;
 	msecnode_t *node;
-	fixed_t x_mag, y_mag, z_mag;
-	fixed_t xspeed = 0, yspeed = 0, zspeed = 0;
+	INT32 xspeed = 0,yspeed = 0;
+	INT32 xl, xh, yl, yh, bx, by;
+	INT32 radius;
+	//INT32 ht = 0;
 	boolean inFOF;
 	boolean touching;
 	boolean moved;
 
-	x_mag = p->x_mag >> PUSH_FACTOR;
-	y_mag = p->y_mag >> PUSH_FACTOR;
-	z_mag = p->z_mag >> PUSH_FACTOR;
+	xspeed = yspeed = 0;
 
 	sec = sectors + p->affectee;
 
@@ -8734,6 +8859,29 @@ void T_Pusher(pusher_t *p)
 	// Apply the effect to clipped players only for now.
 	//
 	// In Phase II, you can apply these effects to Things other than players.
+
+	if (p->type == p_push)
+	{
+
+		// Seek out all pushable things within the force radius of this
+		// point pusher. Crosses sectors, so use blockmap.
+
+		tmpusher = p; // MT_PUSH/MT_PULL point source
+		radius = p->radius; // where force goes to zero
+		tmbbox[BOXTOP]    = p->y + radius;
+		tmbbox[BOXBOTTOM] = p->y - radius;
+		tmbbox[BOXRIGHT]  = p->x + radius;
+		tmbbox[BOXLEFT]   = p->x - radius;
+
+		xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+		xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+		yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+		yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+		for (bx = xl; bx <= xh; bx++)
+			for (by = yl; by <= yh; by++)
+				P_BlockThingsIterator(bx,by, PIT_PushThing);
+		return;
+	}
 
 	// constant pushers p_wind and p_current
 	node = sec->touching_thinglist; // things touching this sector
@@ -8809,35 +8957,83 @@ void T_Pusher(pusher_t *p)
 		if (!touching && !inFOF) // Object is out of range of effect
 			continue;
 
-		if (inFOF || (p->type == p_current && touching))
+		if (p->type == p_wind)
 		{
-			xspeed = x_mag; // full force
-			yspeed = y_mag;
-			zspeed = z_mag;
-			moved = true;
+			if (touching) // on ground
+			{
+				xspeed = (p->x_mag)>>1; // half force
+				yspeed = (p->y_mag)>>1;
+				moved = true;
+			}
+			else if (inFOF)
+			{
+				xspeed = (p->x_mag); // full force
+				yspeed = (p->y_mag);
+				moved = true;
+			}
 		}
-		else if (p->type == p_wind && touching)
+		else if (p->type == p_upwind)
 		{
-			xspeed = x_mag>>1; // half force
-			yspeed = y_mag>>1;
-			zspeed = z_mag>>1;
-			moved = true;
+			if (touching) // on ground
+			{
+				thing->momz += (p->magnitude)>>1;
+				moved = true;
+			}
+			else if (inFOF)
+			{
+				thing->momz += p->magnitude;
+				moved = true;
+			}
+		}
+		else if (p->type == p_downwind)
+		{
+			if (touching) // on ground
+			{
+				thing->momz -= (p->magnitude)>>1;
+				moved = true;
+			}
+			else if (inFOF)
+			{
+				thing->momz -= p->magnitude;
+				moved = true;
+			}
+		}
+		else // p_current
+		{
+			if (!touching && !inFOF) // Not in water at all
+				xspeed = yspeed = 0; // no force
+			else // underwater / touching water
+			{
+				if (p->type == p_upcurrent)
+					thing->momz += p->magnitude;
+				else if (p->type == p_downcurrent)
+					thing->momz -= p->magnitude;
+				else
+				{
+					xspeed = p->x_mag; // full force
+					yspeed = p->y_mag;
+				}
+				moved = true;
+			}
 		}
 
-		thing->momx += xspeed;
-		thing->momy += yspeed;
-		thing->momz += zspeed;
-		if (thing->player)
+		if (p->type != p_downcurrent && p->type != p_upcurrent
+			&& p->type != p_upwind && p->type != p_downwind)
 		{
-			thing->player->cmomx += xspeed;
-			thing->player->cmomy += yspeed;
-			thing->player->cmomx = FixedMul(thing->player->cmomx, ORIG_FRICTION);
-			thing->player->cmomy = FixedMul(thing->player->cmomy, ORIG_FRICTION);
-		}
+			thing->momx += xspeed<<(FRACBITS-PUSH_FACTOR);
+			thing->momy += yspeed<<(FRACBITS-PUSH_FACTOR);
+			if (thing->player)
+			{
+				thing->player->cmomx += xspeed<<(FRACBITS-PUSH_FACTOR);
+				thing->player->cmomy += yspeed<<(FRACBITS-PUSH_FACTOR);
+				thing->player->cmomx = FixedMul(thing->player->cmomx, ORIG_FRICTION);
+				thing->player->cmomy = FixedMul(thing->player->cmomy, ORIG_FRICTION);
+			}
 
-		// Tumbleweeds bounce a bit...
-		if (thing->type == MT_LITTLETUMBLEWEED || thing->type == MT_BIGTUMBLEWEED)
-			thing->momz += P_AproxDistance(xspeed, yspeed) >> 2;
+			// Tumbleweeds bounce a bit...
+			if (thing->type == MT_LITTLETUMBLEWEED || thing->type == MT_BIGTUMBLEWEED)
+				thing->momz += P_AproxDistance(xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR)) >> 2;
+		}
 
 		if (moved)
 		{
@@ -8850,7 +9046,7 @@ void T_Pusher(pusher_t *p)
 					thing->player->pflags |= jumped;
 
 				thing->player->pflags |= PF_SLIDING;
-				thing->angle = R_PointToAngle2(0, 0, xspeed, yspeed);
+				thing->angle = R_PointToAngle2 (0, 0, xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR));
 
 				if (!demoplayback || P_ControlStyle(thing->player) == CS_LMAOGALOG)
 				{
@@ -8917,29 +9113,37 @@ static void P_SpawnPushers(void)
 		tag = Tag_FGet(&l->tags);
 		switch (l->special)
 		{
-			case 541: // wind/current
-			{
-				fixed_t length = R_PointToDist2(l->v2->x, l->v2->y, l->v1->x, l->v1->y);
-				fixed_t hspeed = l->args[1] << FRACBITS;
-				fixed_t dx = FixedMul(FixedDiv(l->dx, length), hspeed);
-				fixed_t dy = FixedMul(FixedDiv(l->dy, length), hspeed);
-
-				if (l->args[0] == 0)
-					Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, (INT32)(l->frontsector - sectors), -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
-				else
-				{
-					TAG_ITER_SECTORS(l->args[0], s)
-						Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, s, -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
-				}
+			case 541: // wind
+				TAG_ITER_SECTORS(tag, s)
+					Add_Pusher(p_wind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
-			}
+			case 544: // current
+				TAG_ITER_SECTORS(tag, s)
+					Add_Pusher(p_current, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				break;
 			case 547: // push/pull
 				TAG_ITER_SECTORS(tag, s)
 				{
 					thing = P_GetPushThing(s);
 					if (thing) // No MT_P* means no effect
-						Add_PointPusher(P_AproxDistance(l->dx >> FRACBITS, l->dy >> FRACBITS), thing, s, l->flags & ML_NOCLIMB);
+						Add_Pusher(p_push, l->dx, l->dy, thing, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				}
+				break;
+			case 545: // current up
+				TAG_ITER_SECTORS(tag, s)
+					Add_Pusher(p_upcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				break;
+			case 546: // current down
+				TAG_ITER_SECTORS(tag, s)
+					Add_Pusher(p_downcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				break;
+			case 542: // wind up
+				TAG_ITER_SECTORS(tag, s)
+					Add_Pusher(p_upwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				break;
+			case 543: // wind down
+				TAG_ITER_SECTORS(tag, s)
+					Add_Pusher(p_downwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 		}
 	}

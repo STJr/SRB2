@@ -3741,6 +3741,15 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[2] = lines[i].args[1];
 			lines[i].special = 489;
 			break;
+		case 491: //Polyobject - set translucency
+			lines[i].args[0] = tag;
+			// If Front X Offset is specified, use that. Else, use floorheight.
+			lines[i].args[1] = (sides[lines[i].sidenum[0]].textureoffset ? sides[lines[i].sidenum[0]].textureoffset : lines[i].frontsector->floorheight) >> FRACBITS;
+			// If DONTPEGBOTTOM, specify raw translucency value. Else, take it out of 1000.
+			if (!(lines[i].flags & ML_DONTPEGBOTTOM))
+				lines[i].args[1] /= 100;
+			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT3);
+			break;
 		case 500: //Scroll front wall left
 		case 501: //Scroll front wall right
 			lines[i].args[0] = 0;
