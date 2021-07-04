@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -48,8 +48,6 @@ size_t COM_FirstOption(void);
 
 // match existing command or NULL
 const char *COM_CompleteCommand(const char *partial, INT32 skips);
-
-const char *COM_CompleteAlias(const char *partial, INT32 skips);
 
 // insert at queu (at end of other command)
 #define COM_BufAddText(s) COM_BufAddTextEx(s, 0)
@@ -140,6 +138,7 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 	const char *string;   // value in string
 	char *zstring;        // Either NULL or same as string.
 	                      // If non-NULL, must be Z_Free'd later.
+
 	struct
 	{
 		char allocated; // whether to Z_Free
@@ -155,10 +154,6 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 	char changed;         // has variable been changed by the user? 0 = no, 1 = yes
 	struct consvar_s *next;
 } consvar_t;
-
-/* name, defaultvalue, flags, PossibleValue, func */
-#define CVAR_INIT( ... ) \
-{ __VA_ARGS__, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL }
 
 #ifdef OLD22DEMOCOMPAT
 typedef struct old_demo_var old_demo_var_t;
@@ -216,7 +211,7 @@ void CV_SaveVariables(FILE *f);
 void CV_SaveVars(UINT8 **p, boolean in_demo);
 
 #define CV_SaveNetVars(p) CV_SaveVars(p, false)
-void CV_LoadNetVars(UINT8 **p);
+void CV_LoadNetVars(UINT8 **p, boolean onlyIfChanged);
 
 // then revert after leaving a netgame
 void CV_RevertNetVars(void);

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 2013-2016 by Matthew "Kaito Sinclaire" Walsh.
 // Copyright (C) 2013      by "Ninji".
-// Copyright (C) 2013-2021 by Sonic Team Junior.
+// Copyright (C) 2013-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,7 +18,7 @@
 #include "z_zone.h"
 #include "v_video.h"
 #include "i_video.h"
-#include "i_system.h" // I_GetPreciseTime
+#include "i_system.h" // I_GetTimeMicros
 #include "m_misc.h"
 #include "st_stuff.h" // st_palette
 
@@ -29,21 +29,15 @@
 // GIFs are always little-endian
 #include "byteptr.h"
 
-CV_PossibleValue_t gif_dynamicdelay_cons_t[] = {
-	{0, "Off"},
-	{1, "On"},
-	{2, "Accurate, experimental"},
-{0, NULL}};
-
-consvar_t cv_gif_optimize = CVAR_INIT ("gif_optimize", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_gif_downscale =  CVAR_INIT ("gif_downscale", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_gif_dynamicdelay = CVAR_INIT ("gif_dynamicdelay", "On", CV_SAVE, gif_dynamicdelay_cons_t, NULL);
-consvar_t cv_gif_localcolortable =  CVAR_INIT ("gif_localcolortable", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_gif_optimize = {"gif_optimize", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gif_downscale =  {"gif_downscale", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gif_dynamicdelay = {"gif_dynamicdelay", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_gif_localcolortable =  {"gif_localcolortable", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 #ifdef HAVE_ANIGIF
 static boolean gif_optimize = false; // So nobody can do something dumb
 static boolean gif_downscale = false; // like changing cvars mid output
-static UINT8 gif_dynamicdelay = (UINT8)0; // and messing something up
+static boolean gif_dynamicdelay = false; // and messing something up
 
 // Palette handling
 static boolean gif_localcolortable = false;
@@ -53,8 +47,7 @@ static RGBA_t *gif_framepalette = NULL;
 
 static FILE *gif_out = NULL;
 static INT32 gif_frames = 0;
-static precise_t gif_prevframetime = 0;
-static UINT32 gif_delayus = 0; // "us" is microseconds
+static UINT32 gif_prevframems = 0;
 static UINT8 gif_writeover = 0;
 
 
@@ -514,7 +507,7 @@ static void GIF_rgbconvert(UINT8 *linear, UINT8 *scr)
 	size_t src = 0, dest = 0;
 	size_t size = (vid.width * vid.height * 3);
 
-	InitColorLUT(&gif_colorlookup, (gif_localcolortable) ? gif_framepalette : gif_headerpalette, true);
+	InitColorLUT(&gif_colorlookup, gif_framepalette, true);
 
 	while (src < size)
 	{
@@ -601,30 +594,16 @@ static void GIF_framewrite(void)
 
 	// screen regions are handled in GIF_lzw
 	{
-		UINT16 delay = 0;
+		UINT16 delay;
 		INT32 startline;
 
-		if (gif_dynamicdelay ==(UINT8) 2)
-		{
+		if (gif_dynamicdelay) {
 			// golden's attempt at creating a "dynamic delay"
-			UINT16 mingifdelay = 10; // minimum gif delay in milliseconds (keep at 10 because gifs can't get more precise).
-			gif_delayus += I_PreciseToMicros(I_GetPreciseTime() - gif_prevframetime); // increase delay by how much time was spent between last measurement
-
-			if (gif_delayus/1000 >= mingifdelay) // delay is big enough to be able to effect gif frame delay?
-			{
-				int frames = (gif_delayus/1000) / mingifdelay; // get amount of frames to delay.
-				delay = frames; // set the delay to delay that amount of frames.
-				gif_delayus -= frames*(mingifdelay*1000); // remove frames by the amount of milliseconds they take. don't reset to 0, the microseconds help consistency.
-			}
-		}
-		else if (gif_dynamicdelay ==(UINT8) 1)
-		{
 			float delayf = ceil(100.0f/NEWTICRATE);
 
-			delay = (UINT16)I_PreciseToMicros((I_GetPreciseTime() - gif_prevframetime))/10/1000;
-
-			if (delay < (UINT16)(delayf))
-				delay = (UINT16)(delayf);
+			delay = (UINT16)((I_GetTimeMicros() - gif_prevframems)/10/1000);
+			if (delay < (int)(delayf))
+				delay = (int)(delayf);
 		}
 		else
 		{
@@ -711,7 +690,7 @@ static void GIF_framewrite(void)
 	}
 	fwrite(gifframe_data, 1, (p - gifframe_data), gif_out);
 	++gif_frames;
-	gif_prevframetime = I_GetPreciseTime();
+	gif_prevframems = I_GetTimeMicros();
 }
 
 
@@ -732,15 +711,14 @@ INT32 GIF_open(const char *filename)
 
 	gif_optimize = (!!cv_gif_optimize.value);
 	gif_downscale = (!!cv_gif_downscale.value);
-	gif_dynamicdelay = (UINT8)cv_gif_dynamicdelay.value;
+	gif_dynamicdelay = (!!cv_gif_dynamicdelay.value);
 	gif_localcolortable = (!!cv_gif_localcolortable.value);
 	gif_colorprofile = (!!cv_screenshot_colorprofile.value);
 	gif_headerpalette = GIF_getpalette(0);
 
 	GIF_headwrite();
 	gif_frames = 0;
-	gif_prevframetime = I_GetPreciseTime();
-	gif_delayus = 0;
+	gif_prevframems = I_GetTimeMicros();
 	return 1;
 }
 

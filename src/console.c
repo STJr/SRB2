@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -56,10 +56,10 @@ I_mutex con_mutex;
 #endif/*HAVE_THREADS*/
 
 static boolean con_started = false; // console has been initialised
-       boolean con_startup = false; // true at game startup
-       boolean con_refresh = false; // screen needs refreshing
+       boolean con_startup = false; // true at game startup, screen need refreshing
 static boolean con_forcepic = true; // at startup toggle console translucency when first off
        boolean con_recalc;          // set true when screen size has changed
+	   boolean con_muted = false;   // mutes the console
 
 static tic_t con_tick; // console ticker for anim or blinking prompt cursor
                         // con_scrollup should use time (currenttime - lasttime)..
@@ -125,22 +125,22 @@ static void CONS_backcolor_Change(void);
 static char con_buffer[CON_BUFFERSIZE];
 
 // how many seconds the hud messages lasts on the screen
-static consvar_t cons_msgtimeout = CVAR_INIT ("con_hudtime", "5", CV_SAVE, CV_Unsigned, NULL);
+static consvar_t cons_msgtimeout = {"con_hudtime", "5", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // number of lines displayed on the HUD
-static consvar_t cons_hudlines = CVAR_INIT ("con_hudlines", "5", CV_CALL|CV_SAVE, CV_Unsigned, CONS_hudlines_Change);
+static consvar_t cons_hudlines = {"con_hudlines", "5", CV_CALL|CV_SAVE, CV_Unsigned, CONS_hudlines_Change, 0, NULL, NULL, 0, 0, NULL};
 
 // number of lines console move per frame
 // (con_speed needs a limit, apparently)
 static CV_PossibleValue_t speed_cons_t[] = {{0, "MIN"}, {64, "MAX"}, {0, NULL}};
-static consvar_t cons_speed = CVAR_INIT ("con_speed", "8", CV_SAVE, speed_cons_t, NULL);
+static consvar_t cons_speed = {"con_speed", "8", CV_SAVE, speed_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 // percentage of screen height to use for console
-static consvar_t cons_height = CVAR_INIT ("con_height", "50", CV_SAVE, CV_Unsigned, NULL);
+static consvar_t cons_height = {"con_height", "50", CV_SAVE, CV_Unsigned, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t backpic_cons_t[] = {{0, "translucent"}, {1, "picture"}, {0, NULL}};
 // whether to use console background picture, or translucent mode
-static consvar_t cons_backpic = CVAR_INIT ("con_backpic", "translucent", CV_SAVE, backpic_cons_t, NULL);
+static consvar_t cons_backpic = {"con_backpic", "translucent", CV_SAVE, backpic_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
 
 static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 		{1, "Black"},		{2, "Sepia"},
 												{3, "Brown"},		{4, "Pink"},		{5, "Raspberry"},
@@ -152,7 +152,7 @@ static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 		{1, "Black"},		{
 												{0, NULL}};
 
 
-consvar_t cons_backcolor = CVAR_INIT ("con_backcolor", "Green", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change);
+consvar_t cons_backcolor = {"con_backcolor", "Green", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change, 0, NULL, NULL, 0, 0, NULL};
 
 static void CON_Print(char *msg);
 
@@ -360,47 +360,29 @@ static void CON_SetupColormaps(void)
 	for (i = 0; i < (256*15); i++, ++memorysrc)
 		*memorysrc = (UINT8)(i & 0xFF); // remap each color to itself...
 
-#define colset(map, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) \
-	map[0x0] = (UINT8)a;\
-	map[0x1] = (UINT8)b;\
-	map[0x2] = (UINT8)c;\
-	map[0x3] = (UINT8)d;\
-	map[0x4] = (UINT8)e;\
-	map[0x5] = (UINT8)f;\
-	map[0x6] = (UINT8)g;\
-	map[0x7] = (UINT8)h;\
-	map[0x8] = (UINT8)i;\
-	map[0x9] = (UINT8)j;\
-	map[0xA] = (UINT8)k;\
-	map[0xB] = (UINT8)l;\
-	map[0xC] = (UINT8)m;\
-	map[0xD] = (UINT8)n;\
-	map[0xE] = (UINT8)o;\
-	map[0xF] = (UINT8)p;
+#define colset(map, a, b, c) \
+	map[1] = (UINT8)a;\
+	map[3] = (UINT8)b;\
+	map[9] = (UINT8)c
 
-	// Tried to keep the colors vanilla while adding some shades in between them ~SonicX8000
-
-	//                      0x1       0x3                           0x9                           0xF
-	colset(magentamap, 177, 177, 178, 178, 178, 180, 180, 180, 182, 182, 182, 182, 184, 184, 184, 185);
-	colset(yellowmap,   82,  82,  73,  73,  73,  64,  64,  64,  66,  66,  66,  66,  67,  67,  67,  68);
-	colset(lgreenmap,   96,  96,  98,  98,  98, 101, 101, 101, 104, 104, 104, 104, 106, 106, 106, 107);
-	colset(bluemap,    146, 146, 147, 147, 147, 149, 149, 149, 152, 152, 152, 152, 155, 155, 155, 157);
-	colset(redmap,      32,  32,  33,  33,  33,  35,  35,  35,  39,  39,  39,  39,  42,  42,  42,  44);
-	colset(graymap,      8,   9,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23);
-	colset(orangemap,   50,  50,  52,  52,  52,  54,  54,  54,  56,  56,  56,  56,  59,  59,  59,  60);
-	colset(skymap,     129, 129, 130, 130, 130, 131, 131, 131, 133, 133, 133, 133, 135, 135, 135, 136);
-	colset(purplemap,  160, 160, 161, 161, 161, 162, 162, 162, 163, 163, 163, 163, 164, 164, 164, 165);
-	colset(aquamap,    120, 120, 121, 121, 121, 122, 122, 122, 123, 123, 123, 123, 124, 124, 124, 125);
-	colset(peridotmap,  72,  72, 188, 188, 189, 189, 189, 189, 190, 190, 190, 190, 191, 191, 191,  94);
-	colset(azuremap,   144, 144, 145, 145, 145, 146, 146, 146, 170, 170, 170, 170, 171, 171, 171, 172);
-	colset(brownmap,   219, 219, 221, 221, 221, 222, 222, 222, 224, 224, 224, 224, 227, 227, 227, 229);
-	colset(rosymap,    200, 200, 201, 201, 201, 202, 202, 202, 203, 203, 203, 203, 204, 204, 204, 205);
+	colset(magentamap, 177, 178, 184);
+	colset(yellowmap,   82,  73,  66);
+	colset(lgreenmap,   97,  98, 106);
+	colset(bluemap,    146, 147, 155);
+	colset(redmap,     210,  32,  39);
+	colset(graymap,      6,  8,   14);
+	colset(orangemap,   51,  52,  57);
+	colset(skymap,     129, 130, 133);
+	colset(purplemap,  160, 161, 163);
+	colset(aquamap,    120, 121, 123);
+	colset(peridotmap,  88, 188, 190);
+	colset(azuremap,   144, 145, 170);
+	colset(brownmap,   219, 221, 224);
+	colset(rosymap,    200, 201, 203);
+	colset(invertmap,   27,  26,  22);
+	invertmap[26] = (UINT8)3;
 
 #undef colset
-
-	// Yeah just straight up invert it like a normal person
-	for (i = 0x00; i <= 0x1F; i++)
-		invertmap[0x1F - i] = i;
 
 	// Init back colormap
 	CON_SetupBackColormap();
@@ -458,8 +440,7 @@ void CON_Init(void)
 		Lock_state();
 
 		con_started = true;
-		con_startup = true;
-		con_refresh = true; // needs explicit screen refresh until we are in the main game loop
+		con_startup = true; // need explicit screen refresh until we are in Doom loop
 		consoletoggle = false;
 
 		Unlock_state();
@@ -477,8 +458,7 @@ void CON_Init(void)
 		Lock_state();
 
 		con_started = true;
-		con_startup = false;
-		con_refresh = false; // disable explicit screen refresh
+		con_startup = false; // need explicit screen refresh until we are in Doom loop
 		consoletoggle = true;
 
 		Unlock_state();
@@ -832,6 +812,7 @@ static void CON_InputDelSelection(void)
 		return;
 	}
 
+
 	if (input_cur > input_sel)
 	{
 		start = input_sel;
@@ -897,14 +878,9 @@ boolean CON_Responder(event_t *ev)
 
 	// sequential completions a la 4dos
 	static char completion[80];
+	static INT32 comskips, varskips;
 
-	static INT32 skips;
-
-	static INT32   com_skips;
-	static INT32   var_skips;
-	static INT32 alias_skips;
-
-	const char *cmd = NULL;
+	const char *cmd = "";
 	INT32 key;
 
 	if (chat_on)
@@ -1039,6 +1015,7 @@ boolean CON_Responder(event_t *ev)
 				if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
 					return true;
 				strcpy(completion, inputlines[inputline]);
+				comskips = varskips = 0;
 			}
 			len = strlen(completion);
 
@@ -1053,14 +1030,6 @@ boolean CON_Responder(event_t *ev)
 			for (i = 0, cmd = CV_CompleteVar(completion, i); cmd; cmd = CV_CompleteVar(completion, ++i))
 				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
 			if (i == 0) CONS_Printf("  (none)\n");
-
-			//and finally aliases
-			CONS_Printf("Aliases:\n");
-			for (i = 0, cmd = COM_CompleteAlias(completion, i); cmd; cmd = COM_CompleteAlias(completion, ++i))
-				CONS_Printf("  \x83" "%s" "\x80" "%s\n", completion, cmd+len);
-			if (i == 0) CONS_Printf("  (none)\n");
-
-			completion[0] = 0;
 
 			return true;
 		}
@@ -1130,64 +1099,43 @@ boolean CON_Responder(event_t *ev)
 			if (!input_len || input_len >= 40 || strchr(inputlines[inputline], ' '))
 				return true;
 			strcpy(completion, inputlines[inputline]);
-			skips       = 0;
-			com_skips   = 0;
-			var_skips   = 0;
-			alias_skips = 0;
+			comskips = varskips = 0;
 		}
 		else
 		{
 			if (shiftdown)
 			{
-				if (skips > 0)
-					skips--;
+				if (comskips < 0)
+				{
+					if (--varskips < 0)
+						comskips = -comskips - 2;
+				}
+				else if (comskips > 0) comskips--;
 			}
 			else
 			{
-				skips++;
+				if (comskips < 0) varskips++;
+				else              comskips++;
 			}
 		}
 
-		if (skips <= com_skips)
+		if (comskips >= 0)
 		{
-			cmd = COM_CompleteCommand(completion, skips);
-
-			if (cmd && skips == com_skips)
-			{
-				com_skips  ++;
-				var_skips  ++;
-				alias_skips++;
-			}
+			cmd = COM_CompleteCommand(completion, comskips);
+			if (!cmd) // dirty: make sure if comskips is zero, to have a neg value
+				comskips = -comskips - 1;
 		}
-
-		if (!cmd && skips <= var_skips)
-		{
-			cmd = CV_CompleteVar(completion, skips - com_skips);
-
-			if (cmd && skips == var_skips)
-			{
-				var_skips  ++;
-				alias_skips++;
-			}
-		}
-
-		if (!cmd && skips <= alias_skips)
-		{
-			cmd = COM_CompleteAlias(completion, skips - var_skips);
-
-			if (cmd && skips == alias_skips)
-			{
-				alias_skips++;
-			}
-		}
+		if (comskips < 0)
+			cmd = CV_CompleteVar(completion, varskips);
 
 		if (cmd)
-		{
 			CON_InputSetString(va("%s ", cmd));
-		}
 		else
 		{
-			skips--;
+			if (comskips > 0)
+				comskips--;
+			else if (varskips > 0)
+				varskips--;
 		}
 
 		return true;
@@ -1303,6 +1251,10 @@ boolean CON_Responder(event_t *ev)
 	if (key < 32 || key > 127)
 		return true;
 
+	// add key to cmd line here
+	if (key >= 'A' && key <= 'Z' && !(shiftdown ^ capslock)) //this is only really necessary for dedicated servers
+		key = key + 'a' - 'A';
+
 	if (input_sel != input_cur)
 		CON_InputDelSelection();
 	CON_InputAddChar(key);
@@ -1334,7 +1286,8 @@ static void CON_Print(char *msg)
 	INT32 controlchars = 0; // for color changing
 	char color = '\x80';  // keep color across lines
 
-	if (msg == NULL)
+	//TODO: also mute the console in terminal/command line 
+	if (msg == NULL || con_muted) //mute the console when needed (during simulations)
 		return;
 
 	if (*msg == '\3') // chat text, makes ding sound
@@ -1461,7 +1414,7 @@ void CONS_Printf(const char *fmt, ...)
 {
 	va_list argptr;
 	static char *txt = NULL;
-	boolean refresh;
+	boolean startup;
 
 	if (txt == NULL)
 		txt = malloc(8192);
@@ -1483,15 +1436,26 @@ void CONS_Printf(const char *fmt, ...)
 
 	// make sure new text is visible
 	con_scrollup = 0;
-	refresh = con_refresh;
+	startup = con_startup;
 
 	Unlock_state();
 
 	// if not in display loop, force screen update
-	if (refresh)
+	if (startup && (!setrenderneeded))
 	{
-		CON_Drawer(); // here we display the console text
+#ifdef _WINDOWS
+		patch_t *con_backpic = W_CachePatchName("CONSBACK", PU_PATCH);
+
+		// Jimita: CON_DrawBackpic just called V_DrawScaledPatch
+		V_DrawScaledPatch(0, 0, 0, con_backpic);
+
+		W_UnlockCachedPatch(con_backpic);
+		I_LoadingScreen(txt);				// Win32/OS2 only
+#else
+		// here we display the console text
+		CON_Drawer();
 		I_FinishUpdate(); // page flip or blit buffer
+#endif
 	}
 }
 
@@ -1553,7 +1517,7 @@ void CONS_Debug(INT32 debugflags, const char *fmt, ...)
 //
 void CONS_Error(const char *msg)
 {
-#if defined(RPC_NO_WINDOWS_H) && defined(_WINDOWS)
+#ifdef RPC_NO_WINDOWS_H
 	if (!graphics_started)
 	{
 		MessageBoxA(vid.WndParent, msg, "SRB2 Warning", MB_OK);
@@ -1697,15 +1661,12 @@ static void CON_DrawHudlines(void)
 			{
 				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
 				p++;
-				c++;
 			}
-			if (c >= con_width)
-				break;
 			if (*p < HU_FONTSTART)
 				;//charwidth = 4 * con_scalefactor;
 			else
 			{
-				//charwidth = (hu_font['A'-HU_FONTSTART]->width) * con_scalefactor;
+				//charwidth = SHORT(hu_font['A'-HU_FONTSTART]->width) * con_scalefactor;
 				V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 			}
 		}
@@ -1734,8 +1695,8 @@ static void CON_DrawBackpic(void)
 	if (piclump == LUMPERROR)
 		piclump = W_GetNumForName("MISSING");
 
-	// Cache the patch.
-	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
+	// Cache the Software patch.
+	con_backpic = W_CacheSoftwarePatchNum(piclump, PU_PATCH);
 
 	// Center the backpic, and draw a vertically cropped patch.
 	w = (con_backpic->width * vid.dupx);
@@ -1746,7 +1707,7 @@ static void CON_DrawBackpic(void)
 	// then fill the sides with a solid color.
 	if (x > 0)
 	{
-		column_t *column = (column_t *)((UINT8 *)(con_backpic->columns) + (con_backpic->columnofs[0]));
+		column_t *column = (column_t *)((UINT8 *)(con_backpic) + LONG(con_backpic->columnofs[0]));
 		if (!column->topdelta)
 		{
 			UINT8 *source = (UINT8 *)(column) + 3;
@@ -1758,7 +1719,8 @@ static void CON_DrawBackpic(void)
 		}
 	}
 
-	// Draw the patch.
+	// Cache the patch normally.
+	con_backpic = W_CachePatchNum(piclump, PU_PATCH);
 	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, V_NOSCALESTART, con_backpic,
 			0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
 
@@ -1821,10 +1783,7 @@ static void CON_DrawConsole(void)
 			{
 				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
 				p++;
-				c++;
 			}
-			if (c >= con_width)
-				break;
 			V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 		}
 	}
@@ -1845,6 +1804,9 @@ void CON_Drawer(void)
 		Unlock_state();
 		return;
 	}
+
+	if (needpatchrecache)
+		HU_LoadGraphics();
 
 	if (con_recalc)
 	{

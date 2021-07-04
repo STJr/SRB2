@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -79,7 +79,7 @@ CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
 // Also set CV_HIDEN during runtime, after config is loaded
 static boolean execversion_enabled = false;
-consvar_t cv_execversion = CVAR_INIT ("execversion","25",CV_CALL,CV_Unsigned, CV_EnforceExecVersion);
+consvar_t cv_execversion = {"execversion","25",CV_CALL,CV_Unsigned, CV_EnforceExecVersion, 0, NULL, NULL, 0, 0, NULL};
 
 // for default joyaxis detection
 static boolean joyaxis_default = false;
@@ -165,8 +165,6 @@ void COM_BufAddTextEx(const char *ptext, int flags)
   */
 void COM_BufInsertTextEx(const char *ptext, int flags)
 {
-	const INT32 old_wait = com_wait;
-
 	char *temp = NULL;
 	size_t templen;
 
@@ -178,13 +176,9 @@ void COM_BufInsertTextEx(const char *ptext, int flags)
 		VS_Clear(&com_text);
 	}
 
-	com_wait = 0;
-
 	// add the entire text of the file (or alias)
 	COM_BufAddTextEx(ptext, flags);
 	COM_BufExecute(); // do it right away
-
-	com_wait += old_wait;
 
 	// add the copied off data
 	if (templen)
@@ -566,7 +560,7 @@ static boolean COM_Exists(const char *com_name)
   * \param partial The partial name of the command (potentially).
   * \param skips   Number of commands to skip.
   * \return The complete command name, or NULL.
-  * \sa CV_CompleteAlias, CV_CompleteVar
+  * \sa CV_CompleteVar
   */
 const char *COM_CompleteCommand(const char *partial, INT32 skips)
 {
@@ -583,32 +577,6 @@ const char *COM_CompleteCommand(const char *partial, INT32 skips)
 		if (!strncmp(partial, cmd->name, len))
 			if (!skips--)
 				return cmd->name;
-
-	return NULL;
-}
-
-/** Completes the name of an alias.
-  *
-  * \param partial The partial name of the alias (potentially).
-  * \param skips   Number of aliases to skip.
-  * \return The complete alias name, or NULL.
-  * \sa CV_CompleteCommand, CV_CompleteVar
-  */
-const char *COM_CompleteAlias(const char *partial, INT32 skips)
-{
-	cmdalias_t *a;
-	size_t len;
-
-	len = strlen(partial);
-
-	if (!len)
-		return NULL;
-
-	// check functions
-	for (a = com_alias; a; a = a->next)
-		if (!strncmp(partial, a->name, len))
-			if (!skips--)
-				return a->name;
 
 	return NULL;
 }
@@ -910,6 +878,7 @@ static void COM_Help_f(void)
 
 			if (cvar->revert.v.string != NULL && strcmp(cvar->revert.v.string, cvar->string) != 0)
 				CONS_Printf(" Value before netgame: %s\n", cvar->revert.v.string);
+
 		}
 		else
 		{
@@ -1357,7 +1326,7 @@ static const char *CV_StringValue(const char *var_name)
   * \param partial The partial name of the variable (potentially).
   * \param skips   Number of variables to skip.
   * \return The complete variable name, or NULL.
-  * \sa COM_CompleteCommand, CV_CompleteAlias
+  * \sa COM_CompleteCommand
   */
 const char *CV_CompleteVar(char *partial, INT32 skips)
 {
@@ -1433,17 +1402,12 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 						if (var->revert.allocated)
 						{
 							Z_Free(var->revert.v.string);
-							var->revert.allocated = false; // the below value is not allocated in zone memory, don't try to free it!
 						}
 
 						var->revert.v.const_munge = var->PossibleValue[i].strvalue;
 
 						return;
 					}
-
-					// free the old value string
-					Z_Free(var->zstring);
-					var->zstring = NULL;
 
 					var->value = var->PossibleValue[i].value;
 					var->string = var->PossibleValue[i].strvalue;
@@ -1507,7 +1471,13 @@ static void Setvalue(consvar_t *var, const char *valstr, boolean stealth)
 found:
 			if (client && execversion_enabled)
 			{
+				if (var->revert.allocated)
+				{
+					Z_Free(var->revert.v.string);
+				}
+
 				var->revert.v.const_munge = var->PossibleValue[i].strvalue;
+
 				return;
 			}
 
@@ -1522,7 +1492,6 @@ found:
 		if (var->revert.allocated)
 		{
 			Z_Free(var->revert.v.string);
-			// Z_StrDup creates a new zone memory block, so we can keep the allocated flag on
 		}
 
 		var->revert.v.string = Z_StrDup(valstr);
@@ -1568,7 +1537,8 @@ finish:
 
 	if (var->flags & CV_SHOWMODIFONETIME || var->flags & CV_SHOWMODIF)
 	{
-		CONS_Printf(M_GetText("%s set to %s\n"), var->name, var->string);
+		if (!canSimulate || !issimulation)
+			CONS_Printf(M_GetText("%s set to %s\n"), var->name, var->string);
 		var->flags &= ~CV_SHOWMODIFONETIME;
 	}
 	else // display message in debug file only
@@ -1577,7 +1547,7 @@ finish:
 	}
 	var->flags |= CV_MODIFIED;
 	// raise 'on change' code
-	LUA_CVarChanged(var); // let consolelib know what cvar this is.
+	LUA_CVarChanged(var->name); // let consolelib know what cvar this is.
 	if (var->flags & CV_CALL && !stealth)
 		var->func();
 
@@ -1601,6 +1571,7 @@ badinput:
 //
 
 static boolean serverloading = false;
+static boolean serverloadingstealth = false; //TODO: understand what it does
 
 static consvar_t *
 ReadNetVar (UINT8 **p, char **return_value, boolean *return_stealth)
@@ -1614,7 +1585,7 @@ ReadNetVar (UINT8 **p, char **return_value, boolean *return_stealth)
 	netid   = READUINT16 (*p);
 	val     = (char *)*p;
 	SKIPSTRING (*p);
-	stealth = READUINT8  (*p);
+	stealth = READUINT8(*p) || (serverloading && serverloadingstealth); //TODO: understand what it does
 
 	cvar = CV_FindNetVar(netid);
 
@@ -1708,6 +1679,8 @@ static void Got_NetVar(UINT8 **p, INT32 playernum)
 
 	cvar = ReadNetVar(p, &svalue, &stealth);
 
+	stealth = stealth || serverloadingstealth;
+
 	if (cvar)
 		Setvalue(cvar, svalue, stealth);
 }
@@ -1736,7 +1709,7 @@ void CV_SaveVars(UINT8 **p, boolean in_demo)
 }
 
 static void CV_LoadVars(UINT8 **p,
-		consvar_t *(*got)(UINT8 **p, char **ret_value, boolean *ret_stealth))
+		consvar_t *(*got)(UINT8 **p, char **ret_value, boolean *ret_stealth), boolean onlyIfChanged)
 {
 	consvar_t *cvar;
 	UINT16 count;
@@ -1746,32 +1719,39 @@ static void CV_LoadVars(UINT8 **p,
 
 	// prevent "invalid command received"
 	serverloading = true;
+	//TODO: why do we even need this if we already have "stealth"
+	serverloadingstealth = onlyIfChanged;
 
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
-	{
-		if (cvar->flags & CV_NETVAR)
 		{
-			if (client && cvar->revert.v.string == NULL)
+			if (cvar->flags & CV_NETVAR)
 			{
-				cvar->revert.v.const_munge = cvar->string;
-				cvar->revert.allocated = ( cvar->zstring != NULL );
-				cvar->zstring = NULL;/* don't free this */
+				if (client && cvar->revert.v.string == NULL)
+				{
+					cvar->revert.v.const_munge = cvar->string;
+					cvar->revert.allocated = ( cvar->zstring != NULL );
+					cvar->zstring = NULL;/* don't free this */
+				}
+
+				Setvalue(cvar, cvar->defaultvalue, true);
 			}
-
-			Setvalue(cvar, cvar->defaultvalue, true);
 		}
-	}
 
-	count = READUINT16(*p);
-	while (count--)
-	{
-		cvar = (*got)(p, &val, &stealth);
+		count = READUINT16(*p);
+		while (count--)
+		{
+			cvar = (*got)(p, &val, &stealth);
 
-		if (cvar)
-			Setvalue(cvar, val, stealth);
-	}
+			if (cvar)
+				Setvalue(cvar, val, stealth);
+		}
 
-	serverloading = false;
+		serverloading = false;
+}
+
+void CV_LoadNetVars(UINT8 **p, boolean onlyIfChanged)
+{
+	CV_LoadVars(p, ReadNetVar, onlyIfChanged);
 }
 
 void CV_RevertNetVars(void)
@@ -1787,7 +1767,6 @@ void CV_RevertNetVars(void)
 			if (cvar->revert.allocated)
 			{
 				Z_Free(cvar->revert.v.string);
-				cvar->revert.allocated = false; // no value being held now
 			}
 
 			cvar->revert.v.string = NULL;
@@ -1795,21 +1774,16 @@ void CV_RevertNetVars(void)
 	}
 }
 
-void CV_LoadNetVars(UINT8 **p)
-{
-	CV_LoadVars(p, ReadNetVar);
-}
-
 #ifdef OLD22DEMOCOMPAT
 void CV_LoadOldDemoVars(UINT8 **p)
 {
-	CV_LoadVars(p, ReadOldDemoVar);
+	CV_LoadVars(p, ReadOldDemoVar, false);
 }
 #endif
 
 void CV_LoadDemoVars(UINT8 **p)
 {
-	CV_LoadVars(p, ReadDemoVar);
+	CV_LoadVars(p, ReadDemoVar, false);
 }
 
 static void CV_SetCVar(consvar_t *var, const char *value, boolean stealth);
@@ -2402,7 +2376,7 @@ void CV_ClearChangedFlags(void)
   */
 void CV_SaveVariables(FILE *f)
 {
-	consvar_t *cvar;
+consvar_t *cvar;
 
 	for (cvar = consvar_vars; cvar; cvar = cvar->next)
 		if (cvar->flags & CV_SAVE)
@@ -2423,11 +2397,10 @@ void CV_SaveVariables(FILE *f)
 			// Silly hack for Min/Max vars
 #define MINVAL 0
 #define MAXVAL 1
-			if (
-					cvar->PossibleValue != NULL &&
-					cvar->PossibleValue[0].strvalue &&
-					stricmp(cvar->PossibleValue[0].strvalue, "MIN") == 0
-			){ // bounded cvar
+			if (cvar->PossibleValue != NULL &&
+				cvar->PossibleValue[0].strvalue &&
+				stricmp(cvar->PossibleValue[0].strvalue, "MIN") == 0)
+			{ // bounded cvar
 				int which = stricmp(string, "MAX") == 0;
 
 				if (which || stricmp(string, "MIN") == 0)
@@ -2444,9 +2417,9 @@ void CV_SaveVariables(FILE *f)
 			}
 #undef MINVAL
 #undef MAXVAL
-
 			fprintf(f, "%s \"%s\"\n", cvar->name, string);
 		}
+
 }
 
 //============================================================================

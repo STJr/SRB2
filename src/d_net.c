@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -798,9 +798,8 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"REQUESTFILE",
 	"ASKINFOVIAMS",
 
-	"WILLRESENDGAMESTATE",
-	"CANRECEIVEGAMESTATE",
-	"RECEIVEDGAMESTATE",
+	"RESYNCHEND",
+	"RESYNCHGET",
 
 	"SENDINGLUAFILE",
 	"ASKLUAFILE",
@@ -814,6 +813,7 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"TEXTCMD2",
 	"CLIENTJOIN",
 	"NODETIMEOUT",
+	"RESYNCHING",
 	"LOGIN",
 	"PING"
 };
@@ -1436,6 +1436,8 @@ void D_CloseConnection(void)
 		for (i = 0; i < MAXNETNODES; i++)
 			Net_CloseConnection(i|FORCECLOSE);
 
+		SOCK_FlushDelayBuffers(true);
+		
 		InitAck();
 
 		if (I_NetCloseSocket)

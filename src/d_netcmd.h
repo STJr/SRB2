@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,7 +16,7 @@
 #define __D_NETCMD__
 
 #include "command.h"
-
+void Command_Autotimefudge(void);
 // console vars
 extern consvar_t cv_playername;
 extern consvar_t cv_playercolor;
@@ -31,7 +31,9 @@ extern consvar_t cv_defaultskin;
 extern consvar_t cv_defaultplayercolor2;
 extern consvar_t cv_defaultskin2;
 
+#ifdef SEENAMES
 extern consvar_t cv_seenames, cv_allowseenames;
+#endif
 extern consvar_t cv_usemouse;
 extern consvar_t cv_usejoystick;
 extern consvar_t cv_usejoystick2;
@@ -73,6 +75,11 @@ extern consvar_t cv_teamscramble;
 extern consvar_t cv_scrambleonchange;
 
 extern consvar_t cv_netstat;
+extern consvar_t cv_netsimstat;
+extern consvar_t cv_hitcounters;
+#ifdef WALLSPLATS
+extern consvar_t cv_splats;
+#endif
 
 extern consvar_t cv_countdowntime;
 extern consvar_t cv_runscripts;
@@ -104,19 +111,31 @@ extern consvar_t cv_maxping;
 extern consvar_t cv_pingtimeout;
 extern consvar_t cv_showping;
 
+extern consvar_t cv_simulate;
+extern consvar_t cv_simulatetics;
+extern consvar_t cv_simulateculldistance;
+extern consvar_t cv_siminaccuracy;
+extern consvar_t cv_netdelay;
+extern consvar_t cv_netjitter;
+extern consvar_t cv_netsmoothing;
+extern consvar_t cv_netspikes;
+extern consvar_t cv_netsteadyplayers;
+extern consvar_t cv_debugsimulaterewind;
+extern consvar_t cv_timefudge;
+extern consvar_t cv_nettrails;
+extern consvar_t cv_netslingdelay;
+extern consvar_t cv_netvariabletime;
+
+extern consvar_t cv_powerupmusic;
 
 extern consvar_t cv_skipmapcheck;
 
 extern consvar_t cv_sleep;
 
-extern consvar_t cv_perfstats;
-
 extern char timedemo_name[256];
 extern boolean timedemo_csv;
 extern char timedemo_csv_id[256];
 extern boolean timedemo_quit;
-
-extern consvar_t cv_freedemocamera;
 
 typedef enum
 {
@@ -209,4 +228,5 @@ void D_SetPassword(const char *pw);
 // used for the player setup menu
 UINT8 CanChangeSkin(INT32 playernum);
 
+//for netplus options menu
 #endif

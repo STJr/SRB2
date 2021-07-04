@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -51,9 +51,6 @@ typedef enum
 	SF_NONIGHTSSUPER    = 1<<15, // Disable super colors for NiGHTS (if you have SF_SUPER)
 	SF_NOSUPERSPRITES   = 1<<16, // Don't use super sprites while super
 	SF_NOSUPERJUMPBOOST = 1<<17, // Disable the jump boost given while super (i.e. Knuckles)
-	SF_CANBUSTWALLS     = 1<<18, // Can naturally bust walls on contact? (i.e. Knuckles)
-	SF_NOSHIELDABILITY  = 1<<19, // Disable shield abilities
-
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -533,6 +530,14 @@ typedef struct player_s
 	fixed_t fovadd; // adjust FOV for hw rendering
 #endif
 } player_t;
+
+typedef struct playermatchstats_s
+{
+	UINT8 hits;
+	UINT8 timeshit;
+	UINT8 kills;
+	UINT8 deaths;
+} playermatchstats_t;
 
 // Values for dashmode
 #define DASHMODE_THRESHOLD (3*TICRATE)

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2020 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -59,16 +59,10 @@ enum hook {
 	hook_PlayerThink,
 	hook_ShouldJingleContinue,
 	hook_GameQuit,
-	hook_PlayerCmd,
-	hook_MusicChange,
-	hook_PlayerHeight,
-	hook_PlayerCanEnterSpinGaps,
 
 	hook_MAX // last hook
 };
 extern const char *const hookNames[];
-
-extern boolean hook_cmd_running;
 
 void LUAh_MapChange(INT16 mapnumber); // Hook for map change (before load)
 void LUAh_MapLoad(void); // Hook for map load
@@ -114,11 +108,9 @@ void LUAh_PlayerQuit(player_t *plr, kickreason_t reason); // Hook for player qui
 void LUAh_IntermissionThinker(void); // Hook for Y_Ticker
 boolean LUAh_TeamSwitch(player_t *player, int newteam, boolean fromspectators, boolean tryingautobalance, boolean tryingscramble); // Hook for team switching in... uh....
 UINT8 LUAh_ViewpointSwitch(player_t *player, player_t *newdisplayplayer, boolean forced); // Hook for spy mode
+#ifdef SEENAMES
 boolean LUAh_SeenPlayer(player_t *player, player_t *seenfriend); // Hook for MT_NAMECHECK
+#endif
 #define LUAh_PlayerThink(player) LUAh_PlayerHook(player, hook_PlayerThink) // Hook for P_PlayerThink
 boolean LUAh_ShouldJingleContinue(player_t *player, const char *musname); // Hook for whether a jingle of the given music should continue playing
-void LUAh_GameQuit(boolean quitting); // Hook for game quitting
-boolean LUAh_PlayerCmd(player_t *player, ticcmd_t *cmd); // Hook for building player's ticcmd struct (Ported from SRB2Kart)
-boolean LUAh_MusicChange(const char *oldname, char *newname, UINT16 *mflags, boolean *looping, UINT32 *position, UINT32 *prefadems, UINT32 *fadeinms); // Hook for music changes
-fixed_t LUAh_PlayerHeight(player_t *player);
-UINT8 LUAh_PlayerCanEnterSpinGaps(player_t *player);
+void LUAh_GameQuit(void); // Hook for game quitting
