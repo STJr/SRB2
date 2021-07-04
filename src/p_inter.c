@@ -488,8 +488,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				P_DoAbilityBounce(player, false);
 			if (special->info->spawnhealth > 1) // Multi-hit? Bounce back!
 			{
-				toucher->momx /= -2;
-				toucher->momy /= -2;
+				if (special->type == MT_EGGMOBILE4) // CEZ3 thrusts you away even if you hit it with very low speed
+				{
+					toucher->momx /= -3;
+					toucher->momy /= -3;
+					angle_t ang = R_PointToAngle2(0, 0, toucher->momx, toucher->momy);
+					P_Thrust(toucher, ang, 25*FRACUNIT);
+				}
+				else {
+					toucher->momx /= -2;
+					toucher->momy /= -2;
+				}
 				if (player->charability == CA_FLY && player->panim == PA_ABILITY)
 					toucher->momz = -toucher->momz/2;
 				else if (player->pflags & PF_GLIDING && !P_IsObjectOnGround(toucher))
