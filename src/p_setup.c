@@ -3715,6 +3715,14 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].flags & ML_EFFECT4)
 				lines[i].args[4] |= PWF_LOOP;
 			break;
+		case 489: //Polyobject - turn invisible, intangible
+		case 490: //Polyobject - turn visible, tangible
+			lines[i].args[0] = tag;
+			lines[i].args[1] = 491 - lines[i].special;
+			if (!(lines[i].flags & ML_NOCLIMB))
+				lines[i].args[2] = lines[i].args[1];
+			lines[i].special = 489;
+			break;
 		case 500: //Scroll front wall left
 		case 501: //Scroll front wall right
 			lines[i].args[0] = 0;

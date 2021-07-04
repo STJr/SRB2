@@ -1031,16 +1031,14 @@ static boolean PolyMove(line_t *line)
 	return EV_DoPolyObjMove(&pmd);
 }
 
-// Makes a polyobject invisible and intangible
-// If NOCLIMB is ticked, the polyobject will still be tangible, just not visible.
-static void PolyInvisible(line_t *line)
+static void PolySetVisibilityTangibility(line_t *line)
 {
-	INT32 polyObjNum = Tag_FGet(&line->tags);
-	polyobj_t *po;
+	INT32 polyObjNum = line->args[0];
+	polyobj_t* po;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "PolyInvisible: bad polyobj %d\n", polyObjNum);
+		CONS_Debug(DBG_POLYOBJ, "PolySetVisibilityTangibility: bad polyobj %d\n", polyObjNum);
 		return;
 	}
 
@@ -1048,37 +1046,22 @@ static void PolyInvisible(line_t *line)
 	if (po->isBad)
 		return;
 
-	if (!(line->flags & ML_NOCLIMB))
-		po->flags &= ~POF_SOLID;
-
-	po->flags |= POF_NOSPECIALS;
-	po->flags &= ~POF_RENDERALL;
-}
-
-// Makes a polyobject visible and tangible
-// If NOCLIMB is ticked, the polyobject will not be tangible, just visible.
-static void PolyVisible(line_t *line)
-{
-	INT32 polyObjNum = Tag_FGet(&line->tags);
-	polyobj_t *po;
-
-	if (!(po = Polyobj_GetForNum(polyObjNum)))
+	if (line->args[1] == TMPV_VISIBLE)
 	{
-		CONS_Debug(DBG_POLYOBJ, "PolyVisible: bad polyobj %d\n", polyObjNum);
-		return;
+		po->flags &= ~POF_NOSPECIALS;
+		po->flags |= (po->spawnflags & POF_RENDERALL);
+	}
+	else if (line->args[1] == TMPV_INVISIBLE)
+	{
+		po->flags |= POF_NOSPECIALS;
+		po->flags &= ~POF_RENDERALL;
 	}
 
-	// don't allow line actions to affect bad polyobjects
-	if (po->isBad)
-		return;
-
-	if (!(line->flags & ML_NOCLIMB))
+	if (line->args[2] == TMPT_TANGIBLE)
 		po->flags |= POF_SOLID;
-
-	po->flags &= ~POF_NOSPECIALS;
-	po->flags |= (po->spawnflags & POF_RENDERALL);
+	else if (line->args[2] == TMPT_INTANGIBLE)
+		po->flags &= ~POF_SOLID;
 }
-
 
 // Sets the translucency of a polyobject
 // Frontsector floor / 100 = translevel
@@ -3891,10 +3874,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			PolyWaypoint(line);
 			break;
 		case 489:
-			PolyInvisible(line);
-			break;
-		case 490:
-			PolyVisible(line);
+			PolySetVisibilityTangibility(line);
 			break;
 		case 491:
 			PolyTranslucency(line);

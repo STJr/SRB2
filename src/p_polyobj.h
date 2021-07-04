@@ -294,6 +294,20 @@ typedef struct polywaypointdata_s
 	UINT8 flags;          // PWF_ flags
 } polywaypointdata_t;
 
+typedef enum
+{
+	TMPV_NOCHANGE  = 1,
+	TMPV_VISIBLE   = 1<<1,
+	TMPV_INVISIBLE = 1<<2,
+} textmappolyvisibility_t;
+
+typedef enum
+{
+	TMPT_NOCHANGE   = 1,
+	TMPT_TANGIBLE   = 1<<1,
+	TMPT_INTANGIBLE = 1<<2,
+} textmappolytangibility_t;
+
 // polyobject door types
 typedef enum
 {
