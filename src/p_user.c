@@ -5300,8 +5300,10 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					if (!(player->pflags & PF_THOKKED) || (player->charflags & SF_MULTIABILITY))
 					{
 						// Catapult the player
-						fixed_t actionspd = player->actionspd;
-
+						
+						fixed_t actionspd = min(player->actionspd, FixedDiv(max(player->speed, player->normalspeed), player->mo->scale)); //!Debug
+						
+						
 						if (player->charflags & SF_DASHMODE)
 							actionspd = max(player->actionspd, FixedDiv(player->speed, player->mo->scale));
 
@@ -6189,6 +6191,8 @@ static void P_3dMovement(player_t *player)
 		{
 			fixed_t newang = ang1;
 			fixed_t turnspd = (FRACUNIT * thrustfactor * (onground + 1))/4;
+			if (player->mo->eflags & MFE_UNDERWATER)
+				turnspd /= 2;
 			if (angdiff > 0)
 				newang += min(angdiff/10 * min(10,thrustfactor), turnspd);
 			else
@@ -6343,6 +6347,7 @@ static void P_3dMovement(player_t *player)
 	}
 	//Did we lose speed this frame?
 	if (!spin && onground && !(player->mo->eflags & MFE_JUSTHITFLOOR) //Ground state qualifiers
+		&& (P_RandomChance(FRACUNIT/2))
 		&& (R_PointToDist2(0, 0, FRACUNIT*cmd->forwardmove/50, FRACUNIT*cmd->sidemove/50) > FRACUNIT>>1) //Input threshold
 		&& (max(topspeed / 2, R_PointToDist2(0, 0, player->mo->momx - player->cmomx, player->mo->momy - player->cmomy)) < min(speedclip, oldspeed+subfriction*9/10) ) ) //Speed threshold
 	{ //Spawn some dust
@@ -6353,11 +6358,13 @@ static void P_3dMovement(player_t *player)
 		//if (P_MobjFlip(player->mo) == -1)
 			//z = player->mo->height - mobjinfo[MT_DUST].height;
 		dust = P_SpawnMobjFromMobj(player->mo, 0, 0, z, MT_DUST);
-		dust->momz = P_MobjFlip(player->mo) * P_RandomRange(1,3) * FRACUNIT;
-		P_InstaThrust(dust, ang, P_RandomRange(1,3) * 10 * dust->scale);
-		dust->destscale = dust->scale * P_RandomRange(2,4) / 2;
-		if P_RandomChance(FRACUNIT/2)
+		if (player->speed > topspeed)
+		{
+			dust->momz = P_MobjFlip(player->mo) * P_RandomRange(1,3) * FRACUNIT;
+			P_InstaThrust(dust, ang, P_RandomRange(1,3) * 10 * dust->scale);
+			dust->destscale = dust->scale * P_RandomRange(2,4) / 2;
 			S_StartSound(player->mo, sfx_s3k7e);
+		}
 	}
 }
 
