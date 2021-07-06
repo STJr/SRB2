@@ -37,6 +37,8 @@
 #include "doomstat.h"
 #include "g_state.h"
 
+#define MAX_MUS_NAME 7
+
 lua_State *gL = NULL;
 
 // List of internal libraries to load from SRB2
@@ -419,16 +421,15 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 		size_t strlength;
 		const char *str = luaL_checklstring(L, 2, &strlength);
 
-		if (strlength > 6)
-			return luaL_error(L, "string length out of range (maximum 6 characters)");
+		if (strlength > (MAX_MUS_NAME - 1))
+			return luaL_error(L, "string length out of range (maximum %d characters)", MAX_MUS_NAME - 1);
 
 		if (strlen(str) < strlength)
 			return luaL_error(L, "string must not contain embedded zeros!");
 
-		strncpy(mapmusname, str, strlength);
-		// The above code doesn't add a null-terminator and not all song names are exactly 6 characters.
-		// So ensure that whatever gets copied is null-terminated at the right spot.
-		mapmusname[strlength] = '\0';
+		// Using 'strlength' doesn't properly copy the null-terminator and thus shorter song
+		// names won't be supported because they'll be 'pasted' on top of a longer string.
+		strncpy(mapmusname, str, MAX_MUS_NAME);
 	}
 	else if (fastcmp(word, "mapmusflags"))
 		mapmusflags = (UINT16)luaL_checkinteger(L, 2);
