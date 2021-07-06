@@ -426,6 +426,9 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 			return luaL_error(L, "string must not contain embedded zeros!");
 
 		strncpy(mapmusname, str, strlength);
+		// The above code doesn't add a null-terminator and not all song names are exactly 6 characters.
+		// So ensure that whatever gets copied is null-terminated at the right spot.
+		mapmusname[strlength] = '\0';
 	}
 	else if (fastcmp(word, "mapmusflags"))
 		mapmusflags = (UINT16)luaL_checkinteger(L, 2);
