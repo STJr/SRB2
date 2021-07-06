@@ -650,7 +650,7 @@ static void COM_ExecuteString(char *ptext)
 			else
 			{ // Monster Iestyn: keep track of how many levels of recursion we're in
 				recursion++;
-				COM_BufInsertText(a->value);
+				COM_BufInsertTextEx(a->value, com_flags);
 				recursion--;
 			}
 			return;
