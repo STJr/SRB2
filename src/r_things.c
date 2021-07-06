@@ -753,13 +753,13 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
 			return R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
 		else
-			return R_GetTranslationColormap(TC_BOSS, vis->mobj->color, GTC_CACHE);
+			return R_GetTranslationColormap(TC_BOSS, vis->color, GTC_CACHE);
 	}
-	else if (vis->mobj->color)
+	else if (vis->color)
 	{
 		// New colormap stuff for skins Tails 06-07-2002
 		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
-			return R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+			return R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
 		else if (!(vis->cut & SC_PRECIP)
 			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
 			&& (vis->mobj->player->charflags & SF_DASHMODE)
@@ -768,15 +768,15 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 			if (vis->mobj->player->charflags & SF_MACHINE)
 				return R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
 			else
-				return R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
+				return R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
 		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
-			return R_GetTranslationColormap((INT32)skinnum, vis->mobj->color, GTC_CACHE);
+			return R_GetTranslationColormap((INT32)skinnum, vis->color, GTC_CACHE);
 		}
 		else // Use the defaults
-			return R_GetTranslationColormap(TC_DEFAULT, vis->mobj->color, GTC_CACHE);
+			return R_GetTranslationColormap(TC_DEFAULT, vis->color, GTC_CACHE);
 	}
 	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		return R_GetTranslationColormap(TC_DEFAULT, SKINCOLOR_BLUE, GTC_CACHE);
@@ -821,7 +821,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 
 	if (R_SpriteIsFlashing(vis)) // Bosses "flash"
 		colfunc = colfuncs[COLDRAWFUNC_TRANS]; // translate certain pixels to white
-	else if (vis->mobj->color && vis->transmap) // Color mapping
+	else if (vis->color && vis->transmap) // Color mapping
 	{
 		colfunc = colfuncs[COLDRAWFUNC_TRANSTRANS];
 		dc_transmap = vis->transmap;
@@ -831,7 +831,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
-	else if (vis->mobj->color) // translate green skin to another color
+	else if (vis->color) // translate green skin to another color
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
@@ -1326,6 +1326,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	shadow->shear.tan = shadowskew; // repurposed variable
 
 	shadow->mobj = thing; // Easy access! Tails 06-07-2002
+	shadow->color = thing->color;
 
 	shadow->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	shadow->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
@@ -1961,6 +1962,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->shear.offset = 0;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
+	vis->color = oldthing->color;
 
 	vis->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
@@ -2209,6 +2211,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->cut = SC_PRECIP;
 	vis->extra_colormap = thing->subsector->sector->extra_colormap;
 	vis->heightsec = thing->subsector->sector->heightsec;
+	vis->color = SKINCOLOR_NONE;
 
 	// Fullbright
 	vis->colormap = colormaps;
