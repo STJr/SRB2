@@ -8358,6 +8358,13 @@ void P_MovePlayer(player_t *player)
 		else if (player->mo->state-states == S_PLAY_FLOAT_RUN)
 			P_SetPlayerMobjState(player->mo, S_PLAY_RUN);
 	}
+	else if (player->mo->state-states == S_PLAY_WALK || player->mo->state-states == S_PLAY_RUN)
+	{ //! For better visual feedback while running, switch to rise/fall states when we go airborne
+		if (P_MobjFlip(player->mo)*player->mo->momz > player->mo->scale * 10)
+			P_SetPlayerMobjState(player->mo, S_PLAY_SPRING);
+		else
+			P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+	}
 
 	// If Springing (or nojumpspinning), but travelling DOWNWARD, change back!
 	if ((player->panim == PA_SPRING && P_MobjFlip(player->mo)*player->mo->momz < 0)
