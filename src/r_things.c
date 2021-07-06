@@ -1962,7 +1962,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->shear.offset = 0;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
-	vis->color = oldthing->color;
+	if ((oldthing->flags2 & MF2_LINKDRAW) && oldthing->tracer && oldthing->color == SKINCOLOR_NONE)
+		vis->color = oldthing->tracer->color;
+	else
+		vis->color = oldthing->color;
 
 	vis->x1 = x1 < portalclipstart ? portalclipstart : x1;
 	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
