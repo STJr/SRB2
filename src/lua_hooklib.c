@@ -56,6 +56,7 @@ static stringhook_t stringHooks[STRING_HOOK(MAX)];
 
 // This will be indexed by hook id, the value of which fetches the registry.
 static int * hookRefs;
+static int   nextid;
 
 // After a hook errors once, don't print the error again.
 static UINT8 * hooksErrored;
@@ -104,13 +105,13 @@ static void get_table(lua_State *L)
 	lua_remove(L, -2);
 }
 
-static void add_hook_to_table(lua_State *L, int id, int n)
+static void add_hook_to_table(lua_State *L, int n)
 {
-	lua_pushnumber(L, id);
+	lua_pushnumber(L, nextid);
 	lua_rawseti(L, -2, n);
 }
 
-static void add_string_hook(lua_State *L, int type, int id)
+static void add_string_hook(lua_State *L, int type)
 {
 	stringhook_t * hook = &stringHooks[type];
 
@@ -146,33 +147,48 @@ static void add_string_hook(lua_State *L, int type, int id)
 	{
 		lua_pushstring(L, string);
 		get_table(L);
-		add_hook_to_table(L, id, 1 + lua_objlen(L, -1));
+		add_hook_to_table(L, 1 + lua_objlen(L, -1));
 	}
 	else
-		add_hook_to_table(L, id, ++hook->numGeneric);
+		add_hook_to_table(L, ++hook->numGeneric);
 }
 
-static void add_hook(hook_t *map, int id)
+static void add_hook(hook_t *map)
 {
 	Z_Realloc(map->ids, (map->numHooks + 1) * sizeof *map->ids,
 			PU_STATIC, &map->ids);
-	map->ids[map->numHooks++] = id;
+	map->ids[map->numHooks++] = nextid;
 }
 
-static void add_mobj_hook(lua_State *L, int hook_type, int id)
+static void add_mobj_hook(lua_State *L, int hook_type)
 {
 	mobjtype_t   mobj_type = luaL_optnumber(L, 3, MT_NULL);
 
 	luaL_argcheck(L, mobj_type < NUMMOBJTYPES, 3, "invalid mobjtype_t");
 
-	add_hook(&mobjHookIds[mobj_type][hook_type], id);
+	add_hook(&mobjHookIds[mobj_type][hook_type]);
+}
+
+static void add_hook_ref(lua_State *L, int idx)
+{
+	if (!(nextid & 7))
+	{
+		Z_Realloc(hooksErrored,
+				BIT_ARRAY_SIZE (nextid + 1) * sizeof *hooksErrored,
+				PU_STATIC, &hooksErrored);
+		hooksErrored[nextid >> 3] = 0;
+	}
+
+	Z_Realloc(hookRefs, (nextid + 1) * sizeof *hookRefs, PU_STATIC, &hookRefs);
+
+	// set the hook function in the registry.
+	lua_pushvalue(L, idx);
+	hookRefs[nextid++] = luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
 // Takes hook, function, and additional arguments (mobj type to act on, etc.)
 static int lib_addHook(lua_State *L)
 {
-	static int nextid;
-
 	const char * name;
 	int type;
 
@@ -185,34 +201,22 @@ static int lib_addHook(lua_State *L)
 	/* this is a very special case */
 	if (( type = hook_in_list(name, stringHookNames) ) < STRING_HOOK(MAX))
 	{
-		add_string_hook(L, type, nextid);
+		add_string_hook(L, type);
 	}
 	else if (( type = hook_in_list(name, mobjHookNames) ) < MOBJ_HOOK(MAX))
 	{
-		add_mobj_hook(L, type, nextid);
+		add_mobj_hook(L, type);
 	}
 	else if (( type = hook_in_list(name, hookNames) ) < HOOK(MAX))
 	{
-		add_hook(&hookIds[type], nextid);
+		add_hook(&hookIds[type]);
 	}
 	else
 	{
 		return luaL_argerror(L, 1, lua_pushfstring(L, "invalid hook " LUA_QS, name));
 	}
 
-	if (!(nextid & 7))
-	{
-		Z_Realloc(hooksErrored,
-				BIT_ARRAY_SIZE (nextid + 1) * sizeof *hooksErrored,
-				PU_STATIC, &hooksErrored);
-		hooksErrored[nextid >> 3] = 0;
-	}
-
-	Z_Realloc(hookRefs, (nextid + 1) * sizeof *hookRefs, PU_STATIC, &hookRefs);
-
-	// set the hook function in the registry.
-	lua_pushvalue(L, 2);/* the function */
-	hookRefs[nextid++] = luaL_ref(L, LUA_REGISTRYINDEX);
+	add_hook_ref(L, 2);/* the function */
 
 	return 0;
 }
