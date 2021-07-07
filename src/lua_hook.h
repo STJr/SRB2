@@ -90,9 +90,13 @@ grepped and found in the lists above.
 #define        HOOK(name)       hook_ ## name
 #define STRING_HOOK(name) stringhook_ ## name
 
-enum {   MOBJ_HOOK_LIST   (MOBJ_HOOK)    MOBJ_HOOK(MAX) };
-enum {        HOOK_LIST        (HOOK)         HOOK(MAX) };
-enum { STRING_HOOK_LIST (STRING_HOOK)  STRING_HOOK(MAX) };
+#define ENUM(X) enum { X ## _LIST (X)  X(MAX) }
+
+ENUM   (MOBJ_HOOK);
+ENUM        (HOOK);
+ENUM (STRING_HOOK);
+
+#undef ENUM
 
 /* dead simple, LUA_HOOK(GameQuit) */
 #define LUA_HOOK(type) LUA_HookVoid(HOOK(type))

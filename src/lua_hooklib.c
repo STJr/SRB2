@@ -31,12 +31,14 @@
                                   ABSTRACTION
    ========================================================================= */
 
-static const char * const mobjHookNames[] = { MOBJ_HOOK_LIST (TOSTR)  NULL };
-static const char * const     hookNames[] = {      HOOK_LIST (TOSTR)  NULL };
+#define LIST(id, M) \
+	static const char * const id [] = { M (TOSTR)  NULL }
 
-static const char * const stringHookNames[] = {
-	STRING_HOOK_LIST (TOSTR)  NULL
-};
+LIST   (mobjHookNames,   MOBJ_HOOK_LIST);
+LIST       (hookNames,        HOOK_LIST);
+LIST (stringHookNames, STRING_HOOK_LIST);
+
+#undef LIST
 
 typedef struct {
 	int numHooks;
