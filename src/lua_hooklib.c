@@ -36,6 +36,7 @@
 
 LIST   (mobjHookNames,   MOBJ_HOOK_LIST);
 LIST       (hookNames,        HOOK_LIST);
+LIST    (hudHookNames,    HUD_HOOK_LIST);
 LIST (stringHookNames, STRING_HOOK_LIST);
 
 #undef LIST
@@ -51,6 +52,7 @@ typedef struct {
 } stringhook_t;
 
 static hook_t hookIds[HOOK(MAX)];
+static hook_t hudHookIds[HUD_HOOK(MAX)];
 static hook_t mobjHookIds[NUMMOBJTYPES][MOBJ_HOOK(MAX)];
 
 // Lua tables are used to lookup string hook ids.
@@ -171,6 +173,12 @@ static void add_mobj_hook(lua_State *L, int hook_type)
 	add_hook(&mobjHookIds[mobj_type][hook_type]);
 }
 
+static void add_hud_hook(lua_State *L, int idx)
+{
+	add_hook(&hudHookIds[luaL_checkoption(L,
+				idx, "game", hudHookNames)]);
+}
+
 static void add_hook_ref(lua_State *L, int idx)
 {
 	if (!(nextid & 7))
@@ -213,6 +221,10 @@ static int lib_addHook(lua_State *L)
 	{
 		add_hook(&hookIds[type]);
 	}
+	else if (strcmp(name, "HUD") == 0)
+	{
+		add_hud_hook(L, 3);
+	}
 	else
 	{
 		return luaL_argerror(L, 1, lua_pushfstring(L, "invalid hook " LUA_QS, name));
@@ -232,6 +244,23 @@ int LUA_HookLib(lua_State *L)
 
 	return 0;
 }
+
+/* TODO: remove in next backwards incompatible release */
+#if MODID == 18
+int lib_hudadd(lua_State *L);/* yeah compiler */
+int lib_hudadd(lua_State *L)
+{
+	if (!lua_lumploading)
+		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
+
+	luaL_checktype(L, 1, LUA_TFUNCTION);
+
+	add_hud_hook(L, 2);
+	add_hook_ref(L, 1);
+
+	return 0;
+}
+#endif
 
 typedef struct Hook_State Hook_State;
 typedef void (*Hook_Callback)(Hook_State *);
@@ -608,6 +637,24 @@ int LUA_HookKey(INT32 keycode, int hook_type)
 		call_hooks(&hook, 1, res_true);
 	}
 	return hook.status;
+}
+
+void LUA_HookHUD(int hook_type)
+{
+	const hook_t * map = &hudHookIds[hook_type];
+	Hook_State hook;
+	if (map->numHooks > 0)
+	{
+		start_hook_stack();
+		begin_hook_values(&hook);
+
+		LUA_SetHudHook(hook_type);
+
+		hud_running = true; // local hook
+		init_hook_call(&hook, 0, res_none);
+		call_mapped(&hook, map);
+		hud_running = false;
+	}
 }
 
 /* =========================================================================

@@ -41,6 +41,7 @@
 #include "console.h"
 
 #include "lua_hud.h"
+#include "lua_hook.h"
 
 // Stage of animation:
 // 0 = text, 1 = art screen
@@ -3423,7 +3424,7 @@ void F_TitleScreenDrawer(void)
 	}
 
 luahook:
-	LUAh_TitleHUD();
+	LUA_HUDHOOK(title);
 }
 
 // separate animation timer for backgrounds, since we also count

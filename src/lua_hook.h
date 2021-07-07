@@ -78,6 +78,13 @@ automatically.
 	X (LinedefExecute),\
 	X (ShouldJingleContinue),/* should jingle of the given music continue playing */\
 
+#define HUD_HOOK_LIST(X) \
+	X (game),\
+	X (scores),/* emblems/multiplayer list */\
+	X (title),/* titlescreen */\
+	X (titlecard),\
+	X (intermission),\
+
 /*
 I chose to access the hook enums through a macro as well. This could provide
 a hint to lookup the macro's definition instead of the enum's definition.
@@ -88,22 +95,26 @@ grepped and found in the lists above.
 
 #define   MOBJ_HOOK(name)   mobjhook_ ## name
 #define        HOOK(name)       hook_ ## name
+#define    HUD_HOOK(name)    hudhook_ ## name
 #define STRING_HOOK(name) stringhook_ ## name
 
 #define ENUM(X) enum { X ## _LIST (X)  X(MAX) }
 
 ENUM   (MOBJ_HOOK);
 ENUM        (HOOK);
+ENUM    (HUD_HOOK);
 ENUM (STRING_HOOK);
 
 #undef ENUM
 
 /* dead simple, LUA_HOOK(GameQuit) */
 #define LUA_HOOK(type) LUA_HookVoid(HOOK(type))
+#define LUA_HUDHOOK(type) LUA_HookHUD(HUD_HOOK(type))
 
 extern boolean hook_cmd_running;
 
 void LUA_HookVoid(int hook);
+void LUA_HookHUD(int hook);
 
 int  LUA_HookMobj(mobj_t *, int hook);
 int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);
