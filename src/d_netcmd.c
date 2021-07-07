@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -168,7 +168,7 @@ void SendWeaponPref(void);
 void SendWeaponPref2(void);
 
 static CV_PossibleValue_t usemouse_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Force"}, {0, NULL}};
-#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 static CV_PossibleValue_t mouse2port_cons_t[] = {{0, "/dev/gpmdata"}, {1, "/dev/ttyS0"},
 	{2, "/dev/ttyS1"}, {3, "/dev/ttyS2"}, {4, "/dev/ttyS3"}, {0, NULL}};
 #else
@@ -255,7 +255,7 @@ consvar_t cv_joyscale2 = CVAR_INIT ("padscale2", "1", CV_SAVE|CV_CALL, NULL, I_J
 consvar_t cv_joyscale = CVAR_INIT ("padscale", "1", CV_SAVE|CV_HIDEN, NULL, NULL); //Alam: Dummy for save
 consvar_t cv_joyscale2 = CVAR_INIT ("padscale2", "1", CV_SAVE|CV_HIDEN, NULL, NULL); //Alam: Dummy for save
 #endif
-#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 consvar_t cv_mouse2port = CVAR_INIT ("mouse2port", "/dev/gpmdata", CV_SAVE, mouse2port_cons_t, NULL);
 consvar_t cv_mouse2opt = CVAR_INIT ("mouse2opt", "0", CV_SAVE, NULL, NULL);
 #else
@@ -788,7 +788,7 @@ void D_RegisterClientCommands(void)
 	// WARNING: the order is important when initialising mouse2
 	// we need the mouse2port
 	CV_RegisterVar(&cv_mouse2port);
-#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 	CV_RegisterVar(&cv_mouse2opt);
 #endif
 	CV_RegisterVar(&cv_controlperkey);
@@ -1313,8 +1313,9 @@ static void SendNameAndColor(void)
 	cv_skin.value = R_SkinAvailable(cv_skin.string);
 	if ((cv_skin.value < 0) || !R_SkinUsable(consoleplayer, cv_skin.value))
 	{
-		CV_StealthSet(&cv_skin, DEFAULTSKIN);
-		cv_skin.value = 0;
+		INT32 defaultSkinNum = GetPlayerDefaultSkin(consoleplayer);
+		CV_StealthSet(&cv_skin, skins[defaultSkinNum].name);
+		cv_skin.value = defaultSkinNum;
 	}
 
 	// Finally write out the complete packet and send it off.
@@ -1475,7 +1476,8 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	if (server && (p != &players[consoleplayer] && p != &players[secondarydisplayplayer]))
 	{
 		boolean kick = false;
-		INT32 s;
+		UINT32 unlockShift = 0;
+		UINT32 i;
 
 		// team colors
 		if (G_GametypeHasTeams())
@@ -1491,12 +1493,29 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 			kick = true;
 
 		// availabilities
-		for (s = 0; s < MAXSKINS; s++)
+		for (i = 0; i < MAXUNLOCKABLES; i++)
 		{
-			if (!skins[s].availability && (p->availabilities & (1 << s)))
+			if (unlockables[i].type != SECRET_SKIN)
+			{
+				continue;
+			}
+
+			unlockShift++;
+		}
+
+		// If they set an invalid bit to true, then likely a modified client
+		if (unlockShift < 32) // 32 is the max the data type allows
+		{
+			UINT32 illegalMask = UINT32_MAX;
+
+			for (i = 0; i < unlockShift; i++)
+			{
+				illegalMask &= ~(1 << i);
+			}
+			
+			if ((p->availabilities & illegalMask) != 0)
 			{
 				kick = true;
-				break;
 			}
 		}
 
@@ -2098,7 +2117,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	}
 
 	mapnumber = M_MapNumber(mapname[3], mapname[4]);
-	LUAh_MapChange(mapnumber);
+	LUA_HookInt(mapnumber, HOOK(MapChange));
 
 	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene, FLS);
 	if (demoplayback && !timingdemo)
@@ -2683,7 +2702,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	}
 
 	// Don't switch team, just go away, please, go awaayyyy, aaauuauugghhhghgh
-	if (!LUAh_TeamSwitch(&players[playernum], NetPacket.packet.newteam, players[playernum].spectator, NetPacket.packet.autobalance, NetPacket.packet.scrambled))
+	if (!LUA_HookTeamSwitch(&players[playernum], NetPacket.packet.newteam, players[playernum].spectator, NetPacket.packet.autobalance, NetPacket.packet.scrambled))
 		return;
 
 	//no status changes after hidetime
@@ -2844,7 +2863,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
 		if (displayplayer != consoleplayer) // You're already viewing yourself. No big deal.
-			LUAh_ViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
+			LUA_HookViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 		displayplayer = consoleplayer;
 	}
 
@@ -3607,7 +3626,7 @@ static void Command_Playintro_f(void)
   */
 FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void)
 {
-	LUAh_GameQuit(true);
+	LUA_HookBool(true, HOOK(GameQuit));
 	I_Quit();
 }
 
@@ -4269,7 +4288,7 @@ void Command_ExitGame_f(void)
 {
 	INT32 i;
 
-	LUAh_GameQuit(false);
+	LUA_HookBool(false, HOOK(GameQuit));
 
 	D_QuitNetGame();
 	CL_Reset();

@@ -25,6 +25,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "console.h" // Until buffering gets finished
+#include "libdivide.h" // used by NPO2 tilted span functions
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -341,7 +342,7 @@ UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 {
 	size_t offs;
 
-	if (style == AST_COPY || style == AST_OVERLAY)
+	if (style <= AST_COPY || style >= AST_OVERLAY)
 		return NULL;
 
 	offs = (ClipBlendLevel(style, alphalevel) << FF_TRANSSHIFT);
@@ -371,7 +372,7 @@ UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 
 boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel)
 {
-	if (blendmode == AST_COPY || blendmode == AST_SUBTRACT || blendmode == AST_MODULATE || blendmode == AST_OVERLAY)
+	if (blendmode <= AST_COPY || blendmode == AST_SUBTRACT || blendmode == AST_MODULATE || blendmode >= AST_OVERLAY)
 		return true;
 
 	return (alphalevel < BlendTab_Count[BlendTab_FromStyle[blendmode]]);
@@ -481,8 +482,12 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		// White!
 		if (skinnum == TC_BOSS)
 		{
+			UINT8 *originalColormap = R_GetTranslationColormap(TC_DEFAULT, (skincolornum_t)color, GTC_CACHE);
 			for (i = 0; i < 16; i++)
+			{
+				dest_colormap[DEFAULT_STARTTRANSCOLOR + i] = originalColormap[DEFAULT_STARTTRANSCOLOR + i];
 				dest_colormap[31-i] = i;
+			}
 		}
 		else if (skinnum == TC_METALSONIC)
 		{

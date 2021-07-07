@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -45,7 +45,7 @@ extern consvar_t cv_joyscale2;
 // splitscreen with second mouse
 extern consvar_t cv_mouse2port;
 extern consvar_t cv_usemouse2;
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 extern consvar_t cv_mouse2opt;
 #endif
 

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1565,10 +1565,6 @@ static void CL_LoadReceivedSavegame(boolean reloading)
 		}
 		CONS_Printf("\"\n");
 	}
-	else
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("Can't load the level!\n"));
-	}
 
 	// done
 	Z_Free(savebuffer);
@@ -2540,14 +2536,14 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 		}
 	}
 
-	LUAh_PlayerQuit(&players[playernum], reason); // Lua hook for player quitting
+	LUA_HookPlayerQuit(&players[playernum], reason); // Lua hook for player quitting
 
 	// don't look through someone's view who isn't there
 	if (playernum == displayplayer)
 	{
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
-		LUAh_ViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
+		LUA_HookViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 		displayplayer = consoleplayer;
 	}
 
@@ -2956,7 +2952,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	{
 		case KICK_MSG_GO_AWAY:
 			if (!players[pnum].quittime)
-				HU_AddChatText(va("\x82*%s has been kicked (Go away)", player_names[pnum]), false);
+				HU_AddChatText(va("\x82*%s has been kicked (No reason given)", player_names[pnum]), false);
 			kickreason = KR_KICK;
 			break;
 		case KICK_MSG_PING_HIGH:
@@ -2964,7 +2960,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			kickreason = KR_PINGLIMIT;
 			break;
 		case KICK_MSG_CON_FAIL:
-			HU_AddChatText(va("\x82*%s left the game (Synch Failure)", player_names[pnum]), false);
+			HU_AddChatText(va("\x82*%s left the game (Synch failure)", player_names[pnum]), false);
 			kickreason = KR_SYNCH;
 
 			if (M_CheckParm("-consisdump")) // Helps debugging some problems
@@ -3010,7 +3006,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			kickreason = KR_LEAVE;
 			break;
 		case KICK_MSG_BANNED:
-			HU_AddChatText(va("\x82*%s has been banned (Don't come back)", player_names[pnum]), false);
+			HU_AddChatText(va("\x82*%s has been banned (No reason given)", player_names[pnum]), false);
 			kickreason = KR_BAN;
 			break;
 		case KICK_MSG_CUSTOM_KICK:
@@ -3027,7 +3023,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	if (pnum == consoleplayer)
 	{
-		LUAh_GameQuit(false);
+		LUA_HookBool(false, HOOK(GameQuit));
 #ifdef DUMPCONSISTENCY
 		if (msg == KICK_MSG_CON_FAIL) SV_SavedGame();
 #endif
@@ -3447,7 +3443,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		COM_BufAddText(va("sayto %d %s\n", newplayernum, motd));
 
 	if (!rejoined)
-		LUAh_PlayerJoin(newplayernum);
+		LUA_HookInt(newplayernum, HOOK(PlayerJoin));
 }
 
 static boolean SV_AddWaitingPlayers(const char *name, const char *name2)
@@ -3727,7 +3723,7 @@ static void HandleConnect(SINT8 node)
 static void HandleShutdown(SINT8 node)
 {
 	(void)node;
-	LUAh_GameQuit(false);
+	LUA_HookBool(false, HOOK(GameQuit));
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -3742,7 +3738,7 @@ static void HandleShutdown(SINT8 node)
 static void HandleTimeout(SINT8 node)
 {
 	(void)node;
-	LUAh_GameQuit(false);
+	LUA_HookBool(false, HOOK(GameQuit));
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -4263,7 +4259,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_RECEIVEDGAMESTATE:
 			sendingsavegame[node] = false;
 			resendingsavegame[node] = false;
-			savegameresendcooldown[node] = I_GetTime() + 15 * TICRATE;
+			savegameresendcooldown[node] = I_GetTime() + 5 * TICRATE;
 			break;
 // -------------------------------------------- CLIENT RECEIVE ----------
 		case PT_SERVERTICS:
