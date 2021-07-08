@@ -5695,13 +5695,58 @@ INT32 P_GetPlayerControlDirection(player_t *player)
 		return 1; // Controls pointing in player's general direction
 }
 
-//! Formula for quickly getting an appropriate player acceleration value
-static fixed_t P_GetPlayerAcceleration(player_t *player, fixed_t scale)
+//!
+static fixed_t P_GetPlayerTopSpeed(player_t *player, fixed_t speed)
 {
+	if (player->powers[pw_super] || player->powers[pw_sneakers])
+		speed *= 2;
+	/*
+	// 2D map modifier
+	// (Any reason why this shouldn't also apply to 2D sections? -CBW)
+	if (maptol & TOL_2D)
+		speed = FixedMul(scale, 2*FRACUNIT/3);
+	*/
+
+	// Tails flight speed modifier
+	if (player->powers[pw_tailsfly] && player->fly1)
+		speed /= 2;
+	// Underwater speed modifier
+	if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER) && !(player->pflags & PF_SLIDING))
+	{
+		speed /= 2;
+	}
+	return FixedMul(speed, player->mo->scale);
+}
+
+//! Formula for quickly getting an appropriate player acceleration value
+static fixed_t P_GetPlayerAcceleration(player_t *player, fixed_t accel)
+{
+	/*
 	if (!(mapheaderinfo[gamemap-1]->typeoflevel & TOL_2D))
 		return FixedMul(player->acceleration * 20, scale);
 	else
 		return FixedMul(player->acceleration * 15, scale);
+	*/
+	if (player->powers[pw_super] || player->powers[pw_sneakers])
+		accel *= 2;
+	/*
+	// 2D map modifier
+	// (Any reason why this shouldn't also apply to 2D sections? -CBW)
+	if (maptol & TOL_2D)
+		scale = FixedMul(scale, 3*FRACUNIT/4);
+	*/
+
+	/*
+	// Tails flight speed modifier
+	if (player->powers[pw_tailsfly] && player->fly1)
+		scale /= 2;
+	*/
+	// Underwater speed modifier
+	if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER) && !(player->pflags & PF_SLIDING))
+	{
+		accel = accel*2/3;
+	}
+	return FixedMul(accel, player->mo->scale*20);
 }
 
 //! Formula for friction compensation during movement
@@ -5716,10 +5761,13 @@ static fixed_t P_CounterFriction(player_t *player)
 static void P_2dMovement(player_t *player)
 {
 	ticcmd_t *cmd;
-	INT32 topspeed, acceleration, thrustfactor;
+	INT32 thrustfactor;
 	fixed_t movepushforward = 0;
 	angle_t movepushangle = 0;
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
+	INT32 topspeed = P_GetPlayerTopSpeed(player, player->normalspeed);
+	INT32 acceleration = P_GetPlayerAcceleration(player,player->acceleration);
+
 	fixed_t subfriction = P_CounterFriction(player);
 	boolean spin = ((onground = P_IsObjectOnGround(player->mo)) && (player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
 
@@ -5813,7 +5861,8 @@ static void P_2dMovement(player_t *player)
 	player->aiming = cmd->aiming<<FRACBITS;
 
 	// *** Speed values
-	
+
+	/*
 	// 2D map modifier
 	// (Any reason why this shouldn't also apply to 2D sections? -CBW)
 	if (maptol & TOL_2D)
@@ -5842,6 +5891,7 @@ static void P_2dMovement(player_t *player)
 		topspeed /= 2;
 		acceleration = 2*acceleration/3;
 	}
+	*/
 
 //////////////////////////////////////
 	if (player->climbing)
@@ -5883,6 +5933,15 @@ static void P_2dMovement(player_t *player)
 		//Note: even if this doesn't execute, we still need movepushforward for deceleration calculations
 	}
 
+	// Add air drag
+	if (!onground
+		&& player->pflags & PF_JUMPED
+		&& P_MobjFlip(player->mo) * player->mo->momz == 
+		max(min(P_MobjFlip(player->mo) * player->mo->momz, gravity * 12), 0))
+		//Air drag
+		player->mo->momx -= abs(player->mo->momx)/40;
+		
+
 	if (player->rmomx != 0 && (!spin))
 	{
 		// Friction and deceleration
@@ -5896,9 +5955,9 @@ static void P_2dMovement(player_t *player)
 		//Push back Tails if flying over the speedlimit
 		if (!onground && player->fly1 && abs(player->rmomx) > topspeed)
 			 frictionmove -= deceleration;
-		// Add deceleration
-		if ((onground || //Ground decel
-			(player->pflags & PF_JUMPED && P_MobjFlip(player->mo) * player->mo->momz > gravity * 6)) //Air drag
+
+		// Add ground deceleration
+		if (onground
 			&& ((cmd->sidemove > 0) == (player->rmomx > 0) //Moving with momentum 
 			|| !(cmd->sidemove))) // Coasting
 		{
@@ -5927,11 +5986,13 @@ static void P_3dMovement(player_t *player)
 {
 	ticcmd_t *cmd;
 	angle_t movepushangle, movepushsideangle; // Analog
-	INT32 topspeed, acceleration, thrustfactor;
+	INT32 thrustfactor;
 	fixed_t movepushforward = 0, movepushside = 0;
 	INT32 mforward = 0, mbackward = 0;
 	angle_t dangle; // replaces old quadrants bits
 	fixed_t normalspd = FixedMul(player->normalspeed, player->mo->scale);
+	INT32 topspeed = P_GetPlayerTopSpeed(player, player->normalspeed);
+	INT32 acceleration = P_GetPlayerAcceleration(player,player->acceleration);
 	controlstyle_e controlstyle;
 	boolean spin = ((onground = P_IsObjectOnGround(player->mo)) && (player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
 	fixed_t oldMagnitude, newMagnitude;
@@ -6030,6 +6091,7 @@ static void P_3dMovement(player_t *player)
 
 	thrustfactor = 5;
 	// Set the player speeds.
+	/*
 	if (player->pflags & PF_SLIDING)
 	{
 		normalspd = FixedMul(36<<FRACBITS, player->mo->scale);
@@ -6059,6 +6121,7 @@ static void P_3dMovement(player_t *player)
 			acceleration = 2*acceleration/3;
 		}
 	}
+	*/
 	if (spin) // Prevent gaining speed whilst rolling!
 	{
 		const fixed_t ns = FixedDiv(549*ORIG_FRICTION,500*FRACUNIT); // P_XYFriction
@@ -6234,7 +6297,7 @@ static void P_3dMovement(player_t *player)
 		//player->rings = R_PointToDist2(0,0,totalthrust.x,totalthrust.y)*100/FRACUNIT; //!Debug
 	}
 	
-	//Apply Tails flight slowdown
+	// Apply Tails flight slowdown
 	if (player->powers[pw_tailsfly] && player->fly1 && player->speed > topspeed)
 	{
 		fixed_t deceleration = 100*acceleration;
@@ -6242,6 +6305,16 @@ static void P_3dMovement(player_t *player)
 		fixed_t momangle = R_PointToAngle2(0, 0, player->rmomx, player->rmomy);
 		totalthrust.x -= P_ReturnThrustX(player->mo, momangle, deceleration);
 		totalthrust.y -= P_ReturnThrustY(player->mo, momangle, deceleration);
+	}
+	
+	// Apply air drag
+	if (!onground
+		&& player->pflags & PF_JUMPED
+		&& P_MobjFlip(player->mo) * player->mo->momz == 
+		max(min(P_MobjFlip(player->mo) * player->mo->momz, gravity * 12), 0))
+	{
+		player->mo->momx -= player->mo->momx / 36;
+		player->mo->momy -= player->mo->momy / 36;
 	}
 	
 	// Slope physics
