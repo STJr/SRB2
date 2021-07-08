@@ -119,9 +119,9 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 		dc_source = (UINT8 *)column + 3;
 
 		if (colfunc == colfuncs[BASEDRAWFUNC])
-			(colfuncs[COLDRAWFUNC_TWOSMULTIPATCH])();
-		else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
-			(colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS])();
+			(colfuncs[COLUMN_MULTIPATCH])();
+		else if (colfunc == colfuncs[column_translu])
+			(colfuncs[column_translu_multipatch])();
 		else
 			colfunc();
 	}
@@ -164,21 +164,19 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 	if (ldef->alpha > 0 && ldef->alpha < FRACUNIT)
 	{
-#ifdef TRUECOLOR
-		if (truecolor)
+		if (!usetranstables)
 		{
 			dc_alpha = FixedInt(ldef->alpha*255);
-			TC_SetColumnBlendingFunction(AST_TRANSLUCENT);
+			R_SetColumnBlendingFunction(AST_TRANSLUCENT);
 		}
 		else
-#endif
 			dc_transmap = R_GetTranslucencyTable(R_GetLinedefTransTable(ldef->alpha));
 
-		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+		colfunc = colfuncs[column_translu];
 	}
 	else if (ldef->special == 909)
 	{
-		colfunc = colfuncs[COLDRAWFUNC_FOG];
+		colfunc = colfuncs[COLUMN_FOG];
 		windowtop = frontsector->ceilingheight;
 		windowbottom = frontsector->floorheight;
 	}
@@ -191,17 +189,15 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		if (alphaval >= NUMTRANSMAPS)
 			return;
 
-#ifdef TRUECOLOR
-		if (truecolor)
+		if (!usetranstables)
 		{
 			dc_alpha = R_TransnumToAlpha(alphaval);
-			TC_SetColumnBlendingFunction(AST_TRANSLUCENT);
+			R_SetColumnBlendingFunction(AST_TRANSLUCENT);
 		}
 		else
-#endif
 			dc_transmap = R_GetTranslucencyTable(alphaval);
 
-		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+		colfunc = colfuncs[column_translu];
 	}
 
 #ifdef TRUECOLOR
@@ -266,7 +262,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			rlight->extra_colormap = *light->extra_colormap;
 			rlight->flags = light->flags;
 
-			if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
+			if ((colfunc != colfuncs[column_translu])
 				|| (rlight->flags & FF_FOG)
 				|| (rlight->extra_colormap && (rlight->extra_colormap->flags & CMF_FOG)))
 				lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
@@ -285,13 +281,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	}
 	else
 	{
-		if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
+		if ((colfunc != colfuncs[column_translu])
 			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 		else
 			lightnum = LIGHTLEVELS - 1;
 
-		if (colfunc == colfuncs[COLDRAWFUNC_FOG]
+		if (colfunc == colfuncs[COLUMN_FOG]
 			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			;
 		else if (curline->v1->y == curline->v2->y)
@@ -698,8 +694,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	{
 		boolean fuzzy = true;
 
-#ifdef TRUECOLOR
-		if (truecolor)
+		if (!usetranstables)
 		{
 			if (pfloor->alpha >= 255) // Opaque
 			{
@@ -711,42 +706,25 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			else
 			{
 				dc_alpha = pfloor->alpha;
-				TC_SetColumnBlendingFunction(AST_TRANSLUCENT);
+				R_SetColumnBlendingFunction(AST_TRANSLUCENT);
 			}
 		}
 		else
-#endif
 		{
-			// Hacked up support for alpha value in software mode Tails 09-24-2002
-			if (pfloor->alpha < 12)
+			INT32 transnum = R_AlphaToTransnum(pfloor->alpha);
+			if (transnum == -1)
 				return; // Don't even draw it
-			else if (pfloor->alpha < 38)
-				dc_transmap = R_GetTranslucencyTable(tr_trans90);
-			else if (pfloor->alpha < 64)
-				dc_transmap = R_GetTranslucencyTable(tr_trans80);
-			else if (pfloor->alpha < 89)
-				dc_transmap = R_GetTranslucencyTable(tr_trans70);
-			else if (pfloor->alpha < 115)
-				dc_transmap = R_GetTranslucencyTable(tr_trans60);
-			else if (pfloor->alpha < 140)
-				dc_transmap = R_GetTranslucencyTable(tr_trans50);
-			else if (pfloor->alpha < 166)
-				dc_transmap = R_GetTranslucencyTable(tr_trans40);
-			else if (pfloor->alpha < 192)
-				dc_transmap = R_GetTranslucencyTable(tr_trans30);
-			else if (pfloor->alpha < 217)
-				dc_transmap = R_GetTranslucencyTable(tr_trans20);
-			else if (pfloor->alpha < 243)
-				dc_transmap = R_GetTranslucencyTable(tr_trans10);
+			else if (transnum > 0)
+				dc_transmap = R_GetTranslucencyTable(transnum);
 			else
 				fuzzy = false; // Opaque
 		}
 
 		if (fuzzy)
-			colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+			colfunc = colfuncs[column_translu];
 	}
 	else if (pfloor->flags & FF_FOG)
-		colfunc = colfuncs[COLDRAWFUNC_FOG];
+		colfunc = colfuncs[COLUMN_FOG];
 
 #ifdef TRUECOLOR
 	dc_picfmt = textures[texnum]->format;
@@ -861,7 +839,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 		else if (pfloor->flags & FF_FOG)
 			lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
-		else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
+		else if (colfunc == colfuncs[column_translu])
 			lightnum = LIGHTLEVELS-1;
 		else
 			lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
@@ -1041,7 +1019,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			// Get data for the column
 			col = (column_t *)((UINT8 *)R_GetColumn(texnum,maskedtexturecol[dc_x]) - 3);
 
-			// SoM: New code does not rely on R_DrawColumnShadowed_8 which
+			// SoM: New code does not rely on R_DrawShadowedColumn which
 			// will (hopefully) put less strain on the stack.
 			if (dc_numlights)
 			{
@@ -1620,7 +1598,7 @@ static void R_RenderSegLoop (void)
 						dc_lightlist[i].rcolormap = xwalllights[pindex];
 				}
 
-				colfunc = colfuncs[COLDRAWFUNC_SHADOWED];
+				colfunc = colfuncs[COLUMN_LIGHTLIST];
 			}
 		}
 

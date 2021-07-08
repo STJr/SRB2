@@ -44,15 +44,27 @@
 #define RUSEASM //MSC.NET can't patch itself
 #endif
 
-// --------------------------------------------
-// assembly or c drawer routines for 8bpp/16bpp
-// --------------------------------------------
+// -----------------------------
+// assembly or c drawer routines
+// -----------------------------
 void (*colfunc)(void);
-void (*colfuncs[COLDRAWFUNC_MAX])(void);
+void (*colfuncs[COLUMN_MAX])(void);
+
+INT32 column_translu;
+INT32 column_translu_mapped;
+INT32 column_translu_multipatch;
 
 void (*spanfunc)(void);
-void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
-void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
+void (*spanfuncs[SPAN_MAX])(void);
+void (*spanfuncs_npo2[SPAN_MAX])(void);
+
+INT32 span_translu;
+INT32 span_translu_tilted;
+INT32 span_translu_splat;
+INT32 span_translu_sprite;
+INT32 span_translu_sprite_tilted;
+INT32 span_translu_water;
+INT32 span_translu_water_tilted;
 
 // ------------------
 // global video state
@@ -107,9 +119,6 @@ boolean R_SSE2 = false;
 
 void SCR_SetDrawFuncs(void)
 {
-	//
-	//  setup the right draw routines for either 8bpp or 32bpp
-	//
 	if (vid.bpp == 1)
 	{
 		colfuncs[BASEDRAWFUNC] = R_DrawColumn_8;
@@ -118,44 +127,19 @@ void SCR_SetDrawFuncs(void)
 		colfunc = colfuncs[BASEDRAWFUNC];
 		spanfunc = spanfuncs[BASEDRAWFUNC];
 
-		colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8;
-		colfuncs[COLDRAWFUNC_TRANS] = R_DrawTranslatedColumn_8;
-		colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8;
-		colfuncs[COLDRAWFUNC_SHADOWED] = R_DrawColumnShadowed_8;
-		colfuncs[COLDRAWFUNC_TRANSTRANS] = R_DrawTranslatedTranslucentColumn_8;
-		colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8;
-		colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS] = R_Draw2sMultiPatchTranslucentColumn_8;
-		colfuncs[COLDRAWFUNC_FOG] = R_DrawFogColumn_8;
+#define COLFUNC8(type, func) colfuncs[COLUMN_##type] = R_Draw##func##Column_8
+		COLFUNCLIST8(COLFUNC8);
+#undef COLFUNC8
 
-		spanfuncs[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_8;
-		spanfuncs[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_8;
-		spanfuncs[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_8;
-		spanfuncs[SPANDRAWFUNC_SPLAT] = R_DrawSplat_8;
-		spanfuncs[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_8;
-		spanfuncs[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_8;
-		spanfuncs[SPANDRAWFUNC_SPRITE] = R_DrawFloorSprite_8;
-		spanfuncs[SPANDRAWFUNC_TRANSSPRITE] = R_DrawTranslucentFloorSprite_8;
-		spanfuncs[SPANDRAWFUNC_TILTEDSPRITE] = R_DrawTiltedFloorSprite_8;
-		spanfuncs[SPANDRAWFUNC_TILTEDTRANSSPRITE] = R_DrawTiltedTranslucentFloorSprite_8;
-		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_8;
-		spanfuncs[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_8;
-		spanfuncs[SPANDRAWFUNC_FOG] = R_DrawFogSpan_8;
+#define SPANFUNC8(type, func) spanfuncs[SPAN_##type] = R_Draw##func##_8
+		SPANFUNCLIST8(SPANFUNC8);
+		SPANFUNC8(FOG, FogSpan);
+#undef SPANFUNC8
 
-		// Lactozilla: Non-powers-of-two
-		spanfuncs_npo2[BASEDRAWFUNC] = R_DrawSpan_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_SPLAT] = R_DrawSplat_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_SPRITE] = R_DrawFloorSprite_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPRITE] = R_DrawTranslucentFloorSprite_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPRITE] = R_DrawTiltedFloorSprite_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANSSPRITE] = R_DrawTiltedTranslucentFloorSprite_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_FOG] = NULL; // Not needed
+#define SPANFUNC8(type, func) spanfuncs_npo2[SPAN_##type] = R_Draw##func##_NPO2_8
+		SPANFUNCLIST8(SPANFUNC8);
+		spanfuncs_npo2[SPAN_FOG] = NULL; // Not needed
+#undef SPANFUNC8
 
 #ifdef RUSEASM
 		if (R_ASM)
@@ -163,17 +147,17 @@ void SCR_SetDrawFuncs(void)
 			if (R_MMX)
 			{
 				colfuncs[BASEDRAWFUNC] = R_DrawColumn_8_MMX;
-				//colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8_ASM;
-				//colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8_ASM;
-				colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8_MMX;
+				//colfuncs[COLUMN_SHADE] = R_DrawShadeColumn_8_ASM;
+				//colfuncs[COLUMN_TRANSLUCENT] = R_DrawTranslucentColumn_8_ASM;
+				colfuncs[COLUMN_MULTIPATCH] = R_Draw2sMultiPatchColumn_8_MMX;
 				spanfuncs[BASEDRAWFUNC] = R_DrawSpan_8_MMX;
 			}
 			else
 			{
 				colfuncs[BASEDRAWFUNC] = R_DrawColumn_8_ASM;
-				//colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_8_ASM;
-				//colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_8_ASM;
-				colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_8_ASM;
+				//colfuncs[COLUMN_SHADE] = R_DrawShadeColumn_8_ASM;
+				//colfuncs[COLUMN_TRANSLUCENT] = R_DrawTranslucentColumn_8_ASM;
+				colfuncs[COLUMN_MULTIPATCH] = R_Draw2sMultiPatchColumn_8_ASM;
 			}
 		}
 #endif
@@ -187,44 +171,19 @@ void SCR_SetDrawFuncs(void)
 		colfunc = colfuncs[BASEDRAWFUNC];
 		spanfunc = spanfuncs[BASEDRAWFUNC];
 
-		colfuncs[COLDRAWFUNC_FUZZY] = R_DrawTranslucentColumn_32;
-		colfuncs[COLDRAWFUNC_TRANS] = R_DrawTranslatedColumn_32;
-		colfuncs[COLDRAWFUNC_SHADE] = R_DrawShadeColumn_32;
-		colfuncs[COLDRAWFUNC_SHADOWED] = R_DrawColumnShadowed_32;
-		colfuncs[COLDRAWFUNC_TRANSTRANS] = R_DrawTranslatedTranslucentColumn_32;
-		colfuncs[COLDRAWFUNC_TWOSMULTIPATCH] = R_Draw2sMultiPatchColumn_32;
-		colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS] = R_Draw2sMultiPatchTranslucentColumn_32;
-		colfuncs[COLDRAWFUNC_FOG] = R_DrawFogColumn_32;
+#define COLFUNC32(type, func) colfuncs[COLUMN_##type] = R_Draw##func##Column_32
+		COLFUNCLIST32(COLFUNC32);
+#undef COLFUNC32
 
-		spanfuncs[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_32;
-		spanfuncs[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_32;
-		spanfuncs[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_32;
-		spanfuncs[SPANDRAWFUNC_SPLAT] = R_DrawSplat_32;
-		spanfuncs[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_32;
-		spanfuncs[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_32;
-		spanfuncs[SPANDRAWFUNC_SPRITE] = R_DrawFloorSprite_32;
-		spanfuncs[SPANDRAWFUNC_TRANSSPRITE] = R_DrawTranslucentFloorSprite_32;
-		spanfuncs[SPANDRAWFUNC_TILTEDSPRITE] = R_DrawTiltedFloorSprite_32;
-		spanfuncs[SPANDRAWFUNC_TILTEDTRANSSPRITE] = R_DrawTiltedTranslucentFloorSprite_32;
-		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_32;
-		spanfuncs[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_32;
-		spanfuncs[SPANDRAWFUNC_FOG] = R_DrawFogSpan_32;
+#define SPANFUNC32(type, func) spanfuncs[SPAN_##type] = R_Draw##func##_32
+		SPANFUNCLIST32(SPANFUNC32);
+		SPANFUNC32(FOG, FogSpan);
+#undef SPANFUNC32
 
-		// Lactozilla: Non-powers-of-two
-		spanfuncs_npo2[BASEDRAWFUNC] = R_DrawSpan_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_TRANS] = R_DrawTranslucentSpan_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTED] = R_DrawTiltedSpan_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANS] = R_DrawTiltedTranslucentSpan_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_SPLAT] = R_DrawSplat_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPLAT] = R_DrawTranslucentSplat_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPLAT] = R_DrawTiltedSplat_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_SPRITE] = R_DrawFloorSprite_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_TRANSSPRITE] = R_DrawTranslucentFloorSprite_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTEDSPRITE] = R_DrawTiltedFloorSprite_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANSSPRITE] = R_DrawTiltedTranslucentFloorSprite_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_NPO2_32;
-		spanfuncs_npo2[SPANDRAWFUNC_FOG] = NULL; // Not needed
+#define SPANFUNC32(type, func) spanfuncs_npo2[SPAN_##type] = R_Draw##func##_NPO2_32
+		SPANFUNCLIST32(SPANFUNC32);
+		spanfuncs_npo2[SPAN_FOG] = NULL; // Not needed
+#undef SPANFUNC8
 	}
 #endif
 	else
@@ -233,6 +192,45 @@ void SCR_SetDrawFuncs(void)
 	if (SCR_IsAspectCorrect(vid.width, vid.height))
 		CONS_Alert(CONS_WARNING, M_GetText("Resolution is not aspect-correct!\nUse a multiple of %dx%d\n"), BASEVIDWIDTH, BASEVIDHEIGHT);
 */
+}
+
+#undef SPANFUNCLIST
+
+void SCR_SetSoftwareTranslucency(void)
+{
+	if (truecolor)
+		usetranstables = false;
+	else
+		usetranstables = cv_transtables.value;
+
+	if (usetranstables)
+	{
+		column_translu = COLUMN_TRANSTAB;
+		column_translu_mapped = COLUMN_MAPPED_TRANSTAB;
+		column_translu_multipatch = COLUMN_MULTIPATCH_TRANSTAB;
+
+		span_translu = SPAN_TRANSTAB;
+		span_translu_tilted = SPAN_TILTED_TRANSTAB;
+		span_translu_splat = SPAN_SPLAT_TRANSTAB;
+		span_translu_sprite = SPAN_SPRITE_TRANSTAB;
+		span_translu_sprite_tilted = SPAN_SPRITE_TILTED_TRANSTAB;
+		span_translu_water = SPAN_WATER_TRANSTAB;
+		span_translu_water_tilted = SPAN_WATER_TILTED_TRANSTAB;
+	}
+	else
+	{
+		column_translu = COLUMN_ALPHA;
+		column_translu_mapped = COLUMN_MAPPED_ALPHA;
+		column_translu_multipatch = COLUMN_MULTIPATCH_ALPHA;
+
+		span_translu = SPAN_ALPHA;
+		span_translu_tilted = SPAN_TILTED_ALPHA;
+		span_translu_splat = SPAN_SPLAT_ALPHA;
+		span_translu_sprite = SPAN_SPRITE_ALPHA;
+		span_translu_sprite_tilted = SPAN_SPRITE_TILTED_ALPHA;
+		span_translu_water = SPAN_WATER_ALPHA;
+		span_translu_water_tilted = SPAN_WATER_TILTED_ALPHA;
+	}
 }
 
 void SCR_SetMode(void)

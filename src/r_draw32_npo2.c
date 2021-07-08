@@ -18,7 +18,7 @@
 /**	\brief The R_DrawSpan_NPO2_32 function
 	Draws the actual span.
 */
-void R_DrawSpan_NPO2_32 (void)
+void R_DrawSpan_NPO2_32(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -183,26 +183,14 @@ void R_DrawTiltedSpan_NPO2_32(void)
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
-
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
-	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 
+	R_CalcTiltedLighting(iz);
+
+	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 	source = ds_source;
 	sourceu32 = (UINT32 *)ds_source;
-	//colormap = ds_colormap;
 
 	startz = 1.f/iz;
 	startu = uz*startz;
@@ -211,7 +199,6 @@ void R_DrawTiltedSpan_NPO2_32(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	if (ds_picfmt == PICFMT_FLAT)
@@ -583,26 +570,14 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
-
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
-	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 
+	R_CalcTiltedLighting(iz);
+
+	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 	source = ds_source;
 	sourceu32 = (UINT32 *)ds_source;
-	//colormap = ds_colormap;
 
 	startz = 1.f/iz;
 	startu = uz*startz;
@@ -611,7 +586,6 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	if (ds_picfmt == PICFMT_FLAT)
@@ -875,7 +849,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 					else
 						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-					*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
+					*dest = R_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
 				}
 				dest++;
 				u += stepu;
@@ -907,7 +881,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 					else
 						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-					*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
+					*dest = R_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
 				}
 			}
 			else
@@ -944,7 +918,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 						else
 							y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-						*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
+						*dest = R_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dest, ds_alpha);
 					}
 					dest++;
 					u += stepu;
@@ -984,27 +958,15 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void)
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
-
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
-	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 
+	R_CalcTiltedLighting(iz);
+
+	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 	dsrc = ((UINT32 *)screens[1]) + (ds_y+ds_bgofs)*vid.width + ds_x1;
 	source = ds_source;
 	sourceu32 = (UINT32 *)ds_source;
-	//colormap = ds_colormap;
 
 	startz = 1.f/iz;
 	startu = uz*startz;
@@ -1013,7 +975,6 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	if (ds_picfmt == PICFMT_FLAT)
@@ -1277,7 +1238,7 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void)
 					else
 						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-					*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
+					*dest = R_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
 				}
 				dest++;
 				u += stepu;
@@ -1309,7 +1270,7 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void)
 					else
 						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-					*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
+					*dest = R_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
 				}
 			}
 			else
@@ -1346,7 +1307,7 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_32(void)
 						else
 							y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-						*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
+						*dest = R_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
 					}
 					dest++;
 					u += stepu;
@@ -1385,26 +1346,14 @@ void R_DrawTiltedSplat_NPO2_32(void)
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
-
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
-	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 
+	R_CalcTiltedLighting(iz);
+
+	dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
 	source = ds_source;
 	sourceu32 = (UINT32 *)ds_source;
-	//colormap = ds_colormap;
 
 	startz = 1.f/iz;
 	startu = uz*startz;
@@ -1413,7 +1362,6 @@ void R_DrawTiltedSplat_NPO2_32(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	if (ds_picfmt == PICFMT_FLAT)
@@ -1778,7 +1726,7 @@ void R_DrawTiltedSplat_NPO2_32(void)
 /**	\brief The R_DrawSplat_NPO2_32 function
 	Just like R_DrawSpan_NPO2_32, but skips transparent pixels.
 */
-void R_DrawSplat_NPO2_32 (void)
+void R_DrawSplat_NPO2_32(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -1925,7 +1873,7 @@ void R_DrawSplat_NPO2_32 (void)
 /**	\brief The R_DrawTranslucentSplat_NPO2_32 function
 	Just like R_DrawSplat_NPO2_32, but is translucent!
 */
-void R_DrawTranslucentSplat_NPO2_32 (void)
+void R_DrawTranslucentSplat_NPO2_32(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -2061,7 +2009,7 @@ void R_DrawTranslucentSplat_NPO2_32 (void)
 
 			val = sourceu32[((y * ds_flatwidth) + x)];
 			if (R_GetRgbaA(val))
-				*dest = TC_BlendModeMix(val, *dest, ds_alpha);
+				*dest = R_BlendModeMix(val, *dest, ds_alpha);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;
@@ -2072,7 +2020,7 @@ void R_DrawTranslucentSplat_NPO2_32 (void)
 /**	\brief The R_DrawFloorSprite_NPO2_8 function
 	Just like R_DrawSplat_NPO2_32, but for floor sprites.
 */
-void R_DrawFloorSprite_NPO2_32 (void)
+void R_DrawFloorSprite_NPO2_32(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -2221,7 +2169,7 @@ void R_DrawFloorSprite_NPO2_32 (void)
 /**	\brief The R_DrawTranslucentFloorSprite_NPO2_32 function
 	Just like R_DrawFloorSprite_NPO2_32, but is translucent!
 */
-void R_DrawTranslucentFloorSprite_NPO2_32 (void)
+void R_DrawTranslucentFloorSprite_NPO2_32(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -2362,7 +2310,7 @@ void R_DrawTranslucentFloorSprite_NPO2_32 (void)
 
 			val = sourceu32[((y * ds_flatwidth) + x)];
 			if (R_GetRgbaA(val))
-				*dest = TC_BlendModeMix(val, *dest, ds_alpha);
+				*dest = R_BlendModeMix(val, *dest, ds_alpha);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;
@@ -2420,7 +2368,6 @@ void R_DrawTiltedFloorSprite_NPO2_32(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	if (ds_picfmt == PICFMT_FLAT16)
@@ -2816,7 +2763,6 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	if (ds_picfmt == PICFMT_FLAT16)
@@ -3083,7 +3029,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 				val = sourceu32[((y * ds_flatwidth) + x)];
 				if (R_GetRgbaA(val))
-					*dest = TC_BlendModeMix(val, *dest, ds_alpha);
+					*dest = R_BlendModeMix(val, *dest, ds_alpha);
 				dest++;
 				u += stepu;
 				v += stepv;
@@ -3115,7 +3061,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 					val = sourceu32[((y * ds_flatwidth) + x)];
 					if (R_GetRgbaA(val))
-						*dest = TC_BlendModeMix(val, *dest, ds_alpha);
+						*dest = R_BlendModeMix(val, *dest, ds_alpha);
 				}
 			}
 			else
@@ -3152,7 +3098,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 					val = sourceu32[((y * ds_flatwidth) + x)];
 					if (R_GetRgbaA(val))
-						*dest = TC_BlendModeMix(val, *dest, ds_alpha);
+						*dest = R_BlendModeMix(val, *dest, ds_alpha);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -3165,7 +3111,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 /**	\brief The R_DrawTranslucentSpan_NPO2_32 function
 	Draws the actual span with translucency.
 */
-void R_DrawTranslucentSpan_NPO2_32 (void)
+void R_DrawTranslucentSpan_NPO2_32(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -3298,7 +3244,7 @@ void R_DrawTranslucentSpan_NPO2_32 (void)
 			y = (yposition >> FRACBITS);
 
 			val = sourceu32[((y * ds_flatwidth) + x)];
-			*dest = TC_BlendModeMix(val, *dest, ds_alpha);
+			*dest = R_BlendModeMix(val, *dest, ds_alpha);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;
@@ -3437,7 +3383,7 @@ void R_DrawTranslucentWaterSpan_NPO2_32(void)
 			x = (xposition >> FRACBITS);
 			y = (yposition >> FRACBITS);
 
-			*dest = TC_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
+			*dest = R_BlendModeMix(sourceu32[((y * ds_flatwidth) + x)], *dsrc++, ds_alpha);
 			dest++;
 			xposition += xstep;
 			yposition += ystep;

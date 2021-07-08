@@ -753,7 +753,7 @@ void R_DrawFlippedMaskedColumn(column_t *column)
 
 boolean R_SpriteIsFlashing(vissprite_t *vis)
 {
-	return (!(vis->cut & SC_PRECIP)
+	return (!(vis->flags & VIS_PRECIP)
 	&& (vis->mobj->flags & (MF_ENEMY|MF_BOSS))
 	&& (vis->mobj->flags2 & MF2_FRET)
 	&& !(vis->mobj->flags & MF_GRENADEBOUNCE)
@@ -788,9 +788,9 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 	else if (vis->mobj->color)
 	{
 		// New colormap stuff for skins Tails 06-07-2002
-		if (!(vis->cut & SC_PRECIP) && vis->mobj->colorized)
+		if (!(vis->flags & VIS_PRECIP) && vis->mobj->colorized)
 			return R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
-		else if (!(vis->cut & SC_PRECIP)
+		else if (!(vis->flags & VIS_PRECIP)
 			&& vis->mobj->player && vis->mobj->player->dashmode >= DASHMODE_THRESHOLD
 			&& (vis->mobj->player->charflags & SF_DASHMODE)
 			&& ((leveltime/2) & 1))
@@ -800,7 +800,7 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 			else
 				return R_GetTranslationColormap(TC_RAINBOW, vis->mobj->color, GTC_CACHE);
 		}
-		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
+		else if (!(vis->flags & VIS_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)vis->mobj->skin-skins;
 			return R_GetTranslationColormap((INT32)skinnum, vis->mobj->color, GTC_CACHE);
@@ -849,30 +849,28 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	dc_translation = R_GetSpriteTranslation(vis);
 
 	if (R_SpriteIsFlashing(vis)) // Bosses "flash"
-		colfunc = colfuncs[COLDRAWFUNC_TRANS]; // translate certain pixels to white
-	else if (vis->transmap)
-		colfunc = colfuncs[(vis->mobj->color) ? COLDRAWFUNC_TRANSTRANS : COLDRAWFUNC_FUZZY];
+		colfunc = colfuncs[COLUMN_TRANSLATED]; // translate certain pixels to white
+	else if (vis->flags & VIS_TRANSLUCENT)
+		colfunc = colfuncs[vis->mobj->color ? column_translu_mapped : column_translu];
 	else if (vis->mobj->color) // translate green skin to another color
-		colfunc = colfuncs[COLDRAWFUNC_TRANS];
+		colfunc = colfuncs[COLUMN_TRANSLATED];
 	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
-		colfunc = colfuncs[COLDRAWFUNC_TRANS];
+		colfunc = colfuncs[COLUMN_TRANSLATED];
 	else
 		colfunc = colfuncs[BASEDRAWFUNC];
 
-#ifdef TRUECOLOR
-	if (truecolor)
+	if (!usetranstables)
 	{
 		dc_alpha = vis->alpha;
-		TC_SetColumnBlendingFunction(vis->blendmode);
+		R_SetColumnBlendingFunction(vis->blendmode);
 	}
 	else
-#endif
 		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 
 #ifdef TRUECOLOR
 	if (truecolor && dc_picfmt == PICFMT_PATCH32 && dc_colormap)
 	{
-		if (tc_colormaps)
+		if (tc_spritecolormaps)
 			dp_lighting = TC_CalcScaleLight((UINT32 *)dc_colormap);
 		else
 			dp_lighting = TC_CalcScaleLightPaletted(dc_colormap);
@@ -884,7 +882,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 #ifdef TRUECOLOR
 		dp_extracolormap = vis->extra_colormap;
 
-		if (tc_colormaps)
+		if (tc_spritecolormaps)
 		{
 			if (!dc_colormap)
 				dc_colormap = (UINT8 *)vis->extra_colormap->colormap_u32;
@@ -910,7 +908,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 #ifdef TRUECOLOR
 		dp_lighting = 0xFF;
 
-		if (tc_colormaps)
+		if (tc_spritecolormaps)
 			dc_colormap = (UINT8 *)colormaps_u32;
 		else
 #endif
@@ -923,18 +921,18 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	frac = vis->startfrac;
 	windowtop = windowbottom = sprbotscreen = INT32_MAX;
 
-	if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && ((skin_t *)vis->mobj->skin)->flags & SF_HIRES)
+	if (!(vis->flags & VIS_PRECIP) && vis->mobj->skin && ((skin_t *)vis->mobj->skin)->flags & SF_HIRES)
 		this_scale = FixedMul(this_scale, ((skin_t *)vis->mobj->skin)->highresscale);
 	if (this_scale <= 0)
 		this_scale = 1;
 	if (this_scale != FRACUNIT)
 	{
-		if (!(vis->cut & SC_ISSCALED))
+		if (!(vis->flags & VIS_SCALED))
 		{
 			vis->scale = FixedMul(vis->scale, this_scale);
 			vis->scalestep = FixedMul(vis->scalestep, this_scale);
 			vis->xiscale = FixedDiv(vis->xiscale,this_scale);
-			vis->cut |= SC_ISSCALED;
+			vis->flags |= VIS_SCALED;
 		}
 		dc_texturemid = FixedDiv(dc_texturemid,this_scale);
 	}
@@ -960,7 +958,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	if (vis->x2 >= vid.width)
 		vis->x2 = vid.width-1;
 
-	localcolfunc = (vis->cut & SC_VFLIP) ? R_DrawFlippedMaskedColumn : R_DrawMaskedColumn;
+	localcolfunc = (vis->flags & VIS_VFLIP) ? R_DrawFlippedMaskedColumn : R_DrawMaskedColumn;
 	lengthcol = patch->height;
 
 	// Split drawing loops for paper and non-paper to reduce conditional checks per sprite
@@ -991,7 +989,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 			localcolfunc (column);
 		}
 	}
-	else if (vis->cut & SC_SHEAR)
+	else if (vis->flags & VIS_SHEARED)
 	{
 #ifdef RANGECHECK
 		pwidth = patch->width;
@@ -1063,23 +1061,21 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 	if (overflow_test < 0) overflow_test = -overflow_test;
 	if ((UINT64)overflow_test&0xFFFFFFFF80000000ULL) return; // fixed point mult would overflow
 
-	if (vis->transmap)
+	if (vis->flags & VIS_TRANSLUCENT)
 	{
-		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+		colfunc = colfuncs[column_translu];
 
-#ifdef TRUECOLOR
-		if (truecolor)
+		if (!usetranstables)
 		{
-			TC_SetColumnBlendingFunction(vis->blendmode);
+			R_SetColumnBlendingFunction(vis->blendmode);
 			dc_alpha = vis->alpha;
 		}
 		else
-#endif
 			dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
 
 #ifdef TRUECOLOR
-	if (tc_colormaps)
+	if (tc_spritecolormaps)
 	{
 		dc_colormap = (UINT8 *)colormaps_u32;
 		dp_extracolormap = defaultextracolormap;
@@ -1157,8 +1153,6 @@ static void R_SplitSprite(vissprite_t *sprite)
 		// adjust the heights.
 		newsprite = M_Memcpy(R_NewVisSprite(), sprite, sizeof (vissprite_t));
 
-		newsprite->cut |= (sprite->cut & SC_FLAGMASK);
-
 		sprite->cut |= SC_BOTTOM;
 		sprite->gz = testheight;
 
@@ -1183,7 +1177,7 @@ static void R_SplitSprite(vissprite_t *sprite)
 			lightnum = (*sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT);
 
 #ifdef TRUECOLOR
-			if (tc_colormaps)
+			if (tc_spritecolormaps)
 			{
 				if (lightnum < 0)
 					spritelights_u32 = scalelight_u32[0];
@@ -1205,16 +1199,15 @@ static void R_SplitSprite(vissprite_t *sprite)
 
 			newsprite->extra_colormap = *sector->lightlist[i].extra_colormap;
 
-			if (!(newsprite->cut & SC_FULLBRIGHT)
-				|| (newsprite->extra_colormap && (newsprite->extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)))
+			if (!(newsprite->flags & VIS_FULLBRIGHT)
+			|| (newsprite->extra_colormap && (newsprite->extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)))
 			{
-				lindex = FixedMul(sprite->xscale, LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
-
+				lindex = FixedMul(sprite->xscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
 
 #ifdef TRUECOLOR
-				if (tc_colormaps)
+				if (tc_spritecolormaps)
 					newsprite->colormap = (UINT8 *)(spritelights_u32[lindex]);
 				else
 #endif
@@ -1374,7 +1367,9 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	patch_t *patch;
 	fixed_t xscale, yscale, shadowxscale, shadowyscale, shadowskew, x1, x2;
 	INT32 light = 0;
-	fixed_t scalemul; UINT8 trans;
+	fixed_t scalemul;
+	INT32 trans;
+	UINT16 alpha;
 	fixed_t floordiff;
 	fixed_t groundz;
 	pslope_t *groundslope;
@@ -1386,8 +1381,11 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	floordiff = abs((isflipped ? thing->height : 0) + thing->z - groundz);
 
-	trans = floordiff / (100*FRACUNIT) + 3;
-	if (trans >= 9) return;
+	alpha = floordiff / (4*FRACUNIT) + 75;
+	if (alpha >= 255)
+		return;
+	alpha = 255 - alpha;
+	trans = R_AlphaToTransnum(alpha);
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
 
@@ -1445,10 +1443,10 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	shadow->sector = vis->sector;
 	shadow->szt = (INT16)((centeryfrac - FixedMul(shadow->gzt - viewz, yscale))>>FRACBITS);
 	shadow->sz = (INT16)((centeryfrac - FixedMul(shadow->gz - viewz, yscale))>>FRACBITS);
-	shadow->cut = SC_ISSCALED|SC_SHADOW; //check this
+	shadow->flags = VIS_SCALED|VIS_SHADOW; //check this
+	shadow->cut = 0;
 
 	shadow->startfrac = 0;
-	//shadow->xiscale = 0x7ffffff0 / (shadow->xscale/2);
 	shadow->xiscale = (patch->width<<FRACBITS)/(x2-x1+1); // fuck it
 
 	if (shadow->x1 > x1)
@@ -1483,14 +1481,23 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 			shadow->extra_colormap = thing->subsector->sector->extra_colormap;
 	}
 
-	trans++;
-	shadow->alpha = R_TransnumToAlpha(trans);
-	shadow->transmap = R_GetTranslucencyTable(trans);
+	shadow->alpha = alpha;
 	shadow->blendmode = AST_TRANSLUCENT;
+	shadow->transmap = NULL;
+
+	if (alpha <= 0xFF)
+		shadow->flags |= VIS_TRANSLUCENT; // The Lord giveth
+
+	if (usetranstables && trans > 0)
+	{
+		shadow->transmap = R_GetTranslucencyTable(trans);
+		if (!shadow->transmap)
+			shadow->flags &= ~VIS_TRANSLUCENT; // and the Lord taketh away
+	}
 
 	// full dark!
 #ifdef TRUECOLOR
-	if (tc_colormaps)
+	if (tc_spritecolormaps)
 		shadow->colormap = (UINT8 *)(scalelight_u32[0][0]);
 	else
 #endif
@@ -1529,12 +1536,15 @@ static void R_ProjectSprite(mobj_t *thing)
 	boolean hflip = (!R_ThingHorizontallyFlipped(thing) != !mirrored);
 
 	INT32 lindex;
-	INT32 trans;
+	INT32 trans = 0, alpha = 0xFF;
+	INT32 blendmode = min(max(AST_COPY, thing->blendmode), AST_OVERLAY);
+	boolean translucent = (cv_translucency.value && blendmode != AST_COPY && blendmode != AST_OVERLAY);
 
 	vissprite_t *vis;
 	patch_t *patch;
 
 	spritecut_e cut = SC_NONE;
+	visspriteflag_e flags = 0;
 
 	angle_t ang = 0; // compiler complaints
 	fixed_t iscale;
@@ -1711,7 +1721,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (rotsprite != NULL)
 		{
 			patch = rotsprite;
-			cut |= SC_ISROTATED;
+			flags |= VIS_ROTATED;
 
 			spr_width = rotsprite->width << FRACBITS;
 			spr_height = rotsprite->height << FRACBITS;
@@ -1892,7 +1902,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			dispoffset *= -1; // if it's physically behind, make sure it's ordered behind (if dispoffset > 0)
 
 		sortscale = linkscale; // now make sure it's linked
-		cut |= SC_LINKDRAW;
+		flags |= VIS_LINKDRAW;
 	}
 	else if (splat)
 	{
@@ -1925,13 +1935,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
 		trans = tr_trans80; // because now the translucency is set through FF_TRANSMASK
 	else if (oldthing->frame & FF_TRANSMASK)
-	{
 		trans = (oldthing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
-		if (!R_BlendLevelVisible(oldthing->blendmode, trans))
-			return;
-	}
-	else
-		trans = 0;
 
 	// Check if this sprite needs to be rendered like a shadow
 	shadowdraw = (!!(thing->renderflags & RF_SHADOWDRAW) && !(papersprite || splat));
@@ -1961,7 +1965,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			else
 				trans += 3;
 
-			if (trans >= NUMTRANSMAPS)
+			if (translucent && trans >= NUMTRANSMAPS)
 				return;
 
 			trans--;
@@ -1988,7 +1992,27 @@ static void R_ProjectSprite(mobj_t *thing)
 			gzt = (isflipped ? (thing->z + thing->height) : thing->z) + patch->height * spriteyscale / 2;
 			gz = gzt - patch->height * spriteyscale;
 
-			cut |= SC_SHEAR;
+			flags |= VIS_SHEARED;
+		}
+	}
+
+	if (translucent)
+	{
+		alpha = oldthing->alpha - (0xFF - R_BlendModeTransnumToAlpha(blendmode, trans));
+		if (!R_BlendLevelVisible(blendmode, alpha))
+			return;
+
+		if (!usetranstables)
+		{
+			trans = R_AlphaToTransnum(alpha);
+			if (blendmode == AST_TRANSLUCENT && alpha == 0xFF)
+				translucent = false;
+		}
+		else if (oldthing->alpha != 0xFF)
+		{
+			trans = R_AlphaToTransnum(alpha);
+			if (trans == -1 && blendmode != AST_SUBTRACT && blendmode != AST_MODULATE)
+				return;
 		}
 	}
 
@@ -2030,11 +2054,10 @@ static void R_ProjectSprite(mobj_t *thing)
 				break;
 			}
 		}
-		//light = R_GetPlaneLight(thing->subsector->sector, gzt, false);
 		lightnum = (*thing->subsector->sector->lightlist[light].lightlevel >> LIGHTSEGSHIFT);
 
 #ifdef TRUECOLOR
-		if (tc_colormaps)
+		if (tc_spritecolormaps)
 		{
 			if (lightnum < 0)
 				spritelights_u32 = scalelight_u32[0];
@@ -2107,6 +2130,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->szt = (INT16)((centeryfrac - FixedMul(vis->gzt - viewz, sortscale))>>FRACBITS);
 	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, sortscale))>>FRACBITS);
 	vis->cut = cut;
+	vis->flags = flags;
 
 	if (thing->subsector->sector->numlights)
 		vis->extra_colormap = *thing->subsector->sector->lightlist[light].extra_colormap;
@@ -2150,50 +2174,52 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->scale += FixedMul(scalestep, spriteyscale) * (vis->x1 - x1);
 	}
 
-	vis->blendmode = oldthing->blendmode;
+	vis->blendmode = blendmode;
+	vis->alpha = alpha;
+	vis->transmap = NULL;
 
-	if (vis->blendmode != AST_COPY && cv_translucency.value)
+	if (translucent)
 	{
-		vis->alpha = R_GetBlendModeAlpha(vis->blendmode, trans);
-		vis->transmap = R_GetBlendTable(vis->blendmode, trans);
-	}
-	else
-	{
-		vis->alpha = 0xFF;
-		vis->transmap = NULL;
+		vis->flags |= VIS_TRANSLUCENT; // The Lord giveth
+
+		if (usetranstables)
+		{
+			vis->transmap = R_GetBlendTable(vis->blendmode, trans);
+			if (!vis->transmap)
+				vis->flags &= ~VIS_TRANSLUCENT; // and the Lord taketh away
+		}
 	}
 
 	if (R_ThingIsFullBright(oldthing) || oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW)
-		vis->cut |= SC_FULLBRIGHT;
+		vis->flags |= VIS_FULLBRIGHT;
 	else if (R_ThingIsFullDark(oldthing))
-		vis->cut |= SC_FULLDARK;
+		vis->flags |= VIS_FULLDARK;
 
 	//
 	// determine the colormap (lightlevel & special effects)
 	//
-	if (vis->cut & SC_FULLBRIGHT
+	if (vis->flags & VIS_FULLBRIGHT
 		&& (!vis->extra_colormap || !(vis->extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)))
 	{
 		// full bright: goggles
 #ifdef TRUECOLOR
-		if (tc_colormaps)
+		if (tc_spritecolormaps)
 			vis->colormap = (UINT8 *)colormaps_u32;
 		else
 #endif
 			vis->colormap = colormaps;
 	}
-	else if (vis->cut & SC_FULLDARK)
+	else if (vis->flags & VIS_FULLDARK)
 		vis->colormap = scalelight[0][0];
 	else
 	{
 		// diminished light
-		lindex = FixedMul(xscale, LIGHTRESOLUTIONFIX)>>(LIGHTSCALESHIFT);
-
+		lindex = FixedMul(xscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
 
 #ifdef TRUECOLOR
-		if (tc_colormaps)
+		if (tc_spritecolormaps)
 			vis->colormap = (UINT8 *)(spritelights_u32[lindex]);
 		else
 #endif
@@ -2201,9 +2227,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	}
 
 	if (vflip)
-		vis->cut |= SC_VFLIP;
+		vis->flags |= VIS_VFLIP;
 	if (splat)
-		vis->cut |= SC_SPLAT; // I like ya cut g
+		vis->flags |= VIS_FLOORSPRITE;
 
 	vis->patch = patch;
 
@@ -2232,6 +2258,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vissprite_t *vis;
 
 	fixed_t iscale;
+	INT32 flags = VIS_PRECIP;
 
 	//SoM: 3/17/2000
 	fixed_t gz, gzt;
@@ -2353,31 +2380,36 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	//Fab: lumppat is the lump number of the patch to use, this is different
 	//     than lumpid for sprites-in-pwad : the graphics are patched
 	vis->patch = W_CachePatchNum(sprframe->lumppat[0], PU_SPRITE);
+	vis->transmap = NULL;
 
 	// specific translucency
 	if (thing->frame & FF_TRANSMASK)
 	{
 		INT32 transnum = (thing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
 		vis->alpha = R_TransnumToAlpha(transnum);
-		vis->transmap = R_GetTranslucencyTable(transnum);
 		vis->blendmode = AST_TRANSLUCENT;
+
+		if (usetranstables)
+			vis->transmap = R_GetTranslucencyTable(transnum);
+
+		flags |= VIS_TRANSLUCENT;
 	}
 	else
 	{
 		vis->blendmode = AST_COPY;
 		vis->alpha = 0xFF;
-		vis->transmap = NULL;
 	}
 
 	vis->mobj = (mobj_t *)thing;
 	vis->mobjflags = 0;
-	vis->cut = SC_PRECIP;
+	vis->flags = flags;
+	vis->cut = 0; // I like ya cut g
 	vis->extra_colormap = thing->subsector->sector->extra_colormap;
 	vis->heightsec = thing->subsector->sector->heightsec;
 
 	// Fullbright
 #ifdef TRUECOLOR
-	if (tc_colormaps)
+	if (tc_spritecolormaps)
 		vis->colormap = (UINT8 *)colormaps_u32;
 	else
 #endif
@@ -2425,7 +2457,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 		lightnum = (lightlevel >> LIGHTSEGSHIFT);
 
 #ifdef TRUECOLOR
-		if (tc_colormaps)
+		if (tc_spritecolormaps)
 		{
 			if (lightnum < 0)
 				spritelights_u32 = scalelight_u32[0];
@@ -2509,21 +2541,21 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 	// bundle linkdraw
 	for (ds = unsorted.prev; ds != &unsorted; ds = ds->prev)
 	{
-		if (!(ds->cut & SC_LINKDRAW))
+		if (!(ds->flags & VIS_LINKDRAW))
 			continue;
 
-		if (ds->cut & SC_SHADOW)
+		if (ds->flags & VIS_SHADOW)
 			continue;
 
 		// reuse dsfirst...
 		for (dsfirst = unsorted.prev; dsfirst != &unsorted; dsfirst = dsfirst->prev)
 		{
 			// don't connect if it's also a link
-			if (dsfirst->cut & SC_LINKDRAW)
+			if (dsfirst->flags & VIS_LINKDRAW)
 				continue;
 
 			// don't connect to your shadow!
-			if (dsfirst->cut & SC_SHADOW)
+			if (dsfirst->flags & VIS_SHADOW)
 				continue;
 
 			// don't connect if it's not the tracer
@@ -2550,7 +2582,7 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 
 		if (dsfirst != &unsorted)
 		{
-			if (!(ds->cut & SC_FULLBRIGHT))
+			if (!(ds->flags & VIS_FULLBRIGHT))
 				ds->colormap = dsfirst->colormap;
 			ds->extra_colormap = dsfirst->extra_colormap;
 
@@ -2581,7 +2613,7 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 		for (ds = unsorted.next; ds != &unsorted; ds = ds->next)
 		{
 #ifdef PARANOIA
-			if (ds->cut & SC_LINKDRAW)
+			if (ds->flags & VIS_LINKDRAW)
 				I_Error("R_SortVisSprites: no link or discardal made for linkdraw!");
 #endif
 
@@ -2845,10 +2877,10 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				boolean infront = (r2->sprite->sortscale > rover->sortscale
 								|| (r2->sprite->sortscale == rover->sortscale && r2->sprite->dispoffset > rover->dispoffset));
 
-				if (rover->cut & SC_SPLAT || r2->sprite->cut & SC_SPLAT)
+				if (rover->flags & VIS_FLOORSPRITE || r2->sprite->flags & VIS_FLOORSPRITE)
 				{
-					fixed_t scale1 = (rover->cut & SC_SPLAT ? rover->sortsplat : rover->sortscale);
-					fixed_t scale2 = (r2->sprite->cut & SC_SPLAT ? r2->sprite->sortsplat : r2->sprite->sortscale);
+					fixed_t scale1 = (rover->flags & VIS_FLOORSPRITE ? rover->sortsplat : rover->sortscale);
+					fixed_t scale2 = (r2->sprite->flags & VIS_FLOORSPRITE ? r2->sprite->sortsplat : r2->sprite->sortscale);
 					boolean behind = (scale2 > scale1 || (scale2 == scale1 && r2->sprite->dispoffset > rover->dispoffset));
 
 					if (!behind)
@@ -2960,7 +2992,7 @@ static void R_SetSpriteStyle(vissprite_t *spr)
 {
 #ifdef TRUECOLOR
 	dc_picfmt = R_SpriteIsPaletted(spr) ? PICFMT_PATCH : PICFMT_PATCH32;
-	dc_colmapstyle = tc_colormaps ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
+	dc_colmapstyle = tc_spritecolormaps ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
 #endif
 }
 
@@ -2977,7 +3009,7 @@ static void R_DrawSprite(vissprite_t *spr)
 	mfloorclip = spr->clipbot;
 	mceilingclip = spr->cliptop;
 
-	if (spr->cut & SC_SPLAT)
+	if (spr->flags & VIS_FLOORSPRITE)
 		R_DrawFloorSplat(spr);
 	else
 		R_DrawVisSprite(spr);
@@ -3193,8 +3225,8 @@ void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 	for (; clippedvissprites < visspritecount; clippedvissprites++)
 	{
 		vissprite_t *spr = R_GetVisSprite(clippedvissprites);
-		INT32 x1 = (spr->cut & SC_SPLAT) ? 0 : spr->x1;
-		INT32 x2 = (spr->cut & SC_SPLAT) ? viewwidth : spr->x2;
+		INT32 x1 = (spr->flags & VIS_FLOORSPRITE) ? 0 : spr->x1;
+		INT32 x2 = (spr->flags & VIS_FLOORSPRITE) ? viewwidth : spr->x2;
 		R_ClipVisSprite(spr, x1, x2, dsstart, portal);
 	}
 }
@@ -3315,7 +3347,7 @@ static void R_DrawMaskedList (drawnode_t* head)
 			next = r2->prev;
 
 			// Tails 08-18-2002
-			if (r2->sprite->cut & SC_PRECIP)
+			if (r2->sprite->flags & VIS_PRECIP)
 				R_DrawPrecipitationSprite(r2->sprite);
 			else if (!r2->sprite->linkdraw)
 				R_DrawSprite(r2->sprite);

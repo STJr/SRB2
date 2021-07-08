@@ -565,7 +565,7 @@ static inline UINT32 standardpdraw_u32(void *dest, void *source, fixed_t ofs)
 		UINT32 bg = (*(UINT32 *)dest);
 		if (alpha < 1)
 			return bg;
-		return TC_TranslucentMix(bg, fg, (UINT8)alpha);
+		return R_TranslucentMix(bg, fg, (UINT8)alpha);
 	}
 
 	return fg;
@@ -584,7 +584,7 @@ static inline UINT32 translucentpdraw_u32(void *dest, void *source, fixed_t ofs)
 
 	alpha -= (0xFF - R_GetRgbaA(fg));
 	if (alpha > 0)
-		return TC_TranslucentMix(bg, fg, (UINT8)alpha);
+		return R_TranslucentMix(bg, fg, (UINT8)alpha);
 
 	return bg;
 }
@@ -614,11 +614,11 @@ static inline UINT32 mappedpdraw_u32_palsrc(void *dest, void *source, fixed_t of
 }
 static inline UINT32 translucentpdraw_u32_palsrc(void *dest, void *source, fixed_t ofs)
 {
-	return TC_TranslucentMix(*(UINT32 *)dest, GetTrueColor(((UINT8 *)source)[ofs>>FRACBITS]), *v_translevel);
+	return R_TranslucentMix(*(UINT32 *)dest, GetTrueColor(((UINT8 *)source)[ofs>>FRACBITS]), *v_translevel);
 }
 static inline UINT32 transmappedpdraw_u32_palsrc(void *dest, void *source, fixed_t ofs)
 {
-	return TC_TranslucentMix(*(UINT32 *)dest, GetTrueColor(*(v_colormap + ((UINT8 *)source)[ofs>>FRACBITS])), *v_translevel);
+	return R_TranslucentMix(*(UINT32 *)dest, GetTrueColor(*(v_colormap + ((UINT8 *)source)[ofs>>FRACBITS])), *v_translevel);
 }
 
 static UINT32 (*pdrawlist_tc_palsrc[4])(void *, void *, fixed_t) =
@@ -1824,7 +1824,7 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 			u = 0;
 			while (u < w)
 			{
-				*(d32+u) = TC_TranslucentMix(*(d32+u), fadecolor, alphaval);
+				*(d32+u) = R_TranslucentMix(*(d32+u), fadecolor, alphaval);
 				u++;
 			}
 		}
@@ -2042,7 +2042,7 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 			line = 0;
 			while (count > 0)
 			{
-				*(d32+line) = TC_TranslucentMix(*(d32+line), rgb_color, alphaval);
+				*(d32+line) = R_TranslucentMix(*(d32+line), rgb_color, alphaval);
 				count--; line++;
 			}
 		}
@@ -2214,13 +2214,13 @@ void V_DrawFadeScreen(UINT16 color, UINT8 strength)
 			if (color & 0xFF00) // Color is not palette index?
 			{
 				for (; buf32 < deststop32; ++buf32)
-					*buf32 = TC_TranslucentMix(*buf32, 0xFF000000, strength*8);
+					*buf32 = R_TranslucentMix(*buf32, 0xFF000000, strength*8);
 			}
 			else
 			{
 				alphaval = R_TransnumToAlpha(9-strength);
 				for (; buf32 < deststop32; ++buf32)
-					*buf32 = TC_TranslucentMix(*buf32, GetTrueColor(color), alphaval);
+					*buf32 = R_TranslucentMix(*buf32, GetTrueColor(color), alphaval);
 			}
 		}
 		else
@@ -2256,7 +2256,7 @@ void V_DrawFadeConsBack(INT32 plines)
 		const UINT32 *deststop32 = buf32 + vid.width * min(plines, vid.height);
 		UINT32 fadecolor = V_GetConsBackColor(cons_backcolor.value);
 		for (; buf32 < deststop32; ++buf32)
-			*buf32 = TC_TranslucentMix(*buf32, fadecolor, 128);
+			*buf32 = R_TranslucentMix(*buf32, fadecolor, 128);
 	}
 	else
 #endif
@@ -2339,7 +2339,7 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 		else // 4 lines of space plus gaps between and some leeway
 			buf32 -= vid.width * ((boxheight * 4) + (boxheight/2)*5);
 		for (; buf32 < deststop32; ++buf32)
-			*buf32 = TC_TranslucentMix(*buf32, fadecolor, 128);
+			*buf32 = R_TranslucentMix(*buf32, fadecolor, 128);
 	}
 	else
 #endif

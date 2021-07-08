@@ -3288,7 +3288,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 			{ // Water removes electric and non-water fire shields...
 			    if (electric)
 				    P_FlashPal(p, PAL_WHITE, 1);
-				
+
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
 			}
 		}
@@ -10473,6 +10473,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		mobj->destscale = FRACUNIT/2;
 
 	// Sprite rendering
+	mobj->alpha = 0xFF;
 	mobj->blendmode = AST_TRANSLUCENT;
 	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
 	mobj->spritexoffset = mobj->spriteyoffset = 0;

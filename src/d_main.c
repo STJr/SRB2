@@ -473,10 +473,14 @@ static void D_Display(void)
 		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide && (!hidetitlemap)))
 		{
 			// draw the view directly
-
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
 				ps_rendercalltime = I_GetPreciseTime();
+
+				SCR_SetSoftwareTranslucency(); // Set translucency method
+				if (!usetranstables)
+					R_InitAlphaLUT();
+
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;

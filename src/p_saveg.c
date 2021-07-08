@@ -1459,12 +1459,13 @@ typedef enum
 	MD2_ROLLANGLE    = 1<<14,
 	MD2_SHADOWSCALE  = 1<<15,
 	MD2_RENDERFLAGS  = 1<<16,
-	MD2_BLENDMODE    = 1<<17,
-	MD2_SPRITEXSCALE = 1<<18,
-	MD2_SPRITEYSCALE = 1<<19,
-	MD2_SPRITEXOFFSET = 1<<20,
-	MD2_SPRITEYOFFSET = 1<<21,
-	MD2_FLOORSPRITESLOPE = 1<<22,
+	MD2_ALPHA        = 1<<17,
+	MD2_BLENDMODE    = 1<<18,
+	MD2_SPRITEXSCALE = 1<<19,
+	MD2_SPRITEYSCALE = 1<<20,
+	MD2_SPRITEXOFFSET = 1<<21,
+	MD2_SPRITEYOFFSET = 1<<22,
+	MD2_FLOORSPRITESLOPE = 1<<23,
 } mobj_diff2_t;
 
 typedef enum
@@ -2884,6 +2885,10 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->shadowscale = READFIXED(save_p);
 	if (diff2 & MD2_RENDERFLAGS)
 		mobj->renderflags = READUINT32(save_p);
+	if (diff2 & MD2_ALPHA)
+		mobj->alpha = READUINT8(save_p);
+	else
+		mobj->alpha = 0xFF;
 	if (diff2 & MD2_BLENDMODE)
 		mobj->blendmode = READINT32(save_p);
 	else

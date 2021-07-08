@@ -288,6 +288,8 @@ typedef struct FSurfaceInfo FSurfaceInfo;
 #define GL_DEFAULTMIX 0x00000000
 #define GL_DEFAULTFOG 0xFF000000
 
+#define SHADOW_ALPHA 0x40
+
 //Hurdler: added for backward compatibility
 enum hwdsetspecialstate
 {

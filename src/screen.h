@@ -120,49 +120,65 @@ extern vmode_t specialmodes[NUMSPECIALMODES];
 
 enum
 {
-	COLDRAWFUNC_BASE = BASEDRAWFUNC,
-	COLDRAWFUNC_FUZZY,
-	COLDRAWFUNC_TRANS,
-	COLDRAWFUNC_SHADE,
-	COLDRAWFUNC_SHADOWED,
-	COLDRAWFUNC_TRANSTRANS,
-	COLDRAWFUNC_TWOSMULTIPATCH,
-	COLDRAWFUNC_TWOSMULTIPATCHTRANS,
-	COLDRAWFUNC_FOG,
+	COLUMN_BASE = BASEDRAWFUNC,
+	COLUMN_TRANSTAB, COLUMN_ALPHA,
+	COLUMN_TRANSLATED,
+	COLUMN_SHADE,
+	COLUMN_LIGHTLIST,
+	COLUMN_MAPPED_TRANSTAB, COLUMN_MAPPED_ALPHA,
+	COLUMN_MULTIPATCH,
+	COLUMN_MULTIPATCH_TRANSTAB, COLUMN_MULTIPATCH_ALPHA,
+	COLUMN_FOG,
 
-	COLDRAWFUNC_MAX
+	COLUMN_MAX
 };
 
 extern void (*colfunc)(void);
-extern void (*colfuncs[COLDRAWFUNC_MAX])(void);
+extern void (*colfuncs[COLUMN_MAX])(void);
+
+extern INT32 column_translu;
+extern INT32 column_translu_mapped;
+extern INT32 column_translu_multipatch;
 
 enum
 {
-	SPANDRAWFUNC_BASE = BASEDRAWFUNC,
-	SPANDRAWFUNC_TRANS,
-	SPANDRAWFUNC_TILTED,
-	SPANDRAWFUNC_TILTEDTRANS,
+	SPAN_BASE = BASEDRAWFUNC,
+	SPAN_TRANSTAB, SPAN_ALPHA,
+	SPAN_TILTED,
+	SPAN_TILTED_TRANSTAB, SPAN_TILTED_ALPHA,
 
-	SPANDRAWFUNC_SPLAT,
-	SPANDRAWFUNC_TRANSSPLAT,
-	SPANDRAWFUNC_TILTEDSPLAT,
+	SPAN_SPLAT,
+	SPAN_SPLAT_TRANSTAB, SPAN_SPLAT_ALPHA,
+	SPAN_SPLAT_TILTED,
 
-	SPANDRAWFUNC_SPRITE,
-	SPANDRAWFUNC_TRANSSPRITE,
-	SPANDRAWFUNC_TILTEDSPRITE,
-	SPANDRAWFUNC_TILTEDTRANSSPRITE,
+	SPAN_SPRITE,
+	SPAN_SPRITE_TRANSTAB, SPAN_SPRITE_ALPHA,
+	SPAN_SPRITE_TILTED,
+	SPAN_SPRITE_TILTED_TRANSTAB, SPAN_SPRITE_TILTED_ALPHA,
 
-	SPANDRAWFUNC_WATER,
-	SPANDRAWFUNC_TILTEDWATER,
+	SPAN_WATER_TRANSTAB, SPAN_WATER_ALPHA,
+	SPAN_WATER_TILTED_TRANSTAB, SPAN_WATER_TILTED_ALPHA,
 
-	SPANDRAWFUNC_FOG,
+	SPAN_FOG,
 
-	SPANDRAWFUNC_MAX
+	SPAN_MAX
 };
 
+extern INT32 column_translu;
+extern INT32 column_translu_mapped;
+extern INT32 column_translu_multipatch;
+
 extern void (*spanfunc)(void);
-extern void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
-extern void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
+extern void (*spanfuncs[SPAN_MAX])(void);
+extern void (*spanfuncs_npo2[SPAN_MAX])(void);
+
+extern INT32 span_translu;
+extern INT32 span_translu_tilted;
+extern INT32 span_translu_splat;
+extern INT32 span_translu_sprite;
+extern INT32 span_translu_sprite_tilted;
+extern INT32 span_translu_water;
+extern INT32 span_translu_water_tilted;
 
 // -----
 // CPUID
@@ -199,8 +215,11 @@ void SCR_Startup(void);
 // Change video mode, only at the start of a refresh.
 void SCR_SetMode(void);
 
-// Set drawer functions for Software
+// Set drawer functions for the software renderer
 void SCR_SetDrawFuncs(void);
+
+// Set the software renderer's translucency method
+void SCR_SetSoftwareTranslucency(void);
 
 // Recalc screen size dependent stuff
 void SCR_Recalc(void);

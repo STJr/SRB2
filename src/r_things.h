@@ -115,25 +115,25 @@ void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
 
 typedef enum
 {
-	// actual cuts
 	SC_NONE       = 0,
 	SC_TOP        = 1,
 	SC_BOTTOM     = 1<<1,
-	// other flags
-	SC_PRECIP     = 1<<2,
-	SC_LINKDRAW   = 1<<3,
-	SC_FULLBRIGHT = 1<<4,
-	SC_FULLDARK   = 1<<5,
-	SC_VFLIP      = 1<<6,
-	SC_ISSCALED   = 1<<7,
-	SC_ISROTATED  = 1<<8,
-	SC_SHADOW     = 1<<9,
-	SC_SHEAR      = 1<<10,
-	SC_SPLAT      = 1<<11,
-	// masks
-	SC_CUTMASK    = SC_TOP|SC_BOTTOM,
-	SC_FLAGMASK   = ~SC_CUTMASK
 } spritecut_e;
+
+typedef enum
+{
+	VIS_PRECIP      = 1,
+	VIS_LINKDRAW    = 1<<1,
+	VIS_FULLBRIGHT  = 1<<2,
+	VIS_FULLDARK    = 1<<3,
+	VIS_VFLIP       = 1<<4,
+	VIS_SCALED      = 1<<5,
+	VIS_ROTATED     = 1<<6,
+	VIS_TRANSLUCENT = 1<<7,
+	VIS_SHADOW      = 1<<8,
+	VIS_SHEARED     = 1<<9,
+	VIS_FLOORSPRITE = 1<<10,
+} visspriteflag_e;
 
 // A vissprite_t is a thing that will be drawn during a refresh,
 // i.e. a sprite object that is partly visible.
@@ -193,6 +193,8 @@ typedef struct vissprite_s
 	INT16 sz, szt;
 
 	spritecut_e cut;
+	visspriteflag_e flags;
+
 	UINT32 renderflags;
 	UINT8 rotateflags;
 

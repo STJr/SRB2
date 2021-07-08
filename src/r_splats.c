@@ -20,7 +20,7 @@
 #include "z_zone.h"
 
 #ifdef TRUECOLOR
-#include "i_video.h" // truecolor
+#include "i_video.h"
 #endif
 
 struct rastery_s *prastertab; // for ASM code
@@ -164,7 +164,7 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	INT32 i;
 
 	boolean hflip = (spr->xiscale < 0);
-	boolean vflip = (spr->cut & SC_VFLIP);
+	boolean vflip = (spr->flags & VIS_VFLIP);
 	UINT8 flipflags = 0;
 
 	renderflags_t renderflags = spr->renderflags;
@@ -205,7 +205,7 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	else
 		splatangle = spr->viewangle;
 
-	if (!(spr->cut & SC_ISROTATED))
+	if (!(spr->flags & VIS_ROTATED))
 		splatangle += mobj->rollangle;
 
 	splat.angle = -splatangle;
@@ -362,7 +362,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	fixed_t planeheight = 0;
 	fixed_t step;
 
-	int spanfunctype = SPANDRAWFUNC_SPRITE;
+	INT32 spanfunctype = SPAN_SPRITE;
 	boolean translucent = false;
 
 	prepare_rastertab();
@@ -437,7 +437,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		R_SetTiltedSpan(0);
 		R_SetScaledSlopePlane(&pSplat->slope, viewx, viewy, viewz, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewangle, pSplat->angle);
 		R_CalculateSlopeVectors();
-		spanfunctype = SPANDRAWFUNC_TILTEDSPRITE;
+		spanfunctype = SPAN_SPRITE_TILTED;
 	}
 	else
 	{
@@ -470,7 +470,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	{
 		if (ds_colormap)
 		{
-			if (tc_colormaps)
+			if (tc_spritecolormaps)
 				dp_lighting = TC_CalcScaleLight((UINT32 *)ds_colormap);
 			else
 				dp_lighting = TC_CalcScaleLightPaletted(ds_colormap);
@@ -485,7 +485,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 #ifdef TRUECOLOR
 		dp_extracolormap = vis->extra_colormap;
 
-		if (tc_colormaps)
+		if (tc_spritecolormaps)
 		{
 			if (!ds_colormap)
 				ds_colormap = (UINT8 *)(vis->extra_colormap->colormap_u32);
@@ -506,20 +506,17 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		dp_extracolormap = defaultextracolormap;
 #endif
 
-#ifdef TRUECOLOR
-	if (truecolor)
+	if (!usetranstables)
 	{
 		ds_alpha = vis->alpha;
 
-		if (vis->transmap)
+		if (vis->flags & VIS_TRANSLUCENT)
 		{
-			TC_SetSpanBlendingFunction(vis->blendmode);
+			R_SetSpanBlendingFunction(vis->blendmode);
 			translucent = true;
 		}
 	}
-	else
-#endif
-	if (vis->transmap)
+	else if (vis->flags & VIS_TRANSLUCENT)
 	{
 		ds_transmap = vis->transmap;
 		translucent = true;
@@ -530,9 +527,9 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	if (translucent)
 	{
 		if (pSplat->tilted)
-			spanfunctype = SPANDRAWFUNC_TILTEDTRANSSPRITE;
+			spanfunctype = span_translu_sprite_tilted;
 		else
-			spanfunctype = SPANDRAWFUNC_TRANSSPRITE;
+			spanfunctype = span_translu_sprite;
 	}
 
 	if (ds_powersoftwo)

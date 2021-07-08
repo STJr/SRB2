@@ -506,7 +506,7 @@ static void F_DoWipe32(fademask_t *fademask)
 
 				while (draw_rowstogo--)
 				{
-					*w = TC_TranslucentMix(*s, *e, *mask);
+					*w = R_TranslucentMix(*s, *e, *mask);
 					w++;
 					e++;
 					s++;

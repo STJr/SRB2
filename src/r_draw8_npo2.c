@@ -18,7 +18,7 @@
 /**	\brief The R_DrawSpan_NPO2_8 function
 	Draws the actual span.
 */
-void R_DrawSpan_NPO2_8 (void)
+void R_DrawSpan_NPO2_8(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -107,25 +107,13 @@ void R_DrawTiltedSpan_NPO2_8(void)
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
-
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
+	R_CalcTiltedLighting(iz);
+
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
-	//colormap = ds_colormap;
 
 #if 0	// The "perfect" reference version of this routine. Pretty slow.
 		// Use it only to see how things are supposed to look.
@@ -168,7 +156,6 @@ void R_DrawTiltedSpan_NPO2_8(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	while (width >= SPANSIZE)
@@ -307,59 +294,14 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
-
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
+	R_CalcTiltedLighting(iz);
+
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
-	//colormap = ds_colormap;
 
-#if 0	// The "perfect" reference version of this routine. Pretty slow.
-		// Use it only to see how things are supposed to look.
-	i = 0;
-	do
-	{
-		double z = 1.f/iz;
-		u = (INT64)(uz*z);
-		v = (INT64)(vz*z);
-
-		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-		// Lactozilla: Non-powers-of-two
-		{
-			fixed_t x = (((fixed_t)u) >> FRACBITS);
-			fixed_t y = (((fixed_t)v) >> FRACBITS);
-
-			// Carefully align all of my Friends.
-			if (x < 0)
-				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
-			else
-				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
-			if (y < 0)
-				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
-			else
-				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
-
-			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
-		}
-		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
-	} while (--width >= 0);
-#else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
@@ -367,7 +309,6 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	while (width >= SPANSIZE)
@@ -479,7 +420,11 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 			}
 		}
 	}
-#endif
+}
+
+void R_DrawTiltedAlphaSpan_NPO2_8(void)
+{
+
 }
 
 void R_DrawTiltedSplat_NPO2_8(void)
@@ -505,64 +450,14 @@ void R_DrawTiltedSplat_NPO2_8(void)
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
-
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
 
+	R_CalcTiltedLighting(iz);
+
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	source = ds_source;
-	//colormap = ds_colormap;
 
-#if 0	// The "perfect" reference version of this routine. Pretty slow.
-		// Use it only to see how things are supposed to look.
-	i = 0;
-	do
-	{
-		double z = 1.f/iz;
-		u = (INT64)(uz*z);
-		v = (INT64)(vz*z);
-
-		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-
-		// Lactozilla: Non-powers-of-two
-		{
-			fixed_t x = (((fixed_t)u) >> FRACBITS);
-			fixed_t y = (((fixed_t)v) >> FRACBITS);
-
-			// Carefully align all of my Friends.
-			if (x < 0)
-				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
-			else
-				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
-			if (y < 0)
-				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
-			else
-				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
-
-			val = source[((y * ds_flatwidth) + x)];
-		}
-
-		if (val != TRANSPARENTPIXEL)
-			*dest = colormap[val];
-
-		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
-	} while (--width >= 0);
-#else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
@@ -570,7 +465,6 @@ void R_DrawTiltedSplat_NPO2_8(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	while (width >= SPANSIZE)
@@ -689,13 +583,12 @@ void R_DrawTiltedSplat_NPO2_8(void)
 			}
 		}
 	}
-#endif
 }
 
 /**	\brief The R_DrawSplat_NPO2_8 function
 	Just like R_DrawSpan_NPO2_8, but skips transparent pixels.
 */
-void R_DrawSplat_NPO2_8 (void)
+void R_DrawSplat_NPO2_8(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -763,7 +656,7 @@ void R_DrawSplat_NPO2_8 (void)
 /**	\brief The R_DrawTranslucentSplat_NPO2_8 function
 	Just like R_DrawSplat_NPO2_8, but is translucent!
 */
-void R_DrawTranslucentSplat_NPO2_8 (void)
+void R_DrawTranslucentSplat_NPO2_8(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -828,10 +721,15 @@ void R_DrawTranslucentSplat_NPO2_8 (void)
 	}
 }
 
+void R_DrawAlphaSplat_NPO2_8(void)
+{
+
+}
+
 /**	\brief The R_DrawFloorSprite_NPO2_8 function
 	Just like R_DrawSplat_NPO2_8, but for floor sprites.
 */
-void R_DrawFloorSprite_NPO2_8 (void)
+void R_DrawFloorSprite_NPO2_8(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -901,7 +799,7 @@ void R_DrawFloorSprite_NPO2_8 (void)
 /**	\brief The R_DrawTranslucentFloorSprite_NPO2_8 function
 	Just like R_DrawFloorSprite_NPO2_8, but is translucent!
 */
-void R_DrawTranslucentFloorSprite_NPO2_8 (void)
+void R_DrawTranslucentFloorSprite_NPO2_8(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -968,6 +866,11 @@ void R_DrawTranslucentFloorSprite_NPO2_8 (void)
 	}
 }
 
+void R_DrawAlphaFloorSprite_NPO2_8(void)
+{
+
+}
+
 /**	\brief The R_DrawTiltedFloorSprite_NPO2_8 function
 	Draws a tilted floor sprite.
 */
@@ -1006,7 +909,6 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	while (width >= SPANSIZE)
@@ -1156,7 +1058,6 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	while (width >= SPANSIZE)
@@ -1268,10 +1169,15 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 	}
 }
 
+void R_DrawTiltedAlphaFloorSprite_NPO2_8(void)
+{
+
+}
+
 /**	\brief The R_DrawTranslucentSpan_NPO2_8 function
 	Draws the actual span with translucency.
 */
-void R_DrawTranslucentSpan_NPO2_8 (void)
+void R_DrawTranslucentSpan_NPO2_8(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -1333,6 +1239,11 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 		xposition += xstep;
 		yposition += ystep;
 	}
+}
+
+void R_DrawAlphaSpan_NPO2_8(void)
+{
+
 }
 
 void R_DrawTranslucentWaterSpan_NPO2_8(void)
@@ -1398,6 +1309,11 @@ void R_DrawTranslucentWaterSpan_NPO2_8(void)
 	}
 }
 
+void R_DrawAlphaWaterSpan_NPO2_8(void)
+{
+
+}
+
 /**	\brief The R_DrawTiltedTranslucentWaterSpan_NPO2_8 function
 	Like DrawTiltedTranslucentSpan_NPO2, but for water
 */
@@ -1423,60 +1339,15 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
-
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
-
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
+
+	R_CalcTiltedLighting(iz);
 
 	dest = ylookup[ds_y] + columnofs[ds_x1];
 	dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
 	source = ds_source;
-	//colormap = ds_colormap;
 
-#if 0	// The "perfect" reference version of this routine. Pretty slow.
-		// Use it only to see how things are supposed to look.
-	i = 0;
-	do
-	{
-		double z = 1.f/iz;
-		u = (INT64)(uz*z);
-		v = (INT64)(vz*z);
-
-		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-		// Lactozilla: Non-powers-of-two
-		{
-			fixed_t x = (((fixed_t)u) >> FRACBITS);
-			fixed_t y = (((fixed_t)v) >> FRACBITS);
-
-			// Carefully align all of my Friends.
-			if (x < 0)
-				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
-			else
-				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
-			if (y < 0)
-				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
-			else
-				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
-
-			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
-		}
-		dest++;
-		iz += ds_szp->x;
-		uz += ds_sup->x;
-		vz += ds_svp->x;
-	} while (--width >= 0);
-#else
 	startz = 1.f/iz;
 	startu = uz*startz;
 	startv = vz*startz;
@@ -1484,7 +1355,6 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 	izstep = ds_szp->x * SPANSIZE;
 	uzstep = ds_sup->x * SPANSIZE;
 	vzstep = ds_svp->x * SPANSIZE;
-	//x1 = 0;
 	width++;
 
 	while (width >= SPANSIZE)
@@ -1596,5 +1466,9 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 			}
 		}
 	}
-#endif
+}
+
+void R_DrawTiltedAlphaWaterSpan_NPO2_8(void)
+{
+
 }

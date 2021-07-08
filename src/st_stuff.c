@@ -250,7 +250,7 @@ void ST_doPaletteStuff(void)
 
 		// blend with the entire screen
 		for (; buf32 < deststop32; ++buf32)
-			*buf32 = TC_TranslucentMix(*buf32, flashcolor, 0xC0);
+			*buf32 = R_TranslucentMix(*buf32, flashcolor, 0xC0);
 	}
 #endif
 }
