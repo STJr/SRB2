@@ -713,6 +713,19 @@ int LUA_HookMobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 d
 			MOBJ_HOOK(MobjDeath), 4, res_true);
 }
 
+int LUA_HookMobjMoveBlocked(mobj_t *t1, mobj_t *t2, line_t *line)
+{
+	Hook_State hook;
+	if (prepare_mobj_hook(&hook, 0, MOBJ_HOOK(MobjMoveBlocked), t1->type))
+	{
+		LUA_PushUserdata(gL, t1, META_MOBJ);
+		LUA_PushUserdata(gL, t2, META_MOBJ);
+		LUA_PushUserdata(gL, line, META_LINE);
+		call_hooks(&hook, 3, 1, res_true);
+	}
+	return hook.status;
+}
+
 typedef struct {
 	mobj_t   * tails;
 	ticcmd_t * cmd;
