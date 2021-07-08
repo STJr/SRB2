@@ -884,7 +884,7 @@ static void ST_drawLivesArea(void)
 		}
 	}
 	// Team name
-	else if (G_GametypeHasTeams())
+	else if (G_GametypeHasTeams() && !(gametyperules & GTR_LIVES))
 	{
 		if (stplyr->ctfteam == 1)
 		{
