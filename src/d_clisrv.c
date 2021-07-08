@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1565,15 +1565,6 @@ static void CL_LoadReceivedSavegame(boolean reloading)
 		}
 		CONS_Printf("\"\n");
 	}
-	else
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("Can't load the level!\n"));
-		Z_Free(savebuffer);
-		save_p = NULL;
-		if (unlink(tmpsave) == -1)
-			CONS_Alert(CONS_ERROR, M_GetText("Can't delete %s\n"), tmpsave);
-		return;
-	}
 
 	// done
 	Z_Free(savebuffer);
@@ -1595,9 +1586,7 @@ static void CL_ReloadReceivedSavegame(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-#ifdef HAVE_BLUA
 		LUA_InvalidatePlayer(&players[i]);
-#endif
 		sprintf(player_names[i], "Player %d", i + 1);
 	}
 
@@ -2260,11 +2249,15 @@ void D_SaveBan(void)
 	size_t i;
 	banreason_t *reasonlist = reasonhead;
 	const char *address, *mask;
+	const char *path = va("%s"PATHSEP"%s", srb2home, "ban.txt");
 
 	if (!reasonhead)
+	{
+		remove(path);
 		return;
+	}
 
-	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "w");
+	f = fopen(path, "w");
 
 	if (!f)
 	{
@@ -2308,16 +2301,14 @@ static void Ban_Add(const char *reason)
 	reasontail = reasonlist;
 }
 
-static void Command_ClearBans(void)
+static void Ban_Clear(void)
 {
 	banreason_t *temp;
 
-	if (!I_ClearBans)
-		return;
-
 	I_ClearBans();
-	D_SaveBan();
+
 	reasontail = NULL;
+
 	while (reasonhead)
 	{
 		temp = reasonhead->next;
@@ -2327,12 +2318,24 @@ static void Command_ClearBans(void)
 	}
 }
 
+static void Command_ClearBans(void)
+{
+	if (!I_ClearBans)
+		return;
+
+	Ban_Clear();
+	D_SaveBan();
+}
+
 static void Ban_Load_File(boolean warning)
 {
 	FILE *f;
 	size_t i;
 	const char *address, *mask;
 	char buffer[MAX_WADPATH];
+
+	if (!I_ClearBans)
+		return;
 
 	f = fopen(va("%s"PATHSEP"%s", srb2home, "ban.txt"), "r");
 
@@ -2343,13 +2346,7 @@ static void Ban_Load_File(boolean warning)
 		return;
 	}
 
-	if (I_ClearBans)
-		Command_ClearBans();
-	else
-	{
-		fclose(f);
-		return;
-	}
+	Ban_Clear();
 
 	for (i=0; fgets(buffer, (int)sizeof(buffer), f); i++)
 	{
@@ -2539,14 +2536,14 @@ static void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 		}
 	}
 
-	LUAh_PlayerQuit(&players[playernum], reason); // Lua hook for player quitting
+	LUA_HookPlayerQuit(&players[playernum], reason); // Lua hook for player quitting
 
 	// don't look through someone's view who isn't there
 	if (playernum == displayplayer)
 	{
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
-		LUAh_ViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
+		LUA_HookViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 		displayplayer = consoleplayer;
 	}
 
@@ -2955,7 +2952,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	{
 		case KICK_MSG_GO_AWAY:
 			if (!players[pnum].quittime)
-				HU_AddChatText(va("\x82*%s has been kicked (Go away)", player_names[pnum]), false);
+				HU_AddChatText(va("\x82*%s has been kicked (No reason given)", player_names[pnum]), false);
 			kickreason = KR_KICK;
 			break;
 		case KICK_MSG_PING_HIGH:
@@ -2963,7 +2960,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			kickreason = KR_PINGLIMIT;
 			break;
 		case KICK_MSG_CON_FAIL:
-			HU_AddChatText(va("\x82*%s left the game (Synch Failure)", player_names[pnum]), false);
+			HU_AddChatText(va("\x82*%s left the game (Synch failure)", player_names[pnum]), false);
 			kickreason = KR_SYNCH;
 
 			if (M_CheckParm("-consisdump")) // Helps debugging some problems
@@ -3009,7 +3006,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 			kickreason = KR_LEAVE;
 			break;
 		case KICK_MSG_BANNED:
-			HU_AddChatText(va("\x82*%s has been banned (Don't come back)", player_names[pnum]), false);
+			HU_AddChatText(va("\x82*%s has been banned (No reason given)", player_names[pnum]), false);
 			kickreason = KR_BAN;
 			break;
 		case KICK_MSG_CUSTOM_KICK:
@@ -3026,8 +3023,7 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 	if (pnum == consoleplayer)
 	{
-		if (Playing())
-			LUAh_GameQuit();
+		LUA_HookBool(false, HOOK(GameQuit));
 #ifdef DUMPCONSISTENCY
 		if (msg == KICK_MSG_CON_FAIL) SV_SavedGame();
 #endif
@@ -3107,7 +3103,7 @@ consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", CV_SAVE|CV_NETVAR, maxpl
 static CV_PossibleValue_t joindelay_cons_t[] = {{1, "MIN"}, {3600, "MAX"}, {0, "Off"}, {0, NULL}};
 consvar_t cv_joindelay = CVAR_INIT ("joindelay", "10", CV_SAVE|CV_NETVAR, joindelay_cons_t, NULL);
 static CV_PossibleValue_t rejointimeout_cons_t[] = {{1, "MIN"}, {60 * FRACUNIT, "MAX"}, {0, "Off"}, {0, NULL}};
-consvar_t cv_rejointimeout = CVAR_INIT ("rejointimeout", "Off", CV_SAVE|CV_NETVAR|CV_FLOAT, rejointimeout_cons_t, NULL);
+consvar_t cv_rejointimeout = CVAR_INIT ("rejointimeout", "2", CV_SAVE|CV_NETVAR|CV_FLOAT, rejointimeout_cons_t, NULL);
 
 static CV_PossibleValue_t resynchattempts_cons_t[] = {{1, "MIN"}, {20, "MAX"}, {0, "No"}, {0, NULL}};
 consvar_t cv_resynchattempts = CVAR_INIT ("resynchattempts", "10", CV_SAVE|CV_NETVAR, resynchattempts_cons_t, NULL);
@@ -3447,7 +3443,7 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		COM_BufAddText(va("sayto %d %s\n", newplayernum, motd));
 
 	if (!rejoined)
-		LUAh_PlayerJoin(newplayernum);
+		LUA_HookInt(newplayernum, HOOK(PlayerJoin));
 }
 
 static boolean SV_AddWaitingPlayers(const char *name, const char *name2)
@@ -3727,8 +3723,7 @@ static void HandleConnect(SINT8 node)
 static void HandleShutdown(SINT8 node)
 {
 	(void)node;
-	if (Playing())
-		LUAh_GameQuit();
+	LUA_HookBool(false, HOOK(GameQuit));
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -3743,8 +3738,7 @@ static void HandleShutdown(SINT8 node)
 static void HandleTimeout(SINT8 node)
 {
 	(void)node;
-	if (Playing())
-		LUAh_GameQuit();
+	LUA_HookBool(false, HOOK(GameQuit));
 	D_QuitNetGame();
 	CL_Reset();
 	D_StartTitle();
@@ -4265,7 +4259,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_RECEIVEDGAMESTATE:
 			sendingsavegame[node] = false;
 			resendingsavegame[node] = false;
-			savegameresendcooldown[node] = I_GetTime() + 15 * TICRATE;
+			savegameresendcooldown[node] = I_GetTime() + 5 * TICRATE;
 			break;
 // -------------------------------------------- CLIENT RECEIVE ----------
 		case PT_SERVERTICS:
@@ -4477,70 +4471,73 @@ static INT16 Consistancy(void)
 		ret += P_GetRandSeed();
 
 #ifdef MOBJCONSISTANCY
-	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+	if (gamestate == GS_LEVEL)
 	{
-		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-			continue;
-
-		mo = (mobj_t *)th;
-
-		if (mo->flags & (MF_SPECIAL | MF_SOLID | MF_PUSHABLE | MF_BOSS | MF_MISSILE | MF_SPRING | MF_MONITOR | MF_FIRE | MF_ENEMY | MF_PAIN | MF_STICKY))
+		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 		{
-			ret -= mo->type;
-			ret += mo->x;
-			ret -= mo->y;
-			ret += mo->z;
-			ret -= mo->momx;
-			ret += mo->momy;
-			ret -= mo->momz;
-			ret += mo->angle;
-			ret -= mo->flags;
-			ret += mo->flags2;
-			ret -= mo->eflags;
-			if (mo->target)
+			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+				continue;
+
+			mo = (mobj_t *)th;
+
+			if (mo->flags & (MF_SPECIAL | MF_SOLID | MF_PUSHABLE | MF_BOSS | MF_MISSILE | MF_SPRING | MF_MONITOR | MF_FIRE | MF_ENEMY | MF_PAIN | MF_STICKY))
 			{
-				ret += mo->target->type;
-				ret -= mo->target->x;
-				ret += mo->target->y;
-				ret -= mo->target->z;
-				ret += mo->target->momx;
-				ret -= mo->target->momy;
-				ret += mo->target->momz;
-				ret -= mo->target->angle;
-				ret += mo->target->flags;
-				ret -= mo->target->flags2;
-				ret += mo->target->eflags;
-				ret -= mo->target->state - states;
-				ret += mo->target->tics;
-				ret -= mo->target->sprite;
-				ret += mo->target->frame;
+				ret -= mo->type;
+				ret += mo->x;
+				ret -= mo->y;
+				ret += mo->z;
+				ret -= mo->momx;
+				ret += mo->momy;
+				ret -= mo->momz;
+				ret += mo->angle;
+				ret -= mo->flags;
+				ret += mo->flags2;
+				ret -= mo->eflags;
+				if (mo->target)
+				{
+					ret += mo->target->type;
+					ret -= mo->target->x;
+					ret += mo->target->y;
+					ret -= mo->target->z;
+					ret += mo->target->momx;
+					ret -= mo->target->momy;
+					ret += mo->target->momz;
+					ret -= mo->target->angle;
+					ret += mo->target->flags;
+					ret -= mo->target->flags2;
+					ret += mo->target->eflags;
+					ret -= mo->target->state - states;
+					ret += mo->target->tics;
+					ret -= mo->target->sprite;
+					ret += mo->target->frame;
+				}
+				else
+					ret ^= 0x3333;
+				if (mo->tracer && mo->tracer->type != MT_OVERLAY)
+				{
+					ret += mo->tracer->type;
+					ret -= mo->tracer->x;
+					ret += mo->tracer->y;
+					ret -= mo->tracer->z;
+					ret += mo->tracer->momx;
+					ret -= mo->tracer->momy;
+					ret += mo->tracer->momz;
+					ret -= mo->tracer->angle;
+					ret += mo->tracer->flags;
+					ret -= mo->tracer->flags2;
+					ret += mo->tracer->eflags;
+					ret -= mo->tracer->state - states;
+					ret += mo->tracer->tics;
+					ret -= mo->tracer->sprite;
+					ret += mo->tracer->frame;
+				}
+				else
+					ret ^= 0xAAAA;
+				ret -= mo->state - states;
+				ret += mo->tics;
+				ret -= mo->sprite;
+				ret += mo->frame;
 			}
-			else
-				ret ^= 0x3333;
-			if (mo->tracer && mo->tracer->type != MT_OVERLAY)
-			{
-				ret += mo->tracer->type;
-				ret -= mo->tracer->x;
-				ret += mo->tracer->y;
-				ret -= mo->tracer->z;
-				ret += mo->tracer->momx;
-				ret -= mo->tracer->momy;
-				ret += mo->tracer->momz;
-				ret -= mo->tracer->angle;
-				ret += mo->tracer->flags;
-				ret -= mo->tracer->flags2;
-				ret += mo->tracer->eflags;
-				ret -= mo->tracer->state - states;
-				ret += mo->tracer->tics;
-				ret -= mo->tracer->sprite;
-				ret += mo->tracer->frame;
-			}
-			else
-				ret ^= 0xAAAA;
-			ret -= mo->state - states;
-			ret += mo->tics;
-			ret -= mo->sprite;
-			ret += mo->frame;
 		}
 	}
 #endif
@@ -4847,14 +4844,14 @@ void TryRunTics(tic_t realtics)
 			{
 				DEBFILE(va("============ Running tic %d (local %d)\n", gametic, localgametic));
 
-				ps_tictime = I_GetTimeMicros();
+				ps_tictime = I_GetPreciseTime();
 
 				G_Ticker((gametic % NEWTICRATERATIO) == 0);
 				ExtraDataTicker();
 				gametic++;
 				consistancy[gametic%BACKUPTICS] = Consistancy();
 
-				ps_tictime = I_GetTimeMicros() - ps_tictime;
+				ps_tictime = I_GetPreciseTime() - ps_tictime;
 
 				// Leave a certain amount of tics present in the net buffer as long as we've ran at least one tic this frame.
 				if (client && gamestate == GS_LEVEL && leveltime > 3 && neededtic <= gametic + cv_netticbuffer.value)

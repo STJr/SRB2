@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,15 +21,12 @@
 // copied from SDL mixer, plus GME
 typedef enum {
 	MU_NONE,
-	MU_CMD,
 	MU_WAV,
 	MU_MOD,
 	MU_MID,
 	MU_OGG,
 	MU_MP3,
-	MU_MP3_MAD_UNUSED, // use MU_MP3 instead
 	MU_FLAC,
-	MU_MODPLUG_UNUSED, // use MU_MOD instead
 	MU_GME,
 	MU_MOD_EX, // libopenmpt
 	MU_MID_EX // Non-native MIDI

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -365,7 +365,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	if (special->flags & (MF_ENEMY|MF_BOSS) && special->flags2 & MF2_FRET)
 		return;
 
-	if (LUAh_TouchSpecial(special, toucher) || P_MobjWasRemoved(special))
+	if (LUA_HookTouchSpecial(special, toucher) || P_MobjWasRemoved(special))
 		return;
 
 	// 0 = none, 1 = elemental pierce, 2 = bubble bounce
@@ -470,14 +470,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 				{
 					fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
-					
+
 					if (elementalpierce == 2) // Reset bubblewrap, part 1
 						P_DoBubbleBounce(player);
 					toucher->momz = setmomz;
 					if (elementalpierce == 2) // Reset bubblewrap, part 2
 					{
 						boolean underwater = toucher->eflags & MFE_UNDERWATER;
-							
+
 						if (underwater)
 							toucher->momz /= 2;
 						toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
@@ -1388,6 +1388,10 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (player->bot)
 					return;
 
+				// Initialize my junk
+				junk.tags.tags = NULL;
+				junk.tags.count = 0;
+
 				Tag_FSet(&junk.tags, LE_AXE);
 				EV_DoElevator(&junk, bridgeFall, false);
 
@@ -1613,7 +1617,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				if (special->tracer && !(special->tracer->flags2 & MF2_STRONGBOX))
 					macespin = true;
-				
+
 				if (macespin ? (player->powers[pw_ignorelatch] & (1<<15)) : (player->powers[pw_ignorelatch]))
 					return;
 
@@ -1935,7 +1939,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 	if (!netgame)
 		return; // Presumably it's obvious what's happening in splitscreen.
 
-	if (LUAh_HurtMsg(player, inflictor, source, damagetype))
+	if (LUA_HookHurtMsg(player, inflictor, source, damagetype))
 		return;
 
 	deadtarget = (player->mo->health <= 0);
@@ -2409,7 +2413,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	target->flags2 &= ~(MF2_SKULLFLY|MF2_NIGHTSPULL);
 	target->health = 0; // This makes it easy to check if something's dead elsewhere.
 
-	if (LUAh_MobjDeath(target, inflictor, source, damagetype) || P_MobjWasRemoved(target))
+	if (LUA_HookMobjDeath(target, inflictor, source, damagetype) || P_MobjWasRemoved(target))
 		return;
 
 	// Let EVERYONE know what happened to a player! 01-29-2002 Tails
@@ -3544,7 +3548,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	// Everything above here can't be forced.
 	if (!metalrecording)
 	{
-		UINT8 shouldForce = LUAh_ShouldDamage(target, inflictor, source, damage, damagetype);
+		UINT8 shouldForce = LUA_HookShouldDamage(target, inflictor, source, damage, damagetype);
 		if (P_MobjWasRemoved(target))
 			return (shouldForce == 1); // mobj was removed
 		if (shouldForce == 1)
@@ -3585,7 +3589,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		if (!force && target->flags2 & MF2_FRET) // Currently flashing from being hit
 			return false;
 
-		if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype) || P_MobjWasRemoved(target))
+		if (LUA_HookMobjDamage(target, inflictor, source, damage, damagetype) || P_MobjWasRemoved(target))
 			return true;
 
 		if (target->health > 1)
@@ -3635,7 +3639,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				|| (G_GametypeHasTeams() && player->ctfteam == source->player->ctfteam)))
 					return false; // Don't run eachother over in special stages and team games and such
 			}
-			if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
+			if (LUA_HookMobjDamage(target, inflictor, source, damage, damagetype))
 				return true;
 			P_NiGHTSDamage(target, source); // -5s :(
 			return true;
@@ -3689,13 +3693,13 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (force
 			|| (inflictor && inflictor->flags & MF_MISSILE && inflictor->flags2 & MF2_SUPERFIRE)) // Super Sonic is stunned!
 			{
-				if (!LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
+				if (!LUA_HookMobjDamage(target, inflictor, source, damage, damagetype))
 					P_SuperDamage(player, inflictor, source, damage);
 				return true;
 			}
 			return false;
 		}
-		else if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
+		else if (LUA_HookMobjDamage(target, inflictor, source, damage, damagetype))
 			return true;
 		else if (player->powers[pw_shield] || (player->bot && !ultimatemode))  //If One-Hit Shield
 		{

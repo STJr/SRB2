@@ -196,6 +196,9 @@
     <ClInclude Include="..\comptime.h" />
     <ClInclude Include="..\console.h" />
     <ClInclude Include="..\dehacked.h" />
+    <ClInclude Include="..\deh_soc.h" />
+    <ClInclude Include="..\deh_lua.h" />
+    <ClInclude Include="..\deh_tables.h" />
     <ClInclude Include="..\doomdata.h" />
     <ClInclude Include="..\doomdef.h" />
     <ClInclude Include="..\doomstat.h" />
@@ -244,6 +247,7 @@
     <ClInclude Include="..\i_tcp.h" />
     <ClInclude Include="..\i_video.h" />
     <ClInclude Include="..\keys.h" />
+    <ClInclude Include="..\libdivide.h" />
     <ClInclude Include="..\lua_hook.h" />
     <ClInclude Include="..\lua_hud.h" />
     <ClInclude Include="..\lua_libs.h" />
@@ -363,6 +367,9 @@
     <ClCompile Include="..\comptime.c" />
     <ClCompile Include="..\console.c" />
     <ClCompile Include="..\dehacked.c" />
+    <ClCompile Include="..\deh_soc.c" />
+    <ClCompile Include="..\deh_lua.c" />
+    <ClCompile Include="..\deh_tables.c" />
     <ClCompile Include="..\d_clisrv.c" />
     <ClCompile Include="..\d_main.c" />
     <ClCompile Include="..\d_net.c" />
@@ -400,6 +407,7 @@
     <ClCompile Include="..\lua_hooklib.c" />
     <ClCompile Include="..\lua_hudlib.c" />
     <ClCompile Include="..\lua_infolib.c" />
+    <ClCompile Include="..\lua_inputlib.c" />
     <ClCompile Include="..\lua_maplib.c" />
     <ClCompile Include="..\lua_mathlib.c" />
     <ClCompile Include="..\lua_mobjlib.c" />

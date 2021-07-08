@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -203,9 +203,7 @@ void ST_doPaletteStuff(void)
 {
 	INT32 palette;
 
-	if (paused || P_AutoPause())
-		palette = 0;
-	else if (stplyr && stplyr->flashcount)
+	if (stplyr && stplyr->flashcount)
 		palette = stplyr->flashpal;
 	else
 		palette = 0;
@@ -214,8 +212,6 @@ void ST_doPaletteStuff(void)
 	if (rendermode == render_opengl)
 		palette = 0; // No flashpals here in OpenGL
 #endif
-
-	palette = min(max(palette, 0), 13);
 
 	if (palette != st_palette)
 	{
@@ -303,10 +299,6 @@ void ST_LoadGraphics(void)
 	gravboots = W_CachePatchName("TVGVICON", PU_HUDGFX);
 
 	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
-	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
-	bflagico = W_CachePatchName("BFLAGICO", PU_HUDGFX);
-	rmatcico = W_CachePatchName("RMATCICO", PU_HUDGFX);
-	bmatcico = W_CachePatchName("BMATCICO", PU_HUDGFX);
 	gotrflag = W_CachePatchName("GOTRFLAG", PU_HUDGFX);
 	gotbflag = W_CachePatchName("GOTBFLAG", PU_HUDGFX);
 	fnshico = W_CachePatchName("FNSHICO", PU_HUDGFX);
@@ -458,7 +450,7 @@ boolean st_overlay;
 static void ST_DrawNightsOverlayNum(fixed_t x /* right border */, fixed_t y, fixed_t s, INT32 a,
 	UINT32 num, patch_t **numpat, skincolornum_t colornum)
 {
-	fixed_t w = SHORT(numpat[0]->width)*s;
+	fixed_t w = numpat[0]->width * s;
 	const UINT8 *colormap;
 
 	// I want my V_SNAPTOx flags. :< -Red
@@ -676,7 +668,7 @@ static void ST_drawRaceNum(INT32 time)
 		if (!(P_AutoPause() || paused) && !bounce)
 				S_StartSound(0, ((racenum == racego) ? sfx_s3kad : sfx_s3ka7));
 	}
-	V_DrawScaledPatch(((BASEVIDWIDTH - SHORT(racenum->width))/2), height, V_PERPLAYER, racenum);
+	V_DrawScaledPatch(((BASEVIDWIDTH - racenum->width)/2), height, V_PERPLAYER, racenum);
 }
 
 static void ST_drawTime(void)
@@ -1375,7 +1367,7 @@ void ST_drawTitleCard(void)
 		zzticker = lt_ticker;
 		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
 		V_DrawMappedPatch(FixedInt(lt_zigzag), (zigzag->height-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
-		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zigzag->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
+		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zztext->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
 		V_DrawMappedPatch(FixedInt(lt_zigzag), (zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
 	}
 
@@ -1625,8 +1617,8 @@ static void ST_drawFirstPersonHUD(void)
 	p = W_CachePatchNum(sprframe->lumppat[0], PU_CACHE);
 
 	// Display the countdown drown numbers!
-	if (p && !F_GetPromptHideHud(60 - SHORT(p->topoffset)))
-		V_DrawScaledPatch((BASEVIDWIDTH/2) - (SHORT(p->width)/2) + SHORT(p->leftoffset), 60 - SHORT(p->topoffset),
+	if (p && !F_GetPromptHideHud(60 - p->topoffset))
+		V_DrawScaledPatch((BASEVIDWIDTH/2) - (p->width / 2) + SHORT(p->leftoffset), 60 - SHORT(p->topoffset),
 			V_PERPLAYER|V_PERPLAYER|V_TRANSLUCENT, p);
 }
 
@@ -2367,27 +2359,29 @@ static inline void ST_drawRaceHUD(void)
 
 static void ST_drawTeamHUD(void)
 {
-	patch_t *p;
 #define SEP 20
 
 	if (F_GetPromptHideHud(0)) // y base is 0
 		return;
 
-	if (gametyperules & GTR_TEAMFLAGS)
-		p = bflagico;
-	else
-		p = bmatcico;
+	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
+	bflagico = W_CachePatchName("BFLAGICO", PU_HUDGFX);
+	rmatcico = W_CachePatchName("RMATCICO", PU_HUDGFX);
+	bmatcico = W_CachePatchName("BMATCICO", PU_HUDGFX);
 
 	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
-
-	if (gametyperules & GTR_TEAMFLAGS)
-		p = rflagico;
-	else
-		p = rmatcico;
-
-	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(p->width)/4, 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
+	{
+		if (gametyperules & GTR_TEAMFLAGS)
+		{
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (bflagico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, bflagico);
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (rflagico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, rflagico);
+		}
+		else
+		{
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (bmatcico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, bmatcico);
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (rmatcico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, rmatcico);
+		}
+	}
 
 	if (!(gametyperules & GTR_TEAMFLAGS))
 		goto num;
@@ -2400,11 +2394,11 @@ static void ST_drawTeamHUD(void)
 		{
 			// Blue flag isn't at base
 			if (players[i].gotflag & GF_BLUEFLAG && LUA_HudEnabled(hud_teamscores))
-				V_DrawScaledPatch(BASEVIDWIDTH/2 - SEP - SHORT(nonicon->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon);
+				V_DrawScaledPatch(BASEVIDWIDTH/2 - SEP - (nonicon->width / 2), 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon);
 
 			// Red flag isn't at base
 			if (players[i].gotflag & GF_REDFLAG && LUA_HudEnabled(hud_teamscores))
-				V_DrawScaledPatch(BASEVIDWIDTH/2 + SEP - SHORT(nonicon2->width)/2, 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon2);
+				V_DrawScaledPatch(BASEVIDWIDTH/2 + SEP - (nonicon2->width / 2), 0, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, nonicon2);
 
 			whichflag |= players[i].gotflag;
 
@@ -2677,7 +2671,7 @@ static void ST_overlayDrawer(void)
 			else
 			{
 				tic_t num = time;
-				INT32 sz = SHORT(tallnum[0]->width)/2, width = 0;
+				INT32 sz = tallnum[0]->width / 2, width = 0;
 				do
 				{
 					width += sz;
@@ -2755,7 +2749,6 @@ static void ST_overlayDrawer(void)
 
 void ST_Drawer(void)
 {
-#ifdef SEENAMES
 	if (cv_seenames.value && cv_allowseenames.value && displayplayer == consoleplayer && seenplayer && seenplayer->mo)
 	{
 		INT32 c = 0;
@@ -2779,7 +2772,6 @@ void ST_Drawer(void)
 
 		V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2 + 15, V_HUDTRANSHALF|c, player_names[seenplayer-players]);
 	}
-#endif
 
 	// Doom's status bar only updated if necessary.
 	// However, ours updates every frame regardless, so the "refresh" param was removed

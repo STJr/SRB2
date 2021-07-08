@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2020 by Sonic Team Junior.
+// Copyright (C) 2014-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,6 +39,7 @@ static UINT8 hudAvailable; // hud hooks field
 static const char *const hud_disable_options[] = {
 	"stagetitle",
 	"textspectator",
+	"crosshair",
 
 	"score",
 	"time",
@@ -62,7 +63,9 @@ static const char *const hud_disable_options[] = {
 	"tabemblems",
 
 	"intermissiontally",
+	"intermissiontitletext",
 	"intermissionmessages",
+	"intermissionemeralds",
 	NULL};
 
 enum hudinfo {
@@ -305,16 +308,16 @@ static int patch_get(lua_State *L)
 		lua_pushboolean(L, patch != NULL);
 		break;
 	case patch_width:
-		lua_pushinteger(L, SHORT(patch->width));
+		lua_pushinteger(L, patch->width);
 		break;
 	case patch_height:
-		lua_pushinteger(L, SHORT(patch->height));
+		lua_pushinteger(L, patch->height);
 		break;
 	case patch_leftoffset:
-		lua_pushinteger(L, SHORT(patch->leftoffset));
+		lua_pushinteger(L, patch->leftoffset);
 		break;
 	case patch_topoffset:
-		lua_pushinteger(L, SHORT(patch->topoffset));
+		lua_pushinteger(L, patch->topoffset);
 		break;
 	}
 	return 1;
@@ -856,6 +859,26 @@ static int libd_drawScaledNameTag(lua_State *L)
 	return 0;
 }
 
+static int libd_drawLevelTitle(lua_State *L)
+{
+	INT32 x;
+	INT32 y;
+	const char *str;
+	INT32 flags;
+
+	HUDONLY
+
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	str = luaL_checkstring(L, 3);
+	flags = luaL_optinteger(L, 4, 0);
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawLevelTitle(x, y, flags, str);
+	return 0;
+}
+
 static int libd_stringWidth(lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);
@@ -885,6 +908,20 @@ static int libd_nameTagWidth(lua_State *L)
 	return 1;
 }
 
+static int libd_levelTitleWidth(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, V_LevelNameWidth(luaL_checkstring(L, 1)));
+	return 1;
+}
+
+static int libd_levelTitleHeight(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, V_LevelNameHeight(luaL_checkstring(L, 1)));
+	return 1;
+}
+
 static int libd_getColormap(lua_State *L)
 {
 	INT32 skinnum = TC_DEFAULT;
@@ -896,8 +933,10 @@ static int libd_getColormap(lua_State *L)
 	else if (lua_type(L, 1) == LUA_TNUMBER) // skin number
 	{
 		skinnum = (INT32)luaL_checkinteger(L, 1);
-		if (skinnum < TC_BLINK || skinnum >= MAXSKINS)
-			return luaL_error(L, "skin number %d is out of range (%d - %d)", skinnum, TC_BLINK, MAXSKINS-1);
+		if (skinnum >= MAXSKINS)
+			return luaL_error(L, "skin number %d is out of range (>%d)", skinnum, MAXSKINS-1);
+		else if (skinnum < 0 && skinnum > TC_DEFAULT)
+			return luaL_error(L, "translation colormap index is out of range");
 	}
 	else // skin name
 	{
@@ -1088,10 +1127,13 @@ static luaL_Reg lib_draw[] = {
 	{"drawString", libd_drawString},
 	{"drawNameTag", libd_drawNameTag},
 	{"drawScaledNameTag", libd_drawScaledNameTag},
+	{"drawLevelTitle", libd_drawLevelTitle},
 	{"fadeScreen", libd_fadeScreen},
 	// misc
 	{"stringWidth", libd_stringWidth},
 	{"nameTagWidth", libd_nameTagWidth},
+	{"levelTitleWidth", libd_levelTitleWidth},
+	{"levelTitleHeight", libd_levelTitleHeight},
 	// m_random
 	{"RandomFixed",libd_RandomFixed},
 	{"RandomByte",libd_RandomByte},
@@ -1261,7 +1303,9 @@ void LUAh_GameHUD(player_t *stplayr)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1283,9 +1327,9 @@ void LUAh_GameHUD(player_t *stplayr)
 		lua_pushvalue(gL, -5); // graphics library (HUD[1])
 		lua_pushvalue(gL, -5); // stplayr
 		lua_pushvalue(gL, -5); // camera
-		LUA_Call(gL, 3);
+		LUA_Call(gL, 3, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1295,7 +1339,9 @@ void LUAh_ScoresHUD(void)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1308,9 +1354,9 @@ void LUAh_ScoresHUD(void)
 	lua_pushnil(gL);
 	while (lua_next(gL, -3) != 0) {
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1);
+		LUA_Call(gL, 1, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1320,7 +1366,9 @@ void LUAh_TitleHUD(void)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1333,9 +1381,9 @@ void LUAh_TitleHUD(void)
 	lua_pushnil(gL);
 	while (lua_next(gL, -3) != 0) {
 		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1);
+		LUA_Call(gL, 1, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
@@ -1345,7 +1393,9 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1366,20 +1416,22 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 		lua_pushvalue(gL, -6); // stplayr
 		lua_pushvalue(gL, -6); // lt_ticker
 		lua_pushvalue(gL, -6); // lt_endtime
-		LUA_Call(gL, 4);
+		LUA_Call(gL, 4, 0, 1);
 	}
 
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }
 
-void LUAh_IntermissionHUD(void)
+void LUAh_IntermissionHUD(boolean failedstage)
 {
 	if (!gL || !(hudAvailable & (1<<hudhook_intermission)))
 		return;
 
 	hud_running = true;
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
+
+	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
 	I_Assert(lua_istable(gL, -1));
@@ -1389,11 +1441,15 @@ void LUAh_IntermissionHUD(void)
 	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
 	I_Assert(lua_istable(gL, -1));
 	lua_remove(gL, -3); // pop HUD
+
+	lua_pushboolean(gL, failedstage); // stagefailed
 	lua_pushnil(gL);
-	while (lua_next(gL, -3) != 0) {
-		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1);
+
+	while (lua_next(gL, -4) != 0) {
+		lua_pushvalue(gL, -4); // graphics library (HUD[1])
+		lua_pushvalue(gL, -4); // stagefailed
+		LUA_Call(gL, 2, 0, 1);
 	}
-	lua_pop(gL, -1);
+	lua_settop(gL, 0);
 	hud_running = false;
 }

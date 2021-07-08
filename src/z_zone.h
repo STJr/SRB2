@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -68,8 +68,7 @@ enum
 	PU_HWRCACHE_UNLOCKED     = 102, // 'unlocked' PU_HWRCACHE memory:
 									// 'second-level' cache for graphics
                                     // stored in hardware format and downloaded as needed
-	PU_HWRPATCHINFO_UNLOCKED    = 103, // 'unlocked' PU_HWRPATCHINFO memory
-	PU_HWRMODELTEXTURE_UNLOCKED = 104, // 'unlocked' PU_HWRMODELTEXTURE memory
+	PU_HWRMODELTEXTURE_UNLOCKED = 103, // 'unlocked' PU_HWRMODELTEXTURE memory
 };
 
 //

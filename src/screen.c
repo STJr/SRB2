@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -33,6 +33,11 @@
 #include "s_sound.h" // ditto
 #include "g_game.h" // ditto
 #include "p_local.h" // P_AutoPause()
+#ifdef HWRENDER
+#include "hardware/hw_main.h"
+#include "hardware/hw_light.h"
+#include "hardware/hw_model.h"
+#endif
 
 
 #if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
@@ -72,7 +77,7 @@ CV_PossibleValue_t cv_renderer_t[] = {
 	{0, NULL}
 };
 
-consvar_t cv_renderer = CVAR_INIT ("renderer", "Software", CV_SAVE|CV_NOLUA|CV_CALL, cv_renderer_t, SCR_SetTargetRenderer);
+consvar_t cv_renderer = CVAR_INIT ("renderer", "Software", CV_SAVE|CV_NOLUA|CV_CALL, cv_renderer_t, SCR_ChangeRenderer);
 
 static void SCR_ChangeFullscreen(void);
 
@@ -207,13 +212,17 @@ void SCR_SetMode(void)
 		if (setrenderneeded && (moviemode == MM_APNG))
 			M_StopMovie();
 
-		VID_CheckRenderer();
+		// VID_SetMode will call VID_CheckRenderer itself,
+		// so no need to do this in here.
+		if (!setmodeneeded)
+			VID_CheckRenderer();
+
 		vid.recalc = 1;
 	}
 
 	// Set the video mode in the video interface.
 	if (setmodeneeded)
-		VID_SetMode(--setmodeneeded);
+		VID_SetMode(setmodeneeded - 1);
 
 	V_SetPalette(0);
 
@@ -402,15 +411,10 @@ void SCR_ChangeFullscreen(void)
 #endif
 }
 
-void SCR_SetTargetRenderer(void)
-{
-	if (!con_refresh)
-		SCR_ChangeRenderer();
-}
-
 void SCR_ChangeRenderer(void)
 {
-	if ((signed)rendermode == cv_renderer.value)
+	if (chosenrendermode != render_none
+	|| (signed)rendermode == cv_renderer.value)
 		return;
 
 #ifdef HWRENDER
@@ -424,11 +428,14 @@ void SCR_ChangeRenderer(void)
 			CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
 		return;
 	}
+
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED)) // Clear these out before switching to software
+		HWR_ClearAllTextures();
+
 #endif
 
 	// Set the new render mode
 	setrenderneeded = cv_renderer.value;
-	con_refresh = false;
 }
 
 boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
