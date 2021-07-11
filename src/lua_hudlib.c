@@ -396,9 +396,9 @@ static int camera_set(lua_State *L)
 	case camera_subsector:
 	case camera_floorz:
 	case camera_ceilingz:
-	case camera_height:
-	case camera_radius:
-		return luaL_error(L, LUA_QL("camera_t") " field " LUA_QS " should not be set directly.", camera_opt[field]);
+	case camera_x:
+	case camera_y:
+		return luaL_error(L, LUA_QL("camera_t") " field " LUA_QS " should not be set directly. Use " LUA_QL("P_TryCameraMove") " or " LUA_QL("P_TeleportCameraMove") " instead.", camera_opt[field]);
 	case camera_chase:
 		if (cam == &camera)
 			CV_SetValue(&cv_chasecam, (INT32)luaL_checkboolean(L, 3));
@@ -410,17 +410,30 @@ static int camera_set(lua_State *L)
 	case camera_aiming:
 		cam->aiming = luaL_checkangle(L, 3);
 		break;
-	case camera_x:
-		cam->x = luaL_checkfixed(L, 3);
-		break;
-	case camera_y:
-		cam->y = luaL_checkfixed(L, 3);
-		break;
 	case camera_z:
 		cam->z = luaL_checkfixed(L, 3);
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
 		break;
 	case camera_angle:
 		cam->angle = luaL_checkangle(L, 3);
+		break;
+	case camera_radius:
+		cam->radius = luaL_checkfixed(L, 3);
+		if (cam->radius < 0)
+			cam->radius = 0;
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
+		break;
+	case camera_height:
+		cam->height = luaL_checkfixed(L, 3);
+		if (cam->height < 0)
+			cam->height = 0;
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
 		break;
 	case camera_momx:
 		cam->momx = luaL_checkfixed(L, 3);
