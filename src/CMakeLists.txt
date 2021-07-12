@@ -4,7 +4,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32)
 
 # Core sources
 target_sourcefile(c)
-target_sources(SRB2SDL2 PRIVATE comptime.c md5.c config.h)
+target_sources(SRB2SDL2 PRIVATE comptime.c md5.c config.h.in)
 
 set(SRB2_ASM_SOURCES vid_copy.s)
 
