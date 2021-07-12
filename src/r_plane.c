@@ -380,9 +380,11 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	{
 		if (polyobj->angle != 0)
 		{
-			angle_t fineshift = polyobj->angle >> ANGLETOFINESHIFT;
-			xoff -= FixedMul(FINECOSINE(fineshift), polyobj->centerPt.x)+FixedMul(FINESINE(fineshift), polyobj->centerPt.y);
-			yoff -= FixedMul(FINESINE(fineshift), polyobj->centerPt.x)-FixedMul(FINECOSINE(fineshift), polyobj->centerPt.y);
+			float ang = ANG2RAD(polyobj->angle);
+			float x = FixedToFloat(polyobj->centerPt.x);
+			float y = FixedToFloat(polyobj->centerPt.y);
+			xoff -= FloatToFixed(x * cos(ang) + y * sin(ang));
+			yoff -= FloatToFixed(x * sin(ang) - y * cos(ang));
 		}
 		else
 		{
