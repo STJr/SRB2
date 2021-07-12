@@ -1,6 +1,6 @@
 #define SRB2VERSION "2.2.9"/* this must be the first line, for cmake !! */
 
-// The Modification ID; must be obtained from a Master Server Admin ( https://mb.srb2.org/showgroups.php ).
+// The Modification ID; must be obtained from a Master Server Admin ( https://mb.srb2.org/members/?key=ms_admin ).
 // DO NOT try to set this otherwise, or your modification will be unplayable through the Master Server.
 // "18" is the default mod ID for version 2.2
 #define MODID 18
