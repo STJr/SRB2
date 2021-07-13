@@ -851,8 +851,8 @@ void LUA_InvalidateLevel(void)
 	{
 		LUA_InvalidateUserdata(&lines[i]);
 		LUA_InvalidateUserdata(&lines[i].tags);
-		LUA_InvalidateUserdata(&lines[i].args);
-		LUA_InvalidateUserdata(&lines[i].stringargs);
+		LUA_InvalidateUserdata(lines[i].args);
+		LUA_InvalidateUserdata(lines[i].stringargs);
 		LUA_InvalidateUserdata(lines[i].sidenum);
 	}
 	for (i = 0; i < numsides; i++)
@@ -894,8 +894,8 @@ void LUA_InvalidateMapthings(void)
 	{
 		LUA_InvalidateUserdata(&mapthings[i]);
 		LUA_InvalidateUserdata(&mapthings[i].tags);
-		LUA_InvalidateUserdata(&mapthings[i].args);
-		LUA_InvalidateUserdata(&mapthings[i].stringargs);
+		LUA_InvalidateUserdata(mapthings[i].args);
+		LUA_InvalidateUserdata(mapthings[i].stringargs);
 	}
 }
 
