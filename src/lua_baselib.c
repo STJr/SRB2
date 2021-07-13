@@ -3482,15 +3482,16 @@ static int lib_gAddPlayer(lua_State *L)
 static int lib_gRemovePlayer(lua_State *L)
 {
 	UINT8 pnum = -1;
-	//const char *kickreason = luaL_checkstring(L, 2);
-	
 	if (!lua_isnoneornil(L, 1))
 		pnum = luaL_checkinteger(L, 1);
-	if (&players[pnum])
+	else // No argument
+		return luaL_error(L, "argument #1 not given (expected number)");
+	if (pnum >= MAXPLAYERS) // Out of range
+		return luaL_error(L, "playernum %d out of range (0 - %d)", pnum, MAXPLAYERS-1);
+	if (playeringame[pnum]) // Found player
 	{
-		if (players[pnum].bot != BOT_NONE)
+		if (players[pnum].bot != BOT_NONE) // Can't remove clients.
 		{
-//			CL_RemovePlayer(pnum, *kickreason);
 			CL_RemovePlayer(pnum, pnum);
 			if (netgame)
 			{
@@ -3503,9 +3504,11 @@ static int lib_gRemovePlayer(lua_State *L)
 			lua_pushboolean(L, true);
 			return 1;
 		}
+		else
+			return luaL_error(L, "G_RemovePlayer can only be used on players with a bot value other than BOT_NONE.");
 	}
-	lua_pushboolean(L, false);
-	return 1;
+	// Fell through. Invalid player
+	return LUA_ErrInvalid(L, "player_t");
 }
 
 
