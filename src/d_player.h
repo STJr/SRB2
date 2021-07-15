@@ -559,6 +559,7 @@ typedef struct player_s
 
 	boolean spectator;
 	boolean outofcoop;
+	boolean removing;
 	UINT8 bot;
 	struct player_s *botleader;
 	UINT16 lastbuttons;

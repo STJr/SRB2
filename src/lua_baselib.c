@@ -3482,24 +3482,14 @@ static int lib_gAddPlayer(lua_State *L)
 static int lib_gRemovePlayer(lua_State *L)
 {
 	UINT8 pnum = -1;
-	//const char *kickreason = luaL_checkstring(L, 2);
 	
 	if (!lua_isnoneornil(L, 1))
 		pnum = luaL_checkinteger(L, 1);
 	if (&players[pnum])
 	{
-		if (players[pnum].bot != BOT_NONE)
+		if (players[pnum].bot != BOT_NONE && players[pnum].removing == false)
 		{
-//			CL_RemovePlayer(pnum, *kickreason);
-			CL_RemovePlayer(pnum, pnum);
-			if (netgame)
-			{
-				char kickmsg[256];
-
-				strcpy(kickmsg, M_GetText("\x82*Bot %s has been removed"));
-				strcpy(kickmsg, va(kickmsg, player_names[pnum], pnum));
-				HU_AddChatText(kickmsg, false);
-			}
+			players[pnum].removing = true; // This function can be run in players.iterate(), which isn't equipped to deal with players being removed mid-process. Instead we'll remove the player at the beginning of the next ticframe.
 			lua_pushboolean(L, true);
 			return 1;
 		}
