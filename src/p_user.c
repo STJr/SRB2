@@ -1188,6 +1188,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 {
 	if (!player)
 		return;
+	
 	if ((player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) && player->botleader)
 		player = player->botleader;
 
@@ -11623,7 +11624,7 @@ void P_PlayerThink(player_t *player)
 			INT32 i;
 
 			for (i = 0; i < MAXPLAYERS; i++)
-			{ 
+			{
 				if (!playeringame[i] || players[i].spectator || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 					continue;
 				if (players[i].lives <= 0)
@@ -12596,6 +12597,7 @@ void P_PlayerAfterThink(player_t *player)
 					player->mo->momy = tails->momy;
 					player->mo->momz = tails->momz;
 				}
+				
 				if (G_CoopGametype() && tails->player && tails->player->bot != BOT_2PAI)
 				{
 					player->mo->angle = tails->angle;

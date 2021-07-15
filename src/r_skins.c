@@ -242,7 +242,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 		// Force 3.
 		return true;
 	}
-    if (players[playernum].bot)
+	if (playernum != -1 && players[playernum].bot)
     {
         //Force 4.
         return true;

@@ -3490,22 +3490,14 @@ static int lib_gRemovePlayer(lua_State *L)
 		return luaL_error(L, "playernum %d out of range (0 - %d)", pnum, MAXPLAYERS-1);
 	if (playeringame[pnum]) // Found player
 	{
-		if (players[pnum].bot != BOT_NONE) // Can't remove clients.
+		if (players[pnum].bot == BOT_NONE) // Can't remove clients.
+			return luaL_error(L, "G_RemovePlayer can only be used on players with a bot value other than BOT_NONE.");
+		else
 		{
-			CL_RemovePlayer(pnum, pnum);
-			if (netgame)
-			{
-				char kickmsg[256];
-
-				strcpy(kickmsg, M_GetText("\x82*Bot %s has been removed"));
-				strcpy(kickmsg, va(kickmsg, player_names[pnum], pnum));
-				HU_AddChatText(kickmsg, false);
-			}
+			players[pnum].removing = true;
 			lua_pushboolean(L, true);
 			return 1;
 		}
-		else
-			return luaL_error(L, "G_RemovePlayer can only be used on players with a bot value other than BOT_NONE.");
 	}
 	// Fell through. Invalid player
 	return LUA_ErrInvalid(L, "player_t");

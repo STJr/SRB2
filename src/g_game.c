@@ -1545,7 +1545,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	cmd->forwardmove = (SINT8)(cmd->forwardmove + forward);
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
-	//Note: Majority of botstuffs are handled in G_Ticker now.
+	// Note: Majority of botstuffs are handled in G_Ticker now.
 	if (player->bot == BOT_2PHUMAN) //Player-controlled bot
 	{
 		G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
@@ -2198,6 +2198,23 @@ void G_Ticker(boolean run)
 	UINT32 i;
 	INT32 buf;
 
+	// Bot players queued for removal
+	for (i = MAXPLAYERS-1; i != UINT32_MAX; i--)
+	{
+		if (playeringame[i] && players[i].removing)
+		{
+			CL_RemovePlayer(i, i);
+			if (netgame)
+			{
+				char kickmsg[256];
+
+				strcpy(kickmsg, M_GetText("\x82*Bot %s has been removed"));
+				strcpy(kickmsg, va(kickmsg, player_names[i], i));
+				HU_AddChatText(kickmsg, false);
+			}
+		}
+	}
+
 	// see also SCR_DisplayMarathonInfo
 	if ((marathonmode & (MA_INIT|MA_INGAME)) == MA_INGAME && gamestate == GS_LEVEL)
 		marathontime++;
@@ -2520,6 +2537,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	tic_t quittime;
 	boolean spectator;
 	boolean outofcoop;
+	boolean removing;
 	INT16 bot;
 	SINT8 pity;
 	INT16 rings;
@@ -2536,6 +2554,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	quittime = players[player].quittime;
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
+	removing = players[player].removing;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
 	playerangleturn = players[player].angleturn;
 	oldrelangleturn = players[player].oldrelangleturn;
@@ -2612,6 +2631,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->quittime = quittime;
 	p->spectator = spectator;
 	p->outofcoop = outofcoop;
+	p->removing = removing;
 	p->angleturn = playerangleturn;
 	p->oldrelangleturn = oldrelangleturn;
 
