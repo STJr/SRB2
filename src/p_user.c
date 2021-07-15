@@ -11656,7 +11656,7 @@ void P_PlayerThink(player_t *player)
 			INT32 i, total = 0, exiting = 0;
 
 			for (i = 0; i < MAXPLAYERS; i++)
-			{
+			{ 
 				if (!playeringame[i] || players[i].spectator || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 					continue;
 				if (players[i].quittime > 30 * TICRATE)

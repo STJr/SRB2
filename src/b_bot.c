@@ -25,8 +25,6 @@ void B_UpdateBotleader(player_t *player)
 	fixed_t neardist = INT32_MAX;
 	player_t *nearplayer = NULL;
 	//Find new botleader
-	//if (!player->botleader)
-	//{
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		if (players[i].bot || players[i].playerstate != PST_LIVE || players[i].spectator || !players[i].mo)
@@ -46,7 +44,6 @@ void B_UpdateBotleader(player_t *player)
 	}
 	//Set botleader to best candidate (or null if none available)
 	player->botleader = nearplayer;
-	//}
 }
 
 static inline void B_ResetAI(botmem_t *mem)
