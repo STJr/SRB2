@@ -1932,8 +1932,6 @@ void P_XYMovement(mobj_t *mo)
 					if (player)
 					{
 						player->powers[pw_justlaunched] = 2;
-						if (player->pflags & PF_SPINNING)
-							player->pflags |= PF_THOKKED;
 					}
 				}
 			}

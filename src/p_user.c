@@ -5769,7 +5769,7 @@ static void P_2dMovement(player_t *player)
 	INT32 acceleration = P_GetPlayerAcceleration(player,player->acceleration);
 
 	fixed_t subfriction = P_CounterFriction(player);
-	boolean spin = ((onground = P_IsObjectOnGround(player->mo)) && (player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
+	boolean spin = ((onground = P_IsObjectOnGround(player->mo)) && (player->pflags & PF_SPINNING) && (player->rmomx || player->rmomy) && !(player->pflags & PF_STARTDASH));
 
 	cmd = &player->cmd;
 
@@ -6124,8 +6124,8 @@ static void P_3dMovement(player_t *player)
 	*/
 	if (spin) // Prevent gaining speed whilst rolling!
 	{
-		const fixed_t ns = FixedDiv(549*ORIG_FRICTION,500*FRACUNIT); // P_XYFriction
-		//const fixed_t ns = FixedDiv(500*ORIG_FRICTION,500*FRACUNIT); // P_XYFriction
+		const fixed_t ns = FixedDiv(110349*ORIG_FRICTION,100000*FRACUNIT); // P_XYFriction
+		//const fixed_t ns = FixedDiv(549*ORIG_FRICTION,500*FRACUNIT); // P_XYFriction
 		topspeed = FixedMul(oldMagnitude, ns);
 	}
 
@@ -6164,15 +6164,11 @@ static void P_3dMovement(player_t *player)
 		movepushforward = cmd->forwardmove * acceleration;
 
 		// Allow a bit of movement while spinning
-		if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
-		{
+		if (player->pflags & PF_STARTDASH)
+			movepushforward = 0;
+
 			//if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0)
-			//|| 
-			if (player->pflags & PF_STARTDASH)
-				movepushforward = 0;
-			else if (!onground)
-				movepushforward >>= 1;
-		}
+			//||
 		movepushforward = FixedMul(movepushforward, player->mo->scale);
 
 		totalthrust.x += P_ReturnThrustX(player->mo, movepushangle, movepushforward);
@@ -6200,14 +6196,8 @@ static void P_3dMovement(player_t *player)
 			movepushforward = FixedHypot(cmd->sidemove, cmd->forwardmove) * acceleration;
 
 			// Allow a bit of movement while spinning
-			if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
-			{
-				if ((mforward && cmd->forwardmove > 0) || (mbackward && cmd->forwardmove < 0)
-				|| (player->pflags & PF_STARTDASH))
-					movepushforward = 0;
-				else if (!onground)
-					movepushforward >>= 1;
-			}
+			if ((player->pflags & PF_SPINNING) && onground)
+				movepushforward = 0;
 
 			movepushsideangle = controldirection;
 
@@ -6223,12 +6213,12 @@ static void P_3dMovement(player_t *player)
 		movepushside = cmd->sidemove * acceleration;
 
 		// Allow a bit of movement while spinning
-		if ((player->pflags & (PF_SPINNING|PF_THOKKED)) == PF_SPINNING)
+		if ((player->pflags & PF_SPINNING) && onground)
 		{
 			if (player->pflags & PF_STARTDASH)
 				movepushside = 0;
-			else if (!onground)
-				movepushside >>= 1;
+			else
+				movepushside <<= 1;
 		}
 
 		// Finally move the player now that their speed/direction has been decided.
