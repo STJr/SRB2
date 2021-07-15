@@ -1839,7 +1839,6 @@ void P_XYMovement(mobj_t *mo)
 		// blocked move
 		moved = false;
 
-		//!!!
 		if (player) 
 			B_MoveBlocked(player);
 

@@ -776,7 +776,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 {
 	UINT8 oldmare, oldmarelap, oldmarebonuslap;
 
-	//! Bots can't be NiGHTSerized, silly!1 :P
+	// Bots can't be NiGHTSerized, silly!1 :P
 	if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
 		return;
 
@@ -1188,7 +1188,7 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 {
 	if (!player)
 		return;
-	//!
+	
 	if ((player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) && player->botleader)
 		player = player->botleader;
 
@@ -5965,23 +5965,6 @@ static void P_3dMovement(player_t *player)
 		acceleration = 96 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * 40;
 		topspeed = normalspd;
 	}
-	//! Kill this!
-	/* else if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
-	{ // Bot steals player 1's stats
-		normalspd = FixedMul(players[consoleplayer].normalspeed, player->mo->scale);
-		thrustfactor = players[consoleplayer].thrustfactor;
-		acceleration = players[consoleplayer].accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * players[consoleplayer].acceleration;
-
-		if (player->powers[pw_tailsfly])
-			topspeed = normalspd/2;
-		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
-		{
-			topspeed = normalspd/2;
-			acceleration = 2*acceleration/3;
-		}
-		else
-			topspeed = normalspd;
-	} */
 	else
 	{
 		if (player->powers[pw_super] || player->powers[pw_sneakers])
@@ -11488,7 +11471,7 @@ void P_PlayerThink(player_t *player)
 		I_Error("p_playerthink: players[%s].mo == NULL", sizeu1(playeri));
 #endif
 
-	//! Reset terrain blocked status for this frame
+	// Reset terrain blocked status for this frame
 	player->blocked = false;
 
 	// todo: Figure out what is actually causing these problems in the first place...
@@ -11641,7 +11624,7 @@ void P_PlayerThink(player_t *player)
 			INT32 i;
 
 			for (i = 0; i < MAXPLAYERS; i++)
-			{ //!
+			{
 				if (!playeringame[i] || players[i].spectator || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 					continue;
 				if (players[i].lives <= 0)
@@ -11673,7 +11656,7 @@ void P_PlayerThink(player_t *player)
 			INT32 i, total = 0, exiting = 0;
 
 			for (i = 0; i < MAXPLAYERS; i++)
-			{ //!
+			{
 				if (!playeringame[i] || players[i].spectator || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 					continue;
 				if (players[i].quittime > 30 * TICRATE)
@@ -12614,7 +12597,7 @@ void P_PlayerAfterThink(player_t *player)
 					player->mo->momy = tails->momy;
 					player->mo->momz = tails->momz;
 				}
-				//!
+				
 				if (G_CoopGametype() && tails->player && tails->player->bot != BOT_2PAI)
 				{
 					player->mo->angle = tails->angle;

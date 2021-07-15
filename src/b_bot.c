@@ -102,7 +102,6 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	if (tails->player->powers[pw_carry] == CR_MACESPIN || tails->player->powers[pw_carry] == CR_GENERIC)
 	{
 		boolean isrelevant = (sonic->player->powers[pw_carry] == CR_MACESPIN || sonic->player->powers[pw_carry] == CR_GENERIC);
-		//dist = P_AproxDistance(tails->x-sonic->x, tails->y-sonic->y); //! This is totally redundant.
 		if (sonic->player->cmd.buttons & BT_JUMP && (sonic->player->pflags & PF_JUMPED) && isrelevant)
 			cmd->buttons |= BT_JUMP;
 		if (isrelevant)
@@ -402,8 +401,6 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 {
 	player_t *player = mo->player;
 	// don't try to do stuff if your sonic is in a minecart or something
-	//if (players[consoleplayer].powers[pw_carry] && players[consoleplayer].powers[pw_carry] != CR_PLAYER)
-	//!!!
 	if (&player->botleader && player->botleader->powers[pw_carry] && player->botleader->powers[pw_carry] != CR_PLAYER)
 		return;
 	// Turn the virtual keypresses into ticcmd_t.
@@ -576,7 +573,6 @@ void B_RespawnBot(INT32 playernum)
 	player->powers[pw_spacetime] = sonic->player->powers[pw_spacetime];
 	player->powers[pw_gravityboots] = sonic->player->powers[pw_gravityboots];
 	player->powers[pw_nocontrol] = sonic->player->powers[pw_nocontrol];
-	//!!! Nuke the speed equivalencies
 	player->pflags |= PF_AUTOBRAKE|(sonic->player->pflags & PF_DIRECTIONCHAR);
 
 	P_TeleportMove(tails, x, y, z);
