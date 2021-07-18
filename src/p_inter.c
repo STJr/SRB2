@@ -282,10 +282,10 @@ void P_DoMatchSuper(player_t *player)
 	// Check everyone else on your team for emeralds, and turn those helpful assisting players invincible too.
 	if (doteams)
 		for (i = 0; i < MAXPLAYERS; i++)
-			player_t *teamplayer = players[i]
-			if (playeringame[i] && teamplayer.ctfteam == player->ctfteam
-			&& teamplayer.powers[pw_emeralds] != 0)
+			if (playeringame[i] && players[i].ctfteam == player->ctfteam
+			&& players[i].powers[pw_emeralds] != 0)
 			{
+				player_t *teamplayer = players[i];
 				teamplayer->powers[pw_emeralds] = 0;
 				teamplayer->powers[pw_invulnerability] = invulntics + 1;
 				teamplayer->powers[pw_sneakers] = teamplayers->powers[pw_invulnerability];
