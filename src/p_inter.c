@@ -286,15 +286,15 @@ void P_DoMatchSuper(player_t *player)
 			&& players[i].powers[pw_emeralds] != 0)
 			{
 				players[i].powers[pw_emeralds] = 0;
-				player->powers[pw_invulnerability] = invulntics + 1;
-				player->powers[pw_sneakers] = player->powers[pw_invulnerability];
-				if (P_IsLocalPlayer(player) && !player->powers[pw_super])
+				players[i].powers[pw_invulnerability] = invulntics + 1;
+				players[i].powers[pw_sneakers] = players[i].powers[pw_invulnerability];
+				if (P_IsLocalPlayer(players[i]) && !players[i].powers[pw_super])
 				{
 					S_StopMusic();
 					if (mariomode)
 						G_GhostAddColor(GHC_INVINCIBLE);
 					strlcpy(S_sfx[sfx_None].caption, "Invincibility", 14);
-					S_StartCaption(sfx_None, -1, player->powers[pw_invulnerability]);
+					S_StartCaption(sfx_None, -1, players[i].powers[pw_invulnerability]);
 					S_ChangeMusicInternal((mariomode) ? "_minv" : "_inv", false);
 				}
 			}
