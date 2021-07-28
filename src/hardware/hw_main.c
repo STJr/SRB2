@@ -367,10 +367,10 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 	float fflatwidth = 64.0f, fflatheight = 64.0f;
 	INT32 flatflag = 63;
 	boolean texflat = false;
-	float scrollx = 0.0f, scrolly = 0.0f;
+	float scrollx = 0.0f, scrolly = 0.0f, anglef = 0.0f;
 	angle_t angle = 0;
 	FSurfaceInfo    Surf;
-	fixed_t tempxsow, tempytow;
+	float tempxsow, tempytow;
 	pslope_t *slope = NULL;
 
 	static FOutVector *planeVerts = NULL;
@@ -504,24 +504,15 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		}
 	}
 
-
 	if (angle) // Only needs to be done if there's an altered angle
 	{
+		tempxsow = flatxref;
+		tempytow = flatyref;
 
-		angle = (InvAngle(angle))>>ANGLETOFINESHIFT;
+		anglef = ANG2RAD(InvAngle(angle));
 
-		// This needs to be done so that it scrolls in a different direction after rotation like software
-		/*tempxsow = FLOAT_TO_FIXED(scrollx);
-		tempytow = FLOAT_TO_FIXED(scrolly);
-		scrollx = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));
-		scrolly = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINESINE(angle)) + FixedMul(tempytow, FINECOSINE(angle))));*/
-
-		// This needs to be done so everything aligns after rotation
-		// It would be done so that rotation is done, THEN the translation, but I couldn't get it to rotate AND scroll like software does
-		tempxsow = FLOAT_TO_FIXED(flatxref);
-		tempytow = FLOAT_TO_FIXED(flatyref);
-		flatxref = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));
-		flatyref = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINESINE(angle)) + FixedMul(tempytow, FINECOSINE(angle))));
+		flatxref = (tempxsow * cos(anglef)) - (tempytow * sin(anglef));
+		flatyref = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));
 	}
 
 #define SETUP3DVERT(vert, vx, vy) {\
@@ -540,10 +531,10 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		/* Need to rotate before translate */\
 		if (angle) /* Only needs to be done if there's an altered angle */\
 		{\
-			tempxsow = FLOAT_TO_FIXED(vert->s);\
-			tempytow = FLOAT_TO_FIXED(vert->t);\
-			vert->s = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINECOSINE(angle)) - FixedMul(tempytow, FINESINE(angle))));\
-			vert->t = (FIXED_TO_FLOAT(FixedMul(tempxsow, FINESINE(angle)) + FixedMul(tempytow, FINECOSINE(angle))));\
+			tempxsow = vert->s;\
+			tempytow = vert->t;\
+			vert->s = (tempxsow * cos(anglef)) - (tempytow * sin(anglef));\
+			vert->t = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));\
 		}\
 \
 		vert->x = (vx);\
@@ -712,13 +703,12 @@ static void HWR_RenderSkyPlane(extrasubsector_t *xsub, fixed_t fixedheight)
 
 #endif //doplanes
 
-FBITFIELD HWR_GetBlendModeFlag(INT32 ast)
+FBITFIELD HWR_GetBlendModeFlag(INT32 style)
 {
-	switch (ast)
+	switch (style)
 	{
-		case AST_COPY:
-		case AST_OVERLAY:
-			return PF_Masked;
+		case AST_TRANSLUCENT:
+			return PF_Translucent;
 		case AST_ADD:
 			return PF_Additive;
 		case AST_SUBTRACT:
@@ -728,10 +718,8 @@ FBITFIELD HWR_GetBlendModeFlag(INT32 ast)
 		case AST_MODULATE:
 			return PF_Multiplicative;
 		default:
-			return PF_Translucent;
+			return PF_Masked;
 	}
-
-	return 0;
 }
 
 UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
@@ -757,7 +745,7 @@ UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
 
 FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf)
 {
-	if (!transtablenum || style == AST_COPY || style == AST_OVERLAY)
+	if (!transtablenum || style <= AST_COPY || style >= AST_OVERLAY)
 	{
 		pSurf->PolyColor.s.alpha = 0xff;
 		return PF_Masked;
@@ -1126,7 +1114,6 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 		SLOPEPARAMS(gl_backsector->c_slope, worldhigh, worldhighslope, gl_backsector->ceilingheight)
 		SLOPEPARAMS(gl_backsector->f_slope, worldlow,  worldlowslope,  gl_backsector->floorheight)
-#undef SLOPEPARAMS
 
 		// hack to allow height changes in outdoor areas
 		// This is what gets rid of the upper textures if there should be sky
@@ -1615,14 +1602,18 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 	{
 		ffloor_t * rover;
 		fixed_t    highcut = 0, lowcut = 0;
+		fixed_t lowcutslope, highcutslope;
+
+		// Used for height comparisons and etc across FOFs and slopes
+		fixed_t high1, highslope1, low1, lowslope1;
 
 		INT32 texnum;
 		line_t * newline = NULL; // Multi-Property FOF
 
-        ///TODO add slope support (fixing cutoffs, proper wall clipping) - maybe just disable highcut/lowcut if either sector or FOF has a slope
-        ///     to allow fun plane intersecting in OGL? But then people would abuse that and make software look bad. :C
-		highcut = gl_frontsector->ceilingheight < gl_backsector->ceilingheight ? gl_frontsector->ceilingheight : gl_backsector->ceilingheight;
-		lowcut = gl_frontsector->floorheight > gl_backsector->floorheight ? gl_frontsector->floorheight : gl_backsector->floorheight;
+		lowcut = max(worldbottom, worldlow);
+		highcut = min(worldtop, worldhigh);
+		lowcutslope = max(worldbottomslope, worldlowslope);
+		highcutslope = min(worldtopslope, worldhighslope);
 
 		if (gl_backsector->ffloors)
 		{
@@ -1644,7 +1635,11 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					continue;
 				if (!(rover->flags & FF_ALLSIDES) && rover->flags & FF_INVERTSIDES)
 					continue;
-				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
+
+				SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
+				SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
+
+				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
 				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
@@ -1660,10 +1655,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				hS = P_GetFFloorTopZAt   (rover, v2x, v2y);
 				l  = P_GetFFloorBottomZAt(rover, v1x, v1y);
 				lS = P_GetFFloorBottomZAt(rover, v2x, v2y);
-				if (!(*rover->t_slope) && !gl_frontsector->c_slope && !gl_backsector->c_slope && h > highcut)
-					h = hS = highcut;
-				if (!(*rover->b_slope) && !gl_frontsector->f_slope && !gl_backsector->f_slope && l < lowcut)
-					l = lS = lowcut;
+				// Adjust the heights so the FOF does not overlap with top and bottom textures.
+				if (h >= highcut && hS >= highcutslope)
+				{
+					h = highcut;
+					hS = highcutslope;
+				}
+				if (l <= lowcut && lS <= lowcutslope)
+				{
+					l = lowcut;
+					lS = lowcutslope;
+				}
 				//Hurdler: HW code starts here
 				//FIXME: check if peging is correct
 				// set top/bottom coords
@@ -1790,7 +1792,11 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					continue;
 				if (!(rover->flags & FF_ALLSIDES || rover->flags & FF_INVERTSIDES))
 					continue;
-				if (*rover->topheight < lowcut || *rover->bottomheight > highcut)
+
+				SLOPEPARAMS(*rover->t_slope, high1, highslope1, *rover->topheight)
+				SLOPEPARAMS(*rover->b_slope, low1,  lowslope1,  *rover->bottomheight)
+
+				if ((high1 < lowcut && highslope1 < lowcutslope) || (low1 > highcut && lowslope1 > highcutslope))
 					continue;
 
 				texnum = R_GetTextureNum(sides[rover->master->sidenum[0]].midtexture);
@@ -1805,10 +1811,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				hS = P_GetFFloorTopZAt   (rover, v2x, v2y);
 				l  = P_GetFFloorBottomZAt(rover, v1x, v1y);
 				lS = P_GetFFloorBottomZAt(rover, v2x, v2y);
-				if (!(*rover->t_slope) && !gl_frontsector->c_slope && !gl_backsector->c_slope && h > highcut)
-					h = hS = highcut;
-				if (!(*rover->b_slope) && !gl_frontsector->f_slope && !gl_backsector->f_slope && l < lowcut)
-					l = lS = lowcut;
+				// Adjust the heights so the FOF does not overlap with top and bottom textures.
+				if (h >= highcut && hS >= highcutslope)
+				{
+					h = highcut;
+					hS = highcutslope;
+				}
+				if (l <= lowcut && lS <= lowcutslope)
+				{
+					l = lowcut;
+					lS = lowcutslope;
+				}
 				//Hurdler: HW code starts here
 				//FIXME: check if peging is correct
 				// set top/bottom coords
@@ -1882,6 +1895,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			}
 		}
 	}
+#undef SLOPEPARAMS
 //Hurdler: end of 3d-floors test
 }
 
@@ -5327,7 +5341,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
 			vis->colormap = R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
 		else
-			vis->colormap = R_GetTranslationColormap(TC_BOSS, 0, GTC_CACHE);
+			vis->colormap = R_GetTranslationColormap(TC_BOSS, vis->mobj->color, GTC_CACHE);
 	}
 	else if (thing->color)
 	{

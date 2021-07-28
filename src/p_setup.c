@@ -65,7 +65,7 @@
 
 #include "md5.h" // map MD5
 
-// for LUAh_MapLoad
+// for MapLoad hook
 #include "lua_script.h"
 #include "lua_hook.h"
 
@@ -2486,7 +2486,7 @@ static void P_LoadMapBSP(const virtres_t *virt)
 		if (numsubsectors <= 0)
 			I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
 		if (numnodes <= 0)
-			I_Error("Level has no nodes");
+			I_Error("Level has no nodes (does your map have at least 2 sectors?)");
 		if (numsegs <= 0)
 			I_Error("Level has no segs");
 
@@ -2952,19 +2952,70 @@ static void P_LinkMapData(void)
 
 // For maps in binary format, add multi-tags from linedef specials. This must be done
 // before any linedef specials have been processed.
+static void P_AddBinaryMapTagsFromLine(sector_t *sector, line_t *line)
+{
+	Tag_Add(&sector->tags, Tag_FGet(&line->tags));
+	if (line->flags & ML_EFFECT6) {
+		if (sides[line->sidenum[0]].textureoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].textureoffset / FRACUNIT);
+		if (sides[line->sidenum[0]].rowoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].rowoffset / FRACUNIT);
+	}
+	if (line->flags & ML_TFERLINE) {
+		if (sides[line->sidenum[1]].textureoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].textureoffset / FRACUNIT);
+		if (sides[line->sidenum[1]].rowoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].rowoffset / FRACUNIT);
+	}
+}
+
 static void P_AddBinaryMapTags(void)
 {
 	size_t i;
 
 	for (i = 0; i < numlines; i++)
 	{
+		// 96: Apply Tag to Tagged Sectors
 		// 97: Apply Tag to Front Sector
 		// 98: Apply Tag to Back Sector
 		// 99: Apply Tag to Front and Back Sectors
-		if (lines[i].special == 97 || lines[i].special == 99)
-			Tag_Add(&lines[i].frontsector->tags, Tag_FGet(&lines[i].tags));
-		if (lines[i].special == 98 || lines[i].special == 99)
-			Tag_Add(&lines[i].backsector->tags, Tag_FGet(&lines[i].tags));
+		if (lines[i].special == 96) {
+			size_t j;
+			mtag_t tag = Tag_FGet(&lines[i].frontsector->tags);
+			mtag_t target_tag = Tag_FGet(&lines[i].tags);
+			mtag_t offset_tags[4];
+			memset(offset_tags, 0, sizeof(mtag_t)*4);
+			if (lines[i].flags & ML_EFFECT6) {
+				offset_tags[0] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
+				offset_tags[1] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
+			}
+			if (lines[i].flags & ML_TFERLINE) {
+				offset_tags[2] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
+				offset_tags[3] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
+			}
+
+			for (j = 0; j < numsectors; j++) {
+				boolean matches_target_tag = target_tag && Tag_Find(&sectors[j].tags, target_tag);
+				size_t k; for (k = 0; k < 4; k++) {
+					if (lines[i].flags & ML_EFFECT5) {
+						if (matches_target_tag || (offset_tags[k] && Tag_Find(&sectors[j].tags, offset_tags[k]))) {
+							Tag_Add(&sectors[j].tags, tag);
+							break;
+						}
+					} else if (matches_target_tag) {
+						if (k == 0)
+							Tag_Add(&sectors[j].tags, tag);
+						if (offset_tags[k])
+							Tag_Add(&sectors[j].tags, offset_tags[k]);
+					}
+				}
+			}
+		} else {
+			if (lines[i].special == 97 || lines[i].special == 99)
+				P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
+			if (lines[i].special == 98 || lines[i].special == 99)
+				P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
+		}
 	}
 }
 
@@ -2984,9 +3035,7 @@ static void P_ConvertBinaryMap(void)
 			INT32 check = -1;
 			INT32 paramline = -1;
 
-			TAG_ITER_DECLARECOUNTER(0);
-
-			TAG_ITER_LINES(0, tag, check)
+			TAG_ITER_LINES(tag, check)
 			{
 				if (lines[check].special == 22)
 				{
@@ -3229,11 +3278,9 @@ static void P_ConvertBinaryMap(void)
 			INT32 firstline = -1;
 			mtag_t tag = mapthings[i].angle;
 
-			TAG_ITER_DECLARECOUNTER(0);
-
 			Tag_FSet(&mapthings[i].tags, tag);
 
-			TAG_ITER_LINES(0, tag, check)
+			TAG_ITER_LINES(tag, check)
 			{
 				if (lines[check].special == 20)
 				{
@@ -3443,8 +3490,10 @@ static void P_InitLevelSettings(void)
 	numstarposts = 0;
 	ssspheres = timeinmap = 0;
 
-	// special stage
-	stagefailed = true; // assume failed unless proven otherwise - P_GiveEmerald or emerald touchspecial
+	// Assume Special Stages were failed in unless proven otherwise - via P_GiveEmerald or emerald touchspecial
+	// Normal stages will default to be OK, until a Lua script / linedef executor says otherwise.
+	stagefailed = G_IsSpecialStage(gamemap);
+
 	// Reset temporary record data
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
 
@@ -4223,7 +4272,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	P_ResetWaypoints();
 
-	P_MapStart();
+	P_MapStart(); // tmthing can be used starting from this point
 
 	if (!P_LoadMapFromFile())
 		return false;
@@ -4276,8 +4325,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// clear special respawning que
 	iquehead = iquetail = 0;
 
-	P_MapEnd();
-
 	// Remove the loading shit from the screen
 	if (rendermode != render_none && !(titlemapinaction || reloadinggamestate))
 		F_WipeColorFill(levelfadecol);
@@ -4296,6 +4343,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	levelloading = false;
 
 	P_RunCachedActions();
+
+	P_MapEnd(); // tmthing is no longer needed from this point onwards
 
 	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
 	if (!titlemapinaction)
@@ -4320,7 +4369,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
-		LUAh_MapLoad();
+		P_MapStart(); // just in case MapLoad modifies tmthing
+		LUA_HookInt(gamemap, HOOK(MapLoad));
+		P_MapEnd(); // just in case MapLoad modifies tmthing
 	}
 
 	// No render mode or reloading gamestate, stop here.
@@ -4576,8 +4627,8 @@ boolean P_AddWadFile(const char *wadfilename)
 	//
 	// look for skins
 	//
-	R_AddSkins(wadnum); // faB: wadfile index in wadfiles[]
-	R_PatchSkins(wadnum); // toast: PATCH PATCH
+	R_AddSkins(wadnum, false); // faB: wadfile index in wadfiles[]
+	R_PatchSkins(wadnum, false); // toast: PATCH PATCH
 	ST_ReloadSkinFaceGraphics();
 
 	//

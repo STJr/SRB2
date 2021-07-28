@@ -374,10 +374,9 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean force)
 {
 	INT32 i;
-	TAG_ITER_DECLARECOUNTER(0);
 
 	// search all sectors for ones with tag
-	TAG_ITER_SECTORS(0, tag, i)
+	TAG_ITER_SECTORS(tag, i)
 	{
 		if (!force && ticbased // always let speed fader execute
 			&& sectors[i].lightingdata

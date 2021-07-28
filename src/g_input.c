@@ -31,10 +31,8 @@ consvar_t cv_mouseysens = CVAR_INIT ("mouseysens", "20", CV_SAVE, mousesens_cons
 consvar_t cv_mouseysens2 = CVAR_INIT ("mouseysens2", "20", CV_SAVE, mousesens_cons_t, NULL);
 consvar_t cv_controlperkey = CVAR_INIT ("controlperkey", "One", CV_SAVE, onecontrolperkey_cons_t, NULL);
 
-INT32 mousex, mousey;
-INT32 mlooky; // like mousey but with a custom sensitivity for mlook
-
-INT32 mouse2x, mouse2y, mlook2y;
+mouse_t mouse;
+mouse_t mouse2;
 
 // joystick values are repeated
 INT32 joyxmove[JOYAXISSET], joyymove[JOYAXISSET], joy2xmove[JOYAXISSET], joy2ymove[JOYAXISSET];
@@ -140,11 +138,8 @@ void G_MapEventsToControls(event_t *ev)
 			break;
 
 		case ev_mouse: // buttons are virtual keys
-			if (menuactive || CON_Ready() || chat_on)
-				break;
-			mousex = (INT32)(ev->data2*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1f));
-			mousey = (INT32)(ev->data3*((cv_mousesens.value*cv_mousesens.value)/110.0f + 0.1f));
-			mlooky = (INT32)(ev->data3*((cv_mouseysens.value*cv_mousesens.value)/110.0f + 0.1f));
+			mouse.rdx = ev->data2;
+			mouse.rdy = ev->data3;
 			break;
 
 		case ev_joystick: // buttons are virtual keys
@@ -166,9 +161,8 @@ void G_MapEventsToControls(event_t *ev)
 		case ev_mouse2: // buttons are virtual keys
 			if (menuactive || CON_Ready() || chat_on)
 				break;
-			mouse2x = (INT32)(ev->data2*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1f));
-			mouse2y = (INT32)(ev->data3*((cv_mousesens2.value*cv_mousesens2.value)/110.0f + 0.1f));
-			mlook2y = (INT32)(ev->data3*((cv_mouseysens2.value*cv_mousesens2.value)/110.0f + 0.1f));
+			mouse2.rdx = ev->data2;
+			mouse2.rdy = ev->data3;
 			break;
 
 		default:
@@ -630,7 +624,7 @@ void G_ClearAllControlKeys(void)
 // Returns the name of a key (or virtual key for mouse and joy)
 // the input value being an keynum
 //
-const char *G_KeynumToString(INT32 keynum)
+const char *G_KeyNumToString(INT32 keynum)
 {
 	static char keynamestr[8];
 
@@ -654,7 +648,7 @@ const char *G_KeynumToString(INT32 keynum)
 	return keynamestr;
 }
 
-INT32 G_KeyStringtoNum(const char *keystr)
+INT32 G_KeyStringToNum(const char *keystr)
 {
 	UINT32 j;
 
@@ -817,10 +811,10 @@ void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis
 	for (i = 1; i < num_gamecontrols; i++)
 	{
 		fprintf(f, "setcontrol \"%s\" \"%s\"", gamecontrolname[i],
-			G_KeynumToString(fromcontrols[i][0]));
+			G_KeyNumToString(fromcontrols[i][0]));
 
 		if (fromcontrols[i][1])
-			fprintf(f, " \"%s\"\n", G_KeynumToString(fromcontrols[i][1]));
+			fprintf(f, " \"%s\"\n", G_KeyNumToString(fromcontrols[i][1]));
 		else
 			fprintf(f, "\n");
 	}
@@ -828,10 +822,10 @@ void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis
 	for (i = 1; i < num_gamecontrols; i++)
 	{
 		fprintf(f, "setcontrol2 \"%s\" \"%s\"", gamecontrolname[i],
-			G_KeynumToString(fromcontrolsbis[i][0]));
+			G_KeyNumToString(fromcontrolsbis[i][0]));
 
 		if (fromcontrolsbis[i][1])
-			fprintf(f, " \"%s\"\n", G_KeynumToString(fromcontrolsbis[i][1]));
+			fprintf(f, " \"%s\"\n", G_KeyNumToString(fromcontrolsbis[i][1]));
 		else
 			fprintf(f, "\n");
 	}
@@ -1007,8 +1001,8 @@ static void setcontrol(INT32 (*gc)[2])
 		CONS_Printf(M_GetText("Control '%s' unknown\n"), namectrl);
 		return;
 	}
-	keynum1 = G_KeyStringtoNum(COM_Argv(2));
-	keynum2 = G_KeyStringtoNum(COM_Argv(3));
+	keynum1 = G_KeyStringToNum(COM_Argv(2));
+	keynum2 = G_KeyStringToNum(COM_Argv(3));
 	keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2, &nestedoverride);
 
 	if (keynum >= 0)
@@ -1072,4 +1066,18 @@ void Command_Setcontrol2_f(void)
 	}
 
 	setcontrol(gamecontrolbis);
+}
+
+void G_SetMouseDeltas(INT32 dx, INT32 dy, UINT8 ssplayer)
+{
+	mouse_t *m = ssplayer == 1 ? &mouse : &mouse2;
+	consvar_t *cvsens, *cvysens;
+
+	cvsens = ssplayer == 1 ? &cv_mousesens : &cv_mousesens2;
+	cvysens = ssplayer == 1 ? &cv_mouseysens : &cv_mouseysens2;
+	m->rdx = dx;
+	m->rdy = dy;
+	m->dx = (INT32)(m->rdx*((cvsens->value*cvsens->value)/110.0f + 0.1f));
+	m->dy = (INT32)(m->rdy*((cvsens->value*cvsens->value)/110.0f + 0.1f));
+	m->mlookdy = (INT32)(m->rdy*((cvysens->value*cvsens->value)/110.0f + 0.1f));
 }

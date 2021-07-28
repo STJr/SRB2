@@ -28,6 +28,7 @@
 #include "console.h"
 #include "d_netcmd.h" // IsPlayerAdmin
 #include "m_menu.h" // Player Setup menu color stuff
+#include "m_misc.h" // M_MapNumber
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -212,6 +213,8 @@ static const struct {
 	{META_ACTION,       "action"},
 
 	{META_LUABANKS,     "luabanks[]"},
+
+	{META_MOUSE,        "mouse_t"},
 	{NULL,              NULL}
 };
 
@@ -357,6 +360,23 @@ static int lib_pGetColorAfter(lua_State *L)
 	return 1;
 }
 
+// M_MISC
+//////////////
+
+static int lib_mMapNumber(lua_State *L)
+{
+	const char *arg = luaL_checkstring(L, 1);
+	size_t len = strlen(arg);
+	if (len == 2 || len == 5) {
+		char first = arg[len-2];
+		char second = arg[len-1];
+		lua_pushinteger(L, M_MapNumber(first, second));
+	} else {
+		lua_pushinteger(L, 0);
+	}
+	return 1;
+}
+
 // M_RANDOM
 //////////////
 
@@ -426,7 +446,7 @@ static int lib_pAproxDistance(lua_State *L)
 	fixed_t dx = luaL_checkfixed(L, 1);
 	fixed_t dy = luaL_checkfixed(L, 2);
 	//HUDSAFE
-	lua_pushfixed(L, R_PointToDist2(0, 0, dx, dy));
+	lua_pushfixed(L, P_AproxDistance(dx, dy));
 	return 1;
 }
 
@@ -1044,48 +1064,56 @@ static int lib_pSceneryXYMovement(lua_State *L)
 static int lib_pZMovement(lua_State *L)
 {
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *ptmthing = tmthing;
 	NOHUD
 	INLEVEL
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushboolean(L, P_ZMovement(actor));
 	P_CheckPosition(actor, actor->x, actor->y);
+	P_SetTarget(&tmthing, ptmthing);
 	return 1;
 }
 
 static int lib_pRingZMovement(lua_State *L)
 {
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *ptmthing = tmthing;
 	NOHUD
 	INLEVEL
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	P_RingZMovement(actor);
 	P_CheckPosition(actor, actor->x, actor->y);
+	P_SetTarget(&tmthing, ptmthing);
 	return 0;
 }
 
 static int lib_pSceneryZMovement(lua_State *L)
 {
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *ptmthing = tmthing;
 	NOHUD
 	INLEVEL
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	lua_pushboolean(L, P_SceneryZMovement(actor));
 	P_CheckPosition(actor, actor->x, actor->y);
+	P_SetTarget(&tmthing, ptmthing);
 	return 1;
 }
 
 static int lib_pPlayerZMovement(lua_State *L)
 {
 	mobj_t *actor = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	mobj_t *ptmthing = tmthing;
 	NOHUD
 	INLEVEL
 	if (!actor)
 		return LUA_ErrInvalid(L, "mobj_t");
 	P_PlayerZMovement(actor);
 	P_CheckPosition(actor, actor->x, actor->y);
+	P_SetTarget(&tmthing, ptmthing);
 	return 0;
 }
 
@@ -1472,11 +1500,13 @@ static int lib_pSpawnSkidDust(lua_State *L)
 static int lib_pMovePlayer(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	mobj_t *ptmthing = tmthing;
 	NOHUD
 	INLEVEL
 	if (!player)
 		return LUA_ErrInvalid(L, "player_t");
 	P_MovePlayer(player);
+	P_SetTarget(&tmthing, ptmthing);
 	return 0;
 }
 
@@ -2506,6 +2536,17 @@ static int lib_pGetZAt(lua_State *L)
 	}
 
 	return 1;
+}
+
+static int lib_pButteredSlope(lua_State *L)
+{
+	mobj_t *mobj = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!mobj)
+		return LUA_ErrInvalid(L, "mobj_t");
+	P_ButteredSlope(mobj);
+	return 0;
 }
 
 // R_DEFS
@@ -3713,6 +3754,9 @@ static luaL_Reg lib[] = {
 	{"M_GetColorAfter",lib_pGetColorAfter},
 	{"M_GetColorBefore",lib_pGetColorBefore},
 
+	// m_misc
+	{"M_MapNumber",lib_mMapNumber},
+
 	// m_random
 	{"P_RandomFixed",lib_pRandomFixed},
 	{"P_RandomByte",lib_pRandomByte},
@@ -3883,6 +3927,7 @@ static luaL_Reg lib[] = {
 
 	// p_slopes
 	{"P_GetZAt",lib_pGetZAt},
+	{"P_ButteredSlope",lib_pButteredSlope},
 
 	// r_defs
 	{"R_PointToAngle",lib_rPointToAngle},

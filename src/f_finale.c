@@ -1063,7 +1063,7 @@ boolean F_IntroResponder(event_t *event)
 //  CREDITS
 // =========
 static const char *credits[] = {
-	"\1Sonic Robo Blast II",
+	"\1Sonic Robo Blast 2",
 	"\1Credits",
 	"",
 	"\1Game Design",
@@ -1166,7 +1166,6 @@ static const char *credits[] = {
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"Stefan \"Stuf\" Rimalia",
 	"Shane Mychal Sexton",
-	"\"Spazzo\"",
 	"David \"Big Wave Dave\" Spencer Sr.",
 	"David \"Instant Sonic\" Spencer Jr.",
 	"\"SSNTails\"",
@@ -1191,7 +1190,6 @@ static const char *credits[] = {
 	"\"Revan\"",
 	"Anna \"QueenDelta\" Sandlin",
 	"Wessel \"sphere\" Smit",
-	"\"Spazzo\"",
 	"\"SSNTails\"",
 	"Rob Tisdell",
 	"\"Torgo\"",

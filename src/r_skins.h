@@ -80,8 +80,6 @@ typedef struct
 	// contains super versions too
 	spritedef_t sprites[NUMPLAYERSPRITES*2];
 	spriteinfo_t sprinfo[NUMPLAYERSPRITES*2];
-
-	UINT8 availability; // lock?
 } skin_t;
 
 /// Externs
@@ -91,13 +89,14 @@ extern skin_t skins[MAXSKINS];
 /// Function prototypes
 void R_InitSkins(void);
 
+INT32 GetPlayerDefaultSkin(INT32 playernum);
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
 boolean R_SkinUsable(INT32 playernum, INT32 skinnum);
 UINT32 R_GetSkinAvailabilities(void);
 INT32 R_SkinAvailable(const char *name);
-void R_PatchSkins(UINT16 wadnum);
-void R_AddSkins(UINT16 wadnum);
+void R_AddSkins(UINT16 wadnum, boolean mainfile);
+void R_PatchSkins(UINT16 wadnum, boolean mainfile);
 
 UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
 

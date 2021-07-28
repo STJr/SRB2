@@ -419,16 +419,23 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 			else if (object->player->dashmode >= DASHMODE_THRESHOLD)
 				P_SetPlayerMobjState(object, S_PLAY_DASH);
-			else if (P_IsObjectOnGround(object) && horizspeed >= FixedMul(object->player->runspeed, object->scale))
-				P_SetPlayerMobjState(object, S_PLAY_RUN);
+			else if (P_IsObjectOnGround(object))
+				P_SetPlayerMobjState(object, (horizspeed >= FixedMul(object->player->runspeed, object->scale)) ? S_PLAY_RUN : S_PLAY_WALK);
 			else
-				P_SetPlayerMobjState(object, S_PLAY_WALK);
+				P_SetPlayerMobjState(object, (object->momz > 0) ? S_PLAY_SPRING : S_PLAY_FALL);
 		}
 		else if (P_MobjFlip(object)*vertispeed > 0)
 			P_SetPlayerMobjState(object, S_PLAY_SPRING);
 		else
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 	}
+	else if (horizspeed
+		&& object->tracer
+		&& object->tracer->player
+		&& object->tracer->player->powers[pw_carry] != CR_NONE
+		&& object->tracer->tracer == object
+		&& (!demoplayback || P_ControlStyle(object->tracer->player) == CS_LMAOGALOG))
+			P_SetPlayerAngle(object->tracer->player, spring->angle);
 
 	object->standingslope = NULL; // And again.
 
@@ -747,7 +754,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 
 		// REX HAS SEEN YOU
-		if (!LUAh_SeenPlayer(tmthing->target->player, thing->player))
+		if (!LUA_HookSeenPlayer(tmthing->target->player, thing->player))
 			return false;
 
 		seenplayer = thing->player;
@@ -936,7 +943,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 
 	{
-		UINT8 shouldCollide = LUAh_MobjCollide(thing, tmthing); // checks hook for thing's type
+		UINT8 shouldCollide = LUA_Hook2Mobj(thing, tmthing, MOBJ_HOOK(MobjCollide)); // checks hook for thing's type
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -944,7 +951,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (shouldCollide == 2)
 			return true; // force no collide
 
-		shouldCollide = LUAh_MobjMoveCollide(tmthing, thing); // checks hook for tmthing's type
+		shouldCollide = LUA_Hook2Mobj(tmthing, thing, MOBJ_HOOK(MobjMoveCollide)); // checks hook for tmthing's type
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -1928,7 +1935,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	blockingline = ld;
 
 	{
-		UINT8 shouldCollide = LUAh_MobjLineCollide(tmthing, blockingline); // checks hook for thing's type
+		UINT8 shouldCollide = LUA_HookMobjLineCollide(tmthing, blockingline); // checks hook for thing's type
 		if (P_MobjWasRemoved(tmthing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)

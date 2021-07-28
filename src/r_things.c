@@ -547,8 +547,8 @@ void R_InitSprites(void)
 	R_InitSkins();
 	for (i = 0; i < numwadfiles; i++)
 	{
-		R_AddSkins((UINT16)i);
-		R_PatchSkins((UINT16)i);
+		R_AddSkins((UINT16)i, true);
+		R_PatchSkins((UINT16)i, true);
 		R_LoadSpriteInfoLumps(i, wadfiles[i]->numlumps);
 	}
 	ST_ReloadSkinFaceGraphics();
@@ -753,7 +753,7 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
 			return R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
 		else
-			return R_GetTranslationColormap(TC_BOSS, 0, GTC_CACHE);
+			return R_GetTranslationColormap(TC_BOSS, vis->mobj->color, GTC_CACHE);
 	}
 	else if (vis->mobj->color)
 	{
