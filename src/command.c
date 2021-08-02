@@ -650,7 +650,7 @@ static void COM_ExecuteString(char *ptext)
 			else
 			{ // Monster Iestyn: keep track of how many levels of recursion we're in
 				recursion++;
-				COM_BufInsertText(a->value);
+				COM_BufInsertTextEx(a->value, com_flags);
 				recursion--;
 			}
 			return;
@@ -2366,7 +2366,10 @@ static boolean CV_Command(void)
 		return false;
 
 	if (( com_flags & COM_SAFE ) && ( v->flags & CV_NOLUA ))
-		return false;
+	{
+		CONS_Alert(CONS_WARNING, "Variable '%s' cannot be changed from Lua.\n", v->name);
+		return true;
+	}
 
 	// perform a variable print or set
 	if (COM_Argc() == 1)
