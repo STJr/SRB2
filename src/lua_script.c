@@ -1390,7 +1390,7 @@ static void ArchiveTables(void)
 			if (e == 1)
 				n++; // the table contained a new table we'll have to archive. :(
 			else if (e == 2) // invalid value type
-				CONS_Alert(CONS_ERROR, "Type of value for table %d entry '%s' (%s) could not be archived!\n", i, lua_tostring(gL, -1), luaL_typename(gL, -1));
+				CONS_Alert(CONS_ERROR, "Type of value for table %d entry '%s' (%s) could not be archived!\n", i, lua_tostring(gL, -2), luaL_typename(gL, -1));
 
 			lua_pop(gL, 1);
 		}
