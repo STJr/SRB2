@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,11 +22,15 @@
 #include "mserv.h"
 
 /*
-The 'packet version' is used to distinguish packet formats.
-This version is independent of VERSION and SUBVERSION. Different
-applications may follow different packet versions.
+The 'packet version' is used to distinguish packet
+formats. This version is independent of VERSION and
+SUBVERSION. Different applications may follow different
+packet versions.
+
+If you change the struct or the meaning of a field
+therein, increment this number.
 */
-#define PACKETVERSION 3
+#define PACKETVERSION 4
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -141,9 +145,6 @@ typedef struct
 
 typedef struct
 {
-	UINT8 version; // Different versions don't work
-	UINT8 subversion; // Contains build version
-
 	// Server launch stuffs
 	UINT8 serverplayer;
 	UINT8 totalslotnum; // "Slots": highest player number in use plus one.
@@ -190,15 +191,18 @@ typedef struct
 
 typedef struct
 {
-	UINT8 _255;/* see serverinfo_pak */
-	UINT8 packetversion;
+	UINT8 modversion;
 	char application[MAXAPPLICATION];
-	UINT8 version; // Different versions don't work
-	UINT8 subversion; // Contains build version
 	UINT8 localplayers;
 	UINT8 mode;
 	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME];
 } ATTRPACK clientconfig_pak;
+
+enum {
+	REFUSE_JOINS_DISABLED = 1,
+	REFUSE_SLOTS_FULL,
+	REFUSE_BANNED,
+};
 
 #define MAXSERVERNAME 32
 #define MAXFILENEEDED 915
@@ -217,7 +221,7 @@ typedef struct
 	UINT8 subversion;
 	UINT8 numberofplayer;
 	UINT8 maxplayer;
-	UINT8 refusereason; // 0: joinable, 1: joins disabled, 2: full
+	UINT8 refusereason; // 0: joinable, REFUSE enum
 	char gametypename[24];
 	UINT8 modifiedgame;
 	UINT8 cheatsenabled;

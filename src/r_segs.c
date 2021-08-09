@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1477,10 +1477,18 @@ static void R_RenderSegLoop (void)
 		}
 
 		for (i = 0; i < numffloors; i++)
+		{
+			if (curline->polyseg && (ffloor[i].polyobj != curline->polyseg))
+				continue;
+
 			ffloor[i].f_frac += ffloor[i].f_step;
+		}
 
 		for (i = 0; i < numbackffloors; i++)
 		{
+			if (curline->polyseg && (ffloor[i].polyobj != curline->polyseg))
+				continue;
+
 			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)((ffloor[i].b_frac >> HEIGHTBITS) & 0xFFFF);
 			ffloor[i].b_frac += ffloor[i].b_step;
 		}

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -686,7 +686,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 
 	// run the lua hook even if we were supposed to eat the msg, netgame consistency goes first.
 
-	if (LUAh_PlayerMsg(playernum, target, flags, msg))
+	if (LUA_HookPlayerMsg(playernum, target, flags, msg))
 		return;
 
 	if (spam_eatmsg)
