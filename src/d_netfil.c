@@ -195,7 +195,7 @@ void AllocFileNeeded(INT32 size)
 
 void FreeFileNeeded(void)
 {
-	if (fileneeded == NULL)
+	if (fileneeded)
 		Z_Free(fileneeded);
 	fileneeded = NULL;
 }
