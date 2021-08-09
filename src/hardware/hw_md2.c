@@ -492,7 +492,7 @@ void HWR_InitModels(void)
 	CONS_Printf("HWR_InitModels()...\n");
 
 	if (numskins && md2_playermodels == NULL)
-		md2_playermodels = Z_Malloc(sizeof(md2_t), PU_STATIC, NULL);
+		md2_playermodels = Z_Malloc(sizeof(md2_t) * numskins, PU_STATIC, NULL);
 
 	for (s = 0; s < numskins; s++)
 	{

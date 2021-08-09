@@ -239,11 +239,13 @@ void HWR_ReloadModels(void)
 	size_t i;
 	INT32 s;
 
-	for (s = 0; s < numskins; s++)
-	{
-		if (md2_playermodels[s].model)
-			LoadModelSprite2(md2_playermodels[s].model);
-	}
+	if (md2_playermodels != NULL)
+		for (s = 0; s < numskins; s++)
+		{
+			CONS_Printf("%u\n", s);
+			if (md2_playermodels[s].model)
+				LoadModelSprite2(md2_playermodels[s].model);
+		}
 
 	for (i = 0; i < NUMSPRITES; i++)
 	{
