@@ -328,8 +328,8 @@ model_t *MD2_LoadModel(const char *fileName, int ztag, boolean useFloat)
 	texcoords = (md2texcoord_t*)&buffer[header->offsetST];
 	frames = (md2frame_t*)&buffer[header->offsetFrames];
 
-	retModel->framenames = (char*)Z_Calloc(header->numFrames*16, ztag, 0);
-	fname = retModel->framenames;
+	retModel->frameNames = (char*)Z_Calloc(header->numFrames*16, ztag, 0);
+	fname = retModel->frameNames;
 	for (i = 0; i < header->numFrames; i++)
 	{
 		md2frame_t *fr = (md2frame_t*)&buffer[header->offsetFrames + foffset];

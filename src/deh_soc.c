@@ -1055,7 +1055,7 @@ void readspriteinfo(MYFILE *f, INT32 num, boolean sprite2)
 					for (i = 0; i < foundskins; i++)
 					{
 						size_t skinnum = skinnumbers[i];
-						skin_t *skin = &skins[skinnum];
+						skin_t *skin = skins[skinnum];
 						spriteinfo_t *sprinfo = skin->sprinfo;
 						M_Memcpy(&sprinfo[num], info, sizeof(spriteinfo_t));
 					}

@@ -91,17 +91,14 @@ typedef struct model_s
 {
 	int maxNumFrames;
 
-	int numMaterials;
-	material_t *materials;
 	int numMeshes;
 	mesh_t *meshes;
+	int numMaterials;
+	material_t *materials;
 	int numTags;
 	tag_t *tags;
 
-	char *mdlFilename;
-	boolean unloaded;
-
-	char *framenames;
+	char *frameNames;
 	boolean interpolate[256];
 	modelspr2frames_t *spr2frames;
 

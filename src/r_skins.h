@@ -32,6 +32,7 @@
 typedef struct
 {
 	char name[SKINNAMESIZE+1]; // INT16 descriptive name of the skin
+	UINT32 skinnum;
 	UINT16 wadnum;
 	skinflags_t flags;
 
@@ -84,7 +85,7 @@ typedef struct
 
 /// Externs
 extern INT32 numskins;
-extern skin_t *skins;
+extern skin_t **skins;
 
 /// Function prototypes
 void R_InitSkins(void);

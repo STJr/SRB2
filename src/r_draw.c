@@ -548,7 +548,7 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 	if (skinnum < 0 && skinnum > TC_DEFAULT)
 		I_Error("Invalid translation colormap index %d.", skinnum);
 
-	starttranscolor = (skinnum != TC_DEFAULT) ? skins[skinnum].starttranscolor : DEFAULT_STARTTRANSCOLOR;
+	starttranscolor = (skinnum != TC_DEFAULT) ? skins[skinnum]->starttranscolor : DEFAULT_STARTTRANSCOLOR;
 
 	if (starttranscolor >= NUM_PALETTE_ENTRIES)
 		I_Error("Invalid startcolor #%d.", starttranscolor);

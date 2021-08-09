@@ -1779,7 +1779,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		case 331: // continuous
 		case 332: // each time
 		case 333: // once
-			if (!(actor && actor->player && ((stricmp(triggerline->text, skins[actor->player->skin].name) == 0) ^ ((triggerline->flags & ML_NOCLIMB) == ML_NOCLIMB))))
+			if (!(actor && actor->player && ((stricmp(triggerline->text, skins[actor->player->skin]->name) == 0) ^ ((triggerline->flags & ML_NOCLIMB) == ML_NOCLIMB))))
 				return false;
 			break;
 		case 334: // object dye - continuous

@@ -345,14 +345,14 @@ void ST_LoadGraphics(void)
 // made separate so that skins code can reload custom face graphics
 void ST_LoadFaceGraphics(INT32 skinnum)
 {
-	if (skins[skinnum].sprites[SPR2_XTRA].numframes > XTRA_LIFEPIC)
+	if (skins[skinnum]->sprites[SPR2_XTRA].numframes > XTRA_LIFEPIC)
 	{
-		spritedef_t *sprdef = &skins[skinnum].sprites[SPR2_XTRA];
+		spritedef_t *sprdef = &skins[skinnum]->sprites[SPR2_XTRA];
 		spriteframe_t *sprframe = &sprdef->spriteframes[XTRA_LIFEPIC];
 		faceprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
-		if (skins[skinnum].sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes > XTRA_LIFEPIC)
+		if (skins[skinnum]->sprites[(SPR2_XTRA|FF_SPR2SUPER)].numframes > XTRA_LIFEPIC)
 		{
-			sprdef = &skins[skinnum].sprites[SPR2_XTRA|FF_SPR2SUPER];
+			sprdef = &skins[skinnum]->sprites[SPR2_XTRA|FF_SPR2SUPER];
 			sprframe = &sprdef->spriteframes[0];
 			superprefix[skinnum] = W_CachePatchNum(sprframe->lumppat[0], PU_HUDGFX);
 		}
@@ -960,14 +960,14 @@ static void ST_drawLivesArea(void)
 
 	// name
 	v_colmap |= (V_HUDTRANS|hudinfo[HUD_LIVES].f|V_PERPLAYER);
-	if (strlen(skins[stplyr->skin].hudname) <= 5)
-		V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
-	else if (V_StringWidth(skins[stplyr->skin].hudname, v_colmap) <= 48)
-		V_DrawString(hudinfo[HUD_LIVES].x+18, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
-	else if (V_ThinStringWidth(skins[stplyr->skin].hudname, v_colmap) <= 40)
-		V_DrawRightAlignedThinString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
+	if (strlen(skins[stplyr->skin]->hudname) <= 5)
+		V_DrawRightAlignedString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin]->hudname);
+	else if (V_StringWidth(skins[stplyr->skin]->hudname, v_colmap) <= 48)
+		V_DrawString(hudinfo[HUD_LIVES].x+18, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin]->hudname);
+	else if (V_ThinStringWidth(skins[stplyr->skin]->hudname, v_colmap) <= 40)
+		V_DrawRightAlignedThinString(hudinfo[HUD_LIVES].x+58, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin]->hudname);
 	else
-		V_DrawThinString(hudinfo[HUD_LIVES].x+18, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin].hudname);
+		V_DrawThinString(hudinfo[HUD_LIVES].x+18, hudinfo[HUD_LIVES].y, v_colmap, skins[stplyr->skin]->hudname);
 
 	// Power Stones collected
 	if (G_RingSlingerGametype() && LUA_HudEnabled(hud_powerstones))

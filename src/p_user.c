@@ -682,8 +682,8 @@ static void P_DeNightserizePlayer(player_t *player)
 
 	player->mo->flags &= ~MF_NOGRAVITY;
 
-	player->mo->skin = &skins[player->skin];
-	player->followitem = skins[player->skin].followitem;
+	player->mo->skin = skins[player->skin];
+	player->followitem = skins[player->skin]->followitem;
 	player->mo->color = player->skincolor;
 	G_GhostAddColor(GHC_RETURNSKIN);
 
@@ -785,12 +785,12 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 		player->mo->height = P_GetPlayerHeight(player); // Just to make sure jumping into the drone doesn't result in a squashed hitbox.
 		player->oldscale = player->mo->scale;
 
-		if (skins[player->skin].sprites[SPR2_NFLY].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+		if (skins[player->skin]->sprites[SPR2_NFLY].numframes == 0) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 		{
-			player->mo->skin = &skins[DEFAULTNIGHTSSKIN];
+			player->mo->skin = skins[DEFAULTNIGHTSSKIN];
 			if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
-				player->mo->color = skins[DEFAULTNIGHTSSKIN].prefcolor;
-			player->followitem = skins[DEFAULTNIGHTSSKIN].followitem;
+				player->mo->color = skins[DEFAULTNIGHTSSKIN]->prefcolor;
+			player->followitem = skins[DEFAULTNIGHTSSKIN]->followitem;
 			G_GhostAddColor(GHC_NIGHTSSKIN);
 		}
 	}
@@ -4264,7 +4264,7 @@ static void P_DoSuperStuff(player_t *player)
 
 		player->mo->color = (player->pflags & PF_GODMODE && cv_debug == 0)
 		? (SKINCOLOR_SUPERSILVER1 + 5*(((signed)leveltime >> 1) % 7)) // A wholesome easter egg.
-		: skins[player->skin].supercolor + abs( ( (player->powers[pw_super] >> 1) % 9) - 4); // This is where super flashing is handled.
+		: skins[player->skin]->supercolor + abs( ( (player->powers[pw_super] >> 1) % 9) - 4); // This is where super flashing is handled.
 
 		G_GhostAddColor(GHC_SUPER);
 
@@ -11469,7 +11469,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	P_SetThingPosition(fume);
 
 	// If dashmode is high enough, spawn a trail
-	if (player->normalspeed >= skins[player->skin].normalspeed*2)
+	if (player->normalspeed >= skins[player->skin]->normalspeed*2)
 		P_SpawnGhostMobj(fume);
 }
 
@@ -12294,20 +12294,20 @@ void P_PlayerThink(player_t *player)
 		{
 			if (prevdashmode >= DASHMODE_THRESHOLD)
 			{
-				player->normalspeed = skins[player->skin].normalspeed; // Reset to default if not capable of entering dash mode.
-				player->jumpfactor = skins[player->skin].jumpfactor;
+				player->normalspeed = skins[player->skin]->normalspeed; // Reset to default if not capable of entering dash mode.
+				player->jumpfactor = skins[player->skin]->jumpfactor;
 			}
 		}
 		else if (P_IsObjectOnGround(player->mo)) // Activate dash mode if we're on the ground.
 		{
-			if (player->normalspeed < skins[player->skin].normalspeed*2) // If the player normalspeed is not currently at normalspeed*2 in dash mode, add speed each tic
+			if (player->normalspeed < skins[player->skin]->normalspeed*2) // If the player normalspeed is not currently at normalspeed*2 in dash mode, add speed each tic
 				player->normalspeed += FRACUNIT/5; // Enter Dash Mode smoothly.
 
-			if (player->jumpfactor < FixedMul(skins[player->skin].jumpfactor, 5*FRACUNIT/4)) // Boost jump height.
+			if (player->jumpfactor < FixedMul(skins[player->skin]->jumpfactor, 5*FRACUNIT/4)) // Boost jump height.
 				player->jumpfactor += FRACUNIT/300;
 		}
 
-		if (player->normalspeed >= skins[player->skin].normalspeed*2)
+		if (player->normalspeed >= skins[player->skin]->normalspeed*2)
 		{
 			mobj_t *ghost = P_SpawnGhostMobj(player->mo); // Spawns afterimages
 			ghost->fuse = 2; // Makes the images fade quickly
@@ -12319,8 +12319,8 @@ void P_PlayerThink(player_t *player)
 	{
 		if (dashmode >= DASHMODE_THRESHOLD) // catch getting the flag!
 		{
-			player->normalspeed = skins[player->skin].normalspeed;
-			player->jumpfactor = skins[player->skin].jumpfactor;
+			player->normalspeed = skins[player->skin]->normalspeed;
+			player->jumpfactor = skins[player->skin]->jumpfactor;
 			S_StartSound(player->mo, sfx_kc65);
 		}
 		dashmode = 0;

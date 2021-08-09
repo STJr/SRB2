@@ -33,7 +33,7 @@
 #endif
 
 INT32 numskins = 0;
-skin_t *skins = NULL;
+skin_t **skins = NULL;
 
 //
 // P_GetSkinSprite2
@@ -100,7 +100,7 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	//
 	memset(skin, 0, sizeof (skin_t));
 	snprintf(skin->name,
-		sizeof skin->name, "skin %u", (UINT32)(skin-skins));
+		sizeof skin->name, "skin %u", (UINT32)(skin->skinnum));
 	skin->name[sizeof skin->name - 1] = '\0';
 	skin->wadnum = INT16_MAX;
 
@@ -221,7 +221,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 		// Force 2.
 		return true;
 	}
-	
+
 	if (metalrecording && skinnum == 5)
 	{
 		// Force 3.
@@ -268,7 +268,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 	}
 }
 
-// returns true if the skin name is found (loaded from pwad)
+// returns the skin number if the skin name is found (loaded from pwad)
 // warning return -1 if not found
 INT32 R_SkinAvailable(const char *name)
 {
@@ -277,8 +277,8 @@ INT32 R_SkinAvailable(const char *name)
 	for (i = 0; i < numskins; i++)
 	{
 		// search in the skin list
-		if (stricmp(skins[i].name,name)==0)
-			return i;
+		if (!stricmp(skins[i]->name,name))
+			return skins[i]->skinnum;
 	}
 	return -1;
 }
@@ -286,7 +286,7 @@ INT32 R_SkinAvailable(const char *name)
 // Auxillary function that actually sets the skin
 static void SetSkin(player_t *player, INT32 skinnum)
 {
-	skin_t *skin = &skins[skinnum];
+	skin_t *skin = skins[skinnum];
 	UINT16 newcolor = 0;
 
 	player->skin = skinnum;
@@ -347,7 +347,7 @@ static void SetSkin(player_t *player, INT32 skinnum)
 		fixed_t radius = FixedMul(skin->radius, player->mo->scale);
 		if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NFLY].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
 		{
-			skin = &skins[DEFAULTNIGHTSSKIN];
+			skin = skins[DEFAULTNIGHTSSKIN];
 			player->followitem = skin->followitem;
 			if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
 				newcolor = skin->prefcolor; // will be updated in thinker to flashing
@@ -687,9 +687,10 @@ void R_AddSkins(UINT16 wadnum, boolean mainfile)
 		buf2[size] = '\0';
 
 		// set defaults
-		skins = Z_Realloc(skins, sizeof(skin_t) * (numskins + 1), PU_STATIC, NULL);
-		skin = &skins[numskins];
+		skins = Z_Realloc(skins, sizeof(skin_t*) * (numskins + 1), PU_STATIC, NULL);
+		skin = skins[numskins] = Z_Calloc(sizeof(skin_t), PU_STATIC, NULL);
 		Sk_SetDefaultValue(skin);
+		skin->skinnum = numskins;
 		skin->wadnum = wadnum;
 		hudname = realname = false;
 		// parse
@@ -785,11 +786,6 @@ next_token:
 			CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
 
 		numskins++;
-
-#ifdef HWRENDER
-		if (rendermode == render_opengl)
-			HWR_AddPlayerModel(numskins-1);
-#endif
 	}
 	return;
 }
@@ -858,7 +854,7 @@ void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 					strlwr(value);
 					skinnum = R_SkinAvailable(value);
 					if (skinnum != -1)
-						skin = &skins[skinnum];
+						skin = skins[skinnum];
 					else
 					{
 						CONS_Debug(DBG_SETUP, "R_PatchSkins: unknown skin name in P_SKIN lump# %d(%s) in WAD %s\n", lump, W_CheckNameForNumPwad(wadnum,lump), wadfiles[wadnum]->filename);
