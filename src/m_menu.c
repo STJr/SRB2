@@ -9111,7 +9111,7 @@ static UINT16 M_SetupChoosePlayerDirect(INT32 choice)
 {
 	INT32 skinnum, botskinnum;
 	UINT16 i;
-	UINT16 firstvalid = 65535, lastvalid = 65535;
+	INT32 firstvalid = INT32_MAX, lastvalid = INT32_MAX;
 	boolean allowed = false;
 	(void)choice;
 
@@ -9155,7 +9155,7 @@ static UINT16 M_SetupChoosePlayerDirect(INT32 choice)
 				}
 
 				// Handling order.
-				if (firstvalid == 65535)
+				if (firstvalid == INT32_MAX)
 					firstvalid = i;
 				else
 				{
@@ -9518,7 +9518,7 @@ static void M_ChoosePlayer(INT32 choice)
 	UINT8 skinnum;
 
 	// skip this if forcecharacter or no characters available
-	if (choice == 65535)
+	if (choice == INT32_MAX)
 	{
 		skinnum = botskin = 0;
 		botingame = false;

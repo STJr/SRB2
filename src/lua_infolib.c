@@ -30,9 +30,6 @@
 #include "lua_hud.h" // hud_running errors
 #include "lua_hook.h" // hook_cmd_running errors
 
-extern CV_PossibleValue_t Color_cons_t[];
-extern UINT8 skincolor_modified[];
-
 boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor);
 state_t *astate;
 

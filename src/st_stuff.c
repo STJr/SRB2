@@ -128,8 +128,6 @@ static patch_t *gotrflag;
 static patch_t *gotbflag;
 static patch_t *fnshico;
 
-static boolean facefreed[MAXPLAYERS];
-
 hudinfo_t hudinfo[NUMHUDITEMS] =
 {
 	{  16, 176, V_SNAPTOLEFT|V_SNAPTOBOTTOM}, // HUD_LIVES
@@ -361,17 +359,14 @@ void ST_LoadFaceGraphics(INT32 skinnum)
 	}
 	else
 		faceprefix[skinnum] = superprefix[skinnum] = W_CachePatchName("MISSING", PU_HUDGFX); // ditto
-	facefreed[skinnum] = false;
 }
 
 void ST_ReloadSkinFaceGraphics(void)
 {
 	INT32 i;
 
-	if (faceprefix)
-		Z_Free(faceprefix);
-	if (superprefix)
-		Z_Free(superprefix);
+	Z_Free(faceprefix);
+	Z_Free(superprefix);
 
 	if (!numskins)
 		return;
@@ -421,11 +416,6 @@ lumpnum_t st_borderpatchnum;
 
 void ST_Init(void)
 {
-	INT32 i;
-
-	for (i = 0; i < MAXPLAYERS; i++)
-		facefreed[i] = true;
-
 	if (dedicated)
 		return;
 
