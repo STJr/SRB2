@@ -31,8 +31,8 @@
 /// The skin_t struct
 typedef struct
 {
-	char name[SKINNAMESIZE+1]; // INT16 descriptive name of the skin
-	UINT32 skinnum;
+	char name[SKINNAMESIZE+1]; // name of the skin
+	UINT8 skinnum;
 	UINT16 wadnum;
 	skinflags_t flags;
 

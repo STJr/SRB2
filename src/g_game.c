@@ -2488,7 +2488,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	UINT8 laps;
 	UINT8 mare;
 	UINT16 skincolor;
-	INT32 skin;
+	UINT8 skin;
 	UINT32 availabilities;
 	tic_t jointime;
 	tic_t quittime;

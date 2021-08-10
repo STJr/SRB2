@@ -1271,7 +1271,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		// 2. draw model with correct position, rotation,...
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY) // Use the player MD2 list if the mobj has a skin and is using the player sprites
 		{
-			INT32 skinnum = ((skin_t*)spr->mobj->skin)->skinnum;
+			UINT8 skinnum = ((skin_t*)spr->mobj->skin)->skinnum;
 			md2 = &md2_playermodels[skinnum];
 			sprinfo = &((skin_t *)spr->mobj->skin)->sprinfo[spr->mobj->sprite2];
 		}

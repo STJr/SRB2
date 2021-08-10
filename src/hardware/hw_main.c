@@ -5359,7 +5359,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		}
 		else if (thing->skin && thing->sprite == SPR_PLAY) // This thing is a player!
 		{
-			INT32 skinnum = ((skin_t*)thing->skin)->skinnum;
+			UINT8 skinnum = ((skin_t*)thing->skin)->skinnum;
 			vis->colormap = R_GetTranslationColormap(skinnum, thing->color, GTC_CACHE);
 		}
 		else

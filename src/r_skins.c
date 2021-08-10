@@ -278,7 +278,7 @@ INT32 R_SkinAvailable(const char *name)
 	{
 		// search in the skin list
 		if (!stricmp(skins[i]->name,name))
-			return skins[i]->skinnum;
+			return i;
 	}
 	return -1;
 }

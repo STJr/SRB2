@@ -764,7 +764,7 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 		}
 		else if (!(vis->cut & SC_PRECIP) && vis->mobj->skin && vis->mobj->sprite == SPR_PLAY) // This thing is a player!
 		{
-			INT32 skinnum = ((skin_t*)vis->mobj->skin)->skinnum;
+			UINT8 skinnum = ((skin_t*)vis->mobj->skin)->skinnum;
 			return R_GetTranslationColormap(skinnum, vis->mobj->color, GTC_CACHE);
 		}
 		else // Use the defaults

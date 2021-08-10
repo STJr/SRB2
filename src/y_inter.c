@@ -1617,7 +1617,7 @@ static void Y_CalculateMatchWinners(void)
 			{
 				data.match.scores[data.match.numplayers] = players[i].score;
 				data.match.color[data.match.numplayers] = &players[i].skincolor;
-				data.match.character[data.match.numplayers] = &players[i].skin;
+				data.match.character[data.match.numplayers] = players[i].skin;
 				data.match.name[data.match.numplayers] = player_names[i];
 				data.match.spectator[data.match.numplayers] = players[i].spectator;
 				data.match.num[data.match.numplayers] = i;
@@ -1662,7 +1662,7 @@ static void Y_CalculateTimeRaceWinners(void)
 			{
 				data.match.scores[data.match.numplayers] = players[i].realtime;
 				data.match.color[data.match.numplayers] = &players[i].skincolor;
-				data.match.character[data.match.numplayers] = &players[i].skin;
+				data.match.character[data.match.numplayers] = players[i].skin;
 				data.match.name[data.match.numplayers] = player_names[i];
 				data.match.num[data.match.numplayers] = i;
 			}
@@ -1788,7 +1788,7 @@ static void Y_CalculateCompetitionWinners(void)
 		strncpy(data.competition.name[data.competition.numplayers], tempname, 9);
 
 		data.competition.color[data.competition.numplayers] = &players[winner].skincolor;
-		data.competition.character[data.competition.numplayers] = &players[winner].skin;
+		data.competition.character[data.competition.numplayers] = players[winner].skin;
 
 		completed[winner] = true;
 		data.competition.numplayers++;
@@ -2110,7 +2110,7 @@ static void Y_AwardSpecialStageBonus(void)
 			if (players[i].gotcontinue)
 				data.spec.continues |= 0x80;
 			data.spec.playercolor = &players[i].skincolor;
-			data.spec.playerchar = &players[i].skin;
+			data.spec.playerchar = players[i].skin;
 		}
 	}
 }

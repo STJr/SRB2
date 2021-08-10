@@ -375,10 +375,8 @@ typedef struct
 	patch_t *charpic;
 	UINT8 prev;
 	UINT8 next;
-
-	// new character select
 	char displayname[SKINNAMESIZE+1];
-	SINT8 skinnum[2];
+	INT16 skinnum[2];
 	UINT16 oppositecolor;
 	char nametag[8];
 	patch_t *namepic;
