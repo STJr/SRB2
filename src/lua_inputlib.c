@@ -127,19 +127,19 @@ static int lib_getCursorPosition(lua_State *L)
 }
 
 static luaL_Reg lib[] = {
-	{"G_GameControlDown", lib_gameControlDown},
-	{"G_GameControl2Down", lib_gameControl2Down},
-	{"G_GameControlToKeyNum", lib_gameControlToKeyNum},
-	{"G_GameControl2ToKeyNum", lib_gameControl2ToKeyNum},
-	{"G_JoyAxis", lib_joyAxis},
-	{"G_Joy2Axis", lib_joy2Axis},
-	{"G_KeyNumToString", lib_keyNumToString},
-	{"G_KeyStringToNum", lib_keyStringToNum},
-	{"HU_KeyNumPrintable", lib_keyNumPrintable},
-	{"HU_ShiftKeyNum", lib_shiftKeyNum},
-	{"I_GetMouseGrab", lib_getMouseGrab},
-	{"I_SetMouseGrab", lib_setMouseGrab},
-	{"I_GetCursorPosition", lib_getCursorPosition},
+	{"gameControlDown", lib_gameControlDown},
+	{"gameControl2Down", lib_gameControl2Down},
+	{"gameControlToKeyNum", lib_gameControlToKeyNum},
+	{"gameControl2ToKeyNum", lib_gameControl2ToKeyNum},
+	{"joyAxis", lib_joyAxis},
+	{"joy2Axis", lib_joy2Axis},
+	{"keyNumToString", lib_keyNumToString},
+	{"keyStringToNum", lib_keyStringToNum},
+	{"keyNumPrintable", lib_keyNumPrintable},
+	{"shiftKeyNum", lib_shiftKeyNum},
+	{"getMouseGrab", lib_getMouseGrab},
+	{"setMouseGrab", lib_setMouseGrab},
+	{"getCursorPosition", lib_getCursorPosition},
 	{NULL, NULL}
 };
 
@@ -235,8 +235,6 @@ int LUA_InputLib(lua_State *L)
 		lua_setfield(L, -2, "__len");
 	lua_pop(L, 1);
 
-	// Set global functions
-	lua_pushvalue(L, LUA_GLOBALSINDEX);
-	luaL_register(L, NULL, lib);
+	luaL_register(L, "input", lib);
 	return 0;
 }
