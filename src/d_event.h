@@ -36,6 +36,7 @@ typedef struct
 	INT32 data1; // keys / mouse/joystick buttons
 	INT32 data2; // mouse/joystick x move
 	INT32 data3; // mouse/joystick y move
+	boolean repeated; // key repeat
 } event_t;
 
 //

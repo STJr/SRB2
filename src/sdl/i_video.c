@@ -664,6 +664,7 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 		return;
 	}
 	event.data1 = Impl_SDL_Scancode_To_Keycode(evt.keysym.scancode);
+	event.repeated = (evt.repeat != 0);
 	if (event.data1) D_PostEvent(&event);
 }
 
