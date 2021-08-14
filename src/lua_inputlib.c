@@ -172,6 +172,29 @@ static int lib_lenGameKeyDown(lua_State *L)
 	return 1;
 }
 
+///////////////
+// KEY EVENT //
+///////////////
+
+static int keyevent_get(lua_State *L)
+{
+	event_t *event = *((event_t **)luaL_checkudata(L, 1, META_KEYEVENT));
+	const char *field = luaL_checkstring(L, 2);
+
+	I_Assert(event != NULL);
+
+	if (fastcmp(field,"name"))
+		lua_pushstring(L, G_KeyNumToString(event->data1));
+	else if (fastcmp(field,"num"))
+		lua_pushinteger(L, event->data1);
+	else if (fastcmp(field,"repeated"))
+		lua_pushboolean(L, event->repeated);
+	else
+		return luaL_error(L, "keyevent_t has no field named %s", field);
+
+	return 1;
+}
+
 ///////////
 // MOUSE //
 ///////////
@@ -226,6 +249,11 @@ int LUA_InputLib(lua_State *L)
 			lua_setfield(L, -2, "__len");
 		lua_setmetatable(L, -2);
 	lua_setglobal(L, "gamekeydown");
+
+	luaL_newmetatable(L, META_KEYEVENT);
+		lua_pushcfunction(L, keyevent_get);
+		lua_setfield(L, -2, "__index");
+	lua_pop(L, 1);
 
 	luaL_newmetatable(L, META_MOUSE);
 		lua_pushcfunction(L, mouse_get);
