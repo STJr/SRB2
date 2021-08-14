@@ -913,12 +913,12 @@ boolean CON_Responder(event_t *ev)
 	// let go keyup events, don't eat them
 	if (ev->type != ev_keydown && ev->type != ev_console)
 	{
-		if (ev->data1 == gamecontrol[gc_console][0] || ev->data1 == gamecontrol[gc_console][1])
+		if (ev->key == gamecontrol[gc_console][0] || ev->key == gamecontrol[gc_console][1])
 			consdown = false;
 		return false;
 	}
 
-	key = ev->data1;
+	key = ev->key;
 
 	// check for console toggle key
 	if (ev->type != ev_console)

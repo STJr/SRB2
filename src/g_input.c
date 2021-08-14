@@ -115,54 +115,54 @@ void G_MapEventsToControls(event_t *ev)
 	switch (ev->type)
 	{
 		case ev_keydown:
-			if (ev->data1 < NUMINPUTS)
-				gamekeydown[ev->data1] = 1;
+			if (ev->key < NUMINPUTS)
+				gamekeydown[ev->key] = 1;
 #ifdef PARANOIA
 			else
 			{
-				CONS_Debug(DBG_GAMELOGIC, "Bad downkey input %d\n",ev->data1);
+				CONS_Debug(DBG_GAMELOGIC, "Bad downkey input %d\n",ev->key);
 			}
 
 #endif
 			break;
 
 		case ev_keyup:
-			if (ev->data1 < NUMINPUTS)
-				gamekeydown[ev->data1] = 0;
+			if (ev->key < NUMINPUTS)
+				gamekeydown[ev->key] = 0;
 #ifdef PARANOIA
 			else
 			{
-				CONS_Debug(DBG_GAMELOGIC, "Bad upkey input %d\n",ev->data1);
+				CONS_Debug(DBG_GAMELOGIC, "Bad upkey input %d\n",ev->key);
 			}
 #endif
 			break;
 
 		case ev_mouse: // buttons are virtual keys
-			mouse.rdx = ev->data2;
-			mouse.rdy = ev->data3;
+			mouse.rdx = ev->x;
+			mouse.rdy = ev->y;
 			break;
 
 		case ev_joystick: // buttons are virtual keys
-			i = ev->data1;
+			i = ev->key;
 			if (i >= JOYAXISSET || menuactive || CON_Ready() || chat_on)
 				break;
-			if (ev->data2 != INT32_MAX) joyxmove[i] = ev->data2;
-			if (ev->data3 != INT32_MAX) joyymove[i] = ev->data3;
+			if (ev->x != INT32_MAX) joyxmove[i] = ev->x;
+			if (ev->y != INT32_MAX) joyymove[i] = ev->y;
 			break;
 
 		case ev_joystick2: // buttons are virtual keys
-			i = ev->data1;
+			i = ev->key;
 			if (i >= JOYAXISSET || menuactive || CON_Ready() || chat_on)
 				break;
-			if (ev->data2 != INT32_MAX) joy2xmove[i] = ev->data2;
-			if (ev->data3 != INT32_MAX) joy2ymove[i] = ev->data3;
+			if (ev->x != INT32_MAX) joy2xmove[i] = ev->x;
+			if (ev->y != INT32_MAX) joy2ymove[i] = ev->y;
 			break;
 
 		case ev_mouse2: // buttons are virtual keys
 			if (menuactive || CON_Ready() || chat_on)
 				break;
-			mouse2.rdx = ev->data2;
-			mouse2.rdy = ev->data3;
+			mouse2.rdx = ev->x;
+			mouse2.rdy = ev->y;
 			break;
 
 		default:

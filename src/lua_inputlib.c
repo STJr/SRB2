@@ -184,9 +184,9 @@ static int keyevent_get(lua_State *L)
 	I_Assert(event != NULL);
 
 	if (fastcmp(field,"name"))
-		lua_pushstring(L, G_KeyNumToString(event->data1));
+		lua_pushstring(L, G_KeyNumToString(event->key));
 	else if (fastcmp(field,"num"))
-		lua_pushinteger(L, event->data1);
+		lua_pushinteger(L, event->key);
 	else if (fastcmp(field,"repeated"))
 		lua_pushboolean(L, event->repeated);
 	else

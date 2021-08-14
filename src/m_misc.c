@@ -1631,7 +1631,7 @@ boolean M_ScreenshotResponder(event_t *ev)
 	if (dedicated || ev->type != ev_keydown)
 		return false;
 
-	ch = ev->data1;
+	ch = ev->key;
 
 	if (ch >= KEY_MOUSE1 && menuactive) // If it's not a keyboard key, then don't allow it in the menus!
 		return false;

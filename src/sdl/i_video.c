@@ -663,9 +663,9 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 	{
 		return;
 	}
-	event.data1 = Impl_SDL_Scancode_To_Keycode(evt.keysym.scancode);
+	event.key = Impl_SDL_Scancode_To_Keycode(evt.keysym.scancode);
 	event.repeated = (evt.repeat != 0);
-	if (event.data1) D_PostEvent(&event);
+	if (event.key) D_PostEvent(&event);
 }
 
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
@@ -743,15 +743,15 @@ static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
 		}
 		else return;
 		if (evt.button == SDL_BUTTON_MIDDLE)
-			event.data1 = KEY_MOUSE1+2;
+			event.key = KEY_MOUSE1+2;
 		else if (evt.button == SDL_BUTTON_RIGHT)
-			event.data1 = KEY_MOUSE1+1;
+			event.key = KEY_MOUSE1+1;
 		else if (evt.button == SDL_BUTTON_LEFT)
-			event.data1 = KEY_MOUSE1;
+			event.key = KEY_MOUSE1;
 		else if (evt.button == SDL_BUTTON_X1)
-			event.data1 = KEY_MOUSE1+3;
+			event.key = KEY_MOUSE1+3;
 		else if (evt.button == SDL_BUTTON_X2)
-			event.data1 = KEY_MOUSE1+4;
+			event.key = KEY_MOUSE1+4;
 		if (event.type == ev_keyup || event.type == ev_keydown)
 		{
 			D_PostEvent(&event);
@@ -767,17 +767,17 @@ static void Impl_HandleMouseWheelEvent(SDL_MouseWheelEvent evt)
 
 	if (evt.y > 0)
 	{
-		event.data1 = KEY_MOUSEWHEELUP;
+		event.key = KEY_MOUSEWHEELUP;
 		event.type = ev_keydown;
 	}
 	if (evt.y < 0)
 	{
-		event.data1 = KEY_MOUSEWHEELDOWN;
+		event.key = KEY_MOUSEWHEELDOWN;
 		event.type = ev_keydown;
 	}
 	if (evt.y == 0)
 	{
-		event.data1 = 0;
+		event.key = 0;
 		event.type = ev_keyup;
 	}
 	if (event.type == ev_keyup || event.type == ev_keydown)
@@ -796,7 +796,7 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	joyid[1] = SDL_JoystickInstanceID(JoyInfo2.dev);
 
 	evt.axis++;
-	event.data1 = event.data2 = event.data3 = INT32_MAX;
+	event.key = event.x = event.y = INT32_MAX;
 
 	if (evt.which == joyid[0])
 	{
@@ -813,14 +813,14 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	//vaule
 	if (evt.axis%2)
 	{
-		event.data1 = evt.axis / 2;
-		event.data2 = SDLJoyAxis(evt.value, event.type);
+		event.key = evt.axis / 2;
+		event.x = SDLJoyAxis(evt.value, event.type);
 	}
 	else
 	{
 		evt.axis--;
-		event.data1 = evt.axis / 2;
-		event.data3 = SDLJoyAxis(evt.value, event.type);
+		event.key = evt.axis / 2;
+		event.y = SDLJoyAxis(evt.value, event.type);
 	}
 	D_PostEvent(&event);
 }
@@ -840,11 +840,11 @@ static void Impl_HandleJoystickHatEvent(SDL_JoyHatEvent evt)
 
 	if (evt.which == joyid[0])
 	{
-		event.data1 = KEY_HAT1 + (evt.hat*4);
+		event.key = KEY_HAT1 + (evt.hat*4);
 	}
 	else if (evt.which == joyid[1])
 	{
-		event.data1 = KEY_2HAT1 + (evt.hat*4);
+		event.key = KEY_2HAT1 + (evt.hat*4);
 	}
 	else return;
 
@@ -863,11 +863,11 @@ static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 
 	if (evt.which == joyid[0])
 	{
-		event.data1 = KEY_JOY1;
+		event.key = KEY_JOY1;
 	}
 	else if (evt.which == joyid[1])
 	{
-		event.data1 = KEY_2JOY1;
+		event.key = KEY_2JOY1;
 	}
 	else return;
 	if (type == SDL_JOYBUTTONUP)
@@ -881,7 +881,7 @@ static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 	else return;
 	if (evt.button < JOYBUTTONS)
 	{
-		event.data1 += evt.button;
+		event.key += evt.button;
 	}
 	else return;
 
@@ -1085,9 +1085,9 @@ void I_GetEvent(void)
 		SDL_GetWindowSize(window, &wwidth, &wheight);
 		//SDL_memset(&event, 0, sizeof(event_t));
 		event.type = ev_mouse;
-		event.data1 = 0;
-		event.data2 = (INT32)lround(mousemovex * ((float)wwidth / (float)realwidth));
-		event.data3 = (INT32)lround(mousemovey * ((float)wheight / (float)realheight));
+		event.key = 0;
+		event.x = (INT32)lround(mousemovex * ((float)wwidth / (float)realwidth));
+		event.y = (INT32)lround(mousemovey * ((float)wheight / (float)realheight));
 		D_PostEvent(&event);
 	}
 
