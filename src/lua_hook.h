@@ -13,6 +13,7 @@
 #include "r_defs.h"
 #include "d_player.h"
 #include "s_sound.h"
+#include "d_event.h"
 
 /*
 Do you know what an 'X Macro' is? Such a macro is called over each element of
@@ -107,7 +108,7 @@ void LUA_HookInt(INT32 integer, int hook);
 void LUA_HookBool(boolean value, int hook);
 int  LUA_HookPlayer(player_t *, int hook);
 int  LUA_HookTiccmd(player_t *, ticcmd_t *, int hook);
-int  LUA_HookKey(INT32 keycode, int hook); // Hooks for key events
+int  LUA_HookKey(event_t *event, int hook); // Hooks for key events
 
 void LUA_HookThinkFrame(void);
 int  LUA_HookMobjLineCollide(mobj_t *, line_t *);

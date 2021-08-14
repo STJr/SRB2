@@ -45,6 +45,7 @@
 #include "lua_hook.h"
 #include "b_bot.h"
 #include "m_cond.h" // condition sets
+#include "lua_script.h"
 
 #include "lua_hud.h"
 
@@ -2194,8 +2195,20 @@ boolean G_Responder(event_t *ev)
 //
 boolean G_LuaResponder(event_t *ev)
 {
-	return (ev->type == ev_keydown && LUA_HookKey(ev->data1, HOOK(KeyDown))) ||
-		(ev->type == ev_keyup && LUA_HookKey(ev->data1, HOOK(KeyUp)));
+	boolean cancelled = false;
+
+	if (ev->type == ev_keydown)
+	{
+		cancelled = LUA_HookKey(ev, HOOK(KeyDown));
+		LUA_InvalidateUserdata(ev);
+	}
+	else if (ev->type == ev_keyup)
+	{
+		cancelled = LUA_HookKey(ev, HOOK(KeyUp));
+		LUA_InvalidateUserdata(ev);
+	}
+
+	return cancelled;
 }
 
 //
@@ -5240,4 +5253,3 @@ INT32 G_TicsToMilliseconds(tic_t tics)
 {
 	return (INT32)((tics%TICRATE) * (1000.00f/TICRATE));
 }
-

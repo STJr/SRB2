@@ -588,12 +588,12 @@ int LUA_HookTiccmd(player_t *player, ticcmd_t *cmd, int hook_type)
 	return hook.status;
 }
 
-int LUA_HookKey(INT32 keycode, int hook_type)
+int LUA_HookKey(event_t *event, int hook_type)
 {
 	Hook_State hook;
 	if (prepare_hook(&hook, false, hook_type))
 	{
-		lua_pushinteger(gL, keycode);
+		LUA_PushUserdata(gL, event, META_KEYEVENT);
 		call_hooks(&hook, 1, 1, res_true);
 	}
 	return hook.status;
