@@ -58,49 +58,49 @@ typedef enum
 
 typedef enum
 {
-	gc_null = 0, // a key/button mapped to gc_null has no effect
-	gc_forward,
-	gc_backward,
-	gc_strafeleft,
-	gc_straferight,
-	gc_turnleft,
-	gc_turnright,
-	gc_weaponnext,
-	gc_weaponprev,
-	gc_wepslot1,
-	gc_wepslot2,
-	gc_wepslot3,
-	gc_wepslot4,
-	gc_wepslot5,
-	gc_wepslot6,
-	gc_wepslot7,
-	gc_wepslot8,
-	gc_wepslot9,
-	gc_wepslot10,
-	gc_fire,
-	gc_firenormal,
-	gc_tossflag,
-	gc_spin,
-	gc_camtoggle,
-	gc_camreset,
-	gc_lookup,
-	gc_lookdown,
-	gc_centerview,
-	gc_mouseaiming, // mouse aiming is momentary (toggleable in the menu)
-	gc_talkkey,
-	gc_teamkey,
-	gc_scores,
-	gc_jump,
-	gc_console,
-	gc_pause,
-	gc_systemmenu,
-	gc_screenshot,
-	gc_recordgif,
-	gc_viewpoint,
-	gc_custom1, // Lua scriptable
-	gc_custom2, // Lua scriptable
-	gc_custom3, // Lua scriptable
-	num_gamecontrols
+	GC_NULL = 0, // a key/button mapped to GC_NULL has no effect
+	GC_FORWARD,
+	GC_BACKWARD,
+	GC_STRAFELEFT,
+	GC_STRAFERIGHT,
+	GC_TURNLEFT,
+	GC_TURNRIGHT,
+	GC_WEAPONNEXT,
+	GC_WEAPONPREV,
+	GC_WEPSLOT1,
+	GC_WEPSLOT2,
+	GC_WEPSLOT3,
+	GC_WEPSLOT4,
+	GC_WEPSLOT5,
+	GC_WEPSLOT6,
+	GC_WEPSLOT7,
+	GC_WEPSLOT8,
+	GC_WEPSLOT9,
+	GC_WEPSLOT10,
+	GC_FIRE,
+	GC_FIRENORMAL,
+	GC_TOSSFLAG,
+	GC_SPIN,
+	GC_CAMTOGGLE,
+	GC_CAMRESET,
+	GC_LOOKUP,
+	GC_LOOKDOWN,
+	GC_CENTERVIEW,
+	GC_MOUSEAIMING, // mouse aiming is momentary (toggleable in the menu)
+	GC_TALKKEY,
+	GC_TEAMKEY,
+	GC_SCORES,
+	GC_JUMP,
+	GC_CONSOLE,
+	GC_PAUSE,
+	GC_SYSTEMMENU,
+	GC_SCREENSHOT,
+	GC_RECORDGIF,
+	GC_VIEWPOINT,
+	GC_CUSTOM1, // Lua scriptable
+	GC_CUSTOM2, // Lua scriptable
+	GC_CUSTOM3, // Lua scriptable
+	NUM_GAMECONTROLS
 } gamecontrols_e;
 
 typedef enum
@@ -146,10 +146,10 @@ extern INT32 joyxmove[JOYAXISSET], joyymove[JOYAXISSET], joy2xmove[JOYAXISSET], 
 extern UINT8 gamekeydown[NUMINPUTS];
 
 // two key codes (or virtual key) per game control
-extern INT32 gamecontrol[num_gamecontrols][2];
-extern INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
-extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; // default control storage, use 0 (gcs_custom) for memory retention
-extern INT32 gamecontrolbisdefault[num_gamecontrolschemes][num_gamecontrols][2];
+extern INT32 gamecontrol[NUM_GAMECONTROLS][2];
+extern INT32 gamecontrolbis[NUM_GAMECONTROLS][2]; // secondary splitscreen player
+extern INT32 gamecontroldefault[num_gamecontrolschemes][NUM_GAMECONTROLS][2]; // default control storage, use 0 (gcs_custom) for memory retention
+extern INT32 gamecontrolbisdefault[num_gamecontrolschemes][NUM_GAMECONTROLS][2];
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
 #define PLAYERINPUTDOWN(p, gc) ((p) == 2 ? PLAYER2INPUTDOWN(gc) : PLAYER1INPUTDOWN(gc))

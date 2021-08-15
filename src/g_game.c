@@ -1140,13 +1140,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		return;
 	}
 
-	turnright = PLAYERINPUTDOWN(ssplayer, gc_turnright);
-	turnleft = PLAYERINPUTDOWN(ssplayer, gc_turnleft);
+	turnright = PLAYERINPUTDOWN(ssplayer, GC_TURNRIGHT);
+	turnleft = PLAYERINPUTDOWN(ssplayer, GC_TURNLEFT);
 
-	straferkey = PLAYERINPUTDOWN(ssplayer, gc_straferight);
-	strafelkey = PLAYERINPUTDOWN(ssplayer, gc_strafeleft);
-	movefkey = PLAYERINPUTDOWN(ssplayer, gc_forward);
-	movebkey = PLAYERINPUTDOWN(ssplayer, gc_backward);
+	straferkey = PLAYERINPUTDOWN(ssplayer, GC_STRAFERIGHT);
+	strafelkey = PLAYERINPUTDOWN(ssplayer, GC_STRAFELEFT);
+	movefkey = PLAYERINPUTDOWN(ssplayer, GC_FORWARD);
+	movebkey = PLAYERINPUTDOWN(ssplayer, GC_BACKWARD);
 
 	if (strafeisturn)
 	{
@@ -1155,7 +1155,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		straferkey = strafelkey = false;
 	}
 
-	mouseaiming = (PLAYERINPUTDOWN(ssplayer, gc_mouseaiming)) ^
+	mouseaiming = (PLAYERINPUTDOWN(ssplayer, GC_MOUSEAIMING)) ^
 		((chasecam && !player->spectator) ? chasefreelook : alwaysfreelook);
 	analogjoystickmove = usejoystick && !Joystick.bGamepadStyle;
 	gamepadjoystickmove = usejoystick && Joystick.bGamepadStyle;
@@ -1271,11 +1271,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// forward with key or button
 	if (movefkey || (gamepadjoystickmove && movejoystickvector.yaxis < 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))))
+			&& (PLAYERINPUTDOWN(ssplayer, GC_LOOKUP) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))))
 		forward = forwardmove[speed];
 	if (movebkey || (gamepadjoystickmove && movejoystickvector.yaxis > 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))))
+			&& (PLAYERINPUTDOWN(ssplayer, GC_LOOKDOWN) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && movejoystickvector.yaxis != 0)
@@ -1288,9 +1288,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (strafelkey)
 		side -= sidemove[speed];
 
-	if (PLAYERINPUTDOWN(ssplayer, gc_weaponnext))
+	if (PLAYERINPUTDOWN(ssplayer, GC_WEAPONNEXT))
 		cmd->buttons |= BT_WEAPONNEXT; // Next Weapon
-	if (PLAYERINPUTDOWN(ssplayer, gc_weaponprev))
+	if (PLAYERINPUTDOWN(ssplayer, GC_WEAPONPREV))
 		cmd->buttons |= BT_WEAPONPREV; // Previous Weapon
 
 #if NUM_WEAPONS > 10
@@ -1299,7 +1299,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	//use the four avaliable bits to determine the weapon.
 	cmd->buttons &= ~BT_WEAPONMASK;
 	for (i = 0; i < NUM_WEAPONS; ++i)
-		if (PLAYERINPUTDOWN(ssplayer, gc_wepslot1 + i))
+		if (PLAYERINPUTDOWN(ssplayer, GC_WEPSLOT1 + i))
 		{
 			cmd->buttons |= (UINT16)(i + 1);
 			break;
@@ -1307,34 +1307,34 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	// fire with any button/key
 	axis = PlayerJoyAxis(ssplayer, JA_FIRE);
-	if (PLAYERINPUTDOWN(ssplayer, gc_fire) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_FIRE) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_ATTACK;
 
 	// fire normal with any button/key
 	axis = PlayerJoyAxis(ssplayer, JA_FIRENORMAL);
-	if (PLAYERINPUTDOWN(ssplayer, gc_firenormal) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_FIRENORMAL) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_FIRENORMAL;
 
-	if (PLAYERINPUTDOWN(ssplayer, gc_tossflag))
+	if (PLAYERINPUTDOWN(ssplayer, GC_TOSSFLAG))
 		cmd->buttons |= BT_TOSSFLAG;
 
 	// Lua scriptable buttons
-	if (PLAYERINPUTDOWN(ssplayer, gc_custom1))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM1))
 		cmd->buttons |= BT_CUSTOM1;
-	if (PLAYERINPUTDOWN(ssplayer, gc_custom2))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM2))
 		cmd->buttons |= BT_CUSTOM2;
-	if (PLAYERINPUTDOWN(ssplayer, gc_custom3))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM3))
 		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
 	axis = PlayerJoyAxis(ssplayer, JA_SPIN);
-	if (PLAYERINPUTDOWN(ssplayer, gc_spin) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_SPIN) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_SPIN;
 
 	// Centerview can be a toggle in simple mode!
 	{
 		static boolean last_centerviewdown[2], centerviewhold[2]; // detect taps for toggle behavior
-		boolean down = PLAYERINPUTDOWN(ssplayer, gc_centerview);
+		boolean down = PLAYERINPUTDOWN(ssplayer, GC_CENTERVIEW);
 
 		if (!(controlstyle == CS_SIMPLE && cv_cam_centertoggle[forplayer].value))
 			centerviewdown = down;
@@ -1433,7 +1433,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (ticcmd_centerviewdown[forplayer] && controlstyle == CS_SIMPLE)
 		controlstyle = CS_LEGACY;
 
-	if (PLAYERINPUTDOWN(ssplayer, gc_camreset))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CAMRESET))
 	{
 		if (thiscam->chase && !resetdown[forplayer])
 			P_ResetCamera(&players[ssplayer == 1 ? displayplayer : secondarydisplayplayer], thiscam);
@@ -1446,7 +1446,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	// jump button
 	axis = PlayerJoyAxis(ssplayer, JA_JUMP);
-	if (PLAYERINPUTDOWN(ssplayer, gc_jump) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_JUMP) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
@@ -1476,12 +1476,12 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
-			if (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))
+			if (PLAYERINPUTDOWN(ssplayer, GC_LOOKUP) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))
 			{
 				*myaiming += KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
 			}
-			else if (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))
+			else if (PLAYERINPUTDOWN(ssplayer, GC_LOOKDOWN) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))
 			{
 				*myaiming -= KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
@@ -2045,7 +2045,7 @@ boolean G_Responder(event_t *ev)
 
 	// allow spy mode changes even during the demo
 	if (gamestate == GS_LEVEL && ev->type == ev_keydown
-		&& (ev->key == KEY_F12 || ev->key == gamecontrol[gc_viewpoint][0] || ev->key == gamecontrol[gc_viewpoint][1]))
+		&& (ev->key == KEY_F12 || ev->key == gamecontrol[GC_VIEWPOINT][0] || ev->key == gamecontrol[GC_VIEWPOINT][1]))
 	{
 		// ViewpointSwitch Lua hook.
 		UINT8 canSwitchView = 0;
@@ -2118,8 +2118,8 @@ boolean G_Responder(event_t *ev)
 	switch (ev->type)
 	{
 		case ev_keydown:
-			if (ev->key == gamecontrol[gc_pause][0]
-				|| ev->key == gamecontrol[gc_pause][1]
+			if (ev->key == gamecontrol[GC_PAUSE][0]
+				|| ev->key == gamecontrol[GC_PAUSE][1]
 				|| ev->key == KEY_PAUSE)
 			{
 				if (modeattacking && !demoplayback && (gamestate == GS_LEVEL))
@@ -2149,8 +2149,8 @@ boolean G_Responder(event_t *ev)
 					}
 				}
 			}
-			if (ev->key == gamecontrol[gc_camtoggle][0]
-				|| ev->key == gamecontrol[gc_camtoggle][1])
+			if (ev->key == gamecontrol[GC_CAMTOGGLE][0]
+				|| ev->key == gamecontrol[GC_CAMTOGGLE][1])
 			{
 				if (!camtoggledelay)
 				{
@@ -2158,8 +2158,8 @@ boolean G_Responder(event_t *ev)
 					CV_SetValue(&cv_chasecam, cv_chasecam.value ? 0 : 1);
 				}
 			}
-			if (ev->key == gamecontrolbis[gc_camtoggle][0]
-				|| ev->key == gamecontrolbis[gc_camtoggle][1])
+			if (ev->key == gamecontrolbis[GC_CAMTOGGLE][0]
+				|| ev->key == gamecontrolbis[GC_CAMTOGGLE][1])
 			{
 				if (!camtoggledelay2)
 				{

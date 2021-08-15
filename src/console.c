@@ -913,7 +913,7 @@ boolean CON_Responder(event_t *ev)
 	// let go keyup events, don't eat them
 	if (ev->type != ev_keydown && ev->type != ev_console)
 	{
-		if (ev->key == gamecontrol[gc_console][0] || ev->key == gamecontrol[gc_console][1])
+		if (ev->key == gamecontrol[GC_CONSOLE][0] || ev->key == gamecontrol[GC_CONSOLE][1])
 			consdown = false;
 		return false;
 	}
@@ -926,7 +926,7 @@ boolean CON_Responder(event_t *ev)
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
-		if (key == gamecontrol[gc_console][0] || key == gamecontrol[gc_console][1])
+		if (key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1])
 		{
 			if (consdown) // ignore repeat
 				return true;

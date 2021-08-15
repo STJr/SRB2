@@ -663,14 +663,14 @@ static void Snake_Handle(void)
 	UINT16 i;
 
 	// Handle retry
-	if (snake->gameover && (PLAYER1INPUTDOWN(gc_jump) || gamekeydown[KEY_ENTER]))
+	if (snake->gameover && (PLAYER1INPUTDOWN(GC_JUMP) || gamekeydown[KEY_ENTER]))
 	{
 		Snake_Initialise();
 		snake->pausepressed = true; // Avoid accidental pause on respawn
 	}
 
 	// Handle pause
-	if (PLAYER1INPUTDOWN(gc_pause) || gamekeydown[KEY_ENTER])
+	if (PLAYER1INPUTDOWN(GC_PAUSE) || gamekeydown[KEY_ENTER])
 	{
 		if (!snake->pausepressed)
 			snake->paused = !snake->paused;

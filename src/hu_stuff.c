@@ -936,7 +936,7 @@ void HU_Ticker(void)
 	hu_tick++;
 	hu_tick &= 7; // currently only to blink chat input cursor
 
-	if (PLAYER1INPUTDOWN(gc_scores))
+	if (PLAYER1INPUTDOWN(GC_SCORES))
 		hu_showscores = !chat_on;
 	else
 		hu_showscores = false;
@@ -1114,13 +1114,13 @@ boolean HU_Responder(event_t *ev)
 	if (ev->key >= KEY_MOUSE1)
 	{
 		INT32 i;
-		for (i = 0; i < num_gamecontrols; i++)
+		for (i = 0; i < NUM_GAMECONTROLS; i++)
 		{
 			if (gamecontrol[i][0] == ev->key || gamecontrol[i][1] == ev->key)
 				break;
 		}
 
-		if (i == num_gamecontrols)
+		if (i == NUM_GAMECONTROLS)
 			return false;
 	}*/	//We don't actually care about that unless we get splitscreen netgames. :V
 
@@ -1130,7 +1130,7 @@ boolean HU_Responder(event_t *ev)
 	if (!chat_on)
 	{
 		// enter chat mode
-		if ((ev->key == gamecontrol[gc_talkkey][0] || ev->key == gamecontrol[gc_talkkey][1])
+		if ((ev->key == gamecontrol[GC_TALKKEY][0] || ev->key == gamecontrol[GC_TALKKEY][1])
 			&& netgame && !OLD_MUTE) // check for old chat mute, still let the players open the chat incase they want to scroll otherwise.
 		{
 			chat_on = true;
@@ -1140,7 +1140,7 @@ boolean HU_Responder(event_t *ev)
 			typelines = 1;
 			return true;
 		}
-		if ((ev->key == gamecontrol[gc_teamkey][0] || ev->key == gamecontrol[gc_teamkey][1])
+		if ((ev->key == gamecontrol[GC_TEAMKEY][0] || ev->key == gamecontrol[GC_TEAMKEY][1])
 			&& netgame && !OLD_MUTE)
 		{
 			chat_on = true;
@@ -1234,8 +1234,8 @@ boolean HU_Responder(event_t *ev)
 			I_UpdateMouseGrab();
 		}
 		else if (c == KEY_ESCAPE
-			|| ((c == gamecontrol[gc_talkkey][0] || c == gamecontrol[gc_talkkey][1]
-			|| c == gamecontrol[gc_teamkey][0] || c == gamecontrol[gc_teamkey][1])
+			|| ((c == gamecontrol[GC_TALKKEY][0] || c == gamecontrol[GC_TALKKEY][1]
+			|| c == gamecontrol[GC_TEAMKEY][0] || c == gamecontrol[GC_TEAMKEY][1])
 			&& c >= KEY_MOUSE1)) // If it's not a keyboard key, then the chat button is used as a toggle.
 		{
 			chat_on = false;
