@@ -181,8 +181,8 @@ extern const INT32 gcl_jump_spin[num_gcl_jump_spin];
 void G_MapEventsToControls(event_t *ev);
 
 // returns the name of a key
-const char *G_KeyNumToString(INT32 keynum);
-INT32 G_KeyStringToNum(const char *keystr);
+const char *G_KeyNumToName(INT32 keynum);
+INT32 G_KeyNameToNum(const char *keystr);
 
 // detach any keys associated to the given game control
 void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);

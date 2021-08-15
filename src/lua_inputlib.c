@@ -75,17 +75,17 @@ static int lib_joy2Axis(lua_State *L)
 	return 1;
 }
 
-static int lib_keyNumToString(lua_State *L)
+static int lib_keyNumToName(lua_State *L)
 {
 	int i = luaL_checkinteger(L, 1);
-	lua_pushstring(L, G_KeyNumToString(i));
+	lua_pushstring(L, G_KeyNumToName(i));
 	return 1;
 }
 
-static int lib_keyStringToNum(lua_State *L)
+static int lib_keyNameToNum(lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);
-	lua_pushinteger(L, G_KeyStringToNum(str));
+	lua_pushinteger(L, G_KeyNameToNum(str));
 	return 1;
 }
 
@@ -133,8 +133,8 @@ static luaL_Reg lib[] = {
 	{"gameControl2ToKeyNum", lib_gameControl2ToKeyNum},
 	{"joyAxis", lib_joyAxis},
 	{"joy2Axis", lib_joy2Axis},
-	{"keyNumToString", lib_keyNumToString},
-	{"keyStringToNum", lib_keyStringToNum},
+	{"keyNumToName", lib_keyNumToName},
+	{"keyNameToNum", lib_keyNameToNum},
 	{"keyNumPrintable", lib_keyNumPrintable},
 	{"shiftKeyNum", lib_shiftKeyNum},
 	{"getMouseGrab", lib_getMouseGrab},
@@ -184,7 +184,7 @@ static int keyevent_get(lua_State *L)
 	I_Assert(event != NULL);
 
 	if (fastcmp(field,"name"))
-		lua_pushstring(L, G_KeyNumToString(event->key));
+		lua_pushstring(L, G_KeyNumToName(event->key));
 	else if (fastcmp(field,"num"))
 		lua_pushinteger(L, event->key);
 	else if (fastcmp(field,"repeated"))

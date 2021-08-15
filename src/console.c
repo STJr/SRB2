@@ -221,7 +221,7 @@ static void CONS_Bind_f(void)
 		for (key = 0; key < NUMINPUTS; key++)
 			if (bindtable[key])
 			{
-				CONS_Printf("%s : \"%s\"\n", G_KeyNumToString(key), bindtable[key]);
+				CONS_Printf("%s : \"%s\"\n", G_KeyNumToName(key), bindtable[key]);
 				na = 1;
 			}
 		if (!na)
@@ -229,7 +229,7 @@ static void CONS_Bind_f(void)
 		return;
 	}
 
-	key = G_KeyStringToNum(COM_Argv(1));
+	key = G_KeyNameToNum(COM_Argv(1));
 	if (key <= 0 || key >= NUMINPUTS)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Invalid key name\n"));
