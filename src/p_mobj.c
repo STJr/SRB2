@@ -10391,6 +10391,9 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 		case MT_RING:
 		case MT_FLINGRING:
+		
+		case MT_COIN:
+		case MT_FLINGCOIN:
 
 		case MT_BLUESPHERE:
 		case MT_FLINGBLUESPHERE:
