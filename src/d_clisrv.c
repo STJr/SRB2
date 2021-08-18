@@ -43,6 +43,7 @@
 #include "lzf.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "lua_libs.h"
 #include "md5.h"
 #include "m_perfstats.h"
 
@@ -3331,6 +3332,9 @@ static inline void SV_GenContext(void)
 //
 void D_QuitNetGame(void)
 {
+	mousegrabbedbylua = true;
+	I_UpdateMouseGrab();
+
 	if (!netgame || !netbuffer)
 		return;
 

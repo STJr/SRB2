@@ -12,6 +12,8 @@
 
 extern lua_State *gL;
 
+extern boolean mousegrabbedbylua;
+
 #define MUTABLE_TAGS
 
 #define LREG_VALID "VALID_USERDATA"

@@ -19,6 +19,8 @@
 #include "lua_script.h"
 #include "lua_libs.h"
 
+boolean mousegrabbedbylua = true;
+
 ///////////////
 // FUNCTIONS //
 ///////////////
@@ -106,14 +108,14 @@ static int lib_shiftKeyNum(lua_State *L)
 
 static int lib_getMouseGrab(lua_State *L)
 {
-	lua_pushboolean(L, I_GetMouseGrab());
+	lua_pushboolean(L, mousegrabbedbylua);
 	return 1;
 }
 
 static int lib_setMouseGrab(lua_State *L)
 {
-	boolean grab = luaL_checkboolean(L, 1);
-	I_SetMouseGrab(grab);
+	mousegrabbedbylua = luaL_checkboolean(L, 1);
+	I_UpdateMouseGrab();
 	return 0;
 }
 

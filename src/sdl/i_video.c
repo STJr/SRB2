@@ -73,6 +73,8 @@
 #include "../console.h"
 #include "../command.h"
 #include "../r_main.h"
+#include "../lua_script.h"
+#include "../lua_libs.h"
 #include "../lua_hook.h"
 #include "sdlmain.h"
 #ifdef HWRENDER
@@ -371,6 +373,8 @@ static boolean IgnoreMouse(void)
 		return true;
 	if (gamestate != GS_LEVEL && gamestate != GS_INTERMISSION &&
 			gamestate != GS_CONTINUING && gamestate != GS_CUTSCENE)
+		return true;
+	if (!mousegrabbedbylua)
 		return true;
 	return false;
 }
