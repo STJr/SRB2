@@ -25,7 +25,7 @@
 #include "byteptr.h"
 #include "p_saveg.h"
 #include "p_local.h"
-#include "p_slopes.h" // for P_SlopeById
+#include "p_slopes.h" // for P_SlopeById and slopelist
 #include "p_polyobj.h" // polyobj_t, PolyObjects
 #ifdef LUA_ALLOW_BYTECODE
 #include "d_netfil.h" // for LUA_DumpFile
@@ -851,6 +851,8 @@ void LUA_InvalidateLevel(void)
 	{
 		LUA_InvalidateUserdata(&lines[i]);
 		LUA_InvalidateUserdata(&lines[i].tags);
+		LUA_InvalidateUserdata(lines[i].args);
+		LUA_InvalidateUserdata(lines[i].stringargs);
 		LUA_InvalidateUserdata(lines[i].sidenum);
 	}
 	for (i = 0; i < numsides; i++)
@@ -862,6 +864,13 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(&PolyObjects[i]);
 		LUA_InvalidateUserdata(&PolyObjects[i].vertices);
 		LUA_InvalidateUserdata(&PolyObjects[i].lines);
+	}
+	for (pslope_t *slope = slopelist; slope; slope = slope->next)
+	{
+		LUA_InvalidateUserdata(slope);
+		LUA_InvalidateUserdata(&slope->normal);
+		LUA_InvalidateUserdata(&slope->o);
+		LUA_InvalidateUserdata(&slope->d);
 	}
 #ifdef HAVE_LUA_SEGS
 	for (i = 0; i < numsegs; i++)
@@ -885,6 +894,8 @@ void LUA_InvalidateMapthings(void)
 	{
 		LUA_InvalidateUserdata(&mapthings[i]);
 		LUA_InvalidateUserdata(&mapthings[i].tags);
+		LUA_InvalidateUserdata(mapthings[i].args);
+		LUA_InvalidateUserdata(mapthings[i].stringargs);
 	}
 }
 

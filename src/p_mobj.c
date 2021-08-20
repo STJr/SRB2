@@ -2549,6 +2549,10 @@ boolean P_ZMovement(mobj_t *mo)
 		}
 
 		P_CheckPosition(mo, mo->x, mo->y); // Sets mo->standingslope correctly
+
+		if (P_MobjWasRemoved(mo)) // mobjs can be removed by P_CheckPosition -- Monster Iestyn 31/07/21
+			return false;
+
 		if (((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) && (mo->type != MT_STEAM))
 		{
 			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
@@ -10387,6 +10391,9 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 		case MT_RING:
 		case MT_FLINGRING:
+		
+		case MT_COIN:
+		case MT_FLINGCOIN:
 
 		case MT_BLUESPHERE:
 		case MT_FLINGBLUESPHERE:
