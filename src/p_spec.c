@@ -1241,7 +1241,7 @@ static boolean PolyFlag(line_t *line)
 
 	pfd.polyObjNum = Tag_FGet(&line->tags);
 	pfd.speed = P_AproxDistance(line->dx, line->dy) >> FRACBITS;
-	pfd.angle = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y) >> ANGLETOFINESHIFT;
+	pfd.angle = line->angle >> ANGLETOFINESHIFT;
 	pfd.momx = sides[line->sidenum[0]].textureoffset >> FRACBITS;
 
 	return EV_DoPolyObjFlag(&pfd);

@@ -1058,6 +1058,8 @@ static void P_InitializeLinedef(line_t *ld)
 	ld->dx = v2->x - v1->x;
 	ld->dy = v2->y - v1->y;
 
+	ld->angle = R_PointToAngle2(0, 0, ld->dx, ld->dy);
+
 	ld->bbox[BOXLEFT] = min(v1->x, v2->x);
 	ld->bbox[BOXRIGHT] = max(v1->x, v2->x);
 	ld->bbox[BOXBOTTOM] = min(v1->y, v2->y);
