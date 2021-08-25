@@ -1839,10 +1839,8 @@ void P_XYMovement(mobj_t *mo)
 		// blocked move
 		moved = false;
 
-		if (player) {
-			if (player->bot)
-				B_MoveBlocked(player);
-		}
+		if (player) 
+			B_MoveBlocked(player);
 
 		if (LUA_HookMobj(mo, MOBJ_HOOK(MobjMoveBlocked)))
 		{
@@ -4140,7 +4138,7 @@ boolean P_BossTargetPlayer(mobj_t *actor, boolean closest)
 
 		player = &players[actor->lastlook];
 
-		if (player->pflags & PF_INVIS || player->bot || player->spectator)
+		if (player->pflags & PF_INVIS || player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN || player->spectator)
 			continue; // ignore notarget
 
 		if (!player->mo || P_MobjWasRemoved(player->mo))
@@ -4181,7 +4179,7 @@ boolean P_SupermanLook4Players(mobj_t *actor)
 			if (players[c].pflags & PF_INVIS)
 				continue; // ignore notarget
 
-			if (!players[c].mo || players[c].bot)
+			if (!players[c].mo || players[c].bot == BOT_2PAI || players[c].bot == BOT_2PHUMAN)
 				continue;
 
 			if (players[c].mo->health <= 0)
@@ -7310,7 +7308,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 			continue;
 		if (!players[i].mo)
 			continue;
-		if (players[i].bot)
+		if (players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 			continue;
 		if (!players[i].mo->health)
 			continue;

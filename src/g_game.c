@@ -1071,7 +1071,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
 	boolean strafeisturn; // Simple controls only
 	player_t *player = &players[ssplayer == 2 ? secondarydisplayplayer : consoleplayer];
-	camera_t *thiscam = ((ssplayer == 1 || player->bot == 2) ? &camera : &camera2);
+	camera_t *thiscam = ((ssplayer == 1 || player->bot == BOT_2PHUMAN) ? &camera : &camera2);
 	angle_t *myangle = (ssplayer == 1 ? &localangle : &localangle2);
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 
@@ -1545,23 +1545,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	cmd->forwardmove = (SINT8)(cmd->forwardmove + forward);
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
-	if (player->bot == 1) { // Tailsbot for P2
-		if (!player->powers[pw_tailsfly] && (cmd->forwardmove || cmd->sidemove || cmd->buttons))
-		{
-			player->bot = 2; // A player-controlled bot. Returns to AI when it respawns.
-			CV_SetValue(&cv_analog[1], true);
-		}
-		else
-		{
-			G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
-			B_BuildTiccmd(player, cmd);
-		}
-		B_HandleFlightIndicator(player);
-	}
-	else if (player->bot == 2)
+	// Note: Majority of botstuffs are handled in G_Ticker now.
+	if (player->bot == BOT_2PHUMAN) //Player-controlled bot
+	{
+		G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
 		// Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Legacy
 		cmd->angleturn = (INT16)((localangle - *myangle) >> 16);
-
+	}	
+	
 	*myangle += (cmd->angleturn<<16);
 
 	if (controlstyle == CS_LMAOGALOG) {
@@ -2207,6 +2198,23 @@ void G_Ticker(boolean run)
 	UINT32 i;
 	INT32 buf;
 
+	// Bot players queued for removal
+	for (i = MAXPLAYERS-1; i != UINT32_MAX; i--)
+	{
+		if (playeringame[i] && players[i].removing)
+		{
+			CL_RemovePlayer(i, i);
+			if (netgame)
+			{
+				char kickmsg[256];
+
+				strcpy(kickmsg, M_GetText("\x82*Bot %s has been removed"));
+				strcpy(kickmsg, va(kickmsg, player_names[i], i));
+				HU_AddChatText(kickmsg, false);
+			}
+		}
+	}
+
 	// see also SCR_DisplayMarathonInfo
 	if ((marathonmode & (MA_INIT|MA_INGAME)) == MA_INGAME && gamestate == GS_LEVEL)
 		marathontime++;
@@ -2292,23 +2300,58 @@ void G_Ticker(boolean run)
 		if (playeringame[i])
 		{
 			INT16 received;
+			// Save last frame's button readings
+			players[i].lastbuttons = players[i].cmd.buttons;
 
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
-
-			received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
-
-			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
-			players[i].oldrelangleturn = players[i].cmd.angleturn;
-			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
-				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
-			else
-				players[i].cmd.angleturn = players[i].angleturn;
-
-			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
+			// Bot ticcmd handling
+			// Yes, ordinarily this would be handled in G_BuildTiccmd...
+			// ...however, bot players won't have a corresponding consoleplayer or splitscreen player 2 to send that information.
+			// Therefore, this has to be done after ticcmd sends are received.
+			if (players[i].bot == BOT_2PAI) { // Tailsbot for P2
+				if (!players[i].powers[pw_tailsfly] && (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons))
+				{
+					players[i].bot = BOT_2PHUMAN; // A player-controlled bot. Returns to AI when it respawns.
+					CV_SetValue(&cv_analog[1], true);
+				}
+				else
+				{
+					B_BuildTiccmd(&players[i], &players[i].cmd);
+				}
+				B_HandleFlightIndicator(&players[i]);
+			}
+			else if (players[i].bot == BOT_MPAI) {
+				B_BuildTiccmd(&players[i], &players[i].cmd);
+			}
+			
+			// Do angle adjustments.
+			if (players[i].bot == BOT_NONE || players[i].bot == BOT_2PHUMAN)
+			{
+				received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
+				players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
+				players[i].oldrelangleturn = players[i].cmd.angleturn;
+				if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
+					P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
+				else
+					players[i].cmd.angleturn = players[i].angleturn;
+    			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
+    				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
+    			else
+    				players[i].cmd.angleturn = players[i].angleturn;
+    
+    			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
+				// Use the leveltime sent in the player's ticcmd to determine control lag
+    			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
+			}
+			else // Less work is required if we're building a bot ticcmd.
+			{
+    			// Since bot TicCmd is pre-determined for both the client and server, the latency and packet checks are simplified.
+    			received = 1;
+    			players[i].cmd.latency = 0;
+				players[i].angleturn = players[i].cmd.angleturn;
+				players[i].oldrelangleturn = players[i].cmd.angleturn;
+			}
 			players[i].cmd.angleturn |= received;
-
-			// Use the leveltime sent in the player's ticcmd to determine control lag
-			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
 		}
 	}
 
@@ -2494,6 +2537,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	tic_t quittime;
 	boolean spectator;
 	boolean outofcoop;
+	boolean removing;
 	INT16 bot;
 	SINT8 pity;
 	INT16 rings;
@@ -2510,6 +2554,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	quittime = players[player].quittime;
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
+	removing = players[player].removing;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
 	playerangleturn = players[player].angleturn;
 	oldrelangleturn = players[player].oldrelangleturn;
@@ -2586,6 +2631,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->quittime = quittime;
 	p->spectator = spectator;
 	p->outofcoop = outofcoop;
+	p->removing = removing;
 	p->angleturn = playerangleturn;
 	p->oldrelangleturn = oldrelangleturn;
 
@@ -2630,8 +2676,10 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->totalring = totalring;
 
 	p->mare = mare;
-	if (bot)
-		p->bot = 1; // reset to AI-controlled
+	if (bot == BOT_2PHUMAN)
+		p->bot = BOT_2PAI; // reset to AI-controlled
+	else
+		p->bot = bot;
 	p->pity = pity;
 	p->rings = rings;
 	p->spheres = spheres;
@@ -2977,7 +3025,8 @@ void G_DoReborn(INT32 playernum)
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
 
-	if (player->bot && playernum != consoleplayer)
+	// Tailsbot
+	if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
 	{ // Bots respawn next to their master.
 		mobj_t *oldmo = NULL;
 
@@ -2994,6 +3043,28 @@ void G_DoReborn(INT32 playernum)
 			G_ChangePlayerReferences(oldmo, players[playernum].mo);
 
 		return;
+	}
+	
+	// Additional players (e.g. independent bots) in Single Player
+	if (playernum != consoleplayer && !(netgame || multiplayer)) 
+	{		
+		mobj_t *oldmo = NULL;
+		// Do nothing if out of lives
+		if (player->lives <= 0)
+			return;
+		
+		// Otherwise do respawn, starting by removing the player object
+		if (player->mo)
+		{
+			oldmo = player->mo;
+			P_RemoveMobj(player->mo);
+		}
+		// Do spawning
+		G_SpawnPlayer(playernum);
+		if (oldmo)
+			G_ChangePlayerReferences(oldmo, players[playernum].mo);
+		
+		return; //Exit function to avoid proccing other SP related mechanics
 	}
 
 	if (countdowntimeup || (!(netgame || multiplayer) && (gametyperules & GTR_CAMPAIGN)))
@@ -3176,7 +3247,7 @@ void G_AddPlayer(INT32 playernum)
 			if (!playeringame[i])
 				continue;
 
-			if (players[i].bot) // ignore dumb, stupid tails
+			if (players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // ignore dumb, stupid tails
 				continue;
 
 			countplayers++;
@@ -3217,7 +3288,7 @@ boolean G_EnoughPlayersFinished(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i] || players[i].spectator || players[i].bot)
+		if (!playeringame[i] || players[i].spectator || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 			continue;
 		if (players[i].quittime > 30 * TICRATE)
 			continue;

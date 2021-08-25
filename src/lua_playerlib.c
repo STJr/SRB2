@@ -370,6 +370,12 @@ static int player_get(lua_State *L)
 		lua_pushboolean(L, plr->outofcoop);
 	else if (fastcmp(field,"bot"))
 		lua_pushinteger(L, plr->bot);
+	else if (fastcmp(field,"botleader"))
+		LUA_PushUserdata(L, plr->botleader, META_PLAYER);
+	else if (fastcmp(field,"lastbuttons"))
+		lua_pushinteger(L, plr->lastbuttons);
+	else if (fastcmp(field,"blocked"))
+		lua_pushboolean(L, plr->blocked);
 	else if (fastcmp(field,"jointime"))
 		lua_pushinteger(L, plr->jointime);
 	else if (fastcmp(field,"quittime"))
@@ -719,6 +725,17 @@ static int player_set(lua_State *L)
 		plr->outofcoop = lua_toboolean(L, 3);
 	else if (fastcmp(field,"bot"))
 		return NOSET;
+	else if (fastcmp(field,"botleader"))
+	{
+		player_t *player = NULL;
+		if (!lua_isnil(L, 3))
+			player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
+		plr->botleader = player;
+	}
+	else if (fastcmp(field,"lastbuttons"))
+		plr->lastbuttons = (UINT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"blocked"))
+		plr->blocked = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"jointime"))
 		plr->jointime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"quittime"))

@@ -777,7 +777,7 @@ void P_NightserizePlayer(player_t *player, INT32 nighttime)
 	UINT8 oldmare, oldmarelap, oldmarebonuslap;
 
 	// Bots can't be NiGHTSerized, silly!1 :P
-	if (player->bot)
+	if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
 		return;
 
 	if (player->powers[pw_carry] != CR_NIGHTSMODE)
@@ -1188,9 +1188,9 @@ void P_GivePlayerRings(player_t *player, INT32 num_rings)
 {
 	if (!player)
 		return;
-
-	if (player->bot)
-		player = &players[consoleplayer];
+	
+	if ((player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) && player->botleader)
+		player = player->botleader;
 
 	if (!player->mo)
 		return;
@@ -1234,8 +1234,8 @@ void P_GivePlayerSpheres(player_t *player, INT32 num_spheres)
 	if (!player)
 		return;
 
-	if (player->bot)
-		player = &players[consoleplayer];
+	if ((player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) && player->botleader)
+		player = player->botleader;
 
 	if (!player->mo)
 		return;
@@ -1261,8 +1261,8 @@ void P_GivePlayerLives(player_t *player, INT32 numlives)
 	if (!player)
 		return;
 
-	if (player->bot)
-		player = &players[consoleplayer];
+	if ((player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) && player->botleader)
+		player = player->botleader;
 
 	if (gamestate == GS_LEVEL)
 	{
@@ -1367,8 +1367,8 @@ void P_AddPlayerScore(player_t *player, UINT32 amount)
 {
 	UINT32 oldscore;
 
-	if (player->bot)
-		player = &players[consoleplayer];
+	if ((player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) && player->botleader)
+		player = player->botleader;
 
 	// NiGHTS does it different!
 	if (gamestate == GS_LEVEL && mapheaderinfo[gamemap-1]->typeoflevel & TOL_NIGHTS)
@@ -5378,7 +5378,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
 
 						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_STARTDASH);
-						if (player->bot == 1)
+						if (player->bot == BOT_2PAI)
 							player->pflags |= PF_THOKKED;
 						else
 							player->pflags |= (PF_THOKKED|PF_CANCARRY);
@@ -5964,22 +5964,6 @@ static void P_3dMovement(player_t *player)
 		thrustfactor = 5;
 		acceleration = 96 + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * 40;
 		topspeed = normalspd;
-	}
-	else if (player->bot)
-	{ // Bot steals player 1's stats
-		normalspd = FixedMul(players[consoleplayer].normalspeed, player->mo->scale);
-		thrustfactor = players[consoleplayer].thrustfactor;
-		acceleration = players[consoleplayer].accelstart + (FixedDiv(player->speed, player->mo->scale)>>FRACBITS) * players[consoleplayer].acceleration;
-
-		if (player->powers[pw_tailsfly])
-			topspeed = normalspd/2;
-		else if (player->mo->eflags & (MFE_UNDERWATER|MFE_GOOWATER))
-		{
-			topspeed = normalspd/2;
-			acceleration = 2*acceleration/3;
-		}
-		else
-			topspeed = normalspd;
 	}
 	else
 	{
@@ -9510,11 +9494,11 @@ static void P_DeathThink(player_t *player)
 	if (player->deadtimer < INT32_MAX)
 		player->deadtimer++;
 
-	if (player->bot) // don't allow bots to do any of the below, B_CheckRespawn does all they need for respawning already
+	if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN) // don't allow followbots to do any of the below, B_CheckRespawn does all they need for respawning already
 		goto notrealplayer;
 
 	// continue logic
-	if (!(netgame || multiplayer) && player->lives <= 0)
+	if (!(netgame || multiplayer) && player->lives <= 0 && player == &players[consoleplayer]) //Extra players in SP can't be allowed to continue or end game
 	{
 		if (player->deadtimer > (3*TICRATE) && (cmd->buttons & BT_SPIN || cmd->buttons & BT_JUMP) && (!continuesInSession || player->continues > 0))
 			G_UseContinue();
@@ -11487,6 +11471,9 @@ void P_PlayerThink(player_t *player)
 		I_Error("p_playerthink: players[%s].mo == NULL", sizeu1(playeri));
 #endif
 
+	// Reset terrain blocked status for this frame
+	player->blocked = false;
+
 	// todo: Figure out what is actually causing these problems in the first place...
 	if (player->mo->health <= 0 && player->playerstate == PST_LIVE) //you should be DEAD!
 	{
@@ -11494,7 +11481,7 @@ void P_PlayerThink(player_t *player)
 		player->playerstate = PST_DEAD;
 	}
 
-	if (player->bot)
+	if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
 	{
 		if (player->playerstate == PST_LIVE || player->playerstate == PST_DEAD)
 		{
@@ -11638,7 +11625,7 @@ void P_PlayerThink(player_t *player)
 
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i] || players[i].spectator || players[i].bot)
+				if (!playeringame[i] || players[i].spectator || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 					continue;
 				if (players[i].lives <= 0)
 					continue;
@@ -11669,8 +11656,8 @@ void P_PlayerThink(player_t *player)
 			INT32 i, total = 0, exiting = 0;
 
 			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i] || players[i].spectator || players[i].bot)
+			{ 
+				if (!playeringame[i] || players[i].spectator || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 					continue;
 				if (players[i].quittime > 30 * TICRATE)
 					continue;
@@ -12610,8 +12597,8 @@ void P_PlayerAfterThink(player_t *player)
 					player->mo->momy = tails->momy;
 					player->mo->momz = tails->momz;
 				}
-
-				if (G_CoopGametype() && tails->player && tails->player->bot != 1)
+				
+				if (G_CoopGametype() && tails->player && tails->player->bot != BOT_2PAI)
 				{
 					player->mo->angle = tails->angle;
 
