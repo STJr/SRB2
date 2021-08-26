@@ -870,7 +870,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 	INT32 x;
 	INT32 stop, angle;
 	ffloor_t *rover;
-	INT32 type;
 	INT32 spanfunctype = BASEDRAWFUNC;
 
 	if (!(pl->minx <= pl->maxx))
@@ -883,8 +882,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 		return;
 	}
 
+	levelflat = &levelflats[pl->picnum];
 	planeripple.active = false;
-	spanfunc = spanfuncs[BASEDRAWFUNC];
 
 	if (pl->polyobj)
 	{
@@ -995,29 +994,25 @@ void R_DrawSinglePlane(visplane_t *pl)
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 	}
 
-	currentplane = pl;
 	ds_powersoftwo = false;
-	levelflat = &levelflats[pl->picnum];
 
 	/* :james: */
-	type = levelflat->type;
-	switch (type)
+	switch (levelflat->type)
 	{
 		case LEVELFLAT_NONE:
 			return;
 		case LEVELFLAT_FLAT:
 			ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
-			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
-			ds_powersoftwo = true; // Raw flats always have dimensions that are powers-of-two numbers.
+			R_SetFlatVars(W_LumpLength(levelflat->u.flat.lumpnum));
+			ds_powersoftwo = true;
 			break;
 		default:
 			ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
 			if (!ds_source)
 				return;
-			// Check if this texture or patch has power-of-two dimensions.
-			if (R_CheckPowersOfTwo())
+			else if (R_CheckPowersOfTwo())
 			{
-				R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+				R_SetFlatVars(ds_flatwidth * ds_flatheight);
 				ds_powersoftwo = true;
 			}
 	}
@@ -1091,7 +1086,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		planezlight = zlight[light];
 	}
 
-	// Use the correct span drawer depending on the powers-of-twoness
+	// Set the span drawer
 	if (!ds_powersoftwo)
 	{
 		if (spanfuncs_npo2[spanfunctype])
@@ -1108,6 +1103,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	pl->bottom[pl->maxx+1] = 0x0000;
 	pl->bottom[pl->minx-1] = 0x0000;
 
+	currentplane = pl;
 	stop = pl->maxx + 1;
 
 	if (pl->slope)

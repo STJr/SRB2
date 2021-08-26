@@ -416,7 +416,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 
 	if (R_CheckPowersOfTwo())
 	{
-		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+		R_SetFlatVars(ds_flatwidth * ds_flatheight);
 		ds_powersoftwo = true;
 	}
 

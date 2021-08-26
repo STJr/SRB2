@@ -619,9 +619,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 }
 
 //
-// R_CheckPowersOfTwo
-//
-// Checks if the flat's dimensions are powers of two.
+// Checks if the current flat's dimensions are powers of two
 //
 boolean R_CheckPowersOfTwo(void)
 {
@@ -637,67 +635,67 @@ boolean R_CheckPowersOfTwo(void)
 }
 
 //
-// R_CheckFlatLength
+// Returns the flat size corresponding to the length of a lump
 //
-// Determine the flat's dimensions from its lump length.
-//
-void R_CheckFlatLength(size_t length)
+UINT16 R_GetFlatSize(size_t length)
 {
-	INT32 size, bits;
-
 	switch (length)
 	{
 		case 4194304: // 2048x2048 lump
-			size = 2048;
-			bits = 11;
-			break;
+			return 2048;
 		case 1048576: // 1024x1024 lump
-			size = 1024;
-			bits = 10;
-			break;
+			return 1024;
 		case 262144:// 512x512 lump
-			size = 512;
-			bits = 9;
-			break;
+			return 512;
 		case 65536: // 256x256 lump
-			size = 256;
-			bits = 8;
-			break;
+			return 256;
 		case 16384: // 128x128 lump
-			size = 128;
-			bits = 7;
-			break;
+			return 128;
 		case 1024: // 32x32 lump
-			size = 32;
-			bits = 5;
-			break;
+			return 32;
 		case 256: // 16x16 lump
-			size = 16;
-			bits = 4;
-			break;
+			return 16;
 		case 64: // 8x8 lump
-			size = 8;
-			bits = 3;
-			break;
+			return 8;
 		case 16: // 4x4 lump
-			size = 4;
-			bits = 2;
-			break;
+			return 4;
 		case 4: // 2x2 lump
-			size = 2;
-			bits = 1;
-			break;
+			return 2;
 		default: // 64x64 lump
-			size = 64;
-			bits = 6;
-			break;
+			return 64;
 	}
+}
+
+//
+// Determines a flat's width bits from its size
+//
+UINT8 R_GetFlatBits(INT32 size)
+{
+	switch (size)
+	{
+		case 2048: return 11;
+		case 1024: return 10;
+		case 512:  return 9;
+		case 256:  return 8;
+		case 128:  return 7;
+		case 32:   return 5;
+		case 16:   return 4;
+		case 8:    return 3;
+		case 4:    return 2;
+		case 2:    return 1;
+		default:   return 6; // 64x64
+	}
+}
+
+void R_SetFlatVars(size_t length)
+{
+	UINT16 size = R_GetFlatSize(length);
+	UINT8 bits = R_GetFlatBits(size);
 
 	nflatshiftup = 16 - bits;
 	nflatxshift = 16 + nflatshiftup;
 	nflatyshift = nflatxshift - bits;
 	nflatmask = (size - 1) * size;
-	ds_flatwidth = ds_flatheight = size;
 }
 
 //
@@ -746,7 +744,7 @@ Rloadflats (INT32 i, INT32 w)
 			UINT16 wadnum = (UINT16)w;
 			lumpnum_t lumpnum = texstart + j;
 			size_t lumplength;
-			size_t flatsize = 0;
+			size_t flatsize;
 
 			if (wadfiles[w]->type == RET_PK3)
 			{
@@ -756,43 +754,7 @@ Rloadflats (INT32 i, INT32 w)
 
 			flatlump = W_CacheLumpNumPwad(wadnum, lumpnum, PU_CACHE);
 			lumplength = W_LumpLengthPwad(wadnum, lumpnum);
-
-			switch (lumplength)
-			{
-				case 4194304: // 2048x2048 lump
-					flatsize = 2048;
-					break;
-				case 1048576: // 1024x1024 lump
-					flatsize = 1024;
-					break;
-				case 262144:// 512x512 lump
-					flatsize = 512;
-					break;
-				case 65536: // 256x256 lump
-					flatsize = 256;
-					break;
-				case 16384: // 128x128 lump
-					flatsize = 128;
-					break;
-				case 1024: // 32x32 lump
-					flatsize = 32;
-					break;
-				case 256: // 16x16 lump
-					flatsize = 16;
-					break;
-				case 64: // 8x8 lump
-					flatsize = 8;
-					break;
-				case 16: // 4x4 lump
-					flatsize = 4;
-					break;
-				case 4: // 2x2 lump
-					flatsize = 2;
-					break;
-				default: // 64x64 lump
-					flatsize = 64;
-					break;
-			}
+			flatsize = R_GetFlatSize(lumplength);
 
 			//CONS_Printf("\n\"%s\" is a flat, dimensions %d x %d",W_CheckNameForNumPwad((UINT16)w,texstart+j),flatsize,flatsize);
 			texture = textures[i] = Z_Calloc(sizeof(texture_t) + sizeof(texpatch_t), PU_STATIC, NULL);
