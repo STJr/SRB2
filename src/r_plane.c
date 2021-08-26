@@ -996,6 +996,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	}
 
 	currentplane = pl;
+	ds_powersoftwo = false;
 	levelflat = &levelflats[pl->picnum];
 
 	/* :james: */
@@ -1007,8 +1008,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		case LEVELFLAT_FLAT:
 			ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
 			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
-			// Raw flats always have dimensions that are powers-of-two numbers.
-			ds_powersoftwo = true;
+			ds_powersoftwo = true; // Raw flats always have dimensions that are powers-of-two numbers.
 			break;
 		default:
 			ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
@@ -1016,7 +1016,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 				return;
 			// Check if this texture or patch has power-of-two dimensions.
 			if (R_CheckPowersOfTwo())
+			{
 				R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+				ds_powersoftwo = true;
+			}
 	}
 
 	if (!pl->slope // Don't mess with angle on slopes! We'll handle this ourselves later

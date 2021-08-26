@@ -444,6 +444,18 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 				case 1024: // 32x32 lump
 					fflatwidth = fflatheight = 32.0f;
 					break;
+				case 256: // 16x16 lump
+					fflatwidth = fflatheight = 16.0f;
+					break;
+				case 64: // 8x8 lump
+					fflatwidth = fflatheight = 8.0f;
+					break;
+				case 16: // 4x4 lump
+					fflatwidth = fflatheight = 4.0f;
+					break;
+				case 4: // 2x2 lump
+					fflatwidth = fflatheight = 2.0f;
+					break;
 				default: // 64x64 lump
 					fflatwidth = fflatheight = 64.0f;
 					break;
@@ -2761,6 +2773,18 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 					break;
 				case 1024: // 32x32 lump
 					fflatwidth = fflatheight = 32.0f;
+					break;
+				case 256: // 16x16 lump
+					fflatwidth = fflatheight = 16.0f;
+					break;
+				case 64: // 8x8 lump
+					fflatwidth = fflatheight = 8.0f;
+					break;
+				case 16: // 4x4 lump
+					fflatwidth = fflatheight = 4.0f;
+					break;
+				case 4: // 2x2 lump
+					fflatwidth = fflatheight = 2.0f;
 					break;
 				default: // 64x64 lump
 					fflatwidth = fflatheight = 64.0f;

@@ -621,23 +621,19 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 //
 // R_CheckPowersOfTwo
 //
-// Sets ds_powersoftwo true if the flat's dimensions are powers of two, and returns that.
+// Checks if the flat's dimensions are powers of two.
 //
 boolean R_CheckPowersOfTwo(void)
 {
 	boolean wpow2 = (!(ds_flatwidth & (ds_flatwidth - 1)));
 	boolean hpow2 = (!(ds_flatheight & (ds_flatheight - 1)));
 
-	// Initially, the flat isn't powers-of-two-sized.
-	ds_powersoftwo = false;
+	if (ds_flatwidth < 2 || ds_flatheight < 2)
+		return false;
+	else if (ds_flatwidth > 2048 || ds_flatheight > 2048)
+		return false;
 
-	// But if the width and height are powers of two,
-	// and are EQUAL, then it's okay :]
-	if ((ds_flatwidth == ds_flatheight) && (wpow2 && hpow2))
-		ds_powersoftwo = true;
-
-	// Just return ds_powersoftwo.
-	return ds_powersoftwo;
+	return ((ds_flatwidth == ds_flatheight) && (wpow2 && hpow2));
 }
 
 //
@@ -645,60 +641,63 @@ boolean R_CheckPowersOfTwo(void)
 //
 // Determine the flat's dimensions from its lump length.
 //
-void R_CheckFlatLength(size_t size)
+void R_CheckFlatLength(size_t length)
 {
-	switch (size)
+	INT32 size, bits;
+
+	switch (length)
 	{
 		case 4194304: // 2048x2048 lump
-			nflatmask = 0x3FF800;
-			nflatxshift = 21;
-			nflatyshift = 10;
-			nflatshiftup = 5;
-			ds_flatwidth = ds_flatheight = 2048;
+			size = 2048;
+			bits = 11;
 			break;
 		case 1048576: // 1024x1024 lump
-			nflatmask = 0xFFC00;
-			nflatxshift = 22;
-			nflatyshift = 12;
-			nflatshiftup = 6;
-			ds_flatwidth = ds_flatheight = 1024;
+			size = 1024;
+			bits = 10;
 			break;
 		case 262144:// 512x512 lump
-			nflatmask = 0x3FE00;
-			nflatxshift = 23;
-			nflatyshift = 14;
-			nflatshiftup = 7;
-			ds_flatwidth = ds_flatheight = 512;
+			size = 512;
+			bits = 9;
 			break;
 		case 65536: // 256x256 lump
-			nflatmask = 0xFF00;
-			nflatxshift = 24;
-			nflatyshift = 16;
-			nflatshiftup = 8;
-			ds_flatwidth = ds_flatheight = 256;
+			size = 256;
+			bits = 8;
 			break;
 		case 16384: // 128x128 lump
-			nflatmask = 0x3F80;
-			nflatxshift = 25;
-			nflatyshift = 18;
-			nflatshiftup = 9;
-			ds_flatwidth = ds_flatheight = 128;
+			size = 128;
+			bits = 7;
 			break;
 		case 1024: // 32x32 lump
-			nflatmask = 0x3E0;
-			nflatxshift = 27;
-			nflatyshift = 22;
-			nflatshiftup = 11;
-			ds_flatwidth = ds_flatheight = 32;
+			size = 32;
+			bits = 5;
+			break;
+		case 256: // 16x16 lump
+			size = 16;
+			bits = 4;
+			break;
+		case 64: // 8x8 lump
+			size = 8;
+			bits = 3;
+			break;
+		case 16: // 4x4 lump
+			size = 4;
+			bits = 2;
+			break;
+		case 4: // 2x2 lump
+			size = 2;
+			bits = 1;
 			break;
 		default: // 64x64 lump
-			nflatmask = 0xFC0;
-			nflatxshift = 26;
-			nflatyshift = 20;
-			nflatshiftup = 10;
-			ds_flatwidth = ds_flatheight = 64;
+			size = 64;
+			bits = 6;
 			break;
 	}
+
+	nflatshiftup = 16 - bits;
+	nflatxshift = 16 + nflatshiftup;
+	nflatyshift = nflatxshift - bits;
+	nflatmask = (size - 1) * size;
+	ds_flatwidth = ds_flatheight = size;
 }
 
 //
@@ -777,6 +776,18 @@ Rloadflats (INT32 i, INT32 w)
 					break;
 				case 1024: // 32x32 lump
 					flatsize = 32;
+					break;
+				case 256: // 16x16 lump
+					flatsize = 16;
+					break;
+				case 64: // 8x8 lump
+					flatsize = 8;
+					break;
+				case 16: // 4x4 lump
+					flatsize = 4;
+					break;
+				case 4: // 2x2 lump
+					flatsize = 2;
 					break;
 				default: // 64x64 lump
 					flatsize = 64;

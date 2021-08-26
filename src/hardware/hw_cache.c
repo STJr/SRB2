@@ -832,6 +832,18 @@ static void HWR_CacheFlat(GLMipmap_t *grMipmap, lumpnum_t flatlumpnum)
 		case 1024: // 32x32 lump
 			pflatsize = 32;
 			break;
+		case 256: // 16x16 lump
+			pflatsize = 16;
+			break;
+		case 64: // 8x8 lump
+			pflatsize = 8;
+			break;
+		case 16: // 4x4 lump
+			pflatsize = 4;
+			break;
+		case 4: // 2x2 lump
+			pflatsize = 2;
+			break;
 		default: // 64x64 lump
 			pflatsize = 64;
 			break;

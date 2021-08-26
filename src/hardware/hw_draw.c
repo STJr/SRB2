@@ -606,6 +606,22 @@ void HWR_DrawFlatFill (INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum
 			dflatsize = 32.0f;
 			flatflag = 31;
 			break;
+		case 256: // 16x16 lump
+			dflatsize = 16.0f;
+			flatflag = 15;
+			break;
+		case 64: // 8x8 lump
+			dflatsize = 8.0f;
+			flatflag = 7;
+			break;
+		case 16: // 4x4 lump
+			dflatsize = 4.0f;
+			flatflag = 3;
+			break;
+		case 4: // 2x2 lump
+			dflatsize = 2.0f;
+			flatflag = 1;
+			break;
 		default: // 64x64 lump
 			dflatsize = 64.0f;
 			flatflag = 63;

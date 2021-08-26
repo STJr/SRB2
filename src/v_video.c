@@ -1721,19 +1721,19 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum)
 	{
 		case 4194304: // 2048x2048 lump
 			lflatsize = 2048;
-			flatshift = 10;
+			flatshift = 11;
 			break;
 		case 1048576: // 1024x1024 lump
 			lflatsize = 1024;
-			flatshift = 9;
+			flatshift = 10;
 			break;
 		case 262144:// 512x512 lump
 			lflatsize = 512;
-			flatshift = 8;
+			flatshift = 9;
 			break;
 		case 65536: // 256x256 lump
 			lflatsize = 256;
-			flatshift = 7;
+			flatshift = 8;
 			break;
 		case 16384: // 128x128 lump
 			lflatsize = 128;
@@ -1742,6 +1742,22 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum)
 		case 1024: // 32x32 lump
 			lflatsize = 32;
 			flatshift = 5;
+			break;
+		case 256: // 16x16 lump
+			lflatsize = 16;
+			flatshift = 4;
+			break;
+		case 64: // 8x8 lump
+			lflatsize = 8;
+			flatshift = 3;
+			break;
+		case 16: // 4x4 lump
+			lflatsize = 4;
+			flatshift = 2;
+			break;
+		case 4: // 2x2 lump
+			lflatsize = 2;
+			flatshift = 1;
 			break;
 		default: // 64x64 lump
 			lflatsize = 64;
