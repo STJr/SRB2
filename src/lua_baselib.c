@@ -3405,7 +3405,7 @@ static int lib_gAddPlayer(lua_State *L)
 {
 	INT16 i, newplayernum, botcount = 1;
 	player_t *newplayer;
-	INT8 skinnum = 0, bot;
+	SINT8 skinnum = 0, bot;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
