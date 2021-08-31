@@ -1089,7 +1089,6 @@ static const char *credits[] = {
 	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
-	"\"james\"",
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"\"Jimita\"",
 	"\"Kaito Sinclaire\"",
@@ -1102,6 +1101,7 @@ static const char *credits[] = {
 	"Louis-Antoine \"LJ Sonic\" de Moulins", // de Rochefort doesn't quite fit on the screen sorry lol
 	"John \"JTE\" Muniz",
 	"Colin \"Sonict\" Pfaff",
+	"James \"james\" Robert Roman",
 	"Sean \"Sryder13\" Ryder",
 	"Ehab \"Wolfy\" Saeed",
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
