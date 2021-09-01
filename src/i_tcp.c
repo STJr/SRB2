@@ -857,7 +857,7 @@ static boolean UDP_Socket(void)
 	struct my_addrinfo *ai, *runp, hints;
 	int gaie;
 #ifdef HAVE_IPV6
-	const INT32 b_ipv6 = M_CheckParm("-ipv6");
+	const INT32 b_ipv6 = !M_CheckParm("-noipv6");
 #endif
 	const char *serv;
 
