@@ -427,7 +427,7 @@ static boolean SOCK_cmpaddr(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
 			&& (b->ip4.sin_port == 0 || (a->ip4.sin_port == b->ip4.sin_port));
 #ifdef HAVE_IPV6
 	else if (b->any.sa_family == AF_INET6)
-		return memcmp(&a->ip6.sin6_addr, &b->ip6.sin6_addr, sizeof(b->ip6.sin6_addr))
+		return !memcmp(&a->ip6.sin6_addr, &b->ip6.sin6_addr, sizeof(b->ip6.sin6_addr))
 			&& (b->ip6.sin6_port == 0 || (a->ip6.sin6_port == b->ip6.sin6_port));
 #endif
 	else
@@ -1156,6 +1156,7 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 	SINT8 newnode = -1;
 	struct my_addrinfo *ai = NULL, *runp, hints;
 	int gaie;
+	size_t i;
 
 	 if (!port || !port[0])
 		port = DEFAULTPORT;
@@ -1183,13 +1184,20 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 
 	while (runp != NULL)
 	{
-		// find ip of the server
-		if (sendto(mysockets[0], NULL, 0, 0, runp->ai_addr, runp->ai_addrlen) == 0)
+		// test ip address of server
+		for (i = 0; i < mysocketses; ++i)
 		{
-			memcpy(&clientaddress[newnode], runp->ai_addr, runp->ai_addrlen);
-			break;
+			if (runp->ai_addr->sa_family == myfamily[i])
+			{
+				memcpy(&clientaddress[newnode], runp->ai_addr, runp->ai_addrlen);
+				break;
+			}
 		}
-		runp = runp->ai_next;
+
+		if (i < mysocketses)
+			runp = runp->ai_next;
+		else
+			break;
 	}
 	I_freeaddrinfo(ai);
 	return newnode;
