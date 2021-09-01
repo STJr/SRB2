@@ -340,8 +340,14 @@ static inline void I_UPnP_rem(const char *port, const char * servicetype)
 
 static const char *SOCK_AddrToStr(mysockaddr_t *sk)
 {
-	static char s[64]; // 255.255.255.255:65535 or IPv6:65535
+	static char s[64]; // 255.255.255.255:65535 or
+	// [ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff]:65535
 #ifdef HAVE_NTOP
+#ifdef HAVE_IPV6
+	int v6 = (sk->any.sa_family == AF_INET6);
+#else
+	int v6 = 0;
+#endif
 	void *addr;
 
 	if(sk->any.sa_family == AF_INET)
@@ -355,14 +361,21 @@ static const char *SOCK_AddrToStr(mysockaddr_t *sk)
 
 	if(addr == NULL)
 		sprintf(s, "No address");
-	else if(inet_ntop(sk->any.sa_family, addr, s, sizeof (s)) == NULL)
+	else if(inet_ntop(sk->any.sa_family, addr, &s[v6], sizeof (s) - v6) == NULL)
 		sprintf(s, "Unknown family type, error #%u", errno);
 #ifdef HAVE_IPV6
-	else if(sk->any.sa_family == AF_INET6 && sk->ip6.sin6_port != 0)
-		strcat(s, va(":%d", ntohs(sk->ip6.sin6_port)));
+	else if(sk->any.sa_family == AF_INET6)
+	{
+		s[0] = '[';
+		strcat(s, "]");
+
+		if (sk->ip6.sin6_port != 0)
+			strcat(s, va(":%d", ntohs(sk->ip6.sin6_port)));
+	}
 #endif
 	else if(sk->any.sa_family == AF_INET  && sk->ip4.sin_port  != 0)
 		strcat(s, va(":%d", ntohs(sk->ip4.sin_port)));
+
 #else
 	if (sk->any.sa_family == AF_INET)
 	{
