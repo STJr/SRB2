@@ -788,7 +788,7 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 		// make it IPv6 ony
 		opt = true;
 		opts = (socklen_t)sizeof(opt);
-		if (setsockopt(s, SOL_SOCKET, IPV6_V6ONLY, (char *)&opt, opts))
+		if (setsockopt(s, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&opt, opts))
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Could not limit IPv6 bind\n")); // I do not care anymore
 		}
