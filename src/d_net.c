@@ -1225,8 +1225,6 @@ SINT8 I_NetMakeNode(const char *hostname)
 		// retrieve portnum from address!
 		hostname = I_NetSplitAddress(localhostname, &port);
 
-		CONS_Printf("%s %s\n", hostname, port);
-
 		newnode = I_NetMakeNodewPort(hostname, port);
 		free(localhostname);
 	}
