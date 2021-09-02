@@ -748,8 +748,7 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 	unsigned long trueval = true;
 #endif
 	mysockaddr_t straddr;
-	struct sockaddr_in sin;
-	socklen_t len = sizeof(sin);
+	socklen_t len = sizeof(straddr);
 
 	if (s == (SOCKET_TYPE)ERRSOCKET)
 		return (SOCKET_TYPE)ERRSOCKET;
@@ -767,14 +766,12 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 	}
 #endif
 
-	straddr.any = *addr;
+	memcpy(&straddr, addr, addrlen);
 	I_OutputMsg("Binding to %s\n", SOCK_AddrToStr(&straddr));
 
 	if (family == AF_INET)
 	{
-		mysockaddr_t tmpaddr;
-		tmpaddr.any = *addr ;
-		if (tmpaddr.ip4.sin_addr.s_addr == htonl(INADDR_ANY))
+		if (straddr.ip4.sin_addr.s_addr == htonl(INADDR_ANY))
 		{
 			opt = true;
 			opts = (socklen_t)sizeof(opt);
@@ -791,7 +788,7 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 #ifdef HAVE_IPV6
 	else if (family == AF_INET6)
 	{
-		if (memcmp(addr, &in6addr_any, sizeof(in6addr_any)) == 0) //IN6_ARE_ADDR_EQUAL
+		if (memcmp(&straddr.ip6.sin6_addr, &in6addr_any, sizeof(in6addr_any)) == 0) //IN6_ARE_ADDR_EQUAL
 		{
 			opt = true;
 			opts = (socklen_t)sizeof(opt);
@@ -843,10 +840,17 @@ static SOCKET_TYPE UDP_Bind(int family, struct sockaddr *addr, socklen_t addrlen
 			CONS_Printf(M_GetText("Network system buffer set to: %dKb\n"), opt>>10);
 	}
 
-	if (getsockname(s, (struct sockaddr *)&sin, &len) == -1)
+	if (getsockname(s, &straddr.any, &len) == -1)
 		CONS_Alert(CONS_WARNING, M_GetText("Failed to get port number\n"));
 	else
-		current_port = (UINT16)ntohs(sin.sin_port);
+	{
+		if (family == AF_INET)
+			current_port = (UINT16)ntohs(straddr.ip4.sin_port);
+#ifdef HAVE_IPV6
+		else if (family == AF_INET6)
+			current_port = (UINT16)ntohs(straddr.ip6.sin6_port);
+#endif
+	}
 
 	return s;
 }
