@@ -11619,6 +11619,7 @@ static void M_DrawMPMainMenu(void)
 	const INT32 boxwidth = /*16*8 + 6*/ (BASEVIDWIDTH - 2*(x+5));
 	const INT32 maxstrwidth = boxwidth - 5;
 	char *drawnstr = malloc(sizeof(setupm_ip));
+	char *drawnstr_orig = drawnstr;
 	boolean drawthin, shorten = false;
 
 	// use generic drawer for cursor, items and title
@@ -11678,6 +11679,8 @@ static void M_DrawMPMainMenu(void)
 		else
 			V_DrawCharacter(x+8+V_StringWidth(drawnstr, V_ALLOWLOWERCASE),y+12,'_',false);
 	}
+
+	free(drawnstr_orig);
 }
 
 #undef DOTS
