@@ -448,7 +448,7 @@ static void ExtraDataTicker(void)
 				UINT8 *curpos = textcmd->cmd;
 				UINT8 *bufferend = &curpos[textcmd->length];
 
-				while (curpos + NETCMD_HEADER_SIZE < bufferend)
+				while (curpos + NETCMD_HEADER_SIZE <= bufferend)
 				{
 					const UINT8 id = curpos[netcmd_type];
 					const UINT8 length = curpos[netcmd_length];
