@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -313,5 +313,17 @@ INT32 I_ClipboardCopy(const char *data, size_t size);
 const char *I_ClipboardPaste(void);
 
 void I_RegisterSysCommands(void);
+
+/** \brief Return the position of the cursor relative to the top-left window corner.
+*/
+void I_GetCursorPosition(INT32 *x, INT32 *y);
+
+/** \brief Returns whether the mouse is grabbed
+*/
+boolean I_GetMouseGrab(void);
+
+/** \brief Sets whether the mouse is grabbed
+*/
+void I_SetMouseGrab(boolean grab);
 
 #endif
