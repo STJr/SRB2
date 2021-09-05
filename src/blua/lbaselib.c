@@ -287,6 +287,25 @@ static int luaB_dofile (lua_State *L) {
 	return lua_gettop(L) - n;
 }
 
+// Edited to load PK3 entries instead
+static int luaB_loadfile (lua_State *L) {
+  const char *filename = luaL_checkstring(L, 1);
+  char fullfilename[256];
+  UINT16 lumpnum;
+  int n = lua_gettop(L);
+
+  if (wadfiles[numwadfiles - 1]->type != RET_PK3)
+    luaL_error(L, "loadfile() only works with PK3 files");
+
+  snprintf(fullfilename, sizeof(fullfilename), "Lua/%s", filename);
+  lumpnum = W_CheckNumForFullNamePK3(fullfilename, numwadfiles - 1, 0);
+  if (lumpnum == INT16_MAX)
+    luaL_error(L, "can't find script " LUA_QS, fullfilename);
+
+  LUA_LoadLump(numwadfiles - 1, lumpnum);
+
+  return 1;
+}
 
 static int luaB_assert (lua_State *L) {
   luaL_checkany(L, 1);
@@ -406,6 +425,7 @@ static const luaL_Reg base_funcs[] = {
   {"collectgarbage", luaB_collectgarbage},
   {"error", luaB_error},
   {"dofile", luaB_dofile},
+  {"loadfile", luaB_loadfile},
   {"gcinfo", luaB_gcinfo},
   {"getfenv", luaB_getfenv},
   {"getmetatable", luaB_getmetatable},
