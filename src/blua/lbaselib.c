@@ -282,7 +282,7 @@ static int luaB_dofile (lua_State *L) {
 	if (lumpnum == INT16_MAX)
 		luaL_error(L, "can't find script " LUA_QS, fullfilename);
 
-	LUA_LoadLump(numwadfiles - 1, lumpnum, false);
+	LUA_DoLump(numwadfiles - 1, lumpnum, false);
 
 	return lua_gettop(L) - n;
 }

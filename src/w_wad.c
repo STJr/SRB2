@@ -199,7 +199,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 	posStart = W_CheckNumForFullNamePK3("Init.lua", wadnum, 0);
 	if (posStart != INT16_MAX)
 	{
-		LUA_LoadLump(wadnum, posStart, true);
+		LUA_DoLump(wadnum, posStart, true);
 	}
 	else
 	{
@@ -208,7 +208,7 @@ static inline void W_LoadDehackedLumpsPK3(UINT16 wadnum, boolean mainfile)
 		{
 			posEnd = W_CheckNumForFolderEndPK3("Lua/", wadnum, posStart);
 			for (; posStart < posEnd; posStart++)
-				LUA_LoadLump(wadnum, posStart, true);
+				LUA_DoLump(wadnum, posStart, true);
 		}
 	}
 
@@ -241,7 +241,7 @@ static inline void W_LoadDehackedLumps(UINT16 wadnum, boolean mainfile)
 		lumpinfo_t *lump_p = wadfiles[wadnum]->lumpinfo;
 		for (lump = 0; lump < wadfiles[wadnum]->numlumps; lump++, lump_p++)
 			if (memcmp(lump_p->name,"LUA_",4)==0)
-				LUA_LoadLump(wadnum, lump, true);
+				LUA_DoLump(wadnum, lump, true);
 	}
 
 	{
@@ -879,7 +879,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		DEH_LoadDehackedLumpPwad(numwadfiles - 1, 0, mainfile);
 		break;
 	case RET_LUA:
-		LUA_LoadLump(numwadfiles - 1, 0, true);
+		LUA_DoLump(numwadfiles - 1, 0, true);
 		break;
 	default:
 		break;
