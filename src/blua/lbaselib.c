@@ -292,7 +292,6 @@ static int luaB_loadfile (lua_State *L) {
   const char *filename = luaL_checkstring(L, 1);
   char fullfilename[256];
   UINT16 lumpnum;
-  int n = lua_gettop(L);
 
   if (wadfiles[numwadfiles - 1]->type != RET_PK3)
     luaL_error(L, "loadfile() only works with PK3 files");
