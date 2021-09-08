@@ -35,7 +35,7 @@ INT32 textureformat = GL_TEXFMT_P_8; // use chromakey for hole
 RGBA_t mapPalette[256] = {0}; // the palette for the currently loaded level or menu etc.
 
 // Returns a pointer to the palette which should be used for caching textures.
-static RGBA_t *HWR_GetTexturePalette(void)
+RGBA_t *HWR_GetTexturePalette(void)
 {
 	return HWR_ShouldUsePaletteRendering() ? mapPalette : pLocalPalette;
 }

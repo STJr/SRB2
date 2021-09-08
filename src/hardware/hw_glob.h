@@ -104,6 +104,8 @@ void HWR_FreeExtraSubsectors(void);
 // --------
 // hw_cache.c
 // --------
+RGBA_t *HWR_GetTexturePalette(void);
+
 void HWR_InitMapTextures(void);
 void HWR_LoadMapTextures(size_t pnumtextures);
 void HWR_FreeMapTextures(void);
