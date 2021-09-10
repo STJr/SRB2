@@ -4185,7 +4185,7 @@ static void M_DrawStaticBox(fixed_t x, fixed_t y, INT32 flags, fixed_t w, fixed_
 	if (staticalong > pw) // simplified for base LSSTATIC
 		staticalong -= pw;
 
-	V_DrawCroppedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT/2, flags, patch, staticalong, 0, sw, h*2); // FixedDiv(h, scale)); -- for scale FRACUNIT/2
+	V_DrawCroppedPatch(x<<FRACBITS, y<<FRACBITS, FRACUNIT/2, FRACUNIT/2, flags, patch, NULL, staticalong<<FRACBITS, 0, sw<<FRACBITS, h*2<<FRACBITS); // FixedDiv(h, scale)); -- for scale FRACUNIT/2
 
 	staticalong += sw; //M_RandomRange(sw/2, 2*sw); -- turns out less randomisation looks better because immediately adjacent frames can't end up close to each other
 

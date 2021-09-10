@@ -1759,8 +1759,8 @@ static void CON_DrawBackpic(void)
 	}
 
 	// Draw the patch.
-	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, V_NOSCALESTART, con_backpic,
-			0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
+	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, FRACUNIT, V_NOSCALESTART, con_backpic, NULL,
+			0, (BASEVIDHEIGHT - h) << FRACBITS, BASEVIDWIDTH << FRACBITS, h << FRACBITS);
 
 	// Unlock the cached patch.
 	W_UnlockCachedPatch(con_backpic);
