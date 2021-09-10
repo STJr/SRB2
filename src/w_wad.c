@@ -50,16 +50,17 @@
 
 #include "filesrch.h"
 
-#include "i_video.h" // rendermode
+#include "d_main.h"
 #include "d_netfil.h"
-#include "dehacked.h"
 #include "d_clisrv.h"
+#include "dehacked.h"
 #include "r_defs.h"
 #include "r_data.h"
 #include "r_textures.h"
 #include "r_patch.h"
 #include "r_picformats.h"
 #include "i_system.h"
+#include "i_video.h" // rendermode
 #include "md5.h"
 #include "lua_script.h"
 #ifdef SCANTHINGS
@@ -117,10 +118,15 @@ void W_Shutdown(void)
 	{
 		wadfile_t *wad = wadfiles[numwadfiles];
 
-		fclose(wad->handle);
+		if (wad->handle)
+			fclose(wad->handle);
 		Z_Free(wad->filename);
+		if (wad->path)
+			Z_Free(wad->path);
 		while (wad->numlumps--)
 		{
+			if (wad->lumpinfo[wad->numlumps].diskpath)
+				Z_Free(wad->lumpinfo[wad->numlumps].diskpath);
 			Z_Free(wad->lumpinfo[wad->numlumps].longname);
 			Z_Free(wad->lumpinfo[wad->numlumps].fullname);
 		}
@@ -421,6 +427,7 @@ static lumpinfo_t* ResGetLumpsWad (FILE* handle, UINT16* nlmp, const char* filen
 	{
 		lump_p->position = LONG(fileinfo->filepos);
 		lump_p->size = lump_p->disksize = LONG(fileinfo->size);
+		lump_p->diskpath = NULL;
 		if (compressed) // wad is compressed, lump might be
 		{
 			UINT32 realsize = 0;
@@ -602,6 +609,7 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 
 		lump_p->position = zentry.offset; // NOT ACCURATE YET: we still need to read the local entry to find our true position
 		lump_p->disksize = zentry.compsize;
+		lump_p->diskpath = NULL;
 		lump_p->size = zentry.size;
 
 		fullname = malloc(zentry.namelen + 1);
@@ -679,6 +687,58 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 	return lumpinfo;
 }
 
+// Checks if the combination of the first path and the second path are valid.
+// If they are, the concatenated path is returned.
+static char *W_CheckFolderPath(const char *startpath, const char *path)
+{
+	if (checkfolderpath(path, startpath, false))
+	{
+		char *fn;
+
+		if (startpath)
+		{
+			size_t len = strlen(startpath) + strlen(path) + strlen(PATHSEP) + 1;
+			fn = ZZ_Alloc(len);
+			snprintf(fn, len, "%s" PATHSEP "%s", startpath, path);
+		}
+		else
+			fn = Z_StrDup(path);
+
+		return fn;
+	}
+
+	return NULL;
+}
+
+// Returns the first valid path for a folder.
+static char *W_GetFullFolderPath(const char *path)
+{
+	// Check the path by itself first.
+	char *fn = W_CheckFolderPath(NULL, path);
+	if (fn)
+		return fn;
+
+#define checkpath(startpath) { \
+	fn = W_CheckFolderPath(startpath, path); \
+	if (fn) \
+		return fn; \
+} \
+
+	checkpath(srb2home) // Then, look in srb2home.
+	checkpath(srb2path) // Now, look in srb2path.
+	checkpath(".") // Finally, look in ".".
+
+#undef checkpath
+
+	return NULL;
+}
+
+// Loads files from a folder into a lumpinfo structure.
+static lumpinfo_t *ResGetLumpsFolder(const char *path, UINT16 *nlmp, UINT16 *nfiles, UINT16 *nfolders)
+{
+	return getfolderfiles(path, nlmp, nfiles, nfolders);
+}
+
 static UINT16 W_InitFileError (const char *filename, boolean exitworthy)
 {
 	if (exitworthy)
@@ -692,6 +752,19 @@ static UINT16 W_InitFileError (const char *filename, boolean exitworthy)
 	else
 		CONS_Printf(M_GetText("Errors occurred while loading %s; not added.\n"), filename);
 	return INT16_MAX;
+}
+
+static void W_ReadFileShaders(wadfile_t *wadfile)
+{
+#ifdef HWRENDER
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
+	{
+		HWR_LoadCustomShadersFromFile(numwadfiles - 1, W_FileHasFolders(wadfile));
+		HWR_CompileShaders();
+	}
+#else
+	(void)wadfile;
+#endif
 }
 
 //  Allocate a wadfile, setup the lumpinfo (directory) and
@@ -760,7 +833,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// see PutFileNeeded in d_netfil.c
 	if ((important = !important))
 	{
-		packetsize = packetsizetally + nameonlylength(filename) + 22;
+		packetsize = packetsizetally + nameonlylength(filename) + FILENEEDEDSIZE;
 
 		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
 		{
@@ -788,7 +861,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
 			if (important)
-				packetsizetally -= nameonlylength(filename) + 22;
+				packetsizetally -= nameonlylength(filename) + FILENEEDEDSIZE;
 			if (handle)
 				fclose(handle);
 			return W_InitFileError(filename, false);
@@ -831,9 +904,11 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	//
 	wadfile = Z_Malloc(sizeof (*wadfile), PU_STATIC, NULL);
 	wadfile->filename = Z_StrDup(filename);
+	wadfile->path = NULL;
 	wadfile->type = type;
 	wadfile->handle = handle;
-	wadfile->numlumps = (UINT16)numlumps;
+	wadfile->numlumps = numlumps;
+	wadfile->filecount = wadfile->foldercount = 0;
 	wadfile->lumpinfo = lumpinfo;
 	wadfile->important = important;
 	fseek(handle, 0, SEEK_END);
@@ -856,14 +931,8 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
-#ifdef HWRENDER
 	// Read shaders from file
-	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED))
-	{
-		HWR_LoadCustomShadersFromFile(numwadfiles - 1, (type == RET_PK3));
-		HWR_CompileShaders();
-	}
-#endif // HWRENDER
+	W_ReadFileShaders(wadfile);
 
 	// TODO: HACK ALERT - Load Lua & SOC stuff right here. I feel like this should be out of this place, but... Let's stick with this for now.
 	switch (wadfile->type)
@@ -889,6 +958,153 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	return wadfile->numlumps;
 }
 
+//
+// Loads a folder as a WAD.
+//
+UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
+{
+	lumpinfo_t *lumpinfo = NULL;
+	wadfile_t *wadfile;
+	UINT16 numlumps = 0;
+	UINT16 filecount, foldercount;
+	size_t i;
+	char *fn, *fullpath;
+	const char *p;
+	int important;
+
+	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
+		refreshdirmenu = REFRESHDIR_NORMAL|REFRESHDIR_ADDFILE; // clean out cons_alerts that happened earlier
+
+	if (refreshdirname)
+		Z_Free(refreshdirname);
+	if (dirmenu)
+		refreshdirname = Z_StrDup(path);
+	else
+		refreshdirname = NULL;
+
+	if (numwadfiles >= MAX_WADFILES)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
+		refreshdirmenu |= REFRESHDIR_MAX;
+		return W_InitFileError(path, startup);
+	}
+
+	important = 0; // ???
+
+	/// \todo Implement a W_VerifyFolder.
+	if ((important = !important))
+	{
+		size_t packetsize = packetsizetally + strlen(path) + FILENEEDEDSIZE;
+
+		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
+			refreshdirmenu |= REFRESHDIR_MAX;
+			return W_InitFileError(path, startup);
+		}
+
+		packetsizetally = packetsize;
+	}
+
+	// Remove path separators from the filename, and don't try adding "/".
+	p = path+strlen(path);
+	--p;
+
+	while (*p == '\\' || *p == '/' || *p == ':')
+	{
+		p--;
+		if (p < path)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Path %s is prohibited\n"), path);
+			return W_InitFileError(path, startup);
+		}
+	}
+	p++;
+
+	// Allocate the new path name.
+	i = (p - path) + 1;
+	fn = ZZ_Alloc(i);
+	strlcpy(fn, path, i);
+
+	if (M_IsStringEmpty(fn))
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Folder name is empty\n"));
+		Z_Free(fn);
+
+		if (startup)
+			return W_InitFileError("A folder", true);
+		else
+			return W_InitFileError("a folder", false);
+	}
+
+	// Get the full path for this filename.
+	fullpath = W_GetFullFolderPath(fn);
+	if (fullpath == NULL)
+	{
+		Z_Free(fn);
+		return W_InitFileError(path, false);
+	}
+
+	for (i = 0; i < numwadfiles; i++)
+	{
+		if (wadfiles[i]->type != RET_FOLDER)
+			continue;
+
+		if (samepaths(wadfiles[i]->path, fullpath) > 0)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), path);
+			if (important)
+				packetsizetally -= strlen(path) + FILENEEDEDSIZE;
+			Z_Free(fn);
+			Z_Free(fullpath);
+			return W_InitFileError(path, false);
+		}
+	}
+
+	lumpinfo = ResGetLumpsFolder(fullpath, &numlumps, &filecount, &foldercount);
+	if (lumpinfo == NULL)
+	{
+		if (filecount == UINT16_MAX)
+			CONS_Alert(CONS_ERROR, M_GetText("Folder %s is empty\n"), path);
+
+		Z_Free(fn);
+		Z_Free(fullpath);
+
+		return W_InitFileError(path, startup);
+	}
+
+	if (important && !mainfile)
+		G_SetGameModified(true);
+
+	wadfile = Z_Malloc(sizeof (*wadfile), PU_STATIC, NULL);
+	wadfile->filename = fn;
+	wadfile->path = fullpath;
+	wadfile->type = RET_FOLDER;
+	wadfile->handle = NULL;
+	wadfile->numlumps = numlumps;
+	wadfile->filecount = filecount;
+	wadfile->foldercount = foldercount;
+	wadfile->lumpinfo = lumpinfo;
+	wadfile->important = important;
+
+	// Irrelevant.
+	wadfile->filesize = 0;
+	memset(wadfile->md5sum, 0x00, 16);
+
+	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
+	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
+
+	CONS_Printf(M_GetText("Added folder %s (%u files, %u folders)\n"), fn, filecount, foldercount);
+	wadfiles[numwadfiles] = wadfile;
+	numwadfiles++;
+
+	W_ReadFileShaders(wadfile);
+	W_LoadDehackedLumpsPK3(numwadfiles - 1, mainfile);
+	W_InvalidateLumpnumCache();
+
+	return wadfile->numlumps;
+}
+
 /** Tries to load a series of files.
   * All files are wads unless they have an extension of ".soc" or ".lua".
   *
@@ -900,11 +1116,18 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
   */
 void W_InitMultipleFiles(char **filenames)
 {
-	// will be realloced as lumps are added
 	for (; *filenames; filenames++)
 	{
-		//CONS_Debug(DBG_SETUP, "Loading %s\n", *filenames);
-		W_InitFile(*filenames, numwadfiles < mainwads, true);
+		const char *fn = (*filenames);
+		char pathsep = fn[strlen(fn) - 1];
+		boolean mainfile = (numwadfiles < mainwads);
+
+		//CONS_Debug(DBG_SETUP, "Loading %s\n", fn);
+
+		if (pathsep == '\\' || pathsep == '/')
+			W_InitFolder(fn, mainfile, true);
+		else
+			W_InitFile(fn, mainfile, true);
 	}
 }
 
@@ -1178,7 +1401,7 @@ lumpnum_t W_CheckNumForMap(const char *name)
 				if (!strncmp(name, (wadfiles[i]->lumpinfo + lumpNum)->name, 8))
 					return (i<<16) + lumpNum;
 		}
-		else if (wadfiles[i]->type == RET_PK3)
+		else if (W_FileHasFolders(wadfiles[i]))
 		{
 			lumpNum = W_CheckNumForFolderStartPK3("maps/", i, 0);
 			if (lumpNum != INT16_MAX)
@@ -1276,9 +1499,34 @@ UINT8 W_LumpExists(const char *name)
 
 size_t W_LumpLengthPwad(UINT16 wad, UINT16 lump)
 {
+	lumpinfo_t *l;
+
 	if (!TestValidLump(wad, lump))
 		return 0;
-	return wadfiles[wad]->lumpinfo[lump].size;
+
+	l = wadfiles[wad]->lumpinfo + lump;
+
+	if (wadfiles[wad]->type == RET_FOLDER)
+	{
+		INT32 stat = pathisfolder(l->diskpath);
+
+		if (stat < 0)
+			I_Error("W_LumpLengthPwad: could not stat %s", l->diskpath);
+		else if (stat == 1) // Path is a folder.
+			return 0;
+		else
+		{
+			FILE *handle = fopen(l->diskpath, "rb");
+			if (handle == NULL)
+				I_Error("W_LumpLengthPwad: could not open file %s", l->diskpath);
+
+			fseek(handle, 0, SEEK_END);
+			l->size = l->disksize = ftell(handle);
+			fclose(handle);
+		}
+	}
+
+	return l->size;
 }
 
 /** Returns the buffer size needed to load the given lump.
@@ -1297,7 +1545,7 @@ size_t W_LumpLength(lumpnum_t lumpnum)
 //
 boolean W_IsLumpWad(lumpnum_t lumpnum)
 {
-	if (wadfiles[WADFILENUM(lumpnum)]->type == RET_PK3)
+	if (W_FileHasFolders(wadfiles[WADFILENUM(lumpnum)]))
 	{
 		const char *lumpfullName = (wadfiles[WADFILENUM(lumpnum)]->lumpinfo + LUMPNUM(lumpnum))->fullname;
 
@@ -1315,7 +1563,7 @@ boolean W_IsLumpWad(lumpnum_t lumpnum)
 //
 boolean W_IsLumpFolder(UINT16 wad, UINT16 lump)
 {
-	if (wadfiles[wad]->type == RET_PK3)
+	if (W_FileHasFolders(wadfiles[wad]))
 	{
 		const char *name = wadfiles[wad]->lumpinfo[lump].fullname;
 
@@ -1365,17 +1613,44 @@ void zerr(int ret)
   */
 size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, size_t offset)
 {
-	size_t lumpsize;
+	size_t lumpsize, bytesread;
 	lumpinfo_t *l;
-	FILE *handle;
+	FILE *handle = NULL;
 
 	if (!TestValidLump(wad,lump))
 		return 0;
 
+	l = wadfiles[wad]->lumpinfo + lump;
+
+	// Open the external file for this lump, if the WAD is a folder.
+	if (wadfiles[wad]->type == RET_FOLDER)
+	{
+		INT32 stat = pathisfolder(l->diskpath);
+
+		if (stat < 0)
+			I_Error("W_ReadLumpHeaderPwad: could not stat %s", l->diskpath);
+		else if (stat == 1) // Path is a folder.
+			return 0;
+		else
+		{
+			handle = fopen(l->diskpath, "rb");
+			if (handle == NULL)
+				I_Error("W_ReadLumpHeaderPwad: could not open file %s", l->diskpath);
+
+			// Find length of file
+			fseek(handle, 0, SEEK_END);
+			l->size = l->disksize = ftell(handle);
+		}
+	}
+
 	lumpsize = wadfiles[wad]->lumpinfo[lump].size;
 	// empty resource (usually markers like S_START, F_END ..)
 	if (!lumpsize || lumpsize<offset)
+	{
+		if (wadfiles[wad]->type == RET_FOLDER)
+			fclose(handle);
 		return 0;
+	}
 
 	// zero size means read all the lump
 	if (!size || size+offset > lumpsize)
@@ -1383,24 +1658,22 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 
 	// Let's get the raw lump data.
 	// We setup the desired file handle to read the lump data.
-	l = wadfiles[wad]->lumpinfo + lump;
-	handle = wadfiles[wad]->handle;
+	if (wadfiles[wad]->type != RET_FOLDER)
+		handle = wadfiles[wad]->handle;
 	fseek(handle, (long)(l->position + offset), SEEK_SET);
 
 	// But let's not copy it yet. We support different compression formats on lumps, so we need to take that into account.
 	switch(wadfiles[wad]->lumpinfo[lump].compression)
 	{
 	case CM_NOCOMPRESSION:		// If it's uncompressed, we directly write the data into our destination, and return the bytes read.
+		bytesread = fread(dest, 1, size, handle);
+		if (wadfiles[wad]->type == RET_FOLDER)
+			fclose(handle);
 #ifdef NO_PNG_LUMPS
-		{
-			size_t bytesread = fread(dest, 1, size, handle);
-			if (Picture_IsLumpPNG((UINT8 *)dest, bytesread))
-				Picture_ThrowPNGError(l->fullname, wadfiles[wad]->filename);
-			return bytesread;
-		}
-#else
-		return fread(dest, 1, size, handle);
+		if (Picture_IsLumpPNG((UINT8 *)dest, bytesread))
+			Picture_ThrowPNGError(l->fullname, wadfiles[wad]->filename);
 #endif
+		return bytesread;
 	case CM_LZF:		// Is it LZF compressed? Used by ZWADs.
 		{
 #ifdef ZWAD

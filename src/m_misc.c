@@ -2688,3 +2688,22 @@ const char * M_Ftrim (double f)
 		return &dig[1];/* skip the 0 */
 	}
 }
+
+// Returns true if the string is empty.
+boolean M_IsStringEmpty(const char *s)
+{
+	const char *ch = s;
+
+	if (ch == NULL || (ch && strlen(ch) < 1))
+		return true;
+
+	for (;;ch++)
+	{
+		if (!(*ch))
+			break;
+		if (!isspace((*ch)))
+			return false;
+	}
+
+	return true;
+}
