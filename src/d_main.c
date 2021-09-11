@@ -191,22 +191,22 @@ void D_ProcessEvents(void)
 		if (ev->type == ev_keydown || ev->type == ev_keyup)
 		{
 			// Mouse buttons
-			if ((UINT32)(ev->data1 - KEY_MOUSE1) < MOUSEBUTTONS)
+			if ((UINT32)(ev->key - KEY_MOUSE1) < MOUSEBUTTONS)
 			{
 				if (ev->type == ev_keydown)
-					mouse.buttons |= 1 << (ev->data1 - KEY_MOUSE1);
+					mouse.buttons |= 1 << (ev->key - KEY_MOUSE1);
 				else
-					mouse.buttons &= ~(1 << (ev->data1 - KEY_MOUSE1));
+					mouse.buttons &= ~(1 << (ev->key - KEY_MOUSE1));
 			}
-			else if ((UINT32)(ev->data1 - KEY_2MOUSE1) < MOUSEBUTTONS)
+			else if ((UINT32)(ev->key - KEY_2MOUSE1) < MOUSEBUTTONS)
 			{
 				if (ev->type == ev_keydown)
-					mouse2.buttons |= 1 << (ev->data1 - KEY_2MOUSE1);
+					mouse2.buttons |= 1 << (ev->key - KEY_2MOUSE1);
 				else
-					mouse2.buttons &= ~(1 << (ev->data1 - KEY_2MOUSE1));
+					mouse2.buttons &= ~(1 << (ev->key - KEY_2MOUSE1));
 			}
 			// Scroll (has no keyup event)
-			else switch (ev->data1) {
+			else switch (ev->key) {
 				case KEY_MOUSEWHEELUP:
 					mouse.buttons |= MB_SCROLLUP;
 					break;
