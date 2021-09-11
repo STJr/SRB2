@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -20,11 +20,12 @@
 #include "r_state.h"
 #include "r_sky.h"
 #include "g_game.h"
+#include "g_input.h"
 #include "f_finale.h"
 #include "byteptr.h"
 #include "p_saveg.h"
 #include "p_local.h"
-#include "p_slopes.h" // for P_SlopeById
+#include "p_slopes.h" // for P_SlopeById and slopelist
 #include "p_polyobj.h" // polyobj_t, PolyObjects
 #ifdef LUA_ALLOW_BYTECODE
 #include "d_netfil.h" // for LUA_DumpFile
@@ -57,6 +58,7 @@ static lua_CFunction liblist[] = {
 	LUA_PolyObjLib, // polyobj_t
 	LUA_BlockmapLib, // blockmap stuff
 	LUA_HudLib, // HUD stuff
+	LUA_InputLib, // inputs
 	NULL
 };
 
@@ -183,6 +185,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	} else if (fastcmp(word,"modeattacking")) {
 		lua_pushboolean(L, modeattacking);
+		return 1;
+	} else if (fastcmp(word,"metalrecording")) {
+		lua_pushboolean(L, metalrecording);
 		return 1;
 	} else if (fastcmp(word,"splitscreen")) {
 		lua_pushboolean(L, splitscreen);
@@ -380,6 +385,14 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word, "gamestate")) {
 		lua_pushinteger(L, gamestate);
 		return 1;
+	} else if (fastcmp(word, "stagefailed")) {
+		lua_pushboolean(L, stagefailed);
+	} else if (fastcmp(word, "mouse")) {
+		LUA_PushUserdata(L, &mouse, META_MOUSE);
+		return 1;
+	} else if (fastcmp(word, "mouse2")) {
+		LUA_PushUserdata(L, &mouse2, META_MOUSE);
+		return 1;
 	}
 	return 0;
 }
@@ -429,6 +442,8 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 	}
 	else if (fastcmp(word, "mapmusflags"))
 		mapmusflags = (UINT16)luaL_checkinteger(L, 2);
+	else if (fastcmp(word, "stagefailed"))
+		stagefailed = luaL_checkboolean(L, 2);
 	else
 		return 0;
 
@@ -714,27 +729,6 @@ fixed_t LUA_EvalMath(const char *word)
 	return res;
 }
 
-/*
-LUA_PushUserdata but no userdata is created.
-You can't invalidate it therefore.
-*/
-
-void LUA_PushLightUserdata (lua_State *L, void *data, const char *meta)
-{
-	if (data)
-	{
-		lua_pushlightuserdata(L, data);
-		luaL_getmetatable(L, meta);
-		/*
-		The metatable is the last value on the stack, so this
-		applies it to the second value, which is the userdata.
-		*/
-		lua_setmetatable(L, -2);
-	}
-	else
-		lua_pushnil(L);
-}
-
 // Takes a pointer, any pointer, and a metatable name
 // Creates a userdata for that pointer with the given metatable
 // Pushes it to the stack and stores it in the registry.
@@ -857,6 +851,8 @@ void LUA_InvalidateLevel(void)
 	{
 		LUA_InvalidateUserdata(&lines[i]);
 		LUA_InvalidateUserdata(&lines[i].tags);
+		LUA_InvalidateUserdata(lines[i].args);
+		LUA_InvalidateUserdata(lines[i].stringargs);
 		LUA_InvalidateUserdata(lines[i].sidenum);
 	}
 	for (i = 0; i < numsides; i++)
@@ -868,6 +864,13 @@ void LUA_InvalidateLevel(void)
 		LUA_InvalidateUserdata(&PolyObjects[i]);
 		LUA_InvalidateUserdata(&PolyObjects[i].vertices);
 		LUA_InvalidateUserdata(&PolyObjects[i].lines);
+	}
+	for (pslope_t *slope = slopelist; slope; slope = slope->next)
+	{
+		LUA_InvalidateUserdata(slope);
+		LUA_InvalidateUserdata(&slope->normal);
+		LUA_InvalidateUserdata(&slope->o);
+		LUA_InvalidateUserdata(&slope->d);
 	}
 #ifdef HAVE_LUA_SEGS
 	for (i = 0; i < numsegs; i++)
@@ -891,6 +894,8 @@ void LUA_InvalidateMapthings(void)
 	{
 		LUA_InvalidateUserdata(&mapthings[i]);
 		LUA_InvalidateUserdata(&mapthings[i].tags);
+		LUA_InvalidateUserdata(mapthings[i].args);
+		LUA_InvalidateUserdata(mapthings[i].stringargs);
 	}
 }
 
@@ -934,6 +939,7 @@ enum
 	ARCH_SLOPE,
 	ARCH_MAPHEADER,
 	ARCH_SKINCOLOR,
+	ARCH_MOUSE,
 
 	ARCH_TEND=0xFF,
 };
@@ -961,6 +967,7 @@ static const struct {
 	{META_SLOPE,    ARCH_SLOPE},
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{META_SKINCOLOR,   ARCH_SKINCOLOR},
+	{META_MOUSE,    ARCH_MOUSE},
 	{NULL,          ARCH_NULL}
 };
 
@@ -1268,12 +1275,18 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			}
 			break;
 		}
-
 		case ARCH_SKINCOLOR:
 		{
 			skincolor_t *info = *((skincolor_t **)lua_touserdata(gL, myindex));
 			WRITEUINT8(save_p, ARCH_SKINCOLOR);
 			WRITEUINT16(save_p, info - skincolors);
+			break;
+		}
+		case ARCH_MOUSE:
+		{
+			mouse_t *m = *((mouse_t **)lua_touserdata(gL, myindex));
+			WRITEUINT8(save_p, ARCH_MOUSE);
+			WRITEUINT8(save_p, m == &mouse ? 1 : 2);
 			break;
 		}
 		default:
@@ -1527,6 +1540,9 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_SKINCOLOR:
 		LUA_PushUserdata(gL, &skincolors[READUINT16(save_p)], META_SKINCOLOR);
 		break;
+	case ARCH_MOUSE:
+		LUA_PushUserdata(gL, READUINT16(save_p) == 1 ? &mouse : &mouse2, META_MOUSE);
+		break;
 	case ARCH_TEND:
 		return 1;
 	}
@@ -1653,7 +1669,7 @@ void LUA_Archive(void)
 
 	WRITEUINT32(save_p, UINT32_MAX); // end of mobjs marker, replaces mobjnum.
 
-	LUAh_NetArchiveHook(NetArchive); // call the NetArchive hook in archive mode
+	LUA_HookNetArchive(NetArchive); // call the NetArchive hook in archive mode
 	ArchiveTables();
 
 	if (gL)
@@ -1688,7 +1704,7 @@ void LUA_UnArchive(void)
 		}
 	} while(mobjnum != UINT32_MAX); // repeat until end of mobjs marker.
 
-	LUAh_NetArchiveHook(NetUnArchive); // call the NetArchive hook in unarchive mode
+	LUA_HookNetArchive(NetUnArchive); // call the NetArchive hook in unarchive mode
 	UnArchiveTables();
 
 	if (gL)

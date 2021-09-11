@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -49,6 +49,7 @@ typedef struct
 	UINT8 md5sum[16];
 	filestatus_t status; // The value returned by recsearch
 	UINT8 willsend; // Is the server willing to send it?
+	UINT8 folder; // File is a folder
 	fileneededtype_t type;
 	boolean justdownloaded; // To prevent late fragments from causing an I_Error
 
@@ -62,6 +63,8 @@ typedef struct
 	UINT32 totalsize;
 	UINT32 ackresendposition; // Used when resuming downloads
 } fileneeded_t;
+
+#define FILENEEDEDSIZE 23
 
 extern INT32 fileneedednum;
 extern fileneeded_t *fileneeded;
@@ -149,6 +152,9 @@ boolean fileexist(char *filename, time_t ptime);
 filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum,
 	boolean completepath);
 filestatus_t checkfilemd5(char *filename, const UINT8 *wantedmd5sum);
+
+// Searches for a folder
+filestatus_t findfolder(const char *path);
 
 void nameonly(char *s);
 size_t nameonlylength(const char *s);

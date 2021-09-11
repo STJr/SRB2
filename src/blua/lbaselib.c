@@ -274,7 +274,7 @@ static int luaB_dofile (lua_State *L) {
 	UINT16 lumpnum;
 	int n = lua_gettop(L);
 
-	if (wadfiles[numwadfiles - 1]->type != RET_PK3)
+	if (!W_FileHasFolders(wadfiles[numwadfiles - 1]))
 		luaL_error(L, "dofile() only works with PK3 files");
 
 	snprintf(fullfilename, sizeof(fullfilename), "Lua/%s", filename);

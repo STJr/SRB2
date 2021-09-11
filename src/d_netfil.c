@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,7 +15,7 @@
 
 #include <time.h>
 
-#if defined (_WIN32) || defined (__DJGPP__)
+#ifdef _WIN32
 #include <io.h>
 #include <direct.h>
 #else
@@ -29,10 +29,6 @@
 #include <limits.h>
 #elif defined (_WIN32)
 #include <sys/utime.h>
-#endif
-#ifdef __DJGPP__
-#include <dir.h>
-#include <utime.h>
 #endif
 
 #include "doomdef.h"
@@ -124,7 +120,7 @@ char luafiledir[256 + 16] = "luafiles";
 /** Fills a serverinfo packet with information about wad files loaded.
   *
   * \todo Give this function a better name since it is in global scope.
-  * Used to have size limiting built in - now handled via W_LoadWadFile in w_wad.c
+  * Used to have size limiting built in - now handled via W_InitFile in w_wad.c
   *
   */
 UINT8 *PutFileNeeded(UINT16 firstfile)
@@ -134,7 +130,7 @@ UINT8 *PutFileNeeded(UINT16 firstfile)
 	UINT8 *p_start = netbuffer->packettype == PT_MOREFILESNEEDED ? netbuffer->u.filesneededcfg.files : netbuffer->u.serverinfo.fileneeded;
 	UINT8 *p = p_start;
 	char wadfilename[MAX_WADPATH] = "";
-	UINT8 filestatus;
+	UINT8 filestatus, folder;
 
 	for (i = mainwads+1; i < numwadfiles; i++) //mainwads+1, otherwise we start on the first mainwad
 	{
@@ -162,9 +158,10 @@ UINT8 *PutFileNeeded(UINT16 firstfile)
 		}
 
 		filestatus = 1; // Importance - not really used any more, holds 1 by default for backwards compat with MS
+		folder = (wadfiles[i]->type == RET_FOLDER);
 
 		// Store in the upper four bits
-		if (!cv_downloading.value)
+		if (!cv_downloading.value || folder) /// \todo Implement folder downloading.
 			filestatus += (2 << 4); // Won't send
 		else if ((wadfiles[i]->filesize <= (UINT32)cv_maxsend.value * 1024))
 			filestatus += (1 << 4); // Will send if requested
@@ -172,6 +169,7 @@ UINT8 *PutFileNeeded(UINT16 firstfile)
 			// filestatus += (0 << 4); -- Won't send, too big
 
 		WRITEUINT8(p, filestatus);
+		WRITEUINT8(p, folder);
 
 		count++;
 		WRITEUINT32(p, wadfiles[i]->filesize);
@@ -195,8 +193,7 @@ void AllocFileNeeded(INT32 size)
 
 void FreeFileNeeded(void)
 {
-	if (fileneeded)
-		Z_Free(fileneeded);
+	Z_Free(fileneeded);
 	fileneeded = NULL;
 }
 
@@ -223,6 +220,7 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr, UINT16 fi
 		fileneeded[i].status = FS_NOTCHECKED; // We haven't even started looking for the file yet
 		fileneeded[i].justdownloaded = false;
 		filestatus = READUINT8(p); // The first byte is the file status
+		fileneeded[i].folder = READUINT8(p); // The second byte is the folder flag
 		fileneeded[i].willsend = (UINT8)(filestatus >> 4);
 		fileneeded[i].totalsize = READUINT32(p); // The four next bytes are the file size
 		fileneeded[i].file = NULL; // The file isn't open yet
@@ -417,6 +415,8 @@ boolean PT_RequestFile(INT32 node)
   * \return 0 if some files are missing
   *         1 if all files exist
   *         2 if some already loaded files are not requested or are in a different order
+  *         3 too many files, over WADLIMIT
+  *         4 still checking, continuing next tic
   *
   */
 INT32 CL_CheckFiles(void)
@@ -485,7 +485,11 @@ INT32 CL_CheckFiles(void)
 			}
 		}
 
-		fileneeded[i].status = FS_NOTFOUND; //findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
+		if (fileneeded[i].folder)
+			fileneeded[i].status = findfolder(fileneeded[i].filename);
+		else
+			fileneeded[i].status = findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
+
 		CONS_Debug(DBG_NETPLAY, "found %d\n", fileneeded[i].status);
 		return 4;
 	}
@@ -510,7 +514,10 @@ boolean CL_LoadServerFiles(void)
 			continue; // Already loaded
 		else if (fileneeded[i].status == FS_FOUND)
 		{
-			P_AddWadFile(fileneeded[i].filename);
+			if (fileneeded[i].folder)
+				P_AddFolder(fileneeded[i].filename);
+			else
+				P_AddWadFile(fileneeded[i].filename);
 			G_SetGameModified(true);
 			fileneeded[i].status = FS_OPEN;
 			return false;
@@ -1623,4 +1630,24 @@ filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum, boolean complet
 		return homecheck; // otherwise return the result we got
 
 	return (badmd5 ? FS_MD5SUMBAD : FS_NOTFOUND); // md5 sum bad or file not found
+}
+
+filestatus_t findfolder(const char *path)
+{
+	// Check the path by itself first.
+	if (checkfolderpath(path, NULL, true))
+		return FS_FOUND;
+
+#define checkpath(startpath) { \
+	if (checkfolderpath(path, startpath, true)) \
+		return FS_FOUND; \
+	}
+
+	checkpath(srb2home) // Then, look in srb2home.
+	checkpath(srb2path) // Now, look in srb2path.
+	checkpath(".") // Finally, look in ".".
+
+#undef checkpath
+
+	return FS_NOTFOUND;
 }

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2020 by Sonic Team Junior.
+// Copyright (C) 2014-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -63,7 +63,9 @@ static const char *const hud_disable_options[] = {
 	"tabemblems",
 
 	"intermissiontally",
+	"intermissiontitletext",
 	"intermissionmessages",
+	"intermissionemeralds",
 	NULL};
 
 enum hudinfo {
@@ -278,12 +280,29 @@ static int hudinfo_num(lua_State *L)
 
 static int colormap_get(lua_State *L)
 {
-	const UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
 	UINT32 i = luaL_checkinteger(L, 2);
 	if (i >= 256)
 		return luaL_error(L, "colormap index %d out of range (0 - %d)", i, 255);
 	lua_pushinteger(L, colormap[i]);
 	return 1;
+}
+
+static int colormap_set(lua_State *L)
+{
+	UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	UINT32 i = luaL_checkinteger(L, 2);
+	if (i >= 256)
+		return luaL_error(L, "colormap index %d out of range (0 - %d)", i, 255);
+	colormap[i] = (UINT8)luaL_checkinteger(L, 3);
+	return 0;
+}
+
+static int colormap_free(lua_State *L)
+{
+	UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	Z_Free(colormap);
+	return 0;
 }
 
 static int patch_get(lua_State *L)
@@ -661,6 +680,45 @@ static int libd_drawStretched(lua_State *L)
 	return 0;
 }
 
+static int libd_drawCropped(lua_State *L)
+{
+	fixed_t x, y, hscale, vscale, sx, sy, w, h;
+	INT32 flags;
+	patch_t *patch;
+	const UINT8 *colormap = NULL;
+
+	HUDONLY
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	hscale = luaL_checkinteger(L, 3);
+	if (hscale < 0)
+		return luaL_error(L, "negative horizontal scale");
+	vscale = luaL_checkinteger(L, 4);
+	if (vscale < 0)
+		return luaL_error(L, "negative vertical scale");
+	patch = *((patch_t **)luaL_checkudata(L, 5, META_PATCH));
+	flags = luaL_checkinteger(L, 6);
+	if (!lua_isnoneornil(L, 7))
+		colormap = *((UINT8 **)luaL_checkudata(L, 7, META_COLORMAP));
+	sx = luaL_checkinteger(L, 8);
+	if (sx < 0) // Don't crash. Now, we could do "x-=sx*FRACUNIT; sx=0;" here...
+		return luaL_error(L, "negative crop sx");
+	sy = luaL_checkinteger(L, 9);
+	if (sy < 0) // ...but it's more truthful to just deny it, as negative values would crash
+		return luaL_error(L, "negative crop sy");
+	w = luaL_checkinteger(L, 10);
+	if (w < 0) // Again, don't crash
+		return luaL_error(L, "negative crop w");
+	h = luaL_checkinteger(L, 11);
+	if (h < 0)
+		return luaL_error(L, "negative crop h");
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawCroppedPatch(x, y, hscale, vscale, flags, patch, colormap, sx, sy, w, h);
+	return 0;
+}
+
 static int libd_drawNum(lua_State *L)
 {
 	INT32 x, y, flags, num;
@@ -857,6 +915,26 @@ static int libd_drawScaledNameTag(lua_State *L)
 	return 0;
 }
 
+static int libd_drawLevelTitle(lua_State *L)
+{
+	INT32 x;
+	INT32 y;
+	const char *str;
+	INT32 flags;
+
+	HUDONLY
+
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	str = luaL_checkstring(L, 3);
+	flags = luaL_optinteger(L, 4, 0);
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawLevelTitle(x, y, flags, str);
+	return 0;
+}
+
 static int libd_stringWidth(lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);
@@ -886,6 +964,20 @@ static int libd_nameTagWidth(lua_State *L)
 	return 1;
 }
 
+static int libd_levelTitleWidth(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, V_LevelNameWidth(luaL_checkstring(L, 1)));
+	return 1;
+}
+
+static int libd_levelTitleHeight(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, V_LevelNameHeight(luaL_checkstring(L, 1)));
+	return 1;
+}
+
 static int libd_getColormap(lua_State *L)
 {
 	INT32 skinnum = TC_DEFAULT;
@@ -912,7 +1004,7 @@ static int libd_getColormap(lua_State *L)
 
 	// all was successful above, now we generate the colormap at last!
 
-	colormap = R_GetTranslationColormap(skinnum, color, GTC_CACHE);
+	colormap = R_GetTranslationColormap(skinnum, color, 0);
 	LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
 	return 1;
 }
@@ -921,10 +1013,14 @@ static int libd_getStringColormap(lua_State *L)
 {
 	INT32 flags = luaL_checkinteger(L, 1);
 	UINT8* colormap = NULL;
+	UINT8* lua_colormap = NULL;
 	HUDONLY
 	colormap = V_GetStringColormap(flags & V_CHARCOLORMASK);
 	if (colormap) {
-		LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
+		lua_colormap = Z_Malloc(256 * sizeof(UINT8), PU_LUA, NULL);
+		memcpy(lua_colormap, colormap, 256 * sizeof(UINT8));
+
+		LUA_PushUserdata(L, lua_colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
 		return 1;
 	}
 	return 0;
@@ -1085,16 +1181,20 @@ static luaL_Reg lib_draw[] = {
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
 	{"drawStretched", libd_drawStretched},
+	{"drawCropped", libd_drawCropped},
 	{"drawNum", libd_drawNum},
 	{"drawPaddedNum", libd_drawPaddedNum},
 	{"drawFill", libd_drawFill},
 	{"drawString", libd_drawString},
 	{"drawNameTag", libd_drawNameTag},
 	{"drawScaledNameTag", libd_drawScaledNameTag},
+	{"drawLevelTitle", libd_drawLevelTitle},
 	{"fadeScreen", libd_fadeScreen},
 	// misc
 	{"stringWidth", libd_stringWidth},
 	{"nameTagWidth", libd_nameTagWidth},
+	{"levelTitleWidth", libd_levelTitleWidth},
+	{"levelTitleHeight", libd_levelTitleHeight},
 	// m_random
 	{"RandomFixed",libd_RandomFixed},
 	{"RandomByte",libd_RandomByte},
@@ -1231,6 +1331,12 @@ int LUA_HudLib(lua_State *L)
 	luaL_newmetatable(L, META_COLORMAP);
 		lua_pushcfunction(L, colormap_get);
 		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, colormap_set);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, colormap_free);
+		lua_setfield(L, -2, "__gc");
 	lua_pop(L,1);
 
 	luaL_newmetatable(L, META_PATCH);
@@ -1384,7 +1490,7 @@ void LUAh_TitleCardHUD(player_t *stplayr)
 	hud_running = false;
 }
 
-void LUAh_IntermissionHUD(void)
+void LUAh_IntermissionHUD(boolean failedstage)
 {
 	if (!gL || !(hudAvailable & (1<<hudhook_intermission)))
 		return;
@@ -1402,10 +1508,14 @@ void LUAh_IntermissionHUD(void)
 	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
 	I_Assert(lua_istable(gL, -1));
 	lua_remove(gL, -3); // pop HUD
+
+	lua_pushboolean(gL, failedstage); // stagefailed
 	lua_pushnil(gL);
-	while (lua_next(gL, -3) != 0) {
-		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1, 0, 1);
+
+	while (lua_next(gL, -4) != 0) {
+		lua_pushvalue(gL, -4); // graphics library (HUD[1])
+		lua_pushvalue(gL, -4); // stagefailed
+		LUA_Call(gL, 2, 0, 1);
 	}
 	lua_settop(gL, 0);
 	hud_running = false;
