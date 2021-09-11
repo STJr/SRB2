@@ -3489,7 +3489,7 @@ static void Command_Addfolder(void)
 		else if (stat < 0)
 		{
 #ifndef AVOID_ERRNO
-			CONS_Alert(CONS_WARNING, M_GetText("Error accessing %s (%s), skipping\n"), fn, strerror(foldererror));
+			CONS_Alert(CONS_WARNING, M_GetText("Error accessing %s (%s), skipping\n"), fn, strerror(direrror));
 #else
 			CONS_Alert(CONS_WARNING, M_GetText("Error accessing %s, skipping\n"), fn);
 #endif

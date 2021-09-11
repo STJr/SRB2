@@ -713,14 +713,14 @@ INT32 W_IsPathToFolderValid(const char *path)
 			return 0;
 	}
 
-	// Check if the path is a folder.
-	stat = pathisfolder(path);
+	// Check if the path is a directory.
+	stat = pathisdirectory(path);
 	if (stat == 0)
 		return 0;
 	else if (stat < 0)
 	{
-		// The path doesn't exist, so it isn't a folder.
-		if (foldererror == ENOENT)
+		// The path doesn't exist, so it can't be a directory.
+		if (direrror == ENOENT)
 			return 0;
 
 		return -1;
@@ -792,7 +792,7 @@ char *W_GetFullFolderPath(const char *path)
 // Loads files from a folder into a lumpinfo structure.
 static lumpinfo_t *ResGetLumpsFolder(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 {
-	return getfolderfiles(path, nlmp, nfolders);
+	return getdirectoryfiles(path, nlmp, nfolders);
 }
 
 static UINT16 W_InitFileError (const char *filename, boolean exitworthy)
@@ -1104,7 +1104,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 		else if (stat < 0)
 		{
 #ifndef AVOID_ERRNO
-			CONS_Alert(CONS_ERROR, M_GetText("Could not stat %s: %s\n"), fn, strerror(foldererror));
+			CONS_Alert(CONS_ERROR, M_GetText("Could not stat %s: %s\n"), fn, strerror(direrror));
 #else
 			CONS_Alert(CONS_ERROR, M_GetText("Could not stat %s\n"), fn);
 #endif
@@ -1589,16 +1589,22 @@ size_t W_LumpLengthPwad(UINT16 wad, UINT16 lump)
 
 	l = wadfiles[wad]->lumpinfo + lump;
 
+	// Open the external file for this lump, if the WAD is a folder.
 	if (wadfiles[wad]->type == RET_FOLDER)
 	{
-		INT32 stat = pathisfolder(l->diskpath);
+		// pathisdirectory calls stat, so if anything wrong has happened,
+		// this is the time to be aware of it.
+		INT32 stat = pathisdirectory(l->diskpath);
 
 		if (stat < 0)
 		{
 #ifndef AVOID_ERRNO
-			I_Error("W_LumpLengthPwad: could not stat %s: %s", l->diskpath, strerror(foldererror));
+			if (direrror == ENOENT)
+				I_Error("W_LumpLengthPwad: file %s doesn't exist", l->diskpath);
+			else
+				I_Error("W_LumpLengthPwad: could not stat %s: %s", l->diskpath, strerror(direrror));
 #else
-			I_Error("W_LumpLengthPwad: could not stat %s", l->diskpath);
+			I_Error("W_LumpLengthPwad: could not access %s", l->diskpath);
 #endif
 		}
 		else if (stat == 1) // Path is a folder.
@@ -1706,7 +1712,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	lumpinfo_t *l;
 	FILE *handle = NULL;
 
-	if (!TestValidLump(wad,lump))
+	if (!TestValidLump(wad, lump))
 		return 0;
 
 	l = wadfiles[wad]->lumpinfo + lump;
@@ -1714,14 +1720,19 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	// Open the external file for this lump, if the WAD is a folder.
 	if (wadfiles[wad]->type == RET_FOLDER)
 	{
-		INT32 stat = pathisfolder(l->diskpath);
+		// pathisdirectory calls stat, so if anything wrong has happened,
+		// this is the time to be aware of it.
+		INT32 stat = pathisdirectory(l->diskpath);
 
 		if (stat < 0)
 		{
 #ifndef AVOID_ERRNO
-			I_Error("W_ReadLumpHeaderPwad: could not stat %s: %s", l->diskpath, strerror(foldererror));
+			if (direrror == ENOENT)
+				I_Error("W_ReadLumpHeaderPwad: file %s doesn't exist", l->diskpath);
+			else
+				I_Error("W_ReadLumpHeaderPwad: could not stat %s: %s", l->diskpath, strerror(direrror));
 #else
-			I_Error("W_ReadLumpHeaderPwad: could not stat %s", l->diskpath);
+			I_Error("W_ReadLumpHeaderPwad: could not access %s", l->diskpath);
 #endif
 		}
 		else if (stat == 1) // Path is a folder.

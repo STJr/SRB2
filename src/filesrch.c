@@ -341,8 +341,8 @@ char *refreshdirname = NULL;
 size_t packetsizetally = 0;
 size_t mainwadstally = 0;
 
-#define folderpathlen 1024
-#define maxfolderdepth 48
+#define dirpathlen 1024
+#define maxdirdepth 48
 
 #define isuptree(dirent) ((dirent)[0]=='.' && ((dirent)[1]=='\0' || ((dirent)[1]=='.' && (dirent)[2]=='\0')))
 
@@ -449,71 +449,20 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 }
 
 #ifndef AVOID_ERRNO
-int foldererror = 0;
+int direrror = 0;
 #endif
 
-// Concatenates two paths, and checks if it is a folder that can be opened.
+// Checks if the specified path is a directory.
 // Returns 1 if so, 0 if not, and -1 if an error occurred.
-INT32 concatpaths(const char *path, const char *startpath)
-{
-	char folderpath[folderpathlen];
-	DIR *dirhandle;
-	INT32 stat;
-
-	if (startpath)
-	{
-		char basepath[folderpathlen];
-
-		snprintf(basepath, sizeof basepath, "%s" PATHSEP, startpath);
-		snprintf(folderpath, sizeof folderpath, "%s%s", basepath, path);
-
-		// Base path and folder path are the same? Not valid.
-		stat = samepaths(basepath, folderpath);
-
-		if (stat == 1)
-			return 0;
-		else if (stat < 0)
-			return -1;
-	}
-	else
-		snprintf(folderpath, sizeof folderpath, "%s", path);
-
-	// Check if the path is a folder.
-	// Will return -1 if there was an error.
-	stat = pathisfolder(folderpath);
-	if (stat == 0)
-		return 0;
-	else if (stat < 0)
-	{
-		// The path doesn't exist, so it isn't a folder.
-		if (foldererror == ENOENT)
-			return 0;
-
-		return -1;
-	}
-
-	// Open the directory.
-	// Will return 0 if it couldn't be opened.
-	dirhandle = opendir(folderpath);
-	if (dirhandle == NULL)
-		return 0;
-	else
-		closedir(dirhandle);
-
-	return 1;
-}
-
-// Checks if the specified path is a folder.
-// Returns 1 if so, 0 if not, and -1 if an error occurred.
-// foldererror is set if there was an error.
-INT32 pathisfolder(const char *path)
+// direrror is set if there was an error.
+INT32 pathisdirectory(const char *path)
 {
 	struct stat fsstat;
 
 	if (stat(path, &fsstat) < 0)
 	{
 #ifndef AVOID_ERRNO
-		foldererror = errno;
+		direrror = errno;
 #endif
 		return -1;
 	}
@@ -523,10 +472,61 @@ INT32 pathisfolder(const char *path)
 	return 0;
 }
 
+// Concatenates two paths, and checks if it is a directory that can be opened.
+// Returns 1 if so, 0 if not, and -1 if an error occurred.
+INT32 concatpaths(const char *path, const char *startpath)
+{
+	char dirpath[dirpathlen];
+	DIR *dirhandle;
+	INT32 stat;
+
+	if (startpath)
+	{
+		char basepath[dirpathlen];
+
+		snprintf(basepath, sizeof basepath, "%s" PATHSEP, startpath);
+		snprintf(dirpath, sizeof dirpath, "%s%s", basepath, path);
+
+		// Base path and directory path are the same? Not valid.
+		stat = samepaths(basepath, dirpath);
+
+		if (stat == 1)
+			return 0;
+		else if (stat < 0)
+			return -1;
+	}
+	else
+		snprintf(dirpath, sizeof dirpath, "%s", path);
+
+	// Check if the path is a directory.
+	// Will return -1 if there was an error.
+	stat = pathisdirectory(dirpath);
+	if (stat == 0)
+		return 0;
+	else if (stat < 0)
+	{
+		// The path doesn't exist, so it can't be a directory.
+		if (direrror == ENOENT)
+			return 0;
+
+		return -1;
+	}
+
+	// Open the directory.
+	// Will return 0 if it couldn't be opened.
+	dirhandle = opendir(dirpath);
+	if (dirhandle == NULL)
+		return 0;
+	else
+		closedir(dirhandle);
+
+	return 1;
+}
+
 // Checks if two paths are the same. Returns 1 if so, and 0 if not.
 // Returns -1 if an error occurred with the first path,
-// and returns -1 if an error occurred with the second path.
-// foldererror is set if there was an error.
+// and returns -2 if an error occurred with the second path.
+// direrror is set if there was an error.
 INT32 samepaths(const char *path1, const char *path2)
 {
 	struct stat stat1;
@@ -535,14 +535,14 @@ INT32 samepaths(const char *path1, const char *path2)
 	if (stat(path1, &stat1) < 0)
 	{
 #ifndef AVOID_ERRNO
-		foldererror = errno;
+		direrror = errno;
 #endif
 		return -1;
 	}
 	if (stat(path2, &stat2) < 0)
 	{
 #ifndef AVOID_ERRNO
-		foldererror = errno;
+		direrror = errno;
 #endif
 		return -2;
 	}
@@ -560,7 +560,7 @@ INT32 samepaths(const char *path1, const char *path2)
 		if (file1 == INVALID_HANDLE_VALUE)
 		{
 #ifndef AVOID_ERRNO
-			foldererror = ENOENT;
+			direrror = ENOENT;
 #endif
 			return -1;
 		}
@@ -568,7 +568,7 @@ INT32 samepaths(const char *path1, const char *path2)
 		{
 			CloseHandle(file1);
 #ifndef AVOID_ERRNO
-			foldererror = ENOENT;
+			direrror = ENOENT;
 #endif
 			return -2;
 		}
@@ -579,7 +579,7 @@ INT32 samepaths(const char *path1, const char *path2)
 		if (!GetFileInformationByHandle(file1, &file1info))
 		{
 #ifndef AVOID_ERRNO
-			foldererror = EIO;
+			direrror = EIO;
 #endif
 			return -1;
 		}
@@ -588,7 +588,7 @@ INT32 samepaths(const char *path1, const char *path2)
 			CloseHandle(file1);
 			CloseHandle(file2);
 #ifndef AVOID_ERRNO
-			foldererror = EIO;
+			direrror = EIO;
 #endif
 			return -2;
 		}
@@ -610,65 +610,65 @@ INT32 samepaths(const char *path1, const char *path2)
 }
 
 //
-// Folder loading
+// Directory loading
 //
 
-static void initfolderpath(char *folderpath, size_t *folderpathindex, int depthleft)
+static void initdirpath(char *dirpath, size_t *dirpathindex, int depthleft)
 {
-	folderpathindex[depthleft] = strlen(folderpath) + 1;
+	dirpathindex[depthleft] = strlen(dirpath) + 1;
 
-	if (folderpath[folderpathindex[depthleft]-2] != PATHSEP[0])
+	if (dirpath[dirpathindex[depthleft]-2] != PATHSEP[0])
 	{
-		folderpath[folderpathindex[depthleft]-1] = PATHSEP[0];
-		folderpath[folderpathindex[depthleft]] = 0;
+		dirpath[dirpathindex[depthleft]-1] = PATHSEP[0];
+		dirpath[dirpathindex[depthleft]] = 0;
 	}
 	else
-		folderpathindex[depthleft]--;
+		dirpathindex[depthleft]--;
 }
 
-lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
+lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 {
 	DIR **dirhandle;
 	struct dirent *dent;
 	struct stat fsstat;
 
-	int rootfolder = (maxfolderdepth - 1);
-	int depthleft = rootfolder;
+	int rootdir = (maxdirdepth - 1);
+	int depthleft = rootdir;
 
-	char folderpath[folderpathlen];
-	size_t *folderpathindex;
+	char dirpath[dirpathlen];
+	size_t *dirpathindex;
 
 	lumpinfo_t *lumpinfo, *lump_p;
 	UINT16 i = 0, numlumps = 0;
 
 	boolean failure = false;
 
-	dirhandle = (DIR **)malloc(maxfolderdepth * sizeof (DIR*));
-	folderpathindex = (size_t *)malloc(maxfolderdepth * sizeof(size_t));
+	dirhandle = (DIR **)malloc(maxdirdepth * sizeof (DIR*));
+	dirpathindex = (size_t *)malloc(maxdirdepth * sizeof(size_t));
 
 	// Open the root directory
-	strlcpy(folderpath, path, folderpathlen);
-	dirhandle[depthleft] = opendir(folderpath);
+	strlcpy(dirpath, path, dirpathlen);
+	dirhandle[depthleft] = opendir(dirpath);
 
 	if (dirhandle[depthleft] == NULL)
 	{
 		free(dirhandle);
-		free(folderpathindex);
+		free(dirpathindex);
 		return NULL;
 	}
 
-	initfolderpath(folderpath, folderpathindex, depthleft);
+	initdirpath(dirpath, dirpathindex, depthleft);
 	(*nfolders) = 0;
 
 	// Count files and directories
-	while (depthleft < maxfolderdepth)
+	while (depthleft < maxdirdepth)
 	{
-		folderpath[folderpathindex[depthleft]] = 0;
+		dirpath[dirpathindex[depthleft]] = 0;
 		dent = readdir(dirhandle[depthleft]);
 
 		if (!dent)
 		{
-			if (depthleft != rootfolder) // Don't close the root directory
+			if (depthleft != rootdir) // Don't close the root directory
 				closedir(dirhandle[depthleft]);
 			depthleft++;
 			continue;
@@ -676,27 +676,27 @@ lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 		else if (isuptree(dent->d_name))
 			continue;
 
-		strcpy(&folderpath[folderpathindex[depthleft]], dent->d_name);
+		strcpy(&dirpath[dirpathindex[depthleft]], dent->d_name);
 
-		if (stat(folderpath, &fsstat) < 0)
+		if (stat(dirpath, &fsstat) < 0)
 			;
 		else if (S_ISDIR(fsstat.st_mode) && depthleft)
 		{
-			folderpathindex[--depthleft] = strlen(folderpath) + 1;
-			dirhandle[depthleft] = opendir(folderpath);
+			dirpathindex[--depthleft] = strlen(dirpath) + 1;
+			dirhandle[depthleft] = opendir(dirpath);
 
 			if (dirhandle[depthleft])
 				(*nfolders)++;
 			else
 				depthleft++;
 
-			folderpath[folderpathindex[depthleft]-1] = '/';
-			folderpath[folderpathindex[depthleft]] = 0;
+			dirpath[dirpathindex[depthleft]-1] = '/';
+			dirpath[dirpathindex[depthleft]] = 0;
 		}
 		else
 			numlumps++;
 
-		// Failure: Too many lumps.
+		// Failure: Too many files.
 		if (numlumps == UINT16_MAX)
 		{
 			(*nlmp) = UINT16_MAX;
@@ -715,28 +715,28 @@ lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 	// Close any open directories and return if something went wrong.
 	if (failure)
 	{
-		free(folderpathindex);
+		free(dirpathindex);
 		free(dirhandle);
-		for (; depthleft < maxfolderdepth; closedir(dirhandle[depthleft++]));
+		for (; depthleft < maxdirdepth; closedir(dirhandle[depthleft++]));
 		return NULL;
 	}
 
 	// Create the files and directories as lump entries
 	// It's possible to create lumps and count files at the same time,
 	// but I didn't want to have to reallocate memory for every lump.
-	rewinddir(dirhandle[rootfolder]);
-	depthleft = rootfolder;
+	rewinddir(dirhandle[rootdir]);
+	depthleft = rootdir;
 
-	strlcpy(folderpath, path, folderpathlen);
-	initfolderpath(folderpath, folderpathindex, depthleft);
+	strlcpy(dirpath, path, dirpathlen);
+	initdirpath(dirpath, dirpathindex, depthleft);
 
 	lump_p = lumpinfo = Z_Calloc(numlumps * sizeof(lumpinfo_t), PU_STATIC, NULL);
 
-	while (depthleft < maxfolderdepth)
+	while (depthleft < maxdirdepth)
 	{
 		char *fullname, *trimname;
 
-		folderpath[folderpathindex[depthleft]] = 0;
+		dirpath[dirpathindex[depthleft]] = 0;
 		dent = readdir(dirhandle[depthleft]);
 
 		if (!dent)
@@ -747,19 +747,19 @@ lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 		else if (isuptree(dent->d_name))
 			continue;
 
-		strcpy(&folderpath[folderpathindex[depthleft]], dent->d_name);
+		strcpy(&dirpath[dirpathindex[depthleft]], dent->d_name);
 
-		if (stat(folderpath, &fsstat) < 0)
+		if (stat(dirpath, &fsstat) < 0)
 			continue;
 		else if (S_ISDIR(fsstat.st_mode) && depthleft)
 		{
-			folderpathindex[--depthleft] = strlen(folderpath) + 1;
-			dirhandle[depthleft] = opendir(folderpath);
+			dirpathindex[--depthleft] = strlen(dirpath) + 1;
+			dirhandle[depthleft] = opendir(dirpath);
 
 			if (dirhandle[depthleft])
 			{
-				folderpath[folderpathindex[depthleft]-1] = '/';
-				folderpath[folderpathindex[depthleft]] = 0;
+				dirpath[dirpathindex[depthleft]-1] = '/';
+				dirpath[dirpathindex[depthleft]] = 0;
 			}
 			else
 				depthleft++;
@@ -767,10 +767,10 @@ lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 			continue;
 		}
 
-		lump_p->diskpath = Z_StrDup(folderpath); // Path in the filesystem to the file
+		lump_p->diskpath = Z_StrDup(dirpath); // Path in the filesystem to the file
 		lump_p->compression = CM_NOCOMPRESSION; // Lump is uncompressed
 
-		// Remove the folder path.
+		// Remove the directory's path.
 		fullname = lump_p->diskpath;
 		if (strstr(fullname, path))
 			fullname += strlen(path) + 1;
@@ -798,7 +798,7 @@ lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 			lump_p->longname = Z_Calloc(1, PU_STATIC, NULL);
 
 		// The complete name of the file, with its extension,
-		// excluding the path of the folder where it resides.
+		// excluding the path of the directory where it resides.
 		lump_p->fullname = Z_StrDup(fullname);
 
 		lump_p++;
@@ -806,12 +806,12 @@ lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 
 		if (i > numlumps || i == (UINT16_MAX-1))
 		{
-			for (; depthleft < maxfolderdepth; closedir(dirhandle[depthleft++])); // Close any open directories.
+			for (; depthleft < maxdirdepth; closedir(dirhandle[depthleft++])); // Close any open directories.
 			break;
 		}
 	}
 
-	free(folderpathindex);
+	free(dirpathindex);
 	free(dirhandle);
 
 	(*nlmp) = numlumps;
