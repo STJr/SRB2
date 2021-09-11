@@ -34,8 +34,7 @@ typedef struct floorsplat_s
 	INT32 width, height;
 	fixed_t scale, xscale, yscale;
 	angle_t angle;
-	boolean tilted; // Uses the tilted drawer
-	pslope_t slope;
+	pslope_t *slope;
 
 	vector3_t verts[4]; // (x,y,z) as viewed from above on map
 	fixed_t x, y, z; // position
