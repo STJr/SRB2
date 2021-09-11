@@ -448,121 +448,165 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 	return retval;
 }
 
-// Called from findfolder and ResGetLumpsFolder in w_wad.c.
-// Call with cleanup true if the path has to be verified.
-boolean checkfolderpath(const char *path, const char *startpath, boolean cleanup)
+#ifndef AVOID_ERRNO
+int foldererror = 0;
+#endif
+
+// Concatenates two paths, and checks if it is a folder that can be opened.
+// Returns 1 if so, 0 if not, and -1 if an error occurred.
+INT32 concatpaths(const char *path, const char *startpath)
 {
-	char folderpath[folderpathlen], basepath[folderpathlen], *fn = NULL;
+	char folderpath[folderpathlen];
 	DIR *dirhandle;
-
-	// Remove path separators from the filename, and don't try adding "/".
-	// See also the same code in W_InitFolder.
-	if (cleanup)
-	{
-		const char *p = path + strlen(path);
-		size_t len;
-
-		--p;
-		while (*p == '\\' || *p == '/' || *p == ':')
-		{
-			p--;
-			if (p < path)
-				return false;
-		}
-		++p;
-
-		// Allocate the new path name.
-		len = (p - path) + 1;
-		fn = ZZ_Alloc(len);
-		strlcpy(fn, path, len);
-	}
+	INT32 stat;
 
 	if (startpath)
 	{
+		char basepath[folderpathlen];
+
 		snprintf(basepath, sizeof basepath, "%s" PATHSEP, startpath);
+		snprintf(folderpath, sizeof folderpath, "%s%s", basepath, path);
 
-		if (cleanup)
-		{
-			snprintf(folderpath, sizeof folderpath, "%s%s", basepath, fn);
-			Z_Free(fn); // Don't need this anymore.
-		}
-		else
-			snprintf(folderpath, sizeof folderpath, "%s%s", basepath, path);
+		// Base path and folder path are the same? Not valid.
+		stat = samepaths(basepath, folderpath);
 
-		// Home path and folder path are the same? Not valid.
-		if (!strcmp(basepath, folderpath))
-			return false;
-	}
-	else if (cleanup)
-	{
-		snprintf(folderpath, sizeof folderpath, "%s", fn);
-		Z_Free(fn); // Don't need this anymore.
+		if (stat == 1)
+			return 0;
+		else if (stat < 0)
+			return -1;
 	}
 	else
 		snprintf(folderpath, sizeof folderpath, "%s", path);
 
+	// Check if the path is a folder.
+	// Will return -1 if there was an error.
+	stat = pathisfolder(folderpath);
+	if (stat == 0)
+		return 0;
+	else if (stat < 0)
+	{
+		// The path doesn't exist, so it isn't a folder.
+		if (foldererror == ENOENT)
+			return 0;
+
+		return -1;
+	}
+
+	// Open the directory.
+	// Will return 0 if it couldn't be opened.
 	dirhandle = opendir(folderpath);
 	if (dirhandle == NULL)
-		return false;
+		return 0;
 	else
 		closedir(dirhandle);
 
-	return true;
+	return 1;
 }
 
+// Checks if the specified path is a folder.
+// Returns 1 if so, 0 if not, and -1 if an error occurred.
+// foldererror is set if there was an error.
 INT32 pathisfolder(const char *path)
 {
 	struct stat fsstat;
 
 	if (stat(path, &fsstat) < 0)
+	{
+#ifndef AVOID_ERRNO
+		foldererror = errno;
+#endif
 		return -1;
+	}
 	else if (S_ISDIR(fsstat.st_mode))
 		return 1;
 
 	return 0;
 }
 
+// Checks if two paths are the same. Returns 1 if so, and 0 if not.
+// Returns -1 if an error occurred with the first path,
+// and returns -1 if an error occurred with the second path.
+// foldererror is set if there was an error.
 INT32 samepaths(const char *path1, const char *path2)
 {
 	struct stat stat1;
 	struct stat stat2;
 
 	if (stat(path1, &stat1) < 0)
+	{
+#ifndef AVOID_ERRNO
+		foldererror = errno;
+#endif
 		return -1;
+	}
 	if (stat(path2, &stat2) < 0)
-		return -1;
+	{
+#ifndef AVOID_ERRNO
+		foldererror = errno;
+#endif
+		return -2;
+	}
 
 	if (stat1.st_dev == stat2.st_dev)
 	{
 #if !defined(_WIN32)
 		return (stat1.st_ino == stat2.st_ino);
 #else
+		// The above doesn't work on NTFS or FAT.
 		HANDLE file1 = CreateFileA(path1, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 		HANDLE file2 = CreateFileA(path2, GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
 		BY_HANDLE_FILE_INFORMATION file1info, file2info;
-		boolean ok = false;
 
-		if (file1 != INVALID_HANDLE_VALUE && file2 != INVALID_HANDLE_VALUE)
+		if (file1 == INVALID_HANDLE_VALUE)
 		{
-			if (GetFileInformationByHandle(file1, &file1info) && GetFileInformationByHandle(file2, &file2info))
-			{
-				if (file1info.dwVolumeSerialNumber == file2info.dwVolumeSerialNumber
-				&& file1info.nFileIndexLow == file2info.nFileIndexLow
-				&& file1info.nFileIndexHigh == file2info.nFileIndexHigh)
-					ok = true;
-			}
+#ifndef AVOID_ERRNO
+			foldererror = ENOENT;
+#endif
+			return -1;
+		}
+		else if (file2 == INVALID_HANDLE_VALUE)
+		{
+			CloseHandle(file1);
+#ifndef AVOID_ERRNO
+			foldererror = ENOENT;
+#endif
+			return -2;
 		}
 
-		if (file1 != INVALID_HANDLE_VALUE)
+		// I have no idea why GetFileInformationByHandle would fail.
+		// Microsoft's documentation doesn't tell me.
+		// I'll just use EIO...
+		if (!GetFileInformationByHandle(file1, &file1info))
+		{
+#ifndef AVOID_ERRNO
+			foldererror = EIO;
+#endif
+			return -1;
+		}
+		else if (!GetFileInformationByHandle(file2, &file2info))
+		{
 			CloseHandle(file1);
-		if (file2 != INVALID_HANDLE_VALUE)
 			CloseHandle(file2);
+#ifndef AVOID_ERRNO
+			foldererror = EIO;
+#endif
+			return -2;
+		}
 
-		return ok;
+		if (file1info.dwVolumeSerialNumber == file2info.dwVolumeSerialNumber
+		&& file1info.nFileIndexLow == file2info.nFileIndexLow
+		&& file1info.nFileIndexHigh == file2info.nFileIndexHigh)
+		{
+			CloseHandle(file1);
+			CloseHandle(file2);
+			return 1;
+		}
+
+		return 0;
 #endif
 	}
 
-	return false;
+	return 0;
 }
 
 //
@@ -582,7 +626,7 @@ static void initfolderpath(char *folderpath, size_t *folderpathindex, int depthl
 		folderpathindex[depthleft]--;
 }
 
-lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfiles, UINT16 *nfolders)
+lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 {
 	DIR **dirhandle;
 	struct dirent *dent;
@@ -595,7 +639,9 @@ lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfiles, UINT1
 	size_t *folderpathindex;
 
 	lumpinfo_t *lumpinfo, *lump_p;
-	UINT16 i = 0, numlumps = (*nlmp);
+	UINT16 i = 0, numlumps = 0;
+
+	boolean failure = false;
 
 	dirhandle = (DIR **)malloc(maxfolderdepth * sizeof (DIR*));
 	folderpathindex = (size_t *)malloc(maxfolderdepth * sizeof(size_t));
@@ -612,7 +658,6 @@ lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfiles, UINT1
 	}
 
 	initfolderpath(folderpath, folderpathindex, depthleft);
-	(*nfiles) = 0;
 	(*nfolders) = 0;
 
 	// Count files and directories
@@ -641,10 +686,7 @@ lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfiles, UINT1
 			dirhandle[depthleft] = opendir(folderpath);
 
 			if (dirhandle[depthleft])
-			{
-				numlumps++;
 				(*nfolders)++;
-			}
 			else
 				depthleft++;
 
@@ -652,28 +694,36 @@ lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfiles, UINT1
 			folderpath[folderpathindex[depthleft]] = 0;
 		}
 		else
-		{
 			numlumps++;
-			(*nfiles)++;
-		}
 
-		if (numlumps == (UINT16_MAX-1))
+		// Failure: Too many lumps.
+		if (numlumps == UINT16_MAX)
+		{
+			(*nlmp) = UINT16_MAX;
+			failure = true;
 			break;
+		}
 	}
 
 	// Failure: No files have been found.
-	if (!(*nfiles))
+	if (!numlumps)
 	{
-		(*nfiles) = UINT16_MAX;
+		(*nlmp) = 0;
+		failure = true;
+	}
+
+	// Close any open directories and return if something went wrong.
+	if (failure)
+	{
 		free(folderpathindex);
 		free(dirhandle);
-		for (; depthleft < maxfolderdepth; closedir(dirhandle[depthleft++])); // Close any open directories.
+		for (; depthleft < maxfolderdepth; closedir(dirhandle[depthleft++]));
 		return NULL;
 	}
 
 	// Create the files and directories as lump entries
 	// It's possible to create lumps and count files at the same time,
-	// but I didn't to constantly have to reallocate memory for every lump.
+	// but I didn't want to have to reallocate memory for every lump.
 	rewinddir(dirhandle[rootfolder]);
 	depthleft = rootfolder;
 
@@ -706,14 +756,15 @@ lumpinfo_t *getfolderfiles(const char *path, UINT16 *nlmp, UINT16 *nfiles, UINT1
 			folderpathindex[--depthleft] = strlen(folderpath) + 1;
 			dirhandle[depthleft] = opendir(folderpath);
 
-			if (!dirhandle[depthleft])
+			if (dirhandle[depthleft])
 			{
-				depthleft++;
-				continue;
+				folderpath[folderpathindex[depthleft]-1] = '/';
+				folderpath[folderpathindex[depthleft]] = 0;
 			}
+			else
+				depthleft++;
 
-			folderpath[folderpathindex[depthleft]-1] = '/';
-			folderpath[folderpathindex[depthleft]] = 0;
+			continue;
 		}
 
 		lump_p->diskpath = Z_StrDup(folderpath); // Path in the filesystem to the file
