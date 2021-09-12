@@ -401,6 +401,72 @@ static int camera_get(lua_State *L)
 	return 1;
 }
 
+static int camera_set(lua_State *L)
+{
+	camera_t *cam = *((camera_t **)luaL_checkudata(L, 1, META_CAMERA));
+	enum cameraf field = luaL_checkoption(L, 2, NULL, camera_opt);
+
+	I_Assert(cam != NULL);
+
+	switch(field)
+	{
+	case camera_subsector:
+	case camera_floorz:
+	case camera_ceilingz:
+	case camera_x:
+	case camera_y:
+		return luaL_error(L, LUA_QL("camera_t") " field " LUA_QS " should not be set directly. Use " LUA_QL("P_TryCameraMove") " or " LUA_QL("P_TeleportCameraMove") " instead.", camera_opt[field]);
+	case camera_chase:
+		if (cam == &camera)
+			CV_SetValue(&cv_chasecam, (INT32)luaL_checkboolean(L, 3));
+		else if (cam == &camera2)
+			CV_SetValue(&cv_chasecam2, (INT32)luaL_checkboolean(L, 3));
+		else // ??? this should never happen, but ok
+			cam->chase = luaL_checkboolean(L, 3);
+		break;
+	case camera_aiming:
+		cam->aiming = luaL_checkangle(L, 3);
+		break;
+	case camera_z:
+		cam->z = luaL_checkfixed(L, 3);
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
+		break;
+	case camera_angle:
+		cam->angle = luaL_checkangle(L, 3);
+		break;
+	case camera_radius:
+		cam->radius = luaL_checkfixed(L, 3);
+		if (cam->radius < 0)
+			cam->radius = 0;
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
+		break;
+	case camera_height:
+		cam->height = luaL_checkfixed(L, 3);
+		if (cam->height < 0)
+			cam->height = 0;
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
+		break;
+	case camera_momx:
+		cam->momx = luaL_checkfixed(L, 3);
+		break;
+	case camera_momy:
+		cam->momy = luaL_checkfixed(L, 3);
+		break;
+	case camera_momz:
+		cam->momz = luaL_checkfixed(L, 3);
+		break;
+	default:
+		return luaL_error(L, LUA_QL("camera_t") " has no field named " LUA_QS, camera_opt[field]);
+	}
+	return 0;
+}
+
 //
 // lib_draw
 //
@@ -1350,6 +1416,9 @@ int LUA_HudLib(lua_State *L)
 	luaL_newmetatable(L, META_CAMERA);
 		lua_pushcfunction(L, camera_get);
 		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, camera_set);
+		lua_setfield(L, -2, "__newindex");
 	lua_pop(L,1);
 
 	luaL_register(L, "hud", lib_hud);

@@ -393,6 +393,14 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word, "mouse2")) {
 		LUA_PushUserdata(L, &mouse2, META_MOUSE);
 		return 1;
+	} else if (fastcmp(word, "camera")) {
+		LUA_PushUserdata(L, &camera, META_CAMERA);
+		return 1;
+	} else if (fastcmp(word, "camera2")) {
+		if (!splitscreen)
+			return 0;
+		LUA_PushUserdata(L, &camera2, META_CAMERA);
+		return 1;
 	}
 	return 0;
 }
