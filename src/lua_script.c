@@ -1392,21 +1392,13 @@ static void ArchiveTables(void)
 			// Write key
 			e = ArchiveValue(TABLESINDEX, -2); // key should be either a number or a string, ArchiveValue can handle this.
 			if (e == 2) // invalid key type (function, thread, lightuserdata, or anything we don't recognise)
-			{
-				lua_pushvalue(gL, -2);
-				CONS_Alert(CONS_ERROR, "Index '%s' (%s) of table %d could not be archived!\n", lua_tostring(gL, -1), luaL_typename(gL, -1), i);
-				lua_pop(gL, 1);
-			}
+				CONS_Alert(CONS_ERROR, "Index '%s' (%s) of table %d could not be archived!\n", lua_tostring(gL, -2), luaL_typename(gL, -2), i);
 			// Write value
 			e = ArchiveValue(TABLESINDEX, -1);
 			if (e == 1)
 				n++; // the table contained a new table we'll have to archive. :(
 			else if (e == 2) // invalid value type
-			{
-				lua_pushvalue(gL, -2);
-				CONS_Alert(CONS_ERROR, "Type of value for table %d entry '%s' (%s) could not be archived!\n", i, lua_tostring(gL, -1), luaL_typename(gL, -1));
-				lua_pop(gL, 1);
-			}
+				CONS_Alert(CONS_ERROR, "Type of value for table %d entry '%s' (%s) could not be archived!\n", i, lua_tostring(gL, -2), luaL_typename(gL, -1));
 
 			lua_pop(gL, 1);
 		}
