@@ -287,7 +287,7 @@ consvar_t cv_gravity = CVAR_INIT ("gravity", "0.5", CV_RESTRICT|CV_FLOAT|CV_CALL
 
 consvar_t cv_soundtest = CVAR_INIT ("soundtest", "0", CV_CALL, NULL, SoundTest_OnChange);
 
-static CV_PossibleValue_t minitimelimit_cons_t[] = {{15, "MIN"}, {9999, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t minitimelimit_cons_t[] = {{1, "MIN"}, {9999, "MAX"}, {0, NULL}};
 consvar_t cv_countdowntime = CVAR_INIT ("countdowntime", "60", CV_SAVE|CV_NETVAR|CV_CHEAT, minitimelimit_cons_t, NULL);
 
 consvar_t cv_touchtag = CVAR_INIT ("touchtag", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
