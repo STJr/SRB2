@@ -1518,7 +1518,7 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 			{
 				illegalMask &= ~(1 << i);
 			}
-			
+
 			if ((p->availabilities & illegalMask) != 0)
 			{
 				kick = true;
@@ -3416,9 +3416,10 @@ static void Command_Addfolder(void)
 	for (curarg = 1; curarg < argc; curarg++)
 	{
 		const char *fn, *p;
+		char *fullpath;
 		char buf[256];
 		char *buf_p = buf;
-		INT32 i;
+		INT32 i, stat;
 		size_t ii;
 		boolean folderadded = false;
 
@@ -3461,6 +3462,13 @@ static void Command_Addfolder(void)
 				break;
 		++p;
 
+		// Don't add an empty path.
+		if (M_IsStringEmpty(fn))
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Folder name is empty, skipping\n"));
+			continue;
+		}
+
 		// check total packet size and no of files currently loaded
 		// See W_InitFile in w_wad.c
 		if ((numwadfiles >= MAX_WADFILES)
@@ -3470,9 +3478,51 @@ static void Command_Addfolder(void)
 			return;
 		}
 
-		WRITESTRINGN(buf_p,p,240);
+		// Check if the path is valid.
+		stat = W_IsPathToFolderValid(fn);
+
+		if (stat == 0)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Path %s is invalid, skipping\n"), fn);
+			continue;
+		}
+		else if (stat < 0)
+		{
+#ifndef AVOID_ERRNO
+			CONS_Alert(CONS_WARNING, M_GetText("Error accessing %s (%s), skipping\n"), fn, strerror(direrror));
+#else
+			CONS_Alert(CONS_WARNING, M_GetText("Error accessing %s, skipping\n"), fn);
+#endif
+			continue;
+		}
+
+		// Get the full path for this folder.
+		fullpath = W_GetFullFolderPath(fn);
+
+		if (fullpath == NULL)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Path %s is invalid, skipping\n"), fn);
+			continue;
+		}
+
+		// Check if the folder is already added.
+		for (i = 0; i < numwadfiles; i++)
+		{
+			if (wadfiles[i]->type != RET_FOLDER)
+				continue;
+
+			if (samepaths(wadfiles[i]->path, fullpath) > 0)
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
+				continue;
+			}
+		}
+
+		Z_Free(fullpath);
 
 		addedfolders[numfoldersadded++] = fn;
+
+		WRITESTRINGN(buf_p,p,240);
 
 		if (IsPlayerAdmin(consoleplayer) && (!server)) // Request to add file
 			SendNetXCmd(XD_REQADDFOLDER, buf, buf_p - buf);

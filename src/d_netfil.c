@@ -1584,20 +1584,23 @@ filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum, boolean complet
 	return (badmd5 ? FS_MD5SUMBAD : FS_NOTFOUND); // md5 sum bad or file not found
 }
 
+// Searches for a folder.
+// This can be used with a full path, or an incomplete path.
+// In the latter case, the function will try to find folders in
+// srb2home, srb2path, and the current directory.
 filestatus_t findfolder(const char *path)
 {
 	// Check the path by itself first.
-	if (checkfolderpath(path, NULL, true))
+	if (concatpaths(path, NULL) == 1)
 		return FS_FOUND;
 
-#define checkpath(startpath) { \
-	if (checkfolderpath(path, startpath, true)) \
-		return FS_FOUND; \
-	}
+#define checkpath(startpath) \
+	if (concatpaths(path, startpath) == 1) \
+		return FS_FOUND
 
-	checkpath(srb2home) // Then, look in srb2home.
-	checkpath(srb2path) // Now, look in srb2path.
-	checkpath(".") // Finally, look in ".".
+	checkpath(srb2home); // Then, look in srb2home.
+	checkpath(srb2path); // Now, look in srb2path.
+	checkpath("."); // Finally, look in the current directory.
 
 #undef checkpath
 

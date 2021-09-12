@@ -944,13 +944,13 @@ static void D_AddFile(char **list, const char *file)
 
 static void D_AddFolder(char **list, const char *file)
 {
-	size_t pnumwadfiles, len = strlen(file);
+	size_t pnumwadfiles;
 	char *newfile;
 
 	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
 		;
 
-	newfile = malloc(len + 2); // NULL terminator + path separator
+	newfile = malloc(strlen(file) + 2); // Path delimiter + NULL terminator
 	if (!newfile)
 		I_Error("No more free memory to AddFolder %s",file);
 
