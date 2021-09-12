@@ -687,11 +687,67 @@ static lumpinfo_t* ResGetLumpsZip (FILE* handle, UINT16* nlmp)
 	return lumpinfo;
 }
 
+static INT32 CheckPathsNotEqual(const char *path1, const char *path2)
+{
+	INT32 stat = samepaths(path1, path2);
+
+	if (stat == 1)
+		return 0;
+	else if (stat < 0)
+		return -1;
+
+	return 1;
+}
+
+// Returns 1 if the path is valid, 0 if not, and -1 if there was an error.
+INT32 W_IsPathToFolderValid(const char *path)
+{
+	INT32 stat;
+
+	// Remove path delimiters.
+	const char *p = path + (strlen(path) - 1);
+	while (*p == '\\' || *p == '/' || *p == ':')
+	{
+		p--;
+		if (p < path)
+			return 0;
+	}
+
+	// Check if the path is a directory.
+	stat = pathisdirectory(path);
+	if (stat == 0)
+		return 0;
+	else if (stat < 0)
+	{
+		// The path doesn't exist, so it can't be a directory.
+		if (direrror == ENOENT)
+			return 0;
+
+		return -1;
+	}
+
+	// Don't add your home, you sodding tic tac.
+	stat = CheckPathsNotEqual(path, srb2home);
+	if (stat != 1)
+		return stat;
+
+	// Do the same checks for SRB2's path, and the current directory.
+	stat = CheckPathsNotEqual(path, srb2path);
+	if (stat != 1)
+		return stat;
+
+	stat = CheckPathsNotEqual(path, ".");
+	if (stat != 1)
+		return stat;
+
+	return 1;
+}
+
 // Checks if the combination of the first path and the second path are valid.
 // If they are, the concatenated path is returned.
-static char *W_CheckFolderPath(const char *startpath, const char *path)
+static char *CheckConcatFolderPath(const char *startpath, const char *path)
 {
-	if (checkfolderpath(path, startpath, false))
+	if (concatpaths(path, startpath) == 1)
 	{
 		char *fn;
 
@@ -710,23 +766,23 @@ static char *W_CheckFolderPath(const char *startpath, const char *path)
 	return NULL;
 }
 
-// Returns the first valid path for a folder.
-static char *W_GetFullFolderPath(const char *path)
+// Looks for the first valid full path for a folder.
+// Returns NULL if the folder doesn't exist, or it isn't valid.
+char *W_GetFullFolderPath(const char *path)
 {
 	// Check the path by itself first.
-	char *fn = W_CheckFolderPath(NULL, path);
+	char *fn = CheckConcatFolderPath(NULL, path);
 	if (fn)
 		return fn;
 
-#define checkpath(startpath) { \
-	fn = W_CheckFolderPath(startpath, path); \
+#define checkpath(startpath) \
+	fn = CheckConcatFolderPath(startpath, path); \
 	if (fn) \
-		return fn; \
-} \
+		return fn
 
-	checkpath(srb2home) // Then, look in srb2home.
-	checkpath(srb2path) // Now, look in srb2path.
-	checkpath(".") // Finally, look in ".".
+	checkpath(srb2home); // Then, look in srb2home.
+	checkpath(srb2path); // Now, look in srb2path.
+	checkpath("."); // Finally, look in the current directory.
 
 #undef checkpath
 
@@ -734,9 +790,9 @@ static char *W_GetFullFolderPath(const char *path)
 }
 
 // Loads files from a folder into a lumpinfo structure.
-static lumpinfo_t *ResGetLumpsFolder(const char *path, UINT16 *nlmp, UINT16 *nfiles, UINT16 *nfolders)
+static lumpinfo_t *ResGetLumpsFolder(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 {
-	return getfolderfiles(path, nlmp, nfiles, nfolders);
+	return getdirectoryfiles(path, nlmp, nfolders);
 }
 
 static UINT16 W_InitFileError (const char *filename, boolean exitworthy)
@@ -908,7 +964,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	wadfile->type = type;
 	wadfile->handle = handle;
 	wadfile->numlumps = numlumps;
-	wadfile->filecount = wadfile->foldercount = 0;
+	wadfile->foldercount = 0;
 	wadfile->lumpinfo = lumpinfo;
 	wadfile->important = important;
 	fseek(handle, 0, SEEK_END);
@@ -966,11 +1022,12 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	lumpinfo_t *lumpinfo = NULL;
 	wadfile_t *wadfile;
 	UINT16 numlumps = 0;
-	UINT16 filecount, foldercount;
+	UINT16 foldercount;
 	size_t i;
 	char *fn, *fullpath;
 	const char *p;
 	int important;
+	INT32 stat;
 
 	if (!(refreshdirmenu & REFRESHDIR_ADDFILE))
 		refreshdirmenu = REFRESHDIR_NORMAL|REFRESHDIR_ADDFILE; // clean out cons_alerts that happened earlier
@@ -1006,16 +1063,15 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 		packetsizetally = packetsize;
 	}
 
-	// Remove path separators from the filename, and don't try adding "/".
-	p = path+strlen(path);
-	--p;
+	// Remove path delimiters.
+	p = path + (strlen(path) - 1);
 
 	while (*p == '\\' || *p == '/' || *p == ':')
 	{
 		p--;
 		if (p < path)
 		{
-			CONS_Alert(CONS_ERROR, M_GetText("Path %s is prohibited\n"), path);
+			CONS_Alert(CONS_ERROR, M_GetText("Path %s is invalid\n"), path);
 			return W_InitFileError(path, startup);
 		}
 	}
@@ -1026,6 +1082,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	fn = ZZ_Alloc(i);
 	strlcpy(fn, path, i);
 
+	// Don't add an empty path.
 	if (M_IsStringEmpty(fn))
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Folder name is empty\n"));
@@ -1037,14 +1094,36 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 			return W_InitFileError("a folder", false);
 	}
 
-	// Get the full path for this filename.
+	// Check if the path is valid.
+	stat = W_IsPathToFolderValid(fn);
+
+	if (stat != 1)
+	{
+		if (stat == 0)
+			CONS_Alert(CONS_ERROR, M_GetText("Path %s is invalid\n"), fn);
+		else if (stat < 0)
+		{
+#ifndef AVOID_ERRNO
+			CONS_Alert(CONS_ERROR, M_GetText("Could not stat %s: %s\n"), fn, strerror(direrror));
+#else
+			CONS_Alert(CONS_ERROR, M_GetText("Could not stat %s\n"), fn);
+#endif
+		}
+
+		Z_Free(fn);
+		return W_InitFileError(path, startup);
+	}
+
+	// Get the full path for this folder.
 	fullpath = W_GetFullFolderPath(fn);
 	if (fullpath == NULL)
 	{
+		CONS_Alert(CONS_ERROR, M_GetText("Path %s is invalid\n"), fn);
 		Z_Free(fn);
-		return W_InitFileError(path, false);
+		return W_InitFileError(path, startup);
 	}
 
+	// Check if the folder is already added.
 	for (i = 0; i < numwadfiles; i++)
 	{
 		if (wadfiles[i]->type != RET_FOLDER)
@@ -1061,11 +1140,16 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 		}
 	}
 
-	lumpinfo = ResGetLumpsFolder(fullpath, &numlumps, &filecount, &foldercount);
+	lumpinfo = ResGetLumpsFolder(fullpath, &numlumps, &foldercount);
+
 	if (lumpinfo == NULL)
 	{
-		if (filecount == UINT16_MAX)
+		if (!numlumps)
 			CONS_Alert(CONS_ERROR, M_GetText("Folder %s is empty\n"), path);
+		else if (numlumps == UINT16_MAX)
+			CONS_Alert(CONS_ERROR, M_GetText("Folder %s contains too many files\n"), path);
+		else
+			CONS_Alert(CONS_ERROR, M_GetText("Unknown error enumerating files from folder %s\n"), path);
 
 		Z_Free(fn);
 		Z_Free(fullpath);
@@ -1082,7 +1166,6 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	wadfile->type = RET_FOLDER;
 	wadfile->handle = NULL;
 	wadfile->numlumps = numlumps;
-	wadfile->filecount = filecount;
 	wadfile->foldercount = foldercount;
 	wadfile->lumpinfo = lumpinfo;
 	wadfile->important = important;
@@ -1094,7 +1177,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
 	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
 
-	CONS_Printf(M_GetText("Added folder %s (%u files, %u folders)\n"), fn, filecount, foldercount);
+	CONS_Printf(M_GetText("Added folder %s (%u files, %u folders)\n"), fn, numlumps, foldercount);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++;
 
@@ -1506,12 +1589,24 @@ size_t W_LumpLengthPwad(UINT16 wad, UINT16 lump)
 
 	l = wadfiles[wad]->lumpinfo + lump;
 
+	// Open the external file for this lump, if the WAD is a folder.
 	if (wadfiles[wad]->type == RET_FOLDER)
 	{
-		INT32 stat = pathisfolder(l->diskpath);
+		// pathisdirectory calls stat, so if anything wrong has happened,
+		// this is the time to be aware of it.
+		INT32 stat = pathisdirectory(l->diskpath);
 
 		if (stat < 0)
-			I_Error("W_LumpLengthPwad: could not stat %s", l->diskpath);
+		{
+#ifndef AVOID_ERRNO
+			if (direrror == ENOENT)
+				I_Error("W_LumpLengthPwad: file %s doesn't exist", l->diskpath);
+			else
+				I_Error("W_LumpLengthPwad: could not stat %s: %s", l->diskpath, strerror(direrror));
+#else
+			I_Error("W_LumpLengthPwad: could not access %s", l->diskpath);
+#endif
+		}
 		else if (stat == 1) // Path is a folder.
 			return 0;
 		else
@@ -1617,7 +1712,7 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	lumpinfo_t *l;
 	FILE *handle = NULL;
 
-	if (!TestValidLump(wad,lump))
+	if (!TestValidLump(wad, lump))
 		return 0;
 
 	l = wadfiles[wad]->lumpinfo + lump;
@@ -1625,10 +1720,21 @@ size_t W_ReadLumpHeaderPwad(UINT16 wad, UINT16 lump, void *dest, size_t size, si
 	// Open the external file for this lump, if the WAD is a folder.
 	if (wadfiles[wad]->type == RET_FOLDER)
 	{
-		INT32 stat = pathisfolder(l->diskpath);
+		// pathisdirectory calls stat, so if anything wrong has happened,
+		// this is the time to be aware of it.
+		INT32 stat = pathisdirectory(l->diskpath);
 
 		if (stat < 0)
-			I_Error("W_ReadLumpHeaderPwad: could not stat %s", l->diskpath);
+		{
+#ifndef AVOID_ERRNO
+			if (direrror == ENOENT)
+				I_Error("W_ReadLumpHeaderPwad: file %s doesn't exist", l->diskpath);
+			else
+				I_Error("W_ReadLumpHeaderPwad: could not stat %s: %s", l->diskpath, strerror(direrror));
+#else
+			I_Error("W_ReadLumpHeaderPwad: could not access %s", l->diskpath);
+#endif
+		}
 		else if (stat == 1) // Path is a folder.
 			return 0;
 		else

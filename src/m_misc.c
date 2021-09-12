@@ -2694,7 +2694,7 @@ boolean M_IsStringEmpty(const char *s)
 {
 	const char *ch = s;
 
-	if (ch == NULL || (ch && strlen(ch) < 1))
+	if (s == NULL || s[0] == '\0')
 		return true;
 
 	for (;;ch++)
