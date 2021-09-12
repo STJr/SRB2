@@ -1680,6 +1680,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	switch(oldversion) // demoversion
 	{
 	case DEMOVERSION: // latest always supported
+	case 0x000d: // The previous demoversion also supported
 	case 0x000c: // all that changed between then and now was longer color name
 		break;
 	// too old, cannot support.
