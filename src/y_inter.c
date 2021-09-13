@@ -430,7 +430,7 @@ void Y_IntermissionDrawer(void)
 	else if (bgtile)
 		V_DrawPatchFill(bgtile);
 
-	LUAh_IntermissionHUD(intertype == int_spec && stagefailed);
+	LUA_HUDHOOK(intermission);
 	if (!LUA_HudEnabled(hud_intermissiontally))
 		goto skiptallydrawer;
 

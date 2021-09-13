@@ -2104,7 +2104,7 @@ void HU_Drawer(void)
 		}
 		else
 			HU_DrawCoopOverlay();
-		LUAh_ScoresHUD();
+		LUA_HUDHOOK(scores);
 	}
 
 	if (gamestate != GS_LEVEL)
