@@ -152,7 +152,7 @@ void W_InitMultipleFiles(char **filenames);
 
 #define W_FileHasFolders(wadfile) ((wadfile)->type == RET_PK3 || (wadfile)->type == RET_FOLDER)
 
-boolean W_IsPathToFolderValid(const char *path);
+INT32 W_IsPathToFolderValid(const char *path);
 char *W_GetFullFolderPath(const char *path);
 
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);

@@ -401,14 +401,16 @@ static int camera_set(lua_State *L)
 	case camera_x:
 	case camera_y:
 		return luaL_error(L, LUA_QL("camera_t") " field " LUA_QS " should not be set directly. Use " LUA_QL("P_TryCameraMove") " or " LUA_QL("P_TeleportCameraMove") " instead.", camera_opt[field]);
-	case camera_chase:
+	case camera_chase: {
+		INT32 chase = luaL_checkboolean(L, 3);
 		if (cam == &camera)
-			CV_SetValue(&cv_chasecam, (INT32)luaL_checkboolean(L, 3));
+			CV_SetValue(&cv_chasecam, chase);
 		else if (cam == &camera2)
-			CV_SetValue(&cv_chasecam2, (INT32)luaL_checkboolean(L, 3));
+			CV_SetValue(&cv_chasecam2, chase);
 		else // ??? this should never happen, but ok
-			cam->chase = luaL_checkboolean(L, 3);
+			cam->chase = chase;
 		break;
+	}
 	case camera_aiming:
 		cam->aiming = luaL_checkangle(L, 3);
 		break;

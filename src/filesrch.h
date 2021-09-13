@@ -31,7 +31,7 @@ filestatus_t filesearch(char *filename, const char *startpath, const UINT8 *want
 
 INT32 pathisdirectory(const char *path);
 INT32 samepaths(const char *path1, const char *path2);
-boolean concatpaths(const char *path, const char *startpath);
+INT32 concatpaths(const char *path, const char *startpath);
 
 #ifndef AVOID_ERRNO
 extern int direrror;

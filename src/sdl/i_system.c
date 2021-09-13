@@ -550,7 +550,7 @@ static void I_StartupConsole(void)
 void I_GetConsoleEvents(void)
 {
 	// we use this when sending back commands
-	event_t ev = {0,0,0,0};
+	event_t ev = {0};
 	char key = 0;
 	ssize_t d;
 
