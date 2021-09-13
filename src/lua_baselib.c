@@ -1885,6 +1885,37 @@ static int lib_pDoSpring(lua_State *L)
 	return 1;
 }
 
+static int lib_pTryCameraMove(lua_State *L)
+{
+	camera_t *cam = *((camera_t **)luaL_checkudata(L, 1, META_CAMERA));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+
+	if (!cam)
+		return LUA_ErrInvalid(L, "camera_t");
+	lua_pushboolean(L, P_TryCameraMove(x, y, cam));
+	return 1;
+}
+
+static int lib_pTeleportCameraMove(lua_State *L)
+{
+	camera_t *cam = *((camera_t **)luaL_checkudata(L, 1, META_CAMERA));
+	fixed_t x = luaL_checkfixed(L, 2);
+	fixed_t y = luaL_checkfixed(L, 3);
+	fixed_t z = luaL_checkfixed(L, 4);
+
+	if (!cam)
+		return LUA_ErrInvalid(L, "camera_t");
+	cam->x = x;
+	cam->y = y;
+	cam->z = z;
+	P_CheckCameraPosition(x, y, cam);
+	cam->subsector = R_PointInSubsector(x, y);
+	cam->floorz = tmfloorz;
+	cam->ceilingz = tmceilingz;
+	return 0;
+}
+
 // P_INTER
 ////////////
 
@@ -3988,6 +4019,8 @@ static luaL_Reg lib[] = {
 	{"P_FloorzAtPos",lib_pFloorzAtPos},
 	{"P_CeilingzAtPos",lib_pCeilingzAtPos},
 	{"P_DoSpring",lib_pDoSpring},
+	{"P_TryCameraMove", lib_pTryCameraMove},
+	{"P_TeleportCameraMove", lib_pTeleportCameraMove},
 
 	// p_inter
 	{"P_RemoveShield",lib_pRemoveShield},

@@ -936,7 +936,7 @@ void HU_Ticker(void)
 	hu_tick++;
 	hu_tick &= 7; // currently only to blink chat input cursor
 
-	if (PLAYER1INPUTDOWN(gc_scores))
+	if (PLAYER1INPUTDOWN(GC_SCORES))
 		hu_showscores = !chat_on;
 	else
 		hu_showscores = false;
@@ -1111,26 +1111,26 @@ boolean HU_Responder(event_t *ev)
 	// (Unless if you're sharing a keyboard, since you probably establish when you start chatting that you have dibs on it...)
 	// (Ahhh, the good ol days when I was a kid who couldn't afford an extra USB controller...)
 
-	if (ev->data1 >= KEY_MOUSE1)
+	if (ev->key >= KEY_MOUSE1)
 	{
 		INT32 i;
-		for (i = 0; i < num_gamecontrols; i++)
+		for (i = 0; i < NUM_GAMECONTROLS; i++)
 		{
-			if (gamecontrol[i][0] == ev->data1 || gamecontrol[i][1] == ev->data1)
+			if (gamecontrol[i][0] == ev->key || gamecontrol[i][1] == ev->key)
 				break;
 		}
 
-		if (i == num_gamecontrols)
+		if (i == NUM_GAMECONTROLS)
 			return false;
 	}*/	//We don't actually care about that unless we get splitscreen netgames. :V
 
 #ifndef NONET
-	c = (INT32)ev->data1;
+	c = (INT32)ev->key;
 
 	if (!chat_on)
 	{
 		// enter chat mode
-		if ((ev->data1 == gamecontrol[gc_talkkey][0] || ev->data1 == gamecontrol[gc_talkkey][1])
+		if ((ev->key == gamecontrol[GC_TALKKEY][0] || ev->key == gamecontrol[GC_TALKKEY][1])
 			&& netgame && !OLD_MUTE) // check for old chat mute, still let the players open the chat incase they want to scroll otherwise.
 		{
 			chat_on = true;
@@ -1140,7 +1140,7 @@ boolean HU_Responder(event_t *ev)
 			typelines = 1;
 			return true;
 		}
-		if ((ev->data1 == gamecontrol[gc_teamkey][0] || ev->data1 == gamecontrol[gc_teamkey][1])
+		if ((ev->key == gamecontrol[GC_TEAMKEY][0] || ev->key == gamecontrol[GC_TEAMKEY][1])
 			&& netgame && !OLD_MUTE)
 		{
 			chat_on = true;
@@ -1157,12 +1157,12 @@ boolean HU_Responder(event_t *ev)
 		// Ignore modifier keys
 		// Note that we do this here so users can still set
 		// their chat keys to one of these, if they so desire.
-		if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT
-		 || ev->data1 == KEY_LCTRL || ev->data1 == KEY_RCTRL
-		 || ev->data1 == KEY_LALT || ev->data1 == KEY_RALT)
+		if (ev->key == KEY_LSHIFT || ev->key == KEY_RSHIFT
+		 || ev->key == KEY_LCTRL || ev->key == KEY_RCTRL
+		 || ev->key == KEY_LALT || ev->key == KEY_RALT)
 			return true;
 
-		c = (INT32)ev->data1;
+		c = (INT32)ev->key;
 
 		// I know this looks very messy but this works. If it ain't broke, don't fix it!
 		// shift LETTERS to uppercase if we have capslock or are holding shift
@@ -1234,8 +1234,8 @@ boolean HU_Responder(event_t *ev)
 			I_UpdateMouseGrab();
 		}
 		else if (c == KEY_ESCAPE
-			|| ((c == gamecontrol[gc_talkkey][0] || c == gamecontrol[gc_talkkey][1]
-			|| c == gamecontrol[gc_teamkey][0] || c == gamecontrol[gc_teamkey][1])
+			|| ((c == gamecontrol[GC_TALKKEY][0] || c == gamecontrol[GC_TALKKEY][1]
+			|| c == gamecontrol[GC_TEAMKEY][0] || c == gamecontrol[GC_TEAMKEY][1])
 			&& c >= KEY_MOUSE1)) // If it's not a keyboard key, then the chat button is used as a toggle.
 		{
 			chat_on = false;
