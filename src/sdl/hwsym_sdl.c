@@ -97,12 +97,10 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(SetTransform);
 	GETFUNC(PostImgRedraw);
 	GETFUNC(FlushScreenTextures);
-	GETFUNC(StartScreenWipe);
-	GETFUNC(EndScreenWipe);
+	GETFUNC(SwapScreenTextures);
 	GETFUNC(DoScreenWipe);
-	GETFUNC(DrawIntermissionBG);
+	GETFUNC(DrawScreenTexture);
 	GETFUNC(MakeScreenTexture);
-	GETFUNC(MakeScreenFinalTexture);
 	GETFUNC(DrawScreenFinalTexture);
 
 	GETFUNC(InitShaders);
