@@ -1981,6 +1981,22 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 	}
 }
 
+static boolean is_rain_type (INT32 weathernum)
+{
+	switch (weathernum)
+	{
+		case PRECIP_SNOW:
+		case PRECIP_RAIN:
+		case PRECIP_STORM:
+		case PRECIP_STORM_NOSTRIKES:
+		case PRECIP_BLANK:
+			return true;
+
+		default:
+			return false;
+	}
+}
+
 //
 // P_SwitchWeather
 //
@@ -1989,12 +2005,12 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 void P_SwitchWeather(INT32 weathernum)
 {
 	boolean purge = true;
-	boolean raintype = (PRECIP_SNOW || PRECIP_RAIN || PRECIP_STORM || PRECIP_STORM_NOSTRIKES || PRECIP_BLANK);
 
 	if (weathernum == curWeather)
 		return;
 
-	if (weathernum == raintype && curWeather == raintype)
+	if (is_rain_type(weathernum) &&
+			is_rain_type(curWeather))
 		purge = false;
 
 	if (purge)
