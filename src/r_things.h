@@ -164,7 +164,12 @@ typedef struct vissprite_s
 	fixed_t xiscale; // negative if flipped
 
 	angle_t centerangle; // for paper sprites
-	angle_t viewangle; // for floor sprites, the viewpoint's current angle
+
+	// for floor sprites
+	struct {
+		fixed_t x, y, z; // the viewpoint's current position
+		angle_t angle; // the viewpoint's current angle
+	} viewpoint;
 
 	struct {
 		fixed_t tan; // The amount to shear the sprite vertically per row
@@ -185,9 +190,10 @@ typedef struct vissprite_s
 
 	extracolormap_t *extra_colormap; // global colormaps
 
-	// Precalculated top and bottom screen coords for the sprite.
 	fixed_t thingheight; // The actual height of the thing (for 3D floors)
 	sector_t *sector; // The sector containing the thing.
+
+	// Precalculated top and bottom screen coords for the sprite.
 	INT16 sz, szt;
 
 	spritecut_e cut;

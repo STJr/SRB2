@@ -89,8 +89,6 @@ static fixed_t planeheight;
 fixed_t yslopetab[MAXVIDHEIGHT*16];
 fixed_t *yslope;
 
-fixed_t basexscale, baseyscale;
-
 fixed_t cachedheight[MAXVIDHEIGHT];
 fixed_t cacheddistance[MAXVIDHEIGHT];
 fixed_t cachedxstep[MAXVIDHEIGHT];
@@ -114,7 +112,7 @@ void R_InitPlanes(void)
 // Sets planeripple.xfrac and planeripple.yfrac, added to ds_xfrac and ds_yfrac, if the span is not tilted.
 //
 
-struct
+static struct
 {
 	INT32 offset;
 	fixed_t xfrac, yfrac;
@@ -143,15 +141,6 @@ static void R_UpdatePlaneRipple(void)
 	planeripple.offset = (leveltime * 140);
 }
 
-//
-// R_MapPlane
-//
-// Uses global vars:
-//  planeheight
-//  basexscale
-//  baseyscale
-//  centerx
-
 static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 {
 	angle_t angle, planecos, planesin;
@@ -176,16 +165,13 @@ static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		cacheddistance[y] = distance = FixedMul(planeheight, yslope[y]);
 		span = abs(centery - y);
 
-		if (span) // don't divide by zero
+		if (span) // Don't divide by zero
 		{
 			ds_xstep = FixedMul(planesin, planeheight) / span;
 			ds_ystep = FixedMul(planecos, planeheight) / span;
 		}
 		else
-		{
-			ds_xstep = FixedMul(distance, basexscale);
-			ds_ystep = FixedMul(distance, baseyscale);
-		}
+			ds_xstep = ds_ystep = FRACUNIT;
 
 		cachedxstep[y] = ds_xstep;
 		cachedystep[y] = ds_ystep;
@@ -197,6 +183,11 @@ static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		ds_ystep = cachedystep[y];
 	}
 
+	// [RH] Instead of using the xtoviewangle array, I calculated the fractional values
+	// at the middle of the screen, then used the calculated ds_xstep and ds_ystep
+	// to step from those to the proper texture coordinate to start drawing at.
+	// That way, the texture coordinate is always calculated by its position
+	// on the screen and not by its position relative to the edge of the visplane.
 	ds_xfrac = xoffs + FixedMul(planecos, distance) + (x1 - centerx) * ds_xstep;
 	ds_yfrac = yoffs - FixedMul(planesin, distance) + (x1 - centerx) * ds_ystep;
 
@@ -295,7 +286,6 @@ void R_ClearFFloorClips (void)
 void R_ClearPlanes(void)
 {
 	INT32 i, p;
-	angle_t angle;
 
 	// opening / clipping determination
 	for (i = 0; i < viewwidth; i++)
@@ -321,13 +311,6 @@ void R_ClearPlanes(void)
 
 	// texture calculation
 	memset(cachedheight, 0, sizeof (cachedheight));
-
-	// left to right mapping
-	angle = (viewangle-ANGLE_90)>>ANGLETOFINESHIFT;
-
-	// scale will be unit scale at SCREENWIDTH/2 distance
-	basexscale = FixedDiv (FINECOSINE(angle),centerxfrac);
-	baseyscale = -FixedDiv (FINESINE(angle),centerxfrac);
 }
 
 static visplane_t *new_visplane(unsigned hash)
@@ -380,9 +363,11 @@ visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel,
 	{
 		if (polyobj->angle != 0)
 		{
-			angle_t fineshift = polyobj->angle >> ANGLETOFINESHIFT;
-			xoff -= FixedMul(FINECOSINE(fineshift), polyobj->centerPt.x)+FixedMul(FINESINE(fineshift), polyobj->centerPt.y);
-			yoff -= FixedMul(FINESINE(fineshift), polyobj->centerPt.x)-FixedMul(FINECOSINE(fineshift), polyobj->centerPt.y);
+			float ang = ANG2RAD(polyobj->angle);
+			float x = FixedToFloat(polyobj->centerPt.x);
+			float y = FixedToFloat(polyobj->centerPt.y);
+			xoff -= FloatToFixed(x * cos(ang) + y * sin(ang));
+			yoff -= FloatToFixed(x * sin(ang) - y * cos(ang));
 		}
 		else
 		{
@@ -530,53 +515,22 @@ visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop)
 //
 // R_ExpandPlane
 //
-// This function basically expands the visplane or I_Errors.
+// This function basically expands the visplane.
 // The reason for this is that when creating 3D floor planes, there is no
 // need to create new ones with R_CheckPlane, because 3D floor planes
 // are created by subsector and there is no way a subsector can graphically
 // overlap.
 void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop)
 {
-//	INT32 unionl, unionh;
-//	INT32 x;
-
 	// Don't expand polyobject planes here - we do that on our own.
 	if (pl->polyobj)
 		return;
 
 	if (pl->minx > start) pl->minx = start;
 	if (pl->maxx < stop)  pl->maxx = stop;
-/*
-	if (start < pl->minx)
-	{
-		unionl = start;
-	}
-	else
-	{
-		unionl = pl->minx;
-	}
-
-	if (stop > pl->maxx)
-	{
-		unionh = stop;
-	}
-	else
-	{
-		unionh = pl->maxx;
-	}
-	for (x = start; x <= stop; x++)
-		if (pl->top[x] != 0xffff || pl->bottom[x] != 0x0000)
-			break;
-
-	if (x <= stop)
-		I_Error("R_ExpandPlane: planes in same subsector overlap?!\nminx: %d, maxx: %d, start: %d, stop: %d\n", pl->minx, pl->maxx, start, stop);
-
-	pl->minx = unionl, pl->maxx = unionh;
-*/
-
 }
 
-static void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
+static void R_MakeSpans(void (*mapfunc)(INT32, INT32, INT32), INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 {
 	//    Alam: from r_splats's R_RasterizeFloorSplat
 	if (t1 >= vid.height) t1 = vid.height-1;
@@ -587,38 +541,12 @@ static void R_MakeSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
 
 	while (t1 < t2 && t1 <= b1)
 	{
-		R_MapPlane(t1, spanstart[t1], x - 1);
+		mapfunc(t1, spanstart[t1], x - 1);
 		t1++;
 	}
 	while (b1 > b2 && b1 >= t1)
 	{
-		R_MapPlane(b1, spanstart[b1], x - 1);
-		b1--;
-	}
-
-	while (t2 < t1 && t2 <= b2)
-		spanstart[t2++] = x;
-	while (b2 > b1 && b2 >= t2)
-		spanstart[b2--] = x;
-}
-
-static void R_MakeTiltedSpans(INT32 x, INT32 t1, INT32 b1, INT32 t2, INT32 b2)
-{
-	//    Alam: from r_splats's R_RasterizeFloorSplat
-	if (t1 >= vid.height) t1 = vid.height-1;
-	if (b1 >= vid.height) b1 = vid.height-1;
-	if (t2 >= vid.height) t2 = vid.height-1;
-	if (b2 >= vid.height) b2 = vid.height-1;
-	if (x-1 >= vid.width) x = vid.width;
-
-	while (t1 < t2 && t1 <= b1)
-	{
-		R_MapTiltedPlane(t1, spanstart[t1], x - 1);
-		t1++;
-	}
-	while (b1 > b2 && b1 >= t1)
-	{
-		R_MapTiltedPlane(b1, spanstart[b1], x - 1);
+		mapfunc(b1, spanstart[b1], x - 1);
 		b1--;
 	}
 
@@ -865,11 +793,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 {
 	levelflat_t *levelflat;
 	INT32 light = 0;
-	INT32 x;
-	INT32 stop, angle;
+	INT32 x, stop;
 	ffloor_t *rover;
-	INT32 type;
-	INT32 spanfunctype = BASEDRAWFUNC;
+	INT32 type, spanfunctype = BASEDRAWFUNC;
+	void (*mapfunc)(INT32, INT32, INT32) = R_MapPlane;
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -1021,9 +948,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 		&& viewangle != pl->viewangle+pl->plangle)
 	{
 		memset(cachedheight, 0, sizeof (cachedheight));
-		angle = (pl->viewangle+pl->plangle-ANGLE_90)>>ANGLETOFINESHIFT;
-		basexscale = FixedDiv(FINECOSINE(angle),centerxfrac);
-		baseyscale = -FixedDiv(FINESINE(angle),centerxfrac);
 		viewangle = pl->viewangle+pl->plangle;
 	}
 
@@ -1038,6 +962,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	if (pl->slope)
 	{
+		mapfunc = R_MapTiltedPlane;
+
 		if (!pl->plangle)
 		{
 			if (ds_powersoftwo)
@@ -1105,16 +1031,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	stop = pl->maxx + 1;
 
-	if (pl->slope)
-	{
-		for (x = pl->minx; x <= stop; x++)
-			R_MakeTiltedSpans(x, pl->top[x-1], pl->bottom[x-1], pl->top[x], pl->bottom[x]);
-	}
-	else
-	{
-		for (x = pl->minx; x <= stop; x++)
-			R_MakeSpans(x, pl->top[x-1], pl->bottom[x-1], pl->top[x], pl->bottom[x]);
-	}
+	for (x = pl->minx; x <= stop; x++)
+		R_MakeSpans(mapfunc, x, pl->top[x-1], pl->bottom[x-1], pl->top[x], pl->bottom[x]);
 
 /*
 QUINCUNX anti-aliasing technique (sort of)
@@ -1181,7 +1099,7 @@ using the palette colors.
 			stop = pl->maxx + 1;
 
 			for (x = pl->minx; x <= stop; x++)
-				R_MakeSpans(x, pl->top[x-1], pl->bottom[x-1],
+				R_MakeSpans(mapfunc, x, pl->top[x-1], pl->bottom[x-1],
 					pl->top[x], pl->bottom[x]);
 		}
 	}

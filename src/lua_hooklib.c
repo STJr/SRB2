@@ -628,12 +628,12 @@ int LUA_HookTiccmd(player_t *player, ticcmd_t *cmd, int hook_type)
 	return hook.status;
 }
 
-int LUA_HookKey(INT32 keycode, int hook_type)
+int LUA_HookKey(event_t *event, int hook_type)
 {
 	Hook_State hook;
 	if (prepare_hook(&hook, false, hook_type))
 	{
-		lua_pushinteger(gL, keycode);
+		LUA_PushUserdata(gL, event, META_KEYEVENT);
 		call_hooks(&hook, 1, res_true);
 	}
 	return hook.status;
@@ -768,6 +768,19 @@ int LUA_HookMobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 d
 {
 	return damage_hook(target, inflictor, source, 0, damagetype,
 			MOBJ_HOOK(MobjDeath), res_true);
+}
+
+int LUA_HookMobjMoveBlocked(mobj_t *t1, mobj_t *t2, line_t *line)
+{
+	Hook_State hook;
+	if (prepare_mobj_hook(&hook, 0, MOBJ_HOOK(MobjMoveBlocked), t1->type))
+	{
+		LUA_PushUserdata(gL, t1, META_MOBJ);
+		LUA_PushUserdata(gL, t2, META_MOBJ);
+		LUA_PushUserdata(gL, line, META_LINE);
+		call_hooks(&hook, 1, res_true);
+	}
+	return hook.status;
 }
 
 typedef struct {

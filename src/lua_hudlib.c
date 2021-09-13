@@ -265,12 +265,29 @@ static int hudinfo_num(lua_State *L)
 
 static int colormap_get(lua_State *L)
 {
-	const UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
 	UINT32 i = luaL_checkinteger(L, 2);
 	if (i >= 256)
 		return luaL_error(L, "colormap index %d out of range (0 - %d)", i, 255);
 	lua_pushinteger(L, colormap[i]);
 	return 1;
+}
+
+static int colormap_set(lua_State *L)
+{
+	UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	UINT32 i = luaL_checkinteger(L, 2);
+	if (i >= 256)
+		return luaL_error(L, "colormap index %d out of range (0 - %d)", i, 255);
+	colormap[i] = (UINT8)luaL_checkinteger(L, 3);
+	return 0;
+}
+
+static int colormap_free(lua_State *L)
+{
+	UINT8 *colormap = *((UINT8 **)luaL_checkudata(L, 1, META_COLORMAP));
+	Z_Free(colormap);
+	return 0;
 }
 
 static int patch_get(lua_State *L)
@@ -367,6 +384,72 @@ static int camera_get(lua_State *L)
 		break;
 	}
 	return 1;
+}
+
+static int camera_set(lua_State *L)
+{
+	camera_t *cam = *((camera_t **)luaL_checkudata(L, 1, META_CAMERA));
+	enum cameraf field = luaL_checkoption(L, 2, NULL, camera_opt);
+
+	I_Assert(cam != NULL);
+
+	switch(field)
+	{
+	case camera_subsector:
+	case camera_floorz:
+	case camera_ceilingz:
+	case camera_x:
+	case camera_y:
+		return luaL_error(L, LUA_QL("camera_t") " field " LUA_QS " should not be set directly. Use " LUA_QL("P_TryCameraMove") " or " LUA_QL("P_TeleportCameraMove") " instead.", camera_opt[field]);
+	case camera_chase:
+		if (cam == &camera)
+			CV_SetValue(&cv_chasecam, (INT32)luaL_checkboolean(L, 3));
+		else if (cam == &camera2)
+			CV_SetValue(&cv_chasecam2, (INT32)luaL_checkboolean(L, 3));
+		else // ??? this should never happen, but ok
+			cam->chase = luaL_checkboolean(L, 3);
+		break;
+	case camera_aiming:
+		cam->aiming = luaL_checkangle(L, 3);
+		break;
+	case camera_z:
+		cam->z = luaL_checkfixed(L, 3);
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
+		break;
+	case camera_angle:
+		cam->angle = luaL_checkangle(L, 3);
+		break;
+	case camera_radius:
+		cam->radius = luaL_checkfixed(L, 3);
+		if (cam->radius < 0)
+			cam->radius = 0;
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
+		break;
+	case camera_height:
+		cam->height = luaL_checkfixed(L, 3);
+		if (cam->height < 0)
+			cam->height = 0;
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
+		break;
+	case camera_momx:
+		cam->momx = luaL_checkfixed(L, 3);
+		break;
+	case camera_momy:
+		cam->momy = luaL_checkfixed(L, 3);
+		break;
+	case camera_momz:
+		cam->momz = luaL_checkfixed(L, 3);
+		break;
+	default:
+		return luaL_error(L, LUA_QL("camera_t") " has no field named " LUA_QS, camera_opt[field]);
+	}
+	return 0;
 }
 
 //
@@ -645,6 +728,45 @@ static int libd_drawStretched(lua_State *L)
 	flags &= ~V_PARAMMASK; // Don't let crashes happen.
 
 	V_DrawStretchyFixedPatch(x, y, hscale, vscale, flags, patch, colormap);
+	return 0;
+}
+
+static int libd_drawCropped(lua_State *L)
+{
+	fixed_t x, y, hscale, vscale, sx, sy, w, h;
+	INT32 flags;
+	patch_t *patch;
+	const UINT8 *colormap = NULL;
+
+	HUDONLY
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	hscale = luaL_checkinteger(L, 3);
+	if (hscale < 0)
+		return luaL_error(L, "negative horizontal scale");
+	vscale = luaL_checkinteger(L, 4);
+	if (vscale < 0)
+		return luaL_error(L, "negative vertical scale");
+	patch = *((patch_t **)luaL_checkudata(L, 5, META_PATCH));
+	flags = luaL_checkinteger(L, 6);
+	if (!lua_isnoneornil(L, 7))
+		colormap = *((UINT8 **)luaL_checkudata(L, 7, META_COLORMAP));
+	sx = luaL_checkinteger(L, 8);
+	if (sx < 0) // Don't crash. Now, we could do "x-=sx*FRACUNIT; sx=0;" here...
+		return luaL_error(L, "negative crop sx");
+	sy = luaL_checkinteger(L, 9);
+	if (sy < 0) // ...but it's more truthful to just deny it, as negative values would crash
+		return luaL_error(L, "negative crop sy");
+	w = luaL_checkinteger(L, 10);
+	if (w < 0) // Again, don't crash
+		return luaL_error(L, "negative crop w");
+	h = luaL_checkinteger(L, 11);
+	if (h < 0)
+		return luaL_error(L, "negative crop h");
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawCroppedPatch(x, y, hscale, vscale, flags, patch, colormap, sx, sy, w, h);
 	return 0;
 }
 
@@ -933,7 +1055,7 @@ static int libd_getColormap(lua_State *L)
 
 	// all was successful above, now we generate the colormap at last!
 
-	colormap = R_GetTranslationColormap(skinnum, color, GTC_CACHE);
+	colormap = R_GetTranslationColormap(skinnum, color, 0);
 	LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
 	return 1;
 }
@@ -942,10 +1064,14 @@ static int libd_getStringColormap(lua_State *L)
 {
 	INT32 flags = luaL_checkinteger(L, 1);
 	UINT8* colormap = NULL;
+	UINT8* lua_colormap = NULL;
 	HUDONLY
 	colormap = V_GetStringColormap(flags & V_CHARCOLORMASK);
 	if (colormap) {
-		LUA_PushUserdata(L, colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
+		lua_colormap = Z_Malloc(256 * sizeof(UINT8), PU_LUA, NULL);
+		memcpy(lua_colormap, colormap, 256 * sizeof(UINT8));
+
+		LUA_PushUserdata(L, lua_colormap, META_COLORMAP); // push as META_COLORMAP userdata, specifically for patches to use!
 		return 1;
 	}
 	return 0;
@@ -1106,6 +1232,7 @@ static luaL_Reg lib_draw[] = {
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
 	{"drawStretched", libd_drawStretched},
+	{"drawCropped", libd_drawCropped},
 	{"drawNum", libd_drawNum},
 	{"drawPaddedNum", libd_drawPaddedNum},
 	{"drawFill", libd_drawFill},
@@ -1219,6 +1346,12 @@ int LUA_HudLib(lua_State *L)
 	luaL_newmetatable(L, META_COLORMAP);
 		lua_pushcfunction(L, colormap_get);
 		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, colormap_set);
+		lua_setfield(L, -2, "__newindex");
+
+		lua_pushcfunction(L, colormap_free);
+		lua_setfield(L, -2, "__gc");
 	lua_pop(L,1);
 
 	luaL_newmetatable(L, META_PATCH);
@@ -1232,6 +1365,9 @@ int LUA_HudLib(lua_State *L)
 	luaL_newmetatable(L, META_CAMERA);
 		lua_pushcfunction(L, camera_get);
 		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, camera_set);
+		lua_setfield(L, -2, "__newindex");
 	lua_pop(L,1);
 
 	luaL_register(L, "hud", lib_hud);

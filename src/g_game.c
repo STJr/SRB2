@@ -45,6 +45,7 @@
 #include "lua_hook.h"
 #include "b_bot.h"
 #include "m_cond.h" // condition sets
+#include "lua_script.h"
 
 #include "lua_hud.h"
 
@@ -1071,7 +1072,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
 	boolean strafeisturn; // Simple controls only
 	player_t *player = &players[ssplayer == 2 ? secondarydisplayplayer : consoleplayer];
-	camera_t *thiscam = ((ssplayer == 1 || player->bot == 2) ? &camera : &camera2);
+	camera_t *thiscam = ((ssplayer == 1 || player->bot == BOT_2PHUMAN) ? &camera : &camera2);
 	angle_t *myangle = (ssplayer == 1 ? &localangle : &localangle2);
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 
@@ -1139,13 +1140,13 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		return;
 	}
 
-	turnright = PLAYERINPUTDOWN(ssplayer, gc_turnright);
-	turnleft = PLAYERINPUTDOWN(ssplayer, gc_turnleft);
+	turnright = PLAYERINPUTDOWN(ssplayer, GC_TURNRIGHT);
+	turnleft = PLAYERINPUTDOWN(ssplayer, GC_TURNLEFT);
 
-	straferkey = PLAYERINPUTDOWN(ssplayer, gc_straferight);
-	strafelkey = PLAYERINPUTDOWN(ssplayer, gc_strafeleft);
-	movefkey = PLAYERINPUTDOWN(ssplayer, gc_forward);
-	movebkey = PLAYERINPUTDOWN(ssplayer, gc_backward);
+	straferkey = PLAYERINPUTDOWN(ssplayer, GC_STRAFERIGHT);
+	strafelkey = PLAYERINPUTDOWN(ssplayer, GC_STRAFELEFT);
+	movefkey = PLAYERINPUTDOWN(ssplayer, GC_FORWARD);
+	movebkey = PLAYERINPUTDOWN(ssplayer, GC_BACKWARD);
 
 	if (strafeisturn)
 	{
@@ -1154,7 +1155,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		straferkey = strafelkey = false;
 	}
 
-	mouseaiming = (PLAYERINPUTDOWN(ssplayer, gc_mouseaiming)) ^
+	mouseaiming = (PLAYERINPUTDOWN(ssplayer, GC_MOUSEAIMING)) ^
 		((chasecam && !player->spectator) ? chasefreelook : alwaysfreelook);
 	analogjoystickmove = usejoystick && !Joystick.bGamepadStyle;
 	gamepadjoystickmove = usejoystick && Joystick.bGamepadStyle;
@@ -1270,11 +1271,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// forward with key or button
 	if (movefkey || (gamepadjoystickmove && movejoystickvector.yaxis < 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))))
+			&& (PLAYERINPUTDOWN(ssplayer, GC_LOOKUP) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))))
 		forward = forwardmove[speed];
 	if (movebkey || (gamepadjoystickmove && movejoystickvector.yaxis > 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))))
+			&& (PLAYERINPUTDOWN(ssplayer, GC_LOOKDOWN) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))))
 		forward -= forwardmove[speed];
 
 	if (analogjoystickmove && movejoystickvector.yaxis != 0)
@@ -1287,9 +1288,9 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (strafelkey)
 		side -= sidemove[speed];
 
-	if (PLAYERINPUTDOWN(ssplayer, gc_weaponnext))
+	if (PLAYERINPUTDOWN(ssplayer, GC_WEAPONNEXT))
 		cmd->buttons |= BT_WEAPONNEXT; // Next Weapon
-	if (PLAYERINPUTDOWN(ssplayer, gc_weaponprev))
+	if (PLAYERINPUTDOWN(ssplayer, GC_WEAPONPREV))
 		cmd->buttons |= BT_WEAPONPREV; // Previous Weapon
 
 #if NUM_WEAPONS > 10
@@ -1298,7 +1299,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	//use the four avaliable bits to determine the weapon.
 	cmd->buttons &= ~BT_WEAPONMASK;
 	for (i = 0; i < NUM_WEAPONS; ++i)
-		if (PLAYERINPUTDOWN(ssplayer, gc_wepslot1 + i))
+		if (PLAYERINPUTDOWN(ssplayer, GC_WEPSLOT1 + i))
 		{
 			cmd->buttons |= (UINT16)(i + 1);
 			break;
@@ -1306,34 +1307,34 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	// fire with any button/key
 	axis = PlayerJoyAxis(ssplayer, JA_FIRE);
-	if (PLAYERINPUTDOWN(ssplayer, gc_fire) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_FIRE) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_ATTACK;
 
 	// fire normal with any button/key
 	axis = PlayerJoyAxis(ssplayer, JA_FIRENORMAL);
-	if (PLAYERINPUTDOWN(ssplayer, gc_firenormal) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_FIRENORMAL) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_FIRENORMAL;
 
-	if (PLAYERINPUTDOWN(ssplayer, gc_tossflag))
+	if (PLAYERINPUTDOWN(ssplayer, GC_TOSSFLAG))
 		cmd->buttons |= BT_TOSSFLAG;
 
 	// Lua scriptable buttons
-	if (PLAYERINPUTDOWN(ssplayer, gc_custom1))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM1))
 		cmd->buttons |= BT_CUSTOM1;
-	if (PLAYERINPUTDOWN(ssplayer, gc_custom2))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM2))
 		cmd->buttons |= BT_CUSTOM2;
-	if (PLAYERINPUTDOWN(ssplayer, gc_custom3))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM3))
 		cmd->buttons |= BT_CUSTOM3;
 
 	// use with any button/key
 	axis = PlayerJoyAxis(ssplayer, JA_SPIN);
-	if (PLAYERINPUTDOWN(ssplayer, gc_spin) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_SPIN) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_SPIN;
 
 	// Centerview can be a toggle in simple mode!
 	{
 		static boolean last_centerviewdown[2], centerviewhold[2]; // detect taps for toggle behavior
-		boolean down = PLAYERINPUTDOWN(ssplayer, gc_centerview);
+		boolean down = PLAYERINPUTDOWN(ssplayer, GC_CENTERVIEW);
 
 		if (!(controlstyle == CS_SIMPLE && cv_cam_centertoggle[forplayer].value))
 			centerviewdown = down;
@@ -1432,7 +1433,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (ticcmd_centerviewdown[forplayer] && controlstyle == CS_SIMPLE)
 		controlstyle = CS_LEGACY;
 
-	if (PLAYERINPUTDOWN(ssplayer, gc_camreset))
+	if (PLAYERINPUTDOWN(ssplayer, GC_CAMRESET))
 	{
 		if (thiscam->chase && !resetdown[forplayer])
 			P_ResetCamera(&players[ssplayer == 1 ? displayplayer : secondarydisplayplayer], thiscam);
@@ -1445,7 +1446,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	// jump button
 	axis = PlayerJoyAxis(ssplayer, JA_JUMP);
-	if (PLAYERINPUTDOWN(ssplayer, gc_jump) || (usejoystick && axis > 0))
+	if (PLAYERINPUTDOWN(ssplayer, GC_JUMP) || (usejoystick && axis > 0))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
@@ -1475,12 +1476,12 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
-			if (PLAYERINPUTDOWN(ssplayer, gc_lookup) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))
+			if (PLAYERINPUTDOWN(ssplayer, GC_LOOKUP) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))
 			{
 				*myaiming += KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
 			}
-			else if (PLAYERINPUTDOWN(ssplayer, gc_lookdown) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))
+			else if (PLAYERINPUTDOWN(ssplayer, GC_LOOKDOWN) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))
 			{
 				*myaiming -= KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
@@ -1545,23 +1546,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	cmd->forwardmove = (SINT8)(cmd->forwardmove + forward);
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
-	if (player->bot == 1) { // Tailsbot for P2
-		if (!player->powers[pw_tailsfly] && (cmd->forwardmove || cmd->sidemove || cmd->buttons))
-		{
-			player->bot = 2; // A player-controlled bot. Returns to AI when it respawns.
-			CV_SetValue(&cv_analog[1], true);
-		}
-		else
-		{
-			G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
-			B_BuildTiccmd(player, cmd);
-		}
-		B_HandleFlightIndicator(player);
-	}
-	else if (player->bot == 2)
+	// Note: Majority of botstuffs are handled in G_Ticker now.
+	if (player->bot == BOT_2PHUMAN) //Player-controlled bot
+	{
+		G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
 		// Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Legacy
 		cmd->angleturn = (INT16)((localangle - *myangle) >> 16);
-
+	}	
+	
 	*myangle += (cmd->angleturn<<16);
 
 	if (controlstyle == CS_LMAOGALOG) {
@@ -1968,7 +1960,7 @@ boolean G_Responder(event_t *ev)
 	if (gameaction == ga_nothing && !singledemo &&
 		((demoplayback && !modeattacking && !titledemo) || gamestate == GS_TITLESCREEN))
 	{
-		if (ev->type == ev_keydown && ev->data1 != 301 && !(gamestate == GS_TITLESCREEN && finalecount < TICRATE))
+		if (ev->type == ev_keydown && ev->key != 301 && !(gamestate == GS_TITLESCREEN && finalecount < TICRATE))
 		{
 			M_StartControlPanel();
 			return true;
@@ -2044,7 +2036,7 @@ boolean G_Responder(event_t *ev)
 
 	// allow spy mode changes even during the demo
 	if (gamestate == GS_LEVEL && ev->type == ev_keydown
-		&& (ev->data1 == KEY_F12 || ev->data1 == gamecontrol[gc_viewpoint][0] || ev->data1 == gamecontrol[gc_viewpoint][1]))
+		&& (ev->key == KEY_F12 || ev->key == gamecontrol[GC_VIEWPOINT][0] || ev->key == gamecontrol[GC_VIEWPOINT][1]))
 	{
 		// ViewpointSwitch Lua hook.
 		UINT8 canSwitchView = 0;
@@ -2117,13 +2109,13 @@ boolean G_Responder(event_t *ev)
 	switch (ev->type)
 	{
 		case ev_keydown:
-			if (ev->data1 == gamecontrol[gc_pause][0]
-				|| ev->data1 == gamecontrol[gc_pause][1]
-				|| ev->data1 == KEY_PAUSE)
+			if (ev->key == gamecontrol[GC_PAUSE][0]
+				|| ev->key == gamecontrol[GC_PAUSE][1]
+				|| ev->key == KEY_PAUSE)
 			{
 				if (modeattacking && !demoplayback && (gamestate == GS_LEVEL))
 				{
-					pausebreakkey = (ev->data1 == KEY_PAUSE);
+					pausebreakkey = (ev->key == KEY_PAUSE);
 					if (menuactive || pausedelay < 0 || leveltime < 2)
 						return true;
 
@@ -2148,8 +2140,8 @@ boolean G_Responder(event_t *ev)
 					}
 				}
 			}
-			if (ev->data1 == gamecontrol[gc_camtoggle][0]
-				|| ev->data1 == gamecontrol[gc_camtoggle][1])
+			if (ev->key == gamecontrol[GC_CAMTOGGLE][0]
+				|| ev->key == gamecontrol[GC_CAMTOGGLE][1])
 			{
 				if (!camtoggledelay)
 				{
@@ -2157,8 +2149,8 @@ boolean G_Responder(event_t *ev)
 					CV_SetValue(&cv_chasecam, cv_chasecam.value ? 0 : 1);
 				}
 			}
-			if (ev->data1 == gamecontrolbis[gc_camtoggle][0]
-				|| ev->data1 == gamecontrolbis[gc_camtoggle][1])
+			if (ev->key == gamecontrolbis[GC_CAMTOGGLE][0]
+				|| ev->key == gamecontrolbis[GC_CAMTOGGLE][1])
 			{
 				if (!camtoggledelay2)
 				{
@@ -2194,8 +2186,20 @@ boolean G_Responder(event_t *ev)
 //
 boolean G_LuaResponder(event_t *ev)
 {
-	return (ev->type == ev_keydown && LUA_HookKey(ev->data1, HOOK(KeyDown))) ||
-		(ev->type == ev_keyup && LUA_HookKey(ev->data1, HOOK(KeyUp)));
+	boolean cancelled = false;
+
+	if (ev->type == ev_keydown)
+	{
+		cancelled = LUA_HookKey(ev, HOOK(KeyDown));
+		LUA_InvalidateUserdata(ev);
+	}
+	else if (ev->type == ev_keyup)
+	{
+		cancelled = LUA_HookKey(ev, HOOK(KeyUp));
+		LUA_InvalidateUserdata(ev);
+	}
+
+	return cancelled;
 }
 
 //
@@ -2206,6 +2210,23 @@ void G_Ticker(boolean run)
 {
 	UINT32 i;
 	INT32 buf;
+
+	// Bot players queued for removal
+	for (i = MAXPLAYERS-1; i != UINT32_MAX; i--)
+	{
+		if (playeringame[i] && players[i].removing)
+		{
+			CL_RemovePlayer(i, i);
+			if (netgame)
+			{
+				char kickmsg[256];
+
+				strcpy(kickmsg, M_GetText("\x82*Bot %s has been removed"));
+				strcpy(kickmsg, va(kickmsg, player_names[i], i));
+				HU_AddChatText(kickmsg, false);
+			}
+		}
+	}
 
 	// see also SCR_DisplayMarathonInfo
 	if ((marathonmode & (MA_INIT|MA_INGAME)) == MA_INGAME && gamestate == GS_LEVEL)
@@ -2292,23 +2313,58 @@ void G_Ticker(boolean run)
 		if (playeringame[i])
 		{
 			INT16 received;
+			// Save last frame's button readings
+			players[i].lastbuttons = players[i].cmd.buttons;
 
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
-
-			received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
-
-			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
-			players[i].oldrelangleturn = players[i].cmd.angleturn;
-			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
-				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
-			else
-				players[i].cmd.angleturn = players[i].angleturn;
-
-			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
+			// Bot ticcmd handling
+			// Yes, ordinarily this would be handled in G_BuildTiccmd...
+			// ...however, bot players won't have a corresponding consoleplayer or splitscreen player 2 to send that information.
+			// Therefore, this has to be done after ticcmd sends are received.
+			if (players[i].bot == BOT_2PAI) { // Tailsbot for P2
+				if (!players[i].powers[pw_tailsfly] && (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons))
+				{
+					players[i].bot = BOT_2PHUMAN; // A player-controlled bot. Returns to AI when it respawns.
+					CV_SetValue(&cv_analog[1], true);
+				}
+				else
+				{
+					B_BuildTiccmd(&players[i], &players[i].cmd);
+				}
+				B_HandleFlightIndicator(&players[i]);
+			}
+			else if (players[i].bot == BOT_MPAI) {
+				B_BuildTiccmd(&players[i], &players[i].cmd);
+			}
+			
+			// Do angle adjustments.
+			if (players[i].bot == BOT_NONE || players[i].bot == BOT_2PHUMAN)
+			{
+				received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
+				players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
+				players[i].oldrelangleturn = players[i].cmd.angleturn;
+				if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
+					P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
+				else
+					players[i].cmd.angleturn = players[i].angleturn;
+    			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
+    				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
+    			else
+    				players[i].cmd.angleturn = players[i].angleturn;
+    
+    			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
+				// Use the leveltime sent in the player's ticcmd to determine control lag
+    			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
+			}
+			else // Less work is required if we're building a bot ticcmd.
+			{
+    			// Since bot TicCmd is pre-determined for both the client and server, the latency and packet checks are simplified.
+    			received = 1;
+    			players[i].cmd.latency = 0;
+				players[i].angleturn = players[i].cmd.angleturn;
+				players[i].oldrelangleturn = players[i].cmd.angleturn;
+			}
 			players[i].cmd.angleturn |= received;
-
-			// Use the leveltime sent in the player's ticcmd to determine control lag
-			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
 		}
 	}
 
@@ -2494,6 +2550,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	tic_t quittime;
 	boolean spectator;
 	boolean outofcoop;
+	boolean removing;
 	INT16 bot;
 	SINT8 pity;
 	INT16 rings;
@@ -2510,6 +2567,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	quittime = players[player].quittime;
 	spectator = players[player].spectator;
 	outofcoop = players[player].outofcoop;
+	removing = players[player].removing;
 	pflags = (players[player].pflags & (PF_FLIPCAM|PF_ANALOGMODE|PF_DIRECTIONCHAR|PF_AUTOBRAKE|PF_TAGIT|PF_GAMETYPEOVER));
 	playerangleturn = players[player].angleturn;
 	oldrelangleturn = players[player].oldrelangleturn;
@@ -2586,6 +2644,7 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->quittime = quittime;
 	p->spectator = spectator;
 	p->outofcoop = outofcoop;
+	p->removing = removing;
 	p->angleturn = playerangleturn;
 	p->oldrelangleturn = oldrelangleturn;
 
@@ -2630,8 +2689,10 @@ void G_PlayerReborn(INT32 player, boolean betweenmaps)
 	p->totalring = totalring;
 
 	p->mare = mare;
-	if (bot)
-		p->bot = 1; // reset to AI-controlled
+	if (bot == BOT_2PHUMAN)
+		p->bot = BOT_2PAI; // reset to AI-controlled
+	else
+		p->bot = bot;
 	p->pity = pity;
 	p->rings = rings;
 	p->spheres = spheres;
@@ -2977,7 +3038,8 @@ void G_DoReborn(INT32 playernum)
 	// Make sure objectplace is OFF when you first start the level!
 	OP_ResetObjectplace();
 
-	if (player->bot && playernum != consoleplayer)
+	// Tailsbot
+	if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
 	{ // Bots respawn next to their master.
 		mobj_t *oldmo = NULL;
 
@@ -2994,6 +3056,28 @@ void G_DoReborn(INT32 playernum)
 			G_ChangePlayerReferences(oldmo, players[playernum].mo);
 
 		return;
+	}
+	
+	// Additional players (e.g. independent bots) in Single Player
+	if (playernum != consoleplayer && !(netgame || multiplayer)) 
+	{		
+		mobj_t *oldmo = NULL;
+		// Do nothing if out of lives
+		if (player->lives <= 0)
+			return;
+		
+		// Otherwise do respawn, starting by removing the player object
+		if (player->mo)
+		{
+			oldmo = player->mo;
+			P_RemoveMobj(player->mo);
+		}
+		// Do spawning
+		G_SpawnPlayer(playernum);
+		if (oldmo)
+			G_ChangePlayerReferences(oldmo, players[playernum].mo);
+		
+		return; //Exit function to avoid proccing other SP related mechanics
 	}
 
 	if (countdowntimeup || (!(netgame || multiplayer) && (gametyperules & GTR_CAMPAIGN)))
@@ -3176,7 +3260,7 @@ void G_AddPlayer(INT32 playernum)
 			if (!playeringame[i])
 				continue;
 
-			if (players[i].bot) // ignore dumb, stupid tails
+			if (players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // ignore dumb, stupid tails
 				continue;
 
 			countplayers++;
@@ -3217,7 +3301,7 @@ boolean G_EnoughPlayersFinished(void)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i] || players[i].spectator || players[i].bot)
+		if (!playeringame[i] || players[i].spectator || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 			continue;
 		if (players[i].quittime > 30 * TICRATE)
 			continue;
@@ -5240,4 +5324,3 @@ INT32 G_TicsToMilliseconds(tic_t tics)
 {
 	return (INT32)((tics%TICRATE) * (1000.00f/TICRATE));
 }
-
