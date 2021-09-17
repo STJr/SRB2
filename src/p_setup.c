@@ -3385,7 +3385,7 @@ static void P_ConvertBinaryMap(void)
 			//Appearance
 			if (lines[i].special == 222)
 				lines[i].args[2] |= TMFA_NOPLANES;
-			if (lines[i].special != 221)
+			if (lines[i].special == 221)
 				lines[i].args[2] |= TMFA_INSIDES;
 			if (lines[i].special != 220 && !(lines[i].flags & ML_NOCLIMB))
 				lines[i].args[2] |= TMFA_NOSHADE;
