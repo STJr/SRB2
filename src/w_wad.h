@@ -69,6 +69,7 @@ typedef struct
 	char name[9];           // filelump_t name[] e.g. "LongEntr"
 	char *longname;         //                   e.g. "LongEntryName"
 	char *fullname;         //                   e.g. "Folder/Subfolder/LongEntryName.extension"
+	char *diskpath;         // path to the file  e.g. "/usr/games/srb2/Addon/Folder/Subfolder/LongEntryName.extension"
 	size_t size;            // real (uncompressed) size
 	compmethod compression; // lump compression method
 } lumpinfo_t;
@@ -109,17 +110,19 @@ typedef enum restype
 	RET_SOC,
 	RET_LUA,
 	RET_PK3,
+	RET_FOLDER,
 	RET_UNKNOWN,
 } restype_t;
 
 typedef struct wadfile_s
 {
-	char *filename;
+	char *filename, *path;
 	restype_t type;
 	lumpinfo_t *lumpinfo;
 	lumpcache_t *lumpcache;
 	lumpcache_t *patchcache;
 	UINT16 numlumps; // this wad's number of resources
+	UINT16 foldercount; // folder count
 	FILE *handle;
 	UINT32 filesize; // for network
 	UINT8 md5sum[16];
@@ -127,7 +130,7 @@ typedef struct wadfile_s
 	boolean important; // also network - !W_VerifyNMUSlumps
 } wadfile_t;
 
-#define WADFILENUM(lumpnum) (UINT16)((lumpnum)>>16) // wad flumpnum>>16) // wad file number in upper word
+#define WADFILENUM(lumpnum) (UINT16)((lumpnum)>>16) // wad file number in upper word
 #define LUMPNUM(lumpnum) (UINT16)((lumpnum)&0xFFFF) // lump number for this pwad
 
 extern UINT16 numwadfiles;
@@ -141,9 +144,16 @@ void W_Shutdown(void);
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
 UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup);
+// Adds a folder as a file
+UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup);
 
 // W_InitMultipleFiles exits if a file was not found, but not if all is okay.
 void W_InitMultipleFiles(char **filenames);
+
+#define W_FileHasFolders(wadfile) ((wadfile)->type == RET_PK3 || (wadfile)->type == RET_FOLDER)
+
+INT32 W_IsPathToFolderValid(const char *path);
+char *W_GetFullFolderPath(const char *path);
 
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);

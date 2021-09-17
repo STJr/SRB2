@@ -116,7 +116,7 @@ char luafiledir[256 + 16] = "luafiles";
 /** Fills a serverinfo packet with information about wad files loaded.
   *
   * \todo Give this function a better name since it is in global scope.
-  * Used to have size limiting built in - now handled via W_LoadWadFile in w_wad.c
+  * Used to have size limiting built in - now handled via W_InitFile in w_wad.c
   *
   */
 UINT8 *PutFileNeeded(void)
@@ -124,7 +124,7 @@ UINT8 *PutFileNeeded(void)
 	size_t i, count = 0;
 	UINT8 *p = netbuffer->u.serverinfo.fileneeded;
 	char wadfilename[MAX_WADPATH] = "";
-	UINT8 filestatus;
+	UINT8 filestatus, folder;
 
 	for (i = 0; i < numwadfiles; i++)
 	{
@@ -133,9 +133,10 @@ UINT8 *PutFileNeeded(void)
 			continue;
 
 		filestatus = 1; // Importance - not really used any more, holds 1 by default for backwards compat with MS
+		folder = (wadfiles[i]->type == RET_FOLDER);
 
 		// Store in the upper four bits
-		if (!cv_downloading.value)
+		if (!cv_downloading.value || folder) /// \todo Implement folder downloading.
 			filestatus += (2 << 4); // Won't send
 		else if ((wadfiles[i]->filesize <= (UINT32)cv_maxsend.value * 1024))
 			filestatus += (1 << 4); // Will send if requested
@@ -143,6 +144,7 @@ UINT8 *PutFileNeeded(void)
 			// filestatus += (0 << 4); -- Won't send, too big
 
 		WRITEUINT8(p, filestatus);
+		WRITEUINT8(p, folder);
 
 		count++;
 		WRITEUINT32(p, wadfiles[i]->filesize);
@@ -174,6 +176,7 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr)
 		fileneeded[i].status = FS_NOTFOUND; // We haven't even started looking for the file yet
 		fileneeded[i].justdownloaded = false;
 		filestatus = READUINT8(p); // The first byte is the file status
+		fileneeded[i].folder = READUINT8(p); // The second byte is the folder flag
 		fileneeded[i].willsend = (UINT8)(filestatus >> 4);
 		fileneeded[i].totalsize = READUINT32(p); // The four next bytes are the file size
 		fileneeded[i].file = NULL; // The file isn't open yet
@@ -416,7 +419,7 @@ INT32 CL_CheckFiles(void)
 		return 1;
 	}
 
-	// See W_LoadWadFile in w_wad.c
+	// See W_InitFile in w_wad.c
 	packetsize = packetsizetally;
 
 	for (i = 1; i < fileneedednum; i++)
@@ -438,7 +441,10 @@ INT32 CL_CheckFiles(void)
 		if (fileneeded[i].status != FS_NOTFOUND)
 			continue;
 
-		packetsize += nameonlylength(fileneeded[i].filename) + 22;
+		if (fileneeded[i].folder)
+			packetsize += strlen(fileneeded[i].filename) + FILENEEDEDSIZE;
+		else
+			packetsize += nameonlylength(fileneeded[i].filename) + FILENEEDEDSIZE;
 
 		if ((numwadfiles+filestoget >= MAX_WADFILES)
 		|| (packetsize > MAXFILENEEDED*sizeof(UINT8)))
@@ -446,7 +452,10 @@ INT32 CL_CheckFiles(void)
 
 		filestoget++;
 
-		fileneeded[i].status = findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
+		if (fileneeded[i].folder)
+			fileneeded[i].status = findfolder(fileneeded[i].filename);
+		else
+			fileneeded[i].status = findfile(fileneeded[i].filename, fileneeded[i].md5sum, true);
 		CONS_Debug(DBG_NETPLAY, "found %d\n", fileneeded[i].status);
 		if (fileneeded[i].status != FS_FOUND)
 			ret = 0;
@@ -468,7 +477,10 @@ void CL_LoadServerFiles(void)
 			continue; // Already loaded
 		else if (fileneeded[i].status == FS_FOUND)
 		{
-			P_AddWadFile(fileneeded[i].filename);
+			if (fileneeded[i].folder)
+				P_AddFolder(fileneeded[i].filename);
+			else
+				P_AddWadFile(fileneeded[i].filename);
 			G_SetGameModified(true);
 			fileneeded[i].status = FS_OPEN;
 		}
@@ -756,7 +768,7 @@ static boolean AddFileToSendQueue(INT32 node, const char *filename, UINT8 fileid
 		// This formerly checked if (!findfile(p->id.filename, NULL, true))
 
 		// Not found
-		// Don't inform client (probably someone who thought they could leak 2.2 ACZ)
+		// Don't inform client
 		DEBFILE(va("Client %d request %s: not found\n", node, filename));
 		free(p->id.filename);
 		free(p);
@@ -1570,4 +1582,27 @@ filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum, boolean complet
 		return homecheck; // otherwise return the result we got
 
 	return (badmd5 ? FS_MD5SUMBAD : FS_NOTFOUND); // md5 sum bad or file not found
+}
+
+// Searches for a folder.
+// This can be used with a full path, or an incomplete path.
+// In the latter case, the function will try to find folders in
+// srb2home, srb2path, and the current directory.
+filestatus_t findfolder(const char *path)
+{
+	// Check the path by itself first.
+	if (concatpaths(path, NULL) == 1)
+		return FS_FOUND;
+
+#define checkpath(startpath) \
+	if (concatpaths(path, startpath) == 1) \
+		return FS_FOUND
+
+	checkpath(srb2home); // Then, look in srb2home.
+	checkpath(srb2path); // Now, look in srb2path.
+	checkpath("."); // Finally, look in the current directory.
+
+#undef checkpath
+
+	return FS_NOTFOUND;
 }

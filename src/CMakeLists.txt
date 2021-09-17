@@ -4,7 +4,7 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32)
 
 # Core sources
 target_sourcefile(c)
-target_sources(SRB2SDL2 PRIVATE comptime.c md5.c config.h)
+target_sources(SRB2SDL2 PRIVATE comptime.c md5.c config.h.in)
 
 set(SRB2_ASM_SOURCES vid_copy.s)
 
@@ -60,7 +60,7 @@ if(${SRB2_CONFIG_HAVE_GME})
 	endif()
 	if(${GME_FOUND})
 		set(SRB2_HAVE_GME ON)
-		target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_LIBGME)
+		target_compile_definitions(SRB2SDL2 PRIVATE -DHAVE_GME)
 	else()
 		message(WARNING "You have specified that GME is available but it was not found.")
 	endif()

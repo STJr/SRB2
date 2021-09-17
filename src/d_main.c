@@ -191,22 +191,22 @@ void D_ProcessEvents(void)
 		if (ev->type == ev_keydown || ev->type == ev_keyup)
 		{
 			// Mouse buttons
-			if ((UINT32)(ev->data1 - KEY_MOUSE1) < MOUSEBUTTONS)
+			if ((UINT32)(ev->key - KEY_MOUSE1) < MOUSEBUTTONS)
 			{
 				if (ev->type == ev_keydown)
-					mouse.buttons |= 1 << (ev->data1 - KEY_MOUSE1);
+					mouse.buttons |= 1 << (ev->key - KEY_MOUSE1);
 				else
-					mouse.buttons &= ~(1 << (ev->data1 - KEY_MOUSE1));
+					mouse.buttons &= ~(1 << (ev->key - KEY_MOUSE1));
 			}
-			else if ((UINT32)(ev->data1 - KEY_2MOUSE1) < MOUSEBUTTONS)
+			else if ((UINT32)(ev->key - KEY_2MOUSE1) < MOUSEBUTTONS)
 			{
 				if (ev->type == ev_keydown)
-					mouse2.buttons |= 1 << (ev->data1 - KEY_2MOUSE1);
+					mouse2.buttons |= 1 << (ev->key - KEY_2MOUSE1);
 				else
-					mouse2.buttons &= ~(1 << (ev->data1 - KEY_2MOUSE1));
+					mouse2.buttons &= ~(1 << (ev->key - KEY_2MOUSE1));
 			}
 			// Scroll (has no keyup event)
-			else switch (ev->data1) {
+			else switch (ev->key) {
 				case KEY_MOUSEWHEELUP:
 					mouse.buttons |= MB_SCROLLUP;
 					break;
@@ -936,10 +936,26 @@ static void D_AddFile(char **list, const char *file)
 
 	newfile = malloc(strlen(file) + 1);
 	if (!newfile)
-	{
 		I_Error("No more free memory to AddFile %s",file);
-	}
+
 	strcpy(newfile, file);
+	list[pnumwadfiles] = newfile;
+}
+
+static void D_AddFolder(char **list, const char *file)
+{
+	size_t pnumwadfiles;
+	char *newfile;
+
+	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
+		;
+
+	newfile = malloc(strlen(file) + 2); // Path delimiter + NULL terminator
+	if (!newfile)
+		I_Error("No more free memory to AddFolder %s",file);
+
+	strcpy(newfile, file);
+	strcat(newfile, PATHSEP);
 
 	list[pnumwadfiles] = newfile;
 }
@@ -1237,21 +1253,25 @@ void D_SRB2Main(void)
 	// Do this up here so that WADs loaded through the command line can use ExecCfg
 	COM_Init();
 
-	// add any files specified on the command line with -file wadfile
-	// to the wad list
+	// Add any files specified on the command line with
+	// "-file <file>" or "-folder <folder>" to the add-on list
 	if (!((M_GetUrlProtocolArg() || M_CheckParm("-connect")) && !M_CheckParm("-server")))
 	{
-		if (M_CheckParm("-file"))
-		{
-			// the parms after p are wadfile/lump names,
-			// until end of parms or another - preceded parm
-			while (M_IsNextParm())
-			{
-				const char *s = M_GetNextParm();
+		INT32 addontype = 0;
+		INT32 i;
 
-				if (s) // Check for NULL?
-					D_AddFile(startuppwads, s);
-			}
+		for (i = 1; i < myargc; i++)
+		{
+			if (!strcasecmp(myargv[i], "-file"))
+				addontype = 1;
+			else if (!strcasecmp(myargv[i], "-folder"))
+				addontype = 2;
+			else if (myargv[i][0] == '-' || myargv[i][0] == '+')
+				addontype = 0;
+			else if (addontype == 1)
+				D_AddFile(startuppwads, myargv[i]);
+			else if (addontype == 2)
+				D_AddFolder(startuppwads, myargv[i]);
 		}
 	}
 
