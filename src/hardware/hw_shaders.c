@@ -426,15 +426,18 @@ static char *HWR_PreprocessShader(char *original)
 	if (strstr(original, "\r\n"))
 	{
 		line_ending = "\r\n";
-		// check that all line endings are same,
-		// otherwise the parsing code won't function correctly
+		// check if all line endings are same
 		while ((read_pos = strchr(read_pos, '\n')))
 		{
 			read_pos--;
 			if (*read_pos != '\r')
 			{
-				CONS_Alert(CONS_ERROR, "HWR_PreprocessShader: Shader contains mixed line ending types. Please use either only LF (Unix) or only CRLF (Windows) line endings.\n");
-				return NULL;
+				// this file contains mixed CRLF and LF line endings.
+				// treating it as a LF file during parsing should keep
+				// the results sane enough as long as the gpu driver is fine
+				// with these kinds of weirdly formatted shader sources.
+				line_ending = "\n";
+				break;
 			}
 			read_pos += 2;
 		}
