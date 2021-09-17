@@ -203,11 +203,11 @@ boolean cht_Responder(event_t *ev)
 	if (ev->type != ev_keydown)
 		return false;
 
-	if (ev->data1 > 0xFF)
+	if (ev->key > 0xFF)
 	{
 		// map some fake (joy) inputs into keys
 		// map joy inputs into keys
-		switch (ev->data1)
+		switch (ev->key)
 		{
 			case KEY_JOY1:
 			case KEY_JOY1 + 2:
@@ -231,7 +231,7 @@ boolean cht_Responder(event_t *ev)
 		}
 	}
 	else
-		ch = (UINT8)ev->data1;
+		ch = (UINT8)ev->key;
 
 	ret += cht_CheckCheat(&cheat_ultimate, (char)ch);
 	ret += cht_CheckCheat(&cheat_ultimate_joy, (char)ch);

@@ -242,6 +242,11 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 		// Force 3.
 		return true;
 	}
+	if (playernum != -1 && players[playernum].bot)
+    {
+        //Force 4.
+        return true;
+    }
 
 	// We will now check if this skin is supposed to be locked or not.
 

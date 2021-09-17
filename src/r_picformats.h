@@ -116,9 +116,9 @@ void *Picture_PNGConvert(
 	size_t insize, size_t *outsize,
 	pictureflags_t flags);
 boolean Picture_PNGDimensions(UINT8 *png, INT32 *width, INT32 *height, INT16 *topoffset, INT16 *leftoffset, size_t size);
-#endif
 
 #define PICTURE_PNG_USELOOKUP
+#endif
 
 // SpriteInfo
 extern spriteinfo_t spriteinfo[NUMSPRITES];
