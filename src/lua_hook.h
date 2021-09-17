@@ -13,6 +13,7 @@
 #include "r_defs.h"
 #include "d_player.h"
 #include "s_sound.h"
+#include "d_event.h"
 
 /*
 Do you know what an 'X Macro' is? Such a macro is called over each element of
@@ -78,6 +79,13 @@ automatically.
 	X (LinedefExecute),\
 	X (ShouldJingleContinue),/* should jingle of the given music continue playing */\
 
+#define HUD_HOOK_LIST(X) \
+	X (game),\
+	X (scores),/* emblems/multiplayer list */\
+	X (title),/* titlescreen */\
+	X (titlecard),\
+	X (intermission),\
+
 /*
 I chose to access the hook enums through a macro as well. This could provide
 a hint to lookup the macro's definition instead of the enum's definition.
@@ -88,18 +96,26 @@ grepped and found in the lists above.
 
 #define   MOBJ_HOOK(name)   mobjhook_ ## name
 #define        HOOK(name)       hook_ ## name
+#define    HUD_HOOK(name)    hudhook_ ## name
 #define STRING_HOOK(name) stringhook_ ## name
 
-enum {   MOBJ_HOOK_LIST   (MOBJ_HOOK)    MOBJ_HOOK(MAX) };
-enum {        HOOK_LIST        (HOOK)         HOOK(MAX) };
-enum { STRING_HOOK_LIST (STRING_HOOK)  STRING_HOOK(MAX) };
+#define ENUM(X) enum { X ## _LIST (X)  X(MAX) }
+
+ENUM   (MOBJ_HOOK);
+ENUM        (HOOK);
+ENUM    (HUD_HOOK);
+ENUM (STRING_HOOK);
+
+#undef ENUM
 
 /* dead simple, LUA_HOOK(GameQuit) */
 #define LUA_HOOK(type) LUA_HookVoid(HOOK(type))
+#define LUA_HUDHOOK(type) LUA_HookHUD(HUD_HOOK(type))
 
 extern boolean hook_cmd_running;
 
 void LUA_HookVoid(int hook);
+void LUA_HookHUD(int hook);
 
 int  LUA_HookMobj(mobj_t *, int hook);
 int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);
@@ -107,6 +123,7 @@ void LUA_HookInt(INT32 integer, int hook);
 void LUA_HookBool(boolean value, int hook);
 int  LUA_HookPlayer(player_t *, int hook);
 int  LUA_HookTiccmd(player_t *, ticcmd_t *, int hook);
+int  LUA_HookKey(event_t *event, int hook); // Hooks for key events
 
 void LUA_HookThinkFrame(void);
 int  LUA_HookMobjLineCollide(mobj_t *, line_t *);
@@ -114,6 +131,7 @@ int  LUA_HookTouchSpecial(mobj_t *special, mobj_t *toucher);
 int  LUA_HookShouldDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
 int  LUA_HookMobjDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype);
 int  LUA_HookMobjDeath(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damagetype);
+int  LUA_HookMobjMoveBlocked(mobj_t *, mobj_t *, line_t *);
 int  LUA_HookBotAI(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd);
 void LUA_HookLinedefExecute(line_t *, mobj_t *, sector_t *);
 int  LUA_HookPlayerMsg(int source, int target, int flags, char *msg);
@@ -130,4 +148,3 @@ int  LUA_HookPlayerCmd(player_t *, ticcmd_t *);
 int  LUA_HookMusicChange(const char *oldname, struct MusicChange *);
 fixed_t LUA_HookPlayerHeight(player_t *player);
 int  LUA_HookPlayerCanEnterSpinGaps(player_t *player);
-int  LUA_HookKey(INT32 keycode, int hooktype); // Hooks for key events

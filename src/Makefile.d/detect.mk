@@ -29,7 +29,6 @@ $(call Print,$(_m))
 
 # go for a 32-bit sdl mingw exe by default
 MINGW:=1
-WINDOWSHELL:=1
 
 else # if you on the *nix
 
@@ -72,13 +71,17 @@ latest_gcc_version:=10.2
 # manually set. And don't bother if this is a clean only
 # run.
 ifeq (,$(call Wildvar,GCC% destructive))
-version:=$(shell $(CC) --version)
+
+# can't use $(CC) --version here since that uses argv[0] to display the name
+# also gcc outputs the information to stderr, so I had to do 2>&1
+# this program really doesn't like identifying itself
+version:=$(shell $(CC) -v 2>&1)
 
 # check if this is in fact GCC
-ifneq (,$(or $(findstring gcc,$(version)),\
-	$(findstring GCC,$(version))))
+ifneq (,$(findstring gcc version,$(version)))
 
-version:=$(shell $(CC) -dumpversion)
+# in stark contrast to the name, gcc will give me a nicely formatted version number for free
+version:=$(shell $(CC) -dumpfullversion)
 
 # Turn version into words of major, minor
 v:=$(subst ., ,$(version))
@@ -91,7 +94,7 @@ ifeq (,$(filter $(v),$(gcc_versions)))
 define line =
 Your compiler version, GCC $(version), \
 is not supported by the Makefile.
-The Makefile will assume GCC $(latest_gcc_version).))
+The Makefile will assume GCC $(latest_gcc_version).
 endef
 $(call Print,$(line))
 GCC$(subst .,,$(latest_gcc_version)):=1

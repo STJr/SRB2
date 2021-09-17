@@ -10,7 +10,8 @@ Wildvar=$(foreach v,$(filter $(1),$(.VARIABLES)),$($(v)))
 
 # Read a list of words from file and prepend each with the
 # directory of the file.
-List=$(addprefix $(dir $(1)),$(file < $(1)))
+_cat=$(shell $(cat) $(call Windows_path,$(1)))
+List=$(addprefix $(dir $(1)),$(call _cat,$(1)))
 
 # Convert path separators to backslash on Windows.
 Windows_path=$(if $(WINDOWSHELL),$(subst /,\,$(1)),$(1))

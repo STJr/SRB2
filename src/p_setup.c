@@ -1501,6 +1501,22 @@ typedef struct textmap_colormap_s {
 
 textmap_colormap_t textmap_colormap = { false, 0, 25, 0, 25, 0, 31, 0 };
 
+typedef enum
+{
+    PD_A = 1,
+    PD_B = 1<<1,
+    PD_C = 1<<2,
+    PD_D = 1<<3,
+} planedef_t;
+
+typedef struct textmap_plane_s {
+    UINT8 defined;
+    fixed_t a, b, c, d;
+} textmap_plane_t;
+
+textmap_plane_t textmap_planefloor = {0, 0, 0, 0, 0};
+textmap_plane_t textmap_planeceiling = {0, 0, 0, 0, 0};
+
 static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "heightfloor"))
@@ -1539,6 +1555,46 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].floorpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
 		sectors[i].ceilingpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+	else if (fastcmp(param, "floorplane_a"))
+	{
+		textmap_planefloor.defined |= PD_A;
+		textmap_planefloor.a = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "floorplane_b"))
+	{
+		textmap_planefloor.defined |= PD_B;
+		textmap_planefloor.b = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "floorplane_c"))
+	{
+		textmap_planefloor.defined |= PD_C;
+		textmap_planefloor.c = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "floorplane_d"))
+	{
+		textmap_planefloor.defined |= PD_D;
+		textmap_planefloor.d = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "ceilingplane_a"))
+	{
+		textmap_planeceiling.defined |= PD_A;
+		textmap_planeceiling.a = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "ceilingplane_b"))
+	{
+		textmap_planeceiling.defined |= PD_B;
+		textmap_planeceiling.b = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "ceilingplane_c"))
+	{
+		textmap_planeceiling.defined |= PD_C;
+		textmap_planeceiling.c = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "ceilingplane_d"))
+	{
+		textmap_planeceiling.defined |= PD_D;
+		textmap_planeceiling.d = FLOAT_TO_FIXED(atof(val));
+	}
 	else if (fastcmp(param, "lightcolor"))
 	{
 		textmap_colormap.used = true;
@@ -1868,6 +1924,10 @@ static void P_LoadTextmap(void)
 		textmap_colormap.fadestart = 0;
 		textmap_colormap.fadeend = 31;
 		textmap_colormap.flags = 0;
+
+		textmap_planefloor.defined = 0;
+		textmap_planeceiling.defined = 0;
+
 		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
 
 		P_InitializeSector(sc);
@@ -1877,6 +1937,19 @@ static void P_LoadTextmap(void)
 			INT32 fadergba = P_ColorToRGBA(textmap_colormap.fadecolor, textmap_colormap.fadealpha);
 			sc->extra_colormap = sc->spawn_extra_colormap = R_CreateColormap(rgba, fadergba, textmap_colormap.fadestart, textmap_colormap.fadeend, textmap_colormap.flags);
 		}
+
+		if (textmap_planefloor.defined == (PD_A|PD_B|PD_C|PD_D))
+        {
+			sc->f_slope = MakeViaEquationConstants(textmap_planefloor.a, textmap_planefloor.b, textmap_planefloor.c, textmap_planefloor.d);
+			sc->hasslope = true;
+        }
+
+		if (textmap_planeceiling.defined == (PD_A|PD_B|PD_C|PD_D))
+        {
+			sc->c_slope = MakeViaEquationConstants(textmap_planeceiling.a, textmap_planeceiling.b, textmap_planeceiling.c, textmap_planeceiling.d);
+			sc->hasslope = true;
+        }
+
 		TextmapFixFlatOffsets(sc);
 	}
 
@@ -3684,6 +3757,12 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].flags & ML_NONET)
 				lines[i].args[2] |= TMSL_DYNAMIC;
 
+			if (lines[i].flags & ML_TFERLINE)
+			{
+					lines[i].args[4] |= backfloor ? TMSC_BACKTOFRONTFLOOR : (frontfloor ? TMSC_FRONTTOBACKFLOOR : 0);
+					lines[i].args[4] |= backceil ? TMSC_BACKTOFRONTCEILING : (frontceil ? TMSC_FRONTTOBACKCEILING : 0);
+			}
+
 			lines[i].special = 700;
 			break;
 		}
@@ -3765,7 +3844,7 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
 			lines[i].special = 720;
 			break;
-		
+
 		case 900: //Translucent wall (10%)
 		case 901: //Translucent wall (20%)
 		case 902: //Translucent wall (30%)
@@ -4802,6 +4881,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	P_MapStart(); // tmthing can be used starting from this point
 
+	P_InitSlopes();
+
 	if (!P_LoadMapFromFile())
 		return false;
 
@@ -5013,10 +5094,9 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 // Add a wadfile to the active wad files,
 // replace sounds, musics, patches, textures, sprites and maps
 //
-boolean P_AddWadFile(const char *wadfilename)
+static boolean P_LoadAddon(UINT16 wadnum, UINT16 numlumps)
 {
 	size_t i, j, sreplaces = 0, mreplaces = 0, digmreplaces = 0;
-	UINT16 numlumps, wadnum;
 	char *name;
 	lumpinfo_t *lumpinfo;
 
@@ -5037,18 +5117,10 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 flaPos, flaNum = 0;
 //	UINT16 mapPos, mapNum = 0;
 
-	// Init file.
-	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
-	{
-		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		return false;
-	}
-	else
-		wadnum = (UINT16)(numwadfiles-1);
-
 	switch(wadfiles[wadnum]->type)
 	{
 	case RET_PK3:
+	case RET_FOLDER:
 		// Look for the lumps that act as resource delimitation markers.
 		lumpinfo = wadfiles[wadnum]->lumpinfo;
 		for (i = 0; i < numlumps; i++, lumpinfo++)
@@ -5211,4 +5283,36 @@ boolean P_AddWadFile(const char *wadfilename)
 	}
 
 	return true;
+}
+
+boolean P_AddWadFile(const char *wadfilename)
+{
+	UINT16 numlumps, wadnum;
+
+	// Init file.
+	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
+	{
+		refreshdirmenu |= REFRESHDIR_NOTLOADED;
+		return false;
+	}
+	else
+		wadnum = (UINT16)(numwadfiles-1);
+
+	return P_LoadAddon(wadnum, numlumps);
+}
+
+boolean P_AddFolder(const char *folderpath)
+{
+	UINT16 numlumps, wadnum;
+
+	// Init file.
+	if ((numlumps = W_InitFolder(folderpath, false, false)) == INT16_MAX)
+	{
+		refreshdirmenu |= REFRESHDIR_NOTLOADED;
+		return false;
+	}
+	else
+		wadnum = (UINT16)(numwadfiles-1);
+
+	return P_LoadAddon(wadnum, numlumps);
 }
