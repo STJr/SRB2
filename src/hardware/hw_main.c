@@ -6765,7 +6765,7 @@ void HWR_DoPostProcessor(player_t *player)
 	// Flipping of the screen isn't done here anymore
 }
 
-void HWR_StartScreenWipe()
+void HWR_StartScreenWipe(void)
 {
 	//CONS_Debug(DBG_RENDER, "In HWR_StartScreenWipe()\n");
 	HWD.pfnMakeScreenTexture(HWD_SCREENTEXTURE_WIPE_START);
