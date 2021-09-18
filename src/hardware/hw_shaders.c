@@ -370,6 +370,8 @@ static shader_t gl_shaders[NUMSHADERTARGETS*2];
 
 static shadertarget_t gl_shadertargets[NUMSHADERTARGETS];
 
+#define WHITESPACE_CHARS " \t"
+
 #define MODEL_LIGHTING_DEFINE "#define SRB2_MODEL_LIGHTING"
 #define PALETTE_RENDERING_DEFINE "#define SRB2_PALETTE_RENDERING"
 
@@ -416,12 +418,14 @@ static char *HWR_PreprocessShader(char *original)
 	const char *line_ending = "\n";
 	int line_ending_len;
 	char *read_pos = original;
-	int insertion_pos = 0;
 	int original_len = strlen(original);
 	int distance_to_end = original_len;
 	int new_len;
 	char *new_shader;
 	char *write_pos;
+	char shader_glsl_version[3];
+	int version_pos = -1;
+	int version_len = 0;
 
 	if (strstr(original, "\r\n"))
 	{
@@ -446,44 +450,62 @@ static char *HWR_PreprocessShader(char *original)
 
 	line_ending_len = strlen(line_ending);
 
-	// We need to find a place to put the #define commands.
-	// To stay within GLSL specs, they must be *after* the #version define,
-	// if there is any. So we need to look for that. And also let's not
-	// get fooled if there is a #version inside a comment!
+	// Find the #version directive, if it exists. Also don't get fooled if it's
+	// inside a comment. Copy the version digits so they can be used in the preamble.
 	// Time for some string parsing :D
 
 #define STARTSWITH(str, with_what) !strncmp(str, with_what, sizeof(with_what)-1)
-#define ADVANCE(amount) read_pos += amount; distance_to_end -= amount;
+#define ADVANCE(amount) read_pos += (amount); distance_to_end -= (amount);
 	while (true)
 	{
 		// we're at the start of a line or at the end of a block comment.
 		// first get any possible whitespace out of the way
-		int whitespace_len = strspn(read_pos, " \t");
+		int whitespace_len = strspn(read_pos, WHITESPACE_CHARS);
 		if (whitespace_len == distance_to_end)
 			break; // we got to the end
 		ADVANCE(whitespace_len)
 
 		if (STARTSWITH(read_pos, "#version"))
 		{
-			// getting closer
-			INT32 newline_pos = strstr_int(read_pos, line_ending);
-			INT32 line_comment_pos = strstr_int(read_pos, "//");
-			INT32 block_comment_pos = strstr_int(read_pos, "/*");
-			if (newline_pos == INT32_MAX && line_comment_pos == INT32_MAX &&
-				block_comment_pos == INT32_MAX)
+			// found a version directive (and it's not inside a comment)
+			// now locate, verify and read the version number
+			int version_number_len;
+			version_pos = read_pos - original;
+			ADVANCE(sizeof("#version") - 1)
+			whitespace_len = strspn(read_pos, WHITESPACE_CHARS);
+			if (!whitespace_len)
 			{
-				// #version is at the end of the file. Probably not a valid shader.
-				CONS_Alert(CONS_ERROR, "HWR_PreprocessShader: Shader unexpectedly ends after #version.\n");
+				CONS_Alert(CONS_ERROR, "HWR_PreprocessShader: Syntax error in #version. Expected space after #version, but got other text.\n");
 				return NULL;
 			}
-			else
+			else if (whitespace_len == distance_to_end)
 			{
-				// insert at the earliest occurence of newline or comment after #version
-				insertion_pos = min(line_comment_pos, block_comment_pos);
-				insertion_pos = min(newline_pos, insertion_pos);
-				insertion_pos += read_pos - original;
-				break;
+				CONS_Alert(CONS_ERROR, "HWR_PreprocessShader: Syntax error in #version. Expected version number, but got end of file.\n");
+				return NULL;
 			}
+			ADVANCE(whitespace_len)
+			version_number_len = strspn(read_pos, "0123456789");
+			if (!version_number_len)
+			{
+				CONS_Alert(CONS_ERROR, "HWR_PreprocessShader: Syntax error in #version. Expected version number, but got other text.\n");
+				return NULL;
+			}
+			else if (version_number_len != 3)
+			{
+				CONS_Alert(CONS_ERROR, "HWR_PreprocessShader: Syntax error in #version. Expected version with 3 digits, but got %d digits.\n", version_number_len);
+				return NULL;
+			}
+			M_Memcpy(shader_glsl_version, read_pos, 3);
+			ADVANCE(version_number_len)
+			version_len = (read_pos - original) - version_pos;
+			whitespace_len = strspn(read_pos, WHITESPACE_CHARS);
+			ADVANCE(whitespace_len)
+			if (STARTSWITH(read_pos, "es"))
+			{
+				CONS_Alert(CONS_ERROR, "HWR_PreprocessShader: Support for ES shaders is not implemented.\n");
+				return NULL;
+			}
+			break;
 		}
 		else
 		{
@@ -544,12 +566,25 @@ static char *HWR_PreprocessShader(char *original)
 #undef STARTSWITH
 #undef ADVANCE
 
+#define ADD_TO_LEN(def) new_len += sizeof(def) - 1 + line_ending_len;
+
 	// Calculate length of modified shader.
 	new_len = original_len;
 	if (cv_glmodellighting.value)
-		new_len += sizeof(MODEL_LIGHTING_DEFINE) - 1 + 2 * line_ending_len;
+		ADD_TO_LEN(MODEL_LIGHTING_DEFINE)
 	if (cv_glpaletterendering.value)
-		new_len += sizeof(PALETTE_RENDERING_DEFINE) - 1 + 2 * line_ending_len;
+		ADD_TO_LEN(PALETTE_RENDERING_DEFINE)
+
+#undef ADD_TO_LEN
+
+#define VERSION_PART "#version "
+
+	if (new_len != original_len)
+	{
+		if (version_pos != -1)
+			new_len += sizeof(VERSION_PART) - 1 + 3 + line_ending_len;
+		new_len += sizeof("#line 0") - 1 + line_ending_len;
+	}
 
 	// Allocate memory for modified shader.
 	new_shader = Z_Malloc(new_len + 1, PU_STATIC, NULL);
@@ -557,22 +592,27 @@ static char *HWR_PreprocessShader(char *original)
 	read_pos = original;
 	write_pos = new_shader;
 
-	// Copy the part before our additions.
-	M_Memcpy(write_pos, original, insertion_pos);
-	read_pos += insertion_pos;
-	write_pos += insertion_pos;
+	if (new_len != original_len && version_pos != -1)
+	{
+		strcpy(write_pos, VERSION_PART);
+		write_pos += sizeof(VERSION_PART) - 1;
+		M_Memcpy(write_pos, shader_glsl_version, 3);
+		write_pos += 3;
+		strcpy(write_pos, line_ending);
+		write_pos += line_ending_len;
+	}
+
+#undef VERSION_PART
 
 #define WRITE_DEFINE(define) \
 	{ \
-		strcpy(write_pos, line_ending); \
-		write_pos += line_ending_len; \
 		strcpy(write_pos, define); \
 		write_pos += sizeof(define) - 1; \
 		strcpy(write_pos, line_ending); \
 		write_pos += line_ending_len; \
 	}
 
-	// Write the additions.
+	// Write the defines.
 	if (cv_glmodellighting.value)
 		WRITE_DEFINE(MODEL_LIGHTING_DEFINE)
 	if (cv_glpaletterendering.value)
@@ -580,8 +620,26 @@ static char *HWR_PreprocessShader(char *original)
 
 #undef WRITE_DEFINE
 
-	// Copy the part after our additions.
-	M_Memcpy(write_pos, read_pos, original_len - insertion_pos);
+	// Write a #line directive, so compiler errors will report line numbers from the
+	// original shader without our preamble lines.
+	if (new_len != original_len)
+	{
+		// line numbering in the #line directive is different for versions 110-150
+		if (version_pos == -1 || shader_glsl_version[0] == '1')
+			strcpy(write_pos, "#line 0");
+		else
+			strcpy(write_pos, "#line 1");
+		write_pos += sizeof("#line 0") - 1;
+		strcpy(write_pos, line_ending);
+		write_pos += line_ending_len;
+	}
+
+	// Copy the original shader.
+	M_Memcpy(write_pos, read_pos, original_len);
+
+	// Erase the original #version directive, if it exists and was copied.
+	if (new_len != original_len && version_pos != -1)
+		memset(write_pos + version_pos, ' ', version_len);
 
 	// Terminate the new string.
 	new_shader[new_len] = '\0';
