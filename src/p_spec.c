@@ -2520,7 +2520,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					INT16 reallightlevel = sectors[secnum].lightlevel;
 					sectors[secnum].lightlevel = line->backsector->lightlevel;
 
-					flick = P_SpawnAdjustableFireFlicker(line->frontsector, &sectors[secnum],
+					flick = P_SpawnAdjustableFireFlicker(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
 						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
 
 					// Make sure the starting light level is in range.
@@ -2535,7 +2535,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				{
 					// Use front sector for min, target sector for max,
 					// the same way linetype 61 does it.
-					P_SpawnAdjustableFireFlicker(line->frontsector, &sectors[secnum],
+					P_SpawnAdjustableFireFlicker(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
 						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
 				}
 			}
@@ -2554,7 +2554,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					INT16 reallightlevel = sectors[secnum].lightlevel;
 					sectors[secnum].lightlevel = line->backsector->lightlevel;
 
-					glow = P_SpawnAdjustableGlowingLight(line->frontsector, &sectors[secnum],
+					glow = P_SpawnAdjustableGlowingLight(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
 						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
 
 					// Make sure the starting light level is in range.
@@ -2569,7 +2569,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				{
 					// Use front sector for min, target sector for max,
 					// the same way linetype 602 does it.
-					P_SpawnAdjustableGlowingLight(line->frontsector, &sectors[secnum],
+					P_SpawnAdjustableGlowingLight(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
 						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
 				}
 			}
@@ -2588,7 +2588,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					INT16 reallightlevel = sectors[secnum].lightlevel;
 					sectors[secnum].lightlevel = line->backsector->lightlevel;
 
-					flash = P_SpawnAdjustableStrobeFlash(line->frontsector, &sectors[secnum],
+					flash = P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
 						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, false);
 
 					// Make sure the starting light level is in range.
@@ -2603,7 +2603,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				{
 					// Use front sector for min, target sector for max,
 					// the same way linetype 602 does it.
-					P_SpawnAdjustableStrobeFlash(line->frontsector, &sectors[secnum],
+					P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
 						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, false);
 				}
 			}
@@ -2622,7 +2622,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					INT16 reallightlevel = sectors[secnum].lightlevel;
 					sectors[secnum].lightlevel = line->backsector->lightlevel;
 
-					flash = P_SpawnAdjustableStrobeFlash(line->frontsector, &sectors[secnum],
+					flash = P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
 						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, true);
 
 					// Make sure the starting light level is in range.
@@ -2637,7 +2637,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				{
 					// Use front sector for min, target sector for max,
 					// the same way linetype 602 does it.
-					P_SpawnAdjustableStrobeFlash(line->frontsector, &sectors[secnum],
+					P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
 						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, true);
 				}
 			}
@@ -6960,28 +6960,28 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 602: // Adjustable pulsating light
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableGlowingLight(&sectors[sec], &sectors[s],
+					P_SpawnAdjustableGlowingLight(&sectors[s], sectors[sec].lightlevel, sectors[s].lightlevel,
 						P_AproxDistance(lines[i].dx, lines[i].dy)>>FRACBITS);
 				break;
 
 			case 603: // Adjustable flickering light
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableFireFlicker(&sectors[sec], &sectors[s],
+					P_SpawnAdjustableFireFlicker(&sectors[s], sectors[sec].lightlevel, sectors[s].lightlevel,
 						P_AproxDistance(lines[i].dx, lines[i].dy)>>FRACBITS);
 				break;
 
 			case 604: // Adjustable Blinking Light (unsynchronized)
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableStrobeFlash(&sectors[sec], &sectors[s],
+					P_SpawnAdjustableStrobeFlash(&sectors[s], sectors[sec].lightlevel, sectors[s].lightlevel,
 						abs(lines[i].dx)>>FRACBITS, abs(lines[i].dy)>>FRACBITS, false);
 				break;
 
 			case 605: // Adjustable Blinking Light (synchronized)
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableStrobeFlash(&sectors[sec], &sectors[s],
+					P_SpawnAdjustableStrobeFlash(&sectors[s], sectors[sec].lightlevel, sectors[s].lightlevel,
 						abs(lines[i].dx)>>FRACBITS, abs(lines[i].dy)>>FRACBITS, true);
 				break;
 

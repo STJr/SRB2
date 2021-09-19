@@ -63,34 +63,27 @@ void T_FireFlicker(fireflicker_t *flick)
 
 /** Spawns an adjustable fire flicker effect in a sector.
   *
-  * \param minsector Sector whose light level is used as the darkest.
-  * \param maxsector Sector whose light level is used as the brightest,
-  *                  and also the target sector for the effect.
+  * \param sector    Target sector for the effect.
+  * \param lighta    One of the two light levels to move between.
+  * \param lightb    The other light level.
   * \param length    Four times the number of tics between flickers.
   * \sa T_FireFlicker
   */
-fireflicker_t *P_SpawnAdjustableFireFlicker(sector_t *minsector, sector_t *maxsector, INT32 length)
+fireflicker_t *P_SpawnAdjustableFireFlicker(sector_t *sector, INT16 lighta, INT16 lightb, INT32 length)
 {
 	fireflicker_t *flick;
 
-	P_RemoveLighting(maxsector); // out with the old, in with the new
+	P_RemoveLighting(sector); // out with the old, in with the new
 	flick = Z_Calloc(sizeof (*flick), PU_LEVSPEC, NULL);
 
 	P_AddThinker(THINK_MAIN, &flick->thinker);
 
 	flick->thinker.function.acp1 = (actionf_p1)T_FireFlicker;
-	flick->sector = maxsector;
-	flick->maxlight = maxsector->lightlevel;
-	flick->minlight = minsector->lightlevel;
-	if (flick->minlight > flick->maxlight)
-	{
-		// You mixed them up, you dummy.
-		INT32 oops = flick->minlight;
-		flick->minlight = flick->maxlight;
-		flick->maxlight = oops;
-	}
+	flick->sector = sector;
+	flick->maxlight = max(lighta, lightb);
+	flick->minlight = min(lighta, lightb);
 	flick->count = flick->resetcount = length/4;
-	maxsector->lightingdata = flick;
+	sector->lightingdata = flick;
 
 	// input bounds checking and stuff
 	if (!flick->resetcount)
@@ -194,9 +187,9 @@ void T_StrobeFlash(strobe_t *flash)
 
 /** Spawns an adjustable strobe light effect in a sector.
   *
-  * \param minsector  Sector whose light level is used as the darkest.
-  * \param maxsector  Sector whose light level is used as the brightest,
-  *                   and also the target sector for the effect.
+  * \param sector     Target sector for the effect.
+  * \param lighta     One of the two light levels to move between.
+  * \param lightb     The other light level.
   * \param darktime   Time in tics for the light to be dark.
   * \param brighttime Time in tics for the light to be bright.
   * \param inSync     If true, the effect will be kept in sync
@@ -207,29 +200,21 @@ void T_StrobeFlash(strobe_t *flash)
   *                   the strobe flash is random.
   * \sa T_StrobeFlash
   */
-strobe_t *P_SpawnAdjustableStrobeFlash(sector_t *minsector, sector_t *maxsector, INT32 darktime, INT32 brighttime, boolean inSync)
+strobe_t *P_SpawnAdjustableStrobeFlash(sector_t *sector, INT16 lighta, INT16 lightb, INT32 darktime, INT32 brighttime, boolean inSync)
 {
 	strobe_t *flash;
 
-	P_RemoveLighting(maxsector); // out with the old, in with the new
+	P_RemoveLighting(sector); // out with the old, in with the new
 	flash = Z_Calloc(sizeof (*flash), PU_LEVSPEC, NULL);
 
 	P_AddThinker(THINK_MAIN, &flash->thinker);
 
-	flash->sector = maxsector;
+	flash->sector = sector;
 	flash->darktime = darktime;
 	flash->brighttime = brighttime;
 	flash->thinker.function.acp1 = (actionf_p1)T_StrobeFlash;
-	flash->maxlight = maxsector->lightlevel;
-	flash->minlight = minsector->lightlevel;
-
-	if (flash->minlight > flash->maxlight)
-	{
-		// You mixed them up, you dummy.
-		INT32 oops = flash->minlight;
-		flash->minlight = flash->maxlight;
-		flash->maxlight = oops;
-	}
+	flash->maxlight = max(lighta, lightb);
+	flash->minlight = min(lighta, lightb);
 
 	if (flash->minlight == flash->maxlight)
 		flash->minlight = 0;
@@ -239,7 +224,7 @@ strobe_t *P_SpawnAdjustableStrobeFlash(sector_t *minsector, sector_t *maxsector,
 	else
 		flash->count = 1;
 
-	maxsector->lightingdata = flash;
+	sector->lightingdata = flash;
 	return flash;
 }
 
@@ -276,31 +261,24 @@ void T_Glow(glow_t *g)
 
 /** Spawns an adjustable glowing light effect in a sector.
   *
-  * \param minsector Sector whose light level is used as the darkest.
-  * \param maxsector Sector whose light level is used as the brightest,
-  *                  and also the target sector for the effect.
+  * \param sector    Target sector for the effect.
+  * \param lighta    One of the two light levels to move between.
+  * \param lightb    The other light level.
   * \param length    The speed of the effect.
   * \sa T_Glow
   */
-glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, INT32 length)
+glow_t *P_SpawnAdjustableGlowingLight(sector_t *sector, INT16 lighta, INT16 lightb, INT32 length)
 {
 	glow_t *g;
 
-	P_RemoveLighting(maxsector); // out with the old, in with the new
+	P_RemoveLighting(sector); // out with the old, in with the new
 	g = Z_Calloc(sizeof (*g), PU_LEVSPEC, NULL);
 
 	P_AddThinker(THINK_MAIN, &g->thinker);
 
-	g->sector = maxsector;
-	g->minlight = minsector->lightlevel;
-	g->maxlight = maxsector->lightlevel;
-	if (g->minlight > g->maxlight)
-	{
-		// You mixed them up, you dummy.
-		INT32 oops = g->minlight;
-		g->minlight = g->maxlight;
-		g->maxlight = oops;
-	}
+	g->sector = sector;
+	g->minlight = min(lighta, lightb);
+	g->maxlight = max(lighta, lightb);
 	g->thinker.function.acp1 = (actionf_p1)T_Glow;
 	g->direction = 1;
 	g->speed = length/4;
@@ -317,7 +295,7 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *minsector, sector_t *maxsector, 
 		g->speed = (g->maxlight - g->minlight)/2;
 	}
 
-	maxsector->lightingdata = g;
+	sector->lightingdata = g;
 
 	return g;
 }
