@@ -121,8 +121,9 @@ typedef enum
 
 typedef enum
 {
-	TMF_TICBASED = 1,
-	TMF_FORCE    = 1<<1,
+	TMF_RELATIVE = 1,
+	TMF_OVERRIDE = 1<<1,
+	TMF_TICBASED = 1<<2,
 } textmapfadeflags_t;
 
 typedef enum
@@ -301,7 +302,7 @@ void T_Glow(glow_t *g);
 glow_t *P_SpawnAdjustableGlowingLight(sector_t *sector, INT16 lighta, INT16 lightb, INT32 length);
 
 void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean ticbased);
-void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean force);
+void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean force, boolean relative);
 void T_LightFade(lightlevel_t *ll);
 
 typedef enum

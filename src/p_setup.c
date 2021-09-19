@@ -3745,7 +3745,7 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].flags & ML_EFFECT4)
 				lines[i].args[3] |= TMF_TICBASED;
 			if (lines[i].flags & ML_EFFECT5)
-				lines[i].args[3] |= TMF_FORCE;
+				lines[i].args[3] |= TMF_OVERRIDE;
 			break;
 		case 421: //Stop lighting effect
 			lines[i].args[0] = tag;

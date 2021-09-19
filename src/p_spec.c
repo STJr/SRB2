@@ -2527,7 +2527,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 420: // Fade light levels in tagged sectors to new value
-			P_FadeLight(line->args[0], line->args[1], line->args[2], line->args[3] & TMF_TICBASED, line->args[3] & TMF_FORCE);
+			P_FadeLight(line->args[0], line->args[1], line->args[2], line->args[3] & TMF_TICBASED, line->args[3] & TMF_OVERRIDE, line->args[3] & TMF_RELATIVE);
 			break;
 
 		case 421: // Stop lighting effect in tagged sectors

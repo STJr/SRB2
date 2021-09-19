@@ -358,9 +358,10 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 	}
 }
 
-void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean force)
+void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean force, boolean relative)
 {
 	INT32 i;
+	INT32 realdestvalue;
 
 	// search all sectors for ones with tag
 	TAG_ITER_SECTORS(tag, i)
@@ -373,7 +374,9 @@ void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, bool
 			CONS_Debug(DBG_GAMELOGIC, "Line type 420 Executor: Fade light thinker already exists, timer: %d\n", ((lightlevel_t*)sectors[i].lightingdata)->timer);
 			continue;
 		}
-		P_FadeLightBySector(&sectors[i], destvalue, speed, ticbased);
+
+		realdestvalue = relative ? max(0, min(255, sectors[i].lightlevel + destvalue)) : destvalue;
+		P_FadeLightBySector(&sectors[i], realdestvalue, speed, ticbased);
 	}
 }
 
