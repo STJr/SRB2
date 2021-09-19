@@ -2508,79 +2508,22 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 416: // Spawn adjustable fire flicker
-			TAG_ITER_SECTORS(tag, secnum)
-			{
-				if (line->flags & ML_NOCLIMB && line->backsector)
-				{
-					// Use front sector for min light level, back sector for max.
-					P_SpawnAdjustableFireFlicker(&sectors[secnum], line->frontsector->lightlevel, line->backsector->lightlevel,
-						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
-				}
-				else
-				{
-					// Use front sector for min, target sector for max,
-					// the same way linetype 61 does it.
-					P_SpawnAdjustableFireFlicker(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
-						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
-				}
-			}
+			TAG_ITER_SECTORS(line->args[0], secnum)
+				P_SpawnAdjustableFireFlicker(&sectors[secnum], line->args[2],
+					line->args[3] ? sectors[secnum].lightlevel : line->args[4], line->args[1]);
 			break;
 
 		case 417: // Spawn adjustable glowing light
-			TAG_ITER_SECTORS(tag, secnum)
-			{
-				if (line->flags & ML_NOCLIMB && line->backsector)
-				{
-					// Use front sector for min light level, back sector for max.
-					P_SpawnAdjustableGlowingLight(&sectors[secnum], line->frontsector->lightlevel, line->backsector->lightlevel,
-						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
-				}
-				else
-				{
-					// Use front sector for min, target sector for max,
-					// the same way linetype 602 does it.
-					P_SpawnAdjustableGlowingLight(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
-						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
-				}
-			}
+			TAG_ITER_SECTORS(line->args[0], secnum)
+				P_SpawnAdjustableGlowingLight(&sectors[secnum], line->args[2],
+					line->args[3] ? sectors[secnum].lightlevel : line->args[4], line->args[1]);
 			break;
 
-		case 418: // Spawn adjustable strobe flash (unsynchronized)
-			TAG_ITER_SECTORS(tag, secnum)
-			{
-				if (line->flags & ML_NOCLIMB && line->backsector)
-				{
-					// Use front sector for min light level, back sector for max.
-					P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, line->backsector->lightlevel,
-						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, false);
-				}
-				else
-				{
-					// Use front sector for min, target sector for max,
-					// the same way linetype 602 does it.
-					P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
-						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, false);
-				}
-			}
-			break;
-
-		case 419: // Spawn adjustable strobe flash (synchronized)
-			TAG_ITER_SECTORS(tag, secnum)
-			{
-				if (line->flags & ML_NOCLIMB && line->backsector)
-				{
-					// Use front sector for min light level, back sector for max.
-					P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, line->backsector->lightlevel,
-						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, true);
-				}
-				else
-				{
-					// Use front sector for min, target sector for max,
-					// the same way linetype 602 does it.
-					P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
-						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, true);
-				}
-			}
+		case 418: // Spawn adjustable strobe flash
+			TAG_ITER_SECTORS(line->args[0], secnum)
+				P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->args[3],
+					(line->args[4] & TMB_USETARGET) ? sectors[secnum].lightlevel : line->args[5],
+					line->args[1], line->args[2], line->args[4] & TMB_SYNC);
 			break;
 
 		case 420: // Fade light levels in tagged sectors to new value
@@ -6899,30 +6842,24 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 602: // Adjustable pulsating light
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableGlowingLight(&sectors[s], sectors[sec].lightlevel, sectors[s].lightlevel,
-						P_AproxDistance(lines[i].dx, lines[i].dy)>>FRACBITS);
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+					P_SpawnAdjustableGlowingLight(&sectors[s], lines[i].args[2],
+						lines[i].args[3] ? sectors[s].lightlevel : lines[i].args[4], lines[i].args[1]);
 				break;
 
 			case 603: // Adjustable flickering light
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableFireFlicker(&sectors[s], sectors[sec].lightlevel, sectors[s].lightlevel,
-						P_AproxDistance(lines[i].dx, lines[i].dy)>>FRACBITS);
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+					P_SpawnAdjustableFireFlicker(&sectors[s], lines[i].args[2],
+						lines[i].args[3] ? sectors[s].lightlevel : lines[i].args[4], lines[i].args[1]);
 				break;
 
-			case 604: // Adjustable Blinking Light (unsynchronized)
+			case 604: // Adjustable Blinking Light
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableStrobeFlash(&sectors[s], sectors[sec].lightlevel, sectors[s].lightlevel,
-						abs(lines[i].dx)>>FRACBITS, abs(lines[i].dy)>>FRACBITS, false);
-				break;
-
-			case 605: // Adjustable Blinking Light (synchronized)
-				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableStrobeFlash(&sectors[s], sectors[sec].lightlevel, sectors[s].lightlevel,
-						abs(lines[i].dx)>>FRACBITS, abs(lines[i].dy)>>FRACBITS, true);
+					P_SpawnAdjustableStrobeFlash(&sectors[s], lines[i].args[3],
+						(lines[i].args[4] & TMB_USETARGET) ? sectors[s].lightlevel : lines[i].args[5],
+						lines[i].args[1], lines[i].args[2], lines[i].args[4] & TMB_SYNC);
 				break;
 
 			case 606: // HACK! Copy colormaps. Just plain colormaps.

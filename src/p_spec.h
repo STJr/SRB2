@@ -127,6 +127,12 @@ typedef enum
 
 typedef enum
 {
+	TMB_USETARGET = 1,
+	TMB_SYNC      = 1<<1,
+} textmapblinkinglightflags_t;
+
+typedef enum
+{
 	TMSD_FRONT = 0,
 	TMSD_BACK = 1,
 	TMSD_FRONTBACK = 2,

@@ -3696,6 +3696,36 @@ static void P_ConvertBinaryMap(void)
 		case 411: //Stop plane movement
 			lines[i].args[0] = tag;
 			break;
+		case 416: //Start adjustable flickering light
+		case 417: //Start adjustable pulsating light
+		case 602: //Adjustable pulsating light
+		case 603: //Adjustable flickering light
+			lines[i].args[0] = tag;
+			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			lines[i].args[2] = lines[i].frontsector->lightlevel;
+			if ((lines[i].flags & ML_NOCLIMB) && lines[i].backsector)
+				lines[i].args[4] = lines[i].backsector->lightlevel;
+			else
+				lines[i].args[3] = 1;
+			break;
+		case 418: //Start adjustable blinking light (unsynchronized)
+		case 419: //Start adjustable blinking light (synchronized)
+		case 604: //Adjustable blinking light (unsynchronized)
+		case 605: //Adjustable blinking light (synchronized)
+			lines[i].args[0] = tag;
+			lines[i].args[1] = abs(lines[i].dx) >> FRACBITS;
+			lines[i].args[2] = abs(lines[i].dy) >> FRACBITS;
+			lines[i].args[3] = lines[i].frontsector->lightlevel;
+			if ((lines[i].flags & ML_NOCLIMB) && lines[i].backsector)
+				lines[i].args[5] = lines[i].backsector->lightlevel;
+			else
+				lines[i].args[4] |= TMB_USETARGET;
+			if (lines[i].special % 2 == 1)
+			{
+				lines[i].args[4] |= TMB_SYNC;
+				lines[i].special--;
+			}
+			break;
 		case 420: //Fade light level
 			lines[i].args[0] = tag;
 			if (lines[i].flags & ML_DONTPEGBOTTOM)
