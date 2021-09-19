@@ -114,6 +114,19 @@ typedef enum
 
 typedef enum
 {
+	TMLC_NOSECTOR  = 1,
+	TMLC_NOFLOOR   = 1<<1,
+	TMLC_NOCEILING = 1<<2,
+} textmaplightcopyflags_t;
+
+typedef enum
+{
+	TMF_TICBASED = 1,
+	TMF_FORCE    = 1<<1,
+} textmapfadeflags_t;
+
+typedef enum
+{
 	TMSD_FRONT = 0,
 	TMSD_BACK = 1,
 	TMSD_FRONTBACK = 2,

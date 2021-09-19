@@ -3657,6 +3657,10 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[2] = !!(lines[i].flags & ML_NOCLIMB);
 			lines[i].special = 400;
 			break;
+		case 402: //Copy light level
+			lines[i].args[0] = tag;
+			lines[i].args[1] = 0;
+			break;
 		case 403: //Move tagged sector's floor
 		case 404: //Move tagged sector's ceiling
 			lines[i].args[0] = tag;
@@ -3690,6 +3694,30 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[1] = TMP_BOTH;
 			break;
 		case 411: //Stop plane movement
+			lines[i].args[0] = tag;
+			break;
+		case 420: //Fade light level
+			lines[i].args[0] = tag;
+			if (lines[i].flags & ML_DONTPEGBOTTOM)
+			{
+				lines[i].args[1] = max(sides[lines[i].sidenum[0]].textureoffset >> FRACBITS, 0);
+				// failsafe: if user specifies Back Y Offset and NOT Front Y Offset, use the Back Offset
+				// to be consistent with other light and fade specials
+				lines[i].args[2] = ((lines[i].sidenum[1] != 0xFFFF && !(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS)) ?
+					max(min(sides[lines[i].sidenum[1]].rowoffset >> FRACBITS, 255), 0)
+					: max(min(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS, 255), 0));
+			}
+			else
+			{
+				lines[i].args[1] = lines[i].frontsector->lightlevel;
+				lines[i].args[2] = abs(P_AproxDistance(lines[i].dx, lines[i].dy)) >> FRACBITS;
+			}
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[3] |= TMF_TICBASED;
+			if (lines[i].flags & ML_EFFECT5)
+				lines[i].args[3] |= TMF_FORCE;
+			break;
+		case 421: //Stop lighting effect
 			lines[i].args[0] = tag;
 			break;
 		case 428: //Start platform movement

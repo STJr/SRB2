@@ -2123,7 +2123,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				EV_DoCeiling(line->args[0], line, instantMoveCeilingByFrontSector);
 			break;
 
-		case 402: // Set tagged sector's light level
+		case 402: // Copy light level to tagged sectors
 			{
 				INT16 newlightlevel;
 				INT16 newfloorlightlevel, newceilinglightlevel;
@@ -2138,8 +2138,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				newfloorlightsec = line->frontsector->floorlightsec;
 				newceilinglightsec = line->frontsector->ceilinglightsec;
 
-				// act on all sectors with the same tag as the triggering linedef
-				TAG_ITER_SECTORS(tag, secnum)
+				TAG_ITER_SECTORS(line->args[0], secnum)
 				{
 					if (sectors[secnum].lightingdata)
 					{
@@ -2152,13 +2151,20 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						// actually is: could be lightlevel_t, fireflicker_t, glow_t, etc.)
 					}
 
-					sectors[secnum].lightlevel = newlightlevel;
-					sectors[secnum].floorlightlevel = newfloorlightlevel;
-					sectors[secnum].floorlightabsolute = newfloorlightabsolute;
-					sectors[secnum].ceilinglightlevel = newceilinglightlevel;
-					sectors[secnum].ceilinglightabsolute = newceilinglightabsolute;
-					sectors[secnum].floorlightsec = newfloorlightsec;
-					sectors[secnum].ceilinglightsec = newceilinglightsec;
+					if (!(line->args[1] & TMLC_NOSECTOR))
+						sectors[secnum].lightlevel = newlightlevel;
+					if (!(line->args[1] & TMLC_NOFLOOR))
+					{
+						sectors[secnum].floorlightlevel = newfloorlightlevel;
+						sectors[secnum].floorlightabsolute = newfloorlightabsolute;
+						sectors[secnum].floorlightsec = newfloorlightsec;
+					}
+					if (!(line->args[1] & TMLC_NOCEILING))
+					{
+						sectors[secnum].ceilinglightlevel = newceilinglightlevel;
+						sectors[secnum].ceilinglightabsolute = newceilinglightabsolute;
+						sectors[secnum].ceilinglightsec = newceilinglightsec;
+					}
 				}
 			}
 			break;
@@ -2638,21 +2644,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 420: // Fade light levels in tagged sectors to new value
-			P_FadeLight(tag,
-				(line->flags & ML_DONTPEGBOTTOM) ? max(sides[line->sidenum[0]].textureoffset>>FRACBITS, 0) : line->frontsector->lightlevel,
-				// failsafe: if user specifies Back Y Offset and NOT Front Y Offset, use the Back Offset
-				// to be consistent with other light and fade specials
-				(line->flags & ML_DONTPEGBOTTOM) ?
-					((line->sidenum[1] != 0xFFFF && !(sides[line->sidenum[0]].rowoffset>>FRACBITS)) ?
-						max(min(sides[line->sidenum[1]].rowoffset>>FRACBITS, 255), 0)
-						: max(min(sides[line->sidenum[0]].rowoffset>>FRACBITS, 255), 0))
-					: abs(P_AproxDistance(line->dx, line->dy))>>FRACBITS,
-				(line->flags & ML_EFFECT4),
-				(line->flags & ML_EFFECT5));
+			P_FadeLight(line->args[0], line->args[1], line->args[2], line->args[3] & TMF_TICBASED, line->args[3] & TMF_FORCE);
 			break;
 
 		case 421: // Stop lighting effect in tagged sectors
-			TAG_ITER_SECTORS(tag, secnum)
+			TAG_ITER_SECTORS(line->args[0], secnum)
 				if (sectors[secnum].lightingdata)
 				{
 					P_RemoveThinker(&((elevator_t *)sectors[secnum].lightingdata)->thinker);
