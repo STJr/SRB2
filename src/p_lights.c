@@ -96,6 +96,9 @@ fireflicker_t *P_SpawnAdjustableFireFlicker(sector_t *sector, INT16 lighta, INT1
 			flick->maxlight++;
 	}
 
+	// Make sure the starting light level is in range.
+	sector->lightlevel = max((INT16)flick->minlight, min((INT16)flick->maxlight, sector->lightlevel));
+
 	return flick;
 }
 
@@ -224,6 +227,9 @@ strobe_t *P_SpawnAdjustableStrobeFlash(sector_t *sector, INT16 lighta, INT16 lig
 	else
 		flash->count = 1;
 
+	// Make sure the starting light level is in range.
+	sector->lightlevel = max((INT16)flash->minlight, min((INT16)flash->maxlight, sector->lightlevel));
+
 	sector->lightingdata = flash;
 	return flash;
 }
@@ -294,6 +300,9 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *sector, INT16 lighta, INT16 ligh
 
 		g->speed = (g->maxlight - g->minlight)/2;
 	}
+
+	// Make sure the starting light level is in range.
+	sector->lightlevel = max((INT16)g->minlight, min((INT16)g->maxlight, sector->lightlevel));
 
 	sector->lightingdata = g;
 

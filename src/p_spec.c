@@ -2513,23 +2513,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (line->flags & ML_NOCLIMB && line->backsector)
 				{
 					// Use front sector for min light level, back sector for max.
-					// This is tricky because P_SpawnAdjustableFireFlicker expects
-					// the maxsector (second argument) to also be the target
-					// sector, so we have to do some light level twiddling.
-					fireflicker_t *flick;
-					INT16 reallightlevel = sectors[secnum].lightlevel;
-					sectors[secnum].lightlevel = line->backsector->lightlevel;
-
-					flick = P_SpawnAdjustableFireFlicker(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
+					P_SpawnAdjustableFireFlicker(&sectors[secnum], line->frontsector->lightlevel, line->backsector->lightlevel,
 						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
-
-					// Make sure the starting light level is in range.
-					if (reallightlevel < flick->minlight)
-						reallightlevel = (INT16)flick->minlight;
-					else if (reallightlevel > flick->maxlight)
-						reallightlevel = (INT16)flick->maxlight;
-
-					sectors[secnum].lightlevel = reallightlevel;
 				}
 				else
 				{
@@ -2547,23 +2532,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (line->flags & ML_NOCLIMB && line->backsector)
 				{
 					// Use front sector for min light level, back sector for max.
-					// This is tricky because P_SpawnAdjustableGlowingLight expects
-					// the maxsector (second argument) to also be the target
-					// sector, so we have to do some light level twiddling.
-					glow_t *glow;
-					INT16 reallightlevel = sectors[secnum].lightlevel;
-					sectors[secnum].lightlevel = line->backsector->lightlevel;
-
-					glow = P_SpawnAdjustableGlowingLight(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
+					P_SpawnAdjustableGlowingLight(&sectors[secnum], line->frontsector->lightlevel, line->backsector->lightlevel,
 						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
-
-					// Make sure the starting light level is in range.
-					if (reallightlevel < glow->minlight)
-						reallightlevel = (INT16)glow->minlight;
-					else if (reallightlevel > glow->maxlight)
-						reallightlevel = (INT16)glow->maxlight;
-
-					sectors[secnum].lightlevel = reallightlevel;
 				}
 				else
 				{
@@ -2581,23 +2551,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (line->flags & ML_NOCLIMB && line->backsector)
 				{
 					// Use front sector for min light level, back sector for max.
-					// This is tricky because P_SpawnAdjustableGlowingLight expects
-					// the maxsector (second argument) to also be the target
-					// sector, so we have to do some light level twiddling.
-					strobe_t *flash;
-					INT16 reallightlevel = sectors[secnum].lightlevel;
-					sectors[secnum].lightlevel = line->backsector->lightlevel;
-
-					flash = P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
+					P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, line->backsector->lightlevel,
 						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, false);
-
-					// Make sure the starting light level is in range.
-					if (reallightlevel < flash->minlight)
-						reallightlevel = (INT16)flash->minlight;
-					else if (reallightlevel > flash->maxlight)
-						reallightlevel = (INT16)flash->maxlight;
-
-					sectors[secnum].lightlevel = reallightlevel;
 				}
 				else
 				{
@@ -2615,23 +2570,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (line->flags & ML_NOCLIMB && line->backsector)
 				{
 					// Use front sector for min light level, back sector for max.
-					// This is tricky because P_SpawnAdjustableGlowingLight expects
-					// the maxsector (second argument) to also be the target
-					// sector, so we have to do some light level twiddling.
-					strobe_t *flash;
-					INT16 reallightlevel = sectors[secnum].lightlevel;
-					sectors[secnum].lightlevel = line->backsector->lightlevel;
-
-					flash = P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, sectors[secnum].lightlevel,
+					P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->frontsector->lightlevel, line->backsector->lightlevel,
 						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, true);
-
-					// Make sure the starting light level is in range.
-					if (reallightlevel < flash->minlight)
-						reallightlevel = (INT16)flash->minlight;
-					else if (reallightlevel > flash->maxlight)
-						reallightlevel = (INT16)flash->maxlight;
-
-					sectors[secnum].lightlevel = reallightlevel;
 				}
 				else
 				{
