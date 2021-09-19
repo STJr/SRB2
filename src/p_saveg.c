@@ -2083,8 +2083,8 @@ static void SaveStrobeThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, type);
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 	WRITEINT32(save_p, ht->count);
-	WRITEINT32(save_p, ht->minlight);
-	WRITEINT32(save_p, ht->maxlight);
+	WRITEINT16(save_p, ht->minlight);
+	WRITEINT16(save_p, ht->maxlight);
 	WRITEINT32(save_p, ht->darktime);
 	WRITEINT32(save_p, ht->brighttime);
 }
@@ -2094,10 +2094,10 @@ static void SaveGlowThinker(const thinker_t *th, const UINT8 type)
 	const glow_t *ht = (const void *)th;
 	WRITEUINT8(save_p, type);
 	WRITEUINT32(save_p, SaveSector(ht->sector));
-	WRITEINT32(save_p, ht->minlight);
-	WRITEINT32(save_p, ht->maxlight);
-	WRITEINT32(save_p, ht->direction);
-	WRITEINT32(save_p, ht->speed);
+	WRITEINT16(save_p, ht->minlight);
+	WRITEINT16(save_p, ht->maxlight);
+	WRITEINT16(save_p, ht->direction);
+	WRITEINT16(save_p, ht->speed);
 }
 
 static inline void SaveFireflickerThinker(const thinker_t *th, const UINT8 type)
@@ -2107,8 +2107,8 @@ static inline void SaveFireflickerThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT32(save_p, SaveSector(ht->sector));
 	WRITEINT32(save_p, ht->count);
 	WRITEINT32(save_p, ht->resetcount);
-	WRITEINT32(save_p, ht->maxlight);
-	WRITEINT32(save_p, ht->minlight);
+	WRITEINT16(save_p, ht->maxlight);
+	WRITEINT16(save_p, ht->minlight);
 }
 
 static void SaveElevatorThinker(const thinker_t *th, const UINT8 type)
@@ -3212,8 +3212,8 @@ static thinker_t* LoadStrobeThinker(actionf_p1 thinker)
 	ht->thinker.function.acp1 = thinker;
 	ht->sector = LoadSector(READUINT32(save_p));
 	ht->count = READINT32(save_p);
-	ht->minlight = READINT32(save_p);
-	ht->maxlight = READINT32(save_p);
+	ht->minlight = READINT16(save_p);
+	ht->maxlight = READINT16(save_p);
 	ht->darktime = READINT32(save_p);
 	ht->brighttime = READINT32(save_p);
 	if (ht->sector)
@@ -3226,10 +3226,10 @@ static thinker_t* LoadGlowThinker(actionf_p1 thinker)
 	glow_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 	ht->sector = LoadSector(READUINT32(save_p));
-	ht->minlight = READINT32(save_p);
-	ht->maxlight = READINT32(save_p);
-	ht->direction = READINT32(save_p);
-	ht->speed = READINT32(save_p);
+	ht->minlight = READINT16(save_p);
+	ht->maxlight = READINT16(save_p);
+	ht->direction = READINT16(save_p);
+	ht->speed = READINT16(save_p);
 	if (ht->sector)
 		ht->sector->lightingdata = ht;
 	return &ht->thinker;
@@ -3242,8 +3242,8 @@ static thinker_t* LoadFireflickerThinker(actionf_p1 thinker)
 	ht->sector = LoadSector(READUINT32(save_p));
 	ht->count = READINT32(save_p);
 	ht->resetcount = READINT32(save_p);
-	ht->maxlight = READINT32(save_p);
-	ht->minlight = READINT32(save_p);
+	ht->maxlight = READINT16(save_p);
+	ht->minlight = READINT16(save_p);
 	if (ht->sector)
 		ht->sector->lightingdata = ht;
 	return &ht->thinker;

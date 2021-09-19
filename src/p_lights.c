@@ -54,9 +54,9 @@ void T_FireFlicker(fireflicker_t *flick)
 	amount = (INT16)((UINT8)(P_RandomByte() & 3) * 16);
 
 	if (flick->sector->lightlevel - amount < flick->minlight)
-		flick->sector->lightlevel = (INT16)flick->minlight;
+		flick->sector->lightlevel = flick->minlight;
 	else
-		flick->sector->lightlevel = (INT16)((INT16)flick->maxlight - amount);
+		flick->sector->lightlevel = flick->maxlight - amount;
 
 	flick->count = flick->resetcount;
 }
@@ -97,7 +97,7 @@ fireflicker_t *P_SpawnAdjustableFireFlicker(sector_t *sector, INT16 lighta, INT1
 	}
 
 	// Make sure the starting light level is in range.
-	sector->lightlevel = max((INT16)flick->minlight, min((INT16)flick->maxlight, sector->lightlevel));
+	sector->lightlevel = max(flick->minlight, min(flick->maxlight, sector->lightlevel));
 
 	return flick;
 }
@@ -178,12 +178,12 @@ void T_StrobeFlash(strobe_t *flash)
 
 	if (flash->sector->lightlevel == flash->minlight)
 	{
-		flash->sector->lightlevel = (INT16)flash->maxlight;
+		flash->sector->lightlevel = flash->maxlight;
 		flash->count = flash->brighttime;
 	}
 	else
 	{
-		flash->sector->lightlevel = (INT16)flash->minlight;
+		flash->sector->lightlevel = flash->minlight;
 		flash->count = flash->darktime;
 	}
 }
@@ -228,7 +228,7 @@ strobe_t *P_SpawnAdjustableStrobeFlash(sector_t *sector, INT16 lighta, INT16 lig
 		flash->count = 1;
 
 	// Make sure the starting light level is in range.
-	sector->lightlevel = max((INT16)flash->minlight, min((INT16)flash->maxlight, sector->lightlevel));
+	sector->lightlevel = max(flash->minlight, min(flash->maxlight, sector->lightlevel));
 
 	sector->lightingdata = flash;
 	return flash;
@@ -245,20 +245,20 @@ void T_Glow(glow_t *g)
 	{
 		case -1:
 			// DOWN
-			g->sector->lightlevel = (INT16)(g->sector->lightlevel - (INT16)g->speed);
+			g->sector->lightlevel -= g->speed;
 			if (g->sector->lightlevel <= g->minlight)
 			{
-				g->sector->lightlevel = (INT16)(g->sector->lightlevel + (INT16)g->speed);
+				g->sector->lightlevel += g->speed;
 				g->direction = 1;
 			}
 			break;
 
 		case 1:
 			// UP
-			g->sector->lightlevel = (INT16)(g->sector->lightlevel + (INT16)g->speed);
+			g->sector->lightlevel += g->speed;
 			if (g->sector->lightlevel >= g->maxlight)
 			{
-				g->sector->lightlevel = (INT16)(g->sector->lightlevel - (INT16)g->speed);
+				g->sector->lightlevel -= g->speed;
 				g->direction = -1;
 			}
 			break;
@@ -287,7 +287,7 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *sector, INT16 lighta, INT16 ligh
 	g->maxlight = max(lighta, lightb);
 	g->thinker.function.acp1 = (actionf_p1)T_Glow;
 	g->direction = 1;
-	g->speed = length/4;
+	g->speed = (INT16)(length/4);
 	if (g->speed > (g->maxlight - g->minlight)/2) // don't make it ridiculous speed
 		g->speed = (g->maxlight - g->minlight)/2;
 
@@ -302,7 +302,7 @@ glow_t *P_SpawnAdjustableGlowingLight(sector_t *sector, INT16 lighta, INT16 ligh
 	}
 
 	// Make sure the starting light level is in range.
-	sector->lightlevel = max((INT16)g->minlight, min((INT16)g->maxlight, sector->lightlevel));
+	sector->lightlevel = max(g->minlight, min(g->maxlight, sector->lightlevel));
 
 	sector->lightingdata = g;
 

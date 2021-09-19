@@ -216,8 +216,8 @@ typedef struct
 	sector_t *sector;  ///< The sector where action is taking place.
 	INT32 count;
 	INT32 resetcount;
-	INT32 maxlight;    ///< The brightest light level to use.
-	INT32 minlight;    ///< The darkest light level to use.
+	INT16 maxlight;    ///< The brightest light level to use.
+	INT16 minlight;    ///< The darkest light level to use.
 } fireflicker_t;
 
 typedef struct
@@ -245,8 +245,8 @@ typedef struct
 	thinker_t thinker; ///< The thinker in use for the effect.
 	sector_t *sector;  ///< The sector where the action is taking place.
 	INT32 count;
-	INT32 minlight;    ///< The minimum light level to use.
-	INT32 maxlight;    ///< The maximum light level to use.
+	INT16 minlight;    ///< The minimum light level to use.
+	INT16 maxlight;    ///< The maximum light level to use.
 	INT32 darktime;    ///< How INT32 to use minlight.
 	INT32 brighttime;  ///< How INT32 to use maxlight.
 } strobe_t;
@@ -255,10 +255,10 @@ typedef struct
 {
 	thinker_t thinker;
 	sector_t *sector;
-	INT32 minlight;
-	INT32 maxlight;
-	INT32 direction;
-	INT32 speed;
+	INT16 minlight;
+	INT16 maxlight;
+	INT16 direction;
+	INT16 speed;
 } glow_t;
 
 /** Thinker struct for fading lights.
