@@ -1043,6 +1043,9 @@ static void P_LoadSectors(UINT8 *data)
 
 		ss->floorpic_angle = ss->ceilingpic_angle = 0;
 
+		ss->floorlightlevel = ss->ceilinglightlevel = 0;
+		ss->floorlightabsolute = ss->ceilinglightabsolute = false;
+
 		ss->colormap_protected = false;
 
 		P_InitializeSector(ss);
@@ -1529,6 +1532,14 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].ceilingpic = P_AddLevelFlat(val, foundflats);
 	else if (fastcmp(param, "lightlevel"))
 		sectors[i].lightlevel = atol(val);
+	else if (fastcmp(param, "lightfloor"))
+		sectors[i].floorlightlevel = atol(val);
+	else if (fastcmp(param, "lightfloorabsolute") && fastcmp("true", val))
+		sectors[i].floorlightabsolute = true;
+	else if (fastcmp(param, "lightceiling"))
+		sectors[i].ceilinglightlevel = atol(val);
+	else if (fastcmp(param, "lightceilingabsolute") && fastcmp("true", val))
+		sectors[i].ceilinglightabsolute = true;
 	else if (fastcmp(param, "special"))
 		sectors[i].special = atol(val);
 	else if (fastcmp(param, "id"))
@@ -1913,6 +1924,9 @@ static void P_LoadTextmap(void)
 		sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
 
 		sc->floorpic_angle = sc->ceilingpic_angle = 0;
+
+		sc->floorlightlevel = sc->ceilinglightlevel = 0;
+		sc->floorlightabsolute = sc->ceilinglightabsolute = false;
 
 		sc->colormap_protected = false;
 

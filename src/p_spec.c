@@ -2126,9 +2126,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 402: // Set tagged sector's light level
 			{
 				INT16 newlightlevel;
+				INT16 newfloorlightlevel, newceilinglightlevel;
+				boolean newfloorlightabsolute, newceilinglightabsolute;
 				INT32 newfloorlightsec, newceilinglightsec;
 
 				newlightlevel = line->frontsector->lightlevel;
+				newfloorlightlevel = line->frontsector->floorlightlevel;
+				newfloorlightabsolute = line->frontsector->floorlightabsolute;
+				newceilinglightlevel = line->frontsector->ceilinglightlevel;
+				newceilinglightabsolute = line->frontsector->ceilinglightabsolute;
 				newfloorlightsec = line->frontsector->floorlightsec;
 				newceilinglightsec = line->frontsector->ceilinglightsec;
 
@@ -2147,6 +2153,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					}
 
 					sectors[secnum].lightlevel = newlightlevel;
+					sectors[secnum].floorlightlevel = newfloorlightlevel;
+					sectors[secnum].floorlightabsolute = newfloorlightabsolute;
+					sectors[secnum].ceilinglightlevel = newceilinglightlevel;
+					sectors[secnum].ceilinglightabsolute = newceilinglightabsolute;
 					sectors[secnum].floorlightsec = newfloorlightsec;
 					sectors[secnum].ceilinglightsec = newceilinglightsec;
 				}

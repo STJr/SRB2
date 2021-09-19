@@ -3046,13 +3046,13 @@ static void HWR_Subsector(size_t num)
 		}
 
 		light = R_GetPlaneLight(gl_frontsector, locFloorHeight, false);
-		if (gl_frontsector->floorlightsec == -1)
-			floorlightlevel = *gl_frontsector->lightlist[light].lightlevel;
+		if (gl_frontsector->floorlightsec == -1 && !gl_frontsector->floorlightabsolute)
+			floorlightlevel = max(0, min(255, *gl_frontsector->lightlist[light].lightlevel + gl_frontsector->floorlightlevel));
 		floorcolormap = *gl_frontsector->lightlist[light].extra_colormap;
 
 		light = R_GetPlaneLight(gl_frontsector, locCeilingHeight, false);
-		if (gl_frontsector->ceilinglightsec == -1)
-			ceilinglightlevel = *gl_frontsector->lightlist[light].lightlevel;
+		if (gl_frontsector->ceilinglightsec == -1 && !gl_frontsector->ceilinglightabsolute)
+			ceilinglightlevel = max(0, min(255, *gl_frontsector->lightlist[light].lightlevel + gl_frontsector->ceilinglightlevel));
 		ceilingcolormap = *gl_frontsector->lightlist[light].extra_colormap;
 	}
 

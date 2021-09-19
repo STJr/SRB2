@@ -341,7 +341,11 @@ typedef struct sector_s
 	INT32 heightsec; // other sector, or -1 if no other sector
 	INT32 camsec; // used for camera clipping
 
-	INT32 floorlightsec, ceilinglightsec;
+	// floor and ceiling lighting
+	INT16 floorlightlevel, ceilinglightlevel;
+	boolean floorlightabsolute, ceilinglightabsolute; // absolute or relative to sector's light level?
+	INT32 floorlightsec, ceilinglightsec; // take floor/ceiling light level from another sector
+
 	INT32 crumblestate; // used for crumbling and bobbing
 
 	// list of mobjs that are at least partially in the sector
