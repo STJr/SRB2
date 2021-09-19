@@ -850,6 +850,8 @@ static void P_NetUnArchiveWaypoints(void)
 #define SD_TAGLIST   0x01
 #define SD_COLORMAP  0x02
 #define SD_CRUMBLESTATE 0x04
+#define SD_FLOORLIGHT 0x08
+#define SD_CEILLIGHT 0x10
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -1031,6 +1033,11 @@ static void ArchiveSectors(void)
 		if (ss->crumblestate)
 			diff3 |= SD_CRUMBLESTATE;
 
+		if (ss->floorlightlevel != spawnss->floorlightlevel || ss->floorlightabsolute != spawnss->floorlightabsolute)
+			diff3 |= SD_FLOORLIGHT;
+		if (ss->ceilinglightlevel != spawnss->ceilinglightlevel || ss->ceilinglightabsolute != spawnss->ceilinglightabsolute)
+			diff3 |= SD_CEILLIGHT;
+
 		if (ss->ffloors && CheckFFloorDiff(ss))
 			diff |= SD_FFLOORS;
 
@@ -1084,6 +1091,16 @@ static void ArchiveSectors(void)
 					// returns existing index if already added, or appends to net_colormaps and returns new index
 			if (diff3 & SD_CRUMBLESTATE)
 				WRITEINT32(save_p, ss->crumblestate);
+			if (diff3 & SD_FLOORLIGHT)
+			{
+				WRITEINT16(save_p, ss->floorlightlevel);
+				WRITEUINT8(save_p, ss->floorlightabsolute);
+			}
+			if (diff3 & SD_CEILLIGHT)
+			{
+				WRITEINT16(save_p, ss->ceilinglightlevel);
+				WRITEUINT8(save_p, ss->ceilinglightabsolute);
+			}
 			if (diff & SD_FFLOORS)
 				ArchiveFFloors(ss);
 		}
@@ -1175,6 +1192,16 @@ static void UnArchiveSectors(void)
 			sectors[i].extra_colormap = GetNetColormapFromList(READUINT32(save_p));
 		if (diff3 & SD_CRUMBLESTATE)
 			sectors[i].crumblestate = READINT32(save_p);
+		if (diff3 & SD_FLOORLIGHT)
+		{
+			sectors[i].floorlightlevel = READINT16(save_p);
+			sectors[i].floorlightabsolute = READUINT8(save_p);
+		}
+		if (diff3 & SD_CEILLIGHT)
+		{
+			sectors[i].ceilinglightlevel = READINT16(save_p);
+			sectors[i].ceilinglightabsolute = READUINT8(save_p);
+		}
 
 		if (diff & SD_FFLOORS)
 			UnArchiveFFloors(&sectors[i]);
