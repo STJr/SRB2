@@ -6859,16 +6859,15 @@ void P_SpawnSpecials(boolean fromnetsave)
 			// 546 is used for downwards current
 			// 547 is used for push/pull
 
-			case 600: // floor lighting independently (e.g. lava)
+			case 600: // Copy light level to tagged sector's planes
 				sec = sides[*lines[i].sidenum].sector-sectors;
-				TAG_ITER_SECTORS(tag, s)
-					sectors[s].floorlightsec = (INT32)sec;
-				break;
-
-			case 601: // ceiling lighting independently
-				sec = sides[*lines[i].sidenum].sector-sectors;
-				TAG_ITER_SECTORS(tag, s)
-					sectors[s].ceilinglightsec = (INT32)sec;
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+				{
+					if (lines[i].args[1] != TMP_CEILING)
+						sectors[s].floorlightsec = (INT32)sec;
+					if (lines[i].args[1] != TMP_FLOOR)
+						sectors[s].ceilinglightsec = (INT32)sec;
+				}
 				break;
 
 			case 602: // Adjustable pulsating light

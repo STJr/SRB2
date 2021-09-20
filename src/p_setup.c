@@ -4035,6 +4035,12 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[4] |= TMPF_NONEXCLUSIVE;
 			lines[i].special = 541;
 			break;
+		case 600: //Floor lighting
+		case 601: //Ceiling lighting
+			lines[i].args[0] = tag;
+			lines[i].args[1] = (lines[i].special == 601) ? TMP_CEILING : TMP_FLOOR;
+			lines[i].special = 600;
+			break;
 		case 606: //Colormap
 			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			break;
