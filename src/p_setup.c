@@ -3824,6 +3824,9 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
+		case 438: //Change object size
+			lines[i].args[0] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			break;
 		case 439: //Change tagged linedef's textures
 			lines[i].args[0] = tag;
 			lines[i].args[1] = TMSD_FRONTBACK;

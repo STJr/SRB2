@@ -2764,7 +2764,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 438: // Set player scale
 			if (mo)
 			{
-				mo->destscale = FixedDiv(P_AproxDistance(line->dx, line->dy), 100<<FRACBITS);
+				mo->destscale = FixedDiv(line->args[0]<<FRACBITS, 100<<FRACBITS);
 				if (mo->destscale < FRACUNIT/100)
 					mo->destscale = FRACUNIT/100;
 				if (mo->player && bot)
