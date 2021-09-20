@@ -6776,15 +6776,15 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 449: // Enable bosses with parameter
 			{
-				INT32 bossid = sides[*lines[i].sidenum].textureoffset>>FRACBITS;
+				INT32 bossid = lines[i].args[0];
 				if (bossid & ~15) // if any bits other than first 16 are set
 				{
 					CONS_Alert(CONS_WARNING,
-						M_GetText("Boss enable linedef (tag %d) has an invalid texture x offset.\nConsider changing it or removing it entirely.\n"),
-						tag);
+						M_GetText("Boss enable linedef has an invalid boss ID (%d).\nConsider changing it or removing it entirely.\n"),
+						bossid);
 					break;
 				}
-				if (!(lines[i].flags & ML_NOCLIMB))
+				if (!(lines[i].args[1]))
 				{
 					bossdisabled |= (1<<bossid); // gotta disable in the first place to enable
 					CONS_Debug(DBG_GAMELOGIC, "Line type 449 spawn effect: bossid disabled = %d", bossid);
