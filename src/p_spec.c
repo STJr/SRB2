@@ -3683,6 +3683,45 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 467: // Set light level
+			TAG_ITER_SECTORS(line->args[0], secnum)
+			{
+				if (sectors[secnum].lightingdata)
+				{
+					// Stop any lighting effects going on in the sector
+					P_RemoveThinker(&((elevator_t *)sectors[secnum].lightingdata)->thinker);
+					sectors[secnum].lightingdata = NULL;
+
+					// No, it's not an elevator_t, but any struct with a thinker_t named
+					// 'thinker' at the beginning will do here. (We don't know what it
+					// actually is: could be lightlevel_t, fireflicker_t, glow_t, etc.)
+				}
+
+				if (line->args[2] == TML_FLOOR)
+				{
+					if (line->args[3])
+						sectors[secnum].floorlightlevel += line->args[1];
+					else
+						sectors[secnum].floorlightlevel = line->args[1];
+				}
+				else if (line->args[2] == TML_CEILING)
+				{
+					if (line->args[3])
+						sectors[secnum].ceilinglightlevel += line->args[1];
+					else
+						sectors[secnum].ceilinglightlevel = line->args[1];
+				}
+				else
+				{
+					if (line->args[3])
+						sectors[secnum].lightlevel += line->args[1];
+					else
+						sectors[secnum].lightlevel = line->args[1];
+					sectors[secnum].lightlevel = max(0, min(255, sectors[secnum].lightlevel));
+				}
+			}
+			break;
+
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
 			PolyDoor(line);

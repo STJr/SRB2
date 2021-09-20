@@ -3826,6 +3826,12 @@ static void P_ConvertBinaryMap(void)
 		case 456: //Stop fading colormap
 			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			break;
+		case 467: //Set light level
+			lines[i].args[0] = tag;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[2] = TML_SECTOR;
+			lines[i].args[3] = !!(lines[i].flags & ML_EFFECT3);
+			break;
 		case 480: //Polyobject - door slide
 		case 481: //Polyobject - door move
 			lines[i].args[0] = tag;

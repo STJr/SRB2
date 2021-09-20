@@ -114,6 +114,13 @@ typedef enum
 
 typedef enum
 {
+	TML_SECTOR  = 0,
+	TML_FLOOR   = 1,
+	TML_CEILING = 2,
+} textmaplightareas_t;
+
+typedef enum
+{
 	TMLC_NOSECTOR  = 1,
 	TMLC_NOFLOOR   = 1<<1,
 	TMLC_NOCEILING = 1<<2,
