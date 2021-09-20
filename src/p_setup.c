@@ -3780,6 +3780,12 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
+		case 426: //Stop object
+			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
+		case 427: //Award score
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			break;
 		case 428: //Start platform movement
 			lines[i].args[0] = tag;
 			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
@@ -3804,9 +3810,19 @@ static void P_ConvertBinaryMap(void)
 			}
 			lines[i].special = 429;
 			break;
+		case 432: //Enable/disable 2D mode
+			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
+		case 433: //Enable/disable gravity flip
+			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
 		case 435: //Change plane scroller direction
 			lines[i].args[0] = tag;
 			lines[i].args[1] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+			break;
+		case 437: //Disable player control
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
 		case 443: //Call Lua function
 			if (lines[i].text)

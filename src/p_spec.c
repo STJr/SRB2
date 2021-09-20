@@ -2583,7 +2583,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			if (!mo)
 				return;
 
-			if (line->flags & ML_NOCLIMB)
+			if (line->args[0])
 			{
 				P_UnsetThingPosition(mo);
 				mo->x = mo->subsector->sector->soundorg.x;
@@ -2618,7 +2618,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 427: // Awards points if the mobj is a player
 			if (mo && mo->player)
-				P_AddPlayerScore(mo->player, sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				P_AddPlayerScore(mo->player, line->args[0]);
 			break;
 
 		case 428: // Start floating platform movement
@@ -2634,10 +2634,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				EV_DoCrush(line->args[0], line, crushBothOnce);
 			break;
 
-		case 432: // Enable 2D Mode (Disable if noclimb)
+		case 432: // Enable/Disable 2D Mode
 			if (mo && mo->player)
 			{
-				if (line->flags & ML_NOCLIMB)
+				if (line->args[0])
 					mo->flags2 &= ~MF2_TWOD;
 				else
 					mo->flags2 |= MF2_TWOD;
@@ -2651,8 +2651,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
-		case 433: // Flip gravity (Flop gravity if noclimb) Works on pushables, too!
-			if (line->flags & ML_NOCLIMB)
+		case 433: // Flip/flop gravity. Works on pushables, too!
+			if (line->args[0])
 				mo->flags2 &= ~MF2_OBJECTFLIP;
 			else
 				mo->flags2 |= MF2_OBJECTFLIP;
@@ -2750,10 +2750,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 437: // Disable Player Controls
 			if (mo && mo->player)
 			{
-				UINT16 fractime = (UINT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				UINT16 fractime = (UINT16)(line->args[0]);
 				if (fractime < 1)
 					fractime = 1; //instantly wears off upon leaving
-				if (line->flags & ML_NOCLIMB)
+				if (line->args[1])
 					fractime |= 1<<15; //more crazy &ing, as if music stuff wasn't enough
 				mo->player->powers[pw_nocontrol] = fractime;
 				if (bot)
