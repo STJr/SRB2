@@ -3696,6 +3696,31 @@ static void P_ConvertBinaryMap(void)
 		case 411: //Stop plane movement
 			lines[i].args[0] = tag;
 			break;
+		case 415: //Run script
+		{
+			INT32 scrnum;
+
+			lines[i].stringargs[0] = Z_Malloc(9, PU_LEVEL, NULL);
+			strcpy(lines[i].stringargs[0], G_BuildMapName(gamemap));
+			lines[i].stringargs[0][0] = 'S';
+			lines[i].stringargs[0][1] = 'C';
+			lines[i].stringargs[0][2] = 'R';
+
+			scrnum = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			if (scrnum < 0 || scrnum > 999)
+			{
+				scrnum = 0;
+				lines[i].stringargs[0][5] = lines[i].stringargs[0][6] = lines[i].stringargs[0][7] = '0';
+			}
+			else
+			{
+				lines[i].stringargs[0][5] = (char)('0' + (char)((scrnum / 100)));
+				lines[i].stringargs[0][6] = (char)('0' + (char)((scrnum % 100) / 10));
+				lines[i].stringargs[0][7] = (char)('0' + (char)(scrnum % 10));
+			}
+			lines[i].stringargs[0][8] = '\0';
+			break;
+		}
 		case 416: //Start adjustable flickering light
 		case 417: //Start adjustable pulsating light
 		case 602: //Adjustable pulsating light

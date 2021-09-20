@@ -2469,35 +2469,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 415: // Run a script
 			if (cv_runscripts.value)
 			{
-				INT32 scrnum;
-				lumpnum_t lumpnum;
-				char newname[9];
-
-				strcpy(newname, G_BuildMapName(gamemap));
-				newname[0] = 'S';
-				newname[1] = 'C';
-				newname[2] = 'R';
-
-				scrnum = sides[line->sidenum[0]].textureoffset>>FRACBITS;
-				if (scrnum < 0 || scrnum > 999)
-				{
-					scrnum = 0;
-					newname[5] = newname[6] = newname[7] = '0';
-				}
-				else
-				{
-					newname[5] = (char)('0' + (char)((scrnum/100)));
-					newname[6] = (char)('0' + (char)((scrnum%100)/10));
-					newname[7] = (char)('0' + (char)(scrnum%10));
-				}
-				newname[8] = '\0';
-
-				lumpnum = W_CheckNumForName(newname);
+				lumpnum_t lumpnum = W_CheckNumForName(line->stringargs[0]);
 
 				if (lumpnum == LUMPERROR || W_LumpLength(lumpnum) == 0)
-				{
-					CONS_Debug(DBG_SETUP, "SOC Error: script lump %s not found/not valid.\n", newname);
-				}
+					CONS_Debug(DBG_SETUP, "Line type 415 Executor: script lump %s not found/not valid.\n", line->stringargs[0]);
 				else
 					COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
 			}
