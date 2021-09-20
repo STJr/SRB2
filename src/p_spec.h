@@ -141,6 +141,13 @@ typedef enum
 
 typedef enum
 {
+	TMS_VIEWPOINT   = 0,
+	TMS_CENTERPOINT = 1,
+	TMS_BOTH        = 2,
+} textmapskybox_t;
+
+typedef enum
+{
 	TMSD_FRONT = 0,
 	TMSD_BACK = 1,
 	TMSD_FRONTBACK = 2,

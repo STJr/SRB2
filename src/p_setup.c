@@ -3824,6 +3824,9 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
+		case 441: //Condition set trigger
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
 			{
@@ -3832,6 +3835,11 @@ static void P_ConvertBinaryMap(void)
 			}
 			else
 				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in the front texture fields)\n", sizeu1(i));
+			break;
+		case 444: //Earthquake
+			lines[i].args[0] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			break;
 		case 447: //Change colormap
 			lines[i].args[0] = Tag_FGet(&lines[i].tags);
@@ -3843,6 +3851,36 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[2] |= TMCF_SUBLIGHTG|TMCF_SUBFADEG;
 			if (lines[i].flags & ML_EFFECT2)
 				lines[i].args[2] |= TMCF_SUBLIGHTB|TMCF_SUBFADEB;
+			break;
+		case 448: //Change skybox
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			if ((lines[i].flags & (ML_EFFECT4|ML_BLOCKMONSTERS)) == ML_EFFECT4) // Solid Midtexture is on but Block Enemies is off?
+			{
+				CONS_Alert(CONS_WARNING,
+					M_GetText("Skybox switch linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
+					tag);
+				lines[i].special = 0;
+				break;
+			}
+			else if ((lines[i].flags & (ML_EFFECT4|ML_BLOCKMONSTERS)) == (ML_EFFECT4|ML_BLOCKMONSTERS))
+				lines[i].args[2] = TMS_CENTERPOINT;
+			else if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[2] = TMS_BOTH;
+			else
+				lines[i].args[2] = TMS_VIEWPOINT;
+			lines[i].args[3] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
+		case 449: //Enable bosses with parameters
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
+		case 450: //Execute linedef executor (specific tag)
+			lines[i].args[0] = tag;
+			break;
+		case 451: //Execute linedef executor (random tag in range)
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			break;
 		case 455: //Fade colormap
 		{
@@ -3871,6 +3909,13 @@ static void P_ConvertBinaryMap(void)
 		}
 		case 456: //Stop fading colormap
 			lines[i].args[0] = Tag_FGet(&lines[i].tags);
+			break;
+		case 460: //Award rings
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			break;
+		case 466: //Set level failure state
+			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
 		case 467: //Set light level
 			lines[i].args[0] = tag;

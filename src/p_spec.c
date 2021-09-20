@@ -2812,7 +2812,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 441: // Trigger unlockable
 			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
 			{
-				INT32 trigid = (INT32)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				INT32 trigid = line->args[0];
 
 				if (trigid < 0 || trigid > 31) // limited by 32 bit variable
 					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", line->sidenum[0], trigid);
@@ -2880,9 +2880,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 444: // Earthquake camera
 		{
-			quake.intensity = sides[line->sidenum[0]].textureoffset;
-			quake.radius = sides[line->sidenum[0]].rowoffset;
-			quake.time = P_AproxDistance(line->dx, line->dy)>>FRACBITS;
+			quake.intensity = line->args[1] << FRACBITS;
+			quake.radius = line->args[2] << FRACBITS;
+			quake.time = line->args[0];
 
 			quake.epicenter = NULL; /// \todo
 
@@ -3060,57 +3060,48 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 		}
 		case 448: // Change skybox viewpoint/centerpoint
-			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || (line->flags & ML_NOCLIMB))
+			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || line->args[3])
 			{
-				INT32 viewid = sides[line->sidenum[0]].textureoffset>>FRACBITS;
-				INT32 centerid = sides[line->sidenum[0]].rowoffset>>FRACBITS;
+				INT32 viewid = line->args[0];
+				INT32 centerid = line->args[1];
 
-				if ((line->flags & (ML_EFFECT4|ML_BLOCKMONSTERS)) == ML_EFFECT4) // Solid Midtexture is on but Block Enemies is off?
+				// set viewpoint mobj
+				if (line->args[2] != TMS_CENTERPOINT)
 				{
-					CONS_Alert(CONS_WARNING,
-					M_GetText("Skybox switch linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
-					tag);
+					if (viewid >= 0 && viewid < 16)
+						skyboxmo[0] = skyboxviewpnts[viewid];
+					else
+						skyboxmo[0] = NULL;
 				}
-				else
-				{
-					// set viewpoint mobj
-					if (!(line->flags & ML_EFFECT4)) // Solid Midtexture turns off viewpoint setting
-					{
-						if (viewid >= 0 && viewid < 16)
-							skyboxmo[0] = skyboxviewpnts[viewid];
-						else
-							skyboxmo[0] = NULL;
-					}
 
-					// set centerpoint mobj
-					if (line->flags & ML_BLOCKMONSTERS) // Block Enemies turns ON centerpoint setting
-					{
-						if (centerid >= 0 && centerid < 16)
-							skyboxmo[1] = skyboxcenterpnts[centerid];
-						else
-							skyboxmo[1] = NULL;
-					}
+				// set centerpoint mobj
+				if (line->args[2] != TMS_VIEWPOINT)
+				{
+					if (centerid >= 0 && centerid < 16)
+						skyboxmo[1] = skyboxcenterpnts[centerid];
+					else
+						skyboxmo[1] = NULL;
 				}
 
 				CONS_Debug(DBG_GAMELOGIC, "Line type 448 Executor: viewid = %d, centerid = %d, viewpoint? = %s, centerpoint? = %s\n",
 						viewid,
 						centerid,
-						((line->flags & ML_EFFECT4) ? "no" : "yes"),
-						((line->flags & ML_BLOCKMONSTERS) ? "yes" : "no"));
+						((line->args[2] == TMS_CENTERPOINT) ? "no" : "yes"),
+						((line->args[2] == TMS_VIEWPOINT) ? "no" : "yes"));
 			}
 			break;
 
 		case 449: // Enable bosses with parameter
 		{
-			INT32 bossid = sides[line->sidenum[0]].textureoffset>>FRACBITS;
+			INT32 bossid = line->args[0];
 			if (bossid & ~15) // if any bits other than first 16 are set
 			{
 				CONS_Alert(CONS_WARNING,
-					M_GetText("Boss enable linedef (tag %d) has an invalid texture x offset.\nConsider changing it or removing it entirely.\n"),
-					tag);
+					M_GetText("Boss enable linedef has an invalid boss ID (%d).\nConsider changing it or removing it entirely.\n"),
+					bossid);
 				break;
 			}
-			if (line->flags & ML_NOCLIMB)
+			if (line->args[1])
 			{
 				bossdisabled |= (1<<bossid);
 				CONS_Debug(DBG_GAMELOGIC, "Line type 449 Executor: bossid disabled = %d", bossid);
@@ -3124,13 +3115,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		}
 
 		case 450: // Execute Linedef Executor - for recursion
-			P_LinedefExecute(tag, mo, NULL);
+			P_LinedefExecute(line->args[0], mo, NULL);
 			break;
 
 		case 451: // Execute Random Linedef Executor
 		{
-			INT32 rvalue1 = sides[line->sidenum[0]].textureoffset>>FRACBITS;
-			INT32 rvalue2 = sides[line->sidenum[0]].rowoffset>>FRACBITS;
+			INT32 rvalue1 = line->args[0];
+			INT32 rvalue2 = line->args[1];
 			INT32 result;
 
 			if (rvalue1 <= rvalue2)
@@ -3500,8 +3491,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 460: // Award rings
 			{
-				INT16 rings = (sides[line->sidenum[0]].textureoffset>>FRACBITS);
-				INT32 delay = (sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				INT16 rings = line->args[0];
+				INT32 delay = line->args[1];
 				if (mo && mo->player)
 				{
 					if (delay <= 0 || !(leveltime % delay))
@@ -3641,7 +3632,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 466: // Set level failure state
 			{
-				if (line->flags & ML_NOCLIMB)
+				if (line->args[1])
 				{
 					stagefailed = false;
 					CONS_Debug(DBG_GAMELOGIC, "Stage can be completed successfully!\n");
