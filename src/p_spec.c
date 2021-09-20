@@ -2143,12 +2143,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (sectors[secnum].lightingdata)
 					{
 						// Stop the lighting madness going on in this sector!
-						P_RemoveThinker(&((elevator_t *)sectors[secnum].lightingdata)->thinker);
+						P_RemoveThinker(&((thinkerdata_t *)sectors[secnum].lightingdata)->thinker);
 						sectors[secnum].lightingdata = NULL;
-
-						// No, it's not an elevator_t, but any struct with a thinker_t named
-						// 'thinker' at the beginning will do here. (We don't know what it
-						// actually is: could be lightlevel_t, fireflicker_t, glow_t, etc.)
 					}
 
 					if (!(line->args[1] & TMLC_NOSECTOR))
@@ -2534,7 +2530,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			TAG_ITER_SECTORS(line->args[0], secnum)
 				if (sectors[secnum].lightingdata)
 				{
-					P_RemoveThinker(&((elevator_t *)sectors[secnum].lightingdata)->thinker);
+					P_RemoveThinker(&((thinkerdata_t *)sectors[secnum].lightingdata)->thinker);
 					sectors[secnum].lightingdata = NULL;
 				}
 			break;
@@ -3689,12 +3685,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (sectors[secnum].lightingdata)
 				{
 					// Stop any lighting effects going on in the sector
-					P_RemoveThinker(&((elevator_t *)sectors[secnum].lightingdata)->thinker);
+					P_RemoveThinker(&((thinkerdata_t *)sectors[secnum].lightingdata)->thinker);
 					sectors[secnum].lightingdata = NULL;
-
-					// No, it's not an elevator_t, but any struct with a thinker_t named
-					// 'thinker' at the beginning will do here. (We don't know what it
-					// actually is: could be lightlevel_t, fireflicker_t, glow_t, etc.)
 				}
 
 				if (line->args[2] == TML_FLOOR)
@@ -8040,7 +8032,7 @@ static void P_ResetColormapFader(sector_t *sector)
 		// The thinker is the first member in all the action structs,
 		// so just let the thinker get freed, and that will free the whole
 		// structure.
-		P_RemoveThinker(&((elevator_t *)sector->fadecolormapdata)->thinker);
+		P_RemoveThinker(&((thinkerdata_t *)sector->fadecolormapdata)->thinker);
 		sector->fadecolormapdata = NULL;
 	}
 }

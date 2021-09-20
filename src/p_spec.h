@@ -219,6 +219,12 @@ void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean e
 UINT16 P_GetFFloorID(ffloor_t *fflr);
 ffloor_t *P_GetFFloorByID(sector_t *sec, UINT16 id);
 
+// Use this when you don't know the type of your thinker data struct but need to access its thinker.
+typedef struct
+{
+	thinker_t thinker;
+} thinkerdata_t;
+
 //
 // P_LIGHTS
 //

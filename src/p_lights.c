@@ -30,7 +30,7 @@ void P_RemoveLighting(sector_t *sector)
 		// The thinker is the first member in all the lighting action structs,
 		// so just let the thinker get freed, and that will free the whole
 		// structure.
-		P_RemoveThinker(&((elevator_t *)sector->lightingdata)->thinker);
+		P_RemoveThinker(&((thinkerdata_t *)sector->lightingdata)->thinker);
 		sector->lightingdata = NULL;
 	}
 }
@@ -144,7 +144,7 @@ void P_SpawnLightningFlash(sector_t *sector)
 			minlight = ((lightflash_t *)sector->lightingdata)->minlight;
 		}
 
-		P_RemoveThinker(&((elevator_t *)sector->lightingdata)->thinker);
+		P_RemoveThinker(&((thinkerdata_t *)sector->lightingdata)->thinker);
 	}
 
 	sector->lightingdata = NULL;
