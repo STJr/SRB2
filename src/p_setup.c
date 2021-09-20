@@ -3824,6 +3824,11 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
+		case 439: //Change tagged linedef's textures
+			lines[i].args[0] = tag;
+			lines[i].args[1] = TMSD_FRONTBACK;
+			lines[i].args[2] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
 		case 441: //Condition set trigger
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			break;
