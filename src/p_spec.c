@@ -2560,18 +2560,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 423: // Change Sky
-			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || (line->flags & ML_NOCLIMB))
-				P_SetupLevelSky(sides[line->sidenum[0]].textureoffset>>FRACBITS, (line->flags & ML_NOCLIMB));
+			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || line->args[1])
+				P_SetupLevelSky(line->args[0], line->args[1]);
 			break;
 
 		case 424: // Change Weather
-			if (line->flags & ML_NOCLIMB)
+			if (line->args[1])
 			{
-				globalweather = (UINT8)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				globalweather = (UINT8)(line->args[0]);
 				P_SwitchWeather(globalweather);
 			}
 			else if (mo && mo->player && P_IsLocalPlayer(mo->player))
-				P_SwitchWeather(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				P_SwitchWeather(line->args[0]);
 			break;
 
 		case 425: // Calls P_SetMobjState on calling mobj

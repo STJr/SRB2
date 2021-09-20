@@ -3775,6 +3775,11 @@ static void P_ConvertBinaryMap(void)
 		case 421: //Stop lighting effect
 			lines[i].args[0] = tag;
 			break;
+		case 423: //Change sky
+		case 424: //Change weather
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
 		case 428: //Start platform movement
 			lines[i].args[0] = tag;
 			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
