@@ -2187,6 +2187,39 @@ static mobj_t *P_GetObjectTypeInSectorNum(mobjtype_t type, size_t s)
 	return NULL;
 }
 
+static mobj_t* P_FindObjectTypeFromTag(mobjtype_t type, mtag_t tag)
+{
+	if (udmf)
+	{
+		INT32 mtnum;
+		mobj_t *mo;
+
+		TAG_ITER_THINGS(tag, mtnum)
+		{
+			mo = mapthings[mtnum].mobj;
+
+			if (!mo)
+				continue;
+
+			if (mo->type != type)
+				continue;
+
+			return mo;
+		}
+
+		return NULL;
+	}
+	else
+	{
+		INT32 secnum;
+
+		if ((secnum = Tag_Iterate_Sectors(tag, 0)) < 0)
+			return NULL;
+
+		return P_GetObjectTypeInSectorNum(type, secnum);
+	}
+}
+
 /** Processes the line special triggered by an object.
   *
   * \param line Line with the special command on it.
@@ -2550,15 +2583,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 422: // Cut away to another view
 			{
 				mobj_t *altview;
+				INT32 aim;
 
 				if ((!mo || !mo->player) && !titlemapinaction) // only players have views, and title screens
 					return;
 
-				if ((secnum = Tag_Iterate_Sectors(tag, 0)) < 0)
-					return;
-
-				altview = P_GetObjectTypeInSectorNum(MT_ALTVIEWMAN, secnum);
-				if (!altview)
+				altview = P_FindObjectTypeFromTag(MT_ALTVIEWMAN, line->args[0]);
+				if (!altview || !altview->spawnpoint)
 					return;
 
 				// If titlemap, set the camera ref for title's thinker
@@ -2568,31 +2599,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				else
 				{
 					P_SetTarget(&mo->player->awayviewmobj, altview);
-					mo->player->awayviewtics = P_AproxDistance(line->dx, line->dy)>>FRACBITS;
+					mo->player->awayviewtics = line->args[1];
 				}
 
-
-				if (line->flags & ML_NOCLIMB) // lets you specify a vertical angle
-				{
-					INT32 aim;
-
-					aim = sides[line->sidenum[0]].textureoffset>>FRACBITS;
-					aim = (aim + 360) % 360;
-					aim *= (ANGLE_90>>8);
-					aim /= 90;
-					aim <<= 8;
-					if (titlemapinaction)
-						titlemapcameraref->cusval = (angle_t)aim;
-					else
-						mo->player->awayviewaiming = (angle_t)aim;
-				}
+				aim = udmf ? altview->spawnpoint->pitch : line->args[2];
+				aim = (aim + 360) % 360;
+				aim *= (ANGLE_90>>8);
+				aim /= 90;
+				aim <<= 8;
+				if (titlemapinaction)
+					titlemapcameraref->cusval = (angle_t)aim;
 				else
-				{
-					// straight ahead
-					if (!titlemapinaction)
-						mo->player->awayviewaiming = 0;
-					// don't do cusval cause that's annoying
-				}
+					mo->player->awayviewaiming = (angle_t)aim;
 			}
 			break;
 
