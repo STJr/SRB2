@@ -3626,6 +3626,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (!mo2)
 						continue;
 
+					if (mo2->type != MT_EGGTRAP)
+						continue;
+
 					if (mo2->thinker.function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 						continue;
 
