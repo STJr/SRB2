@@ -3614,25 +3614,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 464: // Trigger Egg Capsule
 			{
-				thinker_t *th;
+				INT32 mtnum;
 				mobj_t *mo2;
 
 				// Find the center of the Eggtrap and release all the pretty animals!
 				// The chimps are my friends.. heeheeheheehehee..... - LouisJM
-				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+				TAG_ITER_THINGS(line->args[0], mtnum)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+					mo2 = mapthings[mtnum].mobj;
+
+					if (!mo2)
 						continue;
 
-					mo2 = (mobj_t *)th;
-
-					if (mo2->type != MT_EGGTRAP)
-						continue;
-
-					if (!mo2->spawnpoint)
-						continue;
-
-					if (!Tag_Find(&mo2->spawnpoint->tags, line->args[0]))
+					if (mo2->thinker.function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 						continue;
 
 					P_KillMobj(mo2, NULL, mo, 0);
