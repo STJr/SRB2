@@ -3565,10 +3565,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 463: // Dye object
 			{
-				INT32 color = sides[line->sidenum[0]].toptexture;
-
 				if (mo)
 				{
+					INT32 color = line->stringargs[0] ? get_number(line->stringargs[0]) : SKINCOLOR_NONE;
+
 					if (color < 0 || color >= numskincolors)
 						return;
 

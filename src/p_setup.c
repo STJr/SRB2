@@ -1294,7 +1294,6 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 336: // Trigger linedef executor: Object dye - Once
 			case 434: // Custom Power
 			case 461: // Spawns an object on the map based on texture offsets
-			case 463: // Colorizes an object
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -1318,6 +1317,7 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
 			case 443: // Calls a named Lua function
 			case 459: // Control text prompt (named tag)
+			case 463: // Colorizes an object
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -3947,6 +3947,13 @@ static void P_ConvertBinaryMap(void)
 		case 460: //Award rings
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			break;
+		case 463: //Dye object
+			if (sides[lines[i].sidenum[0]].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
+			}
 			break;
 		case 466: //Set level failure state
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
