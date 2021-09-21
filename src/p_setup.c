@@ -4058,6 +4058,10 @@ static void P_ConvertBinaryMap(void)
 				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
 			}
 			break;
+		case 464: //Trigger egg capsule
+			lines[i].args[0] = tag;
+			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
 		case 466: //Set level failure state
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
@@ -4416,6 +4420,9 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (mapthings[i].type)
 		{
+		case 291:
+			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
+			break;
 		case 750:
 			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
 			break;

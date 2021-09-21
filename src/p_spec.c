@@ -3599,13 +3599,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (!mo2->spawnpoint)
 						continue;
 
-					if (mo2->spawnpoint->angle != tag)
+					if (!Tag_Find(&mo2->spawnpoint->tags, line->args[0]))
 						continue;
 
 					P_KillMobj(mo2, NULL, mo, 0);
 				}
 
-				if (!(line->flags & ML_NOCLIMB))
+				if (!(line->args[1]))
 				{
 					INT32 i;
 
