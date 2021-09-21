@@ -3747,6 +3747,20 @@ static void P_ConvertBinaryMap(void)
 		case 411: //Stop plane movement
 			lines[i].args[0] = tag;
 			break;
+		case 412: //Teleporter
+			lines[i].args[0] = tag;
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[1] |= TMT_SILENT;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] |= TMT_KEEPANGLE;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[1] |= TMT_KEEPMOMENTUM;
+			if (lines[i].flags & ML_EFFECT3)
+				lines[i].args[1] |= TMT_RELATIVE;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[3] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[4] = lines[i].frontsector->ceilingheight >> FRACBITS;
+			break;
 		case 414: //Play sound effect
 			lines[i].args[2] = tag;
 			if (tag != 0)

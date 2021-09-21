@@ -121,6 +121,14 @@ typedef enum
 
 typedef enum
 {
+	TMT_SILENT       = 1,
+	TMT_KEEPANGLE    = 1<<1,
+	TMT_KEEPMOMENTUM = 1<<2,
+	TMT_RELATIVE     = 1<<3,
+} textmapteleportflags_t;
+
+typedef enum
+{
 	TMSS_TRIGGERMOBJ   = 0,
 	TMSS_TRIGGERSECTOR = 1,
 	TMSS_NOWHERE       = 2,

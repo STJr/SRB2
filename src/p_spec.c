@@ -2238,7 +2238,6 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 {
 	INT32 secnum = -1;
 	mobj_t *bot = NULL;
-	mtag_t tag = Tag_FGet(&line->tags);
 
 	I_Assert(!mo || !P_MobjWasRemoved(mo)); // If mo is there, mo must be valid!
 
@@ -2403,13 +2402,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (!mo) // nothing to teleport
 					return;
 
-				if (line->flags & ML_EFFECT3) // Relative silent teleport
+				if (line->args[1] & TMT_RELATIVE) // Relative silent teleport
 				{
 					fixed_t x, y, z;
 
-					x = sides[line->sidenum[0]].textureoffset;
-					y = sides[line->sidenum[0]].rowoffset;
-					z = line->frontsector->ceilingheight;
+					x = line->args[2] << FRACBITS;
+					y = line->args[3] << FRACBITS;
+					z = line->args[4] << FRACBITS;
 
 					P_UnsetThingPosition(mo);
 					mo->x += x;
@@ -2439,23 +2438,22 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 				else
 				{
-					if ((secnum = Tag_Iterate_Sectors(tag, 0)) < 0)
-						return;
+					angle_t angle;
+					boolean silent, keepmomentum;
 
-					dest = P_GetObjectTypeInSectorNum(MT_TELEPORTMAN, secnum);
+					dest = P_FindObjectTypeFromTag(MT_TELEPORTMAN, line->args[0]);
 					if (!dest)
 						return;
 
+					angle = (line->args[1] & TMT_KEEPANGLE) ? mo->angle : dest->angle;
+					silent = !!(line->args[1] & TMT_SILENT);
+					keepmomentum = !!(line->args[1] & TMT_KEEPMOMENTUM);
+
 					if (bot)
-						P_Teleport(bot, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, (line->flags & ML_BLOCKMONSTERS) == 0, (line->flags & ML_EFFECT4) == ML_EFFECT4);
-					if (line->flags & ML_BLOCKMONSTERS)
-						P_Teleport(mo, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, false, (line->flags & ML_EFFECT4) == ML_EFFECT4);
-					else
-					{
-						P_Teleport(mo, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, true, (line->flags & ML_EFFECT4) == ML_EFFECT4);
-						// Play the 'bowrwoosh!' sound
-						S_StartSound(dest, sfx_mixup);
-					}
+						P_Teleport(bot, dest->x, dest->y, dest->z, angle, !silent, keepmomentum);
+					P_Teleport(mo, dest->x, dest->y, dest->z, angle, !silent, keepmomentum);
+					if (!silent)
+						S_StartSound(dest, sfx_mixup); // Play the 'bowrwoosh!' sound
 				}
 			}
 			break;
