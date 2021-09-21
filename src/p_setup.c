@@ -1273,7 +1273,6 @@ static void P_LoadSidedefs(UINT8 *data)
 			}
 
 			case 4: // Speed pad parameters
-			case 414: // Play SFX
 			{
 				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
 				if (msd->toptexture[0] != '-' || msd->toptexture[1] != '\0')
@@ -1282,6 +1281,20 @@ static void P_LoadSidedefs(UINT8 *data)
 					M_Memcpy(process,msd->toptexture,8);
 					process[8] = '\0';
 					sd->toptexture = get_number(process);
+				}
+				break;
+			}
+
+			case 414: // Play SFX
+			{
+				sd->toptexture = sd->midtexture = sd->bottomtexture = 0;
+				if (msd->toptexture[0] != '-' || msd->toptexture[1] != '\0')
+				{
+					char process[8 + 1];
+					M_Memcpy(process, msd->toptexture, 8);
+					process[8] = '\0';
+					sd->text = Z_Malloc(strlen(process) + 1, PU_LEVEL, NULL);
+					M_Memcpy(sd->text, process, strlen(process) + 1);
 				}
 				break;
 			}
@@ -3695,6 +3708,50 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 411: //Stop plane movement
 			lines[i].args[0] = tag;
+			break;
+		case 414: //Play sound effect
+			lines[i].args[2] = tag;
+			if (tag != 0)
+			{
+				if (lines[i].flags & ML_EFFECT5)
+				{
+					lines[i].args[0] = TMSS_TAGGEDSECTOR;
+					lines[i].args[1] = TMSL_EVERYONE;
+				}
+				else
+				{
+					lines[i].args[0] = TMSS_NOWHERE;
+					lines[i].args[1] = TMSL_TAGGEDSECTOR;
+				}
+			}
+			else
+			{
+				if (lines[i].flags & ML_NOCLIMB)
+				{
+					lines[i].args[0] = TMSS_NOWHERE;
+					lines[i].args[1] = TMSL_TRIGGERER;
+				}
+				else if (lines[i].flags & ML_EFFECT4)
+				{
+					lines[i].args[0] = TMSS_NOWHERE;
+					lines[i].args[1] = TMSL_EVERYONE;
+				}
+				else if (lines[i].flags & ML_BLOCKMONSTERS)
+				{
+					lines[i].args[0] = TMSS_TRIGGERSECTOR;
+					lines[i].args[1] = TMSL_EVERYONE;
+				}
+				else
+				{
+					lines[i].args[0] = TMSS_TRIGGERMOBJ;
+					lines[i].args[1] = TMSL_EVERYONE;
+				}
+			}
+			if (sides[lines[i].sidenum[0]].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
+			}
 			break;
 		case 415: //Run script
 		{

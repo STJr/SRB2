@@ -1906,6 +1906,105 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 	}
 }
 
+static void P_PlaySFX(INT32 sfxnum, mobj_t *mo, sector_t *callsec, INT16 tag, textmapsoundsource_t source, textmapsoundlistener_t listener)
+{
+	if (sfxnum == sfx_None)
+		return; // Do nothing!
+
+	if (sfxnum < sfx_None || sfxnum >= NUMSFX)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Line type 414 Executor: sfx number %d is invalid!\n", sfxnum);
+		return;
+	}
+
+	// Check if you can hear the sound
+	switch (listener)
+	{
+		case TMSL_TRIGGERER: // only play sound if displayplayer
+			if (!mo)
+				return;
+
+			if (!mo->player)
+				return;
+
+			if (mo->player != &players[displayplayer] && mo->player != &players[secondarydisplayplayer])
+				return;
+
+			break;
+		case TMSL_TAGGEDSECTOR: // only play if touching tagged sectors
+		{
+			UINT8 i = 0;
+			mobj_t *camobj = players[displayplayer].mo;
+			ffloor_t *rover;
+			boolean foundit = false;
+
+			for (i = 0; i < 2; camobj = players[secondarydisplayplayer].mo, i++)
+			{
+				if (!camobj)
+					continue;
+
+				if (foundit || Tag_Find(&camobj->subsector->sector->tags, tag))
+				{
+					foundit = true;
+					break;
+				}
+
+				// Only trigger if mobj is touching the tag
+				for (rover = camobj->subsector->sector->ffloors; rover; rover = rover->next)
+				{
+					if (!Tag_Find(&rover->master->frontsector->tags, tag))
+						continue;
+
+					if (camobj->z > P_GetSpecialTopZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+						continue;
+
+					if (camobj->z + camobj->height < P_GetSpecialBottomZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+						continue;
+
+					foundit = true;
+					break;
+				}
+			}
+
+			if (!foundit)
+				return;
+
+			break;
+		}
+		case TMSL_EVERYONE: // no additional check
+		default:
+			break;
+	}
+
+	// Play the sound from the specified source
+	switch (source)
+	{
+		case TMSS_TRIGGERMOBJ: // play the sound from mobj that triggered it
+			if (mo)
+				S_StartSound(mo, sfxnum);
+			break;
+		case TMSS_TRIGGERSECTOR: // play the sound from calling sector's soundorg
+			if (callsec)
+				S_StartSound(&callsec->soundorg, sfxnum);
+			else if (mo)
+				S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
+			break;
+		case TMSS_NOWHERE: // play the sound from nowhere
+			S_StartSound(NULL, sfxnum);
+			break;
+		case TMSS_TAGGEDSECTOR: // play the sound from tagged sectors' soundorgs
+		{
+			INT32 secnum;
+
+			TAG_ITER_SECTORS(tag, secnum)
+				S_StartSound(&sectors[secnum].soundorg, sfxnum);
+			break;
+		}
+		default:
+			break;
+	}
+}
+
 static boolean is_rain_type (INT32 weathernum)
 {
 	switch (weathernum)
@@ -2368,102 +2467,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 414: // Play SFX
-			{
-				INT32 sfxnum;
-
-				sfxnum = sides[line->sidenum[0]].toptexture;
-
-				if (sfxnum == sfx_None)
-					return; // Do nothing!
-				if (sfxnum < sfx_None || sfxnum >= NUMSFX)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Line type 414 Executor: sfx number %d is invalid!\n", sfxnum);
-					return;
-				}
-
-				if (tag != 0) // Do special stuff only if a non-zero linedef tag is set
-				{
-					// Play sounds from tagged sectors' origins.
-					if (line->flags & ML_EFFECT5) // Repeat Midtexture
-					{
-						// Additionally play the sound from tagged sectors' soundorgs
-						sector_t *sec;
-
-						TAG_ITER_SECTORS(tag, secnum)
-						{
-							sec = &sectors[secnum];
-							S_StartSound(&sec->soundorg, sfxnum);
-						}
-					}
-
-					// Play the sound without origin for anyone, as long as they're inside tagged areas.
-					else
-					{
-						UINT8 i = 0;
-						mobj_t* camobj = players[displayplayer].mo;
-						ffloor_t *rover;
-						boolean foundit = false;
-
-						for (i = 0; i < 2; camobj = players[secondarydisplayplayer].mo, i++)
-						{
-							if (!camobj)
-								continue;
-
-							if (foundit || Tag_Find(&camobj->subsector->sector->tags, tag))
-							{
-								foundit = true;
-								break;
-							}
-
-							// Only trigger if mobj is touching the tag
-							for(rover = camobj->subsector->sector->ffloors; rover; rover = rover->next)
-							{
-								if (!Tag_Find(&rover->master->frontsector->tags, tag))
-									continue;
-
-								if (camobj->z > P_GetSpecialTopZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
-									continue;
-
-								if (camobj->z + camobj->height < P_GetSpecialBottomZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
-									continue;
-
-								foundit = true;
-								break;
-							}
-						}
-
-						if (foundit)
-							S_StartSound(NULL, sfxnum);
-					}
-				}
-				else
-				{
-					if (line->flags & ML_NOCLIMB)
-					{
-						// play the sound from nowhere, but only if display player triggered it
-						if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
-							S_StartSound(NULL, sfxnum);
-					}
-					else if (line->flags & ML_EFFECT4)
-					{
-						// play the sound from nowhere
-						S_StartSound(NULL, sfxnum);
-					}
-					else if (line->flags & ML_BLOCKMONSTERS)
-					{
-						// play the sound from calling sector's soundorg
-						if (callsec)
-							S_StartSound(&callsec->soundorg, sfxnum);
-						else if (mo)
-							S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
-					}
-					else if (mo)
-					{
-						// play the sound from mobj that triggered it
-						S_StartSound(mo, sfxnum);
-					}
-				}
-			}
+			P_PlaySFX(line->stringargs[0] ? get_number(line->stringargs[0]) : sfx_None, mo, callsec, line->args[2], line->args[0], line->args[1]);
 			break;
 
 		case 415: // Run a script

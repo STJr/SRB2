@@ -114,6 +114,21 @@ typedef enum
 
 typedef enum
 {
+	TMSS_TRIGGERMOBJ   = 0,
+	TMSS_TRIGGERSECTOR = 1,
+	TMSS_NOWHERE       = 2,
+	TMSS_TAGGEDSECTOR  = 3,
+} textmapsoundsource_t;
+
+typedef enum
+{
+	TMSL_EVERYONE     = 0,
+	TMSL_TRIGGERER    = 1,
+	TMSL_TAGGEDSECTOR = 2,
+} textmapsoundlistener_t;
+
+typedef enum
+{
 	TML_SECTOR  = 0,
 	TML_FLOOR   = 1,
 	TML_CEILING = 2,
