@@ -3966,6 +3966,30 @@ static void P_ConvertBinaryMap(void)
 		case 456: //Stop fading colormap
 			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			break;
+		case 459: //Control text prompt
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[2] |= TMP_CLOSE;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[2] |= TMP_RUNPOSTEXEC;
+			if (lines[i].flags & ML_TFERLINE)
+				lines[i].args[2] |= TMP_CALLBYNAME;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[2] |= TMP_KEEPCONTROLS;
+			if (lines[i].flags & ML_EFFECT3)
+				lines[i].args[2] |= TMP_KEEPREALTIME;
+			/*if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[2] |= TMP_ALLPLAYERS;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[2] |= ML_EFFECT4;*/
+			lines[i].args[3] = (lines[i].sidenum[1] != 0xFFFF) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : tag;
+			if (sides[lines[i].sidenum[0]].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
+			}
+			break;
 		case 460: //Award rings
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;

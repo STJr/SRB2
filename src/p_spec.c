@@ -3466,27 +3466,27 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 459: // Control Text Prompt
-			// console player only unless NOCLIMB is set
+			// console player only
 			if (mo && mo->player && P_IsLocalPlayer(mo->player) && (!bot || bot != mo))
 			{
-				INT32 promptnum = max(0, (sides[line->sidenum[0]].textureoffset>>FRACBITS)-1);
-				INT32 pagenum = max(0, (sides[line->sidenum[0]].rowoffset>>FRACBITS)-1);
-				INT32 postexectag = abs((line->sidenum[1] != 0xFFFF) ? sides[line->sidenum[1]].textureoffset>>FRACBITS : tag);
+				INT32 promptnum = max(0, line->args[0] - 1);
+				INT32 pagenum = max(0, line->args[1] - 1);
+				INT32 postexectag = abs(line->args[3]);
 
-				boolean closetextprompt = (line->flags & ML_BLOCKMONSTERS);
-				//boolean allplayers = (line->flags & ML_NOCLIMB);
-				boolean runpostexec = (line->flags & ML_EFFECT1);
-				boolean blockcontrols = !(line->flags & ML_EFFECT2);
-				boolean freezerealtime = !(line->flags & ML_EFFECT3);
-				//boolean freezethinkers = (line->flags & ML_EFFECT4);
-				boolean callbynamedtag = (line->flags & ML_TFERLINE);
+				boolean closetextprompt = (line->args[2] & TMP_CLOSE);
+				//boolean allplayers = (line->args[2] & TMP_ALLPLAYERS);
+				boolean runpostexec = (line->args[2] & TMP_RUNPOSTEXEC);
+				boolean blockcontrols = !(line->args[2] & TMP_KEEPCONTROLS);
+				boolean freezerealtime = !(line->args[2] & TMP_KEEPREALTIME);
+				//boolean freezethinkers = (line->args[2] & TMP_FREEZETHINKERS);
+				boolean callbynamedtag = (line->args[2] & TMP_CALLBYNAME);
 
 				if (closetextprompt)
 					F_EndTextPrompt(false, false);
 				else
 				{
-					if (callbynamedtag && sides[line->sidenum[0]].text && sides[line->sidenum[0]].text[0])
-						F_GetPromptPageByNamedTag(sides[line->sidenum[0]].text, &promptnum, &pagenum);
+					if (callbynamedtag && line->stringargs[0] && line->stringargs[0][0])
+						F_GetPromptPageByNamedTag(line->stringargs[0], &promptnum, &pagenum);
 					F_StartTextPrompt(promptnum, pagenum, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
 				}
 			}
