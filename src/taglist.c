@@ -37,6 +37,25 @@ void Tag_Add (taglist_t* list, const mtag_t tag)
 	list->tags[list->count++] = tag;
 }
 
+/// Removes a tag from a given element's taglist.
+/// \warning This does not rebuild the global taggroups, which are used for iteration.
+void Tag_Remove(taglist_t* list, const mtag_t tag)
+{
+	UINT16 i;
+
+	for (i = 0; i < list->count; i++)
+	{
+		if (list->tags[i] != tag)
+			continue;
+
+		for (; i+1 < list->count; i++)
+			list->tags[i] = list->tags[i+1];
+
+		list->tags = Z_Realloc(list->tags, (list->count - 1) * sizeof(mtag_t), PU_LEVEL, NULL);
+		return;
+	}
+}
+
 /// Sets the first tag entry in a taglist.
 /// Replicates the old way of accessing element->tag.
 void Tag_FSet (taglist_t* list, const mtag_t tag)
@@ -375,6 +394,22 @@ INT32 P_FindSpecialLineFromTag(INT16 special, INT16 tag, INT32 start)
 
 
 // Ingame list manipulation.
+
+/// Adds the tag to the given sector, and updates the global taggroups.
+void Tag_SectorAdd (const size_t id, const mtag_t tag)
+{
+	sector_t* sec = &sectors[id];
+	Tag_Add(&sec->tags, tag);
+	Taggroup_Add(tags_sectors, tag, id);
+}
+
+/// Removes the tag from the given sector, and updates the global taggroups.
+void Tag_SectorRemove (const size_t id, const mtag_t tag)
+{
+	sector_t* sec = &sectors[id];
+	Tag_Remove(&sec->tags, tag);
+	Taggroup_Remove(tags_sectors, tag, id);
+}
 
 /// Changes the first tag for a given sector, and updates the global taggroups.
 void Tag_SectorFSet (const size_t id, const mtag_t tag)

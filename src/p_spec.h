@@ -114,6 +114,13 @@ typedef enum
 
 typedef enum
 {
+	TMT_ADD          = 0,
+	TMT_REMOVE       = 1,
+	TMT_REPLACEFIRST = 2,
+} textmaptagoptions_t;
+
+typedef enum
+{
 	TMSS_TRIGGERMOBJ   = 0,
 	TMSS_TRIGGERSECTOR = 1,
 	TMSS_NOWHERE       = 2,

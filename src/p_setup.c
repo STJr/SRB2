@@ -3706,6 +3706,25 @@ static void P_ConvertBinaryMap(void)
 			else
 				lines[i].args[1] = TMP_BOTH;
 			break;
+		case 409: //Change tagged sector's tag
+			lines[i].args[0] = tag;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[2] = TMT_ADD;
+			else if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[2] = TMT_REMOVE;
+			else
+				lines[i].args[2] = TMT_REPLACEFIRST;
+			break;
+		case 410: //Change front sector's tag
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] = TMT_ADD;
+			else if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[1] = TMT_REMOVE;
+			else
+				lines[i].args[1] = TMT_REPLACEFIRST;
+			break;
 		case 411: //Stop plane movement
 			lines[i].args[0] = tag;
 			break;

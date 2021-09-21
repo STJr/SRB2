@@ -2293,14 +2293,47 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 409: // Change tagged sectors' tag
 		// (formerly "Change calling sectors' tag", but behavior was changed)
 		{
-			TAG_ITER_SECTORS(tag, secnum)
-				Tag_SectorFSet(secnum,(INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS));
+			mtag_t newtag = line->args[1];
+
+			TAG_ITER_SECTORS(line->args[0], secnum)
+			{
+				switch (line->args[2])
+				{
+					case TMT_ADD:
+						Tag_SectorAdd(secnum, newtag);
+						break;
+					case TMT_REMOVE:
+						Tag_SectorRemove(secnum, newtag);
+						break;
+					case TMT_REPLACEFIRST:
+					default:
+						Tag_SectorFSet(secnum, newtag);
+						break;
+				}
+			}
 			break;
 		}
 
 		case 410: // Change front sector's tag
-			Tag_SectorFSet((UINT32)(line->frontsector - sectors), (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS));
+		{
+			mtag_t newtag = line->args[1];
+			secnum = (UINT32)(line->frontsector - sectors);
+
+			switch (line->args[2])
+			{
+				case TMT_ADD:
+					Tag_SectorAdd(secnum, newtag);
+					break;
+				case TMT_REMOVE:
+					Tag_SectorRemove(secnum, newtag);
+					break;
+				case TMT_REPLACEFIRST:
+				default:
+					Tag_SectorFSet(secnum, newtag);
+					break;
+			}
 			break;
+		}
 
 		case 411: // Stop floor/ceiling movement in tagged sector(s)
 			TAG_ITER_SECTORS(line->args[0], secnum)
