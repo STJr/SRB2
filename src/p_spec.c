@@ -2669,14 +2669,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			{
 				mobj_t *dummy = P_SpawnMobj(mo->x, mo->y, mo->z, MT_NULL);
 
-				var1 = sides[line->sidenum[0]].toptexture; //(line->dx>>FRACBITS)-1;
-
-				if (line->sidenum[1] != 0xffff && line->flags & ML_BLOCKMONSTERS) // read power from back sidedef
-					var2 = sides[line->sidenum[1]].toptexture;
-				else if (line->flags & ML_NOCLIMB) // 'Infinite'
+				var1 = line->stringargs[0] ? get_number(line->stringargs[0]) : 0;
+				var2 = line->stringargs[1] ? get_number(line->stringargs[1]) : 0;
+				if (var2 == -1) // 'Infinite'
 					var2 = UINT16_MAX;
-				else
-					var2 = sides[line->sidenum[0]].textureoffset>>FRACBITS;
 
 				P_SetTarget(&dummy->target, mo);
 				A_CustomPower(dummy);

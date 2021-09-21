@@ -1292,7 +1292,6 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 334: // Trigger linedef executor: Object dye - Continuous
 			case 335: // Trigger linedef executor: Object dye - Each time
 			case 336: // Trigger linedef executor: Object dye - Once
-			case 434: // Custom Power
 			case 461: // Spawns an object on the map based on texture offsets
 			{
 				char process[8*3+1];
@@ -1314,6 +1313,7 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 332: // Trigger linedef executor: Skin - Each time
 			case 333: // Trigger linedef executor: Skin - Once
 			case 425: // Calls P_SetMobjState on calling mobj
+			case 434: // Custom Power
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
 			case 443: // Calls a named Lua function
 			case 459: // Control text prompt (named tag)
@@ -3822,6 +3822,28 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 433: //Enable/disable gravity flip
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
+		case 434: //Award power-up
+			if (sides[lines[i].sidenum[0]].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
+			}
+			if (lines[i].sidenum[1] != 0xffff && lines[i].flags & ML_BLOCKMONSTERS) // read power from back sidedef
+			{
+				lines[i].stringargs[1] = Z_Malloc(strlen(sides[lines[i].sidenum[1]].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[1], sides[lines[i].sidenum[1]].text, strlen(sides[lines[i].sidenum[1]].text) + 1);
+			}
+			else if (lines[i].flags & ML_NOCLIMB) // 'Infinite'
+			{
+				lines[i].stringargs[1] = Z_Malloc(3, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[1], "-1", 3);
+			}
+			else
+			{
+				lines[i].stringargs[1] = Z_Malloc(7, PU_LEVEL, NULL);
+				snprintf(lines[i].stringargs[1], 7, "%d", sides[lines[i].sidenum[0]].textureoffset >> FRACBITS);
+			}
 			break;
 		case 435: //Change plane scroller direction
 			lines[i].args[0] = tag;
