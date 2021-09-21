@@ -1168,7 +1168,7 @@ static const char *credits[] = {
 	"Stefan \"Stuf\" Rimalia",
 	"Shane Mychal Sexton",
 	"Dave \"Big Wave Dave\" Spencer",
-	"David \"InstantSonic\" Spencer",
+	"David \"instantSonic\" Spencer",
 	"\"SSNTails\"",
 	"",
 	"\1Level Design",
