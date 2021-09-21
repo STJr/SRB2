@@ -4066,6 +4066,13 @@ static void P_ConvertBinaryMap(void)
 		case 456: //Stop fading colormap
 			lines[i].args[0] = Tag_FGet(&lines[i].tags);
 			break;
+		case 457: //Track object's angle
+			lines[i].args[0] = tag;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[3] = (lines[i].sidenum[1] != 0xffff) ? sides[lines[i].sidenum[1]].rowoffset >> FRACBITS : 0;
+			lines[i].args[4] = !!(lines[i].flags & ML_EFFECT2);
+			break;
 		case 459: //Control text prompt
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
