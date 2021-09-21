@@ -2576,7 +2576,11 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 425: // Calls P_SetMobjState on calling mobj
 			if (mo && !mo->player)
-				P_SetMobjState(mo, sides[line->sidenum[0]].toptexture); //P_AproxDistance(line->dx, line->dy)>>FRACBITS);
+			{
+				statenum_t state = line->stringargs[0] ? get_number(line->stringargs[0]) : S_NULL;
+				if (state >= 0 && state < NUMSTATES)
+					P_SetMobjState(mo, state);
+			}
 			break;
 
 		case 426: // Moves the mobj to its sector's soundorg and on the floor, and stops it
@@ -2838,37 +2842,37 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
 		{
-			const mobjtype_t type = (mobjtype_t)sides[line->sidenum[0]].toptexture;
+			const mobjtype_t type = line->stringargs[0] ? get_number(line->stringargs[0]) : MT_NULL;
 			statenum_t state = NUMSTATES;
-			sector_t *sec;
 			mobj_t *thing;
 
-			if (line->sidenum[1] != 0xffff)
-				state = (statenum_t)sides[line->sidenum[1]].toptexture;
+			if (type < 0 || type >= NUMMOBJTYPES)
+				break;
 
-			TAG_ITER_SECTORS(tag, secnum)
+			if (!line->args[1])
+			{
+				state = line->stringargs[1] ? get_number(line->stringargs[1]) : S_NULL;
+
+				if (state < 0 || state >= NUMSTATES)
+					break;
+			}
+
+			TAG_ITER_SECTORS(line->args[0], secnum)
 			{
 				boolean tryagain;
-				sec = sectors + secnum;
 				do {
 					tryagain = false;
-					for (thing = sec->thinglist; thing; thing = thing->snext)
-						if (thing->type == type)
-						{
-							if (state != NUMSTATES)
-							{
-								if (!P_SetMobjState(thing, state)) // set state to specific state
-								{ // mobj was removed
-									tryagain = true; // snext is corrupt, we'll have to start over.
-									break;
-								}
-							}
-							else if (!P_SetMobjState(thing, thing->state->nextstate)) // set state to nextstate
-							{ // mobj was removed
-								tryagain = true; // snext is corrupt, we'll have to start over.
-								break;
-							}
+					for (thing = sectors[secnum].thinglist; thing; thing = thing->snext)
+					{
+						if (thing->type != type)
+							continue;
+
+						if (!P_SetMobjState(thing, line->args[1] ? thing->state->nextstate : state))
+						{ // mobj was removed
+							tryagain = true; // snext is corrupt, we'll have to start over.
+							break;
 						}
+					}
 				} while (tryagain);
 			}
 			break;

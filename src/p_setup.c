@@ -1292,9 +1292,7 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 334: // Trigger linedef executor: Object dye - Continuous
 			case 335: // Trigger linedef executor: Object dye - Each time
 			case 336: // Trigger linedef executor: Object dye - Once
-			case 425: // Calls P_SetMobjState on calling mobj
 			case 434: // Custom Power
-			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
 			case 461: // Spawns an object on the map based on texture offsets
 			case 463: // Colorizes an object
 			{
@@ -1316,6 +1314,8 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 331: // Trigger linedef executor: Skin - Continuous
 			case 332: // Trigger linedef executor: Skin - Each time
 			case 333: // Trigger linedef executor: Skin - Once
+			case 425: // Calls P_SetMobjState on calling mobj
+			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
 			case 443: // Calls a named Lua function
 			case 459: // Control text prompt (named tag)
 			{
@@ -3780,6 +3780,13 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
+		case 425: //Change object state
+			if (sides[lines[i].sidenum[0]].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
+			}
+			break;
 		case 426: //Stop object
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
@@ -3834,6 +3841,25 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 441: //Condition set trigger
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			break;
+		case 442: //Change object type state
+			lines[i].args[0] = tag;
+			if (sides[lines[i].sidenum[0]].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
+			}
+			if (lines[i].sidenum[1] == 0xffff)
+				lines[i].args[1] = 1;
+			else
+			{
+				lines[i].args[1] = 0;
+				if (sides[lines[i].sidenum[1]].text)
+				{
+					lines[i].stringargs[1] = Z_Malloc(strlen(sides[lines[i].sidenum[1]].text) + 1, PU_LEVEL, NULL);
+					M_Memcpy(lines[i].stringargs[1], sides[lines[i].sidenum[1]].text, strlen(sides[lines[i].sidenum[1]].text) + 1);
+				}
+			}
 			break;
 		case 443: //Call Lua function
 			if (lines[i].text)
