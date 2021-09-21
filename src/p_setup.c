@@ -3117,6 +3117,25 @@ static void P_AddBinaryMapTags(void)
 				P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
 		}
 	}
+
+	for (i = 0; i < nummapthings; i++)
+	{
+		switch (mapthings[i].type)
+		{
+		case 291:
+		case 750:
+		case 760:
+		case 761:
+		case 762:
+			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
+			break;
+		case 780:
+			Tag_FSet(&mapthings[i].tags, mapthings[i].extrainfo);
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 //For maps in binary format, converts setup of specials to UDMF format.
@@ -4439,23 +4458,11 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (mapthings[i].type)
 		{
-		case 291:
-			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
-			break;
-		case 750:
-			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
-			break;
-		case 760:
-		case 761:
-			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
-			break;
 		case 762:
 		{
 			INT32 check = -1;
 			INT32 firstline = -1;
-			mtag_t tag = mapthings[i].angle;
-
-			Tag_FSet(&mapthings[i].tags, tag);
+			mtag_t tag = Tag_FGet(&mapthings[i].tags);
 
 			TAG_ITER_LINES(tag, check)
 			{
@@ -4472,9 +4479,6 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].type = 761;
 			break;
 		}
-		case 780:
-			Tag_FSet(&mapthings[i].tags, mapthings[i].extrainfo);
-			break;
 		default:
 			break;
 		}
