@@ -4012,7 +4012,7 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			break;
 		case 447: //Change colormap
-			lines[i].args[0] = Tag_FGet(&lines[i].tags);
+			lines[i].args[0] = tag;
 			if (lines[i].flags & ML_EFFECT3)
 				lines[i].args[2] |= TMCF_RELATIVE;
 			if (lines[i].flags & ML_EFFECT1)
@@ -4058,7 +4058,7 @@ static void P_ConvertBinaryMap(void)
 				abs(sides[lines[i].sidenum[1]].rowoffset >> FRACBITS)
 				: abs(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS));
 
-			lines[i].args[0] = Tag_FGet(&lines[i].tags);
+			lines[i].args[0] = tag;
 			if (lines[i].flags & ML_EFFECT4)
 				lines[i].args[2] = speed;
 			else
@@ -4078,7 +4078,7 @@ static void P_ConvertBinaryMap(void)
 			break;
 		}
 		case 456: //Stop fading colormap
-			lines[i].args[0] = Tag_FGet(&lines[i].tags);
+			lines[i].args[0] = tag;
 			break;
 		case 457: //Track object's angle
 			lines[i].args[0] = tag;
@@ -4345,7 +4345,7 @@ static void P_ConvertBinaryMap(void)
 			lines[i].special = 600;
 			break;
 		case 606: //Colormap
-			lines[i].args[0] = Tag_FGet(&lines[i].tags);
+			lines[i].args[0] = tag;
 			break;
 		case 700: //Slope front sector floor
 		case 701: //Slope front sector ceiling
