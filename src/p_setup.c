@@ -3963,6 +3963,10 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
 			break;
+		case 436: //Shatter FOF
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			break;
 		case 437: //Disable player control
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
@@ -4011,6 +4015,19 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			break;
+		case 445: //Make FOF disappear/reappear
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[2] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
+		case 446: //Make FOF crumble
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[2] |= TMFR_NORETURN;
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[2] |= TMFR_CHECKFLAG;
+			break;
 		case 447: //Change colormap
 			lines[i].args[0] = tag;
 			if (lines[i].flags & ML_EFFECT3)
@@ -4051,6 +4068,44 @@ static void P_ConvertBinaryMap(void)
 		case 451: //Execute linedef executor (random tag in range)
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			break;
+		case 452: //Set FOF translucency
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[2] = lines[i].sidenum[1] != 0xffff ? (sides[lines[i].sidenum[1]].textureoffset >> FRACBITS) : (P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS);
+			if (lines[i].flags & ML_EFFECT3)
+				lines[i].args[3] |= TMST_RELATIVE;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[3] |= TMST_DONTDOTRANSLUCENT;
+			break;
+		case 453: //Fade FOF
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[2] = lines[i].sidenum[1] != 0xffff ? (sides[lines[i].sidenum[1]].textureoffset >> FRACBITS) : (lines[i].dx >> FRACBITS);
+			lines[i].args[3] = lines[i].sidenum[1] != 0xffff ? (sides[lines[i].sidenum[1]].rowoffset >> FRACBITS) : (abs(lines[i].dy) >> FRACBITS);
+			if (lines[i].flags & ML_EFFECT3)
+				lines[i].args[4] |= TMFT_RELATIVE;
+			if (lines[i].flags & ML_EFFECT5)
+				lines[i].args[4] |= TMFT_OVERRIDE;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[4] |= TMFT_TICBASED;
+			if (lines[i].flags & ML_BOUNCY)
+				lines[i].args[4] |= TMFT_IGNORECOLLISION;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[4] |= TMFT_GHOSTFADE;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[4] |= TMFT_DONTDOTRANSLUCENT;
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[4] |= TMFT_DONTDOEXISTS;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[4] |= (TMFT_DONTDOLIGHTING|TMFT_DONTDOCOLORMAP);
+			if (lines[i].flags & ML_TFERLINE)
+				lines[i].args[4] |= TMFT_USEEXACTALPHA;
+			break;
+		case 454: //Stop fading FOF
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[2] = !!(lines[i].flags & ML_BLOCKMONSTERS);
 			break;
 		case 455: //Fade colormap
 		{

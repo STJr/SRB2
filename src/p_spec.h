@@ -171,6 +171,32 @@ typedef enum
 
 typedef enum
 {
+	TMFR_NORETURN  = 1,
+	TMFR_CHECKFLAG = 1<<1,
+} textmapfofrespawnflags_t;
+
+typedef enum
+{
+	TMST_RELATIVE          = 1,
+	TMST_DONTDOTRANSLUCENT = 1<<1,
+} textmapsettranslucencyflags_t;
+
+typedef enum
+{
+	TMFT_RELATIVE          = 1,
+	TMFT_OVERRIDE          = 1<<1,
+	TMFT_TICBASED          = 1<<2,
+	TMFT_IGNORECOLLISION   = 1<<3,
+	TMFT_GHOSTFADE         = 1<<4,
+	TMFT_DONTDOTRANSLUCENT = 1<<5,
+	TMFT_DONTDOEXISTS      = 1<<6,
+	TMFT_DONTDOLIGHTING    = 1<<7,
+	TMFT_DONTDOCOLORMAP    = 1<<8,
+	TMFT_USEEXACTALPHA     = 1<<9,
+} textmapfadetranslucencyflags_t;
+
+typedef enum
+{
 	TMS_VIEWPOINT   = 0,
 	TMS_CENTERPOINT = 1,
 	TMS_BOTH        = 2,
