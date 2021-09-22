@@ -129,6 +129,16 @@ typedef enum
 
 typedef enum
 {
+	TMM_ALLPLAYERS = 1,
+	TMM_OFFSET = 1<<1,
+	TMM_FADE = 1<<2,
+	TMM_NORELOAD = 1<<3,
+	TMM_FORCERESET = 1<<4,
+	TMM_NOLOOP = 1<<5,
+} textmapmusicflags_t;
+
+typedef enum
+{
 	TMSS_TRIGGERMOBJ   = 0,
 	TMSS_TRIGGERSECTOR = 1,
 	TMSS_NOWHERE       = 2,

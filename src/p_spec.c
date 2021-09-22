@@ -2459,19 +2459,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 413: // Change music
-			// console player only unless NOCLIMB is set
-			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)) || titlemapinaction)
+			// console player only unless TMM_ALLPLAYERS is set
+			if ((line->args[0] & TMM_ALLPLAYERS) || (mo && mo->player && P_IsLocalPlayer(mo->player)) || titlemapinaction)
 			{
-				boolean musicsame = (!sides[line->sidenum[0]].text[0] || !strnicmp(sides[line->sidenum[0]].text, S_MusicName(), 7));
-				UINT16 tracknum = (UINT16)max(sides[line->sidenum[0]].bottomtexture, 0);
-				INT32 position = (INT32)max(sides[line->sidenum[0]].midtexture, 0);
-				UINT32 prefadems = (UINT32)max(sides[line->sidenum[0]].textureoffset >> FRACBITS, 0);
-				UINT32 postfadems = (UINT32)max(sides[line->sidenum[0]].rowoffset >> FRACBITS, 0);
-				UINT8 fadetarget = (UINT8)max((line->sidenum[1] != 0xffff) ? sides[line->sidenum[1]].textureoffset >> FRACBITS : 0, 0);
-				INT16 fadesource = (INT16)max((line->sidenum[1] != 0xffff) ? sides[line->sidenum[1]].rowoffset >> FRACBITS : -1, -1);
+				boolean musicsame = (!line->stringargs[0] || !line->stringargs[0][0] || !strnicmp(line->stringargs[0], S_MusicName(), 7));
+				UINT16 tracknum = (UINT16)max(line->args[6], 0);
+				INT32 position = (INT32)max(line->args[1], 0);
+				UINT32 prefadems = (UINT32)max(line->args[2], 0);
+				UINT32 postfadems = (UINT32)max(line->args[3], 0);
+				UINT8 fadetarget = (UINT8)max(line->args[4], 0);
+				INT16 fadesource = (INT16)max(line->args[5], -1);
 
 				// Seek offset from current song position
-				if (line->flags & ML_EFFECT1)
+				if (line->args[0] & TMM_OFFSET)
 				{
 					// adjust for loop point if subtracting
 					if (position < 0 && S_GetMusicLength() &&
@@ -2483,7 +2483,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 
 				// Fade current music to target volume (if music won't be changed)
-				if ((line->flags & ML_EFFECT2) && fadetarget && musicsame)
+				if ((line->args[0] & TMM_FADE) && fadetarget && musicsame)
 				{
 					// 0 fadesource means fade from current volume.
 					// meaning that we can't specify volume 0 as the source volume -- this starts at 1.
@@ -2501,22 +2501,25 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				// Change the music and apply position/fade operations
 				else
 				{
-					strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
+					if (!line->stringargs[0])
+						break;
+
+					strncpy(mapmusname, line->stringargs[0], 7);
 					mapmusname[6] = 0;
 
 					mapmusflags = tracknum & MUSIC_TRACKMASK;
-					if (!(line->flags & ML_BLOCKMONSTERS))
+					if (!(line->args[0] & TMM_NORELOAD))
 						mapmusflags |= MUSIC_RELOADRESET;
-					if (line->flags & ML_BOUNCY)
+					if (line->args[0] & TMM_FORCERESET)
 						mapmusflags |= MUSIC_FORCERESET;
 
 					mapmusposition = position;
 
-					S_ChangeMusicEx(mapmusname, mapmusflags, !(line->flags & ML_EFFECT4), position,
-						!(line->flags & ML_EFFECT2) ? prefadems : 0,
-						!(line->flags & ML_EFFECT2) ? postfadems : 0);
+					S_ChangeMusicEx(mapmusname, mapmusflags, !(line->args[0] & TMM_NOLOOP), position,
+						!(line->args[0] & TMM_FADE) ? prefadems : 0,
+						!(line->args[0] & TMM_FADE) ? postfadems : 0);
 
-					if ((line->flags & ML_EFFECT2) && fadetarget)
+					if ((line->args[0] & TMM_FADE) && fadetarget)
 					{
 						if (!postfadems)
 							S_SetInternalMusicVolume(fadetarget);
@@ -2525,7 +2528,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					}
 				}
 
-				// Except, you can use the ML_BLOCKMONSTERS flag to change this behavior.
+				// Except, you can use the TMM_NORELOAD flag to change this behavior.
 				// if (mapmusflags & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
 			}
 			break;
@@ -3552,34 +3555,28 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 461: // Spawns an object on the map based on texture offsets
 			{
-				const mobjtype_t type = (mobjtype_t)(sides[line->sidenum[0]].toptexture);
+				const mobjtype_t type = line->stringargs[0] ? get_number(line->stringargs[0]) : MT_NULL;
 				mobj_t *mobj;
 
 				fixed_t x, y, z;
-				x = sides[line->sidenum[0]].textureoffset;
-				y = sides[line->sidenum[0]].rowoffset;
-				z = line->frontsector->floorheight;
 
-				if (line->flags & ML_NOCLIMB) // If noclimb is set, spawn randomly within a range
+				if (line->args[4]) // If args[4] is set, spawn randomly within a range
 				{
-					if (line->sidenum[1] != 0xffff) // Make sure the linedef has a back side
-					{
-						x = P_RandomRange(sides[line->sidenum[0]].textureoffset>>FRACBITS, sides[line->sidenum[1]].textureoffset>>FRACBITS)<<FRACBITS;
-						y = P_RandomRange(sides[line->sidenum[0]].rowoffset>>FRACBITS, sides[line->sidenum[1]].rowoffset>>FRACBITS)<<FRACBITS;
-						z = P_RandomRange(line->frontsector->floorheight>>FRACBITS, line->frontsector->ceilingheight>>FRACBITS)<<FRACBITS;
-					}
-					else
-					{
-						CONS_Alert(CONS_WARNING,"Linedef Type %d - Spawn Object: Linedef is set for random range but has no back side.\n", line->special);
-						break;
-					}
+					x = P_RandomRange(line->args[0], line->args[5])<<FRACBITS;
+					y = P_RandomRange(line->args[1], line->args[6])<<FRACBITS;
+					z = P_RandomRange(line->args[2], line->args[7])<<FRACBITS;
+				}
+				else
+				{
+					x = line->args[0] << FRACBITS;
+					y = line->args[1] << FRACBITS;
+					z = line->args[2] << FRACBITS;
 				}
 
 				mobj = P_SpawnMobj(x, y, z, type);
 				if (mobj)
 				{
-					if (line->flags & ML_EFFECT1)
-						mobj->angle = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y);
+					mobj->angle = FixedAngle(line->args[3] << FRACBITS);
 					CONS_Debug(DBG_GAMELOGIC, "Linedef Type %d - Spawn Object: %d spawned at (%d, %d, %d)\n", line->special, mobj->type, mobj->x>>FRACBITS, mobj->y>>FRACBITS, mobj->z>>FRACBITS); //TODO: Convert mobj->type to a string somehow.
 				}
 				else

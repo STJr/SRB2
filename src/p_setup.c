@@ -1305,7 +1305,6 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 334: // Trigger linedef executor: Object dye - Continuous
 			case 335: // Trigger linedef executor: Object dye - Each time
 			case 336: // Trigger linedef executor: Object dye - Once
-			case 461: // Spawns an object on the map based on texture offsets
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -1330,6 +1329,7 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
 			case 443: // Calls a named Lua function
 			case 459: // Control text prompt (named tag)
+			case 461: // Spawns an object on the map based on texture offsets
 			case 463: // Colorizes an object
 			{
 				char process[8*3+1];
@@ -3761,6 +3761,31 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[3] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			lines[i].args[4] = lines[i].frontsector->ceilingheight >> FRACBITS;
 			break;
+		case 413: //Change music
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[0] |= TMM_ALLPLAYERS;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[0] |= TMM_OFFSET;
+			if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[0] |= TMM_FADE;
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[0] |= TMM_NORELOAD;
+			if (lines[i].flags & ML_BOUNCY)
+				lines[i].args[0] |= TMM_FORCERESET;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[0] |= TMM_NOLOOP;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].midtexture;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[3] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[4] = (lines[i].sidenum[1] != 0xffff) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : 0;
+			lines[i].args[5] = (lines[i].sidenum[1] != 0xffff) ? sides[lines[i].sidenum[1]].rowoffset >> FRACBITS : -1;
+			lines[i].args[6] = sides[lines[i].sidenum[0]].bottomtexture;
+			if (sides[lines[i].sidenum[0]].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
+			}
+			break;
 		case 414: //Play sound effect
 			lines[i].args[2] = tag;
 			if (tag != 0)
@@ -4169,6 +4194,34 @@ static void P_ConvertBinaryMap(void)
 		case 460: //Award rings
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			break;
+		case 461: //Spawn object
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[2] = lines[i].frontsector->floorheight >> FRACBITS;
+			lines[i].args[3] = (lines[i].flags & ML_EFFECT1) ? AngleFixed(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y)) >> FRACBITS : 0;
+			if (lines[i].flags & ML_NOCLIMB)
+			{
+				if (lines[i].sidenum[1] != 0xffff) // Make sure the linedef has a back side
+				{
+					lines[i].args[4] = 1;
+					lines[i].args[5] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
+					lines[i].args[6] = sides[lines[i].sidenum[1]].rowoffset >> FRACBITS;
+					lines[i].args[7] = lines[i].frontsector->ceilingheight >> FRACBITS;
+				}
+				else
+				{
+					CONS_Alert(CONS_WARNING, "Linedef Type %d - Spawn Object: Linedef is set for random range but has no back side.\n", lines[i].special);
+					lines[i].args[4] = 0;
+				}
+			}
+			else
+				lines[i].args[4] = 0;
+			if (sides[lines[i].sidenum[0]].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
+			}
 			break;
 		case 463: //Dye object
 			if (sides[lines[i].sidenum[0]].text)
