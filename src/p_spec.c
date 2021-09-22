@@ -1873,15 +1873,16 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
   */
 void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 {
-	size_t masterline;
+	INT32 masterline;
 
 	CONS_Debug(DBG_GAMELOGIC, "P_LinedefExecute: Executing trigger linedefs of tag %d\n", tag);
 
 	I_Assert(!actor || !P_MobjWasRemoved(actor)); // If actor is there, it must be valid.
 
-	for (masterline = 0; masterline < numlines; masterline++)
+	TAG_ITER_LINES(tag, masterline)
 	{
-		if (Tag_FGet(&lines[masterline].tags) != tag)
+		if (lines[masterline].special < 300
+			|| lines[masterline].special > 399)
 			continue;
 
 		// "No More Enemies" and "Level Load" take care of themselves.
@@ -1895,10 +1896,6 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 		 || lines[masterline].special == 322 // Trigger on X calls - Each Time
 		 || lines[masterline].special == 332 // Skin - Each time
 		 || lines[masterline].special == 335)// Dye - Each time
-			continue;
-
-		if (lines[masterline].special < 300
-			|| lines[masterline].special > 399)
 			continue;
 
 		if (!P_RunTriggerLinedef(&lines[masterline], actor, caller))
