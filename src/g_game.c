@@ -3927,6 +3927,9 @@ static void G_DoCompleted(void)
 	if (metalrecording)
 		G_StopMetalRecording(false);
 
+	G_SetGamestate(GS_NULL);
+	wipegamestate = GS_NULL;
+
 	for (i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
 			G_PlayerFinishLevel(i); // take away cards and stuff
