@@ -3686,7 +3686,7 @@ static void P_ConvertBinaryMap(void)
 		case 401: //Set tagged sector's ceiling height/texture
 			lines[i].args[0] = tag;
 			lines[i].args[1] = lines[i].special - 400;
-			lines[i].args[2] = !!(lines[i].flags & ML_NOCLIMB);
+			lines[i].args[2] = !(lines[i].flags & ML_NOCLIMB);
 			lines[i].special = 400;
 			break;
 		case 402: //Copy light level
