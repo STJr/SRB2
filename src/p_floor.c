@@ -231,6 +231,7 @@ void T_MoveFloor(floormove_t *movefloor)
 					remove = true;
 				break;
 			default:
+				remove = true;
 				break;
 		}
 	}
