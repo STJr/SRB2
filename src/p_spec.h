@@ -107,6 +107,53 @@ typedef enum
 
 typedef enum
 {
+	TMC_EQUAL = 0,
+	TMC_LTE   = 1,
+	TMC_GTE   = 2,
+} textmapcomparison_t;
+
+typedef enum
+{
+	TMNP_FASTEST   = 0,
+	TMNP_SLOWEST   = 1,
+	TMNP_TRIGGERER = 2,
+} textmapnightsplayer_t;
+
+typedef enum
+{
+	TMN_ALWAYS       = 0,
+	TMN_FROMNONIGHTS = 1,
+	TMN_FROMNIGHTS   = 2,
+} textmapnighterizeoptions_t;
+
+typedef enum
+{
+	TMN_BONUSLAPS       = 1,
+	TMN_LEVELCOMPLETION = 1<<2,
+} textmapnightserizeflags_t;
+
+typedef enum
+{
+	TMD_ALWAYS         = 0,
+	TMD_NOBODYNIGHTS   = 1,
+	TMD_SOMEBODYNIGHTS = 2,
+} textmapdenighterizeoptions_t;
+
+typedef enum
+{
+	TMS_IFENOUGH    = 0,
+	TMS_IFNOTENOUGH = 1,
+	TMS_ALWAYS      = 2,
+} textmapspherescheck_t;
+
+typedef enum
+{
+	TMI_BONUSLAPS = 1,
+	TMI_ENTER     = 1<<2,
+} textmapideyacaptureflags_t;
+
+typedef enum
+{
 	TMP_FLOOR = 0,
 	TMP_CEILING = 1,
 	TMP_BOTH = 2,

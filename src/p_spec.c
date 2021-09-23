@@ -1223,7 +1223,7 @@ void P_RunNightserizeExecutors(mobj_t *actor)
 
 	for (i = 0; i < numlines; i++)
 	{
-		if (lines[i].special == 323 || lines[i].special == 324)
+		if (lines[i].special == 323)
 			P_RunTriggerLinedef(&lines[i], actor, NULL);
 	}
 }
@@ -1237,7 +1237,7 @@ void P_RunDeNightserizeExecutors(mobj_t *actor)
 
 	for (i = 0; i < numlines; i++)
 	{
-		if (lines[i].special == 325 || lines[i].special == 326)
+		if (lines[i].special == 325)
 			P_RunTriggerLinedef(&lines[i], actor, NULL);
 	}
 }
@@ -1251,7 +1251,7 @@ void P_RunNightsLapExecutors(mobj_t *actor)
 
 	for (i = 0; i < numlines; i++)
 	{
-		if (lines[i].special == 327 || lines[i].special == 328)
+		if (lines[i].special == 327)
 			P_RunTriggerLinedef(&lines[i], actor, NULL);
 	}
 }
@@ -1265,13 +1265,19 @@ void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean e
 
 	for (i = 0; i < numlines; i++)
 	{
-		if ((lines[i].special == 329 || lines[i].special == 330)
-			&& ((entering && (lines[i].flags & ML_TFERLINE))
-				|| (!entering && !(lines[i].flags & ML_TFERLINE)))
-			&& ((lines[i].flags & ML_DONTPEGTOP)
-				|| (enoughspheres && !(lines[i].flags & ML_BOUNCY))
-				|| (!enoughspheres && (lines[i].flags & ML_BOUNCY))))
-			P_RunTriggerLinedef(&lines[i], actor, NULL);
+		if (lines[i].special != 329)
+			continue;
+
+		if (!!(lines[i].args[7] & TMI_ENTER) != entering)
+			continue;
+
+		if (lines[i].args[6] == TMS_IFENOUGH && !enoughspheres)
+			continue;
+
+		if (lines[i].args[6] == TMS_IFNOTENOUGH && enoughspheres)
+			continue;
+
+		P_RunTriggerLinedef(&lines[i], actor, NULL);
 	}
 }
 
@@ -1351,27 +1357,42 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 	INT16 specialtype = triggerline->special;
 	size_t i;
 
-	UINT8 inputmare = max(0, min(255, sides[triggerline->sidenum[0]].textureoffset>>FRACBITS));
-	UINT8 inputlap = max(0, min(255, sides[triggerline->sidenum[0]].rowoffset>>FRACBITS));
+	UINT8 inputmare = max(0, min(255, triggerline->args[1]));
+	UINT8 inputlap = max(0, min(255, triggerline->args[2]));
 
-	boolean ltemare = triggerline->flags & ML_NOCLIMB;
-	boolean gtemare = triggerline->flags & ML_BLOCKMONSTERS;
-	boolean ltelap = triggerline->flags & ML_EFFECT1;
-	boolean gtelap = triggerline->flags & ML_EFFECT2;
+	textmapcomparison_t marecomp = triggerline->args[3];
+	textmapcomparison_t lapcomp = triggerline->args[4];
+	textmapnightsplayer_t checkplayer = triggerline->args[5];
 
-	boolean lapfrombonustime = triggerline->flags & ML_EFFECT3;
-	boolean perglobalinverse = triggerline->flags & ML_DONTPEGBOTTOM;
-	boolean perglobal = !(triggerline->flags & ML_EFFECT4) && !perglobalinverse;
+	boolean lapfrombonustime;
 
-	boolean donomares = triggerline->flags & ML_BOUNCY; // nightserize: run at end of level (no mares)
-	boolean fromnonights = triggerline->flags & ML_TFERLINE; // nightserize: from non-nights // denightserize: all players no nights
-	boolean fromnights = triggerline->flags & ML_DONTPEGTOP; // nightserize: from nights // denightserize: >0 players are nights
+	boolean donomares = (specialtype == 323) && (triggerline->args[7] & TMN_LEVELCOMPLETION); // nightserize: run at end of level (no mares)
 
 	UINT8 currentmare = UINT8_MAX;
 	UINT8 currentlap = UINT8_MAX;
 
+	// Set lapfrombonustime
+	switch (specialtype)
+	{
+		case 323:
+			lapfrombonustime = !!(triggerline->args[7] & TMN_BONUSLAPS);
+			break;
+		case 325:
+			lapfrombonustime = !!(triggerline->args[7]);
+			break;
+		case 327:
+			lapfrombonustime = !!(triggerline->args[6]);
+			break;
+		case 329:
+			lapfrombonustime = !!(triggerline->args[7] & TMI_BONUSLAPS);
+			break;
+		default:
+			lapfrombonustime = false;
+			break;
+	}
+
 	// Do early returns for Nightserize
-	if (specialtype >= 323 && specialtype <= 324)
+	if (specialtype == 323)
 	{
 		// run only when no mares are found
 		if (donomares && P_FindLowestMare() != UINT8_MAX)
@@ -1382,7 +1403,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 			return false;
 
 		// run only if player is nightserizing from non-nights
-		if (fromnonights)
+		if (triggerline->args[6] == TMN_FROMNONIGHTS)
 		{
 			if (!actor->player)
 				return false;
@@ -1390,7 +1411,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 				return false;
 		}
 		// run only if player is nightserizing from nights
-		else if (fromnights)
+		else if (triggerline->args[6] == TMN_FROMNIGHTS)
 		{
 			if (!actor->player)
 				return false;
@@ -1400,8 +1421,8 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 	}
 
 	// Get current mare and lap (and check early return for DeNightserize)
-	if (perglobal || perglobalinverse
-		|| (specialtype >= 325 && specialtype <= 326 && (fromnonights || fromnights)))
+	if (checkplayer != TMNP_TRIGGERER
+		|| (specialtype == 325 && triggerline->args[6] != TMD_ALWAYS))
 	{
 		UINT8 playersarenights = 0;
 
@@ -1412,19 +1433,19 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 				continue;
 
 			// denightserize: run only if all players are not nights
-			if (specialtype >= 325 && specialtype <= 326 && fromnonights
+			if (specialtype == 325 && triggerline->args[6] == TMD_NOBODYNIGHTS
 				&& players[i].powers[pw_carry] == CR_NIGHTSMODE)
 				return false;
 
 			// count number of nights players for denightserize return
-			if (specialtype >= 325 && specialtype <= 326 && fromnights
+			if (specialtype == 325 && triggerline->args[6] == TMD_SOMEBODYNIGHTS
 				&& players[i].powers[pw_carry] == CR_NIGHTSMODE)
 				playersarenights++;
 
 			lap = lapfrombonustime ? players[i].marebonuslap : players[i].marelap;
 
 			// get highest mare/lap of players
-			if (perglobal)
+			if (checkplayer == TMNP_FASTEST)
 			{
 				if (players[i].mare > currentmare || currentmare == UINT8_MAX)
 				{
@@ -1436,7 +1457,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 					currentlap = lap;
 			}
 			// get lowest mare/lap of players
-			else if (perglobalinverse)
+			else if (checkplayer == TMNP_SLOWEST)
 			{
 				if (players[i].mare < currentmare || currentmare == UINT8_MAX)
 				{
@@ -1450,12 +1471,12 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 		}
 
 		// denightserize: run only if >0 players are nights
-		if (specialtype >= 325 && specialtype <= 326 && fromnights
+		if (specialtype == 325 && triggerline->args[6] == TMD_SOMEBODYNIGHTS
 			&& playersarenights < 1)
 			return false;
 	}
 	// get current mare/lap from triggering player
-	else if (!perglobal && !perglobalinverse)
+	else if (checkplayer == TMNP_TRIGGERER)
 	{
 		if (!actor->player)
 			return false;
@@ -1467,13 +1488,13 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 		return false; // special case: player->marebonuslap is 0 until passing through on bonus time. Don't trigger lines looking for inputlap 0.
 
 	// Compare current mare/lap to input mare/lap based on rules
-	if (!(specialtype >= 323 && specialtype <= 324 && donomares) // don't return false if donomares and we got this far
-		&& ((ltemare && currentmare > inputmare)
-		|| (gtemare && currentmare < inputmare)
-		|| (!ltemare && !gtemare && currentmare != inputmare)
-		|| (ltelap && currentlap > inputlap)
-		|| (gtelap && currentlap < inputlap)
-		|| (!ltelap && !gtelap && currentlap != inputlap))
+	if (!donomares // don't return false if donomares and we got this far
+		&& ((marecomp == TMC_LTE && currentmare > inputmare)
+		|| (marecomp == TMC_GTE && currentmare < inputmare)
+		|| (marecomp == TMC_EQUAL && currentmare != inputmare)
+		|| (lapcomp == TMC_LTE && currentlap > inputlap)
+		|| (lapcomp == TMC_GTE && currentlap < inputlap)
+		|| (lapcomp == TMC_EQUAL && currentlap != inputlap))
 		)
 		return false;
 
@@ -1690,14 +1711,10 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 					return false;
 			}
 			break;
-		case 323: // nightserize - each time
-		case 324: // nightserize - once
-		case 325: // denightserize - each time
-		case 326: // denightserize - once
-		case 327: // nights lap - each time
-		case 328: // nights lap - once
-		case 329: // nights egg capsule touch - each time
-		case 330: // nights egg capsule touch - once
+		case 323: // nightserize
+		case 325: // denightserize
+		case 327: // nights lap
+		case 329: // nights egg capsule touch
 			if (!P_CheckNightsTriggerLine(triggerline, actor))
 				return false;
 			break;
@@ -1846,10 +1863,10 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 318  // Unlockable trigger - Once
 	 || specialtype == 320  // Unlockable - Once
 	 || specialtype == 321 || specialtype == 322 // Trigger on X calls - Continuous + Each Time
-	 || specialtype == 324 // Nightserize - Once
-	 || specialtype == 326 // DeNightserize - Once
-	 || specialtype == 328 // Nights lap - Once
-	 || specialtype == 330 // Nights Bonus Time - Once
+	 || (specialtype == 323 && triggerline->args[0]) // Nightserize - Once
+	 || (specialtype == 325 && triggerline->args[0]) // DeNightserize - Once
+	 || (specialtype == 327 && triggerline->args[0]) // Nights lap - Once
+	 || (specialtype == 329 && triggerline->args[0]) // Nights Bonus Time - Once
 	 || specialtype == 333 // Skin - Once
 	 || specialtype == 336 // Dye - Once
 	 || specialtype == 399) // Level Load
@@ -6754,13 +6771,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			// NiGHTS trigger executors
 			case 323:
-			case 324:
 			case 325:
-			case 326:
 			case 327:
-			case 328:
 			case 329:
-			case 330:
 				break;
 
 			// Skin trigger executors

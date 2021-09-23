@@ -3682,6 +3682,79 @@ static void P_ConvertBinaryMap(void)
 			else
 				lines[i].args[1] = 255;
 			break;
+		case 323: //NiGHTSerize - Each time
+		case 324: //NiGHTSerize - Once
+		case 325: //DeNiGHTSerize - Each time
+		case 326: //DeNiGHTSerize - Once
+		case 327: //NiGHTS lap - Each time
+		case 328: //NiGHTS lap - Once
+		case 329: //Ideya capture touch - Each time
+		case 330: //Ideya capture touch - Once
+			lines[i].args[0] = (lines[i].special + 1) % 2;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[3] = TMC_LTE;
+			else if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[3] = TMC_GTE;
+			else
+				lines[i].args[3] = TMC_EQUAL;
+			if (lines[i].flags & ML_EFFECT1)
+				lines[i].args[4] = TMC_LTE;
+			else if (lines[i].flags & ML_EFFECT2)
+				lines[i].args[4] = TMC_GTE;
+			else
+				lines[i].args[4] = TMC_EQUAL;
+			if (lines[i].flags & ML_DONTPEGBOTTOM)
+				lines[i].args[5] = TMNP_SLOWEST;
+			else if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[5] = TMNP_TRIGGERER;
+			else
+				lines[i].args[5] = TMNP_FASTEST;
+			if (lines[i].special % 2 == 0)
+				lines[i].special--;
+			if (lines[i].special == 323)
+			{
+				if (lines[i].flags & ML_TFERLINE)
+					lines[i].args[6] = TMN_FROMNONIGHTS;
+				else if (lines[i].flags & ML_DONTPEGTOP)
+					lines[i].args[6] = TMN_FROMNIGHTS;
+				else
+					lines[i].args[6] = TMN_ALWAYS;
+
+				if (lines[i].flags & ML_EFFECT3)
+					lines[i].args[7] |= TMN_BONUSLAPS;
+				if (lines[i].flags & ML_BOUNCY)
+					lines[i].args[7] |= TMN_LEVELCOMPLETION;
+			}
+			else if (lines[i].special == 325)
+			{
+				if (lines[i].flags & ML_TFERLINE)
+					lines[i].args[6] = TMD_NOBODYNIGHTS;
+				else if (lines[i].flags & ML_DONTPEGTOP)
+					lines[i].args[6] = TMD_SOMEBODYNIGHTS;
+				else
+					lines[i].args[6] = TMD_ALWAYS;
+
+				lines[i].args[7] = !!(lines[i].flags & ML_EFFECT3);
+			}
+			else if (lines[i].special == 327)
+				lines[i].args[6] = !!(lines[i].flags & ML_EFFECT3);
+			else
+			{
+				if (lines[i].flags & ML_DONTPEGTOP)
+					lines[i].args[6] = TMS_ALWAYS;
+				else if (lines[i].flags & ML_BOUNCY)
+					lines[i].args[6] = TMS_IFNOTENOUGH;
+				else
+					lines[i].args[6] = TMS_IFENOUGH;
+
+				if (lines[i].flags & ML_EFFECT3)
+					lines[i].args[7] |= TMI_BONUSLAPS;
+				if (lines[i].flags & ML_TFERLINE)
+					lines[i].args[7] |= TMI_ENTER;
+			}
+			break;
 		case 400: //Set tagged sector's floor height/texture
 		case 401: //Set tagged sector's ceiling height/texture
 			lines[i].args[0] = tag;
