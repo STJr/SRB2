@@ -40,7 +40,7 @@
 	"{\n" \
 		"#ifdef SRB2_MODEL_LIGHTING\n" \
 		"float nDotVP = dot(gl_Normal, vec3(0, 1, 0));\n" \
-		"float light = 0.75 + max(nDotVP, 0.0);\n" \
+		"float light = min(0.75 + max(nDotVP, 0.0), 1.0);\n" \
 		"gl_FrontColor = vec4(light, light, light, 1.0);\n" \
 		"#else\n" \
 		"gl_FrontColor = gl_Color;\n" \
