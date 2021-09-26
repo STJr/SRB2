@@ -3304,17 +3304,21 @@ static void P_ConvertBinaryMap(void)
 					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
 					lines[i].args[1] = 128;
+
+				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
+				if (lines[i].args[1] == 256)
+					lines[i].args[2] |= TMFA_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
 
 			//Appearance
 			if (lines[i].special == 105)
-				lines[i].args[2] = TMFA_NOPLANES|TMFA_NOSIDES;
+				lines[i].args[2] |= TMFA_NOPLANES|TMFA_NOSIDES;
 			else if (lines[i].special == 104)
-				lines[i].args[2] = TMFA_NOSIDES;
+				lines[i].args[2] |= TMFA_NOSIDES;
 			else if (lines[i].special == 103)
-				lines[i].args[2] = TMFA_NOPLANES;
+				lines[i].args[2] |= TMFA_NOPLANES;
 			if (lines[i].special != 100 && (lines[i].special != 104 || !(lines[i].flags & ML_NOCLIMB)))
 				lines[i].args[2] |= TMFA_NOSHADE;
 			if (lines[i].flags & ML_EFFECT6)
@@ -3345,6 +3349,10 @@ static void P_ConvertBinaryMap(void)
 					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
 					lines[i].args[1] = 128;
+
+				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
+				if (lines[i].args[1] == 256)
+					lines[i].args[2] |= TMFW_SPLAT;
 			}
 
 			//No sides?
@@ -3387,15 +3395,19 @@ static void P_ConvertBinaryMap(void)
 					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
 					lines[i].args[1] = 128;
+
+				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
+				if (lines[i].args[1] == 256)
+					lines[i].args[2] |= TMFA_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
 
 			//Appearance
 			if (lines[i].special == 142 || lines[i].special == 145)
-				lines[i].args[2] = TMFA_NOSIDES;
+				lines[i].args[2] |= TMFA_NOSIDES;
 			else if (lines[i].special == 146)
-				lines[i].args[2] = TMFA_NOPLANES;
+				lines[i].args[2] |= TMFA_NOPLANES;
 			if (lines[i].special != 146 && (lines[i].flags & ML_NOCLIMB))
 				lines[i].args[2] |= TMFA_NOSHADE;
 			if (lines[i].flags & ML_EFFECT6)
@@ -3456,6 +3468,10 @@ static void P_ConvertBinaryMap(void)
 					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
 					lines[i].args[1] = 128;
+
+				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
+				if (lines[i].args[1] == 256)
+					lines[i].args[3] |= TMFC_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
@@ -3498,15 +3514,19 @@ static void P_ConvertBinaryMap(void)
 					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
 					lines[i].args[1] = 128;
+
+				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
+				if (lines[i].args[1] == 256)
+					lines[i].args[2] |= TMFA_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
 
 			//Appearance
 			if (lines[i].special == 193)
-				lines[i].args[2] = TMFA_NOPLANES|TMFA_NOSIDES;
+				lines[i].args[2] |= TMFA_NOPLANES|TMFA_NOSIDES;
 			if (lines[i].special >= 194)
-				lines[i].args[2] = TMFA_INSIDES;
+				lines[i].args[2] |= TMFA_INSIDES;
 			if (lines[i].special != 190 && (lines[i].special <= 193 || lines[i].flags & ML_NOCLIMB))
 				lines[i].args[2] |= TMFA_NOSHADE;
 			if (lines[i].flags & ML_EFFECT6)
@@ -3554,6 +3574,10 @@ static void P_ConvertBinaryMap(void)
 					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
 					lines[i].args[1] = 128;
+
+				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
+				if (lines[i].args[1] == 256)
+					lines[i].args[2] |= TMFA_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
@@ -3561,7 +3585,7 @@ static void P_ConvertBinaryMap(void)
 			//Appearance
 			if (lines[i].special == 222)
 				lines[i].args[2] |= TMFA_NOPLANES;
-			if (lines[i].special != 221)
+			if (lines[i].special == 221)
 				lines[i].args[2] |= TMFA_INSIDES;
 			if (lines[i].special != 220 && !(lines[i].flags & ML_NOCLIMB))
 				lines[i].args[2] |= TMFA_NOSHADE;
@@ -3611,6 +3635,10 @@ static void P_ConvertBinaryMap(void)
 					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
 					lines[i].args[1] = 128;
+
+				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
+				if (lines[i].args[1] == 256)
+					lines[i].args[3] |= TMFB_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
@@ -3659,7 +3687,8 @@ static void P_ConvertBinaryMap(void)
 			//Flags
 			if (lines[i].flags & ML_EFFECT1)
 				lines[i].args[2] = TMFL_NOBOSSES;
-			if (lines[i].flags & ML_EFFECT6)
+			//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
+			if (lines[i].flags & ML_EFFECT6 || lines[i].args[1] == 256)
 				lines[i].args[2] = TMFL_SPLAT;
 
 			break;
@@ -3678,6 +3707,10 @@ static void P_ConvertBinaryMap(void)
 					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
 				else
 					lines[i].args[1] = 128;
+
+				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
+				if (lines[i].args[1] == 256)
+					lines[i].args[2] |= FF_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
