@@ -5426,7 +5426,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	}
 
 	fflr->alpha = max(0, min(0xff, alpha));
-	if (fflr->alpha < 0xff)
+	if (fflr->alpha < 0xff || flags & FF_SPLAT)
 	{
 		fflr->flags |= FF_TRANSLUCENT;
 		fflr->spawnflags = fflr->flags;
@@ -5451,7 +5451,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 
 	if ((flags & FF_FLOATBOB))
 	{
-		P_AddFloatThinker(sec2, Tag_FGet(&master->tags), master);
+		P_AddFloatThinker(sec2, master->args[0], master);
 		CheckForFloatBob = true;
 	}
 
@@ -5631,7 +5631,7 @@ static inline void P_AddThwompThinker(sector_t *sec, line_t *sourceline, fixed_t
 	thwomp->floorstartheight = sec->floorheight;
 	thwomp->ceilingstartheight = sec->ceilingheight;
 	thwomp->delay = 1;
-	thwomp->tag = Tag_FGet(&sourceline->tags);
+	thwomp->tag = sourceline->args[0];
 	thwomp->sound = sound;
 
 	sec->floordata = thwomp;
@@ -6250,7 +6250,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						if (lines[l].special < 100 || lines[l].special >= 300)
 							continue;
 
-						P_AddThwompThinker(lines[l].frontsector, &lines[l], lines[i].args[1] << FRACBITS, lines[i].args[2] << FRACBITS, sound);
+						P_AddThwompThinker(lines[l].frontsector, &lines[l], lines[i].args[1] << (FRACBITS - 3), lines[i].args[2] << (FRACBITS - 3), sound);
 					}
 				}
 				break;
@@ -6438,7 +6438,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						ffloorflags |= FF_CUTLEVEL;
 				}
 
-				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
 				P_AddRaiseThinker(lines[i].frontsector, lines[i].args[0], lines[i].args[4] << FRACBITS, ceilingtop, ceilingbottom, !!(lines[i].args[5] & TMFR_REVERSE), !!(lines[i].args[5] & TMFR_SPINDASH));
 				break;
 			}
@@ -6485,7 +6485,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[2] & TMFA_SPLAT)
 					ffloorflags |= FF_SPLAT;
 
-				P_AddFakeFloorsByLine(i, (ffloorflags & FF_TRANSLUCENT) ? (lines[i].alpha * 0xff) >> FRACBITS : 0xff, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
 				break;
 
 			case 223: // FOF (intangible, invisible) - for combining specials in a sector
@@ -6505,7 +6505,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 251: // A THWOMP!
 			{
 				UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
-				P_AddThwompThinker(lines[i].frontsector, &lines[i], lines[i].args[1] << FRACBITS, lines[i].args[2] << FRACBITS, sound);
+				P_AddThwompThinker(lines[i].frontsector, &lines[i], lines[i].args[1] << (FRACBITS - 3), lines[i].args[2] << (FRACBITS - 3), sound);
 				P_AddFakeFloorsByLine(i, 0xff, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				break;
 			}
@@ -6550,6 +6550,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], ffloorflags, secthinkers);
+					if (!fflr)
+						continue;
 					fflr->busttype = busttype;
 					fflr->specialflags = bustflags;
 					fflr->busttag = lines[i].args[4];
@@ -6564,6 +6566,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, 0xff, ffloorflags, secthinkers);
+					if (!fflr)
+						continue;
 					fflr->sinkspeed = abs(lines[i].args[2]) << (FRACBITS - 1);
 					fflr->friction = abs(lines[i].args[3]) << (FRACBITS - 6);
 				}
@@ -6581,6 +6585,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], lines[i].args[2], secthinkers);
+					if (!fflr)
+						continue;
 					if (!udmf) // Ugly backwards compatibility stuff
 					{
 						if (lines[i].args[2] & FF_QUICKSAND)
@@ -7239,7 +7245,7 @@ void T_Scroll(scroll_t *s)
 				if (!is3dblock)
 					continue;
 
-				TAG_ITER_SECTORS(Tag_FGet(&line->tags), sect)
+				TAG_ITER_SECTORS(line->args[0], sect)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
@@ -7314,7 +7320,7 @@ void T_Scroll(scroll_t *s)
 
 				if (!is3dblock)
 					continue;
-				TAG_ITER_SECTORS(Tag_FGet(&line->tags), sect)
+				TAG_ITER_SECTORS(line->args[0], sect)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
@@ -7533,7 +7539,7 @@ void T_Disappear(disappear_t *d)
 	{
 		ffloor_t *rover;
 		register INT32 s;
-		mtag_t afftag = Tag_FGet(&lines[d->affectee].tags);
+		mtag_t afftag = lines[d->affectee].args[0];
 
 		TAG_ITER_SECTORS(afftag, s)
 		{
