@@ -634,7 +634,6 @@ void T_BounceCheese(bouncecheese_t *bouncer)
 	sector_t *actionsector;
 	boolean remove;
 	INT32 i;
-	mtag_t tag = Tag_FGet(&bouncer->sourceline->tags);
 
 	if (bouncer->sector->crumblestate == CRUMBLE_RESTORE || bouncer->sector->crumblestate == CRUMBLE_WAIT
 		|| bouncer->sector->crumblestate == CRUMBLE_ACTIVATED) // Oops! Crumbler says to remove yourself!
@@ -649,7 +648,7 @@ void T_BounceCheese(bouncecheese_t *bouncer)
 	}
 
 	// You can use multiple target sectors, but at your own risk!!!
-	TAG_ITER_SECTORS(tag, i)
+	TAG_ITER_SECTORS(bouncer->sourceline->args[0], i)
 	{
 		actionsector = &sectors[i];
 		actionsector->moved = true;
@@ -773,7 +772,7 @@ void T_StartCrumble(crumble_t *crumble)
 	ffloor_t *rover;
 	sector_t *sector;
 	INT32 i;
-	mtag_t tag = Tag_FGet(&crumble->sourceline->tags);
+	mtag_t tag = crumble->sourceline->args[0];
 
 	// Once done, the no-return thinker just sits there,
 	// constantly 'returning'... kind of an oxymoron, isn't it?
@@ -1301,14 +1300,13 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 		for (i = 0; i < sec->linecount; i++)
 		{
 			INT32 targetsecnum = -1;
-			mtag_t tag2 = Tag_FGet(&sec->lines[i]->tags);
 
 			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
 				continue;
 
 			FOFsector = true;
 
-			TAG_ITER_SECTORS(tag2, targetsecnum)
+			TAG_ITER_SECTORS(sec->lines[i]->args[0], targetsecnum)
 			{
 				if (T_SectorHasEnemies(&sectors[targetsecnum]))
 					return;
@@ -1421,14 +1419,13 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 		for (i = 0; i < sec->linecount; i++)
 		{
 			INT32 targetsecnum = -1;
-			mtag_t tag2 = Tag_FGet(&sec->lines[i]->tags);
 
 			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
 				continue;
 
 			FOFsector = true;
 
-			TAG_ITER_SECTORS(tag2, targetsecnum)
+			TAG_ITER_SECTORS(sec->lines[i]->args[0], targetsecnum)
 			{
 				targetsec = &sectors[targetsecnum];
 
@@ -2418,7 +2415,7 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		block->direction = 1;
 		block->floorstartheight = block->sector->floorheight;
 		block->ceilingstartheight = block->sector->ceilingheight;
-		block->tag = (INT16)Tag_FGet(&sector->tags);
+		block->tag = (INT16)rover->master->args[0];
 
 		if (itsamonitor)
 		{

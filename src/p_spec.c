@@ -5660,7 +5660,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 
 	if ((flags & FF_FLOATBOB))
 	{
-		P_AddFloatThinker(sec2, Tag_FGet(&master->tags), master);
+		P_AddFloatThinker(sec2, master->args[0], master);
 		CheckForFloatBob = true;
 	}
 
@@ -5840,7 +5840,7 @@ static inline void P_AddThwompThinker(sector_t *sec, line_t *sourceline, fixed_t
 	thwomp->floorstartheight = sec->floorheight;
 	thwomp->ceilingstartheight = sec->ceilingheight;
 	thwomp->delay = 1;
-	thwomp->tag = Tag_FGet(&sourceline->tags);
+	thwomp->tag = sourceline->args[0];
 	thwomp->sound = sound;
 
 	sec->floordata = thwomp;
@@ -7477,7 +7477,7 @@ void T_Scroll(scroll_t *s)
 				if (!is3dblock)
 					continue;
 
-				TAG_ITER_SECTORS(Tag_FGet(&line->tags), sect)
+				TAG_ITER_SECTORS(line->args[0], sect)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
@@ -7552,7 +7552,7 @@ void T_Scroll(scroll_t *s)
 
 				if (!is3dblock)
 					continue;
-				TAG_ITER_SECTORS(Tag_FGet(&line->tags), sect)
+				TAG_ITER_SECTORS(line->args[0], sect)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
@@ -7828,7 +7828,7 @@ void T_Disappear(disappear_t *d)
 	{
 		ffloor_t *rover;
 		register INT32 s;
-		mtag_t afftag = Tag_FGet(&lines[d->affectee].tags);
+		mtag_t afftag = lines[d->affectee].args[0];
 
 		TAG_ITER_SECTORS(afftag, s)
 		{
