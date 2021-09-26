@@ -1235,7 +1235,7 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 	sector_t *sec = NULL;
 	INT32 secnum = -1;
 	boolean FOFsector = false;
-	mtag_t tag = Tag_FGet(&nobaddies->sourceline->tags);
+	mtag_t tag = nobaddies->sourceline->args[0];
 
 	TAG_ITER_SECTORS(tag, secnum)
 	{

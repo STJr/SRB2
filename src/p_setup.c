@@ -3715,6 +3715,9 @@ static void P_ConvertBinaryMap(void)
 			else
 				lines[i].args[1] = 255;
 			break;
+		case 313: //No more enemies - once
+			lines[i].args[0] = tag;
+			break;
 		case 323: //NiGHTSerize - Each time
 		case 324: //NiGHTSerize - Once
 		case 325: //DeNiGHTSerize - Each time
