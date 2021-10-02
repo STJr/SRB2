@@ -43,6 +43,7 @@
 #endif
 
 #include "lua_hud.h"
+#include "lua_hook.h"
 
 UINT16 objectsdrawn = 0;
 
@@ -1391,7 +1392,7 @@ void ST_drawTitleCard(void)
 	lt_lasttic = lt_ticker;
 
 luahook:
-	LUAh_TitleCardHUD(stplyr);
+	LUA_HUDHOOK(titlecard);
 }
 
 //
@@ -2732,7 +2733,7 @@ static void ST_overlayDrawer(void)
 		ST_drawPowerupHUD(); // same as it ever was...
 
 	if (!(netgame || multiplayer) || !hu_showscores)
-		LUAh_GameHUD(stplyr);
+		LUA_HUDHOOK(game);
 
 	// draw level title Tails
 	if (stagetitle && (!WipeInAction) && (!WipeStageTitle))

@@ -443,6 +443,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
 		break;
 	case RET_PK3:
+	case RET_FOLDER:
 		start = W_CheckNumForFolderStartPK3("Sprites/", wadnum, 0);
 		end = W_CheckNumForFolderEndPK3("Sprites/", wadnum, start);
 		break;
@@ -1956,9 +1957,12 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->paperoffset = paperoffset;
 	vis->paperdistance = paperdistance;
 	vis->centerangle = centerangle;
-	vis->viewangle = viewangle;
 	vis->shear.tan = sheartan;
 	vis->shear.offset = 0;
+	vis->viewpoint.x = viewx;
+	vis->viewpoint.y = viewy;
+	vis->viewpoint.z = viewz;
+	vis->viewpoint.angle = viewangle;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 
