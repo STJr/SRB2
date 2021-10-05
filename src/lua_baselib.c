@@ -2818,6 +2818,7 @@ static int lib_sStartSound(lua_State *L)
 	void *origin = NULL;
 	sfxenum_t sound_id = luaL_checkinteger(L, 2);
 	player_t *player = NULL;
+	INT16 loops;
 	//NOHUD
 
 	if (sound_id >= NUMSFX)
@@ -2829,6 +2830,9 @@ static int lib_sStartSound(lua_State *L)
 		if (!player)
 			return LUA_ErrInvalid(L, "player_t");
 	}
+
+	loops = (INT16)luaL_optinteger(L, 4, 0);
+
 	if (!lua_isnil(L, 1))
 		if (!GetValidSoundOrigin(L, &origin))
 			return 0;
@@ -2837,7 +2841,7 @@ static int lib_sStartSound(lua_State *L)
 		if (hud_running || hook_cmd_running)
 			origin = NULL;	// HUD rendering and CMD building startsound shouldn't have an origin, just remove it instead of having a retarded error.
 
-		S_StartSound(origin, sound_id);
+		S_StartSoundEx(origin, sound_id, loops);
 	}
 	return 0;
 }
@@ -2848,6 +2852,7 @@ static int lib_sStartSoundAtVolume(lua_State *L)
 	sfxenum_t sound_id = luaL_checkinteger(L, 2);
 	INT32 volume = (INT32)luaL_checkinteger(L, 3);
 	player_t *player = NULL;
+	INT16 loops;
 	//NOHUD
 
 	if (sound_id >= NUMSFX)
@@ -2862,8 +2867,10 @@ static int lib_sStartSoundAtVolume(lua_State *L)
 		if (!GetValidSoundOrigin(L, &origin))
 			return LUA_ErrInvalid(L, "mobj_t/sector_t");
 
+	loops = (INT16)luaL_optinteger(L, 5, 0);
+
 	if (!player || P_IsLocalPlayer(player))
-		S_StartSoundAtVolume(origin, sound_id, volume);
+		S_StartSoundAtVolumeEx(origin, sound_id, volume, loops);
 	return 0;
 }
 

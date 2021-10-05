@@ -140,12 +140,15 @@ lumpnum_t S_GetSfxLumpNum(sfxinfo_t *sfx);
 boolean S_SoundDisabled(void);
 
 //
-// Start sound for thing at <origin> using <sound_id> from sounds.h
+// Start sound for thing at <origin> using <sound_id> from sounds.h, looped <loops> times
 //
-void S_StartSound(const void *origin, sfxenum_t sound_id);
+void S_StartSoundEx(const void *origin, sfxenum_t sound_id, INT16 loops);
 
 // Will start a sound at a given volume.
-void S_StartSoundAtVolume(const void *origin, sfxenum_t sound_id, INT32 volume);
+void S_StartSoundAtVolumeEx(const void *origin, sfxenum_t sound_id, INT32 volume, INT16 loops);
+
+#define S_StartSoundAtVolume(a, b, c) S_StartSoundAtVolumeEx(a, b, c, 0)
+#define S_StartSound(a, b) S_StartSoundEx(a, b, 0)
 
 // Stop sound for thing at <origin>
 void S_StopSound(void *origin);
@@ -162,7 +165,7 @@ boolean S_MusicPaused(void);
 boolean S_MusicNotInFocus(void);
 musictype_t S_MusicType(void);
 const char *S_MusicName(void);
-boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
+boolean S_MusicExists(const char *mnaame, boolean checkMIDI, boolean checkDigi);
 #define S_DigExists(a) S_MusicExists(a, false, true)
 #define S_MIDIExists(a) S_MusicExists(a, true, false)
 
@@ -319,7 +322,7 @@ INT32 S_OriginPlaying(void *origin);
 INT32 S_IdPlaying(sfxenum_t id);
 INT32 S_SoundPlaying(void *origin, sfxenum_t id);
 
-void S_StartSoundName(void *mo, const  char *soundname);
+void S_StartSoundName(void *mo, const char *soundname);
 
 void S_StopSoundByID(void *origin, sfxenum_t sfx_id);
 void S_StopSoundByNum(sfxenum_t sfxnum);

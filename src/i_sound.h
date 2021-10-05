@@ -75,10 +75,11 @@ void I_ShutdownSound(void);
 	\param	sep	left-right balancle
 	\param	pitch	not used
 	\param	priority	not used
+	\parm   loops number of loops to play
 
 	\return	sfx handle
 */
-INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel);
+INT32 I_StartSound(sfxenum_t id, UINT8 vol, UINT8 sep, UINT8 pitch, UINT8 priority, INT32 channel, INT16 loops);
 
 /**	\brief	Stops a sound channel.
 

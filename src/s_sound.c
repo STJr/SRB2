@@ -516,7 +516,7 @@ void S_StartCaption(sfxenum_t sfx_id, INT32 cnum, UINT16 lifespan)
 	closedcaptions[set].b = 2; // bob
 }
 
-void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
+void S_StartSoundAtVolumeEx(const void *origin_p, sfxenum_t sfx_id, INT32 volume, INT16 loops)
 {
 	const INT32 initial_volume = volume;
 	INT32 sep, pitch, priority, cnum;
@@ -663,7 +663,7 @@ void S_StartSoundAtVolume(const void *origin_p, sfxenum_t sfx_id, INT32 volume)
 
 		// Assigns the handle to one of the channels in the
 		// mix/output buffer.
-		channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
+		channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum, loops);
 	}
 
 dontplay:
@@ -717,10 +717,10 @@ dontplay:
 	// Assigns the handle to one of the channels in the
 	// mix/output buffer.
 	channels[cnum].volume = initial_volume;
-	channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum);
+	channels[cnum].handle = I_StartSound(sfx_id, volume, sep, pitch, priority, cnum, loops);
 }
 
-void S_StartSound(const void *origin, sfxenum_t sfx_id)
+void S_StartSoundEx(const void *origin, sfxenum_t sfx_id, INT16 loops)
 {
 	if (S_SoundDisabled())
 		return;
@@ -792,7 +792,7 @@ void S_StartSound(const void *origin, sfxenum_t sfx_id)
 		HW3S_StartSound(origin, sfx_id);
 	else
 #endif
-		S_StartSoundAtVolume(origin, sfx_id, 255);
+		S_StartSoundAtVolumeEx(origin, sfx_id, 255, loops);
 }
 
 void S_StopSound(void *origin)
