@@ -1489,7 +1489,7 @@ UINT8 *HWR_GetScreenshot(void)
 	if (!buf)
 		return NULL;
 	// returns 24bit 888 RGB
-	HWD.pfnReadRect(tex, (void *)buf);
+	HWD.pfnReadScreenTexture(tex, (void *)buf);
 	return buf;
 }
 
@@ -1506,7 +1506,7 @@ boolean HWR_Screenshot(const char *pathname)
 	}
 
 	// returns 24bit 888 RGB
-	HWD.pfnReadRect(tex, (void *)buf);
+	HWD.pfnReadScreenTexture(tex, (void *)buf);
 
 #ifdef USE_PNG
 	ret = M_SavePNG(pathname, buf, vid.width, vid.height, NULL);

@@ -1166,18 +1166,14 @@ EXPORT void HWRAPI(ClearMipMapCache) (void)
 // Writes screen texture tex into dst_data.
 // Pixel format is 24-bit RGB. Row order is top to bottom.
 // Dimensions are screen_width * screen_height.
-// TODO should rename to ReadScreenTexture
-EXPORT void HWRAPI(ReadRect) (int tex, UINT8 *dst_data)
+EXPORT void HWRAPI(ReadScreenTexture) (int tex, UINT8 *dst_data)
 {
 	INT32 i;
 	int dst_stride = screen_width * 3; // stride between rows of image data
 	GLubyte*top = (GLvoid*)dst_data, *bottom = top + dst_stride * (screen_height - 1);
-	//precise_t ts1, ts2, ts3, ts4, ts5, total_time, get_time, loop_time;
 	GLubyte *row;
-	//ts1 = I_GetPreciseTime();
 	row = malloc(dst_stride);
 	if (!row) return;
-	//ts2 = I_GetPreciseTime();
 	// at the time this function is called, generic2 can be found drawn on the framebuffer
 	// if some other screen texture is needed, draw it to the framebuffer
 	// and draw generic2 back after reading the framebuffer.
@@ -1188,7 +1184,6 @@ EXPORT void HWRAPI(ReadRect) (int tex, UINT8 *dst_data)
 	pglReadPixels(0, 0, screen_width, screen_height, GL_RGB, GL_UNSIGNED_BYTE, dst_data);
 	if (tex != HWD_SCREENTEXTURE_GENERIC2)
 		DrawScreenTexture(HWD_SCREENTEXTURE_GENERIC2);
-	//ts3 = I_GetPreciseTime();
 	// Flip image upside down.
 	// In other words, convert OpenGL's "bottom->top" row order into "top->bottom".
 	for(i = 0; i < screen_height/2; i++)
@@ -1199,47 +1194,7 @@ EXPORT void HWRAPI(ReadRect) (int tex, UINT8 *dst_data)
 		top += dst_stride;
 		bottom -= dst_stride;
 	}
-	//ts4 = I_GetPreciseTime();
 	free(row);
-	//ts5 = I_GetPreciseTime();
-	//total_time = I_PreciseToMicros(ts5 - ts1);
-	//get_time = I_PreciseToMicros(ts3 - ts2);
-	//loop_time = I_PreciseToMicros(ts4 - ts3);
-	//CONS_Printf("ReadRect: total time: %" PRIu64 ", read pixels thing: %" PRIu64 " memcpy loop: %" PRIu64 "\n", total_time, get_time, loop_time);
-
-	// the slow glGetTexImage based implementation. left in here in case i wanna test it more
-	// TODO remove this at some point
-
-	/*int texsize = 512;
-	GLsizei buffer_size;
-	GLubyte *buffer;
-	// GL_DBG_Printf ("ReadRect()\n");
-	precise_t ts1, ts2, ts3, ts4, ts5, total_time, get_time, loop_time;
-	ts1 = I_GetPreciseTime();
-	// look for power of two that is large enough for the screen
-	while (texsize < screen_width || texsize < screen_height)
-		texsize <<= 1;
-	buffer_size = texsize * texsize * 4;
-	buffer = malloc(buffer_size);
-	tex_downloaded = screenTextures[tex];
-	pglBindTexture(GL_TEXTURE_2D, tex_downloaded);
-	ts2 = I_GetPreciseTime();
-	pglGetTexImage(GL_TEXTURE_2D, 0, GL_BGRA, GL_UNSIGNED_BYTE, buffer); // GL better not overwrite my buffer :v
-	ts3 = I_GetPreciseTime();
-	//for (i = 0; i < screen_height; i++) // i: pixel row index that we are writing
-	//{
-	//	// read the frame from the lower left corner of the GL screen texture
-	//	// flip it upside down so it's in correct format
-	//	memcpy(dst_data + (screen_height - i - 1) * screen_width * 3,
-	//		buffer + i * texsize * 3, screen_width * 3);
-	//}
-	ts4 = I_GetPreciseTime();
-	free(buffer);
-	ts5 = I_GetPreciseTime();
-	total_time = I_PreciseToMicros(ts5 - ts1);
-	get_time = I_PreciseToMicros(ts3 - ts2);
-	loop_time = I_PreciseToMicros(ts4 - ts3);
-	CONS_Printf("ReadRect: total time: %" PRIu64 ", glGetTexImage: %" PRIu64 " memcpy loop: %" PRIu64 "\n", total_time, get_time, loop_time);*/
 }
 
 
@@ -3015,14 +2970,6 @@ EXPORT void HWRAPI(FlushScreenTextures) (void)
 	for (i = 0; i < NUMSCREENTEXTURES; i++)
 		screenTextures[i] = 0;
 }
-
-EXPORT void HWRAPI(SwapScreenTextures) (int tex1, int tex2)
-{
-	GLuint temp = screenTextures[tex1];
-	screenTextures[tex1] = screenTextures[tex2];
-	screenTextures[tex2] = temp;
-}
-
 
 EXPORT void HWRAPI(DrawScreenTexture)(int tex)
 {

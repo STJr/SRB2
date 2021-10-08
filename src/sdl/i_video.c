@@ -1869,7 +1869,7 @@ void VID_StartupOpenGL(void)
 		HWD.pfnSetTexture       = hwSym("SetTexture",NULL);
 		HWD.pfnUpdateTexture    = hwSym("UpdateTexture",NULL);
 		HWD.pfnDeleteTexture    = hwSym("DeleteTexture",NULL);
-		HWD.pfnReadRect         = hwSym("ReadRect",NULL);
+		HWD.pfnReadScreenTexture= hwSym("ReadScreenTexture",NULL);
 		HWD.pfnGClipRect        = hwSym("GClipRect",NULL);
 		HWD.pfnClearMipMapCache = hwSym("ClearMipMapCache",NULL);
 		HWD.pfnSetSpecialState  = hwSym("SetSpecialState",NULL);
@@ -1880,7 +1880,6 @@ void VID_StartupOpenGL(void)
 		HWD.pfnSetTransform     = hwSym("SetTransform",NULL);
 		HWD.pfnPostImgRedraw    = hwSym("PostImgRedraw",NULL);
 		HWD.pfnFlushScreenTextures=hwSym("FlushScreenTextures",NULL);
-		HWD.pfnSwapScreenTextures=hwSym("SwapScreenTextures",NULL);
 		HWD.pfnDoScreenWipe     = hwSym("DoScreenWipe",NULL);
 		HWD.pfnDrawScreenTexture= hwSym("DrawScreenTexture",NULL);
 		HWD.pfnMakeScreenTexture= hwSym("MakeScreenTexture",NULL);

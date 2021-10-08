@@ -87,7 +87,7 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(SetTexture);
 	GETFUNC(UpdateTexture);
 	GETFUNC(DeleteTexture);
-	GETFUNC(ReadRect);
+	GETFUNC(ReadScreenTexture);
 	GETFUNC(GClipRect);
 	GETFUNC(ClearMipMapCache);
 	GETFUNC(SetSpecialState);
@@ -97,7 +97,6 @@ void *hwSym(const char *funcName,void *handle)
 	GETFUNC(SetTransform);
 	GETFUNC(PostImgRedraw);
 	GETFUNC(FlushScreenTextures);
-	GETFUNC(SwapScreenTextures);
 	GETFUNC(DoScreenWipe);
 	GETFUNC(DrawScreenTexture);
 	GETFUNC(MakeScreenTexture);
