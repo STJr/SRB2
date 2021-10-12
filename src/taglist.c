@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
-// Copyright (C)      2020 by Nev3r.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 2020-2021 by Nev3r.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,11 +27,13 @@ taggroup_t* tags_sectors[MAXTAGS + 1];
 taggroup_t* tags_lines[MAXTAGS + 1];
 taggroup_t* tags_mapthings[MAXTAGS + 1];
 
-/// Adds a tag to a given element's taglist.
+/// Adds a tag to a given element's taglist. It will not add a duplicate.
 /// \warning This does not rebuild the global taggroups, which are used for iteration.
 void Tag_Add (taglist_t* list, const mtag_t tag)
 {
-	list->tags = Z_Realloc(list->tags, (list->count + 1) * sizeof(list->tags), PU_LEVEL, NULL);
+	if (Tag_Find(list, tag))
+		return;
+	list->tags = Z_Realloc(list->tags, (list->count + 1) * sizeof(mtag_t), PU_LEVEL, NULL);
 	list->tags[list->count++] = tag;
 }
 

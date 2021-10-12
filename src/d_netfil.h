@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -38,6 +38,7 @@ typedef enum
 typedef struct
 {
 	UINT8 willsend; // Is the server willing to send it?
+	UINT8 folder; // File is a folder
 	char filename[MAX_WADPATH];
 	UINT8 md5sum[16];
 	filestatus_t status; // The value returned by recsearch
@@ -53,6 +54,8 @@ typedef struct
 	UINT32 totalsize;
 	UINT32 ackresendposition; // Used when resuming downloads
 } fileneeded_t;
+
+#define FILENEEDEDSIZE 23
 
 extern INT32 fileneedednum;
 extern fileneeded_t fileneeded[MAX_WADFILES];
@@ -85,10 +88,11 @@ boolean PT_RequestFile(INT32 node);
 
 typedef enum
 {
+	LFTNS_NONE,    // This node is not connected
 	LFTNS_WAITING, // This node is waiting for the server to send the file
-	LFTNS_ASKED, // The server has told the node they're ready to send the file
+	LFTNS_ASKED,   // The server has told the node they're ready to send the file
 	LFTNS_SENDING, // The server is sending the file to this node
-	LFTNS_SENT // The node already has the file
+	LFTNS_SENT     // The node already has the file
 } luafiletransfernodestatus_t;
 
 typedef struct luafiletransfer_s
@@ -99,6 +103,7 @@ typedef struct luafiletransfer_s
 	INT32 id; // Callback ID
 	boolean ongoing;
 	luafiletransfernodestatus_t nodestatus[MAXNETNODES];
+	tic_t nodetimeouts[MAXNETNODES];
 	struct luafiletransfer_s *next;
 } luafiletransfer_t;
 
@@ -132,6 +137,9 @@ boolean fileexist(char *filename, time_t ptime);
 filestatus_t findfile(char *filename, const UINT8 *wantedmd5sum,
 	boolean completepath);
 filestatus_t checkfilemd5(char *filename, const UINT8 *wantedmd5sum);
+
+// Searches for a folder
+filestatus_t findfolder(const char *path);
 
 void nameonly(char *s);
 size_t nameonlylength(const char *s);

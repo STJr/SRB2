@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -68,7 +68,6 @@ EXPORT void HWRAPI(DrawScreenFinalTexture) (int width, int height);
 #define SCREENVERTS 10
 EXPORT void HWRAPI(PostImgRedraw) (float points[SCREENVERTS][SCREENVERTS][2]);
 
-// jimita
 EXPORT boolean HWRAPI(CompileShaders) (void);
 EXPORT void HWRAPI(CleanShaders) (void);
 EXPORT void HWRAPI(SetShader) (int type);
