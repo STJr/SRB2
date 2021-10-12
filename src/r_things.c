@@ -1265,6 +1265,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	vissprite_t *shadow;
 	patch_t *patch;
 	fixed_t xscale, yscale, shadowxscale, shadowyscale, shadowskew, x1, x2;
+	INT32 heightsec, phs;
 	INT32 light = 0;
 	fixed_t scalemul; UINT8 trans;
 	fixed_t floordiff;
@@ -1275,6 +1276,24 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	groundz = R_GetShadowZ(thing, &groundslope);
 
 	if (abs(groundz-viewz)/tz > 4) return; // Prevent stretchy shadows and possible crashes
+
+	heightsec = thing->subsector->sector->heightsec;
+	if (viewplayer->mo && viewplayer->mo->subsector)
+		phs = viewplayer->mo->subsector->sector->heightsec;
+	else
+		phs = -1;
+
+	if (heightsec != -1 && phs != -1) // only clip things which are in special sectors
+	{
+		if (viewz < sectors[phs].floorheight ?
+		groundz >= sectors[heightsec].floorheight :
+		groundz < sectors[heightsec].floorheight)
+			return;
+		if (viewz > sectors[phs].ceilingheight ?
+		groundz < sectors[heightsec].ceilingheight && viewz >= sectors[heightsec].ceilingheight :
+		groundz >= sectors[heightsec].ceilingheight)
+			return;
+	}
 
 	floordiff = abs((isflipped ? thing->height : 0) + thing->z - groundz);
 
