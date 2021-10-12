@@ -724,7 +724,7 @@ Rloadflats (INT32 i, INT32 w)
 	texpatch_t *patch;
 
 	// Yes
-	if (wadfiles[w]->type == RET_PK3)
+	if (W_FileHasFolders(wadfiles[w]))
 	{
 		texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
 		texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
@@ -746,7 +746,7 @@ Rloadflats (INT32 i, INT32 w)
 			size_t lumplength;
 			size_t flatsize;
 
-			if (wadfiles[w]->type == RET_PK3)
+			if (W_FileHasFolders(wadfiles[w]))
 			{
 				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
 					continue; // If it is then SKIP IT
@@ -812,7 +812,7 @@ Rloadtextures (INT32 i, INT32 w)
 	texpatch_t *patch;
 
 	// Get the lump numbers for the markers in the WAD, if they exist.
-	if (wadfiles[w]->type == RET_PK3)
+	if (W_FileHasFolders(wadfiles[w]))
 	{
 		texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
 		texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
@@ -843,7 +843,7 @@ Rloadtextures (INT32 i, INT32 w)
 			size_t lumplength;
 #endif
 
-			if (wadfiles[w]->type == RET_PK3)
+			if (W_FileHasFolders(wadfiles[w]))
 			{
 				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
 					continue; // If it is then SKIP IT
@@ -932,7 +932,7 @@ void R_LoadTextures(void)
 	{
 #ifdef WALLFLATS
 		// Count flats
-		if (wadfiles[w]->type == RET_PK3)
+		if (W_FileHasFolders(wadfiles[w]))
 		{
 			texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
 			texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
@@ -946,7 +946,7 @@ void R_LoadTextures(void)
 		if (!( texstart == INT16_MAX || texend == INT16_MAX ))
 		{
 			// PK3s have subfolders, so we can't just make a simple sum
-			if (wadfiles[w]->type == RET_PK3)
+			if (W_FileHasFolders(wadfiles[w]))
 			{
 				for (j = texstart; j < texend; j++)
 				{
@@ -970,7 +970,7 @@ void R_LoadTextures(void)
 		}
 
 		// Count single-patch textures
-		if (wadfiles[w]->type == RET_PK3)
+		if (W_FileHasFolders(wadfiles[w]))
 		{
 			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
 			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
@@ -985,7 +985,7 @@ void R_LoadTextures(void)
 			continue;
 
 		// PK3s have subfolders, so we can't just make a simple sum
-		if (wadfiles[w]->type == RET_PK3)
+		if (W_FileHasFolders(wadfiles[w]))
 		{
 			for (j = texstart; j < texend; j++)
 			{
@@ -1526,6 +1526,7 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 					continue;
 			break;
 		case RET_PK3:
+		case RET_FOLDER:
 			if ((start = W_CheckNumForFolderStartPK3("Flats/", i, 0)) == INT16_MAX)
 				continue;
 			if ((end = W_CheckNumForFolderEndPK3("Flats/", i, start)) == INT16_MAX)
