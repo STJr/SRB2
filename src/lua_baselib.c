@@ -187,6 +187,8 @@ static const struct {
 	{META_MAPHEADER,    "mapheader_t"},
 
 	{META_POLYOBJ,      "polyobj_t"},
+	{META_POLYOBJVERTICES, "polyobj_t.vertices"},
+	{META_POLYOBJLINES, "polyobj_t.lines"},
 
 	{META_CVAR,         "consvar_t"},
 
@@ -216,6 +218,7 @@ static const struct {
 
 	{META_LUABANKS,     "luabanks[]"},
 
+	{META_KEYEVENT,     "keyevent_t"},
 	{META_MOUSE,        "mouse_t"},
 	{NULL,              NULL}
 };
