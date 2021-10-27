@@ -2040,7 +2040,7 @@ void P_SwitchWeather(INT32 weathernum)
 				continue; // not a precipmobj thinker
 			precipmobj = (precipmobj_t *)think;
 
-			if (weathernum == (PRECIP_RAIN || PRECIP_STORM || PRECIP_STORM_NOSTRIKES)) // Snow To Rain
+			if (weathernum == PRECIP_RAIN || weathernum == PRECIP_STORM || weathernum == PRECIP_STORM_NOSTRIKES) // Snow To Rain
 			{
 				precipmobj->flags = mobjinfo[MT_RAIN].flags;
 				st = &states[mobjinfo[MT_RAIN].spawnstate];
