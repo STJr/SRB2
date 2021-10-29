@@ -6837,7 +6837,7 @@ void P_RunOverlays(void)
 
 		mo->eflags = (mo->eflags & ~MFE_VERTICALFLIP) | (mo->target->eflags & MFE_VERTICALFLIP);
 		mo->scale = mo->destscale = mo->target->scale;
-		mo->angle = mo->target->angle + mo->movedir;
+		mo->angle = (mo->target->player ? mo->target->player->drawangle : mo->target->angle) + mo->movedir;
 
 		if (!(mo->state->frame & FF_ANIMATE))
 			zoffs = FixedMul(((signed)mo->state->var2)*FRACUNIT, mo->scale);
