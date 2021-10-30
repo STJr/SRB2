@@ -301,6 +301,8 @@ typedef void (APIENTRY * PFNglDisable) (GLenum cap);
 static PFNglDisable pglDisable;
 typedef void (APIENTRY * PFNglGetFloatv) (GLenum pname, GLfloat *params);
 static PFNglGetFloatv pglGetFloatv;
+typedef void (APIENTRY * PFNglPolygonMode) (GLenum, GLenum);
+static PFNglPolygonMode pglPolygonMode;
 
 /* Depth Buffer */
 typedef void (APIENTRY * PFNglClearDepth) (GLclampd depth);
@@ -475,6 +477,7 @@ boolean SetupGLfunc(void)
 	GETOPENGLFUNC(pglGetFloatv, glGetFloatv)
 	GETOPENGLFUNC(pglGetIntegerv, glGetIntegerv)
 	GETOPENGLFUNC(pglGetString, glGetString)
+	GETOPENGLFUNC(pglPolygonMode, glPolygonMode)
 
 	GETOPENGLFUNC(pglClearDepth, glClearDepth)
 	GETOPENGLFUNC(pglDepthFunc, glDepthFunc)
@@ -2465,6 +2468,10 @@ EXPORT void HWRAPI(SetSpecialState) (hwdspecialstate_t IdState, INT32 Value)
 			anisotropic_filter = min(Value,maximumAnisotropy);
 			if (maximumAnisotropy)
 				Flush(); //??? if we want to change filter mode by texture, remove this
+			break;
+
+		case HWD_SET_WIREFRAME:
+			pglPolygonMode(GL_FRONT_AND_BACK, Value ? GL_LINE : GL_FILL);
 			break;
 
 		default:
