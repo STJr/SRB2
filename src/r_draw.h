@@ -25,61 +25,7 @@ extern UINT8 *ylookup2[MAXVIDHEIGHT*4];
 extern INT32 columnofs[MAXVIDWIDTH*4];
 extern UINT8 *topleft;
 
-// -------------------------
-// COLUMN DRAWING CODE STUFF
-// -------------------------
-
-extern lighttable_t *dc_colormap;
-extern INT32 dc_x, dc_yl, dc_yh;
-extern fixed_t dc_iscale, dc_texturemid;
-extern UINT8 dc_hires;
-
-extern UINT8 *dc_source; // first pixel in a column
-
-// translucency stuff here
-extern UINT8 *dc_transmap;
-
-// translation stuff here
-
-extern UINT8 *dc_translation;
-
-extern struct r_lightlist_s *dc_lightlist;
-extern INT32 dc_numlights, dc_maxlights;
-
-//Fix TUTIFRUTI
-extern INT32 dc_texheight;
-
-// -----------------------
-// SPAN DRAWING CODE STUFF
-// -----------------------
-
-extern INT32 ds_y, ds_x1, ds_x2;
-extern lighttable_t *ds_colormap;
-extern lighttable_t *ds_translation;
-
-extern fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
-extern INT32 ds_waterofs, ds_bgofs;
-
-extern UINT16 ds_flatwidth, ds_flatheight;
-extern boolean ds_powersoftwo;
-
-extern UINT8 *ds_source;
-extern UINT8 *ds_transmap;
-
-typedef struct {
-	float x, y, z;
-} floatv3_t;
-
-// Vectors for Software's tilted slope drawers
-extern floatv3_t *ds_su, *ds_sv, *ds_sz;
-extern floatv3_t *ds_sup, *ds_svp, *ds_szp;
-extern float focallengthf, zeroheight;
-
-// Variable flat sizes
-extern UINT32 nflatxshift;
-extern UINT32 nflatyshift;
-extern UINT32 nflatshiftup;
-extern UINT32 nflatmask;
+extern float focallengthf;
 
 /// \brief Top border
 #define BRDR_T 0
@@ -163,85 +109,180 @@ void R_DrawViewBorder(void);
 
 #define TRANSPARENTPIXEL 255
 
+typedef struct colcontext_s
+{
+	void (*func) (struct colcontext_s *);
+	vbuffer_t *dest;
+
+	INT32 x, yl, yh;
+	fixed_t iscale, texturemid;
+	lighttable_t *colormap;
+
+	UINT8 *source; // first pixel in a column
+
+	// translucency stuff here
+	UINT8 *transmap;
+
+	// translation stuff here
+	UINT8 *translation;
+
+	struct r_lightlist_s *lightlist;
+	INT32 numlights, maxlights;
+
+	//Fix TUTIFRUTI
+	INT32 texheight;
+
+	// vars for R_DrawMaskedColumn
+	// Rum and Raisin put these on the sprite context.
+	// I put them on the column context because it felt
+	// more appropriate (for [REDACTED] anyway)
+	INT16 *mfloorclip;
+	INT16 *mceilingclip;
+
+	fixed_t spryscale, sprtopscreen, sprbotscreen;
+	fixed_t windowtop, windowbottom;
+
+	// column->length : for flipped column function pointers and multi-patch on 2sided wall = texture->height
+	INT32 lengthcol;
+} colcontext_t;
+
+typedef struct spancontext_s
+{
+	void (*func) (struct spancontext_s *);
+	vbuffer_t *dest;
+
+	INT32 y, x1, x2;
+	lighttable_t *colormap;
+	lighttable_t *translation;
+
+	fixed_t xfrac, yfrac, xstep, ystep;
+	INT32 waterofs, bgofs;
+
+	UINT16 flatwidth, flatheight;
+	boolean powersoftwo;
+
+	UINT8 *source;
+	UINT8 *transmap;
+
+	// Vectors for Software's tilted slope drawers
+	floatv3_t *su, *sv, *sz;
+	floatv3_t *sup, *svp, *szp;
+	floatv3_t slope_origin, slope_u, slope_v;
+	float zeroheight;
+
+	// Variable flat sizes
+	UINT32 nflatxshift;
+	UINT32 nflatyshift;
+	UINT32 nflatshiftup;
+	UINT32 nflatmask;
+
+	lighttable_t **zlight;
+	INT32 tiltlighting[MAXVIDWIDTH];
+} spancontext_t;
+
+typedef void (*colfunc_t) (colcontext_t *);
+typedef void (*spanfunc_t) (spancontext_t *);
+
+// ---------------------------------------------
+// color mode dependent drawer function pointers
+// ---------------------------------------------
+
+#define BASEDRAWFUNC 0
+
+enum
+{
+	COLDRAWFUNC_BASE = BASEDRAWFUNC,
+	COLDRAWFUNC_FUZZY,
+	COLDRAWFUNC_TRANS,
+	COLDRAWFUNC_SHADE,
+	COLDRAWFUNC_SHADOWED,
+	COLDRAWFUNC_TRANSTRANS,
+	COLDRAWFUNC_TWOSMULTIPATCH,
+	COLDRAWFUNC_TWOSMULTIPATCHTRANS,
+	COLDRAWFUNC_FOG,
+
+	COLDRAWFUNC_MAX
+};
+
+extern colfunc_t colfuncs[COLDRAWFUNC_MAX];
+
+enum
+{
+	SPANDRAWFUNC_BASE = BASEDRAWFUNC,
+	SPANDRAWFUNC_TRANS,
+	SPANDRAWFUNC_TILTED,
+	SPANDRAWFUNC_TILTEDTRANS,
+
+	SPANDRAWFUNC_SPLAT,
+	SPANDRAWFUNC_TRANSSPLAT,
+	SPANDRAWFUNC_TILTEDSPLAT,
+
+	SPANDRAWFUNC_SPRITE,
+	SPANDRAWFUNC_TRANSSPRITE,
+	SPANDRAWFUNC_TILTEDSPRITE,
+	SPANDRAWFUNC_TILTEDTRANSSPRITE,
+
+	SPANDRAWFUNC_WATER,
+	SPANDRAWFUNC_TILTEDWATER,
+
+	SPANDRAWFUNC_FOG,
+
+	SPANDRAWFUNC_MAX
+};
+
+extern spanfunc_t spanfuncs[SPANDRAWFUNC_MAX];
+extern spanfunc_t spanfuncs_npo2[SPANDRAWFUNC_MAX];
+
 // -----------------
 // 8bpp DRAWING CODE
 // -----------------
 
-void R_DrawColumn_8(void);
-void R_DrawShadeColumn_8(void);
-void R_DrawTranslucentColumn_8(void);
-void R_DrawTranslatedColumn_8(void);
-void R_DrawTranslatedTranslucentColumn_8(void);
-void R_Draw2sMultiPatchColumn_8(void);
-void R_Draw2sMultiPatchTranslucentColumn_8(void);
-void R_DrawFogColumn_8(void);
-void R_DrawColumnShadowed_8(void);
+void R_DrawColumn_8(colcontext_t *dc);
+void R_DrawShadeColumn_8(colcontext_t *dc);
+void R_DrawTranslucentColumn_8(colcontext_t *dc);
+void R_DrawTranslatedColumn_8(colcontext_t *dc);
+void R_DrawTranslatedTranslucentColumn_8(colcontext_t *dc);
+void R_Draw2sMultiPatchColumn_8(colcontext_t *dc);
+void R_Draw2sMultiPatchTranslucentColumn_8(colcontext_t *dc);
+void R_DrawFogColumn_8(colcontext_t *dc);
+void R_DrawColumnShadowed_8(colcontext_t *dc);
 
-#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
+void R_DrawSpan_8(spancontext_t *ds);
+void R_DrawTranslucentSpan_8(spancontext_t *ds);
+void R_DrawTiltedSpan_8(spancontext_t *ds);
+void R_DrawTiltedTranslucentSpan_8(spancontext_t *ds);
 
-void R_DrawSpan_8(void);
-void R_DrawTranslucentSpan_8(void);
-void R_DrawTiltedSpan_8(void);
-void R_DrawTiltedTranslucentSpan_8(void);
+void R_DrawSplat_8(spancontext_t *ds);
+void R_DrawTranslucentSplat_8(spancontext_t *ds);
+void R_DrawTiltedSplat_8(spancontext_t *ds);
 
-void R_DrawSplat_8(void);
-void R_DrawTranslucentSplat_8(void);
-void R_DrawTiltedSplat_8(void);
+void R_DrawFloorSprite_8(spancontext_t *ds);
+void R_DrawTranslucentFloorSprite_8(spancontext_t *ds);
+void R_DrawTiltedFloorSprite_8(spancontext_t *ds);
+void R_DrawTiltedTranslucentFloorSprite_8(spancontext_t *ds);
 
-void R_DrawFloorSprite_8(void);
-void R_DrawTranslucentFloorSprite_8(void);
-void R_DrawTiltedFloorSprite_8(void);
-void R_DrawTiltedTranslucentFloorSprite_8(void);
+void R_DrawTranslucentWaterSpan_8(spancontext_t *ds);
+void R_DrawTiltedTranslucentWaterSpan_8(spancontext_t *ds);
 
-void R_CalcTiltedLighting(fixed_t start, fixed_t end);
-extern INT32 tiltlighting[MAXVIDWIDTH];
-
-void R_DrawTranslucentWaterSpan_8(void);
-void R_DrawTiltedTranslucentWaterSpan_8(void);
-
-void R_DrawFogSpan_8(void);
+void R_DrawFogSpan_8(spancontext_t *ds);
 
 // Lactozilla: Non-powers-of-two
-void R_DrawSpan_NPO2_8(void);
-void R_DrawTranslucentSpan_NPO2_8(void);
-void R_DrawTiltedSpan_NPO2_8(void);
-void R_DrawTiltedTranslucentSpan_NPO2_8(void);
+void R_DrawSpan_NPO2_8(spancontext_t *ds);
+void R_DrawTranslucentSpan_NPO2_8(spancontext_t *ds);
+void R_DrawTiltedSpan_NPO2_8(spancontext_t *ds);
+void R_DrawTiltedTranslucentSpan_NPO2_8(spancontext_t *ds);
 
-void R_DrawSplat_NPO2_8(void);
-void R_DrawTranslucentSplat_NPO2_8(void);
-void R_DrawTiltedSplat_NPO2_8(void);
+void R_DrawSplat_NPO2_8(spancontext_t *ds);
+void R_DrawTranslucentSplat_NPO2_8(spancontext_t *ds);
+void R_DrawTiltedSplat_NPO2_8(spancontext_t *ds);
 
-void R_DrawFloorSprite_NPO2_8(void);
-void R_DrawTranslucentFloorSprite_NPO2_8(void);
-void R_DrawTiltedFloorSprite_NPO2_8(void);
-void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void);
+void R_DrawFloorSprite_NPO2_8(spancontext_t *ds);
+void R_DrawTranslucentFloorSprite_NPO2_8(spancontext_t *ds);
+void R_DrawTiltedFloorSprite_NPO2_8(spancontext_t *ds);
+void R_DrawTiltedTranslucentFloorSprite_NPO2_8(spancontext_t *ds);
 
-void R_DrawTranslucentWaterSpan_NPO2_8(void);
-void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void);
-
-#ifdef USEASM
-void ASMCALL R_DrawColumn_8_ASM(void);
-void ASMCALL R_DrawShadeColumn_8_ASM(void);
-void ASMCALL R_DrawTranslucentColumn_8_ASM(void);
-void ASMCALL R_Draw2sMultiPatchColumn_8_ASM(void);
-
-void ASMCALL R_DrawColumn_8_MMX(void);
-
-void ASMCALL R_Draw2sMultiPatchColumn_8_MMX(void);
-void ASMCALL R_DrawSpan_8_MMX(void);
-#endif
-
-// ------------------
-// 16bpp DRAWING CODE
-// ------------------
-
-#ifdef HIGHCOLOR
-void R_DrawColumn_16(void);
-void R_DrawWallColumn_16(void);
-void R_DrawTranslucentColumn_16(void);
-void R_DrawTranslatedColumn_16(void);
-void R_DrawSpan_16(void);
-#endif
+void R_DrawTranslucentWaterSpan_NPO2_8(spancontext_t *ds);
+void R_DrawTiltedTranslucentWaterSpan_NPO2_8(spancontext_t *ds);
 
 // =========================================================================
 #endif  // __R_DRAW__

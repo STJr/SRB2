@@ -210,7 +210,7 @@ sources+=\
 	$(call List,blua/Sourcefile)\
 
 depends:=$(basename $(filter %.c %.s,$(sources)))
-objects:=$(basename $(filter %.c %.s %.nas,$(sources)))
+objects:=$(basename $(filter %.c %.s,$(sources)))
 
 depends:=$(depends:%=$(depdir)/%.d)
 

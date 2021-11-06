@@ -62,14 +62,6 @@ UINT8 *topleft;
 //                      COLUMN DRAWING CODE STUFF
 // =========================================================================
 
-lighttable_t *dc_colormap;
-INT32 dc_x = 0, dc_yl = 0, dc_yh = 0;
-
-fixed_t dc_iscale, dc_texturemid;
-UINT8 dc_hires; // under MSVC boolean is a byte, while on other systems, it a bit,
-               // soo lets make it a byte on all system for the ASM code
-UINT8 *dc_source;
-
 // -----------------------
 // translucency stuff here
 // -----------------------
@@ -78,48 +70,11 @@ UINT8 *dc_source;
 UINT8 *transtables; // translucency tables
 UINT8 *blendtables[NUMBLENDMAPS];
 
-/**	\brief R_DrawTransColumn uses this
-*/
-UINT8 *dc_transmap; // one of the translucency tables
-
-// ----------------------
-// translation stuff here
-// ----------------------
-
-
-/**	\brief R_DrawTranslatedColumn uses this
-*/
-UINT8 *dc_translation;
-
-struct r_lightlist_s *dc_lightlist = NULL;
-INT32 dc_numlights = 0, dc_maxlights, dc_texheight;
-
 // =========================================================================
 //                      SPAN DRAWING CODE STUFF
 // =========================================================================
 
-INT32 ds_y, ds_x1, ds_x2;
-lighttable_t *ds_colormap;
-lighttable_t *ds_translation; // Lactozilla: Sprite splat drawer
-
-fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
-INT32 ds_waterofs, ds_bgofs;
-
-UINT16 ds_flatwidth, ds_flatheight;
-boolean ds_powersoftwo;
-
-UINT8 *ds_source; // points to the start of a flat
-UINT8 *ds_transmap; // one of the translucency tables
-
-// Vectors for Software's tilted slope drawers
-floatv3_t *ds_su, *ds_sv, *ds_sz;
-floatv3_t *ds_sup, *ds_svp, *ds_szp;
-float focallengthf, zeroheight;
-
-/**	\brief Variable flat sizes
-*/
-
-UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
+float focallengthf;
 
 // =========================================================================
 //                   TRANSLATION COLORMAP CODE
@@ -572,6 +527,15 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		dest_colormap[starttranscolor + i] = (UINT8)skincolors[color].ramp[i];
 }
 
+#ifdef HAVE_THREADS
+static I_mutex r_colormap_mutex;
+
+#  define Lock_state()    I_lock_mutex(&r_colormap_mutex)
+#  define Unlock_state() I_unlock_mutex(r_colormap_mutex)
+#else/*HAVE_THREADS*/
+#  define Lock_state()
+#  define Unlock_state()
+#endif/*HAVE_THREADS*/
 
 /**	\brief	Retrieves a translation colormap from the cache.
 
@@ -589,13 +553,16 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags
 
 	if (flags & GTC_CACHE)
 	{
+		Lock_state();
 		// Allocate table for skin if necessary
 		if (!translationtablecache[skintableindex])
 			translationtablecache[skintableindex] = Z_Calloc(MAXSKINCOLORS * sizeof(UINT8**), PU_STATIC, NULL);
+		Unlock_state();
 
 		// Get colormap
 		ret = translationtablecache[skintableindex][color];
 
+		Lock_state();
 		// Rebuild the cache if necessary
 		if (skincolor_modified[color])
 		{
@@ -605,18 +572,21 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags
 
 			skincolor_modified[color] = false;
 		}
+		Unlock_state();
 	}
 	else ret = NULL;
 
 	// Generate the colormap if necessary
 	if (!ret)
 	{
+		Lock_state();
 		ret = Z_MallocAlign(NUM_PALETTE_ENTRIES, (flags & GTC_CACHE) ? PU_LEVEL : PU_STATIC, NULL, 8);
 		R_GenerateTranslationColormap(ret, skinnum, color);
 
 		// Cache the colormap if desired
 		if (flags & GTC_CACHE)
 			translationtablecache[skintableindex][color] = ret;
+		Unlock_state();
 	}
 
 	return ret;
@@ -887,13 +857,37 @@ void R_DrawViewBorder(void)
 //                   INCLUDE 8bpp DRAWING CODE HERE
 // ==========================================================================
 
+// R_CalcTiltedLighting
+// Exactly what it says on the tin. I wish I wasn't too lazy to explain things properly.
+static void R_CalcTiltedLighting(spancontext_t *ds, fixed_t start, fixed_t end)
+{
+	// ZDoom uses a different lighting setup to us, and I couldn't figure out how to adapt their version
+	// of this function. Here's my own.
+	INT32 left = ds->x1, right = ds->x2;
+	fixed_t step = (end-start)/(ds->x2-ds->x1+1);
+	INT32 i;
+
+	// I wanna do some optimizing by checking for out-of-range segments on either side to fill in all at once,
+	// but I'm too bad at coding to not crash the game trying to do that. I guess this is fast enough for now...
+
+	for (i = left; i <= right; i++) {
+		ds->tiltlighting[i] = (start += step) >> FRACBITS;
+		if (ds->tiltlighting[i] < 0)
+			ds->tiltlighting[i] = 0;
+		else if (ds->tiltlighting[i] >= MAXLIGHTSCALE)
+			ds->tiltlighting[i] = MAXLIGHTSCALE-1;
+	}
+}
+
+#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / ds->zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
+
+// Lighting is simple. It's just linear interpolation from start to end
+#define CALC_TILTED_LIGHTING { \
+	float planelightfloat = PLANELIGHTFLOAT; \
+	float lightend = (iz + ds->szp->x*width) * planelightfloat; \
+	float lightstart = iz * planelightfloat; \
+	R_CalcTiltedLighting(ds, FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend)); \
+}
+
 #include "r_draw8.c"
 #include "r_draw8_npo2.c"
-
-// ==========================================================================
-//                   INCLUDE 16bpp DRAWING CODE HERE
-// ==========================================================================
-
-#ifdef HIGHCOLOR
-#include "r_draw16.c"
-#endif

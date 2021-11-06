@@ -18,27 +18,16 @@
 #pragma interface
 #endif
 
-extern seg_t *curline;
-extern side_t *sidedef;
-extern line_t *linedef;
-extern sector_t *frontsector;
-extern sector_t *backsector;
-extern boolean portalline; // is curline a portal seg?
-
-// drawsegs are allocated on the fly... see r_segs.c
-
 extern INT32 checkcoord[12][4];
 
-extern drawseg_t *curdrawsegs;
-extern drawseg_t *drawsegs;
-extern drawseg_t *ds_p;
-extern INT32 doorclosed;
+struct bspcontext_s;
+struct rendercontext_s;
+struct viewcontext_s;
 
 // BSP?
-void R_ClearClipSegs(void);
-void R_PortalClearClipSegs(INT32 start, INT32 end);
-void R_ClearDrawSegs(void);
-void R_RenderBSPNode(INT32 bspnum);
+void R_ClearClipSegs(struct bspcontext_s *context, INT32 start, INT32 end);
+void R_ClearDrawSegs(struct bspcontext_s *context);
+void R_RenderBSPNode(struct rendercontext_s *context, INT32 bspnum);
 
 void R_SortPolyObjects(subsector_t *sub);
 
@@ -46,8 +35,8 @@ extern size_t numpolys;        // number of polyobjects in current subsector
 extern size_t num_po_ptrs;     // number of polyobject pointers allocated
 extern polyobj_t **po_ptrs; // temp ptr array to sort polyobject pointers
 
-sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
-	INT32 *ceilinglightlevel, boolean back);
+sector_t *R_FakeFlat(struct viewcontext_s *viewcontext, sector_t *sec, sector_t *tempsec,
+	INT32 *floorlightlevel, INT32 *ceilinglightlevel, boolean back);
 boolean R_IsEmptyLine(seg_t *line, sector_t *front, sector_t *back);
 
 INT32 R_GetPlaneLight(sector_t *sector, fixed_t planeheight, boolean underside);

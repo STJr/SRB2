@@ -207,11 +207,6 @@ void *W_CachePatchLongName(const char *name, INT32 tag);
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
 void *W_CachePatchNum(lumpnum_t lumpnum, INT32 tag);
 
-// Returns a Software patch.
-// Performs any necessary conversions from PNG images.
-void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag);
-void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag);
-
 void W_UnlockCachedPatch(void *patch);
 
 void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5);

@@ -100,7 +100,30 @@ enum {
 	PERF_COUNT,
 };
 
-static void M_DrawPerfString(perfstatcol_t *col, int type)
+static void M_DrawPerfString(const char *string, INT32 lores_x, INT32 hires_x, INT32 flags)
+{
+	const boolean hires = M_HighResolution();
+
+	INT32 draw_flags = V_MONOSPACE | flags;
+
+	if (hires)
+		draw_flags |= V_ALLOWLOWERCASE;
+
+	if (hires)
+	{
+		V_DrawFillConsoleMap(hires_x, draw_row, V_SmallStringWidth(string, draw_flags), 5, 0);
+		V_DrawSmallString(hires_x, draw_row, draw_flags, string);
+		draw_row += 5;
+	}
+	else
+	{
+		V_DrawFillConsoleMap(lores_x, draw_row, V_ThinStringWidth(string, draw_flags), 8, 0);
+		V_DrawThinString(lores_x, draw_row, draw_flags, string);
+		draw_row += 8;
+	}
+}
+
+static void M_DrawPerfMeasurement(perfstatcol_t *col, int type)
 {
 	const boolean hires = M_HighResolution();
 
@@ -122,15 +145,19 @@ static void M_DrawPerfString(perfstatcol_t *col, int type)
 
 		if (hires)
 		{
-			V_DrawSmallString(col->hires_x, draw_row, draw_flags,
-					va("%s %d", row->hires_label, value));
+			const char *string = va("%s %d", row->hires_label, value);
+
+			V_DrawFillConsoleMap(col->hires_x, draw_row, V_SmallStringWidth(string, draw_flags), 5, 0);
+			V_DrawSmallString(col->hires_x, draw_row, draw_flags, string);
 
 			draw_row += 5;
 		}
 		else
 		{
-			V_DrawThinString(col->lores_x, draw_row, draw_flags,
-					va("%s %d", row->lores_label, value));
+			const char *string = va("%s %d", row->lores_label, value);
+
+			V_DrawFillConsoleMap(col->lores_x, draw_row, V_SmallStringWidth(string, draw_flags), 8, 0);
+			V_DrawThinString(col->lores_x, draw_row, draw_flags, string);
 
 			draw_row += 8;
 		}
@@ -139,12 +166,12 @@ static void M_DrawPerfString(perfstatcol_t *col, int type)
 
 static void M_DrawPerfTiming(perfstatcol_t *col)
 {
-	M_DrawPerfString(col, PERF_TIME);
+	M_DrawPerfMeasurement(col, PERF_TIME);
 }
 
 static void M_DrawPerfCount(perfstatcol_t *col)
 {
-	M_DrawPerfString(col, PERF_COUNT);
+	M_DrawPerfMeasurement(col, PERF_COUNT);
 }
 
 static void M_DrawRenderStats(void)
@@ -161,7 +188,7 @@ static void M_DrawRenderStats(void)
 	};
 
 	perfstatrow_t rendercalltime_row[] = {
-		{"drwtime", "3d rendering:  ", &ps_rendercalltime},
+		{"drwtime", "3D rendering:  ", &ps_rendercalltime},
 		{0}
 	};
 
@@ -176,16 +203,6 @@ static void M_DrawRenderStats(void)
 		{0}
 	};
 
-	perfstatrow_t softwaretime_row[] = {
-		{"bsptime", "RenderBSPNode: ", &ps_bsptime},
-		{"sprclip", "R_ClipSprites: ", &ps_sw_spritecliptime},
-		{"portals", "Portals+Skybox:", &ps_sw_portaltime},
-		{"planes ", "R_DrawPlanes:  ", &ps_sw_planetime},
-		{"masked ", "R_DrawMasked:  ", &ps_sw_maskedtime},
-		{"other  ", "Other:         ", &extrarendertime},
-		{0}
-	};
-
 	perfstatrow_t uiswaptime_row[] = {
 		{"ui     ", "UI render:     ", &ps_uitime},
 		{"finupdt", "I_FinishUpdate:", &ps_swaptime},
@@ -194,14 +211,6 @@ static void M_DrawRenderStats(void)
 
 	perfstatrow_t tictime_row[] = {
 		{"logic  ", "Game logic:    ", &ps_tictime},
-		{0}
-	};
-
-	perfstatrow_t rendercalls_row[] = {
-		{"bspcall", "BSP calls:   ", &ps_numbspcalls},
-		{"sprites", "Sprites:     ", &ps_numsprites},
-		{"drwnode", "Drawnodes:   ", &ps_numdrawnodes},
-		{"plyobjs", "Polyobjects: ", &ps_numpolyobjects},
 		{0}
 	};
 
@@ -230,12 +239,9 @@ static void M_DrawRenderStats(void)
 	perfstatcol_t rendercalltime_col =  {20,  20, V_YELLOWMAP, rendercalltime_row};
 
 	perfstatcol_t     opengltime_col =  {24,  24, V_YELLOWMAP,     opengltime_row};
-	perfstatcol_t   softwaretime_col =  {24,  24, V_YELLOWMAP,   softwaretime_row};
 
 	perfstatcol_t     uiswaptime_col =  {20,  20, V_YELLOWMAP,     uiswaptime_row};
 	perfstatcol_t        tictime_col =  {20,  20, V_GRAYMAP,          tictime_row};
-
-	perfstatcol_t    rendercalls_col =  {90, 115, V_BLUEMAP,      rendercalls_row};
 
 	perfstatcol_t      batchtime_col =  {90, 115, V_REDMAP,         batchtime_row};
 
@@ -256,12 +262,13 @@ static void M_DrawRenderStats(void)
 		M_DrawPerfTiming(&rendercalltime_col);
 
 		// Remember to update this calculation when adding more 3d rendering stats!
-		extrarendertime = ps_rendercalltime - ps_bsptime;
+		extrarendertime = ps_rendercalltime;
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl)
 		{
-			extrarendertime -=
+			extrarendertime =
+				ps_bsptime[0] +
 				ps_hw_skyboxtime +
 				ps_hw_nodesorttime +
 				ps_hw_nodedrawtime +
@@ -280,13 +287,32 @@ static void M_DrawRenderStats(void)
 		else
 #endif
 		{
-			extrarendertime -=
-				ps_sw_spritecliptime +
-				ps_sw_portaltime +
-				ps_sw_planetime +
-				ps_sw_maskedtime;
+			INT32 i = 0;
 
-			M_DrawPerfTiming(&softwaretime_col);
+			perfstatrow_t other_row[] = {
+				{"postprc", "Postprocessing:", &ps_postprocesstime},
+				{0}
+			};
+
+			perfstatcol_t other_col = {24, 24, V_YELLOWMAP, other_row};
+
+			for (i = 0; i < numusablerendercontexts; i++) {
+				perfstatrow_t softwaretime_row[] = {
+					{"bsptime", "RenderBSPNode: ", &ps_bsptime[i]},
+					{"sprclip", "R_ClipSprites: ", &ps_sw_spritecliptime[i]},
+					{"portals", "Portals+Skybox:", &ps_sw_portaltime[i]},
+					{"planes ", "R_DrawPlanes:  ", &ps_sw_planetime[i]},
+					{"masked ", "R_DrawMasked:  ", &ps_sw_maskedtime[i]},
+					{0}
+				};
+
+				perfstatcol_t softwaretime_col = {28, 28, V_YELLOWMAP, softwaretime_row};
+
+				M_DrawPerfString(va("Thread %d:", i+1), 24, 24, V_REDMAP);
+				M_DrawPerfTiming(&softwaretime_col);
+			}
+
+			M_DrawPerfTiming(&other_col);
 		}
 	}
 
@@ -297,8 +323,41 @@ static void M_DrawRenderStats(void)
 
 	if (rendering)
 	{
-		draw_row = 10;
-		M_DrawPerfCount(&rendercalls_col);
+		draw_row = 10;	
+
+#ifdef HWRENDER
+		if (rendermode == render_opengl) {
+			perfstatrow_t rendercalls_row[] = {
+				{"bspcall", "BSP calls:   ", &ps_numbspcalls},
+				{"sprites", "Sprites:     ", &ps_numsprites},
+				{"drwnode", "Drawnodes:   ", &ps_numdrawnodes},
+				{"plyobjs", "Polyobjects: ", &ps_numpolyobjects},
+				{0}
+			};
+
+			perfstatcol_t rendercalls_col = {90, 115, V_BLUEMAP, rendercalls_row};
+
+			M_DrawPerfCount(&rendercalls_col);
+		} else
+#endif
+		{
+			INT32 i;
+
+			for (i = 0; i < numusablerendercontexts; i++) {
+				perfstatrow_t rendercalls_row[] = {
+					{"bspcall", "BSP calls:   ", &ps_numbspcalls[i]},
+					{"sprites", "Sprites:     ", &ps_numsprites[i]},
+					{"drwnode", "Drawnodes:   ", &ps_numdrawnodes[i]},
+					{"plyobjs", "Polyobjects: ", &ps_numpolyobjects[i]},
+					{0}
+				};
+
+				perfstatcol_t rendercalls_col = {94, 120, V_BLUEMAP, rendercalls_row};
+
+				M_DrawPerfString(va("Thread %d:", i+1), 90, 115, V_REDMAP);
+				M_DrawPerfCount(&rendercalls_col);
+			}
+		}
 
 #ifdef HWRENDER
 		if (rendermode == render_opengl && cv_glbatching.value)

@@ -8,8 +8,6 @@ target_sources(SRB2SDL2 PRIVATE comptime.c md5.c config.h.in)
 
 set(SRB2_ASM_SOURCES vid_copy.s)
 
-set(SRB2_NASM_SOURCES tmap_mmx.nas tmap.nas)
-
 ### Configuration
 set(SRB2_CONFIG_HAVE_PNG ON CACHE BOOL
 	"Enable PNG support. Depends on zlib, so will be disabled if you don't enable that too.")
@@ -213,8 +211,7 @@ if(${SRB2_CONFIG_USEASM})
 	target_compile_definitions(SRB2SDL2 PRIVATE -DUSEASM)
 	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -mfpmath=sse")
 
-	target_sources(SRB2SDL2 PRIVATE ${SRB2_ASM_SOURCES}
-		${SRB2_NASM_SOURCES})
+	target_sources(SRB2SDL2 PRIVATE ${SRB2_ASM_SOURCES})
 else()
 	set(SRB2_USEASM OFF)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DNONX86 -DNORUSEASM)

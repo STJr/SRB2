@@ -27,6 +27,7 @@
 
 #define FEETADJUST (4<<FRACBITS) // R_AddSingleSpriteDef
 
+void R_InitSprites(void);
 boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16 wadnum, UINT16 startlump, UINT16 endlump);
 
 //faB: find sprites in wadfile, replace existing, add new ones
@@ -37,22 +38,15 @@ void R_AddSpriteDefs(UINT16 wadnum);
 // MASKED COLUMN DRAWING
 // ---------------------
 
-// vars for R_DrawMaskedColumn
-extern INT16 *mfloorclip;
-extern INT16 *mceilingclip;
-extern fixed_t spryscale;
-extern fixed_t sprtopscreen;
-extern fixed_t sprbotscreen;
-extern fixed_t windowtop;
-extern fixed_t windowbottom;
-extern INT32 lengthcol;
-
-void R_DrawMaskedColumn(column_t *column);
-void R_DrawFlippedMaskedColumn(column_t *column);
+void R_DrawMaskedColumn(colcontext_t *dc, column_t *column);
+void R_DrawFlippedMaskedColumn(colcontext_t *dc, column_t *column);
 
 // ----------------
 // SPRITE RENDERING
 // ----------------
+
+struct rendercontext_s;
+struct spritecontext_s;
 
 // Constant arrays used for psprite clipping
 //  and initializing clipping.
@@ -62,17 +56,18 @@ extern INT16 screenheightarray[MAXVIDWIDTH];
 fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope);
 
 //SoM: 6/5/2000: Light sprites correctly!
-void R_AddSprites(sector_t *sec, INT32 lightlevel);
-void R_InitSprites(void);
-void R_ClearSprites(void);
+void R_AddSprites(struct rendercontext_s *context, sector_t *sec, INT32 lightlevel);
+void R_ClearSprites(struct spritecontext_s *spritecontext);
 
-boolean R_ThingVisible (mobj_t *thing);
+boolean R_ThingVisible (mobj_t *thing, mobj_t *viewmobj);
 
-boolean R_ThingVisibleWithinDist (mobj_t *thing,
+boolean R_ThingVisibleWithinDist (fixed_t viewpos_x, fixed_t viewpos_y,
+		mobj_t *thing, mobj_t *viewmobj,
 		fixed_t        draw_dist,
 		fixed_t nights_draw_dist);
 
-boolean R_PrecipThingVisible (precipmobj_t *precipthing,
+boolean R_PrecipThingVisible (fixed_t viewpos_x, fixed_t viewpos_y,
+		precipmobj_t *precipthing,
 		fixed_t precip_draw_dist);
 
 boolean R_ThingHorizontallyFlipped (mobj_t *thing);
@@ -99,7 +94,7 @@ typedef struct
 	sector_t* viewsector;
 } maskcount_t;
 
-void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
+void R_DrawMasked(struct rendercontext_s *context, maskcount_t *masks, UINT8 nummasks);
 
 // ----------
 // VISSPRITES
@@ -210,10 +205,7 @@ typedef struct vissprite_s
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
 } vissprite_t;
 
-extern UINT32 visspritecount;
-
-void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
-void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, portal_t* portal);
+void R_ClipSprites(struct rendercontext_s *context, drawseg_t* dsstart, portal_t* portal);
 
 boolean R_SpriteIsFlashing(vissprite_t *vis);
 UINT8 *R_GetSpriteTranslation(vissprite_t *vis);
@@ -236,7 +228,7 @@ typedef struct drawnode_s
 	struct drawnode_s *prev;
 } drawnode_t;
 
-void R_InitDrawNodes(void);
+void R_InitDrawNodes(drawnode_t *nodebankhead);
 
 // -----------------------
 // SPRITE FRAME CHARACTERS

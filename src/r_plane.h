@@ -55,52 +55,9 @@ typedef struct visplane_s
 	pslope_t *slope;
 } visplane_t;
 
-extern visplane_t *visplanes[MAXVISPLANES];
-extern visplane_t *floorplane;
-extern visplane_t *ceilingplane;
-
-// Visplane related.
-extern INT16 *lastopening, *openings;
-extern size_t maxopenings;
-
-extern INT16 floorclip[MAXVIDWIDTH], ceilingclip[MAXVIDWIDTH];
-extern fixed_t frontscale[MAXVIDWIDTH], yslopetab[MAXVIDHEIGHT*16];
-extern fixed_t cachedheight[MAXVIDHEIGHT];
-extern fixed_t cacheddistance[MAXVIDHEIGHT];
-extern fixed_t cachedxstep[MAXVIDHEIGHT];
-extern fixed_t cachedystep[MAXVIDHEIGHT];
-
-extern fixed_t *yslope;
-extern lighttable_t **planezlight;
-
-void R_InitPlanes(void);
-void R_ClearPlanes(void);
-void R_ClearFFloorClips (void);
-
-void R_DrawPlanes(void);
-visplane_t *R_FindPlane(fixed_t height, INT32 picnum, INT32 lightlevel, fixed_t xoff, fixed_t yoff, angle_t plangle,
-	extracolormap_t *planecolormap, ffloor_t *ffloor, polyobj_t *polyobj, pslope_t *slope);
-visplane_t *R_CheckPlane(visplane_t *pl, INT32 start, INT32 stop);
-void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);
-void R_PlaneBounds(visplane_t *plane);
-
-void R_CheckFlatLength(size_t size);
-boolean R_CheckPowersOfTwo(void);
-
-// Draws a single visplane.
-void R_DrawSinglePlane(visplane_t *pl);
-
-// Calculates the slope vectors needed for tilted span drawing.
-void R_SetSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
-void R_SetScaledSlopePlane(pslope_t *slope, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
-void R_CalculateSlopeVectors(void);
-
-// Sets the slope vector pointers for the current tilted span.
-void R_SetTiltedSpan(INT32 span);
-
 typedef struct planemgr_s
 {
-	visplane_t *plane;
+	struct visplane_s *plane;
 	fixed_t height;
 	fixed_t f_pos; // F for Front sector
 	fixed_t b_pos; // B for Back sector
@@ -117,10 +74,36 @@ typedef struct planemgr_s
 
 	struct ffloor_s *ffloor;
 	polyobj_t *polyobj;
-} visffloor_t;
+} planemgr_t;
 
-extern visffloor_t ffloor[MAXFFLOORS];
-extern INT32 numffloors;
+// Visplane related.
+extern fixed_t yslopetab[MAXVIDHEIGHT*16];
+extern fixed_t *yslope;
 
-void Portal_AddSkyboxPortals (void);
+struct planecontext_s;
+struct rendercontext_s;
+struct viewcontext_s;
+
+void R_InitPlanes(void);
+void R_ClearPlanes(struct planecontext_s *context);
+void R_ClearFFloorClips (struct planecontext_s *context);
+
+void R_DrawPlanes(struct rendercontext_s *planecontext);
+visplane_t *R_FindPlane(struct planecontext_s *planecontext, struct viewcontext_s *viewcontext,
+	fixed_t height, INT32 picnum, INT32 lightlevel, fixed_t xoff, fixed_t yoff, angle_t plangle,
+	extracolormap_t *planecolormap, ffloor_t *ffloor, polyobj_t *polyobj, pslope_t *slope);
+visplane_t *R_CheckPlane(struct planecontext_s *planecontext, visplane_t *pl, INT32 start, INT32 stop);
+void R_ExpandPlane(visplane_t *pl, INT32 start, INT32 stop);
+void R_PlaneBounds(visplane_t *plane);
+
+// Draws a single visplane.
+void R_DrawSinglePlane(struct rendercontext_s *rendercontext, visplane_t *pl);
+
+// Calculates the slope vectors needed for tilted span drawing.
+void R_SetSlopePlane(pslope_t *slope, spancontext_t *ds, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
+void R_SetScaledSlopePlane(pslope_t *slope, spancontext_t *ds, fixed_t xpos, fixed_t ypos, fixed_t zpos, fixed_t xs, fixed_t ys, fixed_t xoff, fixed_t yoff, angle_t angle, angle_t plangle);
+void R_CalculateSlopeVectors(spancontext_t *ds);
+
+// Sets the slope vector pointers for the current tilted span.
+void R_SetTiltedSpan(spancontext_t *ds, INT32 span);
 #endif

@@ -53,6 +53,22 @@ INT64 mytotal = 0;
 // Fineangles in the SCREENWIDTH wide window.
 #define FIELDOFVIEW 2048
 
+typedef struct renderdata_s
+{
+	rendercontext_t context;
+	I_thread_handle thread;
+	I_Atomicval_t running;
+	I_Atomicval_t shouldquit;
+	I_Atomicval_t framewaiting;
+	I_Atomicval_t framefinished;
+} renderdata_t;
+
+static renderdata_t *renderdatas;
+
+INT32 numrendercontexts = MAX_RENDER_THREADS;
+INT32 numusablerendercontexts = 0;
+boolean renderthreaded = false;
+
 // increment every time a check is made
 size_t validcount = 1;
 
@@ -102,20 +118,21 @@ extracolormap_t *extra_colormaps = NULL;
 // Render stats
 precise_t ps_prevframetime = 0;
 precise_t ps_rendercalltime = 0;
+precise_t ps_postprocesstime = 0;
 precise_t ps_uitime = 0;
 precise_t ps_swaptime = 0;
 
-precise_t ps_bsptime = 0;
+precise_t ps_bsptime[MAX_RENDER_THREADS] = {0};
 
-precise_t ps_sw_spritecliptime = 0;
-precise_t ps_sw_portaltime = 0;
-precise_t ps_sw_planetime = 0;
-precise_t ps_sw_maskedtime = 0;
+precise_t ps_sw_spritecliptime[MAX_RENDER_THREADS] = {0};
+precise_t ps_sw_portaltime[MAX_RENDER_THREADS] = {0};
+precise_t ps_sw_planetime[MAX_RENDER_THREADS] = {0};
+precise_t ps_sw_maskedtime[MAX_RENDER_THREADS] = {0};
 
-int ps_numbspcalls = 0;
-int ps_numsprites = 0;
-int ps_numdrawnodes = 0;
-int ps_numpolyobjects = 0;
+int ps_numbspcalls[MAX_RENDER_THREADS] = {0};
+int ps_numsprites[MAX_RENDER_THREADS] = {0};
+int ps_numdrawnodes[MAX_RENDER_THREADS] = {0};
+int ps_numpolyobjects[MAX_RENDER_THREADS] = {0};
 
 static CV_PossibleValue_t drawdist_cons_t[] = {
 	{256, "256"},	{512, "512"},	{768, "768"},
@@ -132,7 +149,7 @@ static CV_PossibleValue_t drawdist_precip_cons_t[] = {
 
 static CV_PossibleValue_t fov_cons_t[] = {{60*FRACUNIT, "MIN"}, {179*FRACUNIT, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t translucenthud_cons_t[] = {{0, "MIN"}, {10, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t maxportals_cons_t[] = {{0, "MIN"}, {12, "MAX"}, {0, NULL}}; // lmao rendering 32 portals, you're a card
+static CV_PossibleValue_t maxportals_cons_t[] = {{0, "MIN"}, {12, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t homremoval_cons_t[] = {{0, "No"}, {1, "Yes"}, {2, "Flash"}, {0, NULL}};
 
 static void Fov_OnChange(void);
@@ -163,8 +180,10 @@ consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, dr
 //consvar_t cv_precipdensity = CVAR_INIT ("precipdensity", "Moderate", CV_SAVE, precipdensity_cons_t, NULL);
 consvar_t cv_fov = CVAR_INIT ("fov", "90", CV_FLOAT|CV_CALL, fov_cons_t, Fov_OnChange);
 
-// Okay, whoever said homremoval causes a performance hit should be shot.
 consvar_t cv_homremoval = CVAR_INIT ("homremoval", "No", CV_SAVE, homremoval_cons_t, NULL);
+
+static CV_PossibleValue_t numthreads_cons_t[] = {{1, "MIN"}, {8, "MAX"}, {0, NULL}};
+consvar_t cv_numthreads = CVAR_INIT ("numthreads", "2", CV_SAVE, numthreads_cons_t, NULL);
 
 consvar_t cv_maxportals = CVAR_INIT ("maxportals", "2", CV_SAVE, maxportals_cons_t, NULL);
 
@@ -409,35 +428,6 @@ angle_t R_PointToAngleEx(INT32 x2, INT32 y2, INT32 x1, INT32 y1)
 		(x1 = -x1) > (y1 = -y1) ? ANGLE_180+tantoangle[SlopeDivEx(y1,x1)] :    // octant 4
 		ANGLE_270-tantoangle[SlopeDivEx(x1,y1)] :                              // octant 5
 		0;
-}
-
-//
-// R_ScaleFromGlobalAngle
-// Returns the texture mapping scale for the current line (horizontal span)
-//  at the given angle.
-// rw_distance must be calculated first.
-//
-// killough 5/2/98: reformatted, cleaned up
-//
-// note: THIS IS USED ONLY FOR WALLS!
-fixed_t R_ScaleFromGlobalAngle(angle_t visangle)
-{
-	angle_t anglea = ANGLE_90 + (visangle-viewangle);
-	angle_t angleb = ANGLE_90 + (visangle-rw_normalangle);
-	fixed_t den = FixedMul(rw_distance, FINESINE(anglea>>ANGLETOFINESHIFT));
-	// proff 11/06/98: Changed for high-res
-	fixed_t num = FixedMul(projectiony, FINESINE(angleb>>ANGLETOFINESHIFT));
-
-	if (den > num>>16)
-	{
-		num = FixedDiv(num, den);
-		if (num > 64*FRACUNIT)
-			return 64*FRACUNIT;
-		if (num < 256)
-			return 256;
-		return num;
-	}
-	return 64*FRACUNIT;
 }
 
 //
@@ -883,6 +873,285 @@ void R_ApplyViewMorph(void)
 			vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.width);
 }
 
+static void R_PortalFrame(rendercontext_t *context, portal_t *portal)
+{
+	bspcontext_t *bspcontext = &context->bspcontext;
+
+	context->viewcontext.x = portal->viewx;
+	context->viewcontext.y = portal->viewy;
+	context->viewcontext.z = portal->viewz;
+
+	context->viewcontext.angle = portal->viewangle;
+	context->viewcontext.sin = FINESINE(portal->viewangle>>ANGLETOFINESHIFT);
+	context->viewcontext.cos = FINECOSINE(portal->viewangle>>ANGLETOFINESHIFT);
+
+	bspcontext->portalclipstart = portal->start;
+	bspcontext->portalclipend = portal->end;
+
+	if (portal->clipline != -1)
+	{
+		line_t *clipline = &lines[portal->clipline];
+		bspcontext->portalclipline = clipline;
+		bspcontext->portalcullsector = clipline->frontsector;
+		context->viewcontext.sector = clipline->frontsector;
+	}
+	else
+	{
+		bspcontext->portalclipline = NULL;
+		bspcontext->portalcullsector = NULL;
+		context->viewcontext.sector = R_PointInSubsector(context->viewcontext.x, context->viewcontext.y)->sector;
+	}
+}
+
+static void Mask_Pre (rendercontext_t *context, maskcount_t* m)
+{
+	m->drawsegs[0] = context->bspcontext.ds_p - context->bspcontext.drawsegs;
+	m->vissprites[0] = context->spritecontext.visspritecount;
+	m->viewx = context->viewcontext.x;
+	m->viewy = context->viewcontext.y;
+	m->viewz = context->viewcontext.z;
+	m->viewsector = context->viewcontext.sector;
+}
+
+static void Mask_Post (rendercontext_t *context, maskcount_t* m)
+{
+	m->drawsegs[1] = context->bspcontext.ds_p - context->bspcontext.drawsegs;
+	m->vissprites[1] = context->spritecontext.visspritecount;
+}
+
+static void R_RenderViewContext(rendercontext_t *rendercontext)
+{
+	UINT8			nummasks	= 1;
+	maskcount_t*	masks		= malloc(sizeof(maskcount_t));
+
+	bspcontext_t *bspcontext = &rendercontext->bspcontext;
+	planecontext_t *planecontext = &rendercontext->planecontext;
+
+	INT32 i = rendercontext->num;
+
+	// The head node is the last node output.
+	Mask_Pre(rendercontext, &masks[nummasks - 1]);
+	bspcontext->curdrawsegs = bspcontext->ds_p;
+
+	ps_numbspcalls[i] = ps_numpolyobjects[i] = ps_numdrawnodes[i] = 0;
+
+	ps_bsptime[i] = I_GetPreciseTime();
+	R_RenderBSPNode(rendercontext, (INT32)numnodes - 1);
+	ps_bsptime[i] = I_GetPreciseTime() - ps_bsptime[i];
+	ps_numsprites[i] = rendercontext->spritecontext.visspritecount;
+
+	Mask_Post(rendercontext, &masks[nummasks - 1]);
+
+	ps_sw_spritecliptime[i] = I_GetPreciseTime();
+	R_ClipSprites(rendercontext, bspcontext->drawsegs, NULL);
+	ps_sw_spritecliptime[i] = I_GetPreciseTime() - ps_sw_spritecliptime[i];
+
+	// Add skybox portals caused by sky visplanes.
+	if (cv_skybox.value && skyboxmo[0])
+		Portal_AddSkyboxPortals(rendercontext);
+
+	// Portal rendering. Hijacks the BSP traversal.
+	ps_sw_portaltime[i] = I_GetPreciseTime();
+	if (bspcontext->portal_base)
+	{
+		portal_t *portal = bspcontext->portal_base;
+
+		for (; portal; portal = bspcontext->portal_base)
+		{
+			bspcontext->portalrender = portal->pass; // Recursiveness depth.
+
+			R_ClearFFloorClips(planecontext);
+
+			// Apply the viewpoint stored for the portal.
+			R_PortalFrame(rendercontext, portal);
+
+			// Hack in the clipsegs to delimit the starting
+			// clipping for sprites and possibly other similar
+			// future items.
+			R_ClearClipSegs(bspcontext, portal->start, portal->end);
+
+			// Hack in the top/bottom clip values for the window
+			// that were previously stored.
+			Portal_ClipApply(planecontext, portal);
+
+			masks = realloc(masks, (++nummasks)*sizeof(maskcount_t));
+
+			Mask_Pre(rendercontext, &masks[nummasks - 1]);
+			bspcontext->curdrawsegs = bspcontext->ds_p;
+
+			// Render the BSP from the new viewpoint, and clip
+			// any sprites with the new clipsegs and window.
+			R_RenderBSPNode(rendercontext, (INT32)numnodes - 1);
+			Mask_Post(rendercontext, &masks[nummasks - 1]);
+
+			R_ClipSprites(rendercontext, bspcontext->ds_p - (masks[nummasks - 1].drawsegs[1] - masks[nummasks - 1].drawsegs[0]), portal);
+
+			Portal_Remove(bspcontext, portal);
+		}
+	}
+	ps_sw_portaltime[i] = I_GetPreciseTime() - ps_sw_portaltime[i];
+
+	ps_sw_planetime[i] = I_GetPreciseTime();
+	R_DrawPlanes(rendercontext);
+	ps_sw_planetime[i] = I_GetPreciseTime() - ps_sw_planetime[i];
+
+	// draw mid texture and sprite
+	// And now 3D floors/sides!
+	ps_sw_maskedtime[i] = I_GetPreciseTime();
+	R_DrawMasked(rendercontext, masks, nummasks);
+	ps_sw_maskedtime[i] = I_GetPreciseTime() - ps_sw_maskedtime[i];
+
+	free(masks);
+
+#ifdef HAVE_THREADS
+	if (renderthreaded)
+	{
+		INT32 x = rendercontext->begincolumn;
+		INT32 w = (rendercontext->endcolumn - rendercontext->begincolumn);
+		INT32 c = 35 | V_NOSCALESTART;
+
+		V_DrawFill(x, 0, w, 1, c);
+		V_DrawFill(x, viewheight - 1, w, 1, c);
+
+		V_DrawFill(x, 0, 1, viewheight, c);
+		V_DrawFill(x+w-1, 0, 1, viewheight, c);
+	}
+#endif
+}
+
+static void R_ResetContext(rendercontext_t *context, INT32 leftclip, INT32 rightclip)
+{
+	context->begincolumn = leftclip;
+	context->endcolumn = rightclip;
+
+	// Clear buffers.
+	R_ClearPlanes(&context->planecontext);
+
+	if (viewmorph.use)
+	{
+		INT32 left = max(leftclip, viewmorph.x1);
+		INT32 right = min(viewwidth-viewmorph.x1-1, rightclip);
+
+		context->bspcontext.portalclipstart = left;
+		context->bspcontext.portalclipend = right;
+
+		R_ClearClipSegs(&context->bspcontext, left, right);
+
+		memcpy(context->planecontext.ceilingclip, viewmorph.ceilingclip, sizeof(INT16)*vid.width);
+		memcpy(context->planecontext.floorclip, viewmorph.floorclip, sizeof(INT16)*vid.width);
+	}
+	else
+	{
+		context->bspcontext.portalclipstart = leftclip;
+		context->bspcontext.portalclipend = rightclip;
+
+		R_ClearClipSegs(&context->bspcontext, leftclip, rightclip);
+	}
+
+	R_ClearDrawSegs(&context->bspcontext);
+	R_ClearSprites(&context->spritecontext);
+
+	Portal_InitList(&context->bspcontext);
+}
+
+#ifdef HAVE_THREADS
+static void R_ContextThreadFunc(void *userdata)
+{
+	renderdata_t *data = (renderdata_t *)userdata;
+
+	I_atomic_exchange(&data->running, 1);
+
+	while (!I_atomic_load(&data->shouldquit))
+	{
+		if (I_atomic_exchange(&data->framewaiting, 0))
+		{
+			R_RenderViewContext(&data->context);
+			I_atomic_exchange(&data->framefinished, 1);
+		}
+	}
+
+	I_atomic_exchange(&data->running, 0);
+}
+#endif
+
+static void R_StartThreads(void)
+{
+#ifdef HAVE_THREADS
+	INT32 currcontext;
+
+	for (currcontext = 0; currcontext < numusablerendercontexts; ++currcontext)
+	{
+		renderdata_t *renderdata = &renderdatas[currcontext];
+		rendercontext_t *context = &renderdata->context;
+
+		context->colcontext.func = colfuncs[BASEDRAWFUNC];
+		context->spancontext.func = spanfuncs[BASEDRAWFUNC];
+
+		I_atomic_exchange(&renderdata->running, 0);
+		I_atomic_exchange(&renderdata->shouldquit, 0);
+		I_atomic_exchange(&renderdata->framewaiting, 0);
+		I_atomic_exchange(&renderdata->framefinished, 0);
+
+		renderdata->thread = I_spawn_thread("software-renderer", (I_thread_fn)R_ContextThreadFunc, context);
+	}
+#endif
+}
+
+void R_StopThreads(void)
+{
+#ifdef HAVE_THREADS
+	INT32 currcontext;
+
+	if (!numusablerendercontexts)
+		return;
+
+	for (currcontext = 0; currcontext < numusablerendercontexts; ++currcontext)
+		I_atomic_exchange(&renderdatas[currcontext].shouldquit, 1);
+
+	for (;;) {
+		INT32 stoppedthreads = 0;
+
+		for (currcontext = 0; currcontext < numusablerendercontexts; ++currcontext)
+			stoppedthreads += !I_atomic_load(&renderdatas[currcontext].running);
+
+		if (stoppedthreads == numusablerendercontexts)
+			break;
+	}
+
+	numusablerendercontexts = 0;
+#endif
+}
+
+static void R_InitContexts(void)
+{
+	INT32 currcontext;
+	INT32 currstart;
+	INT32 incrementby;
+
+	currstart = 0;
+	incrementby = vid.width / numrendercontexts;
+
+	renderdatas = Z_Calloc(sizeof(renderdata_t) * numrendercontexts, PU_STATIC, NULL);
+
+	for (currcontext = 0; currcontext < numrendercontexts; ++currcontext)
+	{
+		renderdata_t *renderdata = &renderdatas[currcontext];
+		rendercontext_t *context = &renderdata->context;
+
+		context->num = currcontext;
+		context->begincolumn = max(currstart, 0);
+		currstart += incrementby;
+		context->endcolumn = min(currstart, vid.width);
+
+		context->planecontext.freehead = &context->planecontext.freetail;
+
+		R_ResetContext(&renderdata->context, context->begincolumn, context->endcolumn);
+		R_InitDrawNodes(&renderdata->context.spritecontext.nodebankhead);
+
+		context->colcontext.func = colfuncs[BASEDRAWFUNC];
+		context->spancontext.func = spanfuncs[BASEDRAWFUNC];
+	}
+}
 
 //
 // R_SetViewSize
@@ -960,7 +1229,7 @@ void R_ExecuteSetViewSize(void)
 			yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
 		}
 
-		if (ds_su)
+		/*if (ds_su)
 			Z_Free(ds_su);
 		if (ds_sv)
 			Z_Free(ds_sv);
@@ -968,7 +1237,7 @@ void R_ExecuteSetViewSize(void)
 			Z_Free(ds_sz);
 
 		ds_su = ds_sv = ds_sz = NULL;
-		ds_sup = ds_svp = ds_szp = NULL;
+		ds_sup = ds_svp = ds_szp = NULL;*/
 	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
@@ -1024,7 +1293,7 @@ void R_Init(void)
 	//I_OutputMsg("\nR_InitTranslucencyTables\n");
 	R_InitTranslucencyTables();
 
-	R_InitDrawNodes();
+	R_InitContexts();
 
 	framecount = 0;
 }
@@ -1394,63 +1663,57 @@ boolean R_IsViewpointThirdPerson(player_t *player, boolean skybox)
 	return false;
 }
 
-static void R_PortalFrame(portal_t *portal)
-{
-	viewx = portal->viewx;
-	viewy = portal->viewy;
-	viewz = portal->viewz;
-
-	viewangle = portal->viewangle;
-	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
-	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
-
-	portalclipstart = portal->start;
-	portalclipend = portal->end;
-
-	if (portal->clipline != -1)
-	{
-		portalclipline = &lines[portal->clipline];
-		portalcullsector = portalclipline->frontsector;
-		viewsector = portalclipline->frontsector;
-	}
-	else
-	{
-		portalclipline = NULL;
-		portalcullsector = NULL;
-		viewsector = R_PointInSubsector(viewx, viewy)->sector;
-	}
-}
-
-static void Mask_Pre (maskcount_t* m)
-{
-	m->drawsegs[0] = ds_p - drawsegs;
-	m->vissprites[0] = visspritecount;
-	m->viewx = viewx;
-	m->viewy = viewy;
-	m->viewz = viewz;
-	m->viewsector = viewsector;
-}
-
-static void Mask_Post (maskcount_t* m)
-{
-	m->drawsegs[1] = ds_p - drawsegs;
-	m->vissprites[1] = visspritecount;
-}
-
 // ================
 // R_RenderView
 // ================
 
-//                     FAB NOTE FOR WIN32 PORT !! I'm not finished already,
-// but I suspect network may have problems with the video buffer being locked
-// for all duration of rendering, and being released only once at the end..
-// I mean, there is a win16lock() or something that lasts all the rendering,
-// so maybe we should release screen lock before each netupdate below..?
+static void R_PrepareViewContext(viewcontext_t *context)
+{
+	context->x = viewx;
+	context->y = viewy;
+	context->z = viewz;
+
+	context->angle = viewangle;
+	context->sin = viewsin;
+	context->cos = viewcos;
+
+	context->sector = viewsector;
+	context->player = viewplayer;
+	context->mobj = r_viewmobj;
+}
+
+static void R_PrepareContexts(void)
+{
+	INT32 currcontext;
+	INT32 currstart = 0;
+	INT32 desiredwidth = viewwidth / numusablerendercontexts;
+	INT32 i;
+
+	for (currcontext = 0; currcontext < numusablerendercontexts; ++currcontext)
+	{
+		rendercontext_t *context = &renderdatas[currcontext].context;
+
+		context->buffer.screens[0] = topleft;
+		for (i = 1; i < NUMSCREENS; i++)
+			context->buffer.screens[i] = screens[i];
+
+		context->begincolumn = max(currstart, 0);
+		currstart += desiredwidth;
+		context->endcolumn = min(currstart, viewwidth);
+
+		R_ResetContext(context, context->begincolumn, context->endcolumn);
+		R_PrepareViewContext(&context->viewcontext);
+
+		if (context->spritecontext.sectorvisited == NULL)
+			context->spritecontext.sectorvisited = Z_Calloc(sizeof(boolean) * numsectors, PU_LEVEL, NULL);
+		memset(context->spritecontext.sectorvisited, 0, sizeof(boolean) * numsectors);
+	}
+}
 
 void R_RenderPlayerView(player_t *player)
 {
-	UINT8			nummasks	= 1;
-	maskcount_t*	masks		= malloc(sizeof(maskcount_t));
+	INT32 currcontext;
+	INT32 finishedcontexts = 0;
 
 	if (cv_homremoval.value && player == &players[displayplayer]) // if this is display player 1
 	{
@@ -1462,117 +1725,49 @@ void R_RenderPlayerView(player_t *player)
 
 	R_SetupFrame(player);
 	framecount++;
-	validcount++;
-
-	// Clear buffers.
-	R_ClearPlanes();
-	if (viewmorph.use)
-	{
-		portalclipstart = viewmorph.x1;
-		portalclipend = viewwidth-viewmorph.x1-1;
-		R_PortalClearClipSegs(portalclipstart, portalclipend);
-		memcpy(ceilingclip, viewmorph.ceilingclip, sizeof(INT16)*vid.width);
-		memcpy(floorclip, viewmorph.floorclip, sizeof(INT16)*vid.width);
-	}
-	else
-	{
-		portalclipstart = 0;
-		portalclipend = viewwidth;
-		R_ClearClipSegs();
-	}
-	R_ClearDrawSegs();
-	R_ClearSprites();
-	Portal_InitList();
 
 	// check for new console commands.
 	NetUpdate();
 
-	// The head node is the last node output.
-
-	Mask_Pre(&masks[nummasks - 1]);
-	curdrawsegs = ds_p;
-//profile stuff ---------------------------------------------------------
-#ifdef TIMING
-	mytotal = 0;
-	ProfZeroTimer();
-#endif
-	ps_numbspcalls = ps_numpolyobjects = ps_numdrawnodes = 0;
-	ps_bsptime = I_GetPreciseTime();
-	R_RenderBSPNode((INT32)numnodes - 1);
-	ps_bsptime = I_GetPreciseTime() - ps_bsptime;
-	ps_numsprites = visspritecount;
-#ifdef TIMING
-	RDMSR(0x10, &mycount);
-	mytotal += mycount; // 64bit add
-
-	CONS_Debug(DBG_RENDER, "RenderBSPNode: 0x%d %d\n", *((INT32 *)&mytotal + 1), (INT32)mytotal);
-#endif
-//profile stuff ---------------------------------------------------------
-	Mask_Post(&masks[nummasks - 1]);
-
-	ps_sw_spritecliptime = I_GetPreciseTime();
-	R_ClipSprites(drawsegs, NULL);
-	ps_sw_spritecliptime = I_GetPreciseTime() - ps_sw_spritecliptime;
-
-
-	// Add skybox portals caused by sky visplanes.
-	if (cv_skybox.value && skyboxmo[0])
-		Portal_AddSkyboxPortals();
-
-	// Portal rendering. Hijacks the BSP traversal.
-	ps_sw_portaltime = I_GetPreciseTime();
-	if (portal_base)
+#ifdef HAVE_THREADS
+	if (cv_numthreads.value != numusablerendercontexts)
 	{
-		portal_t *portal;
+		if (renderthreaded)
+			R_StopThreads();
 
-		for(portal = portal_base; portal; portal = portal_base)
+		numusablerendercontexts = cv_numthreads.value;
+		renderthreaded = (numusablerendercontexts > 1);
+
+		if (renderthreaded)
+			R_StartThreads();
+	}
+#else
+	numusablerendercontexts = 1;
+	renderthreaded = false;
+#endif
+
+	R_PrepareContexts();
+
+	for (currcontext = 0; currcontext < numusablerendercontexts; currcontext++)
+	{
+#ifdef HAVE_THREADS
+		if (renderthreaded)
+			I_atomic_exchange(&renderdatas[currcontext].framewaiting, 1);
+		else
+#endif
 		{
-			portalrender = portal->pass; // Recursiveness depth.
-
-			R_ClearFFloorClips();
-
-			// Apply the viewpoint stored for the portal.
-			R_PortalFrame(portal);
-
-			// Hack in the clipsegs to delimit the starting
-			// clipping for sprites and possibly other similar
-			// future items.
-			R_PortalClearClipSegs(portal->start, portal->end);
-
-			// Hack in the top/bottom clip values for the window
-			// that were previously stored.
-			Portal_ClipApply(portal);
-
-			validcount++;
-
-			masks = realloc(masks, (++nummasks)*sizeof(maskcount_t));
-
-			Mask_Pre(&masks[nummasks - 1]);
-			curdrawsegs = ds_p;
-
-			// Render the BSP from the new viewpoint, and clip
-			// any sprites with the new clipsegs and window.
-			R_RenderBSPNode((INT32)numnodes - 1);
-			Mask_Post(&masks[nummasks - 1]);
-
-			R_ClipSprites(ds_p - (masks[nummasks - 1].drawsegs[1] - masks[nummasks - 1].drawsegs[0]), portal);
-
-			Portal_Remove(portal);
+			R_RenderViewContext(&renderdatas[currcontext].context);
+			finishedcontexts++;
 		}
 	}
-	ps_sw_portaltime = I_GetPreciseTime() - ps_sw_portaltime;
 
-	ps_sw_planetime = I_GetPreciseTime();
-	R_DrawPlanes();
-	ps_sw_planetime = I_GetPreciseTime() - ps_sw_planetime;
-
-	// draw mid texture and sprite
-	// And now 3D floors/sides!
-	ps_sw_maskedtime = I_GetPreciseTime();
-	R_DrawMasked(masks, nummasks);
-	ps_sw_maskedtime = I_GetPreciseTime() - ps_sw_maskedtime;
-
-	free(masks);
+#ifdef HAVE_THREADS
+	while (renderthreaded && finishedcontexts != numusablerendercontexts)
+	{
+		for (currcontext = 0; currcontext < numusablerendercontexts; currcontext++)
+			finishedcontexts += I_atomic_exchange(&renderdatas[currcontext].framefinished, 0);
+	}
+#endif
 }
 
 // =========================================================================
@@ -1639,6 +1834,7 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_translucenthud);
 
 	CV_RegisterVar(&cv_maxportals);
+	CV_RegisterVar(&cv_numthreads);
 
 	CV_RegisterVar(&cv_movebob);
 }

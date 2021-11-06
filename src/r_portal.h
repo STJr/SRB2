@@ -41,21 +41,19 @@ typedef struct portal_s
 	fixed_t *frontscale;/**< Temporary screen bottom clipping array. */
 } portal_t;
 
-extern portal_t* portal_base;
-extern portal_t* portal_cap;
-extern UINT8 portalrender;
+struct bspcontext_s;
+struct planecontext_s;
+struct rendercontext_s;
+struct viewcontext_s;
 
-extern line_t *portalclipline;
-extern sector_t *portalcullsector;
-extern INT32 portalclipstart, portalclipend;
+void Portal_InitList	(struct bspcontext_s *bspcontext);
+void Portal_Remove		(struct bspcontext_s *context, portal_t* portal);
+void Portal_Add2Lines	(struct rendercontext_s *context,
+                        const INT32 line1, const INT32 line2, const INT32 x1, const INT32 x2);
+void Portal_AddSkybox	(struct bspcontext_s *bspcontext, struct viewcontext_s *viewcontext, const visplane_t* plane);
 
-void Portal_InitList	(void);
-void Portal_Remove		(portal_t* portal);
-void Portal_Add2Lines	(const INT32 line1, const INT32 line2, const INT32 x1, const INT32 x2);
-void Portal_AddSkybox	(const visplane_t* plane);
+void Portal_ClipRange (struct planecontext_s *planecontext, portal_t* portal);
+void Portal_ClipApply (struct planecontext_s *planecontext, const portal_t* portal);
 
-void Portal_ClipRange (portal_t* portal);
-void Portal_ClipApply (const portal_t* portal);
-
-void Portal_AddSkyboxPortals (void);
+void Portal_AddSkyboxPortals (struct rendercontext_s *context);
 #endif

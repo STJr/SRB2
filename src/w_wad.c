@@ -82,6 +82,14 @@
 #define O_BINARY 0
 #endif
 
+#ifdef HAVE_THREADS
+static I_mutex wad_mutex;
+#  define Lock_state()    I_lock_mutex(&wad_mutex)
+#  define Unlock_state() I_unlock_mutex(wad_mutex)
+#else
+#  define Lock_state()
+#  define Unlock_state()
+#endif
 
 typedef struct
 {
@@ -1922,6 +1930,8 @@ void *W_CacheLumpNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	if (!TestValidLump(wad,lump))
 		return NULL;
 
+	Lock_state();
+
 	lumpcache = wadfiles[wad]->lumpcache;
 	if (!lumpcache[lump])
 	{
@@ -1930,6 +1940,8 @@ void *W_CacheLumpNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	}
 	else
 		Z_ChangeTag(lumpcache[lump], tag);
+
+	Unlock_state();
 
 	return lumpcache[lump];
 }
@@ -1955,8 +1967,12 @@ void *W_CacheLumpNumForce(lumpnum_t lumpnum, INT32 tag)
 	if (!TestValidLump(wad,lump))
 		return NULL;
 
+	Lock_state();
+
 	ptr = Z_Malloc(W_LumpLengthPwad(wad, lump), tag, NULL);
 	W_ReadLumpHeaderPwad(wad, lump, ptr, 0, 0);  // read the lump in full
+
+	Unlock_state();
 
 	return ptr;
 }
@@ -1975,15 +1991,23 @@ static inline boolean W_IsLumpCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
 	if (!TestValidLump(wad, lump))
 		return false;
 
+	Lock_state();
+
 	lcache = wadfiles[wad]->lumpcache[lump];
 
 	if (ptr)
 	{
-		if (ptr == lcache)
+		if (ptr == lcache) {
+			Unlock_state();
 			return true;
+		}
 	}
-	else if (lcache)
+	else if (lcache) {
+		Unlock_state();
 		return true;
+	}
+
+	Unlock_state();
 
 	return false;
 }
@@ -2007,15 +2031,23 @@ static inline boolean W_IsPatchCachedPWAD(UINT16 wad, UINT16 lump, void *ptr)
 	if (!TestValidLump(wad, lump))
 		return false;
 
+	Lock_state();
+
 	lcache = wadfiles[wad]->patchcache[lump];
 
 	if (ptr)
 	{
-		if (ptr == lcache)
+		if (ptr == lcache) {
+			Unlock_state();
 			return true;
+		}
 	}
-	else if (lcache)
+	else if (lcache) {
+		Unlock_state();
 		return true;
+	}
+
+	Unlock_state();
 
 	return false;
 }
@@ -2048,7 +2080,7 @@ void *W_CacheLumpName(const char *name, INT32 tag)
 // Cache a patch into heap memory, convert the patch format as necessary
 //
 
-void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
+static void *W_CacheSoftwarePatch(UINT16 wad, UINT16 lump, INT32 tag)
 {
 	lumpcache_t *lumpcache = NULL;
 
@@ -2082,11 +2114,6 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	return lumpcache[lump];
 }
 
-void *W_CacheSoftwarePatchNum(lumpnum_t lumpnum, INT32 tag)
-{
-	return W_CacheSoftwarePatchNumPwad(WADFILENUM(lumpnum),LUMPNUM(lumpnum),tag);
-}
-
 void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 {
 	patch_t *patch;
@@ -2094,16 +2121,23 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 	if (!TestValidLump(wad, lump))
 		return NULL;
 
-	patch = W_CacheSoftwarePatchNumPwad(wad, lump, tag);
+	Lock_state();
+
+	patch = W_CacheSoftwarePatch(wad, lump, tag);
 
 #ifdef HWRENDER
 	// Software-only compile cache the data without conversion
 	if (rendermode == render_soft || rendermode == render_none)
 #endif
+	{
+		Unlock_state();
 		return (void *)patch;
+	}
 
 #ifdef HWRENDER
 	Patch_CreateGL(patch);
+	Unlock_state();
+
 	return (void *)patch;
 #endif
 }
@@ -2118,6 +2152,8 @@ void W_UnlockCachedPatch(void *patch)
 	if (!patch)
 		return;
 
+	Lock_state();
+
 	// The hardware code does its own memory management, as its patches
 	// have different lifetimes from software's.
 #ifdef HWRENDER
@@ -2126,6 +2162,8 @@ void W_UnlockCachedPatch(void *patch)
 	else
 #endif
 		Z_Unlock(patch);
+
+	Unlock_state();
 }
 
 void *W_CachePatchName(const char *name, INT32 tag)

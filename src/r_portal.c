@@ -14,27 +14,17 @@
 #include "r_portal.h"
 #include "r_plane.h"
 #include "r_main.h"
+#include "r_context.h"
 #include "doomstat.h"
 #include "p_spec.h" // Skybox viewpoints
 #include "z_zone.h"
 #include "r_things.h"
 #include "r_sky.h"
 
-UINT8 portalrender;			/**< When rendering a portal, it establishes the depth of the current BSP traversal. */
-
-// Linked list for portals.
-portal_t *portal_base, *portal_cap;
-
-line_t *portalclipline;
-sector_t *portalcullsector;
-INT32 portalclipstart, portalclipend;
-
-boolean portalline; // is curline a portal seg?
-
-void Portal_InitList (void)
+void Portal_InitList (bspcontext_t *bspcontext)
 {
-	portalrender = 0;
-	portal_base = portal_cap = NULL;
+	bspcontext->portalrender = 0;
+	bspcontext->portal_base = bspcontext->portal_cap = NULL;
 }
 
 /** Store the clipping window for a portal in its given range.
@@ -43,7 +33,7 @@ void Portal_InitList (void)
  * the function is called, so it is useful for converting one-sided
  * lines into portals.
  */
-void Portal_ClipRange (portal_t* portal)
+void Portal_ClipRange (planecontext_t *planecontext, portal_t* portal)
 {
 	INT32 start	= portal->start;
 	INT32 end	= portal->end;
@@ -54,18 +44,18 @@ void Portal_ClipRange (portal_t* portal)
 	INT32 i;
 	for (i = 0; i < end-start; i++)
 	{
-		*ceil = ceilingclip[start+i];
+		*ceil = planecontext->ceilingclip[start+i];
 		ceil++;
-		*floor = floorclip[start+i];
+		*floor = planecontext->floorclip[start+i];
 		floor++;
-		*scale = frontscale[start+i];
+		*scale = planecontext->frontscale[start+i];
 		scale++;
 	}
 }
 
 /** Apply the clipping window from a portal.
  */
-void Portal_ClipApply (const portal_t* portal)
+void Portal_ClipApply (planecontext_t *planecontext, const portal_t* portal)
 {
 	INT32 i;
 	INT32 start	= portal->start;
@@ -76,28 +66,28 @@ void Portal_ClipApply (const portal_t* portal)
 
 	for (i = 0; i < end-start; i++)
 	{
-		ceilingclip[start+i] = *ceil;
+		planecontext->ceilingclip[start+i] = *ceil;
 		ceil++;
-		floorclip[start+i] = *floor;
+		planecontext->floorclip[start+i] = *floor;
 		floor++;
-		frontscale[start+i] = *scale;
+		planecontext->frontscale[start+i] = *scale;
 		scale++;
 	}
 
 	// HACKS FOLLOW
 	for (i = 0; i < start; i++)
 	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
+		planecontext->floorclip[i] = -1;
+		planecontext->ceilingclip[i] = (INT16)viewheight;
 	}
 	for (i = end; i < vid.width; i++)
 	{
-		floorclip[i] = -1;
-		ceilingclip[i] = (INT16)viewheight;
+		planecontext->floorclip[i] = -1;
+		planecontext->ceilingclip[i] = (INT16)viewheight;
 	}
 }
 
-static portal_t* Portal_Add (const INT16 x1, const INT16 x2)
+static portal_t* Portal_Add (bspcontext_t *context, const INT16 x1, const INT16 x2)
 {
 	portal_t *portal		= Z_Malloc(sizeof(portal_t), PU_LEVEL, NULL);
 	INT16 *ceilingclipsave	= Z_Malloc(sizeof(INT16)*(x2-x1 + 1), PU_LEVEL, NULL);
@@ -105,15 +95,15 @@ static portal_t* Portal_Add (const INT16 x1, const INT16 x2)
 	fixed_t *frontscalesave	= Z_Malloc(sizeof(fixed_t)*(x2-x1 + 1), PU_LEVEL, NULL);
 
 	// Linked list.
-	if (!portal_base)
+	if (!context->portal_base)
 	{
-		portal_base	= portal;
-		portal_cap	= portal;
+		context->portal_base = portal;
+		context->portal_cap = portal;
 	}
 	else
 	{
-		portal_cap->next = portal;
-		portal_cap = portal;
+		context->portal_cap->next = portal;
+		context->portal_cap = portal;
 	}
 	portal->next = NULL;
 
@@ -125,14 +115,14 @@ static portal_t* Portal_Add (const INT16 x1, const INT16 x2)
 	portal->end		= x2;
 
 	// Increase recursion level.
-	portal->pass = portalrender+1;
+	portal->pass = context->portalrender+1;
 
 	return portal;
 }
 
-void Portal_Remove (portal_t* portal)
+void Portal_Remove (bspcontext_t *context, portal_t* portal)
 {
-	portal_base = portal->next;
+	context->portal_base = portal->next;
 	Z_Free(portal->ceilingclip);
 	Z_Free(portal->floorclip);
 	Z_Free(portal->frontscale);
@@ -149,9 +139,10 @@ void Portal_Remove (portal_t* portal)
  * When the portal renders, it will create the illusion of
  * the two lines being seamed together.
  */
-void Portal_Add2Lines (const INT32 line1, const INT32 line2, const INT32 x1, const INT32 x2)
+void Portal_Add2Lines (rendercontext_t *context,
+    const INT32 line1, const INT32 line2, const INT32 x1, const INT32 x2)
 {
-	portal_t* portal = Portal_Add(x1, x2);
+	portal_t* portal = Portal_Add(&context->bspcontext, x1, x2);
 
 	// Offset the portal view by the linedef centers
 	line_t* start	= &lines[line1];
@@ -172,20 +163,20 @@ void Portal_Add2Lines (const INT32 line1, const INT32 line2, const INT32 x1, con
 	dest_c.x = (dest->v1->x + dest->v2->x) / 2;
 	dest_c.y = (dest->v1->y + dest->v2->y) / 2;
 
-	disttopoint = R_PointToDist2(start_c.x, start_c.y, viewx, viewy);
-	angtopoint = R_PointToAngle2(start_c.x, start_c.y, viewx, viewy);
+	disttopoint = R_PointToDist2(start_c.x, start_c.y, context->viewcontext.x, context->viewcontext.y);
+	angtopoint = R_PointToAngle2(start_c.x, start_c.y, context->viewcontext.x, context->viewcontext.y);
 	angtopoint += dangle;
 
 	portal->viewx = dest_c.x + FixedMul(FINECOSINE(angtopoint>>ANGLETOFINESHIFT), disttopoint);
 	portal->viewy = dest_c.y + FixedMul(FINESINE(angtopoint>>ANGLETOFINESHIFT), disttopoint);
-	portal->viewz = viewz + dest->frontsector->floorheight - start->frontsector->floorheight;
-	portal->viewangle = viewangle + dangle;
+	portal->viewz = context->viewcontext.z + dest->frontsector->floorheight - start->frontsector->floorheight;
+	portal->viewangle = context->viewcontext.angle + dangle;
 
 	portal->clipline = line2;
 
-	Portal_ClipRange(portal);
+	Portal_ClipRange(&context->planecontext, portal);
 
-	portalline = true; // this tells R_StoreWallRange that curline is a portal seg
+	context->bspcontext.portalline = true; // this tells R_StoreWallRange that curline is a portal seg
 }
 
 /** Store the clipping window for a portal using a visplane.
@@ -256,7 +247,7 @@ static boolean TrimVisplaneBounds (const visplane_t* plane, INT16* start, INT16*
  * Applies the necessary offsets and rotation to give
  * a depth illusion to the skybox.
  */
-void Portal_AddSkybox (const visplane_t* plane)
+void Portal_AddSkybox (bspcontext_t *bspcontext, viewcontext_t *viewcontext, const visplane_t* plane)
 {
 	INT16 start, end;
 	mapheader_t *mh;
@@ -265,14 +256,14 @@ void Portal_AddSkybox (const visplane_t* plane)
 	if (TrimVisplaneBounds(plane, &start, &end))
 		return;
 
-	portal = Portal_Add(start, end);
+	portal = Portal_Add(bspcontext, start, end);
 
 	Portal_ClipVisplane(plane, portal);
 
 	portal->viewx = skyboxmo[0]->x;
 	portal->viewy = skyboxmo[0]->y;
 	portal->viewz = skyboxmo[0]->z;
-	portal->viewangle = viewangle + skyboxmo[0]->angle;
+	portal->viewangle = viewcontext->angle + skyboxmo[0]->angle;
 
 	mh = mapheaderinfo[gamemap-1];
 
@@ -283,14 +274,14 @@ void Portal_AddSkybox (const visplane_t* plane)
 		angle_t ang = skyboxmo[0]->angle>>ANGLETOFINESHIFT;
 
 		if (mh->skybox_scalex > 0)
-			x = (viewx - skyboxmo[1]->x) / mh->skybox_scalex;
+			x = (viewcontext->x - skyboxmo[1]->x) / mh->skybox_scalex;
 		else if (mh->skybox_scalex < 0)
-			x = (viewx - skyboxmo[1]->x) * -mh->skybox_scalex;
+			x = (viewcontext->x - skyboxmo[1]->x) * -mh->skybox_scalex;
 
 		if (mh->skybox_scaley > 0)
-			y = (viewy - skyboxmo[1]->y) / mh->skybox_scaley;
+			y = (viewcontext->y - skyboxmo[1]->y) / mh->skybox_scaley;
 		else if (mh->skybox_scaley < 0)
-			y = (viewy - skyboxmo[1]->y) * -mh->skybox_scaley;
+			y = (viewcontext->y - skyboxmo[1]->y) * -mh->skybox_scaley;
 
 		// Apply transform to account for the skybox viewport angle.
 		portal->viewx += FixedMul(x,FINECOSINE(ang)) - FixedMul(y,  FINESINE(ang));
@@ -298,9 +289,9 @@ void Portal_AddSkybox (const visplane_t* plane)
 	}
 
 	if (mh->skybox_scalez > 0)
-		portal->viewz += viewz / mh->skybox_scalez;
+		portal->viewz += viewcontext->z / mh->skybox_scalez;
 	else if (mh->skybox_scalez < 0)
-		portal->viewz += viewz * -mh->skybox_scalez;
+		portal->viewz += viewcontext->z * -mh->skybox_scalez;
 
 	portal->clipline = -1;
 }
@@ -308,7 +299,7 @@ void Portal_AddSkybox (const visplane_t* plane)
 /** Creates portals for the currently existing sky visplanes.
  * The visplanes are also removed and cleared from the list.
  */
-void Portal_AddSkyboxPortals (void)
+void Portal_AddSkyboxPortals (rendercontext_t *context)
 {
 	visplane_t *pl;
 	INT32 i;
@@ -316,11 +307,11 @@ void Portal_AddSkyboxPortals (void)
 
 	for (i = 0; i < MAXVISPLANES; i++, pl++)
 	{
-		for (pl = visplanes[i]; pl; pl = pl->next)
+		for (pl = context->planecontext.visplanes[i]; pl; pl = pl->next)
 		{
 			if (pl->picnum == skyflatnum)
 			{
-				Portal_AddSkybox(pl);
+				Portal_AddSkybox(&context->bspcontext, &context->viewcontext, pl);
 
 				pl->minx = 0;
 				pl->maxx = -1;

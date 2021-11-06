@@ -34,6 +34,15 @@
 
 #include <errno.h>
 
+#ifdef HAVE_THREADS
+static I_mutex r_texture_mutex;
+#  define Lock_state()    I_lock_mutex(&r_texture_mutex)
+#  define Unlock_state() I_unlock_mutex(r_texture_mutex)
+#else
+#  define Lock_state()
+#  define Unlock_state()
+#endif
+
 //
 // TEXTURE_T CACHING
 // When a texture is first needed, it counts the number of composite columns
@@ -508,8 +517,10 @@ INT32 R_GetTextureNum(INT32 texnum)
 //
 void R_CheckTextureCache(INT32 tex)
 {
+	Lock_state();
 	if (!texturecache[tex])
 		R_GenerateTexture(tex);
+	Unlock_state();
 }
 
 //
@@ -525,9 +536,11 @@ UINT8 *R_GetColumn(fixed_t tex, INT32 col)
 	else
 		col &= (width - 1);
 
+	Lock_state();
 	data = texturecache[tex];
 	if (!data)
 		data = R_GenerateTexture(tex);
+	Unlock_state();
 
 	return data + LONG(texturecolumnofs[tex][col]);
 }
@@ -542,7 +555,7 @@ void *R_GetFlat(lumpnum_t flatlumpnum)
 //
 // If needed, convert a texture or patch to a flat.
 //
-void *R_GetLevelFlat(levelflat_t *levelflat)
+void *R_GetLevelFlat(levelflat_t *levelflat, UINT16 *flatwidth, UINT16 *flatheight)
 {
 	boolean isleveltexture = (levelflat->type == LEVELFLAT_TEXTURE);
 	texture_t *texture = (isleveltexture ? textures[levelflat->u.texture.num] : NULL);
@@ -555,8 +568,8 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 		if (texture->flat)
 		{
 			flatdata = texture->flat;
-			ds_flatwidth = texture->width;
-			ds_flatheight = texture->height;
+			*flatwidth = texture->width;
+			*flatheight = texture->height;
 			texturechanged = false;
 		}
 		else
@@ -566,12 +579,14 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 	// If the texture changed, or the flat wasn't generated, convert.
 	if (levelflat->picture == NULL || texturechanged)
 	{
+		Lock_state();
+
 		// Level texture
 		if (isleveltexture)
 		{
 			levelflat->picture = R_GenerateTextureAsFlat(levelflat->u.texture.num);
-			ds_flatwidth = levelflat->width = texture->width;
-			ds_flatheight = levelflat->height = texture->height;
+			*flatwidth = levelflat->width = texture->width;
+			*flatheight = levelflat->height = texture->height;
 		}
 		else
 		{
@@ -584,8 +599,8 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 				levelflat->width = (UINT16)pngwidth;
 				levelflat->height = (UINT16)pngheight;
 
-				ds_flatwidth = levelflat->width;
-				ds_flatheight = levelflat->height;
+				*flatwidth = levelflat->width;
+				*flatheight = levelflat->height;
 			}
 			else
 #endif
@@ -595,8 +610,8 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 				size_t size;
 				softwarepatch_t *patch = W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE);
 
-				levelflat->width = ds_flatwidth = SHORT(patch->width);
-				levelflat->height = ds_flatheight = SHORT(patch->height);
+				levelflat->width = *flatwidth = SHORT(patch->width);
+				levelflat->height = *flatheight = SHORT(patch->height);
 
 				levelflat->picture = Z_Malloc(levelflat->width * levelflat->height, PU_LEVEL, NULL);
 				converted = Picture_FlatConvert(PICFMT_DOOMPATCH, patch, PICFMT_FLAT, 0, &size, levelflat->width, levelflat->height, SHORT(patch->topoffset), SHORT(patch->leftoffset), 0);
@@ -604,11 +619,13 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 				Z_Free(converted);
 			}
 		}
+
+		Unlock_state();
 	}
 	else
 	{
-		ds_flatwidth = levelflat->width;
-		ds_flatheight = levelflat->height;
+		*flatwidth = levelflat->width;
+		*flatheight = levelflat->height;
 	}
 
 	levelflat->u.texture.lastnum = levelflat->u.texture.num;
@@ -621,23 +638,14 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 //
 // R_CheckPowersOfTwo
 //
-// Sets ds_powersoftwo true if the flat's dimensions are powers of two, and returns that.
+// Checks if the flat's dimensions are powers of two.
 //
-boolean R_CheckPowersOfTwo(void)
+boolean R_CheckPowersOfTwo(UINT16 flatwidth, UINT16 flatheight)
 {
-	boolean wpow2 = (!(ds_flatwidth & (ds_flatwidth - 1)));
-	boolean hpow2 = (!(ds_flatheight & (ds_flatheight - 1)));
+	boolean wpow2 = (!(flatwidth & (flatwidth - 1)));
+	boolean hpow2 = (!(flatheight & (flatheight - 1)));
 
-	// Initially, the flat isn't powers-of-two-sized.
-	ds_powersoftwo = false;
-
-	// But if the width and height are powers of two,
-	// and are EQUAL, then it's okay :]
-	if ((ds_flatwidth == ds_flatheight) && (wpow2 && hpow2))
-		ds_powersoftwo = true;
-
-	// Just return ds_powersoftwo.
-	return ds_powersoftwo;
+	return ((flatwidth == flatheight) && (wpow2 && hpow2));
 }
 
 //
@@ -645,58 +653,58 @@ boolean R_CheckPowersOfTwo(void)
 //
 // Determine the flat's dimensions from its lump length.
 //
-void R_CheckFlatLength(size_t size)
+void R_CheckFlatLength(spancontext_t *ds, size_t size)
 {
 	switch (size)
 	{
 		case 4194304: // 2048x2048 lump
-			nflatmask = 0x3FF800;
-			nflatxshift = 21;
-			nflatyshift = 10;
-			nflatshiftup = 5;
-			ds_flatwidth = ds_flatheight = 2048;
+			ds->nflatmask = 0x3FF800;
+			ds->nflatxshift = 21;
+			ds->nflatyshift = 10;
+			ds->nflatshiftup = 5;
+			ds->flatwidth = ds->flatheight = 2048;
 			break;
 		case 1048576: // 1024x1024 lump
-			nflatmask = 0xFFC00;
-			nflatxshift = 22;
-			nflatyshift = 12;
-			nflatshiftup = 6;
-			ds_flatwidth = ds_flatheight = 1024;
+			ds->nflatmask = 0xFFC00;
+			ds->nflatxshift = 22;
+			ds->nflatyshift = 12;
+			ds->nflatshiftup = 6;
+			ds->flatwidth = ds->flatheight = 1024;
 			break;
 		case 262144:// 512x512 lump
-			nflatmask = 0x3FE00;
-			nflatxshift = 23;
-			nflatyshift = 14;
-			nflatshiftup = 7;
-			ds_flatwidth = ds_flatheight = 512;
+			ds->nflatmask = 0x3FE00;
+			ds->nflatxshift = 23;
+			ds->nflatyshift = 14;
+			ds->nflatshiftup = 7;
+			ds->flatwidth = ds->flatheight = 512;
 			break;
 		case 65536: // 256x256 lump
-			nflatmask = 0xFF00;
-			nflatxshift = 24;
-			nflatyshift = 16;
-			nflatshiftup = 8;
-			ds_flatwidth = ds_flatheight = 256;
+			ds->nflatmask = 0xFF00;
+			ds->nflatxshift = 24;
+			ds->nflatyshift = 16;
+			ds->nflatshiftup = 8;
+			ds->flatwidth = ds->flatheight = 256;
 			break;
 		case 16384: // 128x128 lump
-			nflatmask = 0x3F80;
-			nflatxshift = 25;
-			nflatyshift = 18;
-			nflatshiftup = 9;
-			ds_flatwidth = ds_flatheight = 128;
+			ds->nflatmask = 0x3F80;
+			ds->nflatxshift = 25;
+			ds->nflatyshift = 18;
+			ds->nflatshiftup = 9;
+			ds->flatwidth = ds->flatheight = 128;
 			break;
 		case 1024: // 32x32 lump
-			nflatmask = 0x3E0;
-			nflatxshift = 27;
-			nflatyshift = 22;
-			nflatshiftup = 11;
-			ds_flatwidth = ds_flatheight = 32;
+			ds->nflatmask = 0x3E0;
+			ds->nflatxshift = 27;
+			ds->nflatyshift = 22;
+			ds->nflatshiftup = 11;
+			ds->flatwidth = ds->flatheight = 32;
 			break;
 		default: // 64x64 lump
-			nflatmask = 0xFC0;
-			nflatxshift = 26;
-			nflatyshift = 20;
-			nflatshiftup = 10;
-			ds_flatwidth = ds_flatheight = 64;
+			ds->nflatmask = 0xFC0;
+			ds->nflatxshift = 26;
+			ds->nflatyshift = 20;
+			ds->nflatshiftup = 10;
+			ds->flatwidth = ds->flatheight = 64;
 			break;
 	}
 }

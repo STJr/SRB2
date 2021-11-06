@@ -26,7 +26,6 @@ struct rastery_s
 	fixed_t tx1, ty1;   // start points in texture at this line
 	fixed_t tx2, ty2;   // end points in texture at this line
 };
-extern struct rastery_s *prastertab; // for ASM code
 
 typedef struct floorsplat_s
 {
@@ -41,6 +40,8 @@ typedef struct floorsplat_s
 	mobj_t *mobj; // Mobj it is tied to
 } floorsplat_t;
 
-void R_DrawFloorSplat(vissprite_t *spr);
+struct rendercontext_s;
+
+void R_DrawFloorSplat(struct rendercontext_s *context, vissprite_t *spr);
 
 #endif /*__R_SPLATS_H__*/

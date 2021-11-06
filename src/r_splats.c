@@ -13,132 +13,116 @@
 #include "r_draw.h"
 #include "r_main.h"
 #include "r_splats.h"
+#include "r_context.h"
 #include "r_bsp.h"
 #include "p_local.h"
 #include "p_slopes.h"
 #include "w_wad.h"
 #include "z_zone.h"
 
-struct rastery_s *prastertab; // for ASM code
-
-static struct rastery_s rastertab[MAXVIDHEIGHT];
-static void prepare_rastertab(void);
+static void prepare_rastertab(planecontext_t *planecontext);
 
 // ==========================================================================
 //                                                               FLOOR SPLATS
 // ==========================================================================
 
-static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis);
+static void R_RasterizeFloorSplat(rendercontext_t *context, floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis);
 
-#ifdef USEASM
-void ASMCALL rasterize_segment_tex_asm(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2, INT32 tc, INT32 dir);
-#endif
-
-static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2, INT32 tc, INT32 dir)
+static void rasterize_segment_tex(planecontext_t *planecontext, INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 tv1, INT32 tv2, INT32 tc, INT32 dir)
 {
-#ifdef USEASM
-	if (R_ASM)
-	{
-		rasterize_segment_tex_asm(x1, y1, x2, y2, tv1, tv2, tc, dir);
+	fixed_t xs, xe, count;
+	fixed_t dx0, dx1;
+
+	if (y1 == y2)
 		return;
-	}
-	else
-#endif
+
+	if (y2 > y1)
 	{
-		fixed_t xs, xe, count;
-		fixed_t dx0, dx1;
+		count = (y2-y1)+1;
 
-		if (y1 == y2)
-			return;
+		dx0 = FixedDiv((x2-x1)<<FRACBITS, count<<FRACBITS);
+		dx1 = FixedDiv((tv2-tv1)<<FRACBITS, count<<FRACBITS);
 
-		if (y2 > y1)
+		xs = x1 << FRACBITS;
+		xe = tv1 << FRACBITS;
+		tc <<= FRACBITS;
+
+		if (dir == 0)
 		{
-			count = (y2-y1)+1;
-
-			dx0 = FixedDiv((x2-x1)<<FRACBITS, count<<FRACBITS);
-			dx1 = FixedDiv((tv2-tv1)<<FRACBITS, count<<FRACBITS);
-
-			xs = x1 << FRACBITS;
-			xe = tv1 << FRACBITS;
-			tc <<= FRACBITS;
-
-			if (dir == 0)
+			for (;;)
 			{
-				for (;;)
-				{
-					rastertab[y1].maxx = xs;
-					rastertab[y1].tx2 = xe;
-					rastertab[y1].ty2 = tc;
+				planecontext->rastertab[y1].maxx = xs;
+				planecontext->rastertab[y1].tx2 = xe;
+				planecontext->rastertab[y1].ty2 = tc;
 
-					xs += dx0;
-					xe += dx1;
-					y1++;
+				xs += dx0;
+				xe += dx1;
+				y1++;
 
-					if (count-- < 1) break;
-				}
-			}
-			else
-			{
-				for (;;)
-				{
-					rastertab[y1].maxx = xs;
-					rastertab[y1].tx2 = tc;
-					rastertab[y1].ty2 = xe;
-
-					xs += dx0;
-					xe += dx1;
-					y1++;
-
-					if (count-- < 1) break;
-				}
+				if (count-- < 1) break;
 			}
 		}
 		else
 		{
-			count = (y1-y2)+1;
-
-			dx0 = FixedDiv((x1-x2)<<FRACBITS, count<<FRACBITS);
-			dx1 = FixedDiv((tv1-tv2)<<FRACBITS, count<<FRACBITS);
-
-			xs = x2 << FRACBITS;
-			xe = tv2 << FRACBITS;
-			tc <<= FRACBITS;
-
-			if (dir == 0)
+			for (;;)
 			{
-				for (;;)
-				{
-					rastertab[y2].minx = xs;
-					rastertab[y2].tx1 = xe;
-					rastertab[y2].ty1 = tc;
+				planecontext->rastertab[y1].maxx = xs;
+				planecontext->rastertab[y1].tx2 = tc;
+				planecontext->rastertab[y1].ty2 = xe;
 
-					xs += dx0;
-					xe += dx1;
-					y2++;
+				xs += dx0;
+				xe += dx1;
+				y1++;
 
-					if (count-- < 1) break;
-				}
+				if (count-- < 1) break;
 			}
-			else
+		}
+	}
+	else
+	{
+		count = (y1-y2)+1;
+
+		dx0 = FixedDiv((x1-x2)<<FRACBITS, count<<FRACBITS);
+		dx1 = FixedDiv((tv1-tv2)<<FRACBITS, count<<FRACBITS);
+
+		xs = x2 << FRACBITS;
+		xe = tv2 << FRACBITS;
+		tc <<= FRACBITS;
+
+		if (dir == 0)
+		{
+			for (;;)
 			{
-				for (;;)
-				{
-					rastertab[y2].minx = xs;
-					rastertab[y2].tx1 = tc;
-					rastertab[y2].ty1 = xe;
+				planecontext->rastertab[y2].minx = xs;
+				planecontext->rastertab[y2].tx1 = xe;
+				planecontext->rastertab[y2].ty1 = tc;
 
-					xs += dx0;
-					xe += dx1;
-					y2++;
+				xs += dx0;
+				xe += dx1;
+				y2++;
 
-					if (count-- < 1) break;
-				}
+				if (count-- < 1) break;
+			}
+		}
+		else
+		{
+			for (;;)
+			{
+				planecontext->rastertab[y2].minx = xs;
+				planecontext->rastertab[y2].tx1 = tc;
+				planecontext->rastertab[y2].ty1 = xe;
+
+				xs += dx0;
+				xe += dx1;
+				y2++;
+
+				if (count-- < 1) break;
 			}
 		}
 	}
 }
 
-void R_DrawFloorSplat(vissprite_t *spr)
+void R_DrawFloorSplat(rendercontext_t *context, vissprite_t *spr)
 {
 	floorsplat_t splat;
 	mobj_t *mobj = spr->mobj;
@@ -308,7 +292,7 @@ void R_DrawFloorSplat(vissprite_t *spr)
 		v2d[i].y = (centeryfrac + FixedMul(rot_z, yscale))>>FRACBITS;
 	}
 
-	R_RasterizeFloorSplat(&splat, v2d, spr);
+	R_RasterizeFloorSplat(context, &splat, v2d, spr);
 }
 
 // --------------------------------------------------------------------------
@@ -316,7 +300,7 @@ void R_DrawFloorSplat(vissprite_t *spr)
 // fill the polygon with linear interpolation, call span drawer for each
 // scan line
 // --------------------------------------------------------------------------
-static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis)
+static void R_RasterizeFloorSplat(rendercontext_t *context, floorsplat_t *pSplat, vector2_t *verts, vissprite_t *vis)
 {
 	// rasterizing
 	INT32 miny = viewheight + 1, maxy = 0;
@@ -325,9 +309,13 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	fixed_t planeheight = 0;
 	fixed_t step;
 
+	planecontext_t *planecontext = &context->planecontext;
+
+	colcontext_t *dc = &context->colcontext;
+	spancontext_t *ds = &context->spancontext;
 	int spanfunctype = SPANDRAWFUNC_SPRITE;
 
-	prepare_rastertab();
+	prepare_rastertab(planecontext);
 
 #define RASTERPARAMS(vnum1, vnum2, tv1, tv2, tc, dir) \
     x1 = verts[vnum1].x; \
@@ -372,7 +360,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
         } \
         y2 = vid.height - 1; \
     } \
-    rasterize_segment_tex(x1, ry1, x2, y2, tv1, tv2, tc, dir); \
+    rasterize_segment_tex(planecontext, x1, ry1, x2, y2, tv1, tv2, tc, dir); \
     if (ry1 < miny) \
         miny = ry1; \
     if (ry1 > maxy) \
@@ -387,27 +375,27 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	// do segment d -> left side of texture
 	RASTERPARAMS(0,3,pSplat->width-1,0,0,1);
 
-	ds_source = (UINT8 *)pSplat->pic;
-	ds_flatwidth = pSplat->width;
-	ds_flatheight = pSplat->height;
+	ds->source = (UINT8 *)pSplat->pic;
+	ds->flatwidth = pSplat->width;
+	ds->flatheight = pSplat->height;
 
-	if (R_CheckPowersOfTwo())
-		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+	if (R_CheckPowersOfTwo(ds->flatwidth, ds->flatheight))
+		R_CheckFlatLength(ds, ds->flatwidth * ds->flatheight);
 
 	if (pSplat->slope)
 	{
-		R_SetTiltedSpan(0);
-		R_SetScaledSlopePlane(pSplat->slope, vis->viewpoint.x, vis->viewpoint.y, vis->viewpoint.z, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewpoint.angle, pSplat->angle);
-		R_CalculateSlopeVectors();
+		R_SetTiltedSpan(ds, 0);
+		R_SetScaledSlopePlane(pSplat->slope, ds, vis->viewpoint.x, vis->viewpoint.y, vis->viewpoint.z, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewpoint.angle, pSplat->angle);
+		R_CalculateSlopeVectors(ds);
 		spanfunctype = SPANDRAWFUNC_TILTEDSPRITE;
 	}
 	else
 	{
-		planeheight = abs(pSplat->z - vis->viewpoint.z);
+		planecontext->planeheight = abs(pSplat->z - vis->viewpoint.z);
 
 		if (pSplat->angle)
 		{
-			memset(cachedheight, 0, sizeof(cachedheight));
+			memset(planecontext->cachedheight, 0, sizeof(planecontext->cachedheight));
 
 			// Add the view offset, rotated by the plane angle.
 			fixed_t a = -pSplat->verts[0].x + vis->viewpoint.x;
@@ -423,22 +411,22 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		}
 	}
 
-	ds_colormap = vis->colormap;
-	ds_translation = R_GetSpriteTranslation(vis);
-	if (ds_translation == NULL)
-		ds_translation = colormaps;
+	ds->colormap = vis->colormap;
+	ds->translation = R_GetSpriteTranslation(vis);
+	if (ds->translation == NULL)
+		ds->translation = colormaps;
 
 	if (vis->extra_colormap)
 	{
-		if (!ds_colormap)
-			ds_colormap = vis->extra_colormap->colormap;
+		if (!ds->colormap)
+			ds->colormap = vis->extra_colormap->colormap;
 		else
-			ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
+			ds->colormap = &vis->extra_colormap->colormap[ds->colormap - colormaps];
 	}
 
 	if (vis->transmap)
 	{
-		ds_transmap = vis->transmap;
+		ds->transmap = vis->transmap;
 
 		if (pSplat->slope)
 			spanfunctype = SPANDRAWFUNC_TILTEDTRANSSPRITE;
@@ -446,12 +434,12 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 			spanfunctype = SPANDRAWFUNC_TRANSSPRITE;
 	}
 	else
-		ds_transmap = NULL;
+		ds->transmap = NULL;
 
-	if (ds_powersoftwo)
-		spanfunc = spanfuncs[spanfunctype];
+	if (ds->powersoftwo)
+		ds->func = spanfuncs[spanfunctype];
 	else
-		spanfunc = spanfuncs_npo2[spanfunctype];
+		ds->func = spanfuncs_npo2[spanfunctype];
 
 	if (maxy >= vid.height)
 		maxy = vid.height-1;
@@ -460,8 +448,8 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	{
 		boolean cliptab[MAXVIDWIDTH+1];
 
-		x1 = rastertab[y].minx>>FRACBITS;
-		x2 = rastertab[y].maxx>>FRACBITS;
+		x1 = planecontext->rastertab[y].minx>>FRACBITS;
+		x2 = planecontext->rastertab[y].maxx>>FRACBITS;
 
 		if (x1 > x2)
 		{
@@ -482,7 +470,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 			continue;
 
 		for (i = x1; i <= x2; i++)
-			cliptab[i] = (y >= mfloorclip[i]);
+			cliptab[i] = (y >= dc->mfloorclip[i]);
 
 		// clip left
 		while (cliptab[x1])
@@ -516,10 +504,10 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 			angle_t planecos = FINECOSINE(angle);
 			angle_t planesin = FINESINE(angle);
 
-			if (planeheight != cachedheight[y])
+			if (planecontext->planeheight != planecontext->cachedheight[y])
 			{
-				cachedheight[y] = planeheight;
-				distance = cacheddistance[y] = FixedMul(planeheight, yslope[y]);
+				planecontext->cachedheight[y] = planeheight;
+				distance = planecontext->cacheddistance[y] = FixedMul(planeheight, yslope[y]);
 				span = abs(centery - y);
 
 				if (span) // Don't divide by zero
@@ -530,43 +518,43 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 				else
 					xstep = ystep = FRACUNIT;
 
-				cachedxstep[y] = xstep;
-				cachedystep[y] = ystep;
+				planecontext->cachedxstep[y] = xstep;
+				planecontext->cachedystep[y] = ystep;
 			}
 			else
 			{
-				distance = cacheddistance[y];
-				xstep = cachedxstep[y];
-				ystep = cachedystep[y];
+				distance = planecontext->cacheddistance[y];
+				xstep = planecontext->cachedxstep[y];
+				ystep = planecontext->cachedystep[y];
 			}
 
-			ds_xstep = FixedDiv(xstep, pSplat->xscale);
-			ds_ystep = FixedDiv(ystep, pSplat->yscale);
+			ds->xstep = FixedDiv(xstep, pSplat->xscale);
+			ds->ystep = FixedDiv(ystep, pSplat->yscale);
 
-			ds_xfrac = FixedDiv(offsetx + FixedMul(planecos, distance) + (x1 - centerx) * xstep, pSplat->xscale);
-			ds_yfrac = FixedDiv(offsety - FixedMul(planesin, distance) + (x1 - centerx) * ystep, pSplat->yscale);
+			ds->xfrac = FixedDiv(offsetx + FixedMul(planecos, distance) + (x1 - centerx) * xstep, pSplat->xscale);
+			ds->yfrac = FixedDiv(offsety - FixedMul(planesin, distance) + (x1 - centerx) * ystep, pSplat->yscale);
 		}
 
-		ds_y = y;
-		ds_x1 = x1;
-		ds_x2 = x2;
-		spanfunc();
+		ds->y = y;
+		ds->x1 = x1;
+		ds->x2 = x2;
+		ds->func(ds);
 
-		rastertab[y].minx = INT32_MAX;
-		rastertab[y].maxx = INT32_MIN;
+		planecontext->rastertab[y].minx = INT32_MAX;
+		planecontext->rastertab[y].maxx = INT32_MIN;
 	}
 
 	if (pSplat->angle && !pSplat->slope)
-		memset(cachedheight, 0, sizeof(cachedheight));
+		memset(planecontext->cachedheight, 0, sizeof(planecontext->cachedheight));
 }
 
-static void prepare_rastertab(void)
+static void prepare_rastertab(planecontext_t *planecontext)
 {
 	INT32 i;
-	prastertab = rastertab;
+	planecontext->prastertab = planecontext->rastertab;
 	for (i = 0; i < vid.height; i++)
 	{
-		rastertab[i].minx = INT32_MAX;
-		rastertab[i].maxx = INT32_MIN;
+		planecontext->rastertab[i].minx = INT32_MAX;
+		planecontext->rastertab[i].maxx = INT32_MIN;
 	}
 }

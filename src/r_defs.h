@@ -22,7 +22,7 @@
 // SECTORS do store MObjs anyway.
 #include "p_mobj.h"
 
-#include "screen.h" // MAXVIDWIDTH, MAXVIDHEIGHT
+#include "screen.h"
 
 #ifdef HWRENDER
 #include "m_aatree.h"
@@ -41,6 +41,9 @@ typedef struct
 	INT32 last;
 } cliprange_t;
 
+// Fix from boom.
+#define MAXSEGS (MAXVIDWIDTH/2+1)
+
 // Silhouette, needed for clipping segs (mainly) and sprites representing things.
 #define SIL_NONE   0
 #define SIL_BOTTOM 1
@@ -55,6 +58,15 @@ typedef UINT8 lighttable_t;
 
 #define CMF_FADEFULLBRIGHTSPRITES  1
 #define CMF_FOG 4
+
+typedef struct vbuffer_s
+{
+	UINT8 *screens[5];
+} vbuffer_t;
+
+typedef struct {
+	float x, y, z;
+} floatv3_t;
 
 // ExtraColormap type. Use for extra_colormaps from now on.
 typedef struct extracolormap_s

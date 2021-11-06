@@ -155,7 +155,7 @@ Worker (
 	return 0;
 }
 
-void
+I_thread_handle
 I_spawn_thread (
 		const char  * name,
 		I_thread_fn   entry,
@@ -189,6 +189,7 @@ I_spawn_thread (
 		}
 	}
 	I_unlock_mutex(i_thread_pool_mutex);
+	return (I_thread_handle)th;
 }
 
 int
@@ -353,4 +354,19 @@ I_wake_all_cond (
 
 	if (SDL_CondBroadcast(cond) == -1)
 		abort();
+}
+
+INT32
+I_atomic_load (
+		I_Atomicptr_t atomic
+){
+	return SDL_AtomicGet(atomic);
+}
+
+INT32
+I_atomic_exchange (
+	I_Atomicptr_t atomic,
+	INT32         val
+){
+	return SDL_AtomicSet(atomic, val);
 }

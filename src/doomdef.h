@@ -537,6 +537,9 @@ INT32 I_GetKey(void);
 // Max gamepad/joysticks that can be detected/used.
 #define MAX_JOYSTICKS 4
 
+// Software multithreading
+#define MAX_RENDER_THREADS 8
+
 #ifndef M_PIl
 #define M_PIl 3.1415926535897932384626433832795029L
 #endif
@@ -607,13 +610,6 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 
 /// Experimental attempts at preventing MF_PAPERCOLLISION objects from getting stuck in walls.
 //#define PAPER_COLLISIONCORRECTION
-
-/// FINALLY some real clipping that doesn't make walls dissappear AND speeds the game up
-/// (that was the original comment from SRB2CB, sadly it is a lie and actually slows game down)
-/// on the bright side it fixes some weird issues with translucent walls
-/// \note	SRB2CB port.
-///      	SRB2CB itself ported this from PrBoom+
-#define NEWCLIP
 
 /// OpenGL shaders
 #define GL_SHADERS

@@ -34,8 +34,7 @@
 #include "r_textures.h"
 #include "r_things.h"
 #include "r_draw.h"
-
-extern drawseg_t *firstseg;
+#include "r_context.h"
 
 void SplitScreen_OnChange(void);
 

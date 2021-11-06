@@ -112,58 +112,6 @@ typedef struct vmode_s
 #define NUMSPECIALMODES  4
 extern vmode_t specialmodes[NUMSPECIALMODES];
 
-// ---------------------------------------------
-// color mode dependent drawer function pointers
-// ---------------------------------------------
-
-#define BASEDRAWFUNC 0
-
-enum
-{
-	COLDRAWFUNC_BASE = BASEDRAWFUNC,
-	COLDRAWFUNC_FUZZY,
-	COLDRAWFUNC_TRANS,
-	COLDRAWFUNC_SHADE,
-	COLDRAWFUNC_SHADOWED,
-	COLDRAWFUNC_TRANSTRANS,
-	COLDRAWFUNC_TWOSMULTIPATCH,
-	COLDRAWFUNC_TWOSMULTIPATCHTRANS,
-	COLDRAWFUNC_FOG,
-
-	COLDRAWFUNC_MAX
-};
-
-extern void (*colfunc)(void);
-extern void (*colfuncs[COLDRAWFUNC_MAX])(void);
-
-enum
-{
-	SPANDRAWFUNC_BASE = BASEDRAWFUNC,
-	SPANDRAWFUNC_TRANS,
-	SPANDRAWFUNC_TILTED,
-	SPANDRAWFUNC_TILTEDTRANS,
-
-	SPANDRAWFUNC_SPLAT,
-	SPANDRAWFUNC_TRANSSPLAT,
-	SPANDRAWFUNC_TILTEDSPLAT,
-
-	SPANDRAWFUNC_SPRITE,
-	SPANDRAWFUNC_TRANSSPRITE,
-	SPANDRAWFUNC_TILTEDSPRITE,
-	SPANDRAWFUNC_TILTEDTRANSSPRITE,
-
-	SPANDRAWFUNC_WATER,
-	SPANDRAWFUNC_TILTEDWATER,
-
-	SPANDRAWFUNC_FOG,
-
-	SPANDRAWFUNC_MAX
-};
-
-extern void (*spanfunc)(void);
-extern void (*spanfuncs[SPANDRAWFUNC_MAX])(void);
-extern void (*spanfuncs_npo2[SPANDRAWFUNC_MAX])(void);
-
 // -----
 // CPUID
 // -----

@@ -177,6 +177,7 @@ static char returnWadPath[256];
 #include "../screen.h" //vid.WndParent
 #include "../d_net.h"
 #include "../g_game.h"
+#include "../r_main.h"
 #include "../filesrch.h"
 #include "endtxt.h"
 #include "sdlmain.h"
@@ -2272,6 +2273,7 @@ INT32 I_StartupSystem(void)
 #ifdef HAVE_THREADS
 	I_start_threads();
 	I_AddExitFunc(I_stop_threads);
+	I_AddExitFunc(R_StopThreads);
 #endif
 	I_StartupConsole();
 #ifdef NEWSIGNALHANDLER

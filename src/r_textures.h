@@ -18,6 +18,7 @@
 #include "r_state.h"
 #include "p_setup.h" // levelflats
 #include "r_data.h"
+#include "r_draw.h"
 
 #ifdef __GNUG__
 #pragma interface
@@ -86,12 +87,12 @@ void R_CheckTextureCache(INT32 tex);
 void R_ClearTextureNumCache(boolean btell);
 
 // Retrieve texture data.
-void *R_GetLevelFlat(levelflat_t *levelflat);
+void *R_GetLevelFlat(levelflat_t *levelflat, UINT16 *flatwidth, UINT16 *flatheight);
 UINT8 *R_GetColumn(fixed_t tex, INT32 col);
 void *R_GetFlat(lumpnum_t flatnum);
 
-boolean R_CheckPowersOfTwo(void);
-void R_CheckFlatLength(size_t size);
+boolean R_CheckPowersOfTwo(UINT16 flatwidth, UINT16 flatheight);
+void R_CheckFlatLength(spancontext_t *ds, size_t size);
 
 // Returns the texture number for the texture name.
 INT32 R_TextureNumForName(const char *name);

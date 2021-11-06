@@ -511,8 +511,10 @@ static void D_Display(void)
 						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
 					}
 				}
+				ps_rendercalltime = I_GetPreciseTime() - ps_rendercalltime;
 
 				// Image postprocessing effect
+				ps_postprocesstime = I_GetPreciseTime();
 				if (rendermode == render_soft)
 				{
 					if (!splitscreen)
@@ -523,7 +525,7 @@ static void D_Display(void)
 					if (postimgtype2)
 						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
-				ps_rendercalltime = I_GetPreciseTime() - ps_rendercalltime;
+				ps_postprocesstime = I_GetPreciseTime() - ps_postprocesstime;
 			}
 
 			if (lastdraw)

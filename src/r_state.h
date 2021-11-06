@@ -90,6 +90,8 @@ extern sector_t *viewsector;
 extern player_t *viewplayer;
 extern mobj_t *r_viewmobj;
 
+extern consvar_t cv_numthreads;
+
 extern consvar_t cv_allowmlook;
 extern consvar_t cv_maxportals;
 
@@ -98,11 +100,5 @@ extern angle_t doubleclipangle;
 
 extern INT32 viewangletox[FINEANGLES/2];
 extern angle_t xtoviewangle[MAXVIDWIDTH+1];
-
-extern fixed_t rw_distance;
-extern angle_t rw_normalangle;
-
-// angle to line origin
-extern angle_t rw_angle1;
 
 #endif

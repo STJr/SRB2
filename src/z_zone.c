@@ -39,6 +39,15 @@
 #include "hardware/hw_main.h" // For hardware memory info
 #endif
 
+#ifdef HAVE_THREADS
+static I_mutex Z_mutex;
+#  define Lock_state()    I_lock_mutex(&Z_mutex)
+#  define Unlock_state() I_unlock_mutex(Z_mutex)
+#else
+#  define Lock_state()
+#  define Unlock_state()
+#endif
+
 #ifdef HAVE_VALGRIND
 #include "valgrind.h"
 static boolean Z_calloc = false;
@@ -203,6 +212,8 @@ void Z_Free(void *ptr)
 	if (ptr == NULL)
 		return;
 
+	Lock_state();
+
 #ifdef ZDEBUG2
 	CONS_Debug(DBG_MEMORY, "Z_Free %s:%d\n", file, line);
 #endif
@@ -237,6 +248,8 @@ void Z_Free(void *ptr)
 	block->prev->next = block->next;
 	block->next->prev = block->prev;
 	free(block);
+
+	Unlock_state();
 }
 
 /** malloc() that doesn't accept failure.
@@ -294,6 +307,8 @@ void *Z_MallocAlign(size_t size, INT32 tag, void *user, INT32 alignbits)
 	memhdr_t *hdr;
 	void *given;
 	size_t blocksize = extrabytes + sizeof *hdr + size;
+
+	Lock_state();
 
 #ifdef ZDEBUG2
 	CONS_Debug(DBG_MEMORY, "Z_Malloc %s:%d\n", file, line);
@@ -359,6 +374,8 @@ void *Z_MallocAlign(size_t size, INT32 tag, void *user, INT32 alignbits)
 		I_Error("Z_Malloc: attempted to allocate purgable block "
 			"(size %s) with no user", sizeu1(size));
 
+	Unlock_state();
+
 	return given;
 }
 
@@ -381,14 +398,19 @@ void *Z_Calloc2(size_t size, INT32 tag, void *user, INT32 alignbits, const char 
 void *Z_CallocAlign(size_t size, INT32 tag, void *user, INT32 alignbits)
 #endif
 {
+	void *mem;
+	Lock_state();
 #ifdef VALGRIND_MEMPOOL_ALLOC
 	Z_calloc = true;
 #endif
 #ifdef ZDEBUG
-	return memset(Z_Malloc2    (size, tag, user, alignbits, file, line), 0, size);
+	mem = Z_Malloc2    (size, tag, user, alignbits, file, line);
 #else
-	return memset(Z_MallocAlign(size, tag, user, alignbits            ), 0, size);
+	mem = Z_MallocAlign(size, tag, user, alignbits            );
 #endif
+	memset(mem, 0, size);
+	Unlock_state();
+	return mem;
 }
 
 /** The Z_ReallocAlign function.
