@@ -31,6 +31,7 @@
 #include "m_misc.h" // M_MapNumber
 #include "b_bot.h" // B_UpdateBotleader
 #include "d_clisrv.h" // CL_RemovePlayer
+#include "i_system.h" // I_GetPreciseTime, I_PreciseToMicros
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -3876,6 +3877,12 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 	return 1;
 }
 
+static int lib_iGetTimestamp(lua_State *L)
+{
+	lua_pushinteger(L, I_PreciseToMicros(I_GetPreciseTime()));
+	return 1;
+}
+
 static luaL_Reg lib[] = {
 	{"print", lib_print},
 	{"chatprint", lib_chatprint},
@@ -4149,6 +4156,8 @@ static luaL_Reg lib[] = {
 	{"G_TicsToSeconds",lib_gTicsToSeconds},
 	{"G_TicsToCentiseconds",lib_gTicsToCentiseconds},
 	{"G_TicsToMilliseconds",lib_gTicsToMilliseconds},
+
+	{"I_GetTimestamp",lib_iGetTimestamp},
 
 	{NULL, NULL}
 };
