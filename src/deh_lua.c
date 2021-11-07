@@ -555,11 +555,15 @@ static int constants_get(lua_State *L)
 
 	key = luaL_checkstring(L, 2);
 
-	// In Lua, mathlib is always there
-	ret = getEnum(L, true, key);
+	// In Lua, mathlib is never there
+	ret = getEnum(L, false, key);
 
 	if (ret != -1)
-		return ret;
+		// Don't allow A_* or super.
+		// All userdata is meant to be considered global variables,
+		// so no need to get more specific than "is it userdata?"
+		if (!lua_isuserdata(L, -1) && !lua_isfunction(L, -1))
+			return ret;
 
 	return 0;
 }
