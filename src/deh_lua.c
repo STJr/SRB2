@@ -216,14 +216,11 @@ static int lib_dummysuper(lua_State *L)
 	return luaL_error(L, "Can't call super() outside of hardcode-replacing A_Action functions being called by state changes!"); // convoluted, I know. @_@;;
 }
 
-static inline int lib_getenum(lua_State *L)
+static inline int getEnum(lua_State *L, boolean mathlib, const char *word)
 {
-	const char *word, *p;
+	const char *p;
 	fixed_t i;
-	boolean mathlib = lua_toboolean(L, lua_upvalueindex(1));
-	if (lua_type(L,2) != LUA_TSTRING)
-		return 0;
-	word = lua_tostring(L,2);
+
 	if (strlen(word) == 1) { // Assume sprite frame if length 1.
 		if (*word >= 'A' && *word <= '~')
 		{
@@ -545,6 +542,42 @@ static inline int lib_getenum(lua_State *L)
 			return 1;
 		}
 
+	return -1;
+}
+
+static int constants_get(lua_State *L)
+{
+	const char *key;
+	int ret;
+
+	if (!lua_isstring(L, 2))
+		return 0;
+
+	key = luaL_checkstring(L, 2);
+
+	// In Lua, mathlib is always there
+	ret = getEnum(L, true, key);
+
+	if (ret != -1)
+		return ret;
+
+	return 0;
+}
+
+static inline int lib_getenum(lua_State *L)
+{
+	const char *word;
+	int ret;
+	boolean mathlib = lua_toboolean(L, lua_upvalueindex(1));
+	if (lua_type(L,2) != LUA_TSTRING)
+		return 0;
+	word = lua_tostring(L,2);
+
+	ret = getEnum(L, mathlib, word);
+
+	if (ret != -1)
+		return ret;
+
 	if (mathlib) return luaL_error(L, "constant '%s' could not be parsed.\n", word);
 
 	// DYNAMIC variables too!!
@@ -628,6 +661,15 @@ int LUA_SOCLib(lua_State *L)
 		lua_pushcfunction(L, action_call);
 		lua_setfield(L, -2, "__call");
 	lua_pop(L, 1);
+
+	// Allow access to constants without forcing the use of name comparison checks Lua-side
+	// This table will not access global variables, only constants
+	lua_newuserdata(L, 0);
+		lua_createtable(L, 0, 2);
+			lua_pushcfunction(L, constants_get);
+			lua_setfield(L, -2, "__index");
+		lua_setmetatable(L, -2);
+	lua_setglobal(L, "constants");
 
 	return 0;
 }
