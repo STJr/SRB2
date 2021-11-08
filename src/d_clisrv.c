@@ -1836,8 +1836,6 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 #endif/*MASTERSERVER*/
 }
 
-#endif // ifndef NONET
-
 static const char * InvalidServerReason (INT32 i)
 {
 #define EOT "\nPress ESC\n"
@@ -1903,6 +1901,8 @@ static const char * InvalidServerReason (INT32 i)
 
 #undef EOT
 }
+
+#endif // ifndef NONET
 
 /** Called by CL_ServerConnectionTicker
   *
@@ -2932,6 +2932,34 @@ static void Command_Kick(void)
 	else
 		CONS_Printf(M_GetText("Only the server or a remote admin can use this.\n"));
 }
+
+static void Command_ResendGamestate(void)
+{
+	SINT8 playernum;
+
+	if (COM_Argc() == 1)
+	{
+		CONS_Printf(M_GetText("resendgamestate <playername/playernum>: resend the game state to a player\n"));
+		return;
+	}
+	else if (client)
+	{
+		CONS_Printf(M_GetText("Only the server can use this.\n"));
+		return;
+	}
+
+	playernum = nametonum(COM_Argv(1));
+	if (playernum == -1 || playernum == 0)
+		return;
+
+	// Send a PT_WILLRESENDGAMESTATE packet to the client so they know what's going on
+	netbuffer->packettype = PT_WILLRESENDGAMESTATE;
+	if (!HSendPacket(playernode[playernum], true, 0, 0))
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("A problem occured, please try again.\n"));
+		return;
+	}
+}
 #endif
 
 static void Got_KickCmd(UINT8 **p, INT32 playernum)
@@ -3137,34 +3165,6 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	}
 	else
 		CL_RemovePlayer(pnum, kickreason);
-}
-
-static void Command_ResendGamestate(void)
-{
-	SINT8 playernum;
-
-	if (COM_Argc() == 1)
-	{
-		CONS_Printf(M_GetText("resendgamestate <playername/playernum>: resend the game state to a player\n"));
-		return;
-	}
-	else if (client)
-	{
-		CONS_Printf(M_GetText("Only the server can use this.\n"));
-		return;
-	}
-
-	playernum = nametonum(COM_Argv(1));
-	if (playernum == -1 || playernum == 0)
-		return;
-
-	// Send a PT_WILLRESENDGAMESTATE packet to the client so they know what's going on
-	netbuffer->packettype = PT_WILLRESENDGAMESTATE;
-	if (!HSendPacket(playernode[playernum], true, 0, 0))
-	{
-		CONS_Alert(CONS_ERROR, M_GetText("A problem occured, please try again.\n"));
-		return;
-	}
 }
 
 static CV_PossibleValue_t netticbuffer_cons_t[] = {{0, "MIN"}, {3, "MAX"}, {0, NULL}};
@@ -3903,6 +3903,7 @@ static void HandleServerInfo(SINT8 node)
 
 static void PT_WillResendGamestate(void)
 {
+#ifndef NONET
 	char tmpsave[256];
 
 	if (server || cl_redownloadinggamestate)
@@ -3925,10 +3926,12 @@ static void PT_WillResendGamestate(void)
 	CL_PrepareDownloadSaveGame(tmpsave);
 
 	cl_redownloadinggamestate = true;
+#endif
 }
 
 static void PT_CanReceiveGamestate(SINT8 node)
 {
+#ifndef NONET
 	if (client || sendingsavegame[node])
 		return;
 
@@ -3936,6 +3939,9 @@ static void PT_CanReceiveGamestate(SINT8 node)
 
 	SV_SendSaveGame(node, true); // Resend a complete game state
 	resendingsavegame[node] = true;
+#else
+	(void)node;
+#endif
 }
 
 /** Handles a packet received from a node that isn't in game
@@ -4222,8 +4228,10 @@ static void HandlePacketFromPlayer(SINT8 node)
 			// Check player consistancy during the level
 			if (realstart <= gametic && realstart + BACKUPTICS - 1 > gametic && gamestate == GS_LEVEL
 				&& consistancy[realstart%BACKUPTICS] != SHORT(netbuffer->u.clientpak.consistancy)
-				&& !resendingsavegame[node] && savegameresendcooldown[node] <= I_GetTime()
-				&& !SV_ResendingSavegameToAnyone())
+#ifndef NONET
+				&& !SV_ResendingSavegameToAnyone()
+#endif
+				&& !resendingsavegame[node] && savegameresendcooldown[node] <= I_GetTime())
 			{
 				if (cv_resynchattempts.value)
 				{
@@ -5127,9 +5135,11 @@ void NetUpdate(void)
 
 	if (client)
 	{
+#ifndef NONET
 		// If the client just finished redownloading the game state, load it
 		if (cl_redownloadinggamestate && fileneeded[0].status == FS_FOUND)
 			CL_ReloadReceivedSavegame();
+#endif
 
 		CL_SendClientCmd(); // Send tic cmd
 		hu_redownloadinggamestate = cl_redownloadinggamestate;
