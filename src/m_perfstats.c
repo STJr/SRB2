@@ -194,14 +194,18 @@ void PS_SetThinkFrameHookInfo(int index, precise_t time_taken, char* short_src)
 	if (!thinkframe_hooks)
 	{
 		// array needs to be initialized
-		thinkframe_hooks = Z_Malloc(sizeof(ps_hookinfo_t) * thinkframe_hooks_capacity, PU_STATIC, NULL);
+		thinkframe_hooks = Z_Calloc(sizeof(ps_hookinfo_t) * thinkframe_hooks_capacity, PU_STATIC, NULL);
 	}
 	if (index >= thinkframe_hooks_capacity)
 	{
 		// array needs more space, realloc with double size
-		thinkframe_hooks_capacity *= 2;
+		int new_capacity = thinkframe_hooks_capacity * 2;
 		thinkframe_hooks = Z_Realloc(thinkframe_hooks,
-			sizeof(ps_hookinfo_t) * thinkframe_hooks_capacity, PU_STATIC, NULL);
+			sizeof(ps_hookinfo_t) * new_capacity, PU_STATIC, NULL);
+		// initialize new memory with zeros so the pointers in the structs are null
+		memset(&thinkframe_hooks[thinkframe_hooks_capacity], 0,
+			sizeof(ps_hookinfo_t) * thinkframe_hooks_capacity);
+		thinkframe_hooks_capacity = new_capacity;
 	}
 	thinkframe_hooks[index].time_taken.value.p = time_taken;
 	memcpy(thinkframe_hooks[index].short_src, short_src, LUA_IDSIZE * sizeof(char));
