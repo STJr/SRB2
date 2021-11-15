@@ -1110,6 +1110,10 @@ static void R_SplitSprite(vissprite_t *sprite)
 
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
+
+				if (newsprite->cut & SC_SEMIBRIGHT)
+					lindex = (MAXLIGHTSCALE/2) + (lindex >>1);
+
 				newsprite->colormap = spritelights[lindex];
 			}
 		}
@@ -2023,6 +2027,8 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (R_ThingIsFullBright(oldthing) || oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW)
 		vis->cut |= SC_FULLBRIGHT;
+	else if (R_ThingIsSemiBright(oldthing))
+		vis->cut |= SC_SEMIBRIGHT;
 	else if (R_ThingIsFullDark(oldthing))
 		vis->cut |= SC_FULLDARK;
 
@@ -2044,6 +2050,9 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
+
+		if (vis->cut & SC_SEMIBRIGHT)
+			lindex = (MAXLIGHTSCALE/2) + (lindex >> 1);
 
 		vis->colormap = spritelights[lindex];
 	}
@@ -3012,7 +3021,7 @@ boolean R_ThingVisible (mobj_t *thing)
 {
 	return (!(
 				thing->sprite == SPR_NULL ||
-				( thing->flags2 & (MF2_DONTDRAW) ) ||
+				( thing->flags2 & (MF2_DONTDRAW) ) || ( thing->renderflags & (RF_DONTDRAW) ) ||
 				(r_viewmobj && (thing == r_viewmobj || (r_viewmobj->player && r_viewmobj->player->followmobj == thing)))
 	));
 }
@@ -3073,17 +3082,22 @@ boolean R_ThingIsPaperSprite(mobj_t *thing)
 
 boolean R_ThingIsFloorSprite(mobj_t *thing)
 {
-	return (thing->flags2 & MF2_SPLAT || thing->renderflags & RF_FLOORSPRITE);
+	return (thing->flags2 & MF2_SPLAT || thing->frame & FF_FLOORSPRITE || thing->renderflags & RF_FLOORSPRITE);
 }
 
 boolean R_ThingIsFullBright(mobj_t *thing)
 {
-	return (thing->frame & FF_FULLBRIGHT || thing->renderflags & RF_FULLBRIGHT);
+	return ((thing->frame & FF_BRIGHTMASK) == FF_FULLBRIGHT || (thing->renderflags & RF_BRIGHTMASK) == RF_FULLBRIGHT);
+}
+
+boolean R_ThingIsSemiBright(mobj_t *thing)
+{
+	return ((thing->frame & FF_BRIGHTMASK) == FF_SEMIBRIGHT || (thing->renderflags & RF_BRIGHTMASK) == RF_SEMIBRIGHT);
 }
 
 boolean R_ThingIsFullDark(mobj_t *thing)
 {
-	return (thing->renderflags & RF_FULLDARK);
+	return ((thing->frame & FF_BRIGHTMASK) == FF_FULLDARK || (thing->renderflags & RF_BRIGHTMASK) == RF_FULLDARK);
 }
 
 //
