@@ -3853,6 +3853,12 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	else
 		occlusion = PF_Occlude;
 
+	INT32 blendmode;
+	if (spr->mobj->frame & FF_BLENDMASK)
+		blendmode = ((spr->mobj->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
+	else
+		blendmode = spr->mobj->blendmode;
+
 	if (!cv_translucency.value) // translucency disabled
 	{
 		Surf.PolyColor.s.alpha = 0xFF;
@@ -3862,12 +3868,12 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	else if (spr->mobj->flags2 & MF2_SHADOW)
 	{
 		Surf.PolyColor.s.alpha = 0x40;
-		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode);
+		blend = HWR_GetBlendModeFlag(blendmode);
 	}
 	else if (spr->mobj->frame & FF_TRANSMASK)
 	{
 		INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
-		blend = HWR_SurfaceBlend(spr->mobj->blendmode, trans, &Surf);
+		blend = HWR_SurfaceBlend(blendmode, trans, &Surf);
 	}
 	else
 	{
@@ -3876,7 +3882,7 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		// Hurdler: PF_Environement would be cool, but we need to fix
 		//          the issue with the fog before
 		Surf.PolyColor.s.alpha = 0xFF;
-		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode)|occlusion;
+		blend = HWR_GetBlendModeFlag(blendmode)|occlusion;
 		if (!occlusion) use_linkdraw_hack = true;
 	}
 
@@ -4291,6 +4297,12 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		else
 			occlusion = PF_Occlude;
 
+		INT32 blendmode;
+		if (spr->mobj->frame & FF_BLENDMASK)
+			blendmode = ((spr->mobj->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
+		else
+			blendmode = spr->mobj->blendmode;
+
 		if (!cv_translucency.value) // translucency disabled
 		{
 			Surf.PolyColor.s.alpha = 0xFF;
@@ -4300,12 +4312,12 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		else if (spr->mobj->flags2 & MF2_SHADOW)
 		{
 			Surf.PolyColor.s.alpha = 0x40;
-			blend = HWR_GetBlendModeFlag(spr->mobj->blendmode);
+			blend = HWR_GetBlendModeFlag(blendmode);
 		}
 		else if (spr->mobj->frame & FF_TRANSMASK)
 		{
 			INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
-			blend = HWR_SurfaceBlend(spr->mobj->blendmode, trans, &Surf);
+			blend = HWR_SurfaceBlend(blendmode, trans, &Surf);
 		}
 		else
 		{
@@ -4314,7 +4326,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			// Hurdler: PF_Environement would be cool, but we need to fix
 			//          the issue with the fog before
 			Surf.PolyColor.s.alpha = 0xFF;
-			blend = HWR_GetBlendModeFlag(spr->mobj->blendmode)|occlusion;
+			blend = HWR_GetBlendModeFlag(blendmode)|occlusion;
 			if (!occlusion) use_linkdraw_hack = true;
 		}
 
@@ -5009,10 +5021,16 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->spritexscale < 1 || thing->spriteyscale < 1)
 		return;
 
+	INT32 blendmode;
+	if (thing->frame & FF_BLENDMASK)
+		blendmode = ((thing->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
+	else
+		blendmode = thing->blendmode;
+
 	// Visibility check by the blend mode.
 	if (thing->frame & FF_TRANSMASK)
 	{
-		if (!R_BlendLevelVisible(thing->blendmode, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT))
+		if (!R_BlendLevelVisible(blendmode, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT))
 			return;
 	}
 

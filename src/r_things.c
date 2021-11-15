@@ -1802,13 +1802,19 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
+	INT32 blendmode;
+	if (oldthing->frame & FF_BLENDMASK)
+		blendmode = ((oldthing->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
+	else
+		blendmode = oldthing->blendmode;
+
 	// Determine the translucency value.
 	if (oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
 		trans = tr_trans80; // because now the translucency is set through FF_TRANSMASK
 	else if (oldthing->frame & FF_TRANSMASK)
 	{
 		trans = (oldthing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
-		if (!R_BlendLevelVisible(oldthing->blendmode, trans))
+		if (!R_BlendLevelVisible(blendmode, trans))
 			return;
 	}
 	else
@@ -2020,8 +2026,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->scale += FixedMul(scalestep, spriteyscale) * (vis->x1 - x1);
 	}
 
-	if ((oldthing->blendmode != AST_COPY) && cv_translucency.value)
-		vis->transmap = R_GetBlendTable(oldthing->blendmode, trans);
+	if ((blendmode != AST_COPY) && cv_translucency.value)
+		vis->transmap = R_GetBlendTable(blendmode, trans);
 	else
 		vis->transmap = NULL;
 
@@ -3021,7 +3027,7 @@ boolean R_ThingVisible (mobj_t *thing)
 {
 	return (!(
 				thing->sprite == SPR_NULL ||
-				( thing->flags2 & (MF2_DONTDRAW) ) || ( thing->renderflags & (RF_DONTDRAW) ) ||
+				( thing->flags2 & (MF2_DONTDRAW) ) ||
 				(r_viewmobj && (thing == r_viewmobj || (r_viewmobj->player && r_viewmobj->player->followmobj == thing)))
 	));
 }
