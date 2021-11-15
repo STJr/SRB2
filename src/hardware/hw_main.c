@@ -3916,6 +3916,9 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		}
 	}
 
+	if (R_ThingIsSemiBright(spr->mobj))
+		lightlevel = 128 + (lightlevel>>1);
+
 	for (i = 0; i < sector->numlights; i++)
 	{
 		if (endtop < endrealbot && top < realbot)
@@ -4268,6 +4271,9 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		}
 		else if (!lightset)
 			lightlevel = sector->lightlevel > 255 ? 255 : sector->lightlevel;
+
+		if (R_ThingIsSemiBright(spr->mobj))
+			lightlevel = 128 + (lightlevel>>1);
 
 		HWR_Lighting(&Surf, lightlevel, colormap);
 	}
