@@ -184,6 +184,7 @@ typedef struct ffloor_s
 
 	INT32 lastlight;
 	INT32 alpha;
+	UINT8 blend; // blendmode
 	tic_t norender; // for culling
 
 	// these are saved for netgames, so do not let Lua touch these!
@@ -397,6 +398,7 @@ typedef struct line_s
 	// Visual appearance: sidedefs.
 	UINT16 sidenum[2]; // sidenum[1] will be 0xffff if one-sided
 	fixed_t alpha; // translucency
+	UINT8 blendmode; // blendmode
 	INT32 executordelay;
 
 	fixed_t bbox[4]; // bounding box for the extent of the linedef

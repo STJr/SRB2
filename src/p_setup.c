@@ -1350,8 +1350,11 @@ static void P_LoadSidedefs(UINT8 *data)
 				if (msd->toptexture[0] == '#')
 				{
 					char *col = msd->toptexture;
-					sd->toptexture = sd->bottomtexture =
-						((col[1]-'0')*100 + (col[2]-'0')*10 + col[3]-'0') + 1;
+					sd->toptexture =
+						((col[1]-'0')*100 + (col[2]-'0')*10 + col[3]-'0')+1;
+					if (col[4]) // extra num for blendmode
+						sd->toptexture += (col[4]-'0')*1000;
+					sd->bottomtexture = sd->toptexture;
 					sd->midtexture = R_TextureNumForName(msd->midtexture);
 				}
 				else
@@ -3321,21 +3324,29 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
 			lines[i].special = 720;
 			break;
-
-		case 900: //Translucent wall (10%)
-		case 901: //Translucent wall (20%)
-		case 902: //Translucent wall (30%)
-		case 903: //Translucent wall (40%)
-		case 904: //Translucent wall (50%)
-		case 905: //Translucent wall (60%)
-		case 906: //Translucent wall (70%)
-		case 907: //Translucent wall (80%)
-		case 908: //Translucent wall (90%)
-			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
-			break;
 		default:
 			break;
 		}
+
+		// Set alpha for translucent walls
+		if (lines[i].special >= 900 && lines[i].special < 909)
+			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
+
+		// Set alpha for additive/subtractive/reverse subtractive walls
+		if (lines[i].special >= 910 && lines[i].special <= 939)
+			lines[i].alpha = ((10 - lines[i].special % 10) << FRACBITS)/10;
+
+		if (lines[i].special >= 910 && lines[i].special <= 919) // additive
+			lines[i].blendmode = AST_ADD;
+
+		if (lines[i].special >= 920 && lines[i].special <= 929) // subtractive
+			lines[i].blendmode = AST_SUBTRACT;
+
+		if (lines[i].special >= 930 && lines[i].special <= 939) // reverse subtractive
+			lines[i].blendmode = AST_REVERSESUBTRACT;
+
+		if (lines[i].special == 940) // modulate
+			lines[i].blendmode = AST_MODULATE;
 
 		//Linedef executor delay
 		if (lines[i].special >= 400 && lines[i].special < 500)
