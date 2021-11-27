@@ -1042,6 +1042,7 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		case MT_THUNDERCOIN_ORB:
 		case MT_IVSP:
 		case MT_SUPERSPARK:
+		case MT_BOXSPARKLE:
 		case MT_RAIN:
 		case MT_SNOWFLAKE:
 		case MT_SPLISH:

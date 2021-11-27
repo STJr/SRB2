@@ -191,22 +191,22 @@ void D_ProcessEvents(void)
 		if (ev->type == ev_keydown || ev->type == ev_keyup)
 		{
 			// Mouse buttons
-			if ((UINT32)(ev->data1 - KEY_MOUSE1) < MOUSEBUTTONS)
+			if ((UINT32)(ev->key - KEY_MOUSE1) < MOUSEBUTTONS)
 			{
 				if (ev->type == ev_keydown)
-					mouse.buttons |= 1 << (ev->data1 - KEY_MOUSE1);
+					mouse.buttons |= 1 << (ev->key - KEY_MOUSE1);
 				else
-					mouse.buttons &= ~(1 << (ev->data1 - KEY_MOUSE1));
+					mouse.buttons &= ~(1 << (ev->key - KEY_MOUSE1));
 			}
-			else if ((UINT32)(ev->data1 - KEY_2MOUSE1) < MOUSEBUTTONS)
+			else if ((UINT32)(ev->key - KEY_2MOUSE1) < MOUSEBUTTONS)
 			{
 				if (ev->type == ev_keydown)
-					mouse2.buttons |= 1 << (ev->data1 - KEY_2MOUSE1);
+					mouse2.buttons |= 1 << (ev->key - KEY_2MOUSE1);
 				else
-					mouse2.buttons &= ~(1 << (ev->data1 - KEY_2MOUSE1));
+					mouse2.buttons &= ~(1 << (ev->key - KEY_2MOUSE1));
 			}
 			// Scroll (has no keyup event)
-			else switch (ev->data1) {
+			else switch (ev->key) {
 				case KEY_MOUSEWHEELUP:
 					mouse.buttons |= MB_SCROLLUP;
 					break;
@@ -959,7 +959,7 @@ static void D_AddFolder(addfilelist_t *list, const char *file)
 
 	REALLOC_FILE_LIST
 
-	newfile = malloc(strlen(file) + 2); // path separator + NULL terminator
+	newfile = malloc(strlen(file) + 2); // Path delimiter + NULL terminator
 	if (!newfile)
 		I_Error("D_AddFolder: No more free memory to add folder %s", file);
 
@@ -1373,12 +1373,16 @@ void D_SRB2Main(void)
 
 	I_RegisterSysCommands();
 
+	CON_StopRefresh(); // Temporarily stop refreshing the screen for wad loading
+
 	if (startuppwads.numfiles)
 	{
 		CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
 		W_InitMultipleFiles(&startuppwads);
 		D_CleanFile(&startuppwads);
 	}
+
+	CON_StartRefresh(); // Restart the refresh!
 
 	CONS_Printf("HU_LoadGraphics()...\n");
 	HU_LoadGraphics();

@@ -3518,9 +3518,7 @@ void A_Scream(mobj_t *actor)
 	if (LUA_CallAction(A_SCREAM, actor))
 		return;
 
-	if (actor->tracer && (actor->tracer->type == MT_SHELL || actor->tracer->type == MT_FIREBALL))
-		S_StartScreamSound(actor, sfx_mario2);
-	else if (actor->info->deathsound)
+	if (actor->info->deathsound && !S_SoundPlaying(actor, sfx_mario2))
 		S_StartScreamSound(actor, actor->info->deathsound);
 }
 
@@ -5297,7 +5295,7 @@ void A_OverlayThink(mobj_t *actor)
 		actor->z = actor->target->z + actor->target->height - mobjinfo[actor->type].height  - ((var2>>16) ? -1 : 1)*(var2&0xFFFF)*FRACUNIT;
 	else
 		actor->z = actor->target->z + ((var2>>16) ? -1 : 1)*(var2&0xFFFF)*FRACUNIT;
-	actor->angle = actor->target->angle + actor->movedir;
+	actor->angle = (actor->target->player ? actor->target->player->drawangle : actor->target->angle) + actor->movedir;
 	actor->eflags = actor->target->eflags;
 
 	actor->momx = actor->target->momx;
@@ -8272,7 +8270,7 @@ void A_Boss3ShockThink(mobj_t *actor)
 		fixed_t x0, y0, x1, y1;
 
 		// Break the link if movements are too different
-		if (FixedHypot(snext->momx - actor->momx, snext->momy - actor->momy) > 12*actor->scale)
+		if (R_PointToDist2(0, 0, snext->momx - actor->momx, snext->momy - actor->momy) > 12*actor->scale)
 		{
 			P_SetTarget(&actor->hnext, NULL);
 			return;
@@ -8283,15 +8281,21 @@ void A_Boss3ShockThink(mobj_t *actor)
 		y0 = actor->y;
 		x1 = snext->x;
 		y1 = snext->y;
-		if (FixedHypot(x1 - x0, y1 - y0) > 2*actor->radius)
+		if (R_PointToDist2(0, 0, x1 - x0, y1 - y0) > 2*actor->radius)
 		{
-			snew = P_SpawnMobj((x0 + x1) >> 1, (y0 + y1) >> 1, (actor->z + snext->z) >> 1, actor->type);
+			snew = P_SpawnMobj((x0 >> 1) + (x1 >> 1),
+				(y0 >> 1) + (y1 >> 1),
+				(actor->z >> 1) + (snext->z >> 1), actor->type);
 			snew->momx = (actor->momx + snext->momx) >> 1;
 			snew->momy = (actor->momy + snext->momy) >> 1;
 			snew->momz = (actor->momz + snext->momz) >> 1; // is this really needed?
 			snew->angle = (actor->angle + snext->angle) >> 1;
 			P_SetTarget(&snew->target, actor->target);
 			snew->fuse = actor->fuse;
+			
+			P_SetScale(snew, actor->scale);
+			snew->destscale = actor->destscale;
+			snew->scalespeed = actor->scalespeed;
 
 			P_SetTarget(&actor->hnext, snew);
 			P_SetTarget(&snew->hnext, snext);

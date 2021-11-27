@@ -41,6 +41,7 @@
 #include "console.h"
 
 #include "lua_hud.h"
+#include "lua_hook.h"
 
 // Stage of animation:
 // 0 = text, 1 = art screen
@@ -1011,7 +1012,7 @@ void F_IntroTicker(void)
 //
 boolean F_IntroResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 key = event->key;
 
 	// remap virtual keys (mouse & joystick buttons)
 	switch (key)
@@ -1090,11 +1091,11 @@ static const char *credits[] = {
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
 	"Iestyn \"Monster Iestyn\" Jealous",
-	"\"Jimita\"",
 	"\"Kaito Sinclaire\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
+	"\"LZA\"",
 	"Matthew \"Shuffle\" Marsalko",
 	"Steven \"StroggOnMeth\" McGranahan",
 	"\"Morph\"", // For SRB2Morphed stuff
@@ -1166,8 +1167,8 @@ static const char *credits[] = {
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"Stefan \"Stuf\" Rimalia",
 	"Shane Mychal Sexton",
-	"David \"Big Wave Dave\" Spencer Sr.",
-	"David \"Instant Sonic\" Spencer Jr.",
+	"Dave \"Big Wave Dave\" Spencer",
+	"David \"instantSonic\" Spencer",
 	"\"SSNTails\"",
 	"",
 	"\1Level Design",
@@ -1218,7 +1219,7 @@ static const char *credits[] = {
 	"Bill \"Tets\" Reed",
 	"",
 	"\1Special Thanks",
-	"iD Software",
+	"id Software",
 	"Doom Legacy Project",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
 	"Kart Krew",
@@ -1397,7 +1398,7 @@ void F_CreditTicker(void)
 
 boolean F_CreditResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 key = event->key;
 
 	// remap virtual keys (mouse & joystick buttons)
 	switch (key)
@@ -3421,7 +3422,7 @@ void F_TitleScreenDrawer(void)
 	}
 
 luahook:
-	LUAh_TitleHUD();
+	LUA_HUDHOOK(title);
 }
 
 // separate animation timer for backgrounds, since we also count
@@ -3821,7 +3822,7 @@ void F_ContinueTicker(void)
 
 boolean F_ContinueResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 key = event->key;
 
 	if (keypressed)
 		return true;

@@ -128,7 +128,7 @@ typedef struct wadfile_s
 	lumpcache_t *lumpcache;
 	lumpcache_t *patchcache;
 	UINT16 numlumps; // this wad's number of resources
-	UINT16 filecount, foldercount; // file and folder count
+	UINT16 foldercount; // folder count
 	FILE *handle;
 	UINT32 filesize; // for network
 	UINT8 md5sum[16];
@@ -163,6 +163,9 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup);
 void W_InitMultipleFiles(addfilelist_t *list);
 
 #define W_FileHasFolders(wadfile) ((wadfile)->type == RET_PK3 || (wadfile)->type == RET_FOLDER)
+
+INT32 W_IsPathToFolderValid(const char *path);
+char *W_GetFullFolderPath(const char *path);
 
 const char *W_CheckNameForNumPwad(UINT16 wad, UINT16 lump);
 const char *W_CheckNameForNum(lumpnum_t lumpnum);

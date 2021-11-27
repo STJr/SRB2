@@ -1957,9 +1957,12 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->paperoffset = paperoffset;
 	vis->paperdistance = paperdistance;
 	vis->centerangle = centerangle;
-	vis->viewangle = viewangle;
 	vis->shear.tan = sheartan;
 	vis->shear.offset = 0;
+	vis->viewpoint.x = viewx;
+	vis->viewpoint.y = viewy;
+	vis->viewpoint.z = viewz;
+	vis->viewpoint.angle = viewangle;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 

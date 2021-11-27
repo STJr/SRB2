@@ -78,7 +78,7 @@ void P_AddCachedAction(mobj_t *mobj, INT32 statenum)
 //
 // P_SetupStateAnimation
 //
-FUNCINLINE static ATTRINLINE void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
+static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 {
 	INT32 animlength = (mobj->sprite == SPR_PLAY && mobj->skin)
 		? (INT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes) - 1
@@ -1842,7 +1842,7 @@ void P_XYMovement(mobj_t *mo)
 		if (player) 
 			B_MoveBlocked(player);
 
-		if (LUA_HookMobj(mo, MOBJ_HOOK(MobjMoveBlocked)))
+		if (LUA_HookMobjMoveBlocked(mo, tmhitthing, blockingline))
 		{
 			if (P_MobjWasRemoved(mo))
 				return;
@@ -6837,7 +6837,7 @@ void P_RunOverlays(void)
 
 		mo->eflags = (mo->eflags & ~MFE_VERTICALFLIP) | (mo->target->eflags & MFE_VERTICALFLIP);
 		mo->scale = mo->destscale = mo->target->scale;
-		mo->angle = mo->target->angle + mo->movedir;
+		mo->angle = (mo->target->player ? mo->target->player->drawangle : mo->target->angle) + mo->movedir;
 
 		if (!(mo->state->frame & FF_ANIMATE))
 			zoffs = FixedMul(((signed)mo->state->var2)*FRACUNIT, mo->scale);
