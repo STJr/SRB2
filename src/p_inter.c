@@ -3651,7 +3651,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return true;
 		}
 
-		if (!force && inflictor && inflictor->flags & MF_FIRE)
+		if (!force && inflictor && inflictor->flags & MF_FIRE && !(damagetype && damagetype != DMG_FIRE))
 		{
 			if (player->powers[pw_shield] & SH_PROTECTFIRE)
 				return false; // Invincible to fire objects
