@@ -2297,6 +2297,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 		case CL_LOADFILES:
 			if (CL_LoadServerFiles())
 			{
+				FreeFileNeeded();
 				*asksent = 0; //This ensure the first join ask is right away
 				firstconnectattempttime = I_GetTime();
 				cl_mode = CL_ASKJOIN;

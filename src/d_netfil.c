@@ -189,6 +189,8 @@ void AllocFileNeeded(INT32 size)
 {
 	if (fileneeded == NULL)
 		fileneeded = Z_Calloc(sizeof(fileneeded_t) * size, PU_STATIC, NULL);
+	else
+		fileneeded = Z_Realloc(fileneeded, sizeof(fileneeded_t) * size, PU_STATIC, NULL);
 }
 
 void FreeFileNeeded(void)
@@ -235,6 +237,7 @@ void CL_PrepareDownloadSaveGame(const char *tmpsave)
 	lastfilenum = -1;
 #endif
 
+	FreeFileNeeded();
 	AllocFileNeeded(1);
 
 	fileneedednum = 1;
@@ -728,6 +731,7 @@ void CL_PrepareDownloadLuaFile(void)
 	netbuffer->packettype = PT_ASKLUAFILE;
 	HSendPacket(servernode, true, 0, 0);
 
+	FreeFileNeeded();
 	AllocFileNeeded(1);
 
 	fileneedednum = 1;
