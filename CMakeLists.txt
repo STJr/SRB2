@@ -172,8 +172,9 @@ set(SRB2_SDL2_EXE_NAME srb2 CACHE STRING "Executable binary output name")
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src)
 
 add_subdirectory(src)
-add_subdirectory(assets)
-
+if(NOT ${SRB2_CONFIG_DEV_BUILD})
+	add_subdirectory(assets)
+endif()
 
 ## config.h generation
 set(GIT_EXECUTABLE "git" CACHE FILEPATH "Path to git binary")
