@@ -5199,7 +5199,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		24*FRACUNIT,    // radius
 		34*FRACUNIT,    // height
 		0,              // display offset
-		100,            // mass
+		DMG_FIRE,       // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_FIRE|MF_PAIN, // flags
@@ -13401,7 +13401,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		30*FRACUNIT,    // radius
 		48*FRACUNIT,    // height
 		0,              // display offset
-		100,            // mass
+		DMG_FIRE,       // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_PAIN|MF_NOGRAVITY|MF_FIRE, // flags
@@ -13806,7 +13806,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		8*FRACUNIT,     // radius
 		32*FRACUNIT,    // height
 		0,              // display offset
-		0,       // mass
+		0,              // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_PAIN, // flags
