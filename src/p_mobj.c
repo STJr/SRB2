@@ -6440,7 +6440,7 @@ void P_Attract(mobj_t *source, mobj_t *dest, boolean nightsgrab) // Home in on y
 		if (dist < source->movefactor)
 		{
 			source->momx = source->momy = source->momz = 0;
-			P_TeleportMove(source, tx, ty, tz);
+			P_MoveOrigin(source, tx, ty, tz);
 		}
 		else
 		{
