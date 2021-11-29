@@ -1288,6 +1288,9 @@ void PT_FileFragment(void)
 	UINT16 boundedfragmentsize = doomcom->datalength - BASEPACKETSIZE - sizeof(netbuffer->u.filetxpak);
 	char *filename;
 
+	if (!file)
+		return;
+
 	filename = va("%s", file->filename);
 	nameonly(filename);
 
