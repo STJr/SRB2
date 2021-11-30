@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,6 +22,9 @@
 #include "v_video.h" // video flags (for lua)
 #include "i_sound.h" // musictype_t (for lua)
 #include "g_state.h" // gamestate_t (for lua)
+#include "g_game.h" // Joystick axes (for lua)
+#include "i_joy.h"
+#include "g_input.h" // Game controls (for lua)
 
 #include "deh_tables.h"
 
@@ -5167,6 +5170,12 @@ struct int_const_s const INT_CONST[] = {
 	{"GF_REDFLAG",GF_REDFLAG},
 	{"GF_BLUEFLAG",GF_BLUEFLAG},
 
+	// Bot types
+	{"BOT_NONE",BOT_NONE},
+	{"BOT_2PAI",BOT_2PAI},
+	{"BOT_2PHUMAN",BOT_2PHUMAN},
+	{"BOT_MPAI",BOT_MPAI},
+
 	// Customisable sounds for Skins, from sounds.h
 	{"SKSSPIN",SKSSPIN},
 	{"SKSPUTPUT",SKSPUTPUT},
@@ -5454,6 +5463,76 @@ struct int_const_s const INT_CONST[] = {
 	{"GS_CUTSCENE",GS_CUTSCENE},
 	{"GS_DEDICATEDSERVER",GS_DEDICATEDSERVER},
 	{"GS_WAITINGPLAYERS",GS_WAITINGPLAYERS},
+
+	// Joystick axes
+	{"JA_NONE",JA_NONE},
+	{"JA_TURN",JA_TURN},
+	{"JA_MOVE",JA_MOVE},
+	{"JA_LOOK",JA_LOOK},
+	{"JA_STRAFE",JA_STRAFE},
+	{"JA_DIGITAL",JA_DIGITAL},
+	{"JA_JUMP",JA_JUMP},
+	{"JA_SPIN",JA_SPIN},
+	{"JA_FIRE",JA_FIRE},
+	{"JA_FIRENORMAL",JA_FIRENORMAL},
+	{"JOYAXISRANGE",JOYAXISRANGE},
+
+	// Game controls
+	{"GC_NULL",GC_NULL},
+	{"GC_FORWARD",GC_FORWARD},
+	{"GC_BACKWARD",GC_BACKWARD},
+	{"GC_STRAFELEFT",GC_STRAFELEFT},
+	{"GC_STRAFERIGHT",GC_STRAFERIGHT},
+	{"GC_TURNLEFT",GC_TURNLEFT},
+	{"GC_TURNRIGHT",GC_TURNRIGHT},
+	{"GC_WEAPONNEXT",GC_WEAPONNEXT},
+	{"GC_WEAPONPREV",GC_WEAPONPREV},
+	{"GC_WEPSLOT1",GC_WEPSLOT1},
+	{"GC_WEPSLOT2",GC_WEPSLOT2},
+	{"GC_WEPSLOT3",GC_WEPSLOT3},
+	{"GC_WEPSLOT4",GC_WEPSLOT4},
+	{"GC_WEPSLOT5",GC_WEPSLOT5},
+	{"GC_WEPSLOT6",GC_WEPSLOT6},
+	{"GC_WEPSLOT7",GC_WEPSLOT7},
+	{"GC_WEPSLOT8",GC_WEPSLOT8},
+	{"GC_WEPSLOT9",GC_WEPSLOT9},
+	{"GC_WEPSLOT10",GC_WEPSLOT10},
+	{"GC_FIRE",GC_FIRE},
+	{"GC_FIRENORMAL",GC_FIRENORMAL},
+	{"GC_TOSSFLAG",GC_TOSSFLAG},
+	{"GC_SPIN",GC_SPIN},
+	{"GC_CAMTOGGLE",GC_CAMTOGGLE},
+	{"GC_CAMRESET",GC_CAMRESET},
+	{"GC_LOOKUP",GC_LOOKUP},
+	{"GC_LOOKDOWN",GC_LOOKDOWN},
+	{"GC_CENTERVIEW",GC_CENTERVIEW},
+	{"GC_MOUSEAIMING",GC_MOUSEAIMING},
+	{"GC_TALKKEY",GC_TALKKEY},
+	{"GC_TEAMKEY",GC_TEAMKEY},
+	{"GC_SCORES",GC_SCORES},
+	{"GC_JUMP",GC_JUMP},
+	{"GC_CONSOLE",GC_CONSOLE},
+	{"GC_PAUSE",GC_PAUSE},
+	{"GC_SYSTEMMENU",GC_SYSTEMMENU},
+	{"GC_SCREENSHOT",GC_SCREENSHOT},
+	{"GC_RECORDGIF",GC_RECORDGIF},
+	{"GC_VIEWPOINT",GC_VIEWPOINT},
+	{"GC_CUSTOM1",GC_CUSTOM1},
+	{"GC_CUSTOM2",GC_CUSTOM2},
+	{"GC_CUSTOM3",GC_CUSTOM3},
+	{"NUM_GAMECONTROLS",NUM_GAMECONTROLS},
+
+	// Mouse buttons
+	{"MB_BUTTON1",MB_BUTTON1},
+	{"MB_BUTTON2",MB_BUTTON2},
+	{"MB_BUTTON3",MB_BUTTON3},
+	{"MB_BUTTON4",MB_BUTTON4},
+	{"MB_BUTTON5",MB_BUTTON5},
+	{"MB_BUTTON6",MB_BUTTON6},
+	{"MB_BUTTON7",MB_BUTTON7},
+	{"MB_BUTTON8",MB_BUTTON8},
+	{"MB_SCROLLUP",MB_SCROLLUP},
+	{"MB_SCROLLDOWN",MB_SCROLLDOWN},
 
 	{NULL,0}
 };

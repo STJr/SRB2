@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -656,7 +656,7 @@ void P_Ticker(boolean run)
 		ps_lua_mobjhooks = 0;
 		ps_checkposition_calls = 0;
 
-		LUAh_PreThinkFrame();
+		LUA_HOOK(PreThinkFrame);
 
 		ps_playerthink_time = I_GetPreciseTime();
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -687,7 +687,7 @@ void P_Ticker(boolean run)
 				P_PlayerAfterThink(&players[i]);
 
 		ps_lua_thinkframe_time = I_GetPreciseTime();
-		LUAh_ThinkFrame();
+		LUA_HookThinkFrame();
 		ps_lua_thinkframe_time = I_GetPreciseTime() - ps_lua_thinkframe_time;
 	}
 
@@ -760,7 +760,7 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 
-		LUAh_PostThinkFrame();
+		LUA_HOOK(PostThinkFrame);
 	}
 
 	P_MapEnd();
@@ -783,7 +783,7 @@ void P_PreTicker(INT32 frames)
 	{
 		P_MapStart();
 
-		LUAh_PreThinkFrame();
+		LUA_HOOK(PreThinkFrame);
 
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
@@ -810,7 +810,7 @@ void P_PreTicker(INT32 frames)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
 
-		LUAh_ThinkFrame();
+		LUA_HookThinkFrame();
 
 		// Run shield positioning
 		P_RunShields();
@@ -819,7 +819,7 @@ void P_PreTicker(INT32 frames)
 		P_UpdateSpecials();
 		P_RespawnSpecials();
 
-		LUAh_PostThinkFrame();
+		LUA_HOOK(PostThinkFrame);
 
 		P_MapEnd();
 	}
