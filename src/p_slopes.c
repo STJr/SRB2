@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2020 by Sonic Team Junior.
+// Copyright (C) 2015-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -88,6 +88,36 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 		slope->xydirection = R_PointToAngle2(0, 0, slope->d.x, slope->d.y)+ANGLE_180;
 		slope->zangle = InvAngle(R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta));
 	}
+}
+
+/// Setup slope via constants.
+static void ReconfigureViaConstants (pslope_t *slope, const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d)
+{
+	fixed_t m;
+	vector3_t *normal = &slope->normal;
+
+	// Set origin.
+	FV3_Load(&slope->o, 0, 0, c ? -FixedDiv(d, c) : 0);
+
+	// Get slope's normal.
+	FV3_Load(normal, a, b, c);
+	FV3_Normalize(normal);
+
+	// Invert normal if it's facing down.
+	if (normal->z < 0)
+		FV3_Negate(normal);
+
+	// Get direction vector
+	m = FixedHypot(normal->x, normal->y);
+	slope->d.x = -FixedDiv(normal->x, m);
+	slope->d.y = -FixedDiv(normal->y, m);
+
+	// Z delta
+	slope->zdelta = FixedDiv(m, normal->z);
+
+	// Get angles
+	slope->xydirection = R_PointToAngle2(0, 0, slope->d.x, slope->d.y)+ANGLE_180;
+	slope->zangle = InvAngle(R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta));
 }
 
 /// Recalculate dynamic slopes.
@@ -546,11 +576,10 @@ static boolean P_SetSlopeFromTag(sector_t *sec, INT32 tag, boolean ceiling)
 {
 	INT32 i;
 	pslope_t **secslope = ceiling ? &sec->c_slope : &sec->f_slope;
-	TAG_ITER_DECLARECOUNTER(0);
 
 	if (!tag || *secslope)
 		return false;
-	TAG_ITER_SECTORS(0, tag, i)
+	TAG_ITER_SECTORS(tag, i)
 	{
 		pslope_t *srcslope = ceiling ? sectors[i].c_slope : sectors[i].f_slope;
 		if (srcslope)
@@ -632,12 +661,19 @@ pslope_t *P_SlopeById(UINT16 id)
 	return ret;
 }
 
+/// Creates a new slope from equation constants.
+pslope_t *MakeViaEquationConstants(const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d)
+{
+	pslope_t* ret = Slope_Add(0);
+
+	ReconfigureViaConstants(ret, a, b, c, d);
+
+	return ret;
+}
+
 /// Initializes and reads the slopes from the map data.
 void P_SpawnSlopes(const boolean fromsave) {
 	size_t i;
-
-	slopelist = NULL;
-	slopecount = 0;
 
 	/// Generates vertex slopes.
 	SpawnVertexSlopes();
@@ -665,11 +701,21 @@ void P_SpawnSlopes(const boolean fromsave) {
 	for (i = 0; i < numlines; i++)
 		switch (lines[i].special)
 		{
+			case 700:
+				if (lines[i].flags & ML_TFERLINE) P_CopySectorSlope(&lines[i]);
+				break;
 			case 720:
 				P_CopySectorSlope(&lines[i]);
 			default:
 				break;
 		}
+}
+
+/// Initializes slopes.
+void P_InitSlopes(void)
+{
+	slopelist = NULL;
+	slopecount = 0;
 }
 
 // ============================================================================
@@ -774,13 +820,13 @@ void P_SlopeLaunch(mobj_t *mo)
 		mo->momx = slopemom.x;
 		mo->momy = slopemom.y;
 		mo->momz = slopemom.z/2;
+
+	    if (mo->player)
+		    mo->player->powers[pw_justlaunched] = 1;
 	}
 
 	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
-
-	if (mo->player)
-		mo->player->powers[pw_justlaunched] = 1;
 }
 
 //

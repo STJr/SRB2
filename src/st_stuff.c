@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -43,6 +43,7 @@
 #endif
 
 #include "lua_hud.h"
+#include "lua_hook.h"
 
 UINT16 objectsdrawn = 0;
 
@@ -299,10 +300,6 @@ void ST_LoadGraphics(void)
 	gravboots = W_CachePatchName("TVGVICON", PU_HUDGFX);
 
 	tagico = W_CachePatchName("TAGICO", PU_HUDGFX);
-	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
-	bflagico = W_CachePatchName("BFLAGICO", PU_HUDGFX);
-	rmatcico = W_CachePatchName("RMATCICO", PU_HUDGFX);
-	bmatcico = W_CachePatchName("BMATCICO", PU_HUDGFX);
 	gotrflag = W_CachePatchName("GOTRFLAG", PU_HUDGFX);
 	gotbflag = W_CachePatchName("GOTBFLAG", PU_HUDGFX);
 	fnshico = W_CachePatchName("FNSHICO", PU_HUDGFX);
@@ -1371,7 +1368,7 @@ void ST_drawTitleCard(void)
 		zzticker = lt_ticker;
 		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
 		V_DrawMappedPatch(FixedInt(lt_zigzag), (zigzag->height-zzticker) % zigzag->height, V_SNAPTOTOP|V_SNAPTOLEFT, zigzag, colormap);
-		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zigzag->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
+		V_DrawMappedPatch(FixedInt(lt_zigzag), (-zztext->height+zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
 		V_DrawMappedPatch(FixedInt(lt_zigzag), (zzticker) % zztext->height, V_SNAPTOTOP|V_SNAPTOLEFT, zztext, colormap);
 	}
 
@@ -1395,7 +1392,7 @@ void ST_drawTitleCard(void)
 	lt_lasttic = lt_ticker;
 
 luahook:
-	LUAh_TitleCardHUD(stplyr);
+	LUA_HUDHOOK(titlecard);
 }
 
 //
@@ -2191,7 +2188,7 @@ static void ST_drawMatchHUD(void)
 		{
 			sprintf(penaltystr, "-%d", stplyr->ammoremoval);
 			V_DrawString(offset + 8 + stplyr->ammoremovalweapon * 20, y,
-				V_REDMAP|V_SNAPTOBOTTOM, penaltystr);
+				V_REDMAP|V_SNAPTOBOTTOM|V_PERPLAYER, penaltystr);
 		}
 
 	}
@@ -2363,27 +2360,29 @@ static inline void ST_drawRaceHUD(void)
 
 static void ST_drawTeamHUD(void)
 {
-	patch_t *p;
 #define SEP 20
 
 	if (F_GetPromptHideHud(0)) // y base is 0
 		return;
 
-	if (gametyperules & GTR_TEAMFLAGS)
-		p = bflagico;
-	else
-		p = bmatcico;
+	rflagico = W_CachePatchName("RFLAGICO", PU_HUDGFX);
+	bflagico = W_CachePatchName("BFLAGICO", PU_HUDGFX);
+	rmatcico = W_CachePatchName("RMATCICO", PU_HUDGFX);
+	bmatcico = W_CachePatchName("BMATCICO", PU_HUDGFX);
 
 	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (p->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
-
-	if (gametyperules & GTR_TEAMFLAGS)
-		p = rflagico;
-	else
-		p = rmatcico;
-
-	if (LUA_HudEnabled(hud_teamscores))
-		V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (p->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, p);
+	{
+		if (gametyperules & GTR_TEAMFLAGS)
+		{
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (bflagico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, bflagico);
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (rflagico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, rflagico);
+		}
+		else
+		{
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 - SEP - (bmatcico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, bmatcico);
+			V_DrawSmallScaledPatch(BASEVIDWIDTH/2 + SEP - (rmatcico->width / 4), 4, V_HUDTRANS|V_PERPLAYER|V_SNAPTOTOP, rmatcico);
+		}
+	}
 
 	if (!(gametyperules & GTR_TEAMFLAGS))
 		goto num;
@@ -2734,7 +2733,7 @@ static void ST_overlayDrawer(void)
 		ST_drawPowerupHUD(); // same as it ever was...
 
 	if (!(netgame || multiplayer) || !hu_showscores)
-		LUAh_GameHUD(stplyr);
+		LUA_HUDHOOK(game);
 
 	// draw level title Tails
 	if (stagetitle && (!WipeInAction) && (!WipeStageTitle))

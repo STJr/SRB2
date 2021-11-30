@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -230,7 +230,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	UINT8 rotation;
 	lumpinfo_t *lumpinfo;
 	softwarepatch_t patch;
-	UINT8 numadded = 0;
+	UINT16 numadded = 0;
 
 	memset(sprtemp,0xFF, sizeof (sprtemp));
 	maxframe = (size_t)-1;
@@ -443,6 +443,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
 		break;
 	case RET_PK3:
+	case RET_FOLDER:
 		start = W_CheckNumForFolderStartPK3("Sprites/", wadnum, 0);
 		end = W_CheckNumForFolderEndPK3("Sprites/", wadnum, start);
 		break;
@@ -547,8 +548,8 @@ void R_InitSprites(void)
 	R_InitSkins();
 	for (i = 0; i < numwadfiles; i++)
 	{
-		R_AddSkins((UINT16)i);
-		R_PatchSkins((UINT16)i);
+		R_AddSkins((UINT16)i, true);
+		R_PatchSkins((UINT16)i, true);
 		R_LoadSpriteInfoLumps(i, wadfiles[i]->numlumps);
 	}
 	ST_ReloadSkinFaceGraphics();
@@ -753,7 +754,7 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
 			return R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
 		else
-			return R_GetTranslationColormap(TC_BOSS, 0, GTC_CACHE);
+			return R_GetTranslationColormap(TC_BOSS, vis->mobj->color, GTC_CACHE);
 	}
 	else if (vis->mobj->color)
 	{
@@ -1803,7 +1804,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	else if (oldthing->frame & FF_TRANSMASK)
 	{
 		trans = (oldthing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
-		if (oldthing->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
+		if (!R_BlendLevelVisible(oldthing->blendmode, trans))
 			return;
 	}
 	else
@@ -1958,6 +1959,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->centerangle = centerangle;
 	vis->shear.tan = sheartan;
 	vis->shear.offset = 0;
+	vis->viewpoint.x = viewx;
+	vis->viewpoint.y = viewy;
+	vis->viewpoint.z = viewz;
+	vis->viewpoint.angle = viewangle;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 
@@ -2199,7 +2204,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	// specific translucency
 	if (thing->frame & FF_TRANSMASK)
-		vis->transmap = (thing->frame & FF_TRANSMASK) - 0x10000 + transtables;
+		vis->transmap = R_GetTranslucencyTable((thing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT);
 	else
 		vis->transmap = NULL;
 
@@ -2783,7 +2788,7 @@ static void R_DrawSprite(vissprite_t *spr)
 	mceilingclip = spr->cliptop;
 
 	if (spr->cut & SC_SPLAT)
-		R_DrawFloorSprite(spr);
+		R_DrawFloorSplat(spr);
 	else
 		R_DrawVisSprite(spr);
 }

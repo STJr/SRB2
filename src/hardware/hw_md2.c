@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -777,24 +777,7 @@ static void HWR_CreateBlendedTexture(patch_t *gpatch, patch_t *blendgpatch, GLMi
 
 	while (size--)
 	{
-		if (skinnum == TC_BOSS)
-		{
-			// Turn everything below a certain threshold white
-			if ((image->s.red == image->s.green) && (image->s.green == image->s.blue) && image->s.blue < 127)
-			{
-				// Lactozilla: Invert the colors
-				cur->s.red = cur->s.green = cur->s.blue = (255 - image->s.blue);
-			}
-			else
-			{
-				cur->s.red = image->s.red;
-				cur->s.green = image->s.green;
-				cur->s.blue = image->s.blue;
-			}
-
-			cur->s.alpha = image->s.alpha;
-		}
-		else if (skinnum == TC_ALLWHITE)
+		if (skinnum == TC_ALLWHITE)
 		{
 			// Turn everything white
 			cur->s.red = cur->s.green = cur->s.blue = 255;
@@ -1064,6 +1047,15 @@ skippixel:
 					}
 
 					cur->s.alpha = image->s.alpha;
+				}
+				else if (skinnum == TC_BOSS)
+				{
+					// Turn everything below a certain threshold white
+					if ((image->s.red == image->s.green) && (image->s.green == image->s.blue) && image->s.blue < 127)
+					{
+						// Lactozilla: Invert the colors
+						cur->s.red = cur->s.green = cur->s.blue = (255 - image->s.blue);
+					}
 				}
 			}
 		}
@@ -1533,7 +1525,12 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 				{
 					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
 					if (nextFrame >= mod)
-						nextFrame = 0;
+					{
+						if (spr->mobj->state->frame & FF_SPR2ENDSTATE)
+							nextFrame--;
+						else
+							nextFrame = 0;
+					}
 					if (frame || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
 						nextFrame = md2->model->spr2frames[spr2].frames[nextFrame];
 					else

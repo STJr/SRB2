@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 by Sonic Team Junior.
+// Copyright (C) 2020-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -30,11 +30,11 @@ extern int       ps_lua_mobjhooks;
 
 typedef struct
 {
-	UINT32 time_taken;
+	precise_t time_taken;
 	char short_src[LUA_IDSIZE];
 } ps_hookinfo_t;
 
-void PS_SetThinkFrameHookInfo(int index, UINT32 time_taken, char* short_src);
+void PS_SetThinkFrameHookInfo(int index, precise_t time_taken, char* short_src);
 
 void M_DrawPerfStats(void);
 
