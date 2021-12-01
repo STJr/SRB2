@@ -52,7 +52,7 @@
 #include <errno.h>
 
 // Prototypes
-static boolean AddFileToSendQueue(INT32 node, const char *filename, UINT8 fileid);
+static boolean AddFileToSendQueue(INT32 node, UINT8 fileid);
 
 // Sender structure
 typedef struct filetx_s
@@ -116,6 +116,22 @@ boolean waitingforluafiletransfer = false;
 boolean waitingforluafilecommand = false;
 char luafiledir[256 + 16] = "luafiles";
 
+
+static UINT16 GetWadNumFromFileNeededId(UINT8 id)
+{
+	UINT16 wadnum;
+
+	for (wadnum = mainwads; wadnum < numwadfiles; wadnum++)
+	{
+		if (!wadfiles[wadnum]->important)
+			continue;
+		if (id == 0)
+			return wadnum;
+		id--;
+	}
+
+	return UINT16_MAX;
+}
 
 /** Fills a serverinfo packet with information about wad files loaded.
   *
@@ -372,14 +388,18 @@ boolean CL_SendFileRequest(void)
 		if ((fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD))
 		{
 			totalfreespaceneeded += fileneeded[i].totalsize;
-			nameonly(fileneeded[i].filename);
+
 			WRITEUINT8(p, i); // fileid
-			WRITESTRINGN(p, fileneeded[i].filename, MAX_WADPATH);
+
 			// put it in download dir
+			nameonly(fileneeded[i].filename);
 			strcatbf(fileneeded[i].filename, downloaddir, "/");
+
 			fileneeded[i].status = FS_REQUESTED;
 		}
+
 	WRITEUINT8(p, 0xFF);
+
 	I_GetDiskFreeSpace(&availablefreespace);
 	if (totalfreespaceneeded > availablefreespace)
 		I_Error("To play on this server you must download %s KB,\n"
@@ -395,21 +415,22 @@ boolean CL_SendFileRequest(void)
 // returns false if a requested file was not found or cannot be sent
 boolean PT_RequestFile(INT32 node)
 {
-	char wad[MAX_WADPATH+1];
 	UINT8 *p = netbuffer->u.textcmd;
 	UINT8 id;
+
 	while (p < netbuffer->u.textcmd + MAXTEXTCMD-1) // Don't allow hacked client to overflow
 	{
 		id = READUINT8(p);
 		if (id == 0xFF)
 			break;
-		READSTRINGN(p, wad, MAX_WADPATH);
-		if (!AddFileToSendQueue(node, wad, id))
+
+		if (!AddFileToSendQueue(node, id))
 		{
 			SV_AbortSendFiles(node);
 			return false; // don't read the rest of the files
 		}
 	}
+
 	return true; // no problems with any files
 }
 
@@ -762,15 +783,11 @@ static INT32 filestosend = 0;
   * \sa AddLuaFileToSendQueue
   *
   */
-static boolean AddFileToSendQueue(INT32 node, const char *filename, UINT8 fileid)
+static boolean AddFileToSendQueue(INT32 node, UINT8 fileid)
 {
 	filetx_t **q; // A pointer to the "next" field of the last file in the list
 	filetx_t *p; // The new file request
-	INT32 i;
-	char wadfilename[MAX_WADPATH];
-
-	if (cv_noticedownload.value)
-		CONS_Printf("Sending file \"%s\" to node %d (%s)\n", filename, node, I_GetNodeAddress(node));
+	UINT16 wadnum;
 
 	// Find the last file in the list and set a pointer to its "next" field
 	q = &transfer[node].txlist;
@@ -790,51 +807,43 @@ static boolean AddFileToSendQueue(INT32 node, const char *filename, UINT8 fileid
 	if (!p->id.filename)
 		I_Error("AddFileToSendQueue: No more memory\n");
 
-	// Set the file name and get rid of the path
-	strlcpy(p->id.filename, filename, MAX_WADPATH);
-	nameonly(p->id.filename);
-
-	// Look for the requested file through all loaded files
-	for (i = 0; wadfiles[i]; i++)
-	{
-		strlcpy(wadfilename, wadfiles[i]->filename, MAX_WADPATH);
-		nameonly(wadfilename);
-		if (!stricmp(wadfilename, p->id.filename))
-		{
-			// Copy file name with full path
-			strlcpy(p->id.filename, wadfiles[i]->filename, MAX_WADPATH);
-			break;
-		}
-	}
+	// Find the wad the ID refers to
+	wadnum = GetWadNumFromFileNeededId(fileid);
 
 	// Handle non-loaded file requests
-	if (!wadfiles[i])
+	if (wadnum == UINT16_MAX)
 	{
-		DEBFILE(va("%s not found in wadfiles\n", filename));
+		DEBFILE(va("fileneeded %d not found in wadfiles\n", fileid));
 		// This formerly checked if (!findfile(p->id.filename, NULL, true))
 
 		// Not found
 		// Don't inform client
-		DEBFILE(va("Client %d request %s: not found\n", node, filename));
+		DEBFILE(va("Client %d request fileneeded %d: not found\n", node, fileid));
 		free(p->id.filename);
 		free(p);
 		*q = NULL;
 		return false; // cancel the rest of the requests
 	}
 
+	// Set the file name and get rid of the path
+	strlcpy(p->id.filename, wadfiles[wadnum]->filename, MAX_WADPATH);
+
 	// Handle huge file requests (i.e. bigger than cv_maxsend.value KB)
-	if (wadfiles[i]->filesize > (UINT32)cv_maxsend.value * 1024)
+	if (wadfiles[wadnum]->filesize > (UINT32)cv_maxsend.value * 1024)
 	{
 		// Too big
 		// Don't inform client (client sucks, man)
-		DEBFILE(va("Client %d request %s: file too big, not sending\n", node, filename));
+		DEBFILE(va("Client %d request %s: file too big, not sending\n", node, p->id.filename));
 		free(p->id.filename);
 		free(p);
 		*q = NULL;
 		return false; // cancel the rest of the requests
 	}
 
-	DEBFILE(va("Sending file %s (id=%d) to %d\n", filename, fileid, node));
+	if (cv_noticedownload.value)
+		CONS_Printf("Sending file \"%s\" to node %d (%s)\n", p->id.filename, node, I_GetNodeAddress(node));
+
+	DEBFILE(va("Sending file %s (id=%d) to %d\n", p->id.filename, fileid, node));
 	p->ram = SF_FILE; // It's a file, we need to close it and free its name once we're done sending it
 	p->fileid = fileid;
 	p->next = NULL; // End of list
