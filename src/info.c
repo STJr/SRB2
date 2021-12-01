@@ -11430,7 +11430,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		17*FRACUNIT,    // radius
 		34*FRACUNIT,    // height
 		1,              // display offset
-		0,              // mass
+		DMG_SPIKE,      // mass
 		1,              // damage
 		sfx_s3kc9s, //sfx_mswing, -- activesound
 		MF_SCENERY|MF_PAIN|MF_NOGRAVITY, // flags
@@ -11457,7 +11457,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		34*FRACUNIT,    // radius
 		68*FRACUNIT,    // height
 		1,              // display offset
-		0,              // mass
+		DMG_SPIKE,      // mass
 		1,              // damage
 		sfx_s3kc9s, //sfx_mswing, -- activesound
 		MF_SCENERY|MF_PAIN|MF_NOGRAVITY, // flags
@@ -20380,7 +20380,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		18*FRACUNIT,    // radius
 		28*FRACUNIT,    // height
 		0,              // display offset
-		0,              // mass
+		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_PAIN, // flags
