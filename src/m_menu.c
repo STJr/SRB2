@@ -4062,14 +4062,6 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv, boolean ontop)
 	for (i = 1; i < SLIDER_RANGE; i++)
 		V_DrawScaledPatch (x+i*8, y, 0,p);
 
-	if (ontop)
-	{
-		V_DrawCharacter(x - 6 - (skullAnimCounter/5), y,
-			'\x1C' | V_YELLOWMAP, false);
-		V_DrawCharacter(x+i*8 + 8 + (skullAnimCounter/5), y,
-			'\x1D' | V_YELLOWMAP, false);
-	}
-
 	p = W_CachePatchName("M_SLIDER", PU_PATCH);
 	V_DrawScaledPatch(x+i*8, y, 0, p);
 
@@ -4105,6 +4097,16 @@ static void M_DrawSlider(INT32 x, INT32 y, const consvar_t *cv, boolean ontop)
 		range = 100;
 
 	V_DrawMappedPatch(x + 2 + (SLIDER_RANGE*8*range)/100, y, 0, p, yellowmap);
+
+	if (ontop)
+	{
+		V_DrawCharacter(x - 6 - (skullAnimCounter/5), y,
+			'\x1C' | V_YELLOWMAP, false);
+		V_DrawCharacter(x + 80 + (skullAnimCounter/5), y,
+			'\x1D' | V_YELLOWMAP, false);
+		V_DrawCenteredString(x + 40, y, V_30TRANS,
+			(cv->flags & CV_FLOAT) ? va("%.2f", FIXED_TO_FLOAT(cv->value)) : va("%d", cv->value));
+	}
 }
 
 //
@@ -7187,12 +7189,19 @@ static void M_HandleChecklist(INT32 choice)
 
 static void M_DrawChecklist(void)
 {
-	INT32 i = check_on, j = 0, y = currentMenu->y;
+	INT32 i = check_on, j = 0, y = currentMenu->y, emblems = numemblems+numextraemblems;
 	UINT32 condnum, previd, maxcond;
 	condition_t *cond;
 
 	// draw title (or big pic)
 	M_DrawMenuTitle();
+
+	// draw emblem counter
+	if (emblems > 0)
+	{
+		V_DrawString(42, 20, (emblems == M_CountEmblems()) ? V_GREENMAP : 0, va("%d/%d", M_CountEmblems(), emblems));
+		V_DrawSmallScaledPatch(28, 20, 0, W_CachePatchName("EMBLICON", PU_PATCH));
+	}
 
 	if (check_on)
 		V_DrawString(10, y-(skullAnimCounter/5), V_YELLOWMAP, "\x1A");
@@ -8652,6 +8661,12 @@ static void M_DrawLoad(void)
 		loadgameoffset = 0;
 
 	M_DrawLoadGameData();
+
+	if (modifiedgame && !savemoddata)
+	{
+		V_DrawCenteredThinString(BASEVIDWIDTH/2, 184, 0, "\x85WARNING: \x80The game is modified.");
+		V_DrawCenteredThinString(BASEVIDWIDTH/2, 192, 0, "Progress will not be saved.");
+	}
 }
 
 //
@@ -8953,7 +8968,7 @@ static void M_HandleLoadSave(INT32 choice)
 			break;
 
 		case KEY_ENTER:
-			if (ultimate_selectable && saveSlotSelected == NOSAVESLOT)
+			if (ultimate_selectable && saveSlotSelected == NOSAVESLOT && !savemoddata && !modifiedgame)
 			{
 				loadgamescroll = 0;
 				S_StartSound(NULL, sfx_skid);
