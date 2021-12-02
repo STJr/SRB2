@@ -272,7 +272,7 @@ void D_ProcessEvents(void)
 		if (eaten)
 			continue; // ate the event
 
-		if (!hooked && G_LuaResponder(ev))
+		if (!hooked && !CON_Ready() && G_LuaResponder(ev))
 			continue;
 
 		G_Responder(ev);
