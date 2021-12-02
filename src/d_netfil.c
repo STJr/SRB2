@@ -925,7 +925,6 @@ static void SV_EndFileSend(INT32 node)
 	filestosend--;
 }
 
-#define PACKETPERTIC net_bandwidth/(TICRATE*software_MAXPACKETLENGTH)
 #define FILEFRAGMENTSIZE (software_MAXPACKETLENGTH - (FILETXHEADER + BASEPACKETSIZE))
 
 /** Handles file transmission
@@ -958,14 +957,7 @@ void FileSendTicker(void)
 	if (!filestosend) // No file to send
 		return;
 
-	if (cv_downloadspeed.value) // New behavior
-		packetsent = cv_downloadspeed.value;
-	else // Old behavior
-	{
-		packetsent = PACKETPERTIC;
-		if (!packetsent)
-			packetsent = 1;
-	}
+	packetsent = cv_downloadspeed.value;
 
 	netbuffer->packettype = PT_FILEFRAGMENT;
 
