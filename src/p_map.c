@@ -1156,7 +1156,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else
 			thing->z = tmthing->z + tmthing->height + FixedMul(FRACUNIT, tmthing->scale);
 		if (thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
 		return true;
 	}
 
