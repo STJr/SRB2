@@ -1156,7 +1156,7 @@ UINT8 CanChangeSkin(INT32 playernum, INT32 skinnum)
 	}
 	
 	//Call the lua hook for CanChangeSkin
-	UINT8 canchangeskin = LUAh_PlayerCanChangeSkin(&players[playernum], &skins[players[playernum].skin], (skinnum < 0 ? NULL : &skins[skinnum]));
+	int canchangeskin = LUAh_HookPlayerCanChangeSkin(&players[playernum], &skins[players[playernum].skin], (skinnum < 0 ? NULL : &skins[skinnum]));
 	if (canchangeskin == 1)
 		return true; // force yes
 	else if (canchangeskin == 2)
