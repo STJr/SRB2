@@ -3236,8 +3236,8 @@ void P_MobjCheckWater(mobj_t *mobj)
 		 || ((rover->flags & FF_BLOCKOTHERS) && !mobj->player)))
 			continue;
 
-		topheight    = P_GetFFloorTopZAt   (rover, mobj->x, mobj->y);
-		bottomheight = P_GetFFloorBottomZAt(rover, mobj->x, mobj->y);
+		topheight = P_GetSpecialTopZ(mobj, sectors + rover->secnum, sector);
+		bottomheight = P_GetSpecialBottomZ(mobj, sectors + rover->secnum, sector);
 
 		if (mobj->eflags & MFE_VERTICALFLIP)
 		{
