@@ -14,6 +14,7 @@
 #include "d_player.h"
 #include "s_sound.h"
 #include "d_event.h"
+#include "r_skins.h"
 
 /*
 Do you know what an 'X Macro' is? Such a macro is called over each element of
