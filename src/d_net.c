@@ -815,6 +815,8 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"CLIENTJOIN",
 	"NODETIMEOUT",
 	"LOGIN",
+	"TELLFILESNEEDED",
+	"MOREFILESNEEDED",
 	"PING"
 };
 

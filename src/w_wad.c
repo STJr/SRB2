@@ -105,7 +105,7 @@ static UINT16 lumpnumcacheindex = 0;
 //                                                                    GLOBALS
 //===========================================================================
 UINT16 numwadfiles; // number of active wadfiles
-wadfile_t *wadfiles[MAX_WADFILES]; // 0 to numwadfiles-1 are valid
+wadfile_t **wadfiles; // 0 to numwadfiles-1 are valid
 
 // W_Shutdown
 // Closes all of the WAD files before quitting
@@ -134,6 +134,8 @@ void W_Shutdown(void)
 		Z_Free(wad->lumpinfo);
 		Z_Free(wad);
 	}
+
+	Z_Free(wadfiles);
 }
 
 //===========================================================================
@@ -844,7 +846,6 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 #ifndef NOMD5
 	size_t i;
 #endif
-	size_t packetsize;
 	UINT8 md5sum[16];
 	int important;
 
@@ -862,9 +863,8 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		refreshdirname = NULL;
 
 	//CONS_Debug(DBG_SETUP, "Loading %s\n", filename);
-	//
-	// check if limit of active wadfiles
-	//
+
+	// Check if the game reached the limit of active wadfiles.
 	if (numwadfiles >= MAX_WADFILES)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
@@ -884,24 +884,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 		return INT16_MAX;
 	}
 
-	// Check if wad files will overflow fileneededbuffer. Only the filename part
-	// is send in the packet; cf.
-	// see PutFileNeeded in d_netfil.c
-	if ((important = !important))
-	{
-		packetsize = packetsizetally + nameonlylength(filename) + FILENEEDEDSIZE;
-
-		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
-			refreshdirmenu |= REFRESHDIR_MAX;
-			if (handle)
-				fclose(handle);
-			return W_InitFileError(filename, startup);
-		}
-
-		packetsizetally = packetsize;
-	}
+	important = !important;
 
 #ifndef NOMD5
 	//
@@ -913,11 +896,12 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 	for (i = 0; i < numwadfiles; i++)
 	{
+		if (wadfiles[i]->type == RET_FOLDER)
+			continue;
+
 		if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), filename);
-			if (important)
-				packetsizetally -= nameonlylength(filename) + FILENEEDEDSIZE;
 			if (handle)
 				fclose(handle);
 			return W_InitFileError(filename, false);
@@ -984,6 +968,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	// add the wadfile
 	//
 	CONS_Printf(M_GetText("Added file %s (%u lumps)\n"), filename, numlumps);
+	wadfiles = Z_Realloc(wadfiles, sizeof(wadfile_t) * (numwadfiles + 1), PU_STATIC, NULL);
 	wadfiles[numwadfiles] = wadfile;
 	numwadfiles++; // must come BEFORE W_LoadDehackedLumps, so any addfile called by COM_BufInsertText called by Lua doesn't overwrite what we just loaded
 
@@ -1046,22 +1031,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 		return W_InitFileError(path, startup);
 	}
 
-	important = 0; // ???
-
-	/// \todo Implement a W_VerifyFolder.
-	if ((important = !important))
-	{
-		size_t packetsize = packetsizetally + strlen(path) + FILENEEDEDSIZE;
-
-		if (packetsize > MAXFILENEEDED*sizeof(UINT8))
-		{
-			CONS_Alert(CONS_ERROR, M_GetText("Maximum wad files reached\n"));
-			refreshdirmenu |= REFRESHDIR_MAX;
-			return W_InitFileError(path, startup);
-		}
-
-		packetsizetally = packetsize;
-	}
+	important = 0; /// \todo Implement a W_VerifyFolder.
 
 	// Remove path delimiters.
 	p = path + (strlen(path) - 1);
@@ -1132,8 +1102,6 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 		if (samepaths(wadfiles[i]->path, fullpath) > 0)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), path);
-			if (important)
-				packetsizetally -= strlen(path) + FILENEEDEDSIZE;
 			Z_Free(fn);
 			Z_Free(fullpath);
 			return W_InitFileError(path, false);
@@ -1197,11 +1165,13 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
   *
   * \param filenames A null-terminated list of files to use.
   */
-void W_InitMultipleFiles(char **filenames)
+void W_InitMultipleFiles(addfilelist_t *list)
 {
-	for (; *filenames; filenames++)
+	size_t i = 0;
+
+	for (; i < list->numfiles; i++)
 	{
-		const char *fn = (*filenames);
+		const char *fn = list->files[i];
 		char pathsep = fn[strlen(fn) - 1];
 		boolean mainfile = (numwadfiles < mainwads);
 
@@ -1219,7 +1189,7 @@ void W_InitMultipleFiles(char **filenames)
   */
 static boolean TestValidLump(UINT16 wad, UINT16 lump)
 {
-	I_Assert(wad < MAX_WADFILES);
+	I_Assert(wad < numwadfiles);
 	if (!wadfiles[wad]) // make sure the wad file exists
 		return false;
 
@@ -1636,7 +1606,7 @@ size_t W_LumpLength(lumpnum_t lumpnum)
 
 //
 // W_IsLumpWad
-// Is the lump a WAD? (presumably in a PK3)
+// Is the lump a WAD? (presumably not in a WAD)
 //
 boolean W_IsLumpWad(lumpnum_t lumpnum)
 {
@@ -1649,12 +1619,12 @@ boolean W_IsLumpWad(lumpnum_t lumpnum)
 		return !strnicmp(lumpfullName + strlen(lumpfullName) - 4, ".wad", 4);
 	}
 
-	return false; // WADs should never be inside non-PK3s as far as SRB2 is concerned
+	return false; // WADs should never be inside WADs as far as SRB2 is concerned
 }
 
 //
 // W_IsLumpFolder
-// Is the lump a folder? (in a PK3 obviously)
+// Is the lump a folder? (not in a WAD obviously)
 //
 boolean W_IsLumpFolder(UINT16 wad, UINT16 lump)
 {
@@ -1665,7 +1635,7 @@ boolean W_IsLumpFolder(UINT16 wad, UINT16 lump)
 		return (name[strlen(name)-1] == '/'); // folders end in '/'
 	}
 
-	return false; // non-PK3s don't have folders
+	return false; // WADs don't have folders
 }
 
 #ifdef HAVE_ZLIB
@@ -2217,7 +2187,7 @@ void W_VerifyFileMD5(UINT16 wadfilenum, const char *matchmd5)
 #else
 		I_Error
 #endif
-			(M_GetText("File is old, is corrupt or has been modified: %s (found md5: %s, wanted: %s)\n"), wadfiles[wadfilenum]->filename, actualmd5text, matchmd5);
+			(M_GetText("File is old, is corrupt or has been modified:\n%s\nFound MD5: %s\nWanted MD5: %s\n"), wadfiles[wadfilenum]->filename, actualmd5text, matchmd5);
 	}
 #endif
 }
