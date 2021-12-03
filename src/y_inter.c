@@ -239,12 +239,12 @@ void Y_LoadIntermissionData(void)
 			}
 			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_PATCH);
 
-			// get background patches
-			bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
 				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
+			else // no interscreen? use default background
+				bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 			break;
 		}
 		case int_spec:
@@ -255,12 +255,11 @@ void Y_LoadIntermissionData(void)
 			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_PATCH);
 			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_PATCH);
 
-			// get background tile
-			bgtile = W_CachePatchName("SPECTILE", PU_PATCH);
-
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
 				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
+			else // no interscreen? use default background
+				bgtile = W_CachePatchName("SPECTILE", PU_PATCH);
 			break;
 		}
 		case int_ctf:
