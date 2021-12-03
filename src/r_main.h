@@ -17,6 +17,7 @@
 #include "d_player.h"
 #include "r_data.h"
 #include "r_textures.h"
+#include "m_perfstats.h" // ps_metric_t
 
 //
 // POV related.
@@ -79,21 +80,22 @@ boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixe
 // Render stats
 
 extern precise_t ps_prevframetime;// time when previous frame was rendered
-extern precise_t ps_rendercalltime;
-extern precise_t ps_uitime;
-extern precise_t ps_swaptime;
+extern ps_metric_t ps_rendercalltime;
+extern ps_metric_t ps_otherrendertime;
+extern ps_metric_t ps_uitime;
+extern ps_metric_t ps_swaptime;
 
-extern precise_t ps_bsptime;
+extern ps_metric_t ps_bsptime;
 
-extern precise_t ps_sw_spritecliptime;
-extern precise_t ps_sw_portaltime;
-extern precise_t ps_sw_planetime;
-extern precise_t ps_sw_maskedtime;
+extern ps_metric_t ps_sw_spritecliptime;
+extern ps_metric_t ps_sw_portaltime;
+extern ps_metric_t ps_sw_planetime;
+extern ps_metric_t ps_sw_maskedtime;
 
-extern int ps_numbspcalls;
-extern int ps_numsprites;
-extern int ps_numdrawnodes;
-extern int ps_numpolyobjects;
+extern ps_metric_t ps_numbspcalls;
+extern ps_metric_t ps_numsprites;
+extern ps_metric_t ps_numdrawnodes;
+extern ps_metric_t ps_numpolyobjects;
 
 //
 // REFRESH - the actual rendering functions.

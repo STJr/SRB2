@@ -2069,7 +2069,7 @@ state_t states[NUMSTATES] =
 	{SPR_TVFL, 2, 18, {A_GiveShield}, SH_FLAMEAURA, 0, S_NULL}, // S_FLAMEAURA_ICON2
 
 	{SPR_TVBB, FF_ANIMATE|2, 18, {NULL}, 3, 4, S_BUBBLEWRAP_ICON2}, // S_BUBBLEWRAP_ICON1
-	{SPR_TVBB, 2, 18, {A_GiveShield}, SH_BUBBLEWRAP, 0, S_NULL}, // S_BUBBLERWAP_ICON2
+	{SPR_TVBB, 2, 18, {A_GiveShield}, SH_BUBBLEWRAP, 0, S_NULL}, // S_BUBBLEWRAP_ICON2
 
 	{SPR_TVZP, FF_ANIMATE|2, 18, {NULL}, 3, 4, S_THUNDERCOIN_ICON2}, // S_THUNDERCOIN_ICON1
 	{SPR_TVZP, 2, 18, {A_GiveShield}, SH_THUNDERCOIN, 0, S_NULL}, // S_THUNDERCOIN_ICON2
@@ -5199,7 +5199,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		24*FRACUNIT,    // radius
 		34*FRACUNIT,    // height
 		0,              // display offset
-		100,            // mass
+		DMG_FIRE,       // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_FIRE|MF_PAIN, // flags
@@ -7974,7 +7974,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		8*FRACUNIT,     // radius
 		32*FRACUNIT,    // height
 		0,              // display offset
-		4,              // mass
+		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_SCENERY|MF_NOCLIPHEIGHT,  // flags
@@ -8001,7 +8001,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		16*FRACUNIT,    // radius
 		14*FRACUNIT,    // height
 		0,              // display offset
-		4,              // mass
+		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_SCENERY|MF_NOCLIPHEIGHT|MF_PAPERCOLLISION,  // flags
@@ -11430,7 +11430,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		17*FRACUNIT,    // radius
 		34*FRACUNIT,    // height
 		1,              // display offset
-		0,              // mass
+		DMG_SPIKE,      // mass
 		1,              // damage
 		sfx_s3kc9s, //sfx_mswing, -- activesound
 		MF_SCENERY|MF_PAIN|MF_NOGRAVITY, // flags
@@ -11457,7 +11457,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		34*FRACUNIT,    // radius
 		68*FRACUNIT,    // height
 		1,              // display offset
-		0,              // mass
+		DMG_SPIKE,      // mass
 		1,              // damage
 		sfx_s3kc9s, //sfx_mswing, -- activesound
 		MF_SCENERY|MF_PAIN|MF_NOGRAVITY, // flags
@@ -13401,7 +13401,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		30*FRACUNIT,    // radius
 		48*FRACUNIT,    // height
 		0,              // display offset
-		100,            // mass
+		DMG_FIRE,       // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_PAIN|MF_NOGRAVITY|MF_FIRE, // flags
@@ -13806,7 +13806,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		8*FRACUNIT,     // radius
 		32*FRACUNIT,    // height
 		0,              // display offset
-		0,       // mass
+		0,              // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_PAIN, // flags
@@ -20380,7 +20380,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		18*FRACUNIT,    // radius
 		28*FRACUNIT,    // height
 		0,              // display offset
-		0,              // mass
+		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOGRAVITY|MF_PAIN, // flags

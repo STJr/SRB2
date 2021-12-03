@@ -666,7 +666,6 @@ void R_DrawTiltedSplat_NPO2_8(void)
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				// Lactozilla: Non-powers-of-two
 				{
 					fixed_t x = (((fixed_t)u) >> FRACBITS);

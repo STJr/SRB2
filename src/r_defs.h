@@ -154,12 +154,10 @@ typedef enum
 
 typedef enum
 {
-	FS_PUSHABLES   = 0x1, // FF_BUSTABLE: Bustable by pushables
-	FS_EXECUTOR    = 0x2, // FF_BUSTABLE: Trigger linedef executor
-	FS_ONLYBOTTOM  = 0x4, // FF_BUSTABLE: Only bustable from below
-	FS_BUSTMASK    = 0x7,
-	FS_DAMPEN      = 0x8, // FF_BOUNCY:   Dampen bounce
-} ffloorspecialflags_e;
+	FB_PUSHABLES   = 0x1, // Bustable by pushables
+	FB_EXECUTOR    = 0x2, // Trigger linedef executor
+	FB_ONLYBOTTOM  = 0x4, // Only bustable from below
+} ffloorbustflags_e;
 
 typedef enum
 {
@@ -201,10 +199,8 @@ typedef struct ffloor_s
 	INT32 alpha;
 	tic_t norender; // for culling
 
-	// Flags that are only relevant for special ffloor types
-	ffloorspecialflags_e specialflags;
-
 	// Only relevant for FF_BUSTUP
+	ffloorbustflags_e bustflags;
 	UINT8 busttype;
 	INT16 busttag;
 
