@@ -3518,9 +3518,7 @@ void A_Scream(mobj_t *actor)
 	if (LUA_CallAction(A_SCREAM, actor))
 		return;
 
-	if (actor->tracer && (actor->tracer->type == MT_SHELL || actor->tracer->type == MT_FIREBALL))
-		S_StartScreamSound(actor, sfx_mario2);
-	else if (actor->info->deathsound)
+	if (actor->info->deathsound && !S_SoundPlaying(actor, sfx_mario2))
 		S_StartScreamSound(actor, actor->info->deathsound);
 }
 
@@ -5284,7 +5282,7 @@ void A_OverlayThink(mobj_t *actor)
 		actor->z = actor->target->z + actor->target->height - mobjinfo[actor->type].height  - ((var2>>16) ? -1 : 1)*(var2&0xFFFF)*FRACUNIT;
 	else
 		actor->z = actor->target->z + ((var2>>16) ? -1 : 1)*(var2&0xFFFF)*FRACUNIT;
-	actor->angle = actor->target->angle + actor->movedir;
+	actor->angle = (actor->target->player ? actor->target->player->drawangle : actor->target->angle) + actor->movedir;
 	actor->eflags = actor->target->eflags;
 
 	actor->momx = actor->target->momx;

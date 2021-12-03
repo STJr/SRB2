@@ -1549,8 +1549,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	// Note: Majority of botstuffs are handled in G_Ticker now.
 	if (player->bot == BOT_2PHUMAN) //Player-controlled bot
 	{
-		G_CopyTiccmd(cmd,  I_BaseTiccmd2(), 1); // empty, or external driver
-		// Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Legacy
+		// Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Strafe
 		cmd->angleturn = (INT16)((localangle - *myangle) >> 16);
 	}	
 	

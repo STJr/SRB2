@@ -2433,12 +2433,13 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill)
 	{
 		WRITEUINT8(demo_p, (kill) ? METALDEATH : DEMOMARKER); // add the demo end (or metal death) marker
 		WriteDemoChecksum();
-		saved = FIL_WriteFile(va("%sMS.LMP", G_BuildMapName(gamemap)), demobuffer, demo_p - demobuffer); // finally output the file.
+		sprintf(demoname, "%sMS.LMP", G_BuildMapName(gamemap));
+		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
 	}
 	free(demobuffer);
 	metalrecording = false;
 	if (saved)
-		I_Error("Saved to %sMS.LMP", G_BuildMapName(gamemap));
+		I_Error("Saved to %s", demoname);
 	I_Error("Failed to save demo!");
 }
 

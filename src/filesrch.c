@@ -338,9 +338,6 @@ size_t dir_on[menudepth];
 UINT8 refreshdirmenu = 0;
 char *refreshdirname = NULL;
 
-size_t packetsizetally = 0;
-size_t mainwadstally = 0;
-
 #define dirpathlen 1024
 #define maxdirdepth 48
 
@@ -830,7 +827,7 @@ char exttable[NUM_EXT_TABLE][7] = { // maximum extension length (currently 4) pl
 #endif
 	"\5.pk3", "\5.soc", "\5.lua"}; // addfile
 
-char filenamebuf[MAX_WADFILES][MAX_WADPATH];
+static char (*filenamebuf)[MAX_WADPATH];
 
 static boolean filemenucmp(char *haystack, char *needle)
 {
@@ -1102,6 +1099,10 @@ boolean preparefilemenu(boolean samedepth)
 				if (ext >= EXT_LOADSTART)
 				{
 					size_t i;
+
+					if (filenamebuf == NULL)
+						filenamebuf = calloc(sizeof(char) * MAX_WADPATH, numwadfiles);
+
 					for (i = 0; i < numwadfiles; i++)
 					{
 						if (!filenamebuf[i][0])
@@ -1149,6 +1150,12 @@ boolean preparefilemenu(boolean samedepth)
 			else
 				coredirmenu[numfolders + pos++] = temp;
 		}
+	}
+
+	if (filenamebuf)
+	{
+		free(filenamebuf);
+		filenamebuf = NULL;
 	}
 
 	closedir(dirhandle);
