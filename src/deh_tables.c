@@ -5237,12 +5237,10 @@ struct int_const_s const INT_CONST[] = {
 	{"FF_BOUNCY",FF_BOUNCY},                   ///< Bounces players
 	{"FF_SPLAT",FF_SPLAT},                     ///< Use splat flat renderer (treat cyan pixels as invisible)
 
-	// FOF special flags
-	{"FS_PUSHABLES",FS_PUSHABLES},
-	{"FS_EXECUTOR",FS_EXECUTOR},
-	{"FS_ONLYBOTTOM",FS_ONLYBOTTOM},
-	{"FS_BUSTMASK",FS_BUSTMASK},
-	{"FS_DAMPEN",FS_DAMPEN},
+	// FOF bustable flags
+	{"FB_PUSHABLES",FB_PUSHABLES},
+	{"FB_EXECUTOR",FB_EXECUTOR},
+	{"FB_ONLYBOTTOM",FB_ONLYBOTTOM},
 
 	// Bustable FOF type
 	{"BT_TOUCH",BT_TOUCH},

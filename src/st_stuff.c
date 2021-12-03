@@ -2037,9 +2037,8 @@ static void ST_drawNiGHTSHUD(void)
 		else
 			numbersize = 48/2;
 
-		if ((oldspecialstage && leveltime & 2)
-			&& (stplyr->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
-			&& !(stplyr->powers[pw_shield] & SH_PROTECTWATER))
+		if ((oldspecialstage && leveltime & 2) &&
+			(stplyr->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(stplyr->powers[pw_shield] & ((stplyr->mo->eflags & MFE_TOUCHLAVA) ? SH_PROTECTFIRE : SH_PROTECTWATER))))
 			col = SKINCOLOR_ORANGE;
 
 		ST_DrawNightsOverlayNum((160 + numbersize)<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP, realnightstime, nightsnum, col);
@@ -2188,7 +2187,7 @@ static void ST_drawMatchHUD(void)
 		{
 			sprintf(penaltystr, "-%d", stplyr->ammoremoval);
 			V_DrawString(offset + 8 + stplyr->ammoremovalweapon * 20, y,
-				V_REDMAP|V_SNAPTOBOTTOM, penaltystr);
+				V_REDMAP|V_SNAPTOBOTTOM|V_PERPLAYER, penaltystr);
 		}
 
 	}
