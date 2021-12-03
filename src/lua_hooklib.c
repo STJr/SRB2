@@ -505,7 +505,7 @@ static int call_hooks
 		calls += call_mobj_type_hooks(hook, MT_NULL);
 		calls += call_mobj_type_hooks(hook, hook->mobj_type);
 
-		ps_lua_mobjhooks += calls;
+		ps_lua_mobjhooks.value.i += calls;
 	}
 	else
 		calls += call_mapped(hook, &hookIds[hook->hook_type]);
@@ -868,7 +868,7 @@ void LUA_HookLinedefExecute(line_t *line, mobj_t *mo, sector_t *sector)
 		LUA_PushUserdata(gL, line, META_LINE);
 		LUA_PushUserdata(gL, mo, META_MOBJ);
 		LUA_PushUserdata(gL, sector, META_SECTOR);
-		ps_lua_mobjhooks += call_hooks(&hook, 0, res_none);
+		ps_lua_mobjhooks.value.i += call_hooks(&hook, 0, res_none);
 	}
 }
 
