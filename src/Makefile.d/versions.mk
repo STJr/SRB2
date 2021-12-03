@@ -35,8 +35,6 @@ ifndef GCC295
  WFLAGS+=-Wendif-labels
 endif
 ifdef GCC41
- WFLAGS+=-Wdeclaration-after-statement
- WFLAGS+=-Wno-error=declaration-after-statement
  WFLAGS+=-Wshadow
 endif
 #WFLAGS+=-Wlarger-than-%len%

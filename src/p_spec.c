@@ -1965,7 +1965,7 @@ void P_SwitchWeather(INT32 weathernum)
 				continue; // not a precipmobj thinker
 			precipmobj = (precipmobj_t *)think;
 
-			if (weathernum == (PRECIP_RAIN || PRECIP_STORM || PRECIP_STORM_NOSTRIKES)) // Snow To Rain
+			if (weathernum == PRECIP_RAIN || weathernum == PRECIP_STORM || weathernum == PRECIP_STORM_NOSTRIKES) // Snow To Rain
 			{
 				precipmobj->flags = mobjinfo[MT_RAIN].flags;
 				st = &states[mobjinfo[MT_RAIN].spawnstate];
@@ -5960,10 +5960,6 @@ static void P_MakeFOFBouncy(line_t *paramline, line_t *masterline)
 			rover->flags |= FF_BOUNCY;
 			rover->spawnflags |= FF_BOUNCY;
 			rover->bouncestrength = (paramline->args[1]<< FRACBITS)/100;
-			if (paramline->args[2])
-				rover->specialflags |= FS_DAMPEN;
-			else
-				rover->specialflags &= ~FS_DAMPEN;
 			CheckForBouncySector = true;
 			break;
 		}
@@ -6593,7 +6589,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 254: // Bustable block
 			{
 				UINT8 busttype = BT_REGULAR;
-				ffloorspecialflags_e bustflags = 0;
+				ffloorbustflags_e bustflags = 0;
 
 				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP;
 
@@ -6616,15 +6612,15 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 				//Flags
 				if (lines[i].args[3] & TMFB_PUSHABLES)
-					bustflags |= FS_PUSHABLES;
+					bustflags |= FB_PUSHABLES;
 				if (lines[i].args[3] & TMFB_EXECUTOR)
-					bustflags |= FS_EXECUTOR;
+					bustflags |= FB_EXECUTOR;
 				if (lines[i].args[3] & TMFB_ONLYBOTTOM)
-					bustflags |= FS_ONLYBOTTOM;
+					bustflags |= FB_ONLYBOTTOM;
 				if (lines[i].args[3] & TMFB_SPLAT)
 					ffloorflags |= FF_SPLAT;
 
-				if (busttype != BT_TOUCH || bustflags & FS_ONLYBOTTOM)
+				if (busttype != BT_TOUCH || bustflags & FB_ONLYBOTTOM)
 					ffloorflags |= FF_BLOCKPLAYER;
 
 				TAG_ITER_SECTORS(lines[i].args[0], s)
@@ -6632,8 +6628,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], ffloorflags, secthinkers);
 					if (!fflr)
 						continue;
+					fflr->bustflags = bustflags;
 					fflr->busttype = busttype;
-					fflr->specialflags = bustflags;
 					fflr->busttag = lines[i].args[4];
 				}
 				break;
@@ -6693,12 +6689,12 @@ void P_SpawnSpecials(boolean fromnetsave)
 							}
 
 							if (lines[i].args[3] & TMFB_ONLYBOTTOM)
-								fflr->specialflags |= FS_ONLYBOTTOM;
+								fflr->bustflags |= FB_ONLYBOTTOM;
 							if (lines[i].flags & ML_EFFECT4)
-								fflr->specialflags |= FS_PUSHABLES;
+								fflr->bustflags |= FB_PUSHABLES;
 							if (lines[i].flags & ML_EFFECT5)
 							{
-								fflr->specialflags |= FS_EXECUTOR;
+								fflr->bustflags |= FB_EXECUTOR;
 								fflr->busttag = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 							}
 						}
@@ -7030,7 +7026,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 74: // Make FOF bustable
 			{
 				UINT8 busttype = BT_REGULAR;
-				ffloorspecialflags_e bustflags = 0;
+				ffloorbustflags_e bustflags = 0;
 
 				if (!udmf)
 					break;
@@ -7052,11 +7048,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 
 				if (lines[i].args[2] & TMFB_PUSHABLES)
-					bustflags |= FS_PUSHABLES;
+					bustflags |= FB_PUSHABLES;
 				if (lines[i].args[2] & TMFB_EXECUTOR)
-					bustflags |= FS_EXECUTOR;
+					bustflags |= FB_EXECUTOR;
 				if (lines[i].args[2] & TMFB_ONLYBOTTOM)
-					bustflags |= FS_ONLYBOTTOM;
+					bustflags |= FB_ONLYBOTTOM;
 
 				TAG_ITER_LINES(lines[i].args[0], l)
 				{
@@ -7074,9 +7070,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 							rover->flags |= FF_BUSTUP;
 							rover->spawnflags |= FF_BUSTUP;
+							rover->bustflags = bustflags;
 							rover->busttype = busttype;
-							rover->specialflags &= ~FS_BUSTMASK;
-							rover->specialflags |= bustflags;
 							rover->busttag = lines[i].args[3];
 							CheckForBustableBlocks = true;
 							break;

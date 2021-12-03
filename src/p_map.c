@@ -1156,7 +1156,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else
 			thing->z = tmthing->z + tmthing->height + FixedMul(FRACUNIT, tmthing->scale);
 		if (thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
 		return true;
 	}
 
@@ -2029,7 +2029,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	subsector_t *newsubsec;
 	boolean blockval = true;
 
-	ps_checkposition_calls++;
+	ps_checkposition_calls.value.i++;
 
 	I_Assert(thing != NULL);
 #ifdef PARANOIA
