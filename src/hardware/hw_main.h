@@ -20,6 +20,8 @@
 #include "../d_player.h"
 #include "../r_defs.h"
 
+#include "../m_perfstats.h"
+
 // Startup & Shutdown the hardware mode renderer
 void HWR_Startup(void);
 void HWR_Switch(void);
@@ -39,7 +41,7 @@ void HWR_InitTextureMapping(void);
 void HWR_SetViewSize(void);
 void HWR_DrawPatch(patch_t *gpatch, INT32 x, INT32 y, INT32 option);
 void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap);
-void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t scale, INT32 option, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
+void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h);
 void HWR_MakePatch(const patch_t *patch, GLPatch_t *grPatch, GLMipmap_t *grMipmap, boolean makebitmap);
 void HWR_CreatePlanePolygons(INT32 bspnum);
 void HWR_CreateStaticLightmaps(INT32 bspnum);
@@ -116,22 +118,22 @@ extern FTransform atransform;
 
 
 // Render stats
-extern precise_t ps_hw_skyboxtime;
-extern precise_t ps_hw_nodesorttime;
-extern precise_t ps_hw_nodedrawtime;
-extern precise_t ps_hw_spritesorttime;
-extern precise_t ps_hw_spritedrawtime;
+extern ps_metric_t ps_hw_skyboxtime;
+extern ps_metric_t ps_hw_nodesorttime;
+extern ps_metric_t ps_hw_nodedrawtime;
+extern ps_metric_t ps_hw_spritesorttime;
+extern ps_metric_t ps_hw_spritedrawtime;
 
 // Render stats for batching
-extern int ps_hw_numpolys;
-extern int ps_hw_numverts;
-extern int ps_hw_numcalls;
-extern int ps_hw_numshaders;
-extern int ps_hw_numtextures;
-extern int ps_hw_numpolyflags;
-extern int ps_hw_numcolors;
-extern precise_t ps_hw_batchsorttime;
-extern precise_t ps_hw_batchdrawtime;
+extern ps_metric_t ps_hw_numpolys;
+extern ps_metric_t ps_hw_numverts;
+extern ps_metric_t ps_hw_numcalls;
+extern ps_metric_t ps_hw_numshaders;
+extern ps_metric_t ps_hw_numtextures;
+extern ps_metric_t ps_hw_numpolyflags;
+extern ps_metric_t ps_hw_numcolors;
+extern ps_metric_t ps_hw_batchsorttime;
+extern ps_metric_t ps_hw_batchdrawtime;
 
 extern boolean gl_init;
 extern boolean gl_maploaded;

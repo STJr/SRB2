@@ -78,7 +78,7 @@ void P_AddCachedAction(mobj_t *mobj, INT32 statenum)
 //
 // P_SetupStateAnimation
 //
-FUNCINLINE static ATTRINLINE void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
+static void P_SetupStateAnimation(mobj_t *mobj, state_t *st)
 {
 	INT32 animlength = (mobj->sprite == SPR_PLAY && mobj->skin)
 		? (INT32)(((skin_t *)mobj->skin)->sprites[mobj->sprite2].numframes) - 1
@@ -1844,12 +1844,10 @@ void P_XYMovement(mobj_t *mo)
 		// blocked move
 		moved = false;
 
-		if (player) {
-			if (player->bot)
-				B_MoveBlocked(player);
-		}
+		if (player) 
+			B_MoveBlocked(player);
 
-		if (LUA_HookMobj(mo, MOBJ_HOOK(MobjMoveBlocked)))
+		if (LUA_HookMobjMoveBlocked(mo, tmhitthing, blockingline))
 		{
 			if (P_MobjWasRemoved(mo))
 				return;
@@ -2554,6 +2552,10 @@ boolean P_ZMovement(mobj_t *mo)
 		}
 
 		P_CheckPosition(mo, mo->x, mo->y); // Sets mo->standingslope correctly
+
+		if (P_MobjWasRemoved(mo)) // mobjs can be removed by P_CheckPosition -- Monster Iestyn 31/07/21
+			return false;
+
 		if (((mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope) && (mo->type != MT_STEAM))
 		{
 			mo->standingslope = (mo->eflags & MFE_VERTICALFLIP) ? tmceilingslope : tmfloorslope;
@@ -3239,8 +3241,8 @@ void P_MobjCheckWater(mobj_t *mobj)
 		 || ((rover->flags & FF_BLOCKOTHERS) && !mobj->player)))
 			continue;
 
-		topheight    = P_GetFFloorTopZAt   (rover, mobj->x, mobj->y);
-		bottomheight = P_GetFFloorBottomZAt(rover, mobj->x, mobj->y);
+		topheight = P_GetSpecialTopZ(mobj, sectors + rover->secnum, sector);
+		bottomheight = P_GetSpecialBottomZ(mobj, sectors + rover->secnum, sector);
 
 		if (mobj->eflags & MFE_VERTICALFLIP)
 		{
@@ -4141,7 +4143,7 @@ boolean P_BossTargetPlayer(mobj_t *actor, boolean closest)
 
 		player = &players[actor->lastlook];
 
-		if (player->pflags & PF_INVIS || player->bot || player->spectator)
+		if (player->pflags & PF_INVIS || player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN || player->spectator)
 			continue; // ignore notarget
 
 		if (!player->mo || P_MobjWasRemoved(player->mo))
@@ -4182,7 +4184,7 @@ boolean P_SupermanLook4Players(mobj_t *actor)
 			if (players[c].pflags & PF_INVIS)
 				continue; // ignore notarget
 
-			if (!players[c].mo || players[c].bot)
+			if (!players[c].mo || players[c].bot == BOT_2PAI || players[c].bot == BOT_2PHUMAN)
 				continue;
 
 			if (players[c].mo->health <= 0)
@@ -6840,7 +6842,7 @@ void P_RunOverlays(void)
 
 		mo->eflags = (mo->eflags & ~MFE_VERTICALFLIP) | (mo->target->eflags & MFE_VERTICALFLIP);
 		mo->scale = mo->destscale = mo->target->scale;
-		mo->angle = mo->target->angle + mo->movedir;
+		mo->angle = (mo->target->player ? mo->target->player->drawangle : mo->target->angle) + mo->movedir;
 
 		if (!(mo->state->frame & FF_ANIMATE))
 			zoffs = FixedMul(((signed)mo->state->var2)*FRACUNIT, mo->scale);
@@ -7311,7 +7313,7 @@ static void P_RosySceneryThink(mobj_t *mobj)
 			continue;
 		if (!players[i].mo)
 			continue;
-		if (players[i].bot)
+		if (players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
 			continue;
 		if (!players[i].mo->health)
 			continue;
@@ -10392,6 +10394,9 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 		case MT_RING:
 		case MT_FLINGRING:
+		
+		case MT_COIN:
+		case MT_FLINGCOIN:
 
 		case MT_BLUESPHERE:
 		case MT_FLINGBLUESPHERE:
@@ -11056,7 +11061,7 @@ void P_SpawnPrecipitation(void)
 	subsector_t *precipsector = NULL;
 	precipmobj_t *rainmo = NULL;
 
-	if (dedicated || !(cv_drawdist_precip.value) || curWeather == PRECIP_NONE)
+	if (dedicated || !(cv_drawdist_precip.value) || curWeather == PRECIP_NONE || curWeather == PRECIP_STORM_NORAIN)
 		return;
 
 	// Use the blockmap to narrow down our placing patterns
@@ -11102,22 +11107,14 @@ void P_SpawnPrecipitation(void)
 				continue;
 
 			rainmo = P_SpawnRainMobj(x, y, height, MT_RAIN);
+			if (curWeather == PRECIP_BLANK)
+				rainmo->precipflags |= PCF_INVISIBLE;
 		}
 
 		// Randomly assign a height, now that floorz is set.
 		rainmo->z = M_RandomRange(rainmo->floorz>>FRACBITS, rainmo->ceilingz>>FRACBITS)<<FRACBITS;
 	}
 
-	if (curWeather == PRECIP_BLANK)
-	{
-		curWeather = PRECIP_RAIN;
-		P_SwitchWeather(PRECIP_BLANK);
-	}
-	else if (curWeather == PRECIP_STORM_NORAIN)
-	{
-		curWeather = PRECIP_RAIN;
-		P_SwitchWeather(PRECIP_STORM_NORAIN);
-	}
 }
 
 //

@@ -67,7 +67,8 @@ void T_MoveCeiling(ceiling_t *ceiling)
 				switch (ceiling->type)
 				{
 					case instantMoveCeilingByFrontSector:
-						ceiling->sector->ceilingpic = ceiling->texture;
+						if (ceiling->texture > -1)
+							ceiling->sector->ceilingpic = ceiling->texture;
 						ceiling->sector->ceilingdata = NULL;
 						ceiling->sector->ceilspeed = 0;
 						P_RemoveThinker(&ceiling->thinker);
@@ -186,7 +187,8 @@ void T_MoveCeiling(ceiling_t *ceiling)
 						break;
 
 					case instantMoveCeilingByFrontSector:
-						ceiling->sector->ceilingpic = ceiling->texture;
+						if (ceiling->texture > -1)
+							ceiling->sector->ceilingpic = ceiling->texture;
 						ceiling->sector->ceilingdata = NULL;
 						ceiling->sector->ceilspeed = 0;
 						P_RemoveThinker(&ceiling->thinker);
@@ -512,7 +514,10 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 					ceiling->direction = -1;
 					ceiling->bottomheight = line->frontsector->ceilingheight;
 				}
-				ceiling->texture = line->frontsector->ceilingpic;
+				if (line->flags & ML_NOCLIMB)
+					ceiling->texture = -1;
+				else
+					ceiling->texture = line->frontsector->ceilingpic;
 				break;
 
 			case moveCeilingByFrontTexture:

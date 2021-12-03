@@ -295,6 +295,8 @@ ifndef destructive
 $(shell $(CC) -v)
 define flags =
 
+SHELL ..... $(SHELL)
+
 CC ........ $(cc)
 
 CFLAGS .... $(opts)
@@ -374,7 +376,7 @@ ifdef Echo_name
 	@printf '%-20.20s\r' $$<
 endif
 endif
-	$(.)$(cc) -MM -MF $$@ -MT $(objdir)/$$(*F).o $(2) $$<
+	$(.)$(cc) -MM -MF $$@ -MT $(objdir)/$$*.o $(2) $$<
 endef
 
 $(eval $(call _recipe,c))
@@ -404,7 +406,7 @@ clean :
 	$(call _rm,$(exe) $(dbg) $(dbg).txt $(objects))
 
 distclean :
-	$(call _rm,../bin ../objs ../deps ../make comptime.h)
+	$(call _rm,../bin ../objs ../dep ../make comptime.h)
 
 info:
 ifdef WINDOWSHELL

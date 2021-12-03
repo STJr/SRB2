@@ -323,7 +323,7 @@ static inline void P_RunThinkers(void)
 	size_t i;
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
-		ps_thlist_times[i] = I_GetPreciseTime();
+		PS_START_TIMING(ps_thlist_times[i]);
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
 #ifdef PARANOIA
@@ -331,7 +331,7 @@ static inline void P_RunThinkers(void)
 #endif
 			currentthinker->function.acp1(currentthinker);
 		}
-		ps_thlist_times[i] = I_GetPreciseTime() - ps_thlist_times[i];
+		PS_STOP_TIMING(ps_thlist_times[i]);
 	}
 
 }
@@ -487,7 +487,7 @@ static inline void P_DoSpecialStageStuff(void)
 					continue;
 
 				// If in water, deplete timer 6x as fast.
-				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(players[i].powers[pw_shield] & SH_PROTECTWATER))
+				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(players[i].powers[pw_shield] & ((players[i].mo->eflags & MFE_TOUCHLAVA) ? SH_PROTECTFIRE : SH_PROTECTWATER)))
 					players[i].nightstime -= 5;
 				if (--players[i].nightstime > 6)
 				{
@@ -653,16 +653,16 @@ void P_Ticker(boolean run)
 			}
 		}
 
-		ps_lua_mobjhooks = 0;
-		ps_checkposition_calls = 0;
+		ps_lua_mobjhooks.value.i = 0;
+		ps_checkposition_calls.value.i = 0;
 
 		LUA_HOOK(PreThinkFrame);
 
-		ps_playerthink_time = I_GetPreciseTime();
+		PS_START_TIMING(ps_playerthink_time);
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerThink(&players[i]);
-		ps_playerthink_time = I_GetPreciseTime() - ps_playerthink_time;
+		PS_STOP_TIMING(ps_playerthink_time);
 	}
 
 	// Keep track of how long they've been playing!
@@ -677,18 +677,18 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		ps_thinkertime = I_GetPreciseTime();
+		PS_START_TIMING(ps_thinkertime);
 		P_RunThinkers();
-		ps_thinkertime = I_GetPreciseTime() - ps_thinkertime;
+		PS_STOP_TIMING(ps_thinkertime);
 
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
 
-		ps_lua_thinkframe_time = I_GetPreciseTime();
+		PS_START_TIMING(ps_lua_thinkframe_time);
 		LUA_HookThinkFrame();
-		ps_lua_thinkframe_time = I_GetPreciseTime() - ps_lua_thinkframe_time;
+		PS_STOP_TIMING(ps_lua_thinkframe_time);
 	}
 
 	// Run shield positioning

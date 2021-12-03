@@ -1680,6 +1680,7 @@ UINT8 G_CmpDemoTime(char *oldname, char *newname)
 	switch(oldversion) // demoversion
 	{
 	case DEMOVERSION: // latest always supported
+	case 0x000d: // The previous demoversion also supported
 	case 0x000c: // all that changed between then and now was longer color name
 		break;
 	// too old, cannot support.
@@ -2023,7 +2024,7 @@ void G_AddGhost(char *defdemoname)
 	char name[17],skin[17],color[MAXCOLORNAME+1],*n,*pdemoname,md5[16];
 	UINT8 cnamelen;
 	demoghost *gh;
-	UINT8 flags;
+	UINT8 flags, subversion;
 	UINT8 *buffer,*p;
 	mapthing_t *mthing;
 	UINT16 count, ghostversion;
@@ -2071,7 +2072,7 @@ void G_AddGhost(char *defdemoname)
 		return;
 	} p += 12; // DEMOHEADER
 	p++; // VERSION
-	p++; // SUBVERSION
+	subversion = READUINT8(p); // SUBVERSION
 	ghostversion = READUINT16(p);
 	switch(ghostversion)
 	{
@@ -2170,9 +2171,19 @@ void G_AddGhost(char *defdemoname)
 	count = READUINT16(p);
 	while (count--)
 	{
-		SKIPSTRING(p);
-		SKIPSTRING(p);
-		p++;
+		// In 2.2.7 netvar saving was updated
+		if (subversion < 7)
+		{
+			p += 2;
+			SKIPSTRING(p);
+			p++;
+		}
+		else
+		{
+			SKIPSTRING(p);
+			SKIPSTRING(p);
+			p++;
+		}
 	}
 
 	if (*p == DEMOMARKER)
@@ -2422,12 +2433,13 @@ ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill)
 	{
 		WRITEUINT8(demo_p, (kill) ? METALDEATH : DEMOMARKER); // add the demo end (or metal death) marker
 		WriteDemoChecksum();
-		saved = FIL_WriteFile(va("%sMS.LMP", G_BuildMapName(gamemap)), demobuffer, demo_p - demobuffer); // finally output the file.
+		sprintf(demoname, "%sMS.LMP", G_BuildMapName(gamemap));
+		saved = FIL_WriteFile(va(pandf, srb2home, demoname), demobuffer, demo_p - demobuffer); // finally output the file.
 	}
 	free(demobuffer);
 	metalrecording = false;
 	if (saved)
-		I_Error("Saved to %sMS.LMP", G_BuildMapName(gamemap));
+		I_Error("Saved to %s", demoname);
 	I_Error("Failed to save demo!");
 }
 
