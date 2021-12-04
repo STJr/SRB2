@@ -78,7 +78,7 @@ NONX86	= $(shell test "`echo $(CROSS_COMPILE_HOST) | grep 'i[3-6]86'`" || echo "
 MAKEARGS = $(OS) $(NONX86) $(PREFIX) EXENAME=$(EXENAME) DBGNAME=$(DBGNAME) NOOBJDUMP=1 # SDL_PKGCONFIG=sdl2 PNG_PKGCONFIG=libpng
 MENUFILE1 = ?package($(PACKAGE)):needs="X11" section="$(SECTION)"
 MENUFILE2 = title="$(TITLE)" command="/$(PKGDIR)/$(PACKAGE)"
-BINDIR :=  $(DIR)/bin/Linux/Release
+BINDIR :=  $(DIR)/bin/
 
 # FIXME pkg-config dir hacks
 # Launchpad doesn't need this; it actually makes i386 builds fail due to cross-compile

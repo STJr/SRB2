@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -540,7 +540,7 @@ static boolean R_IsFFloorTranslucent(visffloor_t *pfloor)
 
 	// Polyobjects have no ffloors, and they're handled in the conditional above.
 	if (pfloor->ffloor != NULL)
-		return (pfloor->ffloor->flags & FF_TRANSLUCENT);
+		return (pfloor->ffloor->flags & (FF_TRANSLUCENT|FF_FOG));
 
 	return false;
 }
@@ -1191,7 +1191,7 @@ static void R_RenderSegLoop (void)
 
 							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
 							// "bottom" is the top pixel of the floor column
-							if (ffbottom >= bottom-1 && R_FFloorCanClip(&ffloor[i]))
+							if (ffbottom >= bottom-1 && R_FFloorCanClip(&ffloor[i]) && !curline->polyseg)
 							{
 								rw_floormarked = true;
 								floorclip[rw_x] = fftop;
@@ -1239,7 +1239,7 @@ static void R_RenderSegLoop (void)
 
 							// Lactozilla: Cull part of the column by the 3D floor if it can't be seen
 							// "top" is the height of the ceiling column
-							if (fftop <= top+1 && R_FFloorCanClip(&ffloor[i]))
+							if (fftop <= top+1 && R_FFloorCanClip(&ffloor[i]) && !curline->polyseg)
 							{
 								rw_ceilingmarked = true;
 								ceilingclip[rw_x] = ffbottom;
@@ -1477,10 +1477,18 @@ static void R_RenderSegLoop (void)
 		}
 
 		for (i = 0; i < numffloors; i++)
+		{
+			if (curline->polyseg && (ffloor[i].polyobj != curline->polyseg))
+				continue;
+
 			ffloor[i].f_frac += ffloor[i].f_step;
+		}
 
 		for (i = 0; i < numbackffloors; i++)
 		{
+			if (curline->polyseg && (ffloor[i].polyobj != curline->polyseg))
+				continue;
+
 			ffloor[i].f_clip[rw_x] = ffloor[i].c_clip[rw_x] = (INT16)((ffloor[i].b_frac >> HEIGHTBITS) & 0xFFFF);
 			ffloor[i].b_frac += ffloor[i].b_step;
 		}
@@ -1649,23 +1657,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		// left
 		temp = xtoviewangle[start]+viewangle;
 
+#define FIXED_TO_DOUBLE(x) (((double)(x)) / ((double)FRACUNIT))
+#define DOUBLE_TO_FIXED(x) (fixed_t)((x) * ((double)FRACUNIT))
+
 		{
 			// Both lines can be written in slope-intercept form, so figure out line intersection
-			float a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
-			///TODO: convert to FPU
+			double a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
+			///TODO: convert to fixed point
 
-			a1 = FIXED_TO_FLOAT(curline->v2->y-curline->v1->y);
-			b1 = FIXED_TO_FLOAT(curline->v1->x-curline->v2->x);
-			c1 = a1*FIXED_TO_FLOAT(curline->v1->x) + b1*FIXED_TO_FLOAT(curline->v1->y);
+			a1 = FIXED_TO_DOUBLE(curline->v2->y-curline->v1->y);
+			b1 = FIXED_TO_DOUBLE(curline->v1->x-curline->v2->x);
+			c1 = a1*FIXED_TO_DOUBLE(curline->v1->x) + b1*FIXED_TO_DOUBLE(curline->v1->y);
 
-			a2 = -FIXED_TO_FLOAT(FINESINE(temp>>ANGLETOFINESHIFT));
-			b2 = FIXED_TO_FLOAT(FINECOSINE(temp>>ANGLETOFINESHIFT));
-			c2 = a2*FIXED_TO_FLOAT(viewx) + b2*FIXED_TO_FLOAT(viewy);
+			a2 = -FIXED_TO_DOUBLE(FINESINE(temp>>ANGLETOFINESHIFT));
+			b2 = FIXED_TO_DOUBLE(FINECOSINE(temp>>ANGLETOFINESHIFT));
+			c2 = a2*FIXED_TO_DOUBLE(viewx) + b2*FIXED_TO_DOUBLE(viewy);
 
 			det = a1*b2 - a2*b1;
 
-			ds_p->leftpos.x = segleft.x = FLOAT_TO_FIXED((b2*c1 - b1*c2)/det);
-			ds_p->leftpos.y = segleft.y = FLOAT_TO_FIXED((a1*c2 - a2*c1)/det);
+			ds_p->leftpos.x = segleft.x = DOUBLE_TO_FIXED((b2*c1 - b1*c2)/det);
+			ds_p->leftpos.y = segleft.y = DOUBLE_TO_FIXED((a1*c2 - a2*c1)/det);
 		}
 
 		// right
@@ -1673,22 +1684,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		{
 			// Both lines can be written in slope-intercept form, so figure out line intersection
-			float a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
-			///TODO: convert to FPU
+			double a1, b1, c1, a2, b2, c2, det; // 1 is the seg, 2 is the view angle vector...
+			///TODO: convert to fixed point
 
-			a1 = FIXED_TO_FLOAT(curline->v2->y-curline->v1->y);
-			b1 = FIXED_TO_FLOAT(curline->v1->x-curline->v2->x);
-			c1 = a1*FIXED_TO_FLOAT(curline->v1->x) + b1*FIXED_TO_FLOAT(curline->v1->y);
+			a1 = FIXED_TO_DOUBLE(curline->v2->y-curline->v1->y);
+			b1 = FIXED_TO_DOUBLE(curline->v1->x-curline->v2->x);
+			c1 = a1*FIXED_TO_DOUBLE(curline->v1->x) + b1*FIXED_TO_DOUBLE(curline->v1->y);
 
-			a2 = -FIXED_TO_FLOAT(FINESINE(temp>>ANGLETOFINESHIFT));
-			b2 = FIXED_TO_FLOAT(FINECOSINE(temp>>ANGLETOFINESHIFT));
-			c2 = a2*FIXED_TO_FLOAT(viewx) + b2*FIXED_TO_FLOAT(viewy);
+			a2 = -FIXED_TO_DOUBLE(FINESINE(temp>>ANGLETOFINESHIFT));
+			b2 = FIXED_TO_DOUBLE(FINECOSINE(temp>>ANGLETOFINESHIFT));
+			c2 = a2*FIXED_TO_DOUBLE(viewx) + b2*FIXED_TO_DOUBLE(viewy);
 
 			det = a1*b2 - a2*b1;
 
-			ds_p->rightpos.x = segright.x = FLOAT_TO_FIXED((b2*c1 - b1*c2)/det);
-			ds_p->rightpos.y = segright.y = FLOAT_TO_FIXED((a1*c2 - a2*c1)/det);
+			ds_p->rightpos.x = segright.x = DOUBLE_TO_FIXED((b2*c1 - b1*c2)/det);
+			ds_p->rightpos.y = segright.y = DOUBLE_TO_FIXED((a1*c2 - a2*c1)/det);
 		}
+
+#undef FIXED_TO_DOUBLE
+#undef DOUBLE_TO_FIXED
+
 	}
 
 

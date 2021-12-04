@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -98,6 +98,7 @@ patch_t *emeraldpics[3][8]; // 0 = normal, 1 = tiny, 2 = coinbox
 static patch_t *emblemicon;
 patch_t *tokenicon;
 static patch_t *exiticon;
+static patch_t *nopingicon;
 
 //-------------------------------------------
 //              misc vars
@@ -286,6 +287,7 @@ void HU_LoadGraphics(void)
 	emblemicon = W_CachePatchName("EMBLICON", PU_HUDGFX);
 	tokenicon = W_CachePatchName("TOKNICON", PU_HUDGFX);
 	exiticon = W_CachePatchName("EXITICON", PU_HUDGFX);
+	nopingicon = W_CachePatchName("NOPINGICON", PU_HUDGFX);
 
 	emeraldpics[0][0] = W_CachePatchName("CHAOS1", PU_HUDGFX);
 	emeraldpics[0][1] = W_CachePatchName("CHAOS2", PU_HUDGFX);
@@ -684,7 +686,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 
 	// run the lua hook even if we were supposed to eat the msg, netgame consistency goes first.
 
-	if (LUAh_PlayerMsg(playernum, target, flags, msg))
+	if (LUA_HookPlayerMsg(playernum, target, flags, msg))
 		return;
 
 	if (spam_eatmsg)
@@ -934,7 +936,7 @@ void HU_Ticker(void)
 	hu_tick++;
 	hu_tick &= 7; // currently only to blink chat input cursor
 
-	if (PLAYER1INPUTDOWN(gc_scores))
+	if (PLAYER1INPUTDOWN(GC_SCORES))
 		hu_showscores = !chat_on;
 	else
 		hu_showscores = false;
@@ -1109,26 +1111,26 @@ boolean HU_Responder(event_t *ev)
 	// (Unless if you're sharing a keyboard, since you probably establish when you start chatting that you have dibs on it...)
 	// (Ahhh, the good ol days when I was a kid who couldn't afford an extra USB controller...)
 
-	if (ev->data1 >= KEY_MOUSE1)
+	if (ev->key >= KEY_MOUSE1)
 	{
 		INT32 i;
-		for (i = 0; i < num_gamecontrols; i++)
+		for (i = 0; i < NUM_GAMECONTROLS; i++)
 		{
-			if (gamecontrol[i][0] == ev->data1 || gamecontrol[i][1] == ev->data1)
+			if (gamecontrol[i][0] == ev->key || gamecontrol[i][1] == ev->key)
 				break;
 		}
 
-		if (i == num_gamecontrols)
+		if (i == NUM_GAMECONTROLS)
 			return false;
 	}*/	//We don't actually care about that unless we get splitscreen netgames. :V
 
 #ifndef NONET
-	c = (INT32)ev->data1;
+	c = (INT32)ev->key;
 
 	if (!chat_on)
 	{
 		// enter chat mode
-		if ((ev->data1 == gamecontrol[gc_talkkey][0] || ev->data1 == gamecontrol[gc_talkkey][1])
+		if ((ev->key == gamecontrol[GC_TALKKEY][0] || ev->key == gamecontrol[GC_TALKKEY][1])
 			&& netgame && !OLD_MUTE) // check for old chat mute, still let the players open the chat incase they want to scroll otherwise.
 		{
 			chat_on = true;
@@ -1138,7 +1140,7 @@ boolean HU_Responder(event_t *ev)
 			typelines = 1;
 			return true;
 		}
-		if ((ev->data1 == gamecontrol[gc_teamkey][0] || ev->data1 == gamecontrol[gc_teamkey][1])
+		if ((ev->key == gamecontrol[GC_TEAMKEY][0] || ev->key == gamecontrol[GC_TEAMKEY][1])
 			&& netgame && !OLD_MUTE)
 		{
 			chat_on = true;
@@ -1155,12 +1157,12 @@ boolean HU_Responder(event_t *ev)
 		// Ignore modifier keys
 		// Note that we do this here so users can still set
 		// their chat keys to one of these, if they so desire.
-		if (ev->data1 == KEY_LSHIFT || ev->data1 == KEY_RSHIFT
-		 || ev->data1 == KEY_LCTRL || ev->data1 == KEY_RCTRL
-		 || ev->data1 == KEY_LALT || ev->data1 == KEY_RALT)
+		if (ev->key == KEY_LSHIFT || ev->key == KEY_RSHIFT
+		 || ev->key == KEY_LCTRL || ev->key == KEY_RCTRL
+		 || ev->key == KEY_LALT || ev->key == KEY_RALT)
 			return true;
 
-		c = (INT32)ev->data1;
+		c = (INT32)ev->key;
 
 		// I know this looks very messy but this works. If it ain't broke, don't fix it!
 		// shift LETTERS to uppercase if we have capslock or are holding shift
@@ -1232,8 +1234,8 @@ boolean HU_Responder(event_t *ev)
 			I_UpdateMouseGrab();
 		}
 		else if (c == KEY_ESCAPE
-			|| ((c == gamecontrol[gc_talkkey][0] || c == gamecontrol[gc_talkkey][1]
-			|| c == gamecontrol[gc_teamkey][0] || c == gamecontrol[gc_teamkey][1])
+			|| ((c == gamecontrol[GC_TALKKEY][0] || c == gamecontrol[GC_TALKKEY][1]
+			|| c == gamecontrol[GC_TEAMKEY][0] || c == gamecontrol[GC_TEAMKEY][1])
 			&& c >= KEY_MOUSE1)) // If it's not a keyboard key, then the chat button is used as a toggle.
 		{
 			chat_on = false;
@@ -2102,22 +2104,25 @@ void HU_Drawer(void)
 		}
 		else
 			HU_DrawCoopOverlay();
-		LUAh_ScoresHUD();
+		LUA_HUDHOOK(scores);
 	}
 
 	if (gamestate != GS_LEVEL)
 		return;
 
 	// draw the crosshair, not when viewing demos nor with chasecam
-	if (!automapactive && cv_crosshair.value && !demoplayback &&
-		(!camera.chase || ticcmd_ztargetfocus[0])
-	&& !players[displayplayer].spectator)
-		HU_DrawCrosshair();
+	if (LUA_HudEnabled(hud_crosshair))
+	{
+		if (!automapactive && cv_crosshair.value && !demoplayback &&
+			(!camera.chase || ticcmd_ztargetfocus[0])
+		&& !players[displayplayer].spectator)
+			HU_DrawCrosshair();
 
-	if (!automapactive && cv_crosshair2.value && !demoplayback &&
-		(!camera2.chase || ticcmd_ztargetfocus[1])
-	&& !players[secondarydisplayplayer].spectator)
-		HU_DrawCrosshair2();
+		if (!automapactive && cv_crosshair2.value && !demoplayback &&
+			(!camera2.chase || ticcmd_ztargetfocus[1])
+		&& !players[secondarydisplayplayer].spectator)
+			HU_DrawCrosshair2();
+	}
 
 	// draw desynch text
 	if (hu_redownloadinggamestate)
@@ -2243,8 +2248,8 @@ void HU_Erase(void)
 //
 void HU_drawPing(INT32 x, INT32 y, UINT32 ping, boolean notext, INT32 flags)
 {
-	UINT8 numbars = 1; // how many ping bars do we draw?
-	UINT8 barcolor = 35; // color we use for the bars (green, yellow or red)
+	UINT8 numbars = 0; // how many ping bars do we draw?
+	UINT8 barcolor = 31; // color we use for the bars (green, yellow, red or black)
 	SINT8 i = 0;
 	SINT8 yoffset = 6;
 	INT32 dx = x+1 - (V_SmallStringWidth(va("%dms", ping),
@@ -2257,11 +2262,16 @@ void HU_drawPing(INT32 x, INT32 y, UINT32 ping, boolean notext, INT32 flags)
 	}
 	else if (ping < 256)
 	{
-		numbars = 2; // Apparently ternaries w/ multiple statements don't look good in C so I decided against it.
+		numbars = 2;
 		barcolor = 73;
 	}
+	else if (ping < UINT32_MAX)
+	{
+		numbars = 1;
+		barcolor = 35;
+	}
 
-	if (!notext || vid.width >= 640) // how sad, we're using a shit resolution.
+	if (ping < UINT32_MAX && (!notext || vid.width >= 640)) // how sad, we're using a shit resolution.
 		V_DrawSmallString(dx, y+4, V_ALLOWLOWERCASE|flags, va("%dms", ping));
 
 	for (i=0; (i<3); i++) // Draw the ping bar
@@ -2272,6 +2282,9 @@ void HU_drawPing(INT32 x, INT32 y, UINT32 ping, boolean notext, INT32 flags)
 
 		yoffset -= 2;
 	}
+
+	if (ping == UINT32_MAX)
+		V_DrawSmallScaledPatch(x + 4 - nopingicon->width/2, y + 9 - nopingicon->height/2, 0, nopingicon);
 }
 
 //
@@ -2298,16 +2311,17 @@ void HU_DrawTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scorelines, I
 
 		if (!splitscreen) // don't draw it on splitscreen,
 		{
-			if (!(tab[i].num == serverplayer || players[tab[i].num].quittime))
-				HU_drawPing(x+ 253, y, playerpingtable[tab[i].num], false, 0);
+			if (tab[i].num != serverplayer)
+				HU_drawPing(x + 253, y, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], false, 0);
 			//else
 			//	V_DrawSmallString(x+ 246, y+4, V_YELLOWMAP, "SERVER");
 		}
 
-		V_DrawString(x + 20, y,
-		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | (greycheck ? V_60TRANS : 0)
-		             | V_ALLOWLOWERCASE, tab[i].name);
+		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
+			V_DrawString(x + 20, y,
+		                 ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
+		                 | (greycheck ? V_60TRANS : 0)
+		                 | V_ALLOWLOWERCASE, tab[i].name);
 
 		// Draw emeralds
 		if (players[tab[i].num].powers[pw_invulnerability] && (players[tab[i].num].powers[pw_invulnerability] == players[tab[i].num].powers[pw_sneakers]) && ((leveltime/7) & 1))
@@ -2455,10 +2469,11 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		supercheck = supercheckdef;
 
 		strlcpy(name, tab[i].name, 8);
-		V_DrawString(x + 10, y,
-		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | (greycheck ? 0 : V_TRANSLUCENT)
-		             | V_ALLOWLOWERCASE, name);
+		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
+			V_DrawString(x + 10, y,
+			             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
+			             | (greycheck ? 0 : V_TRANSLUCENT)
+			             | V_ALLOWLOWERCASE, name);
 
 		if (gametyperules & GTR_TEAMFLAGS)
 		{
@@ -2497,10 +2512,10 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		V_DrawRightAlignedThinString(x+128, y, ((players[tab[i].num].spectator || players[tab[i].num].playerstate == PST_DEAD) ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
 		if (!splitscreen)
 		{
-			if (!(tab[i].num == serverplayer || players[tab[i].num].quittime))
-				HU_drawPing(x+ 135, y+1, playerpingtable[tab[i].num], true, 0);
-		//else
-			//V_DrawSmallString(x+ 129, y+4, V_YELLOWMAP, "HOST");
+			if (tab[i].num != serverplayer)
+				HU_drawPing(x + 135, y+1, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], true, 0);
+			//else
+				//V_DrawSmallString(x+ 129, y+4, V_YELLOWMAP, "HOST");
 		}
 	}
 }
@@ -2583,10 +2598,11 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		supercheck = supercheckdef;
 
 		strlcpy(name, tab[i].name, 7);
-		V_DrawString(x + 20, y,
-		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | (greycheck ? V_TRANSLUCENT : 0)
-		             | V_ALLOWLOWERCASE, name);
+		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
+			V_DrawString(x + 20, y,
+			             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
+			             | (greycheck ? V_TRANSLUCENT : 0)
+			             | V_ALLOWLOWERCASE, name);
 
 		if (gametyperules & GTR_TEAMFLAGS)
 		{
@@ -2621,10 +2637,10 @@ void HU_DrawTeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		V_DrawRightAlignedThinString(x+100, y, (greycheck ? V_TRANSLUCENT : 0), va("%u", tab[i].count));
 		if (!splitscreen)
 		{
-			if (!(tab[i].num == serverplayer || players[tab[i].num].quittime))
-				HU_drawPing(x+ 113, y, playerpingtable[tab[i].num], false, 0);
-		//else
-		//	V_DrawSmallString(x+ 94, y+4, V_YELLOWMAP, "SERVER");
+			if (tab[i].num != serverplayer)
+				HU_drawPing(x+ 113, y, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], false, 0);
+			//else
+			//	V_DrawSmallString(x+ 94, y+4, V_YELLOWMAP, "SERVER");
 		}
 	}
 }
@@ -2652,15 +2668,16 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 		supercheck = supercheckdef;
 
 		strlcpy(name, tab[i].name, 7);
-		if (!(tab[i].num == serverplayer || players[tab[i].num].quittime))
-			HU_drawPing(x+ 113, y, playerpingtable[tab[i].num], false, 0);
+		if (tab[i].num != serverplayer)
+			HU_drawPing(x+ 113, y, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], false, 0);
 		//else
 		//	V_DrawSmallString(x+ 94, y+4, V_YELLOWMAP, "SERVER");
 
-		V_DrawString(x + 20, y,
-		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | (greycheck ? V_TRANSLUCENT : 0)
-		             | V_ALLOWLOWERCASE, name);
+		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
+			V_DrawString(x + 20, y,
+			             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
+			             | (greycheck ? V_TRANSLUCENT : 0)
+			             | V_ALLOWLOWERCASE, name);
 
 		if (G_GametypeUsesLives() && !(G_GametypeUsesCoopLives() && (cv_cooplives.value == 0 || cv_cooplives.value == 3)) && (players[tab[i].num].lives != INFLIVES)) //show lives
 			V_DrawRightAlignedString(x, y+4, V_ALLOWLOWERCASE, va("%dx", players[tab[i].num].lives));
@@ -2760,16 +2777,17 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 		strlcpy(name, tab[i].name, 7);
 		if (!splitscreen) // don't draw it on splitscreen,
 		{
-			if (!(tab[i].num == serverplayer || players[tab[i].num].quittime))
-				HU_drawPing(x+ 135, y+1, playerpingtable[tab[i].num], true, 0);
-		//else
-		//	V_DrawSmallString(x+ 129, y+4, V_YELLOWMAP, "HOST");
+			if (tab[i].num != serverplayer)
+				HU_drawPing(x+ 135, y+1, players[tab[i].num].quittime ? UINT32_MAX : playerpingtable[tab[i].num], true, 0);
+			//else
+			//	V_DrawSmallString(x+ 129, y+4, V_YELLOWMAP, "HOST");
 		}
 
-		V_DrawString(x + 10, y,
-		             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-		             | (greycheck ? 0 : V_TRANSLUCENT)
-		             | V_ALLOWLOWERCASE, name);
+		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
+			V_DrawString(x + 10, y,
+			             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
+			             | (greycheck ? 0 : V_TRANSLUCENT)
+			             | V_ALLOWLOWERCASE, name);
 
 		if (G_GametypeUsesLives()) //show lives
 			V_DrawRightAlignedThinString(x-1, y, V_ALLOWLOWERCASE, va("%d", players[tab[i].num].lives));
