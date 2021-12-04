@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2020-2021 by Jaime "Lactozilla" Passos.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -227,8 +227,8 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 
 	ox = (newwidth / 2) + (leftoffset - xpivot);
 	oy = (newheight / 2) + (patch->topoffset - ypivot);
-	width = (maxx - minx);
-	height = (maxy - miny);
+	width = (maxx+1 - minx);
+	height = (maxy+1 - miny);
 
 	if ((unsigned)(width * height) != size)
 	{
