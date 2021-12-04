@@ -188,11 +188,11 @@ static LRESULT CALLBACK MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 			ev.type = ev_keydown;
 
 	handleKeyDoom:
-			ev.data1 = 0;
+			ev.key = 0;
 			if (wParam == VK_PAUSE)
 			// intercept PAUSE key
 			{
-				ev.data1 = KEY_PAUSE;
+				ev.key = KEY_PAUSE;
 			}
 			else if (!keyboard_started)
 			// post some keys during the game startup
@@ -201,14 +201,14 @@ static LRESULT CALLBACK MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 			{
 				switch (wParam)
 				{
-					case VK_ESCAPE: ev.data1 = KEY_ESCAPE;  break;
-					case VK_RETURN: ev.data1 = KEY_ENTER;   break;
-					case VK_SHIFT:  ev.data1 = KEY_LSHIFT;  break;
-					default: ev.data1 = MapVirtualKey((DWORD)wParam,2); // convert in to char
+					case VK_ESCAPE: ev.key = KEY_ESCAPE;  break;
+					case VK_RETURN: ev.key = KEY_ENTER;   break;
+					case VK_SHIFT:  ev.key = KEY_LSHIFT;  break;
+					default: ev.key = MapVirtualKey((DWORD)wParam,2); // convert in to char
 				}
 			}
 
-			if (ev.data1)
+			if (ev.key)
 				D_PostEvent (&ev);
 
 			return 0;
@@ -240,7 +240,7 @@ static LRESULT CALLBACK MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 			if (nodinput)
 			{
 				ev.type = ev_keyup;
-				ev.data1 = KEY_MOUSE1 + 3 + HIWORD(wParam);
+				ev.key = KEY_MOUSE1 + 3 + HIWORD(wParam);
 				D_PostEvent(&ev);
 				return TRUE;
 			}
@@ -249,7 +249,7 @@ static LRESULT CALLBACK MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 			if (nodinput)
 			{
 				ev.type = ev_keydown;
-				ev.data1 = KEY_MOUSE1 + 3 + HIWORD(wParam);
+				ev.key = KEY_MOUSE1 + 3 + HIWORD(wParam);
 				D_PostEvent(&ev);
 				return TRUE;
 			}
@@ -258,9 +258,9 @@ static LRESULT CALLBACK MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 			//I_OutputMsg("MW_WHEEL dispatched.\n");
 			ev.type = ev_keydown;
 			if ((INT16)HIWORD(wParam) > 0)
-				ev.data1 = KEY_MOUSEWHEELUP;
+				ev.key = KEY_MOUSEWHEELUP;
 			else
-				ev.data1 = KEY_MOUSEWHEELDOWN;
+				ev.key = KEY_MOUSEWHEELDOWN;
 			D_PostEvent(&ev);
 			break;
 
@@ -271,7 +271,7 @@ static LRESULT CALLBACK MainWndproc(HWND hWnd, UINT message, WPARAM wParam, LPAR
 
 		case WM_CLOSE:
 			PostQuitMessage(0);         //to quit while in-game
-			ev.data1 = KEY_ESCAPE;      //to exit network synchronization
+			ev.key = KEY_ESCAPE;      //to exit network synchronization
 			ev.type = ev_keydown;
 			D_PostEvent (&ev);
 			return 0;
