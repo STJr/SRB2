@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -71,5 +71,8 @@ extern const char *const HUDITEMS_LIST[];
 extern const char *const MENUTYPES_LIST[];
 
 extern struct int_const_s const INT_CONST[];
+
+// Moved to this file because it can't work compile-time otherwise
+void DEH_TableCheck(void);
 
 #endif

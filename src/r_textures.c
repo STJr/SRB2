@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -27,11 +27,6 @@
 #include "p_setup.h" // levelflats
 #include "byteptr.h"
 #include "dehacked.h"
-
-// I don't know what this is even for, but r_data.c had it.
-#ifdef _WIN32
-#include <malloc.h> // alloca(sizeof)
-#endif
 
 #ifdef HWRENDER
 #include "hardware/hw_glob.h" // HWR_LoadMapTextures
@@ -604,7 +599,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 				levelflat->height = ds_flatheight = SHORT(patch->height);
 
 				levelflat->picture = Z_Malloc(levelflat->width * levelflat->height, PU_LEVEL, NULL);
-				converted = Picture_FlatConvert(PICFMT_DOOMPATCH, patch, PICFMT_FLAT, 0, &size, levelflat->width, levelflat->height, patch->topoffset, patch->leftoffset, 0);
+				converted = Picture_FlatConvert(PICFMT_DOOMPATCH, patch, PICFMT_FLAT, 0, &size, levelflat->width, levelflat->height, SHORT(patch->topoffset), SHORT(patch->leftoffset), 0);
 				M_Memcpy(levelflat->picture, converted, size);
 				Z_Free(converted);
 			}
@@ -626,7 +621,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 //
 // R_CheckPowersOfTwo
 //
-// Self-explanatory?
+// Sets ds_powersoftwo true if the flat's dimensions are powers of two, and returns that.
 //
 boolean R_CheckPowersOfTwo(void)
 {
@@ -732,7 +727,7 @@ Rloadflats (INT32 i, INT32 w)
 	texpatch_t *patch;
 
 	// Yes
-	if (wadfiles[w]->type == RET_PK3)
+	if (W_FileHasFolders(wadfiles[w]))
 	{
 		texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
 		texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
@@ -754,7 +749,7 @@ Rloadflats (INT32 i, INT32 w)
 			size_t lumplength;
 			size_t flatsize = 0;
 
-			if (wadfiles[w]->type == RET_PK3)
+			if (W_FileHasFolders(wadfiles[w]))
 			{
 				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
 					continue; // If it is then SKIP IT
@@ -844,7 +839,7 @@ Rloadtextures (INT32 i, INT32 w)
 	texpatch_t *patch;
 
 	// Get the lump numbers for the markers in the WAD, if they exist.
-	if (wadfiles[w]->type == RET_PK3)
+	if (W_FileHasFolders(wadfiles[w]))
 	{
 		texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
 		texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
@@ -875,7 +870,7 @@ Rloadtextures (INT32 i, INT32 w)
 			size_t lumplength;
 #endif
 
-			if (wadfiles[w]->type == RET_PK3)
+			if (W_FileHasFolders(wadfiles[w]))
 			{
 				if (W_IsLumpFolder(wadnum, lumpnum)) // Check if lump is a folder
 					continue; // If it is then SKIP IT
@@ -964,7 +959,7 @@ void R_LoadTextures(void)
 	{
 #ifdef WALLFLATS
 		// Count flats
-		if (wadfiles[w]->type == RET_PK3)
+		if (W_FileHasFolders(wadfiles[w]))
 		{
 			texstart = W_CheckNumForFolderStartPK3("flats/", (UINT16)w, 0);
 			texend = W_CheckNumForFolderEndPK3("flats/", (UINT16)w, texstart);
@@ -978,7 +973,7 @@ void R_LoadTextures(void)
 		if (!( texstart == INT16_MAX || texend == INT16_MAX ))
 		{
 			// PK3s have subfolders, so we can't just make a simple sum
-			if (wadfiles[w]->type == RET_PK3)
+			if (W_FileHasFolders(wadfiles[w]))
 			{
 				for (j = texstart; j < texend; j++)
 				{
@@ -1002,7 +997,7 @@ void R_LoadTextures(void)
 		}
 
 		// Count single-patch textures
-		if (wadfiles[w]->type == RET_PK3)
+		if (W_FileHasFolders(wadfiles[w]))
 		{
 			texstart = W_CheckNumForFolderStartPK3("textures/", (UINT16)w, 0);
 			texend = W_CheckNumForFolderEndPK3("textures/", (UINT16)w, texstart);
@@ -1017,7 +1012,7 @@ void R_LoadTextures(void)
 			continue;
 
 		// PK3s have subfolders, so we can't just make a simple sum
-		if (wadfiles[w]->type == RET_PK3)
+		if (W_FileHasFolders(wadfiles[w]))
 		{
 			for (j = texstart; j < texend; j++)
 			{
@@ -1558,6 +1553,7 @@ lumpnum_t R_GetFlatNumForName(const char *name)
 					continue;
 			break;
 		case RET_PK3:
+		case RET_FOLDER:
 			if ((start = W_CheckNumForFolderStartPK3("Flats/", i, 0)) == INT16_MAX)
 				continue;
 			if ((end = W_CheckNumForFolderEndPK3("Flats/", i, start)) == INT16_MAX)
