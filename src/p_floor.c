@@ -1460,8 +1460,8 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (P_IsPlayerValid(i) && playersArea[i])
-				continue;
+			if (P_IsPlayerValid(i) && !playersArea[i])
+				return;
 		}
 	}
 
