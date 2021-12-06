@@ -3879,6 +3879,53 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 	return false;
 }
 
+static boolean P_IsMobjTouchingPlane(mobj_t *mo, sector_t *sec, fixed_t floorz, fixed_t ceilingz)
+{
+	boolean floorallowed = ((sec->flags & SF_FLIPSPECIAL_FLOOR) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == floorz));
+	boolean ceilingallowed = ((sec->flags & SF_FLIPSPECIAL_CEILING) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == ceilingz));
+	return (floorallowed || ceilingallowed);
+}
+
+static boolean P_IsMobjTouchingSectorPlane(mobj_t *mo, sector_t *sec)
+{
+	return P_IsMobjTouchingPlane(mo, sec, P_GetSpecialBottomZ(mo, sec, sec), P_GetSpecialTopZ(mo, sec, sec));
+}
+
+static boolean P_IsMobjTouching3DFloor(mobj_t *mo, ffloor_t *ffloor, sector_t *sec)
+{
+	fixed_t topheight = P_GetSpecialTopZ(mo, sectors + ffloor->secnum, sec);
+	fixed_t bottomheight = P_GetSpecialBottomZ(mo, sectors + ffloor->secnum, sec);
+
+	if (((ffloor->flags & FF_BLOCKPLAYER) && mo->player)
+		|| ((ffloor->flags & FF_BLOCKOTHERS) && !mo->player))
+	{
+		// Solid 3D floor: Mobj must touch the top or bottom
+		return P_IsMobjTouchingPlane(mo, ffloor->master->frontsector, topheight, bottomheight);
+	}
+	else
+	{
+		// Water or intangible 3D floor: Mobj must be inside
+		return mo->z <= topheight && (mo->z + mo->height) >= bottomheight;
+	}
+}
+
+static boolean P_IsMobjTouchingPolyobj(mobj_t *mo, polyobj_t *po, sector_t *polysec)
+{
+	if (!(po->flags & POF_TESTHEIGHT)) // Don't do height checking
+		return true;
+
+	if (po->flags & POF_SOLID)
+	{
+		// Solid polyobject: Player must touch the top or bottom
+		return P_IsMobjTouchingPlane(mo, polysec, polysec->ceilingheight, polysec->floorheight);
+	}
+	else
+	{
+		// Water or intangible polyobject: Player must be inside
+		return mo->z <= polysec->ceilingheight && (mo->z + mo->height) >= polysec->floorheight;
+	}
+}
+
 //
 // P_PlayerTouchingSectorSpecial
 //
@@ -3905,32 +3952,14 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 	// Hmm.. maybe there's a FOF that has it...
 	for (rover = player->mo->subsector->sector->ffloors; rover; rover = rover->next)
 	{
-		fixed_t topheight, bottomheight;
-
 		if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
 			continue;
 
 		if (!(rover->flags & FF_EXISTS))
 			continue;
 
-		topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
-		bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
-
-		// Check the 3D floor's type...
-		if (rover->flags & FF_BLOCKPLAYER)
-		{
-			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
-			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
-			// Thing must be on top of the floor to be affected...
-			if (!(floorallowed || ceilingallowed))
-				continue;
-		}
-		else
-		{
-			// Water and DEATH FOG!!! heh
-			if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
-				continue;
-		}
+		if (!P_IsMobjTouching3DFloor(player->mo, rover, player->mo->subsector->sector))
+			continue;
 
 		// This FOF has the special we're looking for!
 		return rover->master->frontsector;
@@ -3950,32 +3979,14 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 		// Hmm.. maybe there's a FOF that has it...
 		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
 		{
-			fixed_t topheight, bottomheight;
-
 			if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
 				continue;
 
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
-			bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
-
-			// Check the 3D floor's type...
-			if (rover->flags & FF_BLOCKPLAYER)
-			{
-				boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
-				boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
-				// Thing must be on top of the floor to be affected...
-				if (!(floorallowed || ceilingallowed))
-					continue;
-			}
-			else
-			{
-				// Water and DEATH FOG!!! heh
-				if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
-					continue;
-			}
+			if (!P_IsMobjTouching3DFloor(player->mo, rover, node->m_sector))
+				continue;
 
 			// This FOF has the special we're looking for, but are we allowed to touch it?
 			if (node->m_sector == player->mo->subsector->sector
@@ -3996,12 +4007,8 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *targetsec)
 {
 	ffloor_t *rover;
-	fixed_t top, bottom;
 
 	if (!mo->player) // should NEVER happen
-		return false;
-
-	if (!targetsec->ffloors) // also should NEVER happen
 		return false;
 
 	for (rover = targetsec->ffloors; rover; rover = rover->next)
@@ -4013,42 +4020,10 @@ static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *tar
 		//if (!(rover->flags & FF_EXISTS))
 		//	return false;
 
-		top = P_GetSpecialTopZ(mo, sector, targetsec);
-		bottom = P_GetSpecialBottomZ(mo, sector, targetsec);
-
-		// Check the 3D floor's type...
-		if (rover->flags & FF_BLOCKPLAYER)
-		{
-			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == top));
-			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == bottom));
-			// Thing must be on top of the floor to be affected...
-			if (!(floorallowed || ceilingallowed))
-				continue;
-		}
-		else
-		{
-			// Water and intangible FOFs
-			if (mo->z > top || (mo->z + mo->height) < bottom)
-				return false;
-		}
-
-		return true;
+		return P_IsMobjTouching3DFloor(mo, rover, targetsec);
 	}
 
 	return false;
-}
-
-//
-// P_MobjReadyToTrigger
-//
-// Is player standing on the sector's "ground"?
-//
-static boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
-{
-	boolean floorallowed = ((sec->flags & SF_FLIPSPECIAL_FLOOR) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == P_GetSpecialBottomZ(mo, sec, sec)));
-	boolean ceilingallowed = ((sec->flags & SF_FLIPSPECIAL_CEILING) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == P_GetSpecialTopZ(mo, sec, sec)));
-	// Thing must be on top of the floor to be affected...
-	return (floorallowed || ceilingallowed);
 }
 
 /// \todo check continues for proper splitscreen support?
@@ -4100,7 +4075,7 @@ static boolean P_DoAllPlayersTrigger(sector_t *sector, sector_t *roversector, bo
 					return false;
 			}
 
-			if (floortouch && !P_MobjReadyToTrigger(players[i].mo, sector))
+			if (floortouch && !P_IsMobjTouchingSectorPlane(players[i].mo, sector))
 				return false;
 		}
 	}
@@ -4628,28 +4603,28 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 	switch (section1)
 	{
 		case 1: // Damage (Generic)
-			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
+			if (roversector || P_IsMobjTouchingSectorPlane(player->mo, sector))
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 			break;
 		case 2: // Damage (Water)
-			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_underwater] || player->powers[pw_carry] == CR_NIGHTSMODE))
+			if ((roversector || P_IsMobjTouchingSectorPlane(player->mo, sector)) && (player->powers[pw_underwater] || player->powers[pw_carry] == CR_NIGHTSMODE))
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_WATER);
 			break;
 		case 3: // Damage (Fire)
-			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
+			if (roversector || P_IsMobjTouchingSectorPlane(player->mo, sector))
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_FIRE);
 			break;
 		case 4: // Damage (Electrical)
-			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
+			if (roversector || P_IsMobjTouchingSectorPlane(player->mo, sector))
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_ELECTRIC);
 			break;
 		case 5: // Spikes
-			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
+			if (roversector || P_IsMobjTouchingSectorPlane(player->mo, sector))
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPIKE);
 			break;
 		case 6: // Death Pit (Camera Mod)
 		case 7: // Death Pit (No Camera Mod)
-			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
+			if (roversector || P_IsMobjTouchingSectorPlane(player->mo, sector))
 			{
 				if (player->quittime)
 					G_MovePlayerToSpawnOrStarpost(player - players);
@@ -4713,7 +4688,6 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 		case 10: // Special Stage Time/Rings
 		case 11: // Custom Gravity
-			break;
 		case 12: // Lua sector special
 			break;
 	}
@@ -4725,11 +4699,9 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 3: // Unused
 		case 4: // Conveyor Belt
 			break;
-
 		case 5: // Speed pad
 			P_ProcessSpeedPad(player, sector, roversector, sectag);
 			break;
-
 		case 6: // Unused
 		case 7: // Unused
 		case 8: // Unused
@@ -4755,19 +4727,15 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			P_TouchStarPost(post, player, false);
 			break;
 		}
-
 		case 2: // Special stage GOAL sector / Exit Sector / CTF Flag Return
 			P_ProcessExitSector(player, sectag);
 			break;
-
 		case 3: // Red Team's Base
 			P_ProcessTeamBase(player, true);
 			break;
-
 		case 4: // Blue Team's Base
 			P_ProcessTeamBase(player, false);
 			break;
-
 		case 5: // Fan sector
 			player->mo->momz += mobjinfo[MT_FAN].mass/4;
 
@@ -4778,12 +4746,10 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			if (player->panim != PA_FALL)
 				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
 			break;
-
 		case 6: // Super Sonic transformer
 			if (player->mo->health > 0 && !player->bot && (player->charflags & SF_SUPER) && !player->powers[pw_super] && ALL7EMERALDS(emeralds))
 				P_DoSuperTransformation(player, true);
 			break;
-
 		case 7: // Make player spin
 			if (!(player->pflags & PF_SPINNING))
 			{
@@ -4796,19 +4762,15 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 					P_InstaThrust(player->mo, player->mo->angle, FixedMul(10*FRACUNIT, player->mo->scale));
 			}
 			break;
-
 		case 8: // Zoom Tube Start
 			P_ProcessZoomTube(player, sector, sectag, false);
 			break;
-
 		case 9: // Zoom Tube End
 			P_ProcessZoomTube(player, sector, sectag, true);
 			break;
-
 		case 10: // Finish Line
 			P_ProcessFinishLine(player);
 			break;
-
 		case 11: // Rope hang
 			P_ProcessRopeHang(player, sector, sectag);
 			break;
@@ -4830,15 +4792,9 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
   */
 sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 {
-	sector_t *sector;
 	ffloor_t *rover;
-	fixed_t topheight, bottomheight;
 
-	sector = mo->subsector->sector;
-	if (!sector->ffloors)
-		return NULL;
-
-	for (rover = sector->ffloors; rover; rover = rover->next)
+	for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
 	{
 		if (!rover->master->frontsector->special)
 			continue;
@@ -4846,25 +4802,8 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 		if (!(rover->flags & FF_EXISTS))
 			continue;
 
-		topheight = P_GetSpecialTopZ(mo, sectors + rover->secnum, sector);
-		bottomheight = P_GetSpecialBottomZ(mo, sectors + rover->secnum, sector);
-
-		// Check the 3D floor's type...
-		if (((rover->flags & FF_BLOCKPLAYER) && mo->player)
-			|| ((rover->flags & FF_BLOCKOTHERS) && !mo->player))
-		{
-			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == topheight));
-			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == bottomheight));
-			// Thing must be on top of the floor to be affected...
-			if (!(floorallowed || ceilingallowed))
-				continue;
-		}
-		else
-		{
-			// Water and intangible FOFs
-			if (mo->z > topheight || (mo->z + mo->height) < bottomheight)
-				continue;
-		}
+		if (!P_IsMobjTouching3DFloor(mo, rover, mo->subsector->sector))
+			continue;
 
 		return rover->master->frontsector;
 	}
@@ -4884,7 +4823,6 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 {
 	sector_t *originalsector = player->mo->subsector->sector;
 	ffloor_t *rover;
-	fixed_t topheight, bottomheight;
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
@@ -4894,24 +4832,8 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 		if (!(rover->flags & FF_EXISTS))
 			continue;
 
-		topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector);
-		bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector);
-
-		// Check the 3D floor's type...
-		if (rover->flags & FF_BLOCKPLAYER)
-		{
-			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
-			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
-			// Thing must be on top of the floor to be affected...
-			if (!(floorallowed || ceilingallowed))
-				continue;
-		}
-		else
-		{
-			// Water and DEATH FOG!!! heh
-			if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
-				continue;
-		}
+		if (!P_IsMobjTouching3DFloor(player->mo, rover, sector))
+			continue;
 
 		// This FOF has the special we're looking for, but are we allowed to touch it?
 		if (sector == player->mo->subsector->sector
@@ -4921,77 +4843,40 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 			if TELEPORTED return;
 		}
 	}
-
-	// Allow sector specials to be applied to polyobjects!
-	if (player->mo->subsector->polyList)
-	{
-		polyobj_t *po = player->mo->subsector->polyList;
-		sector_t *polysec;
-		boolean touching = false;
-		boolean inside = false;
-
-		while (po)
-		{
-			if (po->flags & POF_NOSPECIALS)
-			{
-				po = (polyobj_t *)(po->link.next);
-				continue;
-			}
-
-			polysec = po->lines[0]->backsector;
-
-			if ((polysec->flags & SF_TRIGGERSPECIAL_TOUCH))
-				touching = P_MobjTouchingPolyobj(po, player->mo);
-			else
-				touching = false;
-
-			inside = P_MobjInsidePolyobj(po, player->mo);
-
-			if (!(inside || touching))
-			{
-				po = (polyobj_t *)(po->link.next);
-				continue;
-			}
-
-			// We're inside it! Yess...
-			if (!polysec->special)
-			{
-				po = (polyobj_t *)(po->link.next);
-				continue;
-			}
-
-			if (!(po->flags & POF_TESTHEIGHT)) // Don't do height checking
-				;
-			else if (po->flags & POF_SOLID)
-			{
-				boolean floorallowed = ((polysec->flags & SF_FLIPSPECIAL_FLOOR) && ((polysec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == polysec->ceilingheight));
-				boolean ceilingallowed = ((polysec->flags & SF_FLIPSPECIAL_CEILING) && ((polysec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == polysec->floorheight));
-				// Thing must be on top of the floor to be affected...
-				if (!(floorallowed || ceilingallowed))
-				{
-					po = (polyobj_t *)(po->link.next);
-					continue;
-				}
-			}
-			else
-			{
-				// Water and DEATH FOG!!! heh
-				if (player->mo->z > polysec->ceilingheight || (player->mo->z + player->mo->height) < polysec->floorheight)
-				{
-					po = (polyobj_t *)(po->link.next);
-					continue;
-				}
-			}
-
-			P_ProcessSpecialSector(player, polysec, sector);
-			if TELEPORTED return;
-
-			po = (polyobj_t *)(po->link.next);
-		}
-	}
 }
 
-#define VDOORSPEED (FRACUNIT*2)
+static void P_PlayerOnSpecialPolyobj(player_t *player, sector_t *sector)
+{
+	sector_t *originalsector = player->mo->subsector->sector;
+	polyobj_t *po;
+	sector_t *polysec;
+	boolean touching = false;
+	boolean inside = false;
+
+	//TODO: Check polyobjects in sector
+	for (po = player->mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
+	{
+		if (po->flags & POF_NOSPECIALS)
+			continue;
+
+		polysec = po->lines[0]->backsector;
+
+		if (!polysec->special)
+			continue;
+
+		touching = (polysec->flags & SF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);
+		inside = P_MobjInsidePolyobj(po, player->mo);
+
+		if (!(inside || touching))
+			continue;
+
+		if (!P_IsMobjTouchingPolyobj(player->mo, po, polysec))
+			continue;
+
+		P_ProcessSpecialSector(player, polysec, sector);
+		if TELEPORTED return;
+	}
+}
 
 //
 // P_RunSpecialSectorCheck
@@ -5001,7 +4886,6 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 {
 	boolean nofloorneeded = false;
-	fixed_t f_affectpoint, c_affectpoint;
 
 	if (!sector->special) // nothing special, exit
 		return;
@@ -5060,24 +4944,8 @@ static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
 			break;
 	}
 
-	if (nofloorneeded)
-	{
+	if (nofloorneeded || P_IsMobjTouchingSectorPlane(player->mo, sector))
 		P_ProcessSpecialSector(player, sector, NULL);
-		return;
-	}
-
-	f_affectpoint = P_GetSpecialBottomZ(player->mo, sector, sector);
-	c_affectpoint = P_GetSpecialTopZ(player->mo, sector, sector);
-
-	{
-		boolean floorallowed = ((sector->flags & SF_FLIPSPECIAL_FLOOR) && ((sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == f_affectpoint));
-		boolean ceilingallowed = ((sector->flags & SF_FLIPSPECIAL_CEILING) && ((sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == c_affectpoint));
-		// Thing must be on top of the floor to be affected...
-		if (!(floorallowed || ceilingallowed))
-			return;
-	}
-
-	P_ProcessSpecialSector(player, sector, NULL);
 }
 
 /** Checks if the player is in a special sector or FOF and apply any specials.
@@ -5099,6 +4967,10 @@ void P_PlayerInSpecialSector(player_t *player)
 	P_PlayerOnSpecial3DFloor(player, originalsector); // Handle FOFs first.
 	if TELEPORTED return;
 
+	// Allow sector specials to be applied to polyobjects!
+	P_PlayerOnSpecialPolyobj(player, originalsector);
+	if TELEPORTED return;
+
 	P_RunSpecialSectorCheck(player, originalsector);
 	if TELEPORTED return;
 
@@ -5112,6 +4984,10 @@ void P_PlayerInSpecialSector(player_t *player)
 
 		// Check 3D floors...
 		P_PlayerOnSpecial3DFloor(player, loopsector);
+		if TELEPORTED return;
+
+		// Check polyobjects...
+		P_PlayerOnSpecialPolyobj(player, loopsector);
 		if TELEPORTED return;
 
 		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
