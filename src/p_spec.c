@@ -4051,20 +4051,559 @@ static boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
 	return (floorallowed || ceilingallowed);
 }
 
+/// \todo check continues for proper splitscreen support?
+static boolean P_DoAllPlayersTrigger(sector_t *sector, sector_t *roversector, boolean floortouch)
+{
+	INT32 i;
+	msecnode_t *node;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			continue;
+		if (!players[i].mo)
+			continue;
+		if (players[i].spectator)
+			continue;
+		if (players[i].bot)
+			continue;
+		if (G_CoopGametype() && players[i].lives <= 0)
+			continue;
+		if (roversector)
+		{
+			if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
+			{
+				for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+				{
+					if (P_ThingIsOnThe3DFloor(players[i].mo, sector, node->m_sector))
+						break;
+				}
+				if (!node)
+					return false;
+			}
+			else if (players[i].mo->subsector && !P_ThingIsOnThe3DFloor(players[i].mo, sector, players[i].mo->subsector->sector)) // this function handles basically everything for us lmao
+				return false;
+		}
+		else
+		{
+			if (players[i].mo->subsector->sector != sector)
+			{
+				if (!(sector->flags & SF_TRIGGERSPECIAL_TOUCH))
+					return false;
+
+				for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+				{
+					if (node->m_sector == sector)
+						break;
+				}
+				if (!node)
+					return false;
+			}
+
+			if (floortouch && !P_MobjReadyToTrigger(players[i].mo, sector))
+				return false;
+		}
+	}
+
+	return true;
+}
+
+static void P_ProcessEggCapsule(player_t *player, sector_t *sector)
+{
+	thinker_t *th;
+	mobj_t *mo2;
+	INT32 i;
+
+	if (player->bot || sector->ceilingdata || sector->floordata)
+		return;
+
+	// Find the center of the Eggtrap and release all the pretty animals!
+	// The chimps are my friends.. heeheeheheehehee..... - LouisJM
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+		mo2 = (mobj_t *)th;
+		if (mo2->type != MT_EGGTRAP)
+			continue;
+		P_KillMobj(mo2, NULL, player->mo, 0);
+	}
+
+	// clear the special so you can't push the button twice.
+	sector->special = 0;
+
+	// Move the button down
+	EV_DoElevator(LE_CAPSULE0, NULL, elevateDown);
+
+	// Open the top FOF
+	EV_DoFloor(LE_CAPSULE1, NULL, raiseFloorToNearestFast);
+	// Open the bottom FOF
+	EV_DoCeiling(LE_CAPSULE2, NULL, lowerToLowestFast);
+
+	// Mark all players with the time to exit thingy!
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			continue;
+		P_DoPlayerExit(&players[i]);
+	}
+}
+
+static void P_ProcessSpeedPad(player_t *player, sector_t *sector, sector_t *roversector, mtag_t sectag)
+{
+	INT32 lineindex;
+	angle_t lineangle;
+	fixed_t linespeed;
+	fixed_t sfxnum;
+
+	if (player->powers[pw_flashing] != 0 && player->powers[pw_flashing] < TICRATE/2)
+		return;
+
+	lineindex = Tag_FindLineSpecial(4, sectag);
+
+	if (lineindex == -1)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Sector special %d missing line special #4.\n", sector->special);
+		return;
+	}
+
+	lineangle = R_PointToAngle2(lines[lineindex].v1->x, lines[lineindex].v1->y, lines[lineindex].v2->x, lines[lineindex].v2->y);
+	linespeed = sides[lines[lineindex].sidenum[0]].textureoffset;
+
+	if (linespeed == 0)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Speed pad (tag %d) at zero speed.\n", sectag);
+		return;
+	}
+
+	player->mo->angle = player->drawangle = lineangle;
+
+	if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
+		P_SetPlayerAngle(player, player->mo->angle);
+
+	if (!(lines[lineindex].flags & ML_EFFECT4))
+	{
+		P_UnsetThingPosition(player->mo);
+		if (roversector) // make FOF speed pads work
+		{
+			player->mo->x = roversector->soundorg.x;
+			player->mo->y = roversector->soundorg.y;
+		}
+		else
+		{
+			player->mo->x = sector->soundorg.x;
+			player->mo->y = sector->soundorg.y;
+		}
+		P_SetThingPosition(player->mo);
+	}
+
+	P_InstaThrust(player->mo, player->mo->angle, linespeed);
+
+	if (lines[lineindex].flags & ML_EFFECT5) // Roll!
+	{
+		if (!(player->pflags & PF_SPINNING))
+			player->pflags |= PF_SPINNING;
+
+		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+	}
+
+	player->powers[pw_flashing] = TICRATE/3;
+
+	sfxnum = sides[lines[lineindex].sidenum[0]].toptexture;
+
+	if (!sfxnum)
+		sfxnum = sfx_spdpad;
+
+	S_StartSound(player->mo, sfxnum);
+}
+
+static void P_ProcessExitSector(player_t *player, mtag_t sectag)
+{
+	INT32 lineindex;
+
+	if (!(gametyperules & GTR_ALLOWEXIT))
+		return;
+
+	if (player->bot)
+		return;
+
+	if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
+	{
+		player->nightstime = 6; // Just let P_Ticker take care of the rest.
+		return;
+	}
+
+	// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
+	P_DoPlayerFinish(player);
+
+	P_SetupSignExit(player);
+
+	if (!G_CoopGametype())
+		return;
+
+	// Custom exit!
+	// important: use sectag on next line instead of player->mo->subsector->tag
+	// this part is different from in P_PlayerThink, this is what was causing
+	// FOF custom exits not to work.
+	lineindex = Tag_FindLineSpecial(2, sectag);
+
+	if (lineindex == -1)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Exit sector missing line special #2.\n");
+		return;
+	}
+
+	// Special goodies with the block monsters flag depending on emeralds collected
+	if ((lines[lineindex].flags & ML_BLOCKMONSTERS) && ALL7EMERALDS(emeralds))
+		nextmapoverride = (INT16)(lines[lineindex].frontsector->ceilingheight>>FRACBITS);
+	else
+		nextmapoverride = (INT16)(lines[lineindex].frontsector->floorheight>>FRACBITS);
+
+	if (lines[lineindex].flags & ML_NOCLIMB)
+		skipstats = 1;
+}
+
+static void P_ProcessTeamBase(player_t *player, boolean redteam)
+{
+	mobj_t *mo;
+
+	if (!(gametyperules & GTR_TEAMFLAGS))
+		return;
+
+	if (!P_IsObjectOnGround(player->mo))
+		return;
+
+	if (player->ctfteam != (redteam ? 1 : 2))
+		return;
+
+	if (!(player->gotflag & (redteam ? GF_BLUEFLAG : GF_REDFLAG)))
+		return;
+
+	// Make sure the team still has their own
+	// flag at their base so they can score.
+	if (!P_IsFlagAtBase(redteam ? MT_BLUEFLAG : MT_REDFLAG))
+		return;
+
+	HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
+	HU_SetCEchoDuration(5);
+	HU_DoCEcho(va(M_GetText("%s%s\200\\CAPTURED THE %s%s FLAG\200.\\\\\\\\"), redteam ? "\205" : "\204", player_names[player-players], redteam ? "\204" : "\205", redteam ? "BLUE" : "RED"));
+
+	if (splitscreen || players[consoleplayer].ctfteam == (redteam ? 1 : 2))
+		S_StartSound(NULL, sfx_flgcap);
+	else if (players[consoleplayer].ctfteam == (redteam ? 2 : 1))
+		S_StartSound(NULL, sfx_lose);
+
+	mo = P_SpawnMobj(player->mo->x,player->mo->y,player->mo->z, redteam ? MT_BLUEFLAG : MT_REDFLAG);
+	player->gotflag &= ~(redteam ? GF_BLUEFLAG : GF_REDFLAG);
+	mo->flags &= ~MF_SPECIAL;
+	mo->fuse = TICRATE;
+	mo->spawnpoint = redteam ? bflagpoint : rflagpoint;
+	mo->flags2 |= MF2_JUSTATTACKED;
+	if (redteam)
+		redscore += 1;
+	else
+		bluescore += 1;
+	P_AddPlayerScore(player, 250);
+}
+
+static void P_ProcessZoomTube(player_t *player, sector_t *sector, mtag_t sectag, boolean end)
+{
+	INT32 sequence;
+	fixed_t speed;
+	INT32 lineindex;
+	mobj_t *waypoint = NULL;
+	angle_t an;
+
+	if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
+		return;
+
+	if (player->powers[pw_ignorelatch] & (1<<15))
+		return;
+
+	// Find line #3 tagged to this sector
+	lineindex = Tag_FindLineSpecial(3, sectag);
+
+	if (lineindex == -1)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Sector special %d missing line special #3.\n", sector->special);
+		return;
+	}
+
+	// Grab speed and sequence values
+	speed = abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8;
+	if (end)
+		speed *= -1;
+	sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
+
+	if (speed == 0)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
+		return;
+	}
+
+	waypoint = end ? P_GetLastWaypoint(sequence) : P_GetFirstWaypoint(sequence);
+
+	if (!waypoint)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: %s WAYPOINT IN SEQUENCE %d NOT FOUND.\n", end ? "LAST" : "FIRST", sequence);
+		return;
+	}
+
+	CONS_Debug(DBG_GAMELOGIC, "Waypoint %d found in sequence %d - speed = %d\n", waypoint->health, sequence, speed);
+
+	an = R_PointToAngle2(player->mo->x, player->mo->y, waypoint->x, waypoint->y) - player->mo->angle;
+
+	if (an > ANGLE_90 && an < ANGLE_270 && !(lines[lineindex].flags & ML_EFFECT4))
+		return; // behind back
+
+	P_SetTarget(&player->mo->tracer, waypoint);
+	player->powers[pw_carry] = CR_ZOOMTUBE;
+	player->speed = speed;
+	player->pflags |= PF_SPINNING;
+	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
+	player->climbing = 0;
+
+	if (player->mo->state-states != S_PLAY_ROLL)
+	{
+		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+		S_StartSound(player->mo, sfx_spin);
+	}
+}
+
+static void P_ProcessFinishLine(player_t *player)
+{
+	if ((gametyperules & (GTR_RACE|GTR_LIVES)) != GTR_RACE)
+		return;
+
+	if (player->exiting)
+		return;
+
+	if (player->starpostnum == numstarposts) // Must have touched all the starposts
+	{
+		player->laps++;
+
+		if (player->powers[pw_carry] == CR_NIGHTSMODE)
+			player->drillmeter += 48*20;
+
+		if (player->laps >= (UINT8)cv_numlaps.value)
+			CONS_Printf(M_GetText("%s has finished the race.\n"), player_names[player-players]);
+		else if (player->laps == (UINT8)cv_numlaps.value-1)
+			CONS_Printf(M_GetText("%s started the \205final lap\200!\n"), player_names[player-players]);
+		else
+			CONS_Printf(M_GetText("%s started lap %u\n"), player_names[player-players], (UINT32)player->laps+1);
+
+		// Reset starposts (checkpoints) info
+		player->starpostscale = player->starpostangle = player->starposttime = player->starpostnum = 0;
+		player->starpostx = player->starposty = player->starpostz = 0;
+		P_ResetStarposts();
+
+		// Play the starpost sound for 'consistency'
+		S_StartSound(player->mo, sfx_strpst);
+	}
+	else if (player->starpostnum)
+	{
+		// blatant reuse of a variable that's normally unused in circuit
+		if (!player->tossdelay)
+			S_StartSound(player->mo, sfx_lose);
+		player->tossdelay = 3;
+	}
+
+	if (player->laps >= (unsigned)cv_numlaps.value)
+	{
+		if (P_IsLocalPlayer(player))
+		{
+			HU_SetCEchoFlags(0);
+			HU_SetCEchoDuration(5);
+			HU_DoCEcho("FINISHED!");
+		}
+
+		P_DoPlayerExit(player);
+	}
+}
+
+static void P_ProcessRopeHang(player_t *player, sector_t *sector, mtag_t sectag)
+{
+	INT32 sequence;
+	fixed_t speed;
+	INT32 lineindex;
+	mobj_t *waypointmid = NULL;
+	mobj_t *waypointhigh = NULL;
+	mobj_t *waypointlow = NULL;
+	mobj_t *closest = NULL;
+	vector3_t p, line[2], resulthigh, resultlow;
+
+	if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ROPEHANG)
+		return;
+
+	if (player->powers[pw_ignorelatch] & (1<<15))
+		return;
+
+	if (player->mo->momz > 0)
+		return;
+
+	if (player->cmd.buttons & BT_SPIN)
+		return;
+
+	if (!(player->pflags & PF_SLIDING) && player->mo->state == &states[player->mo->info->painstate])
+		return;
+
+	if (player->exiting)
+		return;
+
+	//initialize resulthigh and resultlow with 0
+	memset(&resultlow, 0x00, sizeof(resultlow));
+	memset(&resulthigh, 0x00, sizeof(resulthigh));
+
+	// Find line #11 tagged to this sector
+	lineindex = Tag_FindLineSpecial(11, sectag);
+
+	if (lineindex == -1)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Sector special %d missing line special #11.\n", sector->special);
+		return;
+	}
+
+	// Grab speed and sequence values
+	speed = abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8;
+	sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
+
+	if (speed == 0)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
+		return;
+	}
+
+	// Find the closest waypoint
+	// Find the preceding waypoint
+	// Find the proceeding waypoint
+	// Determine the closest spot on the line between the three waypoints
+	// Put player at that location.
+
+	waypointmid = P_GetClosestWaypoint(sequence, player->mo);
+
+	if (!waypointmid)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: WAYPOINT(S) IN SEQUENCE %d NOT FOUND.\n", sequence);
+		return;
+	}
+
+	waypointlow = P_GetPreviousWaypoint(waypointmid, true);
+	waypointhigh = P_GetNextWaypoint(waypointmid, true);
+
+	CONS_Debug(DBG_GAMELOGIC, "WaypointMid: %d; WaypointLow: %d; WaypointHigh: %d\n",
+					waypointmid->health, waypointlow ? waypointlow->health : -1, waypointhigh ? waypointhigh->health : -1);
+
+	// Now we have three waypoints... the closest one we're near, and the one that comes before, and after.
+	// Next, we need to find the closest point on the line between each set, and determine which one we're
+	// closest to.
+
+	p.x = player->mo->x;
+	p.y = player->mo->y;
+	p.z = player->mo->z;
+
+	// Waypointmid and Waypointlow:
+	if (waypointlow)
+	{
+		line[0].x = waypointmid->x;
+		line[0].y = waypointmid->y;
+		line[0].z = waypointmid->z;
+		line[1].x = waypointlow->x;
+		line[1].y = waypointlow->y;
+		line[1].z = waypointlow->z;
+
+		P_ClosestPointOnLine3D(&p, line, &resultlow);
+	}
+
+	// Waypointmid and Waypointhigh:
+	if (waypointhigh)
+	{
+		line[0].x = waypointmid->x;
+		line[0].y = waypointmid->y;
+		line[0].z = waypointmid->z;
+		line[1].x = waypointhigh->x;
+		line[1].y = waypointhigh->y;
+		line[1].z = waypointhigh->z;
+
+		P_ClosestPointOnLine3D(&p, line, &resulthigh);
+	}
+
+	// 3D support now available. Disregard the previous notice here. -Red
+
+	P_UnsetThingPosition(player->mo);
+	P_ResetPlayer(player);
+	player->mo->momx = player->mo->momy = player->mo->momz = 0;
+
+	if (lines[lineindex].flags & ML_EFFECT1) // Don't wrap
+	{
+		mobj_t *highest = P_GetLastWaypoint(sequence);
+		highest->flags |= MF_SLIDEME;
+	}
+
+	// Changing the conditions on these ifs to fix issues with snapping to the wrong spot -Red
+	if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == 0)
+	{
+		closest = waypointhigh;
+		player->mo->x = resulthigh.x;
+		player->mo->y = resulthigh.y;
+		player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
+	}
+	else if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == numwaypoints[sequence] - 1)
+	{
+		closest = waypointmid;
+		player->mo->x = resultlow.x;
+		player->mo->y = resultlow.y;
+		player->mo->z = resultlow.z - P_GetPlayerHeight(player);
+	}
+	else
+	{
+		if (P_AproxDistance(P_AproxDistance(player->mo->x-resultlow.x, player->mo->y-resultlow.y),
+				player->mo->z-resultlow.z) < P_AproxDistance(P_AproxDistance(player->mo->x-resulthigh.x,
+					player->mo->y-resulthigh.y), player->mo->z-resulthigh.z))
+		{
+			// Line between Mid and Low is closer
+			closest = waypointmid;
+			player->mo->x = resultlow.x;
+			player->mo->y = resultlow.y;
+			player->mo->z = resultlow.z - P_GetPlayerHeight(player);
+		}
+		else
+		{
+			// Line between Mid and High is closer
+			closest = waypointhigh;
+			player->mo->x = resulthigh.x;
+			player->mo->y = resulthigh.y;
+			player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
+		}
+	}
+
+	P_SetTarget(&player->mo->tracer, closest);
+	player->powers[pw_carry] = CR_ROPEHANG;
+
+	// Option for static ropes.
+	if (lines[lineindex].flags & ML_NOCLIMB)
+		player->speed = 0;
+	else
+		player->speed = speed;
+
+	S_StartSound(player->mo, sfx_s3k4a);
+
+	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
+	player->climbing = 0;
+	P_SetThingPosition(player->mo);
+	P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+}
+
 /** Applies a sector special to a player.
   *
   * \param player       Player in the sector.
   * \param sector       Sector with the special.
   * \param roversector  If !NULL, sector is actually an FOF; otherwise, sector
   *                     is being physically contacted by the player.
-  * \todo Split up into multiple functions.
   * \sa P_PlayerInSpecialSector, P_PlayerOnSpecial3DFloor
   */
 void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *roversector)
 {
-	INT32 i = 0;
 	INT32 section1, section2, section3, section4;
-	INT32 special;
 	mtag_t sectag = Tag_FGet(&sector->tags);
 
 	section1 = GETSECSPECIAL(sector->special, 1);
@@ -4086,10 +4625,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 	if (section3 == 2 || section3 == 4)
 		player->onconveyor = section3;
 
-	special = section1;
-
-	// Process Section 1
-	switch (special)
+	switch (section1)
 	{
 		case 1: // Damage (Generic)
 			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
@@ -4154,66 +4690,14 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 	}
 
-	special = section2;
-
-	// Process Section 2
-	switch (special)
+	switch (section2)
 	{
 		case 1: // Trigger Linedef Exec (Pushable Objects)
 			break;
 		case 2: // Linedef executor requires all players present+doesn't require touching floor
 		case 3: // Linedef executor requires all players present
-			/// \todo check continues for proper splitscreen support?
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i])
-					continue;
-				if (!players[i].mo)
-					continue;
-				if (players[i].spectator)
-					continue;
-				if (players[i].bot)
-					continue;
-				if (G_CoopGametype() && players[i].lives <= 0)
-					continue;
-				if (roversector)
-				{
-					if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
-					{
-						msecnode_t *node;
-						for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-						{
-							if (P_ThingIsOnThe3DFloor(players[i].mo, sector, node->m_sector))
-								break;
-						}
-						if (!node)
-							goto DoneSection2;
-					}
-					else if (players[i].mo->subsector && !P_ThingIsOnThe3DFloor(players[i].mo, sector, players[i].mo->subsector->sector)) // this function handles basically everything for us lmao
-						goto DoneSection2;
-				}
-				else
-				{
-					if (players[i].mo->subsector->sector == sector)
-						;
-					else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
-					{
-						msecnode_t *node;
-						for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-						{
-							if (node->m_sector == sector)
-								break;
-						}
-						if (!node)
-							goto DoneSection2;
-					}
-					else
-						goto DoneSection2;
-
-					if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
-						goto DoneSection2;
-				}
-			}
+			if (!P_DoAllPlayersTrigger(sector, roversector, section2 == 3))
+				break;
 			/* FALLTHRU */
 		case 4: // Linedef executor that doesn't require touching floor
 		case 5: // Linedef executor
@@ -4225,57 +4709,16 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 8: // Tells pushable things to check FOFs
 			break;
 		case 9: // Egg trap capsule
-		{
-			thinker_t *th;
-			mobj_t *mo2;
-
-			if (player->bot || sector->ceilingdata || sector->floordata)
-				return;
-
-			// Find the center of the Eggtrap and release all the pretty animals!
-			// The chimps are my friends.. heeheeheheehehee..... - LouisJM
-			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-					continue;
-				mo2 = (mobj_t *)th;
-				if (mo2->type != MT_EGGTRAP)
-					continue;
-				P_KillMobj(mo2, NULL, player->mo, 0);
-			}
-
-			// clear the special so you can't push the button twice.
-			sector->special = 0;
-
-			// Move the button down
-			EV_DoElevator(LE_CAPSULE0, NULL, elevateDown);
-
-			// Open the top FOF
-			EV_DoFloor(LE_CAPSULE1, NULL, raiseFloorToNearestFast);
-			// Open the bottom FOF
-			EV_DoCeiling(LE_CAPSULE2, NULL, lowerToLowestFast);
-
-			// Mark all players with the time to exit thingy!
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i])
-					continue;
-				P_DoPlayerExit(&players[i]);
-			}
+			P_ProcessEggCapsule(player, sector);
 			break;
-		}
 		case 10: // Special Stage Time/Rings
 		case 11: // Custom Gravity
 			break;
 		case 12: // Lua sector special
 			break;
 	}
-DoneSection2:
 
-	special = section3;
-
-	// Process Section 3
-	switch (special)
+	switch (section3)
 	{
 		case 1: // Unused
 		case 2: // Wind/Current
@@ -4284,66 +4727,7 @@ DoneSection2:
 			break;
 
 		case 5: // Speed pad
-			if (player->powers[pw_flashing] != 0 && player->powers[pw_flashing] < TICRATE/2)
-				break;
-
-			i = Tag_FindLineSpecial(4, sectag);
-
-			if (i != -1)
-			{
-				angle_t lineangle;
-				fixed_t linespeed;
-				fixed_t sfxnum;
-
-				lineangle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y);
-				linespeed = sides[lines[i].sidenum[0]].textureoffset;
-
-				if (linespeed == 0)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Speed pad (tag %d) at zero speed.\n", sectag);
-					break;
-				}
-
-				player->mo->angle = player->drawangle = lineangle;
-
-				if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
-					P_SetPlayerAngle(player, player->mo->angle);
-
-				if (!(lines[i].flags & ML_EFFECT4))
-				{
-					P_UnsetThingPosition(player->mo);
-					if (roversector) // make FOF speed pads work
-					{
-						player->mo->x = roversector->soundorg.x;
-						player->mo->y = roversector->soundorg.y;
-					}
-					else
-					{
-						player->mo->x = sector->soundorg.x;
-						player->mo->y = sector->soundorg.y;
-					}
-					P_SetThingPosition(player->mo);
-				}
-
-				P_InstaThrust(player->mo, player->mo->angle, linespeed);
-
-				if (lines[i].flags & ML_EFFECT5) // Roll!
-				{
-					if (!(player->pflags & PF_SPINNING))
-						player->pflags |= PF_SPINNING;
-
-					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-				}
-
-				player->powers[pw_flashing] = TICRATE/3;
-
-				sfxnum = sides[lines[i].sidenum[0]].toptexture;
-
-				if (!sfxnum)
-					sfxnum = sfx_spdpad;
-
-				S_StartSound(player->mo, sfxnum);
-			}
+			P_ProcessSpeedPad(player, sector, roversector, sectag);
 			break;
 
 		case 6: // Unused
@@ -4359,10 +4743,7 @@ DoneSection2:
 			break;
 	}
 
-	special = section4;
-
-	// Process Section 4
-	switch (special)
+	switch (section4)
 	{
 		case 1: // Starpost Activator
 		{
@@ -4376,104 +4757,15 @@ DoneSection2:
 		}
 
 		case 2: // Special stage GOAL sector / Exit Sector / CTF Flag Return
-			if (player->bot || !(gametyperules & GTR_ALLOWEXIT))
-				break;
-			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
-			{
-				player->nightstime = 6; // Just let P_Ticker take care of the rest.
-				return;
-			}
-
-			// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
-			{
-				INT32 lineindex;
-
-				P_DoPlayerFinish(player);
-
-				P_SetupSignExit(player);
-				// important: use sector->tag on next line instead of player->mo->subsector->tag
-				// this part is different from in P_PlayerThink, this is what was causing
-				// FOF custom exits not to work.
-				lineindex = Tag_FindLineSpecial(2, sectag);
-
-				if (G_CoopGametype() && lineindex != -1) // Custom exit!
-				{
-					// Special goodies with the block monsters flag depending on emeralds collected
-					if ((lines[lineindex].flags & ML_BLOCKMONSTERS) && ALL7EMERALDS(emeralds))
-						nextmapoverride = (INT16)(lines[lineindex].frontsector->ceilingheight>>FRACBITS);
-					else
-						nextmapoverride = (INT16)(lines[lineindex].frontsector->floorheight>>FRACBITS);
-
-					if (lines[lineindex].flags & ML_NOCLIMB)
-						skipstats = 1;
-				}
-			}
+			P_ProcessExitSector(player, sectag);
 			break;
 
 		case 3: // Red Team's Base
-			if ((gametyperules & GTR_TEAMFLAGS) && P_IsObjectOnGround(player->mo))
-			{
-				if (player->ctfteam == 1 && (player->gotflag & GF_BLUEFLAG))
-				{
-					mobj_t *mo;
-
-					// Make sure the red team still has their own
-					// flag at their base so they can score.
-					if (!P_IsFlagAtBase(MT_REDFLAG))
-						break;
-
-					HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
-					HU_SetCEchoDuration(5);
-					HU_DoCEcho(va(M_GetText("\205%s\200\\CAPTURED THE \204BLUE FLAG\200.\\\\\\\\"), player_names[player-players]));
-
-					if (splitscreen || players[consoleplayer].ctfteam == 1)
-						S_StartSound(NULL, sfx_flgcap);
-					else if (players[consoleplayer].ctfteam == 2)
-						S_StartSound(NULL, sfx_lose);
-
-					mo = P_SpawnMobj(player->mo->x,player->mo->y,player->mo->z,MT_BLUEFLAG);
-					player->gotflag &= ~GF_BLUEFLAG;
-					mo->flags &= ~MF_SPECIAL;
-					mo->fuse = TICRATE;
-					mo->spawnpoint = bflagpoint;
-					mo->flags2 |= MF2_JUSTATTACKED;
-					redscore += 1;
-					P_AddPlayerScore(player, 250);
-				}
-			}
+			P_ProcessTeamBase(player, true);
 			break;
 
 		case 4: // Blue Team's Base
-			if ((gametyperules & GTR_TEAMFLAGS) && P_IsObjectOnGround(player->mo))
-			{
-				if (player->ctfteam == 2 && (player->gotflag & GF_REDFLAG))
-				{
-					mobj_t *mo;
-
-					// Make sure the blue team still has their own
-					// flag at their base so they can score.
-					if (!P_IsFlagAtBase(MT_BLUEFLAG))
-						break;
-
-					HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
-					HU_SetCEchoDuration(5);
-					HU_DoCEcho(va(M_GetText("\204%s\200\\CAPTURED THE \205RED FLAG\200.\\\\\\\\"), player_names[player-players]));
-
-					if (splitscreen || players[consoleplayer].ctfteam == 2)
-						S_StartSound(NULL, sfx_flgcap);
-					else if (players[consoleplayer].ctfteam == 1)
-						S_StartSound(NULL, sfx_lose);
-
-					mo = P_SpawnMobj(player->mo->x,player->mo->y,player->mo->z,MT_REDFLAG);
-					player->gotflag &= ~GF_REDFLAG;
-					mo->flags &= ~MF_SPECIAL;
-					mo->fuse = TICRATE;
-					mo->spawnpoint = rflagpoint;
-					mo->flags2 |= MF2_JUSTATTACKED;
-					bluescore += 1;
-					P_AddPlayerScore(player, 250);
-				}
-			}
+			P_ProcessTeamBase(player, false);
 			break;
 
 		case 5: // Fan sector
@@ -4506,353 +4798,19 @@ DoneSection2:
 			break;
 
 		case 8: // Zoom Tube Start
-			{
-				INT32 sequence;
-				fixed_t speed;
-				INT32 lineindex;
-				mobj_t *waypoint = NULL;
-				angle_t an;
-
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
-					break;
-
-				if (player->powers[pw_ignorelatch] & (1<<15))
-					break;
-
-				// Find line #3 tagged to this sector
-				lineindex = Tag_FindLineSpecial(3, sectag);
-
-				if (lineindex == -1)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Sector special %d missing line special #3.\n", sector->special);
-					break;
-				}
-
-				// Grab speed and sequence values
-				speed = abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8;
-				sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
-
-				if (speed == 0)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
-					break;
-				}
-
-				waypoint = P_GetFirstWaypoint(sequence);
-
-				if (!waypoint)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: FIRST WAYPOINT IN SEQUENCE %d NOT FOUND.\n", sequence);
-					break;
-				}
-				else
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Waypoint %d found in sequence %d - speed = %d\n", waypoint->health, sequence, speed);
-				}
-
-				an = R_PointToAngle2(player->mo->x, player->mo->y, waypoint->x, waypoint->y) - player->mo->angle;
-
-				if (an > ANGLE_90 && an < ANGLE_270 && !(lines[lineindex].flags & ML_EFFECT4))
-					break; // behind back
-
-				P_SetTarget(&player->mo->tracer, waypoint);
-				player->powers[pw_carry] = CR_ZOOMTUBE;
-				player->speed = speed;
-				player->pflags |= PF_SPINNING;
-				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
-				player->climbing = 0;
-
-				if (player->mo->state-states != S_PLAY_ROLL)
-				{
-					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-					S_StartSound(player->mo, sfx_spin);
-				}
-			}
+			P_ProcessZoomTube(player, sector, sectag, false);
 			break;
 
 		case 9: // Zoom Tube End
-			{
-				INT32 sequence;
-				fixed_t speed;
-				INT32 lineindex;
-				mobj_t *waypoint = NULL;
-				angle_t an;
-
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
-					break;
-
-				if (player->powers[pw_ignorelatch] & (1<<15))
-					break;
-
-				// Find line #3 tagged to this sector
-				lineindex = Tag_FindLineSpecial(3, sectag);
-
-				if (lineindex == -1)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Sector special %d missing line special #3.\n", sector->special);
-					break;
-				}
-
-				// Grab speed and sequence values
-				speed = -abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8; // Negative means reverse
-				sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
-
-				if (speed == 0)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
-					break;
-				}
-
-				waypoint = P_GetLastWaypoint(sequence);
-
-				if (!waypoint)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: LAST WAYPOINT IN SEQUENCE %d NOT FOUND.\n", sequence);
-					break;
-				}
-				else
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Waypoint %d found in sequence %d - speed = %d\n", waypoint->health, sequence, speed);
-				}
-
-				an = R_PointToAngle2(player->mo->x, player->mo->y, waypoint->x, waypoint->y) - player->mo->angle;
-
-				if (an > ANGLE_90 && an < ANGLE_270 && !(lines[lineindex].flags & ML_EFFECT4))
-					break; // behind back
-
-				P_SetTarget(&player->mo->tracer, waypoint);
-				player->powers[pw_carry] = CR_ZOOMTUBE;
-				player->speed = speed;
-				player->pflags |= PF_SPINNING;
-				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
-				player->climbing = 0;
-
-				if (player->mo->state-states != S_PLAY_ROLL)
-				{
-					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-					S_StartSound(player->mo, sfx_spin);
-				}
-			}
+			P_ProcessZoomTube(player, sector, sectag, true);
 			break;
 
 		case 10: // Finish Line
-			if (((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE) && !player->exiting)
-			{
-				if (player->starpostnum == numstarposts) // Must have touched all the starposts
-				{
-					player->laps++;
-
-					if (player->powers[pw_carry] == CR_NIGHTSMODE)
-						player->drillmeter += 48*20;
-
-					if (player->laps >= (UINT8)cv_numlaps.value)
-						CONS_Printf(M_GetText("%s has finished the race.\n"), player_names[player-players]);
-					else if (player->laps == (UINT8)cv_numlaps.value-1)
-						CONS_Printf(M_GetText("%s started the \205final lap\200!\n"), player_names[player-players]);
-					else
-						CONS_Printf(M_GetText("%s started lap %u\n"), player_names[player-players], (UINT32)player->laps+1);
-
-					// Reset starposts (checkpoints) info
-					player->starpostscale = player->starpostangle = player->starposttime = player->starpostnum = 0;
-					player->starpostx = player->starposty = player->starpostz = 0;
-					P_ResetStarposts();
-
-					// Play the starpost sound for 'consistency'
-					S_StartSound(player->mo, sfx_strpst);
-				}
-				else if (player->starpostnum)
-				{
-					// blatant reuse of a variable that's normally unused in circuit
-					if (!player->tossdelay)
-						S_StartSound(player->mo, sfx_lose);
-					player->tossdelay = 3;
-				}
-
-				if (player->laps >= (unsigned)cv_numlaps.value)
-				{
-					if (P_IsLocalPlayer(player))
-					{
-						HU_SetCEchoFlags(0);
-						HU_SetCEchoDuration(5);
-						HU_DoCEcho("FINISHED!");
-					}
-
-					P_DoPlayerExit(player);
-				}
-			}
+			P_ProcessFinishLine(player);
 			break;
 
 		case 11: // Rope hang
-			{
-				INT32 sequence;
-				fixed_t speed;
-				INT32 lineindex;
-				mobj_t *waypointmid = NULL;
-				mobj_t *waypointhigh = NULL;
-				mobj_t *waypointlow = NULL;
-				mobj_t *closest = NULL;
-				vector3_t p, line[2], resulthigh, resultlow;
-
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ROPEHANG)
-					break;
-
-				if (player->powers[pw_ignorelatch] & (1<<15))
-					break;
-
-				if (player->mo->momz > 0)
-					break;
-
-				if (player->cmd.buttons & BT_SPIN)
-					break;
-
-				if (!(player->pflags & PF_SLIDING) && player->mo->state == &states[player->mo->info->painstate])
-					break;
-
-				if (player->exiting)
-					break;
-
-				//initialize resulthigh and resultlow with 0
-				memset(&resultlow, 0x00, sizeof(resultlow));
-				memset(&resulthigh, 0x00, sizeof(resulthigh));
-
-				// Find line #11 tagged to this sector
-				lineindex = Tag_FindLineSpecial(11, sectag);
-
-				if (lineindex == -1)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Sector special %d missing line special #11.\n", sector->special);
-					break;
-				}
-
-				// Grab speed and sequence values
-				speed = abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8;
-				sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
-
-				if (speed == 0)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
-					break;
-				}
-
-				// Find the closest waypoint
-				// Find the preceding waypoint
-				// Find the proceeding waypoint
-				// Determine the closest spot on the line between the three waypoints
-				// Put player at that location.
-
-				waypointmid = P_GetClosestWaypoint(sequence, player->mo);
-
-				if (!waypointmid)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: WAYPOINT(S) IN SEQUENCE %d NOT FOUND.\n", sequence);
-					break;
-				}
-
-				waypointlow = P_GetPreviousWaypoint(waypointmid, true);
-				waypointhigh = P_GetNextWaypoint(waypointmid, true);
-
-				CONS_Debug(DBG_GAMELOGIC, "WaypointMid: %d; WaypointLow: %d; WaypointHigh: %d\n",
-								waypointmid->health, waypointlow ? waypointlow->health : -1, waypointhigh ? waypointhigh->health : -1);
-
-				// Now we have three waypoints... the closest one we're near, and the one that comes before, and after.
-				// Next, we need to find the closest point on the line between each set, and determine which one we're
-				// closest to.
-
-				p.x = player->mo->x;
-				p.y = player->mo->y;
-				p.z = player->mo->z;
-
-				// Waypointmid and Waypointlow:
-				if (waypointlow)
-				{
-					line[0].x = waypointmid->x;
-					line[0].y = waypointmid->y;
-					line[0].z = waypointmid->z;
-					line[1].x = waypointlow->x;
-					line[1].y = waypointlow->y;
-					line[1].z = waypointlow->z;
-
-					P_ClosestPointOnLine3D(&p, line, &resultlow);
-				}
-
-				// Waypointmid and Waypointhigh:
-				if (waypointhigh)
-				{
-					line[0].x = waypointmid->x;
-					line[0].y = waypointmid->y;
-					line[0].z = waypointmid->z;
-					line[1].x = waypointhigh->x;
-					line[1].y = waypointhigh->y;
-					line[1].z = waypointhigh->z;
-
-					P_ClosestPointOnLine3D(&p, line, &resulthigh);
-				}
-
-				// 3D support now available. Disregard the previous notice here. -Red
-
-				P_UnsetThingPosition(player->mo);
-				P_ResetPlayer(player);
-				player->mo->momx = player->mo->momy = player->mo->momz = 0;
-
-				if (lines[lineindex].flags & ML_EFFECT1) // Don't wrap
-				{
-					mobj_t *highest = P_GetLastWaypoint(sequence);
-					highest->flags |= MF_SLIDEME;
-				}
-
-				// Changing the conditions on these ifs to fix issues with snapping to the wrong spot -Red
-				if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == 0)
-				{
-					closest = waypointhigh;
-					player->mo->x = resulthigh.x;
-					player->mo->y = resulthigh.y;
-					player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
-				}
-				else if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == numwaypoints[sequence] - 1)
-				{
-					closest = waypointmid;
-					player->mo->x = resultlow.x;
-					player->mo->y = resultlow.y;
-					player->mo->z = resultlow.z - P_GetPlayerHeight(player);
-				}
-				else
-				{
-					if (P_AproxDistance(P_AproxDistance(player->mo->x-resultlow.x, player->mo->y-resultlow.y),
-							player->mo->z-resultlow.z) < P_AproxDistance(P_AproxDistance(player->mo->x-resulthigh.x,
-								player->mo->y-resulthigh.y), player->mo->z-resulthigh.z))
-					{
-						// Line between Mid and Low is closer
-						closest = waypointmid;
-						player->mo->x = resultlow.x;
-						player->mo->y = resultlow.y;
-						player->mo->z = resultlow.z - P_GetPlayerHeight(player);
-					}
-					else
-					{
-						// Line between Mid and High is closer
-						closest = waypointhigh;
-						player->mo->x = resulthigh.x;
-						player->mo->y = resulthigh.y;
-						player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
-					}
-				}
-
-				P_SetTarget(&player->mo->tracer, closest);
-				player->powers[pw_carry] = CR_ROPEHANG;
-
-				// Option for static ropes.
-				if (lines[lineindex].flags & ML_NOCLIMB)
-					player->speed = 0;
-				else
-					player->speed = speed;
-
-				S_StartSound(player->mo, sfx_s3k4a);
-
-				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
-				player->climbing = 0;
-				P_SetThingPosition(player->mo);
-				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
-			}
+			P_ProcessRopeHang(player, sector, sectag);
 			break;
 		case 12: // Camera noclip
 		case 13: // Unused
