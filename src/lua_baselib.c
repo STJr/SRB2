@@ -1639,6 +1639,17 @@ static int lib_pSuperReady(lua_State *L)
 	return 1;
 }
 
+static int lib_pRevertSuperForm(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	NOHUD
+	INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	P_RevertSuperForm(player);
+	return 0;
+}
+
 static int lib_pDoJump(lua_State *L)
 {
 	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
@@ -4008,6 +4019,7 @@ static luaL_Reg lib[] = {
 	{"P_Earthquake",lib_pEarthquake},
 	{"P_HomingAttack",lib_pHomingAttack},
 	{"P_SuperReady",lib_pSuperReady},
+	{"P_RevertSuperForm",lib_pRevertSuperForm},
 	{"P_DoJump",lib_pDoJump},
 	{"P_SpawnThokMobj",lib_pSpawnThokMobj},
 	{"P_SpawnSpinMobj",lib_pSpawnSpinMobj},

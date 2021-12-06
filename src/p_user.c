@@ -4199,40 +4199,14 @@ static void P_DoSuperStuff(player_t *player)
 
 	if (player->powers[pw_super])
 	{
-		// If you're super and not Sonic, de-superize!
-		if (!(ALL7EMERALDS(emeralds) && player->charflags & SF_SUPER))
+		UINT8 force = LUA_HookPlayerForce(player, HOOK(PlayerSuper));
+
+		if (force == 2
+			|| (force != 1 && !(ALL7EMERALDS(emeralds) && player->charflags & SF_SUPER)))
 		{
-			player->powers[pw_super] = 0;
-			P_SetPlayerMobjState(player->mo, S_PLAY_STND);
-			if (P_IsLocalPlayer(player))
-			{
-				music_stack_noposition = true; // HACK: Do not reposition next music
-				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
-			}
-			P_RestoreMusic(player);
-			P_SpawnShieldOrb(player);
-
-			// Restore color
-			if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
-			{
-				player->mo->color = SKINCOLOR_WHITE;
-				G_GhostAddColor(GHC_FIREFLOWER);
-			}
-			else
-			{
-				player->mo->color = player->skincolor;
-				G_GhostAddColor(GHC_NORMAL);
-			}
-
-			if (!G_CoopGametype())
-			{
-				HU_SetCEchoFlags(0);
-				HU_SetCEchoDuration(5);
-				HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[player-players]));
-			}
+			P_RevertSuperForm(player);
 			return;
 		}
-
 		player->mo->color = (player->pflags & PF_GODMODE && cv_debug == 0)
 		? (SKINCOLOR_SUPERSILVER1 + 5*(((signed)leveltime >> 1) % 7)) // A wholesome easter egg.
 		: skins[player->skin].supercolor + abs( ( (player->powers[pw_super] >> 1) % 9) - 4); // This is where super flashing is handled.
@@ -4243,7 +4217,7 @@ static void P_DoSuperStuff(player_t *player)
 			return;
 
 		// Deplete one ring every second while super
-		if ((leveltime % TICRATE == 0) && !(player->exiting))
+		if ((leveltime % TICRATE == 0) && !(player->exiting) && (player->rings > 0))
 			player->rings--;
 
 		if ((cmd->forwardmove != 0 || cmd->sidemove != 0 || player->powers[pw_carry])
@@ -4255,50 +4229,18 @@ static void P_DoSuperStuff(player_t *player)
 		}
 
 		// Ran out of rings while super!
-		if (player->rings <= 0 || player->exiting)
+		if (force != 1 && (player->rings <= 0 || player->exiting))
 		{
 			player->powers[pw_emeralds] = 0; // lost the power stones
 			P_SpawnGhostMobj(player->mo);
 
-			player->powers[pw_super] = 0;
-
-			// Restore color
-			if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
-			{
-				player->mo->color = SKINCOLOR_WHITE;
-				G_GhostAddColor(GHC_FIREFLOWER);
-			}
-			else
-			{
-				player->mo->color = player->skincolor;
-				G_GhostAddColor(GHC_NORMAL);
-			}
+			P_RevertSuperForm(player);
 
 			if (!G_CoopGametype())
+			{
 				player->powers[pw_flashing] = flashingtics-1;
-
-			if (player->mo->sprite2 & FF_SPR2SUPER)
-				P_SetPlayerMobjState(player->mo, player->mo->state-states);
-
-			// Inform the netgame that the champion has fallen in the heat of battle.
-			if (!G_CoopGametype())
-			{
 				S_StartSound(NULL, sfx_s3k66); //let all players hear it.
-				HU_SetCEchoFlags(0);
-				HU_SetCEchoDuration(5);
-				HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[player-players]));
 			}
-
-			// Resume normal music if you're the console player
-			if (P_IsLocalPlayer(player))
-			{
-				music_stack_noposition = true; // HACK: Do not reposition next music
-				music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
-			}
-			P_RestoreMusic(player);
-
-			// If you had a shield, restore its visual significance.
-			P_SpawnShieldOrb(player);
 		}
 	}
 }
@@ -4310,18 +4252,73 @@ static void P_DoSuperStuff(player_t *player)
 //
 boolean P_SuperReady(player_t *player)
 {
-	if (!player->powers[pw_super]
-	&& !player->powers[pw_invulnerability]
+	UINT8 force;
+
+	// conditions under which the player should never be ready to turn super, e.g. because of undesirable behaviour
+	// also for ease of scripting, since writing these out in every hooked function would be tedious and wasteful
+	// (you can use P_DoSuperTransformation if you really need to bypass these)
+	if (player->powers[pw_super]
+		|| (maptol & TOL_NIGHTS)
+		|| (player->powers[pw_shield] & SH_NOSTACK))
+			return false;
+	
+	force = LUA_HookPlayerForce(player, HOOK(SuperReady));
+
+	if (force == 1)
+		return true;
+	if (force == 2)
+		return false;
+
+	if (!player->powers[pw_invulnerability]
 	&& !player->powers[pw_tailsfly]
 	&& (player->charflags & SF_SUPER)
-	&& (player->pflags & PF_JUMPED)
-	&& !(player->powers[pw_shield] & SH_NOSTACK)
-	&& !(maptol & TOL_NIGHTS)
 	&& ALL7EMERALDS(emeralds)
 	&& (player->rings >= 50))
 		return true;
 
 	return false;
+}
+
+void P_RevertSuperForm(player_t *player)
+{
+	if (!player->powers[pw_super]) // :face_with_raised_eyebrow:
+		return;
+
+	player->powers[pw_super] = 0;
+
+	// Resume normal music if you're the console player
+	if (P_IsLocalPlayer(player))
+	{
+		music_stack_noposition = true; // HACK: Do not reposition next music
+		music_stack_fadeout = MUSICRATE/2; // HACK: Fade out current music
+	}
+	P_RestoreMusic(player);
+
+	// If you had a shield, restore its visual significance.
+	P_SpawnShieldOrb(player);
+
+	// Restore color
+	if ((player->powers[pw_shield] & SH_STACK) == SH_FIREFLOWER)
+	{
+		player->mo->color = SKINCOLOR_WHITE;
+		G_GhostAddColor(GHC_FIREFLOWER);
+	}
+	else
+	{
+		player->mo->color = player->skincolor;
+		G_GhostAddColor(GHC_NORMAL);
+	}
+
+	// Inform the netgame that the champion has fallen in the heat of battle.
+	if (!G_CoopGametype())
+	{
+		HU_SetCEchoFlags(0);
+		HU_SetCEchoDuration(5);
+		HU_DoCEcho(va("%s\\is no longer super.\\\\\\\\", player_names[player-players]));
+	}
+
+	if (player->mo->sprite2 & FF_SPR2SUPER)
+		P_SetPlayerMobjState(player->mo, player->mo->state-states);
 }
 
 //
@@ -12915,7 +12912,7 @@ boolean P_PlayerFullbright(player_t *player)
 // returns true if the player can enter a sector that they could not if standing at their skin's full height
 boolean P_PlayerCanEnterSpinGaps(player_t *player)
 {
-	UINT8 canEnter = LUA_HookPlayerCanEnterSpinGaps(player);
+	UINT8 canEnter = LUA_HookPlayerForce(player, HOOK(PlayerCanEnterSpinGaps));
 	if (canEnter == 1)
 		return true;
 	else if (canEnter == 2)

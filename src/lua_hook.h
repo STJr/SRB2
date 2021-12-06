@@ -73,6 +73,8 @@ automatically.
 	X (PlayerCanEnterSpinGaps),\
 	X (KeyDown),\
 	X (KeyUp),\
+	X (SuperReady),\
+	X (PlayerSuper),\
 
 #define STRING_HOOK_LIST(X) \
 	X (BotAI),/* B_BuildTailsTiccmd by skin name */\
@@ -122,6 +124,7 @@ int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);
 void LUA_HookInt(INT32 integer, int hook);
 void LUA_HookBool(boolean value, int hook);
 int  LUA_HookPlayer(player_t *, int hook);
+int  LUA_HookPlayerForce(player_t *, int hook);
 int  LUA_HookTiccmd(player_t *, ticcmd_t *, int hook);
 int  LUA_HookKey(event_t *event, int hook); // Hooks for key events
 
@@ -147,4 +150,3 @@ int  LUA_HookShouldJingleContinue(player_t *, const char *musname);
 int  LUA_HookPlayerCmd(player_t *, ticcmd_t *);
 int  LUA_HookMusicChange(const char *oldname, struct MusicChange *);
 fixed_t LUA_HookPlayerHeight(player_t *player);
-int  LUA_HookPlayerCanEnterSpinGaps(player_t *player);
