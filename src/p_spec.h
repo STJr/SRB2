@@ -322,6 +322,8 @@ void P_SpawnSpecials(boolean fromnetsave);
 void P_UpdateSpecials(void);
 sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 number);
 void P_PlayerInSpecialSector(player_t *player);
+void P_CheckPushableTrigger(mobj_t *mobj, sector_t *sec);
+void P_CheckMobjTrigger(mobj_t *mobj);
 void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *roversector);
 
 fixed_t P_FindLowestFloorSurrounding(sector_t *sec);

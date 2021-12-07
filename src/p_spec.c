@@ -4811,7 +4811,7 @@ sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
 	return NULL;
 }
 
-#define TELEPORTED (player->mo->subsector->sector != originalsector)
+#define TELEPORTED(mo) (mo->subsector->sector != originalsector)
 
 /** Checks if a player is standing on or is inside a 3D floor (e.g. water) and
   * applies any specials.
@@ -4840,7 +4840,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 			|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
 		{
 			P_ProcessSpecialSector(player, rover->master->frontsector, sector);
-			if TELEPORTED return;
+			if TELEPORTED(player->mo) return;
 		}
 	}
 }
@@ -4874,7 +4874,7 @@ static void P_PlayerOnSpecialPolyobj(player_t *player, sector_t *sector)
 			continue;
 
 		P_ProcessSpecialSector(player, polysec, sector);
-		if TELEPORTED return;
+		if TELEPORTED(player->mo) return;
 	}
 }
 
@@ -4965,14 +4965,14 @@ void P_PlayerInSpecialSector(player_t *player)
 	originalsector = player->mo->subsector->sector;
 
 	P_PlayerOnSpecial3DFloor(player, originalsector); // Handle FOFs first.
-	if TELEPORTED return;
+	if TELEPORTED(player->mo) return;
 
 	// Allow sector specials to be applied to polyobjects!
 	P_PlayerOnSpecialPolyobj(player, originalsector);
-	if TELEPORTED return;
+	if TELEPORTED(player->mo) return;
 
 	P_RunSpecialSectorCheck(player, originalsector);
-	if TELEPORTED return;
+	if TELEPORTED(player->mo) return;
 
 	// Iterate through touching_sectorlist for SF_TRIGGERSPECIAL_TOUCH
 	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
@@ -4984,18 +4984,110 @@ void P_PlayerInSpecialSector(player_t *player)
 
 		// Check 3D floors...
 		P_PlayerOnSpecial3DFloor(player, loopsector);
-		if TELEPORTED return;
+		if TELEPORTED(player->mo) return;
 
 		// Check polyobjects...
 		P_PlayerOnSpecialPolyobj(player, loopsector);
-		if TELEPORTED return;
+		if TELEPORTED(player->mo) return;
 
 		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
 			continue;
 
 		P_RunSpecialSectorCheck(player, loopsector);
-		if TELEPORTED return;
+		if TELEPORTED(player->mo) return;
 	}
+}
+
+static void P_CheckMobj3DFloorTrigger(mobj_t *mo)
+{
+	sector_t *originalsector = mo->subsector->sector;
+	ffloor_t *rover;
+	mtag_t tag;
+
+	for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
+	{
+		if (GETSECSPECIAL(rover->master->frontsector->special, 2) != 1)
+			continue;
+
+		if (!(rover->flags & FF_EXISTS))
+			continue;
+
+		if (!P_IsMobjTouching3DFloor(mo, rover, mo->subsector->sector))
+			continue;
+
+		tag = Tag_FGet(&rover->master->frontsector->tags);
+		P_LinedefExecute(tag, mo, rover->master->frontsector);
+		if TELEPORTED(mo) return;
+	}
+}
+
+static void P_CheckMobjPolyobjTrigger(mobj_t *mo)
+{
+	sector_t *originalsector = mo->subsector->sector;
+	polyobj_t *po;
+	sector_t *polysec;
+	boolean touching = false;
+	boolean inside = false;
+	mtag_t tag;
+
+	for (po = mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
+	{
+		if (po->flags & POF_NOSPECIALS)
+			continue;
+
+		polysec = po->lines[0]->backsector;
+
+		if (!polysec->special)
+			continue;
+
+		touching = (polysec->flags & SF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, mo);
+		inside = P_MobjInsidePolyobj(po, mo);
+
+		if (!(inside || touching))
+			continue;
+
+		if (!P_IsMobjTouchingPolyobj(mo, po, polysec))
+			continue;
+
+		tag = Tag_FGet(&polysec->tags);
+		P_LinedefExecute(tag, mo, polysec);
+		if TELEPORTED(mo) return;
+	}
+}
+
+void P_CheckPushableTrigger(mobj_t *mobj, sector_t *sec)
+{
+	sector_t *originalsector = mobj->subsector->sector;
+
+	P_CheckMobj3DFloorTrigger(mobj);
+	if TELEPORTED(mobj)	return;
+
+	P_CheckMobjPolyobjTrigger(mobj);
+	if TELEPORTED(mobj)	return;
+
+	if (GETSECSPECIAL(sec->special, 2) == 1 && P_IsMobjTouchingSectorPlane(mobj, sec))
+	{
+		mtag_t tag = Tag_FGet(&sec->tags);
+		P_LinedefExecute(tag, mobj, sec);
+	}
+}
+
+void P_CheckMobjTrigger(mobj_t *mobj)
+{
+	sector_t *originalsector;
+
+	if (!mobj->subsector)
+		return;
+
+	originalsector = mobj->subsector->sector;
+
+	if (GETSECSPECIAL(originalsector->special, 2) != 8)
+		return;
+
+	P_CheckMobj3DFloorTrigger(mobj);
+	if TELEPORTED(mobj)	return;
+
+	P_CheckMobjPolyobjTrigger(mobj);
 }
 
 #undef TELEPORTED

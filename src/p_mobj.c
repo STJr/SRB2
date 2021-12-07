@@ -10048,15 +10048,7 @@ void P_MobjThinker(mobj_t *mobj)
 	tmfloorthing = tmhitthing = NULL;
 
 	// Sector special (2,8) allows ANY mobj to trigger a linedef exec
-	if (mobj->subsector && GETSECSPECIAL(mobj->subsector->sector->special, 2) == 8)
-	{
-		sector_t *sec2 = P_ThingOnSpecial3DFloor(mobj);
-		if (sec2 && GETSECSPECIAL(sec2->special, 2) == 1)
-		{
-			mtag_t tag = Tag_FGet(&sec2->tags);
-			P_LinedefExecute(tag, mobj, sec2);
-		}
-	}
+	P_CheckMobjTrigger(mobj);
 
 	if (mobj->scale != mobj->destscale)
 		P_MobjScaleThink(mobj); // Slowly scale up/down to reach your destscale.
@@ -10271,28 +10263,10 @@ boolean P_RailThinker(mobj_t *mobj)
 // Unquick, unoptimized function for pushables
 void P_PushableThinker(mobj_t *mobj)
 {
-	sector_t *sec;
-
 	I_Assert(mobj != NULL);
 	I_Assert(!P_MobjWasRemoved(mobj));
 
-	sec = mobj->subsector->sector;
-
-	if (GETSECSPECIAL(sec->special, 2) == 1 && mobj->z == sec->floorheight)
-	{
-		mtag_t tag = Tag_FGet(&sec->tags);
-		P_LinedefExecute(tag, mobj, sec);
-	}
-
-//	else if (GETSECSPECIAL(sec->special, 2) == 8)
-	{
-		sector_t *sec2 = P_ThingOnSpecial3DFloor(mobj);
-		if (sec2 && GETSECSPECIAL(sec2->special, 2) == 1)
-		{
-			mtag_t tag = Tag_FGet(&sec2->tags);
-			P_LinedefExecute(tag, mobj, sec2);
-		}
-	}
+	P_CheckPushableTrigger(mobj, mobj->subsector->sector);
 
 	// it has to be pushable RIGHT NOW for this part to happen
 	if (mobj->flags & MF_PUSHABLE && !(mobj->momx || mobj->momy))
