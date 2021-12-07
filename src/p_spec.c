@@ -4192,7 +4192,7 @@ static void P_ProcessSpeedPad(player_t *player, sector_t *sector, sector_t *rove
 	S_StartSound(player->mo, sfxnum);
 }
 
-static void P_ProcessExitSector(player_t *player, mtag_t sectag)
+static void P_ProcessExitSector(player_t *player, boolean isTouching, mtag_t sectag)
 {
 	INT32 lineindex;
 
@@ -4202,9 +4202,10 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 	if (player->bot)
 		return;
 
-	if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
+	if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))
 	{
-		player->nightstime = 6; // Just let P_Ticker take care of the rest.
+		if (player->nightstime > 6 && isTouching)
+			player->nightstime = 6; // Just let P_Ticker take care of the rest.
 		return;
 	}
 
@@ -4580,6 +4581,10 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 {
 	INT32 section1, section2, section3, section4;
 	mtag_t sectag = Tag_FGet(&sector->tags);
+	boolean isTouching;
+
+	if (!sector->special)
+		return;
 
 	section1 = GETSECSPECIAL(sector->special, 1);
 	section2 = GETSECSPECIAL(sector->special, 2);
@@ -4600,37 +4605,38 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 	if (section3 == 2 || section3 == 4)
 		player->onconveyor = section3;
 
+	isTouching = roversector || P_IsMobjTouchingSectorPlane(player->mo, sector);
+
 	switch (section1)
 	{
 		case 1: // Damage (Generic)
-			if (roversector || P_IsMobjTouchingSectorPlane(player->mo, sector))
+			if (isTouching)
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 			break;
 		case 2: // Damage (Water)
-			if ((roversector || P_IsMobjTouchingSectorPlane(player->mo, sector)) && (player->powers[pw_underwater] || player->powers[pw_carry] == CR_NIGHTSMODE))
+			if (isTouching && (player->powers[pw_underwater] || player->powers[pw_carry] == CR_NIGHTSMODE))
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_WATER);
 			break;
 		case 3: // Damage (Fire)
-			if (roversector || P_IsMobjTouchingSectorPlane(player->mo, sector))
+			if (isTouching)
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_FIRE);
 			break;
 		case 4: // Damage (Electrical)
-			if (roversector || P_IsMobjTouchingSectorPlane(player->mo, sector))
+			if (isTouching)
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_ELECTRIC);
 			break;
 		case 5: // Spikes
-			if (roversector || P_IsMobjTouchingSectorPlane(player->mo, sector))
+			if (isTouching)
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPIKE);
 			break;
 		case 6: // Death Pit (Camera Mod)
 		case 7: // Death Pit (No Camera Mod)
-			if (roversector || P_IsMobjTouchingSectorPlane(player->mo, sector))
-			{
-				if (player->quittime)
-					G_MovePlayerToSpawnOrStarpost(player - players);
-				else
-					P_DamageMobj(player->mo, NULL, NULL, 1, DMG_DEATHPIT);
-			}
+			if (!isTouching)
+				break;
+			if (player->quittime)
+				G_MovePlayerToSpawnOrStarpost(player - players);
+			else
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_DEATHPIT);
 			break;
 		case 8: // Instant Kill
 			if (player->quittime)
@@ -4639,6 +4645,9 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
 			break;
 		case 9: // Ring Drainer (Floor Touch)
+			if (!isTouching)
+				break;
+			/* FALLTHRU */
 		case 10: // Ring Drainer (No Floor Touch)
 			if (leveltime % (TICRATE/2) == 0 && player->rings > 0)
 			{
@@ -4647,6 +4656,9 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			}
 			break;
 		case 11: // Special Stage Damage
+			if (!isTouching)
+				break;
+
 			if (player->exiting || player->bot) // Don't do anything for bots or players who have just finished
 				break;
 
@@ -4678,13 +4690,16 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 5: // Linedef executor
 		case 6: // Linedef executor (7 Emeralds)
 		case 7: // Linedef executor (NiGHTS Mare)
+			if ((section2 == 3 || section2 == 5) && !isTouching)
+				break;
 			if (!player->bot)
 				P_LinedefExecute(sectag, player->mo, sector);
 			break;
 		case 8: // Tells pushable things to check FOFs
 			break;
 		case 9: // Egg trap capsule
-			P_ProcessEggCapsule(player, sector);
+			if (roversector)
+				P_ProcessEggCapsule(player, sector);
 			break;
 		case 10: // Special Stage Time/Rings
 		case 11: // Custom Gravity
@@ -4700,7 +4715,8 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 4: // Conveyor Belt
 			break;
 		case 5: // Speed pad
-			P_ProcessSpeedPad(player, sector, roversector, sectag);
+			if (isTouching)
+				P_ProcessSpeedPad(player, sector, roversector, sectag);
 			break;
 		case 6: // Unused
 		case 7: // Unused
@@ -4728,13 +4744,15 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 		}
 		case 2: // Special stage GOAL sector / Exit Sector / CTF Flag Return
-			P_ProcessExitSector(player, sectag);
+			P_ProcessExitSector(player, isTouching, sectag);
 			break;
 		case 3: // Red Team's Base
-			P_ProcessTeamBase(player, true);
+			if (isTouching)
+				P_ProcessTeamBase(player, true);
 			break;
 		case 4: // Blue Team's Base
-			P_ProcessTeamBase(player, false);
+			if (isTouching)
+				P_ProcessTeamBase(player, false);
 			break;
 		case 5: // Fan sector
 			player->mo->momz += mobjinfo[MT_FAN].mass/4;
@@ -4751,6 +4769,8 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				P_DoSuperTransformation(player, true);
 			break;
 		case 7: // Make player spin
+			if (!isTouching)
+				break;
 			if (!(player->pflags & PF_SPINNING))
 			{
 				player->pflags |= PF_SPINNING;
@@ -4772,7 +4792,8 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			P_ProcessFinishLine(player);
 			break;
 		case 11: // Rope hang
-			P_ProcessRopeHang(player, sector, sectag);
+			if (isTouching)
+				P_ProcessRopeHang(player, sector, sectag);
 			break;
 		case 12: // Camera noclip
 		case 13: // Unused
@@ -4878,76 +4899,6 @@ static void P_PlayerOnSpecialPolyobj(player_t *player, sector_t *sector)
 	}
 }
 
-//
-// P_RunSpecialSectorCheck
-//
-// Helper function to P_PlayerInSpecialSector
-//
-static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
-{
-	boolean nofloorneeded = false;
-
-	if (!sector->special) // nothing special, exit
-		return;
-
-	if (GETSECSPECIAL(sector->special, 2) == 9) // Egg trap capsule -- should only be for 3dFloors!
-		return;
-
-	// The list of specials that activate without floor touch
-	// Check Section 1
-	switch(GETSECSPECIAL(sector->special, 1))
-	{
-		case 2: // Damage (water)
-		case 8: // Instant kill
-		case 10: // Ring drainer that doesn't require floor touch
-		case 12: // Space countdown
-			nofloorneeded = true;
-			break;
-	}
-
-	// Check Section 2
-	switch(GETSECSPECIAL(sector->special, 2))
-	{
-		case 2: // Linedef executor (All players needed)
-		case 4: // Linedef executor
-		case 6: // Linedef executor (7 Emeralds)
-		case 7: // Linedef executor (NiGHTS Mare)
-			nofloorneeded = true;
-			break;
-	}
-
-	// Check Section 3
-/*	switch(GETSECSPECIAL(sector->special, 3))
-	{
-
-	}*/
-
-	// Check Section 4
-	switch(GETSECSPECIAL(sector->special, 4))
-	{
-		case 2: // Level Exit / GOAL Sector / Flag Return
-			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))
-			{
-				// Special stage GOAL sector
-				// requires touching floor.
-				break;
-			}
-			/* FALLTHRU */
-
-		case 1: // Starpost activator
-		case 5: // Fan sector
-		case 6: // Super Sonic Transform
-		case 8: // Zoom Tube Start
-		case 9: // Zoom Tube End
-		case 10: // Finish line
-			nofloorneeded = true;
-			break;
-	}
-
-	if (nofloorneeded || P_IsMobjTouchingSectorPlane(player->mo, sector))
-		P_ProcessSpecialSector(player, sector, NULL);
-}
-
 /** Checks if the player is in a special sector or FOF and apply any specials.
   *
   * \param player Player to check.
@@ -4971,7 +4922,7 @@ void P_PlayerInSpecialSector(player_t *player)
 	P_PlayerOnSpecialPolyobj(player, originalsector);
 	if TELEPORTED(player->mo) return;
 
-	P_RunSpecialSectorCheck(player, originalsector);
+	P_ProcessSpecialSector(player, originalsector, NULL);
 	if TELEPORTED(player->mo) return;
 
 	// Iterate through touching_sectorlist for SF_TRIGGERSPECIAL_TOUCH
@@ -4993,7 +4944,7 @@ void P_PlayerInSpecialSector(player_t *player)
 		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
 			continue;
 
-		P_RunSpecialSectorCheck(player, loopsector);
+		P_ProcessSpecialSector(player, loopsector, NULL);
 		if TELEPORTED(player->mo) return;
 	}
 }
