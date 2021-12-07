@@ -3886,12 +3886,12 @@ static boolean P_IsMobjTouchingPlane(mobj_t *mo, sector_t *sec, fixed_t floorz, 
 	return (floorallowed || ceilingallowed);
 }
 
-static boolean P_IsMobjTouchingSectorPlane(mobj_t *mo, sector_t *sec)
+boolean P_IsMobjTouchingSectorPlane(mobj_t *mo, sector_t *sec)
 {
 	return P_IsMobjTouchingPlane(mo, sec, P_GetSpecialBottomZ(mo, sec, sec), P_GetSpecialTopZ(mo, sec, sec));
 }
 
-static boolean P_IsMobjTouching3DFloor(mobj_t *mo, ffloor_t *ffloor, sector_t *sec)
+boolean P_IsMobjTouching3DFloor(mobj_t *mo, ffloor_t *ffloor, sector_t *sec)
 {
 	fixed_t topheight = P_GetSpecialTopZ(mo, sectors + ffloor->secnum, sec);
 	fixed_t bottomheight = P_GetSpecialBottomZ(mo, sectors + ffloor->secnum, sec);
@@ -3909,7 +3909,7 @@ static boolean P_IsMobjTouching3DFloor(mobj_t *mo, ffloor_t *ffloor, sector_t *s
 	}
 }
 
-static boolean P_IsMobjTouchingPolyobj(mobj_t *mo, polyobj_t *po, sector_t *polysec)
+boolean P_IsMobjTouchingPolyobj(mobj_t *mo, polyobj_t *po, sector_t *polysec)
 {
 	if (!(po->flags & POF_TESTHEIGHT)) // Don't do height checking
 		return true;

@@ -2012,7 +2012,6 @@ static void SaveEachTimeThinker(const thinker_t *th, const UINT8 type)
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		WRITECHAR(save_p, ht->playersInArea[i]);
-		WRITECHAR(save_p, ht->playersOnArea[i]);
 	}
 	WRITECHAR(save_p, ht->triggerOnExit);
 }
@@ -3130,7 +3129,6 @@ static thinker_t* LoadEachTimeThinker(actionf_p1 thinker)
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		ht->playersInArea[i] = READCHAR(save_p);
-		ht->playersOnArea[i] = READCHAR(save_p);
 	}
 	ht->triggerOnExit = READCHAR(save_p);
 	return &ht->thinker;

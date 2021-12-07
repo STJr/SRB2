@@ -1272,208 +1272,190 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 	P_RemoveThinker(&nobaddies->thinker);
 }
 
-//
-// P_IsObjectOnRealGround
-//
-// Helper function for T_EachTimeThinker
-// Like P_IsObjectOnGroundIn, except ONLY THE REAL GROUND IS CONSIDERED, NOT FOFS
-// I'll consider whether to make this a more globally accessible function or whatever in future
-// -- Monster Iestyn
-//
-static boolean P_IsObjectOnRealGround(mobj_t *mo, sector_t *sec)
+static sector_t *P_Check3DFloorTriggers(player_t *player, sector_t *sector, line_t *sourceline)
 {
-	// Is the object in reverse gravity?
-	if (mo->eflags & MFE_VERTICALFLIP)
+	ffloor_t *rover;
+
+	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
-		// Detect if the player is on the ceiling.
-		if (mo->z+mo->height >= P_GetSpecialTopZ(mo, sec, sec))
-			return true;
+		if (GETSECSPECIAL(rover->master->frontsector->special, 2) < 2 || GETSECSPECIAL(rover->master->frontsector->special, 2) > 7)
+			continue;
+
+		if (!(rover->flags & FF_EXISTS))
+			continue;
+
+		if (!Tag_Find(&sourceline->tags, Tag_FGet(&rover->master->frontsector->tags)))
+			return false;
+
+		if (!P_IsMobjTouching3DFloor(player->mo, rover, sector))
+			continue;
+
+		// This FOF has the special we're looking for, but are we allowed to touch it?
+		if (sector == player->mo->subsector->sector
+			|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			return rover->master->frontsector;
 	}
-	// Nope!
-	else
-	{
-		// Detect if the player is on the floor.
-		if (mo->z <= P_GetSpecialBottomZ(mo, sec, sec))
-			return true;
-	}
-	return false;
+
+	return NULL;
 }
 
-static boolean P_IsMobjTouchingSector(mobj_t *mo, sector_t *sec)
+static sector_t *P_CheckPolyobjTriggers(player_t *player, line_t *sourceline)
 {
-	msecnode_t *node;
+	polyobj_t *po;
+	sector_t *polysec;
+	boolean touching = false;
+	boolean inside = false;
 
-	if (mo->subsector->sector == sec)
-		return true;
+	for (po = player->mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next)) //TODO
+	{
+		if (po->flags & POF_NOSPECIALS)
+			continue;
 
-	if (!(sec->flags & SF_TRIGGERSPECIAL_TOUCH))
+		polysec = po->lines[0]->backsector;
+
+		if (GETSECSPECIAL(polysec->special, 2) < 2 || GETSECSPECIAL(polysec->special, 2) > 7)
+			continue;
+
+		if (!Tag_Find(&sourceline->tags, Tag_FGet(&polysec->tags)))
+			return false;
+
+		touching = (polysec->flags & SF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);
+		inside = P_MobjInsidePolyobj(po, player->mo);
+
+		if (!(inside || touching))
+			continue;
+
+		if (!P_IsMobjTouchingPolyobj(player->mo, po, polysec))
+			continue;
+
+		return polysec;
+	}
+
+	return NULL;
+}
+
+static boolean P_CheckSectorTriggers(player_t *player, sector_t *sector, line_t *sourceline)
+{
+	if (GETSECSPECIAL(sector->special, 2) < 2 || GETSECSPECIAL(sector->special, 2) > 7)
 		return false;
 
-	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+	if (!Tag_Find(&sourceline->tags, Tag_FGet(&sector->tags)))
+		return false;
+
+	if (GETSECSPECIAL(sector->special, 2) != 3 && GETSECSPECIAL(sector->special, 2) != 5)
+		return true; // "Anywhere in sector" types
+
+	return P_IsMobjTouchingSectorPlane(player->mo, sector);
+
+}
+
+static sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
+{
+	sector_t *originalsector;
+	sector_t *loopsector;
+	msecnode_t *node;
+	sector_t *caller;
+
+	if (!player->mo)
+		return NULL;
+
+	originalsector = player->mo->subsector->sector;
+
+	caller = P_Check3DFloorTriggers(player, originalsector, sourceline); // Handle FOFs first.
+
+	if (caller)
+		return caller;
+
+	// Allow sector specials to be applied to polyobjects!
+	caller = P_CheckPolyobjTriggers(player, sourceline);
+
+	if (caller)
+		return caller;
+
+	if (P_CheckSectorTriggers(player, originalsector, sourceline))
+		return originalsector;
+
+	// Iterate through touching_sectorlist for SF_TRIGGERSPECIAL_TOUCH
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
-		if (node->m_sector == sec)
-			return true;
+		loopsector = node->m_sector;
+
+		if (loopsector == originalsector) // Don't duplicate
+			continue;
+
+		// Check 3D floors...
+		caller = P_Check3DFloorTriggers(player, loopsector, sourceline); // Handle FOFs first.
+
+		if (caller)
+			return caller;
+
+		//TODO: Check polyobjects in loopsector
+
+		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			continue;
+
+		if (P_CheckSectorTriggers(player, loopsector, sourceline))
+			return loopsector;
 	}
 
 	return false;
 }
 
-//
-// T_EachTimeThinker
-//
-// Runs a linedef exec whenever a player enters an area.
-// Keeps track of players currently in the area and notices any changes.
-//
-// \sa P_AddEachTimeThinker
-//
+static boolean P_CheckAllTrigger(eachtime_t *eachtime)
+{
+	size_t i;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (P_IsPlayerValid(i) && !eachtime->playersInArea[i])
+			return false;
+	}
+
+	return true;
+}
+
 void T_EachTimeThinker(eachtime_t *eachtime)
 {
-	size_t i, j;
-	sector_t *sec = NULL;
-	sector_t *targetsec = NULL;
-	INT32 secnum = -1;
+	size_t i;
 	boolean oldPlayersInArea[MAXPLAYERS];
-	boolean oldPlayersOnArea[MAXPLAYERS];
-	boolean *oldPlayersArea;
-	boolean *playersArea;
-	boolean FOFsector = false;
-	boolean floortouch = false;
-	fixed_t bottomheight, topheight;
-	ffloor_t *rover;
+	sector_t *caller[MAXPLAYERS];
+	boolean allPlayersChecked = false;
+	boolean allPlayersTrigger = false;
 	mtag_t tag = Tag_FGet(&eachtime->sourceline->tags);
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		oldPlayersInArea[i] = eachtime->playersInArea[i];
-		oldPlayersOnArea[i] = eachtime->playersOnArea[i];
-		eachtime->playersInArea[i] = false;
-		eachtime->playersOnArea[i] = false;
-	}
-
-	TAG_ITER_SECTORS(tag, secnum)
-	{
-		sec = &sectors[secnum];
-
-		FOFsector = false;
-
-		if (GETSECSPECIAL(sec->special, 2) == 3 || GETSECSPECIAL(sec->special, 2) == 5)
-			floortouch = true;
-		else if (GETSECSPECIAL(sec->special, 2) >= 1 && GETSECSPECIAL(sec->special, 2) <= 8)
-			floortouch = false;
-		else
-			continue;
-
-		// Check the lines of this sector, to see if it is a FOF control sector.
-		for (i = 0; i < sec->linecount; i++)
-		{
-			INT32 targetsecnum = -1;
-
-			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
-				continue;
-
-			FOFsector = true;
-
-			TAG_ITER_SECTORS(sec->lines[i]->args[0], targetsecnum)
-			{
-				targetsec = &sectors[targetsecnum];
-
-				// Find the FOF corresponding to the control linedef
-				for (rover = targetsec->ffloors; rover; rover = rover->next)
-				{
-					if (rover->master == sec->lines[i])
-						break;
-				}
-
-				if (!rover) // This should be impossible, but don't complain if it is the case somehow
-					continue;
-
-				if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
-					continue;
-
-				for (j = 0; j < MAXPLAYERS; j++)
-				{
-					if (!P_IsPlayerValid(j))
-						continue;
-
-					if (!P_IsMobjTouchingSector(players[j].mo, targetsec))
-						continue;
-
-					topheight = P_GetSpecialTopZ(players[j].mo, sec, targetsec);
-					bottomheight = P_GetSpecialBottomZ(players[j].mo, sec, targetsec);
-
-					if (players[j].mo->z > topheight)
-						continue;
-
-					if (players[j].mo->z + players[j].mo->height < bottomheight)
-						continue;
-
-					if (floortouch && P_IsObjectOnGroundIn(players[j].mo, targetsec))
-						eachtime->playersOnArea[j] = true;
-					else
-						eachtime->playersInArea[j] = true;
-				}
-			}
-		}
-
-		if (!FOFsector)
-		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!P_IsPlayerValid(i))
-					continue;
-
-				if (!P_IsMobjTouchingSector(players[i].mo, sec))
-					continue;
-
-				if (!(players[i].mo->subsector->sector == sec
-					|| P_PlayerTouchingSectorSpecial(&players[i], 2, (GETSECSPECIAL(sec->special, 2))) == sec))
-					continue;
-
-				if (floortouch && P_IsObjectOnRealGround(players[i].mo, sec))
-					eachtime->playersOnArea[i] = true;
-				else
-					eachtime->playersInArea[i] = true;
-			}
-		}
-	}
-
-	// Check if a new player entered.
-	// If not, check if a player hit the floor.
-	// If either condition is true, execute.
-	if (floortouch)
-	{
-		playersArea = eachtime->playersOnArea;
-		oldPlayersArea = oldPlayersOnArea;
-	}
-	else
-	{
-		playersArea = eachtime->playersInArea;
-		oldPlayersArea = oldPlayersInArea;
+		caller[i] = P_IsPlayerValid(i) ? P_FindPlayerTrigger(&players[i], eachtime->sourceline) : NULL;
+		eachtime->playersInArea[i] = caller[i] != NULL;
 	}
 
 	// Easy check... nothing has changed
-	if (!memcmp(playersArea, oldPlayersArea, sizeof(boolean)*MAXPLAYERS))
+	if (!memcmp(eachtime->playersInArea, oldPlayersInArea, sizeof(boolean)*MAXPLAYERS))
 		return;
-
-	// If sector has an "all players" trigger type, all players need to be in area
-	if (GETSECSPECIAL(sec->special, 2) == 2 || GETSECSPECIAL(sec->special, 2) == 3)
-	{
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (P_IsPlayerValid(i) && !playersArea[i])
-				return;
-		}
-	}
 
 	// Trigger for every player who has entered (and exited, if triggerOnExit)
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playersArea[i] == oldPlayersArea[i])
+		if (eachtime->playersInArea[i] == oldPlayersInArea[i])
 			continue;
 
 		// If player has just left, check if still valid
-		if (!playersArea[i] && (!eachtime->triggerOnExit || !P_IsPlayerValid(i)))
+		if (!eachtime->playersInArea[i] && (!eachtime->triggerOnExit || !P_IsPlayerValid(i)))
 			continue;
+
+		// If sector has an "all players" trigger type, all players need to be in area
+		if (caller[i] && (GETSECSPECIAL(caller[i]->special, 2) == 2 || GETSECSPECIAL(caller[i]->special, 2) == 3))
+		{
+			if (!allPlayersChecked)
+			{
+				allPlayersChecked = true;
+				allPlayersTrigger = P_CheckAllTrigger(eachtime);
+			}
+
+			if (!allPlayersTrigger)
+				continue;
+		}
 
 		CONS_Debug(DBG_GAMELOGIC, "Trying to activate each time executor with tag %d\n", tag);
 
@@ -1481,7 +1463,7 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 		// No more stupid hacks involving changing eachtime->sourceline's tag or special or whatever!
 		// This should now run ONLY the stuff for eachtime->sourceline itself, instead of all trigger linedefs sharing the same tag.
 		// Makes much more sense doing it this way, honestly.
-		P_RunTriggerLinedef(eachtime->sourceline, players[i].mo, sec);
+		P_RunTriggerLinedef(eachtime->sourceline, players[i].mo, caller[i]);
 
 		if (!eachtime->sourceline->special) // this happens only for "Trigger on X calls" linedefs
 			P_RemoveThinker(&eachtime->thinker);

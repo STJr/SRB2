@@ -338,6 +338,10 @@ INT32 P_FindMinSurroundingLight(sector_t *sector, INT32 max);
 void P_SetupSignExit(player_t *player);
 boolean P_IsFlagAtBase(mobjtype_t flag);
 
+boolean P_IsMobjTouchingSectorPlane(mobj_t *mo, sector_t *sec);
+boolean P_IsMobjTouching3DFloor(mobj_t *mo, ffloor_t *ffloor, sector_t *sec);
+boolean P_IsMobjTouchingPolyobj(mobj_t *mo, polyobj_t *po, sector_t *polysec);
+
 void P_SwitchWeather(INT32 weathernum);
 
 boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller);
@@ -680,7 +684,6 @@ typedef struct
 	thinker_t thinker;
 	line_t *sourceline; // Source line of the thinker
 	boolean playersInArea[MAXPLAYERS];
-	boolean playersOnArea[MAXPLAYERS];
 	boolean triggerOnExit;
 } eachtime_t;
 
