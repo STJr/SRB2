@@ -3998,39 +3998,142 @@ sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 n
 	return NULL;
 }
 
-//
-// P_ThingIsOnThe3DFloor
-//
-// This checks whether the mobj is on/in the FOF we want it to be at
-// Needed for the "All players" trigger sector specials only
-//
-static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *targetsec)
+static sector_t *P_Check3DFloorTriggers(player_t *player, sector_t *sector, line_t *sourceline)
 {
 	ffloor_t *rover;
 
-	if (!mo->player) // should NEVER happen
-		return false;
-
-	for (rover = targetsec->ffloors; rover; rover = rover->next)
+	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
-		if (rover->master->frontsector != sector)
+		if (GETSECSPECIAL(rover->master->frontsector->special, 2) < 2 || GETSECSPECIAL(rover->master->frontsector->special, 2) > 7)
 			continue;
 
-		// we're assuming the FOF existed when the first player touched it
-		//if (!(rover->flags & FF_EXISTS))
-		//	return false;
+		if (!(rover->flags & FF_EXISTS))
+			continue;
 
-		return P_IsMobjTouching3DFloor(mo, rover, targetsec);
+		if (!Tag_Find(&sourceline->tags, Tag_FGet(&rover->master->frontsector->tags)))
+			return false;
+
+		if (!P_IsMobjTouching3DFloor(player->mo, rover, sector))
+			continue;
+
+		// This FOF has the special we're looking for, but are we allowed to touch it?
+		if (sector == player->mo->subsector->sector
+			|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			return rover->master->frontsector;
+	}
+
+	return NULL;
+}
+
+static sector_t *P_CheckPolyobjTriggers(player_t *player, line_t *sourceline)
+{
+	polyobj_t *po;
+	sector_t *polysec;
+	boolean touching = false;
+	boolean inside = false;
+
+	for (po = player->mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next)) //TODO
+	{
+		if (po->flags & POF_NOSPECIALS)
+			continue;
+
+		polysec = po->lines[0]->backsector;
+
+		if (GETSECSPECIAL(polysec->special, 2) < 2 || GETSECSPECIAL(polysec->special, 2) > 7)
+			continue;
+
+		if (!Tag_Find(&sourceline->tags, Tag_FGet(&polysec->tags)))
+			return false;
+
+		touching = (polysec->flags & SF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);
+		inside = P_MobjInsidePolyobj(po, player->mo);
+
+		if (!(inside || touching))
+			continue;
+
+		if (!P_IsMobjTouchingPolyobj(player->mo, po, polysec))
+			continue;
+
+		return polysec;
+	}
+
+	return NULL;
+}
+
+static boolean P_CheckSectorTriggers(player_t *player, sector_t *sector, line_t *sourceline)
+{
+	if (GETSECSPECIAL(sector->special, 2) < 2 || GETSECSPECIAL(sector->special, 2) > 7)
+		return false;
+
+	if (!Tag_Find(&sourceline->tags, Tag_FGet(&sector->tags)))
+		return false;
+
+	if (GETSECSPECIAL(sector->special, 2) != 3 && GETSECSPECIAL(sector->special, 2) != 5)
+		return true; // "Anywhere in sector" types
+
+	return P_IsMobjTouchingSectorPlane(player->mo, sector);
+
+}
+
+sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
+{
+	sector_t *originalsector;
+	sector_t *loopsector;
+	msecnode_t *node;
+	sector_t *caller;
+
+	if (!player->mo)
+		return NULL;
+
+	originalsector = player->mo->subsector->sector;
+
+	caller = P_Check3DFloorTriggers(player, originalsector, sourceline); // Handle FOFs first.
+
+	if (caller)
+		return caller;
+
+	// Allow sector specials to be applied to polyobjects!
+	caller = P_CheckPolyobjTriggers(player, sourceline);
+
+	if (caller)
+		return caller;
+
+	if (P_CheckSectorTriggers(player, originalsector, sourceline))
+		return originalsector;
+
+	// Iterate through touching_sectorlist for SF_TRIGGERSPECIAL_TOUCH
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		loopsector = node->m_sector;
+
+		if (loopsector == originalsector) // Don't duplicate
+			continue;
+
+		// Check 3D floors...
+		caller = P_Check3DFloorTriggers(player, loopsector, sourceline); // Handle FOFs first.
+
+		if (caller)
+			return caller;
+
+		//TODO: Check polyobjects in loopsector
+
+		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			continue;
+
+		if (P_CheckSectorTriggers(player, loopsector, sourceline))
+			return loopsector;
 	}
 
 	return false;
 }
 
 /// \todo check continues for proper splitscreen support?
-static boolean P_DoAllPlayersTrigger(sector_t *sector, sector_t *roversector, boolean floortouch)
+static boolean P_DoAllPlayersTrigger(mtag_t sectag)
 {
 	INT32 i;
-	msecnode_t *node;
+	line_t dummyline;
+	dummyline.tags.count = 1;
+	dummyline.tags.tags = &sectag;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -4044,40 +4147,8 @@ static boolean P_DoAllPlayersTrigger(sector_t *sector, sector_t *roversector, bo
 			continue;
 		if (G_CoopGametype() && players[i].lives <= 0)
 			continue;
-		if (roversector)
-		{
-			if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
-			{
-				for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-				{
-					if (P_ThingIsOnThe3DFloor(players[i].mo, sector, node->m_sector))
-						break;
-				}
-				if (!node)
-					return false;
-			}
-			else if (players[i].mo->subsector && !P_ThingIsOnThe3DFloor(players[i].mo, sector, players[i].mo->subsector->sector)) // this function handles basically everything for us lmao
-				return false;
-		}
-		else
-		{
-			if (players[i].mo->subsector->sector != sector)
-			{
-				if (!(sector->flags & SF_TRIGGERSPECIAL_TOUCH))
-					return false;
-
-				for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-				{
-					if (node->m_sector == sector)
-						break;
-				}
-				if (!node)
-					return false;
-			}
-
-			if (floortouch && !P_IsMobjTouchingSectorPlane(players[i].mo, sector))
-				return false;
-		}
+		if (!P_FindPlayerTrigger(&players[i], &dummyline))
+			return false;
 	}
 
 	return true;
@@ -4683,7 +4754,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 		case 2: // Linedef executor requires all players present+doesn't require touching floor
 		case 3: // Linedef executor requires all players present
-			if (!P_DoAllPlayersTrigger(sector, roversector, section2 == 3))
+			if (!P_DoAllPlayersTrigger(sectag))
 				break;
 			/* FALLTHRU */
 		case 4: // Linedef executor that doesn't require touching floor
