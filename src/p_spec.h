@@ -320,6 +320,7 @@ void P_SpawnSpecials(boolean fromnetsave);
 
 // every tic
 void P_UpdateSpecials(void);
+sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number);
 sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 number);
 void P_PlayerInSpecialSector(player_t *player);
 void P_CheckPushableTrigger(mobj_t *mobj, sector_t *sec);
@@ -921,7 +922,5 @@ typedef struct
 void T_PlaneDisplace(planedisplace_t *pd);
 
 void P_CalcHeight(player_t *player);
-
-sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo);
 
 #endif

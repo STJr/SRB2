@@ -9611,13 +9611,9 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		break;
 	case MT_BLUEFLAG:
 	case MT_REDFLAG:
-	{
-		sector_t* sec2;
-		sec2 = P_ThingOnSpecial3DFloor(mobj);
-		if ((sec2 && GETSECSPECIAL(sec2->special, 4) == 2) || (GETSECSPECIAL(mobj->subsector->sector->special, 4) == 2))
+		if (P_MobjTouchingSectorSpecial(mobj, 4, 2))
 			mobj->fuse = 1; // Return to base.
 		break;
-	}
 	case MT_SPINDUST: // Spindash dust
 		mobj->momx = FixedMul(mobj->momx, (3*FRACUNIT)/4); // originally 50000
 		mobj->momy = FixedMul(mobj->momy, (3*FRACUNIT)/4); // same

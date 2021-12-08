@@ -3926,6 +3926,99 @@ boolean P_IsMobjTouchingPolyobj(mobj_t *mo, polyobj_t *po, sector_t *polysec)
 	}
 }
 
+static sector_t *P_MobjTouching3DFloorSpecial(mobj_t *mo, sector_t *sector, INT32 section, INT32 number)
+{
+	ffloor_t *rover;
+
+	for (rover = sector->ffloors; rover; rover = rover->next)
+	{
+		if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
+			continue;
+
+		if (!(rover->flags & FF_EXISTS))
+			continue;
+
+		if (!P_IsMobjTouching3DFloor(mo, rover, sector))
+			continue;
+
+		// This FOF has the special we're looking for, but are we allowed to touch it?
+		if (sector == mo->subsector->sector
+			|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			return rover->master->frontsector;
+	}
+
+	return NULL;
+}
+
+static sector_t *P_MobjTouchingPolyobjSpecial(mobj_t *mo, INT32 section, INT32 number)
+{
+	polyobj_t *po;
+	sector_t *polysec;
+	boolean touching = false;
+	boolean inside = false;
+
+	for (po = mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
+	{
+		if (po->flags & POF_NOSPECIALS)
+			continue;
+
+		polysec = po->lines[0]->backsector;
+
+		if (GETSECSPECIAL(polysec->special, section) != number)
+			continue;
+
+		touching = (polysec->flags & SF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, mo);
+		inside = P_MobjInsidePolyobj(po, mo);
+
+		if (!(inside || touching))
+			continue;
+
+		if (!P_IsMobjTouchingPolyobj(mo, po, polysec))
+			continue;
+
+		return polysec;
+	}
+
+	return NULL;
+}
+
+sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number)
+{
+	msecnode_t *node;
+	sector_t *result;
+
+	result = P_MobjTouching3DFloorSpecial(mo, mo->subsector->sector, section, number);
+	if (result)
+		return result;
+
+	result = P_MobjTouchingPolyobjSpecial(mo, section, number);
+	if (result)
+		return result;
+
+	if (GETSECSPECIAL(mo->subsector->sector->special, section) == number)
+		return mo->subsector->sector;
+
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		if (node->m_sector == mo->subsector->sector) // Don't duplicate
+			continue;
+
+		result = P_MobjTouching3DFloorSpecial(mo, node->m_sector, section, number);
+		if (result)
+			return result;
+
+		//TODO: Check polyobjects in node->m_sector
+
+		if (!(node->m_sector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			continue;
+
+		if (GETSECSPECIAL(mo->subsector->sector->special, section) == number)
+			return node->m_sector;
+	}
+
+	return NULL;
+}
+
 //
 // P_PlayerTouchingSectorSpecial
 //
@@ -3939,63 +4032,10 @@ boolean P_IsMobjTouchingPolyobj(mobj_t *mo, polyobj_t *po, sector_t *polysec)
 //
 sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 number)
 {
-	msecnode_t *node;
-	ffloor_t *rover;
-
 	if (!player->mo)
 		return NULL;
 
-	// Check default case first
-	if (GETSECSPECIAL(player->mo->subsector->sector->special, section) == number)
-		return player->mo->subsector->sector;
-
-	// Hmm.. maybe there's a FOF that has it...
-	for (rover = player->mo->subsector->sector->ffloors; rover; rover = rover->next)
-	{
-		if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
-			continue;
-
-		if (!(rover->flags & FF_EXISTS))
-			continue;
-
-		if (!P_IsMobjTouching3DFloor(player->mo, rover, player->mo->subsector->sector))
-			continue;
-
-		// This FOF has the special we're looking for!
-		return rover->master->frontsector;
-	}
-
-	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-	{
-		if (GETSECSPECIAL(node->m_sector->special, section) == number)
-		{
-			// This sector has the special we're looking for, but
-			// are we allowed to touch it?
-			if (node->m_sector == player->mo->subsector->sector
-				|| (node->m_sector->flags & SF_TRIGGERSPECIAL_TOUCH))
-				return node->m_sector;
-		}
-
-		// Hmm.. maybe there's a FOF that has it...
-		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
-		{
-			if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
-				continue;
-
-			if (!(rover->flags & FF_EXISTS))
-				continue;
-
-			if (!P_IsMobjTouching3DFloor(player->mo, rover, node->m_sector))
-				continue;
-
-			// This FOF has the special we're looking for, but are we allowed to touch it?
-			if (node->m_sector == player->mo->subsector->sector
-				|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
-				return rover->master->frontsector;
-		}
-	}
-
-	return NULL;
+	return P_MobjTouchingSectorSpecial(player->mo, section, number);
 }
 
 static sector_t *P_Check3DFloorTriggers(player_t *player, sector_t *sector, line_t *sourceline)
@@ -4872,35 +4912,6 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 15: // Unused
 			break;
 	}
-}
-
-/** Checks if an object is standing on or is inside a special 3D floor.
-  * If so, the sector is returned.
-  *
-  * \param mo Object to check.
-  * \return Pointer to the sector with a special type, or NULL if no special 3D
-  *         floors are being contacted.
-  * \sa P_PlayerOnSpecial3DFloor
-  */
-sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
-{
-	ffloor_t *rover;
-
-	for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
-	{
-		if (!rover->master->frontsector->special)
-			continue;
-
-		if (!(rover->flags & FF_EXISTS))
-			continue;
-
-		if (!P_IsMobjTouching3DFloor(mo, rover, mo->subsector->sector))
-			continue;
-
-		return rover->master->frontsector;
-	}
-
-	return NULL;
 }
 
 #define TELEPORTED(mo) (mo->subsector->sector != originalsector)
