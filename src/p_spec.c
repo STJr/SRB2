@@ -1519,14 +1519,14 @@ static boolean P_CheckPlayerMare(line_t *triggerline, INT32 targetmare)
 	return mare == targetmare;
 }
 
-static boolean P_CheckPlayerRings(line_t *triggerline, mobj_t *actor, INT32 targetrings)
+static boolean P_CheckPlayerRings(line_t *triggerline, mobj_t *actor)
 {
 	INT32 rings = 0;
+	INT32 targetrings = triggerline->args[1];
 	size_t i;
 
-	// With the passuse flag, count all player's
-	// rings.
-	if (triggerline->flags & ML_EFFECT4)
+	// Count all players' rings.
+	if (triggerline->args[3])
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
@@ -1547,13 +1547,16 @@ static boolean P_CheckPlayerRings(line_t *triggerline, mobj_t *actor, INT32 targ
 		rings = (maptol & TOL_NIGHTS) ? actor->player->spheres : actor->player->rings;
 	}
 
-	if (triggerline->flags & ML_NOCLIMB)
-		return rings <= targetrings;
-
-	if (triggerline->flags & ML_BLOCKMONSTERS)
-		return rings >= targetrings;
-
-	return rings == targetrings;
+	switch (triggerline->args[2])
+	{
+		case TMC_EQUAL:
+		default:
+			return rings == targetrings;
+		case TMC_GTE:
+			return rings >= targetrings;
+		case TMC_LTE:
+			return rings <= targetrings;
+	}
 }
 
 static boolean P_CheckPushables(line_t *triggerline, sector_t *caller, INT32 targetpushables)
@@ -1735,9 +1738,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 
 	switch (specialtype)
 	{
-		case 303: // continuous
-		case 304: // once
-			if (!P_CheckPlayerRings(triggerline, actor, dist))
+		case 303:
+			if (!P_CheckPlayerRings(triggerline, actor))
 				return false;
 			break;
 		case 305: // continuous
@@ -1844,8 +1846,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		triggerline->callcount = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
 	else
 	// These special types work only once
-	if ((specialtype == 300 && triggerline->args[0] == TMT_ONCE)  // Once
-	 || specialtype == 304  // Ring count - Once
+	if ((specialtype == 300 && triggerline->args[0] == TMT_ONCE)  // Basic
+	 || (specialtype == 303 && triggerline->args[0] == TMT_ONCE)  // Ring count
 	 || specialtype == 307  // Character ability - Once
 	 || specialtype == 308  // Race only - Once
 	 || specialtype == 313  // No More Enemies - Once
@@ -6660,13 +6662,10 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 300: // Trigger linedef executor
+			case 303: // Count rings
 				if (lines[i].args[0] > TMT_EACHTIMEMASK)
 					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
-
-			// Count rings
-			case 303:
-			case 304:
 
 			// Charability linedef executors
 			case 305:

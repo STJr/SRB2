@@ -3724,6 +3724,19 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[0] = TMT_ONCE;
 			lines[i].special = 300;
 			break;
+		case 303: //Ring count - Continuous
+		case 304: //Ring count - Once
+			lines[i].args[0] = (lines[i].special == 304) ? TMT_ONCE : TMT_CONTINUOUS;
+			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[2] = TMC_LTE;
+			else if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[2] = TMC_GTE;
+			else
+				lines[i].args[2] = TMC_EQUAL;
+			lines[i].args[3] = !!(lines[i].flags & ML_EFFECT4);
+			lines[i].special = 303;
+			break;
 		case 313: //No more enemies - once
 			lines[i].args[0] = tag;
 			break;
