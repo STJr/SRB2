@@ -1844,7 +1844,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		triggerline->callcount = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
 	else
 	// These special types work only once
-	if (specialtype == 302  // Once
+	if ((specialtype == 300 && triggerline->args[0] == TMT_ONCE)  // Once
 	 || specialtype == 304  // Ring count - Once
 	 || specialtype == 307  // Character ability - Once
 	 || specialtype == 308  // Race only - Once
@@ -1896,7 +1896,7 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 		if (lines[masterline].special == 313
 		 || lines[masterline].special == 399
 		 // Each-time executors handle themselves, too
-		 || lines[masterline].special == 301 // Each time
+		 || (lines[masterline].special == 300 && lines[masterline].args[0] > TMT_EACHTIMEMASK) // Each time
 		 || lines[masterline].special == 306 // Character ability - Each time
 		 || lines[masterline].special == 310 // CTF Red team - Each time
 		 || lines[masterline].special == 312 // CTF Blue team - Each time
@@ -5639,7 +5639,7 @@ static inline void P_AddNoEnemiesThinker(line_t *sourceline)
   * \sa P_SpawnSpecials, T_EachTimeThinker
   * \author SSNTails <http://www.ssntails.org>
   */
-static void P_AddEachTimeThinker(line_t *sourceline)
+static void P_AddEachTimeThinker(line_t *sourceline, boolean triggerOnExit)
 {
 	eachtime_t *eachtime;
 
@@ -5650,7 +5650,7 @@ static void P_AddEachTimeThinker(line_t *sourceline)
 	eachtime->thinker.function.acp1 = (actionf_p1)T_EachTimeThinker;
 
 	eachtime->sourceline = sourceline;
-	eachtime->triggerOnExit = !!(sourceline->flags & ML_BOUNCY);
+	eachtime->triggerOnExit = triggerOnExit;
 }
 
 /** Adds a camera scanner.
@@ -6659,8 +6659,12 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
-			case 300: // Linedef executor (combines with sector special 974/975) and commands
-			case 302:
+			case 300: // Trigger linedef executor
+				if (lines[i].args[0] > TMT_EACHTIMEMASK)
+					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
+				break;
+
+			// Count rings
 			case 303:
 			case 304:
 
@@ -6683,12 +6687,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			// Each time executors
 			case 306:
-			case 301:
 			case 310:
 			case 312:
 			case 332:
 			case 335:
-				P_AddEachTimeThinker(&lines[i]);
+				P_AddEachTimeThinker(&lines[i], !!(lines[i].flags & ML_BOUNCY));
 				break;
 
 			// No More Enemies Linedef Exec
@@ -6717,7 +6720,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				else
 					lines[i].callcount = sides[lines[i].sidenum[0]].textureoffset>>FRACBITS;
 				if (lines[i].special == 322) // Each time
-					P_AddEachTimeThinker(&lines[i]);
+					P_AddEachTimeThinker(&lines[i], !!(lines[i].flags & ML_BOUNCY));
 				break;
 
 			// NiGHTS trigger executors

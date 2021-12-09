@@ -107,6 +107,15 @@ typedef enum
 
 typedef enum
 {
+	TMT_CONTINUOUS           = 0,
+	TMT_ONCE                 = 1,
+	TMT_EACHTIMEMASK         = TMT_ONCE,
+	TMT_EACHTIMEENTER        = 2,
+	TMT_EACHTIMEENTERANDEXIT = 3,
+} textmaptriggertype_t;
+
+typedef enum
+{
 	TMC_EQUAL = 0,
 	TMC_LTE   = 1,
 	TMC_GTE   = 2,

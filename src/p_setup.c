@@ -3713,6 +3713,17 @@ static void P_ConvertBinaryMap(void)
 			else
 				lines[i].args[1] = 255;
 			break;
+		case 300: //Trigger linedef executor - Continuous
+			lines[i].args[0] = TMT_CONTINUOUS;
+			break;
+		case 301: //Trigger linedef executor - Each time
+			lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
+			lines[i].special = 300;
+			break;
+		case 302: //Trigger linedef executor - Once
+			lines[i].args[0] = TMT_ONCE;
+			lines[i].special = 300;
+			break;
 		case 313: //No more enemies - once
 			lines[i].args[0] = tag;
 			break;
