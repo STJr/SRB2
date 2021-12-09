@@ -1501,9 +1501,10 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 	return true;
 }
 
-static boolean P_CheckPlayerMare(line_t *triggerline, INT32 targetmare)
+static boolean P_CheckPlayerMare(line_t *triggerline)
 {
 	UINT8 mare;
+	INT32 targetmare = P_AproxDistance(triggerline->dx, triggerline->dy) >> FRACBITS;
 
 	if (!(maptol & TOL_NIGHTS))
 		return false;
@@ -1709,7 +1710,6 @@ static boolean P_ActivateLinedefExecutorsInSector(line_t *triggerline, mobj_t *a
   */
 boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller)
 {
-	fixed_t dist = P_AproxDistance(triggerline->dx, triggerline->dy)>>FRACBITS;
 	INT16 specialtype = triggerline->special;
 
 	////////////////////////
@@ -1725,7 +1725,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		}
 		else if (GETSECSPECIAL(caller->special, 2) == 7)
 		{
-			if (!P_CheckPlayerMare(triggerline, dist))
+			if (!P_CheckPlayerMare(triggerline))
 				return false;
 		}
 		// If we were not triggered by a sector type especially for the purpose,
@@ -1746,10 +1746,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!P_CheckPlayerRings(triggerline, actor))
 				return false;
 			break;
-		case 305: // continuous
-		case 306: // each time
-		case 307: // once
-			if (!(actor && actor->player && actor->player->charability == dist/10))
+		case 305:
+			if (!(actor && actor->player && actor->player->charability == triggerline->args[1]))
 				return false;
 			break;
 		case 309:
@@ -1843,7 +1841,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	// These special types work only once
 	if ((specialtype == 300 && triggerline->args[0] == TMT_ONCE)  // Basic
 	 || (specialtype == 303 && triggerline->args[0] == TMT_ONCE)  // Ring count
-	 || specialtype == 307  // Character ability - Once
+	 || (specialtype == 305 && triggerline->args[0] == TMT_ONCE)  // Character ability
 	 || (specialtype == 308 && triggerline->args[0] == TMT_ONCE)  // Gametype
 	 || (specialtype == 309 && triggerline->args[0] == TMT_ONCE)  // CTF team
 	 || specialtype == 313  // No More Enemies - Once
@@ -1897,6 +1895,7 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 		// Each-time executors handle themselves, too
 		if ((lines[masterline].special == 300 // Basic
 			|| lines[masterline].special == 303 // Ring count
+			|| lines[masterline].special == 305 // Character ability
 			|| lines[masterline].special == 308 // Gametype
 			|| lines[masterline].special == 309 // CTF team
 			|| lines[masterline].special == 314 // Number of pushables
@@ -1908,8 +1907,7 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 		if (lines[masterline].special == 321 && lines[masterline].args[0] > TMXT_EACHTIMEMASK) // Trigger after X calls
 			continue;
 
-		if (lines[masterline].special == 306 // Character ability
-		 || lines[masterline].special == 332 // Skin
+		if (lines[masterline].special == 332 // Skin
 		 || lines[masterline].special == 335)// Dye
 			continue;
 
@@ -6687,6 +6685,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 300: // Trigger linedef executor
 			case 303: // Count rings
+			case 305: // Character ability
 			case 314: // Pushable linedef executors (count # of pushables)
 			case 317: // Condition set trigger
 			case 319: // Unlockable trigger
@@ -6694,9 +6693,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
 
-			// Charability linedef executors
-			case 305:
-			case 307:
 				break;
 
 			case 308: // Race-only linedef executor. Triggers once.

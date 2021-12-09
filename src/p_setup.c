@@ -3714,14 +3714,14 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[1] = 255;
 			break;
 		case 300: //Trigger linedef executor - Continuous
-			lines[i].args[0] = TMT_CONTINUOUS;
-			break;
 		case 301: //Trigger linedef executor - Each time
-			lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
-			lines[i].special = 300;
-			break;
 		case 302: //Trigger linedef executor - Once
-			lines[i].args[0] = TMT_ONCE;
+			if (lines[i].special == 302)
+				lines[i].args[0] = TMT_ONCE;
+			else if (lines[i].special == 301)
+				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
+			else
+				lines[i].args[0] = TMT_CONTINUOUS;
 			lines[i].special = 300;
 			break;
 		case 303: //Ring count - Continuous
@@ -3736,6 +3736,18 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[2] = TMC_EQUAL;
 			lines[i].args[3] = !!(lines[i].flags & ML_EFFECT4);
 			lines[i].special = 303;
+			break;
+		case 305: //Character ability - Continuous
+		case 306: //Character ability - Each time
+		case 307: //Character ability - Once
+			if (lines[i].special == 307)
+				lines[i].args[0] = TMT_ONCE;
+			else if (lines[i].special == 306)
+				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
+			else
+				lines[i].args[0] = TMT_CONTINUOUS;
+			lines[i].args[1] = (P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS) / 10;
+			lines[i].special = 305;
 			break;
 		case 308: //Race only - once
 			lines[i].args[0] = TMT_ONCE;
