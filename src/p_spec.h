@@ -124,6 +124,15 @@ typedef enum
 
 typedef enum
 {
+	TMG_HASALL        = 0,
+	TMG_HASANY        = 1,
+	TMG_HASEXACTLY    = 2,
+	TMG_DOESNTHAVEALL = 3,
+	TMG_DOESNTHAVEANY = 4,
+} textmapgametypecheck_t;
+
+typedef enum
+{
 	TMT_RED  = 0,
 	TMT_BLUE = 1,
 } textmapteam_t;

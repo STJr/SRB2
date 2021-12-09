@@ -3737,6 +3737,11 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[3] = !!(lines[i].flags & ML_EFFECT4);
 			lines[i].special = 303;
 			break;
+		case 308: //Race only - once
+			lines[i].args[0] = TMT_ONCE;
+			lines[i].args[1] = GTR_RACE;
+			lines[i].args[2] = TMG_HASANY;
+			break;
 		case 309: //CTF red team - continuous
 		case 310: //CTF red team - each time
 		case 311: //CTF blue team - continuous

@@ -1844,7 +1844,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	if ((specialtype == 300 && triggerline->args[0] == TMT_ONCE)  // Basic
 	 || (specialtype == 303 && triggerline->args[0] == TMT_ONCE)  // Ring count
 	 || specialtype == 307  // Character ability - Once
-	 || specialtype == 308  // Race only - Once
+	 || (specialtype == 308 && triggerline->args[0] == TMT_ONCE)  // Gametype
 	 || (specialtype == 309 && triggerline->args[0] == TMT_ONCE)  // CTF team
 	 || specialtype == 313  // No More Enemies - Once
 	 || (specialtype == 314 && triggerline->args[0] == TMT_ONCE)  // No of pushables
@@ -1891,16 +1891,26 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 			continue;
 
 		// "No More Enemies" and "Level Load" take care of themselves.
-		if (lines[masterline].special == 313
-		 || lines[masterline].special == 399
-		 // Each-time executors handle themselves, too
-		 || (lines[masterline].special == 300 && lines[masterline].args[0] > TMT_EACHTIMEMASK) // Each time
-		 || lines[masterline].special == 306 // Character ability - Each time
-		 || lines[masterline].special == 310 // CTF Red team - Each time
-		 || lines[masterline].special == 312 // CTF Blue team - Each time
-		 || (lines[masterline].special == 321 && lines[masterline].args[0] > TMXT_EACHTIMEMASK) // Trigger after X calls - Each time
-		 || lines[masterline].special == 332 // Skin - Each time
-		 || lines[masterline].special == 335)// Dye - Each time
+		if (lines[masterline].special == 313  || lines[masterline].special == 399)
+			continue;
+
+		// Each-time executors handle themselves, too
+		if ((lines[masterline].special == 300 // Basic
+			|| lines[masterline].special == 303 // Ring count
+			|| lines[masterline].special == 308 // Gametype
+			|| lines[masterline].special == 309 // CTF team
+			|| lines[masterline].special == 314 // Number of pushables
+			|| lines[masterline].special == 317 // Condition set trigger
+			|| lines[masterline].special == 319) // Unlockable trigger
+			&& lines[masterline].args[0] > TMT_EACHTIMEMASK)
+			continue;
+
+		if (lines[masterline].special == 321 && lines[masterline].args[0] > TMXT_EACHTIMEMASK) // Trigger after X calls
+			continue;
+
+		if (lines[masterline].special == 306 // Character ability
+		 || lines[masterline].special == 332 // Skin
+		 || lines[masterline].special == 335)// Dye
 			continue;
 
 		if (!P_RunTriggerLinedef(&lines[masterline], actor, caller))
@@ -5857,6 +5867,24 @@ static void P_MakeFOFBouncy(line_t *paramline, line_t *masterline)
 
 }
 
+static boolean P_CheckGametypeRules(INT32 checktype, UINT32 target)
+{
+	switch (checktype)
+	{
+		case TMG_HASALL:
+		default:
+			return (gametyperules & target) == target;
+		case TMG_HASANY:
+			return !!(gametyperules & target);
+		case TMG_HASEXACTLY:
+			return gametyperules == target;
+		case TMG_DOESNTHAVEALL:
+			return (gametyperules & target) != target;
+		case TMG_DOESNTHAVEANY:
+			return !(gametyperules & target);
+	}
+}
+
 /** After the map has loaded, scans for specials that spawn 3Dfloors and
   * thinkers.
   *
@@ -6657,14 +6685,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
-				// Linedef executor triggers for CTF teams.
-			case 309:
-				if (!(gametyperules & GTR_TEAMFLAGS))
-				{
-					lines[i].special = 0;
-					break;
-				}
-				/* FALLTHRU */
 			case 300: // Trigger linedef executor
 			case 303: // Count rings
 			case 314: // Pushable linedef executors (count # of pushables)
@@ -6680,8 +6700,24 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 308: // Race-only linedef executor. Triggers once.
-				if (!(gametyperules & GTR_RACE))
+				if (!P_CheckGametypeRules(lines[i].args[2], (UINT32)lines[i].args[1]))
+				{
 					lines[i].special = 0;
+					break;
+				}
+				if (lines[i].args[0] > TMT_EACHTIMEMASK)
+					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
+				break;
+
+			// Linedef executor triggers for CTF teams.
+			case 309:
+				if (!(gametyperules & GTR_TEAMFLAGS))
+				{
+					lines[i].special = 0;
+					break;
+				}
+				if (lines[i].args[0] > TMT_EACHTIMEMASK)
+					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
 
 			// Each time executors
