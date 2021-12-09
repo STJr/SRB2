@@ -1501,263 +1501,109 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 	return true;
 }
 
-/** Used by P_LinedefExecute to check a trigger linedef's conditions
-  * The linedef executor specials in the trigger linedef's sector are run if all conditions are met.
-  * Return false cancels P_LinedefExecute, this happens if a condition is not met.
-  *
-  * \param triggerline Trigger linedef to check conditions for; should NEVER be NULL.
-  * \param actor Object initiating the action; should not be NULL.
-  * \param caller Sector in which the action was started. May be NULL.
-  * \sa P_ProcessLineSpecial, P_LinedefExecute
-  */
-boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller)
+static boolean P_CheckPlayerMare(line_t *triggerline, INT32 targetmare)
 {
-	sector_t *ctlsector;
-	fixed_t dist = P_AproxDistance(triggerline->dx, triggerline->dy)>>FRACBITS;
-	size_t i, linecnt, sectori;
-	INT16 specialtype = triggerline->special;
+	UINT8 mare;
 
-	/////////////////////////////////////////////////
-	// Distance-checking/sector trigger conditions //
-	/////////////////////////////////////////////////
+	if (!(maptol & TOL_NIGHTS))
+		return false;
 
-	// Linetypes 303 and 304 require a specific
-	// number, or minimum or maximum, of rings.
-	if (specialtype == 303 || specialtype == 304)
+	mare = P_FindLowestMare();
+
+	if (triggerline->flags & ML_NOCLIMB)
+		return mare <= targetmare;
+
+	if (triggerline->flags & ML_BLOCKMONSTERS)
+		return mare >= targetmare;
+
+	return mare == targetmare;
+}
+
+static boolean P_CheckPlayerRings(line_t *triggerline, mobj_t *actor, INT32 targetrings)
+{
+	INT32 rings = 0;
+	size_t i;
+
+	// With the passuse flag, count all player's
+	// rings.
+	if (triggerline->flags & ML_EFFECT4)
 	{
-		fixed_t rings = 0;
-
-		// With the passuse flag, count all player's
-		// rings.
-		if (triggerline->flags & ML_EFFECT4)
+		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i] || players[i].spectator)
-					continue;
+			if (!playeringame[i] || players[i].spectator)
+				continue;
 
-				if (!players[i].mo || ((maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings) <= 0)
-					continue;
+			if (!players[i].mo || ((maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings) <= 0)
+				continue;
 
-				rings += (maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings;
-			}
-		}
-		else
-		{
-			if (!(actor && actor->player))
-				return false; // no player to count rings from here, sorry
-
-			rings = (maptol & TOL_NIGHTS) ? actor->player->spheres : actor->player->rings;
-		}
-
-		if (triggerline->flags & ML_NOCLIMB)
-		{
-			if (rings > dist)
-				return false;
-		}
-		else if (triggerline->flags & ML_BLOCKMONSTERS)
-		{
-			if (rings < dist)
-				return false;
-		}
-		else
-		{
-			if (rings != dist)
-				return false;
+			rings += (maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings;
 		}
 	}
-	else if (specialtype >= 314 && specialtype <= 315)
+	else
 	{
-		msecnode_t *node;
-		mobj_t *mo;
-		INT32 numpush = 0;
-		INT32 numneeded = dist;
+		if (!(actor && actor->player))
+			return false; // no player to count rings from here, sorry
 
-		if (!caller)
-			return false; // we need a calling sector to find pushables in, silly!
-
-		// Count the pushables in this sector
-		node = caller->touching_thinglist; // things touching this sector
-		while (node)
-		{
-			mo = node->m_thing;
-			if ((mo->flags & MF_PUSHABLE) || ((mo->info->flags & MF_PUSHABLE) && mo->fuse))
-				numpush++;
-			node = node->m_thinglist_next;
-		}
-
-		if (triggerline->flags & ML_NOCLIMB) // Need at least or more
-		{
-			if (numpush < numneeded)
-				return false;
-		}
-		else if (triggerline->flags & ML_EFFECT4) // Need less than
-		{
-			if (numpush >= numneeded)
-				return false;
-		}
-		else // Need exact
-		{
-			if (numpush != numneeded)
-				return false;
-		}
-	}
-	else if (caller)
-	{
-		if (GETSECSPECIAL(caller->special, 2) == 6)
-		{
-			if (!(ALL7EMERALDS(emeralds)))
-				return false;
-		}
-		else if (GETSECSPECIAL(caller->special, 2) == 7)
-		{
-			UINT8 mare;
-
-			if (!(maptol & TOL_NIGHTS))
-				return false;
-
-			mare = P_FindLowestMare();
-
-			if (triggerline->flags & ML_NOCLIMB)
-			{
-				if (!(mare <= dist))
-					return false;
-			}
-			else if (triggerline->flags & ML_BLOCKMONSTERS)
-			{
-				if (!(mare >= dist))
-					return false;
-			}
-			else
-			{
-				if (!(mare == dist))
-					return false;
-			}
-		}
-		// If we were not triggered by a sector type especially for the purpose,
-		// a Linedef Executor linedef trigger is not handling sector triggers properly, return.
-
-		else if ((!GETSECSPECIAL(caller->special, 2) || GETSECSPECIAL(caller->special, 2) > 7) && (specialtype > 322))
-		{
-			CONS_Alert(CONS_WARNING,
-				M_GetText("Linedef executor trigger isn't handling sector triggers properly!\nspecialtype = %d, if you are not a dev, report this warning instance\nalong with the wad that caused it!\n"),
-				specialtype);
-			return false;
-		}
+		rings = (maptol & TOL_NIGHTS) ? actor->player->spheres : actor->player->rings;
 	}
 
-	//////////////////////////////////////
-	// Miscellaneous trigger conditions //
-	//////////////////////////////////////
+	if (triggerline->flags & ML_NOCLIMB)
+		return rings <= targetrings;
 
-	switch (specialtype)
+	if (triggerline->flags & ML_BLOCKMONSTERS)
+		return rings >= targetrings;
+
+	return rings == targetrings;
+}
+
+static boolean P_CheckPushables(line_t *triggerline, sector_t *caller, INT32 targetpushables)
+{
+	msecnode_t *node;
+	mobj_t *mo;
+	INT32 numpushables = 0;
+
+	if (!caller)
+		return false; // we need a calling sector to find pushables in, silly!
+
+	// Count the pushables in this sector
+	for (node = caller->touching_thinglist; node; node = node->m_thinglist_next)
 	{
-		case 305: // continuous
-		case 306: // each time
-		case 307: // once
-			if (!(actor && actor->player && actor->player->charability == dist/10))
-				return false;
-			break;
-		case 309: // continuous
-		case 310: // each time
-			// Only red team members can activate this.
-			if (!(actor && actor->player && actor->player->ctfteam == 1))
-				return false;
-			break;
-		case 311: // continuous
-		case 312: // each time
-			// Only blue team members can activate this.
-			if (!(actor && actor->player && actor->player->ctfteam == 2))
-				return false;
-			break;
-		case 317: // continuous
-		case 318: // once
-			{ // Unlockable triggers required
-				INT32 trigid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
-
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
-					return false;
-				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", triggerline->sidenum[0], trigid);
-					return false;
-				}
-				else if (!(unlocktriggers & (1 << trigid)))
-					return false;
-			}
-			break;
-		case 319: // continuous
-		case 320: // once
-			{ // An unlockable itself must be unlocked!
-				INT32 unlockid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
-
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
-					return false;
-				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (sidedef %hu): bad unlockable ID %d\n", triggerline->sidenum[0], unlockid);
-					return false;
-				}
-				else if (!(unlockables[unlockid-1].unlocked))
-					return false;
-			}
-			break;
-		case 321: // continuous
-		case 322: // each time
-			// decrement calls left before triggering
-			if (triggerline->callcount > 0)
-			{
-				if (--triggerline->callcount > 0)
-					return false;
-			}
-			break;
-		case 323: // nightserize
-		case 325: // denightserize
-		case 327: // nights lap
-		case 329: // nights egg capsule touch
-			if (!P_CheckNightsTriggerLine(triggerline, actor))
-				return false;
-			break;
-		case 331: // continuous
-		case 332: // each time
-		case 333: // once
-			if (!(actor && actor->player && ((stricmp(triggerline->text, skins[actor->player->skin].name) == 0) ^ ((triggerline->flags & ML_NOCLIMB) == ML_NOCLIMB))))
-				return false;
-			break;
-		case 334: // object dye - continuous
-		case 335: // object dye - each time
-		case 336: // object dye - once
-			{
-				INT32 triggercolor = (INT32)sides[triggerline->sidenum[0]].toptexture;
-				UINT16 color = (actor->player ? actor->player->powers[pw_dye] : actor->color);
-				boolean invert = (triggerline->flags & ML_NOCLIMB ? true : false);
-
-				if (invert ^ (triggercolor != color))
-					return false;
-			}
-		default:
-			break;
+		mo = node->m_thing;
+		if ((mo->flags & MF_PUSHABLE) || ((mo->info->flags & MF_PUSHABLE) && mo->fuse))
+			numpushables++;
 	}
 
-	/////////////////////////////////
-	// Processing linedef specials //
-	/////////////////////////////////
+	if (triggerline->flags & ML_NOCLIMB)
+		return numpushables >= targetpushables;
 
-	ctlsector = triggerline->frontsector;
-	sectori = (size_t)(ctlsector - sectors);
-	linecnt = ctlsector->linecount;
+	if (triggerline->flags & ML_EFFECT4)
+		return numpushables <= targetpushables;
+
+	return numpushables == targetpushables;
+}
+
+static void P_ActivateLinedefExecutor(line_t *line, mobj_t *actor, sector_t *caller)
+{
+	if (line->special < 400 || line->special >= 500)
+		return;
+
+	if (line->executordelay)
+		P_AddExecutorDelay(line, actor, caller);
+	else
+		P_ProcessLineSpecial(line, actor, caller);
+}
+
+static boolean P_ActivateLinedefExecutorsInSector(line_t *triggerline, mobj_t *actor, sector_t *caller)
+{
+	sector_t *ctlsector = triggerline->frontsector;
+	size_t sectori = (size_t)(ctlsector - sectors);
+	size_t linecnt = ctlsector->linecount;
+	size_t i;
 
 	if (triggerline->flags & ML_EFFECT5) // disregard order for efficiency
 	{
 		for (i = 0; i < linecnt; i++)
-			if (ctlsector->lines[i]->special >= 400
-				&& ctlsector->lines[i]->special < 500)
-			{
-				if (ctlsector->lines[i]->executordelay)
-					P_AddExecutorDelay(ctlsector->lines[i], actor, caller);
-				else
-					P_ProcessLineSpecial(ctlsector->lines[i], actor, caller);
-			}
+			P_ActivateLinedefExecutor(ctlsector->lines[i], actor, caller);
 	}
 	else // walk around the sector in a defined order
 	{
@@ -1838,16 +1684,160 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (i == masterlineindex)
 				break;
 
-			if (ctlsector->lines[i]->special >= 400
-				&& ctlsector->lines[i]->special < 500)
-			{
-				if (ctlsector->lines[i]->executordelay)
-					P_AddExecutorDelay(ctlsector->lines[i], actor, caller);
-				else
-					P_ProcessLineSpecial(ctlsector->lines[i], actor, caller);
-			}
+			P_ActivateLinedefExecutor(ctlsector->lines[i], actor, caller);
 		}
 	}
+
+	return true;
+}
+
+/** Used by P_LinedefExecute to check a trigger linedef's conditions
+  * The linedef executor specials in the trigger linedef's sector are run if all conditions are met.
+  * Return false cancels P_LinedefExecute, this happens if a condition is not met.
+  *
+  * \param triggerline Trigger linedef to check conditions for; should NEVER be NULL.
+  * \param actor Object initiating the action; should not be NULL.
+  * \param caller Sector in which the action was started. May be NULL.
+  * \sa P_ProcessLineSpecial, P_LinedefExecute
+  */
+boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller)
+{
+	fixed_t dist = P_AproxDistance(triggerline->dx, triggerline->dy)>>FRACBITS;
+	INT16 specialtype = triggerline->special;
+
+	////////////////////////
+	// Trigger conditions //
+	////////////////////////
+
+	if (caller)
+	{
+		if (GETSECSPECIAL(caller->special, 2) == 6)
+		{
+			if (!(ALL7EMERALDS(emeralds)))
+				return false;
+		}
+		else if (GETSECSPECIAL(caller->special, 2) == 7)
+		{
+			if (!P_CheckPlayerMare(triggerline, dist))
+				return false;
+		}
+		// If we were not triggered by a sector type especially for the purpose,
+		// a Linedef Executor linedef trigger is not handling sector triggers properly, return.
+
+		else if ((!GETSECSPECIAL(caller->special, 2) || GETSECSPECIAL(caller->special, 2) > 7) && (specialtype > 322))
+		{
+			CONS_Alert(CONS_WARNING,
+				M_GetText("Linedef executor trigger isn't handling sector triggers properly!\nspecialtype = %d, if you are not a dev, report this warning instance\nalong with the wad that caused it!\n"),
+				specialtype);
+			return false;
+		}
+	}
+
+	switch (specialtype)
+	{
+		case 303: // continuous
+		case 304: // once
+			if (!P_CheckPlayerRings(triggerline, actor, dist))
+				return false;
+			break;
+		case 305: // continuous
+		case 306: // each time
+		case 307: // once
+			if (!(actor && actor->player && actor->player->charability == dist/10))
+				return false;
+			break;
+		case 309: // continuous
+		case 310: // each time
+			// Only red team members can activate this.
+			if (!(actor && actor->player && actor->player->ctfteam == 1))
+				return false;
+			break;
+		case 311: // continuous
+		case 312: // each time
+			// Only blue team members can activate this.
+			if (!(actor && actor->player && actor->player->ctfteam == 2))
+				return false;
+			break;
+		case 314: // continuous
+		case 315: // once
+			if (!P_CheckPushables(triggerline, caller, dist))
+				return false;
+			break;
+		case 317: // continuous
+		case 318: // once
+			{ // Unlockable triggers required
+				INT32 trigid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
+
+				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+					return false;
+				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", triggerline->sidenum[0], trigid);
+					return false;
+				}
+				else if (!(unlocktriggers & (1 << trigid)))
+					return false;
+			}
+			break;
+		case 319: // continuous
+		case 320: // once
+			{ // An unlockable itself must be unlocked!
+				INT32 unlockid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
+
+				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+					return false;
+				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (sidedef %hu): bad unlockable ID %d\n", triggerline->sidenum[0], unlockid);
+					return false;
+				}
+				else if (!(unlockables[unlockid-1].unlocked))
+					return false;
+			}
+			break;
+		case 321: // continuous
+		case 322: // each time
+			// decrement calls left before triggering
+			if (triggerline->callcount > 0)
+			{
+				if (--triggerline->callcount > 0)
+					return false;
+			}
+			break;
+		case 323: // nightserize
+		case 325: // denightserize
+		case 327: // nights lap
+		case 329: // nights egg capsule touch
+			if (!P_CheckNightsTriggerLine(triggerline, actor))
+				return false;
+			break;
+		case 331: // continuous
+		case 332: // each time
+		case 333: // once
+			if (!(actor && actor->player && ((stricmp(triggerline->text, skins[actor->player->skin].name) == 0) ^ ((triggerline->flags & ML_NOCLIMB) == ML_NOCLIMB))))
+				return false;
+			break;
+		case 334: // object dye - continuous
+		case 335: // object dye - each time
+		case 336: // object dye - once
+			{
+				INT32 triggercolor = (INT32)sides[triggerline->sidenum[0]].toptexture;
+				UINT16 color = (actor->player ? actor->player->powers[pw_dye] : actor->color);
+				boolean invert = (triggerline->flags & ML_NOCLIMB ? true : false);
+
+				if (invert ^ (triggercolor != color))
+					return false;
+			}
+		default:
+			break;
+	}
+
+	/////////////////////////////////
+	// Processing linedef specials //
+	/////////////////////////////////
+
+	if (!P_ActivateLinedefExecutorsInSector(triggerline, actor, caller))
+		return false;
 
 	// "Trigger on X calls" linedefs reset if noclimb is set
 	if ((specialtype == 321 || specialtype == 322) && triggerline->flags & ML_NOCLIMB)
