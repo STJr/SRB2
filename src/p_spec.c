@@ -1837,25 +1837,31 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	if (specialtype == 321 && triggerline->args[2])
 		triggerline->callcount = triggerline->args[3];
 	else
-	// These special types work only once
-	if ((specialtype == 300 && triggerline->args[0] == TMT_ONCE)  // Basic
-	 || (specialtype == 303 && triggerline->args[0] == TMT_ONCE)  // Ring count
-	 || (specialtype == 305 && triggerline->args[0] == TMT_ONCE)  // Character ability
-	 || (specialtype == 308 && triggerline->args[0] == TMT_ONCE)  // Gametype
-	 || (specialtype == 309 && triggerline->args[0] == TMT_ONCE)  // CTF team
-	 || specialtype == 313  // No More Enemies - Once
-	 || (specialtype == 314 && triggerline->args[0] == TMT_ONCE)  // No of pushables
-	 || (specialtype == 317 && triggerline->args[0] == TMT_ONCE)  // Unlockable trigger
-	 || (specialtype == 319 && triggerline->args[0] == TMT_ONCE)  // Unlockable
-	 || specialtype == 321 // Trigger on X calls
-	 || (specialtype == 323 && triggerline->args[0]) // Nightserize - Once
-	 || (specialtype == 325 && triggerline->args[0]) // DeNightserize - Once
-	 || (specialtype == 327 && triggerline->args[0]) // Nights lap - Once
-	 || (specialtype == 329 && triggerline->args[0]) // Nights Bonus Time - Once
-	 || (specialtype == 331 && triggerline->args[0] == TMT_ONCE)  // Player skin
-	 || (specialtype == 334 && triggerline->args[0] == TMT_ONCE)  // Object dye
-	 || specialtype == 399) // Level Load
-		triggerline->special = 0; // Clear it out
+	{
+		// These special types work only once
+		if (specialtype == 313  // No more enemies
+			|| specialtype == 321 // Trigger on X calls
+			|| specialtype == 399) // Level Load
+			triggerline->special = 0;
+		else if ((specialtype == 323 // Nightserize
+			|| specialtype == 325 // DeNightserize
+			|| specialtype == 327 // Nights lap
+			|| specialtype == 329) // Nights bonus time
+			&& triggerline->args[0])
+			triggerline->special = 0;
+		else if ((specialtype == 300 // Basic
+			|| specialtype == 303 // Ring count
+			|| specialtype == 305 // Character ability
+			|| specialtype == 308 // Gametype
+			|| specialtype == 309 // CTF team
+			|| specialtype == 314 // No of pushables
+			|| specialtype == 317 // Unlockable trigger
+			|| specialtype == 319 // Unlockable
+			|| specialtype == 331 // Player skin
+			|| specialtype == 334) // Object dye
+			&& triggerline->args[0] == TMT_ONCE)
+			triggerline->special = 0;
+	}
 
 	return true;
 }
