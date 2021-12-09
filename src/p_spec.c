@@ -1590,6 +1590,24 @@ static boolean P_CheckPushables(line_t *triggerline, sector_t *caller)
 	}
 }
 
+static boolean P_CheckEmeralds(INT32 checktype, UINT16 target)
+{
+	switch (checktype)
+	{
+		case TMF_HASALL:
+		default:
+			return (emeralds & target) == target;
+		case TMF_HASANY:
+			return !!(emeralds & target);
+		case TMF_HASEXACTLY:
+			return emeralds == target;
+		case TMF_DOESNTHAVEALL:
+			return (emeralds & target) != target;
+		case TMF_DOESNTHAVEANY:
+			return !(emeralds & target);
+	}
+}
+
 static void P_ActivateLinedefExecutor(line_t *line, mobj_t *actor, sector_t *caller)
 {
 	if (line->special < 400 || line->special >= 500)
@@ -1720,6 +1738,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	{
 		if (GETSECSPECIAL(caller->special, 2) == 6)
 		{
+			CONS_Alert(CONS_WARNING, M_GetText("Deprecated emerald check sector type detected. Please use linedef types 337-339 instead.\n"));
 			if (!(ALL7EMERALDS(emeralds)))
 				return false;
 		}
@@ -1822,6 +1841,11 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 				if (!!(triggerline->args[1]) ^ (triggercolor != color))
 					return false;
 			}
+			break;
+		case 337: // emerald check
+			if (!P_CheckEmeralds(triggerline->args[2], (UINT16)triggerline->args[1]))
+				return false;
+			break;
 		default:
 			break;
 	}
@@ -1858,7 +1882,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			|| specialtype == 317 // Unlockable trigger
 			|| specialtype == 319 // Unlockable
 			|| specialtype == 331 // Player skin
-			|| specialtype == 334) // Object dye
+			|| specialtype == 334 // Object dye
+			|| specialtype == 337) // Emerald check
 			&& triggerline->args[0] == TMT_ONCE)
 			triggerline->special = 0;
 	}
@@ -1907,7 +1932,8 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 			|| lines[masterline].special == 317 // Condition set trigger
 			|| lines[masterline].special == 319 // Unlockable trigger
 			|| lines[masterline].special == 331 // Player skin
-			|| lines[masterline].special == 334) // Object dye
+			|| lines[masterline].special == 334 // Object dye
+			|| lines[masterline].special == 337) // Emerald check
 			&& lines[masterline].args[0] > TMT_EACHTIMEMASK)
 			continue;
 
@@ -5872,16 +5898,16 @@ static boolean P_CheckGametypeRules(INT32 checktype, UINT32 target)
 {
 	switch (checktype)
 	{
-		case TMG_HASALL:
+		case TMF_HASALL:
 		default:
 			return (gametyperules & target) == target;
-		case TMG_HASANY:
+		case TMF_HASANY:
 			return !!(gametyperules & target);
-		case TMG_HASEXACTLY:
+		case TMF_HASEXACTLY:
 			return gametyperules == target;
-		case TMG_DOESNTHAVEALL:
+		case TMF_DOESNTHAVEALL:
 			return (gametyperules & target) != target;
-		case TMG_DOESNTHAVEANY:
+		case TMF_DOESNTHAVEANY:
 			return !(gametyperules & target);
 	}
 }
@@ -6694,6 +6720,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 319: // Unlockable trigger
 			case 331: // Player skin
 			case 334: // Object dye
+			case 337: // Emerald check
 				if (lines[i].args[0] > TMT_EACHTIMEMASK)
 					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;

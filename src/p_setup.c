@@ -3752,7 +3752,7 @@ static void P_ConvertBinaryMap(void)
 		case 308: //Race only - once
 			lines[i].args[0] = TMT_ONCE;
 			lines[i].args[1] = GTR_RACE;
-			lines[i].args[2] = TMG_HASANY;
+			lines[i].args[2] = TMF_HASANY;
 			break;
 		case 309: //CTF red team - continuous
 		case 310: //CTF red team - each time
@@ -3914,6 +3914,19 @@ static void P_ConvertBinaryMap(void)
 				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
 			}
 			lines[i].special = 334;
+			break;
+		case 337: //Emerald check - continuous
+		case 338: //Emerald check - each time
+		case 339: //Emerald check - once
+			if (lines[i].special == 339)
+				lines[i].args[0] = TMT_ONCE;
+			else if (lines[i].special == 338)
+				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
+			else
+				lines[i].args[0] = TMT_CONTINUOUS;
+			lines[i].args[1] = EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7;
+			lines[i].args[2] = TMF_HASALL;
+			lines[i].special = 337;
 			break;
 		case 400: //Set tagged sector's floor height/texture
 		case 401: //Set tagged sector's ceiling height/texture

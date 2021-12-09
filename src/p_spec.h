@@ -124,12 +124,12 @@ typedef enum
 
 typedef enum
 {
-	TMG_HASALL        = 0,
-	TMG_HASANY        = 1,
-	TMG_HASEXACTLY    = 2,
-	TMG_DOESNTHAVEALL = 3,
-	TMG_DOESNTHAVEANY = 4,
-} textmapgametypecheck_t;
+	TMF_HASALL        = 0,
+	TMF_HASANY        = 1,
+	TMF_HASEXACTLY    = 2,
+	TMF_DOESNTHAVEALL = 3,
+	TMF_DOESNTHAVEANY = 4,
+} textmapflagcheck_t;
 
 typedef enum
 {
