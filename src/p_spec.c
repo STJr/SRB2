@@ -1793,8 +1793,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 					return false;
 			}
 			break;
-		case 321: // continuous
-		case 322: // each time
+		case 321:
 			// decrement calls left before triggering
 			if (triggerline->callcount > 0)
 			{
@@ -1837,9 +1836,9 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	if (!P_ActivateLinedefExecutorsInSector(triggerline, actor, caller))
 		return false;
 
-	// "Trigger on X calls" linedefs reset if noclimb is set
-	if ((specialtype == 321 || specialtype == 322) && triggerline->flags & ML_NOCLIMB)
-		triggerline->callcount = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
+	// "Trigger on X calls" linedefs reset if args[2] is set
+	if (specialtype == 321 && triggerline->args[2])
+		triggerline->callcount = triggerline->args[3];
 	else
 	// These special types work only once
 	if ((specialtype == 300 && triggerline->args[0] == TMT_ONCE)  // Basic
@@ -1851,7 +1850,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || (specialtype == 314 && triggerline->args[0] == TMT_ONCE)  // No of pushables
 	 || (specialtype == 317 && triggerline->args[0] == TMT_ONCE)  // Unlockable trigger
 	 || (specialtype == 319 && triggerline->args[0] == TMT_ONCE)  // Unlockable
-	 || specialtype == 321 || specialtype == 322 // Trigger on X calls - Continuous + Each Time
+	 || specialtype == 321 // Trigger on X calls
 	 || (specialtype == 323 && triggerline->args[0]) // Nightserize - Once
 	 || (specialtype == 325 && triggerline->args[0]) // DeNightserize - Once
 	 || (specialtype == 327 && triggerline->args[0]) // Nights lap - Once
@@ -1899,7 +1898,7 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 		 || lines[masterline].special == 306 // Character ability - Each time
 		 || lines[masterline].special == 310 // CTF Red team - Each time
 		 || lines[masterline].special == 312 // CTF Blue team - Each time
-		 || lines[masterline].special == 322 // Trigger on X calls - Each Time
+		 || (lines[masterline].special == 321 && lines[masterline].args[0] > TMXT_EACHTIMEMASK) // Trigger after X calls - Each time
 		 || lines[masterline].special == 332 // Skin - Each time
 		 || lines[masterline].special == 335)// Dye - Each time
 			continue;
@@ -6699,13 +6698,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			// Trigger on X calls
 			case 321:
-			case 322:
-				if (lines[i].flags & ML_NOCLIMB && sides[lines[i].sidenum[0]].rowoffset > 0) // optional "starting" count
-					lines[i].callcount = sides[lines[i].sidenum[0]].rowoffset>>FRACBITS;
-				else
-					lines[i].callcount = sides[lines[i].sidenum[0]].textureoffset>>FRACBITS;
-				if (lines[i].special == 322) // Each time
-					P_AddEachTimeThinker(&lines[i], !!(lines[i].flags & ML_BOUNCY));
+				lines[i].callcount = (lines[i].args[2] && lines[i].args[3] > 0) ? lines[i].args[3] : lines[i].args[1]; // optional "starting" count
+				if (lines[i].args[0] > TMXT_EACHTIMEMASK) // Each time
+					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMXT_EACHTIMEENTERANDEXIT);
 				break;
 
 			// NiGHTS trigger executors

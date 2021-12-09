@@ -116,6 +116,14 @@ typedef enum
 
 typedef enum
 {
+	TMXT_CONTINUOUS           = 0,
+	TMXT_EACHTIMEMASK         = TMXT_CONTINUOUS,
+	TMXT_EACHTIMEENTER        = 1,
+	TMXT_EACHTIMEENTERANDEXIT = 2,
+} textmapxtriggertype_t;
+
+typedef enum
+{
 	TMT_RED  = 0,
 	TMT_BLUE = 1,
 } textmapteam_t;

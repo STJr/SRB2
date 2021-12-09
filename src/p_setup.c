@@ -3775,6 +3775,22 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].special = 319;
 			break;
+		case 321: //Trigger after X calls - Continuous
+		case 322: //Trigger after X calls - Each time
+			if (lines[i].special % 2 == 0)
+				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMXT_EACHTIMEENTERANDEXIT : TMXT_EACHTIMEENTER;
+			else
+				lines[i].args[0] = TMXT_CONTINUOUS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+			{
+				lines[i].args[2] = 1;
+				lines[i].args[3] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			}
+			else
+				lines[i].args[2] = lines[i].args[3] = 0;
+			lines[i].special = 321;
+			break;
 		case 323: //NiGHTSerize - Each time
 		case 324: //NiGHTSerize - Once
 		case 325: //DeNiGHTSerize - Each time
