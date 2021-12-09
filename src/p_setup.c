@@ -3752,6 +3752,18 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[2] = TMC_EQUAL;
 			lines[i].special = 314;
 			break;
+		case 317: //Condition set trigger - Continuous
+		case 318: //Condition set trigger - Once
+			lines[i].args[0] = (lines[i].special == 318) ? TMT_ONCE : TMT_CONTINUOUS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].special = 317;
+			break;
+		case 319: //Unlockable trigger - Continuous
+		case 320: //Unlockable trigger - Once
+			lines[i].args[0] = (lines[i].special == 320) ? TMT_ONCE : TMT_CONTINUOUS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].special = 319;
+			break;
 		case 323: //NiGHTSerize - Each time
 		case 324: //NiGHTSerize - Once
 		case 325: //DeNiGHTSerize - Each time

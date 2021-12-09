@@ -1768,10 +1768,9 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!P_CheckPushables(triggerline, caller))
 				return false;
 			break;
-		case 317: // continuous
-		case 318: // once
+		case 317:
 			{ // Unlockable triggers required
-				INT32 trigid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
+				INT32 trigid = triggerline->args[1];
 
 				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
 					return false;
@@ -1784,10 +1783,9 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 					return false;
 			}
 			break;
-		case 319: // continuous
-		case 320: // once
+		case 319:
 			{ // An unlockable itself must be unlocked!
-				INT32 unlockid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
+				INT32 unlockid = triggerline->args[1];
 
 				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
 					return false;
@@ -1855,8 +1853,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 308  // Race only - Once
 	 || specialtype == 313  // No More Enemies - Once
 	 || (specialtype == 314 && triggerline->args[0] == TMT_ONCE)  // No of pushables
-	 || specialtype == 318  // Unlockable trigger - Once
-	 || specialtype == 320  // Unlockable - Once
+	 || (specialtype == 317 && triggerline->args[0] == TMT_ONCE)  // Unlockable trigger
+	 || (specialtype == 319 && triggerline->args[0] == TMT_ONCE)  // Unlockable
 	 || specialtype == 321 || specialtype == 322 // Trigger on X calls - Continuous + Each Time
 	 || (specialtype == 323 && triggerline->args[0]) // Nightserize - Once
 	 || (specialtype == 325 && triggerline->args[0]) // DeNightserize - Once
@@ -6667,6 +6665,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 300: // Trigger linedef executor
 			case 303: // Count rings
 			case 314: // Pushable linedef executors (count # of pushables)
+			case 317: // Condition set trigger
+			case 319: // Unlockable trigger
 				if (lines[i].args[0] > TMT_EACHTIMEMASK)
 					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
@@ -6700,14 +6700,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 			// No More Enemies Linedef Exec
 			case 313:
 				P_AddNoEnemiesThinker(&lines[i]);
-				break;
-
-			// Unlock trigger executors
-			case 317:
-			case 318:
-				break;
-			case 319:
-			case 320:
 				break;
 
 			// Trigger on X calls
