@@ -1501,7 +1501,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 	return true;
 }
 
-static boolean P_CheckPlayerMare(line_t *triggerline)
+static boolean P_CheckPlayerMareOld(line_t *triggerline)
 {
 	UINT8 mare;
 	INT32 targetmare = P_AproxDistance(triggerline->dx, triggerline->dy) >> FRACBITS;
@@ -1518,6 +1518,28 @@ static boolean P_CheckPlayerMare(line_t *triggerline)
 		return mare >= targetmare;
 
 	return mare == targetmare;
+}
+
+static boolean P_CheckPlayerMare(line_t *triggerline)
+{
+	UINT8 mare;
+	INT32 targetmare = triggerline->args[1];
+
+	if (!(maptol & TOL_NIGHTS))
+		return false;
+
+	mare = P_FindLowestMare();
+
+	switch (triggerline->args[2])
+	{
+		case TMC_EQUAL:
+		default:
+			return mare == targetmare;
+		case TMC_GTE:
+			return mare >= targetmare;
+		case TMC_LTE:
+			return mare <= targetmare;
+	}
 }
 
 static boolean P_CheckPlayerRings(line_t *triggerline, mobj_t *actor)
@@ -1744,7 +1766,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 		}
 		else if (GETSECSPECIAL(caller->special, 2) == 7)
 		{
-			if (!P_CheckPlayerMare(triggerline))
+			CONS_Alert(CONS_WARNING, M_GetText("Deprecated NiGHTS mare sector type detected. Please use linedef types 340-342 instead.\n"));
+			if (!P_CheckPlayerMareOld(triggerline))
 				return false;
 		}
 		// If we were not triggered by a sector type especially for the purpose,
@@ -1844,6 +1867,10 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			break;
 		case 337: // emerald check
 			if (!P_CheckEmeralds(triggerline->args[2], (UINT16)triggerline->args[1]))
+				return false;
+			break;
+		case 340: // NiGHTS mare
+			if (!P_CheckPlayerMare(triggerline))
 				return false;
 			break;
 		default:

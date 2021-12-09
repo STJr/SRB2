@@ -3775,7 +3775,7 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[2] = TMC_GTE;
 			else if (lines[i].flags & ML_EFFECT4)
-				lines[i].args[2] = TMC_GTE;
+				lines[i].args[2] = TMC_LTE;
 			else
 				lines[i].args[2] = TMC_EQUAL;
 			lines[i].special = 314;
@@ -3927,6 +3927,24 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[1] = EMERALD1|EMERALD2|EMERALD3|EMERALD4|EMERALD5|EMERALD6|EMERALD7;
 			lines[i].args[2] = TMF_HASALL;
 			lines[i].special = 337;
+			break;
+		case 340: //NiGHTS mare - continuous
+		case 341: //NiGHTS mare - each time
+		case 342: //NiGHTS mare - once
+			if (lines[i].special == 342)
+				lines[i].args[0] = TMT_ONCE;
+			else if (lines[i].special == 341)
+				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
+			else
+				lines[i].args[0] = TMT_CONTINUOUS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[2] = TMC_LTE;
+			else if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[2] = TMC_GTE;
+			else
+				lines[i].args[2] = TMC_EQUAL;
+			lines[i].special = 340;
 			break;
 		case 400: //Set tagged sector's floor height/texture
 		case 401: //Set tagged sector's ceiling height/texture
