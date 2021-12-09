@@ -1302,9 +1302,6 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 9: // Mace parameters
 			case 14: // Bustable block parameters
 			case 15: // Fan particle spawner parameters
-			case 334: // Trigger linedef executor: Object dye - Continuous
-			case 335: // Trigger linedef executor: Object dye - Each time
-			case 336: // Trigger linedef executor: Object dye - Once
 			{
 				char process[8*3+1];
 				memset(process,0,8*3+1);
@@ -1324,6 +1321,9 @@ static void P_LoadSidedefs(UINT8 *data)
 			case 331: // Trigger linedef executor: Skin - Continuous
 			case 332: // Trigger linedef executor: Skin - Each time
 			case 333: // Trigger linedef executor: Skin - Once
+			case 334: // Trigger linedef executor: Object dye - Continuous
+			case 335: // Trigger linedef executor: Object dye - Each time
+			case 336: // Trigger linedef executor: Object dye - Once
 			case 425: // Calls P_SetMobjState on calling mobj
 			case 434: // Custom Power
 			case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
@@ -3897,6 +3897,23 @@ static void P_ConvertBinaryMap(void)
 				M_Memcpy(lines[i].stringargs[0], lines[i].text, strlen(lines[i].text) + 1);
 			}
 			lines[i].special = 331;
+			break;
+		case 334: // Object dye - continuous
+		case 335: // Object dye - each time
+		case 336: // Object dye - once
+			if (lines[i].special == 336)
+				lines[i].args[0] = TMT_ONCE;
+			else if (lines[i].special == 335)
+				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
+			else
+				lines[i].args[0] = TMT_CONTINUOUS;
+			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
+			if (sides[lines[i].sidenum[0]].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(sides[lines[i].sidenum[0]].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], sides[lines[i].sidenum[0]].text, strlen(sides[lines[i].sidenum[0]].text) + 1);
+			}
+			lines[i].special = 334;
 			break;
 		case 400: //Set tagged sector's floor height/texture
 		case 401: //Set tagged sector's ceiling height/texture
