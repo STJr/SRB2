@@ -4205,6 +4205,28 @@ sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
 	return false;
 }
 
+boolean P_IsPlayerValid(size_t playernum)
+{
+	if (!playeringame[playernum])
+		return false;
+
+	if (!players[playernum].mo)
+		return false;
+
+	if (players[playernum].mo->health <= 0)
+		return false;
+
+	if (players[playernum].spectator)
+		return false;
+
+	return true;
+}
+
+boolean P_CanPlayerTrigger(size_t playernum)
+{
+	return P_IsPlayerValid(playernum) && !players[playernum].bot;
+}
+
 /// \todo check continues for proper splitscreen support?
 static boolean P_DoAllPlayersTrigger(mtag_t sectag)
 {
@@ -4215,15 +4237,7 @@ static boolean P_DoAllPlayersTrigger(mtag_t sectag)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i])
-			continue;
-		if (!players[i].mo)
-			continue;
-		if (players[i].spectator)
-			continue;
-		if (players[i].bot)
-			continue;
-		if (G_CoopGametype() && players[i].lives <= 0)
+		if (!P_CanPlayerTrigger(i))
 			continue;
 		if (!P_FindPlayerTrigger(&players[i], &dummyline))
 			return false;

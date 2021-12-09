@@ -1043,23 +1043,6 @@ void T_MarioBlockChecker(mariocheck_t *block)
 	}
 }
 
-static boolean P_IsPlayerValid(size_t playernum)
-{
-	if (!playeringame[playernum])
-		return false;
-
-	if (!players[playernum].mo)
-		return false;
-
-	if (players[playernum].mo->health <= 0)
-		return false;
-
-	if (players[playernum].spectator)
-		return false;
-
-	return true;
-}
-
 // This is the Thwomp's 'brain'. It looks around for players nearby, and if
 // it finds any, **SMASH**!!! Muahahhaa....
 void T_ThwompSector(thwomp_t *thwomp)
@@ -1278,7 +1261,7 @@ static boolean P_CheckAllTrigger(eachtime_t *eachtime)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (P_IsPlayerValid(i) && !eachtime->playersInArea[i])
+		if (P_CanPlayerTrigger(i) && !eachtime->playersInArea[i])
 			return false;
 	}
 
@@ -1297,7 +1280,7 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		oldPlayersInArea[i] = eachtime->playersInArea[i];
-		caller[i] = P_IsPlayerValid(i) ? P_FindPlayerTrigger(&players[i], eachtime->sourceline) : NULL;
+		caller[i] = P_CanPlayerTrigger(i) ? P_FindPlayerTrigger(&players[i], eachtime->sourceline) : NULL;
 		eachtime->playersInArea[i] = caller[i] != NULL;
 	}
 
@@ -1312,7 +1295,7 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 			continue;
 
 		// If player has just left, check if still valid
-		if (!eachtime->playersInArea[i] && (!eachtime->triggerOnExit || !P_IsPlayerValid(i)))
+		if (!eachtime->playersInArea[i] && (!eachtime->triggerOnExit || !P_CanPlayerTrigger(i)))
 			continue;
 
 		// If sector has an "all players" trigger type, all players need to be in area
