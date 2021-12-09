@@ -4049,8 +4049,6 @@ sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number)
 		if (result)
 			return result;
 
-		//TODO: Check polyobjects in node->m_sector
-
 		if (!(node->m_sector->flags & SF_TRIGGERSPECIAL_TOUCH))
 			continue;
 
@@ -4196,8 +4194,6 @@ sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
 
 		if (caller)
 			return caller;
-
-		//TODO: Check polyobjects in loopsector
 
 		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
 			continue;
@@ -4990,7 +4986,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 	}
 }
 
-static void P_PlayerOnSpecialPolyobj(player_t *player, sector_t *sector)
+static void P_PlayerOnSpecialPolyobj(player_t *player)
 {
 	sector_t *originalsector = player->mo->subsector->sector;
 	polyobj_t *po;
@@ -4998,7 +4994,6 @@ static void P_PlayerOnSpecialPolyobj(player_t *player, sector_t *sector)
 	boolean touching = false;
 	boolean inside = false;
 
-	//TODO: Check polyobjects in sector
 	for (po = player->mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
 	{
 		if (po->flags & POF_NOSPECIALS)
@@ -5018,7 +5013,7 @@ static void P_PlayerOnSpecialPolyobj(player_t *player, sector_t *sector)
 		if (!P_IsMobjTouchingPolyobj(player->mo, po, polysec))
 			continue;
 
-		P_ProcessSpecialSector(player, polysec, sector);
+		P_ProcessSpecialSector(player, polysec, originalsector);
 		if TELEPORTED(player->mo) return;
 	}
 }
@@ -5043,7 +5038,7 @@ void P_PlayerInSpecialSector(player_t *player)
 	if TELEPORTED(player->mo) return;
 
 	// Allow sector specials to be applied to polyobjects!
-	P_PlayerOnSpecialPolyobj(player, originalsector);
+	P_PlayerOnSpecialPolyobj(player);
 	if TELEPORTED(player->mo) return;
 
 	P_ProcessSpecialSector(player, originalsector, NULL);
@@ -5059,10 +5054,6 @@ void P_PlayerInSpecialSector(player_t *player)
 
 		// Check 3D floors...
 		P_PlayerOnSpecial3DFloor(player, loopsector);
-		if TELEPORTED(player->mo) return;
-
-		// Check polyobjects...
-		P_PlayerOnSpecialPolyobj(player, loopsector);
 		if TELEPORTED(player->mo) return;
 
 		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
