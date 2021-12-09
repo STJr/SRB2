@@ -3741,7 +3741,7 @@ static void P_ConvertBinaryMap(void)
 		case 310: //CTF red team - each time
 		case 311: //CTF blue team - continuous
 		case 312: //CTF blue team - each time
-			if (lines[i].special % 2 == 1)
+			if (lines[i].special % 2 == 0)
 				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
 			else
 				lines[i].args[0] = TMT_CONTINUOUS;
