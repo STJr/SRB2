@@ -116,6 +116,12 @@ typedef enum
 
 typedef enum
 {
+	TMT_RED  = 0,
+	TMT_BLUE = 1,
+} textmapteam_t;
+
+typedef enum
+{
 	TMC_EQUAL = 0,
 	TMC_LTE   = 1,
 	TMC_GTE   = 2,

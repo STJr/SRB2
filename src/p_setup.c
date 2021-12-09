@@ -3737,6 +3737,17 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[3] = !!(lines[i].flags & ML_EFFECT4);
 			lines[i].special = 303;
 			break;
+		case 309: //CTF red team - continuous
+		case 310: //CTF red team - each time
+		case 311: //CTF blue team - continuous
+		case 312: //CTF blue team - each time
+			if (lines[i].special % 2 == 1)
+				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
+			else
+				lines[i].args[0] = TMT_CONTINUOUS;
+			lines[i].args[1] = (lines[i].special > 310) ? TMT_BLUE : TMT_RED;
+			lines[i].special = 309;
+			break;
 		case 313: //No more enemies - once
 			lines[i].args[0] = tag;
 			break;

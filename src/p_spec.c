@@ -1752,16 +1752,11 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!(actor && actor->player && actor->player->charability == dist/10))
 				return false;
 			break;
-		case 309: // continuous
-		case 310: // each time
-			// Only red team members can activate this.
-			if (!(actor && actor->player && actor->player->ctfteam == 1))
+		case 309:
+			// Only red/blue team members can activate this.
+			if (!(actor && actor->player))
 				return false;
-			break;
-		case 311: // continuous
-		case 312: // each time
-			// Only blue team members can activate this.
-			if (!(actor && actor->player && actor->player->ctfteam == 2))
+			if (actor->player->ctfteam != ((triggerline->args[1] == TMT_RED) ? 1 : 2))
 				return false;
 			break;
 		case 314:
@@ -1851,6 +1846,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || (specialtype == 303 && triggerline->args[0] == TMT_ONCE)  // Ring count
 	 || specialtype == 307  // Character ability - Once
 	 || specialtype == 308  // Race only - Once
+	 || (specialtype == 309 && triggerline->args[0] == TMT_ONCE)  // CTF team
 	 || specialtype == 313  // No More Enemies - Once
 	 || (specialtype == 314 && triggerline->args[0] == TMT_ONCE)  // No of pushables
 	 || (specialtype == 317 && triggerline->args[0] == TMT_ONCE)  // Unlockable trigger
@@ -6662,6 +6658,14 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
+				// Linedef executor triggers for CTF teams.
+			case 309:
+				if (!(gametyperules & GTR_TEAMFLAGS))
+				{
+					lines[i].special = 0;
+					break;
+				}
+				/* FALLTHRU */
 			case 300: // Trigger linedef executor
 			case 303: // Count rings
 			case 314: // Pushable linedef executors (count # of pushables)
@@ -6681,17 +6685,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 					lines[i].special = 0;
 				break;
 
-			// Linedef executor triggers for CTF teams.
-			case 309:
-			case 311:
-				if (!(gametyperules & GTR_TEAMFLAGS))
-					lines[i].special = 0;
-				break;
-
 			// Each time executors
 			case 306:
-			case 310:
-			case 312:
 			case 332:
 			case 335:
 				P_AddEachTimeThinker(&lines[i], !!(lines[i].flags & ML_BOUNCY));
