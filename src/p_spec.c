@@ -1770,16 +1770,6 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!P_CheckPlayerMareOld(triggerline))
 				return false;
 		}
-		// If we were not triggered by a sector type especially for the purpose,
-		// a Linedef Executor linedef trigger is not handling sector triggers properly, return.
-
-		else if ((!GETSECSPECIAL(caller->special, 2) || GETSECSPECIAL(caller->special, 2) > 7) && (specialtype > 322))
-		{
-			CONS_Alert(CONS_WARNING,
-				M_GetText("Linedef executor trigger isn't handling sector triggers properly!\nspecialtype = %d, if you are not a dev, report this warning instance\nalong with the wad that caused it!\n"),
-				specialtype);
-			return false;
-		}
 	}
 
 	switch (specialtype)
