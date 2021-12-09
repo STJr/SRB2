@@ -3881,6 +3881,23 @@ static void P_ConvertBinaryMap(void)
 					lines[i].args[7] |= TMI_ENTER;
 			}
 			break;
+		case 331: // Player skin - continuous
+		case 332: // Player skin - each time
+		case 333: // Player skin - once
+			if (lines[i].special == 303)
+				lines[i].args[0] = TMT_ONCE;
+			else if (lines[i].special == 302)
+				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
+			else
+				lines[i].args[0] = TMT_CONTINUOUS;
+			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
+			if (lines[i].text)
+			{
+				lines[i].stringargs[0] = Z_Malloc(strlen(lines[i].text) + 1, PU_LEVEL, NULL);
+				M_Memcpy(lines[i].stringargs[0], lines[i].text, strlen(lines[i].text) + 1);
+			}
+			lines[i].special = 331;
+			break;
 		case 400: //Set tagged sector's floor height/texture
 		case 401: //Set tagged sector's ceiling height/texture
 			lines[i].args[0] = tag;

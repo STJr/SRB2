@@ -1806,10 +1806,12 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!P_CheckNightsTriggerLine(triggerline, actor))
 				return false;
 			break;
-		case 331: // continuous
-		case 332: // each time
-		case 333: // once
-			if (!(actor && actor->player && ((stricmp(triggerline->text, skins[actor->player->skin].name) == 0) ^ ((triggerline->flags & ML_NOCLIMB) == ML_NOCLIMB))))
+		case 331:
+			if (!(actor && actor->player))
+				return false;
+			if (!triggerline->stringargs[0])
+				return false;
+			if (!(stricmp(triggerline->stringargs[0], skins[actor->player->skin].name) == 0) ^ !!(triggerline->args[1]))
 				return false;
 			break;
 		case 334: // object dye - continuous
@@ -1853,7 +1855,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || (specialtype == 325 && triggerline->args[0]) // DeNightserize - Once
 	 || (specialtype == 327 && triggerline->args[0]) // Nights lap - Once
 	 || (specialtype == 329 && triggerline->args[0]) // Nights Bonus Time - Once
-	 || specialtype == 333 // Skin - Once
+	 || (specialtype == 333 && triggerline->args[0] == TMT_ONCE)  // Player skin
 	 || specialtype == 336 // Dye - Once
 	 || specialtype == 399) // Level Load
 		triggerline->special = 0; // Clear it out
@@ -1900,15 +1902,15 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 			|| lines[masterline].special == 309 // CTF team
 			|| lines[masterline].special == 314 // Number of pushables
 			|| lines[masterline].special == 317 // Condition set trigger
-			|| lines[masterline].special == 319) // Unlockable trigger
+			|| lines[masterline].special == 319 // Unlockable trigger
+			|| lines[masterline].special == 331) // Player skin
 			&& lines[masterline].args[0] > TMT_EACHTIMEMASK)
 			continue;
 
 		if (lines[masterline].special == 321 && lines[masterline].args[0] > TMXT_EACHTIMEMASK) // Trigger after X calls
 			continue;
 
-		if (lines[masterline].special == 332 // Skin
-		 || lines[masterline].special == 335)// Dye
+		if (lines[masterline].special == 335) // Dye
 			continue;
 
 		if (!P_RunTriggerLinedef(&lines[masterline], actor, caller))
@@ -6689,6 +6691,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 314: // Pushable linedef executors (count # of pushables)
 			case 317: // Condition set trigger
 			case 319: // Unlockable trigger
+			case 331: // Player skin
 				if (lines[i].args[0] > TMT_EACHTIMEMASK)
 					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
@@ -6717,8 +6720,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			// Each time executors
-			case 306:
-			case 332:
 			case 335:
 				P_AddEachTimeThinker(&lines[i], !!(lines[i].flags & ML_BOUNCY));
 				break;
@@ -6740,11 +6741,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 325:
 			case 327:
 			case 329:
-				break;
-
-			// Skin trigger executors
-			case 331:
-			case 333:
 				break;
 
 			// Object dye executors
