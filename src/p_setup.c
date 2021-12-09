@@ -3740,6 +3740,18 @@ static void P_ConvertBinaryMap(void)
 		case 313: //No more enemies - once
 			lines[i].args[0] = tag;
 			break;
+		case 314: //Number of pushables - Continuous
+		case 315: //Number of pushables - Once
+			lines[i].args[0] = (lines[i].special == 315) ? TMT_ONCE : TMT_CONTINUOUS;
+			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[2] = TMC_GTE;
+			else if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[2] = TMC_GTE;
+			else
+				lines[i].args[2] = TMC_EQUAL;
+			lines[i].special = 314;
+			break;
 		case 323: //NiGHTSerize - Each time
 		case 324: //NiGHTSerize - Once
 		case 325: //DeNiGHTSerize - Each time

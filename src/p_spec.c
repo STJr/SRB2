@@ -1559,11 +1559,12 @@ static boolean P_CheckPlayerRings(line_t *triggerline, mobj_t *actor)
 	}
 }
 
-static boolean P_CheckPushables(line_t *triggerline, sector_t *caller, INT32 targetpushables)
+static boolean P_CheckPushables(line_t *triggerline, sector_t *caller)
 {
 	msecnode_t *node;
 	mobj_t *mo;
 	INT32 numpushables = 0;
+	INT32 targetpushables = triggerline->args[1];
 
 	if (!caller)
 		return false; // we need a calling sector to find pushables in, silly!
@@ -1576,13 +1577,16 @@ static boolean P_CheckPushables(line_t *triggerline, sector_t *caller, INT32 tar
 			numpushables++;
 	}
 
-	if (triggerline->flags & ML_NOCLIMB)
-		return numpushables >= targetpushables;
-
-	if (triggerline->flags & ML_EFFECT4)
-		return numpushables <= targetpushables;
-
-	return numpushables == targetpushables;
+	switch (triggerline->args[2])
+	{
+		case TMC_EQUAL:
+		default:
+			return numpushables == targetpushables;
+		case TMC_GTE:
+			return numpushables >= targetpushables;
+		case TMC_LTE:
+			return numpushables <= targetpushables;
+	}
 }
 
 static void P_ActivateLinedefExecutor(line_t *line, mobj_t *actor, sector_t *caller)
@@ -1760,9 +1764,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!(actor && actor->player && actor->player->ctfteam == 2))
 				return false;
 			break;
-		case 314: // continuous
-		case 315: // once
-			if (!P_CheckPushables(triggerline, caller, dist))
+		case 314:
+			if (!P_CheckPushables(triggerline, caller))
 				return false;
 			break;
 		case 317: // continuous
@@ -1851,7 +1854,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	 || specialtype == 307  // Character ability - Once
 	 || specialtype == 308  // Race only - Once
 	 || specialtype == 313  // No More Enemies - Once
-	 || specialtype == 315  // No of pushables - Once
+	 || (specialtype == 314 && triggerline->args[0] == TMT_ONCE)  // No of pushables
 	 || specialtype == 318  // Unlockable trigger - Once
 	 || specialtype == 320  // Unlockable - Once
 	 || specialtype == 321 || specialtype == 322 // Trigger on X calls - Continuous + Each Time
@@ -6663,6 +6666,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 300: // Trigger linedef executor
 			case 303: // Count rings
+			case 314: // Pushable linedef executors (count # of pushables)
 				if (lines[i].args[0] > TMT_EACHTIMEMASK)
 					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
@@ -6696,11 +6700,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 			// No More Enemies Linedef Exec
 			case 313:
 				P_AddNoEnemiesThinker(&lines[i]);
-				break;
-
-			// Pushable linedef executors (count # of pushables)
-			case 314:
-			case 315:
 				break;
 
 			// Unlock trigger executors
