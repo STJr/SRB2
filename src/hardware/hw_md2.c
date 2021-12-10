@@ -1630,7 +1630,11 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		p.mirror = atransform.mirror;
 
 		HWD.pfnSetShader(SHADER_MODEL);	// model shader
-		HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, finalscale, flip, hflip, &Surf);
+		{
+			float xs = finalscale * FIXED_TO_FLOAT(spr->mobj->spritexscale);
+			float ys = finalscale * FIXED_TO_FLOAT(spr->mobj->spriteyscale);
+			HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, xs, ys, flip, hflip, &Surf);
+		}
 	}
 
 	return true;
