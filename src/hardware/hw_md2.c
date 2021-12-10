@@ -1610,23 +1610,26 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 
-		p.rollangle = 0.0f;
-
-		if (interp.spriteroll)
 		{
-			fixed_t camAngleDiff = AngleFixed(viewangle) - FLOAT_TO_FIXED(p.angley); // dumb reconversion back, I know
-			fixed_t anglef = AngleFixed(interp.spriteroll);
+			fixed_t anglef = AngleFixed(R_SpriteRotationAngle(&interp));
 
-			p.rollangle = FIXED_TO_FLOAT(anglef);
-			p.roll = true;
+			p.rollangle = 0.0f;
 
-			// rotation pivot
-			p.centerx = FIXED_TO_FLOAT(spr->mobj->radius / 2);
-			p.centery = FIXED_TO_FLOAT(spr->mobj->height / 2);
+			if (anglef)
+			{
+				fixed_t camAngleDiff = AngleFixed(viewangle) - FLOAT_TO_FIXED(p.angley); // dumb reconversion back, I know
 
-			// rotation axes relative to camera
-			p.rollx = FIXED_TO_FLOAT(FINECOSINE(FixedAngle(camAngleDiff) >> ANGLETOFINESHIFT));
-			p.rollz = FIXED_TO_FLOAT(FINESINE(FixedAngle(camAngleDiff) >> ANGLETOFINESHIFT));
+				p.rollangle = FIXED_TO_FLOAT(anglef);
+				p.roll = true;
+
+				// rotation pivot
+				p.centerx = FIXED_TO_FLOAT(spr->mobj->radius / 2);
+				p.centery = FIXED_TO_FLOAT(spr->mobj->height / 2);
+
+				// rotation axes relative to camera
+				p.rollx = FIXED_TO_FLOAT(FINECOSINE(FixedAngle(camAngleDiff) >> ANGLETOFINESHIFT));
+				p.rollz = FIXED_TO_FLOAT(FINESINE(FixedAngle(camAngleDiff) >> ANGLETOFINESHIFT));
+			}
 		}
 
 		p.anglez = FIXED_TO_FLOAT(AngleFixed(interp.pitch));
