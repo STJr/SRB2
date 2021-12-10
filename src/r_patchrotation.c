@@ -19,11 +19,11 @@
 fixed_t rollcosang[ROTANGLES];
 fixed_t rollsinang[ROTANGLES];
 
-//
-// R_SpriteRotationAngle
-//
-// Gets the rollangle for the input object.
-//
+angle_t R_ModelRotationAngle(interpmobjstate_t *interp)
+{
+	return interp->spriteroll;
+}
+
 angle_t R_SpriteRotationAngle(interpmobjstate_t *interp)
 {
 	angle_t viewingAngle = R_PointToAngle(interp->x, interp->y);
@@ -33,7 +33,7 @@ angle_t R_SpriteRotationAngle(interpmobjstate_t *interp)
 
 	angle_t rollOrPitch = FixedMul(interp->pitch, pitchMul) + FixedMul(interp->roll, rollMul);
 
-	return (rollOrPitch + interp->spriteroll);
+	return (rollOrPitch + R_ModelRotationAngle(interp));
 }
 
 INT32 R_GetRollAngle(angle_t rollangle)
