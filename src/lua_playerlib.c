@@ -864,7 +864,7 @@ static int ticcmd_set(lua_State *L)
 	else if (fastcmp(field,"latency"))
 		return NOSET;
 	else if (fastcmp(field,"flags"))
-		cmd->buttons = (UINT8)luaL_checkinteger(L, 3);
+		cmd->flags = (UINT8)luaL_checkinteger(L, 3);
 	else
 		return NOFIELD;
 
