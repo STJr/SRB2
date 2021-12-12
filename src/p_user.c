@@ -5349,10 +5349,10 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->powers[pw_tailsfly] = tailsflytics + 1; // Set the fly timer
 
 						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_STARTDASH);
-						if (player->bot == BOT_2PAI)
-							player->pflags |= PF_THOKKED;
-						else
+						if ((player->bot != BOT_2PAI) || (cmd->flags & TCF_SETCARRY))
 							player->pflags |= (PF_THOKKED|PF_CANCARRY);
+						else
+							player->pflags |= PF_THOKKED;
 					}
 					break;
 				case CA_GLIDEANDCLIMB:
@@ -11450,6 +11450,12 @@ void P_PlayerThink(player_t *player)
 		{
 			if (B_CheckRespawn(player))
 				player->playerstate = PST_REBORN;
+			else
+			{
+				if (player->bot == BOT_2PAI)
+					B_UpdateBotleader(player);
+				B_HandleFlightIndicator(player);
+			}
 		}
 		if (player->playerstate == PST_REBORN)
 		{

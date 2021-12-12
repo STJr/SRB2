@@ -1546,12 +1546,17 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	cmd->forwardmove = (SINT8)(cmd->forwardmove + forward);
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
-	// Note: Majority of botstuffs are handled in G_Ticker now.
-	if (player->bot == BOT_2PHUMAN) //Player-controlled bot
+	// Note: Majority of botstuffs are handled in G_Ticker and NetUpdate now.
+	if (player->bot == BOT_2PAI
+		&& !player->powers[pw_tailsfly]
+		&& (cmd->forwardmove || cmd->sidemove || cmd->buttons))
 	{
-		// Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Strafe
-		cmd->angleturn = (INT16)((localangle - *myangle) >> 16);
-	}	
+		player->bot = BOT_2PHUMAN; // A player-controlled bot. Returns to AI when it respawns.
+		CV_SetValue(&cv_analog[1], true);
+	}
+
+	if (player->bot == BOT_2PHUMAN)
+		cmd->angleturn = (localangle - *myangle) >> 16;
 	
 	*myangle += (cmd->angleturn<<16);
 
@@ -1705,6 +1710,7 @@ ticcmd_t *G_MoveTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n)
 		dest[i].aiming = (INT16)SHORT(src[i].aiming);
 		dest[i].buttons = (UINT16)SHORT(src[i].buttons);
 		dest[i].latency = src[i].latency;
+		dest[i].flags = src[i].flags;
 	}
 	return dest;
 }
@@ -2312,57 +2318,32 @@ void G_Ticker(boolean run)
 		if (playeringame[i])
 		{
 			INT16 received;
-			// Save last frame's button readings
-			players[i].lastbuttons = players[i].cmd.buttons;
 
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
-			// Bot ticcmd handling
-			// Yes, ordinarily this would be handled in G_BuildTiccmd...
-			// ...however, bot players won't have a corresponding consoleplayer or splitscreen player 2 to send that information.
-			// Therefore, this has to be done after ticcmd sends are received.
-			if (players[i].bot == BOT_2PAI) { // Tailsbot for P2
-				if (!players[i].powers[pw_tailsfly] && (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons))
-				{
-					players[i].bot = BOT_2PHUMAN; // A player-controlled bot. Returns to AI when it respawns.
-					CV_SetValue(&cv_analog[1], true);
-				}
-				else
-				{
-					B_BuildTiccmd(&players[i], &players[i].cmd);
-				}
-				B_HandleFlightIndicator(&players[i]);
-			}
-			else if (players[i].bot == BOT_MPAI) {
-				B_BuildTiccmd(&players[i], &players[i].cmd);
-			}
-			
-			// Do angle adjustments.
+
 			if (players[i].bot == BOT_NONE || players[i].bot == BOT_2PHUMAN)
 			{
+				// Use the leveltime sent in the player's ticcmd to determine control lag
+				players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
+
+				// Do angle adjustments.
 				received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
+
 				players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
 				players[i].oldrelangleturn = players[i].cmd.angleturn;
 				if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
 					P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
 				else
 					players[i].cmd.angleturn = players[i].angleturn;
-    			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
-    				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
-    			else
-    				players[i].cmd.angleturn = players[i].angleturn;
-    
-    			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
-				// Use the leveltime sent in the player's ticcmd to determine control lag
-    			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
 			}
 			else // Less work is required if we're building a bot ticcmd.
 			{
-    			// Since bot TicCmd is pre-determined for both the client and server, the latency and packet checks are simplified.
-    			received = 1;
-    			players[i].cmd.latency = 0;
-				players[i].angleturn = players[i].cmd.angleturn;
-				players[i].oldrelangleturn = players[i].cmd.angleturn;
+				// Since bot TicCmd is pre-determined for both the client and server, the latency and packet checks are simplified.
+				players[i].cmd.latency = 0;
+				P_SetPlayerAngle(&players[i], players[i].cmd.angleturn << 16);
 			}
+
+			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
 			players[i].cmd.angleturn |= received;
 		}
 	}

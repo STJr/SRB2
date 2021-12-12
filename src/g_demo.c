@@ -110,6 +110,7 @@ demoghost *ghosts = NULL;
 #define ZT_BUTTONS 0x08
 #define ZT_AIMING  0x10
 #define ZT_LATENCY 0x20
+#define ZT_FLAGS   0x40
 #define DEMOMARKER 0x80 // demoend
 #define METALDEATH 0x44
 #define METALSNICE 0x69
@@ -184,6 +185,8 @@ void G_ReadDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 		oldcmd.aiming = READINT16(demo_p);
 	if (ziptic & ZT_LATENCY)
 		oldcmd.latency = READUINT8(demo_p);
+	if (ziptic & ZT_FLAGS)
+		oldcmd.flags = READUINT8(demo_p);
 
 	G_CopyTiccmd(cmd, &oldcmd, 1);
 	players[playernum].angleturn = cmd->angleturn;
@@ -246,6 +249,13 @@ void G_WriteDemoTiccmd(ticcmd_t *cmd, INT32 playernum)
 		WRITEUINT8(demo_p,cmd->latency);
 		oldcmd.latency = cmd->latency;
 		ziptic |= ZT_LATENCY;
+	}
+
+	if (cmd->flags != oldcmd.flags)
+	{
+		WRITEUINT8(demo_p, cmd->flags);
+		oldcmd.flags = cmd->flags;
+		ziptic |= ZT_FLAGS;
 	}
 
 	*ziptic_p = ziptic;
@@ -690,6 +700,8 @@ void G_GhostTicker(void)
 		if (ziptic & ZT_AIMING)
 			g->p += 2;
 		if (ziptic & ZT_LATENCY)
+			g->p++;
+		if (ziptic & ZT_FLAGS)
 			g->p++;
 
 		// Grab ghost data.

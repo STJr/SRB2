@@ -51,14 +51,15 @@ UINT8 *save_p;
 // than an UINT16
 typedef enum
 {
-//	RFLAGPOINT = 0x01,
-//	BFLAGPOINT = 0x02,
-	CAPSULE    = 0x04,
-	AWAYVIEW   = 0x08,
-	FIRSTAXIS  = 0x10,
-	SECONDAXIS = 0x20,
-	FOLLOW     = 0x40,
-	DRONE      = 0x80,
+//	RFLAGPOINT = 0x001,
+//	BFLAGPOINT = 0x002,
+	CAPSULE    = 0x004,
+	AWAYVIEW   = 0x008,
+	FIRSTAXIS  = 0x010,
+	SECONDAXIS = 0x020,
+	FOLLOW     = 0x040,
+	DRONE      = 0x080,
+	BOTLEADER  = 0x100,
 } player_saveflags;
 
 static inline void P_ArchivePlayer(void)
@@ -197,10 +198,11 @@ static void P_NetArchivePlayers(void)
 		// Bots //
 		//////////
 		WRITEUINT8(save_p, players[i].bot);
-		WRITEUINT8(save_p, players[i].botmem.lastForward);
-		WRITEUINT8(save_p, players[i].botmem.lastBlocked);
-		WRITEUINT8(save_p, players[i].botmem.catchup_tics);
-		WRITEUINT8(save_p, players[i].botmem.thinkstate);
+		// We no longer need to sync these since ticcmds are generated only by the server
+		//WRITEUINT8(save_p, players[i].botmem.lastForward);
+		//WRITEUINT8(save_p, players[i].botmem.lastBlocked);
+		//WRITEUINT8(save_p, players[i].botmem.catchup_tics);
+		//WRITEUINT8(save_p, players[i].botmem.thinkstate);
 		WRITEUINT8(save_p, players[i].removing);
 		
 		WRITEUINT8(save_p, players[i].blocked);
@@ -293,6 +295,9 @@ static void P_NetArchivePlayers(void)
 		if (players[i].drone)
 			flags |= DRONE;
 
+		if (players[i].botleader)
+			flags |= BOTLEADER;
+
 		WRITEINT16(save_p, players[i].lastsidehit);
 		WRITEINT16(save_p, players[i].lastlinehit);
 
@@ -324,6 +329,9 @@ static void P_NetArchivePlayers(void)
 
 		if (flags & DRONE)
 			WRITEUINT32(save_p, players[i].drone->mobjnum);
+
+		if (flags & BOTLEADER)
+			WRITEUINT8(save_p, (UINT8)(players[i].botleader - players));
 
 		WRITEFIXED(save_p, players[i].camerascale);
 		WRITEFIXED(save_p, players[i].shieldscale);
@@ -425,10 +433,10 @@ static void P_NetUnArchivePlayers(void)
 		//////////
 		players[i].bot = READUINT8(save_p);
 		
-		players[i].botmem.lastForward = READUINT8(save_p);
-		players[i].botmem.lastBlocked = READUINT8(save_p);
-		players[i].botmem.catchup_tics = READUINT8(save_p);
-		players[i].botmem.thinkstate = READUINT8(save_p);
+		//players[i].botmem.lastForward = READUINT8(save_p);
+		//players[i].botmem.lastBlocked = READUINT8(save_p);
+		//players[i].botmem.catchup_tics = READUINT8(save_p);
+		//players[i].botmem.thinkstate = READUINT8(save_p);
 		players[i].removing = READUINT8(save_p);
 
 		players[i].blocked = READUINT8(save_p);
@@ -534,6 +542,9 @@ static void P_NetUnArchivePlayers(void)
 
 		if (flags & DRONE)
 			players[i].drone = (mobj_t *)(size_t)READUINT32(save_p);
+
+		if (flags & BOTLEADER)
+			players[i].botleader = &players[READUINT8(save_p)];
 
 		players[i].camerascale = READFIXED(save_p);
 		players[i].shieldscale = READFIXED(save_p);

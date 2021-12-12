@@ -32,6 +32,7 @@
 #include "b_bot.h" // B_UpdateBotleader
 #include "d_clisrv.h" // CL_RemovePlayer
 #include "i_system.h" // I_GetPreciseTime, I_PreciseToMicros
+#include "i_net.h" // doomcom
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -3463,6 +3464,8 @@ static int lib_gAddPlayer(lua_State *L)
 
 	playeringame[newplayernum] = true;
 	G_AddPlayer(newplayernum);
+	if (newplayernum+1 > doomcom->numslots)
+		doomcom->numslots = (INT16)(newplayernum+1);
 	newplayer = &players[newplayernum];
 
 	newplayer->jointime = 0;

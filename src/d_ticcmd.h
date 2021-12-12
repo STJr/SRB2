@@ -45,6 +45,14 @@ typedef enum
 	BT_CUSTOM3    = 1<<15,
 } buttoncode_t;
 
+// ticcmd flags
+typedef enum
+{
+	TCF_FLIGHTINDICATOR = 1 << 0, // show flight indicator
+	TCF_SETCARRY        = 1 << 1, // set PF_CARRY upon activating flight
+	// free up to and including 1 << 7
+} ticcmdflag_t;
+
 // The data sampled per tick (single player)
 // and transmitted to other peers (multiplayer).
 // Mainly movements/button commands per game tick,
@@ -66,6 +74,7 @@ typedef struct
 	INT16 aiming; // vertical aiming, see G_BuildTicCmd
 	UINT16 buttons;
 	UINT8 latency; // Netgames: how many tics ago was this ticcmd generated from this player's end?
+	UINT8 flags; // miscellaneous info
 } ATTRPACK ticcmd_t;
 
 #if defined(_MSC_VER)
