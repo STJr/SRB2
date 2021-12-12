@@ -5485,7 +5485,7 @@ void NetUpdate(void)
 	}
 
 	nowtime /= NEWTICRATERATIO;
-	if (nowtime > resptime)
+	if (nowtime != resptime)
 	{
 		resptime = nowtime;
 #ifdef HAVE_THREADS
