@@ -1701,6 +1701,19 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		lines[i].sidenum[1] = atol(val);
 	else if (fastcmp(param, "alpha"))
 		lines[i].alpha = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "blendmode") || fastcmp(param, "renderstyle"))
+	{
+		if (fastcmp(val, "translucent"))
+			lines[i].blendmode = AST_COPY;
+		else if (fastcmp(val, "add"))
+			lines[i].blendmode = AST_ADD;
+		else if (fastcmp(val, "subtract"))
+			lines[i].blendmode = AST_SUBTRACT;
+		else if (fastcmp(val, "reversesubtract"))
+			lines[i].blendmode = AST_REVERSESUBTRACT;
+		else if (fastcmp(val, "modulate"))
+			lines[i].blendmode = AST_MODULATE;
+	}
 	else if (fastcmp(param, "executordelay"))
 		lines[i].executordelay = atol(val);
 
