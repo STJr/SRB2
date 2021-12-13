@@ -4877,6 +4877,32 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].type = 761;
 			break;
 		}
+		case 1202: //Rock spawner
+		{
+			mtag_t tag = (mtag_t)mapthings[i].angle;
+			INT32 j = Tag_FindLineSpecial(12, tag);
+			INT32 typeoffset;
+
+			if (j == -1)
+			{
+				CONS_Debug(DBG_GAMELOGIC, "Rock spawner: Unable to find parameter line 12 (tag %d)!\n", tag);
+				break;
+			}
+			mapthings[i].angle = AngleFixed(R_PointToAngle2(lines[j].v2->x, lines[j].v2->y, lines[j].v1->x, lines[j].v1->y)) >> FRACBITS;
+			mapthings[i].args[0] = P_AproxDistance(lines[j].dx, lines[j].dy) >> FRACBITS;
+			mapthings[i].args[1] = sides[lines[j].sidenum[0]].textureoffset >> FRACBITS;
+			mapthings[i].args[2] = !!(lines[j].flags & ML_NOCLIMB);
+			typeoffset = sides[lines[j].sidenum[0]].rowoffset >> FRACBITS;
+			if (typeoffset < 0 || typeoffset > 15)
+			{
+				CONS_Debug(DBG_GAMELOGIC, "Rock spawner: Invalid Y offset %d (tag %d)!\n", typeoffset, tag);
+				break;
+			}
+
+			mapthings[i].stringargs[0] = Z_Malloc(17, PU_LEVEL, NULL);
+			sprintf(mapthings[i].stringargs[0], "MT_ROCKCRUMBLE%d", typeoffset + 1);
+			break;
+		}
 		default:
 			break;
 		}

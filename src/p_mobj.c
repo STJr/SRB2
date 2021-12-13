@@ -12722,10 +12722,6 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		if (!P_SetupParticleGen(mthing, mobj))
 			return false;
 		break;
-	case MT_ROCKSPAWNER:
-		mobj->threshold = mthing->angle;
-		mobj->movecount = mthing->extrainfo;
-		break;
 	case MT_POPUPTURRET:
 		if (mthing->angle)
 			mobj->threshold = mthing->angle;
