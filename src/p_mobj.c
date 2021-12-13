@@ -395,13 +395,13 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			if (skin)
 			{
 				UINT16 stateframe = st->frame;
-				
+
 				// Add/Remove FF_SPR2SUPER based on certain conditions
 				if (player->charflags & SF_NOSUPERSPRITES)
 					stateframe = stateframe & ~FF_SPR2SUPER;
 				else if (player->powers[pw_super])
 					stateframe = stateframe | FF_SPR2SUPER;
-				
+
 				if (stateframe & FF_SPR2SUPER)
 				{
 					if (mobj->eflags & MFE_FORCENOSUPER)
@@ -409,11 +409,11 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				}
 				else if (mobj->eflags & MFE_FORCESUPER)
 					stateframe = stateframe | FF_SPR2SUPER;
-					
+
 				// Get the sprite2 and frame number
 				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), mobj->player);
 				numframes = skin->sprites[spr2].numframes;
-				
+
 				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
 					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
@@ -541,7 +541,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			if (skin)
 			{
 				UINT16 stateframe = st->frame;
-				
+
 				// Add/Remove FF_SPR2SUPER based on certain conditions
 				if (stateframe & FF_SPR2SUPER)
 				{
@@ -550,11 +550,11 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 				}
 				else if (mobj->eflags & MFE_FORCESUPER)
 					stateframe = stateframe | FF_SPR2SUPER;
-					
+
 				// Get the sprite2 and frame number
 				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), NULL);
 				numframes = skin->sprites[spr2].numframes;
-				
+
 				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
 					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
@@ -1872,7 +1872,7 @@ void P_XYMovement(mobj_t *mo)
 		// blocked move
 		moved = false;
 
-		if (player) 
+		if (player)
 			B_MoveBlocked(player);
 
 		if (LUA_HookMobjMoveBlocked(mo, tmhitthing, blockingline))
@@ -3323,7 +3323,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 			{ // Water removes electric and non-water fire shields...
 			    if (electric)
 				    P_FlashPal(p, PAL_WHITE, 1);
-				
+
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
 			}
 		}
@@ -7059,6 +7059,8 @@ static void P_PyreFlyBurn(mobj_t *mobj, fixed_t hoffs, INT16 vrange, mobjtype_t 
 	fixed_t zoffs = P_RandomRange(-vrange, vrange)*FRACUNIT;
 	mobj_t *particle = P_SpawnMobjFromMobj(mobj, xoffs, yoffs, zoffs, mobjtype);
 	particle->momz = momz;
+	particle->flags2 |= MF2_LINKDRAW;
+	P_SetTarget(&particle->tracer, mobj);
 }
 
 static void P_MobjScaleThink(mobj_t *mobj)
@@ -10422,7 +10424,7 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 		case MT_RING:
 		case MT_FLINGRING:
-		
+
 		case MT_COIN:
 		case MT_FLINGCOIN:
 

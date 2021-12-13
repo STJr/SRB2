@@ -5198,11 +5198,11 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // speed
 		24*FRACUNIT,    // radius
 		34*FRACUNIT,    // height
-		0,              // display offset
+		1,              // display offset
 		DMG_FIRE,       // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_FIRE|MF_PAIN, // flags
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_NOCLIPHEIGHT|MF_FIRE|MF_PAIN, // flags
 		S_NULL          // raisestate
 	},
 
