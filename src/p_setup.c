@@ -4877,6 +4877,67 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].type = 761;
 			break;
 		}
+		case 1104: //Mace spawnpoint
+		case 1105: //Chain with maces spawnpoint
+		case 1106: //Chained spring spawnpoint
+		case 1107: //Chain spawnpoint
+		case 1109: //Firebar spawnpoint
+		case 1110: //Custom mace spawnpoint
+		{
+			mtag_t tag = (mtag_t)mapthings[i].angle;
+			INT32 j = Tag_FindLineSpecial(9, tag);
+
+			if (j == -1)
+			{
+				CONS_Debug(DBG_GAMELOGIC, "Chain/mace setup: Unable to find parameter line 9 (tag %d)!\n", tag);
+				break;
+			}
+
+			mapthings[i].angle = lines[j].frontsector->ceilingheight >> FRACBITS;
+			mapthings[i].pitch = lines[j].frontsector->floorheight >> FRACBITS;
+			mapthings[i].args[0] = lines[j].dx >> FRACBITS;
+			mapthings[i].args[1] = mapthings[i].extrainfo;
+			mapthings[i].args[3] = lines[j].dy >> FRACBITS;
+			mapthings[i].args[4] = sides[lines[j].sidenum[0]].textureoffset >> FRACBITS;
+			mapthings[i].args[7] = -sides[lines[j].sidenum[0]].rowoffset >> FRACBITS;
+			if (lines[j].backsector)
+			{
+				mapthings[i].roll = lines[j].backsector->ceilingheight >> FRACBITS;
+				mapthings[i].args[2] = sides[lines[j].sidenum[1]].rowoffset >> FRACBITS;
+				mapthings[i].args[5] = lines[j].backsector->floorheight >> FRACBITS;
+				mapthings[i].args[6] = sides[lines[j].sidenum[1]].textureoffset >> FRACBITS;
+			}
+			if (mapthings[i].options & MTF_AMBUSH)
+				mapthings[i].args[8] |= TMM_DOUBLESIZE;
+			if (mapthings[i].options & MTF_OBJECTSPECIAL)
+				mapthings[i].args[8] |= TMM_SILENT;
+			if (lines[j].flags & ML_NOCLIMB)
+				mapthings[i].args[8] |= TMM_ALLOWYAWCONTROL;
+			if (lines[j].flags & ML_EFFECT1)
+				mapthings[i].args[8] |= TMM_SWING;
+			if (lines[j].flags & ML_EFFECT2)
+				mapthings[i].args[8] |= TMM_MACELINKS;
+			if (lines[j].flags & ML_EFFECT3)
+				mapthings[i].args[8] |= TMM_CENTERLINK;
+			if (lines[j].flags & ML_EFFECT4)
+				mapthings[i].args[8] |= TMM_CLIP;
+			if (lines[j].flags & ML_EFFECT5)
+				mapthings[i].args[8] |= TMM_ALWAYSTHINK;
+			if (mapthings[i].type == 1110)
+			{
+				mobjtype_t mobjtype = (mobjtype_t)sides[lines[j].sidenum[0]].toptexture;
+				char buffer[12];
+				sprintf(buffer, "%d", mobjtype);
+				mapthings[i].stringargs[0] = Z_Malloc(strlen(buffer) + 1, PU_LEVEL, NULL);
+				M_Memcpy(mapthings[i].stringargs[0], buffer, strlen(buffer) + 1);
+
+				mobjtype = (lines[j].backsector) ? (mobjtype_t)sides[lines[j].sidenum[1]].toptexture : MT_NULL;
+				sprintf(buffer, "%d", mobjtype);
+				mapthings[i].stringargs[1] = Z_Malloc(strlen(buffer) + 1, PU_LEVEL, NULL);
+				M_Memcpy(mapthings[i].stringargs[1], buffer, strlen(buffer) + 1);
+			}
+			break;
+		}
 		case 1202: //Rock spawner
 		{
 			mtag_t tag = (mtag_t)mapthings[i].angle;

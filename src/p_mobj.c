@@ -11,6 +11,7 @@
 /// \file  p_mobj.c
 /// \brief Moving object handling. Spawn functions
 
+#include "dehacked.h"
 #include "doomdef.h"
 #include "g_game.h"
 #include "g_input.h"
@@ -12039,59 +12040,20 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 	mobjflag_t mflagsapply;
 	mobjflag2_t mflags2apply;
 	mobjeflag_t meflagsapply;
-	INT32 line;
 	const size_t mthingi = (size_t)(mthing - mapthings);
 
-	// Find the corresponding linedef special, using angle as tag
-	line = Tag_FindLineSpecial(9, mthing->angle);
-
-	if (line == -1)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Mace chain (mapthing #%s) needs to be tagged to a #9 parameter line (trying to find tag %d).\n", sizeu1(mthingi), mthing->angle);
-		return false;
-	}
-	/*
-	mapthing -
-	MTF_AMBUSH :
-		MT_SPRINGBALLPOINT - upgrade from yellow to red spring
-		anything else - bigger mace/chain theory
-	MTF_OBJECTSPECIAL - force silent
-	MTF_GRAVFLIP - flips objects, doesn't affect chain arrangements
-	Parameter value : number of "spokes"
-
-	linedef -
-	ML_NOCLIMB :
-		MT_CHAINPOINT/MT_CHAINMACEPOINT with ML_EFFECT1 applied - Direction not controllable
-		anything else - no functionality
-	ML_EFFECT1 : Swings instead of spins
-	ML_EFFECT2 : Linktype is replaced with macetype for all spokes not ending in chains (inverted for MT_FIREBARPOINT)
-	ML_EFFECT3 : Spawn a bonus linktype at the hinge point
-	ML_EFFECT4 : Don't clip inside the ground
-	ML_EFFECT5 : Don't stop thinking when too far away
-	*/
-	mlength = abs(lines[line].dx >> FRACBITS);
-	mspeed = abs(lines[line].dy >> (FRACBITS - 4));
-	mphase = (sides[lines[line].sidenum[0]].textureoffset >> FRACBITS) % 360;
-	if ((mminlength = -sides[lines[line].sidenum[0]].rowoffset >> FRACBITS) < 0)
-		mminlength = 0;
-	else if (mminlength > mlength - 1)
-		mminlength = mlength - 1;
-	mpitch = (lines[line].frontsector->floorheight >> FRACBITS) % 360;
-	myaw = (lines[line].frontsector->ceilingheight >> FRACBITS) % 360;
-
-	mnumspokes = mthing->extrainfo + 1;
+	mlength = abs(mthing->args[0]);
+	mnumspokes = mthing->args[1] + 1;
 	mspokeangle = FixedAngle((360*FRACUNIT)/mnumspokes) >> ANGLETOFINESHIFT;
-
-	if (lines[line].backsector)
-	{
-		mpinch = (lines[line].backsector->floorheight >> FRACBITS) % 360;
-		mroll = (lines[line].backsector->ceilingheight >> FRACBITS) % 360;
-		mnumnospokes = (sides[lines[line].sidenum[1]].textureoffset >> FRACBITS);
-		if ((mwidth = sides[lines[line].sidenum[1]].rowoffset >> FRACBITS) < 0)
-			mwidth = 0;
-	}
-	else
-		mpinch = mroll = mnumnospokes = mwidth = 0;
+	mwidth = max(0, mthing->args[2]);
+	mspeed = abs(mthing->args[3] << 4);
+	mphase = mthing->args[4] % 360;
+	mpinch = mthing->args[5] % 360;
+	mnumnospokes = mthing->args[6];
+	mminlength = max(0, min(mlength - 1, mthing->args[7]));
+	mpitch = mthing->pitch % 360;
+	myaw = mthing->angle % 360;
+	mroll = mthing->roll % 360;
 
 	CONS_Debug(DBG_GAMELOGIC, "Mace/Chain (mapthing #%s):\n"
 		"Length is %d (minus %d)\n"
@@ -12122,26 +12084,23 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 	switch (mobj->type)
 	{
 	case MT_SPRINGBALLPOINT:
-		macetype = ((mthing->options & MTF_AMBUSH)
+		macetype = ((mthing->args[8] & TMM_DOUBLESIZE)
 			? MT_REDSPRINGBALL
 			: MT_YELLOWSPRINGBALL);
 		chainlink = MT_SMALLMACECHAIN;
 		break;
 	case MT_FIREBARPOINT:
-		macetype = ((mthing->options & MTF_AMBUSH)
+		macetype = ((mthing->args[8] & TMM_DOUBLESIZE)
 			? MT_BIGFIREBAR
 			: MT_SMALLFIREBAR);
 		chainlink = MT_NULL;
 		break;
 	case MT_CUSTOMMACEPOINT:
-		macetype = (mobjtype_t)sides[lines[line].sidenum[0]].toptexture;
-		if (lines[line].backsector)
-			chainlink = (mobjtype_t)sides[lines[line].sidenum[1]].toptexture;
-		else
-			chainlink = MT_NULL;
+		macetype = mthing->stringargs[0] ? get_number(mthing->stringargs[0]) : MT_NULL;
+		chainlink = mthing->stringargs[1] ? get_number(mthing->stringargs[1]) : MT_NULL;
 		break;
 	case MT_CHAINPOINT:
-		if (mthing->options & MTF_AMBUSH)
+		if (mthing->args[8] & TMM_DOUBLESIZE)
 		{
 			macetype = MT_BIGGRABCHAIN;
 			chainlink = MT_BIGMACECHAIN;
@@ -12154,7 +12113,7 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 		mchainlike = true;
 		break;
 	default:
-		if (mthing->options & MTF_AMBUSH)
+		if (mthing->args[8] & TMM_DOUBLESIZE)
 		{
 			macetype = MT_BIGMACE;
 			chainlink = MT_BIGMACECHAIN;
@@ -12181,11 +12140,11 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 	firsttype = macetype;
 
 	// Adjustable direction
-	if (lines[line].flags & ML_NOCLIMB)
+	if (mthing->args[8] & TMM_ALLOWYAWCONTROL)
 		mobj->flags |= MF_SLIDEME;
 
 	// Swinging
-	if (lines[line].flags & ML_EFFECT1)
+	if (mthing->args[8] & TMM_SWING)
 	{
 		mobj->flags2 |= MF2_STRONGBOX;
 		mmin = ((mnumnospokes > 1) ? 1 : 0);
@@ -12194,11 +12153,11 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 		mmin = mnumspokes;
 
 	// If over distance away, don't move UNLESS this flag is applied
-	if (lines[line].flags & ML_EFFECT5)
+	if (mthing->args[8] & TMM_ALWAYSTHINK)
 		mobj->flags2 |= MF2_BOSSNOTRAP;
 
 	// Make the links the same type as the end - repeated below
-	if ((mobj->type != MT_CHAINPOINT) && (((lines[line].flags & ML_EFFECT2) == ML_EFFECT2) != (mobj->type == MT_FIREBARPOINT))) // exclusive or
+	if ((mobj->type != MT_CHAINPOINT) && (((mthing->args[8] & TMM_MACELINKS) == TMM_MACELINKS) != (mobj->type == MT_FIREBARPOINT))) // exclusive or
 	{
 		linktype = macetype;
 		radiusfactor = 2; // Double the radius.
@@ -12210,7 +12169,7 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 		mchainlike = (firsttype == chainlink);
 	widthfactor = (mchainlike ? 1 : 2);
 
-	mflagsapply = ((lines[line].flags & ML_EFFECT4) ? 0 : (MF_NOCLIP | MF_NOCLIPHEIGHT));
+	mflagsapply = (mthing->args[8] & TMM_CLIP) ? 0 : (MF_NOCLIP|MF_NOCLIPHEIGHT);
 	mflags2apply = ((mthing->options & MTF_OBJECTFLIP) ? MF2_OBJECTFLIP : 0);
 	meflagsapply = ((mthing->options & MTF_OBJECTFLIP) ? MFE_VERTICALFLIP : 0);
 
@@ -12236,14 +12195,14 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 	hprev = spawnee;\
 }
 
-	mdosound = (mspeed && !(mthing->options & MTF_OBJECTSPECIAL));
-	mdocenter = (macetype && (lines[line].flags & ML_EFFECT3));
+	mdosound = (mspeed && !(mthing->args[8] & TMM_SILENT));
+	mdocenter = (macetype && (mthing->args[8] & TMM_CENTERLINK));
 
 	// The actual spawning of spokes
 	while (mnumspokes-- > 0)
 	{
 		// Offsets
-		if (lines[line].flags & ML_EFFECT1) // Swinging
+		if (mthing->args[8] & TMM_SWING) // Swinging
 			mroll = (mroll - mspokeangle) & FINEMASK;
 		else // Spinning
 			mphase = (mphase - mspokeangle) & FINEMASK;
@@ -12254,7 +12213,7 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 				continue;
 
 			linktype = chainlink;
-			firsttype = ((mthing->options & MTF_AMBUSH) ? MT_BIGGRABCHAIN : MT_SMALLGRABCHAIN);
+			firsttype = ((mthing->args[8] & TMM_DOUBLESIZE) ? MT_BIGGRABCHAIN : MT_SMALLGRABCHAIN);
 			mmaxlength = 1 + (mlength - 1) * radiusfactor;
 			radiusfactor = widthfactor = 1;
 		}
@@ -12263,7 +12222,7 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 			if (mobj->type == MT_CHAINMACEPOINT)
 			{
 				// Make the links the same type as the end - repeated above
-				if (lines[line].flags & ML_EFFECT2)
+				if (mthing->args[8] & TMM_MACELINKS)
 				{
 					linktype = macetype;
 					radiusfactor = 2;

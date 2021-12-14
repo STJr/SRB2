@@ -24,6 +24,18 @@ extern mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
 // Amount (dx, dy) vector linedef is shifted right to get scroll amount
 #define SCROLL_SHIFT 5
 
+typedef enum
+{
+	TMM_DOUBLESIZE      = 1,
+	TMM_SILENT          = 1<<1,
+	TMM_ALLOWYAWCONTROL = 1<<2,
+	TMM_SWING           = 1<<3,
+	TMM_MACELINKS       = 1<<4,
+	TMM_CENTERLINK      = 1<<5,
+	TMM_CLIP            = 1<<6,
+	TMM_ALWAYSTHINK     = 1<<7,
+} textmapmaceflags_t;
+
 //FOF flags
 typedef enum
 {
