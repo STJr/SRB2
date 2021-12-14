@@ -405,7 +405,7 @@ typedef enum
 
 #define HORIZONSPECIAL 41
 
-#define NUMLINEARGS 8
+#define NUMLINEARGS 10
 #define NUMLINESTRINGARGS 2
 
 typedef struct line_s
