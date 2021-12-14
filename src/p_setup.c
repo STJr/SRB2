@@ -3138,6 +3138,14 @@ static void P_AddBinaryMapTags(void)
 	}
 }
 
+static void P_WriteConstant(INT32 constant, char **target)
+{
+	char buffer[12];
+	sprintf(buffer, "%d", constant);
+	*target = Z_Malloc(strlen(buffer) + 1, PU_LEVEL, NULL);
+	M_Memcpy(*target, buffer, strlen(buffer) + 1);
+}
+
 //For maps in binary format, converts setup of specials to UDMF format.
 static void P_ConvertBinaryMap(void)
 {
@@ -3612,12 +3620,7 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[2] = 16;
 			}
 			if (lines[i].flags & ML_EFFECT4)
-			{
-				char buffer[6];
-				sprintf(buffer, "%d", sides[lines[i].sidenum[0]].textureoffset >> FRACBITS);
-				lines[i].stringargs[0] = Z_Malloc(strlen(buffer) + 1, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[0], buffer, strlen(buffer) + 1);
-			}
+				P_WriteConstant(sides[lines[i].sidenum[0]].textureoffset >> FRACBITS, &lines[i].stringargs[0]);
 			break;
 		case 252: //FOF: Shatter block
 		case 253: //FOF: Shatter block, translucent
@@ -4237,16 +4240,8 @@ static void P_ConvertBinaryMap(void)
 				lines[i].stringargs[1] = Z_Malloc(strlen(sides[lines[i].sidenum[1]].text) + 1, PU_LEVEL, NULL);
 				M_Memcpy(lines[i].stringargs[1], sides[lines[i].sidenum[1]].text, strlen(sides[lines[i].sidenum[1]].text) + 1);
 			}
-			else if (lines[i].flags & ML_NOCLIMB) // 'Infinite'
-			{
-				lines[i].stringargs[1] = Z_Malloc(3, PU_LEVEL, NULL);
-				M_Memcpy(lines[i].stringargs[1], "-1", 3);
-			}
 			else
-			{
-				lines[i].stringargs[1] = Z_Malloc(7, PU_LEVEL, NULL);
-				snprintf(lines[i].stringargs[1], 7, "%d", sides[lines[i].sidenum[0]].textureoffset >> FRACBITS);
-			}
+				P_WriteConstant((lines[i].flags & ML_NOCLIMB) ? -1 : (sides[lines[i].sidenum[0]].textureoffset >> FRACBITS), &lines[i].stringargs[1]);
 			break;
 		case 435: //Change plane scroller direction
 			lines[i].args[0] = tag;
@@ -4856,7 +4851,7 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (mapthings[i].type)
 		{
-		case 762:
+		case 762: //PolyObject spawn point (crush)
 		{
 			INT32 check = -1;
 			INT32 firstline = -1;
@@ -4925,16 +4920,8 @@ static void P_ConvertBinaryMap(void)
 				mapthings[i].args[8] |= TMM_ALWAYSTHINK;
 			if (mapthings[i].type == 1110)
 			{
-				mobjtype_t mobjtype = (mobjtype_t)sides[lines[j].sidenum[0]].toptexture;
-				char buffer[12];
-				sprintf(buffer, "%d", mobjtype);
-				mapthings[i].stringargs[0] = Z_Malloc(strlen(buffer) + 1, PU_LEVEL, NULL);
-				M_Memcpy(mapthings[i].stringargs[0], buffer, strlen(buffer) + 1);
-
-				mobjtype = (lines[j].backsector) ? (mobjtype_t)sides[lines[j].sidenum[1]].toptexture : MT_NULL;
-				sprintf(buffer, "%d", mobjtype);
-				mapthings[i].stringargs[1] = Z_Malloc(strlen(buffer) + 1, PU_LEVEL, NULL);
-				M_Memcpy(mapthings[i].stringargs[1], buffer, strlen(buffer) + 1);
+				P_WriteConstant(sides[lines[j].sidenum[0]].toptexture, &mapthings[i].stringargs[0]);
+				P_WriteConstant(lines[j].backsector ? sides[lines[j].sidenum[1]].toptexture : MT_NULL, &mapthings[i].stringargs[1]);
 			}
 			break;
 		}
@@ -4942,7 +4929,6 @@ static void P_ConvertBinaryMap(void)
 		{
 			mtag_t tag = (mtag_t)mapthings[i].angle;
 			INT32 j = Tag_FindLineSpecial(12, tag);
-			INT32 typeoffset;
 
 			if (j == -1)
 			{
@@ -4953,15 +4939,7 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].args[0] = P_AproxDistance(lines[j].dx, lines[j].dy) >> FRACBITS;
 			mapthings[i].args[1] = sides[lines[j].sidenum[0]].textureoffset >> FRACBITS;
 			mapthings[i].args[2] = !!(lines[j].flags & ML_NOCLIMB);
-			typeoffset = sides[lines[j].sidenum[0]].rowoffset >> FRACBITS;
-			if (typeoffset < 0 || typeoffset > 15)
-			{
-				CONS_Debug(DBG_GAMELOGIC, "Rock spawner: Invalid Y offset %d (tag %d)!\n", typeoffset, tag);
-				break;
-			}
-
-			mapthings[i].stringargs[0] = Z_Malloc(17, PU_LEVEL, NULL);
-			sprintf(mapthings[i].stringargs[0], "MT_ROCKCRUMBLE%d", typeoffset + 1);
+			P_WriteConstant(MT_ROCKCRUMBLE1 + (sides[lines[j].sidenum[0]].rowoffset >> FRACBITS), &mapthings[i].stringargs[0]);
 			break;
 		}
 		default:
