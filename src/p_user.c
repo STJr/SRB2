@@ -5574,6 +5574,22 @@ INT32 P_GetPlayerControlDirection(player_t *player)
 		return 1; // Controls pointing in player's general direction
 }
 
+static boolean P_ShouldResetConveyorMomentum(player_t *player)
+{
+	switch (player->onconveyor)
+	{
+		case 1:
+			return false;
+		case 2: // Wind/Current
+			return !(player->mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER));
+		case 3:
+		default:
+			return true;
+		case 4: // Actual conveyor belt
+			return !P_IsObjectOnGround(player->mo);
+	}
+}
+
 // Control scheme for 2d levels.
 static void P_2dMovement(player_t *player)
 {
@@ -5608,16 +5624,7 @@ static void P_2dMovement(player_t *player)
 		}
 	}
 
-	// cmomx/cmomy stands for the conveyor belt speed.
-	if (player->onconveyor == 2) // Wind/Current
-	{
-		//if (player->mo->z > player->mo->watertop || player->mo->z + player->mo->height < player->mo->waterbottom)
-		if (!(player->mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
-			player->cmomx = player->cmomy = 0;
-	}
-	else if (player->onconveyor == 4 && !P_IsObjectOnGround(player->mo)) // Actual conveyor belt
-		player->cmomx = player->cmomy = 0;
-	else if (player->onconveyor != 2 && player->onconveyor != 4 && player->onconveyor != 1)
+	if (P_ShouldResetConveyorMomentum(player))
 		player->cmomx = player->cmomy = 0;
 
 	player->rmomx = player->mo->momx - player->cmomx;
@@ -5800,16 +5807,7 @@ static void P_3dMovement(player_t *player)
 	}
 	movepushsideangle = movepushangle-ANGLE_90;
 
-	// cmomx/cmomy stands for the conveyor belt speed.
-	if (player->onconveyor == 2) // Wind/Current
-	{
-		//if (player->mo->z > player->mo->watertop || player->mo->z + player->mo->height < player->mo->waterbottom)
-		if (!(player->mo->eflags & (MFE_UNDERWATER|MFE_TOUCHWATER)))
-			player->cmomx = player->cmomy = 0;
-	}
-	else if (player->onconveyor == 4 && !P_IsObjectOnGround(player->mo)) // Actual conveyor belt
-		player->cmomx = player->cmomy = 0;
-	else if (player->onconveyor != 2 && player->onconveyor != 4 && player->onconveyor != 1)
+	if (P_ShouldResetConveyorMomentum(player))
 		player->cmomx = player->cmomy = 0;
 
 	player->rmomx = player->mo->momx - player->cmomx;
