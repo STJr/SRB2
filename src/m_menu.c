@@ -4438,22 +4438,21 @@ static void M_DrawGenericMenu(void)
 	}
 }
 
-const char *PlaystyleNames[4] = {"Strafe", "Standard", "Simple", "Old Analog??"};
+const char *PlaystyleNames[4] = {"\x86Strafe\x80", "Manual", "Automatic", "Old Analog??"};
 const char *PlaystyleDesc[4] = {
-	// Legacy
-	"The play style used for\n"
-	"old-school SRB2.\n"
+	// Strafe (or Legacy)
+	"A play style resembling\n"
+	"old-school SRB2 gameplay.\n"
 	"\n"
 	"This play style is identical\n"
-	"to Standard, except that the\n"
+	"to Manual, except that the\n"
 	"player always looks in the\n"
 	"direction of the camera."
 	,
 
-	// Standard
-	"The default play style,\n"
-	"designed for full control\n"
-	"with a keyboard and mouse.\n"
+	// Manual (formerly Standard)
+	"A play style made for full control,\n"
+	"using a keyboard and mouse.\n"
 	"\n"
 	"The camera rotates only when\n"
 	"you tell it to. The player\n"
@@ -4465,8 +4464,8 @@ const char *PlaystyleDesc[4] = {
 	"open up the highest level of play!"
 	,
 
-	// Simple
-	"A play style designed for\n"
+	// Automatic (formerly Simple)
+	"The default play style, designed for\n"
 	"gamepads and hassle-free play.\n"
 	"\n"
 	"The camera rotates automatically\n"
@@ -4475,7 +4474,8 @@ const char *PlaystyleDesc[4] = {
 	"they're moving.\n"
 	"\n"
 	"Hold \x82" "Center View\x80 to lock the\n"
-	"camera behind the player!\n"
+	"camera behind the player, or target\n"
+	"enemies, bosses and monitors!\n"
 	,
 
 	// Old Analog
@@ -4486,7 +4486,7 @@ const char *PlaystyleDesc[4] = {
 	"your config file and brought it back.\n"
 	"\n"
 	"That's absolutely valid, but I implore\n"
-	"you to try the new Simple play style\n"
+	"you to try the new Automatic play style\n"
 	"instead!"
 };
 
@@ -9062,7 +9062,7 @@ static void M_LoadGame(INT32 choice)
 
 	if (tutorialmap && cv_tutorialprompt.value)
 	{
-		M_StartMessage("Do you want to \x82play a brief Tutorial\x80?\n\nWe highly recommend this because \nthe controls are slightly different \nfrom other games.\n\nPress 'Y' or 'Enter' to go\nPress 'N' or any key to skip\n",
+		M_StartMessage("Do you want to \x82play a brief Tutorial\x80?\n\nWe highly recommend this because \nthe controls are slightly different \nfrom other games.\n\nPress the \x82\Y\x80 key or the \x83\A button\x80 to go\nPress the \x82\N\x80 key or the \x83\Y button\x80 to skip\n",
 			M_FirstTimeResponse, MM_YESNO);
 		return;
 	}
@@ -13008,6 +13008,7 @@ static void M_DrawPlaystyleMenu(void)
 
 		if (i == playstyle_currentchoice)
 		{
+			V_DrawFill(20, 40, 280, 150, 159);
 			V_DrawScaledPatch((i+1)*BASEVIDWIDTH/4 - 8, 10, 0, W_CachePatchName("M_CURSOR", PU_CACHE));
 			V_DrawString(30, 50, V_ALLOWLOWERCASE, PlaystyleDesc[i]);
 		}
