@@ -3146,6 +3146,28 @@ static void P_WriteConstant(INT32 constant, char **target)
 	M_Memcpy(*target, buffer, strlen(buffer) + 1);
 }
 
+static line_t *P_FindPointPushLine(taglist_t *list)
+{
+	INT32 i, l;
+
+	for (i = 0; i < list->count; i++)
+	{
+		mtag_t tag = list->tags[i];
+		TAG_ITER_LINES(tag, l)
+		{
+			if (Tag_FGet(&lines[l].tags) != tag)
+				continue;
+
+			if (lines[l].special != 547)
+				continue;
+
+			return &lines[l];
+		}
+	}
+
+	return NULL;
+}
+
 //For maps in binary format, converts setup of specials to UDMF format.
 static void P_ConvertBinaryMap(void)
 {
@@ -4851,6 +4873,41 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (mapthings[i].type)
 		{
+		case 754: //Push point
+		case 755: //Pull point
+		{
+			subsector_t *ss = R_PointInSubsector(mapthings[i].x << FRACBITS, mapthings[i].y << FRACBITS);
+			sector_t *s;
+			line_t *line;
+
+			if (!ss)
+			{
+				CONS_Debug(DBG_GAMELOGIC, "Push/pull point: Placed outside of map bounds!\n");
+				break;
+			}
+
+			s = ss->sector;
+			line = P_FindPointPushLine(&s->tags);
+
+			if (!line)
+			{
+				CONS_Debug(DBG_GAMELOGIC, "Push/pull point: Unable to find line of type 547 tagged to sector %s!\n", sizeu1((size_t)(s - sectors)));
+				break;
+			}
+
+			mapthings[i].args[0] = mapthings[i].angle;
+			mapthings[i].args[1] = P_AproxDistance(line->dx >> FRACBITS, line->dy >> FRACBITS);
+			if (mapthings[i].type == 755)
+				mapthings[i].args[1] *= -1;
+			if (mapthings[i].options & MTF_OBJECTSPECIAL)
+				mapthings[i].args[2] |= TMPP_NOZFADE;
+			if (mapthings[i].options & MTF_AMBUSH)
+				mapthings[i].args[2] |= TMPP_PUSHZ;
+			if (!(line->flags & ML_NOCLIMB))
+				mapthings[i].args[2] |= TMPP_NONEXCLUSIVE;
+			mapthings[i].type = 754;
+			break;
+		}
 		case 762: //PolyObject spawn point (crush)
 		{
 			INT32 check = -1;

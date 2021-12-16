@@ -66,8 +66,7 @@ void Command_Numthinkers_f(void)
 			"\t2: P_NullPrecipThinker\n"
 			"\t3: T_Friction\n"
 			"\t4: T_Pusher\n"
-			"\t5: T_PointPusher\n"
-			"\t6: P_RemoveThinkerDelayed\n");
+			"\t5: P_RemoveThinkerDelayed\n");
 		return;
 	}
 
@@ -104,11 +103,6 @@ void Command_Numthinkers_f(void)
 			CONS_Printf(M_GetText("Number of %s: "), "T_Pusher");
 			break;
 		case 5:
-			start = end = THINK_MAIN;
-			action = (actionf_p1)T_PointPusher;
-			CONS_Printf(M_GetText("Number of %s: "), "T_PointPusher");
-			break;
-		case 6:
 			action = (actionf_p1)P_RemoveThinkerDelayed;
 			CONS_Printf(M_GetText("Number of %s: "), "P_RemoveThinkerDelayed");
 			break;

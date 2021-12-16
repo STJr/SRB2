@@ -1537,7 +1537,6 @@ typedef enum
 	tc_scroll,
 	tc_friction,
 	tc_pusher,
-	tc_pointpusher,
 	tc_laserflash,
 	tc_lightfade,
 	tc_executor,
@@ -2191,19 +2190,6 @@ static inline void SavePusherThinker(const thinker_t *th, const UINT8 type)
 	WRITEINT32(save_p, ht->slider);
 }
 
-static inline void SavePointPusherThinker(const thinker_t* th, const UINT8 type)
-{
-	const pointpusher_t *ht = (const void *)th;
-	WRITEUINT8(save_p, type);
-	WRITEINT32(save_p, ht->magnitude);
-	WRITEINT32(save_p, ht->radius);
-	WRITEINT32(save_p, ht->x);
-	WRITEINT32(save_p, ht->y);
-	WRITEINT32(save_p, ht->z);
-	WRITEINT32(save_p, ht->affectee);
-	WRITEINT32(save_p, ht->exclusive);
-}
-
 static void SaveLaserThinker(const thinker_t *th, const UINT8 type)
 {
 	const laserthink_t *ht = (const void *)th;
@@ -2521,11 +2507,6 @@ static void P_NetArchiveThinkers(void)
 			else if (th->function.acp1 == (actionf_p1)T_Pusher)
 			{
 				SavePusherThinker(th, tc_pusher);
-				continue;
-			}
-			else if (th->function.acp1 == (actionf_p1)T_PointPusher)
-			{
-				SavePointPusherThinker(th, tc_pointpusher);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_BounceCheese)
@@ -3344,21 +3325,6 @@ static thinker_t* LoadPusherThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-static thinker_t* LoadPointPusherThinker(actionf_p1 thinker)
-{
-	pointpusher_t *ht = Z_Malloc(sizeof(*ht), PU_LEVSPEC, NULL);
-	ht->thinker.function.acp1 = thinker;
-	ht->magnitude = READINT32(save_p);
-	ht->radius = READINT32(save_p);
-	ht->x = READINT32(save_p);
-	ht->y = READINT32(save_p);
-	ht->z = READINT32(save_p);
-	ht->affectee = READINT32(save_p);
-	ht->exclusive = READINT32(save_p);
-	ht->source = P_GetPushThing(ht->affectee);
-	return &ht->thinker;
-}
-
 static inline thinker_t* LoadLaserThinker(actionf_p1 thinker)
 {
 	laserthink_t *ht = Z_Malloc(sizeof (*ht), PU_LEVSPEC, NULL);
@@ -3819,10 +3785,6 @@ static void P_NetUnArchiveThinkers(void)
 
 				case tc_pusher:
 					th = LoadPusherThinker((actionf_p1)T_Pusher);
-					break;
-
-				case tc_pointpusher:
-					th = LoadPointPusherThinker((actionf_p1)T_PointPusher);
 					break;
 
 				default:

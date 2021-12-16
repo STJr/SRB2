@@ -5046,7 +5046,6 @@ typedef enum mobj_type
 	MT_CRUMBLEOBJ, // Sound generator for crumbling platform
 	MT_TUBEWAYPOINT,
 	MT_PUSH,
-	MT_PULL,
 	MT_GHOST,
 	MT_OVERLAY,
 	MT_ANGLEMAN,

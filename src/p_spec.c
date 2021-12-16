@@ -98,7 +98,6 @@ typedef struct
 static void P_SpawnScrollers(void);
 static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
-static void Add_PointPusher(INT32 magnitude, mobj_t *source, INT32 affectee, INT32 exclusive);
 static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t z_mag, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
 static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize);
@@ -5331,7 +5330,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	thinker_t *th;
 	friction_t *f;
 	pusher_t *p;
-	pointpusher_t *pp;
 	size_t sec2num;
 	size_t i;
 
@@ -5441,13 +5439,6 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 
 			if (p->affectee == (INT32)sec2num)
 				Add_Pusher(p->type, p->x_mag, p->y_mag, p->z_mag, (INT32)(sec-sectors), p->affectee, p->exclusive, p->slider);
-		}
-		else if (th->function.acp1 == (actionf_p1)T_PointPusher)
-		{
-			pp = (pointpusher_t *)th;
-
-			if (pp->affectee == (INT32)sec2num)
-				Add_PointPusher(pp->magnitude, pp->source, pp->affectee, pp->exclusive);
 		}
 
 		if(secthinkers) i++;
@@ -6024,8 +6015,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 			secthinkers[((friction_t *)th)->affectee].count++;
 		else if (th->function.acp1 == (actionf_p1)T_Pusher)
 			secthinkers[((pusher_t *)th)->affectee].count++;
-		else if (th->function.acp1 == (actionf_p1)T_PointPusher)
-			secthinkers[((pointpusher_t *)th)->affectee].count++;
 	}
 
 	// Allocate each list, and then zero the count so we can use it to track
@@ -6046,8 +6035,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 			secnum = ((friction_t *)th)->affectee;
 		else if (th->function.acp1 == (actionf_p1)T_Pusher)
 			secnum = ((pusher_t *)th)->affectee;
-		else if (th->function.acp1 == (actionf_p1)T_PointPusher)
-			secnum = ((pointpusher_t *)th)->affectee;
 
 		if (secnum != (size_t)-1)
 			secthinkers[secnum].thinkers[secthinkers[secnum].count++] = th;
@@ -8328,26 +8315,6 @@ static void P_SpawnFriction(void)
 
 #define PUSH_FACTOR 7
 
-static void Add_PointPusher(INT32 magnitude, mobj_t *source, INT32 affectee, INT32 exclusive)
-{
-	pointpusher_t *p = Z_Calloc(sizeof * p, PU_LEVSPEC, NULL);
-
-	p->thinker.function.acp1 = (actionf_p1)T_PointPusher;
-	p->source = source;
-	p->magnitude = magnitude;
-	p->exclusive = exclusive;
-
-	if (source) // point source exist?
-	{
-		p->radius = AngleFixed(source->angle);
-		p->x = p->source->x;
-		p->y = p->source->y;
-		p->z = p->source->z;
-	}
-	p->affectee = affectee;
-	P_AddThinker(THINK_MAIN, &p->thinker);
-}
-
 /** Adds a pusher.
   *
   * \param type     Type of push/pull effect.
@@ -8380,187 +8347,6 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t 
 
 	p->affectee = affectee;
 	P_AddThinker(THINK_MAIN, &p->thinker);
-}
-
-// PIT_PushThing determines the angle and magnitude of the effect.
-// The object's x and y momentum values are changed.
-static pointpusher_t *tmpusher; // pointpusher structure for blockmap searches
-
-/** Applies a point pusher/puller to a thing.
-  *
-  * \param thing Thing to be pushed.
-  * \return True if the thing was pushed.
-  * \todo Make a more robust P_BlockThingsIterator() so the hidden parameter
-  *       ::tmpusher won't need to be used.
-  * \sa T_Pusher
-  */
-static inline boolean PIT_PushThing(mobj_t *thing)
-{
-	if (thing->eflags & MFE_PUSHED)
-		return false;
-
-	if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
-		return false;
-
-	if (!tmpusher->source)
-		return false;
-
-	// Allow this to affect pushable objects at some point?
-	if (thing->player && (!(thing->flags & (MF_NOGRAVITY | MF_NOCLIP)) || thing->player->powers[pw_carry] == CR_NIGHTSMODE))
-	{
-		INT32 dist;
-		INT32 speed;
-		INT32 sx, sy, sz;
-
-		sx = tmpusher->x;
-		sy = tmpusher->y;
-		sz = tmpusher->z;
-
-		// don't fade wrt Z if health & 2 (mapthing has multi flag)
-		if (tmpusher->source->health & 2)
-			dist = P_AproxDistance(thing->x - sx,thing->y - sy);
-		else
-		{
-			// Make sure the Z is in range
-			if (thing->z < sz - tmpusher->radius || thing->z > sz + tmpusher->radius)
-				return false;
-
-			dist = P_AproxDistance(P_AproxDistance(thing->x - sx, thing->y - sy),
-				thing->z - sz);
-		}
-
-		speed = (tmpusher->magnitude - ((dist>>FRACBITS)>>1))<<(FRACBITS - PUSH_FACTOR - 1);
-
-		// If speed <= 0, you're outside the effective radius. You also have
-		// to be able to see the push/pull source point.
-
-		// Written with bits and pieces of P_HomingAttack
-		if ((speed > 0) && (P_CheckSight(thing, tmpusher->source)))
-		{
-			if (thing->player->powers[pw_carry] != CR_NIGHTSMODE)
-			{
-				// only push wrt Z if health & 1 (mapthing has ambush flag)
-				if (tmpusher->source->health & 1)
-				{
-					fixed_t tmpmomx, tmpmomy, tmpmomz;
-
-					tmpmomx = FixedMul(FixedDiv(sx - thing->x, dist), speed);
-					tmpmomy = FixedMul(FixedDiv(sy - thing->y, dist), speed);
-					tmpmomz = FixedMul(FixedDiv(sz - thing->z, dist), speed);
-					if (tmpusher->source->type == MT_PUSH) // away!
-					{
-						tmpmomx *= -1;
-						tmpmomy *= -1;
-						tmpmomz *= -1;
-					}
-
-					thing->momx += tmpmomx;
-					thing->momy += tmpmomy;
-					thing->momz += tmpmomz;
-
-					if (thing->player)
-					{
-						thing->player->cmomx += tmpmomx;
-						thing->player->cmomy += tmpmomy;
-						thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
-						thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
-					}
-				}
-				else
-				{
-					angle_t pushangle;
-
-					pushangle = R_PointToAngle2(thing->x, thing->y, sx, sy);
-					if (tmpusher->source->type == MT_PUSH)
-						pushangle += ANGLE_180; // away
-					pushangle >>= ANGLETOFINESHIFT;
-					thing->momx += FixedMul(speed, FINECOSINE(pushangle));
-					thing->momy += FixedMul(speed, FINESINE(pushangle));
-
-					if (thing->player)
-					{
-						thing->player->cmomx += FixedMul(speed, FINECOSINE(pushangle));
-						thing->player->cmomy += FixedMul(speed, FINESINE(pushangle));
-						thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
-						thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
-					}
-				}
-			}
-			else
-			{
-				//NiGHTS-specific handling.
-				//By default, pushes and pulls only affect the Z-axis.
-				//By having the ambush flag, it affects the X-axis.
-				//By having the object special flag, it affects the Y-axis.
-				fixed_t tmpmomx, tmpmomy, tmpmomz;
-
-				if (tmpusher->source->health & 1)
-					tmpmomx = FixedMul(FixedDiv(sx - thing->x, dist), speed);
-				else
-					tmpmomx = 0;
-
-				if (tmpusher->source->health & 2)
-					tmpmomy = FixedMul(FixedDiv(sy - thing->y, dist), speed);
-				else
-					tmpmomy = 0;
-
-				tmpmomz = FixedMul(FixedDiv(sz - thing->z, dist), speed);
-
-				if (tmpusher->source->type == MT_PUSH) // away!
-				{
-					tmpmomx *= -1;
-					tmpmomy *= -1;
-					tmpmomz *= -1;
-				}
-
-				thing->momx += tmpmomx;
-				thing->momy += tmpmomy;
-				thing->momz += tmpmomz;
-
-				if (thing->player)
-				{
-					thing->player->cmomx += tmpmomx;
-					thing->player->cmomy += tmpmomy;
-					thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
-					thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
-				}
-			}
-		}
-	}
-
-	if (tmpusher->exclusive)
-		thing->eflags |= MFE_PUSHED;
-
-	return true;
-}
-
-void T_PointPusher(pointpusher_t *p)
-{
-	INT32 xl, xh, yl, yh, bx, by;
-	sector_t *sec = sectors + p->affectee;
-
-	// Be sure the special sector type is still turned on. If so, proceed.
-	// Else, bail out; the sector type has been changed on us.
-
-	if (GETSECSPECIAL(sec->special, 3) != 2)
-		return;
-
-	// Seek out all pushable things within the force radius of this
-	// point pusher. Crosses sectors, so use blockmap.
-
-	tmpusher = p; // MT_PUSH/MT_PULL point source
-	tmbbox[BOXTOP] = p->y + p->radius;
-	tmbbox[BOXBOTTOM] = p->y - p->radius;
-	tmbbox[BOXRIGHT] = p->x + p->radius;
-	tmbbox[BOXLEFT] = p->x - p->radius;
-
-	xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-	xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-	yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-	yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
-	for (bx = xl; bx <= xh; bx++)
-		for (by = yl; by <= yh; by++)
-			P_BlockThingsIterator(bx, by, PIT_PushThing);
 }
 
 /** Applies a pusher to all affected objects.
@@ -8751,78 +8537,33 @@ void T_Pusher(pusher_t *p)
 	}
 }
 
-
-/** Gets a push/pull object.
-  *
-  * \param s Sector number to look in.
-  * \return Pointer to the first ::MT_PUSH or ::MT_PULL object found in the
-  *         sector.
-  * \sa P_GetTeleportDestThing, P_GetStarpostThing, P_GetAltViewThing
-  */
-mobj_t *P_GetPushThing(UINT32 s)
-{
-	mobj_t *thing;
-	sector_t *sec;
-
-	sec = sectors + s;
-	thing = sec->thinglist;
-	while (thing)
-	{
-		switch (thing->type)
-		{
-			case MT_PUSH:
-			case MT_PULL:
-				return thing;
-			default:
-				break;
-		}
-		thing = thing->snext;
-	}
-	return NULL;
-}
-
 /** Spawns pushers.
   *
-  * \todo Remove magic numbers.
   * \sa P_SpawnSpecials, Add_Pusher
   */
 static void P_SpawnPushers(void)
 {
 	size_t i;
 	line_t *l = lines;
-	mtag_t tag;
 	register INT32 s;
-	mobj_t *thing;
+	fixed_t length, hspeed, dx, dy;
 
 	for (i = 0; i < numlines; i++, l++)
 	{
-		tag = Tag_FGet(&l->tags);
-		switch (l->special)
-		{
-			case 541: // wind/current
-			{
-				fixed_t length = R_PointToDist2(l->v2->x, l->v2->y, l->v1->x, l->v1->y);
-				fixed_t hspeed = l->args[1] << FRACBITS;
-				fixed_t dx = FixedMul(FixedDiv(l->dx, length), hspeed);
-				fixed_t dy = FixedMul(FixedDiv(l->dy, length), hspeed);
+		if (l->special != 541)
+			continue;
 
-				if (l->args[0] == 0)
-					Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, (INT32)(l->frontsector - sectors), -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
-				else
-				{
-					TAG_ITER_SECTORS(l->args[0], s)
-						Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, s, -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
-				}
-				break;
-			}
-			case 547: // push/pull
-				TAG_ITER_SECTORS(tag, s)
-				{
-					thing = P_GetPushThing(s);
-					if (thing) // No MT_P* means no effect
-						Add_PointPusher(P_AproxDistance(l->dx >> FRACBITS, l->dy >> FRACBITS), thing, s, l->flags & ML_NOCLIMB);
-				}
-				break;
+		length = R_PointToDist2(l->v2->x, l->v2->y, l->v1->x, l->v1->y);
+		hspeed = l->args[1] << FRACBITS;
+		dx = FixedMul(FixedDiv(l->dx, length), hspeed);
+		dy = FixedMul(FixedDiv(l->dy, length), hspeed);
+
+		if (l->args[0] == 0)
+			Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, (INT32)(l->frontsector - sectors), -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
+		else
+		{
+			TAG_ITER_SECTORS(l->args[0], s)
+				Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, s, -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
 		}
 	}
 }

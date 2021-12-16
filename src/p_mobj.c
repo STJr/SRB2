@@ -9234,6 +9234,118 @@ static void P_DragonbomberThink(mobj_t *mobj)
 #undef DRAGONTURNSPEED
 }
 
+static mobj_t *pushmobj;
+
+#define PUSH_FACTOR 7
+
+static inline boolean PIT_PushThing(mobj_t *thing)
+{
+	if (thing->eflags & MFE_PUSHED)
+		return false;
+
+	if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
+		return false;
+
+	if (!pushmobj)
+		return false;
+
+	if (!pushmobj->spawnpoint)
+		return false;
+
+	// Allow this to affect pushable objects at some point?
+	if (thing->player && !(thing->flags & (MF_NOGRAVITY|MF_NOCLIP)))
+	{
+		INT32 dist;
+		INT32 speed;
+		INT32 sx = pushmobj->x;
+		INT32 sy = pushmobj->y;
+		INT32 sz = pushmobj->z;
+		fixed_t radius = pushmobj->spawnpoint->args[0] << FRACBITS;
+
+		if (pushmobj->spawnpoint->args[2] & TMPP_NOZFADE)
+			dist = P_AproxDistance(thing->x - sx, thing->y - sy);
+		else
+		{
+			// Make sure the Z is in range
+			if (thing->z < sz - radius || thing->z > sz + radius)
+				return false;
+
+			dist = P_AproxDistance(P_AproxDistance(thing->x - sx, thing->y - sy), thing->z - sz);
+		}
+
+		speed = (abs(pushmobj->spawnpoint->args[1]) - ((dist>>FRACBITS)>>1))<<(FRACBITS - PUSH_FACTOR - 1);
+
+		// If speed <= 0, you're outside the effective radius. You also have
+		// to be able to see the push/pull source point.
+
+		// Written with bits and pieces of P_HomingAttack
+		if ((speed > 0) && (P_CheckSight(thing, pushmobj)))
+		{
+			fixed_t tmpmomx, tmpmomy, tmpmomz;
+
+			if (pushmobj->spawnpoint->args[2] & TMPP_PUSHZ)
+			{
+				tmpmomx = FixedMul(FixedDiv(sx - thing->x, dist), speed);
+				tmpmomy = FixedMul(FixedDiv(sy - thing->y, dist), speed);
+				tmpmomz = FixedMul(FixedDiv(sz - thing->z, dist), speed);
+			}
+			else
+			{
+				angle_t pushangle = R_PointToAngle2(thing->x, thing->y, sx, sy) >> ANGLETOFINESHIFT;
+				tmpmomx = FixedMul(speed, FINECOSINE(pushangle));
+				tmpmomy = FixedMul(speed, FINESINE(pushangle));
+				tmpmomz = 0;
+			}
+
+			if (pushmobj->spawnpoint->args[1] > 0) // away!
+			{
+				tmpmomx *= -1;
+				tmpmomy *= -1;
+				tmpmomz *= -1;
+			}
+
+			thing->momx += tmpmomx;
+			thing->momy += tmpmomy;
+			thing->momz += tmpmomz;
+
+			if (thing->player)
+			{
+				thing->player->cmomx += tmpmomx;
+				thing->player->cmomy += tmpmomy;
+				thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
+				thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
+			}
+		}
+	}
+
+	if (!(pushmobj->spawnpoint->args[2] & TMPP_NONEXCLUSIVE))
+		thing->eflags |= MFE_PUSHED;
+
+	return true;
+}
+
+static void P_PointPushThink(mobj_t *mobj)
+{
+	INT32 xl, xh, yl, yh, bx, by;
+	fixed_t radius;
+
+	if (!mobj->spawnpoint)
+		return;
+
+	// Seek out all pushable things within the force radius of this
+	// point pusher. Crosses sectors, so use blockmap.
+	radius = mobj->spawnpoint->args[0] << FRACBITS;
+
+	pushmobj = mobj;
+	xl = (unsigned)(mobj->x - radius - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
+	xh = (unsigned)(mobj->x + radius - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
+	yl = (unsigned)(mobj->y - radius - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
+	yh = (unsigned)(mobj->y + radius - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
+	for (bx = xl; bx <= xh; bx++)
+		for (by = yl; by <= yh; by++)
+			P_BlockThingsIterator(bx, by, PIT_PushThing);
+}
+
 static boolean P_MobjRegularThink(mobj_t *mobj)
 {
 	if ((mobj->flags & MF_ENEMY) && (mobj->state->nextstate == mobj->info->spawnstate && mobj->tics == 1))
@@ -9720,6 +9832,9 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			mobj->rollangle = 0;
 		else
 			mobj->rollangle = R_PointToAngle2(0, 0, mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
+		break;
+	case MT_PUSH:
+		P_PointPushThink(mobj);
 		break;
 	case MT_SPINFIRE:
 		if (mobj->flags & MF_NOGRAVITY)
@@ -12955,18 +13070,6 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	case MT_BLUEFLAG:
 		blueflag = mobj;
 		bflagpoint = mobj->spawnpoint;
-		break;
-	case MT_PUSH:
-	case MT_PULL:
-		mobj->health = 0; // Default behaviour: pushing uses XY, fading uses XYZ
-
-		if (mthing->options & MTF_AMBUSH)
-			mobj->health |= 1; // If ambush is set, push using XYZ
-		if (mthing->options & MTF_OBJECTSPECIAL)
-			mobj->health |= 2; // If object special is set, fade using XY
-
-		if (G_IsSpecialStage(gamemap))
-			P_SetMobjState(mobj, (mobj->type == MT_PUSH) ? S_GRAVWELLGREEN : S_GRAVWELLRED);
 		break;
 	case MT_NIGHTSSTAR:
 		if (maptol & TOL_XMAS)

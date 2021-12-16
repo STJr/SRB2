@@ -343,6 +343,14 @@ typedef enum
 	TMPF_NONEXCLUSIVE = 1<<1,
 } textmappusherflags_t;
 
+
+typedef enum
+{
+	TMPP_NOZFADE      = 1,
+	TMPP_PUSHZ        = 1<<1,
+	TMPP_NONEXCLUSIVE = 1<<2,
+} textmappointpushflags_t;
+
 // GETSECSPECIAL (specialval, section)
 //
 // Pulls out the special # from a particular section.
@@ -874,17 +882,6 @@ typedef struct
 	INT32 slider;       /// < Should the player go into an uncontrollable slide?
 } pusher_t;
 
-typedef struct
-{
-	thinker_t thinker; ///< Thinker structure for push/pull effect.
-	mobj_t *source;     ///< Point source.
-	INT32 magnitude;    ///< Vector strength.
-	INT32 radius;       ///< Effective radius.
-	INT32 x, y, z;      ///< Point source.
-	INT32 affectee;     ///< Number of affected sector.
-	INT32 exclusive;    /// < Once this affect has been applied to a mobj, no other pushers may affect it.
-} pointpusher_t;
-
 // Model for disappearing/reappearing FOFs
 typedef struct
 {
@@ -941,10 +938,8 @@ typedef struct
 
 void T_FadeColormap(fadecolormap_t *d);
 
-// Prototype functions for pushers
+// Prototype function for pushers
 void T_Pusher(pusher_t *p);
-void T_PointPusher(pointpusher_t *p);
-mobj_t *P_GetPushThing(UINT32 s);
 
 // Plane displacement
 typedef struct
