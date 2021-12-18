@@ -12823,11 +12823,10 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		P_SetMobjState(mobj, mobj->info->spawnstate + mobj->threshold);
 		break;
 	case MT_EGGCAPSULE:
-		if (mthing->angle <= 0)
-			mthing->angle = 20; // prevent 0 health
-
-		mobj->health = mthing->angle;
-		mobj->threshold = min(mthing->extrainfo, 7);
+		mobj->threshold = min(mthing->args[0], 7);
+		mobj->health = mthing->args[1];
+		if (mobj->health <= 0)
+			mobj->health = 20; // prevent 0 health
 		break;
 	case MT_TUBEWAYPOINT:
 	{
@@ -12940,20 +12939,19 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			return false;
 		break;
 	case MT_AXIS:
-		// Inverted if uppermost bit is set
-		if (mthing->angle & 16384)
+		// Inverted if args[3] is set
+		if (mthing->args[3])
 			mobj->flags2 |= MF2_AMBUSH;
 
-		if (mthing->angle > 0)
-			mobj->radius = (mthing->angle & 16383) << FRACBITS;
+		mobj->radius = abs(mthing->args[2]) << FRACBITS;
 		// FALLTHRU
 	case MT_AXISTRANSFER:
 	case MT_AXISTRANSFERLINE:
 		// Mare it belongs to
-		mobj->threshold = min(mthing->extrainfo, 7);
+		mobj->threshold = min(mthing->args[0], 7);
 
 		// # in the mare
-		mobj->health = mthing->options;
+		mobj->health = mthing->args[1];
 
 		mobj->flags2 |= MF2_AXIS;
 		break;

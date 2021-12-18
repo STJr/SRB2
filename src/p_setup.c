@@ -5017,6 +5017,19 @@ static void P_ConvertBinaryMap(void)
 			P_WriteConstant(MT_ROCKCRUMBLE1 + (sides[lines[j].sidenum[0]].rowoffset >> FRACBITS), &mapthings[i].stringargs[0]);
 			break;
 		}
+		case 1700: //Axis
+			mapthings[i].args[2] = mapthings[i].angle & 16383;
+			mapthings[i].args[3] = !!(mapthings[i].angle & 16384);
+			/* FALLTHRU */
+		case 1701: //Axis transfer
+		case 1702: //Axis transfer line
+			mapthings[i].args[0] = mapthings[i].extrainfo;
+			mapthings[i].args[1] = mapthings[i].options;
+			break;
+		case 1710: //Ideya capture
+			mapthings[i].args[0] = mapthings[i].extrainfo;
+			mapthings[i].args[1] = mapthings[i].angle;
+			break;
 		default:
 			break;
 		}
