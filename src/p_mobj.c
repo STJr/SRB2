@@ -7295,8 +7295,22 @@ static boolean P_ParticleGenSceneryThink(mobj_t *mobj)
 
 		mobj->fuse = (tic_t)mobj->reactiontime;
 
-		bottomheight = lines[line].frontsector->floorheight;
-		topheight = lines[line].frontsector->ceilingheight - mobjinfo[(mobjtype_t)type].height;
+		if (line != -1)
+		{
+			bottomheight = lines[line].frontsector->floorheight;
+			topheight = lines[line].frontsector->ceilingheight - mobjinfo[(mobjtype_t)type].height;
+		}
+		else if (mobj->flags2 & MF2_OBJECTFLIP)
+		{
+			bottomheight = mobj->z - mobj->extravalue1;
+			topheight = mobj->z - mobjinfo[(mobjtype_t)type].height;
+		}
+		else
+		{
+			bottomheight = mobj->z;
+			topheight = mobj->z + mobj->extravalue1 - mobjinfo[(mobjtype_t)type].height;
+		}
+
 
 		if (mobj->waterbottom != bottomheight || mobj->watertop != topheight)
 		{
@@ -7305,7 +7319,8 @@ static boolean P_ParticleGenSceneryThink(mobj_t *mobj)
 			else
 				mobj->health = 0;
 
-			mobj->z = ((mobj->flags2 & MF2_OBJECTFLIP) ? topheight : bottomheight);
+			if (line != -1)
+				mobj->z = ((mobj->flags2 & MF2_OBJECTFLIP) ? topheight : bottomheight);
 		}
 
 		if (!mobj->health)
@@ -12420,7 +12435,7 @@ static boolean P_SetupMace(mapthing_t *mthing, mobj_t *mobj, boolean *doangle)
 
 static boolean P_SetupParticleGen(mapthing_t *mthing, mobj_t *mobj)
 {
-	fixed_t radius, speed;
+	fixed_t radius, speed, zdist;
 	INT32 type, numdivisions, anglespeed, ticcount;
 	angle_t angledivision;
 	INT32 line;
@@ -12429,40 +12444,33 @@ static boolean P_SetupParticleGen(mapthing_t *mthing, mobj_t *mobj)
 	// Find the corresponding linedef special, using angle as tag
 	line = Tag_FindLineSpecial(15, mthing->angle);
 
-	if (line == -1)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "Particle generator (mapthing #%s) needs to be tagged to a #15 parameter line (trying to find tag %d).\n", sizeu1(mthingi), mthing->angle);
-		return false;
-	}
+	type = mthing->stringargs[0] ? get_number(mthing->stringargs[0]) : MT_PARTICLE;
 
-	if (sides[lines[line].sidenum[0]].toptexture)
-		type = sides[lines[line].sidenum[0]].toptexture; // Set as object type in p_setup.c...
-	else
-		type = (INT32)MT_PARTICLE;
-
-	if (!lines[line].backsector
-		|| (ticcount = (sides[lines[line].sidenum[1]].textureoffset >> FRACBITS)) < 1)
+	ticcount = mthing->args[4];
+	if (ticcount < 1)
 		ticcount = 3;
 
-	numdivisions = mthing->z;
+	numdivisions = mthing->args[0];
 
 	if (numdivisions)
 	{
-		radius = R_PointToDist2(lines[line].v1->x, lines[line].v1->y, lines[line].v2->x, lines[line].v2->y);
-		anglespeed = (sides[lines[line].sidenum[0]].rowoffset >> FRACBITS) % 360;
+		radius = mthing->args[1] << FRACBITS;
+		anglespeed = (mthing->args[3]) % 360;
 		angledivision = 360/numdivisions;
 	}
 	else
 	{
-		numdivisions = 1; // Simple trick to make A_ParticleSpawn simpler.
+		numdivisions = 1; // Simple trick to make P_ParticleGenSceneryThink simpler.
 		radius = 0;
 		anglespeed = 0;
 		angledivision = 0;
 	}
 
-	speed = abs(sides[lines[line].sidenum[0]].textureoffset);
+	speed = abs(mthing->args[2]) << FRACBITS;
 	if (mthing->options & MTF_OBJECTFLIP)
 		speed *= -1;
+
+	zdist = abs(mthing->args[5]) << FRACBITS;
 
 	CONS_Debug(DBG_GAMELOGIC, "Particle Generator (mapthing #%s):\n"
 		"Radius is %d\n"
@@ -12471,8 +12479,13 @@ static boolean P_SetupParticleGen(mapthing_t *mthing, mobj_t *mobj)
 		"Numdivisions is %d\n"
 		"Angledivision is %d\n"
 		"Type is %d\n"
-		"Tic seperation is %d\n",
+		"Tic separation is %d\n",
 		sizeu1(mthingi), radius, speed, anglespeed, numdivisions, angledivision, type, ticcount);
+
+	if (line == -1)
+		CONS_Debug(DBG_GAMELOGIC, "Spawn Z is %d\nZ dist is %d\n", mobj->z, zdist);
+	else
+		CONS_Debug(DBG_GAMELOGIC, "Heights are taken from control sector\n");
 
 	mobj->angle = 0;
 	mobj->movefactor = speed;
@@ -12482,6 +12495,7 @@ static boolean P_SetupParticleGen(mapthing_t *mthing, mobj_t *mobj)
 	mobj->friction = radius;
 	mobj->threshold = type;
 	mobj->reactiontime = ticcount;
+	mobj->extravalue1 = zdist;
 	mobj->cvmem = line;
 	mobj->watertop = mobj->waterbottom = 0;
 	return true;

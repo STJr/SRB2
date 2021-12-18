@@ -4908,6 +4908,24 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].type = 754;
 			break;
 		}
+		case 757: //Fan particle generator
+		{
+			INT32 j = Tag_FindLineSpecial(15, mapthings[i].angle);
+
+			if (j == -1)
+			{
+				CONS_Debug(DBG_GAMELOGIC, "Particle generator (mapthing #%d) needs to be tagged to a #15 parameter line (trying to find tag %d).\n", i, mapthings[i].angle);
+				break;
+			}
+			mapthings[i].args[0] = mapthings[i].z;
+			mapthings[i].args[1] = R_PointToDist2(lines[j].v1->x, lines[j].v1->y, lines[j].v2->x, lines[j].v2->y) >> FRACBITS;
+			mapthings[i].args[2] = sides[lines[j].sidenum[0]].textureoffset >> FRACBITS;
+			mapthings[i].args[3] = sides[lines[j].sidenum[0]].rowoffset >> FRACBITS;
+			mapthings[i].args[4] = lines[j].backsector ? sides[lines[j].sidenum[1]].textureoffset >> FRACBITS : 0;
+			if (sides[lines[j].sidenum[0]].toptexture)
+				P_WriteConstant(sides[lines[j].sidenum[0]].toptexture, &mapthings[i].stringargs[0]);
+			break;
+		}
 		case 762: //PolyObject spawn point (crush)
 		{
 			INT32 check = -1;
