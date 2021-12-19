@@ -1285,7 +1285,7 @@ void OP_NightsObjectplace(player_t *player)
 
 		if (mt->type >= 600 && mt->type <= 609) // Placement patterns
 			P_SpawnItemPattern(mt, false);
-		else if (mt->type == 1705 || mt->type == 1713) // NiGHTS Hoops
+		else if (mt->type == 1713) // NiGHTS Hoops
 			P_SpawnHoop(mt);
 		else
 			P_SpawnMapThing(mt);
@@ -1416,7 +1416,7 @@ void OP_ObjectplaceMovement(player_t *player)
 		mt = OP_CreateNewMapThing(player, (UINT16)spawnthing, ceiling);
 		if (mt->type >= 600 && mt->type <= 609) // Placement patterns
 			P_SpawnItemPattern(mt, false);
-		else if (mt->type == 1705 || mt->type == 1713) // NiGHTS Hoops
+		else if (mt->type == 1713) // NiGHTS Hoops
 			P_SpawnHoop(mt);
 		else
 			P_SpawnMapThing(mt);

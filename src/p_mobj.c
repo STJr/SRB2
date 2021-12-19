@@ -11769,11 +11769,6 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 
 	switch (mobjtype)
 	{
-	// Bumpers never spawn flipped.
-	case MT_NIGHTSBUMPER:
-		flip = false;
-		break;
-
 	// Objects with a non-zero default height.
 	case MT_CRAWLACOMMANDER:
 	case MT_DETON:
@@ -11883,7 +11878,7 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 	}
 	else if (mthing->type == 750 // Slope vertex point (formerly chaos spawn)
 		     || (mthing->type >= 600 && mthing->type <= 609) // Special placement patterns
-		     || mthing->type == 1705 || mthing->type == 1713) // Hoops
+		     || mthing->type == 1713) // Hoops
 		return true; // These are handled elsewhere.
 	else if (mthing->type == mobjinfo[MT_EMERHUNT].doomednum)
 	{
@@ -12817,9 +12812,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			mobj->threshold = (TICRATE*2)-1;
 		break;
 	case MT_NIGHTSBUMPER:
-		// Lower 4 bits specify the angle of
-		// the bumper in 30 degree increments.
-		mobj->threshold = (mthing->options & 15) % 12; // It loops over, etc
+		// Pitch of the bumper is set in 30 degree increments.
+		mobj->threshold = ((mthing->pitch/30) + 3) % 12;
 		P_SetMobjState(mobj, mobj->info->spawnstate + mobj->threshold);
 		break;
 	case MT_EGGCAPSULE:
@@ -12838,7 +12832,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	}
 	case MT_IDEYAANCHOR:
-		mobj->health = mthing->extrainfo;
+		mobj->health = mthing->args[0];
 		break;
 	case MT_NIGHTSDRONE:
 		if (!P_SetupNiGHTSDrone(mthing, mobj))
@@ -13258,13 +13252,18 @@ mobj_t *P_SpawnMapThing(mapthing_t *mthing)
 	return P_SpawnMobjFromMapThing(mthing, x, y, z, i);
 }
 
-static void P_SpawnHoopInternal(mapthing_t *mthing, INT32 hoopsize, fixed_t sizefactor)
+void P_SpawnHoop(mapthing_t *mthing)
 {
+	if (metalrecording)
+		return;
+
 	mobj_t *mobj = NULL;
 	mobj_t *nextmobj = NULL;
 	mobj_t *hoopcenter;
 	TMatrix *pitchmatrix, *yawmatrix;
-	fixed_t radius = hoopsize*sizefactor;
+	fixed_t radius = mthing->args[0] << FRACBITS;
+	fixed_t sizefactor = 4*FRACUNIT;
+	fixed_t hoopsize = radius/sizefactor;
 	INT32 i;
 	angle_t fa;
 	TVector v, *res;
@@ -13281,10 +13280,9 @@ static void P_SpawnHoopInternal(mapthing_t *mthing, INT32 hoopsize, fixed_t size
 	hoopcenter->y = y;
 	P_SetThingPosition(hoopcenter);
 
-	// Scale 0-255 to 0-359 =(
-	hoopcenter->movedir = ((mthing->angle & 255)*360)/256; // Pitch
+	hoopcenter->movedir = mthing->pitch;
 	pitchmatrix = RotateXMatrix(FixedAngle(hoopcenter->movedir << FRACBITS));
-	hoopcenter->movecount = (((UINT16)mthing->angle >> 8)*360)/256; // Yaw
+	hoopcenter->movecount = mthing->angle;
 	yawmatrix = RotateZMatrix(FixedAngle(hoopcenter->movecount << FRACBITS));
 
 	// For the hoop when it flies away
@@ -13362,19 +13360,6 @@ static void P_SpawnHoopInternal(mapthing_t *mthing, INT32 hoopsize, fixed_t size
 			nextmobj = mobj;
 		}
 	} while (hoopsize >= 8);
-}
-
-void P_SpawnHoop(mapthing_t *mthing)
-{
-	if (metalrecording)
-		return;
-
-	if (mthing->type == 1705) // Generic hoop
-		P_SpawnHoopInternal(mthing, 24, 4*FRACUNIT);
-	else // Customizable hoop
-		// For each flag add 16 fracunits to the size
-		// Default (0 flags) is 32 fracunits
-		P_SpawnHoopInternal(mthing, 8 + (4*(mthing->options & 0xF)), 4*FRACUNIT);
 }
 
 void P_SetBonusTime(mobj_t *mobj)

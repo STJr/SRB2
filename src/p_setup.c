@@ -895,7 +895,7 @@ static void P_SpawnMapThings(boolean spawnemblems)
 
 		if (mt->type >= 600 && mt->type <= 609) // item patterns
 			P_SpawnItemPattern(mt, false);
-		else if (mt->type == 1705 || mt->type == 1713) // hoops
+		else if (mt->type == 1713) // hoops
 			P_SpawnHoop(mt);
 		else // Everything else
 			P_SpawnMapThing(mt);
@@ -5026,9 +5026,27 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].args[0] = mapthings[i].extrainfo;
 			mapthings[i].args[1] = mapthings[i].options;
 			break;
+		case 1704: //NiGHTS bumper
+			mapthings[i].pitch = 30 * (((mapthings[i].options & 15) + 9) % 12);
+			mapthings[i].options &= ~0xF;
+			break;
+		case 1705: //Hoop
+		case 1713: //Hoop (Customizable)
+		{
+			UINT16 oldangle = mapthings[i].angle;
+			mapthings[i].angle = ((oldangle >> 8)*360)/256;
+			mapthings[i].pitch = ((oldangle & 255)*360)/256;
+			mapthings[i].args[0] = (mapthings[i].type == 1705) ? 96 : (mapthings[i].options & 0xF)*16 + 32;
+			mapthings[i].options &= ~0xF;
+			mapthings[i].type = 1713;
+			break;
+		}
 		case 1710: //Ideya capture
 			mapthings[i].args[0] = mapthings[i].extrainfo;
 			mapthings[i].args[1] = mapthings[i].angle;
+			break;
+		case 1714: //Ideya anchor point
+			mapthings[i].args[0] = mapthings[i].extrainfo;
 			break;
 		default:
 			break;
