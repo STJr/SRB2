@@ -734,7 +734,7 @@ void P_ReloadRings(void)
 			mt->mobj = NULL;
 			P_SetBonusTime(P_SpawnMapThing(mt));
 		}
-		else if (mt->type >= 600 && mt->type <= 609) // Item patterns
+		else if (mt->type >= 600 && mt->type <= 611) // Item patterns
 		{
 			mt->mobj = NULL;
 			P_SpawnItemPattern(mt, true);
@@ -893,7 +893,7 @@ static void P_SpawnMapThings(boolean spawnemblems)
 
 		mt->mobj = NULL;
 
-		if (mt->type >= 600 && mt->type <= 609) // item patterns
+		if (mt->type >= 600 && mt->type <= 611) // item patterns
 			P_SpawnItemPattern(mt, false);
 		else if (mt->type == 1713) // hoops
 			P_SpawnHoop(mt);
@@ -1701,9 +1701,9 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		P_SetLinedefV1(i, atol(val));
 	else if (fastcmp(param, "v2"))
 		P_SetLinedefV2(i, atol(val));
-	else if (strlen(param) == 7 && fastncmp(param, "arg", 3) && fastncmp(param + 4, "str", 3))
+	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
 	{
-		size_t argnum = param[3] - '0';
+		size_t argnum = atol(param + 9);
 		if (argnum >= NUMLINESTRINGARGS)
 			return;
 		lines[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);
@@ -1800,9 +1800,9 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 	else if (fastcmp(param, "ambush") && fastcmp("true", val))
 		mapthings[i].options |= MTF_AMBUSH;
 
-	else if (strlen(param) == 7 && fastncmp(param, "arg", 3) && fastncmp(param + 4, "str", 3))
+	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
 	{
-		size_t argnum = param[3] - '0';
+		size_t argnum = atol(param + 9);
 		if (argnum >= NUMMAPTHINGSTRINGARGS)
 			return;
 		mapthings[i].stringargs[argnum] = Z_Malloc(strlen(val) + 1, PU_LEVEL, NULL);

@@ -11877,7 +11877,7 @@ static boolean P_SpawnNonMobjMapThing(mapthing_t *mthing)
 		return true;
 	}
 	else if (mthing->type == 750 // Slope vertex point (formerly chaos spawn)
-		     || (mthing->type >= 600 && mthing->type <= 609) // Special placement patterns
+		     || (mthing->type >= 600 && mthing->type <= 611) // Special placement patterns
 		     || mthing->type == 1713) // Hoops
 		return true; // These are handled elsewhere.
 	else if (mthing->type == mobjinfo[MT_EMERHUNT].doomednum)
@@ -13373,7 +13373,7 @@ void P_SetBonusTime(mobj_t *mobj)
 	P_SetMobjState(mobj, mobj->info->raisestate);
 }
 
-static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t* itemtypes, UINT8 numitemtypes, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
+static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numitemtypes, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
 {
 	mapthing_t dummything;
 	mobj_t *mobj = NULL;
@@ -13424,7 +13424,7 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t* itemtypes, UINT8 numi
 	}
 }
 
-static void P_SpawnSingularItemRow(mapthing_t* mthing, mobjtype_t itemtype, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
+static void P_SpawnSingularItemRow(mapthing_t *mthing, mobjtype_t itemtype, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
 {
 	mobjtype_t itemtypes[1] = { itemtype };
 	return P_SpawnItemRow(mthing, itemtypes, 1, numitems, horizontalspacing, verticalspacing, fixedangle, bonustime);
@@ -13488,6 +13488,35 @@ static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 n
 	}
 }
 
+static void P_ParseItemTypes(char *itemstring, mobjtype_t *itemtypes, UINT8 *numitemtypes)
+{
+	char *tok;
+
+	*numitemtypes = 0;
+	if (itemstring)
+	{
+		char *stringcopy = Z_Malloc(strlen(itemstring) + 1, PU_LEVEL, NULL);
+		M_Memcpy(stringcopy, itemstring, strlen(itemstring));
+		stringcopy[strlen(itemstring)] = '\0';
+
+		tok = strtok(stringcopy, " ");
+		while (tok && *numitemtypes < 128)
+		{
+			itemtypes[*numitemtypes] = get_number(tok);
+			tok = strtok(NULL, " ");
+			(*numitemtypes)++;
+		}
+
+		Z_Free(stringcopy);
+	}
+	else
+	{
+		//If no types are supplied, default to ring
+		itemtypes[0] = MT_RING;
+		*numitemtypes = 1;
+	}
+}
+
 void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime)
 {
 	switch (mthing->type)
@@ -13523,6 +13552,27 @@ void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime)
 		fixed_t size = (mthing->type & 1) ? 192*FRACUNIT : 96*FRACUNIT;
 		mobjtype_t itemtypes[2] = { MT_RING, MT_BLUESPHERE };
 		P_SpawnItemCircle(mthing, itemtypes, 2, numitems, size, bonustime);
+		return;
+	}
+	case 610: // Generic item row
+	{
+		mobjtype_t itemtypes[128]; //If you want to have a row with more than 128 different object types, you're crazy.
+		UINT8 numitemtypes;
+		if (!udmf)
+			return;
+		P_ParseItemTypes(mthing->stringargs[0], itemtypes, &numitemtypes);
+		P_SpawnItemRow(mthing, itemtypes, numitemtypes, mthing->args[0], mthing->args[1] << FRACBITS, mthing->args[2] << FRACBITS, mthing->angle, bonustime);
+		return;
+	}
+	case 611: // Generic item circle
+	{
+		mobjtype_t itemtypes[128]; //If you want to have a circle with more than 128 different object types, you're crazy.
+		UINT8 numitemtypes;
+		if (!udmf)
+			return;
+		CONS_Printf("Itemstring: %s\n", mthing->stringargs[0]);
+		P_ParseItemTypes(mthing->stringargs[0], itemtypes, &numitemtypes);
+		P_SpawnItemCircle(mthing, itemtypes, numitemtypes, mthing->args[0], mthing->args[1] << FRACBITS, bonustime);
 		return;
 	}
 	default:
