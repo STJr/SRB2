@@ -4873,6 +4873,9 @@ static void P_ConvertBinaryMap(void)
 	{
 		switch (mapthings[i].type)
 		{
+		case 110: //THZ Turret
+			mapthings[i].args[0] = LE_TURRET;
+			break;
 		case 754: //Push point
 		case 755: //Pull point
 		{
@@ -5047,6 +5050,12 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 1714: //Ideya anchor point
 			mapthings[i].args[0] = mapthings[i].extrainfo;
+			break;
+		case 1806: //King Bowser
+			mapthings[i].args[0] = LE_KOOPA;
+			break;
+		case 1807: //Axe
+			mapthings[i].args[0] = LE_AXE;
 			break;
 		default:
 			break;

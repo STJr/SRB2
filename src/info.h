@@ -150,6 +150,7 @@ enum actionnum
 	A_BOSS3PATH,
 	A_BOSS3SHOCKTHINK,
 	A_LINEDEFEXECUTE,
+	A_LINEDEFEXECUTEFROMARG,
 	A_PLAYSEESOUND,
 	A_PLAYATTACKSOUND,
 	A_PLAYACTIVESOUND,
@@ -409,6 +410,7 @@ void A_Boss3TakeDamage();
 void A_Boss3Path();
 void A_Boss3ShockThink();
 void A_LinedefExecute();
+void A_LinedefExecuteFromArg();
 void A_PlaySeeSound();
 void A_PlayAttackSound();
 void A_PlayActiveSound();

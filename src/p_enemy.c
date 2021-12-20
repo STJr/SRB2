@@ -173,6 +173,7 @@ void A_Boss3TakeDamage(mobj_t *actor);
 void A_Boss3Path(mobj_t *actor);
 void A_Boss3ShockThink(mobj_t *actor);
 void A_LinedefExecute(mobj_t *actor);
+void A_LinedefExecuteFromArg(mobj_t *actor);
 void A_PlaySeeSound(mobj_t *actor);
 void A_PlayAttackSound(mobj_t *actor);
 void A_PlayActiveSound(mobj_t *actor);
@@ -4049,7 +4050,8 @@ bossjustdie:
 		}
 		case MT_KOOPA:
 		{
-			EV_DoCeiling(LE_KOOPA, NULL, raiseToHighest);
+			if (mo->spawnpoint)
+				EV_DoCeiling(mo->spawnpoint->args[0], NULL, raiseToHighest);
 			return;
 		}
 		case MT_FANG:
@@ -8302,6 +8304,38 @@ void A_LinedefExecute(mobj_t *actor)
 		tagnum += (actor->spawnpoint->extrainfo*LE_PARAMWIDTH);
 
 	CONS_Debug(DBG_GAMELOGIC, "A_LinedefExecute: Running mobjtype %d's sector with tag %d\n", actor->type, tagnum);
+
+	// tag 32768 displayed in map editors is actually tag -32768, tag 32769 is -32767, 65535 is -1 etc.
+	P_LinedefExecute((INT16)tagnum, actor, actor->subsector->sector);
+}
+
+// Function: A_LinedefExecuteFromArg
+//
+// Description: Object's location is used to set the calling sector. The tag used is the spawnpoint mapthing's args[var1].
+//
+// var1 = mapthing arg to take tag from
+// var2 = unused
+//
+void A_LinedefExecuteFromArg(mobj_t *actor)
+{
+	INT32 tagnum;
+	INT32 locvar1 = var1;
+
+	if (LUA_CallAction(A_LINEDEFEXECUTEFROMARG, actor))
+		return;
+
+	if (!actor->spawnpoint)
+		return;
+
+	if (locvar1 < 0 || locvar1 > NUMMAPTHINGARGS)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "A_LinedefExecuteFromArg: Invalid mapthing arg %d\n", locvar1);
+		return;
+	}
+
+	tagnum = actor->spawnpoint->args[locvar1];
+
+	CONS_Debug(DBG_GAMELOGIC, "A_LinedefExecuteFromArg: Running mobjtype %d's sector with tag %d\n", actor->type, tagnum);
 
 	// tag 32768 displayed in map editors is actually tag -32768, tag 32769 is -32767, 65535 is -1 etc.
 	P_LinedefExecute((INT16)tagnum, actor, actor->subsector->sector);
