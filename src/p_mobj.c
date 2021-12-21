@@ -12806,10 +12806,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			return false;
 		break;
 	case MT_POPUPTURRET:
-		if (mthing->angle)
-			mobj->threshold = mthing->angle;
-		else
-			mobj->threshold = (TICRATE*2)-1;
+		mobj->threshold = mthing->args[0] ? mthing->args[0] : (TICRATE*2)-1;
 		break;
 	case MT_NIGHTSBUMPER:
 		// Pitch of the bumper is set in 30 degree increments.

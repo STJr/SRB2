@@ -4886,6 +4886,9 @@ static void P_ConvertBinaryMap(void)
 		case 110: //THZ Turret
 			mapthings[i].args[0] = LE_TURRET;
 			break;
+		case 111: //Pop-up Turret
+			mapthings[i].args[0] = mapthings[i].angle;
+			break;
 		case 754: //Push point
 		case 755: //Pull point
 		{
