@@ -4890,6 +4890,17 @@ static void P_ConvertBinaryMap(void)
 		case 111: //Pop-up Turret
 			mapthings[i].args[0] = mapthings[i].angle;
 			break;
+		case 502: //Star post
+			if (mapthings[i].extrainfo)
+				// Allow thing Parameter to define star post num too!
+				// For starposts above param 15 (the 16th), add 360 to the angle like before and start parameter from 1 (NOT 0)!
+				// So the 16th starpost is angle=0 param=15, the 17th would be angle=360 param=1.
+				// This seems more intuitive for mappers to use, since most SP maps won't have over 16 consecutive star posts.
+				mapthings[i].args[0] = mapthings[i].extrainfo + (mapthings[i].angle/360) * 15;
+			else
+				// Old behavior if Parameter is 0; add 360 to the angle for each consecutive star post.
+				mapthings[i].args[0] = (mapthings[i].angle/360);
+			break;
 		case 753: //Zoom tube waypoint
 			mapthings[i].args[0] = mapthings[i].angle >> 8;
 			mapthings[i].args[1] = mapthings[i].angle & 255;
