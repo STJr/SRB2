@@ -14270,7 +14270,7 @@ void A_SpawnPterabytes(mobj_t *actor)
 		return;
 
 	if (actor->spawnpoint)
-		amount = actor->spawnpoint->extrainfo + 1;
+		amount = min(1, actor->spawnpoint->args[0]);
 
 	interval = FixedAngle(FRACUNIT*360/amount);
 
