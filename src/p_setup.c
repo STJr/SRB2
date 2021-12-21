@@ -3123,6 +3123,7 @@ static void P_AddBinaryMapTags(void)
 		switch (mapthings[i].type)
 		{
 		case 291:
+		case 322:
 		case 750:
 		case 760:
 		case 761:

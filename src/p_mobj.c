@@ -12095,7 +12095,7 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 
 	while (emblem)
 	{
-		if ((emblem->type == ET_GLOBAL || emblem->type == ET_SKIN) && emblem->tag == mthing->angle)
+		if ((emblem->type == ET_GLOBAL || emblem->type == ET_SKIN) && emblem->tag == Tag_FGet(&mthing->tags))
 			break;
 
 		emblem = M_GetLevelEmblems(-1);
@@ -12103,7 +12103,7 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 
 	if (!emblem)
 	{
-		CONS_Debug(DBG_GAMELOGIC, "No map emblem for map %d with tag %d found!\n", gamemap, mthing->angle);
+		CONS_Debug(DBG_GAMELOGIC, "No map emblem for map %d with tag %d found!\n", gamemap, Tag_FGet(&mthing->tags));
 		return false;
 	}
 
