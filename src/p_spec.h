@@ -36,6 +36,14 @@ typedef enum
 	TMM_ALWAYSTHINK     = 1<<7,
 } textmapmaceflags_t;
 
+typedef enum
+{
+	TMDA_BOTTOMOFFSET = 1,
+	TMDA_BOTTOM       = 1<<1,
+	TMDA_MIDDLE       = 1<<2,
+	TMDA_TOP          = 1<<3,
+} textmapdronealignment_t;
+
 //FOF flags
 typedef enum
 {

@@ -706,8 +706,7 @@ static void P_DeNightserizePlayer(player_t *player)
 
 		// If you screwed up, kiss your score and ring bonus goodbye.
 		// But only do this in special stage (and instakill!) In regular stages, wait til we hit the ground.
-		player->marescore = player->spheres =\
-		 player->rings = 0;
+		player->marescore = player->spheres = player->rings = 0;
 	}
 
 	// Check to see if the player should be killed.
@@ -717,13 +716,12 @@ static void P_DeNightserizePlayer(player_t *player)
 			continue;
 
 		mo2 = (mobj_t *)th;
-		if (!(mo2->type == MT_NIGHTSDRONE))
+		if (mo2->type != MT_NIGHTSDRONE)
 			continue;
 
 		if (mo2->flags2 & MF2_AMBUSH)
 		{
-			player->marescore = player->spheres =\
-			 player->rings = 0;
+			player->marescore = player->spheres = player->rings = 0;
 			P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
 
 			// Reset music to beginning if MIXNIGHTSCOUNTDOWN

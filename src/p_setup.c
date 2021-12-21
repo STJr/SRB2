@@ -5058,6 +5058,19 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].args[0] = mapthings[i].extrainfo;
 			mapthings[i].args[1] = mapthings[i].options;
 			break;
+		case 1703: //Ideya drone
+			mapthings[i].args[0] = mapthings[i].angle & 0xFFF;
+			mapthings[i].args[1] = mapthings[i].extrainfo*32;
+			mapthings[i].args[2] = ((mapthings[i].angle & 0xF000) >> 12)*32;
+			if ((mapthings[i].options & (MTF_OBJECTSPECIAL|MTF_EXTRA)) == (MTF_OBJECTSPECIAL|MTF_EXTRA))
+				mapthings[i].args[3] = TMDA_BOTTOM;
+			else if ((mapthings[i].options & (MTF_OBJECTSPECIAL|MTF_EXTRA)) == MTF_OBJECTSPECIAL)
+				mapthings[i].args[3] = TMDA_TOP;
+			else if ((mapthings[i].options & (MTF_OBJECTSPECIAL|MTF_EXTRA)) == MTF_EXTRA)
+				mapthings[i].args[3] = TMDA_MIDDLE;
+			else
+				mapthings[i].args[3] = TMDA_BOTTOMOFFSET;
+			break;
 		case 1704: //NiGHTS bumper
 			mapthings[i].pitch = 30 * (((mapthings[i].options & 15) + 9) % 12);
 			mapthings[i].options &= ~0xF;
