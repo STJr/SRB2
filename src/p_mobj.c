@@ -11643,9 +11643,9 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 	{
 		fixed_t offset = mthing->z << FRACBITS;
 
-		// Flagging a player's ambush will make them start on the ceiling
+		// Setting the spawnpoint's args[0] will make the player start on the ceiling
 		// Objectflip inverts
-		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
+		if (!!(mthing->args[0]) ^ !!(mthing->options & MTF_OBJECTFLIP))
 			z = ceilingspawn - offset;
 		else
 			z = floor + offset;

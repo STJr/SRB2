@@ -4871,6 +4871,12 @@ static void P_ConvertBinaryMap(void)
 
 	for (i = 0; i < nummapthings; i++)
 	{
+		if (mapthings[i].type >= 1 && mapthings[i].type <= 35)
+		{
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			continue;
+		}
+
 		switch (mapthings[i].type)
 		{
 		case 110: //THZ Turret
