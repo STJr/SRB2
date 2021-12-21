@@ -12819,8 +12819,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	case MT_TUBEWAYPOINT:
 	{
-		UINT8 sequence = mthing->angle >> 8;
-		UINT8 id = mthing->angle & 255;
+		UINT8 sequence = mthing->args[0];
+		UINT8 id = mthing->args[1];
 		mobj->health = id;
 		mobj->threshold = sequence;
 		P_AddWaypoint(sequence, id, mobj);

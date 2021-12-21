@@ -4890,6 +4890,10 @@ static void P_ConvertBinaryMap(void)
 		case 111: //Pop-up Turret
 			mapthings[i].args[0] = mapthings[i].angle;
 			break;
+		case 753: //Zoom tube waypoint
+			mapthings[i].args[0] = mapthings[i].angle >> 8;
+			mapthings[i].args[1] = mapthings[i].angle & 255;
+			break;
 		case 754: //Push point
 		case 755: //Pull point
 		{
