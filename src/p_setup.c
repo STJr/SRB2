@@ -4879,6 +4879,10 @@ static void P_ConvertBinaryMap(void)
 
 		switch (mapthings[i].type)
 		{
+		case 102: //SDURF
+		case 1805: //Puma
+			mapthings[i].args[0] = mapthings[i].angle;
+			break;
 		case 110: //THZ Turret
 			mapthings[i].args[0] = LE_TURRET;
 			break;

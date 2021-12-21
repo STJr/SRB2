@@ -4803,12 +4803,16 @@ void A_FishJump(mobj_t *actor)
 		fixed_t jumpval;
 
 		if (locvar1)
-			jumpval = var1;
+			jumpval = locvar1;
 		else
-			jumpval = FixedMul(AngleFixed(actor->angle)/4, actor->scale);
+		{
+			if (actor->spawnpoint && actor->spawnpoint->args[0])
+				jumpval = actor->spawnpoint->args[0];
+			else
+				jumpval = 44;
+		}
 
-		if (!jumpval) jumpval = FixedMul(44*(FRACUNIT/4), actor->scale);
-		actor->momz = jumpval;
+		actor->momz = FixedMul(jumpval << (FRACBITS - 2), actor->scale);
 		P_SetMobjStateNF(actor, actor->info->seestate);
 	}
 
