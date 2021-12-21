@@ -12859,8 +12859,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			return false;
 		break;
 	case MT_HIVEELEMENTAL:
-		if (mthing->extrainfo)
-			mobj->extravalue1 = mthing->extrainfo;
+		if (mthing->args[0])
+			mobj->extravalue1 = mthing->args[0];
 		break;
 	case MT_GLAREGOYLE:
 	case MT_GLAREGOYLEUP:
