@@ -4896,6 +4896,9 @@ static void P_ConvertBinaryMap(void)
 		case 135: //Pterabyte Spawner
 			mapthings[i].args[0] = mapthings[i].extrainfo + 1;
 			break;
+		case 136: //Pyre Fly
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
 		case 502: //Star post
 			if (mapthings[i].extrainfo)
 				// Allow thing Parameter to define star post num too!

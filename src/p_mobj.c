@@ -12924,8 +12924,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		}
 		break;
 	case MT_PYREFLY:
-		//start on fire if Ambush flag is set, otherwise behave normally
-		if (mthing->options & MTF_AMBUSH)
+		//start on fire if args[0], otherwise behave normally
+		if (mthing->args[0])
 		{
 			P_SetMobjState(mobj, mobj->info->meleestate);
 			mobj->extravalue2 = 2;
