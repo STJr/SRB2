@@ -2317,8 +2317,6 @@ void G_Ticker(boolean run)
 	{
 		if (playeringame[i])
 		{
-			INT16 received;
-
 			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 
 			if (players[i].bot == BOT_NONE || players[i].bot == BOT_2PHUMAN)
@@ -2327,14 +2325,13 @@ void G_Ticker(boolean run)
 				players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
 
 				// Do angle adjustments.
-				received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
 
 				players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
 				players[i].oldrelangleturn = players[i].cmd.angleturn;
 				if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
 					P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
 				else
-					players[i].cmd.angleturn = players[i].angleturn;
+					players[i].cmd.angleturn = (players[i].angleturn & ~TICCMD_RECEIVED) | (players[i].cmd.angleturn & TICCMD_RECEIVED);
 			}
 			else // Less work is required if we're building a bot ticcmd.
 			{
@@ -2342,9 +2339,6 @@ void G_Ticker(boolean run)
 				players[i].cmd.latency = 0;
 				P_SetPlayerAngle(&players[i], players[i].cmd.angleturn << 16);
 			}
-
-			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
-			players[i].cmd.angleturn |= received;
 		}
 	}
 
