@@ -12212,7 +12212,7 @@ void P_PlayerThink(player_t *player)
 		player->losstime--;
 
 	// Flash player after being hit.
-	if (player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1))
+	if (player->powers[pw_flashing] > 0 && player->powers[pw_flashing] < flashingtics && (leveltime & 1) && player->playerstate == PST_LIVE)
 		player->mo->flags2 |= MF2_DONTDRAW;
 	else
 		player->mo->flags2 &= ~MF2_DONTDRAW;
