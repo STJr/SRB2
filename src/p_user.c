@@ -9651,12 +9651,12 @@ consvar_t cv_cam_savedist[2][2] = {
 };
 consvar_t cv_cam_saveheight[2][2] = {
 	{ // standard
-		CVAR_INIT ("cam_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
-		CVAR_INIT ("cam2_height", "25", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
+		CVAR_INIT ("cam_height", "40", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_height", "40", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
 	},
 	{ // simple
-		CVAR_INIT ("cam_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
-		CVAR_INIT ("cam2_simpleheight", "48", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
+		CVAR_INIT ("cam_simpleheight", "60", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_simpleheight", "60", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
 
 	}
 };
