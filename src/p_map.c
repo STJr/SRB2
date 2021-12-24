@@ -108,6 +108,30 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 	return true;
 }
 
+//
+// P_InitAngle - Change an object's angle, including interp values.
+//
+void P_InitAngle(mobj_t *thing, angle_t newValue)
+{
+	thing->angle = thing->old_angle = newValue;
+}
+
+//
+// P_InitPitch - Change an object's pitch, including interp values.
+//
+void P_InitPitch(mobj_t *thing, angle_t newValue)
+{
+	thing->pitch = thing->old_pitch = newValue;
+}
+
+//
+// P_InitRoll - Change an object's roll, including interp values.
+//
+void P_InitRoll(mobj_t *thing, angle_t newValue)
+{
+	thing->roll = thing->old_roll = newValue;
+}
+
 // =========================================================================
 //                       MOVEMENT ITERATOR FUNCTIONS
 // =========================================================================

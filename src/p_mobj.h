@@ -287,7 +287,7 @@ typedef struct mobj_s
 
 	// More drawing info: to determine current sprite.
 	angle_t angle, pitch, roll; // orientation
-	angle_t old_angle;
+	angle_t old_angle, old_pitch, old_roll; // orientation interpolation
 	angle_t rollangle;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h

@@ -2758,19 +2758,19 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	mobj->info = &mobjinfo[mobj->type];
 	if (diff & MD_POS)
 	{
-		mobj->x = READFIXED(save_p);
-		mobj->y = READFIXED(save_p);
-		mobj->angle = READANGLE(save_p);
-		mobj->pitch = READANGLE(save_p);
-		mobj->roll = READANGLE(save_p);
+		mobj->x = mobj->old_x = READFIXED(save_p);
+		mobj->y = mobj->old_y = READFIXED(save_p);
+		mobj->angle = mobj->old_angle = READANGLE(save_p);
+		mobj->pitch = mobj->old_pitch = READANGLE(save_p);
+		mobj->roll = mobj->old_roll = READANGLE(save_p);
 	}
 	else
 	{
-		mobj->x = mobj->spawnpoint->x << FRACBITS;
-		mobj->y = mobj->spawnpoint->y << FRACBITS;
-		mobj->angle = FixedAngle(mobj->spawnpoint->angle*FRACUNIT);
-		mobj->pitch = FixedAngle(mobj->spawnpoint->pitch*FRACUNIT);
-		mobj->roll = FixedAngle(mobj->spawnpoint->roll*FRACUNIT);
+		mobj->x = mobj->old_x = mobj->spawnpoint->x << FRACBITS;
+		mobj->y = mobj->old_y = mobj->spawnpoint->y << FRACBITS;
+		mobj->angle = mobj->old_angle = FixedAngle(mobj->spawnpoint->angle*FRACUNIT);
+		mobj->pitch = mobj->old_pitch = FixedAngle(mobj->spawnpoint->pitch*FRACUNIT);
+		mobj->roll = mobj->old_roll = FixedAngle(mobj->spawnpoint->roll*FRACUNIT);
 	}
 	if (diff & MD_MOM)
 	{
