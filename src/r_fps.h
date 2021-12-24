@@ -99,6 +99,10 @@ void R_UpdateViewInterpolation(void);
 void R_ResetViewInterpolation(void);
 // Set the current view context (the viewvars pointed to by newview)
 void R_SetViewContext(enum viewcontext_e _viewcontext);
+
+fixed_t R_InterpolateFixed(fixed_t from, fixed_t to);
+angle_t R_InterpolateAngle(angle_t from, angle_t to);
+
 // Evaluate the interpolated mobj state for the given mobj
 void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out);
 // Evaluate the interpolated mobj state for the given precipmobj

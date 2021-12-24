@@ -177,6 +177,26 @@ void R_SetViewContext(enum viewcontext_e _viewcontext)
 	}
 }
 
+fixed_t R_InterpolateFixed(fixed_t from, fixed_t to)
+{
+	if (cv_frameinterpolation.value == 0)
+	{
+		return to;
+	}
+
+	return (R_LerpFixed(from, to, rendertimefrac));
+}
+
+angle_t R_InterpolateAngle(angle_t from, angle_t to)
+{
+	if (cv_frameinterpolation.value == 0)
+	{
+		return to;
+	}
+
+	return (R_LerpAngle(from, to, rendertimefrac));
+}
+
 void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 {
 	out->x = R_LerpFixed(mobj->old_x, mobj->x, frac);
