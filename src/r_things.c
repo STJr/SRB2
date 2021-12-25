@@ -1135,7 +1135,10 @@ static void R_SplitSprite(vissprite_t *sprite)
 //
 fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 {
+	fixed_t halfHeight;
 	boolean isflipped = thing->eflags & MFE_VERTICALFLIP;
+	fixed_t floorz;
+	fixed_t ceilingz;
 	fixed_t z, groundz = isflipped ? INT32_MAX : INT32_MIN;
 	pslope_t *slope, *groundslope = NULL;
 	msecnode_t *node;
@@ -1154,7 +1157,11 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 		R_InterpolateMobjState(thing, FRACUNIT, &interp);
 	}
 
-#define CHECKZ (isflipped ? z > interp.z+thing->height/2 && z < groundz : z < interp.z+thing->height/2 && z > groundz)
+	halfHeight = interp.z + (thing->height >> 1);
+	floorz = P_GetFloorZ(thing, thing->subsector->sector, interp.x, interp.y, NULL);
+	ceilingz = P_GetCeilingZ(thing, thing->subsector->sector, interp.x, interp.y, NULL);
+
+#define CHECKZ (isflipped ? z > halfHeight && z < groundz : z < halfHeight && z > groundz)
 
 	for (node = thing->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
@@ -1188,10 +1195,10 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 			}
 	}
 
-	if (isflipped ? (thing->ceilingz < groundz - (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), thing->radius*3/2)))
-		: (thing->floorz > groundz + (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), thing->radius*3/2))))
+	if (isflipped ? (ceilingz < groundz - (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), thing->radius*3/2)))
+		: (floorz > groundz + (!groundslope ? 0 : FixedMul(abs(groundslope->zdelta), thing->radius*3/2))))
 	{
-		groundz = isflipped ? thing->ceilingz : thing->floorz;
+		groundz = isflipped ? ceilingz : floorz;
 		groundslope = NULL;
 	}
 
@@ -1202,10 +1209,10 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 	{
 		INT32 xl, xh, yl, yh, bx, by;
 
-		xl = (unsigned)(thing->x - thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
-		xh = (unsigned)(thing->x + thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
-		yl = (unsigned)(thing->y - thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
-		yh = (unsigned)(thing->y + thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
+		xl = (unsigned)(interp.x - thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
+		xh = (unsigned)(interp.x + thing->radius - bmaporgx)>>MAPBLOCKSHIFT;
+		yl = (unsigned)(interp.y - thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
+		yh = (unsigned)(interp.y + thing->radius - bmaporgy)>>MAPBLOCKSHIFT;
 
 		BMBOUNDFIX(xl, xh, yl, yh);
 
@@ -1242,7 +1249,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 						// We're inside it! Yess...
 						z = po->lines[0]->backsector->ceilingheight;
 
-						if (z < thing->z+thing->height/2 && z > groundz)
+						if (z < halfHeight && z > groundz)
 						{
 							groundz = z;
 							groundslope = NULL;
