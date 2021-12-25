@@ -3130,6 +3130,7 @@ static void P_AddBinaryMapTags(void)
 		case 762:
 			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
 			break;
+		case 294:
 		case 780:
 			Tag_FSet(&mapthings[i].tags, mapthings[i].extrainfo);
 			break;
@@ -4897,6 +4898,9 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].args[0] = mapthings[i].extrainfo + 1;
 			break;
 		case 136: //Pyre Fly
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
+		case 294:
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 502: //Star post

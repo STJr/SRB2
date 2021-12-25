@@ -12693,7 +12693,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	boolean avoidcenter;
-	UINT32 i;
+	INT32 i;
 	UINT8 extrainfo = (actor->spawnpoint ? actor->spawnpoint->extrainfo : 0);
 
 	if (LUA_CallAction(A_BOSS5FINDWAYPOINT, actor))
@@ -12735,25 +12735,26 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 	}
 	else if (locvar1 == 1) // always go to ambush-marked waypoint
 	{
+		boolean found = false;
+
 		if (avoidcenter)
 			goto nowaypoints; // if we can't go the center, why on earth are we doing this?
 
-		for (i = 0; i < nummapthings; i++)
+		TAG_ITER_THINGS(extrainfo, i)
 		{
 			if (!mapthings[i].mobj)
 				continue;
 			if (mapthings[i].mobj->type != MT_FANGWAYPOINT)
 				continue;
-			if (mapthings[i].extrainfo != extrainfo)
-				continue;
-			if (!(mapthings[i].options & MTF_AMBUSH))
+			if (!(mapthings[i].args[0]))
 				continue;
 
 			P_SetTarget(&actor->tracer, mapthings[i].mobj);
+			found = true;
 			break;
 		}
 
-		if (i == nummapthings)
+		if (!found)
 			goto nowaypoints;
 	}
 	else // locvar1 == 0
@@ -12766,7 +12767,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 		actor->z += hackoffset;
 
 		// first, count how many waypoints we have
-		for (i = 0; i < nummapthings; i++)
+		TAG_ITER_THINGS(extrainfo, i)
 		{
 			if (!mapthings[i].mobj)
 				continue;
@@ -12774,9 +12775,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 				continue;
 			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
 				continue;
-			if (mapthings[i].extrainfo != extrainfo)
-				continue;
-			if (mapthings[i].options & MTF_AMBUSH)
+			if (mapthings[i].args[0])
 			{
 				if (avoidcenter)
 					continue;
@@ -12823,7 +12822,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 		numfangwaypoints = 0;
 
 		// now find them again and add them to the table!
-		for (i = 0; i < nummapthings; i++)
+		TAG_ITER_THINGS(extrainfo, i)
 		{
 			if (!mapthings[i].mobj)
 				continue;
@@ -12831,9 +12830,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 				continue;
 			if (actor->tracer == mapthings[i].mobj) // this was your tracer last time
 				continue;
-			if (mapthings[i].extrainfo != extrainfo)
-				continue;
-			if (mapthings[i].options & MTF_AMBUSH)
+			if (mapthings[i].args[0])
 			{
 				if (avoidcenter)
 					continue;
