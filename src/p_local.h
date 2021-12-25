@@ -349,6 +349,7 @@ void P_FlashPal(player_t *pl, UINT16 type, UINT16 duration);
 #define PAL_MIXUP    2
 #define PAL_RECYCLE  3
 #define PAL_NUKE     4
+#define PAL_INVERT   5
 
 //
 // P_ENEMY
