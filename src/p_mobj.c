@@ -11652,7 +11652,7 @@ void P_MovePlayerToSpawn(INT32 playernum, mapthing_t *mthing)
 			mobj->eflags |= MFE_VERTICALFLIP;
 			mobj->flags2 |= MF2_OBJECTFLIP;
 		}
-		if (mthing->options & MTF_AMBUSH)
+		if (mthing->args[0])
 			P_SetPlayerMobjState(mobj, S_PLAY_FALL);
 		else if (metalrecording)
 			P_SetPlayerMobjState(mobj, S_PLAY_WAIT);

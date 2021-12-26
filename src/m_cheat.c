@@ -539,7 +539,7 @@ void Command_Teleport_f(void)
 
 			// Flagging a player's ambush will make them start on the ceiling
 			// Objectflip inverts
-			if (!!(mt->options & MTF_AMBUSH) ^ !!(mt->options & MTF_OBJECTFLIP))
+			if (!!(mt->args[0]) ^ !!(mt->options & MTF_OBJECTFLIP))
 				intz = ss->sector->ceilingheight - p->mo->height - offset;
 			else
 				intz = ss->sector->floorheight + offset;
