@@ -3889,57 +3889,33 @@ static mobj_t *P_FindBossFlyPoint(mobj_t *mo, INT32 tag)
 	return closest;
 }
 
-// Function: A_BossDeath
-//
-// Description: Possibly trigger special effects when boss dies.
-//
-// var1 = unused
-// var2 = unused
-//
-void A_BossDeath(mobj_t *mo)
+static void P_DoBossVictory(mobj_t *mo)
 {
 	thinker_t *th;
 	mobj_t *mo2;
 	INT32 i;
 
-	if (LUA_CallAction(A_BOSSDEATH, mo))
-		return;
-
-	if (mo->spawnpoint && mo->spawnpoint->extrainfo)
-		P_LinedefExecute(LE_BOSSDEAD+(mo->spawnpoint->extrainfo*LE_PARAMWIDTH), mo, NULL);
-	else
-		P_LinedefExecute(LE_BOSSDEAD, mo, NULL);
-	mo->health = 0;
-
-	// Boss is dead (but not necessarily fleeing...)
-	// Lua may use this to ignore bosses after they start fleeing
-	mo->flags2 |= MF2_BOSSDEAD;
-
-	// make sure there is a player alive for victory
-	for (i = 0; i < MAXPLAYERS; i++)
-		if (playeringame[i] && ((players[i].mo && players[i].mo->health)
-			|| ((netgame || multiplayer) && (players[i].lives || players[i].continues))))
-			break;
-
-	if (i == MAXPLAYERS)
-		return; // no one left alive, so do not end game
-
-	// scan the remaining thinkers to see
-	// if all bosses are dead
+	// scan the remaining thinkers to see if all bosses are dead
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
 	{
 		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 			continue;
 
 		mo2 = (mobj_t *)th;
-		if (mo2 != mo && (mo2->flags & MF_BOSS) && mo2->health > 0)
-			goto bossjustdie; // other boss not dead - just go straight to dying!
+
+		if (mo2 == mo)
+			continue;
+
+		if ((mo2->flags & MF_BOSS) && mo2->health > 0)
+			return;
 	}
 
 	// victory!
 	P_LinedefExecute(LE_ALLBOSSESDEAD, mo, NULL);
+
 	if (stoppedclock && modeattacking) // if you're just time attacking, skip making the capsule appear since you don't need to step on it anyways.
-		goto bossjustdie;
+		return;
+
 	if (mo->flags2 & MF2_BOSSNOTRAP)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -3979,8 +3955,196 @@ void A_BossDeath(mobj_t *mo)
 					mapheaderinfo[gamemap-1]->muspostbossfadein);
 		}
 	}
+}
 
-bossjustdie:
+static void P_SpawnBoss1Junk(mobj_t *mo)
+{
+	mobj_t *mo2 = P_SpawnMobjFromMobj(mo,
+	P_ReturnThrustX(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
+	P_ReturnThrustY(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
+	32<<FRACBITS, MT_BOSSJUNK);
+	mo2->angle = mo->angle;
+	P_InstaThrust(mo2, mo2->angle - ANGLE_90, 4*mo2->scale);
+	P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
+	P_SetMobjState(mo2, S_BOSSEGLZ1);
+
+	mo2 = P_SpawnMobjFromMobj(mo,
+		P_ReturnThrustX(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
+		P_ReturnThrustY(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
+		32<<FRACBITS, MT_BOSSJUNK);
+	mo2->angle = mo->angle;
+	P_InstaThrust(mo2, mo2->angle + ANGLE_90, 4*mo2->scale);
+	P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
+	P_SetMobjState(mo2, S_BOSSEGLZ2);
+}
+
+static void P_SpawnBoss2Junk(mobj_t *mo)
+{
+	mobj_t *mo2 = P_SpawnMobjFromMobj(mo,
+	P_ReturnThrustX(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
+	P_ReturnThrustY(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
+	32<<FRACBITS, MT_BOSSJUNK);
+	mo2->angle = mo->angle;
+	P_InstaThrust(mo2, mo2->angle - ANGLE_90, 4*mo2->scale);
+	P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
+	P_SetMobjState(mo2, S_BOSSTANK1);
+
+	mo2 = P_SpawnMobjFromMobj(mo,
+		P_ReturnThrustX(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
+		P_ReturnThrustY(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
+		32<<FRACBITS, MT_BOSSJUNK);
+	mo2->angle = mo->angle;
+	P_InstaThrust(mo2, mo2->angle + ANGLE_90, 4*mo2->scale);
+	P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
+	P_SetMobjState(mo2, S_BOSSTANK2);
+
+	mo2 = P_SpawnMobjFromMobj(mo, 0, 0,
+		mobjinfo[MT_EGGMOBILE2].height + (32<<FRACBITS),
+		MT_BOSSJUNK);
+	mo2->angle = mo->angle;
+	P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
+	mo2->momz += mo->momz;
+	P_SetMobjState(mo2, S_BOSSSPIGOT);
+}
+
+static void P_SpawnBoss3Junk(mobj_t *mo)
+{
+	mobj_t *mo2 = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_BOSSJUNK);
+	mo2->angle = mo->angle;
+	P_SetMobjState(mo2, S_BOSSSEBH1);
+}
+
+static void P_DoCybrakdemonDeath(mobj_t *mo)
+{
+	mo->flags |= MF_NOCLIP;
+	mo->flags &= ~(MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
+
+	S_StartSound(NULL, sfx_bedie2);
+	P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_CYBRAKDEMON_VILE_EXPLOSION);
+	mo->z += P_MobjFlip(mo);
+	P_SetObjectMomZ(mo, 12*FRACUNIT, false);
+	S_StartSound(mo, sfx_bgxpld);
+	if (mo->spawnpoint && !(mo->spawnpoint->options & MTF_EXTRA))
+		P_InstaThrust(mo, R_PointToAngle2(0, 0, mo->x, mo->y), 14*FRACUNIT);
+}
+
+static void P_DoBoss5Death(mobj_t *mo)
+{
+	if (mo->flags2 & MF2_SLIDEPUSH)
+	{
+		P_RemoveMobj(mo);
+		return;
+	}
+	if (mo->tracer)
+	{
+		var1 = var2 = 0;
+		A_Boss5Jump(mo);
+		mo->momx = ((16 - 1)*mo->momx)/16;
+		mo->momy = ((16 - 1)*mo->momy)/16;
+		{
+			const fixed_t time = FixedHypot(mo->tracer->x - mo->x, mo->tracer->y - mo->y)/FixedHypot(mo->momx, mo->momy);
+			const fixed_t speed = 64*FRACUNIT;
+			mobj_t *pole = P_SpawnMobj(
+				mo->tracer->x - P_ReturnThrustX(mo->tracer, mo->tracer->angle, speed*time),
+				mo->tracer->y - P_ReturnThrustY(mo->tracer, mo->tracer->angle, speed*time),
+				mo->tracer->floorz + (256+1)*FRACUNIT,
+				MT_FSGNB);
+			P_SetTarget(&pole->tracer, P_SpawnMobj(
+				pole->x, pole->y,
+				pole->z - 256*FRACUNIT,
+				MT_FSGNB));
+			P_SetTarget(&pole->tracer->tracer, P_SpawnMobj(
+				pole->x + P_ReturnThrustX(pole, mo->tracer->angle, FRACUNIT),
+				pole->y + P_ReturnThrustY(pole, mo->tracer->angle, FRACUNIT),
+				pole->z + 256*FRACUNIT,
+				MT_FSGNA));
+			pole->tracer->flags |= MF_NOCLIPTHING;
+			P_SetScale(pole, (pole->destscale = 2*FRACUNIT));
+			P_SetScale(pole->tracer, (pole->tracer->destscale = 2*FRACUNIT));
+			pole->angle = pole->tracer->angle = mo->tracer->angle;
+			pole->tracer->tracer->angle = pole->angle - ANGLE_90;
+			pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
+			pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
+			pole->tracer->momx = pole->momx;
+			pole->tracer->momy = pole->momy;
+			pole->tracer->tracer->momx = pole->momx;
+			pole->tracer->tracer->momy = pole->momy;
+		}
+	}
+	else
+	{
+		P_SetObjectMomZ(mo, 10*FRACUNIT, false);
+		mo->flags |= MF_NOGRAVITY;
+	}
+	mo->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
+}
+
+static void P_DoBossDefaultDeath(mobj_t *mo)
+{
+	UINT8 extrainfo = (mo->spawnpoint ? mo->spawnpoint->extrainfo : 0);
+
+	// Stop exploding and prepare to run.
+	P_SetMobjState(mo, mo->info->xdeathstate);
+	if (P_MobjWasRemoved(mo))
+		return;
+
+	P_SetTarget(&mo->target, P_FindBossFlyPoint(mo, extrainfo));
+
+	mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
+	mo->flags |= MF_NOCLIPHEIGHT;
+
+	mo->movedir = 0;
+	mo->extravalue1 = 35;
+	mo->flags2 |= MF2_BOSSFLEE;
+	mo->momz = P_MobjFlip(mo)*2*mo->scale;
+
+	if (mo->target)
+	{
+		angle_t diff = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y) - mo->angle;
+		if (diff)
+		{
+			if (diff > ANGLE_180)
+				diff = InvAngle(InvAngle(diff)/mo->extravalue1);
+			else
+				diff /= mo->extravalue1;
+			mo->movedir = diff;
+		}
+	}
+}
+
+// Function: A_BossDeath
+//
+// Description: Possibly trigger special effects when boss dies.
+//
+// var1 = unused
+// var2 = unused
+//
+void A_BossDeath(mobj_t *mo)
+{
+	INT32 i;
+	UINT8 extrainfo = (mo->spawnpoint ? mo->spawnpoint->extrainfo : 0);
+
+	if (LUA_CallAction(A_BOSSDEATH, mo))
+		return;
+
+	P_LinedefExecute(LE_BOSSDEAD+(extrainfo*LE_PARAMWIDTH), mo, NULL);
+	mo->health = 0;
+
+	// Boss is dead (but not necessarily fleeing...)
+	// Lua may use this to ignore bosses after they start fleeing
+	mo->flags2 |= MF2_BOSSDEAD;
+
+	// make sure there is a player alive for victory
+	for (i = 0; i < MAXPLAYERS; i++)
+		if (playeringame[i] && ((players[i].mo && players[i].mo->health)
+			|| ((netgame || multiplayer) && (players[i].lives || players[i].continues))))
+			break;
+
+	if (i == MAXPLAYERS)
+		return; // no one left alive, so do not end game
+
+	P_DoBossVictory(mo);
+
 	if (LUA_HookMobj(mo, MOBJ_HOOK(BossDeath)))
 		return;
 	else if (P_MobjWasRemoved(mo))
@@ -3992,61 +4156,13 @@ bossjustdie:
 		default:
 			break;
 		case MT_EGGMOBILE: // twin laser pods
-			{
-				mo2 = P_SpawnMobjFromMobj(mo,
-					P_ReturnThrustX(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
-					P_ReturnThrustY(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
-					32<<FRACBITS, MT_BOSSJUNK);
-				mo2->angle = mo->angle;
-				P_InstaThrust(mo2, mo2->angle - ANGLE_90, 4*mo2->scale);
-				P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
-				P_SetMobjState(mo2, S_BOSSEGLZ1);
-
-				mo2 = P_SpawnMobjFromMobj(mo,
-					P_ReturnThrustX(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
-					P_ReturnThrustY(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
-					32<<FRACBITS, MT_BOSSJUNK);
-				mo2->angle = mo->angle;
-				P_InstaThrust(mo2, mo2->angle + ANGLE_90, 4*mo2->scale);
-				P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
-				P_SetMobjState(mo2, S_BOSSEGLZ2);
-			}
+			P_SpawnBoss1Junk(mo);
 			break;
 		case MT_EGGMOBILE2: // twin tanks + spigot
-			{
-				mo2 = P_SpawnMobjFromMobj(mo,
-					P_ReturnThrustX(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
-					P_ReturnThrustY(mo, mo->angle - ANGLE_90, 32<<FRACBITS),
-					32<<FRACBITS, MT_BOSSJUNK);
-				mo2->angle = mo->angle;
-				P_InstaThrust(mo2, mo2->angle - ANGLE_90, 4*mo2->scale);
-				P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
-				P_SetMobjState(mo2, S_BOSSTANK1);
-
-				mo2 = P_SpawnMobjFromMobj(mo,
-					P_ReturnThrustX(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
-					P_ReturnThrustY(mo, mo->angle + ANGLE_90, 32<<FRACBITS),
-					32<<FRACBITS, MT_BOSSJUNK);
-				mo2->angle = mo->angle;
-				P_InstaThrust(mo2, mo2->angle + ANGLE_90, 4*mo2->scale);
-				P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
-				P_SetMobjState(mo2, S_BOSSTANK2);
-
-				mo2 = P_SpawnMobjFromMobj(mo, 0, 0,
-					mobjinfo[MT_EGGMOBILE2].height + (32<<FRACBITS),
-					MT_BOSSJUNK);
-				mo2->angle = mo->angle;
-				P_SetObjectMomZ(mo2, 4*FRACUNIT, false);
-				mo2->momz += mo->momz;
-				P_SetMobjState(mo2, S_BOSSSPIGOT);
-			}
+			P_SpawnBoss2Junk(mo);
 			break;
 		case MT_EGGMOBILE3:
-			{
-				mo2 = P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_BOSSJUNK);
-				mo2->angle = mo->angle;
-				P_SetMobjState(mo2, S_BOSSSEBH1);
-			}
+			P_SpawnBoss3Junk(mo);
 			break;
 	}
 
@@ -4054,118 +4170,24 @@ bossjustdie:
 	switch (mo->type)
 	{
 		case MT_BLACKEGGMAN:
-		{
 			mo->flags |= MF_NOCLIP;
 			mo->flags &= ~MF_SPECIAL;
 
 			S_StartSound(NULL, sfx_befall);
 			break;
-		}
 		case MT_CYBRAKDEMON:
-		{
-			mo->flags |= MF_NOCLIP;
-			mo->flags &= ~(MF_SPECIAL|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
-
-			S_StartSound(NULL, sfx_bedie2);
-			P_SpawnMobjFromMobj(mo, 0, 0, 0, MT_CYBRAKDEMON_VILE_EXPLOSION);
-			mo->z += P_MobjFlip(mo);
-			P_SetObjectMomZ(mo, 12*FRACUNIT, false);
-			S_StartSound(mo, sfx_bgxpld);
-			if (mo->spawnpoint && !(mo->spawnpoint->options & MTF_EXTRA))
-				P_InstaThrust(mo, R_PointToAngle2(0, 0, mo->x, mo->y), 14*FRACUNIT);
+			P_DoCybrakdemonDeath(mo);
 			break;
-		}
 		case MT_KOOPA:
-		{
 			if (mo->spawnpoint)
 				EV_DoCeiling(mo->spawnpoint->args[0], NULL, raiseToHighest);
-			return;
-		}
-		case MT_FANG:
-		{
-			if (mo->flags2 & MF2_SLIDEPUSH)
-			{
-				P_RemoveMobj(mo);
-				return;
-			}
-			if (mo->tracer)
-			{
-				var1 = var2 = 0;
-				A_Boss5Jump(mo);
-				mo->momx = ((16 - 1)*mo->momx)/16;
-				mo->momy = ((16 - 1)*mo->momy)/16;
-				{
-					const fixed_t time = FixedHypot(mo->tracer->x - mo->x, mo->tracer->y - mo->y)/FixedHypot(mo->momx, mo->momy);
-					const fixed_t speed = 64*FRACUNIT;
-					mobj_t *pole = P_SpawnMobj(
-						mo->tracer->x - P_ReturnThrustX(mo->tracer, mo->tracer->angle, speed*time),
-						mo->tracer->y - P_ReturnThrustY(mo->tracer, mo->tracer->angle, speed*time),
-						mo->tracer->floorz + (256+1)*FRACUNIT,
-						MT_FSGNB);
-					P_SetTarget(&pole->tracer, P_SpawnMobj(
-						pole->x, pole->y,
-						pole->z - 256*FRACUNIT,
-						MT_FSGNB));
-					P_SetTarget(&pole->tracer->tracer, P_SpawnMobj(
-						pole->x + P_ReturnThrustX(pole, mo->tracer->angle, FRACUNIT),
-						pole->y + P_ReturnThrustY(pole, mo->tracer->angle, FRACUNIT),
-						pole->z + 256*FRACUNIT,
-						MT_FSGNA));
-					pole->tracer->flags |= MF_NOCLIPTHING;
-					P_SetScale(pole, (pole->destscale = 2*FRACUNIT));
-					P_SetScale(pole->tracer, (pole->tracer->destscale = 2*FRACUNIT));
-					pole->angle = pole->tracer->angle = mo->tracer->angle;
-					pole->tracer->tracer->angle = pole->angle - ANGLE_90;
-					pole->momx = P_ReturnThrustX(pole, pole->angle, speed);
-					pole->momy = P_ReturnThrustY(pole, pole->angle, speed);
-					pole->tracer->momx = pole->momx;
-					pole->tracer->momy = pole->momy;
-					pole->tracer->tracer->momx = pole->momx;
-					pole->tracer->tracer->momy = pole->momy;
-				}
-			}
-			else
-			{
-				P_SetObjectMomZ(mo, 10*FRACUNIT, false);
-				mo->flags |= MF_NOGRAVITY;
-			}
-			mo->flags |= MF_NOCLIP|MF_NOCLIPHEIGHT;
-			return;
-		}
-		default: //eggmobiles
-		{
-			UINT8 extrainfo = (mo->spawnpoint ? mo->spawnpoint->extrainfo : 0);
-
-			// Stop exploding and prepare to run.
-			P_SetMobjState(mo, mo->info->xdeathstate);
-			if (P_MobjWasRemoved(mo))
-				return;
-
-			P_SetTarget(&mo->target, P_FindBossFlyPoint(mo, extrainfo));
-
-			mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
-			mo->flags |= MF_NOCLIPHEIGHT;
-
-			mo->movedir = 0;
-			mo->extravalue1 = 35;
-			mo->flags2 |= MF2_BOSSFLEE;
-			mo->momz = P_MobjFlip(mo)*2*mo->scale;
-
-			if (mo->target)
-			{
-				angle_t diff = R_PointToAngle2(mo->x, mo->y, mo->target->x, mo->target->y) - mo->angle;
-				if (diff)
-				{
-					if (diff > ANGLE_180)
-						diff = InvAngle(InvAngle(diff)/mo->extravalue1);
-					else
-						diff /= mo->extravalue1;
-					mo->movedir = diff;
-				}
-			}
-
 			break;
-		}
+		case MT_FANG:
+			P_DoBoss5Death(mo);
+			break;
+		default: //eggmobiles
+			P_DoBossDefaultDeath(mo);
+			break;
 	}
 }
 
