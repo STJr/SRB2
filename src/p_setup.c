@@ -4915,6 +4915,9 @@ static void P_ConvertBinaryMap(void)
 				// Old behavior if Parameter is 0; add 360 to the angle for each consecutive star post.
 				mapthings[i].args[0] = (mapthings[i].angle/360);
 			break;
+		case 750: //Slope vertex
+			mapthings[i].args[0] = mapthings[i].extrainfo;
+			break;
 		case 753: //Zoom tube waypoint
 			mapthings[i].args[0] = mapthings[i].angle >> 8;
 			mapthings[i].args[1] = mapthings[i].angle & 255;

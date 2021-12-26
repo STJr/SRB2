@@ -469,7 +469,7 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 		vx[i].x = mt->x << FRACBITS;
 		vx[i].y = mt->y << FRACBITS;
 		vx[i].z = mt->z << FRACBITS;
-		if (!mt->extrainfo)
+		if (!mt->args[0])
 			vx[i].z += R_PointInSubsector(vx[i].x, vx[i].y)->sector->floorheight;
 	}
 
