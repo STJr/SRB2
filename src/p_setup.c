@@ -3130,6 +3130,7 @@ static void P_AddBinaryMapTags(void)
 		case 762:
 			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
 			break;
+		case 290:
 		case 294:
 		case 780:
 			Tag_FSet(&mapthings[i].tags, mapthings[i].extrainfo);

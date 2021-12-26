@@ -3862,6 +3862,33 @@ void A_Explode(mobj_t *actor)
 	P_RadiusAttack(actor, actor->target, actor->info->damage, locvar1, true);
 }
 
+static mobj_t *P_FindBossFlyPoint(mobj_t *mo, INT32 tag)
+{
+	INT32 i;
+	mobj_t *closest = NULL;
+
+	TAG_ITER_THINGS(tag, i)
+	{
+		mobj_t *mo2 = mapthings[i].mobj;
+
+		if (!mo2)
+			continue;
+
+		if (mo2->type != MT_BOSSFLYPOINT)
+			continue;
+
+		// If this one's further than the last one, don't go for it.
+		if (closest &&
+			P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) >
+			P_AproxDistance(P_AproxDistance(mo->x - closest->x, mo->y - closest->y), mo->z - closest->z))
+			continue;
+
+		closest = mo2;
+	}
+
+	return closest;
+}
+
 // Function: A_BossDeath
 //
 // Description: Possibly trigger special effects when boss dies.
@@ -4114,32 +4141,7 @@ bossjustdie:
 			if (P_MobjWasRemoved(mo))
 				return;
 
-			P_SetTarget(&mo->target, NULL);
-
-			// Flee! Flee! Find a point to escape to! If none, just shoot upward!
-			// scan the thinkers to find the runaway point
-			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-					continue;
-
-				mo2 = (mobj_t *)th;
-
-				if (mo2->type != MT_BOSSFLYPOINT)
-					continue;
-
-				if (mo2->spawnpoint && mo2->spawnpoint->extrainfo != extrainfo)
-					continue;
-
-				// If this one's further then the last one, don't go for it.
-				if (mo->target &&
-					P_AproxDistance(P_AproxDistance(mo->x - mo2->x, mo->y - mo2->y), mo->z - mo2->z) >
-					P_AproxDistance(P_AproxDistance(mo->x - mo->target->x, mo->y - mo->target->y), mo->z - mo->target->z))
-						continue;
-
-				// Otherwise... Do!
-				P_SetTarget(&mo->target, mo2);
-			}
+			P_SetTarget(&mo->target, P_FindBossFlyPoint(mo, extrainfo));
 
 			mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
 			mo->flags |= MF_NOCLIPHEIGHT;
@@ -12701,35 +12703,10 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 
 	avoidcenter = !actor->tracer || (actor->health == actor->info->damage+1);
 
-	if (locvar1 == 2) // look for the boss waypoint
+	if (locvar1 == 2) // look for the boss flypoint
 	{
-		thinker_t *th;
-		mobj_t *mo2;
-		P_SetTarget(&actor->tracer, NULL);
-		// Flee! Flee! Find a point to escape to! If none, just shoot upward!
-		// scan the thinkers to find the runaway point
-		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-				continue;
+		P_SetTarget(&actor->tracer, P_FindBossFlyPoint(actor, extrainfo));
 
-			mo2 = (mobj_t *)th;
-
-			if (mo2->type != MT_BOSSFLYPOINT)
-				continue;
-
-			if (mo2->spawnpoint && mo2->spawnpoint->extrainfo != extrainfo)
-				continue;
-
-			// If this one's further then the last one, don't go for it.
-			if (actor->tracer &&
-				P_AproxDistance(P_AproxDistance(actor->x - mo2->x, actor->y - mo2->y), actor->z - mo2->z) >
-				P_AproxDistance(P_AproxDistance(actor->x - actor->tracer->x, actor->y - actor->tracer->y), actor->z - actor->tracer->z))
-					continue;
-
-			// Otherwise... Do!
-			P_SetTarget(&actor->tracer, mo2);
-		}
 		if (!actor->tracer)
 			return; // no boss flypoints found
 	}
