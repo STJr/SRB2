@@ -57,6 +57,12 @@ typedef enum
 	TMFF_HOP        = 1<<2,
 } textmapflickyflags_t;
 
+typedef enum
+{
+	TMFH_NOFLAME = 1,
+	TMFH_CORONA  = 1<<1,
+} textmapflameholderflags_t;
+
 //FOF flags
 typedef enum
 {

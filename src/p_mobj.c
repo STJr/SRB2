@@ -12754,7 +12754,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			mobj->color = ((mthing->angle - 1) % (numskincolors - 1)) + 1;
 		break;
 	case MT_FLAME:
-		if (mthing->options & MTF_EXTRA)
+		if (mthing->args[0])
 		{
 			mobj_t *corona = P_MakeSoftwareCorona(mobj, 20);
 			P_SetScale(corona, (corona->destscale = mobj->scale*3));
@@ -12762,12 +12762,12 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		}
 		break;
 	case MT_FLAMEHOLDER:
-		if (!(mthing->options & MTF_OBJECTSPECIAL)) // Spawn the fire
+		if (!(mthing->args[0] & TMFH_NOFLAME)) // Spawn the fire
 		{
 			mobj_t *flame = P_SpawnMobjFromMobj(mobj, 0, 0, mobj->height, MT_FLAME);
 			P_SetTarget(&flame->target, mobj);
 			flame->flags2 |= MF2_BOSSNOTRAP;
-			if (mthing->options & MTF_EXTRA)
+			if (mthing->args[0] & TMFH_CORONA)
 			{
 				mobj_t *corona = P_MakeSoftwareCorona(flame, 20);
 				P_SetScale(corona, (corona->destscale = flame->scale*3));
@@ -12777,13 +12777,13 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	case MT_CANDLE:
 	case MT_CANDLEPRICKET:
-		if (mthing->options & MTF_EXTRA)
+		if (mthing->args[0])
 			P_MakeSoftwareCorona(mobj, ((mobj->type == MT_CANDLE) ? 42 : 176));
 		break;
 	case MT_JACKO1:
 	case MT_JACKO2:
 	case MT_JACKO3:
-		if (!(mthing->options & MTF_EXTRA)) // take the torch out of the crafting recipe
+		if (!(mthing->args[0])) // take the torch out of the crafting recipe
 		{
 			mobj_t *overlay = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_OVERLAY);
 			P_SetTarget(&overlay->target, mobj);

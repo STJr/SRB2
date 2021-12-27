@@ -5124,6 +5124,17 @@ static void P_ConvertBinaryMap(void)
 			}
 			break;
 		}
+		case 1101: //Torch
+		case 1119: //Candle
+		case 1120: //Candle pricket
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_EXTRA);
+			break;
+		case 1121: //Flame holder
+			if (mapthings[i].options & MTF_OBJECTSPECIAL)
+				mapthings[i].args[0] |= TMFH_NOFLAME;
+			if (mapthings[i].options & MTF_EXTRA)
+				mapthings[i].args[0] |= TMFH_CORONA;
+			break;
 		case 1202: //Rock spawner
 		{
 			mtag_t tag = (mtag_t)mapthings[i].angle;
@@ -5196,6 +5207,11 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 1807: //Axe
 			mapthings[i].args[0] = LE_AXE;
+			break;
+		case 2006: //Jack-o'-lantern 1
+		case 2007: //Jack-o'-lantern 2
+		case 2008: //Jack-o'-lantern 3
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_EXTRA);
 			break;
 		default:
 			break;
