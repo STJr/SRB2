@@ -4915,6 +4915,28 @@ static void P_ConvertBinaryMap(void)
 				// Old behavior if Parameter is 0; add 360 to the angle for each consecutive star post.
 				mapthings[i].args[0] = (mapthings[i].angle/360);
 			break;
+		case 522: //Wall spike
+			if (mapthings[i].options & MTF_OBJECTSPECIAL)
+			{
+				mapthings[i].args[0] = mobjinfo[MT_WALLSPIKE].speed + mapthings[i].angle/360;
+				mapthings[i].args[1] = (16 - mapthings[i].extrainfo) * mapthings[i].args[0]/16;
+				if (mapthings[i].options & MTF_EXTRA)
+					mapthings[i].args[2] |= TMSF_RETRACTED;
+			}
+			if (mapthings[i].options & MTF_AMBUSH)
+				mapthings[i].args[2] |= TMSF_INTANGIBLE;
+			break;
+		case 523: //Spike
+			if (mapthings[i].options & MTF_OBJECTSPECIAL)
+			{
+				mapthings[i].args[0] = mobjinfo[MT_SPIKE].speed + mapthings[i].angle;
+				mapthings[i].args[1] = (16 - mapthings[i].extrainfo) * mapthings[i].args[0]/16;
+				if (mapthings[i].options & MTF_EXTRA)
+					mapthings[i].args[2] |= TMSF_RETRACTED;
+			}
+			if (mapthings[i].options & MTF_AMBUSH)
+				mapthings[i].args[2] |= TMSF_INTANGIBLE;
+			break;
 		case 750: //Slope vertex
 			mapthings[i].args[0] = mapthings[i].extrainfo;
 			break;

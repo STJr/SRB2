@@ -10072,16 +10072,9 @@ static boolean P_FuseThink(mobj_t *mobj)
 	case MT_METALSONIC_BATTLE:
 		break; // don't remove
 	case MT_SPIKE:
-		P_SetMobjState(mobj, mobj->state->nextstate);
-		mobj->fuse = mobj->info->speed;
-		if (mobj->spawnpoint)
-			mobj->fuse += mobj->spawnpoint->angle;
-		break;
 	case MT_WALLSPIKE:
 		P_SetMobjState(mobj, mobj->state->nextstate);
-		mobj->fuse = mobj->info->speed;
-		if (mobj->spawnpoint)
-			mobj->fuse += (mobj->spawnpoint->angle / 360);
+		mobj->fuse = mobj->spawnpoint ? mobj->spawnpoint->args[0] : mobj->info->speed;
 		break;
 	case MT_NIGHTSCORE:
 		P_RemoveMobj(mobj);
@@ -12992,15 +12985,13 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	case MT_SPIKE:
 		// Pop up spikes!
-		if (mthing->options & MTF_OBJECTSPECIAL)
+		if (mthing->args[0])
 		{
 			mobj->flags &= ~MF_SCENERY;
-			mobj->fuse = (16 - mthing->extrainfo)*(mthing->angle + mobj->info->speed)/16;
-			if (mthing->options & MTF_EXTRA)
-				P_SetMobjState(mobj, mobj->info->meleestate);
+			mobj->fuse = mthing->args[1];
 		}
-		// Use per-thing collision for spikes if the deaf flag isn't checked.
-		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
+		// Use per-thing collision for spikes unless the intangible flag is checked.
+		if (!(mthing->args[2] & TMSF_INTANGIBLE) && !metalrecording)
 		{
 			P_UnsetThingPosition(mobj);
 			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
@@ -13010,18 +13001,18 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	case MT_WALLSPIKE:
 		// Pop up spikes!
-		if (mthing->options & MTF_OBJECTSPECIAL)
+		if (mthing->args[0])
 		{
 			mobj->flags &= ~MF_SCENERY;
-			mobj->fuse = (16 - mthing->extrainfo)*((mthing->angle/360) + mobj->info->speed)/16;
-			if (mthing->options & MTF_EXTRA)
-				P_SetMobjState(mobj, mobj->info->meleestate);
+			mobj->fuse = mthing->args[1];
 		}
-		// Use per-thing collision for spikes if the deaf flag isn't checked.
-		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
+		if (mthing->args[2] & TMSF_RETRACTED)
+			P_SetMobjState(mobj, mobj->info->meleestate);
+		// Use per-thing collision for spikes unless the intangible flag is checked.
+		if (!(mthing->args[2] & TMSF_INTANGIBLE) && !metalrecording)
 		{
 			P_UnsetThingPosition(mobj);
-			mobj->flags &= ~(MF_NOBLOCKMAP | MF_NOCLIPHEIGHT);
+			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOCLIPHEIGHT);
 			mobj->flags |= MF_SOLID;
 			P_SetThingPosition(mobj);
 		}

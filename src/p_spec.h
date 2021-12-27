@@ -44,6 +44,12 @@ typedef enum
 	TMDA_TOP          = 1<<3,
 } textmapdronealignment_t;
 
+typedef enum
+{
+	TMSF_RETRACTED  = 1,
+	TMSF_INTANGIBLE = 1<<1,
+} textmapspikeflags_t;
+
 //FOF flags
 typedef enum
 {
