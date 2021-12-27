@@ -6939,7 +6939,6 @@ static void P_RemoveOverlay(mobj_t *thing)
 	}
 }
 
-void A_BossDeath(mobj_t *mo);
 // AI for the Koopa boss.
 static void P_KoopaThinker(mobj_t *koopa)
 {
@@ -6947,7 +6946,8 @@ static void P_KoopaThinker(mobj_t *koopa)
 
 	if (koopa->watertop > koopa->z + koopa->height + FixedMul(128*FRACUNIT, koopa->scale) && koopa->health > 0)
 	{
-		A_BossDeath(koopa);
+		if (koopa->spawnpoint)
+			EV_DoCeiling(koopa->spawnpoint->args[0], NULL, raiseToHighest);
 		P_RemoveMobj(koopa);
 		return;
 	}

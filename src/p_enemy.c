@@ -4178,10 +4178,6 @@ void A_BossDeath(mobj_t *mo)
 		case MT_CYBRAKDEMON:
 			P_DoCybrakdemonDeath(mo);
 			break;
-		case MT_KOOPA:
-			if (mo->spawnpoint)
-				EV_DoCeiling(mo->spawnpoint->args[0], NULL, raiseToHighest);
-			break;
 		case MT_FANG:
 			P_DoBoss5Death(mo);
 			break;
