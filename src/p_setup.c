@@ -5141,6 +5141,12 @@ static void P_ConvertBinaryMap(void)
 			P_WriteConstant(MT_ROCKCRUMBLE1 + (sides[lines[j].sidenum[0]].rowoffset >> FRACBITS), &mapthings[i].stringargs[0]);
 			break;
 		}
+		case 1300: //Flame jet (horizontal)
+		case 1301: //Flame jet (vertical)
+			mapthings[i].args[0] = (mapthings[i].angle >> 13)*TICRATE/2;
+			mapthings[i].args[1] = ((mapthings[i].angle >> 10) & 7)*TICRATE/2;
+			mapthings[i].args[2] = 80 - 5*mapthings[i].extrainfo;
+			break;
 		case 1700: //Axis
 			mapthings[i].args[2] = mapthings[i].angle & 16383;
 			mapthings[i].args[3] = !!(mapthings[i].angle & 16384);

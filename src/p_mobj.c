@@ -7226,8 +7226,7 @@ static void P_FlameJetSceneryThink(mobj_t *mobj)
 	else
 		flame->angle += FixedAngle(mobj->fuse<<FRACBITS);
 
-	strength = 20*FRACUNIT;
-	strength -= ((20*FRACUNIT)/16)*mobj->movedir;
+	strength = (mobj->movedir ? mobj->movedir : 80)<<(FRACBITS-2);
 
 	P_InstaThrust(flame, flame->angle, strength);
 	S_StartSound(flame, sfx_fire);
@@ -7257,8 +7256,7 @@ static void P_VerticalFlameJetSceneryThink(mobj_t *mobj)
 
 	flame = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_FLAMEJETFLAME);
 
-	strength = 20*FRACUNIT;
-	strength -= ((20*FRACUNIT)/16)*mobj->movedir;
+	strength = (mobj->movedir ? mobj->movedir : 80)<<(FRACBITS-2);
 
 	// If deaf'd, the object spawns on the ceiling.
 	if (mobj->flags2 & MF2_AMBUSH)
@@ -12797,13 +12795,9 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	case MT_FLAMEJET:
 	case MT_VERTICALFLAMEJET:
-		mobj->threshold = (mthing->angle >> 10) & 7;
-		mobj->movecount = (mthing->angle >> 13);
-
-		mobj->threshold *= (TICRATE/2);
-		mobj->movecount *= (TICRATE/2);
-
-		mobj->movedir = mthing->extrainfo;
+		mobj->movecount = mthing->args[0];
+		mobj->threshold = mthing->args[1];
+		mobj->movedir = mthing->args[2];
 		break;
 	case MT_MACEPOINT:
 	case MT_CHAINMACEPOINT:
