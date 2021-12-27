@@ -8114,10 +8114,6 @@ void A_Boss3TakeDamage(mobj_t *actor)
 
 	actor->movecount = var1;
 	actor->movefactor = -512*FRACUNIT;
-
-	/*if (actor->target && actor->target->spawnpoint)
-		actor->threshold = actor->target->spawnpoint->extrainfo;*/
-
 }
 
 // Function: A_Boss3Path
@@ -8157,27 +8153,21 @@ void A_Boss3Path(mobj_t *actor)
 
 		if (!(actor->flags2 & MF2_STRONGBOX))
 		{
-			thinker_t *th;
 			mobj_t *mo2;
+			INT32 i;
 
 			P_SetTarget(&actor->target, NULL);
 
-			// scan the thinkers
-			// to find a point that matches
-			// the number
-			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+			// Find waypoint
+			TAG_ITER_THINGS(actor->cusval, i)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-					continue;
+				mo2 = mapthings[i].mobj;
 
-				mo2 = (mobj_t *)th;
+				if (!mo2)
+					continue;
 				if (mo2->type != MT_BOSS3WAYPOINT)
 					continue;
-				if (!mo2->spawnpoint)
-					continue;
-				if (mo2->spawnpoint->angle != actor->threshold)
-					continue;
-				if (mo2->spawnpoint->extrainfo != actor->cusval)
+				if (mapthings[i].args[0] != actor->threshold)
 					continue;
 
 				P_SetTarget(&actor->target, mo2);

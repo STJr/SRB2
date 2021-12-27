@@ -3131,6 +3131,7 @@ static void P_AddBinaryMapTags(void)
 			Tag_FSet(&mapthings[i].tags, mapthings[i].angle);
 			break;
 		case 290:
+		case 292:
 		case 294:
 		case 780:
 			Tag_FSet(&mapthings[i].tags, mapthings[i].extrainfo);
@@ -4935,6 +4936,10 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 209: //Brak Eggman
 			mapthings[i].args[4] = LE_BRAKVILEATACK + mapthings[i].extrainfo*LE_PARAMWIDTH;
+			break;
+		case 292: //Boss waypoint
+			mapthings[i].args[0] = mapthings[i].angle;
+			mapthings[i].args[1] = mapthings[i].options & 7;
 			break;
 		case 294:
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);

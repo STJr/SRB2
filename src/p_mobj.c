@@ -4520,27 +4520,21 @@ static void P_Boss3Thinker(mobj_t *mobj)
 
 		if (!(mobj->flags2 & MF2_STRONGBOX))
 		{
-			thinker_t *th;
 			mobj_t *mo2;
+			INT32 i;
 
 			P_SetTarget(&mobj->tracer, NULL);
 
-			// scan the thinkers
-			// to find a point that matches
-			// the number
-			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+			// Find waypoint
+			TAG_ITER_THINGS(mobj->cusval, i)
 			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-					continue;
+				mo2 = mapthings[i].mobj;
 
-				mo2 = (mobj_t *)th;
+				if (!mo2)
+					continue;
 				if (mo2->type != MT_BOSS3WAYPOINT)
 					continue;
-				if (!mo2->spawnpoint)
-					continue;
-				if (mo2->spawnpoint->angle != mobj->threshold)
-					continue;
-				if (mo2->spawnpoint->extrainfo != mobj->cusval)
+				if (mapthings[i].args[0] != mobj->threshold)
 					continue;
 
 				P_SetTarget(&mobj->tracer, mo2);
@@ -5283,8 +5277,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		fixed_t vertical, horizontal;
 		fixed_t airtime = 5*TICRATE;
 		INT32 waypointNum = 0;
-		thinker_t *th;
-		INT32 i;
+		INT32 i, j;
 		boolean foundgoop = false;
 		INT32 closestNum;
 		UINT8 bossid = (mobj->spawnpoint ? mobj->spawnpoint->args[0] : 0);
@@ -5307,19 +5300,15 @@ static void P_Boss7Thinker(mobj_t *mobj)
 				closestdist = INT32_MAX; // Just in case...
 
 				// Find waypoint he is closest to
-				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+				TAG_ITER_THINGS(bossid, j)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-						continue;
+					mo2 = mapthings[j].mobj;
 
-					mo2 = (mobj_t *)th;
+					if (!mo2)
+						continue;
 					if (mo2->type != MT_BOSS3WAYPOINT)
 						continue;
-					if (!mo2->spawnpoint)
-						continue;
-					if (mo2->spawnpoint->extrainfo != bossid)
-						continue;
-					if (mobj->health <= mobj->info->damage && !(mo2->spawnpoint->options & 7))
+					if (mobj->health <= mobj->info->damage && !mapthings[j].args[1])
 						continue; // don't jump to center
 
 					dist = P_AproxDistance(players[i].mo->x - mo2->x, players[i].mo->y - mo2->y);
@@ -5327,7 +5316,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 					if (!(closestNum == -1 || dist < closestdist))
 						continue;
 
-					closestNum = (mo2->spawnpoint->options & 7);
+					closestNum = mapthings[j].args[1];
 					closestdist = dist;
 					foundgoop = true;
 				}
@@ -5347,7 +5336,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		}
 
 		if (mobj->tracer && mobj->tracer->type == MT_BOSS3WAYPOINT
-			&& mobj->tracer->spawnpoint && (mobj->tracer->spawnpoint->options & 7) == waypointNum)
+			&& mobj->tracer->spawnpoint && mobj->tracer->spawnpoint->args[1] == waypointNum)
 		{
 			if (P_RandomChance(FRACUNIT/2))
 				waypointNum++;
@@ -5360,28 +5349,25 @@ static void P_Boss7Thinker(mobj_t *mobj)
 				waypointNum = ((waypointNum + 5) % 5);
 		}
 
-		// scan the thinkers to find
-		// the waypoint to use
-		for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+		// Scan mapthings to find the waypoint to use
+		TAG_ITER_THINGS(bossid, i)
 		{
-			if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			mo2 = mapthings[i].mobj;
+
+			if (!mo2)
 				continue;
 
-			mo2 = (mobj_t *)th;
 			if (mo2->type != MT_BOSS3WAYPOINT)
 				continue;
-			if (!mo2->spawnpoint)
-				continue;
-			if ((mo2->spawnpoint->options & 7) != waypointNum)
-				continue;
-			if (mo2->spawnpoint->extrainfo != bossid)
+
+			if (mapthings[i].args[1] != waypointNum)
 				continue;
 
 			hitspot = mo2;
 			break;
 		}
 
-		if (hitspot == NULL)
+		if (!hitspot)
 		{
 			CONS_Debug(DBG_GAMELOGIC, "BlackEggman unable to find waypoint #%d!\n", waypointNum);
 			P_SetMobjState(mobj, mobj->info->spawnstate);
@@ -12735,7 +12721,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		}
 		break;
 	case MT_EGGMOBILE3:
-		mobj->cusval = mthing->extrainfo;
+		mobj->cusval = mthing->args[0];
 		break;
 	case MT_FAN:
 		if (mthing->options & MTF_OBJECTSPECIAL)
