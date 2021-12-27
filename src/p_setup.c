@@ -3175,6 +3175,8 @@ static line_t *P_FindPointPushLine(taglist_t *list)
 static void P_ConvertBinaryMap(void)
 {
 	size_t i;
+	mobjtype_t mobjtypeofthing[4096];
+	mobjtype_t mobjtype;
 
 	for (i = 0; i < numlines; i++)
 	{
@@ -4872,12 +4874,33 @@ static void P_ConvertBinaryMap(void)
 		}
 	}
 
+	for (i = 0; i < NUMMOBJTYPES; i++)
+	{
+		if (mobjinfo[i].doomednum < 0 || mobjinfo[i].doomednum >= 4096)
+			continue;
+
+		mobjtypeofthing[mobjinfo[i].doomednum] = (mobjtype_t)i;
+	}
+
 	for (i = 0; i < nummapthings; i++)
 	{
 		if (mapthings[i].type >= 1 && mapthings[i].type <= 35)
 		{
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			continue;
+		}
+
+		mobjtype = mobjtypeofthing[mapthings[i].type];
+		if (mobjtype)
+		{
+			if (mobjinfo[mobjtype].flags & MF_BOSS)
+			{
+				INT32 paramoffset = mapthings[i].extrainfo*LE_PARAMWIDTH;
+				mapthings[i].args[0] = mapthings[i].extrainfo;
+				mapthings[i].args[1] = LE_BOSSDEAD + paramoffset;
+				mapthings[i].args[2] = LE_ALLBOSSESDEAD + paramoffset;
+				mapthings[i].args[3] = LE_PINCHPHASE + paramoffset;
+			}
 		}
 
 		switch (mapthings[i].type)
@@ -4900,6 +4923,18 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 136: //Pyre Fly
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
+		case 203: //Egg Colosseum
+			mapthings[i].args[4] = LE_BOSS4DROP + mapthings[i].extrainfo * LE_PARAMWIDTH;
+			break;
+		case 204: //Fang
+			mapthings[i].args[3] = LE_BOSS4DROP + mapthings[i].extrainfo*LE_PARAMWIDTH;
+			break;
+		case 206: //Brak Eggman (Old)
+			mapthings[i].args[4] = LE_BRAKPLATFORM + mapthings[i].extrainfo*LE_PARAMWIDTH;
+			break;
+		case 209: //Brak Eggman
+			mapthings[i].args[4] = LE_BRAKVILEATACK + mapthings[i].extrainfo*LE_PARAMWIDTH;
 			break;
 		case 294:
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);

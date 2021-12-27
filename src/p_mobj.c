@@ -4347,7 +4347,8 @@ static void P_Boss2Thinker(mobj_t *mobj)
 	{
 		mobj->flags &= ~MF_NOGRAVITY;
 		A_Boss2Pogo(mobj);
-		P_LinedefExecute(LE_PINCHPHASE, mobj, NULL);
+		if (mobj->spawnpoint)
+			P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
 	}
 }
 
@@ -4476,7 +4477,8 @@ static void P_Boss3Thinker(mobj_t *mobj)
 			dummy->cusval = mobj->cusval;
 
 			CONS_Debug(DBG_GAMELOGIC, "Eggman path %d - Dummy selected paths %d and %d\n", way0, way1, way2);
-			P_LinedefExecute(LE_PINCHPHASE+(mobj->cusval*LE_PARAMWIDTH), mobj, NULL);
+			if (mobj->spawnpoint)
+				P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
 		}
 	}
 	else if (mobj->movecount) // Firing mode
@@ -4642,12 +4644,14 @@ static void P_Boss3Thinker(mobj_t *mobj)
 // Move Boss4's sectors by delta.
 static boolean P_Boss4MoveCage(mobj_t *mobj, fixed_t delta)
 {
-	const UINT16 tag = 65534 + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0);
 	INT32 snum;
 	sector_t *sector;
 	boolean gotcage = false;
 
-	TAG_ITER_SECTORS(tag, snum)
+	if (!mobj->spawnpoint)
+		return false;
+
+	TAG_ITER_SECTORS(mobj->spawnpoint->args[3], snum)
 	{
 		sector = &sectors[snum];
 		sector->floorheight += delta;
@@ -4726,13 +4730,15 @@ static void P_Boss4PinchSpikeballs(mobj_t *mobj, angle_t angle, fixed_t dz)
 // Destroy cage FOFs.
 static void P_Boss4DestroyCage(mobj_t *mobj)
 {
-	const UINT16 tag = 65534 + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0);
 	INT32 snum;
 	size_t a;
 	sector_t *sector, *rsec;
 	ffloor_t *rover;
 
-	TAG_ITER_SECTORS(tag, snum)
+	if (!mobj->spawnpoint)
+		return;
+
+	TAG_ITER_SECTORS(mobj->spawnpoint->args[3], snum)
 	{
 		sector = &sectors[snum];
 
@@ -5005,13 +5011,15 @@ static void P_Boss4Thinker(mobj_t *mobj)
 			{ // Proceed to pinch phase!
 				P_Boss4DestroyCage(mobj);
 				mobj->movedir = 3;
-				P_LinedefExecute(LE_PINCHPHASE + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0), mobj, NULL);
+				if (mobj->spawnpoint)
+					P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
 				P_Boss4MoveSpikeballs(mobj, FixedAngle(mobj->movecount), 0);
 				var1 = 3;
 				A_BossJetFume(mobj);
 				return;
 			}
-			P_LinedefExecute(LE_BOSS4DROP - (mobj->info->spawnhealth-mobj->health) + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0), mobj, NULL);
+			if (mobj->spawnpoint)
+				P_LinedefExecute(mobj->spawnpoint->args[4] - (mobj->info->spawnhealth-mobj->health), mobj, NULL);
 			// 1 -> 1.5 second timer
 			mobj->threshold = TICRATE+(TICRATE*(mobj->info->spawnhealth-mobj->health)/10);
 			if (mobj->threshold < 1)
@@ -5043,7 +5051,8 @@ static void P_Boss4Thinker(mobj_t *mobj)
 	{ // Proceed to pinch phase!
 		P_Boss4DestroyCage(mobj);
 		mobj->movedir = 3;
-		P_LinedefExecute(LE_PINCHPHASE + (mobj->spawnpoint ? mobj->spawnpoint->extrainfo*LE_PARAMWIDTH : 0), mobj, NULL);
+		if (mobj->spawnpoint)
+			P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
 		var1 = 3;
 		A_BossJetFume(mobj);
 		return;
@@ -5183,7 +5192,8 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			// Begin platform destruction
 			mobj->flags2 |= MF2_FRET;
 			P_SetMobjState(mobj, mobj->info->raisestate);
-			P_LinedefExecute(LE_PINCHPHASE, mobj, NULL);
+			if (mobj->spawnpoint)
+				P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
 		}
 	}
 	else if (mobj->state == &states[S_BLACKEGG_HITFACE4] && mobj->tics == mobj->state->tics)
@@ -5277,7 +5287,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 		INT32 i;
 		boolean foundgoop = false;
 		INT32 closestNum;
-		UINT8 extrainfo = (mobj->spawnpoint ? mobj->spawnpoint->extrainfo : 0);
+		UINT8 bossid = (mobj->spawnpoint ? mobj->spawnpoint->args[0] : 0);
 
 		// Looks for players in goop. If you find one, try to jump on him.
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -5307,7 +5317,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 						continue;
 					if (!mo2->spawnpoint)
 						continue;
-					if (mo2->spawnpoint->extrainfo != extrainfo)
+					if (mo2->spawnpoint->extrainfo != bossid)
 						continue;
 					if (mobj->health <= mobj->info->damage && !(mo2->spawnpoint->options & 7))
 						continue; // don't jump to center
@@ -5364,7 +5374,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 				continue;
 			if ((mo2->spawnpoint->options & 7) != waypointNum)
 				continue;
-			if (mo2->spawnpoint->extrainfo != extrainfo)
+			if (mo2->spawnpoint->extrainfo != bossid)
 				continue;
 
 			hitspot = mo2;
@@ -6040,7 +6050,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 						mobj->watertop = mobj->floorz + 16*FRACUNIT;
 					else
 						mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
-					P_LinedefExecute(LE_PINCHPHASE, mobj, NULL);
+					if (mobj->spawnpoint)
+						P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
 
 #if 0
 					whoosh = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_GHOST); // done here so the offset is correct
@@ -10147,7 +10158,7 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->flags & MF_NOTHINK)
 		return;
 
-	if ((mobj->flags & MF_BOSS) && mobj->spawnpoint && (bossdisabled & (1<<mobj->spawnpoint->extrainfo)))
+	if ((mobj->flags & MF_BOSS) && mobj->spawnpoint && (bossdisabled & (1<<mobj->spawnpoint->args[0])))
 		return;
 
 	// Remove dead target/tracer.

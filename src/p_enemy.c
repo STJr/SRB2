@@ -3911,7 +3911,8 @@ static void P_DoBossVictory(mobj_t *mo)
 	}
 
 	// victory!
-	P_LinedefExecute(LE_ALLBOSSESDEAD, mo, NULL);
+	if (mo->spawnpoint)
+		P_LinedefExecute(mo->spawnpoint->args[1], mo, NULL);
 
 	if (stoppedclock && modeattacking) // if you're just time attacking, skip making the capsule appear since you don't need to step on it anyways.
 		return;
@@ -4081,14 +4082,14 @@ static void P_DoBoss5Death(mobj_t *mo)
 
 static void P_DoBossDefaultDeath(mobj_t *mo)
 {
-	UINT8 extrainfo = (mo->spawnpoint ? mo->spawnpoint->extrainfo : 0);
+	INT32 bossid = (mo->spawnpoint ? mo->spawnpoint->args[0] : 0);
 
 	// Stop exploding and prepare to run.
 	P_SetMobjState(mo, mo->info->xdeathstate);
 	if (P_MobjWasRemoved(mo))
 		return;
 
-	P_SetTarget(&mo->target, P_FindBossFlyPoint(mo, extrainfo));
+	P_SetTarget(&mo->target, P_FindBossFlyPoint(mo, bossid));
 
 	mo->flags |= MF_NOGRAVITY|MF_NOCLIP;
 	mo->flags |= MF_NOCLIPHEIGHT;
@@ -4122,12 +4123,12 @@ static void P_DoBossDefaultDeath(mobj_t *mo)
 void A_BossDeath(mobj_t *mo)
 {
 	INT32 i;
-	UINT8 extrainfo = (mo->spawnpoint ? mo->spawnpoint->extrainfo : 0);
 
 	if (LUA_CallAction(A_BOSSDEATH, mo))
 		return;
 
-	P_LinedefExecute(LE_BOSSDEAD+(extrainfo*LE_PARAMWIDTH), mo, NULL);
+	if (mo->spawnpoint)
+		P_LinedefExecute(mo->spawnpoint->args[1], mo, NULL);
 	mo->health = 0;
 
 	// Boss is dead (but not necessarily fleeing...)
@@ -7070,10 +7071,8 @@ void A_Boss1Chase(mobj_t *actor)
 		}
 		else
 		{
-			if (actor->spawnpoint && actor->spawnpoint->extrainfo)
-				P_LinedefExecute(LE_PINCHPHASE+(actor->spawnpoint->extrainfo*LE_PARAMWIDTH), actor, NULL);
-			else
-				P_LinedefExecute(LE_PINCHPHASE, actor, NULL);
+			if (actor->spawnpoint)
+				P_LinedefExecute(actor->spawnpoint->args[3], actor, NULL);
 			P_SetMobjState(actor, actor->info->raisestate);
 		}
 
@@ -8324,8 +8323,6 @@ void A_LinedefExecute(mobj_t *actor)
 
 	if (locvar2)
 		tagnum += locvar2*(AngleFixed(actor->angle)>>FRACBITS);
-	else if (actor->spawnpoint && actor->spawnpoint->extrainfo)
-		tagnum += (actor->spawnpoint->extrainfo*LE_PARAMWIDTH);
 
 	CONS_Debug(DBG_GAMELOGIC, "A_LinedefExecute: Running mobjtype %d's sector with tag %d\n", actor->type, tagnum);
 
@@ -12714,7 +12711,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 	INT32 locvar1 = var1;
 	boolean avoidcenter;
 	INT32 i;
-	UINT8 extrainfo = (actor->spawnpoint ? actor->spawnpoint->extrainfo : 0);
+	INT32 bossid = (actor->spawnpoint ? actor->spawnpoint->args[0] : 0);
 
 	if (LUA_CallAction(A_BOSS5FINDWAYPOINT, actor))
 		return;
@@ -12723,7 +12720,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 
 	if (locvar1 == 2) // look for the boss flypoint
 	{
-		P_SetTarget(&actor->tracer, P_FindBossFlyPoint(actor, extrainfo));
+		P_SetTarget(&actor->tracer, P_FindBossFlyPoint(actor, bossid));
 
 		if (!actor->tracer)
 			return; // no boss flypoints found
@@ -12735,7 +12732,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 		if (avoidcenter)
 			goto nowaypoints; // if we can't go the center, why on earth are we doing this?
 
-		TAG_ITER_THINGS(extrainfo, i)
+		TAG_ITER_THINGS(bossid, i)
 		{
 			if (!mapthings[i].mobj)
 				continue;
@@ -12762,7 +12759,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 		actor->z += hackoffset;
 
 		// first, count how many waypoints we have
-		TAG_ITER_THINGS(extrainfo, i)
+		TAG_ITER_THINGS(bossid, i)
 		{
 			if (!mapthings[i].mobj)
 				continue;
@@ -12817,7 +12814,7 @@ void A_Boss5FindWaypoint(mobj_t *actor)
 		numfangwaypoints = 0;
 
 		// now find them again and add them to the table!
-		TAG_ITER_THINGS(extrainfo, i)
+		TAG_ITER_THINGS(bossid, i)
 		{
 			if (!mapthings[i].mobj)
 				continue;
