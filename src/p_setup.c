@@ -4885,12 +4885,6 @@ static void P_ConvertBinaryMap(void)
 
 	for (i = 0; i < nummapthings; i++)
 	{
-		if (mapthings[i].type >= 1 && mapthings[i].type <= 35)
-		{
-			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
-			continue;
-		}
-
 		mobjtype = mobjtypeofthing[mapthings[i].type];
 		if (mobjtype)
 		{
@@ -4902,6 +4896,25 @@ static void P_ConvertBinaryMap(void)
 				mapthings[i].args[2] = LE_ALLBOSSESDEAD + paramoffset;
 				mapthings[i].args[3] = LE_PINCHPHASE + paramoffset;
 			}
+		}
+
+		if (mapthings[i].type >= 1 && mapthings[i].type <= 35) //Player starts
+		{
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			continue;
+		}
+		else if (mapthings[i].type >= 2200 && mapthings[i].type <= 2217) //Flickies
+		{
+			mapthings[i].args[0] = mapthings[i].angle;
+			if (mapthings[i].options & MTF_EXTRA)
+				mapthings[i].args[1] |= TMFF_AIMLESS;
+			if (mapthings[i].options & MTF_OBJECTSPECIAL)
+				mapthings[i].args[1] |= TMFF_STATIONARY;
+			if (mapthings[i].options & MTF_AMBUSH)
+				mapthings[i].args[1] |= TMFF_HOP;
+			if (mapthings[i].type == 2207)
+				mapthings[i].args[2] = mapthings[i].extrainfo;
+			continue;
 		}
 
 		switch (mapthings[i].type)

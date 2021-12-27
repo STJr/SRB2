@@ -11690,7 +11690,7 @@ void A_FlickySpawn(mobj_t *actor)
 }
 
 // Internal Flicky color setting
-void P_InternalFlickySetColor(mobj_t *actor, UINT8 extrainfo)
+void P_InternalFlickySetColor(mobj_t *actor, UINT8 color)
 {
 	UINT8 flickycolors[] = {
 		SKINCOLOR_RED,
@@ -11710,11 +11710,11 @@ void P_InternalFlickySetColor(mobj_t *actor, UINT8 extrainfo)
 		SKINCOLOR_YELLOW,
 	};
 
-	if (extrainfo == 0)
+	if (color == 0)
 		// until we can customize flicky colors by level header, just stick to SRB2's defaults
 		actor->color = flickycolors[P_RandomKey(2)]; //flickycolors[P_RandomKey(sizeof(flickycolors))];
 	else
-		actor->color = flickycolors[min(extrainfo-1, 14)]; // sizeof(flickycolors)-1
+		actor->color = flickycolors[min(color-1, 14)]; // sizeof(flickycolors)-1
 }
 
 // Function: A_FlickyCenter
@@ -11724,17 +11724,17 @@ void P_InternalFlickySetColor(mobj_t *actor, UINT8 extrainfo)
 // var1:
 //        Lower 16 bits = if 0, spawns random flicky based on level header. Else, spawns the designated thing type.
 //        Bits 17-20 = Flicky color, up to 15. Applies to fish.
-//        Bit 21 = Flag MF_SLIDEME (see below)
-//        Bit 22 = Flag MF_GRENADEBOUNCE (see below)
-//        Bit 23 = Flag MF_NOCLIPTHING (see below)
+//        Bit 21 = Flag TMFF_AIMLESS (see below)
+//        Bit 22 = Flag TMFF_STATIONARY (see below)
+//        Bit 23 = Flag TMFF_HOP (see below)
 //
 //        If actor is placed from a spawnpoint (map Thing), the Thing's properties take precedence.
 //
-// var2 = maximum default distance away from spawn the flickies are allowed to travel. If angle != 0, then that's the radius.
+// var2 = maximum default distance away from spawn the flickies are allowed to travel. If args[0] != 0, then that's the radius.
 //
-// If MTF_EXTRA (MF_SLIDEME): is flagged, Flickies move aimlessly. Else, orbit around the target.
-// If MTF_OBJECTSPECIAL (MF_GRENADEBOUNCE): Flickies stand in-place without gravity (unless they hop, then gravity is applied.)
-// If MTF_AMBUSH (MF_NOCLIPTHING): is flagged, Flickies hop.
+// If TMFF_AIMLESS (MF_SLIDEME): is flagged, Flickies move aimlessly. Else, orbit around the target.
+// If TMFF_STATIONARY (MF_GRENADEBOUNCE): Flickies stand in-place without gravity (unless they hop, then gravity is applied.)
+// If TMFF_HOP (MF_NOCLIPTHING): is flagged, Flickies hop.
 //
 void A_FlickyCenter(mobj_t *actor)
 {
@@ -11756,14 +11756,15 @@ void A_FlickyCenter(mobj_t *actor)
 		if (actor->spawnpoint)
 		{
 			actor->flags &= ~(MF_SLIDEME|MF_GRENADEBOUNCE|MF_NOCLIPTHING);
-			actor->flags |= (
-				((actor->spawnpoint->options & MTF_EXTRA) ? MF_SLIDEME : 0)
-				| ((actor->spawnpoint->options & MTF_OBJECTSPECIAL) ? MF_GRENADEBOUNCE : 0)
-				| ((actor->spawnpoint->options & MTF_AMBUSH) ? MF_NOCLIPTHING : 0)
-			);
-			actor->extravalue1 = actor->spawnpoint->angle ? abs(actor->spawnpoint->angle) * FRACUNIT
-				: locvar2 ? abs(locvar2) : 384 * FRACUNIT;
-			actor->extravalue2 = actor->spawnpoint->extrainfo;
+			if (actor->spawnpoint->args[1] & TMFF_AIMLESS)
+				actor->flags |= MF_SLIDEME;
+			if (actor->spawnpoint->args[1] & TMFF_STATIONARY)
+				actor->flags |= MF_GRENADEBOUNCE;
+			if (actor->spawnpoint->args[1] & TMFF_HOP)
+				actor->flags |= MF_NOCLIPTHING;
+			actor->extravalue1 = actor->spawnpoint->args[0] ? abs(actor->spawnpoint->args[0])*FRACUNIT
+				: locvar2 ? abs(locvar2) : 384*FRACUNIT;
+			actor->extravalue2 = actor->spawnpoint->args[2];
 			actor->friction = actor->spawnpoint->x*FRACUNIT;
 			actor->movefactor = actor->spawnpoint->y*FRACUNIT;
 			actor->watertop = actor->spawnpoint->z*FRACUNIT;
@@ -11771,11 +11772,12 @@ void A_FlickyCenter(mobj_t *actor)
 		else
 		{
 			actor->flags &= ~(MF_SLIDEME|MF_GRENADEBOUNCE|MF_NOCLIPTHING);
-			actor->flags |= (
-				((flickyflags & 1) ? MF_SLIDEME : 0)
-				| ((flickyflags & 2) ? MF_GRENADEBOUNCE : 0)
-				| ((flickyflags & 4) ? MF_NOCLIPTHING : 0)
-			);
+			if (flickyflags & TMFF_AIMLESS)
+				actor->flags |= MF_SLIDEME;
+			if (flickyflags & TMFF_STATIONARY)
+				actor->flags |= MF_GRENADEBOUNCE;
+			if (flickyflags & TMFF_HOP)
+				actor->flags |= MF_NOCLIPTHING;
 			actor->extravalue1 = abs(locvar2);
 			actor->extravalue2 = flickycolor;
 			actor->friction = actor->x;

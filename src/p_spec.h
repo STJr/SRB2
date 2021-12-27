@@ -50,6 +50,13 @@ typedef enum
 	TMSF_INTANGIBLE = 1<<1,
 } textmapspikeflags_t;
 
+typedef enum
+{
+	TMFF_AIMLESS    = 1,
+	TMFF_STATIONARY = 1<<1,
+	TMFF_HOP        = 1<<2,
+} textmapflickyflags_t;
+
 //FOF flags
 typedef enum
 {
