@@ -63,6 +63,12 @@ typedef enum
 	TMFH_CORONA  = 1<<1,
 } textmapflameholderflags_t;
 
+typedef enum
+{
+	TMDS_NOGRAVITY   = 1,
+	TMDS_ROTATEEXTRA = 1<<1,
+} textmapdiagonalspringflags_t;
+
 //FOF flags
 typedef enum
 {
