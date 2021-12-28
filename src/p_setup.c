@@ -5006,6 +5006,33 @@ static void P_ConvertBinaryMap(void)
 			if (mapthings[i].options & MTF_AMBUSH)
 				mapthings[i].args[0] |= TMDS_ROTATEEXTRA;
 			break;
+		case 700: //Water ambience A
+		case 701: //Water ambience A
+		case 702: //Water ambience A
+		case 703: //Water ambience A
+		case 704: //Water ambience A
+		case 705: //Water ambience A
+		case 706: //Water ambience A
+		case 707: //Water ambience A
+			mapthings[i].args[0] = 35;
+			P_WriteConstant(sfx_amwtr1 + mapthings[i].type - 700, &mapthings[i].stringargs[0]);
+			mapthings[i].type = 700;
+			break;
+		case 708: //Disco ambience
+			mapthings[i].args[0] = 512;
+			P_WriteConstant(sfx_ambint, &mapthings[i].stringargs[0]);
+			mapthings[i].type = 700;
+			break;
+		case 709: //Volcano ambience
+			mapthings[i].args[0] = 220;
+			P_WriteConstant(sfx_ambin2, &mapthings[i].stringargs[0]);
+			mapthings[i].type = 700;
+			break;
+		case 710: //Machine ambience
+			mapthings[i].args[0] = 24;
+			P_WriteConstant(sfx_ambmac, &mapthings[i].stringargs[0]);
+			mapthings[i].type = 700;
+			break;
 		case 750: //Slope vertex
 			mapthings[i].args[0] = mapthings[i].extrainfo;
 			break;

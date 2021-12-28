@@ -4934,17 +4934,7 @@ typedef enum mobj_type
 	MT_FINISHFLAG, // Finish flag
 
 	// Ambient Sounds
-	MT_AWATERA, // Ambient Water Sound 1
-	MT_AWATERB, // Ambient Water Sound 2
-	MT_AWATERC, // Ambient Water Sound 3
-	MT_AWATERD, // Ambient Water Sound 4
-	MT_AWATERE, // Ambient Water Sound 5
-	MT_AWATERF, // Ambient Water Sound 6
-	MT_AWATERG, // Ambient Water Sound 7
-	MT_AWATERH, // Ambient Water Sound 8
-	MT_RANDOMAMBIENT,
-	MT_RANDOMAMBIENT2,
-	MT_MACHINEAMBIENCE,
+	MT_AMBIENT,
 
 	MT_CORK,
 	MT_LHRT,

@@ -10230,10 +10230,12 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->flags2 & MF2_FIRING)
 		P_FiringThink(mobj);
 
-	if (mobj->flags & MF_AMBIENT)
+	if (mobj->type == MT_AMBIENT)
 	{
-		if (!(leveltime % mobj->health) && mobj->info->seesound)
-			S_StartSound(mobj, mobj->info->seesound);
+		if (leveltime % mobj->health)
+			return;
+		if (mobj->threshold)
+			S_StartSound(mobj, mobj->threshold);
 		return;
 	}
 
@@ -13059,6 +13061,11 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		if (mthing->args[0] & TMDS_ROTATEEXTRA)
 			mobj->angle += ANGLE_22h;
 		*doangle = false;
+		break;
+	case MT_AMBIENT:
+		if (mthing->stringargs[0])
+			mobj->threshold = get_number(mthing->stringargs[0]);
+		mobj->health = mthing->args[0] ? mthing->args[0] : TICRATE;
 		break;
 	default:
 		break;
