@@ -13117,15 +13117,31 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			mobj->flags &= ~MF_NIGHTSITEM;
 		}
 	}
+	if (mobj->flags & MF_PUSHABLE)
+	{
+		switch (mthing->args[0])
+		{
+			case TMP_NORMAL:
+			default:
+				break;
+			case TMP_SLIDE:
+				mobj->flags2 |= MF2_SLIDEPUSH;
+				mobj->flags |= MF_BOUNCE;
+				break;
+			case TMP_IMMOVABLE:
+				mobj->flags &= ~MF_PUSHABLE;
+				break;
+			case TMP_CLASSIC:
+				mobj->flags2 |= MF2_CLASSICPUSH;
+				break;
+		}
+	}
 
 	return true;
 }
 
 static void P_SetAmbush(mobj_t *mobj)
 {
-	if (mobj->flags & MF_PUSHABLE)
-		mobj->flags &= ~MF_PUSHABLE;
-
 	if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
 	{
 		// flag for strong/weak random boxes
@@ -13167,13 +13183,6 @@ static void P_SetObjectSpecial(mobj_t *mobj)
 		// any monitor with nonzero speed is allowed to respawn like this
 		mobj->flags2 |= MF2_STRONGBOX;
 	}
-
-	// Pushables bounce and slide coolly with object special flag set
-	if (mobj->flags & MF_PUSHABLE)
-	{
-		mobj->flags2 |= MF2_SLIDEPUSH;
-		mobj->flags |= MF_BOUNCE;
-	}
 }
 
 static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, mobjtype_t i)
@@ -13202,18 +13211,11 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	if (i == MT_NIGHTSBUMPER)
 		return mobj;
 
-	if ((mthing->options & MTF_AMBUSH)
-		&& (mthing->options & MTF_OBJECTSPECIAL)
-		&& (mobj->flags & MF_PUSHABLE))
-		mobj->flags2 |= MF2_CLASSICPUSH;
-	else
-	{
-		if (mthing->options & MTF_AMBUSH)
-			P_SetAmbush(mobj);
+	if (mthing->options & MTF_AMBUSH)
+		P_SetAmbush(mobj);
 
-		if (mthing->options & MTF_OBJECTSPECIAL)
-			P_SetObjectSpecial(mobj);
-	}
+	if (mthing->options & MTF_OBJECTSPECIAL)
+		P_SetObjectSpecial(mobj);
 
 	// Generic reverse gravity for individual objects flag.
 	if (mthing->options & MTF_OBJECTFLIP)

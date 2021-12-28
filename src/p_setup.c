@@ -4903,6 +4903,17 @@ static void P_ConvertBinaryMap(void)
 				if (mapthings[i].options & MTF_AMBUSH)
 					mapthings[i].args[0] |= TMNI_REVEAL;
 			}
+			if (mobjinfo[mobjtype].flags & MF_PUSHABLE)
+			{
+				if ((mapthings[i].options & (MTF_OBJECTSPECIAL|MTF_AMBUSH)) == (MTF_OBJECTSPECIAL|MTF_AMBUSH))
+					mapthings[i].args[0] = TMP_CLASSIC;
+				else if (mapthings[i].options & MTF_OBJECTSPECIAL)
+					mapthings[i].args[0] = TMP_SLIDE;
+				else if (mapthings[i].options & MTF_AMBUSH)
+					mapthings[i].args[0] = TMP_IMMOVABLE;
+				else
+					mapthings[i].args[0] = TMP_NORMAL;
+			}
 		}
 
 		if (mapthings[i].type >= 1 && mapthings[i].type <= 35) //Player starts

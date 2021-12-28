@@ -88,6 +88,14 @@ typedef enum
 	TMNI_REVEAL    = 1<<1,
 } textmapnightsitem_t;
 
+typedef enum
+{
+	TMP_NORMAL    = 0,
+	TMP_SLIDE     = 1,
+	TMP_IMMOVABLE = 2,
+	TMP_CLASSIC   = 3,
+} textmappushabletype_t;
+
 //FOF flags
 typedef enum
 {
