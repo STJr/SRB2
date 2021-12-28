@@ -3176,7 +3176,7 @@ static line_t *P_FindPointPushLine(taglist_t *list)
 static void P_ConvertBinaryMap(void)
 {
 	size_t i;
-	mobjtype_t mobjtypeofthing[4096];
+	mobjtype_t mobjtypeofthing[4096] = {0};
 	mobjtype_t mobjtype;
 
 	for (i = 0; i < numlines; i++)
