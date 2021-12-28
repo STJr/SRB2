@@ -4860,7 +4860,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		case 8: // Tells pushable things to check FOFs
 			break;
 		case 9: // Egg trap capsule
-			if (roversector)
+			if (!udmf && roversector)
 				P_ProcessEggCapsule(player, sector);
 			break;
 		case 10: // Special Stage Time/Rings

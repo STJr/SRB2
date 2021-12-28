@@ -3928,11 +3928,14 @@ static void P_DoBossVictory(mobj_t *mo)
 	}
 	else
 	{
-		// Bring the egg trap up to the surface
-		// Incredibly shitty code ahead
-		EV_DoElevator(LE_CAPSULE0, NULL, elevateHighest);
-		EV_DoElevator(LE_CAPSULE1, NULL, elevateUp);
-		EV_DoElevator(LE_CAPSULE2, NULL, elevateHighest);
+		if (!udmf)
+		{
+			// Bring the egg trap up to the surface
+			// Incredibly shitty code ahead
+			EV_DoElevator(LE_CAPSULE0, NULL, elevateHighest);
+			EV_DoElevator(LE_CAPSULE1, NULL, elevateUp);
+			EV_DoElevator(LE_CAPSULE2, NULL, elevateHighest);
+		}
 
 		if (mapheaderinfo[gamemap-1]->muspostbossname[0] &&
 			S_MusicExists(mapheaderinfo[gamemap-1]->muspostbossname, !midi_disabled, !digital_disabled))
