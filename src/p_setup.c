@@ -5358,6 +5358,13 @@ static void P_ConvertBinaryMap(void)
 		case 1305: //Rollout Rock
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
+		case 1500: //Glaregoyle
+		case 1501: //Glaregoyle (Up)
+		case 1502: //Glaregoyle (Down)
+		case 1503: //Glaregoyle (Long)
+			if (mapthings[i].angle >= 360)
+				mapthings[i].args[1] = 7*(mapthings[i].angle/360) + 1;
+			break;
 		case 1700: //Axis
 			mapthings[i].args[2] = mapthings[i].angle & 16383;
 			mapthings[i].args[3] = !!(mapthings[i].angle & 16384);

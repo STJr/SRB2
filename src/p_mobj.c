@@ -12884,8 +12884,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	case MT_GLAREGOYLEUP:
 	case MT_GLAREGOYLEDOWN:
 	case MT_GLAREGOYLELONG:
-		if (mthing->angle >= 360)
-			mobj->tics += 7*(mthing->angle/360) + 1; // starting delay
+		mobj->tics += mthing->args[1]; // starting delay
 		break;
 	case MT_DSZSTALAGMITE:
 	case MT_DSZ2STALAGMITE:
