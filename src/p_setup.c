@@ -4896,6 +4896,13 @@ static void P_ConvertBinaryMap(void)
 				mapthings[i].args[2] = LE_ALLBOSSESDEAD + paramoffset;
 				mapthings[i].args[3] = LE_PINCHPHASE + paramoffset;
 			}
+			if (mobjinfo[mobjtype].flags & MF_NIGHTSITEM)
+			{
+				if (mapthings[i].options & MTF_OBJECTSPECIAL)
+					mapthings[i].args[0] |= TMNI_BONUSONLY;
+				if (mapthings[i].options & MTF_AMBUSH)
+					mapthings[i].args[0] |= TMNI_REVEAL;
+			}
 		}
 
 		if (mapthings[i].type >= 1 && mapthings[i].type <= 35) //Player starts

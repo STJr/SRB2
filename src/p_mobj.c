@@ -13105,19 +13105,24 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		if (mthing->options & MTF_OBJECTSPECIAL) // No egg trap for this boss
 			mobj->flags2 |= MF2_BOSSNOTRAP;
 	}
+	if (mobj->flags & MF_NIGHTSITEM)
+	{
+		// Requires you to be in bonus time to activate
+		if (mthing->args[0] & TMNI_BONUSONLY)
+			mobj->flags2 |= MF2_STRONGBOX;
+		// Spawn already displayed
+		if (mthing->args[0] & TMNI_REVEAL)
+		{
+			mobj->flags |= MF_SPECIAL;
+			mobj->flags &= ~MF_NIGHTSITEM;
+		}
+	}
 
 	return true;
 }
 
 static void P_SetAmbush(mobj_t *mobj)
 {
-	if (mobj->flags & MF_NIGHTSITEM)
-	{
-		// Spawn already displayed
-		mobj->flags |= MF_SPECIAL;
-		mobj->flags &= ~MF_NIGHTSITEM;
-	}
-
 	if (mobj->flags & MF_PUSHABLE)
 		mobj->flags &= ~MF_PUSHABLE;
 
@@ -13162,10 +13167,6 @@ static void P_SetObjectSpecial(mobj_t *mobj)
 		// any monitor with nonzero speed is allowed to respawn like this
 		mobj->flags2 |= MF2_STRONGBOX;
 	}
-
-	// Requires you to be in bonus time to activate
-	if (mobj->flags & MF_NIGHTSITEM)
-		mobj->flags2 |= MF2_STRONGBOX;
 
 	// Pushables bounce and slide coolly with object special flag set
 	if (mobj->flags & MF_PUSHABLE)

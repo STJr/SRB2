@@ -82,6 +82,12 @@ typedef enum
 	TMGD_LEFT  = 2,
 } textmapguarddirection_t;
 
+typedef enum
+{
+	TMNI_BONUSONLY = 1,
+	TMNI_REVEAL    = 1<<1,
+} textmapnightsitem_t;
+
 //FOF flags
 typedef enum
 {
