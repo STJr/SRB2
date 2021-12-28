@@ -96,6 +96,13 @@ typedef enum
 	TMP_CLASSIC   = 3,
 } textmappushabletype_t;
 
+typedef enum
+{
+	TMED_NONE  = 0,
+	TMED_RIGHT = 1,
+	TMED_LEFT  = 2,
+} textmapeggrobodirection_t;
+
 //FOF flags
 typedef enum
 {

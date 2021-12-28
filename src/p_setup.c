@@ -4914,6 +4914,8 @@ static void P_ConvertBinaryMap(void)
 				else
 					mapthings[i].args[0] = TMP_NORMAL;
 			}
+			if (mobjinfo[mobjtype].flags & MF_SPRING && mobjinfo[mobjtype].painchance == 3)
+				mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 		}
 
 		if (mapthings[i].type >= 1 && mapthings[i].type <= 35) //Player starts
@@ -4996,6 +4998,32 @@ static void P_ConvertBinaryMap(void)
 		case 294: //Fang waypoint
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
+		case 300: //Ring
+		case 301: //Bounce ring
+		case 302: //Rail ring
+		case 303: //Infinity ring
+		case 304: //Automatic ring
+		case 305: //Explosion ring
+		case 306: //Scatter ring
+		case 307: //Grenade ring
+		case 308: //Red team ring
+		case 309: //Blue team ring
+		case 312: //Emerald token
+		case 320: //Emerald hunt location
+		case 321: //Match chaos emerald spawn
+		case 322: //Emblem
+		case 330: //Bounce ring panel
+		case 331: //Rail ring panel
+		case 332: //Automatic ring panel
+		case 333: //Explosion ring panel
+		case 334: //Scatter ring panel
+		case 335: //Grenade ring panel
+		case 520: //Bomb sphere
+		case 521: //Spikeball
+		case 1706: //Blue sphere
+		case 1800: //Coin
+			mapthings[i].args[0] = !(mapthings[i].options & MTF_AMBUSH);
+			break;
 		case 500: //Air bubble patch
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
@@ -5009,6 +5037,7 @@ static void P_ConvertBinaryMap(void)
 			else
 				// Old behavior if Parameter is 0; add 360 to the angle for each consecutive star post.
 				mapthings[i].args[0] = (mapthings[i].angle/360);
+			mapthings[i].args[1] = !!(mapthings[i].options & MTF_OBJECTSPECIAL);
 			break;
 		case 522: //Wall spike
 			if (mapthings[i].options & MTF_OBJECTSPECIAL)
@@ -5039,6 +5068,9 @@ static void P_ConvertBinaryMap(void)
 			if (mapthings[i].options & MTF_AMBUSH)
 				mapthings[i].args[1] |= TMF_NODISTANCECHECK;
 			break;
+		case 541: //Gas jet
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
 		case 543: //Balloon
 			if (mapthings[i].angle > 0)
 				P_WriteConstant(((mapthings[i].angle - 1) % (numskincolors - 1)) + 1, &mapthings[i].stringargs[0]);
@@ -5051,6 +5083,11 @@ static void P_ConvertBinaryMap(void)
 				mapthings[i].args[0] |= TMDS_NOGRAVITY;
 			if (mapthings[i].options & MTF_AMBUSH)
 				mapthings[i].args[0] |= TMDS_ROTATEEXTRA;
+			break;
+		case 558: //Horizontal yellow spring
+		case 559: //Horizontal red spring
+		case 560: //Horizontal blue spring
+			mapthings[i].args[0] = !(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 700: //Water ambience A
 		case 701: //Water ambience A
@@ -5174,6 +5211,9 @@ static void P_ConvertBinaryMap(void)
 		case 1011: //Stalagmite (DSZ2)
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_OBJECTSPECIAL);
 			break;
+		case 1102: //Eggman Statue
+			mapthings[i].args[1] = !!(mapthings[i].options & MTF_EXTRA);
+			break;
 		case 1104: //Mace spawnpoint
 		case 1105: //Chain with maces spawnpoint
 		case 1106: //Chained spring spawnpoint
@@ -5238,6 +5278,14 @@ static void P_ConvertBinaryMap(void)
 			if (mapthings[i].options & MTF_EXTRA)
 				mapthings[i].args[0] |= TMFH_CORONA;
 			break;
+		case 1127: //Spectator EggRobo
+			if (mapthings[i].options & MTF_AMBUSH)
+				mapthings[i].args[0] = TMED_LEFT;
+			else if (mapthings[i].options & MTF_OBJECTSPECIAL)
+				mapthings[i].args[0] = TMED_RIGHT;
+			else
+				mapthings[i].args[0] = TMED_NONE;
+			break;
 		case 1200: //Tumbleweed (Big)
 		case 1201: //Tumbleweed (Small)
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
@@ -5259,6 +5307,12 @@ static void P_ConvertBinaryMap(void)
 			P_WriteConstant(MT_ROCKCRUMBLE1 + (sides[lines[j].sidenum[0]].rowoffset >> FRACBITS), &mapthings[i].stringargs[0]);
 			break;
 		}
+		case 1221: //Minecart saloon door
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
+		case 1229: //Minecart switch point
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
 		case 1300: //Flame jet (horizontal)
 		case 1301: //Flame jet (vertical)
 			mapthings[i].args[0] = (mapthings[i].angle >> 13)*TICRATE/2;
@@ -5268,6 +5322,9 @@ static void P_ConvertBinaryMap(void)
 		case 1304: //Lavafall
 			mapthings[i].args[0] = mapthings[i].angle;
 			mapthings[i].args[1] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
+		case 1305: //Rollout Rock
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 1700: //Axis
 			mapthings[i].args[2] = mapthings[i].angle & 16383;

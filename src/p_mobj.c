@@ -8590,9 +8590,9 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 	{
 		fixed_t basex = mobj->cusval, basey = mobj->cvmem;
 
-		if (mobj->spawnpoint && mobj->spawnpoint->options & (MTF_AMBUSH|MTF_OBJECTSPECIAL))
+		if (mobj->spawnpoint && mobj->spawnpoint->args[0] != TMED_NONE)
 		{
-			angle_t sideang = mobj->movedir + ((mobj->spawnpoint->options & MTF_AMBUSH) ? ANGLE_90 : -ANGLE_90);
+			angle_t sideang = mobj->movedir + ((mobj->spawnpoint->args[0] == TMED_LEFT) ? ANGLE_90 : -ANGLE_90);
 			fixed_t oscillate = FixedMul(FINESINE(((leveltime * ANG1) >> (ANGLETOFINESHIFT + 2)) & FINEMASK), 250*mobj->scale);
 			basex += P_ReturnThrustX(mobj, sideang, oscillate);
 			basey += P_ReturnThrustY(mobj, sideang, oscillate);
@@ -11775,14 +11775,14 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 			dz = 288*FRACUNIT;
 		break;
 
-	// Horizontal springs, may float additional units with MTF_AMBUSH.
+	// Horizontal springs, float additional units unless args[0] is set.
 	case MT_YELLOWHORIZ:
 	case MT_REDHORIZ:
 	case MT_BLUEHORIZ:
-		offset += mthing->options & MTF_AMBUSH ? 16*FRACUNIT : 0;
+		offset += mthing->args[0] ? 0 : 16*FRACUNIT;
 		break;
 
-	// Ring-like items, may float additional units with MTF_AMBUSH.
+	// Ring-like items, float additional units unless args[0] is set.
 	case MT_SPIKEBALL:
 	case MT_EMERHUNT:
 	case MT_EMERALDSPAWN:
@@ -11796,13 +11796,13 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	case MT_BOMBSPHERE:
 	case MT_NIGHTSCHIP:
 	case MT_NIGHTSSTAR:
-		offset += mthing->options & MTF_AMBUSH ? 24*FRACUNIT : 0;
+		offset += mthing->args[0] ? 0 : 24*FRACUNIT;
 		break;
 
 	// Remaining objects.
 	default:
 		if (P_WeaponOrPanel(mobjtype))
-			offset += mthing->options & MTF_AMBUSH ? 24*FRACUNIT : 0;
+			offset += mthing->args[0] ? 0 : 24*FRACUNIT;
 	}
 
 	if (!(dz + offset)) // Snap to the surfaces when there's no offset set.
@@ -12717,7 +12717,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	}
 	case MT_EGGSTATUE:
-		if (mthing->options & MTF_EXTRA)
+		if (mthing->args[1])
 		{
 			mobj->color = SKINCOLOR_GOLD;
 			mobj->colorized = true;
@@ -13096,6 +13096,22 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		if (mthing->args[1])
 			mobj->flags2 |= MF2_AMBUSH;
 		break;
+	case MT_STEAM:
+		if (mthing->args[0])
+			mobj->flags2 |= MF2_AMBUSH;
+		break;
+	case MT_SALOONDOORCENTER:
+		if (mthing->args[0])
+			mobj->flags2 |= MF2_AMBUSH;
+		break;
+	case MT_MINECARTSWITCHPOINT:
+		if (mthing->args[0])
+			mobj->flags2 |= MF2_AMBUSH;
+		break;
+	case MT_ROLLOUTSPAWN:
+		if (mthing->args[0])
+			mobj->flags2 |= MF2_AMBUSH;
+		break;
 	default:
 		break;
 	}
@@ -13136,6 +13152,12 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 				break;
 		}
 	}
+	if (mobj->flags & MF_SPRING && mobj->info->painchance == 3)
+	{
+		if (mthing->args[0])
+			mobj->flags2 |= MF2_AMBUSH;
+	}
+
 
 	return true;
 }
@@ -13171,7 +13193,12 @@ static void P_SetAmbush(mobj_t *mobj)
 		mobj->type != MT_CACOLANTERN &&
 		mobj->type != MT_PIAN &&
 		mobj->type != MT_EGGGUARD &&
-		mobj->type != MT_STARPOST)
+		mobj->type != MT_STEAM &&
+		mobj->type != MT_SALOONDOORCENTER &&
+		mobj->type != MT_MINECARTSWITCHPOINT &&
+		mobj->type != MT_ROLLOUTSPAWN &&
+		mobj->type != MT_STARPOST &&
+		!(mobj->flags & MF_SPRING && mobj->info->painchance == 3))
 		mobj->flags2 |= MF2_AMBUSH;
 }
 
