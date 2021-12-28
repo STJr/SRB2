@@ -5048,6 +5048,9 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].type = 754;
 			break;
 		}
+		case 756: //Blast linedef executor
+			mapthings[i].args[0] = mapthings[i].angle;
+			break;
 		case 757: //Fan particle generator
 		{
 			INT32 j = Tag_FindLineSpecial(15, mapthings[i].angle);

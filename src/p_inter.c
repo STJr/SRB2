@@ -2771,7 +2771,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		case MT_BLASTEXECUTOR:
 			if (target->spawnpoint)
-				P_LinedefExecute(target->spawnpoint->angle, (source ? source : inflictor), target->subsector->sector);
+				P_LinedefExecute(target->spawnpoint->args[0], (source ? source : inflictor), target->subsector->sector);
 			break;
 
 		case MT_SPINBOBERT:
