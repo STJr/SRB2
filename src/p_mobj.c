@@ -12705,7 +12705,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			break;
 		}
 
-		if (mthing->options & MTF_OBJECTSPECIAL)
+		if (mthing->args[0])
 			skyboxcenterpnts[tag] = mobj;
 		else
 			skyboxviewpnts[tag] = mobj;

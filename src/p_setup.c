@@ -5079,6 +5079,9 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].type = 761;
 			break;
 		}
+		case 780: //Skybox
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_OBJECTSPECIAL);
+			break;
 		case 1104: //Mace spawnpoint
 		case 1105: //Chain with maces spawnpoint
 		case 1106: //Chained spring spawnpoint
