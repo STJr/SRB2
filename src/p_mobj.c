@@ -12033,7 +12033,7 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 			case 2: // Unchanging
 				if (i == MT_MYSTERY_BOX)
 					return MT_NULL; // don't spawn
-				mthing->options &= ~(MTF_AMBUSH|MTF_OBJECTSPECIAL); // no random respawning!
+				mthing->args[1] = TMMR_SAME; // no random respawning!
 				return i;
 			case 3: // Don't spawn
 				return MT_NULL;
@@ -12063,8 +12063,7 @@ static mobjtype_t P_GetMobjtypeSubstitute(mapthing_t *mthing, mobjtype_t i)
 
 	if (modeattacking && i == MT_1UP_BOX) // 1UPs -->> Score TVs
 	{
-		// Either or, doesn't matter which.
-		if (mthing->options & (MTF_AMBUSH | MTF_OBJECTSPECIAL))
+		if (mthing->args[2])
 			return MT_SCORE10K_BOX; // 10,000
 		else
 			return MT_SCORE1K_BOX; // 1,000
@@ -13157,22 +13156,27 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		if (mthing->args[0])
 			mobj->flags2 |= MF2_AMBUSH;
 	}
-
+	if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
+	{
+		switch (mthing->args[1])
+		{
+			case TMMR_SAME:
+			default:
+				break;
+			case TMMR_WEAK:
+				mobj->flags2 |= MF2_AMBUSH;
+				break;
+			case TMMR_STRONG:
+				mobj->flags2 |= MF2_STRONGBOX;
+		}
+	}
 
 	return true;
 }
 
 static void P_SetAmbush(mobj_t *mobj)
 {
-	if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
-	{
-		// flag for strong/weak random boxes
-		// any monitor with nonzero speed is allowed to respawn like this
-		mobj->flags2 |= MF2_AMBUSH;
-	}
-
-	//TODO: Make this obsolete
-	else if (mobj->type != MT_AXIS &&
+	if (mobj->type != MT_AXIS &&
 		mobj->type != MT_AXISTRANSFER &&
 		mobj->type != MT_AXISTRANSFERLINE &&
 		mobj->type != MT_NIGHTSBUMPER &&
@@ -13198,18 +13202,9 @@ static void P_SetAmbush(mobj_t *mobj)
 		mobj->type != MT_MINECARTSWITCHPOINT &&
 		mobj->type != MT_ROLLOUTSPAWN &&
 		mobj->type != MT_STARPOST &&
-		!(mobj->flags & MF_SPRING && mobj->info->painchance == 3))
+		!((mobj->flags & MF_SPRING) && mobj->info->painchance == 3) &&
+		!((mobj->flags & MF_MONITOR) && mobj->info->speed != 0))
 		mobj->flags2 |= MF2_AMBUSH;
-}
-
-static void P_SetObjectSpecial(mobj_t *mobj)
-{
-	if ((mobj->flags & MF_MONITOR) && mobj->info->speed != 0)
-	{
-		// flag for strong/weak random boxes
-		// any monitor with nonzero speed is allowed to respawn like this
-		mobj->flags2 |= MF2_STRONGBOX;
-	}
 }
 
 static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, mobjtype_t i)
@@ -13241,24 +13236,11 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	if (mthing->options & MTF_AMBUSH)
 		P_SetAmbush(mobj);
 
-	if (mthing->options & MTF_OBJECTSPECIAL)
-		P_SetObjectSpecial(mobj);
-
 	// Generic reverse gravity for individual objects flag.
 	if (mthing->options & MTF_OBJECTFLIP)
 	{
 		mobj->eflags |= MFE_VERTICALFLIP;
 		mobj->flags2 |= MF2_OBJECTFLIP;
-	}
-
-	// Extra functionality
-	if (mthing->options & MTF_EXTRA)
-	{
-		if (mobj->flags & MF_MONITOR && (mthing->angle & 16384))
-		{
-			// Store line exec tag to run upon popping
-			mobj->lastlook = (mthing->angle & 16383);
-		}
 	}
 
 	// Final set of not being able to draw nightsitems.

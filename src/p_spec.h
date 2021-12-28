@@ -103,6 +103,13 @@ typedef enum
 	TMED_LEFT  = 2,
 } textmapeggrobodirection_t;
 
+typedef enum
+{
+	TMMR_SAME   = 0,
+	TMMR_WEAK   = 1,
+	TMMR_STRONG = 2,
+} textmapmonitorrespawn_t;
+
 //FOF flags
 typedef enum
 {

@@ -3717,8 +3717,8 @@ void A_MonitorPop(mobj_t *actor)
 
 	// Run a linedef executor immediately upon popping
 	// You may want to delay your effects by 18 tics to sync with the reward giving
-	if (actor->spawnpoint && actor->lastlook)
-		P_LinedefExecute(actor->lastlook, actor->target, NULL);
+	if (actor->spawnpoint && actor->spawnpoint->args[0])
+		P_LinedefExecute(actor->spawnpoint->args[0], actor->target, NULL);
 }
 
 // Function: A_GoldMonitorPop
@@ -3803,8 +3803,8 @@ void A_GoldMonitorPop(mobj_t *actor)
 
 	// Run a linedef executor immediately upon popping
 	// You may want to delay your effects by 18 tics to sync with the reward giving
-	if (actor->spawnpoint && actor->lastlook)
-		P_LinedefExecute(actor->lastlook, actor->target, NULL);
+	if (actor->spawnpoint && actor->spawnpoint->args[0])
+		P_LinedefExecute(actor->spawnpoint->args[0], actor->target, NULL);
 }
 
 // Function: A_GoldMonitorRestore

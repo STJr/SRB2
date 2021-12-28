@@ -4914,8 +4914,23 @@ static void P_ConvertBinaryMap(void)
 				else
 					mapthings[i].args[0] = TMP_NORMAL;
 			}
-			if (mobjinfo[mobjtype].flags & MF_SPRING && mobjinfo[mobjtype].painchance == 3)
+			if ((mobjinfo[mobjtype].flags & MF_SPRING) && mobjinfo[mobjtype].painchance == 3)
 				mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			if (mobjinfo[mobjtype].flags & MF_MONITOR)
+			{
+				if ((mapthings[i].options & MTF_EXTRA) && mapthings[i].angle & 16384)
+					mapthings[i].args[0] = mapthings[i].angle & 16383;
+
+				if (mobjinfo[mobjtype].speed != 0)
+				{
+					if (mapthings[i].options & MTF_OBJECTSPECIAL)
+						mapthings[i].args[1] = TMMR_STRONG;
+					else if (mapthings[i].options & MTF_AMBUSH)
+						mapthings[i].args[1] = TMMR_WEAK;
+					else
+						mapthings[i].args[1] = TMMR_SAME;
+				}
+			}
 		}
 
 		if (mapthings[i].type >= 1 && mapthings[i].type <= 35) //Player starts
@@ -5023,6 +5038,9 @@ static void P_ConvertBinaryMap(void)
 		case 1706: //Blue sphere
 		case 1800: //Coin
 			mapthings[i].args[0] = !(mapthings[i].options & MTF_AMBUSH);
+			break;
+		case 409: //Extra life monitor
+			mapthings[i].args[2] = !(mapthings[i].options & (MTF_AMBUSH|MTF_OBJECTSPECIAL));
 			break;
 		case 500: //Air bubble patch
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
