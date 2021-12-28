@@ -492,7 +492,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 	switch (spring->type)
 	{
 		case MT_FAN: // fan
-			if (zdist > (spring->health << FRACBITS)) // max z distance determined by health (set by map thing angle)
+			if (zdist > (spring->health << FRACBITS)) // max z distance determined by health (set by map thing args[0])
 				break;
 			if (flipval*object->momz >= FixedMul(speed, spring->scale)) // if object's already moving faster than your best, don't bother
 				break;

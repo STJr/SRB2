@@ -12722,7 +12722,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		mobj->cusval = mthing->args[0];
 		break;
 	case MT_FAN:
-		if (mthing->options & MTF_OBJECTSPECIAL)
+		if (mthing->args[1])
 		{
 			P_UnsetThingPosition(mobj);
 			if (sector_list)
@@ -12733,8 +12733,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			mobj->flags |= MF_NOSECTOR; // this flag basically turns it invisible
 			P_SetThingPosition(mobj);
 		}
-		if (mthing->angle)
-			mobj->health = mthing->angle;
+		if (mthing->args[0])
+			mobj->health = mthing->args[0];
 		else
 			mobj->health = FixedMul(mobj->subsector->sector->ceilingheight - mobj->subsector->sector->floorheight, 3*(FRACUNIT/4)) >> FRACBITS;
 		break;

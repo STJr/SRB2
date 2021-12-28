@@ -4990,6 +4990,10 @@ static void P_ConvertBinaryMap(void)
 			if (mapthings[i].options & MTF_AMBUSH)
 				mapthings[i].args[2] |= TMSF_INTANGIBLE;
 			break;
+		case 540: //Fan
+			mapthings[i].args[0] = mapthings[i].angle;
+			mapthings[i].args[1] = !!(mapthings[i].options & MTF_OBJECTSPECIAL);
+			break;
 		case 555: //Diagonal yellow spring
 		case 556: //Diagonal red spring
 		case 557: //Diagonal blue spring
