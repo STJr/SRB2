@@ -7909,12 +7909,21 @@ void A_GuardChase(mobj_t *actor)
 			false)
 		&& speed > 0) // can't be the same check as previous so that P_TryMove gets to happen.
 		{
-			if (actor->spawnpoint && ((actor->spawnpoint->options & (MTF_EXTRA|MTF_OBJECTSPECIAL)) == MTF_OBJECTSPECIAL))
-				actor->angle += ANGLE_90;
-			else if (actor->spawnpoint && ((actor->spawnpoint->options & (MTF_EXTRA|MTF_OBJECTSPECIAL)) == MTF_EXTRA))
-				actor->angle -= ANGLE_90;
-			else
-				actor->angle += ANGLE_180;
+			INT32 direction = actor->spawnpoint ? actor->spawnpoint->args[0] : TMGD_BACK;
+
+			switch (direction)
+			{
+				case TMGD_BACK:
+				default:
+					actor->angle += ANGLE_180;
+					break;
+				case TMGD_RIGHT:
+					actor->angle -= ANGLE_90;
+					break;
+				case TMGD_LEFT:
+					actor->angle += ANGLE_90;
+					break;
+			}
 		}
 
 		if (actor->extravalue1 < actor->info->speed)

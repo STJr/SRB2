@@ -2681,7 +2681,7 @@ boolean P_ZMovement(mobj_t *mo)
 					{
 						if (mo->flags2 & MF2_AMBUSH)
 						{
-							// If deafed, give the tumbleweed another random kick if it runs out of steam.
+							// Give the tumbleweed another random kick if it runs out of steam.
 							mom.z += P_MobjFlip(mo)*FixedMul(6*FRACUNIT, mo->scale);
 
 							if (P_RandomChance(FRACUNIT/2))
@@ -12504,6 +12504,9 @@ static boolean P_SetupNiGHTSDrone(mapthing_t *mthing, mobj_t *mobj)
 	else
 		mobj->height = mobjinfo[MT_NIGHTSDRONE].height;
 
+	if (mthing->args[4])
+		mobj->flags2 |= MF2_AMBUSH; //Kill player upon time up
+
 	droneboxmandiff = max(mobj->height - mobjinfo[MT_NIGHTSDRONE_MAN].height, 0);
 	dronemangoaldiff = max(mobjinfo[MT_NIGHTSDRONE_MAN].height - mobjinfo[MT_NIGHTSDRONE_GOAL].height, 0);
 
@@ -12723,8 +12726,12 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	case MT_EGGMOBILE3:
 		mobj->cusval = mthing->args[0];
 		break;
+	case MT_BUBBLES:
+		if (mthing->args[0])
+			mobj->flags2 |= MF2_AMBUSH;
+		break;
 	case MT_FAN:
-		if (mthing->args[1])
+		if (mthing->args[1] & TMF_INVISIBLE)
 		{
 			P_UnsetThingPosition(mobj);
 			if (sector_list)
@@ -12735,6 +12742,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			mobj->flags |= MF_NOSECTOR; // this flag basically turns it invisible
 			P_SetThingPosition(mobj);
 		}
+		if (mthing->args[1] & TMF_NODISTANCECHECK)
+			mobj->flags2 |= MF2_AMBUSH;
 		if (mthing->args[0])
 			mobj->health = mthing->args[0];
 		else
@@ -12754,6 +12763,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	case MT_BALLOON:
 		if (mthing->stringargs[0])
 			mobj->color = get_number(mthing->stringargs[0]);
+		if (mthing->args[0])
+			mobj->flags2 |= MF2_AMBUSH;
 		break;
 	case MT_FLAME:
 		if (mthing->args[0])
@@ -13032,12 +13043,13 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		break;
 	case MT_BIGTUMBLEWEED:
 	case MT_LITTLETUMBLEWEED:
-		if (mthing->options & MTF_AMBUSH)
+		if (mthing->args[0])
 		{
 			fixed_t offset = FixedMul(16*FRACUNIT, mobj->scale);
 			mobj->momx += P_RandomChance(FRACUNIT/2) ? offset : -offset;
 			mobj->momy += P_RandomChance(FRACUNIT/2) ? offset : -offset;
 			mobj->momz += offset;
+			mobj->flags2 |= MF2_AMBUSH;
 		}
 		break;
 	case MT_REDFLAG:
@@ -13066,6 +13078,23 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		if (mthing->stringargs[0])
 			mobj->threshold = get_number(mthing->stringargs[0]);
 		mobj->health = mthing->args[0] ? mthing->args[0] : TICRATE;
+		break;
+	case MT_GOLDBUZZ:
+	case MT_REDBUZZ:
+	case MT_JETTBOMBER:
+	case MT_JETTGUNNER:
+	case MT_ROBOHOOD:
+	case MT_CRUSHSTACEAN:
+	case MT_BANPYURA:
+	case MT_BUMBLEBORE:
+	case MT_CACOLANTERN:
+	case MT_PIAN:
+		if (mthing->args[0])
+			mobj->flags2 |= MF2_AMBUSH;
+		break;
+	case MT_EGGGUARD:
+		if (mthing->args[1])
+			mobj->flags2 |= MF2_AMBUSH;
 		break;
 	default:
 		break;
@@ -13099,10 +13128,28 @@ static void P_SetAmbush(mobj_t *mobj)
 		mobj->flags2 |= MF2_AMBUSH;
 	}
 
+	//TODO: Make this obsolete
 	else if (mobj->type != MT_AXIS &&
 		mobj->type != MT_AXISTRANSFER &&
 		mobj->type != MT_AXISTRANSFERLINE &&
 		mobj->type != MT_NIGHTSBUMPER &&
+		mobj->type != MT_NIGHTSDRONE &&
+		mobj->type != MT_BALLOON &&
+		mobj->type != MT_BIGTUMBLEWEED &&
+		mobj->type != MT_LITTLETUMBLEWEED &&
+		mobj->type != MT_BUBBLES &&
+		mobj->type != MT_FAN &&
+		mobj->type != MT_ROBOHOOD &&
+		mobj->type != MT_CRUSHSTACEAN &&
+		mobj->type != MT_BANPYURA &&
+		mobj->type != MT_GOLDBUZZ &&
+		mobj->type != MT_REDBUZZ &&
+		mobj->type != MT_JETTBOMBER &&
+		mobj->type != MT_JETTGUNNER &&
+		mobj->type != MT_BUMBLEBORE &&
+		mobj->type != MT_CACOLANTERN &&
+		mobj->type != MT_PIAN &&
+		mobj->type != MT_EGGGUARD &&
 		mobj->type != MT_STARPOST)
 		mobj->flags2 |= MF2_AMBUSH;
 }

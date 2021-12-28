@@ -69,6 +69,19 @@ typedef enum
 	TMDS_ROTATEEXTRA = 1<<1,
 } textmapdiagonalspringflags_t;
 
+typedef enum
+{
+	TMF_INVISIBLE       = 1,
+	TMF_NODISTANCECHECK = 1<<1,
+} textmapfanflags_t;
+
+typedef enum
+{
+	TMGD_BACK  = 0,
+	TMGD_RIGHT = 1,
+	TMGD_LEFT  = 2,
+} textmapguarddirection_t;
+
 //FOF flags
 typedef enum
 {

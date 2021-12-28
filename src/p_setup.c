@@ -4929,6 +4929,27 @@ static void P_ConvertBinaryMap(void)
 		case 111: //Pop-up Turret
 			mapthings[i].args[0] = mapthings[i].angle;
 			break;
+		case 103: //Buzz (Gold)
+		case 104: //Buzz (Red)
+		case 105: //Jetty-syn Bomber
+		case 106: //Jetty-syn Gunner
+		case 117: //Robo-Hood
+		case 126: //Crushstacean
+		case 128: //Bumblebore
+		case 132: //Cacolantern
+		case 138: //Banpyura
+		case 1602: //Pian
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
+		case 119: //Egg Guard
+			if ((mapthings[i].options & (MTF_EXTRA|MTF_OBJECTSPECIAL)) == MTF_OBJECTSPECIAL)
+				mapthings[i].args[0] = TMGD_LEFT;
+			else if ((mapthings[i].options & (MTF_EXTRA|MTF_OBJECTSPECIAL)) == MTF_EXTRA)
+				mapthings[i].args[0] = TMGD_RIGHT;
+			else
+				mapthings[i].args[0] = TMGD_BACK;
+			mapthings[i].args[1] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
 		case 127: //Hive Elemental
 			mapthings[i].args[0] = mapthings[i].extrainfo;
 			break;
@@ -4954,7 +4975,10 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].args[0] = mapthings[i].angle;
 			mapthings[i].args[1] = mapthings[i].options & 7;
 			break;
-		case 294:
+		case 294: //Fang waypoint
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
+		case 500: //Air bubble patch
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 502: //Star post
@@ -4992,11 +5016,15 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 540: //Fan
 			mapthings[i].args[0] = mapthings[i].angle;
-			mapthings[i].args[1] = !!(mapthings[i].options & MTF_OBJECTSPECIAL);
+			if (mapthings[i].options & MTF_OBJECTSPECIAL)
+				mapthings[i].args[1] |= TMF_INVISIBLE;
+			if (mapthings[i].options & MTF_AMBUSH)
+				mapthings[i].args[1] |= TMF_NODISTANCECHECK;
 			break;
 		case 543: //Balloon
 			if (mapthings[i].angle > 0)
 				P_WriteConstant(((mapthings[i].angle - 1) % (numskincolors - 1)) + 1, &mapthings[i].stringargs[0]);
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 555: //Diagonal yellow spring
 		case 556: //Diagonal red spring
@@ -5192,6 +5220,10 @@ static void P_ConvertBinaryMap(void)
 			if (mapthings[i].options & MTF_EXTRA)
 				mapthings[i].args[0] |= TMFH_CORONA;
 			break;
+		case 1200: //Tumbleweed (Big)
+		case 1201: //Tumbleweed (Small)
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
 		case 1202: //Rock spawner
 		{
 			mtag_t tag = (mtag_t)mapthings[i].angle;
@@ -5240,6 +5272,7 @@ static void P_ConvertBinaryMap(void)
 				mapthings[i].args[3] = TMDA_MIDDLE;
 			else
 				mapthings[i].args[3] = TMDA_BOTTOMOFFSET;
+			mapthings[i].args[4] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 1704: //NiGHTS bumper
 			mapthings[i].pitch = 30 * (((mapthings[i].options & 15) + 9) % 12);
