@@ -4994,6 +4994,10 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].args[0] = mapthings[i].angle;
 			mapthings[i].args[1] = !!(mapthings[i].options & MTF_OBJECTSPECIAL);
 			break;
+		case 543: //Balloon
+			if (mapthings[i].angle > 0)
+				P_WriteConstant(((mapthings[i].angle - 1) % (numskincolors - 1)) + 1, &mapthings[i].stringargs[0]);
+			break;
 		case 555: //Diagonal yellow spring
 		case 556: //Diagonal red spring
 		case 557: //Diagonal blue spring

@@ -12750,8 +12750,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		}
 		break;
 	case MT_BALLOON:
-		if (mthing->angle > 0)
-			mobj->color = ((mthing->angle - 1) % (numskincolors - 1)) + 1;
+		if (mthing->stringargs[0])
+			mobj->color = get_number(mthing->stringargs[0]);
 		break;
 	case MT_FLAME:
 		if (mthing->args[0])
