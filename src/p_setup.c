@@ -1791,14 +1791,8 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
 	else if (fastcmp(param, "scale") || fastcmp(param, "scalex") || fastcmp(param, "scaley"))
 		mapthings[i].scale = FLOAT_TO_FIXED(atof(val));
 	// Flags
-	else if (fastcmp(param, "extra") && fastcmp("true", val))
-		mapthings[i].options |= MTF_EXTRA;
 	else if (fastcmp(param, "flip") && fastcmp("true", val))
 		mapthings[i].options |= MTF_OBJECTFLIP;
-	else if (fastcmp(param, "objectspecial") && fastcmp("true", val))
-		mapthings[i].options |= MTF_OBJECTSPECIAL;
-	else if (fastcmp(param, "ambush") && fastcmp("true", val))
-		mapthings[i].options |= MTF_AMBUSH;
 
 	else if (fastncmp(param, "stringarg", 9) && strlen(param) > 9)
 	{
@@ -4892,9 +4886,10 @@ static void P_ConvertBinaryMap(void)
 			{
 				INT32 paramoffset = mapthings[i].extrainfo*LE_PARAMWIDTH;
 				mapthings[i].args[0] = mapthings[i].extrainfo;
-				mapthings[i].args[1] = LE_BOSSDEAD + paramoffset;
-				mapthings[i].args[2] = LE_ALLBOSSESDEAD + paramoffset;
-				mapthings[i].args[3] = LE_PINCHPHASE + paramoffset;
+				mapthings[i].args[1] = !!(mapthings[i].options & MTF_OBJECTSPECIAL);
+				mapthings[i].args[2] = LE_BOSSDEAD + paramoffset;
+				mapthings[i].args[3] = LE_ALLBOSSESDEAD + paramoffset;
+				mapthings[i].args[4] = LE_PINCHPHASE + paramoffset;
 			}
 			if (mobjinfo[mobjtype].flags & MF_NIGHTSITEM)
 			{
@@ -4994,17 +4989,35 @@ static void P_ConvertBinaryMap(void)
 		case 136: //Pyre Fly
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
+		case 202: //Egg Slimer
+			mapthings[i].args[5] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
 		case 203: //Egg Colosseum
-			mapthings[i].args[4] = LE_BOSS4DROP + mapthings[i].extrainfo * LE_PARAMWIDTH;
+			mapthings[i].args[5] = LE_BOSS4DROP + mapthings[i].extrainfo * LE_PARAMWIDTH;
 			break;
 		case 204: //Fang
-			mapthings[i].args[3] = LE_BOSS4DROP + mapthings[i].extrainfo*LE_PARAMWIDTH;
+			mapthings[i].args[4] = LE_BOSS4DROP + mapthings[i].extrainfo*LE_PARAMWIDTH;
+			if (mapthings[i].options & MTF_EXTRA)
+				mapthings[i].args[5] |= TMF_GRAYSCALE;
+			if (mapthings[i].options & MTF_AMBUSH)
+				mapthings[i].args[5] |= TMF_SKIPINTRO;
 			break;
 		case 206: //Brak Eggman (Old)
-			mapthings[i].args[4] = LE_BRAKPLATFORM + mapthings[i].extrainfo*LE_PARAMWIDTH;
+			mapthings[i].args[5] = LE_BRAKPLATFORM + mapthings[i].extrainfo*LE_PARAMWIDTH;
+			break;
+		case 207: //Metal Sonic (Race)
+		case 2104: //Amy Cameo
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_EXTRA);
+			break;
+		case 208: //Metal Sonic (Battle)
+			mapthings[i].args[5] = !!(mapthings[i].options & MTF_EXTRA);
 			break;
 		case 209: //Brak Eggman
-			mapthings[i].args[4] = LE_BRAKVILEATACK + mapthings[i].extrainfo*LE_PARAMWIDTH;
+			mapthings[i].args[5] = LE_BRAKVILEATACK + mapthings[i].extrainfo*LE_PARAMWIDTH;
+			if (mapthings[i].options & MTF_EXTRA)
+				mapthings[i].args[6] |= TMB_NODEATHFLING;
+			if (mapthings[i].options & MTF_AMBUSH)
+				mapthings[i].args[6] |= TMB_BARRIER;
 			break;
 		case 292: //Boss waypoint
 			mapthings[i].args[0] = mapthings[i].angle;
@@ -5336,6 +5349,7 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].args[0] = (mapthings[i].angle >> 13)*TICRATE/2;
 			mapthings[i].args[1] = ((mapthings[i].angle >> 10) & 7)*TICRATE/2;
 			mapthings[i].args[2] = 80 - 5*mapthings[i].extrainfo;
+			mapthings[i].args[3] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 1304: //Lavafall
 			mapthings[i].args[0] = mapthings[i].angle;

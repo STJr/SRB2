@@ -3912,7 +3912,7 @@ static void P_DoBossVictory(mobj_t *mo)
 
 	// victory!
 	if (mo->spawnpoint)
-		P_LinedefExecute(mo->spawnpoint->args[1], mo, NULL);
+		P_LinedefExecute(mo->spawnpoint->args[3], mo, NULL);
 
 	if (stoppedclock && modeattacking) // if you're just time attacking, skip making the capsule appear since you don't need to step on it anyways.
 		return;
@@ -4025,7 +4025,7 @@ static void P_DoCybrakdemonDeath(mobj_t *mo)
 	mo->z += P_MobjFlip(mo);
 	P_SetObjectMomZ(mo, 12*FRACUNIT, false);
 	S_StartSound(mo, sfx_bgxpld);
-	if (mo->spawnpoint && !(mo->spawnpoint->options & MTF_EXTRA))
+	if (mo->spawnpoint && !(mo->spawnpoint->args[6] & TMB_NODEATHFLING))
 		P_InstaThrust(mo, R_PointToAngle2(0, 0, mo->x, mo->y), 14*FRACUNIT);
 }
 
@@ -4128,7 +4128,7 @@ void A_BossDeath(mobj_t *mo)
 		return;
 
 	if (mo->spawnpoint)
-		P_LinedefExecute(mo->spawnpoint->args[1], mo, NULL);
+		P_LinedefExecute(mo->spawnpoint->args[2], mo, NULL);
 	mo->health = 0;
 
 	// Boss is dead (but not necessarily fleeing...)
@@ -7072,7 +7072,7 @@ void A_Boss1Chase(mobj_t *actor)
 		else
 		{
 			if (actor->spawnpoint)
-				P_LinedefExecute(actor->spawnpoint->args[3], actor, NULL);
+				P_LinedefExecute(actor->spawnpoint->args[4], actor, NULL);
 			P_SetMobjState(actor, actor->info->raisestate);
 		}
 
@@ -7196,7 +7196,7 @@ void A_Boss2Chase(mobj_t *actor)
 	}
 	else
 	{
-		// Only speed up if you have the 'Deaf' flag.
+		// Only speed up if you have the ambush flag.
 		if (actor->flags2 & MF2_AMBUSH)
 			speedvar = actor->health;
 		else

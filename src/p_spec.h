@@ -110,6 +110,18 @@ typedef enum
 	TMMR_STRONG = 2,
 } textmapmonitorrespawn_t;
 
+typedef enum
+{
+	TMF_GRAYSCALE = 1,
+	TMF_SKIPINTRO = 1<<1,
+} textmapfangflags_t;
+
+typedef enum
+{
+	TMB_NODEATHFLING = 1,
+	TMB_BARRIER      = 1<<1,
+} textmapbrakflags_t;
+
 //FOF flags
 typedef enum
 {

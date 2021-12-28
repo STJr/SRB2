@@ -4348,7 +4348,7 @@ static void P_Boss2Thinker(mobj_t *mobj)
 		mobj->flags &= ~MF_NOGRAVITY;
 		A_Boss2Pogo(mobj);
 		if (mobj->spawnpoint)
-			P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
+			P_LinedefExecute(mobj->spawnpoint->args[4], mobj, NULL);
 	}
 }
 
@@ -4645,7 +4645,7 @@ static boolean P_Boss4MoveCage(mobj_t *mobj, fixed_t delta)
 	if (!mobj->spawnpoint)
 		return false;
 
-	TAG_ITER_SECTORS(mobj->spawnpoint->args[3], snum)
+	TAG_ITER_SECTORS(mobj->spawnpoint->args[4], snum)
 	{
 		sector = &sectors[snum];
 		sector->floorheight += delta;
@@ -4732,7 +4732,7 @@ static void P_Boss4DestroyCage(mobj_t *mobj)
 	if (!mobj->spawnpoint)
 		return;
 
-	TAG_ITER_SECTORS(mobj->spawnpoint->args[3], snum)
+	TAG_ITER_SECTORS(mobj->spawnpoint->args[4], snum)
 	{
 		sector = &sectors[snum];
 
@@ -5006,14 +5006,14 @@ static void P_Boss4Thinker(mobj_t *mobj)
 				P_Boss4DestroyCage(mobj);
 				mobj->movedir = 3;
 				if (mobj->spawnpoint)
-					P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
+					P_LinedefExecute(mobj->spawnpoint->args[4], mobj, NULL);
 				P_Boss4MoveSpikeballs(mobj, FixedAngle(mobj->movecount), 0);
 				var1 = 3;
 				A_BossJetFume(mobj);
 				return;
 			}
 			if (mobj->spawnpoint)
-				P_LinedefExecute(mobj->spawnpoint->args[4] - (mobj->info->spawnhealth-mobj->health), mobj, NULL);
+				P_LinedefExecute(mobj->spawnpoint->args[5] - (mobj->info->spawnhealth-mobj->health), mobj, NULL);
 			// 1 -> 1.5 second timer
 			mobj->threshold = TICRATE+(TICRATE*(mobj->info->spawnhealth-mobj->health)/10);
 			if (mobj->threshold < 1)
@@ -5046,7 +5046,7 @@ static void P_Boss4Thinker(mobj_t *mobj)
 		P_Boss4DestroyCage(mobj);
 		mobj->movedir = 3;
 		if (mobj->spawnpoint)
-			P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
+			P_LinedefExecute(mobj->spawnpoint->args[4], mobj, NULL);
 		var1 = 3;
 		A_BossJetFume(mobj);
 		return;
@@ -5187,7 +5187,7 @@ static void P_Boss7Thinker(mobj_t *mobj)
 			mobj->flags2 |= MF2_FRET;
 			P_SetMobjState(mobj, mobj->info->raisestate);
 			if (mobj->spawnpoint)
-				P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
+				P_LinedefExecute(mobj->spawnpoint->args[4], mobj, NULL);
 		}
 	}
 	else if (mobj->state == &states[S_BLACKEGG_HITFACE4] && mobj->tics == mobj->state->tics)
@@ -6037,7 +6037,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					else
 						mobj->watertop = mobj->target->floorz + 16*FRACUNIT;
 					if (mobj->spawnpoint)
-						P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
+						P_LinedefExecute(mobj->spawnpoint->args[4], mobj, NULL);
 
 #if 0
 					whoosh = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_GHOST); // done here so the offset is correct
@@ -11909,7 +11909,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		runemeraldmanager = true;
 		break;
 	case MT_ROSY:
-		if (!(G_CoopGametype() || (mthing->options & MTF_EXTRA)))
+		if (!(G_CoopGametype() || mthing->args[0]))
 			return false; // she doesn't hang out here
 
 		if (!(netgame || multiplayer) && players[consoleplayer].skin == 3)
@@ -12722,6 +12722,10 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			mobj->colorized = true;
 		}
 		break;
+	case MT_EGGMOBILE2:
+		if (mthing->args[5])
+			mobj->flags2 |= MF2_AMBUSH;
+		break;
 	case MT_EGGMOBILE3:
 		mobj->cusval = mthing->args[0];
 		break;
@@ -12748,11 +12752,27 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		else
 			mobj->health = FixedMul(mobj->subsector->sector->ceilingheight - mobj->subsector->sector->floorheight, 3*(FRACUNIT/4)) >> FRACBITS;
 		break;
-	case MT_METALSONIC_RACE:
-	case MT_METALSONIC_BATTLE:
 	case MT_FANG:
+		if (mthing->args[5] & TMF_GRAYSCALE)
+		{
+			mobj->color = SKINCOLOR_SILVER;
+			mobj->colorized = true;
+			mobj->flags2 |= MF2_SLIDEPUSH;
+		}
+		if (mthing->args[5] & TMF_SKIPINTRO)
+			mobj->flags2 |= MF2_AMBUSH;
+		break;
+	case MT_METALSONIC_BATTLE:
+		if (mthing->args[5])
+		{
+			mobj->color = SKINCOLOR_SILVER;
+			mobj->colorized = true;
+			mobj->flags2 |= MF2_SLIDEPUSH;
+		}
+		break;
+	case MT_METALSONIC_RACE:
 	case MT_ROSY:
-		if (mthing->options & MTF_EXTRA)
+		if (mthing->args[0])
 		{
 			mobj->color = SKINCOLOR_SILVER;
 			mobj->colorized = true;
@@ -12810,6 +12830,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		mobj->movecount = mthing->args[0];
 		mobj->threshold = mthing->args[1];
 		mobj->movedir = mthing->args[2];
+		if (mthing->args[3])
+			mobj->flags2 |= MF2_AMBUSH;
 		break;
 	case MT_MACEPOINT:
 	case MT_CHAINMACEPOINT:
@@ -12971,7 +12993,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		mobj->health = 1 << (tokenbits - 1);
 		break;
 	case MT_CYBRAKDEMON:
-		if (mthing->options & MTF_AMBUSH)
+		if (mthing->args[6] & TMB_BARRIER)
 		{
 			mobj_t* elecmobj;
 			elecmobj = P_SpawnMobj(mobj->x, mobj->y, mobj->z, MT_CYBRAKDEMON_ELECTRIC_BARRIER);
@@ -13117,7 +13139,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 
 	if (mobj->flags & MF_BOSS)
 	{
-		if (mthing->options & MTF_OBJECTSPECIAL) // No egg trap for this boss
+		if (mthing->args[1]) // No egg trap for this boss
 			mobj->flags2 |= MF2_BOSSNOTRAP;
 	}
 	if (mobj->flags & MF_NIGHTSITEM)
@@ -13174,39 +13196,6 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	return true;
 }
 
-static void P_SetAmbush(mobj_t *mobj)
-{
-	if (mobj->type != MT_AXIS &&
-		mobj->type != MT_AXISTRANSFER &&
-		mobj->type != MT_AXISTRANSFERLINE &&
-		mobj->type != MT_NIGHTSBUMPER &&
-		mobj->type != MT_NIGHTSDRONE &&
-		mobj->type != MT_BALLOON &&
-		mobj->type != MT_BIGTUMBLEWEED &&
-		mobj->type != MT_LITTLETUMBLEWEED &&
-		mobj->type != MT_BUBBLES &&
-		mobj->type != MT_FAN &&
-		mobj->type != MT_ROBOHOOD &&
-		mobj->type != MT_CRUSHSTACEAN &&
-		mobj->type != MT_BANPYURA &&
-		mobj->type != MT_GOLDBUZZ &&
-		mobj->type != MT_REDBUZZ &&
-		mobj->type != MT_JETTBOMBER &&
-		mobj->type != MT_JETTGUNNER &&
-		mobj->type != MT_BUMBLEBORE &&
-		mobj->type != MT_CACOLANTERN &&
-		mobj->type != MT_PIAN &&
-		mobj->type != MT_EGGGUARD &&
-		mobj->type != MT_STEAM &&
-		mobj->type != MT_SALOONDOORCENTER &&
-		mobj->type != MT_MINECARTSWITCHPOINT &&
-		mobj->type != MT_ROLLOUTSPAWN &&
-		mobj->type != MT_STARPOST &&
-		!((mobj->flags & MF_SPRING) && mobj->info->painchance == 3) &&
-		!((mobj->flags & MF_MONITOR) && mobj->info->speed != 0))
-		mobj->flags2 |= MF2_AMBUSH;
-}
-
 static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, mobjtype_t i)
 {
 	mobj_t *mobj = NULL;
@@ -13228,13 +13217,6 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	mobj->roll = FixedAngle(mthing->roll << FRACBITS);
 
 	mthing->mobj = mobj;
-
-	// ignore MTF_ flags and return early
-	if (i == MT_NIGHTSBUMPER)
-		return mobj;
-
-	if (mthing->options & MTF_AMBUSH)
-		P_SetAmbush(mobj);
 
 	// Generic reverse gravity for individual objects flag.
 	if (mthing->options & MTF_OBJECTFLIP)
