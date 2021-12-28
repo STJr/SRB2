@@ -5086,6 +5086,14 @@ static void P_ConvertBinaryMap(void)
 		case 780: //Skybox
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_OBJECTSPECIAL);
 			break;
+		case 1002: //Dripping water
+			mapthings[i].args[0] = mapthings[i].angle;
+			break;
+		case 1007: //Kelp
+		case 1008: //Stalagmite (DSZ1)
+		case 1011: //Stalagmite (DSZ2)
+			mapthings[i].args[0] = !!(mapthings[i].options & MTF_OBJECTSPECIAL);
+			break;
 		case 1104: //Mace spawnpoint
 		case 1105: //Chain with maces spawnpoint
 		case 1106: //Chained spring spawnpoint
@@ -5173,6 +5181,10 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].args[1] = ((mapthings[i].angle >> 10) & 7)*TICRATE/2;
 			mapthings[i].args[2] = 80 - 5*mapthings[i].extrainfo;
 			break;
+		case 1304: //Lavafall
+			mapthings[i].args[0] = mapthings[i].angle;
+			mapthings[i].args[1] = !!(mapthings[i].options & MTF_AMBUSH);
+			break;
 		case 1700: //Axis
 			mapthings[i].args[2] = mapthings[i].angle & 16383;
 			mapthings[i].args[3] = !!(mapthings[i].angle & 16384);
@@ -5222,6 +5234,9 @@ static void P_ConvertBinaryMap(void)
 			break;
 		case 1807: //Axe
 			mapthings[i].args[0] = LE_AXE;
+			break;
+		case 2000: //Smashing spikeball
+			mapthings[i].args[0] = mapthings[i].angle;
 			break;
 		case 2006: //Jack-o'-lantern 1
 		case 2007: //Jack-o'-lantern 2

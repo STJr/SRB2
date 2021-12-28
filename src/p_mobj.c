@@ -12791,7 +12791,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		}
 		break;
 	case MT_WATERDRIP:
-		mobj->tics = 3*TICRATE + mthing->angle;
+		mobj->tics = 3*TICRATE + mthing->args[0];
 		break;
 	case MT_FLAMEJET:
 	case MT_VERTICALFLAMEJET:
@@ -12856,7 +12856,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	case MT_DSZSTALAGMITE:
 	case MT_DSZ2STALAGMITE:
 	case MT_KELP:
-		if (mthing->options & MTF_OBJECTSPECIAL) { // make mobj twice as big as normal
+		if (mthing->args[0]) { // make mobj twice as big as normal
 			P_SetScale(mobj, 2*mobj->scale); // not 2*FRACUNIT in case of something like the old ERZ3 mode
 			mobj->destscale = mobj->scale;
 		}
@@ -12896,12 +12896,12 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	}
 	break;
 	case MT_SMASHINGSPIKEBALL:
-		if (mthing->angle > 0)
-			mobj->tics += mthing->angle;
+		if (mthing->args[0] > 0)
+			mobj->tics += mthing->args[0];
 		break;
 	case MT_LAVAFALL:
-		mobj->fuse = 30 + mthing->angle;
-		if (mthing->options & MTF_AMBUSH)
+		mobj->fuse = 30 + mthing->args[0];
+		if (mthing->args[1])
 		{
 			P_SetScale(mobj, 2*mobj->scale);
 			mobj->destscale = mobj->scale;
