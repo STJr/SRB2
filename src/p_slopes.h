@@ -95,26 +95,26 @@ typedef enum {
 	DP_FRONTCEIL,
 	DP_BACKFLOOR,
 	DP_BACKCEIL,
-	DP_VERTEX
 } dynplanetype_t;
 
 /// Permit slopes to be dynamically altered through a thinker.
 typedef struct
 {
 	thinker_t thinker;
-
-	pslope_t* slope;
+	pslope_t *slope;
 	dynplanetype_t type;
-
-	// Used by line slopes.
-	line_t* sourceline;
+	line_t *sourceline;
 	fixed_t extent;
+} dynlineplanethink_t;
 
-	// Used by mapthing vertex slopes.
+typedef struct
+{
+	thinker_t thinker;
+	pslope_t *slope;
 	INT16 tags[3];
 	vector3_t vex[3];
-} dynplanethink_t;
+} dynvertexplanethink_t;
 
-void T_DynamicSlopeLine (dynplanethink_t* th);
-void T_DynamicSlopeVert (dynplanethink_t* th);
+void T_DynamicSlopeLine (dynlineplanethink_t* th);
+void T_DynamicSlopeVert (dynvertexplanethink_t* th);
 #endif // #ifndef P_SLOPES_H__

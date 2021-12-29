@@ -121,7 +121,7 @@ static void ReconfigureViaConstants (pslope_t *slope, const fixed_t a, const fix
 }
 
 /// Recalculate dynamic slopes.
-void T_DynamicSlopeLine (dynplanethink_t* th)
+void T_DynamicSlopeLine (dynlineplanethink_t* th)
 {
 	pslope_t* slope = th->slope;
 	line_t* srcline = th->sourceline;
@@ -161,7 +161,7 @@ void T_DynamicSlopeLine (dynplanethink_t* th)
 }
 
 /// Mapthing-defined
-void T_DynamicSlopeVert (dynplanethink_t* th)
+void T_DynamicSlopeVert (dynvertexplanethink_t* th)
 {
 	pslope_t* slope = th->slope;
 
@@ -180,28 +180,26 @@ void T_DynamicSlopeVert (dynplanethink_t* th)
 	ReconfigureViaVertexes(slope, th->vex[0], th->vex[1], th->vex[2]);
 }
 
-static inline void P_AddDynSlopeThinker (pslope_t* slope, dynplanetype_t type, line_t* sourceline, fixed_t extent, const INT16 tags[3], const vector3_t vx[3])
+static inline void P_AddDynLineSlopeThinker (pslope_t* slope, dynplanetype_t type, line_t* sourceline, fixed_t extent)
 {
-	dynplanethink_t* th = Z_Calloc(sizeof (*th), PU_LEVSPEC, NULL);
-	switch (type)
-	{
-	case DP_VERTEX:
-		th->thinker.function.acp1 = (actionf_p1)T_DynamicSlopeVert;
-		memcpy(th->tags, tags, sizeof(th->tags));
-		memcpy(th->vex, vx, sizeof(th->vex));
-		break;
-	default:
-		th->thinker.function.acp1 = (actionf_p1)T_DynamicSlopeLine;
-		th->sourceline = sourceline;
-		th->extent = extent;
-	}
-
+	dynlineplanethink_t* th = Z_Calloc(sizeof (*th), PU_LEVSPEC, NULL);
+	th->thinker.function.acp1 = (actionf_p1)T_DynamicSlopeLine;
 	th->slope = slope;
 	th->type = type;
-
+	th->sourceline = sourceline;
+	th->extent = extent;
 	P_AddThinker(THINK_DYNSLOPE, &th->thinker);
 }
 
+static inline void P_AddDynVertexSlopeThinker (pslope_t* slope, const INT16 tags[3], const vector3_t vx[3])
+{
+	dynvertexplanethink_t* th = Z_Calloc(sizeof (*th), PU_LEVSPEC, NULL);
+	th->thinker.function.acp1 = (actionf_p1)T_DynamicSlopeVert;
+	th->slope = slope;
+	memcpy(th->tags, tags, sizeof(th->tags));
+	memcpy(th->vex, vx, sizeof(th->vex));
+	P_AddThinker(THINK_DYNSLOPE, &th->thinker);
+}
 
 /// Create a new slope and add it to the slope list.
 static inline pslope_t* Slope_Add (const UINT8 flags)
@@ -358,7 +356,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			P_CalculateSlopeNormal(fslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
-				P_AddDynSlopeThinker(fslope, DP_FRONTFLOOR, line, extent, NULL, NULL);
+				P_AddDynLineSlopeThinker(fslope, DP_FRONTFLOOR, line, extent);
 		}
 		if(frontceil)
 		{
@@ -375,7 +373,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			P_CalculateSlopeNormal(cslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
-				P_AddDynSlopeThinker(cslope, DP_FRONTCEIL, line, extent, NULL, NULL);
+				P_AddDynLineSlopeThinker(cslope, DP_FRONTCEIL, line, extent);
 		}
 	}
 	if(backfloor || backceil)
@@ -415,7 +413,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			P_CalculateSlopeNormal(fslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
-				P_AddDynSlopeThinker(fslope, DP_BACKFLOOR, line, extent, NULL, NULL);
+				P_AddDynLineSlopeThinker(fslope, DP_BACKFLOOR, line, extent);
 		}
 		if(backceil)
 		{
@@ -432,7 +430,7 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 			P_CalculateSlopeNormal(cslope);
 
 			if (spawnthinker && (flags & SL_DYNAMIC))
-				P_AddDynSlopeThinker(cslope, DP_BACKCEIL, line, extent, NULL, NULL);
+				P_AddDynLineSlopeThinker(cslope, DP_BACKCEIL, line, extent);
 		}
 	}
 }
@@ -476,7 +474,7 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 	ReconfigureViaVertexes(ret, vx[0], vx[1], vx[2]);
 
 	if (spawnthinker && (flags & SL_DYNAMIC))
-		P_AddDynSlopeThinker(ret, DP_VERTEX, NULL, 0, tags, vx);
+		P_AddDynVertexSlopeThinker(ret, tags, vx);
 
 	return ret;
 }

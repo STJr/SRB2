@@ -2281,16 +2281,23 @@ static void SavePlaneDisplaceThinker(const thinker_t *th, const UINT8 type)
 	WRITEUINT8(save_p, ht->type);
 }
 
-static inline void SaveDynamicSlopeThinker(const thinker_t *th, const UINT8 type)
+static inline void SaveDynamicLineSlopeThinker(const thinker_t *th, const UINT8 type)
 {
-	const dynplanethink_t* ht = (const void*)th;
+	const dynlineplanethink_t* ht = (const void*)th;
 
 	WRITEUINT8(save_p, type);
 	WRITEUINT8(save_p, ht->type);
 	WRITEUINT32(save_p, SaveSlope(ht->slope));
 	WRITEUINT32(save_p, SaveLine(ht->sourceline));
 	WRITEFIXED(save_p, ht->extent);
+}
 
+static inline void SaveDynamicVertexSlopeThinker(const thinker_t *th, const UINT8 type)
+{
+	const dynvertexplanethink_t* ht = (const void*)th;
+
+	WRITEUINT8(save_p, type);
+	WRITEUINT32(save_p, SaveSlope(ht->slope));
 	WRITEMEM(save_p, ht->tags, sizeof(ht->tags));
     WRITEMEM(save_p, ht->vex, sizeof(ht->vex));
 }
@@ -2617,12 +2624,12 @@ static void P_NetArchiveThinkers(void)
 			}
 			else if (th->function.acp1 == (actionf_p1)T_DynamicSlopeLine)
 			{
-				SaveDynamicSlopeThinker(th, tc_dynslopeline);
+				SaveDynamicLineSlopeThinker(th, tc_dynslopeline);
 				continue;
 			}
 			else if (th->function.acp1 == (actionf_p1)T_DynamicSlopeVert)
 			{
-				SaveDynamicSlopeThinker(th, tc_dynslopevert);
+				SaveDynamicVertexSlopeThinker(th, tc_dynslopevert);
 				continue;
 			}
 #ifdef PARANOIA
@@ -3447,15 +3454,24 @@ static inline thinker_t* LoadPlaneDisplaceThinker(actionf_p1 thinker)
 	return &ht->thinker;
 }
 
-static inline thinker_t* LoadDynamicSlopeThinker(actionf_p1 thinker)
+static inline thinker_t* LoadDynamicLineSlopeThinker(actionf_p1 thinker)
 {
-	dynplanethink_t* ht = Z_Malloc(sizeof(*ht), PU_LEVSPEC, NULL);
+	dynlineplanethink_t* ht = Z_Malloc(sizeof(*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 
 	ht->type = READUINT8(save_p);
 	ht->slope = LoadSlope(READUINT32(save_p));
 	ht->sourceline = LoadLine(READUINT32(save_p));
 	ht->extent = READFIXED(save_p);
+	return &ht->thinker;
+}
+
+static inline thinker_t* LoadDynamicVertexSlopeThinker(actionf_p1 thinker)
+{
+	dynvertexplanethink_t* ht = Z_Malloc(sizeof(*ht), PU_LEVSPEC, NULL);
+	ht->thinker.function.acp1 = thinker;
+
+	ht->slope = LoadSlope(READUINT32(save_p));
 	READMEM(save_p, ht->tags, sizeof(ht->tags));
 	READMEM(save_p, ht->vex, sizeof(ht->vex));
 	return &ht->thinker;
@@ -3770,11 +3786,11 @@ static void P_NetUnArchiveThinkers(void)
 					break;
 
 				case tc_dynslopeline:
-					th = LoadDynamicSlopeThinker((actionf_p1)T_DynamicSlopeLine);
+					th = LoadDynamicLineSlopeThinker((actionf_p1)T_DynamicSlopeLine);
 					break;
 
 				case tc_dynslopevert:
-					th = LoadDynamicSlopeThinker((actionf_p1)T_DynamicSlopeVert);
+					th = LoadDynamicVertexSlopeThinker((actionf_p1)T_DynamicSlopeVert);
 					break;
 
 				case tc_scroll:
