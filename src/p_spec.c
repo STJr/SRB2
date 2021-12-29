@@ -6086,15 +6086,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 
-			case 2: // Custom exit
-				break;
-
-			case 3: // Zoom Tube Parameters
-				break;
-
-			case 4: // Speed pad (combines with sector special Section3:5 or Section3:6)
-				break;
-
 			case 5: // Change camera info
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				TAG_ITER_SECTORS(tag, s)
@@ -6156,9 +6147,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 					if (lines[i].frontsector && GETSECSPECIAL(lines[i].frontsector->special, 4) == 12)
 						sectors[s].camsec = sides[*lines[i].sidenum].sector-sectors;
 				}
-				break;
-
-			case 9: // Chain Parameters
 				break;
 
 			case 10: // Vertical culling plane for sprites and FOFs
@@ -6734,8 +6722,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
 
-				break;
-
 			case 308: // Race-only linedef executor. Triggers once.
 				if (!P_CheckGametypeRules(lines[i].args[2], (UINT32)lines[i].args[1]))
 				{
@@ -6769,51 +6755,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMXT_EACHTIMEENTERANDEXIT);
 				break;
 
-			// NiGHTS trigger executors
-			case 323:
-			case 325:
-			case 327:
-			case 329:
-				break;
-
-			case 399: // Linedef execute on map load
-				// This is handled in P_RunLevelLoadExecutors.
-				break;
-
-			case 400:
-			case 401:
-			case 402:
-			case 403:
-			case 404:
-			case 405:
-			case 406:
-			case 407:
-			case 408:
-			case 409:
-			case 410:
-			case 411:
-			case 412:
-			case 413:
-			case 414:
-			case 415:
-			case 416:
-			case 417:
-			case 418:
-			case 419:
-			case 420:
-			case 421:
-			case 422:
-			case 423:
-			case 424:
-			case 425:
-			case 426:
-			case 427:
-			case 428:
-			case 429:
-			case 430:
-			case 431:
-				break;
-
 			case 449: // Enable bosses with parameter
 			{
 				INT32 bossid = lines[i].args[0];
@@ -6831,42 +6772,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 				break;
 			}
-
-			// 500 is used for a scroller
-			// 501 is used for a scroller
-			// 502 is used for a scroller
-			// 503 is used for a scroller
-			// 504 is used for a scroller
-			// 505 is used for a scroller
-			// 506 is used for a scroller
-			// 507 is used for a scroller
-			// 508 is used for a scroller
-			// 510 is used for a scroller
-			// 511 is used for a scroller
-			// 512 is used for a scroller
-			// 513 is used for a scroller
-			// 514 is used for a scroller
-			// 515 is used for a scroller
-			// 520 is used for a scroller
-			// 521 is used for a scroller
-			// 522 is used for a scroller
-			// 523 is used for a scroller
-			// 524 is used for a scroller
-			// 525 is used for a scroller
-			// 530 is used for a scroller
-			// 531 is used for a scroller
-			// 532 is used for a scroller
-			// 533 is used for a scroller
-			// 534 is used for a scroller
-			// 535 is used for a scroller
-			// 540 is used for friction
-			// 541 is used for wind
-			// 542 is used for upwards wind
-			// 543 is used for downwards wind
-			// 544 is used for current
-			// 545 is used for upwards current
-			// 546 is used for downwards current
-			// 547 is used for push/pull
 
 			case 600: // Copy light level to tagged sector's planes
 				sec = sides[*lines[i].sidenum].sector-sectors;
