@@ -6206,7 +6206,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 63: // support for drawn heights coming from different sector
 				sec = sides[*lines[i].sidenum].sector-sectors;
-				TAG_ITER_SECTORS(tag, s)
+				TAG_ITER_SECTORS(lines[i].args[0], s)
 					sectors[s].heightsec = (INT32)sec;
 				break;
 

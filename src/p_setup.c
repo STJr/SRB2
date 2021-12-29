@@ -3340,6 +3340,9 @@ static void P_ConvertBinaryMap(void)
 			}
 			lines[i].special = 61;
 			break;
+		case 63: //Fake floor/ceiling planes
+			lines[i].args[0] = tag;
+			break;
 		case 66: //Move floor by displacement
 		case 67: //Move ceiling by displacement
 		case 68: //Move floor and ceiling by displacement
