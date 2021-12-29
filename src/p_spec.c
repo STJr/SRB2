@@ -2664,7 +2664,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				// Reset bot too.
 				if (bot) {
-					if (line->flags & ML_NOCLIMB)
+					if (line->args[0])
 						P_TeleportMove(bot, mo->x, mo->y, mo->z);
 					bot->momx = bot->momy = bot->momz = 1;
 					bot->pmomz = 0;
