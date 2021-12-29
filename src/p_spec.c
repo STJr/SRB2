@@ -3778,6 +3778,29 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 468: // Change linedef executor argument
+		{
+			INT32 linenum;
+
+			if (!udmf)
+				break;
+
+			if (line->args[1] < 0 || line->args[1] >= NUMLINEARGS)
+			{
+				CONS_Debug(DBG_GAMELOGIC, "Linedef type 468: Invalid linedef arg %d\n", line->args[1]);
+				break;
+			}
+
+			TAG_ITER_LINES(line->args[0], linenum)
+			{
+				if (line->args[3])
+					lines[linenum].args[line->args[1]] += line->args[2];
+				else
+					lines[linenum].args[line->args[1]] = line->args[2];
+			}
+		}
+		break;
+
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
 			PolyDoor(line);
