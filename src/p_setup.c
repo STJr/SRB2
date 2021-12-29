@@ -3179,6 +3179,25 @@ static void P_ConvertBinaryMap(void)
 
 		switch (lines[i].special)
 		{
+		case 2: //Custom exit
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] |= TMEF_SKIPTALLY;
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[1] |= TMEF_EMERALDCHECK;
+			break;
+		case 3: //Zoom tube parameters
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT4);
+			break;
+		case 4: //Speed pad parameters
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			if (lines[i].flags & ML_EFFECT4)
+				lines[i].args[1] |= TMSP_NOTELEPORT;
+			if (lines[i].flags & ML_EFFECT5)
+				lines[i].args[1] |= TMSP_FORCESPIN;
+			P_WriteConstant(sides[lines[i].sidenum[0]].toptexture ? sides[lines[i].sidenum[0]].toptexture : sfx_spdpad, &lines[i].stringargs[0]);
+			break;
 		case 7: //Sector flat alignment
 			lines[i].args[0] = tag;
 			if ((lines[i].flags & (ML_NETONLY|ML_NONET)) == (ML_NETONLY|ML_NONET))
@@ -3215,6 +3234,14 @@ static void P_ConvertBinaryMap(void)
 		case 10: //Culling plane
 			lines[i].args[0] = tag;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
+		case 11: //Rope hang parameters
+			lines[i].args[0] = (lines[i].flags & ML_NOCLIMB) ? 0 : sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT1);
+			break;
+		case 16: //Minecart parameters
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			break;
 		case 20: //PolyObject first line
 		{

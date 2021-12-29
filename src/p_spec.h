@@ -122,6 +122,18 @@ typedef enum
 	TMB_BARRIER      = 1<<1,
 } textmapbrakflags_t;
 
+typedef enum
+{
+	TMEF_SKIPTALLY    = 1,
+	TMEF_EMERALDCHECK = 1<<1,
+} textmapexitflags_t;
+
+typedef enum
+{
+	TMSP_NOTELEPORT = 1,
+	TMSP_FORCESPIN  = 1<<1,
+} textmapspeedpadflags_t;
+
 //FOF flags
 typedef enum
 {

@@ -4311,15 +4311,36 @@ static void P_ProcessEggCapsule(player_t *player, sector_t *sector)
 
 static void P_ProcessSpeedPad(player_t *player, sector_t *sector, sector_t *roversector, mtag_t sectag)
 {
-	INT32 lineindex;
+	INT32 lineindex = -1;
 	angle_t lineangle;
 	fixed_t linespeed;
 	fixed_t sfxnum;
+	size_t i;
 
 	if (player->powers[pw_flashing] != 0 && player->powers[pw_flashing] < TICRATE/2)
 		return;
 
-	lineindex = Tag_FindLineSpecial(4, sectag);
+	// Try for lines facing the sector itself, with tag 0.
+	for (i = 0; i < sector->linecount; i++)
+	{
+		line_t *li = sector->lines[i];
+
+		if (li->frontsector != sector)
+			continue;
+
+		if (li->special != 4)
+			continue;
+
+		if (!Tag_Find(&li->tags, 0))
+			continue;
+
+		lineindex = li - lines;
+		break;
+	}
+
+	// Nothing found? Look via tag.
+	if (lineindex == -1)
+		lineindex = Tag_FindLineSpecial(4, sectag);
 
 	if (lineindex == -1)
 	{
@@ -4328,7 +4349,7 @@ static void P_ProcessSpeedPad(player_t *player, sector_t *sector, sector_t *rove
 	}
 
 	lineangle = R_PointToAngle2(lines[lineindex].v1->x, lines[lineindex].v1->y, lines[lineindex].v2->x, lines[lineindex].v2->y);
-	linespeed = sides[lines[lineindex].sidenum[0]].textureoffset;
+	linespeed = lines[lineindex].args[0] << FRACBITS;
 
 	if (linespeed == 0)
 	{
@@ -4341,7 +4362,7 @@ static void P_ProcessSpeedPad(player_t *player, sector_t *sector, sector_t *rove
 	if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
 		P_SetPlayerAngle(player, player->mo->angle);
 
-	if (!(lines[lineindex].flags & ML_EFFECT4))
+	if (!(lines[lineindex].args[1] & TMSP_NOTELEPORT))
 	{
 		P_UnsetThingPosition(player->mo);
 		if (roversector) // make FOF speed pads work
@@ -4359,7 +4380,7 @@ static void P_ProcessSpeedPad(player_t *player, sector_t *sector, sector_t *rove
 
 	P_InstaThrust(player->mo, player->mo->angle, linespeed);
 
-	if (lines[lineindex].flags & ML_EFFECT5) // Roll!
+	if (lines[lineindex].args[1] & TMSP_FORCESPIN) // Roll!
 	{
 		if (!(player->pflags & PF_SPINNING))
 			player->pflags |= PF_SPINNING;
@@ -4369,7 +4390,7 @@ static void P_ProcessSpeedPad(player_t *player, sector_t *sector, sector_t *rove
 
 	player->powers[pw_flashing] = TICRATE/3;
 
-	sfxnum = sides[lines[lineindex].sidenum[0]].toptexture;
+	sfxnum = lines[lineindex].stringargs[0] ? get_number(lines[lineindex].stringargs[0]) : sfx_spdpad;
 
 	if (!sfxnum)
 		sfxnum = sfx_spdpad;
@@ -4414,13 +4435,13 @@ static void P_ProcessExitSector(player_t *player, boolean isTouching, mtag_t sec
 		return;
 	}
 
-	// Special goodies with the block monsters flag depending on emeralds collected
-	if ((lines[lineindex].flags & ML_BLOCKMONSTERS) && ALL7EMERALDS(emeralds))
-		nextmapoverride = (INT16)(lines[lineindex].frontsector->ceilingheight>>FRACBITS);
+	// Special goodies depending on emeralds collected
+	if ((lines[lineindex].args[1] & TMEF_EMERALDCHECK) && ALL7EMERALDS(emeralds))
+		nextmapoverride = (INT16)(udmf ? lines[lineindex].args[2] : lines[lineindex].frontsector->ceilingheight>>FRACBITS);
 	else
-		nextmapoverride = (INT16)(lines[lineindex].frontsector->floorheight>>FRACBITS);
+		nextmapoverride = (INT16)(udmf ? lines[lineindex].args[0] : lines[lineindex].frontsector->floorheight>>FRACBITS);
 
-	if (lines[lineindex].flags & ML_NOCLIMB)
+	if (lines[lineindex].args[1] & TMEF_SKIPTALLY)
 		skipstats = 1;
 }
 
@@ -4491,10 +4512,10 @@ static void P_ProcessZoomTube(player_t *player, sector_t *sector, mtag_t sectag,
 	}
 
 	// Grab speed and sequence values
-	speed = abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8;
+	speed = abs(lines[lineindex].args[0])<<(FRACBITS-3);
 	if (end)
 		speed *= -1;
-	sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
+	sequence = abs(lines[lineindex].args[1]);
 
 	if (speed == 0)
 	{
@@ -4514,7 +4535,7 @@ static void P_ProcessZoomTube(player_t *player, sector_t *sector, mtag_t sectag,
 
 	an = R_PointToAngle2(player->mo->x, player->mo->y, waypoint->x, waypoint->y) - player->mo->angle;
 
-	if (an > ANGLE_90 && an < ANGLE_270 && !(lines[lineindex].flags & ML_EFFECT4))
+	if (an > ANGLE_90 && an < ANGLE_270 && !(lines[lineindex].args[2]))
 		return; // behind back
 
 	P_SetTarget(&player->mo->tracer, waypoint);
@@ -4625,14 +4646,8 @@ static void P_ProcessRopeHang(player_t *player, sector_t *sector, mtag_t sectag)
 	}
 
 	// Grab speed and sequence values
-	speed = abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8;
-	sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
-
-	if (speed == 0)
-	{
-		CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
-		return;
-	}
+	speed = abs(lines[lineindex].args[0]) << (FRACBITS - 3);
+	sequence = abs(lines[lineindex].args[1]);
 
 	// Find the closest waypoint
 	// Find the preceding waypoint
@@ -4694,21 +4709,21 @@ static void P_ProcessRopeHang(player_t *player, sector_t *sector, mtag_t sectag)
 	P_ResetPlayer(player);
 	player->mo->momx = player->mo->momy = player->mo->momz = 0;
 
-	if (lines[lineindex].flags & ML_EFFECT1) // Don't wrap
+	if (lines[lineindex].args[2]) // Don't wrap
 	{
 		mobj_t *highest = P_GetLastWaypoint(sequence);
 		highest->flags |= MF_SLIDEME;
 	}
 
 	// Changing the conditions on these ifs to fix issues with snapping to the wrong spot -Red
-	if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == 0)
+	if ((lines[lineindex].args[2]) && waypointmid->health == 0)
 	{
 		closest = waypointhigh;
 		player->mo->x = resulthigh.x;
 		player->mo->y = resulthigh.y;
 		player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
 	}
-	else if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == numwaypoints[sequence] - 1)
+	else if ((lines[lineindex].args[2]) && waypointmid->health == numwaypoints[sequence] - 1)
 	{
 		closest = waypointmid;
 		player->mo->x = resultlow.x;
@@ -4739,12 +4754,7 @@ static void P_ProcessRopeHang(player_t *player, sector_t *sector, mtag_t sectag)
 
 	P_SetTarget(&player->mo->tracer, closest);
 	player->powers[pw_carry] = CR_ROPEHANG;
-
-	// Option for static ropes.
-	if (lines[lineindex].flags & ML_NOCLIMB)
-		player->speed = 0;
-	else
-		player->speed = speed;
+	player->speed = speed;
 
 	S_StartSound(player->mo, sfx_s3k4a);
 
