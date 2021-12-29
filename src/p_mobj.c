@@ -12430,8 +12430,8 @@ static boolean P_SetupParticleGen(mapthing_t *mthing, mobj_t *mobj)
 	INT32 line;
 	const size_t mthingi = (size_t)(mthing - mapthings);
 
-	// Find the corresponding linedef special, using angle as tag
-	line = Tag_FindLineSpecial(15, mthing->angle);
+	// Find the corresponding linedef special, using args[6] as tag
+	line = mthing->args[6] ? Tag_FindLineSpecial(15, mthing->args[6]) : -1;
 
 	type = mthing->stringargs[0] ? get_number(mthing->stringargs[0]) : MT_PARTICLE;
 

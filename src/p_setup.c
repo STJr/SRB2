@@ -5206,6 +5206,7 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].args[2] = sides[lines[j].sidenum[0]].textureoffset >> FRACBITS;
 			mapthings[i].args[3] = sides[lines[j].sidenum[0]].rowoffset >> FRACBITS;
 			mapthings[i].args[4] = lines[j].backsector ? sides[lines[j].sidenum[1]].textureoffset >> FRACBITS : 0;
+			mapthings[i].args[6] = mapthings[i].angle;
 			if (sides[lines[j].sidenum[0]].toptexture)
 				P_WriteConstant(sides[lines[j].sidenum[0]].toptexture, &mapthings[i].stringargs[0]);
 			break;
