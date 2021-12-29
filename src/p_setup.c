@@ -3179,6 +3179,43 @@ static void P_ConvertBinaryMap(void)
 
 		switch (lines[i].special)
 		{
+		case 7: //Sector flat alignment
+			lines[i].args[0] = tag;
+			if ((lines[i].flags & (ML_NETONLY|ML_NONET)) == (ML_NETONLY|ML_NONET))
+			{
+				CONS_Alert(CONS_WARNING, M_GetText("Flat alignment linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"), tag);
+				lines[i].special = 0;
+			}
+			else if (lines[i].flags & ML_NETONLY)
+				lines[i].args[1] = TMP_CEILING;
+			else if (lines[i].flags & ML_NONET)
+				lines[i].args[1] = TMP_FLOOR;
+			else
+				lines[i].args[1] = TMP_BOTH;
+			lines[i].flags &= ~(ML_NETONLY|ML_NONET);
+
+			if (lines[i].flags & ML_EFFECT6) // Set offset through x and y texture offsets
+			{
+				angle_t flatangle = InvAngle(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y));
+				fixed_t xoffs = sides[lines[i].sidenum[0]].textureoffset;
+				fixed_t yoffs = sides[lines[i].sidenum[0]].rowoffset;
+
+				//If no tag is given, apply to front sector
+				if (lines[i].args[0] == 0)
+					P_ApplyFlatAlignment(lines[i].frontsector, flatangle, xoffs, yoffs, lines[i].args[1] != TMP_CEILING, lines[i].args[1] != TMP_FLOOR);
+				else
+				{
+					INT32 s;
+					TAG_ITER_SECTORS(lines[i].args[0], s)
+						P_ApplyFlatAlignment(sectors + s, flatangle, xoffs, yoffs, lines[i].args[1] != TMP_CEILING, lines[i].args[1] != TMP_FLOOR);
+				}
+				lines[i].special = 0;
+			}
+			break;
+		case 10: //Culling plane
+			lines[i].args[0] = tag;
+			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
 		case 20: //PolyObject first line
 		{
 			INT32 check = -1;

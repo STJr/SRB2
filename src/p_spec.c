@@ -5863,16 +5863,16 @@ void P_InitSpecials(void)
 	globalweather = mapheaderinfo[gamemap-1]->weather;
 }
 
-static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs)
+void P_ApplyFlatAlignment(sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs, boolean floor, boolean ceiling)
 {
-	if (!(master->flags & ML_NETONLY)) // Modify floor flat alignment unless ML_NETONLY flag is set
+	if (floor)
 	{
 		sector->floorpic_angle = flatangle;
 		sector->floor_xoffs += xoffs;
 		sector->floor_yoffs += yoffs;
 	}
 
-	if (!(master->flags & ML_NONET)) // Modify ceiling flat alignment unless ML_NONET flag is set
+	if (ceiling)
 	{
 		sector->ceilingpic_angle = flatangle;
 		sector->ceiling_xoffs += xoffs;
@@ -6046,22 +6046,19 @@ void P_SpawnSpecials(boolean fromnetsave)
 	{
 		mtag_t tag = Tag_FGet(&lines[i].tags);
 
-		if (lines[i].special != 7) // This is a hack. I can at least hope nobody wants to prevent flat alignment in netgames...
+		// set line specials to 0 here too, same reason as above
+		if (netgame || multiplayer)
 		{
-			// set line specials to 0 here too, same reason as above
-			if (netgame || multiplayer)
-			{
-				if (lines[i].flags & ML_NONET)
-				{
-					lines[i].special = 0;
-					continue;
-				}
-			}
-			else if (lines[i].flags & ML_NETONLY)
+			if (lines[i].flags & ML_NONET)
 			{
 				lines[i].special = 0;
 				continue;
 			}
+		}
+		else if (lines[i].flags & ML_NETONLY)
+		{
+			lines[i].special = 0;
+			continue;
 		}
 
 		switch (lines[i].special)
@@ -6102,37 +6099,22 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 7: // Flat alignment - redone by toast
-				if ((lines[i].flags & (ML_NETONLY|ML_NONET)) != (ML_NETONLY|ML_NONET)) // If you can do something...
+			{
+				// Set calculated offsets such that line's v1 is the apparent origin
+				angle_t flatangle = InvAngle(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y));
+				fixed_t xoffs = -lines[i].v1->x;
+				fixed_t yoffs = lines[i].v1->y;
+
+				//If no tag is given, apply to front sector
+				if (lines[i].args[0] == 0)
+					P_ApplyFlatAlignment(lines[i].frontsector, flatangle, xoffs, yoffs, lines[i].args[1] != TMP_CEILING, lines[i].args[1] != TMP_FLOOR);
+				else
 				{
-					angle_t flatangle = InvAngle(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y));
-					fixed_t xoffs;
-					fixed_t yoffs;
-
-					if (lines[i].flags & ML_EFFECT6) // Set offset through x and y texture offsets if ML_EFFECT6 flag is set
-					{
-						xoffs = sides[lines[i].sidenum[0]].textureoffset;
-						yoffs = sides[lines[i].sidenum[0]].rowoffset;
-					}
-					else // Otherwise, set calculated offsets such that line's v1 is the apparent origin
-					{
-						xoffs = -lines[i].v1->x;
-						yoffs = lines[i].v1->y;
-					}
-
-					//If no tag is given, apply to front sector
-					if (tag == 0)
-						P_ApplyFlatAlignment(lines + i, lines[i].frontsector, flatangle, xoffs, yoffs);
-					else
-					{
-						TAG_ITER_SECTORS(tag, s)
-							P_ApplyFlatAlignment(lines + i, sectors + s, flatangle, xoffs, yoffs);
-					}
+					TAG_ITER_SECTORS(lines[i].args[0], s)
+						P_ApplyFlatAlignment(sectors + s, flatangle, xoffs, yoffs, lines[i].args[1] != TMP_CEILING, lines[i].args[1] != TMP_FLOOR);
 				}
-				else // Otherwise, print a helpful warning. Can I do no less?
-					CONS_Alert(CONS_WARNING,
-					M_GetText("Flat alignment linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
-					tag);
 				break;
+			}
 
 			case 8: // Sector Parameters
 				TAG_ITER_SECTORS(tag, s)
@@ -6162,7 +6144,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 10: // Vertical culling plane for sprites and FOFs
-				TAG_ITER_SECTORS(tag, s)
+				TAG_ITER_SECTORS(lines[i].args[0], s)
 					sectors[s].cullheight = &lines[i]; // This allows it to change in realtime!
 				break;
 
