@@ -6116,6 +6116,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 5: // Change camera info
+				if (udmf)
+					break;
+
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				TAG_ITER_SECTORS(tag, s)
 					P_AddCameraScanner(&sectors[sec], &sectors[s], R_PointToAngle2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y));
