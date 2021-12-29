@@ -2048,6 +2048,9 @@ static void P_ProcessLinedefsAfterSidedefs(void)
 		ld->frontsector = sides[ld->sidenum[0]].sector; //e6y: Can't be -1 here
 		ld->backsector = ld->sidenum[1] != 0xffff ? sides[ld->sidenum[1]].sector : 0;
 
+		if (udmf)
+			continue;
+
 		switch (ld->special)
 		{
 		// Compile linedef 'text' from both sidedefs 'text' for appropriate specials.
@@ -2068,8 +2071,6 @@ static void P_ProcessLinedefsAfterSidedefs(void)
 			break;
 		case 447: // Change colormap
 		case 455: // Fade colormap
-			if (udmf)
-				break;
 			if (ld->flags & ML_DONTPEGBOTTOM) // alternate alpha (by texture offsets)
 			{
 				extracolormap_t *exc = R_CopyColormap(sides[ld->sidenum[0]].colormap_data, false);
