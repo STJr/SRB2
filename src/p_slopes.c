@@ -163,21 +163,17 @@ void T_DynamicSlopeLine (dynlineplanethink_t* th)
 /// Mapthing-defined
 void T_DynamicSlopeVert (dynvertexplanethink_t* th)
 {
-	pslope_t* slope = th->slope;
-
 	size_t i;
-	INT32 l;
 
-	for (i = 0; i < 3; i++) {
-		l = Tag_FindLineSpecial(799, th->tags[i]);
-		if (l != -1) {
-			th->vex[i].z = lines[l].frontsector->floorheight;
-		}
+	for (i = 0; i < 3; i++)
+	{
+		if (th->relative & (1 << i))
+			th->vex[i].z = th->origvecheights[i] + (th->secs[i]->floorheight - th->origsecheights[i]);
 		else
-			th->vex[i].z = 0;
+			th->vex[i].z = th->secs[i]->floorheight;
 	}
 
-	ReconfigureViaVertexes(slope, th->vex[0], th->vex[1], th->vex[2]);
+	ReconfigureViaVertexes(th->slope, th->vex[0], th->vex[1], th->vex[2]);
 }
 
 static inline void P_AddDynLineSlopeThinker (pslope_t* slope, dynplanetype_t type, line_t* sourceline, fixed_t extent)
@@ -194,10 +190,25 @@ static inline void P_AddDynLineSlopeThinker (pslope_t* slope, dynplanetype_t typ
 static inline void P_AddDynVertexSlopeThinker (pslope_t* slope, const INT16 tags[3], const vector3_t vx[3])
 {
 	dynvertexplanethink_t* th = Z_Calloc(sizeof (*th), PU_LEVSPEC, NULL);
+	size_t i;
+	INT32 l;
 	th->thinker.function.acp1 = (actionf_p1)T_DynamicSlopeVert;
 	th->slope = slope;
-	memcpy(th->tags, tags, sizeof(th->tags));
-	memcpy(th->vex, vx, sizeof(th->vex));
+
+	for (i = 0; i < 3; i++) {
+		l = Tag_FindLineSpecial(799, tags[i]);
+		if (l == -1)
+		{
+			Z_Free(th);
+			return;
+		}
+		th->secs[i] = lines[l].frontsector;
+		th->vex[i] = vx[i];
+		th->origsecheights[i] = lines[l].frontsector->floorheight;
+		th->origvecheights[i] = vx[i].z;
+		if (lines[l].args[0])
+			th->relative |= 1<<i;
+	}
 	P_AddThinker(THINK_DYNSLOPE, &th->thinker);
 }
 

@@ -4885,7 +4885,9 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
 			lines[i].special = 720;
 			break;
-
+		case 799: //Set dynamic slope vertex to front sector height
+			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
 		case 900: //Translucent wall (10%)
 		case 901: //Translucent wall (20%)
 		case 902: //Translucent wall (30%)

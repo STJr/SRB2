@@ -2294,12 +2294,17 @@ static inline void SaveDynamicLineSlopeThinker(const thinker_t *th, const UINT8 
 
 static inline void SaveDynamicVertexSlopeThinker(const thinker_t *th, const UINT8 type)
 {
+	size_t i;
 	const dynvertexplanethink_t* ht = (const void*)th;
 
 	WRITEUINT8(save_p, type);
 	WRITEUINT32(save_p, SaveSlope(ht->slope));
-	WRITEMEM(save_p, ht->tags, sizeof(ht->tags));
-    WRITEMEM(save_p, ht->vex, sizeof(ht->vex));
+	for (i = 0; i < 3; i++)
+		WRITEUINT32(save_p, SaveSector(ht->secs[i]));
+	WRITEMEM(save_p, ht->vex, sizeof(ht->vex));
+	WRITEMEM(save_p, ht->origsecheights, sizeof(ht->origsecheights));
+	WRITEMEM(save_p, ht->origvecheights, sizeof(ht->origvecheights));
+	WRITEUINT8(save_p, ht->relative);
 }
 
 static inline void SavePolyrotatetThinker(const thinker_t *th, const UINT8 type)
@@ -3468,12 +3473,17 @@ static inline thinker_t* LoadDynamicLineSlopeThinker(actionf_p1 thinker)
 
 static inline thinker_t* LoadDynamicVertexSlopeThinker(actionf_p1 thinker)
 {
+	size_t i;
 	dynvertexplanethink_t* ht = Z_Malloc(sizeof(*ht), PU_LEVSPEC, NULL);
 	ht->thinker.function.acp1 = thinker;
 
 	ht->slope = LoadSlope(READUINT32(save_p));
-	READMEM(save_p, ht->tags, sizeof(ht->tags));
+	for (i = 0; i < 3; i++)
+		ht->secs[i] = LoadSector(READUINT32(save_p));
 	READMEM(save_p, ht->vex, sizeof(ht->vex));
+	READMEM(save_p, ht->origsecheights, sizeof(ht->origsecheights));
+	READMEM(save_p, ht->origvecheights, sizeof(ht->origvecheights));
+	ht->relative = READUINT8(save_p);
 	return &ht->thinker;
 }
 

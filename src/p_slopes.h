@@ -111,8 +111,11 @@ typedef struct
 {
 	thinker_t thinker;
 	pslope_t *slope;
-	INT16 tags[3];
+	sector_t *secs[3];
 	vector3_t vex[3];
+	fixed_t origsecheights[3];
+	fixed_t origvecheights[3];
+	UINT8 relative;
 } dynvertexplanethink_t;
 
 void T_DynamicSlopeLine (dynlineplanethink_t* th);
