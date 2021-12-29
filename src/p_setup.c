@@ -3343,6 +3343,14 @@ static void P_ConvertBinaryMap(void)
 		case 63: //Fake floor/ceiling planes
 			lines[i].args[0] = tag;
 			break;
+		case 64: //Appearing/disappearing FOF
+			lines[i].args[0] = (lines[i].flags & ML_BLOCKMONSTERS) ? 0 : tag;
+			lines[i].args[1] = (lines[i].flags & ML_BLOCKMONSTERS) ? tag : Tag_FGet(&lines[i].frontsector->tags);
+			lines[i].args[2] = lines[i].dx >> FRACBITS;
+			lines[i].args[3] = lines[i].dy >> FRACBITS;
+			lines[i].args[4] = lines[i].frontsector->floorheight >> FRACBITS;
+			lines[i].args[5] = !!(lines[i].flags & ML_NOCLIMB);
+			break;
 		case 66: //Move floor by displacement
 		case 67: //Move ceiling by displacement
 		case 68: //Move floor and ceiling by displacement

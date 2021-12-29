@@ -2989,7 +2989,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			if (line->stringargs[0])
 				LUA_HookLinedefExecute(line, mo, callsec);
 			else
-				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in arg0str)\n", sizeu1(line-lines));
+				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in stringarg0)\n", sizeu1(line-lines));
 			break;
 
 		case 444: // Earthquake camera
@@ -6211,19 +6211,30 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 64: // Appearing/Disappearing FOF option
-				if (lines[i].flags & ML_BLOCKMONSTERS) { // Find FOFs by control sector tag
-					TAG_ITER_SECTORS(tag, s)
-						for (j = 0; (unsigned)j < sectors[s].linecount; j++)
-							if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
-								Add_MasterDisappearer(abs(lines[i].dx>>FRACBITS), abs(lines[i].dy>>FRACBITS), abs(sides[lines[i].sidenum[0]].sector->floorheight>>FRACBITS), (INT32)(sectors[s].lines[j]-lines), (INT32)i);
-				} else // Find FOFs by effect sector tag
+				if (lines[i].args[0] == 0) // Find FOFs by control sector tag
 				{
-					TAG_ITER_LINES(tag, s)
+					TAG_ITER_SECTORS(lines[i].args[1], s)
 					{
-						if ((size_t)s == i)
+						for (j = 0; (unsigned)j < sectors[s].linecount; j++)
+						{
+							if (sectors[s].lines[j]->special < 100 || sectors[s].lines[j]->special >= 300)
+								continue;
+
+							Add_MasterDisappearer(abs(lines[i].args[2]), abs(lines[i].args[3]), abs(lines[i].args[4]), (INT32)(sectors[s].lines[j] - lines), (INT32)i);
+						}
+					}
+				}
+				else // Find FOFs by effect sector tag
+				{
+					TAG_ITER_LINES(lines[i].args[0], s)
+					{
+						if (lines[s].special < 100 || lines[s].special >= 300)
 							continue;
-						if (Tag_Find(&sides[lines[s].sidenum[0]].sector->tags, Tag_FGet(&sides[lines[i].sidenum[0]].sector->tags)))
-							Add_MasterDisappearer(abs(lines[i].dx>>FRACBITS), abs(lines[i].dy>>FRACBITS), abs(sides[lines[i].sidenum[0]].sector->floorheight>>FRACBITS), s, (INT32)i);
+
+						if (lines[i].args[1] != 0 && !Tag_Find(&lines[s].frontsector->tags, lines[i].args[1]))
+							continue;
+
+						Add_MasterDisappearer(abs(lines[i].args[2]), abs(lines[i].args[3]), abs(lines[i].args[4]), s, (INT32)i);
 					}
 				}
 				break;
@@ -7469,7 +7480,7 @@ void T_Disappear(disappear_t *d)
 				{
 					rover->flags |= FF_EXISTS;
 
-					if (!(lines[d->sourceline].flags & ML_NOCLIMB))
+					if (!(lines[d->sourceline].args[5]))
 					{
 						sectors[s].soundorg.z = P_GetFFloorTopZAt(rover, sectors[s].soundorg.x, sectors[s].soundorg.y);
 						S_StartSound(&sectors[s].soundorg, sfx_appear);
