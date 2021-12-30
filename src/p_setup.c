@@ -3241,6 +3241,12 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT1);
 			break;
+		case 14: //Bustable block parameters
+			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT1);
+			P_WriteConstant(sides[lines[i].sidenum[0]].toptexture, &lines[i].stringargs[0]);
+			break;
 		case 16: //Minecart parameters
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			break;

@@ -11,6 +11,7 @@
 /// \file  p_floor.c
 /// \brief Floor animation, elevators
 
+#include "dehacked.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "m_random.h"
@@ -1812,7 +1813,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	fixed_t leftx, rightx, topy, bottomy, topz, bottomz, widthfactor, heightfactor, a, b, c, spacing;
 	mobjtype_t type;
 	tic_t lifetime;
-	INT16 flags;
+	boolean fromcenter;
 
 	sector_t *controlsec = rover->master->frontsector;
 	mtag_t tag = Tag_FGet(&controlsec->tags);
@@ -1842,25 +1843,20 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	spacing = (32<<FRACBITS);
 	type = MT_ROCKCRUMBLE1;
 	lifetime = 3*TICRATE;
-	flags = 0;
+	fromcenter = false;
 
 	if (tag != 0)
 	{
 		INT32 tagline = Tag_FindLineSpecial(14, tag);
 		if (tagline != -1)
 		{
-			if (sides[lines[tagline].sidenum[0]].toptexture)
-				type = (mobjtype_t)sides[lines[tagline].sidenum[0]].toptexture; // Set as object type in p_setup.c...
-			if (sides[lines[tagline].sidenum[0]].textureoffset)
-				spacing = sides[lines[tagline].sidenum[0]].textureoffset;
-			if (sides[lines[tagline].sidenum[0]].rowoffset)
-			{
-				if (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS != -1)
-					lifetime = (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS);
-				else
-					lifetime = 0;
-			}
-			flags = lines[tagline].flags;
+			if (lines[tagline].stringargs[0])
+				type = get_number(lines[tagline].stringargs[0]);
+			if (lines[tagline].args[0])
+				spacing = lines[tagline].args[0] << FRACBITS;
+			if (lines[tagline].args[1])
+				lifetime = (lines[tagline].args[1] != -1) ? lines[tagline].args[1] : 0;
+			fromcenter = !!lines[tagline].args[2];
 		}
 	}
 
@@ -1895,7 +1891,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	topz = *rover->topheight-(spacing>>1);
 	bottomz = *rover->bottomheight;
 
-	if (flags & ML_EFFECT1)
+	if (fromcenter)
 	{
 		widthfactor = (rightx + topy - leftx - bottomy)>>3;
 		heightfactor = (topz - *rover->bottomheight)>>2;
@@ -1918,7 +1914,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 					spawned = P_SpawnMobj(a, b, c, type);
 					spawned->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
 
-					if (flags & ML_EFFECT1)
+					if (fromcenter)
 					{
 						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(P_AproxDistance(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
 						P_SetObjectMomZ(spawned, FixedDiv((c - bottomz), heightfactor), false);
