@@ -6143,28 +6143,10 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 			}
 
-			case 8: // Sector Parameters
-				TAG_ITER_SECTORS(tag, s)
-				{
-					if (lines[i].flags & ML_NOCLIMB)
-					{
-						sectors[s].flags &= ~MSF_FLIPSPECIAL_FLOOR;
-						sectors[s].flags |= MSF_FLIPSPECIAL_CEILING;
-					}
-					else if (lines[i].flags & ML_EFFECT4)
-						sectors[s].flags |= MSF_FLIPSPECIAL_BOTH;
-
-					if (lines[i].flags & ML_EFFECT3)
-						sectors[s].flags |= MSF_TRIGGERSPECIAL_TOUCH;
-					if (lines[i].flags & ML_EFFECT2)
-						sectors[s].flags |= MSF_TRIGGERSPECIAL_HEADBUMP;
-
-					if (lines[i].flags & ML_EFFECT1)
-						sectors[s].flags |= MSF_INVERTPRECIP;
-
-					if (lines[i].frontsector && GETSECSPECIAL(lines[i].frontsector->special, 4) == 12)
-						sectors[s].camsec = sides[*lines[i].sidenum].sector-sectors;
-				}
+			case 8: // Set camera collision planes
+				if (lines[i].frontsector)
+					TAG_ITER_SECTORS(tag, s)
+						sectors[s].camsec = lines[i].frontsector-sectors;
 				break;
 
 			case 10: // Vertical culling plane for sprites and FOFs

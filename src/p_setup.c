@@ -3245,6 +3245,34 @@ static void P_ConvertBinaryMap(void)
 				lines[i].special = 0;
 			}
 			break;
+		case 8: //Special sector properties
+		{
+			INT32 s;
+
+			TAG_ITER_SECTORS(tag, s)
+			{
+				if (lines[i].flags & ML_NOCLIMB)
+				{
+					sectors[s].flags &= ~MSF_FLIPSPECIAL_FLOOR;
+					sectors[s].flags |= MSF_FLIPSPECIAL_CEILING;
+				}
+				else if (lines[i].flags & ML_EFFECT4)
+					sectors[s].flags |= MSF_FLIPSPECIAL_BOTH;
+
+				if (lines[i].flags & ML_EFFECT3)
+					sectors[s].flags |= MSF_TRIGGERSPECIAL_TOUCH;
+				if (lines[i].flags & ML_EFFECT2)
+					sectors[s].flags |= MSF_TRIGGERSPECIAL_HEADBUMP;
+
+				if (lines[i].flags & ML_EFFECT1)
+					sectors[s].flags |= MSF_INVERTPRECIP;
+			}
+
+			if (GETSECSPECIAL(lines[i].frontsector->special, 4) != 12)
+				lines[i].special = 0;
+
+			break;
+		}
 		case 10: //Culling plane
 			lines[i].args[0] = tag;
 			lines[i].args[1] = !!(lines[i].flags & ML_NOCLIMB);
