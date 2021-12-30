@@ -4052,7 +4052,7 @@ sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number)
 		if (!(node->m_sector->flags & SF_TRIGGERSPECIAL_TOUCH))
 			continue;
 
-		if (GETSECSPECIAL(mo->subsector->sector->special, section) == number)
+		if (GETSECSPECIAL(node->m_sector->special, section) == number)
 			return node->m_sector;
 	}
 
