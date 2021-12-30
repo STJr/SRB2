@@ -1446,6 +1446,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	if (mo->subsector->sector->ffloors) // Check for 3D floor gravity too.
 	{
 		ffloor_t *rover;
+		fixed_t gravfactor;
 
 		for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
 		{
@@ -1455,11 +1456,12 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 			if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER))
 				goopgravity = true;
 
-			if (!(rover->master->frontsector->gravity))
+			gravfactor = P_GetSectorGravityFactor(mo->subsector->sector);
+
+			if (gravfactor == FRACUNIT)
 				continue;
 
-			gravityadd = -FixedMul(gravity,
-				(FixedDiv(*rover->master->frontsector->gravity>>FRACBITS, 1000)));
+			gravityadd = -FixedMul(gravity, gravfactor);
 
 			if (rover->master->frontsector->verticalflip && gravityadd > 0)
 				mo->eflags |= MFE_VERTICALFLIP;
@@ -1471,11 +1473,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 
 	if (no3dfloorgrav)
 	{
-		if (mo->subsector->sector->gravity)
-			gravityadd = -FixedMul(gravity,
-				(FixedDiv(*mo->subsector->sector->gravity>>FRACBITS, 1000)));
-		else
-			gravityadd = -gravity;
+		gravityadd = -FixedMul(gravity, P_GetSectorGravityFactor(mo->subsector->sector));
 
 		if (mo->subsector->sector->verticalflip && gravityadd > 0)
 			mo->eflags |= MFE_VERTICALFLIP;

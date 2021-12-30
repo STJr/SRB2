@@ -5958,6 +5958,14 @@ static boolean P_CheckGametypeRules(INT32 checktype, UINT32 target)
 	}
 }
 
+fixed_t P_GetSectorGravityFactor(sector_t *sec)
+{
+	if (sec->gravityptr)
+		return FixedDiv(*sec->gravityptr >> FRACBITS, 1000);
+	else
+		return sec->gravity;
+}
+
 /** After the map has loaded, scans for specials that spawn 3Dfloors and
   * thinkers.
   *
@@ -6105,7 +6113,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				TAG_ITER_SECTORS(tag, s)
 				{
-					sectors[s].gravity = &sectors[sec].floorheight; // This allows it to change in realtime!
+					sectors[s].gravityptr = &sectors[sec].floorheight; // This allows it to change in realtime!
 
 					if (lines[i].flags & ML_NOCLIMB)
 						sectors[s].verticalflip = true;

@@ -999,7 +999,7 @@ static void P_InitializeSector(sector_t *ss)
 
 	ss->extra_colormap = NULL;
 
-	ss->gravity = NULL;
+	ss->gravityptr = NULL;
 	ss->verticalflip = false;
 
 	ss->cullheight = NULL;
@@ -1046,6 +1046,8 @@ static void P_LoadSectors(UINT8 *data)
 		ss->floorlightabsolute = ss->ceilinglightabsolute = false;
 
 		ss->colormap_protected = false;
+
+		ss->gravity = FRACUNIT;
 
 		ss->flags = MSF_FLIPSPECIAL_FLOOR;
 
@@ -1676,6 +1678,8 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].flags |= MSF_HEATWAVE;
 	else if (fastcmp(param, "friction"))
 		sectors[i].friction = atol(val);
+	else if (fastcmp(param, "gravity"))
+		sectors[i].gravity = FLOAT_TO_FIXED(atof(val));
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
@@ -1951,6 +1955,8 @@ static void P_LoadTextmap(void)
 		sc->floorlightabsolute = sc->ceilinglightabsolute = false;
 
 		sc->colormap_protected = false;
+
+		sc->gravity = FRACUNIT;
 
 		sc->flags = MSF_FLIPSPECIAL_FLOOR;
 

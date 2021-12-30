@@ -51,6 +51,7 @@ enum sector_e {
 	sector_cslope,
 	sector_flags,
 	sector_friction,
+	sector_gravity,
 };
 
 static const char *const sector_opt[] = {
@@ -76,6 +77,7 @@ static const char *const sector_opt[] = {
 	"c_slope",
 	"flags",
 	"friction",
+	"gravity",
 	NULL};
 
 enum subsector_e {
@@ -659,6 +661,9 @@ static int sector_get(lua_State *L)
 	case sector_friction: // friction
 		lua_pushinteger(L, sector->friction);
 		return 1;
+	case sector_gravity: // gravity
+		lua_pushfixed(L, sector->gravity);
+		return 1;
 	}
 	return 0;
 }
@@ -748,6 +753,9 @@ static int sector_set(lua_State *L)
 		return LUA_ErrSetDirectly(L, "sector_t", "taglist");
 	case sector_flags:
 		sector->flags = luaL_checkinteger(L, 3);
+		break;
+	case sector_gravity:
+		sector->gravity = luaL_checkfixed(L, 3);
 		break;
 	}
 	return 0;

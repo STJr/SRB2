@@ -366,8 +366,8 @@ typedef struct sector_s
 	extracolormap_t *extra_colormap;
 	boolean colormap_protected;
 
-	// This points to the master's floorheight, so it can be changed in realtime!
-	fixed_t *gravity; // per-sector gravity
+	fixed_t gravity; // per-sector gravity factor
+	fixed_t *gravityptr; // For binary format: Read gravity from floor height of master sector
 	boolean verticalflip; // If gravity < 0, then allow flipped physics
 	sectorflags_t flags;
 

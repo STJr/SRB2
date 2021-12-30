@@ -853,6 +853,7 @@ static void P_NetUnArchiveWaypoints(void)
 #define SD_FLOORLIGHT 0x08
 #define SD_CEILLIGHT 0x10
 #define SD_FLAG      0x20
+#define SD_GRAVITY   0x40
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -1040,6 +1041,8 @@ static void ArchiveSectors(void)
 			diff3 |= SD_CEILLIGHT;
 		if (ss->flags != spawnss->flags)
 			diff3 |= SD_FLAG;
+		if (ss->gravity != spawnss->gravity)
+			diff3 |= SD_GRAVITY;
 
 		if (ss->ffloors && CheckFFloorDiff(ss))
 			diff |= SD_FFLOORS;
@@ -1106,6 +1109,8 @@ static void ArchiveSectors(void)
 			}
 			if (diff3 & SD_FLAG)
 				WRITEUINT32(save_p, ss->flags);
+			if (diff3 & SD_GRAVITY)
+				WRITEFIXED(save_p, ss->gravity);
 			if (diff & SD_FFLOORS)
 				ArchiveFFloors(ss);
 		}
@@ -1209,7 +1214,8 @@ static void UnArchiveSectors(void)
 		}
 		if (diff3 & SD_FLAG)
 			sectors[i].flags = READUINT32(save_p);
-
+		if (diff3 & SD_GRAVITY)
+			sectors[i].gravity = READFIXED(save_p);
 
 		if (diff & SD_FFLOORS)
 			UnArchiveFFloors(&sectors[i]);
