@@ -3945,8 +3945,8 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 
 static boolean P_IsMobjTouchingPlane(mobj_t *mo, sector_t *sec, fixed_t floorz, fixed_t ceilingz)
 {
-	boolean floorallowed = ((sec->flags & SF_FLIPSPECIAL_FLOOR) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == floorz));
-	boolean ceilingallowed = ((sec->flags & SF_FLIPSPECIAL_CEILING) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == ceilingz));
+	boolean floorallowed = ((sec->flags & MSF_FLIPSPECIAL_FLOOR) && ((sec->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == floorz));
+	boolean ceilingallowed = ((sec->flags & MSF_FLIPSPECIAL_CEILING) && ((sec->flags &  MSF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == ceilingz));
 	return (floorallowed || ceilingallowed);
 }
 
@@ -4007,7 +4007,7 @@ static sector_t *P_MobjTouching3DFloorSpecial(mobj_t *mo, sector_t *sector, INT3
 
 		// This FOF has the special we're looking for, but are we allowed to touch it?
 		if (sector == mo->subsector->sector
-			|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			|| (rover->master->frontsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
 			return rover->master->frontsector;
 	}
 
@@ -4031,7 +4031,7 @@ static sector_t *P_MobjTouchingPolyobjSpecial(mobj_t *mo, INT32 section, INT32 n
 		if (GETSECSPECIAL(polysec->special, section) != number)
 			continue;
 
-		touching = (polysec->flags & SF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, mo);
+		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, mo);
 		inside = P_MobjInsidePolyobj(po, mo);
 
 		if (!(inside || touching))
@@ -4071,7 +4071,7 @@ sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number)
 		if (result)
 			return result;
 
-		if (!(node->m_sector->flags & SF_TRIGGERSPECIAL_TOUCH))
+		if (!(node->m_sector->flags & MSF_TRIGGERSPECIAL_TOUCH))
 			continue;
 
 		if (GETSECSPECIAL(mo->subsector->sector->special, section) == number)
@@ -4120,7 +4120,7 @@ static sector_t *P_Check3DFloorTriggers(player_t *player, sector_t *sector, line
 
 		// This FOF has the special we're looking for, but are we allowed to touch it?
 		if (sector == player->mo->subsector->sector
-			|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			|| (rover->master->frontsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
 			return rover->master->frontsector;
 	}
 
@@ -4147,7 +4147,7 @@ static sector_t *P_CheckPolyobjTriggers(player_t *player, line_t *sourceline)
 		if (!Tag_Find(&sourceline->tags, Tag_FGet(&polysec->tags)))
 			return false;
 
-		touching = (polysec->flags & SF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);
+		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);
 		inside = P_MobjInsidePolyobj(po, player->mo);
 
 		if (!(inside || touching))
@@ -4217,7 +4217,7 @@ sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
 		if (caller)
 			return caller;
 
-		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+		if (!(loopsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
 			continue;
 
 		if (P_CheckSectorTriggers(player, loopsector, sourceline))
@@ -5024,7 +5024,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 
 		// This FOF has the special we're looking for, but are we allowed to touch it?
 		if (sector == player->mo->subsector->sector
-			|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			|| (rover->master->frontsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
 		{
 			P_ProcessSpecialSector(player, rover->master->frontsector, sector);
 			if TELEPORTED(player->mo) return;
@@ -5050,7 +5050,7 @@ static void P_PlayerOnSpecialPolyobj(player_t *player)
 		if (!polysec->special)
 			continue;
 
-		touching = (polysec->flags & SF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);
+		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);
 		inside = P_MobjInsidePolyobj(po, player->mo);
 
 		if (!(inside || touching))
@@ -5102,7 +5102,7 @@ void P_PlayerInSpecialSector(player_t *player)
 		P_PlayerOnSpecial3DFloor(player, loopsector);
 		if TELEPORTED(player->mo) return;
 
-		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+		if (!(loopsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
 			continue;
 
 		P_ProcessSpecialSector(player, loopsector, NULL);
@@ -5152,7 +5152,7 @@ static void P_CheckMobjPolyobjTrigger(mobj_t *mo)
 		if (!polysec->special)
 			continue;
 
-		touching = (polysec->flags & SF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, mo);
+		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, mo);
 		inside = P_MobjInsidePolyobj(po, mo);
 
 		if (!(inside || touching))
@@ -5994,9 +5994,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 		{
 			case 5: // Spikes
 				//Terrible hack to replace an even worse hack:
-				//Spike damage automatically sets SF_TRIGGERSPECIAL_TOUCH.
+				//Spike damage automatically sets MSF_TRIGGERSPECIAL_TOUCH.
 				//Yes, this also affects other specials on the same sector. Sorry.
-				sector->flags |= SF_TRIGGERSPECIAL_TOUCH;
+				sector->flags |= MSF_TRIGGERSPECIAL_TOUCH;
 				break;
 			case 15: // Bouncy FOF
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated bouncy FOF sector type detected. Please use linedef type 76 instead.\n"));
@@ -6148,19 +6148,19 @@ void P_SpawnSpecials(boolean fromnetsave)
 				{
 					if (lines[i].flags & ML_NOCLIMB)
 					{
-						sectors[s].flags &= ~SF_FLIPSPECIAL_FLOOR;
-						sectors[s].flags |= SF_FLIPSPECIAL_CEILING;
+						sectors[s].flags &= ~MSF_FLIPSPECIAL_FLOOR;
+						sectors[s].flags |= MSF_FLIPSPECIAL_CEILING;
 					}
 					else if (lines[i].flags & ML_EFFECT4)
-						sectors[s].flags |= SF_FLIPSPECIAL_BOTH;
+						sectors[s].flags |= MSF_FLIPSPECIAL_BOTH;
 
 					if (lines[i].flags & ML_EFFECT3)
-						sectors[s].flags |= SF_TRIGGERSPECIAL_TOUCH;
+						sectors[s].flags |= MSF_TRIGGERSPECIAL_TOUCH;
 					if (lines[i].flags & ML_EFFECT2)
-						sectors[s].flags |= SF_TRIGGERSPECIAL_HEADBUMP;
+						sectors[s].flags |= MSF_TRIGGERSPECIAL_HEADBUMP;
 
 					if (lines[i].flags & ML_EFFECT1)
-						sectors[s].flags |= SF_INVERTPRECIP;
+						sectors[s].flags |= MSF_INVERTPRECIP;
 
 					if (lines[i].frontsector && GETSECSPECIAL(lines[i].frontsector->special, 4) == 12)
 						sectors[s].camsec = sides[*lines[i].sidenum].sector-sectors;

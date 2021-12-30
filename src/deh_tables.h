@@ -65,6 +65,7 @@ extern const char *const MAPTHINGFLAG_LIST[4];
 extern const char *const PLAYERFLAG_LIST[];
 extern const char *const GAMETYPERULE_LIST[];
 extern const char *const ML_LIST[16]; // Linedef flags
+extern const char* const MSF_LIST[4]; // Sector flags
 extern const char *COLOR_ENUMS[];
 extern const char *const POWERS_LIST[];
 extern const char *const HUDITEMS_LIST[];

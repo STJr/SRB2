@@ -2324,9 +2324,9 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 		return false;
 
 	if (((mo->z <= mo->subsector->sector->floorheight
-		&& ((mo->subsector->sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & SF_FLIPSPECIAL_FLOOR))
+		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_FLOOR))
 	|| (mo->z + mo->height >= mo->subsector->sector->ceilingheight
-		&& ((mo->subsector->sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & SF_FLIPSPECIAL_CEILING)))
+		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_CEILING)))
 	&& (GETSECSPECIAL(mo->subsector->sector->special, 1) == 6
 	|| GETSECSPECIAL(mo->subsector->sector->special, 1) == 7))
 		return true;
@@ -11219,7 +11219,7 @@ void P_SpawnPrecipitation(void)
 		if (curWeather == PRECIP_SNOW)
 		{
 			// Not in a sector with visible sky -- exception for NiGHTS.
-			if ((!(maptol & TOL_NIGHTS) && (precipsector->sector->ceilingpic != skyflatnum)) == !(precipsector->sector->flags & SF_INVERTPRECIP))
+			if ((!(maptol & TOL_NIGHTS) && (precipsector->sector->ceilingpic != skyflatnum)) == !(precipsector->sector->flags & MSF_INVERTPRECIP))
 				continue;
 
 			rainmo = P_SpawnSnowMobj(x, y, height, MT_SNOWFLAKE);
@@ -11232,7 +11232,7 @@ void P_SpawnPrecipitation(void)
 		else // everything else.
 		{
 			// Not in a sector with visible sky.
-			if ((precipsector->sector->ceilingpic != skyflatnum) == !(precipsector->sector->flags & SF_INVERTPRECIP))
+			if ((precipsector->sector->ceilingpic != skyflatnum) == !(precipsector->sector->flags & MSF_INVERTPRECIP))
 				continue;
 
 			rainmo = P_SpawnRainMobj(x, y, height, MT_RAIN);

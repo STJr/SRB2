@@ -963,7 +963,7 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 					else
 						Polyobj_pushThing(po, line, mo);
 
-					if (mo->player && (po->lines[0]->backsector->flags & SF_TRIGGERSPECIAL_TOUCH) && !(po->flags & POF_NOSPECIALS))
+					if (mo->player && (po->lines[0]->backsector->flags & MSF_TRIGGERSPECIAL_TOUCH) && !(po->flags & POF_NOSPECIALS))
 						P_ProcessSpecialSector(mo->player, mo->subsector->sector, po->lines[0]->backsector);
 
 					hitflags |= 1;

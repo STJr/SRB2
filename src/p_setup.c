@@ -1001,7 +1001,6 @@ static void P_InitializeSector(sector_t *ss)
 
 	ss->gravity = NULL;
 	ss->verticalflip = false;
-	ss->flags = SF_FLIPSPECIAL_FLOOR;
 
 	ss->cullheight = NULL;
 
@@ -1047,6 +1046,8 @@ static void P_LoadSectors(UINT8 *data)
 		ss->floorlightabsolute = ss->ceilinglightabsolute = false;
 
 		ss->colormap_protected = false;
+
+		ss->flags = MSF_FLIPSPECIAL_FLOOR;
 
 		P_InitializeSector(ss);
 	}
@@ -1661,6 +1662,16 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 	}
 	else if (fastcmp(param, "colormapprotected") && fastcmp("true", val))
 		sectors[i].colormap_protected = true;
+	else if (fastcmp(param, "flipspecial_nofloor") && fastcmp("true", val))
+		sectors[i].flags &= ~MSF_FLIPSPECIAL_FLOOR;
+	else if (fastcmp(param, "flipspecial_ceiling") && fastcmp("true", val))
+		sectors[i].flags |= MSF_FLIPSPECIAL_CEILING;
+	else if (fastcmp(param, "triggerspecial_touch") && fastcmp("true", val))
+		sectors[i].flags |= MSF_TRIGGERSPECIAL_TOUCH;
+	else if (fastcmp(param, "triggerspecial_headbump") && fastcmp("true", val))
+		sectors[i].flags |= MSF_TRIGGERSPECIAL_HEADBUMP;
+	else if (fastcmp(param, "invertprecip") && fastcmp("true", val))
+		sectors[i].flags |= MSF_INVERTPRECIP;
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
@@ -1936,6 +1947,8 @@ static void P_LoadTextmap(void)
 		sc->floorlightabsolute = sc->ceilinglightabsolute = false;
 
 		sc->colormap_protected = false;
+
+		sc->flags = MSF_FLIPSPECIAL_FLOOR;
 
 		textmap_colormap.used = false;
 		textmap_colormap.lightcolor = 0;

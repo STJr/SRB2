@@ -338,6 +338,21 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "linedef flag '%s' could not be found.\n", word);
 		return 0;
 	}
+	else if (fastncmp("MSF_", word, 3)) {
+		p = word + 4;
+		for (i = 0; i < 4; i++)
+			if (MSF_LIST[i] && fastcmp(p, MSF_LIST[i])) {
+				lua_pushinteger(L, ((lua_Integer)1 << i));
+				return 1;
+			}
+		if (fastcmp(p, "FLIPSPECIAL_BOTH"))
+		{
+			lua_pushinteger(L, (lua_Integer)MSF_FLIPSPECIAL_BOTH);
+			return 1;
+		}
+		if (mathlib) return luaL_error(L, "sector flag '%s' could not be found.\n", word);
+		return 0;
+	}
 	else if (fastncmp("S_",word,2)) {
 		p = word+2;
 		for (i = 0; i < NUMSTATEFREESLOTS; i++) {

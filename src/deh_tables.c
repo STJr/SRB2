@@ -4471,6 +4471,14 @@ const char *const ML_LIST[16] = {
 	"TFERLINE"
 };
 
+// Sector flags
+const char *const MSF_LIST[4] = {
+	"FLIPSPECIAL_FLOOR",
+	"FLIPSPECIAL_CEILING",
+	"TRIGGERSPECIAL_TOUCH",
+	"TRIGGERSPECIAL_HEADBUMP",
+};
+
 const char *COLOR_ENUMS[] = {
 	"NONE",			// SKINCOLOR_NONE,
 

@@ -276,14 +276,14 @@ typedef struct pslope_s
 typedef enum
 {
 	// flipspecial - planes with effect
-	SF_FLIPSPECIAL_FLOOR       =  1,
-	SF_FLIPSPECIAL_CEILING     =  1<<1,
-	SF_FLIPSPECIAL_BOTH        =  (SF_FLIPSPECIAL_FLOOR|SF_FLIPSPECIAL_CEILING),
+	MSF_FLIPSPECIAL_FLOOR       =  1,
+	MSF_FLIPSPECIAL_CEILING     =  1<<1,
+	MSF_FLIPSPECIAL_BOTH        =  (MSF_FLIPSPECIAL_FLOOR|MSF_FLIPSPECIAL_CEILING),
 	// triggerspecial - conditions under which plane touch causes effect
-	SF_TRIGGERSPECIAL_TOUCH    =  1<<2,
-	SF_TRIGGERSPECIAL_HEADBUMP =  1<<3,
+	MSF_TRIGGERSPECIAL_TOUCH    =  1<<2,
+	MSF_TRIGGERSPECIAL_HEADBUMP =  1<<3,
 	// invertprecip - inverts presence of precipitation
-	SF_INVERTPRECIP            =  1<<4,
+	MSF_INVERTPRECIP            =  1<<4,
 } sectorflags_t;
 
 
