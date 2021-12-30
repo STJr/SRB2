@@ -44,7 +44,8 @@ typedef enum
 typedef enum
 {
 	TMSL_NOPHYSICS = 1,
-	TMSL_DYNAMIC = 2,
+	TMSL_DYNAMIC   = 1<<1,
+	TMSL_COPY      = 1<<2,
 } textmapslopeflags_t;
 
 void P_LinkSlopeThinkers (void);

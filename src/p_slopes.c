@@ -277,6 +277,27 @@ static fixed_t GetExtent(sector_t *sector, line_t *line)
 	return fardist;
 }
 
+static boolean P_CopySlope(pslope_t** toslope, pslope_t* fromslope)
+{
+	if (*toslope || !fromslope)
+		return true;
+
+	*toslope = fromslope;
+	return true;
+}
+
+static void P_UpdateHasSlope(sector_t *sec)
+{
+	size_t i;
+
+	sec->hasslope = true;
+
+	// if this is an FOF control sector, make sure any target sectors also are marked as having slopes
+	if (sec->numattached)
+		for (i = 0; i < sec->numattached; i++)
+			sectors[sec->attached[i]].hasslope = true;
+}
+
 /// Creates one or more slopes based on the given line type and front/back sectors.
 static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 {
@@ -444,6 +465,23 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 				P_AddDynLineSlopeThinker(cslope, DP_BACKCEIL, line, extent);
 		}
 	}
+
+	if (line->args[2] & TMSL_COPY)
+	{
+		if (frontfloor)
+			P_CopySlope(&line->backsector->f_slope, line->frontsector->f_slope);
+		if (backfloor)
+			P_CopySlope(&line->frontsector->f_slope, line->backsector->f_slope);
+		if (frontceil)
+			P_CopySlope(&line->backsector->c_slope, line->frontsector->c_slope);
+		if (backceil)
+			P_CopySlope(&line->frontsector->c_slope, line->backsector->c_slope);
+
+		if (backfloor || backceil)
+			P_UpdateHasSlope(line->frontsector);
+		if (frontfloor || frontceil)
+			P_UpdateHasSlope(line->backsector);
+	}
 }
 
 /// Creates a new slope from three mapthings with the specified IDs
@@ -600,27 +638,6 @@ static boolean P_SetSlopeFromTag(sector_t *sec, INT32 tag, boolean ceiling)
 	return false;
 }
 
-static boolean P_CopySlope(pslope_t **toslope, pslope_t *fromslope)
-{
-	if (*toslope || !fromslope)
-		return true;
-
-	*toslope = fromslope;
-	return true;
-}
-
-static void P_UpdateHasSlope(sector_t *sec)
-{
-	size_t i;
-
-	sec->hasslope = true;
-
-	// if this is an FOF control sector, make sure any target sectors also are marked as having slopes
-	if (sec->numattached)
-		for (i = 0; i < sec->numattached; i++)
-			sectors[sec->attached[i]].hasslope = true;
-}
-
 //
 // P_CopySectorSlope
 //
@@ -710,9 +727,6 @@ void P_SpawnSlopes(const boolean fromsave) {
 	for (i = 0; i < numlines; i++)
 		switch (lines[i].special)
 		{
-			case 700:
-				if (lines[i].flags & ML_TFERLINE) P_CopySectorSlope(&lines[i]);
-				break;
 			case 720:
 				P_CopySectorSlope(&lines[i]);
 			default:
