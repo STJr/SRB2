@@ -852,6 +852,7 @@ static void P_NetUnArchiveWaypoints(void)
 #define SD_CRUMBLESTATE 0x04
 #define SD_FLOORLIGHT 0x08
 #define SD_CEILLIGHT 0x10
+#define SD_FLAG      0x20
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -1037,6 +1038,8 @@ static void ArchiveSectors(void)
 			diff3 |= SD_FLOORLIGHT;
 		if (ss->ceilinglightlevel != spawnss->ceilinglightlevel || ss->ceilinglightabsolute != spawnss->ceilinglightabsolute)
 			diff3 |= SD_CEILLIGHT;
+		if (ss->flags != spawnss->flags)
+			diff3 |= SD_FLAG;
 
 		if (ss->ffloors && CheckFFloorDiff(ss))
 			diff |= SD_FFLOORS;
@@ -1101,6 +1104,8 @@ static void ArchiveSectors(void)
 				WRITEINT16(save_p, ss->ceilinglightlevel);
 				WRITEUINT8(save_p, ss->ceilinglightabsolute);
 			}
+			if (diff3 & SD_FLAG)
+				WRITEUINT32(save_p, ss->flags);
 			if (diff & SD_FFLOORS)
 				ArchiveFFloors(ss);
 		}
@@ -1202,6 +1207,9 @@ static void UnArchiveSectors(void)
 			sectors[i].ceilinglightlevel = READINT16(save_p);
 			sectors[i].ceilinglightabsolute = READUINT8(save_p);
 		}
+		if (diff3 & SD_FLAG)
+			sectors[i].flags = READUINT32(save_p);
+
 
 		if (diff & SD_FFLOORS)
 			UnArchiveFFloors(&sectors[i]);
