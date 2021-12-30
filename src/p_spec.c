@@ -4871,6 +4871,8 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				break;
 			/* FALLTHRU */
 		case 10: // Ring Drainer (No Floor Touch)
+			if (udmf)
+				break;
 			if (leveltime % (TICRATE/2) == 0 && player->rings > 0)
 			{
 				player->rings--;
@@ -6036,6 +6038,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				sector->flags |= MSF_TRIGGERSPECIAL_TOUCH;
 				break;
 			case 15: // Bouncy FOF
+				if (udmf)
+					break;
 				CONS_Alert(CONS_WARNING, M_GetText("Deprecated bouncy FOF sector type detected. Please use linedef type 76 instead.\n"));
 				CheckForBouncySector = true;
 				break;
@@ -6045,20 +6049,20 @@ void P_SpawnSpecials(boolean fromnetsave)
 		switch(GETSECSPECIAL(sector->special, 2))
 		{
 			case 10: // Time for special stage
+				if (udmf)
+					break;
+				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for special stage requirements detected. Please use the SpecialStageTime and SpecialStageSpheres level header options instead.\n"));
 				sstimer = (sector->floorheight>>FRACBITS) * TICRATE + 6; // Time to finish
 				ssspheres = sector->ceilingheight>>FRACBITS; // Ring count for special stage
 				break;
 
 			case 11: // Custom global gravity!
+				if (udmf)
+					break;
+				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for global gravity detected. Please use the Gravity level header option instead.\n"));
 				gravity = sector->floorheight/1000;
 				break;
 		}
-
-		// Process Section 3
-/*		switch(GETSECSPECIAL(player->specialsector, 3))
-		{
-
-		}*/
 
 		// Process Section 4
 		switch(GETSECSPECIAL(sector->special, 4))
