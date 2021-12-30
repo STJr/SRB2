@@ -1672,6 +1672,8 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].flags |= MSF_TRIGGERSPECIAL_HEADBUMP;
 	else if (fastcmp(param, "invertprecip") && fastcmp("true", val))
 		sectors[i].flags |= MSF_INVERTPRECIP;
+	else if (fastcmp(param, "heatwave") && fastcmp("true", val))
+		sectors[i].flags |= MSF_HEATWAVE;
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
@@ -3282,6 +3284,15 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT1);
 			break;
+		case 13: //Heat wave effect
+		{
+			INT32 s;
+
+			TAG_ITER_SECTORS(tag, s)
+				sectors[s].flags |= MSF_HEATWAVE;
+
+			break;
+		}
 		case 14: //Bustable block parameters
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;

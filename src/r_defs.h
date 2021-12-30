@@ -284,6 +284,7 @@ typedef enum
 	MSF_TRIGGERSPECIAL_HEADBUMP =  1<<3,
 	// invertprecip - inverts presence of precipitation
 	MSF_INVERTPRECIP            =  1<<4,
+	MSF_HEATWAVE                =  1<<5, // heat wave effect
 } sectorflags_t;
 
 

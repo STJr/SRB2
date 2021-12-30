@@ -4472,11 +4472,12 @@ const char *const ML_LIST[16] = {
 };
 
 // Sector flags
-const char *const MSF_LIST[4] = {
+const char *const MSF_LIST[5] = {
 	"FLIPSPECIAL_FLOOR",
 	"FLIPSPECIAL_CEILING",
 	"TRIGGERSPECIAL_TOUCH",
 	"TRIGGERSPECIAL_HEADBUMP",
+	"HEATWAVE",
 };
 
 const char *COLOR_ENUMS[] = {
