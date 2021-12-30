@@ -414,6 +414,13 @@ typedef enum
 
 typedef enum
 {
+	TMF_NOCHANGE = 0,
+	TMF_ADD      = 1,
+	TMF_REMOVE   = 2,
+} textmapsetflagflags_t;
+
+typedef enum
+{
 	TMSD_FRONT = 0,
 	TMSD_BACK = 1,
 	TMSD_FRONTBACK = 2,

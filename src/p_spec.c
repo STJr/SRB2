@@ -3801,6 +3801,33 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		}
 		break;
 
+		case 469: // Change sector gravity
+		{
+			fixed_t gravityvalue;
+
+			if (!udmf)
+				break;
+
+			if (!line->stringargs[0])
+				break;
+
+			gravityvalue = FloatToFixed(atof(line->stringargs[0]));
+
+			TAG_ITER_SECTORS(line->args[0], secnum)
+			{
+				if (line->args[1])
+					sectors[secnum].gravity = FixedMul(sectors[secnum].gravity, gravityvalue);
+				else
+					sectors[secnum].gravity = gravityvalue;
+
+				if (line->args[2] == TMF_ADD)
+					sectors[secnum].flags |= MSF_GRAVITYFLIP;
+				else if (line->args[2] == TMF_REMOVE)
+					sectors[secnum].flags &= ~MSF_GRAVITYFLIP;
+			}
+		}
+		break;
+
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
 			PolyDoor(line);
@@ -6112,6 +6139,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 			ffloortype_e ffloorflags;
 
 			case 1: // Definable gravity per sector
+				if (udmf)
+					break;
+
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				TAG_ITER_SECTORS(tag, s)
 				{
