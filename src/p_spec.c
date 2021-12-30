@@ -5994,6 +5994,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 	sector = sectors;
 	for (i = 0; i < numsectors; i++, sector++)
 	{
+		CheckForReverseGravity |= (sector->flags & MSF_GRAVITYFLIP);
+
 		if (!sector->special)
 			continue;
 
@@ -6116,11 +6118,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 					sectors[s].gravityptr = &sectors[sec].floorheight; // This allows it to change in realtime!
 
 					if (lines[i].flags & ML_NOCLIMB)
-						sectors[s].verticalflip = true;
+						sectors[s].flags |= MSF_GRAVITYFLIP;
 					else
-						sectors[s].verticalflip = false;
+						sectors[s].flags &= ~MSF_GRAVITYFLIP;
 
-					CheckForReverseGravity = sectors[s].verticalflip;
+					CheckForReverseGravity |= (sectors[s].flags & MSF_GRAVITYFLIP);
 				}
 				break;
 

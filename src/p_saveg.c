@@ -1213,7 +1213,10 @@ static void UnArchiveSectors(void)
 			sectors[i].ceilinglightabsolute = READUINT8(save_p);
 		}
 		if (diff3 & SD_FLAG)
+		{
 			sectors[i].flags = READUINT32(save_p);
+			CheckForReverseGravity |= (sectors[i].flags & MSF_GRAVITYFLIP);
+		}
 		if (diff3 & SD_GRAVITY)
 			sectors[i].gravity = READFIXED(save_p);
 

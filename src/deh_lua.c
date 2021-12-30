@@ -340,7 +340,7 @@ static inline int lib_getenum(lua_State *L)
 	}
 	else if (fastncmp("MSF_", word, 3)) {
 		p = word + 4;
-		for (i = 0; i < 5; i++)
+		for (i = 0; i < 6; i++)
 			if (MSF_LIST[i] && fastcmp(p, MSF_LIST[i])) {
 				lua_pushinteger(L, ((lua_Integer)1 << i));
 				return 1;

@@ -284,7 +284,8 @@ typedef enum
 	MSF_TRIGGERSPECIAL_HEADBUMP =  1<<3,
 	// invertprecip - inverts presence of precipitation
 	MSF_INVERTPRECIP            =  1<<4,
-	MSF_HEATWAVE                =  1<<5, // heat wave effect
+	MSF_GRAVITYFLIP             =  1<<5,
+	MSF_HEATWAVE                =  1<<6,
 } sectorflags_t;
 
 
@@ -368,7 +369,6 @@ typedef struct sector_s
 
 	fixed_t gravity; // per-sector gravity factor
 	fixed_t *gravityptr; // For binary format: Read gravity from floor height of master sector
-	boolean verticalflip; // If gravity < 0, then allow flipped physics
 	sectorflags_t flags;
 
 	INT32 friction;

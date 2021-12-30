@@ -1000,7 +1000,6 @@ static void P_InitializeSector(sector_t *ss)
 	ss->extra_colormap = NULL;
 
 	ss->gravityptr = NULL;
-	ss->verticalflip = false;
 
 	ss->cullheight = NULL;
 
@@ -1674,6 +1673,8 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].flags |= MSF_TRIGGERSPECIAL_HEADBUMP;
 	else if (fastcmp(param, "invertprecip") && fastcmp("true", val))
 		sectors[i].flags |= MSF_INVERTPRECIP;
+	else if (fastcmp(param, "gravityflip") && fastcmp("true", val))
+		sectors[i].flags |= MSF_GRAVITYFLIP;
 	else if (fastcmp(param, "heatwave") && fastcmp("true", val))
 		sectors[i].flags |= MSF_HEATWAVE;
 	else if (fastcmp(param, "friction"))

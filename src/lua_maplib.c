@@ -753,6 +753,7 @@ static int sector_set(lua_State *L)
 		return LUA_ErrSetDirectly(L, "sector_t", "taglist");
 	case sector_flags:
 		sector->flags = luaL_checkinteger(L, 3);
+		CheckForReverseGravity |= (sector->flags & MSF_GRAVITYFLIP);
 		break;
 	case sector_gravity:
 		sector->gravity = luaL_checkfixed(L, 3);
