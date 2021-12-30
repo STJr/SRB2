@@ -763,6 +763,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 //				return;
 			{
 				UINT8 flagteam = (special->type == MT_REDFLAG) ? 1 : 2;
+				sectorspecialflags_t specialflag = (special->type == MT_REDFLAG) ? SSF_REDTEAMBASE : SSF_BLUETEAMBASE;
 				const char *flagtext;
 				char flagcolor;
 				char plname[MAXPLAYERNAME+4];
@@ -792,7 +793,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 						special->fuse = 1;
 						special->flags2 |= MF2_JUSTATTACKED;
 
-						if (!P_PlayerTouchingSectorSpecial(player, 4, 2 + flagteam))
+						if (!P_PlayerTouchingSectorSpecialFlag(player, specialflag))
 						{
 							CONS_Printf(M_GetText("%s returned the %c%s%c to base.\n"), plname, flagcolor, flagtext, 0x80);
 

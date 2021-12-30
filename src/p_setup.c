@@ -1679,6 +1679,44 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].flags |= MSF_HEATWAVE;
 	else if (fastcmp(param, "noclipcamera") && fastcmp("true", val))
 		sectors[i].flags |= MSF_NOCLIPCAMERA;
+	else if (fastcmp(param, "outerspace") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_OUTERSPACE;
+	else if (fastcmp(param, "doublestepup") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_DOUBLESTEPUP;
+	else if (fastcmp(param, "nostepdown") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_NOSTEPDOWN;
+	else if (fastcmp(param, "windcurrent") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_WINDCURRENT;
+	else if (fastcmp(param, "conveyor") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_CONVEYOR;
+	else if (fastcmp(param, "speedpad") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_SPEEDPAD;
+	else if (fastcmp(param, "starpostactivator") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_STARPOSTACTIVATOR;
+	else if (fastcmp(param, "exit") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_EXIT;
+	else if (fastcmp(param, "specialstagepit") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_SPECIALSTAGEPIT;
+	else if (fastcmp(param, "returnflag") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_RETURNFLAG;
+	else if (fastcmp(param, "redteambase") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_REDTEAMBASE;
+	else if (fastcmp(param, "blueteambase") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_BLUETEAMBASE;
+	else if (fastcmp(param, "fan") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_FAN;
+	else if (fastcmp(param, "supertransform") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_SUPERTRANSFORM;
+	else if (fastcmp(param, "forcespin") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_FORCESPIN;
+	else if (fastcmp(param, "zoomtubestart") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_ZOOMTUBESTART;
+	else if (fastcmp(param, "zoomtubeend") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_ZOOMTUBEEND;
+	else if (fastcmp(param, "finishline") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_FINISHLINE;
+	else if (fastcmp(param, "ropehang") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_ROPEHANG;
 	else if (fastcmp(param, "friction"))
 		sectors[i].friction = atol(val);
 	else if (fastcmp(param, "gravity"))
@@ -5021,8 +5059,72 @@ static void P_ConvertBinaryMap(void)
 
 	for (i = 0; i < numsectors; i++)
 	{
+
+		switch(GETSECSPECIAL(sectors[i].special, 1))
+		{
+			case 12: //Space countdown
+				sectors[i].specialflags |= SSF_OUTERSPACE;
+				break;
+			case 13: //Ramp sector
+				sectors[i].specialflags |= SSF_DOUBLESTEPUP;
+				break;
+			case 14: //Non-ramp sector
+				sectors[i].specialflags |= SSF_NOSTEPDOWN;
+				break;
+			default:
+				break;
+		}
+
+		switch(GETSECSPECIAL(sectors[i].special, 3))
+		{
+			case 2: //Wind/Current
+				sectors[i].specialflags |= SSF_WINDCURRENT;
+				break;
+			case 4: //Conveyor belt
+				sectors[i].specialflags |= SSF_CONVEYOR;
+				break;
+			case 5: //Speed pad
+				sectors[i].specialflags |= SSF_SPEEDPAD;
+				break;
+			default:
+				break;
+		}
+
 		switch(GETSECSPECIAL(sectors[i].special, 4))
 		{
+			case 1: //Star post activator
+				sectors[i].specialflags |= SSF_STARPOSTACTIVATOR;
+				break;
+			case 2: //Exit/Special Stage pit/Return flag
+				sectors[i].specialflags |= SSF_EXIT|SSF_SPECIALSTAGEPIT|SSF_RETURNFLAG;
+				break;
+			case 3: //Red team base
+				sectors[i].specialflags |= SSF_REDTEAMBASE;
+				break;
+			case 4: //Blue team base
+				sectors[i].specialflags |= SSF_BLUETEAMBASE;
+				break;
+			case 5: //Fan sector
+				sectors[i].specialflags |= SSF_FAN;
+				break;
+			case 6: //Super Sonic transform
+				sectors[i].specialflags |= SSF_SUPERTRANSFORM;
+				break;
+			case 7: //Force spin
+				sectors[i].specialflags |= SSF_FORCESPIN;
+				break;
+			case 8: //Zoom tube start
+				sectors[i].specialflags |= SSF_ZOOMTUBESTART;
+				break;
+			case 9: //Zoom tube end
+				sectors[i].specialflags |= SSF_ZOOMTUBEEND;
+				break;
+			case 10: //Circuit finish line
+				sectors[i].specialflags |= SSF_FINISHLINE;
+				break;
+			case 11: //Rope hang
+				sectors[i].specialflags |= SSF_ROPEHANG;
+				break;
 			case 12: //Intangible to the camera
 				sectors[i].flags |= MSF_NOCLIPCAMERA;
 				break;

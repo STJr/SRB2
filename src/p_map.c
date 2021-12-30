@@ -2699,14 +2699,14 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 			if (thing->player)
 			{
-				// If using type Section1:13, double the maxstep.
-				if (P_PlayerTouchingSectorSpecial(thing->player, 1, 13)
-				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 13)
+				// If using SSF_DOUBLESTEPUP, double the maxstep.
+				if (P_PlayerTouchingSectorSpecialFlag(thing->player, SSF_DOUBLESTEPUP)
+				|| (R_PointInSubsector(x, y)->sector->specialflags & SSF_DOUBLESTEPUP))
 					maxstep <<= 1;
 
-				// If using type Section1:14, no maxstep.
-				if (P_PlayerTouchingSectorSpecial(thing->player, 1, 14)
-				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+				// If using SSF_NOSTEPDOWN, no maxstep.
+				if (P_PlayerTouchingSectorSpecialFlag(thing->player, SSF_NOSTEPDOWN)
+				|| (R_PointInSubsector(x, y)->sector->specialflags & SSF_NOSTEPDOWN))
 					maxstep = 0;
 
 				// Don't 'step up' while springing,
@@ -2717,12 +2717,12 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 			}
 			else if (thing->flags & MF_PUSHABLE)
 			{
-				// If using type Section1:13, double the maxstep.
-				if (GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 13)
+				// If using SSF_DOUBLESTEPUP, double the maxstep.
+				if (R_PointInSubsector(x, y)->sector->specialflags & SSF_DOUBLESTEPUP)
 					maxstep <<= 1;
 
-				// If using type Section1:14, no maxstep.
-				if (GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+				// If using SSF_NOSTEPDOWN, no maxstep.
+				if (R_PointInSubsector(x, y)->sector->specialflags & SSF_NOSTEPDOWN)
 					maxstep = 0;
 			}
 

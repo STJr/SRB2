@@ -353,6 +353,16 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "sector flag '%s' could not be found.\n", word);
 		return 0;
 	}
+	else if (fastncmp("SSF_", word, 3)) {
+		p = word + 4;
+		for (i = 0; i < 19; i++)
+			if (SSF_LIST[i] && fastcmp(p, SSF_LIST[i])) {
+				lua_pushinteger(L, ((lua_Integer)1 << i));
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "sector special flag '%s' could not be found.\n", word);
+		return 0;
+	}
 	else if (fastncmp("S_",word,2)) {
 		p = word+2;
 		for (i = 0; i < NUMSTATEFREESLOTS; i++) {

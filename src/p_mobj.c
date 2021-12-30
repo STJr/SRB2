@@ -9738,7 +9738,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		break;
 	case MT_BLUEFLAG:
 	case MT_REDFLAG:
-		if (P_MobjTouchingSectorSpecial(mobj, 4, 2))
+		if (P_MobjTouchingSectorSpecialFlag(mobj, SSF_RETURNFLAG))
 			mobj->fuse = 1; // Return to base.
 		break;
 	case MT_SPINDUST: // Spindash dust

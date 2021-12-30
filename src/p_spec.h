@@ -480,7 +480,9 @@ void P_SpawnSpecials(boolean fromnetsave);
 // every tic
 void P_UpdateSpecials(void);
 sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number);
+sector_t *P_MobjTouchingSectorSpecialFlag(mobj_t *mo, sectorspecialflags_t flag);
 sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 number);
+sector_t *P_PlayerTouchingSectorSpecialFlag(player_t *player, sectorspecialflags_t flag);
 void P_PlayerInSpecialSector(player_t *player);
 void P_CheckPushableTrigger(mobj_t *mobj, sector_t *sec);
 void P_CheckMobjTrigger(mobj_t *mobj);

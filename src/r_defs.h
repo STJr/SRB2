@@ -289,6 +289,28 @@ typedef enum
 	MSF_NOCLIPCAMERA            =  1<<7,
 } sectorflags_t;
 
+typedef enum
+{
+	SSF_OUTERSPACE = 1,
+	SSF_DOUBLESTEPUP = 1<<1,
+	SSF_NOSTEPDOWN = 1<<2,
+	SSF_WINDCURRENT = 1<<3,
+	SSF_CONVEYOR = 1<<4,
+	SSF_SPEEDPAD = 1<<5,
+	SSF_STARPOSTACTIVATOR = 1<<6,
+	SSF_EXIT = 1<<7,
+	SSF_SPECIALSTAGEPIT = 1<<8,
+	SSF_RETURNFLAG = 1<<9,
+	SSF_REDTEAMBASE = 1<<10,
+	SSF_BLUETEAMBASE = 1<<11,
+	SSF_FAN = 1<<12,
+	SSF_SUPERTRANSFORM = 1<<13,
+	SSF_FORCESPIN = 1<<14,
+	SSF_ZOOMTUBESTART = 1<<15,
+	SSF_ZOOMTUBEEND = 1<<16,
+	SSF_FINISHLINE = 1<<17,
+	SSF_ROPEHANG = 1<<18,
+} sectorspecialflags_t;
 
 typedef enum
 {
@@ -371,6 +393,7 @@ typedef struct sector_s
 	fixed_t gravity; // per-sector gravity factor
 	fixed_t *gravityptr; // For binary format: Read gravity from floor height of master sector
 	sectorflags_t flags;
+	sectorspecialflags_t specialflags;
 
 	INT32 friction;
 

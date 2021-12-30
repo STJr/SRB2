@@ -2166,13 +2166,12 @@ void P_DoPlayerExit(player_t *player)
 	P_RestoreMusic(player);
 }
 
-#define SPACESPECIAL 12
 boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 {
 	sector_t *sector = mo->subsector->sector;
 	fixed_t topheight, bottomheight;
 
-	if (GETSECSPECIAL(sector->special, 1) == SPACESPECIAL)
+	if (sector->specialflags & SSF_OUTERSPACE)
 		return true;
 
 	if (sector->ffloors)
@@ -2184,7 +2183,7 @@ boolean P_InSpaceSector(mobj_t *mo) // Returns true if you are in space
 			if (!(rover->flags & FF_EXISTS))
 				continue;
 
-			if (GETSECSPECIAL(rover->master->frontsector->special, 1) != SPACESPECIAL)
+			if (!(rover->master->frontsector->specialflags & SSF_OUTERSPACE))
 				continue;
 			topheight    = P_GetFFloorTopZAt   (rover, mo->x, mo->y);
 			bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
@@ -4678,7 +4677,7 @@ static void P_DoSpinAbility(player_t *player, ticcmd_t *cmd)
 	if (onground && player->pflags & PF_SPINNING && !(player->pflags & PF_STARTDASH)
 		&& player->speed < 5*player->mo->scale && canstand)
 	{
-		if (GETSECSPECIAL(player->mo->subsector->sector->special, 4) == 7 || (player->mo->ceilingz - player->mo->floorz < P_GetPlayerHeight(player)))
+		if ((player->mo->subsector->sector->specialflags & SSF_FORCESPIN) || (player->mo->ceilingz - player->mo->floorz < P_GetPlayerHeight(player)))
 			P_InstaThrust(player->mo, player->mo->angle, 10*player->mo->scale);
 		else
 		{
