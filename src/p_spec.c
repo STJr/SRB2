@@ -8184,40 +8184,40 @@ void T_Friction(friction_t *f)
 static void P_SpawnFriction(void)
 {
 	size_t i;
-	line_t *l = lines;
-	mtag_t tag;
-	register INT32 s;
-	fixed_t strength; // frontside texture offset controls magnitude
+	sector_t *s = sectors;
+
+	fixed_t strength; // friction value of sector
 	fixed_t friction; // friction value to be applied during movement
 	INT32 movefactor; // applied to each player move to simulate inertia
 
-	for (i = 0; i < numlines; i++, l++)
-		if (l->special == 540)
-		{
-			tag = Tag_FGet(&l->tags);
-			strength = sides[l->sidenum[0]].textureoffset>>FRACBITS;
-			if (strength > 0) // sludge
-				strength = strength*2; // otherwise, the maximum sludginess value is +967...
+	for (i = 0; i < numsectors; i++, s++)
+	{
+		if (!s->friction)
+			continue;
 
-			// The following might seem odd. At the time of movement,
-			// the move distance is multiplied by 'friction/0x10000', so a
-			// higher friction value actually means 'less friction'.
-			friction = ORIG_FRICTION - (0x1EB8*strength)/0x80; // ORIG_FRICTION is 0xE800
+		strength = s->friction;
+		if (strength > 0) // sludge
+			strength = strength*2; // otherwise, the maximum sludginess value is +967...
 
-			if (friction > FRACUNIT)
-				friction = FRACUNIT;
-			if (friction < 0)
-				friction = 0;
+		// The following might seem odd. At the time of movement,
+		// the move distance is multiplied by 'friction/0x10000', so a
+		// higher friction value actually means 'less friction'.
+		friction = ORIG_FRICTION - (0x1EB8*strength)/0x80; // ORIG_FRICTION is 0xE800
 
-			movefactor = FixedDiv(ORIG_FRICTION, friction);
-			if (movefactor < FRACUNIT)
-				movefactor = 8*movefactor - 7*FRACUNIT;
-			else
-				movefactor = FRACUNIT;
+		if (friction > FRACUNIT)
+			friction = FRACUNIT;
+		if (friction < 0)
+			friction = 0;
 
-			TAG_ITER_SECTORS(tag, s)
-				Add_Friction(friction, movefactor, s, -1);
-		}
+		movefactor = FixedDiv(ORIG_FRICTION, friction);
+		if (movefactor < FRACUNIT)
+			movefactor = 8*movefactor - 7*FRACUNIT;
+		else
+			movefactor = FRACUNIT;
+
+		Add_Friction(friction, movefactor, (INT32)(s-sectors), -1);
+
+	}
 }
 
 /*

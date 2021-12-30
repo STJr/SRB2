@@ -50,6 +50,7 @@ enum sector_e {
 	sector_fslope,
 	sector_cslope,
 	sector_flags,
+	sector_friction,
 };
 
 static const char *const sector_opt[] = {
@@ -74,6 +75,7 @@ static const char *const sector_opt[] = {
 	"f_slope",
 	"c_slope",
 	"flags",
+	"friction",
 	NULL};
 
 enum subsector_e {
@@ -654,6 +656,9 @@ static int sector_get(lua_State *L)
 	case sector_flags: // flags
 		lua_pushinteger(L, sector->flags);
 		return 1;
+	case sector_friction: // friction
+		lua_pushinteger(L, sector->friction);
+		return 1;
 	}
 	return 0;
 }
@@ -681,6 +686,7 @@ static int sector_set(lua_State *L)
 	case sector_ffloors: // ffloors
 	case sector_fslope: // f_slope
 	case sector_cslope: // c_slope
+	case sector_friction: // friction
 	default:
 		return luaL_error(L, "sector_t field " LUA_QS " cannot be set.", sector_opt[field]);
 	case sector_floorheight: { // floorheight

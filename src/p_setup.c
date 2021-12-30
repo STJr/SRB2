@@ -1674,6 +1674,8 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].flags |= MSF_INVERTPRECIP;
 	else if (fastcmp(param, "heatwave") && fastcmp("true", val))
 		sectors[i].flags |= MSF_HEATWAVE;
+	else if (fastcmp(param, "friction"))
+		sectors[i].friction = atol(val);
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
@@ -4835,6 +4837,13 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[4] |= TMST_NONEXCLUSIVE;
 			lines[i].special = 510;
 			break;
+		case 540: //Floor friction
+		{
+			INT32 s;
+			TAG_ITER_SECTORS(tag, s)
+				sectors[s].friction = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			break;
+		}
 		case 541: //Wind
 		case 542: //Upwards wind
 		case 543: //Downwards wind

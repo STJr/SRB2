@@ -371,6 +371,8 @@ typedef struct sector_s
 	boolean verticalflip; // If gravity < 0, then allow flipped physics
 	sectorflags_t flags;
 
+	INT32 friction;
+
 	// Sprite culling feature
 	struct line_s *cullheight;
 
