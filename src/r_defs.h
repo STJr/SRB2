@@ -286,6 +286,7 @@ typedef enum
 	MSF_INVERTPRECIP            =  1<<4,
 	MSF_GRAVITYFLIP             =  1<<5,
 	MSF_HEATWAVE                =  1<<6,
+	MSF_NOCLIPCAMERA            =  1<<7,
 } sectorflags_t;
 
 

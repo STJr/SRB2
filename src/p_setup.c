@@ -1677,6 +1677,8 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].flags |= MSF_GRAVITYFLIP;
 	else if (fastcmp(param, "heatwave") && fastcmp("true", val))
 		sectors[i].flags |= MSF_HEATWAVE;
+	else if (fastcmp(param, "noclipcamera") && fastcmp("true", val))
+		sectors[i].flags |= MSF_NOCLIPCAMERA;
 	else if (fastcmp(param, "friction"))
 		sectors[i].friction = atol(val);
 	else if (fastcmp(param, "gravity"))
@@ -5014,6 +5016,18 @@ static void P_ConvertBinaryMap(void)
 			//The real value is taken from the back sector at runtime.
 			if (lines[i].flags & ML_DONTPEGTOP)
 				lines[i].executordelay = 1;
+		}
+	}
+
+	for (i = 0; i < numsectors; i++)
+	{
+		switch(GETSECSPECIAL(sectors[i].special, 4))
+		{
+			case 12: //Intangible to the camera
+				sectors[i].flags |= MSF_NOCLIPCAMERA;
+				break;
+			default:
+				break;
 		}
 	}
 

@@ -5017,7 +5017,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			if (isTouching)
 				P_ProcessRopeHang(player, sector, sectag);
 			break;
-		case 12: // Camera noclip
+		case 12: // Unused
 		case 13: // Unused
 		case 14: // Unused
 		case 15: // Unused
