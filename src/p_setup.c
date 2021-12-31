@@ -1559,8 +1559,6 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].ceilinglightlevel = atol(val);
 	else if (fastcmp(param, "lightceilingabsolute") && fastcmp("true", val))
 		sectors[i].ceilinglightabsolute = true;
-	else if (fastcmp(param, "special"))
-		sectors[i].special = atol(val);
 	else if (fastcmp(param, "id"))
 		Tag_FSet(&sectors[i].tags, atol(val));
 	else if (fastcmp(param, "moreids"))
