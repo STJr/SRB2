@@ -3333,6 +3333,7 @@ static void P_ConvertBinaryMap(void)
 		{
 			INT32 s;
 
+			lines[i].args[0] = tag;
 			TAG_ITER_SECTORS(tag, s)
 			{
 				if (lines[i].flags & ML_NOCLIMB)

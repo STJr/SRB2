@@ -6295,7 +6295,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 8: // Set camera collision planes
 				if (lines[i].frontsector)
-					TAG_ITER_SECTORS(tag, s)
+					TAG_ITER_SECTORS(lines[i].args[0], s)
 						sectors[s].camsec = lines[i].frontsector-sectors;
 				break;
 
