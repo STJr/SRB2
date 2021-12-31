@@ -2720,7 +2720,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				// Reset bot too.
 				if (bot) {
-					if (line->flags & ML_NOCLIMB)
+					if (line->args[0])
 						P_TeleportMove(bot, mo->x, mo->y, mo->z);
 					bot->momx = bot->momy = bot->momz = 1;
 					bot->pmomz = 0;
@@ -6908,7 +6908,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 604: // Adjustable Blinking Light
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
+				TAG_ITER_SECTORS(lines[i].args[0], s)
 					P_SpawnAdjustableStrobeFlash(&sectors[s], lines[i].args[3],
 						(lines[i].args[4] & TMB_USETARGET) ? sectors[s].lightlevel : lines[i].args[5],
 						lines[i].args[1], lines[i].args[2], lines[i].args[4] & TMB_SYNC);
