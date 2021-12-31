@@ -1713,6 +1713,8 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 			lines[i].blendmode = AST_REVERSESUBTRACT;
 		else if (fastcmp(val, "modulate"))
 			lines[i].blendmode = AST_MODULATE;
+		if (fastcmp(val, "fog"))
+			lines[i].blendmode = AST_FOG;
 	}
 	else if (fastcmp(param, "executordelay"))
 		lines[i].executordelay = atol(val);
@@ -3329,6 +3331,9 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].special != 733)
 				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
 			lines[i].special = 720;
+			break;
+		case 909: //Fog wall
+			lines[i].blendmode = AST_FOG;
 			break;
 		default:
 			break;
