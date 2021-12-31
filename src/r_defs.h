@@ -282,11 +282,14 @@ typedef enum
 	// triggerspecial - conditions under which plane touch causes effect
 	MSF_TRIGGERSPECIAL_TOUCH    =  1<<2,
 	MSF_TRIGGERSPECIAL_HEADBUMP =  1<<3,
+	// triggerline - conditions for linedef executor triggering
+	MSF_TRIGGERLINE_PLANE       =  1<<4, // require plane touch
+	MSF_TRIGGERLINE_MOBJ        =  1<<5, // allow non-pushable mobjs to trigger
 	// invertprecip - inverts presence of precipitation
-	MSF_INVERTPRECIP            =  1<<4,
-	MSF_GRAVITYFLIP             =  1<<5,
-	MSF_HEATWAVE                =  1<<6,
-	MSF_NOCLIPCAMERA            =  1<<7,
+	MSF_INVERTPRECIP            =  1<<6,
+	MSF_GRAVITYFLIP             =  1<<7,
+	MSF_HEATWAVE                =  1<<8,
+	MSF_NOCLIPCAMERA            =  1<<9,
 } sectorflags_t;
 
 typedef enum
@@ -325,6 +328,15 @@ typedef enum
 	SD_INSTAKILL = 8,
 	SD_SPECIALSTAGE = 9,
 } sectordamage_t;
+
+typedef enum
+{
+	TO_PLAYER = 0,
+	TO_ALLPLAYERS = 1,
+	TO_MOBJ = 2,
+	TO_PLAYEREMERALDS = 3, // only for binary backwards compatibility: check player emeralds
+	TO_PLAYERNIGHTS = 4, // only for binary backwards compatibility: check NiGHTS mare
+} triggerobject_t;
 
 typedef enum
 {
@@ -406,9 +418,14 @@ typedef struct sector_s
 
 	fixed_t gravity; // per-sector gravity factor
 	fixed_t *gravityptr; // For binary format: Read gravity from floor height of master sector
+
 	sectorflags_t flags;
 	sectorspecialflags_t specialflags;
 	UINT8 damagetype;
+
+	// Linedef executor triggering
+	mtag_t triggertag; // tag to call upon triggering
+	UINT8 triggerer; // who can trigger?
 
 	INT32 friction;
 

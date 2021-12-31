@@ -858,7 +858,9 @@ static void P_NetUnArchiveWaypoints(void)
 
 //diff4 flags
 #define SD_DAMAGETYPE 0x01
-#define SD_GRAVITY   0x02
+#define SD_TRIGGERTAG 0x02
+#define SD_TRIGGERER 0x04
+#define SD_GRAVITY   0x08
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -1050,6 +1052,10 @@ static void ArchiveSectors(void)
 			diff3 |= SD_SPECIALFLAG;
 		if (ss->damagetype != spawnss->damagetype)
 			diff4 |= SD_DAMAGETYPE;
+		if (ss->triggertag != spawnss->triggertag)
+			diff4 |= SD_TRIGGERTAG;
+		if (ss->triggerer != spawnss->triggerer)
+			diff4 |= SD_TRIGGERER;
 		if (ss->gravity != spawnss->gravity)
 			diff4 |= SD_GRAVITY;
 
@@ -1127,6 +1133,10 @@ static void ArchiveSectors(void)
 				WRITEUINT32(save_p, ss->specialflags);
 			if (diff4 & SD_DAMAGETYPE)
 				WRITEUINT8(save_p, ss->damagetype);
+			if (diff4 & SD_TRIGGERTAG)
+				WRITEINT16(save_p, ss->triggertag);
+			if (diff4 & SD_TRIGGERER)
+				WRITEUINT8(save_p, ss->triggerer);
 			if (diff4 & SD_GRAVITY)
 				WRITEFIXED(save_p, ss->gravity);
 			if (diff & SD_FFLOORS)
@@ -1243,6 +1253,10 @@ static void UnArchiveSectors(void)
 			sectors[i].specialflags = READUINT32(save_p);
 		if (diff4 & SD_DAMAGETYPE)
 			sectors[i].damagetype = READUINT8(save_p);
+		if (diff4 & SD_TRIGGERTAG)
+			sectors[i].triggertag = READINT16(save_p);
+		if (diff4 & SD_TRIGGERER)
+			sectors[i].triggerer = READUINT8(save_p);
 		if (diff4 & SD_GRAVITY)
 			sectors[i].gravity = READFIXED(save_p);
 

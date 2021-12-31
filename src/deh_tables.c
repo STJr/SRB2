@@ -4478,6 +4478,8 @@ const char *const MSF_LIST[] = {
 	"FLIPSPECIAL_CEILING",
 	"TRIGGERSPECIAL_TOUCH",
 	"TRIGGERSPECIAL_HEADBUMP",
+	"TRIGGERLINE_PLANE",
+	"TRIGGERLINE_MOBJ",
 	"GRAVITYFLIP",
 	"HEATWAVE",
 	"NOCLIPCAMERA",
@@ -4519,6 +4521,14 @@ const char *const SD_LIST[] = {
 	"DEATHPITNOTILT",
 	"INSTAKILL",
 	"SPECIALSTAGE",
+	NULL
+};
+
+// Sector triggerer
+const char *const TO_LIST[] = {
+	"PLAYER",
+	"ALLPLAYERS",
+	"MOBJ",
 	NULL
 };
 

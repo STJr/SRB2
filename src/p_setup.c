@@ -1051,6 +1051,8 @@ static void P_LoadSectors(UINT8 *data)
 		ss->flags = MSF_FLIPSPECIAL_FLOOR;
 		ss->specialflags = 0;
 		ss->damagetype = SD_NONE;
+		ss->triggertag = 0;
+		ss->triggerer = TO_PLAYER;
 
 		P_InitializeSector(ss);
 	}
@@ -1673,6 +1675,10 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].flags |= MSF_TRIGGERSPECIAL_TOUCH;
 	else if (fastcmp(param, "triggerspecial_headbump") && fastcmp("true", val))
 		sectors[i].flags |= MSF_TRIGGERSPECIAL_HEADBUMP;
+	else if (fastcmp(param, "triggerline_plane") && fastcmp("true", val))
+		sectors[i].flags |= MSF_TRIGGERLINE_PLANE;
+	else if (fastcmp(param, "triggerline_mobj") && fastcmp("true", val))
+		sectors[i].flags |= MSF_TRIGGERLINE_MOBJ;
 	else if (fastcmp(param, "invertprecip") && fastcmp("true", val))
 		sectors[i].flags |= MSF_INVERTPRECIP;
 	else if (fastcmp(param, "gravityflip") && fastcmp("true", val))
@@ -1744,6 +1750,10 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		if (fastcmp(val, "SpecialStage"))
 			sectors[i].damagetype = SD_SPECIALSTAGE;
 	}
+	else if (fastcmp(param, "triggertag"))
+		sectors[i].triggertag = atol(val);
+	else if (fastcmp(param, "triggerer"))
+		sectors[i].triggerer = atol(val);
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
@@ -2025,6 +2035,8 @@ static void P_LoadTextmap(void)
 		sc->flags = MSF_FLIPSPECIAL_FLOOR;
 		sc->specialflags = 0;
 		sc->damagetype = SD_NONE;
+		sc->triggertag = 0;
+		sc->triggerer = TO_PLAYER;
 
 		textmap_colormap.used = false;
 		textmap_colormap.lightcolor = 0;
@@ -5084,6 +5096,8 @@ static void P_ConvertBinaryMap(void)
 
 	for (i = 0; i < numsectors; i++)
 	{
+		mtag_t tag = Tag_FGet(&sectors[i].tags);
+
 		switch(GETSECSPECIAL(sectors[i].special, 1))
 		{
 			case 1: //Damage
@@ -5121,6 +5135,50 @@ static void P_ConvertBinaryMap(void)
 				break;
 			case 14: //Non-ramp sector
 				sectors[i].specialflags |= SSF_NOSTEPDOWN;
+				break;
+			default:
+				break;
+		}
+
+		switch(GETSECSPECIAL(sectors[i].special, 2))
+		{
+			case 1: //Trigger linedef executor (pushable objects)
+				sectors[i].triggertag = tag;
+				sectors[i].flags |= MSF_TRIGGERLINE_PLANE;
+				sectors[i].triggerer = TO_MOBJ;
+				break;
+			case 2: //Trigger linedef executor (Anywhere in sector, all players)
+				sectors[i].triggertag = tag;
+				sectors[i].flags &= ~MSF_TRIGGERLINE_PLANE;
+				sectors[i].triggerer = TO_ALLPLAYERS;
+				break;
+			case 3: //Trigger linedef executor (Floor touch, all players)
+				sectors[i].triggertag = tag;
+				sectors[i].flags |= MSF_TRIGGERLINE_PLANE;
+				sectors[i].triggerer = TO_ALLPLAYERS;
+				break;
+			case 4: //Trigger linedef executor (Anywhere in sector)
+				sectors[i].triggertag = tag;
+				sectors[i].flags &= ~MSF_TRIGGERLINE_PLANE;
+				sectors[i].triggerer = TO_PLAYER;
+				break;
+			case 5: //Trigger linedef executor (Floor touch)
+				sectors[i].triggertag = tag;
+				sectors[i].flags |= MSF_TRIGGERLINE_PLANE;
+				sectors[i].triggerer = TO_PLAYER;
+				break;
+			case 6: //Trigger linedef executor (Emerald check)
+				sectors[i].triggertag = tag;
+				sectors[i].flags &= ~MSF_TRIGGERLINE_PLANE;
+				sectors[i].triggerer = TO_PLAYEREMERALDS;
+				break;
+			case 7: //Trigger linedef executor (NiGHTS mare)
+				sectors[i].triggertag = tag;
+				sectors[i].flags &= ~MSF_TRIGGERLINE_PLANE;
+				sectors[i].triggerer = TO_PLAYERNIGHTS;
+				break;
+			case 8: //Check for linedef executor on FOFs
+				sectors[i].flags |= MSF_TRIGGERLINE_MOBJ;
 				break;
 			default:
 				break;

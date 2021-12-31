@@ -10161,8 +10161,8 @@ void P_MobjThinker(mobj_t *mobj)
 
 	tmfloorthing = tmhitthing = NULL;
 
-	// Sector special (2,8) allows ANY mobj to trigger a linedef exec
-	P_CheckMobjTrigger(mobj);
+	// Sector flag MSF_TRIGGERLINE_MOBJ allows ANY mobj to trigger a linedef exec
+	P_CheckMobjTrigger(mobj, false);
 
 	if (mobj->scale != mobj->destscale)
 		P_MobjScaleThink(mobj); // Slowly scale up/down to reach your destscale.
@@ -10382,7 +10382,7 @@ void P_PushableThinker(mobj_t *mobj)
 	I_Assert(mobj != NULL);
 	I_Assert(!P_MobjWasRemoved(mobj));
 
-	P_CheckPushableTrigger(mobj, mobj->subsector->sector);
+	P_CheckMobjTrigger(mobj, true);
 
 	// it has to be pushable RIGHT NOW for this part to happen
 	if (mobj->flags & MF_PUSHABLE && !(mobj->momx || mobj->momy))

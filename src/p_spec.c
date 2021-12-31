@@ -1755,15 +1755,15 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	// Trigger conditions //
 	////////////////////////
 
-	if (caller)
+	if (caller && !udmf)
 	{
-		if (GETSECSPECIAL(caller->special, 2) == 6)
+		if (caller->triggerer == TO_PLAYEREMERALDS)
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Deprecated emerald check sector type detected. Please use linedef types 337-339 instead.\n"));
 			if (!(ALL7EMERALDS(emeralds)))
 				return false;
 		}
-		else if (GETSECSPECIAL(caller->special, 2) == 7)
+		else if (caller->triggerer == TO_PLAYERNIGHTS)
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Deprecated NiGHTS mare sector type detected. Please use linedef types 340-342 instead.\n"));
 			if (!P_CheckPlayerMareOld(triggerline))
@@ -4226,20 +4226,23 @@ sector_t *P_PlayerTouchingSectorSpecialFlag(player_t *player, sectorspecialflags
 	return P_MobjTouchingSectorSpecialFlag(player->mo, flag);
 }
 
-static sector_t *P_Check3DFloorTriggers(player_t *player, sector_t *sector, line_t *sourceline)
+static sector_t *P_CheckPlayer3DFloorTrigger(player_t *player, sector_t *sector, line_t *sourceline)
 {
 	ffloor_t *rover;
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
-		if (GETSECSPECIAL(rover->master->frontsector->special, 2) < 2 || GETSECSPECIAL(rover->master->frontsector->special, 2) > 7)
+		if (!rover->master->frontsector->triggertag)
+			continue;
+
+		if (rover->master->frontsector->triggerer == TO_MOBJ)
 			continue;
 
 		if (!(rover->flags & FF_EXISTS))
 			continue;
 
-		if (!Tag_Find(&sourceline->tags, Tag_FGet(&rover->master->frontsector->tags)))
-			return false;
+		if (!Tag_Find(&sourceline->tags, rover->master->frontsector->triggertag))
+			continue;
 
 		if (!P_IsMobjTouching3DFloor(player->mo, rover, sector))
 			continue;
@@ -4253,25 +4256,28 @@ static sector_t *P_Check3DFloorTriggers(player_t *player, sector_t *sector, line
 	return NULL;
 }
 
-static sector_t *P_CheckPolyobjTriggers(player_t *player, line_t *sourceline)
+static sector_t *P_CheckPlayerPolyobjTrigger(player_t *player, line_t *sourceline)
 {
 	polyobj_t *po;
 	sector_t *polysec;
 	boolean touching = false;
 	boolean inside = false;
 
-	for (po = player->mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next)) //TODO
+	for (po = player->mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
 	{
 		if (po->flags & POF_NOSPECIALS)
 			continue;
 
 		polysec = po->lines[0]->backsector;
 
-		if (GETSECSPECIAL(polysec->special, 2) < 2 || GETSECSPECIAL(polysec->special, 2) > 7)
+		if (!polysec->triggertag)
 			continue;
 
-		if (!Tag_Find(&sourceline->tags, Tag_FGet(&polysec->tags)))
-			return false;
+		if (polysec->triggerer == TO_MOBJ)
+			continue;
+
+		if (!Tag_Find(&sourceline->tags, polysec->triggertag))
+			continue;
 
 		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);
 		inside = P_MobjInsidePolyobj(po, player->mo);
@@ -4288,16 +4294,19 @@ static sector_t *P_CheckPolyobjTriggers(player_t *player, line_t *sourceline)
 	return NULL;
 }
 
-static boolean P_CheckSectorTriggers(player_t *player, sector_t *sector, line_t *sourceline)
+static boolean P_CheckPlayerSectorTrigger(player_t *player, sector_t *sector, line_t *sourceline)
 {
-	if (GETSECSPECIAL(sector->special, 2) < 2 || GETSECSPECIAL(sector->special, 2) > 7)
+	if (!sector->triggertag)
 		return false;
 
-	if (!Tag_Find(&sourceline->tags, Tag_FGet(&sector->tags)))
+	if (sector->triggerer == TO_MOBJ)
 		return false;
 
-	if (GETSECSPECIAL(sector->special, 2) != 3 && GETSECSPECIAL(sector->special, 2) != 5)
-		return true; // "Anywhere in sector" types
+	if (!Tag_Find(&sourceline->tags, sector->triggertag))
+		return false;
+
+	if (!(sector->flags & MSF_TRIGGERLINE_PLANE))
+		return true; // Don't require plane touch
 
 	return P_IsMobjTouchingSectorPlane(player->mo, sector);
 
@@ -4315,18 +4324,18 @@ sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
 
 	originalsector = player->mo->subsector->sector;
 
-	caller = P_Check3DFloorTriggers(player, originalsector, sourceline); // Handle FOFs first.
+	caller = P_CheckPlayer3DFloorTrigger(player, originalsector, sourceline); // Handle FOFs first.
 
 	if (caller)
 		return caller;
 
 	// Allow sector specials to be applied to polyobjects!
-	caller = P_CheckPolyobjTriggers(player, sourceline);
+	caller = P_CheckPlayerPolyobjTrigger(player, sourceline);
 
 	if (caller)
 		return caller;
 
-	if (P_CheckSectorTriggers(player, originalsector, sourceline))
+	if (P_CheckPlayerSectorTrigger(player, originalsector, sourceline))
 		return originalsector;
 
 	// Iterate through touching_sectorlist for SF_TRIGGERSPECIAL_TOUCH
@@ -4338,7 +4347,7 @@ sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
 			continue;
 
 		// Check 3D floors...
-		caller = P_Check3DFloorTriggers(player, loopsector, sourceline); // Handle FOFs first.
+		caller = P_CheckPlayer3DFloorTrigger(player, loopsector, sourceline); // Handle FOFs first.
 
 		if (caller)
 			return caller;
@@ -4346,7 +4355,7 @@ sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
 		if (!(loopsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
 			continue;
 
-		if (P_CheckSectorTriggers(player, loopsector, sourceline))
+		if (P_CheckPlayerSectorTrigger(player, loopsector, sourceline))
 			return loopsector;
 	}
 
@@ -4376,12 +4385,12 @@ boolean P_CanPlayerTrigger(size_t playernum)
 }
 
 /// \todo check continues for proper splitscreen support?
-static boolean P_DoAllPlayersTrigger(mtag_t sectag)
+static boolean P_DoAllPlayersTrigger(mtag_t triggertag)
 {
 	INT32 i;
 	line_t dummyline;
 	dummyline.tags.count = 1;
-	dummyline.tags.tags = &sectag;
+	dummyline.tags.tags = &triggertag;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -4903,34 +4912,26 @@ static void P_ProcessRopeHang(player_t *player, mtag_t sectag)
 	P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
 }
 
-/** Applies a sector special to a player.
-  *
-  * \param player       Player in the sector.
-  * \param sector       Sector with the special.
-  * \param roversector  If !NULL, sector is actually an FOF; otherwise, sector
-  *                     is being physically contacted by the player.
-  * \sa P_PlayerInSpecialSector, P_PlayerOnSpecial3DFloor
-  */
-void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *roversector)
+static boolean P_SectorHasSpecial(sector_t *sec)
 {
-	INT32 section1, section2;
+	if (sec->specialflags)
+		return true;
+
+	if (sec->damagetype != SD_NONE)
+		return true;
+
+	if (sec->triggertag)
+		return true;
+
+	if (sec->special)
+		return true;
+
+	return false;
+}
+
+static void P_EvaluateSpecialFlags(player_t *player, sector_t *sector, sector_t *roversector, boolean isTouching)
+{
 	mtag_t sectag = Tag_FGet(&sector->tags);
-	boolean isTouching;
-
-	if (!sector->special && sector->specialflags == 0 && sector->damagetype == SD_NONE)
-		return;
-
-	// Ignore spectators
-	if (player->spectator)
-		return;
-
-	// Ignore dead players.
-	// If this strange phenomenon could be potentially used in levels,
-	// TODO: modify this to accommodate for it.
-	if (player->playerstate != PST_LIVE)
-		return;
-
-	isTouching = roversector || P_IsMobjTouchingSectorPlane(player->mo, sector);
 
 	if (sector->specialflags & SSF_OUTERSPACE)
 	{
@@ -4994,7 +4995,10 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		P_ProcessFinishLine(player);
 	if ((sector->specialflags & SSF_ROPEHANG) && isTouching)
 		P_ProcessRopeHang(player, sectag);
+}
 
+static void P_EvaluateDamageType(player_t *player, sector_t *sector, boolean isTouching)
+{
 	switch (sector->damagetype)
 	{
 		case SD_GENERIC:
@@ -5047,19 +5051,36 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 		default:
 			break;
 	}
+}
 
-	section1 = GETSECSPECIAL(sector->special, 1);
-	section2 = GETSECSPECIAL(sector->special, 2);
+static void P_EvaluateLinedefExecutorTrigger(player_t *player, sector_t *sector, boolean isTouching)
+{
+	if (player->bot)
+		return;
 
-	switch (section1)
+	if (!sector->triggertag)
+		return;
+
+	if (sector->triggerer == TO_MOBJ)
+		return;
+	else if (sector->triggerer == TO_ALLPLAYERS && !P_DoAllPlayersTrigger(sector->triggertag))
+		return;
+
+	if ((sector->flags & MSF_TRIGGERLINE_PLANE) && !isTouching)
+		return;
+
+	P_LinedefExecute(sector->triggertag, player->mo, sector);
+}
+
+static void P_EvaluateOldSectorSpecial(player_t *player, sector_t *sector, sector_t *roversector, boolean isTouching)
+{
+	switch (GETSECSPECIAL(sector->special, 1))
 	{
 		case 9: // Ring Drainer (Floor Touch)
 			if (!isTouching)
 				break;
 			/* FALLTHRU */
 		case 10: // Ring Drainer (No Floor Touch)
-			if (udmf)
-				break;
 			if (leveltime % (TICRATE/2) == 0 && player->rings > 0)
 			{
 				player->rings--;
@@ -5068,27 +5089,48 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			break;
 	}
 
-	switch (section2)
+	switch (GETSECSPECIAL(sector->special, 2))
 	{
-		case 2: // Linedef executor requires all players present+doesn't require touching floor
-		case 3: // Linedef executor requires all players present
-			if (!P_DoAllPlayersTrigger(sectag))
-				break;
-			/* FALLTHRU */
-		case 4: // Linedef executor that doesn't require touching floor
-		case 5: // Linedef executor
-		case 6: // Linedef executor (7 Emeralds)
-		case 7: // Linedef executor (NiGHTS Mare)
-			if ((section2 == 3 || section2 == 5) && !isTouching)
-				break;
-			if (!player->bot)
-				P_LinedefExecute(sectag, player->mo, sector);
-			break;
 		case 9: // Egg trap capsule
-			if (!udmf && roversector)
+			if (roversector)
 				P_ProcessEggCapsule(player, sector);
 			break;
 	}
+}
+
+/** Applies a sector special to a player.
+  *
+  * \param player       Player in the sector.
+  * \param sector       Sector with the special.
+  * \param roversector  If !NULL, sector is actually an FOF; otherwise, sector
+  *                     is being physically contacted by the player.
+  * \sa P_PlayerInSpecialSector, P_PlayerOnSpecial3DFloor
+  */
+void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *roversector)
+{
+	boolean isTouching;
+
+	if (!P_SectorHasSpecial(sector))
+		return;
+
+	// Ignore spectators
+	if (player->spectator)
+		return;
+
+	// Ignore dead players.
+	// If this strange phenomenon could be potentially used in levels,
+	// TODO: modify this to accommodate for it.
+	if (player->playerstate != PST_LIVE)
+		return;
+
+	isTouching = roversector || P_IsMobjTouchingSectorPlane(player->mo, sector);
+
+	P_EvaluateSpecialFlags(player, sector, roversector, isTouching);
+	P_EvaluateDamageType(player, sector, isTouching);
+	P_EvaluateLinedefExecutorTrigger(player, sector, isTouching);
+
+	if (!udmf)
+		P_EvaluateOldSectorSpecial(player, sector, roversector, isTouching);
 }
 
 #define TELEPORTED(mo) (mo->subsector->sector != originalsector)
@@ -5106,7 +5148,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
-		if (!rover->master->frontsector->special && rover->master->frontsector->specialflags == 0 && rover->master->frontsector->damagetype == SD_NONE)
+		if (!P_SectorHasSpecial(rover->master->frontsector))
 			continue;
 
 		if (!(rover->flags & FF_EXISTS))
@@ -5140,7 +5182,7 @@ static void P_PlayerOnSpecialPolyobj(player_t *player)
 
 		polysec = po->lines[0]->backsector;
 
-		if (!polysec->special && polysec->specialflags == 0 && polysec->damagetype == SD_NONE)
+		if (!P_SectorHasSpecial(polysec))
 			continue;
 
 		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);
@@ -5203,25 +5245,26 @@ void P_PlayerInSpecialSector(player_t *player)
 	}
 }
 
-static void P_CheckMobj3DFloorTrigger(mobj_t *mo)
+static void P_CheckMobj3DFloorTrigger(mobj_t *mo, sector_t *sec)
 {
 	sector_t *originalsector = mo->subsector->sector;
 	ffloor_t *rover;
-	mtag_t tag;
 
-	for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
+	for (rover = sec->ffloors; rover; rover = rover->next)
 	{
-		if (GETSECSPECIAL(rover->master->frontsector->special, 2) != 1)
+		if (!rover->master->frontsector->triggertag)
+			continue;
+
+		if (rover->master->frontsector->triggerer != TO_MOBJ)
 			continue;
 
 		if (!(rover->flags & FF_EXISTS))
 			continue;
 
-		if (!P_IsMobjTouching3DFloor(mo, rover, mo->subsector->sector))
+		if (!P_IsMobjTouching3DFloor(mo, rover, sec))
 			continue;
 
-		tag = Tag_FGet(&rover->master->frontsector->tags);
-		P_LinedefExecute(tag, mo, rover->master->frontsector);
+		P_LinedefExecute(rover->master->frontsector->triggertag, mo, rover->master->frontsector);
 		if TELEPORTED(mo) return;
 	}
 }
@@ -5233,7 +5276,6 @@ static void P_CheckMobjPolyobjTrigger(mobj_t *mo)
 	sector_t *polysec;
 	boolean touching = false;
 	boolean inside = false;
-	mtag_t tag;
 
 	for (po = mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
 	{
@@ -5242,7 +5284,10 @@ static void P_CheckMobjPolyobjTrigger(mobj_t *mo)
 
 		polysec = po->lines[0]->backsector;
 
-		if (!polysec->special)
+		if (!polysec->triggertag)
+			continue;
+
+		if (polysec->triggerer != TO_MOBJ)
 			continue;
 
 		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, mo);
@@ -5254,30 +5299,26 @@ static void P_CheckMobjPolyobjTrigger(mobj_t *mo)
 		if (!P_IsMobjTouchingPolyobj(mo, po, polysec))
 			continue;
 
-		tag = Tag_FGet(&polysec->tags);
-		P_LinedefExecute(tag, mo, polysec);
+		P_LinedefExecute(polysec->triggertag, mo, polysec);
 		if TELEPORTED(mo) return;
 	}
 }
 
-void P_CheckPushableTrigger(mobj_t *mobj, sector_t *sec)
+static void P_CheckMobjSectorTrigger(mobj_t *mo, sector_t *sec)
 {
-	sector_t *originalsector = mobj->subsector->sector;
+	if (!sec->triggertag)
+		return;
 
-	P_CheckMobj3DFloorTrigger(mobj);
-	if TELEPORTED(mobj)	return;
+	if (sec->triggerer != TO_MOBJ)
+		return;
 
-	P_CheckMobjPolyobjTrigger(mobj);
-	if TELEPORTED(mobj)	return;
+	if ((sec->flags & MSF_TRIGGERLINE_PLANE) && !P_IsMobjTouchingSectorPlane(mo, sec))
+		return;
 
-	if (GETSECSPECIAL(sec->special, 2) == 1 && P_IsMobjTouchingSectorPlane(mobj, sec))
-	{
-		mtag_t tag = Tag_FGet(&sec->tags);
-		P_LinedefExecute(tag, mobj, sec);
-	}
+	P_LinedefExecute(sec->triggertag, mo, sec);
 }
 
-void P_CheckMobjTrigger(mobj_t *mobj)
+void P_CheckMobjTrigger(mobj_t *mobj, boolean pushable)
 {
 	sector_t *originalsector;
 
@@ -5286,13 +5327,16 @@ void P_CheckMobjTrigger(mobj_t *mobj)
 
 	originalsector = mobj->subsector->sector;
 
-	if (GETSECSPECIAL(originalsector->special, 2) != 8)
+	if (!pushable && !(originalsector->flags & MSF_TRIGGERLINE_MOBJ))
 		return;
 
-	P_CheckMobj3DFloorTrigger(mobj);
+	P_CheckMobj3DFloorTrigger(mobj, originalsector);
 	if TELEPORTED(mobj)	return;
 
 	P_CheckMobjPolyobjTrigger(mobj);
+	if TELEPORTED(mobj)	return;
+
+	P_CheckMobjSectorTrigger(mobj, originalsector);
 }
 
 #undef TELEPORTED

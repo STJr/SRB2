@@ -1276,7 +1276,6 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 	sector_t *caller[MAXPLAYERS];
 	boolean allPlayersChecked = false;
 	boolean allPlayersTrigger = false;
-	mtag_t tag = Tag_FGet(&eachtime->sourceline->tags);
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
@@ -1300,7 +1299,7 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 			continue;
 
 		// If sector has an "all players" trigger type, all players need to be in area
-		if (caller[i] && (GETSECSPECIAL(caller[i]->special, 2) == 2 || GETSECSPECIAL(caller[i]->special, 2) == 3))
+		if (caller[i] && caller[i]->triggerer == TO_ALLPLAYERS)
 		{
 			if (!allPlayersChecked)
 			{
@@ -1312,7 +1311,7 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 				continue;
 		}
 
-		CONS_Debug(DBG_GAMELOGIC, "Trying to activate each time executor with tag %d\n", tag);
+		CONS_Debug(DBG_GAMELOGIC, "Trying to activate each time executor with tag %d\n", Tag_FGet(&eachtime->sourceline->tags));
 
 		// 03/08/14 -Monster Iestyn
 		// No more stupid hacks involving changing eachtime->sourceline's tag or special or whatever!

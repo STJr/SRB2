@@ -373,6 +373,16 @@ static inline int lib_getenum(lua_State *L)
 		if (mathlib) return luaL_error(L, "sector damagetype '%s' could not be found.\n", word);
 		return 0;
 	}
+	else if (fastncmp("TO_", word, 3)) {
+		p = word + 3;
+		for (i = 0; TO_LIST[i]; i++)
+			if (fastcmp(p, TO_LIST[i])) {
+				lua_pushinteger(L, i);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "sector triggerer '%s' could not be found.\n", word);
+		return 0;
+	}
 	else if (fastncmp("S_",word,2)) {
 		p = word+2;
 		for (i = 0; i < NUMSTATEFREESLOTS; i++) {
