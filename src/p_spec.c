@@ -6224,8 +6224,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 	// Init line EFFECTs
 	for (i = 0; i < numlines; i++)
 	{
-		mtag_t tag = Tag_FGet(&lines[i].tags);
-
 		// set line specials to 0 here too, same reason as above
 		if (netgame || multiplayer)
 		{
@@ -6253,7 +6251,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					break;
 
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
+				TAG_ITER_SECTORS(Tag_FGet(&lines[i].tags), s)
 				{
 					sectors[s].gravityptr = &sectors[sec].floorheight; // This allows it to change in realtime!
 
@@ -6271,7 +6269,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 					break;
 
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
+				TAG_ITER_SECTORS(Tag_FGet(&lines[i].tags), s)
 					P_AddCameraScanner(&sectors[sec], &sectors[s], R_PointToAngle2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y));
 				break;
 
