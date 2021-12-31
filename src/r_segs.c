@@ -155,7 +155,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	if (!ldef->alpha)
 		return;
 
-	if (ldef->blendmode)
+	if (ldef->blendmode == AST_FOG)
+	{
+		colfunc = colfuncs[COLDRAWFUNC_FOG];
+		windowtop = frontsector->ceilingheight;
+		windowbottom = frontsector->floorheight;
+	}
+	else if (ldef->blendmode)
 	{
 		if (ldef->alpha == NUMTRANSMAPS || ldef->blendmode == AST_MODULATE)
 			dc_transmap = R_GetBlendTable(ldef->blendmode, 0);
@@ -167,12 +173,6 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	{
 		dc_transmap = R_GetTranslucencyTable(R_GetLinedefTransTable(ldef->alpha));
 		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
-	}
-	else if (ldef->special == 909)
-	{
-		colfunc = colfuncs[COLDRAWFUNC_FOG];
-		windowtop = frontsector->ceilingheight;
-		windowbottom = frontsector->floorheight;
 	}
 	else
 		colfunc = colfuncs[BASEDRAWFUNC];
