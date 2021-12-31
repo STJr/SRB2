@@ -4917,7 +4917,7 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 	mtag_t sectag = Tag_FGet(&sector->tags);
 	boolean isTouching;
 
-	if (!sector->special && sector->specialflags == 0)
+	if (!sector->special && sector->specialflags == 0 && sector->damagetype == SD_NONE)
 		return;
 
 	// Ignore spectators
@@ -4995,33 +4995,30 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 	if ((sector->specialflags & SSF_ROPEHANG) && isTouching)
 		P_ProcessRopeHang(player, sectag);
 
-	section1 = GETSECSPECIAL(sector->special, 1);
-	section2 = GETSECSPECIAL(sector->special, 2);
-
-	switch (section1)
+	switch (sector->damagetype)
 	{
-		case 1: // Damage (Generic)
+		case SD_GENERIC:
 			if (isTouching)
 				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
 			break;
-		case 2: // Damage (Water)
+		case SD_WATER:
 			if (isTouching && (player->powers[pw_underwater] || player->powers[pw_carry] == CR_NIGHTSMODE))
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_WATER);
 			break;
-		case 3: // Damage (Fire)
+		case SD_FIRE:
 			if (isTouching)
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_FIRE);
 			break;
-		case 4: // Damage (Electrical)
+		case SD_ELECTRIC:
 			if (isTouching)
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_ELECTRIC);
 			break;
-		case 5: // Spikes
+		case SD_SPIKE:
 			if (isTouching)
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPIKE);
 			break;
-		case 6: // Death Pit (Camera Mod)
-		case 7: // Death Pit (No Camera Mod)
+		case SD_DEATHPITTILT:
+		case SD_DEATHPITNOTILT:
 			if (!isTouching)
 				break;
 			if (player->quittime)
@@ -5029,12 +5026,33 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 			else
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_DEATHPIT);
 			break;
-		case 8: // Instant Kill
+		case SD_INSTAKILL:
 			if (player->quittime)
 				G_MovePlayerToSpawnOrStarpost(player - players);
 			else
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
 			break;
+		case SD_SPECIALSTAGE:
+			if (!isTouching)
+				break;
+
+			if (player->exiting || player->bot) // Don't do anything for bots or players who have just finished
+				break;
+
+			if (!(player->powers[pw_shield] || player->spheres > 0)) // Don't do anything if no shield or spheres anyway
+				break;
+
+			P_SpecialStageDamage(player, NULL, NULL);
+			break;
+		default:
+			break;
+	}
+
+	section1 = GETSECSPECIAL(sector->special, 1);
+	section2 = GETSECSPECIAL(sector->special, 2);
+
+	switch (section1)
+	{
 		case 9: // Ring Drainer (Floor Touch)
 			if (!isTouching)
 				break;
@@ -5047,18 +5065,6 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 				player->rings--;
 				S_StartSound(player->mo, sfx_antiri);
 			}
-			break;
-		case 11: // Special Stage Damage
-			if (!isTouching)
-				break;
-
-			if (player->exiting || player->bot) // Don't do anything for bots or players who have just finished
-				break;
-
-			if (!(player->powers[pw_shield] || player->spheres > 0)) // Don't do anything if no shield or spheres anyway
-				break;
-
-			P_SpecialStageDamage(player, NULL, NULL);
 			break;
 	}
 
@@ -5100,7 +5106,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
-		if (!rover->master->frontsector->special && rover->master->frontsector->specialflags == 0)
+		if (!rover->master->frontsector->special && rover->master->frontsector->specialflags == 0 && rover->master->frontsector->damagetype == SD_NONE)
 			continue;
 
 		if (!(rover->flags & FF_EXISTS))
@@ -5134,7 +5140,7 @@ static void P_PlayerOnSpecialPolyobj(player_t *player)
 
 		polysec = po->lines[0]->backsector;
 
-		if (!polysec->special && polysec->specialflags == 0)
+		if (!polysec->special && polysec->specialflags == 0 && polysec->damagetype == SD_NONE)
 			continue;
 
 		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);

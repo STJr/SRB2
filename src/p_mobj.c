@@ -2325,8 +2325,8 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_FLOOR))
 	|| (mo->z + mo->height >= mo->subsector->sector->ceilingheight
 		&& ((mo->subsector->sector->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->subsector->sector->flags & MSF_FLIPSPECIAL_CEILING)))
-	&& (GETSECSPECIAL(mo->subsector->sector->special, 1) == 6
-	|| GETSECSPECIAL(mo->subsector->sector->special, 1) == 7))
+	&& (mo->subsector->sector->damagetype == SD_DEATHPITTILT
+	|| mo->subsector->sector->damagetype == SD_DEATHPITNOTILT))
 		return true;
 
 	return false;
@@ -2334,7 +2334,7 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 
 boolean P_CheckSolidLava(ffloor_t *rover)
 {
-	if (rover->flags & FF_SWIMMABLE && GETSECSPECIAL(rover->master->frontsector->special, 1) == 3
+	if (rover->flags & FF_SWIMMABLE && rover->master->frontsector->damagetype == SD_FIRE
 		&& !(rover->master->flags & ML_BLOCKMONSTERS))
 			return true;
 
@@ -3305,7 +3305,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 
 		if (mobj->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
 		{
-			if (GETSECSPECIAL(rover->master->frontsector->special, 1) == 3)
+			if (rover->master->frontsector->damagetype == SD_FIRE)
 				mobj->eflags |= MFE_TOUCHLAVA;
 
 			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))
@@ -4097,7 +4097,7 @@ static void P_KillRingsInLava(mobj_t *mo)
 				if (!(rover->flags & FF_EXISTS)) continue; // fof must be real
 
 				if (!(rover->flags & FF_SWIMMABLE // fof must be water
-					&& GETSECSPECIAL(rover->master->frontsector->special, 1) == 3)) // fof must be lava water
+					&& rover->master->frontsector->damagetype == SD_FIRE)) // fof must be lava water
 					continue;
 
 				// find heights of FOF
@@ -10985,8 +10985,8 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 
 	if (mobj->floorz != starting_floorz)
 		mobj->precipflags |= PCF_FOF;
-	else if (GETSECSPECIAL(mobj->subsector->sector->special, 1) == 7
-	 || GETSECSPECIAL(mobj->subsector->sector->special, 1) == 6
+	else if (mobj->subsector->sector->damagetype == SD_DEATHPITNOTILT
+	 || mobj->subsector->sector->damagetype == SD_DEATHPITTILT
 	 || mobj->subsector->sector->floorpic == skyflatnum)
 		mobj->precipflags |= PCF_PIT;
 

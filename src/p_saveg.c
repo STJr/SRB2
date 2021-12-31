@@ -854,7 +854,11 @@ static void P_NetUnArchiveWaypoints(void)
 #define SD_CEILLIGHT 0x10
 #define SD_FLAG      0x20
 #define SD_SPECIALFLAG 0x40
-#define SD_GRAVITY   0x80
+#define SD_DIFF4     0x80
+
+//diff4 flags
+#define SD_DAMAGETYPE 0x01
+#define SD_GRAVITY   0x02
 
 #define LD_FLAG     0x01
 #define LD_SPECIAL  0x02
@@ -993,11 +997,11 @@ static void ArchiveSectors(void)
 	size_t i, j;
 	const sector_t *ss = sectors;
 	const sector_t *spawnss = spawnsectors;
-	UINT8 diff, diff2, diff3;
+	UINT8 diff, diff2, diff3, diff4;
 
 	for (i = 0; i < numsectors; i++, ss++, spawnss++)
 	{
-		diff = diff2 = diff3 = 0;
+		diff = diff2 = diff3 = diff4 = 0;
 		if (ss->floorheight != spawnss->floorheight)
 			diff |= SD_FLOORHT;
 		if (ss->ceilingheight != spawnss->ceilingheight)
@@ -1044,11 +1048,16 @@ static void ArchiveSectors(void)
 			diff3 |= SD_FLAG;
 		if (ss->specialflags != spawnss->specialflags)
 			diff3 |= SD_SPECIALFLAG;
+		if (ss->damagetype != spawnss->damagetype)
+			diff4 |= SD_DAMAGETYPE;
 		if (ss->gravity != spawnss->gravity)
-			diff3 |= SD_GRAVITY;
+			diff4 |= SD_GRAVITY;
 
 		if (ss->ffloors && CheckFFloorDiff(ss))
 			diff |= SD_FFLOORS;
+
+		if (diff4)
+			diff3 |= SD_DIFF4;
 
 		if (diff3)
 			diff2 |= SD_DIFF3;
@@ -1064,6 +1073,8 @@ static void ArchiveSectors(void)
 				WRITEUINT8(save_p, diff2);
 			if (diff2 & SD_DIFF3)
 				WRITEUINT8(save_p, diff3);
+			if (diff3 & SD_DIFF4)
+				WRITEUINT8(save_p, diff4);
 			if (diff & SD_FLOORHT)
 				WRITEFIXED(save_p, ss->floorheight);
 			if (diff & SD_CEILHT)
@@ -1114,7 +1125,9 @@ static void ArchiveSectors(void)
 				WRITEUINT32(save_p, ss->flags);
 			if (diff3 & SD_SPECIALFLAG)
 				WRITEUINT32(save_p, ss->specialflags);
-			if (diff3 & SD_GRAVITY)
+			if (diff4 & SD_DAMAGETYPE)
+				WRITEUINT8(save_p, ss->damagetype);
+			if (diff4 & SD_GRAVITY)
 				WRITEFIXED(save_p, ss->gravity);
 			if (diff & SD_FFLOORS)
 				ArchiveFFloors(ss);
@@ -1127,7 +1140,7 @@ static void ArchiveSectors(void)
 static void UnArchiveSectors(void)
 {
 	UINT16 i, j;
-	UINT8 diff, diff2, diff3;
+	UINT8 diff, diff2, diff3, diff4;
 	for (;;)
 	{
 		i = READUINT16(save_p);
@@ -1147,6 +1160,10 @@ static void UnArchiveSectors(void)
 			diff3 = READUINT8(save_p);
 		else
 			diff3 = 0;
+		if (diff3 & SD_DIFF4)
+			diff4 = READUINT8(save_p);
+		else
+			diff4 = 0;
 
 		if (diff & SD_FLOORHT)
 			sectors[i].floorheight = READFIXED(save_p);
@@ -1224,7 +1241,9 @@ static void UnArchiveSectors(void)
 		}
 		if (diff3 & SD_SPECIALFLAG)
 			sectors[i].specialflags = READUINT32(save_p);
-		if (diff3 & SD_GRAVITY)
+		if (diff4 & SD_DAMAGETYPE)
+			sectors[i].damagetype = READUINT8(save_p);
+		if (diff4 & SD_GRAVITY)
 			sectors[i].gravity = READFIXED(save_p);
 
 		if (diff & SD_FFLOORS)

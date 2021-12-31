@@ -1049,6 +1049,8 @@ static void P_LoadSectors(UINT8 *data)
 		ss->gravity = FRACUNIT;
 
 		ss->flags = MSF_FLIPSPECIAL_FLOOR;
+		ss->specialflags = 0;
+		ss->damagetype = SD_NONE;
 
 		P_InitializeSector(ss);
 	}
@@ -1721,6 +1723,27 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].friction = atol(val);
 	else if (fastcmp(param, "gravity"))
 		sectors[i].gravity = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "damagetype"))
+	{
+		if (fastcmp(val, "Generic"))
+			sectors[i].damagetype = SD_GENERIC;
+		if (fastcmp(val, "Water"))
+			sectors[i].damagetype = SD_WATER;
+		if (fastcmp(val, "Fire"))
+			sectors[i].damagetype = SD_FIRE;
+		if (fastcmp(val, "Electric"))
+			sectors[i].damagetype = SD_ELECTRIC;
+		if (fastcmp(val, "Spike"))
+			sectors[i].damagetype = SD_SPIKE;
+		if (fastcmp(val, "DeathPitTilt"))
+			sectors[i].damagetype = SD_DEATHPITTILT;
+		if (fastcmp(val, "DeathPitNoTilt"))
+			sectors[i].damagetype = SD_DEATHPITNOTILT;
+		if (fastcmp(val, "Instakill"))
+			sectors[i].damagetype = SD_INSTAKILL;
+		if (fastcmp(val, "SpecialStage"))
+			sectors[i].damagetype = SD_SPECIALSTAGE;
+	}
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
@@ -2000,6 +2023,8 @@ static void P_LoadTextmap(void)
 		sc->gravity = FRACUNIT;
 
 		sc->flags = MSF_FLIPSPECIAL_FLOOR;
+		sc->specialflags = 0;
+		sc->damagetype = SD_NONE;
 
 		textmap_colormap.used = false;
 		textmap_colormap.lightcolor = 0;
@@ -5059,9 +5084,35 @@ static void P_ConvertBinaryMap(void)
 
 	for (i = 0; i < numsectors; i++)
 	{
-
 		switch(GETSECSPECIAL(sectors[i].special, 1))
 		{
+			case 1: //Damage
+				sectors[i].damagetype = SD_GENERIC;
+				break;
+			case 2: //Damage (Water)
+				sectors[i].damagetype = SD_WATER;
+				break;
+			case 3: //Damage (Fire)
+				sectors[i].damagetype = SD_FIRE;
+				break;
+			case 4: //Damage (Electric)
+				sectors[i].damagetype = SD_ELECTRIC;
+				break;
+			case 5: //Spikes
+				sectors[i].damagetype = SD_SPIKE;
+				break;
+			case 6: //Death pit (camera tilt)
+				sectors[i].damagetype = SD_DEATHPITTILT;
+				break;
+			case 7: //Death pit (no camera tilt)
+				sectors[i].damagetype = SD_DEATHPITNOTILT;
+				break;
+			case 8: //Instakill
+				sectors[i].damagetype = SD_INSTAKILL;
+				break;
+			case 11: //Special stage damage
+				sectors[i].damagetype = SD_SPECIALSTAGE;
+				break;
 			case 12: //Space countdown
 				sectors[i].specialflags |= SSF_OUTERSPACE;
 				break;

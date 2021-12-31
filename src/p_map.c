@@ -3594,7 +3594,7 @@ static void P_CheckLavaWall(mobj_t *mo, sector_t *sec)
 		if (!(rover->flags & FF_SWIMMABLE))
 			continue;
 
-		if (GETSECSPECIAL(rover->master->frontsector->special, 1) != 3)
+		if (rover->master->frontsector->damagetype != SD_FIRE)
 			continue;
 
 		if (rover->master->flags & ML_BLOCKMONSTERS)

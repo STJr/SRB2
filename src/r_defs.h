@@ -314,6 +314,20 @@ typedef enum
 
 typedef enum
 {
+	SD_NONE = 0,
+	SD_GENERIC = 1,
+	SD_WATER = 2,
+	SD_FIRE = 3,
+	SD_ELECTRIC = 4,
+	SD_SPIKE = 5,
+	SD_DEATHPITTILT = 6,
+	SD_DEATHPITNOTILT = 7,
+	SD_INSTAKILL = 8,
+	SD_SPECIALSTAGE = 9,
+} sectordamage_t;
+
+typedef enum
+{
 	CRUMBLE_NONE, // No crumble thinker
 	CRUMBLE_WAIT, // Don't float on water because this is supposed to wait for a crumble
 	CRUMBLE_ACTIVATED, // Crumble thinker activated, but hasn't fallen yet
@@ -394,6 +408,7 @@ typedef struct sector_s
 	fixed_t *gravityptr; // For binary format: Read gravity from floor height of master sector
 	sectorflags_t flags;
 	sectorspecialflags_t specialflags;
+	UINT8 damagetype;
 
 	INT32 friction;
 

@@ -4452,7 +4452,7 @@ const char *const GAMETYPERULE_LIST[] = {
 };
 
 // Linedef flags
-const char *const ML_LIST[16] = {
+const char *const ML_LIST[] = {
 	"IMPASSIBLE",
 	"BLOCKMONSTERS",
 	"TWOSIDED",
@@ -4464,15 +4464,16 @@ const char *const ML_LIST[16] = {
 	"EFFECT3",
 	"EFFECT4",
 	"EFFECT5",
-	"NOSONIC",
-	"NOTAILS",
-	"NOKNUX",
+	"NETONLY",
+	"NONET",
+	"EFFECT6",
 	"BOUNCY",
-	"TFERLINE"
+	"TFERLINE",
+	NULL
 };
 
 // Sector flags
-const char *const MSF_LIST[7] = {
+const char *const MSF_LIST[] = {
 	"FLIPSPECIAL_FLOOR",
 	"FLIPSPECIAL_CEILING",
 	"TRIGGERSPECIAL_TOUCH",
@@ -4480,10 +4481,11 @@ const char *const MSF_LIST[7] = {
 	"GRAVITYFLIP",
 	"HEATWAVE",
 	"NOCLIPCAMERA",
+	NULL
 };
 
 // Sector special flags
-const char* const SSF_LIST[19] = {
+const char *const SSF_LIST[] = {
 	"OUTERSPACE",
 	"DOUBLESTEPUP",
 	"WINDCURRENT",
@@ -4502,6 +4504,22 @@ const char* const SSF_LIST[19] = {
 	"ZOOMTUBEEND",
 	"FINISHLINE",
 	"ROPEHANG",
+	NULL
+};
+
+// Sector damagetypes
+const char *const SD_LIST[] = {
+	"NONE",
+	"GENERIC",
+	"WATER",
+	"FIRE",
+	"ELECTRIC",
+	"SPIKE",
+	"DEATHPITTILT",
+	"DEATHPITNOTILT",
+	"INSTAKILL",
+	"SPECIALSTAGE",
+	NULL
 };
 
 const char *COLOR_ENUMS[] = {
