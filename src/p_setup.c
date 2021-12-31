@@ -1691,10 +1691,6 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].specialflags |= SSF_DOUBLESTEPUP;
 	else if (fastcmp(param, "nostepdown") && fastcmp("true", val))
 		sectors[i].specialflags |= SSF_NOSTEPDOWN;
-	else if (fastcmp(param, "windcurrent") && fastcmp("true", val))
-		sectors[i].specialflags |= SSF_WINDCURRENT;
-	else if (fastcmp(param, "conveyor") && fastcmp("true", val))
-		sectors[i].specialflags |= SSF_CONVEYOR;
 	else if (fastcmp(param, "speedpad") && fastcmp("true", val))
 		sectors[i].specialflags |= SSF_SPEEDPAD;
 	else if (fastcmp(param, "starpostactivator") && fastcmp("true", val))
@@ -5207,12 +5203,6 @@ static void P_ConvertBinaryMap(void)
 
 		switch(GETSECSPECIAL(sectors[i].special, 3))
 		{
-			case 2: //Wind/Current
-				sectors[i].specialflags |= SSF_WINDCURRENT;
-				break;
-			case 4: //Conveyor belt
-				sectors[i].specialflags |= SSF_CONVEYOR;
-				break;
 			case 5: //Speed pad
 				sectors[i].specialflags |= SSF_SPEEDPAD;
 				break;

@@ -7471,9 +7471,12 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 	s->accel = accel;
 	s->exclusive = exclusive;
 	s->vdx = s->vdy = 0;
-	if ((s->control = control) != -1)
+	s->control = control;
+	if (s->control != -1)
 		s->last_height = sectors[control].floorheight + sectors[control].ceilingheight;
 	s->affectee = affectee;
+	if (type == sc_carry || type == sc_carry_ceiling)
+		sectors[affectee].specialflags |= SSF_CONVEYOR;
 	P_AddThinker(THINK_MAIN, &s->thinker);
 }
 
@@ -8407,9 +8410,13 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t 
 	{
 		p->roverpusher = true;
 		p->referrer = referrer;
+		sectors[referrer].specialflags |= SSF_WINDCURRENT;
 	}
 	else
+	{
 		p->roverpusher = false;
+		sectors[affectee].specialflags |= SSF_WINDCURRENT;
+	}
 
 	p->affectee = affectee;
 	P_AddThinker(THINK_MAIN, &p->thinker);
@@ -8437,19 +8444,8 @@ void T_Pusher(pusher_t *p)
 	z_mag = p->z_mag >> PUSH_FACTOR;
 
 	sec = sectors + p->affectee;
-
-	// Be sure the sector special flag is still turned on. If so, proceed.
-	// Else, bail out; the flag has been changed on us.
-
 	if (p->roverpusher)
-	{
-		referrer = &sectors[p->referrer];
-
-		if (!(referrer->specialflags & SSF_WINDCURRENT))
-			return;
-	}
-	else if (!(sec->specialflags & SSF_WINDCURRENT))
-		return;
+		referrer = sectors + p->referrer;
 
 	// For constant pushers (wind/current) there are 3 situations:
 	//
