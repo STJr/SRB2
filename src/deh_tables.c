@@ -4515,6 +4515,7 @@ const char *const SD_LIST[] = {
 	"GENERIC",
 	"WATER",
 	"FIRE",
+	"LAVA",
 	"ELECTRIC",
 	"SPIKE",
 	"DEATHPITTILT",

@@ -5010,6 +5010,7 @@ static void P_EvaluateDamageType(player_t *player, sector_t *sector, boolean isT
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_WATER);
 			break;
 		case SD_FIRE:
+		case SD_LAVA:
 			if (isTouching)
 				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_FIRE);
 			break;

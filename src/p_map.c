@@ -3594,10 +3594,7 @@ static void P_CheckLavaWall(mobj_t *mo, sector_t *sec)
 		if (!(rover->flags & FF_SWIMMABLE))
 			continue;
 
-		if (rover->master->frontsector->damagetype != SD_FIRE)
-			continue;
-
-		if (rover->master->flags & ML_BLOCKMONSTERS)
+		if (rover->master->frontsector->damagetype != SD_LAVA)
 			continue;
 
 		topheight = P_GetFFloorTopZAt(rover, mo->x, mo->y);

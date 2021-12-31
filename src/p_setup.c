@@ -1735,6 +1735,8 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 			sectors[i].damagetype = SD_WATER;
 		if (fastcmp(val, "Fire"))
 			sectors[i].damagetype = SD_FIRE;
+		if (fastcmp(val, "Lava"))
+			sectors[i].damagetype = SD_LAVA;
 		if (fastcmp(val, "Electric"))
 			sectors[i].damagetype = SD_ELECTRIC;
 		if (fastcmp(val, "Spike"))
@@ -5105,8 +5107,29 @@ static void P_ConvertBinaryMap(void)
 				sectors[i].damagetype = SD_WATER;
 				break;
 			case 3: //Damage (Fire)
-				sectors[i].damagetype = SD_FIRE;
+			{
+				size_t j;
+				boolean isLava = false;
+
+				for (j = 0; j < sectors[i].linecount; j++)
+				{
+					line_t *line = sectors[i].lines[j];
+
+					if (line->frontsector != &sectors[i])
+						continue;
+
+					if (line->flags & ML_BLOCKMONSTERS)
+						continue;
+
+					if (line->special == 120 || (line->special == 259 && (line->args[2] & FF_SWIMMABLE)))
+					{
+						isLava = true;
+						break;
+					}
+				}
+				sectors[i].damagetype = isLava ? SD_LAVA : SD_FIRE;
 				break;
+			}
 			case 4: //Damage (Electric)
 				sectors[i].damagetype = SD_ELECTRIC;
 				break;

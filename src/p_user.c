@@ -12230,7 +12230,10 @@ static boolean P_MobjAboveLava(mobj_t *mobj)
 
 		for (rover = sector->ffloors; rover; rover = rover->next)
 		{
-			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || rover->master->frontsector->damagetype != SD_FIRE)
+			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE))
+				continue;
+
+			if (rover->master->frontsector->damagetype != SD_FIRE && rover->master->frontsector->damagetype != SD_LAVA)
 				continue;
 
 			if (mobj->eflags & MFE_VERTICALFLIP)

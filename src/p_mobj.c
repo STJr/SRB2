@@ -2334,11 +2334,7 @@ boolean P_CheckDeathPitCollide(mobj_t *mo)
 
 boolean P_CheckSolidLava(ffloor_t *rover)
 {
-	if (rover->flags & FF_SWIMMABLE && rover->master->frontsector->damagetype == SD_FIRE
-		&& !(rover->master->flags & ML_BLOCKMONSTERS))
-			return true;
-
-	return false;
+	return (rover->flags & FF_SWIMMABLE) && (rover->master->frontsector->damagetype == SD_LAVA);
 }
 
 //
@@ -3305,7 +3301,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 
 		if (mobj->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
 		{
-			if (rover->master->frontsector->damagetype == SD_FIRE)
+			if (rover->master->frontsector->damagetype == SD_FIRE || rover->master->frontsector->damagetype == SD_LAVA)
 				mobj->eflags |= MFE_TOUCHLAVA;
 
 			if (rover->flags & FF_GOOWATER && !(mobj->flags & MF_NOGRAVITY))
@@ -4096,9 +4092,11 @@ static void P_KillRingsInLava(mobj_t *mo)
 			{
 				if (!(rover->flags & FF_EXISTS)) continue; // fof must be real
 
-				if (!(rover->flags & FF_SWIMMABLE // fof must be water
-					&& rover->master->frontsector->damagetype == SD_FIRE)) // fof must be lava water
-					continue;
+				if (!(rover->flags & FF_SWIMMABLE))
+					continue; // fof must be water
+
+				if (rover->master->frontsector->damagetype != SD_FIRE && rover->master->frontsector->damagetype != SD_LAVA)
+					continue;  // fof must have fire or lava damage
 
 				// find heights of FOF
 				topheight = P_GetFOFTopZ(mo, node->m_sector, rover, mo->x, mo->y, NULL);
