@@ -6897,7 +6897,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 604: // Adjustable Blinking Light
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
+				TAG_ITER_SECTORS(lines[i].args[0], s)
 					P_SpawnAdjustableStrobeFlash(&sectors[s], lines[i].args[3],
 						(lines[i].args[4] & TMB_USETARGET) ? sectors[s].lightlevel : lines[i].args[5],
 						lines[i].args[1], lines[i].args[2], lines[i].args[4] & TMB_SYNC);
