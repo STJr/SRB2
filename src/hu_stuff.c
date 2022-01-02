@@ -946,25 +946,15 @@ void HU_Ticker(void)
 
 static boolean teamtalk = false;
 
-// Clear spaces so we don't end up with messages only made out of emptiness
-static boolean HU_clearChatSpaces(void)
+static boolean HU_chatboxContainsOnlySpaces(void)
 {
-	size_t i = 0; // Used to just check our message
-	char c; // current character we're iterating.
-	boolean nothingbutspaces = true;
+	size_t i;
 
-	for (; i < strlen(w_chat); i++) // iterate through message and eradicate all spaces that don't belong.
-	{
-		c = w_chat[i];
-		if (!c)
-			break; // if there's nothing, it's safe to assume our message has ended, so let's not waste any more time here.
+	for (i = 0; w_chat[i]; i++)
+		if (w_chat[i] != ' ')
+			return false;
 
-		if (c != ' ') // Isn't a space
-		{
-			nothingbutspaces = false;
-		}
-	}
-	return nothingbutspaces;
+	return true;
 }
 
 //
@@ -980,8 +970,9 @@ static void HU_queueChatChar(char c)
 		size_t ci = 2;
 		INT32 target = 0;
 
-		if (HU_clearChatSpaces()) // Avoids being able to send empty messages, or something.
-			return; // If this returns true, that means our message was NOTHING but spaces, so don't send it period.
+		// if our message was nothing but spaces, don't send it.
+		if (HU_chatboxContainsOnlySpaces())
+			return;
 
 		do {
 			c = w_chat[-2+ci++];
