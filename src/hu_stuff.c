@@ -985,31 +985,6 @@ static void HU_sendChatMessage(void)
 	}
 }
 
-//
-// Handles key input and string input
-//
-static inline void HU_keyInChatString(char *s, char ch)
-{
-	if ((ch >= HU_FONTSTART && ch <= HU_FONTEND && hu_font[ch-HU_FONTSTART])
-	  || ch == ' ') // Allow spaces, of course
-	{
-		if (strlen(s) >= HU_MAXMSGLEN)
-			return;
-
-		memmove(&s[c_input + 1], &s[c_input], strlen(s) - c_input + 1);
-		s[c_input] = ch;
-		c_input++;
-	}
-	else if (ch == KEY_BACKSPACE)
-	{
-		if (c_input <= 0)
-			return;
-
-		memmove(&s[c_input - 1], &s[c_input], strlen(s) - c_input + 1);
-		c_input--;
-	}
-}
-
 #endif
 
 void HU_clearChatChars(void)
@@ -1102,18 +1077,21 @@ boolean HU_Responder(event_t *ev)
 			if (shiftdown ^ capslock)
 				c = shiftxform[c];
 		}
-		else	// if we're holding shift we should still shift non letter symbols
+		else // if we're holding shift we should still shift non letter symbols
 		{
 			if (shiftdown)
 				c = shiftxform[c];
 		}
 
 		// pasting. pasting is cool. chat is a bit limited, though :(
-		if (((c == 'v' || c == 'V') && ctrldown) && !CHAT_MUTE)
+		if ((c == 'v' || c == 'V') && ctrldown)
 		{
 			const char *paste;
 			size_t chatlen;
 			size_t pastelen;
+
+			if (CHAT_MUTE)
+				return true;
 
 			paste = I_ClipboardPaste();
 			if (paste == NULL)
@@ -1129,8 +1107,7 @@ boolean HU_Responder(event_t *ev)
 			c_input += pastelen;
 			return true;
 		}
-
-		if (c == KEY_ENTER)
+		else if (c == KEY_ENTER)
 		{
 			if (!CHAT_MUTE)
 				HU_sendChatMessage();
@@ -1175,8 +1152,24 @@ boolean HU_Responder(event_t *ev)
 			else
 				c_input++;
 		}
-		else if (!CHAT_MUTE)
-			HU_keyInChatString(w_chat, c);
+		else if ((c >= HU_FONTSTART && c <= HU_FONTEND && hu_font[c-HU_FONTSTART])
+			|| c == ' ') // Allow spaces, of course
+		{
+			if (CHAT_MUTE || strlen(w_chat) >= HU_MAXMSGLEN)
+				return true;
+
+			memmove(&w_chat[c_input + 1], &w_chat[c_input], strlen(w_chat) - c_input + 1);
+			w_chat[c_input] = c;
+			c_input++;
+		}
+		else if (c == KEY_BACKSPACE)
+		{
+			if (CHAT_MUTE || c_input <= 0)
+				return true;
+
+			memmove(&w_chat[c_input - 1], &w_chat[c_input], strlen(w_chat) - c_input + 1);
+			c_input--;
+		}
 
 		return true;
 	}
