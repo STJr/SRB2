@@ -862,7 +862,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 						return; // Don't even draw it
 					if (pl->ffloor->blend) // additive, (reverse) subtractive, modulative
 						ds_transmap = R_GetBlendTable(pl->ffloor->blend, trans);
-					else if (!(ds_transmap = R_GetTranslucencyTable(trans)))
+					else if (!(ds_transmap = R_GetTranslucencyTable(trans)) || trans == 0)
 						spanfunctype = SPANDRAWFUNC_SPLAT; // Opaque, but allow transparent flat pixels
 				}
 
