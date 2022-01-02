@@ -966,18 +966,21 @@ static void HU_queueChatChar(char c)
 	{
 		char buf[2+256];
 		char *msg = &buf[2];
-		size_t ci = 2;
+		size_t ci;
 		INT32 target = 0;
 
 		// if our message was nothing but spaces, don't send it.
 		if (HU_chatboxContainsOnlySpaces())
 			return;
 
-		do {
-			c = w_chat[-2+ci++];
-			if (!c || (c >= ' ' && !(c & 0x80))) // copy printable characters and terminating '\0' only.
-				buf[ci-1]=c;
-		} while (c);
+		// copy printable characters and terminating '\0' only.
+		for (ci = 2; w_chat[ci-2]; ci++)
+		{
+			c = w_chat[ci-2];
+			if (c >= ' ' && !(c & 0x80))
+				buf[ci] = c;
+		};
+		buf[ci] = '\0';
 
 		memset(w_chat, '\0', HU_MAXMSGLEN);
 		c_input = 0;
