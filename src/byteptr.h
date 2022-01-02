@@ -154,7 +154,8 @@ FUNCINLINE static ATTRINLINE UINT32 readulong(void *ptr)
 #define WRITESTRING(p,s)    do { size_t tmp_i = 0; for (;              s[tmp_i] != '\0'; tmp_i++) WRITECHAR(p, s[tmp_i]); WRITECHAR(p, '\0');} while (0)
 #define WRITEMEM(p,s,n)     do { memcpy(p, s, n); p += n; } while (0)
 
-#define SKIPSTRING(p)       while (READCHAR(p) != '\0')
+#define SKIPSTRING(p)                                         while (READCHAR(p) != '\0')
+#define SKIPSTRINGN(p,n)    ({ size_t tmp_i = 0; for (; tmp_i < n && READCHAR(p) != '\0'; tmp_i++); })
 
 #define READSTRINGN(p,s,n)  ({ size_t tmp_i = 0; for (; tmp_i < n && (s[tmp_i] = READCHAR(p)) != '\0'; tmp_i++); s[tmp_i] = '\0';})
 #define READSTRING(p,s)     ({ size_t tmp_i = 0; for (;              (s[tmp_i] = READCHAR(p)) != '\0'; tmp_i++); s[tmp_i] = '\0';})
