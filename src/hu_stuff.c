@@ -957,11 +957,8 @@ static boolean HU_chatboxContainsOnlySpaces(void)
 	return true;
 }
 
-//
-//
 static void HU_queueChatChar(char c)
 {
-	// send automaticly the message (no more chat char)
 	if (c == KEY_ENTER)
 	{
 		char buf[2+256];
@@ -1010,7 +1007,7 @@ static void HU_queueChatChar(char c)
 
 			strncpy(playernum, msg+3, 3);
 			// check for undesirable characters in our "number"
-			if (((playernum[0] < '0') || (playernum[0] > '9')) || ((playernum[1] < '0') || (playernum[1] > '9')))
+			if (!(isdigit(playernum[0]) && isdigit(playernum[1])))
 			{
 				// check if playernum[1] is a space
 				if (playernum[1] == ' ')
@@ -1023,17 +1020,13 @@ static void HU_queueChatChar(char c)
 				}
 			}
 			// I'm very bad at C, I swear I am, additional checks eww!
-			if (spc != 0)
+			if (spc != 0 && msg[5] != ' ')
 			{
-				if (msg[5] != ' ')
-				{
-					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<player num> \'.", false);
-					return;
-				}
+				HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<player num> \'.", false);
+				return;
 			}
 
 			target = atoi(playernum); // turn that into a number
-			//CONS_Printf("%d\n", target);
 
 			// check for target player, if it doesn't exist then we can't send the message!
 			if (target < MAXPLAYERS && playeringame[target]) // player exists
@@ -1050,11 +1043,7 @@ static void HU_queueChatChar(char c)
 		}
 		if (ci > 3) // don't send target+flags+empty message.
 		{
-			if (teamtalk)
-				buf[0] = -1; // target
-			else
-				buf[0] = target;
-
+			buf[0] = teamtalk ? -1 : target; // target
 			buf[1] = 0; // flags
 			SendNetXCmd(XD_SAY, buf, 2 + strlen(&buf[2]) + 1);
 		}
