@@ -1170,6 +1170,13 @@ boolean HU_Responder(event_t *ev)
 			memmove(&w_chat[c_input - 1], &w_chat[c_input], strlen(w_chat) - c_input + 1);
 			c_input--;
 		}
+		else if (c == KEY_DEL)
+		{
+			if (CHAT_MUTE || c_input >= strlen(w_chat))
+				return true;
+
+			memmove(&w_chat[c_input], &w_chat[c_input + 1], strlen(w_chat) - c_input);
+		}
 
 		return true;
 	}
