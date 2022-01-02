@@ -858,72 +858,6 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 #endif
 }
 
-// Handles key input and string input
-//
-static inline boolean HU_keyInChatString(char *s, char ch)
-{
-	size_t l;
-
-	if ((ch >= HU_FONTSTART && ch <= HU_FONTEND && hu_font[ch-HU_FONTSTART])
-	  || ch == ' ') // Allow spaces, of course
-	{
-		l = strlen(s);
-		if (l < HU_MAXMSGLEN - 1)
-		{
-			if (c_input >= strlen(s)) // don't do anything complicated
-			{
-				s[l++] = ch;
-				s[l]=0;
-			}
-			else
-			{
-
-				// move everything past c_input for new characters:
-				size_t m = HU_MAXMSGLEN-1;
-				while (m>=c_input)
-				{
-					if (s[m])
-						s[m+1] = (s[m]);
-					if (m == 0) // prevent overflow
-						break;
-					m--;
-				}
-				s[c_input] = ch; // and replace this.
-			}
-			c_input++;
-			return true;
-		}
-		return false;
-	}
-	else if (ch == KEY_BACKSPACE)
-	{
-		size_t i = c_input;
-
-		if (c_input <= 0)
-			return false;
-
-		if (!s[i-1])
-			return false;
-
-		if (i >= strlen(s)-1)
-		{
-			s[strlen(s)-1] = 0;
-			c_input--;
-			return false;
-		}
-
-		for (; (i < HU_MAXMSGLEN); i++)
-		{
-			s[i-1] = s[i];
-		}
-		c_input--;
-	}
-	else if (ch != KEY_ENTER)
-		return false; // did not eat key
-
-	return true; // ate the key
-}
-
 #endif
 
 //
@@ -945,6 +879,10 @@ void HU_Ticker(void)
 #ifndef NONET
 
 static boolean teamtalk = false;
+static boolean justscrolleddown;
+static boolean justscrolledup;
+static INT16 typelines = 1; // number of drawfill lines we need when drawing the chat. it's some weird hack and might be one frame off but I'm lazy to make another loop.
+// It's up here since it has to be reset when we open the chat.
 
 static boolean HU_chatboxContainsOnlySpaces(void)
 {
@@ -1050,6 +988,73 @@ static void HU_queueChatChar(char c)
 		return;
 	}
 }
+
+// Handles key input and string input
+//
+static inline boolean HU_keyInChatString(char *s, char ch)
+{
+	size_t l;
+
+	if ((ch >= HU_FONTSTART && ch <= HU_FONTEND && hu_font[ch-HU_FONTSTART])
+	  || ch == ' ') // Allow spaces, of course
+	{
+		l = strlen(s);
+		if (l < HU_MAXMSGLEN - 1)
+		{
+			if (c_input >= strlen(s)) // don't do anything complicated
+			{
+				s[l++] = ch;
+				s[l]=0;
+			}
+			else
+			{
+
+				// move everything past c_input for new characters:
+				size_t m = HU_MAXMSGLEN-1;
+				while (m>=c_input)
+				{
+					if (s[m])
+						s[m+1] = (s[m]);
+					if (m == 0) // prevent overflow
+						break;
+					m--;
+				}
+				s[c_input] = ch; // and replace this.
+			}
+			c_input++;
+			return true;
+		}
+		return false;
+	}
+	else if (ch == KEY_BACKSPACE)
+	{
+		size_t i = c_input;
+
+		if (c_input <= 0)
+			return false;
+
+		if (!s[i-1])
+			return false;
+
+		if (i >= strlen(s)-1)
+		{
+			s[strlen(s)-1] = 0;
+			c_input--;
+			return false;
+		}
+
+		for (; (i < HU_MAXMSGLEN); i++)
+		{
+			s[i-1] = s[i];
+		}
+		c_input--;
+	}
+	else if (ch != KEY_ENTER)
+		return false; // did not eat key
+
+	return true; // ate the key
+}
+
 #endif
 
 void HU_clearChatChars(void)
@@ -1060,13 +1065,6 @@ void HU_clearChatChars(void)
 
 	I_UpdateMouseGrab();
 }
-
-#ifndef NONET
-static boolean justscrolleddown;
-static boolean justscrolledup;
-static INT16 typelines = 1; // number of drawfill lines we need when drawing the chat. it's some weird hack and might be one frame off but I'm lazy to make another loop.
-// It's up here since it has to be reset when we open the chat.
-#endif
 
 //
 // Returns true if key eaten
