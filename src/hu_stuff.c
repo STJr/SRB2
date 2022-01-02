@@ -76,7 +76,7 @@ patch_t *nto_font[NT_FONTSIZE];
 
 static player_t *plr;
 boolean chat_on; // entering a chat message?
-static char w_chat[HU_MAXMSGLEN];
+static char w_chat[HU_MAXMSGLEN + 1];
 static size_t c_input = 0; // let's try to make the chat input less shitty.
 static boolean headsupactive = false;
 boolean hu_showscores; // draw rankings
@@ -915,7 +915,7 @@ static void HU_sendChatMessage(void)
 	};
 	buf[ci] = '\0';
 
-	memset(w_chat, '\0', HU_MAXMSGLEN);
+	memset(w_chat, '\0', sizeof(w_chat));
 	c_input = 0;
 
 	// last minute mute check
@@ -985,64 +985,27 @@ static void HU_sendChatMessage(void)
 	}
 }
 
+//
 // Handles key input and string input
 //
 static inline void HU_keyInChatString(char *s, char ch)
 {
-	size_t l;
-
 	if ((ch >= HU_FONTSTART && ch <= HU_FONTEND && hu_font[ch-HU_FONTSTART])
 	  || ch == ' ') // Allow spaces, of course
 	{
-		l = strlen(s);
-		if (l < HU_MAXMSGLEN - 1)
-		{
-			if (c_input >= strlen(s)) // don't do anything complicated
-			{
-				s[l++] = ch;
-				s[l]=0;
-			}
-			else
-			{
-
-				// move everything past c_input for new characters:
-				size_t m = HU_MAXMSGLEN-1;
-				while (m>=c_input)
-				{
-					if (s[m])
-						s[m+1] = (s[m]);
-					if (m == 0) // prevent overflow
-						break;
-					m--;
-				}
-				s[c_input] = ch; // and replace this.
-			}
-			c_input++;
+		if (strlen(s) >= HU_MAXMSGLEN)
 			return;
-		}
-		return;
+
+		memmove(&s[c_input + 1], &s[c_input], strlen(s) - c_input + 1);
+		s[c_input] = ch;
+		c_input++;
 	}
 	else if (ch == KEY_BACKSPACE)
 	{
-		size_t i = c_input;
-
 		if (c_input <= 0)
 			return;
 
-		if (!s[i-1])
-			return;
-
-		if (i >= strlen(s)-1)
-		{
-			s[strlen(s)-1] = 0;
-			c_input--;
-			return;
-		}
-
-		for (; (i < HU_MAXMSGLEN); i++)
-		{
-			s[i-1] = s[i];
-		}
+		memmove(&s[c_input - 1], &s[c_input], strlen(s) - c_input + 1);
 		c_input--;
 	}
 }
@@ -1051,7 +1014,7 @@ static inline void HU_keyInChatString(char *s, char ch)
 
 void HU_clearChatChars(void)
 {
-	memset(w_chat, '\0', HU_MAXMSGLEN);
+	memset(w_chat, '\0', sizeof(w_chat));
 	chat_on = false;
 	c_input = 0;
 
@@ -1148,12 +1111,11 @@ boolean HU_Responder(event_t *ev)
 		// pasting. pasting is cool. chat is a bit limited, though :(
 		if (((c == 'v' || c == 'V') && ctrldown) && !CHAT_MUTE)
 		{
-			const char *paste = I_ClipboardPaste();
+			const char *paste;
 			size_t chatlen;
 			size_t pastelen;
 
-			// create a dummy string real quickly
-
+			paste = I_ClipboardPaste();
 			if (paste == NULL)
 				return true;
 
@@ -1162,27 +1124,10 @@ boolean HU_Responder(event_t *ev)
 			if (chatlen+pastelen > HU_MAXMSGLEN)
 				return true; // we can't paste this!!
 
-			if (c_input >= strlen(w_chat)) // add it at the end of the string.
-			{
-				memcpy(&w_chat[chatlen], paste, pastelen); // copy all of that.
-				c_input += pastelen;
-				return true;
-			}
-			else // otherwise, we need to shift everything and make space, etc etc
-			{
-				size_t i = HU_MAXMSGLEN-1;
-				while (i >= c_input)
-				{
-					if (w_chat[i])
-						w_chat[i+pastelen] = w_chat[i];
-					if (i == 0) // prevent overflow
-						break;
-					i--;
-				}
-				memcpy(&w_chat[c_input], paste, pastelen); // copy all of that.
-				c_input += pastelen;
-				return true;
-			}
+			memmove(&w_chat[c_input + pastelen], &w_chat[c_input], pastelen);
+			memcpy(&w_chat[c_input], paste, pastelen); // copy all of that.
+			c_input += pastelen;
+			return true;
 		}
 
 		if (c == KEY_ENTER)
