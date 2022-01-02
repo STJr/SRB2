@@ -614,7 +614,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				return; // Don't even draw it
 			if (pfloor->blend) // additive, (reverse) subtractive, modulative
 				dc_transmap = R_GetBlendTable(pfloor->blend, trans);
-			else if (!(dc_transmap = R_GetTranslucencyTable(trans)))
+			else if (!(dc_transmap = R_GetTranslucencyTable(trans)) || trans == 0)
 				fuzzy = false; // Opaque
 		}
 
