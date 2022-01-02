@@ -977,7 +977,7 @@ static void HU_sendChatMessage(void)
 		newmsg = msg+5+spc;
 		strlcpy(msg, newmsg, 255);
 	}
-	if (ci > 3) // don't send target+flags+empty message.
+	if (ci > 2) // don't send target+flags+empty message.
 	{
 		buf[0] = teamtalk ? -1 : target; // target
 		buf[1] = 0; // flags
