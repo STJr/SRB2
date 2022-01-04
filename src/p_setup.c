@@ -4989,8 +4989,8 @@ static void P_ConvertBinaryMap(void)
 		case 136: //Pyre Fly
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
-		case 202: //Egg Slimer
-			mapthings[i].args[5] = !!(mapthings[i].options & MTF_AMBUSH);
+		case 201: //Egg Slimer
+			mapthings[i].args[5] = !(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 203: //Egg Colosseum
 			mapthings[i].args[5] = LE_BOSS4DROP + mapthings[i].extrainfo * LE_PARAMWIDTH;
