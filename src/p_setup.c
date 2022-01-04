@@ -3557,10 +3557,10 @@ static void P_ConvertBinaryMap(void)
 
 			//Flags
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] = TMFL_NOBOSSES;
+				lines[i].args[2] |= TMFL_NOBOSSES;
 			//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 			if (lines[i].flags & ML_EFFECT6 || lines[i].args[1] == 256)
-				lines[i].args[2] = TMFL_SPLAT;
+				lines[i].args[2] |= TMFL_SPLAT;
 
 			break;
 		case 259: //Custom FOF
