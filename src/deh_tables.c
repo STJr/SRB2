@@ -5099,6 +5099,7 @@ struct int_const_s const INT_CONST[] = {
 	{"PAL_MIXUP",PAL_MIXUP},
 	{"PAL_RECYCLE",PAL_RECYCLE},
 	{"PAL_NUKE",PAL_NUKE},
+	{"PAL_INVERT",PAL_INVERT},
 	// for P_DamageMobj
 	//// Damage types
 	{"DMG_WATER",DMG_WATER},

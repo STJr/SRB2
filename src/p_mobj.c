@@ -395,13 +395,13 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 			if (skin)
 			{
 				UINT16 stateframe = st->frame;
-				
+
 				// Add/Remove FF_SPR2SUPER based on certain conditions
 				if (player->charflags & SF_NOSUPERSPRITES)
 					stateframe = stateframe & ~FF_SPR2SUPER;
 				else if (player->powers[pw_super])
 					stateframe = stateframe | FF_SPR2SUPER;
-				
+
 				if (stateframe & FF_SPR2SUPER)
 				{
 					if (mobj->eflags & MFE_FORCENOSUPER)
@@ -409,11 +409,11 @@ boolean P_SetPlayerMobjState(mobj_t *mobj, statenum_t state)
 				}
 				else if (mobj->eflags & MFE_FORCESUPER)
 					stateframe = stateframe | FF_SPR2SUPER;
-					
+
 				// Get the sprite2 and frame number
 				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), mobj->player);
 				numframes = skin->sprites[spr2].numframes;
-				
+
 				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
 					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
@@ -541,7 +541,7 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 			if (skin)
 			{
 				UINT16 stateframe = st->frame;
-				
+
 				// Add/Remove FF_SPR2SUPER based on certain conditions
 				if (stateframe & FF_SPR2SUPER)
 				{
@@ -550,11 +550,11 @@ boolean P_SetMobjState(mobj_t *mobj, statenum_t state)
 				}
 				else if (mobj->eflags & MFE_FORCESUPER)
 					stateframe = stateframe | FF_SPR2SUPER;
-					
+
 				// Get the sprite2 and frame number
 				spr2 = P_GetSkinSprite2(skin, (stateframe & FF_FRAMEMASK), NULL);
 				numframes = skin->sprites[spr2].numframes;
-				
+
 				if (state == S_PLAY_STND && (spr2 & FF_SPR2SUPER) && skin->sprites[SPR2_WAIT|FF_SPR2SUPER].numframes == 0)
 					mobj->tics = -1;	// If no super wait, don't wait at all
 			}
@@ -1872,7 +1872,7 @@ void P_XYMovement(mobj_t *mo)
 		// blocked move
 		moved = false;
 
-		if (player) 
+		if (player)
 			B_MoveBlocked(player);
 
 		if (LUA_HookMobjMoveBlocked(mo, tmhitthing, blockingline))
@@ -2522,7 +2522,7 @@ boolean P_ZMovement(mobj_t *mo)
 					{
 						P_KillMobj(mo, NULL, NULL, 0);
 					}
-					return false;
+					return !P_MobjWasRemoved(mo); // allows explosion states to run
 				}
 				else
 				{
@@ -3323,7 +3323,7 @@ void P_MobjCheckWater(mobj_t *mobj)
 			{ // Water removes electric and non-water fire shields...
 			    if (electric)
 				    P_FlashPal(p, PAL_WHITE, 1);
-				
+
 				p->powers[pw_shield] = p->powers[pw_shield] & SH_STACK;
 			}
 		}
@@ -7059,6 +7059,8 @@ static void P_PyreFlyBurn(mobj_t *mobj, fixed_t hoffs, INT16 vrange, mobjtype_t 
 	fixed_t zoffs = P_RandomRange(-vrange, vrange)*FRACUNIT;
 	mobj_t *particle = P_SpawnMobjFromMobj(mobj, xoffs, yoffs, zoffs, mobjtype);
 	particle->momz = momz;
+	particle->flags2 |= MF2_LINKDRAW;
+	P_SetTarget(&particle->tracer, mobj);
 }
 
 static void P_MobjScaleThink(mobj_t *mobj)
@@ -7841,6 +7843,48 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 	case MT_SEED:
 		if (P_MobjFlip(mobj)*mobj->momz < mobj->info->speed)
 			mobj->momz = P_MobjFlip(mobj)*mobj->info->speed;
+		break;
+	case MT_SPIKE:
+		if (mobj->fuse)
+		{
+			mobj->fuse--;
+			break;
+		}
+		P_SetMobjState(mobj, mobj->state->nextstate);
+		mobj->fuse = mobj->info->speed;
+		if (mobj->spawnpoint)
+			mobj->fuse += mobj->spawnpoint->angle;
+		break;
+	case MT_WALLSPIKE:
+		if (mobj->fuse)
+		{
+			mobj->fuse--;
+			break;
+		}
+		P_SetMobjState(mobj, mobj->state->nextstate);
+		mobj->fuse = mobj->info->speed;
+		if (mobj->spawnpoint)
+			mobj->fuse += (mobj->spawnpoint->angle / 360);
+		break;
+	case MT_WALLSPIKEBASE:
+		if (!mobj->target)
+		{
+			P_RemoveMobj(mobj);
+			return;
+		}
+		mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|(mobj->target->frame & FF_FRAMEMASK);
+#if 0
+		if (mobj->angle != mobj->target->angle + ANGLE_90) // reposition if not the correct angle
+		{
+			mobj_t* target = mobj->target; // shortcut
+			const fixed_t baseradius = target->radius - (target->scale/2); //FixedMul(FRACUNIT/2, target->scale);
+			P_UnsetThingPosition(mobj);
+			mobj->x = target->x - P_ReturnThrustX(target, target->angle, baseradius);
+			mobj->y = target->y - P_ReturnThrustY(target, target->angle, baseradius);
+			P_SetThingPosition(mobj);
+			mobj->angle = target->angle + ANGLE_90;
+		}
+#endif
 		break;
 	case MT_ROCKCRUMBLE1:
 	case MT_ROCKCRUMBLE2:
@@ -9238,25 +9282,6 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 
 	switch (mobj->type)
 	{
-	case MT_WALLSPIKEBASE:
-		if (!mobj->target) {
-			P_RemoveMobj(mobj);
-			return false;
-		}
-		mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|(mobj->target->frame & FF_FRAMEMASK);
-#if 0
-		if (mobj->angle != mobj->target->angle + ANGLE_90) // reposition if not the correct angle
-		{
-			mobj_t* target = mobj->target; // shortcut
-			const fixed_t baseradius = target->radius - (target->scale/2); //FixedMul(FRACUNIT/2, target->scale);
-			P_UnsetThingPosition(mobj);
-			mobj->x = target->x - P_ReturnThrustX(target, target->angle, baseradius);
-			mobj->y = target->y - P_ReturnThrustY(target, target->angle, baseradius);
-			P_SetThingPosition(mobj);
-			mobj->angle = target->angle + ANGLE_90;
-		}
-#endif
-		break;
 	case MT_FALLINGROCK:
 		// Despawn rocks here in case zmovement code can't do so (blame slopes)
 		if (!mobj->momx && !mobj->momy && !mobj->momz
@@ -9942,18 +9967,6 @@ static boolean P_FuseThink(mobj_t *mobj)
 		break;
 	case MT_METALSONIC_BATTLE:
 		break; // don't remove
-	case MT_SPIKE:
-		P_SetMobjState(mobj, mobj->state->nextstate);
-		mobj->fuse = mobj->info->speed;
-		if (mobj->spawnpoint)
-			mobj->fuse += mobj->spawnpoint->angle;
-		break;
-	case MT_WALLSPIKE:
-		P_SetMobjState(mobj, mobj->state->nextstate);
-		mobj->fuse = mobj->info->speed;
-		if (mobj->spawnpoint)
-			mobj->fuse += (mobj->spawnpoint->angle / 360);
-		break;
 	case MT_NIGHTSCORE:
 		P_RemoveMobj(mobj);
 		return false;
@@ -10422,7 +10435,7 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 		case MT_RING:
 		case MT_FLINGRING:
-		
+
 		case MT_COIN:
 		case MT_FLINGCOIN:
 
@@ -12956,17 +12969,18 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		// Pop up spikes!
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
-			mobj->flags &= ~MF_SCENERY;
 			mobj->fuse = (16 - mthing->extrainfo)*(mthing->angle + mobj->info->speed)/16;
 			if (mthing->options & MTF_EXTRA)
 				P_SetMobjState(mobj, mobj->info->meleestate);
 		}
-		// Use per-thing collision for spikes if the deaf flag isn't checked.
-		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
+		else
+			mobj->flags |= MF_NOTHINK;
+		// no collision for spikes if the ambush flag is checked
+		if ((mthing->options & MTF_AMBUSH) || metalrecording)
 		{
 			P_UnsetThingPosition(mobj);
-			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
-			mobj->flags |= MF_SOLID;
+			mobj->flags |= (MF_NOBLOCKMAP|MF_NOCLIPHEIGHT);
+			mobj->flags &= ~MF_SOLID;
 			P_SetThingPosition(mobj);
 		}
 		break;
@@ -12974,20 +12988,20 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		// Pop up spikes!
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
-			mobj->flags &= ~MF_SCENERY;
 			mobj->fuse = (16 - mthing->extrainfo)*((mthing->angle/360) + mobj->info->speed)/16;
 			if (mthing->options & MTF_EXTRA)
 				P_SetMobjState(mobj, mobj->info->meleestate);
 		}
-		// Use per-thing collision for spikes if the deaf flag isn't checked.
-		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
+		else
+			mobj->flags |= MF_NOTHINK;
+		// no collision for spikes if the ambush flag is checked
+		if ((mthing->options & MTF_AMBUSH) || metalrecording)
 		{
 			P_UnsetThingPosition(mobj);
-			mobj->flags &= ~(MF_NOBLOCKMAP | MF_NOCLIPHEIGHT);
-			mobj->flags |= MF_SOLID;
+			mobj->flags |= (MF_NOBLOCKMAP|MF_NOCLIPHEIGHT);
+			mobj->flags &= ~MF_SOLID;
 			P_SetThingPosition(mobj);
 		}
-
 		// spawn base
 		{
 			const angle_t mobjangle = FixedAngle(mthing->angle << FRACBITS); // the mobj's own angle hasn't been set quite yet so...
@@ -13001,6 +13015,8 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			P_SetScale(base, mobj->scale);
 			P_SetTarget(&base->target, mobj);
 			P_SetTarget(&mobj->tracer, base);
+			if (!(mthing->options & MTF_OBJECTSPECIAL))
+				base->flags |= MF_NOTHINK;
 		}
 		break;
 	case MT_RING_BOX:
