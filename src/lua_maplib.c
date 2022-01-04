@@ -679,7 +679,7 @@ static int sector_get(lua_State *L)
 		lua_pushinteger(L, (UINT8)sector->triggerer);
 		return 1;
 	case sector_friction: // friction
-		lua_pushinteger(L, sector->friction);
+		lua_pushfixed(L, sector->friction);
 		return 1;
 	case sector_gravity: // gravity
 		lua_pushfixed(L, sector->gravity);
