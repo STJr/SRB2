@@ -11588,9 +11588,7 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[ 2].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[ 3].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[ 4].status = IT_STRING | IT_CVAR;
-		OP_ServerOptionsMenu[36].status = (netgame
-			? IT_GRAYEDOUT
-			: (IT_STRING | IT_CVAR | IT_CV_STRING));
+		OP_ServerOptionsMenu[36].status = IT_STRING | IT_CVAR | IT_CV_STRING;
 		OP_ServerOptionsMenu[37].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[38].status = IT_STRING | IT_CVAR;
 	}

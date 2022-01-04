@@ -11488,7 +11488,7 @@ void P_PlayerThink(player_t *player)
 
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i] || players[i].spectator || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
+				if (!playeringame[i] || players[i].spectator || players[i].bot)
 					continue;
 				if (players[i].lives <= 0)
 					continue;
@@ -11520,7 +11520,7 @@ void P_PlayerThink(player_t *player)
 
 			for (i = 0; i < MAXPLAYERS; i++)
 			{ 
-				if (!playeringame[i] || players[i].spectator || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN)
+				if (!playeringame[i] || players[i].spectator || players[i].bot)
 					continue;
 				if (players[i].quittime > 30 * TICRATE)
 					continue;
