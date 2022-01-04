@@ -448,13 +448,21 @@ typedef enum
 	TMPF_NONEXCLUSIVE = 1<<1,
 } textmappusherflags_t;
 
-
 typedef enum
 {
 	TMPP_NOZFADE      = 1,
 	TMPP_PUSHZ        = 1<<1,
 	TMPP_NONEXCLUSIVE = 1<<2,
 } textmappointpushflags_t;
+
+typedef enum
+{
+	TMB_TRANSLUCENT     = 0,
+	TMB_ADD             = 1,
+	TMB_SUBTRACT        = 2,
+	TMB_REVERSESUBTRACT = 3,
+	TMB_MODULATE        = 4,
+} textmapblendmodes_t;
 
 // GETSECSPECIAL (specialval, section)
 //
