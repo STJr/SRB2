@@ -5121,13 +5121,13 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].args[0] = !(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 700: //Water ambience A
-		case 701: //Water ambience A
-		case 702: //Water ambience A
-		case 703: //Water ambience A
-		case 704: //Water ambience A
-		case 705: //Water ambience A
-		case 706: //Water ambience A
-		case 707: //Water ambience A
+		case 701: //Water ambience B
+		case 702: //Water ambience C
+		case 703: //Water ambience D
+		case 704: //Water ambience E
+		case 705: //Water ambience F
+		case 706: //Water ambience G
+		case 707: //Water ambience H
 			mapthings[i].args[0] = 35;
 			P_WriteConstant(sfx_amwtr1 + mapthings[i].type - 700, &mapthings[i].stringargs[0]);
 			mapthings[i].type = 700;
