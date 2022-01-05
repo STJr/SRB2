@@ -1210,7 +1210,7 @@ static void P_LoadSidedefs(UINT8 *data)
 		isfrontside = sd->line->sidenum[0] == i;
 
 		// Repeat count for midtexture
-		if (((sd->line->flags & (ML_TWOSIDED|ML_EFFECT5)) == (ML_TWOSIDED|ML_EFFECT5))
+		if (((sd->line->flags & (ML_TWOSIDED|ML_WRAPMIDTEX)) == (ML_TWOSIDED|ML_WRAPMIDTEX))
 			&& !(sd->special >= 300 && sd->special < 500)) // exempt linedef exec specials
 		{
 			sd->repeatcnt = (INT16)(((UINT16)textureoffset) >> 12);
@@ -1841,17 +1841,17 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 	else if (fastcmp(param, "dontpegbottom") && fastcmp("true", val))
 		lines[i].flags |= ML_DONTPEGBOTTOM;
 	else if (fastcmp(param, "skewtd") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT1;
+		lines[i].flags |= ML_SKEWTD;
 	else if (fastcmp(param, "noclimb") && fastcmp("true", val))
 		lines[i].flags |= ML_NOCLIMB;
 	else if (fastcmp(param, "noskew") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT2;
+		lines[i].flags |= ML_NOSKEW;
 	else if (fastcmp(param, "midpeg") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT3;
+		lines[i].flags |= ML_MIDPEG;
 	else if (fastcmp(param, "midsolid") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT4;
+		lines[i].flags |= ML_MIDSOLID;
 	else if (fastcmp(param, "wrapmidtex") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT5;
+		lines[i].flags |= ML_WRAPMIDTEX;
 	else if (fastcmp(param, "effect6") && fastcmp("true", val))
 		lines[i].flags |= ML_EFFECT6;
 	else if (fastcmp(param, "nonet") && fastcmp("true", val))
@@ -3217,7 +3217,7 @@ static void P_AddBinaryMapTags(void)
 			boolean matches_target_tag = target_tag && Tag_Find(&sectors[j].tags, target_tag);
 			size_t k;
 			for (k = 0; k < 4; k++) {
-				if (lines[i].flags & ML_EFFECT5) {
+				if (lines[i].flags & ML_WRAPMIDTEX) {
 					if (matches_target_tag || (offset_tags[k] && Tag_Find(&sectors[j].tags, offset_tags[k]))) {
 						Tag_Add(&sectors[j].tags, tag);
 						break;
@@ -3323,13 +3323,13 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 3: //Zoom tube parameters
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT4);
+			lines[i].args[2] = !!(lines[i].flags & ML_MIDSOLID);
 			break;
 		case 4: //Speed pad parameters
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[1] |= TMSP_NOTELEPORT;
-			if (lines[i].flags & ML_EFFECT5)
+			if (lines[i].flags & ML_WRAPMIDTEX)
 				lines[i].args[1] |= TMSP_FORCESPIN;
 			P_WriteConstant(sides[lines[i].sidenum[0]].toptexture ? sides[lines[i].sidenum[0]].toptexture : sfx_spdpad, &lines[i].stringargs[0]);
 			break;
@@ -3378,15 +3378,15 @@ static void P_ConvertBinaryLinedefTypes(void)
 					sectors[s].flags &= ~MSF_FLIPSPECIAL_FLOOR;
 					sectors[s].flags |= MSF_FLIPSPECIAL_CEILING;
 				}
-				else if (lines[i].flags & ML_EFFECT4)
+				else if (lines[i].flags & ML_MIDSOLID)
 					sectors[s].flags |= MSF_FLIPSPECIAL_BOTH;
 
-				if (lines[i].flags & ML_EFFECT3)
+				if (lines[i].flags & ML_MIDPEG)
 					sectors[s].flags |= MSF_TRIGGERSPECIAL_TOUCH;
-				if (lines[i].flags & ML_EFFECT2)
+				if (lines[i].flags & ML_NOSKEW)
 					sectors[s].flags |= MSF_TRIGGERSPECIAL_HEADBUMP;
 
-				if (lines[i].flags & ML_EFFECT1)
+				if (lines[i].flags & ML_SKEWTD)
 					sectors[s].flags |= MSF_INVERTPRECIP;
 			}
 
@@ -3402,7 +3402,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 11: //Rope hang parameters
 			lines[i].args[0] = (lines[i].flags & ML_NOCLIMB) ? 0 : sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT1);
+			lines[i].args[2] = !!(lines[i].flags & ML_SKEWTD);
 			break;
 		case 13: //Heat wave effect
 		{
@@ -3416,7 +3416,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 14: //Bustable block parameters
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT1);
+			lines[i].args[2] = !!(lines[i].flags & ML_SKEWTD);
 			P_WriteConstant(sides[lines[i].sidenum[0]].toptexture, &lines[i].stringargs[0]);
 			break;
 		case 16: //Minecart parameters
@@ -3456,15 +3456,15 @@ static void P_ConvertBinaryLinedefTypes(void)
 						: ((lines[paramline].frontsector->floorheight >> FRACBITS) / 100);
 
 			//Flags
-			if (lines[paramline].flags & ML_EFFECT1)
+			if (lines[paramline].flags & ML_SKEWTD)
 				lines[i].args[3] |= TMPF_NOINSIDES;
-			if (lines[paramline].flags & ML_EFFECT2)
+			if (lines[paramline].flags & ML_NOSKEW)
 				lines[i].args[3] |= TMPF_INTANGIBLE;
-			if (lines[paramline].flags & ML_EFFECT3)
+			if (lines[paramline].flags & ML_MIDPEG)
 				lines[i].args[3] |= TMPF_PUSHABLESTOP;
-			if (lines[paramline].flags & ML_EFFECT4)
+			if (lines[paramline].flags & ML_MIDSOLID)
 				lines[i].args[3] &= ~TMPF_INVISIBLEPLANES;
-			/*if (lines[paramline].flags & ML_EFFECT5)
+			/*if (lines[paramline].flags & ML_WRAPMIDTEX)
 				lines[i].args[3] |= TMPF_DONTCLIPPLANES;*/
 			if (lines[paramline].flags & ML_EFFECT6)
 				lines[i].args[3] |= TMPF_SPLAT;
@@ -3488,7 +3488,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset ? sides[lines[i].sidenum[0]].rowoffset >> FRACBITS : 90;
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[3] |= TMPR_DONTROTATEOTHERS;
-			else if (lines[i].flags & ML_EFFECT4)
+			else if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[3] |= TMPR_ROTATEPLAYERS;
 			break;
 		case 50: //Instantly lower floor on level load
@@ -3534,7 +3534,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 62: //Crusher (Floor to ceiling)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = lines[i].special - 61;
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 			{
 				lines[i].args[2] = abs(lines[i].dx) >> FRACBITS;
 				lines[i].args[3] = lines[i].args[2];
@@ -3604,9 +3604,9 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[3] |= TMFA_SPLAT;
 
 			//Tangibility
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[4] |= TMFT_DONTBLOCKOTHERS;
-			if (lines[i].flags & ML_EFFECT2)
+			if (lines[i].flags & ML_NOSKEW)
 				lines[i].args[4] |= TMFT_DONTBLOCKPLAYER;
 
 			lines[i].special = 100;
@@ -3638,9 +3638,9 @@ static void P_ConvertBinaryLinedefTypes(void)
 			//Flags
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[3] |= TMFW_DOUBLESHADOW;
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[3] |= TMFW_COLORMAPONLY;
-			if (!(lines[i].flags & ML_EFFECT5))
+			if (!(lines[i].flags & ML_WRAPMIDTEX))
 				lines[i].args[3] |= TMFW_NORIPPLE;
 
 			//Goo?
@@ -3694,9 +3694,9 @@ static void P_ConvertBinaryLinedefTypes(void)
 			else
 				lines[i].args[4] |= TMFT_INTANGIBLEBOTTOM|TMFT_INTANGIBLETOP;
 
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[4] |= TMFT_DONTBLOCKOTHERS;
-			if (lines[i].flags & ML_EFFECT2)
+			if (lines[i].flags & ML_NOSKEW)
 				lines[i].args[4] |= TMFT_DONTBLOCKPLAYER;
 
 			lines[i].special = 100;
@@ -3762,9 +3762,9 @@ static void P_ConvertBinaryLinedefTypes(void)
 			if (lines[i].flags & ML_EFFECT6)
 				lines[i].args[4] |= TMFC_SPLAT;
 
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[3] |= TMFT_DONTBLOCKOTHERS;
-			if (lines[i].flags & ML_EFFECT2)
+			if (lines[i].flags & ML_NOSKEW)
 				lines[i].args[3] |= TMFT_DONTBLOCKPLAYER;
 
 			lines[i].special = 170;
@@ -3800,9 +3800,9 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[3] |= TMFA_SPLAT;
 
 			//Tangibility
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[4] |= TMFT_DONTBLOCKOTHERS;
-			if (lines[i].flags & ML_EFFECT2)
+			if (lines[i].flags & ML_NOSKEW)
 				lines[i].args[4] |= TMFT_DONTBLOCKPLAYER;
 			if (lines[i].special >= 194)
 				lines[i].args[4] |= TMFT_INTANGIBLEBOTTOM;
@@ -3862,12 +3862,12 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[1] |= TMFM_BRICK;
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[1] |= TMFM_INVISIBLE;
 			break;
 		case 251: //FOF: Thwomp block
 			lines[i].args[0] = tag;
-			if (lines[i].flags & ML_EFFECT5) //Custom speeds
+			if (lines[i].flags & ML_WRAPMIDTEX) //Custom speeds
 			{
 				lines[i].args[1] = lines[i].dy >> FRACBITS;
 				lines[i].args[2] = lines[i].dx >> FRACBITS;
@@ -3877,7 +3877,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[1] = 80;
 				lines[i].args[2] = 16;
 			}
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				P_WriteConstant(sides[lines[i].sidenum[0]].textureoffset >> FRACBITS, &lines[i].stringargs[0]);
 			break;
 		case 252: //FOF: Shatter block
@@ -3910,9 +3910,9 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[3] = TMFB_REGULAR;
 
 			//Flags
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[4] |= TMFB_PUSHABLES;
-			if (lines[i].flags & ML_EFFECT5)
+			if (lines[i].flags & ML_WRAPMIDTEX)
 			{
 				lines[i].args[4] |= TMFB_EXECUTOR;
 				lines[i].args[5] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
@@ -3926,7 +3926,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 257: //FOF: Quicksand
 			lines[i].args[0] = tag;
-			if (!(lines[i].flags & ML_EFFECT5))
+			if (!(lines[i].flags & ML_WRAPMIDTEX))
 				lines[i].args[1] = 1; //No ripple effect
 			lines[i].args[2] = lines[i].dx >> FRACBITS; //Sinking speed
 			lines[i].args[3] = lines[i].dy >> FRACBITS; //Friction
@@ -3938,7 +3938,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			P_SetBinaryFOFAlpha(&lines[i]);
 
 			//Flags
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[3] |= TMFL_NOBOSSES;
 			//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 			if (lines[i].flags & ML_EFFECT6 || lines[i].args[1] == 256)
@@ -3986,7 +3986,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[2] = TMC_GTE;
 			else
 				lines[i].args[2] = TMC_EQUAL;
-			lines[i].args[3] = !!(lines[i].flags & ML_EFFECT4);
+			lines[i].args[3] = !!(lines[i].flags & ML_MIDSOLID);
 			lines[i].special = 303;
 			break;
 		case 305: //Character ability - Continuous
@@ -4026,7 +4026,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[1] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[2] = TMC_GTE;
-			else if (lines[i].flags & ML_EFFECT4)
+			else if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[2] = TMC_LTE;
 			else
 				lines[i].args[2] = TMC_EQUAL;
@@ -4077,15 +4077,15 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[3] = TMC_GTE;
 			else
 				lines[i].args[3] = TMC_EQUAL;
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[4] = TMC_LTE;
-			else if (lines[i].flags & ML_EFFECT2)
+			else if (lines[i].flags & ML_NOSKEW)
 				lines[i].args[4] = TMC_GTE;
 			else
 				lines[i].args[4] = TMC_EQUAL;
 			if (lines[i].flags & ML_DONTPEGBOTTOM)
 				lines[i].args[5] = TMNP_SLOWEST;
-			else if (lines[i].flags & ML_EFFECT4)
+			else if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[5] = TMNP_TRIGGERER;
 			else
 				lines[i].args[5] = TMNP_FASTEST;
@@ -4100,7 +4100,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 				else
 					lines[i].args[6] = TMN_ALWAYS;
 
-				if (lines[i].flags & ML_EFFECT3)
+				if (lines[i].flags & ML_MIDPEG)
 					lines[i].args[7] |= TMN_BONUSLAPS;
 				if (lines[i].flags & ML_BOUNCY)
 					lines[i].args[7] |= TMN_LEVELCOMPLETION;
@@ -4114,10 +4114,10 @@ static void P_ConvertBinaryLinedefTypes(void)
 				else
 					lines[i].args[6] = TMD_ALWAYS;
 
-				lines[i].args[7] = !!(lines[i].flags & ML_EFFECT3);
+				lines[i].args[7] = !!(lines[i].flags & ML_MIDPEG);
 			}
 			else if (lines[i].special == 327)
-				lines[i].args[6] = !!(lines[i].flags & ML_EFFECT3);
+				lines[i].args[6] = !!(lines[i].flags & ML_MIDPEG);
 			else
 			{
 				if (lines[i].flags & ML_DONTPEGTOP)
@@ -4127,7 +4127,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 				else
 					lines[i].args[6] = TMS_IFENOUGH;
 
-				if (lines[i].flags & ML_EFFECT3)
+				if (lines[i].flags & ML_MIDPEG)
 					lines[i].args[7] |= TMI_BONUSLAPS;
 				if (lines[i].flags & ML_TFERLINE)
 					lines[i].args[7] |= TMI_ENTER;
@@ -4229,14 +4229,14 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 408: //Set flats
 			lines[i].args[0] = tag;
-			if ((lines[i].flags & (ML_NOCLIMB|ML_EFFECT4)) == (ML_NOCLIMB|ML_EFFECT4))
+			if ((lines[i].flags & (ML_NOCLIMB|ML_MIDSOLID)) == (ML_NOCLIMB|ML_MIDSOLID))
 			{
 				CONS_Alert(CONS_WARNING, M_GetText("Set flats linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"), tag);
 				lines[i].special = 0;
 			}
 			else if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[1] = TMP_CEILING;
-			else if (lines[i].flags & ML_EFFECT4)
+			else if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[1] = TMP_FLOOR;
 			else
 				lines[i].args[1] = TMP_BOTH;
@@ -4269,9 +4269,9 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[1] |= TMT_SILENT;
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[1] |= TMT_KEEPANGLE;
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[1] |= TMT_KEEPMOMENTUM;
-			if (lines[i].flags & ML_EFFECT3)
+			if (lines[i].flags & ML_MIDPEG)
 				lines[i].args[1] |= TMT_RELATIVE;
 			lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[3] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
@@ -4280,15 +4280,15 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 413: //Change music
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[0] |= TMM_ALLPLAYERS;
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[0] |= TMM_OFFSET;
-			if (lines[i].flags & ML_EFFECT2)
+			if (lines[i].flags & ML_NOSKEW)
 				lines[i].args[0] |= TMM_FADE;
 			if (lines[i].flags & ML_BLOCKMONSTERS)
 				lines[i].args[0] |= TMM_NORELOAD;
 			if (lines[i].flags & ML_BOUNCY)
 				lines[i].args[0] |= TMM_FORCERESET;
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[0] |= TMM_NOLOOP;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].midtexture;
 			lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
@@ -4306,7 +4306,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[2] = tag;
 			if (tag != 0)
 			{
-				if (lines[i].flags & ML_EFFECT5)
+				if (lines[i].flags & ML_WRAPMIDTEX)
 				{
 					lines[i].args[0] = TMSS_TAGGEDSECTOR;
 					lines[i].args[1] = TMSL_EVERYONE;
@@ -4324,7 +4324,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 					lines[i].args[0] = TMSS_NOWHERE;
 					lines[i].args[1] = TMSL_TRIGGERER;
 				}
-				else if (lines[i].flags & ML_EFFECT4)
+				else if (lines[i].flags & ML_MIDSOLID)
 				{
 					lines[i].args[0] = TMSS_NOWHERE;
 					lines[i].args[1] = TMSL_EVERYONE;
@@ -4417,9 +4417,9 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[1] = lines[i].frontsector->lightlevel;
 				lines[i].args[2] = abs(P_AproxDistance(lines[i].dx, lines[i].dy)) >> FRACBITS;
 			}
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[3] |= TMF_TICBASED;
-			if (lines[i].flags & ML_EFFECT5)
+			if (lines[i].flags & ML_WRAPMIDTEX)
 				lines[i].args[3] |= TMF_OVERRIDE;
 			break;
 		case 421: //Stop lighting effect
@@ -4460,7 +4460,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 431: //Crush floor and ceiling once
 			lines[i].args[0] = tag;
 			lines[i].args[1] = (lines[i].special == 429) ? TMP_CEILING : ((lines[i].special == 430) ? TMP_FLOOR : TMP_BOTH);
-			if (lines[i].special == 430 || lines[i].flags & ML_EFFECT4)
+			if (lines[i].special == 430 || lines[i].flags & ML_MIDSOLID)
 			{
 				lines[i].args[2] = abs(lines[i].dx) >> FRACBITS;
 				lines[i].args[3] = lines[i].args[2];
@@ -4563,19 +4563,19 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 447: //Change colormap
 			lines[i].args[0] = tag;
-			if (lines[i].flags & ML_EFFECT3)
+			if (lines[i].flags & ML_MIDPEG)
 				lines[i].args[2] |= TMCF_RELATIVE;
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[2] |= TMCF_SUBLIGHTR|TMCF_SUBFADER;
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[2] |= TMCF_SUBLIGHTG|TMCF_SUBFADEG;
-			if (lines[i].flags & ML_EFFECT2)
+			if (lines[i].flags & ML_NOSKEW)
 				lines[i].args[2] |= TMCF_SUBLIGHTB|TMCF_SUBFADEB;
 			break;
 		case 448: //Change skybox
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-			if ((lines[i].flags & (ML_EFFECT4|ML_BLOCKMONSTERS)) == ML_EFFECT4) // Solid Midtexture is on but Block Enemies is off?
+			if ((lines[i].flags & (ML_MIDSOLID|ML_BLOCKMONSTERS)) == ML_MIDSOLID) // Solid Midtexture is on but Block Enemies is off?
 			{
 				CONS_Alert(CONS_WARNING,
 					M_GetText("Skybox switch linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
@@ -4583,7 +4583,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].special = 0;
 				break;
 			}
-			else if ((lines[i].flags & (ML_EFFECT4|ML_BLOCKMONSTERS)) == (ML_EFFECT4|ML_BLOCKMONSTERS))
+			else if ((lines[i].flags & (ML_MIDSOLID|ML_BLOCKMONSTERS)) == (ML_MIDSOLID|ML_BLOCKMONSTERS))
 				lines[i].args[2] = TMS_CENTERPOINT;
 			else if (lines[i].flags & ML_BLOCKMONSTERS)
 				lines[i].args[2] = TMS_BOTH;
@@ -4606,7 +4606,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			lines[i].args[2] = lines[i].sidenum[1] != 0xffff ? (sides[lines[i].sidenum[1]].textureoffset >> FRACBITS) : (P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS);
-			if (lines[i].flags & ML_EFFECT3)
+			if (lines[i].flags & ML_MIDPEG)
 				lines[i].args[3] |= TMST_RELATIVE;
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[3] |= TMST_DONTDOTRANSLUCENT;
@@ -4616,21 +4616,21 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			lines[i].args[2] = lines[i].sidenum[1] != 0xffff ? (sides[lines[i].sidenum[1]].textureoffset >> FRACBITS) : (lines[i].dx >> FRACBITS);
 			lines[i].args[3] = lines[i].sidenum[1] != 0xffff ? (sides[lines[i].sidenum[1]].rowoffset >> FRACBITS) : (abs(lines[i].dy) >> FRACBITS);
-			if (lines[i].flags & ML_EFFECT3)
+			if (lines[i].flags & ML_MIDPEG)
 				lines[i].args[4] |= TMFT_RELATIVE;
-			if (lines[i].flags & ML_EFFECT5)
+			if (lines[i].flags & ML_WRAPMIDTEX)
 				lines[i].args[4] |= TMFT_OVERRIDE;
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[4] |= TMFT_TICBASED;
 			if (lines[i].flags & ML_BOUNCY)
 				lines[i].args[4] |= TMFT_IGNORECOLLISION;
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[4] |= TMFT_GHOSTFADE;
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[4] |= TMFT_DONTDOTRANSLUCENT;
 			if (lines[i].flags & ML_BLOCKMONSTERS)
 				lines[i].args[4] |= TMFT_DONTDOEXISTS;
-			if (lines[i].flags & ML_EFFECT2)
+			if (lines[i].flags & ML_NOSKEW)
 				lines[i].args[4] |= (TMFT_DONTDOLIGHTING|TMFT_DONTDOCOLORMAP);
 			if (lines[i].flags & ML_TFERLINE)
 				lines[i].args[4] |= TMFT_USEEXACTALPHA;
@@ -4647,21 +4647,21 @@ static void P_ConvertBinaryLinedefTypes(void)
 				: abs(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS));
 
 			lines[i].args[0] = tag;
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[2] = speed;
 			else
 				lines[i].args[2] = (256 + speed - 1)/speed;
-			if (lines[i].flags & ML_EFFECT3)
+			if (lines[i].flags & ML_MIDPEG)
 				lines[i].args[3] |= TMCF_RELATIVE;
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[3] |= TMCF_SUBLIGHTR|TMCF_SUBFADER;
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[3] |= TMCF_SUBLIGHTG|TMCF_SUBFADEG;
-			if (lines[i].flags & ML_EFFECT2)
+			if (lines[i].flags & ML_NOSKEW)
 				lines[i].args[3] |= TMCF_SUBLIGHTB|TMCF_SUBFADEB;
 			if (lines[i].flags & ML_BOUNCY)
 				lines[i].args[3] |= TMCF_FROMBLACK;
-			if (lines[i].flags & ML_EFFECT5)
+			if (lines[i].flags & ML_WRAPMIDTEX)
 				lines[i].args[3] |= TMCF_OVERRIDE;
 			break;
 		}
@@ -4673,25 +4673,25 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			lines[i].args[3] = (lines[i].sidenum[1] != 0xffff) ? sides[lines[i].sidenum[1]].rowoffset >> FRACBITS : 0;
-			lines[i].args[4] = !!(lines[i].flags & ML_EFFECT2);
+			lines[i].args[4] = !!(lines[i].flags & ML_NOSKEW);
 			break;
 		case 459: //Control text prompt
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			if (lines[i].flags & ML_BLOCKMONSTERS)
 				lines[i].args[2] |= TMP_CLOSE;
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[2] |= TMP_RUNPOSTEXEC;
 			if (lines[i].flags & ML_TFERLINE)
 				lines[i].args[2] |= TMP_CALLBYNAME;
-			if (lines[i].flags & ML_EFFECT2)
+			if (lines[i].flags & ML_NOSKEW)
 				lines[i].args[2] |= TMP_KEEPCONTROLS;
-			if (lines[i].flags & ML_EFFECT3)
+			if (lines[i].flags & ML_MIDPEG)
 				lines[i].args[2] |= TMP_KEEPREALTIME;
 			/*if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[2] |= TMP_ALLPLAYERS;
-			if (lines[i].flags & ML_EFFECT4)
-				lines[i].args[2] |= ML_EFFECT4;*/
+			if (lines[i].flags & ML_MIDSOLID)
+				lines[i].args[2] |= TMP_FREEZETHINKERS;*/
 			lines[i].args[3] = (lines[i].sidenum[1] != 0xFFFF) ? sides[lines[i].sidenum[1]].textureoffset >> FRACBITS : tag;
 			if (sides[lines[i].sidenum[0]].text)
 			{
@@ -4707,7 +4707,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			lines[i].args[2] = lines[i].frontsector->floorheight >> FRACBITS;
-			lines[i].args[3] = (lines[i].flags & ML_EFFECT1) ? AngleFixed(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y)) >> FRACBITS : 0;
+			lines[i].args[3] = (lines[i].flags & ML_SKEWTD) ? AngleFixed(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y)) >> FRACBITS : 0;
 			if (lines[i].flags & ML_NOCLIMB)
 			{
 				if (lines[i].sidenum[1] != 0xffff) // Make sure the linedef has a back side
@@ -4749,7 +4749,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[2] = TML_SECTOR;
-			lines[i].args[3] = !!(lines[i].flags & ML_EFFECT3);
+			lines[i].args[3] = !!(lines[i].flags & ML_MIDPEG);
 			break;
 		case 480: //Polyobject - door slide
 		case 481: //Polyobject - door move
@@ -4782,7 +4782,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[2] *= -1;
 			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[3] |= TMPR_DONTROTATEOTHERS;
-			else if (lines[i].flags & ML_EFFECT4)
+			else if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[3] |= TMPR_ROTATEPLAYERS;
 			if (lines[i].special % 2 == 1)
 				lines[i].args[3] |= TMPR_OVERRIDE;
@@ -4792,15 +4792,15 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-			if (lines[i].flags & ML_EFFECT3)
+			if (lines[i].flags & ML_MIDPEG)
 				lines[i].args[3] = PWR_WRAP;
-			else if (lines[i].flags & ML_EFFECT2)
+			else if (lines[i].flags & ML_NOSKEW)
 				lines[i].args[3] = PWR_COMEBACK;
 			else
 				lines[i].args[3] = PWR_STOP;
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[4] |= PWF_REVERSE;
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[4] |= PWF_LOOP;
 			break;
 		case 489: //Polyobject - turn invisible, intangible
@@ -4818,7 +4818,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			// If DONTPEGBOTTOM, specify raw translucency value. Else, take it out of 1000.
 			if (!(lines[i].flags & ML_DONTPEGBOTTOM))
 				lines[i].args[1] /= 100;
-			lines[i].args[2] = !!(lines[i].flags & ML_EFFECT3);
+			lines[i].args[2] = !!(lines[i].flags & ML_MIDPEG);
 			break;
 		case 492: //Polyobject - fade translucency
 			lines[i].args[0] = tag;
@@ -4831,15 +4831,15 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[2] = (lines[i].sidenum[1] != 0xffff && !sides[lines[i].sidenum[0]].rowoffset) ?
 				abs(sides[lines[i].sidenum[1]].rowoffset >> FRACBITS)
 				: abs(sides[lines[i].sidenum[0]].rowoffset >> FRACBITS);
-			if (lines[i].flags & ML_EFFECT3)
+			if (lines[i].flags & ML_MIDPEG)
 				lines[i].args[3] |= TMPF_RELATIVE;
-			if (lines[i].flags & ML_EFFECT5)
+			if (lines[i].flags & ML_WRAPMIDTEX)
 				lines[i].args[3] |= TMPF_OVERRIDE;
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[3] |= TMPF_TICBASED;
 			if (lines[i].flags & ML_BOUNCY)
 				lines[i].args[3] |= TMPF_IGNORECOLLISION;
-			if (lines[i].flags & ML_EFFECT1)
+			if (lines[i].flags & ML_SKEWTD)
 				lines[i].args[3] |= TMPF_GHOSTFADE;
 			break;
 		case 500: //Scroll front wall left
@@ -4853,7 +4853,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 503: //Scroll tagged wall (accelerative)
 		case 504: //Scroll tagged wall (displacement)
 			lines[i].args[0] = tag;
-			if (lines[i].flags & ML_EFFECT3)
+			if (lines[i].flags & ML_MIDPEG)
 			{
 				if (lines[i].sidenum[1] == 0xffff)
 				{
@@ -4865,7 +4865,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			}
 			else
 				lines[i].args[1] = 0;
-			if (lines[i].flags & ML_EFFECT2)
+			if (lines[i].flags & ML_NOSKEW)
 			{
 				lines[i].args[2] = lines[i].dx >> (FRACBITS + SCROLL_SHIFT);
 				lines[i].args[3] = lines[i].dy >> (FRACBITS + SCROLL_SHIFT);
@@ -4955,7 +4955,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 					break;
 			}
 			lines[i].args[3] = (lines[i].special >= 544) ? p_current : p_wind;
-			if (lines[i].flags & ML_EFFECT4)
+			if (lines[i].flags & ML_MIDSOLID)
 				lines[i].args[4] |= TMPF_SLIDE;
 			if (!(lines[i].flags & ML_NOCLIMB))
 				lines[i].args[4] |= TMPF_NONEXCLUSIVE;
@@ -5714,15 +5714,15 @@ static void P_ConvertBinaryThingTypes(void)
 				mapthings[i].args[8] |= TMM_SILENT;
 			if (lines[j].flags & ML_NOCLIMB)
 				mapthings[i].args[8] |= TMM_ALLOWYAWCONTROL;
-			if (lines[j].flags & ML_EFFECT1)
+			if (lines[j].flags & ML_SKEWTD)
 				mapthings[i].args[8] |= TMM_SWING;
-			if (lines[j].flags & ML_EFFECT2)
+			if (lines[j].flags & ML_NOSKEW)
 				mapthings[i].args[8] |= TMM_MACELINKS;
-			if (lines[j].flags & ML_EFFECT3)
+			if (lines[j].flags & ML_MIDPEG)
 				mapthings[i].args[8] |= TMM_CENTERLINK;
-			if (lines[j].flags & ML_EFFECT4)
+			if (lines[j].flags & ML_MIDSOLID)
 				mapthings[i].args[8] |= TMM_CLIP;
-			if (lines[j].flags & ML_EFFECT5)
+			if (lines[j].flags & ML_WRAPMIDTEX)
 				mapthings[i].args[8] |= TMM_ALWAYSTHINK;
 			if (mapthings[i].type == 1110)
 			{
@@ -5869,10 +5869,10 @@ static void P_ConvertBinaryLinedefFlags(void)
 
 	for (i = 0; i < numlines; i++)
 	{
-		if (!!(lines[i].flags & ML_DONTPEGBOTTOM) ^ !!(lines[i].flags & ML_EFFECT3))
-			lines[i].flags |= ML_EFFECT3;
+		if (!!(lines[i].flags & ML_DONTPEGBOTTOM) ^ !!(lines[i].flags & ML_MIDPEG))
+			lines[i].flags |= ML_MIDPEG;
 		else
-			lines[i].flags &= ~ML_EFFECT3;
+			lines[i].flags &= ~ML_MIDPEG;
 	}
 }
 

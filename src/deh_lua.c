@@ -335,6 +335,32 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
 			}
+		// Aliases
+		if (fastcmp(p, "EFFECT1"))
+		{
+			lua_pushinteger(L, (lua_Integer)ML_SKEWTD);
+			return 1;
+		}
+		if (fastcmp(p, "EFFECT2"))
+		{
+			lua_pushinteger(L, (lua_Integer)ML_NOSKEW);
+			return 1;
+		}
+		if (fastcmp(p, "EFFECT3"))
+		{
+			lua_pushinteger(L, (lua_Integer)ML_MIDPEG);
+			return 1;
+		}
+		if (fastcmp(p, "EFFECT4"))
+		{
+			lua_pushinteger(L, (lua_Integer)ML_MIDSOLID);
+			return 1;
+		}
+		if (fastcmp(p, "EFFECT5"))
+		{
+			lua_pushinteger(L, (lua_Integer)ML_WRAPMIDTEX);
+			return 1;
+		}
 		if (mathlib) return luaL_error(L, "linedef flag '%s' could not be found.\n", word);
 		return 0;
 	}
