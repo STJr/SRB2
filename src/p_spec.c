@@ -1647,7 +1647,7 @@ static boolean P_ActivateLinedefExecutorsInSector(line_t *triggerline, mobj_t *a
 	size_t linecnt = ctlsector->linecount;
 	size_t i;
 
-	if (triggerline->flags & ML_EFFECT5) // disregard order for efficiency
+	if (triggerline->flags & ML_WRAPMIDTEX) // disregard order for efficiency
 	{
 		for (i = 0; i < linecnt; i++)
 			P_ActivateLinedefExecutor(ctlsector->lines[i], actor, caller);
@@ -6812,9 +6812,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 							if (lines[i].args[4] & TMFB_ONLYBOTTOM)
 								fflr->bustflags |= FB_ONLYBOTTOM;
-							if (lines[i].flags & ML_EFFECT4)
+							if (lines[i].flags & ML_MIDSOLID)
 								fflr->bustflags |= FB_PUSHABLES;
-							if (lines[i].flags & ML_EFFECT5)
+							if (lines[i].flags & ML_WRAPMIDTEX)
 							{
 								fflr->bustflags |= FB_EXECUTOR;
 								fflr->busttag = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;

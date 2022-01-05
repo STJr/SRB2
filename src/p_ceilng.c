@@ -375,7 +375,7 @@ INT32 EV_DoCrush(mtag_t tag, line_t *line, ceiling_e type)
 				ceiling->topheight = P_FindHighestCeilingSurrounding(sec);
 				ceiling->direction = 1;
 				// Retain stupid behavior for backwards compatibility
-				if (!udmf && !(line->flags & ML_EFFECT4))
+				if (!udmf && !(line->flags & ML_MIDSOLID))
 					ceiling->speed /= 2;
 				else
 					ceiling->speed = line->args[3] << (FRACBITS - 2);

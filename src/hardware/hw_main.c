@@ -1146,7 +1146,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				// PEGGING
 				if (gl_linedef->flags & ML_DONTPEGTOP)
 					texturevpegtop = 0;
-				else if (gl_linedef->flags & ML_EFFECT1)
+				else if (gl_linedef->flags & ML_SKEWTD)
 					texturevpegtop = worldhigh + textureheight[gl_sidedef->toptexture] - worldtop;
 				else
 					texturevpegtop = gl_backsector->ceilingheight + textureheight[gl_sidedef->toptexture] - gl_frontsector->ceilingheight;
@@ -1162,7 +1162,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
 
 				// Adjust t value for sloped walls
-				if (!(gl_linedef->flags & ML_EFFECT1))
+				if (!(gl_linedef->flags & ML_SKEWTD))
 				{
 					// Unskewed
 					wallVerts[3].t -= (worldtop - gl_frontsector->ceilingheight) * grTex->scaleY;
@@ -1212,7 +1212,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				// PEGGING
 				if (!(gl_linedef->flags & ML_DONTPEGBOTTOM))
 					texturevpegbottom = 0;
-				else if (gl_linedef->flags & ML_EFFECT1)
+				else if (gl_linedef->flags & ML_SKEWTD)
 					texturevpegbottom = worldbottom - worldlow;
 				else
 					texturevpegbottom = gl_frontsector->floorheight - gl_backsector->floorheight;
@@ -1228,7 +1228,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
 
 				// Adjust t value for sloped walls
-				if (!(gl_linedef->flags & ML_EFFECT1))
+				if (!(gl_linedef->flags & ML_SKEWTD))
 				{
 					// Unskewed
 					wallVerts[0].t -= (worldbottom - gl_frontsector->floorheight) * grTex->scaleY;
@@ -1286,7 +1286,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 			if (gl_sidedef->repeatcnt)
 				repeats = 1 + gl_sidedef->repeatcnt;
-			else if (gl_linedef->flags & ML_EFFECT5)
+			else if (gl_linedef->flags & ML_WRAPMIDTEX)
 			{
 				fixed_t high, low;
 
@@ -1328,9 +1328,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				popenbottom = max(worldbottom, worldlow);
 			}
 
-			if (gl_linedef->flags & ML_EFFECT2)
+			if (gl_linedef->flags & ML_NOSKEW)
 			{
-				if (gl_linedef->flags & ML_EFFECT3)
+				if (gl_linedef->flags & ML_MIDPEG)
 				{
 					polybottom = max(front->floorheight, back->floorheight) + gl_sidedef->rowoffset;
 					polytop = polybottom + textureheight[gl_midtexture]*repeats;
@@ -1341,7 +1341,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					polybottom = polytop - textureheight[gl_midtexture]*repeats;
 				}
 			}
-			else if (gl_linedef->flags & ML_EFFECT3)
+			else if (gl_linedef->flags & ML_MIDPEG)
 			{
 				polybottom = popenbottom + gl_sidedef->rowoffset;
 				polytop = polybottom + textureheight[gl_midtexture]*repeats;
@@ -1371,7 +1371,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 			{
 				// PEGGING
-				if (gl_linedef->flags & ML_EFFECT3)
+				if (gl_linedef->flags & ML_MIDPEG)
 					texturevpeg = textureheight[gl_sidedef->midtexture]*repeats - h + polybottom;
 				else
 					texturevpeg = polytop - h;
@@ -1394,9 +1394,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			{
 				fixed_t midtextureslant;
 
-				if (gl_linedef->flags & ML_EFFECT2)
+				if (gl_linedef->flags & ML_NOSKEW)
 					midtextureslant = 0;
-				else if (gl_linedef->flags & ML_EFFECT3)
+				else if (gl_linedef->flags & ML_MIDPEG)
 					midtextureslant = worldlow < worldbottom
 							  ? worldbottomslope-worldbottom
 							  : worldlowslope-worldlow;
@@ -1421,7 +1421,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 				{
 					// PEGGING
-					if (gl_linedef->flags & ML_EFFECT3)
+					if (gl_linedef->flags & ML_MIDPEG)
 						texturevpeg = textureheight[gl_sidedef->midtexture]*repeats - h + polybottom;
 					else
 						texturevpeg = polytop - h;
@@ -1538,7 +1538,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			{
 				fixed_t     texturevpeg;
 				// PEGGING
-				if ((gl_linedef->flags & (ML_DONTPEGBOTTOM|ML_EFFECT2)) == (ML_DONTPEGBOTTOM|ML_EFFECT2))
+				if ((gl_linedef->flags & (ML_DONTPEGBOTTOM|ML_NOSKEW)) == (ML_DONTPEGBOTTOM|ML_NOSKEW))
 					texturevpeg = gl_frontsector->floorheight + textureheight[gl_sidedef->midtexture] - gl_frontsector->ceilingheight + gl_sidedef->rowoffset;
 				else if (gl_linedef->flags & ML_DONTPEGBOTTOM)
 					texturevpeg = worldbottom + textureheight[gl_sidedef->midtexture] - worldtop + gl_sidedef->rowoffset;
@@ -1554,7 +1554,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
 
 				// Texture correction for slopes
-				if (gl_linedef->flags & ML_EFFECT2) {
+				if (gl_linedef->flags & ML_NOSKEW) {
 					wallVerts[3].t += (gl_frontsector->ceilingheight - worldtop) * grTex->scaleY;
 					wallVerts[2].t += (gl_frontsector->ceilingheight - worldtopslope) * grTex->scaleY;
 					wallVerts[0].t += (gl_frontsector->floorheight - worldbottom) * grTex->scaleY;
