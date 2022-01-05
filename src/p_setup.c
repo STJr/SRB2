@@ -3304,12 +3304,9 @@ static void P_SetBinaryFOFAlpha(line_t *line)
 	}
 }
 
-//For maps in binary format, converts setup of specials to UDMF format.
-static void P_ConvertBinaryMap(void)
+static void P_ConvertBinaryLinedefTypes(void)
 {
 	size_t i;
-	mobjtype_t mobjtypeofthing[4096] = {0};
-	mobjtype_t mobjtype;
 
 	for (i = 0; i < numlines; i++)
 	{
@@ -5128,6 +5125,11 @@ static void P_ConvertBinaryMap(void)
 				lines[i].executordelay = 1;
 		}
 	}
+}
+
+static void P_ConvertBinarySectorTypes(void)
+{
+	size_t i;
 
 	for (i = 0; i < numsectors; i++)
 	{
@@ -5291,6 +5293,13 @@ static void P_ConvertBinaryMap(void)
 				break;
 		}
 	}
+}
+
+static void P_ConvertBinaryThingTypes(void)
+{
+	size_t i;
+	mobjtype_t mobjtypeofthing[4096] = {0};
+	mobjtype_t mobjtype;
 
 	for (i = 0; i < NUMMOBJTYPES; i++)
 	{
@@ -5852,6 +5861,11 @@ static void P_ConvertBinaryMap(void)
 			break;
 		}
 	}
+}
+
+static void P_ConvertBinaryLinedefFlags(void)
+{
+	size_t i;
 
 	for (i = 0; i < numlines; i++)
 	{
@@ -5860,6 +5874,15 @@ static void P_ConvertBinaryMap(void)
 		else
 			lines[i].flags &= ~ML_EFFECT3;
 	}
+}
+
+//For maps in binary format, converts setup of specials to UDMF format.
+static void P_ConvertBinaryMap(void)
+{
+	P_ConvertBinaryLinedefTypes();
+	P_ConvertBinarySectorTypes();
+	P_ConvertBinaryThingTypes();
+	P_ConvertBinaryLinedefFlags();
 }
 
 /** Compute MD5 message digest for bytes read from memory source
