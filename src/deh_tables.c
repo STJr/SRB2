@@ -224,6 +224,8 @@ actionpointer_t actionpointers[] =
 	{{A_SetObjectFlags2},        "A_SETOBJECTFLAGS2"},
 	{{A_RandomState},            "A_RANDOMSTATE"},
 	{{A_RandomStateRange},       "A_RANDOMSTATERANGE"},
+	{{A_StateRangeByAngle},      "A_STATERANGEBYANGLE"},
+	{{A_StateRangeByParameter},  "A_STATERANGEBYPARAMETER"},
 	{{A_DualAction},             "A_DUALACTION"},
 	{{A_RemoteAction},           "A_REMOTEACTION"},
 	{{A_ToggleFlameJet},         "A_TOGGLEFLAMEJET"},
