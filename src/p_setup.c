@@ -5873,6 +5873,28 @@ static void P_ConvertBinaryLinedefFlags(void)
 			lines[i].flags |= ML_MIDPEG;
 		else
 			lines[i].flags &= ~ML_MIDPEG;
+
+		if (lines[i].special >= 100 && lines[i].special < 300)
+		{
+			if (lines[i].flags & ML_DONTPEGTOP)
+				lines[i].flags |= ML_SKEWTD;
+			else
+				lines[i].flags = ~ML_SKEWTD;
+
+			if ((lines[i].flags & ML_TFERLINE) && lines[i].frontsector)
+			{
+				size_t j;
+
+				for (j = 0; j < lines[i].frontsector->linecount; j++)
+				{
+					if (lines[i].frontsector->lines[j]->flags & ML_DONTPEGTOP)
+						lines[i].frontsector->lines[j]->flags |= ML_SKEWTD;
+					else
+						lines[i].frontsector->lines[j]->flags = ~ML_SKEWTD;
+				}
+			}
+		}
+
 	}
 }
 

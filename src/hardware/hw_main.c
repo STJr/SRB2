@@ -1703,13 +1703,13 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					{
 						texturevpeg = sides[newline->sidenum[0]].rowoffset;
 						attachtobottom = !!(newline->flags & ML_DONTPEGBOTTOM);
-						slopeskew = !!(newline->flags & ML_DONTPEGTOP);
+						slopeskew = !!(newline->flags & ML_SKEWTD);
 					}
 					else
 					{
 						texturevpeg = sides[rover->master->sidenum[0]].rowoffset;
 						attachtobottom = !!(gl_linedef->flags & ML_DONTPEGBOTTOM);
-						slopeskew = !!(rover->master->flags & ML_DONTPEGTOP);
+						slopeskew = !!(rover->master->flags & ML_SKEWTD);
 					}
 
 					grTex = HWR_GetTexture(texnum);
