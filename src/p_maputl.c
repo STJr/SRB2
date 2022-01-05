@@ -524,7 +524,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 					if (linedef->flags & ML_EFFECT5 && !side->repeatcnt) { // "infinite" repeat
 						texbottom = openbottom + side->rowoffset;
 						textop = opentop + side->rowoffset;
-					} else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3)) {
+					} else if (linedef->flags & ML_EFFECT3) {
 						texbottom = openbottom + side->rowoffset;
 						textop = texbottom + texheight*(side->repeatcnt+1);
 					} else {

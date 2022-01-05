@@ -5852,6 +5852,14 @@ static void P_ConvertBinaryMap(void)
 			break;
 		}
 	}
+
+	for (i = 0; i < numlines; i++)
+	{
+		if (!!(lines[i].flags & ML_DONTPEGBOTTOM) ^ !!(lines[i].flags & ML_EFFECT3))
+			lines[i].flags |= ML_EFFECT3;
+		else
+			lines[i].flags &= ~ML_EFFECT3;
+	}
 }
 
 /** Compute MD5 message digest for bytes read from memory source

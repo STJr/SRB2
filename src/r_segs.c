@@ -345,7 +345,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		{
 			dc_texturemid = ds->maskedtextureheight[dc_x];
 
-			if (!!(curline->linedef->flags & ML_DONTPEGBOTTOM) ^ !!(curline->linedef->flags & ML_EFFECT3))
+			if (curline->linedef->flags & ML_EFFECT3)
 				dc_texturemid += (textureheight[texnum])*times + textureheight[texnum];
 			else
 				dc_texturemid -= (textureheight[texnum])*times;
@@ -1455,9 +1455,9 @@ static void R_RenderSegLoop (void)
 			maskedtexturecol[rw_x] = (INT16)texturecolumn;
 
 			if (maskedtextureheight != NULL) {
-				maskedtextureheight[rw_x] = (!!(curline->linedef->flags & ML_DONTPEGBOTTOM) ^ !!(curline->linedef->flags & ML_EFFECT3) ?
+				maskedtextureheight[rw_x] = (curline->linedef->flags & ML_EFFECT3) ?
 											max(rw_midtexturemid, rw_midtextureback) :
-											min(rw_midtexturemid, rw_midtextureback));
+											min(rw_midtexturemid, rw_midtextureback);
 			}
 		}
 
@@ -2247,7 +2247,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			if (curline->polyseg)
 			{ // use REAL front and back floors please, so midtexture rendering isn't mucked up
 				rw_midtextureslide = rw_midtexturebackslide = 0;
-				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+				if (linedef->flags & ML_EFFECT3)
 					rw_midtexturemid = rw_midtextureback = max(curline->frontsector->floorheight, curline->backsector->floorheight) - viewz;
 				else
 					rw_midtexturemid = rw_midtextureback = min(curline->frontsector->ceilingheight, curline->backsector->ceilingheight) - viewz;
@@ -2258,13 +2258,13 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 				if (linedef->flags & ML_EFFECT2)
 				{ // Ignore slopes when texturing
 					rw_midtextureslide = rw_midtexturebackslide = 0;
-					if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+					if (linedef->flags & ML_EFFECT3)
 						rw_midtexturemid = rw_midtextureback = max(frontsector->floorheight, backsector->floorheight) - viewz;
 					else
 						rw_midtexturemid = rw_midtextureback = min(frontsector->ceilingheight, backsector->ceilingheight) - viewz;
 
 				}
-				else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+				else if (linedef->flags & ML_EFFECT3)
 				{
 					rw_midtexturemid = worldbottom;
 					rw_midtextureslide = floorfrontslide;

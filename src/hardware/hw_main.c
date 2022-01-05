@@ -1330,7 +1330,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 			if (gl_linedef->flags & ML_EFFECT2)
 			{
-				if (!!(gl_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gl_linedef->flags & ML_EFFECT3))
+				if (gl_linedef->flags & ML_EFFECT3)
 				{
 					polybottom = max(front->floorheight, back->floorheight) + gl_sidedef->rowoffset;
 					polytop = polybottom + textureheight[gl_midtexture]*repeats;
@@ -1341,7 +1341,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					polybottom = polytop - textureheight[gl_midtexture]*repeats;
 				}
 			}
-			else if (!!(gl_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gl_linedef->flags & ML_EFFECT3))
+			else if (gl_linedef->flags & ML_EFFECT3)
 			{
 				polybottom = popenbottom + gl_sidedef->rowoffset;
 				polytop = polybottom + textureheight[gl_midtexture]*repeats;
@@ -1371,7 +1371,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 			{
 				// PEGGING
-				if (!!(gl_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gl_linedef->flags & ML_EFFECT3))
+				if (gl_linedef->flags & ML_EFFECT3)
 					texturevpeg = textureheight[gl_sidedef->midtexture]*repeats - h + polybottom;
 				else
 					texturevpeg = polytop - h;
@@ -1396,7 +1396,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 				if (gl_linedef->flags & ML_EFFECT2)
 					midtextureslant = 0;
-				else if (!!(gl_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gl_linedef->flags & ML_EFFECT3))
+				else if (gl_linedef->flags & ML_EFFECT3)
 					midtextureslant = worldlow < worldbottom
 							  ? worldbottomslope-worldbottom
 							  : worldlowslope-worldlow;
@@ -1421,7 +1421,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 				{
 					// PEGGING
-					if (!!(gl_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gl_linedef->flags & ML_EFFECT3))
+					if (gl_linedef->flags & ML_EFFECT3)
 						texturevpeg = textureheight[gl_sidedef->midtexture]*repeats - h + polybottom;
 					else
 						texturevpeg = polytop - h;
