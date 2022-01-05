@@ -1852,8 +1852,8 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		lines[i].flags |= ML_MIDSOLID;
 	else if (fastcmp(param, "wrapmidtex") && fastcmp("true", val))
 		lines[i].flags |= ML_WRAPMIDTEX;
-	else if (fastcmp(param, "effect6") && fastcmp("true", val))
-		lines[i].flags |= ML_EFFECT6;
+	/*else if (fastcmp(param, "effect6") && fastcmp("true", val))
+		lines[i].flags |= ML_EFFECT6;*/
 	else if (fastcmp(param, "nonet") && fastcmp("true", val))
 		lines[i].flags |= ML_NONET;
 	else if (fastcmp(param, "netonly") && fastcmp("true", val))
