@@ -5879,7 +5879,7 @@ static void P_ConvertBinaryLinedefFlags(void)
 			if (lines[i].flags & ML_DONTPEGTOP)
 				lines[i].flags |= ML_SKEWTD;
 			else
-				lines[i].flags = ~ML_SKEWTD;
+				lines[i].flags &= ~ML_SKEWTD;
 
 			if ((lines[i].flags & ML_TFERLINE) && lines[i].frontsector)
 			{
@@ -5890,7 +5890,7 @@ static void P_ConvertBinaryLinedefFlags(void)
 					if (lines[i].frontsector->lines[j]->flags & ML_DONTPEGTOP)
 						lines[i].frontsector->lines[j]->flags |= ML_SKEWTD;
 					else
-						lines[i].frontsector->lines[j]->flags = ~ML_SKEWTD;
+						lines[i].frontsector->lines[j]->flags &= ~ML_SKEWTD;
 				}
 			}
 		}
