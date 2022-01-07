@@ -2030,8 +2030,7 @@ static void P_WriteTextmap(void)
 		fprintf(f, "y = %d;\n", mapthings[i].y);
 		if (mapthings[i].z != 0)
 			fprintf(f, "height = %d;\n", mapthings[i].z);
-		if (mapthings[i].angle != 0)
-			fprintf(f, "angle = %d;\n", mapthings[i].angle);
+		fprintf(f, "angle = %d;\n", mapthings[i].angle);
 		if (mapthings[i].pitch != 0)
 			fprintf(f, "pitch = %d;\n", mapthings[i].pitch);
 		if (mapthings[i].roll != 0)
@@ -2070,6 +2069,11 @@ static void P_WriteTextmap(void)
 	{
 		fprintf(f, "linedef // %d\n", i);
 		fprintf(f, "{\n");
+		fprintf(f, "v1 = %d;\n", lines[i].v1 - vertexes);
+		fprintf(f, "v2 = %d;\n", lines[i].v2 - vertexes);
+		fprintf(f, "sidefront = %d;\n", lines[i].sidenum[0]);
+		if (lines[i].sidenum[1] != 0xffff)
+			fprintf(f, "sideback = %d;\n", lines[i].sidenum[1]);
 		firsttag = Tag_FGet(&lines[i].tags);
 		if (firsttag != 0)
 			fprintf(f, "id = %d;\n", firsttag);
@@ -2086,17 +2090,12 @@ static void P_WriteTextmap(void)
 		}
 		if (lines[i].special != 0)
 			fprintf(f, "special = %d;\n", lines[i].special);
-		fprintf(f, "v1 = %d;\n", lines[i].v1 - vertexes);
-		fprintf(f, "v2 = %d;\n", lines[i].v2 - vertexes);
 		for (j = 0; j < NUMLINEARGS; j++)
 			if (lines[i].args[j] != 0)
 				fprintf(f, "arg%d = %d;\n", j, lines[i].args[j]);
 		for (j = 0; j < NUMLINESTRINGARGS; j++)
 			if (lines[i].stringargs[j])
 				fprintf(f, "stringarg%d = \"%s\";\n", j, lines[i].stringargs[j]);
-		fprintf(f, "sidefront = %d;\n", lines[i].sidenum[0]);
-		if (lines[i].sidenum[1] != 0xffff)
-			fprintf(f, "sideback = %d;\n", lines[i].sidenum[1]);
 		if (lines[i].alpha != FRACUNIT)
 			fprintf(f, "alpha = %f;\n", FIXED_TO_FLOAT(lines[i].alpha));
 		if (lines[i].blendmode != AST_COPY)
@@ -2162,6 +2161,7 @@ static void P_WriteTextmap(void)
 	{
 		fprintf(f, "sidedef // %d\n", i);
 		fprintf(f, "{\n");
+		fprintf(f, "sector = %d;\n", sides[i].sector - sectors);
 		if (sides[i].textureoffset != 0)
 			fprintf(f, "offsetx = %d;\n", sides[i].textureoffset >> FRACBITS);
 		if (sides[i].rowoffset != 0)
@@ -2172,7 +2172,6 @@ static void P_WriteTextmap(void)
 			fprintf(f, "texturebottom = \"%.*s\";\n", 8, textures[sides[i].bottomtexture]->name);
 		if (sides[i].midtexture != 0)
 			fprintf(f, "texturemiddle = \"%.*s\";\n", 8, textures[sides[i].midtexture]->name);
-		fprintf(f, "sector = %d;\n", sides[i].sector - sectors);
 		if (sides[i].repeatcnt != 0)
 			fprintf(f, "repeatcnt = %d;\n", sides[i].repeatcnt);
 		fprintf(f, "}\n");
@@ -2183,16 +2182,13 @@ static void P_WriteTextmap(void)
 	{
 		fprintf(f, "sector // %d\n", i);
 		fprintf(f, "{\n");
-		if (sectors[i].floorheight != 0)
-			fprintf(f, "heightfloor = %d;\n", sectors[i].floorheight >> FRACBITS);
-		if (sectors[i].ceilingheight != 0)
-			fprintf(f, "heightceiling = %d;\n", sectors[i].ceilingheight >> FRACBITS);
+		fprintf(f, "heightfloor = %d;\n", sectors[i].floorheight >> FRACBITS);
+		fprintf(f, "heightceiling = %d;\n", sectors[i].ceilingheight >> FRACBITS);
 		if (sectors[i].floorpic != -1)
 			fprintf(f, "texturefloor = \"%s\";\n", levelflats[sectors[i].floorpic].name);
 		if (sectors[i].ceilingpic != -1)
 			fprintf(f, "textureceiling = \"%s\";\n", levelflats[sectors[i].ceilingpic].name);
-		if (sectors[i].lightlevel != 255)
-			fprintf(f, "lightlevel = %d;\n", sectors[i].lightlevel);
+		fprintf(f, "lightlevel = %d;\n", sectors[i].lightlevel);
 		if (sectors[i].floorlightlevel != 0)
 			fprintf(f, "lightfloor = %d;\n", sectors[i].floorlightlevel);
 		if (sectors[i].floorlightabsolute)
