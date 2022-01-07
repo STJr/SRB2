@@ -3033,7 +3033,10 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		P_InitializeSeg(seg);
 		seg->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
 		if (seg->linedef)
-			segs[i].offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
+		{
+			vertex_t *v = (seg->side == 1) ? seg->linedef->v2 : seg->linedef->v1;
+			segs[i].offset = FixedHypot(v1->x - v->x, v1->y - v->y);
+		}
 		seg->length = P_SegLength(seg);
 #ifdef HWRENDER
 		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
