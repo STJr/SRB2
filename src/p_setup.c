@@ -2331,9 +2331,8 @@ static void P_WriteTextmap(void)
 			fprintf(f, "finishline = true;\n");
 		if (sectors[i].specialflags & SSF_ROPEHANG)
 			fprintf(f, "ropehang = true;\n");
-		//TODO: Float
-		if (sectors[i].friction != 0)
-			fprintf(f, "friction = %d;\n", sectors[i].friction);
+		if (sectors[i].friction != ORIG_FRICTION)
+			fprintf(f, "friction = %f;\n", FIXED_TO_FLOAT(sectors[i].friction));
 		if (sectors[i].gravity != FRACUNIT)
 			fprintf(f, "gravity = %f;\n", FIXED_TO_FLOAT(sectors[i].gravity));
 		if (sectors[i].damagetype != SD_NONE)
