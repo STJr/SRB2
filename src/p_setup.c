@@ -1983,6 +1983,406 @@ static INT32 P_ColorToRGBA(INT32 color, UINT8 alpha)
 	return R_PutRgbaRGBA(r, g, b, alpha);
 }
 
+static INT32 P_RGBAToColor(INT32 rgba)
+{
+	UINT8 r = R_GetRgbaR(rgba);
+	UINT8 g = R_GetRgbaG(rgba);
+	UINT8 b = R_GetRgbaB(rgba);
+	return (r << 16) | (g << 8) | b;
+}
+
+static void P_WriteTextmap(void)
+{
+	size_t i, j;
+	FILE *f;
+	char *filepath = va(pandf, srb2home, "TEXTMAP");
+	mtag_t firsttag;
+
+	f = fopen(filepath, "w");
+	if (!f)
+	{
+		CONS_Alert(CONS_ERROR, M_GetText("Couldn't save map file %s\n"), filepath);
+		return;
+	}
+
+	fprintf(f, "namespace = \"srb2\";\n");
+	for (i = 0; i < nummapthings; i++)
+	{
+		fprintf(f, "thing // %d\n", i);
+		fprintf(f, "{\n");
+		firsttag = Tag_FGet(&mapthings[i].tags);
+		if (firsttag != 0)
+			fprintf(f, "id = %d;\n", firsttag);
+		if (mapthings[i].tags.count > 1)
+		{
+			fprintf(f, "moreids = \"");
+			for (j = 1; j < mapthings[i].tags.count; j++)
+			{
+				if (j > 1)
+					fprintf(f, " ");
+				fprintf(f, " %d", mapthings[i].tags.tags[j]);
+			}
+			fprintf(f, "\";\n");
+		}
+		fprintf(f, "x = %d;\n", mapthings[i].x);
+		fprintf(f, "y = %d;\n", mapthings[i].y);
+		if (mapthings[i].z != 0)
+			fprintf(f, "height = %d;\n", mapthings[i].z);
+		if (mapthings[i].angle != 0)
+			fprintf(f, "angle = %d;\n", mapthings[i].angle);
+		if (mapthings[i].pitch != 0)
+			fprintf(f, "pitch = %d;\n", mapthings[i].pitch);
+		if (mapthings[i].roll != 0)
+			fprintf(f, "roll = %d;\n", mapthings[i].roll);
+		if (mapthings[i].type != 0)
+			fprintf(f, "type = %d;\n", mapthings[i].type);
+		if (mapthings[i].scale != FRACUNIT)
+			fprintf(f, "scale = %f;\n", FIXED_TO_FLOAT(mapthings[i].scale));
+		if (mapthings[i].options & MTF_OBJECTFLIP)
+			fprintf(f, "flip = true;\n");
+		for (j = 0; j < NUMMAPTHINGARGS; j++)
+			if (mapthings[i].args[j] != 0)
+				fprintf(f, "arg%d = %d;\n", j, mapthings[i].args[j]);
+		for (j = 0; j < NUMMAPTHINGSTRINGARGS; j++)
+			if (mapthings[i].stringargs[j])
+				fprintf(f, "stringarg%d = \"%s\";\n", j, mapthings[i].stringargs[j]);
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+
+	for (i = 0; i < numvertexes; i++)
+	{
+		fprintf(f, "vertex // %d\n", i);
+		fprintf(f, "{\n");
+		fprintf(f, "x = %f;\n", FIXED_TO_FLOAT(vertexes[i].x));
+		fprintf(f, "y = %f;\n", FIXED_TO_FLOAT(vertexes[i].y));
+		if (vertexes[i].floorzset)
+			fprintf(f, "zfloor = %f;\n", FIXED_TO_FLOAT(vertexes[i].floorz));
+		if (vertexes[i].ceilingzset)
+			fprintf(f, "zceiling = %f;\n", FIXED_TO_FLOAT(vertexes[i].ceilingz));
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+
+	for (i = 0; i < numlines; i++)
+	{
+		fprintf(f, "linedef // %d\n", i);
+		fprintf(f, "{\n");
+		firsttag = Tag_FGet(&lines[i].tags);
+		if (firsttag != 0)
+			fprintf(f, "id = %d;\n", firsttag);
+		if (lines[i].tags.count > 1)
+		{
+			fprintf(f, "moreids = \"");
+			for (j = 1; j < lines[i].tags.count; j++)
+			{
+				if (j > 1)
+					fprintf(f, " ");
+				fprintf(f, " %d", lines[i].tags.tags[j]);
+			}
+			fprintf(f, "\";\n");
+		}
+		if (lines[i].special != 0)
+			fprintf(f, "special = %d;\n", lines[i].special);
+		fprintf(f, "v1 = %d;\n", lines[i].v1 - vertexes);
+		fprintf(f, "v2 = %d;\n", lines[i].v2 - vertexes);
+		for (j = 0; j < NUMLINEARGS; j++)
+			if (lines[i].args[j] != 0)
+				fprintf(f, "arg%d = %d;\n", j, lines[i].args[j]);
+		for (j = 0; j < NUMLINESTRINGARGS; j++)
+			if (lines[i].stringargs[j])
+				fprintf(f, "stringarg%d = \"%s\";\n", j, lines[i].stringargs[j]);
+		fprintf(f, "sidefront = %d;\n", lines[i].sidenum[0]);
+		if (lines[i].sidenum[1] != 0xffff)
+			fprintf(f, "sideback = %d;\n", lines[i].sidenum[1]);
+		if (lines[i].alpha != FRACUNIT)
+			fprintf(f, "alpha = %f;\n", FIXED_TO_FLOAT(lines[i].alpha));
+		if (lines[i].blendmode != AST_COPY)
+		{
+			switch (lines[i].blendmode)
+			{
+				case AST_ADD:
+					fprintf(f, "renderstyle = \"add\";\n");
+					break;
+				case AST_SUBTRACT:
+					fprintf(f, "renderstyle = \"subtract\";\n");
+					break;
+				case AST_REVERSESUBTRACT:
+					fprintf(f, "renderstyle = \"reversesubtract\";\n");
+					break;
+				case AST_MODULATE:
+					fprintf(f, "renderstyle = \"modulate\";\n");
+					break;
+				case AST_FOG:
+					fprintf(f, "renderstyle = \"fog\";\n");
+					break;
+				default:
+					break;
+			}
+		}
+		if (lines[i].executordelay != 0)
+			fprintf(f, "executordelay = %d;\n", lines[i].executordelay);
+		if (lines[i].flags & ML_IMPASSIBLE)
+			fprintf(f, "blocking = true;\n");
+		if (lines[i].flags & ML_BLOCKMONSTERS)
+			fprintf(f, "blockmonsters = true;\n");
+		if (lines[i].flags & ML_TWOSIDED)
+			fprintf(f, "twosided = true;\n");
+		if (lines[i].flags & ML_DONTPEGTOP)
+			fprintf(f, "dontpegtop = true;\n");
+		if (lines[i].flags & ML_DONTPEGBOTTOM)
+			fprintf(f, "dontpegbottom = true;\n");
+		if (lines[i].flags & ML_SKEWTD)
+			fprintf(f, "skewtd = true;\n");
+		if (lines[i].flags & ML_NOCLIMB)
+			fprintf(f, "noclimb = true;\n");
+		if (lines[i].flags & ML_NOSKEW)
+			fprintf(f, "noskew = true;\n");
+		if (lines[i].flags & ML_MIDPEG)
+			fprintf(f, "midpeg = true;\n");
+		if (lines[i].flags & ML_MIDSOLID)
+			fprintf(f, "midsolid = true;\n");
+		if (lines[i].flags & ML_WRAPMIDTEX)
+			fprintf(f, "wrapmidtex = true;\n");
+		if (lines[i].flags & ML_NONET)
+			fprintf(f, "nonet = true;\n");
+		if (lines[i].flags & ML_NETONLY)
+			fprintf(f, "netonly = true;\n");
+		if (lines[i].flags & ML_BOUNCY)
+			fprintf(f, "bouncy = true;\n");
+		if (lines[i].flags & ML_TFERLINE)
+			fprintf(f, "transfer = true;\n");
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+
+	for (i = 0; i < numsides; i++)
+	{
+		fprintf(f, "sidedef // %d\n", i);
+		fprintf(f, "{\n");
+		if (sides[i].textureoffset != 0)
+			fprintf(f, "offsetx = %d;\n", sides[i].textureoffset >> FRACBITS);
+		if (sides[i].rowoffset != 0)
+			fprintf(f, "offsety = %d;\n", sides[i].rowoffset >> FRACBITS);
+		if (sides[i].toptexture != 0)
+			fprintf(f, "texturetop = \"%.*s\";\n", 8, textures[sides[i].toptexture]->name);
+		if (sides[i].bottomtexture != 0)
+			fprintf(f, "texturebottom = \"%.*s\";\n", 8, textures[sides[i].bottomtexture]->name);
+		if (sides[i].midtexture != 0)
+			fprintf(f, "texturemiddle = \"%.*s\";\n", 8, textures[sides[i].midtexture]->name);
+		fprintf(f, "sector = %d;\n", sides[i].sector - sectors);
+		if (sides[i].repeatcnt != 0)
+			fprintf(f, "repeatcnt = %d;\n", sides[i].repeatcnt);
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+
+	for (i = 0; i < numsectors; i++)
+	{
+		fprintf(f, "sector // %d\n", i);
+		fprintf(f, "{\n");
+		if (sectors[i].floorheight != 0)
+			fprintf(f, "heightfloor = %d;\n", sectors[i].floorheight >> FRACBITS);
+		if (sectors[i].ceilingheight != 0)
+			fprintf(f, "heightceiling = %d;\n", sectors[i].ceilingheight >> FRACBITS);
+		if (sectors[i].floorpic != -1)
+			fprintf(f, "texturefloor = \"%s\";\n", levelflats[sectors[i].floorpic].name);
+		if (sectors[i].ceilingpic != -1)
+			fprintf(f, "textureceiling = \"%s\";\n", levelflats[sectors[i].ceilingpic].name);
+		if (sectors[i].lightlevel != 255)
+			fprintf(f, "lightlevel = %d;\n", sectors[i].lightlevel);
+		if (sectors[i].floorlightlevel != 0)
+			fprintf(f, "lightfloor = %d;\n", sectors[i].floorlightlevel);
+		if (sectors[i].floorlightabsolute)
+			fprintf(f, "lightfloorabsolute = true;\n");
+		if (sectors[i].ceilinglightlevel != 0)
+			fprintf(f, "lightceiling = %d;\n", sectors[i].ceilinglightlevel);
+		if (sectors[i].ceilinglightabsolute)
+			fprintf(f, "lightceilingabsolute = true;\n");
+		firsttag = Tag_FGet(&sectors[i].tags);
+		if (firsttag != 0)
+			fprintf(f, "id = %d;\n", firsttag);
+		if (sectors[i].tags.count > 1)
+		{
+			fprintf(f, "moreids = \"");
+			for (j = 1; j < sectors[i].tags.count; j++)
+			{
+				if (j > 1)
+					fprintf(f, " ");
+				fprintf(f, "%d", sectors[i].tags.tags[j]);
+			}
+			fprintf(f, "\";\n");
+		}
+		//TODO: Un-fix offsets
+		if (sectors[i].floor_xoffs != 0)
+			fprintf(f, "xpanningfloor = %f;\n", FIXED_TO_FLOAT(sectors[i].floor_xoffs));
+		if (sectors[i].floor_yoffs != 0)
+			fprintf(f, "ypanningfloor = %f;\n", FIXED_TO_FLOAT(sectors[i].floor_yoffs));
+		if (sectors[i].ceiling_xoffs != 0)
+			fprintf(f, "xpanningceiling = %f;\n", FIXED_TO_FLOAT(sectors[i].ceiling_xoffs));
+		if (sectors[i].ceiling_yoffs != 0)
+			fprintf(f, "ypanningceiling = %f;\n", FIXED_TO_FLOAT(sectors[i].ceiling_yoffs));
+		if (sectors[i].floorpic_angle != 0)
+			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(sectors[i].floorpic_angle)));
+		if (sectors[i].ceilingpic_angle != 0)
+			fprintf(f, "rotationceiling = %f;\n", FIXED_TO_FLOAT(AngleFixed(sectors[i].ceilingpic_angle)));
+		//TODO: Only if slope was defined via equations
+		/*if (sectors[i].f_slope)
+		{
+			fixed_t a = sectors[i].f_slope->normal.x;
+			fixed_t b = sectors[i].f_slope->normal.y;
+			fixed_t c = sectors[i].f_slope->normal.z;
+			fixed_t d = -FV3_Dot(&sectors[i].f_slope->normal, &sectors[i].f_slope->o);
+			fprintf(f, "floorplane_a = %f;\n", FIXED_TO_FLOAT(a));
+			fprintf(f, "floorplane_b = %f;\n", FIXED_TO_FLOAT(b));
+			fprintf(f, "floorplane_c = %f;\n", FIXED_TO_FLOAT(c));
+			fprintf(f, "floorplane_d = %f;\n", FIXED_TO_FLOAT(d));
+		}
+		if (sectors[i].c_slope)
+		{
+			fixed_t a = sectors[i].c_slope->normal.x;
+			fixed_t b = sectors[i].c_slope->normal.y;
+			fixed_t c = sectors[i].c_slope->normal.z;
+			fixed_t d = -FV3_Dot(&sectors[i].c_slope->normal, &sectors[i].c_slope->o);
+			fprintf(f, "ceilingplane_a = %f;\n", FIXED_TO_FLOAT(a));
+			fprintf(f, "ceilingplane_b = %f;\n", FIXED_TO_FLOAT(b));
+			fprintf(f, "ceilingplane_c = %f;\n", FIXED_TO_FLOAT(c));
+			fprintf(f, "ceilingplane_d = %f;\n", FIXED_TO_FLOAT(d));
+		}*/
+        if (sectors[i].extra_colormap)
+		{
+			INT32 lightcolor = P_RGBAToColor(sectors[i].extra_colormap->rgba);
+			UINT8 lightalpha = R_GetRgbaA(sectors[i].extra_colormap->rgba);
+			INT32 fadecolor = P_RGBAToColor(sectors[i].extra_colormap->fadergba);
+			UINT8 fadealpha = R_GetRgbaA(sectors[i].extra_colormap->fadergba);
+
+			if (lightcolor != 0)
+				fprintf(f, "lightcolor = %d;\n", lightcolor);
+			if (lightalpha != 25)
+				fprintf(f, "lightalpha = %d;\n", lightalpha);
+			if (fadecolor != 0)
+				fprintf(f, "fadecolor = %d;\n", fadecolor);
+			if (fadealpha != 25)
+				fprintf(f, "fadealpha = %d;\n", fadealpha);
+			if (sectors[i].extra_colormap->fadestart != 0)
+				fprintf(f, "fadestart = %d;\n", sectors[i].extra_colormap->fadestart);
+			if (sectors[i].extra_colormap->fadeend != 31)
+				fprintf(f, "fadeend = %d;\n", sectors[i].extra_colormap->fadeend);
+			if (sectors[i].extra_colormap->flags & CMF_FOG)
+				fprintf(f, "colormapfog = true;\n");
+			if (sectors[i].extra_colormap->flags & CMF_FADEFULLBRIGHTSPRITES)
+				fprintf(f, "colormapfadesprites = true;\n");
+		}
+		if (sectors[i].colormap_protected)
+			fprintf(f, "colormapprotected = true;\n");
+		if (!(sectors[i].flags & MSF_FLIPSPECIAL_FLOOR))
+			fprintf(f, "flipspecial_nofloor = true;\n");
+		if (sectors[i].flags & MSF_FLIPSPECIAL_CEILING)
+			fprintf(f, "flipspecial_ceiling = true;\n");
+		if (sectors[i].flags & MSF_TRIGGERSPECIAL_TOUCH)
+			fprintf(f, "triggerspecial_touch = true;\n");
+		if (sectors[i].flags & MSF_TRIGGERSPECIAL_HEADBUMP)
+			fprintf(f, "triggerspecial_headbump = true;\n");
+		if (sectors[i].flags & MSF_TRIGGERLINE_PLANE)
+			fprintf(f, "triggerline_plane = true;\n");
+		if (sectors[i].flags & MSF_TRIGGERLINE_MOBJ)
+			fprintf(f, "triggerline_mobj = true;\n");
+		if (sectors[i].flags & MSF_INVERTPRECIP)
+			fprintf(f, "invertprecip = true;\n");
+		if (sectors[i].flags & MSF_GRAVITYFLIP)
+			fprintf(f, "gravityflip = true;\n");
+		if (sectors[i].flags & MSF_HEATWAVE)
+			fprintf(f, "heatwave = true;\n");
+		if (sectors[i].flags & MSF_NOCLIPCAMERA)
+			fprintf(f, "noclipcamera = true;\n");
+		if (sectors[i].specialflags & SSF_OUTERSPACE)
+			fprintf(f, "outerspace = true;\n");
+		if (sectors[i].specialflags & SSF_DOUBLESTEPUP)
+			fprintf(f, "doublestepup = true;\n");
+		if (sectors[i].specialflags & SSF_NOSTEPDOWN)
+			fprintf(f, "nostepdown = true;\n");
+		if (sectors[i].specialflags & SSF_SPEEDPAD)
+			fprintf(f, "speedpad = true;\n");
+		if (sectors[i].specialflags & SSF_STARPOSTACTIVATOR)
+			fprintf(f, "starpostactivator = true;\n");
+		if (sectors[i].specialflags & SSF_EXIT)
+			fprintf(f, "exit = true;\n");
+		if (sectors[i].specialflags & SSF_SPECIALSTAGEPIT)
+			fprintf(f, "specialstagepit = true;\n");
+		if (sectors[i].specialflags & SSF_RETURNFLAG)
+			fprintf(f, "returnflag = true;\n");
+		if (sectors[i].specialflags & SSF_REDTEAMBASE)
+			fprintf(f, "redteambase = true;\n");
+		if (sectors[i].specialflags & SSF_BLUETEAMBASE)
+			fprintf(f, "blueteambase = true;\n");
+		if (sectors[i].specialflags & SSF_FAN)
+			fprintf(f, "fan = true;\n");
+		if (sectors[i].specialflags & SSF_SUPERTRANSFORM)
+			fprintf(f, "supertransform = true;\n");
+		if (sectors[i].specialflags & SSF_FORCESPIN)
+			fprintf(f, "forcespin = true;\n");
+		if (sectors[i].specialflags & SSF_ZOOMTUBESTART)
+			fprintf(f, "zoomtubestart = true;\n");
+		if (sectors[i].specialflags & SSF_ZOOMTUBEEND)
+			fprintf(f, "zoomtubeend = true;\n");
+		if (sectors[i].specialflags & SSF_FINISHLINE)
+			fprintf(f, "finishline = true;\n");
+		if (sectors[i].specialflags & SSF_ROPEHANG)
+			fprintf(f, "ropehang = true;\n");
+		//TODO: Float
+		if (sectors[i].friction != 0)
+			fprintf(f, "friction = %d;\n", sectors[i].friction);
+		if (sectors[i].gravity != FRACUNIT)
+			fprintf(f, "gravity = %f;\n", FIXED_TO_FLOAT(sectors[i].gravity));
+		if (sectors[i].damagetype != SD_NONE)
+		{
+			switch (sectors[i].damagetype)
+			{
+				case SD_GENERIC:
+					fprintf(f, "damagetype = \"Generic\";\n");
+					break;
+				case SD_WATER:
+					fprintf(f, "damagetype = \"Water\";\n");
+					break;
+				case SD_FIRE:
+					fprintf(f, "damagetype = \"Fire\";\n");
+					break;
+				case SD_LAVA:
+					fprintf(f, "damagetype = \"Lava\";\n");
+					break;
+				case SD_ELECTRIC:
+					fprintf(f, "damagetype = \"Electric\";\n");
+					break;
+				case SD_SPIKE:
+					fprintf(f, "damagetype = \"Spike\";\n");
+					break;
+				case SD_DEATHPITTILT:
+					fprintf(f, "damagetype = \"DeathPitTilt\";\n");
+					break;
+				case SD_DEATHPITNOTILT:
+					fprintf(f, "damagetype = \"DeathPitNoTilt\";\n");
+					break;
+				case SD_INSTAKILL:
+					fprintf(f, "damagetype = \"Instakill\";\n");
+					break;
+				case SD_SPECIALSTAGE:
+					fprintf(f, "damagetype = \"SpecialStage\";\n");
+					break;
+				default:
+					break;
+			}
+		}
+		if (sectors[i].triggertag != 0)
+			fprintf(f, "triggertag = %d;\n", sectors[i].triggertag);
+		if (sectors[i].triggerer != 0)
+			fprintf(f, "triggerer = %d;\n", sectors[i].triggerer);
+		fprintf(f, "}\n");
+		fprintf(f, "\n");
+	}
+
+	fclose(f);
+}
+
 /** Loads the textmap data, after obtaining the elements count and allocating their respective space.
   */
 static void P_LoadTextmap(void)
@@ -2587,10 +2987,16 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 
 				linenum = (nodetype == NT_XGL3) ? READUINT32((*data)) : READUINT16((*data));
 				if (linenum != 0xFFFF && linenum >= numlines)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid linedef %d!\n", sizeu1(k), m, linenum);
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid linedef %d!\n", sizeu1(k), i, linenum);
 				segs[k].glseg = (linenum == 0xFFFF);
 				segs[k].linedef = (linenum == 0xFFFF) ? NULL : &lines[linenum];
 				segs[k].side = READUINT8((*data));
+			}
+			while (segs[subsectors[i].firstline].glseg)
+			{
+				subsectors[i].firstline++;
+				if (subsectors[i].firstline == k)
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Subsector %d does not have any valid segs!", i);
 			}
 			break;
 
@@ -5905,6 +6311,8 @@ static void P_ConvertBinaryMap(void)
 	P_ConvertBinarySectorTypes();
 	P_ConvertBinaryThingTypes();
 	P_ConvertBinaryLinedefFlags();
+	if (M_CheckParm("-writetextmap"))
+		P_WriteTextmap();
 }
 
 /** Compute MD5 message digest for bytes read from memory source
