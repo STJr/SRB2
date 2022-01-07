@@ -7386,6 +7386,7 @@ static void P_SpawnScrollers(void)
 		fixed_t cy = FixedMul(dy, CARRYFACTOR);
 		INT32 control = -1, accel = 0; // no control sector or acceleration
 		INT32 special = l->special;
+		vector2_t vdir;
 
 		tag = Tag_FGet(&l->tags);
 
@@ -7418,6 +7419,20 @@ static void P_SpawnScrollers(void)
 			case 530: // scroll and carry objects on floor
 			case 533: // scroll and carry objects on ceiling
 			case 536: // scroll and carry objects on floor and ceiling
+				// If specified, use line for direction and front X offset for speed.
+				if (l->flags & ML_EFFECT6)
+				{
+					fixed_t factor = sides[l->sidenum[0]].textureoffset;
+					fixed_t hypot = FixedHypot(l->dx, l->dy);
+					vdir.x = l->dx;
+					vdir.y = l->dy;
+					if (hypot)
+						FV2_Divide(&vdir, hypot);
+
+					dx = FixedMul(vdir.x, factor) >> SCROLL_SHIFT;
+					dy = FixedMul(vdir.y, factor) >> SCROLL_SHIFT;
+				}
+
 				if (tag == 0)
 					{
 						if (special % 10 != 3) Add_Scroller(sc_floor, -dx, dy, control, l->frontsector - sectors, accel, l->flags & ML_NOCLIMB);
@@ -7436,6 +7451,12 @@ static void P_SpawnScrollers(void)
 			case 520: // carry objects on floor
 			case 523: // carry objects on ceiling
 			case 526: // carry objects on floor and ceilingz
+				if (l->flags & ML_EFFECT6)
+				{
+					cx = FixedMul(dx, CARRYFACTOR);
+					cy = FixedMul(dy, CARRYFACTOR);
+				}
+
 				if (tag == 0)
 				{
 					if (special % 10 != 3) Add_Scroller(sc_carry, cx, cy, control, l->frontsector - sectors, accel, l->flags & ML_NOCLIMB);
