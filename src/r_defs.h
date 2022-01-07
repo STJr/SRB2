@@ -429,7 +429,7 @@ typedef struct sector_s
 	mtag_t triggertag; // tag to call upon triggering
 	UINT8 triggerer; // who can trigger?
 
-	INT32 friction;
+	fixed_t friction;
 
 	// Sprite culling feature
 	struct line_s *cullheight;

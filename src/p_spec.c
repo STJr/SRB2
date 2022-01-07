@@ -8359,23 +8359,15 @@ static void P_SpawnFriction(void)
 	size_t i;
 	sector_t *s = sectors;
 
-	fixed_t strength; // friction value of sector
 	fixed_t friction; // friction value to be applied during movement
 	INT32 movefactor; // applied to each player move to simulate inertia
 
 	for (i = 0; i < numsectors; i++, s++)
 	{
-		if (!s->friction)
+		if (s->friction == ORIG_FRICTION)
 			continue;
 
-		strength = s->friction;
-		if (strength > 0) // sludge
-			strength = strength*2; // otherwise, the maximum sludginess value is +967...
-
-		// The following might seem odd. At the time of movement,
-		// the move distance is multiplied by 'friction/0x10000', so a
-		// higher friction value actually means 'less friction'.
-		friction = ORIG_FRICTION - (0x1EB8*strength)/0x80; // ORIG_FRICTION is 0xE800
+		friction = s->friction;
 
 		if (friction > FRACUNIT)
 			friction = FRACUNIT;

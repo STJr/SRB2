@@ -1054,6 +1054,8 @@ static void P_LoadSectors(UINT8 *data)
 		ss->triggertag = 0;
 		ss->triggerer = TO_PLAYER;
 
+		ss->friction = ORIG_FRICTION;
+
 		P_InitializeSector(ss);
 	}
 }
@@ -1720,7 +1722,7 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 	else if (fastcmp(param, "ropehang") && fastcmp("true", val))
 		sectors[i].specialflags |= SSF_ROPEHANG;
 	else if (fastcmp(param, "friction"))
-		sectors[i].friction = atol(val);
+		sectors[i].friction = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "gravity"))
 		sectors[i].gravity = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "damagetype"))
@@ -2448,6 +2450,8 @@ static void P_LoadTextmap(void)
 		sc->damagetype = SD_NONE;
 		sc->triggertag = 0;
 		sc->triggerer = TO_PLAYER;
+
+		sc->friction = ORIG_FRICTION;
 
 		textmap_colormap.used = false;
 		textmap_colormap.lightcolor = 0;
@@ -5337,8 +5341,20 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 540: //Floor friction
 		{
 			INT32 s;
+			fixed_t strength; // friction value of sector
+			fixed_t friction; // friction value to be applied during movement
+
+			strength = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+			if (strength > 0) // sludge
+				strength = strength*2; // otherwise, the maximum sludginess value is +967...
+
+			// The following might seem odd. At the time of movement,
+			// the move distance is multiplied by 'friction/0x10000', so a
+			// higher friction value actually means 'less friction'.
+			friction = ORIG_FRICTION - (0x1EB8*strength)/0x80; // ORIG_FRICTION is 0xE800
+
 			TAG_ITER_SECTORS(tag, s)
-				sectors[s].friction = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+				sectors[s].friction = friction;
 			break;
 		}
 		case 541: //Wind
