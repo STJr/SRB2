@@ -8856,6 +8856,8 @@ static void P_SpawnPushers(void)
 	{
 		fixed_t dx = l->dx;
 		fixed_t dy = l->dy;
+		pushertype_e pushertype;
+		boolean valid = true;
 
 		// If specified, use line for direction and front X offset for speed.
 		if (l->flags & ML_EFFECT6)
@@ -8875,37 +8877,56 @@ static void P_SpawnPushers(void)
 		switch (l->special)
 		{
 			case 541: // wind
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_wind, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				pushertype = p_wind;
 				break;
 			case 544: // current
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_current, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				pushertype = p_current;
 				break;
 			case 547: // push/pull
-				TAG_ITER_SECTORS(tag, s)
-				{
-					thing = P_GetPushThing(s);
-					if (thing) // No MT_P* means no effect
-						Add_Pusher(p_push, dx, dy, thing, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				}
+				pushertype = p_push;
 				break;
 			case 545: // current up
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_upcurrent, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				pushertype = p_upcurrent;
 				break;
 			case 546: // current down
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_downcurrent, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				pushertype = p_downcurrent;
 				break;
 			case 542: // wind up
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_upwind, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				pushertype = p_upwind;
 				break;
 			case 543: // wind down
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_downwind, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				pushertype = p_downwind;
 				break;
+			default:
+				valid = false;
+		}
+
+		if (valid)
+		{
+			if (pushertype == p_push)
+			{
+				if (tag)
+					TAG_ITER_SECTORS(tag, s)
+					{
+						thing = P_GetPushThing(s);
+						if (thing) // No MT_P* means no effect
+							Add_Pusher(p_push, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					}
+				else
+				{
+					thing = P_GetPushThing(l->frontsector - sectors);
+					if (thing) // No MT_P* means no effect
+						Add_Pusher(p_push, dx, dy, NULL, l->frontsector - sectors, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				}
+			}
+			else
+			{
+				if (tag)
+					TAG_ITER_SECTORS(tag, s)
+						Add_Pusher(pushertype, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+				else
+					Add_Pusher(pushertype, dx, dy, NULL, l->frontsector - sectors, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+			}
 		}
 	}
 }
