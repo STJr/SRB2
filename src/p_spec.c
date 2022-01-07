@@ -2093,7 +2093,7 @@ void P_SwitchWeather(INT32 weathernum)
 	{
 		case PRECIP_SNOW: // snow
 			curWeather = PRECIP_SNOW;
-			
+
 			if (purge)
 				P_SpawnPrecipitation();
 
@@ -8854,40 +8854,57 @@ static void P_SpawnPushers(void)
 
 	for (i = 0; i < numlines; i++, l++)
 	{
+		fixed_t dx = l->dx;
+		fixed_t dy = l->dy;
+
+		// If specified, use line for direction and front X offset for speed.
+		if (l->flags & ML_EFFECT6)
+		{
+			vector2_t vdir = {.x = l->dx, .y = l->dy};
+			fixed_t factor = sides[l->sidenum[0]].textureoffset;
+			fixed_t hypot = FixedHypot(l->dx, l->dy);
+			if (hypot)
+				FV2_Divide(&vdir, hypot);
+
+			dx = FixedMul(vdir.x, factor);
+			dy = FixedMul(vdir.y, factor);
+		}
+
 		tag = Tag_FGet(&l->tags);
+
 		switch (l->special)
 		{
 			case 541: // wind
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_wind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_wind, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 			case 544: // current
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_current, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_current, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 			case 547: // push/pull
 				TAG_ITER_SECTORS(tag, s)
 				{
 					thing = P_GetPushThing(s);
 					if (thing) // No MT_P* means no effect
-						Add_Pusher(p_push, l->dx, l->dy, thing, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+						Add_Pusher(p_push, dx, dy, thing, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				}
 				break;
 			case 545: // current up
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_upcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_upcurrent, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 			case 546: // current down
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_downcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_downcurrent, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 			case 542: // wind up
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_upwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_upwind, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 			case 543: // wind down
 				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_downwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+					Add_Pusher(p_downwind, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				break;
 		}
 	}
