@@ -1977,6 +1977,29 @@ static void TextmapFixFlatOffsets(sector_t *sec)
 	}
 }
 
+static void TextmapUnfixFlatOffsets(sector_t *sec)
+{
+	if (sec->floorpic_angle)
+	{
+		fixed_t pc = FINECOSINE(sec->floorpic_angle >> ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE(sec->floorpic_angle >> ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->floor_xoffs;
+		fixed_t yoffs = sec->floor_yoffs;
+		sec->floor_xoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		sec->floor_yoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+	}
+
+	if (sec->ceilingpic_angle)
+	{
+		fixed_t pc = FINECOSINE(sec->ceilingpic_angle >> ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE(sec->ceilingpic_angle >> ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->ceiling_xoffs;
+		fixed_t yoffs = sec->ceiling_yoffs;
+		sec->ceiling_xoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		sec->ceiling_yoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+	}
+}
+
 static INT32 P_ColorToRGBA(INT32 color, UINT8 alpha)
 {
 	UINT8 r = (color >> 16) & 0xFF;
@@ -2211,15 +2234,16 @@ static void P_WriteTextmap(void)
 			}
 			fprintf(f, "\";\n");
 		}
-		//TODO: Un-fix offsets
-		if (sectors[i].floor_xoffs != 0)
-			fprintf(f, "xpanningfloor = %f;\n", FIXED_TO_FLOAT(sectors[i].floor_xoffs));
-		if (sectors[i].floor_yoffs != 0)
-			fprintf(f, "ypanningfloor = %f;\n", FIXED_TO_FLOAT(sectors[i].floor_yoffs));
-		if (sectors[i].ceiling_xoffs != 0)
-			fprintf(f, "xpanningceiling = %f;\n", FIXED_TO_FLOAT(sectors[i].ceiling_xoffs));
-		if (sectors[i].ceiling_yoffs != 0)
-			fprintf(f, "ypanningceiling = %f;\n", FIXED_TO_FLOAT(sectors[i].ceiling_yoffs));
+		sector_t tempsec = sectors[i];
+		TextmapUnfixFlatOffsets(&tempsec);
+		if (tempsec.floor_xoffs != 0)
+			fprintf(f, "xpanningfloor = %f;\n", FIXED_TO_FLOAT(tempsec.floor_xoffs));
+		if (tempsec.floor_yoffs != 0)
+			fprintf(f, "ypanningfloor = %f;\n", FIXED_TO_FLOAT(tempsec.floor_yoffs));
+		if (tempsec.ceiling_xoffs != 0)
+			fprintf(f, "xpanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceiling_xoffs));
+		if (tempsec.ceiling_yoffs != 0)
+			fprintf(f, "ypanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceiling_yoffs));
 		if (sectors[i].floorpic_angle != 0)
 			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(sectors[i].floorpic_angle)));
 		if (sectors[i].ceilingpic_angle != 0)
