@@ -1428,9 +1428,9 @@ UINT32 vertexesPos[UINT16_MAX];
 UINT32 sectorsPos[UINT16_MAX];
 
 // Determine total amount of map data in TEXTMAP.
-static boolean TextmapCount(UINT8 *data, size_t size)
+static boolean TextmapCount(size_t size)
 {
-	char *tkn = M_GetToken((char *)data);
+	const char *tkn = M_TokenizerRead(0);
 	UINT8 brackets = 0;
 
 	nummapthings = 0;
@@ -1442,20 +1442,16 @@ static boolean TextmapCount(UINT8 *data, size_t size)
 	// Look for namespace at the beginning.
 	if (!fastcmp(tkn, "namespace"))
 	{
-		Z_Free(tkn);
 		CONS_Alert(CONS_ERROR, "No namespace at beginning of lump!\n");
 		return false;
 	}
-	Z_Free(tkn);
 
 	// Check if namespace is valid.
-	tkn = M_GetToken(NULL);
+	tkn = M_TokenizerRead(0);
 	if (!fastcmp(tkn, "srb2"))
 		CONS_Alert(CONS_WARNING, "Invalid namespace '%s', only 'srb2' is supported.\n", tkn);
-	Z_Free(tkn);
 
-	tkn = M_GetToken(NULL);
-	while (tkn && M_GetTokenPos() < size)
+	while ((tkn = M_TokenizerRead(0)) && M_TokenizerGetEndPos() < size)
 	{
 		// Avoid anything inside bracketed stuff, only look for external keywords.
 		if (brackets)
@@ -1467,23 +1463,18 @@ static boolean TextmapCount(UINT8 *data, size_t size)
 			brackets++;
 		// Check for valid fields.
 		else if (fastcmp(tkn, "thing"))
-			mapthingsPos[nummapthings++] = M_GetTokenPos();
+			mapthingsPos[nummapthings++] = M_TokenizerGetEndPos();
 		else if (fastcmp(tkn, "linedef"))
-			linesPos[numlines++] = M_GetTokenPos();
+			linesPos[numlines++] = M_TokenizerGetEndPos();
 		else if (fastcmp(tkn, "sidedef"))
-			sidesPos[numsides++] = M_GetTokenPos();
+			sidesPos[numsides++] = M_TokenizerGetEndPos();
 		else if (fastcmp(tkn, "vertex"))
-			vertexesPos[numvertexes++] = M_GetTokenPos();
+			vertexesPos[numvertexes++] = M_TokenizerGetEndPos();
 		else if (fastcmp(tkn, "sector"))
-			sectorsPos[numsectors++] = M_GetTokenPos();
+			sectorsPos[numsectors++] = M_TokenizerGetEndPos();
 		else
 			CONS_Alert(CONS_NOTICE, "Unknown field '%s'.\n", tkn);
-
-		Z_Free(tkn);
-		tkn = M_GetToken(NULL);
 	}
-
-	Z_Free(tkn);
 
 	if (brackets)
 	{
@@ -1494,7 +1485,7 @@ static boolean TextmapCount(UINT8 *data, size_t size)
 	return true;
 }
 
-static void ParseTextmapVertexParameter(UINT32 i, char *param, char *val)
+static void ParseTextmapVertexParameter(UINT32 i, const char *param, const char *val)
 {
 	if (fastcmp(param, "x"))
 		vertexes[i].x = FLOAT_TO_FIXED(atof(val));
@@ -1541,7 +1532,7 @@ typedef struct textmap_plane_s {
 textmap_plane_t textmap_planefloor = {0, 0, 0, 0, 0};
 textmap_plane_t textmap_planeceiling = {0, 0, 0, 0, 0};
 
-static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
+static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char *val)
 {
 	if (fastcmp(param, "heightfloor"))
 		sectors[i].floorheight = atol(val) << FRACBITS;
@@ -1565,7 +1556,7 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		Tag_FSet(&sectors[i].tags, atol(val));
 	else if (fastcmp(param, "moreids"))
 	{
-		char* id = val;
+		const char* id = val;
 		while (id)
 		{
 			Tag_Add(&sectors[i].tags, atol(id));
@@ -1754,7 +1745,7 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].triggerer = atol(val);
 }
 
-static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
+static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char *val)
 {
 	if (fastcmp(param, "offsetx"))
 		sides[i].textureoffset = atol(val)<<FRACBITS;
@@ -1772,13 +1763,13 @@ static void ParseTextmapSidedefParameter(UINT32 i, char *param, char *val)
 		sides[i].repeatcnt = atol(val);
 }
 
-static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
+static void ParseTextmapLinedefParameter(UINT32 i, const char *param, const char *val)
 {
 	if (fastcmp(param, "id"))
 		Tag_FSet(&lines[i].tags, atol(val));
 	else if (fastcmp(param, "moreids"))
 	{
-		char* id = val;
+		const char* id = val;
 		while (id)
 		{
 			Tag_Add(&lines[i].tags, atol(id));
@@ -1866,13 +1857,13 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		lines[i].flags |= ML_TFERLINE;
 }
 
-static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
+static void ParseTextmapThingParameter(UINT32 i, const char *param, const char *val)
 {
 	if (fastcmp(param, "id"))
 		Tag_FSet(&mapthings[i].tags, atol(val));
 	else if (fastcmp(param, "moreids"))
 	{
-		char* id = val;
+		const char* id = val;
 		while (id)
 		{
 			Tag_Add(&mapthings[i].tags, atol(id));
@@ -1923,32 +1914,25 @@ static void ParseTextmapThingParameter(UINT32 i, char *param, char *val)
   * \param Structure number (mapthings, sectors, ...).
   * \param Parser function pointer.
   */
-static void TextmapParse(UINT32 dataPos, size_t num, void (*parser)(UINT32, char *, char *))
+static void TextmapParse(UINT32 dataPos, size_t num, void (*parser)(UINT32, const char *, const char *))
 {
-	char *param, *val;
+	const char *param, *val;
 
-	M_SetTokenPos(dataPos);
-	param = M_GetToken(NULL);
+	M_TokenizerSetEndPos(dataPos);
+	param = M_TokenizerRead(0);
 	if (!fastcmp(param, "{"))
 	{
-		Z_Free(param);
 		CONS_Alert(CONS_WARNING, "Invalid UDMF data capsule!\n");
 		return;
 	}
-	Z_Free(param);
 
 	while (true)
 	{
-		param = M_GetToken(NULL);
+		param = M_TokenizerRead(0);
 		if (fastcmp(param, "}"))
-		{
-			Z_Free(param);
 			break;
-		}
-		val = M_GetToken(NULL);
+		val = M_TokenizerRead(1);
 		parser(num, param, val);
-		Z_Free(param);
-		Z_Free(val);
 	}
 }
 
@@ -2649,8 +2633,12 @@ static boolean P_LoadMapData(const virtres_t *virt)
 	if (udmf) // Count how many entries for each type we got in textmap.
 	{
 		virtlump_t *textmap = vres_Find(virt, "TEXTMAP");
-		if (!TextmapCount(textmap->data, textmap->size))
+		M_TokenizerOpen((char *)textmap->data);
+		if (!TextmapCount(textmap->size))
+		{
+			M_TokenizerClose();
 			return false;
+		}
 	}
 	else
 	{
@@ -2704,7 +2692,10 @@ static boolean P_LoadMapData(const virtres_t *virt)
 
 	// Load map data.
 	if (udmf)
+	{
 		P_LoadTextmap();
+		M_TokenizerClose();
+	}
 	else
 	{
 		P_LoadVertices(virtvertexes->data);
