@@ -1428,14 +1428,14 @@ void OP_ObjectplaceMovement(player_t *player)
 //
 // Objectplace related commands.
 //
-void Command_Writethings_f(void)
+/*void Command_Writethings_f(void)
 {
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_OBJECTPLACE;
 
 	P_WriteThings();
-}
+}*/
 
 void Command_ObjectPlace_f(void)
 {

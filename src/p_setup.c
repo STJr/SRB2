@@ -907,7 +907,7 @@ static void P_SpawnMapThings(boolean spawnemblems)
 }
 
 // Experimental groovy write function!
-void P_WriteThings(void)
+/*void P_WriteThings(void)
 {
 	size_t i, length;
 	mapthing_t *mt;
@@ -942,7 +942,7 @@ void P_WriteThings(void)
 	savebuf_p = NULL;
 
 	CONS_Printf(M_GetText("newthings%d.lmp saved.\n"), gamemap);
-}
+}*/
 
 //
 // MAP LOADING FUNCTIONS
