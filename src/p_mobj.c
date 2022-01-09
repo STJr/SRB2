@@ -12723,7 +12723,7 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		}
 		break;
 	case MT_EGGMOBILE2:
-		if (mthing->args[5])
+		if (!mthing->args[5])
 			mobj->flags2 |= MF2_AMBUSH;
 		break;
 	case MT_EGGMOBILE3:

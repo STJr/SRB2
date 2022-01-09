@@ -1435,44 +1435,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 			// set alpha for transparent walls
 			// ooops ! this do not work at all because render order we should render it in backtofront order
-			switch (gl_linedef->special)
+			if (gl_linedef->blendmode && gl_linedef->blendmode != AST_FOG)
 			{
-				//  Translucent
-				case 102:
-				case 121:
-				case 123:
-				case 124:
-				case 125:
-				case 141:
-				case 142:
-				case 144:
-				case 145:
-				case 174:
-				case 175:
-				case 192:
-				case 195:
-				case 221:
-				case 253:
-				case 256:
-					if (gl_linedef->blendmode && gl_linedef->blendmode != AST_FOG)
-						blendmode = HWR_SurfaceBlend(gl_linedef->blendmode, R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
-					else
-						blendmode = PF_Translucent;
-					break;
-				default:
-					if (gl_linedef->blendmode && gl_linedef->blendmode != AST_FOG)
-					{
-						if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
-							blendmode = HWR_SurfaceBlend(gl_linedef->blendmode, R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
-						else
-							blendmode = HWR_GetBlendModeFlag(gl_linedef->blendmode);
-					}
-					else if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
-						blendmode = HWR_TranstableToAlpha(R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
-					else
-						blendmode = PF_Masked;
-					break;
+				if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
+					blendmode = HWR_SurfaceBlend(gl_linedef->blendmode, R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
+				else
+					blendmode = HWR_GetBlendModeFlag(gl_linedef->blendmode);
 			}
+			else if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
+				blendmode = HWR_TranstableToAlpha(R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
+			else
+				blendmode = PF_Masked;
 
 			if (gl_curline->polyseg && gl_curline->polyseg->translucency > 0)
 			{
