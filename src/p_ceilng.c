@@ -86,13 +86,16 @@ void T_MoveCeiling(ceiling_t *ceiling)
 				if (dest == lines[ceiling->sourceline].frontsector->ceilingheight)
 				{
 					dest = lines[ceiling->sourceline].backsector->ceilingheight;
-					ceiling->speed = ceiling->origspeed = lines[ceiling->sourceline].args[3] << (FRACBITS - 2); // return trip, use args[3]
+					ceiling->origspeed = lines[ceiling->sourceline].args[3] << (FRACBITS - 2); // return trip, use args[3]
 				}
 				else
 				{
 					dest = lines[ceiling->sourceline].frontsector->ceilingheight;
-					ceiling->speed = ceiling->origspeed = lines[ceiling->sourceline].args[2] << (FRACBITS - 2); // going frontways, use args[2]
+					ceiling->origspeed = lines[ceiling->sourceline].args[2] << (FRACBITS - 2); // going frontways, use args[2]
 				}
+
+				if (ceiling->type == bounceCeilingCrush)
+					ceiling->speed = ceiling->origspeed;
 
 				if (dest < ceiling->sector->ceilingheight) // must move down
 				{
