@@ -1454,13 +1454,13 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				case 221:
 				case 253:
 				case 256:
-					if (gl_linedef->blendmode != AST_FOG)
+					if (gl_linedef->blendmode && gl_linedef->blendmode != AST_FOG)
 						blendmode = HWR_SurfaceBlend(gl_linedef->blendmode, R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
 					else
 						blendmode = PF_Translucent;
 					break;
 				default:
-					if (gl_linedef->blendmode != AST_FOG)
+					if (gl_linedef->blendmode && gl_linedef->blendmode != AST_FOG)
 					{
 						if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
 							blendmode = HWR_SurfaceBlend(gl_linedef->blendmode, R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
