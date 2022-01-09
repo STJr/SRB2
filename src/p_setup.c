@@ -2035,15 +2035,25 @@ static void P_WriteTextmap(void)
 	{
 		INT32 s;
 
-		if (wlines[i].special != 606)
-			continue;
-
-		TAG_ITER_SECTORS(wlines[i].args[0], s)
+		switch (wlines[i].special)
 		{
-			if (wsectors[s].colormap_protected)
-				continue;
+			case 606:
+				if (wlines[i].args[0] == MTAG_GLOBAL)
+				{
+					CONS_Printf("Linedef %d applies a global colormap which cannot be converted automatically. Please convert it manually.\n", i);
+					break;
+				}
 
-			wsectors[s].extra_colormap = wsides[wlines[i].sidenum[0]].colormap_data;
+				TAG_ITER_SECTORS(wlines[i].args[0], s)
+				{
+					if (wsectors[s].colormap_protected)
+						continue;
+
+					wsectors[s].extra_colormap = wsides[wlines[i].sidenum[0]].colormap_data;
+				}
+				break;
+			default:
+				break;
 		}
 	}
 
