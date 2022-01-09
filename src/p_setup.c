@@ -3638,10 +3638,10 @@ static void P_ConvertBinaryMap(void)
 
 			//Flags
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] = TMFL_NOBOSSES;
+				lines[i].args[2] |= TMFL_NOBOSSES;
 			//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 			if (lines[i].flags & ML_EFFECT6 || lines[i].args[1] == 256)
-				lines[i].args[2] = TMFL_SPLAT;
+				lines[i].args[2] |= TMFL_SPLAT;
 
 			break;
 		case 259: //Custom FOF
@@ -3925,13 +3925,13 @@ static void P_ConvertBinaryMap(void)
 					lines[i].special = 0;
 					break;
 				}
-				lines[i].args[1] = sides[lines[i].sidenum[1]].rowoffset >> FRACBITS;
-				lines[i].args[2] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
+				lines[i].args[1] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
+				lines[i].args[2] = sides[lines[i].sidenum[1]].rowoffset >> FRACBITS;
 			}
 			else
 			{
-				lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-				lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+				lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+				lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			}
 			lines[i].special = 500;
 			break;
