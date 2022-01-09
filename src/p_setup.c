@@ -3816,13 +3816,13 @@ static void P_ConvertBinaryMap(void)
 					lines[i].special = 0;
 					break;
 				}
-				lines[i].args[1] = sides[lines[i].sidenum[1]].rowoffset >> FRACBITS;
-				lines[i].args[2] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
+				lines[i].args[1] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
+				lines[i].args[2] = sides[lines[i].sidenum[1]].rowoffset >> FRACBITS;
 			}
 			else
 			{
-				lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-				lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+				lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+				lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			}
 			lines[i].special = 500;
 			break;
