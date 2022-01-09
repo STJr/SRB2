@@ -2045,7 +2045,7 @@ static void P_WriteTextmap(void)
 				}
 				break;
 			case 2:
-				CONS_Alert(CONS_WARNING, M_GetText("Custom exit linedef %d detected. Changes to the next map at runtime will not be reflected in the converted map. Use linedef type 465 for this.\n"), i);
+				CONS_Alert(CONS_WARNING, M_GetText("Custom exit linedef %d detected. Changes to the next map at runtime will not be reflected in the converted map. Use linedef type 468 for this.\n"), i);
 				wlines[i].args[0] = lines[i].frontsector->floorheight >> FRACBITS;
 				wlines[i].args[2] = lines[i].frontsector->ceilingheight >> FRACBITS;
 				break;
@@ -2188,8 +2188,11 @@ static void P_WriteTextmap(void)
 					break;
 			}
 		}
-		if (wlines[i].executordelay != 0)
-			fprintf(f, "executordelay = %d;\n", wlines[i].executordelay);
+		if (wlines[i].executordelay != 0 && wlines[i].backsector)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Linedef %d has an executor delay. Changes to the delay at runtime will not be reflected in the converted map. Use linedef type 465 for this.\n"), i);
+			fprintf(f, "executordelay = %d;\n", (wlines[i].backsector->ceilingheight >> FRACBITS) + (wlines[i].backsector->floorheight >> FRACBITS));
+		}
 		if (wlines[i].flags & ML_IMPASSIBLE)
 			fprintf(f, "blocking = true;\n");
 		if (wlines[i].flags & ML_BLOCKMONSTERS)
