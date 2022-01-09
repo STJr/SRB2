@@ -2295,29 +2295,6 @@ static void P_WriteTextmap(void)
 			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].floorpic_angle)));
 		if (wsectors[i].ceilingpic_angle != 0)
 			fprintf(f, "rotationceiling = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].ceilingpic_angle)));
-		//TODO: Only if slope was defined via equations
-		/*if (wsectors[i].f_slope)
-		{
-			fixed_t a = wsectors[i].f_slope->normal.x;
-			fixed_t b = wsectors[i].f_slope->normal.y;
-			fixed_t c = wsectors[i].f_slope->normal.z;
-			fixed_t d = -FV3_Dot(&wsectors[i].f_slope->normal, &wsectors[i].f_slope->o);
-			fprintf(f, "floorplane_a = %f;\n", FIXED_TO_FLOAT(a));
-			fprintf(f, "floorplane_b = %f;\n", FIXED_TO_FLOAT(b));
-			fprintf(f, "floorplane_c = %f;\n", FIXED_TO_FLOAT(c));
-			fprintf(f, "floorplane_d = %f;\n", FIXED_TO_FLOAT(d));
-		}
-		if (wsectors[i].c_slope)
-		{
-			fixed_t a = wsectors[i].c_slope->normal.x;
-			fixed_t b = wsectors[i].c_slope->normal.y;
-			fixed_t c = wsectors[i].c_slope->normal.z;
-			fixed_t d = -FV3_Dot(&wsectors[i].c_slope->normal, &wsectors[i].c_slope->o);
-			fprintf(f, "ceilingplane_a = %f;\n", FIXED_TO_FLOAT(a));
-			fprintf(f, "ceilingplane_b = %f;\n", FIXED_TO_FLOAT(b));
-			fprintf(f, "ceilingplane_c = %f;\n", FIXED_TO_FLOAT(c));
-			fprintf(f, "ceilingplane_d = %f;\n", FIXED_TO_FLOAT(d));
-		}*/
         if (wsectors[i].extra_colormap)
 		{
 			INT32 lightcolor = P_RGBAToColor(wsectors[i].extra_colormap->rgba);
