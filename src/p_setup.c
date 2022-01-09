@@ -3930,10 +3930,10 @@ static void P_ConvertBinaryMap(void)
 
 			//Flags
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] = TMFL_NOBOSSES;
+				lines[i].args[2] |= TMFL_NOBOSSES;
 			//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 			if (lines[i].flags & ML_EFFECT6 || lines[i].args[1] == 256)
-				lines[i].args[2] = TMFL_SPLAT;
+				lines[i].args[2] |= TMFL_SPLAT;
 
 			break;
 		case 259: //Custom FOF
@@ -4885,13 +4885,13 @@ static void P_ConvertBinaryMap(void)
 					lines[i].special = 0;
 					break;
 				}
-				lines[i].args[1] = sides[lines[i].sidenum[1]].rowoffset >> FRACBITS;
-				lines[i].args[2] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
+				lines[i].args[1] = sides[lines[i].sidenum[1]].textureoffset >> FRACBITS;
+				lines[i].args[2] = sides[lines[i].sidenum[1]].rowoffset >> FRACBITS;
 			}
 			else
 			{
-				lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
-				lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+				lines[i].args[1] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
+				lines[i].args[2] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			}
 			lines[i].special = 500;
 			break;
@@ -5390,8 +5390,8 @@ static void P_ConvertBinaryMap(void)
 		case 136: //Pyre Fly
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_AMBUSH);
 			break;
-		case 202: //Egg Slimer
-			mapthings[i].args[5] = !!(mapthings[i].options & MTF_AMBUSH);
+		case 201: //Egg Slimer
+			mapthings[i].args[5] = !(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 203: //Egg Colosseum
 			mapthings[i].args[5] = LE_BOSS4DROP + mapthings[i].extrainfo * LE_PARAMWIDTH;
@@ -5522,13 +5522,13 @@ static void P_ConvertBinaryMap(void)
 			mapthings[i].args[0] = !(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 700: //Water ambience A
-		case 701: //Water ambience A
-		case 702: //Water ambience A
-		case 703: //Water ambience A
-		case 704: //Water ambience A
-		case 705: //Water ambience A
-		case 706: //Water ambience A
-		case 707: //Water ambience A
+		case 701: //Water ambience B
+		case 702: //Water ambience C
+		case 703: //Water ambience D
+		case 704: //Water ambience E
+		case 705: //Water ambience F
+		case 706: //Water ambience G
+		case 707: //Water ambience H
 			mapthings[i].args[0] = 35;
 			P_WriteConstant(sfx_amwtr1 + mapthings[i].type - 700, &mapthings[i].stringargs[0]);
 			mapthings[i].type = 700;
