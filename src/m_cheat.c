@@ -1137,7 +1137,7 @@ void OP_ResetObjectplace(void)
 //
 // Main meat of objectplace: handling functions
 //
-void OP_NightsObjectplace(player_t *player)
+/*void OP_NightsObjectplace(player_t *player)
 {
 	ticcmd_t *cmd = &player->cmd;
 	mapthing_t *mt;
@@ -1290,7 +1290,7 @@ void OP_NightsObjectplace(player_t *player)
 		else
 			P_SpawnMapThing(mt);
 	}
-}
+}*/
 
 //
 // OP_ObjectplaceMovement

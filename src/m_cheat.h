@@ -38,7 +38,7 @@ extern UINT32 op_displayflags;
 
 boolean OP_FreezeObjectplace(void);
 void OP_ResetObjectplace(void);
-void OP_NightsObjectplace(player_t *player);
+//void OP_NightsObjectplace(player_t *player);
 void OP_ObjectplaceMovement(player_t *player);
 
 //

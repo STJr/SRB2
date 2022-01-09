@@ -7520,8 +7520,8 @@ static void P_NiGHTSMovement(player_t *player)
 		}
 	}
 
-	if (objectplacing)
-		OP_NightsObjectplace(player);
+	//if (objectplacing)
+	//	OP_NightsObjectplace(player);
 }
 
 // May be used in future for CTF
