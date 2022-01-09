@@ -206,13 +206,15 @@ void T_MoveFloor(floormove_t *movefloor)
 				if (movefloor->floordestheight == lines[movefloor->sourceline].frontsector->floorheight)
 				{
 					movefloor->floordestheight = lines[movefloor->sourceline].backsector->floorheight;
-					movefloor->speed = movefloor->origspeed = lines[movefloor->sourceline].args[3] << (FRACBITS - 2); // return trip, use args[3]
+					movefloor->origspeed = lines[movefloor->sourceline].args[3] << (FRACBITS - 2); // return trip, use args[3]
 				}
 				else
 				{
 					movefloor->floordestheight = lines[movefloor->sourceline].frontsector->floorheight;
-					movefloor->speed = movefloor->origspeed = lines[movefloor->sourceline].args[2] << (FRACBITS - 2); // forward again, use args[2]
+					movefloor->origspeed = lines[movefloor->sourceline].args[2] << (FRACBITS - 2); // forward again, use args[2]
 				}
+				if (movefloor->type == bounceFloorCrush)
+					movefloor->speed = movefloor->origspeed;
 				movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
 				movefloor->delaytimer = movefloor->delay;
 				remove = false;
