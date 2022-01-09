@@ -1647,7 +1647,7 @@ static boolean P_ActivateLinedefExecutorsInSector(line_t *triggerline, mobj_t *a
 	size_t linecnt = ctlsector->linecount;
 	size_t i;
 
-	if (triggerline->flags & ML_EFFECT5) // disregard order for efficiency
+	if (!udmf && triggerline->flags & ML_EFFECT5) // disregard order for efficiency
 	{
 		for (i = 0; i < linecnt; i++)
 			P_ActivateLinedefExecutor(ctlsector->lines[i], actor, caller);
