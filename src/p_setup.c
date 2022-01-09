@@ -2173,11 +2173,11 @@ static void P_WriteTextmap(void)
 			fprintf(f, "offsetx = %d;\n", sides[i].textureoffset >> FRACBITS);
 		if (sides[i].rowoffset != 0)
 			fprintf(f, "offsety = %d;\n", sides[i].rowoffset >> FRACBITS);
-		if (sides[i].toptexture != 0)
+		if (sides[i].toptexture > 0 && sides[i].toptexture < numtextures)
 			fprintf(f, "texturetop = \"%.*s\";\n", 8, textures[sides[i].toptexture]->name);
-		if (sides[i].bottomtexture != 0)
+		if (sides[i].bottomtexture > 0 && sides[i].bottomtexture < numtextures)
 			fprintf(f, "texturebottom = \"%.*s\";\n", 8, textures[sides[i].bottomtexture]->name);
-		if (sides[i].midtexture != 0)
+		if (sides[i].midtexture > 0 && sides[i].midtexture < numtextures)
 			fprintf(f, "texturemiddle = \"%.*s\";\n", 8, textures[sides[i].midtexture]->name);
 		if (sides[i].repeatcnt != 0)
 			fprintf(f, "repeatcnt = %d;\n", sides[i].repeatcnt);
