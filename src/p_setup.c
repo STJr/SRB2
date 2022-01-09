@@ -2037,10 +2037,27 @@ static void P_WriteTextmap(void)
 
 		switch (wlines[i].special)
 		{
+			case 1:
+				TAG_ITER_SECTORS(Tag_FGet(&lines[i].tags), s)
+				{
+					CONS_Alert(CONS_WARNING, M_GetText("Linedef %d applies custom gravity to sector %d. Changes to this gravity at runtime will not be reflected in the converted map. Use linedef type 469 for this.\n"), i, s);
+					wsectors[s].gravity = FixedDiv(lines[i].frontsector->floorheight >> FRACBITS, 1000);
+				}
+				break;
+			case 2:
+				CONS_Alert(CONS_WARNING, M_GetText("Custom exit linedef %d detected. Changes to the next map at runtime will not be reflected in the converted map. Use linedef type 465 for this.\n"), i);
+				wlines[i].args[0] = lines[i].frontsector->floorheight >> FRACBITS;
+				wlines[i].args[2] = lines[i].frontsector->ceilingheight >> FRACBITS;
+				break;
+			case 5:
+			case 50:
+			case 51:
+				CONS_Alert(CONS_WARNING, M_GetText("Linedef %d has type %d, which has been removed in UDMF.\n"), i, wlines[i].special);
+				break;
 			case 606:
 				if (wlines[i].args[0] == MTAG_GLOBAL)
 				{
-					CONS_Printf("Linedef %d applies a global colormap which cannot be converted automatically. Please convert it manually.\n", i);
+					CONS_Alert(CONS_WARNING, M_GetText("Linedef %d applies a global colormap which cannot be converted automatically. Please convert it manually.\n"), i);
 					break;
 				}
 
