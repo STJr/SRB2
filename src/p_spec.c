@@ -5629,7 +5629,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	{
 		case TMB_TRANSLUCENT:
 		default:
-			fflr->blend = AST_TRANSLUCENT;
+			fflr->blend = AST_COPY;
 			break;
 		case TMB_ADD:
 			fflr->blend = AST_ADD;
@@ -6534,12 +6534,12 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 150: // FOF (Air bobbing)
-				P_AddFakeFloorsByLine(i, 0xff, AST_COPY, FF_EXISTS|FF_SOLID|FF_RENDERALL, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_SOLID|FF_RENDERALL, secthinkers);
 				P_AddAirbob(lines[i].frontsector, lines[i].args[0], lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
 				break;
 
 			case 160: // FOF (Water bobbing)
-				P_AddFakeFloorsByLine(i, 0xff, AST_COPY, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB, secthinkers);
 				break;
 
 			case 170: // FOF (Crumbling)
@@ -6644,7 +6644,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				ffloorflags = FF_EXISTS|FF_CUTSPRITES;
 				if (!lines[i].args[1])
 					ffloorflags |= FF_DOUBLESHADOW;
-				P_AddFakeFloorsByLine(i, 0xff, AST_COPY, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				break;
 
 			case 202: // Fog
@@ -6653,7 +6653,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				// SoM: Because it's fog, check for an extra colormap and set the fog flag...
 				if (sectors[sec].extra_colormap)
 					sectors[sec].extra_colormap->flags = CMF_FOG;
-				P_AddFakeFloorsByLine(i, 0xff, AST_COPY, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				break;
 
 			case 220: //Intangible
@@ -6687,7 +6687,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 223: // FOF (intangible, invisible) - for combining specials in a sector
-				P_AddFakeFloorsByLine(i, 0xff, AST_COPY, FF_EXISTS|FF_NOSHADE, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_NOSHADE, secthinkers);
 				break;
 
 			case 250: // Mario Block
@@ -6697,14 +6697,14 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[1] & TMFM_INVISIBLE)
 					ffloorflags &= ~(FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
 
-				P_AddFakeFloorsByLine(i, 0xff, AST_COPY, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				break;
 
 			case 251: // A THWOMP!
 			{
 				UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
 				P_AddThwompThinker(lines[i].frontsector, &lines[i], lines[i].args[1] << (FRACBITS - 3), lines[i].args[2] << (FRACBITS - 3), sound);
-				P_AddFakeFloorsByLine(i, 0xff, AST_COPY, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				break;
 			}
 
@@ -6763,7 +6763,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
-					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, 0xff, AST_COPY, ffloorflags, secthinkers);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 					if (!fflr)
 						continue;
 					fflr->sinkspeed = abs(lines[i].args[2]) << (FRACBITS - 1);
@@ -6885,7 +6885,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						}
 					}
 
-					P_AddFakeFloorsByLine(i, dopacity, AST_TRANSLUCENT, ffloorflags, secthinkers);
+					P_AddFakeFloorsByLine(i, dopacity, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				}
 				break;
 
