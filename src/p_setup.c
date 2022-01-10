@@ -2069,6 +2069,7 @@ static void P_WriteTextmap(void)
 
 						wsectors[s].extra_colormap = wsides[wlines[i].sidenum[0]].colormap_data;
 					}
+					lines[i].special = 0;
 				}
 				break;
 			default:
