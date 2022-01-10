@@ -192,6 +192,8 @@ FUNCINLINE static ATTRINLINE UINT32 readulong(void *ptr)
 		tmp_i++;                             \
 })
 
+#define SKIPSTRINGL(p, n) SKIPSTRINGN(p, n)
+
 #define READSTRINGN(p, s, n) ({                           \
 	size_t tmp_i = 0;                                     \
                                                           \
