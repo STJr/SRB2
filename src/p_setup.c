@@ -2057,16 +2057,18 @@ static void P_WriteTextmap(void)
 			case 606:
 				if (wlines[i].args[0] == MTAG_GLOBAL)
 				{
-					CONS_Alert(CONS_WARNING, M_GetText("Linedef %d applies a global colormap which cannot be converted automatically. Please convert it manually.\n"), i);
-					break;
+					sector_t *sec = wlines[i].frontsector - sectors + wsectors;
+					sec->extra_colormap = wsides[wlines[i].sidenum[0]].colormap_data;
 				}
-
-				TAG_ITER_SECTORS(wlines[i].args[0], s)
+				else
 				{
-					if (wsectors[s].colormap_protected)
-						continue;
+					TAG_ITER_SECTORS(wlines[i].args[0], s)
+					{
+						if (wsectors[s].colormap_protected)
+							continue;
 
-					wsectors[s].extra_colormap = wsides[wlines[i].sidenum[0]].colormap_data;
+						wsectors[s].extra_colormap = wsides[wlines[i].sidenum[0]].colormap_data;
+					}
 				}
 				break;
 			default:
