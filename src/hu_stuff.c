@@ -461,7 +461,7 @@ void HU_AddChatText(const char *text, boolean playsound)
 
 static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 {
-	char buf[254];
+	char buf[2 + HU_MAXMSGLEN + 1];
 	size_t numwords, ix;
 	char *msg = &buf[2];
 	const size_t msgspace = sizeof buf - 2;
@@ -537,7 +537,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		}
 		buf[0] = target;
 		newmsg = msg+5+spc;
-		strlcpy(msg, newmsg, 252);
+		strlcpy(msg, newmsg, HU_MAXMSGLEN + 1);
 	}
 
 	SendNetXCmd(XD_SAY, buf, strlen(msg) + 1 + msg-buf);
