@@ -160,6 +160,15 @@ FUNCINLINE static ATTRINLINE UINT32 readulong(void *ptr)
 		WRITECHAR(p, '\0');                                 \
 })
 
+#define WRITESTRINGL(p, s, n) ({                                \
+	size_t tmp_i;                                               \
+                                                                \
+	for (tmp_i = 0; tmp_i < n - 1 && s[tmp_i] != '\0'; tmp_i++) \
+		WRITECHAR(p, s[tmp_i]);                                 \
+                                                                \
+	WRITECHAR(p, '\0');                                         \
+})
+
 #define WRITESTRING(p, s) ({                   \
 	size_t tmp_i;                              \
                                                \
@@ -190,6 +199,15 @@ FUNCINLINE static ATTRINLINE UINT32 readulong(void *ptr)
 		tmp_i++;                                          \
                                                           \
 	s[tmp_i] = '\0';                                      \
+})
+
+#define READSTRINGL(p, s, n) ({                               \
+	size_t tmp_i = 0;                                         \
+                                                              \
+	while (tmp_i < n - 1 && (s[tmp_i] = READCHAR(p)) != '\0') \
+		tmp_i++;                                              \
+                                                              \
+	s[tmp_i] = '\0';                                          \
 })
 
 #define READSTRING(p, s) ({                  \
