@@ -897,7 +897,7 @@ static boolean HU_chatboxContainsOnlySpaces(void)
 
 static void HU_sendChatMessage(void)
 {
-	char buf[2+256];
+	char buf[2 + HU_MAXMSGLEN + 1];
 	char *msg = &buf[2];
 	size_t ci;
 	INT32 target = 0;
@@ -975,7 +975,7 @@ static void HU_sendChatMessage(void)
 
 		// we need to get rid of the /pm<player num>
 		newmsg = msg+5+spc;
-		strlcpy(msg, newmsg, 255);
+		strlcpy(msg, newmsg, HU_MAXMSGLEN + 1);
 	}
 	if (ci > 2) // don't send target+flags+empty message.
 	{
