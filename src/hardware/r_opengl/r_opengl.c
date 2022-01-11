@@ -3029,10 +3029,14 @@ EXPORT void HWRAPI(SetTransform) (FTransform *stransform)
 	// https://zdoom.org/wiki/Y-shearing
 	if (shearing)
 	{
-		float fdy = stransform->viewaiming * 2;
+		float shear = stransform->viewaiming * 2;
+		float ang = 2*M_PI*(stransform->rollangle/360);
+		float fdx = stransform->roll ? shear * sin(ang) : 0.0f;
+		float fdy = stransform->roll ? shear * cos(ang) : shear;
 		if (stransform->flip)
 			fdy *= -1.0f;
-		pglTranslatef(0.0f, -fdy/BASEVIDHEIGHT, 0.0f);
+
+		pglTranslatef(fdx/BASEVIDWIDTH, -fdy/BASEVIDHEIGHT, 0.0f);
 	}
 
 	if (special_splitscreen)
