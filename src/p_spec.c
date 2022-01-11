@@ -5601,7 +5601,16 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	if (flags & FF_TRANSLUCENT)
 	{
 		if (sides[master->sidenum[0]].toptexture > 0)
-			fflr->alpha = sides[master->sidenum[0]].toptexture; // for future reference, "#0" is 1, and "#255" is 256. Be warned
+		{
+			 // for future reference, "#0" is 1, and "#255" is 256. Be warned
+			fflr->alpha = sides[master->sidenum[0]].toptexture;
+
+			if (fflr->alpha >= 1001) // fourth digit
+			{
+				fflr->blend = (fflr->alpha/1000)+1; // becomes an AST
+				fflr->alpha %= 1000;
+			}
+		}
 		else
 			fflr->alpha = 0x80;
 	}
