@@ -8879,11 +8879,14 @@ static void P_SpawnPushers(void)
 			case 541: // wind
 				pushertype = p_wind;
 				break;
+			case 542: // wind up
+				pushertype = p_upwind;
+				break;
+			case 543: // wind down
+				pushertype = p_downwind;
+				break;
 			case 544: // current
 				pushertype = p_current;
-				break;
-			case 547: // push/pull
-				pushertype = p_push;
 				break;
 			case 545: // current up
 				pushertype = p_upcurrent;
@@ -8891,11 +8894,8 @@ static void P_SpawnPushers(void)
 			case 546: // current down
 				pushertype = p_downcurrent;
 				break;
-			case 542: // wind up
-				pushertype = p_upwind;
-				break;
-			case 543: // wind down
-				pushertype = p_downwind;
+			case 547: // push/pull
+				pushertype = p_push;
 				break;
 			default:
 				valid = false;
@@ -8910,13 +8910,13 @@ static void P_SpawnPushers(void)
 					{
 						thing = P_GetPushThing(s);
 						if (thing) // No MT_P* means no effect
-							Add_Pusher(p_push, dx, dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+							Add_Pusher(p_push, dx, dy, thing, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 					}
 				else
 				{
 					thing = P_GetPushThing(l->frontsector - sectors);
 					if (thing) // No MT_P* means no effect
-						Add_Pusher(p_push, dx, dy, NULL, l->frontsector - sectors, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
+						Add_Pusher(p_push, dx, dy, thing, l->frontsector - sectors, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
 				}
 			}
 			else
