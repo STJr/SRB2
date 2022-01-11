@@ -2522,7 +2522,7 @@ boolean P_ZMovement(mobj_t *mo)
 					{
 						P_KillMobj(mo, NULL, NULL, 0);
 					}
-					return false;
+					return !P_MobjWasRemoved(mo); // allows explosion states to run
 				}
 				else
 				{

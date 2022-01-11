@@ -2023,7 +2023,7 @@ static void Y_AwardCoopBonuses(void)
 
 	for (i = 0; i < MAXPLAYERS; ++i)
 	{
-		if (!playeringame[i] || players[i].lives < 1) // not active or game over
+		if (!playeringame[i] || players[i].lives < 1 || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // not active, game over or tails bot
 			bonusnum = 0; // all null
 		else
 			bonusnum = mapheaderinfo[prevmap]->bonustype + 1; // -1 is none
@@ -2073,7 +2073,7 @@ static void Y_AwardSpecialStageBonus(void)
 	{
 		oldscore = players[i].score;
 
-		if (!playeringame[i] || players[i].lives < 1) // not active or game over
+		if (!playeringame[i] || players[i].lives < 1 || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // not active, game over or tails bot
 		{
 			Y_SetNullBonus(&players[i], &localbonuses[0]);
 			Y_SetNullBonus(&players[i], &localbonuses[1]);
