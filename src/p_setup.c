@@ -2077,6 +2077,41 @@ static void P_WriteTextmap(void)
 		}
 	}
 
+	for (i = 0; i < numsectors; i++)
+	{
+		if (Tag_Find(&sectors[i].tags, LE_CAPSULE0))
+			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which has been removed in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE0);
+		if (Tag_Find(&sectors[i].tags, LE_CAPSULE1))
+			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which has been removed in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE1);
+		if (Tag_Find(&sectors[i].tags, LE_CAPSULE2))
+			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which has been removed in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE2);
+
+		switch (GETSECSPECIAL(wsectors[i].special, 1))
+		{
+			case 9:
+			case 10:
+				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has ring drainer effect, which has been removed in UDMF. Use linedef type 462 instead.\n"), i);
+				break;
+			default:
+				break;
+		}
+
+		switch (GETSECSPECIAL(wsectors[i].special, 2))
+		{
+			case 6:
+				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has emerald check trigger type, which has been removed in UDMF. Please use linedef types 337-339 instead.\n"), i);
+				break;
+			case 7:
+				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has NiGHTS mare trigger type, which has been removed in UDMF. Please use linedef types 340-342 instead.\n"), i);
+				break;
+			case 9:
+				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has Egg Capsule type, which has been removed in UDMF. Please use linedef type 464 instead.\n"), i);
+				break;
+			default:
+				break;
+		}
+	}
+
 	fprintf(f, "namespace = \"srb2\";\n");
 	for (i = 0; i < nummapthings; i++)
 	{
