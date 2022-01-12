@@ -1176,7 +1176,17 @@ static void ST_drawInput(void)
 			break;
 
 		case CS_SIMPLE:
-			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "SIMPLE");
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "AUTOMATIC");
+			y -= 8;
+			break;
+
+		case CS_STANDARD:
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "MANUAL");
+			y -= 8;
+			break;
+
+		case CS_LEGACY:
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "STRAFE");
 			y -= 8;
 			break;
 

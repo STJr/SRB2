@@ -248,6 +248,9 @@ static void BlendTab_Subtractive(UINT8 *table, int style, UINT8 blendamt)
 			result.s.green = max(0, result.s.green - blendamt);
 			result.s.blue = max(0, result.s.blue - blendamt);
 
+			//probably incorrect, but does look better at lower opacity...
+			//result.rgba = ASTBlendPixel(result, frontrgba, AST_TRANSLUCENT, blendamt);
+
 			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
 		}
 	}

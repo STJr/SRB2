@@ -191,6 +191,38 @@ void Taggroup_Add (taggroup_t *garray[], const mtag_t tag, size_t id)
 	group->elements[i] = id;
 }
 
+static void Taggroup_Add_Init(taggroup_t *garray[], const mtag_t tag, size_t id)
+{
+	taggroup_t *group;
+
+	if (tag == MTAG_GLOBAL)
+		return;
+
+	group = garray[(UINT16)tag];
+
+	if (! in_bit_array(tags_available, tag))
+	{
+		num_tags++;
+		set_bit_array(tags_available, tag);
+	}
+
+	// Create group if empty.
+	if (!group)
+		group = garray[(UINT16)tag] = Z_Calloc(sizeof(taggroup_t), PU_LEVEL, NULL);
+	else if (group->elements[group->count - 1] == id)
+		return; // Don't add duplicates
+
+	group->count++;
+
+	if (group->count > group->capacity)
+	{
+		group->capacity = 2 * group->count;
+		group->elements = Z_Realloc(group->elements, group->capacity * sizeof(size_t), PU_LEVEL, NULL);
+	}
+
+	group->elements[group->count - 1] = id;
+}
+
 static size_t total_elements_with_tag (const mtag_t tag)
 {
 	return
@@ -250,17 +282,17 @@ void Taggroup_Remove (taggroup_t *garray[], const mtag_t tag, size_t id)
 
 static void Taglist_AddToSectors (const mtag_t tag, const size_t itemid)
 {
-	Taggroup_Add(tags_sectors, tag, itemid);
+	Taggroup_Add_Init(tags_sectors, tag, itemid);
 }
 
 static void Taglist_AddToLines (const mtag_t tag, const size_t itemid)
 {
-	Taggroup_Add(tags_lines, tag, itemid);
+	Taggroup_Add_Init(tags_lines, tag, itemid);
 }
 
 static void Taglist_AddToMapthings (const mtag_t tag, const size_t itemid)
 {
-	Taggroup_Add(tags_mapthings, tag, itemid);
+	Taggroup_Add_Init(tags_mapthings, tag, itemid);
 }
 
 /// After all taglists have been built for each element (sectors, lines, things),
