@@ -1556,7 +1556,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	}
 
 	if (player->bot == BOT_2PHUMAN)
-		cmd->angleturn = (localangle - *myangle) >> 16;
+		cmd->angleturn = (INT16)((localangle - *myangle) >> 16);
 	
 	*myangle += (cmd->angleturn<<16);
 
