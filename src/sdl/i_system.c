@@ -2160,11 +2160,10 @@ tic_t I_GetTime(void)
 	return (tic_t) floor(elapsed_tics);
 }
 
-fixed_t I_GetTimeFrac(void)
+float I_GetTimeFrac(void)
 {
 	UpdateElapsedTics();
-	
-	return FLOAT_TO_FIXED((float) (elapsed_tics - floor(elapsed_tics)));
+	return elapsed_tics;
 }
 
 precise_t I_GetPreciseTime(void)

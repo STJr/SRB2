@@ -46,9 +46,9 @@ UINT32 I_GetFreeMem(UINT32 *total);
 */
 tic_t I_GetTime(void);
 
-/** \brief  Get the current time as a fraction of a tic since the last tic.
+/** \brief  Get the current time in tics including fractions.
 */
-fixed_t I_GetTimeFrac(void);
+float I_GetTimeFrac(void);
 
 /**	\brief	Returns precise time value for performance measurement.
   */

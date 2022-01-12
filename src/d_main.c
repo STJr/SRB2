@@ -697,6 +697,7 @@ void D_SRB2Loop(void)
 {
 	tic_t oldentertics = 0, entertic = 0, realtics = 0, rendertimeout = INFTICS;
 	static lumpnum_t gstartuplumpnum;
+	boolean ticked;
 
 	if (dedicated)
 		server = true;
@@ -783,11 +784,20 @@ void D_SRB2Loop(void)
 			realtics = 1;
 
 		// process tics (but maybe not if realtic == 0)
-		TryRunTics(realtics);
+		ticked = TryRunTics(realtics);
 
-		if (cv_frameinterpolation.value == 1)
+		if (cv_frameinterpolation.value == 1 && !(paused || P_AutoPause()))
 		{
-			fixed_t entertimefrac = I_GetTimeFrac();
+			static float tictime;
+			float entertime = I_GetTimeFrac();
+
+			fixed_t entertimefrac;
+
+			if (ticked)
+				tictime = entertime;
+
+			entertimefrac = FLOAT_TO_FIXED(entertime - tictime);
+
 			// renderdeltatics is a bit awkard to evaluate, since the system time interface is whole tic-based
 			renderdeltatics = realtics * FRACUNIT;
 			if (entertimefrac > rendertimefrac)
