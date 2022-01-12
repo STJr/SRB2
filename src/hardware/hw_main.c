@@ -6720,15 +6720,15 @@ void HWR_DoPostProcessor(player_t *player)
 		// Modifies the wave.
 		if (*type == postimg_water)
 		{
-			WAVELENGTH = 20; // Lower is longer
-			AMPLITUDE = 20; // Lower is bigger
-			FREQUENCY = 16; // Lower is faster
+			WAVELENGTH = 5;
+			AMPLITUDE = 20;
+			FREQUENCY = 8;
 		}
 		else
 		{
-			WAVELENGTH = 10; // Lower is longer
-			AMPLITUDE = 30; // Lower is bigger
-			FREQUENCY = 4; // Lower is faster
+			WAVELENGTH = 10;
+			AMPLITUDE = 60;
+			FREQUENCY = 4;
 		}
 
 		for (x = 0; x < SCREENVERTS; x++)
