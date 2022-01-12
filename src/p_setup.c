@@ -2052,7 +2052,23 @@ static void P_WriteTextmap(void)
 			case 5:
 			case 50:
 			case 51:
-				CONS_Alert(CONS_WARNING, M_GetText("Linedef %d has type %d, which has been removed in UDMF.\n"), i, wlines[i].special);
+				CONS_Alert(CONS_WARNING, M_GetText("Linedef %d has type %d, which is not supported in UDMF.\n"), i, wlines[i].special);
+				break;
+			case 259:
+				if (wlines[i].args[3] & FF_QUICKSAND)
+					CONS_Alert(CONS_WARNING, M_GetText("Quicksand properties of custom FOF on linedef %d cannot be converted. Use linedef type 75 instead.\n"), i);
+				if (wlines[i].args[3] & FF_BUSTUP)
+					CONS_Alert(CONS_WARNING, M_GetText("Bustable properties of custom FOF on linedef %d cannot be converted. Use linedef type 74 instead.\n"), i);
+				break;
+			case 447:
+				CONS_Alert(CONS_WARNING, M_GetText("Linedef %d has change colormap action, which cannot be converted automatically. Tag arg0 to a sector with the desired colormap.\n"), i);
+				if (wlines[i].flags & ML_TFERLINE)
+					CONS_Alert(CONS_WARNING, M_GetText("Linedef %d mixes front and back colormaps, which is not supported in UDMF. Copy one colormap to the target sector first, then mix in the second one.\n"), i);
+				break;
+			case 455:
+				CONS_Alert(CONS_WARNING, M_GetText("Linedef %d has fade colormap action, which cannot be converted automatically. Tag arg0 to a sector with the desired colormap.\n"), i);
+				if (wlines[i].flags & ML_TFERLINE)
+					CONS_Alert(CONS_WARNING, M_GetText("Linedef %d specifies starting colormap for the fade, which is not supported in UDMF. Change the colormap with linedef type 447 instead.\n"), i);
 				break;
 			case 606:
 				if (wlines[i].args[0] == MTAG_GLOBAL)
@@ -2075,22 +2091,25 @@ static void P_WriteTextmap(void)
 			default:
 				break;
 		}
+
+		if (wlines[i].special >= 300 && wlines[i].special < 400 && wlines[i].flags & ML_WRAPMIDTEX)
+			CONS_Alert(CONS_WARNING, M_GetText("Linedef executor trigger linedef %d has disregard order flag, which is not supported in UDMF.\n"), i);
 	}
 
 	for (i = 0; i < numsectors; i++)
 	{
 		if (Tag_Find(&sectors[i].tags, LE_CAPSULE0))
-			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which has been removed in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE0);
+			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which is not supported in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE0);
 		if (Tag_Find(&sectors[i].tags, LE_CAPSULE1))
-			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which has been removed in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE1);
+			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which is not supported in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE1);
 		if (Tag_Find(&sectors[i].tags, LE_CAPSULE2))
-			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which has been removed in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE2);
+			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which is not supported in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE2);
 
 		switch (GETSECSPECIAL(wsectors[i].special, 1))
 		{
 			case 9:
 			case 10:
-				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has ring drainer effect, which has been removed in UDMF. Use linedef type 462 instead.\n"), i);
+				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has ring drainer effect, which is not supported in UDMF. Use linedef type 462 instead.\n"), i);
 				break;
 			default:
 				break;
@@ -2099,13 +2118,13 @@ static void P_WriteTextmap(void)
 		switch (GETSECSPECIAL(wsectors[i].special, 2))
 		{
 			case 6:
-				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has emerald check trigger type, which has been removed in UDMF. Please use linedef types 337-339 instead.\n"), i);
+				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has emerald check trigger type, which is not supported in UDMF. Use linedef types 337-339 instead.\n"), i);
 				break;
 			case 7:
-				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has NiGHTS mare trigger type, which has been removed in UDMF. Please use linedef types 340-342 instead.\n"), i);
+				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has NiGHTS mare trigger type, which is not supported in UDMF. Use linedef types 340-342 instead.\n"), i);
 				break;
 			case 9:
-				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has Egg Capsule type, which has been removed in UDMF. Please use linedef type 464 instead.\n"), i);
+				CONS_Alert(CONS_WARNING, M_GetText("Sector %d has Egg Capsule type, which is not supported in UDMF. Use linedef type 464 instead.\n"), i);
 				break;
 			default:
 				break;
