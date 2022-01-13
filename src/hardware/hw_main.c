@@ -5052,7 +5052,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
-	dispoffset = thing->info->dispoffset;
+	dispoffset = thing->dispoffset;
 
 	this_scale = FIXED_TO_FLOAT(thing->scale);
 	spritexscale = FIXED_TO_FLOAT(thing->spritexscale);
