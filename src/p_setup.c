@@ -2000,6 +2000,13 @@ static INT32 P_RGBAToColor(INT32 rgba)
 	return (r << 16) | (g << 8) | b;
 }
 
+typedef struct
+{
+	mapthing_t *teleport;
+	mapthing_t *altview;
+	mapthing_t *angleanchor;
+} sectorspecialthings_t;
+
 static void P_WriteTextmap(void)
 {
 	size_t i, j;
@@ -2012,6 +2019,7 @@ static void P_WriteTextmap(void)
 	line_t *wlines;
 	side_t *wsides;
 	mtag_t freetag;
+	sectorspecialthings_t *specialthings;
 
 	f = fopen(filepath, "w");
 	if (!f)
@@ -2025,12 +2033,17 @@ static void P_WriteTextmap(void)
 	wsectors = Z_Calloc(numsectors * sizeof(*sectors), PU_LEVEL, NULL);
 	wlines = Z_Calloc(numlines * sizeof(*lines), PU_LEVEL, NULL);
 	wsides = Z_Calloc(numsides * sizeof(*sides), PU_LEVEL, NULL);
+	specialthings = Z_Calloc(numsectors * sizeof(*sectors), PU_LEVEL, NULL);
 
 	memcpy(wmapthings, mapthings, nummapthings * sizeof(*mapthings));
 	memcpy(wvertexes, vertexes, numvertexes * sizeof(*vertexes));
 	memcpy(wsectors, sectors, numsectors * sizeof(*sectors));
 	memcpy(wlines, lines, numlines * sizeof(*lines));
 	memcpy(wsides, sides, numsides * sizeof(*sides));
+
+	for (i = 0; i < nummapthings; i++)
+		if (mapthings[i].tags.count)
+			wmapthings[i].tags.tags = memcpy(Z_Malloc(mapthings[i].tags.count * sizeof(mtag_t), PU_LEVEL, NULL), mapthings[i].tags.tags, mapthings[i].tags.count * sizeof(mtag_t));
 
 	for (i = 0; i < numsectors; i++)
 		if (sectors[i].tags.count)
@@ -2041,6 +2054,40 @@ static void P_WriteTextmap(void)
 			wlines[i].tags.tags = memcpy(Z_Malloc(lines[i].tags.count * sizeof(mtag_t), PU_LEVEL, NULL), lines[i].tags.tags, lines[i].tags.count * sizeof(mtag_t));
 
 	freetag = Tag_NextUnused(0);
+
+	for (i = 0; i < nummapthings; i++)
+	{
+		subsector_t *ss;
+		INT32 s;
+
+		if (wmapthings[i].type != 751 && wmapthings[i].type != 752 && wmapthings[i].type != 758)
+			continue;
+
+		ss = R_PointInSubsector(wmapthings[i].x << FRACBITS, wmapthings[i].y << FRACBITS);
+
+		if (!ss)
+			continue;
+
+		s = ss->sector - sectors;
+
+		switch (wmapthings[i].type)
+		{
+			case 751:
+				if (!specialthings[s].teleport)
+					specialthings[s].teleport = &wmapthings[i];
+				break;
+			case 752:
+				if (!specialthings[s].altview)
+					specialthings[s].altview = &wmapthings[i];
+				break;
+			case 758:
+				if (!specialthings[s].angleanchor)
+					specialthings[s].angleanchor = &wmapthings[i];
+				break;
+			default:
+				break;
+		}
+	}
 
 	for (i = 0; i < numlines; i++)
 	{
@@ -2088,6 +2135,35 @@ static void P_WriteTextmap(void)
 				if (wlines[i].args[3] & FF_BUSTUP)
 					CONS_Alert(CONS_WARNING, M_GetText("Bustable properties of custom FOF on linedef %d cannot be converted. Use linedef type 74 instead.\n"), i);
 				break;
+			case 412:
+				if ((s = Tag_Iterate_Sectors(wlines[i].args[0], 0)) < 0)
+					break;
+				if (!specialthings[s].teleport)
+					break;
+				if (freetag == (mtag_t)MAXTAGS)
+				{
+					CONS_Alert(CONS_WARNING, M_GetText("No unused tag found. Linedef %d with type 412 cannot be converted.\n"), i);
+					break;
+				}
+				Tag_Add(&specialthings[s].teleport->tags, freetag);
+				wlines[i].args[0] = freetag;
+				freetag = Tag_NextUnused(freetag);
+				break;
+			case 422:
+				if ((s = Tag_Iterate_Sectors(wlines[i].args[0], 0)) < 0)
+					break;
+				if (!specialthings[s].altview)
+					break;
+				if (freetag == (mtag_t)MAXTAGS)
+				{
+					CONS_Alert(CONS_WARNING, M_GetText("No unused tag found. Linedef %d with type 422 cannot be converted.\n"), i);
+					break;
+				}
+				Tag_Add(&specialthings[s].altview->tags, freetag);
+				wlines[i].args[0] = freetag;
+				specialthings[s].altview->pitch = wlines[i].args[2];
+				freetag = Tag_NextUnused(freetag);
+				break;
 			case 447:
 				CONS_Alert(CONS_WARNING, M_GetText("Linedef %d has change colormap action, which cannot be converted automatically. Tag arg0 to a sector with the desired colormap.\n"), i);
 				if (wlines[i].flags & ML_TFERLINE)
@@ -2097,6 +2173,20 @@ static void P_WriteTextmap(void)
 				CONS_Alert(CONS_WARNING, M_GetText("Linedef %d has fade colormap action, which cannot be converted automatically. Tag arg0 to a sector with the desired colormap.\n"), i);
 				if (wlines[i].flags & ML_TFERLINE)
 					CONS_Alert(CONS_WARNING, M_GetText("Linedef %d specifies starting colormap for the fade, which is not supported in UDMF. Change the colormap with linedef type 447 instead.\n"), i);
+				break;
+			case 457:
+				if ((s = Tag_Iterate_Sectors(wlines[i].args[0], 0)) < 0)
+					break;
+				if (!specialthings[s].angleanchor)
+					break;
+				if (freetag == (mtag_t)MAXTAGS)
+				{
+					CONS_Alert(CONS_WARNING, M_GetText("No unused tag found. Linedef %d with type 457 cannot be converted.\n"), i);
+					break;
+				}
+				Tag_Add(&specialthings[s].angleanchor->tags, freetag);
+				wlines[i].args[0] = freetag;
+				freetag = Tag_NextUnused(freetag);
 				break;
 			case 606:
 				if (wlines[i].args[0] == MTAG_GLOBAL)
@@ -2164,17 +2254,17 @@ static void P_WriteTextmap(void)
 	{
 		fprintf(f, "thing // %d\n", i);
 		fprintf(f, "{\n");
-		firsttag = Tag_FGet(&mapthings[i].tags);
+		firsttag = Tag_FGet(&wmapthings[i].tags);
 		if (firsttag != 0)
 			fprintf(f, "id = %d;\n", firsttag);
-		if (mapthings[i].tags.count > 1)
+		if (wmapthings[i].tags.count > 1)
 		{
 			fprintf(f, "moreids = \"");
-			for (j = 1; j < mapthings[i].tags.count; j++)
+			for (j = 1; j < wmapthings[i].tags.count; j++)
 			{
 				if (j > 1)
 					fprintf(f, " ");
-				fprintf(f, "%d", mapthings[i].tags.tags[j]);
+				fprintf(f, "%d", wmapthings[i].tags.tags[j]);
 			}
 			fprintf(f, "\";\n");
 		}
@@ -2512,6 +2602,10 @@ static void P_WriteTextmap(void)
 
 	fclose(f);
 
+	for (i = 0; i < nummapthings; i++)
+		if (wmapthings[i].tags.count)
+			Z_Free(wmapthings[i].tags.tags);
+
 	for (i = 0; i < numsectors; i++)
 		if (wsectors[i].tags.count)
 			Z_Free(wsectors[i].tags.tags);
@@ -2525,6 +2619,7 @@ static void P_WriteTextmap(void)
 	Z_Free(wsectors);
 	Z_Free(wlines);
 	Z_Free(wsides);
+	Z_Free(specialthings);
 }
 
 /** Loads the textmap data, after obtaining the elements count and allocating their respective space.
