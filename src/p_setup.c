@@ -2112,6 +2112,13 @@ static void P_WriteTextmap(void)
 			case 51:
 				CONS_Alert(CONS_WARNING, M_GetText("Linedef %d has type %d, which is not supported in UDMF.\n"), i, wlines[i].special);
 				break;
+			case 61:
+				if (wlines[i].flags & ML_MIDSOLID)
+					continue;
+				if (!wlines[i].args[1])
+					continue;
+				CONS_Alert(CONS_WARNING, M_GetText("Linedef %d with crusher type 61 rises twice as fast on spawn. This behavior is not supported in UDMF.\n"), i);
+				break;
 			case 76:
 				if (freetag == (mtag_t)MAXTAGS)
 				{
