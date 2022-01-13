@@ -6637,7 +6637,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 
 				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, lines[i].args[0], lines[i].args[4] << FRACBITS, ceilingtop, ceilingbottom, !!(lines[i].args[5] & TMFR_REVERSE), !!(lines[i].args[5] & TMFR_SPINDASH));
+				P_AddRaiseThinker(lines[i].frontsector, lines[i].args[0], lines[i].args[5] << FRACBITS, ceilingtop, ceilingbottom, !!(lines[i].args[6] & TMFR_REVERSE), !!(lines[i].args[6] & TMFR_SPINDASH));
 				break;
 			}
 			case 200: // Light block
