@@ -49,6 +49,8 @@ typedef struct
 
 extern bitarray_t tags_available[];
 
+extern mtag_t Tag_NextUnused(mtag_t start);
+
 extern size_t num_tags;
 
 extern taggroup_t* tags_sectors[];

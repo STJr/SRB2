@@ -455,3 +455,16 @@ void Tag_SectorFSet (const size_t id, const mtag_t tag)
 	Taggroup_Add(tags_sectors, tag, id);
 	Tag_FSet(&sec->tags, tag);
 }
+
+mtag_t Tag_NextUnused(mtag_t start)
+{
+	while ((UINT16)start < MAXTAGS)
+	{
+		if (!in_bit_array(tags_available, (UINT16)start))
+			return start;
+
+		start++;
+	}
+
+	return MAXTAGS;
+}

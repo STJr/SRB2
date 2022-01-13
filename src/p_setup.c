@@ -2011,6 +2011,7 @@ static void P_WriteTextmap(void)
 	sector_t *wsectors;
 	line_t *wlines;
 	side_t *wsides;
+	mtag_t freetag;
 
 	f = fopen(filepath, "w");
 	if (!f)
@@ -2031,6 +2032,16 @@ static void P_WriteTextmap(void)
 	memcpy(wlines, lines, numlines * sizeof(*lines));
 	memcpy(wsides, sides, numsides * sizeof(*sides));
 
+	for (i = 0; i < numsectors; i++)
+		if (sectors[i].tags.count)
+			wsectors[i].tags.tags = memcpy(Z_Malloc(sectors[i].tags.count*sizeof(mtag_t), PU_LEVEL, NULL), sectors[i].tags.tags, sectors[i].tags.count*sizeof(mtag_t));
+
+	for (i = 0; i < numlines; i++)
+		if (lines[i].tags.count)
+			wlines[i].tags.tags = memcpy(Z_Malloc(lines[i].tags.count * sizeof(mtag_t), PU_LEVEL, NULL), lines[i].tags.tags, lines[i].tags.count * sizeof(mtag_t));
+
+	freetag = Tag_NextUnused(0);
+
 	for (i = 0; i < numlines; i++)
 	{
 		INT32 s;
@@ -2038,7 +2049,7 @@ static void P_WriteTextmap(void)
 		switch (wlines[i].special)
 		{
 			case 1:
-				TAG_ITER_SECTORS(Tag_FGet(&lines[i].tags), s)
+				TAG_ITER_SECTORS(Tag_FGet(&wlines[i].tags), s)
 				{
 					CONS_Alert(CONS_WARNING, M_GetText("Linedef %d applies custom gravity to sector %d. Changes to this gravity at runtime will not be reflected in the converted map. Use linedef type 469 for this.\n"), i, s);
 					wsectors[s].gravity = FixedDiv(lines[i].frontsector->floorheight >> FRACBITS, 1000);
@@ -2053,6 +2064,23 @@ static void P_WriteTextmap(void)
 			case 50:
 			case 51:
 				CONS_Alert(CONS_WARNING, M_GetText("Linedef %d has type %d, which is not supported in UDMF.\n"), i, wlines[i].special);
+				break;
+			case 76:
+				if (freetag == (mtag_t)MAXTAGS)
+				{
+					CONS_Alert(CONS_WARNING, M_GetText("No unused tag found. Linedef %d with type 76 cannot be converted.\n"), i);
+					break;
+				}
+				TAG_ITER_SECTORS(wlines[i].args[0], s)
+					for (j = 0; (unsigned)j < wsectors[s].linecount; j++)
+					{
+						line_t *line = wsectors[s].lines[j] - lines + wlines;
+						if (line->special < 100 || line->special >= 300)
+							continue;
+						Tag_Add(&line->tags, freetag);
+					}
+				wlines[i].args[0] = freetag;
+				freetag = Tag_NextUnused(freetag);
 				break;
 			case 259:
 				if (wlines[i].args[3] & FF_QUICKSAND)
@@ -2085,7 +2113,7 @@ static void P_WriteTextmap(void)
 
 						wsectors[s].extra_colormap = wsides[wlines[i].sidenum[0]].colormap_data;
 					}
-					lines[i].special = 0;
+					wlines[i].special = 0;
 				}
 				break;
 			default:
@@ -2098,11 +2126,11 @@ static void P_WriteTextmap(void)
 
 	for (i = 0; i < numsectors; i++)
 	{
-		if (Tag_Find(&sectors[i].tags, LE_CAPSULE0))
+		if (Tag_Find(&wsectors[i].tags, LE_CAPSULE0))
 			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which is not supported in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE0);
-		if (Tag_Find(&sectors[i].tags, LE_CAPSULE1))
+		if (Tag_Find(&wsectors[i].tags, LE_CAPSULE1))
 			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which is not supported in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE1);
-		if (Tag_Find(&sectors[i].tags, LE_CAPSULE2))
+		if (Tag_Find(&wsectors[i].tags, LE_CAPSULE2))
 			CONS_Alert(CONS_WARNING, M_GetText("Sector %d has reserved tag %d, which is not supported in UDMF. Use arg3 of the boss mapthing instead.\n"), i, LE_CAPSULE2);
 
 		switch (GETSECSPECIAL(wsectors[i].special, 1))
@@ -2198,17 +2226,17 @@ static void P_WriteTextmap(void)
 		fprintf(f, "sidefront = %d;\n", wlines[i].sidenum[0]);
 		if (wlines[i].sidenum[1] != 0xffff)
 			fprintf(f, "sideback = %d;\n", wlines[i].sidenum[1]);
-		firsttag = Tag_FGet(&lines[i].tags);
+		firsttag = Tag_FGet(&wlines[i].tags);
 		if (firsttag != 0)
 			fprintf(f, "id = %d;\n", firsttag);
-		if (lines[i].tags.count > 1)
+		if (wlines[i].tags.count > 1)
 		{
 			fprintf(f, "moreids = \"");
-			for (j = 1; j < lines[i].tags.count; j++)
+			for (j = 1; j < wlines[i].tags.count; j++)
 			{
 				if (j > 1)
 					fprintf(f, " ");
-				fprintf(f, " %d", lines[i].tags.tags[j]);
+				fprintf(f, " %d", wlines[i].tags.tags[j]);
 			}
 			fprintf(f, "\";\n");
 		}
@@ -2324,17 +2352,17 @@ static void P_WriteTextmap(void)
 			fprintf(f, "lightceiling = %d;\n", wsectors[i].ceilinglightlevel);
 		if (wsectors[i].ceilinglightabsolute)
 			fprintf(f, "lightceilingabsolute = true;\n");
-		firsttag = Tag_FGet(&sectors[i].tags);
+		firsttag = Tag_FGet(&wsectors[i].tags);
 		if (firsttag != 0)
 			fprintf(f, "id = %d;\n", firsttag);
-		if (sectors[i].tags.count > 1)
+		if (wsectors[i].tags.count > 1)
 		{
 			fprintf(f, "moreids = \"");
-			for (j = 1; j < sectors[i].tags.count; j++)
+			for (j = 1; j < wsectors[i].tags.count; j++)
 			{
 				if (j > 1)
 					fprintf(f, " ");
-				fprintf(f, "%d", sectors[i].tags.tags[j]);
+				fprintf(f, "%d", wsectors[i].tags.tags[j]);
 			}
 			fprintf(f, "\";\n");
 		}
@@ -2483,6 +2511,14 @@ static void P_WriteTextmap(void)
 	}
 
 	fclose(f);
+
+	for (i = 0; i < numsectors; i++)
+		if (wsectors[i].tags.count)
+			Z_Free(wsectors[i].tags.tags);
+
+	for (i = 0; i < numlines; i++)
+		if (wlines[i].tags.count)
+			Z_Free(wlines[i].tags.tags);
 
 	Z_Free(wmapthings);
 	Z_Free(wvertexes);
