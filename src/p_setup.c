@@ -2174,7 +2174,7 @@ static void P_WriteTextmap(void)
 			{
 				if (j > 1)
 					fprintf(f, " ");
-				fprintf(f, " %d", mapthings[i].tags.tags[j]);
+				fprintf(f, "%d", mapthings[i].tags.tags[j]);
 			}
 			fprintf(f, "\";\n");
 		}
@@ -2236,7 +2236,7 @@ static void P_WriteTextmap(void)
 			{
 				if (j > 1)
 					fprintf(f, " ");
-				fprintf(f, " %d", wlines[i].tags.tags[j]);
+				fprintf(f, "%d", wlines[i].tags.tags[j]);
 			}
 			fprintf(f, "\";\n");
 		}
