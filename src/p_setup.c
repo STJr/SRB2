@@ -2209,8 +2209,16 @@ static void P_WriteTextmap(void)
 							continue;
 
 						wsectors[s].extra_colormap = wsides[wlines[i].sidenum[0]].colormap_data;
+						if (freetag == (mtag_t)MAXTAGS)
+						{
+							CONS_Alert(CONS_WARNING, M_GetText("No unused tag found. Linedef %d with type 606 cannot be converted.\n"), i);
+							break;
+						}
+						Tag_Add(&wsectors[s].tags, freetag);
+						wlines[i].args[1] = freetag;
+						freetag = Tag_NextUnused(freetag);
+						break;
 					}
-					wlines[i].special = 0;
 				}
 				break;
 			default:
