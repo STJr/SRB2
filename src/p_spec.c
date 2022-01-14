@@ -2093,7 +2093,7 @@ void P_SwitchWeather(INT32 weathernum)
 	{
 		case PRECIP_SNOW: // snow
 			curWeather = PRECIP_SNOW;
-			
+
 			if (purge)
 				P_SpawnPrecipitation();
 
@@ -2997,6 +2997,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				size_t linenum;
 				side_t *set = &sides[line->sidenum[0]], *this;
 				boolean always = !(line->flags & ML_NOCLIMB); // If noclimb: Only change mid texture if mid texture already exists on tagged lines, etc.
+				boolean backside = line->flags & ML_EFFECT6 && line->sidenum[1] != 0xffff; // If Effect 6 is set, use backside textures if provided
 
 				for (linenum = 0; linenum < numlines; linenum++)
 				{
@@ -3014,6 +3015,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 					if (lines[linenum].sidenum[1] == 0xffff)
 						continue; // One-sided stops here.
+
+					if (backside)
+						set = &sides[line->sidenum[1]];
 
 					// Back side
 					this = &sides[lines[linenum].sidenum[1]];
