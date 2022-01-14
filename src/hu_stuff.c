@@ -1869,7 +1869,7 @@ static void HU_DrawChat_Old(void)
 
 static inline void HU_DrawCrosshair(void)
 {
-	INT32 i, y;
+	INT32 i, y, dupz;
 
 	i = cv_crosshair.value & 3;
 	if (!i)
@@ -1885,12 +1885,14 @@ static inline void HU_DrawCrosshair(void)
 #endif
 		y = viewwindowy + (viewheight>>1);
 
-	V_DrawScaledPatch(vid.width>>1, y, V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, crosshair[i - 1]);
+	dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+
+	V_DrawFixedPatch(vid.width<<(FRACBITS-1), y<<FRACBITS, FRACUNIT/dupz, V_TRANSLUCENT, crosshair[i - 1], NULL);
 }
 
 static inline void HU_DrawCrosshair2(void)
 {
-	INT32 i, y;
+	INT32 i, y, dupz;
 
 	i = cv_crosshair2.value & 3;
 	if (!i)
@@ -1906,17 +1908,19 @@ static inline void HU_DrawCrosshair2(void)
 #endif
 		y = viewwindowy + (viewheight>>1);
 
-	if (splitscreen)
-	{
-#ifdef HWRENDER
+	if (!splitscreen)
+		return;
+
+	#ifdef HWRENDER
 		if (rendermode != render_soft)
 			y += (INT32)gl_viewheight;
 		else
-#endif
+	#endif
 			y += viewheight;
 
-		V_DrawScaledPatch(vid.width>>1, y, V_NOSCALESTART|V_OFFSET|V_TRANSLUCENT, crosshair[i - 1]);
-	}
+	dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
+
+	V_DrawFixedPatch(vid.width<<(FRACBITS-1), y<<FRACBITS, FRACUNIT/dupz, V_TRANSLUCENT, crosshair[i - 1], NULL);
 }
 
 static void HU_DrawCEcho(void)
@@ -2472,7 +2476,7 @@ static void HU_Draw32TeamTabRankings(playersort_t *tab, INT32 whiteplayer)
 		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
 			V_DrawString(x + 10, y,
 			             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-			             | (greycheck ? 0 : V_TRANSLUCENT)
+			             | (greycheck ? V_TRANSLUCENT : 0)
 			             | V_ALLOWLOWERCASE, name);
 
 		if (gametyperules & GTR_TEAMFLAGS)
@@ -2733,12 +2737,12 @@ void HU_DrawDualTabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scoreline
 			if (circuitmap)
 			{
 				if (players[tab[i].num].exiting)
-					V_DrawRightAlignedThinString(x+146, y, 0, va("%i:%02i.%02i", G_TicsToMinutes(players[tab[i].num].realtime,true), G_TicsToSeconds(players[tab[i].num].realtime), G_TicsToCentiseconds(players[tab[i].num].realtime)));
+					V_DrawRightAlignedThinString(x+100, y, 0, va("%i:%02i.%02i", G_TicsToMinutes(players[tab[i].num].realtime,true), G_TicsToSeconds(players[tab[i].num].realtime), G_TicsToCentiseconds(players[tab[i].num].realtime)));
 				else
-					V_DrawRightAlignedThinString(x+146, y, (greycheck ? V_TRANSLUCENT : 0), va("%u", tab[i].count));
+					V_DrawRightAlignedThinString(x+100, y, (greycheck ? V_TRANSLUCENT : 0), va("%u", tab[i].count));
 			}
 			else
-				V_DrawRightAlignedThinString(x+146, y, (greycheck ? V_TRANSLUCENT : 0), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
+				V_DrawRightAlignedThinString(x+100, y, (greycheck ? V_TRANSLUCENT : 0), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
 		}
 		else
 			V_DrawRightAlignedThinString(x+100, y, (greycheck ? V_TRANSLUCENT : 0), va("%u", tab[i].count));
@@ -2786,7 +2790,7 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 		if (!players[tab[i].num].quittime || (leveltime / (TICRATE/2) & 1))
 			V_DrawString(x + 10, y,
 			             ((tab[i].num == whiteplayer) ? V_YELLOWMAP : 0)
-			             | (greycheck ? 0 : V_TRANSLUCENT)
+			             | (greycheck ? V_TRANSLUCENT : 0)
 			             | V_ALLOWLOWERCASE, name);
 
 		if (G_GametypeUsesLives()) //show lives
@@ -2846,13 +2850,13 @@ static void HU_Draw32TabRankings(INT32 x, INT32 y, playersort_t *tab, INT32 scor
 				if (players[tab[i].num].exiting)
 					V_DrawRightAlignedThinString(x+128, y, 0, va("%i:%02i.%02i", G_TicsToMinutes(players[tab[i].num].realtime,true), G_TicsToSeconds(players[tab[i].num].realtime), G_TicsToCentiseconds(players[tab[i].num].realtime)));
 				else
-					V_DrawRightAlignedThinString(x+128, y, (greycheck ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+					V_DrawRightAlignedThinString(x+128, y, (greycheck ? V_TRANSLUCENT : 0), va("%u", tab[i].count));
 			}
 			else
-				V_DrawRightAlignedThinString(x+128, y, (greycheck ? 0 : V_TRANSLUCENT), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
+				V_DrawRightAlignedThinString(x+128, y, (greycheck ? V_TRANSLUCENT : 0), va("%i:%02i.%02i", G_TicsToMinutes(tab[i].count,true), G_TicsToSeconds(tab[i].count), G_TicsToCentiseconds(tab[i].count)));
 		}
 		else
-			V_DrawRightAlignedThinString(x+128, y, (greycheck ? 0 : V_TRANSLUCENT), va("%u", tab[i].count));
+			V_DrawRightAlignedThinString(x+128, y, (greycheck ? V_TRANSLUCENT : 0), va("%u", tab[i].count));
 
 		y += 9;
 		if (i == 16)
@@ -3091,7 +3095,7 @@ static void HU_DrawRankings(void)
 		HU_DrawTeamTabRankings(tab, whiteplayer);
 	else if (scorelines <= 9 && !cv_compactscoreboard.value)
 		HU_DrawTabRankings(40, 32, tab, scorelines, whiteplayer);
-	else if (scorelines <= 20 && !cv_compactscoreboard.value)
+	else if (scorelines <= 18 && !cv_compactscoreboard.value)
 		HU_DrawDualTabRankings(32, 32, tab, scorelines, whiteplayer);
 	else
 		HU_Draw32TabRankings(14, 28, tab, scorelines, whiteplayer);
