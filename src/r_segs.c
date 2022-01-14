@@ -155,17 +155,24 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	if (!ldef->alpha)
 		return;
 
-	if (ldef->alpha > 0 && ldef->alpha < FRACUNIT)
-	{
-		dc_transmap = R_GetTranslucencyTable(R_GetLinedefTransTable(ldef->alpha));
-		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
-
-	}
-	else if (ldef->special == 909)
+	if (ldef->blendmode == AST_FOG)
 	{
 		colfunc = colfuncs[COLDRAWFUNC_FOG];
 		windowtop = frontsector->ceilingheight;
 		windowbottom = frontsector->floorheight;
+	}
+	else if (ldef->blendmode)
+	{
+		if (ldef->alpha == NUMTRANSMAPS || ldef->blendmode == AST_MODULATE)
+			dc_transmap = R_GetBlendTable(ldef->blendmode, 0);
+		else
+			dc_transmap = R_GetBlendTable(ldef->blendmode, R_GetLinedefTransTable(ldef->alpha));
+		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+	}
+	else if (ldef->alpha > 0 && ldef->alpha < FRACUNIT)
+	{
+		dc_transmap = R_GetTranslucencyTable(R_GetLinedefTransTable(ldef->alpha));
+		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
 	}
 	else
 		colfunc = colfuncs[BASEDRAWFUNC];
@@ -600,28 +607,16 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		boolean fuzzy = true;
 
 		// Hacked up support for alpha value in software mode Tails 09-24-2002
-		if (pfloor->alpha < 12)
-			return; // Don't even draw it
-		else if (pfloor->alpha < 38)
-			dc_transmap = R_GetTranslucencyTable(tr_trans90);
-		else if (pfloor->alpha < 64)
-			dc_transmap = R_GetTranslucencyTable(tr_trans80);
-		else if (pfloor->alpha < 89)
-			dc_transmap = R_GetTranslucencyTable(tr_trans70);
-		else if (pfloor->alpha < 115)
-			dc_transmap = R_GetTranslucencyTable(tr_trans60);
-		else if (pfloor->alpha < 140)
-			dc_transmap = R_GetTranslucencyTable(tr_trans50);
-		else if (pfloor->alpha < 166)
-			dc_transmap = R_GetTranslucencyTable(tr_trans40);
-		else if (pfloor->alpha < 192)
-			dc_transmap = R_GetTranslucencyTable(tr_trans30);
-		else if (pfloor->alpha < 217)
-			dc_transmap = R_GetTranslucencyTable(tr_trans20);
-		else if (pfloor->alpha < 243)
-			dc_transmap = R_GetTranslucencyTable(tr_trans10);
-		else
-			fuzzy = false; // Opaque
+		// ...unhacked by toaster 04-01-2021, re-hacked a little by sphere 19-11-2021
+		{
+			INT32 trans = (10*((256+12) - pfloor->alpha))/255;
+			if (trans >= 10)
+				return; // Don't even draw it
+			if (pfloor->blend) // additive, (reverse) subtractive, modulative
+				dc_transmap = R_GetBlendTable(pfloor->blend, trans);
+			else if (!(dc_transmap = R_GetTranslucencyTable(trans)) || trans == 0)
+				fuzzy = false; // Opaque
+		}
 
 		if (fuzzy)
 			colfunc = colfuncs[COLDRAWFUNC_FUZZY];

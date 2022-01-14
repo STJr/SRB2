@@ -115,7 +115,7 @@ static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, ext
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
-static void P_AddFakeFloorsByLine(size_t line, INT32 alpha, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
+static void P_AddFakeFloorsByLine(size_t line, INT32 alpha, UINT8 blendmode, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
 static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
 static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer);
 static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, INT32 affectee, UINT8 reverse);
@@ -5490,12 +5490,13 @@ static inline void P_AddFFloorToList(sector_t *sec, ffloor_t *fflr)
   * \param sec2        Control sector.
   * \param master      Control linedef.
   * \param alpha       Alpha value (0-255).
+  * \param blendmode   Blending mode.
   * \param flags       Options affecting this 3Dfloor.
   * \param secthinkers List of relevant thinkers sorted by sector. May be NULL.
   * \return Pointer to the new 3Dfloor.
   * \sa P_AddFFloor, P_AddFakeFloorsByLine, P_SpawnSpecials
   */
-static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, INT32 alpha, ffloortype_e flags, thinkerlist_t *secthinkers)
+static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, INT32 alpha, UINT8 blendmode, ffloortype_e flags, thinkerlist_t *secthinkers)
 {
 	ffloor_t *fflr;
 	thinker_t *th;
@@ -5623,6 +5624,26 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 		fflr->spawnflags = fflr->flags;
 	}
 	fflr->spawnalpha = fflr->alpha; // save for netgames
+
+	switch (blendmode)
+	{
+		case TMB_TRANSLUCENT:
+		default:
+			fflr->blend = AST_COPY;
+			break;
+		case TMB_ADD:
+			fflr->blend = AST_ADD;
+			break;
+		case TMB_SUBTRACT:
+			fflr->blend = AST_SUBTRACT;
+			break;
+		case TMB_REVERSESUBTRACT:
+			fflr->blend = AST_REVERSESUBTRACT;
+			break;
+		case TMB_MODULATE:
+			fflr->blend = AST_MODULATE;
+			break;
+	}
 
 	if (flags & FF_QUICKSAND)
 		CheckForQuicksand = true;
@@ -6449,28 +6470,80 @@ void P_SpawnSpecials(boolean fromnetsave)
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
 
 				//Appearance settings
-				if (lines[i].args[2] & TMFA_NOPLANES)
+				if (lines[i].args[3] & TMFA_NOPLANES)
 					ffloorflags &= ~FF_RENDERPLANES;
-				if (lines[i].args[2] & TMFA_NOSIDES)
+				if (lines[i].args[3] & TMFA_NOSIDES)
 					ffloorflags &= ~FF_RENDERSIDES;
-				if (lines[i].args[2] & TMFA_INSIDES)
+				if (lines[i].args[3] & TMFA_INSIDES)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
 					if (ffloorflags & FF_RENDERSIDES)
 						ffloorflags |= FF_ALLSIDES;
 				}
-				if (lines[i].args[2] & TMFA_ONLYINSIDES)
+				if (lines[i].args[3] & TMFA_ONLYINSIDES)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_INVERTPLANES;
 					if (ffloorflags & FF_RENDERSIDES)
 						ffloorflags |= FF_INVERTSIDES;
 				}
-				if (lines[i].args[2] & TMFA_NOSHADE)
+				if (lines[i].args[3] & TMFA_NOSHADE)
 					ffloorflags |= FF_NOSHADE;
-				if (lines[i].args[2] & TMFA_SPLAT)
+				if (lines[i].args[3] & TMFA_SPLAT)
 					ffloorflags |= FF_SPLAT;
+
+				//Tangibility settings
+				if (lines[i].args[4] & TMFT_INTANGIBLETOP)
+					ffloorflags |= FF_REVERSEPLATFORM;
+				if (lines[i].args[4] & TMFT_INTANGIBLEBOTTOM)
+					ffloorflags |= FF_PLATFORM;
+				if (lines[i].args[4] & TMFT_DONTBLOCKPLAYER)
+					ffloorflags &= ~FF_BLOCKPLAYER;
+				if (lines[i].args[4] & TMFT_DONTBLOCKOTHERS)
+					ffloorflags &= ~FF_BLOCKOTHERS;
+
+				//Cutting options
+				if (ffloorflags & FF_RENDERALL)
+				{
+					//If translucent or player can enter it, cut inner walls
+					if ((lines[i].args[1] < 255) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
+						ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
+					else
+						ffloorflags |= FF_CUTLEVEL;
+				}
+
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
+				break;
+
+			case 120: // FOF (water)
+				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
+				if (!(lines[i].args[3] & TMFW_NOSIDES))
+					ffloorflags |= FF_RENDERSIDES|FF_ALLSIDES;
+				if (lines[i].args[3] & TMFW_DOUBLESHADOW)
+					ffloorflags |= FF_DOUBLESHADOW;
+				if (lines[i].args[3] & TMFW_COLORMAPONLY)
+					ffloorflags |= FF_COLORMAPONLY;
+				if (!(lines[i].args[3] & TMFW_NORIPPLE))
+					ffloorflags |= FF_RIPPLE;
+				if (lines[i].args[3] & TMFW_GOOWATER)
+					ffloorflags |= FF_GOOWATER;
+				if (lines[i].args[3] & TMFW_SPLAT)
+					ffloorflags |= FF_SPLAT;
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
+				break;
+
+			case 150: // FOF (Air bobbing)
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_SOLID|FF_RENDERALL, secthinkers);
+				P_AddAirbob(lines[i].frontsector, lines[i].args[0], lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
+				break;
+
+			case 160: // FOF (Water bobbing)
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB, secthinkers);
+				break;
+
+			case 170: // FOF (Crumbling)
+				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CRUMBLE;
 
 				//Tangibility settings
 				if (lines[i].args[3] & TMFT_INTANGIBLETOP)
@@ -6482,76 +6555,24 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[3] & TMFT_DONTBLOCKOTHERS)
 					ffloorflags &= ~FF_BLOCKOTHERS;
 
-				//Cutting options
-				if (ffloorflags & FF_RENDERALL)
-				{
-					//If translucent or player can enter it, cut inner walls
-					if ((lines[i].args[1] < 255) || (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE))
-						ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
-					else
-						ffloorflags |= FF_CUTLEVEL;
-				}
-
-				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
-				break;
-
-			case 120: // FOF (water)
-				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (!(lines[i].args[2] & TMFW_NOSIDES))
-					ffloorflags |= FF_RENDERSIDES|FF_ALLSIDES;
-				if (lines[i].args[2] & TMFW_DOUBLESHADOW)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].args[2] & TMFW_COLORMAPONLY)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (!(lines[i].args[2] & TMFW_NORIPPLE))
-					ffloorflags |= FF_RIPPLE;
-				if (lines[i].args[2] & TMFW_GOOWATER)
-					ffloorflags |= FF_GOOWATER;
-				if (lines[i].args[2] & TMFW_SPLAT)
-					ffloorflags |= FF_SPLAT;
-				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
-				break;
-
-			case 150: // FOF (Air bobbing)
-				P_AddFakeFloorsByLine(i, 0xff, FF_EXISTS|FF_SOLID|FF_RENDERALL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, lines[i].args[0], lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
-				break;
-
-			case 160: // FOF (Water bobbing)
-				P_AddFakeFloorsByLine(i, 0xff, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB, secthinkers);
-				break;
-
-			case 170: // FOF (Crumbling)
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CRUMBLE;
-
-				//Tangibility settings
-				if (lines[i].args[2] & TMFT_INTANGIBLETOP)
-					ffloorflags |= FF_REVERSEPLATFORM;
-				if (lines[i].args[2] & TMFT_INTANGIBLEBOTTOM)
-					ffloorflags |= FF_PLATFORM;
-				if (lines[i].args[2] & TMFT_DONTBLOCKPLAYER)
-					ffloorflags &= ~FF_BLOCKPLAYER;
-				if (lines[i].args[2] & TMFT_DONTBLOCKOTHERS)
-					ffloorflags &= ~FF_BLOCKOTHERS;
-
 				//Flags
-				if (lines[i].args[3] & TMFC_NOSHADE)
+				if (lines[i].args[4] & TMFC_NOSHADE)
 					ffloorflags |= FF_NOSHADE;
-				if (lines[i].args[3] & TMFC_NORETURN)
+				if (lines[i].args[4] & TMFC_NORETURN)
 					ffloorflags |= FF_NORETURN;
-				if (lines[i].args[3] & TMFC_FLOATBOB)
+				if (lines[i].args[4] & TMFC_FLOATBOB)
 					ffloorflags |= FF_FLOATBOB;
-				if (lines[i].args[3] & TMFC_SPLAT)
+				if (lines[i].args[4] & TMFC_SPLAT)
 					ffloorflags |= FF_SPLAT;
 
 				//If translucent or player can enter it, cut inner walls
-				if (lines[i].args[1] < 0xff || (lines[i].args[2] & TMFT_VISIBLEFROMINSIDE))
+				if (lines[i].args[1] < 0xff || (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE))
 					ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
 				else
 					ffloorflags |= FF_CUTLEVEL;
 
 				//If player can enter it, render insides
-				if (lines[i].args[2] & TMFT_VISIBLEFROMINSIDE)
+				if (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
@@ -6559,8 +6580,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 						ffloorflags |= FF_ALLSIDES;
 				}
 
-				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
-				if (lines[i].args[3] & TMFC_AIRBOB)
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
+				if (lines[i].args[4] & TMFC_AIRBOB)
 					P_AddAirbob(lines[i].frontsector, lines[i].args[0], 16*FRACUNIT, false, false, false);
 				break;
 
@@ -6572,58 +6593,58 @@ void P_SpawnSpecials(boolean fromnetsave)
 				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
 
 				//Appearance settings
-				if (lines[i].args[2] & TMFA_NOPLANES)
+				if (lines[i].args[3] & TMFA_NOPLANES)
 					ffloorflags &= ~FF_RENDERPLANES;
-				if (lines[i].args[2] & TMFA_NOSIDES)
+				if (lines[i].args[3] & TMFA_NOSIDES)
 					ffloorflags &= ~FF_RENDERSIDES;
-				if (lines[i].args[2] & TMFA_INSIDES)
+				if (lines[i].args[3] & TMFA_INSIDES)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
 					if (ffloorflags & FF_RENDERSIDES)
 						ffloorflags |= FF_ALLSIDES;
 				}
-				if (lines[i].args[2] & TMFA_ONLYINSIDES)
+				if (lines[i].args[3] & TMFA_ONLYINSIDES)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_INVERTPLANES;
 					if (ffloorflags & FF_RENDERSIDES)
 						ffloorflags |= FF_INVERTSIDES;
 				}
-				if (lines[i].args[2] & TMFA_NOSHADE)
+				if (lines[i].args[3] & TMFA_NOSHADE)
 					ffloorflags |= FF_NOSHADE;
-				if (lines[i].args[2] & TMFA_SPLAT)
+				if (lines[i].args[3] & TMFA_SPLAT)
 					ffloorflags |= FF_SPLAT;
 
 				//Tangibility settings
-				if (lines[i].args[3] & TMFT_INTANGIBLETOP)
+				if (lines[i].args[4] & TMFT_INTANGIBLETOP)
 					ffloorflags |= FF_REVERSEPLATFORM;
-				if (lines[i].args[3] & TMFT_INTANGIBLEBOTTOM)
+				if (lines[i].args[4] & TMFT_INTANGIBLEBOTTOM)
 					ffloorflags |= FF_PLATFORM;
-				if (lines[i].args[3] & TMFT_DONTBLOCKPLAYER)
+				if (lines[i].args[4] & TMFT_DONTBLOCKPLAYER)
 					ffloorflags &= ~FF_BLOCKPLAYER;
-				if (lines[i].args[3] & TMFT_DONTBLOCKOTHERS)
+				if (lines[i].args[4] & TMFT_DONTBLOCKOTHERS)
 					ffloorflags &= ~FF_BLOCKOTHERS;
 
 				//Cutting options
 				if (ffloorflags & FF_RENDERALL)
 				{
 					//If translucent or player can enter it, cut inner walls
-					if ((lines[i].args[1] < 255) || (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE))
+					if ((lines[i].args[1] < 255) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
 						ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
 					else
 						ffloorflags |= FF_CUTLEVEL;
 				}
 
-				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
-				P_AddRaiseThinker(lines[i].frontsector, lines[i].args[0], lines[i].args[4] << FRACBITS, ceilingtop, ceilingbottom, !!(lines[i].args[5] & TMFR_REVERSE), !!(lines[i].args[5] & TMFR_SPINDASH));
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
+				P_AddRaiseThinker(lines[i].frontsector, lines[i].args[0], lines[i].args[5] << FRACBITS, ceilingtop, ceilingbottom, !!(lines[i].args[6] & TMFR_REVERSE), !!(lines[i].args[6] & TMFR_SPINDASH));
 				break;
 			}
 			case 200: // Light block
 				ffloorflags = FF_EXISTS|FF_CUTSPRITES;
 				if (!lines[i].args[1])
 					ffloorflags |= FF_DOUBLESHADOW;
-				P_AddFakeFloorsByLine(i, 0xff, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				break;
 
 			case 202: // Fog
@@ -6632,41 +6653,41 @@ void P_SpawnSpecials(boolean fromnetsave)
 				// SoM: Because it's fog, check for an extra colormap and set the fog flag...
 				if (sectors[sec].extra_colormap)
 					sectors[sec].extra_colormap->flags = CMF_FOG;
-				P_AddFakeFloorsByLine(i, 0xff, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				break;
 
 			case 220: //Intangible
 				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
 
 				//Appearance settings
-				if (lines[i].args[2] & TMFA_NOPLANES)
+				if (lines[i].args[3] & TMFA_NOPLANES)
 					ffloorflags &= ~FF_RENDERPLANES;
-				if (lines[i].args[2] & TMFA_NOSIDES)
+				if (lines[i].args[3] & TMFA_NOSIDES)
 					ffloorflags &= ~FF_RENDERSIDES;
-				if (!(lines[i].args[2] & TMFA_INSIDES))
+				if (!(lines[i].args[3] & TMFA_INSIDES))
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_BOTHPLANES;
 					if (ffloorflags & FF_RENDERSIDES)
 						ffloorflags |= FF_ALLSIDES;
 				}
-				if (lines[i].args[2] & TMFA_ONLYINSIDES)
+				if (lines[i].args[3] & TMFA_ONLYINSIDES)
 				{
 					if (ffloorflags & FF_RENDERPLANES)
 						ffloorflags |= FF_INVERTPLANES;
 					if (ffloorflags & FF_RENDERSIDES)
 						ffloorflags |= FF_INVERTSIDES;
 				}
-				if (lines[i].args[2] & TMFA_NOSHADE)
+				if (lines[i].args[3] & TMFA_NOSHADE)
 					ffloorflags |= FF_NOSHADE;
-				if (lines[i].args[2] & TMFA_SPLAT)
+				if (lines[i].args[3] & TMFA_SPLAT)
 					ffloorflags |= FF_SPLAT;
 
-				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 				break;
 
 			case 223: // FOF (intangible, invisible) - for combining specials in a sector
-				P_AddFakeFloorsByLine(i, 0xff, FF_EXISTS|FF_NOSHADE, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_NOSHADE, secthinkers);
 				break;
 
 			case 250: // Mario Block
@@ -6676,14 +6697,14 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[1] & TMFM_INVISIBLE)
 					ffloorflags &= ~(FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
 
-				P_AddFakeFloorsByLine(i, 0xff, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				break;
 
 			case 251: // A THWOMP!
 			{
 				UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
 				P_AddThwompThinker(lines[i].frontsector, &lines[i], lines[i].args[1] << (FRACBITS - 3), lines[i].args[2] << (FRACBITS - 3), sound);
-				P_AddFakeFloorsByLine(i, 0xff, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
 				break;
 			}
 
@@ -6695,7 +6716,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP;
 
 				//Bustable type
-				switch (lines[i].args[2])
+				switch (lines[i].args[3])
 				{
 					case TMFB_TOUCH:
 						busttype = BT_TOUCH;
@@ -6712,13 +6733,13 @@ void P_SpawnSpecials(boolean fromnetsave)
 				}
 
 				//Flags
-				if (lines[i].args[3] & TMFB_PUSHABLES)
+				if (lines[i].args[4] & TMFB_PUSHABLES)
 					bustflags |= FB_PUSHABLES;
-				if (lines[i].args[3] & TMFB_EXECUTOR)
+				if (lines[i].args[4] & TMFB_EXECUTOR)
 					bustflags |= FB_EXECUTOR;
-				if (lines[i].args[3] & TMFB_ONLYBOTTOM)
+				if (lines[i].args[4] & TMFB_ONLYBOTTOM)
 					bustflags |= FB_ONLYBOTTOM;
-				if (lines[i].args[3] & TMFB_SPLAT)
+				if (lines[i].args[4] & TMFB_SPLAT)
 					ffloorflags |= FF_SPLAT;
 
 				if (busttype != BT_TOUCH || bustflags & FB_ONLYBOTTOM)
@@ -6726,12 +6747,12 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
-					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], ffloorflags, secthinkers);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 					if (!fflr)
 						continue;
 					fflr->bustflags = bustflags;
 					fflr->busttype = busttype;
-					fflr->busttag = lines[i].args[4];
+					fflr->busttag = lines[i].args[5];
 				}
 				break;
 			}
@@ -6742,7 +6763,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
-					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, 0xff, ffloorflags, secthinkers);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 					if (!fflr)
 						continue;
 					fflr->sinkspeed = abs(lines[i].args[2]) << (FRACBITS - 1);
@@ -6752,28 +6773,28 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 258: // Laser block
 				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA|FF_TRANSLUCENT;
-				P_AddLaserThinker(lines[i].args[0], lines + i, !!(lines[i].args[2] & TMFL_NOBOSSES));
-				if (lines[i].args[2] & TMFL_SPLAT)
+				P_AddLaserThinker(lines[i].args[0], lines + i, !!(lines[i].args[3] & TMFL_NOBOSSES));
+				if (lines[i].args[3] & TMFL_SPLAT)
 					ffloorflags |= FF_SPLAT;
-				P_AddFakeFloorsByLine(i, lines[i].args[1], ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 				break;
 
 			case 259: // Custom FOF
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
-					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], lines[i].args[2], secthinkers);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], lines[i].args[2], lines[i].args[3], secthinkers);
 					if (!fflr)
 						continue;
 					if (!udmf) // Ugly backwards compatibility stuff
 					{
-						if (lines[i].args[2] & FF_QUICKSAND)
+						if (lines[i].args[3] & FF_QUICKSAND)
 						{
 							fflr->sinkspeed = abs(lines[i].dx) >> 1;
 							fflr->friction = abs(lines[i].dy) >> 6;
 						}
-						if (lines[i].args[2] & FF_BUSTUP)
+						if (lines[i].args[3] & FF_BUSTUP)
 						{
-							switch (lines[i].args[3] % TMFB_ONLYBOTTOM)
+							switch (lines[i].args[4] % TMFB_ONLYBOTTOM)
 							{
 								case TMFB_TOUCH:
 									fflr->busttype = BT_TOUCH;
@@ -6789,7 +6810,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 									break;
 							}
 
-							if (lines[i].args[3] & TMFB_ONLYBOTTOM)
+							if (lines[i].args[4] & TMFB_ONLYBOTTOM)
 								fflr->bustflags |= FB_ONLYBOTTOM;
 							if (lines[i].flags & ML_EFFECT4)
 								fflr->bustflags |= FB_PUSHABLES;
@@ -6864,7 +6885,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 						}
 					}
 
-					P_AddFakeFloorsByLine(i, dopacity, ffloorflags, secthinkers);
+					P_AddFakeFloorsByLine(i, dopacity, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				}
 				break;
 
@@ -7153,12 +7174,13 @@ void P_SpawnSpecials(boolean fromnetsave)
   *
   * \param line        Control linedef to use.
   * \param alpha       Alpha value (0-255).
+  * \param blendmode   Blending mode.
   * \param ffloorflags 3Dfloor flags to use.
   * \param secthkiners Lists of thinkers sorted by sector. May be NULL.
   * \sa P_SpawnSpecials, P_AddFakeFloor
   * \author Graue <graue@oceanbase.org>
   */
-static void P_AddFakeFloorsByLine(size_t line, INT32 alpha, ffloortype_e ffloorflags, thinkerlist_t *secthinkers)
+static void P_AddFakeFloorsByLine(size_t line, INT32 alpha, UINT8 blendmode, ffloortype_e ffloorflags, thinkerlist_t *secthinkers)
 {
 	INT32 s;
 	mtag_t tag = lines[line].args[0];
@@ -7166,7 +7188,7 @@ static void P_AddFakeFloorsByLine(size_t line, INT32 alpha, ffloortype_e ffloorf
 
 	line_t* li = lines + line;
 	TAG_ITER_SECTORS(tag, s)
-		P_AddFakeFloor(&sectors[s], &sectors[sec], li, alpha, ffloorflags, secthinkers);
+		P_AddFakeFloor(&sectors[s], &sectors[sec], li, alpha, blendmode, ffloorflags, secthinkers);
 }
 
 /*

@@ -2522,7 +2522,7 @@ boolean P_ZMovement(mobj_t *mo)
 					{
 						P_KillMobj(mo, NULL, NULL, 0);
 					}
-					return false;
+					return !P_MobjWasRemoved(mo); // allows explosion states to run
 				}
 				else
 				{
@@ -7748,7 +7748,8 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		break;
 	case MT_WATERDROP:
 		P_SceneryCheckWater(mobj);
-		if ((mobj->z <= mobj->floorz || mobj->z <= mobj->watertop)
+		if (((!(mobj->eflags & MFE_VERTICALFLIP) && (mobj->z <= mobj->floorz || mobj->z <= mobj->watertop))
+			|| (mobj->eflags & MFE_VERTICALFLIP && mobj->z + mobj->height >= mobj->ceilingz))
 			&& mobj->health > 0)
 		{
 			mobj->health = 0;
