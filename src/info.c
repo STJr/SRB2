@@ -5198,11 +5198,11 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // speed
 		24*FRACUNIT,    // radius
 		34*FRACUNIT,    // height
-		0,              // display offset
+		1,              // display offset
 		DMG_FIRE,       // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_FIRE|MF_PAIN, // flags
+		MF_NOGRAVITY|MF_NOBLOCKMAP|MF_NOCLIPHEIGHT|MF_FIRE|MF_PAIN, // flags
 		S_NULL          // raisestate
 	},
 
@@ -7977,7 +7977,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_SCENERY|MF_NOCLIPHEIGHT,  // flags
+		MF_SOLID|MF_SCENERY,  // flags
 		S_NULL          // raisestate
 	},
 
@@ -8004,7 +8004,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_SCENERY|MF_NOCLIPHEIGHT|MF_PAPERCOLLISION,  // flags
+		MF_SOLID|MF_NOGRAVITY|MF_SCENERY|MF_PAPERCOLLISION,  // flags
 		S_NULL          // raisestate
 	},
 
@@ -8031,7 +8031,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPTHING,  // flags
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_SCENERY|MF_NOCLIP|MF_NOCLIPTHING,  // flags
 		S_NULL          // raisestate
 	},
 
