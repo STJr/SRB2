@@ -102,6 +102,15 @@ typedef enum
 	TMFL_SPLAT    = 1<<1,
 } textmapfoflaserflags_t;
 
+typedef enum
+{
+	TMB_TRANSLUCENT     = 0,
+	TMB_ADD             = 1,
+	TMB_SUBTRACT        = 2,
+	TMB_REVERSESUBTRACT = 3,
+	TMB_MODULATE        = 4,
+} textmapblendmodes_t;
+
 // GETSECSPECIAL (specialval, section)
 //
 // Pulls out the special # from a particular section.
