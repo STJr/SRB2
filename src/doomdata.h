@@ -196,7 +196,7 @@ typedef struct
 #pragma pack()
 #endif
 
-#define NUMMAPTHINGARGS 8
+#define NUMMAPTHINGARGS 10
 #define NUMMAPTHINGSTRINGARGS 2
 
 // Thing definition, position, orientation and type,
