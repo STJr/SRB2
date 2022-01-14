@@ -1117,7 +1117,7 @@ int LUA_HookMusicChange(const char *oldname, struct MusicChange *param)
 		lua_pushstring(gL, oldname);/* the only constant value */
 		lua_pushstring(gL, param->newname);/* semi constant */
 
-		for (k = 0; k <= map->numHooks; ++k)
+		for (k = 0; k < map->numHooks; ++k)
 		{
 			get_hook(&hook, map->ids, k);
 

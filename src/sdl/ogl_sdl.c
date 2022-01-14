@@ -177,7 +177,9 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 			// Also set the renderer variable back to software so the next launch won't
 			// repeat this error.
 			CV_StealthSet(&cv_renderer, "Software");
-			I_Error("OpenGL Error: Failed to access the GPU. There may be an issue with your graphics drivers.");
+			I_Error("OpenGL Error: Failed to access the GPU. Possible reasons include:\n"
+					"- GPU vendor has dropped OpenGL support on your GPU and OS. (Old GPU?)\n"
+					"- GPU drivers are missing or broken. You may need to update your drivers.");
 		}
 	}
 	first_init = true;
