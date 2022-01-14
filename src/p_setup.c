@@ -5762,17 +5762,6 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 799: //Set dynamic slope vertex to front sector height
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
 			break;
-		case 900: //Translucent wall (10%)
-		case 901: //Translucent wall (20%)
-		case 902: //Translucent wall (30%)
-		case 903: //Translucent wall (40%)
-		case 904: //Translucent wall (50%)
-		case 905: //Translucent wall (60%)
-		case 906: //Translucent wall (70%)
-		case 907: //Translucent wall (80%)
-		case 908: //Translucent wall (90%)
-			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
-			break;
 		case 909: //Fog wall
 			lines[i].blendmode = AST_FOG;
 			break;

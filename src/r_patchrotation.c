@@ -227,10 +227,10 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 
 	ox = (newwidth / 2) + (leftoffset - xpivot);
 	oy = (newheight / 2) + (patch->topoffset - ypivot);
-	width = (maxx+1 - minx);
-	height = (maxy+1 - miny);
+	width = (maxx - minx);
+	height = (maxy - miny);
 
-	if ((unsigned)(width * height) != size)
+	if ((unsigned)(width * height) > size)
 	{
 		UINT16 *src, *dest;
 
