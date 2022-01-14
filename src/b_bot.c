@@ -29,11 +29,16 @@ void B_UpdateBotleader(player_t *player)
 	{
 		if (players[i].bot || players[i].playerstate != PST_LIVE || players[i].spectator || !players[i].mo)
 			continue;
-		if (!player->mo) //Can't do distance calculations if there's no player object, so we'll just take the first we find
+		
+		if (!player->botleader)
 		{
-			player->botleader = &players[i];
+			player->botleader = &players[i]; // set default
 			return;
 		}
+
+		if (!player->mo)
+			return;
+
 		//Update best candidate based on nearest distance
 		dist = R_PointToDist2(player->mo->x, player->mo->y, players[i].mo->x, players[i].mo->y);
 		if (neardist > dist)
