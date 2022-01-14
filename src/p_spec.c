@@ -5598,6 +5598,12 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	{
 		fflr->flags |= FF_TRANSLUCENT;
 		fflr->spawnflags = fflr->flags;
+
+		if (sides[master->sidenum[0]].toptexture >= 1001)
+		{
+			fflr->blend = (sides[master->sidenum[0]].toptexture / 1000) + 1; // becomes an AST
+			fflr->alpha %= 1000;
+		}
 	}
 	fflr->spawnalpha = fflr->alpha; // save for netgames
 

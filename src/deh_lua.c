@@ -260,6 +260,11 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
 			}
+		if (fastcmp(p, "REVERSESUPER"))
+		{
+			lua_pushinteger(L, (lua_Integer)MFE_REVERSESUPER);
+			return 1;
+		}
 		if (mathlib) return luaL_error(L, "mobjeflag '%s' could not be found.\n", word);
 		return 0;
 	}

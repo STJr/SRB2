@@ -1350,8 +1350,11 @@ static void P_LoadSidedefs(UINT8 *data)
 				if (msd->toptexture[0] == '#')
 				{
 					char *col = msd->toptexture;
-					sd->toptexture = sd->bottomtexture =
-						((col[1]-'0')*100 + (col[2]-'0')*10 + col[3]-'0') + 1;
+					sd->toptexture =
+						((col[1]-'0')*100 + (col[2]-'0')*10 + col[3]-'0')+1;
+					if (col[4]) // extra num for blendmode
+						sd->toptexture += (col[4]-'0')*1000;
+					sd->bottomtexture = sd->toptexture;
 					sd->midtexture = R_TextureNumForName(msd->midtexture);
 				}
 				else
@@ -1698,6 +1701,21 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		lines[i].sidenum[1] = atol(val);
 	else if (fastcmp(param, "alpha"))
 		lines[i].alpha = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "blendmode") || fastcmp(param, "renderstyle"))
+	{
+		if (fastcmp(val, "translucent"))
+			lines[i].blendmode = AST_COPY;
+		else if (fastcmp(val, "add"))
+			lines[i].blendmode = AST_ADD;
+		else if (fastcmp(val, "subtract"))
+			lines[i].blendmode = AST_SUBTRACT;
+		else if (fastcmp(val, "reversesubtract"))
+			lines[i].blendmode = AST_REVERSESUBTRACT;
+		else if (fastcmp(val, "modulate"))
+			lines[i].blendmode = AST_MODULATE;
+		if (fastcmp(val, "fog"))
+			lines[i].blendmode = AST_FOG;
+	}
 	else if (fastcmp(param, "executordelay"))
 		lines[i].executordelay = atol(val);
 
@@ -3046,48 +3064,55 @@ static void P_AddBinaryMapTags(void)
 {
 	size_t i;
 
-	for (i = 0; i < numlines; i++)
-	{
-		// 96: Apply Tag to Tagged Sectors
+	for (i = 0; i < numlines; i++) {
 		// 97: Apply Tag to Front Sector
 		// 98: Apply Tag to Back Sector
 		// 99: Apply Tag to Front and Back Sectors
-		if (lines[i].special == 96) {
-			size_t j;
-			mtag_t tag = Tag_FGet(&lines[i].frontsector->tags);
-			mtag_t target_tag = Tag_FGet(&lines[i].tags);
-			mtag_t offset_tags[4];
-			memset(offset_tags, 0, sizeof(mtag_t)*4);
-			if (lines[i].flags & ML_EFFECT6) {
-				offset_tags[0] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
-				offset_tags[1] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
-			}
-			if (lines[i].flags & ML_TFERLINE) {
-				offset_tags[2] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
-				offset_tags[3] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
-			}
+		if (lines[i].special == 97 || lines[i].special == 99)
+			P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
+		if (lines[i].special == 98 || lines[i].special == 99)
+			P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
+	}
 
-			for (j = 0; j < numsectors; j++) {
-				boolean matches_target_tag = target_tag && Tag_Find(&sectors[j].tags, target_tag);
-				size_t k; for (k = 0; k < 4; k++) {
-					if (lines[i].flags & ML_EFFECT5) {
-						if (matches_target_tag || (offset_tags[k] && Tag_Find(&sectors[j].tags, offset_tags[k]))) {
-							Tag_Add(&sectors[j].tags, tag);
-							break;
-						}
-					} else if (matches_target_tag) {
-						if (k == 0)
-							Tag_Add(&sectors[j].tags, tag);
-						if (offset_tags[k])
-							Tag_Add(&sectors[j].tags, offset_tags[k]);
+	// Run this loop after the 97-99 loop to ensure that 96 can search through all of the
+	// 97-99-applied tags.
+	for (i = 0; i < numlines; i++) {
+		size_t j;
+		mtag_t tag, target_tag;
+		mtag_t offset_tags[4];
+
+		// 96: Apply Tag to Tagged Sectors
+		if (lines[i].special != 96)
+			continue;
+
+		tag = Tag_FGet(&lines[i].frontsector->tags);
+		target_tag = Tag_FGet(&lines[i].tags);
+		memset(offset_tags, 0, sizeof(mtag_t)*4);
+		if (lines[i].flags & ML_EFFECT6) {
+			offset_tags[0] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
+			offset_tags[1] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
+		}
+		if (lines[i].flags & ML_TFERLINE) {
+			offset_tags[2] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
+			offset_tags[3] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
+		}
+
+		for (j = 0; j < numsectors; j++) {
+			boolean matches_target_tag = target_tag && Tag_Find(&sectors[j].tags, target_tag);
+			size_t k;
+			for (k = 0; k < 4; k++) {
+				if (lines[i].flags & ML_EFFECT5) {
+					if (matches_target_tag || (offset_tags[k] && Tag_Find(&sectors[j].tags, offset_tags[k]))) {
+						Tag_Add(&sectors[j].tags, tag);
+						break;
 					}
+				} else if (matches_target_tag) {
+					if (k == 0)
+						Tag_Add(&sectors[j].tags, tag);
+					if (offset_tags[k])
+						Tag_Add(&sectors[j].tags, offset_tags[k]);
 				}
 			}
-		} else {
-			if (lines[i].special == 97 || lines[i].special == 99)
-				P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
-			if (lines[i].special == 98 || lines[i].special == 99)
-				P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
 		}
 	}
 }
@@ -3746,19 +3771,30 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
 			lines[i].special = 720;
 			break;
-
-		case 900: //Translucent wall (10%)
-		case 901: //Translucent wall (20%)
-		case 902: //Translucent wall (30%)
-		case 903: //Translucent wall (40%)
-		case 904: //Translucent wall (50%)
-		case 905: //Translucent wall (60%)
-		case 906: //Translucent wall (70%)
-		case 907: //Translucent wall (80%)
-		case 908: //Translucent wall (90%)
-			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
+		case 909: //Fog wall
+			lines[i].blendmode = AST_FOG;
 			break;
 		}
+
+		// Set alpha for translucent walls
+		if (lines[i].special >= 900 && lines[i].special < 909)
+			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
+
+		// Set alpha for additive/subtractive/reverse subtractive walls
+		if (lines[i].special >= 910 && lines[i].special <= 939)
+			lines[i].alpha = ((10 - lines[i].special % 10) << FRACBITS)/10;
+
+		if (lines[i].special >= 910 && lines[i].special <= 919) // additive
+			lines[i].blendmode = AST_ADD;
+
+		if (lines[i].special >= 920 && lines[i].special <= 929) // subtractive
+			lines[i].blendmode = AST_SUBTRACT;
+
+		if (lines[i].special >= 930 && lines[i].special <= 939) // reverse subtractive
+			lines[i].blendmode = AST_REVERSESUBTRACT;
+
+		if (lines[i].special == 940) // modulate
+			lines[i].blendmode = AST_MODULATE;
 
 		//Linedef executor delay
 		if (lines[i].special >= 400 && lines[i].special < 500)
