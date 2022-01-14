@@ -511,7 +511,8 @@ static inline UINT8 transmappedpdraw(const UINT8 *dest, const UINT8 *source, fix
 void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap)
 {
 	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
-	UINT32 alphalevel = 0;
+	UINT32 alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT32 blendmode = ((scrn & V_BLENDMASK) >> V_BLENDSHIFT);
 
 	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
 	INT32 dupx, dupy;
@@ -538,13 +539,13 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	patchdrawfunc = standardpdraw;
 
 	v_translevel = NULL;
-	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)))
+	if (alphalevel)
 	{
-		if (alphalevel == 13)
+		if (alphalevel == 10)
 			alphalevel = hudminusalpha[st_translucency];
-		else if (alphalevel == 14)
+		else if (alphalevel == 11)
 			alphalevel = 10 - st_translucency;
-		else if (alphalevel == 15)
+		else if (alphalevel == 12)
 			alphalevel = hudplusalpha[st_translucency];
 
 		if (alphalevel >= 10)
@@ -552,7 +553,11 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 
 		if (alphalevel)
 		{
-			v_translevel = R_GetTranslucencyTable(alphalevel);
+			if (blendmode)
+				v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
+			else
+				v_translevel = R_GetTranslucencyTable(alphalevel);
+
 			patchdrawfunc = translucentpdraw;
 		}
 	}
@@ -591,10 +596,6 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	colfrac = FixedDiv(FRACUNIT, fdup);
 	rowfrac = FixedDiv(FRACUNIT, vdup);
 
-	// So it turns out offsets aren't scaled in V_NOSCALESTART unless V_OFFSET is applied ...poo, that's terrible
-	// For now let's just at least give V_OFFSET the ability to support V_FLIP
-	// I'll probably make a better fix for 2.2 where I don't have to worry about breaking existing support for stuff
-	// -- Monster Iestyn 29/10/18
 	{
 		fixed_t offsetx = 0, offsety = 0;
 
@@ -605,14 +606,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 			offsetx = FixedMul(patch->leftoffset<<FRACBITS, pscale);
 
 		// top offset
-		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
 		offsety = FixedMul(patch->topoffset<<FRACBITS, vscale);
-
-		if ((scrn & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
-		{
-			offsetx = FixedMul(offsetx, dupx<<FRACBITS);
-			offsety = FixedMul(offsety, dupy<<FRACBITS);
-		}
 
 		// Subtract the offsets from x/y positions
 		x -= offsetx;
@@ -812,7 +806,8 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 scrn, patch_t *patch, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
 {
 	UINT8 (*patchdrawfunc)(const UINT8*, const UINT8*, fixed_t);
-	UINT32 alphalevel = 0;
+	UINT32 alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT32 blendmode = ((scrn & V_BLENDMASK) >> V_BLENDSHIFT);
 	// boolean flip = false;
 
 	fixed_t col, ofs, colfrac, rowfrac, fdup, vdup;
@@ -838,13 +833,13 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 	patchdrawfunc = standardpdraw;
 
 	v_translevel = NULL;
-	if ((alphalevel = ((scrn & V_ALPHAMASK) >> V_ALPHASHIFT)))
+	if (alphalevel)
 	{
-		if (alphalevel == 13)
+		if (alphalevel == 10)
 			alphalevel = hudminusalpha[st_translucency];
-		else if (alphalevel == 14)
+		else if (alphalevel == 11)
 			alphalevel = 10 - st_translucency;
-		else if (alphalevel == 15)
+		else if (alphalevel == 12)
 			alphalevel = hudplusalpha[st_translucency];
 
 		if (alphalevel >= 10)
@@ -852,7 +847,11 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 
 		if (alphalevel)
 		{
-			v_translevel = R_GetTranslucencyTable(alphalevel);
+			if (blendmode)
+				v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
+			else
+				v_translevel = R_GetTranslucencyTable(alphalevel);
+
 			patchdrawfunc = translucentpdraw;
 		}
 	}
@@ -1411,11 +1410,11 @@ void V_DrawFillConsoleMap(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c)
 
 	if ((alphalevel = ((c & V_ALPHAMASK) >> V_ALPHASHIFT)))
 	{
-		if (alphalevel == 13)
+		if (alphalevel == 10)
 			alphalevel = hudminusalpha[st_translucency];
-		else if (alphalevel == 14)
+		else if (alphalevel == 11)
 			alphalevel = 10 - st_translucency;
-		else if (alphalevel == 15)
+		else if (alphalevel == 12)
 			alphalevel = hudplusalpha[st_translucency];
 
 		if (alphalevel >= 10)
