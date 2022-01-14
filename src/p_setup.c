@@ -1353,8 +1353,11 @@ static void P_LoadSidedefs(UINT8 *data)
 				if (msd->toptexture[0] == '#')
 				{
 					char *col = msd->toptexture;
-					sd->toptexture = sd->bottomtexture =
-						((col[1]-'0')*100 + (col[2]-'0')*10 + col[3]-'0') + 1;
+					sd->toptexture =
+						((col[1]-'0')*100 + (col[2]-'0')*10 + col[3]-'0')+1;
+					if (col[4]) // extra num for blendmode
+						sd->toptexture += (col[4]-'0')*1000;
+					sd->bottomtexture = sd->toptexture;
 					sd->midtexture = R_TextureNumForName(msd->midtexture);
 				}
 				else
@@ -1709,6 +1712,21 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		lines[i].sidenum[1] = atol(val);
 	else if (fastcmp(param, "alpha"))
 		lines[i].alpha = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "blendmode") || fastcmp(param, "renderstyle"))
+	{
+		if (fastcmp(val, "translucent"))
+			lines[i].blendmode = AST_COPY;
+		else if (fastcmp(val, "add"))
+			lines[i].blendmode = AST_ADD;
+		else if (fastcmp(val, "subtract"))
+			lines[i].blendmode = AST_SUBTRACT;
+		else if (fastcmp(val, "reversesubtract"))
+			lines[i].blendmode = AST_REVERSESUBTRACT;
+		else if (fastcmp(val, "modulate"))
+			lines[i].blendmode = AST_MODULATE;
+		if (fastcmp(val, "fog"))
+			lines[i].blendmode = AST_FOG;
+	}
 	else if (fastcmp(param, "executordelay"))
 		lines[i].executordelay = atol(val);
 
@@ -3060,49 +3078,74 @@ static void P_AddBinaryMapTags(void)
 {
 	size_t i;
 
-	for (i = 0; i < numlines; i++)
-	{
-		// 96: Apply Tag to Tagged Sectors
+	for (i = 0; i < numlines; i++) {
 		// 97: Apply Tag to Front Sector
 		// 98: Apply Tag to Back Sector
 		// 99: Apply Tag to Front and Back Sectors
-		if (lines[i].special == 96) {
-			size_t j;
-			mtag_t tag = Tag_FGet(&lines[i].frontsector->tags);
-			mtag_t target_tag = Tag_FGet(&lines[i].tags);
-			mtag_t offset_tags[4];
-			memset(offset_tags, 0, sizeof(mtag_t)*4);
-			if (lines[i].flags & ML_EFFECT6) {
-				offset_tags[0] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
-				offset_tags[1] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
-			}
-			if (lines[i].flags & ML_TFERLINE) {
-				offset_tags[2] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
-				offset_tags[3] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
-			}
+		if (lines[i].special == 97 || lines[i].special == 99)
+			P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
+		if (lines[i].special == 98 || lines[i].special == 99)
+			P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
+	}
 
-			for (j = 0; j < numsectors; j++) {
-				boolean matches_target_tag = target_tag && Tag_Find(&sectors[j].tags, target_tag);
-				size_t k; for (k = 0; k < 4; k++) {
-					if (lines[i].flags & ML_EFFECT5) {
-						if (matches_target_tag || (offset_tags[k] && Tag_Find(&sectors[j].tags, offset_tags[k]))) {
-							Tag_Add(&sectors[j].tags, tag);
-							break;
-						}
-					} else if (matches_target_tag) {
-						if (k == 0)
-							Tag_Add(&sectors[j].tags, tag);
-						if (offset_tags[k])
-							Tag_Add(&sectors[j].tags, offset_tags[k]);
+	// Run this loop after the 97-99 loop to ensure that 96 can search through all of the
+	// 97-99-applied tags.
+	for (i = 0; i < numlines; i++) {
+		size_t j;
+		mtag_t tag, target_tag;
+		mtag_t offset_tags[4];
+
+		// 96: Apply Tag to Tagged Sectors
+		if (lines[i].special != 96)
+			continue;
+
+		tag = Tag_FGet(&lines[i].frontsector->tags);
+		target_tag = Tag_FGet(&lines[i].tags);
+		memset(offset_tags, 0, sizeof(mtag_t)*4);
+		if (lines[i].flags & ML_EFFECT6) {
+			offset_tags[0] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
+			offset_tags[1] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
+		}
+		if (lines[i].flags & ML_TFERLINE) {
+			offset_tags[2] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
+			offset_tags[3] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
+		}
+
+		for (j = 0; j < numsectors; j++) {
+			boolean matches_target_tag = target_tag && Tag_Find(&sectors[j].tags, target_tag);
+			size_t k;
+			for (k = 0; k < 4; k++) {
+				if (lines[i].flags & ML_EFFECT5) {
+					if (matches_target_tag || (offset_tags[k] && Tag_Find(&sectors[j].tags, offset_tags[k]))) {
+						Tag_Add(&sectors[j].tags, tag);
+						break;
 					}
+				} else if (matches_target_tag) {
+					if (k == 0)
+						Tag_Add(&sectors[j].tags, tag);
+					if (offset_tags[k])
+						Tag_Add(&sectors[j].tags, offset_tags[k]);
 				}
 			}
-		} else {
-			if (lines[i].special == 97 || lines[i].special == 99)
-				P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
-			if (lines[i].special == 98 || lines[i].special == 99)
-				P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
 		}
+	}
+}
+
+static void P_SetBinaryFOFAlpha(line_t *line)
+{
+	if (sides[line->sidenum[0]].toptexture > 0)
+	{
+		line->args[1] = sides[line->sidenum[0]].toptexture;
+		if (sides[line->sidenum[0]].toptexture >= 1001)
+		{
+			line->args[2] = (sides[line->sidenum[0]].toptexture/1000);
+			line->args[1] %= 1000;
+		}
+	}
+	else
+	{
+		line->args[1] = 128;
+		line->args[2] = TMB_TRANSLUCENT;
 	}
 }
 
@@ -3265,36 +3308,33 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].special == 102)
 			{
 				if (lines[i].flags & ML_NOCLIMB)
-					lines[i].args[2] |= TMFA_INSIDES;
-				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
-				else
-					lines[i].args[1] = 128;
+					lines[i].args[3] |= TMFA_INSIDES;
+				P_SetBinaryFOFAlpha(&lines[i]);
 
 				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 				if (lines[i].args[1] == 256)
-					lines[i].args[2] |= TMFA_SPLAT;
+					lines[i].args[3] |= TMFA_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
 
 			//Appearance
 			if (lines[i].special == 105)
-				lines[i].args[2] |= TMFA_NOPLANES|TMFA_NOSIDES;
+				lines[i].args[3] |= TMFA_NOPLANES|TMFA_NOSIDES;
 			else if (lines[i].special == 104)
-				lines[i].args[2] |= TMFA_NOSIDES;
+				lines[i].args[3] |= TMFA_NOSIDES;
 			else if (lines[i].special == 103)
-				lines[i].args[2] |= TMFA_NOPLANES;
+				lines[i].args[3] |= TMFA_NOPLANES;
 			if (lines[i].special != 100 && (lines[i].special != 104 || !(lines[i].flags & ML_NOCLIMB)))
-				lines[i].args[2] |= TMFA_NOSHADE;
+				lines[i].args[3] |= TMFA_NOSHADE;
 			if (lines[i].flags & ML_EFFECT6)
-				lines[i].args[2] |= TMFA_SPLAT;
+				lines[i].args[3] |= TMFA_SPLAT;
 
 			//Tangibility
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[3] |= TMFT_DONTBLOCKOTHERS;
+				lines[i].args[4] |= TMFT_DONTBLOCKOTHERS;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[3] |= TMFT_DONTBLOCKPLAYER;
+				lines[i].args[4] |= TMFT_DONTBLOCKPLAYER;
 
 			lines[i].special = 100;
 			break;
@@ -3311,35 +3351,32 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[1] = 255;
 			else
 			{
-				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
-				else
-					lines[i].args[1] = 128;
+				P_SetBinaryFOFAlpha(&lines[i]);
 
 				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 				if (lines[i].args[1] == 256)
-					lines[i].args[2] |= TMFW_SPLAT;
+					lines[i].args[3] |= TMFW_SPLAT;
 			}
 
 			//No sides?
 			if (lines[i].special == 122 || lines[i].special == 123 || lines[i].special == 125)
-				lines[i].args[2] |= TMFW_NOSIDES;
+				lines[i].args[3] |= TMFW_NOSIDES;
 
 			//Flags
 			if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[2] |= TMFW_DOUBLESHADOW;
+				lines[i].args[3] |= TMFW_DOUBLESHADOW;
 			if (lines[i].flags & ML_EFFECT4)
-				lines[i].args[2] |= TMFW_COLORMAPONLY;
+				lines[i].args[3] |= TMFW_COLORMAPONLY;
 			if (!(lines[i].flags & ML_EFFECT5))
-				lines[i].args[2] |= TMFW_NORIPPLE;
+				lines[i].args[3] |= TMFW_NORIPPLE;
 
 			//Goo?
 			if (lines[i].special >= 124)
-				lines[i].args[2] |= TMFW_GOOWATER;
+				lines[i].args[3] |= TMFW_GOOWATER;
 
 			//Splat rendering?
 			if (lines[i].flags & ML_EFFECT6)
-				lines[i].args[2] |= TMFW_SPLAT;
+				lines[i].args[3] |= TMFW_SPLAT;
 
 			lines[i].special = 120;
 			break;
@@ -3356,41 +3393,38 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].special == 141 || lines[i].special == 142 || lines[i].special == 144 || lines[i].special == 145)
 			{
 				if (lines[i].flags & ML_NOCLIMB)
-					lines[i].args[2] |= TMFA_INSIDES;
-				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
-				else
-					lines[i].args[1] = 128;
+					lines[i].args[3] |= TMFA_INSIDES;
+				P_SetBinaryFOFAlpha(&lines[i]);
 
 				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 				if (lines[i].args[1] == 256)
-					lines[i].args[2] |= TMFA_SPLAT;
+					lines[i].args[3] |= TMFA_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
 
 			//Appearance
 			if (lines[i].special == 142 || lines[i].special == 145)
-				lines[i].args[2] |= TMFA_NOSIDES;
+				lines[i].args[3] |= TMFA_NOSIDES;
 			else if (lines[i].special == 146)
-				lines[i].args[2] |= TMFA_NOPLANES;
+				lines[i].args[3] |= TMFA_NOPLANES;
 			if (lines[i].special != 146 && (lines[i].flags & ML_NOCLIMB))
-				lines[i].args[2] |= TMFA_NOSHADE;
+				lines[i].args[3] |= TMFA_NOSHADE;
 			if (lines[i].flags & ML_EFFECT6)
-				lines[i].args[2] |= TMFA_SPLAT;
+				lines[i].args[3] |= TMFA_SPLAT;
 
 			//Tangibility
 			if (lines[i].special <= 142)
-				lines[i].args[3] |= TMFT_INTANGIBLEBOTTOM;
+				lines[i].args[4] |= TMFT_INTANGIBLEBOTTOM;
 			else if (lines[i].special <= 145)
-				lines[i].args[3] |= TMFT_INTANGIBLETOP;
+				lines[i].args[4] |= TMFT_INTANGIBLETOP;
 			else
-				lines[i].args[3] |= TMFT_INTANGIBLEBOTTOM|TMFT_INTANGIBLETOP;
+				lines[i].args[4] |= TMFT_INTANGIBLEBOTTOM|TMFT_INTANGIBLETOP;
 
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[3] |= TMFT_DONTBLOCKOTHERS;
+				lines[i].args[4] |= TMFT_DONTBLOCKOTHERS;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[3] |= TMFT_DONTBLOCKPLAYER;
+				lines[i].args[4] |= TMFT_DONTBLOCKPLAYER;
 
 			lines[i].special = 100;
 			break;
@@ -3430,38 +3464,35 @@ static void P_ConvertBinaryMap(void)
 			//Alpha
 			if (lines[i].special >= 174 && lines[i].special <= 175)
 			{
-				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
-				else
-					lines[i].args[1] = 128;
+				P_SetBinaryFOFAlpha(&lines[i]);
 
 				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 				if (lines[i].args[1] == 256)
-					lines[i].args[3] |= TMFC_SPLAT;
+					lines[i].args[4] |= TMFC_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
 
 			if (lines[i].special >= 172 && lines[i].special <= 175)
 			{
-				lines[i].args[2] |= TMFT_INTANGIBLEBOTTOM;
+				lines[i].args[3] |= TMFT_INTANGIBLEBOTTOM;
 				if (lines[i].flags & ML_NOCLIMB)
-					lines[i].args[3] |= TMFC_NOSHADE;
+					lines[i].args[4] |= TMFC_NOSHADE;
 			}
 
 			if (lines[i].special % 2 == 1)
-				lines[i].args[3] |= TMFC_NORETURN;
+				lines[i].args[4] |= TMFC_NORETURN;
 			if (lines[i].special == 176 || lines[i].special == 177 || lines[i].special == 180)
-				lines[i].args[3] |= TMFC_AIRBOB;
+				lines[i].args[4] |= TMFC_AIRBOB;
 			if (lines[i].special >= 176 && lines[i].special <= 179)
-				lines[i].args[3] |= TMFC_FLOATBOB;
+				lines[i].args[4] |= TMFC_FLOATBOB;
 			if (lines[i].flags & ML_EFFECT6)
-				lines[i].args[3] |= TMFC_SPLAT;
+				lines[i].args[4] |= TMFC_SPLAT;
 
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] |= TMFT_DONTBLOCKOTHERS;
+				lines[i].args[3] |= TMFT_DONTBLOCKOTHERS;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[2] |= TMFT_DONTBLOCKPLAYER;
+				lines[i].args[3] |= TMFT_DONTBLOCKPLAYER;
 
 			lines[i].special = 170;
 			break;
@@ -3476,44 +3507,41 @@ static void P_ConvertBinaryMap(void)
 			//Translucency
 			if (lines[i].special == 192 || lines[i].special == 195)
 			{
-				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
-				else
-					lines[i].args[1] = 128;
+				P_SetBinaryFOFAlpha(&lines[i]);
 
 				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 				if (lines[i].args[1] == 256)
-					lines[i].args[2] |= TMFA_SPLAT;
+					lines[i].args[3] |= TMFA_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
 
 			//Appearance
 			if (lines[i].special == 193)
-				lines[i].args[2] |= TMFA_NOPLANES|TMFA_NOSIDES;
+				lines[i].args[3] |= TMFA_NOPLANES|TMFA_NOSIDES;
 			if (lines[i].special >= 194)
-				lines[i].args[2] |= TMFA_INSIDES;
+				lines[i].args[3] |= TMFA_INSIDES;
 			if (lines[i].special != 190 && (lines[i].special <= 193 || lines[i].flags & ML_NOCLIMB))
-				lines[i].args[2] |= TMFA_NOSHADE;
+				lines[i].args[3] |= TMFA_NOSHADE;
 			if (lines[i].flags & ML_EFFECT6)
-				lines[i].args[2] |= TMFA_SPLAT;
+				lines[i].args[3] |= TMFA_SPLAT;
 
 			//Tangibility
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[3] |= TMFT_DONTBLOCKOTHERS;
+				lines[i].args[4] |= TMFT_DONTBLOCKOTHERS;
 			if (lines[i].flags & ML_EFFECT2)
-				lines[i].args[3] |= TMFT_DONTBLOCKPLAYER;
+				lines[i].args[4] |= TMFT_DONTBLOCKPLAYER;
 			if (lines[i].special >= 194)
-				lines[i].args[3] |= TMFT_INTANGIBLEBOTTOM;
+				lines[i].args[4] |= TMFT_INTANGIBLEBOTTOM;
 
 			//Speed
-			lines[i].args[4] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			lines[i].args[5] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 
 			//Flags
 			if (lines[i].flags & ML_BLOCKMONSTERS)
-				lines[i].args[5] |= TMFR_REVERSE;
+				lines[i].args[6] |= TMFR_REVERSE;
 			if (lines[i].flags & ML_BLOCKMONSTERS)
-				lines[i].args[5] |= TMFR_SPINDASH;
+				lines[i].args[6] |= TMFR_SPINDASH;
 
 			lines[i].special = 190;
 			break;
@@ -3536,27 +3564,24 @@ static void P_ConvertBinaryMap(void)
 			//Alpha
 			if (lines[i].special == 221)
 			{
-				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
-				else
-					lines[i].args[1] = 128;
+				P_SetBinaryFOFAlpha(&lines[i]);
 
 				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 				if (lines[i].args[1] == 256)
-					lines[i].args[2] |= TMFA_SPLAT;
+					lines[i].args[3] |= TMFA_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
 
 			//Appearance
 			if (lines[i].special == 222)
-				lines[i].args[2] |= TMFA_NOPLANES;
+				lines[i].args[3] |= TMFA_NOPLANES;
 			if (lines[i].special == 221)
-				lines[i].args[2] |= TMFA_INSIDES;
+				lines[i].args[3] |= TMFA_INSIDES;
 			if (lines[i].special != 220 && !(lines[i].flags & ML_NOCLIMB))
-				lines[i].args[2] |= TMFA_NOSHADE;
+				lines[i].args[3] |= TMFA_NOSHADE;
 			if (lines[i].flags & ML_EFFECT6)
-				lines[i].args[2] |= TMFA_SPLAT;
+				lines[i].args[3] |= TMFA_SPLAT;
 
 			lines[i].special = 220;
             break;
@@ -3597,40 +3622,37 @@ static void P_ConvertBinaryMap(void)
 			//Alpha
 			if (lines[i].special == 253 || lines[i].special == 256)
 			{
-				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
-				else
-					lines[i].args[1] = 128;
+				P_SetBinaryFOFAlpha(&lines[i]);
 
 				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 				if (lines[i].args[1] == 256)
-					lines[i].args[3] |= TMFB_SPLAT;
+					lines[i].args[4] |= TMFB_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
 
 			//Bustable type
 			if (lines[i].special <= 253)
-				lines[i].args[2] = TMFB_TOUCH;
+				lines[i].args[3] = TMFB_TOUCH;
 			else if (lines[i].special >= 255)
-				lines[i].args[2] = TMFB_SPIN;
+				lines[i].args[3] = TMFB_SPIN;
 			else if (lines[i].flags & ML_NOCLIMB)
-				lines[i].args[2] = TMFB_STRONG;
+				lines[i].args[3] = TMFB_STRONG;
 			else
-				lines[i].args[2] = TMFB_REGULAR;
+				lines[i].args[3] = TMFB_REGULAR;
 
 			//Flags
 			if (lines[i].flags & ML_EFFECT4)
-				lines[i].args[3] |= TMFB_PUSHABLES;
+				lines[i].args[4] |= TMFB_PUSHABLES;
 			if (lines[i].flags & ML_EFFECT5)
 			{
-				lines[i].args[3] |= TMFB_EXECUTOR;
-				lines[i].args[4] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+				lines[i].args[4] |= TMFB_EXECUTOR;
+				lines[i].args[5] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
 			}
 			if (lines[i].special == 252 && lines[i].flags & ML_NOCLIMB)
-				lines[i].args[3] |= TMFB_ONLYBOTTOM;
+				lines[i].args[4] |= TMFB_ONLYBOTTOM;
 			if (lines[i].flags & ML_EFFECT6)
-				lines[i].args[3] |= TMFB_SPLAT;
+				lines[i].args[4] |= TMFB_SPLAT;
 
 			lines[i].special = 254;
 			break;
@@ -3645,17 +3667,14 @@ static void P_ConvertBinaryMap(void)
 			lines[i].args[0] = tag;
 
 			//Alpha
-			if (sides[lines[i].sidenum[0]].toptexture > 0)
-				lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
-			else
-				lines[i].args[1] = 128;
+			P_SetBinaryFOFAlpha(&lines[i]);
 
 			//Flags
 			if (lines[i].flags & ML_EFFECT1)
-				lines[i].args[2] |= TMFL_NOBOSSES;
+				lines[i].args[3] |= TMFL_NOBOSSES;
 			//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 			if (lines[i].flags & ML_EFFECT6 || lines[i].args[1] == 256)
-				lines[i].args[2] |= TMFL_SPLAT;
+				lines[i].args[3] |= TMFL_SPLAT;
 
 			break;
 		case 259: //Custom FOF
@@ -3663,20 +3682,17 @@ static void P_ConvertBinaryMap(void)
 				I_Error("Custom FOF (tag %d) found without a linedef back side!", tag);
 
 			lines[i].args[0] = tag;
-			lines[i].args[2] = sides[lines[i].sidenum[1]].toptexture;
+			lines[i].args[3] = sides[lines[i].sidenum[1]].toptexture;
 			if (lines[i].flags & ML_EFFECT6)
-				lines[i].args[2] |= FF_SPLAT;
-			lines[i].args[3] = sides[lines[i].sidenum[1]].midtexture;
-			if (lines[i].args[2] & FF_TRANSLUCENT)
+				lines[i].args[3] |= FF_SPLAT;
+			lines[i].args[4] = sides[lines[i].sidenum[1]].midtexture;
+			if (lines[i].args[3] & FF_TRANSLUCENT)
 			{
-				if (sides[lines[i].sidenum[0]].toptexture > 0)
-					lines[i].args[1] = sides[lines[i].sidenum[0]].toptexture;
-				else
-					lines[i].args[1] = 128;
+				P_SetBinaryFOFAlpha(&lines[i]);
 
 				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 				if (lines[i].args[1] == 256)
-					lines[i].args[2] |= FF_SPLAT;
+					lines[i].args[3] |= FF_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
@@ -4184,19 +4200,30 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
 			lines[i].special = 720;
 			break;
-
-		case 900: //Translucent wall (10%)
-		case 901: //Translucent wall (20%)
-		case 902: //Translucent wall (30%)
-		case 903: //Translucent wall (40%)
-		case 904: //Translucent wall (50%)
-		case 905: //Translucent wall (60%)
-		case 906: //Translucent wall (70%)
-		case 907: //Translucent wall (80%)
-		case 908: //Translucent wall (90%)
-			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
+		case 909: //Fog wall
+			lines[i].blendmode = AST_FOG;
 			break;
 		}
+
+		// Set alpha for translucent walls
+		if (lines[i].special >= 900 && lines[i].special < 909)
+			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
+
+		// Set alpha for additive/subtractive/reverse subtractive walls
+		if (lines[i].special >= 910 && lines[i].special <= 939)
+			lines[i].alpha = ((10 - lines[i].special % 10) << FRACBITS)/10;
+
+		if (lines[i].special >= 910 && lines[i].special <= 919) // additive
+			lines[i].blendmode = AST_ADD;
+
+		if (lines[i].special >= 920 && lines[i].special <= 929) // subtractive
+			lines[i].blendmode = AST_SUBTRACT;
+
+		if (lines[i].special >= 930 && lines[i].special <= 939) // reverse subtractive
+			lines[i].blendmode = AST_REVERSESUBTRACT;
+
+		if (lines[i].special == 940) // modulate
+			lines[i].blendmode = AST_MODULATE;
 
 		//Linedef executor delay
 		if (lines[i].special >= 400 && lines[i].special < 500)

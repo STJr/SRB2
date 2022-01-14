@@ -119,11 +119,6 @@ void HWR_DrawPatch(patch_t *gpatch, INT32 x, INT32 y, INT32 option)
 
 	flags = PF_Translucent|PF_NoDepthTest;
 
-	if (option & V_WRAPX)
-		flags |= PF_ForceWrapX;
-	if (option & V_WRAPY)
-		flags |= PF_ForceWrapY;
-
 	// clip it since it is used for bunny scroll in doom I
 	HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
@@ -135,6 +130,7 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	float cx = FIXED_TO_FLOAT(x);
 	float cy = FIXED_TO_FLOAT(y);
 	UINT8 alphalevel = ((option & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT8 blendmode = ((option & V_BLENDMASK) >> V_BLENDSHIFT);
 	GLPatch_t *hwrPatch;
 
 //  3--2
@@ -144,9 +140,6 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	float dupx, dupy, fscalew, fscaleh, fwidth, fheight;
 
 	UINT8 perplayershuffle = 0;
-
-	if (alphalevel >= 10 && alphalevel < 13)
-		return;
 
 	// make patch ready in hardware cache
 	if (!colormap)
@@ -191,14 +184,8 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 			offsetx = (float)(gpatch->leftoffset) * fscalew;
 
 		// top offset
-		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
+		// TODO: make some kind of vertical version of V_FLIP
 		offsety = (float)(gpatch->topoffset) * fscaleh;
-
-		if ((option & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
-		{
-			offsetx *= dupx;
-			offsety *= dupy;
-		}
 
 		cx -= offsetx;
 		cy -= offsety;
@@ -359,21 +346,20 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	v[0].t = v[1].t = 0.0f;
 	v[2].t = v[3].t = hwrPatch->max_t;
 
-	flags = PF_Translucent|PF_NoDepthTest;
-
-	if (option & V_WRAPX)
-		flags |= PF_ForceWrapX;
-	if (option & V_WRAPY)
-		flags |= PF_ForceWrapY;
-
 	// clip it since it is used for bunny scroll in doom I
+	if (blendmode)
+		flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
+	else
+		flags = PF_Translucent|PF_NoDepthTest;
+
 	if (alphalevel)
 	{
 		FSurfaceInfo Surf;
 		Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
-		if (alphalevel == 13) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency];
-		else if (alphalevel == 14) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency];
-		else if (alphalevel == 15) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency];
+
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency];
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency];
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency];
 		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
@@ -389,6 +375,7 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	float cx = FIXED_TO_FLOAT(x);
 	float cy = FIXED_TO_FLOAT(y);
 	UINT8 alphalevel = ((option & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT8 blendmode = ((option & V_BLENDMASK) >> V_BLENDSHIFT);
 	GLPatch_t *hwrPatch;
 
 //  3--2
@@ -398,9 +385,6 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	float dupx, dupy, fscalew, fscaleh, fwidth, fheight;
 
 	UINT8 perplayershuffle = 0;
-
-	if (alphalevel >= 10 && alphalevel < 13)
-		return;
 
 	// make patch ready in hardware cache
 	if (!colormap)
@@ -589,13 +573,6 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	else
 		v[2].t = v[3].t = (FIXED_TO_FLOAT(sy+h)/(float)(gpatch->height))*hwrPatch->max_t;
 
-	flags = PF_Translucent|PF_NoDepthTest;
-
-	if (option & V_WRAPX)
-		flags |= PF_ForceWrapX;
-	if (option & V_WRAPY)
-		flags |= PF_ForceWrapY;
-
 	// Auto-crop at splitscreen borders!
 	if (splitscreen && (option & V_PERPLAYER))
 	{
@@ -667,14 +644,21 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	}
 
 	// clip it since it is used for bunny scroll in doom I
+	if (blendmode)
+		flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
+	else
+		flags = PF_Translucent|PF_NoDepthTest;
+
 	if (alphalevel)
 	{
 		FSurfaceInfo Surf;
 		Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
-		if (alphalevel == 13) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency];
-		else if (alphalevel == 14) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency];
-		else if (alphalevel == 15) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency];
+
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency];
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency];
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency];
 		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
+
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
 	}
