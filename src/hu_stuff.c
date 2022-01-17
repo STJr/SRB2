@@ -76,7 +76,7 @@ patch_t *nto_font[NT_FONTSIZE];
 
 static player_t *plr;
 boolean chat_on; // entering a chat message?
-static char w_chat[HU_MAXMSGLEN];
+static char w_chat[HU_MAXMSGLEN + 1];
 static size_t c_input = 0; // let's try to make the chat input less shitty.
 static boolean headsupactive = false;
 boolean hu_showscores; // draw rankings
@@ -461,7 +461,7 @@ void HU_AddChatText(const char *text, boolean playsound)
 
 static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 {
-	char buf[254];
+	char buf[2 + HU_MAXMSGLEN + 1];
 	size_t numwords, ix;
 	char *msg = &buf[2];
 	const size_t msgspace = sizeof buf - 2;
@@ -537,7 +537,7 @@ static void DoSayCommand(SINT8 target, size_t usedargs, UINT8 flags)
 		}
 		buf[0] = target;
 		newmsg = msg+5+spc;
-		strlcpy(msg, newmsg, 252);
+		strlcpy(msg, newmsg, HU_MAXMSGLEN + 1);
 	}
 
 	SendNetXCmd(XD_SAY, buf, strlen(msg) + 1 + msg-buf);
@@ -644,7 +644,7 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 	target = READSINT8(*p);
 	flags = READUINT8(*p);
 	msg = (char *)*p;
-	SKIPSTRING(*p);
+	SKIPSTRINGL(*p, HU_MAXMSGLEN + 1);
 
 	if ((cv_mute.value || flags & (HU_CSAY|HU_SERVER_SAY)) && playernum != serverplayer && !(IsPlayerAdmin(playernum)))
 	{
@@ -858,72 +858,6 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 #endif
 }
 
-// Handles key input and string input
-//
-static inline boolean HU_keyInChatString(char *s, char ch)
-{
-	size_t l;
-
-	if ((ch >= HU_FONTSTART && ch <= HU_FONTEND && hu_font[ch-HU_FONTSTART])
-	  || ch == ' ') // Allow spaces, of course
-	{
-		l = strlen(s);
-		if (l < HU_MAXMSGLEN - 1)
-		{
-			if (c_input >= strlen(s)) // don't do anything complicated
-			{
-				s[l++] = ch;
-				s[l]=0;
-			}
-			else
-			{
-
-				// move everything past c_input for new characters:
-				size_t m = HU_MAXMSGLEN-1;
-				while (m>=c_input)
-				{
-					if (s[m])
-						s[m+1] = (s[m]);
-					if (m == 0) // prevent overflow
-						break;
-					m--;
-				}
-				s[c_input] = ch; // and replace this.
-			}
-			c_input++;
-			return true;
-		}
-		return false;
-	}
-	else if (ch == KEY_BACKSPACE)
-	{
-		size_t i = c_input;
-
-		if (c_input <= 0)
-			return false;
-
-		if (!s[i-1])
-			return false;
-
-		if (i >= strlen(s)-1)
-		{
-			s[strlen(s)-1] = 0;
-			c_input--;
-			return false;
-		}
-
-		for (; (i < HU_MAXMSGLEN); i++)
-		{
-			s[i-1] = s[i];
-		}
-		c_input--;
-	}
-	else if (ch != KEY_ENTER)
-		return false; // did not eat key
-
-	return true; // ate the key
-}
-
 #endif
 
 //
@@ -945,150 +879,122 @@ void HU_Ticker(void)
 #ifndef NONET
 
 static boolean teamtalk = false;
+static boolean justscrolleddown;
+static boolean justscrolledup;
+static INT16 typelines = 1; // number of drawfill lines we need when drawing the chat. it's some weird hack and might be one frame off but I'm lazy to make another loop.
+// It's up here since it has to be reset when we open the chat.
 
-// Clear spaces so we don't end up with messages only made out of emptiness
-static boolean HU_clearChatSpaces(void)
+static boolean HU_chatboxContainsOnlySpaces(void)
 {
-	size_t i = 0; // Used to just check our message
-	char c; // current character we're iterating.
-	boolean nothingbutspaces = true;
+	size_t i;
 
-	for (; i < strlen(w_chat); i++) // iterate through message and eradicate all spaces that don't belong.
-	{
-		c = w_chat[i];
-		if (!c)
-			break; // if there's nothing, it's safe to assume our message has ended, so let's not waste any more time here.
+	for (i = 0; w_chat[i]; i++)
+		if (w_chat[i] != ' ')
+			return false;
 
-		if (c != ' ') // Isn't a space
-		{
-			nothingbutspaces = false;
-		}
-	}
-	return nothingbutspaces;
+	return true;
 }
 
-//
-//
-static void HU_queueChatChar(char c)
+static void HU_sendChatMessage(void)
 {
-	// send automaticly the message (no more chat char)
-	if (c == KEY_ENTER)
+	char buf[2 + HU_MAXMSGLEN + 1];
+	char *msg = &buf[2];
+	size_t ci;
+	INT32 target = 0;
+
+	// if our message was nothing but spaces, don't send it.
+	if (HU_chatboxContainsOnlySpaces())
+		return;
+
+	// copy printable characters and terminating '\0' only.
+	for (ci = 2; w_chat[ci-2]; ci++)
 	{
-		char buf[2+256];
-		char *msg = &buf[2];
-		size_t i = 0;
-		size_t ci = 2;
-		INT32 target = 0;
+		char c = w_chat[ci-2];
+		if (c >= ' ' && !(c & 0x80))
+			buf[ci] = c;
+	};
+	buf[ci] = '\0';
 
-		if (HU_clearChatSpaces()) // Avoids being able to send empty messages, or something.
-			return; // If this returns true, that means our message was NOTHING but spaces, so don't send it period.
+	memset(w_chat, '\0', sizeof(w_chat));
+	c_input = 0;
 
-		do {
-			c = w_chat[-2+ci++];
-			if (!c || (c >= ' ' && !(c & 0x80))) // copy printable characters and terminating '\0' only.
-				buf[ci-1]=c;
-		} while (c);
+	// last minute mute check
+	if (CHAT_MUTE)
+	{
+		HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"), false);
+		return;
+	}
 
-		for (;(i<HU_MAXMSGLEN);i++)
-			w_chat[i] = 0; // reset this.
+	if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0) // used /pm
+	{
+		INT32 spc = 1; // used if playernum[1] is a space.
+		char playernum[3];
+		const char *newmsg;
 
-		c_input = 0;
+		// what we're gonna do now is check if the player exists
+		// with that logic, characters 4 and 5 are our numbers:
 
-		// last minute mute check
-		if (CHAT_MUTE)
+		// teamtalk can't send PMs, just don't send it, else everyone would be able to see it, and no one wants to see your sex RP sicko.
+		if (teamtalk)
 		{
-			HU_AddChatText(va("%s>ERROR: The chat is muted. You can't say anything.", "\x85"), false);
+			HU_AddChatText(va("%sCannot send sayto in Say-Team.", "\x85"), false);
 			return;
 		}
 
-		if (strlen(msg) > 4 && strnicmp(msg, "/pm", 3) == 0) // used /pm
+		strncpy(playernum, msg+3, 3);
+		// check for undesirable characters in our "number"
+		if (!(isdigit(playernum[0]) && isdigit(playernum[1])))
 		{
-			INT32 spc = 1; // used if playernum[1] is a space.
-			char playernum[3];
-			const char *newmsg;
-
-			// what we're gonna do now is check if the player exists
-			// with that logic, characters 4 and 5 are our numbers:
-
-			// teamtalk can't send PMs, just don't send it, else everyone would be able to see it, and no one wants to see your sex RP sicko.
-			if (teamtalk)
-			{
-				HU_AddChatText(va("%sCannot send sayto in Say-Team.", "\x85"), false);
-				return;
-			}
-
-			strncpy(playernum, msg+3, 3);
-			// check for undesirable characters in our "number"
-			if (((playernum[0] < '0') || (playernum[0] > '9')) || ((playernum[1] < '0') || (playernum[1] > '9')))
-			{
-				// check if playernum[1] is a space
-				if (playernum[1] == ' ')
-					spc = 0;
-					// let it slide
-				else
-				{
-					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<player num> \'.", false);
-					return;
-				}
-			}
-			// I'm very bad at C, I swear I am, additional checks eww!
-			if (spc != 0)
-			{
-				if (msg[5] != ' ')
-				{
-					HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<player num> \'.", false);
-					return;
-				}
-			}
-
-			target = atoi(playernum); // turn that into a number
-			//CONS_Printf("%d\n", target);
-
-			// check for target player, if it doesn't exist then we can't send the message!
-			if (target < MAXPLAYERS && playeringame[target]) // player exists
-				target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
+			// check if playernum[1] is a space
+			if (playernum[1] == ' ')
+				spc = 0;
+				// let it slide
 			else
 			{
-				HU_AddChatText(va("\x82NOTICE: \x80Player %d does not exist.", target), false); // same
+				HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<player num> \'.", false);
 				return;
 			}
-
-			// we need to get rid of the /pm<player num>
-			newmsg = msg+5+spc;
-			strlcpy(msg, newmsg, 255);
 		}
-		if (ci > 3) // don't send target+flags+empty message.
+		// I'm very bad at C, I swear I am, additional checks eww!
+		if (spc != 0 && msg[5] != ' ')
 		{
-			if (teamtalk)
-				buf[0] = -1; // target
-			else
-				buf[0] = target;
-
-			buf[1] = 0; // flags
-			SendNetXCmd(XD_SAY, buf, 2 + strlen(&buf[2]) + 1);
+			HU_AddChatText("\x82NOTICE: \x80Invalid command format. Correct format is \'/pm<player num> \'.", false);
+			return;
 		}
-		return;
+
+		target = atoi(playernum); // turn that into a number
+
+		// check for target player, if it doesn't exist then we can't send the message!
+		if (target < MAXPLAYERS && playeringame[target]) // player exists
+			target++; // even though playernums are from 0 to 31, target is 1 to 32, so up that by 1 to have it work!
+		else
+		{
+			HU_AddChatText(va("\x82NOTICE: \x80Player %d does not exist.", target), false); // same
+			return;
+		}
+
+		// we need to get rid of the /pm<player num>
+		newmsg = msg+5+spc;
+		strlcpy(msg, newmsg, HU_MAXMSGLEN + 1);
+	}
+	if (ci > 2) // don't send target+flags+empty message.
+	{
+		buf[0] = teamtalk ? -1 : target; // target
+		buf[1] = 0; // flags
+		SendNetXCmd(XD_SAY, buf, 2 + strlen(&buf[2]) + 1);
 	}
 }
+
 #endif
 
 void HU_clearChatChars(void)
 {
-	size_t i = 0;
-	for (;i<HU_MAXMSGLEN;i++)
-		w_chat[i] = 0; // reset this.
+	memset(w_chat, '\0', sizeof(w_chat));
 	chat_on = false;
 	c_input = 0;
 
 	I_UpdateMouseGrab();
 }
-
-#ifndef NONET
-static boolean justscrolleddown;
-static boolean justscrolledup;
-static INT16 typelines = 1; // number of drawfill lines we need when drawing the chat. it's some weird hack and might be one frame off but I'm lazy to make another loop.
-// It's up here since it has to be reset when we open the chat.
-#endif
 
 //
 // Returns true if key eaten
@@ -1171,21 +1077,23 @@ boolean HU_Responder(event_t *ev)
 			if (shiftdown ^ capslock)
 				c = shiftxform[c];
 		}
-		else	// if we're holding shift we should still shift non letter symbols
+		else // if we're holding shift we should still shift non letter symbols
 		{
 			if (shiftdown)
 				c = shiftxform[c];
 		}
 
 		// pasting. pasting is cool. chat is a bit limited, though :(
-		if (((c == 'v' || c == 'V') && ctrldown) && !CHAT_MUTE)
+		if ((c == 'v' || c == 'V') && ctrldown)
 		{
-			const char *paste = I_ClipboardPaste();
+			const char *paste;
 			size_t chatlen;
 			size_t pastelen;
 
-			// create a dummy string real quickly
+			if (CHAT_MUTE)
+				return true;
 
+			paste = I_ClipboardPaste();
 			if (paste == NULL)
 				return true;
 
@@ -1194,40 +1102,16 @@ boolean HU_Responder(event_t *ev)
 			if (chatlen+pastelen > HU_MAXMSGLEN)
 				return true; // we can't paste this!!
 
-			if (c_input >= strlen(w_chat)) // add it at the end of the string.
-			{
-				memcpy(&w_chat[chatlen], paste, pastelen); // copy all of that.
-				c_input += pastelen;
-				/*size_t i = 0;
-				for (;i<pastelen;i++)
-				{
-					HU_queueChatChar(paste[i]); // queue it so that it's actually sent. (this chat write thing is REALLY messy.)
-				}*/
-				return true;
-			}
-			else	// otherwise, we need to shift everything and make space, etc etc
-			{
-				size_t i = HU_MAXMSGLEN-1;
-				while (i >= c_input)
-				{
-					if (w_chat[i])
-						w_chat[i+pastelen] = w_chat[i];
-					if (i == 0) // prevent overflow
-						break;
-					i--;
-				}
-				memcpy(&w_chat[c_input], paste, pastelen); // copy all of that.
-				c_input += pastelen;
-				return true;
-			}
+			memmove(&w_chat[c_input + pastelen], &w_chat[c_input], pastelen);
+			memcpy(&w_chat[c_input], paste, pastelen); // copy all of that.
+			c_input += pastelen;
+			return true;
 		}
+		else if (c == KEY_ENTER)
+		{
+			if (!CHAT_MUTE)
+				HU_sendChatMessage();
 
-		if (!CHAT_MUTE && HU_keyInChatString(w_chat,c))
-		{
-			HU_queueChatChar(c);
-		}
-		if (c == KEY_ENTER)
-		{
 			chat_on = false;
 			c_input = 0; // reset input cursor
 			chat_scrollmedown = true; // you hit enter, so you might wanna autoscroll to see what you just sent. :)
@@ -1268,6 +1152,32 @@ boolean HU_Responder(event_t *ev)
 			else
 				c_input++;
 		}
+		else if ((c >= HU_FONTSTART && c <= HU_FONTEND && hu_font[c-HU_FONTSTART])
+			|| c == ' ') // Allow spaces, of course
+		{
+			if (CHAT_MUTE || strlen(w_chat) >= HU_MAXMSGLEN)
+				return true;
+
+			memmove(&w_chat[c_input + 1], &w_chat[c_input], strlen(w_chat) - c_input + 1);
+			w_chat[c_input] = c;
+			c_input++;
+		}
+		else if (c == KEY_BACKSPACE)
+		{
+			if (CHAT_MUTE || c_input <= 0)
+				return true;
+
+			memmove(&w_chat[c_input - 1], &w_chat[c_input], strlen(w_chat) - c_input + 1);
+			c_input--;
+		}
+		else if (c == KEY_DEL)
+		{
+			if (CHAT_MUTE || c_input >= strlen(w_chat))
+				return true;
+
+			memmove(&w_chat[c_input], &w_chat[c_input + 1], strlen(w_chat) - c_input);
+		}
+
 		return true;
 	}
 #endif
