@@ -6542,7 +6542,7 @@ void A_OldRingExplode(mobj_t *actor) {
 	{
 		const angle_t fa = (i*FINEANGLES/16) & FINEMASK;
 
-		mo = P_SpawnMobj(actor->x, actor->y, actor->z, locvar1);
+		mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
 		P_SetTarget(&mo->target, actor->target); // Transfer target so player gets the points
 
 		mo->momx = FixedMul(FINECOSINE(fa),ns);
@@ -6568,7 +6568,7 @@ void A_OldRingExplode(mobj_t *actor) {
 		}
 	}
 
-	mo = P_SpawnMobj(actor->x, actor->y, actor->z, locvar1);
+	mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
 
 	P_SetTarget(&mo->target, actor->target);
 	mo->momz = ns;
@@ -6583,7 +6583,7 @@ void A_OldRingExplode(mobj_t *actor) {
 			mo->color = skincolor_bluering;
 	}
 
-	mo = P_SpawnMobj(actor->x, actor->y, actor->z, locvar1);
+	mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
 
 	P_SetTarget(&mo->target, actor->target);
 	mo->momz = -ns;
