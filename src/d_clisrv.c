@@ -46,7 +46,6 @@
 #include "lua_libs.h"
 #include "md5.h"
 #include "m_perfstats.h"
-#include "b_bot.h" // B_BuildTiccmd
 
 #ifndef NONET
 // cl loading screen
@@ -5167,25 +5166,6 @@ static void Local_Maketic(INT32 realtics)
 	localcmds2.angleturn |= TICCMD_RECEIVED;
 }
 
-static void SV_MakeBotTics(void)
-{
-	UINT8 i;
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (!playeringame[i])
-			continue;
-
-		if (players[i].bot == BOT_2PAI || players[i].bot == BOT_MPAI)
-		{
-			ticcmd_t *cmd = &netcmds[maketic % BACKUPTICS][i];
-
-			G_CopyTiccmd(cmd, I_BaseTiccmd(), 1); // empty, or external driver
-			B_BuildTiccmd(&players[i], cmd);
-			cmd->angleturn |= TICCMD_RECEIVED;
-		}
-	}
-}
-
 // create missed tic
 static void SV_Maketic(void)
 {
@@ -5429,15 +5409,6 @@ void NetUpdate(void)
 	if (client)
 		maketic = neededtic;
 
-	// update players' lastbuttons so they can be used in ticcmd generation
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (!playeringame[i])
-			continue;
-
-		players[i].lastbuttons = players[i].cmd.buttons;
-	}
-
 	Local_Maketic(realtics); // make local tic, and call menu?
 
 	if (server)
@@ -5480,8 +5451,6 @@ void NetUpdate(void)
 					if (maketic + 1 >= nettics[i] + BACKUPTICS)
 						Net_ConnectionTimeout(i);
 				}
-
-			SV_MakeBotTics();
 
 			// Don't erase tics not acknowledged
 			counts = realtics;

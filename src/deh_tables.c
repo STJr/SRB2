@@ -5345,11 +5345,6 @@ struct int_const_s const INT_CONST[] = {
 	{"BT_CUSTOM2",BT_CUSTOM2}, // Lua customizable
 	{"BT_CUSTOM3",BT_CUSTOM3}, // Lua customizable
 
-	// Ticcmd flags (ticcmdflag_t)
-	// (maybe move these into their own table in the future but I cba when there's only 2 LOL)
-	{"TCF_FLIGHTINDICATOR", TCF_FLIGHTINDICATOR},
-	{"TCF_SETCARRY", TCF_SETCARRY},
-
 	// Lua command registration flags
 	{"COM_ADMIN",COM_ADMIN},
 	{"COM_SPLITSCREEN",COM_SPLITSCREEN},

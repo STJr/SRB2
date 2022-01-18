@@ -17,6 +17,7 @@
 #include "p_local.h"
 #include "b_bot.h"
 #include "lua_hook.h"
+#include "i_system.h" // I_BaseTiccmd
 
 void B_UpdateBotleader(player_t *player)
 {
@@ -176,6 +177,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 			{
 				jump = true;
 				mem->thinkstate = AI_FLYSTANDBY;
+				bot->pflags |= PF_CANCARRY;
 			}
 		}
 
@@ -187,10 +189,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 			&& P_IsObjectOnGround(sonic) && P_IsObjectOnGround(tails)
 			&& !(player->pflags & PF_STASIS)
 			&& bot->charability == CA_FLY)
-		{
-			mem->thinkstate = AI_THINKFLY;
-			cmd->flags |= TCF_FLIGHTINDICATOR;
-		}
+				mem->thinkstate = AI_THINKFLY;
 		else if (mem->thinkstate == AI_THINKFLY)
 			mem->thinkstate = AI_FOLLOW;
 
@@ -211,8 +210,6 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 			// Abort if the player moves away or spins
 			if (dist > followthres || player->dashspeed)
 				mem->thinkstate = AI_FOLLOW;
-			else
-				cmd->flags |= TCF_SETCARRY;
 		}
 		// Read player inputs while carrying
 		else if (mem->thinkstate == AI_FLYCARRY)
@@ -374,6 +371,8 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 
 void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 {
+	G_CopyTiccmd(cmd, I_BaseTiccmd(), 1); // empty, or external driver
+
 	// Can't build a ticcmd if we aren't spawned...
 	if (!player->mo)
 		return;
@@ -393,6 +392,7 @@ void B_BuildTiccmd(player_t *player, ticcmd_t *cmd)
 		return;
 
 	// Make sure we have a valid main character to follow
+	B_UpdateBotleader(player);
 	if (!player->botleader)
 		return;
 
@@ -594,12 +594,13 @@ void B_RespawnBot(INT32 playernum)
 void B_HandleFlightIndicator(player_t *player)
 {
 	mobj_t *tails = player->mo;
+	botmem_t *mem = &player->botmem;
 	boolean shouldExist;
 
 	if (!tails)
 		return;
 
-	shouldExist = (player->cmd.flags & TCF_FLIGHTINDICATOR) && player->botleader
+	shouldExist = (mem->thinkstate == AI_THINKFLY) && player->botleader
 		&& player->bot == BOT_2PAI && player->playerstate == PST_LIVE;
 
 	// check whether the indicator doesn't exist
