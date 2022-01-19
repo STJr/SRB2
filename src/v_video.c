@@ -539,7 +539,7 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 	patchdrawfunc = standardpdraw;
 
 	v_translevel = NULL;
-	if (alphalevel)
+	if (alphalevel || blendmode)
 	{
 		if (alphalevel == 10)
 			alphalevel = hudminusalpha[st_translucency];
@@ -551,15 +551,13 @@ void V_DrawStretchyFixedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vsca
 		if (alphalevel >= 10)
 			return; // invis
 
-		if (alphalevel)
-		{
-			if (blendmode)
-				v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
-			else
-				v_translevel = R_GetTranslucencyTable(alphalevel);
+		if (blendmode)
+			v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
+		else if (alphalevel)
+			v_translevel = R_GetTranslucencyTable(alphalevel);
 
+		if (v_translevel)
 			patchdrawfunc = translucentpdraw;
-		}
 	}
 
 	v_colormap = NULL;
@@ -833,7 +831,7 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 	patchdrawfunc = standardpdraw;
 
 	v_translevel = NULL;
-	if (alphalevel)
+	if (alphalevel || blendmode)
 	{
 		if (alphalevel == 10)
 			alphalevel = hudminusalpha[st_translucency];
@@ -845,15 +843,13 @@ void V_DrawCroppedPatch(fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, IN
 		if (alphalevel >= 10)
 			return; // invis
 
-		if (alphalevel)
-		{
-			if (blendmode)
-				v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
-			else
-				v_translevel = R_GetTranslucencyTable(alphalevel);
+		if (blendmode)
+			v_translevel = R_GetBlendTable(blendmode+1, alphalevel);
+		else if (alphalevel)
+			v_translevel = R_GetTranslucencyTable(alphalevel);
 
+		if (v_translevel)
 			patchdrawfunc = translucentpdraw;
-		}
 	}
 
 	v_colormap = NULL;
