@@ -2574,9 +2574,9 @@ void V_DrawFontString(INT32 x, INT32 y, INT32 option, fixed_t scale, const char 
 			cx = x;
 
 			if (option & V_RETURN8)
-				cy += 4*dupy;
+				cy += 8*dupy;
 			else
-				cy += 6*dupy;
+				cy += 12*dupy;
 
 			continue;
 		}
@@ -2595,10 +2595,10 @@ void V_DrawFontString(INT32 x, INT32 y, INT32 option, fixed_t scale, const char 
 		if (charwidth)
 		{
 			w = charwidth * dupx;
-			center = w/2 - font[c]->width*dupx/4;
+			center = w/2 - font[c]->width*dupx/2;
 		}
 		else
-			w = font[c]->width * dupx / 2;
+			w = font[c]->width * dupx;
 
 		if (cx > scrwidth)
 			continue;
@@ -3693,7 +3693,7 @@ INT32 heatindex[2] = { 0, 0 };
 INT32 V_FontStringWidth(const char *string, INT32 option, patch_t **font)
 {
 	INT32 c, w = 0;
-	INT32 spacewidth = 2, charwidth = 0;
+	INT32 spacewidth = 4, charwidth = 0;
 	size_t i;
 
 	switch (option & V_SPACINGMASK)
