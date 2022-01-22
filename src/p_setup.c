@@ -1225,6 +1225,9 @@ static void P_LoadSidedefs(UINT8 *data)
 		}
 		sd->rowoffset = SHORT(msd->rowoffset)<<FRACBITS;
 
+		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bot = 0;
+		sd->offsety_top = sd->offsety_mid = sd->offsety_bot = 0;
+
 		P_SetSidedefSector(i, SHORT(msd->sector));
 
 		// Special info stored in texture fields!
@@ -1751,6 +1754,18 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		sides[i].textureoffset = atol(val)<<FRACBITS;
 	else if (fastcmp(param, "offsety"))
 		sides[i].rowoffset = atol(val)<<FRACBITS;
+	else if (fastcmp(param, "offsetx_top"))
+		sides[i].offsetx_top = atol(val) << FRACBITS;
+	else if (fastcmp(param, "offsetx_mid"))
+		sides[i].offsetx_mid = atol(val) << FRACBITS;
+	else if (fastcmp(param, "offsetx_bottom"))
+		sides[i].offsetx_bot = atol(val) << FRACBITS;
+	else if (fastcmp(param, "offsety_top"))
+		sides[i].offsety_top = atol(val) << FRACBITS;
+	else if (fastcmp(param, "offsety_mid"))
+		sides[i].offsety_mid = atol(val) << FRACBITS;
+	else if (fastcmp(param, "offsety_bottom"))
+		sides[i].offsety_bot = atol(val) << FRACBITS;
 	else if (fastcmp(param, "texturetop"))
 		sides[i].toptexture = R_TextureNumForName(val);
 	else if (fastcmp(param, "texturebottom"))
@@ -2774,6 +2789,8 @@ static void P_LoadTextmap(void)
 		// Defaults.
 		sd->textureoffset = 0;
 		sd->rowoffset = 0;
+		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bot = 0;
+		sd->offsety_top = sd->offsety_mid = sd->offsety_bot = 0;
 		sd->toptexture = R_TextureNumForName("-");
 		sd->midtexture = R_TextureNumForName("-");
 		sd->bottomtexture = R_TextureNumForName("-");
