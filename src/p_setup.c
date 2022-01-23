@@ -2441,6 +2441,18 @@ static void P_WriteTextmap(void)
 			fprintf(f, "offsetx = %d;\n", wsides[i].textureoffset >> FRACBITS);
 		if (wsides[i].rowoffset != 0)
 			fprintf(f, "offsety = %d;\n", wsides[i].rowoffset >> FRACBITS);
+		if (wsides[i].offsetx_top != 0)
+			fprintf(f, "offsetx_top = %d;\n", wsides[i].offsetx_top >> FRACBITS);
+		if (wsides[i].offsety_top != 0)
+			fprintf(f, "offsety_top = %d;\n", wsides[i].offsety_top >> FRACBITS);
+		if (wsides[i].offsetx_mid != 0)
+			fprintf(f, "offsetx_mid = %d;\n", wsides[i].offsetx_mid >> FRACBITS);
+		if (wsides[i].offsety_mid != 0)
+			fprintf(f, "offsety_mid = %d;\n", wsides[i].offsety_mid >> FRACBITS);
+		if (wsides[i].offsetx_bot != 0)
+			fprintf(f, "offsetx_bottom = %d;\n", wsides[i].offsetx_bot >> FRACBITS);
+		if (wsides[i].offsety_bot != 0)
+			fprintf(f, "offsety_bottom = %d;\n", wsides[i].offsety_bot >> FRACBITS);
 		if (wsides[i].toptexture > 0 && wsides[i].toptexture < numtextures)
 			fprintf(f, "texturetop = \"%.*s\";\n", 8, textures[wsides[i].toptexture]->name);
 		if (wsides[i].bottomtexture > 0 && wsides[i].bottomtexture < numtextures)
