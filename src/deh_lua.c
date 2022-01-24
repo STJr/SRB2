@@ -590,11 +590,12 @@ void LUA_UpdateSprName(const char *name, lua_Integer value)
 
 	if (!lua_isnil(gL, -1))
 	{
-		lua_pop(gL, 1);
 		lua_pushstring(gL, name);
 		lua_pushinteger(gL, value);
 		lua_rawset(gL, LUA_GLOBALSINDEX);
 	}
+
+	lua_pop(gL, 1); // pop the rawget result
 }
 
 int LUA_EnumLib(lua_State *L)
