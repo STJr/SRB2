@@ -1450,7 +1450,7 @@ static void Mask_Post (maskcount_t* m)
 
 void R_RenderPlayerView(player_t *player)
 {
-	UINT8			nummasks	= 1;
+	INT32			nummasks	= 1;
 	maskcount_t*	masks		= malloc(sizeof(maskcount_t));
 
 	if (cv_homremoval.value && player == &players[displayplayer]) // if this is display player 1
@@ -1514,7 +1514,6 @@ void R_RenderPlayerView(player_t *player)
 	PS_START_TIMING(ps_sw_spritecliptime);
 	R_ClipSprites(drawsegs, NULL);
 	PS_STOP_TIMING(ps_sw_spritecliptime);
-
 
 	// Add skybox portals caused by sky visplanes.
 	if (cv_skybox.value && skyboxmo[0])
