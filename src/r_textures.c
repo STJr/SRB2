@@ -1039,8 +1039,20 @@ static void R_AllocateTextures(INT32 add)
 	// Create translation table for global animation.
 	Z_Realloc(texturetranslation, (newtextures + 1) * sizeof(*texturetranslation), PU_STATIC, &texturetranslation);
 
-	for (i = numtextures; i < newtextures; ++i)
+	for (i = 0; i < numtextures; ++i)
+	{
+		// R_FlushTextureCache relies on the user for
+		// Z_Free, texturecache has been reallocated so the
+		// user is now garbage memory.
+		Z_SetUser(texturecache[i],
+				(void**)&texturecache[i]);
+	}
+
+	while (i < newtextures)
+	{
 		texturetranslation[i] = i;
+		i++;
+	}
 }
 
 static INT32 R_DefineTextures(INT32 i, UINT16 w)
