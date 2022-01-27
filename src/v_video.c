@@ -2141,8 +2141,8 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 	return newstring;
 }
 
-// Write a string using a supplied font and scale
-// NOTE: the text is centered for screens larger than the base width
+// Draw a string, using a supplied font and scale.
+// NOTE: The text is centered for screens larger than the base width.
 void V_DrawFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32 option, fixed_t scale, const char *string, patch_t **font)
 {
 	V_DrawFontStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, width, height, option, scale, string, font);
@@ -2153,14 +2153,13 @@ void V_DrawCenteredFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32
 	V_DrawCenteredFontStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, width, height, option, scale, string, font);
 }
 
-
 void V_DrawRightAlignedFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32 option, fixed_t scale, const char *string, patch_t **font)
 {
 	V_DrawRightAlignedFontStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, width, height, option, scale, string, font);
 }
 
-// Write a string using a supplied font and scale at a fixed position
-// NOTE: the text is centered for screens larger than the base width
+// Write a string, using a supplied font and scale, at fixed_t coordinates.
+// NOTE: The text is centered for screens larger than the base width.
 void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, INT32 option, fixed_t scale, const char *string, patch_t **font)
 {
 	fixed_t cx = x, cy = y;
@@ -2269,138 +2268,6 @@ void V_DrawRightAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT3
 {
 	x -= V_FontStringWidth(string, option, width, font)*scale;
 	V_DrawFontStringAtFixed(x, y, width, height, option, scale, string, font);
-}
-
-// Write a string using the hu_font
-// NOTE: the text is centered for screens larger than the base width
-void V_DrawString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawFontString(x, y, 8, 12, option, FRACUNIT, string, hu_font);
-}
-
-void V_DrawCenteredString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawCenteredFontString(x, y, 8, 12, option, FRACUNIT, string, hu_font);
-}
-
-void V_DrawRightAlignedString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawRightAlignedFontString(x, y, 8, 12, option, FRACUNIT, string, hu_font);
-}
-
-// Write a string using the hu_font, 0.5x scale
-// NOTE: the text is centered for screens larger than the base width
-void V_DrawSmallString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawFontString(x, y, 8, 12, option, FRACUNIT/2, string, hu_font);
-}
-
-void V_DrawCenteredSmallString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawCenteredFontString(x, y, 8, 12, option, FRACUNIT/2, string, hu_font);
-}
-
-void V_DrawRightAlignedSmallString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawRightAlignedFontString(x, y, 8, 12, option, FRACUNIT/2, string, hu_font);
-}
-
-// Write a string using the tny_font
-// NOTE: the text is centered for screens larger than the base width
-void V_DrawThinString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawFontString(x, y, 5, 12, option, FRACUNIT, string, tny_font);
-}
-
-void V_DrawCenteredThinString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawCenteredFontString(x, y, 5, 12, option, FRACUNIT, string, tny_font);
-}
-
-void V_DrawRightAlignedThinString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawRightAlignedFontString(x, y, 5, 12, option, FRACUNIT, string, tny_font);
-}
-
-// Write a string using the tny_font, 0.5x scale
-// NOTE: the text is centered for screens larger than the base width
-void V_DrawSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawSmallThinStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, option, string);
-}
-
-void V_DrawCenteredSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawCenteredSmallThinStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, option, string);
-}
-
-void V_DrawRightAlignedSmallThinString(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	V_DrawRightAlignedSmallThinStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, option, string);
-}
-
-// Draws a string at a fixed_t location.
-void V_DrawStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawFontStringAtFixed(x, y, 8, 12, option, FRACUNIT, string, hu_font);
-}
-
-void V_DrawCenteredStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawCenteredFontStringAtFixed(x, y, 8, 12, option, FRACUNIT, string, hu_font);
-}
-
-void V_DrawRightAlignedStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawRightAlignedFontStringAtFixed(x, y, 8, 12, option, FRACUNIT, string, hu_font);
-}
-
-// Draws a small string at a fixed_t location.
-void V_DrawSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawFontStringAtFixed(x, y, 8, 12, option, FRACUNIT/2, string, hu_font);
-}
-
-void V_DrawCenteredSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawCenteredFontStringAtFixed(x, y, 8, 12, option, FRACUNIT/2, string, hu_font);
-}
-
-void V_DrawRightAlignedSmallStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawRightAlignedFontStringAtFixed(x, y, 8, 12, option, FRACUNIT/2, string, hu_font);
-}
-
-// Draws a thin string at a fixed_t location.
-void V_DrawThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawFontStringAtFixed(x, y, 5, 12, option, FRACUNIT, string, tny_font);
-}
-
-void V_DrawCenteredThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawCenteredThinStringAtFixed(x, y, option, string);
-}
-
-void V_DrawRightAlignedThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawRightAlignedThinStringAtFixed(x, y, option, string);
-}
-
-// Draws a small string at a fixed_t location.
-void V_DrawSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawFontStringAtFixed(x, y, 5, 12, option, FRACUNIT/2, string, tny_font);
-}
-
-void V_DrawCenteredSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawCenteredFontStringAtFixed(x, y, 5, 12, option, FRACUNIT/2, string, tny_font);
-}
-
-void V_DrawRightAlignedSmallThinStringAtFixed(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	V_DrawRightAlignedFontStringAtFixed(x, y, 5, 12, option, FRACUNIT/2, string, tny_font);
 }
 
 // Draws a tallnum.  Replaces two functions in y_inter and st_stuff
@@ -2869,8 +2736,7 @@ INT16 V_LevelActNumWidth(UINT8 num)
 	return result;
 }
 
-//
-// Find string width from supplied font characters
+// Find string width from supplied font characters & character width.
 //
 INT32 V_FontStringWidth(const char *string, INT32 option, INT32 width, patch_t **font)
 {
@@ -2907,31 +2773,6 @@ INT32 V_FontStringWidth(const char *string, INT32 option, INT32 width, patch_t *
 		w *= vid.dupx;
 
 	return w;
-}
-
-// Find string width from hu_font chars
-INT32 V_StringWidth(const char *string, INT32 option)
-{
-	return V_FontStringWidth(string, option, 8, hu_font);
-}
-
-// Find string width from hu_font chars, 0.5x scale
-INT32 V_SmallStringWidth(const char *string, INT32 option)
-{
-	return V_FontStringWidth(string, option, 8, hu_font)/2;
-}
-
-
-// Find string width from tny_font chars
-INT32 V_ThinStringWidth(const char *string, INT32 option)
-{
-	return V_FontStringWidth(string, option, 5, tny_font);
-}
-
-// Find string width from tny_font chars, 0.5x scale
-INT32 V_SmallThinStringWidth(const char *string, INT32 option)
-{
-	return V_FontStringWidth(string, option, 5, tny_font)/2;
 }
 
 boolean *heatshifter = NULL;

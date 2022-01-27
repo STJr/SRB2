@@ -480,7 +480,7 @@ static void ST_DrawNightsOverlayNum(fixed_t x /* right border */, fixed_t y, fix
 static void ST_drawDebugInfo(void)
 {
 	INT32 height = 0, h = 8, w = 18, lowh;
-	void (*textfunc)(INT32, INT32, INT32, const char *);
+	fixed_t textscale = FRACUNIT/2;
 
 	if (!(stplyr->mo && cv_debug))
 		return;
@@ -489,12 +489,12 @@ static void ST_drawDebugInfo(void)
 
 	if ((moviemode == MM_GIF && cv_gif_downscale.value) || vid.dupx == 1)
 	{
-		textfunc = V_DrawRightAlignedString;
+		textscale = FRACUNIT;
 		lowh = ((vid.height/vid.dupy) - 16);
 	}
 	else
 	{
-		textfunc = V_DrawRightAlignedSmallString;
+		textscale = FRACUNIT/2;
 		h /= 2;
 		w /= 2;
 		lowh = 0;
@@ -505,10 +505,10 @@ static void ST_drawDebugInfo(void)
 								V_DrawRightAlignedThinString(320,  8+lowh, VFLAGS|V_REDMAP, "SOME INFO NOT VISIBLE");\
 								return;\
 							}\
-							textfunc(320, height, VFLAGS, str);\
+							V_DrawRightAlignedFontString(320, height, 8, 12, VFLAGS, textscale, str, hu_font);\
 							height += h;
 
-#define V_DrawDebugFlag(f, str) textfunc(width, height, VFLAGS|f, str);\
+#define V_DrawDebugFlag(f, str) V_DrawRightAlignedFontString(width, height, 8, 12, VFLAGS|f, textscale, str, hu_font);\
 								width -= w
 
 	if (cv_debug & DBG_MEMORY)
