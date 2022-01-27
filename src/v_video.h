@@ -275,6 +275,8 @@ void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecol
 INT32 V_CountNameTagLines(const char *string);
 INT32 V_NameTagWidth(const char *string);
 
+// Find string width from supplied font chars
+INT32 V_FontStringWidth(const char *string, INT32 option, INT32 width, patch_t **font);
 // Find string width from hu_font chars
 INT32 V_StringWidth(const char *string, INT32 option);
 // Find string width from hu_font chars, 0.5x scale
@@ -283,8 +285,6 @@ INT32 V_SmallStringWidth(const char *string, INT32 option);
 INT32 V_ThinStringWidth(const char *string, INT32 option);
 // Find string width from tny_font chars, 0.5x scale
 INT32 V_SmallThinStringWidth(const char *string, INT32 option);
-// Find string width from supplied font chars
-INT32 V_FontStringWidth(const char *string, INT32 option, INT32 width, patch_t **font);
 
 void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param);
 
