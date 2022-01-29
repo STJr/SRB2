@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -65,7 +65,7 @@
 
 #include "md5.h" // map MD5
 
-// for LUAh_MapLoad
+// for MapLoad hook
 #include "lua_script.h"
 #include "lua_hook.h"
 
@@ -1350,8 +1350,11 @@ static void P_LoadSidedefs(UINT8 *data)
 				if (msd->toptexture[0] == '#')
 				{
 					char *col = msd->toptexture;
-					sd->toptexture = sd->bottomtexture =
-						((col[1]-'0')*100 + (col[2]-'0')*10 + col[3]-'0') + 1;
+					sd->toptexture =
+						((col[1]-'0')*100 + (col[2]-'0')*10 + col[3]-'0')+1;
+					if (col[4]) // extra num for blendmode
+						sd->toptexture += (col[4]-'0')*1000;
+					sd->bottomtexture = sd->toptexture;
 					sd->midtexture = R_TextureNumForName(msd->midtexture);
 				}
 				else
@@ -1501,6 +1504,22 @@ typedef struct textmap_colormap_s {
 
 textmap_colormap_t textmap_colormap = { false, 0, 25, 0, 25, 0, 31, 0 };
 
+typedef enum
+{
+    PD_A = 1,
+    PD_B = 1<<1,
+    PD_C = 1<<2,
+    PD_D = 1<<3,
+} planedef_t;
+
+typedef struct textmap_plane_s {
+    UINT8 defined;
+    fixed_t a, b, c, d;
+} textmap_plane_t;
+
+textmap_plane_t textmap_planefloor = {0, 0, 0, 0, 0};
+textmap_plane_t textmap_planeceiling = {0, 0, 0, 0, 0};
+
 static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 {
 	if (fastcmp(param, "heightfloor"))
@@ -1539,6 +1558,46 @@ static void ParseTextmapSectorParameter(UINT32 i, char *param, char *val)
 		sectors[i].floorpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
 		sectors[i].ceilingpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+	else if (fastcmp(param, "floorplane_a"))
+	{
+		textmap_planefloor.defined |= PD_A;
+		textmap_planefloor.a = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "floorplane_b"))
+	{
+		textmap_planefloor.defined |= PD_B;
+		textmap_planefloor.b = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "floorplane_c"))
+	{
+		textmap_planefloor.defined |= PD_C;
+		textmap_planefloor.c = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "floorplane_d"))
+	{
+		textmap_planefloor.defined |= PD_D;
+		textmap_planefloor.d = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "ceilingplane_a"))
+	{
+		textmap_planeceiling.defined |= PD_A;
+		textmap_planeceiling.a = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "ceilingplane_b"))
+	{
+		textmap_planeceiling.defined |= PD_B;
+		textmap_planeceiling.b = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "ceilingplane_c"))
+	{
+		textmap_planeceiling.defined |= PD_C;
+		textmap_planeceiling.c = FLOAT_TO_FIXED(atof(val));
+	}
+	else if (fastcmp(param, "ceilingplane_d"))
+	{
+		textmap_planeceiling.defined |= PD_D;
+		textmap_planeceiling.d = FLOAT_TO_FIXED(atof(val));
+	}
 	else if (fastcmp(param, "lightcolor"))
 	{
 		textmap_colormap.used = true;
@@ -1642,6 +1701,21 @@ static void ParseTextmapLinedefParameter(UINT32 i, char *param, char *val)
 		lines[i].sidenum[1] = atol(val);
 	else if (fastcmp(param, "alpha"))
 		lines[i].alpha = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "blendmode") || fastcmp(param, "renderstyle"))
+	{
+		if (fastcmp(val, "translucent"))
+			lines[i].blendmode = AST_COPY;
+		else if (fastcmp(val, "add"))
+			lines[i].blendmode = AST_ADD;
+		else if (fastcmp(val, "subtract"))
+			lines[i].blendmode = AST_SUBTRACT;
+		else if (fastcmp(val, "reversesubtract"))
+			lines[i].blendmode = AST_REVERSESUBTRACT;
+		else if (fastcmp(val, "modulate"))
+			lines[i].blendmode = AST_MODULATE;
+		if (fastcmp(val, "fog"))
+			lines[i].blendmode = AST_FOG;
+	}
 	else if (fastcmp(param, "executordelay"))
 		lines[i].executordelay = atol(val);
 
@@ -1868,6 +1942,10 @@ static void P_LoadTextmap(void)
 		textmap_colormap.fadestart = 0;
 		textmap_colormap.fadeend = 31;
 		textmap_colormap.flags = 0;
+
+		textmap_planefloor.defined = 0;
+		textmap_planeceiling.defined = 0;
+
 		TextmapParse(sectorsPos[i], i, ParseTextmapSectorParameter);
 
 		P_InitializeSector(sc);
@@ -1877,6 +1955,19 @@ static void P_LoadTextmap(void)
 			INT32 fadergba = P_ColorToRGBA(textmap_colormap.fadecolor, textmap_colormap.fadealpha);
 			sc->extra_colormap = sc->spawn_extra_colormap = R_CreateColormap(rgba, fadergba, textmap_colormap.fadestart, textmap_colormap.fadeend, textmap_colormap.flags);
 		}
+
+		if (textmap_planefloor.defined == (PD_A|PD_B|PD_C|PD_D))
+        {
+			sc->f_slope = MakeViaEquationConstants(textmap_planefloor.a, textmap_planefloor.b, textmap_planefloor.c, textmap_planefloor.d);
+			sc->hasslope = true;
+        }
+
+		if (textmap_planeceiling.defined == (PD_A|PD_B|PD_C|PD_D))
+        {
+			sc->c_slope = MakeViaEquationConstants(textmap_planeceiling.a, textmap_planeceiling.b, textmap_planeceiling.c, textmap_planeceiling.d);
+			sc->hasslope = true;
+        }
+
 		TextmapFixFlatOffsets(sc);
 	}
 
@@ -2486,7 +2577,7 @@ static void P_LoadMapBSP(const virtres_t *virt)
 		if (numsubsectors <= 0)
 			I_Error("Level has no subsectors (did you forget to run it through a nodesbuilder?)");
 		if (numnodes <= 0)
-			I_Error("Level has no nodes");
+			I_Error("Level has no nodes (does your map have at least 2 sectors?)");
 		if (numsegs <= 0)
 			I_Error("Level has no segs");
 
@@ -2950,6 +3041,82 @@ static void P_LinkMapData(void)
 	}
 }
 
+// For maps in binary format, add multi-tags from linedef specials. This must be done
+// before any linedef specials have been processed.
+static void P_AddBinaryMapTagsFromLine(sector_t *sector, line_t *line)
+{
+	Tag_Add(&sector->tags, Tag_FGet(&line->tags));
+	if (line->flags & ML_EFFECT6) {
+		if (sides[line->sidenum[0]].textureoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].textureoffset / FRACUNIT);
+		if (sides[line->sidenum[0]].rowoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[0]].rowoffset / FRACUNIT);
+	}
+	if (line->flags & ML_TFERLINE) {
+		if (sides[line->sidenum[1]].textureoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].textureoffset / FRACUNIT);
+		if (sides[line->sidenum[1]].rowoffset)
+			Tag_Add(&sector->tags, (INT32)sides[line->sidenum[1]].rowoffset / FRACUNIT);
+	}
+}
+
+static void P_AddBinaryMapTags(void)
+{
+	size_t i;
+
+	for (i = 0; i < numlines; i++) {
+		// 97: Apply Tag to Front Sector
+		// 98: Apply Tag to Back Sector
+		// 99: Apply Tag to Front and Back Sectors
+		if (lines[i].special == 97 || lines[i].special == 99)
+			P_AddBinaryMapTagsFromLine(lines[i].frontsector, &lines[i]);
+		if (lines[i].special == 98 || lines[i].special == 99)
+			P_AddBinaryMapTagsFromLine(lines[i].backsector, &lines[i]);
+	}
+
+	// Run this loop after the 97-99 loop to ensure that 96 can search through all of the
+	// 97-99-applied tags.
+	for (i = 0; i < numlines; i++) {
+		size_t j;
+		mtag_t tag, target_tag;
+		mtag_t offset_tags[4];
+
+		// 96: Apply Tag to Tagged Sectors
+		if (lines[i].special != 96)
+			continue;
+
+		tag = Tag_FGet(&lines[i].frontsector->tags);
+		target_tag = Tag_FGet(&lines[i].tags);
+		memset(offset_tags, 0, sizeof(mtag_t)*4);
+		if (lines[i].flags & ML_EFFECT6) {
+			offset_tags[0] = (INT32)sides[lines[i].sidenum[0]].textureoffset / FRACUNIT;
+			offset_tags[1] = (INT32)sides[lines[i].sidenum[0]].rowoffset / FRACUNIT;
+		}
+		if (lines[i].flags & ML_TFERLINE) {
+			offset_tags[2] = (INT32)sides[lines[i].sidenum[1]].textureoffset / FRACUNIT;
+			offset_tags[3] = (INT32)sides[lines[i].sidenum[1]].rowoffset / FRACUNIT;
+		}
+
+		for (j = 0; j < numsectors; j++) {
+			boolean matches_target_tag = target_tag && Tag_Find(&sectors[j].tags, target_tag);
+			size_t k;
+			for (k = 0; k < 4; k++) {
+				if (lines[i].flags & ML_EFFECT5) {
+					if (matches_target_tag || (offset_tags[k] && Tag_Find(&sectors[j].tags, offset_tags[k]))) {
+						Tag_Add(&sectors[j].tags, tag);
+						break;
+					}
+				} else if (matches_target_tag) {
+					if (k == 0)
+						Tag_Add(&sectors[j].tags, tag);
+					if (offset_tags[k])
+						Tag_Add(&sectors[j].tags, offset_tags[k]);
+				}
+			}
+		}
+	}
+}
+
 //For maps in binary format, converts setup of specials to UDMF format.
 static void P_ConvertBinaryMap(void)
 {
@@ -2966,9 +3133,7 @@ static void P_ConvertBinaryMap(void)
 			INT32 check = -1;
 			INT32 paramline = -1;
 
-			TAG_ITER_DECLARECOUNTER(0);
-
-			TAG_ITER_LINES(0, tag, check)
+			TAG_ITER_LINES(tag, check)
 			{
 				if (lines[check].special == 22)
 				{
@@ -3087,6 +3252,12 @@ static void P_ConvertBinaryMap(void)
 			if (lines[i].flags & ML_NONET)
 				lines[i].args[2] |= TMSL_DYNAMIC;
 
+			if (lines[i].flags & ML_TFERLINE)
+			{
+					lines[i].args[4] |= backfloor ? TMSC_BACKTOFRONTFLOOR : (frontfloor ? TMSC_FRONTTOBACKFLOOR : 0);
+					lines[i].args[4] |= backceil ? TMSC_BACKTOFRONTCEILING : (frontceil ? TMSC_FRONTTOBACKCEILING : 0);
+			}
+
 			lines[i].special = 700;
 			break;
 		}
@@ -3141,20 +3312,59 @@ static void P_ConvertBinaryMap(void)
 				lines[i].args[1] = tag;
 			lines[i].special = 720;
 			break;
-		case 900: //Translucent wall (10%)
-		case 901: //Translucent wall (20%)
-		case 902: //Translucent wall (30%)
-		case 903: //Translucent wall (40%)
-		case 904: //Translucent wall (50%)
-		case 905: //Translucent wall (60%)
-		case 906: //Translucent wall (70%)
-		case 907: //Translucent wall (80%)
-		case 908: //Translucent wall (90%)
-			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
+		case 723: //Copy back side floor slope
+		case 724: //Copy back side ceiling slope
+		case 725: //Copy back side floor and ceiling slope
+			if (lines[i].special != 724)
+				lines[i].args[2] = tag;
+			if (lines[i].special != 723)
+				lines[i].args[3] = tag;
+			lines[i].special = 720;
+			break;
+		case 730: //Copy front side floor slope to back side
+		case 731: //Copy front side ceiling slope to back side
+		case 732: //Copy front side floor and ceiling slope to back side
+			if (lines[i].special != 731)
+				lines[i].args[4] |= TMSC_FRONTTOBACKFLOOR;
+			if (lines[i].special != 730)
+				lines[i].args[4] |= TMSC_FRONTTOBACKCEILING;
+			lines[i].special = 720;
+			break;
+		case 733: //Copy back side floor slope to front side
+		case 734: //Copy back side ceiling slope to front side
+		case 735: //Copy back side floor and ceiling slope to front side
+			if (lines[i].special != 734)
+				lines[i].args[4] |= TMSC_BACKTOFRONTFLOOR;
+			if (lines[i].special != 733)
+				lines[i].args[4] |= TMSC_BACKTOFRONTCEILING;
+			lines[i].special = 720;
+			break;
+		case 909: //Fog wall
+			lines[i].blendmode = AST_FOG;
 			break;
 		default:
 			break;
 		}
+
+		// Set alpha for translucent walls
+		if (lines[i].special >= 900 && lines[i].special < 909)
+			lines[i].alpha = ((909 - lines[i].special) << FRACBITS)/10;
+
+		// Set alpha for additive/subtractive/reverse subtractive walls
+		if (lines[i].special >= 910 && lines[i].special <= 939)
+			lines[i].alpha = ((10 - lines[i].special % 10) << FRACBITS)/10;
+
+		if (lines[i].special >= 910 && lines[i].special <= 919) // additive
+			lines[i].blendmode = AST_ADD;
+
+		if (lines[i].special >= 920 && lines[i].special <= 929) // subtractive
+			lines[i].blendmode = AST_SUBTRACT;
+
+		if (lines[i].special >= 930 && lines[i].special <= 939) // reverse subtractive
+			lines[i].blendmode = AST_REVERSESUBTRACT;
+
+		if (lines[i].special == 940) // modulate
+			lines[i].blendmode = AST_MODULATE;
 
 		//Linedef executor delay
 		if (lines[i].special >= 400 && lines[i].special < 500)
@@ -3183,11 +3393,9 @@ static void P_ConvertBinaryMap(void)
 			INT32 firstline = -1;
 			mtag_t tag = mapthings[i].angle;
 
-			TAG_ITER_DECLARECOUNTER(0);
-
 			Tag_FSet(&mapthings[i].tags, tag);
 
-			TAG_ITER_LINES(0, tag, check)
+			TAG_ITER_LINES(tag, check)
 			{
 				if (lines[check].special == 20)
 				{
@@ -3286,6 +3494,9 @@ static boolean P_LoadMapFromFile(void)
 	P_LoadMapLUT(virt);
 
 	P_LinkMapData();
+
+	if (!udmf)
+		P_AddBinaryMapTags();
 
 	Taglist_InitGlobalTables();
 
@@ -3394,8 +3605,10 @@ static void P_InitLevelSettings(void)
 	numstarposts = 0;
 	ssspheres = timeinmap = 0;
 
-	// special stage
-	stagefailed = true; // assume failed unless proven otherwise - P_GiveEmerald or emerald touchspecial
+	// Assume Special Stages were failed in unless proven otherwise - via P_GiveEmerald or emerald touchspecial
+	// Normal stages will default to be OK, until a Lua script / linedef executor says otherwise.
+	stagefailed = G_IsSpecialStage(gamemap);
+
 	// Reset temporary record data
 	memset(&ntemprecords, 0, sizeof(nightsdata_t));
 
@@ -4174,7 +4387,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	P_ResetWaypoints();
 
-	P_MapStart();
+	P_MapStart(); // tmthing can be used starting from this point
+
+	P_InitSlopes();
 
 	if (!P_LoadMapFromFile())
 		return false;
@@ -4227,8 +4442,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	// clear special respawning que
 	iquehead = iquetail = 0;
 
-	P_MapEnd();
-
 	// Remove the loading shit from the screen
 	if (rendermode != render_none && !(titlemapinaction || reloadinggamestate))
 		F_WipeColorFill(levelfadecol);
@@ -4247,6 +4460,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	levelloading = false;
 
 	P_RunCachedActions();
+
+	P_MapEnd(); // tmthing is no longer needed from this point onwards
 
 	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
 	if (!titlemapinaction)
@@ -4271,7 +4486,9 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 				G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
 		}
 		P_PreTicker(2);
-		LUAh_MapLoad();
+		P_MapStart(); // just in case MapLoad modifies tmthing
+		LUA_HookInt(gamemap, HOOK(MapLoad));
+		P_MapEnd(); // just in case MapLoad modifies tmthing
 	}
 
 	// No render mode or reloading gamestate, stop here.
@@ -4385,10 +4602,9 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 // Add a wadfile to the active wad files,
 // replace sounds, musics, patches, textures, sprites and maps
 //
-boolean P_AddWadFile(const char *wadfilename)
+static boolean P_LoadAddon(UINT16 wadnum, UINT16 numlumps)
 {
 	size_t i, j, sreplaces = 0, mreplaces = 0, digmreplaces = 0;
-	UINT16 numlumps, wadnum;
 	char *name;
 	lumpinfo_t *lumpinfo;
 
@@ -4409,18 +4625,10 @@ boolean P_AddWadFile(const char *wadfilename)
 //	UINT16 flaPos, flaNum = 0;
 //	UINT16 mapPos, mapNum = 0;
 
-	// Init file.
-	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
-	{
-		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		return false;
-	}
-	else
-		wadnum = (UINT16)(numwadfiles-1);
-
 	switch(wadfiles[wadnum]->type)
 	{
 	case RET_PK3:
+	case RET_FOLDER:
 		// Look for the lumps that act as resource delimitation markers.
 		lumpinfo = wadfiles[wadnum]->lumpinfo;
 		for (i = 0; i < numlumps; i++, lumpinfo++)
@@ -4527,8 +4735,8 @@ boolean P_AddWadFile(const char *wadfilename)
 	//
 	// look for skins
 	//
-	R_AddSkins(wadnum); // faB: wadfile index in wadfiles[]
-	R_PatchSkins(wadnum); // toast: PATCH PATCH
+	R_AddSkins(wadnum, false); // faB: wadfile index in wadfiles[]
+	R_PatchSkins(wadnum, false); // toast: PATCH PATCH
 	ST_ReloadSkinFaceGraphics();
 
 	//
@@ -4583,4 +4791,36 @@ boolean P_AddWadFile(const char *wadfilename)
 	}
 
 	return true;
+}
+
+boolean P_AddWadFile(const char *wadfilename)
+{
+	UINT16 numlumps, wadnum;
+
+	// Init file.
+	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
+	{
+		refreshdirmenu |= REFRESHDIR_NOTLOADED;
+		return false;
+	}
+	else
+		wadnum = (UINT16)(numwadfiles-1);
+
+	return P_LoadAddon(wadnum, numlumps);
+}
+
+boolean P_AddFolder(const char *folderpath)
+{
+	UINT16 numlumps, wadnum;
+
+	// Init file.
+	if ((numlumps = W_InitFolder(folderpath, false, false)) == INT16_MAX)
+	{
+		refreshdirmenu |= REFRESHDIR_NOTLOADED;
+		return false;
+	}
+	else
+		wadnum = (UINT16)(numwadfiles-1);
+
+	return P_LoadAddon(wadnum, numlumps);
 }

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2021 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -64,8 +64,6 @@ typedef off_t off64_t;
 #define PRIdS "u"
 #elif defined (_WIN32)
 #define PRIdS "Iu"
-#elif defined (DJGPP)
-#define PRIdS "u"
 #else
 #define PRIdS "zu"
 #endif
@@ -1633,14 +1631,14 @@ boolean M_ScreenshotResponder(event_t *ev)
 	if (dedicated || ev->type != ev_keydown)
 		return false;
 
-	ch = ev->data1;
+	ch = ev->key;
 
 	if (ch >= KEY_MOUSE1 && menuactive) // If it's not a keyboard key, then don't allow it in the menus!
 		return false;
 
-	if (ch == KEY_F8 || ch == gamecontrol[gc_screenshot][0] || ch == gamecontrol[gc_screenshot][1]) // remappable F8
+	if (ch == KEY_F8 || ch == gamecontrol[GC_SCREENSHOT][0] || ch == gamecontrol[GC_SCREENSHOT][1]) // remappable F8
 		M_ScreenShot();
-	else if (ch == KEY_F9 || ch == gamecontrol[gc_recordgif][0] || ch == gamecontrol[gc_recordgif][1]) // remappable F9
+	else if (ch == KEY_F9 || ch == gamecontrol[GC_RECORDGIF][0] || ch == gamecontrol[GC_RECORDGIF][1]) // remappable F9
 		((moviemode) ? M_StopMovie : M_StartMovie)();
 	else
 		return false;
@@ -2689,4 +2687,23 @@ const char * M_Ftrim (double f)
 		dig[i + 1] = '\0';
 		return &dig[1];/* skip the 0 */
 	}
+}
+
+// Returns true if the string is empty.
+boolean M_IsStringEmpty(const char *s)
+{
+	const char *ch = s;
+
+	if (s == NULL || s[0] == '\0')
+		return true;
+
+	for (;;ch++)
+	{
+		if (!(*ch))
+			break;
+		if (!isspace((*ch)))
+			return false;
+	}
+
+	return true;
 }
