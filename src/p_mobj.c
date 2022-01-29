@@ -10522,13 +10522,16 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 	// TODO: remove oldbrak/TOL_ERZ3 garbage
 	if (mapheaderinfo[gamemap-1] && (mapheaderinfo[gamemap-1]->object_scale) && !(maptol & TOL_ERZ3))
-		mobj->destscale = mapheaderinfo[gamemap-1]->object_scale;
+	{
+		P_SetScale(mobj, FixedMul(mobj->scale, mapheaderinfo[gamemap-1]->object_scale));
+		mobj->destscale = FixedMul(mobj->destscale, mapheaderinfo[gamemap-1]->object_scale);
+	}
 	else if ((maptol & TOL_ERZ3) && !(mobj->type == MT_BLACKEGGMAN))
 		mobj->destscale = FRACUNIT/2;
 
 	// Sprite rendering
 	mobj->blendmode = AST_TRANSLUCENT;
-	mobj->spritexscale = mobj->spriteyscale = mobj->scale;
+	mobj->spritexscale = mobj->spriteyscale = FRACUNIT;
 	mobj->spritexoffset = mobj->spriteyoffset = 0;
 	mobj->floorspriteslope = NULL;
 
