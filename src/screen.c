@@ -69,6 +69,10 @@ consvar_t cv_scr_height = CVAR_INIT ("scr_height", "800", CV_SAVE, CV_Unsigned, 
 consvar_t cv_scr_depth = CVAR_INIT ("scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL);
 consvar_t cv_renderview = CVAR_INIT ("renderview", "On", 0, CV_OnOff, NULL);
 
+consvar_t cv_usewindowedres = CVAR_INIT ("usewindowedres", "No", CV_SAVE, CV_YesNo, NULL);
+consvar_t cv_scr_width_w = CVAR_INIT ("scr_width_w", "640", CV_SAVE, CV_Unsigned, NULL);
+consvar_t cv_scr_height_w = CVAR_INIT ("scr_height_w", "400", CV_SAVE, CV_Unsigned, NULL);
+
 CV_PossibleValue_t cv_renderer_t[] = {
 	{1, "Software"},
 #ifdef HWRENDER
@@ -405,7 +409,10 @@ void SCR_ChangeFullscreen(void)
 	if (graphics_started)
 	{
 		VID_PrepareModeList();
-		setmodeneeded = VID_GetModeForSize(vid.width, vid.height) + 1;
+		if (cv_usewindowedres.value == 1 && cv_fullscreen.value == 0)
+			setmodeneeded = VID_GetModeForSize(cv_scr_width_w.value, cv_scr_height_w.value) + 1;
+		else
+			setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
 	}
 	return;
 #endif
