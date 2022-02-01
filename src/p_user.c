@@ -2012,6 +2012,24 @@ void P_SwitchShield(player_t *player, UINT16 shieldtype)
 }
 
 //
+// P_SetPower
+//
+// Sets a power and spawns a shield orb if required.
+//
+void P_SetPower(player_t *player, powertype_t power, UINT16 value)
+{
+	boolean spawnshield = false;
+
+	if (power == pw_shield && player->powers[pw_shield] != value)
+		spawnshield = true;
+
+	player->powers[power] = value;
+
+	if (spawnshield) //workaround for a bug
+		P_SpawnShieldOrb(player);
+}
+
+//
 // P_SpawnGhostMobj
 //
 // Spawns a ghost object on the player
