@@ -2481,8 +2481,14 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{"YB_", 3}, // Intermission graphics, goes with the above
 		{"RESULT", 6}, // Used in intermission for competitive modes, above too :3
 		{"RACE", 4}, // Race mode graphics, 321go
+		{"SRB2BACK", 8}, // MP intermission background
 		{"M_", 2}, // Menu stuff
 		{"LT", 2}, // Titlecard changes
+
+		{"RECATK", 6}, // Record Attack menu
+		{"RECCLOCK", 8},
+		{"NTSATK", 6}, // NiGHTS Mode menu
+		{"NTSSONC", 7},
 
 		{"SLID", 4}, // Continue
 		{"CONT", 4},
