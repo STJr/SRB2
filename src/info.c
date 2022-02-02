@@ -3736,14 +3736,13 @@ state_t states[NUMSTATES] =
 	{SPR_FL01, 3, 1, {A_OrbitNights}, ANG2*2, 180 | 0x10000, S_NIGHTOPIANHELPER1}, // S_NIGHTOPIANHELPER9
 
 	// Nightopian
-	{SPR_NTPN, 0, 4, {A_Look}, 0, 0, S_PIAN0}, // S_PIAN0
-	{SPR_NTPN, 0, 4, {A_JetgThink}, 0, 0, S_PIAN2}, // S_PIAN1
-	{SPR_NTPN, 1, 4, {NULL}, 0, 0, S_PIAN3}, // S_PIAN2
-	{SPR_NTPN, 2, 4, {NULL}, 0, 0, S_PIAN4}, // S_PIAN3
-	{SPR_NTPN, 3, 4, {NULL}, 0, 0, S_PIAN5}, // S_PIAN4
-	{SPR_NTPN, 2, 4, {NULL}, 0, 0, S_PIAN6}, // S_PIAN5
-	{SPR_NTPN, 1, 4, {NULL}, 0, 0, S_PIAN1}, // S_PIAN6
-	{SPR_NTPN, 4|FF_ANIMATE, 24, {NULL}, 1, 4, S_PIAN1}, // S_PIANSING
+	{SPR_NTPN, 0, 2, {A_Look}, 1, 1, S_PIAN_LOOK2}, // S_PIAN_LOOK1
+	{SPR_NTPN, 1, 2, {A_Look}, 1, 1, S_PIAN_LOOK3}, // S_PIAN_LOOK1
+	{SPR_NTPN, 2, 2, {A_Look}, 1, 1, S_PIAN_LOOK1}, // S_PIAN_LOOK1
+	{SPR_NTPN, 0, 2, {A_JetgThink}, 0, 0, S_PIAN_FLY2}, // S_PIAN_FLY1
+	{SPR_NTPN, 1, 2, {NULL}, 0, 0, S_PIAN_FLY3}, // S_PIAN_FLY2
+	{SPR_NTPN, 2, 2, {NULL}, 0, 0, S_PIAN_FLY1}, // S_PIAN_FLY3
+	{SPR_NTPN, 3|FF_ANIMATE, 24, {NULL}, 2, 2, S_PIAN_FLY1}, // S_PIANSING
 
 	// Shleep
 	{SPR_SHLP, 0, 15, {NULL}, 0, 0, S_SHLEEP2}, // S_SHLEEP1
@@ -20119,9 +20118,9 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 
 	{           // MT_PIAN
 		1602,           // doomednum
-		S_PIAN0,        // spawnstate
+		S_PIAN_LOOK1,   // spawnstate
 		1000,           // spawnhealth
-		S_PIAN1,        // seestate
+		S_PIAN_FLY1,    // seestate
 		sfx_None,       // seesound
 		0,              // reactiontime
 		sfx_None,       // attacksound
@@ -20129,7 +20128,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		200,            // painchance
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
-		S_PIANSING,     // missilestate
+		S_PIAN_SING,    // missilestate
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
@@ -20140,7 +20139,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY, // flags
+		MF_SLIDEME|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 

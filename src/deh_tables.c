@@ -3293,14 +3293,13 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_NIGHTOPIANHELPER9",
 
 	// Nightopian
-	"S_PIAN0",
-	"S_PIAN1",
-	"S_PIAN2",
-	"S_PIAN3",
-	"S_PIAN4",
-	"S_PIAN5",
-	"S_PIAN6",
-	"S_PIANSING",
+	"S_PIAN_LOOK1",
+	"S_PIAN_LOOK2",
+	"S_PIAN_LOOK3",
+	"S_PIAN_FLY1",
+	"S_PIAN_FLY2",
+	"S_PIAN_FLY3",
+	"S_PIAN_SING",
 
 	// Shleep
 	"S_SHLEEP1",
