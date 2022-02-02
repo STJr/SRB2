@@ -9776,8 +9776,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		sfx_None,       // painsound
 		S_NULL,         // meleestate
 		S_NULL,         // missilestate
-		S_MINE_BOOM1,   // deathstate
-		S_MINE_BOOM1,   // xdeathstate
+		S_XPLD1,        // deathstate
+		S_XPLD1,        // xdeathstate
 		sfx_cybdth,     // deathsound
 		0,              // speed
 		8*FRACUNIT,     // radius
