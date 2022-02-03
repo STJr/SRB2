@@ -6256,7 +6256,7 @@ static void M_DrawMessageMenu(void)
 		}
 
 		V_DrawString((BASEVIDWIDTH - V_StringWidth(string, 0))/2,y,V_ALLOWLOWERCASE,string);
-		y += 8; //hu_font[0]->height;
+		y += 8; //hu_font.chars[0]->height;
 	}
 }
 
@@ -7903,7 +7903,7 @@ static void M_DrawSoundTest(void)
 				{
 					V_DrawFill(165+140-9, y-4, 8, 16, 150);
 					//V_DrawCharacter(165+140-8, y, '\x19' | V_YELLOWMAP, false);
-					V_DrawFixedPatch((165+140-9)<<FRACBITS, (y<<FRACBITS)-(bounce*4), FRACUNIT, 0, hu_font['\x19'-HU_FONTSTART], V_GetStringColormap(V_YELLOWMAP));
+					V_DrawFixedPatch((165+140-9)<<FRACBITS, (y<<FRACBITS)-(bounce*4), FRACUNIT, 0, hu_font.chars['\x19'-HU_FONTSTART], V_GetStringColormap(V_YELLOWMAP));
 				}
 			}
 			t++;

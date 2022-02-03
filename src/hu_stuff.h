@@ -46,6 +46,15 @@
 extern char *shiftxform; // english translation shift table
 extern char english_shiftxform[];
 
+typedef struct
+{
+	patch_t *chars[HU_FONTSIZE];
+	INT32 width;
+	INT32 height;
+} fontdef_t;
+
+extern fontdef_t hu_font, tny_font;
+
 //------------------------------------
 //        sorted player lines
 //------------------------------------
@@ -78,7 +87,6 @@ void HU_AddChatText(const char *text, boolean playsound);
 // set true when entering a chat message
 extern boolean chat_on;
 
-extern patch_t *hu_font[HU_FONTSIZE], *tny_font[HU_FONTSIZE];
 extern patch_t *tallnum[10];
 extern patch_t *nightsnum[10];
 extern patch_t *lt_font[LT_FONTSIZE];

@@ -60,8 +60,9 @@
 //-------------------------------------------
 //              heads up font
 //-------------------------------------------
-patch_t *hu_font[HU_FONTSIZE];
-patch_t *tny_font[HU_FONTSIZE];
+fontdef_t hu_font;
+fontdef_t tny_font;
+
 patch_t *tallnum[10]; // 0-9
 patch_t *nightsnum[10]; // 0-9
 
@@ -193,17 +194,23 @@ void HU_LoadGraphics(void)
 		// cache the heads-up font for entire game execution
 		sprintf(buffer, "STCFN%.3d", j);
 		if (W_CheckNumForName(buffer) == LUMPERROR)
-			hu_font[i] = NULL;
+			hu_font.chars[i] = NULL;
 		else
-			hu_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+			hu_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 
 		// tiny version of the heads-up font
 		sprintf(buffer, "TNYFN%.3d", j);
 		if (W_CheckNumForName(buffer) == LUMPERROR)
-			tny_font[i] = NULL;
+			tny_font.chars[i] = NULL;
 		else
-			tny_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+			tny_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
+
+	hu_font.width = 8;
+	hu_font.height = 12;
+
+	tny_font.width = 5;
+	tny_font.height = 12;
 
 	j = LT_FONTSTART;
 	for (i = 0; i < LT_FONTSIZE; i++)
@@ -864,7 +871,7 @@ static inline boolean HU_keyInChatString(char *s, char ch)
 {
 	size_t l;
 
-	if ((ch >= HU_FONTSTART && ch <= HU_FONTEND && hu_font[ch-HU_FONTSTART])
+	if ((ch >= HU_FONTSTART && ch <= HU_FONTEND && hu_font.chars[ch-HU_FONTSTART])
 	  || ch == ' ') // Allow spaces, of course
 	{
 		l = strlen(s);
@@ -1314,7 +1321,7 @@ static char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 			c = toupper(c);
 		c -= HU_FONTSTART;
 
-		if (c < 0 || c >= HU_FONTSIZE || !hu_font[c])
+		if (c < 0 || c >= HU_FONTSIZE || !hu_font.chars[c])
 		{
 			chw = spacewidth;
 			lastusablespace = i;
@@ -1796,8 +1803,8 @@ static void HU_DrawChat_Old(void)
 	size_t i = 0;
 	const char *ntalk = "Say: ", *ttalk = "Say-Team: ";
 	const char *talk = ntalk;
-	INT32 charwidth = 8 * con_scalefactor; //(hu_font['A'-HU_FONTSTART]->width) * con_scalefactor;
-	INT32 charheight = 8 * con_scalefactor; //(hu_font['A'-HU_FONTSTART]->height) * con_scalefactor;
+	INT32 charwidth = 8 * con_scalefactor; //(hu_font.chars['A'-HU_FONTSTART]->width) * con_scalefactor;
+	INT32 charheight = 8 * con_scalefactor; //(hu_font.chars['A'-HU_FONTSTART]->height) * con_scalefactor;
 	if (teamtalk)
 	{
 		talk = ttalk;
@@ -1818,7 +1825,7 @@ static void HU_DrawChat_Old(void)
 		}
 		else
 		{
-			//charwidth = (hu_font[talk[i]-HU_FONTSTART]->width) * con_scalefactor;
+			//charwidth = (hu_font.chars[talk[i]-HU_FONTSTART]->width) * con_scalefactor;
 			V_DrawCharacter(HU_INPUTX + c, y, talk[i++] | cv_constextsize.value | V_NOSCALESTART, true);
 		}
 		c += charwidth;
@@ -1846,7 +1853,7 @@ static void HU_DrawChat_Old(void)
 		}
 		else
 		{
-			//charwidth = (hu_font[w_chat[i]-HU_FONTSTART]->width) * con_scalefactor;
+			//charwidth = (hu_font.chars[w_chat[i]-HU_FONTSTART]->width) * con_scalefactor;
 			V_DrawCharacter(HU_INPUTX + c, y, w_chat[i++] | cv_constextsize.value | V_NOSCALESTART | t, true);
 		}
 

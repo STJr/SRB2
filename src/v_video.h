@@ -210,48 +210,48 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string);
 UINT8 *V_GetStringColormap(INT32 colorflags);
 
 // Draw a string, using a supplied font and scale.
-void V_DrawFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font);
-void V_DrawCenteredFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font);
-void V_DrawRightAlignedFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font);
+void V_DrawFontString(INT32 x, INT32 y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font);
+void V_DrawCenteredFontString(INT32 x, INT32 y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font);
+void V_DrawRightAlignedFontString(INT32 x, INT32 y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font);
 // Draw a string, using a supplied font and scale, at fixed_t coordinates.
-void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font);
-void V_DrawCenteredFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font);
-void V_DrawRightAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font);
+void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font);
+void V_DrawCenteredFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font);
+void V_DrawRightAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font);
 // width = "average" character width (divided by 2 for space width), height = distance between two lines. TODO: incorporate these in the supplied font, somehow
 
 // Defines for old string drawers.
 // draw a string using the hu_font
-#define V_DrawString(x,y,o,str) V_DrawFontString(x,y,8,12,o,FRACUNIT,FRACUNIT,str,hu_font)
-#define V_DrawCenteredString(x,y,o,str) V_DrawCenteredFontString(x,y,8,12,o,FRACUNIT,FRACUNIT,str,hu_font)
-#define V_DrawRightAlignedString(x,y,o,str) V_DrawRightAlignedFontString(x,y,8,12,o,FRACUNIT,FRACUNIT,str,hu_font)
+#define V_DrawString(x,y,o,str) V_DrawFontString(x,y,o,FRACUNIT,FRACUNIT,str,hu_font)
+#define V_DrawCenteredString(x,y,o,str) V_DrawCenteredFontString(x,y,o,FRACUNIT,FRACUNIT,str,hu_font)
+#define V_DrawRightAlignedString(x,y,o,str) V_DrawRightAlignedFontString(x,y,o,FRACUNIT,FRACUNIT,str,hu_font)
 // draw a string using the hu_font, 0.5x scale
-#define V_DrawSmallString(x,y,o,str) V_DrawFontString(x,y,8,12,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
-#define V_DrawCenteredSmallString(x,y,o,str) V_DrawCenteredFontString(x,y,8,12,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
-#define V_DrawRightAlignedSmallString(x,y,o,str) V_DrawRightAlignedFontString(x,y,8,12,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
+#define V_DrawSmallString(x,y,o,str) V_DrawFontString(x,y,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
+#define V_DrawCenteredSmallString(x,y,o,str) V_DrawCenteredFontString(x,y,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
+#define V_DrawRightAlignedSmallString(x,y,o,str) V_DrawRightAlignedFontString(x,y,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
 // Write a string using the tny_font
-#define V_DrawThinString(x,y,o,str) V_DrawFontString(x,y,5,12,o,FRACUNIT,FRACUNIT,str,tny_font)
-#define V_DrawCenteredThinString(x,y,o,str) V_DrawCenteredFontString(x,y,5,12,o,FRACUNIT,FRACUNIT,str,tny_font)
-#define V_DrawRightAlignedThinString(x,y,o,str) V_DrawRightAlignedFontString(x,y,5,12,o,FRACUNIT,FRACUNIT,str,tny_font)
+#define V_DrawThinString(x,y,o,str) V_DrawFontString(x,y,o,FRACUNIT,FRACUNIT,str,tny_font)
+#define V_DrawCenteredThinString(x,y,o,str) V_DrawCenteredFontString(x,y,o,FRACUNIT,FRACUNIT,str,tny_font)
+#define V_DrawRightAlignedThinString(x,y,o,str) V_DrawRightAlignedFontString(x,y,o,FRACUNIT,FRACUNIT,str,tny_font)
 // draw a string using the tny_font, 0.5x scale
-#define V_DrawSmallThinString(x,y,o,str) V_DrawFontString(x,y,5,12,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
-#define V_DrawCenteredSmallThinString(x,y,o,str) V_DrawCenteredFontString(x,y,5,12,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
-#define V_DrawRightAlignedSmallThinString(x,y,o,str) V_DrawRightAlignedFontString(x,y,5,12,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
+#define V_DrawSmallThinString(x,y,o,str) V_DrawFontString(x,y,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
+#define V_DrawCenteredSmallThinString(x,y,o,str) V_DrawCenteredFontString(x,y,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
+#define V_DrawRightAlignedSmallThinString(x,y,o,str) V_DrawRightAlignedFontString(x,y,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
 // draw a string using the hu_font at fixed_t coordinates
-#define V_DrawStringAtFixed(x,y,o,str) V_DrawFontStringAtFixed(x,y,8,12,o,FRACUNIT,FRACUNIT,str,hu_font)
-#define V_DrawCenteredStringAtFixed(x,y,o,str) V_DrawCenteredFontStringAtFixed(x,y,8,12,o,FRACUNIT,FRACUNIT,str,hu_font)
-#define V_DrawRightAlignedStringAtFixed(x,y,o,str) V_DrawRightAlignedFontStringAtFixed(x,y,8,12,o,FRACUNIT,FRACUNIT,str,hu_font)
+#define V_DrawStringAtFixed(x,y,o,str) V_DrawFontStringAtFixed(x,y,o,FRACUNIT,FRACUNIT,str,hu_font)
+#define V_DrawCenteredStringAtFixed(x,y,o,str) V_DrawCenteredFontStringAtFixed(x,y,o,FRACUNIT,FRACUNIT,str,hu_font)
+#define V_DrawRightAlignedStringAtFixed(x,y,o,str) V_DrawRightAlignedFontStringAtFixed(x,y,o,FRACUNIT,FRACUNIT,str,hu_font)
 // draw a string using the hu_font at fixed_t coordinates, 0.5x scale
-#define V_DrawSmallStringAtFixed(x,y,o,str) V_DrawFontStringAtFixed(x,y,8,12,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
-#define V_DrawCenteredSmallStringAtFixed(x,y,o,str) V_DrawCenteredFontStringAtFixed(x,y,8,12,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
-#define V_DrawRightAlignedSmallStringAtFixed(x,y,o,str) V_DrawRightAlignedFontStringAtFixed(x,y,8,12,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
+#define V_DrawSmallStringAtFixed(x,y,o,str) V_DrawFontStringAtFixed(x,y,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
+#define V_DrawCenteredSmallStringAtFixed(x,y,o,str) V_DrawCenteredFontStringAtFixed(x,y,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
+#define V_DrawRightAlignedSmallStringAtFixed(x,y,o,str) V_DrawRightAlignedFontStringAtFixed(x,y,o,FRACUNIT/2,FRACUNIT/2,str,hu_font)
 // draw a string using the tny_font at fixed_t coordinates
-#define V_DrawThinStringAtFixed(x,y,o,str) V_DrawFontStringAtFixed(x,y,5,12,o,FRACUNIT,FRACUNIT,str,tny_font)
-#define V_DrawCenteredThinStringAtFixed(x,y,o,str) V_DrawCenteredFontStringAtFixed(x,y,5,12,o,FRACUNIT,FRACUNIT,str,tny_font)
-#define V_DrawRightAlignedThinStringAtFixed(x,y,o,str) V_DrawRightAlignedFontStringAtFixed(x,y,5,12,o,FRACUNIT,FRACUNIT,str,tny_font)
+#define V_DrawThinStringAtFixed(x,y,o,str) V_DrawFontStringAtFixed(x,y,o,FRACUNIT,FRACUNIT,str,tny_font)
+#define V_DrawCenteredThinStringAtFixed(x,y,o,str) V_DrawCenteredFontStringAtFixed(x,y,o,FRACUNIT,FRACUNIT,str,tny_font)
+#define V_DrawRightAlignedThinStringAtFixed(x,y,o,str) V_DrawRightAlignedFontStringAtFixed(x,y,o,FRACUNIT,FRACUNIT,str,tny_font)
 // draw a string using the tny_font at fixed_t coordinates, 0.5x scale
-#define V_DrawSmallThinStringAtFixed(x,y,o,str) V_DrawFontStringAtFixed(x,y,5,12,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
-#define V_DrawCenteredSmallThinStringAtFixed(x,y,o,str) V_DrawCenteredFontStringAtFixed(x,y,5,12,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
-#define V_DrawRightAlignedSmallThinStringAtFixed(x,y,o,str) V_DrawRightAlignedFontStringAtFixed(x,y,5,12,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
+#define V_DrawSmallThinStringAtFixed(x,y,o,str) V_DrawFontStringAtFixed(x,y,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
+#define V_DrawCenteredSmallThinStringAtFixed(x,y,o,str) V_DrawCenteredFontStringAtFixed(x,y,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
+#define V_DrawRightAlignedSmallThinStringAtFixed(x,y,o,str) V_DrawRightAlignedFontStringAtFixed(x,y,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
 
 // Draw tall nums, used for menu, HUD, intermission
 void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num);
@@ -272,13 +272,13 @@ INT32 V_CountNameTagLines(const char *string);
 INT32 V_NameTagWidth(const char *string);
 
 // Find string width from supplied font chars
-INT32 V_FontStringWidth(const char *string, INT32 option, INT32 width, patch_t **font);
+INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font);
 
 // Defines for old string width functions.
-#define V_StringWidth(str,o) V_FontStringWidth(str,o,8,hu_font)
-#define V_SmallStringWidth(str,o) V_FontStringWidth(str,o,8,hu_font)/2
-#define V_ThinStringWidth(str,o) V_FontStringWidth(str,o,5,tny_font)
-#define V_SmallThinStringWidth(str,o) V_FontStringWidth(str,o,5,tny_font)/2
+#define V_StringWidth(str,o) V_FontStringWidth(str,o,hu_font)
+#define V_SmallStringWidth(str,o) V_FontStringWidth(str,o,hu_font)/2
+#define V_ThinStringWidth(str,o) V_FontStringWidth(str,o,tny_font)
+#define V_SmallThinStringWidth(str,o) V_FontStringWidth(str,o,tny_font)/2
 
 void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param);
 
