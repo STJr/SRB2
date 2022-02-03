@@ -2466,6 +2466,10 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{"STNONEX", 7}, // "X" graphic
 		{"ULTIMATE", 8}, // Ultimate no-save
 
+		{"SLCT", 4}, // Level select "cursor"
+		{"LSSTATIC", 8}, // Level select static
+		{"BLANKLV", 7}, // "?" level images
+
 		{"CRFNT", 5}, // Sonic 1 font changes
 		{"NTFNT", 5}, // Character Select font changes
 		{"NTFNO", 5}, // Character Select font (outline)
@@ -2488,6 +2492,8 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{"HOMING", 6}, // Emerald hunt radar
 		{"HOMITM", 6}, // Emblem radar
 
+		{"CHARFG", 6}, // Character select menu
+		{"CHARBG", 6},
 		{"RECATK", 6}, // Record Attack menu
 		{"RECCLOCK", 8},
 		{"NTSATK", 6}, // NiGHTS Mode menu
