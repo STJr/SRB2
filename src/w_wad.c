@@ -2477,6 +2477,7 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{"STLIVE", 6}, // Life graphics, background and the "X" that shows under skin's HUDNAME
 		{"CROSHAI", 7}, // First person crosshairs
 		{"INTERSC", 7}, // Default intermission backgrounds (co-op)
+		{"SPECTILE", 8}, // Special stage intermission background
 		{"STT", 3}, // Acceptable HUD changes (Score Time Rings)
 		{"YB_", 3}, // Intermission graphics, goes with the above
 		{"RESULT", 6}, // Used in intermission for competitive modes, above too :3
@@ -2484,6 +2485,8 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{"SRB2BACK", 8}, // MP intermission background
 		{"M_", 2}, // Menu stuff
 		{"LT", 2}, // Titlecard changes
+		{"HOMING", 6}, // Emerald hunt radar
+		{"HOMITM", 6}, // Emblem radar
 
 		{"RECATK", 6}, // Record Attack menu
 		{"RECCLOCK", 8},
@@ -2512,6 +2515,7 @@ int W_VerifyNMUSlumps(const char *filename, boolean exit_on_error)
 		{"DRILL", 5},
 		{"GRADE", 5},
 		{"MINUS5", 6},
+		{"NGRTIMER", 8}, // NiGHTS Mode timer
 
 		{"MUSICDEF", 8}, // Song definitions (thanks kart)
 		{"SHADERS", 7}, // OpenGL shader definitions
