@@ -505,10 +505,10 @@ static void ST_drawDebugInfo(void)
 								V_DrawRightAlignedThinString(320,  8+lowh, VFLAGS|V_REDMAP, "SOME INFO NOT VISIBLE");\
 								return;\
 							}\
-							V_DrawRightAlignedFontString(320, height, 8, 12, VFLAGS, textscale, str, hu_font);\
+							V_DrawRightAlignedFontString(320, height, 8, 12, VFLAGS, textscale, textscale, str, hu_font);\
 							height += h;
 
-#define V_DrawDebugFlag(f, str) V_DrawRightAlignedFontString(width, height, 8, 12, VFLAGS|f, textscale, str, hu_font);\
+#define V_DrawDebugFlag(f, str) V_DrawRightAlignedFontString(width, height, 8, 12, VFLAGS|f, textscale, textscale, str, hu_font);\
 								width -= w
 
 	if (cv_debug & DBG_MEMORY)

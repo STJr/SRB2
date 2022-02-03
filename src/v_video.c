@@ -2143,24 +2143,24 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 
 // Draw a string, using a supplied font and scale.
 // NOTE: The text is centered for screens larger than the base width.
-void V_DrawFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32 option, fixed_t scale, const char *string, patch_t **font)
+void V_DrawFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font)
 {
-	V_DrawFontStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, width, height, option, scale, string, font);
+	V_DrawFontStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, width, height, option, pscale, vscale, string, font);
 }
 
-void V_DrawCenteredFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32 option, fixed_t scale, const char *string, patch_t **font)
+void V_DrawCenteredFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font)
 {
-	V_DrawCenteredFontStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, width, height, option, scale, string, font);
+	V_DrawCenteredFontStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, width, height, option, pscale, vscale, string, font);
 }
 
-void V_DrawRightAlignedFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32 option, fixed_t scale, const char *string, patch_t **font)
+void V_DrawRightAlignedFontString(INT32 x, INT32 y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font)
 {
-	V_DrawRightAlignedFontStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, width, height, option, scale, string, font);
+	V_DrawRightAlignedFontStringAtFixed((fixed_t)x<<FRACBITS, (fixed_t)y<<FRACBITS, width, height, option, pscale, vscale, string, font);
 }
 
 // Write a string, using a supplied font and scale, at fixed_t coordinates.
 // NOTE: The text is centered for screens larger than the base width.
-void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, INT32 option, fixed_t scale, const char *string, patch_t **font)
+void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font)
 {
 	fixed_t cx = x, cy = y;
 	INT32 w, c, dupx, dupy, scrwidth, center = 0, left = 0;
@@ -2179,7 +2179,8 @@ void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, IN
 	}
 	else
 	{
-		dupx = dupy = scale;
+		dupx = pscale;
+		dupy = vscale;
 		scrwidth = FixedDiv(vid.width<<FRACBITS, vid.dupx);
 		left = (scrwidth - (BASEVIDWIDTH << FRACBITS))/2;
 		scrwidth -= left;
@@ -2252,22 +2253,22 @@ void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, IN
 			continue;
 		}
 
-		V_DrawFixedPatch(cx + center, cy, scale, option, font[c], V_GetStringColormap(charflags));
+		V_DrawStretchyFixedPatch(cx + center, cy, pscale, vscale, option, font[c], V_GetStringColormap(charflags));
 
 		cx += w;
 	}
 }
 
-void V_DrawCenteredFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, INT32 option, fixed_t scale, const char *string, patch_t **font)
+void V_DrawCenteredFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font)
 {
-	x -= (V_FontStringWidth(string, option, width, font)*scale)/2;
-	V_DrawFontStringAtFixed(x, y, width, height, option, scale, string, font);
+	x -= (V_FontStringWidth(string, option, width, font)*pscale)/2;
+	V_DrawFontStringAtFixed(x, y, width, height, option, pscale, vscale, string, font);
 }
 
-void V_DrawRightAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, INT32 option, fixed_t scale, const char *string, patch_t **font)
+void V_DrawRightAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 width, INT32 height, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, patch_t **font)
 {
-	x -= V_FontStringWidth(string, option, width, font)*scale;
-	V_DrawFontStringAtFixed(x, y, width, height, option, scale, string, font);
+	x -= V_FontStringWidth(string, option, width, font)*pscale;
+	V_DrawFontStringAtFixed(x, y, width, height, option, pscale, vscale, string, font);
 }
 
 // Draws a tallnum.  Replaces two functions in y_inter and st_stuff
