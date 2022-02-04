@@ -49,8 +49,9 @@ extern char english_shiftxform[];
 typedef struct
 {
 	patch_t *chars[HU_FONTSIZE];
-	INT32 width;
-	INT32 height;
+	INT32 kerning;
+	UINT32 spacewidth;
+	UINT32 linespacing;
 } fontdef_t;
 
 extern fontdef_t hu_font, tny_font;

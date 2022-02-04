@@ -206,11 +206,13 @@ void HU_LoadGraphics(void)
 			tny_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
 
-	hu_font.width = 8;
-	hu_font.height = 12;
+	hu_font.kerning = 0;
+	hu_font.spacewidth = 4;
+	hu_font.linespacing = 12;
 
-	tny_font.width = 5;
-	tny_font.height = 12;
+	tny_font.kerning = 0;
+	tny_font.spacewidth = 2;
+	tny_font.linespacing = 12;
 
 	j = LT_FONTSTART;
 	for (i = 0; i < LT_FONTSIZE; i++)

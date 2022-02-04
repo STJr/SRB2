@@ -2166,7 +2166,7 @@ void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale,
 	INT32 w, c, dupx, dupy, scrwidth, center = 0, left = 0;
 	const char *ch = string;
 	INT32 charflags = (option & V_CHARCOLORMASK);
-	INT32 spacewidth = font.width/2, charwidth = 0;
+	INT32 spacewidth = font.spacewidth, charwidth = 0;
 
 	INT32 lowercase = (option & V_ALLOWLOWERCASE);
 	option &= ~V_FLIP; // which is also shared with V_ALLOWLOWERCASE...
@@ -2192,10 +2192,10 @@ void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale,
 	switch (option & V_SPACINGMASK) // TODO: drop support for these crusty flags in the next major update
 	{
 		case V_MONOSPACE:
-			spacewidth = font.width;
+			spacewidth = font.spacewidth*2;
 			/* FALLTHRU */
 		case V_OLDSPACING:
-			charwidth = font.width;
+			charwidth = font.spacewidth*2;
 			break;
 		case V_6WIDTHSPACE:
 			spacewidth = 6;
@@ -2221,7 +2221,7 @@ void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale,
 			if (option & V_RETURN8)
 				cy += FixedMul((8<<FRACBITS), dupy);
 			else
-				cy += FixedMul((font.height<<FRACBITS), dupy);
+				cy += FixedMul((font.linespacing<<FRACBITS), dupy);
 
 			continue;
 		}
@@ -2255,7 +2255,7 @@ void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale,
 
 		V_DrawStretchyFixedPatch(cx + center, cy, pscale, vscale, option, font.chars[c], V_GetStringColormap(charflags));
 
-		cx += w;
+		cx += w + (font.kerning<<FRACBITS);
 	}
 }
 
@@ -2742,16 +2742,16 @@ INT16 V_LevelActNumWidth(UINT8 num)
 INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
 {
 	INT32 c, w = 0;
-	INT32 spacewidth = font.width/2, charwidth = 0;
+	INT32 spacewidth = font.spacewidth, charwidth = 0;
 	size_t i;
 
 	switch (option & V_SPACINGMASK)
 	{
 		case V_MONOSPACE:
-			spacewidth = font.width;
+			spacewidth = font.spacewidth*2;
 			/* FALLTHRU */
 		case V_OLDSPACING:
-			charwidth = font.width;
+			charwidth = font.spacewidth*2;
 			break;
 		case V_6WIDTHSPACE:
 			spacewidth = 6;
@@ -2767,7 +2767,7 @@ INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
 		if (c < 0 || c >= HU_FONTSIZE || !font.chars[c])
 			w += spacewidth;
 		else
-			w += (charwidth ? charwidth : (font.chars[c]->width));
+			w += (charwidth ? charwidth : (font.chars[c]->width)) + font.kerning;
 	}
 
 	if (option & (V_NOSCALESTART|V_NOSCALEPATCH))
