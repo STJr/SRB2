@@ -1341,7 +1341,7 @@ static menuitem_t OP_VideoOptionsMenu[] =
 #endif
 	{IT_STRING | IT_CVAR, NULL, "Vertical Sync",                &cv_vidwait,         16},
 #ifdef HWRENDER
-	{IT_STRING | IT_CVAR, NULL, "Renderer",                     &cv_renderer,        21},
+	{IT_STRING | IT_CVAR, NULL, "Renderer (F10)",               &cv_renderer,        21},
 #else
 	{IT_TRANSTEXT | IT_PAIR, "Renderer", "Software",            &cv_renderer,        21},
 #endif
@@ -3395,8 +3395,11 @@ boolean M_Responder(event_t *ev)
 			// Screenshots on F8 now handled elsewhere
 			// Same with Moviemode on F9
 
-			case KEY_F10: // Quit SRB2
-				M_QuitSRB2(0);
+			case KEY_F10: // Renderer toggle, also processed inside menus
+				if (cv_renderer.value == render_soft)
+					CV_SetValue(&cv_renderer, render_opengl);
+				else if (cv_renderer.value == render_opengl)
+					CV_SetValue(&cv_renderer, render_soft);
 				return true;
 
 			case KEY_F11: // Fullscreen toggle, also processed inside menus
@@ -3578,6 +3581,13 @@ boolean M_Responder(event_t *ev)
 			//if (currentMenu->prevMenu)
 			//	M_SetupNextMenu(currentMenu->prevMenu);
 			return false;
+
+		case KEY_F10: // Renderer toggle, also processed outside menus
+			if (cv_renderer.value == render_soft)
+				CV_SetValue(&cv_renderer, render_opengl);
+			else if (cv_renderer.value == render_opengl)
+				CV_SetValue(&cv_renderer, render_soft);
+			return true;
 
 		case KEY_F11: // Fullscreen toggle, also processed outside menus
 			CV_SetValue(&cv_fullscreen, !cv_fullscreen.value);
