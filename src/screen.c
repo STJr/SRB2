@@ -66,12 +66,10 @@ static CV_PossibleValue_t scr_depth_cons_t[] = {{8, "8 bits"}, {16, "16 bits"}, 
 //added : 03-02-98: default screen mode, as loaded/saved in config
 consvar_t cv_scr_width = CVAR_INIT ("scr_width", "1280", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_scr_height = CVAR_INIT ("scr_height", "800", CV_SAVE, CV_Unsigned, NULL);
-consvar_t cv_scr_depth = CVAR_INIT ("scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL);
-consvar_t cv_renderview = CVAR_INIT ("renderview", "On", 0, CV_OnOff, NULL);
-
-consvar_t cv_usewindowedres = CVAR_INIT ("usewindowedres", "No", CV_SAVE, CV_YesNo, NULL);
 consvar_t cv_scr_width_w = CVAR_INIT ("scr_width_w", "640", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_scr_height_w = CVAR_INIT ("scr_height_w", "400", CV_SAVE, CV_Unsigned, NULL);
+consvar_t cv_scr_depth = CVAR_INIT ("scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL);
+consvar_t cv_renderview = CVAR_INIT ("renderview", "On", 0, CV_OnOff, NULL);
 
 CV_PossibleValue_t cv_renderer_t[] = {
 	{1, "Software"},
@@ -370,10 +368,16 @@ void SCR_CheckDefaultMode(void)
 	}
 	else
 	{
-		CONS_Printf(M_GetText("Default resolution: %d x %d (%d bits)\n"), cv_scr_width.value,
-			cv_scr_height.value, cv_scr_depth.value);
-		// see note above
-		setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
+		if (cv_fullscreen.value == 0)
+		{
+			CONS_Printf(M_GetText("Default windowed resolution: %d x %d (%d bits)\n"), cv_scr_width_w.value, cv_scr_height_w.value, cv_scr_depth.value);
+			setmodeneeded = VID_GetModeForSize(cv_scr_width_w.value, cv_scr_height_w.value) + 1; // see note above
+		}
+		else
+		{
+			CONS_Printf(M_GetText("Default resolution: %d x %d (%d bits)\n"), cv_scr_width.value, cv_scr_height.value, cv_scr_depth.value);
+			setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1; // see note above
+		}
 	}
 
 	if (cv_renderer.value != (signed)rendermode)
@@ -392,9 +396,16 @@ void SCR_CheckDefaultMode(void)
 void SCR_SetDefaultMode(void)
 {
 	// remember the default screen size
-	CV_SetValue(&cv_scr_width, vid.width);
-	CV_SetValue(&cv_scr_height, vid.height);
-	CV_SetValue(&cv_scr_depth, vid.bpp*8);
+	if (cv_fullscreen.value == 0)
+	{
+		CV_SetValue(&cv_scr_width_w, vid.width);
+		CV_SetValue(&cv_scr_height_w, vid.height);
+	}
+	else
+	{
+		CV_SetValue(&cv_scr_width, vid.width);
+		CV_SetValue(&cv_scr_height, vid.height);
+	}
 }
 
 // Change fullscreen on/off according to cv_fullscreen
@@ -409,7 +420,7 @@ void SCR_ChangeFullscreen(void)
 	if (graphics_started)
 	{
 		VID_PrepareModeList();
-		if (cv_usewindowedres.value == 1 && cv_fullscreen.value == 0)
+		if (cv_fullscreen.value == 0)
 			setmodeneeded = VID_GetModeForSize(cv_scr_width_w.value, cv_scr_height_w.value) + 1;
 		else
 			setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
