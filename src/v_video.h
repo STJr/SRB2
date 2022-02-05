@@ -201,10 +201,6 @@ void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed);
 // draw a single character, but for the chat
 void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UINT8 *colormap);
 
-UINT8 *V_GetStringColormap(INT32 colorflags);
-
-void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string);
-
 // wordwrap a string using the hu_font
 char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string);
 UINT8 *V_GetStringColormap(INT32 colorflags);
@@ -217,7 +213,6 @@ void V_DrawRightAlignedFontString(INT32 x, INT32 y, INT32 option, fixed_t pscale
 void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font);
 void V_DrawCenteredFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font);
 void V_DrawRightAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font);
-// width = "average" character width (divided by 2 for space width), height = distance between two lines. TODO: incorporate these in the supplied font, somehow
 
 // Defines for old string drawers.
 // draw a string using the hu_font
@@ -261,7 +256,6 @@ void V_DrawRightAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fix
 void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num);
 void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits);
 void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, UINT8 num);
-
 INT16 V_LevelActNumWidth(UINT8 num); // act number width
 
 // Draw a string using the nt_font
@@ -271,7 +265,7 @@ INT32 V_NameTagWidth(const char *string);
 
 // Find string width or height from supplied font chars
 INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font);
-INT32 V_FontStringHeight(const char *string, INT32 option, fontdef_t font);
+INT32 V_FontStringHeight(const char *string, fontdef_t font);
 
 // Defines for old string width functions.
 #define V_StringWidth(str,o) V_FontStringWidth(str,o,hu_font)
@@ -280,7 +274,7 @@ INT32 V_FontStringHeight(const char *string, INT32 option, fontdef_t font);
 #define V_SmallThinStringWidth(str,o) V_FontStringWidth(str,o,tny_font)/2
 #define V_CreditStringWidth(str) V_FontStringWidth(str,0,cred_font)
 #define V_LevelNameWidth(str) V_FontStringWidth(str,V_ALLOWLOWERCASE,lt_font)
-#define V_LevelNameHeight(str) V_FontStringHeight(str,V_ALLOWLOWERCASE,lt_font)
+#define V_LevelNameHeight(str) V_FontStringHeight(str,lt_font)
 
 void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param);
 

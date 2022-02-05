@@ -1979,47 +1979,6 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 		*buf = promptbgmap[*buf];
 }
 
-// Gets string colormap, used for 0x80 color codes
-//
-UINT8 *V_GetStringColormap(INT32 colorflags)
-{
-	switch ((colorflags & V_CHARCOLORMASK) >> V_CHARCOLORSHIFT)
-	{
-	case  1: // 0x81, magenta
-		return magentamap;
-	case  2: // 0x82, yellow
-		return yellowmap;
-	case  3: // 0x83, lgreen
-		return lgreenmap;
-	case  4: // 0x84, blue
-		return bluemap;
-	case  5: // 0x85, red
-		return redmap;
-	case  6: // 0x86, gray
-		return graymap;
-	case  7: // 0x87, orange
-		return orangemap;
-	case  8: // 0x88, sky
-		return skymap;
-	case  9: // 0x89, purple
-		return purplemap;
-	case 10: // 0x8A, aqua
-		return aquamap;
-	case 11: // 0x8B, peridot
-		return peridotmap;
-	case 12: // 0x8C, azure
-		return azuremap;
-	case 13: // 0x8D, brown
-		return brownmap;
-	case 14: // 0x8E, rosy
-		return rosymap;
-	case 15: // 0x8F, invert
-		return invertmap;
-	default: // reset
-		return NULL;
-	}
-}
-
 // Writes a single character (draw WHITE if bit 7 set)
 //
 void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed)
@@ -2068,8 +2027,6 @@ void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UI
 		return;
 
 	V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, (vid.width < 640) ? (FRACUNIT) : (FRACUNIT/2), flags, hu_font.chars[c], colormap);
-
-
 }
 
 // Precompile a wordwrapped string to any given width.
@@ -2139,6 +2096,47 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 		}
 	}
 	return newstring;
+}
+
+// Gets string colormap, used for 0x80 color codes
+//
+UINT8 *V_GetStringColormap(INT32 colorflags)
+{
+	switch ((colorflags & V_CHARCOLORMASK) >> V_CHARCOLORSHIFT)
+	{
+	case  1: // 0x81, magenta
+		return magentamap;
+	case  2: // 0x82, yellow
+		return yellowmap;
+	case  3: // 0x83, lgreen
+		return lgreenmap;
+	case  4: // 0x84, blue
+		return bluemap;
+	case  5: // 0x85, red
+		return redmap;
+	case  6: // 0x86, gray
+		return graymap;
+	case  7: // 0x87, orange
+		return orangemap;
+	case  8: // 0x88, sky
+		return skymap;
+	case  9: // 0x89, purple
+		return purplemap;
+	case 10: // 0x8A, aqua
+		return aquamap;
+	case 11: // 0x8B, peridot
+		return peridotmap;
+	case 12: // 0x8C, azure
+		return azuremap;
+	case 13: // 0x8D, brown
+		return brownmap;
+	case 14: // 0x8E, rosy
+		return rosymap;
+	case 15: // 0x8F, invert
+		return invertmap;
+	default: // reset
+		return NULL;
+	}
 }
 
 // Draw a string, using a supplied font and scale.
@@ -2331,6 +2329,23 @@ void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, UINT8 num)
 			V_DrawScaledPatch(x, y, flags, ttlnum[num]);
 		num = num/10;
 	}
+}
+
+// Returns the width of the act num patch(es)
+INT16 V_LevelActNumWidth(UINT8 num)
+{
+	INT16 result = 0;
+
+	if (num == 0)
+		result = ttlnum[num]->width;
+
+	while (num > 0 && num <= 99)
+	{
+		result = result + ttlnum[num%10]->width;
+		num = num/10;
+	}
+
+	return result;
 }
 
 // Draw a string using the nt_font
@@ -2533,24 +2548,6 @@ INT32 V_NameTagWidth(const char *string)
 	return w;
 }
 
-// For ST_drawTitleCard
-// Returns the width of the act num patch(es)
-INT16 V_LevelActNumWidth(UINT8 num)
-{
-	INT16 result = 0;
-
-	if (num == 0)
-		result = ttlnum[num]->width;
-
-	while (num > 0 && num <= 99)
-	{
-		result = result + ttlnum[num%10]->width;
-		num = num/10;
-	}
-
-	return result;
-}
-
 // Find string width from supplied font characters & character width.
 //
 INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
@@ -2592,7 +2589,7 @@ INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
 
 // Find max string height from supplied font characters
 //
-INT32 V_FontStringHeight(const char *string, INT32 option, fontdef_t font)
+INT32 V_FontStringHeight(const char *string, fontdef_t font)
 {
 	INT32 c, h = 0;
 	size_t i;
