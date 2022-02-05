@@ -4228,15 +4228,6 @@ static void M_DrawSaveLoadBorder(INT32 x,INT32 y)
 }
 #endif
 
-// horizontally centered text
-static void M_CentreText(INT32 y, const char *string)
-{
-	INT32 x;
-	//added : 02-02-98 : centre on 320, because V_DrawString centers on vid.width...
-	x = (BASEVIDWIDTH - V_StringWidth(string, V_OLDSPACING))>>1;
-	V_DrawString(x,y,V_OLDSPACING,string);
-}
-
 //
 // M_DrawMapEmblems
 //
@@ -12818,12 +12809,12 @@ static void M_DrawControl(void)
 	if (tutorialmode && tutorialgcs)
 	{
 		if ((gametic / TICRATE) % 2)
-			M_CentreText(30, "\202EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
+			V_DrawCenteredString(BASEVIDWIDTH/2, 30, 0, "\202EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
 		else
-			M_CentreText(30, "EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
+			V_DrawCenteredString(BASEVIDWIDTH/2, 30, 0, "EXIT THE TUTORIAL TO CHANGE THE CONTROLS");
 	}
 	else
-		M_CentreText(30,
+		V_DrawCenteredString(BASEVIDWIDTH/2, 30, 0,
 		    (setupcontrols_secondaryplayer ? "SET CONTROLS FOR SECONDARY PLAYER" :
 		                                     "PRESS ENTER TO CHANGE, BACKSPACE TO CLEAR"));
 
@@ -13188,11 +13179,11 @@ static void M_DrawVideoMode(void)
 	// draw title
 	M_DrawMenuTitle();
 
-	V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y,
-		V_YELLOWMAP, "Choose mode, reselect to change default");
+	V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y, V_YELLOWMAP, "Choose mode, reselect to change default");
+	V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y+8, V_YELLOWMAP, "Press F11 to toggle fullscreen");
 
 	row = 41;
-	col = OP_VideoModeDef.y + 14;
+	col = OP_VideoModeDef.y + 24;
 	for (i = 0; i < vidm_nummodes; i++)
 	{
 		if (i == vidm_selected)
@@ -13205,7 +13196,7 @@ static void M_DrawVideoMode(void)
 		if ((i % vidm_column_size) == (vidm_column_size-1))
 		{
 			row += 7*13;
-			col = OP_VideoModeDef.y + 14;
+			col = OP_VideoModeDef.y + 24;
 		}
 	}
 
@@ -13213,29 +13204,31 @@ static void M_DrawVideoMode(void)
 	{
 		INT32 testtime = (vidm_testingmode/TICRATE) + 1;
 
-		M_CentreText(OP_VideoModeDef.y + 116,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 116, 0,
 			va("Previewing mode %c%dx%d",
 				(SCR_IsAspectCorrect(vid.width, vid.height)) ? 0x83 : 0x80,
 				vid.width, vid.height));
-		M_CentreText(OP_VideoModeDef.y + 138,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 138, 0,
 			"Press ENTER again to keep this mode");
-		M_CentreText(OP_VideoModeDef.y + 150,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 150, 0,
 			va("Wait %d second%s", testtime, (testtime > 1) ? "s" : ""));
-		M_CentreText(OP_VideoModeDef.y + 158,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 158, 0,
 			"or press ESC to return");
-
 	}
 	else
 	{
-		M_CentreText(OP_VideoModeDef.y + 100,
+		V_DrawFill(60, OP_VideoModeDef.y + 98, 200, 12, 159);
+		V_DrawFill(60, OP_VideoModeDef.y + 114, 200, 20, 159);
+
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 100, 0,
 			va("Current mode is %c%dx%d",
 				(SCR_IsAspectCorrect(vid.width, vid.height)) ? 0x83 : 0x80,
 				vid.width, vid.height));
-		M_CentreText(OP_VideoModeDef.y + 116,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 116, (cv_fullscreen.value ? 0 : V_TRANSLUCENT),
 			va("Default mode is %c%dx%d",
 				(SCR_IsAspectCorrect(cv_scr_width.value, cv_scr_height.value)) ? 0x83 : 0x80,
 				cv_scr_width.value, cv_scr_height.value));
-		M_CentreText(OP_VideoModeDef.y + 124,
+		V_DrawCenteredString(BASEVIDWIDTH/2, OP_VideoModeDef.y + 124, (cv_fullscreen.value ? V_TRANSLUCENT : 0),
 			va("Windowed mode is %c%dx%d",
 				(SCR_IsAspectCorrect(cv_scr_width_w.value, cv_scr_height_w.value)) ? 0x83 : 0x80,
 				cv_scr_width_w.value, cv_scr_height_w.value));
@@ -13250,7 +13243,7 @@ static void M_DrawVideoMode(void)
 
 	// Draw the cursor for the VidMode menu
 	i = 41 - 10 + ((vidm_selected / vidm_column_size)*7*13);
-	j = OP_VideoModeDef.y + 14 + ((vidm_selected % vidm_column_size)*8);
+	j = OP_VideoModeDef.y + 24 + ((vidm_selected % vidm_column_size)*8);
 
 	V_DrawScaledPatch(i - 8, j, 0,
 		W_CachePatchName("M_CURSOR", PU_PATCH));
@@ -13433,11 +13426,14 @@ static void M_HandleVideoMode(INT32 ch)
 			break;
 
 		case KEY_ENTER:
-			S_StartSound(NULL, sfx_menu1);
 			if (vid.modenum == modedescs[vidm_selected].modenum)
+			{
+				S_StartSound(NULL, sfx_strpst);
 				SCR_SetDefaultMode();
+			}
 			else
 			{
+				S_StartSound(NULL, sfx_menu1);
 				vidm_testingmode = 15*TICRATE;
 				vidm_previousmode = vid.modenum;
 				if (!setmodeneeded) // in case the previous setmode was not finished
@@ -13453,6 +13449,7 @@ static void M_HandleVideoMode(INT32 ch)
 			break;
 
 		case KEY_F11:
+			S_StartSound(NULL, sfx_menu1);
 			CV_SetValue(&cv_fullscreen, !cv_fullscreen.value);
 			break;
 
