@@ -62,13 +62,13 @@
 //-------------------------------------------
 fontdef_t hu_font;
 fontdef_t tny_font;
+fontdef_t cred_font;
 
 patch_t *tallnum[10]; // 0-9
 patch_t *nightsnum[10]; // 0-9
 
-// Level title and credits fonts
+// Level title fonts
 patch_t *lt_font[LT_FONTSIZE];
-patch_t *cred_font[CRED_FONTSIZE];
 patch_t *ttlnum[10]; // act numbers (0-9)
 
 // Name tag fonts
@@ -204,6 +204,13 @@ void HU_LoadGraphics(void)
 			tny_font.chars[i] = NULL;
 		else
 			tny_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+
+		// cache the credits font for entire game execution (why not?)
+		sprintf(buffer, "CRFNT%.3d", j);
+		if (W_CheckNumForName(buffer) == LUMPERROR)
+			cred_font.chars[i] = NULL;
+		else
+			cred_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
 
 	hu_font.kerning = 0;
@@ -213,6 +220,10 @@ void HU_LoadGraphics(void)
 	tny_font.kerning = 0;
 	tny_font.spacewidth = 2;
 	tny_font.linespacing = 12;
+
+	cred_font.kerning = 0;
+	cred_font.spacewidth = 16;
+	cred_font.linespacing = 16;
 
 	j = LT_FONTSTART;
 	for (i = 0; i < LT_FONTSIZE; i++)
@@ -224,19 +235,6 @@ void HU_LoadGraphics(void)
 			lt_font[i] = NULL;
 		else
 			lt_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
-
-	// cache the credits font for entire game execution (why not?)
-	j = CRED_FONTSTART;
-	for (i = 0; i < CRED_FONTSIZE; i++)
-	{
-		sprintf(buffer, "CRFNT%.3d", j);
-		j++;
-
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			cred_font[i] = NULL;
-		else
-			cred_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
 
 	//cache numbers too!

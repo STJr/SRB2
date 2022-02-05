@@ -252,6 +252,8 @@ void V_DrawRightAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fix
 #define V_DrawSmallThinStringAtFixed(x,y,o,str) V_DrawFontStringAtFixed(x,y,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
 #define V_DrawCenteredSmallThinStringAtFixed(x,y,o,str) V_DrawCenteredFontStringAtFixed(x,y,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
 #define V_DrawRightAlignedSmallThinStringAtFixed(x,y,o,str) V_DrawRightAlignedFontStringAtFixed(x,y,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
+// draw a string using the credit font
+#define V_DrawCreditString(x,y,o,str) V_DrawFontStringAtFixed(x,y,o,FRACUNIT,FRACUNIT,str,cred_font)
 
 // Draw tall nums, used for menu, HUD, intermission
 void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num);
@@ -262,9 +264,6 @@ void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, UINT8 num);
 INT32 V_LevelNameWidth(const char *string);
 INT32 V_LevelNameHeight(const char *string);
 INT16 V_LevelActNumWidth(UINT8 num); // act number width
-
-void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string);
-INT32 V_CreditStringWidth(const char *string);
 
 // Draw a string using the nt_font
 void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string);
@@ -279,6 +278,7 @@ INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font);
 #define V_SmallStringWidth(str,o) V_FontStringWidth(str,o,hu_font)/2
 #define V_ThinStringWidth(str,o) V_FontStringWidth(str,o,tny_font)
 #define V_SmallThinStringWidth(str,o) V_FontStringWidth(str,o,tny_font)/2
+#define V_CreditStringWidth(str) V_FontStringWidth(str,0,cred_font)
 
 void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param);
 

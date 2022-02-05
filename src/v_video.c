@@ -2333,59 +2333,6 @@ void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, UINT8 num)
 	}
 }
 
-// Write a string using the credit font
-// NOTE: the text is centered for screens larger than the base width
-//
-void V_DrawCreditString(fixed_t x, fixed_t y, INT32 option, const char *string)
-{
-	INT32 w, c, dupx, dupy, scrwidth = BASEVIDWIDTH;
-	fixed_t cx = x, cy = y;
-	const char *ch = string;
-
-	// It's possible for string to be a null pointer
-	if (!string)
-		return;
-
-	if (option & V_NOSCALESTART)
-	{
-		dupx = vid.dupx;
-		dupy = vid.dupy;
-		scrwidth = vid.width;
-	}
-	else
-		dupx = dupy = 1;
-
-	if (option & V_NOSCALEPATCH)
-		scrwidth *= vid.dupx;
-
-	for (;;)
-	{
-		c = *ch++;
-		if (!c)
-			break;
-		if (c == '\n')
-		{
-			cx = x;
-			cy += (12*dupy)<<FRACBITS;
-			continue;
-		}
-
-		c = toupper(c) - CRED_FONTSTART;
-		if (c < 0 || c >= CRED_FONTSIZE)
-		{
-			cx += (16*dupx)<<FRACBITS;
-			continue;
-		}
-
-		w = cred_font[c]->width * dupx;
-		if ((cx>>FRACBITS) > scrwidth)
-			continue;
-
-		V_DrawSciencePatch(cx, cy, option, cred_font[c], FRACUNIT);
-		cx += w<<FRACBITS;
-	}
-}
-
 // Draw a string using the nt_font
 // Note that the outline is a seperate font set
 static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string)
@@ -2581,29 +2528,6 @@ INT32 V_NameTagWidth(const char *string)
 			w += 4;
 		else
 			w += (ntb_font[c]->width)+2;
-	}
-
-	return w;
-}
-
-// Find string width from cred_font chars
-//
-INT32 V_CreditStringWidth(const char *string)
-{
-	INT32 c, w = 0;
-	size_t i;
-
-	// It's possible for string to be a null pointer
-	if (!string)
-		return 0;
-
-	for (i = 0; i < strlen(string); i++)
-	{
-		c = toupper(string[i]) - CRED_FONTSTART;
-		if (c < 0 || c >= CRED_FONTSIZE)
-			w += 16;
-		else
-			w += cred_font[c]->width;
 	}
 
 	return w;

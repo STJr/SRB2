@@ -23,17 +23,12 @@
 //------------------------------------
 #define HU_FONTSTART '\x16' // the first font character
 #define HU_FONTEND '~'
-
 #define HU_FONTSIZE (HU_FONTEND - HU_FONTSTART + 1)
 
 // Level title font
 #define LT_FONTSTART '!' // the first font characters
 #define LT_FONTEND 'z' // the last font characters
 #define LT_FONTSIZE (LT_FONTEND - LT_FONTSTART + 1)
-
-#define CRED_FONTSTART '!' // the first font character
-#define CRED_FONTEND 'Z' // the last font character
-#define CRED_FONTSIZE (CRED_FONTEND - CRED_FONTSTART + 1)
 
 // Name tag font
 // Used by base and outline font set
@@ -54,7 +49,7 @@ typedef struct
 	UINT32 linespacing;
 } fontdef_t;
 
-extern fontdef_t hu_font, tny_font;
+extern fontdef_t hu_font, tny_font, cred_font;
 
 //------------------------------------
 //        sorted player lines
@@ -91,7 +86,6 @@ extern boolean chat_on;
 extern patch_t *tallnum[10];
 extern patch_t *nightsnum[10];
 extern patch_t *lt_font[LT_FONTSIZE];
-extern patch_t *cred_font[CRED_FONTSIZE];
 extern patch_t *ntb_font[NT_FONTSIZE];
 extern patch_t *nto_font[NT_FONTSIZE];
 extern patch_t *ttlnum[10];
