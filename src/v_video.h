@@ -254,15 +254,14 @@ void V_DrawRightAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fix
 #define V_DrawRightAlignedSmallThinStringAtFixed(x,y,o,str) V_DrawRightAlignedFontStringAtFixed(x,y,o,FRACUNIT/2,FRACUNIT/2,str,tny_font)
 // draw a string using the credit font
 #define V_DrawCreditString(x,y,o,str) V_DrawFontStringAtFixed(x,y,o,FRACUNIT,FRACUNIT,str,cred_font)
+// draw a string using the level title font
+#define V_DrawLevelTitle(x,y,o,str) V_DrawFontString(x,y,o|V_ALLOWLOWERCASE,FRACUNIT,FRACUNIT,str,lt_font)
 
 // Draw tall nums, used for menu, HUD, intermission
 void V_DrawTallNum(INT32 x, INT32 y, INT32 flags, INT32 num);
 void V_DrawPaddedTallNum(INT32 x, INT32 y, INT32 flags, INT32 num, INT32 digits);
 void V_DrawLevelActNum(INT32 x, INT32 y, INT32 flags, UINT8 num);
 
-// Find string width from lt_font chars
-INT32 V_LevelNameWidth(const char *string);
-INT32 V_LevelNameHeight(const char *string);
 INT16 V_LevelActNumWidth(UINT8 num); // act number width
 
 // Draw a string using the nt_font
@@ -270,8 +269,9 @@ void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecol
 INT32 V_CountNameTagLines(const char *string);
 INT32 V_NameTagWidth(const char *string);
 
-// Find string width from supplied font chars
+// Find string width or height from supplied font chars
 INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font);
+INT32 V_FontStringHeight(const char *string, INT32 option, fontdef_t font);
 
 // Defines for old string width functions.
 #define V_StringWidth(str,o) V_FontStringWidth(str,o,hu_font)
@@ -279,6 +279,8 @@ INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font);
 #define V_ThinStringWidth(str,o) V_FontStringWidth(str,o,tny_font)
 #define V_SmallThinStringWidth(str,o) V_FontStringWidth(str,o,tny_font)/2
 #define V_CreditStringWidth(str) V_FontStringWidth(str,0,cred_font)
+#define V_LevelNameWidth(str) V_FontStringWidth(str,V_ALLOWLOWERCASE,lt_font)
+#define V_LevelNameHeight(str) V_FontStringHeight(str,V_ALLOWLOWERCASE,lt_font)
 
 void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param);
 

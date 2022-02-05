@@ -63,12 +63,11 @@
 fontdef_t hu_font;
 fontdef_t tny_font;
 fontdef_t cred_font;
+fontdef_t lt_font;
 
 patch_t *tallnum[10]; // 0-9
 patch_t *nightsnum[10]; // 0-9
 
-// Level title fonts
-patch_t *lt_font[LT_FONTSIZE];
 patch_t *ttlnum[10]; // act numbers (0-9)
 
 // Name tag fonts
@@ -211,6 +210,13 @@ void HU_LoadGraphics(void)
 			cred_font.chars[i] = NULL;
 		else
 			cred_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+
+		// level title font
+		sprintf(buffer, "LTFNT%.3d", j);
+		if (W_CheckNumForName(buffer) == LUMPERROR)
+			lt_font.chars[i] = NULL;
+		else
+			lt_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
 
 	hu_font.kerning = 0;
@@ -225,17 +231,9 @@ void HU_LoadGraphics(void)
 	cred_font.spacewidth = 16;
 	cred_font.linespacing = 16;
 
-	j = LT_FONTSTART;
-	for (i = 0; i < LT_FONTSIZE; i++)
-	{
-		sprintf(buffer, "LTFNT%.3d", j);
-		j++;
-
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			lt_font[i] = NULL;
-		else
-			lt_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
+	lt_font.kerning = 0;
+	lt_font.spacewidth = 16;
+	lt_font.linespacing = 20;
 
 	//cache numbers too!
 	for (i = 0; i < 10; i++)
@@ -257,26 +255,17 @@ void HU_LoadGraphics(void)
 		ttlnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
 
-	// cache the base name tag font for entire game execution
+	// cache the base name tag font & outline for entire game execution
 	j = NT_FONTSTART;
-	for (i = 0; i < NT_FONTSIZE; i++)
+	for (i = 0; i < NT_FONTSIZE; i++, j++)
 	{
 		sprintf(buffer, "NTFNT%.3d", j);
-		j++;
-
 		if (W_CheckNumForName(buffer) == LUMPERROR)
 			ntb_font[i] = NULL;
 		else
 			ntb_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
 
-	// cache the outline name tag font for entire game execution
-	j = NT_FONTSTART;
-	for (i = 0; i < NT_FONTSIZE; i++)
-	{
 		sprintf(buffer, "NTFNO%.3d", j);
-		j++;
-
 		if (W_CheckNumForName(buffer) == LUMPERROR)
 			nto_font[i] = NULL;
 		else

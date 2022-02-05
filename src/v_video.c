@@ -2533,116 +2533,6 @@ INT32 V_NameTagWidth(const char *string)
 	return w;
 }
 
-// Write a string using the level title font
-// NOTE: the text is centered for screens larger than the base width
-//
-void V_DrawLevelTitle(INT32 x, INT32 y, INT32 option, const char *string)
-{
-	INT32 w, c, cx = x, cy = y, dupx, dupy, scrwidth, left = 0;
-	const char *ch = string;
-	INT32 charflags = (option & V_CHARCOLORMASK);
-	const UINT8 *colormap = NULL;
-
-	if (option & V_NOSCALESTART)
-	{
-		dupx = vid.dupx;
-		dupy = vid.dupy;
-		scrwidth = vid.width;
-	}
-	else
-	{
-		dupx = dupy = 1;
-		scrwidth = vid.width/vid.dupx;
-		left = (scrwidth - BASEVIDWIDTH)/2;
-		scrwidth -= left;
-	}
-
-	if (option & V_NOSCALEPATCH)
-		scrwidth *= vid.dupx;
-
-	for (;;ch++)
-	{
-		if (!*ch)
-			break;
-		if (*ch & 0x80) //color parsing -x 2.16.09
-		{
-			// manually set flags override color codes
-			if (!(option & V_CHARCOLORMASK))
-				charflags = ((*ch & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK;
-			continue;
-		}
-		if (*ch == '\n')
-		{
-			cx = x;
-			cy += 12*dupy;
-			continue;
-		}
-
-		c = *ch - LT_FONTSTART;
-		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
-		{
-			cx += 16*dupx;
-			continue;
-		}
-
-		w = lt_font[c]->width * dupx;
-
-		if (cx > scrwidth)
-			continue;
-		if (cx+left + w < 0) //left boundary check
-		{
-			cx += w;
-			continue;
-		}
-
-		colormap = V_GetStringColormap(charflags);
-		V_DrawFixedPatch(cx<<FRACBITS, cy<<FRACBITS, FRACUNIT, option, lt_font[c], colormap);
-
-		cx += w;
-	}
-}
-
-// Find string width from lt_font chars
-//
-INT32 V_LevelNameWidth(const char *string)
-{
-	INT32 c, w = 0;
-	size_t i;
-
-	for (i = 0; i < strlen(string); i++)
-	{
-		if (string[i] & 0x80)
-			continue;
-		c = string[i] - LT_FONTSTART;
-		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
-			w += 16;
-		else
-			w += lt_font[c]->width;
-	}
-
-	return w;
-}
-
-// Find max height of the string
-//
-INT32 V_LevelNameHeight(const char *string)
-{
-	INT32 c, w = 0;
-	size_t i;
-
-	for (i = 0; i < strlen(string); i++)
-	{
-		c = string[i] - LT_FONTSTART;
-		if (c < 0 || c >= LT_FONTSIZE || !lt_font[c])
-			continue;
-
-		if (lt_font[c]->height > w)
-			w = lt_font[c]->height;
-	}
-
-	return w;
-}
-
 // For ST_drawTitleCard
 // Returns the width of the act num patch(es)
 INT16 V_LevelActNumWidth(UINT8 num)
@@ -2687,7 +2577,7 @@ INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
 	{
 		if (string[i] & 0x80)
 			continue;
-		c = toupper(string[i]) - HU_FONTSTART;
+		c = ((option & V_ALLOWLOWERCASE ? string[i] : toupper(string[i])) - HU_FONTSTART);
 		if (c < 0 || c >= HU_FONTSIZE || !font.chars[c])
 			w += spacewidth;
 		else
@@ -2698,6 +2588,26 @@ INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
 		w *= vid.dupx;
 
 	return w;
+}
+
+// Find max string height from supplied font characters
+//
+INT32 V_FontStringHeight(const char *string, INT32 option, fontdef_t font)
+{
+	INT32 c, h = 0;
+	size_t i;
+
+	for (i = 0; i < strlen(string); i++)
+	{
+		c = string[i] - HU_FONTSTART;
+		if (c < 0 || c >= HU_FONTSIZE || !font.chars[c])
+			continue;
+
+		if (font.chars[c]->height > h)
+			h = font.chars[c]->height;
+	}
+
+	return h;
 }
 
 boolean *heatshifter = NULL;
