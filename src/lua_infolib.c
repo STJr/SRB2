@@ -812,6 +812,7 @@ boolean LUA_SetLuaAction(void *stv, const char *action)
 	return true; // action successfully set.
 }
 
+static UINT8 superstack[NUMACTIONS];
 boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 {
 	I_Assert(actor != NULL);
@@ -819,7 +820,7 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 	if (actionsoverridden[actionnum][0] == LUA_REFNIL)
 	{
 		// The action was not overridden at all,
-		// so call the hardcoded version.
+		// so just call the hardcoded version.
 		return false;
 	}
 
@@ -830,24 +831,27 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 
 		// 0 is just the reference to the one we're calling,
 		// so we increment here.
-		superstack++;
+		superstack[actionnum]++;
 
-		if (superstack >= MAX_ACTION_RECURSION)
+		if (superstack[actionnum] >= MAX_ACTION_RECURSION)
 		{
 			CONS_Alert(CONS_WARNING, "Max Lua super recursion reached! Cool it on calling super!\n");
+			superstack[actionnum] = 0;
 			return false;
 		}
 	}
-	else
-	{
-		// Not calling itself, reset the super counter.
-		superstack = 0;
-	}
 
-	if (actionsoverridden[actionnum][superstack] == LUA_REFNIL)
+	if (actionsoverridden[actionnum][superstack[actionnum]] == LUA_REFNIL)
 	{
 		// No Lua reference beyond this point.
 		// Let it call the hardcoded function instead.
+
+		if (superstack[actionnum])
+		{
+			// Decrement super stack
+			superstack[actionnum]--;
+		}
+
 		return false;
 	}
 
@@ -855,7 +859,7 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
 	// Push function by reference.
-	lua_getref(gL, actionsoverridden[actionnum][superstack]);
+	lua_getref(gL, actionsoverridden[actionnum][superstack[actionnum]]);
 
 	if (lua_isnil(gL, -1)) // no match
 	{
@@ -882,6 +886,12 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 
 	LUA_Call(gL, 3, 0, -(2 + 3));
 	lua_pop(gL, -1); // Error handler
+
+	if (superstack[actionnum])
+	{
+		// Decrement super stack
+		superstack[actionnum]--;
+	}
 
 	--luaactionstack;
 	luaactions[luaactionstack] = NULL;

@@ -43,7 +43,6 @@ extern boolean introchanged;
 #define MAX_ACTION_RECURSION 30
 extern const char *luaactions[MAX_ACTION_RECURSION];
 extern UINT8 luaactionstack;
-extern UINT8 superstack;
 
 // If the dehacked patch does not match this version, we throw a warning
 #define PATCHVERSION 220

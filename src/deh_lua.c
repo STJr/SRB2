@@ -214,7 +214,6 @@ static int action_call(lua_State *L)
 // Set in lua_infolib.
 const char *luaactions[MAX_ACTION_RECURSION];
 UINT8 luaactionstack = 0;
-UINT8 superstack = 0;
 
 static int lib_dummysuper(lua_State *L)
 {
