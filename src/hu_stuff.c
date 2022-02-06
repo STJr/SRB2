@@ -1773,64 +1773,25 @@ static void HU_DrawChat_Old(void)
 }
 #endif
 
-// draw the Crosshair, at the exact center of the view.
-//
+// Draw crosshairs at the exact center of the view.
+// In splitscreen, crosshairs are stretched vertically to compensate for V_PERPLAYER squishing them.
 // Crosshairs are pre-cached at HU_Init
 
-static inline void HU_DrawCrosshair(void)
+static inline void HU_DrawCrosshairs(void)
 {
-	INT32 i, y, dupz;
+	INT32 cross1 = cv_crosshair.value & 3;
+	INT32 cross2 = cv_crosshair2.value & 3;
 
-	i = cv_crosshair.value & 3;
-	if (!i)
+	if (automapactive || demoplayback)
 		return;
 
-	if ((netgame || multiplayer) && players[displayplayer].spectator)
-		return;
+	stplyr = ((stplyr == &players[displayplayer]) ? &players[secondarydisplayplayer] : &players[displayplayer]);
+	if (!players[displayplayer].spectator && (!camera.chase || ticcmd_ztargetfocus[0]) && cross1)
+		V_DrawStretchyFixedPatch((BASEVIDWIDTH/2)<<FRACBITS, (BASEVIDHEIGHT/2)<<FRACBITS, FRACUNIT, splitscreen ? 2*FRACUNIT : FRACUNIT, V_TRANSLUCENT|V_PERPLAYER, crosshair[cross1 - 1], NULL);
 
-#ifdef HWRENDER
-	if (rendermode != render_soft)
-		y = (INT32)gl_basewindowcentery;
-	else
-#endif
-		y = viewwindowy + (viewheight>>1);
-
-	dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-
-	V_DrawFixedPatch(vid.width<<(FRACBITS-1), y<<FRACBITS, FRACUNIT/dupz, V_TRANSLUCENT, crosshair[i - 1], NULL);
-}
-
-static inline void HU_DrawCrosshair2(void)
-{
-	INT32 i, y, dupz;
-
-	i = cv_crosshair2.value & 3;
-	if (!i)
-		return;
-
-	if ((netgame || multiplayer) && players[secondarydisplayplayer].spectator)
-		return;
-
-#ifdef HWRENDER
-	if (rendermode != render_soft)
-		y = (INT32)gl_basewindowcentery;
-	else
-#endif
-		y = viewwindowy + (viewheight>>1);
-
-	if (!splitscreen)
-		return;
-
-	#ifdef HWRENDER
-		if (rendermode != render_soft)
-			y += (INT32)gl_viewheight;
-		else
-	#endif
-			y += viewheight;
-
-	dupz = (vid.dupx < vid.dupy ? vid.dupx : vid.dupy);
-
-	V_DrawFixedPatch(vid.width<<(FRACBITS-1), y<<FRACBITS, FRACUNIT/dupz, V_TRANSLUCENT, crosshair[i - 1], NULL);
+	stplyr = ((stplyr == &players[displayplayer]) ? &players[secondarydisplayplayer] : &players[displayplayer]);
+	if (!players[secondarydisplayplayer].spectator && (!camera2.chase || ticcmd_ztargetfocus[1]) && cross2 && splitscreen)
+		V_DrawStretchyFixedPatch((BASEVIDWIDTH/2)<<FRACBITS, (BASEVIDHEIGHT/2)<<FRACBITS, FRACUNIT, 2*FRACUNIT, V_TRANSLUCENT|V_PERPLAYER, crosshair[cross2 - 1], NULL);
 }
 
 static void HU_DrawCEcho(void)
@@ -2024,19 +1985,9 @@ void HU_Drawer(void)
 	if (gamestate != GS_LEVEL)
 		return;
 
-	// draw the crosshair, not when viewing demos nor with chasecam
+	// draw the crosshair
 	if (LUA_HudEnabled(hud_crosshair))
-	{
-		if (!automapactive && cv_crosshair.value && !demoplayback &&
-			(!camera.chase || ticcmd_ztargetfocus[0])
-		&& !players[displayplayer].spectator)
-			HU_DrawCrosshair();
-
-		if (!automapactive && cv_crosshair2.value && !demoplayback &&
-			(!camera2.chase || ticcmd_ztargetfocus[1])
-		&& !players[secondarydisplayplayer].spectator)
-			HU_DrawCrosshair2();
-	}
+		HU_DrawCrosshairs();
 
 	// draw desynch text
 	if (hu_redownloadinggamestate)
