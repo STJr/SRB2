@@ -165,7 +165,7 @@ boolean S_MusicPaused(void);
 boolean S_MusicNotInFocus(void);
 musictype_t S_MusicType(void);
 const char *S_MusicName(void);
-boolean S_MusicExists(const char *mnaame, boolean checkMIDI, boolean checkDigi);
+boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
 #define S_DigExists(a) S_MusicExists(a, false, true)
 #define S_MIDIExists(a) S_MusicExists(a, true, false)
 
