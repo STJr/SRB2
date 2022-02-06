@@ -4373,7 +4373,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
-	lastloadedmaplumpnum = W_CheckNumForName(maplumpname);
+	lastloadedmaplumpnum = W_CheckNumForMap(maplumpname);
 	if (lastloadedmaplumpnum == LUMPERROR)
 		I_Error("Map %s not found.\n", maplumpname);
 
