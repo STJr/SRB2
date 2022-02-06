@@ -66,7 +66,7 @@ const char *const sfxinfo_wopt[] = {
 	"caption",
 	NULL};
 
-boolean actionsoverridden[NUMACTIONS] = {false};
+int actionsoverridden[NUMACTIONS][MAX_ACTION_RECURSION];
 
 //
 // Sprite Names
@@ -645,8 +645,8 @@ static void A_Lua(mobj_t *actor)
 		if (lua_rawequal(gL, -1, -4))
 		{
 			found = true;
-			superactions[superstack] = lua_tostring(gL, -2); // "A_ACTION"
-			++superstack;
+			luaactions[luaactionstack] = lua_tostring(gL, -2); // "A_ACTION"
+			++luaactionstack;
 			lua_pop(gL, 2); // pop the name and function
 			break;
 		}
@@ -661,8 +661,8 @@ static void A_Lua(mobj_t *actor)
 
 	if (found)
 	{
-		--superstack;
-		superactions[superstack] = NULL;
+		--luaactionstack;
+		luaactions[luaactionstack] = NULL;
 	}
 }
 
@@ -816,18 +816,46 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 {
 	I_Assert(actor != NULL);
 
-	if (!actionsoverridden[actionnum]) // The action is not overriden,
-		return false; // action not called.
+	if (actionsoverridden[actionnum][0] == LUA_REFNIL)
+	{
+		// The action was not overridden at all,
+		// so call the hardcoded version.
+		return false;
+	}
 
-	if (superstack && fasticmp(actionpointers[actionnum].name, superactions[superstack-1])) // the action is calling itself,
-		return false; // let it call the hardcoded function instead.
+	if (luaactionstack && fasticmp(actionpointers[actionnum].name, luaactions[luaactionstack-1]))
+	{
+		// The action is calling itself,
+		// so look up the next Lua reference in its stack.
 
+		// 0 is just the reference to the one we're calling,
+		// so we increment here.
+		superstack++;
+
+		if (superstack >= MAX_ACTION_RECURSION)
+		{
+			CONS_Alert(CONS_WARNING, "Max Lua super recursion reached! Cool it on calling super!\n");
+			return false;
+		}
+	}
+	else
+	{
+		// Not calling itself, reset the super counter.
+		superstack = 0;
+	}
+
+	if (actionsoverridden[actionnum][superstack] == LUA_REFNIL)
+	{
+		// No Lua reference beyond this point.
+		// Let it call the hardcoded function instead.
+		return false;
+	}
+
+	// Push error function
 	lua_pushcfunction(gL, LUA_GetErrorMessage);
 
-	// grab function by uppercase name.
-	lua_getfield(gL, LUA_REGISTRYINDEX, LREG_ACTIONS);
-	lua_getfield(gL, -1, actionpointers[actionnum].name);
-	lua_remove(gL, -2); // pop LREG_ACTIONS
+	// Push function by reference.
+	lua_getref(gL, actionsoverridden[actionnum][superstack]);
 
 	if (lua_isnil(gL, -1)) // no match
 	{
@@ -835,7 +863,7 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 		return false; // action not called.
 	}
 
-	if (superstack == MAXRECURSION)
+	if (luaactionstack >= MAX_ACTION_RECURSION)
 	{
 		CONS_Alert(CONS_WARNING, "Max Lua Action recursion reached! Cool it on the calling A_Action functions from inside A_Action functions!\n");
 		lua_pop(gL, 2); // pop function and error handler
@@ -849,14 +877,14 @@ boolean LUA_CallAction(enum actionnum actionnum, mobj_t *actor)
 	lua_pushinteger(gL, var1);
 	lua_pushinteger(gL, var2);
 
-	superactions[superstack] = actionpointers[actionnum].name;
-	++superstack;
+	luaactions[luaactionstack] = actionpointers[actionnum].name;
+	++luaactionstack;
 
 	LUA_Call(gL, 3, 0, -(2 + 3));
 	lua_pop(gL, -1); // Error handler
 
-	--superstack;
-	superactions[superstack] = NULL;
+	--luaactionstack;
+	luaactions[luaactionstack] = NULL;
 	return true; // action successfully called.
 }
 
