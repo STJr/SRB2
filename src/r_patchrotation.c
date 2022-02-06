@@ -230,7 +230,7 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 	width = (maxx - minx);
 	height = (maxy - miny);
 
-	if ((unsigned)(width * height) != size)
+	if ((unsigned)(width * height) > size)
 	{
 		UINT16 *src, *dest;
 

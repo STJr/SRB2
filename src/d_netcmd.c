@@ -47,6 +47,7 @@
 #include "m_cond.h"
 #include "m_anigif.h"
 #include "md5.h"
+#include "m_perfstats.h"
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -374,7 +375,14 @@ consvar_t cv_sleep = CVAR_INIT ("cpusleep", "1", CV_SAVE, sleeping_cons_t, NULL)
 
 static CV_PossibleValue_t perfstats_cons_t[] = {
 	{0, "Off"}, {1, "Rendering"}, {2, "Logic"}, {3, "ThinkFrame"}, {0, NULL}};
-consvar_t cv_perfstats = CVAR_INIT ("perfstats", "Off", 0, perfstats_cons_t, NULL);
+consvar_t cv_perfstats = CVAR_INIT ("perfstats", "Off", CV_CALL, perfstats_cons_t, PS_PerfStats_OnChange);
+static CV_PossibleValue_t ps_samplesize_cons_t[] = {
+	{1, "MIN"}, {1000, "MAX"}, {0, NULL}};
+consvar_t cv_ps_samplesize = CVAR_INIT ("ps_samplesize", "1", CV_CALL, ps_samplesize_cons_t, PS_SampleSize_OnChange);
+static CV_PossibleValue_t ps_descriptor_cons_t[] = {
+	{1, "Average"}, {2, "SD"}, {3, "Minimum"}, {4, "Maximum"}, {0, NULL}};
+consvar_t cv_ps_descriptor = CVAR_INIT ("ps_descriptor", "Average", 0, ps_descriptor_cons_t, NULL);
+
 consvar_t cv_freedemocamera = CVAR_INIT("freedemocamera", "Off", CV_SAVE, CV_OnOff, NULL);
 
 char timedemo_name[256];
@@ -867,6 +875,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_soundtest);
 
 	CV_RegisterVar(&cv_perfstats);
+	CV_RegisterVar(&cv_ps_samplesize);
+	CV_RegisterVar(&cv_ps_descriptor);
 
 	// ingame object placing
 	COM_AddCommand("objectplace", Command_ObjectPlace_f);
@@ -3223,7 +3233,7 @@ static void Command_RunSOC(void)
 static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum)
 {
 	char filename[256];
-	filestatus_t ncs = FS_NOTFOUND;
+	filestatus_t ncs = FS_NOTCHECKED;
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -3347,10 +3357,9 @@ static void Command_Addfile(void)
 				break;
 		++p;
 
-		// check total packet size and no of files currently loaded
-		// See W_InitFile in w_wad.c
-		if ((numwadfiles >= MAX_WADFILES)
-		|| ((packetsizetally + nameonlylength(fn) + FILENEEDEDSIZE) > MAXFILENEEDED*sizeof(UINT8)))
+		// check no of files currently loaded
+		// See W_LoadWadFile in w_wad.c
+		if (numwadfiles >= MAX_WADFILES)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
 			return;
@@ -3379,6 +3388,9 @@ static void Command_Addfile(void)
 
 			for (i = 0; i < numwadfiles; i++)
 			{
+				if (wadfiles[i]->type == RET_FOLDER)
+					continue;
+
 				if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
 				{
 					CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
@@ -3469,10 +3481,9 @@ static void Command_Addfolder(void)
 			continue;
 		}
 
-		// check total packet size and no of files currently loaded
-		// See W_InitFile in w_wad.c
-		if ((numwadfiles >= MAX_WADFILES)
-		|| ((packetsizetally + strlen(fn) + FILENEEDEDSIZE) > MAXFILENEEDED*sizeof(UINT8)))
+		// check no of files currently loaded
+		// See W_LoadWadFile in w_wad.c
+		if (numwadfiles >= MAX_WADFILES)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
 			return;
@@ -3534,7 +3545,7 @@ static void Command_Addfolder(void)
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 {
 	char filename[241];
-	filestatus_t ncs = FS_NOTFOUND;
+	filestatus_t ncs = FS_NOTCHECKED;
 	UINT8 md5sum[16];
 	boolean kick = false;
 	boolean toomany = false;
@@ -3559,9 +3570,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	// See W_InitFile in w_wad.c
-	if ((numwadfiles >= MAX_WADFILES)
-	|| ((packetsizetally + nameonlylength(filename) + FILENEEDEDSIZE) > MAXFILENEEDED*sizeof(UINT8)))
+	if (numwadfiles >= MAX_WADFILES)
 		toomany = true;
 	else
 		ncs = findfile(filename,md5sum,true);
@@ -3594,7 +3603,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 static void Got_RequestAddfoldercmd(UINT8 **cp, INT32 playernum)
 {
 	char path[241];
-	filestatus_t ncs = FS_NOTFOUND;
+	filestatus_t ncs = FS_NOTCHECKED;
 	boolean kick = false;
 	boolean toomany = false;
 	INT32 i,j;
@@ -3619,9 +3628,7 @@ static void Got_RequestAddfoldercmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	// See W_InitFile in w_wad.c
-	if ((numwadfiles >= MAX_WADFILES)
-	|| ((packetsizetally + strlen(path) + FILENEEDEDSIZE) > MAXFILENEEDED*sizeof(UINT8)))
+	if (numwadfiles >= MAX_WADFILES)
 		toomany = true;
 	else
 		ncs = findfolder(path);
@@ -3652,7 +3659,7 @@ static void Got_RequestAddfoldercmd(UINT8 **cp, INT32 playernum)
 static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 {
 	char filename[241];
-	filestatus_t ncs = FS_NOTFOUND;
+	filestatus_t ncs = FS_NOTCHECKED;
 	UINT8 md5sum[16];
 
 	READSTRINGN(*cp, filename, 240);
@@ -3700,7 +3707,7 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 static void Got_Addfoldercmd(UINT8 **cp, INT32 playernum)
 {
 	char path[241];
-	filestatus_t ncs = FS_NOTFOUND;
+	filestatus_t ncs = FS_NOTCHECKED;
 
 	READSTRINGN(*cp, path, 240);
 
@@ -3744,13 +3751,19 @@ static void Command_ListWADS_f(void)
 {
 	INT32 i = numwadfiles;
 	char *tempname;
-	CONS_Printf(M_GetText("There are %d wads loaded:\n"),numwadfiles);
+
+#ifdef ENFORCE_WAD_LIMIT
+	CONS_Printf(M_GetText("There are %d/%d files loaded:\n"),numwadfiles,MAX_WADFILES);
+#else
+	CONS_Printf(M_GetText("There are %d files loaded:\n"),numwadfiles);
+#endif
+
 	for (i--; i >= 0; i--)
 	{
 		nameonly(tempname = va("%s", wadfiles[i]->filename));
 		if (!i)
 			CONS_Printf("\x82 IWAD\x80: %s\n", tempname);
-		else if (i <= mainwads)
+		else if (i < mainwads)
 			CONS_Printf("\x82 * %.2d\x80: %s\n", i, tempname);
 		else if (!wadfiles[i]->important)
 			CONS_Printf("\x86   %.2d: %s\n", i, tempname);

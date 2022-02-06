@@ -484,6 +484,19 @@ void CON_Init(void)
 		Unlock_state();
 	}
 }
+
+void CON_StartRefresh(void)
+{
+	if (con_startup)
+		con_refresh = true;
+}
+
+void CON_StopRefresh(void)
+{
+	if (con_startup)
+		con_refresh = false;
+}
+
 // Console input initialization
 //
 static void CON_InputInit(void)

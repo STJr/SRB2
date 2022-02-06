@@ -1042,6 +1042,7 @@ static mobj_t *SearchMarioNode(msecnode_t *node)
 		case MT_THUNDERCOIN_ORB:
 		case MT_IVSP:
 		case MT_SUPERSPARK:
+		case MT_BOXSPARKLE:
 		case MT_RAIN:
 		case MT_SNOWFLAKE:
 		case MT_SPLISH:
@@ -1515,8 +1516,8 @@ void T_EachTimeThinker(eachtime_t *eachtime)
 	{
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (P_IsPlayerValid(i) && playersArea[i])
-				continue;
+			if (P_IsPlayerValid(i) && !playersArea[i])
+				return;
 		}
 	}
 

@@ -41,6 +41,7 @@ typedef struct
 {
 	size_t *elements;
 	size_t count;
+	size_t capacity;
 } taggroup_t;
 
 extern bitarray_t tags_available[];

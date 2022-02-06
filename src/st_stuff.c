@@ -1176,7 +1176,17 @@ static void ST_drawInput(void)
 			break;
 
 		case CS_SIMPLE:
-			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "SIMPLE");
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "AUTOMATIC");
+			y -= 8;
+			break;
+
+		case CS_STANDARD:
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "MANUAL");
+			y -= 8;
+			break;
+
+		case CS_LEGACY:
+			V_DrawThinString(x, y, hudinfo[HUD_LIVES].f, "STRAFE");
 			y -= 8;
 			break;
 
@@ -2037,9 +2047,8 @@ static void ST_drawNiGHTSHUD(void)
 		else
 			numbersize = 48/2;
 
-		if ((oldspecialstage && leveltime & 2)
-			&& (stplyr->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER))
-			&& !(stplyr->powers[pw_shield] & SH_PROTECTWATER))
+		if ((oldspecialstage && leveltime & 2) &&
+			(stplyr->mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(stplyr->powers[pw_shield] & ((stplyr->mo->eflags & MFE_TOUCHLAVA) ? SH_PROTECTFIRE : SH_PROTECTWATER))))
 			col = SKINCOLOR_ORANGE;
 
 		ST_DrawNightsOverlayNum((160 + numbersize)<<FRACBITS, 14<<FRACBITS, FRACUNIT, V_PERPLAYER|V_SNAPTOTOP, realnightstime, nightsnum, col);
@@ -2188,7 +2197,7 @@ static void ST_drawMatchHUD(void)
 		{
 			sprintf(penaltystr, "-%d", stplyr->ammoremoval);
 			V_DrawString(offset + 8 + stplyr->ammoremovalweapon * 20, y,
-				V_REDMAP|V_SNAPTOBOTTOM, penaltystr);
+				V_REDMAP|V_SNAPTOBOTTOM|V_PERPLAYER, penaltystr);
 		}
 
 	}
@@ -2292,7 +2301,7 @@ static void ST_drawTextHUD(void)
 
 			for (i = 0; i < MAXPLAYERS; i++)
 			{
-				if (!playeringame[i] || players[i].spectator)
+				if (!playeringame[i] || players[i].spectator || players[i].bot)
 					continue;
 				if (players[i].lives <= 0)
 					continue;
