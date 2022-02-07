@@ -3548,6 +3548,7 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 // because sadly no one remembers this place while searching for full state names.
 const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity testing later.
 	"MT_NULL",
+	"MT_RAY",
 	"MT_UNKNOWN",
 
 	"MT_THOK", // Thok! mobj
