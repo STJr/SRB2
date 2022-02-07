@@ -7978,6 +7978,9 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		P_SetScale(mobj, mobj->target->scale);
 	}
 	break;
+	case MT_TUTORIALFLOWER:
+		mobj->angle += FixedAngle(3*FRACUNIT);
+	break;
 	case MT_VWREF:
 	case MT_VWREB:
 	{
@@ -12825,6 +12828,25 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		P_SpawnMobjFromMobj(mobj, FRACUNIT, 0, 0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_22h;
 		P_SpawnMobjFromMobj(mobj, 0, FRACUNIT, 0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_157h;
 		P_SpawnMobjFromMobj(mobj, -FRACUNIT, 0, 0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
+	}
+	break;
+	case MT_TUTORIALPLANT:
+	{
+		INT32 i;
+		mobj_t *segment;
+		for (i = 0; i < 6; i++)
+		{
+			segment = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_TUTORIALLEAF);
+			segment->angle = mobj->angle + FixedAngle(i*60*FRACUNIT);
+			P_SetMobjState(segment, S_TUTORIALLEAF1 + mthing->extrainfo);
+		}
+		for (i = 0; i < 3; i++)
+		{
+			segment = P_SpawnMobjFromMobj(mobj, 0, 0, 112*FRACUNIT, MT_TUTORIALFLOWER);
+			segment->angle = mobj->angle + FixedAngle(i*120*FRACUNIT);
+			P_SetMobjState(segment, S_TUTORIALFLOWER1 + mthing->extrainfo);
+		}
+		P_SetMobjState(P_SpawnMobjFromMobj(mobj, 0, 0, 112*FRACUNIT, MT_TUTORIALFLOWERF), S_TUTORIALFLOWERF1 + mthing->extrainfo);
 	}
 	break;
 	case MT_CEZPOLE1:
