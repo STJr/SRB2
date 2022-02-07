@@ -753,7 +753,7 @@ void *Picture_TextureToFlat(size_t trickytex)
 	UINT8 *desttop, *dest, *deststop;
 	UINT8 *source;
 
-	if (trickytex >= (unsigned)numtextures)
+	if (trickytex < 1 || trickytex > (unsigned)numtextures)
 		I_Error("Picture_TextureToFlat: invalid texture number!");
 
 	// Check the texture cache

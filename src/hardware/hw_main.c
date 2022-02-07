@@ -1660,6 +1660,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 				}
 
+				if (!texnum)
+					continue;
+
 				h  = P_GetFFloorTopZAt   (rover, v1x, v1y);
 				hS = P_GetFFloorTopZAt   (rover, v2x, v2y);
 				l  = P_GetFFloorBottomZAt(rover, v1x, v1y);
@@ -1816,6 +1819,10 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					newline = rover->master->frontsector->lines[0] + linenum;
 					texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 				}
+
+				if (!texnum)
+					continue;
+
 				h  = P_GetFFloorTopZAt   (rover, v1x, v1y);
 				hS = P_GetFFloorTopZAt   (rover, v2x, v2y);
 				l  = P_GetFFloorBottomZAt(rover, v1x, v1y);

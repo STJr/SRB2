@@ -1254,14 +1254,17 @@ void R_PrecacheLevel(void)
 	texturepresent = calloc(numtextures, sizeof (*texturepresent));
 	if (texturepresent == NULL) I_Error("%s: Out of memory looking up textures", "R_PrecacheLevel");
 
+	// offset by 1 for index from 1
+	texturepresent--;
+
 	for (j = 0; j < numsides; j++)
 	{
-		// huh, a potential bug here????
-		if (sides[j].toptexture >= 0 && sides[j].toptexture < numtextures)
+		// check if any of these textures are valid
+		if (sides[j].toptexture > 0 && sides[j].toptexture <= numtextures)
 			texturepresent[sides[j].toptexture] = 1;
-		if (sides[j].midtexture >= 0 && sides[j].midtexture < numtextures)
+		if (sides[j].midtexture > 0 && sides[j].midtexture <= numtextures)
 			texturepresent[sides[j].midtexture] = 1;
-		if (sides[j].bottomtexture >= 0 && sides[j].bottomtexture < numtextures)
+		if (sides[j].bottomtexture > 0 && sides[j].bottomtexture <= numtextures)
 			texturepresent[sides[j].bottomtexture] = 1;
 	}
 
@@ -1271,7 +1274,7 @@ void R_PrecacheLevel(void)
 	texturepresent[skytexture] = 1;
 
 	texturememory = 0;
-	for (j = 0; j < (unsigned)numtextures; j++)
+	for (j = 1; j <= (unsigned)numtextures; j++)
 	{
 		if (!texturepresent[j])
 			continue;
@@ -1281,7 +1284,7 @@ void R_PrecacheLevel(void)
 		// pre-caching individual patches that compose textures became obsolete,
 		// since we cache entire composite textures
 	}
-	free(texturepresent);
+	free(&texturepresent[1]); // offset from 1 points back to original memory
 
 	//
 	// Precache sprites.

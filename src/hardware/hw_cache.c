@@ -779,13 +779,13 @@ GLMapTexture_t *HWR_GetTexture(INT32 tex)
 {
 	GLMapTexture_t *grtex;
 #ifdef PARANOIA
-	if ((unsigned)tex >= gl_numtextures)
-		I_Error("HWR_GetTexture: tex >= numtextures\n");
+	if (tex < 1 || (unsigned)tex > gl_numtextures)
+		I_Error("HWR_GetTexture: tex > numtextures\n");
 #endif
 
 	// Every texture in memory, stored in the
 	// hardware renderer's bit depth format. Wow!
-	grtex = &gl_textures[tex];
+	grtex = &gl_textures[tex - 1];
 
 	// Generate texture if missing from the cache
 	if (!grtex->mipmap.data && !grtex->mipmap.downloaded)
@@ -901,8 +901,8 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 		GLMapTexture_t *grtex;
 		INT32 texturenum = levelflat->u.texture.num;
 #ifdef PARANOIA
-		if ((unsigned)texturenum >= gl_numtextures)
-			I_Error("HWR_GetLevelFlat: texturenum >= numtextures");
+		if (texturenum < 1 || (unsigned)texturenum > gl_numtextures)
+			I_Error("HWR_GetLevelFlat: texturenum > numtextures");
 #endif
 
 		// Who knows?
@@ -910,7 +910,7 @@ void HWR_GetLevelFlat(levelflat_t *levelflat)
 			return;
 
 		// Every texture in memory, stored as a 8-bit flat. Wow!
-		grtex = &gl_flats[texturenum];
+		grtex = &gl_flats[texturenum - 1];
 
 		// Generate flat if missing from the cache
 		if (!grtex->mipmap.data && !grtex->mipmap.downloaded)

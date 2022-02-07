@@ -152,7 +152,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	windowbottom = windowtop = sprbotscreen = INT32_MAX;
 
 	ldef = curline->linedef;
-	if (!ldef->alpha)
+	if (!texnum || !ldef->alpha)
 		return;
 
 	if (ldef->blendmode == AST_FOG)
@@ -601,6 +601,9 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		newline = pfloor->master->frontsector->lines[0] + linenum;
 		texnum = R_GetTextureNum(sides[newline->sidenum[0]].midtexture);
 	}
+
+	if (!texnum)
+		return;
 
 	if (pfloor->flags & FF_TRANSLUCENT)
 	{
@@ -2227,7 +2230,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 			ds_p->numthicksides = numthicksides = i;
 		}
-		if (sidedef->midtexture > 0 && sidedef->midtexture < numtextures)
+		if (sidedef->midtexture > 0 && sidedef->midtexture <= numtextures)
 		{
 			// masked midtexture
 			if (!ds_p->thicksidecol)
@@ -2759,12 +2762,12 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	if (maskedtexture && !(ds_p->silhouette & SIL_TOP))
 	{
 		ds_p->silhouette |= SIL_TOP;
-		ds_p->tsilheight = (sidedef->midtexture > 0 && sidedef->midtexture < numtextures) ? INT32_MIN: INT32_MAX;
+		ds_p->tsilheight = (sidedef->midtexture > 0 && sidedef->midtexture <= numtextures) ? INT32_MIN: INT32_MAX;
 	}
 	if (maskedtexture && !(ds_p->silhouette & SIL_BOTTOM))
 	{
 		ds_p->silhouette |= SIL_BOTTOM;
-		ds_p->bsilheight = (sidedef->midtexture > 0 && sidedef->midtexture < numtextures) ? INT32_MAX: INT32_MIN;
+		ds_p->bsilheight = (sidedef->midtexture > 0 && sidedef->midtexture <= numtextures) ? INT32_MAX: INT32_MIN;
 	}
 	ds_p++;
 }

@@ -495,7 +495,7 @@ UINT8 *R_GenerateTextureAsFlat(size_t texnum)
 //
 INT32 R_GetTextureNum(INT32 texnum)
 {
-	if (texnum < 0 || texnum >= numtextures)
+	if (texnum < 1 || texnum > numtextures)
 		return 0;
 	return texturetranslation[texnum];
 }
@@ -709,7 +709,7 @@ void R_FlushTextureCache(void)
 	INT32 i;
 
 	if (numtextures)
-		for (i = 0; i < numtextures; i++)
+		for (i = 1; i <= numtextures; i++)
 			Z_Free(texturecache[i]);
 }
 
@@ -939,13 +939,14 @@ void R_LoadTextures(void)
 	// Free previous memory before numtextures change.
 	if (numtextures)
 	{
-		for (i = 0; i < numtextures; i++)
+		for (i = 1; i <= numtextures; i++)
 		{
 			Z_Free(textures[i]);
 			Z_Free(texturecache[i]);
 		}
-		Z_Free(texturetranslation);
-		Z_Free(textures);
+		// these are offset by 1; free the original memory
+		Z_Free(&texturetranslation[1]);
+		Z_Free(&textures[1]);
 	}
 
 	// Load patches and textures.
@@ -1033,6 +1034,7 @@ void R_LoadTextures(void)
 	// Allocate memory and initialize to 0 for all the textures we are initialising.
 	// There are actually 5 buffers allocated in one for convenience.
 	textures = Z_Calloc((numtextures * sizeof(void *)) * 5, PU_STATIC, NULL);
+	textures--; // offset by 1 for index from 1
 
 	// Allocate texture column offset table.
 	texturecolumnofs = (void *)((UINT8 *)textures + (numtextures * sizeof(void *)));
@@ -1043,12 +1045,13 @@ void R_LoadTextures(void)
 	// Allocate texture height table.
 	textureheight    = (void *)((UINT8 *)textures + ((numtextures * sizeof(void *)) * 4));
 	// Create translation table for global animation.
-	texturetranslation = Z_Malloc((numtextures + 1) * sizeof(*texturetranslation), PU_STATIC, NULL);
+	texturetranslation = Z_Malloc(numtextures * sizeof(*texturetranslation), PU_STATIC, NULL);
+	texturetranslation--; // offset by 1 for index from 1
 
-	for (i = 0; i < numtextures; i++)
+	for (i = 1; i <= numtextures; i++)
 		texturetranslation[i] = i;
 
-	for (i = 0, w = 0; w < numwadfiles; w++)
+	for (i = 1, w = 0; w < numwadfiles; w++)
 	{
 #ifdef WALLFLATS
 		i = Rloadflats(i, w);
@@ -1605,7 +1608,7 @@ INT32 R_CheckTextureNumForName(const char *name)
 
 	// Need to parse the list backwards, so textures loaded more recently are used in lieu of ones loaded earlier
 	//for (i = 0; i < numtextures; i++) <- old
-	for (i = (numtextures - 1); i >= 0; i--) // <- new
+	for (i = numtextures; i > 0; i--) // <- new
 		if (!strncasecmp(textures[i]->name, name, 8))
 		{
 			tidcachelen++;
