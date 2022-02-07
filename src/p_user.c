@@ -11441,6 +11441,8 @@ void P_PlayerThink(player_t *player)
 		{
 			if (B_CheckRespawn(player))
 				player->playerstate = PST_REBORN;
+			else
+				B_HandleFlightIndicator(player);
 		}
 		if (player->playerstate == PST_REBORN)
 		{
