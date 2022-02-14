@@ -2387,21 +2387,21 @@ static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UIN
 		if (*ch == '\n')
 		{
 			cx = x<<FRACBITS;
-			cy += FixedMul((21*dupy)*FRACUNIT, scale);
+			cy += FixedMul((ntb_font.linespacing*dupy)*FRACUNIT, scale);
 			continue;
 		}
 
 		c = toupper(*ch);
-		c -= NT_FONTSTART;
+		c -= HU_FONTSTART;
 
 		// character does not exist or is a space
-		if (c < 0 || c >= NT_FONTSIZE || !ntb_font[c] || !nto_font[c])
+		if (c < 0 || c >= HU_FONTSIZE || !ntb_font.chars[c] || !nto_font.chars[c])
 		{
-			cx += FixedMul((4 * dupx)*FRACUNIT, scale);
+			cx += FixedMul((ntb_font.spacewidth * dupx)*FRACUNIT, scale);
 			continue;
 		}
 
-		w = FixedMul(((ntb_font[c]->width)+2 * dupx) * FRACUNIT, scale);
+		w = FixedMul(((ntb_font.chars[c]->width)+2 * dupx) * FRACUNIT, scale);
 
 		if (FixedInt(cx) > scrwidth)
 			continue;
@@ -2411,8 +2411,8 @@ static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UIN
 			continue;
 		}
 
-		V_DrawFixedPatch(cx, cy, scale, option, nto_font[c], outlinecolormap);
-		V_DrawFixedPatch(cx, cy, scale, option, ntb_font[c], basecolormap);
+		V_DrawFixedPatch(cx, cy, scale, option, nto_font.chars[c], outlinecolormap);
+		V_DrawFixedPatch(cx, cy, scale, option, ntb_font.chars[c], basecolormap);
 
 		cx += w;
 	}
@@ -2538,11 +2538,11 @@ INT32 V_NameTagWidth(const char *string)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = toupper(string[i]) - NT_FONTSTART;
-		if (c < 0 || c >= NT_FONTSIZE || !ntb_font[c] || !nto_font[c])
-			w += 4;
+		c = toupper(string[i]) - HU_FONTSTART;
+		if (c < 0 || c >= HU_FONTSIZE || !ntb_font.chars[c] || !nto_font.chars[c])
+			w += ntb_font.spacewidth;
 		else
-			w += (ntb_font[c]->width)+2;
+			w += (ntb_font.chars[c]->width)+2;
 	}
 
 	return w;

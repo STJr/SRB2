@@ -19,17 +19,11 @@
 #include "r_defs.h"
 
 //------------------------------------
-//           heads up font
+//           Fonts & stuff
 //------------------------------------
 #define HU_FONTSTART '\x16' // the first font character
 #define HU_FONTEND '~'
 #define HU_FONTSIZE (HU_FONTEND - HU_FONTSTART + 1)
-
-// Name tag font
-// Used by base and outline font set
-#define NT_FONTSTART '!' // the first font character
-#define NT_FONTEND 'Z' // the last font character
-#define NT_FONTSIZE (NT_FONTEND - NT_FONTSTART + 1)
 
 #define HU_CROSSHAIRS 3 // maximum of 9 - see HU_Init();
 
@@ -45,6 +39,12 @@ typedef struct
 } fontdef_t;
 
 extern fontdef_t hu_font, tny_font, cred_font, lt_font;
+extern fontdef_t ntb_font, nto_font;
+extern patch_t *tallnum[10];
+extern patch_t *nightsnum[10];
+extern patch_t *ttlnum[10];
+extern patch_t *tallminus;
+extern patch_t *tallinfin;
 
 //------------------------------------
 //        sorted player lines
@@ -78,19 +78,12 @@ void HU_AddChatText(const char *text, boolean playsound);
 // set true when entering a chat message
 extern boolean chat_on;
 
-extern patch_t *tallnum[10];
-extern patch_t *nightsnum[10];
-extern patch_t *ntb_font[NT_FONTSIZE];
-extern patch_t *nto_font[NT_FONTSIZE];
-extern patch_t *ttlnum[10];
 extern patch_t *emeraldpics[3][8];
 extern patch_t *rflagico;
 extern patch_t *bflagico;
 extern patch_t *rmatcico;
 extern patch_t *bmatcico;
 extern patch_t *tagico;
-extern patch_t *tallminus;
-extern patch_t *tallinfin;
 extern patch_t *tokenicon;
 
 // set true whenever the tab rankings are being shown for any reason

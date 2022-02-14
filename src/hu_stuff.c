@@ -58,21 +58,22 @@
 #define HU_CSAY       2 // Server CECHOes to everyone.
 
 //-------------------------------------------
-//              heads up font
+//              Fonts & stuff
 //-------------------------------------------
+// Font definitions
 fontdef_t hu_font;
 fontdef_t tny_font;
 fontdef_t cred_font;
 fontdef_t lt_font;
+fontdef_t ntb_font;
+fontdef_t nto_font;
 
+// Numbers
 patch_t *tallnum[10]; // 0-9
 patch_t *nightsnum[10]; // 0-9
-
 patch_t *ttlnum[10]; // act numbers (0-9)
-
-// Name tag fonts
-patch_t *ntb_font[NT_FONTSIZE];
-patch_t *nto_font[NT_FONTSIZE];
+patch_t *tallminus;
+patch_t *tallinfin;
 
 static player_t *plr;
 boolean chat_on; // entering a chat message?
@@ -87,8 +88,6 @@ patch_t *bflagico;
 patch_t *rmatcico;
 patch_t *bmatcico;
 patch_t *tagico;
-patch_t *tallminus;
-patch_t *tallinfin;
 
 //-------------------------------------------
 //              coop hud
@@ -217,6 +216,20 @@ void HU_LoadGraphics(void)
 			lt_font.chars[i] = NULL;
 		else
 			lt_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+
+		// name tag font base
+		sprintf(buffer, "NTFNT%.3d", j);
+		if (W_CheckNumForName(buffer) == LUMPERROR)
+			ntb_font.chars[i] = NULL;
+		else
+			ntb_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+
+		// name tag font outline
+		sprintf(buffer, "NTFNO%.3d", j);
+		if (W_CheckNumForName(buffer) == LUMPERROR)
+			nto_font.chars[i] = NULL;
+		else
+			nto_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
 
 	hu_font.kerning = 0;
@@ -235,6 +248,10 @@ void HU_LoadGraphics(void)
 	lt_font.spacewidth = 16;
 	lt_font.linespacing = 20;
 
+	ntb_font.kerning = nto_font.kerning = 0;
+	ntb_font.spacewidth = nto_font.spacewidth = 4;
+	ntb_font.linespacing = nto_font.linespacing = 21;
+
 	//cache numbers too!
 	for (i = 0; i < 10; i++)
 	{
@@ -242,35 +259,13 @@ void HU_LoadGraphics(void)
 		tallnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 		sprintf(buffer, "NGTNUM%d", i);
 		nightsnum[i] = (patch_t *) W_CachePatchName(buffer, PU_HUDGFX);
+		sprintf(buffer, "TTL%.2d", i);
+		ttlnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
 
 	// minus for negative tallnums
 	tallminus = (patch_t *)W_CachePatchName("STTMINUS", PU_HUDGFX);
 	tallinfin = (patch_t *)W_CachePatchName("STTINFIN", PU_HUDGFX);
-
-	// cache act numbers for level titles
-	for (i = 0; i < 10; i++)
-	{
-		sprintf(buffer, "TTL%.2d", i);
-		ttlnum[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
-
-	// cache the base name tag font & outline for entire game execution
-	j = NT_FONTSTART;
-	for (i = 0; i < NT_FONTSIZE; i++, j++)
-	{
-		sprintf(buffer, "NTFNT%.3d", j);
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			ntb_font[i] = NULL;
-		else
-			ntb_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-
-		sprintf(buffer, "NTFNO%.3d", j);
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			nto_font[i] = NULL;
-		else
-			nto_font[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
 
 	// cache the crosshairs, don't bother to know which one is being used,
 	// just cache all 3, they're so small anyway.
@@ -1148,7 +1143,7 @@ boolean HU_Responder(event_t *ev)
 			else
 				c_input++;
 		}
-		else if ((c >= HU_FONTSTART && c <= HU_FONTEND && hu_font[c-HU_FONTSTART])
+		else if ((c >= HU_FONTSTART && c <= HU_FONTEND && hu_font.chars[c-HU_FONTSTART])
 			|| c == ' ') // Allow spaces, of course
 		{
 			if (CHAT_MUTE || strlen(w_chat) >= HU_MAXMSGLEN)

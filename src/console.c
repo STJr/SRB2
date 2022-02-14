@@ -1718,7 +1718,7 @@ static void CON_DrawHudlines(void)
 				;//charwidth = 4 * con_scalefactor;
 			else
 			{
-				//charwidth = (hu_font['A'-HU_FONTSTART]->width) * con_scalefactor;
+				//charwidth = (hu_font.chars['A'-HU_FONTSTART]->width) * con_scalefactor;
 				V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 			}
 		}
