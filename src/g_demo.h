@@ -82,5 +82,6 @@ void G_StopMetalDemo(void);
 ATTRNORETURN void FUNCNORETURN G_StopMetalRecording(boolean kill);
 void G_StopDemo(void);
 boolean G_CheckDemoStatus(void);
+INT32 G_ConvertOldFrameFlags(INT32 frame);
 
 #endif // __G_DEMO__
