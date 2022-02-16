@@ -12975,7 +12975,10 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 				P_SetMobjState(mobj, mobj->info->meleestate);
 		}
 		else
+		{
+			mobj->floorz = mobj->z;
 			mobj->flags |= MF_NOTHINK;
+		}
 		// no collision for spikes if the ambush flag is checked
 		if ((mthing->options & MTF_AMBUSH) || metalrecording)
 		{
