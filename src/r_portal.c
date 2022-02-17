@@ -132,6 +132,7 @@ static portal_t* Portal_Add (const INT16 x1, const INT16 x2)
 
 void Portal_Remove (portal_t* portal)
 {
+	portalcullsector = NULL;
 	portal_base = portal->next;
 	Z_Free(portal->ceilingclip);
 	Z_Free(portal->floorclip);
