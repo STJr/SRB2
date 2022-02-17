@@ -62,7 +62,7 @@ typedef struct
 //------------------------------------
 //           chat stuff
 //------------------------------------
-#define HU_MAXMSGLEN 224
+#define HU_MAXMSGLEN 223
 #define CHAT_BUFSIZE 64		// that's enough messages, right? We'll delete the older ones when that gets out of hand.
 #ifdef NETSPLITSCREEN
 #define OLDCHAT (cv_consolechat.value == 1 || dedicated || vid.width < 640)
