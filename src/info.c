@@ -5601,8 +5601,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_EGGMOBILE_FLEE1, // xdeathstate
 		sfx_s3kb4,         // deathsound
 		4,                 // speed
-		24*FRACUNIT,       // radius
-		76*FRACUNIT,       // height
+		36*FRACUNIT,       // radius
+		84*FRACUNIT,       // height
 		0,                 // display offset
 		sfx_None,          // mass
 		3,                 // damage
@@ -5736,8 +5736,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_EGGMOBILE2_FLEE1,// xdeathstate
 		sfx_s3kb4,         // deathsound
 		2*FRACUNIT,        // speed
-		24*FRACUNIT,       // radius
-		76*FRACUNIT,       // height
+		36*FRACUNIT,       // radius
+		84*FRACUNIT,       // height
 		0,                 // display offset
 		0,                 // mass
 		3,                 // damage
@@ -5844,7 +5844,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_EGGMOBILE3_FLEE1, // xdeathstate
 		sfx_s3kb4,          // deathsound
 		8*FRACUNIT,         // speed
-		32*FRACUNIT,        // radius
+		36*FRACUNIT,        // radius
 		116*FRACUNIT,       // height
 		0,                  // display offset
 		MT_FAKEMOBILE,      // mass
@@ -5871,7 +5871,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,             // xdeathstate
 		sfx_mswarp,         // deathsound
 		8*FRACUNIT,         // speed
-		32*FRACUNIT,        // radius
+		36*FRACUNIT,        // radius
 		116*FRACUNIT,       // height
 		0,                  // display offset
 		0,                  // mass
@@ -5925,8 +5925,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_EGGMOBILE4_FLEE1,// xdeathstate
 		sfx_s3kb4,         // deathsound
 		0,                 // speed
-		24*FRACUNIT,       // radius
-		76*FRACUNIT,       // height
+		36*FRACUNIT,       // radius
+		84*FRACUNIT,       // height
 		0,                 // display offset
 		0,                 // mass
 		3,                 // damage
