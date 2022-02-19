@@ -2463,7 +2463,7 @@ num:
 		ST_DrawPatchFromHud(HUD_TIMEUP, timeup, V_HUDTRANS);
 }*/
 
-static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offset)
+static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offset, boolean trans)
 {
 	INT32 interval, i;
 	UINT32 dist = ((UINT32)P_AproxDistance(P_AproxDistance(stplyr->mo->x - hunt->x, stplyr->mo->y - hunt->y), stplyr->mo->z - hunt->z))>>FRACBITS;
@@ -2500,7 +2500,7 @@ static INT32 ST_drawEmeraldHuntIcon(mobj_t *hunt, patch_t **patches, INT32 offse
 	}
 
 	if (!F_GetPromptHideHud(hudinfo[HUD_HUNTPICS].y))
-		V_DrawScaledPatch(hudinfo[HUD_HUNTPICS].x+offset, hudinfo[HUD_HUNTPICS].y, hudinfo[HUD_HUNTPICS].f|V_PERPLAYER|V_HUDTRANS, patches[i]);
+		V_DrawScaledPatch(hudinfo[HUD_HUNTPICS].x+offset, hudinfo[HUD_HUNTPICS].y, hudinfo[HUD_HUNTPICS].f|V_PERPLAYER|(trans ? V_HUDTRANSHALF : V_HUDTRANS), patches[i]);
 	return interval;
 }
 
@@ -2510,18 +2510,18 @@ static void ST_doHuntIconsAndSound(void)
 	INT32 interval = 0, newinterval = 0;
 
 	if (hunt1 && hunt1->health)
-		interval = ST_drawEmeraldHuntIcon(hunt1, hunthoming, -20);
+		interval = ST_drawEmeraldHuntIcon(hunt1, hunthoming, -20, false);
 
 	if (hunt2 && hunt2->health)
 	{
-		newinterval = ST_drawEmeraldHuntIcon(hunt2, hunthoming, 0);
+		newinterval = ST_drawEmeraldHuntIcon(hunt2, hunthoming, 0, false);
 		if (newinterval && (!interval || newinterval < interval))
 			interval = newinterval;
 	}
 
 	if (hunt3 && hunt3->health)
 	{
-		newinterval = ST_drawEmeraldHuntIcon(hunt3, hunthoming, 20);
+		newinterval = ST_drawEmeraldHuntIcon(hunt3, hunthoming, 20, false);
 		if (newinterval && (!interval || newinterval < interval))
 			interval = newinterval;
 	}
@@ -2540,6 +2540,7 @@ static void ST_doItemFinderIconsAndSound(void)
 	INT32 i;
 	INT32 interval = 0, newinterval = 0;
 	INT32 soffset;
+	boolean invalid = false;
 
 	for (i = 0; i < numemblems; ++i)
 	{
@@ -2566,11 +2567,13 @@ static void ST_doItemFinderIconsAndSound(void)
 
 		mo2 = (mobj_t *)th;
 
+		invalid = false;
+
 		if (mo2->type != MT_EMBLEM)
 			continue;
 
 		if (!(mo2->flags & MF_SPECIAL))
-			continue;
+			invalid = true;
 
 		for (i = 0; i < stemblems; ++i)
 		{
@@ -2578,8 +2581,11 @@ static void ST_doItemFinderIconsAndSound(void)
 			{
 				soffset = (i * 20) - ((stemblems - 1) * 10);
 
-				newinterval = ST_drawEmeraldHuntIcon(mo2, itemhoming, soffset);
-				if (newinterval && (!interval || newinterval < interval))
+				if (invalid && (emblemlocations[emblems[i]].collected || !(emblemlocations[emblems[i]].type == ET_SKIN)))
+					break;
+
+				newinterval = ST_drawEmeraldHuntIcon(mo2, itemhoming, soffset, invalid);
+				if (newinterval && (!interval || newinterval < interval) && !invalid)
 					interval = newinterval;
 
 				break;
@@ -2588,7 +2594,7 @@ static void ST_doItemFinderIconsAndSound(void)
 
 	}
 
-	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0)
+	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0 && !invalid)
 		S_StartSound(NULL, sfx_emfind);
 }
 
