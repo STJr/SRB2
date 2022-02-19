@@ -375,6 +375,9 @@ void SCR_CheckDefaultMode(void)
 			setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1; // see note above
 		else
 			setmodeneeded = VID_GetModeForSize(cv_scr_width_w.value, cv_scr_height_w.value) + 1; // see note above
+
+		if (setmodeneeded <= 0)
+			CONS_Alert(CONS_WARNING, "Invalid resolution given, defaulting to base resolution\n");
 	}
 
 	if (cv_renderer.value != (signed)rendermode)
@@ -412,6 +415,12 @@ void SCR_ChangeFullscreen(void)
 			setmodeneeded = VID_GetModeForSize(cv_scr_width.value, cv_scr_height.value) + 1;
 		else
 			setmodeneeded = VID_GetModeForSize(cv_scr_width_w.value, cv_scr_height_w.value) + 1;
+
+		if (setmodeneeded <= 0) // hacky safeguard
+		{
+			CONS_Alert(CONS_WARNING, "Invalid resolution given, defaulting to base resolution.\n");
+			setmodeneeded = VID_GetModeForSize(BASEVIDWIDTH, BASEVIDHEIGHT) + 1;
+		}
 	}
 	return;
 #endif
