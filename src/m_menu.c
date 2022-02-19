@@ -3396,10 +3396,7 @@ boolean M_Responder(event_t *ev)
 			// Same with Moviemode on F9
 
 			case KEY_F10: // Renderer toggle, also processed inside menus
-				if (cv_renderer.value == render_soft)
-					CV_SetValue(&cv_renderer, render_opengl);
-				else if (cv_renderer.value == render_opengl)
-					CV_SetValue(&cv_renderer, render_soft);
+				CV_AddValue(&cv_renderer, 1);
 				return true;
 
 			case KEY_F11: // Fullscreen toggle, also processed inside menus
@@ -3583,10 +3580,7 @@ boolean M_Responder(event_t *ev)
 			return false;
 
 		case KEY_F10: // Renderer toggle, also processed outside menus
-			if (cv_renderer.value == render_soft)
-				CV_SetValue(&cv_renderer, render_opengl);
-			else if (cv_renderer.value == render_opengl)
-				CV_SetValue(&cv_renderer, render_soft);
+			CV_AddValue(&cv_renderer, 1);
 			return true;
 
 		case KEY_F11: // Fullscreen toggle, also processed outside menus
