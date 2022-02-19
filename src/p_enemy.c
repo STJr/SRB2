@@ -2655,7 +2655,7 @@ void A_LobShot(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2 >> 16;
-	mobj_t *shot, *hitspot;
+	mobj_t *shot;
 	angle_t an;
 	fixed_t z;
 	fixed_t dist;
@@ -2693,11 +2693,6 @@ void A_LobShot(mobj_t *actor)
 		shot->destscale = actor->scale;
 		P_SetScale(shot, actor->scale);
 	}
-
-	// Keep track of where it's going to land
-	hitspot = P_SpawnMobj(actor->target->x&(64*FRACUNIT-1), actor->target->y&(64*FRACUNIT-1), actor->target->subsector->sector->floorheight, MT_NULL);
-	hitspot->tics = airtime;
-	P_SetTarget(&shot->tracer, hitspot);
 
 	P_SetTarget(&shot->target, actor); // where it came from
 
@@ -3334,20 +3329,18 @@ void A_SkullAttack(mobj_t *actor)
 		actor->angle += (P_RandomChance(FRACUNIT/2)) ? ANGLE_90 : -ANGLE_90;
 	else if (locvar1 == 3)
 	{
-		statenum_t oldspawnstate = mobjinfo[MT_NULL].spawnstate;
-		UINT32 oldflags = mobjinfo[MT_NULL].flags;
-		fixed_t oldradius = mobjinfo[MT_NULL].radius;
-		fixed_t oldheight = mobjinfo[MT_NULL].height;
-		mobj_t *check;
+		statenum_t oldspawnstate = mobjinfo[MT_RAY].spawnstate;
+		UINT32 oldflags = mobjinfo[MT_RAY].flags;
+		fixed_t oldradius = mobjinfo[MT_RAY].radius;
+		fixed_t oldheight = mobjinfo[MT_RAY].height;
 		INT32 i, j;
 		static INT32 k;/* static for (at least) GCC 9.1 weirdness */
-		boolean allow;
 		angle_t testang = 0;
 
-		mobjinfo[MT_NULL].spawnstate = S_INVISIBLE;
-		mobjinfo[MT_NULL].flags = MF_NOGRAVITY|MF_NOTHINK|MF_NOCLIPTHING|MF_NOBLOCKMAP;
-		mobjinfo[MT_NULL].radius = mobjinfo[actor->type].radius;
-		mobjinfo[MT_NULL].height = mobjinfo[actor->type].height;
+		mobjinfo[MT_RAY].spawnstate = S_INVISIBLE;
+		mobjinfo[MT_RAY].flags = MF_NOGRAVITY|MF_NOTHINK|MF_NOCLIPTHING|MF_NOBLOCKMAP;
+		mobjinfo[MT_RAY].radius = mobjinfo[actor->type].radius;
+		mobjinfo[MT_RAY].height = mobjinfo[actor->type].height;
 
 		if (P_RandomChance(FRACUNIT/2)) // port priority 1?
 		{
@@ -3360,15 +3353,12 @@ void A_SkullAttack(mobj_t *actor)
 			j = 9;
 		}
 
-#define dostuff(q) check = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_NULL);\
+#define dostuff(q) \
 			testang = actor->angle + ((i+(q))*ANG10);\
-			allow = (P_TryMove(check,\
-				P_ReturnThrustX(check, testang, dist + 2*actor->radius),\
-				P_ReturnThrustY(check, testang, dist + 2*actor->radius),\
-				true));\
-			P_RemoveMobj(check);\
-			if (allow)\
-				break;
+			if (P_CheckMove(actor,\
+				P_ReturnThrustX(actor, testang, dist + 2*actor->radius),\
+				P_ReturnThrustY(actor, testang, dist + 2*actor->radius),\
+				true)) break;
 
 		if (P_RandomChance(FRACUNIT/2)) // port priority 2?
 		{
@@ -3394,10 +3384,10 @@ void A_SkullAttack(mobj_t *actor)
 
 #undef dostuff
 
-		mobjinfo[MT_NULL].spawnstate = oldspawnstate;
-		mobjinfo[MT_NULL].flags = oldflags;
-		mobjinfo[MT_NULL].radius = oldradius;
-		mobjinfo[MT_NULL].height = oldheight;
+		mobjinfo[MT_RAY].spawnstate = oldspawnstate;
+		mobjinfo[MT_RAY].flags = oldflags;
+		mobjinfo[MT_RAY].radius = oldradius;
+		mobjinfo[MT_RAY].height = oldheight;
 	}
 
 	an = actor->angle >> ANGLETOFINESHIFT;
@@ -4189,7 +4179,6 @@ void A_CustomPower(mobj_t *actor)
 	player_t *player;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	boolean spawnshield = false;
 
 	if (LUA_CallAction(A_CUSTOMPOWER, actor))
 		return;
@@ -4208,15 +4197,10 @@ void A_CustomPower(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (locvar1 == pw_shield && player->powers[pw_shield] != locvar2)
-		spawnshield = true;
+	P_SetPower(player, locvar1, locvar2);
 
-	player->powers[locvar1] = (UINT16)locvar2;
 	if (actor->info->seesound)
 		S_StartSound(player->mo, actor->info->seesound);
-
-	if (spawnshield) //workaround for a bug
-		P_SpawnShieldOrb(player);
 }
 
 // Function: A_GiveWeapon
@@ -8292,7 +8276,7 @@ void A_Boss3ShockThink(mobj_t *actor)
 			snew->angle = (actor->angle + snext->angle) >> 1;
 			P_SetTarget(&snew->target, actor->target);
 			snew->fuse = actor->fuse;
-			
+
 			P_SetScale(snew, actor->scale);
 			snew->destscale = actor->destscale;
 			snew->scalespeed = actor->scalespeed;

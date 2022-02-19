@@ -4316,6 +4316,7 @@ extern playersprite_t free_spr2;
 typedef enum mobj_type
 {
 	MT_NULL,
+	MT_RAY, // General purpose mobj
 	MT_UNKNOWN,
 
 	MT_THOK, // Thok! mobj
