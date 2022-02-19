@@ -3737,12 +3737,12 @@ state_t states[NUMSTATES] =
 
 	// Nightopian
 	{SPR_NTPN, 0, 2, {A_Look}, 1, 1, S_PIAN_LOOK2}, // S_PIAN_LOOK1
-	{SPR_NTPN, 1, 2, {A_Look}, 1, 1, S_PIAN_LOOK3}, // S_PIAN_LOOK1
-	{SPR_NTPN, 2, 2, {A_Look}, 1, 1, S_PIAN_LOOK1}, // S_PIAN_LOOK1
+	{SPR_NTPN, 1, 2, {A_Look}, 1, 1, S_PIAN_LOOK3}, // S_PIAN_LOOK2
+	{SPR_NTPN, 2, 2, {A_Look}, 1, 1, S_PIAN_LOOK1}, // S_PIAN_LOOK3
 	{SPR_NTPN, 0, 2, {A_JetgThink}, 0, 0, S_PIAN_FLY2}, // S_PIAN_FLY1
 	{SPR_NTPN, 1, 2, {NULL}, 0, 0, S_PIAN_FLY3}, // S_PIAN_FLY2
 	{SPR_NTPN, 2, 2, {NULL}, 0, 0, S_PIAN_FLY1}, // S_PIAN_FLY3
-	{SPR_NTPN, 3|FF_ANIMATE, 24, {NULL}, 2, 2, S_PIAN_FLY1}, // S_PIANSING
+	{SPR_NTPN, 3|FF_ANIMATE, 24, {NULL}, 2, 2, S_PIAN_FLY1}, // S_PIAN_SING
 
 	// Shleep
 	{SPR_SHLP, 0, 15, {NULL}, 0, 0, S_SHLEEP2}, // S_SHLEEP1
