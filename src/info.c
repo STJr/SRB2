@@ -203,6 +203,10 @@ char sprnames[NUMSPRITES + 1][5] =
 	// The letter
 	"LETR",
 
+	// Tutorial Scenery
+	"TUPL",
+	"TUPF",
+
 	// Greenflower Scenery
 	"FWR1",
 	"FWR2", // GFZ Sunflower
@@ -2116,6 +2120,56 @@ state_t states[NUMSTATES] =
 	{SPR_CFIR, FF_FULLBRIGHT|FF_ANIMATE, -1, {NULL}, 5, 2, S_NULL}, // S_DEMONFIRE
 
 	{SPR_LETR, FF_PAPERSPRITE, -1, {NULL}, 0, 0, S_NULL}, // S_LETTER
+
+	// Tutorial scenery
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|0, 3, {NULL}, 0, 0, S_TUTORIALLEAF2}, // S_TUTORIALLEAF1
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|1, 3, {NULL}, 0, 0, S_TUTORIALLEAF3}, // S_TUTORIALLEAF2
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|2, 3, {NULL}, 0, 0, S_TUTORIALLEAF4}, // S_TUTORIALLEAF3
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|3, 3, {NULL}, 0, 0, S_TUTORIALLEAF5}, // S_TUTORIALLEAF4
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|4, 3, {NULL}, 0, 0, S_TUTORIALLEAF6}, // S_TUTORIALLEAF5
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|5, 3, {NULL}, 0, 0, S_TUTORIALLEAF7}, // S_TUTORIALLEAF6
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|6, 3, {NULL}, 0, 0, S_TUTORIALLEAF8}, // S_TUTORIALLEAF7
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|7, 3, {NULL}, 0, 0, S_TUTORIALLEAF9}, // S_TUTORIALLEAF8
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|7, 3, {NULL}, 0, 0, S_TUTORIALLEAF10}, // S_TUTORIALLEAF9
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|6, 3, {NULL}, 0, 0, S_TUTORIALLEAF11}, // S_TUTORIALLEAF10
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|5, 3, {NULL}, 0, 0, S_TUTORIALLEAF12}, // S_TUTORIALLEAF11
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|4, 3, {NULL}, 0, 0, S_TUTORIALLEAF13}, // S_TUTORIALLEAF12
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|3, 3, {NULL}, 0, 0, S_TUTORIALLEAF14}, // S_TUTORIALLEAF13
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|2, 3, {NULL}, 0, 0, S_TUTORIALLEAF15}, // S_TUTORIALLEAF14
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|1, 3, {NULL}, 0, 0, S_TUTORIALLEAF16}, // S_TUTORIALLEAF15
+	{SPR_TUPL, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|0, 3, {NULL}, 0, 0, S_TUTORIALLEAF1}, // S_TUTORIALLEAF16
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|0, 3, {NULL}, 0, 0, S_TUTORIALFLOWER2}, // S_TUTORIALFLOWER1
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|1, 3, {NULL}, 0, 0, S_TUTORIALFLOWER3}, // S_TUTORIALFLOWER2
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|2, 3, {NULL}, 0, 0, S_TUTORIALFLOWER4}, // S_TUTORIALFLOWER3
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|3, 3, {NULL}, 0, 0, S_TUTORIALFLOWER5}, // S_TUTORIALFLOWER4
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|4, 3, {NULL}, 0, 0, S_TUTORIALFLOWER6}, // S_TUTORIALFLOWER5
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|5, 3, {NULL}, 0, 0, S_TUTORIALFLOWER7}, // S_TUTORIALFLOWER6
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|6, 3, {NULL}, 0, 0, S_TUTORIALFLOWER8}, // S_TUTORIALFLOWER7
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|7, 3, {NULL}, 0, 0, S_TUTORIALFLOWER9}, // S_TUTORIALFLOWER8
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|7, 3, {NULL}, 0, 0, S_TUTORIALFLOWER10}, // S_TUTORIALFLOWER9
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|6, 3, {NULL}, 0, 0, S_TUTORIALFLOWER11}, // S_TUTORIALFLOWER10
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|5, 3, {NULL}, 0, 0, S_TUTORIALFLOWER12}, // S_TUTORIALFLOWER11
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|4, 3, {NULL}, 0, 0, S_TUTORIALFLOWER13}, // S_TUTORIALFLOWER12
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|3, 3, {NULL}, 0, 0, S_TUTORIALFLOWER14}, // S_TUTORIALFLOWER13
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|2, 3, {NULL}, 0, 0, S_TUTORIALFLOWER15}, // S_TUTORIALFLOWER14
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|1, 3, {NULL}, 0, 0, S_TUTORIALFLOWER16}, // S_TUTORIALFLOWER15
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_PAPERSPRITE|0, 3, {NULL}, 0, 0, S_TUTORIALFLOWER1}, // S_TUTORIALFLOWER16
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|0, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF2}, // S_TUTORIALFLOWERF1
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|1, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF3}, // S_TUTORIALFLOWERF2
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|2, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF4}, // S_TUTORIALFLOWERF3
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|3, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF5}, // S_TUTORIALFLOWERF4
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|4, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF6}, // S_TUTORIALFLOWERF5
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|5, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF7}, // S_TUTORIALFLOWERF6
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|6, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF8}, // S_TUTORIALFLOWERF7
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|7, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF9}, // S_TUTORIALFLOWERF8
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|7, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF10}, // S_TUTORIALFLOWERF9
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|6, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF11}, // S_TUTORIALFLOWERF10
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|5, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF12}, // S_TUTORIALFLOWERF11
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|4, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF13}, // S_TUTORIALFLOWERF12
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|3, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF14}, // S_TUTORIALFLOWERF13
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|2, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF15}, // S_TUTORIALFLOWERF14
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|1, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF16}, // S_TUTORIALFLOWERF15
+	{SPR_TUPF, FF_SEMIBRIGHT|FF_ADD|FF_FLOORSPRITE|0, 3, {NULL}, 0, 0, S_TUTORIALFLOWERF1}, // S_TUTORIALFLOWERF16
 
 	// GFZ flowers
 	{SPR_FWR1, FF_ANIMATE, -1, {NULL},  7, 3, S_NULL}, // S_GFZFLOWERA
@@ -10003,6 +10057,114 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		1,              // damage
 		sfx_None,       // activesound
 		MF_SPECIAL|MF_NOCLIPHEIGHT|MF_NOGRAVITY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_TUTORIALPLANT
+		799,            // doomednum
+		S_NULL,         // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		32*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_TUTORIALLEAF
+		-1,            // doomednum
+		S_TUTORIALLEAF1,   // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		32*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_TUTORIALFLOWER
+		-1,            // doomednum
+		S_TUTORIALFLOWER1,   // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		32*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_TUTORIALFLOWERF
+		-1,            // doomednum
+		S_TUTORIALFLOWERF1,   // spawnstate
+		1000,           // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		8,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		32*FRACUNIT,    // radius
+		32*FRACUNIT,    // height
+		0,              // display offset
+		100,            // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOCLIP|MF_NOGRAVITY|MF_SCENERY, // flags
 		S_NULL          // raisestate
 	},
 
