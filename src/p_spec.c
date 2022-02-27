@@ -2937,7 +2937,6 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 441: // Trigger unlockable
-			if (!(netgame || multiplayer))
 			{
 				INT32 trigid = line->args[0];
 
@@ -2948,10 +2947,12 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					unlocktriggers |= 1 << trigid;
 
 					// Unlocked something?
-					if (M_UpdateUnlockablesAndExtraEmblems())
+					M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+					if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 					{
 						S_StartSound(NULL, sfx_s3k68);
-						G_SaveGameData(); // only save if unlocked something
+						G_SaveGameData(clientGamedata); // only save if unlocked something
 					}
 				}
 			}

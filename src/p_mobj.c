@@ -12004,10 +12004,6 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 			return false; // You already got this token
 
 		break;
-	case MT_EMBLEM:
-		if (netgame || multiplayer)
-			return false; // Single player (You're next on my shit list)
-		break;
 	default:
 		break;
 	}
@@ -12175,15 +12171,20 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 	emcolor = M_GetEmblemColor(&emblemlocations[j]); // workaround for compiler complaint about bad function casting
 	mobj->color = (UINT16)emcolor;
 
-	validEmblem = !emblemlocations[j].collected;
+	validEmblem = true;
 
-	if (emblemlocations[j].type == ET_SKIN)
+	if (!netgame)
 	{
-		INT32 skinnum = M_EmblemSkinNum(&emblemlocations[j]);
+		validEmblem = !serverGamedata->collected[j];
 
-		if (players[0].skin != skinnum)
+		if (emblemlocations[j].type == ET_SKIN && !multiplayer)
 		{
-			validEmblem = false;
+			INT32 skinnum = M_EmblemSkinNum(&emblemlocations[j]);
+
+			if (players[0].skin != skinnum)
+			{
+				validEmblem = false;
+			}
 		}
 	}
 

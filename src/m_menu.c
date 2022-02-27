@@ -2284,6 +2284,7 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt);
 // Nextmap.  Used for Level select.
 void Nextmap_OnChange(void)
 {
+	gamedata_t *data = clientGamedata;
 	char *leveltitle;
 	char tabase[256];
 #ifdef OLDNREPLAYNAME
@@ -2301,7 +2302,7 @@ void Nextmap_OnChange(void)
 	{
 		CV_StealthSetValue(&cv_dummymares, 0);
 		// Hide the record changing CVAR if only one mare is available.
-		if (!nightsrecords[cv_nextmap.value-1] || nightsrecords[cv_nextmap.value-1]->nummares < 2)
+		if (!data->nightsrecords[cv_nextmap.value-1] || data->nightsrecords[cv_nextmap.value-1]->nummares < 2)
 			SP_NightsAttackMenu[narecords].status = IT_DISABLED;
 		else
 			SP_NightsAttackMenu[narecords].status = IT_STRING|IT_CVAR;
@@ -2432,14 +2433,15 @@ void Nextmap_OnChange(void)
 
 static void Dummymares_OnChange(void)
 {
-	if (!nightsrecords[cv_nextmap.value-1])
+	gamedata_t *data = clientGamedata;
+	if (!data->nightsrecords[cv_nextmap.value-1])
 	{
 		CV_StealthSetValue(&cv_dummymares, 0);
 		return;
 	}
 	else
 	{
-		UINT8 mares = nightsrecords[cv_nextmap.value-1]->nummares;
+		UINT8 mares = data->nightsrecords[cv_nextmap.value-1]->nummares;
 
 		if (cv_dummymares.value < 0)
 			CV_StealthSetValue(&cv_dummymares, mares);
@@ -3670,9 +3672,9 @@ void M_StartControlPanel(void)
 	if (!Playing())
 	{
 		// Secret menu!
-		MainMenu[singleplr].alphaKey = (M_AnySecretUnlocked()) ? 76 : 84;
-		MainMenu[multiplr].alphaKey = (M_AnySecretUnlocked()) ? 84 : 92;
-		MainMenu[secrets].status = (M_AnySecretUnlocked()) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+		MainMenu[singleplr].alphaKey = (M_AnySecretUnlocked(clientGamedata)) ? 76 : 84;
+		MainMenu[multiplr].alphaKey = (M_AnySecretUnlocked(clientGamedata)) ? 84 : 92;
+		MainMenu[secrets].status = (M_AnySecretUnlocked(clientGamedata)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 
 		currentMenu = &MainDef;
 		itemOn = singleplr;
@@ -3680,14 +3682,14 @@ void M_StartControlPanel(void)
 	else if (modeattacking)
 	{
 		currentMenu = &MAPauseDef;
-		MAPauseMenu[mapause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+		MAPauseMenu[mapause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 		itemOn = mapause_continue;
 	}
 	else if (!(netgame || multiplayer)) // Single Player
 	{
 		if (gamestate != GS_LEVEL || ultimatemode) // intermission, so gray out stuff.
 		{
-			SPauseMenu[spause_pandora].status = (M_SecretUnlocked(SECRET_PANDORA)) ? (IT_GRAYEDOUT) : (IT_DISABLED);
+			SPauseMenu[spause_pandora].status = (M_SecretUnlocked(SECRET_PANDORA, serverGamedata)) ? (IT_GRAYEDOUT) : (IT_DISABLED);
 			SPauseMenu[spause_retry].status = IT_GRAYEDOUT;
 		}
 		else
@@ -3696,7 +3698,7 @@ void M_StartControlPanel(void)
 			if (players[consoleplayer].playerstate != PST_LIVE)
 				++numlives;
 
-			SPauseMenu[spause_pandora].status = (M_SecretUnlocked(SECRET_PANDORA) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+			SPauseMenu[spause_pandora].status = (M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 
 			// The list of things that can disable retrying is (was?) a little too complex
 			// for me to want to use the short if statement syntax
@@ -3710,7 +3712,7 @@ void M_StartControlPanel(void)
 		SPauseMenu[spause_levelselect].status = (gamecomplete == 1) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 
 		// And emblem hints.
-		SPauseMenu[spause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+		SPauseMenu[spause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 
 		// Shift up Pandora's Box if both pandora and levelselect are active
 		/*if (SPauseMenu[spause_pandora].status != (IT_DISABLED)
@@ -4259,7 +4261,7 @@ static void M_DrawMapEmblems(INT32 mapnum, INT32 x, INT32 y, boolean norecordatt
 			x -= 4;
 		lasttype = curtype;
 
-		if (emblem->collected)
+		if (clientGamedata->collected[emblem - emblemlocations])
 			V_DrawSmallMappedPatch(x, y, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
 			                       R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
 		else
@@ -4692,6 +4694,8 @@ static void M_DrawGenericScrollMenu(void)
 
 static void M_DrawPauseMenu(void)
 {
+	gamedata_t *data = clientGamedata;
+
 	if (!netgame && !multiplayer && (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
 	{
 		emblem_t *emblem_detail[3] = {NULL, NULL, NULL};
@@ -4720,7 +4724,7 @@ static void M_DrawPauseMenu(void)
 				{
 					case ET_SCORE:
 						snprintf(targettext, 9, "%d", emblem->var);
-						snprintf(currenttext, 9, "%u", G_GetBestScore(gamemap));
+						snprintf(currenttext, 9, "%u", G_GetBestScore(gamemap, data));
 
 						targettext[8] = 0;
 						currenttext[8] = 0;
@@ -4734,7 +4738,7 @@ static void M_DrawPauseMenu(void)
 							G_TicsToSeconds((tic_t)emblemslot),
 							G_TicsToCentiseconds((tic_t)emblemslot));
 
-						emblemslot = (INT32)G_GetBestTime(gamemap); // dumb hack pt ii
+						emblemslot = (INT32)G_GetBestTime(gamemap, data); // dumb hack pt ii
 						if ((tic_t)emblemslot == UINT32_MAX)
 							snprintf(currenttext, 9, "-:--.--");
 						else
@@ -4750,7 +4754,7 @@ static void M_DrawPauseMenu(void)
 						break;
 					case ET_RINGS:
 						snprintf(targettext, 9, "%d", emblem->var);
-						snprintf(currenttext, 9, "%u", G_GetBestRings(gamemap));
+						snprintf(currenttext, 9, "%u", G_GetBestRings(gamemap, data));
 
 						targettext[8] = 0;
 						currenttext[8] = 0;
@@ -4758,8 +4762,8 @@ static void M_DrawPauseMenu(void)
 						emblemslot = 2;
 						break;
 					case ET_NGRADE:
-						snprintf(targettext, 9, "%u", P_GetScoreForGradeOverall(gamemap, emblem->var));
-						snprintf(currenttext, 9, "%u", G_GetBestNightsScore(gamemap, 0));
+						snprintf(targettext, 9, "%u", P_GetScoreForGrade(gamemap, 0, emblem->var));
+						snprintf(currenttext, 9, "%u", G_GetBestNightsScore(gamemap, 0, data));
 
 						targettext[8] = 0;
 						currenttext[8] = 0;
@@ -4773,7 +4777,7 @@ static void M_DrawPauseMenu(void)
 							G_TicsToSeconds((tic_t)emblemslot),
 							G_TicsToCentiseconds((tic_t)emblemslot));
 
-						emblemslot = (INT32)G_GetBestNightsTime(gamemap, 0); // dumb hack pt iv
+						emblemslot = (INT32)G_GetBestNightsTime(gamemap, 0, data); // dumb hack pt iv
 						if ((tic_t)emblemslot == UINT32_MAX)
 							snprintf(currenttext, 9, "-:--.--");
 						else
@@ -4807,7 +4811,7 @@ static void M_DrawPauseMenu(void)
 			if (!emblem)
 				continue;
 
-			if (emblem->collected)
+			if (data->collected[emblem - emblemlocations])
 				V_DrawSmallMappedPatch(40, 44 + (i*8), 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
 				                       R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(emblem), GTC_CACHE));
 			else
@@ -5019,7 +5023,9 @@ static void M_PatchSkinNameTable(void)
 //
 static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 {
-	if (M_MapLocked(mapnum+1))
+	gamedata_t *data = serverGamedata;
+
+	if (M_MapLocked(mapnum+1, data))
 		return false; // not unlocked
 
 	switch (levellistmode)
@@ -5032,7 +5038,7 @@ static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 				return true;
 
 #ifndef DEVELOP
-			if (mapvisited[mapnum]) // MV_MP
+			if (data->mapvisited[mapnum])
 #endif
 				return true;
 
@@ -5040,7 +5046,7 @@ static boolean M_LevelAvailableOnPlatter(INT32 mapnum)
 		case LLM_RECORDATTACK:
 		case LLM_NIGHTSATTACK:
 #ifndef DEVELOP
-			if (mapvisited[mapnum] & MV_MAX)
+			if (data->mapvisited[mapnum])
 				return true;
 
 			if (mapheaderinfo[mapnum]->menuflags & LF2_NOVISITNEEDED)
@@ -5071,7 +5077,7 @@ static boolean M_CanShowLevelOnPlatter(INT32 mapnum, INT32 gt)
 	if (!mapheaderinfo[mapnum]->lvlttl[0])
 		return false;
 
-	/*if (M_MapLocked(mapnum+1))
+	/*if (M_MapLocked(mapnum+1, serverGamedata))
 		return false; // not unlocked*/
 
 	switch (levellistmode)
@@ -6904,7 +6910,7 @@ static void M_HandleAddons(INT32 choice)
 		closefilemenu(true);
 
 		// secrets disabled by addfile...
-		MainMenu[secrets].status = (M_AnySecretUnlocked()) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+		MainMenu[secrets].status = (M_AnySecretUnlocked(clientGamedata)) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 
 		if (currentMenu->prevMenu)
 			M_SetupNextMenu(currentMenu->prevMenu);
@@ -7150,7 +7156,9 @@ static boolean checklist_cangodown; // uuuueeerggghhhh HACK
 
 static void M_HandleChecklist(INT32 choice)
 {
+	gamedata_t *data = clientGamedata;
 	INT32 j;
+
 	switch (choice)
 	{
 		case KEY_DOWNARROW:
@@ -7167,7 +7175,7 @@ static void M_HandleChecklist(INT32 choice)
 						continue;
 					if (unlockables[j].conditionset > MAXCONDITIONSETS)
 						continue;
-					if (!unlockables[j].unlocked && unlockables[j].showconditionset && !M_Achieved(unlockables[j].showconditionset))
+					if (!data->unlocked[j] && unlockables[j].showconditionset && !M_Achieved(unlockables[j].showconditionset, data))
 						continue;
 					if (unlockables[j].conditionset == unlockables[check_on].conditionset)
 						continue;
@@ -7192,7 +7200,7 @@ static void M_HandleChecklist(INT32 choice)
 						continue;
 					if (unlockables[j].conditionset > MAXCONDITIONSETS)
 						continue;
-					if (!unlockables[j].unlocked && unlockables[j].showconditionset && !M_Achieved(unlockables[j].showconditionset))
+					if (!data->unlocked[j] && unlockables[j].showconditionset && !M_Achieved(unlockables[j].showconditionset, data))
 						continue;
 					if (j && unlockables[j].conditionset == unlockables[j-1].conditionset)
 						continue;
@@ -7218,6 +7226,9 @@ static void M_HandleChecklist(INT32 choice)
 
 static void M_DrawChecklist(void)
 {
+	gamedata_t *data = clientGamedata;
+	INT32 emblemCount = M_CountEmblems(data);
+
 	INT32 i = check_on, j = 0, y = currentMenu->y, emblems = numemblems+numextraemblems;
 	UINT32 condnum, previd, maxcond;
 	condition_t *cond;
@@ -7228,7 +7239,7 @@ static void M_DrawChecklist(void)
 	// draw emblem counter
 	if (emblems > 0)
 	{
-		V_DrawString(42, 20, (emblems == M_CountEmblems()) ? V_GREENMAP : 0, va("%d/%d", M_CountEmblems(), emblems));
+		V_DrawString(42, 20, (emblems == emblemCount) ? V_GREENMAP : 0, va("%d/%d", emblemCount, emblems));
 		V_DrawSmallScaledPatch(28, 20, 0, W_CachePatchName("EMBLICON", PU_PATCH));
 	}
 
@@ -7239,13 +7250,13 @@ static void M_DrawChecklist(void)
 	{
 		if (unlockables[i].name[0] == 0 //|| unlockables[i].nochecklist
 		|| !unlockables[i].conditionset || unlockables[i].conditionset > MAXCONDITIONSETS
-		|| (!unlockables[i].unlocked && unlockables[i].showconditionset && !M_Achieved(unlockables[i].showconditionset)))
+		|| (!data->unlocked[i] && unlockables[i].showconditionset && !M_Achieved(unlockables[i].showconditionset, data)))
 		{
 			i += 1;
 			continue;
 		}
 
-		V_DrawString(currentMenu->x, y, ((unlockables[i].unlocked) ? V_GREENMAP : V_TRANSLUCENT)|V_ALLOWLOWERCASE, ((unlockables[i].unlocked || !unlockables[i].nochecklist) ? unlockables[i].name : M_CreateSecretMenuOption(unlockables[i].name)));
+		V_DrawString(currentMenu->x, y, ((data->unlocked[i]) ? V_GREENMAP : V_TRANSLUCENT)|V_ALLOWLOWERCASE, ((data->unlocked[i] || !unlockables[i].nochecklist) ? unlockables[i].name : M_CreateSecretMenuOption(unlockables[i].name)));
 
 		for (j = i+1; j < MAXUNLOCKABLES; j++)
 		{
@@ -7323,7 +7334,7 @@ static void M_DrawChecklist(void)
 
 									if (title)
 									{
-										const char *level = ((M_MapLocked(cond[condnum].requirement) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || (mapvisited[cond[condnum].requirement-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
+										const char *level = ((M_MapLocked(cond[condnum].requirement, data) || !((mapheaderinfo[cond[condnum].requirement-1]->menuflags & LF2_NOVISITNEEDED) || (data->mapvisited[cond[condnum].requirement-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
 
 										switch (cond[condnum].type)
 										{
@@ -7356,7 +7367,7 @@ static void M_DrawChecklist(void)
 
 									if (title)
 									{
-										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || (mapvisited[cond[condnum].extrainfo1-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
+										const char *level = ((M_MapLocked(cond[condnum].extrainfo1, data) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || (data->mapvisited[cond[condnum].extrainfo1-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
 
 										switch (cond[condnum].type)
 										{
@@ -7425,7 +7436,7 @@ static void M_DrawChecklist(void)
 
 									if (title)
 									{
-										const char *level = ((M_MapLocked(cond[condnum].extrainfo1) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || (mapvisited[cond[condnum].extrainfo1-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
+										const char *level = ((M_MapLocked(cond[condnum].extrainfo1, data) || !((mapheaderinfo[cond[condnum].extrainfo1-1]->menuflags & LF2_NOVISITNEEDED) || (data->mapvisited[cond[condnum].extrainfo1-1] & MV_MAX))) ? M_CreateSecretMenuOption(title) : title);
 
 										switch (cond[condnum].type)
 										{
@@ -7488,7 +7499,7 @@ static void M_DrawChecklist(void)
 
 		/*V_DrawString(160, 8+(24*j), V_RETURN8, V_WordWrap(160, 292, 0, unlockables[i].objective));
 
-		if (unlockables[i].unlocked)
+		if (data->unlocked[i])
 			V_DrawString(308, 8+(24*j), V_YELLOWMAP, "Y");
 		else
 			V_DrawString(308, 8+(24*j), V_YELLOWMAP, "N");*/
@@ -7517,7 +7528,7 @@ static void M_EmblemHints(INT32 choice)
 
 	(void)choice;
 	SR_EmblemHintMenu[0].status = (local > NUMHINTS*2) ? (IT_STRING | IT_ARROWS) : (IT_DISABLED);
-	SR_EmblemHintMenu[1].status = (M_SecretUnlocked(SECRET_ITEMFINDER)) ? (IT_CVAR|IT_STRING) : (IT_SECRET);
+	SR_EmblemHintMenu[1].status = (M_SecretUnlocked(SECRET_ITEMFINDER, clientGamedata)) ? (IT_CVAR|IT_STRING) : (IT_SECRET);
 	hintpage = 1;
 	SR_EmblemHintDef.prevMenu = currentMenu;
 	M_SetupNextMenu(&SR_EmblemHintDef);
@@ -7577,7 +7588,7 @@ static void M_DrawEmblemHints(void)
 
 		if (totalemblems >= ((hintpage-1)*(NUMHINTS*2) + 1) && totalemblems < (hintpage*NUMHINTS*2)+1){
 
-			if (emblem->collected)
+			if (clientGamedata->collected[i])
 			{
 				collected = V_GREENMAP;
 				V_DrawMappedPatch(x, y+4, 0, W_CachePatchName(M_GetEmblemPatch(emblem, false), PU_PATCH),
@@ -8117,7 +8128,7 @@ static void M_SecretsMenu(INT32 choice)
 
 		SR_MainMenu[i].status = IT_SECRET;
 
-		if (unlockables[ul].unlocked)
+		if (clientGamedata->unlocked[ul])
 		{
 			switch (unlockables[ul].type)
 			{
@@ -8216,7 +8227,7 @@ static void M_SinglePlayerMenu(INT32 choice)
 
 	levellistmode = LLM_RECORDATTACK;
 	if (M_GametypeHasLevels(-1))
-		SP_MainMenu[sprecordattack].status = (M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING : IT_SECRET;
+		SP_MainMenu[sprecordattack].status = (M_SecretUnlocked(SECRET_RECORDATTACK, clientGamedata)) ? IT_CALL|IT_STRING : IT_SECRET;
 	else // If Record Attack is nonexistent in the current add-on...
 	{
 		SP_MainMenu[sprecordattack].status = IT_NOTHING|IT_DISABLED; // ...hide and disable the Record Attack option...
@@ -8226,7 +8237,7 @@ static void M_SinglePlayerMenu(INT32 choice)
 
 	levellistmode = LLM_NIGHTSATTACK;
 	if (M_GametypeHasLevels(-1))
-		SP_MainMenu[spnightsmode].status = (M_SecretUnlocked(SECRET_NIGHTSMODE)) ? IT_CALL|IT_STRING : IT_SECRET;
+		SP_MainMenu[spnightsmode].status = (M_SecretUnlocked(SECRET_NIGHTSMODE, clientGamedata)) ? IT_CALL|IT_STRING : IT_SECRET;
 	else // If NiGHTS Mode is nonexistent in the current add-on...
 	{
 		SP_MainMenu[spnightsmode].status = IT_NOTHING|IT_DISABLED; // ...hide and disable the NiGHTS Mode option...
@@ -8249,7 +8260,7 @@ static void M_SinglePlayerMenu(INT32 choice)
 		SP_MainMenu[spnightsmode]  .alphaKey += 8;
 	}
 	else // Otherwise, if Marathon Run is allowed and Record Attack is unlocked, unlock Marathon Run!
-		SP_MainMenu[spmarathon].status = (M_SecretUnlocked(SECRET_RECORDATTACK)) ? IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED : IT_SECRET;
+		SP_MainMenu[spmarathon].status = (M_SecretUnlocked(SECRET_RECORDATTACK, clientGamedata)) ? IT_CALL|IT_STRING|IT_CALL_NOTMODIFIED : IT_SECRET;
 
 
 	if (tutorialmap) // If there's a tutorial available in the current add-on...
@@ -9626,7 +9637,7 @@ static void M_Statistics(INT32 choice)
 		if (!(mapheaderinfo[i]->typeoflevel & TOL_SP) || (mapheaderinfo[i]->menuflags & LF2_HIDEINSTATS))
 			continue;
 
-		if (!(mapvisited[i] & MV_MAX))
+		if (!(clientGamedata->mapvisited[i] & MV_MAX))
 			continue;
 
 		statsMapList[j++] = i;
@@ -9643,6 +9654,7 @@ static void M_Statistics(INT32 choice)
 
 static void M_DrawStatsMaps(int location)
 {
+	gamedata_t *data = clientGamedata;
 	INT32 y = 80, i = -1;
 	INT16 mnum;
 	extraemblem_t *exemblem;
@@ -9710,14 +9722,14 @@ static void M_DrawStatsMaps(int location)
 		{
 			exemblem = &extraemblems[i];
 
-			if (exemblem->collected)
+			if (data->extraCollected[i])
 				V_DrawSmallMappedPatch(292, y, 0, W_CachePatchName(M_GetExtraEmblemPatch(exemblem, false), PU_PATCH),
 				                       R_GetTranslationColormap(TC_DEFAULT, M_GetExtraEmblemColor(exemblem), GTC_CACHE));
 			else
 				V_DrawSmallScaledPatch(292, y, 0, W_CachePatchName("NEEDIT", PU_PATCH));
 
 			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE,
-				(!exemblem->collected && exemblem->showconditionset && !M_Achieved(exemblem->showconditionset))
+				(!data->extraCollected[i] && exemblem->showconditionset && !M_Achieved(exemblem->showconditionset, data))
 				? M_CreateSecretMenuOption(exemblem->description)
 				: exemblem->description);
 		}
@@ -9734,6 +9746,7 @@ bottomarrow:
 
 static void M_DrawLevelStats(void)
 {
+	gamedata_t *data = clientGamedata;
 	char beststr[40];
 
 	tic_t besttime = 0;
@@ -9748,9 +9761,9 @@ static void M_DrawLevelStats(void)
 
 	V_DrawString(20, 24, V_YELLOWMAP, "Total Play Time:");
 	V_DrawCenteredString(BASEVIDWIDTH/2, 32, 0, va("%i hours, %i minutes, %i seconds",
-	                         G_TicsToHours(totalplaytime),
-	                         G_TicsToMinutes(totalplaytime, false),
-	                         G_TicsToSeconds(totalplaytime)));
+	                         G_TicsToHours(data->totalplaytime),
+	                         G_TicsToMinutes(data->totalplaytime, false),
+	                         G_TicsToSeconds(data->totalplaytime)));
 
 	for (i = 0; i < NUMMAPS; i++)
 	{
@@ -9759,25 +9772,25 @@ static void M_DrawLevelStats(void)
 		if (!mapheaderinfo[i] || !(mapheaderinfo[i]->menuflags & LF2_RECORDATTACK))
 			continue;
 
-		if (!mainrecords[i])
+		if (!data->mainrecords[i])
 		{
 			mapsunfinished++;
 			bestunfinished[0] = bestunfinished[1] = bestunfinished[2] = true;
 			continue;
 		}
 
-		if (mainrecords[i]->score > 0)
-			bestscore += mainrecords[i]->score;
+		if (data->mainrecords[i]->score > 0)
+			bestscore += data->mainrecords[i]->score;
 		else
 			mapunfinished = bestunfinished[0] = true;
 
-		if (mainrecords[i]->time > 0)
-			besttime += mainrecords[i]->time;
+		if (data->mainrecords[i]->time > 0)
+			besttime += data->mainrecords[i]->time;
 		else
 			mapunfinished = bestunfinished[1] = true;
 
-		if (mainrecords[i]->rings > 0)
-			bestrings += mainrecords[i]->rings;
+		if (data->mainrecords[i]->rings > 0)
+			bestrings += data->mainrecords[i]->rings;
 		else
 			mapunfinished = bestunfinished[2] = true;
 
@@ -9792,7 +9805,7 @@ static void M_DrawLevelStats(void)
 	else
 		V_DrawString(20, 56, V_GREENMAP, "(complete)");
 
-	V_DrawString(36, 64, 0, va("x %d/%d", M_CountEmblems(), numemblems+numextraemblems));
+	V_DrawString(36, 64, 0, va("x %d/%d", M_CountEmblems(data), numemblems+numextraemblems));
 	V_DrawSmallScaledPatch(20, 64, 0, W_CachePatchName("EMBLICON", PU_PATCH));
 
 	sprintf(beststr, "%u", bestscore);
@@ -9859,6 +9872,7 @@ static void M_HandleLevelStats(INT32 choice)
 // Drawing function for Time Attack
 void M_DrawTimeAttackMenu(void)
 {
+	gamedata_t *data = clientGamedata;
 	INT32 i, x, y, empatx, empaty, cursory = 0;
 	UINT16 dispstatus;
 	patch_t *PictureOfUrFace;	// my WHAT
@@ -10017,7 +10031,7 @@ void M_DrawTimeAttackMenu(void)
 			empatx = empatch->leftoffset / 2;
 			empaty = empatch->topoffset / 2;
 
-			if (em->collected)
+			if (data->collected[em - emblemlocations])
 				V_DrawSmallMappedPatch(104+76+empatx, yHeight+lsheadingheight/2+empaty, 0, empatch,
 				                       R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(em), GTC_CACHE));
 			else
@@ -10030,34 +10044,34 @@ void M_DrawTimeAttackMenu(void)
 		// Draw in-level emblems.
 		M_DrawMapEmblems(cv_nextmap.value, 288, 28, true);
 
-		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->score)
+		if (!data->mainrecords[cv_nextmap.value-1] || !data->mainrecords[cv_nextmap.value-1]->score)
 			sprintf(beststr, "(none)");
 		else
-			sprintf(beststr, "%u", mainrecords[cv_nextmap.value-1]->score);
+			sprintf(beststr, "%u", data->mainrecords[cv_nextmap.value-1]->score);
 
 		V_DrawString(104-72, 33+lsheadingheight/2, V_YELLOWMAP, "SCORE:");
 		V_DrawRightAlignedString(104+64, 33+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
 		V_DrawRightAlignedString(104+72, 43+lsheadingheight/2, V_ALLOWLOWERCASE, reqscore);
 
-		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->time)
+		if (!data->mainrecords[cv_nextmap.value-1] || !data->mainrecords[cv_nextmap.value-1]->time)
 			sprintf(beststr, "(none)");
 		else
-			sprintf(beststr, "%i:%02i.%02i", G_TicsToMinutes(mainrecords[cv_nextmap.value-1]->time, true),
-			                                 G_TicsToSeconds(mainrecords[cv_nextmap.value-1]->time),
-			                                 G_TicsToCentiseconds(mainrecords[cv_nextmap.value-1]->time));
+			sprintf(beststr, "%i:%02i.%02i", G_TicsToMinutes(data->mainrecords[cv_nextmap.value-1]->time, true),
+			                                 G_TicsToSeconds(data->mainrecords[cv_nextmap.value-1]->time),
+			                                 G_TicsToCentiseconds(data->mainrecords[cv_nextmap.value-1]->time));
 
 		V_DrawString(104-72, 53+lsheadingheight/2, V_YELLOWMAP, "TIME:");
 		V_DrawRightAlignedString(104+64, 53+lsheadingheight/2, V_ALLOWLOWERCASE, beststr);
 		V_DrawRightAlignedString(104+72, 63+lsheadingheight/2, V_ALLOWLOWERCASE, reqtime);
 
-		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->rings)
+		if (!data->mainrecords[cv_nextmap.value-1] || !data->mainrecords[cv_nextmap.value-1]->rings)
 			sprintf(beststr, "(none)");
 		else
-			sprintf(beststr, "%hu", mainrecords[cv_nextmap.value-1]->rings);
+			sprintf(beststr, "%hu", data->mainrecords[cv_nextmap.value-1]->rings);
 
 		V_DrawString(104-72, 73+lsheadingheight/2, V_YELLOWMAP, "RINGS:");
 
-		V_DrawRightAlignedString(104+64, 73+lsheadingheight/2, V_ALLOWLOWERCASE|((mapvisited[cv_nextmap.value-1] & MV_PERFECTRA) ? V_YELLOWMAP : 0), beststr);
+		V_DrawRightAlignedString(104+64, 73+lsheadingheight/2, V_ALLOWLOWERCASE|((data->mapvisited[cv_nextmap.value-1] & MV_PERFECTRA) ? V_YELLOWMAP : 0), beststr);
 
 		V_DrawRightAlignedString(104+72, 83+lsheadingheight/2, V_ALLOWLOWERCASE, reqrings);
 	}
@@ -10151,6 +10165,7 @@ static void M_TimeAttack(INT32 choice)
 // Drawing function for Nights Attack
 void M_DrawNightsAttackMenu(void)
 {
+	gamedata_t *data = clientGamedata;
 	INT32 i, x, y, cursory = 0;
 	UINT16 dispstatus;
 
@@ -10217,10 +10232,10 @@ void M_DrawNightsAttackMenu(void)
 		lumpnum_t lumpnum;
 		char beststr[40];
 
-		//UINT8 bestoverall	= G_GetBestNightsGrade(cv_nextmap.value, 0);
-		UINT8 bestgrade		= G_GetBestNightsGrade(cv_nextmap.value, cv_dummymares.value);
-		UINT32 bestscore	= G_GetBestNightsScore(cv_nextmap.value, cv_dummymares.value);
-		tic_t besttime		= G_GetBestNightsTime(cv_nextmap.value, cv_dummymares.value);
+		//UINT8 bestoverall	= G_GetBestNightsGrade(cv_nextmap.value, 0, data);
+		UINT8 bestgrade		= G_GetBestNightsGrade(cv_nextmap.value, cv_dummymares.value, data);
+		UINT32 bestscore	= G_GetBestNightsScore(cv_nextmap.value, cv_dummymares.value, data);
+		tic_t besttime		= G_GetBestNightsTime(cv_nextmap.value, cv_dummymares.value, data);
 
 		M_DrawLevelPlatterHeader(32-lsheadingheight/2, cv_nextmap.string, true, false);
 
@@ -10301,7 +10316,7 @@ void M_DrawNightsAttackMenu(void)
 						goto skipThisOne;
 				}
 
-				if (em->collected)
+				if (data->collected[em - emblemlocations])
 					V_DrawSmallMappedPatch(xpos, yHeight+lsheadingheight/2, 0, W_CachePatchName(M_GetEmblemPatch(em, false), PU_PATCH),
 																 R_GetTranslationColormap(TC_DEFAULT, M_GetEmblemColor(em), GTC_CACHE));
 				else
@@ -12544,12 +12559,12 @@ static void M_EraseDataResponse(INT32 ch)
 
 	// Delete the data
 	if (erasecontext != 1)
-		G_ClearRecords();
+		G_ClearRecords(clientGamedata);
 	if (erasecontext != 0)
-		M_ClearSecrets();
+		M_ClearSecrets(clientGamedata);
 	if (erasecontext == 2)
 	{
-		totalplaytime = 0;
+		clientGamedata->totalplaytime = 0;
 		F_StartIntro();
 	}
 	BwehHehHe();

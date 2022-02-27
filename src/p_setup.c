@@ -7460,7 +7460,7 @@ static void P_WriteLetter(void)
 {
 	char *buf, *b;
 
-	if (!unlockables[28].unlocked) // pandora's box
+	if (!serverGamedata->unlocked[28]) // pandora's box
 		return;
 
 	if (modeattacking)
@@ -7804,10 +7804,11 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	nextmapoverride = 0;
 	skipstats = 0;
 
-	if (!(netgame || multiplayer || demoplayback))
-		mapvisited[gamemap-1] |= MV_VISITED;
-	else if (netgame || multiplayer)
-		mapvisited[gamemap-1] |= MV_MP; // you want to record that you've been there this session, but not permanently
+	if (!demoplayback)
+	{
+		clientGamedata->mapvisited[gamemap-1] |= MV_VISITED;
+		serverGamedata->mapvisited[gamemap-1] |= MV_VISITED;
+	}
 
 	levelloading = false;
 

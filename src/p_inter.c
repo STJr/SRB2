@@ -740,10 +740,22 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				if (demoplayback || (player->bot && player->bot != BOT_MPAI) || special->health <= 0 || special->health > MAXEMBLEMS)
 					return;
-				emblemlocations[special->health-1].collected = true;
 
-				M_UpdateUnlockablesAndExtraEmblems();
-				G_SaveGameData();
+				if (emblemlocations[special->health-1].type == ET_SKIN)
+				{
+					INT32 skinnum = M_EmblemSkinNum(&emblemlocations[special->health-1]);
+
+					if (player->skin != skinnum)
+					{
+						return;
+					}
+				}
+
+				clientGamedata->collected[special->health-1] = serverGamedata->collected[special->health-1] = true;
+
+				M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+				M_UpdateUnlockablesAndExtraEmblems(clientGamedata);
+				G_SaveGameData(clientGamedata);
 				break;
 			}
 

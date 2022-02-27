@@ -2036,7 +2036,7 @@ static void Command_Map_f(void)
 	// ... unless you're in a dedicated server.  Yes, technically this means you can view any level by
 	// running a dedicated server and joining it yourself, but that's better than making dedicated server's
 	// lives hell.
-	if (!dedicated && M_MapLocked(newmapnum))
+	if (!dedicated && M_MapLocked(newmapnum, serverGamedata))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("You need to unlock this level before you can warp to it!\n"));
 		Z_Free(realmapname);
@@ -3945,15 +3945,9 @@ void ItemFinder_OnChange(void)
 	if (!cv_itemfinder.value)
 		return; // it's fine.
 
-	if (!M_SecretUnlocked(SECRET_ITEMFINDER))
+	if (!M_SecretUnlocked(SECRET_ITEMFINDER, clientGamedata))
 	{
 		CONS_Printf(M_GetText("You haven't earned this yet.\n"));
-		CV_StealthSetValue(&cv_itemfinder, 0);
-		return;
-	}
-	else if (netgame || multiplayer)
-	{
-		CONS_Printf(M_GetText("This only works in single player.\n"));
 		CV_StealthSetValue(&cv_itemfinder, 0);
 		return;
 	}
@@ -4305,7 +4299,7 @@ void D_GameTypeChanged(INT32 lastgametype)
 
 static void Ringslinger_OnChange(void)
 {
-	if (!M_SecretUnlocked(SECRET_PANDORA) && !netgame && cv_ringslinger.value && !cv_debug)
+	if (!M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !netgame && cv_ringslinger.value && !cv_debug)
 	{
 		CONS_Printf(M_GetText("You haven't earned this yet.\n"));
 		CV_StealthSetValue(&cv_ringslinger, 0);
@@ -4318,7 +4312,7 @@ static void Ringslinger_OnChange(void)
 
 static void Gravity_OnChange(void)
 {
-	if (!M_SecretUnlocked(SECRET_PANDORA) && !netgame && !cv_debug
+	if (!M_SecretUnlocked(SECRET_PANDORA, serverGamedata) && !netgame && !cv_debug
 		&& strcmp(cv_gravity.string, cv_gravity.defaultvalue))
 	{
 		CONS_Printf(M_GetText("You haven't earned this yet.\n"));

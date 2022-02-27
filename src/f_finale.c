@@ -1411,7 +1411,7 @@ boolean F_CreditResponder(event_t *event)
 			break;
 	}
 
-	if (!(timesBeaten) && !(netgame || multiplayer) && !cv_debug)
+	if (!(serverGamedata->timesBeaten) && !(netgame || multiplayer) && !cv_debug)
 		return false;
 
 	if (event->type != ev_keydown)
@@ -1573,23 +1573,17 @@ void F_GameEvaluationDrawer(void)
 #if 0 // the following looks like hot garbage the more unlockables we add, and we now have a lot of unlockables
 	if (finalecount >= 5*TICRATE)
 	{
+		INT32 startcoord = 32;
 		V_DrawString(8, 16, V_YELLOWMAP, "Unlocked:");
 
-		if (netgame)
-			V_DrawString(8, 96, V_YELLOWMAP, "Multiplayer games\ncan't unlock\nextras!");
-		else
+		for (i = 0; i < MAXUNLOCKABLES; i++)
 		{
-			INT32 startcoord = 32;
-
-			for (i = 0; i < MAXUNLOCKABLES; i++)
+			if (unlockables[i].conditionset && unlockables[i].conditionset < MAXCONDITIONSETS
+				&& unlockables[i].type && !unlockables[i].nocecho)
 			{
-				if (unlockables[i].conditionset && unlockables[i].conditionset < MAXCONDITIONSETS
-					&& unlockables[i].type && !unlockables[i].nocecho)
-				{
-					if (unlockables[i].unlocked)
-						V_DrawString(8, startcoord, 0, unlockables[i].name);
-					startcoord += 8;
-				}
+				if (clientGamedata->unlocked[i])
+					V_DrawString(8, startcoord, 0, unlockables[i].name);
+				startcoord += 8;
 			}
 		}
 	}
@@ -1657,18 +1651,27 @@ void F_GameEvaluationTicker(void)
 		}
 		else
 		{
-			++timesBeaten;
+			serverGamedata->timesBeaten++;
+			clientGamedata->timesBeaten++;
 
 			if (ALL7EMERALDS(emeralds))
-				++timesBeatenWithEmeralds;
+			{
+				serverGamedata->timesBeatenWithEmeralds++;
+				clientGamedata->timesBeatenWithEmeralds++;
+			}
 
 			if (ultimatemode)
-				++timesBeatenUltimate;
+			{
+				serverGamedata->timesBeatenUltimate++;
+				clientGamedata->timesBeatenUltimate++;
+			}
 
-			if (M_UpdateUnlockablesAndExtraEmblems())
+			M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+			if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 				S_StartSound(NULL, sfx_s3k68);
 
-			G_SaveGameData();
+			G_SaveGameData(clientGamedata);
 		}
 	}
 }
@@ -2183,7 +2186,7 @@ void F_EndingDrawer(void)
 			//colset(linkmap,  164, 165, 169); -- the ideal purple colour to represent a clicked in-game link, but not worth it just for a soundtest-controlled secret
 			V_DrawCenteredString(BASEVIDWIDTH/2, 8, V_ALLOWLOWERCASE|(trans<<V_ALPHASHIFT), str);
 			V_DrawCharacter(32, BASEVIDHEIGHT-16, '>'|(trans<<V_ALPHASHIFT), false);
-			V_DrawString(40, ((finalecount == STOPPINGPOINT-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((timesBeaten || finalecount >= STOPPINGPOINT-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
+			V_DrawString(40, ((finalecount == STOPPINGPOINT-(20+TICRATE)) ? 1 : 0)+BASEVIDHEIGHT-16, ((serverGamedata->timesBeaten || finalecount >= STOPPINGPOINT-TICRATE) ? V_PURPLEMAP : V_BLUEMAP)|(trans<<V_ALPHASHIFT), " [S] ===>");
 		}
 
 		if (finalecount > STOPPINGPOINT-(20+(2*TICRATE)))

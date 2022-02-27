@@ -1697,7 +1697,7 @@ static void ST_drawNightsRecords(void)
 			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
 
 			// If new record, say so!
-			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1) <= stplyr->lastmarescore)
+			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1, clientGamedata) <= stplyr->lastmarescore)
 			{
 				if (stplyr->texttimer & 16)
 					V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_YELLOWMAP|aflag, "* NEW RECORD *");
@@ -2563,8 +2563,11 @@ static void ST_doItemFinderIconsAndSound(void)
 
 		emblems[stemblems++] = i;
 
-		if (!emblemlocations[i].collected)
+		if (!(clientGamedata->collected[i] && serverGamedata->collected[i]))
+		{
+			// It can be worth collecting again if the server doesn't have it.
 			++stunfound;
+		}
 
 		if (stemblems >= 16)
 			break;
@@ -2723,7 +2726,7 @@ static void ST_overlayDrawer(void)
 			ST_drawRaceHUD();
 
 		// Emerald Hunt Indicators
-		if (cv_itemfinder.value && M_SecretUnlocked(SECRET_ITEMFINDER))
+		if (cv_itemfinder.value && M_SecretUnlocked(SECRET_ITEMFINDER, clientGamedata))
 			ST_doItemFinderIconsAndSound();
 		else
 			ST_doHuntIconsAndSound();
