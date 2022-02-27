@@ -4322,11 +4322,20 @@ void G_LoadGameData(void)
 	totalplaytime = READUINT32(save_p);
 
 #ifdef COMPAT_GAMEDATA_ID
-	// Ignore for backwards compat, it'll get fixed when saving.
 	if (versionID == COMPAT_GAMEDATA_ID)
 	{
-		// Old files use a UINT8 here.
-		READUINT8(save_p);
+		// We'll temporarily use the old condition when loading an older file.
+		// The proper mod-specific hash will get saved in afterwards.
+		boolean modded = READUINT8(save_p);
+
+		if (modded && !savemoddata)
+		{
+			goto datacorrupt;
+		}
+		else if (modded != true && modded != false)
+		{
+			goto datacorrupt;
+		}
 	}
 	else
 #endif
