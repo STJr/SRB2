@@ -1114,7 +1114,7 @@ void Y_Ticker(void)
 			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
+			if (!(netgame || multiplayer) && !demoplayback)
 			{
 				if (M_UpdateUnlockablesAndExtraEmblems())
 					S_StartSound(NULL, sfx_s3k68);
@@ -1206,7 +1206,7 @@ void Y_Ticker(void)
 			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
+			if (!(netgame || multiplayer) && !demoplayback)
 			{
 				if (M_UpdateUnlockablesAndExtraEmblems())
 					S_StartSound(NULL, sfx_s3k68);
