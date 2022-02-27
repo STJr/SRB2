@@ -2937,7 +2937,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 441: // Trigger unlockable
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
+			if (!(netgame || multiplayer))
 			{
 				INT32 trigid = line->args[0];
 

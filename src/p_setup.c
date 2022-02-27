@@ -7746,7 +7746,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	nextmapoverride = 0;
 	skipstats = 0;
 
-	if (!(netgame || multiplayer || demoplayback) && (!modifiedgame || savemoddata))
+	if (!(netgame || multiplayer || demoplayback))
 		mapvisited[gamemap-1] |= MV_VISITED;
 	else if (netgame || multiplayer)
 		mapvisited[gamemap-1] |= MV_MP; // you want to record that you've been there this session, but not permanently
@@ -7764,8 +7764,10 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		{
 			// I'd love to do this in the menu code instead of here, but everything's a mess and I can't guarantee saving proper player struct info before the first act's started. You could probably refactor it, but it'd be a lot of effort. Easier to just work off known good code. ~toast 22/06/2020
 			if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || marathonmode)
-			&& (!modifiedgame || savemoddata) && cursaveslot > 0)
+				&& cursaveslot > 0)
+			{
 				G_SaveGame((UINT32)cursaveslot, gamemap);
+			}
 			// If you're looking for saving sp file progression (distinct from G_SaveGameOver), check G_DoCompleted.
 		}
 		lastmaploaded = gamemap; // HAS to be set after saving!!

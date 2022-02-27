@@ -1575,7 +1575,9 @@ void F_GameEvaluationDrawer(void)
 	{
 		V_DrawString(8, 16, V_YELLOWMAP, "Unlocked:");
 
-		if (!(netgame) && (!modifiedgame || savemoddata))
+		if (netgame)
+			V_DrawString(8, 96, V_YELLOWMAP, "Multiplayer games\ncan't unlock\nextras!");
+		else
 		{
 			INT32 startcoord = 32;
 
@@ -1590,10 +1592,6 @@ void F_GameEvaluationDrawer(void)
 				}
 			}
 		}
-		else if (netgame)
-			V_DrawString(8, 96, V_YELLOWMAP, "Multiplayer games\ncan't unlock\nextras!");
-		else
-			V_DrawString(8, 96, V_YELLOWMAP, "Modified games\ncan't unlock\nextras!");
 	}
 #endif
 
@@ -1657,7 +1655,7 @@ void F_GameEvaluationTicker(void)
 			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Multiplayer games can't unlock extras!");
 			S_StartSound(NULL, sfx_s3k68);
 		}
-		else if (!modifiedgame || savemoddata)
+		else
 		{
 			++timesBeaten;
 
@@ -1671,13 +1669,6 @@ void F_GameEvaluationTicker(void)
 				S_StartSound(NULL, sfx_s3k68);
 
 			G_SaveGameData();
-		}
-		else
-		{
-			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
-			HU_SetCEchoDuration(6);
-			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Modified games can't unlock extras!");
-			S_StartSound(NULL, sfx_s3k68);
 		}
 	}
 }
