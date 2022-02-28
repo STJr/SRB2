@@ -81,7 +81,7 @@ static UINT8 cheatf_warp(void)
 	S_StartSound(0, sfx_itemup);
 
 	// Temporarily unlock stuff.
-	G_SetGameModified(false);
+	G_SetUsedCheats(false);
 	unlockables[31].unlocked = true; // credits
 	unlockables[30].unlocked = true; // sound test
 	unlockables[28].unlocked = true; // level select
@@ -106,7 +106,7 @@ static UINT8 cheatf_devmode(void)
 	S_StartSound(0, sfx_itemup);
 
 	// Just unlock all the things and turn on -debug and console devmode.
-	G_SetGameModified(false);
+	G_SetUsedCheats(false);
 	for (i = 0; i < MAXUNLOCKABLES; i++)
 		unlockables[i].unlocked = true;
 	devparm = true;
@@ -275,7 +275,7 @@ void Command_CheatNoClip_f(void)
 	plyr->pflags ^= PF_NOCLIP;
 	CONS_Printf(M_GetText("No Clipping %s\n"), plyr->pflags & PF_NOCLIP ? M_GetText("On") : M_GetText("Off"));
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_CheatGod_f(void)
@@ -290,7 +290,7 @@ void Command_CheatGod_f(void)
 	plyr->pflags ^= PF_GODMODE;
 	CONS_Printf(M_GetText("Cheese Mode %s\n"), plyr->pflags & PF_GODMODE ? M_GetText("On") : M_GetText("Off"));
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_CheatNoTarget_f(void)
@@ -305,7 +305,7 @@ void Command_CheatNoTarget_f(void)
 	plyr->pflags ^= PF_INVIS;
 	CONS_Printf(M_GetText("SEP Field %s\n"), plyr->pflags & PF_INVIS ? M_GetText("On") : M_GetText("Off"));
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_Scale_f(void)
@@ -879,7 +879,7 @@ void Command_Devmode_f(void)
 		return;
 	}
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 void Command_Setrings_f(void)
@@ -905,7 +905,7 @@ void Command_Setrings_f(void)
 			// no totalsphere addition to revert
 		}
 
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 }
 
@@ -928,7 +928,7 @@ void Command_Setlives_f(void)
 			P_GivePlayerLives(&players[consoleplayer], atoi(COM_Argv(1)));
 		}
 
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 }
 
@@ -955,7 +955,7 @@ void Command_Setcontinues_f(void)
 
 		players[consoleplayer].continues = numcontinues;
 
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 }
 
@@ -1446,7 +1446,7 @@ void Command_ObjectPlace_f(void)
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_NOULTIMATE;
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 
 	silent = COM_CheckParm("-silent");
 

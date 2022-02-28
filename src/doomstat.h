@@ -75,6 +75,7 @@ extern SINT8 startinglivesbalance[maxgameovers+1];
 extern boolean modifiedgame;
 extern UINT16 mainwads;
 extern boolean savemoddata; // This mod saves time/emblem data.
+extern boolean usedCheats;
 extern boolean disableSpeedAdjust; // Don't alter the duration of player states if true
 extern boolean imcontinuing; // Temporary flag while continuing
 extern boolean metalrecording;
