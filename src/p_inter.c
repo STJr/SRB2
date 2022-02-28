@@ -822,7 +822,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				spark = P_SpawnMobjFromMobj(special, 0, 0, 0, MT_SPARK);
 				if (prevCollected == false && P_EmblemWasCollected(special->health - 1) == true)
 				{
-					S_StartSound(special, special->info->deathsound);
+					S_StartSound((shareEmblems ? NULL : special), special->info->deathsound);
 				}
 				else
 				{
