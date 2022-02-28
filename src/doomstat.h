@@ -543,8 +543,11 @@ extern UINT8 useBlackRock;
 
 extern UINT8 use1upSound;
 extern UINT8 maxXtraLife; // Max extra lives from rings
+
 extern UINT8 useContinues;
 #define continuesInSession (!multiplayer && (ultimatemode || (useContinues && !marathonmode) || (!modeattacking && !(cursaveslot > 0))))
+
+extern UINT8 shareEmblems;
 
 extern mobj_t *hunt1, *hunt2, *hunt3; // Emerald hunt locations
 

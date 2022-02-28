@@ -2563,9 +2563,8 @@ static void ST_doItemFinderIconsAndSound(void)
 
 		emblems[stemblems++] = i;
 
-		if (!(clientGamedata->collected[i] && serverGamedata->collected[i]))
+		if (!P_EmblemWasCollected(i))
 		{
-			// It can be worth collecting again if the server doesn't have it.
 			++stunfound;
 		}
 

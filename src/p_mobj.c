@@ -9716,6 +9716,11 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			A_AttractChase(mobj);
 		break;
 	case MT_EMBLEM:
+		if (P_EmblemWasCollected(mobj->health - 1) || !P_CanPickupEmblem(&players[consoleplayer], mobj->health - 1))
+			mobj->frame |= (tr_trans50 << FF_TRANSSHIFT);
+		else
+			mobj->frame &= ~FF_TRANSMASK;
+
 		if (mobj->flags2 & MF2_NIGHTSPULL)
 			P_NightsItemChase(mobj);
 		break;
@@ -12146,7 +12151,6 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 	INT32 j;
 	emblem_t* emblem = M_GetLevelEmblems(gamemap);
 	skincolornum_t emcolor;
-	boolean validEmblem = true;
 
 	while (emblem)
 	{
@@ -12171,47 +12175,19 @@ static boolean P_SetupEmblem(mapthing_t *mthing, mobj_t *mobj)
 	emcolor = M_GetEmblemColor(&emblemlocations[j]); // workaround for compiler complaint about bad function casting
 	mobj->color = (UINT16)emcolor;
 
-	validEmblem = true;
+	mobj->frame &= ~FF_TRANSMASK;
 
-	if (!netgame)
+	if (emblemlocations[j].type == ET_GLOBAL)
 	{
-		validEmblem = !serverGamedata->collected[j];
-
-		if (emblemlocations[j].type == ET_SKIN && !multiplayer)
+		mobj->reactiontime = emblemlocations[j].var;
+		if (emblemlocations[j].var & GE_NIGHTSITEM)
 		{
-			INT32 skinnum = M_EmblemSkinNum(&emblemlocations[j]);
-
-			if (players[0].skin != skinnum)
-			{
-				validEmblem = false;
-			}
+			mobj->flags |= MF_NIGHTSITEM;
+			mobj->flags &= ~MF_SPECIAL;
+			mobj->flags2 |= MF2_DONTDRAW;
 		}
 	}
 
-	if (validEmblem == false)
-	{
-		P_UnsetThingPosition(mobj);
-		mobj->flags |= MF_NOCLIP;
-		mobj->flags &= ~MF_SPECIAL;
-		mobj->flags |= MF_NOBLOCKMAP;
-		mobj->frame |= (tr_trans50 << FF_TRANSSHIFT);
-		P_SetThingPosition(mobj);
-	}
-	else
-	{
-		mobj->frame &= ~FF_TRANSMASK;
-
-		if (emblemlocations[j].type == ET_GLOBAL)
-		{
-			mobj->reactiontime = emblemlocations[j].var;
-			if (emblemlocations[j].var & GE_NIGHTSITEM)
-			{
-				mobj->flags |= MF_NIGHTSITEM;
-				mobj->flags &= ~MF_SPECIAL;
-				mobj->flags2 |= MF2_DONTDRAW;
-			}
-		}
-	}
 	return true;
 }
 

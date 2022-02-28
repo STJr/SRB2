@@ -876,7 +876,7 @@ static void P_SpawnMapThings(boolean spawnemblems)
 	size_t i;
 	mapthing_t *mt;
 
-        // Spawn axis points first so they are at the front of the list for fast searching.
+	// Spawn axis points first so they are at the front of the list for fast searching.
 	for (i = 0, mt = mapthings; i < nummapthings; i++, mt++)
 	{
 		switch (mt->type)

@@ -164,6 +164,62 @@ boolean P_CanPickupItem(player_t *player, boolean weapon)
 	return true;
 }
 
+boolean P_CanPickupEmblem(player_t *player, INT32 emblemID)
+{
+	emblem_t *emblem = NULL;
+
+	if (emblemID < 0 || emblemID >= numemblems)
+	{
+		// Invalid emblem ID, can't pickup.
+		return false;
+	}
+
+	emblem = &emblemlocations[emblemID];
+
+	if (demoplayback)
+	{
+		// Never collect emblems in replays.
+		return false;
+	}
+
+	if (player->bot && player->bot != BOT_MPAI)
+	{
+		// Your little lap-dog can't grab these for you.
+		return false;
+	}
+
+	if (emblem->type == ET_SKIN)
+	{
+		INT32 skinnum = M_EmblemSkinNum(emblem);
+
+		if (player->skin != skinnum)
+		{
+			// Incorrect skin to pick up this emblem.
+			return false;
+		}
+	}
+
+	return true;
+}
+
+boolean P_EmblemWasCollected(INT32 emblemID)
+{
+	if (emblemID < 0 || emblemID >= numemblems)
+	{
+		// Invalid emblem ID, can't pickup.
+		return true;
+	}
+
+	if (shareEmblems && !serverGamedata->collected[emblemID])
+	{
+		// It can be worth collecting again if we're sharing emblems
+		// and the server doesn't have it.
+		return false;
+	}
+
+	return clientGamedata->collected[emblemID];
+}
+
 //
 // P_DoNightsScore
 //
@@ -738,25 +794,41 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		// Secret emblem thingy
 		case MT_EMBLEM:
 			{
-				if (demoplayback || (player->bot && player->bot != BOT_MPAI) || special->health <= 0 || special->health > MAXEMBLEMS)
-					return;
+				mobj_t *spark = NULL;
+				boolean prevCollected;
 
-				if (emblemlocations[special->health-1].type == ET_SKIN)
+				if (!P_CanPickupEmblem(player, special->health - 1))
 				{
-					INT32 skinnum = M_EmblemSkinNum(&emblemlocations[special->health-1]);
-
-					if (player->skin != skinnum)
-					{
-						return;
-					}
+					return;
 				}
 
-				clientGamedata->collected[special->health-1] = serverGamedata->collected[special->health-1] = true;
+				prevCollected = P_EmblemWasCollected(special->health - 1);
 
-				M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
-				M_UpdateUnlockablesAndExtraEmblems(clientGamedata);
-				G_SaveGameData(clientGamedata);
-				break;
+				if (((player - players) == serverplayer) || shareEmblems)
+				{
+					serverGamedata->collected[special->health-1] = true;
+					M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+				}
+
+				if (P_IsLocalPlayer(player) || shareEmblems)
+				{
+					clientGamedata->collected[special->health-1] = true;
+					M_UpdateUnlockablesAndExtraEmblems(clientGamedata);
+					G_SaveGameData(clientGamedata);
+				}
+
+				// This always spawns the object to prevent mobjnum issues,
+				// but makes the effect invisible to whoever it doesn't matter to.
+				spark = P_SpawnMobjFromMobj(special, 0, 0, 0, MT_SPARK);
+				if (prevCollected == false && P_EmblemWasCollected(special->health - 1) == true)
+				{
+					S_StartSound(special, special->info->deathsound);
+				}
+				else
+				{
+					spark->flags2 |= MF2_DONTDRAW;
+				}
+				return;
 			}
 
 		// CTF Flags

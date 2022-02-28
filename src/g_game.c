@@ -215,6 +215,7 @@ UINT8 ammoremovaltics = 2*TICRATE;
 UINT8 use1upSound = 0;
 UINT8 maxXtraLife = 2; // Max extra lives from rings
 UINT8 useContinues = 0; // Set to 1 to enable continues outside of no-save scenarioes
+UINT8 shareEmblems = 0; // Set to 1 to share all picked up emblems in multiplayer
 
 UINT8 introtoplay;
 UINT8 creditscutscene;

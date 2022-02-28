@@ -3839,6 +3839,10 @@ void readmaincfg(MYFILE *f)
 			{
 				useContinues = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
+			else if (fastcmp(word, "SHAREEMBLEMS"))
+			{
+				shareEmblems = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
 
 			else if (fastcmp(word, "GAMEDATA"))
 			{
