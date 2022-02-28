@@ -3843,7 +3843,7 @@ static void G_UpdateVisited(gamedata_t *data, boolean silent)
 {
 	boolean spec = G_IsSpecialStage(gamemap);
 	// Update visitation flags?
-	if (!multiplayer && !demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
+	if (!demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
 		&& !stagefailed) // Did not fail the stage
 	{
 		UINT8 earnedEmblems;
