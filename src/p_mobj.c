@@ -12009,6 +12009,10 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 			return false; // You already got this token
 
 		break;
+	case MT_EMBLEM:
+		if (!G_CoopGametype())
+			return false; // Gametype's not right
+		break;
 	default:
 		break;
 	}

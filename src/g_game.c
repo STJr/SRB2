@@ -3843,16 +3843,19 @@ static void G_UpdateVisited(gamedata_t *data, boolean silent)
 {
 	boolean spec = G_IsSpecialStage(gamemap);
 	// Update visitation flags?
-	if (!demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
+	if (!demoplayback
+		&& G_CoopGametype() // Campaign mode
 		&& !stagefailed) // Did not fail the stage
 	{
 		UINT8 earnedEmblems;
 
 		// Update visitation flags
 		data->mapvisited[gamemap-1] |= MV_BEATEN;
+
 		// eh, what the hell
 		if (ultimatemode)
 			data->mapvisited[gamemap-1] |= MV_ULTIMATE;
+
 		// may seem incorrect but IS possible in what the main game uses as mp special stages, and nummaprings will be -1 in NiGHTS
 		if (nummaprings > 0 && players[consoleplayer].rings >= nummaprings)
 		{
@@ -3860,6 +3863,7 @@ static void G_UpdateVisited(gamedata_t *data, boolean silent)
 			if (modeattacking)
 				data->mapvisited[gamemap-1] |= MV_PERFECTRA;
 		}
+
 		if (!spec)
 		{
 			// not available to special stages because they can only really be done in one order in an unmodified game, so impossible for first six and trivial for seventh
