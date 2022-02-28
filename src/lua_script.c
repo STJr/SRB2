@@ -306,6 +306,18 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		lua_pushinteger(L, ammoremovaltics);
 		return 1;
 	// end timers
+	} else if (fastcmp(word,"use1upSound")) {
+		lua_pushinteger(L, use1upSound);
+		return 1;
+	} else if (fastcmp(word,"maxXtraLife")) {
+		lua_pushinteger(L, maxXtraLife);
+		return 1;
+	} else if (fastcmp(word,"useContinues")) {
+		lua_pushinteger(L, useContinues);
+		return 1;
+	} else if (fastcmp(word,"shareEmblems")) {
+		lua_pushinteger(L, shareEmblems);
+		return 1;
 	} else if (fastcmp(word,"gametype")) {
 		lua_pushinteger(L, gametype);
 		return 1;
