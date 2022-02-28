@@ -555,19 +555,22 @@ static menuitem_t MPauseMenu[] =
 	{IT_STRING | IT_CALL,    NULL, "Add-ons...",                M_Addons,               8},
 	{IT_STRING | IT_SUBMENU, NULL, "Scramble Teams...",         &MISC_ScrambleTeamDef, 16},
 	{IT_STRING | IT_CALL,    NULL, "Switch Gametype/Level...",  M_MapChange,           24},
+	{IT_STRING | IT_CALL,    NULL, "Emblem Hints...",           M_EmblemHints,         32},
 
-	{IT_STRING | IT_CALL,    NULL, "Continue",                  M_SelectableClearMenus,40},
-	{IT_STRING | IT_CALL,    NULL, "Player 1 Setup",            M_SetupMultiPlayer,    48}, // splitscreen
-	{IT_STRING | IT_CALL,    NULL, "Player 2 Setup",            M_SetupMultiPlayer2,   56}, // splitscreen
+	{IT_STRING | IT_CALL,    NULL, "Continue",                  M_SelectableClearMenus,48},
 
-	{IT_STRING | IT_CALL,    NULL, "Spectate",                  M_ConfirmSpectate,     48},
-	{IT_STRING | IT_CALL,    NULL, "Enter Game",                M_ConfirmEnterGame,    48},
-	{IT_STRING | IT_SUBMENU, NULL, "Switch Team...",            &MISC_ChangeTeamDef,   48},
-	{IT_STRING | IT_CALL,    NULL, "Player Setup",              M_SetupMultiPlayer,    56}, // alone
-	{IT_STRING | IT_CALL,    NULL, "Options",                   M_Options,             64},
+	{IT_STRING | IT_CALL,    NULL, "Player 1 Setup",            M_SetupMultiPlayer,    56}, // splitscreen
+	{IT_STRING | IT_CALL,    NULL, "Player 2 Setup",            M_SetupMultiPlayer2,   64},
 
-	{IT_STRING | IT_CALL,    NULL, "Return to Title",           M_EndGame,             80},
-	{IT_STRING | IT_CALL,    NULL, "Quit Game",                 M_QuitSRB2,            88},
+	{IT_STRING | IT_CALL,    NULL, "Spectate",                  M_ConfirmSpectate,     56}, // alone
+	{IT_STRING | IT_CALL,    NULL, "Enter Game",                M_ConfirmEnterGame,    56},
+	{IT_STRING | IT_SUBMENU, NULL, "Switch Team...",            &MISC_ChangeTeamDef,   56},
+	{IT_STRING | IT_CALL,    NULL, "Player Setup",              M_SetupMultiPlayer,    64},
+
+	{IT_STRING | IT_CALL,    NULL, "Options",                   M_Options,             72},
+
+	{IT_STRING | IT_CALL,    NULL, "Return to Title",           M_EndGame,             88},
+	{IT_STRING | IT_CALL,    NULL, "Quit Game",                 M_QuitSRB2,            96},
 };
 
 typedef enum
@@ -575,6 +578,7 @@ typedef enum
 	mpause_addons = 0,
 	mpause_scramble,
 	mpause_switchmap,
+	mpause_hints,
 
 	mpause_continue,
 	mpause_psetupsplit,
@@ -3747,12 +3751,10 @@ void M_StartControlPanel(void)
 		if (splitscreen)
 		{
 			MPauseMenu[mpause_psetupsplit].status = MPauseMenu[mpause_psetupsplit2].status = IT_STRING | IT_CALL;
-			MPauseMenu[mpause_psetup].text = "Player 1 Setup";
 		}
 		else
 		{
 			MPauseMenu[mpause_psetup].status = IT_STRING | IT_CALL;
-			MPauseMenu[mpause_psetup].text = "Player Setup";
 
 			if (G_GametypeHasTeams())
 				MPauseMenu[mpause_switchteam].status = IT_STRING | IT_SUBMENU;
@@ -3761,6 +3763,8 @@ void M_StartControlPanel(void)
 			else // in this odd case, we still want something to be on the menu even if it's useless
 				MPauseMenu[mpause_spectate].status = IT_GRAYEDOUT;
 		}
+
+		MPauseMenu[mpause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata) && G_CoopGametype()) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 
 		currentMenu = &MPauseDef;
 		itemOn = mpause_continue;
@@ -4696,7 +4700,7 @@ static void M_DrawPauseMenu(void)
 {
 	gamedata_t *data = clientGamedata;
 
-	if (!netgame && !multiplayer && (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
+	if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION)
 	{
 		emblem_t *emblem_detail[3] = {NULL, NULL, NULL};
 		char emblem_text[3][20];
