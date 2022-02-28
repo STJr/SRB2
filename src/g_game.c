@@ -3869,7 +3869,8 @@ static void G_UpdateVisited(gamedata_t *data, boolean silent)
 
 		if (silent)
 		{
-			M_CheckLevelEmblems(data);
+			if (modeattacking)
+				M_CheckLevelEmblems(data);
 		}
 		else
 		{
