@@ -4316,7 +4316,6 @@ extern playersprite_t free_spr2;
 typedef enum mobj_type
 {
 	MT_NULL,
-	MT_RAY, // General purpose mobj
 	MT_UNKNOWN,
 
 	MT_THOK, // Thok! mobj
@@ -5090,6 +5089,7 @@ typedef enum mobj_type
 	MT_YELLOWBRICKDEBRIS, // for CEZ3
 
 	MT_NAMECHECK,
+	MT_RAY, // General purpose mobj
 
 	MT_FIRSTFREESLOT,
 	MT_LASTFREESLOT = MT_FIRSTFREESLOT + NUMMOBJFREESLOTS - 1,
