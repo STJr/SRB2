@@ -1506,7 +1506,7 @@ void D_SRB2Main(void)
 		else
 		{
 			if (!M_CheckParm("-server"))
-				G_SetGameModified(true);
+				G_SetUsedCheats(true);
 			autostart = true;
 		}
 	}

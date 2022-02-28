@@ -7764,7 +7764,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		{
 			// I'd love to do this in the menu code instead of here, but everything's a mess and I can't guarantee saving proper player struct info before the first act's started. You could probably refactor it, but it'd be a lot of effort. Easier to just work off known good code. ~toast 22/06/2020
 			if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking || marathonmode)
-				&& cursaveslot > 0)
+				&& !usedCheats && cursaveslot > 0)
 			{
 				G_SaveGame((UINT32)cursaveslot, gamemap);
 			}

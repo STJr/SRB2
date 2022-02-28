@@ -96,6 +96,7 @@ SINT8 startinglivesbalance[maxgameovers+1] = {3, 5, 7, 9, 12, 15, 20, 25, 30, 40
 UINT16 mainwads = 0;
 boolean modifiedgame; // Set if homebrew PWAD stuff has been added.
 boolean savemoddata = false;
+boolean usedCheats = false; // Set when a gamedata-preventing cheat command is used.
 UINT8 paused;
 UINT8 modeattacking = ATTACKING_NONE;
 boolean disableSpeedAdjust = false;
@@ -756,6 +757,23 @@ void G_SetGameModified(boolean silent)
 
 	if (!silent)
 		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to play Record Attack.\n"));
+
+	// If in record attack recording, cancel it.
+	if (modeattacking)
+		M_EndModeAttackRun();
+	else if (marathonmode)
+		Command_ExitGame_f();
+}
+
+void G_SetUsedCheats(boolean silent)
+{
+	if (usedCheats)
+		return;
+
+	usedCheats = true;
+
+	if (!silent)
+		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to save progress.\n"));
 
 	// If in record attack recording, cancel it.
 	if (modeattacking)
@@ -3894,7 +3912,7 @@ static void G_HandleSaveLevel(void)
 					remove(liveeventbackup);
 				cursaveslot = 0;
 			}
-			else if (!(netgame || multiplayer || ultimatemode || demorecording || metalrecording || modeattacking))
+			else if (!usedCheats && !(netgame || multiplayer || ultimatemode || demorecording || metalrecording || modeattacking))
 			{
 				G_SaveGame((UINT32)cursaveslot, spstage_start);
 			}
@@ -3902,7 +3920,7 @@ static void G_HandleSaveLevel(void)
 	}
 	// and doing THIS here means you don't lose your progress if you close the game mid-intermission
 	else if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
-		&& cursaveslot > 0 && CanSaveLevel(lastmap+1))
+		&& !usedCheats && cursaveslot > 0 && CanSaveLevel(lastmap+1))
 	{
 		G_SaveGame((UINT32)cursaveslot, lastmap+1); // not nextmap+1 to route around special stages
 	}
@@ -4181,7 +4199,7 @@ static void G_DoContinued(void)
 	tokenlist = 0;
 	token = 0;
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && cursaveslot > 0)
+	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && !usedCheats && cursaveslot > 0)
 	{
 		G_SaveGameOver((UINT32)cursaveslot, true);
 	}
@@ -4477,6 +4495,13 @@ void G_SaveGameData(void)
 	if (!save_p)
 	{
 		CONS_Alert(CONS_ERROR, M_GetText("No more free memory for saving game data\n"));
+		return;
+	}
+
+	if (usedCheats)
+	{
+		free(savebuffer);
+		save_p = savebuffer = NULL;
 		return;
 	}
 

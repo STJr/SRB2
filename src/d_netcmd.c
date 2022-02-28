@@ -1877,7 +1877,7 @@ static void Command_Map_f(void)
 	const char *gametypename;
 	boolean newresetplayers;
 
-	boolean mustmodifygame;
+	boolean wouldSetCheats;
 
 	INT32 newmapnum;
 
@@ -1898,11 +1898,11 @@ static void Command_Map_f(void)
 	option_gametype =   COM_CheckPartialParm("-g");
 	newresetplayers = ! COM_CheckParm("-noresetplayers");
 
-	mustmodifygame =
-		!( netgame     || multiplayer ) &&
-		(!modifiedgame || savemoddata );
+	wouldSetCheats =
+		!( netgame || multiplayer ) &&
+		!( usedCheats );
 
-	if (mustmodifygame && !option_force)
+	if (wouldSetCheats && !option_force)
 	{
 		/* May want to be more descriptive? */
 		CONS_Printf(M_GetText("Sorry, level change disabled in single player.\n"));
@@ -1956,9 +1956,9 @@ static void Command_Map_f(void)
 		return;
 	}
 
-	if (mustmodifygame && option_force)
+	if (wouldSetCheats && option_force)
 	{
-		G_SetGameModified(false);
+		G_SetUsedCheats(false);
 	}
 
 	// new gametype value
@@ -4259,7 +4259,7 @@ static void Ringslinger_OnChange(void)
 	}
 
 	if (cv_ringslinger.value) // Only if it's been turned on
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 }
 
 static void Gravity_OnChange(void)
@@ -4280,7 +4280,7 @@ static void Gravity_OnChange(void)
 #endif
 
 	if (!CV_IsSetToDefault(&cv_gravity))
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	gravity = cv_gravity.value;
 }
 
@@ -4596,7 +4596,7 @@ static void Fishcake_OnChange(void)
 	// so don't make modifiedgame always on!
 	if (cv_debug)
 	{
-		G_SetGameModified(multiplayer);
+		G_SetUsedCheats(false);
 	}
 
 	else if (cv_debug != cv_fishcake.value)

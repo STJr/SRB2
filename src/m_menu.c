@@ -7082,7 +7082,7 @@ static void M_AllowSuper(INT32 choice)
 	M_StartMessage(M_GetText("You are now capable of turning super.\nRemember to get all the emeralds!\n"),NULL,MM_NOTHING);
 	SR_PandorasBox[6].status = IT_GRAYEDOUT;
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 static void M_GetAllEmeralds(INT32 choice)
@@ -7093,7 +7093,7 @@ static void M_GetAllEmeralds(INT32 choice)
 	M_StartMessage(M_GetText("You now have all 7 emeralds.\nUse them wisely.\nWith great power comes great ring drain.\n"),NULL,MM_NOTHING);
 	SR_PandorasBox[7].status = IT_GRAYEDOUT;
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 static void M_DestroyRobotsResponse(INT32 ch)
@@ -7104,7 +7104,7 @@ static void M_DestroyRobotsResponse(INT32 ch)
 	// Destroy all robots
 	P_DestroyRobots();
 
-	G_SetGameModified(multiplayer);
+	G_SetUsedCheats(false);
 }
 
 static void M_DestroyRobots(INT32 choice)
@@ -8703,6 +8703,12 @@ static void M_DrawLoad(void)
 		loadgameoffset = 0;
 
 	M_DrawLoadGameData();
+
+	if (usedCheats)
+	{
+		V_DrawCenteredThinString(BASEVIDWIDTH/2, 184, 0, "\x85WARNING:\x80 Cheats have been activated.");
+		V_DrawCenteredThinString(BASEVIDWIDTH/2, 192, 0, "Progress will not be saved.");
+	}
 }
 
 //
@@ -9004,11 +9010,17 @@ static void M_HandleLoadSave(INT32 choice)
 			break;
 
 		case KEY_ENTER:
-			if (ultimate_selectable && saveSlotSelected == NOSAVESLOT)
+			if (ultimate_selectable && saveSlotSelected == NOSAVESLOT && !usedCheats)
 			{
 				loadgamescroll = 0;
 				S_StartSound(NULL, sfx_skid);
 				M_StartMessage("Are you sure you want to play\n\x85ultimate mode\x80? It isn't remotely fair,\nand you don't even get an emblem for it.\n\n(Press 'Y' to confirm)\n",M_SaveGameUltimateResponse,MM_YESNO);
+			}
+			else if (saveSlotSelected != NOSAVESLOT && savegameinfo[saveSlotSelected-1].lives == -42 && usedCheats)
+			{
+				loadgamescroll = 0;
+				S_StartSound(NULL, sfx_skid);
+				M_StartMessage(M_GetText("This cannot be done in a cheated game.\n\n(Press a key)\n"), NULL, MM_NOTHING);
 			}
 			else if (saveSlotSelected == NOSAVESLOT || savegameinfo[saveSlotSelected-1].lives != -666) // don't allow loading of "bad saves"
 			{
