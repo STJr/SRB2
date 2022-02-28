@@ -3519,7 +3519,7 @@ boolean M_Responder(event_t *ev)
 #ifndef DEVELOP
 					// TODO: Replays are scary, so I left the remaining instances of this alone.
 					// It'd be nice to get rid of this once and for all though!
-					if (((currentMenu->menuitems[itemOn].status & IT_CALLTYPE) & IT_CALL_NOTMODIFIED) && modifiedgame && !savemoddata)
+					if (((currentMenu->menuitems[itemOn].status & IT_CALLTYPE) & IT_CALL_NOTMODIFIED) && (modifiedgame && !savemoddata) && !usedCheats)
 					{
 						S_StartSound(NULL, sfx_skid);
 						M_StartMessage(M_GetText("This cannot be done in a modified game.\n\n(Press a key)\n"), NULL, MM_NOTHING);
