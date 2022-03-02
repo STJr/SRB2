@@ -10477,10 +10477,17 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 	if (type == MT_NULL)
 	{
+#if 0		
 #ifdef PARANOIA
 		I_Error("Tried to spawn MT_NULL\n");
 #endif
 		return NULL;
+#endif
+		// Hack: Some code assumes that P_SpawnMobj can never return NULL
+		// So replace MT_NULL with MT_RAY in the meantime
+		// Remove when dealt properly
+		CONS_Debug(DBG_GAMELOGIC, "Tried to spawn MT_NULL, using MT_RAY\n");
+		type = MT_RAY;
 	}
 
 	mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
