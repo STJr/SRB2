@@ -2339,7 +2339,7 @@ static void Got_Clearscores(UINT8 **cp, INT32 playernum)
 	}
 
 	for (i = 0; i < MAXPLAYERS; i++)
-		players[i].score = 0;
+		players[i].score = players[i].recordscore = 0;
 
 	CONS_Printf(M_GetText("Scores have been reset by the server.\n"));
 }

@@ -6985,7 +6985,7 @@ static void P_InitLevelSettings(void)
 	stagefailed = G_IsSpecialStage(gamemap);
 
 	// Reset temporary record data
-	memset(&ntemprecords, 0, sizeof(nightsdata_t));
+	memset(&ntemprecords, 0, sizeof(ntemprecords));
 
 	// earthquake camera
 	memset(&quake,0,sizeof(struct quake));
