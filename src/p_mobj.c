@@ -10483,7 +10483,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 		// Hack: Some code assumes that P_SpawnMobj can never return NULL
 		// So replace MT_NULL with MT_RAY in the meantime
 		// Remove when dealt properly
-		CONS_Alert(CONS_WARNING, "Tried to spawn MT_NULL, using MT_RAY\n");
+		CONS_Debug(DBG_GAMELOGIC, "Tried to spawn MT_NULL, using MT_RAY\n");
 		type = MT_RAY;
 	}
 
