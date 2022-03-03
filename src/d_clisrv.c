@@ -2077,6 +2077,7 @@ static boolean CL_FinishedFileList(void)
 	return true;
 }
 
+#ifndef NONET
 static const char * InvalidServerReason (serverinfo_pak *info)
 {
 #define EOT "\nPress ESC\n"
@@ -2140,6 +2141,7 @@ static const char * InvalidServerReason (serverinfo_pak *info)
 
 #undef EOT
 }
+#endif // ifndef NONET
 
 /** Called by CL_ServerConnectionTicker
   *
