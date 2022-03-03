@@ -2545,7 +2545,7 @@ static void ST_doHuntIconsAndSound(void)
 		S_StartSound(NULL, sfx_emfind);
 }
 
-static void ST_doItemFinderIconsAndSound(void)
+static boolean ST_doItemFinderIconsAndSound(void)
 {
 	INT32 emblems[16];
 	thinker_t *th;
@@ -2555,6 +2555,12 @@ static void ST_doItemFinderIconsAndSound(void)
 	INT32 i;
 	INT32 interval = 0, newinterval = 0;
 	INT32 soffset;
+
+	if (!(cv_itemfinder.value && M_SecretUnlocked(SECRET_ITEMFINDER, clientGamedata)))
+	{
+		// Not unlocked, or not enabled. Use emerald hunt radar.
+		return false;
+	}
 
 	for (i = 0; i < numemblems; ++i)
 	{
@@ -2573,7 +2579,10 @@ static void ST_doItemFinderIconsAndSound(void)
 	}
 	// Found all/none exist? Don't waste our time
 	if (!stunfound)
-		return;
+	{
+		// Allow emerald hunt radar to function after they're all collected.
+		return false;
+	}
 
 	// Scan thinkers to find emblem mobj with these ids
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
@@ -2607,6 +2616,8 @@ static void ST_doItemFinderIconsAndSound(void)
 
 	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0 && renderisnewtic)
 		S_StartSound(NULL, sfx_emfind);
+
+	return true;
 }
 
 //
@@ -2725,9 +2736,7 @@ static void ST_overlayDrawer(void)
 			ST_drawRaceHUD();
 
 		// Emerald Hunt Indicators
-		if (cv_itemfinder.value && M_SecretUnlocked(SECRET_ITEMFINDER, clientGamedata))
-			ST_doItemFinderIconsAndSound();
-		else
+		if (!ST_doItemFinderIconsAndSound());
 			ST_doHuntIconsAndSound();
 
 		if(!P_IsLocalPlayer(stplyr))
