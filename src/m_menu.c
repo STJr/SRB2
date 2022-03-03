@@ -9010,7 +9010,7 @@ static void M_HandleLoadSave(INT32 choice)
 			break;
 
 		case KEY_ENTER:
-			if (ultimate_selectable && saveSlotSelected == NOSAVESLOT && !usedCheats)
+			if (ultimate_selectable && saveSlotSelected == NOSAVESLOT && !savemoddata)
 			{
 				loadgamescroll = 0;
 				S_StartSound(NULL, sfx_skid);
