@@ -329,6 +329,7 @@ void M_SilentUpdateUnlockablesAndEmblems(gamedata_t *data)
 	// Just in case they aren't to sync
 	M_CheckUnlockConditions(data);
 	M_CheckLevelEmblems(data);
+	M_CompletionEmblems(data);
 
 	// Go through extra emblems
 	for (i = 0; i < numextraemblems; ++i)
