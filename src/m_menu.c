@@ -241,6 +241,7 @@ static void M_EmblemHints(INT32 choice);
 static void M_HandleEmblemHints(INT32 choice);
 UINT32 hintpage = 1;
 static void M_HandleChecklist(INT32 choice);
+static void M_PauseLevelSelect(INT32 choice);
 menu_t SR_MainDef, SR_UnlockChecklistDef;
 
 static UINT8 check_on;
@@ -601,7 +602,7 @@ static menuitem_t SPauseMenu[] =
 	// Pandora's Box will be shifted up if both options are available
 	{IT_CALL | IT_STRING,    NULL, "Pandora's Box...",     M_PandorasBox,         16},
 	{IT_CALL | IT_STRING,    NULL, "Emblem Hints...",      M_EmblemHints,         24},
-	{IT_CALL | IT_STRING,    NULL, "Level Select...",      M_LoadGameLevelSelect, 32},
+	{IT_CALL | IT_STRING,    NULL, "Level Select...",      M_PauseLevelSelect,    32},
 
 	{IT_CALL | IT_STRING,    NULL, "Continue",             M_SelectableClearMenus,48},
 	{IT_CALL | IT_STRING,    NULL, "Retry",                M_Retry,               56},
@@ -3713,7 +3714,7 @@ void M_StartControlPanel(void)
 		}
 
 		// We can always use level select though. :33
-		SPauseMenu[spause_levelselect].status = (gamecomplete == 1) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
+		SPauseMenu[spause_levelselect].status = (maplistoption != 0) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
 
 		// And emblem hints.
 		SPauseMenu[spause_hints].status = (M_SecretUnlocked(SECRET_EMBLEMHINTS, clientGamedata) && !marathonmode) ? (IT_STRING | IT_CALL) : (IT_DISABLED);
@@ -7138,7 +7139,6 @@ static void M_LevelSelectWarp(INT32 choice)
 	}
 
 	startmap = (INT16)(cv_nextmap.value);
-
 	fromlevelselect = true;
 
 	if (fromloadgame)
@@ -7662,6 +7662,26 @@ static void M_HandleEmblemHints(INT32 choice)
 
 }
 
+static void M_PauseLevelSelect(INT32 choice)
+{
+	(void)choice;
+
+	SP_LevelSelectDef.prevMenu = currentMenu;
+	levellistmode = LLM_LEVELSELECT;
+
+	// maplistoption is NOT specified, so that this
+	// transfers the level select list from the menu
+	// used to enter the game to the pause menu.
+
+	if (!M_PrepareLevelPlatter(-1, true))
+	{
+		M_StartMessage(M_GetText("No selectable levels found.\n"),NULL,MM_NOTHING);
+		return;
+	}
+
+	M_SetupNextMenu(&SP_LevelSelectDef);
+}
+
 /*static void M_DrawSkyRoom(void)
 {
 	INT32 i, y = 0;
@@ -8169,6 +8189,7 @@ INT32 ultimate_selectable = false;
 static void M_NewGame(void)
 {
 	fromlevelselect = false;
+	maplistoption = 0;
 
 	startmap = spstage_start;
 	CV_SetValue(&cv_newgametype, GT_COOP); // Graue 09-08-2004
@@ -8180,6 +8201,7 @@ static void M_CustomWarp(INT32 choice)
 {
 	INT32 ul = skyRoomMenuTranslations[choice-1];
 
+	maplistoption = 0;
 	startmap = (INT16)(unlockables[ul].variable);
 
 	M_SetupChoosePlayer(0);
@@ -8372,6 +8394,7 @@ static void M_StartTutorial(INT32 choice)
 	M_ClearMenus(true);
 	gamecomplete = 0;
 	cursaveslot = 0;
+	maplistoption = 0;
 	G_DeferedInitNew(false, G_BuildMapName(tutorialmap), 0, false, false);
 }
 
@@ -8733,6 +8756,10 @@ static void M_DrawLoad(void)
 static void M_LoadSelect(INT32 choice)
 {
 	(void)choice;
+
+	// Reset here, if we want a level select
+	// M_LoadGameLevelSelect will set it for us.
+	maplistoption = 0;
 
 	if (saveSlotSelected == NOSAVESLOT) //last slot is play without saving
 	{
@@ -10674,6 +10701,7 @@ static void M_Marathon(INT32 choice)
 	}
 
 	fromlevelselect = false;
+	maplistoption = 0;
 
 	startmap = spmarathon_start;
 	CV_SetValue(&cv_newgametype, GT_COOP); // Graue 09-08-2004
