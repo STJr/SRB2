@@ -2938,7 +2938,7 @@ state_t states[NUMSTATES] =
 	{SPR_NULL,                           0, 15*2, {NULL}, 0, 0, S_ZAPSB2 }, // S_ZAPSB11
 
 	// Thunder spark
-	{SPR_SSPK, FF_ANIMATE, -1, {NULL}, 1, 2, S_NULL},   // S_THUNDERCOIN_SPARK
+	{SPR_SSPK, FF_ANIMATE|FF_FULLBRIGHT, -1, {NULL}, 1, 2, S_NULL},   // S_THUNDERCOIN_SPARK
 
 	// Invincibility Sparkles
 	{SPR_IVSP, FF_ANIMATE|FF_FULLBRIGHT, 32, {NULL}, 31, 1, S_NULL},   // S_IVSP
