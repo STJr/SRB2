@@ -2577,6 +2577,7 @@ static boolean ST_doItemFinderIconsAndSound(void)
 		if (stemblems >= 16)
 			break;
 	}
+
 	// Found all/none exist? Don't waste our time
 	if (!stunfound)
 	{
@@ -2602,6 +2603,9 @@ static boolean ST_doItemFinderIconsAndSound(void)
 		{
 			if (mo2->health == emblems[i] + 1)
 			{
+				if (P_EmblemWasCollected(emblems[i]))
+					break;
+
 				soffset = (i * 20) - ((stemblems - 1) * 10);
 
 				newinterval = ST_drawEmeraldHuntIcon(mo2, itemhoming, soffset);
@@ -2736,7 +2740,7 @@ static void ST_overlayDrawer(void)
 			ST_drawRaceHUD();
 
 		// Emerald Hunt Indicators
-		if (!ST_doItemFinderIconsAndSound());
+		if (!ST_doItemFinderIconsAndSound())
 			ST_doHuntIconsAndSound();
 
 		if(!P_IsLocalPlayer(stplyr))
