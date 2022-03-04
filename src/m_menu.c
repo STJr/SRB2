@@ -1829,6 +1829,10 @@ menu_t SP_LevelSelectDef = MAPPLATTERMENUSTYLE(
 	MTREE4(MN_SP_MAIN, MN_SP_LOAD, MN_SP_PLAYER, MN_SP_LEVELSELECT),
 	NULL, SP_LevelSelectMenu);
 
+menu_t SP_PauseLevelSelectDef = MAPPLATTERMENUSTYLE(
+	MTREE4(MN_SP_MAIN, MN_SP_LOAD, MN_SP_PLAYER, MN_SP_LEVELSELECT),
+	NULL, SP_LevelSelectMenu);
+
 menu_t SP_LevelStatsDef =
 {
 	MTREE2(MN_SP_MAIN, MN_SP_LEVELSTATS),
@@ -7129,6 +7133,7 @@ static void M_DestroyRobots(INT32 choice)
 static void M_LevelSelectWarp(INT32 choice)
 {
 	boolean fromloadgame = (currentMenu == &SP_LevelSelectDef);
+	boolean frompause = (currentMenu == &SP_PauseLevelSelectDef);
 
 	(void)choice;
 
@@ -7146,7 +7151,20 @@ static void M_LevelSelectWarp(INT32 choice)
 	else
 	{
 		cursaveslot = 0;
-		M_SetupChoosePlayer(0);
+
+		if (frompause)
+		{
+			M_ClearMenus(true);
+
+			D_MapChange(startmap, gametype, false, false, 1, false, fromlevelselect);
+			COM_BufAddText("dummyconsvar 1\n");
+
+			if (levelselect.rows)
+				Z_Free(levelselect.rows);
+			levelselect.rows = NULL;
+		}
+		else
+			M_SetupChoosePlayer(0);
 	}
 }
 
@@ -7666,7 +7684,7 @@ static void M_PauseLevelSelect(INT32 choice)
 {
 	(void)choice;
 
-	SP_LevelSelectDef.prevMenu = currentMenu;
+	SP_PauseLevelSelectDef.prevMenu = currentMenu;
 	levellistmode = LLM_LEVELSELECT;
 
 	// maplistoption is NOT specified, so that this
@@ -7679,7 +7697,7 @@ static void M_PauseLevelSelect(INT32 choice)
 		return;
 	}
 
-	M_SetupNextMenu(&SP_LevelSelectDef);
+	M_SetupNextMenu(&SP_PauseLevelSelectDef);
 }
 
 /*static void M_DrawSkyRoom(void)
