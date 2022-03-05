@@ -3153,6 +3153,9 @@ void G_DoReborn(INT32 playernum)
 
 	if (resetlevel)
 	{
+		// Don't give completion emblems for reloading the level...
+		stagefailed = true;
+
 		// reload the level from scratch
 		if (countdowntimeup)
 		{
