@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -470,14 +470,14 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				if (!(player->charability2 == CA2_MELEE && player->panim == PA_ABILITY2))
 				{
 					fixed_t setmomz = -toucher->momz; // Store this, momz get changed by P_DoJump within P_DoBubbleBounce
-					
+
 					if (elementalpierce == 2) // Reset bubblewrap, part 1
 						P_DoBubbleBounce(player);
 					toucher->momz = setmomz;
 					if (elementalpierce == 2) // Reset bubblewrap, part 2
 					{
 						boolean underwater = toucher->eflags & MFE_UNDERWATER;
-							
+
 						if (underwater)
 							toucher->momz /= 2;
 						toucher->momz -= (toucher->momz/(underwater ? 8 : 4)); // Cap the height!
@@ -1387,7 +1387,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				if (player->bot && player->bot != BOT_MPAI)
 					return;
-					
+
 				// Initialize my junk
 				junk.tags.tags = NULL;
 				junk.tags.count = 0;
@@ -1617,7 +1617,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				if (special->tracer && !(special->tracer->flags2 & MF2_STRONGBOX))
 					macespin = true;
-				
+
 				if (macespin ? (player->powers[pw_ignorelatch] & (1<<15)) : (player->powers[pw_ignorelatch]))
 					return;
 
