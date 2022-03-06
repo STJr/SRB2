@@ -738,12 +738,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		// Secret emblem thingy
 		case MT_EMBLEM:
 			{
-				if (demoplayback || (player->bot && player->bot != BOT_MPAI))
+				if (demoplayback || (player->bot && player->bot != BOT_MPAI) || special->health > MAXEMBLEMS)
 					return;
 				emblemlocations[special->health-1].collected = true;
 
 				M_UpdateUnlockablesAndExtraEmblems();
-
 				G_SaveGameData();
 				break;
 			}
