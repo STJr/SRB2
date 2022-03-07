@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2078,6 +2078,7 @@ static boolean CL_FinishedFileList(void)
 	return true;
 }
 
+#ifndef NONET
 static const char * InvalidServerReason (serverinfo_pak *info)
 {
 #define EOT "\nPress ESC\n"
@@ -2141,6 +2142,7 @@ static const char * InvalidServerReason (serverinfo_pak *info)
 
 #undef EOT
 }
+#endif // ifndef NONET
 
 /** Called by CL_ServerConnectionTicker
   *
