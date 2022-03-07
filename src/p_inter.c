@@ -810,7 +810,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
 				}
 
-				if (P_IsLocalPlayer(player) || shareEmblems)
+				if (P_IsLocalPlayer(player) /*|| shareEmblems*/)
 				{
 					clientGamedata->collected[special->health-1] = true;
 					M_UpdateUnlockablesAndExtraEmblems(clientGamedata);
