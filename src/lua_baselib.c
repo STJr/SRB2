@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3455,7 +3455,7 @@ static int lib_gAddPlayer(lua_State *L)
 		lua_pushnil(L);
 		return 1;
 	}
-	
+
 
 	newplayernum = i;
 
@@ -3486,15 +3486,15 @@ static int lib_gAddPlayer(lua_State *L)
 
 	// Read the bot name, if given
 	if (!lua_isnoneornil(L, 3))
-		strcpy(player_names[newplayernum], luaL_checkstring(L, 3));
-	
+		strlcpy(player_names[newplayernum], luaL_checkstring(L, 3), sizeof(*player_names));
+
 	bot = luaL_optinteger(L, 4, 3);
 	newplayer->bot = (bot >= BOT_NONE && bot <= BOT_MPAI) ? bot : BOT_MPAI;
-	
+
 	// If our bot is a 2P type, we'll need to set its leader so it can spawn
 	if (newplayer->bot == BOT_2PAI || newplayer->bot == BOT_2PHUMAN)
 		B_UpdateBotleader(newplayer);
-	
+
 	// Set the skin (can't do this until AFTER bot type is set!)
 	SetPlayerSkinByNum(newplayernum, skinnum);
 
@@ -3507,7 +3507,7 @@ static int lib_gAddPlayer(lua_State *L)
 		strcpy(joinmsg, va(joinmsg, player_names[newplayernum], newplayernum));
 		HU_AddChatText(joinmsg, false);
 	}
-	
+
 	LUA_PushUserdata(L, newplayer, META_PLAYER);
 	return 1;
 }
