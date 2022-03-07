@@ -7156,8 +7156,8 @@ static void M_LevelSelectWarp(INT32 choice)
 		{
 			M_ClearMenus(true);
 
-			D_MapChange(startmap, gametype, false, false, 1, false, fromlevelselect);
-			COM_BufAddText("dummyconsvar 1\n");
+			G_DeferedInitNew(false, G_BuildMapName(startmap), cv_skin.value, false, fromlevelselect); // Not sure about using cv_skin here, but it seems fine in testing.
+			COM_BufAddText("dummyconsvar 1\n"); // G_DeferedInitNew doesn't do this
 
 			if (levelselect.rows)
 				Z_Free(levelselect.rows);
