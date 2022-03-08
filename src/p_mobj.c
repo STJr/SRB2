@@ -10456,6 +10456,27 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 			return 2*FRACUNIT/3;
 
+		case MT_FLICKY_01:
+		case MT_FLICKY_02:
+		case MT_FLICKY_03:
+		case MT_FLICKY_04:
+		case MT_FLICKY_05:
+		case MT_FLICKY_06:
+		case MT_FLICKY_07:
+		case MT_FLICKY_08:
+		case MT_FLICKY_09:
+		case MT_FLICKY_10:
+		case MT_FLICKY_11:
+		case MT_FLICKY_12:
+		case MT_FLICKY_13:
+		case MT_FLICKY_14:
+		case MT_FLICKY_15:
+		case MT_FLICKY_16:
+		case MT_SECRETFLICKY_01:
+		case MT_SECRETFLICKY_02:
+
+			return FRACUNIT;
+
 		default:
 
 			if (thing->flags & (MF_ENEMY|MF_BOSS))
@@ -10477,7 +10498,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 	if (type == MT_NULL)
 	{
-#if 0		
+#if 0
 #ifdef PARANOIA
 		I_Error("Tried to spawn MT_NULL\n");
 #endif
