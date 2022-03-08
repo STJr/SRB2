@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -7845,48 +7845,6 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		if (P_MobjFlip(mobj)*mobj->momz < mobj->info->speed)
 			mobj->momz = P_MobjFlip(mobj)*mobj->info->speed;
 		break;
-	case MT_SPIKE:
-		if (mobj->fuse)
-		{
-			mobj->fuse--;
-			break;
-		}
-		P_SetMobjState(mobj, mobj->state->nextstate);
-		mobj->fuse = mobj->info->speed;
-		if (mobj->spawnpoint)
-			mobj->fuse += mobj->spawnpoint->angle;
-		break;
-	case MT_WALLSPIKE:
-		if (mobj->fuse)
-		{
-			mobj->fuse--;
-			break;
-		}
-		P_SetMobjState(mobj, mobj->state->nextstate);
-		mobj->fuse = mobj->info->speed;
-		if (mobj->spawnpoint)
-			mobj->fuse += (mobj->spawnpoint->angle / 360);
-		break;
-	case MT_WALLSPIKEBASE:
-		if (!mobj->target)
-		{
-			P_RemoveMobj(mobj);
-			return;
-		}
-		mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|(mobj->target->frame & FF_FRAMEMASK);
-#if 0
-		if (mobj->angle != mobj->target->angle + ANGLE_90) // reposition if not the correct angle
-		{
-			mobj_t* target = mobj->target; // shortcut
-			const fixed_t baseradius = target->radius - (target->scale/2); //FixedMul(FRACUNIT/2, target->scale);
-			P_UnsetThingPosition(mobj);
-			mobj->x = target->x - P_ReturnThrustX(target, target->angle, baseradius);
-			mobj->y = target->y - P_ReturnThrustY(target, target->angle, baseradius);
-			P_SetThingPosition(mobj);
-			mobj->angle = target->angle + ANGLE_90;
-		}
-#endif
-		break;
 	case MT_ROCKCRUMBLE1:
 	case MT_ROCKCRUMBLE2:
 	case MT_ROCKCRUMBLE3:
@@ -7977,6 +7935,9 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 
 		P_SetScale(mobj, mobj->target->scale);
 	}
+	break;
+	case MT_TUTORIALFLOWER:
+		mobj->angle += FixedAngle(3*FRACUNIT);
 	break;
 	case MT_VWREF:
 	case MT_VWREB:
@@ -9283,6 +9244,25 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 
 	switch (mobj->type)
 	{
+	case MT_WALLSPIKEBASE:
+		if (!mobj->target) {
+			P_RemoveMobj(mobj);
+			return false;
+		}
+		mobj->frame = (mobj->frame & ~FF_FRAMEMASK)|(mobj->target->frame & FF_FRAMEMASK);
+#if 0
+		if (mobj->angle != mobj->target->angle + ANGLE_90) // reposition if not the correct angle
+		{
+			mobj_t* target = mobj->target; // shortcut
+			const fixed_t baseradius = target->radius - (target->scale/2); //FixedMul(FRACUNIT/2, target->scale);
+			P_UnsetThingPosition(mobj);
+			mobj->x = target->x - P_ReturnThrustX(target, target->angle, baseradius);
+			mobj->y = target->y - P_ReturnThrustY(target, target->angle, baseradius);
+			P_SetThingPosition(mobj);
+			mobj->angle = target->angle + ANGLE_90;
+		}
+#endif
+		break;
 	case MT_FALLINGROCK:
 		// Despawn rocks here in case zmovement code can't do so (blame slopes)
 		if (!mobj->momx && !mobj->momy && !mobj->momz
@@ -9968,6 +9948,18 @@ static boolean P_FuseThink(mobj_t *mobj)
 		break;
 	case MT_METALSONIC_BATTLE:
 		break; // don't remove
+	case MT_SPIKE:
+		P_SetMobjState(mobj, mobj->state->nextstate);
+		mobj->fuse = mobj->info->speed;
+		if (mobj->spawnpoint)
+			mobj->fuse += mobj->spawnpoint->angle;
+		break;
+	case MT_WALLSPIKE:
+		P_SetMobjState(mobj, mobj->state->nextstate);
+		mobj->fuse = mobj->info->speed;
+		if (mobj->spawnpoint)
+			mobj->fuse += (mobj->spawnpoint->angle / 360);
+		break;
 	case MT_NIGHTSCORE:
 		P_RemoveMobj(mobj);
 		return false;
@@ -10481,7 +10473,24 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	const mobjinfo_t *info = &mobjinfo[type];
 	SINT8 sc = -1;
 	state_t *st;
-	mobj_t *mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
+	mobj_t *mobj;
+
+	if (type == MT_NULL)
+	{
+#if 0		
+#ifdef PARANOIA
+		I_Error("Tried to spawn MT_NULL\n");
+#endif
+		return NULL;
+#endif
+		// Hack: Some code assumes that P_SpawnMobj can never return NULL
+		// So replace MT_NULL with MT_RAY in the meantime
+		// Remove when dealt properly
+		CONS_Debug(DBG_GAMELOGIC, "Tried to spawn MT_NULL, using MT_RAY\n");
+		type = MT_RAY;
+	}
+
+	mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);
 
 	// this is officially a mobj, declared as soon as possible.
 	mobj->thinker.function.acp1 = (actionf_p1)P_MobjThinker;
@@ -12827,6 +12836,25 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		P_SpawnMobjFromMobj(mobj, -FRACUNIT, 0, 0, MT_THZTREEBRANCH)->angle = mobjangle + ANGLE_270;
 	}
 	break;
+	case MT_TUTORIALPLANT:
+	{
+		INT32 i;
+		mobj_t *segment;
+		for (i = 0; i < 6; i++)
+		{
+			segment = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_TUTORIALLEAF);
+			segment->angle = mobj->angle + FixedAngle(i*60*FRACUNIT);
+			P_SetMobjState(segment, S_TUTORIALLEAF1 + mthing->extrainfo);
+		}
+		for (i = 0; i < 3; i++)
+		{
+			segment = P_SpawnMobjFromMobj(mobj, 0, 0, 112*FRACUNIT, MT_TUTORIALFLOWER);
+			segment->angle = mobj->angle + FixedAngle(i*120*FRACUNIT);
+			P_SetMobjState(segment, S_TUTORIALFLOWER1 + mthing->extrainfo);
+		}
+		P_SetMobjState(P_SpawnMobjFromMobj(mobj, 0, 0, 112*FRACUNIT, MT_TUTORIALFLOWERF), S_TUTORIALFLOWERF1 + mthing->extrainfo);
+	}
+	break;
 	case MT_CEZPOLE1:
 	case MT_CEZPOLE2:
 	{ // Spawn the banner
@@ -12970,18 +12998,17 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		// Pop up spikes!
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
+			mobj->flags &= ~MF_SCENERY;
 			mobj->fuse = (16 - mthing->extrainfo)*(mthing->angle + mobj->info->speed)/16;
 			if (mthing->options & MTF_EXTRA)
 				P_SetMobjState(mobj, mobj->info->meleestate);
 		}
-		else
-			mobj->flags |= MF_NOTHINK;
-		// no collision for spikes if the ambush flag is checked
-		if ((mthing->options & MTF_AMBUSH) || metalrecording)
+		// Use per-thing collision for spikes if the deaf flag isn't checked.
+		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
 		{
 			P_UnsetThingPosition(mobj);
-			mobj->flags |= (MF_NOBLOCKMAP|MF_NOCLIPHEIGHT);
-			mobj->flags &= ~MF_SOLID;
+			mobj->flags &= ~(MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIPHEIGHT);
+			mobj->flags |= MF_SOLID;
 			P_SetThingPosition(mobj);
 		}
 		break;
@@ -12989,20 +13016,20 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		// Pop up spikes!
 		if (mthing->options & MTF_OBJECTSPECIAL)
 		{
+			mobj->flags &= ~MF_SCENERY;
 			mobj->fuse = (16 - mthing->extrainfo)*((mthing->angle/360) + mobj->info->speed)/16;
 			if (mthing->options & MTF_EXTRA)
 				P_SetMobjState(mobj, mobj->info->meleestate);
 		}
-		else
-			mobj->flags |= MF_NOTHINK;
-		// no collision for spikes if the ambush flag is checked
-		if ((mthing->options & MTF_AMBUSH) || metalrecording)
+		// Use per-thing collision for spikes if the deaf flag isn't checked.
+		if (!(mthing->options & MTF_AMBUSH) && !metalrecording)
 		{
 			P_UnsetThingPosition(mobj);
-			mobj->flags |= (MF_NOBLOCKMAP|MF_NOCLIPHEIGHT);
-			mobj->flags &= ~MF_SOLID;
+			mobj->flags &= ~(MF_NOBLOCKMAP | MF_NOCLIPHEIGHT);
+			mobj->flags |= MF_SOLID;
 			P_SetThingPosition(mobj);
 		}
+
 		// spawn base
 		{
 			const angle_t mobjangle = FixedAngle(mthing->angle << FRACBITS); // the mobj's own angle hasn't been set quite yet so...
@@ -13016,8 +13043,6 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 			P_SetScale(base, mobj->scale);
 			P_SetTarget(&base->target, mobj);
 			P_SetTarget(&mobj->tracer, base);
-			if (!(mthing->options & MTF_OBJECTSPECIAL))
-				base->flags |= MF_NOTHINK;
 		}
 		break;
 	case MT_RING_BOX:

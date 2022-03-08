@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3186,10 +3186,10 @@ static void R_DrawMaskedList (drawnode_t* head)
 	}
 }
 
-void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
+void R_DrawMasked(maskcount_t* masks, INT32 nummasks)
 {
 	drawnode_t *heads;	/**< Drawnode lists; as many as number of views/portals. */
-	SINT8 i;
+	INT32 i;
 
 	heads = calloc(nummasks, sizeof(drawnode_t));
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -2093,7 +2093,7 @@ void P_SwitchWeather(INT32 weathernum)
 	{
 		case PRECIP_SNOW: // snow
 			curWeather = PRECIP_SNOW;
-			
+
 			if (purge)
 				P_SpawnPrecipitation();
 
@@ -2888,25 +2888,20 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 434: // Custom Power
 			if (mo && mo->player)
 			{
-				mobj_t *dummy = P_SpawnMobj(mo->x, mo->y, mo->z, MT_NULL);
-
-				var1 = sides[line->sidenum[0]].toptexture; //(line->dx>>FRACBITS)-1;
+				powertype_t power = sides[line->sidenum[0]].toptexture; //(line->dx>>FRACBITS)-1;
+				UINT16 value;
 
 				if (line->sidenum[1] != 0xffff && line->flags & ML_BLOCKMONSTERS) // read power from back sidedef
-					var2 = sides[line->sidenum[1]].toptexture;
+					value = sides[line->sidenum[1]].toptexture;
 				else if (line->flags & ML_NOCLIMB) // 'Infinite'
-					var2 = UINT16_MAX;
+					value = UINT16_MAX;
 				else
-					var2 = sides[line->sidenum[0]].textureoffset>>FRACBITS;
+					value = sides[line->sidenum[0]].textureoffset>>FRACBITS;
 
-				P_SetTarget(&dummy->target, mo);
-				A_CustomPower(dummy);
+				P_SetPower(mo->player, power, value);
 
-				if (bot) {
-					P_SetTarget(&dummy->target, bot);
-					A_CustomPower(dummy);
-				}
-				P_RemoveMobj(dummy);
+				if (bot)
+					P_SetPower(bot->player, power, value);
 			}
 			break;
 
