@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1411,7 +1411,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			newtarget = P_SpawnMobj(ticcmd_ztargetfocus[forplayer]->x, ticcmd_ztargetfocus[forplayer]->y, ticcmd_ztargetfocus[forplayer]->z, MT_LOCKON); // positioning, flip handled in P_SceneryThinker
 			P_SetTarget(&newtarget->target, ticcmd_ztargetfocus[forplayer]);
 
-			if (P_AproxDistance(
+			if (player->mo && P_AproxDistance(
 				player->mo->x - ticcmd_ztargetfocus[forplayer]->x,
 				player->mo->y - ticcmd_ztargetfocus[forplayer]->y
 			) > 50*player->mo->scale)
@@ -1547,11 +1547,16 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	cmd->sidemove = (SINT8)(cmd->sidemove + side);
 
 	// Note: Majority of botstuffs are handled in G_Ticker now.
-	if (player->bot == BOT_2PHUMAN) //Player-controlled bot
+	if (player->bot == BOT_2PAI
+		&& !player->powers[pw_tailsfly]
+		&& (cmd->forwardmove || cmd->sidemove || cmd->buttons))
 	{
-		// Fix offset angle for P2-controlled Tailsbot when P2's controls are set to non-Strafe
-		cmd->angleturn = (INT16)((localangle - *myangle) >> 16);
+		player->bot = BOT_2PHUMAN; // A player-controlled bot. Returns to AI when it respawns.
+		CV_SetValue(&cv_analog[1], true);
 	}
+
+	if (player->bot == BOT_2PHUMAN)
+		cmd->angleturn = (INT16)((localangle - *myangle) >> 16);
 
 	*myangle += (cmd->angleturn<<16);
 
@@ -2307,65 +2312,44 @@ void G_Ticker(boolean run)
 
 	buf = gametic % BACKUPTICS;
 
+	// Generate ticcmds for bots FIRST, then copy received ticcmds for players.
+	// This emulates pre-2.2.10 behaviour where the bot referenced their leader's last copied ticcmd,
+	// which is desirable because P_PlayerThink can override inputs (e.g. while PF_STASIS is applied or in a waterslide),
+	// and the bot AI needs to respect that.
+#define ISHUMAN (players[i].bot == BOT_NONE || players[i].bot == BOT_2PHUMAN)
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playeringame[i])
+		if (playeringame[i] && !ISHUMAN) // Less work is required if we're building a bot ticcmd.
 		{
-			INT16 received;
-			// Save last frame's button readings
-			players[i].lastbuttons = players[i].cmd.buttons;
+			players[i].lastbuttons = players[i].cmd.buttons; // Save last frame's button readings
+			B_BuildTiccmd(&players[i], &players[i].cmd);
 
-			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
-			// Bot ticcmd handling
-			// Yes, ordinarily this would be handled in G_BuildTiccmd...
-			// ...however, bot players won't have a corresponding consoleplayer or splitscreen player 2 to send that information.
-			// Therefore, this has to be done after ticcmd sends are received.
-			if (players[i].bot == BOT_2PAI) { // Tailsbot for P2
-				if (!players[i].powers[pw_tailsfly] && (players[i].cmd.forwardmove || players[i].cmd.sidemove || players[i].cmd.buttons))
-				{
-					players[i].bot = BOT_2PHUMAN; // A player-controlled bot. Returns to AI when it respawns.
-					CV_SetValue(&cv_analog[1], true);
-				}
-				else
-				{
-					B_BuildTiccmd(&players[i], &players[i].cmd);
-				}
-				B_HandleFlightIndicator(&players[i]);
-			}
-			else if (players[i].bot == BOT_MPAI) {
-				B_BuildTiccmd(&players[i], &players[i].cmd);
-			}
-
-			// Do angle adjustments.
-			if (players[i].bot == BOT_NONE || players[i].bot == BOT_2PHUMAN)
-			{
-				received = (players[i].cmd.angleturn & TICCMD_RECEIVED);
-				players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
-				players[i].oldrelangleturn = players[i].cmd.angleturn;
-				if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
-					P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
-				else
-					players[i].cmd.angleturn = players[i].angleturn;
-    			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
-    				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
-    			else
-    				players[i].cmd.angleturn = players[i].angleturn;
-
-    			players[i].cmd.angleturn &= ~TICCMD_RECEIVED;
-				// Use the leveltime sent in the player's ticcmd to determine control lag
-    			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
-			}
-			else // Less work is required if we're building a bot ticcmd.
-			{
-    			// Since bot TicCmd is pre-determined for both the client and server, the latency and packet checks are simplified.
-    			received = 1;
-    			players[i].cmd.latency = 0;
-				players[i].angleturn = players[i].cmd.angleturn;
-				players[i].oldrelangleturn = players[i].cmd.angleturn;
-			}
-			players[i].cmd.angleturn |= received;
+			// Since bot TicCmd is pre-determined for both the client and server, the latency and packet checks are simplified.
+			players[i].cmd.latency = 0;
+			P_SetPlayerAngle(&players[i], players[i].cmd.angleturn << 16);
 		}
 	}
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i] && ISHUMAN)
+		{
+			players[i].lastbuttons = players[i].cmd.buttons; // Save last frame's button readings
+			G_CopyTiccmd(&players[i].cmd, &netcmds[buf][i], 1);
+
+			// Use the leveltime sent in the player's ticcmd to determine control lag
+			players[i].cmd.latency = min(((leveltime & 0xFF) - players[i].cmd.latency) & 0xFF, MAXPREDICTTICS-1);
+
+			// Do angle adjustments.
+			players[i].angleturn += players[i].cmd.angleturn - players[i].oldrelangleturn;
+			players[i].oldrelangleturn = players[i].cmd.angleturn;
+			if (P_ControlStyle(&players[i]) == CS_LMAOGALOG)
+				P_ForceLocalAngle(&players[i], players[i].angleturn << 16);
+			else
+				players[i].cmd.angleturn = (players[i].angleturn & ~TICCMD_RECEIVED) | (players[i].cmd.angleturn & TICCMD_RECEIVED);
+		}
+	}
+#undef ISHUMAN
 
 	// do main actions
 	switch (gamestate)

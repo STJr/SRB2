@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -836,6 +836,12 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
+
+	// Hack: Use a special column function for drop shadows that bypasses
+	// invalid memory access crashes caused by R_ProjectDropShadow putting wrong values
+	// in dc_texturemid and dc_iscale when the shadow is sloped.
+	if (vis->cut & SC_SHADOW)
+		colfunc = R_DrawDropShadowColumn_8;
 
 	if (vis->extra_colormap && !(vis->renderflags & RF_NOCOLORMAPS))
 	{
@@ -3001,12 +3007,24 @@ void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, p
 
 	if (portal)
 	{
-		for (x = x1; x <= x2; x++)
+		INT32 start_index = max(portal->start, x1);
+		INT32 end_index = min(portal->start + portal->end - portal->start, x2);
+		for (x = x1; x < start_index; x++)
+		{
+			spr->clipbot[x] = -1;
+			spr->cliptop[x] = -1;
+		}
+		for (x = start_index; x <= end_index; x++)
 		{
 			if (spr->clipbot[x] > portal->floorclip[x - portal->start])
 				spr->clipbot[x] = portal->floorclip[x - portal->start];
 			if (spr->cliptop[x] < portal->ceilingclip[x - portal->start])
 				spr->cliptop[x] = portal->ceilingclip[x - portal->start];
+		}
+		for (x = end_index + 1; x <= x2; x++)
+		{
+			spr->clipbot[x] = -1;
+			spr->cliptop[x] = -1;
 		}
 	}
 }
@@ -3168,10 +3186,10 @@ static void R_DrawMaskedList (drawnode_t* head)
 	}
 }
 
-void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
+void R_DrawMasked(maskcount_t* masks, INT32 nummasks)
 {
 	drawnode_t *heads;	/**< Drawnode lists; as many as number of views/portals. */
-	SINT8 i;
+	INT32 i;
 
 	heads = calloc(nummasks, sizeof(drawnode_t));
 

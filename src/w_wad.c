@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1476,7 +1476,11 @@ lumpnum_t W_CheckNumForMap(const char *name)
 			{
 				p = wadfiles[i]->lumpinfo + lumpNum;
 				if (p->hash == hash && !strnicmp(name, p->name, 8))
-					return (i<<16) + lumpNum;
+				{
+					const char *extension = strrchr(p->fullname, '.');
+					if (!(extension && stricmp(extension, ".wad")))
+						return (i<<16) + lumpNum;
+				}
 			}
 		}
 	}

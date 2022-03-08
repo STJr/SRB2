@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -200,6 +200,8 @@ void A_SetObjectFlags(mobj_t *actor);
 void A_SetObjectFlags2(mobj_t *actor);
 void A_RandomState(mobj_t *actor);
 void A_RandomStateRange(mobj_t *actor);
+void A_StateRangeByAngle(mobj_t *actor);
+void A_StateRangeByParameter(mobj_t *actor);
 void A_DualAction(mobj_t *actor);
 void A_RemoteAction(mobj_t *actor);
 void A_ToggleFlameJet(mobj_t *actor);
@@ -2655,7 +2657,7 @@ void A_LobShot(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2 >> 16;
-	mobj_t *shot, *hitspot;
+	mobj_t *shot;
 	angle_t an;
 	fixed_t z;
 	fixed_t dist;
@@ -2693,11 +2695,6 @@ void A_LobShot(mobj_t *actor)
 		shot->destscale = actor->scale;
 		P_SetScale(shot, actor->scale);
 	}
-
-	// Keep track of where it's going to land
-	hitspot = P_SpawnMobj(actor->target->x&(64*FRACUNIT-1), actor->target->y&(64*FRACUNIT-1), actor->target->subsector->sector->floorheight, MT_NULL);
-	hitspot->tics = airtime;
-	P_SetTarget(&shot->tracer, hitspot);
 
 	P_SetTarget(&shot->target, actor); // where it came from
 
@@ -3334,20 +3331,18 @@ void A_SkullAttack(mobj_t *actor)
 		actor->angle += (P_RandomChance(FRACUNIT/2)) ? ANGLE_90 : -ANGLE_90;
 	else if (locvar1 == 3)
 	{
-		statenum_t oldspawnstate = mobjinfo[MT_NULL].spawnstate;
-		UINT32 oldflags = mobjinfo[MT_NULL].flags;
-		fixed_t oldradius = mobjinfo[MT_NULL].radius;
-		fixed_t oldheight = mobjinfo[MT_NULL].height;
-		mobj_t *check;
+		statenum_t oldspawnstate = mobjinfo[MT_RAY].spawnstate;
+		UINT32 oldflags = mobjinfo[MT_RAY].flags;
+		fixed_t oldradius = mobjinfo[MT_RAY].radius;
+		fixed_t oldheight = mobjinfo[MT_RAY].height;
 		INT32 i, j;
 		static INT32 k;/* static for (at least) GCC 9.1 weirdness */
-		boolean allow;
 		angle_t testang = 0;
 
-		mobjinfo[MT_NULL].spawnstate = S_INVISIBLE;
-		mobjinfo[MT_NULL].flags = MF_NOGRAVITY|MF_NOTHINK|MF_NOCLIPTHING|MF_NOBLOCKMAP;
-		mobjinfo[MT_NULL].radius = mobjinfo[actor->type].radius;
-		mobjinfo[MT_NULL].height = mobjinfo[actor->type].height;
+		mobjinfo[MT_RAY].spawnstate = S_INVISIBLE;
+		mobjinfo[MT_RAY].flags = MF_NOGRAVITY|MF_NOTHINK|MF_NOCLIPTHING|MF_NOBLOCKMAP;
+		mobjinfo[MT_RAY].radius = mobjinfo[actor->type].radius;
+		mobjinfo[MT_RAY].height = mobjinfo[actor->type].height;
 
 		if (P_RandomChance(FRACUNIT/2)) // port priority 1?
 		{
@@ -3360,15 +3355,12 @@ void A_SkullAttack(mobj_t *actor)
 			j = 9;
 		}
 
-#define dostuff(q) check = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_NULL);\
+#define dostuff(q) \
 			testang = actor->angle + ((i+(q))*ANG10);\
-			allow = (P_TryMove(check,\
-				P_ReturnThrustX(check, testang, dist + 2*actor->radius),\
-				P_ReturnThrustY(check, testang, dist + 2*actor->radius),\
-				true));\
-			P_RemoveMobj(check);\
-			if (allow)\
-				break;
+			if (P_CheckMove(actor,\
+				P_ReturnThrustX(actor, testang, dist + 2*actor->radius),\
+				P_ReturnThrustY(actor, testang, dist + 2*actor->radius),\
+				true)) break;
 
 		if (P_RandomChance(FRACUNIT/2)) // port priority 2?
 		{
@@ -3394,10 +3386,10 @@ void A_SkullAttack(mobj_t *actor)
 
 #undef dostuff
 
-		mobjinfo[MT_NULL].spawnstate = oldspawnstate;
-		mobjinfo[MT_NULL].flags = oldflags;
-		mobjinfo[MT_NULL].radius = oldradius;
-		mobjinfo[MT_NULL].height = oldheight;
+		mobjinfo[MT_RAY].spawnstate = oldspawnstate;
+		mobjinfo[MT_RAY].flags = oldflags;
+		mobjinfo[MT_RAY].radius = oldradius;
+		mobjinfo[MT_RAY].height = oldheight;
 	}
 
 	an = actor->angle >> ANGLETOFINESHIFT;
@@ -4189,7 +4181,6 @@ void A_CustomPower(mobj_t *actor)
 	player_t *player;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	boolean spawnshield = false;
 
 	if (LUA_CallAction(A_CUSTOMPOWER, actor))
 		return;
@@ -4208,15 +4199,10 @@ void A_CustomPower(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (locvar1 == pw_shield && player->powers[pw_shield] != locvar2)
-		spawnshield = true;
+	P_SetPower(player, locvar1, locvar2);
 
-	player->powers[locvar1] = (UINT16)locvar2;
 	if (actor->info->seesound)
 		S_StartSound(player->mo, actor->info->seesound);
-
-	if (spawnshield) //workaround for a bug
-		P_SpawnShieldOrb(player);
 }
 
 // Function: A_GiveWeapon
@@ -6542,7 +6528,7 @@ void A_OldRingExplode(mobj_t *actor) {
 	{
 		const angle_t fa = (i*FINEANGLES/16) & FINEMASK;
 
-		mo = P_SpawnMobj(actor->x, actor->y, actor->z, locvar1);
+		mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
 		P_SetTarget(&mo->target, actor->target); // Transfer target so player gets the points
 
 		mo->momx = FixedMul(FINECOSINE(fa),ns);
@@ -6568,7 +6554,7 @@ void A_OldRingExplode(mobj_t *actor) {
 		}
 	}
 
-	mo = P_SpawnMobj(actor->x, actor->y, actor->z, locvar1);
+	mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
 
 	P_SetTarget(&mo->target, actor->target);
 	mo->momz = ns;
@@ -6583,7 +6569,7 @@ void A_OldRingExplode(mobj_t *actor) {
 			mo->color = skincolor_bluering;
 	}
 
-	mo = P_SpawnMobj(actor->x, actor->y, actor->z, locvar1);
+	mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
 
 	P_SetTarget(&mo->target, actor->target);
 	mo->momz = -ns;
@@ -8292,7 +8278,7 @@ void A_Boss3ShockThink(mobj_t *actor)
 			snew->angle = (actor->angle + snext->angle) >> 1;
 			P_SetTarget(&snew->target, actor->target);
 			snew->fuse = actor->fuse;
-			
+
 			P_SetScale(snew, actor->scale);
 			snew->destscale = actor->destscale;
 			snew->scalespeed = actor->scalespeed;
@@ -9288,6 +9274,49 @@ void A_RandomStateRange(mobj_t *actor)
 		return;
 
 	P_SetMobjState(actor, P_RandomRange(locvar1, locvar2));
+}
+
+// Function: A_StateRangeByAngle
+//
+// Description: Chooses a state within the range supplied, depending on the actor's angle.
+//
+// var1 = Minimum state number to use.
+// var2 = Maximum state number to use. The difference will act as a modulo operator.
+//
+void A_StateRangeByAngle(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+	if (LUA_CallAction(A_STATERANGEBYANGLE, actor))
+		return;
+
+	if (locvar2 - locvar1 < 0)
+		return; // invalid range
+
+	P_SetMobjState(actor, locvar1 + (AngleFixed(actor->angle)>>FRACBITS % (1 + locvar2 - locvar1)));
+}
+
+// Function: A_StateRangeByParameter
+//
+// Description: Chooses a state within the range supplied, depending on the actor's parameter/extrainfo value.
+//
+// var1 = Minimum state number to use.
+// var2 = Maximum state number to use. The difference will act as a modulo operator.
+//
+void A_StateRangeByParameter(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	UINT8 parameter = (actor->spawnpoint ? actor->spawnpoint->extrainfo : 0);
+
+	if (LUA_CallAction(A_STATERANGEBYPARAMETER, actor))
+		return;
+
+	if (locvar2 - locvar1 < 0)
+		return; // invalid range
+
+	P_SetMobjState(actor, locvar1 + (parameter % (1 + locvar2 - locvar1)));
 }
 
 // Function: A_DualAction
