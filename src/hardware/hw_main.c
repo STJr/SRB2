@@ -239,31 +239,9 @@ void HWR_Lighting(FSurfaceInfo *Surface, INT32 light_level, extracolormap_t *col
 	Surface->LightInfo.fade_end = (colormap != NULL) ? colormap->fadeend : 31;
 
 	if (HWR_ShouldUsePaletteRendering())
-	{
-		boolean default_colormap = false;
-		if (!colormap)
-		{
-			colormap = R_GetDefaultColormap(); // a place to store the hw lighttable id
-			// alternatively could just store the id in a global variable if there are issues
-			default_colormap = true;
-		}
-		// create hw lighttable if there isn't one
-		if (!colormap->gl_lighttable_id)
-		{
-			UINT8 *colormap_pointer;
-
-			if (default_colormap)
-				colormap_pointer = colormaps; // don't actually use the data from the "default colormap"
-			else
-				colormap_pointer = colormap->colormap;
-			colormap->gl_lighttable_id = HWR_CreateLightTable(colormap_pointer);
-		}
-		Surface->LightTableId = colormap->gl_lighttable_id;
-	}
+		Surface->LightTableId = HWR_GetLightTableID(colormap);
 	else
-	{
 		Surface->LightTableId = 0;
-	}
 }
 
 UINT8 HWR_FogBlockAlpha(INT32 light, extracolormap_t *colormap) // Let's see if this can work
@@ -6835,7 +6813,7 @@ void HWR_EndScreenWipe(void)
 
 void HWR_DrawIntermissionBG(void)
 {
-	HWD.pfnDrawScreenTexture(HWD_SCREENTEXTURE_GENERIC1);
+	HWD.pfnDrawScreenTexture(HWD_SCREENTEXTURE_GENERIC1, NULL, 0);
 }
 
 //

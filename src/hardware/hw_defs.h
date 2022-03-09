@@ -153,8 +153,9 @@ enum
 	SHADER_FOG,
 	SHADER_SKY,
 	SHADER_PALETTE_POSTPROCESS,
+	SHADER_UI_COLORMAP_FADE,
 
-	NUMSHADERTARGETS,
+	NUMSHADERTARGETS
 };
 
 // Maximum amount of shader programs
@@ -335,7 +336,7 @@ enum hwdscreentexture
 	HWD_SCREENTEXTURE_WIPE_START, // source image for the wipe/fade effect
 	HWD_SCREENTEXTURE_WIPE_END,   // destination image for the wipe/fade effect
 	HWD_SCREENTEXTURE_GENERIC1,   // underwater/heat effect, intermission background
-	HWD_SCREENTEXTURE_GENERIC2,   // screen before palette rendering's postprocessing
+	HWD_SCREENTEXTURE_GENERIC2,   // palette-based colormap fade, screen before palette rendering's postprocessing
 	HWD_SCREENTEXTURE_GENERIC3,   // screen after palette rendering's postprocessing
 	NUMSCREENTEXTURES,            // (generic3 is unused if palette rendering is disabled)
 };

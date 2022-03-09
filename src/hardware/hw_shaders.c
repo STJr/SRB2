@@ -315,6 +315,18 @@
 		"gl_FragColor = final_color;\n" \
 	"}\0"
 
+#define GLSL_UI_COLORMAP_FADE_SHADER \
+	"uniform sampler2D tex;\n" \
+	"uniform float lighting;\n" \
+	"uniform sampler3D palette_lookup_tex;\n" \
+	"uniform sampler2D lighttable_tex;\n" \
+	"void main(void) {\n" \
+		"vec4 texel = texture2D(tex, gl_TexCoord[0].st);\n" \
+		"float tex_pal_idx = texture3D(palette_lookup_tex, vec3((texel * 63.0 + 0.5) / 64.0))[0] * 255.0;\n" \
+		"vec2 lighttable_coord = vec2((tex_pal_idx + 0.5) / 256.0, (lighting + 0.5) / 32.0);\n" \
+		"gl_FragColor = texture2D(lighttable_tex, lighttable_coord);\n" \
+	"}\0" \
+
 // ================
 //  Shader sources
 // ================
@@ -346,6 +358,9 @@ static struct {
 
 	// Palette postprocess shader
 	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_PALETTE_POSTPROCESS_SHADER},
+
+	// UI colormap fade shader
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_UI_COLORMAP_FADE_SHADER},
 
 	{NULL, NULL},
 };
