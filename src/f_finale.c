@@ -1642,37 +1642,27 @@ void F_GameEvaluationTicker(void)
 
 	if (finalecount == 5*TICRATE)
 	{
-		if (netgame || multiplayer) // modify this when we finally allow unlocking stuff in 2P
+		serverGamedata->timesBeaten++;
+		clientGamedata->timesBeaten++;
+
+		if (ALL7EMERALDS(emeralds))
 		{
-			HU_SetCEchoFlags(V_YELLOWMAP|V_RETURN8);
-			HU_SetCEchoDuration(6);
-			HU_DoCEcho("\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\Multiplayer games can't unlock extras!");
+			serverGamedata->timesBeatenWithEmeralds++;
+			clientGamedata->timesBeatenWithEmeralds++;
+		}
+
+		if (ultimatemode)
+		{
+			serverGamedata->timesBeatenUltimate++;
+			clientGamedata->timesBeatenUltimate++;
+		}
+
+		M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+		if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 			S_StartSound(NULL, sfx_s3k68);
-		}
-		else
-		{
-			serverGamedata->timesBeaten++;
-			clientGamedata->timesBeaten++;
 
-			if (ALL7EMERALDS(emeralds))
-			{
-				serverGamedata->timesBeatenWithEmeralds++;
-				clientGamedata->timesBeatenWithEmeralds++;
-			}
-
-			if (ultimatemode)
-			{
-				serverGamedata->timesBeatenUltimate++;
-				clientGamedata->timesBeatenUltimate++;
-			}
-
-			M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
-
-			if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
-				S_StartSound(NULL, sfx_s3k68);
-
-			G_SaveGameData(clientGamedata);
-		}
+		G_SaveGameData(clientGamedata);
 	}
 }
 
