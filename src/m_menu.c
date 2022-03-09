@@ -4751,7 +4751,7 @@ static void M_DrawPauseMenu(void)
 						emblemslot = 2;
 						break;
 					case ET_NGRADE:
-						snprintf(targettext, 9, "%u", P_GetScoreForGrade(gamemap, 0, emblem->var));
+						snprintf(targettext, 9, "%u", P_GetScoreForGradeOverall(gamemap, emblem->var));
 						snprintf(currenttext, 9, "%u", G_GetBestNightsScore(gamemap, 0));
 
 						targettext[8] = 0;

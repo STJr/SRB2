@@ -508,6 +508,17 @@ UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade)
 	return mapheaderinfo[map-1]->grades[mare].grade[grade-1];
 }
 
+UINT32 P_GetScoreForGradeOverall(INT16 map, UINT8 grade)
+{
+	UINT8 mares;
+	INT32 i;
+	UINT32 score = 0;
+	mares = mapheaderinfo[map-1]->numGradedMares;
+	for (i = 0; i < mares; ++i)
+			score += P_GetScoreForGrade(map, i, grade);
+	return score;
+}
+
 //
 // levelflats
 //
