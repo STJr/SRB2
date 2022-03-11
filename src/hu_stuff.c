@@ -232,25 +232,12 @@ void HU_LoadGraphics(void)
 			nto_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
 
-	hu_font.kerning = 0;
-	hu_font.spacewidth = 4;
-	hu_font.linespacing = 12;
-
-	tny_font.kerning = 0;
-	tny_font.spacewidth = 2;
-	tny_font.linespacing = 12;
-
-	cred_font.kerning = 0;
-	cred_font.spacewidth = 16;
-	cred_font.linespacing = 16;
-
-	lt_font.kerning = 0;
-	lt_font.spacewidth = 16;
-	lt_font.linespacing = 20;
-
-	ntb_font.kerning = nto_font.kerning = 0;
-	ntb_font.spacewidth = nto_font.spacewidth = 4;
-	ntb_font.linespacing = nto_font.linespacing = 21;
+	HU_LoadFontProperties(&hu_font, 0, 4, 12);
+	HU_LoadFontProperties(&tny_font, 0, 2, 12);
+	HU_LoadFontProperties(&cred_font, 0, 16, 16);
+	HU_LoadFontProperties(&lt_font, 0, 16, 20);
+	HU_LoadFontProperties(&ntb_font, 0, 4, 21);
+	HU_LoadFontProperties(&nto_font, 0, 4, 21);
 
 	//cache numbers too!
 	for (i = 0; i < 10; i++)
@@ -306,6 +293,13 @@ void HU_LoadGraphics(void)
 	emeraldpics[2][5] = W_CachePatchName("EMBOX6", PU_HUDGFX);
 	emeraldpics[2][6] = W_CachePatchName("EMBOX7", PU_HUDGFX);
 	//emeraldpics[2][7] = W_CachePatchName("EMBOX8", PU_HUDGFX); -- unused
+}
+
+void HU_LoadFontProperties(fontdef_t *font, INT32 kerning, UINT32 spacewidth, UINT32 linespacing)
+{
+	font->kerning = kerning;
+	font->spacewidth = spacewidth;
+	font->linespacing = linespacing;
 }
 
 // Initialise Heads up
