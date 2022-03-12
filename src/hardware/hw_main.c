@@ -6858,13 +6858,31 @@ void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
 		return;
 
 	HWR_GetFadeMask(wipelumpnum);
-	HWD.pfnDoScreenWipe(HWD_SCREENTEXTURE_WIPE_START, HWD_SCREENTEXTURE_WIPE_END);
-}
+	if (wipestyle == WIPESTYLE_COLORMAP && HWR_UseShader())
+	{
+		FSurfaceInfo surf = {0};
+		FBITFIELD polyflags = PF_Modulated|PF_NoDepthTest;
 
-void HWR_DoTintedWipe(UINT8 wipenum, UINT8 scrnnum)
-{
-	// It does the same thing
-	HWR_DoWipe(wipenum, scrnnum);
+		polyflags |= (wipestyleflags & WSF_TOWHITE) ? PF_Additive : PF_ReverseSubtract;
+		surf.PolyColor.s.red = FADEREDFACTOR;
+		surf.PolyColor.s.green = FADEGREENFACTOR;
+		surf.PolyColor.s.blue = FADEBLUEFACTOR;
+		// polycolor alpha communicates fadein / fadeout to the shader and the backend
+		surf.PolyColor.s.alpha = (wipestyleflags & WSF_FADEIN) ? 255 : 0;
+
+		// backend shader may not have been enabled yet so do it here
+		HWR_SetShaderState();
+
+		HWD.pfnSetShader(HWR_GetShaderFromTarget(SHADER_UI_TINTED_WIPE));
+		HWD.pfnDoScreenWipe(HWD_SCREENTEXTURE_WIPE_START, HWD_SCREENTEXTURE_WIPE_END,
+			&surf, polyflags);
+		HWD.pfnUnSetShader();
+	}
+	else
+	{
+		HWD.pfnDoScreenWipe(HWD_SCREENTEXTURE_WIPE_START, HWD_SCREENTEXTURE_WIPE_END,
+			NULL, 0);
+	}
 }
 
 void HWR_MakeScreenFinalTexture(void)

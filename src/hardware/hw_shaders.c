@@ -315,6 +315,7 @@
 		"gl_FragColor = final_color;\n" \
 	"}\0"
 
+// Applies a palettized colormap fade to tex
 #define GLSL_UI_COLORMAP_FADE_SHADER \
 	"uniform sampler2D tex;\n" \
 	"uniform float lighting;\n" \
@@ -325,7 +326,29 @@
 		"float tex_pal_idx = texture3D(palette_lookup_tex, vec3((texel * 63.0 + 0.5) / 64.0))[0] * 255.0;\n" \
 		"vec2 lighttable_coord = vec2((tex_pal_idx + 0.5) / 256.0, (lighting + 0.5) / 32.0);\n" \
 		"gl_FragColor = texture2D(lighttable_tex, lighttable_coord);\n" \
-	"}\0" \
+	"}\0"
+
+// For wipes that use additive and subtractive blending.
+// alpha_factor = 31 * 8 / 10 = 24.8
+// Calculated based on the use of the "fade" variable from the GETCOLOR macro
+// in r_data.c:R_CreateFadeColormaps.
+// However this value created some ugliness in fades to white (special stage entry)
+// while palette rendering is enabled, so I raised the value just a bit.
+#define GLSL_UI_TINTED_WIPE_SHADER \
+	"uniform sampler2D tex;\n" \
+	"uniform vec4 poly_color;\n" \
+	"const float alpha_factor = 24.875;\n" \
+	"void main(void) {\n" \
+		"vec4 texel = texture2D(tex, gl_TexCoord[0].st);\n" \
+		"vec4 final_color = poly_color;\n" \
+		"float alpha = texel.a;\n" \
+		"if (final_color.a >= 0.5)\n" \
+			"alpha = 1.0 - alpha;\n" \
+		"alpha *= alpha_factor;\n" \
+		"final_color *= alpha;\n" \
+		"final_color.a = 1.0;\n" \
+		"gl_FragColor = final_color;\n" \
+	"}\0"
 
 // ================
 //  Shader sources
@@ -361,6 +384,9 @@ static struct {
 
 	// UI colormap fade shader
 	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_UI_COLORMAP_FADE_SHADER},
+
+	// UI tinted wipe shader
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_UI_TINTED_WIPE_SHADER},
 
 	{NULL, NULL},
 };
