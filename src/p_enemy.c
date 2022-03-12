@@ -4181,7 +4181,6 @@ bossjustdie:
 void A_SetShadowScale(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
 
 	if (LUA_CallAction(A_SETSHADOWSCALE, actor))
 		return;
@@ -4199,9 +4198,6 @@ void A_SetShadowScale(mobj_t *actor)
 //
 void A_ShadowScream(mobj_t *actor)
 {
-	INT32 locvar1 = var1;
-	INT32 locvar2 = var2;
-
 	if (LUA_CallAction(A_SHADOWSCREAM, actor))
 		return;
 

@@ -10412,6 +10412,7 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 	switch (thing->type)
 	{
 		case MT_PLAYER:
+		case MT_METALSONIC_RACE:
 		case MT_ROLLOUTROCK:
 
 		case MT_EGGMOBILE4_MACE:
