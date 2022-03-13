@@ -246,7 +246,6 @@ int LUA_HookLib(lua_State *L)
 }
 
 /* TODO: remove in next backwards incompatible release */
-#if MODID == 18
 int lib_hudadd(lua_State *L);/* yeah compiler */
 int lib_hudadd(lua_State *L)
 {
@@ -260,7 +259,6 @@ int lib_hudadd(lua_State *L)
 
 	return 0;
 }
-#endif
 
 typedef struct Hook_State Hook_State;
 typedef void (*Hook_Callback)(Hook_State *);
