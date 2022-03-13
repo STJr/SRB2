@@ -162,7 +162,7 @@ sfxinfo_t S_sfx[NUMSFX] =
   {"cgot" ,   true, 120, 0,                  -1, NULL, 0, -1, -1, LUMPERROR, "Got Emerald"}, // Got Emerald! Tails 09-02-2001
   {"cybdth", false,  32, 0,                  -1, NULL, 0, -1, -1, LUMPERROR, "Explosion"},
   {"deton",   true,  64, 0,                  -1, NULL, 0, -1, -1, LUMPERROR, "Threatening beeping"},
-  {"ding",   false, 127, SF_X4AWAYSOUND,     -1, NULL, 0, -1, -1, LUMPERROR, "Ding"},
+  {"ding",    true, 127, SF_X4AWAYSOUND,     -1, NULL, 0, -1, -1, LUMPERROR, "Ding"},
   {"dmpain", false,  96, 0,                  -1, NULL, 0, -1, -1, LUMPERROR, "Machine damage"},
   {"drown",  false, 192, 0,                  -1, NULL, 0, -1, -1, LUMPERROR, "Drowning"},
   {"fizzle", false, 127, SF_X4AWAYSOUND,     -1, NULL, 0, -1, -1, LUMPERROR, "Electric fizzle"},
