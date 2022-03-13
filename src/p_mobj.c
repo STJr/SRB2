@@ -7864,7 +7864,8 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 	case MT_WOODDEBRIS:
 	case MT_BRICKDEBRIS:
 	case MT_BROKENROBOT:
-		if (mobj->z <= P_FloorzAtPos(mobj->x, mobj->y, mobj->z, mobj->height)
+		if (((!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z <= P_FloorzAtPos(mobj->x, mobj->y, mobj->z, mobj->height))
+			|| (mobj->eflags & MFE_VERTICALFLIP && mobj->z + mobj->height >= P_CeilingzAtPos(mobj->x, mobj->y, mobj->z, mobj->height)))
 			&& mobj->state != &states[mobj->info->deathstate])
 		{
 			P_SetMobjState(mobj, mobj->info->deathstate);
@@ -9723,7 +9724,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		if (P_IsObjectOnGround(mobj))
 			mobj->rollangle = 0;
 		else
-			mobj->rollangle = R_PointToAngle2(0, 0, mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
+			mobj->rollangle = R_PointToAngle2(0, 0, P_MobjFlip(mobj)*mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
 		break;
 	case MT_SPINFIRE:
 		if (mobj->flags & MF_NOGRAVITY)
