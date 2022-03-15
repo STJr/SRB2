@@ -8433,7 +8433,10 @@ static boolean P_HangsterThink(mobj_t *mobj)
 	}
 	//after swooping back up, check for ceiling
 	else if ((st == S_HANGSTER_RETURN1 || st == S_HANGSTER_RETURN2) && mobj->momz == 0 && mobj->ceilingz == (mobj->z + mobj->height))
+	{
 		P_SetMobjState(mobj, (st = S_HANGSTER_RETURN3));
+		mobj->momx = mobj->momy = 0;
+	}
 
 	//should you roost on a ceiling with F_SKY1 as its flat, disappear forever
 	if (st == S_HANGSTER_RETURN3 && mobj->momz == 0 && mobj->ceilingz == (mobj->z + mobj->height)
@@ -10477,7 +10480,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 	if (type == MT_NULL)
 	{
-#if 0		
+#if 0
 #ifdef PARANOIA
 		I_Error("Tried to spawn MT_NULL\n");
 #endif
