@@ -617,9 +617,9 @@ typedef enum
 	gluniform_fade_end,
 
 	// palette rendering
-	gluniform_screen_palette_tex,
-	gluniform_palette_lookup_tex,
-	gluniform_lighttable_tex,
+	gluniform_palette_tex, // 1d texture containing a palette
+	gluniform_palette_lookup_tex, // 3d texture containing the rgb->index lookup table
+	gluniform_lighttable_tex, // 2d texture containing a light table
 
 	// misc.
 	gluniform_leveltime,
@@ -1918,7 +1918,7 @@ static boolean Shader_CompileProgram(gl_shader_t *shader, GLint i)
 	shader->uniforms[gluniform_fade_end] = GETUNI("fade_end");
 
 	// palette rendering
-	shader->uniforms[gluniform_screen_palette_tex] = GETUNI("screen_palette_tex");
+	shader->uniforms[gluniform_palette_tex] = GETUNI("palette_tex");
 	shader->uniforms[gluniform_palette_lookup_tex] = GETUNI("palette_lookup_tex");
 	shader->uniforms[gluniform_lighttable_tex] = GETUNI("lighttable_tex");
 
@@ -1934,7 +1934,7 @@ static boolean Shader_CompileProgram(gl_shader_t *shader, GLint i)
 	pglUseProgram(shader->program);
 
 	// texture unit numbers for the samplers used for palette rendering
-	UNIFORM_1(shader->uniforms[gluniform_screen_palette_tex], 2, pglUniform1i);
+	UNIFORM_1(shader->uniforms[gluniform_palette_tex], 2, pglUniform1i);
 	UNIFORM_1(shader->uniforms[gluniform_palette_lookup_tex], 1, pglUniform1i);
 	UNIFORM_1(shader->uniforms[gluniform_lighttable_tex], 2, pglUniform1i);
 

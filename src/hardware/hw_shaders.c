@@ -306,12 +306,12 @@
 #define GLSL_PALETTE_POSTPROCESS_SHADER \
 	"uniform sampler2D tex;\n" \
 	"uniform sampler3D palette_lookup_tex;\n" \
-	"uniform sampler1D screen_palette_tex;\n" \
+	"uniform sampler1D palette_tex;\n" \
 	"void main(void) {\n" \
 		"vec4 texel = texture2D(tex, gl_TexCoord[0].st);\n" \
 		"float tex_pal_idx = texture3D(palette_lookup_tex, vec3((texel * 63.0 + 0.5) / 64.0))[0] * 255.0;\n" \
 		"float palette_coord = (tex_pal_idx + 0.5) / 256.0;\n" \
-		"vec4 final_color = texture1D(screen_palette_tex, palette_coord);\n" \
+		"vec4 final_color = texture1D(palette_tex, palette_coord);\n" \
 		"gl_FragColor = final_color;\n" \
 	"}\0"
 

@@ -1258,11 +1258,9 @@ void I_FinishUpdate(void)
 		if (HWR_ShouldUsePaletteRendering())
 		{
 			HWD.pfnMakeScreenTexture(HWD_SCREENTEXTURE_GENERIC2);
-			HWD.pfnSetSpecialState(HWD_SET_SHADERS, 1);
 			HWD.pfnSetShader(HWR_GetShaderFromTarget(SHADER_PALETTE_POSTPROCESS));
 			HWD.pfnDrawScreenTexture(HWD_SCREENTEXTURE_GENERIC2, NULL, 0);
 			HWD.pfnUnSetShader();
-			HWD.pfnSetSpecialState(HWD_SET_SHADERS, 0);
 		}
 		OglSdlFinishUpdate(cv_vidwait.value);
 	}

@@ -6041,9 +6041,6 @@ void HWR_RenderSkyboxView(INT32 viewnumber, player_t *player)
 	//                     Actually it only works on Walls and Planes
 	HWD.pfnSetTransform(&atransform);
 
-	// Reset the shader state.
-	HWR_SetShaderState();
-
 	validcount++;
 
 	if (cv_glbatching.value)
@@ -6255,9 +6252,6 @@ void HWR_RenderPlayerView(INT32 viewnumber, player_t *player)
 	//04/01/2000: Hurdler: added for T&L
 	//                     Actually it only works on Walls and Planes
 	HWD.pfnSetTransform(&atransform);
-
-	// Reset the shader state.
-	HWR_SetShaderState();
 
 	ps_numbspcalls.value.i = 0;
 	ps_numpolyobjects.value.i = 0;
@@ -6474,20 +6468,23 @@ static CV_PossibleValue_t glpalettedepth_cons_t[] = {{16, "16 bits"}, {24, "24 b
 consvar_t cv_glpaletterendering = CVAR_INIT ("gr_paletterendering", "Off", CV_SAVE|CV_CALL, CV_OnOff, CV_glpaletterendering_OnChange);
 consvar_t cv_glpalettedepth = CVAR_INIT ("gr_palettedepth", "16 bits", CV_SAVE|CV_CALL, glpalettedepth_cons_t, CV_glpalettedepth_OnChange);
 
+#define ONLY_IF_GL_LOADED if (vid.glstate != VID_GL_LIBRARY_LOADED) return;
+
 static void CV_glfiltermode_OnChange(void)
 {
-	if (rendermode == render_opengl)
-		HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_glfiltermode.value);
+	ONLY_IF_GL_LOADED
+	HWD.pfnSetSpecialState(HWD_SET_TEXTUREFILTERMODE, cv_glfiltermode.value);
 }
 
 static void CV_glanisotropic_OnChange(void)
 {
-	if (rendermode == render_opengl)
-		HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_glanisotropicmode.value);
+	ONLY_IF_GL_LOADED
+	HWD.pfnSetSpecialState(HWD_SET_TEXTUREANISOTROPICMODE, cv_glanisotropicmode.value);
 }
 
 static void CV_glmodellighting_OnChange(void)
 {
+	ONLY_IF_GL_LOADED
 	// if shaders have been compiled, then they now need to be recompiled.
 	if (gl_shadersavailable)
 		HWR_CompileShaders();
@@ -6495,6 +6492,7 @@ static void CV_glmodellighting_OnChange(void)
 
 static void CV_glpaletterendering_OnChange(void)
 {
+	ONLY_IF_GL_LOADED
 	if (gl_shadersavailable)
 	{
 		HWR_CompileShaders();
@@ -6504,6 +6502,7 @@ static void CV_glpaletterendering_OnChange(void)
 
 static void CV_glpalettedepth_OnChange(void)
 {
+	ONLY_IF_GL_LOADED
 	// refresh the screen palette
 	if (HWR_ShouldUsePaletteRendering())
 		HWR_SetPalette(pLocalPalette);
@@ -6511,6 +6510,8 @@ static void CV_glpalettedepth_OnChange(void)
 
 static void CV_glshaders_OnChange(void)
 {
+	ONLY_IF_GL_LOADED
+	HWR_SetShaderState();
 	if (cv_glpaletterendering.value)
 	{
 		// can't do palette rendering without shaders, so update the state if needed
@@ -6582,6 +6583,7 @@ void HWR_Startup(void)
 #endif
 
 		gl_shadersavailable = HWR_InitShaders();
+		HWR_SetShaderState();
 		HWR_LoadAllCustomShaders();
 		HWR_TogglePaletteRendering();
 	}
@@ -6869,9 +6871,6 @@ void HWR_DoWipe(UINT8 wipenum, UINT8 scrnnum)
 		surf.PolyColor.s.blue = FADEBLUEFACTOR;
 		// polycolor alpha communicates fadein / fadeout to the shader and the backend
 		surf.PolyColor.s.alpha = (wipestyleflags & WSF_FADEIN) ? 255 : 0;
-
-		// backend shader may not have been enabled yet so do it here
-		HWR_SetShaderState();
 
 		HWD.pfnSetShader(HWR_GetShaderFromTarget(SHADER_UI_TINTED_WIPE));
 		HWD.pfnDoScreenWipe(HWD_SCREENTEXTURE_WIPE_START, HWD_SCREENTEXTURE_WIPE_END,
