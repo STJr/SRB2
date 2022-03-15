@@ -728,6 +728,54 @@ static menuitem_t SR_MainMenu[] =
 	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom30
 	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom31
 	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom32
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom33
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom34
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom35
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom36
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom37
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom38
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom39
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom40
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom41
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom42
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom43
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom44
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom45
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom46
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom47
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom48
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom49
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom50
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom51
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom52
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom53
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom54
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom55
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom56
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom57
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom58
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom59
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom60
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom61
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom62
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom63
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom64
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom65
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom66
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom67
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom68
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom69
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom70
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom71
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom72
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom73
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom74
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom75
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom76
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom77
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom78
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom79
+	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom80
 
 };
 
