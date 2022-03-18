@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1465,6 +1465,86 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		return true;
 	}
 
+	// Sprite Spikes!
+	// Do not return because solidity code comes below.
+	if (tmthing->type == MT_SPIKE && tmthing->flags & MF_SOLID && thing->player) // moving spike rams into player?!
+	{
+		if (tmthing->eflags & MFE_VERTICALFLIP)
+		{
+			if (thing->z + thing->height <= tmthing->z + FixedMul(FRACUNIT, tmthing->scale)
+			&& thing->z + thing->height + thing->momz  >= tmthing->z + FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz
+			&& !(thing->player->charability == CA_BOUNCE && thing->player->panim == PA_ABILITY && thing->eflags & MFE_VERTICALFLIP))
+				P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
+		}
+		else if (thing->z >= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale)
+		&& thing->z + thing->momz <= tmthing->z + tmthing->height - FixedMul(FRACUNIT, tmthing->scale) + tmthing->momz
+		&& !(thing->player->charability == CA_BOUNCE && thing->player->panim == PA_ABILITY && !(thing->eflags & MFE_VERTICALFLIP)))
+			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
+	}
+	else if (thing->type == MT_SPIKE && thing->flags & MF_SOLID && tmthing->player) // unfortunate player falls into spike?!
+	{
+		if (thing->eflags & MFE_VERTICALFLIP)
+		{
+			if (tmthing->z + tmthing->height <= thing->z - FixedMul(FRACUNIT, thing->scale)
+			&& tmthing->z + tmthing->height + tmthing->momz >= thing->z - FixedMul(FRACUNIT, thing->scale)
+			&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && tmthing->eflags & MFE_VERTICALFLIP))
+				P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
+		}
+		else if (tmthing->z >= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
+		&& tmthing->z + tmthing->momz <= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
+		&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && !(tmthing->eflags & MFE_VERTICALFLIP)))
+			P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
+	}
+
+	if (tmthing->type == MT_WALLSPIKE && tmthing->flags & MF_SOLID && thing->player) // wall spike impales player
+	{
+		fixed_t bottomz, topz;
+		bottomz = tmthing->z;
+		topz = tmthing->z + tmthing->height;
+		if (tmthing->eflags & MFE_VERTICALFLIP)
+			bottomz -= FixedMul(FRACUNIT, tmthing->scale);
+		else
+			topz += FixedMul(FRACUNIT, tmthing->scale);
+
+		if (thing->z + thing->height > bottomz // above bottom
+		&&  thing->z < topz) // below top
+		// don't check angle, the player was clearly in the way in this case
+			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
+	}
+	else if (thing->type == MT_WALLSPIKE && thing->flags & MF_SOLID && tmthing->player)
+	{
+		fixed_t bottomz, topz;
+		angle_t touchangle = R_PointToAngle2(thing->tracer->x, thing->tracer->y, tmthing->x, tmthing->y);
+
+		if (P_PlayerInPain(tmthing->player) && (tmthing->momx || tmthing->momy))
+		{
+			angle_t playerangle = R_PointToAngle2(0, 0, tmthing->momx, tmthing->momy) - touchangle;
+			if (playerangle > ANGLE_180)
+				playerangle = InvAngle(playerangle);
+			if (playerangle < ANGLE_90)
+				return true; // Yes, this is intentionally outside the z-height check. No standing on spikes whilst moving away from them.
+		}
+
+		bottomz = thing->z;
+		topz = thing->z + thing->height;
+
+		if (thing->eflags & MFE_VERTICALFLIP)
+			bottomz -= FixedMul(FRACUNIT, thing->scale);
+		else
+			topz += FixedMul(FRACUNIT, thing->scale);
+
+		if (tmthing->z + tmthing->height > bottomz // above bottom
+		&&  tmthing->z < topz // below top
+		&& !P_MobjWasRemoved(thing->tracer)) // this probably wouldn't work if we didn't have a tracer
+		{ // use base as a reference point to determine what angle you touched the spike at
+			touchangle = thing->angle - touchangle;
+			if (touchangle > ANGLE_180)
+				touchangle = InvAngle(touchangle);
+			if (touchangle <= ANGLE_22h) // if you touched it at this close an angle, you get poked!
+				P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
+		}
+	}
+
 	if (thing->flags & MF_PUSHABLE)
 	{
 		if (tmthing->type == MT_FAN || tmthing->type == MT_STEAM)
@@ -1543,22 +1623,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (thing->player)
 	{
-		if (tmthing->type == MT_WALLSPIKE && (tmthing->flags & MF_SOLID)) // wall spike impales player
-		{
-			fixed_t bottomz, topz;
-			bottomz = tmthing->z;
-			topz = tmthing->z + tmthing->height;
-			if (tmthing->eflags & MFE_VERTICALFLIP)
-				bottomz -= FixedMul(FRACUNIT, tmthing->scale);
-			else
-				topz += FixedMul(FRACUNIT, tmthing->scale);
-
-			if (thing->z + thing->height > bottomz // above bottom
-			&&  thing->z < topz) // below top
-			// don't check angle, the player was clearly in the way in this case
-				P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
-		}
-
 		// Doesn't matter what gravity player's following! Just do your stuff in YOUR direction only
 		if (tmthing->eflags & MFE_VERTICALFLIP
 		&& (tmthing->z + tmthing->height + tmthing->momz < thing->z
@@ -1592,55 +1656,6 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	{
 		if (!tmthing->health)
 			return true;
-
-		if (thing->type == MT_SPIKE && (thing->flags & MF_SOLID)) // unfortunate player falls into spike?!
-		{
-			if (thing->eflags & MFE_VERTICALFLIP)
-			{
-				if (tmthing->z + tmthing->height <= thing->z - FixedMul(FRACUNIT, thing->scale)
-				&& tmthing->z + tmthing->height + tmthing->momz >= thing->z - FixedMul(FRACUNIT, thing->scale)
-				&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && tmthing->eflags & MFE_VERTICALFLIP))
-					P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
-			}
-			else if (tmthing->z >= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
-			&& tmthing->z + tmthing->momz <= thing->z + thing->height + FixedMul(FRACUNIT, thing->scale)
-			&& !(tmthing->player->charability == CA_BOUNCE && tmthing->player->panim == PA_ABILITY && !(tmthing->eflags & MFE_VERTICALFLIP)))
-				P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
-		}
-
-		if (thing->type == MT_WALLSPIKE && (thing->flags & MF_SOLID))
-		{
-			fixed_t bottomz, topz;
-			angle_t touchangle = R_PointToAngle2(thing->tracer->x, thing->tracer->y, tmthing->x, tmthing->y);
-
-			if (P_PlayerInPain(tmthing->player) && (tmthing->momx || tmthing->momy))
-			{
-				angle_t playerangle = R_PointToAngle2(0, 0, tmthing->momx, tmthing->momy) - touchangle;
-				if (playerangle > ANGLE_180)
-					playerangle = InvAngle(playerangle);
-				if (playerangle < ANGLE_90)
-					return true; // Yes, this is intentionally outside the z-height check. No standing on spikes whilst moving away from them.
-			}
-
-			bottomz = thing->z;
-			topz = thing->z + thing->height;
-
-			if (thing->eflags & MFE_VERTICALFLIP)
-				bottomz -= FixedMul(FRACUNIT, thing->scale);
-			else
-				topz += FixedMul(FRACUNIT, thing->scale);
-
-			if (tmthing->z + tmthing->height > bottomz // above bottom
-			&&  tmthing->z < topz // below top
-			&& !P_MobjWasRemoved(thing->tracer)) // this probably wouldn't work if we didn't have a tracer
-			{ // use base as a reference point to determine what angle you touched the spike at
-				touchangle = thing->angle - touchangle;
-				if (touchangle > ANGLE_180)
-					touchangle = InvAngle(touchangle);
-				if (touchangle <= ANGLE_22h) // if you touched it at this close an angle, you get poked!
-					P_DamageMobj(tmthing, thing, thing, 1, DMG_SPIKE);
-			}
-		}
 
 		if (thing->type == MT_FAN || thing->type == MT_STEAM)
 			P_DoFanAndGasJet(thing, tmthing);
@@ -1706,17 +1721,14 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		}
 	}
 
-	if ((thing->player) && (tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM))
-		; // springs and gas jets should never be able to step up onto a player
+	if ((tmthing->flags & MF_SPRING || tmthing->type == MT_STEAM || tmthing->type == MT_SPIKE || tmthing->type == MT_WALLSPIKE) && (thing->player))
+		; // springs, gas jets and springs should never be able to step up onto a player
 	// z checking at last
 	// Treat noclip things as non-solid!
 	else if ((thing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID
 		&& (tmthing->flags & (MF_SOLID|MF_NOCLIP)) == MF_SOLID)
 	{
 		fixed_t topz, tmtopz;
-
-		if (tmthing->type == MT_SPIKE || tmthing->type == MT_WALLSPIKE) // do not run height checks if you are a spike
-			return true;
 
 		if (tmthing->eflags & MFE_VERTICALFLIP)
 		{
@@ -2654,17 +2666,17 @@ boolean PIT_PushableMoved(mobj_t *thing)
 	return true;
 }
 
-//
-// P_TryMove
-// Attempt to move to a new position.
-//
-boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
+static boolean
+increment_move
+(		mobj_t * thing,
+		fixed_t x,
+		fixed_t y,
+		boolean allowdropoff)
 {
 	fixed_t tryx = thing->x;
 	fixed_t tryy = thing->y;
 	fixed_t radius = thing->radius;
 	fixed_t thingtop;
-	fixed_t startingonground = P_IsObjectOnGround(thing);
 	floatok = false;
 
 	if (radius < MAXRADIUS/2)
@@ -2802,7 +2814,38 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		}
 	} while (tryx != x || tryy != y);
 
+	return true;
+}
+
+//
+// P_CheckMove
+// Check if a P_TryMove would be successful.
+//
+boolean P_CheckMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
+{
+	boolean moveok;
+	mobj_t *hack = P_SpawnMobjFromMobj(thing, 0, 0, 0, MT_RAY);
+
+	hack->radius = thing->radius;
+	hack->height = thing->height;
+
+	moveok = increment_move(hack, x, y, allowdropoff);
+	P_RemoveMobj(hack);
+
+	return moveok;
+}
+
+//
+// P_TryMove
+// Attempt to move to a new position.
+//
+boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
+{
+	fixed_t startingonground = P_IsObjectOnGround(thing);
+
 	// The move is ok!
+	if (!increment_move(thing, x, y, allowdropoff))
+		return false;
 
 	// If it's a pushable object, check if anything is
 	// standing on top and move it, too.

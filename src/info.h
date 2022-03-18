@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -177,6 +177,8 @@ enum actionnum
 	A_SETOBJECTFLAGS2,
 	A_RANDOMSTATE,
 	A_RANDOMSTATERANGE,
+	A_STATERANGEBYANGLE,
+	A_STATERANGEBYPARAMETER,
 	A_DUALACTION,
 	A_REMOTEACTION,
 	A_TOGGLEFLAMEJET,
@@ -443,6 +445,8 @@ void A_SetObjectFlags();
 void A_SetObjectFlags2();
 void A_RandomState();
 void A_RandomStateRange();
+void A_StateRangeByAngle();
+void A_StateRangeByParameter();
 void A_DualAction();
 void A_RemoteAction();
 void A_ToggleFlameJet();
@@ -736,6 +740,10 @@ typedef enum sprite
 
 	// The letter
 	SPR_LETR,
+
+	// Tutorial scenery
+	SPR_TUPL,
+	SPR_TUPF,
 
 	// Greenflower Scenery
 	SPR_FWR1,
@@ -2551,6 +2559,56 @@ typedef enum state
 	// The letter
 	S_LETTER,
 
+	// Tutorial scenery
+	S_TUTORIALLEAF1,
+	S_TUTORIALLEAF2,
+	S_TUTORIALLEAF3,
+	S_TUTORIALLEAF4,
+	S_TUTORIALLEAF5,
+	S_TUTORIALLEAF6,
+	S_TUTORIALLEAF7,
+	S_TUTORIALLEAF8,
+	S_TUTORIALLEAF9,
+	S_TUTORIALLEAF10,
+	S_TUTORIALLEAF11,
+	S_TUTORIALLEAF12,
+	S_TUTORIALLEAF13,
+	S_TUTORIALLEAF14,
+	S_TUTORIALLEAF15,
+	S_TUTORIALLEAF16,
+	S_TUTORIALFLOWER1,
+	S_TUTORIALFLOWER2,
+	S_TUTORIALFLOWER3,
+	S_TUTORIALFLOWER4,
+	S_TUTORIALFLOWER5,
+	S_TUTORIALFLOWER6,
+	S_TUTORIALFLOWER7,
+	S_TUTORIALFLOWER8,
+	S_TUTORIALFLOWER9,
+	S_TUTORIALFLOWER10,
+	S_TUTORIALFLOWER11,
+	S_TUTORIALFLOWER12,
+	S_TUTORIALFLOWER13,
+	S_TUTORIALFLOWER14,
+	S_TUTORIALFLOWER15,
+	S_TUTORIALFLOWER16,
+	S_TUTORIALFLOWERF1,
+	S_TUTORIALFLOWERF2,
+	S_TUTORIALFLOWERF3,
+	S_TUTORIALFLOWERF4,
+	S_TUTORIALFLOWERF5,
+	S_TUTORIALFLOWERF6,
+	S_TUTORIALFLOWERF7,
+	S_TUTORIALFLOWERF8,
+	S_TUTORIALFLOWERF9,
+	S_TUTORIALFLOWERF10,
+	S_TUTORIALFLOWERF11,
+	S_TUTORIALFLOWERF12,
+	S_TUTORIALFLOWERF13,
+	S_TUTORIALFLOWERF14,
+	S_TUTORIALFLOWERF15,
+	S_TUTORIALFLOWERF16,
+
 	// GFZ flowers
 	S_GFZFLOWERA,
 	S_GFZFLOWERB,
@@ -4093,14 +4151,13 @@ typedef enum state
 	S_NIGHTOPIANHELPER9,
 
 	// Nightopian
-	S_PIAN0,
-	S_PIAN1,
-	S_PIAN2,
-	S_PIAN3,
-	S_PIAN4,
-	S_PIAN5,
-	S_PIAN6,
-	S_PIANSING,
+	S_PIAN_LOOK1,
+	S_PIAN_LOOK2,
+	S_PIAN_LOOK3,
+	S_PIAN_FLY1,
+	S_PIAN_FLY2,
+	S_PIAN_FLY3,
+	S_PIAN_SING,
 
 	// Shleep
 	S_SHLEEP1,
@@ -4582,6 +4639,12 @@ typedef enum mobj_type
 
 	// The letter
 	MT_LETTER,
+
+	// Tutorial Scenery
+	MT_TUTORIALPLANT,
+	MT_TUTORIALLEAF,
+	MT_TUTORIALFLOWER,
+	MT_TUTORIALFLOWERF,
 
 	// Greenflower Scenery
 	MT_GFZFLOWER1,
@@ -5089,6 +5152,7 @@ typedef enum mobj_type
 	MT_YELLOWBRICKDEBRIS, // for CEZ3
 
 	MT_NAMECHECK,
+	MT_RAY, // General purpose mobj
 
 	MT_FIRSTFREESLOT,
 	MT_LASTFREESLOT = MT_FIRSTFREESLOT + NUMMOBJFREESLOTS - 1,
