@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -58,49 +58,49 @@ typedef enum
 
 typedef enum
 {
-	gc_null = 0, // a key/button mapped to gc_null has no effect
-	gc_forward,
-	gc_backward,
-	gc_strafeleft,
-	gc_straferight,
-	gc_turnleft,
-	gc_turnright,
-	gc_weaponnext,
-	gc_weaponprev,
-	gc_wepslot1,
-	gc_wepslot2,
-	gc_wepslot3,
-	gc_wepslot4,
-	gc_wepslot5,
-	gc_wepslot6,
-	gc_wepslot7,
-	gc_wepslot8,
-	gc_wepslot9,
-	gc_wepslot10,
-	gc_fire,
-	gc_firenormal,
-	gc_tossflag,
-	gc_spin,
-	gc_camtoggle,
-	gc_camreset,
-	gc_lookup,
-	gc_lookdown,
-	gc_centerview,
-	gc_mouseaiming, // mouse aiming is momentary (toggleable in the menu)
-	gc_talkkey,
-	gc_teamkey,
-	gc_scores,
-	gc_jump,
-	gc_console,
-	gc_pause,
-	gc_systemmenu,
-	gc_screenshot,
-	gc_recordgif,
-	gc_viewpoint,
-	gc_custom1, // Lua scriptable
-	gc_custom2, // Lua scriptable
-	gc_custom3, // Lua scriptable
-	num_gamecontrols
+	GC_NULL = 0, // a key/button mapped to GC_NULL has no effect
+	GC_FORWARD,
+	GC_BACKWARD,
+	GC_STRAFELEFT,
+	GC_STRAFERIGHT,
+	GC_TURNLEFT,
+	GC_TURNRIGHT,
+	GC_WEAPONNEXT,
+	GC_WEAPONPREV,
+	GC_WEPSLOT1,
+	GC_WEPSLOT2,
+	GC_WEPSLOT3,
+	GC_WEPSLOT4,
+	GC_WEPSLOT5,
+	GC_WEPSLOT6,
+	GC_WEPSLOT7,
+	GC_WEPSLOT8,
+	GC_WEPSLOT9,
+	GC_WEPSLOT10,
+	GC_FIRE,
+	GC_FIRENORMAL,
+	GC_TOSSFLAG,
+	GC_SPIN,
+	GC_CAMTOGGLE,
+	GC_CAMRESET,
+	GC_LOOKUP,
+	GC_LOOKDOWN,
+	GC_CENTERVIEW,
+	GC_MOUSEAIMING, // mouse aiming is momentary (toggleable in the menu)
+	GC_TALKKEY,
+	GC_TEAMKEY,
+	GC_SCORES,
+	GC_JUMP,
+	GC_CONSOLE,
+	GC_PAUSE,
+	GC_SYSTEMMENU,
+	GC_SCREENSHOT,
+	GC_RECORDGIF,
+	GC_VIEWPOINT,
+	GC_CUSTOM1, // Lua scriptable
+	GC_CUSTOM2, // Lua scriptable
+	GC_CUSTOM3, // Lua scriptable
+	NUM_GAMECONTROLS
 } gamecontrols_e;
 
 typedef enum
@@ -116,9 +116,29 @@ extern consvar_t cv_mousesens, cv_mouseysens;
 extern consvar_t cv_mousesens2, cv_mouseysens2;
 extern consvar_t cv_controlperkey;
 
-extern INT32 mousex, mousey;
-extern INT32 mlooky; //mousey with mlookSensitivity
-extern INT32 mouse2x, mouse2y, mlook2y;
+typedef struct
+{
+	INT32 dx; // deltas with mousemove sensitivity
+	INT32 dy;
+	INT32 mlookdy; // dy with mouselook sensitivity
+	INT32 rdx; // deltas without sensitivity
+	INT32 rdy;
+	UINT16 buttons;
+} mouse_t;
+
+#define MB_BUTTON1    0x0001
+#define MB_BUTTON2    0x0002
+#define MB_BUTTON3    0x0004
+#define MB_BUTTON4    0x0008
+#define MB_BUTTON5    0x0010
+#define MB_BUTTON6    0x0020
+#define MB_BUTTON7    0x0040
+#define MB_BUTTON8    0x0080
+#define MB_SCROLLUP   0x0100
+#define MB_SCROLLDOWN 0x0200
+
+extern mouse_t mouse;
+extern mouse_t mouse2;
 
 extern INT32 joyxmove[JOYAXISSET], joyymove[JOYAXISSET], joy2xmove[JOYAXISSET], joy2ymove[JOYAXISSET];
 
@@ -126,10 +146,10 @@ extern INT32 joyxmove[JOYAXISSET], joyymove[JOYAXISSET], joy2xmove[JOYAXISSET], 
 extern UINT8 gamekeydown[NUMINPUTS];
 
 // two key codes (or virtual key) per game control
-extern INT32 gamecontrol[num_gamecontrols][2];
-extern INT32 gamecontrolbis[num_gamecontrols][2]; // secondary splitscreen player
-extern INT32 gamecontroldefault[num_gamecontrolschemes][num_gamecontrols][2]; // default control storage, use 0 (gcs_custom) for memory retention
-extern INT32 gamecontrolbisdefault[num_gamecontrolschemes][num_gamecontrols][2];
+extern INT32 gamecontrol[NUM_GAMECONTROLS][2];
+extern INT32 gamecontrolbis[NUM_GAMECONTROLS][2]; // secondary splitscreen player
+extern INT32 gamecontroldefault[num_gamecontrolschemes][NUM_GAMECONTROLS][2]; // default control storage, use 0 (gcs_custom) for memory retention
+extern INT32 gamecontrolbisdefault[num_gamecontrolschemes][NUM_GAMECONTROLS][2];
 #define PLAYER1INPUTDOWN(gc) (gamekeydown[gamecontrol[gc][0]] || gamekeydown[gamecontrol[gc][1]])
 #define PLAYER2INPUTDOWN(gc) (gamekeydown[gamecontrolbis[gc][0]] || gamekeydown[gamecontrolbis[gc][1]])
 #define PLAYERINPUTDOWN(p, gc) ((p) == 2 ? PLAYER2INPUTDOWN(gc) : PLAYER1INPUTDOWN(gc))
@@ -161,8 +181,8 @@ extern const INT32 gcl_jump_spin[num_gcl_jump_spin];
 void G_MapEventsToControls(event_t *ev);
 
 // returns the name of a key
-const char *G_KeynumToString(INT32 keynum);
-INT32 G_KeyStringtoNum(const char *keystr);
+const char *G_KeyNumToName(INT32 keynum);
+INT32 G_KeyNameToNum(const char *keystr);
 
 // detach any keys associated to the given game control
 void G_ClearControlKeys(INT32 (*setupcontrols)[2], INT32 control);
@@ -174,5 +194,8 @@ INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gc
 void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
 void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis)[2]);
 INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify);
+
+// sets the members of a mouse_t given position deltas
+void G_SetMouseDeltas(INT32 dx, INT32 dy, UINT8 ssplayer);
 
 #endif

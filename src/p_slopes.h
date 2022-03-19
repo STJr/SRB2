@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2020 by Sonic Team Junior.
+// Copyright (C) 2015-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -50,6 +50,7 @@ typedef enum
 void P_LinkSlopeThinkers (void);
 
 void P_CalculateSlopeNormal(pslope_t *slope);
+void P_InitSlopes(void);
 void P_SpawnSlopes(const boolean fromsave);
 
 //
@@ -86,6 +87,7 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope);
 void P_HandleSlopeLanding(mobj_t *thing, pslope_t *slope);
 void P_ButteredSlope(mobj_t *mo);
 
+pslope_t *MakeViaEquationConstants(const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d);
 
 /// Dynamic plane type enum for the thinker. Will have a different functionality depending on this.
 typedef enum {

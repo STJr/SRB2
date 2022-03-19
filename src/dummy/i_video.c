@@ -3,12 +3,13 @@
 #include "../i_video.h"
 
 rendermode_t rendermode = render_none;
+rendermode_t chosenrendermode = render_none;
 
 boolean highcolor = false;
 
 boolean allow_fullscreen = false;
 
-consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_vidwait = CVAR_INIT ("vid_wait", "On", CV_SAVE, CV_OnOff, NULL);
 
 void I_StartupGraphics(void){}
 void I_ShutdownGraphics(void){}
@@ -40,8 +41,15 @@ INT32 VID_SetMode(INT32 modenum)
 	return 0;
 }
 
-void VID_CheckRenderer(void) {}
-void VID_CheckGLLoaded(rendermode_t oldrender) {}
+boolean VID_CheckRenderer(void)
+{
+	return false;
+}
+
+void VID_CheckGLLoaded(rendermode_t oldrender)
+{
+	(void)oldrender;
+}
 
 const char *VID_GetModeName(INT32 modenum)
 {

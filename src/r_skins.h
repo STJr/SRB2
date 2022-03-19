@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,7 @@
 #include "info.h"
 #include "sounds.h"
 #include "d_player.h" // skinflags
+#include "r_patch.h"
 #include "r_picformats.h" // spriteinfo_t
 #include "r_defs.h" // spritedef_t
 
@@ -79,8 +80,6 @@ typedef struct
 	// contains super versions too
 	spritedef_t sprites[NUMPLAYERSPRITES*2];
 	spriteinfo_t sprinfo[NUMPLAYERSPRITES*2];
-
-	UINT8 availability; // lock?
 } skin_t;
 
 /// Externs
@@ -90,13 +89,14 @@ extern skin_t skins[MAXSKINS];
 /// Function prototypes
 void R_InitSkins(void);
 
+INT32 GetPlayerDefaultSkin(INT32 playernum);
 void SetPlayerSkin(INT32 playernum,const char *skinname);
 void SetPlayerSkinByNum(INT32 playernum,INT32 skinnum); // Tails 03-16-2002
 boolean R_SkinUsable(INT32 playernum, INT32 skinnum);
 UINT32 R_GetSkinAvailabilities(void);
 INT32 R_SkinAvailable(const char *name);
-void R_PatchSkins(UINT16 wadnum);
-void R_AddSkins(UINT16 wadnum);
+void R_AddSkins(UINT16 wadnum, boolean mainfile);
+void R_PatchSkins(UINT16 wadnum, boolean mainfile);
 
 UINT8 P_GetSkinSprite2(skin_t *skin, UINT8 spr2, player_t *player);
 

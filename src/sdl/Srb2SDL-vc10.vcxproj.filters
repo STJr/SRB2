@@ -135,6 +135,16 @@
     <ClInclude Include="..\dehacked.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
+    <ClInclude Include="..\deh_lua.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deh_soc.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+    <ClInclude Include="..\deh_tables.h">
+      <Filter>D_Doom</Filter>
+    </ClInclude>
+
     <ClInclude Include="..\doomdata.h">
       <Filter>D_Doom</Filter>
     </ClInclude>
@@ -288,6 +298,9 @@
     <ClInclude Include="..\i_tcp.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
+    <ClInclude Include="..\i_threads.h">
+      <Filter>I_Interface</Filter>
+    </ClInclude>
     <ClInclude Include="..\i_video.h">
       <Filter>I_Interface</Filter>
     </ClInclude>
@@ -348,6 +361,9 @@
     <ClInclude Include="..\m_misc.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
+    <ClInclude Include="..\m_perfstats.h">
+      <Filter>M_Misc</Filter>
+    </ClInclude>
     <ClInclude Include="..\m_queue.h">
       <Filter>M_Misc</Filter>
     </ClInclude>
@@ -398,6 +414,12 @@
     </ClInclude>
     <ClInclude Include="..\tables.h">
       <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\taglist.h">
+      <Filter>P_Play</Filter>
+    </ClInclude>
+    <ClInclude Include="..\libdivide.h">
+      <Filter>R_Rend</Filter>
     </ClInclude>
     <ClInclude Include="..\r_bsp.h">
       <Filter>R_Rend</Filter>
@@ -474,10 +496,16 @@
     <ClInclude Include="..\hardware\hw_clip.h">
       <Filter>Hw_Hardware</Filter>
     </ClInclude>
-    <ClInclude Include="..\r_textures.h">
+    <ClInclude Include="..\r_patch.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_patchrotation.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
     <ClInclude Include="..\r_picformats.h">
+      <Filter>R_Rend</Filter>
+    </ClInclude>
+    <ClInclude Include="..\r_textures.h">
       <Filter>R_Rend</Filter>
     </ClInclude>
     <ClInclude Include="..\r_portal.h">
@@ -588,6 +616,16 @@
     <ClCompile Include="..\dehacked.c">
       <Filter>D_Doom</Filter>
     </ClCompile>
+    <ClCompile Include="..\deh_lua.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deh_soc.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+    <ClCompile Include="..\deh_tables.c">
+      <Filter>D_Doom</Filter>
+    </ClCompile>
+
     <ClCompile Include="..\d_clisrv.c">
       <Filter>D_Doom</Filter>
     </ClCompile>
@@ -711,6 +749,9 @@
     <ClCompile Include="..\lua_infolib.c">
       <Filter>LUA</Filter>
     </ClCompile>
+    <ClCompile Include="..\lua_inputlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
     <ClCompile Include="..\lua_maplib.c">
       <Filter>LUA</Filter>
     </ClCompile>
@@ -723,10 +764,16 @@
     <ClCompile Include="..\lua_playerlib.c">
       <Filter>LUA</Filter>
     </ClCompile>
+    <ClCompile Include="..\lua_polyobjlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
     <ClCompile Include="..\lua_script.c">
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_skinlib.c">
+      <Filter>LUA</Filter>
+    </ClCompile>
+    <ClCompile Include="..\lua_taglib.c">
       <Filter>LUA</Filter>
     </ClCompile>
     <ClCompile Include="..\lua_thinkerlib.c">
@@ -762,6 +809,9 @@
     <ClCompile Include="..\m_misc.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
+    <ClCompile Include="..\m_perfstats.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
     <ClCompile Include="..\m_queue.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
@@ -769,6 +819,9 @@
       <Filter>M_Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\string.c">
+      <Filter>M_Misc</Filter>
+    </ClCompile>
+    <ClCompile Include="..\strcasestr.c">
       <Filter>M_Misc</Filter>
     </ClCompile>
     <ClCompile Include="..\comptime.c">
@@ -829,6 +882,9 @@
       <Filter>P_Play</Filter>
     </ClCompile>
     <ClCompile Include="..\tables.c">
+      <Filter>P_Play</Filter>
+    </ClCompile>
+    <ClCompile Include="..\taglist.c">
       <Filter>P_Play</Filter>
     </ClCompile>
     <ClCompile Include="..\t_facon.c">
@@ -952,10 +1008,16 @@
       <Filter>Hw_Hardware</Filter>
     </ClCompile>
     <ClCompile Include="..\apng.c" />
-    <ClCompile Include="..\r_textures.c">
+    <ClCompile Include="..\r_patch.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_patchrotation.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_picformats.c">
+      <Filter>R_Rend</Filter>
+    </ClCompile>
+    <ClCompile Include="..\r_textures.c">
       <Filter>R_Rend</Filter>
     </ClCompile>
     <ClCompile Include="..\r_portal.c">

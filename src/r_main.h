@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -17,6 +17,7 @@
 #include "d_player.h"
 #include "r_data.h"
 #include "r_textures.h"
+#include "m_perfstats.h" // ps_metric_t
 
 //
 // POV related.
@@ -78,24 +79,23 @@ boolean R_DoCulling(line_t *cullheight, line_t *viewcullheight, fixed_t vz, fixe
 
 // Render stats
 
-extern consvar_t cv_renderstats;
+extern precise_t ps_prevframetime;// time when previous frame was rendered
+extern ps_metric_t ps_rendercalltime;
+extern ps_metric_t ps_otherrendertime;
+extern ps_metric_t ps_uitime;
+extern ps_metric_t ps_swaptime;
 
-extern int rs_prevframetime;// time when previous frame was rendered
-extern int rs_rendercalltime;
-extern int rs_uitime;
-extern int rs_swaptime;
-extern int rs_tictime;
+extern ps_metric_t ps_bsptime;
 
-extern int rs_bsptime;
+extern ps_metric_t ps_sw_spritecliptime;
+extern ps_metric_t ps_sw_portaltime;
+extern ps_metric_t ps_sw_planetime;
+extern ps_metric_t ps_sw_maskedtime;
 
-extern int rs_sw_portaltime;
-extern int rs_sw_planetime;
-extern int rs_sw_maskedtime;
-
-extern int rs_numbspcalls;
-extern int rs_numsprites;
-extern int rs_numdrawnodes;
-extern int rs_numpolyobjects;
+extern ps_metric_t ps_numbspcalls;
+extern ps_metric_t ps_numsprites;
+extern ps_metric_t ps_numdrawnodes;
+extern ps_metric_t ps_numpolyobjects;
 
 //
 // REFRESH - the actual rendering functions.
@@ -107,6 +107,7 @@ extern consvar_t cv_chasecam, cv_chasecam2;
 extern consvar_t cv_flipcam, cv_flipcam2;
 
 extern consvar_t cv_shadow;
+extern consvar_t cv_ffloorclip;
 extern consvar_t cv_translucency;
 extern consvar_t cv_drawdist, cv_drawdist_nights, cv_drawdist_precip;
 extern consvar_t cv_fov;
@@ -115,10 +116,6 @@ extern consvar_t cv_tailspickup;
 
 // Called by startup code.
 void R_Init(void);
-#ifdef HWRENDER
-void R_InitHardwareMode(void);
-#endif
-void R_ReloadHUDGraphics(void);
 
 void R_CheckViewMorph(void);
 void R_ApplyViewMorph(void);

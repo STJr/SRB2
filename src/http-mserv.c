@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020 by James R.
+// Copyright (C) 2020-2022 by James R.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -36,20 +36,23 @@ Documentation available here.
 
 static void MasterServer_Debug_OnChange (void);
 
-consvar_t cv_masterserver_timeout = {
-	"masterserver_timeout", "5", CV_SAVE, CV_Unsigned,
-	NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
-};
+consvar_t cv_masterserver_timeout = CVAR_INIT
+(
+		"masterserver_timeout", "5", CV_SAVE, CV_Unsigned,
+		NULL
+);
 
-consvar_t cv_masterserver_debug = {
+consvar_t cv_masterserver_debug = CVAR_INIT
+(
 	"masterserver_debug", "Off", CV_SAVE|CV_CALL, CV_OnOff,
-	MasterServer_Debug_OnChange, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
-};
+	MasterServer_Debug_OnChange
+);
 
-consvar_t cv_masterserver_token = {
-	"masterserver_token", "", CV_SAVE, NULL,
-	NULL, 0, NULL, NULL, 0, 0, NULL/* C90 moment */
-};
+consvar_t cv_masterserver_token = CVAR_INIT
+(
+		"masterserver_token", "", CV_SAVE, NULL,
+		NULL
+);
 
 #ifdef MASTERSERVER
 

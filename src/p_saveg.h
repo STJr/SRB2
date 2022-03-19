@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -18,13 +18,15 @@
 #pragma interface
 #endif
 
+#define NEWSKINSAVES (INT16_MAX) // Purely for backwards compatibility, remove this for 2.3
+
 // Persistent storage/archiving.
 // These are the load / save game routines.
 
 void P_SaveGame(INT16 mapnum);
-void P_SaveNetGame(void);
+void P_SaveNetGame(boolean resending);
 boolean P_LoadGame(INT16 mapoverride);
-boolean P_LoadNetGame(void);
+boolean P_LoadNetGame(boolean reloading);
 
 mobj_t *P_FindNewPosition(UINT32 oldposition);
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -194,6 +194,7 @@ typedef enum
 	MF2_AMBUSH         = 1<<27, // Alternate behaviour typically set by MTF_AMBUSH
 	MF2_LINKDRAW       = 1<<28, // Draw vissprite of mobj immediately before/after tracer's vissprite (dependent on dispoffset and position)
 	MF2_SHIELD         = 1<<29, // Thinker calls P_AddShield/P_ShieldLook (must be partnered with MF_SCENERY to use)
+	MF2_SPLAT          = 1<<30, // Renders as a splat
 	// free: to and including 1<<31
 } mobjflag2_t;
 
@@ -217,33 +218,40 @@ typedef enum
 typedef enum
 {
 	// The mobj stands on solid floor (not on another mobj or in air)
-	MFE_ONGROUND          = 1,
+	MFE_ONGROUND			= 1,
 	// The mobj just hit the floor while falling, this is cleared on next frame
 	// (instant damage in lava/slime sectors to prevent jump cheat..)
-	MFE_JUSTHITFLOOR      = 1<<1,
+	MFE_JUSTHITFLOOR		= 1<<1,
 	// The mobj stands in a sector with water, and touches the surface
 	// this bit is set once and for all at the start of mobjthinker
-	MFE_TOUCHWATER        = 1<<2,
+	MFE_TOUCHWATER			= 1<<2,
 	// The mobj stands in a sector with water, and his waist is BELOW the water surface
 	// (for player, allows swimming up/down)
-	MFE_UNDERWATER        = 1<<3,
+	MFE_UNDERWATER			= 1<<3,
 	// used for ramp sectors
-	MFE_JUSTSTEPPEDDOWN   = 1<<4,
+	MFE_JUSTSTEPPEDDOWN		= 1<<4,
 	// Vertically flip sprite/allow upside-down physics
-	MFE_VERTICALFLIP      = 1<<5,
+	MFE_VERTICALFLIP		= 1<<5,
 	// Goo water
-	MFE_GOOWATER          = 1<<6,
+	MFE_GOOWATER			= 1<<6,
 	// The mobj is touching a lava block
-	MFE_TOUCHLAVA         = 1<<7,
+	MFE_TOUCHLAVA			= 1<<7,
 	// Mobj was already pushed this tic
-	MFE_PUSHED            = 1<<8,
+	MFE_PUSHED				= 1<<8,
 	// Mobj was already sprung this tic
-	MFE_SPRUNG            = 1<<9,
+	MFE_SPRUNG				= 1<<9,
 	// Platform movement
-	MFE_APPLYPMOMZ        = 1<<10,
+	MFE_APPLYPMOMZ			= 1<<10,
 	// Compute and trigger on mobj angle relative to tracer
 	// See Linedef Exec 457 (Track mobj angle to point)
-	MFE_TRACERANGLE       = 1<<11,
+	MFE_TRACERANGLE			= 1<<11,
+	// Forces an object to use super sprites with SPR_PLAY.
+	MFE_FORCESUPER			= 1<<12,
+	// Forces an object to NOT use super sprites with SPR_PLAY.
+	MFE_FORCENOSUPER		= 1<<13,
+	// Makes an object use super sprites where they wouldn't have otherwise and vice-versa
+	MFE_REVERSESUPER		= MFE_FORCESUPER|MFE_FORCENOSUPER
+
 	// free: to and including 1<<15
 } mobjeflag_t;
 
@@ -264,6 +272,7 @@ typedef enum {
 	// Ran the thinker this tic.
 	PCF_THUNK = 32,
 } precipflag_t;
+
 // Map Object definition.
 typedef struct mobj_s
 {
@@ -284,6 +293,12 @@ typedef struct mobj_s
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
+
+	UINT32 renderflags; // render flags
+	INT32 blendmode; // blend mode
+	fixed_t spritexscale, spriteyscale;
+	fixed_t spritexoffset, spriteyoffset;
+	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
 
 	struct msecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
 
@@ -399,12 +414,18 @@ typedef struct precipmobj_s
 	struct precipmobj_s **sprev; // killough 8/11/98: change to ptr-to-ptr
 
 	// More drawing info: to determine current sprite.
-	angle_t angle, pitch, roll;  // orientation
+	angle_t angle, pitch, roll; // orientation
 	angle_t rollangle;
 	spritenum_t sprite; // used to find patch_t and flip value
 	UINT32 frame; // frame number, plus bits see p_pspr.h
 	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
+
+	UINT32 renderflags; // render flags
+	INT32 blendmode; // blend mode
+	fixed_t spritexscale, spriteyscale;
+	fixed_t spritexoffset, spriteyoffset;
+	struct pslope_s *floorspriteslope; // The slope that the floorsprite is rotated by
 
 	struct mprecipsecnode_s *touching_sectorlist; // a linked list of sectors where this object appears
 
@@ -462,6 +483,8 @@ void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime);
 void P_SpawnHoopOfSomething(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, angle_t rotangle);
 void P_SpawnPrecipitation(void);
 void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 number, mobjtype_t type, statenum_t nstate, angle_t rotangle, boolean spawncenter);
+void *P_CreateFloorSpriteSlope(mobj_t *mobj);
+void P_RemoveFloorSpriteSlope(mobj_t *mobj);
 boolean P_BossTargetPlayer(mobj_t *actor, boolean closest);
 boolean P_SupermanLook4Players(mobj_t *actor);
 void P_DestroyRobots(void);

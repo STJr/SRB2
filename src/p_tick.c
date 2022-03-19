@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -21,6 +21,8 @@
 #include "m_random.h"
 #include "lua_script.h"
 #include "lua_hook.h"
+#include "m_perfstats.h"
+#include "i_system.h" // I_GetPreciseTime
 
 // Object place
 #include "m_cheat.h"
@@ -321,6 +323,7 @@ static inline void P_RunThinkers(void)
 	size_t i;
 	for (i = 0; i < NUM_THINKERLISTS; i++)
 	{
+		PS_START_TIMING(ps_thlist_times[i]);
 		for (currentthinker = thlist[i].next; currentthinker != &thlist[i]; currentthinker = currentthinker->next)
 		{
 #ifdef PARANOIA
@@ -328,6 +331,7 @@ static inline void P_RunThinkers(void)
 #endif
 			currentthinker->function.acp1(currentthinker);
 		}
+		PS_STOP_TIMING(ps_thlist_times[i]);
 	}
 
 }
@@ -483,7 +487,7 @@ static inline void P_DoSpecialStageStuff(void)
 					continue;
 
 				// If in water, deplete timer 6x as fast.
-				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(players[i].powers[pw_shield] & SH_PROTECTWATER))
+				if (players[i].mo->eflags & (MFE_TOUCHWATER|MFE_UNDERWATER) && !(players[i].powers[pw_shield] & ((players[i].mo->eflags & MFE_TOUCHLAVA) ? SH_PROTECTFIRE : SH_PROTECTWATER)))
 					players[i].nightstime -= 5;
 				if (--players[i].nightstime > 6)
 				{
@@ -639,13 +643,26 @@ void P_Ticker(boolean run)
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
 		if (demoplayback)
-			G_ReadDemoTiccmd(&players[consoleplayer].cmd, 0);
+		{
+			player_t* p = &players[consoleplayer];
+			G_ReadDemoTiccmd(&p->cmd, 0);
+			if (!cv_freedemocamera.value)
+			{
+				P_ForceLocalAngle(p, p->cmd.angleturn << 16);
+				localaiming = p->aiming;
+			}
+		}
 
-		LUAh_PreThinkFrame();
+		ps_lua_mobjhooks.value.i = 0;
+		ps_checkposition_calls.value.i = 0;
 
+		LUA_HOOK(PreThinkFrame);
+
+		PS_START_TIMING(ps_playerthink_time);
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerThink(&players[i]);
+		PS_STOP_TIMING(ps_playerthink_time);
 	}
 
 	// Keep track of how long they've been playing!
@@ -660,14 +677,18 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
+		PS_START_TIMING(ps_thinkertime);
 		P_RunThinkers();
+		PS_STOP_TIMING(ps_thinkertime);
 
 		// Run any "after all the other thinkers" stuff
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
 
-		LUAh_ThinkFrame();
+		PS_START_TIMING(ps_lua_thinkframe_time);
+		LUA_HookThinkFrame();
+		PS_STOP_TIMING(ps_lua_thinkframe_time);
 	}
 
 	// Run shield positioning
@@ -739,7 +760,7 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 
-		LUAh_PostThinkFrame();
+		LUA_HOOK(PostThinkFrame);
 	}
 
 	P_MapEnd();
@@ -762,7 +783,7 @@ void P_PreTicker(INT32 frames)
 	{
 		P_MapStart();
 
-		LUAh_PreThinkFrame();
+		LUA_HOOK(PreThinkFrame);
 
 		for (i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
@@ -789,7 +810,7 @@ void P_PreTicker(INT32 frames)
 			if (playeringame[i] && players[i].mo && !P_MobjWasRemoved(players[i].mo))
 				P_PlayerAfterThink(&players[i]);
 
-		LUAh_ThinkFrame();
+		LUA_HookThinkFrame();
 
 		// Run shield positioning
 		P_RunShields();
@@ -798,7 +819,7 @@ void P_PreTicker(INT32 frames)
 		P_UpdateSpecials();
 		P_RespawnSpecials();
 
-		LUAh_PostThinkFrame();
+		LUA_HOOK(PostThinkFrame);
 
 		P_MapEnd();
 	}

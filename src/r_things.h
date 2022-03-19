@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,6 +15,7 @@
 #define __R_THINGS__
 
 #include "r_plane.h"
+#include "r_patch.h"
 #include "r_picformats.h"
 #include "r_portal.h"
 #include "r_defs.h"
@@ -64,7 +65,6 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope);
 void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
-void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
 
 boolean R_ThingVisible (mobj_t *thing);
 
@@ -74,6 +74,16 @@ boolean R_ThingVisibleWithinDist (mobj_t *thing,
 
 boolean R_PrecipThingVisible (precipmobj_t *precipthing,
 		fixed_t precip_draw_dist);
+
+boolean R_ThingHorizontallyFlipped (mobj_t *thing);
+boolean R_ThingVerticallyFlipped (mobj_t *thing);
+
+boolean R_ThingIsPaperSprite (mobj_t *thing);
+boolean R_ThingIsFloorSprite (mobj_t *thing);
+
+boolean R_ThingIsFullBright (mobj_t *thing);
+boolean R_ThingIsSemiBright (mobj_t *thing);
+boolean R_ThingIsFullDark (mobj_t *thing);
 
 // --------------
 // MASKED DRAWING
@@ -90,7 +100,7 @@ typedef struct
 	sector_t* viewsector;
 } maskcount_t;
 
-void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
+void R_DrawMasked(maskcount_t* masks, INT32 nummasks);
 
 // ----------
 // VISSPRITES
@@ -107,19 +117,24 @@ void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
 typedef enum
 {
 	// actual cuts
-	SC_NONE = 0,
-	SC_TOP = 1,
-	SC_BOTTOM = 1<<1,
+	SC_NONE       = 0,
+	SC_TOP        = 1,
+	SC_BOTTOM     = 1<<1,
 	// other flags
-	SC_PRECIP = 1<<2,
-	SC_LINKDRAW = 1<<3,
+	SC_PRECIP     = 1<<2,
+	SC_LINKDRAW   = 1<<3,
 	SC_FULLBRIGHT = 1<<4,
-	SC_VFLIP = 1<<5,
-	SC_ISSCALED = 1<<6,
-	SC_SHADOW = 1<<7,
+	SC_SEMIBRIGHT = 1<<5,
+	SC_FULLDARK   = 1<<6,
+	SC_VFLIP      = 1<<7,
+	SC_ISSCALED   = 1<<8,
+	SC_ISROTATED  = 1<<9,
+	SC_SHADOW     = 1<<10,
+	SC_SHEAR      = 1<<11,
+	SC_SPLAT      = 1<<12,
 	// masks
-	SC_CUTMASK = SC_TOP|SC_BOTTOM,
-	SC_FLAGMASK = ~SC_CUTMASK
+	SC_CUTMASK    = SC_TOP|SC_BOTTOM,
+	SC_FLAGMASK   = ~SC_CUTMASK
 } spritecut_e;
 
 // A vissprite_t is a thing that will be drawn during a refresh,
@@ -142,12 +157,21 @@ typedef struct vissprite_s
 	fixed_t pz, pzt; // physical bottom/top for sorting with 3D floors
 
 	fixed_t startfrac; // horizontal position of x1
-	fixed_t scale, sortscale; // sortscale only differs from scale for paper sprites and MF2_LINKDRAW
+	fixed_t xscale, scale; // projected horizontal and vertical scales
+	fixed_t thingscale; // the object's scale
+	fixed_t sortscale; // sortscale only differs from scale for paper sprites, floor sprites, and MF2_LINKDRAW
+	fixed_t sortsplat; // the sortscale from behind the floor sprite
 	fixed_t scalestep; // only for paper sprites, 0 otherwise
 	fixed_t paperoffset, paperdistance; // for paper sprites, offset/dist relative to the angle
 	fixed_t xiscale; // negative if flipped
 
 	angle_t centerangle; // for paper sprites
+
+	// for floor sprites
+	struct {
+		fixed_t x, y, z; // the viewpoint's current position
+		angle_t angle; // the viewpoint's current angle
+	} viewpoint;
 
 	struct {
 		fixed_t tan; // The amount to shear the sprite vertically per row
@@ -168,14 +192,20 @@ typedef struct vissprite_s
 
 	extracolormap_t *extra_colormap; // global colormaps
 
-	fixed_t xscale;
-
-	// Precalculated top and bottom screen coords for the sprite.
 	fixed_t thingheight; // The actual height of the thing (for 3D floors)
 	sector_t *sector; // The sector containing the thing.
+
+	// Precalculated top and bottom screen coords for the sprite.
 	INT16 sz, szt;
 
 	spritecut_e cut;
+	UINT32 renderflags;
+	UINT8 rotateflags;
+
+	fixed_t spritexscale, spriteyscale;
+	fixed_t spritexoffset, spriteyoffset;
+
+	fixed_t shadowscale;
 
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
@@ -183,6 +213,12 @@ typedef struct vissprite_s
 } vissprite_t;
 
 extern UINT32 visspritecount;
+
+void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
+void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, portal_t* portal);
+
+boolean R_SpriteIsFlashing(vissprite_t *vis);
+UINT8 *R_GetSpriteTranslation(vissprite_t *vis);
 
 // ----------
 // DRAW NODES

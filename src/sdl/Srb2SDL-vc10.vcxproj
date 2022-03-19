@@ -196,6 +196,9 @@
     <ClInclude Include="..\comptime.h" />
     <ClInclude Include="..\console.h" />
     <ClInclude Include="..\dehacked.h" />
+    <ClInclude Include="..\deh_soc.h" />
+    <ClInclude Include="..\deh_lua.h" />
+    <ClInclude Include="..\deh_tables.h" />
     <ClInclude Include="..\doomdata.h" />
     <ClInclude Include="..\doomdef.h" />
     <ClInclude Include="..\doomstat.h" />
@@ -242,8 +245,10 @@
     <ClInclude Include="..\i_sound.h" />
     <ClInclude Include="..\i_system.h" />
     <ClInclude Include="..\i_tcp.h" />
+    <ClInclude Include="..\i_threads.h" />
     <ClInclude Include="..\i_video.h" />
     <ClInclude Include="..\keys.h" />
+    <ClInclude Include="..\libdivide.h" />
     <ClInclude Include="..\lua_hook.h" />
     <ClInclude Include="..\lua_hud.h" />
     <ClInclude Include="..\lua_libs.h" />
@@ -262,6 +267,7 @@
     <ClInclude Include="..\m_fixed.h" />
     <ClInclude Include="..\m_menu.h" />
     <ClInclude Include="..\m_misc.h" />
+    <ClInclude Include="..\m_perfstats.h" />
     <ClInclude Include="..\m_queue.h" />
     <ClInclude Include="..\m_random.h" />
     <ClInclude Include="..\m_swap.h" />
@@ -282,6 +288,8 @@
     <ClInclude Include="..\r_draw.h" />
     <ClInclude Include="..\r_local.h" />
     <ClInclude Include="..\r_main.h" />
+    <ClInclude Include="..\r_patch.h" />
+    <ClInclude Include="..\r_patchrotation.h" />
     <ClInclude Include="..\r_picformats.h" />
     <ClInclude Include="..\r_plane.h" />
     <ClInclude Include="..\r_portal.h" />
@@ -297,6 +305,7 @@
     <ClInclude Include="..\st_stuff.h" />
     <ClInclude Include="..\s_sound.h" />
     <ClInclude Include="..\tables.h" />
+    <ClInclude Include="..\taglist.h" />
     <ClInclude Include="..\v_video.h" />
     <ClInclude Include="..\w_wad.h" />
     <ClInclude Include="..\y_inter.h" />
@@ -360,6 +369,9 @@
     <ClCompile Include="..\comptime.c" />
     <ClCompile Include="..\console.c" />
     <ClCompile Include="..\dehacked.c" />
+    <ClCompile Include="..\deh_soc.c" />
+    <ClCompile Include="..\deh_lua.c" />
+    <ClCompile Include="..\deh_tables.c" />
     <ClCompile Include="..\d_clisrv.c" />
     <ClCompile Include="..\d_main.c" />
     <ClCompile Include="..\d_net.c" />
@@ -397,12 +409,15 @@
     <ClCompile Include="..\lua_hooklib.c" />
     <ClCompile Include="..\lua_hudlib.c" />
     <ClCompile Include="..\lua_infolib.c" />
+    <ClCompile Include="..\lua_inputlib.c" />
     <ClCompile Include="..\lua_maplib.c" />
     <ClCompile Include="..\lua_mathlib.c" />
     <ClCompile Include="..\lua_mobjlib.c" />
     <ClCompile Include="..\lua_playerlib.c" />
+    <ClCompile Include="..\lua_polyobjlib.c" />
     <ClCompile Include="..\lua_script.c" />
     <ClCompile Include="..\lua_skinlib.c" />
+    <ClCompile Include="..\lua_taglib.c" />
     <ClCompile Include="..\lua_thinkerlib.c" />
     <ClCompile Include="..\lzf.c" />
     <ClCompile Include="..\md5.c" />
@@ -417,6 +432,7 @@
     <ClCompile Include="..\m_fixed.c" />
     <ClCompile Include="..\m_menu.c" />
     <ClCompile Include="..\m_misc.c" />
+    <ClCompile Include="..\m_perfstats.c" />
     <ClCompile Include="..\m_queue.c" />
     <ClCompile Include="..\m_random.c" />
     <ClCompile Include="..\p_ceilng.c" />
@@ -449,6 +465,8 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\r_main.c" />
+    <ClCompile Include="..\r_patch.c" />
+    <ClCompile Include="..\r_patchrotation.c" />
     <ClCompile Include="..\r_picformats.c" />
     <ClCompile Include="..\r_plane.c" />
     <ClCompile Include="..\r_portal.c" />
@@ -460,10 +478,12 @@
     <ClCompile Include="..\r_things.c" />
     <ClCompile Include="..\screen.c" />
     <ClCompile Include="..\sounds.c" />
+    <ClCompile Include="..\strcasestr.c" />
     <ClCompile Include="..\string.c" />
     <ClCompile Include="..\st_stuff.c" />
     <ClCompile Include="..\s_sound.c" />
     <ClCompile Include="..\tables.c" />
+    <ClCompile Include="..\taglist.c" />
     <ClCompile Include="..\t_facon.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -71,7 +71,7 @@ FUNCMATH FUNCINLINE static ATTRINLINE fixed_t FloatToFixed(float f)
 		value   [eax]       \
 		modify exact [eax edx]
 #elif defined (__GNUC__) && defined (__i386__) && !defined (NOASM)
-	// DJGPP, i386 linux, cygwin or mingw
+	// i386 linux, cygwin or mingw
 	FUNCMATH FUNCINLINE static inline fixed_t FixedMul(fixed_t a, fixed_t b) // asm
 	{
 		fixed_t ret;

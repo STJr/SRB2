@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 //
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2020 by Sonic Team Junior.
+// Copyright (C) 2014-2022 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -167,6 +167,20 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 		GL_DBG_Printf("OpenGL %s\n", gl_version);
 		GL_DBG_Printf("GPU: %s\n", gl_renderer);
 		GL_DBG_Printf("Extensions: %s\n", gl_extensions);
+
+		if (strcmp((const char*)gl_renderer, "GDI Generic") == 0 &&
+			strcmp((const char*)gl_version, "1.1.0") == 0)
+		{
+			// Oh no... Windows gave us the GDI Generic rasterizer, so something is wrong...
+			// The game will crash later on when unsupported OpenGL commands are encountered.
+			// Instead of a nondescript crash, show a more informative error message.
+			// Also set the renderer variable back to software so the next launch won't
+			// repeat this error.
+			CV_StealthSet(&cv_renderer, "Software");
+			I_Error("OpenGL Error: Failed to access the GPU. Possible reasons include:\n"
+					"- GPU vendor has dropped OpenGL support on your GPU and OS. (Old GPU?)\n"
+					"- GPU drivers are missing or broken. You may need to update your drivers.");
+		}
 	}
 	first_init = true;
 
@@ -177,7 +191,7 @@ boolean OglSdlSurface(INT32 w, INT32 h)
 
 	SetupGLFunc4();
 
-	granisotropicmode_cons_t[1].value = maximumAnisotropy;
+	glanisotropicmode_cons_t[1].value = maximumAnisotropy;
 
 	SDL_GL_SetSwapInterval(cv_vidwait.value ? 1 : 0);
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -33,7 +33,7 @@ extern consvar_t cv_screenshot_option, cv_screenshot_folder, cv_screenshot_color
 extern consvar_t cv_moviemode, cv_movie_folder, cv_movie_option;
 extern consvar_t cv_zlib_memory, cv_zlib_level, cv_zlib_strategy, cv_zlib_window_bits;
 extern consvar_t cv_zlib_memorya, cv_zlib_levela, cv_zlib_strategya, cv_zlib_window_bitsa;
-extern consvar_t cv_apng_delay;
+extern consvar_t cv_apng_delay, cv_apng_downscale;
 
 void M_StartMovie(void);
 void M_SaveFrame(void);
@@ -116,6 +116,9 @@ Return dot and then the fractional part of a float, without
 trailing zeros, or "" if the fractional part is zero.
 */
 const char * M_Ftrim (double);
+
+// Returns true if the string is empty.
+boolean M_IsStringEmpty(const char *s);
 
 // counting bits, for weapon ammo code, usually
 FUNCMATH UINT8 M_CountBits(UINT32 num, UINT8 size);

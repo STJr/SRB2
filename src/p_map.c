@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -32,6 +32,8 @@
 #include "z_zone.h"
 
 #include "lua_hook.h"
+
+#include "m_perfstats.h" // ps_checkposition_calls
 
 fixed_t tmbbox[4];
 mobj_t *tmthing;
@@ -417,16 +419,23 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 			else if (object->player->dashmode >= DASHMODE_THRESHOLD)
 				P_SetPlayerMobjState(object, S_PLAY_DASH);
-			else if (P_IsObjectOnGround(object) && horizspeed >= FixedMul(object->player->runspeed, object->scale))
-				P_SetPlayerMobjState(object, S_PLAY_RUN);
+			else if (P_IsObjectOnGround(object))
+				P_SetPlayerMobjState(object, (horizspeed >= FixedMul(object->player->runspeed, object->scale)) ? S_PLAY_RUN : S_PLAY_WALK);
 			else
-				P_SetPlayerMobjState(object, S_PLAY_WALK);
+				P_SetPlayerMobjState(object, (object->momz > 0) ? S_PLAY_SPRING : S_PLAY_FALL);
 		}
 		else if (P_MobjFlip(object)*vertispeed > 0)
 			P_SetPlayerMobjState(object, S_PLAY_SPRING);
 		else
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 	}
+	else if (horizspeed
+		&& object->tracer
+		&& object->tracer->player
+		&& object->tracer->player->powers[pw_carry] != CR_NONE
+		&& object->tracer->tracer == object
+		&& (!demoplayback || P_ControlStyle(object->tracer->player) == CS_LMAOGALOG))
+			P_SetPlayerAngle(object->tracer->player, spring->angle);
 
 	object->standingslope = NULL; // And again.
 
@@ -509,6 +518,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			if (spring->state != &states[S_STEAM1]) // Only when it bursts
 				break;
 
+			object->eflags |= MFE_SPRUNG;
 			object->momz = flipval*FixedMul(speed, FixedSqrt(FixedMul(spring->scale, object->scale))); // scale the speed with both objects' scales, just like with springs!
 
 			if (p)
@@ -725,9 +735,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	|| (thing->player && thing->player->spectator))
 		return true;
 
-#ifdef SEENAMES
-  // Do name checks all the way up here
-  // So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
+	// Do name checks all the way up here
+	// So that NOTHING ELSE can see MT_NAMECHECK because it is client-side.
 	if (tmthing->type == MT_NAMECHECK)
 	{
 		// Ignore things that aren't players, ignore spectators, ignore yourself.
@@ -745,13 +754,12 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 
 		// REX HAS SEEN YOU
-		if (!LUAh_SeenPlayer(tmthing->target->player, thing->player))
+		if (!LUA_HookSeenPlayer(tmthing->target->player, thing->player))
 			return false;
 
 		seenplayer = thing->player;
 		return false;
 	}
-#endif
 
 	// Metal Sonic destroys tiny baby objects.
 	if (tmthing->type == MT_METALSONIC_RACE
@@ -935,7 +943,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 
 	{
-		UINT8 shouldCollide = LUAh_MobjCollide(thing, tmthing); // checks hook for thing's type
+		UINT8 shouldCollide = LUA_Hook2Mobj(thing, tmthing, MOBJ_HOOK(MobjCollide)); // checks hook for thing's type
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -943,7 +951,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (shouldCollide == 2)
 			return true; // force no collide
 
-		shouldCollide = LUAh_MobjMoveCollide(tmthing, thing); // checks hook for tmthing's type
+		shouldCollide = LUA_Hook2Mobj(tmthing, thing, MOBJ_HOOK(MobjMoveCollide)); // checks hook for tmthing's type
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -980,7 +988,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	if (thing->type == MT_SALOONDOOR && tmthing->player)
 	{
 		mobj_t *ref = (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)) ? tmthing->tracer : tmthing;
-		if ((thing->flags2 & MF2_AMBUSH) || ref != tmthing)
+		if (((thing->flags2 & MF2_AMBUSH) && (tmthing->z <= thing->z + thing->height) && (tmthing->z + tmthing->height >= thing->z))
+			|| ref != tmthing)
 		{
 			fixed_t dm = min(FixedHypot(ref->momx, ref->momy), 16*FRACUNIT);
 			angle_t ang = R_PointToAngle2(0, 0, ref->momx, ref->momy) - thing->angle;
@@ -993,7 +1002,8 @@ static boolean PIT_CheckThing(mobj_t *thing)
 
 	if (thing->type == MT_SALOONDOORCENTER && tmthing->player)
 	{
-		if ((thing->flags2 & MF2_AMBUSH) || (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)))
+		if (((thing->flags2 & MF2_AMBUSH) && (tmthing->z <= thing->z + thing->height) && (tmthing->z + tmthing->height >= thing->z))
+			|| (tmthing->player->powers[pw_carry] == CR_MINECART && tmthing->tracer && !P_MobjWasRemoved(tmthing->tracer)))
 			return true;
 	}
 
@@ -1142,11 +1152,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 
 		if (tmthing->eflags & MFE_VERTICALFLIP)
-			thing->z = tmthing->z - thing->height - FixedMul(FRACUNIT, tmthing->scale);
+			P_TeleportMove(thing, thing->x, thing->y, tmthing->z - thing->height - FixedMul(FRACUNIT, tmthing->scale));
 		else
-			thing->z = tmthing->z + tmthing->height + FixedMul(FRACUNIT, tmthing->scale);
+			P_TeleportMove(thing, thing->x, thing->y, tmthing->z + tmthing->height + FixedMul(FRACUNIT, tmthing->scale));
 		if (thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
 		return true;
 	}
 
@@ -1925,7 +1935,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	blockingline = ld;
 
 	{
-		UINT8 shouldCollide = LUAh_MobjLineCollide(tmthing, blockingline); // checks hook for thing's type
+		UINT8 shouldCollide = LUA_HookMobjLineCollide(tmthing, blockingline); // checks hook for thing's type
 		if (P_MobjWasRemoved(tmthing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -2018,6 +2028,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	INT32 xl, xh, yl, yh, bx, by;
 	subsector_t *newsubsec;
 	boolean blockval = true;
+
+	ps_checkposition_calls.value.i++;
 
 	I_Assert(thing != NULL);
 #ifdef PARANOIA
@@ -2253,6 +2265,8 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 			{
 				if (!P_BlockThingsIterator(bx, by, PIT_CheckThing))
 					blockval = false;
+				else
+					tmhitthing = tmfloorthing;
 				if (P_MobjWasRemoved(tmthing))
 					return false;
 			}
@@ -2652,17 +2666,17 @@ boolean PIT_PushableMoved(mobj_t *thing)
 	return true;
 }
 
-//
-// P_TryMove
-// Attempt to move to a new position.
-//
-boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
+static boolean
+increment_move
+(		mobj_t * thing,
+		fixed_t x,
+		fixed_t y,
+		boolean allowdropoff)
 {
 	fixed_t tryx = thing->x;
 	fixed_t tryy = thing->y;
 	fixed_t radius = thing->radius;
-	fixed_t thingtop = thing->z + thing->height;
-	fixed_t startingonground = P_IsObjectOnGround(thing);
+	fixed_t thingtop;
 	floatok = false;
 
 	if (radius < MAXRADIUS/2)
@@ -2702,17 +2716,35 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 13)
 					maxstep <<= 1;
 
+				// If using type Section1:14, no maxstep.
+				if (P_PlayerTouchingSectorSpecial(thing->player, 1, 14)
+				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+					maxstep = 0;
+
 				// Don't 'step up' while springing,
 				// Only step up "if needed".
 				if (thing->player->panim == PA_SPRING
 				&& P_MobjFlip(thing)*thing->momz > FixedMul(FRACUNIT, thing->scale))
 					maxstep = 0;
 			}
+			else if (thing->flags & MF_PUSHABLE)
+			{
+				// If using type Section1:13, double the maxstep.
+				if (GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 13)
+					maxstep <<= 1;
+
+				// If using type Section1:14, no maxstep.
+				if (GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+					maxstep = 0;
+			}
 
 			if (thing->type == MT_SKIM)
 				maxstep = 0;
 
-			if (tmceilingz - tmfloorz < thing->height)
+			if (tmceilingz - tmfloorz < thing->height
+				|| (thing->player
+					&& tmceilingz - tmfloorz < P_GetPlayerHeight(thing->player)
+					&& !P_PlayerCanEnterSpinGaps(thing->player)))
 			{
 				if (tmfloorthing)
 					tmhitthing = tmfloorthing;
@@ -2721,39 +2753,45 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 
 			floatok = true;
 
-			if (thing->eflags & MFE_VERTICALFLIP)
+			thingtop = thing->z + thing->height;
+
+			// Step up
+			if (thing->z < tmfloorz)
 			{
-				if (thing->z < tmfloorz)
+				if (maxstep > 0 && tmfloorz - thing->z <= maxstep)
+				{
+					thing->z = thing->floorz = tmfloorz;
+					thing->floorrover = tmfloorrover;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
+				}
+				else
+				{
 					return false; // mobj must raise itself to fit
+				}
 			}
 			else if (tmceilingz < thingtop)
-				return false; // mobj must lower itself to fit
-
-			// Ramp test
-			if (maxstep > 0 && !(
-				thing->player && (
-				P_PlayerTouchingSectorSpecial(thing->player, 1, 14)
-				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
-				)
-			)
+			{
+				if (maxstep > 0 && thingtop - tmceilingz <= maxstep)
+				{
+					thing->z = ( thing->ceilingz = tmceilingz ) - thing->height;
+					thing->ceilingrover = tmceilingrover;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
+				}
+				else
+				{
+					return false; // mobj must lower itself to fit
+				}
+			}
+			else if (maxstep > 0) // Step down
 			{
 				// If the floor difference is MAXSTEPMOVE or less, and the sector isn't Section1:14, ALWAYS
 				// step down! Formerly required a Section1:13 sector for the full MAXSTEPMOVE, but no more.
 
-				if (thing->eflags & MFE_VERTICALFLIP)
+				if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
 				{
-					if (thingtop == thing->ceilingz && tmceilingz > thingtop && tmceilingz - thingtop <= maxstep)
-					{
-						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
-						thing->ceilingrover = tmceilingrover;
-						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
-					}
-					else if (tmceilingz < thingtop && thingtop - tmceilingz <= maxstep)
-					{
-						thing->z = (thing->ceilingz = thingtop = tmceilingz) - thing->height;
-						thing->ceilingrover = tmceilingrover;
-						thing->eflags |= MFE_JUSTSTEPPEDDOWN;
-					}
+					thing->z = (thing->ceilingz = tmceilingz) - thing->height;
+					thing->ceilingrover = tmceilingrover;
+					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
 				else if (thing->z == thing->floorz && tmfloorz < thing->z && thing->z - tmfloorz <= maxstep)
 				{
@@ -2761,28 +2799,6 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 					thing->floorrover = tmfloorrover;
 					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
 				}
-				else if (tmfloorz > thing->z && tmfloorz - thing->z <= maxstep)
-				{
-					thing->z = thing->floorz = tmfloorz;
-					thing->floorrover = tmfloorrover;
-					thing->eflags |= MFE_JUSTSTEPPEDDOWN;
-				}
-			}
-
-			if (thing->eflags & MFE_VERTICALFLIP)
-			{
-				if (thingtop - tmceilingz > maxstep)
-				{
-					if (tmfloorthing)
-						tmhitthing = tmfloorthing;
-					return false; // too big a step up
-				}
-			}
-			else if (tmfloorz - thing->z > maxstep)
-			{
-				if (tmfloorthing)
-					tmhitthing = tmfloorthing;
-				return false; // too big a step up
 			}
 
 			if (!allowdropoff && !(thing->flags & MF_FLOAT) && thing->type != MT_SKIM && !tmfloorthing)
@@ -2798,7 +2814,38 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		}
 	} while (tryx != x || tryy != y);
 
+	return true;
+}
+
+//
+// P_CheckMove
+// Check if a P_TryMove would be successful.
+//
+boolean P_CheckMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
+{
+	boolean moveok;
+	mobj_t *hack = P_SpawnMobjFromMobj(thing, 0, 0, 0, MT_RAY);
+
+	hack->radius = thing->radius;
+	hack->height = thing->height;
+
+	moveok = increment_move(hack, x, y, allowdropoff);
+	P_RemoveMobj(hack);
+
+	return moveok;
+}
+
+//
+// P_TryMove
+// Attempt to move to a new position.
+//
+boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
+{
+	fixed_t startingonground = P_IsObjectOnGround(thing);
+
 	// The move is ok!
+	if (!increment_move(thing, x, y, allowdropoff))
+		return false;
 
 	// If it's a pushable object, check if anything is
 	// standing on top and move it, too.
@@ -3114,7 +3161,7 @@ static void P_HitSlideLine(line_t *ld)
 	lineangle >>= ANGLETOFINESHIFT;
 	deltaangle >>= ANGLETOFINESHIFT;
 
-	movelen = P_AproxDistance(tmxmove, tmymove);
+	movelen = R_PointToDist2(0, 0, tmxmove, tmymove);
 	newlen = FixedMul(movelen, FINECOSINE(deltaangle));
 
 	tmxmove = FixedMul(newlen, FINECOSINE(lineangle));
@@ -3336,6 +3383,11 @@ static boolean PTR_LineIsBlocking(line_t *li)
 	if (openbottom - slidemo->z > FixedMul(MAXSTEPMOVE, slidemo->scale))
 		return true; // too big a step up
 
+	if (slidemo->player
+		&& openrange < P_GetPlayerHeight(slidemo->player)
+		&& !P_PlayerCanEnterSpinGaps(slidemo->player))
+			return true; // nonspin character should not take this path
+
 	return false;
 }
 
@@ -3351,7 +3403,7 @@ static void PTR_GlideClimbTraverse(line_t *li)
 	{
 		for (rover = checksector->ffloors; rover; rover = rover->next)
 		{
-			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || (rover->flags & FF_BUSTUP))
+			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_BLOCKPLAYER) || ((rover->flags & FF_BUSTUP) && (slidemo->player->charflags & SF_CANBUSTWALLS)))
 				continue;
 
 			topheight    = P_GetFFloorTopZAt   (rover, slidemo->x, slidemo->y);
@@ -3450,9 +3502,17 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 			P_ProcessSpecialSector(slidemo->player, slidemo->subsector->sector, li->polyobj->lines[0]->backsector);
 	}
 
-	if (slidemo->player && slidemo->player->charability == CA_GLIDEANDCLIMB
-		&& (slidemo->player->pflags & PF_GLIDING || slidemo->player->climbing))
-		PTR_GlideClimbTraverse(li);
+	if (slidemo->player)
+	{
+		if (slidemo->player->charability == CA_GLIDEANDCLIMB
+			&& (slidemo->player->pflags & PF_GLIDING || slidemo->player->climbing))
+			PTR_GlideClimbTraverse(li);
+		else
+		{
+			slidemo->player->lastsidehit = li->sidenum[P_PointOnLineSide(slidemo->x, slidemo->y, li)];
+			slidemo->player->lastlinehit = (INT16)(li - lines);
+		}
+	}
 
 	if (in->frac < bestslidefrac && (!slidemo->player || !slidemo->player->climbing))
 	{
@@ -4963,7 +5023,7 @@ void P_MapEnd(void)
 }
 
 // P_FloorzAtPos
-// Returns the floorz of the XYZ position // TODO: Need ceilingpos function too
+// Returns the floorz of the XYZ position
 // Tails 05-26-2003
 fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 {
@@ -5006,4 +5066,48 @@ fixed_t P_FloorzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 	}
 
 	return floorz;
+}
+
+// P_CeilingZAtPos
+// Returns the ceilingz of the XYZ position
+fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
+{
+	sector_t *sec = R_PointInSubsector(x, y)->sector;
+	fixed_t ceilingz = P_GetSectorCeilingZAt(sec, x, y);
+
+	if (sec->ffloors)
+	{
+		ffloor_t *rover;
+		fixed_t delta1, delta2, thingtop = z + height;
+
+		for (rover = sec->ffloors; rover; rover = rover->next)
+		{
+			fixed_t topheight, bottomheight;
+			if (!(rover->flags & FF_EXISTS))
+				continue;
+
+			if ((!(rover->flags & FF_SOLID || rover->flags & FF_QUICKSAND) || (rover->flags & FF_SWIMMABLE)))
+				continue;
+
+			topheight    = P_GetFFloorTopZAt   (rover, x, y);
+			bottomheight = P_GetFFloorBottomZAt(rover, x, y);
+
+			if (rover->flags & FF_QUICKSAND)
+			{
+				if (thingtop > bottomheight && topheight > z)
+				{
+					if (ceilingz > z)
+						ceilingz = z;
+				}
+				continue;
+			}
+
+			delta1 = z - (bottomheight + ((topheight - bottomheight)/2));
+			delta2 = thingtop - (bottomheight + ((topheight - bottomheight)/2));
+			if (bottomheight < ceilingz && abs(delta1) > abs(delta2))
+				ceilingz = bottomheight;
+		}
+	}
+
+	return ceilingz;
 }

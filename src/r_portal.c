@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -132,6 +132,7 @@ static portal_t* Portal_Add (const INT16 x1, const INT16 x2)
 
 void Portal_Remove (portal_t* portal)
 {
+	portalcullsector = NULL;
 	portal_base = portal->next;
 	Z_Free(portal->ceilingclip);
 	Z_Free(portal->floorclip);

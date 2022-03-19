@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -494,6 +494,64 @@ UINT8 M_GotHighEnoughRings(INT32 trings)
 			return true;
 	}
 	return false;
+}
+
+// Gets the skin number for a SECRET_SKIN unlockable.
+INT32 M_UnlockableSkinNum(unlockable_t *unlock)
+{
+	if (unlock->type != SECRET_SKIN)
+	{
+		// This isn't a skin unlockable...
+		return -1;
+	}
+
+	if (unlock->stringVar && strcmp(unlock->stringVar, ""))
+	{
+		// Get the skin from the string.
+		INT32 skinnum = R_SkinAvailable(unlock->stringVar);
+		if (skinnum != -1)
+		{
+			return skinnum;
+		}
+	}
+
+	if (unlock->variable >= 0 && unlock->variable < numskins)
+	{
+		// Use the number directly.
+		return unlock->variable;
+	}
+
+	// Invalid skin unlockable.
+	return -1;
+}
+
+// Gets the skin number for a ET_SKIN emblem.
+INT32 M_EmblemSkinNum(emblem_t *emblem)
+{
+	if (emblem->type != ET_SKIN)
+	{
+		// This isn't a skin emblem...
+		return -1;
+	}
+
+	if (emblem->stringVar && strcmp(emblem->stringVar, ""))
+	{
+		// Get the skin from the string.
+		INT32 skinnum = R_SkinAvailable(emblem->stringVar);
+		if (skinnum != -1)
+		{
+			return skinnum;
+		}
+	}
+
+	if (emblem->var >= 0 && emblem->var < numskins)
+	{
+		// Use the number directly.
+		return emblem->var;
+	}
+
+	// Invalid skin emblem.
+	return -1;
 }
 
 // ----------------

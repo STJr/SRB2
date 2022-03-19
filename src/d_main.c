@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,7 +15,7 @@
 ///        plus functions to parse command line parameters, configure game
 ///        parameters, and call the startup functions.
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 #include <sys/stat.h>
 #include <sys/types.h>
 #endif
@@ -61,12 +61,13 @@
 #include "p_local.h" // chasecam
 #include "mserv.h" // ms_RoomId
 #include "m_misc.h" // screenshot functionality
-#include "dehacked.h" // Dehacked list test
+#include "deh_tables.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
 #include "keys.h"
-#include "filesrch.h" // refreshdirmenu, mainwadstally
+#include "filesrch.h" // refreshdirmenu
 #include "g_input.h" // tutorial mode control scheming
+#include "m_perfstats.h"
 
 #ifdef CMAKECONFIG
 #include "config.h"
@@ -95,18 +96,13 @@ int SUBVERSION;
 // platform independant focus loss
 UINT8 window_notinfocus = false;
 
-//
-// DEMO LOOP
-//
-static char *startupwadfiles[MAX_WADFILES];
-static char *startuppwads[MAX_WADFILES];
+static addfilelist_t startupwadfiles;
+static addfilelist_t startuppwads;
 
 boolean devparm = false; // started game with -devparm
 
 boolean singletics = false; // timedemo
 boolean lastdraw = false;
-
-static void D_CheckRendererState(void);
 
 postimg_t postimgtype = postimg_none;
 INT32 postimgparam;
@@ -120,6 +116,9 @@ boolean midi_disabled = false;
 boolean sound_disabled = false;
 boolean digital_disabled = false;
 
+//
+// DEMO LOOP
+//
 boolean advancedemo;
 #ifdef DEBUGFILE
 INT32 debugload = 0;
@@ -176,9 +175,52 @@ void D_ProcessEvents(void)
 
 	boolean eaten;
 
+	// Reset possibly stale mouse info
+	G_SetMouseDeltas(0, 0, 1);
+	G_SetMouseDeltas(0, 0, 2);
+	mouse.buttons &= ~(MB_SCROLLUP|MB_SCROLLDOWN);
+	mouse2.buttons &= ~(MB_SCROLLUP|MB_SCROLLDOWN);
+
 	for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 	{
+		boolean hooked = false;
+
 		ev = &events[eventtail];
+
+		// Set mouse buttons early in case event is eaten later
+		if (ev->type == ev_keydown || ev->type == ev_keyup)
+		{
+			// Mouse buttons
+			if ((UINT32)(ev->key - KEY_MOUSE1) < MOUSEBUTTONS)
+			{
+				if (ev->type == ev_keydown)
+					mouse.buttons |= 1 << (ev->key - KEY_MOUSE1);
+				else
+					mouse.buttons &= ~(1 << (ev->key - KEY_MOUSE1));
+			}
+			else if ((UINT32)(ev->key - KEY_2MOUSE1) < MOUSEBUTTONS)
+			{
+				if (ev->type == ev_keydown)
+					mouse2.buttons |= 1 << (ev->key - KEY_2MOUSE1);
+				else
+					mouse2.buttons &= ~(1 << (ev->key - KEY_2MOUSE1));
+			}
+			// Scroll (has no keyup event)
+			else switch (ev->key) {
+				case KEY_MOUSEWHEELUP:
+					mouse.buttons |= MB_SCROLLUP;
+					break;
+				case KEY_MOUSEWHEELDOWN:
+					mouse.buttons |= MB_SCROLLDOWN;
+					break;
+				case KEY_2MOUSEWHEELUP:
+					mouse2.buttons |= MB_SCROLLUP;
+					break;
+				case KEY_2MOUSEWHEELDOWN:
+					mouse2.buttons |= MB_SCROLLDOWN;
+					break;
+			}
+		}
 
 		// Screenshots over everything so that they can be taken anywhere.
 		if (M_ScreenshotResponder(ev))
@@ -188,6 +230,12 @@ void D_ProcessEvents(void)
 		{
 			if (cht_Responder(ev))
 				continue;
+		}
+
+		if (!CON_Ready() && !menuactive) {
+			if (G_LuaResponder(ev))
+				continue;
+			hooked = true;
 		}
 
 		// Menu input
@@ -204,6 +252,12 @@ void D_ProcessEvents(void)
 		if (eaten)
 			continue; // menu ate the event
 
+		if (!hooked && !CON_Ready()) {
+			if (G_LuaResponder(ev))
+				continue;
+			hooked = true;
+		}
+
 		// console input
 #ifdef HAVE_THREADS
 		I_lock_mutex(&con_mutex);
@@ -218,8 +272,16 @@ void D_ProcessEvents(void)
 		if (eaten)
 			continue; // ate the event
 
+		if (!hooked && !CON_Ready() && G_LuaResponder(ev))
+			continue;
+
 		G_Responder(ev);
 	}
+
+	if (mouse.rdx || mouse.rdy)
+		G_SetMouseDeltas(mouse.rdx, mouse.rdy, 1);
+	if (mouse2.rdx || mouse2.rdy)
+		G_SetMouseDeltas(mouse2.rdx, mouse2.rdy, 2);
 }
 
 //
@@ -236,7 +298,6 @@ INT16 wipetypepost = -1;
 
 static void D_Display(void)
 {
-	INT32 setrenderstillneeded = 0;
 	boolean forcerefresh = false;
 	static boolean wipe = false;
 	INT32 wipedefindex = 0;
@@ -259,47 +320,27 @@ static void D_Display(void)
 	//    create plane polygons, if necessary.
 	// 3. Functions related to switching video
 	//    modes (resolution) are called.
-	// 4. Patch data is freed from memory,
-	//    and recached if necessary.
-	// 5. The frame is ready to be drawn!
+	// 4. The frame is ready to be drawn!
 
-	// stop movie if needs to change renderer
-	if (setrenderneeded && (moviemode == MM_APNG))
-		M_StopMovie();
-
-	// check for change of renderer or screen size (video mode)
+	// Check for change of renderer or screen size (video mode)
 	if ((setrenderneeded || setmodeneeded) && !wipe)
-	{
-		if (setrenderneeded)
-		{
-			CONS_Debug(DBG_RENDER, "setrenderneeded set (%d)\n", setrenderneeded);
-			setrenderstillneeded = setrenderneeded;
-		}
 		SCR_SetMode(); // change video mode
-	}
 
-	if (vid.recalc || setrenderstillneeded)
-	{
+	// Recalc the screen
+	if (vid.recalc)
 		SCR_Recalc(); // NOTE! setsizeneeded is set by SCR_Recalc()
-#ifdef HWRENDER
-		// Shoot! The screen texture was flushed!
-		if ((rendermode == render_opengl) && (gamestate == GS_INTERMISSION))
-			usebuffer = false;
-#endif
-	}
 
+	// View morph
 	if (rendermode == render_soft && !splitscreen)
 		R_CheckViewMorph();
 
-	// change the view size if needed
-	if (setsizeneeded || setrenderstillneeded)
+	// Change the view size if needed
+	// Set by changing video mode or renderer
+	if (setsizeneeded)
 	{
 		R_ExecuteSetViewSize();
 		forcerefresh = true; // force background redraw
 	}
-
-	// Lactozilla: Renderer switching
-	D_CheckRendererState();
 
 	// draw buffered stuff to screen
 	// Used only by linux GGI version
@@ -435,7 +476,7 @@ static void D_Display(void)
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
-				rs_rendercalltime = I_GetTimeMicros();
+				PS_START_TIMING(ps_rendercalltime);
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
@@ -482,7 +523,7 @@ static void D_Display(void)
 					if (postimgtype2)
 						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
-				rs_rendercalltime = I_GetTimeMicros() - rs_rendercalltime;
+				PS_STOP_TIMING(ps_rendercalltime);
 			}
 
 			if (lastdraw)
@@ -496,7 +537,7 @@ static void D_Display(void)
 				lastdraw = false;
 			}
 
-			rs_uitime = I_GetTimeMicros();
+			PS_START_TIMING(ps_uitime);
 
 			if (gamestate == GS_LEVEL)
 			{
@@ -509,7 +550,7 @@ static void D_Display(void)
 		}
 		else
 		{
-			rs_uitime = I_GetTimeMicros();
+			PS_START_TIMING(ps_uitime);
 		}
 	}
 
@@ -529,7 +570,7 @@ static void D_Display(void)
 		else
 			py = viewwindowy + 4;
 		patch = W_CachePatchName("M_PAUSE", PU_PATCH);
-		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - SHORT(patch->width))/2, py, 0, patch);
+		V_DrawScaledPatch(viewwindowx + (BASEVIDWIDTH - patch->width)/2, py, 0, patch);
 #else
 		INT32 y = ((automapactive) ? (32) : (BASEVIDHEIGHT/2));
 		M_DrawTextBox((BASEVIDWIDTH/2) - (60), y - (16), 13, 2);
@@ -551,7 +592,7 @@ static void D_Display(void)
 
 	CON_Drawer();
 
-	rs_uitime = I_GetTimeMicros() - rs_uitime;
+	PS_STOP_TIMING(ps_uitime);
 
 	//
 	// wipe update
@@ -632,111 +673,15 @@ static void D_Display(void)
 			V_DrawRightAlignedString(BASEVIDWIDTH, BASEVIDHEIGHT-ST_HEIGHT-10, V_YELLOWMAP, s);
 		}
 
-		if (cv_renderstats.value)
+		if (cv_perfstats.value)
 		{
-			char s[50];
-			int frametime = I_GetTimeMicros() - rs_prevframetime;
-			int divisor = 1;
-			rs_prevframetime = I_GetTimeMicros();
-
-			if (rs_rendercalltime > 10000) divisor = 1000;
-
-			snprintf(s, sizeof s - 1, "ft   %d", frametime / divisor);
-			V_DrawThinString(30, 10, V_MONOSPACE | V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "rtot %d", rs_rendercalltime / divisor);
-			V_DrawThinString(30, 20, V_MONOSPACE | V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "bsp  %d", rs_bsptime / divisor);
-			V_DrawThinString(30, 30, V_MONOSPACE | V_YELLOWMAP, s);
-			snprintf(s, sizeof s - 1, "nbsp %d", rs_numbspcalls);
-			V_DrawThinString(80, 10, V_MONOSPACE | V_BLUEMAP, s);
-			snprintf(s, sizeof s - 1, "nspr %d", rs_numsprites);
-			V_DrawThinString(80, 20, V_MONOSPACE | V_BLUEMAP, s);
-			snprintf(s, sizeof s - 1, "nnod %d", rs_numdrawnodes);
-			V_DrawThinString(80, 30, V_MONOSPACE | V_BLUEMAP, s);
-			snprintf(s, sizeof s - 1, "npob %d", rs_numpolyobjects);
-			V_DrawThinString(80, 40, V_MONOSPACE | V_BLUEMAP, s);
-			if (rendermode == render_opengl) // OpenGL specific stats
-			{
-#ifdef HWRENDER
-				snprintf(s, sizeof s - 1, "nsrt %d", rs_hw_nodesorttime / divisor);
-				V_DrawThinString(30, 40, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ndrw %d", rs_hw_nodedrawtime / divisor);
-				V_DrawThinString(30, 50, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ssrt %d", rs_hw_spritesorttime / divisor);
-				V_DrawThinString(30, 60, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "sdrw %d", rs_hw_spritedrawtime / divisor);
-				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ui   %d", rs_uitime / divisor);
-				V_DrawThinString(30, 80, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
-				V_DrawThinString(30, 90, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "tic  %d", rs_tictime / divisor);
-				V_DrawThinString(30, 105, V_MONOSPACE | V_GRAYMAP, s);
-				if (cv_glbatching.value)
-				{
-					snprintf(s, sizeof s - 1, "bsrt %d", rs_hw_batchsorttime / divisor);
-					V_DrawThinString(80, 55, V_MONOSPACE | V_REDMAP, s);
-					snprintf(s, sizeof s - 1, "bdrw %d", rs_hw_batchdrawtime / divisor);
-					V_DrawThinString(80, 65, V_MONOSPACE | V_REDMAP, s);
-
-					snprintf(s, sizeof s - 1, "npol %d", rs_hw_numpolys);
-					V_DrawThinString(130, 10, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "ndc  %d", rs_hw_numcalls);
-					V_DrawThinString(130, 20, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "nshd %d", rs_hw_numshaders);
-					V_DrawThinString(130, 30, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "nvrt %d", rs_hw_numverts);
-					V_DrawThinString(130, 40, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "ntex %d", rs_hw_numtextures);
-					V_DrawThinString(185, 10, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "npf  %d", rs_hw_numpolyflags);
-					V_DrawThinString(185, 20, V_MONOSPACE | V_PURPLEMAP, s);
-					snprintf(s, sizeof s - 1, "ncol %d", rs_hw_numcolors);
-					V_DrawThinString(185, 30, V_MONOSPACE | V_PURPLEMAP, s);
-				}
-#endif
-			}
-			else // software specific stats
-			{
-				snprintf(s, sizeof s - 1, "prtl %d", rs_sw_portaltime / divisor);
-				V_DrawThinString(30, 40, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "plns %d", rs_sw_planetime / divisor);
-				V_DrawThinString(30, 50, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "mskd %d", rs_sw_maskedtime / divisor);
-				V_DrawThinString(30, 60, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "ui   %d", rs_uitime / divisor);
-				V_DrawThinString(30, 70, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "fin  %d", rs_swaptime / divisor);
-				V_DrawThinString(30, 80, V_MONOSPACE | V_YELLOWMAP, s);
-				snprintf(s, sizeof s - 1, "tic  %d", rs_tictime / divisor);
-				V_DrawThinString(30, 95, V_MONOSPACE | V_GRAYMAP, s);
-			}
+			M_DrawPerfStats();
 		}
 
-		rs_swaptime = I_GetTimeMicros();
+		PS_START_TIMING(ps_swaptime);
 		I_FinishUpdate(); // page flip or blit buffer
-		rs_swaptime = I_GetTimeMicros() - rs_swaptime;
+		PS_STOP_TIMING(ps_swaptime);
 	}
-
-	needpatchflush = false;
-	needpatchrecache = false;
-}
-
-// Check the renderer's state
-// after a possible renderer switch.
-void D_CheckRendererState(void)
-{
-	// flush all patches from memory
-	if (needpatchflush)
-	{
-		Z_FlushCachedPatches();
-		needpatchflush = false;
-	}
-
-	// some patches have been freed,
-	// so cache them again
-	if (needpatchrecache)
-		R_ReloadHUDGraphics();
 }
 
 // =========================================================================
@@ -763,11 +708,14 @@ void D_SRB2Loop(void)
 	oldentertics = I_GetTime();
 
 	// end of loading screen: CONS_Printf() will no more call FinishUpdate()
+	con_refresh = false;
 	con_startup = false;
 
 	// make sure to do a d_display to init mode _before_ load a level
 	SCR_SetMode(); // change video mode
 	SCR_Recalc();
+
+	chosenrendermode = render_none;
 
 	// Check and print which version is executed.
 	// Use this as the border between setup and the main game loop being entered.
@@ -975,35 +923,68 @@ void D_StartTitle(void)
 	tutorialmode = false;
 }
 
-//
-// D_AddFile
-//
-static void D_AddFile(char **list, const char *file)
-{
-	size_t pnumwadfiles;
-	char *newfile;
+#define REALLOC_FILE_LIST \
+	if (list->files == NULL) \
+	{ \
+		list->files = calloc(sizeof(list->files), 2); \
+		list->numfiles = 1; \
+	} \
+	else \
+	{ \
+		index = list->numfiles; \
+		list->files = realloc(list->files, sizeof(list->files) * ((++list->numfiles) + 1)); \
+		if (list->files == NULL) \
+			I_Error("%s: No more free memory to add file %s", __FUNCTION__, file); \
+	}
 
-	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
-		;
+static void D_AddFile(addfilelist_t *list, const char *file)
+{
+	char *newfile;
+	size_t index = 0;
+
+	REALLOC_FILE_LIST
 
 	newfile = malloc(strlen(file) + 1);
 	if (!newfile)
-	{
-		I_Error("No more free memory to AddFile %s",file);
-	}
-	strcpy(newfile, file);
+		I_Error("D_AddFile: No more free memory to add file %s", file);
 
-	list[pnumwadfiles] = newfile;
+	strcpy(newfile, file);
+	list->files[index] = newfile;
 }
 
-static inline void D_CleanFile(char **list)
+static void D_AddFolder(addfilelist_t *list, const char *file)
 {
-	size_t pnumwadfiles;
-	for (pnumwadfiles = 0; list[pnumwadfiles]; pnumwadfiles++)
+	char *newfile;
+	size_t index = 0;
+
+	REALLOC_FILE_LIST
+
+	newfile = malloc(strlen(file) + 2); // Path delimiter + NULL terminator
+	if (!newfile)
+		I_Error("D_AddFolder: No more free memory to add folder %s", file);
+
+	strcpy(newfile, file);
+	strcat(newfile, PATHSEP);
+
+	list->files[index] = newfile;
+}
+
+#undef REALLOC_FILE_LIST
+
+static inline void D_CleanFile(addfilelist_t *list)
+{
+	if (list->files)
 	{
-		free(list[pnumwadfiles]);
-		list[pnumwadfiles] = NULL;
+		size_t pnumwadfiles = 0;
+
+		for (; pnumwadfiles < list->numfiles; pnumwadfiles++)
+			free(list->files[pnumwadfiles]);
+
+		free(list->files);
+		list->files = NULL;
 	}
+
+	list->numfiles = 0;
 }
 
 ///\brief Checks if a netgame URL is being handled, and changes working directory to the EXE's if so.
@@ -1049,7 +1030,7 @@ static void IdentifyVersion(void)
 	char *srb2wad;
 	const char *srb2waddir = NULL;
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	// change to the directory where 'srb2.pk3' is found
 	srb2waddir = I_LocateWad();
 #endif
@@ -1087,7 +1068,7 @@ static void IdentifyVersion(void)
 
 	// Load the IWAD
 	if (srb2wad != NULL && FIL_ReadFileOK(srb2wad))
-		D_AddFile(startupwadfiles, srb2wad);
+		D_AddFile(&startupwadfiles, srb2wad);
 	else
 		I_Error("srb2.pk3 not found! Expected in %s, ss file: %s\n", srb2waddir, srb2wad);
 
@@ -1098,14 +1079,14 @@ static void IdentifyVersion(void)
 	// checking in D_SRB2Main
 
 	// Add the maps
-	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"zones.pk3"));
+	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "zones.pk3"));
 
 	// Add the players
-	D_AddFile(startupwadfiles, va(pandf,srb2waddir, "player.dta"));
+	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "player.dta"));
 
 #ifdef USE_PATCH_DTA
 	// Add our crappy patches to fix our bugs
-	D_AddFile(startupwadfiles, va(pandf,srb2waddir,"patch.pk3"));
+	D_AddFile(&startupwadfiles, va(pandf,srb2waddir, "patch.pk3"));
 #endif
 
 #if !defined (HAVE_SDL) || defined (HAVE_MIXER)
@@ -1113,18 +1094,15 @@ static void IdentifyVersion(void)
 #define MUSICTEST(str) \
 		{\
 			const char *musicpath = va(pandf,srb2waddir,str);\
-			int ms = W_VerifyNMUSlumps(musicpath); \
+			int ms = W_VerifyNMUSlumps(musicpath, false); \
 			if (ms == 1) \
-				D_AddFile(startupwadfiles, musicpath); \
+				D_AddFile(&startupwadfiles, musicpath); \
 			else if (ms == 0) \
 				I_Error("File "str" has been modified with non-music/sound lumps"); \
 		}
 
 		MUSICTEST("music.dta")
-		MUSICTEST("patch_music.pk3")
-#ifdef DEVELOP // remove when music_new.dta is merged into music.dta
-		MUSICTEST("music_new.dta")
-#endif
+		//MUSICTEST("patch_music.pk3")
 	}
 #endif
 }
@@ -1160,7 +1138,7 @@ void D_SRB2Main(void)
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
-	"Copyright (C) 1998-2020 by Sonic Team Junior\n\n"
+	"Copyright (C) 1998-2022 by Sonic Team Junior\n\n"
 	"This program comes with ABSOLUTELY NO WARRANTY.\n\n"
 	"This is free software, and you are welcome to redistribute it\n"
 	"and/or modify it under the terms of the GNU General Public License\n"
@@ -1187,7 +1165,7 @@ void D_SRB2Main(void)
 	G_LoadGameSettings();
 
 	// Test Dehacked lists
-	DEH_Check();
+	DEH_TableCheck();
 
 	// Netgame URL special case: change working dir to EXE folder.
 	ChangeDirForUrlHandler();
@@ -1222,7 +1200,7 @@ void D_SRB2Main(void)
 
 		if (!userhome)
 		{
-#if ((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)
+#if (defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)) && !defined (__CYGWIN__)
 			I_Error("Please set $HOME to your home directory\n");
 #else
 			if (dedicated)
@@ -1289,25 +1267,25 @@ void D_SRB2Main(void)
 	// Do this up here so that WADs loaded through the command line can use ExecCfg
 	COM_Init();
 
-	// add any files specified on the command line with -file wadfile
-	// to the wad list
+	// Add any files specified on the command line with
+	// "-file <file>" or "-folder <folder>" to the add-on list
 	if (!((M_GetUrlProtocolArg() || M_CheckParm("-connect")) && !M_CheckParm("-server")))
 	{
-		if (M_CheckParm("-file"))
-		{
-			// the parms after p are wadfile/lump names,
-			// until end of parms or another - preceded parm
-			while (M_IsNextParm())
-			{
-				const char *s = M_GetNextParm();
+		INT32 addontype = 0;
+		INT32 i;
 
-				if (s) // Check for NULL?
-				{
-					if (!W_VerifyNMUSlumps(s))
-						G_SetGameModified(true);
-					D_AddFile(startuppwads, s);
-				}
-			}
+		for (i = 1; i < myargc; i++)
+		{
+			if (!strcasecmp(myargv[i], "-file"))
+				addontype = 1;
+			else if (!strcasecmp(myargv[i], "-folder"))
+				addontype = 2;
+			else if (myargv[i][0] == '-' || myargv[i][0] == '+')
+				addontype = 0;
+			else if (addontype == 1)
+				D_AddFile(&startuppwads, myargv[i]);
+			else if (addontype == 2)
+				D_AddFolder(&startuppwads, myargv[i]);
 		}
 	}
 
@@ -1346,8 +1324,8 @@ void D_SRB2Main(void)
 
 	// load wad, including the main wad file
 	CONS_Printf("W_InitMultipleFiles(): Adding IWAD and main PWADs.\n");
-	W_InitMultipleFiles(startupwadfiles);
-	D_CleanFile(startupwadfiles);
+	W_InitMultipleFiles(&startupwadfiles);
+	D_CleanFile(&startupwadfiles);
 
 #ifndef DEVELOP // md5s last updated 22/02/20 (ddmmyy)
 
@@ -1361,8 +1339,6 @@ void D_SRB2Main(void)
 	// don't check music.dta because people like to modify it, and it doesn't matter if they do
 	// ...except it does if they slip maps in there, and that's what W_VerifyNMUSlumps is for.
 #endif //ifndef DEVELOP
-
-	mainwadstally = packetsizetally; // technically not accurate atm, remember to port the two-stage -file process from kart in 2.2.x
 
 	cht_Init();
 
@@ -1394,9 +1370,16 @@ void D_SRB2Main(void)
 
 	I_RegisterSysCommands();
 
-	CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
-	W_InitMultipleFiles(startuppwads);
-	D_CleanFile(startuppwads);
+	CON_StopRefresh(); // Temporarily stop refreshing the screen for wad loading
+
+	if (startuppwads.numfiles)
+	{
+		CONS_Printf("W_InitMultipleFiles(): Adding extra PWADs.\n");
+		W_InitMultipleFiles(&startuppwads);
+		D_CleanFile(&startuppwads);
+	}
+
+	CON_StartRefresh(); // Restart the refresh!
 
 	CONS_Printf("HU_LoadGraphics()...\n");
 	HU_LoadGraphics();
@@ -1406,30 +1389,12 @@ void D_SRB2Main(void)
 
 	G_LoadGameData();
 
-#if (defined (__unix__) && !defined (MSDOS)) || defined (UNIXCOMMON) || defined (HAVE_SDL)
+#if defined (__unix__) || defined (UNIXCOMMON) || defined (HAVE_SDL)
 	VID_PrepareModeList(); // Regenerate Modelist according to cv_fullscreen
 #endif
 
 	// set user default mode or mode set at cmdline
 	SCR_CheckDefaultMode();
-
-	// Lactozilla: Does the render mode need to change?
-	if ((setrenderneeded != 0) && (setrenderneeded != rendermode))
-	{
-		CONS_Printf(M_GetText("Switching the renderer...\n"));
-		Z_PreparePatchFlush();
-
-		// set needpatchflush / needpatchrecache true for D_CheckRendererState
-		needpatchflush = true;
-		needpatchrecache = true;
-
-		// Set cv_renderer to the new render mode
-		VID_CheckRenderer();
-		SCR_ChangeRendererCVars(rendermode);
-
-		// check the renderer's state
-		D_CheckRendererState();
-	}
 
 	wipegamestate = gamestate;
 
@@ -1589,6 +1554,12 @@ void D_SRB2Main(void)
 		ultimatemode = true;
 	}
 
+	if (M_CheckParm("-splitscreen"))
+	{
+		autostart = true;
+		splitscreen = true;
+	}
+
 	// rei/miru: bootmap (Idea: starts the game on a predefined map)
 	if (bootmap && !(M_CheckParm("-warp") && M_IsNextParm()))
 	{
@@ -1667,7 +1638,7 @@ void D_SRB2Main(void)
 	{
 		levelstarttic = gametic;
 		G_SetGamestate(GS_LEVEL);
-		if (!P_LoadLevel(false))
+		if (!P_LoadLevel(false, false))
 			I_Quit(); // fail so reset game stuff
 	}
 }
@@ -1684,7 +1655,7 @@ const char *D_Home(void)
 		userhome = M_GetNextParm();
 	else
 	{
-#if !((defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)) && !defined (__APPLE__)
+#if !(defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON))
 		if (FIL_FileOK(CONFIGFILENAME))
 			usehome = false; // Let's NOT use home
 		else

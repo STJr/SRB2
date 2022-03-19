@@ -3,7 +3,7 @@
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
 // Copyright (C) 2013-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -293,7 +293,7 @@ static void F_DoWipe(fademask_t *fademask)
 			else
 			{
 				// pointer to transtable that this mask would use
-				transtbl = transtables + ((9 - *mask)<<FF_TRANSSHIFT);
+				transtbl = R_GetTranslucencyTable((9 - *mask) + 1);
 
 				// DRAWING LOOP
 				while (draw_linestogo--)

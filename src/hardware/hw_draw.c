@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -68,10 +68,11 @@ static UINT8 softwaretranstogl_lo[11] = {  0, 12, 24, 36, 48, 60, 71, 83, 95,111
 // Notes            : x,y : positions relative to the original Doom resolution
 //                  : textes(console+score) + menus + status bar
 // -----------------+
-void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option)
+void HWR_DrawPatch(patch_t *gpatch, INT32 x, INT32 y, INT32 option)
 {
 	FOutVector v[4];
 	FBITFIELD flags;
+	GLPatch_t *hwrPatch;
 
 //  3--2
 //  | /|
@@ -84,6 +85,7 @@ void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option)
 
 	// make patch ready in hardware cache
 	HWR_GetPatch(gpatch);
+	hwrPatch = ((GLPatch_t *)gpatch->hardware);
 
 	switch (option & V_SCALEPATCHMASK)
 	{
@@ -103,36 +105,33 @@ void HWR_DrawPatch(GLPatch_t *gpatch, INT32 x, INT32 y, INT32 option)
 	if (option & V_NOSCALESTART)
 		sdupx = sdupy = 2.0f;
 
-	v[0].x = v[3].x = (x*sdupx-SHORT(gpatch->leftoffset)*pdupx)/vid.width - 1;
-	v[2].x = v[1].x = (x*sdupx+(SHORT(gpatch->width)-SHORT(gpatch->leftoffset))*pdupx)/vid.width - 1;
-	v[0].y = v[1].y = 1-(y*sdupy-SHORT(gpatch->topoffset)*pdupy)/vid.height;
-	v[2].y = v[3].y = 1-(y*sdupy+(SHORT(gpatch->height)-SHORT(gpatch->topoffset))*pdupy)/vid.height;
+	v[0].x = v[3].x = (x*sdupx-(gpatch->leftoffset)*pdupx)/vid.width - 1;
+	v[2].x = v[1].x = (x*sdupx+(gpatch->width-gpatch->leftoffset)*pdupx)/vid.width - 1;
+	v[0].y = v[1].y = 1-(y*sdupy-(gpatch->topoffset)*pdupy)/vid.height;
+	v[2].y = v[3].y = 1-(y*sdupy+(gpatch->height-gpatch->topoffset)*pdupy)/vid.height;
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
 	v[0].s = v[3].s = 0.0f;
-	v[2].s = v[1].s = gpatch->max_s;
+	v[2].s = v[1].s = hwrPatch->max_s;
 	v[0].t = v[1].t = 0.0f;
-	v[2].t = v[3].t = gpatch->max_t;
+	v[2].t = v[3].t = hwrPatch->max_t;
 
 	flags = PF_Translucent|PF_NoDepthTest;
-
-	if (option & V_WRAPX)
-		flags |= PF_ForceWrapX;
-	if (option & V_WRAPY)
-		flags |= PF_ForceWrapY;
 
 	// clip it since it is used for bunny scroll in doom I
 	HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
 
-void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap)
+void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap)
 {
 	FOutVector v[4];
 	FBITFIELD flags;
 	float cx = FIXED_TO_FLOAT(x);
 	float cy = FIXED_TO_FLOAT(y);
 	UINT8 alphalevel = ((option & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT8 blendmode = ((option & V_BLENDMASK) >> V_BLENDSHIFT);
+	GLPatch_t *hwrPatch;
 
 //  3--2
 //  | /|
@@ -142,14 +141,13 @@ void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t
 
 	UINT8 perplayershuffle = 0;
 
-	if (alphalevel >= 10 && alphalevel < 13)
-		return;
-
 	// make patch ready in hardware cache
 	if (!colormap)
 		HWR_GetPatch(gpatch);
 	else
 		HWR_GetMappedPatch(gpatch, colormap);
+
+	hwrPatch = ((GLPatch_t *)gpatch->hardware);
 
 	dupx = (float)vid.dupx;
 	dupy = (float)vid.dupy;
@@ -181,19 +179,13 @@ void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t
 
 		// left offset
 		if (option & V_FLIP)
-			offsetx = (float)(SHORT(gpatch->width) - SHORT(gpatch->leftoffset)) * fscalew;
+			offsetx = (float)(gpatch->width - gpatch->leftoffset) * fscalew;
 		else
-			offsetx = (float)SHORT(gpatch->leftoffset) * fscalew;
+			offsetx = (float)(gpatch->leftoffset) * fscalew;
 
 		// top offset
-		// TODO: make some kind of vertical version of V_FLIP, maybe by deprecating V_OFFSET in future?!?
-		offsety = (float)SHORT(gpatch->topoffset) * fscaleh;
-
-		if ((option & (V_NOSCALESTART|V_OFFSET)) == (V_NOSCALESTART|V_OFFSET)) // Multiply by dupx/dupy for crosshairs
-		{
-			offsetx *= dupx;
-			offsety *= dupy;
-		}
+		// TODO: make some kind of vertical version of V_FLIP
+		offsety = (float)(gpatch->topoffset) * fscaleh;
 
 		cx -= offsetx;
 		cy -= offsety;
@@ -277,17 +269,14 @@ void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t
 			// if it's meant to cover the whole screen, black out the rest (ONLY IF TOP LEFT ISN'T TRANSPARENT)
 			// cx and cy are possibly *slightly* off from float maths
 			// This is done before here compared to software because we directly alter cx and cy to centre
-			if (cx >= -0.1f && cx <= 0.1f && SHORT(gpatch->width) == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && SHORT(gpatch->height) == BASEVIDHEIGHT)
+			if (cx >= -0.1f && cx <= 0.1f && gpatch->width == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && gpatch->height == BASEVIDHEIGHT)
 			{
-				// Need to temporarily cache the real patch to get the colour of the top left pixel
-				patch_t *realpatch = W_CacheSoftwarePatchNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
-				const column_t *column = (const column_t *)((const UINT8 *)(realpatch) + LONG((realpatch)->columnofs[0]));
+				const column_t *column = (const column_t *)((const UINT8 *)(gpatch->columns) + (gpatch->columnofs[0]));
 				if (!column->topdelta)
 				{
 					const UINT8 *source = (const UINT8 *)(column) + 3;
 					HWR_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
 				}
-				Z_Free(realpatch);
 			}
 			// centre screen
 			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
@@ -315,15 +304,15 @@ void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t
 		}
 	}
 
-	if (pscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
+	if (pscale != FRACUNIT || vscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
 	{
-		fwidth = (float)SHORT(gpatch->width) * fscalew * dupx;
-		fheight = (float)SHORT(gpatch->height) * fscaleh * dupy;
+		fwidth = (float)(gpatch->width) * fscalew * dupx;
+		fheight = (float)(gpatch->height) * fscaleh * dupy;
 	}
 	else
 	{
-		fwidth = (float)SHORT(gpatch->width) * dupx;
-		fheight = (float)SHORT(gpatch->height) * dupy;
+		fwidth = (float)(gpatch->width) * dupx;
+		fheight = (float)(gpatch->height) * dupy;
 	}
 
 	// positions of the cx, cy, are between 0 and vid.width/vid.height now, we need them to be between -1 and 1
@@ -345,33 +334,29 @@ void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t
 
 	if (option & V_FLIP)
 	{
-		v[0].s = v[3].s = gpatch->max_s;
+		v[0].s = v[3].s = hwrPatch->max_s;
 		v[2].s = v[1].s = 0.0f;
 	}
 	else
 	{
 		v[0].s = v[3].s = 0.0f;
-		v[2].s = v[1].s = gpatch->max_s;
+		v[2].s = v[1].s = hwrPatch->max_s;
 	}
 
 	v[0].t = v[1].t = 0.0f;
-	v[2].t = v[3].t = gpatch->max_t;
-
-	flags = PF_Translucent|PF_NoDepthTest;
-
-	if (option & V_WRAPX)
-		flags |= PF_ForceWrapX;
-	if (option & V_WRAPY)
-		flags |= PF_ForceWrapY;
+	v[2].t = v[3].t = hwrPatch->max_t;
 
 	// clip it since it is used for bunny scroll in doom I
+	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
+
 	if (alphalevel)
 	{
 		FSurfaceInfo Surf;
 		Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
-		if (alphalevel == 13) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency];
-		else if (alphalevel == 14) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency];
-		else if (alphalevel == 15) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency];
+
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
 		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
@@ -380,25 +365,31 @@ void HWR_DrawStretchyFixedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t
 		HWD.pfnDrawPolygon(NULL, v, 4, flags);
 }
 
-void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, INT32 option, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
+void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale, fixed_t vscale, INT32 option, const UINT8 *colormap, fixed_t sx, fixed_t sy, fixed_t w, fixed_t h)
 {
 	FOutVector v[4];
 	FBITFIELD flags;
 	float cx = FIXED_TO_FLOAT(x);
 	float cy = FIXED_TO_FLOAT(y);
 	UINT8 alphalevel = ((option & V_ALPHAMASK) >> V_ALPHASHIFT);
+	UINT8 blendmode = ((option & V_BLENDMASK) >> V_BLENDSHIFT);
+	GLPatch_t *hwrPatch;
 
 //  3--2
 //  | /|
 //  |/ |
 //  0--1
-	float dupx, dupy, fscale, fwidth, fheight;
+	float dupx, dupy, fscalew, fscaleh, fwidth, fheight;
 
-	if (alphalevel >= 10 && alphalevel < 13)
-		return;
+	UINT8 perplayershuffle = 0;
 
 	// make patch ready in hardware cache
-	HWR_GetPatch(gpatch);
+	if (!colormap)
+		HWR_GetPatch(gpatch);
+	else
+		HWR_GetMappedPatch(gpatch, colormap);
+
+	hwrPatch = ((GLPatch_t *)gpatch->hardware);
 
 	dupx = (float)vid.dupx;
 	dupy = (float)vid.dupy;
@@ -419,12 +410,80 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 	}
 
 	dupx = dupy = (dupx < dupy ? dupx : dupy);
-	fscale = FIXED_TO_FLOAT(pscale);
+	fscalew = fscaleh = FIXED_TO_FLOAT(pscale);
+	if (vscale != pscale)
+		fscaleh = FIXED_TO_FLOAT(vscale);
 
-	// fuck it, no GL support for croppedpatch v_perplayer right now. it's not like it's accessible to Lua or anything, and we only use it for menus...
+	cx -= (float)(gpatch->leftoffset) * fscalew;
+	cy -= (float)(gpatch->topoffset) * fscaleh;
 
-	cy -= (float)SHORT(gpatch->topoffset) * fscale;
-	cx -= (float)SHORT(gpatch->leftoffset) * fscale;
+	if (splitscreen && (option & V_PERPLAYER))
+	{
+		float adjusty = ((option & V_NOSCALESTART) ? vid.height : BASEVIDHEIGHT)/2.0f;
+		fscaleh /= 2;
+		cy /= 2;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			float adjustx = ((option & V_NOSCALESTART) ? vid.width : BASEVIDWIDTH)/2.0f;
+			fscalew /= 2;
+			cx /= 2;
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				option &= ~V_SNAPTOBOTTOM|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 1;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				cx += adjustx;
+				option &= ~V_SNAPTOBOTTOM|V_SNAPTOLEFT;
+			}
+			else if (stplyr == &players[thirddisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 4;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP|V_SNAPTORIGHT;
+			}
+			else if (stplyr == &players[fourthdisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle |= 2;
+				if (!(option & (V_SNAPTOLEFT|V_SNAPTORIGHT)))
+					perplayershuffle |= 8;
+				cx += adjustx;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP|V_SNAPTOLEFT;
+			}
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle = 1;
+				option &= ~V_SNAPTOBOTTOM;
+			}
+			else //if (stplyr == &players[secondarydisplayplayer])
+			{
+				if (!(option & (V_SNAPTOTOP|V_SNAPTOBOTTOM)))
+					perplayershuffle = 2;
+				cy += adjusty;
+				option &= ~V_SNAPTOTOP;
+			}
+		}
+	}
 
 	if (!(option & V_NOSCALESTART))
 	{
@@ -433,21 +492,9 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 
 		if (!(option & V_SCALEPATCHMASK))
 		{
-			// if it's meant to cover the whole screen, black out the rest (ONLY IF TOP LEFT ISN'T TRANSPARENT)
-			// cx and cy are possibly *slightly* off from float maths
-			// This is done before here compared to software because we directly alter cx and cy to centre
-			if (cx >= -0.1f && cx <= 0.1f && SHORT(gpatch->width) == BASEVIDWIDTH && cy >= -0.1f && cy <= 0.1f && SHORT(gpatch->height) == BASEVIDHEIGHT)
-			{
-				// Need to temporarily cache the real patch to get the colour of the top left pixel
-				patch_t *realpatch = W_CacheSoftwarePatchNumPwad(gpatch->wadnum, gpatch->lumpnum, PU_STATIC);
-				const column_t *column = (const column_t *)((const UINT8 *)(realpatch) + LONG((realpatch)->columnofs[0]));
-				if (!column->topdelta)
-				{
-					const UINT8 *source = (const UINT8 *)(column) + 3;
-					HWR_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, (column->topdelta == 0xff ? 31 : source[0]));
-				}
-				Z_Free(realpatch);
-			}
+			// if it's meant to cover the whole screen, black out the rest
+			// no the patch is cropped do not do this ever
+
 			// centre screen
 			if (fabsf((float)vid.width - (float)BASEVIDWIDTH * dupx) > 1.0E-36f)
 			{
@@ -455,6 +502,10 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx));
 				else if (!(option & V_SNAPTOLEFT))
 					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/2;
+				if (perplayershuffle & 4)
+					cx -= ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
+				else if (perplayershuffle & 8)
+					cx += ((float)vid.width - ((float)BASEVIDWIDTH * dupx))/4;
 			}
 			if (fabsf((float)vid.height - (float)BASEVIDHEIGHT * dupy) > 1.0E-36f)
 			{
@@ -462,23 +513,27 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy));
 				else if (!(option & V_SNAPTOTOP))
 					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/2;
+				if (perplayershuffle & 1)
+					cy -= ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/4;
+				else if (perplayershuffle & 2)
+					cy += ((float)vid.height - ((float)BASEVIDHEIGHT * dupy))/4;
 			}
 		}
 	}
 
-	fwidth = w;
-	fheight = h;
+	fwidth = FIXED_TO_FLOAT(w);
+	fheight = FIXED_TO_FLOAT(h);
 
-	if (fwidth > SHORT(gpatch->width))
-		fwidth = SHORT(gpatch->width);
+	if (sx + w > gpatch->width<<FRACBITS)
+		fwidth = FIXED_TO_FLOAT((gpatch->width<<FRACBITS) - sx);
 
-	if (fheight > SHORT(gpatch->height))
-		fheight = SHORT(gpatch->height);
+	if (sy + h > gpatch->height<<FRACBITS)
+		fheight = FIXED_TO_FLOAT((gpatch->height<<FRACBITS) - sy);
 
-	if (pscale != FRACUNIT)
+	if (pscale != FRACUNIT || vscale != FRACUNIT || (splitscreen && option & V_PERPLAYER))
 	{
-		fwidth *=  fscale * dupx;
-		fheight *=  fscale * dupy;
+		fwidth *= fscalew * dupx;
+		fheight *= fscaleh * dupy;
 	}
 	else
 	{
@@ -503,34 +558,101 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	v[0].s = v[3].s = ((sx  )/(float)SHORT(gpatch->width) )*gpatch->max_s;
-	if (sx + w > SHORT(gpatch->width))
-		v[2].s = v[1].s = gpatch->max_s;
+	v[0].s = v[3].s = (FIXED_TO_FLOAT(sx)/(float)(gpatch->width))*hwrPatch->max_s;
+	if (sx + w > gpatch->width<<FRACBITS)
+		v[2].s = v[1].s = hwrPatch->max_s;
 	else
-		v[2].s = v[1].s = ((sx+w)/(float)SHORT(gpatch->width) )*gpatch->max_s;
+		v[2].s = v[1].s = (FIXED_TO_FLOAT(sx+w)/(float)(gpatch->width))*hwrPatch->max_s;
 
-	v[0].t = v[1].t = ((sy  )/(float)SHORT(gpatch->height))*gpatch->max_t;
-	if (sy + h > SHORT(gpatch->height))
-		v[2].t = v[3].t = gpatch->max_t;
+	v[0].t = v[1].t = (FIXED_TO_FLOAT(sy)/(float)(gpatch->height))*hwrPatch->max_t;
+	if (sy + h > gpatch->height<<FRACBITS)
+		v[2].t = v[3].t = hwrPatch->max_t;
 	else
-		v[2].t = v[3].t = ((sy+h)/(float)SHORT(gpatch->height))*gpatch->max_t;
+		v[2].t = v[3].t = (FIXED_TO_FLOAT(sy+h)/(float)(gpatch->height))*hwrPatch->max_t;
 
-	flags = PF_Translucent|PF_NoDepthTest;
+	// Auto-crop at splitscreen borders!
+	if (splitscreen && (option & V_PERPLAYER))
+	{
+#define flerp(a,b,amount) (((a) * (1.0f - (amount))) + ((b) * (amount))) // Float lerp
 
-	if (option & V_WRAPX)
-		flags |= PF_ForceWrapX;
-	if (option & V_WRAPY)
-		flags |= PF_ForceWrapY;
+#ifdef QUADS
+		if (splitscreen > 1) // 3 or 4 players
+		{
+			#error Auto-cropping doesnt take quadscreen into account! Fix it!
+			// Hint: For player 1/2, copy player 1's code below. For player 3/4, copy player 2's code below
+			// For player 1/3 and 2/4, mangle the below code to apply horizontally instead of vertically
+		}
+		else
+#endif
+		// 2 players
+		{
+			if (stplyr == &players[displayplayer]) // Player 1's screen, crop at the bottom
+			{
+				if ((cy - fheight) < 0) // If the bottom is below the border
+				{
+					if (cy <= 0) // If the whole patch is beyond the border...
+						return; // ...crop away the entire patch, don't draw anything
+
+					if (fheight <= 0) // Don't divide by zero
+						return;
+
+					v[2].y = v[3].y = 0; // Clamp the polygon edge vertex position
+					// Now for the UV-map... Uh-oh, math time!
+
+					// On second thought, a basic linear interpolation suffices
+					//float full_height = fheight;
+					//float cropped_height = fheight - cy;
+					//float remaining_height = cy;
+					//float cropped_percentage = (fheight - cy) / fheight;
+					//float remaining_percentage = cy / fheight;
+					//v[2].t = v[3].t = lerp(v[2].t, v[0].t, cropped_percentage);
+					// By swapping v[2] and v[0], we can use remaining_percentage for less operations
+					//v[2].t = v[3].t = lerp(v[0].t, v[2].t, remaining_percentage);
+
+					v[2].t = v[3].t = flerp(v[0].t, v[2].t, cy/fheight);
+				}
+			}
+			else //if (stplyr == &players[secondarydisplayplayer]) // Player 2's screen, crop at the top
+			{
+				if (cy > 0) // If the top is above the border
+				{
+					if ((cy - fheight) >= 0) // If the whole patch is beyond the border...
+						return; // ...crop away the entire patch, don't draw anything
+
+					if (fheight <= 0) // Don't divide by zero
+						return;
+
+					v[0].y = v[1].y = 0; // Clamp the polygon edge vertex position
+					// Now for the UV-map... Uh-oh, math time!
+
+					// On second thought, a basic linear interpolation suffices
+					//float full_height = fheight;
+					//float cropped_height = cy;
+					//float remaining_height = fheight - cy;
+					//float cropped_percentage = cy / fheight;
+					//float remaining_percentage = (fheight - cy) / fheight;
+					//v[0].t = v[1].t = lerp(v[0].t, v[2].t, cropped_percentage);
+
+					v[0].t = v[1].t = flerp(v[0].t, v[2].t, cy/fheight);
+				}
+			}
+		}
+#undef flerp
+	}
 
 	// clip it since it is used for bunny scroll in doom I
+	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
+
 	if (alphalevel)
 	{
 		FSurfaceInfo Surf;
 		Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
-		if (alphalevel == 13) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency];
-		else if (alphalevel == 14) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency];
-		else if (alphalevel == 15) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency];
+
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
 		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
+
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
 	}
@@ -541,7 +663,7 @@ void HWR_DrawCroppedPatch(GLPatch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscal
 void HWR_DrawPic(INT32 x, INT32 y, lumpnum_t lumpnum)
 {
 	FOutVector      v[4];
-	const GLPatch_t    *patch;
+	const patch_t    *patch;
 
 	// make pic ready in hardware cache
 	patch = HWR_GetPic(lumpnum);
@@ -558,10 +680,10 @@ void HWR_DrawPic(INT32 x, INT32 y, lumpnum_t lumpnum)
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	v[0].s = v[3].s =  0;
-	v[2].s = v[1].s =  patch->max_s;
-	v[0].t = v[1].t =  0;
-	v[2].t = v[3].t =  patch->max_t;
+	v[0].s = v[3].s = 0;
+	v[2].s = v[1].s = ((GLPatch_t *)patch->hardware)->max_s;
+	v[0].t = v[1].t = 0;
+	v[2].t = v[3].t = ((GLPatch_t *)patch->hardware)->max_t;
 
 
 	//Hurdler: Boris, the same comment as above... but maybe for pics
@@ -570,7 +692,7 @@ void HWR_DrawPic(INT32 x, INT32 y, lumpnum_t lumpnum)
 	// But then, the question is: why not 0 instead of PF_Masked ?
 	// or maybe PF_Environment ??? (like what I said above)
 	// BP: PF_Environment don't change anything ! and 0 is undifined
-	HWD.pfnDrawPolygon(NULL, v, 4, PF_Translucent | PF_NoDepthTest | PF_Clip | PF_NoZClip);
+	HWD.pfnDrawPolygon(NULL, v, 4, PF_Translucent | PF_NoDepthTest);
 }
 
 // ==========================================================================
@@ -638,7 +760,7 @@ void HWR_DrawFlatFill (INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum
 	v[0].t = v[1].t = (float)((y & flatflag)/dflatsize);
 	v[2].t = v[3].t = (float)(v[0].t + h/dflatsize);
 
-	HWR_LiterallyGetFlat(flatlumpnum);
+	HWR_GetRawFlat(flatlumpnum);
 
 	//Hurdler: Boris, the same comment as above... but maybe for pics
 	// it not a problem since they don't have any transparent pixel
@@ -934,7 +1056,7 @@ void HWR_DrawViewBorder(INT32 clearlines)
 	INT32 top, side;
 	INT32 baseviewwidth, baseviewheight;
 	INT32 basewindowx, basewindowy;
-	GLPatch_t *patch;
+	patch_t *patch;
 
 //    if (gl_viewwidth == vid.width)
 //        return;

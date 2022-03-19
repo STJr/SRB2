@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2020 by Sonic Team Junior.
+// Copyright (C) 2014-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -13,6 +13,7 @@
 enum hud {
 	hud_stagetitle = 0,
 	hud_textspectator,
+	hud_crosshair,
 	// Singleplayer / Co-op
 	hud_score,
 	hud_time,
@@ -36,7 +37,9 @@ enum hud {
 	hud_tabemblems,
 	// Intermission
 	hud_intermissiontally,
+	hud_intermissiontitletext,
 	hud_intermissionmessages,
+	hud_intermissionemeralds,
 	hud_MAX
 };
 
@@ -44,8 +47,4 @@ extern boolean hud_running;
 
 boolean LUA_HudEnabled(enum hud option);
 
-void LUAh_GameHUD(player_t *stplyr);
-void LUAh_ScoresHUD(void);
-void LUAh_TitleHUD(void);
-void LUAh_TitleCardHUD(player_t *stplayr);
-void LUAh_IntermissionHUD(void);
+void LUA_SetHudHook(int hook);

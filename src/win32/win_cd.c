@@ -161,13 +161,13 @@ static BOOL wasPlaying;
 //static INT     cdVolume = 0;          // current cd volume (0-31)
 
 // 0-31 like Music & Sfx, though CD hardware volume is 0-255.
-consvar_t cd_volume = {"cd_volume","18",CV_SAVE,soundvolume_cons_t, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cd_volume = CVAR_INIT ("cd_volume","18",CV_SAVE,soundvolume_cons_t, NULL);
 
 // allow Update for next/loop track
 // some crap cd drivers take up to
 // a second for a simple 'busy' check..
 // (on those Update can be disabled)
-consvar_t cdUpdate  = {"cd_update","1",CV_SAVE, NULL, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cdUpdate  = CVAR_INIT ("cd_update","1",CV_SAVE, NULL, NULL);
 
 #if (__GNUC__ > 6)
 #pragma GCC diagnostic push

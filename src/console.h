@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -16,6 +16,9 @@
 
 void CON_Init(void);
 
+void CON_StartRefresh(void);
+void CON_StopRefresh(void);
+
 boolean CON_Responder(event_t *ev);
 
 #ifdef HAVE_THREADS
@@ -25,7 +28,11 @@ extern I_mutex con_mutex;
 // set true when screen size has changed, to adapt console
 extern boolean con_recalc;
 
+// console being displayed at game startup
 extern boolean con_startup;
+
+// needs explicit screen refresh until we are in the main game loop
+extern boolean con_refresh;
 
 // top clip value for view render: do not draw part of view hidden by console
 extern INT32 con_clipviewtop;

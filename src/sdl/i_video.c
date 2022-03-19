@@ -4,7 +4,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2020 by Sonic Team Junior.
+// Copyright (C) 2014-2022 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -42,7 +42,7 @@
 
 #ifdef HAVE_IMAGE
 #include "SDL_image.h"
-#elif defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON) // Windows doesn't need this, as SDL will do it for us.
+#elif defined (__unix__) || (!defined(__APPLE__) && defined (UNIXCOMMON)) // Windows & Mac don't need this, as SDL will do it for us.
 #define LOAD_XPM //I want XPM!
 #include "IMG_xpm.c" //Alam: I don't want to add SDL_Image.dll/so
 #define HAVE_IMAGE //I have SDL_Image, sortof
@@ -73,6 +73,8 @@
 #include "../console.h"
 #include "../command.h"
 #include "../r_main.h"
+#include "../lua_script.h"
+#include "../lua_libs.h"
 #include "../lua_hook.h"
 #include "sdlmain.h"
 #ifdef HWRENDER
@@ -95,17 +97,16 @@ static INT32 numVidModes = -1;
 static char vidModeName[33][32]; // allow 33 different modes
 
 rendermode_t rendermode = render_soft;
-static rendermode_t chosenrendermode = render_soft; // set by command line arguments
+rendermode_t chosenrendermode = render_none; // set by command line arguments
 
 boolean highcolor = false;
 
 // synchronize page flipping with screen refresh
-consvar_t cv_vidwait = {"vid_wait", "On", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-static consvar_t cv_stretch = {"stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
-static consvar_t cv_alwaysgrabmouse = {"alwaysgrabmouse", "Off", CV_SAVE, CV_OnOff, NULL, 0, NULL, NULL, 0, 0, NULL};
+consvar_t cv_vidwait = CVAR_INIT ("vid_wait", "On", CV_SAVE, CV_OnOff, NULL);
+static consvar_t cv_stretch = CVAR_INIT ("stretch", "Off", CV_SAVE|CV_NOSHOWHELP, CV_OnOff, NULL);
+static consvar_t cv_alwaysgrabmouse = CVAR_INIT ("alwaysgrabmouse", "Off", CV_SAVE, CV_OnOff, NULL);
 
 UINT8 graphics_started = 0; // Is used in console.c and screen.c
-INT32 vid_opengl_state = 0;
 
 // To disable fullscreen at startup; is set in VID_PrepareModeList
 boolean allow_fullscreen = false;
@@ -373,6 +374,8 @@ static boolean IgnoreMouse(void)
 	if (gamestate != GS_LEVEL && gamestate != GS_INTERMISSION &&
 			gamestate != GS_CONTINUING && gamestate != GS_CUTSCENE)
 		return true;
+	if (!mousegrabbedbylua)
+		return true;
 	return false;
 }
 
@@ -404,6 +407,14 @@ void I_UpdateMouseGrab(void)
 	&& SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window
 	&& USE_MOUSEINPUT && !IgnoreMouse())
 		SDLdoGrabMouse();
+}
+
+void I_SetMouseGrab(boolean grab)
+{
+	if (grab)
+		SDLdoGrabMouse();
+	else
+		SDLdoUngrabMouse();
 }
 
 static void VID_Command_NumModes_f (void)
@@ -651,8 +662,9 @@ static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 	{
 		return;
 	}
-	event.data1 = Impl_SDL_Scancode_To_Keycode(evt.keysym.scancode);
-	if (event.data1) D_PostEvent(&event);
+	event.key = Impl_SDL_Scancode_To_Keycode(evt.keysym.scancode);
+	event.repeated = (evt.repeat != 0);
+	if (event.key) D_PostEvent(&event);
 }
 
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
@@ -674,8 +686,8 @@ static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
 		{
 			if (SDL_GetMouseFocus() == window && SDL_GetKeyboardFocus() == window)
 			{
-				mousemovex +=  evt.xrel;
-				mousemovey += -evt.yrel;
+				mousemovex += evt.xrel;
+				mousemovey += evt.yrel;
 				SDL_SetWindowGrab(window, SDL_TRUE);
 			}
 			firstmove = false;
@@ -730,15 +742,15 @@ static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
 		}
 		else return;
 		if (evt.button == SDL_BUTTON_MIDDLE)
-			event.data1 = KEY_MOUSE1+2;
+			event.key = KEY_MOUSE1+2;
 		else if (evt.button == SDL_BUTTON_RIGHT)
-			event.data1 = KEY_MOUSE1+1;
+			event.key = KEY_MOUSE1+1;
 		else if (evt.button == SDL_BUTTON_LEFT)
-			event.data1 = KEY_MOUSE1;
+			event.key = KEY_MOUSE1;
 		else if (evt.button == SDL_BUTTON_X1)
-			event.data1 = KEY_MOUSE1+3;
+			event.key = KEY_MOUSE1+3;
 		else if (evt.button == SDL_BUTTON_X2)
-			event.data1 = KEY_MOUSE1+4;
+			event.key = KEY_MOUSE1+4;
 		if (event.type == ev_keyup || event.type == ev_keydown)
 		{
 			D_PostEvent(&event);
@@ -754,17 +766,17 @@ static void Impl_HandleMouseWheelEvent(SDL_MouseWheelEvent evt)
 
 	if (evt.y > 0)
 	{
-		event.data1 = KEY_MOUSEWHEELUP;
+		event.key = KEY_MOUSEWHEELUP;
 		event.type = ev_keydown;
 	}
 	if (evt.y < 0)
 	{
-		event.data1 = KEY_MOUSEWHEELDOWN;
+		event.key = KEY_MOUSEWHEELDOWN;
 		event.type = ev_keydown;
 	}
 	if (evt.y == 0)
 	{
-		event.data1 = 0;
+		event.key = 0;
 		event.type = ev_keyup;
 	}
 	if (event.type == ev_keyup || event.type == ev_keydown)
@@ -783,7 +795,7 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	joyid[1] = SDL_JoystickInstanceID(JoyInfo2.dev);
 
 	evt.axis++;
-	event.data1 = event.data2 = event.data3 = INT32_MAX;
+	event.key = event.x = event.y = INT32_MAX;
 
 	if (evt.which == joyid[0])
 	{
@@ -800,14 +812,14 @@ static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
 	//vaule
 	if (evt.axis%2)
 	{
-		event.data1 = evt.axis / 2;
-		event.data2 = SDLJoyAxis(evt.value, event.type);
+		event.key = evt.axis / 2;
+		event.x = SDLJoyAxis(evt.value, event.type);
 	}
 	else
 	{
 		evt.axis--;
-		event.data1 = evt.axis / 2;
-		event.data3 = SDLJoyAxis(evt.value, event.type);
+		event.key = evt.axis / 2;
+		event.y = SDLJoyAxis(evt.value, event.type);
 	}
 	D_PostEvent(&event);
 }
@@ -827,11 +839,11 @@ static void Impl_HandleJoystickHatEvent(SDL_JoyHatEvent evt)
 
 	if (evt.which == joyid[0])
 	{
-		event.data1 = KEY_HAT1 + (evt.hat*4);
+		event.key = KEY_HAT1 + (evt.hat*4);
 	}
 	else if (evt.which == joyid[1])
 	{
-		event.data1 = KEY_2HAT1 + (evt.hat*4);
+		event.key = KEY_2HAT1 + (evt.hat*4);
 	}
 	else return;
 
@@ -850,11 +862,11 @@ static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 
 	if (evt.which == joyid[0])
 	{
-		event.data1 = KEY_JOY1;
+		event.key = KEY_JOY1;
 	}
 	else if (evt.which == joyid[1])
 	{
-		event.data1 = KEY_2JOY1;
+		event.key = KEY_2JOY1;
 	}
 	else return;
 	if (type == SDL_JOYBUTTONUP)
@@ -868,7 +880,7 @@ static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
 	else return;
 	if (evt.button < JOYBUTTONS)
 	{
-		event.data1 += evt.button;
+		event.key += evt.button;
 	}
 	else return;
 
@@ -1058,8 +1070,7 @@ void I_GetEvent(void)
 					M_SetupJoystickMenu(0);
 			 	break;
 			case SDL_QUIT:
-				if (Playing())
-					LUAh_GameQuit();
+				LUA_HookBool(true, HOOK(GameQuit));
 				I_Quit();
 				break;
 		}
@@ -1073,9 +1084,9 @@ void I_GetEvent(void)
 		SDL_GetWindowSize(window, &wwidth, &wheight);
 		//SDL_memset(&event, 0, sizeof(event_t));
 		event.type = ev_mouse;
-		event.data1 = 0;
-		event.data2 = (INT32)lround(mousemovex * ((float)wwidth / (float)realwidth));
-		event.data3 = (INT32)lround(mousemovey * ((float)wheight / (float)realheight));
+		event.key = 0;
+		event.x = (INT32)lround(mousemovex * ((float)wwidth / (float)realwidth));
+		event.y = (INT32)lround(mousemovey * ((float)wheight / (float)realheight));
 		D_PostEvent(&event);
 	}
 
@@ -1443,7 +1454,8 @@ static SDL_bool Impl_CreateContext(void)
 {
 	// Renderer-specific stuff
 #ifdef HWRENDER
-	if ((rendermode == render_opengl) && (vid_opengl_state != -1))
+	if ((rendermode == render_opengl)
+	&& (vid.glstate != VID_GL_LIBRARY_ERROR))
 	{
 		if (!sdlglcontext)
 			sdlglcontext = SDL_GL_CreateContext(window);
@@ -1480,7 +1492,7 @@ void VID_CheckGLLoaded(rendermode_t oldrender)
 {
 	(void)oldrender;
 #ifdef HWRENDER
-	if (vid_opengl_state == -1) // Well, it didn't work the first time anyway.
+	if (vid.glstate == VID_GL_LIBRARY_ERROR) // Well, it didn't work the first time anyway.
 	{
 		CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
 		rendermode = oldrender;
@@ -1495,14 +1507,16 @@ void VID_CheckGLLoaded(rendermode_t oldrender)
 #endif
 }
 
-void VID_CheckRenderer(void)
+boolean VID_CheckRenderer(void)
 {
 	boolean rendererchanged = false;
 	boolean contextcreated = false;
+#ifdef HWRENDER
 	rendermode_t oldrenderer = rendermode;
+#endif
 
 	if (dedicated)
-		return;
+		return false;
 
 	if (setrenderneeded)
 	{
@@ -1516,11 +1530,12 @@ void VID_CheckRenderer(void)
 
 			// Initialise OpenGL before calling SDLSetMode!!!
 			// This is because SDLSetMode calls OglSdlSurface.
-			if (vid_opengl_state == 0)
+			if (vid.glstate == VID_GL_LIBRARY_NOTLOADED)
 			{
 				VID_StartupOpenGL();
+
 				// Loaded successfully!
-				if (vid_opengl_state == 1)
+				if (vid.glstate == VID_GL_LIBRARY_LOADED)
 				{
 					// Destroy the current window, if it exists.
 					if (window)
@@ -1543,7 +1558,7 @@ void VID_CheckRenderer(void)
 					contextcreated = true;
 				}
 			}
-			else if (vid_opengl_state == -1)
+			else if (vid.glstate == VID_GL_LIBRARY_ERROR)
 				rendererchanged = false;
 		}
 #endif
@@ -1554,7 +1569,7 @@ void VID_CheckRenderer(void)
 		setrenderneeded = 0;
 	}
 
-	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, (rendererchanged ? SDL_FALSE : SDL_TRUE));
+	SDLSetMode(vid.width, vid.height, USE_FULLSCREEN, (setmodeneeded ? SDL_TRUE : SDL_FALSE));
 	Impl_VideoSetupBuffer();
 
 	if (rendermode == render_soft)
@@ -1565,27 +1580,17 @@ void VID_CheckRenderer(void)
 			bufSurface = NULL;
 		}
 
-		if (rendererchanged)
-		{
-#ifdef HWRENDER
-			if (vid_opengl_state == 1) // Only if OpenGL ever loaded!
-				HWR_FreeTextureCache();
-#endif
-			SCR_SetDrawFuncs();
-		}
+		SCR_SetDrawFuncs();
 	}
 #ifdef HWRENDER
-	else if (rendermode == render_opengl)
+	else if (rendermode == render_opengl && rendererchanged)
 	{
-		if (rendererchanged)
-		{
-			R_InitHardwareMode();
-			V_SetPalette(0);
-		}
+		HWR_Switch();
+		V_SetPalette(0);
 	}
-#else
-	(void)oldrenderer;
 #endif
+
+	return rendererchanged;
 }
 
 INT32 VID_SetMode(INT32 modeNum)
@@ -1626,7 +1631,7 @@ static SDL_bool Impl_CreateWindow(SDL_bool fullscreen)
 		flags |= SDL_WINDOW_BORDERLESS;
 
 #ifdef HWRENDER
-	if (vid_opengl_state == 1)
+	if (vid.glstate == VID_GL_LIBRARY_LOADED)
 		flags |= SDL_WINDOW_OPENGL;
 #endif
 
@@ -1660,7 +1665,7 @@ static void Impl_SetWindowName(const char *title)
 static void Impl_SetWindowIcon(void)
 {
 	if (window && icoSurface)
-		SDL_SetWindowIcon(window, icoSurface);	
+		SDL_SetWindowIcon(window, icoSurface);
 }
 
 static void Impl_VideoSetupSDLBuffer(void)
@@ -1747,12 +1752,44 @@ void I_StartupGraphics(void)
 			framebuffer = SDL_TRUE;
 	}
 
-#ifdef HWRENDER
-	if (M_CheckParm("-opengl"))
-		chosenrendermode = rendermode = render_opengl;
+	// Renderer choices
+	// Takes priority over the config.
+	if (M_CheckParm("-renderer"))
+	{
+		INT32 i = 0;
+		CV_PossibleValue_t *renderer_list = cv_renderer_t;
+		const char *modeparm = M_GetNextParm();
+		while (renderer_list[i].strvalue)
+		{
+			if (!stricmp(modeparm, renderer_list[i].strvalue))
+			{
+				chosenrendermode = renderer_list[i].value;
+				break;
+			}
+			i++;
+		}
+	}
+
+	// Choose Software renderer
 	else if (M_CheckParm("-software"))
+		chosenrendermode = render_soft;
+
+#ifdef HWRENDER
+	// Choose OpenGL renderer
+	else if (M_CheckParm("-opengl"))
+		chosenrendermode = render_opengl;
+
+	// Don't startup OpenGL
+	if (M_CheckParm("-nogl"))
+	{
+		vid.glstate = VID_GL_LIBRARY_ERROR;
+		if (chosenrendermode == render_opengl)
+			chosenrendermode = render_none;
+	}
 #endif
-		chosenrendermode = rendermode = render_soft;
+
+	if (chosenrendermode != render_none)
+		rendermode = chosenrendermode;
 
 	usesdl2soft = M_CheckParm("-softblit");
 	borderlesswindow = M_CheckParm("-borderless");
@@ -1761,16 +1798,14 @@ void I_StartupGraphics(void)
 	VID_Command_ModeList_f();
 
 #ifdef HWRENDER
-	if (M_CheckParm("-nogl"))
-		vid_opengl_state = -1; // Don't startup OpenGL
-	else if (chosenrendermode == render_opengl)
+	if (rendermode == render_opengl)
 		VID_StartupOpenGL();
 #endif
 
 	// Window icon
 #ifdef HAVE_IMAGE
 	icoSurface = IMG_ReadXPMFromArray(SDL_icon_xpm);
-#endif	
+#endif
 
 	// Fury: we do window initialization after GL setup to allow
 	// SDL_GL_LoadLibrary to work well on Windows
@@ -1836,6 +1871,7 @@ void VID_StartupOpenGL(void)
 		HWD.pfnClearBuffer      = hwSym("ClearBuffer",NULL);
 		HWD.pfnSetTexture       = hwSym("SetTexture",NULL);
 		HWD.pfnUpdateTexture    = hwSym("UpdateTexture",NULL);
+		HWD.pfnDeleteTexture    = hwSym("DeleteTexture",NULL);
 		HWD.pfnReadRect         = hwSym("ReadRect",NULL);
 		HWD.pfnGClipRect        = hwSym("GClipRect",NULL);
 		HWD.pfnClearMipMapCache = hwSym("ClearMipMapCache",NULL);
@@ -1855,18 +1891,17 @@ void VID_StartupOpenGL(void)
 		HWD.pfnMakeScreenFinalTexture=hwSym("MakeScreenFinalTexture",NULL);
 		HWD.pfnDrawScreenFinalTexture=hwSym("DrawScreenFinalTexture",NULL);
 
-		HWD.pfnLoadShaders      = hwSym("LoadShaders",NULL);
-		HWD.pfnKillShaders      = hwSym("KillShaders",NULL);
+		HWD.pfnCompileShaders   = hwSym("CompileShaders",NULL);
+		HWD.pfnCleanShaders     = hwSym("CleanShaders",NULL);
 		HWD.pfnSetShader        = hwSym("SetShader",NULL);
 		HWD.pfnUnSetShader      = hwSym("UnSetShader",NULL);
 
 		HWD.pfnSetShaderInfo    = hwSym("SetShaderInfo",NULL);
 		HWD.pfnLoadCustomShader = hwSym("LoadCustomShader",NULL);
-		HWD.pfnInitCustomShaders= hwSym("InitCustomShaders",NULL);
 
-		vid_opengl_state = HWD.pfnInit() ? 1 : -1; // let load the OpenGL library
+		vid.glstate = HWD.pfnInit() ? VID_GL_LIBRARY_LOADED : VID_GL_LIBRARY_ERROR; // let load the OpenGL library
 
-		if (vid_opengl_state == -1)
+		if (vid.glstate == VID_GL_LIBRARY_ERROR)
 		{
 			rendermode = render_soft;
 			setrenderneeded = 0;
@@ -1916,3 +1951,8 @@ void I_ShutdownGraphics(void)
 	framebuffer = SDL_FALSE;
 }
 #endif
+
+void I_GetCursorPosition(INT32 *x, INT32 *y)
+{
+	SDL_GetMouseState(x, y);
+}

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -23,6 +23,7 @@
 // Some global defines, that configure the game.
 #include "doomdef.h"
 
+#include "taglist.h"
 #include "m_fixed.h" // See the mapthing_t scale.
 
 //
@@ -208,11 +209,10 @@ typedef struct
 	UINT16 options;
 	INT16 z;
 	UINT8 extrainfo;
+	taglist_t tags;
 	fixed_t scale;
-	INT16 tag;
 	INT32 args[NUMMAPTHINGARGS];
 	char *stringargs[NUMMAPTHINGSTRINGARGS];
-
 	struct mobj_s *mobj;
 } mapthing_t;
 

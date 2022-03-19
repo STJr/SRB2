@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2004      by Stephen McGranahan
-// Copyright (C) 2015-2020 by Sonic Team Junior.
+// Copyright (C) 2015-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -90,6 +90,36 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 	}
 }
 
+/// Setup slope via constants.
+static void ReconfigureViaConstants (pslope_t *slope, const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d)
+{
+	fixed_t m;
+	vector3_t *normal = &slope->normal;
+
+	// Set origin.
+	FV3_Load(&slope->o, 0, 0, c ? -FixedDiv(d, c) : 0);
+
+	// Get slope's normal.
+	FV3_Load(normal, a, b, c);
+	FV3_Normalize(normal);
+
+	// Invert normal if it's facing down.
+	if (normal->z < 0)
+		FV3_Negate(normal);
+
+	// Get direction vector
+	m = FixedHypot(normal->x, normal->y);
+	slope->d.x = -FixedDiv(normal->x, m);
+	slope->d.y = -FixedDiv(normal->y, m);
+
+	// Z delta
+	slope->zdelta = FixedDiv(m, normal->z);
+
+	// Get angles
+	slope->xydirection = R_PointToAngle2(0, 0, slope->d.x, slope->d.y)+ANGLE_180;
+	slope->zangle = InvAngle(R_PointToAngle2(0, 0, FRACUNIT, slope->zdelta));
+}
+
 /// Recalculate dynamic slopes.
 void T_DynamicSlopeLine (dynplanethink_t* th)
 {
@@ -139,7 +169,7 @@ void T_DynamicSlopeVert (dynplanethink_t* th)
 	INT32 l;
 
 	for (i = 0; i < 3; i++) {
-		l = P_FindSpecialLineFromTag(799, th->tags[i], -1);
+		l = Tag_FindLineSpecial(799, th->tags[i]);
 		if (l != -1) {
 			th->vex[i].z = lines[l].frontsector->floorheight;
 		}
@@ -405,9 +435,6 @@ static void line_SpawnViaLine(const int linenum, const boolean spawnthinker)
 				P_AddDynSlopeThinker(cslope, DP_BACKCEIL, line, extent, NULL, NULL);
 		}
 	}
-
-	if(!line->tag)
-		return;
 }
 
 /// Creates a new slope from three mapthings with the specified IDs
@@ -426,11 +453,11 @@ static pslope_t *MakeViaMapthings(INT16 tag1, INT16 tag2, INT16 tag3, UINT8 flag
 		if (mt->type != 750) // Haha, I'm hijacking the old Chaos Spawn thingtype for something!
 			continue;
 
-		if (!vertices[0] && mt->tag == tag1)
+		if (!vertices[0] && Tag_Find(&mt->tags, tag1))
 			vertices[0] = mt;
-		else if (!vertices[1] && mt->tag == tag2)
+		else if (!vertices[1] && Tag_Find(&mt->tags, tag2))
 			vertices[1] = mt;
-		else if (!vertices[2] && mt->tag == tag3)
+		else if (!vertices[2] && Tag_Find(&mt->tags, tag3))
 			vertices[2] = mt;
 	}
 
@@ -552,8 +579,7 @@ static boolean P_SetSlopeFromTag(sector_t *sec, INT32 tag, boolean ceiling)
 
 	if (!tag || *secslope)
 		return false;
-
-	for (i = -1; (i = P_FindSectorFromTag(tag, i)) >= 0;)
+	TAG_ITER_SECTORS(tag, i)
 	{
 		pslope_t *srcslope = ceiling ? sectors[i].c_slope : sectors[i].f_slope;
 		if (srcslope)
@@ -635,12 +661,19 @@ pslope_t *P_SlopeById(UINT16 id)
 	return ret;
 }
 
+/// Creates a new slope from equation constants.
+pslope_t *MakeViaEquationConstants(const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d)
+{
+	pslope_t* ret = Slope_Add(0);
+
+	ReconfigureViaConstants(ret, a, b, c, d);
+
+	return ret;
+}
+
 /// Initializes and reads the slopes from the map data.
 void P_SpawnSlopes(const boolean fromsave) {
 	size_t i;
-
-	slopelist = NULL;
-	slopecount = 0;
 
 	/// Generates vertex slopes.
 	SpawnVertexSlopes();
@@ -668,11 +701,21 @@ void P_SpawnSlopes(const boolean fromsave) {
 	for (i = 0; i < numlines; i++)
 		switch (lines[i].special)
 		{
+			case 700:
+				if (lines[i].flags & ML_TFERLINE) P_CopySectorSlope(&lines[i]);
+				break;
 			case 720:
 				P_CopySectorSlope(&lines[i]);
 			default:
 				break;
 		}
+}
+
+/// Initializes slopes.
+void P_InitSlopes(void)
+{
+	slopelist = NULL;
+	slopecount = 0;
 }
 
 // ============================================================================
@@ -777,13 +820,13 @@ void P_SlopeLaunch(mobj_t *mo)
 		mo->momx = slopemom.x;
 		mo->momy = slopemom.y;
 		mo->momz = slopemom.z/2;
+
+	    if (mo->player)
+		    mo->player->powers[pw_justlaunched] = 1;
 	}
 
 	//CONS_Printf("Launched off of slope.\n");
 	mo->standingslope = NULL;
-
-	if (mo->player)
-		mo->player->powers[pw_justlaunched] = 1;
 }
 
 //
