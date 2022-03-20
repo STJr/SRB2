@@ -693,90 +693,10 @@ static menuitem_t SR_PandorasBox[] =
 };
 
 // Sky Room Custom Unlocks
-static menuitem_t SR_MainMenu[] =
+static menuitem_t SR_MainMenu[MAXUNLOCKABLES+1] =
 {
 	{IT_STRING|IT_SUBMENU,NULL, "Extras Checklist", &SR_UnlockChecklistDef, 0},
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom1
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom2
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom3
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom4
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom5
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom6
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom7
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom8
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom9
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom10
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom11
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom12
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom13
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom14
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom15
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom16
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom17
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom18
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom19
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom20
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom21
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom22
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom23
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom24
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom25
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom26
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom27
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom28
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom29
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom30
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom31
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom32
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom33
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom34
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom35
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom36
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom37
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom38
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom39
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom40
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom41
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom42
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom43
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom44
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom45
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom46
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom47
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom48
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom49
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom50
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom51
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom52
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom53
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom54
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom55
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom56
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom57
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom58
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom59
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom60
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom61
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom62
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom63
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom64
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom65
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom66
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom67
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom68
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom69
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom70
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom71
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom72
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom73
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom74
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom75
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom76
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom77
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom78
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom79
-	{IT_DISABLED,         NULL, "",   NULL,                 0}, // Custom80
-
+	// The remaining (MAXUNLOCKABLES) items are now initialized in M_SecretsMenu
 };
 
 static menuitem_t SR_LevelSelectMenu[] =
@@ -8177,14 +8097,15 @@ static void M_SecretsMenu(INT32 choice)
 
 	(void)choice;
 
-	// Clear all before starting
-	for (i = 1; i < MAXUNLOCKABLES+1; ++i)
-		SR_MainMenu[i].status = IT_DISABLED;
+	// Initialize array with placeholder entries
+	menuitem_t placeholder = {IT_DISABLED, NULL, "", NULL, 0};
+	for (i = 1; i <= MAXUNLOCKABLES; ++i)
+		SR_MainMenu[i] = placeholder;
 
 	memset(skyRoomMenuTranslations, 0, sizeof(skyRoomMenuTranslations));
 	memset(done, 0, sizeof(done));
 
-	for (i = 1; i < MAXUNLOCKABLES+1; ++i)
+	for (i = 1; i <= MAXUNLOCKABLES; ++i)
 	{
 		curheight = UINT16_MAX;
 		ul = -1;
