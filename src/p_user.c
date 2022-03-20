@@ -6818,20 +6818,19 @@ static void P_DoNiGHTSCapsule(player_t *player)
 
 				if (player->capsule->health > sphereresult && player->spheres > 0)
 				{
+					// If spherecount isn't a multiple of deductquantity, the final deduction might steal too many spheres from the player
+					// E.g. with 80 capsule health, deductquantity is 3, 3*26 is 78, 78+3=81, and then it'll have stolen more than the 80 that it was meant to!
+					// So let's adjust deductquantity accordingly for the final deduction
+					deductquantity = min(deductquantity, player->capsule->health - sphereresult);
+
 					player->spheres -= deductquantity;
 					player->capsule->health -= deductquantity;
 
-					// If spherecount isn't a multiple of deductquantity, the final deduction might steal too many spheres from the player
-					// E.g. with 80 capsule health, deductquantity is 3, 3*26 is 78, 78+3=81, and then it'll have stolen more than the 80 that it was meant to!
-					// So let's check for that and unsteal the extra ones ~Zwip-Zwap Zapony, 2022-20-03
-					if (player->capsule->health < sphereresult)
-					{
-						player->spheres += sphereresult - player->capsule->health; // Give the player the "stolen" spheres back
-						player->capsule->health = sphereresult; // Un-deduct the capsule health by the "stolen" spheres. Often, this just sets it to 0
-					}
-
-					if (player->spheres < 0) // This probably can't happen, since we give the "stolen" spheres back, but better safe than sorry
+					if (player->spheres < 0) // This can't happen... without Lua, setrings, et cetera
 						player->spheres = 0;
+
+					//if (player->capsule->health < sphereresult) // This can't happen
+						//player->capsule->health = sphereresult;
 				}
 			}
 
