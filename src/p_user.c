@@ -6695,7 +6695,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 //
 static void P_DoNiGHTSCapsule(player_t *player)
 {
-	INT32 i, spherecount, totalduration, popduration, deductinterval, deductquantity, sphereresult, firstpoptic, startingspheres;
+	INT32 i, spherecount, totalduration, popduration, deductinterval, deductquantity, sphereresult, firstpoptic;
 	INT32 tictimer = ++player->capsule->extravalue2;
 
 	if (abs(player->mo->x-player->capsule->x) <= 3*FRACUNIT)
@@ -6820,13 +6820,19 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				{
 					player->spheres -= deductquantity;
 					player->capsule->health -= deductquantity;
+
+					// If spherecount isn't a multiple of deductquantity, the final deduction might steal too many spheres from the player
+					// E.g. with 80 capsule health, deductquantity is 3, 3*26 is 78, 78+3=81, and then it'll have stolen more than the 80 that it was meant to!
+					// So let's check for that and unsteal the extra ones ~Zwip-Zwap Zapony, 2022-20-03
+					if (player->capsule->health < sphereresult)
+					{
+						player->spheres += sphereresult - player->capsule->health; // Give the player the "stolen" spheres back
+						player->capsule->health = sphereresult; // Un-deduct the capsule health by the "stolen" spheres. Often, this just sets it to 0
+					}
+
+					if (player->spheres < 0) // This probably can't happen, since we give the "stolen" spheres back, but better safe than sorry
+						player->spheres = 0;
 				}
-
-				if (player->spheres < 0)
-					player->spheres = 0;
-
-				if (player->capsule->health < sphereresult)
-					player->capsule->health = sphereresult;
 			}
 
 			// Spawn a 'pop' for every 2 tics
@@ -6847,9 +6853,8 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				}
 				else
 				{
-					startingspheres = player->spheres - player->capsule->health;
+					player->spheres -= player->capsule->health;
 					player->capsule->health = 0;
-					player->spheres = startingspheres;
 				}
 			}
 
