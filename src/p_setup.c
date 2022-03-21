@@ -4736,7 +4736,7 @@ static boolean P_LoadAddon(UINT16 wadnum, UINT16 numlumps)
 	// Reload it all anyway, just in case they
 	// added some textures but didn't insert a
 	// TEXTURES/etc. list.
-	R_LoadTextures(); // numtexture changes
+	R_LoadTexturesPwad(wadnum); // numtexture changes
 
 	// Reload ANIMDEFS
 	P_InitPicAnims();
