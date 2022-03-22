@@ -660,7 +660,7 @@ static void COM_ExecuteString(char *ptext)
 	// check cvars
 	// Hurdler: added at Ebola's request ;)
 	// (don't flood the console in software mode with bad gl_xxx command)
-	if (!CV_Command() && con_destlines)
+	if (!CV_Command() && (con_destlines || dedicated))
 		CONS_Printf(M_GetText("Unknown command '%s'\n"), COM_Argv(0));
 }
 
