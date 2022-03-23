@@ -162,17 +162,17 @@
 	"#define STARTMAP_FUDGE 1.05\n" \
 	"#define SCALE_FUDGE 2.2\n"
 
-#define GLSL_SOFTWARE_FRAGMENT_SHADER_FLOORS \
+#define GLSL_FLOOR_FRAGMENT_SHADER \
 	GLSL_FLOOR_FUDGES \
 	GLSL_SOFTWARE_FRAGMENT_SHADER
 
-#define GLSL_SOFTWARE_FRAGMENT_SHADER_WALLS \
+#define GLSL_WALL_FRAGMENT_SHADER \
 	GLSL_WALL_FUDGES \
 	GLSL_SOFTWARE_FRAGMENT_SHADER
 
 // same as above but multiplies results with the lighting value from the
 // accompanying vertex shader (stored in gl_Color) if model lighting is enabled
-#define GLSL_SOFTWARE_MODEL_FRAGMENT_SHADER \
+#define GLSL_MODEL_FRAGMENT_SHADER \
 	GLSL_WALL_FUDGES \
 	"#ifdef SRB2_PALETTE_RENDERING\n" \
 	"uniform sampler2D tex;\n" \
@@ -303,7 +303,7 @@
 	"}\0"
 
 // Shader for the palette rendering postprocess step
-#define GLSL_PALETTE_POSTPROCESS_SHADER \
+#define GLSL_PALETTE_POSTPROCESS_FRAGMENT_SHADER \
 	"uniform sampler2D tex;\n" \
 	"uniform sampler3D palette_lookup_tex;\n" \
 	"uniform sampler1D palette_tex;\n" \
@@ -316,7 +316,7 @@
 	"}\0"
 
 // Applies a palettized colormap fade to tex
-#define GLSL_UI_COLORMAP_FADE_SHADER \
+#define GLSL_UI_COLORMAP_FADE_FRAGMENT_SHADER \
 	"uniform sampler2D tex;\n" \
 	"uniform float lighting;\n" \
 	"uniform sampler3D palette_lookup_tex;\n" \
@@ -334,7 +334,7 @@
 // in r_data.c:R_CreateFadeColormaps.
 // However this value created some ugliness in fades to white (special stage entry)
 // while palette rendering is enabled, so I raised the value just a bit.
-#define GLSL_UI_TINTED_WIPE_SHADER \
+#define GLSL_UI_TINTED_WIPE_FRAGMENT_SHADER \
 	"uniform sampler2D tex;\n" \
 	"uniform vec4 poly_color;\n" \
 	"const float alpha_factor = 24.875;\n" \
@@ -359,16 +359,16 @@ static struct {
 	const char *fragment;
 } const gl_shadersources[] = {
 	// Floor shader
-	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER_FLOORS},
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_FLOOR_FRAGMENT_SHADER},
 
 	// Wall shader
-	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER_WALLS},
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_WALL_FRAGMENT_SHADER},
 
 	// Sprite shader
-	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SOFTWARE_FRAGMENT_SHADER_WALLS},
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_WALL_FRAGMENT_SHADER},
 
 	// Model shader
-	{GLSL_MODEL_VERTEX_SHADER, GLSL_SOFTWARE_MODEL_FRAGMENT_SHADER},
+	{GLSL_MODEL_VERTEX_SHADER, GLSL_MODEL_FRAGMENT_SHADER},
 
 	// Water shader
 	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_WATER_FRAGMENT_SHADER},
@@ -380,13 +380,13 @@ static struct {
 	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_SKY_FRAGMENT_SHADER},
 
 	// Palette postprocess shader
-	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_PALETTE_POSTPROCESS_SHADER},
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_PALETTE_POSTPROCESS_FRAGMENT_SHADER},
 
 	// UI colormap fade shader
-	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_UI_COLORMAP_FADE_SHADER},
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_UI_COLORMAP_FADE_FRAGMENT_SHADER},
 
 	// UI tinted wipe shader
-	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_UI_TINTED_WIPE_SHADER},
+	{GLSL_DEFAULT_VERTEX_SHADER, GLSL_UI_TINTED_WIPE_FRAGMENT_SHADER},
 
 	{NULL, NULL},
 };
@@ -768,6 +768,8 @@ customshaderxlat_t shaderxlat[] =
 	{"Fog", SHADER_FOG},
 	{"Sky", SHADER_SKY},
 	{"PalettePostprocess", SHADER_PALETTE_POSTPROCESS},
+	{"UIColormapFade", SHADER_UI_COLORMAP_FADE},
+	{"UITintedWipe", SHADER_UI_TINTED_WIPE},
 	{NULL, 0},
 };
 
