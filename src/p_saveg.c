@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -64,12 +64,29 @@ typedef enum
 static inline void P_ArchivePlayer(void)
 {
 	const player_t *player = &players[consoleplayer];
-	INT16 skininfo = player->skin + (botskin<<5);
 	SINT8 pllives = player->lives;
 	if (pllives < startinglivesbalance[numgameovers]) // Bump up to 3 lives if the player
 		pllives = startinglivesbalance[numgameovers]; // has less than that.
 
-	WRITEUINT16(save_p, skininfo);
+#ifdef NEWSKINSAVES
+	// Write a specific value into the old skininfo location.
+	// If we read something other than this, it's an older save file that used skin numbers.
+	WRITEUINT16(save_p, NEWSKINSAVES);
+#endif
+
+	// Write skin names, so that loading skins in different orders
+	// doesn't change who the save file is for!
+	WRITESTRINGN(save_p, skins[player->skin].name, SKINNAMESIZE);
+
+	if (botskin != 0)
+	{
+		WRITESTRINGN(save_p, skins[botskin-1].name, SKINNAMESIZE);
+	}
+	else
+	{
+		WRITESTRINGN(save_p, "\0", SKINNAMESIZE);
+	}
+
 	WRITEUINT8(save_p, numgameovers);
 	WRITESINT8(save_p, pllives);
 	WRITEUINT32(save_p, player->score);
@@ -78,9 +95,27 @@ static inline void P_ArchivePlayer(void)
 
 static inline void P_UnArchivePlayer(void)
 {
-	INT16 skininfo = READUINT16(save_p);
-	savedata.skin = skininfo & ((1<<5) - 1);
-	savedata.botskin = skininfo >> 5;
+#ifdef NEWSKINSAVES
+	INT16 backwardsCompat = READUINT16(save_p);
+
+	if (backwardsCompat != NEWSKINSAVES)
+	{
+		// This is an older save file, which used direct skin numbers.
+		savedata.skin = backwardsCompat & ((1<<5) - 1);
+		savedata.botskin = backwardsCompat >> 5;
+	}
+	else
+#endif
+	{
+		char ourSkinName[SKINNAMESIZE+1];
+		char botSkinName[SKINNAMESIZE+1];
+
+		READSTRINGN(save_p, ourSkinName, SKINNAMESIZE);
+		savedata.skin = R_SkinAvailable(ourSkinName);
+
+		READSTRINGN(save_p, botSkinName, SKINNAMESIZE);
+		savedata.botskin = R_SkinAvailable(botSkinName) + 1;
+	}
 
 	savedata.numgameovers = READUINT8(save_p);
 	savedata.lives = READSINT8(save_p);
@@ -157,6 +192,19 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].homing);
 		WRITEUINT32(save_p, players[i].dashmode);
 		WRITEUINT32(save_p, players[i].skidtime);
+
+		//////////
+		// Bots //
+		//////////
+		WRITEUINT8(save_p, players[i].bot);
+		WRITEUINT8(save_p, players[i].botmem.lastForward);
+		WRITEUINT8(save_p, players[i].botmem.lastBlocked);
+		WRITEUINT8(save_p, players[i].botmem.catchup_tics);
+		WRITEUINT8(save_p, players[i].botmem.thinkstate);
+		WRITEUINT8(save_p, players[i].removing);
+		
+		WRITEUINT8(save_p, players[i].blocked);
+		WRITEUINT16(save_p, players[i].lastbuttons);
 
 		////////////////////////////
 		// Conveyor Belt Movement //
@@ -372,6 +420,20 @@ static void P_NetUnArchivePlayers(void)
 		players[i].dashmode = READUINT32(save_p); // counter for dashmode ability
 		players[i].skidtime = READUINT32(save_p); // Skid timer
 
+		//////////
+		// Bots //
+		//////////
+		players[i].bot = READUINT8(save_p);
+		
+		players[i].botmem.lastForward = READUINT8(save_p);
+		players[i].botmem.lastBlocked = READUINT8(save_p);
+		players[i].botmem.catchup_tics = READUINT8(save_p);
+		players[i].botmem.thinkstate = READUINT8(save_p);
+		players[i].removing = READUINT8(save_p);
+
+		players[i].blocked = READUINT8(save_p);
+		players[i].lastbuttons = READUINT16(save_p);
+		
 		////////////////////////////
 		// Conveyor Belt Movement //
 		////////////////////////////
@@ -1541,7 +1603,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 	diff2 = 0;
 
 	// not the default but the most probable
-	if (mobj->momx != 0 || mobj->momy != 0 || mobj->momz != 0)
+	if (mobj->momx != 0 || mobj->momy != 0 || mobj->momz != 0 || mobj->pmomz !=0)
 		diff |= MD_MOM;
 	if (mobj->radius != mobj->info->radius)
 		diff |= MD_RADIUS;
@@ -1716,6 +1778,7 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, mobj->momx);
 		WRITEFIXED(save_p, mobj->momy);
 		WRITEFIXED(save_p, mobj->momz);
+		WRITEFIXED(save_p, mobj->pmomz);
 	}
 	if (diff & MD_RADIUS)
 		WRITEFIXED(save_p, mobj->radius);
@@ -2714,6 +2777,7 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->momx = READFIXED(save_p);
 		mobj->momy = READFIXED(save_p);
 		mobj->momz = READFIXED(save_p);
+		mobj->pmomz = READFIXED(save_p);
 	} // otherwise they're zero, and the memset took care of it
 
 	if (diff & MD_RADIUS)

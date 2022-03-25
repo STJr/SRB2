@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -184,6 +184,7 @@ typedef struct ffloor_s
 
 	INT32 lastlight;
 	INT32 alpha;
+	UINT8 blend; // blendmode
 	tic_t norender; // for culling
 
 	// these are saved for netgames, so do not let Lua touch these!
@@ -397,6 +398,7 @@ typedef struct line_s
 	// Visual appearance: sidedefs.
 	UINT16 sidenum[2]; // sidenum[1] will be 0xffff if one-sided
 	fixed_t alpha; // translucency
+	UINT8 blendmode; // blendmode
 	INT32 executordelay;
 
 	fixed_t bbox[4]; // bounding box for the extent of the linedef
@@ -713,6 +715,9 @@ typedef struct
 #pragma pack()
 #endif
 
+// Possible alpha types for a patch.
+enum patchalphastyle {AST_COPY, AST_TRANSLUCENT, AST_ADD, AST_SUBTRACT, AST_REVERSESUBTRACT, AST_MODULATE, AST_OVERLAY, AST_FOG};
+
 typedef enum
 {
 	RF_HORIZONTALFLIP   = 0x0001,   // Flip sprite horizontally
@@ -726,17 +731,19 @@ typedef enum
 	RF_NOSPLATBILLBOARD = 0x0040,   // Don't billboard floor sprites (faces forward from the view angle)
 	RF_NOSPLATROLLANGLE = 0x0080,   // Don't rotate floor sprites by the object's rollangle (uses rotated patches instead)
 
-	RF_BLENDMASK        = 0x0F00,   // --Blending modes
-	RF_FULLBRIGHT       = 0x0100,   // Sprite is drawn at full brightness
-	RF_FULLDARK         = 0x0200,   // Sprite is drawn completely dark
-	RF_NOCOLORMAPS      = 0x0400,   // Sprite is not drawn with colormaps
+	RF_BRIGHTMASK       = 0x00000300,   // --Bright modes
+	RF_FULLBRIGHT       = 0x00000100,   // Sprite is drawn at full brightness
+	RF_FULLDARK         = 0x00000200,   // Sprite is drawn completely dark
+	RF_SEMIBRIGHT       = (RF_FULLBRIGHT | RF_FULLDARK), // between sector bright and full bright
 
-	RF_SPRITETYPEMASK   = 0x7000,   // ---Different sprite types
-	RF_PAPERSPRITE      = 0x1000,   // Paper sprite
-	RF_FLOORSPRITE      = 0x2000,   // Floor sprite
+	RF_NOCOLORMAPS      = 0x00000400,   // Sprite is not drawn with colormaps
 
-	RF_SHADOWDRAW       = 0x10000,  // Stretches and skews the sprite like a shadow.
-	RF_SHADOWEFFECTS    = 0x20000,  // Scales and becomes transparent like a shadow.
+	RF_SPRITETYPEMASK   = 0x00003000,   // --Different sprite types
+	RF_PAPERSPRITE      = 0x00001000,   // Paper sprite
+	RF_FLOORSPRITE      = 0x00002000,   // Floor sprite
+
+	RF_SHADOWDRAW       = 0x00004000,  // Stretches and skews the sprite like a shadow.
+	RF_SHADOWEFFECTS    = 0x00008000,  // Scales and becomes transparent like a shadow.
 	RF_DROPSHADOW       = (RF_SHADOWDRAW | RF_SHADOWEFFECTS | RF_FULLDARK),
 } renderflags_t;
 

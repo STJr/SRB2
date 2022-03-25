@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -151,7 +151,7 @@ boolean P_CanPickupItem(player_t *player, boolean weapon)
 	if (!player->mo || player->mo->health <= 0)
 		return false;
 
-	if (player->bot)
+	if (player->bot && player->bot != BOT_MPAI)
 	{
 		if (weapon)
 			return false;
@@ -178,7 +178,7 @@ void P_DoNightsScore(player_t *player)
 		return; // Don't do any fancy shit for failures.
 
 	dummymo = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z+player->mo->height/2, MT_NIGHTSCORE);
-	if (player->bot)
+	if (player->bot && player->bot != BOT_MPAI)
 		player = &players[consoleplayer];
 
 	if (G_IsSpecialStage(gamemap)) // Global link count? Maybe not a good idea...
@@ -365,7 +365,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 	if (special->flags & (MF_ENEMY|MF_BOSS) && special->flags2 & MF2_FRET)
 		return;
 
-	if (LUAh_TouchSpecial(special, toucher) || P_MobjWasRemoved(special))
+	if (LUA_HookTouchSpecial(special, toucher) || P_MobjWasRemoved(special))
 		return;
 
 	// 0 = none, 1 = elemental pierce, 2 = bubble bounce
@@ -630,7 +630,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 // ***************************** //
 		// Special Stage Token
 		case MT_TOKEN:
-			if (player->bot)
+			if (player->bot && player->bot != BOT_MPAI)
 				return;
 
 			P_AddPlayerScore(player, 1000);
@@ -670,7 +670,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 		// Emerald Hunt
 		case MT_EMERHUNT:
-			if (player->bot)
+			if (player->bot && player->bot != BOT_MPAI)
 				return;
 
 			if (hunt1 == special)
@@ -701,7 +701,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		case MT_EMERALD5:
 		case MT_EMERALD6:
 		case MT_EMERALD7:
-			if (player->bot)
+			if (player->bot && player->bot != BOT_MPAI)
 				return;
 
 			if (special->threshold)
@@ -738,12 +738,11 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		// Secret emblem thingy
 		case MT_EMBLEM:
 			{
-				if (demoplayback || player->bot)
+				if (demoplayback || (player->bot && player->bot != BOT_MPAI) || special->health <= 0 || special->health > MAXEMBLEMS)
 					return;
 				emblemlocations[special->health-1].collected = true;
 
 				M_UpdateUnlockablesAndExtraEmblems();
-
 				G_SaveGameData();
 				break;
 			}
@@ -751,7 +750,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		// CTF Flags
 		case MT_REDFLAG:
 		case MT_BLUEFLAG:
-			if (player->bot)
+			if (player->bot && player->bot != BOT_MPAI)
 				return;
 			if (player->powers[pw_flashing] || player->tossdelay)
 				return;
@@ -826,7 +825,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				boolean spec = G_IsSpecialStage(gamemap);
 				boolean cangiveemmy = false;
-				if (player->bot)
+				if (player->bot && player->bot != BOT_MPAI)
 					return;
 				if (player->exiting)
 					return;
@@ -1072,7 +1071,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			return;
 		case MT_EGGCAPSULE:
-			if (player->bot)
+			if (player->bot && player->bot != BOT_MPAI)
 				return;
 
 			// make sure everything is as it should be, THEN take rings from players in special stages
@@ -1164,7 +1163,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			return;
 		case MT_NIGHTSSUPERLOOP:
-			if (player->bot || !(player->powers[pw_carry] == CR_NIGHTSMODE))
+			if ((player->bot && player->bot != BOT_MPAI) || !(player->powers[pw_carry] == CR_NIGHTSMODE))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 				player->powers[pw_nights_superloop] = (UINT16)special->info->speed;
@@ -1186,7 +1185,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			break;
 		case MT_NIGHTSDRILLREFILL:
-			if (player->bot || !(player->powers[pw_carry] == CR_NIGHTSMODE))
+			if ((player->bot && player->bot != BOT_MPAI) || !(player->powers[pw_carry] == CR_NIGHTSMODE))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 				player->drillmeter = special->info->speed;
@@ -1208,7 +1207,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			break;
 		case MT_NIGHTSHELPER:
-			if (player->bot || !(player->powers[pw_carry] == CR_NIGHTSMODE))
+			if ((player->bot && player->bot != BOT_MPAI) || !(player->powers[pw_carry] == CR_NIGHTSMODE))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 			{
@@ -1240,7 +1239,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			break;
 		case MT_NIGHTSEXTRATIME:
-			if (player->bot || !(player->powers[pw_carry] == CR_NIGHTSMODE))
+			if ((player->bot && player->bot != BOT_MPAI) || !(player->powers[pw_carry] == CR_NIGHTSMODE))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 			{
@@ -1272,7 +1271,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			break;
 		case MT_NIGHTSLINKFREEZE:
-			if (player->bot || !(player->powers[pw_carry] == CR_NIGHTSMODE))
+			if ((player->bot && player->bot != BOT_MPAI) || !(player->powers[pw_carry] == CR_NIGHTSMODE))
 				return;
 			if (!G_IsSpecialStage(gamemap))
 			{
@@ -1332,7 +1331,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 					if (playeringame[i] && players[i].powers[pw_carry] == CR_NIGHTSMODE)
 						players[i].drillmeter += TICRATE/2;
 			}
-			else if (player->bot)
+			else if (player->bot && player->bot != BOT_MPAI)
 				players[consoleplayer].drillmeter += TICRATE/2;
 			else
 				player->drillmeter += TICRATE/2;
@@ -1385,7 +1384,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				thinker_t  *th;
 				mobj_t *mo2;
 
-				if (player->bot)
+				if (player->bot && player->bot != BOT_MPAI)
 					return;
 
 				// Initialize my junk
@@ -1423,7 +1422,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 		}
 		case MT_FIREFLOWER:
-			if (player->bot)
+			if (player->bot && player->bot != BOT_MPAI)
 				return;
 
 			S_StartSound(toucher, sfx_mario3);
@@ -1685,7 +1684,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				return; // Only go in the mouth
 
 			// Eaten by player!
-			if ((!player->bot) && (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1))
+			if ((!player->bot || player->bot == BOT_MPAI) && (player->powers[pw_underwater] && player->powers[pw_underwater] <= 12*TICRATE + 1))
 			{
 				player->powers[pw_underwater] = underwatertics + 1;
 				P_RestoreMusic(player);
@@ -1696,7 +1695,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			if (!player->climbing)
 			{
-				if (player->bot && toucher->state-states != S_PLAY_GASP)
+				if (player->bot && player->bot != BOT_MPAI && toucher->state-states != S_PLAY_GASP)
 					S_StartSound(toucher, special->info->deathsound); // Force it to play a sound for bots
 				P_SetPlayerMobjState(toucher, S_PLAY_GASP);
 				P_ResetPlayer(player);
@@ -1704,7 +1703,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 			toucher->momx = toucher->momy = toucher->momz = 0;
 
-			if (player->bot)
+			if (player->bot && player->bot != BOT_MPAI)
 				return;
 			else
 				break;
@@ -1736,7 +1735,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			return;
 
 		case MT_MINECARTSPAWNER:
-			if (!player->bot && special->fuse <= TICRATE && player->powers[pw_carry] != CR_MINECART && !(player->powers[pw_ignorelatch] & (1<<15)))
+			if (!player->bot && player->bot != BOT_MPAI && special->fuse <= TICRATE && player->powers[pw_carry] != CR_MINECART && !(player->powers[pw_ignorelatch] & (1<<15)))
 			{
 				mobj_t *mcart = P_SpawnMobj(special->x, special->y, special->z, MT_MINECART);
 				P_SetTarget(&mcart->target, toucher);
@@ -1789,7 +1788,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			}
 			return;
 		default: // SOC or script pickup
-			if (player->bot)
+			if (player->bot && player->bot != BOT_MPAI)
 				return;
 			P_SetTarget(&special->target, toucher);
 			break;
@@ -1813,7 +1812,7 @@ void P_TouchStarPost(mobj_t *post, player_t *player, boolean snaptopost)
 	mobj_t *toucher = player->mo;
 	mobj_t *checkbase = snaptopost ? post : toucher;
 
-	if (player->bot)
+	if (player->bot && player->bot != BOT_MPAI)
 		return;
 	// In circuit, player must have touched all previous starposts
 	if (circuitmap
@@ -1939,7 +1938,7 @@ static void P_HitDeathMessages(player_t *player, mobj_t *inflictor, mobj_t *sour
 	if (!netgame)
 		return; // Presumably it's obvious what's happening in splitscreen.
 
-	if (LUAh_HurtMsg(player, inflictor, source, damagetype))
+	if (LUA_HookHurtMsg(player, inflictor, source, damagetype))
 		return;
 
 	deadtarget = (player->mo->health <= 0);
@@ -2391,7 +2390,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	mobj_t *mo;
 
 	if (inflictor && (inflictor->type == MT_SHELL || inflictor->type == MT_FIREBALL))
-		P_SetTarget(&target->tracer, inflictor);
+		S_StartScreamSound(target, sfx_mario2);
 
 	if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && target->player && target->player->nightstime > 6)
 		target->player->nightstime = 6; // Just let P_Ticker take care of the rest.
@@ -2413,7 +2412,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 	target->flags2 &= ~(MF2_SKULLFLY|MF2_NIGHTSPULL);
 	target->health = 0; // This makes it easy to check if something's dead elsewhere.
 
-	if (LUAh_MobjDeath(target, inflictor, source, damagetype) || P_MobjWasRemoved(target))
+	if (LUA_HookMobjDeath(target, inflictor, source, damagetype) || P_MobjWasRemoved(target))
 		return;
 
 	// Let EVERYONE know what happened to a player! 01-29-2002 Tails
@@ -2555,7 +2554,7 @@ void P_KillMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, UINT8 damaget
 
 		if ((target->player->lives <= 1) && (netgame || multiplayer) && G_GametypeUsesCoopLives() && (cv_cooplives.value == 0))
 			;
-		else if (!target->player->bot && !target->player->spectator && (target->player->lives != INFLIVES)
+		else if ((!target->player->bot || target->player->bot == BOT_MPAI) && !target->player->spectator && (target->player->lives != INFLIVES)
 		 && G_GametypeUsesLives())
 		{
 			if (!(target->player->pflags & PF_FINISHED))
@@ -3475,7 +3474,7 @@ void P_SpecialStageDamage(player_t *player, mobj_t *inflictor, mobj_t *source)
 	if (inflictor && inflictor->type == MT_LHRT)
 		return;
 
-	if (player->powers[pw_shield] || player->bot)  //If One-Hit Shield
+	if (player->powers[pw_shield] || (player->bot && player->bot != BOT_MPAI))  //If One-Hit Shield
 	{
 		P_RemoveShield(player);
 		S_StartSound(player->mo, sfx_shldls); // Ba-Dum! Shield loss.
@@ -3548,7 +3547,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	// Everything above here can't be forced.
 	if (!metalrecording)
 	{
-		UINT8 shouldForce = LUAh_ShouldDamage(target, inflictor, source, damage, damagetype);
+		UINT8 shouldForce = LUA_HookShouldDamage(target, inflictor, source, damage, damagetype);
 		if (P_MobjWasRemoved(target))
 			return (shouldForce == 1); // mobj was removed
 		if (shouldForce == 1)
@@ -3566,7 +3565,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return false;
 
 		// Make sure that boxes cannot be popped by enemies, red rings, etc.
-		if (target->flags & MF_MONITOR && ((!source || !source->player || source->player->bot)
+		if (target->flags & MF_MONITOR && ((!source || !source->player || (source->player->bot && source->player->bot != BOT_MPAI))
 		|| (inflictor && (inflictor->type == MT_REDRING || (inflictor->type >= MT_THROWNBOUNCE && inflictor->type <= MT_THROWNGRENADE)))))
 			return false;
 	}
@@ -3589,7 +3588,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		if (!force && target->flags2 & MF2_FRET) // Currently flashing from being hit
 			return false;
 
-		if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype) || P_MobjWasRemoved(target))
+		if (LUA_HookMobjDamage(target, inflictor, source, damage, damagetype) || P_MobjWasRemoved(target))
 			return true;
 
 		if (target->health > 1)
@@ -3639,7 +3638,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 				|| (G_GametypeHasTeams() && player->ctfteam == source->player->ctfteam)))
 					return false; // Don't run eachother over in special stages and team games and such
 			}
-			if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
+			if (LUA_HookMobjDamage(target, inflictor, source, damage, damagetype))
 				return true;
 			P_NiGHTSDamage(target, source); // -5s :(
 			return true;
@@ -3651,7 +3650,7 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			return true;
 		}
 
-		if (!force && inflictor && inflictor->flags & MF_FIRE)
+		if (!force && inflictor && inflictor->flags & MF_FIRE && !(damagetype && damagetype != DMG_FIRE))
 		{
 			if (player->powers[pw_shield] & SH_PROTECTFIRE)
 				return false; // Invincible to fire objects
@@ -3693,15 +3692,15 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			if (force
 			|| (inflictor && inflictor->flags & MF_MISSILE && inflictor->flags2 & MF2_SUPERFIRE)) // Super Sonic is stunned!
 			{
-				if (!LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
+				if (!LUA_HookMobjDamage(target, inflictor, source, damage, damagetype))
 					P_SuperDamage(player, inflictor, source, damage);
 				return true;
 			}
 			return false;
 		}
-		else if (LUAh_MobjDamage(target, inflictor, source, damage, damagetype))
+		else if (LUA_HookMobjDamage(target, inflictor, source, damage, damagetype))
 			return true;
-		else if (player->powers[pw_shield] || (player->bot && !ultimatemode))  //If One-Hit Shield
+		else if (player->powers[pw_shield] || (player->bot && player->bot != BOT_MPAI && !ultimatemode))  //If One-Hit Shield
 		{
 			P_ShieldDamage(player, inflictor, source, damage, damagetype);
 			damage = 0;

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,6 +25,7 @@
 #include "i_video.h"
 #include "z_zone.h"
 #include "lua_hook.h"
+#include "m_cond.h" // SECRET_SKIN
 
 #ifdef HW3SOUND
 #include "hardware/hw3sound.h"
@@ -199,6 +200,8 @@ void A_SetObjectFlags(mobj_t *actor);
 void A_SetObjectFlags2(mobj_t *actor);
 void A_RandomState(mobj_t *actor);
 void A_RandomStateRange(mobj_t *actor);
+void A_StateRangeByAngle(mobj_t *actor);
+void A_StateRangeByParameter(mobj_t *actor);
 void A_DualAction(mobj_t *actor);
 void A_RemoteAction(mobj_t *actor);
 void A_ToggleFlameJet(mobj_t *actor);
@@ -743,8 +746,8 @@ boolean P_LookForPlayers(mobj_t *actor, boolean allaround, boolean tracer, fixed
 		if (player->mo->health <= 0)
 			continue; // dead
 
-		if (player->bot)
-			continue; // ignore bots
+		if (player->bot == BOT_2PAI || player->bot == BOT_2PHUMAN)
+			continue; // ignore followbots
 
 		if (player->quittime)
 			continue; // Ignore uncontrolled bodies
@@ -1708,7 +1711,7 @@ void A_HoodThink(mobj_t *actor)
 	dx = (actor->target->x - actor->x), dy = (actor->target->y - actor->y), dz = (actor->target->z - actor->z);
 	dm = P_AproxDistance(dx, dy);
 	// Target dangerously close to robohood, retreat then.
-	if ((dm < 256<<FRACBITS) && (abs(dz) < 128<<FRACBITS))
+	if ((dm < 256<<FRACBITS) && (abs(dz) < 128<<FRACBITS) && !(actor->flags2 & MF2_AMBUSH))
 	{
 		S_StartSound(actor, actor->info->attacksound);
 		P_SetMobjState(actor, actor->info->raisestate);
@@ -2654,7 +2657,7 @@ void A_LobShot(mobj_t *actor)
 {
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2 >> 16;
-	mobj_t *shot, *hitspot;
+	mobj_t *shot;
 	angle_t an;
 	fixed_t z;
 	fixed_t dist;
@@ -2692,11 +2695,6 @@ void A_LobShot(mobj_t *actor)
 		shot->destscale = actor->scale;
 		P_SetScale(shot, actor->scale);
 	}
-
-	// Keep track of where it's going to land
-	hitspot = P_SpawnMobj(actor->target->x&(64*FRACUNIT-1), actor->target->y&(64*FRACUNIT-1), actor->target->subsector->sector->floorheight, MT_NULL);
-	hitspot->tics = airtime;
-	P_SetTarget(&shot->tracer, hitspot);
 
 	P_SetTarget(&shot->target, actor); // where it came from
 
@@ -3333,20 +3331,18 @@ void A_SkullAttack(mobj_t *actor)
 		actor->angle += (P_RandomChance(FRACUNIT/2)) ? ANGLE_90 : -ANGLE_90;
 	else if (locvar1 == 3)
 	{
-		statenum_t oldspawnstate = mobjinfo[MT_NULL].spawnstate;
-		UINT32 oldflags = mobjinfo[MT_NULL].flags;
-		fixed_t oldradius = mobjinfo[MT_NULL].radius;
-		fixed_t oldheight = mobjinfo[MT_NULL].height;
-		mobj_t *check;
+		statenum_t oldspawnstate = mobjinfo[MT_RAY].spawnstate;
+		UINT32 oldflags = mobjinfo[MT_RAY].flags;
+		fixed_t oldradius = mobjinfo[MT_RAY].radius;
+		fixed_t oldheight = mobjinfo[MT_RAY].height;
 		INT32 i, j;
 		static INT32 k;/* static for (at least) GCC 9.1 weirdness */
-		boolean allow;
 		angle_t testang = 0;
 
-		mobjinfo[MT_NULL].spawnstate = S_INVISIBLE;
-		mobjinfo[MT_NULL].flags = MF_NOGRAVITY|MF_NOTHINK|MF_NOCLIPTHING|MF_NOBLOCKMAP;
-		mobjinfo[MT_NULL].radius = mobjinfo[actor->type].radius;
-		mobjinfo[MT_NULL].height = mobjinfo[actor->type].height;
+		mobjinfo[MT_RAY].spawnstate = S_INVISIBLE;
+		mobjinfo[MT_RAY].flags = MF_NOGRAVITY|MF_NOTHINK|MF_NOCLIPTHING|MF_NOBLOCKMAP;
+		mobjinfo[MT_RAY].radius = mobjinfo[actor->type].radius;
+		mobjinfo[MT_RAY].height = mobjinfo[actor->type].height;
 
 		if (P_RandomChance(FRACUNIT/2)) // port priority 1?
 		{
@@ -3359,15 +3355,12 @@ void A_SkullAttack(mobj_t *actor)
 			j = 9;
 		}
 
-#define dostuff(q) check = P_SpawnMobjFromMobj(actor, 0, 0, 0, MT_NULL);\
+#define dostuff(q) \
 			testang = actor->angle + ((i+(q))*ANG10);\
-			allow = (P_TryMove(check,\
-				P_ReturnThrustX(check, testang, dist + 2*actor->radius),\
-				P_ReturnThrustY(check, testang, dist + 2*actor->radius),\
-				true));\
-			P_RemoveMobj(check);\
-			if (allow)\
-				break;
+			if (P_CheckMove(actor,\
+				P_ReturnThrustX(actor, testang, dist + 2*actor->radius),\
+				P_ReturnThrustY(actor, testang, dist + 2*actor->radius),\
+				true)) break;
 
 		if (P_RandomChance(FRACUNIT/2)) // port priority 2?
 		{
@@ -3393,10 +3386,10 @@ void A_SkullAttack(mobj_t *actor)
 
 #undef dostuff
 
-		mobjinfo[MT_NULL].spawnstate = oldspawnstate;
-		mobjinfo[MT_NULL].flags = oldflags;
-		mobjinfo[MT_NULL].radius = oldradius;
-		mobjinfo[MT_NULL].height = oldheight;
+		mobjinfo[MT_RAY].spawnstate = oldspawnstate;
+		mobjinfo[MT_RAY].flags = oldflags;
+		mobjinfo[MT_RAY].radius = oldradius;
+		mobjinfo[MT_RAY].height = oldheight;
 	}
 
 	an = actor->angle >> ANGLETOFINESHIFT;
@@ -3517,9 +3510,7 @@ void A_Scream(mobj_t *actor)
 	if (LUA_CallAction(A_SCREAM, actor))
 		return;
 
-	if (actor->tracer && (actor->tracer->type == MT_SHELL || actor->tracer->type == MT_FIREBALL))
-		S_StartScreamSound(actor, sfx_mario2);
-	else if (actor->info->deathsound)
+	if (actor->info->deathsound && !S_SoundPlaying(actor, sfx_mario2))
 		S_StartScreamSound(actor, actor->info->deathsound);
 }
 
@@ -3590,7 +3581,7 @@ void A_1upThinker(mobj_t *actor)
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (!playeringame[i] || players[i].bot || players[i].spectator)
+		if (!playeringame[i] || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN || players[i].spectator)
 			continue;
 
 		if (!players[i].mo)
@@ -3961,7 +3952,7 @@ void A_BossDeath(mobj_t *mo)
 	}
 
 bossjustdie:
-	if (LUAh_BossDeath(mo))
+	if (LUA_HookMobj(mo, MOBJ_HOOK(BossDeath)))
 		return;
 	else if (P_MobjWasRemoved(mo))
 		return;
@@ -4190,7 +4181,6 @@ void A_CustomPower(mobj_t *actor)
 	player_t *player;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
-	boolean spawnshield = false;
 
 	if (LUA_CallAction(A_CUSTOMPOWER, actor))
 		return;
@@ -4209,15 +4199,10 @@ void A_CustomPower(mobj_t *actor)
 
 	player = actor->target->player;
 
-	if (locvar1 == pw_shield && player->powers[pw_shield] != locvar2)
-		spawnshield = true;
+	P_SetPower(player, locvar1, locvar2);
 
-	player->powers[locvar1] = (UINT16)locvar2;
 	if (actor->info->seesound)
 		S_StartSound(player->mo, actor->info->seesound);
-
-	if (spawnshield) //workaround for a bug
-		P_SpawnShieldOrb(player);
 }
 
 // Function: A_GiveWeapon
@@ -5101,6 +5086,33 @@ void A_SignSpin(mobj_t *actor)
 	}
 }
 
+static boolean SignSkinCheck(player_t *player, INT32 num)
+{
+	INT32 i;
+
+	if (player != NULL)
+	{
+		// Use player's availabilities
+		return R_SkinUsable(player - players, num);
+	}
+
+	// Player invalid, only show characters that are unlocked from the start.
+	for (i = 0; i < MAXUNLOCKABLES; i++)
+	{
+		if (unlockables[i].type == SECRET_SKIN)
+		{
+			INT32 lockedSkin = M_UnlockableSkinNum(&unlockables[i]);
+
+			if (lockedSkin == num)
+			{
+				return false;
+			}
+		}
+	}
+
+	return true;
+}
+
 // Function: A_SignPlayer
 //
 // Description: Changes the state of a level end sign to reflect the player that hit it.
@@ -5161,23 +5173,21 @@ void A_SignPlayer(mobj_t *actor)
 		// I turned this function into a fucking mess. I'm so sorry. -Lach
 		if (locvar1 == -2) // random skin
 		{
-#define skincheck(num) (player ? !R_SkinUsable(player-players, num) : skins[num].availability > 0)
 			player_t *player = actor->target ? actor->target->player : NULL;
 			UINT8 skinnum;
 			UINT8 skincount = 0;
 			for (skinnum = 0; skinnum < numskins; skinnum++)
-				if (!skincheck(skinnum))
+				if (SignSkinCheck(player, skinnum))
 					skincount++;
 			skinnum = P_RandomKey(skincount);
 			for (skincount = 0; skincount < numskins; skincount++)
 			{
 				if (skincount > skinnum)
 					break;
-				if (skincheck(skincount))
+				if (!SignSkinCheck(player, skincount))
 					skinnum++;
 			}
 			skin = &skins[skinnum];
-#undef skincheck
 		}
 		else // specific skin
 			skin = &skins[locvar1];
@@ -5271,7 +5281,7 @@ void A_OverlayThink(mobj_t *actor)
 		actor->z = actor->target->z + actor->target->height - mobjinfo[actor->type].height  - ((var2>>16) ? -1 : 1)*(var2&0xFFFF)*FRACUNIT;
 	else
 		actor->z = actor->target->z + ((var2>>16) ? -1 : 1)*(var2&0xFFFF)*FRACUNIT;
-	actor->angle = actor->target->angle + actor->movedir;
+	actor->angle = (actor->target->player ? actor->target->player->drawangle : actor->target->angle) + actor->movedir;
 	actor->eflags = actor->target->eflags;
 
 	actor->momx = actor->target->momx;
@@ -6518,7 +6528,7 @@ void A_OldRingExplode(mobj_t *actor) {
 	{
 		const angle_t fa = (i*FINEANGLES/16) & FINEMASK;
 
-		mo = P_SpawnMobj(actor->x, actor->y, actor->z, locvar1);
+		mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
 		P_SetTarget(&mo->target, actor->target); // Transfer target so player gets the points
 
 		mo->momx = FixedMul(FINECOSINE(fa),ns);
@@ -6544,7 +6554,7 @@ void A_OldRingExplode(mobj_t *actor) {
 		}
 	}
 
-	mo = P_SpawnMobj(actor->x, actor->y, actor->z, locvar1);
+	mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
 
 	P_SetTarget(&mo->target, actor->target);
 	mo->momz = ns;
@@ -6559,7 +6569,7 @@ void A_OldRingExplode(mobj_t *actor) {
 			mo->color = skincolor_bluering;
 	}
 
-	mo = P_SpawnMobj(actor->x, actor->y, actor->z, locvar1);
+	mo = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
 
 	P_SetTarget(&mo->target, actor->target);
 	mo->momz = -ns;
@@ -8246,7 +8256,7 @@ void A_Boss3ShockThink(mobj_t *actor)
 		fixed_t x0, y0, x1, y1;
 
 		// Break the link if movements are too different
-		if (FixedHypot(snext->momx - actor->momx, snext->momy - actor->momy) > 12*actor->scale)
+		if (R_PointToDist2(0, 0, snext->momx - actor->momx, snext->momy - actor->momy) > 12*actor->scale)
 		{
 			P_SetTarget(&actor->hnext, NULL);
 			return;
@@ -8257,15 +8267,21 @@ void A_Boss3ShockThink(mobj_t *actor)
 		y0 = actor->y;
 		x1 = snext->x;
 		y1 = snext->y;
-		if (FixedHypot(x1 - x0, y1 - y0) > 2*actor->radius)
+		if (R_PointToDist2(0, 0, x1 - x0, y1 - y0) > 2*actor->radius)
 		{
-			snew = P_SpawnMobj((x0 + x1) >> 1, (y0 + y1) >> 1, (actor->z + snext->z) >> 1, actor->type);
+			snew = P_SpawnMobj((x0 >> 1) + (x1 >> 1),
+				(y0 >> 1) + (y1 >> 1),
+				(actor->z >> 1) + (snext->z >> 1), actor->type);
 			snew->momx = (actor->momx + snext->momx) >> 1;
 			snew->momy = (actor->momy + snext->momy) >> 1;
 			snew->momz = (actor->momz + snext->momz) >> 1; // is this really needed?
 			snew->angle = (actor->angle + snext->angle) >> 1;
 			P_SetTarget(&snew->target, actor->target);
 			snew->fuse = actor->fuse;
+
+			P_SetScale(snew, actor->scale);
+			snew->destscale = actor->destscale;
+			snew->scalespeed = actor->scalespeed;
 
 			P_SetTarget(&actor->hnext, snew);
 			P_SetTarget(&snew->hnext, snext);
@@ -9260,6 +9276,49 @@ void A_RandomStateRange(mobj_t *actor)
 	P_SetMobjState(actor, P_RandomRange(locvar1, locvar2));
 }
 
+// Function: A_StateRangeByAngle
+//
+// Description: Chooses a state within the range supplied, depending on the actor's angle.
+//
+// var1 = Minimum state number to use.
+// var2 = Maximum state number to use. The difference will act as a modulo operator.
+//
+void A_StateRangeByAngle(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+
+	if (LUA_CallAction(A_STATERANGEBYANGLE, actor))
+		return;
+
+	if (locvar2 - locvar1 < 0)
+		return; // invalid range
+
+	P_SetMobjState(actor, locvar1 + (AngleFixed(actor->angle)>>FRACBITS % (1 + locvar2 - locvar1)));
+}
+
+// Function: A_StateRangeByParameter
+//
+// Description: Chooses a state within the range supplied, depending on the actor's parameter/extrainfo value.
+//
+// var1 = Minimum state number to use.
+// var2 = Maximum state number to use. The difference will act as a modulo operator.
+//
+void A_StateRangeByParameter(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+	INT32 locvar2 = var2;
+	UINT8 parameter = (actor->spawnpoint ? actor->spawnpoint->extrainfo : 0);
+
+	if (LUA_CallAction(A_STATERANGEBYPARAMETER, actor))
+		return;
+
+	if (locvar2 - locvar1 < 0)
+		return; // invalid range
+
+	P_SetMobjState(actor, locvar1 + (parameter % (1 + locvar2 - locvar1)));
+}
+
 // Function: A_DualAction
 //
 // Description: Calls two actions. Be careful, if you reference the same state this action is called from, you can create an infinite loop.
@@ -9873,8 +9932,8 @@ void A_Custom3DRotate(mobj_t *actor)
 
 	const fixed_t radius = FixedMul(loc1lw*FRACUNIT, actor->scale);
 	const fixed_t hOff = FixedMul(loc1up*FRACUNIT, actor->scale);
-	const fixed_t hspeed = FixedMul(loc2up*FRACUNIT/10, actor->scale);
-	const fixed_t vspeed = FixedMul(loc2lw*FRACUNIT/10, actor->scale);
+	const fixed_t hspeed = loc2up*FRACUNIT/10; // Monster's note (29/05/21): DO NOT SCALE, this is an angular speed!
+	const fixed_t vspeed = loc2lw*FRACUNIT/10; // ditto
 
 	if (LUA_CallAction(A_CUSTOM3DROTATE, actor))
 		return;
@@ -14320,6 +14379,14 @@ void A_RolloutRock(mobj_t *actor)
 	if (LUA_CallAction(A_ROLLOUTROCK, actor))
 		return;
 
+	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
+		actor->flags |= MF_PUSHABLE;
+	else
+	{
+		actor->flags2 = (actor->flags2 & ~MF2_OBJECTFLIP) | (actor->tracer->flags2 & MF2_OBJECTFLIP);
+		actor->eflags = (actor->eflags & ~MFE_VERTICALFLIP) | (actor->tracer->eflags & MFE_VERTICALFLIP);
+	}
+
 	actor->friction = FRACUNIT; // turns out riding on solids sucks, so let's just make it easier on ourselves
 
 	if (actor->eflags & MFE_JUSTHITFLOOR)
@@ -14358,7 +14425,8 @@ void A_RolloutRock(mobj_t *actor)
 
 	speed = P_AproxDistance(actor->momx, actor->momy); // recalculate speed for visual rolling
 
-	if (speed < actor->scale >> 1) // stop moving if speed is insignificant
+	if (((actor->flags & MF_PUSHABLE) || !(actor->flags2 & MF2_STRONGBOX))
+		&& speed < actor->scale) // stop moving if speed is insignificant
 	{
 		actor->momx = 0;
 		actor->momy = 0;
@@ -14377,9 +14445,6 @@ void A_RolloutRock(mobj_t *actor)
 	}
 
 	actor->frame = actor->reactiontime % maxframes; // set frame
-
-	if (!actor->tracer || P_MobjWasRemoved(actor->tracer) || !actor->tracer->health)
-		actor->flags |= MF_PUSHABLE;
 
 	if (!(actor->flags & MF_PUSHABLE) || (actor->movecount != 1)) // if being ridden or haven't moved, don't disappear
 		actor->fuse = actor->info->painchance;

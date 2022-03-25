@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -221,7 +221,7 @@ static void CONS_Bind_f(void)
 		for (key = 0; key < NUMINPUTS; key++)
 			if (bindtable[key])
 			{
-				CONS_Printf("%s : \"%s\"\n", G_KeynumToString(key), bindtable[key]);
+				CONS_Printf("%s : \"%s\"\n", G_KeyNumToName(key), bindtable[key]);
 				na = 1;
 			}
 		if (!na)
@@ -229,7 +229,7 @@ static void CONS_Bind_f(void)
 		return;
 	}
 
-	key = G_KeyStringtoNum(COM_Argv(1));
+	key = G_KeyNameToNum(COM_Argv(1));
 	if (key <= 0 || key >= NUMINPUTS)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Invalid key name\n"));
@@ -484,6 +484,19 @@ void CON_Init(void)
 		Unlock_state();
 	}
 }
+
+void CON_StartRefresh(void)
+{
+	if (con_startup)
+		con_refresh = true;
+}
+
+void CON_StopRefresh(void)
+{
+	if (con_startup)
+		con_refresh = false;
+}
+
 // Console input initialization
 //
 static void CON_InputInit(void)
@@ -913,12 +926,12 @@ boolean CON_Responder(event_t *ev)
 	// let go keyup events, don't eat them
 	if (ev->type != ev_keydown && ev->type != ev_console)
 	{
-		if (ev->data1 == gamecontrol[gc_console][0] || ev->data1 == gamecontrol[gc_console][1])
+		if (ev->key == gamecontrol[GC_CONSOLE][0] || ev->key == gamecontrol[GC_CONSOLE][1])
 			consdown = false;
 		return false;
 	}
 
-	key = ev->data1;
+	key = ev->key;
 
 	// check for console toggle key
 	if (ev->type != ev_console)
@@ -926,7 +939,7 @@ boolean CON_Responder(event_t *ev)
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
-		if (key == gamecontrol[gc_console][0] || key == gamecontrol[gc_console][1])
+		if (key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1])
 		{
 			if (consdown) // ignore repeat
 				return true;
@@ -1697,7 +1710,10 @@ static void CON_DrawHudlines(void)
 			{
 				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
 				p++;
+				c++;
 			}
+			if (c >= con_width)
+				break;
 			if (*p < HU_FONTSTART)
 				;//charwidth = 4 * con_scalefactor;
 			else
@@ -1756,8 +1772,8 @@ static void CON_DrawBackpic(void)
 	}
 
 	// Draw the patch.
-	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, V_NOSCALESTART, con_backpic,
-			0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
+	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, FRACUNIT, V_NOSCALESTART, con_backpic, NULL,
+			0, (BASEVIDHEIGHT - h) << FRACBITS, BASEVIDWIDTH << FRACBITS, h << FRACBITS);
 
 	// Unlock the cached patch.
 	W_UnlockCachedPatch(con_backpic);
@@ -1818,7 +1834,10 @@ static void CON_DrawConsole(void)
 			{
 				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
 				p++;
+				c++;
 			}
+			if (c >= con_width)
+				break;
 			V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 		}
 	}

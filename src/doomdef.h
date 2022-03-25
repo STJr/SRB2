@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -127,6 +127,7 @@ extern char logfilename[1024];
 //#define DEVELOP // Disable this for release builds to remove excessive cheat commands and enable MD5 checking and stuff, all in one go. :3
 #ifdef DEVELOP
 #define VERSIONSTRING "Development EXE"
+#define VERSIONSTRING_RC "Development EXE" "\0"
 // most interface strings are ignored in development mode.
 // we use comprevision and compbranch instead.
 // VERSIONSTRING_RC is for the resource-definition script used by windows builds
@@ -149,7 +150,10 @@ extern char logfilename[1024];
 
 // Does this version require an added patch file?
 // Comment or uncomment this as necessary.
-#define USE_PATCH_DTA
+// #define USE_PATCH_DTA
+
+// Enforce a limit of loaded WAD files.
+//#define ENFORCE_WAD_LIMIT
 
 // Use .kart extension addons
 //#define USE_KART

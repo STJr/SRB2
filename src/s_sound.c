@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -74,9 +74,9 @@ consvar_t stereoreverse = CVAR_INIT ("stereoreverse", "Off", CV_SAVE, CV_OnOff, 
 static consvar_t precachesound = CVAR_INIT ("precachesound", "Off", CV_SAVE, CV_OnOff, NULL);
 
 // actual general (maximum) sound & music volume, saved into the config
-consvar_t cv_soundvolume = CVAR_INIT ("soundvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
-consvar_t cv_digmusicvolume = CVAR_INIT ("digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
-consvar_t cv_midimusicvolume = CVAR_INIT ("midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_soundvolume = CVAR_INIT ("soundvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_digmusicvolume = CVAR_INIT ("digmusicvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_midimusicvolume = CVAR_INIT ("midimusicvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
 
 static void Captioning_OnChange(void)
 {
@@ -2238,6 +2238,16 @@ static void S_ChangeMusicToQueue(void)
 void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
 	char newmusic[7];
+
+	struct MusicChange hook_param = {
+		newmusic,
+		&mflags,
+		&looping,
+		&position,
+		&prefadems,
+		&fadeinms
+	};
+
 	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
 	boolean midipref = cv_musicpref.value;
 
@@ -2245,7 +2255,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 
 	strncpy(newmusic, mmusic, 7);
-	if (LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
+	if (LUA_HookMusicChange(music_name, &hook_param))
 		return;
 	newmusic[6] = 0;
 

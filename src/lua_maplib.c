@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -196,6 +196,7 @@ enum ffloor_e {
 	ffloor_next,
 	ffloor_prev,
 	ffloor_alpha,
+	ffloor_blend,
 };
 
 static const char *const ffloor_opt[] = {
@@ -214,6 +215,7 @@ static const char *const ffloor_opt[] = {
 	"next",
 	"prev",
 	"alpha",
+	"blend",
 	NULL};
 
 #ifdef HAVE_LUA_SEGS
@@ -1807,6 +1809,9 @@ static int ffloor_get(lua_State *L)
 	case ffloor_alpha:
 		lua_pushinteger(L, ffloor->alpha);
 		return 1;
+	case ffloor_blend:
+		lua_pushinteger(L, ffloor->blend);
+		return 1;
 	}
 	return 0;
 }
@@ -1884,6 +1889,9 @@ static int ffloor_set(lua_State *L)
 	}
 	case ffloor_alpha:
 		ffloor->alpha = (INT32)luaL_checkinteger(L, 3);
+		break;
+	case ffloor_blend:
+		ffloor->blend = (INT32)luaL_checkinteger(L, 3);
 		break;
 	}
 	return 0;

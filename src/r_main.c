@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -101,21 +101,22 @@ extracolormap_t *extra_colormaps = NULL;
 
 // Render stats
 precise_t ps_prevframetime = 0;
-precise_t ps_rendercalltime = 0;
-precise_t ps_uitime = 0;
-precise_t ps_swaptime = 0;
+ps_metric_t ps_rendercalltime = {0};
+ps_metric_t ps_otherrendertime = {0};
+ps_metric_t ps_uitime = {0};
+ps_metric_t ps_swaptime = {0};
 
-precise_t ps_bsptime = 0;
+ps_metric_t ps_bsptime = {0};
 
-precise_t ps_sw_spritecliptime = 0;
-precise_t ps_sw_portaltime = 0;
-precise_t ps_sw_planetime = 0;
-precise_t ps_sw_maskedtime = 0;
+ps_metric_t ps_sw_spritecliptime = {0};
+ps_metric_t ps_sw_portaltime = {0};
+ps_metric_t ps_sw_planetime = {0};
+ps_metric_t ps_sw_maskedtime = {0};
 
-int ps_numbspcalls = 0;
-int ps_numsprites = 0;
-int ps_numdrawnodes = 0;
-int ps_numpolyobjects = 0;
+ps_metric_t ps_numbspcalls = {0};
+ps_metric_t ps_numsprites = {0};
+ps_metric_t ps_numdrawnodes = {0};
+ps_metric_t ps_numpolyobjects = {0};
 
 static CV_PossibleValue_t drawdist_cons_t[] = {
 	{256, "256"},	{512, "512"},	{768, "768"},
@@ -955,7 +956,7 @@ void R_ExecuteSetViewSize(void)
 		j = viewheight*16;
 		for (i = 0; i < j; i++)
 		{
-			dy = ((i - viewheight*8)<<FRACBITS) + FRACUNIT/2;
+			dy = (i - viewheight*8)<<FRACBITS;
 			dy = FixedMul(abs(dy), fovtan);
 			yslopetab[i] = FixedDiv(centerx*FRACUNIT, dy);
 		}
@@ -1449,7 +1450,7 @@ static void Mask_Post (maskcount_t* m)
 
 void R_RenderPlayerView(player_t *player)
 {
-	UINT8			nummasks	= 1;
+	INT32			nummasks	= 1;
 	maskcount_t*	masks		= malloc(sizeof(maskcount_t));
 
 	if (cv_homremoval.value && player == &players[displayplayer]) // if this is display player 1
@@ -1496,11 +1497,11 @@ void R_RenderPlayerView(player_t *player)
 	mytotal = 0;
 	ProfZeroTimer();
 #endif
-	ps_numbspcalls = ps_numpolyobjects = ps_numdrawnodes = 0;
-	ps_bsptime = I_GetPreciseTime();
+	ps_numbspcalls.value.i = ps_numpolyobjects.value.i = ps_numdrawnodes.value.i = 0;
+	PS_START_TIMING(ps_bsptime);
 	R_RenderBSPNode((INT32)numnodes - 1);
-	ps_bsptime = I_GetPreciseTime() - ps_bsptime;
-	ps_numsprites = visspritecount;
+	PS_STOP_TIMING(ps_bsptime);
+	ps_numsprites.value.i = visspritecount;
 #ifdef TIMING
 	RDMSR(0x10, &mycount);
 	mytotal += mycount; // 64bit add
@@ -1510,9 +1511,9 @@ void R_RenderPlayerView(player_t *player)
 //profile stuff ---------------------------------------------------------
 	Mask_Post(&masks[nummasks - 1]);
 
-	ps_sw_spritecliptime = I_GetPreciseTime();
+	PS_START_TIMING(ps_sw_spritecliptime);
 	R_ClipSprites(drawsegs, NULL);
-	ps_sw_spritecliptime = I_GetPreciseTime() - ps_sw_spritecliptime;
+	PS_STOP_TIMING(ps_sw_spritecliptime);
 
 
 	// Add skybox portals caused by sky visplanes.
@@ -1520,7 +1521,7 @@ void R_RenderPlayerView(player_t *player)
 		Portal_AddSkyboxPortals();
 
 	// Portal rendering. Hijacks the BSP traversal.
-	ps_sw_portaltime = I_GetPreciseTime();
+	PS_START_TIMING(ps_sw_portaltime);
 	if (portal_base)
 	{
 		portal_t *portal;
@@ -1560,17 +1561,17 @@ void R_RenderPlayerView(player_t *player)
 			Portal_Remove(portal);
 		}
 	}
-	ps_sw_portaltime = I_GetPreciseTime() - ps_sw_portaltime;
+	PS_STOP_TIMING(ps_sw_portaltime);
 
-	ps_sw_planetime = I_GetPreciseTime();
+	PS_START_TIMING(ps_sw_planetime);
 	R_DrawPlanes();
-	ps_sw_planetime = I_GetPreciseTime() - ps_sw_planetime;
+	PS_STOP_TIMING(ps_sw_planetime);
 
 	// draw mid texture and sprite
 	// And now 3D floors/sides!
-	ps_sw_maskedtime = I_GetPreciseTime();
+	PS_START_TIMING(ps_sw_maskedtime);
 	R_DrawMasked(masks, nummasks);
-	ps_sw_maskedtime = I_GetPreciseTime() - ps_sw_maskedtime;
+	PS_STOP_TIMING(ps_sw_maskedtime);
 
 	free(masks);
 }

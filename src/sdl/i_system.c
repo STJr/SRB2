@@ -5,7 +5,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2021 by Sonic Team Junior.
+// Copyright (C) 2014-2022 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -358,9 +358,10 @@ static void I_ReportSignal(int num, int coredumped)
 
 	I_OutputMsg("\nProcess killed by signal: %s\n\n", sigmsg);
 
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-		"Process killed by signal",
-		sigmsg, NULL);
+	if (!M_CheckParm("-dedicated"))
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+			"Process killed by signal",
+			sigmsg, NULL);
 }
 
 #ifndef NEWSIGNALHANDLER
@@ -550,7 +551,7 @@ static void I_StartupConsole(void)
 void I_GetConsoleEvents(void)
 {
 	// we use this when sending back commands
-	event_t ev = {0,0,0,0};
+	event_t ev = {0};
 	char key = 0;
 	ssize_t d;
 
@@ -572,7 +573,7 @@ void I_GetConsoleEvents(void)
 			tty_con.buffer[tty_con.cursor] = '\0';
 			tty_Back();
 		}
-		ev.data1 = KEY_BACKSPACE;
+		ev.key = KEY_BACKSPACE;
 	}
 	else if (key < ' ') // check if this is a control char
 	{
@@ -580,19 +581,19 @@ void I_GetConsoleEvents(void)
 		{
 			tty_Clear();
 			tty_con.cursor = 0;
-			ev.data1 = KEY_ENTER;
+			ev.key = KEY_ENTER;
 		}
 		else return;
 	}
 	else
 	{
 		// push regular character
-		ev.data1 = tty_con.buffer[tty_con.cursor] = key;
+		ev.key = tty_con.buffer[tty_con.cursor] = key;
 		tty_con.cursor++;
 		// print the current line (this is differential)
 		d = write(STDOUT_FILENO, &key, 1);
 	}
-	if (ev.data1) D_PostEvent(&ev);
+	if (ev.key) D_PostEvent(&ev);
 	//tty_FlushIn();
 	(void)d;
 }
@@ -626,18 +627,18 @@ static void Impl_HandleKeyboardConsoleEvent(KEY_EVENT_RECORD evt, HANDLE co)
 		{
 			case VK_ESCAPE:
 			case VK_TAB:
-				event.data1 = KEY_NULL;
+				event.key = KEY_NULL;
 				break;
 			case VK_RETURN:
 				entering_con_command = false;
 				/* FALLTHRU */
 			default:
-				//event.data1 = MapVirtualKey(evt.wVirtualKeyCode,2); // convert in to char
-				event.data1 = evt.uChar.AsciiChar;
+				//event.key = MapVirtualKey(evt.wVirtualKeyCode,2); // convert in to char
+				event.key = evt.uChar.AsciiChar;
 		}
 		if (co != INVALID_HANDLE_VALUE && GetFileType(co) == FILE_TYPE_CHAR && GetConsoleMode(co, &t))
 		{
-			if (event.data1 && event.data1 != KEY_LSHIFT && event.data1 != KEY_RSHIFT)
+			if (event.key && event.key != KEY_LSHIFT && event.key != KEY_RSHIFT)
 			{
 #ifdef _UNICODE
 				WriteConsole(co, &evt.uChar.UnicodeChar, 1, &t, NULL);
@@ -652,7 +653,7 @@ static void Impl_HandleKeyboardConsoleEvent(KEY_EVENT_RECORD evt, HANDLE co)
 			}
 		}
 	}
-	if (event.data1) D_PostEvent(&event);
+	if (event.key) D_PostEvent(&event);
 }
 
 void I_GetConsoleEvents(void)
@@ -917,7 +918,7 @@ INT32 I_GetKey (void)
 		ev = &events[eventtail];
 		if (ev->type == ev_keydown || ev->type == ev_console)
 		{
-			rc = ev->data1;
+			rc = ev->key;
 			continue;
 		}
 	}
@@ -977,22 +978,22 @@ void I_ShutdownJoystick(void)
 	INT32 i;
 	event_t event;
 	event.type=ev_keyup;
-	event.data2 = 0;
-	event.data3 = 0;
+	event.x = 0;
+	event.y = 0;
 
 	lastjoybuttons = lastjoyhats = 0;
 
 	// emulate the up of all joystick buttons
 	for (i=0;i<JOYBUTTONS;i++)
 	{
-		event.data1=KEY_JOY1+i;
+		event.key=KEY_JOY1+i;
 		D_PostEvent(&event);
 	}
 
 	// emulate the up of all joystick hats
 	for (i=0;i<JOYHATS*4;i++)
 	{
-		event.data1=KEY_HAT1+i;
+		event.key=KEY_HAT1+i;
 		D_PostEvent(&event);
 	}
 
@@ -1000,7 +1001,7 @@ void I_ShutdownJoystick(void)
 	event.type = ev_joystick;
 	for (i=0;i<JOYAXISSET; i++)
 	{
-		event.data1 = i;
+		event.key = i;
 		D_PostEvent(&event);
 	}
 
@@ -1012,7 +1013,7 @@ void I_ShutdownJoystick(void)
 
 void I_GetJoystickEvents(void)
 {
-	static event_t event = {0,0,0,0};
+	static event_t event = {0,0,0,0,false};
 	INT32 i = 0;
 	UINT64 joyhats = 0;
 #if 0
@@ -1049,7 +1050,7 @@ void I_GetJoystickEvents(void)
 					event.type = ev_keydown;
 				else
 					event.type = ev_keyup;
-				event.data1 = KEY_JOY1 + i;
+				event.key = KEY_JOY1 + i;
 				D_PostEvent(&event);
 			}
 		}
@@ -1080,7 +1081,7 @@ void I_GetJoystickEvents(void)
 					event.type = ev_keydown;
 				else
 					event.type = ev_keyup;
-				event.data1 = KEY_HAT1 + i;
+				event.key = KEY_HAT1 + i;
 				D_PostEvent(&event);
 			}
 		}
@@ -1092,7 +1093,7 @@ void I_GetJoystickEvents(void)
 
 	for (i = JOYAXISSET - 1; i >= 0; i--)
 	{
-		event.data1 = i;
+		event.key = i;
 		if (i*2 + 1 <= JoyInfo.axises)
 			axisx = SDL_JoystickGetAxis(JoyInfo.dev, i*2 + 0);
 		else axisx = 0;
@@ -1110,15 +1111,15 @@ void I_GetJoystickEvents(void)
 		{
 			// gamepad control type, on or off, live or die
 			if (axisx < -(JOYAXISRANGE/2))
-				event.data2 = -1;
+				event.x = -1;
 			else if (axisx > (JOYAXISRANGE/2))
-				event.data2 = 1;
-			else event.data2 = 0;
+				event.x = 1;
+			else event.x = 0;
 			if (axisy < -(JOYAXISRANGE/2))
-				event.data3 = -1;
+				event.y = -1;
 			else if (axisy > (JOYAXISRANGE/2))
-				event.data3 = 1;
-			else event.data3 = 0;
+				event.y = 1;
+			else event.y = 0;
 		}
 		else
 		{
@@ -1132,8 +1133,8 @@ void I_GetJoystickEvents(void)
 #endif
 
 			// analog control style , just send the raw data
-			event.data2 = axisx; // x axis
-			event.data3 = axisy; // y axis
+			event.x = axisx; // x axis
+			event.y = axisy; // y axis
 		}
 		D_PostEvent(&event);
 	}
@@ -1247,22 +1248,22 @@ void I_ShutdownJoystick2(void)
 	INT32 i;
 	event_t event;
 	event.type = ev_keyup;
-	event.data2 = 0;
-	event.data3 = 0;
+	event.x = 0;
+	event.y = 0;
 
 	lastjoy2buttons = lastjoy2hats = 0;
 
 	// emulate the up of all joystick buttons
 	for (i = 0; i < JOYBUTTONS; i++)
 	{
-		event.data1 = KEY_2JOY1 + i;
+		event.key = KEY_2JOY1 + i;
 		D_PostEvent(&event);
 	}
 
 	// emulate the up of all joystick hats
 	for (i = 0; i < JOYHATS*4; i++)
 	{
-		event.data1 = KEY_2HAT1 + i;
+		event.key = KEY_2HAT1 + i;
 		D_PostEvent(&event);
 	}
 
@@ -1270,7 +1271,7 @@ void I_ShutdownJoystick2(void)
 	event.type = ev_joystick2;
 	for (i = 0; i < JOYAXISSET; i++)
 	{
-		event.data1 = i;
+		event.key = i;
 		D_PostEvent(&event);
 	}
 
@@ -1282,7 +1283,7 @@ void I_ShutdownJoystick2(void)
 
 void I_GetJoystick2Events(void)
 {
-	static event_t event = {0,0,0,0};
+	static event_t event = {0,0,0,0,false};
 	INT32 i = 0;
 	UINT64 joyhats = 0;
 #if 0
@@ -1321,7 +1322,7 @@ void I_GetJoystick2Events(void)
 					event.type = ev_keydown;
 				else
 					event.type = ev_keyup;
-				event.data1 = KEY_2JOY1 + i;
+				event.key = KEY_2JOY1 + i;
 				D_PostEvent(&event);
 			}
 		}
@@ -1352,7 +1353,7 @@ void I_GetJoystick2Events(void)
 					event.type = ev_keydown;
 				else
 					event.type = ev_keyup;
-				event.data1 = KEY_2HAT1 + i;
+				event.key = KEY_2HAT1 + i;
 				D_PostEvent(&event);
 			}
 		}
@@ -1364,7 +1365,7 @@ void I_GetJoystick2Events(void)
 
 	for (i = JOYAXISSET - 1; i >= 0; i--)
 	{
-		event.data1 = i;
+		event.key = i;
 		if (i*2 + 1 <= JoyInfo2.axises)
 			axisx = SDL_JoystickGetAxis(JoyInfo2.dev, i*2 + 0);
 		else axisx = 0;
@@ -1380,17 +1381,17 @@ void I_GetJoystick2Events(void)
 		{
 			// gamepad control type, on or off, live or die
 			if (axisx < -(JOYAXISRANGE/2))
-				event.data2 = -1;
+				event.x = -1;
 			else if (axisx > (JOYAXISRANGE/2))
-				event.data2 = 1;
+				event.x = 1;
 			else
-				event.data2 = 0;
+				event.x = 0;
 			if (axisy < -(JOYAXISRANGE/2))
-				event.data3 = -1;
+				event.y = -1;
 			else if (axisy > (JOYAXISRANGE/2))
-				event.data3 = 1;
+				event.y = 1;
 			else
-				event.data3 = 0;
+				event.y = 0;
 		}
 		else
 		{
@@ -1404,8 +1405,8 @@ void I_GetJoystick2Events(void)
 #endif
 
 			// analog control style , just send the raw data
-			event.data2 = axisx; // x axis
-			event.data3 = axisy; // y axis
+			event.x = axisx; // x axis
+			event.y = axisy; // y axis
 		}
 		D_PostEvent(&event);
 	}
@@ -1804,7 +1805,7 @@ void I_GetMouseEvents(void)
 					if (!(button & (1<<j))) //keyup
 					{
 						event.type = ev_keyup;
-						event.data1 = KEY_2MOUSE1+j;
+						event.key = KEY_2MOUSE1+j;
 						D_PostEvent(&event);
 						om2b ^= 1 << j;
 					}
@@ -1814,18 +1815,18 @@ void I_GetMouseEvents(void)
 					if (button & (1<<j))
 					{
 						event.type = ev_keydown;
-						event.data1 = KEY_2MOUSE1+j;
+						event.key = KEY_2MOUSE1+j;
 						D_PostEvent(&event);
 						om2b ^= 1 << j;
 					}
 				}
 			}
-			event.data2 = ((SINT8)mdata[1])+((SINT8)mdata[3]);
-			event.data3 = ((SINT8)mdata[2])+((SINT8)mdata[4]);
-			if (event.data2 && event.data3)
+			event.x = ((SINT8)mdata[1])+((SINT8)mdata[3]);
+			event.y = ((SINT8)mdata[2])+((SINT8)mdata[4]);
+			if (event.x && event.y)
 			{
 				event.type = ev_mouse2;
-				event.data1 = 0;
+				event.key = 0;
 				D_PostEvent(&event);
 			}
 		}
@@ -1867,7 +1868,7 @@ static void I_ShutdownMouse2(void)
 	for (i = 0; i < MOUSEBUTTONS; i++)
 	{
 		event.type = ev_keyup;
-		event.data1 = KEY_2MOUSE1+i;
+		event.key = KEY_2MOUSE1+i;
 		D_PostEvent(&event);
 	}
 
@@ -1958,7 +1959,7 @@ void I_GetMouseEvents(void)
 					event.type = ev_keydown;
 				else
 					event.type = ev_keyup;
-				event.data1 = KEY_2MOUSE1+i;
+				event.key = KEY_2MOUSE1+i;
 				D_PostEvent(&event);
 			}
 	}
@@ -1966,10 +1967,10 @@ void I_GetMouseEvents(void)
 	if (handlermouse2x != 0 || handlermouse2y != 0)
 	{
 		event.type = ev_mouse2;
-		event.data1 = 0;
-//		event.data1 = buttons; // not needed
-		event.data2 = handlermouse2x << 1;
-		event.data3 = -handlermouse2y << 1;
+		event.key = 0;
+//		event.key = buttons; // not needed
+		event.x = handlermouse2x << 1;
+		event.y = handlermouse2y << 1;
 		handlermouse2x = 0;
 		handlermouse2y = 0;
 
@@ -2163,7 +2164,13 @@ precise_t I_GetPreciseTime(void)
 
 int I_PreciseToMicros(precise_t d)
 {
-	return (int)(d / (timer_frequency / 1000000.0));
+	// d is going to be converted into a double. So remove the highest bits
+	// to avoid loss of precision in the lower bits, for the (probably rare) case
+	// that the higher bits are actually used.
+	d &= ((precise_t)1 << 53) - 1; // The mantissa of a double can handle 53 bits at most.
+	// The resulting double from the calculation is converted first to UINT64 to avoid overflow,
+	// which is undefined behaviour when converting floating point values to integers.
+	return (int)(UINT64)(d / (timer_frequency / 1000000.0));
 }
 
 //
@@ -2196,9 +2203,10 @@ static void newsignalhandler_Warn(const char *pr)
 
 	I_OutputMsg("%s\n", text);
 
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-		"Startup error",
-		text, NULL);
+	if (!M_CheckParm("-dedicated"))
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+			"Startup error",
+			text, NULL);
 
 	I_ShutdownConsole();
 	exit(-1);
@@ -2399,9 +2407,10 @@ void I_Error(const char *error, ...)
 			// Implement message box with SDL_ShowSimpleMessageBox,
 			// which should fail gracefully if it can't put a message box up
 			// on the target system
-			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-				"SRB2 "VERSIONSTRING" Recursive Error",
-				buffer, NULL);
+			if (!M_CheckParm("-dedicated"))
+				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+					"SRB2 "VERSIONSTRING" Recursive Error",
+					buffer, NULL);
 
 			W_Shutdown();
 			exit(-1); // recursive errors detected
@@ -2443,9 +2452,10 @@ void I_Error(const char *error, ...)
 	// Implement message box with SDL_ShowSimpleMessageBox,
 	// which should fail gracefully if it can't put a message box up
 	// on the target system
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-		"SRB2 "VERSIONSTRING" Error",
-		buffer, NULL);
+	if (!M_CheckParm("-dedicated"))
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+			"SRB2 "VERSIONSTRING" Error",
+			buffer, NULL);
 	// Note that SDL_ShowSimpleMessageBox does *not* require SDL to be
 	// initialized at the time, so calling it after SDL_Quit() is
 	// perfectly okay! In addition, we do this on purpose so the

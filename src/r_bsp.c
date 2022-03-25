@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -804,7 +804,7 @@ static void R_AddPolyObjects(subsector_t *sub)
 	}
 
 	// for render stats
-	ps_numpolyobjects += numpolys;
+	ps_numpolyobjects.value.i += numpolys;
 
 	// sort polyobjects
 	R_SortPolyObjects(sub);
@@ -1239,7 +1239,7 @@ void R_RenderBSPNode(INT32 bspnum)
 	node_t *bsp;
 	INT32 side;
 
-	ps_numbspcalls++;
+	ps_numbspcalls.value.i++;
 
 	while (!(bspnum & NF_SUBSECTOR))  // Found a subsector?
 	{

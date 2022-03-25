@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -41,6 +41,7 @@
 #include "console.h"
 
 #include "lua_hud.h"
+#include "lua_hook.h"
 
 // Stage of animation:
 // 0 = text, 1 = art screen
@@ -1011,7 +1012,7 @@ void F_IntroTicker(void)
 //
 boolean F_IntroResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 key = event->key;
 
 	// remap virtual keys (mouse & joystick buttons)
 	switch (key)
@@ -1063,7 +1064,7 @@ boolean F_IntroResponder(event_t *event)
 //  CREDITS
 // =========
 static const char *credits[] = {
-	"\1Sonic Robo Blast II",
+	"\1Sonic Robo Blast 2",
 	"\1Credits",
 	"",
 	"\1Game Design",
@@ -1089,19 +1090,19 @@ static const char *credits[] = {
 	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
-	"\"james\"",
 	"Iestyn \"Monster Iestyn\" Jealous",
-	"\"Jimita\"",
 	"\"Kaito Sinclaire\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
+	"\"LZA\"",
 	"Matthew \"Shuffle\" Marsalko",
 	"Steven \"StroggOnMeth\" McGranahan",
 	"\"Morph\"", // For SRB2Morphed stuff
 	"Louis-Antoine \"LJ Sonic\" de Moulins", // de Rochefort doesn't quite fit on the screen sorry lol
 	"John \"JTE\" Muniz",
 	"Colin \"Sonict\" Pfaff",
+	"James \"james\" Robert Roman",
 	"Sean \"Sryder13\" Ryder",
 	"Ehab \"Wolfy\" Saeed",
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
@@ -1166,9 +1167,8 @@ static const char *credits[] = {
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"Stefan \"Stuf\" Rimalia",
 	"Shane Mychal Sexton",
-	"\"Spazzo\"",
-	"David \"Big Wave Dave\" Spencer Sr.",
-	"David \"Instant Sonic\" Spencer Jr.",
+	"Dave \"Big Wave Dave\" Spencer",
+	"David \"instantSonic\" Spencer",
 	"\"SSNTails\"",
 	"",
 	"\1Level Design",
@@ -1191,7 +1191,6 @@ static const char *credits[] = {
 	"\"Revan\"",
 	"Anna \"QueenDelta\" Sandlin",
 	"Wessel \"sphere\" Smit",
-	"\"Spazzo\"",
 	"\"SSNTails\"",
 	"Rob Tisdell",
 	"\"Torgo\"",
@@ -1220,7 +1219,7 @@ static const char *credits[] = {
 	"Bill \"Tets\" Reed",
 	"",
 	"\1Special Thanks",
-	"iD Software",
+	"id Software",
 	"Doom Legacy Project",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
 	"Kart Krew",
@@ -1399,7 +1398,7 @@ void F_CreditTicker(void)
 
 boolean F_CreditResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 key = event->key;
 
 	// remap virtual keys (mouse & joystick buttons)
 	switch (key)
@@ -3423,7 +3422,7 @@ void F_TitleScreenDrawer(void)
 	}
 
 luahook:
-	LUAh_TitleHUD();
+	LUA_HUDHOOK(title);
 }
 
 // separate animation timer for backgrounds, since we also count
@@ -3823,7 +3822,7 @@ void F_ContinueTicker(void)
 
 boolean F_ContinueResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 key = event->key;
 
 	if (keypressed)
 		return true;

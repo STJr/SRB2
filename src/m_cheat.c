@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -203,11 +203,11 @@ boolean cht_Responder(event_t *ev)
 	if (ev->type != ev_keydown)
 		return false;
 
-	if (ev->data1 > 0xFF)
+	if (ev->key > 0xFF)
 	{
 		// map some fake (joy) inputs into keys
 		// map joy inputs into keys
-		switch (ev->data1)
+		switch (ev->key)
 		{
 			case KEY_JOY1:
 			case KEY_JOY1 + 2:
@@ -231,7 +231,7 @@ boolean cht_Responder(event_t *ev)
 		}
 	}
 	else
-		ch = (UINT8)ev->data1;
+		ch = (UINT8)ev->key;
 
 	ret += cht_CheckCheat(&cheat_ultimate, (char)ch);
 	ret += cht_CheckCheat(&cheat_ultimate_joy, (char)ch);

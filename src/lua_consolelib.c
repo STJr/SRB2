@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -433,7 +433,7 @@ static int CVarSetFunction
 	consvar_t *cvar = *(consvar_t **)luaL_checkudata(L, 1, META_CVAR);
 
 	if (cvar->flags & CV_NOLUA)
-		return luaL_error(L, "Variable %s cannot be set from Lua.", cvar->name);
+		return luaL_error(L, "Variable '%s' cannot be set from Lua.", cvar->name);
 
 	switch (lua_type(L, 2))
 	{

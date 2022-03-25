@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -260,6 +260,11 @@ static inline int lib_getenum(lua_State *L)
 				lua_pushinteger(L, ((lua_Integer)1<<i));
 				return 1;
 			}
+		if (fastcmp(p, "REVERSESUPER"))
+		{
+			lua_pushinteger(L, (lua_Integer)MFE_REVERSESUPER);
+			return 1;
+		}
 		if (mathlib) return luaL_error(L, "mobjeflag '%s' could not be found.\n", word);
 		return 0;
 	}

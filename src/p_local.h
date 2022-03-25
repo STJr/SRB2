@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -155,6 +155,7 @@ boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff);
 
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
 void P_RestoreMusic(player_t *player);
+void P_SetPower(player_t *player, powertype_t power, UINT16 value);
 void P_SpawnShieldOrb(player_t *player);
 void P_SwitchShield(player_t *player, UINT16 shieldtype);
 mobj_t *P_SpawnGhostMobj(mobj_t *mobj);
@@ -349,6 +350,7 @@ void P_FlashPal(player_t *pl, UINT16 type, UINT16 duration);
 #define PAL_MIXUP    2
 #define PAL_RECYCLE  3
 #define PAL_NUKE     4
+#define PAL_INVERT   5
 
 //
 // P_ENEMY
@@ -409,6 +411,7 @@ void P_SetUnderlayPosition(mobj_t *thing);
 
 boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y);
 boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam);
+boolean P_CheckMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff);
 boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff);
 boolean P_Move(mobj_t *actor, fixed_t speed);
 boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z);

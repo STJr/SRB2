@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -650,7 +650,7 @@ static void COM_ExecuteString(char *ptext)
 			else
 			{ // Monster Iestyn: keep track of how many levels of recursion we're in
 				recursion++;
-				COM_BufInsertText(a->value);
+				COM_BufInsertTextEx(a->value, com_flags);
 				recursion--;
 			}
 			return;
@@ -1738,6 +1738,8 @@ void CV_SaveVars(UINT8 **p, boolean in_demo)
 static void CV_LoadVars(UINT8 **p,
 		consvar_t *(*got)(UINT8 **p, char **ret_value, boolean *ret_stealth))
 {
+	const boolean store = (client || demoplayback);
+
 	consvar_t *cvar;
 	UINT16 count;
 
@@ -1751,7 +1753,7 @@ static void CV_LoadVars(UINT8 **p,
 	{
 		if (cvar->flags & CV_NETVAR)
 		{
-			if (client && cvar->revert.v.string == NULL)
+			if (store && cvar->revert.v.string == NULL)
 			{
 				cvar->revert.v.const_munge = cvar->string;
 				cvar->revert.allocated = ( cvar->zstring != NULL );
@@ -2364,7 +2366,10 @@ static boolean CV_Command(void)
 		return false;
 
 	if (( com_flags & COM_SAFE ) && ( v->flags & CV_NOLUA ))
-		return false;
+	{
+		CONS_Alert(CONS_WARNING, "Variable '%s' cannot be changed from Lua.\n", v->name);
+		return true;
+	}
 
 	// perform a variable print or set
 	if (COM_Argc() == 1)

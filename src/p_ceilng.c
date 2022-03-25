@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -67,7 +67,8 @@ void T_MoveCeiling(ceiling_t *ceiling)
 				switch (ceiling->type)
 				{
 					case instantMoveCeilingByFrontSector:
-						ceiling->sector->ceilingpic = ceiling->texture;
+						if (ceiling->texture > -1)
+							ceiling->sector->ceilingpic = ceiling->texture;
 						ceiling->sector->ceilingdata = NULL;
 						ceiling->sector->ceilspeed = 0;
 						P_RemoveThinker(&ceiling->thinker);
@@ -186,7 +187,8 @@ void T_MoveCeiling(ceiling_t *ceiling)
 						break;
 
 					case instantMoveCeilingByFrontSector:
-						ceiling->sector->ceilingpic = ceiling->texture;
+						if (ceiling->texture > -1)
+							ceiling->sector->ceilingpic = ceiling->texture;
 						ceiling->sector->ceilingdata = NULL;
 						ceiling->sector->ceilspeed = 0;
 						P_RemoveThinker(&ceiling->thinker);
@@ -395,9 +397,8 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 	sector_t *sec;
 	ceiling_t *ceiling;
 	mtag_t tag = Tag_FGet(&line->tags);
-	TAG_ITER_DECLARECOUNTER(0);
 
-	TAG_ITER_SECTORS(0, tag, secnum)
+	TAG_ITER_SECTORS(tag, secnum)
 	{
 		sec = &sectors[secnum];
 
@@ -513,7 +514,10 @@ INT32 EV_DoCeiling(line_t *line, ceiling_e type)
 					ceiling->direction = -1;
 					ceiling->bottomheight = line->frontsector->ceilingheight;
 				}
-				ceiling->texture = line->frontsector->ceilingpic;
+				if (line->flags & ML_NOCLIMB)
+					ceiling->texture = -1;
+				else
+					ceiling->texture = line->frontsector->ceilingpic;
 				break;
 
 			case moveCeilingByFrontTexture:
@@ -617,9 +621,8 @@ INT32 EV_DoCrush(line_t *line, ceiling_e type)
 	sector_t *sec;
 	ceiling_t *ceiling;
 	mtag_t tag = Tag_FGet(&line->tags);
-	TAG_ITER_DECLARECOUNTER(0);
 
-	TAG_ITER_SECTORS(0, tag, secnum)
+	TAG_ITER_SECTORS(tag, secnum)
 	{
 		sec = &sectors[secnum];
 

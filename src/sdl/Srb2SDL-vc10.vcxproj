@@ -245,8 +245,10 @@
     <ClInclude Include="..\i_sound.h" />
     <ClInclude Include="..\i_system.h" />
     <ClInclude Include="..\i_tcp.h" />
+    <ClInclude Include="..\i_threads.h" />
     <ClInclude Include="..\i_video.h" />
     <ClInclude Include="..\keys.h" />
+    <ClInclude Include="..\libdivide.h" />
     <ClInclude Include="..\lua_hook.h" />
     <ClInclude Include="..\lua_hud.h" />
     <ClInclude Include="..\lua_libs.h" />
@@ -303,6 +305,7 @@
     <ClInclude Include="..\st_stuff.h" />
     <ClInclude Include="..\s_sound.h" />
     <ClInclude Include="..\tables.h" />
+    <ClInclude Include="..\taglist.h" />
     <ClInclude Include="..\v_video.h" />
     <ClInclude Include="..\w_wad.h" />
     <ClInclude Include="..\y_inter.h" />
@@ -406,6 +409,7 @@
     <ClCompile Include="..\lua_hooklib.c" />
     <ClCompile Include="..\lua_hudlib.c" />
     <ClCompile Include="..\lua_infolib.c" />
+    <ClCompile Include="..\lua_inputlib.c" />
     <ClCompile Include="..\lua_maplib.c" />
     <ClCompile Include="..\lua_mathlib.c" />
     <ClCompile Include="..\lua_mobjlib.c" />
@@ -413,6 +417,7 @@
     <ClCompile Include="..\lua_polyobjlib.c" />
     <ClCompile Include="..\lua_script.c" />
     <ClCompile Include="..\lua_skinlib.c" />
+    <ClCompile Include="..\lua_taglib.c" />
     <ClCompile Include="..\lua_thinkerlib.c" />
     <ClCompile Include="..\lzf.c" />
     <ClCompile Include="..\md5.c" />
@@ -473,10 +478,12 @@
     <ClCompile Include="..\r_things.c" />
     <ClCompile Include="..\screen.c" />
     <ClCompile Include="..\sounds.c" />
+    <ClCompile Include="..\strcasestr.c" />
     <ClCompile Include="..\string.c" />
     <ClCompile Include="..\st_stuff.c" />
     <ClCompile Include="..\s_sound.c" />
     <ClCompile Include="..\tables.c" />
+    <ClCompile Include="..\taglist.c" />
     <ClCompile Include="..\t_facon.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>

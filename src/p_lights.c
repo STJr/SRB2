@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -374,10 +374,9 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 void P_FadeLight(INT16 tag, INT32 destvalue, INT32 speed, boolean ticbased, boolean force)
 {
 	INT32 i;
-	TAG_ITER_DECLARECOUNTER(0);
 
 	// search all sectors for ones with tag
-	TAG_ITER_SECTORS(0, tag, i)
+	TAG_ITER_SECTORS(tag, i)
 	{
 		if (!force && ticbased // always let speed fader execute
 			&& sectors[i].lightingdata

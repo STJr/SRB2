@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -419,16 +419,23 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 			}
 			else if (object->player->dashmode >= DASHMODE_THRESHOLD)
 				P_SetPlayerMobjState(object, S_PLAY_DASH);
-			else if (P_IsObjectOnGround(object) && horizspeed >= FixedMul(object->player->runspeed, object->scale))
-				P_SetPlayerMobjState(object, S_PLAY_RUN);
+			else if (P_IsObjectOnGround(object))
+				P_SetPlayerMobjState(object, (horizspeed >= FixedMul(object->player->runspeed, object->scale)) ? S_PLAY_RUN : S_PLAY_WALK);
 			else
-				P_SetPlayerMobjState(object, S_PLAY_WALK);
+				P_SetPlayerMobjState(object, (object->momz > 0) ? S_PLAY_SPRING : S_PLAY_FALL);
 		}
 		else if (P_MobjFlip(object)*vertispeed > 0)
 			P_SetPlayerMobjState(object, S_PLAY_SPRING);
 		else
 			P_SetPlayerMobjState(object, S_PLAY_FALL);
 	}
+	else if (horizspeed
+		&& object->tracer
+		&& object->tracer->player
+		&& object->tracer->player->powers[pw_carry] != CR_NONE
+		&& object->tracer->tracer == object
+		&& (!demoplayback || P_ControlStyle(object->tracer->player) == CS_LMAOGALOG))
+			P_SetPlayerAngle(object->tracer->player, spring->angle);
 
 	object->standingslope = NULL; // And again.
 
@@ -747,7 +754,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 
 		// REX HAS SEEN YOU
-		if (!LUAh_SeenPlayer(tmthing->target->player, thing->player))
+		if (!LUA_HookSeenPlayer(tmthing->target->player, thing->player))
 			return false;
 
 		seenplayer = thing->player;
@@ -936,7 +943,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 	}
 
 	{
-		UINT8 shouldCollide = LUAh_MobjCollide(thing, tmthing); // checks hook for thing's type
+		UINT8 shouldCollide = LUA_Hook2Mobj(thing, tmthing, MOBJ_HOOK(MobjCollide)); // checks hook for thing's type
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -944,7 +951,7 @@ static boolean PIT_CheckThing(mobj_t *thing)
 		else if (shouldCollide == 2)
 			return true; // force no collide
 
-		shouldCollide = LUAh_MobjMoveCollide(tmthing, thing); // checks hook for tmthing's type
+		shouldCollide = LUA_Hook2Mobj(tmthing, thing, MOBJ_HOOK(MobjMoveCollide)); // checks hook for tmthing's type
 		if (P_MobjWasRemoved(tmthing) || P_MobjWasRemoved(thing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -1145,11 +1152,11 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 
 		if (tmthing->eflags & MFE_VERTICALFLIP)
-			thing->z = tmthing->z - thing->height - FixedMul(FRACUNIT, tmthing->scale);
+			P_TeleportMove(thing, thing->x, thing->y, tmthing->z - thing->height - FixedMul(FRACUNIT, tmthing->scale));
 		else
-			thing->z = tmthing->z + tmthing->height + FixedMul(FRACUNIT, tmthing->scale);
+			P_TeleportMove(thing, thing->x, thing->y, tmthing->z + tmthing->height + FixedMul(FRACUNIT, tmthing->scale));
 		if (thing->flags & MF_SHOOTABLE)
-			P_DamageMobj(thing, tmthing, tmthing, 1, 0);
+			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
 		return true;
 	}
 
@@ -1928,7 +1935,7 @@ static boolean PIT_CheckLine(line_t *ld)
 	blockingline = ld;
 
 	{
-		UINT8 shouldCollide = LUAh_MobjLineCollide(tmthing, blockingline); // checks hook for thing's type
+		UINT8 shouldCollide = LUA_HookMobjLineCollide(tmthing, blockingline); // checks hook for thing's type
 		if (P_MobjWasRemoved(tmthing))
 			return true; // one of them was removed???
 		if (shouldCollide == 1)
@@ -2022,7 +2029,7 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 	subsector_t *newsubsec;
 	boolean blockval = true;
 
-	ps_checkposition_calls++;
+	ps_checkposition_calls.value.i++;
 
 	I_Assert(thing != NULL);
 #ifdef PARANOIA
@@ -2659,17 +2666,17 @@ boolean PIT_PushableMoved(mobj_t *thing)
 	return true;
 }
 
-//
-// P_TryMove
-// Attempt to move to a new position.
-//
-boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
+static boolean
+increment_move
+(		mobj_t * thing,
+		fixed_t x,
+		fixed_t y,
+		boolean allowdropoff)
 {
 	fixed_t tryx = thing->x;
 	fixed_t tryy = thing->y;
 	fixed_t radius = thing->radius;
 	fixed_t thingtop;
-	fixed_t startingonground = P_IsObjectOnGround(thing);
 	floatok = false;
 
 	if (radius < MAXRADIUS/2)
@@ -2718,6 +2725,16 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 				// Only step up "if needed".
 				if (thing->player->panim == PA_SPRING
 				&& P_MobjFlip(thing)*thing->momz > FixedMul(FRACUNIT, thing->scale))
+					maxstep = 0;
+			}
+			else if (thing->flags & MF_PUSHABLE)
+			{
+				// If using type Section1:13, double the maxstep.
+				if (GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 13)
+					maxstep <<= 1;
+
+				// If using type Section1:14, no maxstep.
+				if (GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
 					maxstep = 0;
 			}
 
@@ -2797,7 +2814,38 @@ boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 		}
 	} while (tryx != x || tryy != y);
 
+	return true;
+}
+
+//
+// P_CheckMove
+// Check if a P_TryMove would be successful.
+//
+boolean P_CheckMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
+{
+	boolean moveok;
+	mobj_t *hack = P_SpawnMobjFromMobj(thing, 0, 0, 0, MT_RAY);
+
+	hack->radius = thing->radius;
+	hack->height = thing->height;
+
+	moveok = increment_move(hack, x, y, allowdropoff);
+	P_RemoveMobj(hack);
+
+	return moveok;
+}
+
+//
+// P_TryMove
+// Attempt to move to a new position.
+//
+boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
+{
+	fixed_t startingonground = P_IsObjectOnGround(thing);
+
 	// The move is ok!
+	if (!increment_move(thing, x, y, allowdropoff))
+		return false;
 
 	// If it's a pushable object, check if anything is
 	// standing on top and move it, too.
