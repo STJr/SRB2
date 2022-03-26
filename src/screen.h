@@ -181,6 +181,7 @@ extern boolean R_SSE2;
 extern viddef_t vid;
 extern INT32 setmodeneeded; // mode number to set if needed, or 0
 extern UINT8 setrenderneeded;
+extern double aproxfps;
 
 void SCR_ChangeRenderer(void);
 
@@ -210,6 +211,8 @@ void SCR_CheckDefaultMode(void);
 
 // Set the mode number which is saved in the config
 void SCR_SetDefaultMode(void);
+
+void SCR_CalcAproxFps(void);
 
 FUNCMATH boolean SCR_IsAspectCorrect(INT32 width, INT32 height);
 

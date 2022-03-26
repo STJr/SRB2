@@ -451,18 +451,50 @@ boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
 // moved out of os-specific code for consistency
 static boolean fpsgraph[TICRATE];
 static tic_t lasttic;
+static tic_t totaltics;
 
-void SCR_DisplayTicRate(void)
+static UINT32 fpstime = 0;
+static UINT32 lastupdatetime = 0;
+
+#define FPSUPDATERATE 1/20 // What fraction of a second to update at. The fraction will not simplify to 0, trust me.
+#define FPSMAXSAMPLES 16
+
+static UINT32 fpssamples[FPSMAXSAMPLES];
+static UINT32 fpssampleslen = 0;
+static UINT32 fpssum = 0;
+double aproxfps = 0.0f;
+
+void SCR_CalcAproxFps(void)
 {
-	tic_t i;
+	tic_t i = 0;
 	tic_t ontic = I_GetTime();
-	tic_t totaltics = 0;
-	INT32 ticcntcolor = 0;
-	const INT32 h = vid.height-(8*vid.dupy);
 
-	if (gamestate == GS_NULL)
-		return;
+	totaltics = 0;
 
+	// Update FPS time
+	if (I_PreciseToMicros(fpstime - lastupdatetime) > 1000000 * FPSUPDATERATE)
+	{
+		if (fpssampleslen == FPSMAXSAMPLES)
+		{
+			fpssum -= fpssamples[0];
+
+			for (i = 1; i < fpssampleslen; i++)
+				fpssamples[i-1] = fpssamples[i];
+		}
+		else
+			fpssampleslen++;
+
+		fpssamples[fpssampleslen-1] = I_GetPreciseTime() - fpstime;
+		fpssum += fpssamples[fpssampleslen-1];
+
+		aproxfps = 1000000 / (I_PreciseToMicros(fpssum) / (double)fpssampleslen);
+
+		lastupdatetime = I_GetPreciseTime();
+	}
+
+	fpstime = I_GetPreciseTime();
+
+	// Update ticrate time
 	for (i = lasttic + 1; i < TICRATE+lasttic && i < ontic; ++i)
 		fpsgraph[i % TICRATE] = false;
 
@@ -472,21 +504,30 @@ void SCR_DisplayTicRate(void)
 		if (fpsgraph[i])
 			++totaltics;
 
+	lasttic = ontic;
+}
+
+void SCR_DisplayTicRate(void)
+{
+	INT32 ticcntcolor = 0;
+	const INT32 h = vid.height-(8*vid.dupy);
+
+	if (gamestate == GS_NULL)
+		return;
+
 	if (totaltics <= TICRATE/2) ticcntcolor = V_REDMAP;
 	else if (totaltics == TICRATE) ticcntcolor = V_GREENMAP;
 
 	if (cv_ticrate.value == 2) // compact counter
-		V_DrawString(vid.width-(16*vid.dupx), h,
-			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d", totaltics));
+		V_DrawString(vid.width-(24*vid.dupx), h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%03.0f", aproxfps));
 	else if (cv_ticrate.value == 1) // full counter
 	{
-		V_DrawString(vid.width-(72*vid.dupx), h,
+		V_DrawString(vid.width-(88*vid.dupx), h,
 			V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
-		V_DrawString(vid.width-(40*vid.dupx), h,
-			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%02d/%02u", totaltics, TICRATE));
+		V_DrawString(vid.width-(56*vid.dupx), h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%03.0f/%03u", aproxfps, TICRATE));
 	}
-
-	lasttic = ontic;
 }
 
 void SCR_DisplayLocalPing(void)
