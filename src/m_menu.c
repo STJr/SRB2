@@ -22,6 +22,7 @@
 #include "d_main.h"
 #include "d_netcmd.h"
 #include "console.h"
+#include "r_fps.h"
 #include "r_local.h"
 #include "hu_stuff.h"
 #include "g_game.h"
@@ -1380,16 +1381,14 @@ static menuitem_t OP_VideoOptionsMenu[] =
 
 	{IT_HEADER, NULL, "Diagnostic", NULL, 184},
 	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         190},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      195},
-	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   200},
+	{IT_STRING | IT_CVAR, NULL, "FPS Cap",                   &cv_fpscap,          195},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      200},
+	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   205},
 
 #ifdef HWRENDER
-	{IT_HEADER, NULL, "Renderer", NULL, 208},
-	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",         M_OpenGLOptionsMenu, 214},
+	{IT_HEADER, NULL, "Renderer", NULL, 213},
+	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",         M_OpenGLOptionsMenu, 219},
 #endif
-
-	{IT_HEADER, NULL, "Experimental", NULL, 222},
-	{IT_STRING | IT_CVAR, NULL, "Frame Interpolation",       &cv_frameinterpolation, 228},
 };
 
 static menuitem_t OP_VideoModeMenu[] =

@@ -33,12 +33,15 @@
 #include "s_sound.h" // ditto
 #include "g_game.h" // ditto
 #include "p_local.h" // P_AutoPause()
+
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
 #include "hardware/hw_light.h"
 #include "hardware/hw_model.h"
 #endif
 
+// SRB2Kart
+#include "r_fps.h" // R_GetFramerateCap
 
 #if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
 #define RUSEASM //MSC.NET can't patch itself
@@ -67,6 +70,7 @@ static CV_PossibleValue_t scr_depth_cons_t[] = {{8, "8 bits"}, {16, "16 bits"}, 
 consvar_t cv_scr_width = CVAR_INIT ("scr_width", "1280", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_scr_height = CVAR_INIT ("scr_height", "800", CV_SAVE, CV_Unsigned, NULL);
 consvar_t cv_scr_depth = CVAR_INIT ("scr_depth", "16 bits", CV_SAVE, scr_depth_cons_t, NULL);
+
 consvar_t cv_renderview = CVAR_INIT ("renderview", "On", 0, CV_OnOff, NULL);
 
 CV_PossibleValue_t cv_renderer_t[] = {
@@ -447,86 +451,82 @@ boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
 	 );
 }
 
-// XMOD FPS display
-// moved out of os-specific code for consistency
-static boolean fpsgraph[TICRATE];
-static tic_t lasttic;
 static tic_t totaltics;
+double averageFPS = 0.0f;
 
-static UINT32 fpstime = 0;
-static UINT32 lastupdatetime = 0;
+#define FPS_SAMPLE_RATE (50000) // How often to update FPS samples, in microseconds
+#define NUM_FPS_SAMPLES 16 // Number of samples to store
 
-#define FPSUPDATERATE 1/20 // What fraction of a second to update at. The fraction will not simplify to 0, trust me.
-#define FPSMAXSAMPLES 16
+static double fps_samples[NUM_FPS_SAMPLES];
 
-static UINT32 fpssamples[FPSMAXSAMPLES];
-static UINT32 fpssampleslen = 0;
-static UINT32 fpssum = 0;
-double aproxfps = 0.0f;
-
-void SCR_CalcAproxFps(void)
+void SCR_CalculateFPS(void)
 {
-	tic_t i = 0;
-	tic_t ontic = I_GetTime();
+	static boolean init = false;
 
-	totaltics = 0;
+	static precise_t startTime = 0;
+	precise_t endTime = 0;
 
-	// Update FPS time
-	if (I_PreciseToMicros(fpstime - lastupdatetime) > 1000000 * FPSUPDATERATE)
+	static precise_t updateTime = 0;
+	int updateElapsed = 0;
+	int i;
+
+	endTime = I_GetPreciseTime();
+
+	if (init == false)
 	{
-		if (fpssampleslen == FPSMAXSAMPLES)
-		{
-			fpssum -= fpssamples[0];
-
-			for (i = 1; i < fpssampleslen; i++)
-				fpssamples[i-1] = fpssamples[i];
-		}
-		else
-			fpssampleslen++;
-
-		fpssamples[fpssampleslen-1] = I_GetPreciseTime() - fpstime;
-		fpssum += fpssamples[fpssampleslen-1];
-
-		aproxfps = 1000000 / (I_PreciseToMicros(fpssum) / (double)fpssampleslen);
-
-		lastupdatetime = I_GetPreciseTime();
+		startTime = updateTime = endTime;
+		init = true;
+		return;
 	}
 
-	fpstime = I_GetPreciseTime();
+	updateElapsed = I_PreciseToMicros(endTime - updateTime);
 
-	// Update ticrate time
-	for (i = lasttic + 1; i < TICRATE+lasttic && i < ontic; ++i)
-		fpsgraph[i % TICRATE] = false;
+	if (updateElapsed >= FPS_SAMPLE_RATE)
+	{
+		static int sampleIndex = 0;
+		int frameElapsed = I_PreciseToMicros(endTime - startTime);
 
-	fpsgraph[ontic % TICRATE] = true;
+		fps_samples[sampleIndex] = frameElapsed / 1000.0f;
 
-	for (i = 0;i < TICRATE;++i)
-		if (fpsgraph[i])
-			++totaltics;
+		sampleIndex++;
+		if (sampleIndex >= NUM_FPS_SAMPLES)
+			sampleIndex = 0;
 
-	lasttic = ontic;
+		averageFPS = 0.0f;
+		for (i = 0; i < NUM_FPS_SAMPLES; i++)
+		{
+			averageFPS += fps_samples[i];
+		}
+		averageFPS = 1000.0f / (averageFPS / NUM_FPS_SAMPLES);
+
+		updateTime = endTime;
+	}
+
+	startTime = endTime;
 }
 
 void SCR_DisplayTicRate(void)
 {
 	INT32 ticcntcolor = 0;
 	const INT32 h = vid.height-(8*vid.dupy);
+	UINT32 cap = R_GetFramerateCap();
+	double fps = ceil(averageFPS);
 
 	if (gamestate == GS_NULL)
 		return;
 
-	if (totaltics <= TICRATE/2) ticcntcolor = V_REDMAP;
-	else if (totaltics == TICRATE) ticcntcolor = V_GREENMAP;
+	if (totaltics <= cap/2) ticcntcolor = V_REDMAP;
+	else if (totaltics >= cap) ticcntcolor = V_GREENMAP;
 
 	if (cv_ticrate.value == 2) // compact counter
-		V_DrawString(vid.width-(24*vid.dupx), h,
-			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%03.0f", aproxfps));
+		V_DrawString(vid.width-(32*vid.dupx), h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%04.0f", fps));
 	else if (cv_ticrate.value == 1) // full counter
 	{
-		V_DrawString(vid.width-(88*vid.dupx), h,
+		V_DrawString(vid.width-(104*vid.dupx), h,
 			V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
-		V_DrawString(vid.width-(56*vid.dupx), h,
-			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%03.0f/%03u", aproxfps, TICRATE));
+		V_DrawString(vid.width-(72*vid.dupx), h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%4.0f/%4u", fps, cap));
 	}
 }
 

@@ -1344,7 +1344,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		float finalscale;
 		interpmobjstate_t interp;
 
-		if (cv_frameinterpolation.value == 1 && !paused)
+		if (R_UsingFrameInterpolation() && !paused)
 		{
 			R_InterpolateMobjState(spr->mobj, rendertimefrac, &interp);
 		}

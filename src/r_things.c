@@ -1148,7 +1148,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 	// for frame interpolation
 	interpmobjstate_t interp = {0};
 
-	if (cv_frameinterpolation.value == 1 && !paused)
+	if (R_UsingFrameInterpolation() && !paused)
 	{
 		R_InterpolateMobjState(thing, rendertimefrac, &interp);
 	}
@@ -1281,7 +1281,7 @@ static void R_SkewShadowSprite(
 	// for frame interpolation
 	interpmobjstate_t interp = {0};
 
-	if (cv_frameinterpolation.value == 1 && !paused)
+	if (R_UsingFrameInterpolation() && !paused)
 	{
 		R_InterpolateMobjState(thing, rendertimefrac, &interp);
 	}
@@ -1324,7 +1324,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	if (abs(groundz-viewz)/tz > 4) return; // Prevent stretchy shadows and possible crashes
 
-	if (cv_frameinterpolation.value == 1 && !paused)
+	if (R_UsingFrameInterpolation() && !paused)
 	{
 		R_InterpolateMobjState(thing, rendertimefrac, &interp);
 	}
@@ -1530,7 +1530,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	interpmobjstate_t interp = {0};
 
 	// do interpolation
-	if (cv_frameinterpolation.value == 1 && !paused)
+	if (R_UsingFrameInterpolation() && !paused)
 	{
 		R_InterpolateMobjState(thing, rendertimefrac, &interp);
 	}
@@ -1850,7 +1850,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		fixed_t linkscale;
 
 		thing = thing->tracer;
-		if (cv_frameinterpolation.value == 1 && !paused)
+		if (R_UsingFrameInterpolation() && !paused)
 		{
 			R_InterpolateMobjState(thing, rendertimefrac, &interp);
 		}
@@ -2210,7 +2210,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	interpmobjstate_t interp = {0};
 
 	// do interpolation
-	if (cv_frameinterpolation.value == 1 && !paused)
+	if (R_UsingFrameInterpolation() && !paused)
 	{
 		R_InterpolatePrecipMobjState(thing, rendertimefrac, &interp);
 	}

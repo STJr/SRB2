@@ -3648,7 +3648,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	// uncapped/interpolation
 	interpmobjstate_t interp = {0};
 
-	if (cv_frameinterpolation.value == 1 && !paused)
+	if (R_UsingFrameInterpolation() && !paused)
 	{
 		R_InterpolateMobjState(thing, rendertimefrac, &interp);
 	}
@@ -5089,7 +5089,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	dispoffset = thing->info->dispoffset;
 
 
-	if (cv_frameinterpolation.value == 1 && !paused)
+	if (R_UsingFrameInterpolation() && !paused)
 	{
 		R_InterpolateMobjState(thing, rendertimefrac, &interp);
 	}
@@ -5502,7 +5502,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	interpmobjstate_t interp = {0};
 
 	// do interpolation
-	if (cv_frameinterpolation.value == 1 && !paused)
+	if (R_UsingFrameInterpolation() && !paused)
 	{
 		R_InterpolatePrecipMobjState(thing, rendertimefrac, &interp);
 	}

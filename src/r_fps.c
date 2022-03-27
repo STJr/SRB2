@@ -21,9 +21,51 @@
 #include "p_spec.h"
 #include "r_state.h"
 #include "z_zone.h"
+#include "console.h" // con_startup_loadprogress
 #ifdef HWRENDER
 #include "hardware/hw_main.h" // for cv_glshearing
 #endif
+
+static CV_PossibleValue_t fpscap_cons_t[] = {
+	{-1, "Match refresh rate"},
+	{0, "Unlimited"},
+#ifdef DEVELOP
+	// Lower values are actually pretty useful for debugging interp problems!
+	{1, "One Singular Frame"},
+	{10, "10"},
+	{20, "20"},
+	{25, "25"},
+	{30, "30"},
+#endif
+	{35, "35"},
+	{50, "50"},
+	{60, "60"},
+	{70, "70"},
+	{75, "75"},
+	{90, "90"},
+	{100, "100"},
+	{120, "120"},
+	{144, "144"},
+	{200, "200"},
+	{240, "240"},
+	{0, NULL}
+};
+consvar_t cv_fpscap = CVAR_INIT ("fpscap", "Match refresh rate", CV_SAVE, fpscap_cons_t, NULL);
+
+UINT32 R_GetFramerateCap(void)
+{
+	if (cv_fpscap.value < 0)
+	{
+		return I_GetRefreshRate();
+	}
+
+	return cv_fpscap.value;
+}
+
+boolean R_UsingFrameInterpolation(void)
+{
+	return (R_GetFramerateCap() != TICRATE); // maybe use ">" instead?
+}
 
 static viewvars_t p1view_old;
 static viewvars_t p1view_new;
@@ -179,7 +221,7 @@ void R_SetViewContext(enum viewcontext_e _viewcontext)
 
 fixed_t R_InterpolateFixed(fixed_t from, fixed_t to)
 {
-	if (cv_frameinterpolation.value == 0)
+	if (!R_UsingFrameInterpolation())
 	{
 		return to;
 	}
@@ -189,7 +231,7 @@ fixed_t R_InterpolateFixed(fixed_t from, fixed_t to)
 
 angle_t R_InterpolateAngle(angle_t from, angle_t to)
 {
-	if (cv_frameinterpolation.value == 0)
+	if (!R_UsingFrameInterpolation())
 	{
 		return to;
 	}

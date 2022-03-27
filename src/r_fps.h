@@ -19,6 +19,11 @@
 #include "p_local.h"
 #include "r_state.h"
 
+extern consvar_t cv_fpscap;
+
+UINT32 R_GetFramerateCap(void);
+boolean R_UsingFrameInterpolation(void);
+
 enum viewcontext_e
 {
 	VIEWCONTEXT_PLAYER1 = 0,
