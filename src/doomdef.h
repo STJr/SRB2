@@ -530,6 +530,22 @@ extern boolean capslock;
 // i_system.c, replace getchar() once the keyboard has been appropriated
 INT32 I_GetKey(void);
 
+/* http://www.cse.yorku.ca/~oz/hash.html */
+static inline
+UINT32 quickncasehash (const char *p, size_t n)
+{
+	size_t i = 0;
+	UINT32 x = 5381;
+
+	while (i < n && p[i])
+	{
+		x = (x * 33) ^ tolower(p[i]);
+		i++;
+	}
+
+	return x;
+}
+
 #ifndef min // Double-Check with WATTCP-32's cdefs.h
 #define min(x, y) (((x) < (y)) ? (x) : (y))
 #endif

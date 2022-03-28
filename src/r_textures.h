@@ -54,6 +54,7 @@ typedef struct
 {
 	// Keep name for switch changing, etc.
 	char name[8];
+	UINT32 hash;
 	UINT8 type; // TEXTURETYPE_
 	INT16 width, height;
 	boolean holes;
@@ -76,6 +77,7 @@ extern UINT8 **texturecache; // graphics data for each generated full-size textu
 
 // Load TEXTURES definitions, create lookup tables
 void R_LoadTextures(void);
+void R_LoadTexturesPwad(UINT16 wadnum);
 void R_FlushTextureCache(void);
 
 // Texture generation

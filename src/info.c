@@ -2992,10 +2992,10 @@ state_t states[NUMSTATES] =
 	{SPR_NULL,                           0, 15*2, {NULL}, 0, 0, S_ZAPSB2 }, // S_ZAPSB11
 
 	// Thunder spark
-	{SPR_SSPK, FF_ANIMATE, -1, {NULL}, 1, 2, S_NULL},   // S_THUNDERCOIN_SPARK
+	{SPR_SSPK, FF_ANIMATE|FF_FULLBRIGHT, -1, {NULL}, 1, 2, S_NULL},   // S_THUNDERCOIN_SPARK
 
 	// Invincibility Sparkles
-	{SPR_IVSP, FF_ANIMATE, 32, {NULL}, 31, 1, S_NULL},   // S_IVSP
+	{SPR_IVSP, FF_ANIMATE|FF_FULLBRIGHT, 32, {NULL}, 31, 1, S_NULL},   // S_IVSP
 
 	// Super Sonic Spark
 	{SPR_SSPK,   FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_SSPK2}, // S_SSPK1
@@ -3936,23 +3936,23 @@ state_t states[NUMSTATES] =
 	{SPR_SPRK, FF_TRANS20|FF_ANIMATE|9, 18, {NULL}, 8, 2, S_NULL},  // S_SPRK3
 
 	// Robot Explosion
-	{SPR_BOM1, 0, 0, {A_FlickySpawn}, 0, 0, S_XPLD1}, // S_XPLD_FLICKY
-	{SPR_BOM1, 0, 2, {A_Scream},      0, 0, S_XPLD2}, // S_XPLD1
-	{SPR_BOM1, 1, 2, {NULL},          0, 0, S_XPLD3}, // S_XPLD2
-	{SPR_BOM1, 2, 3, {NULL},          0, 0, S_XPLD4}, // S_XPLD3
-	{SPR_BOM1, 3, 3, {NULL},          0, 0, S_XPLD5}, // S_XPLD4
-	{SPR_BOM1, 4, 4, {NULL},          0, 0, S_XPLD6}, // S_XPLD5
-	{SPR_BOM1, 5, 4, {NULL},          0, 0, S_NULL},  // S_XPLD6
+	{SPR_BOM1, 0, 0, {A_FlickySpawn},  0, 0, S_XPLD1}, // S_XPLD_FLICKY
+	{SPR_BOM1, 0, 2, {A_ShadowScream}, 0, 0, S_XPLD2}, // S_XPLD1
+	{SPR_BOM1, 1, 2, {NULL},           0, 0, S_XPLD3}, // S_XPLD2
+	{SPR_BOM1, 2, 3, {NULL},           0, 0, S_XPLD4}, // S_XPLD3
+	{SPR_BOM1, 3, 3, {NULL},           0, 0, S_XPLD5}, // S_XPLD4
+	{SPR_BOM1, 4, 4, {NULL},           0, 0, S_XPLD6}, // S_XPLD5
+	{SPR_BOM1, 5, 4, {NULL},           0, 0, S_NULL},  // S_XPLD6
 
 	{SPR_BOM1, FF_ANIMATE,   21, {NULL},          5, 4, S_INVISIBLE}, // S_XPLD_EGGTRAP
 
 	// Underwater Explosion
-	{SPR_BOM4, 0, 3, {A_Scream}, 0, 0, S_WPLD2}, // S_WPLD1
-	{SPR_BOM4, 1, 3, {NULL},     0, 0, S_WPLD3}, // S_WPLD2
-	{SPR_BOM4, 2, 3, {NULL},     0, 0, S_WPLD4}, // S_WPLD3
-	{SPR_BOM4, 3, 3, {NULL},     0, 0, S_WPLD5}, // S_WPLD4
-	{SPR_BOM4, 4, 3, {NULL},     0, 0, S_WPLD6}, // S_WPLD5
-	{SPR_BOM4, 5, 3, {NULL},     0, 0, S_NULL},  // S_WPLD6
+	{SPR_BOM4, 0, 3, {A_ShadowScream}, 0, 0, S_WPLD2}, // S_WPLD1
+	{SPR_BOM4, 1, 3, {NULL},           0, 0, S_WPLD3}, // S_WPLD2
+	{SPR_BOM4, 2, 3, {NULL},           0, 0, S_WPLD4}, // S_WPLD3
+	{SPR_BOM4, 3, 3, {NULL},           0, 0, S_WPLD5}, // S_WPLD4
+	{SPR_BOM4, 4, 3, {NULL},           0, 0, S_WPLD6}, // S_WPLD5
+	{SPR_BOM4, 5, 3, {NULL},           0, 0, S_NULL},  // S_WPLD6
 
 	{SPR_DUST,   FF_TRANS40, 4, {NULL}, 0, 0, S_DUST2}, // S_DUST1
 	{SPR_DUST, 1|FF_TRANS50, 5, {NULL}, 0, 0, S_DUST3}, // S_DUST2
