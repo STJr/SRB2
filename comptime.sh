@@ -23,7 +23,7 @@ versiongit() {
 }
 
 versionsvn() {
-	svnrevision="$(svnversion -n $1)"
+	svnrevision="$(svnversion -n "$1")"
 	version "Subversion" "r$svnrevision";
 	exit 0
 }
@@ -35,10 +35,10 @@ versionfake() {
 compversion() {
 	touch "$path/comptime.c"
 	versionfake
-	[ -d "$path/.svn" ] && versionsvn
+	[ -d "$path/.svn" ] && versionsvn "$@"
 	[ -d "$path/../.git" ] && versiongit
 	exit 1
 }
 
-[ -f "$path/comptime.c" ] && compversion
+[ -f "$path/comptime.c" ] && compversion "$@"
 exit 2
