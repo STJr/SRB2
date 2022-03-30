@@ -841,17 +841,12 @@ void D_SRB2Loop(void)
 				tictime = entertime;
 			}
 
+			dbg_entertime = entertime;
+			dbg_prevtime = prevtime;
+			dbg_tictime = tictime;
+
 			if (!(paused || P_AutoPause()))
 			{
-#if 0
-				CONS_Printf("prevtime = %f\n", prevtime);
-				CONS_Printf("entertime = %f\n", entertime);
-				CONS_Printf("tictime = %f\n", tictime);
-				CONS_Printf("entertime - prevtime = %f\n", entertime - prevtime);
-				CONS_Printf("entertime - tictime = %f\n", entertime - tictime);
-				CONS_Printf("========\n");
-#endif
-
 				if (entertime - prevtime >= 1.0f)
 				{
 					// Lagged for more frames than a gametic...

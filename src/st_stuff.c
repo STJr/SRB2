@@ -45,6 +45,8 @@
 #include "lua_hud.h"
 #include "lua_hook.h"
 
+#include "r_fps.h"
+
 UINT16 objectsdrawn = 0;
 
 //
@@ -619,6 +621,24 @@ static void ST_drawDebugInfo(void)
 #undef V_DrawDebugFlag
 #undef V_DrawDebugLine
 #undef VFLAGS
+}
+
+float dbg_entertime = 0.0f, dbg_prevtime = 0.0f, dbg_tictime = 0.0f;
+static void ST_DrawInterpDebug(void)
+{
+	// TODO: when the devmode situation stops sucking eggs,
+	// remove cv_interpdebug and use DBG_RENDER instead.
+	if (!cv_interpdebug.value || !R_UsingFrameInterpolation())
+	{
+		return;
+	}
+
+	V_DrawRightAlignedString(312, 8, V_MONOSPACE, va("enter - tic: %.3f", dbg_entertime - dbg_tictime));
+	V_DrawRightAlignedString(312, 16, V_MONOSPACE, va("enter - prev: %.3f", dbg_entertime - dbg_prevtime));
+
+	V_DrawRightAlignedString(312, 24, V_MONOSPACE, va("tic: %.3f", dbg_tictime));
+	V_DrawRightAlignedString(312, 32, V_MONOSPACE, va("prev: %.3f", dbg_prevtime));
+	V_DrawRightAlignedString(312, 40, V_MONOSPACE, va("enter: %.3f", dbg_entertime));
 }
 
 static void ST_drawScore(void)
@@ -2755,6 +2775,8 @@ static void ST_overlayDrawer(void)
 		ST_drawInput();
 
 	ST_drawDebugInfo();
+
+	ST_DrawInterpDebug();
 }
 
 void ST_Drawer(void)

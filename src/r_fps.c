@@ -40,6 +40,8 @@ static CV_PossibleValue_t fpscap_cons_t[] = {
 };
 consvar_t cv_fpscap = CVAR_INIT ("fpscap", "Match refresh rate", CV_SAVE, fpscap_cons_t, NULL);
 
+consvar_t cv_interpdebug = CVAR_INIT ("interpdebug", "Off", 0, CV_OnOff, NULL);
+
 UINT32 R_GetFramerateCap(void)
 {
 	if (rendermode == render_none)
