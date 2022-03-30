@@ -2147,6 +2147,16 @@ static double tic_frequency;
 static Uint64 tic_epoch;
 static double elapsed_tics;
 
+#ifdef DEVELOP // Tied behind DEVELOP, until sv_cheats is made better
+static void UpdateTicFreq(void)
+{
+	tic_frequency = (timer_frequency / (double)NEWTICRATE) / FIXED_TO_FLOAT(cv_timescale.value);
+}
+
+static CV_PossibleValue_t timescale_cons_t[] = {{FRACUNIT/20, "MIN"}, {20*FRACUNIT, "MAX"}, {0, NULL}};
+consvar_t cv_timescale = CVAR_INIT ("timescale", "1.0", CV_NETVAR|CV_CHEAT|CV_FLOAT|CV_CALL, timescale_cons_t, UpdateTicFreq);
+#endif
+
 static void UpdateElapsedTics(void)
 {
 	const Uint64 now = SDL_GetPerformanceCounter();
@@ -2251,6 +2261,10 @@ double I_GetFrameTime(void)
 //
 void I_StartupTimer(void)
 {
+#ifdef DEVELOP
+	CV_RegisterVar(&cv_timescale);
+#endif
+
 	timer_frequency = SDL_GetPerformanceFrequency();
 	tic_epoch       = SDL_GetPerformanceCounter();
 

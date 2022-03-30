@@ -194,6 +194,9 @@ extern UINT8 *scr_borderpatch; // patch used to fill the view borders
 extern consvar_t cv_scr_width, cv_scr_height, cv_scr_depth, cv_renderview, cv_renderer, cv_fullscreen;
 // wait for page flipping to end or not
 extern consvar_t cv_vidwait;
+#ifdef DEVELOP
+extern consvar_t cv_timescale;
+#endif
 
 // Initialize the screen
 void SCR_Startup(void);
