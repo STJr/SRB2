@@ -91,6 +91,8 @@ actionpointer_t actionpointers[] =
 	{{A_FaceTracer},             "A_FACETRACER"},
 	{{A_Scream},                 "A_SCREAM"},
 	{{A_BossDeath},              "A_BOSSDEATH"},
+	{{A_SetShadowScale},         "A_SETSHADOWSCALE"},
+	{{A_ShadowScream},           "A_SHADOWSCREAM"},
 	{{A_CustomPower},            "A_CUSTOMPOWER"},
 	{{A_GiveWeapon},             "A_GIVEWEAPON"},
 	{{A_RingBox},                "A_RINGBOX"},
