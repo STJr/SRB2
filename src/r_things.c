@@ -1140,7 +1140,24 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 	msecnode_t *node;
 	sector_t *sector;
 	ffloor_t *rover;
-#define CHECKZ (isflipped ? z > thing->z+thing->height/2 && z < groundz : z < thing->z+thing->height/2 && z > groundz)
+
+	// for frame interpolation
+	fixed_t interpx;
+	fixed_t interpy;
+	fixed_t interpz;
+	
+	interpx = thing->x;
+	interpy = thing->y;
+	interpz = thing->z;
+
+	if (cv_frameinterpolation.value == 1 && !paused)
+	{
+		interpx = thing->old_x + FixedMul(rendertimefrac, thing->x - thing->old_x);
+		interpy = thing->old_y + FixedMul(rendertimefrac, thing->y - thing->old_y);
+		interpz = thing->old_z + FixedMul(rendertimefrac, thing->z - thing->old_z);
+	}
+
+#define CHECKZ (isflipped ? z > interpz+thing->height/2 && z < groundz : z < interpz+thing->height/2 && z > groundz)
 
 	for (node = thing->touching_sectorlist; node; node = node->m_sectorlist_next)
 	{
@@ -1151,7 +1168,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 		if (sector->heightsec != -1)
 			z = isflipped ? sectors[sector->heightsec].ceilingheight : sectors[sector->heightsec].floorheight;
 		else
-			z = isflipped ? P_GetSectorCeilingZAt(sector, thing->x, thing->y) : P_GetSectorFloorZAt(sector, thing->x, thing->y);
+			z = isflipped ? P_GetSectorCeilingZAt(sector, interpx, interpy) : P_GetSectorFloorZAt(sector, interpx, interpy);
 
 		if CHECKZ
 		{
@@ -1165,7 +1182,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES) || (rover->alpha < 90 && !(rover->flags & FF_SWIMMABLE)))
 					continue;
 
-				z = isflipped ? P_GetFFloorBottomZAt(rover, thing->x, thing->y) : P_GetFFloorTopZAt(rover, thing->x, thing->y);
+				z = isflipped ? P_GetFFloorBottomZAt(rover, interpx, interpy) : P_GetFFloorTopZAt(rover, interpx, interpy);
 				if CHECKZ
 				{
 					groundz = z;
@@ -1252,9 +1269,24 @@ static void R_SkewShadowSprite(
 			fixed_t groundz, INT32 spriteheight, fixed_t scalemul,
 			fixed_t *shadowyscale, fixed_t *shadowskew)
 {
+
 	// haha let's try some dumb stuff
 	fixed_t xslope, zslope;
-	angle_t sloperelang = (R_PointToAngle(thing->x, thing->y) - groundslope->xydirection) >> ANGLETOFINESHIFT;
+	angle_t sloperelang;
+
+	// for frame interpolation
+	fixed_t interpx;
+	fixed_t interpy;
+
+	interpx = thing->x;
+	interpy = thing->y;
+
+	if (cv_frameinterpolation.value == 1 && !paused)
+	{
+		interpx = thing->old_x + FixedMul(rendertimefrac, thing->x - thing->old_x);
+		interpy = thing->old_y + FixedMul(rendertimefrac, thing->y - thing->old_y);
+	}
+	sloperelang = (R_PointToAngle(interpx, interpy) - groundslope->xydirection) >> ANGLETOFINESHIFT;
 
 	xslope = FixedMul(FINESINE(sloperelang), groundslope->zdelta);
 	zslope = FixedMul(FINECOSINE(sloperelang), groundslope->zdelta);

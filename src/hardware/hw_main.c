@@ -3644,6 +3644,19 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	fixed_t slopez;
 	pslope_t *groundslope;
 
+	// uncapped/interpolation
+	fixed_t interpx;
+	fixed_t interpy;
+
+	interpx = thing->x;
+	interpy = thing->y;
+
+	if (cv_frameinterpolation.value == 1 && !paused)
+	{
+		interpx = thing->old_x + FixedMul(rendertimefrac, thing->x - thing->old_x);
+		interpy = thing->old_y + FixedMul(rendertimefrac, thing->y - thing->old_y);
+	}
+
 	groundz = R_GetShadowZ(thing, &groundslope);
 
 	heightsec = thing->subsector->sector->heightsec;
@@ -3678,8 +3691,8 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	scalemul = FixedMul(scalemul, (thing->radius*2) / gpatch->height);
 
 	fscale = FIXED_TO_FLOAT(scalemul);
-	fx = FIXED_TO_FLOAT(thing->x);
-	fy = FIXED_TO_FLOAT(thing->y);
+	fx = FIXED_TO_FLOAT(interpx);
+	fy = FIXED_TO_FLOAT(interpy);
 
 	//  3--2
 	//  | /|

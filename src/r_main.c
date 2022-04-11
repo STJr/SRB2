@@ -100,9 +100,6 @@ lighttable_t *scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
 lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
 
-// Frame interpolation/uncapped
-tic_t prev_tics;
-
 // Hack to support extra boom colormaps.
 extracolormap_t *extra_colormaps = NULL;
 

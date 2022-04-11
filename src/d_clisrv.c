@@ -5270,7 +5270,6 @@ void TryRunTics(tic_t realtics)
 				boolean update_stats = !(paused || P_AutoPause());
 
 				DEBFILE(va("============ Running tic %d (local %d)\n", gametic, localgametic));
-				prev_tics = I_GetTime();
 
 				if (update_stats)
 					PS_START_TIMING(ps_tictime);

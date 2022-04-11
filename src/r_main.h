@@ -120,7 +120,6 @@ extern consvar_t cv_skybox;
 extern consvar_t cv_tailspickup;
 
 // Frame interpolation (uncapped framerate)
-extern tic_t prev_tics;
 extern consvar_t cv_frameinterpolation;
 
 // Called by startup code.
