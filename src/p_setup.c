@@ -33,6 +33,7 @@
 #include "r_picformats.h"
 #include "r_sky.h"
 #include "r_draw.h"
+#include "r_fps.h" // R_ResetViewInterpolation in level load
 
 #include "s_sound.h"
 #include "st_stuff.h"
@@ -4478,6 +4479,11 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	P_RunCachedActions();
 
 	P_MapEnd(); // tmthing is no longer needed from this point onwards
+
+	if (rendermode != render_none)
+	{
+		R_ResetViewInterpolation();
+	}
 
 	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
 	if (!titlemapinaction)

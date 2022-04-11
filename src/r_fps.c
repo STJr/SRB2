@@ -34,6 +34,7 @@ static viewvars_t sky2view_old;
 static viewvars_t sky2view_new;
 
 static viewvars_t *oldview = &p1view_old;
+static BOOL oldview_valid = FALSE;
 viewvars_t *newview = &p1view_new;
 
 
@@ -87,18 +88,25 @@ static void R_SetupFreelook(player_t *player, boolean skybox)
 
 void R_InterpolateView(fixed_t frac)
 {
+	viewvars_t* prevview = oldview;
 	boolean skybox = 0;
 	if (FIXED_TO_FLOAT(frac) < 0)
 		frac = 0;
 	if (frac > FRACUNIT)
 		frac = FRACUNIT;
 
-	viewx = oldview->x + R_LerpFixed(oldview->x, newview->x, frac);
-	viewy = oldview->y + R_LerpFixed(oldview->y, newview->y, frac);
-	viewz = oldview->z + R_LerpFixed(oldview->z, newview->z, frac);
+	if (oldview_valid == FALSE)
+	{
+		// interpolate from newview to newview
+		prevview = newview;
+	}
 
-	viewangle = oldview->angle + R_LerpAngle(oldview->angle, newview->angle, frac);
-	aimingangle = oldview->aim + R_LerpAngle(oldview->aim, newview->aim, frac);
+	viewx = prevview->x + R_LerpFixed(prevview->x, newview->x, frac);
+	viewy = prevview->y + R_LerpFixed(prevview->y, newview->y, frac);
+	viewz = prevview->z + R_LerpFixed(prevview->z, newview->z, frac);
+
+	viewangle = prevview->angle + R_LerpAngle(prevview->angle, newview->angle, frac);
+	aimingangle = prevview->aim + R_LerpAngle(prevview->aim, newview->aim, frac);
 
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
@@ -123,6 +131,12 @@ void R_UpdateViewInterpolation(void)
 	p2view_old = p2view_new;
 	sky1view_old = sky1view_new;
 	sky2view_old = sky2view_new;
+	oldview_valid = TRUE;
+}
+
+void R_ResetViewInterpolation(void)
+{
+	oldview_valid = FALSE;
 }
 
 void R_SetViewContext(enum viewcontext_e _viewcontext)
