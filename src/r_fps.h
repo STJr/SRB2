@@ -44,6 +44,13 @@ typedef struct {
 
 extern viewvars_t *newview;
 
+typedef struct {
+	fixed_t x;
+	fixed_t y;
+	fixed_t z;
+	angle_t angle;
+} interpmobjstate_t;
+
 // Interpolates the current view variables (r_state.h) against the selected view context in R_SetViewContext
 void R_InterpolateView(fixed_t frac);
 // Buffer the current new views into the old views. Call once after each real tic.
@@ -52,5 +59,9 @@ void R_UpdateViewInterpolation(void);
 void R_ResetViewInterpolation(void);
 // Set the current view context (the viewvars pointed to by newview)
 void R_SetViewContext(enum viewcontext_e _viewcontext);
+// Evaluate the interpolated mobj state for the given mobj
+void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out);
+// Evaluate the interpolated mobj state for the given precipmobj
+void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjstate_t *out);
 
 #endif

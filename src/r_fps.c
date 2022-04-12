@@ -42,12 +42,12 @@ enum viewcontext_e viewcontext = VIEWCONTEXT_PLAYER1;
 
 static fixed_t R_LerpFixed(fixed_t from, fixed_t to, fixed_t frac)
 {
-	return FixedMul(frac, to - from);
+	return from + FixedMul(frac, to - from);
 }
 
 static angle_t R_LerpAngle(angle_t from, angle_t to, fixed_t frac)
 {
-	return FixedMul(frac, to - from);
+	return from + FixedMul(frac, to - from);
 }
 
 // recalc necessary stuff for mouseaiming
@@ -101,12 +101,12 @@ void R_InterpolateView(fixed_t frac)
 		prevview = newview;
 	}
 
-	viewx = prevview->x + R_LerpFixed(prevview->x, newview->x, frac);
-	viewy = prevview->y + R_LerpFixed(prevview->y, newview->y, frac);
-	viewz = prevview->z + R_LerpFixed(prevview->z, newview->z, frac);
+	viewx = R_LerpFixed(prevview->x, newview->x, frac);
+	viewy = R_LerpFixed(prevview->y, newview->y, frac);
+	viewz = R_LerpFixed(prevview->z, newview->z, frac);
 
-	viewangle = prevview->angle + R_LerpAngle(prevview->angle, newview->angle, frac);
-	aimingangle = prevview->aim + R_LerpAngle(prevview->aim, newview->aim, frac);
+	viewangle = R_LerpAngle(prevview->angle, newview->angle, frac);
+	aimingangle = R_LerpAngle(prevview->aim, newview->aim, frac);
 
 	viewsin = FINESINE(viewangle>>ANGLETOFINESHIFT);
 	viewcos = FINECOSINE(viewangle>>ANGLETOFINESHIFT);
@@ -169,4 +169,28 @@ void R_SetViewContext(enum viewcontext_e _viewcontext)
 			I_Error("viewcontext value is invalid: we should never get here without an assert!!");
 			break;
 	}
+}
+
+void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
+{
+	out->x = R_LerpFixed(mobj->old_x, mobj->x, frac);
+	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
+	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
+
+	if (mobj->player)
+	{
+		out->angle = mobj->player->drawangle;
+	}
+	else
+	{
+		out->angle = mobj->angle;
+	}
+}
+
+void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
+{
+	out->x = R_LerpFixed(mobj->old_x, mobj->x, frac);
+	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
+	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
+	out->angle = mobj->angle;
 }
