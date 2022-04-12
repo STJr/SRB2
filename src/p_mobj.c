@@ -4056,7 +4056,10 @@ void P_SnowThinker(precipmobj_t *mobj)
 
 	// adjust height
 	if ((mobj->z += mobj->momz) <= mobj->floorz)
+	{
 		mobj->z = mobj->ceilingz;
+		P_ResetPrecipitationInterpolationState(mobj);
+	}
 }
 
 void P_RainThinker(precipmobj_t *mobj)
@@ -4082,6 +4085,7 @@ void P_RainThinker(precipmobj_t *mobj)
 			return;
 
 		mobj->z = mobj->ceilingz;
+		P_ResetPrecipitationInterpolationState(mobj);
 		P_SetPrecipMobjState(mobj, S_RAIN1);
 
 		return;
