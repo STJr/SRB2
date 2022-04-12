@@ -825,10 +825,17 @@ void D_SRB2Loop(void)
 			// Lagless camera! Yay!
 			if (gamestate == GS_LEVEL && netgame)
 			{
-				if (splitscreen && camera2.chase)
-					P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
-				if (camera.chase)
-					P_MoveChaseCamera(&players[displayplayer], &camera, false);
+				// Evaluate the chase cam once for every local realtic
+				// This might actually be better suited inside G_Ticker or TryRunTics
+				for (tic_t chasecamtics = 0; chasecamtics < realtics; chasecamtics++)
+				{
+					if (splitscreen && camera2.chase)
+						P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
+					if (camera.chase)
+						P_MoveChaseCamera(&players[displayplayer], &camera, false);
+				}
+				R_UpdateViewInterpolation();
+				
 			}
 			// (Only display if not already done for frame interp)
 			cv_frameinterpolation.value == 0 ? D_Display() : 0;
