@@ -501,6 +501,8 @@ void P_RingZMovement(mobj_t *mo);
 boolean P_SceneryZMovement(mobj_t *mo);
 void P_PlayerZMovement(mobj_t *mo);
 void P_EmeraldManager(void);
+void P_ResetInterpolationState(mobj_t *mobj);
+void P_ResetPrecipitationInterpolationState(precipmobj_t *mobj);
 
 extern INT32 modulothing;
 
