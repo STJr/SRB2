@@ -34,7 +34,7 @@ static viewvars_t sky2view_old;
 static viewvars_t sky2view_new;
 
 static viewvars_t *oldview = &p1view_old;
-static BOOL oldview_valid = FALSE;
+static boolean oldview_valid = false;
 viewvars_t *newview = &p1view_new;
 
 
@@ -95,7 +95,7 @@ void R_InterpolateView(fixed_t frac)
 	if (frac > FRACUNIT)
 		frac = FRACUNIT;
 
-	if (oldview_valid == FALSE)
+	if (oldview_valid == false)
 	{
 		// interpolate from newview to newview
 		prevview = newview;
@@ -131,12 +131,12 @@ void R_UpdateViewInterpolation(void)
 	p2view_old = p2view_new;
 	sky1view_old = sky1view_new;
 	sky2view_old = sky2view_new;
-	oldview_valid = TRUE;
+	oldview_valid = true;
 }
 
 void R_ResetViewInterpolation(void)
 {
-	oldview_valid = FALSE;
+	oldview_valid = false;
 }
 
 void R_SetViewContext(enum viewcontext_e _viewcontext)

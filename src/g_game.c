@@ -2363,7 +2363,11 @@ void G_Ticker(boolean run)
 			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
-			R_UpdateViewInterpolation();
+			if (run)
+			{
+				R_UpdateViewInterpolation();
+			}
+			
 
 			break;
 
@@ -2420,7 +2424,10 @@ void G_Ticker(boolean run)
 			if (titlemapinaction)
 			{
 				P_Ticker(run);
-				R_UpdateViewInterpolation();
+				if (run)
+				{
+					R_UpdateViewInterpolation();
+				}
 				// then intentionally fall through
 			}
 			/* FALLTHRU */
