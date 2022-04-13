@@ -477,6 +477,7 @@ static void D_Display(void)
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
+				R_ApplyLevelInterpolators(cv_frameinterpolation.value == 1 ? rendertimefrac : FRACUNIT);
 				PS_START_TIMING(ps_rendercalltime);
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
@@ -525,6 +526,7 @@ static void D_Display(void)
 						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
 				PS_STOP_TIMING(ps_rendercalltime);
+				R_RestoreLevelInterpolators();
 			}
 
 			if (lastdraw)

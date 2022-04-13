@@ -51,6 +51,27 @@ typedef struct {
 	angle_t angle;
 } interpmobjstate_t;
 
+// Level interpolators
+
+// The union tag for levelinterpolator_t
+typedef enum {
+	LVLINTERP_SectorPlane,
+} levelinterpolator_type_e;
+
+// Tagged union of a level interpolator
+typedef struct levelinterpolator_s {
+	levelinterpolator_type_e type;
+	thinker_t *thinker;
+	union {
+		struct {
+			sector_t *sector;
+			fixed_t oldheight;
+			fixed_t bakheight;
+			boolean ceiling;
+		} sectorplane;
+	};
+} levelinterpolator_t;
+
 // Interpolates the current view variables (r_state.h) against the selected view context in R_SetViewContext
 void R_InterpolateView(fixed_t frac);
 // Buffer the current new views into the old views. Call once after each real tic.
@@ -63,5 +84,18 @@ void R_SetViewContext(enum viewcontext_e _viewcontext);
 void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out);
 // Evaluate the interpolated mobj state for the given precipmobj
 void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjstate_t *out);
+
+void R_CreateInterpolator_SectorPlane(thinker_t *thinker, sector_t *sector, boolean ceiling);
+
+// Initialize level interpolators after a level change
+void R_InitializeLevelInterpolators(void);
+// Update level interpolators, storing the previous and current states.
+void R_UpdateLevelInterpolators(void);
+// Clear states for all level interpolators for the thinker
+void R_ClearLevelInterpolatorState(thinker_t *thinker);
+// Apply level interpolators to the actual game state
+void R_ApplyLevelInterpolators(fixed_t frac);
+// Restore level interpolators to the real game state
+void R_RestoreLevelInterpolators(void);
 
 #endif

@@ -16,6 +16,7 @@
 #include "m_random.h"
 #include "p_local.h"
 #include "p_slopes.h"
+#include "r_fps.h"
 #include "r_state.h"
 #include "s_sound.h"
 #include "z_zone.h"
@@ -573,6 +574,8 @@ void T_ContinuousFalling(continuousfall_t *faller)
 	{
 		faller->sector->ceilingheight = faller->ceilingstartheight;
 		faller->sector->floorheight = faller->floorstartheight;
+
+		R_ClearLevelInterpolatorState(&faller->thinker);
 	}
 
 	P_CheckSector(faller->sector, false); // you might think this is irrelevant. you would be wrong
@@ -2010,6 +2013,9 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 		}
 
 		firstone = 0;
+
+		// interpolation
+		R_CreateInterpolator_SectorPlane(&dofloor->thinker, sec, false);
 	}
 }
 
@@ -2140,6 +2146,10 @@ void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 			default:
 				break;
 		}
+
+		// interpolation
+		R_CreateInterpolator_SectorPlane(&elevator->thinker, sec, false);
+		R_CreateInterpolator_SectorPlane(&elevator->thinker, sec, true);
 	}
 }
 
@@ -2318,6 +2328,10 @@ void EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boole
 
 	faller->destheight = backwards ? backsector->ceilingheight : backsector->floorheight;
 	faller->direction = backwards ? 1 : -1;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&faller->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&faller->thinker, sec, true);
 }
 
 // Some other 3dfloor special things Tails 03-11-2002 (Search p_mobj.c for description)

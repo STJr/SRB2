@@ -20,6 +20,7 @@
 #include "r_plane.h"
 #include "p_spec.h"
 #include "r_state.h"
+#include "z_zone.h"
 #ifdef HWRENDER
 #include "hardware/hw_main.h" // for cv_glshearing
 #endif
@@ -39,6 +40,11 @@ viewvars_t *newview = &p1view_new;
 
 
 enum viewcontext_e viewcontext = VIEWCONTEXT_PLAYER1;
+
+static levelinterpolator_t **levelinterpolators;
+static size_t levelinterpolators_len;
+static size_t levelinterpolators_size;
+
 
 static fixed_t R_LerpFixed(fixed_t from, fixed_t to, fixed_t frac)
 {
@@ -193,4 +199,156 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
 	out->angle = mobj->angle;
+}
+
+static void AddInterpolator(levelinterpolator_t* interpolator)
+{
+	if (levelinterpolators_len >= levelinterpolators_size)
+	{
+		if (levelinterpolators_size == 0)
+		{
+			levelinterpolators_size = 128;
+		}
+		else
+		{
+			levelinterpolators_size *= 2;
+		}
+		
+		levelinterpolators = Z_ReallocAlign(
+			(void*) levelinterpolators,
+			sizeof(levelinterpolator_t*) * levelinterpolators_size,
+			PU_LEVEL,
+			NULL,
+			sizeof(levelinterpolator_t*) * 8
+		);
+	}
+
+	levelinterpolators[levelinterpolators_len] = interpolator;
+	levelinterpolators_len += 1;
+}
+
+static levelinterpolator_t *CreateInterpolator(levelinterpolator_type_e type, thinker_t *thinker)
+{
+	levelinterpolator_t *ret = (levelinterpolator_t*) Z_CallocAlign(
+		sizeof(levelinterpolator_t),
+		PU_LEVEL,
+		NULL,
+		sizeof(levelinterpolator_t) * 8
+	);
+
+	ret->type = type;
+	ret->thinker = thinker;
+
+	AddInterpolator(ret);
+
+	return ret;
+}
+
+void R_CreateInterpolator_SectorPlane(thinker_t *thinker, sector_t *sector, boolean ceiling)
+{
+	levelinterpolator_t *interp = CreateInterpolator(LVLINTERP_SectorPlane, thinker);
+	interp->sectorplane.sector = sector;
+	interp->sectorplane.ceiling = ceiling;
+	if (ceiling)
+	{
+		interp->sectorplane.oldheight = interp->sectorplane.bakheight = sector->ceilingheight;
+	}
+	else
+	{
+		interp->sectorplane.oldheight = interp->sectorplane.bakheight = sector->floorheight;
+	}
+}
+
+void R_InitializeLevelInterpolators(void)
+{
+	levelinterpolators_len = 0;
+	levelinterpolators_size = 0;
+	levelinterpolators = NULL;
+}
+
+static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
+{
+	switch (interp->type)
+	{
+	case LVLINTERP_SectorPlane:
+		interp->sectorplane.oldheight = interp->sectorplane.bakheight;
+		interp->sectorplane.bakheight = interp->sectorplane.ceiling ? interp->sectorplane.sector->ceilingheight : interp->sectorplane.sector->floorheight;
+		break;
+	}
+}
+
+void R_UpdateLevelInterpolators(void)
+{
+	size_t i;
+
+	for (i = 0; i < levelinterpolators_len; i++)
+	{
+		levelinterpolator_t *interp = levelinterpolators[i];
+		
+		UpdateLevelInterpolatorState(interp);
+	}
+}
+
+void R_ClearLevelInterpolatorState(thinker_t *thinker)
+{
+	
+	size_t i;
+
+	for (i = 0; i < levelinterpolators_len; i++)
+	{
+		levelinterpolator_t *interp = levelinterpolators[i];
+		
+		if (interp->thinker == thinker)
+		{
+			// Do it twice to make the old state match the new
+			UpdateLevelInterpolatorState(interp);
+			UpdateLevelInterpolatorState(interp);
+		}
+	}
+}
+
+void R_ApplyLevelInterpolators(fixed_t frac)
+{
+	size_t i;
+
+	for (i = 0; i < levelinterpolators_len; i++)
+	{
+		levelinterpolator_t *interp = levelinterpolators[i];
+
+		switch (interp->type)
+		{
+		case LVLINTERP_SectorPlane:
+			if (interp->sectorplane.ceiling)
+			{
+				interp->sectorplane.sector->ceilingheight = R_LerpFixed(interp->sectorplane.oldheight, interp->sectorplane.bakheight, frac);
+			}
+			else
+			{
+				interp->sectorplane.sector->floorheight = R_LerpFixed(interp->sectorplane.oldheight, interp->sectorplane.bakheight, frac);
+			}
+		}
+	}
+}
+
+void R_RestoreLevelInterpolators(void)
+{
+	size_t i;
+
+	for (i = 0; i < levelinterpolators_len; i++)
+	{
+		levelinterpolator_t *interp = levelinterpolators[i];
+		
+		switch (interp->type)
+		{
+		case LVLINTERP_SectorPlane:
+			if (interp->sectorplane.ceiling)
+			{
+				interp->sectorplane.sector->ceilingheight = interp->sectorplane.bakheight;
+			}
+			else
+			{
+				interp->sectorplane.sector->floorheight = interp->sectorplane.bakheight;
+			}
+		}
+	}
 }

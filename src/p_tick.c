@@ -764,6 +764,11 @@ void P_Ticker(boolean run)
 		LUA_HOOK(PostThinkFrame);
 	}
 
+	if (run)
+	{
+		R_UpdateLevelInterpolators();
+	}
+
 	P_MapEnd();
 
 //	Z_CheckMemCleanup();
