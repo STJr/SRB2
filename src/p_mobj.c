@@ -902,6 +902,12 @@ void P_ResetInterpolationState(mobj_t *mobj)
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;
+	mobj->old_angle = mobj->angle;
+
+	if (mobj->player)
+	{
+		mobj->player->old_drawangle = mobj->player->drawangle;
+	}
 }
 
 //
@@ -914,6 +920,7 @@ void P_ResetPrecipitationInterpolationState(precipmobj_t *mobj)
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;
+	mobj->old_angle = mobj->angle;
 }
 
 //

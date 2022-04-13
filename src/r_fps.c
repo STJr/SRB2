@@ -185,11 +185,11 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 
 	if (mobj->player)
 	{
-		out->angle = mobj->player->drawangle;
+		out->angle = R_LerpAngle(mobj->player->old_drawangle, mobj->player->drawangle, frac);
 	}
 	else
 	{
-		out->angle = mobj->angle;
+		out->angle = R_LerpAngle(mobj->old_angle, mobj->angle, frac);
 	}
 }
 
@@ -198,7 +198,7 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 	out->x = R_LerpFixed(mobj->old_x, mobj->x, frac);
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
-	out->angle = mobj->angle;
+	out->angle = R_LerpAngle(mobj->old_angle, mobj->angle, frac);
 }
 
 static void AddInterpolator(levelinterpolator_t* interpolator)
