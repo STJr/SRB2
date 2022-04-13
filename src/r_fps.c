@@ -259,6 +259,23 @@ void R_CreateInterpolator_SectorPlane(thinker_t *thinker, sector_t *sector, bool
 	}
 }
 
+void R_CreateInterpolator_SectorScroll(thinker_t *thinker, sector_t *sector, boolean ceiling)
+{
+	levelinterpolator_t *interp = CreateInterpolator(LVLINTERP_SectorScroll, thinker);
+	interp->sectorscroll.sector = sector;
+	interp->sectorscroll.ceiling = ceiling;
+	if (ceiling)
+	{
+		interp->sectorscroll.oldxoffs = interp->sectorscroll.bakxoffs = sector->ceiling_xoffs;
+		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs = sector->ceiling_yoffs;
+	}
+	else
+	{
+		interp->sectorscroll.oldxoffs = interp->sectorscroll.bakxoffs = sector->floor_xoffs;
+		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs = sector->floor_yoffs;
+	}
+}
+
 void R_InitializeLevelInterpolators(void)
 {
 	levelinterpolators_len = 0;
@@ -273,6 +290,12 @@ static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
 	case LVLINTERP_SectorPlane:
 		interp->sectorplane.oldheight = interp->sectorplane.bakheight;
 		interp->sectorplane.bakheight = interp->sectorplane.ceiling ? interp->sectorplane.sector->ceilingheight : interp->sectorplane.sector->floorheight;
+		break;
+	case LVLINTERP_SectorScroll:
+		interp->sectorscroll.oldxoffs = interp->sectorscroll.bakxoffs;
+		interp->sectorscroll.bakxoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceiling_xoffs : interp->sectorscroll.sector->floor_xoffs;
+		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs;
+		interp->sectorscroll.bakyoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceiling_yoffs : interp->sectorscroll.sector->floor_yoffs;
 		break;
 	}
 }
@@ -326,6 +349,19 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 			{
 				interp->sectorplane.sector->floorheight = R_LerpFixed(interp->sectorplane.oldheight, interp->sectorplane.bakheight, frac);
 			}
+			break;
+		case LVLINTERP_SectorScroll:
+			if (interp->sectorscroll.ceiling)
+			{
+				interp->sectorscroll.sector->ceiling_xoffs = R_LerpFixed(interp->sectorscroll.oldxoffs, interp->sectorscroll.bakxoffs, frac);
+				interp->sectorscroll.sector->ceiling_yoffs = R_LerpFixed(interp->sectorscroll.oldyoffs, interp->sectorscroll.bakyoffs, frac);
+			}
+			else
+			{
+				interp->sectorscroll.sector->floor_xoffs = R_LerpFixed(interp->sectorscroll.oldxoffs, interp->sectorscroll.bakxoffs, frac);
+				interp->sectorscroll.sector->floor_yoffs = R_LerpFixed(interp->sectorscroll.oldyoffs, interp->sectorscroll.bakyoffs, frac);
+			}
+			break;
 		}
 	}
 }
@@ -349,6 +385,19 @@ void R_RestoreLevelInterpolators(void)
 			{
 				interp->sectorplane.sector->floorheight = interp->sectorplane.bakheight;
 			}
+			break;
+		case LVLINTERP_SectorScroll:
+			if (interp->sectorscroll.ceiling)
+			{
+				interp->sectorscroll.sector->ceiling_xoffs = interp->sectorscroll.bakxoffs;
+				interp->sectorscroll.sector->ceiling_yoffs = interp->sectorscroll.bakyoffs;
+			}
+			else
+			{
+				interp->sectorscroll.sector->floor_xoffs = interp->sectorscroll.bakxoffs;
+				interp->sectorscroll.sector->floor_yoffs = interp->sectorscroll.bakyoffs;
+			}
+			break;
 		}
 	}
 }
