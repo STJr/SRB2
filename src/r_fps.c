@@ -276,6 +276,14 @@ void R_CreateInterpolator_SectorScroll(thinker_t *thinker, sector_t *sector, boo
 	}
 }
 
+void R_CreateInterpolator_SideScroll(thinker_t *thinker, side_t *side)
+{
+	levelinterpolator_t *interp = CreateInterpolator(LVLINTERP_SideScroll, thinker);
+	interp->sidescroll.side = side;
+	interp->sidescroll.oldtextureoffset = interp->sidescroll.baktextureoffset = side->textureoffset;
+	interp->sidescroll.oldrowoffset = interp->sidescroll.bakrowoffset = side->rowoffset;
+}
+
 void R_InitializeLevelInterpolators(void)
 {
 	levelinterpolators_len = 0;
@@ -296,6 +304,12 @@ static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
 		interp->sectorscroll.bakxoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceiling_xoffs : interp->sectorscroll.sector->floor_xoffs;
 		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs;
 		interp->sectorscroll.bakyoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceiling_yoffs : interp->sectorscroll.sector->floor_yoffs;
+		break;
+	case LVLINTERP_SideScroll:
+		interp->sidescroll.oldtextureoffset = interp->sidescroll.baktextureoffset;
+		interp->sidescroll.baktextureoffset = interp->sidescroll.side->textureoffset;
+		interp->sidescroll.oldrowoffset = interp->sidescroll.bakrowoffset;
+		interp->sidescroll.bakrowoffset = interp->sidescroll.side->rowoffset;
 		break;
 	}
 }
@@ -362,6 +376,10 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 				interp->sectorscroll.sector->floor_yoffs = R_LerpFixed(interp->sectorscroll.oldyoffs, interp->sectorscroll.bakyoffs, frac);
 			}
 			break;
+		case LVLINTERP_SideScroll:
+			interp->sidescroll.side->textureoffset = R_LerpFixed(interp->sidescroll.oldtextureoffset, interp->sidescroll.baktextureoffset, frac);
+			interp->sidescroll.side->rowoffset = R_LerpFixed(interp->sidescroll.oldrowoffset, interp->sidescroll.bakrowoffset, frac);
+			break;
 		}
 	}
 }
@@ -397,6 +415,10 @@ void R_RestoreLevelInterpolators(void)
 				interp->sectorscroll.sector->floor_xoffs = interp->sectorscroll.bakxoffs;
 				interp->sectorscroll.sector->floor_yoffs = interp->sectorscroll.bakyoffs;
 			}
+			break;
+		case LVLINTERP_SideScroll:
+			interp->sidescroll.side->textureoffset = interp->sidescroll.baktextureoffset;
+			interp->sidescroll.side->rowoffset = interp->sidescroll.bakrowoffset;
 			break;
 		}
 	}

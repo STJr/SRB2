@@ -7413,6 +7413,7 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 	switch (type)
 	{
 		case sc_side:
+			R_CreateInterpolator_SideScroll(&s->thinker, &sides[affectee]);
 			break;
 		case sc_floor:
 			R_CreateInterpolator_SectorScroll(&s->thinker, &sectors[affectee], false);
