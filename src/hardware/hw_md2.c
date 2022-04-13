@@ -30,6 +30,7 @@
 #include "hw_md2.h"
 #include "../d_main.h"
 #include "../r_bsp.h"
+#include "../r_fps.h"
 #include "../r_main.h"
 #include "../m_misc.h"
 #include "../w_wad.h"
@@ -1341,6 +1342,16 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		angle_t ang;
 		INT32 mod;
 		float finalscale;
+		interpmobjstate_t interp;
+
+		if (cv_frameinterpolation.value == 1 && !paused)
+		{
+			R_InterpolateMobjState(spr->mobj, rendertimefrac, &interp);
+		}
+		else
+		{
+			R_InterpolateMobjState(spr->mobj, FRACUNIT, &interp);
+		}
 
 		// Apparently people don't like jump frames like that, so back it goes
 		//if (tics > durs)
@@ -1564,13 +1575,13 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 #endif
 
 		//Hurdler: it seems there is still a small problem with mobj angle
-		p.x = FIXED_TO_FLOAT(spr->mobj->x);
-		p.y = FIXED_TO_FLOAT(spr->mobj->y)+md2->offset;
+		p.x = FIXED_TO_FLOAT(interp.x);
+		p.y = FIXED_TO_FLOAT(interp.y)+md2->offset;
 
 		if (flip)
-			p.z = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
+			p.z = FIXED_TO_FLOAT(interp.z + spr->mobj->height);
 		else
-			p.z = FIXED_TO_FLOAT(spr->mobj->z);
+			p.z = FIXED_TO_FLOAT(interp.z);
 
 		if (spr->mobj->skin && spr->mobj->sprite == SPR_PLAY)
 			sprdef = &((skin_t *)spr->mobj->skin)->sprites[spr->mobj->sprite2];
@@ -1581,16 +1592,13 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 
 		if (sprframe->rotate || papersprite)
 		{
-			fixed_t anglef = AngleFixed(spr->mobj->angle);
-
-			if (spr->mobj->player)
-				anglef = AngleFixed(spr->mobj->player->drawangle);
+			fixed_t anglef = AngleFixed(interp.angle);
 
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 		else
 		{
-			const fixed_t anglef = AngleFixed((R_PointToAngle(spr->mobj->x, spr->mobj->y))-ANGLE_180);
+			const fixed_t anglef = AngleFixed((R_PointToAngle(interp.x, interp.y))-ANGLE_180);
 			p.angley = FIXED_TO_FLOAT(anglef);
 		}
 
@@ -1612,7 +1620,7 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 				p.rotaxis = (UINT8)(sprinfo->pivot[(spr->mobj->frame & FF_FRAMEMASK)].rotaxis);
 
 			// for NiGHTS specifically but should work everywhere else
-			ang = R_PointToAngle (spr->mobj->x, spr->mobj->y) - (spr->mobj->player ? spr->mobj->player->drawangle : spr->mobj->angle);
+			ang = R_PointToAngle (interp.x, interp.y) - interp.angle;
 			if ((sprframe->rotate & SRF_RIGHT) && (ang < ANGLE_180)) // See from right
 				p.rollflip = 1;
 			else if ((sprframe->rotate & SRF_LEFT) && (ang >= ANGLE_180)) // See from left
