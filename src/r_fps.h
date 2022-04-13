@@ -58,6 +58,7 @@ typedef enum {
 	LVLINTERP_SectorPlane,
 	LVLINTERP_SectorScroll,
 	LVLINTERP_SideScroll,
+	LVLINTERP_Polyobj,
 } levelinterpolator_type_e;
 
 // Tagged union of a level interpolator
@@ -80,6 +81,13 @@ typedef struct levelinterpolator_s {
 			side_t *side;
 			fixed_t oldtextureoffset, oldrowoffset, baktextureoffset, bakrowoffset;
 		} sidescroll;
+		struct {
+			polyobj_t *polyobj;
+			fixed_t *oldvertices;
+			fixed_t *bakvertices;
+			size_t vertices_size;
+			fixed_t oldcx, oldcy, bakcx, bakcy;
+		} polyobj;
 	};
 } levelinterpolator_t;
 
@@ -99,6 +107,7 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 void R_CreateInterpolator_SectorPlane(thinker_t *thinker, sector_t *sector, boolean ceiling);
 void R_CreateInterpolator_SectorScroll(thinker_t *thinker, sector_t *sector, boolean ceiling);
 void R_CreateInterpolator_SideScroll(thinker_t *thinker, side_t *side);
+void R_CreateInterpolator_Polyobj(thinker_t *thinker, polyobj_t *polyobj);
 
 // Initialize level interpolators after a level change
 void R_InitializeLevelInterpolators(void);

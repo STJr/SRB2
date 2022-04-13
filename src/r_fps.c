@@ -284,6 +284,24 @@ void R_CreateInterpolator_SideScroll(thinker_t *thinker, side_t *side)
 	interp->sidescroll.oldrowoffset = interp->sidescroll.bakrowoffset = side->rowoffset;
 }
 
+void R_CreateInterpolator_Polyobj(thinker_t *thinker, polyobj_t *polyobj)
+{
+	levelinterpolator_t *interp = CreateInterpolator(LVLINTERP_Polyobj, thinker);
+	interp->polyobj.polyobj = polyobj;
+	interp->polyobj.vertices_size = polyobj->numVertices;
+
+	interp->polyobj.oldvertices = Z_CallocAlign(sizeof(fixed_t) * 2 * polyobj->numVertices, PU_LEVEL, NULL, 32);
+	interp->polyobj.bakvertices = Z_CallocAlign(sizeof(fixed_t) * 2 * polyobj->numVertices, PU_LEVEL, NULL, 32);
+	for (size_t i = 0; i < polyobj->numVertices; i++)
+	{
+		interp->polyobj.oldvertices[i * 2    ] = interp->polyobj.bakvertices[i * 2    ] = polyobj->vertices[i]->x;
+		interp->polyobj.oldvertices[i * 2 + 1] = interp->polyobj.bakvertices[i * 2 + 1] = polyobj->vertices[i]->y;
+	}
+
+	interp->polyobj.oldcx = interp->polyobj.bakcx = polyobj->centerPt.x;
+	interp->polyobj.oldcy = interp->polyobj.bakcy = polyobj->centerPt.y;
+}
+
 void R_InitializeLevelInterpolators(void)
 {
 	levelinterpolators_len = 0;
@@ -293,6 +311,8 @@ void R_InitializeLevelInterpolators(void)
 
 static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
 {
+	size_t i;
+
 	switch (interp->type)
 	{
 	case LVLINTERP_SectorPlane:
@@ -310,6 +330,19 @@ static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
 		interp->sidescroll.baktextureoffset = interp->sidescroll.side->textureoffset;
 		interp->sidescroll.oldrowoffset = interp->sidescroll.bakrowoffset;
 		interp->sidescroll.bakrowoffset = interp->sidescroll.side->rowoffset;
+		break;
+	case LVLINTERP_Polyobj:
+		for (i = 0; i < interp->polyobj.vertices_size; i++)
+		{
+			interp->polyobj.oldvertices[i * 2    ] = interp->polyobj.bakvertices[i * 2    ];
+			interp->polyobj.oldvertices[i * 2 + 1] = interp->polyobj.bakvertices[i * 2 + 1];
+			interp->polyobj.bakvertices[i * 2    ] = interp->polyobj.polyobj->vertices[i]->x;
+			interp->polyobj.bakvertices[i * 2 + 1] = interp->polyobj.polyobj->vertices[i]->y;
+		}
+		interp->polyobj.oldcx = interp->polyobj.bakcx;
+		interp->polyobj.oldcy = interp->polyobj.bakcy;
+		interp->polyobj.bakcx = interp->polyobj.polyobj->centerPt.x;
+		interp->polyobj.bakcy = interp->polyobj.polyobj->centerPt.y;
 		break;
 	}
 }
@@ -346,7 +379,7 @@ void R_ClearLevelInterpolatorState(thinker_t *thinker)
 
 void R_ApplyLevelInterpolators(fixed_t frac)
 {
-	size_t i;
+	size_t i, ii;
 
 	for (i = 0; i < levelinterpolators_len; i++)
 	{
@@ -380,13 +413,22 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 			interp->sidescroll.side->textureoffset = R_LerpFixed(interp->sidescroll.oldtextureoffset, interp->sidescroll.baktextureoffset, frac);
 			interp->sidescroll.side->rowoffset = R_LerpFixed(interp->sidescroll.oldrowoffset, interp->sidescroll.bakrowoffset, frac);
 			break;
+		case LVLINTERP_Polyobj:
+			for (ii = 0; ii < interp->polyobj.vertices_size; ii++)
+			{
+				interp->polyobj.polyobj->vertices[ii]->x = R_LerpFixed(interp->polyobj.oldvertices[ii * 2    ], interp->polyobj.bakvertices[ii * 2    ], frac);
+				interp->polyobj.polyobj->vertices[ii]->y = R_LerpFixed(interp->polyobj.oldvertices[ii * 2 + 1], interp->polyobj.bakvertices[ii * 2 + 1], frac);
+			}
+			interp->polyobj.polyobj->centerPt.x = R_LerpFixed(interp->polyobj.oldcx, interp->polyobj.bakcx, frac);
+			interp->polyobj.polyobj->centerPt.y = R_LerpFixed(interp->polyobj.oldcy, interp->polyobj.bakcy, frac);
+			break;
 		}
 	}
 }
 
 void R_RestoreLevelInterpolators(void)
 {
-	size_t i;
+	size_t i, ii;
 
 	for (i = 0; i < levelinterpolators_len; i++)
 	{
@@ -419,6 +461,15 @@ void R_RestoreLevelInterpolators(void)
 		case LVLINTERP_SideScroll:
 			interp->sidescroll.side->textureoffset = interp->sidescroll.baktextureoffset;
 			interp->sidescroll.side->rowoffset = interp->sidescroll.bakrowoffset;
+			break;
+		case LVLINTERP_Polyobj:
+			for (ii = 0; ii < interp->polyobj.vertices_size; ii++)
+			{
+				interp->polyobj.polyobj->vertices[ii]->x = interp->polyobj.bakvertices[ii * 2    ];
+				interp->polyobj.polyobj->vertices[ii]->y = interp->polyobj.bakvertices[ii * 2 + 1];
+			}
+			interp->polyobj.polyobj->centerPt.x = interp->polyobj.bakcx;
+			interp->polyobj.polyobj->centerPt.y = interp->polyobj.bakcy;
 			break;
 		}
 	}
