@@ -474,3 +474,23 @@ void R_RestoreLevelInterpolators(void)
 		}
 	}
 }
+
+void R_DestroyLevelInterpolators(thinker_t *thinker)
+{
+	size_t i;
+
+	for (i = 0; i < levelinterpolators_len; i++)
+	{
+		levelinterpolator_t *interp = levelinterpolators[i];
+		
+		if (interp->thinker == thinker)
+		{
+			// Swap the tail of the level interpolators to this spot
+			levelinterpolators[i] = levelinterpolators[levelinterpolators_len - 1];
+			levelinterpolators_len -= 1;
+
+			Z_Free(interp);
+			i -= 1;
+		}
+	}
+}
