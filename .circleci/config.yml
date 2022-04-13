@@ -66,7 +66,7 @@ jobs:
           name: Compile
           command: make -C src LINUX=1 ERRORMODE=1 -k
       - store_artifacts:
-          path: /root/SRB2/bin/Linux/Release/
+          path: /root/SRB2/bin
           destination: bin
       - save_cache:
           key: v1-SRB2-{{ .Branch }}-{{ checksum "objs/Linux/SDL/Release/depend.dep" }}
