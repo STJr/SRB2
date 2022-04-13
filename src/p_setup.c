@@ -4373,6 +4373,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	Patch_FreeTag(PU_PATCH_ROTATED);
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
 
+	R_InitializeLevelInterpolators();
+
 	P_InitThinkers();
 	P_InitCachedActions();
 
