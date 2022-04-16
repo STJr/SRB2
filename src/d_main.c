@@ -897,12 +897,7 @@ void D_SRB2Loop(void)
 				}
 
 				// renderdeltatics is a bit awkard to evaluate, since the system time interface is whole tic-based
-				renderdeltatics = realtics * FRACUNIT;
-				if (entertimefrac > rendertimefrac)
-					renderdeltatics += entertimefrac - rendertimefrac;
-				else
-					renderdeltatics -= rendertimefrac - entertimefrac;
-
+				renderdeltatics = FloatToFixed(entertime - prevtime);
 				rendertimefrac = entertimefrac;
 			}
 
