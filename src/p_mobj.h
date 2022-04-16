@@ -503,8 +503,12 @@ void P_RingZMovement(mobj_t *mo);
 boolean P_SceneryZMovement(mobj_t *mo);
 void P_PlayerZMovement(mobj_t *mo);
 void P_EmeraldManager(void);
-void P_ResetInterpolationState(mobj_t *mobj);
-void P_ResetPrecipitationInterpolationState(precipmobj_t *mobj);
+
+// Initialize internal mobj interpolator list (e.g. during level loading)
+void P_InitMobjInterpolators(void);
+void P_UpdateMobjInterpolators(void);
+void P_ResetMobjInterpolationState(mobj_t *mobj);
+void P_ResetPrecipitationMobjInterpolationState(precipmobj_t *mobj);
 
 extern INT32 modulothing;
 

@@ -4376,6 +4376,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	R_InitializeLevelInterpolators();
 
 	P_InitThinkers();
+	P_InitMobjInterpolators();
 	P_InitCachedActions();
 
 	if (!fromnetsave && savedata.lives > 0)

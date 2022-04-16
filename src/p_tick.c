@@ -642,6 +642,8 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
+		P_UpdateMobjInterpolators();
+
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
 		if (demoplayback)
