@@ -723,6 +723,7 @@ void D_SRB2Loop(void)
 	boolean ticked;
 	boolean interp;
 	boolean doDisplay = false;
+	boolean frameCap = false;
 
 	if (dedicated)
 		server = true;
@@ -803,11 +804,25 @@ void D_SRB2Loop(void)
 		doDisplay = false;
 		ticked = false;
 
-		if (!realtics && !singletics && !interp)
+		frameCap = false;
+		if (interp)
 		{
-			// Non-interp sleep
-			I_Sleep();
-			continue;
+			frameCap = D_CheckFrameCap();
+		}
+
+		if (!realtics && !singletics)
+		{
+			if (interp)
+			{
+				if (frameCap)
+					continue;
+			}
+			else
+			{
+				// Non-interp sleep
+				I_Sleep();
+				continue;
+			}
 		}
 
 #ifdef HW3SOUND
@@ -869,7 +884,7 @@ void D_SRB2Loop(void)
 			// TryRunTics needs ran if possible to prevent lagged map changes,
 			// (and if that runs, the code above needs to also run)
 			// so this is done here after TryRunTics.
-			if (D_CheckFrameCap())
+			if (frameCap)
 			{
 				continue;
 			}
