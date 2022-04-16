@@ -1381,13 +1381,13 @@ static menuitem_t OP_VideoOptionsMenu[] =
 
 	{IT_HEADER, NULL, "Diagnostic", NULL, 184},
 	{IT_STRING | IT_CVAR, NULL, "Show FPS",                  &cv_ticrate,         190},
-	{IT_STRING | IT_CVAR, NULL, "FPS Cap",                   &cv_fpscap,          195},
-	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      200},
-	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   205},
+	{IT_STRING | IT_CVAR, NULL, "Clear Before Redraw",       &cv_homremoval,      195},
+	{IT_STRING | IT_CVAR, NULL, "Show \"FOCUS LOST\"",       &cv_showfocuslost,   200},
 
 #ifdef HWRENDER
-	{IT_HEADER, NULL, "Renderer", NULL, 213},
-	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",         M_OpenGLOptionsMenu, 219},
+	{IT_HEADER, NULL, "Renderer", NULL, 208},
+	{IT_CALL | IT_STRING, NULL, "OpenGL Options...",         M_OpenGLOptionsMenu, 214},
+	{IT_STRING | IT_CVAR, NULL, "FPS Cap",                   &cv_fpscap,          219},
 #endif
 };
 

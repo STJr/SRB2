@@ -451,7 +451,6 @@ boolean SCR_IsAspectCorrect(INT32 width, INT32 height)
 	 );
 }
 
-static tic_t totaltics;
 double averageFPS = 0.0f;
 
 #define FPS_SAMPLE_RATE (50000) // How often to update FPS samples, in microseconds
@@ -515,18 +514,37 @@ void SCR_DisplayTicRate(void)
 	if (gamestate == GS_NULL)
 		return;
 
-	if (totaltics <= cap/2) ticcntcolor = V_REDMAP;
-	else if (totaltics >= cap) ticcntcolor = V_GREENMAP;
+	if (cap > 0)
+	{
+		if (fps <= cap / 2.0) ticcntcolor = V_REDMAP;
+		else if (fps <= cap * 0.90) ticcntcolor = V_YELLOWMAP;
+		else ticcntcolor = V_GREENMAP;
+	}
+	else
+	{
+		ticcntcolor = V_GREENMAP;
+	}
+
 
 	if (cv_ticrate.value == 2) // compact counter
 		V_DrawString(vid.width-(32*vid.dupx), h,
 			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%04.0f", fps));
 	else if (cv_ticrate.value == 1) // full counter
 	{
-		V_DrawString(vid.width-(104*vid.dupx), h,
-			V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
-		V_DrawString(vid.width-(72*vid.dupx), h,
-			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%4.0f/%4u", fps, cap));
+		if (cap > 0)
+		{
+			V_DrawString(vid.width-(104*vid.dupx), h,
+				V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
+			V_DrawString(vid.width-(72*vid.dupx), h,
+				ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%4.0f/%4u", fps, cap));
+		}
+		else
+		{
+			V_DrawString(vid.width-(88*vid.dupx), h,
+				V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
+			V_DrawString(vid.width-(56*vid.dupx), h,
+				ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%4.0f", fps));
+		}
 	}
 }
 
