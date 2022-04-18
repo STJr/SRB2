@@ -804,25 +804,17 @@ void D_SRB2Loop(void)
 		doDisplay = false;
 		ticked = false;
 
-		frameCap = false;
-		if (interp)
-		{
-			frameCap = D_CheckFrameCap();
-		}
+		frameCap = D_CheckFrameCap();
+
+		// Moved to here from I_FinishUpdate.
+		// It doesn't track fades properly anymore by being here (might be easy fix),
+		// but it's a little more accurate for actual rendering when its here.
+		SCR_CalculateFPS();
 
 		if (!realtics && !singletics)
 		{
-			if (interp)
-			{
-				if (frameCap)
-					continue;
-			}
-			else
-			{
-				// Non-interp sleep
-				I_Sleep();
+			if (frameCap)
 				continue;
-			}
 		}
 
 #ifdef HW3SOUND
@@ -920,6 +912,11 @@ void D_SRB2Loop(void)
 		}
 		else
 		{
+			if (frameCap)
+			{
+				continue;
+			}
+
 			renderdeltatics = realtics * FRACUNIT;
 			rendertimefrac = FRACUNIT;
 		}
@@ -943,11 +940,6 @@ void D_SRB2Loop(void)
 #endif
 
 		LUA_Step();
-
-		// Moved to here from I_FinishUpdate.
-		// It doesn't track fades properly anymore by being here (might be easy fix),
-		// but it's a little more accurate for actual game logic when its here.
-		SCR_CalculateFPS();
 	}
 }
 

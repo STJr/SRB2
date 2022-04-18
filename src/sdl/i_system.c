@@ -2203,7 +2203,7 @@ void I_Sleep(void)
 
 boolean I_CheckFrameCap(precise_t start, precise_t end)
 {
-	UINT32 capFrames = R_GetFramerateCap();
+	const UINT32 capFrames = R_GetFramerateCap();
 	int capMicros = 0;
 
 	int elapsed;
@@ -2219,31 +2219,42 @@ boolean I_CheckFrameCap(precise_t start, precise_t end)
 
 	if (elapsed < capMicros)
 	{
-		// Wait to draw the next frame.
-		UINT32 wait = ((capMicros - elapsed) / 1000);
-
-		if (cv_sleep.value > 1)
+		// Experimental variable delay code.
+		if (cv_sleep.value > 0)
 		{
-			// 1 is the default, and in non-interpolated mode is just the bare minimum wait.
-			// Since we're already adding some wait with an FPS cap, only apply when it's above 1.
-			wait += cv_sleep.value - 1;
-		}
+			const INT64 delayGranularity = 2000; // 2ms, I picked this as it's what GZDoom uses before it stops trying to sleep.
+			INT64 wait = (capMicros - elapsed);
 
-		// If the wait's greater than our granularity value,
-		// we'll just burn the couple extra cycles in the main loop
-		// in order to get to the next frame.
-		// This makes us get to the exact FPS cap more often.
+			while (wait > 0)
+			{
+				precise_t sleepStart = I_GetPreciseTime();
+				precise_t sleepEnd = sleepStart;
+				int sleepElasped = 0;
 
-		// Higher values have more wasted CPU cycles, but the in-game frame performance is better.
-		// 10ms is the average clock tick of most OS scheduling.
-		// 15ms is a little more than that, for leniency on slow machines. (This helps mine reach a stable 60, at least!)
-		// (https://www.libsdl.org/release/SDL-1.2.15/docs/html/sdldelay.html)
-#define DELAY_GRANULARITY 15
-		if (wait >= DELAY_GRANULARITY)
-		{
-			SDL_Delay(wait);
+				if (wait > delayGranularity)
+				{
+					// Wait 1ms at a time (on default settings)
+					// until we're close enough.
+					SDL_Delay(cv_sleep.value);
+
+					sleepEnd = I_GetPreciseTime();
+					sleepElasped = I_PreciseToMicros(sleepEnd - sleepStart);
+				}
+				else
+				{
+					// When we have an extremely fine wait,
+					// we do this to spin-lock the remaining time.
+
+					while (sleepElasped < wait)
+					{
+						sleepEnd = I_GetPreciseTime();
+						sleepElasped = I_PreciseToMicros(sleepEnd - sleepStart);
+					}
+				}
+
+				wait -= sleepElasped;
+			}
 		}
-#undef DELAY_GRANULARITY
 
 		return true;
 	}
