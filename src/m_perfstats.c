@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2020-2021 by Sonic Team Junior.
+// Copyright (C) 2020-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -228,10 +228,13 @@ static boolean PS_IsLevelActive(void)
 // Is the row valid in the current context?
 static boolean PS_IsRowValid(perfstatrow_t *row)
 {
-	return !((row->flags & PS_LEVEL && !PS_IsLevelActive()) ||
-		(row->flags & PS_SW && rendermode != render_soft) ||
-		(row->flags & PS_HW && rendermode != render_opengl) ||
-		(row->flags & PS_BATCHING && !cv_glbatching.value));
+	return !((row->flags & PS_LEVEL && !PS_IsLevelActive())
+		|| (row->flags & PS_SW && rendermode != render_soft)
+		|| (row->flags & PS_HW && rendermode != render_opengl)
+#ifdef HWRENDER
+		|| (row->flags & PS_BATCHING && !cv_glbatching.value)
+#endif
+		);
 }
 
 // Should the row be visible on the screen?

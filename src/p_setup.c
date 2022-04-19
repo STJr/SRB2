@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -506,6 +506,17 @@ UINT32 P_GetScoreForGrade(INT16 map, UINT8 mare, UINT8 grade)
 	if (grade == GRADE_F || grade > GRADE_S || !P_HasGrades(map, mare)) return 0;
 
 	return mapheaderinfo[map-1]->grades[mare].grade[grade-1];
+}
+
+UINT32 P_GetScoreForGradeOverall(INT16 map, UINT8 grade)
+{
+	UINT8 mares;
+	INT32 i;
+	UINT32 score = 0;
+	mares = mapheaderinfo[map-1]->numGradedMares;
+	for (i = 0; i < mares; ++i)
+			score += P_GetScoreForGrade(map, i, grade);
+	return score;
 }
 
 //
@@ -1060,6 +1071,8 @@ static void P_InitializeLinedef(line_t *ld)
 
 	ld->dx = v2->x - v1->x;
 	ld->dy = v2->y - v1->y;
+
+	ld->angle = R_PointToAngle2(0, 0, ld->dx, ld->dy);
 
 	ld->bbox[BOXLEFT] = min(v1->x, v2->x);
 	ld->bbox[BOXRIGHT] = max(v1->x, v2->x);
@@ -2539,7 +2552,10 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 		P_InitializeSeg(seg);
 		seg->angle = R_PointToAngle2(v1->x, v1->y, v2->x, v2->y);
 		if (seg->linedef)
-			segs[i].offset = FixedHypot(v1->x - seg->linedef->v1->x, v1->y - seg->linedef->v1->y);
+		{
+			vertex_t *v = (seg->side == 1) ? seg->linedef->v2 : seg->linedef->v1;
+			segs[i].offset = FixedHypot(v1->x - v->x, v1->y - v->y);
+		}
 		seg->length = P_SegLength(seg);
 #ifdef HWRENDER
 		seg->flength = (rendermode == render_opengl) ? P_SegLengthFloat(seg) : 0;
@@ -5864,7 +5880,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	// internal game map
 	maplumpname = G_BuildMapName(gamemap);
-	lastloadedmaplumpnum = W_CheckNumForName(maplumpname);
+	lastloadedmaplumpnum = W_CheckNumForMap(maplumpname);
 	if (lastloadedmaplumpnum == LUMPERROR)
 		I_Error("Map %s not found.\n", maplumpname);
 
@@ -6213,7 +6229,7 @@ static boolean P_LoadAddon(UINT16 wadnum, UINT16 numlumps)
 	// Reload it all anyway, just in case they
 	// added some textures but didn't insert a
 	// TEXTURES/etc. list.
-	R_LoadTextures(); // numtexture changes
+	R_LoadTexturesPwad(wadnum); // numtexture changes
 
 	// Reload ANIMDEFS
 	P_InitPicAnims();
