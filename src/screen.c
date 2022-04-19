@@ -509,7 +509,7 @@ void SCR_DisplayTicRate(void)
 	INT32 ticcntcolor = 0;
 	const INT32 h = vid.height-(8*vid.dupy);
 	UINT32 cap = R_GetFramerateCap();
-	double fps = ceil(averageFPS);
+	double fps = round(averageFPS);
 
 	if (gamestate == GS_NULL)
 		return;
@@ -525,10 +525,11 @@ void SCR_DisplayTicRate(void)
 		ticcntcolor = V_GREENMAP;
 	}
 
-
 	if (cv_ticrate.value == 2) // compact counter
-		V_DrawString(vid.width-(32*vid.dupx), h,
-			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%04.0f", fps));
+	{
+		V_DrawRightAlignedString(vid.width, h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%04.2f", averageFPS)); // use averageFPS directly
+	}
 	else if (cv_ticrate.value == 1) // full counter
 	{
 		if (cap > 0)
