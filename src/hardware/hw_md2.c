@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1346,12 +1346,18 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		//if (tics > durs)
 			//durs = tics;
 
+		INT32 blendmode;
+		if (spr->mobj->frame & FF_BLENDMASK)
+			blendmode = ((spr->mobj->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
+		else
+			blendmode = spr->mobj->blendmode;
+
 		if (spr->mobj->frame & FF_TRANSMASK)
-			Surf.PolyFlags = HWR_SurfaceBlend(spr->mobj->blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
+			Surf.PolyFlags = HWR_SurfaceBlend(blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 		else
 		{
 			Surf.PolyColor.s.alpha = (spr->mobj->flags2 & MF2_SHADOW) ? 0x40 : 0xff;
-			Surf.PolyFlags = HWR_GetBlendModeFlag(spr->mobj->blendmode);
+			Surf.PolyFlags = HWR_GetBlendModeFlag(blendmode);
 		}
 
 		// don't forget to enable the depth test because we can't do this
