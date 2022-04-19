@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by James Haley
-// Copyright (C) 2006-2021 by Sonic Team Junior.
+// Copyright (C) 2006-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -785,7 +785,7 @@ static void Polyobj_pushThing(polyobj_t *po, line_t *line, mobj_t *mo)
 	vertex_t closest;
 
 	// calculate angle of line and subtract 90 degrees to get normal
-	lineangle = R_PointToAngle2(0, 0, line->dx, line->dy) - ANGLE_90;
+	lineangle = line->angle - ANGLE_90;
 	lineangle >>= ANGLETOFINESHIFT;
 	momx = FixedMul(po->thrust, FINECOSINE(lineangle));
 	momy = FixedMul(po->thrust, FINESINE(lineangle));
@@ -1059,6 +1059,8 @@ static void Polyobj_rotateLine(line_t *ld)
 	// set dx, dy
 	ld->dx = v2->x - v1->x;
 	ld->dy = v2->y - v1->y;
+
+	ld->angle = R_PointToAngle2(0, 0, ld->dx, ld->dy);
 
 	// determine slopetype
 	ld->slopetype = !ld->dx ? ST_VERTICAL : !ld->dy ? ST_HORIZONTAL :
