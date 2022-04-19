@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -251,7 +251,7 @@ typedef enum
 	MFE_FORCENOSUPER		= 1<<13,
 	// Makes an object use super sprites where they wouldn't have otherwise and vice-versa
 	MFE_REVERSESUPER		= MFE_FORCESUPER|MFE_FORCENOSUPER
-	
+
 	// free: to and including 1<<15
 } mobjeflag_t;
 
