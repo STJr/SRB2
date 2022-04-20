@@ -12922,15 +12922,15 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 		{
 			segment = P_SpawnMobjFromMobj(mobj, 0, 0, 0, MT_TUTORIALLEAF);
 			segment->angle = mobj->angle + FixedAngle(i*60*FRACUNIT);
-			P_SetMobjState(segment, S_TUTORIALLEAF1 + mthing->extrainfo);
+			P_SetMobjState(segment, S_TUTORIALLEAF1 + mthing->args[0]);
 		}
 		for (i = 0; i < 3; i++)
 		{
 			segment = P_SpawnMobjFromMobj(mobj, 0, 0, 112*FRACUNIT, MT_TUTORIALFLOWER);
 			segment->angle = mobj->angle + FixedAngle(i*120*FRACUNIT);
-			P_SetMobjState(segment, S_TUTORIALFLOWER1 + mthing->extrainfo);
+			P_SetMobjState(segment, S_TUTORIALFLOWER1 + mthing->args[0]);
 		}
-		P_SetMobjState(P_SpawnMobjFromMobj(mobj, 0, 0, 112*FRACUNIT, MT_TUTORIALFLOWERF), S_TUTORIALFLOWERF1 + mthing->extrainfo);
+		P_SetMobjState(P_SpawnMobjFromMobj(mobj, 0, 0, 112*FRACUNIT, MT_TUTORIALFLOWERF), S_TUTORIALFLOWERF1 + mthing->args[0]);
 	}
 	break;
 	case MT_CEZPOLE1:

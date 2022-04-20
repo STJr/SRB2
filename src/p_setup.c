@@ -5262,6 +5262,9 @@ static void P_ConvertBinaryMap(void)
 		case 780: //Skybox
 			mapthings[i].args[0] = !!(mapthings[i].options & MTF_OBJECTSPECIAL);
 			break;
+		case 799: //Tutorial plant
+			mapthings[i].args[0] = mapthings[i].extrainfo;
+			break;
 		case 1002: //Dripping water
 			mapthings[i].args[0] = mapthings[i].angle;
 			break;
