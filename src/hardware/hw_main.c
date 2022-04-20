@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3605,6 +3605,7 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 	FBITFIELD blendmode = PF_Translucent|PF_Modulated;
 	INT32 shader = SHADER_DEFAULT;
 	UINT8 i;
+	INT32 heightsec, phs;
 	SINT8 flip = P_MobjFlip(thing);
 
 	INT32 light;
@@ -3617,7 +3618,23 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 
 	groundz = R_GetShadowZ(thing, &groundslope);
 
-	//if (abs(groundz - gl_viewz) / tz > 4) return; // Prevent stretchy shadows and possible crashes
+	heightsec = thing->subsector->sector->heightsec;
+	if (viewplayer->mo && viewplayer->mo->subsector)
+		phs = viewplayer->mo->subsector->sector->heightsec;
+	else
+		phs = -1;
+
+	if (heightsec != -1 && phs != -1) // only clip things which are in special sectors
+	{
+		if (gl_viewz < FIXED_TO_FLOAT(sectors[phs].floorheight) ?
+		thing->z >= sectors[heightsec].floorheight :
+		thing->z < sectors[heightsec].floorheight)
+			return;
+		if (gl_viewz > FIXED_TO_FLOAT(sectors[phs].ceilingheight) ?
+		thing->z < sectors[heightsec].ceilingheight && gl_viewz >= FIXED_TO_FLOAT(sectors[heightsec].ceilingheight) :
+		thing->z >= sectors[heightsec].ceilingheight)
+			return;
+	}
 
 	floordiff = abs((flip < 0 ? thing->height : 0) + thing->z - groundz);
 
@@ -5274,13 +5291,19 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if (heightsec != -1 && phs != -1) // only clip things which are in special sectors
 	{
+		float top = gzt;
+		float bottom = FIXED_TO_FLOAT(thing->z);
+
+		if (R_ThingIsFloorSprite(thing))
+			top = bottom;
+
 		if (gl_viewz < FIXED_TO_FLOAT(sectors[phs].floorheight) ?
-		FIXED_TO_FLOAT(thing->z) >= FIXED_TO_FLOAT(sectors[heightsec].floorheight) :
-		gzt < FIXED_TO_FLOAT(sectors[heightsec].floorheight))
+		bottom >= FIXED_TO_FLOAT(sectors[heightsec].floorheight) :
+		top < FIXED_TO_FLOAT(sectors[heightsec].floorheight))
 			return;
 		if (gl_viewz > FIXED_TO_FLOAT(sectors[phs].ceilingheight) ?
-		gzt < FIXED_TO_FLOAT(sectors[heightsec].ceilingheight) && gl_viewz >= FIXED_TO_FLOAT(sectors[heightsec].ceilingheight) :
-		FIXED_TO_FLOAT(thing->z) >= FIXED_TO_FLOAT(sectors[heightsec].ceilingheight))
+		top < FIXED_TO_FLOAT(sectors[heightsec].ceilingheight) && gl_viewz >= FIXED_TO_FLOAT(sectors[heightsec].ceilingheight) :
+		bottom >= FIXED_TO_FLOAT(sectors[heightsec].ceilingheight))
 			return;
 	}
 

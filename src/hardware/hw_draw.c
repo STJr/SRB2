@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -347,19 +347,16 @@ void HWR_DrawStretchyFixedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t p
 	v[2].t = v[3].t = hwrPatch->max_t;
 
 	// clip it since it is used for bunny scroll in doom I
-	if (blendmode)
-		flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
-	else
-		flags = PF_Translucent|PF_NoDepthTest;
+	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
 
 	if (alphalevel)
 	{
 		FSurfaceInfo Surf;
 		Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
 
-		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency];
-		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency];
-		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency];
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
 		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
 		flags |= PF_Modulated;
 		HWD.pfnDrawPolygon(&Surf, v, 4, flags);
@@ -644,19 +641,16 @@ void HWR_DrawCroppedPatch(patch_t *gpatch, fixed_t x, fixed_t y, fixed_t pscale,
 	}
 
 	// clip it since it is used for bunny scroll in doom I
-	if (blendmode)
-		flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
-	else
-		flags = PF_Translucent|PF_NoDepthTest;
+	flags = HWR_GetBlendModeFlag(blendmode+1)|PF_NoDepthTest;
 
 	if (alphalevel)
 	{
 		FSurfaceInfo Surf;
 		Surf.PolyColor.s.red = Surf.PolyColor.s.green = Surf.PolyColor.s.blue = 0xff;
 
-		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency];
-		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency];
-		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency];
+		if (alphalevel == 10) Surf.PolyColor.s.alpha = softwaretranstogl_lo[st_translucency]; // V_HUDTRANSHALF
+		else if (alphalevel == 11) Surf.PolyColor.s.alpha = softwaretranstogl[st_translucency]; // V_HUDTRANS
+		else if (alphalevel == 12) Surf.PolyColor.s.alpha = softwaretranstogl_hi[st_translucency]; // V_HUDTRANSDOUBLE
 		else Surf.PolyColor.s.alpha = softwaretranstogl[10-alphalevel];
 
 		flags |= PF_Modulated;
