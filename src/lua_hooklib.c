@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -246,7 +246,6 @@ int LUA_HookLib(lua_State *L)
 }
 
 /* TODO: remove in next backwards incompatible release */
-#if MODID == 18
 int lib_hudadd(lua_State *L);/* yeah compiler */
 int lib_hudadd(lua_State *L)
 {
@@ -260,7 +259,6 @@ int lib_hudadd(lua_State *L)
 
 	return 0;
 }
-#endif
 
 typedef struct Hook_State Hook_State;
 typedef void (*Hook_Callback)(Hook_State *);
@@ -347,6 +345,10 @@ static boolean prepare_mobj_hook
 		int          hook_type,
 		mobjtype_t   mobj_type
 ){
+#ifdef PARANOIA
+	if (mobj_type == MT_NULL)
+		I_Error("MT_NULL has been passed to a mobj hook\n");
+#endif
 	return init_hook_type(hook, default_status,
 			hook_type, mobj_type, NULL,
 			mobj_hook_available(hook_type, mobj_type));

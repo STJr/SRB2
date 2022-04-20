@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1043,7 +1043,8 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 			fallbackspeed = FixedMul(4*FRACUNIT, player->mo->scale);
 		}
 
-		player->drawangle = ang + ANGLE_180;
+		if (player->pflags & PF_DIRECTIONCHAR)
+			player->drawangle = ang + ANGLE_180;
 		P_InstaThrust(player->mo, ang, fallbackspeed);
 	}
 
@@ -1923,6 +1924,24 @@ void P_SwitchShield(player_t *player, UINT16 shieldtype)
 }
 
 //
+// P_SetPower
+//
+// Sets a power and spawns a shield orb if required.
+//
+void P_SetPower(player_t *player, powertype_t power, UINT16 value)
+{
+	boolean spawnshield = false;
+
+	if (power == pw_shield && player->powers[pw_shield] != value)
+		spawnshield = true;
+
+	player->powers[power] = value;
+
+	if (spawnshield) //workaround for a bug
+		P_SpawnShieldOrb(player);
+}
+
+//
 // P_SpawnGhostMobj
 //
 // Spawns a ghost object on the player
@@ -1947,12 +1966,22 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	ghost->angle = (mobj->player ? mobj->player->drawangle : mobj->angle);
 	ghost->rollangle = mobj->rollangle;
+	
 	ghost->sprite = mobj->sprite;
 	ghost->sprite2 = mobj->sprite2;
 	ghost->frame = mobj->frame;
 	ghost->tics = -1;
 	ghost->frame &= ~FF_TRANSMASK;
 	ghost->frame |= tr_trans50<<FF_TRANSSHIFT;
+	
+	ghost->renderflags = mobj->renderflags;
+	ghost->blendmode = mobj->blendmode;
+	
+	ghost->spritexscale = mobj->spritexscale;
+	ghost->spriteyscale = mobj->spriteyscale;
+	ghost->spritexoffset = mobj->spritexoffset;
+	ghost->spriteyoffset = mobj->spriteyoffset;
+	
 	ghost->fuse = ghost->info->damage;
 	ghost->skin = mobj->skin;
 
@@ -6197,18 +6226,11 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 	if (player->exiting)
 		return;
 
+	if (!P_CheckMove(player->mo,
+				player->mo->x + player->mo->momx,
+				player->mo->y + player->mo->momy, true))
 	{
-		boolean notallowed;
-		mobj_t *hack = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_NULL);
-		hack->flags = MF_NOGRAVITY;
-		hack->radius = player->mo->radius;
-		hack->height = player->mo->height;
-		hack->z = player->mo->z;
-		P_SetThingPosition(hack);
-		notallowed = (!(P_TryMove(hack, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, true)));
-		P_RemoveMobj(hack);
-		if (notallowed)
-			return;
+		return;
 	}
 
 	{
@@ -6600,7 +6622,7 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 //
 static void P_DoNiGHTSCapsule(player_t *player)
 {
-	INT32 i, spherecount, totalduration, popduration, deductinterval, deductquantity, sphereresult, firstpoptic, startingspheres;
+	INT32 i, spherecount, totalduration, popduration, deductinterval, deductquantity, sphereresult, firstpoptic;
 	INT32 tictimer = ++player->capsule->extravalue2;
 
 	if (abs(player->mo->x-player->capsule->x) <= 3*FRACUNIT)
@@ -6723,15 +6745,20 @@ static void P_DoNiGHTSCapsule(player_t *player)
 
 				if (player->capsule->health > sphereresult && player->spheres > 0)
 				{
+					// If spherecount isn't a multiple of deductquantity, the final deduction might steal too many spheres from the player
+					// E.g. with 80 capsule health, deductquantity is 3, 3*26 is 78, 78+3=81, and then it'll have stolen more than the 80 that it was meant to!
+					// So let's adjust deductquantity accordingly for the final deduction
+					deductquantity = min(deductquantity, player->capsule->health - sphereresult);
+
 					player->spheres -= deductquantity;
 					player->capsule->health -= deductquantity;
+
+					if (player->spheres < 0) // This can't happen... without Lua, setrings, et cetera
+						player->spheres = 0;
+
+					//if (player->capsule->health < sphereresult) // This can't happen
+						//player->capsule->health = sphereresult;
 				}
-
-				if (player->spheres < 0)
-					player->spheres = 0;
-
-				if (player->capsule->health < sphereresult)
-					player->capsule->health = sphereresult;
 			}
 
 			// Spawn a 'pop' for every 2 tics
@@ -6752,9 +6779,8 @@ static void P_DoNiGHTSCapsule(player_t *player)
 				}
 				else
 				{
-					startingspheres = player->spheres - player->capsule->health;
+					player->spheres -= player->capsule->health;
 					player->capsule->health = 0;
-					player->spheres = startingspheres;
 				}
 			}
 
@@ -11357,6 +11383,8 @@ void P_PlayerThink(player_t *player)
 		{
 			if (B_CheckRespawn(player))
 				player->playerstate = PST_REBORN;
+			else
+				B_HandleFlightIndicator(player);
 		}
 		if (player->playerstate == PST_REBORN)
 		{
