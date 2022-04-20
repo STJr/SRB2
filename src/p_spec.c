@@ -2778,21 +2778,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 434: // Custom Power
 			if (mo && mo->player)
 			{
-				mobj_t *dummy = P_SpawnMobj(mo->x, mo->y, mo->z, MT_NULL);
+				powertype_t power = line->stringargs[0] ? get_number(line->stringargs[0]) : 0;
+				INT32 value = line->stringargs[1] ? get_number(line->stringargs[1]) : 0;
+				if (value == -1) // 'Infinite'
+					value = UINT16_MAX;
 
-				var1 = line->stringargs[0] ? get_number(line->stringargs[0]) : 0;
-				var2 = line->stringargs[1] ? get_number(line->stringargs[1]) : 0;
-				if (var2 == -1) // 'Infinite'
-					var2 = UINT16_MAX;
+				P_SetPower(mo->player, power, value);
 
-				P_SetTarget(&dummy->target, mo);
-				A_CustomPower(dummy);
-
-				if (bot) {
-					P_SetTarget(&dummy->target, bot);
-					A_CustomPower(dummy);
-				}
-				P_RemoveMobj(dummy);
+				if (bot)
+					P_SetPower(bot->player, power, value);
 			}
 			break;
 

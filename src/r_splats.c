@@ -482,7 +482,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 			continue;
 
 		for (i = x1; i <= x2; i++)
-			cliptab[i] = (y >= mfloorclip[i]);
+			cliptab[i] = (y >= mfloorclip[i] || y <= mceilingclip[i]);
 
 		// clip left
 		while (cliptab[x1])

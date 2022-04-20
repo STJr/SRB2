@@ -1450,7 +1450,7 @@ static void Mask_Post (maskcount_t* m)
 
 void R_RenderPlayerView(player_t *player)
 {
-	UINT8			nummasks	= 1;
+	INT32			nummasks	= 1;
 	maskcount_t*	masks		= malloc(sizeof(maskcount_t));
 
 	if (cv_homremoval.value && player == &players[displayplayer]) // if this is display player 1

@@ -3797,7 +3797,7 @@ state_t states[NUMSTATES] =
 	{SPR_NTPN, 3, 4, {NULL}, 0, 0, S_PIAN5}, // S_PIAN4
 	{SPR_NTPN, 2, 4, {NULL}, 0, 0, S_PIAN6}, // S_PIAN5
 	{SPR_NTPN, 1, 4, {NULL}, 0, 0, S_PIAN1}, // S_PIAN6
-	{SPR_NTPN, 5|FF_ANIMATE, 4, {NULL}, 1, 4, S_PIAN1}, // S_PIANSING
+	{SPR_NTPN, 4|FF_ANIMATE, 24, {NULL}, 1, 4, S_PIAN1}, // S_PIANSING
 
 	// Shleep
 	{SPR_SHLP, 0, 15, {NULL}, 0, 0, S_SHLEEP2}, // S_SHLEEP1
@@ -3992,6 +3992,33 @@ state_t states[NUMSTATES] =
 mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 {
 	{           // MT_NULL
+		-1,             // doomednum
+		S_NULL,         // spawnstate
+		0,              // spawnhealth
+		S_NULL,         // seestate
+		sfx_None,       // seesound
+		0,              // reactiontime
+		sfx_None,       // attacksound
+		S_NULL,         // painstate
+		0,              // painchance
+		sfx_None,       // painsound
+		S_NULL,         // meleestate
+		S_NULL,         // missilestate
+		S_NULL,         // deathstate
+		S_NULL,         // xdeathstate
+		sfx_None,       // deathsound
+		0,              // speed
+		0,              // radius
+		0,              // height
+		0,              // display offset
+		0,              // mass
+		0,              // damage
+		sfx_None,       // activesound
+		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOCLIP|MF_NOCLIPHEIGHT|MF_NOGRAVITY|MF_SCENERY, // flags
+		S_NULL          // raisestate
+	},
+
+	{           // MT_RAY
 		-1,             // doomednum
 		S_NULL,         // spawnstate
 		0,              // spawnhealth
@@ -5655,8 +5682,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_EGGMOBILE_FLEE1, // xdeathstate
 		sfx_s3kb4,         // deathsound
 		4,                 // speed
-		24*FRACUNIT,       // radius
-		76*FRACUNIT,       // height
+		36*FRACUNIT,       // radius
+		84*FRACUNIT,       // height
 		0,                 // display offset
 		sfx_None,          // mass
 		3,                 // damage
@@ -5790,8 +5817,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_EGGMOBILE2_FLEE1,// xdeathstate
 		sfx_s3kb4,         // deathsound
 		2*FRACUNIT,        // speed
-		24*FRACUNIT,       // radius
-		76*FRACUNIT,       // height
+		36*FRACUNIT,       // radius
+		84*FRACUNIT,       // height
 		0,                 // display offset
 		0,                 // mass
 		3,                 // damage
@@ -5898,7 +5925,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_EGGMOBILE3_FLEE1, // xdeathstate
 		sfx_s3kb4,          // deathsound
 		8*FRACUNIT,         // speed
-		32*FRACUNIT,        // radius
+		36*FRACUNIT,        // radius
 		116*FRACUNIT,       // height
 		0,                  // display offset
 		MT_FAKEMOBILE,      // mass
@@ -5925,7 +5952,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,             // xdeathstate
 		sfx_mswarp,         // deathsound
 		8*FRACUNIT,         // speed
-		32*FRACUNIT,        // radius
+		36*FRACUNIT,        // radius
 		116*FRACUNIT,       // height
 		0,                  // display offset
 		0,                  // mass
@@ -5979,8 +6006,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_EGGMOBILE4_FLEE1,// xdeathstate
 		sfx_s3kb4,         // deathsound
 		0,                 // speed
-		24*FRACUNIT,       // radius
-		76*FRACUNIT,       // height
+		36*FRACUNIT,       // radius
+		84*FRACUNIT,       // height
 		0,                 // display offset
 		0,                 // mass
 		3,                 // damage
@@ -8031,7 +8058,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SOLID|MF_SCENERY,  // flags
+		MF_NOBLOCKMAP|MF_SCENERY|MF_NOCLIPHEIGHT,  // flags
 		S_NULL          // raisestate
 	},
 
@@ -8058,7 +8085,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		DMG_SPIKE,      // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SOLID|MF_NOGRAVITY|MF_SCENERY|MF_PAPERCOLLISION,  // flags
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_SCENERY|MF_NOCLIPHEIGHT|MF_PAPERCOLLISION,  // flags
 		S_NULL          // raisestate
 	},
 
@@ -8085,7 +8112,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		4,              // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_SCENERY|MF_NOCLIP|MF_NOCLIPTHING,  // flags
+		MF_NOBLOCKMAP|MF_NOGRAVITY|MF_NOCLIP|MF_NOCLIPTHING,  // flags
 		S_NULL          // raisestate
 	},
 
@@ -20013,8 +20040,8 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL,         // painstate
 		200,            // painchance
 		sfx_None,       // painsound
-		S_PIANSING,     // meleestate
-		S_NULL,         // missilestate
+		S_NULL,         // meleestate
+		S_PIANSING,     // missilestate
 		S_NULL,         // deathstate
 		S_NULL,         // xdeathstate
 		sfx_None,       // deathsound
@@ -20025,7 +20052,7 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		16,             // mass
 		0,              // damage
 		sfx_None,       // activesound
-		MF_SLIDEME|MF_ENEMY|MF_SPECIAL|MF_SHOOTABLE|MF_NOGRAVITY, // flags
+		MF_SLIDEME|MF_SPECIAL|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 

@@ -100,7 +100,7 @@ typedef struct
 	sector_t* viewsector;
 } maskcount_t;
 
-void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
+void R_DrawMasked(maskcount_t* masks, INT32 nummasks);
 
 // ----------
 // VISSPRITES

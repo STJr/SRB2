@@ -1043,7 +1043,8 @@ void P_DoPlayerPain(player_t *player, mobj_t *source, mobj_t *inflictor)
 			fallbackspeed = FixedMul(4*FRACUNIT, player->mo->scale);
 		}
 
-		player->drawangle = ang + ANGLE_180;
+		if (player->pflags & PF_DIRECTIONCHAR)
+			player->drawangle = ang + ANGLE_180;
 		P_InstaThrust(player->mo, ang, fallbackspeed);
 	}
 
@@ -1920,6 +1921,24 @@ void P_SwitchShield(player_t *player, UINT16 shieldtype)
 			}
 		}
 	}
+}
+
+//
+// P_SetPower
+//
+// Sets a power and spawns a shield orb if required.
+//
+void P_SetPower(player_t *player, powertype_t power, UINT16 value)
+{
+	boolean spawnshield = false;
+
+	if (power == pw_shield && player->powers[pw_shield] != value)
+		spawnshield = true;
+
+	player->powers[power] = value;
+
+	if (spawnshield) //workaround for a bug
+		P_SpawnShieldOrb(player);
 }
 
 //
@@ -6197,18 +6216,11 @@ static void P_NightsTransferPoints(player_t *player, fixed_t xspeed, fixed_t rad
 	if (player->exiting)
 		return;
 
+	if (!P_CheckMove(player->mo,
+				player->mo->x + player->mo->momx,
+				player->mo->y + player->mo->momy, true))
 	{
-		boolean notallowed;
-		mobj_t *hack = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_NULL);
-		hack->flags = MF_NOGRAVITY;
-		hack->radius = player->mo->radius;
-		hack->height = player->mo->height;
-		hack->z = player->mo->z;
-		P_SetThingPosition(hack);
-		notallowed = (!(P_TryMove(hack, player->mo->x+player->mo->momx, player->mo->y+player->mo->momy, true)));
-		P_RemoveMobj(hack);
-		if (notallowed)
-			return;
+		return;
 	}
 
 	{
@@ -11357,6 +11369,8 @@ void P_PlayerThink(player_t *player)
 		{
 			if (B_CheckRespawn(player))
 				player->playerstate = PST_REBORN;
+			else
+				B_HandleFlightIndicator(player);
 		}
 		if (player->playerstate == PST_REBORN)
 		{
