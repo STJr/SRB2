@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1169,7 +1169,7 @@ static boolean PolyFlag(line_t *line)
 
 	pfd.polyObjNum = line->args[0];
 	pfd.speed = line->args[1];
-	pfd.angle = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y) >> ANGLETOFINESHIFT;
+	pfd.angle = line->angle >> ANGLETOFINESHIFT;
 	pfd.momx = line->args[2];
 
 	return EV_DoPolyObjFlag(&pfd);
@@ -2172,7 +2172,7 @@ void P_SwitchWeather(INT32 weathernum)
 	{
 		case PRECIP_SNOW: // snow
 			curWeather = PRECIP_SNOW;
-			
+
 			if (purge)
 				P_SpawnPrecipitation();
 
@@ -2778,21 +2778,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 434: // Custom Power
 			if (mo && mo->player)
 			{
-				mobj_t *dummy = P_SpawnMobj(mo->x, mo->y, mo->z, MT_NULL);
+				powertype_t power = line->stringargs[0] ? get_number(line->stringargs[0]) : 0;
+				INT32 value = line->stringargs[1] ? get_number(line->stringargs[1]) : 0;
+				if (value == -1) // 'Infinite'
+					value = UINT16_MAX;
 
-				var1 = line->stringargs[0] ? get_number(line->stringargs[0]) : 0;
-				var2 = line->stringargs[1] ? get_number(line->stringargs[1]) : 0;
-				if (var2 == -1) // 'Infinite'
-					var2 = UINT16_MAX;
+				P_SetPower(mo->player, power, value);
 
-				P_SetTarget(&dummy->target, mo);
-				A_CustomPower(dummy);
-
-				if (bot) {
-					P_SetTarget(&dummy->target, bot);
-					A_CustomPower(dummy);
-				}
-				P_RemoveMobj(dummy);
+				if (bot)
+					P_SetPower(bot->player, power, value);
 			}
 			break;
 
