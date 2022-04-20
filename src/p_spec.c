@@ -2724,7 +2724,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			if (mo && mo->player)
 			{
 				powertype_t power = line->stringargs[0] ? get_number(line->stringargs[0]) : 0;
-				UINT16 value = line->stringargs[1] ? get_number(line->stringargs[1]) : 0;
+				INT32 value = line->stringargs[1] ? get_number(line->stringargs[1]) : 0;
 				if (value == -1) // 'Infinite'
 					value = UINT16_MAX;
 
