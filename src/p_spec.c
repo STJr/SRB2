@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1169,7 +1169,7 @@ static boolean PolyFlag(line_t *line)
 
 	pfd.polyObjNum = line->args[0];
 	pfd.speed = line->args[1];
-	pfd.angle = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y) >> ANGLETOFINESHIFT;
+	pfd.angle = line->angle >> ANGLETOFINESHIFT;
 	pfd.momx = line->args[2];
 
 	return EV_DoPolyObjFlag(&pfd);
@@ -2172,7 +2172,7 @@ void P_SwitchWeather(INT32 weathernum)
 	{
 		case PRECIP_SNOW: // snow
 			curWeather = PRECIP_SNOW;
-			
+
 			if (purge)
 				P_SpawnPrecipitation();
 

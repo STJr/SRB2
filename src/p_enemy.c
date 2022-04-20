@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -108,6 +108,8 @@ void A_GoldMonitorRestore(mobj_t *actor);
 void A_GoldMonitorSparkle(mobj_t *actor);
 void A_Explode(mobj_t *actor);
 void A_BossDeath(mobj_t *actor);
+void A_SetShadowScale(mobj_t *actor);
+void A_ShadowScream(mobj_t *actor);
 void A_CustomPower(mobj_t *actor);
 void A_GiveWeapon(mobj_t *actor);
 void A_RingBox(mobj_t *actor);
@@ -4182,6 +4184,41 @@ void A_BossDeath(mobj_t *mo)
 			break;
 	}
 }
+
+// Function: A_SetShadowScale
+//
+// Description: Sets the target's shadowscale.
+//
+// var1 = new fixed_t shadowscale (default = FRACUNIT)
+// var2 = unused
+//
+void A_SetShadowScale(mobj_t *actor)
+{
+	INT32 locvar1 = var1;
+
+	if (LUA_CallAction(A_SETSHADOWSCALE, actor))
+		return;
+
+	actor->shadowscale = locvar1;
+}
+
+
+// Function: A_ShadowScream
+//
+// Description: Sets the target's shadowscale and starts the death sound of the object.
+//
+// var1 = new fixed_t shadowscale (default = FRACUNIT)
+// var2 = unused
+//
+void A_ShadowScream(mobj_t *actor)
+{
+	if (LUA_CallAction(A_SHADOWSCREAM, actor))
+		return;
+
+	A_SetShadowScale(actor);
+	A_Scream(actor);
+}
+
 
 // Function: A_CustomPower
 //

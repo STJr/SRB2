@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -91,6 +91,8 @@ actionpointer_t actionpointers[] =
 	{{A_FaceTracer},             "A_FACETRACER"},
 	{{A_Scream},                 "A_SCREAM"},
 	{{A_BossDeath},              "A_BOSSDEATH"},
+	{{A_SetShadowScale},         "A_SETSHADOWSCALE"},
+	{{A_ShadowScream},           "A_SHADOWSCREAM"},
 	{{A_CustomPower},            "A_CUSTOMPOWER"},
 	{{A_GiveWeapon},             "A_GIVEWEAPON"},
 	{{A_RingBox},                "A_RINGBOX"},
@@ -3346,14 +3348,13 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_NIGHTOPIANHELPER9",
 
 	// Nightopian
-	"S_PIAN0",
-	"S_PIAN1",
-	"S_PIAN2",
-	"S_PIAN3",
-	"S_PIAN4",
-	"S_PIAN5",
-	"S_PIAN6",
-	"S_PIANSING",
+	"S_PIAN_LOOK1",
+	"S_PIAN_LOOK2",
+	"S_PIAN_LOOK3",
+	"S_PIAN_FLY1",
+	"S_PIAN_FLY2",
+	"S_PIAN_FLY3",
+	"S_PIAN_SING",
 
 	// Shleep
 	"S_SHLEEP1",
@@ -3549,7 +3550,6 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 // because sadly no one remembers this place while searching for full state names.
 const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity testing later.
 	"MT_NULL",
-	"MT_RAY",
 	"MT_UNKNOWN",
 
 	"MT_THOK", // Thok! mobj
@@ -4318,6 +4318,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_YELLOWBRICKDEBRIS",
 
 	"MT_NAMECHECK",
+	"MT_RAY",
 };
 
 const char *const MOBJFLAG_LIST[] = {

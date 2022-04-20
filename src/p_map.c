@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3101,7 +3101,7 @@ static void P_HitCameraSlideLine(line_t *ld, camera_t *thiscam)
 	}
 
 	side = P_PointOnLineSide(thiscam->x, thiscam->y, ld);
-	lineangle = R_PointToAngle2(0, 0, ld->dx, ld->dy);
+	lineangle = ld->angle;
 
 	if (side == 1)
 		lineangle += ANGLE_180;
@@ -3147,7 +3147,7 @@ static void P_HitSlideLine(line_t *ld)
 
 	side = P_PointOnLineSide(slidemo->x, slidemo->y, ld);
 
-	lineangle = R_PointToAngle2(0, 0, ld->dx, ld->dy);
+	lineangle = ld->angle;
 
 	if (side == 1)
 		lineangle += ANGLE_180;
@@ -3190,7 +3190,7 @@ static void P_HitBounceLine(line_t *ld)
 		return;
 	}
 
-	lineangle = R_PointToAngle2(0, 0, ld->dx, ld->dy);
+	lineangle = ld->angle;
 
 	if (lineangle >= ANGLE_180)
 		lineangle -= ANGLE_180;

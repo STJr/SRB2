@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -44,6 +44,8 @@ enum actionnum
 	A_FACETRACER,
 	A_SCREAM,
 	A_BOSSDEATH,
+	A_SETSHADOWSCALE,
+	A_SHADOWSCREAM,
 	A_CUSTOMPOWER,
 	A_GIVEWEAPON,
 	A_RINGBOX,
@@ -313,6 +315,8 @@ void A_FaceTarget();
 void A_FaceTracer();
 void A_Scream();
 void A_BossDeath();
+void A_SetShadowScale();
+void A_ShadowScream(); // MARIA!!!!!!
 void A_CustomPower(); // Use this for a custom power
 void A_GiveWeapon(); // Gives the player weapon(s)
 void A_RingBox(); // Obtained Ring Box Tails
@@ -4153,14 +4157,13 @@ typedef enum state
 	S_NIGHTOPIANHELPER9,
 
 	// Nightopian
-	S_PIAN0,
-	S_PIAN1,
-	S_PIAN2,
-	S_PIAN3,
-	S_PIAN4,
-	S_PIAN5,
-	S_PIAN6,
-	S_PIANSING,
+	S_PIAN_LOOK1,
+	S_PIAN_LOOK2,
+	S_PIAN_LOOK3,
+	S_PIAN_FLY1,
+	S_PIAN_FLY2,
+	S_PIAN_FLY3,
+	S_PIAN_SING,
 
 	// Shleep
 	S_SHLEEP1,
@@ -4376,7 +4379,6 @@ extern playersprite_t free_spr2;
 typedef enum mobj_type
 {
 	MT_NULL,
-	MT_RAY, // General purpose mobj
 	MT_UNKNOWN,
 
 	MT_THOK, // Thok! mobj
@@ -5145,6 +5147,7 @@ typedef enum mobj_type
 	MT_YELLOWBRICKDEBRIS, // for CEZ3
 
 	MT_NAMECHECK,
+	MT_RAY, // General purpose mobj
 
 	MT_FIRSTFREESLOT,
 	MT_LASTFREESLOT = MT_FIRSTFREESLOT + NUMMOBJFREESLOTS - 1,

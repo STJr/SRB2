@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -7880,7 +7880,8 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 	case MT_WOODDEBRIS:
 	case MT_BRICKDEBRIS:
 	case MT_BROKENROBOT:
-		if (mobj->z <= P_FloorzAtPos(mobj->x, mobj->y, mobj->z, mobj->height)
+		if (((!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z <= P_FloorzAtPos(mobj->x, mobj->y, mobj->z, mobj->height))
+			|| (mobj->eflags & MFE_VERTICALFLIP && mobj->z + mobj->height >= P_CeilingzAtPos(mobj->x, mobj->y, mobj->z, mobj->height)))
 			&& mobj->state != &states[mobj->info->deathstate])
 		{
 			P_SetMobjState(mobj, mobj->info->deathstate);
@@ -8449,7 +8450,10 @@ static boolean P_HangsterThink(mobj_t *mobj)
 	}
 	//after swooping back up, check for ceiling
 	else if ((st == S_HANGSTER_RETURN1 || st == S_HANGSTER_RETURN2) && mobj->momz == 0 && mobj->ceilingz == (mobj->z + mobj->height))
+	{
 		P_SetMobjState(mobj, (st = S_HANGSTER_RETURN3));
+		mobj->momx = mobj->momy = 0;
+	}
 
 	//should you roost on a ceiling with F_SKY1 as its flat, disappear forever
 	if (st == S_HANGSTER_RETURN3 && mobj->momz == 0 && mobj->ceilingz == (mobj->z + mobj->height)
@@ -9845,7 +9849,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		if (P_IsObjectOnGround(mobj))
 			mobj->rollangle = 0;
 		else
-			mobj->rollangle = R_PointToAngle2(0, 0, mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
+			mobj->rollangle = R_PointToAngle2(0, 0, P_MobjFlip(mobj)*mobj->momz, (mobj->scale << 1) - min(abs(mobj->momz), mobj->scale << 1));
 		break;
 	case MT_PUSH:
 		P_PointPushThink(mobj);
@@ -10506,6 +10510,7 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 	switch (thing->type)
 	{
 		case MT_PLAYER:
+		case MT_METALSONIC_RACE:
 		case MT_ROLLOUTROCK:
 
 		case MT_EGGMOBILE4_MACE:
@@ -10550,6 +10555,27 @@ static fixed_t P_DefaultMobjShadowScale (mobj_t *thing)
 
 			return 2*FRACUNIT/3;
 
+		case MT_FLICKY_01:
+		case MT_FLICKY_02:
+		case MT_FLICKY_03:
+		case MT_FLICKY_04:
+		case MT_FLICKY_05:
+		case MT_FLICKY_06:
+		case MT_FLICKY_07:
+		case MT_FLICKY_08:
+		case MT_FLICKY_09:
+		case MT_FLICKY_10:
+		case MT_FLICKY_11:
+		case MT_FLICKY_12:
+		case MT_FLICKY_13:
+		case MT_FLICKY_14:
+		case MT_FLICKY_15:
+		case MT_FLICKY_16:
+		case MT_SECRETFLICKY_01:
+		case MT_SECRETFLICKY_02:
+
+			return FRACUNIT;
+
 		default:
 
 			if (thing->flags & (MF_ENEMY|MF_BOSS))
@@ -10571,10 +10597,17 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 
 	if (type == MT_NULL)
 	{
+#if 0
 #ifdef PARANOIA
 		I_Error("Tried to spawn MT_NULL\n");
 #endif
 		return NULL;
+#endif
+		// Hack: Some code assumes that P_SpawnMobj can never return NULL
+		// So replace MT_NULL with MT_RAY in the meantime
+		// Remove when dealt properly
+		CONS_Debug(DBG_GAMELOGIC, "Tried to spawn MT_NULL, using MT_RAY\n");
+		type = MT_RAY;
 	}
 
 	mobj = Z_Calloc(sizeof (*mobj), PU_LEVEL, NULL);

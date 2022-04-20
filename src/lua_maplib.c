@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -96,6 +96,7 @@ enum line_e {
 	line_v2,
 	line_dx,
 	line_dy,
+	line_angle,
 	line_flags,
 	line_special,
 	line_tag,
@@ -121,6 +122,7 @@ static const char *const line_opt[] = {
 	"v2",
 	"dx",
 	"dy",
+	"angle",
 	"flags",
 	"special",
 	"tag",
@@ -866,6 +868,9 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_dy:
 		lua_pushfixed(L, line->dy);
+		return 1;
+	case line_angle:
+		lua_pushangle(L, line->angle);
 		return 1;
 	case line_flags:
 		lua_pushinteger(L, line->flags);
