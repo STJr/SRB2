@@ -72,6 +72,8 @@ static void AddInterpolatedMobj(mobj_t *mobj)
 
 	interpolated_mobjs[interpolated_mobjs_len] = mobj;
 	interpolated_mobjs_len += 1;
+
+	P_ResetMobjInterpolationState(mobj);
 }
 
 static void RemoveInterpolatedMobj(mobj_t *mobj)
