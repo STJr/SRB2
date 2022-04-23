@@ -504,14 +504,6 @@ boolean P_SceneryZMovement(mobj_t *mo);
 void P_PlayerZMovement(mobj_t *mo);
 void P_EmeraldManager(void);
 
-// Initialize internal mobj interpolator list (e.g. during level loading)
-void P_InitMobjInterpolators(void);
-// Add interpolation state for the given mobj
-void P_AddMobjInterpolator(mobj_t *mobj);
-void P_UpdateMobjInterpolators(void);
-void P_ResetMobjInterpolationState(mobj_t *mobj);
-void P_ResetPrecipitationMobjInterpolationState(precipmobj_t *mobj);
-
 extern INT32 modulothing;
 
 #define MAXHUNTEMERALDS 64

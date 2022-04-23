@@ -642,7 +642,7 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
-		P_UpdateMobjInterpolators();
+		R_UpdateMobjInterpolators();
 
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);

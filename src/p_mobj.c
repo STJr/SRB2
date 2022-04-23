@@ -18,6 +18,7 @@
 #include "hu_stuff.h"
 #include "p_local.h"
 #include "p_setup.h"
+#include "r_fps.h"
 #include "r_main.h"
 #include "r_skins.h"
 #include "r_sky.h"
@@ -41,79 +42,6 @@ consvar_t cv_movebob = CVAR_INIT ("movebob", "1.0", CV_FLOAT|CV_SAVE, CV_BobSpee
 actioncache_t actioncachehead;
 
 static mobj_t *overlaycap = NULL;
-
-static mobj_t **interpolated_mobjs = NULL;
-static size_t interpolated_mobjs_len = 0;
-static size_t interpolated_mobjs_capacity = 0;
-
-// NOTE: This will NOT check that the mobj has already been added, for perf
-// reasons.
-void P_AddMobjInterpolator(mobj_t *mobj)
-{
-	if (interpolated_mobjs_len >= interpolated_mobjs_capacity)
-	{
-		if (interpolated_mobjs_capacity == 0)
-		{
-			interpolated_mobjs_capacity = 256;
-		}
-		else
-		{
-			interpolated_mobjs_capacity *= 2;
-		}
-
-		interpolated_mobjs = Z_ReallocAlign(
-			interpolated_mobjs,
-			sizeof(mobj_t *) * interpolated_mobjs_capacity,
-			PU_LEVEL,
-			NULL,
-			64
-		);
-	}
-
-	interpolated_mobjs[interpolated_mobjs_len] = mobj;
-	interpolated_mobjs_len += 1;
-
-	P_ResetMobjInterpolationState(mobj);
-}
-
-static void RemoveInterpolatedMobj(mobj_t *mobj)
-{
-	size_t i;
-
-	if (interpolated_mobjs_len == 0) return;
-
-	for (i = 0; i < interpolated_mobjs_len - 1; i++)
-	{
-		if (interpolated_mobjs[i] == mobj)
-		{
-			interpolated_mobjs[i] = interpolated_mobjs[
-				interpolated_mobjs_len - 1
-			];
-			interpolated_mobjs_len -= 1;
-			return;
-		}
-	}
-}
-
-void P_InitMobjInterpolators(void)
-{
-	// apparently it's not acceptable to free something already unallocated
-	// Z_Free(interpolated_mobjs);
-	interpolated_mobjs = NULL;
-	interpolated_mobjs_len = 0;
-	interpolated_mobjs_capacity = 0;
-}
-
-void P_UpdateMobjInterpolators(void)
-{
-	size_t i;
-	for (i = 0; i < interpolated_mobjs_len; i++)
-	{
-		mobj_t *mobj = interpolated_mobjs[i];
-		if (!P_MobjWasRemoved(mobj))
-			P_ResetMobjInterpolationState(mobj);
-	}
-}
 
 void P_InitCachedActions(void)
 {
@@ -963,39 +891,6 @@ void P_EmeraldManager(void)
 	}
 
 	emeraldspawndelay = 0;
-}
-
-//
-// P_ResetMobjInterpolationState
-//
-// Reset the rendering interpolation state of the mobj.
-//
-void P_ResetMobjInterpolationState(mobj_t *mobj)
-{
-	mobj->old_x = mobj->x;
-	mobj->old_y = mobj->y;
-	mobj->old_z = mobj->z;
-	mobj->old_angle = mobj->angle;
-	mobj->old_pitch = mobj->pitch;
-	mobj->old_roll = mobj->roll;
-
-	if (mobj->player)
-	{
-		mobj->player->old_drawangle = mobj->player->drawangle;
-	}
-}
-
-//
-// P_ResetPrecipitationMobjInterpolationState
-//
-// Reset the rendering interpolation state of the precipmobj.
-//
-void P_ResetPrecipitationMobjInterpolationState(precipmobj_t *mobj)
-{
-	mobj->old_x = mobj->x;
-	mobj->old_y = mobj->y;
-	mobj->old_z = mobj->z;
-	mobj->old_angle = mobj->angle;
 }
 
 //
@@ -4132,7 +4027,7 @@ void P_NullPrecipThinker(precipmobj_t *mobj)
 
 void P_SnowThinker(precipmobj_t *mobj)
 {
-	P_ResetPrecipitationMobjInterpolationState(mobj);
+	R_ResetPrecipitationMobjInterpolationState(mobj);
 
 	P_CycleStateAnimation((mobj_t *)mobj);
 
@@ -4140,13 +4035,13 @@ void P_SnowThinker(precipmobj_t *mobj)
 	if ((mobj->z += mobj->momz) <= mobj->floorz)
 	{
 		mobj->z = mobj->ceilingz;
-		P_ResetPrecipitationMobjInterpolationState(mobj);
+		R_ResetPrecipitationMobjInterpolationState(mobj);
 	}
 }
 
 void P_RainThinker(precipmobj_t *mobj)
 {
-	P_ResetPrecipitationMobjInterpolationState(mobj);
+	R_ResetPrecipitationMobjInterpolationState(mobj);
 
 	P_CycleStateAnimation((mobj_t *)mobj);
 
@@ -4167,7 +4062,7 @@ void P_RainThinker(precipmobj_t *mobj)
 			return;
 
 		mobj->z = mobj->ceilingz;
-		P_ResetPrecipitationMobjInterpolationState(mobj);
+		R_ResetPrecipitationMobjInterpolationState(mobj);
 		P_SetPrecipMobjState(mobj, S_RAIN1);
 
 		return;
@@ -11010,7 +10905,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	if (CheckForReverseGravity && !(mobj->flags & MF_NOBLOCKMAP))
 		P_CheckGravity(mobj, false);
 
-	P_AddMobjInterpolator(mobj);
+	R_AddMobjInterpolator(mobj);
 
 	return mobj;
 }
@@ -11059,7 +10954,7 @@ static precipmobj_t *P_SpawnPrecipMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype
 	 || mobj->subsector->sector->floorpic == skyflatnum)
 		mobj->precipflags |= PCF_PIT;
 
-	P_ResetPrecipitationMobjInterpolationState(mobj);
+	R_ResetPrecipitationMobjInterpolationState(mobj);
 
 	return mobj;
 }
@@ -11180,7 +11075,7 @@ void P_RemoveMobj(mobj_t *mobj)
 	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
 #endif
 
-	RemoveInterpolatedMobj(mobj);
+	R_RemoveMobjInterpolator(mobj);
 
 	// free block
 	if (!mobj->thinker.next)

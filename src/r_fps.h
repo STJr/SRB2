@@ -133,4 +133,14 @@ void R_RestoreLevelInterpolators(void);
 // Destroy interpolators associated with a thinker
 void R_DestroyLevelInterpolators(thinker_t *thinker);
 
+// Initialize internal mobj interpolator list (e.g. during level loading)
+void R_InitMobjInterpolators(void);
+// Add interpolation state for the given mobj
+void R_AddMobjInterpolator(mobj_t *mobj);
+// Remove the interpolation state for the given mobj
+void R_RemoveMobjInterpolator(mobj_t *mobj);
+void R_UpdateMobjInterpolators(void);
+void R_ResetMobjInterpolationState(mobj_t *mobj);
+void R_ResetPrecipitationMobjInterpolationState(precipmobj_t *mobj);
+
 #endif
