@@ -48,7 +48,7 @@ static size_t interpolated_mobjs_capacity = 0;
 
 // NOTE: This will NOT check that the mobj has already been added, for perf
 // reasons.
-static void AddInterpolatedMobj(mobj_t *mobj)
+void P_AddMobjInterpolator(mobj_t *mobj)
 {
 	if (interpolated_mobjs_len >= interpolated_mobjs_capacity)
 	{
@@ -11010,7 +11010,7 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	if (CheckForReverseGravity && !(mobj->flags & MF_NOBLOCKMAP))
 		P_CheckGravity(mobj, false);
 
-	AddInterpolatedMobj(mobj);
+	P_AddMobjInterpolator(mobj);
 
 	return mobj;
 }

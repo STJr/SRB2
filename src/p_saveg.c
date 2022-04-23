@@ -2969,6 +2969,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 
 	mobj->info = (mobjinfo_t *)next; // temporarily, set when leave this function
 
+	P_AddMobjInterpolator(mobj);
+
 	return &mobj->thinker;
 }
 
