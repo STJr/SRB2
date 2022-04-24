@@ -2188,6 +2188,58 @@ int I_PreciseToMicros(precise_t d)
 }
 
 //
+// I_GetFrameTime
+// returns time in 1/fpscap second tics
+//
+
+static UINT32 frame_rate;
+
+static double frame_frequency;
+static UINT64 frame_epoch;
+static double elapsed_frames;
+
+static void I_InitFrameTime(const UINT64 now, const UINT32 cap)
+{
+	frame_rate = cap;
+	frame_epoch = now;
+
+	//elapsed_frames = 0.0;
+
+	if (frame_rate == 0)
+	{
+		// Shouldn't be used, but just in case...?
+		frame_frequency = 1.0;
+		return;
+	}
+
+	frame_frequency = timer_frequency / (double)frame_rate;
+}
+
+double I_GetFrameTime(void)
+{
+	const UINT64 now = SDL_GetPerformanceCounter();
+	const UINT32 cap = R_GetFramerateCap();
+
+	if (cap != frame_rate)
+	{
+		I_InitFrameTime(now, cap);
+	}
+
+	if (frame_rate == 0)
+	{
+		// Always advance a frame.
+		elapsed_frames += 1.0;
+	}
+	else
+	{
+		elapsed_frames += (now - frame_epoch) / frame_frequency;
+	}
+
+	frame_epoch = now; // moving epoch
+	return elapsed_frames;
+}
+
+//
 // I_StartupTimer
 //
 void I_StartupTimer(void)
@@ -2197,6 +2249,9 @@ void I_StartupTimer(void)
 
 	tic_frequency   = timer_frequency / (double)NEWTICRATE;
 	elapsed_tics    = 0.0;
+
+	I_InitFrameTime(tic_epoch, R_GetFramerateCap());
+	elapsed_frames  = 0.0;
 }
 
 //
@@ -2213,69 +2268,66 @@ void I_Sleep(void)
 // I_FrameCapSleep
 // Sleeps for a variable amount of time, depending on how much time the last frame took.
 //
-boolean I_FrameCapSleep(const int elapsed)
+boolean I_FrameCapSleep(const double elapsed)
 {
-	const INT64 delayGranularity = 2000;
-	// I picked 2ms as it's what GZDoom uses before it stops trying to sleep,
-	// but maybe other values might work better.
+	// SDL_Delay(1) gives me a range of around 1.95ms to 2.05ms.
+	// Has a bit extra to be totally safe.
+	const double delayGranularity = 2.1;
 
-	const UINT32 capFrames = R_GetFramerateCap();
-	int capMicros = 0;
+	double capMS = 0.0;
+	double elapsedMS = 0.0;
+	double waitMS = 0.0;
 
-	if (capFrames == 0)
+	if (frame_rate == 0)
 	{
 		// We don't want to cap.
 		return false;
 	}
 
-	capMicros = 1000000 / capFrames;
+	capMS = 1000.0 / frame_rate; // Time of 1 frame, in milliseconds
+	elapsedMS = elapsed * capMS; // Convert elapsed from frame time to milliseconds.
+	waitMS = (capMS - elapsedMS); // How many MS to delay by.
 
-	if (elapsed < capMicros)
+	if (waitMS <= 0.0)
 	{
-		const INT64 error = capMicros / 40;
-		// 2.5% ... How much we might expect the framerate to flucuate.
-		// No exact logic behind this number, simply tried stuff until the framerate
-		// reached the cap 300 more often and only overshot it occasionally.
-
-		INT64 wait = (capMicros - elapsed) - error;
-
-		while (wait > 0)
-		{
-			precise_t sleepStart = I_GetPreciseTime();
-			precise_t sleepEnd = sleepStart;
-			int sleepElasped = 0;
-
-			if (wait > delayGranularity && cv_sleep.value != -1)
-			{
-				// Wait 1ms at a time (on default settings)
-				// until we're close enough.
-				SDL_Delay(cv_sleep.value);
-
-				sleepEnd = I_GetPreciseTime();
-				sleepElasped = I_PreciseToMicros(sleepEnd - sleepStart);
-			}
-			else
-			{
-				// When we have an extremely fine wait,
-				// we do this to spin-lock the remaining time.
-				while (sleepElasped < wait)
-				{
-					sleepEnd = I_GetPreciseTime();
-					sleepElasped = I_PreciseToMicros(sleepEnd - sleepStart);
-				}
-
-				break;
-			}
-
-			wait -= sleepElasped;
-		}
-
-		// We took our nap.
-		return true;
+		// Too small of a wait, don't delay.
+		return false;
 	}
 
-	// We're lagging behind.
-	return false;
+	while (waitMS > 0.0)
+	{
+		double sleepStart = I_GetFrameTime();
+		double sleepEnd = sleepStart;
+		double sleepElaspedMS = 0.0;
+
+		if (waitMS > delayGranularity && cv_sleep.value != -1)
+		{
+			// Wait 1ms at a time (on default settings)
+			// until we're close enough.
+			SDL_Delay(cv_sleep.value);
+
+			sleepEnd = I_GetFrameTime();
+			sleepElaspedMS = (sleepEnd - sleepStart) * capMS;
+		}
+		else
+		{
+			// When we have an extremely fine wait,
+			// we do this to spin-lock the remaining time.
+
+			while (sleepElaspedMS < waitMS)
+			{
+				sleepEnd = I_GetFrameTime();
+				sleepElaspedMS = (sleepEnd - sleepStart) * capMS;
+			}
+
+			break;
+		}
+
+		waitMS -= sleepElaspedMS;
+	}
+
+	// We took our nap.
+	return true;
 }
 
 #ifdef NEWSIGNALHANDLER

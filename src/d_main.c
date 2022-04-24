@@ -702,8 +702,8 @@ void D_SRB2Loop(void)
 	boolean interp = false;
 	boolean doDisplay = false;
 
-	precise_t frameTime = 0;
-	int frameElapsed = 0;
+	double frameTime = 0.0;
+	double frameElapsed = 0.0;
 
 	if (dedicated)
 		server = true;
@@ -755,8 +755,8 @@ void D_SRB2Loop(void)
 
 	for (;;)
 	{
-		frameTime = I_GetPreciseTime();
-		frameElapsed = 0;
+		frameTime = I_GetFrameTime();
+		frameElapsed = 0.0;
 
 		if (lastwipetic)
 		{
@@ -903,7 +903,7 @@ void D_SRB2Loop(void)
 		SCR_CalculateFPS();
 
 		// Fully completed frame made, handle frame cap delay.
-		frameElapsed = I_PreciseToMicros(I_GetPreciseTime() - frameTime);
+		frameElapsed = I_GetFrameTime() - frameTime;
 
 		if (!singletics)
 		{
