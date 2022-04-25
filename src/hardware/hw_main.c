@@ -5378,13 +5378,24 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer)
 	{
+		interpmobjstate_t tracer_interp = {};
+
 		if (! R_ThingVisible(thing->tracer))
 			return;
 
+		if (R_UsingFrameInterpolation() && !paused)
+		{
+			R_InterpolateMobjState(thing->tracer, rendertimefrac, &tracer_interp);
+		}
+		else
+		{
+			R_InterpolateMobjState(thing->tracer, FRACUNIT, &tracer_interp);
+		}
+
 		// calculate tz for tracer, same way it is calculated for this sprite
 		// transform the origin point
-		tr_x = FIXED_TO_FLOAT(thing->tracer->x) - gl_viewx;
-		tr_y = FIXED_TO_FLOAT(thing->tracer->y) - gl_viewy;
+		tr_x = FIXED_TO_FLOAT(tracer_interp.x) - gl_viewx;
+		tr_y = FIXED_TO_FLOAT(tracer_interp.y) - gl_viewy;
 
 		// rotation around vertical axis
 		tracertz = (tr_x * gl_viewcos) + (tr_y * gl_viewsin);
