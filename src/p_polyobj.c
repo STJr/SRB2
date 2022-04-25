@@ -2132,8 +2132,10 @@ boolean EV_DoPolyObjMove(polymovedata_t *pmdata)
 boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 {
 	polyobj_t *po;
+	polyobj_t *oldpo;
 	polywaypoint_t *th;
 	mobj_t *first = NULL;
+	INT32 start;
 
 	if (!(po = Polyobj_GetForNum(pwdata->polyObjNum)))
 	{
@@ -2186,6 +2188,23 @@ boolean EV_DoPolyObjWaypoint(polywaypointdata_t *pwdata)
 
 	// interpolation
 	R_CreateInterpolator_Polyobj(&th->thinker, po);
+	// T_PolyObjWaypoint is the only polyobject movement
+	// that can adjust z, so we add these ones too.
+	R_CreateInterpolator_SectorPlane(&th->thinker, po->lines[0]->backsector, false); 
+	R_CreateInterpolator_SectorPlane(&th->thinker, po->lines[0]->backsector, true);
+
+	// Most other polyobject functions handle children by recursively
+	// giving each child another thinker. T_PolyObjWaypoint handles
+	// it manually though, which means we need to manually give them
+	// interpolation here instead.
+	start = 0;
+	oldpo = po;
+	while ((po = Polyobj_GetChild(oldpo, &start)))
+	{
+		R_CreateInterpolator_Polyobj(&th->thinker, po);
+		R_CreateInterpolator_SectorPlane(&th->thinker, po->lines[0]->backsector, false);
+		R_CreateInterpolator_SectorPlane(&th->thinker, po->lines[0]->backsector, true);
+	}
 
 	th->pointnum = first->health;
 
