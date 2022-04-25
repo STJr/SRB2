@@ -6901,6 +6901,8 @@ void P_RunOverlays(void)
 		else
 			P_SetThingPosition(mo);
 		P_CheckPosition(mo, mo->x, mo->y);
+
+		R_ResetMobjInterpolationState(mo);
 	}
 	P_SetTarget(&overlaycap, NULL);
 }
