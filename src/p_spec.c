@@ -5667,6 +5667,10 @@ static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline)
 	floater->sector = sec;
 	floater->tag = (INT16)tag;
 	floater->sourceline = sourceline;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&floater->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&floater->thinker, sec, true);
 }
 
 /**

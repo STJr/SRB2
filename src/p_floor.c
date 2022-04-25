@@ -2303,6 +2303,10 @@ void EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 	bouncer->speed = momz/2;
 	bouncer->distance = FRACUNIT;
 	bouncer->low = true;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&bouncer->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&bouncer->thinker, sec, true);
 }
 
 // For T_ContinuousFalling special
@@ -2384,6 +2388,10 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 
 	crumble->sector->crumblestate = CRUMBLE_ACTIVATED;
 
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&crumble->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&crumble->thinker, sec, true);
+
 	TAG_ITER_SECTORS(tag, i)
 	{
 		foundsec = &sectors[i];
@@ -2434,6 +2442,10 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		block->floorstartheight = block->sector->floorheight;
 		block->ceilingstartheight = block->sector->ceilingheight;
 		block->tag = (INT16)Tag_FGet(&sector->tags);
+
+		// interpolation
+		R_CreateInterpolator_SectorPlane(&block->thinker, roversec, false);
+		R_CreateInterpolator_SectorPlane(&block->thinker, roversec, true);
 
 		if (itsamonitor)
 		{
