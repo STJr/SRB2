@@ -54,8 +54,6 @@ typedef struct {
 	fixed_t y;
 	fixed_t z;
 	angle_t angle;
-	angle_t pitch;
-	angle_t roll;
 } interpmobjstate_t;
 
 // Level interpolators

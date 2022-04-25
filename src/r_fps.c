@@ -264,9 +264,6 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 	{
 		out->angle = R_LerpAngle(mobj->old_angle, mobj->angle, frac);
 	}
-
-	out->pitch = R_LerpAngle(mobj->old_pitch, mobj->pitch, frac);
-	out->roll = R_LerpAngle(mobj->old_roll, mobj->roll, frac);
 }
 
 void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
@@ -275,8 +272,6 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
 	out->angle = R_LerpAngle(mobj->old_angle, mobj->angle, frac);
-	out->pitch = 0;
-	out->roll = 0;
 }
 
 static void AddInterpolator(levelinterpolator_t* interpolator)
