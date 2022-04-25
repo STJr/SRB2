@@ -1742,8 +1742,8 @@ static void R_ProjectSprite(mobj_t *thing)
 			offset2 *= -1;
 		}
 
-		cosmul = FINECOSINE(thing->angle>>ANGLETOFINESHIFT);
-		sinmul = FINESINE(thing->angle>>ANGLETOFINESHIFT);
+		cosmul = FINECOSINE(interp.angle >> ANGLETOFINESHIFT);
+		sinmul = FINESINE(interp.angle >> ANGLETOFINESHIFT);
 
 		tr_x += FixedMul(offset, cosmul);
 		tr_y += FixedMul(offset, sinmul);
@@ -1759,7 +1759,7 @@ static void R_ProjectSprite(mobj_t *thing)
 			paperoffset = -paperoffset;
 			paperdistance = -paperdistance;
 		}
-		centerangle = viewangle - thing->angle;
+		centerangle = viewangle - interp.angle;
 
 		tr_x += FixedMul(offset2, cosmul);
 		tr_y += FixedMul(offset2, sinmul);
