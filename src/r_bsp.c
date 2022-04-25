@@ -836,6 +836,7 @@ static void R_Subsector(size_t num)
 	extracolormap_t *floorcolormap;
 	extracolormap_t *ceilingcolormap;
 	fixed_t floorcenterz, ceilingcenterz;
+	ffloor_t *rover;
 
 #ifdef RANGECHECK
 	if (num >= numsubsectors)
@@ -862,7 +863,23 @@ static void R_Subsector(size_t num)
 	// Check and prep all 3D floors. Set the sector floor/ceiling light levels and colormaps.
 	if (frontsector->ffloors)
 	{
-		if (frontsector->moved)
+		boolean anyMoved = frontsector->moved;
+
+		if (anyMoved == false)
+		{
+			for (rover = frontsector->ffloors; rover; rover = rover->next)
+			{
+				sector_t *controlSec = &sectors[rover->secnum];
+
+				if (controlSec->moved == true)
+				{
+					anyMoved = true;
+					break;
+				}
+			}
+		}
+
+		if (anyMoved == true)
 		{
 			frontsector->numlights = sub->sector->numlights = 0;
 			R_Prep3DFloors(frontsector);
@@ -910,7 +927,6 @@ static void R_Subsector(size_t num)
 	ffloor[numffloors].polyobj = NULL;
 	if (frontsector->ffloors)
 	{
-		ffloor_t *rover;
 		fixed_t heightcheck, planecenterz;
 
 		for (rover = frontsector->ffloors; rover && numffloors < MAXFFLOORS; rover = rover->next)

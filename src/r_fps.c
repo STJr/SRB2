@@ -455,20 +455,19 @@ void R_UpdateLevelInterpolators(void)
 	for (i = 0; i < levelinterpolators_len; i++)
 	{
 		levelinterpolator_t *interp = levelinterpolators[i];
-		
+
 		UpdateLevelInterpolatorState(interp);
 	}
 }
 
 void R_ClearLevelInterpolatorState(thinker_t *thinker)
 {
-	
 	size_t i;
 
 	for (i = 0; i < levelinterpolators_len; i++)
 	{
 		levelinterpolator_t *interp = levelinterpolators[i];
-		
+
 		if (interp->thinker == thinker)
 		{
 			// Do it twice to make the old state match the new
@@ -497,6 +496,7 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 			{
 				interp->sectorplane.sector->floorheight = R_LerpFixed(interp->sectorplane.oldheight, interp->sectorplane.bakheight, frac);
 			}
+			interp->sectorplane.sector->moved = true;
 			break;
 		case LVLINTERP_SectorScroll:
 			if (interp->sectorscroll.ceiling)
@@ -551,6 +551,7 @@ void R_RestoreLevelInterpolators(void)
 			{
 				interp->sectorplane.sector->floorheight = interp->sectorplane.bakheight;
 			}
+			interp->sectorplane.sector->moved = true;
 			break;
 		case LVLINTERP_SectorScroll:
 			if (interp->sectorscroll.ceiling)
