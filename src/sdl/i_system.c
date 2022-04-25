@@ -2222,6 +2222,7 @@ double I_GetFrameTime(void)
 
 	if (cap != frame_rate)
 	{
+		// Maybe do this in a OnChange function for cv_fpscap?
 		I_InitFrameTime(now, cap);
 	}
 
@@ -2260,23 +2261,24 @@ void I_StartupTimer(void)
 //
 void I_Sleep(void)
 {
-	if (cv_sleep.value != -1)
+	if (cv_sleep.value > 0)
 		SDL_Delay(cv_sleep.value);
 }
 
 //
 // I_FrameCapSleep
-// Sleeps for a variable amount of time, depending on how much time the last frame took.
+// Sleeps for a variable amount of time, depending on how much time the frame took.
 //
-boolean I_FrameCapSleep(const double elapsed)
+boolean I_FrameCapSleep(const double t)
 {
 	// SDL_Delay(1) gives me a range of around 1.95ms to 2.05ms.
 	// Has a bit extra to be totally safe.
 	const double delayGranularity = 2.1;
+	double frameMS = 0.0;
 
-	double capMS = 0.0;
-	double elapsedMS = 0.0;
-	double waitMS = 0.0;
+	double curTime = 0.0;
+	double destTime = 0.0;
+	double sleepTime = 0.0;
 
 	if (frame_rate == 0)
 	{
@@ -2284,46 +2286,29 @@ boolean I_FrameCapSleep(const double elapsed)
 		return false;
 	}
 
-	capMS = 1000.0 / frame_rate; // Time of 1 frame, in milliseconds
-	elapsedMS = elapsed * capMS; // Convert elapsed from frame time to milliseconds.
-	waitMS = (capMS - elapsedMS); // How many MS to delay by.
+	curTime = I_GetFrameTime();
+	destTime = floor(t) + 1.0;
 
-	if (waitMS <= 0.0)
+	if (curTime >= destTime)
 	{
-		// Too small of a wait, don't delay.
+		// We're already behind schedule.
 		return false;
 	}
 
-	while (waitMS > 0.0)
-	{
-		double sleepStart = I_GetFrameTime();
-		double sleepEnd = sleepStart;
-		double sleepElaspedMS = 0.0;
+	frameMS = frame_rate * 0.001; // 1ms as frame time
+	sleepTime = destTime - (delayGranularity * frameMS);
 
-		if (waitMS > delayGranularity && cv_sleep.value != -1)
+	while (curTime < destTime)
+	{
+		if (curTime < sleepTime && cv_sleep.value <= 0)
 		{
 			// Wait 1ms at a time (on default settings)
 			// until we're close enough.
 			SDL_Delay(cv_sleep.value);
-
-			sleepEnd = I_GetFrameTime();
-			sleepElaspedMS = (sleepEnd - sleepStart) * capMS;
-		}
-		else
-		{
-			// When we have an extremely fine wait,
-			// we do this to spin-lock the remaining time.
-
-			while (sleepElaspedMS < waitMS)
-			{
-				sleepEnd = I_GetFrameTime();
-				sleepElaspedMS = (sleepEnd - sleepStart) * capMS;
-			}
-
-			break;
 		}
 
-		waitMS -= sleepElaspedMS;
+		// This part will spin-lock the rest.
+		curTime = I_GetFrameTime();
 	}
 
 	// We took our nap.

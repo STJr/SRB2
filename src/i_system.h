@@ -72,7 +72,7 @@ void I_Sleep(void);
 
 	\return	void
 */
-boolean I_FrameCapSleep(const double elapsed);
+boolean I_FrameCapSleep(const double frameStart);
 
 /**	\brief Get events
 

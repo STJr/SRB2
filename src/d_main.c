@@ -297,17 +297,17 @@ gamestate_t wipegamestate = GS_LEVEL;
 INT16 wipetypepre = -1;
 INT16 wipetypepost = -1;
 
-static void D_Display(void)
+static boolean D_Display(void)
 {
 	boolean forcerefresh = false;
 	static boolean wipe = false;
 	INT32 wipedefindex = 0;
 
 	if (dedicated)
-		return;
+		return false;
 
 	if (nodrawers)
-		return; // for comparative timing/profiling
+		return false; // for comparative timing/profiling
 
 	// Lactozilla: Switching renderers works by checking
 	// if the game has to do it right when the frame
@@ -681,10 +681,10 @@ static void D_Display(void)
 			M_DrawPerfStats();
 		}
 
-		PS_START_TIMING(ps_swaptime);
-		I_FinishUpdate(); // page flip or blit buffer
-		PS_STOP_TIMING(ps_swaptime);
+		return true; // Do I_FinishUpdate in the main loop
 	}
+
+	return false;
 }
 
 // =========================================================================
@@ -701,9 +701,9 @@ void D_SRB2Loop(void)
 	boolean ticked = false;
 	boolean interp = false;
 	boolean doDisplay = false;
+	boolean screenUpdate = false;
 
-	double frameTime = 0.0;
-	double frameElapsed = 0.0;
+	double frameEnd = 0.0;
 
 	if (dedicated)
 		server = true;
@@ -755,9 +755,6 @@ void D_SRB2Loop(void)
 
 	for (;;)
 	{
-		frameTime = I_GetFrameTime();
-		frameElapsed = 0.0;
-
 		if (lastwipetic)
 		{
 			oldentertics = lastwipetic;
@@ -768,8 +765,6 @@ void D_SRB2Loop(void)
 		entertic = I_GetTime();
 		realtics = entertic - oldentertics;
 		oldentertics = entertic;
-
-		refreshdirmenu = 0; // not sure where to put this, here as good as any?
 
 		if (demoplayback && gamestate == GS_LEVEL)
 		{
@@ -784,12 +779,14 @@ void D_SRB2Loop(void)
 #endif
 
 		interp = R_UsingFrameInterpolation();
-		doDisplay = false;
+		doDisplay = screenUpdate = false;
 		ticked = false;
 
 #ifdef HW3SOUND
 		HW3S_BeginFrameUpdate();
 #endif
+
+		refreshdirmenu = 0; // not sure where to put this, here as good as any?
 
 		if (realtics > 0 || singletics)
 		{
@@ -879,13 +876,8 @@ void D_SRB2Loop(void)
 
 		if (interp || doDisplay)
 		{
-			D_Display();
+			screenUpdate = D_Display();
 		}
-
-		if (moviemode)
-			M_SaveFrame();
-		if (takescreenshot) // Only take screenshots after drawing.
-			M_DoScreenShot();
 
 		// consoleplayer -> displayplayer (hear sounds from viewpoint)
 		S_UpdateSounds(); // move positional sounds
@@ -897,18 +889,27 @@ void D_SRB2Loop(void)
 
 		LUA_Step();
 
-		// Moved to here from I_FinishUpdate.
-		// It doesn't track fades properly anymore by being here (might be easy fix),
-		// but it's a little more accurate for actual rendering when its here.
-		SCR_CalculateFPS();
-
-		// Fully completed frame made, handle frame cap delay.
-		frameElapsed = I_GetFrameTime() - frameTime;
-
+		// Fully completed frame made.
+		frameEnd = I_GetFrameTime();
 		if (!singletics)
 		{
-			I_FrameCapSleep(frameElapsed);
+			I_FrameCapSleep(frameEnd);
 		}
+
+		// I_FinishUpdate is now here instead of D_Display,
+		// because it synchronizes it more closely with the frame counter.
+		if (screenUpdate == true)
+		{
+			PS_START_TIMING(ps_swaptime);
+			I_FinishUpdate(); // page flip or blit buffer
+			PS_STOP_TIMING(ps_swaptime);
+		}
+
+		// Only take screenshots after drawing.
+		if (moviemode)
+			M_SaveFrame();
+		if (takescreenshot)
+			M_DoScreenShot();
 	}
 }
 

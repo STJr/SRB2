@@ -1214,7 +1214,7 @@ void I_FinishUpdate(void)
 	if (rendermode == render_none)
 		return; //Alam: No software or OpenGl surface
 
-	//SCR_CalculateFPS(); // Moved to main loop
+	SCR_CalculateFPS();
 
 	if (I_SkipFrame())
 		return;
