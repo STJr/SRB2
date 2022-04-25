@@ -4669,7 +4669,7 @@ static void P_Boss4MoveSpikeballs(mobj_t *mobj, angle_t angle, fixed_t fz)
 	while ((base = base->tracer))
 	{
 		for (seg = base, dist = 172*FRACUNIT, s = 9; seg; seg = seg->hnext, dist += 124*FRACUNIT, --s)
-			P_TeleportMove(seg, mobj->x + P_ReturnThrustX(mobj, angle, dist), mobj->y + P_ReturnThrustY(mobj, angle, dist), bz + FixedMul(fz, FixedDiv(s<<FRACBITS, 9<<FRACBITS)));
+			P_MoveOrigin(seg, mobj->x + P_ReturnThrustX(mobj, angle, dist), mobj->y + P_ReturnThrustY(mobj, angle, dist), bz + FixedMul(fz, FixedDiv(s<<FRACBITS, 9<<FRACBITS)));
 		angle += ANGLE_MAX/3;
 	}
 }
@@ -5592,7 +5592,7 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					mobj->hprev->destscale = FRACUNIT + (2*TICRATE - mobj->fuse)*(FRACUNIT/2)/TICRATE + FixedMul(FINECOSINE(angle>>ANGLETOFINESHIFT),FRACUNIT/2);
 					P_SetScale(mobj->hprev, mobj->hprev->destscale);
 
-					P_TeleportMove(mobj->hprev, mobj->x, mobj->y, mobj->z + mobj->height/2 - mobj->hprev->height/2);
+					P_MoveOrigin(mobj->hprev, mobj->x, mobj->y, mobj->z + mobj->height/2 - mobj->hprev->height/2);
 					mobj->hprev->momx = mobj->momx;
 					mobj->hprev->momy = mobj->momy;
 					mobj->hprev->momz = mobj->momz;
@@ -7045,7 +7045,7 @@ static void P_UpdateMinecartSegments(mobj_t *mobj)
 		dx = seg->extravalue1;
 		dy = seg->extravalue2;
 		sang = seg->cusval;
-		P_TeleportMove(seg, x + s*dx + c*dy, y - c*dx + s*dy, z);
+		P_MoveOrigin(seg, x + s*dx + c*dy, y - c*dx + s*dy, z);
 		seg->angle = ang + FixedAngle(FRACUNIT*sang);
 		seg->flags2 = (seg->flags2 & ~MF2_DONTDRAW) | (mobj->flags2 & MF2_DONTDRAW);
 		seg = seg->tracer;
@@ -8648,7 +8648,7 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 						< mobj->scale)
 						S_StartSound(mobj, mobj->info->seesound);
 
-					P_TeleportMove(mobj,
+					P_MoveOrigin(mobj,
 						(15*(mobj->x >> 4)) + (basex >> 4) + P_ReturnThrustX(mobj, mobj->angle, SPECTATORRADIUS >> 4),
 						(15*(mobj->y >> 4)) + (basey >> 4) + P_ReturnThrustY(mobj, mobj->angle, SPECTATORRADIUS >> 4),
 						mobj->z);
@@ -8674,9 +8674,9 @@ static boolean P_EggRobo1Think(mobj_t *mobj)
 			if (!didmove)
 			{
 				if (P_AproxDistance(mobj->x - basex, mobj->y - basey) < mobj->scale)
-					P_TeleportMove(mobj, basex, basey, mobj->z);
+					P_MoveOrigin(mobj, basex, basey, mobj->z);
 				else
-					P_TeleportMove(mobj,
+					P_MoveOrigin(mobj,
 					(15*(mobj->x >> 4)) + (basex >> 4),
 						(15*(mobj->y >> 4)) + (basey >> 4),
 						mobj->z);
@@ -8800,11 +8800,11 @@ static void P_NiGHTSDroneThink(mobj_t *mobj)
 				sparkleoffset = goaloffset + FixedMul(15*FRACUNIT, mobj->scale);
 			}
 
-			P_TeleportMove(goalpost, mobj->x, mobj->y, mobj->z + goaloffset);
-			P_TeleportMove(sparkle, mobj->x, mobj->y, mobj->z + sparkleoffset);
+			P_MoveOrigin(goalpost, mobj->x, mobj->y, mobj->z + goaloffset);
+			P_MoveOrigin(sparkle, mobj->x, mobj->y, mobj->z + sparkleoffset);
 			if (goalpost->movefactor != mobj->z || goalpost->friction != mobj->height)
 			{
-				P_TeleportMove(droneman, mobj->x, mobj->y, mobj->z + dronemanoffset);
+				P_MoveOrigin(droneman, mobj->x, mobj->y, mobj->z + dronemanoffset);
 				goalpost->movefactor = mobj->z;
 				goalpost->friction = mobj->height;
 			}
@@ -8814,12 +8814,12 @@ static void P_NiGHTSDroneThink(mobj_t *mobj)
 		{
 			if (goalpost->x != mobj->x || goalpost->y != mobj->y)
 			{
-				P_TeleportMove(goalpost, mobj->x, mobj->y, goalpost->z);
-				P_TeleportMove(sparkle, mobj->x, mobj->y, sparkle->z);
+				P_MoveOrigin(goalpost, mobj->x, mobj->y, goalpost->z);
+				P_MoveOrigin(sparkle, mobj->x, mobj->y, sparkle->z);
 			}
 
 			if (droneman->x != mobj->x || droneman->y != mobj->y)
-				P_TeleportMove(droneman, mobj->x, mobj->y,
+				P_MoveOrigin(droneman, mobj->x, mobj->y,
 					droneman->z >= mobj->floorz && droneman->z <= mobj->ceilingz ? droneman->z : mobj->z);
 		}
 
@@ -9019,7 +9019,7 @@ static void P_SaloonDoorThink(mobj_t *mobj)
 	fma = (mobj->angle >> ANGLETOFINESHIFT) & FINEMASK;
 	c = 48*FINECOSINE(fma);
 	s = 48*FINESINE(fma);
-	P_TeleportMove(mobj, x + c0 + c, y + s0 + s, z);
+	P_MoveOrigin(mobj, x + c0 + c, y + s0 + s, z);
 }
 
 static void P_PyreFlyThink(mobj_t *mobj)
@@ -9461,7 +9461,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 			P_RemoveMobj(mobj);
 			return false;
 		}
-		P_TeleportMove(mobj, mobj->target->x, mobj->target->y, mobj->target->z - mobj->height);
+		P_MoveOrigin(mobj, mobj->target->x, mobj->target->y, mobj->target->z - mobj->height);
 		break;
 	case MT_HAMMER:
 		if (mobj->z <= mobj->floorz)
@@ -12535,7 +12535,7 @@ static boolean P_SetupNiGHTSDrone(mapthing_t* mthing, mobj_t* mobj)
 	dronemangoaldiff = max(mobjinfo[MT_NIGHTSDRONE_MAN].height - mobjinfo[MT_NIGHTSDRONE_GOAL].height, 0);
 
 	if (flip && mobj->height != oldheight)
-		P_TeleportMove(mobj, mobj->x, mobj->y, mobj->z - (mobj->height - oldheight));
+		P_MoveOrigin(mobj, mobj->x, mobj->y, mobj->z - (mobj->height - oldheight));
 
 	if (!flip)
 	{
@@ -12604,9 +12604,9 @@ static boolean P_SetupNiGHTSDrone(mapthing_t* mthing, mobj_t* mobj)
 		// correct Z position
 		if (flip)
 		{
-			P_TeleportMove(goalpost, goalpost->x, goalpost->y, mobj->z + goaloffset);
-			P_TeleportMove(sparkle, sparkle->x, sparkle->y, mobj->z + sparkleoffset);
-			P_TeleportMove(droneman, droneman->x, droneman->y, mobj->z + dronemanoffset);
+			P_MoveOrigin(goalpost, goalpost->x, goalpost->y, mobj->z + goaloffset);
+			P_MoveOrigin(sparkle, sparkle->x, sparkle->y, mobj->z + sparkleoffset);
+			P_MoveOrigin(droneman, droneman->x, droneman->y, mobj->z + dronemanoffset);
 		}
 
 		// Remember position preference for later

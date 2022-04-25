@@ -7015,7 +7015,7 @@ static void P_MoveNiGHTSToDrone(player_t *player)
 	}
 
 	player->mo->momx = player->mo->momy = player->mo->momz = 0;
-	P_TeleportMove(player->mo, player->drone->x, player->drone->y, player->drone->z + zofs);
+	P_MoveOrigin(player->mo, player->drone->x, player->drone->y, player->drone->z + zofs);
 	P_SetTarget(&player->drone, NULL);
 }
 
@@ -11097,7 +11097,7 @@ static void P_MinecartThink(player_t *player)
 	}
 
 	// Move player to minecart.
-	P_TeleportMove(player->mo, minecart->x - minecart->momx, minecart->y - minecart->momy, minecart->z + max(minecart->momz, 0) + 8*FRACUNIT);
+	P_MoveOrigin(player->mo, minecart->x - minecart->momx, minecart->y - minecart->momy, minecart->z + max(minecart->momz, 0) + 8*FRACUNIT);
 	if (player->powers[pw_carry] != CR_MINECART)
 		return;
 	player->mo->momx = player->mo->momy = player->mo->momz = 0;
@@ -11832,7 +11832,7 @@ void P_PlayerThink(player_t *player)
 			// P_TouchSpecialThing case MT_NIGHTSBUMPER, that position is fudged in the time
 			// between that routine in the previous tic
 			// and reaching here in the current tic
-			P_TeleportMove(player->mo, player->mo->hnext->x, player->mo->hnext->y
+			P_MoveOrigin(player->mo, player->mo->hnext->x, player->mo->hnext->y
 				, player->mo->hnext->z + FixedMul(player->mo->hnext->height/4, player->mo->hnext->scale));
 			P_SetTarget(&player->mo->hnext, NULL);
 		}
@@ -12653,7 +12653,7 @@ void P_PlayerAfterThink(player_t *player)
 				player->mo->momx = (chain->x - player->mo->x)*2;
 				player->mo->momy = (chain->y - player->mo->y)*2;
 				player->mo->momz = (chain->z - (player->mo->height-chain->height/2) - player->mo->z)*2;
-				P_TeleportMove(player->mo, chain->x, chain->y, chain->z - (player->mo->height-chain->height/2));
+				P_MoveOrigin(player->mo, chain->x, chain->y, chain->z - (player->mo->height-chain->height/2));
 				if (!player->powers[pw_flashing]) // handle getting hurt
 				{
 					player->pflags |= PF_JUMPED;
@@ -12724,7 +12724,7 @@ void P_PlayerAfterThink(player_t *player)
 					mo->tics = walktics;
 				}
 
-				P_TeleportMove(player->mo, rock->x, rock->y, rock->z + ((mo->eflags & MFE_VERTICALFLIP) ? -mo->height : rock->height));
+				P_MoveOrigin(player->mo, rock->x, rock->y, rock->z + ((mo->eflags & MFE_VERTICALFLIP) ? -mo->height : rock->height));
 				break;
 			}
 			case CR_PTERABYTE: // being carried by a Pterabyte

@@ -13541,7 +13541,7 @@ void A_DustDevilThink(mobj_t *actor)
 	//Chained thinker for the spiralling dust column.
 	while (layer && !P_MobjWasRemoved(layer)) {
 		angle_t fa = layer->angle >> ANGLETOFINESHIFT;
-		P_TeleportMove(layer, layer->x + 5 * FixedMul(scale, FINECOSINE(fa)), layer->y + 5 * FixedMul(scale, FINESINE(fa)), layer->z);
+		P_MoveOrigin(layer, layer->x + 5 * FixedMul(scale, FINECOSINE(fa)), layer->y + 5 * FixedMul(scale, FINESINE(fa)), layer->z);
 		layer->scale = scale;
 		layer->angle += ANG10 / 2;
 		layer->momx = actor->momx;
