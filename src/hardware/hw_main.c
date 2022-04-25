@@ -2997,6 +2997,7 @@ static void HWR_Subsector(size_t num)
 	INT32 light = 0;
 	extracolormap_t *floorcolormap;
 	extracolormap_t *ceilingcolormap;
+	ffloor_t *rover;
 
 #ifdef PARANOIA //no risk while developing, enough debugging nights!
 	if (num >= addsubsector)
@@ -3054,7 +3055,22 @@ static void HWR_Subsector(size_t num)
 
 	if (gl_frontsector->ffloors)
 	{
-		if (gl_frontsector->moved)
+		boolean anyMoved = gl_frontsector->moved;
+
+		if (anyMoved == false)
+		{
+			for (rover = gl_frontsector->ffloors; rover; rover = rover->next)
+			{
+				sector_t *controlSec = &sectors[rover->secnum];
+				if (controlSec->moved == true)
+				{
+					anyMoved = true;
+					break;
+				}
+			}
+		}
+
+		if (anyMoved == true)
 		{
 			gl_frontsector->numlights = sub->sector->numlights = 0;
 			R_Prep3DFloors(gl_frontsector);
@@ -3133,7 +3149,6 @@ static void HWR_Subsector(size_t num)
 	if (gl_frontsector->ffloors)
 	{
 		/// \todo fix light, xoffs, yoffs, extracolormap ?
-		ffloor_t * rover;
 		for (rover = gl_frontsector->ffloors;
 			rover; rover = rover->next)
 		{
