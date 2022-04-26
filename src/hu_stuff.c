@@ -905,7 +905,7 @@ void HU_Ticker(void)
 		}
 	}
 
-	--cechotimer;
+	if (cechotimer > 0) --cechotimer;
 
 	if (hu_redownloadinggamestate)
 		resynch_ticker++;
