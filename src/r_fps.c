@@ -687,6 +687,12 @@ void R_UpdateMobjInterpolators(void)
 //
 void R_ResetMobjInterpolationState(mobj_t *mobj)
 {
+	mobj->old_x2 = mobj->old_x;
+	mobj->old_y2 = mobj->old_y;
+	mobj->old_z2 = mobj->old_z;
+	mobj->old_angle2 = mobj->old_angle;
+	mobj->old_pitch2 = mobj->old_pitch;
+	mobj->old_roll2 = mobj->old_roll;
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;
@@ -696,6 +702,7 @@ void R_ResetMobjInterpolationState(mobj_t *mobj)
 
 	if (mobj->player)
 	{
+		mobj->player->old_drawangle2 = mobj->player->old_drawangle;
 		mobj->player->old_drawangle = mobj->player->drawangle;
 	}
 }
@@ -707,6 +714,12 @@ void R_ResetMobjInterpolationState(mobj_t *mobj)
 //
 void R_ResetPrecipitationMobjInterpolationState(precipmobj_t *mobj)
 {
+	mobj->old_x2 = mobj->old_x;
+	mobj->old_y2 = mobj->old_y;
+	mobj->old_z2 = mobj->old_z;
+	mobj->old_angle2 = mobj->old_angle;
+	mobj->old_pitch2 = mobj->old_pitch;
+	mobj->old_roll2 = mobj->old_roll;
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;
