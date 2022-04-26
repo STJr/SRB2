@@ -175,7 +175,7 @@ static INT32 vidm_column_size;
 static fixed_t recatkdrawtimer = 0;
 static fixed_t ntsatkdrawtimer = 0;
 
-static tic_t charseltimer = 0;
+static fixed_t charseltimer = 0;
 static fixed_t char_scroll = 0;
 #define charscrollamt 128*FRACUNIT
 
@@ -9354,8 +9354,8 @@ static void M_DrawSetupChoosePlayerMenu(void)
 	INT32 x, y;
 	INT32 w = (vid.width/vid.dupx);
 
-	if (abs(char_scroll) > FRACUNIT)
-		char_scroll -= (char_scroll>>2);
+	if (abs(char_scroll) > FRACUNIT/4)
+		char_scroll -= FixedMul((char_scroll>>2), renderdeltatics);
 	else // close enough.
 		char_scroll = 0; // just be exact now.
 
@@ -9383,7 +9383,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 
 	// Don't render the title map
 	hidetitlemap = true;
-	charseltimer++;
+	charseltimer += renderdeltatics;
 
 	// Background and borders
 	V_DrawFill(0, 0, bgwidth, vid.height, V_SNAPTOTOP|colormap[101]);
@@ -9395,7 +9395,7 @@ static void M_DrawSetupChoosePlayerMenu(void)
 			V_DrawFill(0, 0, bw, vid.height, V_NOSCALESTART|col);
 	}
 
-	y = (charseltimer%32);
+	y = (charseltimer / FRACUNIT) % 32;
 	V_DrawMappedPatch(0, y-bgheight, V_SNAPTOTOP, charbg, colormap);
 	V_DrawMappedPatch(0, y, V_SNAPTOTOP, charbg, colormap);
 	V_DrawMappedPatch(0, y+bgheight, V_SNAPTOTOP, charbg, colormap);
