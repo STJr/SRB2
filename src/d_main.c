@@ -778,7 +778,7 @@ void D_SRB2Loop(void)
 				debugload--;
 #endif
 
-		interp = R_UsingFrameInterpolation();
+		interp = R_UsingFrameInterpolation() && !dedicated;
 		doDisplay = screenUpdate = false;
 		ticked = false;
 
@@ -891,9 +891,14 @@ void D_SRB2Loop(void)
 
 		// Fully completed frame made.
 		frameEnd = I_GetFrameTime();
-		if (!singletics)
+		if (!singletics && !dedicated)
 		{
 			I_FrameCapSleep(frameEnd);
+		}
+		else if (dedicated)
+		{
+			// Preserve the pre-interp sleeping behavior for dedicated mode
+			I_Sleep();
 		}
 
 		// I_FinishUpdate is now here instead of D_Display,
