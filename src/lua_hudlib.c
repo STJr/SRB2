@@ -1201,6 +1201,14 @@ static int libd_getusertransflag(lua_State *L)
 	return 1;
 }
 
+// Return the time elapsed for the previous frame, in tics.
+static int libd_deltaTime(lua_State *L)
+{
+	HUDONLY
+	lua_pushfixed(L, renderdeltatics);
+	return 1;
+}
+
 static luaL_Reg lib_draw[] = {
 	// cache
 	{"patchExists", libd_patchExists},
@@ -1242,6 +1250,7 @@ static luaL_Reg lib_draw[] = {
 	{"renderer", libd_renderer},
 	{"localTransFlag", libd_getlocaltransflag},
 	{"userTransFlag", libd_getusertransflag},
+	{"deltaTime", libd_deltaTime},
 	{NULL, NULL}
 };
 
