@@ -4022,7 +4022,8 @@ void P_RecalcPrecipInSector(sector_t *sector)
 //
 void P_NullPrecipThinker(precipmobj_t *mobj)
 {
-	(void)mobj;
+	//(void)mobj;
+	mobj->precipflags &= ~PCF_THUNK;
 }
 
 void P_SnowThinker(precipmobj_t *mobj)
@@ -10963,14 +10964,14 @@ static inline precipmobj_t *P_SpawnRainMobj(fixed_t x, fixed_t y, fixed_t z, mob
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
 	mo->precipflags |= PCF_RAIN;
-	mo->thinker.function.acp1 = (actionf_p1)P_RainThinker;
+	//mo->thinker.function.acp1 = (actionf_p1)P_RainThinker;
 	return mo;
 }
 
 static inline precipmobj_t *P_SpawnSnowMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 {
 	precipmobj_t *mo = P_SpawnPrecipMobj(x,y,z,type);
-	mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
+	//mo->thinker.function.acp1 = (actionf_p1)P_SnowThinker;
 	return mo;
 }
 

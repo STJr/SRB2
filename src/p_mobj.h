@@ -269,6 +269,8 @@ typedef enum {
 	PCF_MOVINGFOF = 8,
 	// Is rain.
 	PCF_RAIN = 16,
+	// Ran the thinker this tic.
+	PCF_THUNK = 32,
 } precipflag_t;
 
 // Map Object definition.

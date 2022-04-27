@@ -2264,7 +2264,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	if (thing->subsector->sector->cullheight)
 	{
 		if (R_DoCulling(thing->subsector->sector->cullheight, viewsector->cullheight, viewz, gz, gzt))
-			return;
+			goto weatherthink;
 	}
 
 	// store information in a vissprite
@@ -2318,6 +2318,17 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	// Fullbright
 	vis->colormap = colormaps;
+
+weatherthink:
+	// okay... this is a hack, but weather isn't networked, so it should be ok
+	if (!(thing->precipflags & PCF_THUNK))
+	{
+		if (thing->precipflags & PCF_RAIN)
+			P_RainThinker(thing);
+		else
+			P_SnowThinker(thing);
+		thing->precipflags |= PCF_THUNK;
+	}
 }
 
 // R_AddSprites
