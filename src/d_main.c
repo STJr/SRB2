@@ -755,6 +755,8 @@ void D_SRB2Loop(void)
 
 	for (;;)
 	{
+		frameEnd = I_GetFrameTime();
+
 		if (lastwipetic)
 		{
 			oldentertics = lastwipetic;
@@ -890,7 +892,6 @@ void D_SRB2Loop(void)
 		LUA_Step();
 
 		// Fully completed frame made.
-		frameEnd = I_GetFrameTime();
 		if (!singletics && !dedicated)
 		{
 			I_FrameCapSleep(frameEnd);

@@ -2157,8 +2157,14 @@ static void UpdateElapsedTics(void)
 
 tic_t I_GetTime(void)
 {
+	float f = 0.0f;
+
 	UpdateElapsedTics();
-	return (tic_t) floor(elapsed_tics);
+
+	// This needs kept in a separate variable before converting
+	// to tic_t, due to stupid -Wbad-function-cast error.
+	f = floor(elapsed_tics);
+	return (tic_t)f;
 }
 
 float I_GetTimeFrac(void)
