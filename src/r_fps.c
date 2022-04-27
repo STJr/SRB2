@@ -22,6 +22,7 @@
 #include "r_state.h"
 #include "z_zone.h"
 #include "console.h" // con_startup_loadprogress
+#include "m_perfstats.h" // ps_metric_t
 #ifdef HWRENDER
 #include "hardware/hw_main.h" // for cv_glshearing
 #endif
@@ -40,7 +41,8 @@ static CV_PossibleValue_t fpscap_cons_t[] = {
 };
 consvar_t cv_fpscap = CVAR_INIT ("fpscap", "Match refresh rate", CV_SAVE, fpscap_cons_t, NULL);
 
-consvar_t cv_interpdebug = CVAR_INIT ("interpdebug", "Off", 0, CV_OnOff, NULL);
+ps_metric_t ps_interp_frac = {0};
+ps_metric_t ps_interp_lag = {0};
 
 UINT32 R_GetFramerateCap(void)
 {

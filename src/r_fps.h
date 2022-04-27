@@ -18,9 +18,12 @@
 #include "m_fixed.h"
 #include "p_local.h"
 #include "r_state.h"
+#include "m_perfstats.h" // ps_metric_t
 
 extern consvar_t cv_fpscap;
-extern consvar_t cv_interpdebug;
+
+extern ps_metric_t ps_interp_frac;
+extern ps_metric_t ps_interp_lag;
 
 UINT32 R_GetFramerateCap(void);
 boolean R_UsingFrameInterpolation(void);
