@@ -892,14 +892,9 @@ void D_SRB2Loop(void)
 		LUA_Step();
 
 		// Fully completed frame made.
-		if (!singletics && !dedicated)
+		if (!singletics)
 		{
 			I_FrameCapSleep(frameEnd);
-		}
-		else if (dedicated)
-		{
-			// Preserve the pre-interp sleeping behavior for dedicated mode
-			I_Sleep();
 		}
 
 		// I_FinishUpdate is now here instead of D_Display,

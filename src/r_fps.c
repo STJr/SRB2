@@ -42,6 +42,13 @@ consvar_t cv_fpscap = CVAR_INIT ("fpscap", "Match refresh rate", CV_SAVE, fpscap
 
 UINT32 R_GetFramerateCap(void)
 {
+	if (rendermode == render_none)
+	{
+		// If we're not rendering (dedicated server),
+		// we shouldn't be using any interpolation.
+		return TICRATE;
+	}
+
 	if (cv_fpscap.value == 0)
 	{
 		// 0: Match refresh rate
