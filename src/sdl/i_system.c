@@ -2306,7 +2306,7 @@ boolean I_FrameCapSleep(const double t)
 
 	while (curTime < destTime)
 	{
-		if (curTime < sleepTime && cv_sleep.value <= 0)
+		if (curTime < sleepTime && cv_sleep.value > 0)
 		{
 			// Wait 1ms at a time (on default settings)
 			// until we're close enough.
