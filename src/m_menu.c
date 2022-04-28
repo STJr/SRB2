@@ -11850,7 +11850,7 @@ static void M_HandleConnectIP(INT32 choice)
 // ========================
 // Tails 03-02-2002
 
-static UINT8      multi_tics;
+static fixed_t    multi_tics;
 static UINT8      multi_frame;
 static UINT8      multi_spr2;
 
@@ -11918,10 +11918,11 @@ static void M_DrawSetupMultiPlayerMenu(void)
 	y += 11;
 
 	// anim the player in the box
-	if (--multi_tics <= 0)
+	multi_tics -= renderdeltatics;
+	while (multi_tics <= 0)
 	{
 		multi_frame++;
-		multi_tics = 4;
+		multi_tics += 4*FRACUNIT;
 	}
 
 #define charw 74
@@ -12192,7 +12193,7 @@ static void M_SetupMultiPlayer(INT32 choice)
 	(void)choice;
 
 	multi_frame = 0;
-	multi_tics = 4;
+	multi_tics = 4*FRACUNIT;
 	strcpy(setupm_name, cv_playername.string);
 
 	// set for player 1
@@ -12236,7 +12237,7 @@ static void M_SetupMultiPlayer2(INT32 choice)
 	(void)choice;
 
 	multi_frame = 0;
-	multi_tics = 4;
+	multi_tics = 4*FRACUNIT;
 	strcpy (setupm_name, cv_playername2.string);
 
 	// set for splitscreen secondary player
