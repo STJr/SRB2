@@ -272,11 +272,11 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 
 	if (mobj->player)
 	{
-		out->angle = R_LerpAngle(mobj->player->old_drawangle, mobj->player->drawangle, frac);
+		out->angle = mobj->resetinterp ? mobj->player->drawangle : R_LerpAngle(mobj->player->old_drawangle, mobj->player->drawangle, frac);
 	}
 	else
 	{
-		out->angle = R_LerpAngle(mobj->old_angle, mobj->angle, frac);
+		out->angle = mobj->resetinterp ? mobj->angle : R_LerpAngle(mobj->old_angle, mobj->angle, frac);
 	}
 }
 
@@ -719,6 +719,8 @@ void R_ResetMobjInterpolationState(mobj_t *mobj)
 		mobj->player->old_drawangle2 = mobj->player->old_drawangle;
 		mobj->player->old_drawangle = mobj->player->drawangle;
 	}
+
+	mobj->resetinterp = false;
 }
 
 //
