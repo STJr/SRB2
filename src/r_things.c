@@ -1814,23 +1814,25 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
 	{
+		interpmobjstate_t tracer_interp = {0};
 		fixed_t linkscale;
 
 		thing = thing->tracer;
-		if (R_UsingFrameInterpolation() && !paused)
-		{
-			R_InterpolateMobjState(thing, rendertimefrac, &interp);
-		}
-		else
-		{
-			R_InterpolateMobjState(thing, FRACUNIT, &interp);
-		}
 
 		if (! R_ThingVisible(thing))
 			return;
 
-		tr_x = (interp.x + sort_x) - viewx;
-		tr_y = (interp.y + sort_y) - viewy;
+		if (R_UsingFrameInterpolation() && !paused)
+		{
+			R_InterpolateMobjState(thing, rendertimefrac, &tracer_interp);
+		}
+		else
+		{
+			R_InterpolateMobjState(thing, FRACUNIT, &tracer_interp);
+		}
+
+		tr_x = (tracer_interp.x + sort_x) - viewx;
+		tr_y = (tracer_interp.y + sort_y) - viewy;
 		tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		linkscale = FixedDiv(projectiony, tz);
 
