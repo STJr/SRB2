@@ -1481,7 +1481,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t gz = 0, gzt = 0;
 	INT32 heightsec, phs;
 	INT32 light = 0;
-	fixed_t this_scale = thing->scale;
+	fixed_t this_scale;
 	fixed_t spritexscale, spriteyscale;
 
 	// rotsprite
@@ -1505,6 +1505,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	{
 		R_InterpolateMobjState(thing, FRACUNIT, &interp);
 	}
+
+	this_scale = interp.scale;
 
 	// transform the origin point
 	tr_x = interp.x - viewx;

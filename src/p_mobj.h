@@ -377,6 +377,8 @@ typedef struct mobj_s
 	UINT32 mobjnum; // A unique number for this mobj. Used for restoring pointers on save games.
 
 	fixed_t scale;
+	fixed_t old_scale; // interpolation
+	fixed_t old_scale2;
 	fixed_t destscale;
 	fixed_t scalespeed;
 

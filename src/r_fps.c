@@ -266,6 +266,7 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 	out->x = R_LerpFixed(mobj->old_x, mobj->x, frac);
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
+	out->scale = R_LerpFixed(mobj->old_scale, mobj->scale, frac);
 
 	out->subsector = R_PointInSubsector(out->x, out->y);
 
@@ -704,12 +705,14 @@ void R_ResetMobjInterpolationState(mobj_t *mobj)
 	mobj->old_angle2 = mobj->old_angle;
 	mobj->old_pitch2 = mobj->old_pitch;
 	mobj->old_roll2 = mobj->old_roll;
+	mobj->old_scale2 = mobj->old_scale;
 	mobj->old_x = mobj->x;
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;
 	mobj->old_angle = mobj->angle;
 	mobj->old_pitch = mobj->pitch;
 	mobj->old_roll = mobj->roll;
+	mobj->old_scale = mobj->scale;
 
 	if (mobj->player)
 	{

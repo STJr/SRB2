@@ -5112,7 +5112,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		R_InterpolateMobjState(thing, FRACUNIT, &interp);
 	}
 
-	this_scale = FIXED_TO_FLOAT(thing->scale);
+	this_scale = FIXED_TO_FLOAT(interp.scale);
 	spritexscale = FIXED_TO_FLOAT(thing->spritexscale);
 	spriteyscale = FIXED_TO_FLOAT(thing->spriteyscale);
 

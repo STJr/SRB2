@@ -59,6 +59,7 @@ typedef struct {
 	fixed_t z;
 	subsector_t *subsector;
 	angle_t angle;
+	fixed_t scale;
 } interpmobjstate_t;
 
 // Level interpolators
