@@ -1602,6 +1602,27 @@ boolean VID_CheckRenderer(void)
 	return rendererchanged;
 }
 
+static UINT32 refresh_rate;
+static UINT32 VID_GetRefreshRate(void)
+{
+	int index = SDL_GetWindowDisplayIndex(window);
+	SDL_DisplayMode m;
+
+	if (SDL_WasInit(SDL_INIT_VIDEO) == 0)
+	{
+		// Video not init yet.
+		return 0;
+	}
+
+	if (SDL_GetCurrentDisplayMode(index, &m) != 0)
+	{
+		// Error has occurred.
+		return 0;
+	}
+
+	return m.refresh_rate;
+}
+
 INT32 VID_SetMode(INT32 modeNum)
 {
 	SDLdoUngrabMouse();
@@ -1621,6 +1642,8 @@ INT32 VID_SetMode(INT32 modeNum)
 	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
 	src_rect.w = vid.width;
 	src_rect.h = vid.height;
+
+	refresh_rate = VID_GetRefreshRate();
 
 	VID_CheckRenderer();
 	return SDL_TRUE;
@@ -1971,20 +1994,10 @@ void I_GetCursorPosition(INT32 *x, INT32 *y)
 
 UINT32 I_GetRefreshRate(void)
 {
-	int index = SDL_GetWindowDisplayIndex(window);
-	SDL_DisplayMode m;
-
-	if (SDL_WasInit(SDL_INIT_VIDEO) == 0)
-	{
-		// Video not init yet.
-		return 0;
-	}
-
-	if (SDL_GetDesktopDisplayMode(index, &m) != 0)
-	{
-		// Error has occurred.
-		return 0;
-	}
-
-	return m.refresh_rate;
+	// Moved to VID_GetRefreshRate.
+	// Precalculating it like that won't work as
+	// well for windowed mode since you can drag
+	// the window around, but very slow PCs might have
+	// trouble querying mode over and over again.
+	return refresh_rate;
 }
