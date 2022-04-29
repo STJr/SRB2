@@ -1671,15 +1671,15 @@ static void R_ProjectSprite(mobj_t *thing)
 	flip = !flip != !hflip;
 
 	// calculate edges of the shape
-	spritexscale = thing->spritexscale;
-	spriteyscale = thing->spriteyscale;
+	spritexscale = interp.spritexscale;
+	spriteyscale = interp.spriteyscale;
 	if (spritexscale < 1 || spriteyscale < 1)
 		return;
 
 	if (thing->renderflags & RF_ABSOLUTEOFFSETS)
 	{
-		spr_offset = thing->spritexoffset;
-		spr_topoffset = thing->spriteyoffset;
+		spr_offset = interp.spritexoffset;
+		spr_topoffset = interp.spriteyoffset;
 	}
 	else
 	{
@@ -1688,8 +1688,8 @@ static void R_ProjectSprite(mobj_t *thing)
 		if ((thing->renderflags & RF_FLIPOFFSETS) && flip)
 			flipoffset = -1;
 
-		spr_offset += thing->spritexoffset * flipoffset;
-		spr_topoffset += thing->spriteyoffset * flipoffset;
+		spr_offset += interp.spritexoffset * flipoffset;
+		spr_topoffset += interp.spriteyoffset * flipoffset;
 	}
 
 	if (flip)

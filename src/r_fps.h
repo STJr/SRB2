@@ -60,6 +60,10 @@ typedef struct {
 	subsector_t *subsector;
 	angle_t angle;
 	fixed_t scale;
+	fixed_t spritexscale;
+	fixed_t spriteyscale;
+	fixed_t spritexoffset;
+	fixed_t spriteyoffset;
 } interpmobjstate_t;
 
 // Level interpolators

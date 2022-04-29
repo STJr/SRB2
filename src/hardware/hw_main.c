@@ -5084,9 +5084,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (!thing)
 		return;
 
-	if (thing->spritexscale < 1 || thing->spriteyscale < 1)
-		return;
-
 	INT32 blendmode;
 	if (thing->frame & FF_BLENDMASK)
 		blendmode = ((thing->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
@@ -5112,9 +5109,12 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		R_InterpolateMobjState(thing, FRACUNIT, &interp);
 	}
 
+	if (interp.spritexscale < 1 || interp.spriteyscale < 1)
+		return;
+
 	this_scale = FIXED_TO_FLOAT(interp.scale);
-	spritexscale = FIXED_TO_FLOAT(thing->spritexscale);
-	spriteyscale = FIXED_TO_FLOAT(thing->spriteyscale);
+	spritexscale = FIXED_TO_FLOAT(interp.spritexscale);
+	spriteyscale = FIXED_TO_FLOAT(interp.spriteyscale);
 
 	// transform the origin point
 	tr_x = FIXED_TO_FLOAT(interp.x) - gl_viewx;
@@ -5258,8 +5258,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if (thing->renderflags & RF_ABSOLUTEOFFSETS)
 	{
-		spr_offset = thing->spritexoffset;
-		spr_topoffset = thing->spriteyoffset;
+		spr_offset = interp.spritexoffset;
+		spr_topoffset = interp.spriteyoffset;
 	}
 	else
 	{
@@ -5268,8 +5268,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		if ((thing->renderflags & RF_FLIPOFFSETS) && flip)
 			flipoffset = -1;
 
-		spr_offset += thing->spritexoffset * flipoffset;
-		spr_topoffset += thing->spriteyoffset * flipoffset;
+		spr_offset += interp.spritexoffset * flipoffset;
+		spr_topoffset += interp.spriteyoffset * flipoffset;
 	}
 
 	if (papersprite)

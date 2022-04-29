@@ -10593,8 +10593,6 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	// Tells MobjCheckWater that the water height was not set.
 	mobj->watertop = INT32_MAX;
 
-	mobj->resetinterp = true;
-
 	if (z == ONFLOORZ)
 	{
 		mobj->z = mobj->floorz;
@@ -14032,9 +14030,14 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 		newmobj->old_angle2 = mobj->old_angle2;
 		newmobj->old_angle = mobj->old_angle;
 	}
+	newmobj->resetinterp = true;
 
 	newmobj->old_scale2 = mobj->old_scale2;
 	newmobj->old_scale = mobj->old_scale;
+	newmobj->old_spritexscale = mobj->old_spritexscale;
+	newmobj->old_spriteyscale = mobj->old_spriteyscale;
+	newmobj->old_spritexoffset = mobj->old_spritexoffset;
+	newmobj->old_spriteyoffset = mobj->old_spriteyoffset;
 
 	return newmobj;
 }

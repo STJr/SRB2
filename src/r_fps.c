@@ -271,13 +271,21 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 		out->scale = mobj->scale;
 		out->subsector = mobj->subsector;
 		out->angle = mobj->player ? mobj->player->drawangle : mobj->angle;
+		out->spritexscale = mobj->spritexscale;
+		out->spriteyscale = mobj->spriteyscale;
+		out->spritexoffset = mobj->spritexoffset;
+		out->spriteyoffset = mobj->spriteyoffset;
 		return;
 	}
 
 	out->x = R_LerpFixed(mobj->old_x, mobj->x, frac);
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
-	out->scale = R_LerpFixed(mobj->old_scale, mobj->scale, frac);
+	out->scale = mobj->resetinterp ? mobj->scale : R_LerpFixed(mobj->old_scale, mobj->scale, frac);
+	out->spritexscale = mobj->resetinterp ? mobj->spritexscale : R_LerpFixed(mobj->old_spritexscale, mobj->spritexscale, frac);
+	out->spriteyscale = mobj->resetinterp ? mobj->spriteyscale : R_LerpFixed(mobj->old_spriteyscale, mobj->spriteyscale, frac);
+	out->spritexoffset = mobj->resetinterp ? mobj->spritexoffset : R_LerpFixed(mobj->old_spritexoffset, mobj->spritexoffset, frac);
+	out->spriteyoffset = mobj->resetinterp ? mobj->spriteyoffset : R_LerpFixed(mobj->old_spriteyoffset, mobj->spriteyoffset, frac);
 
 	out->subsector = R_PointInSubsector(out->x, out->y);
 
@@ -298,14 +306,24 @@ void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjst
 		out->x = mobj->x;
 		out->y = mobj->y;
 		out->z = mobj->z;
+		out->scale = FRACUNIT;
 		out->subsector = mobj->subsector;
 		out->angle = mobj->angle;
+		out->spritexscale = mobj->spritexscale;
+		out->spriteyscale = mobj->spriteyscale;
+		out->spritexoffset = mobj->spritexoffset;
+		out->spriteyoffset = mobj->spriteyoffset;
 		return;
 	}
 
 	out->x = R_LerpFixed(mobj->old_x, mobj->x, frac);
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
+	out->scale = FRACUNIT;
+	out->spritexscale = R_LerpFixed(mobj->old_spritexscale, mobj->spritexscale, frac);
+	out->spriteyscale = R_LerpFixed(mobj->old_spriteyscale, mobj->spriteyscale, frac);
+	out->spritexoffset = R_LerpFixed(mobj->old_spritexoffset, mobj->spritexoffset, frac);
+	out->spriteyoffset = R_LerpFixed(mobj->old_spriteyoffset, mobj->spriteyoffset, frac);
 
 	out->subsector = R_PointInSubsector(out->x, out->y);
 
@@ -672,6 +690,7 @@ void R_AddMobjInterpolator(mobj_t *mobj)
 	interpolated_mobjs_len += 1;
 
 	R_ResetMobjInterpolationState(mobj);
+	mobj->resetinterp = true;
 }
 
 void R_RemoveMobjInterpolator(mobj_t *mobj)
@@ -734,6 +753,10 @@ void R_ResetMobjInterpolationState(mobj_t *mobj)
 	mobj->old_pitch = mobj->pitch;
 	mobj->old_roll = mobj->roll;
 	mobj->old_scale = mobj->scale;
+	mobj->old_spritexscale = mobj->spritexscale;
+	mobj->old_spriteyscale = mobj->spriteyscale;
+	mobj->old_spritexoffset = mobj->spritexoffset;
+	mobj->old_spriteyoffset = mobj->spriteyoffset;
 
 	if (mobj->player)
 	{
@@ -761,4 +784,8 @@ void R_ResetPrecipitationMobjInterpolationState(precipmobj_t *mobj)
 	mobj->old_y = mobj->y;
 	mobj->old_z = mobj->z;
 	mobj->old_angle = mobj->angle;
+	mobj->old_spritexscale = mobj->spritexscale;
+	mobj->old_spriteyscale = mobj->spriteyscale;
+	mobj->old_spritexoffset = mobj->spritexoffset;
+	mobj->old_spriteyoffset = mobj->spriteyoffset;
 }
