@@ -2455,9 +2455,9 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		}
 
 		P_UnsetThingPosition(thing);
-		thing->x = sector->soundorg.x;
-		thing->y = sector->soundorg.y;
-		thing->z = topheight;
+		thing->x = thing->old_x = sector->soundorg.x;
+		thing->y = thing->old_y = sector->soundorg.y;
+		thing->z = thing->old_z = topheight;
 		thing->momz = FixedMul(6*FRACUNIT, thing->scale);
 		P_SetThingPosition(thing);
 		if (thing->flags & MF_SHOOTABLE)
@@ -2478,9 +2478,9 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		if (itsamonitor && thing)
 		{
 			P_UnsetThingPosition(thing);
-			thing->x = oldx;
-			thing->y = oldy;
-			thing->z = oldz;
+			thing->x = thing->old_x = oldx;
+			thing->y = thing->old_y = oldy;
+			thing->z = thing->old_z = oldz;
 			thing->momx = 1;
 			thing->momy = 1;
 			P_SetThingPosition(thing);
