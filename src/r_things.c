@@ -1362,7 +1362,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	shadow->gy = interp.y;
 	shadow->gzt = (isflipped ? shadow->pzt : shadow->pz) + patch->height * shadowyscale / 2;
 	shadow->gz = shadow->gzt - patch->height * shadowyscale;
-	shadow->texturemid = FixedMul(thing->scale, FixedDiv(shadow->gzt - viewz, shadowyscale));
+	shadow->texturemid = FixedMul(interp.scale, FixedDiv(shadow->gzt - viewz, shadowyscale));
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
 		shadow->texturemid = FixedMul(shadow->texturemid, ((skin_t *)thing->skin)->highresscale);
 	shadow->scalestep = 0;
@@ -1375,7 +1375,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	shadow->xscale = FixedMul(xscale, shadowxscale); //SoM: 4/17/2000
 	shadow->scale = FixedMul(yscale, shadowyscale);
-	shadow->thingscale = thing->scale;
+	shadow->thingscale = interp.scale;
 	shadow->sector = vis->sector;
 	shadow->szt = (INT16)((centeryfrac - FixedMul(shadow->gzt - viewz, yscale))>>FRACBITS);
 	shadow->sz = (INT16)((centeryfrac - FixedMul(shadow->gz - viewz, yscale))>>FRACBITS);
@@ -1905,6 +1905,16 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (shadoweffects)
 		{
 			mobj_t *caster = thing->target;
+			interpmobjstate_t casterinterp = {};
+
+			if (R_UsingFrameInterpolation() && !paused)
+			{
+				R_InterpolateMobjState(caster, rendertimefrac, &casterinterp);
+			}
+			else
+			{
+				R_InterpolateMobjState(caster, FRACUNIT, &casterinterp);
+			}
 
 			if (caster && !P_MobjWasRemoved(caster))
 			{
@@ -1913,9 +1923,9 @@ static void R_ProjectSprite(mobj_t *thing)
 				if (abs(groundz-viewz)/tz > 4)
 					return; // Prevent stretchy shadows and possible crashes
 
-				floordiff = abs((isflipped ? caster->height : 0) + caster->z - groundz);
+				floordiff = abs((isflipped ? caster->height : 0) + casterinterp.z - groundz);
 				trans += ((floordiff / (100*FRACUNIT)) + 3);
-				shadowscale = FixedMul(FRACUNIT - floordiff/640, caster->scale);
+				shadowscale = FixedMul(FRACUNIT - floordiff/640, casterinterp.scale);
 			}
 			else
 				trans += 3;
