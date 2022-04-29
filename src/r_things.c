@@ -1499,11 +1499,11 @@ static void R_ProjectSprite(mobj_t *thing)
 	// do interpolation
 	if (R_UsingFrameInterpolation() && !paused)
 	{
-		R_InterpolateMobjState(thing, rendertimefrac, &interp);
+		R_InterpolateMobjState(oldthing, rendertimefrac, &interp);
 	}
 	else
 	{
-		R_InterpolateMobjState(thing, FRACUNIT, &interp);
+		R_InterpolateMobjState(oldthing, FRACUNIT, &interp);
 	}
 
 	this_scale = interp.scale;
@@ -2069,7 +2069,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->xscale = FixedMul(spritexscale, xscale); //SoM: 4/17/2000
 	vis->scale = FixedMul(spriteyscale, yscale); //<<detailshift;
-	vis->thingscale = this_scale;
+	vis->thingscale = interp.scale;
 
 	vis->spritexscale = spritexscale;
 	vis->spriteyscale = spriteyscale;
