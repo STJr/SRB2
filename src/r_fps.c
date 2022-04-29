@@ -263,6 +263,17 @@ angle_t R_InterpolateAngle(angle_t from, angle_t to)
 
 void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 {
+	if (frac == FRACUNIT)
+	{
+		out->x = mobj->x;
+		out->y = mobj->y;
+		out->z = mobj->z;
+		out->scale = mobj->scale;
+		out->subsector = mobj->subsector;
+		out->angle = mobj->player ? mobj->player->drawangle : mobj->angle;
+		return;
+	}
+
 	out->x = R_LerpFixed(mobj->old_x, mobj->x, frac);
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
@@ -282,6 +293,16 @@ void R_InterpolateMobjState(mobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 
 void R_InterpolatePrecipMobjState(precipmobj_t *mobj, fixed_t frac, interpmobjstate_t *out)
 {
+	if (frac == FRACUNIT)
+	{
+		out->x = mobj->x;
+		out->y = mobj->y;
+		out->z = mobj->z;
+		out->subsector = mobj->subsector;
+		out->angle = mobj->angle;
+		return;
+	}
+
 	out->x = R_LerpFixed(mobj->old_x, mobj->x, frac);
 	out->y = R_LerpFixed(mobj->old_y, mobj->y, frac);
 	out->z = R_LerpFixed(mobj->old_z, mobj->z, frac);
