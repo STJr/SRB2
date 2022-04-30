@@ -227,6 +227,8 @@ static tic_t cutscene_lasttextwrite = 0;
 // STJR Intro
 char stjrintro[9] = "STJRI000";
 
+static huddrawlist_h luahuddrawlist_title;
+
 //
 // This alters the text string cutscene_disptext.
 // Use the typical string drawing functions to display it.
@@ -2278,6 +2280,9 @@ void F_InitMenuPresValues(void)
 	M_SetMenuCurBackground((gamestate == GS_TIMEATTACK) ? "RECATTBG" : "TITLESKY");
 	M_SetMenuCurFadeValue(16);
 	M_SetMenuCurTitlePics();
+
+	LUA_HUD_DestroyDrawList(luahuddrawlist_title);
+	luahuddrawlist_title = LUA_HUD_CreateDrawList();
 }
 
 //
@@ -3397,7 +3402,12 @@ void F_TitleScreenDrawer(void)
 	}
 
 luahook:
-	LUA_HUDHOOK(title);
+	if (renderisnewtic)
+	{
+		LUA_HUD_ClearDrawList(luahuddrawlist_title);
+		LUA_HUDHOOK(title, luahuddrawlist_title);
+	}
+	LUA_HUD_DrawList(luahuddrawlist_title);
 }
 
 // separate animation timer for backgrounds, since we also count
