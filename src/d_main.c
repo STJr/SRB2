@@ -829,6 +829,10 @@ void D_SRB2Loop(void)
 
 			renderisnewtic = true;
 		}
+		else
+		{
+			renderisnewtic = false;
+		}
 
 		if (interp)
 		{
