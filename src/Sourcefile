@@ -18,6 +18,7 @@ am_map.c
 command.c
 console.c
 hu_stuff.c
+i_time.c
 y_inter.c
 st_stuff.c
 m_aatree.c

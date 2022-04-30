@@ -24,6 +24,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "i_time.h"
 #include "i_system.h"
 #include "i_threads.h"
 #include "m_menu.h"

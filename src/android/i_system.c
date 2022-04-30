@@ -82,18 +82,6 @@ INT64 current_time_in_ps() {
   return (t.tv_sec * (INT64)1000000) + t.tv_usec;
 }
 
-tic_t I_GetTime(void)
-{
-  INT64 since_start = current_time_in_ps() - start_time;
-  return (since_start*TICRATE)/1000000;
-}
-
-fixed_t I_GetTimeFrac(void)
-{
-  //stub
-  return 0;
-}
-
 void I_Sleep(void){}
 
 void I_GetEvent(void){}

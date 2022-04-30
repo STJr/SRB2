@@ -32,6 +32,7 @@
 // Data.
 #include "sounds.h"
 #include "s_sound.h"
+#include "i_time.h"
 #include "i_system.h"
 #include "i_threads.h"
 

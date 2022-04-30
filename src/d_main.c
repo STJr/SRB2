@@ -40,6 +40,7 @@
 #include "hu_stuff.h"
 #include "i_sound.h"
 #include "i_system.h"
+#include "i_time.h"
 #include "i_threads.h"
 #include "i_video.h"
 #include "m_argv.h"
@@ -695,10 +696,9 @@ tic_t rendergametic;
 
 void D_SRB2Loop(void)
 {
-	tic_t oldentertics = 0, entertic = 0, realtics = 0, rendertimeout = INFTICS;
+	tic_t realtics = 0, rendertimeout = INFTICS;
 	static lumpnum_t gstartuplumpnum;
 
-	boolean ticked = false;
 	boolean interp = false;
 	boolean doDisplay = false;
 	boolean screenUpdate = false;
@@ -715,7 +715,7 @@ void D_SRB2Loop(void)
 	I_DoStartupMouse();
 #endif
 
-	oldentertics = I_GetTime();
+	I_UpdateTime(cv_timescale.value);
 
 	// end of loading screen: CONS_Printf() will no more call FinishUpdate()
 	con_refresh = false;
@@ -757,16 +757,17 @@ void D_SRB2Loop(void)
 	{
 		frameEnd = I_GetFrameTime();
 
+		I_UpdateTime(cv_timescale.value);
+
+		// Can't guarantee that I_UpdateTime won't be called inside TryRunTics
+		// so capture the realtics for later use
+		realtics = g_time.realtics;
+
 		if (lastwipetic)
 		{
-			oldentertics = lastwipetic;
+			// oldentertics = lastwipetic;
 			lastwipetic = 0;
 		}
-
-		// get real tics
-		entertic = I_GetTime();
-		realtics = entertic - oldentertics;
-		oldentertics = entertic;
 
 		if (demoplayback && gamestate == GS_LEVEL)
 		{
@@ -782,7 +783,6 @@ void D_SRB2Loop(void)
 
 		interp = R_UsingFrameInterpolation() && !dedicated;
 		doDisplay = screenUpdate = false;
-		ticked = false;
 
 #ifdef HW3SOUND
 		HW3S_BeginFrameUpdate();
@@ -798,16 +798,16 @@ void D_SRB2Loop(void)
 				realtics = 1;
 
 			// process tics (but maybe not if realtic == 0)
-			ticked = TryRunTics(realtics);
+			TryRunTics(realtics);
 
 			if (lastdraw || singletics || gametic > rendergametic)
 			{
 				rendergametic = gametic;
-				rendertimeout = entertic+TICRATE/17;
+				rendertimeout = g_time.time + TICRATE/17;
 
 				doDisplay = true;
 			}
-			else if (rendertimeout < entertic) // in case the server hang or netsplit
+			else if (rendertimeout < g_time.time) // in case the server hang or netsplit
 			{
 				// Lagless camera! Yay!
 				if (gamestate == GS_LEVEL && netgame)
@@ -836,41 +836,21 @@ void D_SRB2Loop(void)
 
 		if (interp)
 		{
-			static float tictime = 0.0f;
-			static float prevtime = 0.0f;
-			float entertime = I_GetTimeFrac();
-
-			fixed_t entertimefrac = FRACUNIT;
-
-			if (ticked)
-			{
-				tictime = entertime;
-			}
-
 			// I looked at the possibility of putting in a float drawer for
 			// perfstats and it's very complicated, so we'll just do this instead...
-			ps_interp_frac.value.p = (precise_t)((entertime - tictime) * 1000.0f);
-			ps_interp_lag.value.p = (precise_t)((entertime - prevtime) * 1000.0f);
+			ps_interp_frac.value.p = (precise_t)((FIXED_TO_FLOAT(g_time.timefrac)) * 1000.0f);
+			ps_interp_lag.value.p = (precise_t)((FIXED_TO_FLOAT(g_time.deltaseconds)) * 1000.0f);
+
+			renderdeltatics = g_time.deltatics;
 
 			if (!(paused || P_AutoPause()))
 			{
-				if (entertime - prevtime >= 1.0f)
-				{
-					// Lagged for more frames than a gametic...
-					// No need for interpolation.
-					entertimefrac = FRACUNIT;
-				}
-				else
-				{
-					entertimefrac = min(FRACUNIT, FLOAT_TO_FIXED(entertime - tictime));
-				}
-
-				// renderdeltatics is a bit awkard to evaluate, since the system time interface is whole tic-based
-				renderdeltatics = FloatToFixed(entertime - prevtime);
-				rendertimefrac = entertimefrac;
+				rendertimefrac = g_time.timefrac;
 			}
-
-			prevtime = entertime;
+			else
+			{
+				rendertimefrac = FRACUNIT;
+			}
 		}
 		else
 		{
@@ -1398,8 +1378,8 @@ void D_SRB2Main(void)
 	//---------------------------------------------------- READY TIME
 	// we need to check for dedicated before initialization of some subsystems
 
-	CONS_Printf("I_StartupTimer()...\n");
-	I_StartupTimer();
+	CONS_Printf("I_InitializeTime()...\n");
+	I_InitializeTime();
 
 	// Make backups of some SOCcable tables.
 	P_BackupTables();

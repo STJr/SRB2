@@ -170,6 +170,7 @@ static char returnWadPath[256];
 
 #include "../doomdef.h"
 #include "../m_misc.h"
+#include "../i_time.h"
 #include "../i_video.h"
 #include "../i_sound.h"
 #include "../i_system.h"
@@ -2143,44 +2144,6 @@ ticcmd_t *I_BaseTiccmd2(void)
 
 static Uint64 timer_frequency;
 
-static double tic_frequency;
-static Uint64 tic_epoch;
-static double elapsed_tics;
-
-static void UpdateTicFreq(void)
-{
-	tic_frequency = (timer_frequency / (double)NEWTICRATE) / FixedToFloat(cv_timescale.value);
-}
-
-static CV_PossibleValue_t timescale_cons_t[] = {{FRACUNIT/20, "MIN"}, {20*FRACUNIT, "MAX"}, {0, NULL}};
-consvar_t cv_timescale = CVAR_INIT ("timescale", "1.0", CV_NETVAR|CV_CHEAT|CV_FLOAT|CV_CALL, timescale_cons_t, UpdateTicFreq);
-
-static void UpdateElapsedTics(void)
-{
-	const Uint64 now = SDL_GetPerformanceCounter();
-
-	elapsed_tics += (now - tic_epoch) / tic_frequency;
-	tic_epoch = now; // moving epoch
-}
-
-tic_t I_GetTime(void)
-{
-	float f = 0.0f;
-
-	UpdateElapsedTics();
-
-	// This needs kept in a separate variable before converting
-	// to tic_t, due to stupid -Wbad-function-cast error.
-	f = floor(elapsed_tics);
-	return (tic_t)f;
-}
-
-float I_GetTimeFrac(void)
-{
-	UpdateElapsedTics();
-	return elapsed_tics;
-}
-
 //
 // I_GetPreciseTime
 // returns time in precise_t
@@ -2199,6 +2162,11 @@ int I_PreciseToMicros(precise_t d)
 	// The resulting double from the calculation is converted first to UINT64 to avoid overflow,
 	// which is undefined behaviour when converting floating point values to integers.
 	return (int)(UINT64)(d / (timer_frequency / 1000000.0));
+}
+
+double I_PreciseElapsedSeconds(precise_t before, precise_t after)
+{
+	return (after - before) / (double)timer_frequency;
 }
 
 //
@@ -2259,15 +2227,9 @@ double I_GetFrameTime(void)
 //
 void I_StartupTimer(void)
 {
-	CV_RegisterVar(&cv_timescale);
-
 	timer_frequency = SDL_GetPerformanceFrequency();
-	tic_epoch       = SDL_GetPerformanceCounter();
 
-	tic_frequency   = timer_frequency / (double)NEWTICRATE;
-	elapsed_tics    = 0.0;
-
-	I_InitFrameTime(tic_epoch, R_GetFramerateCap());
+	I_InitFrameTime(0, R_GetFramerateCap());
 	elapsed_frames  = 0.0;
 }
 
@@ -2279,6 +2241,10 @@ void I_Sleep(void)
 {
 	if (cv_sleep.value > 0)
 		SDL_Delay(cv_sleep.value);
+
+	// I_Sleep is still called in a number of places
+	// we need to update the internal time state to make this work
+	I_UpdateTime(cv_timescale.value);
 }
 
 //
