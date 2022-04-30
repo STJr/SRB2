@@ -4487,6 +4487,8 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	if (rendermode != render_none)
 	{
 		R_ResetViewInterpolation();
+		R_UpdateMobjInterpolators();
+		R_UpdateMobjInterpolators();
 	}
 
 	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
