@@ -301,7 +301,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 
 	if (ds->curline->sidedef->repeatcnt)
 		repeats = 1 + ds->curline->sidedef->repeatcnt;
-	else if (ldef->flags & ML_EFFECT5)
+	else if (ldef->flags & ML_WRAPMIDTEX)
 	{
 		fixed_t high, low;
 
@@ -345,7 +345,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		{
 			dc_texturemid = ds->maskedtextureheight[dc_x];
 
-			if (!!(curline->linedef->flags & ML_DONTPEGBOTTOM) ^ !!(curline->linedef->flags & ML_EFFECT3))
+			if (curline->linedef->flags & ML_MIDPEG)
 				dc_texturemid += (textureheight[texnum])*times + textureheight[texnum];
 			else
 				dc_texturemid -= (textureheight[texnum])*times;
@@ -765,10 +765,10 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	skewslope = *pfloor->t_slope; // skew using top slope by default
 	if (newline)
 	{
-		if (newline->flags & ML_DONTPEGTOP)
+		if (newline->flags & ML_SKEWTD)
 			slopeskew = true;
 	}
-	else if (pfloor->master->flags & ML_DONTPEGTOP)
+	else if (pfloor->master->flags & ML_SKEWTD)
 		slopeskew = true;
 
 	if (slopeskew)
@@ -1455,9 +1455,9 @@ static void R_RenderSegLoop (void)
 			maskedtexturecol[rw_x] = (INT16)texturecolumn;
 
 			if (maskedtextureheight != NULL) {
-				maskedtextureheight[rw_x] = (!!(curline->linedef->flags & ML_DONTPEGBOTTOM) ^ !!(curline->linedef->flags & ML_EFFECT3) ?
+				maskedtextureheight[rw_x] = (curline->linedef->flags & ML_MIDPEG) ?
 											max(rw_midtexturemid, rw_midtextureback) :
-											min(rw_midtexturemid, rw_midtextureback));
+											min(rw_midtexturemid, rw_midtextureback);
 			}
 		}
 
@@ -1766,7 +1766,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		texheight = textureheight[midtexture];
 		// a single sided line is terminal, so it must mark ends
 		markfloor = markceiling = true;
-		if (linedef->flags & ML_EFFECT2) {
+		if (linedef->flags & ML_NOSKEW) {
 			if (linedef->flags & ML_DONTPEGBOTTOM)
 				rw_midtexturemid = frontsector->floorheight + texheight - viewz;
 			else
@@ -1903,18 +1903,20 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		else if (worldlow != worldbottom
 			|| worldlowslope != worldbottomslope
 			|| backsector->f_slope != frontsector->f_slope
-		    || backsector->floorpic != frontsector->floorpic
-		    || backsector->lightlevel != frontsector->lightlevel
-		    //SoM: 3/22/2000: Check floor x and y offsets.
-		    || backsector->floor_xoffs != frontsector->floor_xoffs
-		    || backsector->floor_yoffs != frontsector->floor_yoffs
-		    || backsector->floorpic_angle != frontsector->floorpic_angle
-		    //SoM: 3/22/2000: Prevents bleeding.
-		    || (frontsector->heightsec != -1 && frontsector->floorpic != skyflatnum)
-		    || backsector->floorlightsec != frontsector->floorlightsec
-		    //SoM: 4/3/2000: Check for colormaps
-		    || frontsector->extra_colormap != backsector->extra_colormap
-		    || (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
+			|| backsector->floorpic != frontsector->floorpic
+			|| backsector->lightlevel != frontsector->lightlevel
+			//SoM: 3/22/2000: Check floor x and y offsets.
+			|| backsector->floor_xoffs != frontsector->floor_xoffs
+			|| backsector->floor_yoffs != frontsector->floor_yoffs
+			|| backsector->floorpic_angle != frontsector->floorpic_angle
+			//SoM: 3/22/2000: Prevents bleeding.
+			|| (frontsector->heightsec != -1 && frontsector->floorpic != skyflatnum)
+			|| backsector->floorlightlevel != frontsector->floorlightlevel
+			|| backsector->floorlightabsolute != frontsector->floorlightabsolute
+			|| backsector->floorlightsec != frontsector->floorlightsec
+			//SoM: 4/3/2000: Check for colormaps
+			|| frontsector->extra_colormap != backsector->extra_colormap
+			|| (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 			markfloor = true;
 		}
@@ -1934,18 +1936,20 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		else if (worldhigh != worldtop
 			|| worldhighslope != worldtopslope
 			|| backsector->c_slope != frontsector->c_slope
-		    || backsector->ceilingpic != frontsector->ceilingpic
-		    || backsector->lightlevel != frontsector->lightlevel
-		    //SoM: 3/22/2000: Check floor x and y offsets.
-		    || backsector->ceiling_xoffs != frontsector->ceiling_xoffs
-		    || backsector->ceiling_yoffs != frontsector->ceiling_yoffs
-		    || backsector->ceilingpic_angle != frontsector->ceilingpic_angle
-		    //SoM: 3/22/2000: Prevents bleeding.
-		    || (frontsector->heightsec != -1 && frontsector->ceilingpic != skyflatnum)
-		    || backsector->ceilinglightsec != frontsector->ceilinglightsec
-		    //SoM: 4/3/2000: Check for colormaps
-		    || frontsector->extra_colormap != backsector->extra_colormap
-		    || (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
+			|| backsector->ceilingpic != frontsector->ceilingpic
+			|| backsector->lightlevel != frontsector->lightlevel
+			//SoM: 3/22/2000: Check floor x and y offsets.
+			|| backsector->ceiling_xoffs != frontsector->ceiling_xoffs
+			|| backsector->ceiling_yoffs != frontsector->ceiling_yoffs
+			|| backsector->ceilingpic_angle != frontsector->ceilingpic_angle
+			//SoM: 3/22/2000: Prevents bleeding.
+			|| (frontsector->heightsec != -1 && frontsector->ceilingpic != skyflatnum)
+			|| backsector->ceilinglightlevel != frontsector->ceilinglightlevel
+			|| backsector->ceilinglightabsolute != frontsector->ceilinglightabsolute
+			|| backsector->ceilinglightsec != frontsector->ceilinglightsec
+			//SoM: 4/3/2000: Check for colormaps
+			|| frontsector->extra_colormap != backsector->extra_colormap
+			|| (frontsector->ffloors != backsector->ffloors && !Tag_Compare(&frontsector->tags, &backsector->tags)))
 		{
 				markceiling = true;
 		}
@@ -1971,23 +1975,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			fixed_t texheight;
 			// top texture
-			if ((linedef->flags & (ML_DONTPEGTOP) && (linedef->flags & ML_DONTPEGBOTTOM))
-				&& linedef->sidenum[1] != 0xffff)
-			{
-				// Special case... use offsets from 2nd side but only if it has a texture.
-				side_t *def = &sides[linedef->sidenum[1]];
-				toptexture = R_GetTextureNum(def->toptexture);
+			toptexture = R_GetTextureNum(sidedef->toptexture);
+			texheight = textureheight[toptexture];
 
-				if (!toptexture) //Second side has no texture, use the first side's instead.
-					toptexture = R_GetTextureNum(sidedef->toptexture);
-				texheight = textureheight[toptexture];
-			}
-			else
-			{
-				toptexture = R_GetTextureNum(sidedef->toptexture);
-				texheight = textureheight[toptexture];
-			}
-			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
+			if (!(linedef->flags & ML_SKEWTD)) { // Ignore slopes for lower/upper textures unless flag is checked
 				if (linedef->flags & ML_DONTPEGTOP)
 					rw_toptexturemid = frontsector->ceilingheight - viewz;
 				else
@@ -2012,7 +2003,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			// bottom texture
 			bottomtexture = R_GetTextureNum(sidedef->bottomtexture);
 
-			if (!(linedef->flags & ML_EFFECT1)) { // Ignore slopes for lower/upper textures unless flag is checked
+			if (!(linedef->flags & ML_SKEWTD)) { // Ignore slopes for lower/upper textures unless flag is checked
 				if (linedef->flags & ML_DONTPEGBOTTOM)
 					rw_bottomtexturemid = frontsector->floorheight - viewz;
 				else
@@ -2243,7 +2234,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			if (curline->polyseg)
 			{ // use REAL front and back floors please, so midtexture rendering isn't mucked up
 				rw_midtextureslide = rw_midtexturebackslide = 0;
-				if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+				if (linedef->flags & ML_MIDPEG)
 					rw_midtexturemid = rw_midtextureback = max(curline->frontsector->floorheight, curline->backsector->floorheight) - viewz;
 				else
 					rw_midtexturemid = rw_midtextureback = min(curline->frontsector->ceilingheight, curline->backsector->ceilingheight) - viewz;
@@ -2251,16 +2242,16 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			else
 			{
 				// Set midtexture starting height
-				if (linedef->flags & ML_EFFECT2)
+				if (linedef->flags & ML_NOSKEW)
 				{ // Ignore slopes when texturing
 					rw_midtextureslide = rw_midtexturebackslide = 0;
-					if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+					if (linedef->flags & ML_MIDPEG)
 						rw_midtexturemid = rw_midtextureback = max(frontsector->floorheight, backsector->floorheight) - viewz;
 					else
 						rw_midtexturemid = rw_midtextureback = min(frontsector->ceilingheight, backsector->ceilingheight) - viewz;
 
 				}
-				else if (!!(linedef->flags & ML_DONTPEGBOTTOM) ^ !!(linedef->flags & ML_EFFECT3))
+				else if (linedef->flags & ML_MIDPEG)
 				{
 					rw_midtexturemid = worldbottom;
 					rw_midtextureslide = floorfrontslide;

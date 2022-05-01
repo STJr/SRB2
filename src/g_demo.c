@@ -2221,7 +2221,7 @@ void G_AddGhost(char *defdemoname)
 		gh->mo->angle = FixedAngle(mthing->angle << FRACBITS);
 		f = gh->mo->floorz;
 		c = gh->mo->ceilingz - mobjinfo[MT_PLAYER].height;
-		if (!!(mthing->options & MTF_AMBUSH) ^ !!(mthing->options & MTF_OBJECTFLIP))
+		if (!!(mthing->args[0]) ^ !!(mthing->options & MTF_OBJECTFLIP))
 		{
 			z = c - offset;
 			if (z < f)
