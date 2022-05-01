@@ -25,10 +25,6 @@ extern "C" {
 typedef struct timestate_s {
 	tic_t time;
 	fixed_t timefrac;
-	fixed_t realtics;
-	fixed_t deltatics;
-	fixed_t deltaseconds;
-	fixed_t ticrate;
 } timestate_t;
 
 extern timestate_t g_time;
@@ -43,6 +39,13 @@ tic_t I_GetTime(void);
 void I_InitializeTime(void);
 
 void I_UpdateTime(fixed_t timescale);
+
+/** \brief  Block for at minimum the duration specified. This function makes a
+            best effort not to oversleep, and will spinloop if sleeping would
+			take too long. However, callers should still check the current time
+			after this returns.
+*/
+void I_SleepDuration(precise_t duration);
 
 #ifdef __cplusplus
 } // extern "C"

@@ -1905,7 +1905,10 @@ void G_PreLevelTitleCard(void)
 	{
 		// draw loop
 		while (!((nowtime = I_GetTime()) - lasttime))
-			I_Sleep();
+		{
+			I_Sleep(cv_sleep.value);
+			I_UpdateTime(cv_timescale.value);
+		}
 		lasttime = nowtime;
 
 		ST_runTitleCard();

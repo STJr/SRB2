@@ -915,7 +915,10 @@ void F_IntroTicker(void)
 				while (quittime > nowtime)
 				{
 					while (!((nowtime = I_GetTime()) - lasttime))
-						I_Sleep();
+					{
+						I_Sleep(cv_sleep.value);
+						I_UpdateTime(cv_timescale.value);
+					}
 					lasttime = nowtime;
 
 					I_OsPolling();

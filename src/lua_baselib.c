@@ -31,7 +31,7 @@
 #include "m_misc.h" // M_MapNumber
 #include "b_bot.h" // B_UpdateBotleader
 #include "d_clisrv.h" // CL_RemovePlayer
-#include "i_system.h" // I_GetPreciseTime, I_PreciseToMicros
+#include "i_system.h" // I_GetPreciseTime, I_GetPrecisePrecision
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -3917,7 +3917,7 @@ static int lib_gTicsToMilliseconds(lua_State *L)
 
 static int lib_getTimeMicros(lua_State *L)
 {
-	lua_pushinteger(L, I_PreciseToMicros(I_GetPreciseTime()));
+	lua_pushinteger(L, I_GetPreciseTime() / (I_GetPrecisePrecision() / 1000000));
 	return 1;
 }
 

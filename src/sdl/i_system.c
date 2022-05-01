@@ -2144,35 +2144,15 @@ ticcmd_t *I_BaseTiccmd2(void)
 
 static Uint64 timer_frequency;
 
-//
-// I_GetPreciseTime
-// returns time in precise_t
-//
 precise_t I_GetPreciseTime(void)
 {
 	return SDL_GetPerformanceCounter();
 }
 
-int I_PreciseToMicros(precise_t d)
+UINT64 I_GetPrecisePrecision(void)
 {
-	// d is going to be converted into a double. So remove the highest bits
-	// to avoid loss of precision in the lower bits, for the (probably rare) case
-	// that the higher bits are actually used.
-	d &= ((precise_t)1 << 53) - 1; // The mantissa of a double can handle 53 bits at most.
-	// The resulting double from the calculation is converted first to UINT64 to avoid overflow,
-	// which is undefined behaviour when converting floating point values to integers.
-	return (int)(UINT64)(d / (timer_frequency / 1000000.0));
+	return SDL_GetPerformanceFrequency();
 }
-
-double I_PreciseElapsedSeconds(precise_t before, precise_t after)
-{
-	return (after - before) / (double)timer_frequency;
-}
-
-//
-// I_GetFrameTime
-// returns time in 1/fpscap second tics
-//
 
 static UINT32 frame_rate;
 
@@ -2233,68 +2213,9 @@ void I_StartupTimer(void)
 	elapsed_frames  = 0.0;
 }
 
-//
-// I_Sleep
-// Sleeps by the value of cv_sleep
-//
-void I_Sleep(void)
+void I_Sleep(UINT32 ms)
 {
-	if (cv_sleep.value > 0)
-		SDL_Delay(cv_sleep.value);
-
-	// I_Sleep is still called in a number of places
-	// we need to update the internal time state to make this work
-	I_UpdateTime(cv_timescale.value);
-}
-
-//
-// I_FrameCapSleep
-// Sleeps for a variable amount of time, depending on how much time the frame took.
-//
-boolean I_FrameCapSleep(const double t)
-{
-	// SDL_Delay(1) gives me a range of around 1.95ms to 2.05ms.
-	// Has a bit extra to be totally safe.
-	const double delayGranularity = 2.1;
-	double frameMS = 0.0;
-
-	double curTime = 0.0;
-	double destTime = 0.0;
-	double sleepTime = 0.0;
-
-	if (frame_rate == 0)
-	{
-		// We don't want to cap.
-		return false;
-	}
-
-	curTime = I_GetFrameTime();
-	destTime = floor(t) + 1.0;
-
-	if (curTime >= destTime)
-	{
-		// We're already behind schedule.
-		return false;
-	}
-
-	frameMS = frame_rate * 0.001; // 1ms as frame time
-	sleepTime = destTime - (delayGranularity * frameMS);
-
-	while (curTime < destTime)
-	{
-		if (curTime < sleepTime && cv_sleep.value > 0)
-		{
-			// Wait 1ms at a time (on default settings)
-			// until we're close enough.
-			SDL_Delay(cv_sleep.value);
-		}
-
-		// This part will spin-lock the rest.
-		curTime = I_GetFrameTime();
-	}
-
-	// We took our nap.
-	return true;
+	SDL_Delay(ms);
 }
 
 #ifdef NEWSIGNALHANDLER
