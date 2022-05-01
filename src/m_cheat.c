@@ -72,9 +72,6 @@ static UINT8 cheatf_ultimate(void)
 
 static UINT8 cheatf_warp(void)
 {
-	if (modifiedgame)
-		return 0;
-
 	if (menuactive && currentMenu != &MainDef)
 		return 0; // Only on the main menu!
 
@@ -96,9 +93,6 @@ static UINT8 cheatf_warp(void)
 static UINT8 cheatf_devmode(void)
 {
 	UINT8 i;
-
-	if (modifiedgame)
-		return 0;
 
 	if (menuactive && currentMenu != &MainDef)
 		return 0; // Only on the main menu!
