@@ -4484,13 +4484,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	P_MapEnd(); // tmthing is no longer needed from this point onwards
 
-	if (rendermode != render_none)
-	{
-		R_ResetViewInterpolation();
-		R_UpdateMobjInterpolators();
-		R_UpdateMobjInterpolators();
-	}
-
 	// Took me 3 hours to figure out why my progression kept on getting overwritten with the titlemap...
 	if (!titlemapinaction)
 	{
@@ -4518,6 +4511,10 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		LUA_HookInt(gamemap, HOOK(MapLoad));
 		P_MapEnd(); // just in case MapLoad modifies tmthing
 	}
+
+	R_ResetViewInterpolation();
+	R_ResetViewInterpolation();
+	R_UpdateMobjInterpolators();
 
 	// No render mode or reloading gamestate, stop here.
 	if (rendermode == render_none || reloadinggamestate)
