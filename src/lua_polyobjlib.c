@@ -244,13 +244,14 @@ static int lib_polyobj_rotate(lua_State *L)
 {
 	polyobj_t *po = *((polyobj_t **)luaL_checkudata(L, 1, META_POLYOBJ));
 	angle_t delta = luaL_checkangle(L, 2);
-	UINT8 turnthings = (UINT8)luaL_optinteger(L, 3, 0); // don't turn anything by default? (could change this if not desired)
-	boolean checkmobjs = lua_opttrueboolean(L, 4);
+	boolean turnplayers = lua_opttrueboolean(L, 3);
+	boolean turnothers = lua_opttrueboolean(L, 4);
+	boolean checkmobjs = lua_opttrueboolean(L, 5);
 	NOHUD
 	INLEVEL
 	if (!po)
 		return LUA_ErrInvalid(L, "polyobj_t");
-	lua_pushboolean(L, Polyobj_rotate(po, delta, turnthings, checkmobjs));
+	lua_pushboolean(L, Polyobj_rotate(po, delta, turnplayers, turnothers, checkmobjs));
 	return 1;
 }
 
