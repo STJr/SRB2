@@ -10663,7 +10663,7 @@ static void M_Marathon(INT32 choice)
 	titlemapinaction = TITLEMAP_OFF; // Nope don't give us HOMs please
 	M_SetupNextMenu(&SP_MarathonDef);
 	itemOn = marathonstart; // "Start" is selected.
-	recatkdrawtimer = 50-8;
+	recatkdrawtimer = (50-8) * FRACUNIT;
 	char_scroll = 0;
 }
 
@@ -10744,13 +10744,16 @@ void M_DrawMarathon(void)
 	x = (((BASEVIDWIDTH-82)/2)+11)<<FRACBITS;
 	y = (((BASEVIDHEIGHT-82)/2)+12-10)<<FRACBITS;
 
-	cnt = (36*(recatkdrawtimer<<FRACBITS))/TICRATE;
+	cnt = (36 * recatkdrawtimer) / TICRATE;
 	fa = (FixedAngle(cnt)>>ANGLETOFINESHIFT) & FINEMASK;
 	y -= (10*FINECOSINE(fa));
 
-	recatkdrawtimer++;
+	if (renderisnewtic)
+	{
+		recatkdrawtimer += FRACUNIT;
+	}
 
-	soffset = cnt = (recatkdrawtimer%50);
+	soffset = cnt = ((recatkdrawtimer >> FRACBITS) % 50);
 	if (!useBlackRock)
 	{
 		if (cnt > 8)
@@ -10789,7 +10792,7 @@ void M_DrawMarathon(void)
 	}
 
 	w = char_scroll + (((8-cnt)*(8-cnt))<<(FRACBITS-5));
-	if (soffset == 50-1)
+	if (soffset == 50-1 && renderisnewtic)
 		w += FRACUNIT/2;
 
 	{
@@ -10844,11 +10847,11 @@ void M_DrawMarathon(void)
 
 	if (!soffset)
 	{
-		char_scroll += (360<<FRACBITS)/42; // like a clock, ticking at 42bpm!
+		char_scroll += (360 * renderdeltatics)/42; // like a clock, ticking at 42bpm!
 		if (char_scroll >= 360<<FRACBITS)
 			char_scroll -= 360<<FRACBITS;
-		if (recatkdrawtimer > (10*TICRATE))
-			recatkdrawtimer -= (10*TICRATE);
+		if (recatkdrawtimer > ((10 << FRACBITS) * TICRATE))
+			recatkdrawtimer -= ((10 << FRACBITS) * TICRATE);
 	}
 
 	M_DrawMenuTitle();
