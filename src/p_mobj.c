@@ -14084,7 +14084,6 @@ void P_FlashPal(player_t *pl, UINT16 type, UINT16 duration)
 mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zofs, mobjtype_t type)
 {
 	mobj_t *newmobj;
-	fixed_t elementheight;
 
 	xofs = FixedMul(xofs, mobj->scale);
 	yofs = FixedMul(yofs, mobj->scale);
@@ -14094,20 +14093,19 @@ mobj_t *P_SpawnMobjFromMobj(mobj_t *mobj, fixed_t xofs, fixed_t yofs, fixed_t zo
 	if (!newmobj)
 		return NULL;
 
-	elementheight = FixedMul(newmobj->info->height, mobj->scale);
-
 	if (mobj->eflags & MFE_VERTICALFLIP)
 	{
+		fixed_t elementheight = FixedMul(newmobj->info->height, mobj->scale);
+
 		newmobj->eflags |= MFE_VERTICALFLIP;
 		newmobj->flags2 |= MF2_OBJECTFLIP;
 		newmobj->z = mobj->z + mobj->height - zofs - elementheight;
-	}
 
-	if (mobj->flags2 & MF2_OBJECTFLIP || mobj->eflags & MFE_VERTICALFLIP)
-	{
 		newmobj->old_z = mobj->old_z + mobj->height - zofs - elementheight;
 		newmobj->old_z2 = mobj->old_z2 + mobj->height - zofs - elementheight;
-	} else {
+	}
+	else
+	{
 		newmobj->old_z = mobj->old_z;
 		newmobj->old_z2 = mobj->old_z2;
 	}
