@@ -830,6 +830,8 @@ void P_PreTicker(INT32 frames)
 
 		LUA_HOOK(PostThinkFrame);
 
+		R_UpdateLevelInterpolators();
+
 		P_MapEnd();
 	}
 
