@@ -118,7 +118,7 @@ void R_InterpolateView(fixed_t frac);
 // Buffer the current new views into the old views. Call once after each real tic.
 void R_UpdateViewInterpolation(void);
 // Reset the view states (e.g. after level load) so R_InterpolateView doesn't interpolate invalid data
-void R_ResetViewInterpolation(void);
+void R_ResetViewInterpolation(UINT8 p);
 // Set the current view context (the viewvars pointed to by newview)
 void R_SetViewContext(enum viewcontext_e _viewcontext);
 
