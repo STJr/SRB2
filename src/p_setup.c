@@ -7680,7 +7680,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	R_ResetViewInterpolation();
 	R_ResetViewInterpolation();
-	R_UpdateMobjInterpolators();
 
 	// No render mode or reloading gamestate, stop here.
 	if (rendermode == render_none || reloadinggamestate)
