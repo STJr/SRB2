@@ -2367,11 +2367,6 @@ void G_Ticker(boolean run)
 			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
-			if (run)
-			{
-				R_UpdateViewInterpolation();
-			}
-			
 
 			break;
 
@@ -2426,14 +2421,8 @@ void G_Ticker(boolean run)
 
 		case GS_TITLESCREEN:
 			if (titlemapinaction)
-			{
 				P_Ticker(run);
-				if (run)
-				{
-					R_UpdateViewInterpolation();
-				}
 				// then intentionally fall through
-			}
 			/* FALLTHRU */
 		case GS_WAITINGPLAYERS:
 			F_MenuPresTicker(run);

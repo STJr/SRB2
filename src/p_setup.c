@@ -7678,9 +7678,6 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 		P_MapEnd(); // just in case MapLoad modifies tmthing
 	}
 
-	R_ResetViewInterpolation();
-	R_ResetViewInterpolation();
-
 	// No render mode or reloading gamestate, stop here.
 	if (rendermode == render_none || reloadinggamestate)
 		return true;
