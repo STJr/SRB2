@@ -853,7 +853,7 @@ void D_SRB2Loop(void)
 
 			renderdeltatics = FLOAT_TO_FIXED(deltatics);
 
-			if (!(paused || P_AutoPause()))
+			if (!(paused || P_AutoPause()) && !hu_stopped)
 			{
 				rendertimefrac = g_time.timefrac;
 			}

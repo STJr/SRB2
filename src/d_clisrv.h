@@ -458,4 +458,7 @@ extern UINT8 hu_redownloadinggamestate;
 
 extern UINT8 adminpassmd5[16];
 extern boolean adminpasswordset;
+
+extern boolean hu_stopped;
+
 #endif
