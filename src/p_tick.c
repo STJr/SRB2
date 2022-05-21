@@ -618,8 +618,10 @@ void P_Ticker(boolean run)
 		if (OP_FreezeObjectplace())
 		{
 			P_MapStart();
+			R_UpdateMobjInterpolators();
 			OP_ObjectplaceMovement(&players[0]);
 			P_MoveChaseCamera(&players[0], &camera, false);
+			R_UpdateViewInterpolation();
 			P_MapEnd();
 			S_SetStackAdjustmentStart();
 			return;
