@@ -30,6 +30,12 @@ static precise_t enterprecise, oldenterprecise;
 static fixed_t entertic, oldentertics;
 static double tictimer;
 
+// A little more than the minimum sleep duration on Windows.
+// May be incorrect for other platforms, but we don't currently have a way to
+// query the scheduler granularity. SDL will do what's needed to make this as
+// low as possible though.
+#define MIN_SLEEP_DURATION_MS 2.1
+
 tic_t I_GetTime(void)
 {
 	return g_time.time;
@@ -90,7 +96,7 @@ void I_SleepDuration(precise_t duration)
 	precise_t dest;
 
 	{
-		double gran = round(((double)(precision / 1000) * sleepvalue * 2.1));
+		double gran = round(((double)(precision / 1000) * sleepvalue * MIN_SLEEP_DURATION_MS));
 		delaygranularity = (UINT64)gran;
 	}
 
