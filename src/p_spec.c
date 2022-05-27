@@ -7563,9 +7563,9 @@ static void P_SpawnScrollers(void)
 					if (s != (INT32)i)
 					{
 						if (l->args[1] != TMSD_BACK)
-							Add_Scroller(sc_side, l->args[2] << FRACBITS, l->args[3] << FRACBITS, control, lines[s].sidenum[0], accel, 0);
+							Add_Scroller(sc_side, l->args[2] << (FRACBITS - SCROLL_SHIFT), l->args[3] << (FRACBITS - SCROLL_SHIFT), control, lines[s].sidenum[0], accel, 0);
 						if (l->args[1] != TMSD_FRONT && lines[s].sidenum[1] != 0xffff)
-							Add_Scroller(sc_side, l->args[2] << FRACBITS, l->args[3] << FRACBITS, control, lines[s].sidenum[1], accel, 0);
+							Add_Scroller(sc_side, l->args[2] << (FRACBITS - SCROLL_SHIFT), l->args[3] << (FRACBITS - SCROLL_SHIFT), control, lines[s].sidenum[1], accel, 0);
 					}
 				break;
 			}
