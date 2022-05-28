@@ -2313,10 +2313,10 @@ static void P_WriteTextmap(void)
 			fprintf(f, "flip = true;\n");
 		for (j = 0; j < NUMMAPTHINGARGS; j++)
 			if (wmapthings[i].args[j] != 0)
-				fprintf(f, "arg%d = %d;\n", j, wmapthings[i].args[j]);
+				fprintf(f, "arg%s = %d;\n", sizeu1(j), wmapthings[i].args[j]);
 		for (j = 0; j < NUMMAPTHINGSTRINGARGS; j++)
 			if (mapthings[i].stringargs[j])
-				fprintf(f, "stringarg%d = \"%s\";\n", j, mapthings[i].stringargs[j]);
+				fprintf(f, "stringarg%s = \"%s\";\n", sizeu1(j), mapthings[i].stringargs[j]);
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
@@ -2362,10 +2362,10 @@ static void P_WriteTextmap(void)
 			fprintf(f, "special = %d;\n", wlines[i].special);
 		for (j = 0; j < NUMLINEARGS; j++)
 			if (wlines[i].args[j] != 0)
-				fprintf(f, "arg%d = %d;\n", j, wlines[i].args[j]);
+				fprintf(f, "arg%s = %d;\n", sizeu1(j), wlines[i].args[j]);
 		for (j = 0; j < NUMLINESTRINGARGS; j++)
 			if (lines[i].stringargs[j])
-				fprintf(f, "stringarg%d = \"%s\";\n", j, lines[i].stringargs[j]);
+				fprintf(f, "stringarg%s = \"%s\";\n", sizeu1(j), lines[i].stringargs[j]);
 		if (wlines[i].alpha != FRACUNIT)
 			fprintf(f, "alpha = %f;\n", FIXED_TO_FLOAT(wlines[i].alpha));
 		if (wlines[i].blendmode != AST_COPY)
@@ -3263,7 +3263,7 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 
 				linenum = (nodetype == NT_XGL3) ? READUINT32((*data)) : READUINT16((*data));
 				if (linenum != 0xFFFF && linenum >= numlines)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %d has invalid linedef %d!\n", sizeu1(k), i, linenum);
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Seg %s in subsector %s has invalid linedef %d!\n", sizeu1(k), sizeu1(i), linenum);
 				segs[k].glseg = (linenum == 0xFFFF);
 				segs[k].linedef = (linenum == 0xFFFF) ? NULL : &lines[linenum];
 				segs[k].side = READUINT8((*data));
@@ -3272,7 +3272,7 @@ static boolean P_LoadExtendedSubsectorsAndSegs(UINT8 **data, nodetype_t nodetype
 			{
 				subsectors[i].firstline++;
 				if (subsectors[i].firstline == k)
-					I_Error("P_LoadExtendedSubsectorsAndSegs: Subsector %d does not have any valid segs!", i);
+					I_Error("P_LoadExtendedSubsectorsAndSegs: Subsector %s does not have any valid segs!", sizeu1(i));
 			}
 			break;
 
@@ -6316,7 +6316,7 @@ static void P_ConvertBinaryThingTypes(void)
 
 			if (j == -1)
 			{
-				CONS_Debug(DBG_GAMELOGIC, "Particle generator (mapthing #%d) needs to be tagged to a #15 parameter line (trying to find tag %d).\n", i, mapthings[i].angle);
+				CONS_Debug(DBG_GAMELOGIC, "Particle generator (mapthing #%s) needs to be tagged to a #15 parameter line (trying to find tag %d).\n", sizeu1(i), mapthings[i].angle);
 				break;
 			}
 			mapthings[i].args[0] = mapthings[i].z;
