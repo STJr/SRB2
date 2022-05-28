@@ -2280,7 +2280,7 @@ static void P_WriteTextmap(void)
 	fprintf(f, "namespace = \"srb2\";\n");
 	for (i = 0; i < nummapthings; i++)
 	{
-		fprintf(f, "thing // %d\n", i);
+		fprintf(f, "thing // %s\n", sizeu1(i));
 		fprintf(f, "{\n");
 		firsttag = Tag_FGet(&wmapthings[i].tags);
 		if (firsttag != 0)
@@ -2323,7 +2323,7 @@ static void P_WriteTextmap(void)
 
 	for (i = 0; i < numvertexes; i++)
 	{
-		fprintf(f, "vertex // %d\n", i);
+		fprintf(f, "vertex // %s\n", sizeu1(i));
 		fprintf(f, "{\n");
 		fprintf(f, "x = %f;\n", FIXED_TO_FLOAT(wvertexes[i].x));
 		fprintf(f, "y = %f;\n", FIXED_TO_FLOAT(wvertexes[i].y));
@@ -2337,10 +2337,10 @@ static void P_WriteTextmap(void)
 
 	for (i = 0; i < numlines; i++)
 	{
-		fprintf(f, "linedef // %d\n", i);
+		fprintf(f, "linedef // %s\n", sizeu1(i));
 		fprintf(f, "{\n");
-		fprintf(f, "v1 = %d;\n", wlines[i].v1 - vertexes);
-		fprintf(f, "v2 = %d;\n", wlines[i].v2 - vertexes);
+		fprintf(f, "v1 = %s;\n", sizeu1(wlines[i].v1 - vertexes));
+		fprintf(f, "v2 = %s;\n", sizeu1(wlines[i].v2 - vertexes));
 		fprintf(f, "sidefront = %d;\n", wlines[i].sidenum[0]);
 		if (wlines[i].sidenum[1] != 0xffff)
 			fprintf(f, "sideback = %d;\n", wlines[i].sidenum[1]);
@@ -2432,9 +2432,9 @@ static void P_WriteTextmap(void)
 
 	for (i = 0; i < numsides; i++)
 	{
-		fprintf(f, "sidedef // %d\n", i);
+		fprintf(f, "sidedef // %s\n", sizeu1(i));
 		fprintf(f, "{\n");
-		fprintf(f, "sector = %d;\n", wsides[i].sector - sectors);
+		fprintf(f, "sector = %s;\n", sizeu1(wsides[i].sector - sectors));
 		if (wsides[i].textureoffset != 0)
 			fprintf(f, "offsetx = %d;\n", wsides[i].textureoffset >> FRACBITS);
 		if (wsides[i].rowoffset != 0)
@@ -2453,7 +2453,7 @@ static void P_WriteTextmap(void)
 
 	for (i = 0; i < numsectors; i++)
 	{
-		fprintf(f, "sector // %d\n", i);
+		fprintf(f, "sector // %s\n", sizeu1(i));
 		fprintf(f, "{\n");
 		fprintf(f, "heightfloor = %d;\n", wsectors[i].floorheight >> FRACBITS);
 		fprintf(f, "heightceiling = %d;\n", wsectors[i].ceilingheight >> FRACBITS);
