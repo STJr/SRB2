@@ -306,6 +306,7 @@ typedef enum
 	TMT_ADD          = 0,
 	TMT_REMOVE       = 1,
 	TMT_REPLACEFIRST = 2,
+	TMT_TRIGGERTAG   = 3,
 } textmaptagoptions_t;
 
 typedef enum
