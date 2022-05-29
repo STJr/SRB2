@@ -14,7 +14,7 @@
 #include "taglist.h"
 #include "z_zone.h"
 #include "r_data.h"
-#include "r_defs.h"
+#include "p_spec.h"
 
 // Bit array of whether a tag exists for sectors/lines/things.
 bitarray_t tags_available[BIT_ARRAY_SIZE (MAXTAGS)];
@@ -458,10 +458,8 @@ void Tag_SectorFSet (const size_t id, const mtag_t tag)
 
 	// Sectors with linedef trigger effects need to have their trigger tag updated too
 	// This is a bit of a hack...
-	if (sec->flags & MSF_TRIGGERLINE_PLANE || sec->flags & MSF_TRIGGERLINE_MOBJ)
-	{
+	if (!udmf && GETSECSPECIAL(sec->special, 2) >= 1 && GETSECSPECIAL(sec->special, 2) <= 7)
 		sec->triggertag = tag;
-	}
 }
 
 mtag_t Tag_NextUnused(mtag_t start)
