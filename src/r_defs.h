@@ -154,6 +154,47 @@ typedef enum
 
 typedef enum
 {
+	FF_OLD_EXISTS            = 0x1,
+	FF_OLD_BLOCKPLAYER       = 0x2,
+	FF_OLD_BLOCKOTHERS       = 0x4,
+	FF_OLD_SOLID             = 0x6,
+	FF_OLD_RENDERSIDES       = 0x8,
+	FF_OLD_RENDERPLANES      = 0x10,
+	FF_OLD_RENDERALL         = 0x18,
+	FF_OLD_SWIMMABLE         = 0x20,
+	FF_OLD_NOSHADE           = 0x40,
+	FF_OLD_CUTSOLIDS         = 0x80,
+	FF_OLD_CUTEXTRA          = 0x100,
+	FF_OLD_CUTLEVEL          = 0x180,
+	FF_OLD_CUTSPRITES        = 0x200,
+	FF_OLD_BOTHPLANES        = 0x400,
+	FF_OLD_EXTRA             = 0x800,
+	FF_OLD_TRANSLUCENT       = 0x1000,
+	FF_OLD_FOG               = 0x2000,
+	FF_OLD_INVERTPLANES      = 0x4000,
+	FF_OLD_ALLSIDES          = 0x8000,
+	FF_OLD_INVERTSIDES       = 0x10000,
+	FF_OLD_DOUBLESHADOW      = 0x20000,
+	FF_OLD_FLOATBOB          = 0x40000,
+	FF_OLD_NORETURN          = 0x80000,
+	FF_OLD_CRUMBLE           = 0x100000,
+	FF_OLD_SHATTERBOTTOM     = 0x200000,
+	FF_OLD_GOOWATER          = 0x200000,
+	FF_OLD_MARIO             = 0x400000,
+	FF_OLD_BUSTUP            = 0x800000,
+	FF_OLD_QUICKSAND         = 0x1000000,
+	FF_OLD_PLATFORM          = 0x2000000,
+	FF_OLD_REVERSEPLATFORM   = 0x4000000,
+	FF_OLD_INTANGIBLEFLATS   = 0x6000000,
+	FF_OLD_SHATTER           = 0x8000000,
+	FF_OLD_SPINBUST          = 0x10000000,
+	FF_OLD_STRONGBUST        = 0x20000000,
+	FF_OLD_RIPPLE            = 0x40000000,
+	FF_OLD_COLORMAPONLY      = 0x80000000,
+} oldffloortype_e;
+
+typedef enum
+{
 	FB_PUSHABLES   = 0x1, // Bustable by pushables
 	FB_EXECUTOR    = 0x2, // Trigger linedef executor
 	FB_ONLYBOTTOM  = 0x4, // Only bustable from below

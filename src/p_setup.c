@@ -3989,6 +3989,81 @@ static void P_SetBinaryFOFAlpha(line_t *line)
 	}
 }
 
+static INT32 P_GetFOFFlags(INT32 oldflags)
+{
+	INT32 result = 0;
+	if (oldflags & FF_OLD_EXISTS)
+		result |= FF_EXISTS;
+	if (oldflags & FF_OLD_BLOCKPLAYER)
+		result |= FF_BLOCKPLAYER;
+	if (oldflags & FF_OLD_BLOCKOTHERS)
+		result |= FF_BLOCKOTHERS;
+	if (oldflags & FF_OLD_RENDERSIDES)
+		result |= FF_RENDERSIDES;
+	if (oldflags & FF_OLD_RENDERPLANES)
+		result |= FF_RENDERPLANES;
+	if (oldflags & FF_OLD_SWIMMABLE)
+		result |= FF_SWIMMABLE;
+	if (oldflags & FF_OLD_NOSHADE)
+		result |= FF_NOSHADE;
+	if (oldflags & FF_OLD_CUTSOLIDS)
+		result |= FF_CUTSOLIDS;
+	if (oldflags & FF_OLD_CUTEXTRA)
+		result |= FF_CUTEXTRA;
+	if (oldflags & FF_OLD_CUTSPRITES)
+		result |= FF_CUTSPRITES;
+	if (oldflags & FF_OLD_BOTHPLANES)
+		result |= FF_BOTHPLANES;
+	if (oldflags & FF_OLD_EXTRA)
+		result |= FF_EXTRA;
+	if (oldflags & FF_OLD_TRANSLUCENT)
+		result |= FF_TRANSLUCENT;
+	if (oldflags & FF_OLD_FOG)
+		result |= FF_FOG;
+	if (oldflags & FF_OLD_INVERTPLANES)
+		result |= FF_INVERTPLANES;
+	if (oldflags & FF_OLD_ALLSIDES)
+		result |= FF_ALLSIDES;
+	if (oldflags & FF_OLD_INVERTSIDES)
+		result |= FF_INVERTSIDES;
+	if (oldflags & FF_OLD_DOUBLESHADOW)
+		result |= FF_DOUBLESHADOW;
+	if (oldflags & FF_OLD_FLOATBOB)
+		result |= FF_FLOATBOB;
+	if (oldflags & FF_OLD_NORETURN)
+		result |= FF_NORETURN;
+	if (oldflags & FF_OLD_CRUMBLE)
+		result |= FF_CRUMBLE;
+	if (oldflags & FF_OLD_GOOWATER)
+		result |= FF_GOOWATER;
+	if (oldflags & FF_OLD_MARIO)
+		result |= FF_MARIO;
+	if (oldflags & FF_OLD_BUSTUP)
+		result |= FF_BUSTUP;
+	if (oldflags & FF_OLD_QUICKSAND)
+		result |= FF_QUICKSAND;
+	if (oldflags & FF_OLD_PLATFORM)
+		result |= FF_PLATFORM;
+	if (oldflags & FF_OLD_REVERSEPLATFORM)
+		result |= FF_REVERSEPLATFORM;
+	if (oldflags & FF_OLD_RIPPLE)
+		result |= FF_RIPPLE;
+	if (oldflags & FF_OLD_COLORMAPONLY)
+		result |= FF_COLORMAPONLY;
+	return result;
+}
+
+static INT32 P_GetFOFBustflags(INT32 oldflags)
+{
+	if (oldflags & FF_OLD_SHATTER)
+		return TMFB_TOUCH;
+	if (oldflags & FF_OLD_SPINBUST)
+		return TMFB_SPIN;
+	if (oldflags & FF_OLD_STRONGBUST)
+		return TMFB_STRONG;
+	return TMFB_REGULAR;
+}
+
 static void P_ConvertBinaryLinedefTypes(void)
 {
 	size_t i;
@@ -4635,10 +4710,12 @@ static void P_ConvertBinaryLinedefTypes(void)
 				I_Error("Custom FOF (tag %d) found without a linedef back side!", tag);
 
 			lines[i].args[0] = tag;
-			lines[i].args[3] = sides[lines[i].sidenum[1]].toptexture;
+			lines[i].args[3] = P_GetFOFFlags(sides[lines[i].sidenum[1]].toptexture);
 			if (lines[i].flags & ML_EFFECT6)
 				lines[i].args[3] |= FF_SPLAT;
-			lines[i].args[4] = sides[lines[i].sidenum[1]].midtexture;
+			lines[i].args[4] = P_GetFOFBustflags(sides[lines[i].sidenum[1]].toptexture);
+			if (sides[lines[i].sidenum[1]].toptexture & FF_OLD_SHATTERBOTTOM)
+				lines[i].args[4] |= TMFB_ONLYBOTTOM;
 			if (lines[i].args[3] & FF_TRANSLUCENT)
 			{
 				P_SetBinaryFOFAlpha(&lines[i]);
