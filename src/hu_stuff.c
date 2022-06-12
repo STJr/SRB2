@@ -1089,6 +1089,7 @@ boolean HU_Responder(event_t *ev)
 			const char *paste;
 			size_t chatlen;
 			size_t pastelen;
+			size_t movelen;
 
 			if (CHAT_MUTE)
 				return true;
@@ -1102,7 +1103,10 @@ boolean HU_Responder(event_t *ev)
 			if (chatlen+pastelen > HU_MAXMSGLEN)
 				return true; // we can't paste this!!
 
-			memmove(&w_chat[c_input + pastelen], &w_chat[c_input], pastelen);
+			// prevent moving past the chat buffer by truncating
+			movelen = min(chatlen + pastelen, HU_MAXMSGLEN) - c_input;
+			memmove(&w_chat[c_input + pastelen], &w_chat[c_input], movelen);
+
 			memcpy(&w_chat[c_input], paste, pastelen); // copy all of that.
 			c_input += pastelen;
 			return true;
