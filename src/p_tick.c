@@ -23,6 +23,7 @@
 #include "lua_hook.h"
 #include "m_perfstats.h"
 #include "i_system.h" // I_GetPreciseTime
+#include "r_main.h"
 
 // Object place
 #include "m_cheat.h"
@@ -740,7 +741,22 @@ void P_Ticker(boolean run)
 		if (quake.time)
 		{
 			fixed_t ir = quake.intensity>>1;
-			/// \todo Calculate distance from epicenter if set and modulate the intensity accordingly based on radius.
+
+			if (quake.epicenter) {
+				// Calculate 3D distance from epicenter, using camera.
+				// Uses only player 1 camera because only one quake variable exists.
+				fixed_t xydist = R_PointToDist2(camera.x, camera.y, quake.epicenter->x, quake.epicenter->y);
+				fixed_t dist = R_PointToDist2(0, camera.z, xydist, quake.epicenter->z);
+
+				CONS_Printf("%d\n", dist / FRACUNIT);
+
+				// More effect closer to epicenter, outside of radius = no effect
+				if (!quake.radius || dist > quake.radius)
+					ir = 0;
+				else
+					ir = FixedMul(ir, FRACUNIT - FixedDiv(dist, quake.radius));
+			}
+
 			quake.x = M_RandomRange(-ir,ir);
 			quake.y = M_RandomRange(-ir,ir);
 			quake.z = M_RandomRange(-ir,ir);
