@@ -748,8 +748,6 @@ void P_Ticker(boolean run)
 				fixed_t xydist = R_PointToDist2(camera.x, camera.y, quake.epicenter->x, quake.epicenter->y);
 				fixed_t dist = R_PointToDist2(0, camera.z, xydist, quake.epicenter->z);
 
-				CONS_Printf("%d\n", dist / FRACUNIT);
-
 				// More effect closer to epicenter, outside of radius = no effect
 				if (!quake.radius || dist > quake.radius)
 					ir = 0;
