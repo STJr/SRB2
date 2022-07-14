@@ -87,39 +87,30 @@ if(${SDL2_FOUND})
 	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES Darwin)
-		find_library(CORE_LIB CoreFoundation)
+		find_library(CORE_FOUNDATION_LIBRARY "CoreFoundation")
 		target_link_libraries(SRB2SDL2 PRIVATE
-			${CORE_LIB}
-			SDL2
-			SDL2_mixer
-			${GME_LIBRARIES}
-			${OPENMPT_LIBRARIES}
-			${MIXERX_LIBRARIES}
-			${PNG_LIBRARIES}
-			${ZLIB_LIBRARIES}
-			${OPENGL_LIBRARIES}
-			${CURL_LIBRARIES}
+			${CORE_FOUNDATION_LIBRARY}
 		)
 		set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
-	else()
-		target_link_libraries(SRB2SDL2 PRIVATE
-			${SDL2_LIBRARIES}
-			${SDL2_MIXER_LIBRARIES}
-			${GME_LIBRARIES}
-			${OPENMPT_LIBRARIES}
-			${MIXERX_LIBRARIES}
-			${PNG_LIBRARIES}
-			${ZLIB_LIBRARIES}
-			${OPENGL_LIBRARIES}
-			${CURL_LIBRARIES}
-		)
+	endif()
 
-		if(${CMAKE_SYSTEM} MATCHES Linux)
-			target_link_libraries(SRB2SDL2 PRIVATE
-				m
-				rt
-			)
-		endif()
+	target_link_libraries(SRB2SDL2 PRIVATE
+		${SDL2_LIBRARIES}
+		${SDL2_MIXER_LIBRARIES}
+		${GME_LIBRARIES}
+		${OPENMPT_LIBRARIES}
+		${MIXERX_LIBRARIES}
+		${PNG_LIBRARIES}
+		${ZLIB_LIBRARIES}
+		${OPENGL_LIBRARIES}
+		${CURL_LIBRARIES}
+	)
+
+	if(${CMAKE_SYSTEM} MATCHES Linux)
+		target_link_libraries(SRB2SDL2 PRIVATE
+			m
+			rt
+		)
 	endif()
 
 	#target_link_libraries(SRB2SDL2 PRIVATE SRB2Core)
