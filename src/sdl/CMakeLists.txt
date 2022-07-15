@@ -92,6 +92,16 @@ if(${SDL2_FOUND})
 			${CORE_FOUNDATION_LIBRARY}
 		)
 		set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
+
+		# Configure the app bundle icon and plist properties
+		target_sources(SRB2SDL2 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/macosx/Srb2mac.icns")
+		set_target_properties(SRB2SDL2 PROPERTIES
+			MACOSX_BUNDLE_ICON_FILE "Srb2mac"
+			MACOSX_BUNDLE_BUNDLE_NAME "Sonic Robo Blast 2"
+			MACOSX_BUNDLE_BUNDLE_VERSION ${SRB2_VERSION}
+
+			RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/macosx/Srb2mac.icns"
+		)
 	endif()
 
 	target_link_libraries(SRB2SDL2 PRIVATE
