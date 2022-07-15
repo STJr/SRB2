@@ -4250,6 +4250,8 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = lines[i].special - 66;
 			lines[i].args[2] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[2] *= -1;
 			lines[i].special = 66;
 			break;
 		case 76: //Make FOF bouncy
@@ -5554,13 +5556,13 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[1] = 0;
 			if (lines[i].flags & ML_NOSKEW)
 			{
-				lines[i].args[2] = lines[i].dx >> (FRACBITS + SCROLL_SHIFT);
-				lines[i].args[3] = lines[i].dy >> (FRACBITS + SCROLL_SHIFT);
+				lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> (FRACBITS - SCROLL_SHIFT);
+				lines[i].args[3] = sides[lines[i].sidenum[0]].rowoffset >> (FRACBITS - SCROLL_SHIFT);
 			}
 			else
 			{
-				lines[i].args[2] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
-				lines[i].args[3] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
+				lines[i].args[2] = lines[i].dx >> FRACBITS;
+				lines[i].args[3] = lines[i].dy >> FRACBITS;
 			}
 			lines[i].args[4] = lines[i].special - 502;
 			lines[i].special = 502;

@@ -1457,7 +1457,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 			if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER))
 				goopgravity = true;
 
-			gravfactor = P_GetSectorGravityFactor(mo->subsector->sector);
+			gravfactor = P_GetSectorGravityFactor(rover->master->frontsector);
 
 			if (gravfactor == FRACUNIT)
 				continue;
