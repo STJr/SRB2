@@ -1,5 +1,3 @@
-# SRB2 Core
-
 add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32)
 
 # Core sources
@@ -211,7 +209,7 @@ if(${SRB2_CONFIG_USEASM})
 
 	set(SRB2_USEASM ON)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DUSEASM)
-	set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -msse3 -mfpmath=sse")
+	target_compile_options(SRB2SDL2 PRIVATE "-msse3" "-mfpmath=sse")
 
 	target_sources(SRB2SDL2 PRIVATE ${SRB2_ASM_SOURCES}
 		${SRB2_NASM_SOURCES})
@@ -245,28 +243,15 @@ endif()
 
 # Compatibility flag with later versions of GCC
 # We should really fix our code to not need this
-if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -mno-ms-bitfields)
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+	target_compile_options(SRB2SDL2 PRIVATE "-mno-ms-bitfields" "-Wno-trigraphs")
 endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-	set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Wno-absolute-value)
+	target_compile_options(SRB2SDL2 PRIVATE "-Wno-absolute-value")
 endif()
 
-set(CMAKE_C_FLAGS ${CMAKE_C_FLAGS} -Wno-trigraphs)
-
 target_compile_definitions(SRB2SDL2 PRIVATE -DCMAKECONFIG)
-
-#add_library(SRB2Core STATIC
-#	${SRB2_CORE_SOURCES}
-#	${SRB2_CORE_HEADERS}
-#	${SRB2_CORE_RENDER_SOURCES}
-#	${SRB2_CORE_GAME_SOURCES}
-#	${SRB2_LUA_SOURCES}
-#	${SRB2_LUA_HEADERS}
-#	${SRB2_BLUA_SOURCES}
-#	${SRB2_BLUA_HEADERS}
-#)
 
 add_subdirectory(sdl)
 

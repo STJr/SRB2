@@ -123,8 +123,6 @@ if(${SDL2_FOUND})
 		)
 	endif()
 
-	#target_link_libraries(SRB2SDL2 PRIVATE SRB2Core)
-
 	if(${SRB2_USEASM})
 		if(${SRB2_CONFIG_YASM})
 			set(ASM_ASSEMBLER_TEMP ${CMAKE_ASM_YASM_COMPILER})
