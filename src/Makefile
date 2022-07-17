@@ -140,6 +140,7 @@ include Makefile.d/util.mk
 
 ifdef PREFIX
 CC:=$(PREFIX)-gcc
+CXX:=$(PREFIX)-g++
 endif
 
 OBJDUMP_OPTS?=--wide --source --line-numbers
@@ -209,8 +210,8 @@ sources+=\
 	$(call List,Sourcefile)\
 	$(call List,blua/Sourcefile)\
 
-depends:=$(basename $(filter %.c %.s,$(sources)))
-objects:=$(basename $(filter %.c %.s %.nas,$(sources)))
+depends:=$(basename $(filter %.c %.cpp %.s,$(sources)))
+objects:=$(basename $(filter %.c %.cpp %.s %.nas,$(sources)))
 
 depends:=$(depends:%=$(depdir)/%.d)
 
@@ -271,6 +272,11 @@ endif
 # debug_opts also get passed to windres
 opts+=$(debug_opts)
 
+cxxopts:=$(opts)
+cxxopts+=$(foreach v,$(passthru_opts),$(if $($(v)),-D$(v)))
+cxxopts+=$(CXXWFLAGS) $(CPPFLAGS) $(CXXFLAGS)
+cxxopts+=-std=c++17
+
 opts+=$(foreach v,$(passthru_opts),$(if $($(v)),-D$(v)))
 
 opts+=$(WFLAGS) $(CPPFLAGS) $(CFLAGS)
@@ -278,13 +284,16 @@ libs+=$(LDFLAGS)
 asflags:=$(ASFLAGS) -x assembler-with-cpp
 
 cc=$(CC)
+cxx=$(CXX)
 
 ifdef DISTCC
 cc=distcc $(CC)
+cxx=distcc $(CXX)
 endif
 
 ifdef CCACHE
 cc=ccache $(CC)
+cxx=ccache $(CXX)
 endif
 
 ifndef SILENT
@@ -299,7 +308,11 @@ SHELL ..... $(SHELL)
 
 CC ........ $(cc)
 
+CXX ....... $(cxx)
+
 CFLAGS .... $(opts)
+
+CXXFLAGS .. $(cxxopts)
 
 LDFLAGS ... $(libs)
 
@@ -316,6 +329,7 @@ endif
 
 LD:=$(CC)
 cc:=$(cc) $(opts)
+cxx:=$(cxx) $(cxxopts)
 nasm=$(NASM) $(NASMOPTS) -f $(nasm_format)
 ifdef UPX
 upx=$(UPX) $(UPX_OPTS)
@@ -379,7 +393,21 @@ endif
 	$(.)$(cc) -MM -MF $$@ -MT $(objdir)/$$*.o $(2) $$<
 endef
 
+# dependency recipe template (C++)
+# 1: source file suffix
+# 2: extra flags to gcc
+define _recipecxx =
+$(depdir)/%.d : %.$(1) | $$$$(@D)/
+ifndef WINDOWSHELL
+ifdef Echo_name
+	@printf '%-20.20s\r' $$<
+endif
+endif
+	$(.)$(cxx) -MM -MF $$@ -MT $(objdir)/$$*.o $(2) $$<
+endef
+
 $(eval $(call _recipe,c))
+$(eval $(call _recipecxx,cpp))
 $(eval $(call _recipe,s,$(asflags)))
 
 # compiling recipe template
@@ -393,6 +421,7 @@ $(objdir)/%.$(1) : %.$(2) | $$$$(@D)/
 endef
 
 $(eval $(call _recipe,o,c,$(cc) -c -o $$@ $$<))
+$(eval $(call _recipe,o,cpp,$(cxx) -c -o $$@ $$<))
 $(eval $(call _recipe,o,nas,$(nasm) -o $$@ $$<))
 $(eval $(call _recipe,o,s,$(cc) $(asflags) -c -o $$@ $$<))
 $(eval $(call _recipe,res,rc,$(windres) -i $$< -o $$@))
