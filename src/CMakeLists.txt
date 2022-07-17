@@ -36,6 +36,9 @@ set(SRB2_CONFIG_YASM OFF CACHE BOOL
 set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
 	"Use statically linked OpenGL. NOT RECOMMENDED.")
 
+set(SRB2_CONFIG_DEVELOP OFF CACHE BOOL
+	"Enable DEVELOP mode (disables MD5 checks, etc)")
+
 ### use internal libraries?
 if(${CMAKE_SYSTEM} MATCHES "Windows") ###set on Windows only
 	set(SRB2_CONFIG_USE_INTERNAL_LIBRARIES OFF CACHE BOOL
@@ -216,6 +219,10 @@ if(${SRB2_CONFIG_USEASM})
 else()
 	set(SRB2_USEASM OFF)
 	target_compile_definitions(SRB2SDL2 PRIVATE -DNONX86 -DNORUSEASM)
+endif()
+
+if(${SRB2_CONFIG_DEVELOP})
+	target_compile_definitions(SRB2SDL2 PRIVATE -DDEVELOP)
 endif()
 
 # Targets
