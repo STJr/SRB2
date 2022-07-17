@@ -1,5 +1,3 @@
-# SRB2 Core
-
 add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32)
 
 # Core sources
@@ -254,17 +252,6 @@ if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 target_compile_definitions(SRB2SDL2 PRIVATE -DCMAKECONFIG)
-
-#add_library(SRB2Core STATIC
-#	${SRB2_CORE_SOURCES}
-#	${SRB2_CORE_HEADERS}
-#	${SRB2_CORE_RENDER_SOURCES}
-#	${SRB2_CORE_GAME_SOURCES}
-#	${SRB2_LUA_SOURCES}
-#	${SRB2_LUA_HEADERS}
-#	${SRB2_BLUA_SOURCES}
-#	${SRB2_BLUA_HEADERS}
-#)
 
 add_subdirectory(sdl)
 
