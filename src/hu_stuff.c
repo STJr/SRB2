@@ -2092,7 +2092,7 @@ void HU_Erase(void)
 		con_hudupdate = false; // if it was set..
 	}
 #ifdef HWRENDER
-	else if (rendermode != render_none)
+	else if (rendermode == render_opengl)
 	{
 		// refresh just what is needed from the view borders
 		HWR_DrawViewBorder(secondframelines);

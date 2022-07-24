@@ -432,14 +432,18 @@ void F_WipeStartScreen(void)
 {
 #ifndef NOWIPE
 #ifdef HWRENDER
-	if(rendermode != render_soft)
+	if (rendermode == render_opengl)
 	{
 		HWR_StartScreenWipe();
 		return;
 	}
+	else
 #endif
-	wipe_scr_start = screens[3];
-	I_ReadScreen(wipe_scr_start);
+	if (rendermode == render_soft)
+	{
+		wipe_scr_start = screens[3];
+		I_ReadScreen(wipe_scr_start);
+	}
 #endif
 }
 
@@ -449,15 +453,19 @@ void F_WipeEndScreen(void)
 {
 #ifndef NOWIPE
 #ifdef HWRENDER
-	if(rendermode != render_soft)
+	if (rendermode == render_opengl)
 	{
 		HWR_EndScreenWipe();
 		return;
 	}
+	else
 #endif
-	wipe_scr_end = screens[4];
-	I_ReadScreen(wipe_scr_end);
-	V_DrawBlock(0, 0, 0, vid.width, vid.height, wipe_scr_start);
+	if (rendermode == render_soft)
+	{
+		wipe_scr_end = screens[4];
+		I_ReadScreen(wipe_scr_end);
+		V_DrawBlock(0, 0, 0, vid.width, vid.height, wipe_scr_start);
+	}
 #endif
 }
 
@@ -569,6 +577,7 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			}
 			else
 #endif
+			if (rendermode == render_soft)
 			{
 				UINT8 *colormap = fadecolormap;
 				if (wipestyleflags & WSF_TOWHITE)

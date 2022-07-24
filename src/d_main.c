@@ -481,34 +481,44 @@ static void D_Display(void)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
 					objectsdrawn = 0;
+
+					switch (rendermode)
+					{
+						case render_soft:
+							R_RenderPlayerView(&players[displayplayer]);
+							break;
 	#ifdef HWRENDER
-					if (rendermode != render_soft)
-						HWR_RenderPlayerView(0, &players[displayplayer]);
-					else
+						case render_opengl:
+							HWR_RenderPlayerView(0, &players[displayplayer]);
 	#endif
-					if (rendermode != render_none)
-						R_RenderPlayerView(&players[displayplayer]);
+						default:
+							break;
+					}
 				}
 
 				// render the second screen
 				if (splitscreen && players[secondarydisplayplayer].mo)
 				{
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
-						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
-					else
-	#endif
-					if (rendermode != render_none)
+					switch (rendermode)
 					{
-						viewwindowy = vid.height / 2;
-						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
+						case render_soft:
+							viewwindowy = vid.height / 2;
+							M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
 
-						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+							topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
 
-						R_RenderPlayerView(&players[secondarydisplayplayer]);
+							R_RenderPlayerView(&players[secondarydisplayplayer]);
 
-						viewwindowy = 0;
-						M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+							viewwindowy = 0;
+							M_Memcpy(ylookup, ylookup1, viewheight*sizeof (ylookup[0]));
+							break;
+	#ifdef HWRENDER
+						case render_opengl:
+							HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
+							break;
+	#endif
+						default:
+							break;
 					}
 				}
 

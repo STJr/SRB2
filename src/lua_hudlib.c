@@ -1118,6 +1118,7 @@ static int libd_renderer(lua_State *L)
 	switch (rendermode) {
 		case render_opengl: lua_pushliteral(L, "opengl");   break; // OpenGL renderer
 		case render_soft:   lua_pushliteral(L, "software"); break; // Software renderer
+		case render_hwr2:   lua_pushliteral(L, "hardware");     break; // Hardware Renderer 2
 		default:            lua_pushliteral(L, "none");     break; // render_none (for dedicated), in case there's any reason this should be run
 	}
 	return 1;

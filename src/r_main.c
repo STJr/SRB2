@@ -994,7 +994,7 @@ void R_ExecuteSetViewSize(void)
 
 	// continue to do the software setviewsize as long as we use the reference software view
 #ifdef HWRENDER
-	if (rendermode != render_soft)
+	if (rendermode == render_opengl)
 		HWR_SetViewSize();
 #endif
 

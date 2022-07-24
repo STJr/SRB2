@@ -1134,11 +1134,23 @@ void AM_Drawer(void)
 	if (!automapactive)
 		return;
 
-	AM_drawFline = AM_drawFline_soft;
+	switch (rendermode)
+	{
+		case render_soft:
+			AM_drawFline = AM_drawFline_soft;
+			break;
 #ifdef HWRENDER
-	if (rendermode == render_opengl)
-		AM_drawFline = HWR_drawAMline;
+		case render_opengl:
+			AM_drawFline = HWR_drawAMline;
+			break;
 #endif
+		case render_hwr2:
+			// NYI
+			return;
+		default:
+			I_Error("AM_Drawer: unsupported rendermode");
+			return;
+	}
 
 	AM_clearFB(BACKGROUND);
 	if (draw_grid) AM_drawGrid(GRIDCOLORS);

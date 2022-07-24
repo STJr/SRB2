@@ -74,7 +74,10 @@ CV_PossibleValue_t cv_renderer_t[] = {
 #ifdef HWRENDER
 	{2, "OpenGL"},
 #endif
-	{0, NULL}
+#ifdef DEVELOP
+	{3, "Hardware"},
+#endif
+	{255, NULL}
 };
 
 consvar_t cv_renderer = CVAR_INIT ("renderer", "Software", CV_SAVE|CV_NOLUA|CV_CALL, cv_renderer_t, SCR_ChangeRenderer);

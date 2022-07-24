@@ -1240,7 +1240,7 @@ void R_PrecacheLevel(void)
 		return;
 
 	// do not flush the memory, Z_Malloc twice with same user will cause error in Z_CheckHeap()
-	if (rendermode != render_soft)
+	if (rendermode == render_opengl)
 		return;
 
 	// Precache flats.

@@ -28,8 +28,11 @@ typedef enum
 	/// OpenGL
 	render_opengl = 2,
 
+	/// Hardware Render 2
+	render_hwr2 = 3,
+
 	/// Dedicated
-	render_none = 3  // for dedicated server
+	render_none = 255  // for dedicated server
 } rendermode_t;
 
 /**	\brief current render mode
