@@ -164,7 +164,11 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 		#define true    TRUE
 		#define boolean BOOL
 	#else
+	#ifndef __cplusplus
 		typedef enum {false, true} boolean;
+	#else
+		typedef int32_t boolean;
+	#endif
 	#endif
 #endif // __BYTEBOOL__
 

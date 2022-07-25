@@ -5,3 +5,4 @@ i_video.c
 dosstr.c
 endtxt.c
 hwsym_sdl.c
+i_video_hwr2.cpp

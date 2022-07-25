@@ -96,3 +96,5 @@ lua_polyobjlib.c
 lua_blockmaplib.c
 lua_hudlib.c
 lua_inputlib.c
+
+hwr2/gles2/renderer.cpp

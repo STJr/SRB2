@@ -16,6 +16,8 @@
 
 #include "doomtype.h"
 
+#include "hwr2/renderer.h"
+
 #ifdef __GNUG__
 #pragma interface
 #endif
@@ -153,5 +155,10 @@ void I_BeginRead(void);
 /**	\brief Stop disk icon
 */
 void I_EndRead(void);
+
+/** \brief Get the current Hardware Renderer instance handle.
+ * \return NULL if HWR2 is not active or failed to initialize.
+ */
+hwr2renderer_h I_GetHwr2Renderer(void);
 
 #endif
