@@ -836,13 +836,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 			// Don't draw planes that shouldn't be drawn.
 			for (rover = pl->ffloor->target->ffloors; rover; rover = rover->next)
 			{
-				if ((pl->ffloor->flags & FF_CUTEXTRA) && (rover->flags & FF_EXTRA))
+				if ((pl->ffloor->fofflags & FOF_CUTEXTRA) && (rover->fofflags & FOF_EXTRA))
 				{
-					if (pl->ffloor->flags & FF_EXTRA)
+					if (pl->ffloor->fofflags & FOF_EXTRA)
 					{
 						// The plane is from an extra 3D floor... Check the flags so
 						// there are no undesired cuts.
-						if (((pl->ffloor->flags & (FF_FOG|FF_SWIMMABLE)) == (rover->flags & (FF_FOG|FF_SWIMMABLE)))
+						if (((pl->ffloor->fofflags & (FOF_FOG|FOF_SWIMMABLE)) == (rover->fofflags & (FOF_FOG|FOF_SWIMMABLE)))
 							&& pl->height < *rover->topheight
 							&& pl->height > *rover->bottomheight)
 							return;
@@ -850,9 +850,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 				}
 			}
 
-			if (pl->ffloor->flags & FF_TRANSLUCENT)
+			if (pl->ffloor->fofflags & FOF_TRANSLUCENT)
 			{
-				spanfunctype = (pl->ffloor->flags & FF_SPLAT) ? SPANDRAWFUNC_TRANSSPLAT : SPANDRAWFUNC_TRANS;
+				spanfunctype = (pl->ffloor->fofflags & FOF_SPLAT) ? SPANDRAWFUNC_TRANSSPLAT : SPANDRAWFUNC_TRANS;
 
 				// Hacked up support for alpha value in software mode Tails 09-24-2002
 				// ...unhacked by toaster 04-01-2021, re-hacked a little by sphere 19-11-2021
@@ -871,14 +871,14 @@ void R_DrawSinglePlane(visplane_t *pl)
 				else
 					light = LIGHTLEVELS-1;
 			}
-			else if (pl->ffloor->flags & FF_FOG)
+			else if (pl->ffloor->fofflags & FOF_FOG)
 			{
 				spanfunctype = SPANDRAWFUNC_FOG;
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			}
 			else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
-			if (pl->ffloor->flags & FF_RIPPLE)
+			if (pl->ffloor->fofflags & FOF_RIPPLE)
 			{
 				INT32 top, bottom;
 
