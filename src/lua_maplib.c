@@ -1888,7 +1888,7 @@ static INT32 P_GetOldFOFFlags(ffloor_t *fflr)
 		result |= FF_OLD_NORETURN;
 	if (fflr->fofflags & FOF_CRUMBLE)
 		result |= FF_OLD_CRUMBLE;
-	if (fflr->bustflags & TMFB_ONLYBOTTOM)
+	if (fflr->bustflags & FB_ONLYBOTTOM)
 		result |= FF_OLD_SHATTERBOTTOM;
 	if (fflr->fofflags & FOF_GOOWATER)
 		result |= FF_OLD_GOOWATER;
@@ -2094,9 +2094,9 @@ static void P_SetOldFOFFlags(ffloor_t *fflr, oldffloortype_e oldflags)
 		fflr->busttype = BT_REGULAR;
 
 	if (oldflags & FF_OLD_SHATTERBOTTOM)
-		fflr->bustflags |= TMFB_ONLYBOTTOM;
+		fflr->bustflags |= FB_ONLYBOTTOM;
 	else
-		fflr->bustflags &= ~TMFB_ONLYBOTTOM;
+		fflr->bustflags &= ~FB_ONLYBOTTOM;
 }
 
 static int ffloor_set(lua_State *L)
