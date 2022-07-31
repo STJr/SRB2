@@ -2396,6 +2396,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					default:
 						Tag_SectorFSet(secnum, newtag);
 						break;
+					case TMT_TRIGGERTAG:
+						sectors[secnum].triggertag = newtag;
+						break;
 				}
 			}
 			break;
@@ -2417,6 +2420,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				case TMT_REPLACEFIRST:
 				default:
 					Tag_SectorFSet(secnum, newtag);
+					break;
+				case TMT_TRIGGERTAG:
+					sectors[secnum].triggertag = newtag;
 					break;
 			}
 			break;

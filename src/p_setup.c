@@ -4323,6 +4323,8 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = lines[i].special - 66;
 			lines[i].args[2] = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+			if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[2] *= -1;
 			lines[i].special = 66;
 			break;
 		case 76: //Make FOF bouncy
