@@ -240,6 +240,7 @@ static const char *const ffloor_opt[] = {
 	"t_slope",
 	"b_slope",
 	"sector", // secnum pushed as control sector userdata
+	"fofflags",
 	"flags",
 	"master", // control linedef
 	"target", // target sector
