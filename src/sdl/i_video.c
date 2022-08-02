@@ -84,6 +84,8 @@
 #include "hwsym_sdl.h"
 #include "ogl_sdl.h"
 #endif
+#include "i_video_hwr2.h"
+#include "../hwr2/renderer.h"
 
 // maximum number of windowed modes (see windowedModes[][])
 #define MAXWINMODES (18)
@@ -147,6 +149,7 @@ SDL_Window   *window;
 SDL_Renderer *renderer;
 static SDL_Texture  *texture;
 static SDL_bool      havefocus = SDL_TRUE;
+static hwr2renderer_h sdl_current_hwr2renderer;
 static const char *fallback_resolution_name = "Fallback";
 
 // windowed video modes from which to choose from.
@@ -233,6 +236,14 @@ static void SDLSetMode(INT32 width, INT32 height, SDL_bool fullscreen, SDL_bool 
 		OglSdlSurface(vid.width, vid.height);
 	}
 #endif
+	if (rendermode == render_hwr2)
+	{
+		if (sdl_current_hwr2renderer == NULL)
+		{
+			I_SDL_DestroyGlesHwr2Renderer(sdl_current_hwr2renderer);
+		}
+		sdl_current_hwr2renderer = I_SDL_CreateGlesHwr2Renderer(window);
+	}
 
 	if (rendermode == render_soft)
 	{
@@ -1168,6 +1179,10 @@ void I_UpdateNoBlit(void)
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
 		}
+		else if (rendermode == render_hwr2)
+		{
+			I_SDL_Hwr2Present(sdl_current_hwr2renderer);
+		}
 	}
 	exposevideo = SDL_FALSE;
 }
@@ -1257,6 +1272,10 @@ void I_FinishUpdate(void)
 		OglSdlFinishUpdate(cv_vidwait.value);
 	}
 #endif
+	else if (rendermode == render_hwr2)
+	{
+		I_SDL_Hwr2Present(sdl_current_hwr2renderer);
+	}
 	exposevideo = SDL_FALSE;
 }
 
@@ -1955,4 +1974,9 @@ void I_ShutdownGraphics(void)
 void I_GetCursorPosition(INT32 *x, INT32 *y)
 {
 	SDL_GetMouseState(x, y);
+}
+
+hwr2renderer_h I_GetHwr2Renderer()
+{
+	return sdl_current_hwr2renderer;
 }
