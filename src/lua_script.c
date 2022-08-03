@@ -441,12 +441,13 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 		const char *str = luaL_checklstring(L, 2, &strlength);
 
 		if (strlength > 6)
-			return luaL_error(L, "string length out of range (maximum 6 characters)");
+			LUA_UsageWarning(L, "mapmusname: Music name too long - truncated to six characters.");
 
 		if (strlen(str) < strlength)
 			return luaL_error(L, "string must not contain embedded zeros!");
 
-		strncpy(mapmusname, str, strlength);
+
+		strlcpy(mapmusname, str, sizeof mapmusname);
 	}
 	else if (fastcmp(word, "mapmusflags"))
 		mapmusflags = (UINT16)luaL_checkinteger(L, 2);
