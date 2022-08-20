@@ -91,6 +91,7 @@ typedef struct camera_s
 	// Camera demobjerization
 	// Info for drawing: position.
 	fixed_t x, y, z;
+	boolean reset;
 
 	//More drawing info: to determine current sprite.
 	angle_t angle; // orientation

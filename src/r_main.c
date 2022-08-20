@@ -1346,12 +1346,31 @@ void R_SkyboxFrame(player_t *player)
 
 boolean R_ViewpointHasChasecam(player_t *player)
 {
+	camera_t *thiscam;
 	boolean chasecam = false;
 
 	if (splitscreen && player == &players[secondarydisplayplayer] && player != &players[consoleplayer])
+	{
+		thiscam = &camera2;
 		chasecam = (cv_chasecam2.value != 0);
+		R_SetViewContext(VIEWCONTEXT_PLAYER2);
+		if (thiscam->reset)
+		{
+			R_ResetViewInterpolation(2);
+			thiscam->reset = false;
+		}
+	}
 	else
+	{
+		thiscam = &camera;
 		chasecam = (cv_chasecam.value != 0);
+		R_SetViewContext(VIEWCONTEXT_PLAYER1);
+		if (thiscam->reset)
+		{
+			R_ResetViewInterpolation(1);
+			thiscam->reset = false;
+		}
+	}
 
 	if (player->climbing || (player->powers[pw_carry] == CR_NIGHTSMODE) || player->playerstate == PST_DEAD || gamestate == GS_TITLESCREEN || tutorialmode)
 		chasecam = true; // force chasecam on

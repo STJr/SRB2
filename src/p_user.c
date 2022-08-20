@@ -9656,6 +9656,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 	thiscam->x = x;
 	thiscam->y = y;
 	thiscam->z = z;
+	thiscam->reset = true;
 
 	if ((thiscam == &camera && G_ControlStyle(1) == CS_SIMPLE)
 	|| (thiscam == &camera2 && G_ControlStyle(2) == CS_SIMPLE))
