@@ -895,7 +895,11 @@ void D_SRB2Loop(void)
 		if (!singletics)
 		{
 			INT64 elapsed = (INT64)(finishprecise - enterprecise);
-			if (elapsed > 0 && (INT64)capbudget > elapsed)
+
+			// in the case of "match refresh rate" + vsync, don't sleep at all
+			const boolean vsync_with_match_refresh = cv_vidwait.value && cv_fpscap.value == 0;
+
+			if (elapsed > 0 && (INT64)capbudget > elapsed && !vsync_with_match_refresh)
 			{
 				I_SleepDuration(capbudget - (finishprecise - enterprecise));
 			}
