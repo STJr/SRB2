@@ -499,6 +499,8 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("mod_details", Command_ModDetails_f);
 #endif
 	COM_AddCommand("quit", Command_Quit_f);
+	COM_AddCommand("stop", Command_Quit_f);
+	COM_AddCommand("exit", Command_Quit_f);
 
 	COM_AddCommand("saveconfig", Command_SaveConfig_f);
 	COM_AddCommand("loadconfig", Command_LoadConfig_f);
