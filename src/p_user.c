@@ -5491,7 +5491,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			{
 				fixed_t potentialmomz;
 				if (player->charability == CA_SLOWFALL)
-					potentialmomz = -gravity*4;
+					potentialmomz = FixedMul(gravity, -4*player->mo->scale);
 				else
 					potentialmomz = ((player->speed < 10*player->mo->scale)
 					? (player->speed - 10*player->mo->scale)/5
