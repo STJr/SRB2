@@ -87,39 +87,40 @@ if(${SDL2_FOUND})
 	endif()
 
 	if(${CMAKE_SYSTEM} MATCHES Darwin)
-		find_library(CORE_LIB CoreFoundation)
+		find_library(CORE_FOUNDATION_LIBRARY "CoreFoundation")
 		target_link_libraries(SRB2SDL2 PRIVATE
-			${CORE_LIB}
-			SDL2
-			SDL2_mixer
-			${GME_LIBRARIES}
-			${OPENMPT_LIBRARIES}
-			${MIXERX_LIBRARIES}
-			${PNG_LIBRARIES}
-			${ZLIB_LIBRARIES}
-			${OPENGL_LIBRARIES}
-			${CURL_LIBRARIES}
+			${CORE_FOUNDATION_LIBRARY}
 		)
 		set_target_properties(SRB2SDL2 PROPERTIES OUTPUT_NAME "${CPACK_PACKAGE_DESCRIPTION_SUMMARY}")
-	else()
-		target_link_libraries(SRB2SDL2 PRIVATE
-			${SDL2_LIBRARIES}
-			${SDL2_MIXER_LIBRARIES}
-			${GME_LIBRARIES}
-			${OPENMPT_LIBRARIES}
-			${MIXERX_LIBRARIES}
-			${PNG_LIBRARIES}
-			${ZLIB_LIBRARIES}
-			${OPENGL_LIBRARIES}
-			${CURL_LIBRARIES}
-		)
 
-		if(${CMAKE_SYSTEM} MATCHES Linux)
-			target_link_libraries(SRB2SDL2 PRIVATE
-				m
-				rt
-			)
-		endif()
+		# Configure the app bundle icon and plist properties
+		target_sources(SRB2SDL2 PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/macosx/Srb2mac.icns")
+		set_target_properties(SRB2SDL2 PROPERTIES
+			MACOSX_BUNDLE_ICON_FILE "Srb2mac"
+			MACOSX_BUNDLE_BUNDLE_NAME "Sonic Robo Blast 2"
+			MACOSX_BUNDLE_BUNDLE_VERSION ${SRB2_VERSION}
+
+			RESOURCE "${CMAKE_CURRENT_SOURCE_DIR}/macosx/Srb2mac.icns"
+		)
+	endif()
+
+	target_link_libraries(SRB2SDL2 PRIVATE
+		${SDL2_LIBRARIES}
+		${SDL2_MIXER_LIBRARIES}
+		${GME_LIBRARIES}
+		${OPENMPT_LIBRARIES}
+		${MIXERX_LIBRARIES}
+		${PNG_LIBRARIES}
+		${ZLIB_LIBRARIES}
+		${OPENGL_LIBRARIES}
+		${CURL_LIBRARIES}
+	)
+
+	if(${CMAKE_SYSTEM} MATCHES Linux)
+		target_link_libraries(SRB2SDL2 PRIVATE
+			m
+			rt
+		)
 	endif()
 
 	#target_link_libraries(SRB2SDL2 PRIVATE SRB2Core)
@@ -135,8 +136,6 @@ if(${SDL2_FOUND})
 			set_source_files_properties(${SRB2_NASM_SOURCES} LANGUAGE ASM_NASM)
 		endif()
 	endif()
-
-	set_target_properties(SRB2SDL2 PROPERTIES VERSION ${SRB2_VERSION})
 
 	if(${CMAKE_SYSTEM} MATCHES Windows)
 		target_link_libraries(SRB2SDL2 PRIVATE
@@ -188,6 +187,7 @@ if(${SDL2_FOUND})
 		install(TARGETS SRB2SDL2
 			BUNDLE DESTINATION .
 		)
+		set_property(TARGET SRB2SDL2 PROPERTY INSTALL_RPATH_USE_LINK_PATH ON)
 	else()
 		install(TARGETS SRB2SDL2 SRB2SDL2
 			RUNTIME DESTINATION .

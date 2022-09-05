@@ -1146,7 +1146,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				// PEGGING
 				if (gl_linedef->flags & ML_DONTPEGTOP)
 					texturevpegtop = 0;
-				else if (gl_linedef->flags & ML_EFFECT1)
+				else if (gl_linedef->flags & ML_SKEWTD)
 					texturevpegtop = worldhigh + textureheight[gl_sidedef->toptexture] - worldtop;
 				else
 					texturevpegtop = gl_backsector->ceilingheight + textureheight[gl_sidedef->toptexture] - gl_frontsector->ceilingheight;
@@ -1162,7 +1162,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
 
 				// Adjust t value for sloped walls
-				if (!(gl_linedef->flags & ML_EFFECT1))
+				if (!(gl_linedef->flags & ML_SKEWTD))
 				{
 					// Unskewed
 					wallVerts[3].t -= (worldtop - gl_frontsector->ceilingheight) * grTex->scaleY;
@@ -1212,7 +1212,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				// PEGGING
 				if (!(gl_linedef->flags & ML_DONTPEGBOTTOM))
 					texturevpegbottom = 0;
-				else if (gl_linedef->flags & ML_EFFECT1)
+				else if (gl_linedef->flags & ML_SKEWTD)
 					texturevpegbottom = worldbottom - worldlow;
 				else
 					texturevpegbottom = gl_frontsector->floorheight - gl_backsector->floorheight;
@@ -1228,7 +1228,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
 
 				// Adjust t value for sloped walls
-				if (!(gl_linedef->flags & ML_EFFECT1))
+				if (!(gl_linedef->flags & ML_SKEWTD))
 				{
 					// Unskewed
 					wallVerts[0].t -= (worldbottom - gl_frontsector->floorheight) * grTex->scaleY;
@@ -1286,7 +1286,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 			if (gl_sidedef->repeatcnt)
 				repeats = 1 + gl_sidedef->repeatcnt;
-			else if (gl_linedef->flags & ML_EFFECT5)
+			else if (gl_linedef->flags & ML_WRAPMIDTEX)
 			{
 				fixed_t high, low;
 
@@ -1328,9 +1328,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				popenbottom = max(worldbottom, worldlow);
 			}
 
-			if (gl_linedef->flags & ML_EFFECT2)
+			if (gl_linedef->flags & ML_NOSKEW)
 			{
-				if (!!(gl_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gl_linedef->flags & ML_EFFECT3))
+				if (gl_linedef->flags & ML_MIDPEG)
 				{
 					polybottom = max(front->floorheight, back->floorheight) + gl_sidedef->rowoffset;
 					polytop = polybottom + textureheight[gl_midtexture]*repeats;
@@ -1341,7 +1341,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					polybottom = polytop - textureheight[gl_midtexture]*repeats;
 				}
 			}
-			else if (!!(gl_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gl_linedef->flags & ML_EFFECT3))
+			else if (gl_linedef->flags & ML_MIDPEG)
 			{
 				polybottom = popenbottom + gl_sidedef->rowoffset;
 				polytop = polybottom + textureheight[gl_midtexture]*repeats;
@@ -1371,7 +1371,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 			{
 				// PEGGING
-				if (!!(gl_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gl_linedef->flags & ML_EFFECT3))
+				if (gl_linedef->flags & ML_MIDPEG)
 					texturevpeg = textureheight[gl_sidedef->midtexture]*repeats - h + polybottom;
 				else
 					texturevpeg = polytop - h;
@@ -1394,9 +1394,9 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			{
 				fixed_t midtextureslant;
 
-				if (gl_linedef->flags & ML_EFFECT2)
+				if (gl_linedef->flags & ML_NOSKEW)
 					midtextureslant = 0;
-				else if (!!(gl_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gl_linedef->flags & ML_EFFECT3))
+				else if (gl_linedef->flags & ML_MIDPEG)
 					midtextureslant = worldlow < worldbottom
 							  ? worldbottomslope-worldbottom
 							  : worldlowslope-worldlow;
@@ -1421,7 +1421,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 				{
 					// PEGGING
-					if (!!(gl_linedef->flags & ML_DONTPEGBOTTOM) ^ !!(gl_linedef->flags & ML_EFFECT3))
+					if (gl_linedef->flags & ML_MIDPEG)
 						texturevpeg = textureheight[gl_sidedef->midtexture]*repeats - h + polybottom;
 					else
 						texturevpeg = polytop - h;
@@ -1435,44 +1435,17 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 
 			// set alpha for transparent walls
 			// ooops ! this do not work at all because render order we should render it in backtofront order
-			switch (gl_linedef->special)
+			if (gl_linedef->blendmode && gl_linedef->blendmode != AST_FOG)
 			{
-				//  Translucent
-				case 102:
-				case 121:
-				case 123:
-				case 124:
-				case 125:
-				case 141:
-				case 142:
-				case 144:
-				case 145:
-				case 174:
-				case 175:
-				case 192:
-				case 195:
-				case 221:
-				case 253:
-				case 256:
-					if (gl_linedef->blendmode && gl_linedef->blendmode != AST_FOG)
-						blendmode = HWR_SurfaceBlend(gl_linedef->blendmode, R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
-					else
-						blendmode = PF_Translucent;
-					break;
-				default:
-					if (gl_linedef->blendmode && gl_linedef->blendmode != AST_FOG)
-					{
-						if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
-							blendmode = HWR_SurfaceBlend(gl_linedef->blendmode, R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
-						else
-							blendmode = HWR_GetBlendModeFlag(gl_linedef->blendmode);
-					}
-					else if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
-						blendmode = HWR_TranstableToAlpha(R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
-					else
-						blendmode = PF_Masked;
-					break;
+				if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
+					blendmode = HWR_SurfaceBlend(gl_linedef->blendmode, R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
+				else
+					blendmode = HWR_GetBlendModeFlag(gl_linedef->blendmode);
 			}
+			else if (gl_linedef->alpha >= 0 && gl_linedef->alpha < FRACUNIT)
+				blendmode = HWR_TranstableToAlpha(R_GetLinedefTransTable(gl_linedef->alpha), &Surf);
+			else
+				blendmode = PF_Masked;
 
 			if (gl_curline->polyseg && gl_curline->polyseg->translucency > 0)
 			{
@@ -1538,7 +1511,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 			{
 				fixed_t     texturevpeg;
 				// PEGGING
-				if ((gl_linedef->flags & (ML_DONTPEGBOTTOM|ML_EFFECT2)) == (ML_DONTPEGBOTTOM|ML_EFFECT2))
+				if ((gl_linedef->flags & (ML_DONTPEGBOTTOM|ML_NOSKEW)) == (ML_DONTPEGBOTTOM|ML_NOSKEW))
 					texturevpeg = gl_frontsector->floorheight + textureheight[gl_sidedef->midtexture] - gl_frontsector->ceilingheight + gl_sidedef->rowoffset;
 				else if (gl_linedef->flags & ML_DONTPEGBOTTOM)
 					texturevpeg = worldbottom + textureheight[gl_sidedef->midtexture] - worldtop + gl_sidedef->rowoffset;
@@ -1554,7 +1527,7 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 				wallVerts[2].s = wallVerts[1].s = cliphigh * grTex->scaleX;
 
 				// Texture correction for slopes
-				if (gl_linedef->flags & ML_EFFECT2) {
+				if (gl_linedef->flags & ML_NOSKEW) {
 					wallVerts[3].t += (gl_frontsector->ceilingheight - worldtop) * grTex->scaleY;
 					wallVerts[2].t += (gl_frontsector->ceilingheight - worldtopslope) * grTex->scaleY;
 					wallVerts[0].t += (gl_frontsector->floorheight - worldbottom) * grTex->scaleY;
@@ -1703,13 +1676,13 @@ static void HWR_ProcessSeg(void) // Sort of like GLWall::Process in GZDoom
 					{
 						texturevpeg = sides[newline->sidenum[0]].rowoffset;
 						attachtobottom = !!(newline->flags & ML_DONTPEGBOTTOM);
-						slopeskew = !!(newline->flags & ML_DONTPEGTOP);
+						slopeskew = !!(newline->flags & ML_SKEWTD);
 					}
 					else
 					{
 						texturevpeg = sides[rover->master->sidenum[0]].rowoffset;
 						attachtobottom = !!(gl_linedef->flags & ML_DONTPEGBOTTOM);
-						slopeskew = !!(rover->master->flags & ML_DONTPEGTOP);
+						slopeskew = !!(rover->master->flags & ML_SKEWTD);
 					}
 
 					grTex = HWR_GetTexture(texnum);
@@ -3062,13 +3035,13 @@ static void HWR_Subsector(size_t num)
 		}
 
 		light = R_GetPlaneLight(gl_frontsector, locFloorHeight, false);
-		if (gl_frontsector->floorlightsec == -1)
-			floorlightlevel = *gl_frontsector->lightlist[light].lightlevel;
+		if (gl_frontsector->floorlightsec == -1 && !gl_frontsector->floorlightabsolute)
+			floorlightlevel = max(0, min(255, *gl_frontsector->lightlist[light].lightlevel + gl_frontsector->floorlightlevel));
 		floorcolormap = *gl_frontsector->lightlist[light].extra_colormap;
 
 		light = R_GetPlaneLight(gl_frontsector, locCeilingHeight, false);
-		if (gl_frontsector->ceilinglightsec == -1)
-			ceilinglightlevel = *gl_frontsector->lightlist[light].lightlevel;
+		if (gl_frontsector->ceilinglightsec == -1 && !gl_frontsector->ceilinglightabsolute)
+			ceilinglightlevel = max(0, min(255, *gl_frontsector->lightlist[light].lightlevel + gl_frontsector->ceilinglightlevel));
 		ceilingcolormap = *gl_frontsector->lightlist[light].extra_colormap;
 	}
 
@@ -3594,7 +3567,7 @@ static boolean HWR_DoCulling(line_t *cullheight, line_t *viewcullheight, float v
 		return false;
 
 	cullplane = FIXED_TO_FLOAT(cullheight->frontsector->floorheight);
-	if (cullheight->flags & ML_NOCLIMB) // Group culling
+	if (cullheight->args[1]) // Group culling
 	{
 		if (!viewcullheight)
 			return false;

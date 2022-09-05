@@ -903,7 +903,7 @@ state_t states[NUMSTATES] =
 	{SPR_TRET, FF_FULLBRIGHT|2, 7, {A_Pain}, 0, 0, S_TURRETSHOCK7},       // S_TURRETSHOCK6
 	{SPR_TRET, FF_FULLBRIGHT|3, 7, {NULL}, 0, 0, S_TURRETSHOCK8},         // S_TURRETSHOCK7
 	{SPR_TRET, FF_FULLBRIGHT|4, 7, {NULL}, 0, 0, S_TURRETSHOCK9},         // S_TURRETSHOCK8
-	{SPR_TRET, FF_FULLBRIGHT|4, 7, {A_LinedefExecute}, LE_TURRET, 0, S_XPLD1}, // S_TURRETSHOCK9
+	{SPR_TRET, FF_FULLBRIGHT|4, 7, {A_LinedefExecuteFromArg}, 0, 0, S_XPLD1}, // S_TURRETSHOCK9
 
 	{SPR_TURR, 0, 1, {A_Look}, 1, 0, S_TURRETPOPDOWN8},          // S_TURRETLOOK
 	{SPR_TURR, 0, 0, {A_FaceTarget}, 0, 0, S_TURRETPOPUP1},  // S_TURRETSEE
@@ -1456,7 +1456,7 @@ state_t states[NUMSTATES] =
 	{SPR_FANG, 18, 16, {A_FaceTarget}, 3, 0, S_FANG_PINCHLOBSHOT1}, // S_FANG_PINCHLOBSHOT0
 	{SPR_FANG, 19,  2, {A_FaceTarget}, 3, 0, S_FANG_PINCHLOBSHOT2}, // S_FANG_PINCHLOBSHOT1
 	{SPR_FANG, 20, 30, {A_Boss5MakeItRain}, MT_FBOMB, -16, S_FANG_PINCHLOBSHOT3}, // S_FANG_PINCHLOBSHOT2
-	{SPR_FANG, 20, 18, {A_LinedefExecute}, LE_BOSS4DROP, 0, S_FANG_PINCHLOBSHOT4}, // S_FANG_PINCHLOBSHOT3
+	{SPR_FANG, 20, 18, {A_LinedefExecuteFromArg}, 4, 0, S_FANG_PINCHLOBSHOT4}, // S_FANG_PINCHLOBSHOT3
 	{SPR_FANG,  0,  0, {A_Boss5Calm}, 0, 0, S_FANG_PATHINGSTART1}, // S_FANG_PINCHLOBSHOT4
 
 	{SPR_FANG, 21, 0, {A_DoNPCPain},                    0, 0, S_FANG_DIE2}, // S_FANG_DIE1
@@ -1588,7 +1588,7 @@ state_t states[NUMSTATES] =
 
 	{SPR_BRAK, 21, 3*TICRATE, {NULL}, 0, 0, S_BLACKEGG_DESTROYPLAT2}, // S_BLACKEGG_DESTROYPLAT1
 	{SPR_BRAK, 21, 1, {A_PlaySound}, sfx_s3k54, 0, S_BLACKEGG_DESTROYPLAT3}, // S_BLACKEGG_DESTROYPLAT2
-	{SPR_BRAK, 21, 14, {A_LinedefExecute}, LE_BRAKPLATFORM, 0, S_BLACKEGG_STND}, // S_BLACKEGG_DESTROYPLAT3
+	{SPR_BRAK, 21, 14, {A_LinedefExecuteFromArg}, 5, 0, S_BLACKEGG_STND}, // S_BLACKEGG_DESTROYPLAT3
 
 	{SPR_NULL, 0, 1, {A_CapeChase}, (160 - 20) << 16, 0, S_BLACKEGG_HELPER}, // S_BLACKEGG_HELPER
 
@@ -1622,7 +1622,7 @@ state_t states[NUMSTATES] =
 	{SPR_BRAK, 26 + FF_FULLBRIGHT, 2, {A_BrakFireShot}, MT_CYBRAKDEMON_FLAMESHOT, 128, S_CYBRAKDEMON_FLAME_ATTACK4}, // S_CYBRAKDEMON_FLAME_ATTACK3 // Fire
 	{SPR_BRAK, 7, 1, {A_Repeat}, 30, S_CYBRAKDEMON_FLAME_ATTACK3, S_CYBRAKDEMON_FINISH_ATTACK1}, // S_CYBRAKDEMON_FLAME_ATTACK4 // Loop
 	{SPR_BRAK, 0, 6, {A_RandomState}, S_CYBRAKDEMON_VILE_ATTACK1, S_CYBRAKDEMON_NAPALM_ATTACK1, S_CYBRAKDEMON_MISSILE_ATTACK1}, // S_CYBRAKDEMON_CHOOSE_ATTACK2
-	{SPR_BRAK, 20, 0, {A_LinedefExecute}, LE_BRAKVILEATACK, 0, S_CYBRAKDEMON_VILE_ATTACK2}, // S_CYBRAKDEMON_VILE_ATTACK1
+	{SPR_BRAK, 20, 0, {A_LinedefExecuteFromArg}, 5, 0, S_CYBRAKDEMON_VILE_ATTACK2}, // S_CYBRAKDEMON_VILE_ATTACK1
 	{SPR_BRAK, 20, 24, {A_VileTarget}, MT_CYBRAKDEMON_TARGET_RETICULE, 1, S_CYBRAKDEMON_VILE_ATTACK3}, // S_CYBRAKDEMON_VILE_ATTACK2
 	{SPR_BRAK, 19, 8, {A_FaceTarget}, 0, 0, S_CYBRAKDEMON_VILE_ATTACK4}, // S_CYBRAKDEMON_VILE_ATTACK3
 	{SPR_BRAK, 18, 8, {A_FaceTarget}, 0, 0, S_CYBRAKDEMON_VILE_ATTACK5}, // S_CYBRAKDEMON_VILE_ATTACK4
@@ -1635,7 +1635,7 @@ state_t states[NUMSTATES] =
 	{SPR_BRAK, 0, 0, {A_SetReactionTime}, 0, 0, S_CYBRAKDEMON_WALK1}, // S_CYBRAKDEMON_FINISH_ATTACK2 // If just attacked, remove MF2_FRET w/out going back to spawnstate
 	{SPR_BRAK, 18, 24, {A_Pain}, 0, 0, S_CYBRAKDEMON_PAIN2}, // S_CYBRAKDEMON_PAIN1
 	{SPR_BRAK, 18, 0, {A_CheckHealth}, 3, S_CYBRAKDEMON_PAIN3, S_CYBRAKDEMON_CHOOSE_ATTACK1}, // S_CYBRAKDEMON_PAIN2
-	{SPR_BRAK, 18, 0, {A_LinedefExecute}, LE_PINCHPHASE, 0, S_CYBRAKDEMON_CHOOSE_ATTACK1}, // S_CYBRAKDEMON_PAIN3
+	{SPR_BRAK, 18, 0, {A_LinedefExecuteFromArg}, 4, 0, S_CYBRAKDEMON_CHOOSE_ATTACK1}, // S_CYBRAKDEMON_PAIN3
 	{SPR_BRAK, 18, 1, {A_Repeat}, 1, S_CYBRAKDEMON_DIE1, S_CYBRAKDEMON_DIE2}, // S_CYBRAKDEMON_DIE1
 	{SPR_BRAK, 18, 2, {A_BossScream}, 2, 0, S_CYBRAKDEMON_DIE3}, // S_CYBRAKDEMON_DIE2
 	{SPR_BRAK, 18, 0, {A_Repeat}, 52, S_CYBRAKDEMON_DIE2, S_CYBRAKDEMON_DIE4}, // S_CYBRAKDEMON_DIE3
@@ -18217,13 +18217,13 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		S_NULL          // raisestate
 	},
 
-	// ambient water 1a (large)
-	{           // MT_AWATERA
+	// ambient sound effect
+	{           // MT_AMBIENT
 		700,            // doomednum
 		S_INVISIBLE,    // spawnstate
-		35,             // spawnhealth
+		1000,           // spawnhealth
 		S_NULL,         // seestate
-		sfx_amwtr1,     // seesound
+		sfx_None,       // seesound
 		8,              // reactiontime
 		sfx_None,       // attacksound
 		S_NULL,         // painstate
@@ -18242,283 +18242,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_AMBIENT, // flags
-		S_NULL          // raisestate
-	},
-
-	// ambient water 1b (large)
-	{           // MT_AWATERB
-		701,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		35,             // spawnhealth
-		S_NULL,         // seestate
-		sfx_amwtr2,     // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		16*FRACUNIT,    // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_AMBIENT, // flags
-		S_NULL          // raisestate
-	},
-
-	// ambient water 2a (medium)
-	{           // MT_AWATERC
-		702,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		35,             // spawnhealth
-		S_NULL,         // seestate
-		sfx_amwtr3,     // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		16*FRACUNIT,    // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_AMBIENT, // flags
-		S_NULL          // raisestate
-	},
-
-	// ambient water 2b (medium)
-	{           // MT_AWATERD
-		703,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		35,             // spawnhealth
-		S_NULL,         // seestate
-		sfx_amwtr4,     // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		16*FRACUNIT,    // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_AMBIENT, // flags
-		S_NULL          // raisestate
-	},
-
-	// ambient water 3a (small)
-	{           // MT_AWATERE
-		704,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		35,             // spawnhealth
-		S_NULL,         // seestate
-		sfx_amwtr5,     // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		16*FRACUNIT,    // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_AMBIENT, // flags
-		S_NULL          // raisestate
-	},
-
-	// ambient water 3b (small)
-	{           // MT_AWATERF
-		705,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		35,             // spawnhealth
-		S_NULL,         // seestate
-		sfx_amwtr6,     // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		16*FRACUNIT,    // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_AMBIENT, // flags
-		S_NULL          // raisestate
-	},
-
-	// ambient water 4a (extra large)
-	{           // MT_AWATERG
-		706,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		35,             // spawnhealth
-		S_NULL,         // seestate
-		sfx_amwtr7,     // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		16*FRACUNIT,    // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_AMBIENT, // flags
-		S_NULL          // raisestate
-	},
-
-	// ambient water 4b (extra large)
-	{           // MT_AWATERH
-		707,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		35,             // spawnhealth
-		S_NULL,         // seestate
-		sfx_amwtr8,     // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		16*FRACUNIT,    // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOSECTOR|MF_NOGRAVITY|MF_AMBIENT, // flags
-		S_NULL          // raisestate
-	},
-
-	{           // MT_RANDOMAMBIENT
-		708,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		512,            // spawnhealth: repeat speed
-		S_NULL,         // seestate
-		sfx_ambint,     // seesound
-		0,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		255,            // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		8*FRACUNIT,     // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		1000,           // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOSECTOR|MF_NOBLOCKMAP|MF_NOGRAVITY|MF_AMBIENT, // flags
-		S_NULL          // raisestate
-	},
-
-	{           // MT_RANDOMAMBIENT2
-		709,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		220,            // spawnhealth: repeat speed
-		S_NULL,         // seestate
-		sfx_ambin2,     // seesound
-		0,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		255,            // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		8*FRACUNIT,     // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		1000,           // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOSECTOR|MF_NOBLOCKMAP|MF_NOGRAVITY|MF_AMBIENT, // flags
-		S_NULL          // raisestate
-	},
-
-	{           // MT_MACHINEAMBIENCE
-		710,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		24,             // spawnhealth: repeat speed
-		S_NULL,         // seestate
-		sfx_ambmac,     // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		200,            // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		1*FRACUNIT,     // speed
-		16*FRACUNIT,    // radius
-		16*FRACUNIT,    // height
-		0,              // display offset
-		100,            // mass
-		20,             // damage
-		sfx_None,       // activesound
-		MF_NOSECTOR|MF_NOBLOCKMAP|MF_NOGRAVITY|MF_AMBIENT, // flags
 		S_NULL          // raisestate
 	},
 
@@ -20871,34 +20594,6 @@ mobjinfo_t mobjinfo[NUMMOBJTYPES] =
 		0,              // damage
 		sfx_None,       // activesound
 		MF_NOBLOCKMAP|MF_NOGRAVITY,  // flags
-		S_NULL          // raisestate
-	},
-
-	// for use with wind and current effects
-	{           // MT_PULL
-		755,            // doomednum
-		S_INVISIBLE,    // spawnstate
-		1000,           // spawnhealth
-		S_NULL,         // seestate
-		sfx_None,       // seesound
-		8,              // reactiontime
-		sfx_None,       // attacksound
-		S_NULL,         // painstate
-		0,              // painchance
-		sfx_None,       // painsound
-		S_NULL,         // meleestate
-		S_NULL,         // missilestate
-		S_NULL,         // deathstate
-		S_NULL,         // xdeathstate
-		sfx_None,       // deathsound
-		0,              // speed
-		8,              // radius
-		8,              // height
-		0,              // display offset
-		10,             // mass
-		0,              // damage
-		sfx_None,       // activesound
-		MF_NOBLOCKMAP|MF_NOGRAVITY, // flags
 		S_NULL          // raisestate
 	},
 

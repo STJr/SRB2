@@ -28,12 +28,15 @@ typedef struct
 } taglist_t;
 
 void Tag_Add (taglist_t* list, const mtag_t tag);
+void Tag_Remove (taglist_t* list, const mtag_t tag);
 void Tag_FSet (taglist_t* list, const mtag_t tag);
 mtag_t Tag_FGet (const taglist_t* list);
 boolean Tag_Find (const taglist_t* list, const mtag_t tag);
 boolean Tag_Share (const taglist_t* list1, const taglist_t* list2);
 boolean Tag_Compare (const taglist_t* list1, const taglist_t* list2);
 
+void Tag_SectorAdd (const size_t id, const mtag_t tag);
+void Tag_SectorRemove (const size_t id, const mtag_t tag);
 void Tag_SectorFSet (const size_t id, const mtag_t tag);
 
 /// Taggroup list. It is essentially just an element id list.
@@ -45,6 +48,8 @@ typedef struct
 } taggroup_t;
 
 extern bitarray_t tags_available[];
+
+extern mtag_t Tag_NextUnused(mtag_t start);
 
 extern size_t num_tags;
 

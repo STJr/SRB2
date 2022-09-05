@@ -492,7 +492,7 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 	switch (spring->type)
 	{
 		case MT_FAN: // fan
-			if (zdist > (spring->health << FRACBITS)) // max z distance determined by health (set by map thing angle)
+			if (zdist > (spring->health << FRACBITS)) // max z distance determined by health (set by map thing args[0])
 				break;
 			if (flipval*object->momz >= FixedMul(speed, spring->scale)) // if object's already moving faster than your best, don't bother
 				break;
@@ -2331,7 +2331,7 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 
 	mapcampointer = thiscam;
 
-	if (GETSECSPECIAL(newsubsec->sector->special, 4) == 12)
+	if (newsubsec->sector->flags & MSF_NOCLIPCAMERA)
 	{ // Camera noclip on entire sector.
 		tmfloorz = tmdropoffz = thiscam->z;
 		tmceilingz = tmdrpoffceilz = thiscam->z + thiscam->height;
@@ -2371,7 +2371,7 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 		for (rover = newsubsec->sector->ffloors; rover; rover = rover->next)
 		{
 			fixed_t topheight, bottomheight;
-			if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERALL) || GETSECSPECIAL(rover->master->frontsector->special, 4) == 12)
+			if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERALL) || (rover->master->frontsector->flags & MSF_NOCLIPCAMERA))
 				continue;
 
 			topheight = P_CameraGetFOFTopZ(thiscam, newsubsec->sector, rover, x, y, NULL);
@@ -2443,7 +2443,7 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam)
 						// We're inside it! Yess...
 						polysec = po->lines[0]->backsector;
 
-						if (GETSECSPECIAL(polysec->special, 4) == 12)
+						if (polysec->flags & MSF_NOCLIPCAMERA)
 						{ // Camera noclip polyobj.
 							plink = (polymaplink_t *)(plink->link.next);
 							continue;
@@ -2711,14 +2711,14 @@ increment_move
 
 			if (thing->player)
 			{
-				// If using type Section1:13, double the maxstep.
-				if (P_PlayerTouchingSectorSpecial(thing->player, 1, 13)
-				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 13)
+				// If using SSF_DOUBLESTEPUP, double the maxstep.
+				if (P_PlayerTouchingSectorSpecialFlag(thing->player, SSF_DOUBLESTEPUP)
+				|| (R_PointInSubsector(x, y)->sector->specialflags & SSF_DOUBLESTEPUP))
 					maxstep <<= 1;
 
-				// If using type Section1:14, no maxstep.
-				if (P_PlayerTouchingSectorSpecial(thing->player, 1, 14)
-				|| GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+				// If using SSF_NOSTEPDOWN, no maxstep.
+				if (P_PlayerTouchingSectorSpecialFlag(thing->player, SSF_NOSTEPDOWN)
+				|| (R_PointInSubsector(x, y)->sector->specialflags & SSF_NOSTEPDOWN))
 					maxstep = 0;
 
 				// Don't 'step up' while springing,
@@ -2729,12 +2729,12 @@ increment_move
 			}
 			else if (thing->flags & MF_PUSHABLE)
 			{
-				// If using type Section1:13, double the maxstep.
-				if (GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 13)
+				// If using SSF_DOUBLESTEPUP, double the maxstep.
+				if (R_PointInSubsector(x, y)->sector->specialflags & SSF_DOUBLESTEPUP)
 					maxstep <<= 1;
 
-				// If using type Section1:14, no maxstep.
-				if (GETSECSPECIAL(R_PointInSubsector(x, y)->sector->special, 1) == 14)
+				// If using SSF_NOSTEPDOWN, no maxstep.
+				if (R_PointInSubsector(x, y)->sector->specialflags & SSF_NOSTEPDOWN)
 					maxstep = 0;
 			}
 
@@ -3498,7 +3498,7 @@ static boolean PTR_SlideTraverse(intercept_t *in)
 	// see if it is closer than best so far
 	if (li->polyobj && slidemo->player)
 	{
-		if ((li->polyobj->lines[0]->backsector->flags & SF_TRIGGERSPECIAL_TOUCH) && !(li->polyobj->flags & POF_NOSPECIALS))
+		if ((li->polyobj->lines[0]->backsector->flags & MSF_TRIGGERSPECIAL_TOUCH) && !(li->polyobj->flags & POF_NOSPECIALS))
 			P_ProcessSpecialSector(slidemo->player, slidemo->subsector->sector, li->polyobj->lines[0]->backsector);
 	}
 
@@ -3637,10 +3637,7 @@ static void P_CheckLavaWall(mobj_t *mo, sector_t *sec)
 		if (!(rover->flags & FF_SWIMMABLE))
 			continue;
 
-		if (GETSECSPECIAL(rover->master->frontsector->special, 1) != 3)
-			continue;
-
-		if (rover->master->flags & ML_BLOCKMONSTERS)
+		if (rover->master->frontsector->damagetype != SD_LAVA)
 			continue;
 
 		topheight = P_GetFFloorTopZAt(rover, mo->x, mo->y);

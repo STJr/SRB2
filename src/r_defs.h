@@ -139,20 +139,33 @@ typedef enum
 	FF_FLOATBOB          = 0x40000,    ///< Floats on water and bobs if you step on it.
 	FF_NORETURN          = 0x80000,    ///< Used with ::FF_CRUMBLE. Will not return to its original position after falling.
 	FF_CRUMBLE           = 0x100000,   ///< Falls 2 seconds after being stepped on, and randomly brings all touching crumbling 3dfloors down with it, providing their master sectors share the same tag (allows crumble platforms above or below, to also exist).
-	FF_SHATTERBOTTOM     = 0x200000,   ///< Used with ::FF_BUSTUP. Like FF_SHATTER, but only breaks from the bottom. Good for springing up through rubble.
+	FF_GOOWATER          = 0x200000,   ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 	FF_MARIO             = 0x400000,   ///< Acts like a question block when hit from underneath. Goodie spawned at top is determined by master sector.
 	FF_BUSTUP            = 0x800000,   ///< You can spin through/punch this block and it will crumble!
 	FF_QUICKSAND         = 0x1000000,  ///< Quicksand!
 	FF_PLATFORM          = 0x2000000,  ///< You can jump up through this to the top.
 	FF_REVERSEPLATFORM   = 0x4000000,  ///< A fall-through floor in normal gravity, a platform in reverse gravity.
 	FF_INTANGIBLEFLATS   = 0x6000000,  ///< Both flats are intangible, but the sides are still solid.
-	FF_SHATTER           = 0x8000000,  ///< Used with ::FF_BUSTUP. Bustable on mere touch.
-	FF_SPINBUST          = 0x10000000, ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
-	FF_STRONGBUST        = 0x20000000, ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
-	FF_RIPPLE            = 0x40000000, ///< Ripple the flats
-	FF_COLORMAPONLY      = 0x80000000, ///< Only copy the colormap, not the lightlevel
-	FF_GOOWATER          = FF_SHATTERBOTTOM, ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
+	FF_RIPPLE            = 0x8000000,  ///< Ripple the flats
+	FF_COLORMAPONLY      = 0x10000000, ///< Only copy the colormap, not the lightlevel
+	FF_BOUNCY            = 0x20000000, ///< Bounces players
+	FF_SPLAT             = 0x40000000, ///< Use splat flat renderer (treat cyan pixels as invisible)
 } ffloortype_e;
+
+typedef enum
+{
+	FB_PUSHABLES   = 0x1, // Bustable by pushables
+	FB_EXECUTOR    = 0x2, // Trigger linedef executor
+	FB_ONLYBOTTOM  = 0x4, // Only bustable from below
+} ffloorbustflags_e;
+
+typedef enum
+{
+	BT_TOUCH,
+	BT_SPINBUST,
+	BT_REGULAR,
+	BT_STRONG,
+} busttype_e;
 
 typedef struct ffloor_s
 {
@@ -186,6 +199,18 @@ typedef struct ffloor_s
 	INT32 alpha;
 	UINT8 blend; // blendmode
 	tic_t norender; // for culling
+
+	// Only relevant for FF_BUSTUP
+	ffloorbustflags_e bustflags;
+	UINT8 busttype;
+	INT16 busttag;
+
+	// Only relevant for FF_QUICKSAND
+	fixed_t sinkspeed;
+	fixed_t friction;
+
+	// Only relevant for FF_BOUNCY
+	fixed_t bouncestrength;
 
 	// these are saved for netgames, so do not let Lua touch these!
 	ffloortype_e spawnflags; // flags the 3D floor spawned with
@@ -252,16 +277,68 @@ typedef struct pslope_s
 typedef enum
 {
 	// flipspecial - planes with effect
-	SF_FLIPSPECIAL_FLOOR       =  1,
-	SF_FLIPSPECIAL_CEILING     =  1<<1,
-	SF_FLIPSPECIAL_BOTH        =  (SF_FLIPSPECIAL_FLOOR|SF_FLIPSPECIAL_CEILING),
+	MSF_FLIPSPECIAL_FLOOR       =  1,
+	MSF_FLIPSPECIAL_CEILING     =  1<<1,
+	MSF_FLIPSPECIAL_BOTH        =  (MSF_FLIPSPECIAL_FLOOR|MSF_FLIPSPECIAL_CEILING),
 	// triggerspecial - conditions under which plane touch causes effect
-	SF_TRIGGERSPECIAL_TOUCH    =  1<<2,
-	SF_TRIGGERSPECIAL_HEADBUMP =  1<<3,
+	MSF_TRIGGERSPECIAL_TOUCH    =  1<<2,
+	MSF_TRIGGERSPECIAL_HEADBUMP =  1<<3,
+	// triggerline - conditions for linedef executor triggering
+	MSF_TRIGGERLINE_PLANE       =  1<<4, // require plane touch
+	MSF_TRIGGERLINE_MOBJ        =  1<<5, // allow non-pushable mobjs to trigger
 	// invertprecip - inverts presence of precipitation
-	SF_INVERTPRECIP            =  1<<4,
+	MSF_INVERTPRECIP            =  1<<6,
+	MSF_GRAVITYFLIP             =  1<<7,
+	MSF_HEATWAVE                =  1<<8,
+	MSF_NOCLIPCAMERA            =  1<<9,
 } sectorflags_t;
 
+typedef enum
+{
+	SSF_OUTERSPACE = 1,
+	SSF_DOUBLESTEPUP = 1<<1,
+	SSF_NOSTEPDOWN = 1<<2,
+	SSF_WINDCURRENT = 1<<3,
+	SSF_CONVEYOR = 1<<4,
+	SSF_SPEEDPAD = 1<<5,
+	SSF_STARPOSTACTIVATOR = 1<<6,
+	SSF_EXIT = 1<<7,
+	SSF_SPECIALSTAGEPIT = 1<<8,
+	SSF_RETURNFLAG = 1<<9,
+	SSF_REDTEAMBASE = 1<<10,
+	SSF_BLUETEAMBASE = 1<<11,
+	SSF_FAN = 1<<12,
+	SSF_SUPERTRANSFORM = 1<<13,
+	SSF_FORCESPIN = 1<<14,
+	SSF_ZOOMTUBESTART = 1<<15,
+	SSF_ZOOMTUBEEND = 1<<16,
+	SSF_FINISHLINE = 1<<17,
+	SSF_ROPEHANG = 1<<18,
+} sectorspecialflags_t;
+
+typedef enum
+{
+	SD_NONE = 0,
+	SD_GENERIC = 1,
+	SD_WATER = 2,
+	SD_FIRE = 3,
+	SD_LAVA = 4,
+	SD_ELECTRIC = 5,
+	SD_SPIKE = 6,
+	SD_DEATHPITTILT = 7,
+	SD_DEATHPITNOTILT = 8,
+	SD_INSTAKILL = 9,
+	SD_SPECIALSTAGE = 10,
+} sectordamage_t;
+
+typedef enum
+{
+	TO_PLAYER = 0,
+	TO_ALLPLAYERS = 1,
+	TO_MOBJ = 2,
+	TO_PLAYEREMERALDS = 3, // only for binary backwards compatibility: check player emeralds
+	TO_PLAYERNIGHTS = 4, // only for binary backwards compatibility: check NiGHTS mare
+} triggerobject_t;
 
 typedef enum
 {
@@ -313,7 +390,11 @@ typedef struct sector_s
 	INT32 heightsec; // other sector, or -1 if no other sector
 	INT32 camsec; // used for camera clipping
 
-	INT32 floorlightsec, ceilinglightsec;
+	// floor and ceiling lighting
+	INT16 floorlightlevel, ceilinglightlevel;
+	boolean floorlightabsolute, ceilinglightabsolute; // absolute or relative to sector's light level?
+	INT32 floorlightsec, ceilinglightsec; // take floor/ceiling light level from another sector
+
 	INT32 crumblestate; // used for crumbling and bobbing
 
 	// list of mobjs that are at least partially in the sector
@@ -337,10 +418,18 @@ typedef struct sector_s
 	extracolormap_t *extra_colormap;
 	boolean colormap_protected;
 
-	// This points to the master's floorheight, so it can be changed in realtime!
-	fixed_t *gravity; // per-sector gravity
-	boolean verticalflip; // If gravity < 0, then allow flipped physics
+	fixed_t gravity; // per-sector gravity factor
+	fixed_t *gravityptr; // For binary format: Read gravity from floor height of master sector
+
 	sectorflags_t flags;
+	sectorspecialflags_t specialflags;
+	UINT8 damagetype;
+
+	// Linedef executor triggering
+	mtag_t triggertag; // tag to call upon triggering
+	UINT8 triggerer; // who can trigger?
+
+	fixed_t friction;
 
 	// Sprite culling feature
 	struct line_s *cullheight;
@@ -377,7 +466,7 @@ typedef enum
 
 #define HORIZONSPECIAL 41
 
-#define NUMLINEARGS 6
+#define NUMLINEARGS 10
 #define NUMLINESTRINGARGS 2
 
 typedef struct line_s
