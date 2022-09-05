@@ -21,9 +21,9 @@
 //------------------------------------
 //           Fonts & stuff
 //------------------------------------
-#define HU_FONTSTART '\x16' // the first font character
-#define HU_FONTEND '~'
-#define HU_FONTSIZE (HU_FONTEND - HU_FONTSTART + 1)
+#define FONTSTART '\x16' // the first font character
+#define FONTEND '~'
+#define FONTSIZE (FONTEND - FONTSTART + 1)
 
 #define HU_CROSSHAIRS 3 // maximum of 9 - see HU_Init();
 
@@ -32,7 +32,7 @@ extern char english_shiftxform[];
 
 typedef struct
 {
-	patch_t *chars[HU_FONTSIZE];
+	patch_t *chars[FONTSIZE];
 	INT32 kerning;
 	UINT32 spacewidth;
 	UINT32 linespacing;

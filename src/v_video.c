@@ -1981,10 +1981,10 @@ void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed)
 	flags = c & ~(V_CHARCOLORMASK | V_PARAMMASK);
 	c &= 0x7f;
 	if (lowercaseallowed)
-		c -= HU_FONTSTART;
+		c -= FONTSTART;
 	else
-		c = toupper(c) - HU_FONTSTART;
-	if (c < 0 || c >= HU_FONTSIZE || !hu_font.chars[c])
+		c = toupper(c) - FONTSTART;
+	if (c < 0 || c >= FONTSIZE || !hu_font.chars[c])
 		return;
 
 	w = hu_font.chars[c]->width;
@@ -2008,10 +2008,10 @@ void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UI
 	flags = c & ~(V_CHARCOLORMASK | V_PARAMMASK);
 	c &= 0x7f;
 	if (lowercaseallowed)
-		c -= HU_FONTSTART;
+		c -= FONTSTART;
 	else
-		c = toupper(c) - HU_FONTSTART;
-	if (c < 0 || c >= HU_FONTSIZE || !hu_font.chars[c])
+		c = toupper(c) - FONTSTART;
+	if (c < 0 || c >= FONTSIZE || !hu_font.chars[c])
 		return;
 
 	w = (vid.width < 640 ) ? ((hu_font.chars[c]->width / 2)) : (hu_font.chars[c]->width);	// use normal sized characters if we're using a terribly low resolution.
@@ -2067,9 +2067,9 @@ char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 
 		if (!(option & V_ALLOWLOWERCASE))
 			c = toupper(c);
-		c -= HU_FONTSTART;
+		c -= FONTSTART;
 
-		if (c < 0 || c >= HU_FONTSIZE || !hu_font.chars[c])
+		if (c < 0 || c >= FONTSIZE || !hu_font.chars[c])
 		{
 			chw = spacewidth;
 			lastusablespace = i;
@@ -2219,9 +2219,9 @@ void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale,
 		c = *ch;
 		if (!lowercase)
 			c = toupper(c);
-		c -= HU_FONTSTART;
+		c -= FONTSTART;
 
-		if (c < 0 || c >= HU_FONTSIZE || !font.chars[c])
+		if (c < 0 || c >= FONTSIZE || !font.chars[c])
 		{
 			cx += FixedMul((spacewidth<<FRACBITS), dupx);
 			continue;
@@ -2384,10 +2384,10 @@ static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UIN
 		}
 
 		c = toupper(*ch);
-		c -= HU_FONTSTART;
+		c -= FONTSTART;
 
 		// character does not exist or is a space
-		if (c < 0 || c >= HU_FONTSIZE || !ntb_font.chars[c] || !nto_font.chars[c])
+		if (c < 0 || c >= FONTSIZE || !ntb_font.chars[c] || !nto_font.chars[c])
 		{
 			cx += FixedMul((ntb_font.spacewidth * dupx)*FRACUNIT, scale);
 			continue;
@@ -2530,8 +2530,8 @@ INT32 V_NameTagWidth(const char *string)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = toupper(string[i]) - HU_FONTSTART;
-		if (c < 0 || c >= HU_FONTSIZE || !ntb_font.chars[c] || !nto_font.chars[c])
+		c = toupper(string[i]) - FONTSTART;
+		if (c < 0 || c >= FONTSIZE || !ntb_font.chars[c] || !nto_font.chars[c])
 			w += ntb_font.spacewidth;
 		else
 			w += (ntb_font.chars[c]->width)+2;
@@ -2566,8 +2566,8 @@ INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
 	{
 		if (string[i] & 0x80)
 			continue;
-		c = ((option & V_ALLOWLOWERCASE ? string[i] : toupper(string[i])) - HU_FONTSTART);
-		if (c < 0 || c >= HU_FONTSIZE || !font.chars[c])
+		c = ((option & V_ALLOWLOWERCASE ? string[i] : toupper(string[i])) - FONTSTART);
+		if (c < 0 || c >= FONTSIZE || !font.chars[c])
 			w += spacewidth;
 		else
 			w += (charwidth ? charwidth : (font.chars[c]->width)) + font.kerning;
@@ -2588,8 +2588,8 @@ INT32 V_FontStringHeight(const char *string, fontdef_t font)
 
 	for (i = 0; i < strlen(string); i++)
 	{
-		c = string[i] - HU_FONTSTART;
-		if (c < 0 || c >= HU_FONTSIZE || !font.chars[c])
+		c = string[i] - FONTSTART;
+		if (c < 0 || c >= FONTSIZE || !font.chars[c])
 			continue;
 
 		if (font.chars[c]->height > h)

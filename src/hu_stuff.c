@@ -186,8 +186,8 @@ void HU_LoadGraphics(void)
 	if (dedicated)
 		return;
 
-	j = HU_FONTSTART;
-	for (i = 0; i < HU_FONTSIZE; i++, j++)
+	j = FONTSTART;
+	for (i = 0; i < FONTSIZE; i++, j++)
 	{
 		// cache the heads-up font for entire game execution
 		sprintf(buffer, "STCFN%.3d", j);
@@ -1137,7 +1137,7 @@ boolean HU_Responder(event_t *ev)
 			else
 				c_input++;
 		}
-		else if ((c >= HU_FONTSTART && c <= HU_FONTEND && hu_font.chars[c-HU_FONTSTART])
+		else if ((c >= FONTSTART && c <= FONTEND && hu_font.chars[c-FONTSTART])
 			|| c == ' ') // Allow spaces, of course
 		{
 			if (CHAT_MUTE || strlen(w_chat) >= HU_MAXMSGLEN)
@@ -1207,9 +1207,9 @@ static char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
 
 		if (!(option & V_ALLOWLOWERCASE))
 			c = toupper(c);
-		c -= HU_FONTSTART;
+		c -= FONTSTART;
 
-		if (c < 0 || c >= HU_FONTSIZE || !hu_font.chars[c])
+		if (c < 0 || c >= FONTSIZE || !hu_font.chars[c])
 		{
 			chw = spacewidth;
 			lastusablespace = i;
@@ -1267,7 +1267,7 @@ static void HU_drawMiniChat(void)
 
 		while(msg[j]) // iterate through msg
 		{
-			if (msg[j] < HU_FONTSTART) // don't draw
+			if (msg[j] < FONTSTART) // don't draw
 			{
 				if (msg[j] == '\n') // get back down.
 				{
@@ -1333,7 +1333,7 @@ static void HU_drawMiniChat(void)
 
 		while(msg[j]) // iterate through msg
 		{
-			if (msg[j] < HU_FONTSTART) // don't draw
+			if (msg[j] < FONTSTART) // don't draw
 			{
 				if (msg[j] == '\n') // get back down.
 				{
@@ -1432,7 +1432,7 @@ static void HU_drawChatLog(INT32 offset)
 		UINT8 *colormap = NULL;
 		while(msg[j]) // iterate through msg
 		{
-			if (msg[j] < HU_FONTSTART) // don't draw
+			if (msg[j] < FONTSTART) // don't draw
 			{
 				if (msg[j] == '\n') // get back down.
 				{
@@ -1460,7 +1460,7 @@ static void HU_drawChatLog(INT32 offset)
 			}
 
 			dx += charwidth;
-			if (dx >= boxw-charwidth-2 && i<chat_nummsg_log && msg[j] >= HU_FONTSTART) // end of message shouldn't count, nor should invisible characters!!!!
+			if (dx >= boxw-charwidth-2 && i<chat_nummsg_log && msg[j] >= FONTSTART) // end of message shouldn't count, nor should invisible characters!!!!
 			{
 				dx = 0;
 				dy += charheight;
@@ -1550,7 +1550,7 @@ static void HU_DrawChat(void)
 
 	while (talk[i])
 	{
-		if (talk[i] < HU_FONTSTART)
+		if (talk[i] < FONTSTART)
 			++i;
 		else
 		{
@@ -1592,7 +1592,7 @@ static void HU_DrawChat(void)
 		}
 
 		//Hurdler: isn't it better like that?
-		if (w_chat[i] < HU_FONTSTART)
+		if (w_chat[i] < FONTSTART)
 			++i;
 		else
 			V_DrawChatCharacter(chatx + c + 2, y, w_chat[i++] | V_SNAPTOBOTTOM|V_SNAPTOLEFT | t, true, NULL);
@@ -1691,8 +1691,8 @@ static void HU_DrawChat_Old(void)
 	size_t i = 0;
 	const char *ntalk = "Say: ", *ttalk = "Say-Team: ";
 	const char *talk = ntalk;
-	INT32 charwidth = 8 * con_scalefactor; //(hu_font.chars['A'-HU_FONTSTART]->width) * con_scalefactor;
-	INT32 charheight = 8 * con_scalefactor; //(hu_font.chars['A'-HU_FONTSTART]->height) * con_scalefactor;
+	INT32 charwidth = 8 * con_scalefactor; //(hu_font.chars['A'-FONTSTART]->width) * con_scalefactor;
+	INT32 charheight = 8 * con_scalefactor; //(hu_font.chars['A'-FONTSTART]->height) * con_scalefactor;
 	if (teamtalk)
 	{
 		talk = ttalk;
@@ -1706,14 +1706,14 @@ static void HU_DrawChat_Old(void)
 
 	while (talk[i])
 	{
-		if (talk[i] < HU_FONTSTART)
+		if (talk[i] < FONTSTART)
 		{
 			++i;
 			//charwidth = 4 * con_scalefactor;
 		}
 		else
 		{
-			//charwidth = (hu_font.chars[talk[i]-HU_FONTSTART]->width) * con_scalefactor;
+			//charwidth = (hu_font.chars[talk[i]-FONTSTART]->width) * con_scalefactor;
 			V_DrawCharacter(HU_INPUTX + c, y, talk[i++] | cv_constextsize.value | V_NOSCALESTART, true);
 		}
 		c += charwidth;
@@ -1734,14 +1734,14 @@ static void HU_DrawChat_Old(void)
 		}
 
 		//Hurdler: isn't it better like that?
-		if (w_chat[i] < HU_FONTSTART)
+		if (w_chat[i] < FONTSTART)
 		{
 			++i;
 			//charwidth = 4 * con_scalefactor;
 		}
 		else
 		{
-			//charwidth = (hu_font.chars[w_chat[i]-HU_FONTSTART]->width) * con_scalefactor;
+			//charwidth = (hu_font.chars[w_chat[i]-FONTSTART]->width) * con_scalefactor;
 			V_DrawCharacter(HU_INPUTX + c, y, w_chat[i++] | cv_constextsize.value | V_NOSCALESTART | t, true);
 		}
 
