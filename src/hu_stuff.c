@@ -232,12 +232,12 @@ void HU_LoadGraphics(void)
 			nto_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
 	}
 
-	HU_LoadFontProperties(&hu_font, 0, 4, 12);
-	HU_LoadFontProperties(&tny_font, 0, 2, 12);
-	HU_LoadFontProperties(&cred_font, 0, 16, 16);
-	HU_LoadFontProperties(&lt_font, 0, 16, 20);
-	HU_LoadFontProperties(&ntb_font, 0, 4, 21);
-	HU_LoadFontProperties(&nto_font, 0, 4, 21);
+	HU_SetFontProperties(&hu_font, 0, 4, 12);
+	HU_SetFontProperties(&tny_font, 0, 2, 12);
+	HU_SetFontProperties(&cred_font, 0, 16, 16);
+	HU_SetFontProperties(&lt_font, 0, 16, 20);
+	HU_SetFontProperties(&ntb_font, 0, 4, 21);
+	HU_SetFontProperties(&nto_font, 0, 4, 21);
 
 	//cache numbers too!
 	for (i = 0; i < 10; i++)
@@ -295,7 +295,7 @@ void HU_LoadGraphics(void)
 	//emeraldpics[2][7] = W_CachePatchName("EMBOX8", PU_HUDGFX); -- unused
 }
 
-void HU_LoadFontProperties(fontdef_t *font, INT32 kerning, UINT32 spacewidth, UINT32 linespacing)
+void HU_SetFontProperties(fontdef_t *font, INT32 kerning, UINT32 spacewidth, UINT32 linespacing)
 {
 	font->kerning = kerning;
 	font->spacewidth = spacewidth;
