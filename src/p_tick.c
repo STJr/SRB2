@@ -739,29 +739,7 @@ void P_Ticker(boolean run)
 			countdown2--;
 
 		if (quake.time)
-		{
-			fixed_t ir = quake.intensity>>1;
-
-			if (quake.epicenter) {
-				// Calculate 3D distance from epicenter, using camera.
-				// Uses only player 1 camera because only one quake variable exists.
-				fixed_t xydist = R_PointToDist2(camera.x, camera.y, quake.epicenter->x, quake.epicenter->y);
-				fixed_t dist = R_PointToDist2(0, camera.z, xydist, quake.epicenter->z);
-
-				// More effect closer to epicenter, outside of radius = no effect
-				if (!quake.radius || dist > quake.radius)
-					ir = 0;
-				else
-					ir = FixedMul(ir, FRACUNIT - FixedDiv(dist, quake.radius));
-			}
-
-			quake.x = M_RandomRange(-ir,ir);
-			quake.y = M_RandomRange(-ir,ir);
-			quake.z = M_RandomRange(-ir,ir);
 			--quake.time;
-		}
-		else
-			quake.x = quake.y = quake.z = 0;
 
 		if (metalplayback)
 			G_ReadMetalTic(metalplayback);
