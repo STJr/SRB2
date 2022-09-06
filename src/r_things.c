@@ -2939,6 +2939,14 @@ static void R_DrawSprite(vissprite_t *spr)
 		R_DrawFloorSplat(spr);
 	else
 		R_DrawVisSprite(spr);
+
+	if (R_ThingBoundingBoxVisible(spr->mobj))
+	{
+		// fuck you fuck you fuck you FUCK YOU
+		// (shadows are linked to their mobj)
+		if (!(spr->cut & SC_SHADOW))
+			R_DrawThingBoundingBox(spr->mobj);
+	}
 }
 
 // Special drawer for precipitation sprites Tails 08-18-2002
