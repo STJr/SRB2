@@ -91,6 +91,8 @@ actionpointer_t actionpointers[] =
 	{{A_FaceTracer},             "A_FACETRACER"},
 	{{A_Scream},                 "A_SCREAM"},
 	{{A_BossDeath},              "A_BOSSDEATH"},
+	{{A_SetShadowScale},         "A_SETSHADOWSCALE"},
+	{{A_ShadowScream},           "A_SHADOWSCREAM"},
 	{{A_CustomPower},            "A_CUSTOMPOWER"},
 	{{A_GiveWeapon},             "A_GIVEWEAPON"},
 	{{A_RingBox},                "A_RINGBOX"},
@@ -197,6 +199,7 @@ actionpointer_t actionpointers[] =
 	{{A_Boss3Path},              "A_BOSS3PATH"},
 	{{A_Boss3ShockThink},        "A_BOSS3SHOCKTHINK"},
 	{{A_LinedefExecute},         "A_LINEDEFEXECUTE"},
+	{{A_LinedefExecuteFromArg},  "A_LINEDEFEXECUTEFROMARG"},
 	{{A_PlaySeeSound},           "A_PLAYSEESOUND"},
 	{{A_PlayAttackSound},        "A_PLAYATTACKSOUND"},
 	{{A_PlayActiveSound},        "A_PLAYACTIVESOUND"},
@@ -4169,17 +4172,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_FINISHFLAG", // Finish flag
 
 	// Ambient Sounds
-	"MT_AWATERA", // Ambient Water Sound 1
-	"MT_AWATERB", // Ambient Water Sound 2
-	"MT_AWATERC", // Ambient Water Sound 3
-	"MT_AWATERD", // Ambient Water Sound 4
-	"MT_AWATERE", // Ambient Water Sound 5
-	"MT_AWATERF", // Ambient Water Sound 6
-	"MT_AWATERG", // Ambient Water Sound 7
-	"MT_AWATERH", // Ambient Water Sound 8
-	"MT_RANDOMAMBIENT",
-	"MT_RANDOMAMBIENT2",
-	"MT_MACHINEAMBIENCE",
+	"MT_AMBIENT",
 
 	"MT_CORK",
 	"MT_LHRT",
@@ -4283,7 +4276,6 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_CRUMBLEOBJ", // Sound generator for crumbling platform
 	"MT_TUBEWAYPOINT",
 	"MT_PUSH",
-	"MT_PULL",
 	"MT_GHOST",
 	"MT_OVERLAY",
 	"MT_ANGLEMAN",
@@ -4520,23 +4512,85 @@ const char *const GAMETYPERULE_LIST[] = {
 };
 
 // Linedef flags
-const char *const ML_LIST[16] = {
+const char *const ML_LIST[] = {
 	"IMPASSIBLE",
 	"BLOCKMONSTERS",
 	"TWOSIDED",
 	"DONTPEGTOP",
 	"DONTPEGBOTTOM",
-	"EFFECT1",
+	"SKEWTD",
 	"NOCLIMB",
-	"EFFECT2",
-	"EFFECT3",
-	"EFFECT4",
-	"EFFECT5",
-	"NOSONIC",
-	"NOTAILS",
-	"NOKNUX",
+	"NOSKEW",
+	"MIDPEG",
+	"MIDSOLID",
+	"WRAPMIDTEX",
+	"NETONLY",
+	"NONET",
+	"EFFECT6",
 	"BOUNCY",
-	"TFERLINE"
+	"TFERLINE",
+	NULL
+};
+
+// Sector flags
+const char *const MSF_LIST[] = {
+	"FLIPSPECIAL_FLOOR",
+	"FLIPSPECIAL_CEILING",
+	"TRIGGERSPECIAL_TOUCH",
+	"TRIGGERSPECIAL_HEADBUMP",
+	"TRIGGERLINE_PLANE",
+	"TRIGGERLINE_MOBJ",
+	"GRAVITYFLIP",
+	"HEATWAVE",
+	"NOCLIPCAMERA",
+	NULL
+};
+
+// Sector special flags
+const char *const SSF_LIST[] = {
+	"OUTERSPACE",
+	"DOUBLESTEPUP",
+	"WINDCURRENT",
+	"CONVEYOR",
+	"SPEEDPAD",
+	"STARPOSTACTIVATOR",
+	"EXIT",
+	"SPECIALSTAGEPIT",
+	"RETURNFLAG",
+	"REDTEAMBASE",
+	"BLUETEAMBASE",
+	"FAN",
+	"SUPERTRANSFORM",
+	"FORCESPIN",
+	"ZOOMTUBESTART",
+	"ZOOMTUBEEND",
+	"FINISHLINE",
+	"ROPEHANG",
+	NULL
+};
+
+// Sector damagetypes
+const char *const SD_LIST[] = {
+	"NONE",
+	"GENERIC",
+	"WATER",
+	"FIRE",
+	"LAVA",
+	"ELECTRIC",
+	"SPIKE",
+	"DEATHPITTILT",
+	"DEATHPITNOTILT",
+	"INSTAKILL",
+	"SPECIALSTAGE",
+	NULL
+};
+
+// Sector triggerer
+const char *const TO_LIST[] = {
+	"PLAYER",
+	"ALLPLAYERS",
+	"MOBJ",
+	NULL
 };
 
 const char *COLOR_ENUMS[] = {
@@ -5296,7 +5350,7 @@ struct int_const_s const INT_CONST[] = {
 	{"FF_FLOATBOB",FF_FLOATBOB},               ///< Floats on water and bobs if you step on it.
 	{"FF_NORETURN",FF_NORETURN},               ///< Used with ::FF_CRUMBLE. Will not return to its original position after falling.
 	{"FF_CRUMBLE",FF_CRUMBLE},                 ///< Falls 2 seconds after being stepped on, and randomly brings all touching crumbling 3dfloors down with it, providing their master sectors share the same tag (allows crumble platforms above or below, to also exist).
-	{"FF_SHATTERBOTTOM",FF_SHATTERBOTTOM},     ///< Used with ::FF_BUSTUP. Like FF_SHATTER, but only breaks from the bottom. Good for springing up through rubble.
+	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 	{"FF_MARIO",FF_MARIO},                     ///< Acts like a question block when hit from underneath. Goodie spawned at top is determined by master sector.
 	{"FF_BUSTUP",FF_BUSTUP},                   ///< You can spin through/punch this block and it will crumble!
 	{"FF_QUICKSAND",FF_QUICKSAND},             ///< Quicksand!
@@ -5304,12 +5358,21 @@ struct int_const_s const INT_CONST[] = {
 	{"FF_REVERSEPLATFORM",FF_REVERSEPLATFORM}, ///< A fall-through floor in normal gravity, a platform in reverse gravity.
 	{"FF_INTANGIBLEFLATS",FF_INTANGIBLEFLATS}, ///< Both flats are intangible, but the sides are still solid.
 	{"FF_INTANGABLEFLATS",FF_INTANGIBLEFLATS}, ///< Both flats are intangable, but the sides are still solid.
-	{"FF_SHATTER",FF_SHATTER},                 ///< Used with ::FF_BUSTUP. Bustable on mere touch.
-	{"FF_SPINBUST",FF_SPINBUST},               ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
-	{"FF_STRONGBUST",FF_STRONGBUST},           ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
 	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
-	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
+	{"FF_BOUNCY",FF_BOUNCY},                   ///< Bounces players
+	{"FF_SPLAT",FF_SPLAT},                     ///< Use splat flat renderer (treat cyan pixels as invisible)
+
+	// FOF bustable flags
+	{"FB_PUSHABLES",FB_PUSHABLES},
+	{"FB_EXECUTOR",FB_EXECUTOR},
+	{"FB_ONLYBOTTOM",FB_ONLYBOTTOM},
+
+	// Bustable FOF type
+	{"BT_TOUCH",BT_TOUCH},
+	{"BT_SPINBUST",BT_SPINBUST},
+	{"BT_REGULAR",BT_REGULAR},
+	{"BT_STRONG",BT_STRONG},
 
 	// PolyObject flags
 	{"POF_CLIPLINES",POF_CLIPLINES},               ///< Test against lines for collision

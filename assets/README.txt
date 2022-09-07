@@ -2,7 +2,7 @@ SONIC ROBO BLAST 2
 
 Sonic Robo Blast 2 (SRB2) is a 3D Sonic the Hedgehog fangame, based on a modified version of Doom Legacy.
 
-https://srb2.org
+https://www.srb2.org
 
 LICENSE
 
@@ -43,6 +43,8 @@ Design and content in Sonic Robo Blast 2 is copyright 1998-2022 by Sonic Team Jr
 
 All original material in this game is copyrighted by their respective owners, and no copyright infringement is intended. Sonic Team Jr. is in no way affiliated with SEGA or Sonic Team, and we do not claim ownership of any of SEGA's intellectual property used in SRB2.
 
-Sonic Robo Blast 2 is not commercial software. If you purchased this game, you have been scammed! Sonic Team Jr.'s staff makes no profit whatsoever (in fact, we lose money). 
+Sonic Robo Blast 2 is not commercial software. If you purchased this game, you have been scammed! Sonic Team Jr.'s staff makes no profit whatsoever (in fact, we lose money).
+
+The owner of the srb2.org domain is only acting as an ISP, and is therefore not responsible for any content on srb2.org under the 1998 DMCA. Sonic Team Jr. assumes no responsibility for the content on any Sonic Team Jr. fan sites.
 
 This software is provided as-is with no warranty whatsoever.

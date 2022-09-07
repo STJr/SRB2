@@ -35,6 +35,10 @@ enum sector_e {
 	sector_floorpic,
 	sector_ceilingpic,
 	sector_lightlevel,
+	sector_floorlightlevel,
+	sector_floorlightabsolute,
+	sector_ceilinglightlevel,
+	sector_ceilinglightabsolute,
 	sector_special,
 	sector_tag,
 	sector_taglist,
@@ -44,7 +48,14 @@ enum sector_e {
 	sector_lines,
 	sector_ffloors,
 	sector_fslope,
-	sector_cslope
+	sector_cslope,
+	sector_flags,
+	sector_specialflags,
+	sector_damagetype,
+	sector_triggertag,
+	sector_triggerer,
+	sector_friction,
+	sector_gravity,
 };
 
 static const char *const sector_opt[] = {
@@ -54,6 +65,10 @@ static const char *const sector_opt[] = {
 	"floorpic",
 	"ceilingpic",
 	"lightlevel",
+	"floorlightlevel",
+	"floorlightabsolute",
+	"ceilinglightlevel",
+	"ceilinglightabsolute",
 	"special",
 	"tag",
 	"taglist",
@@ -64,6 +79,13 @@ static const char *const sector_opt[] = {
 	"ffloors",
 	"f_slope",
 	"c_slope",
+	"flags",
+	"specialflags",
+	"damagetype",
+	"triggertag",
+	"triggerer",
+	"friction",
+	"gravity",
 	NULL};
 
 enum subsector_e {
@@ -88,6 +110,7 @@ enum line_e {
 	line_v2,
 	line_dx,
 	line_dy,
+	line_angle,
 	line_flags,
 	line_special,
 	line_tag,
@@ -113,6 +136,7 @@ static const char *const line_opt[] = {
 	"v2",
 	"dx",
 	"dy",
+	"angle",
 	"flags",
 	"special",
 	"tag",
@@ -197,6 +221,12 @@ enum ffloor_e {
 	ffloor_prev,
 	ffloor_alpha,
 	ffloor_blend,
+	ffloor_bustflags,
+	ffloor_busttype,
+	ffloor_busttag,
+	ffloor_sinkspeed,
+	ffloor_friction,
+	ffloor_bouncestrength,
 };
 
 static const char *const ffloor_opt[] = {
@@ -216,6 +246,12 @@ static const char *const ffloor_opt[] = {
 	"prev",
 	"alpha",
 	"blend",
+	"bustflags",
+	"busttype",
+	"busttag",
+	"sinkspeed",
+	"friction",
+	"bouncestrength",
 	NULL};
 
 #ifdef HAVE_LUA_SEGS
@@ -581,6 +617,18 @@ static int sector_get(lua_State *L)
 	case sector_lightlevel:
 		lua_pushinteger(L, sector->lightlevel);
 		return 1;
+	case sector_floorlightlevel:
+		lua_pushinteger(L, sector->floorlightlevel);
+		return 1;
+	case sector_floorlightabsolute:
+		lua_pushboolean(L, sector->floorlightabsolute);
+		return 1;
+	case sector_ceilinglightlevel:
+		lua_pushinteger(L, sector->ceilinglightlevel);
+		return 1;
+	case sector_ceilinglightabsolute:
+		lua_pushboolean(L, sector->ceilinglightabsolute);
+		return 1;
 	case sector_special:
 		lua_pushinteger(L, sector->special);
 		return 1;
@@ -619,6 +667,27 @@ static int sector_get(lua_State *L)
 	case sector_cslope: // c_slope
 		LUA_PushUserdata(L, sector->c_slope, META_SLOPE);
 		return 1;
+	case sector_flags: // flags
+		lua_pushinteger(L, sector->flags);
+		return 1;
+	case sector_specialflags: // specialflags
+		lua_pushinteger(L, sector->specialflags);
+		return 1;
+	case sector_damagetype: // damagetype
+		lua_pushinteger(L, (UINT8)sector->damagetype);
+		return 1;
+	case sector_triggertag: // triggertag
+		lua_pushinteger(L, (INT16)sector->triggertag);
+		return 1;
+	case sector_triggerer: // triggerer
+		lua_pushinteger(L, (UINT8)sector->triggerer);
+		return 1;
+	case sector_friction: // friction
+		lua_pushfixed(L, sector->friction);
+		return 1;
+	case sector_gravity: // gravity
+		lua_pushfixed(L, sector->gravity);
+		return 1;
 	}
 	return 0;
 }
@@ -646,6 +715,7 @@ static int sector_set(lua_State *L)
 	case sector_ffloors: // ffloors
 	case sector_fslope: // f_slope
 	case sector_cslope: // c_slope
+	case sector_friction: // friction
 	default:
 		return luaL_error(L, "sector_t field " LUA_QS " cannot be set.", sector_opt[field]);
 	case sector_floorheight: { // floorheight
@@ -685,6 +755,18 @@ static int sector_set(lua_State *L)
 	case sector_lightlevel:
 		sector->lightlevel = (INT16)luaL_checkinteger(L, 3);
 		break;
+	case sector_floorlightlevel:
+		sector->floorlightlevel = (INT16)luaL_checkinteger(L, 3);
+		break;
+	case sector_floorlightabsolute:
+		sector->floorlightabsolute = luaL_checkboolean(L, 3);
+		break;
+	case sector_ceilinglightlevel:
+		sector->ceilinglightlevel = (INT16)luaL_checkinteger(L, 3);
+		break;
+	case sector_ceilinglightabsolute:
+		sector->ceilinglightabsolute = luaL_checkboolean(L, 3);
+		break;
 	case sector_special:
 		sector->special = (INT16)luaL_checkinteger(L, 3);
 		break;
@@ -693,6 +775,25 @@ static int sector_set(lua_State *L)
 		break;
 	case sector_taglist:
 		return LUA_ErrSetDirectly(L, "sector_t", "taglist");
+	case sector_flags:
+		sector->flags = luaL_checkinteger(L, 3);
+		CheckForReverseGravity |= (sector->flags & MSF_GRAVITYFLIP);
+		break;
+	case sector_specialflags:
+		sector->specialflags = luaL_checkinteger(L, 3);
+		break;
+	case sector_damagetype:
+		sector->damagetype = (UINT8)luaL_checkinteger(L, 3);
+		break;
+	case sector_triggertag:
+		sector->triggertag = (INT16)luaL_checkinteger(L, 3);
+		break;
+	case sector_triggerer:
+		sector->triggerer = (UINT8)luaL_checkinteger(L, 3);
+		break;
+	case sector_gravity:
+		sector->gravity = luaL_checkfixed(L, 3);
+		break;
 	}
 	return 0;
 }
@@ -822,6 +923,9 @@ static int line_get(lua_State *L)
 		return 1;
 	case line_dy:
 		lua_pushfixed(L, line->dy);
+		return 1;
+	case line_angle:
+		lua_pushangle(L, line->angle);
 		return 1;
 	case line_flags:
 		lua_pushinteger(L, line->flags);
@@ -1811,6 +1915,24 @@ static int ffloor_get(lua_State *L)
 		return 1;
 	case ffloor_blend:
 		lua_pushinteger(L, ffloor->blend);
+		return 1;
+	case ffloor_bustflags:
+		lua_pushinteger(L, ffloor->bustflags);
+		return 1;
+	case ffloor_busttype:
+		lua_pushinteger(L, ffloor->busttype);
+		return 1;
+	case ffloor_busttag:
+		lua_pushinteger(L, ffloor->busttag);
+		return 1;
+	case ffloor_sinkspeed:
+		lua_pushfixed(L, ffloor->sinkspeed);
+		return 1;
+	case ffloor_friction:
+		lua_pushfixed(L, ffloor->friction);
+		return 1;
+	case ffloor_bouncestrength:
+		lua_pushfixed(L, ffloor->bouncestrength);
 		return 1;
 	}
 	return 0;
