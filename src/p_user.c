@@ -1966,22 +1966,22 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	ghost->angle = (mobj->player ? mobj->player->drawangle : mobj->angle);
 	ghost->rollangle = mobj->rollangle;
-	
+
 	ghost->sprite = mobj->sprite;
 	ghost->sprite2 = mobj->sprite2;
 	ghost->frame = mobj->frame;
 	ghost->tics = -1;
 	ghost->frame &= ~FF_TRANSMASK;
 	ghost->frame |= tr_trans50<<FF_TRANSSHIFT;
-	
+
 	ghost->renderflags = mobj->renderflags;
 	ghost->blendmode = mobj->blendmode;
-	
+
 	ghost->spritexscale = mobj->spritexscale;
 	ghost->spriteyscale = mobj->spriteyscale;
 	ghost->spritexoffset = mobj->spritexoffset;
 	ghost->spriteyoffset = mobj->spriteyoffset;
-	
+
 	ghost->fuse = ghost->info->damage;
 	ghost->skin = mobj->skin;
 
@@ -2482,6 +2482,41 @@ boolean P_InQuicksand(mobj_t *mo) // Returns true if you are in quicksand
 	}
 
 	return false; // No sand here, Captain!
+}
+
+boolean P_InJumpFlipSector(mobj_t *mo) // Returns true if you are in a jumpflip sector
+{
+	sector_t *sector = mo->subsector->sector;
+	fixed_t topheight, bottomheight;
+
+	if (sector->specialflags & SSF_JUMPFLIP)
+		return true;
+
+	if (sector->ffloors)
+	{
+		ffloor_t *rover;
+
+		for (rover = sector->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->flags & FF_EXISTS))
+				continue;
+
+			if (!(rover->master->frontsector->specialflags & SSF_JUMPFLIP))
+				continue;
+			topheight    = P_GetFFloorTopZAt   (rover, mo->x, mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
+
+			if (mo->z + (mo->height/2) > topheight)
+				continue;
+
+			if (mo->z + (mo->height/2) < bottomheight)
+				continue;
+
+			return true;
+		}
+	}
+
+	return false; // No jumpflip here, Captain!
 }
 
 static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
@@ -4448,6 +4483,9 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 	if (player->charflags & SF_NOJUMPDAMAGE)
 		player->pflags &= ~PF_SPINNING;
+
+	if (P_InJumpFlipSector(player->mo))
+		player->mo->flags2 ^= MF2_OBJECTFLIP;
 
 	if (soundandstate)
 	{
