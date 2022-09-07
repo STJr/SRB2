@@ -2773,7 +2773,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 433: // Flip/flop gravity. Works on pushables, too!
-			if (line->args[0])
+			if (line->args[1])
+				mo->flags2 ^= MF2_OBJECTFLIP;
+			else if (line->args[0])
 				mo->flags2 &= ~MF2_OBJECTFLIP;
 			else
 				mo->flags2 |= MF2_OBJECTFLIP;
