@@ -5940,7 +5940,7 @@ static void P_ConvertBinarySectorTypes(void)
 			case 5: //Speed pad
 				sectors[i].specialflags |= SSF_SPEEDPAD;
 				break;
-			case 6: //Gravity flip on jump
+			case 6: //Gravity flip on jump (think VVVVVV)
 				sectors[i].specialflags |= SSF_JUMPFLIP;
 				break;
 			default:

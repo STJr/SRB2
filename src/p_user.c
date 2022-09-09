@@ -2516,7 +2516,7 @@ boolean P_InJumpFlipSector(mobj_t *mo) // Returns true if you are in a jumpflip 
 		}
 	}
 
-	return false; // No jumpflip here, Captain!
+	return false; // No gravity jumping here, Captain Viridian!
 }
 
 static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
@@ -4484,8 +4484,11 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	if (player->charflags & SF_NOJUMPDAMAGE)
 		player->pflags &= ~PF_SPINNING;
 
-	if (P_InJumpFlipSector(player->mo))
+	if (P_InJumpFlipSector(player->mo)) // Flip gravity on jump?
+	{
 		player->mo->flags2 ^= MF2_OBJECTFLIP;
+		S_StartSound(player->mo, sfx_s3k73); // Play gravity flip sound
+	}
 
 	if (soundandstate)
 	{
