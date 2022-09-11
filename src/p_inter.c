@@ -3882,7 +3882,8 @@ void P_PlayerRingBurst(player_t *player, INT32 num_rings)
 			if (i & 1)
 				P_SetObjectMomZ(mo, ns, true);
 		}
-		if (player->mo->eflags & MFE_VERTICALFLIP) {
+		if (player->mo->eflags & MFE_VERTICALFLIP)
+		{
 			mo->momz *= -1;
 			mo->flags2 |= MF2_OBJECTFLIP;
 		}
@@ -4268,11 +4269,14 @@ void P_PlayerEmeraldBurst(player_t *player, boolean toss)
 
 			mo->momx = momx;
 			mo->momy = momy;
-			
-			if (player->mo->eflags & MFE_VERTICALFLIP)
-				mo->flags2 |= MF2_OBJECTFLIP;
 
 			P_SetObjectMomZ(mo, 3*FRACUNIT, false);
+
+			if (player->mo->eflags & MFE_VERTICALFLIP)
+			{
+				mo->momz = -mo->momz;
+				mo->flags2 |= MF2_OBJECTFLIP;
+			}
 
 			if (toss)
 				player->tossdelay = 2*TICRATE;
@@ -4300,7 +4304,8 @@ void P_PlayerFlagBurst(player_t *player, boolean toss)
 
 	flag = P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z, type);
 
-	if (player->mo->eflags & MFE_VERTICALFLIP) {
+	if (player->mo->eflags & MFE_VERTICALFLIP)
+	{
 		flag->z += player->mo->height - flag->height;
 		flag->flags2 |= MF2_OBJECTFLIP;
 	}
