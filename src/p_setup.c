@@ -1727,6 +1727,8 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].specialflags |= SSF_ROPEHANG;
 	else if (fastcmp(param, "jumpflip") && fastcmp("true", val))
 		sectors[i].specialflags |= SSF_JUMPFLIP;
+	else if (fastcmp(param, "gravityoverride") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_GRAVITYOVERRIDE;
 	else if (fastcmp(param, "friction"))
 		sectors[i].friction = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "gravity"))
@@ -2582,6 +2584,8 @@ static void P_WriteTextmap(void)
 			fprintf(f, "ropehang = true;\n");
 		if (wsectors[i].specialflags & SSF_JUMPFLIP)
 			fprintf(f, "jumpflip = true;\n");
+		if (wsectors[i].specialflags & SSF_GRAVITYOVERRIDE)
+			fprintf(f, "gravityoverride = true;\n");
 		if (wsectors[i].friction != ORIG_FRICTION)
 			fprintf(f, "friction = %f;\n", FIXED_TO_FLOAT(wsectors[i].friction));
 		if (wsectors[i].gravity != FRACUNIT)
