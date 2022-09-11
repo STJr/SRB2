@@ -1439,9 +1439,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	I_Assert(!P_MobjWasRemoved(mo));
 
 	wasflip = (mo->eflags & MFE_VERTICALFLIP) != 0;
-
-	if (mo->type != MT_SPINFIRE) // Prevent fire trails from disappearing in reverse gravity
-		mo->eflags &= ~MFE_VERTICALFLIP;
+	mo->eflags &= ~MFE_VERTICALFLIP;
 
 	if (mo->subsector->sector->ffloors) // Check for 3D floor gravity too.
 	{
