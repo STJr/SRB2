@@ -253,6 +253,27 @@ boolean R_ThingBoundingBoxVisible(mobj_t *thing)
 {
 	INT32 cvmode = cv_renderhitbox.value;
 
+	// Do not render bbox for these
+	switch (thing->type)
+	{
+		default:
+			// First person / awayviewmobj -- rendering
+			// a bbox too close to the viewpoint causes
+			// anomalies and these are exactly on the
+			// viewpoint!
+			if (thing != r_viewmobj)
+			{
+				break;
+			}
+			// FALLTHRU
+
+		case MT_SKYBOX:
+			// Ditto for skybox viewpoint but because they
+			// are rendered using portals in Software,
+			// r_viewmobj does not point here.
+			return false;
+	}
+
 	switch (cvmode)
 	{
 		case RENDERHITBOX_OFF:
