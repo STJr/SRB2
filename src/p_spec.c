@@ -6283,6 +6283,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 					else
 						sectors[s].flags &= ~MSF_GRAVITYFLIP;
 
+					if (lines[i].flags & ML_EFFECT6)
+						sectors[s].specialflags |= SSF_GRAVITYOVERRIDE;
+
 					CheckForReverseGravity |= (sectors[s].flags & MSF_GRAVITYFLIP);
 				}
 				break;
