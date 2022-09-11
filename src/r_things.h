@@ -75,10 +75,6 @@ boolean R_ThingWithinDist (mobj_t *thing,
 		fixed_t        draw_dist,
 		fixed_t nights_draw_dist);
 
-boolean R_ThingVisibleWithinDist (mobj_t *thing,
-		fixed_t        draw_dist,
-		fixed_t nights_draw_dist);
-
 boolean R_PrecipThingVisible (precipmobj_t *precipthing,
 		fixed_t precip_draw_dist);
 
