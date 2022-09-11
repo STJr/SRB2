@@ -1434,6 +1434,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	boolean no3dfloorgrav = true; // Custom gravity
 	boolean goopgravity = false;
 	boolean wasflip;
+	boolean alreadyflipped = false;
 
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
@@ -1466,6 +1467,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 				if (rover->master->frontsector->specialflags & SSF_GRAVITYOVERRIDE)
 					mo->flags2 &= ~MF2_OBJECTFLIP;
 				mo->eflags |= MFE_VERTICALFLIP;
+				alreadyflipped = true;
 			}
 
 			no3dfloorgrav = false;
@@ -1482,6 +1484,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 			if (mo->subsector->sector->specialflags & SSF_GRAVITYOVERRIDE)
 				mo->flags2 &= ~MF2_OBJECTFLIP;
 			mo->eflags |= MFE_VERTICALFLIP;
+			alreadyflipped = true;
 		}
 	}
 
@@ -1500,7 +1503,8 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 		if (!(mo->flags2 & MF2_OBJECTFLIP) != !(mo->player->powers[pw_gravityboots])) // negated to turn numeric into bool - would be double negated, but not needed if both would be
 		{
 			gravityadd = -gravityadd;
-			mo->eflags ^= MFE_VERTICALFLIP;
+			if (!alreadyflipped) // prevent re-flipping after a per-sector gravity flip
+				mo->eflags ^= MFE_VERTICALFLIP;
 		}
 		if (wasflip == !(mo->eflags & MFE_VERTICALFLIP)) // note!! == ! is not equivalent to != here - turns numeric into bool this way
 			P_PlayerFlip(mo);
