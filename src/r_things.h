@@ -66,6 +66,7 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel);
 void R_InitSprites(void);
 void R_ClearSprites(void);
 
+UINT8 R_GetBoundingBoxColor(mobj_t *thing);
 boolean R_ThingBoundingBoxVisible(mobj_t *thing);
 
 boolean R_ThingVisible (mobj_t *thing);
