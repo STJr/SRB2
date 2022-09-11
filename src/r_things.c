@@ -1424,6 +1424,91 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	objectsdrawn++;
 }
 
+static void R_ProjectBoundingBox(mobj_t *thing, vissprite_t *vis)
+{
+	fixed_t gx, gy;
+	fixed_t tx, tz;
+
+	vissprite_t *box;
+
+	if (!R_ThingBoundingBoxVisible(thing))
+	{
+		return;
+	}
+
+	// 1--3
+	// |  |
+	// 0--2
+
+	// start in the (0) corner
+	gx = thing->x - thing->radius - viewx;
+	gy = thing->y - thing->radius - viewy;
+
+	tz = FixedMul(gx, viewcos) + FixedMul(gy, viewsin);
+
+	// thing is behind view plane?
+	// if parent vis is visible, ignore this
+	if (!vis && (tz < FixedMul(MINZ, thing->scale)))
+	{
+		return;
+	}
+
+	tx = FixedMul(gx, viewsin) - FixedMul(gy, viewcos);
+
+	// too far off the side?
+	if (!vis && abs(tx) > FixedMul(tz, fovtan)<<2)
+	{
+		return;
+	}
+
+	box = R_NewVisSprite();
+	box->mobj = thing;
+	box->mobjflags = thing->flags;
+	box->thingheight = thing->height;
+	box->cut = SC_BBOX;
+
+	box->gx = tx;
+	box->gy = tz;
+
+	box->scale = 2 * FixedMul(thing->radius, viewsin);
+	box->xscale = 2 * FixedMul(thing->radius, viewcos);
+
+	box->pz = thing->z;
+	box->pzt = box->pz + box->thingheight;
+
+	box->gzt = box->pzt;
+	box->gz = box->pz;
+	box->texturemid = box->gzt - viewz;
+
+	if (vis)
+	{
+		box->x1 = vis->x1;
+		box->x2 = vis->x2;
+		box->szt = vis->szt;
+		box->sz = vis->sz;
+
+		box->sortscale = vis->sortscale; // link sorting to sprite
+		box->dispoffset = vis->dispoffset + 5;
+
+		box->cut |= SC_LINKDRAW;
+	}
+	else
+	{
+		fixed_t xscale = FixedDiv(projection, tz);
+		fixed_t yscale = FixedDiv(projectiony, tz);
+		fixed_t top = (centeryfrac - FixedMul(box->texturemid, yscale));
+
+		box->x1 = (centerxfrac + FixedMul(box->gx, xscale)) / FRACUNIT;
+		box->x2 = box->x1;
+
+		box->szt = top / FRACUNIT;
+		box->sz = (top + FixedMul(box->thingheight, yscale)) / FRACUNIT;
+
+		box->sortscale = yscale;
+		box->dispoffset = 0;
+	}
+}
+
 //
 // R_ProjectSprite
 // Generates a vissprite for a thing
@@ -2181,6 +2266,8 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (oldthing->shadowscale && cv_shadow.value)
 		R_ProjectDropShadow(oldthing, vis, oldthing->shadowscale, basetx, basetz);
 
+	R_ProjectBoundingBox(oldthing, vis);
+
 	// Debug
 	++objectsdrawn;
 }
@@ -2406,8 +2493,26 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	hoop_limit_dist = (fixed_t)(cv_drawdist_nights.value) << FRACBITS;
 	for (thing = sec->thinglist; thing; thing = thing->snext)
 	{
-		if (R_ThingVisibleWithinDist(thing, limit_dist, hoop_limit_dist))
-			R_ProjectSprite(thing);
+		if (R_ThingWithinDist(thing, limit_dist, hoop_limit_dist))
+		{
+			const INT32 oldobjectsdrawn = objectsdrawn;
+
+			if (R_ThingVisible(thing))
+			{
+				R_ProjectSprite(thing);
+			}
+
+			// I'm so smart :^)
+			if (objectsdrawn == oldobjectsdrawn)
+			{
+				/*
+				Object is invisible OR is off screen but
+				render its bbox even if the latter because
+				radius could be bigger than sprite.
+				*/
+				R_ProjectBoundingBox(thing, NULL);
+			}
+		}
 	}
 
 	// no, no infinite draw distance for precipitation. this option at zero is supposed to turn it off
@@ -2493,6 +2598,10 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 
 			// don't connect to your shadow!
 			if (dsfirst->cut & SC_SHADOW)
+				continue;
+
+			// don't connect to your bounding box!
+			if (dsfirst->cut & SC_BBOX)
 				continue;
 
 			// don't connect if it's not the tracer
@@ -2935,18 +3044,12 @@ static void R_DrawSprite(vissprite_t *spr)
 	mfloorclip = spr->clipbot;
 	mceilingclip = spr->cliptop;
 
-	if (spr->cut & SC_SPLAT)
+	if (spr->cut & SC_BBOX)
+		R_DrawThingBoundingBox(spr);
+	else if (spr->cut & SC_SPLAT)
 		R_DrawFloorSplat(spr);
 	else
 		R_DrawVisSprite(spr);
-
-	if (R_ThingBoundingBoxVisible(spr->mobj))
-	{
-		// fuck you fuck you fuck you FUCK YOU
-		// (shadows are linked to their mobj)
-		if (!(spr->cut & SC_SHADOW))
-			R_DrawThingBoundingBox(spr->mobj);
-	}
 }
 
 // Special drawer for precipitation sprites Tails 08-18-2002
@@ -3182,9 +3285,13 @@ void R_ClipSprites(drawseg_t* dsstart, portal_t* portal)
 	for (; clippedvissprites < visspritecount; clippedvissprites++)
 	{
 		vissprite_t *spr = R_GetVisSprite(clippedvissprites);
-		INT32 x1 = (spr->cut & SC_SPLAT) ? 0 : spr->x1;
-		INT32 x2 = (spr->cut & SC_SPLAT) ? viewwidth : spr->x2;
-		R_ClipVisSprite(spr, x1, x2, dsstart, portal);
+
+		if (!(spr->cut & SC_BBOX)) // Do not clip bounding boxes
+		{
+			INT32 x1 = (spr->cut & SC_SPLAT) ? 0 : spr->x1;
+			INT32 x2 = (spr->cut & SC_SPLAT) ? viewwidth : spr->x2;
+			R_ClipVisSprite(spr, x1, x2, dsstart, portal);
+		}
 	}
 }
 
@@ -3198,16 +3305,11 @@ boolean R_ThingVisible (mobj_t *thing)
 	));
 }
 
-boolean R_ThingVisibleWithinDist (mobj_t *thing,
+boolean R_ThingWithinDist (mobj_t *thing,
 		fixed_t      limit_dist,
 		fixed_t hoop_limit_dist)
 {
-	fixed_t approx_dist;
-
-	if (! R_ThingVisible(thing))
-		return false;
-
-	approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
+	const fixed_t approx_dist = P_AproxDistance(viewx-thing->x, viewy-thing->y);
 
 	if (thing->sprite == SPR_HOOP)
 	{
@@ -3221,6 +3323,17 @@ boolean R_ThingVisibleWithinDist (mobj_t *thing,
 	}
 
 	return true;
+}
+
+// For OpenGL, TODO: REMOVE!!
+boolean R_ThingVisibleWithinDist (mobj_t *thing,
+		fixed_t      limit_dist,
+		fixed_t hoop_limit_dist)
+{
+	if (! R_ThingVisible(thing))
+		return false;
+
+	return R_ThingWithinDist(thing, limit_dist, hoop_limit_dist);
 }
 
 /* Check if precipitation may be drawn from our current view. */

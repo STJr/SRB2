@@ -67,9 +67,12 @@ void R_InitSprites(void);
 void R_ClearSprites(void);
 
 boolean R_ThingBoundingBoxVisible(mobj_t *thing);
-void R_DrawThingBoundingBox(mobj_t *thing);
 
 boolean R_ThingVisible (mobj_t *thing);
+
+boolean R_ThingWithinDist (mobj_t *thing,
+		fixed_t        draw_dist,
+		fixed_t nights_draw_dist);
 
 boolean R_ThingVisibleWithinDist (mobj_t *thing,
 		fixed_t        draw_dist,
@@ -135,6 +138,7 @@ typedef enum
 	SC_SHADOW     = 1<<10,
 	SC_SHEAR      = 1<<11,
 	SC_SPLAT      = 1<<12,
+	SC_BBOX       = 1<<13,
 	// masks
 	SC_CUTMASK    = SC_TOP|SC_BOTTOM,
 	SC_FLAGMASK   = ~SC_CUTMASK
@@ -224,6 +228,9 @@ void R_ClipSprites(drawseg_t* dsstart, portal_t* portal);
 void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, portal_t* portal);
 
 boolean R_SpriteIsFlashing(vissprite_t *vis);
+
+void R_DrawThingBoundingBox(vissprite_t *spr);
+
 UINT8 *R_GetSpriteTranslation(vissprite_t *vis);
 
 // ----------
