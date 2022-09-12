@@ -2135,9 +2135,9 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 						tmfloorslope = NULL;
 					}
 				}
-				else if (thing->eflags & MFE_VERTICALFLIP && thingtop < topheight && bottomheight < thing->z)
+				else if (thing->eflags & MFE_VERTICALFLIP && thing->z < topheight && bottomheight < thingtop)
 				{
-					if (tmceilingz < thingtop) {
+					if (tmceilingz > thingtop) {
 						tmceilingz = thingtop;
 						tmceilingrover = rover;
 						tmceilingslope = NULL;
@@ -5101,8 +5101,8 @@ fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 			{
 				if (thingtop > bottomheight && topheight > z)
 				{
-					if (ceilingz > z)
-						ceilingz = z;
+					if (ceilingz > thingtop)
+						ceilingz = thingtop;
 				}
 				continue;
 			}
