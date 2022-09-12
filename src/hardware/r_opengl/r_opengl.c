@@ -1032,7 +1032,7 @@ EXPORT void HWRAPI(SetShader) (int type)
 #ifdef GL_SHADERS
 	if (type == SHADER_NONE)
 	{
-		HWRAPI(UnSetShader)();
+		UnSetShader();
 		return;
 	}
 
