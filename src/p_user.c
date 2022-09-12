@@ -2814,7 +2814,9 @@ static void P_CheckQuicksand(player_t *player)
 	fixed_t sinkspeed;
 	fixed_t topheight, bottomheight;
 
-	if (!(player->mo->subsector->sector->ffloors && player->mo->momz <= 0))
+	if (!(player->mo->subsector->sector->ffloors &&
+		((!(player->mo->eflags & MFE_VERTICALFLIP) && player->mo->momz <= 0) ||
+			(player->mo->eflags & MFE_VERTICALFLIP && player->mo->momz >= 0))))
 		return;
 
 	for (rover = player->mo->subsector->sector->ffloors; rover; rover = rover->next)

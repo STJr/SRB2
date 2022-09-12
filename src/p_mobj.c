@@ -2172,15 +2172,20 @@ void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motype)
 				case 2: // scenery does things differently for some reason
 					if (mo->z < topheight && bottomheight < thingtop)
 					{
-						mo->floorz = mo->z;
+						if (!(mo->eflags & MFE_VERTICALFLIP))
+							mo->floorz = mo->z;
+						else if (mo->eflags & MFE_VERTICALFLIP)
+							mo->ceilingz = thingtop;
 						continue;
 					}
 					break;
 				default:
 					if (mo->z < topheight && bottomheight < thingtop)
 					{
-						if (mo->floorz < mo->z)
+						if (!(mo->eflags & MFE_VERTICALFLIP) && mo->floorz < mo->z)
 							mo->floorz = mo->z;
+						else if (mo->eflags & MFE_VERTICALFLIP && mo->ceilingz > thingtop)
+							mo->ceilingz = thingtop;
 					}
 					continue; // This is so you can jump/spring up through quicksand from below.
 			}

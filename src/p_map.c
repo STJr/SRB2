@@ -2127,12 +2127,20 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 
 			if (rover->flags & FF_QUICKSAND)
 			{
-				if (thing->z < topheight && bottomheight < thingtop)
+				if (!(thing->eflags & MFE_VERTICALFLIP) && thing->z < topheight && bottomheight < thingtop)
 				{
 					if (tmfloorz < thing->z) {
 						tmfloorz = thing->z;
 						tmfloorrover = rover;
 						tmfloorslope = NULL;
+					}
+				}
+				else if (thing->eflags & MFE_VERTICALFLIP && thingtop < topheight && bottomheight < thing->z)
+				{
+					if (tmceilingz < thingtop) {
+						tmceilingz = thingtop;
+						tmceilingrover = rover;
+						tmceilingslope = NULL;
 					}
 				}
 				// Quicksand blocks never change heights otherwise.
