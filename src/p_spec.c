@@ -4965,9 +4965,13 @@ static void P_EvaluateSpecialFlags(player_t *player, sector_t *sector, sector_t 
 		if (player->mo->momz > mobjinfo[MT_FAN].mass)
 			player->mo->momz = mobjinfo[MT_FAN].mass;
 
-		P_ResetPlayer(player);
-		if (player->panim != PA_FALL)
+		if (!player->powers[pw_carry])
+		{
+			P_ResetPlayer(player);
 			P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+			P_SetTarget(&player->mo->tracer, player->mo);
+			player->powers[pw_carry] = CR_FAN;
+		}
 	}
 	if (sector->specialflags & SSF_SUPERTRANSFORM)
 	{
