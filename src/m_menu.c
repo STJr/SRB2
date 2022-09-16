@@ -4223,7 +4223,7 @@ static void M_CentreText(INT32 y, const char *string)
 //
 // used by pause & statistics to draw a row of emblems for a map
 //
-static void M_DrawMapEmblems(INT32 mapnum, INT32 x, INT32 y, boolean globalonly)
+static void M_DrawMapEmblems(INT32 mapnum, INT32 x, INT32 y, boolean norecordattack)
 {
 	UINT8 lasttype = UINT8_MAX, curtype;
 	emblem_t *emblem = M_GetLevelEmblems(mapnum);
@@ -4242,7 +4242,7 @@ static void M_DrawMapEmblems(INT32 mapnum, INT32 x, INT32 y, boolean globalonly)
 				curtype = 0; break;
 		}
 
-		if (globalonly && curtype)
+		if (norecordattack && (curtype == 1 || curtype == 2))
 		{
 			emblem = M_GetLevelEmblems(-1);
 			continue;
