@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -47,6 +47,7 @@
 #include "m_cond.h"
 #include "m_anigif.h"
 #include "md5.h"
+#include "m_perfstats.h"
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -63,7 +64,9 @@ static void Got_WeaponPref(UINT8 **cp, INT32 playernum);
 static void Got_Mapcmd(UINT8 **cp, INT32 playernum);
 static void Got_ExitLevelcmd(UINT8 **cp, INT32 playernum);
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum);
+static void Got_RequestAddfoldercmd(UINT8 **cp, INT32 playernum);
 static void Got_Addfilecmd(UINT8 **cp, INT32 playernum);
+static void Got_Addfoldercmd(UINT8 **cp, INT32 playernum);
 static void Got_Pause(UINT8 **cp, INT32 playernum);
 static void Got_Suicide(UINT8 **cp, INT32 playernum);
 static void Got_RandomSeed(UINT8 **cp, INT32 playernum);
@@ -115,6 +118,7 @@ static void Command_Map_f(void);
 static void Command_ResetCamera_f(void);
 
 static void Command_Addfile(void);
+static void Command_Addfolder(void);
 static void Command_ListWADS_f(void);
 static void Command_RunSOC(void);
 static void Command_Pause(void);
@@ -168,7 +172,7 @@ void SendWeaponPref(void);
 void SendWeaponPref2(void);
 
 static CV_PossibleValue_t usemouse_cons_t[] = {{0, "Off"}, {1, "On"}, {2, "Force"}, {0, NULL}};
-#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 static CV_PossibleValue_t mouse2port_cons_t[] = {{0, "/dev/gpmdata"}, {1, "/dev/ttyS0"},
 	{2, "/dev/ttyS1"}, {3, "/dev/ttyS2"}, {4, "/dev/ttyS3"}, {0, NULL}};
 #else
@@ -255,7 +259,7 @@ consvar_t cv_joyscale2 = CVAR_INIT ("padscale2", "1", CV_SAVE|CV_CALL, NULL, I_J
 consvar_t cv_joyscale = CVAR_INIT ("padscale", "1", CV_SAVE|CV_HIDEN, NULL, NULL); //Alam: Dummy for save
 consvar_t cv_joyscale2 = CVAR_INIT ("padscale2", "1", CV_SAVE|CV_HIDEN, NULL, NULL); //Alam: Dummy for save
 #endif
-#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 consvar_t cv_mouse2port = CVAR_INIT ("mouse2port", "/dev/gpmdata", CV_SAVE, mouse2port_cons_t, NULL);
 consvar_t cv_mouse2opt = CVAR_INIT ("mouse2opt", "0", CV_SAVE, NULL, NULL);
 #else
@@ -284,7 +288,7 @@ consvar_t cv_gravity = CVAR_INIT ("gravity", "0.5", CV_RESTRICT|CV_FLOAT|CV_CALL
 
 consvar_t cv_soundtest = CVAR_INIT ("soundtest", "0", CV_CALL, NULL, SoundTest_OnChange);
 
-static CV_PossibleValue_t minitimelimit_cons_t[] = {{15, "MIN"}, {9999, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t minitimelimit_cons_t[] = {{1, "MIN"}, {9999, "MAX"}, {0, NULL}};
 consvar_t cv_countdowntime = CVAR_INIT ("countdowntime", "60", CV_SAVE|CV_NETVAR|CV_CHEAT, minitimelimit_cons_t, NULL);
 
 consvar_t cv_touchtag = CVAR_INIT ("touchtag", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
@@ -371,7 +375,14 @@ consvar_t cv_sleep = CVAR_INIT ("cpusleep", "1", CV_SAVE, sleeping_cons_t, NULL)
 
 static CV_PossibleValue_t perfstats_cons_t[] = {
 	{0, "Off"}, {1, "Rendering"}, {2, "Logic"}, {3, "ThinkFrame"}, {0, NULL}};
-consvar_t cv_perfstats = CVAR_INIT ("perfstats", "Off", 0, perfstats_cons_t, NULL);
+consvar_t cv_perfstats = CVAR_INIT ("perfstats", "Off", CV_CALL, perfstats_cons_t, PS_PerfStats_OnChange);
+static CV_PossibleValue_t ps_samplesize_cons_t[] = {
+	{1, "MIN"}, {1000, "MAX"}, {0, NULL}};
+consvar_t cv_ps_samplesize = CVAR_INIT ("ps_samplesize", "1", CV_CALL, ps_samplesize_cons_t, PS_SampleSize_OnChange);
+static CV_PossibleValue_t ps_descriptor_cons_t[] = {
+	{1, "Average"}, {2, "SD"}, {3, "Minimum"}, {4, "Maximum"}, {0, NULL}};
+consvar_t cv_ps_descriptor = CVAR_INIT ("ps_descriptor", "Average", 0, ps_descriptor_cons_t, NULL);
+
 consvar_t cv_freedemocamera = CVAR_INIT("freedemocamera", "Off", CV_SAVE, CV_OnOff, NULL);
 
 char timedemo_name[256];
@@ -398,16 +409,16 @@ const char *netxcmdnames[MAXNETXCMD - 1] =
 	"MAP",
 	"EXITLEVEL",
 	"ADDFILE",
+	"ADDFOLDER",
 	"PAUSE",
 	"ADDPLAYER",
 	"TEAMCHANGE",
 	"CLEARSCORES",
-	"LOGIN",
 	"VERIFIED",
 	"RANDOMSEED",
 	"RUNSOC",
 	"REQADDFILE",
-	"DELFILE", // replace next time we add an XD
+	"REQADDFOLDER",
 	"SETMOTD",
 	"SUICIDE",
 	"LUACMD",
@@ -441,7 +452,9 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_MAP, Got_Mapcmd);
 	RegisterNetXCmd(XD_EXITLEVEL, Got_ExitLevelcmd);
 	RegisterNetXCmd(XD_ADDFILE, Got_Addfilecmd);
+	RegisterNetXCmd(XD_ADDFOLDER, Got_Addfoldercmd);
 	RegisterNetXCmd(XD_REQADDFILE, Got_RequestAddfilecmd);
+	RegisterNetXCmd(XD_REQADDFOLDER, Got_RequestAddfoldercmd);
 	RegisterNetXCmd(XD_PAUSE, Got_Pause);
 	RegisterNetXCmd(XD_SUICIDE, Got_Suicide);
 	RegisterNetXCmd(XD_RUNSOC, Got_RunSOCcmd);
@@ -472,6 +485,7 @@ void D_RegisterServerCommands(void)
 	COM_AddCommand("showmap", Command_Showmap_f);
 	COM_AddCommand("mapmd5", Command_Mapmd5_f);
 
+	COM_AddCommand("addfolder", Command_Addfolder);
 	COM_AddCommand("addfile", Command_Addfile);
 	COM_AddCommand("listwad", Command_ListWADS_f);
 
@@ -788,7 +802,7 @@ void D_RegisterClientCommands(void)
 	// WARNING: the order is important when initialising mouse2
 	// we need the mouse2port
 	CV_RegisterVar(&cv_mouse2port);
-#if (defined (__unix__) && !defined (MSDOS)) || defined(__APPLE__) || defined (UNIXCOMMON)
+#if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 	CV_RegisterVar(&cv_mouse2opt);
 #endif
 	CV_RegisterVar(&cv_controlperkey);
@@ -861,10 +875,12 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_soundtest);
 
 	CV_RegisterVar(&cv_perfstats);
+	CV_RegisterVar(&cv_ps_samplesize);
+	CV_RegisterVar(&cv_ps_descriptor);
 
 	// ingame object placing
 	COM_AddCommand("objectplace", Command_ObjectPlace_f);
-	COM_AddCommand("writethings", Command_Writethings_f);
+	//COM_AddCommand("writethings", Command_Writethings_f);
 	CV_RegisterVar(&cv_speed);
 	CV_RegisterVar(&cv_opflags);
 	CV_RegisterVar(&cv_ophoopflags);
@@ -1313,8 +1329,9 @@ static void SendNameAndColor(void)
 	cv_skin.value = R_SkinAvailable(cv_skin.string);
 	if ((cv_skin.value < 0) || !R_SkinUsable(consoleplayer, cv_skin.value))
 	{
-		CV_StealthSet(&cv_skin, DEFAULTSKIN);
-		cv_skin.value = 0;
+		INT32 defaultSkinNum = GetPlayerDefaultSkin(consoleplayer);
+		CV_StealthSet(&cv_skin, skins[defaultSkinNum].name);
+		cv_skin.value = defaultSkinNum;
 	}
 
 	// Finally write out the complete packet and send it off.
@@ -1475,7 +1492,8 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 	if (server && (p != &players[consoleplayer] && p != &players[secondarydisplayplayer]))
 	{
 		boolean kick = false;
-		INT32 s;
+		UINT32 unlockShift = 0;
+		UINT32 i;
 
 		// team colors
 		if (G_GametypeHasTeams())
@@ -1491,12 +1509,29 @@ static void Got_NameAndColor(UINT8 **cp, INT32 playernum)
 			kick = true;
 
 		// availabilities
-		for (s = 0; s < MAXSKINS; s++)
+		for (i = 0; i < MAXUNLOCKABLES; i++)
 		{
-			if (!skins[s].availability && (p->availabilities & (1 << s)))
+			if (unlockables[i].type != SECRET_SKIN)
+			{
+				continue;
+			}
+
+			unlockShift++;
+		}
+
+		// If they set an invalid bit to true, then likely a modified client
+		if (unlockShift < 32) // 32 is the max the data type allows
+		{
+			UINT32 illegalMask = UINT32_MAX;
+
+			for (i = 0; i < unlockShift; i++)
+			{
+				illegalMask &= ~(1 << i);
+			}
+
+			if ((p->availabilities & illegalMask) != 0)
 			{
 				kick = true;
-				break;
 			}
 		}
 
@@ -2098,7 +2133,7 @@ static void Got_Mapcmd(UINT8 **cp, INT32 playernum)
 	}
 
 	mapnumber = M_MapNumber(mapname[3], mapname[4]);
-	LUAh_MapChange(mapnumber);
+	LUA_HookInt(mapnumber, HOOK(MapChange));
 
 	G_InitNew(ultimatemode, mapname, resetplayer, skipprecutscene, FLS);
 	if (demoplayback && !timingdemo)
@@ -2130,7 +2165,7 @@ static void Command_Pause(void)
 
 	if (cv_pause.value || server || (IsPlayerAdmin(consoleplayer)))
 	{
-		if (modeattacking || !(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION))
+		if (modeattacking || !(gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) || (marathonmode && gamestate == GS_INTERMISSION))
 		{
 			CONS_Printf(M_GetText("You can't pause here.\n"));
 			return;
@@ -2683,7 +2718,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 	}
 
 	// Don't switch team, just go away, please, go awaayyyy, aaauuauugghhhghgh
-	if (!LUAh_TeamSwitch(&players[playernum], NetPacket.packet.newteam, players[playernum].spectator, NetPacket.packet.autobalance, NetPacket.packet.scrambled))
+	if (!LUA_HookTeamSwitch(&players[playernum], NetPacket.packet.newteam, players[playernum].spectator, NetPacket.packet.autobalance, NetPacket.packet.scrambled))
 		return;
 
 	//no status changes after hidetime
@@ -2844,7 +2879,7 @@ static void Got_Teamchange(UINT8 **cp, INT32 playernum)
 		// Call ViewpointSwitch hooks here.
 		// The viewpoint was forcibly changed.
 		if (displayplayer != consoleplayer) // You're already viewing yourself. No big deal.
-			LUAh_ViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
+			LUA_HookViewpointSwitch(&players[consoleplayer], &players[consoleplayer], true);
 		displayplayer = consoleplayer;
 	}
 
@@ -3198,7 +3233,7 @@ static void Command_RunSOC(void)
 static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum)
 {
 	char filename[256];
-	filestatus_t ncs = FS_NOTFOUND;
+	filestatus_t ncs = FS_NOTCHECKED;
 
 	if (playernum != serverplayer && !IsPlayerAdmin(playernum))
 	{
@@ -3322,10 +3357,9 @@ static void Command_Addfile(void)
 				break;
 		++p;
 
-		// check total packet size and no of files currently loaded
+		// check no of files currently loaded
 		// See W_LoadWadFile in w_wad.c
-		if ((numwadfiles >= MAX_WADFILES)
-		|| ((packetsizetally + nameonlylength(fn) + 22) > MAXFILENEEDED*sizeof(UINT8)))
+		if (numwadfiles >= MAX_WADFILES)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
 			return;
@@ -3354,6 +3388,9 @@ static void Command_Addfile(void)
 
 			for (i = 0; i < numwadfiles; i++)
 			{
+				if (wadfiles[i]->type == RET_FOLDER)
+					continue;
+
 				if (!memcmp(wadfiles[i]->md5sum, md5sum, 16))
 				{
 					CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
@@ -3373,10 +3410,142 @@ static void Command_Addfile(void)
 	}
 }
 
+static void Command_Addfolder(void)
+{
+	size_t argc = COM_Argc(); // amount of arguments total
+	size_t curarg; // current argument index
+
+	const char *addedfolders[argc]; // list of filenames already processed
+	size_t numfoldersadded = 0; // the amount of filenames processed
+
+	if (argc < 2)
+	{
+		CONS_Printf(M_GetText("addfolder <path> [path2...] [...]: Load add-ons\n"));
+		return;
+	}
+
+	// start at one to skip command name
+	for (curarg = 1; curarg < argc; curarg++)
+	{
+		const char *fn, *p;
+		char *fullpath;
+		char buf[256];
+		char *buf_p = buf;
+		INT32 i, stat;
+		size_t ii;
+		boolean folderadded = false;
+
+		fn = COM_Argv(curarg);
+
+		// For the amount of filenames previously processed...
+		for (ii = 0; ii < numfoldersadded; ii++)
+		{
+			// If this is one of them, don't try to add it.
+			if (!strcmp(fn, addedfolders[ii]))
+			{
+				folderadded = true;
+				break;
+			}
+		}
+
+		// If we've added this one, skip to the next one.
+		if (folderadded)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Already processed %s, skipping\n"), fn);
+			continue;
+		}
+
+		// Disallow non-printing characters and semicolons.
+		for (i = 0; fn[i] != '\0'; i++)
+			if (!isprint(fn[i]) || fn[i] == ';')
+				return;
+
+		// Add file on your client directly if you aren't in a netgame.
+		if (!(netgame || multiplayer))
+		{
+			P_AddFolder(fn);
+			addedfolders[numfoldersadded++] = fn;
+			continue;
+		}
+
+		p = fn+strlen(fn);
+		while(--p >= fn)
+			if (*p == '\\' || *p == '/' || *p == ':')
+				break;
+		++p;
+
+		// Don't add an empty path.
+		if (M_IsStringEmpty(fn))
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Folder name is empty, skipping\n"));
+			continue;
+		}
+
+		// check no of files currently loaded
+		// See W_LoadWadFile in w_wad.c
+		if (numwadfiles >= MAX_WADFILES)
+		{
+			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+			return;
+		}
+
+		// Check if the path is valid.
+		stat = W_IsPathToFolderValid(fn);
+
+		if (stat == 0)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Path %s is invalid, skipping\n"), fn);
+			continue;
+		}
+		else if (stat < 0)
+		{
+#ifndef AVOID_ERRNO
+			CONS_Alert(CONS_WARNING, M_GetText("Error accessing %s (%s), skipping\n"), fn, strerror(direrror));
+#else
+			CONS_Alert(CONS_WARNING, M_GetText("Error accessing %s, skipping\n"), fn);
+#endif
+			continue;
+		}
+
+		// Get the full path for this folder.
+		fullpath = W_GetFullFolderPath(fn);
+
+		if (fullpath == NULL)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("Path %s is invalid, skipping\n"), fn);
+			continue;
+		}
+
+		// Check if the folder is already added.
+		for (i = 0; i < numwadfiles; i++)
+		{
+			if (wadfiles[i]->type != RET_FOLDER)
+				continue;
+
+			if (samepaths(wadfiles[i]->path, fullpath) > 0)
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("%s is already loaded\n"), fn);
+				continue;
+			}
+		}
+
+		Z_Free(fullpath);
+
+		addedfolders[numfoldersadded++] = fn;
+
+		WRITESTRINGN(buf_p,p,240);
+
+		if (IsPlayerAdmin(consoleplayer) && (!server)) // Request to add file
+			SendNetXCmd(XD_REQADDFOLDER, buf, buf_p - buf);
+		else
+			SendNetXCmd(XD_ADDFOLDER, buf, buf_p - buf);
+	}
+}
+
 static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 {
 	char filename[241];
-	filestatus_t ncs = FS_NOTFOUND;
+	filestatus_t ncs = FS_NOTCHECKED;
 	UINT8 md5sum[16];
 	boolean kick = false;
 	boolean toomany = false;
@@ -3401,9 +3570,7 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 		return;
 	}
 
-	// See W_LoadWadFile in w_wad.c
-	if ((numwadfiles >= MAX_WADFILES)
-	|| ((packetsizetally + nameonlylength(filename) + 22) > MAXFILENEEDED*sizeof(UINT8)))
+	if (numwadfiles >= MAX_WADFILES)
 		toomany = true;
 	else
 		ncs = findfile(filename,md5sum,true);
@@ -3433,10 +3600,66 @@ static void Got_RequestAddfilecmd(UINT8 **cp, INT32 playernum)
 	COM_BufAddText(va("addfile %s\n", filename));
 }
 
+static void Got_RequestAddfoldercmd(UINT8 **cp, INT32 playernum)
+{
+	char path[241];
+	filestatus_t ncs = FS_NOTCHECKED;
+	boolean kick = false;
+	boolean toomany = false;
+	INT32 i,j;
+
+	READSTRINGN(*cp, path, 240);
+
+	/// \todo Integrity checks.
+
+	// Only the server processes this message.
+	if (client)
+		return;
+
+	// Disallow non-printing characters and semicolons.
+	for (i = 0; path[i] != '\0'; i++)
+		if (!isprint(path[i]) || path[i] == ';')
+			kick = true;
+
+	if ((playernum != serverplayer && !IsPlayerAdmin(playernum)) || kick)
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal addfolder command received from %s\n"), player_names[playernum]);
+		SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+		return;
+	}
+
+	if (numwadfiles >= MAX_WADFILES)
+		toomany = true;
+	else
+		ncs = findfolder(path);
+
+	if (ncs != FS_FOUND || toomany)
+	{
+		char message[256];
+
+		if (toomany)
+			sprintf(message, M_GetText("Too many files loaded to add %s\n"), path);
+		else if (ncs == FS_NOTFOUND)
+			sprintf(message, M_GetText("The server doesn't have %s\n"), path);
+		else
+			sprintf(message, M_GetText("Unknown error finding folder (%s)\n"), path);
+
+		CONS_Printf("%s",message);
+
+		for (j = 0; j < MAXPLAYERS; j++)
+			if (adminplayers[j])
+				COM_BufAddText(va("sayto %d %s", adminplayers[j], message));
+
+		return;
+	}
+
+	COM_BufAddText(va("addfolder \"%s\"\n", path));
+}
+
 static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 {
 	char filename[241];
-	filestatus_t ncs = FS_NOTFOUND;
+	filestatus_t ncs = FS_NOTCHECKED;
 	UINT8 md5sum[16];
 
 	READSTRINGN(*cp, filename, 240);
@@ -3481,20 +3704,71 @@ static void Got_Addfilecmd(UINT8 **cp, INT32 playernum)
 	G_SetGameModified(true);
 }
 
+static void Got_Addfoldercmd(UINT8 **cp, INT32 playernum)
+{
+	char path[241];
+	filestatus_t ncs = FS_NOTCHECKED;
+
+	READSTRINGN(*cp, path, 240);
+
+	/// \todo Integrity checks.
+
+	if (playernum != serverplayer)
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal addfolder command received from %s\n"), player_names[playernum]);
+		if (server)
+			SendKick(playernum, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+		return;
+	}
+
+	ncs = findfolder(path);
+
+	if (ncs != FS_FOUND || !P_AddFolder(path))
+	{
+		Command_ExitGame_f();
+		if (ncs == FS_FOUND)
+		{
+			CONS_Printf(M_GetText("The server tried to add %s,\nbut you have too many files added.\nRestart the game to clear loaded files\nand play on this server."), path);
+			M_StartMessage(va("The server added a folder \n(%s)\nbut you have too many files added.\nRestart the game to clear loaded files.\n\nPress ESC\n",path), NULL, MM_NOTHING);
+		}
+		else if (ncs == FS_NOTFOUND)
+		{
+			CONS_Printf(M_GetText("The server tried to add %s,\nbut you don't have this file.\nYou need to find it in order\nto play on this server."), path);
+			M_StartMessage(va("The server added a folder \n(%s)\nthat you do not have.\n\nPress ESC\n",path), NULL, MM_NOTHING);
+		}
+		else
+		{
+			CONS_Printf(M_GetText("Unknown error finding folder (%s) the server added.\n"), path);
+			M_StartMessage(va("Unknown error trying to load a folder\nthat the server added \n(%s).\n\nPress ESC\n",path), NULL, MM_NOTHING);
+		}
+		return;
+	}
+
+	G_SetGameModified(true);
+}
+
 static void Command_ListWADS_f(void)
 {
 	INT32 i = numwadfiles;
 	char *tempname;
-	CONS_Printf(M_GetText("There are %d wads loaded:\n"),numwadfiles);
+
+#ifdef ENFORCE_WAD_LIMIT
+	CONS_Printf(M_GetText("There are %d/%d files loaded:\n"),numwadfiles,MAX_WADFILES);
+#else
+	CONS_Printf(M_GetText("There are %d files loaded:\n"),numwadfiles);
+#endif
+
 	for (i--; i >= 0; i--)
 	{
 		nameonly(tempname = va("%s", wadfiles[i]->filename));
 		if (!i)
 			CONS_Printf("\x82 IWAD\x80: %s\n", tempname);
-		else if (i <= mainwads)
+		else if (i < mainwads)
 			CONS_Printf("\x82 * %.2d\x80: %s\n", i, tempname);
 		else if (!wadfiles[i]->important)
 			CONS_Printf("\x86   %.2d: %s\n", i, tempname);
+		else if (wadfiles[i]->type == RET_FOLDER)
+			CONS_Printf("\x82 * %.2d\x84: %s\n", i, tempname);
 		else
 			CONS_Printf("   %.2d: %s\n", i, tempname);
 	}
@@ -3607,7 +3881,7 @@ static void Command_Playintro_f(void)
   */
 FUNCNORETURN static ATTRNORETURN void Command_Quit_f(void)
 {
-	LUAh_GameQuit(true);
+	LUA_HookBool(true, HOOK(GameQuit));
 	I_Quit();
 }
 
@@ -4269,7 +4543,7 @@ void Command_ExitGame_f(void)
 {
 	INT32 i;
 
-	LUAh_GameQuit(false);
+	LUA_HookBool(false, HOOK(GameQuit));
 
 	D_QuitNetGame();
 	CL_Reset();
@@ -4301,7 +4575,7 @@ void Command_Retry_f(void)
 		CONS_Printf(M_GetText("You must be in a level to use this.\n"));
 	else if (netgame || multiplayer)
 		CONS_Printf(M_GetText("This only works in single player.\n"));
-	else if (!&players[consoleplayer] || players[consoleplayer].lives <= 1)
+	else if (players[consoleplayer].lives <= 1)
 		CONS_Printf(M_GetText("You can't retry without any lives remaining!\n"));
 	else if (G_IsSpecialStage(gamemap))
 		CONS_Printf(M_GetText("You can't retry special stages!\n"));

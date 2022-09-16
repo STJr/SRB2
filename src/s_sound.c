@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -74,9 +74,9 @@ consvar_t stereoreverse = CVAR_INIT ("stereoreverse", "Off", CV_SAVE, CV_OnOff, 
 static consvar_t precachesound = CVAR_INIT ("precachesound", "Off", CV_SAVE, CV_OnOff, NULL);
 
 // actual general (maximum) sound & music volume, saved into the config
-consvar_t cv_soundvolume = CVAR_INIT ("soundvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
-consvar_t cv_digmusicvolume = CVAR_INIT ("digmusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
-consvar_t cv_midimusicvolume = CVAR_INIT ("midimusicvolume", "18", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_soundvolume = CVAR_INIT ("soundvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_digmusicvolume = CVAR_INIT ("digmusicvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_midimusicvolume = CVAR_INIT ("midimusicvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
 
 static void Captioning_OnChange(void)
 {
@@ -1033,11 +1033,9 @@ void S_SetSfxVolume(INT32 volume)
 
 void S_ClearSfx(void)
 {
-#ifndef DJGPPDOS
 	size_t i;
 	for (i = 1; i < NUMSFX; i++)
 		I_FreeSfx(S_sfx + i);
-#endif
 }
 
 static void S_StopChannel(INT32 cnum)
@@ -1353,28 +1351,6 @@ void S_InitSfxChannels(INT32 sfxVolume)
 /// ------------------------
 /// Music
 /// ------------------------
-
-#ifdef MUSICSLOT_COMPATIBILITY
-const char *compat_special_music_slots[16] =
-{
-	"_title", // 1036  title screen
-	"_intro", // 1037  intro
-	"_clear", // 1038  level clear
-	"_inv", // 1039  invincibility
-	"_shoes",  // 1040  super sneakers
-	"_minv", // 1041  Mario invincibility
-	"_drown",  // 1042  drowning
-	"_gover", // 1043  game over
-	"_1up", // 1044  extra life
-	"_conti", // 1045  continue screen
-	"_super", // 1046  Super Sonic
-	"_chsel", // 1047  character select
-	"_creds", // 1048  credits
-	"_inter", // 1049  Race Results
-	"_stjr",   // 1050  Sonic Team Jr. Presents
-	""
-};
-#endif
 
 static char      music_name[7]; // up to 6-character name
 static void      *music_data;
@@ -2262,6 +2238,16 @@ static void S_ChangeMusicToQueue(void)
 void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 position, UINT32 prefadems, UINT32 fadeinms)
 {
 	char newmusic[7];
+
+	struct MusicChange hook_param = {
+		newmusic,
+		&mflags,
+		&looping,
+		&position,
+		&prefadems,
+		&fadeinms
+	};
+
 	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
 	boolean midipref = cv_musicpref.value;
 
@@ -2269,7 +2255,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 
 	strncpy(newmusic, mmusic, 7);
-	if (LUAh_MusicChange(music_name, newmusic, &mflags, &looping, &position, &prefadems, &fadeinms))
+	if (LUA_HookMusicChange(music_name, &hook_param))
 		return;
 	newmusic[6] = 0;
 
@@ -2465,7 +2451,7 @@ void S_StartEx(boolean reset)
 static void Command_Tunes_f(void)
 {
 	const char *tunearg;
-	UINT16 tunenum, track = 0;
+	UINT16 track = 0;
 	UINT32 position = 0;
 	const size_t argc = COM_Argc();
 
@@ -2481,7 +2467,6 @@ static void Command_Tunes_f(void)
 	}
 
 	tunearg = COM_Argv(1);
-	tunenum = (UINT16)atoi(tunearg);
 	track = 0;
 
 	if (!strcasecmp(tunearg, "-show"))
@@ -2500,24 +2485,14 @@ static void Command_Tunes_f(void)
 		tunearg = mapheaderinfo[gamemap-1]->musname;
 		track = mapheaderinfo[gamemap-1]->mustrack;
 	}
-	else if (!tunearg[2] && toupper(tunearg[0]) >= 'A' && toupper(tunearg[0]) <= 'Z')
-		tunenum = (UINT16)M_MapNumber(tunearg[0], tunearg[1]);
 
-	if (tunenum && tunenum >= 1036)
-	{
-		CONS_Alert(CONS_NOTICE, M_GetText("Valid music slots are 1 to 1035.\n"));
-		return;
-	}
-	if (!tunenum && strlen(tunearg) > 6) // This is automatic -- just show the error just in case
+	if (strlen(tunearg) > 6) // This is automatic -- just show the error just in case
 		CONS_Alert(CONS_NOTICE, M_GetText("Music name too long - truncated to six characters.\n"));
 
 	if (argc > 2)
 		track = (UINT16)atoi(COM_Argv(2))-1;
 
-	if (tunenum)
-		snprintf(mapmusname, 7, "%sM", G_BuildMapName(tunenum));
-	else
-		strncpy(mapmusname, tunearg, 7);
+	strncpy(mapmusname, tunearg, 7);
 
 	if (argc > 4)
 		position = (UINT32)atoi(COM_Argv(4));

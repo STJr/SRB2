@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -416,6 +416,39 @@ void R_DrawTranslucentColumn_8(void)
 	}
 }
 
+// Hack: A cut-down copy of R_DrawTranslucentColumn_8 that does not read texture
+// data since something about calculating the texture reading address for drop shadows is broken.
+// dc_texturemid and dc_iscale get wrong values for drop shadows, however those are not strictly
+// needed for the current design of the shadows, so this function bypasses the issue
+// by not using those variables at all.
+void R_DrawDropShadowColumn_8(void)
+{
+	register INT32 count;
+	register UINT8 *dest;
+
+	count = dc_yh - dc_yl + 1;
+
+	if (count <= 0) // Zero length, column does not exceed a pixel.
+		return;
+
+	dest = &topleft[dc_yl*vid.width + dc_x];
+
+	{
+#define DSCOLOR 31 // palette index for the color of the shadow
+		register const UINT8 *transmap_offset = dc_transmap + (dc_colormap[DSCOLOR] << 8);
+#undef DSCOLOR
+		while ((count -= 2) >= 0)
+		{
+			*dest = *(transmap_offset + (*dest));
+			dest += vid.width;
+			*dest = *(transmap_offset + (*dest));
+			dest += vid.width;
+		}
+		if (count & 1)
+			*dest = *(transmap_offset + (*dest));
+	}
+}
+
 /**	\brief The R_DrawTranslatedTranslucentColumn_8 function
 	Spiffy function. Not only does it colormap a sprite, but does translucency as well.
 	Uber-kudos to Cyan Helkaraxe
@@ -693,8 +726,8 @@ void R_DrawTiltedSpan_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 
@@ -726,8 +759,8 @@ void R_DrawTiltedSpan_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
@@ -763,8 +796,8 @@ void R_DrawTiltedSpan_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
@@ -826,8 +859,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dest);
@@ -858,8 +891,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
@@ -895,8 +928,8 @@ void R_DrawTiltedTranslucentSpan_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
@@ -960,8 +993,8 @@ void R_DrawTiltedTranslucentWaterSpan_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		*dest = *(ds_transmap + (colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]] << 8) + *dsrc++);
@@ -992,8 +1025,8 @@ void R_DrawTiltedTranslucentWaterSpan_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
@@ -1029,8 +1062,8 @@ void R_DrawTiltedTranslucentWaterSpan_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
@@ -1091,8 +1124,8 @@ void R_DrawTiltedSplat_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 
@@ -1127,8 +1160,8 @@ void R_DrawTiltedSplat_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
@@ -1168,8 +1201,8 @@ void R_DrawTiltedSplat_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
@@ -1227,8 +1260,9 @@ void R_DrawSplat_8 (void)
 		// need!
 		//
 		// <Callum> 4194303 = (2048x2048)-1 (2048x2048 is maximum flat size)
+		// Why decimal? 0x3FFFFF == 4194303... ~Golden
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[0] = colormap[val];
@@ -1236,7 +1270,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[1] = colormap[val];
@@ -1244,7 +1278,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[2] = colormap[val];
@@ -1252,7 +1286,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[3] = colormap[val];
@@ -1260,7 +1294,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[4] = colormap[val];
@@ -1268,7 +1302,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[5] = colormap[val];
@@ -1276,7 +1310,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[6] = colormap[val];
@@ -1284,7 +1318,7 @@ void R_DrawSplat_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
+		val &= 0x3FFFFF;
 		val = source[val];
 		if (val != TRANSPARENTPIXEL)
 			dest[7] = colormap[val];
@@ -1447,10 +1481,7 @@ void R_DrawFloorSprite_8 (void)
 		// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
 		// have the uber complicated math to calculate it now, so that was a memory write we didn't
 		// need!
-		//
-		// <Callum> 4194303 = (2048x2048)-1 (2048x2048 is maximum flat size)
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[0] = colormap[translation[val & 0xFF]];
@@ -1458,7 +1489,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[1] = colormap[translation[val & 0xFF]];
@@ -1466,7 +1496,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[2] = colormap[translation[val & 0xFF]];
@@ -1474,7 +1503,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[3] = colormap[translation[val & 0xFF]];
@@ -1482,7 +1510,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[4] = colormap[translation[val & 0xFF]];
@@ -1490,7 +1517,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[5] = colormap[translation[val & 0xFF]];
@@ -1498,7 +1524,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[6] = colormap[translation[val & 0xFF]];
@@ -1506,7 +1531,6 @@ void R_DrawFloorSprite_8 (void)
 		yposition += ystep;
 
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		val &= 4194303;
 		val = source[val];
 		if (val & 0xFF00)
 			dest[7] = colormap[translation[val & 0xFF]];
@@ -1682,8 +1706,8 @@ void R_DrawTiltedFloorSprite_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
@@ -1722,8 +1746,8 @@ void R_DrawTiltedFloorSprite_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
@@ -1791,8 +1815,8 @@ void R_DrawTiltedTranslucentFloorSprite_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
@@ -1831,8 +1855,8 @@ void R_DrawTiltedTranslucentFloorSprite_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1635,8 +1635,10 @@ static int skincolor_get(lua_State *L)
 		lua_pushinteger(L, info->chatcolor);
 	else if (fastcmp(field,"accessible"))
 		lua_pushboolean(L, info->accessible);
-	else
+	else {
 		CONS_Debug(DBG_LUA, M_GetText("'%s' has no field named '%s'; returning nil.\n"), "skincolor_t", field);
+		return 0;
+	}
 	return 1;
 }
 

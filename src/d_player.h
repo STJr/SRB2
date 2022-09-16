@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -52,6 +52,8 @@ typedef enum
 	SF_NOSUPERSPRITES   = 1<<16, // Don't use super sprites while super
 	SF_NOSUPERJUMPBOOST = 1<<17, // Disable the jump boost given while super (i.e. Knuckles)
 	SF_CANBUSTWALLS     = 1<<18, // Can naturally bust walls on contact? (i.e. Knuckles)
+	SF_NOSHIELDABILITY  = 1<<19, // Disable shield abilities
+
 	// free up to and including 1<<31
 } skinflags_t;
 
@@ -312,9 +314,43 @@ typedef enum
 	RW_RAIL    = 32
 } ringweapons_t;
 
+//Bot types
+typedef enum
+{
+	BOT_NONE = 0,
+	BOT_2PAI,
+	BOT_2PHUMAN,
+	BOT_MPAI
+} bottype_t;
+
+//AI states
+typedef enum
+{
+	AI_STANDBY = 0,
+	AI_FOLLOW,
+	AI_CATCHUP,
+	AI_THINKFLY,
+	AI_FLYSTANDBY,
+	AI_FLYCARRY,
+	AI_SPINFOLLOW
+} aistatetype_t;
+
+
 // ========================================================================
 //                          PLAYER STRUCTURE
 // ========================================================================
+
+//Bot memory struct
+typedef struct botmem_s
+{
+	boolean lastForward;
+	boolean lastBlocked;
+	boolean blocked;	
+	UINT8 catchup_tics;
+	UINT8 thinkstate;
+} botmem_t;
+
+//Main struct
 typedef struct player_s
 {
 	mobj_t *mo;
@@ -524,8 +560,13 @@ typedef struct player_s
 
 	boolean spectator;
 	boolean outofcoop;
+	boolean removing;
 	UINT8 bot;
-
+	struct player_s *botleader;
+	UINT16 lastbuttons;
+	botmem_t botmem;
+	boolean blocked;
+	
 	tic_t jointime; // Timer when player joins game to change skin/color
 	tic_t quittime; // Time elapsed since user disconnected, zero if connected
 #ifdef HWRENDER

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -43,7 +43,7 @@
 
 #include "info.h"
 #include "dehacked.h"
-#include "doomdef.h" // MUSICSLOT_COMPATIBILITY, HWRENDER
+#include "doomdef.h" // HWRENDER
 
 // Crazy word-reading stuff
 /// \todo Put these in a seperate file or something.
@@ -52,9 +52,6 @@ statenum_t get_state(const char *word);
 spritenum_t get_sprite(const char *word);
 playersprite_t get_sprite2(const char *word);
 sfxenum_t get_sfx(const char *word);
-#ifdef MUSICSLOT_COMPATIBILITY
-UINT16 get_mus(const char *word, UINT8 dehacked_mode);
-#endif
 hudnum_t get_huditem(const char *word);
 menutype_t get_menutype(const char *word);
 //INT16 get_gametype(const char *word);
@@ -84,6 +81,8 @@ void readskincolor(MYFILE *f, INT32 num);
 void readthing(MYFILE *f, INT32 num);
 void readfreeslots(MYFILE *f);
 void readPlayer(MYFILE *f, INT32 num);
+void clear_emblems(void);
+void clear_unlockables(void);
 void clear_levels(void);
 void clear_conditionsets(void);
 #endif

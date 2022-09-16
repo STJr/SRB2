@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -158,7 +158,7 @@ typedef struct consvar_s //NULL, NULL, 0, NULL, NULL |, 0, NULL, NULL, 0, 0, NUL
 
 /* name, defaultvalue, flags, PossibleValue, func */
 #define CVAR_INIT( ... ) \
-{ __VA_ARGS__, 0, NULL, NULL, {0}, 0U, (char)0, NULL }
+{ __VA_ARGS__, 0, NULL, NULL, {0, {NULL}}, 0U, (char)0, NULL }
 
 #ifdef OLD22DEMOCOMPAT
 typedef struct old_demo_var old_demo_var_t;

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -203,11 +203,11 @@ boolean cht_Responder(event_t *ev)
 	if (ev->type != ev_keydown)
 		return false;
 
-	if (ev->data1 > 0xFF)
+	if (ev->key > 0xFF)
 	{
 		// map some fake (joy) inputs into keys
 		// map joy inputs into keys
-		switch (ev->data1)
+		switch (ev->key)
 		{
 			case KEY_JOY1:
 			case KEY_JOY1 + 2:
@@ -231,7 +231,7 @@ boolean cht_Responder(event_t *ev)
 		}
 	}
 	else
-		ch = (UINT8)ev->data1;
+		ch = (UINT8)ev->key;
 
 	ret += cht_CheckCheat(&cheat_ultimate, (char)ch);
 	ret += cht_CheckCheat(&cheat_ultimate_joy, (char)ch);
@@ -539,7 +539,7 @@ void Command_Teleport_f(void)
 
 			// Flagging a player's ambush will make them start on the ceiling
 			// Objectflip inverts
-			if (!!(mt->options & MTF_AMBUSH) ^ !!(mt->options & MTF_OBJECTFLIP))
+			if (!!(mt->args[0]) ^ !!(mt->options & MTF_OBJECTFLIP))
 				intz = ss->sector->ceilingheight - p->mo->height - offset;
 			else
 				intz = ss->sector->floorheight + offset;
@@ -1004,7 +1004,7 @@ static void OP_CycleThings(INT32 amt)
 		} while
 		(mobjinfo[op_currentthing].doomednum == -1
 			|| op_currentthing == MT_NIGHTSDRONE
-			|| mobjinfo[op_currentthing].flags & (MF_AMBIENT|MF_NOSECTOR)
+			|| mobjinfo[op_currentthing].flags & MF_NOSECTOR
 			|| (states[mobjinfo[op_currentthing].spawnstate].sprite == SPR_NULL
 			 && states[mobjinfo[op_currentthing].seestate].sprite == SPR_NULL)
 		);
@@ -1137,7 +1137,7 @@ void OP_ResetObjectplace(void)
 //
 // Main meat of objectplace: handling functions
 //
-void OP_NightsObjectplace(player_t *player)
+/*void OP_NightsObjectplace(player_t *player)
 {
 	ticcmd_t *cmd = &player->cmd;
 	mapthing_t *mt;
@@ -1283,14 +1283,14 @@ void OP_NightsObjectplace(player_t *player)
 		mt = OP_CreateNewMapThing(player, (UINT16)cv_mapthingnum.value, false);
 		mt->angle = angle;
 
-		if (mt->type >= 600 && mt->type <= 609) // Placement patterns
+		if (mt->type >= 600 && mt->type <= 611) // Placement patterns
 			P_SpawnItemPattern(mt, false);
-		else if (mt->type == 1705 || mt->type == 1713) // NiGHTS Hoops
+		else if (mt->type == 1713) // NiGHTS Hoops
 			P_SpawnHoop(mt);
 		else
 			P_SpawnMapThing(mt);
 	}
-}
+}*/
 
 //
 // OP_ObjectplaceMovement
@@ -1414,9 +1414,9 @@ void OP_ObjectplaceMovement(player_t *player)
 			return;
 
 		mt = OP_CreateNewMapThing(player, (UINT16)spawnthing, ceiling);
-		if (mt->type >= 600 && mt->type <= 609) // Placement patterns
+		if (mt->type >= 600 && mt->type <= 611) // Placement patterns
 			P_SpawnItemPattern(mt, false);
-		else if (mt->type == 1705 || mt->type == 1713) // NiGHTS Hoops
+		else if (mt->type == 1713) // NiGHTS Hoops
 			P_SpawnHoop(mt);
 		else
 			P_SpawnMapThing(mt);
@@ -1428,14 +1428,14 @@ void OP_ObjectplaceMovement(player_t *player)
 //
 // Objectplace related commands.
 //
-void Command_Writethings_f(void)
+/*void Command_Writethings_f(void)
 {
 	REQUIRE_INLEVEL;
 	REQUIRE_SINGLEPLAYER;
 	REQUIRE_OBJECTPLACE;
 
 	P_WriteThings();
-}
+}*/
 
 void Command_ObjectPlace_f(void)
 {

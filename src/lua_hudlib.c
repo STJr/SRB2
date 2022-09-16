@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2014-2016 by John "JTE" Muniz.
-// Copyright (C) 2014-2020 by Sonic Team Junior.
+// Copyright (C) 2014-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -23,22 +23,23 @@
 #include "v_video.h"
 #include "w_wad.h"
 #include "z_zone.h"
+#include "y_inter.h"
 
 #include "lua_script.h"
 #include "lua_libs.h"
 #include "lua_hud.h"
+#include "lua_hook.h"
 
 #define HUDONLY if (!hud_running) return luaL_error(L, "HUD rendering code should not be called outside of rendering hooks!");
 
 boolean hud_running = false;
 static UINT8 hud_enabled[(hud_MAX/8)+1];
 
-static UINT8 hudAvailable; // hud hooks field
-
 // must match enum hud in lua_hud.h
 static const char *const hud_disable_options[] = {
 	"stagetitle",
 	"textspectator",
+	"crosshair",
 
 	"score",
 	"time",
@@ -62,7 +63,9 @@ static const char *const hud_disable_options[] = {
 	"tabemblems",
 
 	"intermissiontally",
+	"intermissiontitletext",
 	"intermissionmessages",
+	"intermissionemeralds",
 	NULL};
 
 enum hudinfo {
@@ -90,21 +93,6 @@ static const char *const patch_opt[] = {
 	"height",
 	"leftoffset",
 	"topoffset",
-	NULL};
-
-enum hudhook {
-	hudhook_game = 0,
-	hudhook_scores,
-	hudhook_intermission,
-	hudhook_title,
-	hudhook_titlecard
-};
-static const char *const hudhook_opt[] = {
-	"game",
-	"scores",
-	"intermission",
-	"title",
-	"titlecard",
 	NULL};
 
 // alignment types for v.drawString
@@ -379,6 +367,74 @@ static int camera_get(lua_State *L)
 		break;
 	}
 	return 1;
+}
+
+static int camera_set(lua_State *L)
+{
+	camera_t *cam = *((camera_t **)luaL_checkudata(L, 1, META_CAMERA));
+	enum cameraf field = luaL_checkoption(L, 2, NULL, camera_opt);
+
+	I_Assert(cam != NULL);
+
+	switch(field)
+	{
+	case camera_subsector:
+	case camera_floorz:
+	case camera_ceilingz:
+	case camera_x:
+	case camera_y:
+		return luaL_error(L, LUA_QL("camera_t") " field " LUA_QS " should not be set directly. Use " LUA_QL("P_TryCameraMove") " or " LUA_QL("P_TeleportCameraMove") " instead.", camera_opt[field]);
+	case camera_chase: {
+		INT32 chase = luaL_checkboolean(L, 3);
+		if (cam == &camera)
+			CV_SetValue(&cv_chasecam, chase);
+		else if (cam == &camera2)
+			CV_SetValue(&cv_chasecam2, chase);
+		else // ??? this should never happen, but ok
+			cam->chase = chase;
+		break;
+	}
+	case camera_aiming:
+		cam->aiming = luaL_checkangle(L, 3);
+		break;
+	case camera_z:
+		cam->z = luaL_checkfixed(L, 3);
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
+		break;
+	case camera_angle:
+		cam->angle = luaL_checkangle(L, 3);
+		break;
+	case camera_radius:
+		cam->radius = luaL_checkfixed(L, 3);
+		if (cam->radius < 0)
+			cam->radius = 0;
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
+		break;
+	case camera_height:
+		cam->height = luaL_checkfixed(L, 3);
+		if (cam->height < 0)
+			cam->height = 0;
+		P_CheckCameraPosition(cam->x, cam->y, cam);
+		cam->floorz = tmfloorz;
+		cam->ceilingz = tmceilingz;
+		break;
+	case camera_momx:
+		cam->momx = luaL_checkfixed(L, 3);
+		break;
+	case camera_momy:
+		cam->momy = luaL_checkfixed(L, 3);
+		break;
+	case camera_momz:
+		cam->momz = luaL_checkfixed(L, 3);
+		break;
+	default:
+		return luaL_error(L, LUA_QL("camera_t") " has no field named " LUA_QS, camera_opt[field]);
+	}
+	return 0;
 }
 
 //
@@ -660,6 +716,45 @@ static int libd_drawStretched(lua_State *L)
 	return 0;
 }
 
+static int libd_drawCropped(lua_State *L)
+{
+	fixed_t x, y, hscale, vscale, sx, sy, w, h;
+	INT32 flags;
+	patch_t *patch;
+	const UINT8 *colormap = NULL;
+
+	HUDONLY
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	hscale = luaL_checkinteger(L, 3);
+	if (hscale < 0)
+		return luaL_error(L, "negative horizontal scale");
+	vscale = luaL_checkinteger(L, 4);
+	if (vscale < 0)
+		return luaL_error(L, "negative vertical scale");
+	patch = *((patch_t **)luaL_checkudata(L, 5, META_PATCH));
+	flags = luaL_checkinteger(L, 6);
+	if (!lua_isnoneornil(L, 7))
+		colormap = *((UINT8 **)luaL_checkudata(L, 7, META_COLORMAP));
+	sx = luaL_checkinteger(L, 8);
+	if (sx < 0) // Don't crash. Now, we could do "x-=sx*FRACUNIT; sx=0;" here...
+		return luaL_error(L, "negative crop sx");
+	sy = luaL_checkinteger(L, 9);
+	if (sy < 0) // ...but it's more truthful to just deny it, as negative values would crash
+		return luaL_error(L, "negative crop sy");
+	w = luaL_checkinteger(L, 10);
+	if (w < 0) // Again, don't crash
+		return luaL_error(L, "negative crop w");
+	h = luaL_checkinteger(L, 11);
+	if (h < 0)
+		return luaL_error(L, "negative crop h");
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawCroppedPatch(x, y, hscale, vscale, flags, patch, colormap, sx, sy, w, h);
+	return 0;
+}
+
 static int libd_drawNum(lua_State *L)
 {
 	INT32 x, y, flags, num;
@@ -856,6 +951,26 @@ static int libd_drawScaledNameTag(lua_State *L)
 	return 0;
 }
 
+static int libd_drawLevelTitle(lua_State *L)
+{
+	INT32 x;
+	INT32 y;
+	const char *str;
+	INT32 flags;
+
+	HUDONLY
+
+	x = luaL_checkinteger(L, 1);
+	y = luaL_checkinteger(L, 2);
+	str = luaL_checkstring(L, 3);
+	flags = luaL_optinteger(L, 4, 0);
+
+	flags &= ~V_PARAMMASK; // Don't let crashes happen.
+
+	V_DrawLevelTitle(x, y, flags, str);
+	return 0;
+}
+
 static int libd_stringWidth(lua_State *L)
 {
 	const char *str = luaL_checkstring(L, 1);
@@ -882,6 +997,20 @@ static int libd_nameTagWidth(lua_State *L)
 {
 	HUDONLY
 	lua_pushinteger(L, V_NameTagWidth(luaL_checkstring(L, 1)));
+	return 1;
+}
+
+static int libd_levelTitleWidth(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, V_LevelNameWidth(luaL_checkstring(L, 1)));
+	return 1;
+}
+
+static int libd_levelTitleHeight(lua_State *L)
+{
+	HUDONLY
+	lua_pushinteger(L, V_LevelNameHeight(luaL_checkstring(L, 1)));
 	return 1;
 }
 
@@ -1084,16 +1213,20 @@ static luaL_Reg lib_draw[] = {
 	{"draw", libd_draw},
 	{"drawScaled", libd_drawScaled},
 	{"drawStretched", libd_drawStretched},
+	{"drawCropped", libd_drawCropped},
 	{"drawNum", libd_drawNum},
 	{"drawPaddedNum", libd_drawPaddedNum},
 	{"drawFill", libd_drawFill},
 	{"drawString", libd_drawString},
 	{"drawNameTag", libd_drawNameTag},
 	{"drawScaledNameTag", libd_drawScaledNameTag},
+	{"drawLevelTitle", libd_drawLevelTitle},
 	{"fadeScreen", libd_fadeScreen},
 	// misc
 	{"stringWidth", libd_stringWidth},
 	{"nameTagWidth", libd_nameTagWidth},
+	{"levelTitleWidth", libd_levelTitleWidth},
+	{"levelTitleHeight", libd_levelTitleHeight},
 	// m_random
 	{"RandomFixed",libd_RandomFixed},
 	{"RandomByte",libd_RandomByte},
@@ -1111,6 +1244,8 @@ static luaL_Reg lib_draw[] = {
 	{"userTransFlag", libd_getusertransflag},
 	{NULL, NULL}
 };
+
+static int lib_draw_ref;
 
 //
 // lib_hud
@@ -1146,28 +1281,7 @@ static int lib_hudenabled(lua_State *L)
 
 
 // add a HUD element for rendering
-static int lib_hudadd(lua_State *L)
-{
-	enum hudhook field;
-
-	luaL_checktype(L, 1, LUA_TFUNCTION);
-	field = luaL_checkoption(L, 2, "game", hudhook_opt);
-
-	if (!lua_lumploading)
-		return luaL_error(L, "This function cannot be called from within a hook or coroutine!");
-
-	lua_getfield(L, LUA_REGISTRYINDEX, "HUD");
-	I_Assert(lua_istable(L, -1));
-	lua_rawgeti(L, -1, field+2); // HUD[2+]
-	I_Assert(lua_istable(L, -1));
-	lua_remove(L, -2);
-
-	lua_pushvalue(L, 1);
-	lua_rawseti(L, -2, (int)(lua_objlen(L, -2) + 1));
-
-	hudAvailable |= 1<<field;
-	return 0;
-}
+extern int lib_hudadd(lua_State *L);
 
 static luaL_Reg lib_hud[] = {
 	{"enable", lib_hudenable},
@@ -1185,26 +1299,9 @@ int LUA_HudLib(lua_State *L)
 {
 	memset(hud_enabled, 0xff, (hud_MAX/8)+1);
 
-	lua_newtable(L); // HUD registry table
-		lua_newtable(L);
-		luaL_register(L, NULL, lib_draw);
-		lua_rawseti(L, -2, 1); // HUD[1] = lib_draw
-
-		lua_newtable(L);
-		lua_rawseti(L, -2, 2); // HUD[2] = game rendering functions array
-
-		lua_newtable(L);
-		lua_rawseti(L, -2, 3); // HUD[3] = scores rendering functions array
-
-		lua_newtable(L);
-		lua_rawseti(L, -2, 4); // HUD[4] = intermission rendering functions array
-
-		lua_newtable(L);
-		lua_rawseti(L, -2, 5); // HUD[5] = title rendering functions array
-
-		lua_newtable(L);
-		lua_rawseti(L, -2, 6); // HUD[6] = title card rendering functions array
-	lua_setfield(L, LUA_REGISTRYINDEX, "HUD");
+	lua_newtable(L);
+	luaL_register(L, NULL, lib_draw);
+	lib_draw_ref = luaL_ref(L, LUA_REGISTRYINDEX);
 
 	luaL_newmetatable(L, META_HUDINFO);
 		lua_pushcfunction(L, hudinfo_get);
@@ -1243,6 +1340,9 @@ int LUA_HudLib(lua_State *L)
 	luaL_newmetatable(L, META_CAMERA);
 		lua_pushcfunction(L, camera_get);
 		lua_setfield(L, -2, "__index");
+
+		lua_pushcfunction(L, camera_set);
+		lua_setfield(L, -2, "__newindex");
 	lua_pop(L,1);
 
 	luaL_register(L, "hud", lib_hud);
@@ -1256,156 +1356,29 @@ boolean LUA_HudEnabled(enum hud option)
 	return false;
 }
 
-// Hook for HUD rendering
-void LUAh_GameHUD(player_t *stplayr)
+void LUA_SetHudHook(int hook)
 {
-	if (!gL || !(hudAvailable & (1<<hudhook_game)))
-		return;
+	lua_getref(gL, lib_draw_ref);
 
-	hud_running = true;
-	lua_settop(gL, 0);
+	switch (hook)
+	{
+		case HUD_HOOK(game): {
+			camera_t *cam = (splitscreen && stplyr ==
+					&players[secondarydisplayplayer])
+				? &camera2 : &camera;
 
-	lua_pushcfunction(gL, LUA_GetErrorMessage);
+			LUA_PushUserdata(gL, stplyr, META_PLAYER);
+			LUA_PushUserdata(gL, cam, META_CAMERA);
+		}	break;
 
-	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
-	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, 2+hudhook_game); // HUD[2] = rendering funcs
-	I_Assert(lua_istable(gL, -1));
+		case HUD_HOOK(titlecard):
+			LUA_PushUserdata(gL, stplyr, META_PLAYER);
+			lua_pushinteger(gL, lt_ticker);
+			lua_pushinteger(gL, (lt_endtime + TICRATE));
+			break;
 
-	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
-	I_Assert(lua_istable(gL, -1));
-	lua_remove(gL, -3); // pop HUD
-	LUA_PushUserdata(gL, stplayr, META_PLAYER);
-
-	if (splitscreen && stplayr == &players[secondarydisplayplayer])
-		LUA_PushUserdata(gL, &camera2, META_CAMERA);
-	else
-		LUA_PushUserdata(gL, &camera, META_CAMERA);
-
-	lua_pushnil(gL);
-	while (lua_next(gL, -5) != 0) {
-		lua_pushvalue(gL, -5); // graphics library (HUD[1])
-		lua_pushvalue(gL, -5); // stplayr
-		lua_pushvalue(gL, -5); // camera
-		LUA_Call(gL, 3, 0, 1);
+		case HUD_HOOK(intermission):
+			lua_pushboolean(gL, intertype == int_spec &&
+					stagefailed);
 	}
-	lua_settop(gL, 0);
-	hud_running = false;
-}
-
-void LUAh_ScoresHUD(void)
-{
-	if (!gL || !(hudAvailable & (1<<hudhook_scores)))
-		return;
-
-	hud_running = true;
-	lua_settop(gL, 0);
-
-	lua_pushcfunction(gL, LUA_GetErrorMessage);
-
-	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
-	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, 2+hudhook_scores); // HUD[3] = rendering funcs
-	I_Assert(lua_istable(gL, -1));
-
-	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
-	I_Assert(lua_istable(gL, -1));
-	lua_remove(gL, -3); // pop HUD
-	lua_pushnil(gL);
-	while (lua_next(gL, -3) != 0) {
-		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1, 0, 1);
-	}
-	lua_settop(gL, 0);
-	hud_running = false;
-}
-
-void LUAh_TitleHUD(void)
-{
-	if (!gL || !(hudAvailable & (1<<hudhook_title)))
-		return;
-
-	hud_running = true;
-	lua_settop(gL, 0);
-
-	lua_pushcfunction(gL, LUA_GetErrorMessage);
-
-	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
-	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, 2+hudhook_title); // HUD[5] = rendering funcs
-	I_Assert(lua_istable(gL, -1));
-
-	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
-	I_Assert(lua_istable(gL, -1));
-	lua_remove(gL, -3); // pop HUD
-	lua_pushnil(gL);
-	while (lua_next(gL, -3) != 0) {
-		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1, 0, 1);
-	}
-	lua_settop(gL, 0);
-	hud_running = false;
-}
-
-void LUAh_TitleCardHUD(player_t *stplayr)
-{
-	if (!gL || !(hudAvailable & (1<<hudhook_titlecard)))
-		return;
-
-	hud_running = true;
-	lua_settop(gL, 0);
-
-	lua_pushcfunction(gL, LUA_GetErrorMessage);
-
-	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
-	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, 2+hudhook_titlecard); // HUD[6] = rendering funcs
-	I_Assert(lua_istable(gL, -1));
-
-	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
-	I_Assert(lua_istable(gL, -1));
-	lua_remove(gL, -3); // pop HUD
-
-	LUA_PushUserdata(gL, stplayr, META_PLAYER);
-	lua_pushinteger(gL, lt_ticker);
-	lua_pushinteger(gL, (lt_endtime + TICRATE));
-	lua_pushnil(gL);
-
-	while (lua_next(gL, -6) != 0) {
-		lua_pushvalue(gL, -6); // graphics library (HUD[1])
-		lua_pushvalue(gL, -6); // stplayr
-		lua_pushvalue(gL, -6); // lt_ticker
-		lua_pushvalue(gL, -6); // lt_endtime
-		LUA_Call(gL, 4, 0, 1);
-	}
-
-	lua_settop(gL, 0);
-	hud_running = false;
-}
-
-void LUAh_IntermissionHUD(void)
-{
-	if (!gL || !(hudAvailable & (1<<hudhook_intermission)))
-		return;
-
-	hud_running = true;
-	lua_settop(gL, 0);
-
-	lua_pushcfunction(gL, LUA_GetErrorMessage);
-
-	lua_getfield(gL, LUA_REGISTRYINDEX, "HUD");
-	I_Assert(lua_istable(gL, -1));
-	lua_rawgeti(gL, -1, 2+hudhook_intermission); // HUD[4] = rendering funcs
-	I_Assert(lua_istable(gL, -1));
-
-	lua_rawgeti(gL, -2, 1); // HUD[1] = lib_draw
-	I_Assert(lua_istable(gL, -1));
-	lua_remove(gL, -3); // pop HUD
-	lua_pushnil(gL);
-	while (lua_next(gL, -3) != 0) {
-		lua_pushvalue(gL, -3); // graphics library (HUD[1])
-		LUA_Call(gL, 1, 0, 1);
-	}
-	lua_settop(gL, 0);
-	hud_running = false;
 }

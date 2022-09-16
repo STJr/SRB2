@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -337,9 +337,9 @@ typedef struct
 	fixed_t gravity;        ///< Map-wide gravity.
 
 	// Title card.
-	char ltzzpatch[8];      ///< Zig zag patch.
-	char ltzztext[8];       ///< Zig zag text.
-	char ltactdiamond[8];   ///< Act diamond.
+	char ltzzpatch[9];      ///< Zig zag patch.
+	char ltzztext[9];       ///< Zig zag text.
+	char ltactdiamond[9];   ///< Act diamond.
 
 	// Freed animals stuff.
 	UINT8 numFlickies;     ///< Internal. For freed flicky support.
@@ -496,7 +496,7 @@ extern UINT32 lastcustomtol;
 
 extern tic_t totalplaytime;
 
-extern UINT8 stagefailed;
+extern boolean stagefailed;
 
 // Emeralds stored as bits to throw savegame hackers off.
 extern UINT16 emeralds;

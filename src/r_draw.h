@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -140,10 +140,11 @@ extern UINT8 *blendtables[NUMBLENDMAPS];
 
 void R_InitTranslucencyTables(void);
 void R_GenerateBlendTables(void);
-void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt);
 
 UINT8 *R_GetTranslucencyTable(INT32 alphalevel);
 UINT8 *R_GetBlendTable(int style, INT32 alphalevel);
+
+boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel);
 
 // Color ramp modification should force a recache
 extern UINT8 skincolor_modified[];
@@ -169,6 +170,7 @@ void R_DrawViewBorder(void);
 void R_DrawColumn_8(void);
 void R_DrawShadeColumn_8(void);
 void R_DrawTranslucentColumn_8(void);
+void R_DrawDropShadowColumn_8(void);
 void R_DrawTranslatedColumn_8(void);
 void R_DrawTranslatedTranslucentColumn_8(void);
 void R_Draw2sMultiPatchColumn_8(void);
@@ -176,7 +178,7 @@ void R_Draw2sMultiPatchTranslucentColumn_8(void);
 void R_DrawFogColumn_8(void);
 void R_DrawColumnShadowed_8(void);
 
-#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / (zeroheight - FIXED_TO_FLOAT(viewz)) / 21.0f * FIXED_TO_FLOAT(fovtan))
+#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
 
 void R_DrawSpan_8(void);
 void R_DrawTranslucentSpan_8(void);

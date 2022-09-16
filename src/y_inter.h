@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2020 by Sonic Team Junior.
+// Copyright (C) 2004-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -14,6 +14,7 @@ extern boolean usebuffer;
 void Y_IntermissionDrawer(void);
 void Y_Ticker(void);
 
+void Y_LoadIntermissionData(void);
 void Y_StartIntermission(void);
 void Y_EndIntermission(void);
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -148,8 +148,6 @@ static void Sk_SetDefaultValue(skin_t *skin)
 	skin->contspeed = 17;
 	skin->contangle = 0;
 
-	skin->availability = 0;
-
 	for (i = 0; i < sfx_skinsoundslot0; i++)
 		if (S_sfx[i].skinsound != -1)
 			skin->soundsid[S_sfx[i].skinsound] = i;
@@ -176,14 +174,34 @@ void R_InitSkins(void)
 
 UINT32 R_GetSkinAvailabilities(void)
 {
-	INT32 s;
 	UINT32 response = 0;
+	UINT32 unlockShift = 0;
+	INT32 i;
 
-	for (s = 0; s < MAXSKINS; s++)
+	for (i = 0; i < MAXUNLOCKABLES; i++)
 	{
-		if (skins[s].availability && unlockables[skins[s].availability - 1].unlocked)
-			response |= (1 << s);
+		if (unlockables[i].type != SECRET_SKIN)
+		{
+			continue;
+		}
+
+		if (unlockShift >= 32)
+		{
+			// This crash is impossible to trigger as is,
+			// but it could happen if MAXUNLOCKABLES is ever made higher than 32,
+			// and someone makes a mod that has 33+ unlockable characters. :V
+			I_Error("Too many unlockable characters\n");
+			return 0;
+		}
+
+		if (unlockables[i].unlocked)
+		{
+			response |= (1 << unlockShift);
+		}
+
+		unlockShift++;
 	}
+
 	return response;
 }
 
@@ -191,14 +209,83 @@ UINT32 R_GetSkinAvailabilities(void)
 // warning don't use with an invalid skinnum other than -1 which always returns true
 boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 {
-	return ((skinnum == -1) // Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
-		|| (!skins[skinnum].availability)
-		|| (((netgame || multiplayer) && playernum != -1) ? (players[playernum].availabilities & (1 << skinnum)) : (unlockables[skins[skinnum].availability - 1].unlocked))
-		|| (modeattacking) // If you have someone else's run you might as well take a look
-		|| (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum)) // Force 1.
-		|| (netgame && (cv_forceskin.value == skinnum)) // Force 2.
-		|| (metalrecording && skinnum == 5) // Force 3.
-		);
+	INT32 unlockID = -1;
+	UINT32 unlockShift = 0;
+	INT32 i;
+
+	if (skinnum == -1)
+	{
+		// Simplifies things elsewhere, since there's already plenty of checks for less-than-0...
+		return true;
+	}
+
+	if (modeattacking)
+	{
+		// If you have someone else's run you might as well take a look
+		return true;
+	}
+
+	if (Playing() && (R_SkinAvailable(mapheaderinfo[gamemap-1]->forcecharacter) == skinnum))
+	{
+		// Force 1.
+		return true;
+	}
+
+	if (netgame && (cv_forceskin.value == skinnum))
+	{
+		// Force 2.
+		return true;
+	}
+	
+	if (metalrecording && skinnum == 5)
+	{
+		// Force 3.
+		return true;
+	}
+	if (playernum != -1 && players[playernum].bot)
+    {
+        //Force 4.
+        return true;
+    }
+
+	// We will now check if this skin is supposed to be locked or not.
+
+	for (i = 0; i < MAXUNLOCKABLES; i++)
+	{
+		INT32 unlockSkin = -1;
+
+		if (unlockables[i].type != SECRET_SKIN)
+		{
+			continue;
+		}
+
+		unlockSkin = M_UnlockableSkinNum(&unlockables[i]);
+
+		if (unlockSkin == skinnum)
+		{
+			unlockID = i;
+			break;
+		}
+
+		unlockShift++;
+	}
+
+	if (unlockID == -1)
+	{
+		// This skin isn't locked at all, we're good.
+		return true;
+	}
+
+	if ((netgame || multiplayer) && playernum != -1)
+	{
+		// We want to check per-player unlockables.
+		return (players[playernum].availabilities & (1 << unlockShift));
+	}
+	else
+	{
+		// We want to check our global unlockables.
+		return (unlockables[unlockID].unlocked);
+	}
 }
 
 // returns true if the skin name is found (loaded from pwad)
@@ -216,6 +303,103 @@ INT32 R_SkinAvailable(const char *name)
 	return -1;
 }
 
+// Auxillary function that actually sets the skin
+static void SetSkin(player_t *player, INT32 skinnum)
+{
+	skin_t *skin = &skins[skinnum];
+	UINT16 newcolor = 0;
+
+	player->skin = skinnum;
+
+	player->camerascale = skin->camerascale;
+	player->shieldscale = skin->shieldscale;
+
+	player->charability = (UINT8)skin->ability;
+	player->charability2 = (UINT8)skin->ability2;
+
+	player->charflags = (UINT32)skin->flags;
+
+	player->thokitem = skin->thokitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].painchance : (UINT32)skin->thokitem;
+	player->spinitem = skin->spinitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].damage : (UINT32)skin->spinitem;
+	player->revitem = skin->revitem < 0 ? (mobjtype_t)mobjinfo[MT_PLAYER].raisestate : (UINT32)skin->revitem;
+	player->followitem = skin->followitem;
+
+	if (((player->powers[pw_shield] & SH_NOSTACK) == SH_PINK) && (player->revitem == MT_LHRT || player->spinitem == MT_LHRT || player->thokitem == MT_LHRT)) // Healers can't keep their buff.
+		player->powers[pw_shield] &= SH_STACK;
+
+	player->actionspd = skin->actionspd;
+	player->mindash = skin->mindash;
+	player->maxdash = skin->maxdash;
+
+	player->normalspeed = skin->normalspeed;
+	player->runspeed = skin->runspeed;
+	player->thrustfactor = skin->thrustfactor;
+	player->accelstart = skin->accelstart;
+	player->acceleration = skin->acceleration;
+
+	player->jumpfactor = skin->jumpfactor;
+
+	player->height = skin->height;
+	player->spinheight = skin->spinheight;
+
+	if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
+	{
+		if (player == &players[consoleplayer])
+			CV_StealthSetValue(&cv_playercolor, skin->prefcolor);
+		else if (player == &players[secondarydisplayplayer])
+			CV_StealthSetValue(&cv_playercolor2, skin->prefcolor);
+		player->skincolor = newcolor = skin->prefcolor;
+		if (player->bot && botingame)
+		{
+			botskin = (UINT8)(skinnum + 1);
+			botcolor = skin->prefcolor;
+		}
+	}
+
+	if (player->followmobj)
+	{
+		P_RemoveMobj(player->followmobj);
+		P_SetTarget(&player->followmobj, NULL);
+	}
+
+	if (player->mo)
+	{
+		fixed_t radius = FixedMul(skin->radius, player->mo->scale);
+		if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NFLY].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
+		{
+			skin = &skins[DEFAULTNIGHTSSKIN];
+			player->followitem = skin->followitem;
+			if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
+				newcolor = skin->prefcolor; // will be updated in thinker to flashing
+		}
+		player->mo->skin = skin;
+		if (newcolor)
+			player->mo->color = newcolor;
+		P_SetScale(player->mo, player->mo->scale);
+		player->mo->radius = radius;
+
+		P_SetPlayerMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
+	}
+}
+
+// Gets the player to the first usuable skin in the game.
+// (If your mod locked them all, then you kinda stupid)
+INT32 GetPlayerDefaultSkin(INT32 playernum)
+{
+	INT32 i;
+
+	for (i = 0; i < numskins; i++)
+	{
+		if (R_SkinUsable(playernum, i))
+		{
+			return i;
+		}
+	}
+
+	I_Error("All characters are locked!");
+	return 0;
+}
+
 // network code calls this when a 'skin change' is received
 void SetPlayerSkin(INT32 playernum, const char *skinname)
 {
@@ -224,16 +408,16 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 
 	if ((i != -1) && R_SkinUsable(playernum, i))
 	{
-		SetPlayerSkinByNum(playernum, i);
+		SetSkin(player, i);
 		return;
 	}
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Skin '%s' not found.\n"), skinname);
-	else if(server || IsPlayerAdmin(consoleplayer))
+	else if (server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, M_GetText("Player %d (%s) skin '%s' not found\n"), playernum, player_names[playernum], skinname);
 
-	SetPlayerSkinByNum(playernum, 0);
+	SetSkin(player, GetPlayerDefaultSkin(playernum));
 }
 
 // Same as SetPlayerSkin, but uses the skin #.
@@ -241,90 +425,19 @@ void SetPlayerSkin(INT32 playernum, const char *skinname)
 void SetPlayerSkinByNum(INT32 playernum, INT32 skinnum)
 {
 	player_t *player = &players[playernum];
-	skin_t *skin = &skins[skinnum];
-	UINT16 newcolor = 0;
 
 	if (skinnum >= 0 && skinnum < numskins && R_SkinUsable(playernum, skinnum)) // Make sure it exists!
 	{
-		player->skin = skinnum;
-
-		player->camerascale = skin->camerascale;
-		player->shieldscale = skin->shieldscale;
-
-		player->charability = (UINT8)skin->ability;
-		player->charability2 = (UINT8)skin->ability2;
-
-		player->charflags = (UINT32)skin->flags;
-
-		player->thokitem = skin->thokitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].painchance : (UINT32)skin->thokitem;
-		player->spinitem = skin->spinitem < 0 ? (UINT32)mobjinfo[MT_PLAYER].damage : (UINT32)skin->spinitem;
-		player->revitem = skin->revitem < 0 ? (mobjtype_t)mobjinfo[MT_PLAYER].raisestate : (UINT32)skin->revitem;
-		player->followitem = skin->followitem;
-
-		if (((player->powers[pw_shield] & SH_NOSTACK) == SH_PINK) && (player->revitem == MT_LHRT || player->spinitem == MT_LHRT || player->thokitem == MT_LHRT)) // Healers can't keep their buff.
-			player->powers[pw_shield] &= SH_STACK;
-
-		player->actionspd = skin->actionspd;
-		player->mindash = skin->mindash;
-		player->maxdash = skin->maxdash;
-
-		player->normalspeed = skin->normalspeed;
-		player->runspeed = skin->runspeed;
-		player->thrustfactor = skin->thrustfactor;
-		player->accelstart = skin->accelstart;
-		player->acceleration = skin->acceleration;
-
-		player->jumpfactor = skin->jumpfactor;
-
-		player->height = skin->height;
-		player->spinheight = skin->spinheight;
-
-		if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
-		{
-			if (playernum == consoleplayer)
-				CV_StealthSetValue(&cv_playercolor, skin->prefcolor);
-			else if (playernum == secondarydisplayplayer)
-				CV_StealthSetValue(&cv_playercolor2, skin->prefcolor);
-			player->skincolor = newcolor = skin->prefcolor;
-			if (player->bot && botingame)
-			{
-				botskin = (UINT8)(skinnum + 1);
-				botcolor = skin->prefcolor;
-			}
-		}
-
-		if (player->followmobj)
-		{
-			P_RemoveMobj(player->followmobj);
-			P_SetTarget(&player->followmobj, NULL);
-		}
-
-		if (player->mo)
-		{
-			fixed_t radius = FixedMul(skin->radius, player->mo->scale);
-			if ((player->powers[pw_carry] == CR_NIGHTSMODE) && (skin->sprites[SPR2_NFLY].numframes == 0)) // If you don't have a sprite for flying horizontally, use the default NiGHTS skin.
-			{
-				skin = &skins[DEFAULTNIGHTSSKIN];
-				player->followitem = skin->followitem;
-				if (!(cv_debug || devparm) && !(netgame || multiplayer || demoplayback))
-					newcolor = skin->prefcolor; // will be updated in thinker to flashing
-			}
-			player->mo->skin = skin;
-			if (newcolor)
-				player->mo->color = newcolor;
-			P_SetScale(player->mo, player->mo->scale);
-			player->mo->radius = radius;
-
-			P_SetPlayerMobjState(player->mo, player->mo->state-states); // Prevent visual errors when switching between skins with differing number of frames
-		}
+		SetSkin(player, skinnum);
 		return;
 	}
 
 	if (P_IsLocalPlayer(player))
 		CONS_Alert(CONS_WARNING, M_GetText("Requested skin %d not found\n"), skinnum);
-	else if(server || IsPlayerAdmin(consoleplayer))
+	else if (server || IsPlayerAdmin(consoleplayer))
 		CONS_Alert(CONS_WARNING, "Player %d (%s) skin %d not found\n", playernum, player_names[playernum], skinnum);
-	SetPlayerSkinByNum(playernum, 0); // not found put the sonic skin
+
+	SetSkin(player, GetPlayerDefaultSkin(playernum));
 }
 
 //
@@ -514,6 +627,7 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 	GETFLAG(NOSUPERSPRITES)
 	GETFLAG(NOSUPERJUMPBOOST)
 	GETFLAG(CANBUSTWALLS)
+	GETFLAG(NOSHIELDABILITY)
 #undef GETFLAG
 
 	else // let's check if it's a sound, otherwise error out
@@ -557,7 +671,7 @@ static boolean R_ProcessPatchableFields(skin_t *skin, char *stoken, char *value)
 //
 // Find skin sprites, sounds & optional status bar face, & add them
 //
-void R_AddSkins(UINT16 wadnum)
+void R_AddSkins(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 lump, lastlump = 0;
 	char *buf;
@@ -672,12 +786,6 @@ void R_AddSkins(UINT16 wadnum)
 				if (!realname)
 					STRBUFCPY(skin->realname, skin->hudname);
 			}
-			else if (!stricmp(stoken, "availability"))
-			{
-				skin->availability = atoi(value);
-				if (skin->availability >= MAXUNLOCKABLES)
-					skin->availability = 0;
-			}
 			else if (!R_ProcessPatchableFields(skin, stoken, value))
 				CONS_Debug(DBG_SETUP, "R_AddSkins: Unknown keyword '%s' in S_SKIN lump #%d (WAD %s)\n", stoken, lump, wadfiles[wadnum]->filename);
 
@@ -692,7 +800,7 @@ next_token:
 
 		R_FlushTranslationColormapCache();
 
-		if (!skin->availability) // Safe to print...
+		if (mainfile == false)
 			CONS_Printf(M_GetText("Added skin '%s'\n"), skin->name);
 #ifdef SKINVALUES
 		skin_cons_t[numskins].value = numskins;
@@ -712,7 +820,7 @@ next_token:
 //
 // Patch skin sprites
 //
-void R_PatchSkins(UINT16 wadnum)
+void R_PatchSkins(UINT16 wadnum, boolean mainfile)
 {
 	UINT16 lump, lastlump = 0;
 	char *buf;
@@ -825,7 +933,7 @@ next_token:
 
 		R_FlushTranslationColormapCache();
 
-		if (!skin->availability) // Safe to print...
+		if (mainfile == false)
 			CONS_Printf(M_GetText("Patched skin '%s'\n"), skin->name);
 	}
 	return;

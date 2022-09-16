@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -82,6 +82,7 @@ boolean R_ThingIsPaperSprite (mobj_t *thing);
 boolean R_ThingIsFloorSprite (mobj_t *thing);
 
 boolean R_ThingIsFullBright (mobj_t *thing);
+boolean R_ThingIsSemiBright (mobj_t *thing);
 boolean R_ThingIsFullDark (mobj_t *thing);
 
 // --------------
@@ -99,7 +100,7 @@ typedef struct
 	sector_t* viewsector;
 } maskcount_t;
 
-void R_DrawMasked(maskcount_t* masks, UINT8 nummasks);
+void R_DrawMasked(maskcount_t* masks, INT32 nummasks);
 
 // ----------
 // VISSPRITES
@@ -123,13 +124,14 @@ typedef enum
 	SC_PRECIP     = 1<<2,
 	SC_LINKDRAW   = 1<<3,
 	SC_FULLBRIGHT = 1<<4,
-	SC_FULLDARK   = 1<<5,
-	SC_VFLIP      = 1<<6,
-	SC_ISSCALED   = 1<<7,
-	SC_ISROTATED  = 1<<8,
-	SC_SHADOW     = 1<<9,
-	SC_SHEAR      = 1<<10,
-	SC_SPLAT      = 1<<11,
+	SC_SEMIBRIGHT = 1<<5,
+	SC_FULLDARK   = 1<<6,
+	SC_VFLIP      = 1<<7,
+	SC_ISSCALED   = 1<<8,
+	SC_ISROTATED  = 1<<9,
+	SC_SHADOW     = 1<<10,
+	SC_SHEAR      = 1<<11,
+	SC_SPLAT      = 1<<12,
 	// masks
 	SC_CUTMASK    = SC_TOP|SC_BOTTOM,
 	SC_FLAGMASK   = ~SC_CUTMASK
@@ -151,10 +153,12 @@ typedef struct vissprite_s
 	INT32 x1, x2;
 
 	fixed_t gx, gy; // for line side calculation
-	fixed_t gz, gzt; // global bottom/top for silhouette clipping and sorting with 3D floors
+	fixed_t gz, gzt; // global bottom/top for silhouette clipping
+	fixed_t pz, pzt; // physical bottom/top for sorting with 3D floors
 
 	fixed_t startfrac; // horizontal position of x1
-	fixed_t scale;
+	fixed_t xscale, scale; // projected horizontal and vertical scales
+	fixed_t thingscale; // the object's scale
 	fixed_t sortscale; // sortscale only differs from scale for paper sprites, floor sprites, and MF2_LINKDRAW
 	fixed_t sortsplat; // the sortscale from behind the floor sprite
 	fixed_t scalestep; // only for paper sprites, 0 otherwise
@@ -162,6 +166,12 @@ typedef struct vissprite_s
 	fixed_t xiscale; // negative if flipped
 
 	angle_t centerangle; // for paper sprites
+
+	// for floor sprites
+	struct {
+		fixed_t x, y, z; // the viewpoint's current position
+		angle_t angle; // the viewpoint's current angle
+	} viewpoint;
 
 	struct {
 		fixed_t tan; // The amount to shear the sprite vertically per row
@@ -182,10 +192,10 @@ typedef struct vissprite_s
 
 	extracolormap_t *extra_colormap; // global colormaps
 
-	fixed_t xscale;
+	fixed_t thingheight; // The actual height of the thing (for 3D floors)
+	sector_t *sector; // The sector containing the thing.
 
 	// Precalculated top and bottom screen coords for the sprite.
-	sector_t *sector; // The sector containing the thing.
 	INT16 sz, szt;
 
 	spritecut_e cut;

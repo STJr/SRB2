@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -33,6 +33,11 @@
 #include "s_sound.h" // ditto
 #include "g_game.h" // ditto
 #include "p_local.h" // P_AutoPause()
+#ifdef HWRENDER
+#include "hardware/hw_main.h"
+#include "hardware/hw_light.h"
+#include "hardware/hw_model.h"
+#endif
 
 
 #if defined (USEASM) && !defined (NORUSEASM)//&& (!defined (_MSC_VER) || (_MSC_VER <= 1200))
@@ -217,7 +222,7 @@ void SCR_SetMode(void)
 
 	// Set the video mode in the video interface.
 	if (setmodeneeded)
-		VID_SetMode(--setmodeneeded);
+		VID_SetMode(setmodeneeded - 1);
 
 	V_SetPalette(0);
 
@@ -423,6 +428,10 @@ void SCR_ChangeRenderer(void)
 			CONS_Alert(CONS_ERROR, "OpenGL never loaded\n");
 		return;
 	}
+
+	if (rendermode == render_opengl && (vid.glstate == VID_GL_LIBRARY_LOADED)) // Clear these out before switching to software
+		HWR_ClearAllTextures();
+
 #endif
 
 	// Set the new render mode

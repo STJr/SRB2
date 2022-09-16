@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,11 +22,15 @@
 #include "mserv.h"
 
 /*
-The 'packet version' is used to distinguish packet formats.
-This version is independent of VERSION and SUBVERSION. Different
-applications may follow different packet versions.
+The 'packet version' is used to distinguish packet
+formats. This version is independent of VERSION and
+SUBVERSION. Different applications may follow different
+packet versions.
+
+If you change the struct or the meaning of a field
+therein, increment this number.
 */
-#define PACKETVERSION 3
+#define PACKETVERSION 4
 
 // Network play related stuff.
 // There is a data struct that stores network
@@ -90,6 +94,9 @@ typedef enum
 
 	PT_LOGIN,         // Login attempt from the client.
 
+	PT_TELLFILESNEEDED, // Client, to server: "what other files do I need starting from this number?"
+	PT_MOREFILESNEEDED, // Server, to client: "you need these (+ more on top of those)"
+
 	PT_PING,          // Packet sent to tell clients the other client's latency to server.
 	NUMPACKETTYPE
 } packettype_t;
@@ -141,9 +148,6 @@ typedef struct
 
 typedef struct
 {
-	UINT8 version; // Different versions don't work
-	UINT8 subversion; // Contains build version
-
 	// Server launch stuffs
 	UINT8 serverplayer;
 	UINT8 totalslotnum; // "Slots": highest player number in use plus one.
@@ -190,15 +194,21 @@ typedef struct
 
 typedef struct
 {
-	UINT8 _255;/* see serverinfo_pak */
-	UINT8 packetversion;
+	UINT8 modversion;
 	char application[MAXAPPLICATION];
-	UINT8 version; // Different versions don't work
-	UINT8 subversion; // Contains build version
 	UINT8 localplayers;
 	UINT8 mode;
 	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME];
 } ATTRPACK clientconfig_pak;
+
+#define SV_DEDICATED    0x40 // server is dedicated
+#define SV_LOTSOFADDONS 0x20 // flag used to ask for full file list in d_netfil
+
+enum {
+	REFUSE_JOINS_DISABLED = 1,
+	REFUSE_SLOTS_FULL,
+	REFUSE_BANNED,
+};
 
 #define MAXSERVERNAME 32
 #define MAXFILENEEDED 915
@@ -217,11 +227,11 @@ typedef struct
 	UINT8 subversion;
 	UINT8 numberofplayer;
 	UINT8 maxplayer;
-	UINT8 refusereason; // 0: joinable, 1: joins disabled, 2: full
+	UINT8 refusereason; // 0: joinable, REFUSE enum
 	char gametypename[24];
 	UINT8 modifiedgame;
 	UINT8 cheatsenabled;
-	UINT8 isdedicated;
+	UINT8 flags;
 	UINT8 fileneedednum;
 	tic_t time;
 	tic_t leveltime;
@@ -275,6 +285,14 @@ typedef struct
 	UINT8 ctfteam;
 } ATTRPACK plrconfig;
 
+typedef struct
+{
+	INT32 first;
+	UINT8 num;
+	UINT8 more;
+	UINT8 files[MAXFILENEEDED]; // is filled with writexxx (byteptr.h)
+} ATTRPACK filesneededconfig_pak;
+
 //
 // Network packet data
 //
@@ -304,6 +322,8 @@ typedef struct
 		msaskinfo_pak msaskinfo;            //          22 bytes
 		plrinfo playerinfo[MAXPLAYERS];     //         576 bytes(?)
 		plrconfig playerconfig[MAXPLAYERS]; // (up to) 528 bytes(?)
+		INT32 filesneedednum;               //           4 bytes
+		filesneededconfig_pak filesneededcfg; //       ??? bytes
 		UINT32 pingtable[MAXPLAYERS+1];     //          68 bytes
 	} u; // This is needed to pack diff packet types data together
 } ATTRPACK doomdata_t;
@@ -401,6 +421,7 @@ void CL_Reset(void);
 void CL_ClearPlayer(INT32 playernum);
 void CL_QueryServerList(msg_server_t *list);
 void CL_UpdateServerList(boolean internetsearch, INT32 room);
+void CL_RemovePlayer(INT32 playernum, kickreason_t reason);
 // Is there a game running
 boolean Playing(void);
 

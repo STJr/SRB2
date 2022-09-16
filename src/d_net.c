@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -815,6 +815,8 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"CLIENTJOIN",
 	"NODETIMEOUT",
 	"LOGIN",
+	"TELLFILESNEEDED",
+	"MOREFILESNEEDED",
 	"PING"
 };
 
@@ -1142,8 +1144,9 @@ boolean HGetPacket(void)
 		if (netbuffer->checksum != NetbufferChecksum())
 		{
 			DEBFILE("Bad packet checksum\n");
-			//Net_CloseConnection(nodejustjoined ? (doomcom->remotenode | FORCECLOSE) : doomcom->remotenode);
-			Net_CloseConnection(doomcom->remotenode);
+			// Do not disconnect or anything, just ignore the packet.
+			// Bad checksums with UDP tend to happen very scarcely
+			// so they are not normally an issue.
 			continue;
 		}
 

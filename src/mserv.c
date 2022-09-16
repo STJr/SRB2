@@ -1,8 +1,8 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
-// Copyright (C)      2020 by James R.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 2020-2022 by James R.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -98,6 +98,7 @@ void AddMServCommands(void)
 	CV_RegisterVar(&cv_servername);
 #ifdef MASTERSERVER
 	COM_AddCommand("listserv", Command_Listserv_f);
+	COM_AddCommand("masterserver_update", Update_parameters); // allows people to updates manually in case you were delisted by accident
 #endif
 #endif
 }

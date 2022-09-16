@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -118,7 +118,7 @@ typedef enum
 	// Don't apply gravity (every tic); object will float, keeping current height
 	//  or changing it actively.
 	MF_NOGRAVITY        = 1<<9,
-	// This object is an ambient sound.
+	// This object is an ambient sound. Obsolete, but keep this around for backwards compatibility.
 	MF_AMBIENT          = 1<<10,
 	// Slide this object when it hits a wall.
 	MF_SLIDEME          = 1<<11,
@@ -218,33 +218,40 @@ typedef enum
 typedef enum
 {
 	// The mobj stands on solid floor (not on another mobj or in air)
-	MFE_ONGROUND          = 1,
+	MFE_ONGROUND			= 1,
 	// The mobj just hit the floor while falling, this is cleared on next frame
 	// (instant damage in lava/slime sectors to prevent jump cheat..)
-	MFE_JUSTHITFLOOR      = 1<<1,
+	MFE_JUSTHITFLOOR		= 1<<1,
 	// The mobj stands in a sector with water, and touches the surface
 	// this bit is set once and for all at the start of mobjthinker
-	MFE_TOUCHWATER        = 1<<2,
+	MFE_TOUCHWATER			= 1<<2,
 	// The mobj stands in a sector with water, and his waist is BELOW the water surface
 	// (for player, allows swimming up/down)
-	MFE_UNDERWATER        = 1<<3,
+	MFE_UNDERWATER			= 1<<3,
 	// used for ramp sectors
-	MFE_JUSTSTEPPEDDOWN   = 1<<4,
+	MFE_JUSTSTEPPEDDOWN		= 1<<4,
 	// Vertically flip sprite/allow upside-down physics
-	MFE_VERTICALFLIP      = 1<<5,
+	MFE_VERTICALFLIP		= 1<<5,
 	// Goo water
-	MFE_GOOWATER          = 1<<6,
+	MFE_GOOWATER			= 1<<6,
 	// The mobj is touching a lava block
-	MFE_TOUCHLAVA         = 1<<7,
+	MFE_TOUCHLAVA			= 1<<7,
 	// Mobj was already pushed this tic
-	MFE_PUSHED            = 1<<8,
+	MFE_PUSHED				= 1<<8,
 	// Mobj was already sprung this tic
-	MFE_SPRUNG            = 1<<9,
+	MFE_SPRUNG				= 1<<9,
 	// Platform movement
-	MFE_APPLYPMOMZ        = 1<<10,
+	MFE_APPLYPMOMZ			= 1<<10,
 	// Compute and trigger on mobj angle relative to tracer
 	// See Linedef Exec 457 (Track mobj angle to point)
-	MFE_TRACERANGLE       = 1<<11,
+	MFE_TRACERANGLE			= 1<<11,
+	// Forces an object to use super sprites with SPR_PLAY.
+	MFE_FORCESUPER			= 1<<12,
+	// Forces an object to NOT use super sprites with SPR_PLAY.
+	MFE_FORCENOSUPER		= 1<<13,
+	// Makes an object use super sprites where they wouldn't have otherwise and vice-versa
+	MFE_REVERSESUPER		= MFE_FORCESUPER|MFE_FORCENOSUPER
+
 	// free: to and including 1<<15
 } mobjeflag_t;
 

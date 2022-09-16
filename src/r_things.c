@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -230,7 +230,7 @@ boolean R_AddSingleSpriteDef(const char *sprname, spritedef_t *spritedef, UINT16
 	UINT8 rotation;
 	lumpinfo_t *lumpinfo;
 	softwarepatch_t patch;
-	UINT8 numadded = 0;
+	UINT16 numadded = 0;
 
 	memset(sprtemp,0xFF, sizeof (sprtemp));
 	maxframe = (size_t)-1;
@@ -443,6 +443,7 @@ void R_AddSpriteDefs(UINT16 wadnum)
 			end = W_CheckNumForNamePwad("SS_END",wadnum,start);     //deutex compatib.
 		break;
 	case RET_PK3:
+	case RET_FOLDER:
 		start = W_CheckNumForFolderStartPK3("Sprites/", wadnum, 0);
 		end = W_CheckNumForFolderEndPK3("Sprites/", wadnum, start);
 		break;
@@ -547,8 +548,8 @@ void R_InitSprites(void)
 	R_InitSkins();
 	for (i = 0; i < numwadfiles; i++)
 	{
-		R_AddSkins((UINT16)i);
-		R_PatchSkins((UINT16)i);
+		R_AddSkins((UINT16)i, true);
+		R_PatchSkins((UINT16)i, true);
 		R_LoadSpriteInfoLumps(i, wadfiles[i]->numlumps);
 	}
 	ST_ReloadSkinFaceGraphics();
@@ -753,7 +754,7 @@ UINT8 *R_GetSpriteTranslation(vissprite_t *vis)
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
 			return R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
 		else
-			return R_GetTranslationColormap(TC_BOSS, 0, GTC_CACHE);
+			return R_GetTranslationColormap(TC_BOSS, vis->mobj->color, GTC_CACHE);
 	}
 	else if (vis->mobj->color)
 	{
@@ -796,7 +797,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	INT32 pwidth;
 	fixed_t frac;
 	patch_t *patch = vis->patch;
-	fixed_t this_scale = vis->mobj->scale;
+	fixed_t this_scale = vis->thingscale;
 	INT32 x1, x2;
 	INT64 overflow_test;
 
@@ -835,6 +836,12 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
 	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
 		colfunc = colfuncs[COLDRAWFUNC_TRANS];
+
+	// Hack: Use a special column function for drop shadows that bypasses
+	// invalid memory access crashes caused by R_ProjectDropShadow putting wrong values
+	// in dc_texturemid and dc_iscale when the shadow is sloped.
+	if (vis->cut & SC_SHADOW)
+		colfunc = R_DrawDropShadowColumn_8;
 
 	if (vis->extra_colormap && !(vis->renderflags & RF_NOCOLORMAPS))
 	{
@@ -1078,6 +1085,14 @@ static void R_SplitSprite(vissprite_t *sprite)
 		sprite->sz = cutfrac;
 		newsprite->szt = (INT16)(sprite->sz - 1);
 
+		if (testheight < sprite->pzt && testheight > sprite->pz)
+			sprite->pz = newsprite->pzt = testheight;
+		else
+		{
+			newsprite->pz = newsprite->gz;
+			newsprite->pzt = newsprite->gzt;
+		}
+
 		newsprite->szt -= 8;
 
 		newsprite->cut |= SC_TOP;
@@ -1101,6 +1116,10 @@ static void R_SplitSprite(vissprite_t *sprite)
 
 				if (lindex >= MAXLIGHTSCALE)
 					lindex = MAXLIGHTSCALE-1;
+
+				if (newsprite->cut & SC_SEMIBRIGHT)
+					lindex = (MAXLIGHTSCALE/2) + (lindex >>1);
+
 				newsprite->colormap = spritelights[lindex];
 			}
 		}
@@ -1256,6 +1275,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	vissprite_t *shadow;
 	patch_t *patch;
 	fixed_t xscale, yscale, shadowxscale, shadowyscale, shadowskew, x1, x2;
+	INT32 heightsec, phs;
 	INT32 light = 0;
 	fixed_t scalemul; UINT8 trans;
 	fixed_t floordiff;
@@ -1266,6 +1286,24 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	groundz = R_GetShadowZ(thing, &groundslope);
 
 	if (abs(groundz-viewz)/tz > 4) return; // Prevent stretchy shadows and possible crashes
+
+	heightsec = thing->subsector->sector->heightsec;
+	if (viewplayer->mo && viewplayer->mo->subsector)
+		phs = viewplayer->mo->subsector->sector->heightsec;
+	else
+		phs = -1;
+
+	if (heightsec != -1 && phs != -1) // only clip things which are in special sectors
+	{
+		if (viewz < sectors[phs].floorheight ?
+		groundz >= sectors[heightsec].floorheight :
+		groundz < sectors[heightsec].floorheight)
+			return;
+		if (viewz > sectors[phs].ceilingheight ?
+		groundz < sectors[heightsec].ceilingheight && viewz >= sectors[heightsec].ceilingheight :
+		groundz >= sectors[heightsec].ceilingheight)
+			return;
+	}
 
 	floordiff = abs((isflipped ? thing->height : 0) + thing->z - groundz);
 
@@ -1300,12 +1338,16 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 	shadow->patch = patch;
 	shadow->heightsec = vis->heightsec;
 
+	shadow->thingheight = FRACUNIT;
+	shadow->pz = groundz + (isflipped ? -shadow->thingheight : 0);
+	shadow->pzt = shadow->pz + shadow->thingheight;
+
 	shadow->mobjflags = 0;
 	shadow->sortscale = vis->sortscale;
 	shadow->dispoffset = vis->dispoffset - 5;
 	shadow->gx = thing->x;
 	shadow->gy = thing->y;
-	shadow->gzt = groundz + patch->height * shadowyscale / 2;
+	shadow->gzt = (isflipped ? shadow->pzt : shadow->pz) + patch->height * shadowyscale / 2;
 	shadow->gz = shadow->gzt - patch->height * shadowyscale;
 	shadow->texturemid = FixedMul(thing->scale, FixedDiv(shadow->gzt - viewz, shadowyscale));
 	if (thing->skin && ((skin_t *)thing->skin)->flags & SF_HIRES)
@@ -1320,6 +1362,7 @@ static void R_ProjectDropShadow(mobj_t *thing, vissprite_t *vis, fixed_t scale, 
 
 	shadow->xscale = FixedMul(xscale, shadowxscale); //SoM: 4/17/2000
 	shadow->scale = FixedMul(yscale, shadowyscale);
+	shadow->thingscale = thing->scale;
 	shadow->sector = vis->sector;
 	shadow->szt = (INT16)((centeryfrac - FixedMul(shadow->gzt - viewz, yscale))>>FRACBITS);
 	shadow->sz = (INT16)((centeryfrac - FixedMul(shadow->gz - viewz, yscale))>>FRACBITS);
@@ -1411,7 +1454,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	fixed_t sheartan = 0;
 	fixed_t shadowscale = FRACUNIT;
-	fixed_t basetx; // drop shadows
+	fixed_t basetx, basetz; // drop shadows
 
 	boolean shadowdraw, shadoweffects, shadowskew;
 	boolean splat = R_ThingIsFloorSprite(thing);
@@ -1441,7 +1484,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	tr_x = thing->x - viewx;
 	tr_y = thing->y - viewy;
 
-	tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin); // near/far distance
+	basetz = tz = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin); // near/far distance
 
 	// thing is behind view plane?
 	if (!papersprite && (tz < FixedMul(MINZ, this_scale))) // papersprite clipping is handled later
@@ -1568,7 +1611,16 @@ static void R_ProjectSprite(mobj_t *thing)
 	if (thing->rollangle
 	&& !(splat && !(thing->renderflags & RF_NOSPLATROLLANGLE)))
 	{
-		rollangle = R_GetRollAngle(thing->rollangle);
+		if (papersprite && ang >= ANGLE_180)
+		{
+			// Makes Software act much more sane like OpenGL
+			rollangle = R_GetRollAngle(InvAngle(thing->rollangle));
+		}
+		else
+		{
+			rollangle = R_GetRollAngle(thing->rollangle);
+		}
+
 		rotsprite = Patch_GetRotatedSprite(sprframe, (thing->frame & FF_FRAMEMASK), rot, flip, false, sprinfo, rollangle);
 
 		if (rotsprite != NULL)
@@ -1784,13 +1836,19 @@ static void R_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
+	INT32 blendmode;
+	if (oldthing->frame & FF_BLENDMASK)
+		blendmode = ((oldthing->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
+	else
+		blendmode = oldthing->blendmode;
+
 	// Determine the translucency value.
 	if (oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
 		trans = tr_trans80; // because now the translucency is set through FF_TRANSMASK
 	else if (oldthing->frame & FF_TRANSMASK)
 	{
 		trans = (oldthing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
-		if (oldthing->blendmode == AST_TRANSLUCENT && trans >= NUMTRANSMAPS)
+		if (!R_BlendLevelVisible(blendmode, trans))
 			return;
 	}
 	else
@@ -1912,13 +1970,19 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	if (heightsec != -1 && phs != -1) // only clip things which are in special sectors
 	{
+		fixed_t top = gzt;
+		fixed_t bottom = thing->z;
+
+		if (splat)
+			top = bottom;
+
 		if (viewz < sectors[phs].floorheight ?
-		thing->z >= sectors[heightsec].floorheight :
-		gzt < sectors[heightsec].floorheight)
+		bottom >= sectors[heightsec].floorheight :
+		top < sectors[heightsec].floorheight)
 			return;
 		if (viewz > sectors[phs].ceilingheight ?
-		gzt < sectors[heightsec].ceilingheight && viewz >= sectors[heightsec].ceilingheight :
-		thing->z >= sectors[heightsec].ceilingheight)
+		top < sectors[heightsec].ceilingheight && viewz >= sectors[heightsec].ceilingheight :
+		bottom >= sectors[heightsec].ceilingheight)
 			return;
 	}
 
@@ -1935,6 +1999,9 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->gy = thing->y;
 	vis->gz = gz;
 	vis->gzt = gzt;
+	vis->thingheight = thing->height;
+	vis->pz = thing->z;
+	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = FixedDiv(gzt - viewz, spriteyscale);
 	vis->scalestep = scalestep;
 	vis->paperoffset = paperoffset;
@@ -1942,6 +2009,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->centerangle = centerangle;
 	vis->shear.tan = sheartan;
 	vis->shear.offset = 0;
+	vis->viewpoint.x = viewx;
+	vis->viewpoint.y = viewy;
+	vis->viewpoint.z = viewz;
+	vis->viewpoint.angle = viewangle;
 
 	vis->mobj = thing; // Easy access! Tails 06-07-2002
 
@@ -1960,6 +2031,7 @@ static void R_ProjectSprite(mobj_t *thing)
 
 	vis->xscale = FixedMul(spritexscale, xscale); //SoM: 4/17/2000
 	vis->scale = FixedMul(spriteyscale, yscale); //<<detailshift;
+	vis->thingscale = oldthing->scale;
 
 	vis->spritexscale = spritexscale;
 	vis->spriteyscale = spriteyscale;
@@ -1994,13 +2066,15 @@ static void R_ProjectSprite(mobj_t *thing)
 		vis->scale += FixedMul(scalestep, spriteyscale) * (vis->x1 - x1);
 	}
 
-	if ((oldthing->blendmode != AST_COPY) && cv_translucency.value)
-		vis->transmap = R_GetBlendTable(oldthing->blendmode, trans);
+	if ((blendmode != AST_COPY) && cv_translucency.value)
+		vis->transmap = R_GetBlendTable(blendmode, trans);
 	else
 		vis->transmap = NULL;
 
 	if (R_ThingIsFullBright(oldthing) || oldthing->flags2 & MF2_SHADOW || thing->flags2 & MF2_SHADOW)
 		vis->cut |= SC_FULLBRIGHT;
+	else if (R_ThingIsSemiBright(oldthing))
+		vis->cut |= SC_SEMIBRIGHT;
 	else if (R_ThingIsFullDark(oldthing))
 		vis->cut |= SC_FULLDARK;
 
@@ -2023,6 +2097,9 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (lindex >= MAXLIGHTSCALE)
 			lindex = MAXLIGHTSCALE-1;
 
+		if (vis->cut & SC_SEMIBRIGHT)
+			lindex = (MAXLIGHTSCALE/2) + (lindex >> 1);
+
 		vis->colormap = spritelights[lindex];
 	}
 
@@ -2037,7 +2114,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		R_SplitSprite(vis);
 
 	if (oldthing->shadowscale && cv_shadow.value)
-		R_ProjectDropShadow(oldthing, vis, oldthing->shadowscale, basetx, tz);
+		R_ProjectDropShadow(oldthing, vis, oldthing->shadowscale, basetx, basetz);
 
 	// Debug
 	++objectsdrawn;
@@ -2151,6 +2228,9 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->gy = thing->y;
 	vis->gz = gz;
 	vis->gzt = gzt;
+	vis->thingheight = 4*FRACUNIT;
+	vis->pz = thing->z;
+	vis->pzt = vis->pz + vis->thingheight;
 	vis->texturemid = vis->gzt - viewz;
 	vis->scalestep = 0;
 	vis->paperdistance = 0;
@@ -2179,7 +2259,7 @@ static void R_ProjectPrecipitationSprite(precipmobj_t *thing)
 
 	// specific translucency
 	if (thing->frame & FF_TRANSMASK)
-		vis->transmap = (thing->frame & FF_TRANSMASK) - 0x10000 + transtables;
+		vis->transmap = R_GetTranslucencyTable((thing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT);
 	else
 		vis->transmap = NULL;
 
@@ -2544,15 +2624,19 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				planeobjectz = P_GetZAt(r2->plane->slope, rover->gx, rover->gy, r2->plane->height);
 				planecameraz = P_GetZAt(r2->plane->slope,     viewx,     viewy, r2->plane->height);
 
-				// bird: if any part of the sprite peeks in front the plane
-				if (planecameraz < viewz)
+				if (rover->mobjflags & MF_NOCLIPHEIGHT)
 				{
-					if (rover->gzt >= planeobjectz)
+					//Objects with NOCLIPHEIGHT can appear halfway in.
+					if (planecameraz < viewz && rover->pz+(rover->thingheight/2) >= planeobjectz)
+						continue;
+					if (planecameraz > viewz && rover->pzt-(rover->thingheight/2) <= planeobjectz)
 						continue;
 				}
-				else if (planecameraz > viewz)
+				else
 				{
-					if (rover->gz <= planeobjectz)
+					if (planecameraz < viewz && rover->pz >= planeobjectz)
+						continue;
+					if (planecameraz > viewz && rover->pzt <= planeobjectz)
 						continue;
 				}
 
@@ -2585,7 +2669,7 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 			}
 			else if (r2->thickseg)
 			{
-				//fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
+				fixed_t topplaneobjectz, topplanecameraz, botplaneobjectz, botplanecameraz;
 				if (rover->x1 > r2->thickseg->x2 || rover->x2 < r2->thickseg->x1)
 					continue;
 
@@ -2596,11 +2680,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				if (scale <= rover->sortscale)
 					continue;
 
-				// bird: Always sort sprites behind segs. This helps the plane
-				// sorting above too. Basically if the sprite gets sorted behind
-				// the seg here, it will be behind the plane too, since planes
-				// are added after segs in the list.
-#if 0
 				topplaneobjectz = P_GetFFloorTopZAt   (r2->ffloor, rover->gx, rover->gy);
 				topplanecameraz = P_GetFFloorTopZAt   (r2->ffloor,     viewx,     viewy);
 				botplaneobjectz = P_GetFFloorBottomZAt(r2->ffloor, rover->gx, rover->gy);
@@ -2609,7 +2688,6 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 				if ((topplanecameraz > viewz && botplanecameraz < viewz) ||
 				    (topplanecameraz < viewz && rover->gzt < topplaneobjectz) ||
 				    (botplanecameraz > viewz && rover->gz > botplaneobjectz))
-#endif
 				{
 					entry = R_CreateDrawNode(NULL);
 					(entry->prev = r2->prev)->next = entry;
@@ -2650,11 +2728,23 @@ static void R_CreateDrawNodes(maskcount_t* mask, drawnode_t* head, boolean temps
 
 					if (!behind)
 					{
-						// FIXME: calculate gz and gzt for splats properly and use that
-						if (rover->mobj->z < viewz)
-							infront = (r2->sprite->mobj->z >= rover->mobj->z);
+						fixed_t z1 = 0, z2 = 0;
+
+						if (rover->mobj->z - viewz > 0)
+						{
+							z1 = rover->pz;
+							z2 = r2->sprite->pz;
+						}
 						else
-							infront = (r2->sprite->mobj->z <= rover->mobj->z);
+						{
+							z1 = r2->sprite->pz;
+							z2 = rover->pz;
+						}
+
+						z1 -= viewz;
+						z2 -= viewz;
+
+						infront = (z1 >= z2);
 					}
 				}
 				else
@@ -2710,7 +2800,7 @@ static drawnode_t *R_CreateDrawNode(drawnode_t *link)
 	node->ffloor = NULL;
 	node->sprite = NULL;
 
-	ps_numdrawnodes++;
+	ps_numdrawnodes.value.i++;
 	return node;
 }
 
@@ -2753,7 +2843,7 @@ static void R_DrawSprite(vissprite_t *spr)
 	mceilingclip = spr->cliptop;
 
 	if (spr->cut & SC_SPLAT)
-		R_DrawFloorSprite(spr);
+		R_DrawFloorSplat(spr);
 	else
 		R_DrawVisSprite(spr);
 }
@@ -2764,6 +2854,57 @@ static void R_DrawPrecipitationSprite(vissprite_t *spr)
 	mfloorclip = spr->clipbot;
 	mceilingclip = spr->cliptop;
 	R_DrawPrecipitationVisSprite(spr);
+}
+
+//SoM: 3/17/2000: Clip sprites in water.
+static void R_HeightSecClip(vissprite_t *spr, INT32 x1, INT32 x2)
+{
+	fixed_t mh, h;
+	INT32 x, phs;
+
+	if (spr->heightsec == -1)
+		return;
+
+	if (spr->cut & (SC_SPLAT | SC_SHADOW) || spr->renderflags & RF_SHADOWDRAW)
+		return;
+
+	phs = viewplayer->mo->subsector->sector->heightsec;
+
+	if ((mh = sectors[spr->heightsec].floorheight) > spr->gz &&
+		(h = centeryfrac - FixedMul(mh -= viewz, spr->sortscale)) >= 0 &&
+		(h >>= FRACBITS) < viewheight)
+	{
+		if (mh <= 0 || (phs != -1 && viewz > sectors[phs].floorheight))
+		{                          // clip bottom
+			for (x = x1; x <= x2; x++)
+				if (spr->clipbot[x] == -2 || h < spr->clipbot[x])
+					spr->clipbot[x] = (INT16)h;
+		}
+		else						// clip top
+		{
+			for (x = x1; x <= x2; x++)
+				if (spr->cliptop[x] == -2 || h > spr->cliptop[x])
+					spr->cliptop[x] = (INT16)h;
+		}
+	}
+
+	if ((mh = sectors[spr->heightsec].ceilingheight) < spr->gzt &&
+		(h = centeryfrac - FixedMul(mh-viewz, spr->sortscale)) >= 0 &&
+		(h >>= FRACBITS) < viewheight)
+	{
+		if (phs != -1 && viewz >= sectors[phs].ceilingheight)
+		{                         // clip bottom
+			for (x = x1; x <= x2; x++)
+				if (spr->clipbot[x] == -2 || h < spr->clipbot[x])
+					spr->clipbot[x] = (INT16)h;
+		}
+		else                       // clip top
+		{
+			for (x = x1; x <= x2; x++)
+				if (spr->cliptop[x] == -2 || h > spr->cliptop[x])
+					spr->cliptop[x] = (INT16)h;
+		}
+	}
 }
 
 // R_ClipVisSprite
@@ -2867,47 +3008,9 @@ void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, p
 			}
 		}
 	}
-	//SoM: 3/17/2000: Clip sprites in water.
-	if (spr->heightsec != -1)  // only things in specially marked sectors
-	{
-		fixed_t mh, h;
-		INT32 phs = viewplayer->mo->subsector->sector->heightsec;
-		if ((mh = sectors[spr->heightsec].floorheight) > spr->gz &&
-			(h = centeryfrac - FixedMul(mh -= viewz, spr->sortscale)) >= 0 &&
-			(h >>= FRACBITS) < viewheight)
-		{
-			if (mh <= 0 || (phs != -1 && viewz > sectors[phs].floorheight))
-			{                          // clip bottom
-				for (x = x1; x <= x2; x++)
-					if (spr->clipbot[x] == -2 || h < spr->clipbot[x])
-						spr->clipbot[x] = (INT16)h;
-			}
-			else						// clip top
-			{
-				for (x = x1; x <= x2; x++)
-					if (spr->cliptop[x] == -2 || h > spr->cliptop[x])
-						spr->cliptop[x] = (INT16)h;
-			}
-		}
 
-		if ((mh = sectors[spr->heightsec].ceilingheight) < spr->gzt &&
-			(h = centeryfrac - FixedMul(mh-viewz, spr->sortscale)) >= 0 &&
-			(h >>= FRACBITS) < viewheight)
-		{
-			if (phs != -1 && viewz >= sectors[phs].ceilingheight)
-			{                         // clip bottom
-				for (x = x1; x <= x2; x++)
-					if (spr->clipbot[x] == -2 || h < spr->clipbot[x])
-						spr->clipbot[x] = (INT16)h;
-			}
-			else                       // clip top
-			{
-				for (x = x1; x <= x2; x++)
-					if (spr->cliptop[x] == -2 || h > spr->cliptop[x])
-						spr->cliptop[x] = (INT16)h;
-			}
-		}
-	}
+	R_HeightSecClip(spr, x1, x2);
+
 	if (spr->cut & SC_TOP && spr->cut & SC_BOTTOM)
 	{
 		for (x = x1; x <= x2; x++)
@@ -2951,12 +3054,24 @@ void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, p
 
 	if (portal)
 	{
-		for (x = x1; x <= x2; x++)
+		INT32 start_index = max(portal->start, x1);
+		INT32 end_index = min(portal->start + portal->end - portal->start, x2);
+		for (x = x1; x < start_index; x++)
+		{
+			spr->clipbot[x] = -1;
+			spr->cliptop[x] = -1;
+		}
+		for (x = start_index; x <= end_index; x++)
 		{
 			if (spr->clipbot[x] > portal->floorclip[x - portal->start])
 				spr->clipbot[x] = portal->floorclip[x - portal->start];
 			if (spr->cliptop[x] < portal->ceilingclip[x - portal->start])
 				spr->cliptop[x] = portal->ceilingclip[x - portal->start];
+		}
+		for (x = end_index + 1; x <= x2; x++)
+		{
+			spr->clipbot[x] = -1;
+			spr->cliptop[x] = -1;
 		}
 	}
 }
@@ -3038,17 +3153,22 @@ boolean R_ThingIsPaperSprite(mobj_t *thing)
 
 boolean R_ThingIsFloorSprite(mobj_t *thing)
 {
-	return (thing->flags2 & MF2_SPLAT || thing->renderflags & RF_FLOORSPRITE);
+	return (thing->flags2 & MF2_SPLAT || thing->frame & FF_FLOORSPRITE || thing->renderflags & RF_FLOORSPRITE);
 }
 
 boolean R_ThingIsFullBright(mobj_t *thing)
 {
-	return (thing->frame & FF_FULLBRIGHT || thing->renderflags & RF_FULLBRIGHT);
+	return ((thing->frame & FF_BRIGHTMASK) == FF_FULLBRIGHT || (thing->renderflags & RF_BRIGHTMASK) == RF_FULLBRIGHT);
+}
+
+boolean R_ThingIsSemiBright(mobj_t *thing)
+{
+	return ((thing->frame & FF_BRIGHTMASK) == FF_SEMIBRIGHT || (thing->renderflags & RF_BRIGHTMASK) == RF_SEMIBRIGHT);
 }
 
 boolean R_ThingIsFullDark(mobj_t *thing)
 {
-	return (thing->renderflags & RF_FULLDARK);
+	return ((thing->frame & FF_BRIGHTMASK) == FF_FULLDARK || (thing->renderflags & RF_BRIGHTMASK) == RF_FULLDARK);
 }
 
 //
@@ -3113,10 +3233,10 @@ static void R_DrawMaskedList (drawnode_t* head)
 	}
 }
 
-void R_DrawMasked(maskcount_t* masks, UINT8 nummasks)
+void R_DrawMasked(maskcount_t* masks, INT32 nummasks)
 {
 	drawnode_t *heads;	/**< Drawnode lists; as many as number of views/portals. */
-	SINT8 i;
+	INT32 i;
 
 	heads = calloc(nummasks, sizeof(drawnode_t));
 

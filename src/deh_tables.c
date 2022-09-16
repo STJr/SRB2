@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -22,6 +22,9 @@
 #include "v_video.h" // video flags (for lua)
 #include "i_sound.h" // musictype_t (for lua)
 #include "g_state.h" // gamestate_t (for lua)
+#include "g_game.h" // Joystick axes (for lua)
+#include "i_joy.h"
+#include "g_input.h" // Game controls (for lua)
 
 #include "deh_tables.h"
 
@@ -88,6 +91,8 @@ actionpointer_t actionpointers[] =
 	{{A_FaceTracer},             "A_FACETRACER"},
 	{{A_Scream},                 "A_SCREAM"},
 	{{A_BossDeath},              "A_BOSSDEATH"},
+	{{A_SetShadowScale},         "A_SETSHADOWSCALE"},
+	{{A_ShadowScream},           "A_SHADOWSCREAM"},
 	{{A_CustomPower},            "A_CUSTOMPOWER"},
 	{{A_GiveWeapon},             "A_GIVEWEAPON"},
 	{{A_RingBox},                "A_RINGBOX"},
@@ -194,6 +199,7 @@ actionpointer_t actionpointers[] =
 	{{A_Boss3Path},              "A_BOSS3PATH"},
 	{{A_Boss3ShockThink},        "A_BOSS3SHOCKTHINK"},
 	{{A_LinedefExecute},         "A_LINEDEFEXECUTE"},
+	{{A_LinedefExecuteFromArg},  "A_LINEDEFEXECUTEFROMARG"},
 	{{A_PlaySeeSound},           "A_PLAYSEESOUND"},
 	{{A_PlayAttackSound},        "A_PLAYATTACKSOUND"},
 	{{A_PlayActiveSound},        "A_PLAYACTIVESOUND"},
@@ -221,6 +227,8 @@ actionpointer_t actionpointers[] =
 	{{A_SetObjectFlags2},        "A_SETOBJECTFLAGS2"},
 	{{A_RandomState},            "A_RANDOMSTATE"},
 	{{A_RandomStateRange},       "A_RANDOMSTATERANGE"},
+	{{A_StateRangeByAngle},      "A_STATERANGEBYANGLE"},
+	{{A_StateRangeByParameter},  "A_STATERANGEBYPARAMETER"},
 	{{A_DualAction},             "A_DUALACTION"},
 	{{A_RemoteAction},           "A_REMOTEACTION"},
 	{{A_ToggleFlameJet},         "A_TOGGLEFLAMEJET"},
@@ -1522,6 +1530,13 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_SPINFIRE5",
 	"S_SPINFIRE6",
 
+	"S_TEAM_SPINFIRE1",
+	"S_TEAM_SPINFIRE2",
+	"S_TEAM_SPINFIRE3",
+	"S_TEAM_SPINFIRE4",
+	"S_TEAM_SPINFIRE5",
+	"S_TEAM_SPINFIRE6",
+
 	// Spikes
 	"S_SPIKE1",
 	"S_SPIKE2",
@@ -1740,6 +1755,56 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 
 	// The letter
 	"S_LETTER",
+
+	// Tutorial Scenery
+	"S_TUTORIALLEAF1",
+	"S_TUTORIALLEAF2",
+	"S_TUTORIALLEAF3",
+	"S_TUTORIALLEAF4",
+	"S_TUTORIALLEAF5",
+	"S_TUTORIALLEAF6",
+	"S_TUTORIALLEAF7",
+	"S_TUTORIALLEAF8",
+	"S_TUTORIALLEAF9",
+	"S_TUTORIALLEAF10",
+	"S_TUTORIALLEAF11",
+	"S_TUTORIALLEAF12",
+	"S_TUTORIALLEAF13",
+	"S_TUTORIALLEAF14",
+	"S_TUTORIALLEAF15",
+	"S_TUTORIALLEAF16",
+	"S_TUTORIALFLOWER1",
+	"S_TUTORIALFLOWER2",
+	"S_TUTORIALFLOWER3",
+	"S_TUTORIALFLOWER4",
+	"S_TUTORIALFLOWER5",
+	"S_TUTORIALFLOWER6",
+	"S_TUTORIALFLOWER7",
+	"S_TUTORIALFLOWER8",
+	"S_TUTORIALFLOWER9",
+	"S_TUTORIALFLOWER10",
+	"S_TUTORIALFLOWER11",
+	"S_TUTORIALFLOWER12",
+	"S_TUTORIALFLOWER13",
+	"S_TUTORIALFLOWER14",
+	"S_TUTORIALFLOWER15",
+	"S_TUTORIALFLOWER16",
+	"S_TUTORIALFLOWERF1",
+	"S_TUTORIALFLOWERF2",
+	"S_TUTORIALFLOWERF3",
+	"S_TUTORIALFLOWERF4",
+	"S_TUTORIALFLOWERF5",
+	"S_TUTORIALFLOWERF6",
+	"S_TUTORIALFLOWERF7",
+	"S_TUTORIALFLOWERF8",
+	"S_TUTORIALFLOWERF9",
+	"S_TUTORIALFLOWERF10",
+	"S_TUTORIALFLOWERF11",
+	"S_TUTORIALFLOWERF12",
+	"S_TUTORIALFLOWERF13",
+	"S_TUTORIALFLOWERF14",
+	"S_TUTORIALFLOWERF15",
+	"S_TUTORIALFLOWERF16",
 
 	// GFZ flowers
 	"S_GFZFLOWERA",
@@ -3283,14 +3348,13 @@ const char *const STATE_LIST[] = { // array length left dynamic for sanity testi
 	"S_NIGHTOPIANHELPER9",
 
 	// Nightopian
-	"S_PIAN0",
-	"S_PIAN1",
-	"S_PIAN2",
-	"S_PIAN3",
-	"S_PIAN4",
-	"S_PIAN5",
-	"S_PIAN6",
-	"S_PIANSING",
+	"S_PIAN_LOOK1",
+	"S_PIAN_LOOK2",
+	"S_PIAN_LOOK3",
+	"S_PIAN_FLY1",
+	"S_PIAN_FLY2",
+	"S_PIAN_FLY3",
+	"S_PIAN_SING",
 
 	// Shleep
 	"S_SHLEEP1",
@@ -3753,6 +3817,12 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	// The letter
 	"MT_LETTER",
 
+	// Tutorial Scenery
+	"MT_TUTORIALPLANT",
+	"MT_TUTORIALLEAF",
+	"MT_TUTORIALFLOWER",
+	"MT_TUTORIALFLOWERF",
+
 	// Greenflower Scenery
 	"MT_GFZFLOWER1",
 	"MT_GFZFLOWER2",
@@ -4102,17 +4172,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_FINISHFLAG", // Finish flag
 
 	// Ambient Sounds
-	"MT_AWATERA", // Ambient Water Sound 1
-	"MT_AWATERB", // Ambient Water Sound 2
-	"MT_AWATERC", // Ambient Water Sound 3
-	"MT_AWATERD", // Ambient Water Sound 4
-	"MT_AWATERE", // Ambient Water Sound 5
-	"MT_AWATERF", // Ambient Water Sound 6
-	"MT_AWATERG", // Ambient Water Sound 7
-	"MT_AWATERH", // Ambient Water Sound 8
-	"MT_RANDOMAMBIENT",
-	"MT_RANDOMAMBIENT2",
-	"MT_MACHINEAMBIENCE",
+	"MT_AMBIENT",
 
 	"MT_CORK",
 	"MT_LHRT",
@@ -4216,7 +4276,6 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_CRUMBLEOBJ", // Sound generator for crumbling platform
 	"MT_TUBEWAYPOINT",
 	"MT_PUSH",
-	"MT_PULL",
 	"MT_GHOST",
 	"MT_OVERLAY",
 	"MT_ANGLEMAN",
@@ -4259,6 +4318,7 @@ const char *const MOBJTYPE_LIST[] = {  // array length left dynamic for sanity t
 	"MT_YELLOWBRICKDEBRIS",
 
 	"MT_NAMECHECK",
+	"MT_RAY",
 };
 
 const char *const MOBJFLAG_LIST[] = {
@@ -4344,6 +4404,8 @@ const char *const MOBJEFLAG_LIST[] = {
 	"SPRUNG", // Mobj was already sprung this tic
 	"APPLYPMOMZ", // Platform movement
 	"TRACERANGLE", // Compute and trigger on mobj angle relative to tracer
+	"FORCESUPER", // Forces an object to use super sprites with SPR_PLAY.
+	"FORCENOSUPER", // Forces an object to NOT use super sprites with SPR_PLAY.
 	NULL
 };
 
@@ -4450,23 +4512,85 @@ const char *const GAMETYPERULE_LIST[] = {
 };
 
 // Linedef flags
-const char *const ML_LIST[16] = {
+const char *const ML_LIST[] = {
 	"IMPASSIBLE",
 	"BLOCKMONSTERS",
 	"TWOSIDED",
 	"DONTPEGTOP",
 	"DONTPEGBOTTOM",
-	"EFFECT1",
+	"SKEWTD",
 	"NOCLIMB",
-	"EFFECT2",
-	"EFFECT3",
-	"EFFECT4",
-	"EFFECT5",
-	"NOSONIC",
-	"NOTAILS",
-	"NOKNUX",
+	"NOSKEW",
+	"MIDPEG",
+	"MIDSOLID",
+	"WRAPMIDTEX",
+	"NETONLY",
+	"NONET",
+	"EFFECT6",
 	"BOUNCY",
-	"TFERLINE"
+	"TFERLINE",
+	NULL
+};
+
+// Sector flags
+const char *const MSF_LIST[] = {
+	"FLIPSPECIAL_FLOOR",
+	"FLIPSPECIAL_CEILING",
+	"TRIGGERSPECIAL_TOUCH",
+	"TRIGGERSPECIAL_HEADBUMP",
+	"TRIGGERLINE_PLANE",
+	"TRIGGERLINE_MOBJ",
+	"GRAVITYFLIP",
+	"HEATWAVE",
+	"NOCLIPCAMERA",
+	NULL
+};
+
+// Sector special flags
+const char *const SSF_LIST[] = {
+	"OUTERSPACE",
+	"DOUBLESTEPUP",
+	"WINDCURRENT",
+	"CONVEYOR",
+	"SPEEDPAD",
+	"STARPOSTACTIVATOR",
+	"EXIT",
+	"SPECIALSTAGEPIT",
+	"RETURNFLAG",
+	"REDTEAMBASE",
+	"BLUETEAMBASE",
+	"FAN",
+	"SUPERTRANSFORM",
+	"FORCESPIN",
+	"ZOOMTUBESTART",
+	"ZOOMTUBEEND",
+	"FINISHLINE",
+	"ROPEHANG",
+	NULL
+};
+
+// Sector damagetypes
+const char *const SD_LIST[] = {
+	"NONE",
+	"GENERIC",
+	"WATER",
+	"FIRE",
+	"LAVA",
+	"ELECTRIC",
+	"SPIKE",
+	"DEATHPITTILT",
+	"DEATHPITNOTILT",
+	"INSTAKILL",
+	"SPECIALSTAGE",
+	NULL
+};
+
+// Sector triggerer
+const char *const TO_LIST[] = {
+	"PLAYER",
+	"ALLPLAYERS",
+	"MOBJ",
+	NULL
 };
 
 const char *COLOR_ENUMS[] = {
@@ -4831,9 +4955,18 @@ struct int_const_s const INT_CONST[] = {
 	{"FF_RANDOMANIM",FF_RANDOMANIM},
 	{"FF_GLOBALANIM",FF_GLOBALANIM},
 	{"FF_FULLBRIGHT",FF_FULLBRIGHT},
+	{"FF_SEMIBRIGHT",FF_SEMIBRIGHT},
+	{"FF_FULLDARK",FF_FULLDARK},
 	{"FF_VERTICALFLIP",FF_VERTICALFLIP},
 	{"FF_HORIZONTALFLIP",FF_HORIZONTALFLIP},
 	{"FF_PAPERSPRITE",FF_PAPERSPRITE},
+	{"FF_FLOORSPRITE",FF_FLOORSPRITE},
+	{"FF_BLENDMASK",FF_BLENDMASK},
+	{"FF_BLENDSHIFT",FF_BLENDSHIFT},
+	{"FF_ADD",FF_ADD},
+	{"FF_SUBTRACT",FF_SUBTRACT},
+	{"FF_REVERSESUBTRACT",FF_REVERSESUBTRACT},
+	{"FF_MODULATE",FF_MODULATE},
 	{"FF_TRANSMASK",FF_TRANSMASK},
 	{"FF_TRANSSHIFT",FF_TRANSSHIFT},
 	// new preshifted translucency (used in source)
@@ -4877,6 +5010,7 @@ struct int_const_s const INT_CONST[] = {
 	{"AST_REVERSESUBTRACT",AST_REVERSESUBTRACT},
 	{"AST_MODULATE",AST_MODULATE},
 	{"AST_OVERLAY",AST_OVERLAY},
+	{"AST_FOG",AST_FOG},
 
 	// Render flags
 	{"RF_HORIZONTALFLIP",RF_HORIZONTALFLIP},
@@ -4888,9 +5022,10 @@ struct int_const_s const INT_CONST[] = {
 	{"RF_OBJECTSLOPESPLAT",RF_OBJECTSLOPESPLAT},
 	{"RF_NOSPLATBILLBOARD",RF_NOSPLATBILLBOARD},
 	{"RF_NOSPLATROLLANGLE",RF_NOSPLATROLLANGLE},
-	{"RF_BLENDMASK",RF_BLENDMASK},
+	{"RF_BRIGHTMASK",RF_BRIGHTMASK},
 	{"RF_FULLBRIGHT",RF_FULLBRIGHT},
 	{"RF_FULLDARK",RF_FULLDARK},
+	{"RF_SEMIBRIGHT",RF_SEMIBRIGHT},
 	{"RF_NOCOLORMAPS",RF_NOCOLORMAPS},
 	{"RF_SPRITETYPEMASK",RF_SPRITETYPEMASK},
 	{"RF_PAPERSPRITE",RF_PAPERSPRITE},
@@ -5016,6 +5151,7 @@ struct int_const_s const INT_CONST[] = {
 	{"SF_NOSUPERSPRITES",SF_NOSUPERSPRITES},
 	{"SF_NOSUPERJUMPBOOST",SF_NOSUPERJUMPBOOST},
 	{"SF_CANBUSTWALLS",SF_CANBUSTWALLS},
+	{"SF_NOSHIELDABILITY",SF_NOSHIELDABILITY},
 
 	// Dashmode constants
 	{"DASHMODE_THRESHOLD",DASHMODE_THRESHOLD},
@@ -5076,6 +5212,7 @@ struct int_const_s const INT_CONST[] = {
 	{"PAL_MIXUP",PAL_MIXUP},
 	{"PAL_RECYCLE",PAL_RECYCLE},
 	{"PAL_NUKE",PAL_NUKE},
+	{"PAL_INVERT",PAL_INVERT},
 	// for P_DamageMobj
 	//// Damage types
 	{"DMG_WATER",DMG_WATER},
@@ -5160,6 +5297,12 @@ struct int_const_s const INT_CONST[] = {
 	{"GF_REDFLAG",GF_REDFLAG},
 	{"GF_BLUEFLAG",GF_BLUEFLAG},
 
+	// Bot types
+	{"BOT_NONE",BOT_NONE},
+	{"BOT_2PAI",BOT_2PAI},
+	{"BOT_2PHUMAN",BOT_2PHUMAN},
+	{"BOT_MPAI",BOT_MPAI},
+
 	// Customisable sounds for Skins, from sounds.h
 	{"SKSSPIN",SKSSPIN},
 	{"SKSPUTPUT",SKSPUTPUT},
@@ -5208,7 +5351,7 @@ struct int_const_s const INT_CONST[] = {
 	{"FF_FLOATBOB",FF_FLOATBOB},               ///< Floats on water and bobs if you step on it.
 	{"FF_NORETURN",FF_NORETURN},               ///< Used with ::FF_CRUMBLE. Will not return to its original position after falling.
 	{"FF_CRUMBLE",FF_CRUMBLE},                 ///< Falls 2 seconds after being stepped on, and randomly brings all touching crumbling 3dfloors down with it, providing their master sectors share the same tag (allows crumble platforms above or below, to also exist).
-	{"FF_SHATTERBOTTOM",FF_SHATTERBOTTOM},     ///< Used with ::FF_BUSTUP. Like FF_SHATTER, but only breaks from the bottom. Good for springing up through rubble.
+	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
 	{"FF_MARIO",FF_MARIO},                     ///< Acts like a question block when hit from underneath. Goodie spawned at top is determined by master sector.
 	{"FF_BUSTUP",FF_BUSTUP},                   ///< You can spin through/punch this block and it will crumble!
 	{"FF_QUICKSAND",FF_QUICKSAND},             ///< Quicksand!
@@ -5216,12 +5359,21 @@ struct int_const_s const INT_CONST[] = {
 	{"FF_REVERSEPLATFORM",FF_REVERSEPLATFORM}, ///< A fall-through floor in normal gravity, a platform in reverse gravity.
 	{"FF_INTANGIBLEFLATS",FF_INTANGIBLEFLATS}, ///< Both flats are intangible, but the sides are still solid.
 	{"FF_INTANGABLEFLATS",FF_INTANGIBLEFLATS}, ///< Both flats are intangable, but the sides are still solid.
-	{"FF_SHATTER",FF_SHATTER},                 ///< Used with ::FF_BUSTUP. Bustable on mere touch.
-	{"FF_SPINBUST",FF_SPINBUST},               ///< Used with ::FF_BUSTUP. Also bustable if you're in your spinning frames.
-	{"FF_STRONGBUST",FF_STRONGBUST},           ///< Used with ::FF_BUSTUP. Only bustable by "strong" characters (Knuckles) and abilities (bouncing, twinspin, melee).
 	{"FF_RIPPLE",FF_RIPPLE},                   ///< Ripple the flats
 	{"FF_COLORMAPONLY",FF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
-	{"FF_GOOWATER",FF_GOOWATER},               ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
+	{"FF_BOUNCY",FF_BOUNCY},                   ///< Bounces players
+	{"FF_SPLAT",FF_SPLAT},                     ///< Use splat flat renderer (treat cyan pixels as invisible)
+
+	// FOF bustable flags
+	{"FB_PUSHABLES",FB_PUSHABLES},
+	{"FB_EXECUTOR",FB_EXECUTOR},
+	{"FB_ONLYBOTTOM",FB_ONLYBOTTOM},
+
+	// Bustable FOF type
+	{"BT_TOUCH",BT_TOUCH},
+	{"BT_SPINBUST",BT_SPINBUST},
+	{"BT_REGULAR",BT_REGULAR},
+	{"BT_STRONG",BT_STRONG},
 
 	// PolyObject flags
 	{"POF_CLIPLINES",POF_CLIPLINES},               ///< Test against lines for collision
@@ -5373,9 +5525,12 @@ struct int_const_s const INT_CONST[] = {
 	{"V_HUDTRANSHALF",V_HUDTRANSHALF},
 	{"V_HUDTRANS",V_HUDTRANS},
 	{"V_HUDTRANSDOUBLE",V_HUDTRANSDOUBLE},
-	{"V_AUTOFADEOUT",V_AUTOFADEOUT},
-	{"V_RETURN8",V_RETURN8},
-	{"V_OFFSET",V_OFFSET},
+	{"V_BLENDSHIFT",V_BLENDSHIFT},
+	{"V_BLENDMASK",V_BLENDMASK},
+	{"V_ADD",V_ADD},
+	{"V_SUBTRACT",V_SUBTRACT},
+	{"V_REVERSESUBTRACT",V_REVERSESUBTRACT},
+	{"V_MODULATE",V_MODULATE},
 	{"V_ALLOWLOWERCASE",V_ALLOWLOWERCASE},
 	{"V_FLIP",V_FLIP},
 	{"V_CENTERNAMETAG",V_CENTERNAMETAG},
@@ -5383,8 +5538,8 @@ struct int_const_s const INT_CONST[] = {
 	{"V_SNAPTOBOTTOM",V_SNAPTOBOTTOM},
 	{"V_SNAPTOLEFT",V_SNAPTOLEFT},
 	{"V_SNAPTORIGHT",V_SNAPTORIGHT},
-	{"V_WRAPX",V_WRAPX},
-	{"V_WRAPY",V_WRAPY},
+	{"V_AUTOFADEOUT",V_AUTOFADEOUT},
+	{"V_RETURN8",V_RETURN8},
 	{"V_NOSCALESTART",V_NOSCALESTART},
 	{"V_PERPLAYER",V_PERPLAYER},
 
@@ -5448,5 +5603,99 @@ struct int_const_s const INT_CONST[] = {
 	{"GS_DEDICATEDSERVER",GS_DEDICATEDSERVER},
 	{"GS_WAITINGPLAYERS",GS_WAITINGPLAYERS},
 
+	// Joystick axes
+	{"JA_NONE",JA_NONE},
+	{"JA_TURN",JA_TURN},
+	{"JA_MOVE",JA_MOVE},
+	{"JA_LOOK",JA_LOOK},
+	{"JA_STRAFE",JA_STRAFE},
+	{"JA_DIGITAL",JA_DIGITAL},
+	{"JA_JUMP",JA_JUMP},
+	{"JA_SPIN",JA_SPIN},
+	{"JA_FIRE",JA_FIRE},
+	{"JA_FIRENORMAL",JA_FIRENORMAL},
+	{"JOYAXISRANGE",JOYAXISRANGE},
+
+	// Game controls
+	{"GC_NULL",GC_NULL},
+	{"GC_FORWARD",GC_FORWARD},
+	{"GC_BACKWARD",GC_BACKWARD},
+	{"GC_STRAFELEFT",GC_STRAFELEFT},
+	{"GC_STRAFERIGHT",GC_STRAFERIGHT},
+	{"GC_TURNLEFT",GC_TURNLEFT},
+	{"GC_TURNRIGHT",GC_TURNRIGHT},
+	{"GC_WEAPONNEXT",GC_WEAPONNEXT},
+	{"GC_WEAPONPREV",GC_WEAPONPREV},
+	{"GC_WEPSLOT1",GC_WEPSLOT1},
+	{"GC_WEPSLOT2",GC_WEPSLOT2},
+	{"GC_WEPSLOT3",GC_WEPSLOT3},
+	{"GC_WEPSLOT4",GC_WEPSLOT4},
+	{"GC_WEPSLOT5",GC_WEPSLOT5},
+	{"GC_WEPSLOT6",GC_WEPSLOT6},
+	{"GC_WEPSLOT7",GC_WEPSLOT7},
+	{"GC_WEPSLOT8",GC_WEPSLOT8},
+	{"GC_WEPSLOT9",GC_WEPSLOT9},
+	{"GC_WEPSLOT10",GC_WEPSLOT10},
+	{"GC_FIRE",GC_FIRE},
+	{"GC_FIRENORMAL",GC_FIRENORMAL},
+	{"GC_TOSSFLAG",GC_TOSSFLAG},
+	{"GC_SPIN",GC_SPIN},
+	{"GC_CAMTOGGLE",GC_CAMTOGGLE},
+	{"GC_CAMRESET",GC_CAMRESET},
+	{"GC_LOOKUP",GC_LOOKUP},
+	{"GC_LOOKDOWN",GC_LOOKDOWN},
+	{"GC_CENTERVIEW",GC_CENTERVIEW},
+	{"GC_MOUSEAIMING",GC_MOUSEAIMING},
+	{"GC_TALKKEY",GC_TALKKEY},
+	{"GC_TEAMKEY",GC_TEAMKEY},
+	{"GC_SCORES",GC_SCORES},
+	{"GC_JUMP",GC_JUMP},
+	{"GC_CONSOLE",GC_CONSOLE},
+	{"GC_PAUSE",GC_PAUSE},
+	{"GC_SYSTEMMENU",GC_SYSTEMMENU},
+	{"GC_SCREENSHOT",GC_SCREENSHOT},
+	{"GC_RECORDGIF",GC_RECORDGIF},
+	{"GC_VIEWPOINT",GC_VIEWPOINT},
+	{"GC_CUSTOM1",GC_CUSTOM1},
+	{"GC_CUSTOM2",GC_CUSTOM2},
+	{"GC_CUSTOM3",GC_CUSTOM3},
+	{"NUM_GAMECONTROLS",NUM_GAMECONTROLS},
+
+	// Mouse buttons
+	{"MB_BUTTON1",MB_BUTTON1},
+	{"MB_BUTTON2",MB_BUTTON2},
+	{"MB_BUTTON3",MB_BUTTON3},
+	{"MB_BUTTON4",MB_BUTTON4},
+	{"MB_BUTTON5",MB_BUTTON5},
+	{"MB_BUTTON6",MB_BUTTON6},
+	{"MB_BUTTON7",MB_BUTTON7},
+	{"MB_BUTTON8",MB_BUTTON8},
+	{"MB_SCROLLUP",MB_SCROLLUP},
+	{"MB_SCROLLDOWN",MB_SCROLLDOWN},
+
 	{NULL,0}
 };
+
+// For this to work compile-time without being in this file,
+// this function would need to check sizes at runtime, without sizeof
+void DEH_TableCheck(void)
+{
+#if defined(_DEBUG) || defined(PARANOIA)
+	const size_t dehstates = sizeof(STATE_LIST)/sizeof(const char*);
+	const size_t dehmobjs  = sizeof(MOBJTYPE_LIST)/sizeof(const char*);
+	const size_t dehpowers = sizeof(POWERS_LIST)/sizeof(const char*);
+	const size_t dehcolors = sizeof(COLOR_ENUMS)/sizeof(const char*);
+
+	if (dehstates != S_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked states list, you dolt!\n(%d states defined, versus %s in the Dehacked list)\n", S_FIRSTFREESLOT, sizeu1(dehstates));
+
+	if (dehmobjs != MT_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked mobjtype list, you dolt!\n(%d mobj types defined, versus %s in the Dehacked list)\n", MT_FIRSTFREESLOT, sizeu1(dehmobjs));
+
+	if (dehpowers != NUMPOWERS)
+		I_Error("You forgot to update the Dehacked powers list, you dolt!\n(%d powers defined, versus %s in the Dehacked list)\n", NUMPOWERS, sizeu1(dehpowers));
+
+	if (dehcolors != SKINCOLOR_FIRSTFREESLOT)
+		I_Error("You forgot to update the Dehacked colors list, you dolt!\n(%d colors defined, versus %s in the Dehacked list)\n", SKINCOLOR_FIRSTFREESLOT, sizeu1(dehcolors));
+#endif
+}

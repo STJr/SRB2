@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.0)
+cmake_minimum_required(VERSION 3.13)
 
 # Enable CCache early
 set(SRB2_USE_CCACHE OFF CACHE BOOL "Use CCache")
@@ -34,12 +34,11 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
 ### Useful functions
 
-# Prepend sources with current source directory
-function(prepend_sources SOURCE_FILES)
-	foreach(SOURCE_FILE ${${SOURCE_FILES}})
-		set(MODIFIED ${MODIFIED} ${CMAKE_CURRENT_SOURCE_DIR}/${SOURCE_FILE})
-	endforeach()
-	set(${SOURCE_FILES} ${MODIFIED} PARENT_SCOPE)
+# Add sources from Sourcefile
+function(target_sourcefile type)
+	file(STRINGS Sourcefile list
+		REGEX "[-0-9A-Za-z_]+\.${type}")
+	target_sources(SRB2SDL2 PRIVATE ${list})
 endfunction()
 
 # Macro to add OSX framework

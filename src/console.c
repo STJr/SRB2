@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -221,7 +221,7 @@ static void CONS_Bind_f(void)
 		for (key = 0; key < NUMINPUTS; key++)
 			if (bindtable[key])
 			{
-				CONS_Printf("%s : \"%s\"\n", G_KeynumToString(key), bindtable[key]);
+				CONS_Printf("%s : \"%s\"\n", G_KeyNumToName(key), bindtable[key]);
 				na = 1;
 			}
 		if (!na)
@@ -229,7 +229,7 @@ static void CONS_Bind_f(void)
 		return;
 	}
 
-	key = G_KeyStringtoNum(COM_Argv(1));
+	key = G_KeyNameToNum(COM_Argv(1));
 	if (key <= 0 || key >= NUMINPUTS)
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("Invalid key name\n"));
@@ -360,29 +360,47 @@ static void CON_SetupColormaps(void)
 	for (i = 0; i < (256*15); i++, ++memorysrc)
 		*memorysrc = (UINT8)(i & 0xFF); // remap each color to itself...
 
-#define colset(map, a, b, c) \
-	map[1] = (UINT8)a;\
-	map[3] = (UINT8)b;\
-	map[9] = (UINT8)c
+#define colset(map, a, b, c, d, e, f, g, h, i, j, k, l, m, n, o, p) \
+	map[0x0] = (UINT8)a;\
+	map[0x1] = (UINT8)b;\
+	map[0x2] = (UINT8)c;\
+	map[0x3] = (UINT8)d;\
+	map[0x4] = (UINT8)e;\
+	map[0x5] = (UINT8)f;\
+	map[0x6] = (UINT8)g;\
+	map[0x7] = (UINT8)h;\
+	map[0x8] = (UINT8)i;\
+	map[0x9] = (UINT8)j;\
+	map[0xA] = (UINT8)k;\
+	map[0xB] = (UINT8)l;\
+	map[0xC] = (UINT8)m;\
+	map[0xD] = (UINT8)n;\
+	map[0xE] = (UINT8)o;\
+	map[0xF] = (UINT8)p;
 
-	colset(magentamap, 177, 178, 184);
-	colset(yellowmap,   82,  73,  66);
-	colset(lgreenmap,   97,  98, 106);
-	colset(bluemap,    146, 147, 155);
-	colset(redmap,     210,  32,  39);
-	colset(graymap,      6,  8,   14);
-	colset(orangemap,   51,  52,  57);
-	colset(skymap,     129, 130, 133);
-	colset(purplemap,  160, 161, 163);
-	colset(aquamap,    120, 121, 123);
-	colset(peridotmap,  88, 188, 190);
-	colset(azuremap,   144, 145, 170);
-	colset(brownmap,   219, 221, 224);
-	colset(rosymap,    200, 201, 203);
-	colset(invertmap,   27,  26,  22);
-	invertmap[26] = (UINT8)3;
+	// Tried to keep the colors vanilla while adding some shades in between them ~SonicX8000
+
+	//                      0x1       0x3                           0x9                           0xF
+	colset(magentamap, 177, 177, 178, 178, 178, 180, 180, 180, 182, 182, 182, 182, 184, 184, 184, 185);
+	colset(yellowmap,   82,  82,  73,  73,  73,  64,  64,  64,  66,  66,  66,  66,  67,  67,  67,  68);
+	colset(lgreenmap,   96,  96,  98,  98,  98, 101, 101, 101, 104, 104, 104, 104, 106, 106, 106, 107);
+	colset(bluemap,    146, 146, 147, 147, 147, 149, 149, 149, 152, 152, 152, 152, 155, 155, 155, 157);
+	colset(redmap,      32,  32,  33,  33,  33,  35,  35,  35,  39,  39,  39,  39,  42,  42,  42,  44);
+	colset(graymap,      8,   9,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23);
+	colset(orangemap,   50,  50,  52,  52,  52,  54,  54,  54,  56,  56,  56,  56,  59,  59,  59,  60);
+	colset(skymap,     129, 129, 130, 130, 130, 131, 131, 131, 133, 133, 133, 133, 135, 135, 135, 136);
+	colset(purplemap,  160, 160, 161, 161, 161, 162, 162, 162, 163, 163, 163, 163, 164, 164, 164, 165);
+	colset(aquamap,    120, 120, 121, 121, 121, 122, 122, 122, 123, 123, 123, 123, 124, 124, 124, 125);
+	colset(peridotmap,  72,  72, 188, 188, 189, 189, 189, 189, 190, 190, 190, 190, 191, 191, 191,  94);
+	colset(azuremap,   144, 144, 145, 145, 145, 146, 146, 146, 170, 170, 170, 170, 171, 171, 171, 172);
+	colset(brownmap,   219, 219, 221, 221, 221, 222, 222, 222, 224, 224, 224, 224, 227, 227, 227, 229);
+	colset(rosymap,    200, 200, 201, 201, 201, 202, 202, 202, 203, 203, 203, 203, 204, 204, 204, 205);
 
 #undef colset
+
+	// Yeah just straight up invert it like a normal person
+	for (i = 0x00; i <= 0x1F; i++)
+		invertmap[0x1F - i] = i;
 
 	// Init back colormap
 	CON_SetupBackColormap();
@@ -466,6 +484,19 @@ void CON_Init(void)
 		Unlock_state();
 	}
 }
+
+void CON_StartRefresh(void)
+{
+	if (con_startup)
+		con_refresh = true;
+}
+
+void CON_StopRefresh(void)
+{
+	if (con_startup)
+		con_refresh = false;
+}
+
 // Console input initialization
 //
 static void CON_InputInit(void)
@@ -808,6 +839,12 @@ static void CON_InputDelSelection(void)
 
 	Lock_state();
 
+	if (!input_cur)
+	{
+		Unlock_state();
+		return;
+	}
+
 	if (input_cur > input_sel)
 	{
 		start = input_sel;
@@ -889,12 +926,12 @@ boolean CON_Responder(event_t *ev)
 	// let go keyup events, don't eat them
 	if (ev->type != ev_keydown && ev->type != ev_console)
 	{
-		if (ev->data1 == gamecontrol[gc_console][0] || ev->data1 == gamecontrol[gc_console][1])
+		if (ev->key == gamecontrol[GC_CONSOLE][0] || ev->key == gamecontrol[GC_CONSOLE][1])
 			consdown = false;
 		return false;
 	}
 
-	key = ev->data1;
+	key = ev->key;
 
 	// check for console toggle key
 	if (ev->type != ev_console)
@@ -902,7 +939,7 @@ boolean CON_Responder(event_t *ev)
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
-		if (key == gamecontrol[gc_console][0] || key == gamecontrol[gc_console][1])
+		if (key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1])
 		{
 			if (consdown) // ignore repeat
 				return true;
@@ -1278,10 +1315,6 @@ boolean CON_Responder(event_t *ev)
 	// enter a char into the command prompt
 	if (key < 32 || key > 127)
 		return true;
-
-	// add key to cmd line here
-	if (key >= 'A' && key <= 'Z' && !(shiftdown ^ capslock)) //this is only really necessary for dedicated servers
-		key = key + 'a' - 'A';
 
 	if (input_sel != input_cur)
 		CON_InputDelSelection();
@@ -1677,7 +1710,10 @@ static void CON_DrawHudlines(void)
 			{
 				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
 				p++;
+				c++;
 			}
+			if (c >= con_width)
+				break;
 			if (*p < HU_FONTSTART)
 				;//charwidth = 4 * con_scalefactor;
 			else
@@ -1736,8 +1772,8 @@ static void CON_DrawBackpic(void)
 	}
 
 	// Draw the patch.
-	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, V_NOSCALESTART, con_backpic,
-			0, ( BASEVIDHEIGHT - h ), BASEVIDWIDTH, h);
+	V_DrawCroppedPatch(x << FRACBITS, 0, FRACUNIT, FRACUNIT, V_NOSCALESTART, con_backpic, NULL,
+			0, (BASEVIDHEIGHT - h) << FRACBITS, BASEVIDWIDTH << FRACBITS, h << FRACBITS);
 
 	// Unlock the cached patch.
 	W_UnlockCachedPatch(con_backpic);
@@ -1798,7 +1834,10 @@ static void CON_DrawConsole(void)
 			{
 				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
 				p++;
+				c++;
 			}
+			if (c >= con_width)
+				break;
 			V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 		}
 	}

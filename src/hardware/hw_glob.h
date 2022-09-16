@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -118,7 +118,7 @@ patch_t *HWR_GetPic(lumpnum_t lumpnum);
 
 GLMapTexture_t *HWR_GetTexture(INT32 tex);
 void HWR_GetLevelFlat(levelflat_t *levelflat);
-void HWR_LiterallyGetFlat(lumpnum_t flatlumpnum);
+void HWR_GetRawFlat(lumpnum_t flatlumpnum);
 
 void HWR_FreeTexture(patch_t *patch);
 void HWR_FreeTextureData(patch_t *patch);

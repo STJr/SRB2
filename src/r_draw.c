@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -25,6 +25,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "console.h" // Until buffering gets finished
+#include "libdivide.h" // used by NPO2 tilted span functions
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -134,19 +135,51 @@ UINT32 nflatxshift, nflatyshift, nflatshiftup, nflatmask;
 #define DEFAULT_STARTTRANSCOLOR 96
 #define NUM_PALETTE_ENTRIES 256
 
-static UINT8** translationtablecache[MAXSKINS + 7] = {NULL};
+static UINT8 **translationtablecache[MAXSKINS + 7] = {NULL};
 UINT8 skincolor_modified[MAXSKINCOLORS];
 
-CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
+static INT32 SkinToCacheIndex(INT32 skinnum)
+{
+	switch (skinnum)
+	{
+		case TC_DEFAULT:    return DEFAULT_TT_CACHE_INDEX;
+		case TC_BOSS:       return BOSS_TT_CACHE_INDEX;
+		case TC_METALSONIC: return METALSONIC_TT_CACHE_INDEX;
+		case TC_ALLWHITE:   return ALLWHITE_TT_CACHE_INDEX;
+		case TC_RAINBOW:    return RAINBOW_TT_CACHE_INDEX;
+		case TC_BLINK:      return BLINK_TT_CACHE_INDEX;
+		case TC_DASHMODE:   return DASHMODE_TT_CACHE_INDEX;
+		     default:       break;
+	}
 
-#define TRANSTAB_AMTMUL10 (256.0f / 10.0f)
+	return skinnum;
+}
+
+static INT32 CacheIndexToSkin(INT32 ttc)
+{
+	switch (ttc)
+	{
+		case DEFAULT_TT_CACHE_INDEX:    return TC_DEFAULT;
+		case BOSS_TT_CACHE_INDEX:       return TC_BOSS;
+		case METALSONIC_TT_CACHE_INDEX: return TC_METALSONIC;
+		case ALLWHITE_TT_CACHE_INDEX:   return TC_ALLWHITE;
+		case RAINBOW_TT_CACHE_INDEX:    return TC_RAINBOW;
+		case BLINK_TT_CACHE_INDEX:      return TC_BLINK;
+		case DASHMODE_TT_CACHE_INDEX:   return TC_DASHMODE;
+		     default:                   break;
+	}
+
+	return ttc;
+}
+
+CV_PossibleValue_t Color_cons_t[MAXSKINCOLORS+1];
 
 /** \brief Initializes the translucency tables used by the Software renderer.
 */
 void R_InitTranslucencyTables(void)
 {
-	// Load here the transparency lookup tables 'TINTTAB'
-	// NOTE: the TINTTAB resource MUST BE aligned on 64k for the asm
+	// Load here the transparency lookup tables 'TRANSx0'
+	// NOTE: the TRANSx0 resources MUST BE aligned on 64k for the asm
 	// optimised code (in other words, transtables pointer low word is 0)
 	transtables = Z_MallocAlign(NUMTRANSTABLES*0x10000, PU_STATIC,
 		NULL, 16);
@@ -164,42 +197,14 @@ void R_InitTranslucencyTables(void)
 	R_GenerateBlendTables();
 }
 
-void R_GenerateBlendTables(void)
-{
-	INT32 i;
-
-	for (i = 0; i < NUMBLENDMAPS; i++)
-	{
-		if (i == blendtab_modulate)
-			continue;
-		blendtables[i] = Z_MallocAlign((NUMTRANSTABLES + 1) * 0x10000, PU_STATIC, NULL, 16);
-	}
-
-	for (i = 0; i <= 9; i++)
-	{
-		const size_t offs = (0x10000 * i);
-		const UINT8 alpha = TRANSTAB_AMTMUL10 * i;
-
-		R_GenerateTranslucencyTable(blendtables[blendtab_add] + offs, AST_ADD, alpha);
-		R_GenerateTranslucencyTable(blendtables[blendtab_subtract] + offs, AST_SUBTRACT, alpha);
-		R_GenerateTranslucencyTable(blendtables[blendtab_reversesubtract] + offs, AST_REVERSESUBTRACT, alpha);
-	}
-
-	// Modulation blending only requires a single table
-	blendtables[blendtab_modulate] = Z_MallocAlign(0x10000, PU_STATIC, NULL, 16);
-	R_GenerateTranslucencyTable(blendtables[blendtab_modulate], AST_MODULATE, 0);
-}
-
 static colorlookup_t transtab_lut;
 
-void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt)
+static void BlendTab_Translucent(UINT8 *table, int style, UINT8 blendamt)
 {
 	INT16 bg, fg;
 
 	if (table == NULL)
-		I_Error("R_GenerateTranslucencyTable: input table was NULL!");
-
-	InitColorLUT(&transtab_lut, pMasterPalette, false);
+		I_Error("BlendTab_Translucent: input table was NULL!");
 
 	for (bg = 0; bg < 0xFF; bg++)
 	{
@@ -209,12 +214,126 @@ void R_GenerateTranslucencyTable(UINT8 *table, int style, UINT8 blendamt)
 			RGBA_t frontrgba = V_GetMasterColor(fg);
 			RGBA_t result;
 
-			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, blendamt);
+			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, 0xFF);
+			result.rgba = ASTBlendPixel(result, frontrgba, AST_TRANSLUCENT, blendamt);
+
 			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
 		}
 	}
 }
 
+static void BlendTab_Subtractive(UINT8 *table, int style, UINT8 blendamt)
+{
+	INT16 bg, fg;
+
+	if (table == NULL)
+		I_Error("BlendTab_Subtractive: input table was NULL!");
+
+	if (blendamt == 0xFF)
+	{
+		memset(table, GetColorLUT(&transtab_lut, 0, 0, 0), 0x10000);
+		return;
+	}
+
+	for (bg = 0; bg < 0xFF; bg++)
+	{
+		for (fg = 0; fg < 0xFF; fg++)
+		{
+			RGBA_t backrgba = V_GetMasterColor(bg);
+			RGBA_t frontrgba = V_GetMasterColor(fg);
+			RGBA_t result;
+
+			result.rgba = ASTBlendPixel(backrgba, frontrgba, style, 0xFF);
+			result.s.red = max(0, result.s.red - blendamt);
+			result.s.green = max(0, result.s.green - blendamt);
+			result.s.blue = max(0, result.s.blue - blendamt);
+
+			//probably incorrect, but does look better at lower opacity...
+			//result.rgba = ASTBlendPixel(result, frontrgba, AST_TRANSLUCENT, blendamt);
+
+			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
+		}
+	}
+}
+
+static void BlendTab_Modulative(UINT8 *table)
+{
+	INT16 bg, fg;
+
+	if (table == NULL)
+		I_Error("BlendTab_Modulative: input table was NULL!");
+
+	for (bg = 0; bg < 0xFF; bg++)
+	{
+		for (fg = 0; fg < 0xFF; fg++)
+		{
+			RGBA_t backrgba = V_GetMasterColor(bg);
+			RGBA_t frontrgba = V_GetMasterColor(fg);
+			RGBA_t result;
+			result.rgba = ASTBlendPixel(backrgba, frontrgba, AST_MODULATE, 0);
+			table[((bg * 0x100) + fg)] = GetColorLUT(&transtab_lut, result.s.red, result.s.green, result.s.blue);
+		}
+	}
+}
+
+static INT32 BlendTab_Count[NUMBLENDMAPS] =
+{
+	NUMTRANSTABLES+1, // blendtab_add
+	NUMTRANSTABLES+1, // blendtab_subtract
+	NUMTRANSTABLES+1, // blendtab_reversesubtract
+	1                 // blendtab_modulate
+};
+
+static INT32 BlendTab_FromStyle[] =
+{
+	0,                        // AST_COPY
+	0,                        // AST_TRANSLUCENT
+	blendtab_add,             // AST_ADD
+	blendtab_subtract,        // AST_SUBTRACT
+	blendtab_reversesubtract, // AST_REVERSESUBTRACT
+	blendtab_modulate,        // AST_MODULATE
+	0                         // AST_OVERLAY
+};
+
+static void BlendTab_GenerateMaps(INT32 tab, INT32 style, void (*genfunc)(UINT8 *, int, UINT8))
+{
+	INT32 i = 0, num = BlendTab_Count[tab];
+	const float amtmul = (256.0f / (float)(NUMTRANSTABLES + 1));
+	for (; i < num; i++)
+	{
+		const size_t offs = (0x10000 * i);
+		const UINT16 alpha = min(amtmul * i, 0xFF);
+		genfunc(blendtables[tab] + offs, style, alpha);
+	}
+}
+
+void R_GenerateBlendTables(void)
+{
+	INT32 i;
+
+	for (i = 0; i < NUMBLENDMAPS; i++)
+		blendtables[i] = Z_MallocAlign(BlendTab_Count[i] * 0x10000, PU_STATIC, NULL, 16);
+
+	InitColorLUT(&transtab_lut, pMasterPalette, false);
+
+	// Additive
+	BlendTab_GenerateMaps(blendtab_add, AST_ADD, BlendTab_Translucent);
+
+	// Subtractive
+#if 1
+	BlendTab_GenerateMaps(blendtab_subtract, AST_SUBTRACT, BlendTab_Subtractive);
+#else
+	BlendTab_GenerateMaps(blendtab_subtract, AST_SUBTRACT, BlendTab_Translucent);
+#endif
+
+	// Reverse subtractive
+	BlendTab_GenerateMaps(blendtab_reversesubtract, AST_REVERSESUBTRACT, BlendTab_Translucent);
+
+	// Modulative blending only requires a single table
+	BlendTab_Modulative(blendtables[blendtab_modulate]);
+}
+
+#define ClipBlendLevel(style, trans) max(min((trans), BlendTab_Count[BlendTab_FromStyle[style]]-1), 0)
 #define ClipTransLevel(trans) max(min((trans), NUMTRANSMAPS-2), 0)
 
 UINT8 *R_GetTranslucencyTable(INT32 alphalevel)
@@ -224,7 +343,12 @@ UINT8 *R_GetTranslucencyTable(INT32 alphalevel)
 
 UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 {
-	size_t offs = (ClipTransLevel(alphalevel) << FF_TRANSSHIFT);
+	size_t offs;
+
+	if (style <= AST_COPY || style >= AST_OVERLAY)
+		return NULL;
+
+	offs = (ClipBlendLevel(style, alphalevel) << FF_TRANSSHIFT);
 
 	// Lactozilla: Returns the equivalent to AST_TRANSLUCENT
 	// if no alpha style matches any of the blend tables.
@@ -247,6 +371,14 @@ UINT8 *R_GetBlendTable(int style, INT32 alphalevel)
 		return transtables + (ClipTransLevel(alphalevel) << FF_TRANSSHIFT);
 	else
 		return NULL;
+}
+
+boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel)
+{
+	if (blendmode <= AST_COPY || blendmode == AST_SUBTRACT || blendmode == AST_MODULATE || blendmode >= AST_OVERLAY)
+		return true;
+
+	return (alphalevel < BlendTab_Count[BlendTab_FromStyle[blendmode]]);
 }
 
 // Define for getting accurate color brightness readings according to how the human eye sees them.
@@ -308,7 +440,7 @@ static void R_RainbowColormap(UINT8 *dest_colormap, UINT16 skincolor)
 /**	\brief	Generates a translation colormap.
 
 	\param	dest_colormap	colormap to populate
-	\param	skinnum		number of skin, TC_DEFAULT or TC_BOSS
+	\param	skinnum		skin number, or a translation mode
 	\param	color		translation color
 
 	\return	void
@@ -353,8 +485,12 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 		// White!
 		if (skinnum == TC_BOSS)
 		{
+			UINT8 *originalColormap = R_GetTranslationColormap(TC_DEFAULT, (skincolornum_t)color, GTC_CACHE);
 			for (i = 0; i < 16; i++)
+			{
+				dest_colormap[DEFAULT_STARTTRANSCOLOR + i] = originalColormap[DEFAULT_STARTTRANSCOLOR + i];
 				dest_colormap[31-i] = i;
+			}
 		}
 		else if (skinnum == TC_METALSONIC)
 		{
@@ -412,6 +548,9 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 	if (color >= numskincolors)
 		I_Error("Invalid skin color #%hu.", (UINT16)color);
 
+	if (skinnum < 0 && skinnum > TC_DEFAULT)
+		I_Error("Invalid translation colormap index %d.", skinnum);
+
 	starttranscolor = (skinnum != TC_DEFAULT) ? skins[skinnum].starttranscolor : DEFAULT_STARTTRANSCOLOR;
 
 	if (starttranscolor >= NUM_PALETTE_ENTRIES)
@@ -448,25 +587,11 @@ static void R_GenerateTranslationColormap(UINT8 *dest_colormap, INT32 skinnum, U
 UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags)
 {
 	UINT8* ret;
-	INT32 skintableindex;
+	INT32 skintableindex = SkinToCacheIndex(skinnum); // Adjust if we want the default colormap
 	INT32 i;
-
-	// Adjust if we want the default colormap
-	switch (skinnum)
-	{
-		case TC_DEFAULT:    skintableindex = DEFAULT_TT_CACHE_INDEX; break;
-		case TC_BOSS:       skintableindex = BOSS_TT_CACHE_INDEX; break;
-		case TC_METALSONIC: skintableindex = METALSONIC_TT_CACHE_INDEX; break;
-		case TC_ALLWHITE:   skintableindex = ALLWHITE_TT_CACHE_INDEX; break;
-		case TC_RAINBOW:    skintableindex = RAINBOW_TT_CACHE_INDEX; break;
-		case TC_BLINK:      skintableindex = BLINK_TT_CACHE_INDEX; break;
-		case TC_DASHMODE:   skintableindex = DASHMODE_TT_CACHE_INDEX; break;
-		     default:       skintableindex = skinnum; break;
-	}
 
 	if (flags & GTC_CACHE)
 	{
-
 		// Allocate table for skin if necessary
 		if (!translationtablecache[skintableindex])
 			translationtablecache[skintableindex] = Z_Calloc(MAXSKINCOLORS * sizeof(UINT8**), PU_STATIC, NULL);
@@ -479,7 +604,8 @@ UINT8* R_GetTranslationColormap(INT32 skinnum, skincolornum_t color, UINT8 flags
 		{
 			for (i = 0; i < (INT32)(sizeof(translationtablecache) / sizeof(translationtablecache[0])); i++)
 				if (translationtablecache[i] && translationtablecache[i][color])
-					R_GenerateTranslationColormap(translationtablecache[i][color], i>=MAXSKINS ? MAXSKINS-i-1 : i, color);
+					R_GenerateTranslationColormap(translationtablecache[i][color], CacheIndexToSkin(i), color);
+
 			skincolor_modified[color] = false;
 		}
 	}

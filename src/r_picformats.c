@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 2005-2009 by Andrey "entryway" Budko.
-// Copyright (C) 2018-2020 by Jaime "Lactozilla" Passos.
-// Copyright (C) 2019-2020 by Sonic Team Junior.
+// Copyright (C) 2018-2022 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2019-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -540,55 +540,60 @@ void *Picture_GetPatchPixel(
 {
 	fixed_t ofs;
 	column_t *column;
-	UINT8 *s8 = NULL;
-	UINT16 *s16 = NULL;
-	UINT32 *s32 = NULL;
+	INT32 inbpp = Picture_FormatBPP(informat);
 	softwarepatch_t *doompatch = (softwarepatch_t *)patch;
+	boolean isdoompatch = Picture_IsDoomPatchFormat(informat);
 	INT16 width;
 
 	if (patch == NULL)
 		I_Error("Picture_GetPatchPixel: patch == NULL");
 
-	width = (Picture_IsDoomPatchFormat(informat) ? patch->width : SHORT(patch->width));
+	width = (isdoompatch ? SHORT(doompatch->width) : patch->width);
 
 	if (x >= 0 && x < width)
 	{
 		INT32 colx = (flags & PICFLAGS_XFLIP) ? (width-1)-x : x;
 		INT32 topdelta, prevdelta = -1;
-		INT32 colofs = (Picture_IsDoomPatchFormat(informat) ? LONG(patch->columnofs[colx]) : patch->columnofs[colx]);
+		INT32 colofs = (isdoompatch ? LONG(doompatch->columnofs[colx]) : patch->columnofs[colx]);
 
-		// Column offsets are pointers so no casting required
-		if (Picture_IsDoomPatchFormat(informat))
+		// Column offsets are pointers, so no casting is required.
+		if (isdoompatch)
 			column = (column_t *)((UINT8 *)doompatch + colofs);
 		else
 			column = (column_t *)((UINT8 *)patch->columns + colofs);
 
 		while (column->topdelta != 0xff)
 		{
+			UINT8 *s8 = NULL;
+			UINT16 *s16 = NULL;
+			UINT32 *s32 = NULL;
+
 			topdelta = column->topdelta;
 			if (topdelta <= prevdelta)
 				topdelta += prevdelta;
 			prevdelta = topdelta;
-			s8 = (UINT8 *)(column) + 3;
-			if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
-				s32 = (UINT32 *)s8;
-			else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
-				s16 = (UINT16 *)s8;
-			for (ofs = 0; ofs < column->length; ofs++)
+
+			ofs = (y - topdelta);
+
+			if (y >= topdelta && ofs < column->length)
 			{
-				if ((topdelta + ofs) == y)
+				s8 = (UINT8 *)(column) + 3;
+				switch (inbpp)
 				{
-					if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
+					case PICDEPTH_32BPP:
+						s32 = (UINT32 *)s8;
 						return &s32[ofs];
-					else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
+					case PICDEPTH_16BPP:
+						s16 = (UINT16 *)s8;
 						return &s16[ofs];
-					else // PICDEPTH_8BPP
+					default: // PICDEPTH_8BPP
 						return &s8[ofs];
 				}
 			}
-			if (Picture_FormatBPP(informat) == PICDEPTH_32BPP)
+
+			if (inbpp == PICDEPTH_32BPP)
 				column = (column_t *)((UINT32 *)column + column->length);
-			else if (Picture_FormatBPP(informat) == PICDEPTH_16BPP)
+			else if (inbpp == PICDEPTH_16BPP)
 				column = (column_t *)((UINT16 *)column + column->length);
 			else
 				column = (column_t *)((UINT8 *)column + column->length);
@@ -896,9 +901,8 @@ static png_bytep *PNG_Read(
 	png_colorp palette;
 	int palette_size;
 
-	png_bytep trans;
-	int trans_num;
-	png_color_16p trans_values;
+	png_bytep trans = NULL;
+	int num_trans = 0;
 
 #ifdef PNG_SETJMP_SUPPORTED
 #ifdef USE_FAR_KEYWORD
@@ -978,8 +982,8 @@ static png_bytep *PNG_Read(
 
 				for (i = 0; i < 256; i++)
 				{
-					UINT32 rgb = R_PutRgbaRGBA(pal->red, pal->green, pal->blue, 0xFF);
-					if (rgb != pMasterPalette[i].rgba)
+					byteColor_t *curpal = &(pMasterPalette[i].s);
+					if (pal->red != curpal->red || pal->green != curpal->green || pal->blue != curpal->blue)
 					{
 						usepal = false;
 						break;
@@ -993,14 +997,14 @@ static png_bytep *PNG_Read(
 		// color is present on the image, the palette flag is disabled.
 		if (usepal)
 		{
-			png_get_tRNS(png_ptr, png_info_ptr, &trans, &trans_num, &trans_values);
+			png_uint_32 result = png_get_tRNS(png_ptr, png_info_ptr, &trans, &num_trans, NULL);
 
-			if (trans && trans_num == 256)
+			if ((result & PNG_INFO_tRNS) && num_trans > 0 && trans != NULL)
 			{
 				INT32 i;
-				for (i = 0; i < trans_num; i++)
+				for (i = 0; i < num_trans; i++)
 				{
-					// libpng will transform this image into RGB even if
+					// libpng will transform this image into RGBA even if
 					// the transparent index does not exist in the image,
 					// and there is no way around that.
 					if (trans[i] < 0xFF)

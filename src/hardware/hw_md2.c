@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -158,7 +158,7 @@ static GLTextureFormat_t PNG_Load(const char *filename, int *w, int *h, GLPatch_
 	jmp_buf jmpbuf;
 #endif
 #endif
-	png_FILE_p png_FILE;
+	volatile png_FILE_p png_FILE;
 	//Filename checking fixed ~Monster Iestyn and Golden
 	char *pngfilename = va("%s"PATHSEP"models"PATHSEP"%s", srb2home, filename);
 
@@ -777,24 +777,7 @@ static void HWR_CreateBlendedTexture(patch_t *gpatch, patch_t *blendgpatch, GLMi
 
 	while (size--)
 	{
-		if (skinnum == TC_BOSS)
-		{
-			// Turn everything below a certain threshold white
-			if ((image->s.red == image->s.green) && (image->s.green == image->s.blue) && image->s.blue < 127)
-			{
-				// Lactozilla: Invert the colors
-				cur->s.red = cur->s.green = cur->s.blue = (255 - image->s.blue);
-			}
-			else
-			{
-				cur->s.red = image->s.red;
-				cur->s.green = image->s.green;
-				cur->s.blue = image->s.blue;
-			}
-
-			cur->s.alpha = image->s.alpha;
-		}
-		else if (skinnum == TC_ALLWHITE)
+		if (skinnum == TC_ALLWHITE)
 		{
 			// Turn everything white
 			cur->s.red = cur->s.green = cur->s.blue = 255;
@@ -1065,6 +1048,15 @@ skippixel:
 
 					cur->s.alpha = image->s.alpha;
 				}
+				else if (skinnum == TC_BOSS)
+				{
+					// Turn everything below a certain threshold white
+					if ((image->s.red == image->s.green) && (image->s.green == image->s.blue) && image->s.blue < 127)
+					{
+						// Lactozilla: Invert the colors
+						cur->s.red = cur->s.green = cur->s.blue = (255 - image->s.blue);
+					}
+				}
 			}
 		}
 
@@ -1106,11 +1098,19 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 	for (grMipmap = grPatch->mipmap; grMipmap->nextcolormap; )
 	{
 		grMipmap = grMipmap->nextcolormap;
-		if (grMipmap->colormap == colormap)
+		if (grMipmap->colormap && grMipmap->colormap->source == colormap)
 		{
 			if (grMipmap->downloaded && grMipmap->data)
 			{
-				HWD.pfnSetTexture(grMipmap); // found the colormap, set it to the correct texture
+				if (memcmp(grMipmap->colormap->data, colormap, 256 * sizeof(UINT8)))
+				{
+					M_Memcpy(grMipmap->colormap->data, colormap, 256 * sizeof(UINT8));
+					HWR_CreateBlendedTexture(patch, blendpatch, grMipmap, skinnum, color);
+					HWD.pfnUpdateTexture(grMipmap);
+				}
+				else
+					HWD.pfnSetTexture(grMipmap); // found the colormap, set it to the correct texture
+
 				Z_ChangeTag(grMipmap->data, PU_HWRMODELTEXTURE_UNLOCKED);
 				return;
 			}
@@ -1128,7 +1128,10 @@ static void HWR_GetBlendedTexture(patch_t *patch, patch_t *blendpatch, INT32 ski
 	if (newMipmap == NULL)
 		I_Error("%s: Out of memory", "HWR_GetBlendedTexture");
 	grMipmap->nextcolormap = newMipmap;
-	newMipmap->colormap = colormap;
+
+	newMipmap->colormap = Z_Calloc(sizeof(*newMipmap->colormap), PU_HWRPATCHCOLMIPMAP, NULL);
+	newMipmap->colormap->source = colormap;
+	M_Memcpy(newMipmap->colormap->data, colormap, 256 * sizeof(UINT8));
 
 	HWR_CreateBlendedTexture(patch, blendpatch, newMipmap, skinnum, color);
 
@@ -1303,7 +1306,11 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 
 			light = R_GetPlaneLight(sector, spr->mobj->z + spr->mobj->height, false); // Always use the light at the top instead of whatever I was doing before
 
-			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+			if (R_ThingIsFullDark(spr->mobj))
+				lightlevel = 0;
+			else if (R_ThingIsSemiBright(spr->mobj))
+				lightlevel = 128 + (*sector->lightlist[light].lightlevel>>1);
+			else if (!R_ThingIsFullBright(spr->mobj))
 				lightlevel = *sector->lightlist[light].lightlevel > 255 ? 255 : *sector->lightlist[light].lightlevel;
 
 			if (*sector->lightlist[light].extra_colormap)
@@ -1311,7 +1318,11 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		}
 		else
 		{
-			if (!(spr->mobj->frame & FF_FULLBRIGHT))
+			if (R_ThingIsFullDark(spr->mobj))
+				lightlevel = 0;
+			else if (R_ThingIsSemiBright(spr->mobj))
+				lightlevel = 128 + (sector->lightlevel>>1);
+			else if (!R_ThingIsFullBright(spr->mobj))
 				lightlevel = sector->lightlevel > 255 ? 255 : sector->lightlevel;
 
 			if (sector->extra_colormap)
@@ -1329,10 +1340,9 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		GLPatch_t *hwrPatch = NULL, *hwrBlendPatch = NULL;
 		INT32 durs = spr->mobj->state->tics;
 		INT32 tics = spr->mobj->tics;
-		//mdlframe_t *next = NULL;
-		const boolean papersprite = (spr->mobj->frame & FF_PAPERSPRITE);
-		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !(spr->mobj->frame & FF_VERTICALFLIP));
-		const UINT8 hflip = (UINT8)(!(spr->mobj->mirrored) != !(spr->mobj->frame & FF_HORIZONTALFLIP));
+		const boolean papersprite = (R_ThingIsPaperSprite(spr->mobj) && !R_ThingIsFloorSprite(spr->mobj));
+		const UINT8 flip = (UINT8)(!(spr->mobj->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(spr->mobj));
+		const UINT8 hflip = (UINT8)(!(spr->mobj->mirrored) != !R_ThingHorizontallyFlipped(spr->mobj));
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
 		spriteinfo_t *sprinfo;
@@ -1344,12 +1354,18 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		//if (tics > durs)
 			//durs = tics;
 
+		INT32 blendmode;
+		if (spr->mobj->frame & FF_BLENDMASK)
+			blendmode = ((spr->mobj->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
+		else
+			blendmode = spr->mobj->blendmode;
+
 		if (spr->mobj->frame & FF_TRANSMASK)
-			Surf.PolyFlags = HWR_SurfaceBlend(spr->mobj->blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
+			Surf.PolyFlags = HWR_SurfaceBlend(blendmode, (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT, &Surf);
 		else
 		{
 			Surf.PolyColor.s.alpha = (spr->mobj->flags2 & MF2_SHADOW) ? 0x40 : 0xff;
-			Surf.PolyFlags = HWR_GetBlendModeFlag(spr->mobj->blendmode);
+			Surf.PolyFlags = HWR_GetBlendModeFlag(blendmode);
 		}
 
 		// don't forget to enable the depth test because we can't do this
@@ -1393,6 +1409,11 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			&& (!blendgpatch || !hwrBlendPatch
 			|| ((!hwrBlendPatch->mipmap->format || !hwrBlendPatch->mipmap->downloaded) && !md2->noblendfile)))
 			md2_loadBlendTexture(md2);
+
+		// Load it again, because it isn't being loaded into blendgpatch after md2_loadblendtexture...
+		blendgpatch = md2->blendgrpatch;
+		if (blendgpatch)
+			hwrBlendPatch = ((GLPatch_t *)blendgpatch->hardware);
 
 		if (md2->error)
 			return false; // we already failed loading this before :(
@@ -1518,7 +1539,12 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 				{
 					nextFrame = (spr->mobj->frame & FF_FRAMEMASK) + 1;
 					if (nextFrame >= mod)
-						nextFrame = 0;
+					{
+						if (spr->mobj->state->frame & FF_SPR2ENDSTATE)
+							nextFrame--;
+						else
+							nextFrame = 0;
+					}
 					if (frame || !(spr->mobj->state->frame & FF_SPR2ENDSTATE))
 						nextFrame = md2->model->spr2frames[spr2].frames[nextFrame];
 					else

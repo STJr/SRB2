@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,6 +54,7 @@ typedef struct
 {
 	// Keep name for switch changing, etc.
 	char name[8];
+	UINT32 hash;
 	UINT8 type; // TEXTURETYPE_
 	INT16 width, height;
 	boolean holes;
@@ -76,6 +77,7 @@ extern UINT8 **texturecache; // graphics data for each generated full-size textu
 
 // Load TEXTURES definitions, create lookup tables
 void R_LoadTextures(void);
+void R_LoadTexturesPwad(UINT16 wadnum);
 void R_FlushTextureCache(void);
 
 // Texture generation

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,6 +15,9 @@
 #include "i_threads.h"
 
 void CON_Init(void);
+
+void CON_StartRefresh(void);
+void CON_StopRefresh(void);
 
 boolean CON_Responder(event_t *ev);
 

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -41,6 +41,7 @@
 #include "console.h"
 
 #include "lua_hud.h"
+#include "lua_hook.h"
 
 // Stage of animation:
 // 0 = text, 1 = art screen
@@ -1011,7 +1012,7 @@ void F_IntroTicker(void)
 //
 boolean F_IntroResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 key = event->key;
 
 	// remap virtual keys (mouse & joystick buttons)
 	switch (key)
@@ -1063,7 +1064,7 @@ boolean F_IntroResponder(event_t *event)
 //  CREDITS
 // =========
 static const char *credits[] = {
-	"\1Sonic Robo Blast II",
+	"\1Sonic Robo Blast 2",
 	"\1Credits",
 	"",
 	"\1Game Design",
@@ -1089,19 +1090,19 @@ static const char *credits[] = {
 	"\"Hannu_Hanhi\"", // For many OpenGL performance improvements!
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
-	"\"james\"",
 	"Iestyn \"Monster Iestyn\" Jealous",
-	"\"Jimita\"",
 	"\"Kaito Sinclaire\"",
 	"\"Kalaron\"", // Coded some of Sryder13's collection of OpenGL fixes, especially fog
 	"Ronald \"Furyhunter\" Kinard", // The SDL2 port
 	"\"Lat'\"", // SRB2-CHAT, the chat window from Kart
+	"\"LZA\"",
 	"Matthew \"Shuffle\" Marsalko",
 	"Steven \"StroggOnMeth\" McGranahan",
 	"\"Morph\"", // For SRB2Morphed stuff
 	"Louis-Antoine \"LJ Sonic\" de Moulins", // de Rochefort doesn't quite fit on the screen sorry lol
 	"John \"JTE\" Muniz",
 	"Colin \"Sonict\" Pfaff",
+	"James \"james\" Robert Roman",
 	"Sean \"Sryder13\" Ryder",
 	"Ehab \"Wolfy\" Saeed",
 	"Tasos \"tatokis\" Sahanidis", // Corrected C FixedMul, making 64-bit builds netplay compatible
@@ -1138,6 +1139,7 @@ static const char *credits[] = {
 	"Iestyn \"Monster Iestyn\" Jealous",
 	"William \"GuyWithThePie\" Kloppenberg",
 	"Alice \"Alacroix\" de Lemos",
+	"Logan \"Hyperchaotix\" McCloud",
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"Andrew \"Senku Niola\" Moran",
 	"\"MotorRoach\"",
@@ -1165,9 +1167,8 @@ static const char *credits[] = {
 	"Alexander \"DrTapeworm\" Moench-Ford",
 	"Stefan \"Stuf\" Rimalia",
 	"Shane Mychal Sexton",
-	"\"Spazzo\"",
-	"David \"Big Wave Dave\" Spencer Sr.",
-	"David \"Instant Sonic\" Spencer Jr.",
+	"Dave \"Big Wave Dave\" Spencer",
+	"David \"instantSonic\" Spencer",
 	"\"SSNTails\"",
 	"",
 	"\1Level Design",
@@ -1190,7 +1191,6 @@ static const char *credits[] = {
 	"\"Revan\"",
 	"Anna \"QueenDelta\" Sandlin",
 	"Wessel \"sphere\" Smit",
-	"\"Spazzo\"",
 	"\"SSNTails\"",
 	"Rob Tisdell",
 	"\"Torgo\"",
@@ -1219,7 +1219,7 @@ static const char *credits[] = {
 	"Bill \"Tets\" Reed",
 	"",
 	"\1Special Thanks",
-	"iD Software",
+	"id Software",
 	"Doom Legacy Project",
 	"FreeDoom Project", // Used some of the mancubus and rocket launcher sprites for Brak
 	"Kart Krew",
@@ -1398,7 +1398,7 @@ void F_CreditTicker(void)
 
 boolean F_CreditResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 key = event->key;
 
 	// remap virtual keys (mouse & joystick buttons)
 	switch (key)
@@ -2545,28 +2545,28 @@ static void F_UnloadAlacroixGraphics(SINT8 oldttscale)
 	oldttscale--; // zero-based index
 	for (i = 0; i < TTMAX_ALACROIX; i++)
 	{
-		if(ttembl[oldttscale][i]) { Z_Free(ttembl[oldttscale][i]); ttembl[oldttscale][i] = 0; }
-		if(ttribb[oldttscale][i]) { Z_Free(ttribb[oldttscale][i]); ttribb[oldttscale][i] = 0; }
-		if(ttsont[oldttscale][i]) { Z_Free(ttsont[oldttscale][i]); ttsont[oldttscale][i] = 0; }
-		if(ttrobo[oldttscale][i]) { Z_Free(ttrobo[oldttscale][i]); ttrobo[oldttscale][i] = 0; }
-		if(tttwot[oldttscale][i]) { Z_Free(tttwot[oldttscale][i]); tttwot[oldttscale][i] = 0; }
-		if(ttrbtx[oldttscale][i]) { Z_Free(ttrbtx[oldttscale][i]); ttrbtx[oldttscale][i] = 0; }
-		if(ttsoib[oldttscale][i]) { Z_Free(ttsoib[oldttscale][i]); ttsoib[oldttscale][i] = 0; }
-		if(ttsoif[oldttscale][i]) { Z_Free(ttsoif[oldttscale][i]); ttsoif[oldttscale][i] = 0; }
-		if(ttsoba[oldttscale][i]) { Z_Free(ttsoba[oldttscale][i]); ttsoba[oldttscale][i] = 0; }
-		if(ttsobk[oldttscale][i]) { Z_Free(ttsobk[oldttscale][i]); ttsobk[oldttscale][i] = 0; }
-		if(ttsodh[oldttscale][i]) { Z_Free(ttsodh[oldttscale][i]); ttsodh[oldttscale][i] = 0; }
-		if(tttaib[oldttscale][i]) { Z_Free(tttaib[oldttscale][i]); tttaib[oldttscale][i] = 0; }
-		if(tttaif[oldttscale][i]) { Z_Free(tttaif[oldttscale][i]); tttaif[oldttscale][i] = 0; }
-		if(tttaba[oldttscale][i]) { Z_Free(tttaba[oldttscale][i]); tttaba[oldttscale][i] = 0; }
-		if(tttabk[oldttscale][i]) { Z_Free(tttabk[oldttscale][i]); tttabk[oldttscale][i] = 0; }
-		if(tttabt[oldttscale][i]) { Z_Free(tttabt[oldttscale][i]); tttabt[oldttscale][i] = 0; }
-		if(tttaft[oldttscale][i]) { Z_Free(tttaft[oldttscale][i]); tttaft[oldttscale][i] = 0; }
-		if(ttknib[oldttscale][i]) { Z_Free(ttknib[oldttscale][i]); ttknib[oldttscale][i] = 0; }
-		if(ttknif[oldttscale][i]) { Z_Free(ttknif[oldttscale][i]); ttknif[oldttscale][i] = 0; }
-		if(ttknba[oldttscale][i]) { Z_Free(ttknba[oldttscale][i]); ttknba[oldttscale][i] = 0; }
-		if(ttknbk[oldttscale][i]) { Z_Free(ttknbk[oldttscale][i]); ttknbk[oldttscale][i] = 0; }
-		if(ttkndh[oldttscale][i]) { Z_Free(ttkndh[oldttscale][i]); ttkndh[oldttscale][i] = 0; }
+		if(ttembl[oldttscale][i]) { Patch_Free(ttembl[oldttscale][i]); ttembl[oldttscale][i] = 0; }
+		if(ttribb[oldttscale][i]) { Patch_Free(ttribb[oldttscale][i]); ttribb[oldttscale][i] = 0; }
+		if(ttsont[oldttscale][i]) { Patch_Free(ttsont[oldttscale][i]); ttsont[oldttscale][i] = 0; }
+		if(ttrobo[oldttscale][i]) { Patch_Free(ttrobo[oldttscale][i]); ttrobo[oldttscale][i] = 0; }
+		if(tttwot[oldttscale][i]) { Patch_Free(tttwot[oldttscale][i]); tttwot[oldttscale][i] = 0; }
+		if(ttrbtx[oldttscale][i]) { Patch_Free(ttrbtx[oldttscale][i]); ttrbtx[oldttscale][i] = 0; }
+		if(ttsoib[oldttscale][i]) { Patch_Free(ttsoib[oldttscale][i]); ttsoib[oldttscale][i] = 0; }
+		if(ttsoif[oldttscale][i]) { Patch_Free(ttsoif[oldttscale][i]); ttsoif[oldttscale][i] = 0; }
+		if(ttsoba[oldttscale][i]) { Patch_Free(ttsoba[oldttscale][i]); ttsoba[oldttscale][i] = 0; }
+		if(ttsobk[oldttscale][i]) { Patch_Free(ttsobk[oldttscale][i]); ttsobk[oldttscale][i] = 0; }
+		if(ttsodh[oldttscale][i]) { Patch_Free(ttsodh[oldttscale][i]); ttsodh[oldttscale][i] = 0; }
+		if(tttaib[oldttscale][i]) { Patch_Free(tttaib[oldttscale][i]); tttaib[oldttscale][i] = 0; }
+		if(tttaif[oldttscale][i]) { Patch_Free(tttaif[oldttscale][i]); tttaif[oldttscale][i] = 0; }
+		if(tttaba[oldttscale][i]) { Patch_Free(tttaba[oldttscale][i]); tttaba[oldttscale][i] = 0; }
+		if(tttabk[oldttscale][i]) { Patch_Free(tttabk[oldttscale][i]); tttabk[oldttscale][i] = 0; }
+		if(tttabt[oldttscale][i]) { Patch_Free(tttabt[oldttscale][i]); tttabt[oldttscale][i] = 0; }
+		if(tttaft[oldttscale][i]) { Patch_Free(tttaft[oldttscale][i]); tttaft[oldttscale][i] = 0; }
+		if(ttknib[oldttscale][i]) { Patch_Free(ttknib[oldttscale][i]); ttknib[oldttscale][i] = 0; }
+		if(ttknif[oldttscale][i]) { Patch_Free(ttknif[oldttscale][i]); ttknif[oldttscale][i] = 0; }
+		if(ttknba[oldttscale][i]) { Patch_Free(ttknba[oldttscale][i]); ttknba[oldttscale][i] = 0; }
+		if(ttknbk[oldttscale][i]) { Patch_Free(ttknbk[oldttscale][i]); ttknbk[oldttscale][i] = 0; }
+		if(ttkndh[oldttscale][i]) { Patch_Free(ttkndh[oldttscale][i]); ttkndh[oldttscale][i] = 0; }
 	}
 	ttloaded[oldttscale] = false;
 }
@@ -3422,7 +3422,7 @@ void F_TitleScreenDrawer(void)
 	}
 
 luahook:
-	LUAh_TitleHUD();
+	LUA_HUDHOOK(title);
 }
 
 // separate animation timer for backgrounds, since we also count
@@ -3822,7 +3822,7 @@ void F_ContinueTicker(void)
 
 boolean F_ContinueResponder(event_t *event)
 {
-	INT32 key = event->data1;
+	INT32 key = event->key;
 
 	if (keypressed)
 		return true;

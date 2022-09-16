@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -39,45 +39,53 @@ typedef enum GLTextureFormat_e
 	GL_TEXFMT_ALPHA_INTENSITY_88  = 0x22,
 } GLTextureFormat_t;
 
-// data holds the address of the graphics data cached in heap memory
-//                NULL if the texture is not in Doom heap cache.
+// Colormap structure for mipmaps.
+struct GLColormap_s
+{
+	const UINT8 *source;
+	UINT8 data[256];
+};
+typedef struct GLColormap_s GLColormap_t;
+
+
+// Texture information (misleadingly named "mipmap" all over the code.)
+// The *data pointer holds the address of the graphics data cached in heap memory.
+// NULL if the texture is not in SRB2's heap cache.
 struct GLMipmap_s
 {
-	// for TexDownloadMipMap
+	// for UpdateTexture
 	GLTextureFormat_t     format;
 	void                 *data;
 
 	UINT32                flags;
 	UINT16                height;
 	UINT16                width;
-	UINT32                downloaded;     // The GPU has this texture.
+	UINT32                downloaded; // The GPU has this texture.
 
 	struct GLMipmap_s    *nextcolormap;
-	const UINT8          *colormap;
-
-	struct GLMipmap_s    *nextmipmap; // Linked list of all textures
+	struct GLColormap_s  *colormap;
 };
 typedef struct GLMipmap_s GLMipmap_t;
 
 
 //
-// Doom texture info, as cached for hardware rendering
+// Level textures, as cached for hardware rendering.
 //
 struct GLMapTexture_s
 {
 	GLMipmap_t  mipmap;
-	float       scaleX;             //used for scaling textures on walls
+	float       scaleX; // Used for scaling textures on walls
 	float       scaleY;
 };
 typedef struct GLMapTexture_s GLMapTexture_t;
 
 
-// a cached patch as converted to hardware format
+// Patch information for the hardware renderer.
 struct GLPatch_s
 {
-	float               max_s,max_t;
-	GLMipmap_t          *mipmap;
-} ATTRPACK;
+	GLMipmap_t *mipmap; // Texture data. Allocated whenever the patch is.
+	float       max_s, max_t;
+};
 typedef struct GLPatch_s GLPatch_t;
 
 #endif //_HWR_DATA_

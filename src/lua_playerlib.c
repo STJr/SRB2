@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2020 by Sonic Team Junior.
+// Copyright (C) 2012-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -370,6 +370,12 @@ static int player_get(lua_State *L)
 		lua_pushboolean(L, plr->outofcoop);
 	else if (fastcmp(field,"bot"))
 		lua_pushinteger(L, plr->bot);
+	else if (fastcmp(field,"botleader"))
+		LUA_PushUserdata(L, plr->botleader, META_PLAYER);
+	else if (fastcmp(field,"lastbuttons"))
+		lua_pushinteger(L, plr->lastbuttons);
+	else if (fastcmp(field,"blocked"))
+		lua_pushboolean(L, plr->blocked);
 	else if (fastcmp(field,"jointime"))
 		lua_pushinteger(L, plr->jointime);
 	else if (fastcmp(field,"quittime"))
@@ -719,6 +725,17 @@ static int player_set(lua_State *L)
 		plr->outofcoop = lua_toboolean(L, 3);
 	else if (fastcmp(field,"bot"))
 		return NOSET;
+	else if (fastcmp(field,"botleader"))
+	{
+		player_t *player = NULL;
+		if (!lua_isnil(L, 3))
+			player = *((player_t **)luaL_checkudata(L, 3, META_PLAYER));
+		plr->botleader = player;
+	}
+	else if (fastcmp(field,"lastbuttons"))
+		plr->lastbuttons = (UINT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"blocked"))
+		plr->blocked = (UINT8)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"jointime"))
 		plr->jointime = (tic_t)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"quittime"))
@@ -795,6 +812,7 @@ static int power_len(lua_State *L)
 }
 
 #define NOFIELD luaL_error(L, LUA_QL("ticcmd_t") " has no field named " LUA_QS, field)
+#define NOSET luaL_error(L, LUA_QL("ticcmd_t") " field " LUA_QS " should not be set directly.", field)
 
 static int ticcmd_get(lua_State *L)
 {
@@ -813,6 +831,8 @@ static int ticcmd_get(lua_State *L)
 		lua_pushinteger(L, cmd->aiming);
 	else if (fastcmp(field,"buttons"))
 		lua_pushinteger(L, cmd->buttons);
+	else if (fastcmp(field,"latency"))
+		lua_pushinteger(L, cmd->latency);
 	else
 		return NOFIELD;
 
@@ -839,6 +859,8 @@ static int ticcmd_set(lua_State *L)
 		cmd->aiming = (INT16)luaL_checkinteger(L, 3);
 	else if (fastcmp(field,"buttons"))
 		cmd->buttons = (UINT16)luaL_checkinteger(L, 3);
+	else if (fastcmp(field,"latency"))
+		return NOSET;
 	else
 		return NOFIELD;
 
@@ -846,6 +868,7 @@ static int ticcmd_set(lua_State *L)
 }
 
 #undef NOFIELD
+#undef NOSET
 
 int LUA_PlayerLib(lua_State *L)
 {

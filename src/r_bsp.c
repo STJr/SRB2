@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -238,11 +238,11 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 {
 	if (floorlightlevel)
 		*floorlightlevel = sec->floorlightsec == -1 ?
-			sec->lightlevel : sectors[sec->floorlightsec].lightlevel;
+			(sec->floorlightabsolute ? sec->floorlightlevel : max(0, min(255, sec->lightlevel + sec->floorlightlevel))) : sectors[sec->floorlightsec].lightlevel;
 
 	if (ceilinglightlevel)
 		*ceilinglightlevel = sec->ceilinglightsec == -1 ?
-			sec->lightlevel : sectors[sec->ceilinglightsec].lightlevel;
+			(sec->ceilinglightabsolute ? sec->ceilinglightlevel : max(0, min(255, sec->lightlevel + sec->ceilinglightlevel))) : sectors[sec->ceilinglightsec].lightlevel;
 
 	// if (sec->midmap != -1)
 	//	mapnum = sec->midmap;
@@ -301,11 +301,11 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 			tempsec->lightlevel = s->lightlevel;
 
 			if (floorlightlevel)
-				*floorlightlevel = s->floorlightsec == -1 ? s->lightlevel
+				*floorlightlevel = s->floorlightsec == -1 ? (s->floorlightabsolute ? s->floorlightlevel : max(0, min(255, s->lightlevel + s->floorlightlevel)))
 					: sectors[s->floorlightsec].lightlevel;
 
 			if (ceilinglightlevel)
-				*ceilinglightlevel = s->ceilinglightsec == -1 ? s->lightlevel
+				*ceilinglightlevel = s->ceilinglightsec == -1 ? (s->ceilinglightabsolute ? s->ceilinglightlevel : max(0, min(255, s->lightlevel + s->ceilinglightlevel)))
 					: sectors[s->ceilinglightsec].lightlevel;
 		}
 		else if (heightsec != -1 && viewz >= sectors[heightsec].ceilingheight
@@ -339,12 +339,12 @@ sector_t *R_FakeFlat(sector_t *sec, sector_t *tempsec, INT32 *floorlightlevel,
 			tempsec->lightlevel = s->lightlevel;
 
 			if (floorlightlevel)
-				*floorlightlevel = s->floorlightsec == -1 ? s->lightlevel :
-			sectors[s->floorlightsec].lightlevel;
+				*floorlightlevel = s->floorlightsec == -1 ? (s->floorlightabsolute ? s->floorlightlevel : max(0, min(255, s->lightlevel + s->floorlightlevel)))
+					: sectors[s->floorlightsec].lightlevel;
 
 			if (ceilinglightlevel)
-				*ceilinglightlevel = s->ceilinglightsec == -1 ? s->lightlevel :
-			sectors[s->ceilinglightsec].lightlevel;
+				*ceilinglightlevel = s->ceilinglightsec == -1 ? (s->ceilinglightabsolute ? s->ceilinglightlevel : max(0, min(255, s->lightlevel + s->ceilinglightlevel)))
+					: sectors[s->ceilinglightsec].lightlevel;
 		}
 		sec = tempsec;
 	}
@@ -370,6 +370,10 @@ boolean R_IsEmptyLine(seg_t *line, sector_t *front, sector_t *back)
 		&& back->ceiling_yoffs == front->ceiling_yoffs
 		&& back->ceilingpic_angle == front->ceilingpic_angle
 		// Consider altered lighting.
+		&& back->floorlightlevel == front->floorlightlevel
+		&& back->floorlightabsolute == front->floorlightabsolute
+		&& back->ceilinglightlevel == front->ceilinglightlevel
+		&& back->ceilinglightabsolute == front->ceilinglightabsolute
 		&& back->floorlightsec == front->floorlightsec
 		&& back->ceilinglightsec == front->ceilinglightsec
 		// Consider colormaps
@@ -804,7 +808,7 @@ static void R_AddPolyObjects(subsector_t *sub)
 	}
 
 	// for render stats
-	ps_numpolyobjects += numpolys;
+	ps_numpolyobjects.value.i += numpolys;
 
 	// sort polyobjects
 	R_SortPolyObjects(sub);
@@ -872,12 +876,12 @@ static void R_Subsector(size_t num)
 		}
 
 		light = R_GetPlaneLight(frontsector, floorcenterz, false);
-		if (frontsector->floorlightsec == -1)
-			floorlightlevel = *frontsector->lightlist[light].lightlevel;
+		if (frontsector->floorlightsec == -1 && !frontsector->floorlightabsolute)
+			floorlightlevel = max(0, min(255, *frontsector->lightlist[light].lightlevel + frontsector->floorlightlevel));
 		floorcolormap = *frontsector->lightlist[light].extra_colormap;
 		light = R_GetPlaneLight(frontsector, ceilingcenterz, false);
-		if (frontsector->ceilinglightsec == -1)
-			ceilinglightlevel = *frontsector->lightlist[light].lightlevel;
+		if (frontsector->ceilinglightsec == -1 && !frontsector->ceilinglightabsolute)
+			ceilinglightlevel = max(0, min(255, *frontsector->lightlist[light].lightlevel + frontsector->ceilinglightlevel));
 		ceilingcolormap = *frontsector->lightlist[light].extra_colormap;
 	}
 
@@ -1239,7 +1243,7 @@ void R_RenderBSPNode(INT32 bspnum)
 	node_t *bsp;
 	INT32 side;
 
-	ps_numbspcalls++;
+	ps_numbspcalls.value.i++;
 
 	while (!(bspnum & NF_SUBSECTOR))  // Found a subsector?
 	{

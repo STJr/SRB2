@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2020 by Sonic Team Junior.
+// Copyright (C) 1999-2022 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -106,6 +106,9 @@ void R_DrawTiltedSpan_NPO2_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
+
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
 	// Lighting is simple. It's just linear interpolation from start to end
@@ -133,24 +136,25 @@ void R_DrawTiltedSpan_NPO2_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 
 		// Lactozilla: Non-powers-of-two
 		{
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			*dest = colormap[source[((y * ds_flatwidth) + x)]];
 		}
@@ -181,25 +185,26 @@ void R_DrawTiltedSpan_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = colormap[source[((y * ds_flatwidth) + x)]];
 			}
@@ -220,17 +225,18 @@ void R_DrawTiltedSpan_NPO2_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = colormap[source[((y * ds_flatwidth) + x)]];
 			}
@@ -248,25 +254,26 @@ void R_DrawTiltedSpan_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 				// Lactozilla: Non-powers-of-two
 				{
-					fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-					fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+					fixed_t x = (((fixed_t)u) >> FRACBITS);
+					fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 					// Carefully align all of my Friends.
 					if (x < 0)
-						x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+						x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+					else
+						x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 					if (y < 0)
-						y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-					x %= ds_flatwidth;
-					y %= ds_flatheight;
+						y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+					else
+						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 					*dest = colormap[source[((y * ds_flatwidth) + x)]];
 				}
@@ -299,6 +306,9 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
+
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
 	// Lighting is simple. It's just linear interpolation from start to end
@@ -326,23 +336,24 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		// Lactozilla: Non-powers-of-two
 		{
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 		}
@@ -373,25 +384,26 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 			}
@@ -412,17 +424,18 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 			}
@@ -440,25 +453,26 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 				// Lactozilla: Non-powers-of-two
 				{
-					fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-					fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+					fixed_t x = (((fixed_t)u) >> FRACBITS);
+					fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 					// Carefully align all of my Friends.
 					if (x < 0)
-						x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+						x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+					else
+						x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 					if (y < 0)
-						y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-					x %= ds_flatwidth;
-					y %= ds_flatheight;
+						y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+					else
+						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 					*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
 				}
@@ -490,6 +504,9 @@ void R_DrawTiltedSplat_NPO2_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
+
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
 	// Lighting is simple. It's just linear interpolation from start to end
@@ -517,24 +534,25 @@ void R_DrawTiltedSplat_NPO2_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 
 		// Lactozilla: Non-powers-of-two
 		{
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			val = source[((y * ds_flatwidth) + x)];
 		}
@@ -569,25 +587,26 @@ void R_DrawTiltedSplat_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 			}
@@ -610,17 +629,18 @@ void R_DrawTiltedSplat_NPO2_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 			}
@@ -640,26 +660,26 @@ void R_DrawTiltedSplat_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				// Lactozilla: Non-powers-of-two
 				{
-					fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-					fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+					fixed_t x = (((fixed_t)u) >> FRACBITS);
+					fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 					// Carefully align all of my Friends.
 					if (x < 0)
-						x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+						x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+					else
+						x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 					if (y < 0)
-						y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-					x %= ds_flatwidth;
-					y %= ds_flatheight;
+						y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+					else
+						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 					val = source[((y * ds_flatwidth) + x)];
 				}
@@ -972,6 +992,9 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
+
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -1002,23 +1025,24 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			// Lactozilla: Non-powers-of-two
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			val = source[((y * ds_flatwidth) + x)];
 			if (val & 0xFF00)
@@ -1040,17 +1064,18 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 			v = (INT64)(startv);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1070,23 +1095,24 @@ void R_DrawTiltedFloorSprite_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
 				// Lactozilla: Non-powers-of-two
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1122,6 +1148,9 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
+
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -1152,23 +1181,24 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			// Lactozilla: Non-powers-of-two
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			val = source[((y * ds_flatwidth) + x)];
 			if (val & 0xFF00)
@@ -1190,17 +1220,18 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 			v = (INT64)(startv);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1220,23 +1251,24 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
 				// Lactozilla: Non-powers-of-two
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
@@ -1401,6 +1433,9 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 	double endz, endu, endv;
 	UINT32 stepu, stepv;
 
+	struct libdivide_u32_t x_divider = libdivide_u32_gen(ds_flatwidth);
+	struct libdivide_u32_t y_divider = libdivide_u32_gen(ds_flatheight);
+
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
 	// Lighting is simple. It's just linear interpolation from start to end
@@ -1429,23 +1464,24 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 	do
 	{
 		double z = 1.f/iz;
-		u = (INT64)(uz*z) + viewx;
-		v = (INT64)(vz*z) + viewy;
+		u = (INT64)(uz*z);
+		v = (INT64)(vz*z);
 
 		colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		// Lactozilla: Non-powers-of-two
 		{
-			fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-			fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+			fixed_t x = (((fixed_t)u) >> FRACBITS);
+			fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 			// Carefully align all of my Friends.
 			if (x < 0)
-				x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+				x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+			else
+				x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 			if (y < 0)
-				y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-			x %= ds_flatwidth;
-			y %= ds_flatheight;
+				y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+			else
+				y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 			*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 		}
@@ -1476,25 +1512,26 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 		endv = vz*endz;
 		stepu = (INT64)((endu - startu) * INVSPAN);
 		stepv = (INT64)((endv - startv) * INVSPAN);
-		u = (INT64)(startu) + viewx;
-		v = (INT64)(startv) + viewy;
+		u = (INT64)(startu);
+		v = (INT64)(startv);
 
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 			}
@@ -1515,17 +1552,18 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 			// Lactozilla: Non-powers-of-two
 			{
-				fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-				fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+				fixed_t x = (((fixed_t)u) >> FRACBITS);
+				fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 				// Carefully align all of my Friends.
 				if (x < 0)
-					x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+					x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+				else
+					x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 				if (y < 0)
-					y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-				x %= ds_flatwidth;
-				y %= ds_flatheight;
+					y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+				else
+					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 			}
@@ -1543,25 +1581,26 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 			left = 1.f/left;
 			stepu = (INT64)((endu - startu) * left);
 			stepv = (INT64)((endv - startv) * left);
-			u = (INT64)(startu) + viewx;
-			v = (INT64)(startv) + viewy;
+			u = (INT64)(startu);
+			v = (INT64)(startv);
 
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 				// Lactozilla: Non-powers-of-two
 				{
-					fixed_t x = (((fixed_t)u-viewx) >> FRACBITS);
-					fixed_t y = (((fixed_t)v-viewy) >> FRACBITS);
+					fixed_t x = (((fixed_t)u) >> FRACBITS);
+					fixed_t y = (((fixed_t)v) >> FRACBITS);
 
 					// Carefully align all of my Friends.
 					if (x < 0)
-						x = ds_flatwidth - ((UINT32)(ds_flatwidth - x) % ds_flatwidth);
+						x += (libdivide_u32_do((UINT32)(-x-1), &x_divider) + 1) * ds_flatwidth;
+					else
+						x -= libdivide_u32_do((UINT32)x, &x_divider) * ds_flatwidth;
 					if (y < 0)
-						y = ds_flatheight - ((UINT32)(ds_flatheight - y) % ds_flatheight);
-
-					x %= ds_flatwidth;
-					y %= ds_flatheight;
+						y += (libdivide_u32_do((UINT32)(-y-1), &y_divider) + 1) * ds_flatheight;
+					else
+						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
 					*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 				}
