@@ -256,6 +256,13 @@ typedef enum
 
 typedef enum
 {
+	TMG_NORMAL  = 0,
+	TMG_REVERSE = 1,
+	TMG_TEMPREVERSE = 2,
+} textmapgravity_t;
+
+typedef enum
+{
 	TMNP_FASTEST   = 0,
 	TMNP_SLOWEST   = 1,
 	TMNP_TRIGGERER = 2,

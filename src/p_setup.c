@@ -4893,6 +4893,21 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[2] = TMC_EQUAL;
 			lines[i].special = 340;
 			break;
+		case 343: //Gravity check - continuous
+		case 344: //Gravity check - each time
+		case 345: //Gravity check - once
+			if (lines[i].special == 345)
+				lines[i].args[0] = TMT_ONCE;
+			else if (lines[i].special == 344)
+				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
+			else
+				lines[i].args[0] = TMT_CONTINUOUS;
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[1] = TMG_TEMPREVERSE;
+			else if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] = TMG_REVERSE;
+			lines[i].special = 343;
+			break;
 		case 400: //Set tagged sector's floor height/texture
 		case 401: //Set tagged sector's ceiling height/texture
 			lines[i].args[0] = tag;

@@ -1862,6 +1862,12 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!P_CheckPlayerMare(triggerline))
 				return false;
 			break;
+		case 343: // gravity check
+			if ((!(actor->flags2 & MF2_OBJECTFLIP) != !(actor->player->powers[pw_gravityboots])) && triggerline->args[1] == TMG_TEMPREVERSE)
+				return false;
+			if (!(actor->eflags & MFE_VERTICALFLIP) != (triggerline->args[1] == TMG_NORMAL))
+				return false;
+			break;
 		default:
 			break;
 	}
@@ -1899,7 +1905,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			|| specialtype == 319 // Unlockable
 			|| specialtype == 331 // Player skin
 			|| specialtype == 334 // Object dye
-			|| specialtype == 337) // Emerald check
+			|| specialtype == 337 // Emerald check
+			|| specialtype == 343) // Gravity check
 			&& triggerline->args[0] == TMT_ONCE)
 			triggerline->special = 0;
 	}
@@ -1949,7 +1956,8 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 			|| lines[masterline].special == 319 // Unlockable trigger
 			|| lines[masterline].special == 331 // Player skin
 			|| lines[masterline].special == 334 // Object dye
-			|| lines[masterline].special == 337) // Emerald check
+			|| lines[masterline].special == 337 // Emerald check
+			|| lines[masterline].special == 343) // Gravity check
 			&& lines[masterline].args[0] > TMT_EACHTIMEMASK)
 			continue;
 
@@ -6906,6 +6914,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 331: // Player skin
 			case 334: // Object dye
 			case 337: // Emerald check
+			case 343: // Gravity check
 				if (lines[i].args[0] > TMT_EACHTIMEMASK)
 					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
