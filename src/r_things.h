@@ -207,6 +207,8 @@ typedef struct vissprite_s
 
 	fixed_t shadowscale;
 
+	skincolornum_t color;
+
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing

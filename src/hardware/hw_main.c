@@ -5370,6 +5370,10 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 
 	vis->mobj = thing;
+	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer && thing->color == SKINCOLOR_NONE)
+		vis->color = thing->tracer->color;
+	else
+		vis->color = thing->color;
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	if ((vis->mobj->flags & (MF_ENEMY|MF_BOSS)) && (vis->mobj->flags2 & MF2_FRET) && !(vis->mobj->flags & MF_GRENADEBOUNCE) && (leveltime & 1)) // Bosses "flash"
@@ -5379,13 +5383,13 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		else if (vis->mobj->type == MT_METALSONIC_BATTLE)
 			vis->colormap = R_GetTranslationColormap(TC_METALSONIC, 0, GTC_CACHE);
 		else
-			vis->colormap = R_GetTranslationColormap(TC_BOSS, vis->mobj->color, GTC_CACHE);
+			vis->colormap = R_GetTranslationColormap(TC_BOSS, vis->color, GTC_CACHE);
 	}
-	else if (thing->color)
+	else if (vis->color)
 	{
 		// New colormap stuff for skins Tails 06-07-2002
 		if (thing->colorized)
-			vis->colormap = R_GetTranslationColormap(TC_RAINBOW, thing->color, GTC_CACHE);
+			vis->colormap = R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
 		else if (thing->player && thing->player->dashmode >= DASHMODE_THRESHOLD
 			&& (thing->player->charflags & SF_DASHMODE)
 			&& ((leveltime/2) & 1))
@@ -5393,15 +5397,15 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			if (thing->player->charflags & SF_MACHINE)
 				vis->colormap = R_GetTranslationColormap(TC_DASHMODE, 0, GTC_CACHE);
 			else
-				vis->colormap = R_GetTranslationColormap(TC_RAINBOW, thing->color, GTC_CACHE);
+				vis->colormap = R_GetTranslationColormap(TC_RAINBOW, vis->color, GTC_CACHE);
 		}
 		else if (thing->skin && thing->sprite == SPR_PLAY) // This thing is a player!
 		{
 			size_t skinnum = (skin_t*)thing->skin-skins;
-			vis->colormap = R_GetTranslationColormap((INT32)skinnum, thing->color, GTC_CACHE);
+			vis->colormap = R_GetTranslationColormap((INT32)skinnum, vis->color, GTC_CACHE);
 		}
 		else
-			vis->colormap = R_GetTranslationColormap(TC_DEFAULT, vis->mobj->color ? vis->mobj->color : SKINCOLOR_CYAN, GTC_CACHE);
+			vis->colormap = R_GetTranslationColormap(TC_DEFAULT, vis->color ? vis->color : SKINCOLOR_CYAN, GTC_CACHE);
 	}
 	else
 		vis->colormap = NULL;
@@ -5511,6 +5515,7 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->gpatch = (patch_t *)W_CachePatchNum(sprframe->lumppat[rot], PU_SPRITE);
 	vis->flip = flip;
 	vis->mobj = (mobj_t *)thing;
+	vis->color = SKINCOLOR_NONE;
 
 	vis->colormap = NULL;
 
