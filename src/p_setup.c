@@ -5651,17 +5651,18 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 544: //Current
 		case 545: //Upwards current
 		case 546: //Downwards current
+			fixed_t speed = (lines[i].flags & ML_EFFECT6) ? sides[lines[i].sidenum[0]].textureoffset : R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y);
 			lines[i].args[0] = tag;
 			switch ((lines[i].special - 541) % 3)
 			{
 				case 0:
-					lines[i].args[1] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+					lines[i].args[1] = speed >> FRACBITS;
 					break;
 				case 1:
-					lines[i].args[2] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+					lines[i].args[2] = speed >> FRACBITS;
 					break;
 				case 2:
-					lines[i].args[2] = -R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+					lines[i].args[2] = -speed >> FRACBITS;
 					break;
 			}
 			lines[i].args[3] = (lines[i].special >= 544) ? p_current : p_wind;
@@ -6308,7 +6309,7 @@ static void P_ConvertBinaryThingTypes(void)
 			}
 
 			mapthings[i].args[0] = mapthings[i].angle;
-			mapthings[i].args[1] = P_AproxDistance(line->dx >> FRACBITS, line->dy >> FRACBITS);
+			mapthings[i].args[1] = (line->flags & ML_EFFECT6) ? sides[line->sidenum[0]].textureoffset >> FRACBITS : P_AproxDistance(line->dx >> FRACBITS, line->dy >> FRACBITS);
 			if (mapthings[i].type == 755)
 				mapthings[i].args[1] *= -1;
 			if (mapthings[i].options & MTF_OBJECTSPECIAL)
