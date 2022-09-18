@@ -7552,11 +7552,11 @@ static void P_SpawnScrollers(void)
 				fixed_t dy = FixedMul(FixedDiv(l->dy, length), speed) >> SCROLL_SHIFT;
 
 				if (l->args[0] == 0)
-					P_SpawnPlaneScroller(l, dx, dy, control, (INT32)(l->frontsector - sectors), accel, l->args[4] & TMST_NONEXCLUSIVE);
+					P_SpawnPlaneScroller(l, dx, dy, control, (INT32)(l->frontsector - sectors), accel, !(l->args[4] & TMST_NONEXCLUSIVE));
 				else
 				{
 					TAG_ITER_SECTORS(l->args[0], s)
-						P_SpawnPlaneScroller(l, dx, dy, control, s, accel, l->args[4] & TMST_NONEXCLUSIVE);
+						P_SpawnPlaneScroller(l, dx, dy, control, s, accel, !(l->args[4] & TMST_NONEXCLUSIVE));
 				}
 				break;
 			}
