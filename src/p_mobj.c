@@ -1431,10 +1431,9 @@ static void P_PlayerFlip(mobj_t *mo)
 fixed_t P_GetMobjGravity(mobj_t *mo)
 {
 	fixed_t gravityadd = 0;
-	boolean no3dfloorgrav = true; // Custom gravity
+	sector_t *gravsector = NULL; // Custom gravity
 	boolean goopgravity = false;
 	boolean wasflip;
-	boolean alreadyflipped = false;
 
 	I_Assert(mo != NULL);
 	I_Assert(!P_MobjWasRemoved(mo));
@@ -1445,7 +1444,6 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	if (mo->subsector->sector->ffloors) // Check for 3D floor gravity too.
 	{
 		ffloor_t *rover;
-		fixed_t gravfactor;
 
 		for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
 		{
@@ -1455,37 +1453,24 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 			if ((rover->flags & (FF_SWIMMABLE|FF_GOOWATER)) == (FF_SWIMMABLE|FF_GOOWATER))
 				goopgravity = true;
 
-			gravfactor = P_GetSectorGravityFactor(rover->master->frontsector);
-
-			if (gravfactor == FRACUNIT)
+			if (P_GetSectorGravityFactor(rover->master->frontsector) == FRACUNIT)
 				continue;
 
-			gravityadd = -FixedMul(gravity, gravfactor);
-
-			if ((rover->master->frontsector->flags & MSF_GRAVITYFLIP) && gravityadd > 0)
-			{
-				if (rover->master->frontsector->specialflags & SSF_GRAVITYOVERRIDE)
-					mo->flags2 &= ~MF2_OBJECTFLIP;
-				mo->eflags |= MFE_VERTICALFLIP;
-				alreadyflipped = true;
-			}
-
-			no3dfloorgrav = false;
+			gravsector = rover->master->frontsector;
 			break;
 		}
 	}
 
-	if (no3dfloorgrav)
-	{
-		gravityadd = -FixedMul(gravity, P_GetSectorGravityFactor(mo->subsector->sector));
+	if (!gravsector) // If there is no 3D floor gravity, check sector's gravity
+		gravsector = mo->subsector->sector;
 
-		if ((mo->subsector->sector->flags & MSF_GRAVITYFLIP) && gravityadd > 0)
-		{
-			if (mo->subsector->sector->specialflags & SSF_GRAVITYOVERRIDE)
-				mo->flags2 &= ~MF2_OBJECTFLIP;
-			mo->eflags |= MFE_VERTICALFLIP;
-			alreadyflipped = true;
-		}
+	gravityadd = -FixedMul(gravity, P_GetSectorGravityFactor(gravsector));
+
+	if ((gravsector->flags & MSF_GRAVITYFLIP) && gravityadd > 0)
+	{
+		if (gravsector->specialflags & SSF_GRAVITYOVERRIDE)
+			mo->flags2 &= ~MF2_OBJECTFLIP;
+		mo->eflags |= MFE_VERTICALFLIP;
 	}
 
 	// Less gravity underwater.
@@ -1503,8 +1488,7 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 		if (!(mo->flags2 & MF2_OBJECTFLIP) != !(mo->player->powers[pw_gravityboots])) // negated to turn numeric into bool - would be double negated, but not needed if both would be
 		{
 			gravityadd = -gravityadd;
-			if (!alreadyflipped) // prevent re-flipping after a per-sector gravity flip
-				mo->eflags ^= MFE_VERTICALFLIP;
+			mo->eflags ^= MFE_VERTICALFLIP;
 		}
 		if (wasflip == !(mo->eflags & MFE_VERTICALFLIP)) // note!! == ! is not equivalent to != here - turns numeric into bool this way
 			P_PlayerFlip(mo);
