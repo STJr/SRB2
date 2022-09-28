@@ -1055,7 +1055,7 @@ static void R_SplitSprite(vissprite_t *sprite)
 	{
 		fixed_t testheight;
 
-		if (!(sector->lightlist[i].caster->flags & FF_CUTSPRITES))
+		if (!(sector->lightlist[i].caster->fofflags & FOF_CUTSPRITES))
 			continue;
 
 		testheight = P_GetLightZAt(&sector->lightlist[i], sprite->gx, sprite->gy);
@@ -1096,7 +1096,7 @@ static void R_SplitSprite(vissprite_t *sprite)
 		newsprite->szt -= 8;
 
 		newsprite->cut |= SC_TOP;
-		if (!(sector->lightlist[i].caster->flags & FF_NOSHADE))
+		if (!(sector->lightlist[i].caster->fofflags & FOF_NOSHADE))
 		{
 			lightnum = (*sector->lightlist[i].lightlevel >> LIGHTSEGSHIFT);
 
@@ -1162,7 +1162,7 @@ fixed_t R_GetShadowZ(mobj_t *thing, pslope_t **shadowslope)
 		if (sector->ffloors)
 			for (rover = sector->ffloors; rover; rover = rover->next)
 			{
-				if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_RENDERPLANES) || (rover->alpha < 90 && !(rover->flags & FF_SWIMMABLE)))
+				if (!(rover->fofflags & FOF_EXISTS) || !(rover->fofflags & FOF_RENDERPLANES) || (rover->alpha < 90 && !(rover->fofflags & FOF_SWIMMABLE)))
 					continue;
 
 				z = isflipped ? P_GetFFloorBottomZAt(rover, thing->x, thing->y) : P_GetFFloorTopZAt(rover, thing->x, thing->y);

@@ -2150,9 +2150,9 @@ static void P_WriteTextmap(void)
 				freetag = Tag_NextUnused(freetag);
 				break;
 			case 259:
-				if (wlines[i].args[3] & FF_QUICKSAND)
+				if (wlines[i].args[3] & FOF_QUICKSAND)
 					CONS_Alert(CONS_WARNING, M_GetText("Quicksand properties of custom FOF on linedef %s cannot be converted. Use linedef type 75 instead.\n"), sizeu1(i));
-				if (wlines[i].args[3] & FF_BUSTUP)
+				if (wlines[i].args[3] & FOF_BUSTUP)
 					CONS_Alert(CONS_WARNING, M_GetText("Bustable properties of custom FOF on linedef %s cannot be converted. Use linedef type 74 instead.\n"), sizeu1(i));
 				break;
 			case 412:
@@ -3989,6 +3989,81 @@ static void P_SetBinaryFOFAlpha(line_t *line)
 	}
 }
 
+static INT32 P_GetFOFFlags(INT32 oldflags)
+{
+	INT32 result = 0;
+	if (oldflags & FF_OLD_EXISTS)
+		result |= FOF_EXISTS;
+	if (oldflags & FF_OLD_BLOCKPLAYER)
+		result |= FOF_BLOCKPLAYER;
+	if (oldflags & FF_OLD_BLOCKOTHERS)
+		result |= FOF_BLOCKOTHERS;
+	if (oldflags & FF_OLD_RENDERSIDES)
+		result |= FOF_RENDERSIDES;
+	if (oldflags & FF_OLD_RENDERPLANES)
+		result |= FOF_RENDERPLANES;
+	if (oldflags & FF_OLD_SWIMMABLE)
+		result |= FOF_SWIMMABLE;
+	if (oldflags & FF_OLD_NOSHADE)
+		result |= FOF_NOSHADE;
+	if (oldflags & FF_OLD_CUTSOLIDS)
+		result |= FOF_CUTSOLIDS;
+	if (oldflags & FF_OLD_CUTEXTRA)
+		result |= FOF_CUTEXTRA;
+	if (oldflags & FF_OLD_CUTSPRITES)
+		result |= FOF_CUTSPRITES;
+	if (oldflags & FF_OLD_BOTHPLANES)
+		result |= FOF_BOTHPLANES;
+	if (oldflags & FF_OLD_EXTRA)
+		result |= FOF_EXTRA;
+	if (oldflags & FF_OLD_TRANSLUCENT)
+		result |= FOF_TRANSLUCENT;
+	if (oldflags & FF_OLD_FOG)
+		result |= FOF_FOG;
+	if (oldflags & FF_OLD_INVERTPLANES)
+		result |= FOF_INVERTPLANES;
+	if (oldflags & FF_OLD_ALLSIDES)
+		result |= FOF_ALLSIDES;
+	if (oldflags & FF_OLD_INVERTSIDES)
+		result |= FOF_INVERTSIDES;
+	if (oldflags & FF_OLD_DOUBLESHADOW)
+		result |= FOF_DOUBLESHADOW;
+	if (oldflags & FF_OLD_FLOATBOB)
+		result |= FOF_FLOATBOB;
+	if (oldflags & FF_OLD_NORETURN)
+		result |= FOF_NORETURN;
+	if (oldflags & FF_OLD_CRUMBLE)
+		result |= FOF_CRUMBLE;
+	if (oldflags & FF_OLD_GOOWATER)
+		result |= FOF_GOOWATER;
+	if (oldflags & FF_OLD_MARIO)
+		result |= FOF_MARIO;
+	if (oldflags & FF_OLD_BUSTUP)
+		result |= FOF_BUSTUP;
+	if (oldflags & FF_OLD_QUICKSAND)
+		result |= FOF_QUICKSAND;
+	if (oldflags & FF_OLD_PLATFORM)
+		result |= FOF_PLATFORM;
+	if (oldflags & FF_OLD_REVERSEPLATFORM)
+		result |= FOF_REVERSEPLATFORM;
+	if (oldflags & FF_OLD_RIPPLE)
+		result |= FOF_RIPPLE;
+	if (oldflags & FF_OLD_COLORMAPONLY)
+		result |= FOF_COLORMAPONLY;
+	return result;
+}
+
+static INT32 P_GetFOFBusttype(INT32 oldflags)
+{
+	if (oldflags & FF_OLD_SHATTER)
+		return TMFB_TOUCH;
+	if (oldflags & FF_OLD_SPINBUST)
+		return TMFB_SPIN;
+	if (oldflags & FF_OLD_STRONGBUST)
+		return TMFB_STRONG;
+	return TMFB_REGULAR;
+}
+
 static void P_ConvertBinaryLinedefTypes(void)
 {
 	size_t i;
@@ -4637,17 +4712,19 @@ static void P_ConvertBinaryLinedefTypes(void)
 				I_Error("Custom FOF (tag %d) found without a linedef back side!", tag);
 
 			lines[i].args[0] = tag;
-			lines[i].args[3] = sides[lines[i].sidenum[1]].toptexture;
+			lines[i].args[3] = P_GetFOFFlags(sides[lines[i].sidenum[1]].toptexture);
 			if (lines[i].flags & ML_EFFECT6)
-				lines[i].args[3] |= FF_SPLAT;
-			lines[i].args[4] = sides[lines[i].sidenum[1]].midtexture;
-			if (lines[i].args[3] & FF_TRANSLUCENT)
+				lines[i].args[3] |= FOF_SPLAT;
+			lines[i].args[4] = P_GetFOFBusttype(sides[lines[i].sidenum[1]].toptexture);
+			if (sides[lines[i].sidenum[1]].toptexture & FF_OLD_SHATTERBOTTOM)
+				lines[i].args[4] |= TMFB_ONLYBOTTOM;
+			if (lines[i].args[3] & FOF_TRANSLUCENT)
 			{
 				P_SetBinaryFOFAlpha(&lines[i]);
 
 				//Replicate old hack: Translucent FOFs set to full opacity cut cyan pixels
 				if (lines[i].args[1] == 256)
-					lines[i].args[3] |= FF_SPLAT;
+					lines[i].args[3] |= FOF_SPLAT;
 			}
 			else
 				lines[i].args[1] = 255;
@@ -5846,7 +5923,7 @@ static void P_ConvertBinarySectorTypes(void)
 					if (line->flags & ML_BLOCKMONSTERS)
 						continue;
 
-					if (line->special == 120 || (line->special == 259 && (line->args[2] & FF_SWIMMABLE)))
+					if (line->special == 120 || (line->special == 259 && (line->args[2] & FOF_SWIMMABLE)))
 					{
 						isLava = true;
 						break;
