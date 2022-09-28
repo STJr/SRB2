@@ -5357,7 +5357,6 @@ struct int_const_s const INT_CONST[] = {
 	{"FOF_PLATFORM",FOF_PLATFORM},               ///< You can jump up through this to the top.
 	{"FOF_REVERSEPLATFORM",FOF_REVERSEPLATFORM}, ///< A fall-through floor in normal gravity, a platform in reverse gravity.
 	{"FOF_INTANGIBLEFLATS",FOF_INTANGIBLEFLATS}, ///< Both flats are intangible, but the sides are still solid.
-	{"FF_INTANGABLEFLATS",FOF_INTANGIBLEFLATS},  ///< Both flats are intangable, but the sides are still solid. //TODO
 	{"FOF_RIPPLE",FOF_RIPPLE},                   ///< Ripple the flats
 	{"FOF_COLORMAPONLY",FOF_COLORMAPONLY},       ///< Only copy the colormap, not the lightlevel
 	{"FOF_BOUNCY",FOF_BOUNCY},                   ///< Bounces players
