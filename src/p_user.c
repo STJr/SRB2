@@ -2498,7 +2498,7 @@ boolean P_InJumpFlipSector(mobj_t *mo) // Returns true if you are in a jumpflip 
 
 		for (rover = sector->ffloors; rover; rover = rover->next)
 		{
-			if (!(rover->flags & FF_EXISTS))
+			if (!(rover->fofflags & FOF_EXISTS))
 				continue;
 
 			if (!(rover->master->frontsector->specialflags & SSF_JUMPFLIP))
