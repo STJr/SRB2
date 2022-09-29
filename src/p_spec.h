@@ -1036,8 +1036,8 @@ typedef struct
 	INT16 speed;        ///< Speed to fade by
 	boolean ticbased;    ///< Tic-based logic toggle
 	INT32 timer;        ///< Timer for tic-based logic
-	boolean doexists;   ///< Handle FF_EXISTS
-	boolean dotranslucent; ///< Handle FF_TRANSLUCENT
+	boolean doexists;   ///< Handle FOF_EXISTS
+	boolean dotranslucent; ///< Handle FOF_TRANSLUCENT
 	boolean dolighting; ///< Handle shadows and light blocks
 	boolean docolormap; ///< Handle colormaps
 	boolean docollision; ///< Handle interactive flags

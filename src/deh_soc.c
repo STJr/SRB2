@@ -2687,10 +2687,10 @@ void readhuditem(MYFILE *f, INT32 num)
 			}
 			else if (fastcmp(word, "F"))
 			{
-				hudinfo[num].f = i;
+				hudinfo[num].f = get_number(word2);
 			}
 			else
-				deh_warning("Level header %d: unknown word '%s'", num, word);
+				deh_warning("HUD item %d: unknown word '%s'", num, word);
 		}
 	} while (!myfeof(f)); // finish when the line is empty
 
