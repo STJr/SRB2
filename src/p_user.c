@@ -12633,6 +12633,29 @@ void P_PlayerAfterThink(player_t *player)
 
 				break;
 			}
+			case CR_FAN:
+			{
+				fixed_t zdist;
+				mobj_t *mo = player->mo, *fan = player->mo->tracer;
+
+				if (!(player->pflags & PF_JUMPSTASIS))
+					player->pflags |= PF_JUMPSTASIS;
+
+				if (fan->eflags & MFE_VERTICALFLIP)
+					zdist = (mo->z + mo->height) - (fan->z + fan->height);
+				else
+					zdist = mo->z - fan->z;
+
+				if ((fan->type != MT_FAN && !P_PlayerTouchingSectorSpecialFlag(player, SSF_FAN))
+				|| (fan->type == MT_FAN && (abs(mo->x - fan->x) > fan->radius || abs(mo->y - fan->y) > fan->radius || zdist > (fan->health << FRACBITS))))
+				{
+					P_SetTarget(&player->mo->tracer, NULL);
+					player->pflags &= ~PF_JUMPSTASIS;
+					player->powers[pw_carry] = CR_NONE;
+					break;
+				}
+				break;
+			}
 			case CR_ROLLOUT:
 			{
 				mobj_t *mo = player->mo, *rock = player->mo->tracer;

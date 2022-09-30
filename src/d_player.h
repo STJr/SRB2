@@ -245,7 +245,8 @@ typedef enum
 	CR_MINECART,
 	CR_ROLLOUT,
 	CR_PTERABYTE,
-	CR_DUSTDEVIL
+	CR_DUSTDEVIL,
+	CR_FAN
 } carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)
