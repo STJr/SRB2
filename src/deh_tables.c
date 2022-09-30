@@ -5119,6 +5119,7 @@ struct int_const_s const INT_CONST[] = {
 	{"CR_ROLLOUT",CR_ROLLOUT},
 	{"CR_PTERABYTE",CR_PTERABYTE},
 	{"CR_DUSTDEVIL",CR_DUSTDEVIL},
+	{"CR_FAN",CR_FAN},
 
 	// Ring weapons (ringweapons_t)
 	// Useful for A_GiveWeapon

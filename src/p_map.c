@@ -505,11 +505,12 @@ static void P_DoFanAndGasJet(mobj_t *spring, mobj_t *object)
 			if (flipval*object->momz > FixedMul(speed, spring->scale))
 				object->momz = flipval*FixedMul(speed, spring->scale);
 
-			if (p && !p->powers[pw_tailsfly]) // doesn't reset anim for Tails' flight
+			if (p && !p->powers[pw_tailsfly] && !p->powers[pw_carry]) // doesn't reset anim for Tails' flight
 			{
 				P_ResetPlayer(p);
-				if (p->panim != PA_FALL)
-					P_SetPlayerMobjState(object, S_PLAY_FALL);
+				P_SetPlayerMobjState(object, S_PLAY_FALL);
+				P_SetTarget(&object->tracer, spring);
+				p->powers[pw_carry] = CR_FAN;
 			}
 			break;
 		case MT_STEAM: // Steam

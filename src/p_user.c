@@ -1966,22 +1966,22 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 
 	ghost->angle = (mobj->player ? mobj->player->drawangle : mobj->angle);
 	ghost->rollangle = mobj->rollangle;
-	
+
 	ghost->sprite = mobj->sprite;
 	ghost->sprite2 = mobj->sprite2;
 	ghost->frame = mobj->frame;
 	ghost->tics = -1;
 	ghost->frame &= ~FF_TRANSMASK;
 	ghost->frame |= tr_trans50<<FF_TRANSSHIFT;
-	
+
 	ghost->renderflags = mobj->renderflags;
 	ghost->blendmode = mobj->blendmode;
-	
+
 	ghost->spritexscale = mobj->spritexscale;
 	ghost->spriteyscale = mobj->spriteyscale;
 	ghost->spritexoffset = mobj->spritexoffset;
 	ghost->spriteyoffset = mobj->spriteyoffset;
-	
+
 	ghost->fuse = ghost->info->damage;
 	ghost->skin = mobj->skin;
 
@@ -12587,6 +12587,29 @@ void P_PlayerAfterThink(player_t *player)
 					break;
 				}
 
+				break;
+			}
+			case CR_FAN:
+			{
+				fixed_t zdist;
+				mobj_t *mo = player->mo, *fan = player->mo->tracer;
+
+				if (!(player->pflags & PF_JUMPSTASIS))
+					player->pflags |= PF_JUMPSTASIS;
+
+				if (fan->eflags & MFE_VERTICALFLIP)
+					zdist = (mo->z + mo->height) - (fan->z + fan->height);
+				else
+					zdist = mo->z - fan->z;
+
+				if ((fan->type != MT_FAN && !P_PlayerTouchingSectorSpecialFlag(player, SSF_FAN))
+				|| (fan->type == MT_FAN && (abs(mo->x - fan->x) > fan->radius || abs(mo->y - fan->y) > fan->radius || zdist > (fan->health << FRACBITS))))
+				{
+					P_SetTarget(&player->mo->tracer, NULL);
+					player->pflags &= ~PF_JUMPSTASIS;
+					player->powers[pw_carry] = CR_NONE;
+					break;
+				}
 				break;
 			}
 			case CR_ROLLOUT:
