@@ -2012,58 +2012,42 @@ const char *GetRevisionString(void)
 }
 
 // Vector/matrix math
-TVector *VectorMatrixMultiply(TVector v, TMatrix m)
+TVector *VectorMatrixMultiply(TVector v, matrix_t m)
 {
 	static TVector ret;
 
-	ret[0] = FixedMul(v[0],m[0][0]) + FixedMul(v[1],m[1][0]) + FixedMul(v[2],m[2][0]) + FixedMul(v[3],m[3][0]);
-	ret[1] = FixedMul(v[0],m[0][1]) + FixedMul(v[1],m[1][1]) + FixedMul(v[2],m[2][1]) + FixedMul(v[3],m[3][1]);
-	ret[2] = FixedMul(v[0],m[0][2]) + FixedMul(v[1],m[1][2]) + FixedMul(v[2],m[2][2]) + FixedMul(v[3],m[3][2]);
-	ret[3] = FixedMul(v[0],m[0][3]) + FixedMul(v[1],m[1][3]) + FixedMul(v[2],m[2][3]) + FixedMul(v[3],m[3][3]);
+	ret[0] = FixedMul(v[0],m.m[0]) + FixedMul(v[1],m.m[4]) + FixedMul(v[2],m.m[8]) + FixedMul(v[3],m.m[12]);
+	ret[1] = FixedMul(v[0],m.m[1]) + FixedMul(v[1],m.m[5]) + FixedMul(v[2],m.m[9]) + FixedMul(v[3],m.m[13]);
+	ret[2] = FixedMul(v[0],m.m[2]) + FixedMul(v[1],m.m[6]) + FixedMul(v[2],m.m[10]) + FixedMul(v[3],m.m[14]);
+	ret[3] = FixedMul(v[0],m.m[3]) + FixedMul(v[1],m.m[7]) + FixedMul(v[2],m.m[11]) + FixedMul(v[3],m.m[15]);
 
 	return &ret;
 }
 
-TMatrix *RotateXMatrix(angle_t rad)
+matrix_t *RotateXMatrix(angle_t rad)
 {
-	static TMatrix ret;
+	static matrix_t ret;
 	const angle_t fa = rad>>ANGLETOFINESHIFT;
 	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
 
-	ret[0][0] = FRACUNIT; ret[0][1] =       0; ret[0][2] = 0;        ret[0][3] = 0;
-	ret[1][0] =        0; ret[1][1] =  cosrad; ret[1][2] = sinrad;   ret[1][3] = 0;
-	ret[2][0] =        0; ret[2][1] = -sinrad; ret[2][2] = cosrad;   ret[2][3] = 0;
-	ret[3][0] =        0; ret[3][1] =       0; ret[3][2] = 0;        ret[3][3] = FRACUNIT;
+	ret.m[0]  = FRACUNIT; ret.m[1]  =       0; ret.m[2]  = 0;        ret.m[3]  = 0;
+	ret.m[4]  =        0; ret.m[5]  =  cosrad; ret.m[6]  = sinrad;   ret.m[7]  = 0;
+	ret.m[8]  =        0; ret.m[9]  = -sinrad; ret.m[10] = cosrad;   ret.m[11] = 0;
+	ret.m[12] =        0; ret.m[13] =       0; ret.m[11] = 0;        ret.m[12] = FRACUNIT;
 
 	return &ret;
 }
 
-#if 0
-TMatrix *RotateYMatrix(angle_t rad)
+matrix_t *RotateZMatrix(angle_t rad)
 {
-	static TMatrix ret;
+	static matrix_t ret;
 	const angle_t fa = rad>>ANGLETOFINESHIFT;
 	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
 
-	ret[0][0] = cosrad;   ret[0][1] =        0; ret[0][2] = -sinrad;   ret[0][3] = 0;
-	ret[1][0] = 0;        ret[1][1] = FRACUNIT; ret[1][2] = 0;         ret[1][3] = 0;
-	ret[2][0] = sinrad;   ret[2][1] =        0; ret[2][2] = cosrad;    ret[2][3] = 0;
-	ret[3][0] = 0;        ret[3][1] =        0; ret[3][2] = 0;         ret[3][3] = FRACUNIT;
-
-	return &ret;
-}
-#endif
-
-TMatrix *RotateZMatrix(angle_t rad)
-{
-	static TMatrix ret;
-	const angle_t fa = rad>>ANGLETOFINESHIFT;
-	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
-
-	ret[0][0] = cosrad;    ret[0][1] = sinrad;   ret[0][2] =        0; ret[0][3] = 0;
-	ret[1][0] = -sinrad;   ret[1][1] = cosrad;   ret[1][2] =        0; ret[1][3] = 0;
-	ret[2][0] = 0;         ret[2][1] = 0;        ret[2][2] = FRACUNIT; ret[2][3] = 0;
-	ret[3][0] = 0;         ret[3][1] = 0;        ret[3][2] =        0; ret[3][3] = FRACUNIT;
+	ret.m[0]  = cosrad;  ret.m[1]  = sinrad; ret.m[2]  =        0; ret.m[3]  = 0;
+	ret.m[4]  = -sinrad; ret.m[5]  = cosrad; ret.m[6]  =        0; ret.m[7]  = 0;
+	ret.m[8]  = 0;       ret.m[9]  = 0;      ret.m[10] = FRACUNIT; ret.m[11] = 0;
+	ret.m[12] = 0;       ret.m[10] = 0;      ret.m[11] =        0; ret.m[12] = FRACUNIT;
 
 	return &ret;
 }

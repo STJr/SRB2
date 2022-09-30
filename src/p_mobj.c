@@ -13260,7 +13260,7 @@ static void P_SpawnHoopInternal(mapthing_t *mthing, INT32 hoopsize, fixed_t size
 	mobj_t *mobj = NULL;
 	mobj_t *nextmobj = NULL;
 	mobj_t *hoopcenter;
-	TMatrix *pitchmatrix, *yawmatrix;
+	matrix_t *pitchmatrix, *yawmatrix;
 	fixed_t radius = hoopsize*sizefactor;
 	INT32 i;
 	angle_t fa;
