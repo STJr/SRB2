@@ -2011,19 +2011,6 @@ const char *GetRevisionString(void)
 	return rev;
 }
 
-// Vector/matrix math
-TVector *VectorMatrixMultiply(TVector v, matrix_t m)
-{
-	static TVector ret;
-
-	ret[0] = FixedMul(v[0],m.m[0]) + FixedMul(v[1],m.m[4]) + FixedMul(v[2],m.m[8]) + FixedMul(v[3],m.m[12]);
-	ret[1] = FixedMul(v[0],m.m[1]) + FixedMul(v[1],m.m[5]) + FixedMul(v[2],m.m[9]) + FixedMul(v[3],m.m[13]);
-	ret[2] = FixedMul(v[0],m.m[2]) + FixedMul(v[1],m.m[6]) + FixedMul(v[2],m.m[10]) + FixedMul(v[3],m.m[14]);
-	ret[3] = FixedMul(v[0],m.m[3]) + FixedMul(v[1],m.m[7]) + FixedMul(v[2],m.m[11]) + FixedMul(v[3],m.m[15]);
-
-	return &ret;
-}
-
 /** Set of functions to take in a size_t as an argument,
   * put the argument in a character buffer, and return the
   * pointer to that buffer.

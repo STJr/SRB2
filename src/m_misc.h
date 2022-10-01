@@ -80,11 +80,6 @@ INT32 axtoi(const char *hexStg);
 
 const char *GetRevisionString(void);
 
-// Vector/matrix math
-typedef fixed_t TVector[4];
-
-TVector *VectorMatrixMultiply(TVector v, matrix_t m);
-
 // s1 = s2+s3+s1 (1024 lenghtmax)
 void strcatbf(char *s1, const char *s2, const char *s3);
 
