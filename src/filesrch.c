@@ -797,6 +797,7 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 		// The complete name of the file, with its extension,
 		// excluding the path of the directory where it resides.
 		lump_p->fullname = Z_StrDup(fullname);
+		lump_p->hash = quickncasehash(lump_p->name, 8);
 
 		lump_p++;
 		i++;
