@@ -2024,34 +2024,6 @@ TVector *VectorMatrixMultiply(TVector v, matrix_t m)
 	return &ret;
 }
 
-matrix_t *RotateXMatrix(angle_t rad)
-{
-	static matrix_t ret;
-	const angle_t fa = rad>>ANGLETOFINESHIFT;
-	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
-
-	ret.m[0]  = FRACUNIT; ret.m[1]  =       0; ret.m[2]  = 0;        ret.m[3]  = 0;
-	ret.m[4]  =        0; ret.m[5]  =  cosrad; ret.m[6]  = sinrad;   ret.m[7]  = 0;
-	ret.m[8]  =        0; ret.m[9]  = -sinrad; ret.m[10] = cosrad;   ret.m[11] = 0;
-	ret.m[12] =        0; ret.m[13] =       0; ret.m[11] = 0;        ret.m[12] = FRACUNIT;
-
-	return &ret;
-}
-
-matrix_t *RotateZMatrix(angle_t rad)
-{
-	static matrix_t ret;
-	const angle_t fa = rad>>ANGLETOFINESHIFT;
-	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
-
-	ret.m[0]  = cosrad;  ret.m[1]  = sinrad; ret.m[2]  =        0; ret.m[3]  = 0;
-	ret.m[4]  = -sinrad; ret.m[5]  = cosrad; ret.m[6]  =        0; ret.m[7]  = 0;
-	ret.m[8]  = 0;       ret.m[9]  = 0;      ret.m[10] = FRACUNIT; ret.m[11] = 0;
-	ret.m[12] = 0;       ret.m[10] = 0;      ret.m[11] =        0; ret.m[12] = FRACUNIT;
-
-	return &ret;
-}
-
 /** Set of functions to take in a size_t as an argument,
   * put the argument in a character buffer, and return the
   * pointer to that buffer.

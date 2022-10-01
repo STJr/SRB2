@@ -84,8 +84,6 @@ const char *GetRevisionString(void);
 typedef fixed_t TVector[4];
 
 TVector *VectorMatrixMultiply(TVector v, matrix_t m);
-matrix_t *RotateXMatrix(angle_t rad);
-matrix_t *RotateZMatrix(angle_t rad);
 
 // s1 = s2+s3+s1 (1024 lenghtmax)
 void strcatbf(char *s1, const char *s2, const char *s3);

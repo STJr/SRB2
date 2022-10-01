@@ -1517,6 +1517,7 @@ void A_PointyThink(mobj_t *actor)
 	INT32 i;
 	player_t *player = NULL;
 	mobj_t *ball;
+	matrix_t m;
 	TVector v;
 	TVector *res;
 	angle_t fa;
@@ -1593,9 +1594,12 @@ void A_PointyThink(mobj_t *actor)
 		v[2] = FixedMul(FINESINE(fa),radius);
 		v[3] = FRACUNIT;
 
-		res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(actor->lastlook+i)));
+		FM_RotateX(&m, FixedAngle(actor->lastlook+i));
+		res = VectorMatrixMultiply(v, m);
 		M_Memcpy(&v, res, sizeof (v));
-		res = VectorMatrixMultiply(v, *RotateZMatrix(actor->angle+ANGLE_180));
+
+		FM_RotateZ(&m, actor->angle+ANGLE_180);
+		res = VectorMatrixMultiply(v, m);
 		M_Memcpy(&v, res, sizeof (v));
 
 		P_UnsetThingPosition(ball);
