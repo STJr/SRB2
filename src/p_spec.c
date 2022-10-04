@@ -1863,9 +1863,9 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 				return false;
 			break;
 		case 343: // gravity check
-			if ((!(actor->flags2 & MF2_OBJECTFLIP) != !(actor->player->powers[pw_gravityboots])) && triggerline->args[1] == TMG_TEMPREVERSE)
+			if (triggerline->args[1] == TMG_TEMPREVERSE && (!(actor->flags2 & MF2_OBJECTFLIP) != !(actor->player->powers[pw_gravityboots])))
 				return false;
-			if (!(actor->eflags & MFE_VERTICALFLIP) != (triggerline->args[1] == TMG_NORMAL))
+			if ((triggerline->args[1] == TMG_NORMAL) != !(actor->eflags & MFE_VERTICALFLIP))
 				return false;
 			break;
 		default:
