@@ -7474,6 +7474,17 @@ void T_Scroll(scroll_t *s)
 	} // end of switch
 }
 
+static boolean IsSector3DBlock(sector_t* sec)
+{
+	size_t i;
+	for (i = 0; i < sec->linecount; i++)
+	{
+		if (sec->lines[i]->special >= 100 && sec->lines[i]->special < 300)
+			return true;
+	}
+	return false;
+}
+
 /** Adds a generalized scroller to the thinker list.
   *
   * \param type     The enumerated type of scrolling.
@@ -7487,6 +7498,7 @@ void T_Scroll(scroll_t *s)
   */
 static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT32 affectee, INT32 accel, INT32 exclusive)
 {
+	boolean is3dblock = IsSector3DBlock(&sectors[affectee]);
 	scroll_t *s = Z_Calloc(sizeof *s, PU_LEVSPEC, NULL);
 	s->thinker.function.acp1 = (actionf_p1)T_Scroll;
 	s->type = type;
@@ -7500,7 +7512,13 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 		s->last_height = sectors[control].floorheight + sectors[control].ceilingheight;
 	s->affectee = affectee;
 	if (type == sc_carry || type == sc_carry_ceiling)
+	{
 		sectors[affectee].specialflags |= SSF_CONVEYOR;
+		if ((type == sc_carry_ceiling) ^ is3dblock)
+			sectors[affectee].flags |= MSF_FLIPSPECIAL_CEILING;
+		else
+			sectors[affectee].flags |= MSF_FLIPSPECIAL_FLOOR;
+	}
 	P_AddThinker(THINK_MAIN, &s->thinker);
 }
 
