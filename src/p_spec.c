@@ -8548,7 +8548,9 @@ void T_Pusher(pusher_t *p)
 		{
 			if (thing->z == P_GetSpecialBottomZ(thing, sec, sec))
 				touching = true;
-			else if (p->type != p_current)
+			// Annoying backwards compatibility nonsense:
+			// In binary, horizontal currents require floor touch
+			else if (udmf || p->type != p_current || z_mag != 0)
 				inFOF = true;
 		}
 
