@@ -2906,8 +2906,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						if (always || this->bottomtexture) this->bottomtexture = set->bottomtexture;
 					}
 
-					if (line->args[3] && lines[linenum].sidenum[1] != 0xffff)
-						set = &sides[line->sidenum[1]]; // Use back side textures
+					if (line->args[3] && line->sidenum[1] != 0xffff)
+						set = &sides[line->sidenum[1]]; // Use back side textures for target's back side
 
 					// Back side
 					if (line->args[1] != TMSD_FRONT && lines[linenum].sidenum[1] != 0xffff)
@@ -2917,6 +2917,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						if (always || this->midtexture) this->midtexture = set->midtexture;
 						if (always || this->bottomtexture) this->bottomtexture = set->bottomtexture;
 					}
+
+					set = &sides[line->sidenum[0]]; // Go back to front side textures
 				}
 			}
 			break;
