@@ -35,6 +35,8 @@ set(SRB2_CONFIG_YASM OFF CACHE BOOL
 	"Use YASM in place of NASM.")
 set(SRB2_CONFIG_STATIC_OPENGL OFF CACHE BOOL
 	"Use statically linked OpenGL. NOT RECOMMENDED.")
+set(SRB2_CONFIG_DEV_BUILD OFF CACHE BOOL
+	"Compile a development build of SRB2.")
 
 ### use internal libraries?
 if(${CMAKE_SYSTEM} MATCHES "Windows") ###set on Windows only
@@ -249,6 +251,10 @@ endif()
 
 if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 	target_compile_options(SRB2SDL2 PRIVATE "-Wno-absolute-value")
+endif()
+
+if(${SRB2_CONFIG_DEV_BUILD})
+	target_compile_definitions(SRB2SDL2 PRIVATE -DDEVELOP)
 endif()
 
 target_compile_definitions(SRB2SDL2 PRIVATE -DCMAKECONFIG)
