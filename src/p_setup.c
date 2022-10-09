@@ -5618,12 +5618,10 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = tag;
 			lines[i].args[1] = ((lines[i].special % 10) < 6) ? (((lines[i].special % 10) < 3) ? TMP_FLOOR : TMP_CEILING) : TMP_BOTH;
 			lines[i].args[2] = ((lines[i].special - 510)/10 + 1) % 3;
-			lines[i].args[3] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+			lines[i].args[3] = ((lines[i].flags & ML_EFFECT6) ? sides[lines[i].sidenum[0]].textureoffset : R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y)) >> FRACBITS;
 			lines[i].args[4] = (lines[i].special % 10) % 3;
 			if (lines[i].args[2] != TMS_SCROLLONLY && !(lines[i].flags & ML_NOCLIMB))
 				lines[i].args[4] |= TMST_NONEXCLUSIVE;
-			if (lines[i].flags & ML_EFFECT6)
-				lines[i].args[3] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].special = 510;
 			break;
 		case 540: //Floor friction
