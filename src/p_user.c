@@ -2512,7 +2512,7 @@ static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
 		if ((player->pflags & PF_SPINNING) && !(player->pflags & PF_JUMPED))
 			return true;
 
-		// Strong abilities can break even FF_STRONGBUST.
+		// Passive wall breaking
 		if (player->charflags & SF_CANBUSTWALLS)
 			return true;
 
@@ -2534,7 +2534,7 @@ static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
 
 		/* FALLTHRU */
 	case BT_STRONG: // Requires a "strong ability"
-		if (player->charability == CA_GLIDEANDCLIMB)
+		if (player->charflags & SF_CANBUSTWALLS)
 			return true;
 
 		if (player->pflags & PF_BOUNCING)
