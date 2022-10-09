@@ -7514,10 +7514,13 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 	if (type == sc_carry || type == sc_carry_ceiling)
 	{
 		sectors[affectee].specialflags |= SSF_CONVEYOR;
-		if ((type == sc_carry_ceiling) ^ is3dblock)
-			sectors[affectee].flags |= MSF_FLIPSPECIAL_CEILING;
-		else
-			sectors[affectee].flags |= MSF_FLIPSPECIAL_FLOOR;
+		if (is3dblock)
+		{
+			if (type == sc_carry)
+				sectors[affectee].flags |= MSF_FLIPSPECIAL_CEILING;
+			else
+				sectors[affectee].flags |= MSF_FLIPSPECIAL_FLOOR;
+		}
 	}
 	P_AddThinker(THINK_MAIN, &s->thinker);
 }
