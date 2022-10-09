@@ -21,5 +21,12 @@ const char *comprevision = "illegal";
 
 #endif
 
+const int compuncommitted =
+#if (defined(COMPVERSION_UNCOMMITTED))
+1;
+#else
+0;
+#endif
+
 const char *compdate = __DATE__;
 const char *comptime = __TIME__;

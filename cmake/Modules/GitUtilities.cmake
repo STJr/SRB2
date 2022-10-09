@@ -41,3 +41,19 @@ function(git_latest_commit variable path)
 
 	set(${variable} "${output}" PARENT_SCOPE)
 endfunction()
+
+function(git_working_tree_dirty variable path)
+	execute_process(COMMAND ${GIT_EXECUTABLE} "status" "--porcelain" "-uno"
+		WORKING_DIRECTORY "${path}"
+		RESULT_VARIABLE result
+		OUTPUT_VARIABLE output
+		ERROR_QUIET
+		OUTPUT_STRIP_TRAILING_WHITESPACE
+	)
+
+	if(output STREQUAL "")
+		set(${variable} FALSE PARENT_SCOPE)
+	else()
+		set(${variable} TRUE PARENT_SCOPE)
+	endif()
+endfunction()

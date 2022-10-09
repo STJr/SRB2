@@ -19,32 +19,6 @@ project(SRB2
 	VERSION ${SRB2_VERSION}
 	LANGUAGES C CXX)
 
-##### PACKAGE CONFIGURATION #####
-
-set(SRB2_CPACK_GENERATOR "" CACHE STRING "Generator to use for making a package. E.g., ZIP, TGZ, DragNDrop (OSX only). Leave blank for default generator.")
-
-if("${SRB2_CPACK_GENERATOR}" STREQUAL "")
-	if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
-		set(SRB2_CPACK_GENERATOR "ZIP")
-	elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
-		set(SRB2_CPACK_GENERATOR "TGZ")
-	elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-		set(SRB2_CPACK_GENERATOR "TGZ")
-	endif()
-endif()
-
-set(CPACK_GENERATOR ${SRB2_CPACK_GENERATOR})
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Sonic Robo Blast 2" CACHE STRING "Program name for display purposes")
-set(CPACK_PACKAGE_VENDOR "Sonic Team Jr." CACHE STRING "Vendor name for display purposes")
-#set(CPACK_PACKAGE_DESCRIPTION_FILE )
-set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-set(CPACK_PACKAGE_VERSION_MAJOR ${SRB2_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${SRB2_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${SRB2_VERSION_PATCH})
-set(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMAKE_VERSION_MAJOR}.${CMAKE_VERSION_MINOR}")
-SET(CPACK_OUTPUT_FILE_PREFIX package)
-include(CPack)
-
 # Options
 
 if("${CMAKE_SYSTEM_NAME}" MATCHES Linux)
@@ -171,16 +145,43 @@ set(SRB2_SDL2_EXE_NAME srb2 CACHE STRING "Executable binary output name")
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/src)
 
-add_subdirectory(src)
-if(NOT ${SRB2_CONFIG_DEV_BUILD})
-	add_subdirectory(assets)
-endif()
-
 ## config.h generation
 set(GIT_EXECUTABLE "git" CACHE FILEPATH "Path to git binary")
 include(GitUtilities)
 git_latest_commit(SRB2_COMP_COMMIT "${CMAKE_SOURCE_DIR}")
 git_current_branch(SRB2_GIT_BRANCH "${CMAKE_SOURCE_DIR}")
+git_working_tree_dirty(SRB2_COMP_UNCOMMITTED "${CMAKE_SOURCE_DIR}")
 set(SRB2_COMP_BRANCH "${SRB2_GIT_BRANCH}")
 set(SRB2_COMP_REVISION "${SRB2_COMP_COMMIT}")
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_BINARY_DIR}/src/config.h)
+
+add_subdirectory(src)
+if(NOT ${SRB2_CONFIG_DEV_BUILD})
+	add_subdirectory(assets)
+endif()
+
+##### PACKAGE CONFIGURATION #####
+
+set(SRB2_CPACK_GENERATOR "" CACHE STRING "Generator to use for making a package. E.g., ZIP, TGZ, DragNDrop (OSX only). Leave blank for default generator.")
+
+if("${SRB2_CPACK_GENERATOR}" STREQUAL "")
+	if("${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
+		set(SRB2_CPACK_GENERATOR "ZIP")
+	elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Linux")
+		set(SRB2_CPACK_GENERATOR "TGZ")
+	elseif("${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
+		set(SRB2_CPACK_GENERATOR "TGZ")
+	endif()
+endif()
+
+set(CPACK_GENERATOR ${SRB2_CPACK_GENERATOR})
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Sonic Robo Blast 2" CACHE STRING "Program name for display purposes")
+set(CPACK_PACKAGE_VENDOR "Sonic Team Jr." CACHE STRING "Vendor name for display purposes")
+#set(CPACK_PACKAGE_DESCRIPTION_FILE )
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_PACKAGE_VERSION_MAJOR ${SRB2_VERSION_MAJOR})
+set(CPACK_PACKAGE_VERSION_MINOR ${SRB2_VERSION_MINOR})
+set(CPACK_PACKAGE_VERSION_PATCH ${SRB2_VERSION_PATCH})
+set(CPACK_PACKAGE_INSTALL_DIRECTORY "CMake ${CMAKE_VERSION_MAJOR}.${CMAKE_VERSION_MINOR}")
+SET(CPACK_OUTPUT_FILE_PREFIX package)
+include(CPack)

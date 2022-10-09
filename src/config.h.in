@@ -11,8 +11,14 @@
 
 #ifdef CMAKECONFIG
 
-#define SRB2_COMP_REVISION    "${SRB2_COMP_REVISION}"
-#define SRB2_COMP_BRANCH      "${SRB2_COMP_BRANCH}"
+#define SRB2_COMP_REVISION       "${SRB2_COMP_REVISION}"
+#define SRB2_COMP_BRANCH         "${SRB2_COMP_BRANCH}"
+
+// This is done with configure_file instead of defines in order to avoid
+// recompiling the whole target whenever the working directory state changes
+#cmakedefine SRB2_COMP_UNCOMMITTED
+#ifdef SRB2_COMP_UNCOMMITTED
+#define COMPVERSION_UNCOMMITTED
 
 #endif
 
@@ -34,6 +40,4 @@
 #define ASSET_HASH_PLAYER_DTA "2e7aaae8a6b1b77d90ffe7606ceadb6c"
 #ifdef USE_PATCH_DTA
 #define ASSET_HASH_PATCH_PK3  "2e69558bce3b9610624549a75e29e19b"
-#endif
-
 #endif
