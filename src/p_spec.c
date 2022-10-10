@@ -2886,7 +2886,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 439: // Set texture
 			{
 				size_t linenum;
-				side_t *set = &sides[line->sidenum[0]], *this;
+				side_t *setfront = &sides[line->sidenum[0]];
+				side_t *setback = (line->args[3] && line->sidenum[1] != 0xffff) ? &sides[line->sidenum[1]] : setfront;
+				side_t *this;
 				boolean always = !(line->args[2]); // If args[2] is set: Only change mid texture if mid texture already exists on tagged lines, etc.
 
 				for (linenum = 0; linenum < numlines; linenum++)
@@ -2901,24 +2903,19 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (line->args[1] != TMSD_BACK)
 					{
 						this = &sides[lines[linenum].sidenum[0]];
-						if (always || this->toptexture) this->toptexture = set->toptexture;
-						if (always || this->midtexture) this->midtexture = set->midtexture;
-						if (always || this->bottomtexture) this->bottomtexture = set->bottomtexture;
+						if (always || this->toptexture) this->toptexture = setfront->toptexture;
+						if (always || this->midtexture) this->midtexture = setfront->midtexture;
+						if (always || this->bottomtexture) this->bottomtexture = setfront->bottomtexture;
 					}
-
-					if (line->args[3] && line->sidenum[1] != 0xffff)
-						set = &sides[line->sidenum[1]]; // Use back side textures for target's back side
 
 					// Back side
 					if (line->args[1] != TMSD_FRONT && lines[linenum].sidenum[1] != 0xffff)
 					{
 						this = &sides[lines[linenum].sidenum[1]];
-						if (always || this->toptexture) this->toptexture = set->toptexture;
-						if (always || this->midtexture) this->midtexture = set->midtexture;
-						if (always || this->bottomtexture) this->bottomtexture = set->bottomtexture;
+						if (always || this->toptexture) this->toptexture = setback->toptexture;
+						if (always || this->midtexture) this->midtexture = setback->midtexture;
+						if (always || this->bottomtexture) this->bottomtexture = setback->bottomtexture;
 					}
-
-					set = &sides[line->sidenum[0]]; // Go back to front side textures
 				}
 			}
 			break;
