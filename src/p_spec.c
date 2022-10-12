@@ -1797,7 +1797,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // Unlockable triggers required
 				INT32 trigid = triggerline->args[1];
 
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+				if (netgame || multiplayer)
 					return false;
 				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
 				{
@@ -1812,7 +1812,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // An unlockable itself must be unlocked!
 				INT32 unlockid = triggerline->args[1];
 
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+				if (netgame || multiplayer)
 					return false;
 				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
 				{
