@@ -19,7 +19,7 @@ libs+=-ladvapi32 -lkernel32 -lmsvcrt -luser32
 
 nasm_format:=win32
 
-SDL=1
+SDL?=1
 
 ifndef NOHW
 opts+=-DUSE_WGL_SWAP
@@ -76,6 +76,7 @@ else
 lib:=../libs/SDL2_mixer/$(mingw)
 endif
 
+ifdef SDL2
 mixer_opts:=-I$(lib)/include/SDL2
 mixer_libs:=-L$(lib)/lib
 
@@ -85,6 +86,7 @@ SDL_opts:=-I$(lib)/include/SDL2\
 SDL_libs:=-L$(lib)/lib $(mixer_libs)\
 	-lmingw32 -lSDL2main -lSDL2 -mwindows
 $(eval $(call _set,SDL))
+endif
 
 lib:=../libs/zlib
 ZLIB_opts:=-I$(lib)

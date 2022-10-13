@@ -1,5 +1,8 @@
 #include "../doomdef.h"
+#include "../doomtype.h"
 #include "../i_system.h"
+
+FILE *logstream = NULL;
 
 UINT8 graphics_started = 0;
 
@@ -16,8 +19,14 @@ tic_t I_GetTime(void)
 	return 0;
 }
 
-int I_GetTimeMicros(void)
+precise_t I_GetPreciseTime(void)
 {
+	return 0;
+}
+
+int I_PreciseToMicros(precise_t d)
+{
+	(void)d;
 	return 0;
 }
 
@@ -95,8 +104,6 @@ void I_OutputMsg(const char *error, ...)
 void I_StartupMouse(void){}
 
 void I_StartupMouse2(void){}
-
-void I_StartupKeyboard(void){}
 
 INT32 I_GetKey(void)
 {
@@ -176,12 +183,18 @@ INT32 I_ClipboardCopy(const char *data, size_t size)
 	return -1;
 }
 
-char *I_ClipboardPaste(void)
+const char *I_ClipboardPaste(void)
 {
 	return NULL;
 }
 
 void I_RegisterSysCommands(void) {}
+
+void I_GetCursorPosition(INT32 *x, INT32 *y)
+{
+	(void)x;
+	(void)y;
+}
 
 #include "../sdl/dosstr.c"
 
