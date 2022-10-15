@@ -107,6 +107,9 @@ typedef long ssize_t;
 char *strcasestr(const char *in, const char *what);
 #define stristr strcasestr
 
+int startswith (const char *base, const char *tag);
+int endswith (const char *base, const char *tag);
+
 #if defined (macintosh) //|| defined (__APPLE__) //skip all boolean/Boolean crap
 	#define true 1
 	#define false 0

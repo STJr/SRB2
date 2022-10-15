@@ -52,3 +52,19 @@ size_t strlcpy(char *dst, const char *src, size_t siz)
 #endif
 
 #include "strcasestr.c"
+
+int startswith(const char *path, const char *tag)
+{
+	return !strncmp(path, tag, strlen(tag));
+}
+
+int endswith(const char *base, const char *tag)
+{
+	const size_t base_length = strlen(base);
+	const size_t tag_length = strlen(tag);
+
+	if (tag_length > base_length)
+		return false;
+
+	return !memcmp(&base[base_length - tag_length], tag, tag_length);
+}
