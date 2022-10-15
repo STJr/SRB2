@@ -1760,3 +1760,14 @@ boolean D_IsPathAllowed(const char *path)
 
 	return true;
 }
+
+boolean D_CheckPathAllowed(const char *path, const char *why)
+{
+	if (!D_IsPathAllowed(path))
+	{
+		CONS_Alert(CONS_WARNING, "%s: %s, location is not allowed\n", why, path);
+		return false;
+	}
+
+	return true;
+}

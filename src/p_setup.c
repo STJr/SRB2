@@ -8059,25 +8059,14 @@ static boolean P_LoadAddon(UINT16 numlumps)
 	return true;
 }
 
-static boolean P_CheckAddonPath(const char *path)
-{
-	if (!D_IsPathAllowed(path))
-	{
-		CONS_Alert(CONS_WARNING, "%s: tried to add file, location is not allowed\n", path);
-		return false;
-	}
-
-	return true;
-}
-
 boolean P_AddWadFile(const char *wadfilename)
 {
-	return P_CheckAddonPath(wadfilename) &&
+	return D_CheckPathAllowed(wadfilename, "tried to add file") &&
 		P_LoadAddon(W_InitFile(wadfilename, false, false));
 }
 
 boolean P_AddFolder(const char *folderpath)
 {
-	return P_CheckAddonPath(folderpath) &&
+	return D_CheckPathAllowed(folderpath, "tried to add folder") &&
 		P_LoadAddon(W_InitFolder(folderpath, false, false));
 }

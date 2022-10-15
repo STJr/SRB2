@@ -467,6 +467,7 @@ void Command_SaveConfig_f(void)
 		CONS_Printf(M_GetText("saveconfig <filename[.cfg]> [-silent] : save config to a file\n"));
 		return;
 	}
+
 	strcpy(tmpstr, COM_Argv(1));
 	FIL_ForceExtension(tmpstr, ".cfg");
 
