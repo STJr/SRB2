@@ -273,8 +273,8 @@ size_t FIL_ReadFileTag(char const *name, UINT8 **buffer, INT32 tag)
 	size_t count, length;
 	UINT8 *buf;
 
-	if (FIL_ReadFileOK(name))
-		handle = fopen(name, "rb");
+	//if (FIL_ReadFileOK(name))
+		handle = fopenfile(name, "rb");
 
 	if (!handle)
 		return 0;
