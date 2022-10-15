@@ -44,6 +44,8 @@ void D_ProcessEvents(void);
 
 const char *D_Home(void);
 
+boolean D_IsPathAllowed(const char *path);
+
 //
 // BASE LEVEL
 //

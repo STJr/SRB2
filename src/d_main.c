@@ -1689,3 +1689,74 @@ const char *D_Home(void)
 	if (usehome) return userhome;
 	else return NULL;
 }
+
+static boolean check_top_dir(const char **path, const char *top)
+{
+	// empty string does NOT match
+	if (!strcmp(top, ""))
+		return false;
+
+	if (!startswith(*path, top))
+		return false;
+
+	*path += strlen(top);
+
+	// if it doesn't already end with a path separator,
+	// check if a separator follows
+	if (!endswith(top, PATHSEP))
+	{
+		if (startswith(*path, PATHSEP))
+			*path += strlen(PATHSEP);
+		else
+			return false;
+	}
+
+	return true;
+}
+
+static int cmp_strlen_desc(const void *a, const void *b)
+{
+	return ((int)strlen(*(const char*const*)b) - (int)strlen(*(const char*const*)a));
+}
+
+boolean D_IsPathAllowed(const char *path)
+{
+	const char *paths[] = {
+		srb2home,
+		srb2path,
+		cv_addons_folder.string
+	};
+
+	const size_t n_paths = sizeof paths / sizeof *paths;
+
+	size_t i;
+
+	// Sort folder paths by longest to shortest so
+	// overlapping paths work. E.g.:
+	// Path 1: /home/james/.srb2/addons
+	// Path 2: /home/james/.srb2
+	qsort(paths, n_paths, sizeof *paths, cmp_strlen_desc);
+
+	// These paths are allowed to be absolute
+	// path is offset so ".." can be checked only in the
+	// rest of the path
+	for (i = 0; i < n_paths; ++i)
+	{
+		if (check_top_dir(&path, paths[i]))
+			break;
+	}
+
+	// Only if none of the presets matched
+	if (i == n_paths)
+	{
+		// Cannot be an absolute path
+		if (M_IsPathAbsolute(path))
+			return false;
+	}
+
+	// Cannot traverse upwards
+	if (strstr(path, ".."))
+		return false;
+
+	return true;
+}
