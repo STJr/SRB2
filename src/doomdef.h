@@ -104,6 +104,8 @@
 #include <io.h>
 #endif
 
+FILE *fopenfile(const char*, const char*);
+
 //#define NOMD5
 
 // Uncheck this to compile debugging code
