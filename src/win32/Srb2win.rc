@@ -2,6 +2,7 @@
 //
 #include "resource.h"
 #include "winver.h"
+#include "winuser.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
