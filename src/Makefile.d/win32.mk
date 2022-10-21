@@ -76,7 +76,7 @@ else
 lib:=../libs/SDL2_mixer/$(mingw)
 endif
 
-ifdef SDL2
+ifdef SDL
 mixer_opts:=-I$(lib)/include/SDL2
 mixer_libs:=-L$(lib)/lib
 
