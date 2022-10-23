@@ -11,6 +11,7 @@
 /// \file  p_floor.c
 /// \brief Floor animation, elevators
 
+#include "dehacked.h"
 #include "doomdef.h"
 #include "doomstat.h"
 #include "m_random.h"
@@ -162,7 +163,7 @@ result_e T_MovePlane(sector_t *sector, fixed_t speed, fixed_t dest, boolean crus
 void T_MoveFloor(floormove_t *movefloor)
 {
 	result_e res = 0;
-	boolean dontupdate = false;
+	boolean remove = false;
 
 	if (movefloor->delaytimer)
 	{
@@ -178,8 +179,8 @@ void T_MoveFloor(floormove_t *movefloor)
 	if (movefloor->type == bounceFloor)
 	{
 		const fixed_t origspeed = FixedDiv(movefloor->origspeed,(ELEVATORSPEED/2));
-		const fixed_t fs = abs(movefloor->sector->floorheight - lines[movefloor->texture].frontsector->floorheight);
-		const fixed_t bs = abs(movefloor->sector->floorheight - lines[movefloor->texture].backsector->floorheight);
+		const fixed_t fs = abs(movefloor->sector->floorheight - lines[movefloor->sourceline].frontsector->floorheight);
+		const fixed_t bs = abs(movefloor->sector->floorheight - lines[movefloor->sourceline].backsector->floorheight);
 		if (fs < bs)
 			movefloor->speed = FixedDiv(fs,25*FRACUNIT) + FRACUNIT/4;
 		else
@@ -190,113 +191,62 @@ void T_MoveFloor(floormove_t *movefloor)
 
 	if (res == pastdest)
 	{
-		if (movefloor->direction == 1)
+		switch (movefloor->type)
 		{
-			switch (movefloor->type)
-			{
-				case moveFloorByFrontSector:
-					if (movefloor->texture < -1) // chained linedef executing
-						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
-					/* FALLTHRU */
-				case instantMoveFloorByFrontSector:
-					if (movefloor->texture > -1) // flat changing
-						movefloor->sector->floorpic = movefloor->texture;
-					break;
-				case bounceFloor: // Graue 03-12-2004
-					if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
-						movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
-					else
-						movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
-					movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
-					movefloor->sector->floorspeed = movefloor->speed * movefloor->direction;
-					movefloor->delaytimer = movefloor->delay;
-					P_RecalcPrecipInSector(movefloor->sector);
-					return; // not break, why did this work? Graue 04-03-2004
-				case bounceFloorCrush: // Graue 03-27-2004
-					if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
-					{
-						movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
-						movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dy),4*FRACUNIT); // return trip, use dy
-					}
-					else
-					{
-						movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
-						movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dx),4*FRACUNIT); // forward again, use dx
-					}
-					movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
-					movefloor->sector->floorspeed = movefloor->speed * movefloor->direction;
-					movefloor->delaytimer = movefloor->delay;
-					P_RecalcPrecipInSector(movefloor->sector);
-					return; // not break, why did this work? Graue 04-03-2004
-				case crushFloorOnce:
-					movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
+			case moveFloorByFrontSector:
+				if (movefloor->tag) // chained linedef executing
+					P_LinedefExecute(movefloor->tag, NULL, NULL);
+				/* FALLTHRU */
+			case instantMoveFloorByFrontSector:
+				if (movefloor->texture > -1) // flat changing
+					movefloor->sector->floorpic = movefloor->texture;
+				remove = true;
+				break;
+			case bounceFloor: // Graue 03-12-2004
+			case bounceFloorCrush: // Graue 03-27-2004
+				if (movefloor->floordestheight == lines[movefloor->sourceline].frontsector->floorheight)
+				{
+					movefloor->floordestheight = lines[movefloor->sourceline].backsector->floorheight;
+					movefloor->origspeed = lines[movefloor->sourceline].args[3] << (FRACBITS - 2); // return trip, use args[3]
+				}
+				else
+				{
+					movefloor->floordestheight = lines[movefloor->sourceline].frontsector->floorheight;
+					movefloor->origspeed = lines[movefloor->sourceline].args[2] << (FRACBITS - 2); // forward again, use args[2]
+				}
+				if (movefloor->type == bounceFloorCrush)
+					movefloor->speed = movefloor->origspeed;
+				movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
+				movefloor->delaytimer = movefloor->delay;
+				remove = false;
+				break;
+			case crushFloorOnce:
+				if (movefloor->direction == 1)
+				{
+					movefloor->floordestheight = lines[movefloor->sourceline].frontsector->floorheight;
 					movefloor->direction = -1;
+					movefloor->speed = lines[movefloor->sourceline].args[3] << (FRACBITS - 2);
 					movefloor->sector->soundorg.z = movefloor->sector->floorheight;
-					S_StartSound(&movefloor->sector->soundorg,sfx_pstop);
-					P_RecalcPrecipInSector(movefloor->sector);
-					return;
-				default:
-					break;
-			}
+					S_StartSound(&movefloor->sector->soundorg, sfx_pstop);
+					remove = false;
+				}
+				else
+					remove = true;
+				break;
+			default:
+				remove = true;
+				break;
 		}
-		else if (movefloor->direction == -1)
-		{
-			switch (movefloor->type)
-			{
-				case moveFloorByFrontSector:
-					if (movefloor->texture < -1) // chained linedef executing
-						P_LinedefExecute((INT16)(movefloor->texture + INT16_MAX + 2), NULL, NULL);
-					/* FALLTHRU */
-				case instantMoveFloorByFrontSector:
-					if (movefloor->texture > -1) // flat changing
-						movefloor->sector->floorpic = movefloor->texture;
-					break;
-				case bounceFloor: // Graue 03-12-2004
-					if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
-						movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
-					else
-						movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
-					movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
-					movefloor->sector->floorspeed = movefloor->speed * movefloor->direction;
-					movefloor->delaytimer = movefloor->delay;
-					P_RecalcPrecipInSector(movefloor->sector);
-					return; // not break, why did this work? Graue 04-03-2004
-				case bounceFloorCrush: // Graue 03-27-2004
-					if (movefloor->floordestheight == lines[movefloor->texture].frontsector->floorheight)
-					{
-						movefloor->floordestheight = lines[movefloor->texture].backsector->floorheight;
-						movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dy),4*FRACUNIT); // return trip, use dy
-					}
-					else
-					{
-						movefloor->floordestheight = lines[movefloor->texture].frontsector->floorheight;
-						movefloor->speed = movefloor->origspeed = FixedDiv(abs(lines[movefloor->texture].dx),4*FRACUNIT); // forward again, use dx
-					}
-					movefloor->direction = (movefloor->floordestheight < movefloor->sector->floorheight) ? -1 : 1;
-					movefloor->sector->floorspeed = movefloor->speed * movefloor->direction;
-					movefloor->delaytimer = movefloor->delay;
-					P_RecalcPrecipInSector(movefloor->sector);
-					return; // not break, why did this work? Graue 04-03-2004
-				case crushFloorOnce:
-					movefloor->sector->floordata = NULL; // Clear up the thinker so others can use it
-					P_RemoveThinker(&movefloor->thinker);
-					movefloor->sector->floorspeed = 0;
-					P_RecalcPrecipInSector(movefloor->sector);
-					return;
-				default:
-					break;
-			}
-		}
+	}
 
+	if (remove)
+	{
 		movefloor->sector->floordata = NULL; // Clear up the thinker so others can use it
 		movefloor->sector->floorspeed = 0;
 		P_RemoveThinker(&movefloor->thinker);
-		dontupdate = true;
 	}
-	if (!dontupdate)
-		movefloor->sector->floorspeed = movefloor->speed*movefloor->direction;
 	else
-		movefloor->sector->floorspeed = 0;
+		movefloor->sector->floorspeed = movefloor->speed*movefloor->direction;
 
 	P_RecalcPrecipInSector(movefloor->sector);
 }
@@ -601,7 +551,7 @@ static fixed_t P_SectorCheckWater(sector_t *analyzesector,
 
 		for (rover = analyzesector->ffloors; rover; rover = rover->next)
 		{
-			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE) || rover->flags & FF_SOLID)
+			if (!(rover->fofflags & FOF_EXISTS) || !(rover->fofflags & FOF_SWIMMABLE) || rover->fofflags & FOF_SOLID)
 				continue;
 
 			// If the sector is below the water, don't bother.
@@ -634,7 +584,6 @@ void T_BounceCheese(bouncecheese_t *bouncer)
 	sector_t *actionsector;
 	boolean remove;
 	INT32 i;
-	mtag_t tag = Tag_FGet(&bouncer->sourceline->tags);
 
 	if (bouncer->sector->crumblestate == CRUMBLE_RESTORE || bouncer->sector->crumblestate == CRUMBLE_WAIT
 		|| bouncer->sector->crumblestate == CRUMBLE_ACTIVATED) // Oops! Crumbler says to remove yourself!
@@ -649,7 +598,7 @@ void T_BounceCheese(bouncecheese_t *bouncer)
 	}
 
 	// You can use multiple target sectors, but at your own risk!!!
-	TAG_ITER_SECTORS(tag, i)
+	TAG_ITER_SECTORS(bouncer->sourceline->args[0], i)
 	{
 		actionsector = &sectors[i];
 		actionsector->moved = true;
@@ -773,7 +722,7 @@ void T_StartCrumble(crumble_t *crumble)
 	ffloor_t *rover;
 	sector_t *sector;
 	INT32 i;
-	mtag_t tag = Tag_FGet(&crumble->sourceline->tags);
+	mtag_t tag = crumble->sourceline->args[0];
 
 	// Once done, the no-return thinker just sits there,
 	// constantly 'returning'... kind of an oxymoron, isn't it?
@@ -808,10 +757,10 @@ void T_StartCrumble(crumble_t *crumble)
 
 				for (rover = sector->ffloors; rover; rover = rover->next)
 				{
-					if (!(rover->flags & FF_CRUMBLE))
+					if (!(rover->fofflags & FOF_CRUMBLE))
 						continue;
 
-					if (!(rover->flags & FF_FLOATBOB))
+					if (!(rover->fofflags & FOF_FLOATBOB))
 						continue;
 
 					if (rover->master != crumble->sourceline)
@@ -820,7 +769,7 @@ void T_StartCrumble(crumble_t *crumble)
 					rover->alpha = crumble->origalpha;
 
 					if (rover->alpha == 0xff)
-						rover->flags &= ~FF_TRANSLUCENT;
+						rover->fofflags &= ~FOF_TRANSLUCENT;
 				}
 			}
 
@@ -844,13 +793,13 @@ void T_StartCrumble(crumble_t *crumble)
 
 				for (rover = sector->ffloors; rover; rover = rover->next)
 				{
-					if (rover->flags & FF_NORETURN)
+					if (rover->fofflags & FOF_NORETURN)
 						continue;
 
-					if (!(rover->flags & FF_CRUMBLE))
+					if (!(rover->fofflags & FOF_CRUMBLE))
 						continue;
 
-					if (!(rover->flags & FF_FLOATBOB))
+					if (!(rover->fofflags & FOF_FLOATBOB))
 						continue;
 
 					if (rover->master != crumble->sourceline)
@@ -858,7 +807,7 @@ void T_StartCrumble(crumble_t *crumble)
 
 					if (rover->alpha == crumble->origalpha)
 					{
-						rover->flags |= FF_TRANSLUCENT;
+						rover->fofflags |= FOF_TRANSLUCENT;
 						rover->alpha = 0x00;
 					}
 					else
@@ -866,7 +815,7 @@ void T_StartCrumble(crumble_t *crumble)
 						rover->alpha = crumble->origalpha;
 
 						if (rover->alpha == 0xff)
-							rover->flags &= ~FF_TRANSLUCENT;
+							rover->fofflags &= ~FOF_TRANSLUCENT;
 					}
 				}
 			}
@@ -1097,23 +1046,6 @@ void T_MarioBlockChecker(mariocheck_t *block)
 	}
 }
 
-static boolean P_IsPlayerValid(size_t playernum)
-{
-	if (!playeringame[playernum])
-		return false;
-
-	if (!players[playernum].mo)
-		return false;
-
-	if (players[playernum].mo->health <= 0)
-		return false;
-
-	if (players[playernum].spectator)
-		return false;
-
-	return true;
-}
-
 // This is the Thwomp's 'brain'. It looks around for players nearby, and if
 // it finds any, **SMASH**!!! Muahahhaa....
 void T_ThwompSector(thwomp_t *thwomp)
@@ -1150,7 +1082,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 
 	if (thwomp->direction == 0) // Not going anywhere, so look for players.
 	{
-		if (rover->flags & FF_EXISTS)
+		if (rover->fofflags & FOF_EXISTS)
 		{
 			UINT8 i;
 			// scan the players to find victims!
@@ -1243,7 +1175,7 @@ void T_ThwompSector(thwomp_t *thwomp)
 
 			if (res == pastdest)
 			{
-				if (rover->flags & FF_EXISTS)
+				if (rover->fofflags & FOF_EXISTS)
 					S_StartSound((void *)&actionsector->soundorg, thwomp->sound);
 
 				thwomp->direction = 1; // start heading back up
@@ -1290,7 +1222,7 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 	sector_t *sec = NULL;
 	INT32 secnum = -1;
 	boolean FOFsector = false;
-	mtag_t tag = Tag_FGet(&nobaddies->sourceline->tags);
+	mtag_t tag = nobaddies->sourceline->args[0];
 
 	TAG_ITER_SECTORS(tag, secnum)
 	{
@@ -1302,14 +1234,13 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 		for (i = 0; i < sec->linecount; i++)
 		{
 			INT32 targetsecnum = -1;
-			mtag_t tag2 = Tag_FGet(&sec->lines[i]->tags);
 
 			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
 				continue;
 
 			FOFsector = true;
 
-			TAG_ITER_SECTORS(tag2, targetsecnum)
+			TAG_ITER_SECTORS(sec->lines[i]->args[0], targetsecnum)
 			{
 				if (T_SectorHasEnemies(&sectors[targetsecnum]))
 					return;
@@ -1327,217 +1258,68 @@ void T_NoEnemiesSector(noenemies_t *nobaddies)
 	P_RemoveThinker(&nobaddies->thinker);
 }
 
-//
-// P_IsObjectOnRealGround
-//
-// Helper function for T_EachTimeThinker
-// Like P_IsObjectOnGroundIn, except ONLY THE REAL GROUND IS CONSIDERED, NOT FOFS
-// I'll consider whether to make this a more globally accessible function or whatever in future
-// -- Monster Iestyn
-//
-static boolean P_IsObjectOnRealGround(mobj_t *mo, sector_t *sec)
+static boolean P_CheckAllTrigger(eachtime_t *eachtime)
 {
-	// Is the object in reverse gravity?
-	if (mo->eflags & MFE_VERTICALFLIP)
+	size_t i;
+
+	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		// Detect if the player is on the ceiling.
-		if (mo->z+mo->height >= P_GetSpecialTopZ(mo, sec, sec))
-			return true;
+		if (P_CanPlayerTrigger(i) && !eachtime->playersInArea[i])
+			return false;
 	}
-	// Nope!
-	else
-	{
-		// Detect if the player is on the floor.
-		if (mo->z <= P_GetSpecialBottomZ(mo, sec, sec))
-			return true;
-	}
-	return false;
+
+	return true;
 }
 
-static boolean P_IsMobjTouchingSector(mobj_t *mo, sector_t *sec)
-{
-	msecnode_t *node;
-
-	if (mo->subsector->sector == sec)
-		return true;
-
-	if (!(sec->flags & SF_TRIGGERSPECIAL_TOUCH))
-		return false;
-
-	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-	{
-		if (node->m_sector == sec)
-			return true;
-	}
-
-	return false;
-}
-
-//
-// T_EachTimeThinker
-//
-// Runs a linedef exec whenever a player enters an area.
-// Keeps track of players currently in the area and notices any changes.
-//
-// \sa P_AddEachTimeThinker
-//
 void T_EachTimeThinker(eachtime_t *eachtime)
 {
-	size_t i, j;
-	sector_t *sec = NULL;
-	sector_t *targetsec = NULL;
-	INT32 secnum = -1;
+	size_t i;
 	boolean oldPlayersInArea[MAXPLAYERS];
-	boolean oldPlayersOnArea[MAXPLAYERS];
-	boolean *oldPlayersArea;
-	boolean *playersArea;
-	boolean FOFsector = false;
-	boolean floortouch = false;
-	fixed_t bottomheight, topheight;
-	ffloor_t *rover;
-	mtag_t tag = Tag_FGet(&eachtime->sourceline->tags);
+	sector_t *caller[MAXPLAYERS];
+	boolean allPlayersChecked = false;
+	boolean allPlayersTrigger = false;
 
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
 		oldPlayersInArea[i] = eachtime->playersInArea[i];
-		oldPlayersOnArea[i] = eachtime->playersOnArea[i];
-		eachtime->playersInArea[i] = false;
-		eachtime->playersOnArea[i] = false;
-	}
-
-	TAG_ITER_SECTORS(tag, secnum)
-	{
-		sec = &sectors[secnum];
-
-		FOFsector = false;
-
-		if (GETSECSPECIAL(sec->special, 2) == 3 || GETSECSPECIAL(sec->special, 2) == 5)
-			floortouch = true;
-		else if (GETSECSPECIAL(sec->special, 2) >= 1 && GETSECSPECIAL(sec->special, 2) <= 8)
-			floortouch = false;
-		else
-			continue;
-
-		// Check the lines of this sector, to see if it is a FOF control sector.
-		for (i = 0; i < sec->linecount; i++)
-		{
-			INT32 targetsecnum = -1;
-			mtag_t tag2 = Tag_FGet(&sec->lines[i]->tags);
-
-			if (sec->lines[i]->special < 100 || sec->lines[i]->special >= 300)
-				continue;
-
-			FOFsector = true;
-
-			TAG_ITER_SECTORS(tag2, targetsecnum)
-			{
-				targetsec = &sectors[targetsecnum];
-
-				// Find the FOF corresponding to the control linedef
-				for (rover = targetsec->ffloors; rover; rover = rover->next)
-				{
-					if (rover->master == sec->lines[i])
-						break;
-				}
-
-				if (!rover) // This should be impossible, but don't complain if it is the case somehow
-					continue;
-
-				if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
-					continue;
-
-				for (j = 0; j < MAXPLAYERS; j++)
-				{
-					if (!P_IsPlayerValid(j))
-						continue;
-
-					if (!P_IsMobjTouchingSector(players[j].mo, targetsec))
-						continue;
-
-					topheight = P_GetSpecialTopZ(players[j].mo, sec, targetsec);
-					bottomheight = P_GetSpecialBottomZ(players[j].mo, sec, targetsec);
-
-					if (players[j].mo->z > topheight)
-						continue;
-
-					if (players[j].mo->z + players[j].mo->height < bottomheight)
-						continue;
-
-					if (floortouch && P_IsObjectOnGroundIn(players[j].mo, targetsec))
-						eachtime->playersOnArea[j] = true;
-					else
-						eachtime->playersInArea[j] = true;
-				}
-			}
-		}
-
-		if (!FOFsector)
-		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!P_IsPlayerValid(i))
-					continue;
-
-				if (!P_IsMobjTouchingSector(players[i].mo, sec))
-					continue;
-
-				if (!(players[i].mo->subsector->sector == sec
-					|| P_PlayerTouchingSectorSpecial(&players[i], 2, (GETSECSPECIAL(sec->special, 2))) == sec))
-					continue;
-
-				if (floortouch && P_IsObjectOnRealGround(players[i].mo, sec))
-					eachtime->playersOnArea[i] = true;
-				else
-					eachtime->playersInArea[i] = true;
-			}
-		}
-	}
-
-	// Check if a new player entered.
-	// If not, check if a player hit the floor.
-	// If either condition is true, execute.
-	if (floortouch)
-	{
-		playersArea = eachtime->playersOnArea;
-		oldPlayersArea = oldPlayersOnArea;
-	}
-	else
-	{
-		playersArea = eachtime->playersInArea;
-		oldPlayersArea = oldPlayersInArea;
+		caller[i] = P_CanPlayerTrigger(i) ? P_FindPlayerTrigger(&players[i], eachtime->sourceline) : NULL;
+		eachtime->playersInArea[i] = caller[i] != NULL;
 	}
 
 	// Easy check... nothing has changed
-	if (!memcmp(playersArea, oldPlayersArea, sizeof(boolean)*MAXPLAYERS))
+	if (!memcmp(eachtime->playersInArea, oldPlayersInArea, sizeof(boolean)*MAXPLAYERS))
 		return;
-
-	// If sector has an "all players" trigger type, all players need to be in area
-	if (GETSECSPECIAL(sec->special, 2) == 2 || GETSECSPECIAL(sec->special, 2) == 3)
-	{
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (P_IsPlayerValid(i) && !playersArea[i])
-				return;
-		}
-	}
 
 	// Trigger for every player who has entered (and exited, if triggerOnExit)
 	for (i = 0; i < MAXPLAYERS; i++)
 	{
-		if (playersArea[i] == oldPlayersArea[i])
+		if (eachtime->playersInArea[i] == oldPlayersInArea[i])
 			continue;
 
 		// If player has just left, check if still valid
-		if (!playersArea[i] && (!eachtime->triggerOnExit || !P_IsPlayerValid(i)))
+		if (!eachtime->playersInArea[i] && (!eachtime->triggerOnExit || !P_CanPlayerTrigger(i)))
 			continue;
 
-		CONS_Debug(DBG_GAMELOGIC, "Trying to activate each time executor with tag %d\n", tag);
+		// If sector has an "all players" trigger type, all players need to be in area
+		if (caller[i] && caller[i]->triggerer == TO_ALLPLAYERS)
+		{
+			if (!allPlayersChecked)
+			{
+				allPlayersChecked = true;
+				allPlayersTrigger = P_CheckAllTrigger(eachtime);
+			}
+
+			if (!allPlayersTrigger)
+				continue;
+		}
+
+		CONS_Debug(DBG_GAMELOGIC, "Trying to activate each time executor with tag %d\n", Tag_FGet(&eachtime->sourceline->tags));
 
 		// 03/08/14 -Monster Iestyn
 		// No more stupid hacks involving changing eachtime->sourceline's tag or special or whatever!
 		// This should now run ONLY the stuff for eachtime->sourceline itself, instead of all trigger linedefs sharing the same tag.
 		// Makes much more sense doing it this way, honestly.
-		P_RunTriggerLinedef(eachtime->sourceline, players[i].mo, sec);
+		P_RunTriggerLinedef(eachtime->sourceline, players[i].mo, caller[i]);
 
 		if (!eachtime->sourceline->special) // this happens only for "Trigger on X calls" linedefs
 			P_RemoveThinker(&eachtime->thinker);
@@ -1806,13 +1588,12 @@ void T_PlaneDisplace(planedisplace_t *pd)
 // (egg capsule button), P_PlayerInSpecialSector (buttons),
 // and P_SpawnSpecials (continuous floor movers and instant lower).
 //
-void EV_DoFloor(line_t *line, floor_e floortype)
+void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 {
 	INT32 firstone = 1;
 	INT32 secnum = -1;
 	sector_t *sec;
 	floormove_t *dofloor;
-	mtag_t tag = Tag_FGet(&line->tags);
 
 	TAG_ITER_SECTORS(tag, secnum)
 	{
@@ -1833,34 +1614,25 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 		dofloor->type = floortype;
 		dofloor->crush = false; // default: types that crush will change this
 		dofloor->sector = sec;
+		dofloor->sourceline = (INT32)(line - lines);
 
 		switch (floortype)
 		{
-			// Lowers a floor to the lowest surrounding floor.
-			case lowerFloorToLowest:
-				dofloor->direction = -1; // down
-				dofloor->speed = FLOORSPEED*2; // 2 fracunits per tic
-				dofloor->floordestheight = P_FindLowestFloorSurrounding(sec);
-				break;
-
-			// Used for part of the Egg Capsule, when an FOF with type 666 is
-			// contacted by the player.
+			// Used to open the top of an Egg Capsule.
 			case raiseFloorToNearestFast:
 				dofloor->direction = -1; // down
 				dofloor->speed = FLOORSPEED*4; // 4 fracunits per tic
 				dofloor->floordestheight = P_FindNextHighestFloor(sec, sec->floorheight);
 				break;
 
-			// Used for sectors tagged to 50 linedefs (effectively
-			// changing the base height for placing things in that sector).
+			// Instantly lower floor to surrounding sectors.
+			// Used as a hack in the binary map format to allow thing heights above 4096.
 			case instantLower:
 				dofloor->direction = -1; // down
 				dofloor->speed = INT32_MAX/2; // "instant" means "takes one tic"
 				dofloor->floordestheight = P_FindLowestFloorSurrounding(sec);
 				break;
 
-			// Linedef executor command, linetype 101.
-			// Front sector floor = destination height.
 			case instantMoveFloorByFrontSector:
 				dofloor->speed = INT32_MAX/2; // as above, "instant" is one tic
 				dofloor->floordestheight = line->frontsector->floorheight;
@@ -1870,22 +1642,12 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 				else
 					dofloor->direction = -1; // down
 
-				// New for 1.09: now you can use the no climb flag to
-				// DISABLE the flat changing. This makes it work
-				// totally opposite the way linetype 106 does. Yet
-				// another reason I'll be glad to break backwards
-				// compatibility for the final.
-				if (line->flags & ML_NOCLIMB)
-					dofloor->texture = -1; // don't mess with the floorpic
-				else
-					dofloor->texture = line->frontsector->floorpic;
+				// If flag is set, change floor texture after moving
+				dofloor->texture = line->args[2] ? line->frontsector->floorpic : -1;
 				break;
 
-			// Linedef executor command, linetype 106.
-			// Line length = speed, front sector floor = destination height.
 			case moveFloorByFrontSector:
-				dofloor->speed = P_AproxDistance(line->dx, line->dy);
-				dofloor->speed = FixedDiv(dofloor->speed,8*FRACUNIT);
+				dofloor->speed = line->args[2] << (FRACBITS - 3);
 				dofloor->floordestheight = line->frontsector->floorheight;
 
 				if (dofloor->floordestheight >= sec->floorheight)
@@ -1894,85 +1656,31 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 					dofloor->direction = -1; // down
 
 				// chained linedef executing ability
-				if (line->flags & ML_BLOCKMONSTERS)
-				{
-					// Only set it on one of the moving sectors (the
-					// smallest numbered) and only if the front side
-					// x offset is positive, indicating a valid tag.
-					if (firstone && sides[line->sidenum[0]].textureoffset > 0)
-						dofloor->texture = (sides[line->sidenum[0]].textureoffset>>FRACBITS) - 32769;
-					else
-						dofloor->texture = -1;
-				}
+				// Only set it on one of the moving sectors (the smallest numbered)
+				if (line->args[3])
+					dofloor->tag = firstone ? (INT16)line->args[3] : -1;
 
 				// flat changing ability
-				else if (line->flags & ML_NOCLIMB)
-					dofloor->texture = line->frontsector->floorpic;
-				else
-					dofloor->texture = -1; // nothing special to do after movement completes
-
+				dofloor->texture = line->args[4] ? line->frontsector->floorpic : -1;
 				break;
 
-			case moveFloorByFrontTexture:
-				if (line->flags & ML_NOCLIMB)
+			case moveFloorByDistance:
+				if (line->args[4])
 					dofloor->speed = INT32_MAX/2; // as above, "instant" is one tic
 				else
-					dofloor->speed = FixedDiv(sides[line->sidenum[0]].textureoffset,8*FRACUNIT); // texture x offset
-				dofloor->floordestheight = sec->floorheight + sides[line->sidenum[0]].rowoffset; // texture y offset
+					dofloor->speed = line->args[3] << (FRACBITS - 3);
+				dofloor->floordestheight = sec->floorheight + (line->args[2] << FRACBITS);
 				if (dofloor->floordestheight > sec->floorheight)
 					dofloor->direction = 1; // up
 				else
 					dofloor->direction = -1; // down
 				break;
 
-/*
-			// Linedef executor command, linetype 108.
-			// dx = speed, dy = amount to lower.
-			case lowerFloorByLine:
-				dofloor->direction = -1; // down
-				dofloor->speed = FixedDiv(abs(line->dx),8*FRACUNIT);
-				dofloor->floordestheight = sec->floorheight - abs(line->dy);
-				if (dofloor->floordestheight > sec->floorheight) // wrapped around
-					I_Error("Can't lower sector %d\n", secnum);
-				break;
-
-			// Linedef executor command, linetype 109.
-			// dx = speed, dy = amount to raise.
-			case raiseFloorByLine:
-				dofloor->direction = 1; // up
-				dofloor->speed = FixedDiv(abs(line->dx),8*FRACUNIT);
-				dofloor->floordestheight = sec->floorheight + abs(line->dy);
-				if (dofloor->floordestheight < sec->floorheight) // wrapped around
-					I_Error("Can't raise sector %d\n", secnum);
-				break;
-*/
-
-			// Linetypes 2/3.
-			// Move floor up and down indefinitely like the old elevators.
+			// Move floor up and down indefinitely.
+			// bounceFloor has slowdown at the top and bottom of movement.
 			case bounceFloor:
-				dofloor->speed = P_AproxDistance(line->dx, line->dy); // same speed as elevateContinuous
-				dofloor->speed = FixedDiv(dofloor->speed,4*FRACUNIT);
-				dofloor->origspeed = dofloor->speed; // it gets slowed down at the top and bottom
-				dofloor->floordestheight = line->frontsector->floorheight;
-
-				if (dofloor->floordestheight >= sec->floorheight)
-					dofloor->direction = 1; // up
-				else
-					dofloor->direction = -1; // down
-
-				// Any delay?
-				dofloor->delay = sides[line->sidenum[0]].textureoffset >> FRACBITS;
-				dofloor->delaytimer = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Initial delay
-
-				dofloor->texture = (fixed_t)(line - lines); // hack: store source line number
-				break;
-
-			// Linetypes 6/7.
-			// Like 2/3, but no slowdown at the top and bottom of movement,
-			// and the speed is line->dx the first way, line->dy for the
-			// return trip. Good for crushers.
 			case bounceFloorCrush:
-				dofloor->speed = FixedDiv(abs(line->dx),4*FRACUNIT);
+				dofloor->speed = line->args[2] << (FRACBITS - 2); // same speed as elevateContinuous
 				dofloor->origspeed = dofloor->speed;
 				dofloor->floordestheight = line->frontsector->floorheight;
 
@@ -1982,27 +1690,18 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 					dofloor->direction = -1; // down
 
 				// Any delay?
-				dofloor->delay = sides[line->sidenum[0]].textureoffset >> FRACBITS;
-				dofloor->delaytimer = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Initial delay
-
-				dofloor->texture = (fixed_t)(line - lines); // hack: store source line number
+				dofloor->delay = line->args[5];
+				dofloor->delaytimer = line->args[4]; // Initial delay
 				break;
 
 			case crushFloorOnce:
-				dofloor->speed = FixedDiv(abs(line->dx),4*FRACUNIT);
-				dofloor->origspeed = dofloor->speed;
+				dofloor->speed = dofloor->origspeed = line->args[2] << (FRACBITS - 2);
 				dofloor->floordestheight = line->frontsector->ceilingheight;
 
 				if (dofloor->floordestheight >= sec->floorheight)
 					dofloor->direction = 1; // up
 				else
 					dofloor->direction = -1; // down
-
-				// Any delay?
-				dofloor->delay = sides[line->sidenum[0]].textureoffset >> FRACBITS;
-				dofloor->delaytimer = sides[line->sidenum[0]].rowoffset >> FRACBITS;
-
-				dofloor->texture = (fixed_t)(line - lines); // hack: store source line number
 				break;
 
 			default:
@@ -2023,14 +1722,13 @@ void EV_DoFloor(line_t *line, floor_e floortype)
 //
 // jff 2/22/98 new type to move floor and ceiling in parallel
 //
-void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
+void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 {
 	INT32 secnum = -1;
 	sector_t *sec;
 	elevator_t *elevator;
-	mtag_t tag = Tag_FGet(&line->tags);
 
-	// act on all sectors with the same tag as the triggering linedef
+	// act on all sectors with the given tag
 	TAG_ITER_SECTORS(tag, secnum)
 	{
 		sec = &sectors[secnum];
@@ -2048,6 +1746,7 @@ void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 		elevator->type = elevtype;
 		elevator->sourceline = line;
 		elevator->distance = 1; // Always crush unless otherwise
+		elevator->sector = sec;
 
 		// set up the fields according to the type of elevator action
 		switch (elevtype)
@@ -2055,91 +1754,57 @@ void EV_DoElevator(line_t *line, elevator_e elevtype, boolean customspeed)
 			// elevator down to next floor
 			case elevateDown:
 				elevator->direction = -1;
-				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED/2; // half speed
 				elevator->floordestheight = P_FindNextLowestFloor(sec, sec->floorheight);
-				elevator->ceilingdestheight = elevator->floordestheight
-					+ sec->ceilingheight - sec->floorheight;
 				break;
 
 			// elevator up to next floor
 			case elevateUp:
 				elevator->direction = 1;
-				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED/4; // quarter speed
 				elevator->floordestheight = P_FindNextHighestFloor(sec, sec->floorheight);
-				elevator->ceilingdestheight = elevator->floordestheight
-					+ sec->ceilingheight - sec->floorheight;
 				break;
 
 			// elevator up to highest floor
 			case elevateHighest:
 				elevator->direction = 1;
-				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED/4; // quarter speed
 				elevator->floordestheight = P_FindHighestFloorSurrounding(sec);
-				elevator->ceilingdestheight = elevator->floordestheight
-					+ sec->ceilingheight - sec->floorheight;
-				break;
-
-			// elevator to floor height of activating switch's front sector
-			case elevateCurrent:
-				elevator->sector = sec;
-				elevator->speed = ELEVATORSPEED;
-				elevator->floordestheight = line->frontsector->floorheight;
-				elevator->ceilingdestheight = elevator->floordestheight
-					+ sec->ceilingheight - sec->floorheight;
-				elevator->direction = elevator->floordestheight > sec->floorheight?  1 : -1;
 				break;
 
 			case elevateContinuous:
-				if (customspeed)
-				{
-					elevator->origspeed = P_AproxDistance(line->dx, line->dy);
-					elevator->origspeed = FixedDiv(elevator->origspeed,4*FRACUNIT);
-					elevator->speed = elevator->origspeed;
-				}
-				else
-				{
-					elevator->speed = ELEVATORSPEED/2;
-					elevator->origspeed = elevator->speed;
-				}
+				elevator->origspeed = line->args[1] << (FRACBITS - 2);
+				elevator->speed = elevator->origspeed;
 
-				elevator->sector = sec;
-				elevator->low = !(line->flags & ML_NOCLIMB); // go down first unless noclimb is on
+				elevator->low = !line->args[4]; // go down first unless args[4] is set
 				if (elevator->low)
 				{
 					elevator->direction = 1;
 					elevator->floordestheight = P_FindNextHighestFloor(sec, sec->floorheight);
-					elevator->ceilingdestheight = elevator->floordestheight
-						+ sec->ceilingheight - sec->floorheight;
 				}
 				else
 				{
 					elevator->direction = -1;
 					elevator->floordestheight = P_FindNextLowestFloor(sec,sec->floorheight);
-					elevator->ceilingdestheight = elevator->floordestheight
-						+ sec->ceilingheight - sec->floorheight;
 				}
 				elevator->floorwasheight = elevator->sector->floorheight;
 				elevator->ceilingwasheight = elevator->sector->ceilingheight;
 
-				elevator->delay = sides[line->sidenum[0]].textureoffset >> FRACBITS;
-				elevator->delaytimer = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Initial delay
+				elevator->delay = line->args[3];
+				elevator->delaytimer = line->args[2]; // Initial delay
 				break;
 
 			case bridgeFall:
 				elevator->direction = -1;
-				elevator->sector = sec;
 				elevator->speed = ELEVATORSPEED*4; // quadruple speed
 				elevator->floordestheight = P_FindNextLowestFloor(sec, sec->floorheight);
-				elevator->ceilingdestheight = elevator->floordestheight
-					+ sec->ceilingheight - sec->floorheight;
 				break;
 
 			default:
 				break;
 		}
+
+		elevator->ceilingdestheight = elevator->floordestheight + sec->ceilingheight - sec->floorheight;
 	}
 }
 
@@ -2149,7 +1814,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	fixed_t leftx, rightx, topy, bottomy, topz, bottomz, widthfactor, heightfactor, a, b, c, spacing;
 	mobjtype_t type;
 	tic_t lifetime;
-	INT16 flags;
+	boolean fromcenter;
 
 	sector_t *controlsec = rover->master->frontsector;
 	mtag_t tag = Tag_FGet(&controlsec->tags);
@@ -2179,25 +1844,20 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	spacing = (32<<FRACBITS);
 	type = MT_ROCKCRUMBLE1;
 	lifetime = 3*TICRATE;
-	flags = 0;
+	fromcenter = false;
 
 	if (tag != 0)
 	{
 		INT32 tagline = Tag_FindLineSpecial(14, tag);
 		if (tagline != -1)
 		{
-			if (sides[lines[tagline].sidenum[0]].toptexture)
-				type = (mobjtype_t)sides[lines[tagline].sidenum[0]].toptexture; // Set as object type in p_setup.c...
-			if (sides[lines[tagline].sidenum[0]].textureoffset)
-				spacing = sides[lines[tagline].sidenum[0]].textureoffset;
-			if (sides[lines[tagline].sidenum[0]].rowoffset)
-			{
-				if (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS != -1)
-					lifetime = (sides[lines[tagline].sidenum[0]].rowoffset>>FRACBITS);
-				else
-					lifetime = 0;
-			}
-			flags = lines[tagline].flags;
+			if (lines[tagline].stringargs[0])
+				type = get_number(lines[tagline].stringargs[0]);
+			if (lines[tagline].args[0])
+				spacing = lines[tagline].args[0] << FRACBITS;
+			if (lines[tagline].args[1])
+				lifetime = (lines[tagline].args[1] != -1) ? lines[tagline].args[1] : 0;
+			fromcenter = !!lines[tagline].args[2];
 		}
 	}
 
@@ -2232,7 +1892,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	topz = *rover->topheight-(spacing>>1);
 	bottomz = *rover->bottomheight;
 
-	if (flags & ML_EFFECT1)
+	if (fromcenter)
 	{
 		widthfactor = (rightx + topy - leftx - bottomy)>>3;
 		heightfactor = (topz - *rover->bottomheight)>>2;
@@ -2255,7 +1915,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 					spawned = P_SpawnMobj(a, b, c, type);
 					spawned->angle += P_RandomKey(36)*ANG10; // irrelevant for default objects but might make sense for some custom ones
 
-					if (flags & ML_EFFECT1)
+					if (fromcenter)
 					{
 						P_InstaThrust(spawned, R_PointToAngle2(sec->soundorg.x, sec->soundorg.y, a, b), FixedDiv(P_AproxDistance(a - sec->soundorg.x, b - sec->soundorg.y), widthfactor));
 						P_SetObjectMomZ(spawned, FixedDiv((c - bottomz), heightfactor), false);
@@ -2268,7 +1928,7 @@ void EV_CrumbleChain(sector_t *sec, ffloor_t *rover)
 	}
 
 	// no longer exists (can't collide with again)
-	rover->flags &= ~FF_EXISTS;
+	rover->fofflags &= ~FOF_EXISTS;
 	rover->master->frontsector->moved = true;
 	P_RecalcPrecipInSector(sec);
 }
@@ -2327,7 +1987,7 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 	crumble_t *crumble;
 	sector_t *foundsec;
 	INT32 i;
-	mtag_t tag = Tag_FGet(&rover->master->tags);
+	mtag_t tag = rover->master->args[0];
 
 	// If floor is already activated, skip it
 	if (sec->floordata)
@@ -2394,8 +2054,8 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 	if (roversec->floordata || roversec->ceilingdata)
 		return;
 
-	if (!(rover->flags & FF_SOLID))
-		rover->flags |= (FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
+	if (!(rover->fofflags & FOF_SOLID))
+		rover->fofflags |= (FOF_SOLID|FOF_RENDERALL|FOF_CUTLEVEL);
 
 	// Find an item to pop out!
 	thing = SearchMarioNode(roversec->touching_thinglist);
@@ -2419,7 +2079,7 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		block->direction = 1;
 		block->floorstartheight = block->sector->floorheight;
 		block->ceilingstartheight = block->sector->ceilingheight;
-		block->tag = (INT16)Tag_FGet(&sector->tags);
+		block->tag = (INT16)rover->master->args[0];
 
 		if (itsamonitor)
 		{

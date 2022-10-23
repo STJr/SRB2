@@ -566,10 +566,13 @@ void M_FirstLoadConfig(void)
 	gameconfig_loaded = true;
 
 	// reset to default player stuff
-	COM_BufAddText (va("%s \"%s\"\n",cv_skin.name,cv_defaultskin.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor.name,cv_defaultplayercolor.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_skin2.name,cv_defaultskin2.string));
-	COM_BufAddText (va("%s \"%s\"\n",cv_playercolor2.name,cv_defaultplayercolor2.string));
+	if (!dedicated)
+	{
+		COM_BufAddText (va("%s \"%s\"\n",cv_skin.name,cv_defaultskin.string));
+		COM_BufAddText (va("%s \"%s\"\n",cv_playercolor.name,cv_defaultplayercolor.string));
+		COM_BufAddText (va("%s \"%s\"\n",cv_skin2.name,cv_defaultskin2.string));
+		COM_BufAddText (va("%s \"%s\"\n",cv_playercolor2.name,cv_defaultplayercolor2.string));
+	}
 }
 
 /** Saves the game configuration.
@@ -1970,18 +1973,168 @@ void M_UnGetToken(void)
 	endPos = oldendPos;
 }
 
-/** Returns the current token's position.
- */
-UINT32 M_GetTokenPos(void)
+#define NUMTOKENS 2
+static const char *tokenizerInput = NULL;
+static UINT32 tokenCapacity[NUMTOKENS] = {0};
+static char *tokenizerToken[NUMTOKENS] = {NULL};
+static UINT32 tokenizerStartPos = 0;
+static UINT32 tokenizerEndPos = 0;
+static UINT32 tokenizerInputLength = 0;
+static UINT8 tokenizerInComment = 0; // 0 = not in comment, 1 = // Single-line, 2 = /* Multi-line */
+
+void M_TokenizerOpen(const char *inputString)
 {
-	return endPos;
+	size_t i;
+
+	tokenizerInput = inputString;
+	for (i = 0; i < NUMTOKENS; i++)
+	{
+		tokenCapacity[i] = 1024;
+		tokenizerToken[i] = (char*)Z_Malloc(tokenCapacity[i] * sizeof(char), PU_STATIC, NULL);
+	}
+	tokenizerInputLength = strlen(tokenizerInput);
 }
 
-/** Sets the current token's position.
- */
-void M_SetTokenPos(UINT32 newPos)
+void M_TokenizerClose(void)
 {
-	endPos = newPos;
+	size_t i;
+
+	tokenizerInput = NULL;
+	for (i = 0; i < NUMTOKENS; i++)
+		Z_Free(tokenizerToken[i]);
+	tokenizerStartPos = 0;
+	tokenizerEndPos = 0;
+	tokenizerInComment = 0;
+}
+
+static void M_DetectComment(UINT32 *pos)
+{
+	if (tokenizerInComment)
+		return;
+
+	if (*pos >= tokenizerInputLength - 1)
+		return;
+
+	if (tokenizerInput[*pos] != '/')
+		return;
+
+	//Single-line comment start
+	if (tokenizerInput[*pos + 1] == '/')
+		tokenizerInComment = 1;
+	//Multi-line comment start
+	else if (tokenizerInput[*pos + 1] == '*')
+		tokenizerInComment = 2;
+}
+
+static void M_ReadTokenString(UINT32 i)
+{
+	UINT32 tokenLength = tokenizerEndPos - tokenizerStartPos;
+	if (tokenLength + 1 > tokenCapacity[i])
+	{
+		tokenCapacity[i] = tokenLength + 1;
+		// Assign the memory. Don't forget an extra byte for the end of the string!
+		tokenizerToken[i] = (char *)Z_Malloc(tokenCapacity[i] * sizeof(char), PU_STATIC, NULL);
+	}
+	// Copy the string.
+	M_Memcpy(tokenizerToken[i], tokenizerInput + tokenizerStartPos, (size_t)tokenLength);
+	// Make the final character NUL.
+	tokenizerToken[i][tokenLength] = '\0';
+}
+
+const char *M_TokenizerRead(UINT32 i)
+{
+	if (!tokenizerInput)
+		return NULL;
+
+	tokenizerStartPos = tokenizerEndPos;
+
+	// Try to detect comments now, in case we're pointing right at one
+	M_DetectComment(&tokenizerStartPos);
+
+	// Find the first non-whitespace char, or else the end of the string trying
+	while ((tokenizerInput[tokenizerStartPos] == ' '
+			|| tokenizerInput[tokenizerStartPos] == '\t'
+			|| tokenizerInput[tokenizerStartPos] == '\r'
+			|| tokenizerInput[tokenizerStartPos] == '\n'
+			|| tokenizerInput[tokenizerStartPos] == '\0'
+			|| tokenizerInput[tokenizerStartPos] == '=' || tokenizerInput[tokenizerStartPos] == ';' // UDMF TEXTMAP.
+			|| tokenizerInComment != 0)
+			&& tokenizerStartPos < tokenizerInputLength)
+	{
+		// Try to detect comment endings now
+		if (tokenizerInComment == 1	&& tokenizerInput[tokenizerStartPos] == '\n')
+			tokenizerInComment = 0; // End of line for a single-line comment
+		else if (tokenizerInComment == 2
+			&& tokenizerStartPos < tokenizerInputLength - 1
+			&& tokenizerInput[tokenizerStartPos] == '*'
+			&& tokenizerInput[tokenizerStartPos+1] == '/')
+		{
+			// End of multi-line comment
+			tokenizerInComment = 0;
+			tokenizerStartPos++; // Make damn well sure we're out of the comment ending at the end of it all
+		}
+
+		tokenizerStartPos++;
+		M_DetectComment(&tokenizerStartPos);
+	}
+
+	// If the end of the string is reached, no token is to be read
+	if (tokenizerStartPos == tokenizerInputLength) {
+		tokenizerEndPos = tokenizerInputLength;
+		return NULL;
+	}
+	// Else, if it's one of these three symbols, capture only this one character
+	else if (tokenizerInput[tokenizerStartPos] == ','
+			|| tokenizerInput[tokenizerStartPos] == '{'
+			|| tokenizerInput[tokenizerStartPos] == '}')
+	{
+		tokenizerEndPos = tokenizerStartPos + 1;
+		tokenizerToken[i][0] = tokenizerInput[tokenizerStartPos];
+		tokenizerToken[i][1] = '\0';
+		return tokenizerToken[i];
+	}
+	// Return entire string within quotes, except without the quotes.
+	else if (tokenizerInput[tokenizerStartPos] == '"')
+	{
+		tokenizerEndPos = ++tokenizerStartPos;
+		while (tokenizerInput[tokenizerEndPos] != '"' && tokenizerEndPos < tokenizerInputLength)
+			tokenizerEndPos++;
+
+		M_ReadTokenString(i);
+		tokenizerEndPos++;
+		return tokenizerToken[i];
+	}
+
+	// Now find the end of the token. This includes several additional characters that are okay to capture as one character, but not trailing at the end of another token.
+	tokenizerEndPos = tokenizerStartPos + 1;
+	while ((tokenizerInput[tokenizerEndPos] != ' '
+			&& tokenizerInput[tokenizerEndPos] != '\t'
+			&& tokenizerInput[tokenizerEndPos] != '\r'
+			&& tokenizerInput[tokenizerEndPos] != '\n'
+			&& tokenizerInput[tokenizerEndPos] != ','
+			&& tokenizerInput[tokenizerEndPos] != '{'
+			&& tokenizerInput[tokenizerEndPos] != '}'
+			&& tokenizerInput[tokenizerEndPos] != '=' && tokenizerInput[tokenizerEndPos] != ';' // UDMF TEXTMAP.
+			&& tokenizerInComment == 0)
+			&& tokenizerEndPos < tokenizerInputLength)
+	{
+		tokenizerEndPos++;
+		// Try to detect comment starts now; if it's in a comment, we don't want it in this token
+		M_DetectComment(&tokenizerEndPos);
+	}
+
+	M_ReadTokenString(i);
+	return tokenizerToken[i];
+}
+
+UINT32 M_TokenizerGetEndPos(void)
+{
+	return tokenizerEndPos;
+}
+
+void M_TokenizerSetEndPos(UINT32 newPos)
+{
+	tokenizerEndPos = newPos;
 }
 
 /** Count bits in a number.

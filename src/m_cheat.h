@@ -26,7 +26,7 @@ void cht_Init(void);
 // ObjectPlace
 //
 void Command_ObjectPlace_f(void);
-void Command_Writethings_f(void);
+//void Command_Writethings_f(void);
 
 extern consvar_t cv_opflags, cv_ophoopflags, cv_mapthingnum, cv_speed;
 //extern consvar_t cv_snapto, cv_grid;
@@ -38,7 +38,7 @@ extern UINT32 op_displayflags;
 
 boolean OP_FreezeObjectplace(void);
 void OP_ResetObjectplace(void);
-void OP_NightsObjectplace(player_t *player);
+//void OP_NightsObjectplace(player_t *player);
 void OP_ObjectplaceMovement(player_t *player);
 
 //

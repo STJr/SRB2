@@ -785,7 +785,7 @@ static void Polyobj_pushThing(polyobj_t *po, line_t *line, mobj_t *mo)
 	vertex_t closest;
 
 	// calculate angle of line and subtract 90 degrees to get normal
-	lineangle = R_PointToAngle2(0, 0, line->dx, line->dy) - ANGLE_90;
+	lineangle = line->angle - ANGLE_90;
 	lineangle >>= ANGLETOFINESHIFT;
 	momx = FixedMul(po->thrust, FINECOSINE(lineangle));
 	momy = FixedMul(po->thrust, FINESINE(lineangle));
@@ -963,7 +963,7 @@ static INT32 Polyobj_clipThings(polyobj_t *po, line_t *line)
 					else
 						Polyobj_pushThing(po, line, mo);
 
-					if (mo->player && (po->lines[0]->backsector->flags & SF_TRIGGERSPECIAL_TOUCH) && !(po->flags & POF_NOSPECIALS))
+					if (mo->player && (po->lines[0]->backsector->flags & MSF_TRIGGERSPECIAL_TOUCH) && !(po->flags & POF_NOSPECIALS))
 						P_ProcessSpecialSector(mo->player, mo->subsector->sector, po->lines[0]->backsector);
 
 					hitflags |= 1;
@@ -1060,6 +1060,8 @@ static void Polyobj_rotateLine(line_t *ld)
 	ld->dx = v2->x - v1->x;
 	ld->dy = v2->y - v1->y;
 
+	ld->angle = R_PointToAngle2(0, 0, ld->dx, ld->dy);
+
 	// determine slopetype
 	ld->slopetype = !ld->dx ? ST_VERTICAL : !ld->dy ? ST_HORIZONTAL :
 			((ld->dy > 0) == (ld->dx > 0)) ? ST_POSITIVE : ST_NEGATIVE;
@@ -1089,7 +1091,7 @@ static void Polyobj_rotateLine(line_t *ld)
 }
 
 // Causes objects resting on top of the rotating polyobject to 'ride' with its movement.
-static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta, UINT8 turnthings)
+static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta, boolean turnplayers, boolean turnothers)
 {
 	static INT32 pomovecount = 10000;
 	INT32 x, y;
@@ -1151,7 +1153,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta,
 
 					Polyobj_slideThing(mo, newxoff, newyoff);
 
-					if (turnthings == 2 || (turnthings == 1 && !mo->player)) {
+					if ((turnplayers && mo->player) || (turnothers && !mo->player)) {
 						mo->angle += delta;
 						if (mo->player)
 							P_SetPlayerAngle(mo->player, (angle_t)(mo->player->angleturn << 16) + delta);
@@ -1163,7 +1165,7 @@ static void Polyobj_rotateThings(polyobj_t *po, vector2_t origin, angle_t delta,
 }
 
 // Rotates a polyobject around its start point.
-boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean checkmobjs)
+boolean Polyobj_rotate(polyobj_t *po, angle_t delta, boolean turnplayers, boolean turnothers, boolean checkmobjs)
 {
 	size_t i;
 	angle_t angle;
@@ -1201,7 +1203,7 @@ boolean Polyobj_rotate(polyobj_t *po, angle_t delta, UINT8 turnthings, boolean c
 		for (i = 0; i < po->numLines; ++i)
 			hitflags |= Polyobj_clipThings(po, po->lines[i]);
 
-		Polyobj_rotateThings(po, origin, delta, turnthings);
+		Polyobj_rotateThings(po, origin, delta, turnplayers, turnothers);
 	}
 
 	if (hitflags & 2)
@@ -1409,7 +1411,7 @@ void Polyobj_MoveOnLoad(polyobj_t *po, angle_t angle, fixed_t x, fixed_t y)
 	fixed_t dx, dy;
 
 	// first, rotate to the saved angle
-	Polyobj_rotate(po, angle, false, false);
+	Polyobj_rotate(po, angle, false, false, false);
 
 	// determine component distances to translate
 	dx = x - po->spawnSpot.x;
@@ -1452,7 +1454,7 @@ void T_PolyObjRotate(polyrotate_t *th)
 
 	// rotate by 'speed' angle per frame
 	// if distance == -1, this polyobject rotates perpetually
-	if (Polyobj_rotate(po, th->speed, th->turnobjs, true) && th->distance != -1)
+	if (Polyobj_rotate(po, th->speed, th->turnobjs & PTF_PLAYERS, th->turnobjs & PTF_OTHERS, true) && th->distance != -1)
 	{
 		INT32 avel = abs(th->speed);
 
@@ -1854,7 +1856,7 @@ void T_PolyDoorSwing(polyswingdoor_t *th)
 
 	// rotate by 'speed' angle per frame
 	// if distance == -1, this polyobject rotates perpetually
-	if (Polyobj_rotate(po, th->speed, false, true) && th->distance != -1)
+	if (Polyobj_rotate(po, th->speed, false, false, true) && th->distance != -1)
 	{
 		INT32 avel = abs(th->speed);
 
@@ -1985,7 +1987,7 @@ void T_PolyObjRotDisplace(polyrotdisplace_t *th)
 
 	rotangle = FixedMul(th->rotscale, delta);
 
-	if (Polyobj_rotate(po, FixedAngle(rotangle), th->turnobjs, true))
+	if (Polyobj_rotate(po, FixedAngle(rotangle), th->turnobjs & PTF_PLAYERS, th->turnobjs & PTF_OTHERS, true))
 		th->oldHeights = newheights;
 }
 
@@ -2014,7 +2016,7 @@ boolean EV_DoPolyObjRotate(polyrotdata_t *prdata)
 		return false;
 
 	// check for override if this polyobj already has a thinker
-	if (po->thinker && !prdata->overRide)
+	if (po->thinker && !(prdata->flags & TMPR_OVERRIDE))
 		return false;
 
 	// create a new thinker
@@ -2029,10 +2031,10 @@ boolean EV_DoPolyObjRotate(polyrotdata_t *prdata)
 	// use Hexen-style byte angles for speed and distance
 	th->speed = Polyobj_AngSpeed(prdata->speed * prdata->direction);
 
-	if (prdata->distance == 360)    // 360 means perpetual
+	if (prdata->flags & TMPR_CONTINUOUS)
 		th->distance = -1;
-	else if (prdata->distance == 0) // 0 means 360 degrees
-		th->distance = 0xffffffff - 1;
+	else if (prdata->distance == 360)
+		th->distance = ANGLE_MAX - 1;
 	else
 		th->distance = FixedAngle(prdata->distance*FRACUNIT);
 
@@ -2047,7 +2049,11 @@ boolean EV_DoPolyObjRotate(polyrotdata_t *prdata)
 
 	oldpo = po;
 
-	th->turnobjs = prdata->turnobjs;
+	th->turnobjs = 0;
+	if (!(prdata->flags & TMPR_DONTROTATEOTHERS))
+		th->turnobjs |= PTF_OTHERS;
+	if (prdata->flags & TMPR_ROTATEPLAYERS)
+		th->turnobjs |= PTF_PLAYERS;
 
 	// apply action to mirroring polyobjects as well
 	start = 0;

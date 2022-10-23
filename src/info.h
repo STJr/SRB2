@@ -44,6 +44,8 @@ enum actionnum
 	A_FACETRACER,
 	A_SCREAM,
 	A_BOSSDEATH,
+	A_SETSHADOWSCALE,
+	A_SHADOWSCREAM,
 	A_CUSTOMPOWER,
 	A_GIVEWEAPON,
 	A_RINGBOX,
@@ -150,6 +152,7 @@ enum actionnum
 	A_BOSS3PATH,
 	A_BOSS3SHOCKTHINK,
 	A_LINEDEFEXECUTE,
+	A_LINEDEFEXECUTEFROMARG,
 	A_PLAYSEESOUND,
 	A_PLAYATTACKSOUND,
 	A_PLAYACTIVESOUND,
@@ -312,6 +315,8 @@ void A_FaceTarget();
 void A_FaceTracer();
 void A_Scream();
 void A_BossDeath();
+void A_SetShadowScale();
+void A_ShadowScream(); // MARIA!!!!!!
 void A_CustomPower(); // Use this for a custom power
 void A_GiveWeapon(); // Gives the player weapon(s)
 void A_RingBox(); // Obtained Ring Box Tails
@@ -411,6 +416,7 @@ void A_Boss3TakeDamage();
 void A_Boss3Path();
 void A_Boss3ShockThink();
 void A_LinedefExecute();
+void A_LinedefExecuteFromArg();
 void A_PlaySeeSound();
 void A_PlayAttackSound();
 void A_PlayActiveSound();
@@ -4995,17 +5001,7 @@ typedef enum mobj_type
 	MT_FINISHFLAG, // Finish flag
 
 	// Ambient Sounds
-	MT_AWATERA, // Ambient Water Sound 1
-	MT_AWATERB, // Ambient Water Sound 2
-	MT_AWATERC, // Ambient Water Sound 3
-	MT_AWATERD, // Ambient Water Sound 4
-	MT_AWATERE, // Ambient Water Sound 5
-	MT_AWATERF, // Ambient Water Sound 6
-	MT_AWATERG, // Ambient Water Sound 7
-	MT_AWATERH, // Ambient Water Sound 8
-	MT_RANDOMAMBIENT,
-	MT_RANDOMAMBIENT2,
-	MT_MACHINEAMBIENCE,
+	MT_AMBIENT,
 
 	MT_CORK,
 	MT_LHRT,
@@ -5109,7 +5105,6 @@ typedef enum mobj_type
 	MT_CRUMBLEOBJ, // Sound generator for crumbling platform
 	MT_TUBEWAYPOINT,
 	MT_PUSH,
-	MT_PULL,
 	MT_GHOST,
 	MT_OVERLAY,
 	MT_ANGLEMAN,
