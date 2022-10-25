@@ -140,7 +140,7 @@ static fixed_t dup_viewx, dup_viewy, dup_viewz;
 static angle_t dup_viewangle;
 
 static float gl_viewx, gl_viewy, gl_viewz;
-static float gl_viewsin, gl_viewcos;
+float gl_viewsin, gl_viewcos;
 
 // Maybe not necessary with the new T&L code (needs to be checked!)
 static float gl_viewludsin, gl_viewludcos; // look up down kik test
