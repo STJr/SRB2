@@ -568,7 +568,7 @@ static void P_DoPterabyteCarry(player_t *player, mobj_t *ptera)
 	player->mo->x = ptera->x;
 	player->mo->y = ptera->y;
 	P_SetThingPosition(player->mo);
-	ptera->movefactor = 3*TICRATE;
+	ptera->movefactor = 3*TICRATE; // timer before dropping
 	ptera->watertop = ptera->waterbottom = ptera->cusval = 0;
 }
 

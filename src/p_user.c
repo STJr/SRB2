@@ -4324,7 +4324,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		if (player->powers[pw_carry] == CR_PTERABYTE)
 		{
 			S_StartSound(player->mo, sfx_s3kd7s);
-			player->mo->tracer->cusval += 10;
+			player->mo->tracer->cusval += 10; // attempting to break free
 			player->mo->tracer->watertop = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
 			player->mo->tracer->waterbottom = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
 			player->mo->tracer->cvmem = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
@@ -12655,6 +12655,9 @@ void P_PlayerAfterThink(player_t *player)
 			}
 			case CR_PTERABYTE: // being carried by a Pterabyte
 			{
+
+#define DROPTHRESHOLD TICRATE
+
 				mobj_t *ptera = player->mo->tracer;
 				mobj_t *spawnpoint = ptera->tracer->tracer;
 				player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14 * FRACUNIT, 10 * FRACUNIT));
@@ -12662,7 +12665,7 @@ void P_PlayerAfterThink(player_t *player)
 				if (ptera->health <= 0)
 					goto dropoff;
 
-				if (P_MobjAboveLava(ptera) && ptera->movefactor <= 3*TICRATE - 10)
+				if (P_MobjAboveLava(ptera) && ptera->movefactor < DROPTHRESHOLD)
 					goto dropoff;
 
 				if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -12671,7 +12674,7 @@ void P_PlayerAfterThink(player_t *player)
 						&& (ptera->eflags & MFE_VERTICALFLIP)) // Reverse gravity check for the carrier - Flame
 						player->mo->z = ptera->z + ptera->height + FixedMul(FRACUNIT, player->mo->scale);
 
-					if (ptera->ceilingz - ptera->z > spawnpoint->ceilingz - spawnpoint->z + 512*FRACUNIT && ptera->movefactor <= 3 * TICRATE - 10)
+					if (ptera->ceilingz - ptera->z > spawnpoint->ceilingz - spawnpoint->z + 512*FRACUNIT && ptera->movefactor < DROPTHRESHOLD)
 						goto dropoff;
 				}
 				else
@@ -12680,7 +12683,7 @@ void P_PlayerAfterThink(player_t *player)
 						&& !(ptera->eflags & MFE_VERTICALFLIP)) // Correct gravity check for the carrier - Flame
 						player->mo->z = ptera->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale);
 
-					if (ptera->z - ptera->floorz > spawnpoint->z - spawnpoint->floorz + 512 * FRACUNIT && ptera->movefactor <= 3 * TICRATE - 10)
+					if (ptera->z - ptera->floorz > spawnpoint->z - spawnpoint->floorz + 512 * FRACUNIT && ptera->movefactor < DROPTHRESHOLD)
 						goto dropoff;
 				}
 
@@ -12688,7 +12691,7 @@ void P_PlayerAfterThink(player_t *player)
 				if (!ptera->movefactor)
 					goto dropoff;
 
-				if (ptera->cusval >= 30)
+				if (ptera->cusval >= 50) // breaking free
 				{
 					player->powers[pw_carry] = CR_NONE;
 					P_SetTarget(&player->mo->tracer, NULL);
