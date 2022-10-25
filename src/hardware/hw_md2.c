@@ -1346,7 +1346,6 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		spritedef_t *sprdef;
 		spriteframe_t *sprframe;
 		INT32 mod;
-		float finalscale;
 
 		// Apparently people don't like jump frames like that, so back it goes
 		//if (tics > durs)
@@ -1440,7 +1439,6 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		}
 
 		//HWD.pfnSetBlend(blend); // This seems to actually break translucency?
-		finalscale = md2->scale;
 		//Hurdler: arf, I don't like that implementation at all... too much crappy
 
 		if (gpatch && hwrPatch && hwrPatch->mipmap->format) // else if meant that if a texture couldn't be loaded, it would just end up using something else's texture
@@ -1623,17 +1621,25 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 		p.anglez = FIXED_TO_FLOAT(AngleFixed(spr->mobj->pitch));
 		p.anglex = FIXED_TO_FLOAT(AngleFixed(spr->mobj->roll));
 
-		// SRB2CBTODO: MD2 scaling support
-		finalscale *= FIXED_TO_FLOAT(spr->mobj->scale);
-
 		p.flip = atransform.flip;
 		p.mirror = atransform.mirror;
 
 		HWD.pfnSetShader(SHADER_MODEL);	// model shader
 		{
-			float xs = finalscale * FIXED_TO_FLOAT(spr->mobj->spritexscale);
-			float ys = finalscale * FIXED_TO_FLOAT(spr->mobj->spriteyscale);
-			HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, xs, ys, flip, hflip, &Surf);
+			float this_scale = FIXED_TO_FLOAT(spr->mobj->scale);
+
+			float xs = this_scale * FIXED_TO_FLOAT(spr->mobj->spritexscale);
+			float ys = this_scale * FIXED_TO_FLOAT(spr->mobj->spriteyscale);
+
+			float ox = xs * FIXED_TO_FLOAT(spr->mobj->spritexoffset);
+			float oy = ys * FIXED_TO_FLOAT(spr->mobj->spriteyoffset);
+
+			// offset perpendicular to the camera angle
+			p.x -= ox * gl_viewsin;
+			p.y += ox * gl_viewcos;
+			p.z += oy;
+
+			HWD.pfnDrawModel(md2->model, frame, durs, tics, nextFrame, &p, md2->scale * xs, md2->scale * ys, flip, hflip, &Surf);
 		}
 	}
 
