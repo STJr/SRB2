@@ -4623,6 +4623,7 @@ const char *COLOR_ENUMS[] = {
 	// Viv's vivid colours (toast 21/07/17)
 	"RUBY",     	// SKINCOLOR_RUBY,
 	"SALMON",     	// SKINCOLOR_SALMON,
+	"PEPPER",     	// SKINCOLOR_PEPPER,
 	"RED",     		// SKINCOLOR_RED,
 	"CRIMSON",     	// SKINCOLOR_CRIMSON,
 	"FLAME",     	// SKINCOLOR_FLAME,
@@ -4644,7 +4645,10 @@ const char *COLOR_ENUMS[] = {
 	"GREEN",     	// SKINCOLOR_GREEN,
 	"FOREST",     	// SKINCOLOR_FOREST,
 	"EMERALD",     	// SKINCOLOR_EMERALD,
+	"JADE",     	// SKINCOLOR_JADE,
+	"HEADLIGHT",	// SKINCOLOR_HEADLIGHT,
 	"MINT",     	// SKINCOLOR_MINT,
+	"MASTER",     	// SKINCOLOR_MASTER,
 	"SEAFOAM",     	// SKINCOLOR_SEAFOAM,
 	"AQUA",     	// SKINCOLOR_AQUA,
 	"TEAL",     	// SKINCOLOR_TEAL,
@@ -4666,8 +4670,10 @@ const char *COLOR_ENUMS[] = {
 	"NEON",     	// SKINCOLOR_NEON,
 	"VIOLET",     	// SKINCOLOR_VIOLET,
 	"LILAC",     	// SKINCOLOR_LILAC,
+	"MAUVE",     	// SKINCOLOR_MAUVE,
 	"PLUM",     	// SKINCOLOR_PLUM,
 	"RASPBERRY",  	// SKINCOLOR_RASPBERRY,
+	"TAFFY",     	// SKINCOLOR_TAFFY,
 	"ROSY",     	// SKINCOLOR_ROSY,
 
 	// Super special awesome Super flashing colors!
