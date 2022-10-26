@@ -2759,10 +2759,8 @@ static void ST_overlayDrawer(void)
 	{
 		if (renderisnewtic)
 		{
-			LUA_HUD_ClearDrawList(luahuddrawlist_game);
 			LUA_HUDHOOK(game, luahuddrawlist_game);
 		}
-		LUA_HUD_DrawList(luahuddrawlist_game);
 	}
 
 	// draw level title Tails
@@ -2841,6 +2839,10 @@ void ST_Drawer(void)
 
 	if (st_overlay)
 	{
+		if (renderisnewtic)
+		{
+			LUA_HUD_ClearDrawList(luahuddrawlist_game);
+		}
 		// No deadview!
 		stplyr = &players[displayplayer];
 		ST_overlayDrawer();
@@ -2850,5 +2852,7 @@ void ST_Drawer(void)
 			stplyr = &players[secondarydisplayplayer];
 			ST_overlayDrawer();
 		}
+
+		LUA_HUD_DrawList(luahuddrawlist_game);
 	}
 }
