@@ -76,7 +76,7 @@ raster_bbox_seg
 static void
 draw_bbox_col
 (		struct bbox_config * bb,
-		int p,
+		size_t p,
 		fixed_t tx,
 		fixed_t ty)
 {
@@ -104,8 +104,8 @@ draw_bbox_col
 static void
 draw_bbox_row
 (		struct bbox_config * bb,
-		int p1,
-		int p2)
+		size_t p1,
+		size_t p2)
 {
 	struct bbox_col
 		*a = &bb->col[p1],
