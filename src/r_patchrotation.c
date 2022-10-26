@@ -26,6 +26,7 @@ angle_t R_ModelRotationAngle(mobj_t *mobj)
 
 angle_t R_SpriteRotationAngle(mobj_t *mobj)
 {
+#if 0
 	angle_t viewingAngle = R_PointToAngle(mobj->x, mobj->y);
 
 	fixed_t pitchMul = -FINESINE(viewingAngle >> ANGLETOFINESHIFT);
@@ -34,6 +35,9 @@ angle_t R_SpriteRotationAngle(mobj_t *mobj)
 	angle_t rollOrPitch = FixedMul(mobj->pitch, pitchMul) + FixedMul(mobj->roll, rollMul);
 
 	return (rollOrPitch + R_ModelRotationAngle(mobj));
+#else
+	return mobj->rollangle;
+#endif
 }
 
 INT32 R_GetRollAngle(angle_t rollangle)
