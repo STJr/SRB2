@@ -1630,8 +1630,13 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 			}
 		}
 
+#if 0
 		p.anglez = FIXED_TO_FLOAT(AngleFixed(interp.pitch));
 		p.anglex = FIXED_TO_FLOAT(AngleFixed(interp.roll));
+#else
+		p.anglez = 0.f;
+		p.anglex = 0.f;
+#endif
 
 		p.flip = atransform.flip;
 		p.mirror = atransform.mirror;

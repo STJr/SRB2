@@ -26,6 +26,7 @@ angle_t R_ModelRotationAngle(interpmobjstate_t *interp)
 
 angle_t R_SpriteRotationAngle(interpmobjstate_t *interp)
 {
+#if 0
 	angle_t viewingAngle = R_PointToAngle(interp->x, interp->y);
 
 	fixed_t pitchMul = -FINESINE(viewingAngle >> ANGLETOFINESHIFT);
@@ -34,6 +35,9 @@ angle_t R_SpriteRotationAngle(interpmobjstate_t *interp)
 	angle_t rollOrPitch = FixedMul(interp->pitch, pitchMul) + FixedMul(interp->roll, rollMul);
 
 	return (rollOrPitch + R_ModelRotationAngle(interp));
+#else
+	return R_ModelRotationAngle(interp);
+#endif
 }
 
 INT32 R_GetRollAngle(angle_t rollangle)
