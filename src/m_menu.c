@@ -12268,6 +12268,23 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			break;
 
+		case KEY_PGUP:
+		case KEY_PGDN:
+			{
+				UINT8 i;
+				if (itemOn == 2) // player color
+				{
+					S_StartSound(NULL,sfx_menu1);
+					for (i = 0; i < 13; i++) // or (282-charw)/(2*indexwidth)
+					{
+						setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+						while (!skincolors[setupm_fakecolor->color].accessible) // skip inaccessible colors
+							setupm_fakecolor = (choice == KEY_PGUP) ? setupm_fakecolor->prev : setupm_fakecolor->next;
+					}
+				}
+			}
+			break;
+
 		case KEY_ESCAPE:
 			exitmenu = true;
 			break;
