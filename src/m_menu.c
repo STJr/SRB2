@@ -8520,7 +8520,7 @@ static void M_DrawLoadGameData(void)
 					if (charskin->prefoppositecolor)
 					{
 						col = charskin->prefoppositecolor;
-						col = skincolors[col].ramp[skincolors[skincolors[col].invcolor].invshade];
+						col = skincolors[col].ramp[skincolors[charskin->prefcolor].invshade];
 					}
 					else
 					{
