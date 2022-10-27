@@ -4616,6 +4616,7 @@ const char *COLOR_ENUMS[] = {
 	"YOGURT",     	// SKINCOLOR_YOGURT,
 	"LATTE",     	// SKINCOLOR_LATTE,
 	"BROWN",     	// SKINCOLOR_BROWN,
+	"BOULDER",   	// SKINCOLOR_BOULDER
 	"BRONZE",     	// SKINCOLOR_BRONZE,
 	"SEPIA",     	// SKINCOLOR_SEPIA,
 	"ECRU",     	// SKINCOLOR_ECRU,
@@ -4706,6 +4707,7 @@ const char *COLOR_ENUMS[] = {
 	"ROSY",     	// SKINCOLOR_ROSY,
 	"FANCY",  		// SKINCOLOR_FANCY,
 	"SANGRIA",     	// SKINCOLOR_SANGRIA,
+	"VOLCANIC",    	// SKINCOLOR_VOLCANIC,
 
 	// Super special awesome Super flashing colors!
 	"SUPERSILVER1",	// SKINCOLOR_SUPERSILVER1
