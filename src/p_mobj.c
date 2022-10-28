@@ -6189,8 +6189,9 @@ static void P_MoveHoop(mobj_t *mobj)
 {
 	const fixed_t fuse = (mobj->fuse*mobj->extravalue2);
 	const angle_t fa = mobj->movedir*(FINEANGLES/mobj->extravalue1);
-	TVector v;
-	TVector *res;
+	matrix_t m;
+	vector4_t v;
+	vector4_t res;
 	fixed_t finalx, finaly, finalz;
 	fixed_t x, y, z;
 
@@ -6203,19 +6204,20 @@ static void P_MoveHoop(mobj_t *mobj)
 	z = mobj->target->z+mobj->target->height/2;
 
 	// Make the sprite travel towards the center of the hoop
-	v[0] = FixedMul(FINECOSINE(fa),fuse);
-	v[1] = 0;
-	v[2] = FixedMul(FINESINE(fa),fuse);
-	v[3] = FRACUNIT;
+	v.x = FixedMul(FINECOSINE(fa),fuse);
+	v.y = 0;
+	v.z = FixedMul(FINESINE(fa),fuse);
+	v.a = FRACUNIT;
 
-	res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(mobj->target->movedir*FRACUNIT)));
-	M_Memcpy(&v, res, sizeof (v));
-	res = VectorMatrixMultiply(v, *RotateZMatrix(FixedAngle(mobj->target->movecount*FRACUNIT)));
-	M_Memcpy(&v, res, sizeof (v));
+	FM_RotateX(&m, FixedAngle(mobj->target->movedir*FRACUNIT));
+	FV4_Copy(&v, FM_MultMatrixVec4(&m, &v, &res));
 
-	finalx = x + v[0];
-	finaly = y + v[1];
-	finalz = z + v[2];
+	FM_RotateZ(&m, FixedAngle(mobj->target->movecount*FRACUNIT));
+	FV4_Copy(&v, FM_MultMatrixVec4(&m, &v, &res));
+
+	finalx = x + v.x;
+	finaly = y + v.y;
+	finalz = z + v.z;
 
 	P_UnsetThingPosition(mobj);
 	mobj->x = finalx;
@@ -6228,8 +6230,9 @@ void P_SpawnHoopOfSomething(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT
 {
 	mobj_t *mobj;
 	INT32 i;
-	TVector v;
-	TVector *res;
+	matrix_t m;
+	vector4_t v;
+	vector4_t res;
 	fixed_t finalx, finaly, finalz;
 	mobj_t hoopcenter;
 	mobj_t *axis;
@@ -6271,19 +6274,20 @@ void P_SpawnHoopOfSomething(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT
 	for (i = 0; i < number; i++)
 	{
 		fa = (i*degrees);
-		v[0] = FixedMul(FINECOSINE(fa),radius);
-		v[1] = 0;
-		v[2] = FixedMul(FINESINE(fa),radius);
-		v[3] = FRACUNIT;
+		v.x = FixedMul(FINECOSINE(fa),radius);
+		v.y = 0;
+		v.z = FixedMul(FINESINE(fa),radius);
+		v.a = FRACUNIT;
 
-		res = VectorMatrixMultiply(v, *RotateXMatrix(rotangle));
-		M_Memcpy(&v, res, sizeof (v));
-		res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
-		M_Memcpy(&v, res, sizeof (v));
+		FM_RotateX(&m, rotangle);
+		FV4_Copy(&v, FM_MultMatrixVec4(&m, &v, &res));
 
-		finalx = x + v[0];
-		finaly = y + v[1];
-		finalz = z + v[2];
+		FM_RotateZ(&m, closestangle);
+		FV4_Copy(&v, FM_MultMatrixVec4(&m, &v, &res));
+
+		finalx = x + v.x;
+		finaly = y + v.y;
+		finalz = z + v.z;
 
 		mobj = P_SpawnMobj(finalx, finaly, finalz, type);
 		mobj->z -= mobj->height/2;
@@ -6294,8 +6298,9 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 {
 	mobj_t *mobj;
 	INT32 i;
-	TVector v;
-	TVector *res;
+	matrix_t m;
+	vector4_t v;
+	vector4_t res;
 	fixed_t finalx, finaly, finalz, dist;
 	angle_t degrees, fa, closestangle;
 	fixed_t mobjx, mobjy, mobjz;
@@ -6310,19 +6315,20 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 	for (i = 0; i < number; i++)
 	{
 		fa = (i*degrees);
-		v[0] = FixedMul(FINECOSINE(fa),radius);
-		v[1] = 0;
-		v[2] = FixedMul(FINESINE(fa),radius);
-		v[3] = FRACUNIT;
+		v.x = FixedMul(FINECOSINE(fa),radius);
+		v.y = 0;
+		v.z = FixedMul(FINESINE(fa),radius);
+		v.a = FRACUNIT;
 
-		res = VectorMatrixMultiply(v, *RotateXMatrix(rotangle));
-		M_Memcpy(&v, res, sizeof (v));
-		res = VectorMatrixMultiply(v, *RotateZMatrix(closestangle));
-		M_Memcpy(&v, res, sizeof (v));
+		FM_RotateX(&m, rotangle);
+		FV4_Copy(&v, FM_MultMatrixVec4(&m, &v, &res));
 
-		finalx = x + v[0];
-		finaly = y + v[1];
-		finalz = z + v[2];
+		FM_RotateZ(&m, closestangle);
+		FV4_Copy(&v, FM_MultMatrixVec4(&m, &v, &res));
+
+		finalx = x + v.x;
+		finaly = y + v.y;
+		finalz = z + v.z;
 
 		mobj = P_SpawnMobj(finalx, finaly, finalz, type);
 
@@ -6489,9 +6495,10 @@ static void P_NightsItemChase(mobj_t *thing)
 //
 void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 {
-	TVector unit_lengthways, unit_sideways, pos_lengthways, pos_sideways;
-	TVector *res;
-	fixed_t radius, dist, zstore;
+	matrix_t m;
+	vector4_t unit_lengthways, unit_sideways, pos_lengthways, pos_sideways;
+	vector4_t res;
+	fixed_t radius, dist = 0, zstore;
 	angle_t fa;
 	boolean dosound = false;
 	mobj_t *mobj = center->hnext, *hnext = NULL;
@@ -6502,8 +6509,9 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 	INT32 rot;
 	INT32 prevrot;
 
-	dist = pos_sideways[0] = pos_sideways[1] = pos_sideways[2] = pos_sideways[3] = unit_sideways[3] =\
-	 pos_lengthways[0] = pos_lengthways[1] = pos_lengthways[2] = pos_lengthways[3] = 0;
+	FV4_Load(&pos_sideways, 0, 0, 0, 0);
+	FV4_Load(&unit_sideways, 0, 0, 0, 0);
+	FV4_Load(&pos_lengthways, 0, 0, 0, 0);
 
 	while (mobj)
 	{
@@ -6521,15 +6529,15 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 			rot = (baserot + mobj->threshold) & FINEMASK;
 			prevrot = (baseprevrot + mobj->threshold) & FINEMASK;
 
-			pos_lengthways[0] = pos_lengthways[1] = pos_lengthways[2] = pos_lengthways[3] = 0;
+			FV4_Load(&pos_lengthways, 0, 0, 0, 0);
 
 			dist = ((mobj->info->speed) ? mobj->info->speed : mobjinfo[MT_SMALLMACECHAIN].speed);
 			dist = ((center->scale == FRACUNIT) ? dist : FixedMul(dist, center->scale));
 
 			fa = (FixedAngle(center->movefactor*FRACUNIT) >> ANGLETOFINESHIFT);
 			radius = FixedMul(dist, FINECOSINE(fa));
-			unit_lengthways[1] = -FixedMul(dist, FINESINE(fa));
-			unit_lengthways[3] = FRACUNIT;
+			unit_lengthways.y = -FixedMul(dist, FINESINE(fa));
+			unit_lengthways.a = FRACUNIT;
 
 			// Swinging Chain.
 			if (center->flags2 & MF2_STRONGBOX)
@@ -6542,8 +6550,8 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 
 				fa = ((FixedAngle(swingmag) >> ANGLETOFINESHIFT) + mobj->friction) & FINEMASK;
 
-				unit_lengthways[0] = FixedMul(FINESINE(fa), -radius);
-				unit_lengthways[2] = FixedMul(FINECOSINE(fa), -radius);
+				unit_lengthways.x = FixedMul(FINESINE(fa), -radius);
+				unit_lengthways.z = FixedMul(FINECOSINE(fa), -radius);
 			}
 			// Rotating Chain.
 			else
@@ -6554,15 +6562,16 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 				if (!(prevfa > (FINEMASK/2)) && (fa > (FINEMASK/2))) // completed a full swing
 					dosound = true;
 
-				unit_lengthways[0] = FixedMul(FINECOSINE(fa), radius);
-				unit_lengthways[2] = FixedMul(FINESINE(fa), radius);
+				unit_lengthways.x = FixedMul(FINECOSINE(fa), radius);
+				unit_lengthways.z = FixedMul(FINESINE(fa), radius);
 			}
 
 			// Calculate the angle matrixes for the link.
-			res = VectorMatrixMultiply(unit_lengthways, *RotateXMatrix(center->threshold << ANGLETOFINESHIFT));
-			M_Memcpy(&unit_lengthways, res, sizeof(unit_lengthways));
-			res = VectorMatrixMultiply(unit_lengthways, *RotateZMatrix(center->angle));
-			M_Memcpy(&unit_lengthways, res, sizeof(unit_lengthways));
+			FM_RotateX(&m, center->threshold << ANGLETOFINESHIFT);
+			FV4_Copy(&unit_lengthways, FM_MultMatrixVec4(&m, &unit_lengthways, &res));
+
+			FM_RotateZ(&m, center->angle);
+			FV4_Copy(&unit_lengthways, FM_MultMatrixVec4(&m, &unit_lengthways, &res));
 
 			lastthreshold = mobj->threshold;
 			lastfriction = mobj->friction;
@@ -6574,63 +6583,64 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 			dosound = false;
 		}
 
-		if (pos_sideways[3] != mobj->movefactor)
+		if (pos_sideways.a != mobj->movefactor)
 		{
-			if (!unit_sideways[3])
+			if (!unit_sideways.a)
 			{
-				unit_sideways[1] = dist;
-				unit_sideways[0] = unit_sideways[2] = 0;
-				unit_sideways[3] = FRACUNIT;
+				unit_sideways.y = dist;
+				unit_sideways.x = unit_sideways.z = 0;
+				unit_sideways.a = FRACUNIT;
 
-				res = VectorMatrixMultiply(unit_sideways, *RotateXMatrix(center->threshold << ANGLETOFINESHIFT));
-				M_Memcpy(&unit_sideways, res, sizeof(unit_sideways));
-				res = VectorMatrixMultiply(unit_sideways, *RotateZMatrix(center->angle));
-				M_Memcpy(&unit_sideways, res, sizeof(unit_sideways));
+				FM_RotateX(&m, center->threshold << ANGLETOFINESHIFT);
+				FV4_Copy(&unit_sideways, FM_MultMatrixVec4(&m, &unit_sideways, &res));
+
+				FM_RotateZ(&m, center->angle);
+				FV4_Copy(&unit_sideways, FM_MultMatrixVec4(&m, &unit_sideways, &res));
 			}
 
-			if (pos_sideways[3] > mobj->movefactor)
+			if (pos_sideways.a > mobj->movefactor)
 			{
 				do
 				{
-					pos_sideways[0] -= unit_sideways[0];
-					pos_sideways[1] -= unit_sideways[1];
-					pos_sideways[2] -= unit_sideways[2];
+					pos_sideways.x -= unit_sideways.x;
+					pos_sideways.y -= unit_sideways.y;
+					pos_sideways.z -= unit_sideways.z;
 				}
-				while ((--pos_sideways[3]) != mobj->movefactor);
+				while ((--pos_sideways.a) != mobj->movefactor);
 			}
 			else
 			{
 				do
 				{
-					pos_sideways[0] += unit_sideways[0];
-					pos_sideways[1] += unit_sideways[1];
-					pos_sideways[2] += unit_sideways[2];
+					pos_sideways.x += unit_sideways.x;
+					pos_sideways.y += unit_sideways.y;
+					pos_sideways.z += unit_sideways.z;
 				}
-				while ((++pos_sideways[3]) != mobj->movefactor);
+				while ((++pos_sideways.a) != mobj->movefactor);
 			}
 		}
 
 		hnext = mobj->hnext; // just in case the mobj is removed
 
-		if (pos_lengthways[3] > mobj->movecount)
+		if (pos_lengthways.a > mobj->movecount)
 		{
 			do
 			{
-				pos_lengthways[0] -= unit_lengthways[0];
-				pos_lengthways[1] -= unit_lengthways[1];
-				pos_lengthways[2] -= unit_lengthways[2];
+				pos_lengthways.x -= unit_lengthways.x;
+				pos_lengthways.y -= unit_lengthways.y;
+				pos_lengthways.z -= unit_lengthways.z;
 			}
-			while ((--pos_lengthways[3]) != mobj->movecount);
+			while ((--pos_lengthways.a) != mobj->movecount);
 		}
-		else if (pos_lengthways[3] < mobj->movecount)
+		else if (pos_lengthways.a < mobj->movecount)
 		{
 			do
 			{
-				pos_lengthways[0] += unit_lengthways[0];
-				pos_lengthways[1] += unit_lengthways[1];
-				pos_lengthways[2] += unit_lengthways[2];
+				pos_lengthways.x += unit_lengthways.x;
+				pos_lengthways.y += unit_lengthways.y;
+				pos_lengthways.z += unit_lengthways.z;
 			}
-			while ((++pos_lengthways[3]) != mobj->movecount);
+			while ((++pos_lengthways.a) != mobj->movecount);
 		}
 
 		P_UnsetThingPosition(mobj);
@@ -6640,17 +6650,17 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 		mobj->z = center->z;
 
 		// Add on the appropriate distances to the center's co-ordinates.
-		if (pos_lengthways[3])
+		if (pos_lengthways.a)
 		{
-			mobj->x += pos_lengthways[0];
-			mobj->y += pos_lengthways[1];
-			zstore = pos_lengthways[2] + pos_sideways[2];
+			mobj->x += pos_lengthways.x;
+			mobj->y += pos_lengthways.y;
+			zstore = pos_lengthways.z + pos_sideways.z;
 		}
 		else
-			zstore = pos_sideways[2];
+			zstore = pos_sideways.z;
 
-		mobj->x += pos_sideways[0];
-		mobj->y += pos_sideways[1];
+		mobj->x += pos_sideways.x;
+		mobj->y += pos_sideways.y;
 
 		// Cut the height to align the link with the axis.
 		if (mobj->type == MT_SMALLMACECHAIN || mobj->type == MT_BIGMACECHAIN || mobj->type == MT_SMALLGRABCHAIN || mobj->type == MT_BIGGRABCHAIN)
@@ -6668,7 +6678,7 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 		P_SetThingPosition(mobj);
 
 #if 0 // toaster's height-clipping dealie!
-		if (!pos_lengthways[3] || P_MobjWasRemoved(mobj) || (mobj->flags & MF_NOCLIPHEIGHT))
+		if (!pos_lengthways.a || P_MobjWasRemoved(mobj) || (mobj->flags & MF_NOCLIPHEIGHT))
 			goto cont;
 
 		if ((fa = ((center->threshold & (FINEMASK/2)) << ANGLETOFINESHIFT)) > ANGLE_45 && fa < ANGLE_135) // only move towards center when the motion is towards/away from the ground, rather than alongside it
@@ -6688,8 +6698,8 @@ void P_MaceRotate(mobj_t *center, INT32 baserot, INT32 baseprevrot)
 
 		P_UnsetThingPosition(mobj);
 
-		mobj->x -= FixedMul(unit_lengthways[0], zstore);
-		mobj->y -= FixedMul(unit_lengthways[1], zstore);
+		mobj->x -= FixedMul(unit_lengthways.x, zstore);
+		mobj->y -= FixedMul(unit_lengthways.y, zstore);
 
 		P_SetThingPosition(mobj);
 
@@ -13342,13 +13352,13 @@ void P_SpawnHoop(mapthing_t *mthing)
 	mobj_t *mobj = NULL;
 	mobj_t *nextmobj = NULL;
 	mobj_t *hoopcenter;
-	TMatrix *pitchmatrix, *yawmatrix;
+	matrix_t pitchmatrix, yawmatrix;
 	fixed_t radius = mthing->args[0] << FRACBITS;
 	fixed_t sizefactor = 4*FRACUNIT;
 	fixed_t hoopsize = radius/sizefactor;
 	INT32 i;
 	angle_t fa;
-	TVector v, *res;
+	vector4_t v, res;
 	fixed_t x = mthing->x << FRACBITS;
 	fixed_t y = mthing->y << FRACBITS;
 	fixed_t z = P_GetMobjSpawnHeight(MT_HOOP, x, y, mthing->z << FRACBITS, 0, false, mthing->scale);
@@ -13363,9 +13373,9 @@ void P_SpawnHoop(mapthing_t *mthing)
 	P_SetThingPosition(hoopcenter);
 
 	hoopcenter->movedir = mthing->pitch;
-	pitchmatrix = RotateXMatrix(FixedAngle(hoopcenter->movedir << FRACBITS));
+	FM_RotateX(&pitchmatrix, FixedAngle(hoopcenter->movedir << FRACBITS));
 	hoopcenter->movecount = mthing->angle;
-	yawmatrix = RotateZMatrix(FixedAngle(hoopcenter->movecount << FRACBITS));
+	FM_RotateZ(&yawmatrix, FixedAngle(hoopcenter->movecount << FRACBITS));
 
 	// For the hoop when it flies away
 	hoopcenter->extravalue1 = hoopsize;
@@ -13375,17 +13385,15 @@ void P_SpawnHoop(mapthing_t *mthing)
 	for (i = 0; i < hoopsize; i++)
 	{
 		fa = i*(FINEANGLES/hoopsize);
-		v[0] = FixedMul(FINECOSINE(fa), radius);
-		v[1] = 0;
-		v[2] = FixedMul(FINESINE(fa), radius);
-		v[3] = FRACUNIT;
+		v.x = FixedMul(FINECOSINE(fa), radius);
+		v.y = 0;
+		v.z = FixedMul(FINESINE(fa), radius);
+		v.a = FRACUNIT;
 
-		res = VectorMatrixMultiply(v, *pitchmatrix);
-		M_Memcpy(&v, res, sizeof(v));
-		res = VectorMatrixMultiply(v, *yawmatrix);
-		M_Memcpy(&v, res, sizeof(v));
+		FV4_Copy(&v, FM_MultMatrixVec4(&pitchmatrix, &v, &res));
+		FV4_Copy(&v, FM_MultMatrixVec4(&yawmatrix, &v, &res));
 
-		mobj = P_SpawnMobj(x + v[0], y + v[1], z + v[2], MT_HOOP);
+		mobj = P_SpawnMobj(x + v.x, y + v.y, z + v.z, MT_HOOP);
 		mobj->z -= mobj->height/2;
 
 		if (maptol & TOL_XMAS)
@@ -13421,17 +13429,15 @@ void P_SpawnHoop(mapthing_t *mthing)
 		for (i = 0; i < hoopsize; i++)
 		{
 			fa = i*(FINEANGLES/hoopsize);
-			v[0] = FixedMul(FINECOSINE(fa), radius);
-			v[1] = 0;
-			v[2] = FixedMul(FINESINE(fa), radius);
-			v[3] = FRACUNIT;
+			v.x = FixedMul(FINECOSINE(fa), radius);
+			v.y = 0;
+			v.z = FixedMul(FINESINE(fa), radius);
+			v.a = FRACUNIT;
 
-			res = VectorMatrixMultiply(v, *pitchmatrix);
-			M_Memcpy(&v, res, sizeof(v));
-			res = VectorMatrixMultiply(v, *yawmatrix);
-			M_Memcpy(&v, res, sizeof(v));
+			FV4_Copy(&v, FM_MultMatrixVec4(&pitchmatrix, &v, &res));
+			FV4_Copy(&v, FM_MultMatrixVec4(&yawmatrix, &v, &res));
 
-			mobj = P_SpawnMobj(x + v[0], y + v[1], z + v[2], MT_HOOPCOLLIDE);
+			mobj = P_SpawnMobj(x + v.x, y + v.y, z + v.z, MT_HOOPCOLLIDE);
 			mobj->z -= mobj->height/2;
 
 			// Link all the collision sprites together.
@@ -13522,7 +13528,8 @@ static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 n
 	angle_t angle = FixedAngle(mthing->angle << FRACBITS);
 	angle_t fa;
 	INT32 i;
-	TVector v, *res;
+	matrix_t m;
+	vector4_t v, res;
 
 	for (i = 0; i < numitemtypes; i++)
 	{
@@ -13550,15 +13557,15 @@ static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 n
 		dummything.type = mobjinfo[itemtype].doomednum;
 
 		fa = i*FINEANGLES/numitems;
-		v[0] = FixedMul(FINECOSINE(fa), size);
-		v[1] = 0;
-		v[2] = FixedMul(FINESINE(fa), size);
-		v[3] = FRACUNIT;
+		v.x = FixedMul(FINECOSINE(fa), size);
+		v.y = 0;
+		v.z = FixedMul(FINESINE(fa), size);
+		v.a = FRACUNIT;
 
-		res = VectorMatrixMultiply(v, *RotateZMatrix(angle));
-		M_Memcpy(&v, res, sizeof(v));
+		FM_RotateZ(&m, angle);
+		FV4_Copy(&v, FM_MultMatrixVec4(&m, &v, &res));
 
-		mobj = P_SpawnMobjFromMapThing(&dummything, x + v[0], y + v[1], z + v[2], itemtype);
+		mobj = P_SpawnMobjFromMapThing(&dummything, x + v.x, y + v.y, z + v.z, itemtype);
 
 		if (!mobj)
 			continue;
