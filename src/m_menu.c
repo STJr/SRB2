@@ -11999,6 +11999,8 @@ static void M_HandleConnectIP(INT32 choice)
 static fixed_t    multi_tics;
 static UINT8      multi_frame;
 static UINT8      multi_spr2;
+static UINT8      multi_angle;
+static boolean    multi_paused;
 
 // this is set before entering the MultiPlayer setup menu,
 // for either player 1 or 2
@@ -12066,7 +12068,7 @@ static void M_DrawSetupMultiPlayerMenu(void)
 
 	// anim the player in the box
 	multi_tics -= renderdeltatics;
-	while (multi_tics <= 0)
+	while (!multi_paused && multi_tics <= 0)
 	{
 		multi_frame++;
 		multi_tics += 4*FRACUNIT;
@@ -12089,8 +12091,8 @@ static void M_DrawSetupMultiPlayerMenu(void)
 		multi_frame = 0;
 
 	sprframe = &sprdef->spriteframes[multi_frame];
-	patch = W_CachePatchNum(sprframe->lumppat[0], PU_PATCH);
-	if (sprframe->flip & 1) // Only for first sprite
+	patch = W_CachePatchNum(sprframe->lumppat[multi_angle], PU_PATCH);
+	if (sprframe->flip & 1 || multi_angle >= 5) // Only for first sprite
 		flags |= V_FLIP; // This sprite is left/right flipped!
 
 #define chary (y+64)
@@ -12408,6 +12410,20 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 			}
 			break;
 
+		case KEY_KEYPAD5:
+			multi_paused = !multi_paused;
+			break;
+
+		case KEY_KEYPAD4:
+			if (multi_angle <= 0) multi_angle = 7;
+			else multi_angle--;
+			break;
+
+		case KEY_KEYPAD6:
+			if (multi_angle >= 7) multi_angle = 0;
+			else multi_angle++;
+			break;
+
 		default:
 			if (itemOn != 0 || choice < 32 || choice > 127)
 				break;
@@ -12447,6 +12463,7 @@ static void M_SetupMultiPlayer(INT32 choice)
 
 	multi_frame = 0;
 	multi_tics = 4*FRACUNIT;
+	multi_angle = 0;
 	strcpy(setupm_name, cv_playername.string);
 
 	// set for player 1
@@ -12491,6 +12508,7 @@ static void M_SetupMultiPlayer2(INT32 choice)
 
 	multi_frame = 0;
 	multi_tics = 4*FRACUNIT;
+	multi_angle = 0;
 	strcpy (setupm_name, cv_playername2.string);
 
 	// set for splitscreen secondary player
