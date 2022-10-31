@@ -794,9 +794,9 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		// Secret emblem thingy
 		case MT_EMBLEM:
 			{
-				mobj_t *spark = NULL;
-				boolean prevCollected;
-				const boolean isServer = ((player - players) == serverplayer);
+				const boolean toucherIsServer = ((player - players) == serverplayer);
+				const boolean consoleIsServer = (consoleplayer == serverplayer);
+				boolean prevCollected = false;
 
 				if ((special->flags2 & MF2_NIGHTSPULL)
 					&& (toucher == special->tracer))
@@ -816,31 +816,48 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				prevCollected = P_EmblemWasCollected(special->health - 1);
 
-				if (isServer || shareEmblems)
+				if (toucherIsServer || shareEmblems)
 				{
 					serverGamedata->collected[special->health-1] = true;
 					M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
 				}
 
-				if (P_IsLocalPlayer(player) || (isServer && shareEmblems))
+				if (P_IsLocalPlayer(player) || (consoleIsServer && shareEmblems))
 				{
 					clientGamedata->collected[special->health-1] = true;
 					M_UpdateUnlockablesAndExtraEmblems(clientGamedata);
 					G_SaveGameData(clientGamedata);
 				}
 
-				// This always spawns the object to prevent mobjnum issues,
-				// but makes the effect invisible to whoever it doesn't matter to.
-				spark = P_SpawnMobjFromMobj(special, 0, 0, 0, MT_SPARK);
-				if (prevCollected == false && P_EmblemWasCollected(special->health - 1) == true)
+				if (netgame)
 				{
-					S_StartSound((shareEmblems ? NULL : special), special->info->deathsound);
+					// This always spawns the object to prevent mobjnum issues,
+					// but makes the effect invisible to whoever it doesn't matter to.
+					mobj_t *spark = P_SpawnMobjFromMobj(special, 0, 0, 0, MT_SPARK);
+
+					if (prevCollected == false && P_EmblemWasCollected(special->health - 1) == true)
+					{
+						// Play the sound if it was collected.
+						S_StartSound((shareEmblems ? NULL : special), special->info->deathsound);
+					}
+					else
+					{
+						// We didn't collect it, make it invisible to us.
+						spark->flags2 |= MF2_DONTDRAW;
+					}
+
+					return;
 				}
 				else
 				{
-					spark->flags2 |= MF2_DONTDRAW;
+					if (prevCollected == false && P_EmblemWasCollected(special->health - 1) == true)
+					{
+						// Disappear when collecting for local games.
+						break;
+					}
+
+					return;
 				}
-				return;
 			}
 
 		// CTF Flags
