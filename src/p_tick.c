@@ -786,7 +786,10 @@ void P_Ticker(boolean run)
 			{
 				R_SkyboxFrame(player1);
 			}
-			R_SetupFrame(player1);
+			if (player1->mo)
+			{
+				R_SetupFrame(player1);
+			}
 
 			if (splitscreen)
 			{
@@ -795,7 +798,10 @@ void P_Ticker(boolean run)
 				{
 					R_SkyboxFrame(player2);
 				}
-				R_SetupFrame(player2);
+				if (player2->mo)
+				{
+					R_SetupFrame(player2);
+				}
 			}
 		}
 		
