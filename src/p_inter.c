@@ -796,6 +796,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			{
 				mobj_t *spark = NULL;
 				boolean prevCollected;
+				const boolean isServer = ((player - players) == serverplayer);
 
 				if (!P_CanPickupEmblem(player, special->health - 1))
 				{
@@ -804,13 +805,13 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 
 				prevCollected = P_EmblemWasCollected(special->health - 1);
 
-				if (((player - players) == serverplayer) || shareEmblems)
+				if (isServer || shareEmblems)
 				{
 					serverGamedata->collected[special->health-1] = true;
 					M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
 				}
 
-				if (P_IsLocalPlayer(player) /*|| shareEmblems*/)
+				if (P_IsLocalPlayer(player) || (isServer && shareEmblems))
 				{
 					clientGamedata->collected[special->health-1] = true;
 					M_UpdateUnlockablesAndExtraEmblems(clientGamedata);
