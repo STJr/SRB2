@@ -3758,11 +3758,24 @@ static void HWR_RotateSpritePolyToAim(gl_vissprite_t *spr, FOutVector *wallVerts
 		&& spr && spr->mobj && !R_ThingIsPaperSprite(spr->mobj)
 		&& wallVerts)
 	{
-		float basey = FIXED_TO_FLOAT(spr->mobj->z);
+		// uncapped/interpolation
+		interpmobjstate_t interp = {0};
+
+		// do interpolation
+		if (R_UsingFrameInterpolation() && !paused)
+		{
+			R_InterpolateMobjState(spr->mobj, rendertimefrac, &interp);
+		}
+		else
+		{
+			R_InterpolateMobjState(spr->mobj, FRACUNIT, &interp);
+		}
+
+		float basey = FIXED_TO_FLOAT(interp.z);
 		float lowy = wallVerts[0].y;
 		if (!precip && P_MobjFlip(spr->mobj) == -1) // precip doesn't have eflags so they can't flip
 		{
-			basey = FIXED_TO_FLOAT(spr->mobj->z + spr->mobj->height);
+			basey = FIXED_TO_FLOAT(interp.z + spr->mobj->height);
 		}
 		// Rotate sprites to fully billboard with the camera
 		// X, Y, AND Z need to be manipulated for the polys to rotate around the
