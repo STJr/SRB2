@@ -798,6 +798,17 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 				boolean prevCollected;
 				const boolean isServer = ((player - players) == serverplayer);
 
+				if ((special->flags2 & MF2_NIGHTSPULL)
+					&& (toucher == special->tracer))
+				{
+					// Since collecting may not remove the object,
+					// we need to manually stop it from chasing.
+					P_SetTarget(&special->tracer, NULL);
+					special->flags2 &= ~MF2_NIGHTSPULL;
+					special->movefactor = 0;
+					special->momx = special->momy = special->momz = 0;
+				}
+
 				if (!P_CanPickupEmblem(player, special->health - 1))
 				{
 					return;
