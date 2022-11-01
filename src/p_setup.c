@@ -7370,7 +7370,7 @@ static void P_WriteLetter(void)
 {
 	char *buf, *b;
 
-	if (!unlockables[27].unlocked) // pandora's box
+	if (!unlockables[28].unlocked) // pandora's box
 		return;
 
 	if (modeattacking)
