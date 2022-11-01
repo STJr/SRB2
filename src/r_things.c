@@ -1863,6 +1863,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		tr_y = (interp.y - sort_y) - viewy;
 		sort_z = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
 		sortsplat = FixedDiv(projectiony, sort_z);
+		centerangle = interp.angle;
 	}
 
 	// PORTAL SPRITE CLIPPING
