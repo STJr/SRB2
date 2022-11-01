@@ -214,6 +214,7 @@ enum ffloor_e {
 	ffloor_tslope,
 	ffloor_bslope,
 	ffloor_sector,
+	ffloor_fofflags,
 	ffloor_flags,
 	ffloor_master,
 	ffloor_target,
@@ -239,6 +240,7 @@ static const char *const ffloor_opt[] = {
 	"t_slope",
 	"b_slope",
 	"sector", // secnum pushed as control sector userdata
+	"fofflags",
 	"flags",
 	"master", // control linedef
 	"target", // target sector
@@ -1841,6 +1843,80 @@ static int lib_numnodes(lua_State *L)
 // ffloor_t //
 //////////////
 
+static INT32 P_GetOldFOFFlags(ffloor_t *fflr)
+{
+	INT32 result = 0;
+	if (fflr->fofflags & FOF_EXISTS)
+		result |= FF_OLD_EXISTS;
+	if (fflr->fofflags & FOF_BLOCKPLAYER)
+		result |= FF_OLD_BLOCKPLAYER;
+	if (fflr->fofflags & FOF_BLOCKOTHERS)
+		result |= FF_OLD_BLOCKOTHERS;
+	if (fflr->fofflags & FOF_RENDERSIDES)
+		result |= FF_OLD_RENDERSIDES;
+	if (fflr->fofflags & FOF_RENDERPLANES)
+		result |= FF_OLD_RENDERPLANES;
+	if (fflr->fofflags & FOF_SWIMMABLE)
+		result |= FF_OLD_SWIMMABLE;
+	if (fflr->fofflags & FOF_NOSHADE)
+		result |= FF_OLD_NOSHADE;
+	if (fflr->fofflags & FOF_CUTSOLIDS)
+		result |= FF_OLD_CUTSOLIDS;
+	if (fflr->fofflags & FOF_CUTEXTRA)
+		result |= FF_OLD_CUTEXTRA;
+	if (fflr->fofflags & FOF_CUTSPRITES)
+		result |= FF_OLD_CUTSPRITES;
+	if (fflr->fofflags & FOF_BOTHPLANES)
+		result |= FF_OLD_BOTHPLANES;
+	if (fflr->fofflags & FOF_EXTRA)
+		result |= FF_OLD_EXTRA;
+	if (fflr->fofflags & FOF_TRANSLUCENT)
+		result |= FF_OLD_TRANSLUCENT;
+	if (fflr->fofflags & FOF_FOG)
+		result |= FF_OLD_FOG;
+	if (fflr->fofflags & FOF_INVERTPLANES)
+		result |= FF_OLD_INVERTPLANES;
+	if (fflr->fofflags & FOF_ALLSIDES)
+		result |= FF_OLD_ALLSIDES;
+	if (fflr->fofflags & FOF_INVERTSIDES)
+		result |= FF_OLD_INVERTSIDES;
+	if (fflr->fofflags & FOF_DOUBLESHADOW)
+		result |= FF_OLD_DOUBLESHADOW;
+	if (fflr->fofflags & FOF_FLOATBOB)
+		result |= FF_OLD_FLOATBOB;
+	if (fflr->fofflags & FOF_NORETURN)
+		result |= FF_OLD_NORETURN;
+	if (fflr->fofflags & FOF_CRUMBLE)
+		result |= FF_OLD_CRUMBLE;
+	if (fflr->bustflags & FB_ONLYBOTTOM)
+		result |= FF_OLD_SHATTERBOTTOM;
+	if (fflr->fofflags & FOF_GOOWATER)
+		result |= FF_OLD_GOOWATER;
+	if (fflr->fofflags & FOF_MARIO)
+		result |= FF_OLD_MARIO;
+	if (fflr->fofflags & FOF_BUSTUP)
+		result |= FF_OLD_BUSTUP;
+	if (fflr->fofflags & FOF_QUICKSAND)
+		result |= FF_OLD_QUICKSAND;
+	if (fflr->fofflags & FOF_PLATFORM)
+		result |= FF_OLD_PLATFORM;
+	if (fflr->fofflags & FOF_REVERSEPLATFORM)
+		result |= FF_OLD_REVERSEPLATFORM;
+	if (fflr->fofflags & FOF_INTANGIBLEFLATS)
+		result |= FF_OLD_INTANGIBLEFLATS;
+	if (fflr->busttype == BT_TOUCH)
+		result |= FF_OLD_SHATTER;
+	if (fflr->busttype == BT_SPINBUST)
+		result |= FF_OLD_SPINBUST;
+	if (fflr->busttype == BT_STRONG)
+		result |= FF_OLD_STRONGBUST;
+	if (fflr->fofflags & FF_OLD_RIPPLE)
+		result |= FOF_RIPPLE;
+	if (fflr->fofflags & FF_OLD_COLORMAPONLY)
+		result |= FOF_COLORMAPONLY;
+	return result;
+}
+
 static int ffloor_get(lua_State *L)
 {
 	ffloor_t *ffloor = *((ffloor_t **)luaL_checkudata(L, 1, META_FFLOOR));
@@ -1895,8 +1971,11 @@ static int ffloor_get(lua_State *L)
 	case ffloor_sector:
 		LUA_PushUserdata(L, &sectors[ffloor->secnum], META_SECTOR);
 		return 1;
+	case ffloor_fofflags:
+		lua_pushinteger(L, ffloor->fofflags);
+		return 1;
 	case ffloor_flags:
-		lua_pushinteger(L, ffloor->flags);
+		lua_pushinteger(L, P_GetOldFOFFlags(ffloor));
 		return 1;
 	case ffloor_master:
 		LUA_PushUserdata(L, ffloor->master, META_LINE);
@@ -1936,6 +2015,88 @@ static int ffloor_get(lua_State *L)
 		return 1;
 	}
 	return 0;
+}
+
+static void P_SetOldFOFFlags(ffloor_t *fflr, oldffloortype_e oldflags)
+{
+	ffloortype_e originalflags = fflr->fofflags;
+	fflr->fofflags = 0;
+	if (oldflags & FF_OLD_EXISTS)
+		fflr->fofflags |= FOF_EXISTS;
+	if (oldflags & FF_OLD_BLOCKPLAYER)
+		fflr->fofflags |= FOF_BLOCKPLAYER;
+	if (oldflags & FF_OLD_BLOCKOTHERS)
+		fflr->fofflags |= FOF_BLOCKOTHERS;
+	if (oldflags & FF_OLD_RENDERSIDES)
+		fflr->fofflags |= FOF_RENDERSIDES;
+	if (oldflags & FF_OLD_RENDERPLANES)
+		fflr->fofflags |= FOF_RENDERPLANES;
+	if (oldflags & FF_OLD_SWIMMABLE)
+		fflr->fofflags |= FOF_SWIMMABLE;
+	if (oldflags & FF_OLD_NOSHADE)
+		fflr->fofflags |= FOF_NOSHADE;
+	if (oldflags & FF_OLD_CUTSOLIDS)
+		fflr->fofflags |= FOF_CUTSOLIDS;
+	if (oldflags & FF_OLD_CUTEXTRA)
+		fflr->fofflags |= FOF_CUTEXTRA;
+	if (oldflags & FF_OLD_CUTSPRITES)
+		fflr->fofflags |= FOF_CUTSPRITES;
+	if (oldflags & FF_OLD_BOTHPLANES)
+		fflr->fofflags |= FOF_BOTHPLANES;
+	if (oldflags & FF_OLD_EXTRA)
+		fflr->fofflags |= FOF_EXTRA;
+	if (oldflags & FF_OLD_TRANSLUCENT)
+		fflr->fofflags |= FOF_TRANSLUCENT;
+	if (oldflags & FF_OLD_FOG)
+		fflr->fofflags |= FOF_FOG;
+	if (oldflags & FF_OLD_INVERTPLANES)
+		fflr->fofflags |= FOF_INVERTPLANES;
+	if (oldflags & FF_OLD_ALLSIDES)
+		fflr->fofflags |= FOF_ALLSIDES;
+	if (oldflags & FF_OLD_INVERTSIDES)
+		fflr->fofflags |= FOF_INVERTSIDES;
+	if (oldflags & FF_OLD_DOUBLESHADOW)
+		fflr->fofflags |= FOF_DOUBLESHADOW;
+	if (oldflags & FF_OLD_FLOATBOB)
+		fflr->fofflags |= FOF_FLOATBOB;
+	if (oldflags & FF_OLD_NORETURN)
+		fflr->fofflags |= FOF_NORETURN;
+	if (oldflags & FF_OLD_CRUMBLE)
+		fflr->fofflags |= FOF_CRUMBLE;
+	if (oldflags & FF_OLD_GOOWATER)
+		fflr->fofflags |= FOF_GOOWATER;
+	if (oldflags & FF_OLD_MARIO)
+		fflr->fofflags |= FOF_MARIO;
+	if (oldflags & FF_OLD_BUSTUP)
+		fflr->fofflags |= FOF_BUSTUP;
+	if (oldflags & FF_OLD_QUICKSAND)
+		fflr->fofflags |= FOF_QUICKSAND;
+	if (oldflags & FF_OLD_PLATFORM)
+		fflr->fofflags |= FOF_PLATFORM;
+	if (oldflags & FF_OLD_REVERSEPLATFORM)
+		fflr->fofflags |= FOF_REVERSEPLATFORM;
+	if (oldflags & FF_OLD_RIPPLE)
+		fflr->fofflags |= FOF_RIPPLE;
+	if (oldflags & FF_OLD_COLORMAPONLY)
+		fflr->fofflags |= FOF_COLORMAPONLY;
+	if (originalflags & FOF_BOUNCY)
+		fflr->fofflags |= FOF_BOUNCY;
+	if (originalflags & FOF_SPLAT)
+		fflr->fofflags |= FOF_SPLAT;
+
+	if (oldflags & FF_OLD_SHATTER)
+		fflr->busttype = BT_TOUCH;
+	else if (oldflags & FF_OLD_SPINBUST)
+		fflr->busttype = BT_SPINBUST;
+	else if (oldflags & FF_OLD_STRONGBUST)
+		fflr->busttype = BT_STRONG;
+	else
+		fflr->busttype = BT_REGULAR;
+
+	if (oldflags & FF_OLD_SHATTERBOTTOM)
+		fflr->bustflags |= FB_ONLYBOTTOM;
+	else
+		fflr->bustflags &= ~FB_ONLYBOTTOM;
 }
 
 static int ffloor_set(lua_State *L)
@@ -2002,10 +2163,20 @@ static int ffloor_set(lua_State *L)
 	case ffloor_bottompic:
 		*ffloor->bottompic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
 		break;
+	case ffloor_fofflags: {
+		ffloortype_e oldflags = ffloor->fofflags; // store FOF's old flags
+		ffloor->fofflags = luaL_checkinteger(L, 3);
+		if (ffloor->fofflags != oldflags)
+			ffloor->target->moved = true; // reset target sector's lightlist
+		break;
+	}
 	case ffloor_flags: {
-		ffloortype_e oldflags = ffloor->flags; // store FOF's old flags
-		ffloor->flags = luaL_checkinteger(L, 3);
-		if (ffloor->flags != oldflags)
+		ffloortype_e oldflags = ffloor->fofflags; // store FOF's old flags
+		busttype_e oldbusttype = ffloor->busttype;
+		ffloorbustflags_e oldbustflags = ffloor->bustflags;
+		oldffloortype_e newflags = luaL_checkinteger(L, 3);
+		P_SetOldFOFFlags(ffloor, newflags);
+		if (ffloor->fofflags != oldflags || ffloor->busttype != oldbusttype || ffloor->bustflags != oldbustflags)
 			ffloor->target->moved = true; // reset target sector's lightlist
 		break;
 	}

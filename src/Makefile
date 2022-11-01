@@ -31,8 +31,8 @@
 # MINGW=1, MINGW64=1 - Windows (MinGW toolchain)
 # UNIX=1 - Generic Unix like system
 # FREEBSD=1
-# SDL=1 - Use SDL backend. SDL is the only backend though
-#         and thus, always enabled.
+# SDL=1 - Use SDL backend. SDL is the only implemented backend though.
+#         If disabled, a dummy backend will be used.
 #
 # A list of supported GCC versions can be found in
 # Makefile.d/detect.mk -- search 'gcc_versions'.

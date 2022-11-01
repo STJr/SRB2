@@ -2886,7 +2886,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 439: // Set texture
 			{
 				size_t linenum;
-				side_t *set = &sides[line->sidenum[0]], *this;
+				side_t *setfront = &sides[line->sidenum[0]];
+				side_t *setback = (line->args[3] && line->sidenum[1] != 0xffff) ? &sides[line->sidenum[1]] : setfront;
+				side_t *this;
 				boolean always = !(line->args[2]); // If args[2] is set: Only change mid texture if mid texture already exists on tagged lines, etc.
 
 				for (linenum = 0; linenum < numlines; linenum++)
@@ -2901,18 +2903,18 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (line->args[1] != TMSD_BACK)
 					{
 						this = &sides[lines[linenum].sidenum[0]];
-						if (always || this->toptexture) this->toptexture = set->toptexture;
-						if (always || this->midtexture) this->midtexture = set->midtexture;
-						if (always || this->bottomtexture) this->bottomtexture = set->bottomtexture;
+						if (always || this->toptexture) this->toptexture = setfront->toptexture;
+						if (always || this->midtexture) this->midtexture = setfront->midtexture;
+						if (always || this->bottomtexture) this->bottomtexture = setfront->bottomtexture;
 					}
 
 					// Back side
 					if (line->args[1] != TMSD_FRONT && lines[linenum].sidenum[1] != 0xffff)
 					{
 						this = &sides[lines[linenum].sidenum[1]];
-						if (always || this->toptexture) this->toptexture = set->toptexture;
-						if (always || this->midtexture) this->midtexture = set->midtexture;
-						if (always || this->bottomtexture) this->bottomtexture = set->bottomtexture;
+						if (always || this->toptexture) this->toptexture = setback->toptexture;
+						if (always || this->midtexture) this->midtexture = setback->midtexture;
+						if (always || this->bottomtexture) this->bottomtexture = setback->bottomtexture;
 					}
 				}
 			}
@@ -3033,16 +3035,16 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						{
 							foundrover = true;
 
-							oldflags = rover->flags;
+							oldflags = rover->fofflags;
 
 							// Abracadabra!
 							if (line->args[2])
-								rover->flags |= FF_EXISTS;
+								rover->fofflags |= FOF_EXISTS;
 							else
-								rover->flags &= ~FF_EXISTS;
+								rover->fofflags &= ~FOF_EXISTS;
 
 							// if flags changed, reset sector's light list
-							if (rover->flags != oldflags)
+							if (rover->fofflags != oldflags)
 							{
 								sec->moved = true;
 								P_RecalcPrecipInSector(sec);
@@ -3059,7 +3061,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
-		case 446: // Make block fall remotely (acts like FF_CRUMBLE)
+		case 446: // Make block fall remotely (acts like FOF_CRUMBLE)
 			{
 				INT16 sectag = (INT16)(line->args[0]);
 				INT16 foftag = (INT16)(line->args[1]);
@@ -3092,9 +3094,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							foundrover = true;
 
 							if (line->args[2] & TMFR_CHECKFLAG) // FOF flags determine respawn ability instead?
-								respawn = !(rover->flags & FF_NORETURN) ^ !!(line->args[2] & TMFR_NORETURN); // TMFR_NORETURN inverts
+								respawn = !(rover->fofflags & FOF_NORETURN) ^ !!(line->args[2] & TMFR_NORETURN); // TMFR_NORETURN inverts
 
-							EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, respawn);
+							EV_StartCrumble(rover->master->frontsector, rover, (rover->fofflags & FOF_FLOATBOB), player, rover->alpha, respawn);
 						}
 					}
 
@@ -3276,10 +3278,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						// initialize its alpha to 1
 						// for relative alpha calc
 						if (!(line->args[3] & TMST_DONTDOTRANSLUCENT) &&      // do translucent
-							(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-							!(rover->spawnflags & FF_RENDERSIDES) &&
-							!(rover->spawnflags & FF_RENDERPLANES) &&
-							!(rover->flags & FF_RENDERALL))
+							(rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+							!(rover->spawnflags & FOF_RENDERSIDES) &&
+							!(rover->spawnflags & FOF_RENDERPLANES) &&
+							!(rover->fofflags & FOF_RENDERALL))
 							rover->alpha = 1;
 
 						P_RemoveFakeFloorFader(rover);
@@ -3288,8 +3290,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							max(1, min(256, (line->args[3] & TMST_RELATIVE) ? rover->alpha + destvalue : destvalue)),
 							0,                                         // set alpha immediately
 							false, NULL,                               // tic-based logic
-							false,                                     // do not handle FF_EXISTS
-							!(line->args[3] & TMST_DONTDOTRANSLUCENT), // handle FF_TRANSLUCENT
+							false,                                     // do not handle FOF_EXISTS
+							!(line->args[3] & TMST_DONTDOTRANSLUCENT), // handle FOF_TRANSLUCENT
 							false,                                     // do not handle lighting
 							false,                                     // do not handle colormap
 							false,                                     // do not handle collision
@@ -3349,8 +3351,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 								speed,
 								(line->args[4] & TMFT_TICBASED),           // tic-based logic
 								(line->args[4] & TMFT_RELATIVE),           // Relative destvalue
-								!(line->args[4] & TMFT_DONTDOEXISTS),      // do not handle FF_EXISTS
-								!(line->args[4] & TMFT_DONTDOTRANSLUCENT), // do not handle FF_TRANSLUCENT
+								!(line->args[4] & TMFT_DONTDOEXISTS),      // do not handle FOF_EXISTS
+								!(line->args[4] & TMFT_DONTDOTRANSLUCENT), // do not handle FOF_TRANSLUCENT
 								!(line->args[4] & TMFT_DONTDOLIGHTING),    // do not handle lighting
 								!(line->args[4] & TMFT_DONTDOCOLORMAP),    // do not handle colormap
 								!(line->args[4] & TMFT_IGNORECOLLISION),   // do not handle collision
@@ -3362,10 +3364,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							// initialize its alpha to 1
 							// for relative alpha calc
 							if (!(line->args[4] & TMFT_DONTDOTRANSLUCENT) &&      // do translucent
-								(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-								!(rover->spawnflags & FF_RENDERSIDES) &&
-								!(rover->spawnflags & FF_RENDERPLANES) &&
-								!(rover->flags & FF_RENDERALL))
+								(rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+								!(rover->spawnflags & FOF_RENDERSIDES) &&
+								!(rover->spawnflags & FOF_RENDERPLANES) &&
+								!(rover->fofflags & FOF_RENDERALL))
 								rover->alpha = 1;
 
 							P_RemoveFakeFloorFader(rover);
@@ -3374,8 +3376,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 								max(1, min(256, (line->args[4] & TMFT_RELATIVE) ? rover->alpha + destvalue : destvalue)),
 								0,                                         // set alpha immediately
 								false, NULL,                               // tic-based logic
-								!(line->args[4] & TMFT_DONTDOEXISTS),      // do not handle FF_EXISTS
-								!(line->args[4] & TMFT_DONTDOTRANSLUCENT), // do not handle FF_TRANSLUCENT
+								!(line->args[4] & TMFT_DONTDOEXISTS),      // do not handle FOF_EXISTS
+								!(line->args[4] & TMFT_DONTDOTRANSLUCENT), // do not handle FOF_TRANSLUCENT
 								!(line->args[4] & TMFT_DONTDOLIGHTING),    // do not handle lighting
 								!(line->args[4] & TMFT_DONTDOCOLORMAP),    // do not handle colormap
 								!(line->args[4] & TMFT_IGNORECOLLISION),   // do not handle collision
@@ -3953,7 +3955,7 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 
 			for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
 			{
-				if (!(rover->flags & FF_EXISTS))
+				if (!(rover->fofflags & FOF_EXISTS))
 					continue;
 
 				if (!(rover->master->frontsector->specialflags & specialflag))
@@ -3987,8 +3989,8 @@ boolean P_IsMobjTouching3DFloor(mobj_t *mo, ffloor_t *ffloor, sector_t *sec)
 	fixed_t topheight = P_GetSpecialTopZ(mo, sectors + ffloor->secnum, sec);
 	fixed_t bottomheight = P_GetSpecialBottomZ(mo, sectors + ffloor->secnum, sec);
 
-	if (((ffloor->flags & FF_BLOCKPLAYER) && mo->player)
-		|| ((ffloor->flags & FF_BLOCKOTHERS) && !mo->player))
+	if (((ffloor->fofflags & FOF_BLOCKPLAYER) && mo->player)
+		|| ((ffloor->fofflags & FOF_BLOCKOTHERS) && !mo->player))
 	{
 		// Solid 3D floor: Mobj must touch the top or bottom
 		return P_IsMobjTouchingPlane(mo, ffloor->master->frontsector, topheight, bottomheight);
@@ -4026,7 +4028,7 @@ static sector_t *P_MobjTouching3DFloorSpecial(mobj_t *mo, sector_t *sector, INT3
 		if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
 			continue;
 
-		if (!(rover->flags & FF_EXISTS))
+		if (!(rover->fofflags & FOF_EXISTS))
 			continue;
 
 		if (!P_IsMobjTouching3DFloor(mo, rover, sector))
@@ -4050,7 +4052,7 @@ static sector_t *P_MobjTouching3DFloorSpecialFlag(mobj_t *mo, sector_t *sector, 
 		if (!(rover->master->frontsector->specialflags & flag))
 			continue;
 
-		if (!(rover->flags & FF_EXISTS))
+		if (!(rover->fofflags & FOF_EXISTS))
 			continue;
 
 		if (!P_IsMobjTouching3DFloor(mo, rover, sector))
@@ -4238,7 +4240,7 @@ static sector_t *P_CheckPlayer3DFloorTrigger(player_t *player, sector_t *sector,
 		if (rover->master->frontsector->triggerer == TO_MOBJ)
 			continue;
 
-		if (!(rover->flags & FF_EXISTS))
+		if (!(rover->fofflags & FOF_EXISTS))
 			continue;
 
 		if (!Tag_Find(&sourceline->tags, rover->master->frontsector->triggertag))
@@ -4965,9 +4967,13 @@ static void P_EvaluateSpecialFlags(player_t *player, sector_t *sector, sector_t 
 		if (player->mo->momz > mobjinfo[MT_FAN].mass)
 			player->mo->momz = mobjinfo[MT_FAN].mass;
 
-		P_ResetPlayer(player);
-		if (player->panim != PA_FALL)
+		if (!player->powers[pw_carry])
+		{
+			P_ResetPlayer(player);
 			P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+			P_SetTarget(&player->mo->tracer, player->mo);
+			player->powers[pw_carry] = CR_FAN;
+		}
 	}
 	if (sector->specialflags & SSF_SUPERTRANSFORM)
 	{
@@ -5152,7 +5158,7 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 		if (!P_SectorHasSpecial(rover->master->frontsector))
 			continue;
 
-		if (!(rover->flags & FF_EXISTS))
+		if (!(rover->fofflags & FOF_EXISTS))
 			continue;
 
 		if (!P_IsMobjTouching3DFloor(player->mo, rover, sector))
@@ -5259,7 +5265,7 @@ static void P_CheckMobj3DFloorTrigger(mobj_t *mo, sector_t *sec)
 		if (rover->master->frontsector->triggerer != TO_MOBJ)
 			continue;
 
-		if (!(rover->flags & FF_EXISTS))
+		if (!(rover->fofflags & FOF_EXISTS))
 			continue;
 
 		if (!P_IsMobjTouching3DFloor(mo, rover, sec))
@@ -5525,7 +5531,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 		sec2->attachedsolid = Z_Malloc(sizeof (*sec2->attachedsolid) * sec2->maxattached, PU_STATIC, NULL);
 		sec2->attached[0] = sec - sectors;
 		sec2->numattached = 1;
-		sec2->attachedsolid[0] = (flags & FF_SOLID);
+		sec2->attachedsolid[0] = (flags & FOF_SOLID);
 	}
 	else
 	{
@@ -5540,7 +5546,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 			sec2->attachedsolid = Z_Realloc(sec2->attachedsolid, sizeof (*sec2->attachedsolid) * sec2->maxattached, PU_STATIC, NULL);
 		}
 		sec2->attached[sec2->numattached] = sec - sectors;
-		sec2->attachedsolid[sec2->numattached] = (flags & FF_SOLID);
+		sec2->attachedsolid[sec2->numattached] = (flags & FOF_SOLID);
 		sec2->numattached++;
 	}
 
@@ -5570,7 +5576,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	if (sec2->hasslope)
 		sec->hasslope = true;
 
-	fflr->spawnflags = fflr->flags = flags;
+	fflr->spawnflags = fflr->fofflags = flags;
 	fflr->master = master;
 	fflr->norender = INFTICS;
 	fflr->fadingdata = NULL;
@@ -5618,10 +5624,10 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	}
 
 	fflr->alpha = max(0, min(0xff, alpha));
-	if (fflr->alpha < 0xff || flags & FF_SPLAT)
+	if (fflr->alpha < 0xff || flags & FOF_SPLAT)
 	{
-		fflr->flags |= FF_TRANSLUCENT;
-		fflr->spawnflags = fflr->flags;
+		fflr->fofflags |= FOF_TRANSLUCENT;
+		fflr->spawnflags = fflr->fofflags;
 	}
 	fflr->spawnalpha = fflr->alpha; // save for netgames
 
@@ -5645,23 +5651,23 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 			break;
 	}
 
-	if (flags & FF_QUICKSAND)
+	if (flags & FOF_QUICKSAND)
 		CheckForQuicksand = true;
 
-	if (flags & FF_BUSTUP)
+	if (flags & FOF_BUSTUP)
 		CheckForBustableBlocks = true;
 
-	if ((flags & FF_MARIO))
+	if ((flags & FOF_MARIO))
 	{
-		if (!(flags & FF_GOOWATER)) // Don't change the textures of a brick block, just a question block
+		if (!(flags & FOF_GOOWATER)) // Don't change the textures of a brick block, just a question block
 			P_AddBlockThinker(sec2, master);
 		CheckForMarioBlocks = true;
 	}
 
-	if ((flags & FF_CRUMBLE))
+	if ((flags & FOF_CRUMBLE))
 		sec2->crumblestate = CRUMBLE_WAIT;
 
-	if ((flags & FF_FLOATBOB))
+	if ((flags & FOF_FLOATBOB))
 	{
 		P_AddFloatThinker(sec2, master->args[0], master);
 		CheckForFloatBob = true;
@@ -5944,14 +5950,14 @@ void T_LaserFlash(laserthink_t *flash)
 			if (fflr->master != flash->sourceline)
 				continue;
 
-			if (!(fflr->flags & FF_EXISTS))
+			if (!(fflr->fofflags & FOF_EXISTS))
 				break;
 
 			if (leveltime & 2)
-				//fflr->flags |= FF_RENDERALL;
+				//fflr->flags |= FOF_RENDERALL;
 				fflr->alpha = 0xB0;
 			else
-				//fflr->flags &= ~FF_RENDERALL;
+				//fflr->flags &= ~FOF_RENDERALL;
 				fflr->alpha = 0x90;
 
 			top    = P_GetFFloorTopZAt   (fflr, sector->soundorg.x, sector->soundorg.y);
@@ -6089,8 +6095,8 @@ static void P_MakeFOFBouncy(line_t *paramline, line_t *masterline)
 			if (rover->master != masterline)
 				continue;
 
-			rover->flags |= FF_BOUNCY;
-			rover->spawnflags |= FF_BOUNCY;
+			rover->fofflags |= FOF_BOUNCY;
+			rover->spawnflags |= FOF_BOUNCY;
 			rover->bouncestrength = (paramline->args[1]<< FRACBITS)/100;
 			CheckForBouncySector = true;
 			break;
@@ -6467,117 +6473,117 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 100: // FOF (solid)
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
+				ffloorflags = FOF_EXISTS|FOF_SOLID|FOF_RENDERALL;
 
 				//Appearance settings
 				if (lines[i].args[3] & TMFA_NOPLANES)
-					ffloorflags &= ~FF_RENDERPLANES;
+					ffloorflags &= ~FOF_RENDERPLANES;
 				if (lines[i].args[3] & TMFA_NOSIDES)
-					ffloorflags &= ~FF_RENDERSIDES;
+					ffloorflags &= ~FOF_RENDERSIDES;
 				if (lines[i].args[3] & TMFA_INSIDES)
 				{
-					if (ffloorflags & FF_RENDERPLANES)
-						ffloorflags |= FF_BOTHPLANES;
-					if (ffloorflags & FF_RENDERSIDES)
-						ffloorflags |= FF_ALLSIDES;
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_BOTHPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_ALLSIDES;
 				}
 				if (lines[i].args[3] & TMFA_ONLYINSIDES)
 				{
-					if (ffloorflags & FF_RENDERPLANES)
-						ffloorflags |= FF_INVERTPLANES;
-					if (ffloorflags & FF_RENDERSIDES)
-						ffloorflags |= FF_INVERTSIDES;
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_INVERTPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_INVERTSIDES;
 				}
 				if (lines[i].args[3] & TMFA_NOSHADE)
-					ffloorflags |= FF_NOSHADE;
+					ffloorflags |= FOF_NOSHADE;
 				if (lines[i].args[3] & TMFA_SPLAT)
-					ffloorflags |= FF_SPLAT;
+					ffloorflags |= FOF_SPLAT;
 
 				//Tangibility settings
 				if (lines[i].args[4] & TMFT_INTANGIBLETOP)
-					ffloorflags |= FF_REVERSEPLATFORM;
+					ffloorflags |= FOF_REVERSEPLATFORM;
 				if (lines[i].args[4] & TMFT_INTANGIBLEBOTTOM)
-					ffloorflags |= FF_PLATFORM;
+					ffloorflags |= FOF_PLATFORM;
 				if (lines[i].args[4] & TMFT_DONTBLOCKPLAYER)
-					ffloorflags &= ~FF_BLOCKPLAYER;
+					ffloorflags &= ~FOF_BLOCKPLAYER;
 				if (lines[i].args[4] & TMFT_DONTBLOCKOTHERS)
-					ffloorflags &= ~FF_BLOCKOTHERS;
+					ffloorflags &= ~FOF_BLOCKOTHERS;
 
 				//Cutting options
-				if (ffloorflags & FF_RENDERALL)
+				if (ffloorflags & FOF_RENDERALL)
 				{
 					//If translucent or player can enter it, cut inner walls
 					if ((lines[i].args[1] < 255) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
-						ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
+						ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
 					else
-						ffloorflags |= FF_CUTLEVEL;
+						ffloorflags |= FOF_CUTLEVEL;
 				}
 
 				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 				break;
 
 			case 120: // FOF (water)
-				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
+				ffloorflags = FOF_EXISTS|FOF_RENDERPLANES|FOF_SWIMMABLE|FOF_BOTHPLANES|FOF_CUTEXTRA|FOF_EXTRA|FOF_CUTSPRITES;
 				if (!(lines[i].args[3] & TMFW_NOSIDES))
-					ffloorflags |= FF_RENDERSIDES|FF_ALLSIDES;
+					ffloorflags |= FOF_RENDERSIDES|FOF_ALLSIDES;
 				if (lines[i].args[3] & TMFW_DOUBLESHADOW)
-					ffloorflags |= FF_DOUBLESHADOW;
+					ffloorflags |= FOF_DOUBLESHADOW;
 				if (lines[i].args[3] & TMFW_COLORMAPONLY)
-					ffloorflags |= FF_COLORMAPONLY;
+					ffloorflags |= FOF_COLORMAPONLY;
 				if (!(lines[i].args[3] & TMFW_NORIPPLE))
-					ffloorflags |= FF_RIPPLE;
+					ffloorflags |= FOF_RIPPLE;
 				if (lines[i].args[3] & TMFW_GOOWATER)
-					ffloorflags |= FF_GOOWATER;
+					ffloorflags |= FOF_GOOWATER;
 				if (lines[i].args[3] & TMFW_SPLAT)
-					ffloorflags |= FF_SPLAT;
+					ffloorflags |= FOF_SPLAT;
 				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 				break;
 
 			case 150: // FOF (Air bobbing)
-				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_SOLID|FF_RENDERALL, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FOF_EXISTS|FOF_SOLID|FOF_RENDERALL, secthinkers);
 				P_AddAirbob(lines[i].frontsector, lines[i].args[0], lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
 				break;
 
 			case 160: // FOF (Water bobbing)
-				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FOF_EXISTS|FOF_SOLID|FOF_RENDERALL|FOF_FLOATBOB, secthinkers);
 				break;
 
 			case 170: // FOF (Crumbling)
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CRUMBLE;
+				ffloorflags = FOF_EXISTS|FOF_SOLID|FOF_RENDERALL|FOF_CRUMBLE;
 
 				//Tangibility settings
 				if (lines[i].args[3] & TMFT_INTANGIBLETOP)
-					ffloorflags |= FF_REVERSEPLATFORM;
+					ffloorflags |= FOF_REVERSEPLATFORM;
 				if (lines[i].args[3] & TMFT_INTANGIBLEBOTTOM)
-					ffloorflags |= FF_PLATFORM;
+					ffloorflags |= FOF_PLATFORM;
 				if (lines[i].args[3] & TMFT_DONTBLOCKPLAYER)
-					ffloorflags &= ~FF_BLOCKPLAYER;
+					ffloorflags &= ~FOF_BLOCKPLAYER;
 				if (lines[i].args[3] & TMFT_DONTBLOCKOTHERS)
-					ffloorflags &= ~FF_BLOCKOTHERS;
+					ffloorflags &= ~FOF_BLOCKOTHERS;
 
 				//Flags
 				if (lines[i].args[4] & TMFC_NOSHADE)
-					ffloorflags |= FF_NOSHADE;
+					ffloorflags |= FOF_NOSHADE;
 				if (lines[i].args[4] & TMFC_NORETURN)
-					ffloorflags |= FF_NORETURN;
+					ffloorflags |= FOF_NORETURN;
 				if (lines[i].args[4] & TMFC_FLOATBOB)
-					ffloorflags |= FF_FLOATBOB;
+					ffloorflags |= FOF_FLOATBOB;
 				if (lines[i].args[4] & TMFC_SPLAT)
-					ffloorflags |= FF_SPLAT;
+					ffloorflags |= FOF_SPLAT;
 
 				//If translucent or player can enter it, cut inner walls
 				if (lines[i].args[1] < 0xff || (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE))
-					ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
+					ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
 				else
-					ffloorflags |= FF_CUTLEVEL;
+					ffloorflags |= FOF_CUTLEVEL;
 
 				//If player can enter it, render insides
 				if (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE)
 				{
-					if (ffloorflags & FF_RENDERPLANES)
-						ffloorflags |= FF_BOTHPLANES;
-					if (ffloorflags & FF_RENDERSIDES)
-						ffloorflags |= FF_ALLSIDES;
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_BOTHPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_ALLSIDES;
 				}
 
 				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
@@ -6590,50 +6596,50 @@ void P_SpawnSpecials(boolean fromnetsave)
 				fixed_t ceilingtop = P_FindHighestCeilingSurrounding(lines[i].frontsector);
 				fixed_t ceilingbottom = P_FindLowestCeilingSurrounding(lines[i].frontsector);
 
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL;
+				ffloorflags = FOF_EXISTS|FOF_SOLID|FOF_RENDERALL;
 
 				//Appearance settings
 				if (lines[i].args[3] & TMFA_NOPLANES)
-					ffloorflags &= ~FF_RENDERPLANES;
+					ffloorflags &= ~FOF_RENDERPLANES;
 				if (lines[i].args[3] & TMFA_NOSIDES)
-					ffloorflags &= ~FF_RENDERSIDES;
+					ffloorflags &= ~FOF_RENDERSIDES;
 				if (lines[i].args[3] & TMFA_INSIDES)
 				{
-					if (ffloorflags & FF_RENDERPLANES)
-						ffloorflags |= FF_BOTHPLANES;
-					if (ffloorflags & FF_RENDERSIDES)
-						ffloorflags |= FF_ALLSIDES;
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_BOTHPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_ALLSIDES;
 				}
 				if (lines[i].args[3] & TMFA_ONLYINSIDES)
 				{
-					if (ffloorflags & FF_RENDERPLANES)
-						ffloorflags |= FF_INVERTPLANES;
-					if (ffloorflags & FF_RENDERSIDES)
-						ffloorflags |= FF_INVERTSIDES;
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_INVERTPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_INVERTSIDES;
 				}
 				if (lines[i].args[3] & TMFA_NOSHADE)
-					ffloorflags |= FF_NOSHADE;
+					ffloorflags |= FOF_NOSHADE;
 				if (lines[i].args[3] & TMFA_SPLAT)
-					ffloorflags |= FF_SPLAT;
+					ffloorflags |= FOF_SPLAT;
 
 				//Tangibility settings
 				if (lines[i].args[4] & TMFT_INTANGIBLETOP)
-					ffloorflags |= FF_REVERSEPLATFORM;
+					ffloorflags |= FOF_REVERSEPLATFORM;
 				if (lines[i].args[4] & TMFT_INTANGIBLEBOTTOM)
-					ffloorflags |= FF_PLATFORM;
+					ffloorflags |= FOF_PLATFORM;
 				if (lines[i].args[4] & TMFT_DONTBLOCKPLAYER)
-					ffloorflags &= ~FF_BLOCKPLAYER;
+					ffloorflags &= ~FOF_BLOCKPLAYER;
 				if (lines[i].args[4] & TMFT_DONTBLOCKOTHERS)
-					ffloorflags &= ~FF_BLOCKOTHERS;
+					ffloorflags &= ~FOF_BLOCKOTHERS;
 
 				//Cutting options
-				if (ffloorflags & FF_RENDERALL)
+				if (ffloorflags & FOF_RENDERALL)
 				{
 					//If translucent or player can enter it, cut inner walls
 					if ((lines[i].args[1] < 255) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
-						ffloorflags |= FF_CUTEXTRA|FF_EXTRA;
+						ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
 					else
-						ffloorflags |= FF_CUTLEVEL;
+						ffloorflags |= FOF_CUTLEVEL;
 				}
 
 				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
@@ -6641,14 +6647,14 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 			}
 			case 200: // Light block
-				ffloorflags = FF_EXISTS|FF_CUTSPRITES;
+				ffloorflags = FOF_EXISTS|FOF_CUTSPRITES;
 				if (!lines[i].args[1])
-					ffloorflags |= FF_DOUBLESHADOW;
+					ffloorflags |= FOF_DOUBLESHADOW;
 				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				break;
 
 			case 202: // Fog
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_FOG|FF_INVERTPLANES|FF_INVERTSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES;
+				ffloorflags = FOF_EXISTS|FOF_RENDERALL|FOF_FOG|FOF_INVERTPLANES|FOF_INVERTSIDES|FOF_CUTEXTRA|FOF_EXTRA|FOF_DOUBLESHADOW|FOF_CUTSPRITES;
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				// SoM: Because it's fog, check for an extra colormap and set the fog flag...
 				if (sectors[sec].extra_colormap)
@@ -6657,45 +6663,45 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 220: //Intangible
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
+				ffloorflags = FOF_EXISTS|FOF_RENDERALL|FOF_CUTEXTRA|FOF_EXTRA|FOF_CUTSPRITES;
 
 				//Appearance settings
 				if (lines[i].args[3] & TMFA_NOPLANES)
-					ffloorflags &= ~FF_RENDERPLANES;
+					ffloorflags &= ~FOF_RENDERPLANES;
 				if (lines[i].args[3] & TMFA_NOSIDES)
-					ffloorflags &= ~FF_RENDERSIDES;
+					ffloorflags &= ~FOF_RENDERSIDES;
 				if (!(lines[i].args[3] & TMFA_INSIDES))
 				{
-					if (ffloorflags & FF_RENDERPLANES)
-						ffloorflags |= FF_BOTHPLANES;
-					if (ffloorflags & FF_RENDERSIDES)
-						ffloorflags |= FF_ALLSIDES;
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_BOTHPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_ALLSIDES;
 				}
 				if (lines[i].args[3] & TMFA_ONLYINSIDES)
 				{
-					if (ffloorflags & FF_RENDERPLANES)
-						ffloorflags |= FF_INVERTPLANES;
-					if (ffloorflags & FF_RENDERSIDES)
-						ffloorflags |= FF_INVERTSIDES;
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_INVERTPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_INVERTSIDES;
 				}
 				if (lines[i].args[3] & TMFA_NOSHADE)
-					ffloorflags |= FF_NOSHADE;
+					ffloorflags |= FOF_NOSHADE;
 				if (lines[i].args[3] & TMFA_SPLAT)
-					ffloorflags |= FF_SPLAT;
+					ffloorflags |= FOF_SPLAT;
 
 				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 				break;
 
 			case 223: // FOF (intangible, invisible) - for combining specials in a sector
-				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_NOSHADE, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FOF_EXISTS|FOF_NOSHADE, secthinkers);
 				break;
 
 			case 250: // Mario Block
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_MARIO;
+				ffloorflags = FOF_EXISTS|FOF_SOLID|FOF_RENDERALL|FOF_CUTLEVEL|FOF_MARIO;
 				if (lines[i].args[1] & TMFM_BRICK)
-					ffloorflags |= FF_GOOWATER;
+					ffloorflags |= FOF_GOOWATER;
 				if (lines[i].args[1] & TMFM_INVISIBLE)
-					ffloorflags &= ~(FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
+					ffloorflags &= ~(FOF_SOLID|FOF_RENDERALL|FOF_CUTLEVEL);
 
 				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				break;
@@ -6704,7 +6710,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			{
 				UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
 				P_AddThwompThinker(lines[i].frontsector, &lines[i], lines[i].args[1] << (FRACBITS - 3), lines[i].args[2] << (FRACBITS - 3), sound);
-				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FOF_EXISTS|FOF_SOLID|FOF_RENDERALL|FOF_CUTLEVEL, secthinkers);
 				break;
 			}
 
@@ -6713,7 +6719,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 				UINT8 busttype = BT_REGULAR;
 				ffloorbustflags_e bustflags = 0;
 
-				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP;
+				ffloorflags = FOF_EXISTS|FOF_BLOCKOTHERS|FOF_RENDERALL|FOF_BUSTUP;
 
 				//Bustable type
 				switch (lines[i].args[3])
@@ -6740,10 +6746,10 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[4] & TMFB_ONLYBOTTOM)
 					bustflags |= FB_ONLYBOTTOM;
 				if (lines[i].args[4] & TMFB_SPLAT)
-					ffloorflags |= FF_SPLAT;
+					ffloorflags |= FOF_SPLAT;
 
 				if (busttype != BT_TOUCH || bustflags & FB_ONLYBOTTOM)
-					ffloorflags |= FF_BLOCKPLAYER;
+					ffloorflags |= FOF_BLOCKPLAYER;
 
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
@@ -6757,9 +6763,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 			}
 			case 257: // Quicksand
-				ffloorflags = FF_EXISTS|FF_QUICKSAND|FF_RENDERALL|FF_ALLSIDES|FF_CUTSPRITES;
+				ffloorflags = FOF_EXISTS|FOF_QUICKSAND|FOF_RENDERALL|FOF_ALLSIDES|FOF_CUTSPRITES;
 				if (!(lines[i].args[1]))
-					ffloorflags |= FF_RIPPLE;
+					ffloorflags |= FOF_RIPPLE;
 
 				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
@@ -6772,10 +6778,10 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 
 			case 258: // Laser block
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA|FF_TRANSLUCENT;
+				ffloorflags = FOF_EXISTS|FOF_RENDERALL|FOF_NOSHADE|FOF_EXTRA|FOF_CUTEXTRA|FOF_TRANSLUCENT;
 				P_AddLaserThinker(lines[i].args[0], lines + i, !!(lines[i].args[3] & TMFL_NOBOSSES));
 				if (lines[i].args[3] & TMFL_SPLAT)
-					ffloorflags |= FF_SPLAT;
+					ffloorflags |= FOF_SPLAT;
 				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 				break;
 
@@ -6787,12 +6793,12 @@ void P_SpawnSpecials(boolean fromnetsave)
 						continue;
 					if (!udmf) // Ugly backwards compatibility stuff
 					{
-						if (lines[i].args[3] & FF_QUICKSAND)
+						if (lines[i].args[3] & FOF_QUICKSAND)
 						{
 							fflr->sinkspeed = abs(lines[i].dx) >> 1;
 							fflr->friction = abs(lines[i].dy) >> 6;
 						}
-						if (lines[i].args[3] & FF_BUSTUP)
+						if (lines[i].args[3] & FOF_BUSTUP)
 						{
 							switch (lines[i].args[4] % TMFB_ONLYBOTTOM)
 							{
@@ -6835,31 +6841,31 @@ void P_SpawnSpecials(boolean fromnetsave)
 					if (dtype == 0)
 						dtype = 1;
 
-					ffloorflags = FF_EXISTS;
+					ffloorflags = FOF_EXISTS;
 
-					if (dflags2 & 1) ffloorflags |= FF_NOSHADE; // Disable light effects (Means no shadowcast)
-					if (dflags2 & 2) ffloorflags |= FF_DOUBLESHADOW; // Restrict light inside (Means doubleshadow)
+					if (dflags2 & 1) ffloorflags |= FOF_NOSHADE; // Disable light effects (Means no shadowcast)
+					if (dflags2 & 2) ffloorflags |= FOF_DOUBLESHADOW; // Restrict light inside (Means doubleshadow)
 					if (dflags2 & 4) isfog = true; // Fog effect (Explicitly render like a fog block)
 
-					if (dflags1 & 4) ffloorflags |= FF_BOTHPLANES|FF_ALLSIDES; // Render-inside
-					if (dflags1 & 16) ffloorflags |= FF_INVERTSIDES|FF_INVERTPLANES; // Invert visibility rules
+					if (dflags1 & 4) ffloorflags |= FOF_BOTHPLANES|FOF_ALLSIDES; // Render-inside
+					if (dflags1 & 16) ffloorflags |= FOF_INVERTSIDES|FOF_INVERTPLANES; // Invert visibility rules
 
 					// Fog block
 					if (isfog)
-						ffloorflags |= FF_RENDERALL|FF_CUTEXTRA|FF_CUTSPRITES|FF_BOTHPLANES|FF_EXTRA|FF_FOG|FF_INVERTPLANES|FF_ALLSIDES|FF_INVERTSIDES;
+						ffloorflags |= FOF_RENDERALL|FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_BOTHPLANES|FOF_EXTRA|FOF_FOG|FOF_INVERTPLANES|FOF_ALLSIDES|FOF_INVERTSIDES;
 					else
 					{
-						ffloorflags |= FF_RENDERALL;
+						ffloorflags |= FOF_RENDERALL;
 
 						// Solid
 						if (dtype == 1)
-							ffloorflags |= FF_SOLID|FF_CUTLEVEL;
+							ffloorflags |= FOF_SOLID|FOF_CUTLEVEL;
 						// Water
 						else if (dtype == 2)
-							ffloorflags |= FF_SWIMMABLE|FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA|FF_RIPPLE;
+							ffloorflags |= FOF_SWIMMABLE|FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_EXTRA|FOF_RIPPLE;
 						// Intangible
 						else if (dtype == 3)
-							ffloorflags |= FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA;
+							ffloorflags |= FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_EXTRA;
 					}
 
 					// Non-opaque
@@ -6869,19 +6875,19 @@ void P_SpawnSpecials(boolean fromnetsave)
 						if (dopacity == 0)
 						{
 							// True invisible
-							if (ffloorflags & FF_NOSHADE)
-								ffloorflags &= ~(FF_RENDERALL|FF_CUTEXTRA|FF_CUTSPRITES|FF_EXTRA|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTLEVEL);
+							if (ffloorflags & FOF_NOSHADE)
+								ffloorflags &= ~(FOF_RENDERALL|FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_EXTRA|FOF_BOTHPLANES|FOF_ALLSIDES|FOF_CUTLEVEL);
 							// Shadow block
 							else
 							{
-								ffloorflags |= FF_CUTSPRITES;
-								ffloorflags &= ~(FF_RENDERALL|FF_CUTEXTRA|FF_EXTRA|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTLEVEL);
+								ffloorflags |= FOF_CUTSPRITES;
+								ffloorflags &= ~(FOF_RENDERALL|FOF_CUTEXTRA|FOF_EXTRA|FOF_BOTHPLANES|FOF_ALLSIDES|FOF_CUTLEVEL);
 							}
 						}
 						else
 						{
-							ffloorflags |= FF_TRANSLUCENT|FF_CUTEXTRA|FF_EXTRA;
-							ffloorflags &= ~FF_CUTLEVEL;
+							ffloorflags |= FOF_TRANSLUCENT|FOF_CUTEXTRA|FOF_EXTRA;
+							ffloorflags &= ~FOF_CUTLEVEL;
 						}
 					}
 
@@ -7073,8 +7079,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 							if (rover->master != lines + l)
 								continue;
 
-							rover->flags |= FF_BUSTUP;
-							rover->spawnflags |= FF_BUSTUP;
+							rover->fofflags |= FOF_BUSTUP;
+							rover->spawnflags |= FOF_BUSTUP;
 							rover->bustflags = bustflags;
 							rover->busttype = busttype;
 							rover->busttag = lines[i].args[3];
@@ -7104,8 +7110,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 							if (rover->master != lines + l)
 								continue;
 
-							rover->flags |= FF_QUICKSAND;
-							rover->spawnflags |= FF_QUICKSAND;
+							rover->fofflags |= FOF_QUICKSAND;
+							rover->spawnflags |= FOF_QUICKSAND;
 							rover->sinkspeed = abs(lines[i].args[1]) << (FRACBITS - 1);
 							rover->friction = abs(lines[i].args[2]) << (FRACBITS - 6);
 							CheckForQuicksand = true;
@@ -7348,7 +7354,7 @@ void T_Scroll(scroll_t *s)
 					if (!rover) // This should be impossible, but don't complain if it is the case somehow
 						continue;
 
-					if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
+					if (!(rover->fofflags & FOF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
 						continue;
 
 					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
@@ -7423,7 +7429,7 @@ void T_Scroll(scroll_t *s)
 					if (!rover) // This should be impossible, but don't complain if it is the case somehow
 						continue;
 
-					if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
+					if (!(rover->fofflags & FOF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
 						continue;
 
 					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
@@ -7470,6 +7476,17 @@ void T_Scroll(scroll_t *s)
 	} // end of switch
 }
 
+static boolean IsSector3DBlock(sector_t* sec)
+{
+	size_t i;
+	for (i = 0; i < sec->linecount; i++)
+	{
+		if (sec->lines[i]->special >= 100 && sec->lines[i]->special < 300)
+			return true;
+	}
+	return false;
+}
+
 /** Adds a generalized scroller to the thinker list.
   *
   * \param type     The enumerated type of scrolling.
@@ -7483,6 +7500,7 @@ void T_Scroll(scroll_t *s)
   */
 static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT32 affectee, INT32 accel, INT32 exclusive)
 {
+	boolean is3dblock = IsSector3DBlock(&sectors[affectee]);
 	scroll_t *s = Z_Calloc(sizeof *s, PU_LEVSPEC, NULL);
 	s->thinker.function.acp1 = (actionf_p1)T_Scroll;
 	s->type = type;
@@ -7496,7 +7514,16 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 		s->last_height = sectors[control].floorheight + sectors[control].ceilingheight;
 	s->affectee = affectee;
 	if (type == sc_carry || type == sc_carry_ceiling)
+	{
 		sectors[affectee].specialflags |= SSF_CONVEYOR;
+		if (is3dblock)
+		{
+			if (type == sc_carry)
+				sectors[affectee].flags |= MSF_FLIPSPECIAL_CEILING;
+			else
+				sectors[affectee].flags |= MSF_FLIPSPECIAL_FLOOR;
+		}
+	}
 	P_AddThinker(THINK_MAIN, &s->thinker);
 }
 
@@ -7552,11 +7579,11 @@ static void P_SpawnScrollers(void)
 				fixed_t dy = FixedMul(FixedDiv(l->dy, length), speed) >> SCROLL_SHIFT;
 
 				if (l->args[0] == 0)
-					P_SpawnPlaneScroller(l, dx, dy, control, (INT32)(l->frontsector - sectors), accel, l->args[4] & TMST_NONEXCLUSIVE);
+					P_SpawnPlaneScroller(l, dx, dy, control, (INT32)(l->frontsector - sectors), accel, !(l->args[4] & TMST_NONEXCLUSIVE));
 				else
 				{
 					TAG_ITER_SECTORS(l->args[0], s)
-						P_SpawnPlaneScroller(l, dx, dy, control, s, accel, l->args[4] & TMST_NONEXCLUSIVE);
+						P_SpawnPlaneScroller(l, dx, dy, control, s, accel, !(l->args[4] & TMST_NONEXCLUSIVE));
 				}
 				break;
 			}
@@ -7640,10 +7667,10 @@ void T_Disappear(disappear_t *d)
 					continue;
 
 				if (d->exists)
-					rover->flags &= ~FF_EXISTS;
+					rover->fofflags &= ~FOF_EXISTS;
 				else
 				{
-					rover->flags |= FF_EXISTS;
+					rover->fofflags |= FOF_EXISTS;
 
 					if (!(lines[d->sourceline].args[5]))
 					{
@@ -7728,11 +7755,11 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
 	// If fading an invisible FOF whose render flags we did not yet set,
 	// initialize its alpha to 1
 	if (dotranslucent &&
-		(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-		!(rover->flags & FF_FOG) && // do not include fog
-		!(rover->spawnflags & FF_RENDERSIDES) &&
-		!(rover->spawnflags & FF_RENDERPLANES) &&
-		!(rover->flags & FF_RENDERALL))
+		(rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+		!(rover->fofflags & FOF_FOG) && // do not include fog
+		!(rover->spawnflags & FOF_RENDERSIDES) &&
+		!(rover->spawnflags & FOF_RENDERPLANES) &&
+		!(rover->fofflags & FOF_RENDERALL))
 		rover->alpha = 1;
 
 	if (fadingdata)
@@ -7753,16 +7780,16 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
 
 			if (docollision)
 			{
-				if (rover->spawnflags & FF_SOLID)
-					rover->flags &= ~FF_SOLID;
-				if (rover->spawnflags & FF_SWIMMABLE)
-					rover->flags &= ~FF_SWIMMABLE;
-				if (rover->spawnflags & FF_QUICKSAND)
-					rover->flags &= ~FF_QUICKSAND;
-				if (rover->spawnflags & FF_BUSTUP)
-					rover->flags &= ~FF_BUSTUP;
-				if (rover->spawnflags & FF_MARIO)
-					rover->flags &= ~FF_MARIO;
+				if (rover->spawnflags & FOF_SOLID)
+					rover->fofflags &= ~FOF_SOLID;
+				if (rover->spawnflags & FOF_SWIMMABLE)
+					rover->fofflags &= ~FOF_SWIMMABLE;
+				if (rover->spawnflags & FOF_QUICKSAND)
+					rover->fofflags &= ~FOF_QUICKSAND;
+				if (rover->spawnflags & FOF_BUSTUP)
+					rover->fofflags &= ~FOF_BUSTUP;
+				if (rover->spawnflags & FOF_MARIO)
+					rover->fofflags &= ~FOF_MARIO;
 			}
 		}
 		else // continue fading out
@@ -7788,16 +7815,16 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
 
 			if (docollision)
 			{
-				if (rover->spawnflags & FF_SOLID)
-					rover->flags |= FF_SOLID;
-				if (rover->spawnflags & FF_SWIMMABLE)
-					rover->flags |= FF_SWIMMABLE;
-				if (rover->spawnflags & FF_QUICKSAND)
-					rover->flags |= FF_QUICKSAND;
-				if (rover->spawnflags & FF_BUSTUP)
-					rover->flags |= FF_BUSTUP;
-				if (rover->spawnflags & FF_MARIO)
-					rover->flags |= FF_MARIO;
+				if (rover->spawnflags & FOF_SOLID)
+					rover->fofflags |= FOF_SOLID;
+				if (rover->spawnflags & FOF_SWIMMABLE)
+					rover->fofflags |= FOF_SWIMMABLE;
+				if (rover->spawnflags & FOF_QUICKSAND)
+					rover->fofflags |= FOF_QUICKSAND;
+				if (rover->spawnflags & FOF_BUSTUP)
+					rover->fofflags |= FOF_BUSTUP;
+				if (rover->spawnflags & FOF_MARIO)
+					rover->fofflags |= FOF_MARIO;
 			}
 		}
 		else // continue fading in
@@ -7817,114 +7844,114 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
 	// routines common to both fade in and fade out
 	if (!stillfading)
 	{
-		if (doexists && !(rover->spawnflags & FF_BUSTUP))
+		if (doexists && !(rover->spawnflags & FOF_BUSTUP))
 		{
 			if (alpha <= 1)
-				rover->flags &= ~FF_EXISTS;
+				rover->fofflags &= ~FOF_EXISTS;
 			else
-				rover->flags |= FF_EXISTS;
+				rover->fofflags |= FOF_EXISTS;
 
 			// Re-render lighting at end of fade
-			if (dolighting && !(rover->spawnflags & FF_NOSHADE) && !(rover->flags & FF_EXISTS))
+			if (dolighting && !(rover->spawnflags & FOF_NOSHADE) && !(rover->fofflags & FOF_EXISTS))
 				rover->target->moved = true;
 		}
 
-		if (dotranslucent && !(rover->flags & FF_FOG))
+		if (dotranslucent && !(rover->fofflags & FOF_FOG))
 		{
 			if (alpha >= 256)
 			{
-				if (!(rover->flags & FF_CUTSOLIDS) &&
-					(rover->spawnflags & FF_CUTSOLIDS))
+				if (!(rover->fofflags & FOF_CUTSOLIDS) &&
+					(rover->spawnflags & FOF_CUTSOLIDS))
 				{
-					rover->flags |= FF_CUTSOLIDS;
+					rover->fofflags |= FOF_CUTSOLIDS;
 					rover->target->moved = true;
 				}
 
-				rover->flags &= ~FF_TRANSLUCENT;
+				rover->fofflags &= ~FOF_TRANSLUCENT;
 			}
 			else
 			{
-				rover->flags |= FF_TRANSLUCENT;
+				rover->fofflags |= FOF_TRANSLUCENT;
 
-				if ((rover->flags & FF_CUTSOLIDS) &&
-					(rover->spawnflags & FF_CUTSOLIDS))
+				if ((rover->fofflags & FOF_CUTSOLIDS) &&
+					(rover->spawnflags & FOF_CUTSOLIDS))
 				{
-					rover->flags &= ~FF_CUTSOLIDS;
+					rover->fofflags &= ~FOF_CUTSOLIDS;
 					rover->target->moved = true;
 				}
 			}
 
-			if ((rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-				!(rover->spawnflags & FF_RENDERSIDES) &&
-				!(rover->spawnflags & FF_RENDERPLANES))
+			if ((rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+				!(rover->spawnflags & FOF_RENDERSIDES) &&
+				!(rover->spawnflags & FOF_RENDERPLANES))
 			{
 				if (rover->alpha > 1)
-					rover->flags |= FF_RENDERALL;
+					rover->fofflags |= FOF_RENDERALL;
 				else
-					rover->flags &= ~FF_RENDERALL;
+					rover->fofflags &= ~FOF_RENDERALL;
 			}
 		}
 	}
 	else
 	{
-		if (doexists && !(rover->spawnflags & FF_BUSTUP))
+		if (doexists && !(rover->spawnflags & FOF_BUSTUP))
 		{
-			// Re-render lighting if we haven't yet set FF_EXISTS (beginning of fade)
-			if (dolighting && !(rover->spawnflags & FF_NOSHADE) && !(rover->flags & FF_EXISTS))
+			// Re-render lighting if we haven't yet set FOF_EXISTS (beginning of fade)
+			if (dolighting && !(rover->spawnflags & FOF_NOSHADE) && !(rover->fofflags & FOF_EXISTS))
 				rover->target->moved = true;
 
-			rover->flags |= FF_EXISTS;
+			rover->fofflags |= FOF_EXISTS;
 		}
 
-		if (dotranslucent && !(rover->flags & FF_FOG))
+		if (dotranslucent && !(rover->fofflags & FOF_FOG))
 		{
-			rover->flags |= FF_TRANSLUCENT;
+			rover->fofflags |= FOF_TRANSLUCENT;
 
-			if ((rover->flags & FF_CUTSOLIDS) &&
-				(rover->spawnflags & FF_CUTSOLIDS))
+			if ((rover->fofflags & FOF_CUTSOLIDS) &&
+				(rover->spawnflags & FOF_CUTSOLIDS))
 			{
-				rover->flags &= ~FF_CUTSOLIDS;
+				rover->fofflags &= ~FOF_CUTSOLIDS;
 				rover->target->moved = true;
 			}
 
-			if ((rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-				!(rover->spawnflags & FF_RENDERSIDES) &&
-				!(rover->spawnflags & FF_RENDERPLANES))
-				rover->flags |= FF_RENDERALL;
+			if ((rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+				!(rover->spawnflags & FOF_RENDERSIDES) &&
+				!(rover->spawnflags & FOF_RENDERPLANES))
+				rover->fofflags |= FOF_RENDERALL;
 		}
 
 		if (docollision)
 		{
 			if (doghostfade) // remove collision flags during fade
 			{
-				if (rover->spawnflags & FF_SOLID)
-					rover->flags &= ~FF_SOLID;
-				if (rover->spawnflags & FF_SWIMMABLE)
-					rover->flags &= ~FF_SWIMMABLE;
-				if (rover->spawnflags & FF_QUICKSAND)
-					rover->flags &= ~FF_QUICKSAND;
-				if (rover->spawnflags & FF_BUSTUP)
-					rover->flags &= ~FF_BUSTUP;
-				if (rover->spawnflags & FF_MARIO)
-					rover->flags &= ~FF_MARIO;
+				if (rover->spawnflags & FOF_SOLID)
+					rover->fofflags &= ~FOF_SOLID;
+				if (rover->spawnflags & FOF_SWIMMABLE)
+					rover->fofflags &= ~FOF_SWIMMABLE;
+				if (rover->spawnflags & FOF_QUICKSAND)
+					rover->fofflags &= ~FOF_QUICKSAND;
+				if (rover->spawnflags & FOF_BUSTUP)
+					rover->fofflags &= ~FOF_BUSTUP;
+				if (rover->spawnflags & FOF_MARIO)
+					rover->fofflags &= ~FOF_MARIO;
 			}
 			else // keep collision during fade
 			{
-				if (rover->spawnflags & FF_SOLID)
-					rover->flags |= FF_SOLID;
-				if (rover->spawnflags & FF_SWIMMABLE)
-					rover->flags |= FF_SWIMMABLE;
-				if (rover->spawnflags & FF_QUICKSAND)
-					rover->flags |= FF_QUICKSAND;
-				if (rover->spawnflags & FF_BUSTUP)
-					rover->flags |= FF_BUSTUP;
-				if (rover->spawnflags & FF_MARIO)
-					rover->flags |= FF_MARIO;
+				if (rover->spawnflags & FOF_SOLID)
+					rover->fofflags |= FOF_SOLID;
+				if (rover->spawnflags & FOF_SWIMMABLE)
+					rover->fofflags |= FOF_SWIMMABLE;
+				if (rover->spawnflags & FOF_QUICKSAND)
+					rover->fofflags |= FOF_QUICKSAND;
+				if (rover->spawnflags & FOF_BUSTUP)
+					rover->fofflags |= FOF_BUSTUP;
+				if (rover->spawnflags & FOF_MARIO)
+					rover->fofflags |= FOF_MARIO;
 			}
 		}
 	}
 
-	if (!(rover->flags & FF_FOG)) // don't set FOG alpha
+	if (!(rover->fofflags & FOF_FOG)) // don't set FOG alpha
 	{
 		if (!stillfading || exactalpha)
 			rover->alpha = alpha;
@@ -7967,8 +7994,8 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
   * \param speed        speed to fade by
   * \param ticbased     tic-based logic, speed = duration
   * \param relative     Destvalue is relative to rover->alpha
-  * \param doexists	    handle FF_EXISTS
-  * \param dotranslucent handle FF_TRANSLUCENT
+  * \param doexists	    handle FOF_EXISTS
+  * \param dotranslucent handle FOF_TRANSLUCENT
   * \param dolighting  fade FOF light
   * \param docollision handle interactive flags
   * \param doghostfade  no interactive flags during fading
@@ -7984,10 +8011,10 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	// If fading an invisible FOF whose render flags we did not yet set,
 	// initialize its alpha to 1
 	if (dotranslucent &&
-		(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-		!(rover->spawnflags & FF_RENDERSIDES) &&
-		!(rover->spawnflags & FF_RENDERPLANES) &&
-		!(rover->flags & FF_RENDERALL))
+		(rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+		!(rover->spawnflags & FOF_RENDERSIDES) &&
+		!(rover->spawnflags & FOF_RENDERPLANES) &&
+		!(rover->fofflags & FOF_RENDERALL))
 		rover->alpha = 1;
 
 	// already equal, nothing to do
@@ -8028,7 +8055,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	P_ResetFakeFloorFader(rover, d, false);
 
 	// Set a separate thinker for shadow fading
-	if (dolighting && !(rover->flags & FF_NOSHADE))
+	if (dolighting && !(rover->fofflags & FOF_NOSHADE))
 	{
 		UINT16 lightdelta = abs(sectors[rover->secnum].spawn_lightlevel - rover->target->lightlevel);
 		fixed_t alphapercent = min(FixedDiv(d->destvalue, rover->spawnalpha), 1*FRACUNIT); // don't make darker than spawn_lightlevel
@@ -8049,7 +8076,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 		d->destlightlevel = -1;
 
 	// Set a separate thinker for colormap fading
-	if (docolormap && !(rover->flags & FF_NOSHADE) && sectors[rover->secnum].spawn_extra_colormap && !sectors[rover->secnum].colormap_protected)
+	if (docolormap && !(rover->fofflags & FOF_NOSHADE) && sectors[rover->secnum].spawn_extra_colormap && !sectors[rover->secnum].colormap_protected)
 	{
 		extracolormap_t *dest_exc,
 			*source_exc = sectors[rover->secnum].extra_colormap ? sectors[rover->secnum].extra_colormap : R_GetDefaultColormap();
@@ -8110,11 +8137,11 @@ void T_Fade(fade_t *d)
 		d->doexists, d->dotranslucent, d->dolighting, d->docolormap, d->docollision, d->doghostfade, d->exactalpha))
 	{
 		// Finalize lighting, copypasta from P_AddFakeFloorFader
-		if (d->dolighting && !(d->rover->flags & FF_NOSHADE) && d->destlightlevel > -1)
+		if (d->dolighting && !(d->rover->fofflags & FOF_NOSHADE) && d->destlightlevel > -1)
 			sectors[d->rover->secnum].lightlevel = d->destlightlevel;
 
 		// Finalize colormap
-		if (d->docolormap && !(d->rover->flags & FF_NOSHADE) && sectors[d->rover->secnum].spawn_extra_colormap)
+		if (d->docolormap && !(d->rover->fofflags & FOF_NOSHADE) && sectors[d->rover->secnum].spawn_extra_colormap)
 			sectors[d->rover->secnum].extra_colormap = d->dest_exc;
 
 		P_RemoveFakeFloorFader(d->rover);
@@ -8544,7 +8571,9 @@ void T_Pusher(pusher_t *p)
 		{
 			if (thing->z == P_GetSpecialBottomZ(thing, sec, sec))
 				touching = true;
-			else if (p->type != p_current)
+			// Annoying backwards compatibility nonsense:
+			// In binary, horizontal currents require floor touch
+			else if (udmf || p->type != p_current || z_mag != 0)
 				inFOF = true;
 		}
 

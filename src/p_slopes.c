@@ -94,10 +94,14 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 static void ReconfigureViaConstants (pslope_t *slope, const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d)
 {
 	fixed_t m;
+	fixed_t o = 0;
 	vector3_t *normal = &slope->normal;
 
+	if (c)
+		o = abs(c) <= FRACUNIT ? -FixedMul(d, FixedDiv(FRACUNIT, c)) : -FixedDiv(d, c);
+
 	// Set origin.
-	FV3_Load(&slope->o, 0, 0, c ? -FixedDiv(d, c) : 0);
+	FV3_Load(&slope->o, 0, 0, o);
 
 	// Get slope's normal.
 	FV3_Load(normal, a, b, c);

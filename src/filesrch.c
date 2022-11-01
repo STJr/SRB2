@@ -712,9 +712,9 @@ lumpinfo_t *getdirectoryfiles(const char *path, UINT16 *nlmp, UINT16 *nfolders)
 	// Close any open directories and return if something went wrong.
 	if (failure)
 	{
+		for (; depthleft < maxdirdepth; closedir(dirhandle[depthleft++]));
 		free(dirpathindex);
 		free(dirhandle);
-		for (; depthleft < maxdirdepth; closedir(dirhandle[depthleft++]));
 		return NULL;
 	}
 

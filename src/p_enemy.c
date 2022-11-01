@@ -498,7 +498,7 @@ static boolean P_WaterInSector(mobj_t *mobj, fixed_t x, fixed_t y)
 
 		for (rover = sector->ffloors; rover; rover = rover->next)
 		{
-			if (!(rover->flags & FF_EXISTS) || !(rover->flags & FF_SWIMMABLE))
+			if (!(rover->fofflags & FOF_EXISTS) || !(rover->fofflags & FOF_SWIMMABLE))
 				continue;
 
 			if (*rover->topheight >= mobj->floorz && *rover->topheight <= mobj->z)
@@ -1521,8 +1521,9 @@ void A_PointyThink(mobj_t *actor)
 	INT32 i;
 	player_t *player = NULL;
 	mobj_t *ball;
-	TVector v;
-	TVector *res;
+	matrix_t m;
+	vector4_t v;
+	vector4_t res;
 	angle_t fa;
 	fixed_t radius = FixedMul(actor->info->radius*actor->info->reactiontime, actor->scale);
 	boolean firsttime = true;
@@ -1592,20 +1593,21 @@ void A_PointyThink(mobj_t *actor)
 	while (ball)
 	{
 		fa = actor->lastlook+i;
-		v[0] = FixedMul(FINECOSINE(fa),radius);
-		v[1] = 0;
-		v[2] = FixedMul(FINESINE(fa),radius);
-		v[3] = FRACUNIT;
+		v.x = FixedMul(FINECOSINE(fa),radius);
+		v.y = 0;
+		v.z = FixedMul(FINESINE(fa),radius);
+		v.a = FRACUNIT;
 
-		res = VectorMatrixMultiply(v, *RotateXMatrix(FixedAngle(actor->lastlook+i)));
-		M_Memcpy(&v, res, sizeof (v));
-		res = VectorMatrixMultiply(v, *RotateZMatrix(actor->angle+ANGLE_180));
-		M_Memcpy(&v, res, sizeof (v));
+		FM_RotateX(&m, FixedAngle(actor->lastlook+i));
+		FV4_Copy(&v, FM_MultMatrixVec4(&m, &v, &res));
+
+		FM_RotateZ(&m, actor->angle+ANGLE_180);
+		FV4_Copy(&v, FM_MultMatrixVec4(&m, &v, &res));
 
 		P_UnsetThingPosition(ball);
-		ball->x = actor->x + v[0];
-		ball->y = actor->y + v[1];
-		ball->z = actor->z + (actor->height>>1) + v[2];
+		ball->x = actor->x + v.x;
+		ball->y = actor->y + v.y;
+		ball->z = actor->z + (actor->height>>1) + v.z;
 		P_SetThingPosition(ball);
 
 		ball = ball->tracer;
@@ -12686,7 +12688,7 @@ void A_WhoCaresIfYourSonIsABee(mobj_t *actor)
 
 // Function: A_ParentTriesToSleep
 //
-// Description: If extravalue1 is less than or equal to var1, go to var2.
+// Description: If extravalue1 is greater than 0 go to var1
 //
 // var1 = state to go to when extravalue1
 // var2 = unused
