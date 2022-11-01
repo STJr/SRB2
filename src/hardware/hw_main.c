@@ -3760,23 +3760,42 @@ static void HWR_RotateSpritePolyToAim(gl_vissprite_t *spr, FOutVector *wallVerts
 	{
 		// uncapped/interpolation
 		interpmobjstate_t interp = {0};
+		float basey, lowy;
 
 		// do interpolation
 		if (R_UsingFrameInterpolation() && !paused)
 		{
-			R_InterpolateMobjState(spr->mobj, rendertimefrac, &interp);
+			if (precip)
+			{
+				R_InterpolatePrecipMobjState(spr->mobj, rendertimefrac, &interp);
+			}
+			else
+			{
+				R_InterpolateMobjState(spr->mobj, rendertimefrac, &interp);
+			}
 		}
 		else
 		{
-			R_InterpolateMobjState(spr->mobj, FRACUNIT, &interp);
+			if (precip)
+			{
+				R_InterpolatePrecipMobjState(spr->mobj, FRACUNIT, &interp);
+			}
+			else
+			{
+				R_InterpolateMobjState(spr->mobj, FRACUNIT, &interp);
+			}
 		}
 
-		float basey = FIXED_TO_FLOAT(interp.z);
-		float lowy = wallVerts[0].y;
-		if (!precip && P_MobjFlip(spr->mobj) == -1) // precip doesn't have eflags so they can't flip
+		if (P_MobjFlip(spr->mobj) == -1)
 		{
 			basey = FIXED_TO_FLOAT(interp.z + spr->mobj->height);
 		}
+		else
+		{
+			basey = FIXED_TO_FLOAT(interp.z);
+		}
+		lowy = wallVerts[0].y;
+
 		// Rotate sprites to fully billboard with the camera
 		// X, Y, AND Z need to be manipulated for the polys to rotate around the
 		// origin, because of how the origin setting works I believe that should
