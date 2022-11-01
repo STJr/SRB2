@@ -1586,7 +1586,11 @@ static void R_ProjectSprite(mobj_t *thing)
 		I_Error("R_ProjectSprite: sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
-	if (sprframe->rotate != SRF_SINGLE || papersprite)
+	if (splat)
+	{
+		ang = R_PointToAngle2(0, viewz, 0, interp.z);
+	}
+	else if (sprframe->rotate != SRF_SINGLE || papersprite)
 	{
 		ang = R_PointToAngle (interp.x, interp.y) - interp.angle;
 		if (mirrored)

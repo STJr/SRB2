@@ -5195,9 +5195,16 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		I_Error("sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
-	ang = R_PointToAngle (interp.x, interp.y) - interp.angle;
-	if (mirrored)
-		ang = InvAngle(ang);
+	if (splat)
+	{
+		ang = R_PointToAngle2(0, viewz, 0, interp.z);
+	}
+	else
+	{
+		ang = R_PointToAngle (interp.x, interp.y) - interp.angle;
+		if (mirrored)
+			ang = InvAngle(ang);
+	}
 
 	if (sprframe->rotate == SRF_SINGLE)
 	{
