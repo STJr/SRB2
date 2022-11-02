@@ -2393,7 +2393,7 @@ static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UIN
 			continue;
 		}
 
-		w = FixedMul(((ntb_font.chars[c]->width)+2 * dupx) * FRACUNIT, scale);
+		w = FixedMul(((ntb_font.chars[c]->width)+ntb_font.kerning * dupx) * FRACUNIT, scale);
 
 		if (FixedInt(cx) > scrwidth)
 			continue;
@@ -2517,27 +2517,6 @@ INT32 V_CountNameTagLines(const char *string)
 		}
 	}
 	return ntlines;
-}
-
-INT32 V_NameTagWidth(const char *string)
-{
-	INT32 c, w = 0;
-	size_t i;
-
-	// It's possible for string to be a null pointer
-	if (!string)
-		return 0;
-
-	for (i = 0; i < strlen(string); i++)
-	{
-		c = toupper(string[i]) - FONTSTART;
-		if (c < 0 || c >= FONTSIZE || !ntb_font.chars[c] || !nto_font.chars[c])
-			w += ntb_font.spacewidth;
-		else
-			w += (ntb_font.chars[c]->width)+2;
-	}
-
-	return w;
 }
 
 // Find string width from supplied font characters & character width.

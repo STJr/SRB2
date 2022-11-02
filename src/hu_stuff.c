@@ -236,7 +236,7 @@ void HU_LoadGraphics(void)
 	HU_SetFontProperties(&tny_font, 0, 2, 12);
 	HU_SetFontProperties(&cred_font, 0, 16, 16);
 	HU_SetFontProperties(&lt_font, 0, 16, 20);
-	HU_SetFontProperties(&ntb_font, 0, 4, 21);
+	HU_SetFontProperties(&ntb_font, 2, 4, 21);
 	HU_SetFontProperties(&nto_font, 0, 4, 21);
 
 	//cache numbers too!

@@ -261,7 +261,6 @@ INT16 V_LevelActNumWidth(UINT8 num); // act number width
 // Draw a string using the nt_font
 void V_DrawNameTag(INT32 x, INT32 y, INT32 option, fixed_t scale, UINT8 *basecolormap, UINT8 *outlinecolormap, const char *string);
 INT32 V_CountNameTagLines(const char *string);
-INT32 V_NameTagWidth(const char *string);
 
 // Find string width or height from supplied font chars
 INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font);
@@ -273,6 +272,7 @@ INT32 V_FontStringHeight(const char *string, fontdef_t font);
 #define V_ThinStringWidth(str,o) V_FontStringWidth(str,o,tny_font)
 #define V_SmallThinStringWidth(str,o) V_FontStringWidth(str,o,tny_font)/2
 #define V_CreditStringWidth(str) V_FontStringWidth(str,0,cred_font)
+#define V_NameTagWidth(str) V_FontStringWidth(str,0,ntb_font)
 #define V_LevelNameWidth(str) V_FontStringWidth(str,V_ALLOWLOWERCASE,lt_font)
 #define V_LevelNameHeight(str) V_FontStringHeight(str,lt_font)
 
