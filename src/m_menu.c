@@ -6682,7 +6682,7 @@ static void M_DrawAddons(void)
 	}
 
 	// draw down arrow that bobs down and up
-	if (b != sizedirmenu)
+	if ((b != sizedirmenu) && !(sizedirmenu < addonmenusize))
 		V_DrawString(19, y-12 + (skullAnimCounter/5), highlightflags, "\x1B");
 
 	// draw search box
