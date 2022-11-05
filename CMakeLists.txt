@@ -63,6 +63,7 @@ cmake_dependent_option(
 )
 option(SRB2_CONFIG_HWRENDER "Enable hardware render (OpenGL) support" ON)
 option(SRB2_CONFIG_STATIC_OPENGL "Enable static linking GL (do not do this)" OFF)
+option(SRB2_CONFIG_ERRORMODE "Compile C code with warnings treated as errors. (C++ warnings are always treated as errors)" OFF)
 
 # Enable CCache
 # (Set USE_CCACHE=ON to use, CCACHE_OPTIONS for options)
