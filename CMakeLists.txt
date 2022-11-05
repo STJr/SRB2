@@ -49,6 +49,9 @@ else()
 	set(SRB2_CONFIG_SYSTEM_LIBRARIES_DEFAULT OFF)
 endif()
 
+# Clang tidy options will be ignored if CMAKE_<LANG>_CLANG_TIDY are set.
+option(SRB2_CONFIG_ENABLE_CLANG_TIDY_C "Enable default clang-tidy check configuration for C" OFF)
+option(SRB2_CONFIG_ENABLE_CLANG_TIDY_CXX "Enable default clang-tidy check configuration for C++" OFF)
 option(
 	SRB2_CONFIG_SYSTEM_LIBRARIES
 	"Link dependencies using CMake's find_package and do not use internal builds"

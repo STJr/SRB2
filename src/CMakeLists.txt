@@ -1,3 +1,5 @@
+include(clang-tidy-default)
+
 add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32)
 
 if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows" AND NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
@@ -156,4 +158,12 @@ if((CMAKE_COMPILER_IS_GNUCC) AND NOT ("${CMAKE_SYSTEM_NAME}" MATCHES Darwin))
 			COMMAND ${OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE:SRB2SDL2>.debug $<TARGET_FILE:SRB2SDL2>
 		)
 	endif()
+endif()
+
+# Setup clang-tidy
+if(SRB2_CONFIG_ENABLE_CLANG_TIDY_C)
+	target_set_default_clang_tidy(SRB2SDL2 C "-*,clang-analyzer-*,-clang-analyzer-cplusplus-*")
+endif()
+if(SRB2_CONFIG_ENABLE_CLANG_TIDY_CXX)
+	target_set_default_clang_tidy(SRB2SDL2 CXX "-*,clang-analyzer-*,modernize-*")
 endif()
