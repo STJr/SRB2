@@ -2854,13 +2854,6 @@ static const char *locateWad(void)
 	CHECKWADPATH(NULL);
 #endif
 
-#ifdef CMAKECONFIG
-#ifndef NDEBUG
-	strcpy(returnWadPath, CMAKE_ASSETS_DIR);
-	CHECKWADPATH(returnWadPath);
-#endif
-#endif
-
 #ifdef __APPLE__
 	OSX_GetResourcesPath(returnWadPath);
 	CHECKWADPATH(returnWadPath);
