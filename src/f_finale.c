@@ -1182,7 +1182,6 @@ static const char *credits[] = {
 	"Ben \"Mystic\" Geyer",
 	"Nathan \"Jazz\" Giroux",
 	"Vivian \"toaster\" Grannell",
-	"Dan \"Blitzzo\" Hagerstrand",
 	"James \"SeventhSentinel\" Hall",
 	"Kepa \"Nev3r\" Iceta",
 	"Thomas \"Shadow Hog\" Igoe",
