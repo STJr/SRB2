@@ -64,16 +64,26 @@ cmake_dependent_option(
 option(SRB2_CONFIG_HWRENDER "Enable hardware render (OpenGL) support" ON)
 option(SRB2_CONFIG_STATIC_OPENGL "Enable static linking GL (do not do this)" OFF)
 
-# Enable CCache early
-set(SRB2_USE_CCACHE OFF CACHE BOOL "Use CCache")
-if (${SRB2_USE_CCACHE})
-	find_program(CCACHE_PROGRAM ccache)
-	if(CCACHE_PROGRAM)
-		message(STATUS "Found CCache: ${CCACHE_PROGRAM}")
-		set_property(GLOBAL PROPERTY RULE_LAUNCH_COMPILE "${CCACHE_PROGRAM}")
-	else()
-		message(WARNING "You have specified to use CCACHE but it was not found. Object files will not be cached.")
+# Enable CCache
+# (Set USE_CCACHE=ON to use, CCACHE_OPTIONS for options)
+if("${CMAKE_HOST_SYSTEM_NAME}" STREQUAL Windows)
+	option(USE_CCACHE "Enable ccache support" OFF)
+
+	if(USE_CCACHE)
+		find_program(CCACHE_TOOL_PATH ccache)
+		if(CCACHE_TOOL_PATH)
+			set(CMAKE_C_COMPILER_LAUNCHER ${CCACHE_TOOL_PATH} CACHE STRING "" FORCE)
+			set(CMAKE_CXX_COMPILER_LAUNCHER ${CCACHE_TOOL_PATH} CACHE STRING "" FORCE)
+		else()
+			message(WARNING "USE_CCACHE was set but ccache is not found (set CCACHE_TOOL_PATH)")
+		endif()
 	endif()
+else()
+	CPMAddPackage(
+		NAME Ccache.cmake
+		GITHUB_REPOSITORY TheLartians/Ccache.cmake
+		VERSION 1.2
+	)
 endif()
 
 # Dependencies
