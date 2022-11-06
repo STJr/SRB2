@@ -63,7 +63,13 @@ cmake_dependent_option(
 )
 option(SRB2_CONFIG_HWRENDER "Enable hardware render (OpenGL) support" ON)
 option(SRB2_CONFIG_STATIC_OPENGL "Enable static linking GL (do not do this)" OFF)
-option(SRB2_CONFIG_ERRORMODE "Compile C code with warnings treated as errors. (C++ warnings are always treated as errors)" OFF)
+option(SRB2_CONFIG_ERRORMODE "Compile C code with warnings treated as errors." OFF)
+option(SRB2_CONFIG_DEBUGMODE "Compile with PARANOIA, ZDEBUG, RANGECHECK and PACKETDROP defined." OFF)
+option(SRB2_CONFIG_MOBJCONSISTANCY "Compile with MOBJCONSISTANCY defined." OFF)
+option(SRB2_CONFIG_PACKETDROP "Compile with PACKETDROP defined." OFF)
+option(SRB2_CONFIG_ZDEBUG "Compile with ZDEBUG defined." OFF)
+# SRB2_CONFIG_PROFILEMODE is probably superceded by some CMake setting.
+option(SRB2_CONFIG_PROFILEMODE "Compile for profiling (GCC only)." OFF)
 set(SRB2_CONFIG_ASSET_DIRECTORY "" CACHE PATH "Path to directory that contains all asset files for the installer. If set, assets will be part of installation and cpack.")
 
 # Enable CCache
