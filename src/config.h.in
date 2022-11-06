@@ -11,19 +11,10 @@
 
 #ifdef CMAKECONFIG
 
-#define ASSET_HASH_SRB2_PK3   "${SRB2_ASSET_srb2.pk3_HASH}"
-#define ASSET_HASH_PLAYER_DTA "${SRB2_ASSET_player.dta_HASH}"
-#define ASSET_HASH_ZONES_PK3  "${SRB2_ASSET_zones.pk3_HASH}"
-#ifdef USE_PATCH_DTA
-#define ASSET_HASH_PATCH_PK3  "${SRB2_ASSET_patch.pk3_HASH}"
-#endif
-
 #define SRB2_COMP_REVISION    "${SRB2_COMP_REVISION}"
 #define SRB2_COMP_BRANCH      "${SRB2_COMP_BRANCH}"
 
-#define CMAKE_ASSETS_DIR      "${CMAKE_SOURCE_DIR}/assets"
-
-#else
+#endif
 
 /* Manually defined asset hashes for non-CMake builds
  * Last updated 2020 / 02 / 15 - v2.2.1 - main assets
@@ -44,5 +35,4 @@
 #define ASSET_HASH_PATCH_PK3  "7d467a883f7887b3c311798ee2f56b6a"
 #endif
 
-#endif
 #endif
