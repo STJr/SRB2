@@ -140,6 +140,11 @@ if(${SRB2_CONFIG_DEV_BUILD})
 endif()
 target_compile_definitions(SRB2SDL2 PRIVATE -DCMAKECONFIG)
 
+if("${SRB2_CONFIG_ENABLE_VALGRIND}" AND "${CMAKE_SYSTEM_NAME}" MATCHES Linux)
+	find_package(Valgrind REQUIRED)
+	target_link_libraries(SRB2SDL2 PRIVATE Valgrind::Valgrind)
+endif()
+
 add_subdirectory(sdl)
 
 # strip debug symbols into separate file when using gcc.

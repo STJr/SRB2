@@ -49,6 +49,9 @@ else()
 	set(SRB2_CONFIG_SYSTEM_LIBRARIES_DEFAULT OFF)
 endif()
 
+if("${CMAKE_SYSTEM_NAME}" MATCHES Linux)
+	option(SRB2_CONFIG_ENABLE_VALGRIND "Build with Valgrind memory debugging support" OFF)
+endif()
 option(
 	SRB2_CONFIG_SYSTEM_LIBRARIES
 	"Link dependencies using CMake's find_package and do not use internal builds"
