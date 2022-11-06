@@ -7500,7 +7500,6 @@ static boolean IsSector3DBlock(sector_t* sec)
   */
 static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT32 affectee, INT32 accel, INT32 exclusive)
 {
-	boolean is3dblock = IsSector3DBlock(&sectors[affectee]);
 	scroll_t *s = Z_Calloc(sizeof *s, PU_LEVSPEC, NULL);
 	s->thinker.function.acp1 = (actionf_p1)T_Scroll;
 	s->type = type;
@@ -7516,7 +7515,7 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 	if (type == sc_carry || type == sc_carry_ceiling)
 	{
 		sectors[affectee].specialflags |= SSF_CONVEYOR;
-		if (is3dblock)
+		if (IsSector3DBlock(&sectors[affectee]))
 		{
 			if (type == sc_carry)
 				sectors[affectee].flags |= MSF_FLIPSPECIAL_CEILING;
