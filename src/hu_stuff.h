@@ -93,6 +93,7 @@ extern boolean hu_showscores;
 void HU_Init(void);
 
 void HU_LoadGraphics(void);
+void HU_LoadFontCharacters(fontdef_t *font, const char *prefix);
 void HU_SetFontProperties(fontdef_t *font, INT32 kerning, UINT32 spacewidth, UINT32 linespacing);
 
 // reset heads up when consoleplayer respawns.

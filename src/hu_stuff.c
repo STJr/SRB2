@@ -181,57 +181,20 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum);
 void HU_LoadGraphics(void)
 {
 	char buffer[9];
-	INT32 i, j;
+	INT32 i;
 
 	if (dedicated)
 		return;
 
-	j = FONTSTART;
-	for (i = 0; i < FONTSIZE; i++, j++)
-	{
-		// cache the heads-up font for entire game execution
-		sprintf(buffer, "STCFN%.3d", j);
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			hu_font.chars[i] = NULL;
-		else
-			hu_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+	// Cache fonts
+	HU_LoadFontCharacters(&hu_font,   "STCFN");
+	HU_LoadFontCharacters(&tny_font,  "TNYFN");
+	HU_LoadFontCharacters(&cred_font, "CRFNT");
+	HU_LoadFontCharacters(&lt_font,   "LTFNT");
+	HU_LoadFontCharacters(&ntb_font,  "NTFNT");
+	HU_LoadFontCharacters(&nto_font,  "NTFNO");
 
-		// tiny version of the heads-up font
-		sprintf(buffer, "TNYFN%.3d", j);
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			tny_font.chars[i] = NULL;
-		else
-			tny_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-
-		// cache the credits font for entire game execution (why not?)
-		sprintf(buffer, "CRFNT%.3d", j);
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			cred_font.chars[i] = NULL;
-		else
-			cred_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-
-		// level title font
-		sprintf(buffer, "LTFNT%.3d", j);
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			lt_font.chars[i] = NULL;
-		else
-			lt_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-
-		// name tag font base
-		sprintf(buffer, "NTFNT%.3d", j);
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			ntb_font.chars[i] = NULL;
-		else
-			ntb_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-
-		// name tag font outline
-		sprintf(buffer, "NTFNO%.3d", j);
-		if (W_CheckNumForName(buffer) == LUMPERROR)
-			nto_font.chars[i] = NULL;
-		else
-			nto_font.chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
-	}
-
+	// Set kerning, space width & line spacing for each font
 	HU_SetFontProperties(&hu_font, 0, 4, 12);
 	HU_SetFontProperties(&tny_font, 0, 2, 12);
 	HU_SetFontProperties(&cred_font, 0, 16, 16);
@@ -293,6 +256,21 @@ void HU_LoadGraphics(void)
 	emeraldpics[2][5] = W_CachePatchName("EMBOX6", PU_HUDGFX);
 	emeraldpics[2][6] = W_CachePatchName("EMBOX7", PU_HUDGFX);
 	//emeraldpics[2][7] = W_CachePatchName("EMBOX8", PU_HUDGFX); -- unused
+}
+
+void HU_LoadFontCharacters(fontdef_t *font, const char *prefix)
+{
+		char buffer[9];
+		INT32 i, j = FONTSTART;
+
+		for (i = 0; i < FONTSIZE; i++, j++)
+		{
+			sprintf(buffer, "%.5s%.3d", prefix, j);
+			if (W_CheckNumForName(buffer) == LUMPERROR)
+				font->chars[i] = NULL;
+			else
+				font->chars[i] = (patch_t *)W_CachePatchName(buffer, PU_HUDGFX);
+		}
 }
 
 void HU_SetFontProperties(fontdef_t *font, INT32 kerning, UINT32 spacewidth, UINT32 linespacing)
