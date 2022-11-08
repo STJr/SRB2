@@ -7670,7 +7670,7 @@ static void M_HandleEmblemHints(INT32 choice)
 
 static musicdef_t *curplaying = NULL;
 static INT32 st_sel = 0, st_cc = 0;
-static tic_t st_time = 0;
+static fixed_t st_time = 0;
 static patch_t* st_radio[9];
 static patch_t* st_launchpad[4];
 
@@ -7734,16 +7734,17 @@ static void M_DrawSoundTest(void)
 		{
 			if (cv_soundtest.value)
 			{
-				frame[1] = (2-st_time);
+				frame[1] = (2 - (st_time >> FRACBITS));
 				frame[2] = ((cv_soundtest.value - 1) % 9);
 				frame[3] += (((cv_soundtest.value - 1) / 9) % (FIRSTSUPERCOLOR - frame[3]));
-				if (st_time < 2)
-					st_time++;
+				if (st_time < (2 << FRACBITS))
+					st_time += renderdeltatics;
 			}
 		}
 		else
 		{
-			if (curplaying->stoppingtics && st_time >= curplaying->stoppingtics)
+			fixed_t stoppingtics = (fixed_t)(curplaying->stoppingtics) << FRACBITS;
+			if (stoppingtics && st_time >= stoppingtics)
 			{
 				curplaying = NULL;
 				st_time = 0;
@@ -7754,11 +7755,11 @@ static void M_DrawSoundTest(void)
 				angle_t ang;
 				//bpm = FixedDiv((60*TICRATE)<<FRACBITS, bpm); -- bake this in on load
 
-				work = st_time<<FRACBITS;
+				work = st_time;
 				work %= bpm;
 
-				if (st_time >= (FRACUNIT>>1)) // prevent overflow jump - takes about 15 minutes of loop on the same song to reach
-					st_time = (work>>FRACBITS);
+				if (st_time >= (FRACUNIT << (FRACBITS - 2))) // prevent overflow jump - takes about 15 minutes of loop on the same song to reach
+					st_time = work;
 
 				work = FixedDiv(work*180, bpm);
 				frame[0] = 8-(work/(20<<FRACBITS));
@@ -7769,7 +7770,7 @@ static void M_DrawSoundTest(void)
 				hscale -= bounce/16;
 				vscale += bounce/16;
 
-				st_time++;
+				st_time += renderdeltatics;
 			}
 		}
 	}
@@ -7809,7 +7810,7 @@ static void M_DrawSoundTest(void)
 
 	V_DrawFill(y, 20, vid.width/vid.dupx, 24, 159);
 	{
-		static fixed_t st_scroll = -1;
+		static fixed_t st_scroll = -FRACUNIT;
 		const char* titl;
 		x = 16;
 		V_DrawString(x, 10, 0, "NOW PLAYING:");
@@ -7825,10 +7826,12 @@ static void M_DrawSoundTest(void)
 
 		i = V_LevelNameWidth(titl);
 
-		if (++st_scroll >= i)
-			st_scroll %= i;
+		st_scroll += renderdeltatics;
 
-		x -= st_scroll;
+		while (st_scroll >= (i << FRACBITS))
+			st_scroll -= i << FRACBITS;
+
+		x -= st_scroll >> FRACBITS;
 
 		while (x < BASEVIDWIDTH-y)
 			x += i;
