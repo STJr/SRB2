@@ -547,20 +547,21 @@ void SCR_DisplayTicRate(void)
 	}
 	else if (cv_ticrate.value == 1) // full counter
 	{
+		const char *drawnstr;
+		INT32 width;
+
+		// The highest assignable cap is < 1000, so 3 characters is fine.
 		if (cap > 0)
-		{
-			V_DrawString(vid.width-(104*vid.dupx), h,
-				V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
-			V_DrawString(vid.width-(72*vid.dupx), h,
-				ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%4.0f/%4u", fps, cap));
-		}
+			drawnstr = va("%3.0f/%3u", fps, cap);
 		else
-		{
-			V_DrawString(vid.width-(88*vid.dupx), h,
-				V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
-			V_DrawString(vid.width-(56*vid.dupx), h,
-				ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, va("%4.0f", fps));
-		}
+			drawnstr = va("%4.2f", averageFPS);
+
+		width = V_StringWidth(drawnstr, V_NOSCALESTART);
+
+		V_DrawString(vid.width - ((7 * 8 * vid.dupx) + V_StringWidth("FPS: ", V_NOSCALESTART)), h,
+			V_YELLOWMAP|V_NOSCALESTART|V_USERHUDTRANS, "FPS:");
+		V_DrawString(vid.width - width, h,
+			ticcntcolor|V_NOSCALESTART|V_USERHUDTRANS, drawnstr);
 	}
 }
 
