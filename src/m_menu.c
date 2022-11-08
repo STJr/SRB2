@@ -11066,7 +11066,7 @@ static INT32 menuRoomIndex = 0;
 
 static void M_DrawRoomMenu(void)
 {
-	static int frame = -12;
+	static fixed_t frame = -(12 << FRACBITS);
 	int dot_frame;
 	char text[4];
 
@@ -11077,7 +11077,7 @@ static void M_DrawRoomMenu(void)
 
 	if (m_waiting_mode)
 	{
-		dot_frame = frame / 4;
+		dot_frame = (int)(frame >> FRACBITS) / 4;
 		dots = dot_frame + 3;
 
 		strcpy(text, "   ");
@@ -11090,8 +11090,9 @@ static void M_DrawRoomMenu(void)
 			strncpy(&text[dot_frame], "...", min(dots, 3 - dot_frame));
 		}
 
-		if (++frame == 12)
-			frame = -12;
+		frame += renderdeltatics;
+		while (frame >= (12 << FRACBITS))
+			frame -= 12 << FRACBITS;
 
 		currentMenu->menuitems[0].text = text;
 	}
