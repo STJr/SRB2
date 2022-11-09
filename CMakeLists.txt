@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.14 FATAL_ERROR)
 
+if("${CMAKE_CURRENT_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
+	message(FATAL_ERROR "In-source builds are blocked. Please build from a separate directory.")
+endif()
+
 # Set up CMAKE path
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/Modules/")
 
