@@ -268,6 +268,24 @@ if(${SRB2_CONFIG_DEV_BUILD})
 endif()
 target_compile_definitions(SRB2SDL2 PRIVATE -DCMAKECONFIG)
 
+# Misc. build options from Makefiles
+if(SRB2_CONFIG_DEBUGMODE)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DZDEBUG -DPARANOIA -DRANGECHECK -DPACKETDROP)
+endif()
+if(SRB2_CONFIG_MOBJCONSISTANCY)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DMOBJCONSISTANCY)
+endif()
+if(SRB2_CONFIG_PACKETDROP)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DPACKETDROP)
+endif()
+if(SRB2_CONFIG_ZDEBUG)
+	target_compile_definitions(SRB2SDL2 PRIVATE -DZDEBUG)
+endif()
+if(SRB2_CONFIG_PROFILEMODE AND "${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+	target_compile_options(SRB2SDL2 PRIVATE -pg)
+	target_link_options(SRB2SDL2 PRIVATE -pg)
+endif()
+
 add_subdirectory(sdl)
 
 # strip debug symbols into separate file when using gcc.
