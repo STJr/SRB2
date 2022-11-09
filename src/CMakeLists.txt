@@ -1,6 +1,6 @@
 add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32)
 
-if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows" AND NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
+if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows" AND NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}" AND NOT "${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}")
 	# On MinGW with internal libraries, link the standard library statically
 	target_link_options(SRB2SDL2 PRIVATE "-static")
 endif()
@@ -302,4 +302,28 @@ if((CMAKE_COMPILER_IS_GNUCC) AND NOT ("${CMAKE_SYSTEM_NAME}" MATCHES Darwin))
 			COMMAND ${OBJCOPY} --add-gnu-debuglink=$<TARGET_FILE:SRB2SDL2>.debug $<TARGET_FILE:SRB2SDL2>
 		)
 	endif()
+endif()
+
+# copy DLLs to bin/ directory if building internal shared on windows
+if("${CMAKE_SYSTEM_NAME}" STREQUAL Windows AND NOT "${SRB2_CONFIG_INTERNAL_LIBRARIES}" AND "${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}")
+	set(ADDITIONAL_DLLS "")
+	if("${CMAKE_C_COMPILER_ID}" STREQUAL GNU)
+		# also copy implicitly linked system libraries
+		get_filename_component(MINGW_BIN_PATH ${CMAKE_CXX_COMPILER} PATH)
+		list(APPEND ADDITIONAL_DLLS
+			"libgcc_s_dw2-1.dll"
+			"libstdc++-6.dll"
+			"libwinpthread-1.dll"
+		)
+		list(TRANSFORM ADDITIONAL_DLLS PREPEND "${MINGW_BIN_PATH}/")
+	endif()
+	add_custom_command(TARGET SRB2SDL2 POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			$<TARGET_RUNTIME_DLLS:SRB2SDL2>
+			${ADDITIONAL_DLLS}
+
+			$<TARGET_FILE_DIR:SRB2SDL2>
+		COMMAND_EXPAND_LISTS
+		COMMENT "Copying runtime DLLs"
+	)
 endif()
