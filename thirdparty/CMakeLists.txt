@@ -492,6 +492,9 @@ if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 		# -DLIBOPENMPT_BUILD
 		configure_file("openmpt_svn_version.h" "svn_version.h")
 		add_library(openmpt "${SRB2_INTERNAL_LIBRARY_TYPE}" ${openmpt_SOURCES} ${CMAKE_CURRENT_BINARY_DIR}/svn_version.h)
+		if("${CMAKE_SYSTEM_NAME}" STREQUAL Windows)
+			target_link_libraries(openmpt PRIVATE Rpcrt4)
+		endif()
 		target_compile_features(openmpt PRIVATE cxx_std_11)
 		target_compile_definitions(openmpt PRIVATE -DLIBOPENMPT_BUILD)
 		
