@@ -1333,7 +1333,7 @@ void A_FaceStabHurl(mobj_t *actor)
 					hwork->destscale = FixedSqrt(step*basesize);
 					P_SetScale(hwork, hwork->destscale);
 					hwork->fuse = 2;
-					P_TeleportMove(hwork, actor->x + xo*(15-step), actor->y + yo*(15-step), actor->z + (actor->height - hwork->height)/2 + (P_MobjFlip(actor)*(8<<FRACBITS)));
+					P_MoveOrigin(hwork, actor->x + xo*(15-step), actor->y + yo*(15-step), actor->z + (actor->height - hwork->height)/2 + (P_MobjFlip(actor)*(8<<FRACBITS)));
 					step -= NUMGRADS;
 				}
 
@@ -2095,7 +2095,7 @@ void A_CrushclawAim(mobj_t *actor)
 #undef anglimit
 #undef angfactor
 
-	P_TeleportMove(actor,
+	P_MoveOrigin(actor,
 		crab->x + P_ReturnThrustX(actor, actor->angle, locvar1*crab->scale),
 		crab->y + P_ReturnThrustY(actor, actor->angle, locvar1*crab->scale),
 		crab->z + locvar2*crab->scale);
@@ -2233,7 +2233,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		fixed_t idx = dx, idy = dy, idz = dz;
 		while (chain)
 		{
-			P_TeleportMove(chain, actor->target->x + idx, actor->target->y + idy, actor->target->z + idz);
+			P_MoveOrigin(chain, actor->target->x + idx, actor->target->y + idy, actor->target->z + idz);
 			chain->movefactor = chain->z;
 			idx += dx;
 			idy += dy;
@@ -11181,7 +11181,7 @@ void A_VileAttack(mobj_t *actor)
 		// move the fire between the vile and the player
 		//fire->x = actor->target->x - FixedMul (24*FRACUNIT, finecosine[an]);
 		//fire->y = actor->target->y - FixedMul (24*FRACUNIT, finesine[an]);
-		P_TeleportMove(fire,
+		P_MoveOrigin(fire,
 						actor->target->x - P_ReturnThrustX(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 						actor->target->y - P_ReturnThrustY(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 						fire->z);
@@ -11226,7 +11226,7 @@ void A_VileAttack(mobj_t *actor)
 			// move the fire between the vile and the player
 			//fire->x = actor->target->x - FixedMul (24*FRACUNIT, finecosine[an]);
 			//fire->y = actor->target->y - FixedMul (24*FRACUNIT, finesine[an]);
-			P_TeleportMove(fire,
+			P_MoveOrigin(fire,
 							actor->target->x - P_ReturnThrustX(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 							actor->target->y - P_ReturnThrustY(fire, actor->angle, FixedMul(24*FRACUNIT, fire->scale)),
 							fire->z);
@@ -11893,12 +11893,12 @@ void A_FlickyCenter(mobj_t *actor)
 		if (actor->target && P_AproxDistance(actor->target->x - originx, actor->target->y - originy) < actor->extravalue1)
 		{
 			actor->extravalue2 = 1;
-		 	P_TeleportMove(actor, actor->target->x, actor->target->y, actor->target->z);
+		 	P_SetOrigin(actor, actor->target->x, actor->target->y, actor->target->z);
 		}
 		else if(actor->extravalue2)
 		{
 			actor->extravalue2 = 0;
-			P_TeleportMove(actor, originx, originy, originz);
+			P_SetOrigin(actor, originx, originy, originz);
 		}
 	}
 }
@@ -12431,7 +12431,7 @@ void A_LightBeamReset(mobj_t *actor)
 	actor->momy = (P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/128;
 	actor->momz = (P_SignedRandom()*FRACUNIT)/128;
 
-	P_TeleportMove(actor,
+	P_SetOrigin(actor,
 		actor->spawnpoint->x*FRACUNIT - (P_SignedRandom()*FINESINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2,
 		actor->spawnpoint->y*FRACUNIT + (P_SignedRandom()*FINECOSINE(((actor->spawnpoint->angle*ANG1)>>ANGLETOFINESHIFT) & FINEMASK))/2,
 		actor->spawnpoint->z*FRACUNIT + (P_SignedRandom()*FRACUNIT)/2);
@@ -12988,7 +12988,7 @@ void A_DoNPCSkid(mobj_t *actor)
 		actor->momy = (2*actor->momy)/3;
 	}
 
-	P_TeleportMove(actor, x, y, z);
+	P_MoveOrigin(actor, x, y, z);
 
 	// Spawn a particle every 3 tics.
 	if (!(leveltime % 3))
@@ -13329,7 +13329,7 @@ void A_Boss5MakeJunk(mobj_t *actor)
 		if (locvar1 > 0)
 			P_SetMobjState(broked, locvar1);
 		if (!P_MobjWasRemoved(broked))
-			P_TeleportMove(broked, broked->x + broked->momx, broked->y + broked->momy, broked->z);
+			P_MoveOrigin(broked, broked->x + broked->momx, broked->y + broked->momy, broked->z);
 		ang += ANGLE_45;
 	}
 
@@ -13538,7 +13538,7 @@ void A_DustDevilThink(mobj_t *actor)
 	//Chained thinker for the spiralling dust column.
 	while (layer && !P_MobjWasRemoved(layer)) {
 		angle_t fa = layer->angle >> ANGLETOFINESHIFT;
-		P_TeleportMove(layer, layer->x + 5 * FixedMul(scale, FINECOSINE(fa)), layer->y + 5 * FixedMul(scale, FINESINE(fa)), layer->z);
+		P_MoveOrigin(layer, layer->x + 5 * FixedMul(scale, FINECOSINE(fa)), layer->y + 5 * FixedMul(scale, FINESINE(fa)), layer->z);
 		layer->scale = scale;
 		layer->angle += ANG10 / 2;
 		layer->momx = actor->momx;
@@ -14547,7 +14547,7 @@ void A_DragonWing(mobj_t *actor)
 	actor->angle = target->angle + actor->movedir;
 	x = target->x + P_ReturnThrustX(actor, actor->angle, -target->radius);
 	y = target->y + P_ReturnThrustY(actor, actor->angle, -target->radius);
-	P_TeleportMove(actor, x, y, target->z);
+	P_MoveOrigin(actor, x, y, target->z);
 }
 
 // Function: A_DragonSegment
@@ -14588,7 +14588,7 @@ void A_DragonSegment(mobj_t *actor)
 	zdist = P_ReturnThrustY(target, zangle, radius);
 
 	actor->angle = hangle;
-	P_TeleportMove(actor, target->x + xdist, target->y + ydist, target->z + zdist);
+	P_MoveOrigin(actor, target->x + xdist, target->y + ydist, target->z + zdist);
 }
 
 // Function: A_ChangeHeight

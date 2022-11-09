@@ -22,6 +22,7 @@
 #include "p_setup.h"
 #include "p_saveg.h"
 #include "r_data.h"
+#include "r_fps.h"
 #include "r_textures.h"
 #include "r_things.h"
 #include "r_skins.h"
@@ -3059,6 +3060,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	}
 
 	mobj->info = (mobjinfo_t *)next; // temporarily, set when leave this function
+
+	R_AddMobjInterpolator(mobj);
 
 	return &mobj->thinker;
 }

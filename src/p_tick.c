@@ -23,6 +23,9 @@
 #include "lua_hook.h"
 #include "m_perfstats.h"
 #include "i_system.h" // I_GetPreciseTime
+#include "r_main.h"
+#include "r_fps.h"
+#include "i_video.h" // rendermode
 
 // Object place
 #include "m_cheat.h"
@@ -254,6 +257,7 @@ void P_RemoveThinkerDelayed(thinker_t *thinker)
 	* thinker->prev->next = thinker->next */
 	(next->prev = currentthinker = thinker->prev)->next = next;
 
+	R_DestroyLevelInterpolators(thinker);
 	Z_Free(thinker);
 }
 
@@ -616,8 +620,10 @@ void P_Ticker(boolean run)
 		if (OP_FreezeObjectplace())
 		{
 			P_MapStart();
+			R_UpdateMobjInterpolators();
 			OP_ObjectplaceMovement(&players[0]);
 			P_MoveChaseCamera(&players[0], &camera, false);
+			R_UpdateViewInterpolation();
 			P_MapEnd();
 			S_SetStackAdjustmentStart();
 			return;
@@ -640,6 +646,8 @@ void P_Ticker(boolean run)
 
 	if (run)
 	{
+		R_UpdateMobjInterpolators();
+
 		if (demorecording)
 			G_WriteDemoTiccmd(&players[consoleplayer].cmd, 0);
 		if (demoplayback)
@@ -763,6 +771,42 @@ void P_Ticker(boolean run)
 		LUA_HOOK(PostThinkFrame);
 	}
 
+	if (run)
+	{
+		R_UpdateLevelInterpolators();
+		R_UpdateViewInterpolation();
+
+		// Hack: ensure newview is assigned every tic.
+		// Ensures view interpolation is T-1 to T in poor network conditions
+		// We need a better way to assign view state decoupled from game logic
+		if (rendermode != render_none)
+		{
+			player_t *player1 = &players[displayplayer];
+			if (player1->mo && skyboxmo[0] && cv_skybox.value)
+			{
+				R_SkyboxFrame(player1);
+			}
+			if (player1->mo)
+			{
+				R_SetupFrame(player1);
+			}
+
+			if (splitscreen)
+			{
+				player_t *player2 = &players[secondarydisplayplayer];
+				if (player2->mo && skyboxmo[0] && cv_skybox.value)
+				{
+					R_SkyboxFrame(player2);
+				}
+				if (player2->mo)
+				{
+					R_SetupFrame(player2);
+				}
+			}
+		}
+		
+	}
+
 	P_MapEnd();
 
 //	Z_CheckMemCleanup();
@@ -782,6 +826,8 @@ void P_PreTicker(INT32 frames)
 	for (framecnt = 0; framecnt < frames; ++framecnt)
 	{
 		P_MapStart();
+
+		R_UpdateMobjInterpolators();
 
 		LUA_HOOK(PreThinkFrame);
 
@@ -820,6 +866,10 @@ void P_PreTicker(INT32 frames)
 		P_RespawnSpecials();
 
 		LUA_HOOK(PostThinkFrame);
+
+		R_UpdateLevelInterpolators();
+		R_UpdateViewInterpolation();
+		R_ResetViewInterpolation(0);
 
 		P_MapEnd();
 	}

@@ -40,6 +40,7 @@
 #include "hu_stuff.h"
 #include "i_sound.h"
 #include "i_system.h"
+#include "i_time.h"
 #include "i_threads.h"
 #include "i_video.h"
 #include "m_argv.h"
@@ -64,6 +65,7 @@
 #include "deh_tables.h" // Dehacked list test
 #include "m_cond.h" // condition initialization
 #include "fastcmp.h"
+#include "r_fps.h" // Frame interpolation/uncapped
 #include "keys.h"
 #include "filesrch.h" // refreshdirmenu
 #include "g_input.h" // tutorial mode control scheming
@@ -476,6 +478,7 @@ static void D_Display(void)
 
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
+				R_ApplyLevelInterpolators(R_UsingFrameInterpolation() ? rendertimefrac : FRACUNIT);
 				PS_START_TIMING(ps_rendercalltime);
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
@@ -524,6 +527,7 @@ static void D_Display(void)
 						V_DoPostProcessor(1, postimgtype2, postimgparam2);
 				}
 				PS_STOP_TIMING(ps_rendercalltime);
+				R_RestoreLevelInterpolators();
 			}
 
 			if (lastdraw)
@@ -692,8 +696,13 @@ tic_t rendergametic;
 
 void D_SRB2Loop(void)
 {
-	tic_t oldentertics = 0, entertic = 0, realtics = 0, rendertimeout = INFTICS;
+	tic_t entertic = 0, oldentertics = 0, realtics = 0, rendertimeout = INFTICS;
+	double deltatics = 0.0;
+	double deltasecs = 0.0;
 	static lumpnum_t gstartuplumpnum;
+
+	boolean interp = false;
+	boolean doDisplay = false;
 
 	if (dedicated)
 		server = true;
@@ -705,6 +714,7 @@ void D_SRB2Loop(void)
 	I_DoStartupMouse();
 #endif
 
+	I_UpdateTime(cv_timescale.value);
 	oldentertics = I_GetTime();
 
 	// end of loading screen: CONS_Printf() will no more call FinishUpdate()
@@ -745,6 +755,19 @@ void D_SRB2Loop(void)
 
 	for (;;)
 	{
+		// capbudget is the minimum precise_t duration of a single loop iteration
+		precise_t capbudget;
+		precise_t enterprecise = I_GetPreciseTime();
+		precise_t finishprecise = enterprecise;
+
+		{
+			// Casting the return value of a function is bad practice (apparently)
+			double budget = round((1.0 / R_GetFramerateCap()) * I_GetPrecisePrecision());
+			capbudget = (precise_t) budget;
+		}
+
+		I_UpdateTime(cv_timescale.value);
+
 		if (lastwipetic)
 		{
 			oldentertics = lastwipetic;
@@ -756,7 +779,11 @@ void D_SRB2Loop(void)
 		realtics = entertic - oldentertics;
 		oldentertics = entertic;
 
-		refreshdirmenu = 0; // not sure where to put this, here as good as any?
+		if (demoplayback && gamestate == GS_LEVEL)
+		{
+			// Nicer place to put this.
+			realtics = realtics * cv_playbackspeed.value;
+		}
 
 #ifdef DEBUGFILE
 		if (!realtics)
@@ -764,64 +791,119 @@ void D_SRB2Loop(void)
 				debugload--;
 #endif
 
-		if (!realtics && !singletics)
-		{
-			I_Sleep();
-			continue;
-		}
+		interp = R_UsingFrameInterpolation() && !dedicated;
+		doDisplay = false;
 
 #ifdef HW3SOUND
 		HW3S_BeginFrameUpdate();
 #endif
 
-		// don't skip more than 10 frames at a time
-		// (fadein / fadeout cause massive frame skip!)
-		if (realtics > 8)
-			realtics = 1;
+		refreshdirmenu = 0; // not sure where to put this, here as good as any?
 
-		// process tics (but maybe not if realtic == 0)
-		TryRunTics(realtics);
-
-		if (lastdraw || singletics || gametic > rendergametic)
+		if (realtics > 0 || singletics)
 		{
-			rendergametic = gametic;
-			rendertimeout = entertic+TICRATE/17;
+			// don't skip more than 10 frames at a time
+			// (fadein / fadeout cause massive frame skip!)
+			if (realtics > 8)
+				realtics = 1;
 
-			// Update display, next frame, with current state.
-			D_Display();
+			// process tics (but maybe not if realtic == 0)
+			TryRunTics(realtics);
 
-			if (moviemode)
-				M_SaveFrame();
-			if (takescreenshot) // Only take screenshots after drawing.
-				M_DoScreenShot();
-		}
-		else if (rendertimeout < entertic) // in case the server hang or netsplit
-		{
-			// Lagless camera! Yay!
-			if (gamestate == GS_LEVEL && netgame)
+			if (lastdraw || singletics || gametic > rendergametic)
 			{
-				if (splitscreen && camera2.chase)
-					P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
-				if (camera.chase)
-					P_MoveChaseCamera(&players[displayplayer], &camera, false);
-			}
-			D_Display();
+				rendergametic = gametic;
+				rendertimeout = entertic + TICRATE/17;
 
-			if (moviemode)
-				M_SaveFrame();
-			if (takescreenshot) // Only take screenshots after drawing.
-				M_DoScreenShot();
+				doDisplay = true;
+			}
+			else if (rendertimeout < entertic) // in case the server hang or netsplit
+			{
+				// Lagless camera! Yay!
+				if (gamestate == GS_LEVEL && netgame)
+				{
+					// Evaluate the chase cam once for every local realtic
+					// This might actually be better suited inside G_Ticker or TryRunTics
+					for (tic_t chasecamtics = 0; chasecamtics < realtics; chasecamtics++)
+					{
+						if (splitscreen && camera2.chase)
+							P_MoveChaseCamera(&players[secondarydisplayplayer], &camera2, false);
+						if (camera.chase)
+							P_MoveChaseCamera(&players[displayplayer], &camera, false);
+					}
+					R_UpdateViewInterpolation();
+				}
+
+				doDisplay = true;
+			}
+
+			renderisnewtic = true;
+		}
+		else
+		{
+			renderisnewtic = false;
 		}
 
-		// consoleplayer -> displayplayer (hear sounds from viewpoint)
+		if (interp)
+		{
+			// I looked at the possibility of putting in a float drawer for
+			// perfstats and it's very complicated, so we'll just do this instead...
+			ps_interp_frac.value.p = (precise_t)((FIXED_TO_FLOAT(g_time.timefrac)) * 1000.0f);
+			ps_interp_lag.value.p = (precise_t)((deltasecs) * 1000.0f);
+
+			renderdeltatics = FLOAT_TO_FIXED(deltatics);
+
+			if (!(paused || P_AutoPause()) && deltatics < 1.0 && !hu_stopped)
+			{
+				rendertimefrac = g_time.timefrac;
+			}
+			else
+			{
+				rendertimefrac = FRACUNIT;
+			}
+		}
+		else
+		{
+			renderdeltatics = realtics * FRACUNIT;
+			rendertimefrac = FRACUNIT;
+		}
+
+		if (interp || doDisplay)
+		{
+			D_Display();
+		}
+
+		// Only take screenshots after drawing.
+		if (moviemode)
+			M_SaveFrame();
+		if (takescreenshot)
+			M_DoScreenShot();
+
+		// consoleplayer -> displayplayers (hear sounds from viewpoint)
 		S_UpdateSounds(); // move positional sounds
-		S_UpdateClosedCaptions();
+		if (realtics > 0 || singletics)
+			S_UpdateClosedCaptions();
 
 #ifdef HW3SOUND
 		HW3S_EndFrameUpdate();
 #endif
 
 		LUA_Step();
+
+		// Fully completed frame made.
+		finishprecise = I_GetPreciseTime();
+		if (!singletics)
+		{
+			INT64 elapsed = (INT64)(finishprecise - enterprecise);
+			if (elapsed > 0 && (INT64)capbudget > elapsed)
+			{
+				I_SleepDuration(capbudget - (finishprecise - enterprecise));
+			}
+		}
+		// Capture the time once more to get the real delta time.
+		finishprecise = I_GetPreciseTime();
+		deltasecs = (double)((INT64)(finishprecise - enterprecise)) / I_GetPrecisePrecision();
+		deltatics = deltasecs * NEWTICRATE;
 	}
 }
 
@@ -1307,8 +1389,8 @@ void D_SRB2Main(void)
 	//---------------------------------------------------- READY TIME
 	// we need to check for dedicated before initialization of some subsystems
 
-	CONS_Printf("I_StartupTimer()...\n");
-	I_StartupTimer();
+	CONS_Printf("I_InitializeTime()...\n");
+	I_InitializeTime();
 
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
@@ -1582,6 +1664,8 @@ void D_SRB2Main(void)
 		// Do this here so if you run SRB2 with eg +timelimit 5, the time limit counts
 		// as having been modified for the first game.
 		M_PushSpecialParameters(); // push all "+" parameter at the command buffer
+
+		COM_BufExecute(); // ensure the command buffer gets executed before the map starts (+skin)
 
 		if (M_CheckParm("-gametype") && M_IsNextParm())
 		{

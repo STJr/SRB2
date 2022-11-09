@@ -17,6 +17,7 @@
 #include "m_random.h"
 #include "p_local.h"
 #include "p_slopes.h"
+#include "r_fps.h"
 #include "r_state.h"
 #include "s_sound.h"
 #include "z_zone.h"
@@ -523,6 +524,8 @@ void T_ContinuousFalling(continuousfall_t *faller)
 	{
 		faller->sector->ceilingheight = faller->ceilingstartheight;
 		faller->sector->floorheight = faller->floorstartheight;
+
+		R_ClearLevelInterpolatorState(&faller->thinker);
 	}
 
 	P_CheckSector(faller->sector, false); // you might think this is irrelevant. you would be wrong
@@ -1709,6 +1712,9 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 		}
 
 		firstone = 0;
+
+		// interpolation
+		R_CreateInterpolator_SectorPlane(&dofloor->thinker, sec, false);
 	}
 }
 
@@ -1805,6 +1811,10 @@ void EV_DoElevator(mtag_t tag, line_t *line, elevator_e elevtype)
 		}
 
 		elevator->ceilingdestheight = elevator->floordestheight + sec->ceilingheight - sec->floorheight;
+
+		// interpolation
+		R_CreateInterpolator_SectorPlane(&elevator->thinker, sec, false);
+		R_CreateInterpolator_SectorPlane(&elevator->thinker, sec, true);
 	}
 }
 
@@ -1953,6 +1963,10 @@ void EV_BounceSector(sector_t *sec, fixed_t momz, line_t *sourceline)
 	bouncer->speed = momz/2;
 	bouncer->distance = FRACUNIT;
 	bouncer->low = true;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&bouncer->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&bouncer->thinker, sec, true);
 }
 
 // For T_ContinuousFalling special
@@ -1978,6 +1992,10 @@ void EV_DoContinuousFall(sector_t *sec, sector_t *backsector, fixed_t spd, boole
 
 	faller->destheight = backwards ? backsector->ceilingheight : backsector->floorheight;
 	faller->direction = backwards ? 1 : -1;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&faller->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&faller->thinker, sec, true);
 }
 
 // Some other 3dfloor special things Tails 03-11-2002 (Search p_mobj.c for description)
@@ -2030,6 +2048,10 @@ INT32 EV_StartCrumble(sector_t *sec, ffloor_t *rover, boolean floating,
 
 	crumble->sector->crumblestate = CRUMBLE_ACTIVATED;
 
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&crumble->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&crumble->thinker, sec, true);
+
 	TAG_ITER_SECTORS(tag, i)
 	{
 		foundsec = &sectors[i];
@@ -2081,6 +2103,10 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		block->ceilingstartheight = block->sector->ceilingheight;
 		block->tag = (INT16)rover->master->args[0];
 
+		// interpolation
+		R_CreateInterpolator_SectorPlane(&block->thinker, roversec, false);
+		R_CreateInterpolator_SectorPlane(&block->thinker, roversec, true);
+
 		if (itsamonitor)
 		{
 			oldx = thing->x;
@@ -2089,9 +2115,9 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		}
 
 		P_UnsetThingPosition(thing);
-		thing->x = sector->soundorg.x;
-		thing->y = sector->soundorg.y;
-		thing->z = topheight;
+		thing->x = thing->old_x = sector->soundorg.x;
+		thing->y = thing->old_y = sector->soundorg.y;
+		thing->z = thing->old_z = topheight;
 		thing->momz = FixedMul(6*FRACUNIT, thing->scale);
 		P_SetThingPosition(thing);
 		if (thing->flags & MF_SHOOTABLE)
@@ -2112,9 +2138,9 @@ void EV_MarioBlock(ffloor_t *rover, sector_t *sector, mobj_t *puncher)
 		if (itsamonitor && thing)
 		{
 			P_UnsetThingPosition(thing);
-			thing->x = oldx;
-			thing->y = oldy;
-			thing->z = oldz;
+			thing->x = thing->old_x = oldx;
+			thing->y = thing->old_y = oldy;
+			thing->z = thing->old_z = oldz;
 			thing->momx = 1;
 			thing->momy = 1;
 			P_SetThingPosition(thing);

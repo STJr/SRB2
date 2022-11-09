@@ -383,6 +383,8 @@ typedef struct player_s
 
 	// fun thing for player sprite
 	angle_t drawangle;
+	angle_t old_drawangle;
+	angle_t old_drawangle2;
 
 	// player's ring count
 	INT16 rings;

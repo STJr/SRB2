@@ -48,6 +48,7 @@
 #endif
 
 #include "lua_hud.h"
+#include "lua_hudlib_drawlist.h"
 #include "lua_hook.h"
 
 // coords are scaled
@@ -166,9 +167,13 @@ static tic_t cechotimer = 0;
 static tic_t cechoduration = 5*TICRATE;
 static INT32 cechoflags = 0;
 
+static huddrawlist_h luahuddrawlist_scores;
+
 //======================================================================
 //                          HEADS UP INIT
 //======================================================================
+
+static tic_t resynch_ticker = 0;
 
 #ifndef NONET
 // just after
@@ -332,6 +337,8 @@ void HU_Init(void)
 
 	// set shift translation table
 	shiftxform = english_shiftxform;
+
+	luahuddrawlist_scores = LUA_HUD_CreateDrawList();
 }
 
 static inline void HU_Stop(void)
@@ -382,12 +389,12 @@ static INT16 addy = 0; // use this to make the messages scroll smoothly when one
 
 static void HU_removeChatText_Mini(void)
 {
-    // MPC: Don't create new arrays, just iterate through an existing one
+	// MPC: Don't create new arrays, just iterate through an existing one
 	size_t i;
-    for(i=0;i<chat_nummsg_min-1;i++) {
-        strcpy(chat_mini[i], chat_mini[i+1]);
-        chat_timers[i] = chat_timers[i+1];
-    }
+	for(i=0;i<chat_nummsg_min-1;i++) {
+		strcpy(chat_mini[i], chat_mini[i+1]);
+		chat_timers[i] = chat_timers[i+1];
+	}
 	chat_nummsg_min--; // lost 1 msg.
 
 	// use addy and make shit slide smoothly af.
@@ -400,10 +407,10 @@ static void HU_removeChatText_Log(void)
 {
 	// MPC: Don't create new arrays, just iterate through an existing one
 	size_t i;
-    for(i=0;i<chat_nummsg_log-1;i++) {
-        strcpy(chat_log[i], chat_log[i+1]);
-    }
-    chat_nummsg_log--; // lost 1 msg.
+	for(i=0;i<chat_nummsg_log-1;i++) {
+		strcpy(chat_log[i], chat_log[i+1]);
+	}
+	chat_nummsg_log--; // lost 1 msg.
 }
 #endif
 
@@ -874,6 +881,39 @@ void HU_Ticker(void)
 		hu_showscores = !chat_on;
 	else
 		hu_showscores = false;
+
+	if (chat_on)
+	{
+		// count down the scroll timer.
+		if (chat_scrolltime > 0)
+			chat_scrolltime--;
+	}
+
+	if (netgame)
+	{
+		size_t i = 0;
+
+		// handle spam while we're at it:
+		for(; (i<MAXPLAYERS); i++)
+		{
+			if (stop_spamming[i] > 0)
+				stop_spamming[i]--;
+		}
+
+		// handle chat timers
+		for (i=0; (i<chat_nummsg_min); i++)
+		{
+			if (chat_timers[i] > 0)
+				chat_timers[i]--;
+			else
+				HU_removeChatText_Mini();
+		}
+	}
+
+	if (cechotimer > 0) --cechotimer;
+
+	if (hu_redownloadinggamestate)
+		resynch_ticker++;
 }
 
 #ifndef NONET
@@ -1102,7 +1142,7 @@ boolean HU_Responder(event_t *ev)
 			if (chatlen+pastelen > HU_MAXMSGLEN)
 				return true; // we can't paste this!!
 
-			memmove(&w_chat[c_input + pastelen], &w_chat[c_input], pastelen);
+			memmove(&w_chat[c_input + pastelen], &w_chat[c_input], (chatlen - c_input) + 1); // +1 for '\0'
 			memcpy(&w_chat[c_input], paste, pastelen); // copy all of that.
 			c_input += pastelen;
 			return true;
@@ -1854,8 +1894,6 @@ static void HU_DrawCEcho(void)
 		echoptr = line;
 		echoptr++;
 	}
-
-	--cechotimer;
 }
 
 static void HU_drawGametype(void)
@@ -1917,9 +1955,6 @@ void HU_Drawer(void)
 	// draw chat string plus cursor
 	if (chat_on)
 	{
-		// count down the scroll timer.
-		if (chat_scrolltime > 0)
-			chat_scrolltime--;
 		if (!OLDCHAT)
 			HU_DrawChat();
 		else
@@ -1929,29 +1964,9 @@ void HU_Drawer(void)
 	{
 		typelines = 1;
 		chat_scrolltime = 0;
+
 		if (!OLDCHAT && cv_consolechat.value < 2 && netgame) // Don't display minimized chat if you set the mode to Window (Hidden)
 			HU_drawMiniChat(); // draw messages in a cool fashion.
-	}
-
-	if (netgame) // would handle that in hu_drawminichat, but it's actually kinda awkward when you're typing a lot of messages. (only handle that in netgames duh)
-	{
-		size_t i = 0;
-
-		// handle spam while we're at it:
-		for(; (i<MAXPLAYERS); i++)
-		{
-			if (stop_spamming[i] > 0)
-				stop_spamming[i]--;
-		}
-
-		// handle chat timers
-		for (i=0; (i<chat_nummsg_min); i++)
-		{
-			if (chat_timers[i] > 0)
-				chat_timers[i]--;
-			else
-				HU_removeChatText_Mini();
-		}
 	}
 #endif
 
@@ -1979,7 +1994,13 @@ void HU_Drawer(void)
 		}
 		else
 			HU_DrawCoopOverlay();
-		LUA_HUDHOOK(scores);
+		
+		if (renderisnewtic)
+		{
+			LUA_HUD_ClearDrawList(luahuddrawlist_scores);
+			LUA_HUDHOOK(scores, luahuddrawlist_scores);
+		}
+		LUA_HUD_DrawList(luahuddrawlist_scores);
 	}
 
 	if (gamestate != GS_LEVEL)
@@ -1992,12 +2013,9 @@ void HU_Drawer(void)
 	// draw desynch text
 	if (hu_redownloadinggamestate)
 	{
-		static UINT32 resynch_ticker = 0;
 		char resynch_text[14];
 		UINT32 i;
 
-		// Animate the dots
-		resynch_ticker++;
 		strcpy(resynch_text, "Resynching");
 		for (i = 0; i < (resynch_ticker / 16) % 4; i++)
 			strcat(resynch_text, ".");

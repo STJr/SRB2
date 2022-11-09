@@ -14,6 +14,7 @@
 #include "d_player.h"
 #include "s_sound.h"
 #include "d_event.h"
+#include "lua_hudlib_drawlist.h"
 
 /*
 Do you know what an 'X Macro' is? Such a macro is called over each element of
@@ -110,12 +111,12 @@ ENUM (STRING_HOOK);
 
 /* dead simple, LUA_HOOK(GameQuit) */
 #define LUA_HOOK(type) LUA_HookVoid(HOOK(type))
-#define LUA_HUDHOOK(type) LUA_HookHUD(HUD_HOOK(type))
+#define LUA_HUDHOOK(type,drawlist) LUA_HookHUD(HUD_HOOK(type),(drawlist))
 
 extern boolean hook_cmd_running;
 
 void LUA_HookVoid(int hook);
-void LUA_HookHUD(int hook);
+void LUA_HookHUD(int hook, huddrawlist_h drawlist);
 
 int  LUA_HookMobj(mobj_t *, int hook);
 int  LUA_Hook2Mobj(mobj_t *, mobj_t *, int hook);
