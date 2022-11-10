@@ -1052,6 +1052,7 @@ static const char *credits[] = {
 	"Johnny \"Sonikku\" Wallbank",
 	"",
 	"\1Programming",
+	"\"altaluna\"",
 	"Alam \"GBC\" Arias",
 	"Logan \"GBA\" Arias",
 	"Zolton \"Zippy_Zolton\" Auburn",
@@ -1089,7 +1090,6 @@ static const char *credits[] = {
 	"Jonas \"MascaraSnake\" Sauer",
 	"Wessel \"sphere\" Smit",
 	"\"SSNTails\"",
-	"\"Varren\"",
 	"\"VelocitOni\"", // Wrote the original dashmode script
 	"Ikaro \"Tatsuru\" Vinhas",
 	"Ben \"Cue\" Woodford",
