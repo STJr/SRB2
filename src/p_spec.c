@@ -1863,6 +1863,12 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!P_CheckPlayerMare(triggerline))
 				return false;
 			break;
+		case 343: // gravity check
+			if (triggerline->args[1] == TMG_TEMPREVERSE && (!(actor->flags2 & MF2_OBJECTFLIP) != !(actor->player->powers[pw_gravityboots])))
+				return false;
+			if ((triggerline->args[1] == TMG_NORMAL) != !(actor->eflags & MFE_VERTICALFLIP))
+				return false;
+			break;
 		default:
 			break;
 	}
@@ -1900,7 +1906,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			|| specialtype == 319 // Unlockable
 			|| specialtype == 331 // Player skin
 			|| specialtype == 334 // Object dye
-			|| specialtype == 337) // Emerald check
+			|| specialtype == 337 // Emerald check
+			|| specialtype == 343) // Gravity check
 			&& triggerline->args[0] == TMT_ONCE)
 			triggerline->special = 0;
 	}
@@ -1950,7 +1957,8 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 			|| lines[masterline].special == 319 // Unlockable trigger
 			|| lines[masterline].special == 331 // Player skin
 			|| lines[masterline].special == 334 // Object dye
-			|| lines[masterline].special == 337) // Emerald check
+			|| lines[masterline].special == 337 // Emerald check
+			|| lines[masterline].special == 343) // Gravity check
 			&& lines[masterline].args[0] > TMT_EACHTIMEMASK)
 			continue;
 
@@ -2774,7 +2782,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 433: // Flip/flop gravity. Works on pushables, too!
-			if (line->args[0])
+			if (line->args[1])
+				mo->flags2 ^= MF2_OBJECTFLIP;
+			else if (line->args[0])
 				mo->flags2 &= ~MF2_OBJECTFLIP;
 			else
 				mo->flags2 |= MF2_OBJECTFLIP;
@@ -3827,6 +3837,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					sectors[secnum].flags |= MSF_GRAVITYFLIP;
 				else if (line->args[2] == TMF_REMOVE)
 					sectors[secnum].flags &= ~MSF_GRAVITYFLIP;
+
+				if (line->args[3])
+					sectors[secnum].specialflags |= SSF_GRAVITYOVERRIDE;
 			}
 		}
 		break;
@@ -6307,6 +6320,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 					else
 						sectors[s].flags &= ~MSF_GRAVITYFLIP;
 
+					if (lines[i].flags & ML_EFFECT6)
+						sectors[s].specialflags |= SSF_GRAVITYOVERRIDE;
+
 					CheckForReverseGravity |= (sectors[s].flags & MSF_GRAVITYFLIP);
 				}
 				break;
@@ -6924,6 +6940,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 331: // Player skin
 			case 334: // Object dye
 			case 337: // Emerald check
+			case 343: // Gravity check
 				if (lines[i].args[0] > TMT_EACHTIMEMASK)
 					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;

@@ -1432,7 +1432,7 @@ static void P_PlayerFlip(mobj_t *mo)
 fixed_t P_GetMobjGravity(mobj_t *mo)
 {
 	fixed_t gravityadd = 0;
-	boolean no3dfloorgrav = true; // Custom gravity
+	sector_t *gravsector = NULL; // Custom gravity
 	boolean goopgravity = false;
 	boolean wasflip;
 
@@ -1440,14 +1440,11 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 	I_Assert(!P_MobjWasRemoved(mo));
 
 	wasflip = (mo->eflags & MFE_VERTICALFLIP) != 0;
-
-	if (mo->type != MT_SPINFIRE)
-		mo->eflags &= ~MFE_VERTICALFLIP;
+	mo->eflags &= ~MFE_VERTICALFLIP;
 
 	if (mo->subsector->sector->ffloors) // Check for 3D floor gravity too.
 	{
 		ffloor_t *rover;
-		fixed_t gravfactor;
 
 		for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
 		{
@@ -1457,27 +1454,24 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 			if ((rover->fofflags & (FOF_SWIMMABLE|FOF_GOOWATER)) == (FOF_SWIMMABLE|FOF_GOOWATER))
 				goopgravity = true;
 
-			gravfactor = P_GetSectorGravityFactor(rover->master->frontsector);
-
-			if (gravfactor == FRACUNIT)
+			if (P_GetSectorGravityFactor(rover->master->frontsector) == FRACUNIT)
 				continue;
 
-			gravityadd = -FixedMul(gravity, gravfactor);
-
-			if ((rover->master->frontsector->flags & MSF_GRAVITYFLIP) && gravityadd > 0)
-				mo->eflags |= MFE_VERTICALFLIP;
-
-			no3dfloorgrav = false;
+			gravsector = rover->master->frontsector;
 			break;
 		}
 	}
 
-	if (no3dfloorgrav)
-	{
-		gravityadd = -FixedMul(gravity, P_GetSectorGravityFactor(mo->subsector->sector));
+	if (!gravsector) // If there is no 3D floor gravity, check sector's gravity
+		gravsector = mo->subsector->sector;
 
-		if ((mo->subsector->sector->flags & MSF_GRAVITYFLIP) && gravityadd > 0)
-			mo->eflags |= MFE_VERTICALFLIP;
+	gravityadd = -FixedMul(gravity, P_GetSectorGravityFactor(gravsector));
+
+	if ((gravsector->flags & MSF_GRAVITYFLIP) && gravityadd > 0)
+	{
+		if (gravsector->specialflags & SSF_GRAVITYOVERRIDE)
+			mo->flags2 &= ~MF2_OBJECTFLIP;
+		mo->eflags |= MFE_VERTICALFLIP;
 	}
 
 	// Less gravity underwater.
@@ -1515,36 +1509,6 @@ fixed_t P_GetMobjGravity(mobj_t *mo)
 		{
 			switch (mo->type)
 			{
-				case MT_FLINGRING:
-				case MT_FLINGCOIN:
-				case MT_FLINGBLUESPHERE:
-				case MT_FLINGNIGHTSCHIP:
-				case MT_FLINGEMERALD:
-				case MT_BOUNCERING:
-				case MT_RAILRING:
-				case MT_INFINITYRING:
-				case MT_AUTOMATICRING:
-				case MT_EXPLOSIONRING:
-				case MT_SCATTERRING:
-				case MT_GRENADERING:
-				case MT_BOUNCEPICKUP:
-				case MT_RAILPICKUP:
-				case MT_AUTOPICKUP:
-				case MT_EXPLODEPICKUP:
-				case MT_SCATTERPICKUP:
-				case MT_GRENADEPICKUP:
-				case MT_REDFLAG:
-				case MT_BLUEFLAG:
-					if (mo->target)
-					{
-						// Flung items copy the gravity of their tosser.
-						if ((mo->target->eflags & MFE_VERTICALFLIP) && !(mo->eflags & MFE_VERTICALFLIP))
-						{
-							gravityadd = -gravityadd;
-							mo->eflags |= MFE_VERTICALFLIP;
-						}
-					}
-					break;
 				case MT_WATERDROP:
 				case MT_CYBRAKDEMON:
 					gravityadd >>= 1;
@@ -2193,15 +2157,20 @@ void P_AdjustMobjFloorZ_FFloors(mobj_t *mo, sector_t *sector, UINT8 motype)
 				case 2: // scenery does things differently for some reason
 					if (mo->z < topheight && bottomheight < thingtop)
 					{
-						mo->floorz = mo->z;
+						if (!(mo->eflags & MFE_VERTICALFLIP))
+							mo->floorz = mo->z;
+						else if (mo->eflags & MFE_VERTICALFLIP)
+							mo->ceilingz = thingtop;
 						continue;
 					}
 					break;
 				default:
 					if (mo->z < topheight && bottomheight < thingtop)
 					{
-						if (mo->floorz < mo->z)
+						if (!(mo->eflags & MFE_VERTICALFLIP) && mo->floorz < mo->z)
 							mo->floorz = mo->z;
+						else if (mo->eflags & MFE_VERTICALFLIP && mo->ceilingz > thingtop)
+							mo->ceilingz = thingtop;
 					}
 					continue; // This is so you can jump/spring up through quicksand from below.
 			}

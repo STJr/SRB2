@@ -1727,6 +1727,10 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].specialflags |= SSF_FINISHLINE;
 	else if (fastcmp(param, "ropehang") && fastcmp("true", val))
 		sectors[i].specialflags |= SSF_ROPEHANG;
+	else if (fastcmp(param, "jumpflip") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_JUMPFLIP;
+	else if (fastcmp(param, "gravityoverride") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_GRAVITYOVERRIDE;
 	else if (fastcmp(param, "friction"))
 		sectors[i].friction = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "gravity"))
@@ -2580,6 +2584,10 @@ static void P_WriteTextmap(void)
 			fprintf(f, "finishline = true;\n");
 		if (wsectors[i].specialflags & SSF_ROPEHANG)
 			fprintf(f, "ropehang = true;\n");
+		if (wsectors[i].specialflags & SSF_JUMPFLIP)
+			fprintf(f, "jumpflip = true;\n");
+		if (wsectors[i].specialflags & SSF_GRAVITYOVERRIDE)
+			fprintf(f, "gravityoverride = true;\n");
 		if (wsectors[i].friction != ORIG_FRICTION)
 			fprintf(f, "friction = %f;\n", FIXED_TO_FLOAT(wsectors[i].friction));
 		if (wsectors[i].gravity != FRACUNIT)
@@ -4964,6 +4972,21 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[2] = TMC_EQUAL;
 			lines[i].special = 340;
 			break;
+		case 343: //Gravity check - continuous
+		case 344: //Gravity check - each time
+		case 345: //Gravity check - once
+			if (lines[i].special == 345)
+				lines[i].args[0] = TMT_ONCE;
+			else if (lines[i].special == 344)
+				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
+			else
+				lines[i].args[0] = TMT_CONTINUOUS;
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[1] = TMG_TEMPREVERSE;
+			else if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] = TMG_REVERSE;
+			lines[i].special = 343;
+			break;
 		case 400: //Set tagged sector's floor height/texture
 		case 401: //Set tagged sector's ceiling height/texture
 			lines[i].args[0] = tag;
@@ -5243,6 +5266,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 433: //Enable/disable gravity flip
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
+			lines[i].args[1] = !!(lines[i].flags & ML_SKEWTD);
 			break;
 		case 434: //Award power-up
 			if (sides[lines[i].sidenum[0]].text)
@@ -6014,6 +6038,9 @@ static void P_ConvertBinarySectorTypes(void)
 		{
 			case 5: //Speed pad
 				sectors[i].specialflags |= SSF_SPEEDPAD;
+				break;
+			case 6: //Gravity flip on jump (think VVVVVV)
+				sectors[i].specialflags |= SSF_JUMPFLIP;
 				break;
 			default:
 				break;

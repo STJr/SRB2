@@ -2494,6 +2494,41 @@ boolean P_InQuicksand(mobj_t *mo) // Returns true if you are in quicksand
 	return false; // No sand here, Captain!
 }
 
+boolean P_InJumpFlipSector(mobj_t *mo) // Returns true if you are in a jumpflip sector
+{
+	sector_t *sector = mo->subsector->sector;
+	fixed_t topheight, bottomheight;
+
+	if (sector->specialflags & SSF_JUMPFLIP)
+		return true;
+
+	if (sector->ffloors)
+	{
+		ffloor_t *rover;
+
+		for (rover = sector->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->fofflags & FOF_EXISTS))
+				continue;
+
+			if (!(rover->master->frontsector->specialflags & SSF_JUMPFLIP))
+				continue;
+			topheight    = P_GetFFloorTopZAt   (rover, mo->x, mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
+
+			if (mo->z + (mo->height/2) > topheight)
+				continue;
+
+			if (mo->z + (mo->height/2) < bottomheight)
+				continue;
+
+			return true;
+		}
+	}
+
+	return false; // No gravity jumping here, Captain Viridian!
+}
+
 static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
 {
 	if (!(rover->fofflags & FOF_EXISTS))
@@ -2789,12 +2824,13 @@ static void P_CheckQuicksand(player_t *player)
 	fixed_t sinkspeed;
 	fixed_t topheight, bottomheight;
 
-	if (!(player->mo->subsector->sector->ffloors && player->mo->momz <= 0))
+	if (!(player->mo->subsector->sector->ffloors && P_MobjFlip(player->mo)*player->mo->momz <= 0))
 		return;
 
 	for (rover = player->mo->subsector->sector->ffloors; rover; rover = rover->next)
 	{
-		if (!(rover->fofflags & FOF_EXISTS)) continue;
+		if (!(rover->fofflags & FOF_EXISTS))
+			continue;
 
 		if (!(rover->fofflags & FOF_QUICKSAND))
 			continue;
@@ -4458,6 +4494,12 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 	if (player->charflags & SF_NOJUMPDAMAGE)
 		player->pflags &= ~PF_SPINNING;
+
+	if (P_InJumpFlipSector(player->mo)) // Flip gravity on jump?
+	{
+		player->mo->flags2 ^= MF2_OBJECTFLIP;
+		S_StartSound(player->mo, sfx_s3k73); // Play gravity flip sound
+	}
 
 	if (soundandstate)
 	{
@@ -7643,10 +7685,8 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 		ground = player->mo->floorz;
 
 	if (cropcircle)
-		ground += P_MobjFlip(player->mo);
-
-	if (cropcircle)
 	{
+		ground += P_MobjFlip(player->mo);
 #define numangles 8
 #define limitangle (180/numangles)
 		travelangle = player->mo->angle + P_RandomRange(-limitangle, limitangle)*ANG1;
@@ -7659,7 +7699,8 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->fuse = TICRATE*7; // takes about an extra second to hit the ground
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
-			flame->flags2 = (flame->flags2 & ~MF2_OBJECTFLIP)|(player->mo->flags2 & MF2_OBJECTFLIP);
+			if (!(player->mo->flags2 & MF2_OBJECTFLIP) != !(player->powers[pw_gravityboots])) // take gravity boots into account
+				flame->flags2 |= MF2_OBJECTFLIP;
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
 			P_InstaThrust(flame, flame->angle, FixedMul(3*FRACUNIT, flame->scale));
 			P_SetObjectMomZ(flame, 3*FRACUNIT, false);
@@ -7694,6 +7735,8 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->fuse = TICRATE*6;
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
+			if (!(player->mo->flags2 & MF2_OBJECTFLIP) != !(player->powers[pw_gravityboots])) // take gravity boots into account
+				flame->flags2 |= MF2_OBJECTFLIP;
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
 			if (!(gametyperules & GTR_FRIENDLY))
 			{

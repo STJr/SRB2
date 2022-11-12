@@ -151,6 +151,7 @@ boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
 boolean P_InSpaceSector(mobj_t *mo);
 boolean P_InQuicksand(mobj_t *mo);
+boolean P_InJumpFlipSector(mobj_t *mo);
 boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff);
 
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);

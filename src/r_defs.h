@@ -355,6 +355,8 @@ typedef enum
 	SSF_ZOOMTUBEEND = 1<<16,
 	SSF_FINISHLINE = 1<<17,
 	SSF_ROPEHANG = 1<<18,
+	SSF_JUMPFLIP = 1<<19,
+	SSF_GRAVITYOVERRIDE = 1<<20, // combine with MSF_GRAVITYFLIP
 } sectorspecialflags_t;
 
 typedef enum
