@@ -1,0 +1,21 @@
+build:
+  image:
+    name: purplekarrot/mingw-w64-i686:latest
+    entrypoint: [""]
+  artifacts:
+    paths:
+      - build/bin/*.exe
+      - build/bin/*.exe.debug
+    expire_in: 1 day
+  script:
+    - apt-get -qq update && apt-get -qq install -y --no-install-recommends git
+    - mkdir -p .cpm
+    - mkdir -p build
+    - cd build
+    - >
+      cmake -G "Ninja"
+      "-DCPM_SOURCE_CACHE=$CI_PROJECT_DIR/.cpm"
+      -DCMAKE_TOOLCHAIN_FILE=/toolchain.cmake
+      -DCMAKE_BUILD_TYPE=Debug
+      ..
+    - ninja -j 1
