@@ -156,7 +156,7 @@ target_compile_options(SRB2SDL2 PRIVATE
 		-Winline
 		-Wformat-y2k
 		-Wformat-security
-		
+
 		$<$<VERSION_LESS:$<C_COMPILER_VERSION>,2.9.5>:
 			-Wno-div-by-zero
 			-Wendif-labels

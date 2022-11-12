@@ -89,7 +89,7 @@ precise_t I_GetPreciseTime(void)
 	return 0;
 }
 
-UINT64 I_GetPrecisePrecision(void) 
+UINT64 I_GetPrecisePrecision(void)
 {
 	return 1000000;
 }

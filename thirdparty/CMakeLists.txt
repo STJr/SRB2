@@ -88,7 +88,7 @@ if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 			zutil.c
 		)
 		list(TRANSFORM ZLIB_SRCS PREPEND "${ZLIB_SOURCE_DIR}/")
-		
+
 		configure_file("${ZLIB_SOURCE_DIR}/zlib.pc.cmakein" "${ZLIB_BINARY_DIR}/zlib.pc" @ONLY)
 		configure_file("${ZLIB_SOURCE_DIR}/zconf.h.cmakein" "${ZLIB_BINARY_DIR}/include/zconf.h" @ONLY)
 
@@ -122,7 +122,7 @@ if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 
 			png.h
 			pngconf.h
-			
+
 			pngpriv.h
 			pngdebug.h
 			pnginfo.h
@@ -471,7 +471,7 @@ if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 			soundlib/OggStream.h
 			soundlib/Loaders.h
 			soundlib/BitReader.h
-			soundlib/opal.h			
+			soundlib/opal.h
 
 			sounddsp/AGC.cpp
 			sounddsp/EQ.cpp
@@ -500,7 +500,7 @@ if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 		endif()
 		target_compile_features(openmpt PRIVATE cxx_std_11)
 		target_compile_definitions(openmpt PRIVATE -DLIBOPENMPT_BUILD)
-		
+
 		target_include_directories(openmpt PRIVATE "${openmpt_SOURCE_DIR}/common")
 		target_include_directories(openmpt PRIVATE "${openmpt_SOURCE_DIR}/src")
 		target_include_directories(openmpt PRIVATE "${openmpt_SOURCE_DIR}/include")

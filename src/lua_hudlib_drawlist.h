@@ -147,6 +147,6 @@ void LUA_HUD_DrawList(huddrawlist_h list);
 
 #ifdef __cplusplus
 } // extern "C"
-#endif 
+#endif
 
 #endif // __LUA_HUDLIB_DRAWLIST__

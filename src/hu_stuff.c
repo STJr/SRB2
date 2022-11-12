@@ -1996,7 +1996,7 @@ void HU_Drawer(void)
 		}
 		else
 			HU_DrawCoopOverlay();
-		
+
 		if (renderisnewtic)
 		{
 			LUA_HUD_ClearDrawList(luahuddrawlist_scores);

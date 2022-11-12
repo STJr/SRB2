@@ -1131,7 +1131,7 @@ void Y_Ticker(void)
 				S_ChangeMusicInternal("_clear", false); // don't loop it
 			tallydonetic = -1;
 		}
-		
+
 		// emerald bounce
 		if (intertic <= 1)
 		{

@@ -368,7 +368,7 @@ static void AddInterpolator(levelinterpolator_t* interpolator)
 		{
 			levelinterpolators_size *= 2;
 		}
-		
+
 		levelinterpolators = Z_ReallocAlign(
 			(void*) levelinterpolators,
 			sizeof(levelinterpolator_t*) * levelinterpolators_size,
@@ -616,7 +616,7 @@ void R_RestoreLevelInterpolators(void)
 	for (i = 0; i < levelinterpolators_len; i++)
 	{
 		levelinterpolator_t *interp = levelinterpolators[i];
-		
+
 		switch (interp->type)
 		{
 		case LVLINTERP_SectorPlane:
@@ -671,7 +671,7 @@ void R_DestroyLevelInterpolators(thinker_t *thinker)
 	for (i = 0; i < levelinterpolators_len; i++)
 	{
 		levelinterpolator_t *interp = levelinterpolators[i];
-		
+
 		if (interp->thinker == thinker)
 		{
 			// Swap the tail of the level interpolators to this spot
