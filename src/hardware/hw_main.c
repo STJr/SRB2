@@ -16,7 +16,7 @@
 
 #ifdef HWRENDER
 #include "hw_glob.h"
-#include "hw_light.h
+#include "hw_light.h"
 #include "hw_drv.h"
 #include "hw_batching.h"
 
