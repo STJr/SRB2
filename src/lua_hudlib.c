@@ -1185,7 +1185,7 @@ static int libd_fadeScreen(lua_State *L)
 		LUA_HUD_AddFadeScreen(list, color, strength);
 	else
 		V_DrawFadeScreen(color, strength);
-	
+
 	return 0;
 }
 

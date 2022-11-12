@@ -236,7 +236,7 @@ boolean R_SkinUsable(INT32 playernum, INT32 skinnum)
 		// Force 2.
 		return true;
 	}
-	
+
 	if (metalrecording && skinnum == 5)
 	{
 		// Force 3.

@@ -1273,7 +1273,7 @@ static void P_LoadSidedefs(UINT8 *data)
 					sd->midtexture = get_number(process);
 				}
 
- 				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
+				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
 				if (isfrontside && !(msd->toptexture[0] == '-' && msd->toptexture[1] == '\0'))
 				{
 					M_Memcpy(process,msd->toptexture,8);

@@ -2809,9 +2809,9 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 		P_MovePlayerToStarpost(playernum);
 	else
 		P_MovePlayerToSpawn(playernum, G_FindMapStart(playernum));
-	
+
 	R_ResetMobjInterpolationState(players[playernum].mo);
-	
+
 	if (playernum == consoleplayer)
 		P_ResetCamera(&players[playernum], &camera);
 	else if (playernum == secondarydisplayplayer)
