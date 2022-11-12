@@ -8418,7 +8418,7 @@ static void M_DrawLoadGameData(void)
 
 		savetodraw--;
 
-		if (savegameinfo[savetodraw].lives > 0)
+		if (savegameinfo[savetodraw].lives != 0)
 			charskin = &skins[savegameinfo[savetodraw].skinnum];
 
 		// signpost background
