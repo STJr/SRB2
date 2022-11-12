@@ -6682,7 +6682,7 @@ static void M_DrawAddons(void)
 	}
 
 	// draw down arrow that bobs down and up
-	if (b != sizedirmenu)
+	if (b != sizedirmenu - 1)
 		V_DrawString(19, y-12 + (skullAnimCounter/5), highlightflags, "\x1B");
 
 	// draw search box
@@ -6781,11 +6781,15 @@ static void M_HandleAddons(INT32 choice)
 		case KEY_DOWNARROW:
 			if (dir_on[menudepthleft] < sizedirmenu-1)
 				dir_on[menudepthleft]++;
+			else if (dir_on[menudepthleft] == sizedirmenu-1)
+				dir_on[menudepthleft] = 0;
 			S_StartSound(NULL, sfx_menu1);
 			break;
 		case KEY_UPARROW:
 			if (dir_on[menudepthleft])
 				dir_on[menudepthleft]--;
+			else if (!dir_on[menudepthleft])
+				dir_on[menudepthleft] = sizedirmenu-1;
 			S_StartSound(NULL, sfx_menu1);
 			break;
 		case KEY_PGDN:
