@@ -11827,7 +11827,7 @@ void A_FlickyCenter(mobj_t *actor)
 		if (actor->target && P_AproxDistance(actor->target->x - originx, actor->target->y - originy) < actor->extravalue1)
 		{
 			actor->extravalue2 = 1;
-		 	P_TeleportMove(actor, actor->target->x, actor->target->y, actor->target->z);
+			P_TeleportMove(actor, actor->target->x, actor->target->y, actor->target->z);
 		}
 		else if(actor->extravalue2)
 		{

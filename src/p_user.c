@@ -1,3 +1,4 @@
+
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
@@ -1518,8 +1519,8 @@ void P_PlayJingle(player_t *player, jingletype_t jingletype)
 	char newmusic[7];
 	strncpy(newmusic, musname, 7);
 #ifdef HAVE_LUA_MUSICPLUS
- 	if(LUAh_MusicJingle(jingletype, newmusic, &musflags, &looping))
- 		return;
+	if(LUAh_MusicJingle(jingletype, newmusic, &musflags, &looping))
+		return;
 #endif
 	newmusic[6] = 0;
 
@@ -1609,7 +1610,7 @@ boolean P_EvaluateMusicStatus(UINT16 status, const char *musname)
 
 		if (result)
 			break;
- 	}
+	}
 
 	return result;
  }
@@ -1666,8 +1667,8 @@ void P_RestoreMusic(player_t *player)
 	else if (!S_RecallMusic(JT_NONE, false)) // go down the stack
 	{
 		CONS_Debug(DBG_BASIC, "Cannot find any music in resume stack!\n");
-	 	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
- 	}
+		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+	}
 }
 
 //

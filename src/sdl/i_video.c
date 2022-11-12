@@ -1,3 +1,4 @@
+
 // Emacs style mode select   -*- C++ -*-
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
@@ -1068,7 +1069,7 @@ void I_GetEvent(void)
 				// update the menu
 				if (currentMenu == &OP_JoystickSetDef)
 					M_SetupJoystickMenu(0);
-			 	break;
+				break;
 			case SDL_QUIT:
 				LUA_HookBool(true, HOOK(GameQuit));
 				I_Quit();
