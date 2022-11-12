@@ -725,7 +725,7 @@ void R_RemoveMobjInterpolator(mobj_t *mobj)
 
 	if (interpolated_mobjs_len == 0) return;
 
-	for (i = 0; i < interpolated_mobjs_len - 1; i++)
+	for (i = 0; i < interpolated_mobjs_len; i++)
 	{
 		if (interpolated_mobjs[i] == mobj)
 		{

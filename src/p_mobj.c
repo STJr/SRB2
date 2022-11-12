@@ -11240,6 +11240,7 @@ void P_RemoveSavegameMobj(mobj_t *mobj)
 
 	// free block
 	P_RemoveThinker((thinker_t *)mobj);
+	R_RemoveMobjInterpolator(mobj);
 }
 
 static CV_PossibleValue_t respawnitemtime_cons_t[] = {{1, "MIN"}, {300, "MAX"}, {0, NULL}};
