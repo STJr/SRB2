@@ -4226,7 +4226,7 @@ static void M_CentreText(INT32 y, const char *string)
 //
 // used by pause & statistics to draw a row of emblems for a map
 //
-static void M_DrawMapEmblems(INT32 mapnum, INT32 x, INT32 y)
+static void M_DrawMapEmblems(INT32 mapnum, INT32 x, INT32 y, boolean norecordattack)
 {
 	UINT8 lasttype = UINT8_MAX, curtype;
 	emblem_t *emblem = M_GetLevelEmblems(mapnum);
@@ -4245,6 +4245,12 @@ static void M_DrawMapEmblems(INT32 mapnum, INT32 x, INT32 y)
 				curtype = 0; break;
 		}
 
+		if (norecordattack && (curtype == 1 || curtype == 2))
+		{
+			emblem = M_GetLevelEmblems(-1);
+			continue;
+		}
+
 		// Shift over if emblem is of a different discipline
 		if (lasttype != UINT8_MAX && lasttype != curtype)
 			x -= 4;
@@ -4257,7 +4263,7 @@ static void M_DrawMapEmblems(INT32 mapnum, INT32 x, INT32 y)
 			V_DrawSmallScaledPatch(x, y, 0, W_CachePatchName("NEEDIT", PU_PATCH));
 
 		emblem = M_GetLevelEmblems(-1);
-		x -= 12;
+		x -= 12+1;
 	}
 }
 
@@ -4692,7 +4698,7 @@ static void M_DrawPauseMenu(void)
 		M_DrawTextBox(27, 16, 32, 6);
 
 		// Draw any and all emblems at the top.
-		M_DrawMapEmblems(gamemap, 272, 28);
+		M_DrawMapEmblems(gamemap, 272, 28, true);
 
 		if (mapheaderinfo[gamemap-1]->actnum != 0)
 			V_DrawString(40, 28, V_YELLOWMAP, va("%s %d", mapheaderinfo[gamemap-1]->lvlttl, mapheaderinfo[gamemap-1]->actnum));
@@ -9658,7 +9664,7 @@ static void M_DrawStatsMaps(int location)
 		}
 
 		mnum = statsMapList[i];
-		M_DrawMapEmblems(mnum+1, 292, y);
+		M_DrawMapEmblems(mnum+1, 292, y, false);
 
 		if (mapheaderinfo[mnum]->actnum != 0)
 			V_DrawString(20, y, V_YELLOWMAP|V_ALLOWLOWERCASE, va("%s %d", mapheaderinfo[mnum]->lvlttl, mapheaderinfo[mnum]->actnum));
@@ -10018,6 +10024,9 @@ void M_DrawTimeAttackMenu(void)
 			em = M_GetLevelEmblems(-1);
 		}
 
+		// Draw in-level emblems.
+		M_DrawMapEmblems(cv_nextmap.value, 288, 28, true);
+
 		if (!mainrecords[cv_nextmap.value-1] || !mainrecords[cv_nextmap.value-1]->score)
 			sprintf(beststr, "(none)");
 		else
@@ -10298,6 +10307,9 @@ void M_DrawNightsAttackMenu(void)
 				skipThisOne:
 				em = M_GetLevelEmblems(-1);
 			}
+
+			// Draw in-level emblems.
+			M_DrawMapEmblems(cv_nextmap.value, 288, 28, true);
 		}
 	}
 
