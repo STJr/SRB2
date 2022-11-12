@@ -5300,21 +5300,24 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (thing->renderflags & RF_SHADOWEFFECTS)
 	{
 		mobj_t *caster = thing->target;
-		interpmobjstate_t casterinterp = {};
-
-		if (R_UsingFrameInterpolation() && !paused)
-		{
-			R_InterpolateMobjState(caster, rendertimefrac, &casterinterp);
-		}
-		else
-		{
-			R_InterpolateMobjState(caster, FRACUNIT, &casterinterp);
-		}
 
 		if (caster && !P_MobjWasRemoved(caster))
 		{
-			fixed_t groundz = R_GetShadowZ(thing, NULL);
-			fixed_t floordiff = abs(((thing->eflags & MFE_VERTICALFLIP) ? caster->height : 0) + casterinterp.z - groundz);
+			interpmobjstate_t casterinterp = {};
+			fixed_t groundz;
+			fixed_t floordiff; 
+
+			if (R_UsingFrameInterpolation() && !paused)
+			{
+				R_InterpolateMobjState(caster, rendertimefrac, &casterinterp);
+			}
+			else
+			{
+				R_InterpolateMobjState(caster, FRACUNIT, &casterinterp);
+			}
+			
+			groundz = R_GetShadowZ(thing, NULL);
+			floordiff = abs(((thing->eflags & MFE_VERTICALFLIP) ? caster->height : 0) + casterinterp.z - groundz);
 
 			shadowheight = FIXED_TO_FLOAT(floordiff);
 			shadowscale = FIXED_TO_FLOAT(FixedMul(FRACUNIT - floordiff/640, casterinterp.scale));
