@@ -165,7 +165,7 @@ typedef struct vissprite_s
 	fixed_t paperoffset, paperdistance; // for paper sprites, offset/dist relative to the angle
 	fixed_t xiscale; // negative if flipped
 
-	angle_t centerangle; // for paper sprites
+	angle_t centerangle; // for paper sprites / splats
 
 	// for floor sprites
 	struct {

@@ -4173,7 +4173,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			scale *= spr->shadowscale;
 
 		if (spr->rotateflags & SRF_3D || renderflags & RF_NOSPLATBILLBOARD)
-			angle = spr->mobj->angle;
+			angle = spr->angle;
 		else
 			angle = viewangle;
 
@@ -4228,8 +4228,8 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		// Translate
 		for (i = 0; i < 4; i++)
 		{
-			wallVerts[i].x = rotated[i].x + FIXED_TO_FLOAT(spr->mobj->x);
-			wallVerts[i].z = rotated[i].y + FIXED_TO_FLOAT(spr->mobj->y);
+			wallVerts[i].x = rotated[i].x + spr->x1;
+			wallVerts[i].z = rotated[i].y + spr->z1;
 		}
 
 		if (renderflags & (RF_SLOPESPLAT | RF_OBJECTSLOPESPLAT))
@@ -4256,7 +4256,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		else
 		{
 			for (i = 0; i < 4; i++)
-				wallVerts[i].y = FIXED_TO_FLOAT(spr->mobj->z) + zoffset;
+				wallVerts[i].y = FIXED_TO_FLOAT(spr->gz) + zoffset;
 		}
 	}
 	else
@@ -5195,9 +5195,16 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		I_Error("sprframes NULL for sprite %d\n", thing->sprite);
 #endif
 
-	ang = R_PointToAngle (interp.x, interp.y) - interp.angle;
-	if (mirrored)
-		ang = InvAngle(ang);
+	if (splat)
+	{
+		ang = R_PointToAngle2(0, viewz, 0, interp.z);
+	}
+	else
+	{
+		ang = R_PointToAngle (interp.x, interp.y) - interp.angle;
+		if (mirrored)
+			ang = InvAngle(ang);
+	}
 
 	if (sprframe->rotate == SRF_SINGLE)
 	{
@@ -5321,43 +5328,52 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	this_xscale = spritexscale * this_scale;
 	this_yscale = spriteyscale * this_scale;
 
-	if (flip)
+	if (splat)
 	{
-		x1 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_xscale);
-		x2 = (FIXED_TO_FLOAT(spr_offset) * this_xscale);
+		z1 = z2 = tr_y;
+		x1 = x2 = tr_x;
+		gz = gzt = interp.z;
 	}
 	else
 	{
-		x1 = (FIXED_TO_FLOAT(spr_offset) * this_xscale);
-		x2 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_xscale);
-	}
+		if (flip)
+		{
+			x1 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_xscale);
+			x2 = (FIXED_TO_FLOAT(spr_offset) * this_xscale);
+		}
+		else
+		{
+			x1 = (FIXED_TO_FLOAT(spr_offset) * this_xscale);
+			x2 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_xscale);
+		}
 
-	// test if too close
-/*
-	if (papersprite)
-	{
-		z1 = tz - x1 * angle_scalez;
-		z2 = tz + x2 * angle_scalez;
+		// test if too close
+	/*
+		if (papersprite)
+		{
+			z1 = tz - x1 * angle_scalez;
+			z2 = tz + x2 * angle_scalez;
 
-		if (max(z1, z2) < ZCLIP_PLANE)
-			return;
-	}
-*/
+			if (max(z1, z2) < ZCLIP_PLANE)
+				return;
+		}
+	*/
 
-	z1 = tr_y + x1 * rightsin;
-	z2 = tr_y - x2 * rightsin;
-	x1 = tr_x + x1 * rightcos;
-	x2 = tr_x - x2 * rightcos;
+		z1 = tr_y + x1 * rightsin;
+		z2 = tr_y - x2 * rightsin;
+		x1 = tr_x + x1 * rightcos;
+		x2 = tr_x - x2 * rightcos;
 
-	if (vflip)
-	{
-		gz = FIXED_TO_FLOAT(interp.z + thing->height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
-		gzt = gz + (FIXED_TO_FLOAT(spr_height) * this_yscale);
-	}
-	else
-	{
-		gzt = FIXED_TO_FLOAT(interp.z) + (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
-		gz = gzt - (FIXED_TO_FLOAT(spr_height) * this_yscale);
+		if (vflip)
+		{
+			gz = FIXED_TO_FLOAT(interp.z + thing->height) - (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
+			gzt = gz + (FIXED_TO_FLOAT(spr_height) * this_yscale);
+		}
+		else
+		{
+			gzt = FIXED_TO_FLOAT(interp.z) + (FIXED_TO_FLOAT(spr_topoffset) * this_yscale);
+			gz = gzt - (FIXED_TO_FLOAT(spr_height) * this_yscale);
+		}
 	}
 
 	if (thing->subsector->sector->cullheight)
@@ -5514,6 +5530,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	vis->vflip = vflip;
 
 	vis->precip = false;
+
+	vis->angle = interp.angle;
 }
 
 #ifdef HWPRECIP
