@@ -7738,6 +7738,8 @@ static void M_DrawSoundTest(void)
 				frame[3] += (((cv_soundtest.value - 1) / 9) % (FIRSTSUPERCOLOR - frame[3]));
 				if (st_time < (2 << FRACBITS))
 					st_time += renderdeltatics;
+				if (st_time >= (2 << FRACBITS))
+					st_time = 2 << FRACBITS;
 			}
 		}
 		else
