@@ -202,7 +202,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].botmem.catchup_tics);
 		WRITEUINT8(save_p, players[i].botmem.thinkstate);
 		WRITEUINT8(save_p, players[i].removing);
-		
+
 		WRITEUINT8(save_p, players[i].blocked);
 		WRITEUINT16(save_p, players[i].lastbuttons);
 
@@ -424,7 +424,7 @@ static void P_NetUnArchivePlayers(void)
 		// Bots //
 		//////////
 		players[i].bot = READUINT8(save_p);
-		
+
 		players[i].botmem.lastForward = READUINT8(save_p);
 		players[i].botmem.lastBlocked = READUINT8(save_p);
 		players[i].botmem.catchup_tics = READUINT8(save_p);
@@ -433,7 +433,7 @@ static void P_NetUnArchivePlayers(void)
 
 		players[i].blocked = READUINT8(save_p);
 		players[i].lastbuttons = READUINT16(save_p);
-		
+
 		////////////////////////////
 		// Conveyor Belt Movement //
 		////////////////////////////
