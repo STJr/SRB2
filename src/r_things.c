@@ -1066,7 +1066,7 @@ static void R_SplitSprite(vissprite_t *sprite)
 		if (testheight <= sprite->gz)
 			return;
 
-		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->sortscale))>>FRACBITS);
+		cutfrac = (INT16)((centeryfrac - FixedMul(testheight - viewz, sprite->linkscale))>>FRACBITS);
 		if (cutfrac < 0)
 			continue;
 		if (cutfrac > viewheight)
@@ -1436,6 +1436,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t tx, tz;
 	fixed_t xscale, yscale; //added : 02-02-98 : aaargll..if I were a math-guy!!!
 	fixed_t sortscale, sortsplat = 0;
+	fixed_t linkscale = 0;
 	fixed_t sort_x = 0, sort_y = 0, sort_z;
 
 	INT32 x1, x2;
@@ -1817,12 +1818,16 @@ static void R_ProjectSprite(mobj_t *thing)
 		ang = (viewangle >> ANGLETOFINESHIFT);
 		sort_x = FixedMul(FixedMul(FixedMul(spritexscale, this_scale), sort_z), FINECOSINE(ang));
 		sort_y = FixedMul(FixedMul(FixedMul(spriteyscale, this_scale), sort_z), FINESINE(ang));
+
+		tr_x = (interp.x + sort_x) - viewx;
+		tr_y = (interp.y + sort_y) - viewy;
+		sort_z = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
+		sortscale = FixedDiv(projectiony, sort_z);
 	}
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer) // toast 16/09/16 (SYMMETRY)
 	{
 		interpmobjstate_t tracer_interp = {0};
-		fixed_t linkscale;
 
 		thing = thing->tracer;
 
@@ -1849,15 +1854,14 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (sortscale < linkscale)
 			dispoffset *= -1; // if it's physically behind, make sure it's ordered behind (if dispoffset > 0)
 
-		sortscale = linkscale; // now make sure it's linked
+		//sortscale = linkscale; // now make sure it's linked
+		// No need to do that, linkdraw already excludes it from regular sorting.
+
 		cut |= SC_LINKDRAW;
 	}
-	else if (splat)
+	else
 	{
-		tr_x = (interp.x + sort_x) - viewx;
-		tr_y = (interp.y + sort_y) - viewy;
-		sort_z = FixedMul(tr_x, viewcos) + FixedMul(tr_y, viewsin);
-		sortscale = FixedDiv(projectiony, sort_z);
+		linkscale = sortscale;
 	}
 
 	// Calculate the splat's sortscale
@@ -2048,6 +2052,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->mobjflags = thing->flags;
 	vis->sortscale = sortscale;
 	vis->sortsplat = sortsplat;
+	vis->linkscale = linkscale;
 	vis->dispoffset = dispoffset; // Monster Iestyn: 23/11/15
 	vis->gx = interp.x;
 	vis->gy = interp.y;
@@ -2078,8 +2083,10 @@ static void R_ProjectSprite(mobj_t *thing)
 	vis->x2 = x2 >= portalclipend ? portalclipend-1 : x2;
 
 	vis->sector = thing->subsector->sector;
-	vis->szt = (INT16)((centeryfrac - FixedMul(vis->gzt - viewz, sortscale))>>FRACBITS);
-	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, sortscale))>>FRACBITS);
+
+	// Using linkscale here improves cut detection for LINKDRAW.
+	vis->szt = (INT16)((centeryfrac - FixedMul(vis->gzt - viewz, linkscale))>>FRACBITS);
+	vis->sz = (INT16)((centeryfrac - FixedMul(vis->gz - viewz, linkscale))>>FRACBITS);
 	vis->cut = cut;
 
 	if (thing->subsector->sector->numlights)
@@ -2414,6 +2421,21 @@ void R_AddSprites(sector_t *sec, INT32 lightlevel)
 	}
 }
 
+static boolean R_SortVisSpriteFunc(vissprite_t *ds, fixed_t bestscale, INT32 bestdispoffset)
+{
+	if (ds->sortscale < bestscale)
+	{
+		return true;
+	}
+	// order visprites of same scale by dispoffset, smallest first
+	else if (ds->sortscale == bestscale && ds->dispoffset < bestdispoffset)
+	{
+		return true;
+	}
+
+	return false;
+}
+
 //
 // R_SortVisSprites
 //
@@ -2504,7 +2526,7 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 			// reusing dsnext...
 			dsnext = dsfirst->linkdraw;
 
-			if (!dsnext || ds->dispoffset < dsnext->dispoffset)
+			if (dsnext == NULL || R_SortVisSpriteFunc(ds, dsnext->sortscale, dsnext->dispoffset) == true)
 			{
 				ds->next = dsnext;
 				dsfirst->linkdraw = ds;
@@ -2512,8 +2534,13 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 			else
 			{
 				for (; dsnext->next != NULL; dsnext = dsnext->next)
-					if (ds->dispoffset < dsnext->next->dispoffset)
+				{
+					if (R_SortVisSpriteFunc(ds, dsnext->next->sortscale, dsnext->next->dispoffset) == true)
+					{
 						break;
+					}
+				}
+
 				ds->next = dsnext->next;
 				dsnext->next = ds;
 			}
@@ -2532,15 +2559,9 @@ static void R_SortVisSprites(vissprite_t* vsprsortedhead, UINT32 start, UINT32 e
 				I_Error("R_SortVisSprites: no link or discardal made for linkdraw!");
 #endif
 
-			if (ds->sortscale < bestscale)
+			if (R_SortVisSpriteFunc(ds, bestscale, bestdispoffset) == true)
 			{
 				bestscale = ds->sortscale;
-				bestdispoffset = ds->dispoffset;
-				best = ds;
-			}
-			// order visprites of same scale by dispoffset, smallest first
-			else if (ds->sortscale == bestscale && ds->dispoffset < bestdispoffset)
-			{
 				bestdispoffset = ds->dispoffset;
 				best = ds;
 			}
@@ -3289,14 +3310,20 @@ static void R_DrawMaskedList (drawnode_t* head)
 				vissprite_t *ds = r2->sprite->linkdraw;
 
 				for (;
-				(ds != NULL && r2->sprite->dispoffset > ds->dispoffset);
-				ds = ds->next)
+					(ds != NULL && r2->sprite->dispoffset > ds->dispoffset);
+					ds = ds->next)
+				{
 					R_DrawSprite(ds);
+				}
 
 				R_DrawSprite(r2->sprite);
 
-				for (; ds != NULL; ds = ds->next)
+				for (;
+					ds != NULL;
+					ds = ds->next)
+				{
 					R_DrawSprite(ds);
+				}
 			}
 
 			R_DoneWithNode(r2);
