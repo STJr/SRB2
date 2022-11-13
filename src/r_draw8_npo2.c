@@ -111,17 +111,7 @@ void R_DrawTiltedSpan_NPO2_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -311,17 +301,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -509,17 +489,7 @@ void R_DrawTiltedSplat_NPO2_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -1438,17 +1408,7 @@ void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);

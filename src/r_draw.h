@@ -194,13 +194,11 @@ void R_DrawTranslucentFloorSprite_8(void);
 void R_DrawTiltedFloorSprite_8(void);
 void R_DrawTiltedTranslucentFloorSprite_8(void);
 
-void R_CalcTiltedLighting(fixed_t start, fixed_t end);
-extern INT32 tiltlighting[MAXVIDWIDTH];
-
 void R_DrawTranslucentWaterSpan_8(void);
 void R_DrawTiltedTranslucentWaterSpan_8(void);
 
 void R_DrawFogSpan_8(void);
+void R_DrawTiltedFogSpan_8(void);
 
 // Lactozilla: Non-powers-of-two
 void R_DrawSpan_NPO2_8(void);

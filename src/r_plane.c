@@ -262,6 +262,61 @@ static void R_MapTiltedPlane(INT32 y, INT32 x1, INT32 x2)
 	spanfunc();
 }
 
+static void R_MapFogPlane(INT32 y, INT32 x1, INT32 x2)
+{
+	fixed_t distance;
+	size_t pindex;
+
+#ifdef RANGECHECK
+	if (x2 < x1 || x1 < 0 || x2 >= viewwidth || y > viewheight)
+		I_Error("R_MapFogPlane: %d, %d at %d", x1, x2, y);
+#endif
+
+	if (x1 >= vid.width)
+		x1 = vid.width - 1;
+
+	if (planeheight != cachedheight[y])
+		distance = FixedMul(planeheight, yslope[y]);
+	else
+		distance = cacheddistance[y];
+
+	pindex = distance >> LIGHTZSHIFT;
+	if (pindex >= MAXLIGHTZ)
+		pindex = MAXLIGHTZ - 1;
+
+	ds_colormap = planezlight[pindex];
+	if (currentplane->extra_colormap)
+		ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
+
+	ds_y = y;
+	ds_x1 = x1;
+	ds_x2 = x2;
+
+	spanfunc();
+}
+
+static void R_MapTiltedFogPlane(INT32 y, INT32 x1, INT32 x2)
+{
+#ifdef RANGECHECK
+	if (x2 < x1 || x1 < 0 || x2 >= viewwidth || y > viewheight)
+		I_Error("R_MapTiltedFogPlane: %d, %d at %d", x1, x2, y);
+#endif
+
+	if (x1 >= vid.width)
+		x1 = vid.width - 1;
+
+	if (currentplane->extra_colormap)
+		ds_colormap = currentplane->extra_colormap->colormap;
+	else
+		ds_colormap = colormaps;
+
+	ds_y = y;
+	ds_x1 = x1;
+	ds_x2 = x2;
+
+	spanfunc();
+}
+
 void R_ClearFFloorClips (void)
 {
 	INT32 i, p;
@@ -791,11 +846,11 @@ static inline void R_AdjustSlopeCoordinatesNPO2(vector3_t *origin)
 
 void R_DrawSinglePlane(visplane_t *pl)
 {
-	levelflat_t *levelflat;
 	INT32 light = 0;
 	INT32 x, stop;
 	ffloor_t *rover;
-	INT32 type, spanfunctype = BASEDRAWFUNC;
+	boolean fog = false;
+	INT32 spanfunctype = BASEDRAWFUNC;
 	void (*mapfunc)(INT32, INT32, INT32) = R_MapPlane;
 
 	if (!(pl->minx <= pl->maxx))
@@ -873,6 +928,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			}
 			else if (pl->ffloor->fofflags & FOF_FOG)
 			{
+				fog = true;
 				spanfunctype = SPANDRAWFUNC_FOG;
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			}
@@ -880,28 +936,28 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 			if (pl->ffloor->fofflags & FOF_RIPPLE)
 			{
-				INT32 top, bottom;
-
 				planeripple.active = true;
 
 				if (spanfunctype == SPANDRAWFUNC_TRANS)
 				{
-					spanfunctype = SPANDRAWFUNC_WATER;
-
 					// Copy the current scene, ugh
-					top = pl->high-8;
-					bottom = pl->low+8;
+					INT32 top = pl->high-8;
+					INT32 bottom = pl->low+8;
 
 					if (top < 0)
 						top = 0;
 					if (bottom > vid.height)
 						bottom = vid.height;
 
+					spanfunctype = SPANDRAWFUNC_WATER;
+
 					// Only copy the part of the screen we need
 					VID_BlitLinearScreen((splitscreen && viewplayer == &players[secondarydisplayplayer]) ? screens[0] + (top+(vid.height>>1))*vid.width : screens[0]+((top)*vid.width), screens[1]+((top)*vid.width),
 										 vid.width, bottom-top,
 										 vid.width, vid.width);
 				}
+				else if (fog)
+					planeripple.active = false;
 			}
 		}
 		else
@@ -909,35 +965,40 @@ void R_DrawSinglePlane(visplane_t *pl)
 	}
 
 	currentplane = pl;
-	levelflat = &levelflats[pl->picnum];
 
-	/* :james: */
-	type = levelflat->type;
-	switch (type)
+	if (!fog)
 	{
-		case LEVELFLAT_NONE:
-			return;
-		case LEVELFLAT_FLAT:
-			ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
-			R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
-			// Raw flats always have dimensions that are powers-of-two numbers.
-			ds_powersoftwo = true;
-			break;
-		default:
-			ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
-			if (!ds_source)
+		levelflat_t *levelflat = &levelflats[pl->picnum];
+
+		/* :james: */
+		switch (levelflat->type)
+		{
+			case LEVELFLAT_NONE:
 				return;
-			// Check if this texture or patch has power-of-two dimensions.
-			if (R_CheckPowersOfTwo())
-				R_CheckFlatLength(ds_flatwidth * ds_flatheight);
-	}
+			case LEVELFLAT_FLAT:
+				ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
+				R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
+				// Raw flats always have dimensions that are powers-of-two numbers.
+				ds_powersoftwo = true;
+				break;
+			default:
+				ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
+				if (!ds_source)
+					return;
+				// Check if this texture or patch has power-of-two dimensions.
+				if (R_CheckPowersOfTwo())
+					R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+		}
 
-	if (!pl->slope // Don't mess with angle on slopes! We'll handle this ourselves later
-		&& viewangle != pl->viewangle+pl->plangle)
-	{
-		memset(cachedheight, 0, sizeof (cachedheight));
-		viewangle = pl->viewangle+pl->plangle;
+		if (!pl->slope // Don't mess with angle on slopes! We'll handle this ourselves later
+			&& viewangle != pl->viewangle+pl->plangle)
+		{
+			memset(cachedheight, 0, sizeof (cachedheight));
+			viewangle = pl->viewangle+pl->plangle;
+		}
 	}
+	else
+		mapfunc = R_MapFogPlane;
 
 	xoffs = pl->xoffs;
 	yoffs = pl->yoffs;
@@ -950,14 +1011,19 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	if (pl->slope)
 	{
-		mapfunc = R_MapTiltedPlane;
-
-		if (!pl->plangle)
+		if (fog)
+			mapfunc = R_MapTiltedFogPlane;
+		else
 		{
-			if (ds_powersoftwo)
-				R_AdjustSlopeCoordinates(&pl->slope->o);
-			else
-				R_AdjustSlopeCoordinatesNPO2(&pl->slope->o);
+			mapfunc = R_MapTiltedPlane;
+
+			if (!pl->plangle)
+			{
+				if (ds_powersoftwo)
+					R_AdjustSlopeCoordinates(&pl->slope->o);
+				else
+					R_AdjustSlopeCoordinatesNPO2(&pl->slope->o);
+			}
 		}
 
 		if (planeripple.active)
@@ -986,6 +1052,9 @@ void R_DrawSinglePlane(visplane_t *pl)
 				break;
 			case SPANDRAWFUNC_SPLAT:
 				spanfunctype = SPANDRAWFUNC_TILTEDSPLAT;
+				break;
+			case SPANDRAWFUNC_FOG:
+				spanfunctype = SPANDRAWFUNC_TILTEDFOG;
 				break;
 			default:
 				spanfunctype = SPANDRAWFUNC_TILTED;

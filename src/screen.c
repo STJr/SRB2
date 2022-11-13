@@ -144,6 +144,7 @@ void SCR_SetDrawFuncs(void)
 		spanfuncs[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_8;
 		spanfuncs[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_8;
 		spanfuncs[SPANDRAWFUNC_FOG] = R_DrawFogSpan_8;
+		spanfuncs[SPANDRAWFUNC_TILTEDFOG] = R_DrawTiltedFogSpan_8;
 
 		// Lactozilla: Non-powers-of-two
 		spanfuncs_npo2[BASEDRAWFUNC] = R_DrawSpan_NPO2_8;
@@ -159,7 +160,6 @@ void SCR_SetDrawFuncs(void)
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDTRANSSPRITE] = R_DrawTiltedTranslucentFloorSprite_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_WATER] = R_DrawTranslucentWaterSpan_NPO2_8;
 		spanfuncs_npo2[SPANDRAWFUNC_TILTEDWATER] = R_DrawTiltedTranslucentWaterSpan_NPO2_8;
-		spanfuncs_npo2[SPANDRAWFUNC_FOG] = NULL; // Not needed
 
 #ifdef RUSEASM
 		if (R_ASM)

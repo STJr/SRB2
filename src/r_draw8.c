@@ -656,29 +656,6 @@ void R_DrawSpan_8 (void)
 	}
 }
 
-// R_CalcTiltedLighting
-// Exactly what it says on the tin. I wish I wasn't too lazy to explain things properly.
-INT32 tiltlighting[MAXVIDWIDTH];
-void R_CalcTiltedLighting(fixed_t start, fixed_t end)
-{
-	// ZDoom uses a different lighting setup to us, and I couldn't figure out how to adapt their version
-	// of this function. Here's my own.
-	INT32 left = ds_x1, right = ds_x2;
-	fixed_t step = (end-start)/(ds_x2-ds_x1+1);
-	INT32 i;
-
-	// I wanna do some optimizing by checking for out-of-range segments on either side to fill in all at once,
-	// but I'm too bad at coding to not crash the game trying to do that. I guess this is fast enough for now...
-
-	for (i = left; i <= right; i++) {
-		tiltlighting[i] = (start += step) >> FRACBITS;
-		if (tiltlighting[i] < 0)
-			tiltlighting[i] = 0;
-		else if (tiltlighting[i] >= MAXLIGHTSCALE)
-			tiltlighting[i] = MAXLIGHTSCALE-1;
-	}
-}
-
 /**	\brief The R_DrawTiltedSpan_8 function
 	Draw slopes! Holy sheit!
 */
@@ -701,17 +678,7 @@ void R_DrawTiltedSpan_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -834,17 +801,7 @@ void R_DrawTiltedTranslucentSpan_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -967,17 +924,7 @@ void R_DrawTiltedTranslucentWaterSpan_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -1099,17 +1046,7 @@ void R_DrawTiltedSplat_8(void)
 
 	iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
 
-	// Lighting is simple. It's just linear interpolation from start to end
-	{
-		float planelightfloat = PLANELIGHTFLOAT;
-		float lightstart, lightend;
-
-		lightend = (iz + ds_szp->x*width) * planelightfloat;
-		lightstart = iz * planelightfloat;
-
-		R_CalcTiltedLighting(FLOAT_TO_FIXED(lightstart), FLOAT_TO_FIXED(lightend));
-		//CONS_Printf("tilted lighting %f to %f (foc %f)\n", lightstart, lightend, focallengthf);
-	}
+	CALC_SLOPE_LIGHT
 
 	uz = ds_sup->z + ds_sup->y*(centery-ds_y) + ds_sup->x*(ds_x1-centerx);
 	vz = ds_svp->z + ds_svp->y*(centery-ds_y) + ds_svp->x*(ds_x1-centerx);
@@ -2065,6 +2002,27 @@ void R_DrawFogSpan_8(void)
 		*dest = colormap[*dest];
 		dest++;
 	}
+}
+
+/**	\brief The R_DrawTiltedFogSpan_8 function
+	Draws a tilted span with fogging.
+*/
+void R_DrawTiltedFogSpan_8(void)
+{
+	int width = ds_x2 - ds_x1;
+
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	do
+	{
+		UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+		*dest = colormap[*dest];
+		dest++;
+	} while (--width >= 0);
 }
 
 /**	\brief The R_DrawFogColumn_8 function
