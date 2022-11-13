@@ -15,6 +15,7 @@
 
 #include "doomdef.h"
 #include "console.h"
+#include "m_easing.h" // For Easing_InOutSine, used in R_UpdatePlaneRipple
 #include "g_game.h"
 #include "p_setup.h" // levelflats
 #include "p_slopes.h"
@@ -137,8 +138,14 @@ static void R_CalculatePlaneRipple(angle_t angle)
 
 static void R_UpdatePlaneRipple(void)
 {
-	ds_waterofs = (leveltime & 1)*16384;
-	planeripple.offset = (leveltime * 140);
+	// ds_waterofs oscillates between 0 and 16384 every other tic
+	// Now that frame interpolation is a thing, HOW does it oscillate?
+	// The difference between linear interpolation and a sine wave is miniscule here,
+	// but a sine wave is ever so slightly smoother and sleeker
+	ds_waterofs = Easing_InOutSine(((leveltime & 1)*FRACUNIT) + rendertimefrac,16384,0);
+
+	// Meanwhile, planeripple.offset just counts up, so it gets simple linear interpolation
+	planeripple.offset = ((leveltime-1)*140) + ((rendertimefrac*140) / FRACUNIT);
 }
 
 static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
