@@ -25,7 +25,8 @@
 #include "st_stuff.h"
 #include "hu_stuff.h"
 #include "keys.h"
-#include "g_input.h" // JOY1
+#include "g_input.h"
+#include "i_gamepad.h"
 #include "m_menu.h"
 #include "console.h"
 #include "d_netfil.h"
@@ -33,6 +34,7 @@
 #include "p_saveg.h"
 #include "z_zone.h"
 #include "p_local.h"
+#include "p_haptic.h"
 #include "m_misc.h"
 #include "am_map.h"
 #include "m_random.h"
@@ -678,14 +680,14 @@ static void Snake_Handle(void)
 	UINT16 i;
 
 	// Handle retry
-	if (snake->gameover && (PLAYER1INPUTDOWN(GC_JUMP) || gamekeydown[KEY_ENTER]))
+	if (snake->gameover && (G_PlayerInputDown(0, GC_JUMP) || gamekeydown[KEY_ENTER]))
 	{
 		Snake_Initialise();
 		snake->pausepressed = true; // Avoid accidental pause on respawn
 	}
 
 	// Handle pause
-	if (PLAYER1INPUTDOWN(GC_PAUSE) || gamekeydown[KEY_ENTER])
+	if (G_PlayerInputDown(0, GC_PAUSE) || gamekeydown[KEY_ENTER])
 	{
 		if (!snake->pausepressed)
 			snake->paused = !snake->paused;
@@ -1646,6 +1648,8 @@ static void CL_LoadReceivedSavegame(boolean reloading)
 	titledemo = false;
 	automapactive = false;
 
+	P_StopRumble(NULL);
+
 	// load a base level
 	if (P_LoadNetGame(reloading))
 	{
@@ -2383,7 +2387,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 				G_MapEventsToControls(&events[eventtail]);
 		}
 
-		if (gamekeydown[KEY_ESCAPE] || gamekeydown[KEY_JOY1+1] || cl_mode == CL_ABORTED)
+		if (gamekeydown[KEY_ESCAPE] || gamepads[0].buttons[GAMEPAD_BUTTON_B] || cl_mode == CL_ABORTED)
 		{
 			CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
 			M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
@@ -5166,7 +5170,7 @@ static void Local_Maketic(INT32 realtics)
 	                   // game responder calls HU_Responder, AM_Responder,
 	                   // and G_MapEventsToControls
 	if (!dedicated) rendergametic = gametic;
-	// translate inputs (keyboard/mouse/joystick) into game controls
+	// translate inputs (keyboard/mouse/gamepad) into game controls
 	G_BuildTiccmd(&localcmds, realtics, 1);
 	if (splitscreen || botingame)
 		G_BuildTiccmd(&localcmds2, realtics, 2);

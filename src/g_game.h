@@ -68,9 +68,13 @@ typedef enum {
 #define P_ControlStyle(player) ((((player)->pflags & PF_ANALOGMODE) ? CS_LMAOGALOG : 0) | (((player)->pflags & PF_DIRECTIONCHAR) ? CS_STANDARD : 0))
 
 extern consvar_t cv_autobrake, cv_autobrake2;
-extern consvar_t cv_sideaxis,cv_turnaxis,cv_moveaxis,cv_lookaxis,cv_jumpaxis,cv_spinaxis,cv_fireaxis,cv_firenaxis,cv_deadzone,cv_digitaldeadzone;
-extern consvar_t cv_sideaxis2,cv_turnaxis2,cv_moveaxis2,cv_lookaxis2,cv_jumpaxis2,cv_spinaxis2,cv_fireaxis2,cv_firenaxis2,cv_deadzone2,cv_digitaldeadzone2;
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
+
+extern consvar_t cv_sideaxis[2], cv_turnaxis[2], cv_moveaxis[2], cv_lookaxis[2],
+	cv_jumpaxis[2], cv_spinaxis[2], cv_fireaxis[2], cv_firenaxis[2],
+	cv_deadzone[2], cv_digitaldeadzone[2];
+
+extern CV_PossibleValue_t joyaxis_cons_t[];
 
 // hi here's some new controls
 extern consvar_t cv_cam_shiftfacing[2], cv_cam_turnfacing[2],
@@ -84,10 +88,12 @@ typedef enum
 	LOCK_INTERESTS = 1<<2,
 } lockassist_e;
 
+// Legacy axis stuff
+#define JOYAXISSET   4 // 4 Sets of 2 axes
 
 typedef enum
 {
-	JA_NONE = 0,
+	JA_NONE,
 	JA_TURN,
 	JA_MOVE,
 	JA_LOOK,
@@ -101,8 +107,7 @@ typedef enum
 	JA_FIRENORMAL,
 } joyaxis_e;
 
-INT32 JoyAxis(joyaxis_e axissel);
-INT32 Joy2Axis(joyaxis_e axissel);
+INT16 G_JoyAxis(UINT8 which, joyaxis_e axissel);
 
 // mouseaiming (looking up/down with the mouse or keyboard)
 #define KB_LOOKSPEED (1<<25)
@@ -121,6 +126,15 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer);
 ticcmd_t *G_CopyTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n);
 // copy ticcmd_t to and fro network packets
 ticcmd_t *G_MoveTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n);
+
+// gets the user-set gamepad device for a specific player
+INT32 G_GetGamepadDeviceIndex(INT32 player);
+
+// returns a player's gamepad index
+INT16 G_GetGamepadForPlayer(player_t *player);
+
+// called when a player's gamepad is disconnected
+void G_OnGamepadDisconnect(UINT8 which);
 
 // clip the console player aiming to the view
 INT16 G_ClipAimingPitch(INT32 *aiming);

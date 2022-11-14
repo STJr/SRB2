@@ -33,14 +33,10 @@ extern consvar_t cv_defaultskin2;
 
 extern consvar_t cv_seenames, cv_allowseenames;
 extern consvar_t cv_usemouse;
-extern consvar_t cv_usejoystick;
-extern consvar_t cv_usejoystick2;
-#ifdef LJOYSTICK
-extern consvar_t cv_joyport;
-extern consvar_t cv_joyport2;
-#endif
-extern consvar_t cv_joyscale;
-extern consvar_t cv_joyscale2;
+extern consvar_t cv_usegamepad[2];
+extern consvar_t cv_gamepad_scale[2];
+extern consvar_t cv_gamepad_rumble[2];
+extern consvar_t cv_gamepad_autopause;
 
 // splitscreen with second mouse
 extern consvar_t cv_mouse2port;

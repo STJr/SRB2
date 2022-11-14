@@ -199,39 +199,41 @@ static UINT8 cht_CheckCheat(cheatseq_t *cht, char key)
 
 boolean cht_Responder(event_t *ev)
 {
-	UINT8 ret = 0, ch = 0;
-	if (ev->type != ev_keydown)
-		return false;
+	UINT8 ch = 0;
 
-	if (ev->key > 0xFF)
+	if (ev->type == ev_gamepad_down)
 	{
-		// map some fake (joy) inputs into keys
-		// map joy inputs into keys
 		switch (ev->key)
 		{
-			case KEY_JOY1:
-			case KEY_JOY1 + 2:
-				ch = KEY_ENTER;
-				break;
-			case KEY_HAT1:
+			case GAMEPAD_BUTTON_DPAD_UP:
 				ch = KEY_UPARROW;
 				break;
-			case KEY_HAT1 + 1:
+			case GAMEPAD_BUTTON_DPAD_DOWN:
 				ch = KEY_DOWNARROW;
 				break;
-			case KEY_HAT1 + 2:
+			case GAMEPAD_BUTTON_DPAD_LEFT:
 				ch = KEY_LEFTARROW;
 				break;
-			case KEY_HAT1 + 3:
+			case GAMEPAD_BUTTON_DPAD_RIGHT:
 				ch = KEY_RIGHTARROW;
+				break;
+			case GAMEPAD_BUTTON_START:
+				ch = KEY_ENTER;
 				break;
 			default:
 				// no mapping
 				return false;
 		}
 	}
-	else
+	else if (ev->type == ev_keydown)
+	{
+		if (ev->key > 0xFF)
+			return false;
+
 		ch = (UINT8)ev->key;
+	}
+
+	UINT8 ret = 0;
 
 	ret += cht_CheckCheat(&cheat_ultimate, (char)ch);
 	ret += cht_CheckCheat(&cheat_ultimate_joy, (char)ch);
