@@ -91,6 +91,7 @@ extern boolean mousegrabbedbylua;
 #define META_LUABANKS "LUABANKS[]*"
 
 #define META_KEYEVENT "KEYEVENT_T*"
+#define META_GAMEPAD "GAMEPAD_T*"
 #define META_MOUSE "MOUSE_T*"
 
 boolean luaL_checkboolean(lua_State *L, int narg);
