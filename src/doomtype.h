@@ -82,7 +82,9 @@ typedef long ssize_t;
 #endif
 	#define strncasecmp             strnicmp
 	#define strcasecmp              stricmp
+#ifndef __cplusplus
 	#define inline                  __inline
+#endif
 #elif defined (__WATCOMC__)
 	#include <dos.h>
 	#include <sys\types.h>
