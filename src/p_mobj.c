@@ -4448,7 +4448,7 @@ static void P_Boss3Thinker(mobj_t *mobj)
 
 			CONS_Debug(DBG_GAMELOGIC, "Eggman path %d - Dummy selected paths %d and %d\n", way0, way1, way2);
 			if (mobj->spawnpoint)
-				P_LinedefExecute(mobj->spawnpoint->args[3], mobj, NULL);
+				P_LinedefExecute(mobj->spawnpoint->args[4], mobj, NULL);
 		}
 	}
 	else if (mobj->movecount) // Firing mode
