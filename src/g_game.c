@@ -1959,6 +1959,79 @@ INT32 pausedelay = 0;
 boolean pausebreakkey = false;
 static INT32 camtoggledelay, camtoggledelay2 = 0;
 
+static boolean ViewpointSwitchResponder(event_t *ev)
+{
+	// ViewpointSwitch Lua hook.
+	UINT8 canSwitchView = 0;
+	boolean pressed = (ev->key == KEY_F12 || ev->key == gamecontrol[GC_VIEWPOINT][0] || ev->key == gamecontrol[GC_VIEWPOINT][1]);
+
+	// allow spy mode changes even during the demo
+	if (!(gamestate == GS_LEVEL && ev->type == ev_keydown && pressed))
+		return false;
+
+	if (splitscreen || !netgame)
+	{
+		displayplayer = consoleplayer;
+		return false;
+	}
+
+	// spy mode
+	do
+	{
+		displayplayer++;
+		if (displayplayer == MAXPLAYERS)
+			displayplayer = 0;
+
+		if (!playeringame[displayplayer])
+			continue;
+
+		// Call ViewpointSwitch hooks here.
+		canSwitchView = LUA_HookViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
+		if (canSwitchView == 1) // Set viewpoint to this player
+			break;
+		else if (canSwitchView == 2) // Skip this player
+			continue;
+
+		if (players[displayplayer].spectator)
+			continue;
+
+		if (G_GametypeHasTeams())
+		{
+			if (players[consoleplayer].ctfteam
+				&& players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
+				continue;
+		}
+		else if (gametyperules & GTR_HIDEFROZEN)
+		{
+			if (players[consoleplayer].pflags & PF_TAGIT)
+				continue;
+		}
+		// Other Tag-based gametypes?
+		else if (G_TagGametype())
+		{
+			if (!players[consoleplayer].spectator
+				&& (players[consoleplayer].pflags & PF_TAGIT) != (players[displayplayer].pflags & PF_TAGIT))
+				continue;
+		}
+		else if (G_GametypeHasSpectators() && G_RingSlingerGametype())
+		{
+			if (!players[consoleplayer].spectator)
+				continue;
+		}
+
+		break;
+	} while (displayplayer != consoleplayer);
+
+	// change statusbar also if playing back demo
+	if (singledemo)
+		ST_changeDemoView();
+
+	// tell who's the view
+	CONS_Printf(M_GetText("Viewpoint: %s\n"), player_names[displayplayer]);
+
+	return true;
+}
+
 //
 // G_Responder
 // Get info needed to make ticcmd_ts for the players.
@@ -2043,74 +2116,8 @@ boolean G_Responder(event_t *ev)
 		if (HU_Responder(ev))
 			return true; // chat ate the event
 
-	// allow spy mode changes even during the demo
-	if (gamestate == GS_LEVEL && ev->type == ev_keydown
-		&& (ev->key == KEY_F12 || ev->key == gamecontrol[GC_VIEWPOINT][0] || ev->key == gamecontrol[GC_VIEWPOINT][1]))
-	{
-		// ViewpointSwitch Lua hook.
-		UINT8 canSwitchView = 0;
-
-		if (splitscreen || !netgame)
-			displayplayer = consoleplayer;
-		else
-		{
-			// spy mode
-			do
-			{
-				displayplayer++;
-				if (displayplayer == MAXPLAYERS)
-					displayplayer = 0;
-
-				if (!playeringame[displayplayer])
-					continue;
-
-				// Call ViewpointSwitch hooks here.
-				canSwitchView = LUA_HookViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
-				if (canSwitchView == 1) // Set viewpoint to this player
-					break;
-				else if (canSwitchView == 2) // Skip this player
-					continue;
-
-				if (players[displayplayer].spectator)
-					continue;
-
-				if (G_GametypeHasTeams())
-				{
-					if (players[consoleplayer].ctfteam
-					 && players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
-						continue;
-				}
-				else if (gametyperules & GTR_HIDEFROZEN)
-				{
-					if (players[consoleplayer].pflags & PF_TAGIT)
-						continue;
-				}
-				// Other Tag-based gametypes?
-				else if (G_TagGametype())
-				{
-					if (!players[consoleplayer].spectator
-					 && (players[consoleplayer].pflags & PF_TAGIT) != (players[displayplayer].pflags & PF_TAGIT))
-						continue;
-				}
-				else if (G_GametypeHasSpectators() && G_RingSlingerGametype())
-				{
-					if (!players[consoleplayer].spectator)
-						continue;
-				}
-
-				break;
-			} while (displayplayer != consoleplayer);
-
-			// change statusbar also if playing back demo
-			if (singledemo)
-				ST_changeDemoView();
-
-			// tell who's the view
-			CONS_Printf(M_GetText("Viewpoint: %s\n"), player_names[displayplayer]);
-
-			return true;
-		}
-	}
+	if (ViewpointSwitchResponder(ev))
+		return true;
 
 	// update keys current state
 	G_MapEventsToControls(ev);
