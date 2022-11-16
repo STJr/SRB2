@@ -2569,7 +2569,7 @@ static boolean ST_doItemFinderIconsAndSound(void)
 
 		emblems[stemblems++] = i;
 
-		if (!P_EmblemWasCollected(i))
+		if (!P_EmblemWasCollected(i) && P_CanPickupEmblem(stplyr, i))
 		{
 			++stunfound;
 		}
@@ -2603,7 +2603,7 @@ static boolean ST_doItemFinderIconsAndSound(void)
 		{
 			if (mo2->health == emblems[i] + 1)
 			{
-				if (P_EmblemWasCollected(emblems[i]))
+				if (P_EmblemWasCollected(emblems[i]) || !P_CanPickupEmblem(stplyr, emblems[i]))
 					break;
 
 				soffset = (i * 20) - ((stemblems - 1) * 10);
