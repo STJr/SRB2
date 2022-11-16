@@ -1978,9 +1978,9 @@ static boolean ViewpointSwitchResponder(event_t *ev)
 	// spy mode
 	do
 	{
-		displayplayer++;
-		if (displayplayer == MAXPLAYERS)
-			displayplayer = 0;
+		// Wrap in both directions
+		displayplayer += shiftdown ? -1 : 1;
+		displayplayer = (displayplayer + MAXPLAYERS) % MAXPLAYERS;
 
 		if (!playeringame[displayplayer])
 			continue;
