@@ -390,9 +390,13 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	ds_source = (UINT8 *)pSplat->pic;
 	ds_flatwidth = pSplat->width;
 	ds_flatheight = pSplat->height;
+	ds_powersoftwo = false;
 
 	if (R_CheckPowersOfTwo())
-		R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+	{
+		R_SetFlatVars(ds_flatwidth * ds_flatheight);
+		ds_powersoftwo = true;
+	}
 
 	if (pSplat->slope)
 	{

@@ -705,42 +705,10 @@ void HWR_DrawPic(INT32 x, INT32 y, lumpnum_t lumpnum)
 // --------------------------------------------------------------------------
 void HWR_DrawFlatFill (INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum)
 {
-	FOutVector  v[4];
-	double dflatsize;
-	INT32 flatflag;
+	FOutVector v[4];
 	const size_t len = W_LumpLength(flatlumpnum);
-
-	switch (len)
-	{
-		case 4194304: // 2048x2048 lump
-			dflatsize = 2048.0f;
-			flatflag = 2047;
-			break;
-		case 1048576: // 1024x1024 lump
-			dflatsize = 1024.0f;
-			flatflag = 1023;
-			break;
-		case 262144:// 512x512 lump
-			dflatsize = 512.0f;
-			flatflag = 511;
-			break;
-		case 65536: // 256x256 lump
-			dflatsize = 256.0f;
-			flatflag = 255;
-			break;
-		case 16384: // 128x128 lump
-			dflatsize = 128.0f;
-			flatflag = 127;
-			break;
-		case 1024: // 32x32 lump
-			dflatsize = 32.0f;
-			flatflag = 31;
-			break;
-		default: // 64x64 lump
-			dflatsize = 64.0f;
-			flatflag = 63;
-			break;
-	}
+	UINT16 flatflag = R_GetFlatSize(len) - 1;
+	double dflatsize = (double)(flatflag + 1);
 
 //  3--2
 //  | /|
@@ -754,7 +722,6 @@ void HWR_DrawFlatFill (INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatlumpnum
 
 	v[0].z = v[1].z = v[2].z = v[3].z = 1.0f;
 
-	// flat is 64x64 lod and texture offsets are [0.0, 1.0]
 	v[0].s = v[3].s = (float)((x & flatflag)/dflatsize);
 	v[2].s = v[1].s = (float)(v[0].s + w/dflatsize);
 	v[0].t = v[1].t = (float)((y & flatflag)/dflatsize);

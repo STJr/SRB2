@@ -1319,7 +1319,7 @@ void R_DrawTranslucentSpan_NPO2_8 (void)
 	}
 }
 
-void R_DrawTranslucentWaterSpan_NPO2_8(void)
+void R_DrawWaterSpan_NPO2_8(void)
 {
 	fixed_t xposition;
 	fixed_t yposition;
@@ -1382,10 +1382,10 @@ void R_DrawTranslucentWaterSpan_NPO2_8(void)
 	}
 }
 
-/**	\brief The R_DrawTiltedTranslucentWaterSpan_NPO2_8 function
+/**	\brief The R_DrawTiltedWaterSpan_NPO2_8 function
 	Like DrawTiltedTranslucentSpan_NPO2, but for water
 */
-void R_DrawTiltedTranslucentWaterSpan_NPO2_8(void)
+void R_DrawTiltedWaterSpan_NPO2_8(void)
 {
 	// x1, x2 = ds_x1, ds_x2
 	int width = ds_x2 - ds_x1;
