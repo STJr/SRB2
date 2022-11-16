@@ -1772,7 +1772,7 @@ ticcmd_t *G_MoveTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n)
 static player_t *G_GetInputPlayer(UINT8 which)
 {
 	if (which == 0)
-		return &players[consoleplayer];
+		return &players[displayplayer];
 	else if (which == 1)
 	{
 		if (splitscreen)
