@@ -534,17 +534,10 @@ void I_SetGamepadDigital(UINT8 which, boolean enable)
 
 static gamepad_t *Controller_GetFromID(SDL_JoystickID which, UINT8 *found)
 {
-	SDL_JoystickID joyid[NUM_GAMEPADS];
-
-	UINT8 i;
-
 	// Determine the joystick IDs for each current open controller
-	for (i = 0; i < NUM_GAMEPADS; i++)
-		joyid[i] = SDL_JoystickInstanceID(controllers[i].joydev);
-
-	for (i = 0; i < NUM_GAMEPADS; i++)
+	for (UINT8 i = 0; i < NUM_GAMEPADS; i++)
 	{
-		if (which == joyid[i])
+		if (which == SDL_JoystickInstanceID(controllers[i].joydev))
 		{
 			(*found) = i;
 			return &gamepads[i];
