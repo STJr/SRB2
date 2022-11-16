@@ -357,9 +357,9 @@ $(dbg).txt : $(dbg)
 # this really updates comptime.h
 comptime.c ::
 ifdef WINDOWSHELL
-	$(.)..\comptime.bat .
+	-$(.)..\comptime.bat .
 else
-	$(.)../comptime.sh .
+	-$(.)../comptime.sh .
 endif
 
 # I wish I could make dependencies out of rc files :(
