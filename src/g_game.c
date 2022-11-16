@@ -2026,9 +2026,6 @@ static boolean ViewpointSwitchResponder(event_t *ev)
 	if (singledemo)
 		ST_changeDemoView();
 
-	// tell who's the view
-	CONS_Printf(M_GetText("Viewpoint: %s\n"), player_names[displayplayer]);
-
 	return true;
 }
 
