@@ -360,28 +360,37 @@ static FUINT HWR_CalcSlopeLight(FUINT lightnum, angle_t dir, fixed_t delta)
 // -----------------+
 static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, boolean isceiling, fixed_t fixedheight, FBITFIELD PolyFlags, INT32 lightlevel, levelflat_t *levelflat, sector_t *FOFsector, UINT8 alpha, extracolormap_t *planecolormap)
 {
-	polyvertex_t *  pv;
-	float           height; //constant y for all points on the convex flat polygon
-	FOutVector      *v3d;
-	INT32             nrPlaneVerts;   //verts original define of convex flat polygon
-	INT32             i;
-	float           flatxref,flatyref;
-	float fflatwidth = 64.0f, fflatheight = 64.0f;
-	INT32 flatflag = 63;
-	boolean texflat = false;
-	float scrollx = 0.0f, scrolly = 0.0f, anglef = 0.0f;
-	angle_t angle = 0;
-	FSurfaceInfo    Surf;
-	float tempxsow, tempytow;
+	FSurfaceInfo Surf;
+	FOutVector *v3d;
+	polyvertex_t *pv;
 	pslope_t *slope = NULL;
+	INT32 shader = SHADER_DEFAULT;
+
+	size_t nrPlaneVerts;
+	INT32 i;
+
+	float height; // constant y for all points on the convex flat polygon
+	float flatxref, flatyref, anglef = 0.0f;
+	float fflatwidth = 64.0f, fflatheight = 64.0f;
+	UINT16 flatflag = 63;
+
+	boolean texflat = false;
+
+	float tempxsow, tempytow;
+	float scrollx = 0.0f, scrolly = 0.0f;
+	angle_t angle = 0;
 
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
 
-	INT32 shader = SHADER_DEFAULT;
-
 	// no convex poly were generated for this subsector
 	if (!xsub->planepoly)
+		return;
+
+	pv = xsub->planepoly->pts;
+	nrPlaneVerts = xsub->planepoly->numpts;
+
+	if (nrPlaneVerts < 3) // not even a triangle?
 		return;
 
 	// Get the slope pointer to simplify future code
@@ -406,12 +415,6 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 
 	height = FIXED_TO_FLOAT(fixedheight);
 
-	pv  = xsub->planepoly->pts;
-	nrPlaneVerts = xsub->planepoly->numpts;
-
-	if (nrPlaneVerts < 3)   //not even a triangle ?
-		return;
-
 	// Allocate plane-vertex buffer if we need to
 	if (!planeVerts || nrPlaneVerts > numAllocedPlaneVerts)
 	{
@@ -426,31 +429,8 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		if (levelflat->type == LEVELFLAT_FLAT)
 		{
 			size_t len = W_LumpLength(levelflat->u.flat.lumpnum);
-			switch (len)
-			{
-				case 4194304: // 2048x2048 lump
-					fflatwidth = fflatheight = 2048.0f;
-					break;
-				case 1048576: // 1024x1024 lump
-					fflatwidth = fflatheight = 1024.0f;
-					break;
-				case 262144:// 512x512 lump
-					fflatwidth = fflatheight = 512.0f;
-					break;
-				case 65536: // 256x256 lump
-					fflatwidth = fflatheight = 256.0f;
-					break;
-				case 16384: // 128x128 lump
-					fflatwidth = fflatheight = 128.0f;
-					break;
-				case 1024: // 32x32 lump
-					fflatwidth = fflatheight = 32.0f;
-					break;
-				default: // 64x64 lump
-					fflatwidth = fflatheight = 64.0f;
-					break;
-			}
-			flatflag = ((INT32)fflatwidth)-1;
+			flatflag = R_GetFlatSize(len) - 1;
+			fflatwidth = fflatheight = (float)(flatflag + 1);
 		}
 		else
 		{
@@ -550,7 +530,7 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		}\
 }
 
-	for (i = 0, v3d = planeVerts; i < nrPlaneVerts; i++,v3d++,pv++)
+	for (i = 0, v3d = planeVerts; i < (INT32)nrPlaneVerts; i++,v3d++,pv++)
 		SETUP3DVERT(v3d, pv->x, pv->y);
 
 	if (slope)
@@ -2671,13 +2651,13 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 	float height = FIXED_TO_FLOAT(fixedheight); // constant y for all points on the convex flat polygon
 	float flatxref, flatyref;
 	float fflatwidth = 64.0f, fflatheight = 64.0f;
-	INT32 flatflag = 63;
+	UINT16 flatflag = 63;
 
 	boolean texflat = false;
 
 	float scrollx = 0.0f, scrolly = 0.0f;
+	float tempxsow, tempytow, anglef = 0.0f;
 	angle_t angle = 0;
-	fixed_t tempxs, tempyt;
 
 	static FOutVector *planeVerts = NULL;
 	static UINT16 numAllocedPlaneVerts = 0;
@@ -2704,31 +2684,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		if (levelflat->type == LEVELFLAT_FLAT)
 		{
 			size_t len = W_LumpLength(levelflat->u.flat.lumpnum);
-			switch (len)
-			{
-				case 4194304: // 2048x2048 lump
-					fflatwidth = fflatheight = 2048.0f;
-					break;
-				case 1048576: // 1024x1024 lump
-					fflatwidth = fflatheight = 1024.0f;
-					break;
-				case 262144:// 512x512 lump
-					fflatwidth = fflatheight = 512.0f;
-					break;
-				case 65536: // 256x256 lump
-					fflatwidth = fflatheight = 256.0f;
-					break;
-				case 16384: // 128x128 lump
-					fflatwidth = fflatheight = 128.0f;
-					break;
-				case 1024: // 32x32 lump
-					fflatwidth = fflatheight = 32.0f;
-					break;
-				default: // 64x64 lump
-					fflatwidth = fflatheight = 64.0f;
-					break;
-			}
-			flatflag = ((INT32)fflatwidth)-1;
+			flatflag = R_GetFlatSize(len) - 1;
+			fflatwidth = fflatheight = (float)(flatflag + 1);
 		}
 		else
 		{
@@ -2791,20 +2748,13 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 
 	if (angle) // Only needs to be done if there's an altered angle
 	{
-		angle = (InvAngle(angle))>>ANGLETOFINESHIFT;
+		tempxsow = flatxref;
+		tempytow = flatyref;
 
-		// This needs to be done so that it scrolls in a different direction after rotation like software
-		/*tempxs = FLOAT_TO_FIXED(scrollx);
-		tempyt = FLOAT_TO_FIXED(scrolly);
-		scrollx = (FIXED_TO_FLOAT(FixedMul(tempxs, FINECOSINE(angle)) - FixedMul(tempyt, FINESINE(angle))));
-		scrolly = (FIXED_TO_FLOAT(FixedMul(tempxs, FINESINE(angle)) + FixedMul(tempyt, FINECOSINE(angle))));*/
+		anglef = ANG2RAD(InvAngle(angle));
 
-		// This needs to be done so everything aligns after rotation
-		// It would be done so that rotation is done, THEN the translation, but I couldn't get it to rotate AND scroll like software does
-		tempxs = FLOAT_TO_FIXED(flatxref);
-		tempyt = FLOAT_TO_FIXED(flatyref);
-		flatxref = (FIXED_TO_FLOAT(FixedMul(tempxs, FINECOSINE(angle)) - FixedMul(tempyt, FINESINE(angle))));
-		flatyref = (FIXED_TO_FLOAT(FixedMul(tempxs, FINESINE(angle)) + FixedMul(tempyt, FINECOSINE(angle))));
+		flatxref = (tempxsow * cos(anglef)) - (tempytow * sin(anglef));
+		flatyref = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));
 	}
 
 	for (i = 0; i < (INT32)nrPlaneVerts; i++,v3d++)
@@ -2825,10 +2775,11 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		// Need to rotate before translate
 		if (angle) // Only needs to be done if there's an altered angle
 		{
-			tempxs = FLOAT_TO_FIXED(v3d->s);
-			tempyt = FLOAT_TO_FIXED(v3d->t);
-			v3d->s = (FIXED_TO_FLOAT(FixedMul(tempxs, FINECOSINE(angle)) - FixedMul(tempyt, FINESINE(angle))));
-			v3d->t = (FIXED_TO_FLOAT(FixedMul(tempxs, FINESINE(angle)) + FixedMul(tempyt, FINECOSINE(angle))));
+			tempxsow = v3d->s;
+			tempytow = v3d->t;
+
+			v3d->s = (tempxsow * cos(anglef)) - (tempytow * sin(anglef));
+			v3d->t = (tempxsow * sin(anglef)) + (tempytow * cos(anglef));
 		}
 
 		v3d->x = FIXED_TO_FLOAT(polysector->vertices[i]->x);

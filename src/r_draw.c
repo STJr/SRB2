@@ -106,7 +106,7 @@ fixed_t ds_xfrac, ds_yfrac, ds_xstep, ds_ystep;
 INT32 ds_waterofs, ds_bgofs;
 
 UINT16 ds_flatwidth, ds_flatheight;
-boolean ds_powersoftwo;
+boolean ds_powersoftwo, ds_solidcolor;
 
 UINT8 *ds_source; // points to the start of a flat
 UINT8 *ds_transmap; // one of the translucency tables

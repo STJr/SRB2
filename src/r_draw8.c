@@ -901,10 +901,10 @@ void R_DrawTiltedTranslucentSpan_8(void)
 #endif
 }
 
-/**	\brief The R_DrawTiltedTranslucentWaterSpan_8 function
+/**	\brief The R_DrawTiltedWaterSpan_8 function
 	Like DrawTiltedTranslucentSpan, but for water
 */
-void R_DrawTiltedTranslucentWaterSpan_8(void)
+void R_DrawTiltedWaterSpan_8(void)
 {
 	// x1, x2 = ds_x1, ds_x2
 	int width = ds_x2 - ds_x1;
@@ -1893,7 +1893,7 @@ void R_DrawTranslucentSpan_8 (void)
 	}
 }
 
-void R_DrawTranslucentWaterSpan_8(void)
+void R_DrawWaterSpan_8(void)
 {
 	UINT32 xposition;
 	UINT32 yposition;
@@ -2022,6 +2022,123 @@ void R_DrawTiltedFogSpan_8(void)
 		UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
 		*dest = colormap[*dest];
 		dest++;
+	} while (--width >= 0);
+}
+
+/**	\brief The R_DrawSolidColorSpan_8 function
+	Draws a solid color span.
+*/
+void R_DrawSolidColorSpan_8(void)
+{
+	size_t count = (ds_x2 - ds_x1 + 1);
+
+	UINT8 source = ds_colormap[ds_source[0]];
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	memset(dest, source, count);
+}
+
+/**	\brief The R_DrawTransSolidColorSpan_8 function
+	Draws a translucent solid color span.
+*/
+void R_DrawTransSolidColorSpan_8(void)
+{
+	size_t count = (ds_x2 - ds_x1 + 1);
+
+	UINT8 source = ds_colormap[ds_source[0]];
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+
+	while (count-- && dest <= deststop)
+	{
+		*dest = *(ds_transmap + (source << 8) + *dest);
+		dest++;
+	}
+}
+
+/**	\brief The R_DrawTiltedSolidColorSpan_8 function
+	Draws a tilted solid color span.
+*/
+void R_DrawTiltedSolidColorSpan_8(void)
+{
+	int width = ds_x2 - ds_x1;
+
+	UINT8 source = ds_source[0];
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	do
+	{
+		UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+		*dest++ = colormap[source];
+	} while (--width >= 0);
+}
+
+/**	\brief The R_DrawTiltedTransSolidColorSpan_8 function
+	Draws a tilted and translucent solid color span.
+*/
+void R_DrawTiltedTransSolidColorSpan_8(void)
+{
+	int width = ds_x2 - ds_x1;
+
+	UINT8 source = ds_source[0];
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	do
+	{
+		UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+		*dest = *(ds_transmap + (colormap[source] << 8) + *dest);
+		dest++;
+	} while (--width >= 0);
+}
+
+/**	\brief The R_DrawWaterSolidColorSpan_8 function
+	Draws a water solid color span.
+*/
+void R_DrawWaterSolidColorSpan_8(void)
+{
+	UINT8 source = ds_source[0];
+	UINT8 *colormap = ds_colormap;
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+	UINT8 *dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
+
+	size_t count = (ds_x2 - ds_x1 + 1);
+	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
+
+	while (count-- && dest <= deststop)
+	{
+		*dest = colormap[*(ds_transmap + (source << 8) + *dsrc++)];
+		dest++;
+	}
+}
+
+/**	\brief The R_DrawTiltedWaterSolidColorSpan_8 function
+	Draws a tilted water solid color span.
+*/
+void R_DrawTiltedWaterSolidColorSpan_8(void)
+{
+	int width = ds_x2 - ds_x1;
+
+	UINT8 source = ds_source[0];
+	UINT8 *dest = ylookup[ds_y] + columnofs[ds_x1];
+	UINT8 *dsrc = screens[1] + (ds_y+ds_bgofs)*vid.width + ds_x1;
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	do
+	{
+		UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+		*dest++ = *(ds_transmap + (colormap[source] << 8) + *dsrc++);
 	} while (--width >= 0);
 }
 

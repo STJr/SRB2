@@ -1748,7 +1748,7 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum)
 	fixed_t dx, dy, xfrac, yfrac;
 	const UINT8 *src, *deststop;
 	UINT8 *flat, *dest;
-	size_t size, lflatsize, flatshift;
+	size_t lflatsize, flatshift;
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
@@ -1758,39 +1758,8 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum)
 	}
 #endif
 
-	size = W_LumpLength(flatnum);
-
-	switch (size)
-	{
-		case 4194304: // 2048x2048 lump
-			lflatsize = 2048;
-			flatshift = 10;
-			break;
-		case 1048576: // 1024x1024 lump
-			lflatsize = 1024;
-			flatshift = 9;
-			break;
-		case 262144:// 512x512 lump
-			lflatsize = 512;
-			flatshift = 8;
-			break;
-		case 65536: // 256x256 lump
-			lflatsize = 256;
-			flatshift = 7;
-			break;
-		case 16384: // 128x128 lump
-			lflatsize = 128;
-			flatshift = 7;
-			break;
-		case 1024: // 32x32 lump
-			lflatsize = 32;
-			flatshift = 5;
-			break;
-		default: // 64x64 lump
-			lflatsize = 64;
-			flatshift = 6;
-			break;
-	}
+	lflatsize = R_GetFlatSize(W_LumpLength(flatnum));
+	flatshift = R_GetFlatBits(lflatsize);
 
 	flat = W_CacheLumpNum(flatnum, PU_CACHE);
 

@@ -36,9 +36,6 @@
 // opening
 //
 
-// Quincunx antialiasing of flats!
-//#define QUINCUNX
-
 //SoM: 3/23/2000: Use Boom visplane hashing.
 
 visplane_t *visplanes[MAXVISPLANES];
@@ -789,6 +786,9 @@ d->z = (v1.x * v2.y) - (v1.y * v2.x)
 	ds_svp->z *= focallengthf;
 	ds_szp->z *= focallengthf;
 
+	if (ds_solidcolor)
+		return;
+
 	// Premultiply the texture vectors with the scale factors
 	if (ds_powersoftwo)
 		sfmult *= (1 << nflatshiftup);
@@ -858,7 +858,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 	ffloor_t *rover;
 	boolean fog = false;
 	INT32 spanfunctype = BASEDRAWFUNC;
-	void (*mapfunc)(INT32, INT32, INT32) = R_MapPlane;
+	void (*mapfunc)(INT32, INT32, INT32);
 
 	if (!(pl->minx <= pl->maxx))
 		return;
@@ -871,7 +871,6 @@ void R_DrawSinglePlane(visplane_t *pl)
 	}
 
 	planeripple.active = false;
-	spanfunc = spanfuncs[BASEDRAWFUNC];
 
 	if (pl->polyobj)
 	{
@@ -941,7 +940,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			}
 			else light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
-			if (pl->ffloor->fofflags & FOF_RIPPLE)
+			if (pl->ffloor->fofflags & FOF_RIPPLE && !fog)
 			{
 				planeripple.active = true;
 
@@ -963,17 +962,21 @@ void R_DrawSinglePlane(visplane_t *pl)
 										 vid.width, bottom-top,
 										 vid.width, vid.width);
 				}
-				else if (fog)
-					planeripple.active = false;
 			}
 		}
 		else
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
 	}
 
-	currentplane = pl;
+	ds_powersoftwo = ds_solidcolor = false;
 
-	if (!fog)
+	if (fog)
+	{
+		// Since all fog planes do is apply a colormap, it's not required
+		// to know any information about their textures.
+		mapfunc = R_MapFogPlane;
+	}
+	else
 	{
 		levelflat_t *levelflat = &levelflats[pl->picnum];
 
@@ -984,28 +987,50 @@ void R_DrawSinglePlane(visplane_t *pl)
 				return;
 			case LEVELFLAT_FLAT:
 				ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
-				R_CheckFlatLength(W_LumpLength(levelflat->u.flat.lumpnum));
-				// Raw flats always have dimensions that are powers-of-two numbers.
-				ds_powersoftwo = true;
+				R_SetFlatVars(W_LumpLength(levelflat->u.flat.lumpnum));
+				if (R_CheckSolidColorFlat())
+					ds_solidcolor = true;
+				else
+					ds_powersoftwo = true;
 				break;
 			default:
 				ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
 				if (!ds_source)
 					return;
-				// Check if this texture or patch has power-of-two dimensions.
-				if (R_CheckPowersOfTwo())
-					R_CheckFlatLength(ds_flatwidth * ds_flatheight);
+				else if (R_CheckSolidColorFlat())
+					ds_solidcolor = true;
+				else if (R_CheckPowersOfTwo())
+				{
+					R_SetFlatVars(ds_flatwidth * ds_flatheight);
+					ds_powersoftwo = true;
+				}
 		}
 
-		if (!pl->slope // Don't mess with angle on slopes! We'll handle this ourselves later
-			&& viewangle != pl->viewangle+pl->plangle)
+		// Don't mess with angle on slopes! We'll handle this ourselves later
+		if (!pl->slope && viewangle != pl->viewangle+pl->plangle)
 		{
 			memset(cachedheight, 0, sizeof (cachedheight));
 			viewangle = pl->viewangle+pl->plangle;
 		}
+
+		mapfunc = R_MapPlane;
+
+		if (ds_solidcolor)
+		{
+			switch (spanfunctype)
+			{
+				case SPANDRAWFUNC_WATER:
+					spanfunctype = SPANDRAWFUNC_WATERSOLID;
+					break;
+				case SPANDRAWFUNC_TRANS:
+					spanfunctype = SPANDRAWFUNC_TRANSSOLID;
+					break;
+				default:
+					spanfunctype = SPANDRAWFUNC_SOLID;
+					break;
+			}
+		}
 	}
-	else
-		mapfunc = R_MapFogPlane;
 
 	xoffs = pl->xoffs;
 	yoffs = pl->yoffs;
@@ -1024,7 +1049,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		{
 			mapfunc = R_MapTiltedPlane;
 
-			if (!pl->plangle)
+			if (!pl->plangle && !ds_solidcolor)
 			{
 				if (ds_powersoftwo)
 					R_AdjustSlopeCoordinates(&pl->slope->o);
@@ -1060,6 +1085,15 @@ void R_DrawSinglePlane(visplane_t *pl)
 			case SPANDRAWFUNC_SPLAT:
 				spanfunctype = SPANDRAWFUNC_TILTEDSPLAT;
 				break;
+			case SPANDRAWFUNC_SOLID:
+				spanfunctype = SPANDRAWFUNC_TILTEDSOLID;
+				break;
+			case SPANDRAWFUNC_TRANSSOLID:
+				spanfunctype = SPANDRAWFUNC_TILTEDTRANSSOLID;
+				break;
+			case SPANDRAWFUNC_WATERSOLID:
+				spanfunctype = SPANDRAWFUNC_TILTEDWATERSOLID;
+				break;
 			case SPANDRAWFUNC_FOG:
 				spanfunctype = SPANDRAWFUNC_TILTEDFOG;
 				break;
@@ -1076,7 +1110,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 		planezlight = zlight[light];
 	}
 
-	// Use the correct span drawer depending on the powers-of-twoness
+	// Set the span drawer
 	if (!ds_powersoftwo)
 	{
 		if (spanfuncs_npo2[spanfunctype])
@@ -1093,81 +1127,11 @@ void R_DrawSinglePlane(visplane_t *pl)
 	pl->bottom[pl->maxx+1] = 0x0000;
 	pl->bottom[pl->minx-1] = 0x0000;
 
+	currentplane = pl;
 	stop = pl->maxx + 1;
 
 	for (x = pl->minx; x <= stop; x++)
 		R_MakeSpans(mapfunc, x, pl->top[x-1], pl->bottom[x-1], pl->top[x], pl->bottom[x]);
-
-/*
-QUINCUNX anti-aliasing technique (sort of)
-
-Normally, Quincunx antialiasing staggers pixels
-in a 5-die pattern like so:
-
-o   o
-  o
-o   o
-
-To simulate this, we offset the plane by
-FRACUNIT/4 in each direction, and draw
-at 50% translucency. The result is
-a 'smoothing' of the texture while
-using the palette colors.
-*/
-#ifdef QUINCUNX
-	if (spanfunc == spanfuncs[BASEDRAWFUNC])
-	{
-		INT32 i;
-		ds_transmap = R_GetTranslucencyTable(tr_trans50);
-		spanfunc = spanfuncs[SPANDRAWFUNC_TRANS];
-		for (i=0; i<4; i++)
-		{
-			xoffs = pl->xoffs;
-			yoffs = pl->yoffs;
-
-			switch(i)
-			{
-				case 0:
-					xoffs -= FRACUNIT/4;
-					yoffs -= FRACUNIT/4;
-					break;
-				case 1:
-					xoffs -= FRACUNIT/4;
-					yoffs += FRACUNIT/4;
-					break;
-				case 2:
-					xoffs += FRACUNIT/4;
-					yoffs -= FRACUNIT/4;
-					break;
-				case 3:
-					xoffs += FRACUNIT/4;
-					yoffs += FRACUNIT/4;
-					break;
-			}
-			planeheight = abs(pl->height - pl->viewz);
-
-			if (light >= LIGHTLEVELS)
-				light = LIGHTLEVELS-1;
-
-			if (light < 0)
-				light = 0;
-
-			planezlight = zlight[light];
-
-			// set the maximum value for unsigned
-			pl->top[pl->maxx+1] = 0xffff;
-			pl->top[pl->minx-1] = 0xffff;
-			pl->bottom[pl->maxx+1] = 0x0000;
-			pl->bottom[pl->minx-1] = 0x0000;
-
-			stop = pl->maxx + 1;
-
-			for (x = pl->minx; x <= stop; x++)
-				R_MakeSpans(mapfunc, x, pl->top[x-1], pl->bottom[x-1],
-					pl->top[x], pl->bottom[x]);
-		}
-	}
-#endif
 }
 
 void R_PlaneBounds(visplane_t *plane)
