@@ -289,8 +289,8 @@ static void PadRumble2_OnChange(void)
 }
 
 consvar_t cv_gamepad_rumble[2] = {
-	CVAR_INIT ("padrumble", "Off", CV_SAVE|CV_CALL, NULL, PadRumble_OnChange),
-	CVAR_INIT ("padrumble2", "Off", CV_SAVE|CV_CALL, NULL, PadRumble2_OnChange)
+	CVAR_INIT ("padrumble", "Off", CV_SAVE|CV_CALL, CV_OnOff, PadRumble_OnChange),
+	CVAR_INIT ("padrumble2", "Off", CV_SAVE|CV_CALL, CV_OnOff, PadRumble2_OnChange)
 };
 
 consvar_t cv_gamepad_autopause = CVAR_INIT ("pauseongamepaddisconnect", "On", CV_SAVE, CV_OnOff, NULL);
