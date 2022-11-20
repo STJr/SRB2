@@ -1662,21 +1662,30 @@ INT32 R_CheckTextureNumForName(const char *name)
 	return -1;
 }
 
-// i was fully expecting this to take like an hour to figure out not 2 mintues and 5 lines of c - ashi
+//
+// R_CheckTextureNameForNum
+//
+// because sidedefs use numbers and sometimes you want names
+// returns no texture marker if no texture was found
+//
 const char *R_CheckTextureNameForNum(INT32 num)
 {
-	if (textures[num] && textures[num]->name)
-	{
+	if (num > 0 && num < numtextures)
 		return textures[num]->name;
-	}
+	
 	return "-";
 }
 
+//
+// R_TextureNameForNum
+//
+// calls R_CheckTextureNameForNum and returns REDWALL if result is a no texture marker
+//
 const char *R_TextureNameForNum(INT32 num)
 {
 	const char *result = R_CheckTextureNameForNum(num);
 
-	if (strcmp(result, "-"))
+	if (strcmp(result, "-") == 0)
 		return "REDWALL";
 
 	return result;
