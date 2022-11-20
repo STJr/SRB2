@@ -2832,6 +2832,22 @@ static int lib_rTextureNumForName(lua_State *L)
 	return 1;
 }
 
+static int lib_rCheckTextureNameForNum(lua_State *L)
+{
+	INT32 num = luaL_checkstring(L, 1);
+	//HUDSAFE
+	lua_pushstring(L, R_CheckTextureNameForNum(num));
+	return 1;
+}
+
+static int lib_rTextureNameForNum(lua_State *L)
+{
+	INT32 num = luaL_checkstring(L, 1);
+	//HUDSAFE
+	lua_pushstring(L, R_TextureNameForNum(num));
+	return 1;
+}
+
 // R_DRAW
 ////////////
 static int lib_rGetColorByName(lua_State *L)
@@ -4174,6 +4190,8 @@ static luaL_Reg lib[] = {
 	// r_data
 	{"R_CheckTextureNumForName",lib_rCheckTextureNumForName},
 	{"R_TextureNumForName",lib_rTextureNumForName},
+	{"R_CheckTextureNameForNum", lib_rCheckTextureNameForNum},
+	{"R_TextureNameForNum", lib_rTextureNameForNum},
 
 	// r_draw
 	{"R_GetColorByName", lib_rGetColorByName},

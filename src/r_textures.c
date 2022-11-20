@@ -1662,6 +1662,26 @@ INT32 R_CheckTextureNumForName(const char *name)
 	return -1;
 }
 
+// i was fully expecting this to take like an hour to figure out not 2 mintues and 5 lines of c - ashi
+const char *R_CheckTextureNameForNum(INT32 num)
+{
+	if (textures[num] && textures[num]->name)
+	{
+		return textures[num]->name;
+	}
+	return "-";
+}
+
+const char *R_TextureNameForNum(INT32 num)
+{
+	const char *result = R_CheckTextureNameForNum(num);
+
+	if (strcmp(result, "-"))
+		return "REDWALL";
+
+	return result;
+}
+
 //
 // R_TextureNumForName
 //
