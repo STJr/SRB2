@@ -705,22 +705,22 @@ static void Snake_Handle(void)
 	oldy = snake->snakey[1];
 
 	// Update direction
-	if (gamekeydown[KEY_LEFTARROW])
+	if (PLAYER1INPUTDOWN(GC_STRAFELEFT) || gamekeydown[KEY_LEFTARROW])
 	{
 		if (snake->snakelength < 2 || x <= oldx)
 			snake->snakedir[0] = 1;
 	}
-	else if (gamekeydown[KEY_RIGHTARROW])
+	else if (PLAYER1INPUTDOWN(GC_STRAFERIGHT) || gamekeydown[KEY_RIGHTARROW])
 	{
 		if (snake->snakelength < 2 || x >= oldx)
 			snake->snakedir[0] = 2;
 	}
-	else if (gamekeydown[KEY_UPARROW])
+	else if (PLAYER1INPUTDOWN(GC_FORWARD) || gamekeydown[KEY_UPARROW])
 	{
 		if (snake->snakelength < 2 || y <= oldy)
 			snake->snakedir[0] = 3;
 	}
-	else if (gamekeydown[KEY_DOWNARROW])
+	else if (PLAYER1INPUTDOWN(GC_BACKWARD) || gamekeydown[KEY_DOWNARROW])
 	{
 		if (snake->snakelength < 2 || y >= oldy)
 			snake->snakedir[0] = 4;
