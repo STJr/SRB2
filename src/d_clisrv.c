@@ -705,22 +705,22 @@ static void Snake_Handle(void)
 	oldy = snake->snakey[1];
 
 	// Update direction
-	if (PLAYER1INPUTDOWN(GC_STRAFELEFT) || gamekeydown[KEY_LEFTARROW])
+	if (PLAYER1INPUTDOWN(GC_STRAFELEFT) || gamekeydown[KEY_LEFTARROW] || JoyAxis(JA_STRAFE) > 0)
 	{
 		if (snake->snakelength < 2 || x <= oldx)
 			snake->snakedir[0] = 1;
 	}
-	else if (PLAYER1INPUTDOWN(GC_STRAFERIGHT) || gamekeydown[KEY_RIGHTARROW])
+	else if (PLAYER1INPUTDOWN(GC_STRAFERIGHT) || gamekeydown[KEY_RIGHTARROW] || JoyAxis(JA_STRAFE) < 0)
 	{
 		if (snake->snakelength < 2 || x >= oldx)
 			snake->snakedir[0] = 2;
 	}
-	else if (PLAYER1INPUTDOWN(GC_FORWARD) || gamekeydown[KEY_UPARROW])
+	else if (PLAYER1INPUTDOWN(GC_FORWARD) || gamekeydown[KEY_UPARROW] || JoyAxis(JA_MOVE) > 0)
 	{
 		if (snake->snakelength < 2 || y <= oldy)
 			snake->snakedir[0] = 3;
 	}
-	else if (PLAYER1INPUTDOWN(GC_BACKWARD) || gamekeydown[KEY_DOWNARROW])
+	else if (PLAYER1INPUTDOWN(GC_BACKWARD) || gamekeydown[KEY_DOWNARROW] || JoyAxis(JA_MOVE) < 0)
 	{
 		if (snake->snakelength < 2 || y >= oldy)
 			snake->snakedir[0] = 4;
@@ -1128,91 +1128,91 @@ static inline void CL_DrawConnectionStatus(void)
 	}
 	else
 	{
-		if (cl_mode == CL_LOADFILES)
-		{
-			INT32 totalfileslength;
-			INT32 loadcompletednum = 0;
-			INT32 i;
+		// if (cl_mode == CL_LOADFILES)
+		// {
+		// 	INT32 totalfileslength;
+		// 	INT32 loadcompletednum = 0;
+		// 	INT32 i;
 
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
+		// 	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
 
-			//ima just count files here
-			if (fileneeded)
-			{
-				for (i = 0; i < fileneedednum; i++)
-					if (fileneeded[i].status == FS_OPEN)
-						loadcompletednum++;
-			}
+		// 	//ima just count files here
+		// 	if (fileneeded)
+		// 	{
+		// 		for (i = 0; i < fileneedednum; i++)
+		// 			if (fileneeded[i].status == FS_OPEN)
+		// 				loadcompletednum++;
+		// 	}
 
-			// Loading progress
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP, "Loading server addons...");
-			totalfileslength = (INT32)((loadcompletednum/(double)(fileneedednum)) * 256);
-			M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
-			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
-			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, totalfileslength, 8, 96);
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
-				va(" %2u/%2u Files",loadcompletednum,fileneedednum));
-		}
-		else if (lastfilenum != -1)
-		{
-			INT32 dldlength;
-			static char tempname[28];
-			fileneeded_t *file;
-			char *filename;
+		// 	// Loading progress
+		// 	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP, "Loading server addons...");
+		// 	totalfileslength = (INT32)((loadcompletednum/(double)(fileneedednum)) * 256);
+		// 	M_DrawTextBox(BASEVIDWIDTH/2-128-8, BASEVIDHEIGHT-16-8, 32, 1);
+		// 	V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
+		// 	V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, totalfileslength, 8, 96);
+		// 	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
+		// 		va(" %2u/%2u Files",loadcompletednum,fileneedednum));
+		// }
+		// else if (lastfilenum != -1)
+		// {
+		// 	INT32 dldlength;
+		// 	static char tempname[28];
+		// 	fileneeded_t *file;
+		// 	char *filename;
 
-			if (snake)
-				Snake_Draw();
+		// 	if (snake)
+		// 		Snake_Draw();
 
-			// Draw the bottom box.
-			CL_DrawConnectionStatusBox();
+		// 	// Draw the bottom box.
+		// 	CL_DrawConnectionStatusBox();
 
-			if (fileneeded)
-			{
-				file = &fileneeded[lastfilenum];
-				filename = file->filename;
-			}
-			else
-				return;
+		// 	if (fileneeded)
+		// 	{
+		// 		file = &fileneeded[lastfilenum];
+		// 		filename = file->filename;
+		// 	}
+		// 	else
+		// 		return;
 
-			Net_GetNetStat();
-			dldlength = (INT32)((file->currentsize/(double)file->totalsize) * 256);
-			if (dldlength > 256)
-				dldlength = 256;
-			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
-			V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, dldlength, 8, 96);
+		// 	Net_GetNetStat();
+		// 	dldlength = (INT32)((file->currentsize/(double)file->totalsize) * 256);
+		// 	if (dldlength > 256)
+		// 		dldlength = 256;
+		// 	V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, 256, 8, 111);
+		// 	V_DrawFill(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, dldlength, 8, 96);
 
-			memset(tempname, 0, sizeof(tempname));
-			// offset filename to just the name only part
-			filename += strlen(filename) - nameonlylength(filename);
+		// 	memset(tempname, 0, sizeof(tempname));
+		// 	// offset filename to just the name only part
+		// 	filename += strlen(filename) - nameonlylength(filename);
 
-			if (strlen(filename) > sizeof(tempname)-1) // too long to display fully
-			{
-				size_t endhalfpos = strlen(filename)-10;
-				// display as first 14 chars + ... + last 10 chars
-				// which should add up to 27 if our math(s) is correct
-				snprintf(tempname, sizeof(tempname), "%.14s...%.10s", filename, filename+endhalfpos);
-			}
-			else // we can copy the whole thing in safely
-			{
-				strncpy(tempname, filename, sizeof(tempname)-1);
-			}
+		// 	if (strlen(filename) > sizeof(tempname)-1) // too long to display fully
+		// 	{
+		// 		size_t endhalfpos = strlen(filename)-10;
+		// 		// display as first 14 chars + ... + last 10 chars
+		// 		// which should add up to 27 if our math(s) is correct
+		// 		snprintf(tempname, sizeof(tempname), "%.14s...%.10s", filename, filename+endhalfpos);
+		// 	}
+		// 	else // we can copy the whole thing in safely
+		// 	{
+		// 		strncpy(tempname, filename, sizeof(tempname)-1);
+		// 	}
 
-			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP,
-				va(M_GetText("Downloading \"%s\""), tempname));
-			V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
-				va(" %4uK/%4uK",fileneeded[lastfilenum].currentsize>>10,file->totalsize>>10));
-			V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
-				va("%3.1fK/s ", ((double)getbps)/1024));
-		}
-		else
-		{
+		// 	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP,
+		// 		va(M_GetText("Downloading \"%s\""), tempname));
+		// 	V_DrawString(BASEVIDWIDTH/2-128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
+		// 		va(" %4uK/%4uK",fileneeded[lastfilenum].currentsize>>10,file->totalsize>>10));
+		// 	V_DrawRightAlignedString(BASEVIDWIDTH/2+128, BASEVIDHEIGHT-16, V_20TRANS|V_MONOSPACE,
+		// 		va("%3.1fK/s ", ((double)getbps)/1024));
+		// }
+		// else
+		// {
 			if (snake)
 				Snake_Draw();
 
 			CL_DrawConnectionStatusBox();
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-24, V_YELLOWMAP,
 				M_GetText("Waiting to download files..."));
-		}
+		// }
 	}
 }
 #endif
@@ -1964,6 +1964,7 @@ static boolean CL_FinishedFileList(void)
 {
 	INT32 i;
 	char *downloadsize = NULL;
+
 	//CONS_Printf(M_GetText("Checking files...\n"));
 	i = CL_CheckFiles();
 	if (i == 4) // still checking ...
@@ -2072,7 +2073,7 @@ static boolean CL_FinishedFileList(void)
 				"Download of %s additional content\nis required to join.\n"
 				"\n"
 				"Press ENTER to continue\nor ESC to cancel.\n"
-			), downloadsize), M_ConfirmConnect, MM_EVENTHANDLER);
+			), "1111"), M_ConfirmConnect, MM_EVENTHANDLER);
 
 		Z_Free(downloadsize);
 		cl_mode = CL_CONFIRMCONNECT;
