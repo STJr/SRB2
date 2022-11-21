@@ -1934,7 +1934,7 @@ static void M_ConfirmConnect(event_t *ev)
 #ifndef NONET
 	if (ev->type == ev_keydown)
 	{
-		if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER)
+		if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER || ev->key == KEY_JOY1)
 		{
 			if (totalfilesrequestednum > 0)
 			{
@@ -1949,7 +1949,7 @@ static void M_ConfirmConnect(event_t *ev)
 
 			M_ClearMenus(true);
 		}
-		else if (ev->key == 'n' || ev->key == KEY_ESCAPE)
+		else if (ev->key == 'n' || ev->key == KEY_ESCAPE || ev->key == KEY_JOY1 + 3)
 		{
 			cl_mode = CL_ABORTED;
 			M_ClearMenus(true);
