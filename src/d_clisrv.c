@@ -759,6 +759,7 @@ static void Snake_Handle(void)
 				pjoyx = 0;
 		}
 	}
+	joyeventcount = 0;
 
 	// Update direction
 	if (PLAYER1INPUTDOWN(GC_STRAFELEFT) || gamekeydown[KEY_LEFTARROW] || joystate == 3)
