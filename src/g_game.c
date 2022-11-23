@@ -1963,10 +1963,17 @@ static boolean ViewpointSwitchResponder(event_t *ev)
 {
 	// ViewpointSwitch Lua hook.
 	UINT8 canSwitchView = 0;
-	boolean pressed = (ev->key == KEY_F12 || ev->key == gamecontrol[GC_VIEWPOINT][0] || ev->key == gamecontrol[GC_VIEWPOINT][1]);
+
+	INT32 direction = 0;
+	if (ev->key == KEY_F12 || ev->key == gamecontrol[GC_VIEWPOINTNEXT][0] || ev->key == gamecontrol[GC_VIEWPOINTNEXT][1])
+		direction = 1;
+	if (ev->key == gamecontrol[GC_VIEWPOINTPREV][0] || ev->key == gamecontrol[GC_VIEWPOINTPREV][1])
+		direction = -1;
+	if (shiftdown)
+		direction = -direction;
 
 	// allow spy mode changes even during the demo
-	if (!(gamestate == GS_LEVEL && ev->type == ev_keydown && pressed))
+	if (!(gamestate == GS_LEVEL && ev->type == ev_keydown && direction != 0))
 		return false;
 
 	if (splitscreen || !netgame)
@@ -1979,7 +1986,7 @@ static boolean ViewpointSwitchResponder(event_t *ev)
 	do
 	{
 		// Wrap in both directions
-		displayplayer += shiftdown ? -1 : 1;
+		displayplayer += direction;
 		displayplayer = (displayplayer + MAXPLAYERS) % MAXPLAYERS;
 
 		if (!playeringame[displayplayer])
