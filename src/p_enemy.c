@@ -1406,7 +1406,7 @@ void A_StatueBurst(mobj_t *actor)
 		return;
 
 	// make statue intangible upon spawning so you can't stand above the created object for 40 tics
-	actor->flags |= ~MF_SOLID;
+	actor->flags &= ~MF_SOLID;
 
 	if (!locvar1 || !(new = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1)))
 		return;
