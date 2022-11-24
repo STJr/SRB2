@@ -17,7 +17,6 @@ all_systems:=\
 	UNIX\
 	LINUX\
 	FREEBSD\
-	SDL\
 
 # check for user specified system
 ifeq (,$(filter $(all_systems),$(.VARIABLES)))

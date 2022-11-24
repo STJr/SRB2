@@ -374,7 +374,7 @@ void P_CameraLineOpening(line_t *linedef)
 				for (rover = front->ffloors; rover; rover = rover->next)
 				{
 					fixed_t topheight, bottomheight;
-					if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_RENDERALL) || !(rover->flags & FF_EXISTS) || (rover->master->frontsector->flags & MSF_NOCLIPCAMERA))
+					if (!(rover->fofflags & FOF_BLOCKOTHERS) || !(rover->fofflags & FOF_RENDERALL) || !(rover->fofflags & FOF_EXISTS) || (rover->master->frontsector->flags & MSF_NOCLIPCAMERA))
 						continue;
 
 					topheight = P_CameraGetFOFTopZ(mapcampointer, front, rover, tmx, tmy, linedef);
@@ -398,7 +398,7 @@ void P_CameraLineOpening(line_t *linedef)
 				for (rover = back->ffloors; rover; rover = rover->next)
 				{
 					fixed_t topheight, bottomheight;
-					if (!(rover->flags & FF_BLOCKOTHERS) || !(rover->flags & FF_RENDERALL) || !(rover->flags & FF_EXISTS) || (rover->master->frontsector->flags & MSF_NOCLIPCAMERA))
+					if (!(rover->fofflags & FOF_BLOCKOTHERS) || !(rover->fofflags & FOF_RENDERALL) || !(rover->fofflags & FOF_EXISTS) || (rover->master->frontsector->flags & MSF_NOCLIPCAMERA))
 						continue;
 
 					topheight = P_CameraGetFOFTopZ(mapcampointer, back, rover, tmx, tmy, linedef);
@@ -594,13 +594,13 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				for (rover = front->ffloors; rover; rover = rover->next)
 				{
 					fixed_t topheight, bottomheight;
-					if (!(rover->flags & FF_EXISTS))
+					if (!(rover->fofflags & FOF_EXISTS))
 						continue;
 
 					if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
 						;
-					else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
-						|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
+					else if (!((rover->fofflags & FOF_BLOCKPLAYER && mobj->player)
+						|| (rover->fofflags & FOF_BLOCKOTHERS && !mobj->player)))
 						continue;
 
 					topheight = P_GetFOFTopZ(mobj, front, rover, tmx, tmy, linedef);
@@ -609,7 +609,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 					delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
 					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
-					if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
+					if (delta1 >= delta2 && (rover->fofflags & FOF_INTANGIBLEFLATS) != FOF_PLATFORM) // thing is below FOF
 					{
 						if (bottomheight < opentop) {
 							opentop = bottomheight;
@@ -620,7 +620,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 							highceiling = bottomheight;
 					}
 
-					if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+					if (delta1 < delta2 && (rover->fofflags & FOF_INTANGIBLEFLATS) != FOF_REVERSEPLATFORM) // thing is above FOF
 					{
 						if (topheight > openbottom) {
 							openbottom = topheight;
@@ -636,13 +636,13 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 				for (rover = back->ffloors; rover; rover = rover->next)
 				{
 					fixed_t topheight, bottomheight;
-					if (!(rover->flags & FF_EXISTS))
+					if (!(rover->fofflags & FOF_EXISTS))
 						continue;
 
 					if (mobj->player && (P_CheckSolidLava(rover) || P_CanRunOnWater(mobj->player, rover)))
 						;
-					else if (!((rover->flags & FF_BLOCKPLAYER && mobj->player)
-						|| (rover->flags & FF_BLOCKOTHERS && !mobj->player)))
+					else if (!((rover->fofflags & FOF_BLOCKPLAYER && mobj->player)
+						|| (rover->fofflags & FOF_BLOCKOTHERS && !mobj->player)))
 						continue;
 
 					topheight = P_GetFOFTopZ(mobj, back, rover, tmx, tmy, linedef);
@@ -651,7 +651,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 					delta1 = abs(mobj->z - (bottomheight + ((topheight - bottomheight)/2)));
 					delta2 = abs(thingtop - (bottomheight + ((topheight - bottomheight)/2)));
 
-					if (delta1 >= delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_PLATFORM) // thing is below FOF
+					if (delta1 >= delta2 && (rover->fofflags & FOF_INTANGIBLEFLATS) != FOF_PLATFORM) // thing is below FOF
 					{
 						if (bottomheight < opentop) {
 							opentop = bottomheight;
@@ -662,7 +662,7 @@ void P_LineOpening(line_t *linedef, mobj_t *mobj)
 							highceiling = bottomheight;
 					}
 
-					if (delta1 < delta2 && (rover->flags & FF_INTANGIBLEFLATS) != FF_REVERSEPLATFORM) // thing is above FOF
+					if (delta1 < delta2 && (rover->fofflags & FOF_INTANGIBLEFLATS) != FOF_REVERSEPLATFORM) // thing is above FOF
 					{
 						if (topheight > openbottom) {
 							openbottom = topheight;

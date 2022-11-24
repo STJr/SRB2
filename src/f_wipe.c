@@ -24,6 +24,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#include "i_time.h"
 #include "i_system.h"
 #include "i_threads.h"
 #include "m_menu.h"
@@ -555,7 +556,10 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 
 		// wait loop
 		while (!((nowtime = I_GetTime()) - lastwipetic))
-			I_Sleep();
+		{
+			I_Sleep(cv_sleep.value);
+			I_UpdateTime(cv_timescale.value);
+		}
 		lastwipetic = nowtime;
 
 		// Wipe styles

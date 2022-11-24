@@ -115,42 +115,83 @@ typedef struct
   */
 typedef enum
 {
-	FF_EXISTS            = 0x1,        ///< Always set, to check for validity.
-	FF_BLOCKPLAYER       = 0x2,        ///< Solid to player, but nothing else
-	FF_BLOCKOTHERS       = 0x4,        ///< Solid to everything but player
-	FF_SOLID             = 0x6,        ///< Clips things.
-	FF_RENDERSIDES       = 0x8,        ///< Renders the sides.
-	FF_RENDERPLANES      = 0x10,       ///< Renders the floor/ceiling.
-	FF_RENDERALL         = 0x18,       ///< Renders everything.
-	FF_SWIMMABLE         = 0x20,       ///< Is a water block.
-	FF_NOSHADE           = 0x40,       ///< Messes with the lighting?
-	FF_CUTSOLIDS         = 0x80,       ///< Cuts out hidden solid pixels.
-	FF_CUTEXTRA          = 0x100,      ///< Cuts out hidden translucent pixels.
-	FF_CUTLEVEL          = 0x180,      ///< Cuts out all hidden pixels.
-	FF_CUTSPRITES        = 0x200,      ///< Final step in making 3D water.
-	FF_BOTHPLANES        = 0x400,      ///< Render inside and outside planes.
-	FF_EXTRA             = 0x800,      ///< Gets cut by ::FF_CUTEXTRA.
-	FF_TRANSLUCENT       = 0x1000,     ///< See through!
-	FF_FOG               = 0x2000,     ///< Fog "brush."
-	FF_INVERTPLANES      = 0x4000,     ///< Only render inside planes.
-	FF_ALLSIDES          = 0x8000,     ///< Render inside and outside sides.
-	FF_INVERTSIDES       = 0x10000,    ///< Only render inside sides.
-	FF_DOUBLESHADOW      = 0x20000,    ///< Make two lightlist entries to reset light?
-	FF_FLOATBOB          = 0x40000,    ///< Floats on water and bobs if you step on it.
-	FF_NORETURN          = 0x80000,    ///< Used with ::FF_CRUMBLE. Will not return to its original position after falling.
-	FF_CRUMBLE           = 0x100000,   ///< Falls 2 seconds after being stepped on, and randomly brings all touching crumbling 3dfloors down with it, providing their master sectors share the same tag (allows crumble platforms above or below, to also exist).
-	FF_GOOWATER          = 0x200000,   ///< Used with ::FF_SWIMMABLE. Makes thick bouncey goop.
-	FF_MARIO             = 0x400000,   ///< Acts like a question block when hit from underneath. Goodie spawned at top is determined by master sector.
-	FF_BUSTUP            = 0x800000,   ///< You can spin through/punch this block and it will crumble!
-	FF_QUICKSAND         = 0x1000000,  ///< Quicksand!
-	FF_PLATFORM          = 0x2000000,  ///< You can jump up through this to the top.
-	FF_REVERSEPLATFORM   = 0x4000000,  ///< A fall-through floor in normal gravity, a platform in reverse gravity.
-	FF_INTANGIBLEFLATS   = 0x6000000,  ///< Both flats are intangible, but the sides are still solid.
-	FF_RIPPLE            = 0x8000000,  ///< Ripple the flats
-	FF_COLORMAPONLY      = 0x10000000, ///< Only copy the colormap, not the lightlevel
-	FF_BOUNCY            = 0x20000000, ///< Bounces players
-	FF_SPLAT             = 0x40000000, ///< Use splat flat renderer (treat cyan pixels as invisible)
+	FOF_EXISTS            = 0x1,        ///< Always set, to check for validity.
+	FOF_BLOCKPLAYER       = 0x2,        ///< Solid to player, but nothing else
+	FOF_BLOCKOTHERS       = 0x4,        ///< Solid to everything but player
+	FOF_SOLID             = 0x6,        ///< Clips things.
+	FOF_RENDERSIDES       = 0x8,        ///< Renders the sides.
+	FOF_RENDERPLANES      = 0x10,       ///< Renders the floor/ceiling.
+	FOF_RENDERALL         = 0x18,       ///< Renders everything.
+	FOF_SWIMMABLE         = 0x20,       ///< Is a water block.
+	FOF_NOSHADE           = 0x40,       ///< Messes with the lighting?
+	FOF_CUTSOLIDS         = 0x80,       ///< Cuts out hidden solid pixels.
+	FOF_CUTEXTRA          = 0x100,      ///< Cuts out hidden translucent pixels.
+	FOF_CUTLEVEL          = 0x180,      ///< Cuts out all hidden pixels.
+	FOF_CUTSPRITES        = 0x200,      ///< Final step in making 3D water.
+	FOF_BOTHPLANES        = 0x400,      ///< Render inside and outside planes.
+	FOF_EXTRA             = 0x800,      ///< Gets cut by ::FOF_CUTEXTRA.
+	FOF_TRANSLUCENT       = 0x1000,     ///< See through!
+	FOF_FOG               = 0x2000,     ///< Fog "brush."
+	FOF_INVERTPLANES      = 0x4000,     ///< Only render inside planes.
+	FOF_ALLSIDES          = 0x8000,     ///< Render inside and outside sides.
+	FOF_INVERTSIDES       = 0x10000,    ///< Only render inside sides.
+	FOF_DOUBLESHADOW      = 0x20000,    ///< Make two lightlist entries to reset light?
+	FOF_FLOATBOB          = 0x40000,    ///< Floats on water and bobs if you step on it.
+	FOF_NORETURN          = 0x80000,    ///< Used with ::FOF_CRUMBLE. Will not return to its original position after falling.
+	FOF_CRUMBLE           = 0x100000,   ///< Falls 2 seconds after being stepped on, and randomly brings all touching crumbling 3dfloors down with it, providing their master sectors share the same tag (allows crumble platforms above or below, to also exist).
+	FOF_GOOWATER          = 0x200000,   ///< Used with ::FOF_SWIMMABLE. Makes thick bouncey goop.
+	FOF_MARIO             = 0x400000,   ///< Acts like a question block when hit from underneath. Goodie spawned at top is determined by master sector.
+	FOF_BUSTUP            = 0x800000,   ///< You can spin through/punch this block and it will crumble!
+	FOF_QUICKSAND         = 0x1000000,  ///< Quicksand!
+	FOF_PLATFORM          = 0x2000000,  ///< You can jump up through this to the top.
+	FOF_REVERSEPLATFORM   = 0x4000000,  ///< A fall-through floor in normal gravity, a platform in reverse gravity.
+	FOF_INTANGIBLEFLATS   = 0x6000000,  ///< Both flats are intangible, but the sides are still solid.
+	FOF_RIPPLE            = 0x8000000,  ///< Ripple the flats
+	FOF_COLORMAPONLY      = 0x10000000, ///< Only copy the colormap, not the lightlevel
+	FOF_BOUNCY            = 0x20000000, ///< Bounces players
+	FOF_SPLAT             = 0x40000000, ///< Use splat flat renderer (treat cyan pixels as invisible)
 } ffloortype_e;
+
+typedef enum
+{
+	FF_OLD_EXISTS            = 0x1,
+	FF_OLD_BLOCKPLAYER       = 0x2,
+	FF_OLD_BLOCKOTHERS       = 0x4,
+	FF_OLD_SOLID             = 0x6,
+	FF_OLD_RENDERSIDES       = 0x8,
+	FF_OLD_RENDERPLANES      = 0x10,
+	FF_OLD_RENDERALL         = 0x18,
+	FF_OLD_SWIMMABLE         = 0x20,
+	FF_OLD_NOSHADE           = 0x40,
+	FF_OLD_CUTSOLIDS         = 0x80,
+	FF_OLD_CUTEXTRA          = 0x100,
+	FF_OLD_CUTLEVEL          = 0x180,
+	FF_OLD_CUTSPRITES        = 0x200,
+	FF_OLD_BOTHPLANES        = 0x400,
+	FF_OLD_EXTRA             = 0x800,
+	FF_OLD_TRANSLUCENT       = 0x1000,
+	FF_OLD_FOG               = 0x2000,
+	FF_OLD_INVERTPLANES      = 0x4000,
+	FF_OLD_ALLSIDES          = 0x8000,
+	FF_OLD_INVERTSIDES       = 0x10000,
+	FF_OLD_DOUBLESHADOW      = 0x20000,
+	FF_OLD_FLOATBOB          = 0x40000,
+	FF_OLD_NORETURN          = 0x80000,
+	FF_OLD_CRUMBLE           = 0x100000,
+	FF_OLD_SHATTERBOTTOM     = 0x200000,
+	FF_OLD_GOOWATER          = 0x200000,
+	FF_OLD_MARIO             = 0x400000,
+	FF_OLD_BUSTUP            = 0x800000,
+	FF_OLD_QUICKSAND         = 0x1000000,
+	FF_OLD_PLATFORM          = 0x2000000,
+	FF_OLD_REVERSEPLATFORM   = 0x4000000,
+	FF_OLD_INTANGIBLEFLATS   = 0x6000000,
+	FF_OLD_SHATTER           = 0x8000000,
+	FF_OLD_SPINBUST          = 0x10000000,
+	FF_OLD_STRONGBUST        = 0x20000000,
+	FF_OLD_RIPPLE            = 0x40000000,
+	FF_OLD_COLORMAPONLY      = 0x80000000,
+} oldffloortype_e;
 
 typedef enum
 {
@@ -187,7 +228,7 @@ typedef struct ffloor_s
 	struct pslope_s **b_slope;
 
 	size_t secnum;
-	ffloortype_e flags;
+	ffloortype_e fofflags;
 	struct line_s *master;
 
 	struct sector_s *target;
@@ -200,16 +241,16 @@ typedef struct ffloor_s
 	UINT8 blend; // blendmode
 	tic_t norender; // for culling
 
-	// Only relevant for FF_BUSTUP
+	// Only relevant for FOF_BUSTUP
 	ffloorbustflags_e bustflags;
 	UINT8 busttype;
 	INT16 busttag;
 
-	// Only relevant for FF_QUICKSAND
+	// Only relevant for FOF_QUICKSAND
 	fixed_t sinkspeed;
 	fixed_t friction;
 
-	// Only relevant for FF_BOUNCY
+	// Only relevant for FOF_BOUNCY
 	fixed_t bouncestrength;
 
 	// these are saved for netgames, so do not let Lua touch these!
@@ -230,7 +271,7 @@ typedef struct lightlist_s
 	extracolormap_t **extra_colormap; // pointer-to-a-pointer, so we can react to colormap changes
 	INT32 flags;
 	ffloor_t *caster;
-	struct pslope_s *slope; // FF_DOUBLESHADOW makes me have to store this pointer here. Bluh bluh.
+	struct pslope_s *slope; // FOF_DOUBLESHADOW makes me have to store this pointer here. Bluh bluh.
 } lightlist_t;
 
 
@@ -314,6 +355,8 @@ typedef enum
 	SSF_ZOOMTUBEEND = 1<<16,
 	SSF_FINISHLINE = 1<<17,
 	SSF_ROPEHANG = 1<<18,
+	SSF_JUMPFLIP = 1<<19,
+	SSF_GRAVITYOVERRIDE = 1<<20, // combine with MSF_GRAVITYFLIP
 } sectorspecialflags_t;
 
 typedef enum

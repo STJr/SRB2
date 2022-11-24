@@ -22,6 +22,7 @@
 #include "p_setup.h"
 #include "p_saveg.h"
 #include "r_data.h"
+#include "r_fps.h"
 #include "r_textures.h"
 #include "r_things.h"
 #include "r_skins.h"
@@ -202,7 +203,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].botmem.catchup_tics);
 		WRITEUINT8(save_p, players[i].botmem.thinkstate);
 		WRITEUINT8(save_p, players[i].removing);
-		
+
 		WRITEUINT8(save_p, players[i].blocked);
 		WRITEUINT16(save_p, players[i].lastbuttons);
 
@@ -424,7 +425,7 @@ static void P_NetUnArchivePlayers(void)
 		// Bots //
 		//////////
 		players[i].bot = READUINT8(save_p);
-		
+
 		players[i].botmem.lastForward = READUINT8(save_p);
 		players[i].botmem.lastBlocked = READUINT8(save_p);
 		players[i].botmem.catchup_tics = READUINT8(save_p);
@@ -433,7 +434,7 @@ static void P_NetUnArchivePlayers(void)
 
 		players[i].blocked = READUINT8(save_p);
 		players[i].lastbuttons = READUINT16(save_p);
-		
+
 		////////////////////////////
 		// Conveyor Belt Movement //
 		////////////////////////////
@@ -915,7 +916,7 @@ static boolean CheckFFloorDiff(const sector_t *ss)
 
 	for (rover = ss->ffloors; rover; rover = rover->next)
 	{
-		if (rover->flags != rover->spawnflags
+		if (rover->fofflags != rover->spawnflags
 		|| rover->alpha != rover->spawnalpha)
 			{
 				return true; // we found an FOF that changed!
@@ -935,7 +936,7 @@ static void ArchiveFFloors(const sector_t *ss)
 	for (rover = ss->ffloors; rover; rover = rover->next)
 	{
 		fflr_diff = 0; // reset diff flags
-		if (rover->flags != rover->spawnflags)
+		if (rover->fofflags != rover->spawnflags)
 			fflr_diff |= FD_FLAGS;
 		if (rover->alpha != rover->spawnalpha)
 			fflr_diff |= FD_ALPHA;
@@ -945,7 +946,7 @@ static void ArchiveFFloors(const sector_t *ss)
 			WRITEUINT16(save_p, j); // save ffloor "number"
 			WRITEUINT8(save_p, fflr_diff);
 			if (fflr_diff & FD_FLAGS)
-				WRITEUINT32(save_p, rover->flags);
+				WRITEUINT32(save_p, rover->fofflags);
 			if (fflr_diff & FD_ALPHA)
 				WRITEINT16(save_p, rover->alpha);
 		}
@@ -983,7 +984,7 @@ static void UnArchiveFFloors(const sector_t *ss)
 		fflr_diff = READUINT8(save_p);
 
 		if (fflr_diff & FD_FLAGS)
-			rover->flags = READUINT32(save_p);
+			rover->fofflags = READUINT32(save_p);
 		if (fflr_diff & FD_ALPHA)
 			rover->alpha = READINT16(save_p);
 
@@ -3059,6 +3060,8 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 	}
 
 	mobj->info = (mobjinfo_t *)next; // temporarily, set when leave this function
+
+	R_AddMobjInterpolator(mobj);
 
 	return &mobj->thinker;
 }

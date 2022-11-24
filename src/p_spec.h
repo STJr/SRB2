@@ -256,6 +256,13 @@ typedef enum
 
 typedef enum
 {
+	TMG_NORMAL  = 0,
+	TMG_REVERSE = 1,
+	TMG_TEMPREVERSE = 2,
+} textmapgravity_t;
+
+typedef enum
+{
 	TMNP_FASTEST   = 0,
 	TMNP_SLOWEST   = 1,
 	TMNP_TRIGGERER = 2,
@@ -1029,8 +1036,8 @@ typedef struct
 	INT16 speed;        ///< Speed to fade by
 	boolean ticbased;    ///< Tic-based logic toggle
 	INT32 timer;        ///< Timer for tic-based logic
-	boolean doexists;   ///< Handle FF_EXISTS
-	boolean dotranslucent; ///< Handle FF_TRANSLUCENT
+	boolean doexists;   ///< Handle FOF_EXISTS
+	boolean dotranslucent; ///< Handle FOF_TRANSLUCENT
 	boolean dolighting; ///< Handle shadows and light blocks
 	boolean docolormap; ///< Handle colormaps
 	boolean docollision; ///< Handle interactive flags

@@ -159,13 +159,14 @@ typedef struct vissprite_s
 	fixed_t startfrac; // horizontal position of x1
 	fixed_t xscale, scale; // projected horizontal and vertical scales
 	fixed_t thingscale; // the object's scale
-	fixed_t sortscale; // sortscale only differs from scale for paper sprites, floor sprites, and MF2_LINKDRAW
+	fixed_t sortscale; // sortscale only differs from scale for paper sprites and floor sprites
 	fixed_t sortsplat; // the sortscale from behind the floor sprite
+	fixed_t linkscale; // the sortscale for MF2_LINKDRAW sprites
 	fixed_t scalestep; // only for paper sprites, 0 otherwise
 	fixed_t paperoffset, paperdistance; // for paper sprites, offset/dist relative to the angle
 	fixed_t xiscale; // negative if flipped
 
-	angle_t centerangle; // for paper sprites
+	angle_t centerangle; // for paper sprites / splats
 
 	// for floor sprites
 	struct {
@@ -206,6 +207,8 @@ typedef struct vissprite_s
 	fixed_t spritexoffset, spriteyoffset;
 
 	fixed_t shadowscale;
+
+	skincolornum_t color;
 
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 

@@ -31,8 +31,8 @@
 # MINGW=1, MINGW64=1 - Windows (MinGW toolchain)
 # UNIX=1 - Generic Unix like system
 # FREEBSD=1
-# SDL=1 - Use SDL backend. SDL is the only backend though
-#         and thus, always enabled.
+# SDL=1 - Use SDL backend. SDL is the only implemented backend though.
+#         If disabled, a dummy backend will be used.
 #
 # A list of supported GCC versions can be found in
 # Makefile.d/detect.mk -- search 'gcc_versions'.
@@ -357,9 +357,9 @@ $(dbg).txt : $(dbg)
 # this really updates comptime.h
 comptime.c ::
 ifdef WINDOWSHELL
-	$(.)..\comptime.bat .
+	-$(.)..\comptime.bat .
 else
-	$(.)../comptime.sh .
+	-$(.)../comptime.sh .
 endif
 
 # I wish I could make dependencies out of rc files :(
