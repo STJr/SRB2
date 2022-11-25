@@ -621,17 +621,17 @@ static int sector_get(lua_State *L)
 	}
 	case sector_floorxoffset:
 	{
-		lua_pushfixed(L, sector->floor_xoffs);
+		lua_pushfixed(L, sector->floorxoffset);
 		return 1;
 	}
 	case sector_flooryoffset:
 	{
-		lua_pushfixed(L, sector->floor_yoffs);
+		lua_pushfixed(L, sector->flooryoffset);
 		return 1;
 	}
 	case sector_floorangle: 
 	{
-		lua_pushangle(L, sector->floorpic_angle);
+		lua_pushangle(L, sector->floorangle);
 		return 1;
 	}	
 	case sector_ceilingpic: // ceilingpic
@@ -645,17 +645,17 @@ static int sector_get(lua_State *L)
 	}
 	case sector_ceilingxoffset:
 	{
-		lua_pushfixed(L, sector->ceiling_xoffs);
+		lua_pushfixed(L, sector->ceilingxoffset);
 		return 1;
 	}
 	case sector_ceilingyoffset:
 	{
-		lua_pushfixed(L, sector->ceiling_yoffs);
+		lua_pushfixed(L, sector->ceilingyoffset);
 		return 1;
 	}
 	case sector_ceilingangle:
 	{
-		lua_pushangle(L, sector->ceilingpic_angle);
+		lua_pushangle(L, sector->ceilingangle);
 		return 1;
 	}	
 	case sector_lightlevel:
@@ -794,25 +794,25 @@ static int sector_set(lua_State *L)
 		sector->floorpic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
 		break;
 	case sector_floorxoffset:
-		sector->floor_xoffs = luaL_checkfixed(L, 3);
+		sector->floorxoffset = luaL_checkfixed(L, 3);
 		break;
 	case sector_flooryoffset:
-		sector->floor_yoffs = luaL_checkfixed(L, 3);
+		sector->flooryoffset = luaL_checkfixed(L, 3);
 		break;
 	case sector_floorangle:
-		sector->floorpic_angle = luaL_checkangle(L, 3);
+		sector->floorangle = luaL_checkangle(L, 3);
 		break;		
 	case sector_ceilingpic:
 		sector->ceilingpic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
 		break;
 	case sector_ceilingxoffset:
-		sector->ceiling_xoffs = luaL_checkfixed(L, 3);
+		sector->ceilingxoffset = luaL_checkfixed(L, 3);
 		break;
 	case sector_ceilingyoffset:
-		sector->ceiling_yoffs = luaL_checkfixed(L, 3);
+		sector->ceilingyoffset = luaL_checkfixed(L, 3);
 		break;
 	case sector_ceilingangle:
-		sector->ceilingpic_angle = luaL_checkangle(L, 3);
+		sector->ceilingangle = luaL_checkangle(L, 3);
 		break;
 	case sector_lightlevel:
 		sector->lightlevel = (INT16)luaL_checkinteger(L, 3);

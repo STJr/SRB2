@@ -1049,10 +1049,10 @@ static void P_LoadSectors(UINT8 *data)
 		ss->special = SHORT(ms->special);
 		Tag_FSet(&ss->tags, SHORT(ms->tag));
 
-		ss->floor_xoffs = ss->floor_yoffs = 0;
-		ss->ceiling_xoffs = ss->ceiling_yoffs = 0;
+		ss->floorxoffset = ss->flooryoffset = 0;
+		ss->ceilingxoffset = ss->ceilingyoffset = 0;
 
-		ss->floorpic_angle = ss->ceilingpic_angle = 0;
+		ss->floorangle = ss->ceilingangle = 0;
 
 		ss->floorlightlevel = ss->ceilinglightlevel = 0;
 		ss->floorlightabsolute = ss->ceilinglightabsolute = false;
@@ -1578,19 +1578,19 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 			if ((id = strchr(id, ' ')))
 				id++;
 		}
-	}
+	}	
 	else if (fastcmp(param, "xpanningfloor"))
-		sectors[i].floor_xoffs = FLOAT_TO_FIXED(atof(val));
+		sectors[i].floorxoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningfloor"))
-		sectors[i].floor_yoffs = FLOAT_TO_FIXED(atof(val));
+		sectors[i].flooryoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "xpanningceiling"))
-		sectors[i].ceiling_xoffs = FLOAT_TO_FIXED(atof(val));
+		sectors[i].ceilingxoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "ypanningceiling"))
-		sectors[i].ceiling_yoffs = FLOAT_TO_FIXED(atof(val));
+		sectors[i].ceilingyoffset = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "rotationfloor"))
-		sectors[i].floorpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+		sectors[i].floorangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "rotationceiling"))
-		sectors[i].ceilingpic_angle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
+		sectors[i].ceilingangle = FixedAngle(FLOAT_TO_FIXED(atof(val)));
 	else if (fastcmp(param, "floorplane_a"))
 	{
 		textmap_planefloor.defined |= PD_A;
@@ -1959,47 +1959,47 @@ static void TextmapParse(UINT32 dataPos, size_t num, void (*parser)(UINT32, cons
  */
 static void TextmapFixFlatOffsets(sector_t *sec)
 {
-	if (sec->floorpic_angle)
+	if (sec->floorangle)
 	{
-		fixed_t pc = FINECOSINE(sec->floorpic_angle>>ANGLETOFINESHIFT);
-		fixed_t ps = FINESINE  (sec->floorpic_angle>>ANGLETOFINESHIFT);
-		fixed_t xoffs = sec->floor_xoffs;
-		fixed_t yoffs = sec->floor_yoffs;
-		sec->floor_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
-		sec->floor_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		fixed_t pc = FINECOSINE(sec->floorangle>>ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE  (sec->floorangle>>ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->floorxoffset;
+		fixed_t yoffs = sec->flooryoffset;
+		sec->floorxoffset = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		sec->flooryoffset = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
 	}
 
-	if (sec->ceilingpic_angle)
+	if (sec->ceilingangle)
 	{
-		fixed_t pc = FINECOSINE(sec->ceilingpic_angle>>ANGLETOFINESHIFT);
-		fixed_t ps = FINESINE  (sec->ceilingpic_angle>>ANGLETOFINESHIFT);
-		fixed_t xoffs = sec->ceiling_xoffs;
-		fixed_t yoffs = sec->ceiling_yoffs;
-		sec->ceiling_xoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
-		sec->ceiling_yoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		fixed_t pc = FINECOSINE(sec->ceilingangle>>ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE  (sec->ceilingangle>>ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->ceilingxoffset;
+		fixed_t yoffs = sec->ceilingyoffset;
+		sec->ceilingxoffset = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		sec->ceilingyoffset = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
 	}
 }
 
 static void TextmapUnfixFlatOffsets(sector_t *sec)
 {
-	if (sec->floorpic_angle)
+	if (sec->floorangle)
 	{
-		fixed_t pc = FINECOSINE(sec->floorpic_angle >> ANGLETOFINESHIFT);
-		fixed_t ps = FINESINE(sec->floorpic_angle >> ANGLETOFINESHIFT);
-		fixed_t xoffs = sec->floor_xoffs;
-		fixed_t yoffs = sec->floor_yoffs;
-		sec->floor_xoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
-		sec->floor_yoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		fixed_t pc = FINECOSINE(sec->floorangle >> ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE(sec->floorangle >> ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->floorxoffset;
+		fixed_t yoffs = sec->flooryoffset;
+		sec->floorxoffset = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		sec->flooryoffset = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
 	}
 
-	if (sec->ceilingpic_angle)
+	if (sec->ceilingangle)
 	{
-		fixed_t pc = FINECOSINE(sec->ceilingpic_angle >> ANGLETOFINESHIFT);
-		fixed_t ps = FINESINE(sec->ceilingpic_angle >> ANGLETOFINESHIFT);
-		fixed_t xoffs = sec->ceiling_xoffs;
-		fixed_t yoffs = sec->ceiling_yoffs;
-		sec->ceiling_xoffs = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
-		sec->ceiling_yoffs = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
+		fixed_t pc = FINECOSINE(sec->ceilingangle >> ANGLETOFINESHIFT);
+		fixed_t ps = FINESINE(sec->ceilingangle >> ANGLETOFINESHIFT);
+		fixed_t xoffs = sec->ceilingxoffset;
+		fixed_t yoffs = sec->ceilingyoffset;
+		sec->ceilingxoffset = (FixedMul(xoffs, ps) % MAXFLATSIZE) + (FixedMul(yoffs, pc) % MAXFLATSIZE);
+		sec->ceilingyoffset = (FixedMul(xoffs, pc) % MAXFLATSIZE) - (FixedMul(yoffs, ps) % MAXFLATSIZE);
 	}
 }
 
@@ -2492,18 +2492,18 @@ static void P_WriteTextmap(void)
 		}
 		sector_t tempsec = wsectors[i];
 		TextmapUnfixFlatOffsets(&tempsec);
-		if (tempsec.floor_xoffs != 0)
-			fprintf(f, "xpanningfloor = %f;\n", FIXED_TO_FLOAT(tempsec.floor_xoffs));
-		if (tempsec.floor_yoffs != 0)
-			fprintf(f, "ypanningfloor = %f;\n", FIXED_TO_FLOAT(tempsec.floor_yoffs));
-		if (tempsec.ceiling_xoffs != 0)
-			fprintf(f, "xpanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceiling_xoffs));
-		if (tempsec.ceiling_yoffs != 0)
-			fprintf(f, "ypanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceiling_yoffs));
-		if (wsectors[i].floorpic_angle != 0)
-			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].floorpic_angle)));
-		if (wsectors[i].ceilingpic_angle != 0)
-			fprintf(f, "rotationceiling = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].ceilingpic_angle)));
+		if (tempsec.floorxoffset != 0)
+			fprintf(f, "xpanningfloor = %f;\n", FIXED_TO_FLOAT(tempsec.floorxoffset));
+		if (tempsec.flooryoffset != 0)
+			fprintf(f, "ypanningfloor = %f;\n", FIXED_TO_FLOAT(tempsec.flooryoffset));
+		if (tempsec.ceilingxoffset != 0)
+			fprintf(f, "xpanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingxoffset));
+		if (tempsec.ceilingyoffset != 0)
+			fprintf(f, "ypanningceiling = %f;\n", FIXED_TO_FLOAT(tempsec.ceilingyoffset));
+		if (wsectors[i].floorangle != 0)
+			fprintf(f, "rotationfloor = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].floorangle)));
+		if (wsectors[i].ceilingangle != 0)
+			fprintf(f, "rotationceiling = %f;\n", FIXED_TO_FLOAT(AngleFixed(wsectors[i].ceilingangle)));
         if (wsectors[i].extra_colormap)
 		{
 			INT32 lightcolor = P_RGBAToColor(wsectors[i].extra_colormap->rgba);
@@ -2708,10 +2708,10 @@ static void P_LoadTextmap(void)
 		sc->special = 0;
 		Tag_FSet(&sc->tags, 0);
 
-		sc->floor_xoffs = sc->floor_yoffs = 0;
-		sc->ceiling_xoffs = sc->ceiling_yoffs = 0;
+		sc->floorxoffset = sc->flooryoffset = 0;
+		sc->ceilingxoffset = sc->ceilingyoffset = 0;
 
-		sc->floorpic_angle = sc->ceilingpic_angle = 0;
+		sc->floorangle = sc->ceilingangle = 0;
 
 		sc->floorlightlevel = sc->ceilinglightlevel = 0;
 		sc->floorlightabsolute = sc->ceilinglightabsolute = false;

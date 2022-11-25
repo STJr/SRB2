@@ -1022,17 +1022,17 @@ static void ArchiveSectors(void)
 		if (ss->special != spawnss->special)
 			diff |= SD_SPECIAL;
 
-		if (ss->floor_xoffs != spawnss->floor_xoffs)
+		if (ss->floorxoffset != spawnss->floorxoffset)
 			diff2 |= SD_FXOFFS;
-		if (ss->floor_yoffs != spawnss->floor_yoffs)
+		if (ss->flooryoffset != spawnss->flooryoffset)
 			diff2 |= SD_FYOFFS;
-		if (ss->ceiling_xoffs != spawnss->ceiling_xoffs)
+		if (ss->ceilingxoffset != spawnss->ceilingxoffset)
 			diff2 |= SD_CXOFFS;
-		if (ss->ceiling_yoffs != spawnss->ceiling_yoffs)
+		if (ss->ceilingyoffset != spawnss->ceilingyoffset)
 			diff2 |= SD_CYOFFS;
-		if (ss->floorpic_angle != spawnss->floorpic_angle)
+		if (ss->floorangle != spawnss->floorangle)
 			diff2 |= SD_FLOORANG;
-		if (ss->ceilingpic_angle != spawnss->ceilingpic_angle)
+		if (ss->ceilingangle != spawnss->ceilingangle)
 			diff2 |= SD_CEILANG;
 
 		if (!Tag_Compare(&ss->tags, &spawnss->tags))
@@ -1095,17 +1095,17 @@ static void ArchiveSectors(void)
 			if (diff & SD_SPECIAL)
 				WRITEINT16(save_p, ss->special);
 			if (diff2 & SD_FXOFFS)
-				WRITEFIXED(save_p, ss->floor_xoffs);
+				WRITEFIXED(save_p, ss->floorxoffset);
 			if (diff2 & SD_FYOFFS)
-				WRITEFIXED(save_p, ss->floor_yoffs);
+				WRITEFIXED(save_p, ss->flooryoffset);
 			if (diff2 & SD_CXOFFS)
-				WRITEFIXED(save_p, ss->ceiling_xoffs);
+				WRITEFIXED(save_p, ss->ceilingxoffset);
 			if (diff2 & SD_CYOFFS)
-				WRITEFIXED(save_p, ss->ceiling_yoffs);
+				WRITEFIXED(save_p, ss->ceilingyoffset);
 			if (diff2 & SD_FLOORANG)
-				WRITEANGLE(save_p, ss->floorpic_angle);
+				WRITEANGLE(save_p, ss->floorangle);
 			if (diff2 & SD_CEILANG)
-				WRITEANGLE(save_p, ss->ceilingpic_angle);
+				WRITEANGLE(save_p, ss->ceilingangle);
 			if (diff2 & SD_TAG)
 			{
 				WRITEUINT32(save_p, ss->tags.count);
@@ -1196,17 +1196,17 @@ static void UnArchiveSectors(void)
 			sectors[i].special = READINT16(save_p);
 
 		if (diff2 & SD_FXOFFS)
-			sectors[i].floor_xoffs = READFIXED(save_p);
+			sectors[i].floorxoffset = READFIXED(save_p);
 		if (diff2 & SD_FYOFFS)
-			sectors[i].floor_yoffs = READFIXED(save_p);
+			sectors[i].flooryoffset = READFIXED(save_p);
 		if (diff2 & SD_CXOFFS)
-			sectors[i].ceiling_xoffs = READFIXED(save_p);
+			sectors[i].ceilingxoffset = READFIXED(save_p);
 		if (diff2 & SD_CYOFFS)
-			sectors[i].ceiling_yoffs = READFIXED(save_p);
+			sectors[i].ceilingyoffset = READFIXED(save_p);
 		if (diff2 & SD_FLOORANG)
-			sectors[i].floorpic_angle  = READANGLE(save_p);
+			sectors[i].floorangle  = READANGLE(save_p);
 		if (diff2 & SD_CEILANG)
-			sectors[i].ceilingpic_angle = READANGLE(save_p);
+			sectors[i].ceilingangle = READANGLE(save_p);
 		if (diff2 & SD_TAG)
 		{
 			size_t ncount = READUINT32(save_p);

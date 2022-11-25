@@ -5570,17 +5570,17 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, I
 	fflr->target = sec;
 	fflr->bottomheight = &sec2->floorheight;
 	fflr->bottompic = &sec2->floorpic;
-	fflr->bottomxoffs = &sec2->floor_xoffs;
-	fflr->bottomyoffs = &sec2->floor_yoffs;
-	fflr->bottomangle = &sec2->floorpic_angle;
+	fflr->bottomxoffs = &sec2->floorxoffset;
+	fflr->bottomyoffs = &sec2->flooryoffset;
+	fflr->bottomangle = &sec2->floorangle;
 
 	// Add the ceiling
 	fflr->topheight = &sec2->ceilingheight;
 	fflr->toppic = &sec2->ceilingpic;
 	fflr->toplightlevel = &sec2->lightlevel;
-	fflr->topxoffs = &sec2->ceiling_xoffs;
-	fflr->topyoffs = &sec2->ceiling_yoffs;
-	fflr->topangle = &sec2->ceilingpic_angle;
+	fflr->topxoffs = &sec2->ceilingxoffset;
+	fflr->topyoffs = &sec2->ceilingyoffset;
+	fflr->topangle = &sec2->ceilingangle;
 
 	// Add slopes
 	fflr->t_slope = &sec2->c_slope;
@@ -6098,16 +6098,16 @@ void P_ApplyFlatAlignment(sector_t *sector, angle_t flatangle, fixed_t xoffs, fi
 {
 	if (floor)
 	{
-		sector->floorpic_angle = flatangle;
-		sector->floor_xoffs += xoffs;
-		sector->floor_yoffs += yoffs;
+		sector->floorangle = flatangle;
+		sector->floorxoffset += xoffs;
+		sector->flooryoffset += yoffs;
 	}
 
 	if (ceiling)
 	{
-		sector->ceilingpic_angle = flatangle;
-		sector->ceiling_xoffs += xoffs;
-		sector->ceiling_yoffs += yoffs;
+		sector->ceilingangle = flatangle;
+		sector->ceilingxoffset += xoffs;
+		sector->ceilingyoffset += yoffs;
 	}
 
 }
@@ -7349,14 +7349,14 @@ void T_Scroll(scroll_t *s)
 
 		case sc_floor: // scroll floor texture
 			sec = sectors + s->affectee;
-			sec->floor_xoffs += dx;
-			sec->floor_yoffs += dy;
+			sec->floorxoffset += dx;
+			sec->flooryoffset += dy;
 			break;
 
 		case sc_ceiling: // scroll ceiling texture
 			sec = sectors + s->affectee;
-			sec->ceiling_xoffs += dx;
-			sec->ceiling_yoffs += dy;
+			sec->ceilingxoffset += dx;
+			sec->ceilingyoffset += dy;
 			break;
 
 		case sc_carry:
