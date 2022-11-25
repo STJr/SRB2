@@ -421,8 +421,8 @@ void R_CreateInterpolator_SectorScroll(thinker_t *thinker, sector_t *sector, boo
 	interp->sectorscroll.ceiling = ceiling;
 	if (ceiling)
 	{
-		interp->sectorscroll.oldxoffs = interp->sectorscroll.bakxoffs = sector->ceiling_xoffs;
-		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs = sector->ceiling_yoffs;
+		interp->sectorscroll.oldxoffs = interp->sectorscroll.bakxoffs = sector->ceilingxoffset;
+		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs = sector->ceilingyoffset;
 	}
 	else
 	{
@@ -490,9 +490,9 @@ static void UpdateLevelInterpolatorState(levelinterpolator_t *interp)
 		break;
 	case LVLINTERP_SectorScroll:
 		interp->sectorscroll.oldxoffs = interp->sectorscroll.bakxoffs;
-		interp->sectorscroll.bakxoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceiling_xoffs : interp->sectorscroll.sector->floorxoffset;
+		interp->sectorscroll.bakxoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceilingxoffset : interp->sectorscroll.sector->floorxoffset;
 		interp->sectorscroll.oldyoffs = interp->sectorscroll.bakyoffs;
-		interp->sectorscroll.bakyoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceiling_yoffs : interp->sectorscroll.sector->flooryoffset;
+		interp->sectorscroll.bakyoffs = interp->sectorscroll.ceiling ? interp->sectorscroll.sector->ceilingyoffset : interp->sectorscroll.sector->flooryoffset;
 		break;
 	case LVLINTERP_SideScroll:
 		interp->sidescroll.oldtextureoffset = interp->sidescroll.baktextureoffset;
@@ -578,8 +578,8 @@ void R_ApplyLevelInterpolators(fixed_t frac)
 		case LVLINTERP_SectorScroll:
 			if (interp->sectorscroll.ceiling)
 			{
-				interp->sectorscroll.sector->ceiling_xoffs = R_LerpFixed(interp->sectorscroll.oldxoffs, interp->sectorscroll.bakxoffs, frac);
-				interp->sectorscroll.sector->ceiling_yoffs = R_LerpFixed(interp->sectorscroll.oldyoffs, interp->sectorscroll.bakyoffs, frac);
+				interp->sectorscroll.sector->ceilingxoffset = R_LerpFixed(interp->sectorscroll.oldxoffs, interp->sectorscroll.bakxoffs, frac);
+				interp->sectorscroll.sector->ceilingyoffset = R_LerpFixed(interp->sectorscroll.oldyoffs, interp->sectorscroll.bakyoffs, frac);
 			}
 			else
 			{
@@ -633,8 +633,8 @@ void R_RestoreLevelInterpolators(void)
 		case LVLINTERP_SectorScroll:
 			if (interp->sectorscroll.ceiling)
 			{
-				interp->sectorscroll.sector->ceiling_xoffs = interp->sectorscroll.bakxoffs;
-				interp->sectorscroll.sector->ceiling_yoffs = interp->sectorscroll.bakyoffs;
+				interp->sectorscroll.sector->ceilingxoffset = interp->sectorscroll.bakxoffs;
+				interp->sectorscroll.sector->ceilingyoffset = interp->sectorscroll.bakyoffs;
 			}
 			else
 			{
