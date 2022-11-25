@@ -33,13 +33,13 @@ enum sector_e {
 	sector_floorheight,
 	sector_ceilingheight,
 	sector_floorpic,
-	sector_floor_xoffs,
-	sector_floor_yoffs,
-	sector_floorpic_angle,	
+	sector_floorxoffset,
+	sector_flooryoffset,
+	sector_floorangle,	
 	sector_ceilingpic,
-	sector_ceiling_xoffs,
-	sector_ceiling_yoffs,
-	sector_ceilingpic_angle,	
+	sector_ceilingxoffset,
+	sector_ceilingyoffset,
+	sector_ceilingangle,
 	sector_lightlevel,
 	sector_floorlightlevel,
 	sector_floorlightabsolute,
@@ -69,13 +69,13 @@ static const char *const sector_opt[] = {
 	"floorheight",
 	"ceilingheight",
 	"floorpic",
-	"floor_xoffs",
-	"floor_yoffs",
-	"floorpic_angle",	
+	"floorxoffset",
+	"flooryoffset",
+	"floorangle",
 	"ceilingpic",
-	"ceiling_xoffs",
-	"ceiling_yoffs",
-	"ceilingpic_angle",	
+	"ceilingxoffset",
+	"ceilingyoffset",
+	"ceilingangle",	
 	"lightlevel",
 	"floorlightlevel",
 	"floorlightabsolute",
@@ -619,17 +619,17 @@ static int sector_get(lua_State *L)
 		lua_pushlstring(L, levelflat->name, i);
 		return 1;
 	}
-	case sector_floor_xoffs:
+	case sector_floorxoffset:
 	{
 		lua_pushfixed(L, sector->floor_xoffs);
 		return 1;
 	}
-	case sector_floor_yoffs:
+	case sector_flooryoffset:
 	{
 		lua_pushfixed(L, sector->floor_yoffs);
 		return 1;
 	}
-	case sector_floorpic_angle: 
+	case sector_floorangle: 
 	{
 		lua_pushangle(L, sector->floorpic_angle);
 		return 1;
@@ -643,17 +643,17 @@ static int sector_get(lua_State *L)
 		lua_pushlstring(L, levelflat->name, i);
 		return 1;
 	}
-	case sector_ceiling_xoffs:
+	case sector_ceilingxoffset:
 	{
 		lua_pushfixed(L, sector->ceiling_xoffs);
 		return 1;
 	}
-	case sector_ceiling_yoffs:
+	case sector_ceilingyoffset:
 	{
 		lua_pushfixed(L, sector->ceiling_yoffs);
 		return 1;
 	}
-	case sector_ceilingpic_angle:
+	case sector_ceilingangle:
 	{
 		lua_pushangle(L, sector->ceilingpic_angle);
 		return 1;
@@ -793,25 +793,25 @@ static int sector_set(lua_State *L)
 	case sector_floorpic:
 		sector->floorpic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
 		break;
-	case sector_floor_xoffs:
+	case sector_floorxoffset:
 		sector->floor_xoffs = luaL_checkfixed(L, 3);
 		break;
-	case sector_floor_yoffs:
+	case sector_flooryoffset:
 		sector->floor_yoffs = luaL_checkfixed(L, 3);
 		break;
-	case sector_floorpic_angle:
+	case sector_floorangle:
 		sector->floorpic_angle = luaL_checkangle(L, 3);
 		break;		
 	case sector_ceilingpic:
 		sector->ceilingpic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
 		break;
-	case sector_ceiling_xoffs:
+	case sector_ceilingxoffset:
 		sector->ceiling_xoffs = luaL_checkfixed(L, 3);
 		break;
-	case sector_ceiling_yoffs:
+	case sector_ceilingyoffset:
 		sector->ceiling_yoffs = luaL_checkfixed(L, 3);
 		break;
-	case sector_ceilingpic_angle:
+	case sector_ceilingangle:
 		sector->ceilingpic_angle = luaL_checkangle(L, 3);
 		break;
 	case sector_lightlevel:
