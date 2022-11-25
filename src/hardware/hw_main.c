@@ -465,8 +465,8 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->ceiling_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->ceiling_yoffs)/fflatheight;
+			scrollx = FIXED_TO_FLOAT(FOFsector->ceilingxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(FOFsector->ceilingyoffset)/fflatheight;
 			angle = FOFsector->ceilingangle;
 		}
 	}
@@ -480,8 +480,8 @@ static void HWR_RenderPlane(subsector_t *subsector, extrasubsector_t *xsub, bool
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceiling_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceiling_yoffs)/fflatheight;
+			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceilingxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceilingyoffset)/fflatheight;
 			angle = gl_frontsector->ceilingangle;
 		}
 	}
@@ -2725,8 +2725,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(FOFsector->ceiling_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(FOFsector->ceiling_yoffs)/fflatheight;
+			scrollx = FIXED_TO_FLOAT(FOFsector->ceilingxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(FOFsector->ceilingyoffset)/fflatheight;
 			angle = FOFsector->ceilingangle;
 		}
 	}
@@ -2740,8 +2740,8 @@ static void HWR_RenderPolyObjectPlane(polyobj_t *polysector, boolean isceiling, 
 		}
 		else // it's a ceiling
 		{
-			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceiling_xoffs)/fflatwidth;
-			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceiling_yoffs)/fflatheight;
+			scrollx = FIXED_TO_FLOAT(gl_frontsector->ceilingxoffset)/fflatwidth;
+			scrolly = FIXED_TO_FLOAT(gl_frontsector->ceilingyoffset)/fflatheight;
 			angle = gl_frontsector->ceilingangle;
 		}
 	}
