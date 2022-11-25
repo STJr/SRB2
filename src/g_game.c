@@ -1969,8 +1969,10 @@ static boolean ViewpointSwitchResponder(event_t *ev)
 		direction = 1;
 	if (ev->key == gamecontrol[GC_VIEWPOINTPREV][0] || ev->key == gamecontrol[GC_VIEWPOINTPREV][1])
 		direction = -1;
-	if (shiftdown)
-		direction = -direction;
+	// This enabled reverse-iterating with shift+F12, sadly I had to
+	// disable this in case your shift key is bound to a control =((
+	//if (shiftdown)
+	//	direction = -direction;
 
 	// allow spy mode changes even during the demo
 	if (!(gamestate == GS_LEVEL && ev->type == ev_keydown && direction != 0))
