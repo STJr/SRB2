@@ -43,8 +43,10 @@ enum sector_e {
 	sector_lightlevel,
 	sector_floorlightlevel,
 	sector_floorlightabsolute,
+	sector_floorlightsec,	
 	sector_ceilinglightlevel,
 	sector_ceilinglightabsolute,
+	sector_ceilinglightsec,
 	sector_special,
 	sector_tag,
 	sector_taglist,
@@ -79,8 +81,10 @@ static const char *const sector_opt[] = {
 	"lightlevel",
 	"floorlightlevel",
 	"floorlightabsolute",
+	"floorlightsec",
 	"ceilinglightlevel",
 	"ceilinglightabsolute",
+	"ceilinglightsec",	
 	"special",
 	"tag",
 	"taglist",
@@ -667,12 +671,18 @@ static int sector_get(lua_State *L)
 	case sector_floorlightabsolute:
 		lua_pushboolean(L, sector->floorlightabsolute);
 		return 1;
+	case sector_floorlightsec:
+		lua_pushinteger(L, sector->floorlightsec);
+		return 1;		
 	case sector_ceilinglightlevel:
 		lua_pushinteger(L, sector->ceilinglightlevel);
 		return 1;
 	case sector_ceilinglightabsolute:
 		lua_pushboolean(L, sector->ceilinglightabsolute);
 		return 1;
+	case sector_ceilinglightsec:
+		lua_pushinteger(L, sector->ceilinglightsec);
+		return 1;		
 	case sector_special:
 		lua_pushinteger(L, sector->special);
 		return 1;
@@ -801,7 +811,7 @@ static int sector_set(lua_State *L)
 		break;
 	case sector_floorangle:
 		sector->floorangle = luaL_checkangle(L, 3);
-		break;		
+		break;				
 	case sector_ceilingpic:
 		sector->ceilingpic = P_AddLevelFlatRuntime(luaL_checkstring(L, 3));
 		break;
@@ -823,12 +833,18 @@ static int sector_set(lua_State *L)
 	case sector_floorlightabsolute:
 		sector->floorlightabsolute = luaL_checkboolean(L, 3);
 		break;
+	case sector_floorlightsec:
+		sector->floorlightsec = (INT32)luaL_checkinteger(L, 3);
+		break;		
 	case sector_ceilinglightlevel:
 		sector->ceilinglightlevel = (INT16)luaL_checkinteger(L, 3);
 		break;
 	case sector_ceilinglightabsolute:
 		sector->ceilinglightabsolute = luaL_checkboolean(L, 3);
 		break;
+	case sector_ceilinglightsec:
+		sector->ceilinglightsec = (INT32)luaL_checkinteger(L, 3);
+		break;		
 	case sector_special:
 		sector->special = (INT16)luaL_checkinteger(L, 3);
 		break;
