@@ -2437,12 +2437,17 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			D_ProcessEvents(); //needed for menu system to receive inputs
 		else
 		{
+#ifndef NONET
 			// my hand has been forced and I am dearly sorry for this awful hack :vomit:
 			for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 			{
 				if (!Snake_Joy_Grabber(&events[eventtail]))
 					G_MapEventsToControls(&events[eventtail]);
 			}
+#else // woopsie doodles forgot to disable the above in NONET builds - ashi
+			for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
+				G_MapEventsToControls(&events[eventtail]);
+#endif
 		}
 
 		if (gamekeydown[KEY_ESCAPE] || gamekeydown[KEY_JOY1+1] || cl_mode == CL_ABORTED)
