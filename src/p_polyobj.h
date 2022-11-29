@@ -296,16 +296,16 @@ typedef struct polywaypointdata_s
 
 typedef enum
 {
-	TMPV_NOCHANGE  = 1,
-	TMPV_VISIBLE   = 1<<1,
-	TMPV_INVISIBLE = 1<<2,
+	TMPV_NOCHANGE  = 0,
+	TMPV_VISIBLE   = 1,
+	TMPV_INVISIBLE = 2,
 } textmappolyvisibility_t;
 
 typedef enum
 {
-	TMPT_NOCHANGE   = 1,
-	TMPT_TANGIBLE   = 1<<1,
-	TMPT_INTANGIBLE = 1<<2,
+	TMPT_NOCHANGE   = 0,
+	TMPT_TANGIBLE   = 1,
+	TMPT_INTANGIBLE = 2,
 } textmappolytangibility_t;
 
 // polyobject door types
