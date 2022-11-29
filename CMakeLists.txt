@@ -116,13 +116,6 @@ if ((${SRB2_USE_CCACHE}) AND (${CMAKE_C_COMPILER} MATCHES "clang"))
 	message(WARNING "Using clang and CCache: You may want to set environment variable CCACHE_CPP2=yes to prevent include errors during compile.")
 endif()
 
-# Add sources from Sourcefile
-function(target_sourcefile type)
-	file(STRINGS Sourcefile list
-		REGEX "[-0-9A-Za-z_]+\.${type}")
-	target_sources(SRB2SDL2 PRIVATE ${list})
-endfunction()
-
 # bitness check
 set(SRB2_SYSTEM_BITS 0)
 if(CMAKE_SIZEOF_VOID_P EQUAL 8)

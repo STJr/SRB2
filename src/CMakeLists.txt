@@ -1,6 +1,113 @@
 include(clang-tidy-default)
 
-add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32)
+add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
+	comptime.c
+	md5.c
+	config.h.in
+	string.c
+	d_main.c
+	d_clisrv.c
+	d_net.c
+	d_netfil.c
+	d_netcmd.c
+	dehacked.c
+	deh_soc.c
+	deh_lua.c
+	deh_tables.c
+	z_zone.c
+	f_finale.c
+	f_wipe.c
+	g_demo.c
+	g_game.c
+	g_input.c
+	am_map.c
+	command.c
+	console.c
+	hu_stuff.c
+	i_time.c
+	y_inter.c
+	st_stuff.c
+	m_aatree.c
+	m_anigif.c
+	m_argv.c
+	m_bbox.c
+	m_cheat.c
+	m_cond.c
+	m_easing.c
+	m_fixed.c
+	m_menu.c
+	m_misc.c
+	m_perfstats.c
+	m_random.c
+	m_queue.c
+	info.c
+	p_ceilng.c
+	p_enemy.c
+	p_floor.c
+	p_inter.c
+	p_lights.c
+	p_map.c
+	p_maputl.c
+	p_mobj.c
+	p_polyobj.c
+	p_saveg.c
+	p_setup.c
+	p_sight.c
+	p_spec.c
+	p_telept.c
+	p_tick.c
+	p_user.c
+	p_slopes.c
+	tables.c
+	r_bsp.c
+	r_data.c
+	r_draw.c
+	r_fps.c
+	r_main.c
+	r_plane.c
+	r_segs.c
+	r_skins.c
+	r_sky.c
+	r_splats.c
+	r_things.c
+	r_bbox.c
+	r_textures.c
+	r_patch.c
+	r_patchrotation.c
+	r_picformats.c
+	r_portal.c
+	screen.c
+	taglist.c
+	v_video.c
+	s_sound.c
+	sounds.c
+	w_wad.c
+	filesrch.c
+	mserv.c
+	http-mserv.c
+	i_tcp.c
+	lzf.c
+	vid_copy.s
+	b_bot.c
+	u_list.c
+	lua_script.c
+	lua_baselib.c
+	lua_mathlib.c
+	lua_hooklib.c
+	lua_consolelib.c
+	lua_infolib.c
+	lua_mobjlib.c
+	lua_playerlib.c
+	lua_skinlib.c
+	lua_thinkerlib.c
+	lua_maplib.c
+	lua_taglib.c
+	lua_polyobjlib.c
+	lua_blockmaplib.c
+	lua_hudlib.c
+	lua_hudlib_drawlist.c
+	lua_inputlib.c
+)
 
 if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows" AND NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}" AND NOT "${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}")
 	# On MinGW with internal libraries, link the standard library statically
@@ -8,10 +115,6 @@ if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows" AND
 endif()
 
 target_compile_features(SRB2SDL2 PRIVATE c_std_11 cxx_std_17)
-
-# Core sources
-target_sourcefile(c)
-target_sources(SRB2SDL2 PRIVATE comptime.c md5.c config.h.in)
 
 ### Configuration
 set(SRB2_CONFIG_DEV_BUILD OFF CACHE BOOL
