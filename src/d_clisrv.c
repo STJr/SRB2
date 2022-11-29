@@ -2440,7 +2440,9 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			// my hand has been forced and I am dearly sorry for this awful hack :vomit:
 			for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
 			{
+#ifndef NONET
 				if (!Snake_Joy_Grabber(&events[eventtail]))
+#endif
 					G_MapEventsToControls(&events[eventtail]);
 			}
 		}
