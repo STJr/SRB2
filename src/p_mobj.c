@@ -11147,13 +11147,14 @@ void P_RemoveMobj(mobj_t *mobj)
 	memset((UINT8 *)mobj + sizeof(thinker_t), 0xff, sizeof(mobj_t) - sizeof(thinker_t));
 #endif
 
+	R_RemoveMobjInterpolator(mobj);
+
 	// free block
 	if (!mobj->thinker.next)
 	{ // Uh-oh, the mobj doesn't think, P_RemoveThinker would never go through!
 		INT32 prevreferences;
 		if (!mobj->thinker.references)
 		{
-			R_RemoveMobjInterpolator(mobj);
 			Z_Free(mobj); // No refrrences? Can be removed immediately! :D
 			return;
 		}
@@ -11164,8 +11165,6 @@ void P_RemoveMobj(mobj_t *mobj)
 	}
 
 	P_RemoveThinker((thinker_t *)mobj);
-
-	R_RemoveMobjInterpolator(mobj);
 }
 
 // This does not need to be added to Lua.
