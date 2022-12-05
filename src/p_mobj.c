@@ -11153,6 +11153,7 @@ void P_RemoveMobj(mobj_t *mobj)
 		INT32 prevreferences;
 		if (!mobj->thinker.references)
 		{
+			R_RemoveMobjInterpolator(mobj);
 			Z_Free(mobj); // No refrrences? Can be removed immediately! :D
 			return;
 		}
