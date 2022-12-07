@@ -34,6 +34,7 @@
 #include "lua_script.h"
 #include "d_netfil.h" // findfile
 #include "r_data.h" // Color_cons_t
+#include "d_main.h" // D_IsPathAllowed
 
 //========
 // protos.
@@ -769,6 +770,9 @@ static void COM_Exec_f(void)
 		CONS_Printf(M_GetText("exec <filename>: run a script file\n"));
 		return;
 	}
+
+	if (!D_CheckPathAllowed(COM_Argv(1), "tried to exec"))
+		return;
 
 	// load file
 	// Try with Argv passed verbatim first, for back compat

@@ -7896,8 +7896,10 @@ static lumpinfo_t* FindFolder(const char *folName, UINT16 *start, UINT16 *end, l
 // Add a wadfile to the active wad files,
 // replace sounds, musics, patches, textures, sprites and maps
 //
-static boolean P_LoadAddon(UINT16 wadnum, UINT16 numlumps)
+static boolean P_LoadAddon(UINT16 numlumps)
 {
+	const UINT16 wadnum = (UINT16)(numwadfiles-1);
+
 	size_t i, j, sreplaces = 0, mreplaces = 0, digmreplaces = 0;
 	char *name;
 	lumpinfo_t *lumpinfo;
@@ -7918,6 +7920,12 @@ static boolean P_LoadAddon(UINT16 wadnum, UINT16 numlumps)
 //	UINT16 patPos, patNum = 0;
 //	UINT16 flaPos, flaNum = 0;
 //	UINT16 mapPos, mapNum = 0;
+
+	if (numlumps == INT16_MAX)
+	{
+		refreshdirmenu |= REFRESHDIR_NOTLOADED;
+		return false;
+	}
 
 	switch(wadfiles[wadnum]->type)
 	{
@@ -8089,32 +8097,12 @@ static boolean P_LoadAddon(UINT16 wadnum, UINT16 numlumps)
 
 boolean P_AddWadFile(const char *wadfilename)
 {
-	UINT16 numlumps, wadnum;
-
-	// Init file.
-	if ((numlumps = W_InitFile(wadfilename, false, false)) == INT16_MAX)
-	{
-		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		return false;
-	}
-	else
-		wadnum = (UINT16)(numwadfiles-1);
-
-	return P_LoadAddon(wadnum, numlumps);
+	return D_CheckPathAllowed(wadfilename, "tried to add file") &&
+		P_LoadAddon(W_InitFile(wadfilename, false, false));
 }
 
 boolean P_AddFolder(const char *folderpath)
 {
-	UINT16 numlumps, wadnum;
-
-	// Init file.
-	if ((numlumps = W_InitFolder(folderpath, false, false)) == INT16_MAX)
-	{
-		refreshdirmenu |= REFRESHDIR_NOTLOADED;
-		return false;
-	}
-	else
-		wadnum = (UINT16)(numwadfiles-1);
-
-	return P_LoadAddon(wadnum, numlumps);
+	return D_CheckPathAllowed(folderpath, "tried to add folder") &&
+		P_LoadAddon(W_InitFolder(folderpath, false, false));
 }
