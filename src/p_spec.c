@@ -21,6 +21,7 @@
 #include "p_local.h"
 #include "p_setup.h" // levelflats for flat animation
 #include "r_data.h"
+#include "r_fps.h"
 #include "r_textures.h"
 #include "m_random.h"
 #include "p_mobj.h"
@@ -1862,6 +1863,12 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (!P_CheckPlayerMare(triggerline))
 				return false;
 			break;
+		case 343: // gravity check
+			if (triggerline->args[1] == TMG_TEMPREVERSE && (!(actor->flags2 & MF2_OBJECTFLIP) != !(actor->player->powers[pw_gravityboots])))
+				return false;
+			if ((triggerline->args[1] == TMG_NORMAL) != !(actor->eflags & MFE_VERTICALFLIP))
+				return false;
+			break;
 		default:
 			break;
 	}
@@ -1899,7 +1906,8 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			|| specialtype == 319 // Unlockable
 			|| specialtype == 331 // Player skin
 			|| specialtype == 334 // Object dye
-			|| specialtype == 337) // Emerald check
+			|| specialtype == 337 // Emerald check
+			|| specialtype == 343) // Gravity check
 			&& triggerline->args[0] == TMT_ONCE)
 			triggerline->special = 0;
 	}
@@ -1949,7 +1957,8 @@ void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 			|| lines[masterline].special == 319 // Unlockable trigger
 			|| lines[masterline].special == 331 // Player skin
 			|| lines[masterline].special == 334 // Object dye
-			|| lines[masterline].special == 337) // Emerald check
+			|| lines[masterline].special == 337 // Emerald check
+			|| lines[masterline].special == 343) // Gravity check
 			&& lines[masterline].args[0] > TMT_EACHTIMEMASK)
 			continue;
 
@@ -2480,7 +2489,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (mo->player)
 					{
 						if (bot) // This might put poor Tails in a wall if he's too far behind! D: But okay, whatever! >:3
-							P_TeleportMove(bot, bot->x + x, bot->y + y, bot->z + z);
+							P_SetOrigin(bot, bot->x + x, bot->y + y, bot->z + z);
 						if (splitscreen && mo->player == &players[secondarydisplayplayer] && camera2.chase)
 						{
 							camera2.x += x;
@@ -2726,7 +2735,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				// Reset bot too.
 				if (bot) {
 					if (line->args[0])
-						P_TeleportMove(bot, mo->x, mo->y, mo->z);
+						P_SetOrigin(bot, mo->x, mo->y, mo->z);
 					bot->momx = bot->momy = bot->momz = 1;
 					bot->pmomz = 0;
 					bot->player->rmomx = bot->player->rmomy = 1;
@@ -2767,13 +2776,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				// (Teleport them to you so they don't break it.)
 				if (bot && (bot->flags2 & MF2_TWOD) != (mo->flags2 & MF2_TWOD)) {
 					bot->flags2 = (bot->flags2 & ~MF2_TWOD) | (mo->flags2 & MF2_TWOD);
-					P_TeleportMove(bot, mo->x, mo->y, mo->z);
+					P_SetOrigin(bot, mo->x, mo->y, mo->z);
 				}
 			}
 			break;
 
 		case 433: // Flip/flop gravity. Works on pushables, too!
-			if (line->args[0])
+			if (line->args[1])
+				mo->flags2 ^= MF2_OBJECTFLIP;
+			else if (line->args[0])
 				mo->flags2 &= ~MF2_OBJECTFLIP;
 			else
 				mo->flags2 |= MF2_OBJECTFLIP;
@@ -3826,6 +3837,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					sectors[secnum].flags |= MSF_GRAVITYFLIP;
 				else if (line->args[2] == TMF_REMOVE)
 					sectors[secnum].flags &= ~MSF_GRAVITYFLIP;
+
+				if (line->args[3])
+					sectors[secnum].specialflags |= SSF_GRAVITYOVERRIDE;
 			}
 		}
 		break;
@@ -5703,6 +5717,10 @@ static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline)
 	floater->sector = sec;
 	floater->tag = (INT16)tag;
 	floater->sourceline = sourceline;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&floater->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&floater->thinker, sec, true);
 }
 
 /**
@@ -5732,6 +5750,9 @@ static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, 
 	displace->speed = speed;
 	displace->type = type;
 	displace->reverse = reverse;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&displace->thinker, &sectors[affectee], false);
 }
 
 /** Adds a Mario block thinker, which changes the block's texture between blank
@@ -5791,6 +5812,10 @@ static void P_AddRaiseThinker(sector_t *sec, INT16 tag, fixed_t speed, fixed_t c
 		raise->flags |= RF_REVERSE;
 	if (spindash)
 		raise->flags |= RF_SPINDASH;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&raise->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&raise->thinker, sec, true);
 }
 
 static void P_AddAirbob(sector_t *sec, INT16 tag, fixed_t dist, boolean raise, boolean spindash, boolean dynamic)
@@ -5816,6 +5841,10 @@ static void P_AddAirbob(sector_t *sec, INT16 tag, fixed_t dist, boolean raise, b
 		airbob->flags |= RF_SPINDASH;
 	if (dynamic)
 		airbob->flags |= RF_DYNAMIC;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&airbob->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&airbob->thinker, sec, true);
 }
 
 /** Adds a thwomp thinker.
@@ -5856,6 +5885,10 @@ static inline void P_AddThwompThinker(sector_t *sec, line_t *sourceline, fixed_t
 	sec->ceilingdata = thwomp;
 	// Start with 'resting' texture
 	sides[sourceline->sidenum[0]].midtexture = sides[sourceline->sidenum[0]].bottomtexture;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&thwomp->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&thwomp->thinker, sec, true);
 }
 
 /** Adds a thinker which checks if any MF_ENEMY objects with health are in the defined area.
@@ -6287,6 +6320,9 @@ void P_SpawnSpecials(boolean fromnetsave)
 					else
 						sectors[s].flags &= ~MSF_GRAVITYFLIP;
 
+					if (lines[i].flags & ML_EFFECT6)
+						sectors[s].specialflags |= SSF_GRAVITYOVERRIDE;
+
 					CheckForReverseGravity |= (sectors[s].flags & MSF_GRAVITYFLIP);
 				}
 				break;
@@ -6512,8 +6548,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				//Cutting options
 				if (ffloorflags & FOF_RENDERALL)
 				{
-					//If translucent or player can enter it, cut inner walls
-					if ((lines[i].args[1] < 255) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
+					//If inside is visible, cut inner walls
+					if ((lines[i].args[1] < 255) || (lines[i].args[3] & TMFA_SPLAT) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
 						ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
 					else
 						ffloorflags |= FOF_CUTLEVEL;
@@ -6571,8 +6607,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				if (lines[i].args[4] & TMFC_SPLAT)
 					ffloorflags |= FOF_SPLAT;
 
-				//If translucent or player can enter it, cut inner walls
-				if (lines[i].args[1] < 0xff || (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE))
+				//If inside is visible, cut inner walls
+				if (lines[i].args[1] < 0xff || (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE) || (lines[i].args[4] & TMFC_SPLAT))
 					ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
 				else
 					ffloorflags |= FOF_CUTLEVEL;
@@ -6635,8 +6671,8 @@ void P_SpawnSpecials(boolean fromnetsave)
 				//Cutting options
 				if (ffloorflags & FOF_RENDERALL)
 				{
-					//If translucent or player can enter it, cut inner walls
-					if ((lines[i].args[1] < 255) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
+					//If inside is visible, cut inner walls
+					if ((lines[i].args[1] < 255) || (lines[i].args[3] & TMFA_SPLAT) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
 						ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
 					else
 						ffloorflags |= FOF_CUTLEVEL;
@@ -6904,6 +6940,7 @@ void P_SpawnSpecials(boolean fromnetsave)
 			case 331: // Player skin
 			case 334: // Object dye
 			case 337: // Emerald check
+			case 343: // Gravity check
 				if (lines[i].args[0] > TMT_EACHTIMEMASK)
 					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
@@ -7476,6 +7513,17 @@ void T_Scroll(scroll_t *s)
 	} // end of switch
 }
 
+static boolean IsSector3DBlock(sector_t* sec)
+{
+	size_t i;
+	for (i = 0; i < sec->linecount; i++)
+	{
+		if (sec->lines[i]->special >= 100 && sec->lines[i]->special < 300)
+			return true;
+	}
+	return false;
+}
+
 /** Adds a generalized scroller to the thinker list.
   *
   * \param type     The enumerated type of scrolling.
@@ -7502,8 +7550,33 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 		s->last_height = sectors[control].floorheight + sectors[control].ceilingheight;
 	s->affectee = affectee;
 	if (type == sc_carry || type == sc_carry_ceiling)
+	{
 		sectors[affectee].specialflags |= SSF_CONVEYOR;
+		if (IsSector3DBlock(&sectors[affectee]))
+		{
+			if (type == sc_carry)
+				sectors[affectee].flags |= MSF_FLIPSPECIAL_CEILING;
+			else
+				sectors[affectee].flags |= MSF_FLIPSPECIAL_FLOOR;
+		}
+	}
 	P_AddThinker(THINK_MAIN, &s->thinker);
+
+	// interpolation
+	switch (type)
+	{
+		case sc_side:
+			R_CreateInterpolator_SideScroll(&s->thinker, &sides[affectee]);
+			break;
+		case sc_floor:
+			R_CreateInterpolator_SectorScroll(&s->thinker, &sectors[affectee], false);
+			break;
+		case sc_ceiling:
+			R_CreateInterpolator_SectorScroll(&s->thinker, &sectors[affectee], true);
+			break;
+		default:
+			break;
+	}
 }
 
 static void P_SpawnPlaneScroller(line_t *l, fixed_t dx, fixed_t dy, INT32 control, INT32 affectee, INT32 accel, INT32 exclusive)

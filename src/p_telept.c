@@ -122,7 +122,7 @@ void P_MixUp(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle,
 */
 boolean P_Teleport(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z, angle_t angle, boolean flash, boolean dontstopmove)
 {
-	if (!P_TeleportMove(thing, x, y, z))
+	if (!P_SetOrigin(thing, x, y, z))
 		return false;
 
 	if (!dontstopmove)

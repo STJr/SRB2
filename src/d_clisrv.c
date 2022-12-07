@@ -15,6 +15,7 @@
 #include <unistd.h> //for unlink
 #endif
 
+#include "i_time.h"
 #include "i_net.h"
 #include "i_system.h"
 #include "i_video.h"
@@ -46,6 +47,9 @@
 #include "lua_libs.h"
 #include "md5.h"
 #include "m_perfstats.h"
+
+// aaaaaa
+#include "i_joy.h"
 
 #ifndef NONET
 // cl loading screen
@@ -112,6 +116,9 @@ static INT16 consistancy[BACKUPTICS];
 
 static UINT8 player_joining = false;
 UINT8 hu_redownloadinggamestate = 0;
+
+// true when a player is connecting or disconnecting so that the gameplay has stopped in its tracks
+boolean hu_stopped = false;
 
 UINT8 adminpassmd5[16];
 boolean adminpasswordset = false;
@@ -646,6 +653,22 @@ static UINT8 Snake_GetOppositeDir(UINT8 dir)
 		return 12 + 5 - dir;
 }
 
+event_t *snakejoyevents[MAXEVENTS];
+UINT16 joyeventcount = 0;
+
+// I'm screaming the hack is clean - ashi
+static boolean Snake_Joy_Grabber(event_t *ev)
+{
+	if (ev->type == ev_joystick  && ev->key == 0)
+	{
+		snakejoyevents[joyeventcount] = ev;
+		joyeventcount++;
+		return true;
+	}
+	else
+		return false;
+}
+
 static void Snake_FindFreeSlot(UINT8 *freex, UINT8 *freey, UINT8 headx, UINT8 heady)
 {
 	UINT8 x, y;
@@ -672,6 +695,9 @@ static void Snake_Handle(void)
 	UINT8 x, y;
 	UINT8 oldx, oldy;
 	UINT16 i;
+	UINT16 j;
+	UINT16 joystate = 0;
+	static INT32 pjoyx = 0, pjoyy = 0;
 
 	// Handle retry
 	if (snake->gameover && (PLAYER1INPUTDOWN(GC_JUMP) || gamekeydown[KEY_ENTER]))
@@ -700,23 +726,58 @@ static void Snake_Handle(void)
 	oldx = snake->snakex[1];
 	oldy = snake->snakey[1];
 
+	// process the input events in here dear lord
+	for (j = 0; j < joyeventcount; j++)
+	{
+		event_t *ev = snakejoyevents[j];
+		const INT32 jdeadzone = (JOYAXISRANGE * cv_digitaldeadzone.value) / FRACUNIT;
+		if (ev->y != INT32_MAX)
+		{
+			if (Joystick.bGamepadStyle || abs(ev->y) > jdeadzone)
+			{
+				if (ev->y < 0 && pjoyy >= 0)
+					joystate = 1;
+				else if (ev->y > 0 && pjoyy <= 0)
+					joystate = 2;
+				pjoyy = ev->y;
+			}
+			else
+				pjoyy = 0;
+		}
+
+		if (ev->x != INT32_MAX)
+		{
+			if (Joystick.bGamepadStyle || abs(ev->x) > jdeadzone)
+			{
+				if (ev->x < 0 && pjoyx >= 0)
+					joystate = 3;
+				else if (ev->x > 0 && pjoyx <= 0)
+					joystate = 4;
+				pjoyx = ev->x;
+			}
+			else
+				pjoyx = 0;
+		}
+	}
+	joyeventcount = 0;
+
 	// Update direction
-	if (gamekeydown[KEY_LEFTARROW])
+	if (PLAYER1INPUTDOWN(GC_STRAFELEFT) || gamekeydown[KEY_LEFTARROW] || joystate == 3)
 	{
 		if (snake->snakelength < 2 || x <= oldx)
 			snake->snakedir[0] = 1;
 	}
-	else if (gamekeydown[KEY_RIGHTARROW])
+	else if (PLAYER1INPUTDOWN(GC_STRAFERIGHT) || gamekeydown[KEY_RIGHTARROW] || joystate == 4)
 	{
 		if (snake->snakelength < 2 || x >= oldx)
 			snake->snakedir[0] = 2;
 	}
-	else if (gamekeydown[KEY_UPARROW])
+	else if (PLAYER1INPUTDOWN(GC_FORWARD) || gamekeydown[KEY_UPARROW] || joystate == 1)
 	{
 		if (snake->snakelength < 2 || y <= oldy)
 			snake->snakedir[0] = 3;
 	}
-	else if (gamekeydown[KEY_DOWNARROW])
+	else if (PLAYER1INPUTDOWN(GC_BACKWARD) || gamekeydown[KEY_DOWNARROW] || joystate == 2)
 	{
 		if (snake->snakelength < 2 || y >= oldy)
 			snake->snakedir[0] = 4;
@@ -1930,7 +1991,7 @@ static void M_ConfirmConnect(event_t *ev)
 #ifndef NONET
 	if (ev->type == ev_keydown)
 	{
-		if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER)
+		if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER || ev->key == KEY_JOY1)
 		{
 			if (totalfilesrequestednum > 0)
 			{
@@ -1945,7 +2006,7 @@ static void M_ConfirmConnect(event_t *ev)
 
 			M_ClearMenus(true);
 		}
-		else if (ev->key == 'n' || ev->key == KEY_ESCAPE)
+		else if (ev->key == 'n' || ev->key == KEY_ESCAPE || ev->key == KEY_JOY1 + 3)
 		{
 			cl_mode = CL_ABORTED;
 			M_ClearMenus(true);
@@ -1960,6 +2021,7 @@ static boolean CL_FinishedFileList(void)
 {
 	INT32 i;
 	char *downloadsize = NULL;
+
 	//CONS_Printf(M_GetText("Checking files...\n"));
 	i = CL_CheckFiles();
 	if (i == 4) // still checking ...
@@ -2375,8 +2437,14 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			D_ProcessEvents(); //needed for menu system to receive inputs
 		else
 		{
+			// my hand has been forced and I am dearly sorry for this awful hack :vomit:
 			for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
-				G_MapEventsToControls(&events[eventtail]);
+			{
+#ifndef NONET
+				if (!Snake_Joy_Grabber(&events[eventtail]))
+#endif
+					G_MapEventsToControls(&events[eventtail]);
+			}
 		}
 
 		if (gamekeydown[KEY_ESCAPE] || gamekeydown[KEY_JOY1+1] || cl_mode == CL_ABORTED)
@@ -2441,7 +2509,10 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 #endif
 	}
 	else
-		I_Sleep();
+	{
+		I_Sleep(cv_sleep.value);
+		I_UpdateTime(cv_timescale.value);
+	}
 
 	return true;
 }
@@ -5206,8 +5277,10 @@ static void SV_Maketic(void)
 	maketic++;
 }
 
-void TryRunTics(tic_t realtics)
+boolean TryRunTics(tic_t realtics)
 {
+	boolean ticking;
+
 	// the machine has lagged but it is not so bad
 	if (realtics > TICRATE/7) // FIXME: consistency failure!!
 	{
@@ -5231,7 +5304,7 @@ void TryRunTics(tic_t realtics)
 
 	if (demoplayback)
 	{
-		neededtic = gametic + (realtics * cv_playbackspeed.value);
+		neededtic = gametic + realtics;
 		// start a game after a demo
 		maketic += realtics;
 		firstticstosend = maketic;
@@ -5251,10 +5324,22 @@ void TryRunTics(tic_t realtics)
 	}
 #endif
 
-	if (player_joining)
-		return;
+	ticking = neededtic > gametic;
 
-	if (neededtic > gametic)
+	if (ticking)
+	{
+		if (realtics)
+			hu_stopped = false;
+	}
+
+	if (player_joining)
+	{
+		if (realtics)
+			hu_stopped = true;
+		return false;
+	}
+
+	if (ticking)
 	{
 		if (advancedemo)
 		{
@@ -5290,6 +5375,13 @@ void TryRunTics(tic_t realtics)
 					break;
 			}
 	}
+	else
+	{
+		if (realtics)
+			hu_stopped = true;
+	}
+
+	return ticking;
 }
 
 /*

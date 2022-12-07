@@ -447,7 +447,7 @@ int LUA_CheckGlobals(lua_State *L, const char *word)
 		if (strlen(str) < strlength)
 			return luaL_error(L, "string must not contain embedded zeros!");
 
-		strncpy(mapmusname, str, strlength);
+		strlcpy(mapmusname, str, sizeof mapmusname);
 	}
 	else if (fastcmp(word, "mapmusflags"))
 		mapmusflags = (UINT16)luaL_checkinteger(L, 2);

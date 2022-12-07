@@ -1748,7 +1748,7 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum)
 	fixed_t dx, dy, xfrac, yfrac;
 	const UINT8 *src, *deststop;
 	UINT8 *flat, *dest;
-	size_t size, lflatsize, flatshift;
+	size_t lflatsize, flatshift;
 
 #ifdef HWRENDER
 	if (rendermode == render_opengl)
@@ -1758,39 +1758,8 @@ void V_DrawFlatFill(INT32 x, INT32 y, INT32 w, INT32 h, lumpnum_t flatnum)
 	}
 #endif
 
-	size = W_LumpLength(flatnum);
-
-	switch (size)
-	{
-		case 4194304: // 2048x2048 lump
-			lflatsize = 2048;
-			flatshift = 10;
-			break;
-		case 1048576: // 1024x1024 lump
-			lflatsize = 1024;
-			flatshift = 9;
-			break;
-		case 262144:// 512x512 lump
-			lflatsize = 512;
-			flatshift = 8;
-			break;
-		case 65536: // 256x256 lump
-			lflatsize = 256;
-			flatshift = 7;
-			break;
-		case 16384: // 128x128 lump
-			lflatsize = 128;
-			flatshift = 7;
-			break;
-		case 1024: // 32x32 lump
-			lflatsize = 32;
-			flatshift = 5;
-			break;
-		default: // 64x64 lump
-			lflatsize = 64;
-			flatshift = 6;
-			break;
-	}
+	lflatsize = R_GetFlatSize(W_LumpLength(flatnum));
+	flatshift = R_GetFlatBits(lflatsize);
 
 	flat = W_CacheLumpNum(flatnum, PU_CACHE);
 
@@ -3606,7 +3575,8 @@ void V_DoPostProcessor(INT32 view, postimg_t type, INT32 param)
 		UINT8 *tmpscr = screens[4];
 		UINT8 *srcscr = screens[0];
 		INT32 y;
-		angle_t disStart = (leveltime * 128) & FINEMASK; // in 0 to FINEANGLE
+		// Set disStart to a range from 0 to FINEANGLE, incrementing by 128 per tic
+		angle_t disStart = (((leveltime-1)*128) + (rendertimefrac / (FRACUNIT/128))) & FINEMASK;
 		INT32 newpix;
 		INT32 sine;
 		//UINT8 *transme = R_GetTranslucencyTable(tr_trans50);
@@ -3729,8 +3699,11 @@ Unoptimized version
 			heatindex[view] %= height;
 		}
 
-		heatindex[view]++;
-		heatindex[view] %= vid.height;
+		if (renderisnewtic) // This isn't interpolated... but how do you interpolate a one-pixel shift?
+		{
+			heatindex[view]++;
+			heatindex[view] %= vid.height;
+		}
 
 		VID_BlitLinearScreen(tmpscr+vid.width*vid.bpp*yoffset, screens[0]+vid.width*vid.bpp*yoffset,
 				vid.width*vid.bpp, height, vid.width*vid.bpp, vid.width);

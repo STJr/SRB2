@@ -1,3 +1,4 @@
+
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
@@ -20,6 +21,7 @@
 #include "d_net.h"
 #include "g_game.h"
 #include "p_local.h"
+#include "r_fps.h"
 #include "r_main.h"
 #include "s_sound.h"
 #include "r_skins.h"
@@ -1513,8 +1515,8 @@ void P_PlayJingle(player_t *player, jingletype_t jingletype)
 	char newmusic[7];
 	strncpy(newmusic, musname, 7);
 #ifdef HAVE_LUA_MUSICPLUS
- 	if(LUAh_MusicJingle(jingletype, newmusic, &musflags, &looping))
- 		return;
+	if(LUAh_MusicJingle(jingletype, newmusic, &musflags, &looping))
+		return;
 #endif
 	newmusic[6] = 0;
 
@@ -1604,7 +1606,7 @@ boolean P_EvaluateMusicStatus(UINT16 status, const char *musname)
 
 		if (result)
 			break;
- 	}
+	}
 
 	return result;
  }
@@ -1661,8 +1663,8 @@ void P_RestoreMusic(player_t *player)
 	else if (!S_RecallMusic(JT_NONE, false)) // go down the stack
 	{
 		CONS_Debug(DBG_BASIC, "Cannot find any music in resume stack!\n");
-	 	S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
- 	}
+		S_ChangeMusicEx(mapmusname, mapmusflags, true, mapmusposition, 0, 0);
+	}
 }
 
 //
@@ -1995,6 +1997,14 @@ mobj_t *P_SpawnGhostMobj(mobj_t *mobj)
 		P_SetTarget(&ghost->tracer, ghost2);
 		ghost2->flags2 |= (mobj->player->followmobj->flags2 & MF2_LINKDRAW);
 	}
+
+	// Copy interpolation data :)
+	ghost->old_x = mobj->old_x2;
+	ghost->old_y = mobj->old_y2;
+	ghost->old_z = mobj->old_z2;
+	ghost->old_angle = (mobj->player ? mobj->player->old_drawangle2 : mobj->old_angle2);
+	ghost->old_pitch = mobj->old_pitch2;
+	ghost->old_roll = mobj->old_roll2;
 
 	return ghost;
 }
@@ -2484,6 +2494,41 @@ boolean P_InQuicksand(mobj_t *mo) // Returns true if you are in quicksand
 	return false; // No sand here, Captain!
 }
 
+boolean P_InJumpFlipSector(mobj_t *mo) // Returns true if you are in a jumpflip sector
+{
+	sector_t *sector = mo->subsector->sector;
+	fixed_t topheight, bottomheight;
+
+	if (sector->specialflags & SSF_JUMPFLIP)
+		return true;
+
+	if (sector->ffloors)
+	{
+		ffloor_t *rover;
+
+		for (rover = sector->ffloors; rover; rover = rover->next)
+		{
+			if (!(rover->fofflags & FOF_EXISTS))
+				continue;
+
+			if (!(rover->master->frontsector->specialflags & SSF_JUMPFLIP))
+				continue;
+			topheight    = P_GetFFloorTopZAt   (rover, mo->x, mo->y);
+			bottomheight = P_GetFFloorBottomZAt(rover, mo->x, mo->y);
+
+			if (mo->z + (mo->height/2) > topheight)
+				continue;
+
+			if (mo->z + (mo->height/2) < bottomheight)
+				continue;
+
+			return true;
+		}
+	}
+
+	return false; // No gravity jumping here, Captain Viridian!
+}
+
 static boolean P_PlayerCanBust(player_t *player, ffloor_t *rover)
 {
 	if (!(rover->fofflags & FOF_EXISTS))
@@ -2779,12 +2824,13 @@ static void P_CheckQuicksand(player_t *player)
 	fixed_t sinkspeed;
 	fixed_t topheight, bottomheight;
 
-	if (!(player->mo->subsector->sector->ffloors && player->mo->momz <= 0))
+	if (!(player->mo->subsector->sector->ffloors && P_MobjFlip(player->mo)*player->mo->momz <= 0))
 		return;
 
 	for (rover = player->mo->subsector->sector->ffloors; rover; rover = rover->next)
 	{
-		if (!(rover->fofflags & FOF_EXISTS)) continue;
+		if (!(rover->fofflags & FOF_EXISTS))
+			continue;
 
 		if (!(rover->fofflags & FOF_QUICKSAND))
 			continue;
@@ -4324,7 +4370,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 		if (player->powers[pw_carry] == CR_PTERABYTE)
 		{
 			S_StartSound(player->mo, sfx_s3kd7s);
-			player->mo->tracer->cusval += 10;
+			player->mo->tracer->cusval += 10; // attempting to break free
 			player->mo->tracer->watertop = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
 			player->mo->tracer->waterbottom = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
 			player->mo->tracer->cvmem = P_RandomRange(-player->mo->tracer->cusval, player->mo->tracer->cusval) << (FRACBITS - 1);
@@ -4448,6 +4494,12 @@ void P_DoJump(player_t *player, boolean soundandstate)
 
 	if (player->charflags & SF_NOJUMPDAMAGE)
 		player->pflags &= ~PF_SPINNING;
+
+	if (P_InJumpFlipSector(player->mo)) // Flip gravity on jump?
+	{
+		player->mo->flags2 ^= MF2_OBJECTFLIP;
+		S_StartSound(player->mo, sfx_s3k73); // Play gravity flip sound
+	}
 
 	if (soundandstate)
 	{
@@ -5491,7 +5543,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 			{
 				fixed_t potentialmomz;
 				if (player->charability == CA_SLOWFALL)
-					potentialmomz = -gravity*4;
+					potentialmomz = FixedMul(gravity, -4*player->mo->scale);
 				else
 					potentialmomz = ((player->speed < 10*player->mo->scale)
 					? (player->speed - 10*player->mo->scale)/5
@@ -6931,7 +6983,7 @@ static void P_MoveNiGHTSToDrone(player_t *player)
 	}
 
 	player->mo->momx = player->mo->momy = player->mo->momz = 0;
-	P_TeleportMove(player->mo, player->drone->x, player->drone->y, player->drone->z + zofs);
+	P_MoveOrigin(player->mo, player->drone->x, player->drone->y, player->drone->z + zofs);
 	P_SetTarget(&player->drone, NULL);
 }
 
@@ -7633,10 +7685,8 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 		ground = player->mo->floorz;
 
 	if (cropcircle)
-		ground += P_MobjFlip(player->mo);
-
-	if (cropcircle)
 	{
+		ground += P_MobjFlip(player->mo);
 #define numangles 8
 #define limitangle (180/numangles)
 		travelangle = player->mo->angle + P_RandomRange(-limitangle, limitangle)*ANG1;
@@ -7649,7 +7699,8 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->fuse = TICRATE*7; // takes about an extra second to hit the ground
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
-			flame->flags2 = (flame->flags2 & ~MF2_OBJECTFLIP)|(player->mo->flags2 & MF2_OBJECTFLIP);
+			if (!(player->mo->flags2 & MF2_OBJECTFLIP) != !(player->powers[pw_gravityboots])) // take gravity boots into account
+				flame->flags2 |= MF2_OBJECTFLIP;
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
 			P_InstaThrust(flame, flame->angle, FixedMul(3*FRACUNIT, flame->scale));
 			P_SetObjectMomZ(flame, 3*FRACUNIT, false);
@@ -7684,6 +7735,8 @@ void P_ElementalFire(player_t *player, boolean cropcircle)
 			flame->fuse = TICRATE*6;
 			flame->destscale = player->mo->scale;
 			P_SetScale(flame, player->mo->scale);
+			if (!(player->mo->flags2 & MF2_OBJECTFLIP) != !(player->powers[pw_gravityboots])) // take gravity boots into account
+				flame->flags2 |= MF2_OBJECTFLIP;
 			flame->eflags = (flame->eflags & ~MFE_VERTICALFLIP)|(player->mo->eflags & MFE_VERTICALFLIP);
 			if (!(gametyperules & GTR_FRIENDLY))
 			{
@@ -9647,6 +9700,7 @@ void P_ResetCamera(player_t *player, camera_t *thiscam)
 	thiscam->x = x;
 	thiscam->y = y;
 	thiscam->z = z;
+	thiscam->reset = true;
 
 	if ((thiscam == &camera && G_ControlStyle(1) == CS_SIMPLE)
 	|| (thiscam == &camera2 && G_ControlStyle(2) == CS_SIMPLE))
@@ -10997,7 +11051,7 @@ static void P_MinecartThink(player_t *player)
 	}
 
 	// Move player to minecart.
-	P_TeleportMove(player->mo, minecart->x - minecart->momx, minecart->y - minecart->momy, minecart->z + max(minecart->momz, 0) + 8*FRACUNIT);
+	P_MoveOrigin(player->mo, minecart->x - minecart->momx, minecart->y - minecart->momy, minecart->z + max(minecart->momz, 0) + 8*FRACUNIT);
 	if (player->powers[pw_carry] != CR_MINECART)
 		return;
 	player->mo->momx = player->mo->momy = player->mo->momz = 0;
@@ -11236,6 +11290,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	tic_t dashmode = min(player->dashmode, DASHMODE_MAX);
 	boolean underwater = mo->eflags & MFE_UNDERWATER;
 	statenum_t stat = fume->state-states;
+	boolean resetinterp = false;
 
 	if (panim != PA_WALK && panim != PA_RUN && panim != PA_DASH) // turn invisible when not in a coherent movement state
 	{
@@ -11287,6 +11342,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	{
 		P_SetMobjState(fume, (stat = fume->info->seestate));
 		P_SetScale(fume, mo->scale);
+		resetinterp = true;
 	}
 
 	if (dashmode > DASHMODE_THRESHOLD && stat != fume->info->seestate) // If in dashmode, grow really big and flash
@@ -11330,6 +11386,7 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	fume->y = mo->y + P_ReturnThrustY(fume, angle, dist);
 	fume->z = mo->z + heightoffset - (fume->height >> 1);
 	P_SetThingPosition(fume);
+	if (resetinterp) R_ResetMobjInterpolationState(fume);
 
 	// If dashmode is high enough, spawn a trail
 	if (player->normalspeed >= skins[player->skin].normalspeed*2)
@@ -11732,7 +11789,7 @@ void P_PlayerThink(player_t *player)
 			// P_TouchSpecialThing case MT_NIGHTSBUMPER, that position is fudged in the time
 			// between that routine in the previous tic
 			// and reaching here in the current tic
-			P_TeleportMove(player->mo, player->mo->hnext->x, player->mo->hnext->y
+			P_MoveOrigin(player->mo, player->mo->hnext->x, player->mo->hnext->y
 				, player->mo->hnext->z + FixedMul(player->mo->hnext->height/4, player->mo->hnext->scale));
 			P_SetTarget(&player->mo->hnext, NULL);
 		}
@@ -12556,7 +12613,7 @@ void P_PlayerAfterThink(player_t *player)
 				player->mo->momx = (chain->x - player->mo->x)*2;
 				player->mo->momy = (chain->y - player->mo->y)*2;
 				player->mo->momz = (chain->z - (player->mo->height-chain->height/2) - player->mo->z)*2;
-				P_TeleportMove(player->mo, chain->x, chain->y, chain->z - (player->mo->height-chain->height/2));
+				P_MoveOrigin(player->mo, chain->x, chain->y, chain->z - (player->mo->height-chain->height/2));
 				if (!player->powers[pw_flashing]) // handle getting hurt
 				{
 					player->pflags |= PF_JUMPED;
@@ -12650,11 +12707,14 @@ void P_PlayerAfterThink(player_t *player)
 					mo->tics = walktics;
 				}
 
-				P_TeleportMove(player->mo, rock->x, rock->y, rock->z + ((mo->eflags & MFE_VERTICALFLIP) ? -mo->height : rock->height));
+				P_MoveOrigin(player->mo, rock->x, rock->y, rock->z + ((mo->eflags & MFE_VERTICALFLIP) ? -mo->height : rock->height));
 				break;
 			}
 			case CR_PTERABYTE: // being carried by a Pterabyte
 			{
+
+#define DROPTHRESHOLD TICRATE
+
 				mobj_t *ptera = player->mo->tracer;
 				mobj_t *spawnpoint = ptera->tracer->tracer;
 				player->mo->height = FixedDiv(P_GetPlayerHeight(player), FixedDiv(14 * FRACUNIT, 10 * FRACUNIT));
@@ -12662,7 +12722,7 @@ void P_PlayerAfterThink(player_t *player)
 				if (ptera->health <= 0)
 					goto dropoff;
 
-				if (P_MobjAboveLava(ptera) && ptera->movefactor <= 3*TICRATE - 10)
+				if (P_MobjAboveLava(ptera) && ptera->movefactor < DROPTHRESHOLD)
 					goto dropoff;
 
 				if (player->mo->eflags & MFE_VERTICALFLIP)
@@ -12671,7 +12731,7 @@ void P_PlayerAfterThink(player_t *player)
 						&& (ptera->eflags & MFE_VERTICALFLIP)) // Reverse gravity check for the carrier - Flame
 						player->mo->z = ptera->z + ptera->height + FixedMul(FRACUNIT, player->mo->scale);
 
-					if (ptera->ceilingz - ptera->z > spawnpoint->ceilingz - spawnpoint->z + 512*FRACUNIT && ptera->movefactor <= 3 * TICRATE - 10)
+					if (ptera->ceilingz - ptera->z > spawnpoint->ceilingz - spawnpoint->z + 512*FRACUNIT && ptera->movefactor < DROPTHRESHOLD)
 						goto dropoff;
 				}
 				else
@@ -12680,7 +12740,7 @@ void P_PlayerAfterThink(player_t *player)
 						&& !(ptera->eflags & MFE_VERTICALFLIP)) // Correct gravity check for the carrier - Flame
 						player->mo->z = ptera->z - player->mo->height - FixedMul(FRACUNIT, player->mo->scale);
 
-					if (ptera->z - ptera->floorz > spawnpoint->z - spawnpoint->floorz + 512 * FRACUNIT && ptera->movefactor <= 3 * TICRATE - 10)
+					if (ptera->z - ptera->floorz > spawnpoint->z - spawnpoint->floorz + 512 * FRACUNIT && ptera->movefactor < DROPTHRESHOLD)
 						goto dropoff;
 				}
 
@@ -12688,7 +12748,7 @@ void P_PlayerAfterThink(player_t *player)
 				if (!ptera->movefactor)
 					goto dropoff;
 
-				if (ptera->cusval >= 30)
+				if (ptera->cusval >= 50) // breaking free
 				{
 					player->powers[pw_carry] = CR_NONE;
 					P_SetTarget(&player->mo->tracer, NULL);

@@ -1,5 +1,5 @@
 /*
-  Copyright (C) 1997-2019 Sam Lantinga <slouken@libsdl.org>
+  Copyright (C) 1997-2022 Sam Lantinga <slouken@libsdl.org>
 
   This software is provided 'as-is', without any express or implied
   warranty.  In no event will the authors be held liable for any damages
@@ -32,6 +32,9 @@ static NativeWindowFactory *factories[] = {
 #ifdef TEST_NATIVE_COCOA
     &CocoaWindowFactory,
 #endif
+#ifdef TEST_NATIVE_OS2
+    &OS2WindowFactory,
+#endif
     NULL
 };
 static NativeWindowFactory *factory = NULL;
@@ -50,7 +53,7 @@ quit(int rc)
 }
 
 SDL_Texture *
-LoadSprite(SDL_Renderer *renderer, char *file)
+LoadSprite(SDL_Renderer *renderer, const char *file)
 {
     SDL_Surface *temp;
     SDL_Texture *sprite;

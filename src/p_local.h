@@ -91,6 +91,7 @@ typedef struct camera_s
 	// Camera demobjerization
 	// Info for drawing: position.
 	fixed_t x, y, z;
+	boolean reset;
 
 	//More drawing info: to determine current sprite.
 	angle_t angle; // orientation
@@ -150,6 +151,7 @@ boolean P_IsObjectInGoop(mobj_t *mo);
 boolean P_IsObjectOnGround(mobj_t *mo);
 boolean P_InSpaceSector(mobj_t *mo);
 boolean P_InQuicksand(mobj_t *mo);
+boolean P_InJumpFlipSector(mobj_t *mo);
 boolean P_PlayerHitFloor(player_t *player, boolean dorollstuff);
 
 void P_SetObjectMomZ(mobj_t *mo, fixed_t value, boolean relative);
@@ -413,7 +415,8 @@ boolean P_CheckCameraPosition(fixed_t x, fixed_t y, camera_t *thiscam);
 boolean P_CheckMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff);
 boolean P_TryMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff);
 boolean P_Move(mobj_t *actor, fixed_t speed);
-boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z);
+boolean P_SetOrigin(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z);
+boolean P_MoveOrigin(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z);
 void P_SlideMove(mobj_t *mo);
 void P_BounceMove(mobj_t *mo);
 boolean P_CheckSight(mobj_t *t1, mobj_t *t2);

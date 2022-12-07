@@ -96,7 +96,8 @@ typedef enum
 	GC_SYSTEMMENU,
 	GC_SCREENSHOT,
 	GC_RECORDGIF,
-	GC_VIEWPOINT,
+	GC_VIEWPOINTNEXT,
+	GC_VIEWPOINTPREV,
 	GC_CUSTOM1, // Lua scriptable
 	GC_CUSTOM2, // Lua scriptable
 	GC_CUSTOM3, // Lua scriptable

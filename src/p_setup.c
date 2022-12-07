@@ -21,6 +21,7 @@
 #include "p_spec.h"
 #include "p_saveg.h"
 
+#include "i_time.h"
 #include "i_sound.h" // for I_PlayCD()..
 #include "i_video.h" // for I_FinishUpdate()..
 #include "r_sky.h"
@@ -33,6 +34,7 @@
 #include "r_picformats.h"
 #include "r_sky.h"
 #include "r_draw.h"
+#include "r_fps.h" // R_ResetViewInterpolation in level load
 
 #include "s_sound.h"
 #include "st_stuff.h"
@@ -1271,7 +1273,7 @@ static void P_LoadSidedefs(UINT8 *data)
 					sd->midtexture = get_number(process);
 				}
 
- 				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
+				sd->text = Z_Malloc(7, PU_LEVEL, NULL);
 				if (isfrontside && !(msd->toptexture[0] == '-' && msd->toptexture[1] == '\0'))
 				{
 					M_Memcpy(process,msd->toptexture,8);
@@ -1725,6 +1727,10 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 		sectors[i].specialflags |= SSF_FINISHLINE;
 	else if (fastcmp(param, "ropehang") && fastcmp("true", val))
 		sectors[i].specialflags |= SSF_ROPEHANG;
+	else if (fastcmp(param, "jumpflip") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_JUMPFLIP;
+	else if (fastcmp(param, "gravityoverride") && fastcmp("true", val))
+		sectors[i].specialflags |= SSF_GRAVITYOVERRIDE;
 	else if (fastcmp(param, "friction"))
 		sectors[i].friction = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "gravity"))
@@ -2578,6 +2584,10 @@ static void P_WriteTextmap(void)
 			fprintf(f, "finishline = true;\n");
 		if (wsectors[i].specialflags & SSF_ROPEHANG)
 			fprintf(f, "ropehang = true;\n");
+		if (wsectors[i].specialflags & SSF_JUMPFLIP)
+			fprintf(f, "jumpflip = true;\n");
+		if (wsectors[i].specialflags & SSF_GRAVITYOVERRIDE)
+			fprintf(f, "gravityoverride = true;\n");
 		if (wsectors[i].friction != ORIG_FRICTION)
 			fprintf(f, "friction = %f;\n", FIXED_TO_FLOAT(wsectors[i].friction));
 		if (wsectors[i].gravity != FRACUNIT)
@@ -4575,7 +4585,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			//Flags
 			if (lines[i].flags & ML_BLOCKMONSTERS)
 				lines[i].args[6] |= TMFR_REVERSE;
-			if (lines[i].flags & ML_BLOCKMONSTERS)
+			if (lines[i].flags & ML_NOCLIMB)
 				lines[i].args[6] |= TMFR_SPINDASH;
 
 			lines[i].special = 190;
@@ -4962,6 +4972,21 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[2] = TMC_EQUAL;
 			lines[i].special = 340;
 			break;
+		case 343: //Gravity check - continuous
+		case 344: //Gravity check - each time
+		case 345: //Gravity check - once
+			if (lines[i].special == 345)
+				lines[i].args[0] = TMT_ONCE;
+			else if (lines[i].special == 344)
+				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
+			else
+				lines[i].args[0] = TMT_CONTINUOUS;
+			if (lines[i].flags & ML_BLOCKMONSTERS)
+				lines[i].args[1] = TMG_TEMPREVERSE;
+			else if (lines[i].flags & ML_NOCLIMB)
+				lines[i].args[1] = TMG_REVERSE;
+			lines[i].special = 343;
+			break;
 		case 400: //Set tagged sector's floor height/texture
 		case 401: //Set tagged sector's ceiling height/texture
 			lines[i].args[0] = tag;
@@ -5241,6 +5266,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 			break;
 		case 433: //Enable/disable gravity flip
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
+			lines[i].args[1] = !!(lines[i].flags & ML_SKEWTD);
 			break;
 		case 434: //Award power-up
 			if (sides[lines[i].sidenum[0]].text)
@@ -6012,6 +6038,9 @@ static void P_ConvertBinarySectorTypes(void)
 		{
 			case 5: //Speed pad
 				sectors[i].specialflags |= SSF_SPEEDPAD;
+				break;
+			case 6: //Gravity flip on jump (think VVVVVV)
+				sectors[i].specialflags |= SSF_JUMPFLIP;
 				break;
 			default:
 				break;
@@ -7313,7 +7342,10 @@ static void P_RunSpecialStageWipe(void)
 	{
 		// wait loop
 		while (!((nowtime = I_GetTime()) - lastwipetic))
-			I_Sleep();
+		{
+			I_Sleep(cv_sleep.value);
+			I_UpdateTime(cv_timescale.value);
+		}
 		lastwipetic = nowtime;
 		if (moviemode) // make sure we save frames for the white hold too
 			M_SaveFrame();
@@ -7370,7 +7402,7 @@ static void P_WriteLetter(void)
 {
 	char *buf, *b;
 
-	if (!unlockables[27].unlocked) // pandora's box
+	if (!unlockables[28].unlocked) // pandora's box
 		return;
 
 	if (modeattacking)
@@ -7615,7 +7647,10 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 	Patch_FreeTag(PU_PATCH_ROTATED);
 	Z_FreeTags(PU_LEVEL, PU_PURGELEVEL - 1);
 
+	R_InitializeLevelInterpolators();
+
 	P_InitThinkers();
+	R_InitMobjInterpolators();
 	P_InitCachedActions();
 
 	if (!fromnetsave && savedata.lives > 0)

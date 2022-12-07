@@ -84,6 +84,8 @@ typedef struct gl_vissprite_s
 	boolean rotated;
 	UINT8 translucency;       //alpha level 0-255
 
+	angle_t angle; // for splats
+
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	UINT8 *colormap;
 	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing

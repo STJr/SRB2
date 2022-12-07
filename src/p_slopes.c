@@ -22,6 +22,7 @@
 #include "r_main.h"
 #include "p_maputl.h"
 #include "w_wad.h"
+#include "r_fps.h"
 
 pslope_t *slopelist = NULL;
 UINT16 slopecount = 0;
@@ -94,10 +95,14 @@ static void ReconfigureViaVertexes (pslope_t *slope, const vector3_t v1, const v
 static void ReconfigureViaConstants (pslope_t *slope, const fixed_t a, const fixed_t b, const fixed_t c, const fixed_t d)
 {
 	fixed_t m;
+	fixed_t o = 0;
 	vector3_t *normal = &slope->normal;
 
+	if (c)
+		o = abs(c) <= FRACUNIT ? -FixedMul(d, FixedDiv(FRACUNIT, c)) : -FixedDiv(d, c);
+
 	// Set origin.
-	FV3_Load(&slope->o, 0, 0, c ? -FixedDiv(d, c) : 0);
+	FV3_Load(&slope->o, 0, 0, o);
 
 	// Get slope's normal.
 	FV3_Load(normal, a, b, c);
@@ -167,6 +172,9 @@ void T_DynamicSlopeVert (dynvertexplanethink_t* th)
 
 	for (i = 0; i < 3; i++)
 	{
+		if (!th->secs[i])
+			continue;
+
 		if (th->relative & (1 << i))
 			th->vex[i].z = th->origvecheights[i] + (th->secs[i]->floorheight - th->origsecheights[i]);
 		else
@@ -185,6 +193,9 @@ static inline void P_AddDynLineSlopeThinker (pslope_t* slope, dynplanetype_t typ
 	th->sourceline = sourceline;
 	th->extent = extent;
 	P_AddThinker(THINK_DYNSLOPE, &th->thinker);
+
+	// interpolation
+	R_CreateInterpolator_DynSlope(&th->thinker, slope);
 }
 
 static inline void P_AddDynVertexSlopeThinker (pslope_t* slope, const INT16 tags[3], const vector3_t vx[3])
@@ -197,16 +208,11 @@ static inline void P_AddDynVertexSlopeThinker (pslope_t* slope, const INT16 tags
 
 	for (i = 0; i < 3; i++) {
 		l = Tag_FindLineSpecial(799, tags[i]);
-		if (l == -1)
-		{
-			Z_Free(th);
-			return;
-		}
-		th->secs[i] = lines[l].frontsector;
+		th->secs[i] = (l == -1) ? NULL : lines[l].frontsector;
 		th->vex[i] = vx[i];
-		th->origsecheights[i] = lines[l].frontsector->floorheight;
+		th->origsecheights[i] = (l == -1) ? 0 : lines[l].frontsector->floorheight;
 		th->origvecheights[i] = vx[i].z;
-		if (lines[l].args[0])
+		if (l != -1 && lines[l].args[0])
 			th->relative |= 1<<i;
 	}
 	P_AddThinker(THINK_DYNSLOPE, &th->thinker);

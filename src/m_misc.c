@@ -36,6 +36,7 @@
 #include "v_video.h"
 #include "z_zone.h"
 #include "g_input.h"
+#include "i_time.h"
 #include "i_video.h"
 #include "d_main.h"
 #include "m_argv.h"
@@ -2162,63 +2163,6 @@ const char *GetRevisionString(void)
 	rev[7] = '\0';
 
 	return rev;
-}
-
-// Vector/matrix math
-TVector *VectorMatrixMultiply(TVector v, TMatrix m)
-{
-	static TVector ret;
-
-	ret[0] = FixedMul(v[0],m[0][0]) + FixedMul(v[1],m[1][0]) + FixedMul(v[2],m[2][0]) + FixedMul(v[3],m[3][0]);
-	ret[1] = FixedMul(v[0],m[0][1]) + FixedMul(v[1],m[1][1]) + FixedMul(v[2],m[2][1]) + FixedMul(v[3],m[3][1]);
-	ret[2] = FixedMul(v[0],m[0][2]) + FixedMul(v[1],m[1][2]) + FixedMul(v[2],m[2][2]) + FixedMul(v[3],m[3][2]);
-	ret[3] = FixedMul(v[0],m[0][3]) + FixedMul(v[1],m[1][3]) + FixedMul(v[2],m[2][3]) + FixedMul(v[3],m[3][3]);
-
-	return &ret;
-}
-
-TMatrix *RotateXMatrix(angle_t rad)
-{
-	static TMatrix ret;
-	const angle_t fa = rad>>ANGLETOFINESHIFT;
-	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
-
-	ret[0][0] = FRACUNIT; ret[0][1] =       0; ret[0][2] = 0;        ret[0][3] = 0;
-	ret[1][0] =        0; ret[1][1] =  cosrad; ret[1][2] = sinrad;   ret[1][3] = 0;
-	ret[2][0] =        0; ret[2][1] = -sinrad; ret[2][2] = cosrad;   ret[2][3] = 0;
-	ret[3][0] =        0; ret[3][1] =       0; ret[3][2] = 0;        ret[3][3] = FRACUNIT;
-
-	return &ret;
-}
-
-#if 0
-TMatrix *RotateYMatrix(angle_t rad)
-{
-	static TMatrix ret;
-	const angle_t fa = rad>>ANGLETOFINESHIFT;
-	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
-
-	ret[0][0] = cosrad;   ret[0][1] =        0; ret[0][2] = -sinrad;   ret[0][3] = 0;
-	ret[1][0] = 0;        ret[1][1] = FRACUNIT; ret[1][2] = 0;         ret[1][3] = 0;
-	ret[2][0] = sinrad;   ret[2][1] =        0; ret[2][2] = cosrad;    ret[2][3] = 0;
-	ret[3][0] = 0;        ret[3][1] =        0; ret[3][2] = 0;         ret[3][3] = FRACUNIT;
-
-	return &ret;
-}
-#endif
-
-TMatrix *RotateZMatrix(angle_t rad)
-{
-	static TMatrix ret;
-	const angle_t fa = rad>>ANGLETOFINESHIFT;
-	const fixed_t cosrad = FINECOSINE(fa), sinrad = FINESINE(fa);
-
-	ret[0][0] = cosrad;    ret[0][1] = sinrad;   ret[0][2] =        0; ret[0][3] = 0;
-	ret[1][0] = -sinrad;   ret[1][1] = cosrad;   ret[1][2] =        0; ret[1][3] = 0;
-	ret[2][0] = 0;         ret[2][1] = 0;        ret[2][2] = FRACUNIT; ret[2][3] = 0;
-	ret[3][0] = 0;         ret[3][1] = 0;        ret[3][2] =        0; ret[3][3] = FRACUNIT;
-
-	return &ret;
 }
 
 /** Set of functions to take in a size_t as an argument,
