@@ -77,7 +77,6 @@ CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 
 // Filter consvars by EXECVERSION
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
-// Also set CV_HIDEN during runtime, after config is loaded
 static boolean execversion_enabled = false;
 consvar_t cv_execversion = CVAR_INIT ("execversion","25",CV_CALL,CV_Unsigned, CV_EnforceExecVersion);
 
@@ -2230,12 +2229,12 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 		// reset all axis settings to defaults
 		if (joyaxis_count == 6)
 		{
-			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis.name, cv_turnaxis.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis.name, cv_moveaxis.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis.name, cv_sideaxis.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis.name, cv_lookaxis.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis.name, cv_fireaxis.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis.name, cv_firenaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis[0].name, cv_turnaxis[0].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis[0].name, cv_moveaxis[0].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis[0].name, cv_sideaxis[0].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis[0].name, cv_lookaxis[0].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis[0].name, cv_fireaxis[0].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis[0].name, cv_firenaxis[0].defaultvalue));
 			joyaxis_count++;
 			return false;
 		}
@@ -2289,12 +2288,12 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 		// reset all axis settings to defaults
 		if (joyaxis2_count == 6)
 		{
-			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis2.name, cv_turnaxis2.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis2.name, cv_moveaxis2.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis2.name, cv_sideaxis2.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis2.name, cv_lookaxis2.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis2.name, cv_fireaxis2.defaultvalue));
-			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis2.name, cv_firenaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis[1].name, cv_turnaxis[1].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis[1].name, cv_moveaxis[1].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis[1].name, cv_sideaxis[1].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis[1].name, cv_lookaxis[1].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis[1].name, cv_fireaxis[1].defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis[1].name, cv_firenaxis[1].defaultvalue));
 			joyaxis2_count++;
 			return false;
 		}
@@ -2303,6 +2302,49 @@ static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 	// we haven't reached our counts yet, or we're not default
 	return true;
 }
+
+#ifndef OLD_GAMEPAD_AXES
+static boolean CV_ConvertOldJoyAxisVars(consvar_t *v, const char *valstr)
+{
+	static struct {
+		const char *old;
+		const char *new;
+	} axis_names[] = {
+		{"X-Axis",    "Left Stick X"},
+		{"Y-Axis",    "Left Stick Y"},
+		{"X-Axis-",   "Left Stick X-"},
+		{"Y-Axis-",   "Left Stick Y-"},
+		{"X-Rudder",  "Right Stick X"},
+		{"Y-Rudder",  "Right Stick Y"},
+		{"X-Rudder-", "Right Stick X-"},
+		{"Y-Rudder-", "Right Stick Y-"},
+		{"Z-Axis",    "Left Trigger"},
+		{"Z-Rudder",  "Right Trigger"},
+		{"Z-Axis-",   "Left Trigger"},
+		{"Z-Rudder-", "Right Trigger"},
+		{NULL, NULL}
+	};
+
+	if (v->PossibleValue != joyaxis_cons_t)
+		return true;
+
+	for (unsigned i = 0;; i++)
+	{
+		if (axis_names[i].old == NULL)
+		{
+			CV_SetCVar(v, "None", false);
+			return false;
+		}
+		else if (!stricmp(valstr, axis_names[i].old))
+		{
+			CV_SetCVar(v, axis_names[i].new, false);
+			return false;
+		}
+	}
+
+	return true;
+}
+#endif
 
 static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 {
@@ -2332,8 +2374,8 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 			&& atoi(valstr) == 35)
 			return false;
 
-		// JOYSTICK DEFAULTS
-		// use_joystick was changed from 0 to 1 to automatically use a joystick if available
+		// GAMEPAD DEFAULTS
+		// use_gamepad was changed from 0 to 1 to automatically use a gamepad if available
 #if defined(HAVE_SDL) || defined(_WINDOWS)
 		if ((!stricmp(v->name, "use_joystick")
 			|| !stricmp(v->name, "use_joystick2"))
@@ -2346,6 +2388,15 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 		if (!CV_FilterJoyAxisVars(v, valstr))
 			return false;
 	}
+
+#ifndef OLD_GAMEPAD_AXES
+	if (GETMAJOREXECVERSION(cv_execversion.value) <= 51 && GETMINOREXECVERSION(cv_execversion.value) < 1)
+	{
+		if (!CV_ConvertOldJoyAxisVars(v, valstr))
+			return false;
+	}
+#endif
+
 	return true;
 }
 

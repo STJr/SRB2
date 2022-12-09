@@ -23,59 +23,41 @@ extern SDL_bool consolevent;
 extern SDL_bool framebuffer;
 
 #include "../m_fixed.h"
+#include "../i_gamepad.h"
 
-// SDL2 stub macro
-#ifdef _MSC_VER
-#define SDL2STUB() CONS_Printf("SDL2: stubbed: %s:%d\n", __FUNCTION__, __LINE__)
-#else
-#define SDL2STUB() CONS_Printf("SDL2: stubbed: %s:%d\n", __func__, __LINE__)
-#endif
-
-// So m_menu knows whether to store cv_usejoystick value or string
-#define JOYSTICK_HOTPLUG
-
-/**	\brief	The JoyInfo_s struct
-
-  info about joystick
-*/
-typedef struct SDLJoyInfo_s
+// SDL info about all controllers
+typedef struct
 {
-	/// Joystick handle
-	SDL_Joystick *dev;
-	/// number of old joystick
-	int oldjoy;
-	/// number of axies
-	int axises;
-	/// scale of axises
-	INT32 scale;
-	/// number of buttons
-	int buttons;
-	/// number of hats
-	int hats;
-	/// number of balls
-	int balls;
+	boolean started; // started
+	int lastindex; // last gamepad ID
 
-} SDLJoyInfo_t;
+	SDL_GameController *dev;
+	SDL_Joystick *joydev;
 
-/**	\brief SDL info about joystick 1
-*/
-extern SDLJoyInfo_t JoyInfo;
+	gamepad_t *info; // pointer to gamepad info
 
-/**	\brief joystick axis deadzone
-*/
-#define SDL_JDEADZONE 153
-#undef SDL_JDEADZONE
+	struct {
+		Uint16 large_magnitude;
+		Uint16 small_magnitude;
+		Uint32 expiration, time_left;
+	} rumble;
+} ControllerInfo;
 
-/**	\brief SDL inof about joystick 2
-*/
-extern SDLJoyInfo_t JoyInfo2;
+#define GAMEPAD_INIT_FLAGS (SDL_INIT_JOYSTICK | SDL_INIT_GAMECONTROLLER)
 
-// So we can call this from i_video event loop
-void I_ShutdownJoystick(void);
-void I_ShutdownJoystick2(void);
+void I_UpdateControllers(void);
 
-// Cheat to get the device index for a joystick handle
-INT32 I_GetJoystickDeviceIndex(SDL_Joystick *dev);
+void I_ControllerDeviceAdded(INT32 which);
+void I_ControllerDeviceRemoved(void);
+
+void I_HandleControllerButtonEvent(SDL_ControllerButtonEvent evt, Uint32 type);
+void I_HandleControllerAxisEvent(SDL_ControllerAxisEvent evt);
+
+INT32 I_GetControllerIndex(SDL_GameController *dev);
+void I_CloseInactiveController(SDL_GameController *dev);
+void I_CloseInactiveHapticDevice(SDL_Haptic *dev);
+
+void I_ToggleControllerRumble(boolean unpause);
 
 void I_GetConsoleEvents(void);
 

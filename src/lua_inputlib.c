@@ -15,6 +15,7 @@
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "i_system.h"
+#include "i_gamepad.h"
 
 #include "lua_script.h"
 #include "lua_libs.h"
@@ -30,7 +31,7 @@ static int lib_gameControlDown(lua_State *L)
 	int i = luaL_checkinteger(L, 1);
 	if (i < 0 || i >= NUM_GAMECONTROLS)
 		return luaL_error(L, "GC_* constant %d out of range (0 - %d)", i, NUM_GAMECONTROLS-1);
-	lua_pushinteger(L, PLAYER1INPUTDOWN(i));
+	lua_pushinteger(L, G_PlayerInputDown(0, i));
 	return 1;
 }
 
@@ -39,7 +40,7 @@ static int lib_gameControl2Down(lua_State *L)
 	int i = luaL_checkinteger(L, 1);
 	if (i < 0 || i >= NUM_GAMECONTROLS)
 		return luaL_error(L, "GC_* constant %d out of range (0 - %d)", i, NUM_GAMECONTROLS-1);
-	lua_pushinteger(L, PLAYER2INPUTDOWN(i));
+	lua_pushinteger(L, G_PlayerInputDown(1, i));
 	return 1;
 }
 
@@ -66,14 +67,14 @@ static int lib_gameControl2ToKeyNum(lua_State *L)
 static int lib_joyAxis(lua_State *L)
 {
 	int i = luaL_checkinteger(L, 1);
-	lua_pushinteger(L, JoyAxis(i));
+	lua_pushinteger(L, G_JoyAxis(0, i) / 32);
 	return 1;
 }
 
 static int lib_joy2Axis(lua_State *L)
 {
 	int i = luaL_checkinteger(L, 1);
-	lua_pushinteger(L, Joy2Axis(i));
+	lua_pushinteger(L, G_JoyAxis(1, i) / 32);
 	return 1;
 }
 
