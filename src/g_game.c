@@ -1808,8 +1808,15 @@ INT32 G_GetGamepadDeviceIndex(INT32 player)
 		return cv_usegamepad[player].value;
 }
 
+void G_OnGamepadConnect(UINT8 which)
+{
+	LUA_HookGamepadEvent(which, HOOK(GamepadAdded));
+}
+
 void G_OnGamepadDisconnect(UINT8 which)
 {
+	LUA_HookGamepadEvent(which, HOOK(GamepadRemoved));
+
 	if (!cv_gamepad_autopause.value)
 		return;
 
@@ -2333,6 +2340,10 @@ boolean G_LuaResponder(event_t *ev)
 		cancelled = LUA_HookKey(ev, HOOK(KeyUp));
 		LUA_InvalidateUserdata(ev);
 	}
+	else if (ev->type == ev_gamepad_down)
+		cancelled = LUA_HookGamepadButton(ev, HOOK(GamepadButtonDown));
+	else if (ev->type == ev_gamepad_up)
+		cancelled = LUA_HookGamepadButton(ev, HOOK(GamepadButtonUp));
 
 	return cancelled;
 }
