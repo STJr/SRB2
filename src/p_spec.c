@@ -1882,7 +1882,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 
 	// "Trigger on X calls" linedefs reset if args[2] is set
 	if (specialtype == 321 && triggerline->args[2])
-		triggerline->callcount = triggerline->args[3];
+		triggerline->callcount = triggerline->args[1];
 	else
 	{
 		// These special types work only once

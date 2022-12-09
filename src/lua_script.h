@@ -30,11 +30,13 @@
 // TODO add some distinction between fixed numbers and integer numbers
 // for at least the purpose of printing and maybe math.
 #define luaL_checkfixed(L, i) luaL_checkinteger(L, i)
+#define luaL_optfixed(L, i, o) luaL_optinteger(L, i, o)
 #define lua_pushfixed(L, f) lua_pushinteger(L, f)
 
 // angle_t casting
 // TODO deal with signedness
 #define luaL_checkangle(L, i) ((angle_t)luaL_checkinteger(L, i))
+#define luaL_optangle(L, i, o) ((angle_t)luaL_optinteger(L, i, o))
 #define lua_pushangle(L, a) lua_pushinteger(L, a)
 
 #ifdef _DEBUG
