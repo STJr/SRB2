@@ -15,6 +15,7 @@
 #include "p_local.h"
 #include "p_setup.h" // So we can have P_SetupLevelSky
 #include "p_slopes.h" // P_GetSlopeZAt
+#include "p_haptic.h"
 #include "z_zone.h"
 #include "r_main.h"
 #include "r_draw.h"
@@ -1733,6 +1734,78 @@ static int lib_pPlayerShouldUseSpinHeight(lua_State *L)
 	return 1;
 }
 
+// P_HAPTIC
+///////////
+#define GET_OPTIONAL_PLAYER(arg) \
+	player_t *player = NULL; \
+	if (!lua_isnoneornil(L, arg)) { \
+		player = *((player_t **)luaL_checkudata(L, arg, META_PLAYER)); \
+		if (!player) \
+			return LUA_ErrInvalid(L, "player_t"); \
+	}
+
+static int lib_pDoRumble(lua_State *L)
+{
+	GET_OPTIONAL_PLAYER(1);
+	fixed_t large_magnitude = luaL_checkfixed(L, 2);
+	fixed_t small_magnitude = luaL_optfixed(L, 3, large_magnitude);
+	tic_t duration = luaL_optinteger(L, 4, 0);
+
+#define CHECK_MAGNITUDE(which) \
+	if (which##_magnitude < 0 || which##_magnitude > FRACUNIT) \
+		return luaL_error(L, va(#which " motor frequency %f out of range (minimum is 0.0, maximum is 1.0)", \
+			FixedToFloat(which##_magnitude)))
+
+	CHECK_MAGNITUDE(large);
+	CHECK_MAGNITUDE(small);
+
+#undef CHECK_MAGNITUDE
+
+	lua_pushboolean(L, P_DoRumble(player, large_magnitude, small_magnitude, duration));
+	return 1;
+}
+
+static int lib_pPauseRumble(lua_State *L)
+{
+	GET_OPTIONAL_PLAYER(1);
+	P_PauseRumble(player);
+	return 0;
+}
+
+static int lib_pUnpauseRumble(lua_State *L)
+{
+	GET_OPTIONAL_PLAYER(1);
+	P_UnpauseRumble(player);
+	return 0;
+}
+
+static int lib_pIsRumbleEnabled(lua_State *L)
+{
+	GET_OPTIONAL_PLAYER(1);
+	if (player && P_IsLocalPlayer(player))
+		lua_pushboolean(L, P_IsRumbleEnabled(player));
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_pIsRumblePaused(lua_State *L)
+{
+	GET_OPTIONAL_PLAYER(1);
+	if (player && P_IsLocalPlayer(player))
+		lua_pushboolean(L, P_IsRumblePaused(player));
+	else
+		lua_pushnil(L);
+	return 1;
+}
+
+static int lib_pStopRumble(lua_State *L)
+{
+	GET_OPTIONAL_PLAYER(1);
+	P_StopRumble(player);
+	return 0;
+}
+
 // P_MAP
 ///////////
 
@@ -3369,7 +3442,6 @@ static int lib_sResumeMusic(lua_State *L)
 // G_GAME
 ////////////
 
-// Copypasted from lib_cvRegisterVar :]
 static int lib_gAddGametype(lua_State *L)
 {
 	const char *k;
@@ -4090,6 +4162,14 @@ static luaL_Reg lib[] = {
 	{"P_SwitchShield",lib_pSwitchShield},
 	{"P_PlayerCanEnterSpinGaps",lib_pPlayerCanEnterSpinGaps},
 	{"P_PlayerShouldUseSpinHeight",lib_pPlayerShouldUseSpinHeight},
+
+	// p_haptic
+	{"P_DoRumble",lib_pDoRumble},
+	{"P_PauseRumble",lib_pPauseRumble},
+	{"P_UnpauseRumble",lib_pUnpauseRumble},
+	{"P_IsRumbleEnabled",lib_pIsRumbleEnabled},
+	{"P_IsRumblePaused",lib_pIsRumblePaused},
+	{"P_StopRumble",lib_pStopRumble},
 
 	// p_map
 	{"P_CheckPosition",lib_pCheckPosition},
