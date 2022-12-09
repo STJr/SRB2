@@ -935,7 +935,12 @@ static INT16 GetJoystickAxisValue(UINT8 which, joyaxis_e axissel, INT32 axisval)
 
 	// flip it around
 	if (flp)
-		retaxis = -retaxis;
+	{
+		if (retaxis == -32768)
+			retaxis = 32767;
+		else
+			retaxis = -retaxis;
+	}
 
 	return retaxis;
 }
@@ -943,6 +948,7 @@ static INT16 GetJoystickAxisValue(UINT8 which, joyaxis_e axissel, INT32 axisval)
 INT16 G_JoyAxis(UINT8 which, joyaxis_e axissel)
 {
 	INT32 axisval;
+	INT32 value;
 
 	// find what axis to get
 	switch (axissel)
@@ -975,7 +981,16 @@ INT16 G_JoyAxis(UINT8 which, joyaxis_e axissel)
 			return 0;
 	}
 
-	return GetJoystickAxisValue(which, axissel, axisval);
+	value = GetJoystickAxisValue(which, axissel, axisval);
+	if (axissel == JA_LOOK)
+	{
+		// Look is inverted because +Y goes _down_ in gamepads.
+		if (value == -32768)
+			value = 32767;
+		else
+			value = -value;
+	}
+	return value;
 }
 
 static INT16 GetAnalogInput(UINT8 which, gamecontrols_e gc)
