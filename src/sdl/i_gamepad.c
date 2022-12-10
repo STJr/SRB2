@@ -103,6 +103,7 @@ INT32 I_NumGamepads(void)
 #define USB_PRODUCT_XBOX_SERIES_X_POWERA_FUSION_PRO2        0x4001
 #define USB_PRODUCT_XBOX_SERIES_X_POWERA_SPECTRA            0x4002
 
+#if SDL_VERSION_ATLEAST(2,0,6)
 static boolean IsJoystickXboxOneElite(Uint16 vendor_id, Uint16 product_id)
 {
 	if (vendor_id == USB_VENDOR_MICROSOFT) {
@@ -141,6 +142,7 @@ static boolean IsJoystickXboxSeriesXS(Uint16 vendor_id, Uint16 product_id)
 
 	return false;
 }
+#endif
 
 // Opens a controller device
 static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
@@ -885,6 +887,7 @@ boolean I_SetGamepadSmallMotorFreq(UINT8 which, fixed_t freq)
 
 void I_SetGamepadRumblePaused(UINT8 which, boolean pause)
 {
+#if SDL_VERSION_ATLEAST(2,0,9)
 	if (!I_RumbleSupported() || which >= NUM_GAMEPADS)
 		return;
 
@@ -915,6 +918,11 @@ void I_SetGamepadRumblePaused(UINT8 which, boolean pause)
 	}
 
 	controller->info->rumble.paused = pause;
+#else
+	(void)which;
+	(void)pause;
+	return;
+#endif
 }
 
 boolean I_GetGamepadRumbleSupported(UINT8 which)
