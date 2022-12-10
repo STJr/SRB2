@@ -39,8 +39,10 @@ static boolean InitGamepadSubsystems(void)
 {
 	if (M_CheckParm("-noxinput"))
 		SDL_SetHintWithPriority(SDL_HINT_XINPUT_ENABLED, "0", SDL_HINT_OVERRIDE);
+#if SDL_VERSION_ATLEAST(2,0,9)
 	if (M_CheckParm("-nohidapi"))
 		SDL_SetHintWithPriority(SDL_HINT_JOYSTICK_HIDAPI, "0", SDL_HINT_OVERRIDE);
+#endif
 
 	if (SDL_WasInit(GAMEPAD_INIT_FLAGS) == 0)
 	{
@@ -199,6 +201,7 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 
 		CONS_Debug(DBG_GAMELOGIC, M_GetText("Controller %d: %s\n"), which, SDL_GameControllerName(controller->dev));
 
+#if SDL_VERSION_ATLEAST(2,0,12)
 	#define GAMEPAD_TYPE_CASE(ctrl) \
 		case SDL_CONTROLLER_TYPE_##ctrl: \
 			controller->info->type = GAMEPAD_TYPE_##ctrl; \
@@ -211,15 +214,22 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 			GAMEPAD_TYPE_CASE(XBOXONE);
 			GAMEPAD_TYPE_CASE(PS3);
 			GAMEPAD_TYPE_CASE(PS4);
+#if SDL_VERSION_ATLEAST(2,0,14)
 			GAMEPAD_TYPE_CASE(PS5);
+#endif
 			GAMEPAD_TYPE_CASE(NINTENDO_SWITCH_PRO);
+#if SDL_VERSION_ATLEAST(2,0,16)
 			GAMEPAD_TYPE_CASE(GOOGLE_STADIA);
 			GAMEPAD_TYPE_CASE(AMAZON_LUNA);
+#endif
 			GAMEPAD_TYPE_CASE(VIRTUAL);
 			default: break;
 		}
-
 	#undef GAMEPAD_BUTTON_CASE
+#else
+		// Under older versions of SDL, we aren't provided controller type information.
+		controller->info->type = GAMEPAD_TYPE_UNKNOWN;
+#endif // SDL_VERSION_ATLEAST(2,0,12)
 
 		// Check the device vendor and product to find out what controller this actually is
 		Uint16 vendor = SDL_JoystickGetDeviceVendor(devindex);
