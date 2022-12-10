@@ -231,6 +231,7 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 		controller->info->type = GAMEPAD_TYPE_UNKNOWN;
 #endif // SDL_VERSION_ATLEAST(2,0,12)
 
+#if SDL_VERSION_ATLEAST(2,0,6)
 		// Check the device vendor and product to find out what controller this actually is
 		Uint16 vendor = SDL_JoystickGetDeviceVendor(devindex);
 		Uint16 product = SDL_JoystickGetDeviceProduct(devindex);
@@ -239,13 +240,17 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 			controller->info->type = GAMEPAD_TYPE_XBOX_SERIES_XS;
 		else if (IsJoystickXboxOneElite(vendor, product))
 			controller->info->type = GAMEPAD_TYPE_XBOX_ELITE;
+#endif
 
 		CONS_Debug(DBG_GAMELOGIC, M_GetText("    Type: %s\n"), G_GamepadTypeToString(controller->info->type));
 
+#if SDL_VERSION_ATLEAST(2,0,12)
 		// Change the ring LEDs on Xbox 360 controllers
 		// FIXME: Doesn't seem to work?
 		SDL_GameControllerSetPlayerIndex(controller->dev, which);
+#endif
 
+#if SDL_VERSION_ATLEAST(2,0,18)
 		// Check if rumble is supported
 		if (SDL_GameControllerHasRumble(controller->dev) == SDL_TRUE)
 		{
@@ -255,8 +260,12 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 		else
 		{
 			controller->info->rumble.supported = false;
-			CONS_Debug(DBG_GAMELOGIC, M_GetText("    Rumble supported: No\n"));;
+			CONS_Debug(DBG_GAMELOGIC, M_GetText("    Rumble supported: No\n"));
 		}
+#else
+		controller->info->rumble.supported = true;
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("    Rumble supported: Maybe\n"));
+#endif // SDL_VERSION_ATLEAST(2,0,18)
 
 		if (!controller->info->connected)
 		{
@@ -600,12 +609,14 @@ void I_HandleControllerButtonEvent(SDL_ControllerButtonEvent evt, Uint32 type)
 		GAMEPAD_BUTTON_CASE(DPAD_DOWN);
 		GAMEPAD_BUTTON_CASE(DPAD_LEFT);
 		GAMEPAD_BUTTON_CASE(DPAD_RIGHT);
+#if SDL_VERSION_ATLEAST(2,0,14)
 		GAMEPAD_BUTTON_CASE(MISC1);
 		GAMEPAD_BUTTON_CASE(PADDLE1);
 		GAMEPAD_BUTTON_CASE(PADDLE2);
 		GAMEPAD_BUTTON_CASE(PADDLE3);
 		GAMEPAD_BUTTON_CASE(PADDLE4);
 		GAMEPAD_BUTTON_CASE(TOUCHPAD);
+#endif
 		default: return;
 	}
 
@@ -663,8 +674,10 @@ static void Controller_StopRumble(UINT8 num)
 	gamepad->rumble.data.small_magnitude = 0;
 	gamepad->rumble.data.duration = 0;
 
+#if SDL_VERSION_ATLEAST(2,0,9)
 	if (gamepad->rumble.supported)
 		SDL_GameControllerRumble(controller->dev, 0, 0, 0);
+#endif
 }
 
 static void Controller_Close(UINT8 num)
