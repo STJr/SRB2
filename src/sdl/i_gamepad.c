@@ -39,8 +39,10 @@ static boolean InitGamepadSubsystems(void)
 {
 	if (M_CheckParm("-noxinput"))
 		SDL_SetHintWithPriority(SDL_HINT_XINPUT_ENABLED, "0", SDL_HINT_OVERRIDE);
+#if SDL_VERSION_ATLEAST(2,0,9)
 	if (M_CheckParm("-nohidapi"))
 		SDL_SetHintWithPriority(SDL_HINT_JOYSTICK_HIDAPI, "0", SDL_HINT_OVERRIDE);
+#endif
 
 	if (SDL_WasInit(GAMEPAD_INIT_FLAGS) == 0)
 	{
@@ -64,7 +66,11 @@ void I_InitGamepads(void)
 	if (!InitGamepadSubsystems())
 		return;
 
+#if SDL_VERSION_ATLEAST(2,0,9)
 	rumble_supported = !M_CheckParm("-norumble");
+#else
+	rumble_supported = false;
+#endif
 
 	for (UINT8 i = 0; i < NUM_GAMEPADS; i++)
 		controllers[i].info = &gamepads[i];
@@ -97,6 +103,7 @@ INT32 I_NumGamepads(void)
 #define USB_PRODUCT_XBOX_SERIES_X_POWERA_FUSION_PRO2        0x4001
 #define USB_PRODUCT_XBOX_SERIES_X_POWERA_SPECTRA            0x4002
 
+#if SDL_VERSION_ATLEAST(2,0,6)
 static boolean IsJoystickXboxOneElite(Uint16 vendor_id, Uint16 product_id)
 {
 	if (vendor_id == USB_VENDOR_MICROSOFT) {
@@ -135,6 +142,7 @@ static boolean IsJoystickXboxSeriesXS(Uint16 vendor_id, Uint16 product_id)
 
 	return false;
 }
+#endif
 
 // Opens a controller device
 static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
@@ -199,6 +207,7 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 
 		CONS_Debug(DBG_GAMELOGIC, M_GetText("Controller %d: %s\n"), which, SDL_GameControllerName(controller->dev));
 
+#if SDL_VERSION_ATLEAST(2,0,12)
 	#define GAMEPAD_TYPE_CASE(ctrl) \
 		case SDL_CONTROLLER_TYPE_##ctrl: \
 			controller->info->type = GAMEPAD_TYPE_##ctrl; \
@@ -211,16 +220,24 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 			GAMEPAD_TYPE_CASE(XBOXONE);
 			GAMEPAD_TYPE_CASE(PS3);
 			GAMEPAD_TYPE_CASE(PS4);
+#if SDL_VERSION_ATLEAST(2,0,14)
 			GAMEPAD_TYPE_CASE(PS5);
+#endif
 			GAMEPAD_TYPE_CASE(NINTENDO_SWITCH_PRO);
+#if SDL_VERSION_ATLEAST(2,0,16)
 			GAMEPAD_TYPE_CASE(GOOGLE_STADIA);
 			GAMEPAD_TYPE_CASE(AMAZON_LUNA);
+#endif
 			GAMEPAD_TYPE_CASE(VIRTUAL);
 			default: break;
 		}
-
 	#undef GAMEPAD_BUTTON_CASE
+#else
+		// Under older versions of SDL, we aren't provided controller type information.
+		controller->info->type = GAMEPAD_TYPE_UNKNOWN;
+#endif // SDL_VERSION_ATLEAST(2,0,12)
 
+#if SDL_VERSION_ATLEAST(2,0,6)
 		// Check the device vendor and product to find out what controller this actually is
 		Uint16 vendor = SDL_JoystickGetDeviceVendor(devindex);
 		Uint16 product = SDL_JoystickGetDeviceProduct(devindex);
@@ -229,13 +246,17 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 			controller->info->type = GAMEPAD_TYPE_XBOX_SERIES_XS;
 		else if (IsJoystickXboxOneElite(vendor, product))
 			controller->info->type = GAMEPAD_TYPE_XBOX_ELITE;
+#endif
 
 		CONS_Debug(DBG_GAMELOGIC, M_GetText("    Type: %s\n"), G_GamepadTypeToString(controller->info->type));
 
+#if SDL_VERSION_ATLEAST(2,0,12)
 		// Change the ring LEDs on Xbox 360 controllers
 		// FIXME: Doesn't seem to work?
 		SDL_GameControllerSetPlayerIndex(controller->dev, which);
+#endif
 
+#if SDL_VERSION_ATLEAST(2,0,18)
 		// Check if rumble is supported
 		if (SDL_GameControllerHasRumble(controller->dev) == SDL_TRUE)
 		{
@@ -245,8 +266,12 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 		else
 		{
 			controller->info->rumble.supported = false;
-			CONS_Debug(DBG_GAMELOGIC, M_GetText("    Rumble supported: No\n"));;
+			CONS_Debug(DBG_GAMELOGIC, M_GetText("    Rumble supported: No\n"));
 		}
+#else
+		controller->info->rumble.supported = true;
+		CONS_Debug(DBG_GAMELOGIC, M_GetText("    Rumble supported: Maybe\n"));
+#endif // SDL_VERSION_ATLEAST(2,0,18)
 
 		if (!controller->info->connected)
 		{
@@ -590,12 +615,14 @@ void I_HandleControllerButtonEvent(SDL_ControllerButtonEvent evt, Uint32 type)
 		GAMEPAD_BUTTON_CASE(DPAD_DOWN);
 		GAMEPAD_BUTTON_CASE(DPAD_LEFT);
 		GAMEPAD_BUTTON_CASE(DPAD_RIGHT);
+#if SDL_VERSION_ATLEAST(2,0,14)
 		GAMEPAD_BUTTON_CASE(MISC1);
 		GAMEPAD_BUTTON_CASE(PADDLE1);
 		GAMEPAD_BUTTON_CASE(PADDLE2);
 		GAMEPAD_BUTTON_CASE(PADDLE3);
 		GAMEPAD_BUTTON_CASE(PADDLE4);
 		GAMEPAD_BUTTON_CASE(TOUCHPAD);
+#endif
 		default: return;
 	}
 
@@ -653,8 +680,10 @@ static void Controller_StopRumble(UINT8 num)
 	gamepad->rumble.data.small_magnitude = 0;
 	gamepad->rumble.data.duration = 0;
 
+#if SDL_VERSION_ATLEAST(2,0,9)
 	if (gamepad->rumble.supported)
 		SDL_GameControllerRumble(controller->dev, 0, 0, 0);
+#endif
 }
 
 static void Controller_Close(UINT8 num)
@@ -704,14 +733,20 @@ boolean I_RumbleSupported(void)
 
 static boolean Controller_Rumble(ControllerInfo *c)
 {
+#if SDL_VERSION_ATLEAST(2,0,9)
 	if (SDL_GameControllerRumble(c->dev, c->rumble.large_magnitude, c->rumble.small_magnitude, 0) == -1)
 		return false;
 
 	return true;
+#else
+	(void)c;
+	return false;
+#endif
 }
 
 void I_ToggleControllerRumble(boolean unpause)
 {
+#if SDL_VERSION_ATLEAST(2,0,9)
 	if (!I_RumbleSupported() || rumble_paused == !unpause)
 		return;
 
@@ -731,6 +766,10 @@ void I_ToggleControllerRumble(boolean unpause)
 				controller->rumble.expiration = controller->rumble.time_left = 0;
 		}
 	}
+#else
+	(void)unpause;
+	return;
+#endif
 }
 
 void I_UpdateControllers(void)
@@ -848,6 +887,7 @@ boolean I_SetGamepadSmallMotorFreq(UINT8 which, fixed_t freq)
 
 void I_SetGamepadRumblePaused(UINT8 which, boolean pause)
 {
+#if SDL_VERSION_ATLEAST(2,0,9)
 	if (!I_RumbleSupported() || which >= NUM_GAMEPADS)
 		return;
 
@@ -878,6 +918,11 @@ void I_SetGamepadRumblePaused(UINT8 which, boolean pause)
 	}
 
 	controller->info->rumble.paused = pause;
+#else
+	(void)which;
+	(void)pause;
+	return;
+#endif
 }
 
 boolean I_GetGamepadRumbleSupported(UINT8 which)
