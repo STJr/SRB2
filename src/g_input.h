@@ -188,6 +188,7 @@ typedef enum
 } key_input_e;
 
 #define GAMEPAD_KEY(key) (KEY_GAMEPAD + GAMEPAD_BUTTON_##key)
+#define GAMEPAD_AXIS(key) (KEY_AXES + GAMEPAD_AXIS_##key)
 
 typedef enum
 {

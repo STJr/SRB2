@@ -297,10 +297,10 @@ CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
 #ifndef OLD_GAMEPAD_AXES
 #define MOVEAXIS_DEFAULT "Left Stick Y"
 #define SIDEAXIS_DEFAULT "Left Stick X"
-#define LOOKAXIS_DEFAULT "Right Stick Y-"
+#define LOOKAXIS_DEFAULT "Right Stick Y"
 #define TURNAXIS_DEFAULT "Right Stick X"
-#define FIREAXIS_DEFAULT "Right Trigger"
-#define FIRENAXIS_DEFAULT "Left Trigger"
+#define FIREAXIS_DEFAULT "None"
+#define FIRENAXIS_DEFAULT "None"
 #else
 #define MOVEAXIS_DEFAULT "Y-Axis"
 #define SIDEAXIS_DEFAULT "X-Axis"

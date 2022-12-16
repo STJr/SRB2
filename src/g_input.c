@@ -1377,15 +1377,17 @@ void G_DefineDefaultControls(void)
 		gamecontroldefault[i][GC_CUSTOM1    ][1] = GAMEPAD_KEY(B); // B
 		gamecontroldefault[i][GC_CUSTOM2    ][1] = GAMEPAD_KEY(Y); // Y
 		gamecontroldefault[i][GC_CUSTOM3    ][1] = GAMEPAD_KEY(LEFTSTICK); // Left Stick
-		gamecontroldefault[i][GC_CENTERVIEW ][1] = GAMEPAD_KEY(RIGHTSTICK); // Right Stick
-		gamecontroldefault[i][GC_WEAPONPREV ][1] = GAMEPAD_KEY(LEFTSHOULDER); // LB
-		gamecontroldefault[i][GC_WEAPONNEXT ][1] = GAMEPAD_KEY(RIGHTSHOULDER); // RB
+		gamecontroldefault[i][GC_CENTERVIEW ][1] = GAMEPAD_KEY(RIGHTSHOULDER); // R1
+		gamecontroldefault[i][GC_CAMTOGGLE  ][1] = GAMEPAD_KEY(LEFTSHOULDER); // L1
 		gamecontroldefault[i][GC_SCREENSHOT ][1] = GAMEPAD_KEY(BACK); // Back
 		gamecontroldefault[i][GC_SYSTEMMENU ][0] = GAMEPAD_KEY(START); // Start
-		gamecontroldefault[i][GC_CAMTOGGLE  ][1] = GAMEPAD_KEY(DPAD_UP); // D-Pad Up
-		gamecontroldefault[i][GC_VIEWPOINTNEXT][1] = GAMEPAD_KEY(DPAD_DOWN); // D-Pad Down
-		gamecontroldefault[i][GC_TOSSFLAG   ][1] = GAMEPAD_KEY(DPAD_LEFT); // D-Pad Left
-		gamecontroldefault[i][GC_SCORES     ][1] = GAMEPAD_KEY(DPAD_RIGHT); // D-Pad Right
+		gamecontroldefault[i][GC_TOSSFLAG   ][1] = GAMEPAD_KEY(DPAD_UP); // D-Pad Up
+		gamecontroldefault[i][GC_WEAPONPREV ][1] = GAMEPAD_KEY(DPAD_LEFT); // D-Pad Left
+		gamecontroldefault[i][GC_WEAPONNEXT ][1] = GAMEPAD_KEY(DPAD_RIGHT); // D-Pad Right
+		gamecontroldefault[i][GC_SCORES     ][1] = GAMEPAD_KEY(DPAD_DOWN); // D-Pad Down
+		gamecontroldefault[i][GC_VIEWPOINTNEXT][1] = GAMEPAD_KEY(RIGHTSTICK); // Right Stick
+		gamecontroldefault[i][GC_FIRE       ][1] = GAMEPAD_AXIS(TRIGGERRIGHT); // R2
+		gamecontroldefault[i][GC_FIRENORMAL ][1] = GAMEPAD_AXIS(TRIGGERLEFT); // L2
 
 		// Second player only has gamepad defaults
 		gamecontrolbisdefault[i][GC_JUMP       ][1] = GAMEPAD_KEY(A); // A
@@ -1393,15 +1395,17 @@ void G_DefineDefaultControls(void)
 		gamecontrolbisdefault[i][GC_CUSTOM1    ][1] = GAMEPAD_KEY(B); // B
 		gamecontrolbisdefault[i][GC_CUSTOM2    ][1] = GAMEPAD_KEY(Y); // Y
 		gamecontrolbisdefault[i][GC_CUSTOM3    ][1] = GAMEPAD_KEY(LEFTSTICK); // Left Stick
-		gamecontrolbisdefault[i][GC_CENTERVIEW ][1] = GAMEPAD_KEY(RIGHTSTICK); // Right Stick
-		gamecontrolbisdefault[i][GC_WEAPONPREV ][1] = GAMEPAD_KEY(LEFTSHOULDER); // LB
-		gamecontrolbisdefault[i][GC_WEAPONNEXT ][1] = GAMEPAD_KEY(RIGHTSHOULDER); // RB
+		gamecontrolbisdefault[i][GC_CENTERVIEW ][1] = GAMEPAD_KEY(RIGHTSHOULDER); // R1
+		gamecontrolbisdefault[i][GC_CAMTOGGLE  ][1] = GAMEPAD_KEY(LEFTSHOULDER); // L1
 		gamecontrolbisdefault[i][GC_SCREENSHOT ][1] = GAMEPAD_KEY(BACK); // Back
 		//gamecontrolbisdefault[i][GC_SYSTEMMENU ][0] = GAMEPAD_KEY(START); // Start
-		gamecontrolbisdefault[i][GC_CAMTOGGLE  ][1] = GAMEPAD_KEY(DPAD_UP); // D-Pad Up
-		gamecontrolbisdefault[i][GC_VIEWPOINTNEXT][1] = GAMEPAD_KEY(DPAD_DOWN); // D-Pad Down
-		gamecontrolbisdefault[i][GC_TOSSFLAG   ][1] = GAMEPAD_KEY(DPAD_LEFT); // D-Pad Left
-		//gamecontrolbisdefault[i][GC_SCORES     ][1] = GAMEPAD_KEY(DPAD_RIGHT); // D-Pad Right
+		gamecontrolbisdefault[i][GC_TOSSFLAG   ][1] = GAMEPAD_KEY(DPAD_UP); // D-Pad Up
+		gamecontrolbisdefault[i][GC_WEAPONPREV ][1] = GAMEPAD_KEY(DPAD_LEFT); // D-Pad Left
+		gamecontrolbisdefault[i][GC_WEAPONNEXT ][1] = GAMEPAD_KEY(DPAD_RIGHT); // D-Pad Right
+		//gamecontrolbisdefault[i][GC_SCORES     ][1] = GAMEPAD_KEY(DPAD_DOWN); // D-Pad Down
+		gamecontrolbisdefault[i][GC_VIEWPOINTNEXT][1] = GAMEPAD_KEY(RIGHTSTICK); // Right Stick
+		gamecontrolbisdefault[i][GC_FIRE       ][1] = GAMEPAD_AXIS(TRIGGERRIGHT); // R2
+		gamecontrolbisdefault[i][GC_FIRENORMAL ][1] = GAMEPAD_AXIS(TRIGGERLEFT); // L2
 	}
 }
 
