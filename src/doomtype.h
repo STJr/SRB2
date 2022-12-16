@@ -139,7 +139,7 @@ size_t strlcpy(char *dst, const char *src, size_t siz);
 #ifndef _WIN32
 typedef int32_t boolean;
 #else
-#define BOOL boolean
+#define boolean BOOL
 #endif
 
 #ifndef __cplusplus
