@@ -109,9 +109,12 @@ add_executable(SRB2SDL2 MACOSX_BUNDLE WIN32
 	lua_inputlib.c
 )
 
-if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows" AND NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}" AND NOT "${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}")
-	# On MinGW with internal libraries, link the standard library statically
-	target_link_options(SRB2SDL2 PRIVATE "-static")
+if("${CMAKE_COMPILER_IS_GNUCC}" AND "${CMAKE_SYSTEM_NAME}" MATCHES "Windows")
+	target_link_options(SRB2SDL2 PRIVATE "-Wl,--disable-dynamicbase")
+	if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}" AND NOT "${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}")
+		# On MinGW with internal libraries, link the standard library statically
+		target_link_options(SRB2SDL2 PRIVATE "-static")
+	endif()
 endif()
 
 target_compile_features(SRB2SDL2 PRIVATE c_std_11 cxx_std_17)
