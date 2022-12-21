@@ -12969,7 +12969,7 @@ static void M_ChangeControlResponse(event_t *ev)
 				setupcontrols[control][1] = KEY_NULL;  //replace key 1,clear key2
 			}
 
-			G_CheckDoubleUsage(ch, true);
+			G_CheckDoubleUsage(ch, true, setupcontrols_secondaryplayer ? 2 : 1);
 			setupcontrols[control][found] = ch;
 		}
 

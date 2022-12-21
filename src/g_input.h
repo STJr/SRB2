@@ -355,7 +355,7 @@ void G_DefineDefaultControls(void);
 INT32 G_GetControlScheme(INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
 void G_CopyControls(INT32 (*setupcontrols)[2], INT32 (*fromcontrols)[2], const INT32 *gclist, INT32 gclen);
 void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis)[2]);
-INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify);
+INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify, UINT8 player);
 
 // sets the members of a mouse_t given position deltas
 void G_SetMouseDeltas(INT32 dx, INT32 dy, UINT8 ssplayer);
