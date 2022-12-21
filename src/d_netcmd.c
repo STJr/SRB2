@@ -841,7 +841,6 @@ void D_RegisterClientCommands(void)
 #if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 	CV_RegisterVar(&cv_mouse2opt);
 #endif
-	CV_RegisterVar(&cv_controlperkey);
 
 	CV_RegisterVar(&cv_usemouse);
 	CV_RegisterVar(&cv_usemouse2);

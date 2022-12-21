@@ -249,7 +249,6 @@ typedef enum
 // mouse values are used once
 extern consvar_t cv_mousesens, cv_mouseysens;
 extern consvar_t cv_mousesens2, cv_mouseysens2;
-extern consvar_t cv_controlperkey;
 
 typedef struct
 {

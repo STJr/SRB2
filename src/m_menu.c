@@ -1070,7 +1070,6 @@ static menuitem_t OP_MainMenu[] =
 {
 	{IT_SUBMENU | IT_STRING, NULL, "Player 1 Controls...", &OP_P1ControlsDef,   10},
 	{IT_SUBMENU | IT_STRING, NULL, "Player 2 Controls...", &OP_P2ControlsDef,   20},
-	{IT_CVAR    | IT_STRING, NULL, "Controls per key",     &cv_controlperkey,   30},
 
 	{IT_CALL    | IT_STRING, NULL, "Video Options...",     M_VideoOptions,      50},
 	{IT_SUBMENU | IT_STRING, NULL, "Sound Options...",     &OP_SoundOptionsDef, 60},
