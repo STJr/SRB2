@@ -1506,7 +1506,7 @@ INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify, UINT8 player)
 	return result;
 }
 
-static INT32 G_FilterSpecialKeys(INT32 keyidx, INT32 player, INT32 *keynum1, INT32 *keynum2)
+static INT32 G_FilterSpecialKeys(INT32 keyidx, INT32 *keynum1, INT32 *keynum2)
 {
 	// Special case: ignore KEY_PAUSE because it's hardcoded
 	if (keyidx == 0 && *keynum1 == KEY_PAUSE)
@@ -1529,11 +1529,6 @@ static INT32 G_FilterSpecialKeys(INT32 keyidx, INT32 player, INT32 *keynum1, INT
 		return *keynum1;
 }
 
-static INT32 G_TranslateJoyKeys(INT32 *keynum1, INT32 *keynum2)
-{
-
-}
-
 static void setcontrol(INT32 (*gc)[2])
 {
 	INT32 numctrl;
@@ -1554,7 +1549,7 @@ static void setcontrol(INT32 (*gc)[2])
 	}
 	keynum1 = G_KeyNameToNum(COM_Argv(2));
 	keynum2 = G_KeyNameToNum(COM_Argv(3));
-	keynum = G_FilterSpecialKeys(0, player, &keynum1, &keynum2);
+	keynum = G_FilterSpecialKeys(0, &keynum1, &keynum2);
 
 	if (keynum >= 0)
 	{
@@ -1565,7 +1560,7 @@ static void setcontrol(INT32 (*gc)[2])
 		{
 			keynum1 = keynum2; // push down keynum2
 			keynum2 = 0;
-			keynum = G_FilterSpecialKeys(0, player, &keynum1, &keynum2);
+			keynum = G_FilterSpecialKeys(0, &keynum1, &keynum2);
 			if (keynum >= 0)
 				(void)G_CheckDoubleUsage(keynum, true, player+1);
 		}
@@ -1576,7 +1571,7 @@ static void setcontrol(INT32 (*gc)[2])
 
 	if (keynum2)
 	{
-		keynum = G_FilterSpecialKeys(1, player, &keynum1, &keynum2);
+		keynum = G_FilterSpecialKeys(1, &keynum1, &keynum2);
 		if (keynum >= 0)
 		{
 			if (keynum != gc[numctrl][0])
