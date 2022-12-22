@@ -960,9 +960,6 @@ static keyname_t keynames[] =
 	DEF_GAMEPAD_AXIS(TRIGGERLEFT, "left trigger"),
 	DEF_GAMEPAD_AXIS(TRIGGERRIGHT, "right trigger"),
 
-#undef DEF_GAMEPAD_NAME
-#undef DEF_GAMEPAD_AXIS
-
 	{KEY_DBLMOUSE1+0, "dblmouse1"},
 	{KEY_DBLMOUSE1+1, "dblmouse2"},
 	{KEY_DBLMOUSE1+2, "dblmouse3"},
@@ -981,7 +978,50 @@ static keyname_t keynames[] =
 	{KEY_DBL2MOUSE1+7, "dblsec_mouse8"}
 };
 
+static keyname_t oldjoynames[] =
+{
+	DEF_GAMEPAD_NAME(A, "joy1"),
+	DEF_GAMEPAD_NAME(B, "joy2"),
+	DEF_GAMEPAD_NAME(X, "joy3"),
+	DEF_GAMEPAD_NAME(Y, "joy4"),
+
+	DEF_GAMEPAD_NAME(BACK, "joy7"),
+	DEF_GAMEPAD_NAME(START, "joy8"),
+	DEF_GAMEPAD_NAME(LEFTSTICK, "joy9"),
+	DEF_GAMEPAD_NAME(RIGHTSTICK, "joy10"),
+
+	DEF_GAMEPAD_NAME(LEFTSHOULDER, "joy5"),
+	DEF_GAMEPAD_NAME(RIGHTSHOULDER, "joy6"),
+
+	DEF_GAMEPAD_NAME(DPAD_UP, "hatup"),
+	DEF_GAMEPAD_NAME(DPAD_DOWN, "hatdown"),
+	DEF_GAMEPAD_NAME(DPAD_LEFT, "hatleft"),
+	DEF_GAMEPAD_NAME(DPAD_RIGHT, "hatright"),
+
+	DEF_GAMEPAD_NAME(A, "sec_joy1"),
+	DEF_GAMEPAD_NAME(B, "sec_joy2"),
+	DEF_GAMEPAD_NAME(X, "sec_joy3"),
+	DEF_GAMEPAD_NAME(Y, "sec_joy4"),
+
+	DEF_GAMEPAD_NAME(BACK, "sec_joy7"),
+	DEF_GAMEPAD_NAME(START, "sec_joy8"),
+	DEF_GAMEPAD_NAME(LEFTSTICK, "sec_joy9"),
+	DEF_GAMEPAD_NAME(RIGHTSTICK, "sec_joy10"),
+
+	DEF_GAMEPAD_NAME(LEFTSHOULDER, "sec_joy5"),
+	DEF_GAMEPAD_NAME(RIGHTSHOULDER, "sec_joy6"),
+
+	DEF_GAMEPAD_NAME(DPAD_UP, "sec_hatup"),
+	DEF_GAMEPAD_NAME(DPAD_DOWN, "sec_hatdown"),
+	DEF_GAMEPAD_NAME(DPAD_LEFT, "sec_hatleft"),
+	DEF_GAMEPAD_NAME(DPAD_RIGHT, "sec_hatright"),
+};
+
+#undef DEF_GAMEPAD_NAME
+#undef DEF_GAMEPAD_AXIS
+
 #define NUMKEYNAMES (sizeof(keynames) / sizeof(keyname_t))
+#define NUMOLDJOYNAMES (sizeof(oldjoynames) / sizeof(keyname_t))
 
 static keyname_t displaykeynames[] =
 {
@@ -1269,6 +1309,10 @@ INT32 G_KeyNameToNum(const char *keystr)
 	for (j = 0; j < NUMKEYNAMES; j++)
 		if (!stricmp(keynames[j].name, keystr))
 			return keynames[j].keynum;
+
+	for (j = 0; j < NUMOLDJOYNAMES; j++)
+		if (!stricmp(oldjoynames[j].name, keystr))
+			return oldjoynames[j].keynum;
 
 	return 0;
 }
