@@ -1223,6 +1223,11 @@ void D_SRB2Main(void)
 	/* break the version string into version numbers, for netplay */
 	D_ConvertVersionNumbers();
 
+	if (!strcmp(compbranch, ""))
+	{
+		compbranch = "detached HEAD";
+	}
+
 	// Print GPL notice for our console users (Linux)
 	CONS_Printf(
 	"\n\nSonic Robo Blast 2\n"
