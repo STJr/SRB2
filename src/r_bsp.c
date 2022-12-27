@@ -399,8 +399,8 @@ static void R_AddLine(seg_t *line)
 		return;
 
 	// big room fix
-	angle1 = R_PointToAngleEx(viewx, viewy, line->v1->x, line->v1->y);
-	angle2 = R_PointToAngleEx(viewx, viewy, line->v2->x, line->v2->y);
+	angle1 = R_PointToAngle64(line->v1->x, line->v1->y);
+	angle2 = R_PointToAngle64(line->v2->x, line->v2->y);
 	curline = line;
 
 	// Clip to view edges.
@@ -620,8 +620,8 @@ static boolean R_CheckBBox(const fixed_t *bspcoord)
 	check = checkcoord[boxpos];
 
 	// big room fix
-	angle1 = R_PointToAngleEx(viewx, viewy, bspcoord[check[0]], bspcoord[check[1]]) - viewangle;
-	angle2 = R_PointToAngleEx(viewx, viewy, bspcoord[check[2]], bspcoord[check[3]]) - viewangle;
+	angle1 = R_PointToAngle64(bspcoord[check[0]], bspcoord[check[1]]) - viewangle;
+	angle2 = R_PointToAngle64(bspcoord[check[2]], bspcoord[check[3]]) - viewangle;
 
 	if ((signed)angle1 < (signed)angle2)
 	{
