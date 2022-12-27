@@ -72,12 +72,6 @@
 #include "m_perfstats.h"
 #include "m_random.h"
 
-#ifdef CMAKECONFIG
-#include "config.h"
-#else
-#include "config.h.in"
-#endif
-
 #ifdef HWRENDER
 #include "hardware/hw_main.h" // 3D View Rendering
 #endif

@@ -23,12 +23,6 @@
 /// \file
 /// \brief SRB2 system stuff for SDL
 
-#ifdef CMAKECONFIG
-#include "config.h"
-#else
-#include "../config.h.in"
-#endif
-
 #include <signal.h>
 
 #ifdef _WIN32
