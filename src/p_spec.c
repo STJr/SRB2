@@ -4579,6 +4579,9 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 	if (player->bot)
 		return;
 
+	if (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))
+		return;
+
 	// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
 	P_DoPlayerFinish(player);
 
