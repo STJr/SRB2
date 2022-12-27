@@ -258,68 +258,82 @@ SDL_bool framebuffer = SDL_FALSE;
 UINT8 keyboard_started = false;
 
 #ifdef UNIXBACKTRACE
-#define STDERR_WRITE(string) if (fd != -1) I_OutputMsg("%s", string)
-#define CRASHLOG_WRITE(string) if (fd != -1) write(fd, string, strlen(string))
-#define CRASHLOG_STDERR_WRITE(string) \
-	if (fd != -1)\
-		write(fd, string, strlen(string));\
-	I_OutputMsg("%s", string)
+
+// NOTE: if written ends up ever being -1, all further writes end up being cancelled.
+// i figure an error is a reason to stop writing...
+#define WRITE_FILE(string) \
+	sourcelen = strlen(string); \
+	while (fd != -1 && (written != -1 && errno != EINTR) && written < sourcelen) \
+		written = write(fd, string, sourcelen);
+
+#define WRITE_STDERR(string) \
+	I_OutputMsg("%s", string);
+
+#define WRITE_ALL(string) \
+	WRITE_FILE(string); \
+	WRITE_STDERR(string);
 
 static void write_backtrace(INT32 signal)
 {
 	int fd = -1;
-	size_t size;
+	ssize_t written = 0;
+	ssize_t sourcelen = 0;
 	time_t rawtime;
 	struct tm timeinfo;
+	size_t size;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
-	void *array[BT_SIZE];
+	void *funcptrs[BT_SIZE];
 	char timestr[STR_SIZE];
 
-	const char *error = "An error occurred within SRB2! Send this stack trace to someone who can help!\n";
-	const char *error2 = "(Or find crash-log.txt in your SRB2 directory.)\n"; // Shown only to stderr.
+	const char *filename = va("%s" PATHSEP "%s", srb2home, "crash-log.txt");
 
-	fd = open(va("%s" PATHSEP "%s", srb2home, "crash-log.txt"), O_CREAT|O_APPEND|O_RDWR, S_IRUSR|S_IWUSR);
+	fd = open(filename, O_CREAT|O_APPEND|O_RDWR, S_IRUSR|S_IWUSR);
 
-	if (fd == -1)
-		I_OutputMsg("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
+	if (fd == -1) // File handle error
+		WRITE_STDERR("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
 
 	// Get the current time as a string.
 	time(&rawtime);
 	localtime_r(&rawtime, &timeinfo);
 	strftime(timestr, STR_SIZE, "%a, %d %b %Y %T %z", &timeinfo);
 
-	CRASHLOG_WRITE("------------------------\n"); // Nice looking seperator
+	WRITE_FILE("------------------------\n"); // Nice looking seperator
 
-	CRASHLOG_STDERR_WRITE("\n"); // Newline to look nice for both outputs.
-	CRASHLOG_STDERR_WRITE(error); // "Oops, SRB2 crashed" message
-	STDERR_WRITE(error2); // Tell the user where the crash log is.
+	WRITE_ALL("\n"); // Newline to look nice for both outputs.
+	WRITE_ALL("An error occurred within SRB2! Send this stack trace to someone who can help!\n");
+
+	if (fd != -1) // If the crash log exists,
+		WRITE_STDERR("(Or find crash-log.txt in your SRB2 directory.)\n"); // tell the user where the crash log is.
 
 	// Tell the log when we crashed.
-	CRASHLOG_WRITE("Time of crash: ");
-	CRASHLOG_WRITE(timestr);
-	CRASHLOG_WRITE("\n");
+	WRITE_FILE("Time of crash: ");
+	WRITE_FILE(timestr);
+	WRITE_FILE("\n");
 
 	// Give the crash log the cause and a nice 'Backtrace:' thing
 	// The signal is given to the user when the parent process sees we crashed.
-	CRASHLOG_WRITE("Cause: ");
-	CRASHLOG_WRITE(strsignal(signal));
-	CRASHLOG_WRITE("\n"); // Newline for the signal name
+	WRITE_FILE("Cause: ");
+	WRITE_FILE(strsignal(signal));
+	WRITE_FILE("\n"); // Newline for the signal name
 
-	CRASHLOG_STDERR_WRITE("\nBacktrace:\n");
+	WRITE_ALL("\nBacktrace:\n");
 
 	// Flood the output and log with the backtrace
-	size = backtrace(array, BT_SIZE);
-	backtrace_symbols_fd(array, size, fd);
-	backtrace_symbols_fd(array, size, STDERR_FILENO);
+	size = backtrace(funcptrs, BT_SIZE);
+	backtrace_symbols_fd(funcptrs, size, fd);
+	backtrace_symbols_fd(funcptrs, size, STDERR_FILENO);
 
-	CRASHLOG_WRITE("\n"); // Write another newline to the log so it looks nice :)
+	WRITE_FILE("\n"); // Write another newline to the log so it looks nice :)
 
-	close(fd);
+	if (fd != -1) {
+		fsync(fd); // reaaaaally make sure we got that data written.
+		close(fd);
+	}
 }
-#undef STDERR_WRITE
-#undef CRASHLOG_WRITE
-#undef CRASHLOG_STDERR_WRITE
+#undef WRITE_FILE
+#undef WRITE_STDERR
+#undef WRITE_ALL
 #endif // UNIXBACKTRACE
 
 static void I_ReportSignal(int num, int coredumped)
