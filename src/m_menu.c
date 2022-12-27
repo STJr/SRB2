@@ -1543,7 +1543,8 @@ static menuitem_t OP_DataOptionsMenu[] =
 	{IT_STRING | IT_SUBMENU, NULL, "\x85" "Erase Data...",  &OP_EraseDataDef,    40},
 };
 
-enum{
+enum
+{
 	opdataaddon,
 	opdatascreenshot,
 	opdataerase
