@@ -18,31 +18,31 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
-#define SNAKE_SPEED 5
+#define SPEED 5
 
-#define SNAKE_NUM_BLOCKS_X 20
-#define SNAKE_NUM_BLOCKS_Y 10
-#define SNAKE_BLOCK_SIZE 12
-#define SNAKE_BORDER_SIZE 12
+#define NUM_BLOCKS_X 20
+#define NUM_BLOCKS_Y 10
+#define BLOCK_SIZE 12
+#define BORDER_SIZE 12
 
-#define SNAKE_MAP_WIDTH  (SNAKE_NUM_BLOCKS_X * SNAKE_BLOCK_SIZE)
-#define SNAKE_MAP_HEIGHT (SNAKE_NUM_BLOCKS_Y * SNAKE_BLOCK_SIZE)
+#define MAP_WIDTH  (NUM_BLOCKS_X * BLOCK_SIZE)
+#define MAP_HEIGHT (NUM_BLOCKS_Y * BLOCK_SIZE)
 
-#define SNAKE_LEFT_X ((BASEVIDWIDTH - SNAKE_MAP_WIDTH) / 2 - SNAKE_BORDER_SIZE)
-#define SNAKE_RIGHT_X (SNAKE_LEFT_X + SNAKE_MAP_WIDTH + SNAKE_BORDER_SIZE * 2 - 1)
-#define SNAKE_BOTTOM_Y (BASEVIDHEIGHT - 48)
-#define SNAKE_TOP_Y (SNAKE_BOTTOM_Y - SNAKE_MAP_HEIGHT - SNAKE_BORDER_SIZE * 2 + 1)
+#define LEFT_X ((BASEVIDWIDTH - MAP_WIDTH) / 2 - BORDER_SIZE)
+#define RIGHT_X (LEFT_X + MAP_WIDTH + BORDER_SIZE * 2 - 1)
+#define BOTTOM_Y (BASEVIDHEIGHT - 48)
+#define TOP_Y (BOTTOM_Y - MAP_HEIGHT - BORDER_SIZE * 2 + 1)
 
-enum snake_bonustype_s {
-	SNAKE_BONUS_NONE = 0,
-	SNAKE_BONUS_SLOW,
-	SNAKE_BONUS_FAST,
-	SNAKE_BONUS_GHOST,
-	SNAKE_BONUS_NUKE,
-	SNAKE_BONUS_SCISSORS,
-	SNAKE_BONUS_REVERSE,
-	SNAKE_BONUS_EGGMAN,
-	SNAKE_NUM_BONUSES,
+enum bonustype_s {
+	BONUS_NONE = 0,
+	BONUS_SLOW,
+	BONUS_FAST,
+	BONUS_GHOST,
+	BONUS_NUKE,
+	BONUS_SCISSORS,
+	BONUS_REVERSE,
+	BONUS_EGGMAN,
+	NUM_BONUSES,
 };
 
 typedef struct snake_s
@@ -55,21 +55,21 @@ typedef struct snake_s
 	UINT8 background;
 
 	UINT16 snakelength;
-	enum snake_bonustype_s snakebonus;
+	enum bonustype_s snakebonus;
 	tic_t snakebonustime;
-	UINT8 snakex[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
-	UINT8 snakey[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
-	UINT8 snakedir[SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y];
+	UINT8 snakex[NUM_BLOCKS_X * NUM_BLOCKS_Y];
+	UINT8 snakey[NUM_BLOCKS_X * NUM_BLOCKS_Y];
+	UINT8 snakedir[NUM_BLOCKS_X * NUM_BLOCKS_Y];
 
 	UINT8 applex;
 	UINT8 appley;
 
-	enum snake_bonustype_s bonustype;
+	enum bonustype_s bonustype;
 	UINT8 bonusx;
 	UINT8 bonusy;
 } snake_t;
 
-static const char *snake_bonuspatches[] = {
+static const char *bonuspatches[] = {
 	NULL,
 	"DL_SLOW",
 	"TVSSC0",
@@ -80,7 +80,7 @@ static const char *snake_bonuspatches[] = {
 	"TVEGC0",
 };
 
-static const char *snake_backgrounds[] = {
+static const char *backgrounds[] = {
 	"RVPUMICF",
 	"FRSTRCKF",
 	"TAR",
@@ -93,29 +93,29 @@ static const char *snake_backgrounds[] = {
 	"RVZGRS04",
 };
 
-static void Snake_Initialise(snake_t *snake)
+static void Initialise(snake_t *snake)
 {
 	snake->paused = false;
 	snake->pausepressed = false;
 	snake->time = 0;
-	snake->nextupdate = SNAKE_SPEED;
+	snake->nextupdate = SPEED;
 	snake->gameover = false;
-	snake->background = M_RandomKey(sizeof(snake_backgrounds) / sizeof(*snake_backgrounds));
+	snake->background = M_RandomKey(sizeof(backgrounds) / sizeof(*backgrounds));
 
 	snake->snakelength = 1;
-	snake->snakebonus = SNAKE_BONUS_NONE;
-	snake->snakex[0] = M_RandomKey(SNAKE_NUM_BLOCKS_X);
-	snake->snakey[0] = M_RandomKey(SNAKE_NUM_BLOCKS_Y);
+	snake->snakebonus = BONUS_NONE;
+	snake->snakex[0] = M_RandomKey(NUM_BLOCKS_X);
+	snake->snakey[0] = M_RandomKey(NUM_BLOCKS_Y);
 	snake->snakedir[0] = 0;
 	snake->snakedir[1] = 0;
 
-	snake->applex = M_RandomKey(SNAKE_NUM_BLOCKS_X);
-	snake->appley = M_RandomKey(SNAKE_NUM_BLOCKS_Y);
+	snake->applex = M_RandomKey(NUM_BLOCKS_X);
+	snake->appley = M_RandomKey(NUM_BLOCKS_Y);
 
-	snake->bonustype = SNAKE_BONUS_NONE;
+	snake->bonustype = BONUS_NONE;
 }
 
-static UINT8 Snake_GetOppositeDir(UINT8 dir)
+static UINT8 GetOppositeDir(UINT8 dir)
 {
 	if (dir == 1 || dir == 3)
 		return dir + 1;
@@ -125,22 +125,22 @@ static UINT8 Snake_GetOppositeDir(UINT8 dir)
 		return 12 + 5 - dir;
 }
 
-static void Snake_FindFreeSlot(snake_t *snake, UINT8 *freex, UINT8 *freey, UINT8 headx, UINT8 heady)
+static void FindFreeSlot(snake_t *snake, UINT8 *freex, UINT8 *freey, UINT8 headx, UINT8 heady)
 {
 	UINT8 x, y;
 	UINT16 i;
 
 	do
 	{
-		x = M_RandomKey(SNAKE_NUM_BLOCKS_X);
-		y = M_RandomKey(SNAKE_NUM_BLOCKS_Y);
+		x = M_RandomKey(NUM_BLOCKS_X);
+		y = M_RandomKey(NUM_BLOCKS_Y);
 
 		for (i = 0; i < snake->snakelength; i++)
 			if (x == snake->snakex[i] && y == snake->snakey[i])
 				break;
 	} while (i < snake->snakelength || (x == headx && y == heady)
 		|| (x == snake->applex && y == snake->appley)
-		|| (snake->bonustype != SNAKE_BONUS_NONE && x == snake->bonusx && y == snake->bonusy));
+		|| (snake->bonustype != BONUS_NONE && x == snake->bonusx && y == snake->bonusy));
 
 	*freex = x;
 	*freey = y;
@@ -151,7 +151,7 @@ void Snake_Allocate(void **opaque)
 	if (*opaque)
 		Snake_Free(opaque);
 	*opaque = malloc(sizeof(snake_t));
-	Snake_Initialise(*opaque);
+	Initialise(*opaque);
 }
 
 void Snake_Update(void *opaque)
@@ -166,7 +166,7 @@ void Snake_Update(void *opaque)
 	// Handle retry
 	if (snake->gameover && (G_PlayerInputDown(0, GC_JUMP) || gamekeydown[KEY_ENTER]))
 	{
-		Snake_Initialise(snake);
+		Initialise(snake);
 		snake->pausepressed = true; // Avoid accidental pause on respawn
 	}
 
@@ -216,18 +216,18 @@ void Snake_Update(void *opaque)
 	{
 		snake->snakebonustime--;
 		if (!snake->snakebonustime)
-			snake->snakebonus = SNAKE_BONUS_NONE;
+			snake->snakebonus = BONUS_NONE;
 	}
 
 	snake->nextupdate--;
 	if (snake->nextupdate)
 		return;
-	if (snake->snakebonus == SNAKE_BONUS_SLOW)
-		snake->nextupdate = SNAKE_SPEED * 2;
-	else if (snake->snakebonus == SNAKE_BONUS_FAST)
-		snake->nextupdate = SNAKE_SPEED * 2 / 3;
+	if (snake->snakebonus == BONUS_SLOW)
+		snake->nextupdate = SPEED * 2;
+	else if (snake->snakebonus == BONUS_FAST)
+		snake->nextupdate = SPEED * 2 / 3;
 	else
-		snake->nextupdate = SNAKE_SPEED;
+		snake->nextupdate = SPEED;
 
 	if (snake->gameover)
 		return;
@@ -242,7 +242,7 @@ void Snake_Update(void *opaque)
 				snake->gameover = true;
 			break;
 		case 2:
-			if (x < SNAKE_NUM_BLOCKS_X - 1)
+			if (x < NUM_BLOCKS_X - 1)
 				x++;
 			else
 				snake->gameover = true;
@@ -254,7 +254,7 @@ void Snake_Update(void *opaque)
 				snake->gameover = true;
 			break;
 		case 4:
-			if (y < SNAKE_NUM_BLOCKS_Y - 1)
+			if (y < NUM_BLOCKS_Y - 1)
 				y++;
 			else
 				snake->gameover = true;
@@ -262,13 +262,13 @@ void Snake_Update(void *opaque)
 	}
 
 	// Check collision with snake
-	if (snake->snakebonus != SNAKE_BONUS_GHOST)
+	if (snake->snakebonus != BONUS_GHOST)
 		for (i = 1; i < snake->snakelength - 1; i++)
 			if (x == snake->snakex[i] && y == snake->snakey[i])
 			{
-				if (snake->snakebonus == SNAKE_BONUS_SCISSORS)
+				if (snake->snakebonus == BONUS_SCISSORS)
 				{
-					snake->snakebonus = SNAKE_BONUS_NONE;
+					snake->snakebonus = BONUS_NONE;
 					snake->snakelength = i;
 					S_StartSound(NULL, sfx_adderr);
 				}
@@ -285,7 +285,7 @@ void Snake_Update(void *opaque)
 	// Check collision with apple
 	if (x == snake->applex && y == snake->appley)
 	{
-		if (snake->snakelength + 3 < SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y)
+		if (snake->snakelength + 3 < NUM_BLOCKS_X * NUM_BLOCKS_Y)
 		{
 			snake->snakelength++;
 			snake->snakex  [snake->snakelength - 1] = snake->snakex  [snake->snakelength - 2];
@@ -294,18 +294,18 @@ void Snake_Update(void *opaque)
 		}
 
 		// Spawn new apple
-		Snake_FindFreeSlot(snake, &snake->applex, &snake->appley, x, y);
+		FindFreeSlot(snake, &snake->applex, &snake->appley, x, y);
 
 		// Spawn new bonus
 		if (!(snake->snakelength % 5))
 		{
 			do
 			{
-				snake->bonustype = M_RandomKey(SNAKE_NUM_BONUSES - 1) + 1;
-			} while (snake->snakelength > SNAKE_NUM_BLOCKS_X * SNAKE_NUM_BLOCKS_Y * 3 / 4
-				&& (snake->bonustype == SNAKE_BONUS_EGGMAN || snake->bonustype == SNAKE_BONUS_FAST || snake->bonustype == SNAKE_BONUS_REVERSE));
+				snake->bonustype = M_RandomKey(NUM_BONUSES - 1) + 1;
+			} while (snake->snakelength > NUM_BLOCKS_X * NUM_BLOCKS_Y * 3 / 4
+				&& (snake->bonustype == BONUS_EGGMAN || snake->bonustype == BONUS_FAST || snake->bonustype == BONUS_REVERSE));
 
-			Snake_FindFreeSlot(snake, &snake->bonusx, &snake->bonusy, x, y);
+			FindFreeSlot(snake, &snake->bonusx, &snake->bonusy, x, y);
 		}
 
 		S_StartSound(NULL, sfx_s3k6b);
@@ -350,25 +350,25 @@ void Snake_Update(void *opaque)
 	snake->snakey[0] = y;
 
 	// Check collision with bonus
-	if (snake->bonustype != SNAKE_BONUS_NONE && x == snake->bonusx && y == snake->bonusy)
+	if (snake->bonustype != BONUS_NONE && x == snake->bonusx && y == snake->bonusy)
 	{
 		S_StartSound(NULL, sfx_ncchip);
 
 		switch (snake->bonustype)
 		{
-		case SNAKE_BONUS_SLOW:
-			snake->snakebonus = SNAKE_BONUS_SLOW;
+		case BONUS_SLOW:
+			snake->snakebonus = BONUS_SLOW;
 			snake->snakebonustime = 20 * TICRATE;
 			break;
-		case SNAKE_BONUS_FAST:
-			snake->snakebonus = SNAKE_BONUS_FAST;
+		case BONUS_FAST:
+			snake->snakebonus = BONUS_FAST;
 			snake->snakebonustime = 20 * TICRATE;
 			break;
-		case SNAKE_BONUS_GHOST:
-			snake->snakebonus = SNAKE_BONUS_GHOST;
+		case BONUS_GHOST:
+			snake->snakebonus = BONUS_GHOST;
 			snake->snakebonustime = 10 * TICRATE;
 			break;
-		case SNAKE_BONUS_NUKE:
+		case BONUS_NUKE:
 			for (i = 0; i < snake->snakelength; i++)
 			{
 				snake->snakex  [i] = snake->snakex  [0];
@@ -378,11 +378,11 @@ void Snake_Update(void *opaque)
 
 			S_StartSound(NULL, sfx_bkpoof);
 			break;
-		case SNAKE_BONUS_SCISSORS:
-			snake->snakebonus = SNAKE_BONUS_SCISSORS;
+		case BONUS_SCISSORS:
+			snake->snakebonus = BONUS_SCISSORS;
 			snake->snakebonustime = 60 * TICRATE;
 			break;
-		case SNAKE_BONUS_REVERSE:
+		case BONUS_REVERSE:
 			for (i = 0; i < (snake->snakelength + 1) / 2; i++)
 			{
 				UINT16 i2 = snake->snakelength - 1 - i;
@@ -393,10 +393,10 @@ void Snake_Update(void *opaque)
 				// Swap first segment with last segment
 				snake->snakex  [i] = snake->snakex  [i2];
 				snake->snakey  [i] = snake->snakey  [i2];
-				snake->snakedir[i] = Snake_GetOppositeDir(snake->snakedir[i2]);
+				snake->snakedir[i] = GetOppositeDir(snake->snakedir[i2]);
 				snake->snakex  [i2] = tmpx;
 				snake->snakey  [i2] = tmpy;
-				snake->snakedir[i2] = Snake_GetOppositeDir(tmpdir);
+				snake->snakedir[i2] = GetOppositeDir(tmpdir);
 			}
 
 			snake->snakedir[0] = 0;
@@ -404,14 +404,14 @@ void Snake_Update(void *opaque)
 			S_StartSound(NULL, sfx_gravch);
 			break;
 		default:
-			if (snake->snakebonus != SNAKE_BONUS_GHOST)
+			if (snake->snakebonus != BONUS_GHOST)
 			{
 				snake->gameover = true;
 				S_StartSound(NULL, sfx_lose);
 			}
 		}
 
-		snake->bonustype = SNAKE_BONUS_NONE;
+		snake->bonustype = BONUS_NONE;
 	}
 }
 
@@ -425,23 +425,23 @@ void Snake_Draw(void *opaque)
 	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
 
 	V_DrawFlatFill(
-		SNAKE_LEFT_X + SNAKE_BORDER_SIZE,
-		SNAKE_TOP_Y  + SNAKE_BORDER_SIZE,
-		SNAKE_MAP_WIDTH,
-		SNAKE_MAP_HEIGHT,
-		W_GetNumForName(snake_backgrounds[snake->background])
+		LEFT_X + BORDER_SIZE,
+		TOP_Y  + BORDER_SIZE,
+		MAP_WIDTH,
+		MAP_HEIGHT,
+		W_GetNumForName(backgrounds[snake->background])
 	);
 
 	// Borders
-	V_DrawFill(SNAKE_LEFT_X, SNAKE_TOP_Y, SNAKE_BORDER_SIZE + SNAKE_MAP_WIDTH, SNAKE_BORDER_SIZE, 242); // Top
-	V_DrawFill(SNAKE_LEFT_X + SNAKE_BORDER_SIZE + SNAKE_MAP_WIDTH, SNAKE_TOP_Y, SNAKE_BORDER_SIZE, SNAKE_BORDER_SIZE + SNAKE_MAP_HEIGHT, 242); // Right
-	V_DrawFill(SNAKE_LEFT_X + SNAKE_BORDER_SIZE, SNAKE_TOP_Y + SNAKE_BORDER_SIZE + SNAKE_MAP_HEIGHT, SNAKE_BORDER_SIZE + SNAKE_MAP_WIDTH, SNAKE_BORDER_SIZE, 242); // Bottom
-	V_DrawFill(SNAKE_LEFT_X, SNAKE_TOP_Y + SNAKE_BORDER_SIZE, SNAKE_BORDER_SIZE, SNAKE_BORDER_SIZE + SNAKE_MAP_HEIGHT, 242); // Left
+	V_DrawFill(LEFT_X, TOP_Y, BORDER_SIZE + MAP_WIDTH, BORDER_SIZE, 242); // Top
+	V_DrawFill(LEFT_X + BORDER_SIZE + MAP_WIDTH, TOP_Y, BORDER_SIZE, BORDER_SIZE + MAP_HEIGHT, 242); // Right
+	V_DrawFill(LEFT_X + BORDER_SIZE, TOP_Y + BORDER_SIZE + MAP_HEIGHT, BORDER_SIZE + MAP_WIDTH, BORDER_SIZE, 242); // Bottom
+	V_DrawFill(LEFT_X, TOP_Y + BORDER_SIZE, BORDER_SIZE, BORDER_SIZE + MAP_HEIGHT, 242); // Left
 
 	// Apple
 	V_DrawFixedPatch(
-		(SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->applex * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
-		(SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->appley * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
+		(LEFT_X + BORDER_SIZE + snake->applex * BLOCK_SIZE + BLOCK_SIZE / 2) * FRACUNIT,
+		(TOP_Y  + BORDER_SIZE + snake->appley * BLOCK_SIZE + BLOCK_SIZE / 2) * FRACUNIT,
 		FRACUNIT / 4,
 		0,
 		W_CachePatchLongName("DL_APPLE", PU_HUDGFX),
@@ -449,13 +449,13 @@ void Snake_Draw(void *opaque)
 	);
 
 	// Bonus
-	if (snake->bonustype != SNAKE_BONUS_NONE)
+	if (snake->bonustype != BONUS_NONE)
 		V_DrawFixedPatch(
-			(SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->bonusx * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2    ) * FRACUNIT,
-			(SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->bonusy * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2 + 4) * FRACUNIT,
+			(LEFT_X + BORDER_SIZE + snake->bonusx * BLOCK_SIZE + BLOCK_SIZE / 2    ) * FRACUNIT,
+			(TOP_Y  + BORDER_SIZE + snake->bonusy * BLOCK_SIZE + BLOCK_SIZE / 2 + 4) * FRACUNIT,
 			FRACUNIT / 2,
 			0,
-			W_CachePatchLongName(snake_bonuspatches[snake->bonustype], PU_HUDGFX),
+			W_CachePatchLongName(bonuspatches[snake->bonustype], PU_HUDGFX),
 			NULL
 		);
 
@@ -499,10 +499,10 @@ void Snake_Draw(void *opaque)
 			}
 
 			V_DrawFixedPatch(
-				(SNAKE_LEFT_X + SNAKE_BORDER_SIZE + snake->snakex[i] * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
-				(SNAKE_TOP_Y  + SNAKE_BORDER_SIZE + snake->snakey[i] * SNAKE_BLOCK_SIZE + SNAKE_BLOCK_SIZE / 2) * FRACUNIT,
+				(LEFT_X + BORDER_SIZE + snake->snakex[i] * BLOCK_SIZE + BLOCK_SIZE / 2) * FRACUNIT,
+				(TOP_Y  + BORDER_SIZE + snake->snakey[i] * BLOCK_SIZE + BLOCK_SIZE / 2) * FRACUNIT,
 				i == 0 && dir == 0 ? FRACUNIT / 5 : FRACUNIT / 2,
-				snake->snakebonus == SNAKE_BONUS_GHOST ? V_TRANSLUCENT : 0,
+				snake->snakebonus == BONUS_GHOST ? V_TRANSLUCENT : 0,
 				W_CachePatchLongName(patchname, PU_HUDGFX),
 				NULL
 			);
@@ -510,17 +510,17 @@ void Snake_Draw(void *opaque)
 	}
 
 	// Length
-	V_DrawString(SNAKE_RIGHT_X + 4, SNAKE_TOP_Y, V_MONOSPACE, va("%u", snake->snakelength));
+	V_DrawString(RIGHT_X + 4, TOP_Y, V_MONOSPACE, va("%u", snake->snakelength));
 
 	// Bonus
-	if (snake->snakebonus != SNAKE_BONUS_NONE
+	if (snake->snakebonus != BONUS_NONE
 	&& (snake->snakebonustime >= 3 * TICRATE || snake->time % 4 < 4 / 2))
 		V_DrawFixedPatch(
-			(SNAKE_RIGHT_X + 10) * FRACUNIT,
-			(SNAKE_TOP_Y + 24) * FRACUNIT,
+			(RIGHT_X + 10) * FRACUNIT,
+			(TOP_Y + 24) * FRACUNIT,
 			FRACUNIT / 2,
 			0,
-			W_CachePatchLongName(snake_bonuspatches[snake->snakebonus], PU_HUDGFX),
+			W_CachePatchLongName(bonuspatches[snake->snakebonus], PU_HUDGFX),
 			NULL
 		);
 }
