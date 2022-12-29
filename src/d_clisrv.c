@@ -2278,7 +2278,12 @@ static void Command_connect(void)
 }
 #endif
 
-static void ResetNode(INT32 node);
+static void ResetNode(INT32 node)
+{
+	memset(&netnodes[node], 0, sizeof(*netnodes));
+	netnodes[node].player = -1;
+	netnodes[node].player2 = -1;
+}
 
 //
 // CL_ClearPlayer
@@ -3005,23 +3010,6 @@ void D_ClientServerInit(void)
 	SV_ResetServer();
 	if (dedicated)
 		SV_SpawnServer();
-}
-
-static void ResetNode(INT32 node)
-{
-	netnodes[node].ingame = false;
-	netnodes[node].numplayerswaiting = 0;
-
-	netnodes[node].tic = gametic;
-	netnodes[node].supposedtic = gametic;
-
-	netnodes[node].player = -1;
-	netnodes[node].player2 = -1;
-	netnodes[node].numplayers = 0;
-
-	netnodes[node].sendingsavegame = false;
-	netnodes[node].resendingsavegame = false;
-	netnodes[node].savegameresendcooldown = 0;
 }
 
 void SV_ResetServer(void)
