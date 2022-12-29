@@ -2316,6 +2316,61 @@ static void UnlinkPlayerFromNode(INT32 playernum)
 	}
 }
 
+// If in a special stage, redistribute the player's
+// spheres across the remaining players.
+// I feel like this shouldn't even be in this file at all, but well.
+static void RedistributeSpecialStageSpheres(INT32 playernum)
+{
+	INT32 i, count, sincrement, spheres, rincrement, rings;
+
+	if (!G_IsSpecialStage(gamemap))
+		return;
+
+	for (i = 0, count = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i])
+			count++;
+	}
+
+	count--;
+	sincrement = spheres = players[playernum].spheres;
+	rincrement = rings = players[playernum].rings;
+
+	if (count)
+	{
+		sincrement /= count;
+		rincrement /= count;
+	}
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (playeringame[i] && i != playernum)
+		{
+			if (spheres < 2*sincrement)
+			{
+				P_GivePlayerSpheres(&players[i], spheres);
+				spheres = 0;
+			}
+			else
+			{
+				P_GivePlayerSpheres(&players[i], sincrement);
+				spheres -= sincrement;
+			}
+
+			if (rings < 2*rincrement)
+			{
+				P_GivePlayerRings(&players[i], rings);
+				rings = 0;
+			}
+			else
+			{
+				P_GivePlayerRings(&players[i], rincrement);
+				rings -= rincrement;
+			}
+		}
+	}
+}
+
 //
 // CL_RemovePlayer
 //
@@ -2334,56 +2389,7 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 	if (gametyperules & GTR_TEAMFLAGS)
 		P_PlayerFlagBurst(&players[playernum], false); // Don't take the flag with you!
 
-	// If in a special stage, redistribute the player's spheres across
-	// the remaining players.
-	if (G_IsSpecialStage(gamemap))
-	{
-		INT32 i, count, sincrement, spheres, rincrement, rings;
-
-		for (i = 0, count = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i])
-				count++;
-		}
-
-		count--;
-		sincrement = spheres = players[playernum].spheres;
-		rincrement = rings = players[playernum].rings;
-
-		if (count)
-		{
-			sincrement /= count;
-			rincrement /= count;
-		}
-
-		for (i = 0; i < MAXPLAYERS; i++)
-		{
-			if (playeringame[i] && i != playernum)
-			{
-				if (spheres < 2*sincrement)
-				{
-					P_GivePlayerSpheres(&players[i], spheres);
-					spheres = 0;
-				}
-				else
-				{
-					P_GivePlayerSpheres(&players[i], sincrement);
-					spheres -= sincrement;
-				}
-
-				if (rings < 2*rincrement)
-				{
-					P_GivePlayerRings(&players[i], rings);
-					rings = 0;
-				}
-				else
-				{
-					P_GivePlayerRings(&players[i], rincrement);
-					rings -= rincrement;
-				}
-			}
-		}
-	}
+	RedistributeSpecialStageSpheres(playernum);
 
 	LUA_HookPlayerQuit(&players[playernum], reason); // Lua hook for player quitting
 
