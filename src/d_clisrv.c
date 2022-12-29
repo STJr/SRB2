@@ -3262,9 +3262,9 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		LUA_HookInt(newplayernum, HOOK(PlayerJoin));
 }
 
-static boolean SV_AddWaitingPlayers(const char *name, const char *name2)
+static void SV_AddWaitingPlayers(const char *name, const char *name2)
 {
-	INT32 node, n, newplayer = false;
+	INT32 node, n;
 	UINT8 buf[2 + MAXPLAYERNAME];
 	UINT8 *p;
 	INT32 newplayernum;
@@ -3274,8 +3274,6 @@ static boolean SV_AddWaitingPlayers(const char *name, const char *name2)
 		// splitscreen can allow 2 player in one node
 		for (; netnodes[node].numplayerswaiting > 0; netnodes[node].numplayerswaiting--)
 		{
-			newplayer = true;
-
 			newplayernum = FindRejoinerNum(node);
 			if (newplayernum == -1)
 			{
@@ -3320,8 +3318,6 @@ static boolean SV_AddWaitingPlayers(const char *name, const char *name2)
 			DEBFILE(va("Server added player %d node %d\n", newplayernum, node));
 		}
 	}
-
-	return newplayer;
 }
 
 void CL_AddSplitscreenPlayer(void)
@@ -3344,7 +3340,7 @@ boolean Playing(void)
 	return (server && serverrunning) || (client && cl_mode == CL_CONNECTED);
 }
 
-boolean SV_SpawnServer(void)
+void SV_SpawnServer(void)
 {
 	if (demoplayback)
 		G_StopDemo(); // reset engine parameter
@@ -3371,8 +3367,6 @@ boolean SV_SpawnServer(void)
 			CL_ConnectToServer();
 		else doomcom->numslots = 1;
 	}
-
-	return SV_AddWaitingPlayers(cv_playername.zstring, cv_playername2.zstring);
 }
 
 void SV_StopServer(void)
