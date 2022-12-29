@@ -412,7 +412,7 @@ void SendKick(UINT8 playernum, UINT8 msg);
 void NetUpdate(void);
 
 void SV_StartSinglePlayerServer(void);
-boolean SV_SpawnServer(void);
+void SV_SpawnServer(void);
 void SV_StopServer(void);
 void SV_ResetServer(void);
 void CL_AddSplitscreenPlayer(void);

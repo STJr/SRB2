@@ -1850,8 +1850,7 @@ void D_MapChange(INT32 mapnum, INT32 newgametype, boolean pultmode, boolean rese
 		// reset players if there is a new one
 		if (!IsPlayerAdmin(consoleplayer))
 		{
-			if (SV_SpawnServer())
-				buf[0] &= ~(1<<1);
+			SV_SpawnServer();
 			if (!Playing()) // you failed to start a server somehow, so cancel the map change
 				return;
 		}
