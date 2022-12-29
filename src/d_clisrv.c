@@ -2321,52 +2321,31 @@ static void UnlinkPlayerFromNode(INT32 playernum)
 // I feel like this shouldn't even be in this file at all, but well.
 static void RedistributeSpecialStageSpheres(INT32 playernum)
 {
-	INT32 i, count, sincrement, spheres, rincrement, rings;
-
-	if (!G_IsSpecialStage(gamemap))
+	if (!G_IsSpecialStage(gamemap) || D_NumPlayers() <= 1)
 		return;
 
-	for (i = 0, count = 0; i < MAXPLAYERS; i++)
+	INT32 count = D_NumPlayers() - 1;
+	INT32 spheres = players[playernum].spheres;
+	INT32 rings = players[playernum].rings;
+
+	while (spheres || rings)
 	{
-		if (playeringame[i])
-			count++;
-	}
+		INT32 sincrement = max(spheres / count, 1);
+		INT32 rincrement = max(rings / count, 1);
 
-	count--;
-	spheres = players[playernum].spheres;
-	rings = players[playernum].rings;
-
-	while (count && (spheres || rings))
-	{
-		sincrement = max(spheres / count, 1);
-		rincrement = max(rings / count, 1);
-
+		INT32 i, n;
 		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (playeringame[i] && i != playernum)
-			{
-				if (spheres < sincrement)
-				{
-					P_GivePlayerSpheres(&players[i], spheres);
-					spheres = 0;
-				}
-				else
-				{
-					P_GivePlayerSpheres(&players[i], sincrement);
-					spheres -= sincrement;
-				}
+			if (!playeringame[i] || i == playernum)
+				continue;
 
-				if (rings < rincrement)
-				{
-					P_GivePlayerRings(&players[i], rings);
-					rings = 0;
-				}
-				else
-				{
-					P_GivePlayerRings(&players[i], rincrement);
-					rings -= rincrement;
-				}
-			}
+			n = min(spheres, sincrement);
+			P_GivePlayerSpheres(&players[i], n);
+			spheres -= n;
+
+			n = min(rings, rincrement);
+			P_GivePlayerRings(&players[i], n);
+			rings -= n;
 		}
 	}
 }
