@@ -413,11 +413,16 @@ boolean CL_SendFileRequest(void)
 }
 
 // get request filepak and put it on the send queue
-// returns false if a requested file was not found or cannot be sent
-boolean PT_RequestFile(INT32 node)
+void PT_RequestFile(SINT8 node)
 {
 	UINT8 *p = netbuffer->u.textcmd;
 	UINT8 id;
+
+	if (client || !cv_downloading.value)
+	{
+		Net_CloseConnection(node); // close connection if you are not the server or disabled downloading
+		return;
+	}
 
 	while (p < netbuffer->u.textcmd + MAXTEXTCMD-1) // Don't allow hacked client to overflow
 	{
@@ -428,11 +433,12 @@ boolean PT_RequestFile(INT32 node)
 		if (!AddFileToSendQueue(node, id))
 		{
 			SV_AbortSendFiles(node);
-			return false; // don't read the rest of the files
+			Net_CloseConnection(node); // close connection if one of the requested files could not be sent
+			return; // don't read the rest of the files
 		}
 	}
 
-	return true; // no problems with any files
+	return; // no problems with any files
 }
 
 /** Checks if the files needed aren't already loaded or on the disk
@@ -1137,12 +1143,14 @@ void FileSendTicker(void)
 	}
 }
 
-void PT_FileAck(void)
+void PT_FileAck(SINT8 node)
 {
 	fileack_pak *packet = &netbuffer->u.fileack;
-	INT32 node = doomcom->remotenode;
 	filetran_t *trans = &transfer[node];
 	INT32 i, j;
+
+	if (client)
+		return;
 
 	// Wrong file id? Ignore it, it's probably a late packet
 	if (!(trans->txlist && packet->fileid == trans->txlist->fileid))
@@ -1190,12 +1198,12 @@ void PT_FileAck(void)
 	}
 }
 
-void PT_FileReceived(void)
+void PT_FileReceived(SINT8 node)
 {
-	filetx_t *trans = transfer[doomcom->remotenode].txlist;
+	filetx_t *trans = transfer[node].txlist;
 
-	if (trans && netbuffer->u.filereceived == trans->fileid)
-		SV_EndFileSend(doomcom->remotenode);
+	if (server && trans && netbuffer->u.filereceived == trans->fileid)
+		SV_EndFileSend(node);
 }
 
 static void SendAckPacket(fileack_pak *packet, UINT8 fileid)
@@ -1281,8 +1289,27 @@ void FileReceiveTicker(void)
 	}
 }
 
-void PT_FileFragment(void)
+void PT_FileFragment(SINT8 node, INT32 netconsole)
 {
+	if (nodeingame[node])
+	{
+		// Only accept PT_FILEFRAGMENT from the server.
+		if (node != servernode)
+		{
+			CONS_Alert(CONS_WARNING, M_GetText("%s received from non-host %d\n"), "PT_FILEFRAGMENT", node);
+			if (server)
+				SendKick(netconsole, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+			return;
+		}
+		if (server)
+			return;
+	}
+	else if (server || node != servernode)
+	{
+		Net_CloseConnection(node);
+		return;
+	}
+
 	INT32 filenum = netbuffer->u.filetxpak.fileid;
 	fileneeded_t *file = &fileneeded[filenum];
 	UINT32 fragmentpos = LONG(netbuffer->u.filetxpak.position);

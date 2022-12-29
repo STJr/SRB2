@@ -90,16 +90,16 @@ void AddRamToSendQueue(INT32 node, void *data, size_t size, freemethod_t freemet
 	UINT8 fileid);
 
 void FileSendTicker(void);
-void PT_FileAck(void);
-void PT_FileReceived(void);
+void PT_FileAck(SINT8 node);
+void PT_FileReceived(SINT8 node);
 boolean SendingFile(INT32 node);
 
 void FileReceiveTicker(void);
-void PT_FileFragment(void);
+void PT_FileFragment(SINT8 node, INT32 netconsole);
 
 boolean CL_CheckDownloadable(void);
 boolean CL_SendFileRequest(void);
-boolean PT_RequestFile(INT32 node);
+void PT_RequestFile(SINT8 node);
 
 typedef enum
 {
