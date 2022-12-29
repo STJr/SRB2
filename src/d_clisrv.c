@@ -2333,39 +2333,39 @@ static void RedistributeSpecialStageSpheres(INT32 playernum)
 	}
 
 	count--;
-	sincrement = spheres = players[playernum].spheres;
-	rincrement = rings = players[playernum].rings;
+	spheres = players[playernum].spheres;
+	rings = players[playernum].rings;
 
-	if (count)
+	while (count && (spheres || rings))
 	{
-		sincrement /= count;
-		rincrement /= count;
-	}
+		sincrement = max(spheres / count, 1);
+		rincrement = max(rings / count, 1);
 
-	for (i = 0; i < MAXPLAYERS; i++)
-	{
-		if (playeringame[i] && i != playernum)
+		for (i = 0; i < MAXPLAYERS; i++)
 		{
-			if (spheres < 2*sincrement)
+			if (playeringame[i] && i != playernum)
 			{
-				P_GivePlayerSpheres(&players[i], spheres);
-				spheres = 0;
-			}
-			else
-			{
-				P_GivePlayerSpheres(&players[i], sincrement);
-				spheres -= sincrement;
-			}
+				if (spheres < sincrement)
+				{
+					P_GivePlayerSpheres(&players[i], spheres);
+					spheres = 0;
+				}
+				else
+				{
+					P_GivePlayerSpheres(&players[i], sincrement);
+					spheres -= sincrement;
+				}
 
-			if (rings < 2*rincrement)
-			{
-				P_GivePlayerRings(&players[i], rings);
-				rings = 0;
-			}
-			else
-			{
-				P_GivePlayerRings(&players[i], rincrement);
-				rings -= rincrement;
+				if (rings < rincrement)
+				{
+					P_GivePlayerRings(&players[i], rings);
+					rings = 0;
+				}
+				else
+				{
+					P_GivePlayerRings(&players[i], rincrement);
+					rings -= rincrement;
+				}
 			}
 		}
 	}
