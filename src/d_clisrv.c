@@ -2298,6 +2298,24 @@ void CL_ClearPlayer(INT32 playernum)
 	memset(playeraddress[playernum], 0, sizeof(*playeraddress));
 }
 
+static void UnlinkPlayerFromNode(INT32 playernum)
+{
+	INT32 node = playernode[playernum];
+
+	if (node == UINT8_MAX)
+		return;
+
+	playernode[playernum] = UINT8_MAX;
+
+	netnodes[node].numplayers--;
+	if (netnodes[node].numplayers <= 0)
+	{
+		netnodes[node].ingame = false;
+		Net_CloseConnection(node);
+		ResetNode(node);
+	}
+}
+
 //
 // CL_RemovePlayer
 //
@@ -2310,17 +2328,8 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 	if (!playeringame[playernum])
 		return;
 
-	if (server && !demoplayback && playernode[playernum] != UINT8_MAX)
-	{
-		INT32 node = playernode[playernum];
-		netnodes[node].numplayers--;
-		if (netnodes[node].numplayers <= 0)
-		{
-			netnodes[node].ingame = false;
-			Net_CloseConnection(node);
-			ResetNode(node);
-		}
-	}
+	if (server)
+		UnlinkPlayerFromNode(playernum);
 
 	if (gametyperules & GTR_TEAMFLAGS)
 		P_PlayerFlagBurst(&players[playernum], false); // Don't take the flag with you!
@@ -2392,7 +2401,6 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 
 	// remove avatar of player
 	playeringame[playernum] = false;
-	playernode[playernum] = UINT8_MAX;
 	while (!playeringame[doomcom->numslots-1] && doomcom->numslots > 1)
 		doomcom->numslots--;
 
@@ -2920,20 +2928,8 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 	}
 	else if (keepbody)
 	{
-		if (server && !demoplayback && playernode[pnum] != UINT8_MAX)
-		{
-			INT32 node = playernode[pnum];
-			netnodes[node].numplayers--;
-			if (netnodes[node].numplayers <= 0)
-			{
-				netnodes[node].ingame = false;
-				Net_CloseConnection(node);
-				ResetNode(node);
-			}
-		}
-
-		playernode[pnum] = UINT8_MAX;
-
+		if (server)
+			UnlinkPlayerFromNode(pnum);
 		players[pnum].quittime = 1;
 	}
 	else
