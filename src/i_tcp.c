@@ -449,7 +449,7 @@ static void cleanupnodes(void)
 
 	// Why can't I start at zero?
 	for (j = 1; j < MAXNETNODES; j++)
-		if (!(nodeingame[j] || SendingFile(j)))
+		if (!(netnodes[j].ingame || SendingFile(j)))
 			nodeconnected[j] = false;
 }
 
@@ -473,7 +473,7 @@ static SINT8 getfreenode(void)
 	  */
 	/*I_Error("No more free nodes!!1!11!11!!1111\n");
 	for (j = 1; j < MAXNETNODES; j++)
-		if (!nodeingame[j])
+		if (!netnodes[j].ingame)
 			return j;*/
 
 	return -1;
@@ -488,24 +488,24 @@ void Command_Numnodes(void)
 
 	for (i = 1; i < MAXNETNODES; i++)
 	{
-		if (!(nodeconnected[i] || nodeingame[i]))
+		if (!(nodeconnected[i] || netnodes[i].ingame))
 			continue;
 
 		if (nodeconnected[i])
 			connected++;
-		if (nodeingame[i])
+		if (netnodes[i].ingame)
 			ingame++;
 
 		CONS_Printf("%2d - ", i);
-		if (nodetoplayer[i] != -1)
-			CONS_Printf("player %.2d", nodetoplayer[i]);
+		if (netnodes[i].player != -1)
+			CONS_Printf("player %.2d", netnodes[i].player);
 		else
 			CONS_Printf("         ");
 		if (nodeconnected[i])
 			CONS_Printf(" - connected");
 		else
 			CONS_Printf(" -          ");
-		if (nodeingame[i])
+		if (netnodes[i].ingame)
 			CONS_Printf(" - ingame");
 		else
 			CONS_Printf(" -       ");
