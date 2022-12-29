@@ -667,7 +667,7 @@ void SV_PrepareSendLuaFile(void)
 
 	// Set status to "waiting" for everyone
 	for (i = 0; i < MAXNETNODES; i++)
-		luafiletransfers->nodestatus[i] = (nodeingame[i] ? LFTNS_WAITING : LFTNS_NONE);
+		luafiletransfers->nodestatus[i] = (netnodes[i].ingame ? LFTNS_WAITING : LFTNS_NONE);
 
 	if (FIL_ReadFileOK(luafiletransfers->realfilename))
 	{
@@ -1291,7 +1291,7 @@ void FileReceiveTicker(void)
 
 void PT_FileFragment(SINT8 node, INT32 netconsole)
 {
-	if (nodeingame[node])
+	if (netnodes[node].ingame)
 	{
 		// Only accept PT_FILEFRAGMENT from the server.
 		if (node != servernode)
