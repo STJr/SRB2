@@ -3262,62 +3262,54 @@ static void Got_AddPlayer(UINT8 **p, INT32 playernum)
 		LUA_HookInt(newplayernum, HOOK(PlayerJoin));
 }
 
-static void SV_AddWaitingPlayers(const char *name, const char *name2)
+static void SV_AddPlayer(SINT8 node, const char *name)
 {
-	INT32 node, n;
+	INT32 n;
 	UINT8 buf[2 + MAXPLAYERNAME];
 	UINT8 *p;
 	INT32 newplayernum;
 
-	for (node = 0; node < MAXNETNODES; node++)
+	newplayernum = FindRejoinerNum(node);
+	if (newplayernum == -1)
 	{
-		// splitscreen can allow 2 player in one node
-		for (; netnodes[node].numplayerswaiting > 0; netnodes[node].numplayerswaiting--)
+		// search for a free playernum
+		// we can't use playeringame since it is not updated here
+		for (newplayernum = dedicated ? 1 : 0; newplayernum < MAXPLAYERS; newplayernum++)
 		{
-			newplayernum = FindRejoinerNum(node);
-			if (newplayernum == -1)
-			{
-				// search for a free playernum
-				// we can't use playeringame since it is not updated here
-				for (newplayernum = dedicated ? 1 : 0; newplayernum < MAXPLAYERS; newplayernum++)
-				{
-					if (playeringame[newplayernum])
-						continue;
-					for (n = 0; n < MAXNETNODES; n++)
-						if (netnodes[n].player == newplayernum || netnodes[n].player2 == newplayernum)
-							break;
-					if (n == MAXNETNODES)
-						break;
-				}
-			}
-
-			// should never happen since we check the playernum
-			// before accepting the join
-			I_Assert(newplayernum < MAXPLAYERS);
-
-			playernode[newplayernum] = (UINT8)node;
-
-			p = buf + 2;
-			buf[0] = (UINT8)node;
-			buf[1] = newplayernum;
-			if (netnodes[node].numplayers < 1)
-			{
-				netnodes[node].player = newplayernum;
-				WRITESTRINGN(p, name, MAXPLAYERNAME);
-			}
-			else
-			{
-				netnodes[node].player2 = newplayernum;
-				buf[1] |= 0x80;
-				WRITESTRINGN(p, name2, MAXPLAYERNAME);
-			}
-			netnodes[node].numplayers++;
-
-			SendNetXCmd(XD_ADDPLAYER, &buf, p - buf);
-
-			DEBFILE(va("Server added player %d node %d\n", newplayernum, node));
+			if (playeringame[newplayernum])
+				continue;
+			for (n = 0; n < MAXNETNODES; n++)
+				if (netnodes[n].player == newplayernum || netnodes[n].player2 == newplayernum)
+					break;
+			if (n == MAXNETNODES)
+				break;
 		}
 	}
+
+	// should never happen since we check the playernum
+	// before accepting the join
+	I_Assert(newplayernum < MAXPLAYERS);
+
+	playernode[newplayernum] = (UINT8)node;
+
+	p = buf + 2;
+	buf[0] = (UINT8)node;
+	buf[1] = newplayernum;
+	if (netnodes[node].numplayers < 1)
+	{
+		netnodes[node].player = newplayernum;
+	}
+	else
+	{
+		netnodes[node].player2 = newplayernum;
+		buf[1] |= 0x80;
+	}
+	WRITESTRINGN(p, name, MAXPLAYERNAME);
+	netnodes[node].numplayers++;
+
+	SendNetXCmd(XD_ADDPLAYER, &buf, p - buf);
+
+	DEBFILE(va("Server added player %d node %d\n", newplayernum, node));
 }
 
 void CL_AddSplitscreenPlayer(void)
@@ -3522,11 +3514,12 @@ static void HandleConnect(SINT8 node)
 		SV_SendRefuse(node, refuse);
 	else
 	{
+		INT32 numplayers = netbuffer->u.clientcfg.localplayers;
 #ifndef NONET
 		boolean newnode = false;
 #endif
 
-		for (i = 0; i < netbuffer->u.clientcfg.localplayers - netnodes[node].numplayers; i++)
+		for (i = 0; i < numplayers; i++)
 		{
 			strlcpy(names[i], netbuffer->u.clientcfg.names[i], MAXPLAYERNAME + 1);
 			if (!EnsurePlayerNameIsGood(names[i], rejoinernum))
@@ -3537,7 +3530,6 @@ static void HandleConnect(SINT8 node)
 		}
 
 		// client authorised to join
-		netnodes[node].numplayerswaiting = (UINT8)(netbuffer->u.clientcfg.localplayers - netnodes[node].numplayers);
 		if (!netnodes[node].ingame)
 		{
 			gamestate_t backupstate = gamestate;
@@ -3568,7 +3560,12 @@ static void HandleConnect(SINT8 node)
 			SV_SendSaveGame(node, false); // send a complete game state
 			DEBFILE("send savegame\n");
 		}
-		SV_AddWaitingPlayers(names[0], names[1]);
+
+		// Splitscreen can allow 2 players in one node
+		SV_AddPlayer(node, names[0]);
+		if (numplayers > 1)
+			SV_AddPlayer(node, names[1]);
+
 		joindelay += cv_joindelay.value * TICRATE;
 		player_joining = true;
 #endif
@@ -3993,7 +3990,6 @@ static void PT_ClientQuit(SINT8 node, INT32 netconsole)
 
 	// nodeingame will be put false in the execution of kick command
 	// this allow to send some packets to the quitting client to have their ack back
-	netnodes[node].numplayerswaiting = 0;
 	if (netconsole != -1 && playeringame[netconsole])
 	{
 		UINT8 kickmsg;

@@ -45,7 +45,6 @@ typedef struct netnode_s
 	SINT8 player;
 	SINT8 player2; // say the numplayer for this node if any (splitscreen)
 	UINT8 numplayers; // used specialy for scplitscreen
-	UINT8 numplayerswaiting;
 
 	tic_t tic; // what tic the client have received
 	tic_t supposedtic; // nettics prevision for smaller packet
