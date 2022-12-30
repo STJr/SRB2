@@ -3422,7 +3422,7 @@ static size_t TotalTextCmdPerTic(tic_t tic)
 }
 
 static const char *
-ConnectionRefused (SINT8 node, INT32 rejoinernum)
+GetRefuseMessage (SINT8 node, INT32 rejoinernum)
 {
 	clientconfig_pak *cc = &netbuffer->u.clientcfg;
 
@@ -3507,7 +3507,7 @@ static void HandleConnect(SINT8 node)
 
 	rejoinernum = FindRejoinerNum(node);
 
-	const char *refuse = ConnectionRefused(node, rejoinernum);
+	const char *refuse = GetRefuseMessage(node, rejoinernum);
 	if (refuse)
 	{
 		SV_SendRefuse(node, refuse);
