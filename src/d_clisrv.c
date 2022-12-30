@@ -3501,69 +3501,55 @@ ConnectionRefused (SINT8 node, INT32 rejoinernum)
 static void HandleConnect(SINT8 node)
 {
 	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME + 1];
+	INT32 numplayers = netbuffer->u.clientcfg.localplayers;
 	INT32 rejoinernum;
 	INT32 i;
-	const char *refuse;
 
 	rejoinernum = FindRejoinerNum(node);
 
-	refuse = ConnectionRefused(node, rejoinernum);
-
+	const char *refuse = ConnectionRefused(node, rejoinernum);
 	if (refuse)
-		SV_SendRefuse(node, refuse);
-	else
 	{
-		INT32 numplayers = netbuffer->u.clientcfg.localplayers;
-#ifndef NONET
-		boolean newnode = false;
-#endif
-
-		for (i = 0; i < numplayers; i++)
-		{
-			strlcpy(names[i], netbuffer->u.clientcfg.names[i], MAXPLAYERNAME + 1);
-			if (!EnsurePlayerNameIsGood(names[i], rejoinernum))
-			{
-				SV_SendRefuse(node, "Bad player name");
-				return;
-			}
-		}
-
-		// client authorised to join
-		if (!netnodes[node].ingame)
-		{
-#ifndef NONET
-			newnode = true;
-#endif
-			SV_AddNode(node);
-
-			if (!SV_SendServerConfig(node))
-			{
-				/// \note Shouldn't SV_SendRefuse be called before ResetNode?
-				ResetNode(node);
-				SV_SendRefuse(node, M_GetText("Server couldn't send info, please try again"));
-				/// \todo fix this !!!
-				return; // restart the while
-			}
-			//if (gamestate != GS_LEVEL) // GS_INTERMISSION, etc?
-			//	SV_SendPlayerConfigs(node); // send bare minimum player info
-			DEBFILE("new node joined\n");
-		}
-#ifndef NONET
-		if ((gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) && newnode)
-		{
-			SV_SendSaveGame(node, false); // send a complete game state
-			DEBFILE("send savegame\n");
-		}
-
-		// Splitscreen can allow 2 players in one node
-		SV_AddPlayer(node, names[0]);
-		if (numplayers > 1)
-			SV_AddPlayer(node, names[1]);
-
-		joindelay += cv_joindelay.value * TICRATE;
-		player_joining = true;
-#endif
+		SV_SendRefuse(node, refuse);
+		return;
 	}
+
+	for (i = 0; i < numplayers; i++)
+	{
+		strlcpy(names[i], netbuffer->u.clientcfg.names[i], MAXPLAYERNAME + 1);
+		if (!EnsurePlayerNameIsGood(names[i], rejoinernum))
+		{
+			SV_SendRefuse(node, "Bad player name");
+			return;
+		}
+	}
+
+	SV_AddNode(node);
+
+	if (!SV_SendServerConfig(node))
+	{
+		/// \note Shouldn't SV_SendRefuse be called before ResetNode?
+		ResetNode(node);
+		SV_SendRefuse(node, M_GetText("Server couldn't send info, please try again"));
+		/// \todo fix this !!!
+		return; // restart the while
+	}
+	DEBFILE("new node joined\n");
+
+#ifndef NONET
+	if (gamestate == GS_LEVEL || gamestate == GS_INTERMISSION)
+	{
+		SV_SendSaveGame(node, false); // send a complete game state
+		DEBFILE("send savegame\n");
+	}
+
+	// Splitscreen can allow 2 players in one node
+	for (i = 0; i < numplayers; i++)
+		SV_AddPlayer(node, names[i]);
+
+	joindelay += cv_joindelay.value * TICRATE;
+	player_joining = true;
+#endif
 }
 
 /** Called when a PT_SERVERSHUTDOWN packet is received
