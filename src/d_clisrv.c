@@ -2925,7 +2925,6 @@ static CV_PossibleValue_t netticbuffer_cons_t[] = {{0, "MIN"}, {3, "MAX"}, {0, N
 consvar_t cv_netticbuffer = CVAR_INIT ("netticbuffer", "1", CV_SAVE, netticbuffer_cons_t, NULL);
 
 consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
-consvar_t cv_joinnextround = CVAR_INIT ("joinnextround", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL); /// \todo not done
 static CV_PossibleValue_t maxplayers_cons_t[] = {{2, "MIN"}, {32, "MAX"}, {0, NULL}};
 consvar_t cv_maxplayers = CVAR_INIT ("maxplayers", "8", CV_SAVE|CV_NETVAR, maxplayers_cons_t, NULL);
 static CV_PossibleValue_t joindelay_cons_t[] = {{1, "MIN"}, {3600, "MAX"}, {0, "Off"}, {0, NULL}};
@@ -3532,17 +3531,13 @@ static void HandleConnect(SINT8 node)
 		// client authorised to join
 		if (!netnodes[node].ingame)
 		{
-			gamestate_t backupstate = gamestate;
 #ifndef NONET
 			newnode = true;
 #endif
 			SV_AddNode(node);
 
-			if (cv_joinnextround.value && gameaction == ga_nothing)
-				G_SetGamestate(GS_WAITINGPLAYERS);
 			if (!SV_SendServerConfig(node))
 			{
-				G_SetGamestate(backupstate);
 				/// \note Shouldn't SV_SendRefuse be called before ResetNode?
 				ResetNode(node);
 				SV_SendRefuse(node, M_GetText("Server couldn't send info, please try again"));
@@ -3551,7 +3546,6 @@ static void HandleConnect(SINT8 node)
 			}
 			//if (gamestate != GS_LEVEL) // GS_INTERMISSION, etc?
 			//	SV_SendPlayerConfigs(node); // send bare minimum player info
-			G_SetGamestate(backupstate);
 			DEBFILE("new node joined\n");
 		}
 #ifndef NONET
