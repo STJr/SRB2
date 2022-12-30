@@ -175,14 +175,12 @@ static huddrawlist_h luahuddrawlist_scores;
 
 static tic_t resynch_ticker = 0;
 
-#ifndef NONET
 // just after
 static void Command_Say_f(void);
 static void Command_Sayto_f(void);
 static void Command_Sayteam_f(void);
 static void Command_CSay_f(void);
 static void Got_Saycmd(UINT8 **p, INT32 playernum);
-#endif
 
 void HU_LoadGraphics(void)
 {
@@ -327,13 +325,11 @@ void HU_LoadGraphics(void)
 //
 void HU_Init(void)
 {
-#ifndef NONET
 	COM_AddCommand("say", Command_Say_f);
 	COM_AddCommand("sayto", Command_Sayto_f);
 	COM_AddCommand("sayteam", Command_Sayteam_f);
 	COM_AddCommand("csay", Command_CSay_f);
 	RegisterNetXCmd(XD_SAY, Got_Saycmd);
-#endif
 
 	// set shift translation table
 	shiftxform = english_shiftxform;
@@ -362,8 +358,6 @@ void HU_Start(void)
 //======================================================================
 //                            EXECUTION
 //======================================================================
-
-#ifndef NONET
 
 // EVERY CHANGE IN THIS SCRIPT IS LOL XD! BY VINCYTM
 
@@ -412,11 +406,9 @@ static void HU_removeChatText_Log(void)
 	}
 	chat_nummsg_log--; // lost 1 msg.
 }
-#endif
 
 void HU_AddChatText(const char *text, boolean playsound)
 {
-#ifndef NONET
 	if (playsound && cv_consolechat.value != 2) // Don't play the sound if we're using hidden chat.
 		S_StartSound(NULL, sfx_radio);
 	// reguardless of our preferences, put all of this in the chat buffer in case we decide to change from oldchat mid-game.
@@ -438,13 +430,7 @@ void HU_AddChatText(const char *text, boolean playsound)
 		CONS_Printf("%s\n", text);
 	else			// if we aren't, still save the message to log.txt
 		CON_LogMessage(va("%s\n", text));
-#else
-	(void)playsound;
-	CONS_Printf("%s\n", text);
-#endif
 }
-
-#ifndef NONET
 
 /** Runs a say command, sending an ::XD_SAY message.
   * A say command consists of a signed 8-bit integer for the target, an
@@ -865,8 +851,6 @@ static void Got_Saycmd(UINT8 **p, INT32 playernum)
 #endif
 }
 
-#endif
-
 //
 //
 void HU_Ticker(void)
@@ -882,7 +866,6 @@ void HU_Ticker(void)
 	else
 		hu_showscores = false;
 
-#ifndef NONET
 	if (chat_on)
 	{
 		// count down the scroll timer.
@@ -910,15 +893,12 @@ void HU_Ticker(void)
 				HU_removeChatText_Mini();
 		}
 	}
-#endif
 
 	if (cechotimer > 0) --cechotimer;
 
 	if (hu_redownloadinggamestate)
 		resynch_ticker++;
 }
-
-#ifndef NONET
 
 static boolean teamtalk = false;
 static boolean justscrolleddown;
@@ -1027,8 +1007,6 @@ static void HU_sendChatMessage(void)
 	}
 }
 
-#endif
-
 void HU_clearChatChars(void)
 {
 	memset(w_chat, '\0', sizeof(w_chat));
@@ -1043,16 +1021,13 @@ void HU_clearChatChars(void)
 //
 boolean HU_Responder(event_t *ev)
 {
-#ifndef NONET
 	INT32 c=0;
-#endif
 
 	if (ev->type != ev_keydown)
 		return false;
 
 	// only KeyDown events now...
 
-#ifndef NONET
 	c = (INT32)ev->key;
 
 	if (!chat_on)
@@ -1202,7 +1177,6 @@ boolean HU_Responder(event_t *ev)
 
 		return true;
 	}
-#endif
 
 	return false;
 }
@@ -1211,8 +1185,6 @@ boolean HU_Responder(event_t *ev)
 //======================================================================
 //                         HEADS UP DRAWING
 //======================================================================
-
-#ifndef NONET
 
 // Precompile a wordwrapped string to any given width.
 // This is a muuuch better method than V_WORDWRAP.
@@ -1793,7 +1765,6 @@ static void HU_DrawChat_Old(void)
 	if (hu_tick < 4)
 		V_DrawCharacter(HU_INPUTX + c, y, '_' | cv_constextsize.value |V_NOSCALESTART|t, true);
 }
-#endif
 
 // Draw crosshairs at the exact center of the view.
 // In splitscreen, crosshairs are stretched vertically to compensate for V_PERPLAYER squishing them.
@@ -1933,7 +1904,6 @@ static void HU_DrawDemoInfo(void)
 //
 void HU_Drawer(void)
 {
-#ifndef NONET
 	// draw chat string plus cursor
 	if (chat_on)
 	{
@@ -1950,7 +1920,6 @@ void HU_Drawer(void)
 		if (!OLDCHAT && cv_consolechat.value < 2 && netgame) // Don't display minimized chat if you set the mode to Window (Hidden)
 			HU_drawMiniChat(); // draw messages in a cool fashion.
 	}
-#endif
 
 	if (cechotimer)
 		HU_DrawCEcho();

@@ -103,14 +103,12 @@ typedef struct
 } pauseddownload_t;
 static pauseddownload_t *pauseddownload = NULL;
 
-#ifndef NONET
 // for cl loading screen
 INT32 lastfilenum = -1;
 INT32 downloadcompletednum = 0;
 UINT32 downloadcompletedsize = 0;
 INT32 totalfilesrequestednum = 0;
 UINT32 totalfilesrequestedsize = 0;
-#endif
 
 luafiletransfer_t *luafiletransfers = NULL;
 boolean waitingforluafiletransfer = false;
@@ -250,9 +248,7 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr, UINT16 fi
 
 void CL_PrepareDownloadSaveGame(const char *tmpsave)
 {
-#ifndef NONET
 	lastfilenum = -1;
-#endif
 
 	FreeFileNeeded();
 	AllocFileNeeded(1);
@@ -1466,9 +1462,7 @@ void PT_FileFragment(SINT8 node, INT32 netconsole)
 		I_Error("Received a file not requested (file id: %d, file status: %s)\n", filenum, s);
 	}
 
-#ifndef NONET
 	lastfilenum = filenum;
-#endif
 }
 
 /** \brief Checks if a node is downloading a file
