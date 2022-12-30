@@ -3505,6 +3505,10 @@ static void HandleConnect(SINT8 node)
 	INT32 rejoinernum;
 	INT32 i;
 
+	// Ignore duplicate packets
+	if (netnodes[node].ingame)
+		return;
+
 	rejoinernum = FindRejoinerNum(node);
 
 	const char *refuse = GetRefuseMessage(node, rejoinernum);
