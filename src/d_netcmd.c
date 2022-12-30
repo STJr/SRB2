@@ -630,7 +630,6 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_downloadspeed);
 #ifndef NONET
 	CV_RegisterVar(&cv_allownewplayer);
-	CV_RegisterVar(&cv_joinnextround);
 	CV_RegisterVar(&cv_showjoinaddress);
 	CV_RegisterVar(&cv_blamecfail);
 #endif
