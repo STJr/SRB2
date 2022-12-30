@@ -149,9 +149,7 @@ levellist_mode_t levellistmode = LLM_CREATESERVER;
 UINT8 maplistoption = 0;
 
 static char joystickInfo[MAX_JOYSTICKS+1][29];
-#ifndef NONET
 static UINT32 serverlistpage;
-#endif
 
 static UINT8 numsaves = 0;
 static saveinfo_t* savegameinfo = NULL; // Extra info about the save games.
@@ -190,10 +188,8 @@ static void M_GoBack(INT32 choice);
 static void M_StopMessage(INT32 choice);
 static boolean stopstopmessage = false;
 
-#ifndef NONET
 static void M_HandleServerPage(INT32 choice);
 static void M_RoomMenu(INT32 choice);
-#endif
 
 // Prototyping is fun, innit?
 // ==========================================================================
@@ -296,7 +292,6 @@ static void M_SetupMultiPlayer2(INT32 choice);
 static void M_StartSplitServerMenu(INT32 choice);
 static void M_StartServer(INT32 choice);
 static void M_ServerOptions(INT32 choice);
-#ifndef NONET
 static void M_StartServerMenu(INT32 choice);
 static void M_ConnectMenu(INT32 choice);
 static void M_ConnectMenuModChecks(INT32 choice);
@@ -304,7 +299,6 @@ static void M_Refresh(INT32 choice);
 static void M_Connect(INT32 choice);
 static void M_ChooseRoom(INT32 choice);
 menu_t MP_MainDef;
-#endif
 
 // Options
 // Split into multiple parts due to size
@@ -382,11 +376,9 @@ static void M_DrawVideoMode(void);
 static void M_DrawColorMenu(void);
 static void M_DrawScreenshotMenu(void);
 static void M_DrawMonitorToggles(void);
-#ifndef NONET
 static void M_DrawConnectMenu(void);
 static void M_DrawMPMainMenu(void);
 static void M_DrawRoomMenu(void);
-#endif
 static void M_DrawJoystick(void);
 static void M_DrawSetupMultiPlayerMenu(void);
 static void M_DrawColorRamp(INT32 x, INT32 y, INT32 w, INT32 h, skincolor_t color);
@@ -401,10 +393,8 @@ static void M_HandleImageDef(INT32 choice);
 static void M_HandleLoadSave(INT32 choice);
 static void M_HandleLevelStats(INT32 choice);
 static void M_HandlePlaystyleMenu(INT32 choice);
-#ifndef NONET
 static boolean M_CancelConnect(void);
 static void M_HandleConnectIP(INT32 choice);
-#endif
 static void M_HandleSetupMultiPlayer(INT32 choice);
 static void M_HandleVideoMode(INT32 choice);
 
@@ -503,11 +493,7 @@ consvar_t cv_dummyloadless = CVAR_INIT ("dummyloadless", "In-game", CV_HIDEN, lo
 static menuitem_t MainMenu[] =
 {
 	{IT_STRING|IT_CALL,    NULL, "1  Player",   M_SinglePlayerMenu,      76},
-#ifndef NONET
 	{IT_STRING|IT_SUBMENU, NULL, "Multiplayer", &MP_MainDef,             84},
-#else
-	{IT_STRING|IT_CALL,    NULL, "Multiplayer", M_StartSplitServerMenu,  84},
-#endif
 	{IT_STRING|IT_CALL,    NULL, "Extras",      M_SecretsMenu,           92},
 	{IT_CALL   |IT_STRING, NULL, "Addons",      M_Addons,               100},
 	{IT_STRING|IT_CALL,    NULL, "Options",     M_Options,              108},
@@ -930,15 +916,9 @@ static menuitem_t SP_PlayerMenu[] =
 static menuitem_t MP_SplitServerMenu[] =
 {
 	{IT_STRING|IT_CALL,              NULL, "Select Gametype/Level...", M_MapChange,         100},
-#ifdef NONET // In order to keep player setup accessible.
-	{IT_STRING|IT_CALL,              NULL, "Player 1 setup...",        M_SetupMultiPlayer,  110},
-	{IT_STRING|IT_CALL,              NULL, "Player 2 setup...",        M_SetupMultiPlayer2, 120},
-#endif
 	{IT_STRING|IT_CALL,              NULL, "More Options...",          M_ServerOptions,     130},
 	{IT_WHITESTRING|IT_CALL,         NULL, "Start",                    M_StartServer,       140},
 };
-
-#ifndef NONET
 
 static menuitem_t MP_MainMenu[] =
 {
@@ -1025,8 +1005,6 @@ menuitem_t MP_RoomMenu[] =
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom, 153},
 	{IT_DISABLED,         NULL, "",               M_ChooseRoom, 162},
 };
-
-#endif
 
 static menuitem_t MP_PlayerSetupMenu[] =
 {
@@ -1586,14 +1564,12 @@ enum
 static menuitem_t OP_ServerOptionsMenu[] =
 {
 	{IT_HEADER, NULL, "General", NULL, 0},
-#ifndef NONET
 	{IT_STRING | IT_CVAR | IT_CV_STRING,
 	                         NULL, "Server name",                      &cv_servername,           7},
 	{IT_STRING | IT_CVAR,    NULL, "Max Players",                      &cv_maxplayers,          21},
 	{IT_STRING | IT_CVAR,    NULL, "Allow Add-on Downloading",         &cv_downloading,         26},
 	{IT_STRING | IT_CVAR,    NULL, "Allow players to join",            &cv_allownewplayer,      31},
 	{IT_STRING | IT_CVAR,    NULL, "Minutes for reconnecting",         &cv_rejointimeout,       36},
-#endif
 	{IT_STRING | IT_CVAR,    NULL, "Map progression",                  &cv_advancemap,          41},
 	{IT_STRING | IT_CVAR,    NULL, "Intermission Timer",               &cv_inttime,             46},
 
@@ -1632,7 +1608,6 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Autobalance sizes",                &cv_autobalance,        216},
 	{IT_STRING | IT_CVAR,    NULL, "Scramble on Map Change",           &cv_scrambleonchange,   221},
 
-#ifndef NONET
 	{IT_HEADER, NULL, "Advanced", NULL, 230},
 	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "Master server",        &cv_masterserver,       236},
 
@@ -1640,7 +1615,6 @@ static menuitem_t OP_ServerOptionsMenu[] =
 	{IT_STRING | IT_CVAR,    NULL, "Attempts to resynchronise",        &cv_resynchattempts,    256},
 
 	{IT_STRING | IT_CVAR,    NULL, "Show IP Address of Joiners",       &cv_showjoinaddress,    261},
-#endif
 };
 
 static menuitem_t OP_MonitorToggleMenu[] =
@@ -1954,19 +1928,13 @@ menu_t MP_SplitServerDef =
 	MTREE2(MN_MP_MAIN, MN_MP_SPLITSCREEN),
 	"M_MULTI",
 	sizeof (MP_SplitServerMenu)/sizeof (menuitem_t),
-#ifndef NONET
 	&MP_MainDef,
-#else
-	&MainDef,
-#endif
 	MP_SplitServerMenu,
 	M_DrawServerMenu,
 	27, 30 - 50,
 	0,
 	NULL
 };
-
-#ifndef NONET
 
 menu_t MP_MainDef =
 {
@@ -2019,15 +1987,10 @@ menu_t MP_RoomDef =
 	0,
 	NULL
 };
-#endif
 
 menu_t MP_PlayerSetupDef =
 {
-#ifdef NONET
-	MTREE2(MN_MP_MAIN, MN_MP_PLAYERSETUP),
-#else
 	MTREE3(MN_MP_MAIN, MN_MP_SPLITSCREEN, MN_MP_PLAYERSETUP),
-#endif
 	"M_SPLAYR",
 	sizeof (MP_PlayerSetupMenu)/sizeof (menuitem_t),
 	&MainDef, // doesn't matter
@@ -3956,9 +3919,7 @@ void M_Init(void)
 		OP_JoystickSetMenu[i].itemaction = M_AssignJoystick;
 	}
 
-#ifndef NONET
 	CV_RegisterVar(&cv_serversort);
-#endif
 }
 
 void M_InitCharacterTables(void)
@@ -11110,7 +11071,6 @@ static void M_EndGame(INT32 choice)
 
 #define S_LINEY(n) currentMenu->y + SERVERHEADERHEIGHT + (n * SERVERLINEHEIGHT)
 
-#ifndef NONET
 static UINT32 localservercount;
 
 static void M_HandleServerPage(INT32 choice)
@@ -11382,11 +11342,9 @@ static int ServerListEntryComparator_modified(const void *entry1, const void *en
 	// Default to strcmp.
 	return strcmp(sa->info.servername, sb->info.servername);
 }
-#endif
 
 void M_SortServerList(void)
 {
-#ifndef NONET
 	switch(cv_serversort.value)
 	{
 	case 0:		// Ping.
@@ -11408,10 +11366,8 @@ void M_SortServerList(void)
 		qsort(serverlist, serverlistcount, sizeof(serverelem_t), ServerListEntryComparator_gametypename);
 		break;
 	}
-#endif
 }
 
-#ifndef NONET
 #ifdef UPDATE_ALERT
 static boolean M_CheckMODVersion(int id)
 {
@@ -11610,7 +11566,6 @@ static void M_ChooseRoom(INT32 choice)
 	if (currentMenu == &MP_ConnectDef)
 		M_Refresh(0);
 }
-#endif //NONET
 
 //===========================================================================
 // Start Server Menu
@@ -11658,7 +11613,6 @@ static void M_DrawServerMenu(void)
 {
 	M_DrawGenericMenu();
 
-#ifndef NONET
 	// Room name
 	if (currentMenu == &MP_ServerDef)
 	{
@@ -11670,15 +11624,10 @@ static void M_DrawServerMenu(void)
 			V_DrawRightAlignedString(BASEVIDWIDTH - currentMenu->x, currentMenu->y + MP_ServerMenu[mp_server_room].alphaKey,
 			                         V_YELLOWMAP, room_list[menuRoomIndex].name);
 	}
-#endif
 
 	if (cv_nextmap.value)
 	{
-#ifndef NONET
 #define imgheight MP_ServerMenu[mp_server_levelgt].alphaKey
-#else
-#define imgheight 100
-#endif
 		patch_t *PictureOfLevel;
 		lumpnum_t lumpnum;
 		char headerstr[40];
@@ -11730,7 +11679,6 @@ static void M_ServerOptions(INT32 choice)
 {
 	(void)choice;
 
-#ifndef NONET
 	if ((splitscreen && !netgame) || currentMenu == &MP_SplitServerDef)
 	{
 		OP_ServerOptionsMenu[ 1].status = IT_GRAYEDOUT; // Server name
@@ -11751,7 +11699,6 @@ static void M_ServerOptions(INT32 choice)
 		OP_ServerOptionsMenu[37].status = IT_STRING | IT_CVAR;
 		OP_ServerOptionsMenu[38].status = IT_STRING | IT_CVAR;
 	}
-#endif
 
 	/* Disable fading because of different menu head. */
 	if (currentMenu == &OP_MainDef)/* from Options menu */
@@ -11763,7 +11710,6 @@ static void M_ServerOptions(INT32 choice)
 	M_SetupNextMenu(&OP_ServerOptionsDef);
 }
 
-#ifndef NONET
 static void M_StartServerMenu(INT32 choice)
 {
 	(void)choice;
@@ -12030,7 +11976,6 @@ static void M_HandleConnectIP(INT32 choice)
 			M_ClearMenus(true);
 	}
 }
-#endif //!NONET
 
 // ========================
 // MULTIPLAYER PLAYER SETUP
@@ -12544,7 +12489,7 @@ static void M_SetupMultiPlayer2(INT32 choice)
 
 	multi_frame = 0;
 	multi_tics = 4*FRACUNIT;
-	
+
 	strcpy (setupm_name, cv_playername2.string);
 
 	// set for splitscreen secondary player

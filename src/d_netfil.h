@@ -70,13 +70,11 @@ extern INT32 fileneedednum;
 extern fileneeded_t *fileneeded;
 extern char downloaddir[512];
 
-#ifndef NONET
 extern INT32 lastfilenum;
 extern INT32 downloadcompletednum;
 extern UINT32 downloadcompletedsize;
 extern INT32 totalfilesrequestednum;
 extern UINT32 totalfilesrequestedsize;
-#endif
 
 void AllocFileNeeded(INT32 size);
 void FreeFileNeeded(void);
