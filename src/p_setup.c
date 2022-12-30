@@ -1761,7 +1761,14 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 	else if (fastcmp(param, "triggertag"))
 		sectors[i].triggertag = atol(val);
 	else if (fastcmp(param, "triggerer"))
-		sectors[i].triggerer = atol(val);
+	{
+		if (fastcmp(val, "Player"))
+			sectors[i].triggerer = TO_PLAYER;
+		if (fastcmp(val, "AllPlayers"))
+			sectors[i].triggerer = TO_ALLPLAYERS;
+		if (fastcmp(val, "Mobj"))
+			sectors[i].triggerer = TO_MOBJ;
+	}
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char *val)
@@ -2633,7 +2640,22 @@ static void P_WriteTextmap(void)
 		if (wsectors[i].triggertag != 0)
 			fprintf(f, "triggertag = %d;\n", wsectors[i].triggertag);
 		if (wsectors[i].triggerer != 0)
-			fprintf(f, "triggerer = %d;\n", wsectors[i].triggerer);
+		{
+			switch (wsectors[i].triggerer)
+			{
+				case TO_PLAYER:
+					fprintf(f, "triggerer = \"Player\";\n");
+					break;
+				case TO_ALLPLAYERS:
+					fprintf(f, "triggerer = \"AllPlayers\";\n");
+					break;
+				case TO_MOBJ:
+					fprintf(f, "triggerer = \"Mobj\";\n");
+					break;
+				default:
+					break;
+			}
+		}
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
