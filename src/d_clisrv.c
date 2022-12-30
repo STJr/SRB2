@@ -3563,17 +3563,14 @@ static void HandleConnect(SINT8 node)
 			DEBFILE("new node joined\n");
 		}
 #ifndef NONET
-		if (netnodes[node].numplayerswaiting)
+		if ((gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) && newnode)
 		{
-			if ((gamestate == GS_LEVEL || gamestate == GS_INTERMISSION) && newnode)
-			{
-				SV_SendSaveGame(node, false); // send a complete game state
-				DEBFILE("send savegame\n");
-			}
-			SV_AddWaitingPlayers(names[0], names[1]);
-			joindelay += cv_joindelay.value * TICRATE;
-			player_joining = true;
+			SV_SendSaveGame(node, false); // send a complete game state
+			DEBFILE("send savegame\n");
 		}
+		SV_AddWaitingPlayers(names[0], names[1]);
+		joindelay += cv_joindelay.value * TICRATE;
+		player_joining = true;
 #endif
 	}
 }
