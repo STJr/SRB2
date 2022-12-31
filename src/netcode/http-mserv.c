@@ -20,6 +20,7 @@ Documentation available here.
 
 #include "../doomdef.h"
 #include "d_clisrv.h"
+#include "client_connection.h"
 #include "../command.h"
 #include "../m_argv.h"
 #include "../m_menu.h"

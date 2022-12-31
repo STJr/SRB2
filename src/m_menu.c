@@ -57,6 +57,7 @@
 
 #include "netcode/d_net.h"
 #include "netcode/mserv.h"
+#include "netcode/client_connection.h"
 #include "m_misc.h"
 #include "m_anigif.h"
 #include "byteptr.h"
