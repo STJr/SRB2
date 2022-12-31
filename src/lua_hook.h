@@ -41,6 +41,7 @@ automatically.
 	X (MobjMoveBlocked),/* P_XYMovement (when movement is blocked) */\
 	X (MapThingSpawn),/* P_SpawnMapThing */\
 	X (FollowMobj),/* P_PlayerAfterThink Smiles mobj-following */\
+	X (HurtMsg),/* imhurttin */\
 
 #define HOOK_LIST(X) \
 	X (NetVars),/* add to archive table (netsave) */\
@@ -56,7 +57,6 @@ automatically.
 	X (JumpSpinSpecial),/* P_DoJumpStuff (Spin button effect (mid-air)) */\
 	X (BotTiccmd),/* B_BuildTiccmd */\
 	X (PlayerMsg),/* chat messages */\
-	X (HurtMsg),/* imhurttin */\
 	X (PlayerSpawn),/* G_SpawnPlayer */\
 	X (ShieldSpawn),/* P_SpawnShieldOrb */\
 	X (ShieldSpecial),/* shield abilities */\

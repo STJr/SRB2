@@ -933,7 +933,7 @@ int LUA_HookPlayerMsg(int source, int target, int flags, char *msg)
 int LUA_HookHurtMsg(player_t *player, mobj_t *inflictor, mobj_t *source, UINT8 damagetype)
 {
 	Hook_State hook;
-	if (prepare_hook(&hook, false, HOOK(HurtMsg)))
+	if (prepare_mobj_hook(&hook, false, MOBJ_HOOK(HurtMsg), inflictor))
 	{
 		LUA_PushUserdata(gL, player, META_PLAYER);
 		LUA_PushUserdata(gL, inflictor, META_MOBJ);
