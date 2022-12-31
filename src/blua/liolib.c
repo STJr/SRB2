@@ -19,7 +19,7 @@
 #include "lualib.h"
 #include "../i_system.h"
 #include "../g_game.h"
-#include "../d_netfil.h"
+#include "../netcode/d_netfil.h"
 #include "../lua_libs.h"
 #include "../byteptr.h"
 #include "../lua_script.h"

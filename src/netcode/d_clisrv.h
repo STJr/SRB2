@@ -13,12 +13,12 @@
 #ifndef __D_CLISRV__
 #define __D_CLISRV__
 
-#include "d_ticcmd.h"
+#include "../d_ticcmd.h"
 #include "d_net.h"
 #include "d_netcmd.h"
 #include "d_net.h"
-#include "tables.h"
-#include "d_player.h"
+#include "../tables.h"
+#include "../d_player.h"
 #include "mserv.h"
 
 /*

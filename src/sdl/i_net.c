@@ -21,16 +21,16 @@
 
 #include "../i_system.h"
 #include "../d_event.h"
-#include "../d_net.h"
+#include "../netcode/d_net.h"
 #include "../m_argv.h"
 
 #include "../doomstat.h"
 
-#include "../i_net.h"
+#include "../netcode/i_net.h"
 
 #include "../z_zone.h"
 
-#include "../i_tcp.h"
+#include "../netcode/i_tcp.h"
 
 #ifdef HAVE_SDL
 

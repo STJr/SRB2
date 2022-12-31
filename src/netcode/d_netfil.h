@@ -15,7 +15,7 @@
 
 #include "d_net.h"
 #include "d_clisrv.h"
-#include "w_wad.h"
+#include "../w_wad.h"
 
 typedef enum
 {

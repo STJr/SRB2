@@ -19,7 +19,7 @@
 #include "m_cond.h" // emblems
 #include "m_misc.h" // word jumping
 
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 
 #include "g_game.h"
 #include "g_input.h"

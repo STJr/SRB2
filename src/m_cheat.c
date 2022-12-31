@@ -19,7 +19,7 @@
 #include "r_local.h"
 #include "p_local.h"
 #include "p_setup.h"
-#include "d_net.h"
+#include "netcode/d_net.h"
 
 #include "m_cheat.h"
 #include "m_menu.h"

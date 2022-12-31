@@ -14,7 +14,7 @@
 #ifndef _MSERV_H_
 #define _MSERV_H_
 
-#include "i_threads.h"
+#include "../i_threads.h"
 
 // lowered from 32 due to menu changes
 #define NUM_LIST_ROOMS 16

@@ -36,7 +36,7 @@
 	#include <ws2tcpip.h>
 #endif
 
-#include "doomdef.h"
+#include "../doomdef.h"
 
 #ifdef USE_WINSOCK1
 	#include <winsock.h>
@@ -122,14 +122,14 @@ typedef union
 
 #define MAXBANS 100
 
-#include "i_system.h"
+#include "../i_system.h"
 #include "i_net.h"
 #include "d_net.h"
 #include "d_netfil.h"
 #include "i_tcp.h"
-#include "m_argv.h"
+#include "../m_argv.h"
 
-#include "doomstat.h"
+#include "../doomstat.h"
 
 // win32
 #ifdef USE_WINSOCK

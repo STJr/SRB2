@@ -193,7 +193,7 @@ static char returnWadPath[256];
 #include "../i_system.h"
 #include "../i_threads.h"
 #include "../screen.h" //vid.WndParent
-#include "../d_net.h"
+#include "../netcode/d_net.h"
 #include "../g_game.h"
 #include "../filesrch.h"
 #include "endtxt.h"
@@ -214,7 +214,7 @@ static char returnWadPath[256];
 
 #if !defined(NOMUMBLE) && defined(HAVE_MUMBLE)
 // Mumble context string
-#include "../d_clisrv.h"
+#include "../netcode/d_clisrv.h"
 #include "../byteptr.h"
 #endif
 

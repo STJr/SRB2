@@ -20,7 +20,7 @@
 #include "command.h"
 #include "f_finale.h" // for ttmode_enum
 #include "i_threads.h"
-#include "mserv.h"
+#include "netcode/mserv.h"
 #include "r_things.h" // for SKINNAMESIZE
 
 // Compatibility with old-style named NiGHTS replay files.
