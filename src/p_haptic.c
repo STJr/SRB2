@@ -11,7 +11,7 @@
 
 #include "p_haptic.h"
 #include "g_game.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 #include "i_gamepad.h"
 #include "doomstat.h"
 

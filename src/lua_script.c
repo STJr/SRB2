@@ -28,7 +28,7 @@
 #include "p_slopes.h" // for P_SlopeById and slopelist
 #include "p_polyobj.h" // polyobj_t, PolyObjects
 #ifdef LUA_ALLOW_BYTECODE
-#include "d_netfil.h" // for LUA_DumpFile
+#include "netcode/d_netfil.h" // for LUA_DumpFile
 #endif
 
 #include "lua_script.h"

@@ -26,7 +26,7 @@
 #include <string.h>
 
 #include "filesrch.h"
-#include "d_netfil.h"
+#include "netcode/d_netfil.h"
 #include "m_misc.h"
 #include "z_zone.h"
 #include "m_menu.h" // Addons_option_Onchange

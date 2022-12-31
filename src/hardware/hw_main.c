@@ -29,7 +29,7 @@
 #include "../r_patch.h"
 #include "../r_picformats.h"
 #include "../r_bsp.h"
-#include "../d_clisrv.h"
+#include "../netcode/d_clisrv.h"
 #include "../w_wad.h"
 #include "../z_zone.h"
 #include "../r_splats.h"
@@ -5234,7 +5234,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 		{
 			interpmobjstate_t casterinterp = {};
 			fixed_t groundz;
-			fixed_t floordiff; 
+			fixed_t floordiff;
 
 			if (R_UsingFrameInterpolation() && !paused)
 			{
@@ -5244,7 +5244,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			{
 				R_InterpolateMobjState(caster, FRACUNIT, &casterinterp);
 			}
-			
+
 			groundz = R_GetShadowZ(thing, NULL);
 			floordiff = abs(((thing->eflags & MFE_VERTICALFLIP) ? caster->height : 0) + casterinterp.z - groundz);
 

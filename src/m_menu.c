@@ -20,7 +20,7 @@
 
 #include "doomdef.h"
 #include "d_main.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 #include "console.h"
 #include "r_fps.h"
 #include "r_local.h"
@@ -55,8 +55,8 @@
 #include "hardware/hw_main.h"
 #endif
 
-#include "d_net.h"
-#include "mserv.h"
+#include "netcode/d_net.h"
+#include "netcode/mserv.h"
 #include "m_misc.h"
 #include "m_anigif.h"
 #include "byteptr.h"

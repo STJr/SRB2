@@ -15,7 +15,7 @@
 #include "console.h"
 #include "d_main.h"
 #include "d_player.h"
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 #include "f_finale.h"
 #include "p_setup.h"
 #include "p_saveg.h"

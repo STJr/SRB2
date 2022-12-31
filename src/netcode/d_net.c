@@ -16,19 +16,19 @@
 ///        This protocol uses a mix of "goback n" and "selective repeat" implementation
 ///        The NOTHING packet is sent when connection is idle to acknowledge packets
 
-#include "doomdef.h"
-#include "g_game.h"
-#include "i_time.h"
+#include "../doomdef.h"
+#include "../g_game.h"
+#include "../i_time.h"
 #include "i_net.h"
-#include "i_system.h"
-#include "m_argv.h"
+#include "../i_system.h"
+#include "../m_argv.h"
 #include "d_net.h"
-#include "w_wad.h"
+#include "../w_wad.h"
 #include "d_netfil.h"
 #include "d_clisrv.h"
-#include "z_zone.h"
+#include "../z_zone.h"
 #include "i_tcp.h"
-#include "d_main.h" // srb2home
+#include "../d_main.h" // srb2home
 
 //
 // NETWORKING

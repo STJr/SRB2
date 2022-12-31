@@ -28,11 +28,11 @@
 #include "byteptr.h"
 #include "p_saveg.h"
 #include "g_game.h" // for player_names
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 #include "hu_stuff.h"
 #include "p_setup.h"
 #include "lua_script.h"
-#include "d_netfil.h" // findfile
+#include "netcode/d_netfil.h" // findfile
 #include "r_data.h" // Color_cons_t
 
 //========

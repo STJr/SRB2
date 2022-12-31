@@ -15,13 +15,13 @@
 #include <time.h>
 #endif
 
-#include "doomstat.h"
-#include "doomdef.h"
-#include "command.h"
-#include "i_threads.h"
+#include "../doomstat.h"
+#include "../doomdef.h"
+#include "../command.h"
+#include "../i_threads.h"
 #include "mserv.h"
-#include "m_menu.h"
-#include "z_zone.h"
+#include "../m_menu.h"
+#include "../z_zone.h"
 
 #ifdef MASTERSERVER
 
