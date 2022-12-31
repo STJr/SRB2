@@ -5664,6 +5664,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			{
 				mobj_t *missile = P_SpawnMissile(spawner, mobj, MT_MSGATHER);
 				missile->fuse = (dist/P_AproxDistance(missile->momx, missile->momy));
+				if (missile->fuse <= 0) // Prevents a division by zero when calculating missile->scalespeed
+					missile->fuse = 1;
 
 				if (missile->fuse > mobj->fuse)
 					P_RemoveMobj(missile);
