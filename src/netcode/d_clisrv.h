@@ -332,15 +332,6 @@ typedef struct
 #pragma pack()
 #endif
 
-#define MAXSERVERLIST (MAXNETNODES-1)
-typedef struct
-{
-	SINT8 node;
-	serverinfo_pak info;
-} serverelem_t;
-
-extern serverelem_t serverlist[MAXSERVERLIST];
-extern UINT32 serverlistcount;
 extern INT32 mapchangepending;
 
 // Points inside doomcom
@@ -385,6 +376,8 @@ extern boolean dedicated; // For dedicated server
 extern UINT16 software_MAXPACKETLENGTH;
 extern boolean acceptnewnode;
 extern SINT8 servernode;
+extern tic_t maketic;
+extern tic_t neededtic;
 
 void Command_Ping_f(void);
 extern tic_t connectiontimeout;
@@ -411,6 +404,8 @@ void SendKick(UINT8 playernum, UINT8 msg);
 // Create any new ticcmds and broadcast to other players.
 void NetUpdate(void);
 
+void GetPackets(void);
+
 void SV_StartSinglePlayerServer(void);
 void SV_SpawnServer(void);
 void SV_StopServer(void);
@@ -419,9 +414,8 @@ void CL_AddSplitscreenPlayer(void);
 void CL_RemoveSplitscreenPlayer(void);
 void CL_Reset(void);
 void CL_ClearPlayer(INT32 playernum);
-void CL_QueryServerList(msg_server_t *list);
-void CL_UpdateServerList(boolean internetsearch, INT32 room);
 void CL_RemovePlayer(INT32 playernum, kickreason_t reason);
+void CL_LoadReceivedSavegame(boolean reloading);
 // Is there a game running
 boolean Playing(void);
 

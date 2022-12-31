@@ -20,6 +20,7 @@
 #include "../command.h"
 #include "../i_threads.h"
 #include "mserv.h"
+#include "client_connection.h"
 #include "../m_menu.h"
 #include "../z_zone.h"
 
