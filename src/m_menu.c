@@ -12000,6 +12000,7 @@ static fixed_t    multi_tics;
 static UINT8      multi_frame;
 static UINT8      multi_spr2;
 static boolean    multi_paused;
+static boolean    multi_invcolor;
 
 // this is set before entering the MultiPlayer setup menu,
 // for either player 1 or 2
@@ -12076,7 +12077,8 @@ static void M_DrawSetupMultiPlayerMenu(void)
 #define charw 74
 
 	// draw box around character
-	V_DrawFill(x-(charw/2), y, charw, 84, 159);
+	V_DrawFill(x-(charw/2), y, charw, 84,
+		multi_invcolor ?skincolors[skincolors[setupm_fakecolor->color].invcolor].ramp[skincolors[setupm_fakecolor->color].invshade] : 159);
 
 	sprdef = &skins[setupm_fakeskin].sprites[multi_spr2];
 
@@ -12411,6 +12413,10 @@ static void M_HandleSetupMultiPlayer(INT32 choice)
 
 		case KEY_PAUSE:
 			multi_paused = !multi_paused;
+			break;
+
+		case KEY_INS:
+			multi_invcolor = !multi_invcolor;
 			break;
 
 		default:
