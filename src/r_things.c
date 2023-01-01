@@ -1785,7 +1785,11 @@ static void R_ProjectSprite(mobj_t *thing)
 
 		range++; // fencepost problem
 
-		scalestep = ((yscale2 - yscale)/range) ?: 1;
+		// Compatibility with MSVC - SSNTails
+		scalestep = ((yscale2 - yscale) / range);
+		if (!scalestep)
+			scalestep = 1;
+
 		xscale = FixedDiv(range<<FRACBITS, abs(offset2));
 
 		// The following two are alternate sorting methods which might be more applicable in some circumstances. TODO - maybe enable via MF2?
@@ -1915,7 +1919,7 @@ static void R_ProjectSprite(mobj_t *thing)
 		if (shadoweffects)
 		{
 			mobj_t *caster = thing->target;
-			interpmobjstate_t casterinterp = {};
+			interpmobjstate_t casterinterp = { 0 }; // MSVC compatibility - SSNTails
 
 			if (R_UsingFrameInterpolation() && !paused)
 			{
