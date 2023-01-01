@@ -4161,7 +4161,7 @@ static void G_DoCompleted(void)
 	{
 		token--;
 
-		if (!nextmapoverride)
+//		if (!nextmapoverride) // Having a token should pull the player into the special stage before going to the overridden map (Issue #933)
 			for (i = 0; i < 7; i++)
 				if (!(emeralds & (1<<i)))
 				{
