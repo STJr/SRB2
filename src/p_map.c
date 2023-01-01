@@ -3506,11 +3506,9 @@ static void PTR_GlideClimbTraverse(line_t *li)
 			if (fofline)
 				whichside = 0;
 
-			if (!whichside)
-			{
-				slidemo->player->lastsidehit = checkline->sidenum[whichside];
-				slidemo->player->lastlinehit = (INT16)(checkline - lines);
-			}
+                        // Even if you attach to the second side of a linedef, we want to know the last hit.
+			slidemo->player->lastsidehit = checkline->sidenum[whichside];
+			slidemo->player->lastlinehit = (INT16)(checkline - lines);
 
 			P_Thrust(slidemo, slidemo->angle, FixedMul(5*FRACUNIT, slidemo->scale));
 		}
