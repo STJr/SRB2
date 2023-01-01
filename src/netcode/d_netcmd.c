@@ -36,6 +36,7 @@
 #include "../p_spec.h"
 #include "../m_cheat.h"
 #include "d_clisrv.h"
+#include "server_connection.h"
 #include "d_net.h"
 #include "../v_video.h"
 #include "../d_main.h"

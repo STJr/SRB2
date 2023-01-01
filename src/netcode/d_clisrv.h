@@ -381,7 +381,6 @@ extern tic_t neededtic;
 
 void Command_Ping_f(void);
 extern tic_t connectiontimeout;
-extern tic_t jointimeout;
 extern UINT16 pingmeasurecount;
 extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
@@ -405,11 +404,13 @@ void SendKick(UINT8 playernum, UINT8 msg);
 void NetUpdate(void);
 
 void GetPackets(void);
+void ResetNode(INT32 node);
 
 void SV_StartSinglePlayerServer(void);
 void SV_SpawnServer(void);
 void SV_StopServer(void);
 void SV_ResetServer(void);
+void SV_SendSaveGame(INT32 node, boolean resending);
 void CL_AddSplitscreenPlayer(void);
 void CL_RemoveSplitscreenPlayer(void);
 void CL_Reset(void);
