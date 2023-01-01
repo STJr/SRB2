@@ -1,4 +1,5 @@
 d_clisrv.c
+server_connection.c
 client_connection.c
 d_net.c
 d_netcmd.c
