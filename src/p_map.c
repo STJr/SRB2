@@ -418,7 +418,12 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 				P_SetPlayerMobjState(object, S_PLAY_ROLL);
 		}
 		else
-			pflags = object->player->pflags & (PF_STARTJUMP|PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING|PF_THOKKED|PF_BOUNCING); // I still need these.
+		{
+			pflags = object->player->pflags & (PF_STARTJUMP | PF_JUMPED | PF_NOJUMPDAMAGE | PF_SPINNING | PF_THOKKED | PF_BOUNCING); // I still need these.
+
+			if (pflags & PF_SPINNING) // Ensure we're in the rolling state, and not something like spindash.
+				P_SetPlayerMobjState(object, S_PLAY_ROLL);
+		}
 		secondjump = object->player->secondjump;
 		washoming = object->player->homing;
 		P_ResetPlayer(object->player);
