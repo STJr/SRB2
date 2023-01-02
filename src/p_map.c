@@ -425,6 +425,12 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 
 			if (wasSpindashing) // Ensure we're in the rolling state, and not spindash.
 				P_SetPlayerMobjState(object, S_PLAY_ROLL);
+
+			if (object->player->charability == CA_GLIDEANDCLIMB && object->player->skidtime && (pflags & PF_JUMPED))
+			{
+				object->player->skidtime = 0; // No skidding should be happening, either.
+				pflags &= ~PF_JUMPED;
+			}
 		}
 		secondjump = object->player->secondjump;
 		washoming = object->player->homing;
