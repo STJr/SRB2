@@ -419,9 +419,11 @@ boolean P_DoSpring(mobj_t *spring, mobj_t *object)
 		}
 		else
 		{
+			boolean wasSpindashing = object->player->dashspeed > 0 && (object->player->charability2 == CA2_SPINDASH);
+
 			pflags = object->player->pflags & (PF_STARTJUMP | PF_JUMPED | PF_NOJUMPDAMAGE | PF_SPINNING | PF_THOKKED | PF_BOUNCING); // I still need these.
 
-			if (pflags & PF_SPINNING) // Ensure we're in the rolling state, and not something like spindash.
+			if (wasSpindashing) // Ensure we're in the rolling state, and not spindash.
 				P_SetPlayerMobjState(object, S_PLAY_ROLL);
 		}
 		secondjump = object->player->secondjump;
