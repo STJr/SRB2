@@ -5232,7 +5232,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 		if (caster && !P_MobjWasRemoved(caster))
 		{
-			interpmobjstate_t casterinterp = {};
+			interpmobjstate_t casterinterp = { 0 };
 			fixed_t groundz;
 			fixed_t floordiff; 
 
@@ -5340,7 +5340,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	if ((thing->flags2 & MF2_LINKDRAW) && thing->tracer)
 	{
-		interpmobjstate_t tracer_interp = {};
+		interpmobjstate_t tracer_interp = { 0 };
 
 		if (! R_ThingVisible(thing->tracer))
 			return;

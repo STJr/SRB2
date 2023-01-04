@@ -541,9 +541,9 @@ INT32 G_RemapGamepadEvent(event_t *event, INT32 *type)
 		const INT16 value = G_GetGamepadAxisValue(event->which, event->key);
 
 		if (value < -jdeadzone || value > jdeadzone)
-			*type = ev_keyup;
-		else
 			*type = ev_keydown;
+		else
+			*type = ev_keyup;
 
 		if (value < -jdeadzone)
 			return KEY_INV_AXES + event->key;

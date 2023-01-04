@@ -1724,9 +1724,13 @@ void CV_SaveVars(UINT8 **p, boolean in_demo)
 		if ((cvar->flags & CV_NETVAR) && !CV_IsSetToDefault(cvar))
 		{
 			if (in_demo)
+			{
 				WRITESTRING(*p, cvar->name);
+			}
 			else
+			{
 				WRITEUINT16(*p, cvar->netid);
+			}
 			WRITESTRING(*p, cvar->string);
 			WRITEUINT8(*p, false);
 			++count;
