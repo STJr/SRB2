@@ -53,6 +53,7 @@
 #include "client_connection.h"
 #include "tic_command.h"
 #include "net_command.h"
+#include "protocol.h"
 
 //
 // NETWORKING
