@@ -19,6 +19,7 @@
 #include "i_system.h"
 #include "d_event.h"
 #include "netcode/d_net.h"
+#include "netcode/net_command.h"
 #include "g_game.h"
 #include "p_local.h"
 #include "r_fps.h"

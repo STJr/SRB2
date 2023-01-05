@@ -1,6 +1,8 @@
 d_clisrv.c
 server_connection.c
 client_connection.c
+tic_command.c
+net_command.c
 d_net.c
 d_netcmd.c
 d_netfil.c

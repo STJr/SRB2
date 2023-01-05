@@ -26,6 +26,7 @@
 #include "../w_wad.h"
 #include "d_netfil.h"
 #include "d_clisrv.h"
+#include "tic_command.h"
 #include "../z_zone.h"
 #include "i_tcp.h"
 #include "../d_main.h" // srb2home

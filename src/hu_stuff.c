@@ -20,6 +20,7 @@
 #include "m_misc.h" // word jumping
 
 #include "netcode/d_clisrv.h"
+#include "netcode/net_command.h"
 
 #include "g_game.h"
 #include "g_input.h"

@@ -378,6 +378,7 @@ extern boolean acceptnewnode;
 extern SINT8 servernode;
 extern tic_t maketic;
 extern tic_t neededtic;
+extern INT16 consistancy[BACKUPTICS];
 
 void Command_Ping_f(void);
 extern tic_t connectiontimeout;
@@ -391,20 +392,15 @@ extern consvar_t cv_resynchattempts, cv_blamecfail;
 extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
 
 // Used in d_net, the only dependence
-tic_t ExpandTics(INT32 low, INT32 node);
 void D_ClientServerInit(void);
-
-// Initialise the other field
-void RegisterNetXCmd(netxcmd_t id, void (*cmd_f)(UINT8 **p, INT32 playernum));
-void SendNetXCmd(netxcmd_t id, const void *param, size_t nparam);
-void SendNetXCmd2(netxcmd_t id, const void *param, size_t nparam); // splitsreen player
-void SendKick(UINT8 playernum, UINT8 msg);
 
 // Create any new ticcmds and broadcast to other players.
 void NetUpdate(void);
 
 void GetPackets(void);
 void ResetNode(INT32 node);
+INT16 Consistancy(void);
+boolean SV_ResendingSavegameToAnyone(void);
 
 void SV_StartSinglePlayerServer(void);
 void SV_SpawnServer(void);
@@ -440,10 +436,8 @@ extern char motd[254], server_context[8];
 extern UINT8 playernode[MAXPLAYERS];
 
 INT32 D_NumPlayers(void);
-void D_ResetTiccmds(void);
 
 tic_t GetLag(INT32 node);
-UINT8 GetFreeXCmdSize(void);
 
 void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
 

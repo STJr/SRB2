@@ -42,6 +42,7 @@
 #include "d_net.h"
 #include "../w_wad.h"
 #include "d_netfil.h"
+#include "net_command.h"
 #include "../z_zone.h"
 #include "../byteptr.h"
 #include "../p_setup.h"
