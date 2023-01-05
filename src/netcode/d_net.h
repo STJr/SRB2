@@ -18,6 +18,8 @@
 #ifndef __D_NET__
 #define __D_NET__
 
+#include "../doomtype.h"
+
 // Max computers in a game
 // 127 is probably as high as this can go, because
 // SINT8 is used for nodes sometimes >:(
