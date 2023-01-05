@@ -15,6 +15,7 @@
 #include "d_clisrv.h"
 #include "d_netfil.h"
 #include "mserv.h"
+#include "net_command.h"
 #include "../byteptr.h"
 #include "../g_game.h"
 #include "../g_state.h"

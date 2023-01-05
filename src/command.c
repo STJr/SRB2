@@ -29,6 +29,7 @@
 #include "p_saveg.h"
 #include "g_game.h" // for player_names
 #include "netcode/d_netcmd.h"
+#include "netcode/net_command.h"
 #include "hu_stuff.h"
 #include "p_setup.h"
 #include "lua_script.h"

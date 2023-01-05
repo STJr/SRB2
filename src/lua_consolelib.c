@@ -16,6 +16,7 @@
 #include "g_game.h"
 #include "byteptr.h"
 #include "z_zone.h"
+#include "netcode/net_command.h"
 
 #include "lua_script.h"
 #include "lua_libs.h"
