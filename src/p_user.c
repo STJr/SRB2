@@ -9059,10 +9059,6 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 
 		switch (mo->type)
 		{
-		case MT_TNTBARREL:
-			if (lockonflags & LOCK_INTERESTS)
-				break;
-			/*FALLTHRU*/
 		case MT_PLAYER: // Don't chase other players!
 		case MT_DETON:
 			continue; // Don't be STUPID, Sonic!
@@ -9083,17 +9079,13 @@ mobj_t *P_LookForFocusTarget(player_t *player, mobj_t *exclude, SINT8 direction,
 			/*FALLTHRU*/
 		default:
 
-			if ((lockonflags & LOCK_BOSS) && ((mo->flags & (MF_BOSS|MF_SHOOTABLE)) == (MF_BOSS|MF_SHOOTABLE))) // allows if it has the flags desired XOR it has the invert aimable flag
-			{
-				if (mo->flags2 & MF2_FRET)
-					continue;
+			if ((lockonflags & LOCK_BOSS) && (mo->flags & MF_BOSS)) // always allow targeting bosses
 				break;
-			}
 
 			if ((lockonflags & LOCK_ENEMY) && (!((mo->flags & (MF_ENEMY|MF_SHOOTABLE)) == (MF_ENEMY|MF_SHOOTABLE)) != !(mo->flags2 & MF2_INVERTAIMABLE))) // allows if it has the flags desired XOR it has the invert aimable flag
 				break;
 
-			if ((lockonflags & LOCK_INTERESTS) && (mo->flags & (MF_PUSHABLE|MF_MONITOR))) // allows if it has the flags desired XOR it has the invert aimable flag
+			if ((lockonflags & LOCK_INTERESTS) && (mo->flags & (MF_PUSHABLE|MF_MONITOR))) // allows if it has the flags desired
 				break;
 
 			continue; // not a valid object

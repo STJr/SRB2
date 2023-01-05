@@ -1453,7 +1453,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		if (
 			P_MobjWasRemoved(ticcmd_ztargetfocus[forplayer]) ||
 			!ticcmd_ztargetfocus[forplayer]->health ||
-			(ticcmd_ztargetfocus[forplayer]->flags2 & MF2_FRET) ||
 			(ticcmd_ztargetfocus[forplayer]->type == MT_EGGMOBILE3 && !ticcmd_ztargetfocus[forplayer]->movecount) // Sea Egg is moving around underground and shouldn't be tracked
 		)
 			P_SetTarget(&ticcmd_ztargetfocus[forplayer], NULL);
