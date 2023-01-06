@@ -6627,8 +6627,8 @@ static void P_ConvertBinaryThingTypes(void)
 		case 1713: //Hoop (Customizable)
 		{
 			UINT16 oldangle = mapthings[i].angle;
-			mapthings[i].angle = ((oldangle >> 8)*360)/256;
-			mapthings[i].pitch = ((oldangle & 255)*360)/256;
+			mapthings[i].angle = (mapthings[i].extrainfo == 1) ? oldangle - 90  : ((oldangle >> 8)*360)/256;
+			mapthings[i].pitch = (mapthings[i].extrainfo == 1) ? oldangle / 360 : ((oldangle & 255)*360)/256;
 			mapthings[i].args[0] = (mapthings[i].type == 1705) ? 96 : (mapthings[i].options & 0xF)*16 + 32;
 			mapthings[i].options &= ~0xF;
 			mapthings[i].type = 1713;
