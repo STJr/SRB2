@@ -50,8 +50,8 @@ function(git_working_tree_dirty variable)
 	endif()
 endfunction()
 
-function(git_summary variable)
-	_git_easy_command(log -1 "--format=%h %s")
+function(git_subject variable)
+	_git_easy_command(log -1 --format=%s)
 endfunction()
 
 function(get_git_dir variable)
