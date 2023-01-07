@@ -1352,6 +1352,9 @@ void SV_StartSinglePlayerServer(void)
   */
 static void PT_ServerShutdown(SINT8 node)
 {
+	if (node != servernode || server || cl_mode == CL_SEARCHING)
+		return;
+
 	(void)node;
 	LUA_HookBool(false, HOOK(GameQuit));
 	D_QuitNetGame();
@@ -1412,7 +1415,11 @@ static void PT_Login(SINT8 node, INT32 netconsole)
 static void PT_ClientQuit(SINT8 node, INT32 netconsole)
 {
 	if (client)
+	{
+		if (node == servernode && cl_mode != CL_SEARCHING && netbuffer->packettype == PT_NODETIMEOUT)
+			PT_NodeTimeout(node);
 		return;
+	}
 
 	if (!netnodes[node].ingame)
 	{
@@ -1505,6 +1512,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 	switch (netbuffer->packettype)
 	{
 		case PT_ASKINFOVIAMS   : PT_AskInfoViaMS   (node    ); break;
+		case PT_SERVERINFO     : PT_ServerInfo     (node    ); break;
 		case PT_TELLFILESNEEDED: PT_TellFilesNeeded(node    ); break;
 		case PT_MOREFILESNEEDED: PT_MoreFilesNeeded(node    ); break;
 		case PT_ASKINFO        : PT_AskInfo        (node    ); break;
@@ -1517,6 +1525,8 @@ static void HandlePacketFromAwayNode(SINT8 node)
 		case PT_NODETIMEOUT    : PT_ClientQuit     (node, -1); break;
 		case PT_CLIENTQUIT     : PT_ClientQuit     (node, -1); break;
 		case PT_SERVERTICS     : PT_ServerTics     (node, -1); break;
+		case PT_CLIENTJOIN     : PT_ClientJoin     (node    ); break;
+		case PT_SERVERSHUTDOWN : PT_ServerShutdown (node    ); break;
 		case PT_CLIENTCMD      :                               break; // This is not an "unknown packet"
 
 		default:
@@ -1566,6 +1576,7 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_ASKLUAFILE         : PT_AskLuaFile         (node            ); break;
 		case PT_HASLUAFILE         : PT_HasLuaFile         (node            ); break;
 		case PT_RECEIVEDGAMESTATE  : PT_ReceivedGamestate  (node            ); break;
+		case PT_SERVERINFO         : PT_ServerInfo         (node            ); break;
 
 		// CLIENT RECEIVE
 		case PT_SERVERTICS         : PT_ServerTics         (node, netconsole); break;
@@ -1575,7 +1586,9 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_FILERECEIVED       : PT_FileReceived       (node            ); break;
 		case PT_WILLRESENDGAMESTATE: PT_WillResendGamestate(node            ); break;
 		case PT_SENDINGLUAFILE     : PT_SendingLuaFile     (node            ); break;
+		case PT_SERVERSHUTDOWN     : PT_ServerShutdown     (node            ); break;
 		case PT_SERVERCFG          :                                           break;
+		case PT_CLIENTJOIN         :                                           break;
 
 		default:
 			DEBFILE(va("UNKNOWN PACKET TYPE RECEIVED %d from host %d\n",
@@ -1597,34 +1610,6 @@ void GetPackets(void)
 	while (HGetPacket())
 	{
 		node = (SINT8)doomcom->remotenode;
-
-		if (netbuffer->packettype == PT_CLIENTJOIN && server)
-		{
-			PT_Connect(node);
-			continue;
-		}
-		if (node == servernode && client && cl_mode != CL_SEARCHING)
-		{
-			if (netbuffer->packettype == PT_SERVERSHUTDOWN)
-			{
-				PT_Shutdown(node);
-				continue;
-			}
-			if (netbuffer->packettype == PT_NODETIMEOUT)
-			{
-				PT_Timeout(node);
-				continue;
-			}
-		}
-
-		if (netbuffer->packettype == PT_SERVERINFO)
-		{
-			PT_ServerInfo(node);
-			continue;
-		}
-
-		if (netbuffer->packettype == PT_PLAYERINFO)
-			continue; // We do nothing with PLAYERINFO, that's for the MS browser.
 
 		// Packet received from someone already playing
 		if (netnodes[node].ingame)
