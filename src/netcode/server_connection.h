@@ -13,6 +13,7 @@
 #ifndef __D_SERVER_CONNECTION__
 #define __D_SERVER_CONNECTION__
 
+#include "../command.h"
 #include "../doomdef.h"
 #include "../doomtype.h"
 
@@ -25,5 +26,6 @@ extern tic_t jointimeout;
 extern tic_t joindelay;
 extern char playeraddress[MAXPLAYERS][64];
 extern UINT8 player_joining;
+extern consvar_t cv_showjoinaddress, cv_allownewplayer, cv_maxplayers, cv_joindelay, cv_rejointimeout;
 
 #endif

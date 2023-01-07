@@ -11,6 +11,7 @@
 /// \brief Client connection handling
 
 #include "client_connection.h"
+#include "gamestate.h"
 #include "d_clisrv.h"
 #include "d_netfil.h"
 #include "../d_main.h"
