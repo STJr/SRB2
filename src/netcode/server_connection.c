@@ -430,7 +430,7 @@ void PT_ClientJoin(SINT8 node)
 	INT32 i;
 
 	// Ignore duplicate packets
-	if (netnodes[node].ingame)
+	if (client || netnodes[node].ingame)
 		return;
 
 	rejoinernum = FindRejoinerNum(node);
