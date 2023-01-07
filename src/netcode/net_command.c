@@ -13,6 +13,7 @@
 #include "net_command.h"
 #include "tic_command.h"
 #include "gamestate.h"
+#include "server_connection.h"
 #include "d_clisrv.h"
 #include "i_net.h"
 #include "../g_game.h"

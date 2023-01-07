@@ -76,6 +76,8 @@ extern UINT32 downloadcompletedsize;
 extern INT32 totalfilesrequestednum;
 extern UINT32 totalfilesrequestedsize;
 
+extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
+
 void AllocFileNeeded(INT32 size);
 void FreeFileNeeded(void);
 UINT8 *PutFileNeeded(UINT16 firstfile);

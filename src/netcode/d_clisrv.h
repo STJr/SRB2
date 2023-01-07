@@ -37,9 +37,6 @@ extern INT32 mapchangepending;
 // Points inside doomcom
 extern doomdata_t *netbuffer;
 
-extern consvar_t cv_showjoinaddress;
-extern consvar_t cv_playbackspeed;
-
 #define BASEPACKETSIZE      offsetof(doomdata_t, u)
 #define BASESERVERTICSSIZE  offsetof(doomdata_t, u.serverpak.cmds[0])
 
@@ -76,9 +73,7 @@ extern UINT32 realpingtable[MAXPLAYERS];
 extern UINT32 playerpingtable[MAXPLAYERS];
 extern tic_t servermaxping;
 
-extern consvar_t cv_netticbuffer, cv_allownewplayer, cv_maxplayers, cv_joindelay, cv_rejointimeout;
-extern consvar_t cv_resynchattempts, cv_blamecfail;
-extern consvar_t cv_maxsend, cv_noticedownload, cv_downloadspeed;
+extern consvar_t cv_netticbuffer,  cv_resynchattempts, cv_blamecfail, cv_playbackspeed;
 
 // Used in d_net, the only dependence
 void D_ClientServerInit(void);
