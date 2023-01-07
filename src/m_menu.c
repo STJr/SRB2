@@ -13006,19 +13006,7 @@ static void M_ChangeControlResponse(event_t *ev)
 		else if (setupcontrols[control][1] == ch)
 			found = 1;
 
-		if (found >= 0)
-		{
-#define CHECK_DBL(key, length) (ch >= key && ch <= key+length)
-#define SET_DBL(key, dblkey) ch-key+dblkey
-			// replace mouse clicks by double clicks
-			if (CHECK_DBL(KEY_MOUSE1, MOUSEBUTTONS))
-				setupcontrols[control][found] = SET_DBL(KEY_MOUSE1, KEY_DBLMOUSE1);
-			else if (CHECK_DBL(KEY_2MOUSE1, MOUSEBUTTONS))
-				setupcontrols[control][found] = SET_DBL(KEY_2MOUSE1, KEY_DBL2MOUSE1);
-#undef CHECK_DBL
-#undef SET_DBL
-		}
-		else
+		if (found < 0)
 		{
 			// check if change key1 or key2, or replace the two by the new
 			found = 0;
