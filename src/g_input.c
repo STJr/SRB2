@@ -147,46 +147,6 @@ INT16 G_GetAnalogPlayerInput(UINT8 which, gamecontrols_e gc, UINT8 settings)
 	return 0;
 }
 
-typedef struct
-{
-	UINT8 time;
-	UINT8 state;
-	UINT8 clicks;
-} dclick_t;
-
-static dclick_t mousedclicks[MOUSEBUTTONS];
-static dclick_t mouse2dclicks[MOUSEBUTTONS];
-
-//
-// General double-click detection routine for any kind of input.
-//
-static UINT8 G_CheckDoubleClick(UINT8 state, dclick_t *dt)
-{
-	if (state != dt->state && dt->time > 1)
-	{
-		dt->state = state;
-		if (state)
-			dt->clicks++;
-		if (dt->clicks == 2)
-		{
-			dt->clicks = 0;
-			return true;
-		}
-		else
-			dt->time = 0;
-	}
-	else
-	{
-		dt->time++;
-		if (dt->time > 20)
-		{
-			dt->clicks = 0;
-			dt->state = 0;
-		}
-	}
-	return false;
-}
-
 //
 // Remaps the inputs to game controls.
 //
@@ -247,19 +207,6 @@ void G_MapEventsToControls(event_t *ev)
 
 		default:
 			break;
-	}
-
-	// ALWAYS check for mouse double-clicks even if there were no such events
-	for (i = 0; i < MOUSEBUTTONS; i++)
-	{
-		flag = G_CheckDoubleClick(gamekeydown[KEY_MOUSE1+i], &mousedclicks[i]);
-		gamekeydown[KEY_DBLMOUSE1+i] = flag;
-	}
-
-	for (i = 0; i < MOUSEBUTTONS; i++)
-	{
-		flag = G_CheckDoubleClick(gamekeydown[KEY_2MOUSE1+i], &mouse2dclicks[i]);
-		gamekeydown[KEY_DBL2MOUSE1+i] = flag;
 	}
 }
 
@@ -958,24 +905,7 @@ static keyname_t keynames[] =
 	DEF_GAMEPAD_AXIS(RIGHTY, "right stick y"),
 
 	DEF_GAMEPAD_AXIS(TRIGGERLEFT, "left trigger"),
-	DEF_GAMEPAD_AXIS(TRIGGERRIGHT, "right trigger"),
-
-	{KEY_DBLMOUSE1+0, "dblmouse1"},
-	{KEY_DBLMOUSE1+1, "dblmouse2"},
-	{KEY_DBLMOUSE1+2, "dblmouse3"},
-	{KEY_DBLMOUSE1+3, "dblmouse4"},
-	{KEY_DBLMOUSE1+4, "dblmouse5"},
-	{KEY_DBLMOUSE1+5, "dblmouse6"},
-	{KEY_DBLMOUSE1+6, "dblmouse7"},
-	{KEY_DBLMOUSE1+7, "dblmouse8"},
-	{KEY_DBL2MOUSE1+0, "dblsec_mouse1"},
-	{KEY_DBL2MOUSE1+1, "dblsec_mouse2"},
-	{KEY_DBL2MOUSE1+2, "dblsec_mouse3"},
-	{KEY_DBL2MOUSE1+3, "dblsec_mouse4"},
-	{KEY_DBL2MOUSE1+4, "dblsec_mouse5"},
-	{KEY_DBL2MOUSE1+5, "dblsec_mouse6"},
-	{KEY_DBL2MOUSE1+6, "dblsec_mouse7"},
-	{KEY_DBL2MOUSE1+7, "dblsec_mouse8"}
+	DEF_GAMEPAD_AXIS(TRIGGERRIGHT, "right trigger")
 };
 
 static keyname_t oldjoynames[] =
