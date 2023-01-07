@@ -219,7 +219,7 @@ static void SV_SendPlayerInfo(INT32 node)
 			netbuffer->u.playerinfo[i].data |= 0x80;
 	}
 
-	HSendPacket(node, false, 0, sizeof(plrinfo) * MAXPLAYERS);
+	HSendPacket(node, false, 0, sizeof(plrinfo_pak) * MAXPLAYERS);
 }
 
 /** Sends a PT_SERVERCFG packet
