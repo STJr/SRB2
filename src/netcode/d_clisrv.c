@@ -99,13 +99,8 @@ boolean adminpasswordset = false;
 tic_t neededtic;
 SINT8 servernode = 0; // the number of the server node
 
-/// \brief do we accept new players?
-/// \todo WORK!
 boolean acceptnewnode = true;
 
-// Some software don't support largest packet
-// (original sersetup, not exactely, but the probability of sending a packet
-// of 512 bytes is like 0.1)
 UINT16 software_MAXPACKETLENGTH;
 
 typedef struct banreason_s
@@ -299,9 +294,6 @@ static void Command_connect(void)
 		CONS_Printf(M_GetText("You cannot connect while in a game. End this game first.\n"));
 		return;
 	}
-
-	// modified game check: no longer handled
-	// we don't request a restart unless the filelist differs
 
 	server = false;
 /*
@@ -1768,7 +1760,7 @@ boolean TryRunTics(tic_t realtics)
 	boolean ticking;
 
 	// the machine has lagged but it is not so bad
-	if (realtics > TICRATE/7) // FIXME: consistency failure!!
+	if (realtics > TICRATE/7)
 	{
 		if (server)
 			realtics = 1;
@@ -1802,8 +1794,6 @@ boolean TryRunTics(tic_t realtics)
 #ifdef DEBUGFILE
 	if (debugfile && (realtics || neededtic > gametic))
 	{
-		//SoM: 3/30/2000: Need long INT32 in the format string for args 4 & 5.
-		//Shut up stupid warning!
 		fprintf(debugfile, "------------ Tryruntic: REAL:%d NEED:%d GAME:%d LOAD: %d\n",
 			realtics, neededtic, gametic, debugload);
 		debugload = 100000;
@@ -1983,7 +1973,7 @@ void NetUpdate(void)
 	if (client)
 		maketic = neededtic;
 
-	Local_Maketic(realtics); // make local tic, and call menu?
+	Local_Maketic(realtics);
 
 	if (server)
 		CL_SendClientCmd(); // send it

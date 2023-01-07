@@ -460,7 +460,7 @@ void PT_Connect(SINT8 node)
 		ResetNode(node);
 		SV_SendRefuse(node, M_GetText("Server couldn't send info, please try again"));
 		/// \todo fix this !!!
-		return; // restart the while
+		return;
 	}
 	DEBFILE("new node joined\n");
 
