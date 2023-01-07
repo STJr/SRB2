@@ -422,7 +422,7 @@ GetRefuseMessage (SINT8 node, INT32 rejoinernum)
   * \param node The packet sender
   *
   */
-void HandleConnect(SINT8 node)
+void PT_Connect(SINT8 node)
 {
 	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME + 1];
 	INT32 numplayers = netbuffer->u.clientcfg.localplayers;

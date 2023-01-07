@@ -1052,7 +1052,7 @@ void CL_ConnectToServer(void)
   * \note What happens if the packet comes from a client or something like that?
   *
   */
-void HandleServerInfo(SINT8 node)
+void PT_ServerInfo(SINT8 node)
 {
 	// compute ping in ms
 	const tic_t ticnow = I_GetTime();
@@ -1173,7 +1173,7 @@ void PT_ServerCFG(SINT8 node)
 
 	/// \note Wait. What if a Lua script uses some global custom variables synched with the NetVars hook?
 	///       Shouldn't them be downloaded even at intermission time?
-	///       Also, according to HandleConnect, the server will send the savegame even during intermission...
+	///       Also, according to PT_Connect, the server will send the savegame even during intermission...
 	if (netbuffer->u.servercfg.gamestate == GS_LEVEL/* ||
 		netbuffer->u.servercfg.gamestate == GS_INTERMISSION*/)
 		cl_mode = CL_DOWNLOADSAVEGAME;

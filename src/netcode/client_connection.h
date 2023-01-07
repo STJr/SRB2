@@ -53,7 +53,7 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room);
 void CL_ConnectToServer(void);
 boolean CL_SendJoin(void);
 
-void HandleServerInfo(SINT8 node);
+void PT_ServerInfo(SINT8 node);
 void PT_MoreFilesNeeded(SINT8 node);
 void PT_ServerRefuse(SINT8 node);
 void PT_ServerCFG(SINT8 node);
