@@ -294,25 +294,25 @@ typedef struct
 	UINT8 reserved; // Padding
 	union
 	{
-		clientcmd_pak clientpak;            //         144 bytes
-		client2cmd_pak client2pak;          //         200 bytes
-		servertics_pak serverpak;           //      132495 bytes (more around 360, no?)
-		serverconfig_pak servercfg;         //         773 bytes
-		UINT8 textcmd[MAXTEXTCMD+1];        //       66049 bytes (wut??? 64k??? More like 257 bytes...)
-		filetx_pak filetxpak;               //         139 bytes
+		clientcmd_pak clientpak;
+		client2cmd_pak client2pak;
+		servertics_pak serverpak;
+		serverconfig_pak servercfg;
+		UINT8 textcmd[MAXTEXTCMD+1];
+		filetx_pak filetxpak;
 		fileack_pak fileack;
 		UINT8 filereceived;
-		clientconfig_pak clientcfg;         //         136 bytes
+		clientconfig_pak clientcfg;
 		UINT8 md5sum[16];
-		serverinfo_pak serverinfo;          //        1024 bytes
-		serverrefuse_pak serverrefuse;      //       65025 bytes (somehow I feel like those values are garbage...)
-		askinfo_pak askinfo;                //          61 bytes
-		msaskinfo_pak msaskinfo;            //          22 bytes
-		plrinfo_pak playerinfo[MAXPLAYERS];     //         576 bytes(?)
-		plrconfig_pak playerconfig[MAXPLAYERS]; // (up to) 528 bytes(?)
-		INT32 filesneedednum;               //           4 bytes
-		filesneededconfig_pak filesneededcfg; //       ??? bytes
-		UINT32 pingtable[MAXPLAYERS+1];     //          68 bytes
+		serverinfo_pak serverinfo;
+		serverrefuse_pak serverrefuse;
+		askinfo_pak askinfo;
+		msaskinfo_pak msaskinfo;
+		plrinfo_pak playerinfo[MAXPLAYERS];
+		plrconfig_pak playerconfig[MAXPLAYERS];
+		INT32 filesneedednum;
+		filesneededconfig_pak filesneededcfg;
+		UINT32 pingtable[MAXPLAYERS+1];
 	} u; // This is needed to pack diff packet types data together
 } ATTRPACK doomdata_t;
 

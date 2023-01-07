@@ -262,11 +262,6 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 	else
 	{
 		DEBFILE(va("frame not in bound: %u\n", neededtic));
-		/*if (realend < neededtic - 2 * TICRATE || neededtic + 2 * TICRATE < realstart)
-			I_Error("Received an out of order PT_SERVERTICS packet!\n"
-					"Got tics %d-%d, needed tic %d\n\n"
-					"Please report this crash on the Master Board,\n"
-					"IRC or Discord so it can be fixed.\n", (INT32)realstart, (INT32)realend, (INT32)neededtic);*/
 	}
 }
 
@@ -447,9 +442,6 @@ void SV_SendTics(void)
 	netnodes[0].supposedtic = maketic;
 }
 
-//
-// TryRunTics
-//
 void Local_Maketic(INT32 realtics)
 {
 	I_OsPolling(); // I_Getevent

@@ -36,7 +36,7 @@ cl_mode_t cl_mode = CL_SEARCHING;
 static UINT16 cl_lastcheckedfilecount = 0;	// used for full file list
 boolean serverisfull = false; //lets us be aware if the server was full after we check files, but before downloading, so we can ask if the user still wants to download or not
 tic_t firstconnectattempttime = 0;
-UINT8 mynode; // my address pointofview server
+UINT8 mynode;
 static void *snake = NULL;
 
 static void CL_DrawConnectionStatusBox(void)
@@ -226,12 +226,9 @@ static boolean CL_AskFileList(INT32 firstfile)
 	return HSendPacket(servernode, false, 0, sizeof (INT32));
 }
 
-/** Sends a special packet to declare how many players in local
-  * Used only in arbitratrenetstart()
-  * Sends a PT_CLIENTJOIN packet to the server
+/** Sends a PT_CLIENTJOIN packet to the server
   *
   * \return True if the packet was successfully sent
-  * \todo Improve the description...
   *
   */
 boolean CL_SendJoin(void)
@@ -928,10 +925,6 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 		if (client && (cl_mode == CL_DOWNLOADFILES || cl_mode == CL_DOWNLOADSAVEGAME))
 			FileReceiveTicker();
 
-		// why are these here? this is for servers, we're a client
-		//if (key == 's' && server)
-		//	doomcom->numnodes = (INT16)pnumnodes;
-		//FileSendTicker();
 		*oldtic = I_GetTime();
 
 		if (client && cl_mode != CL_CONNECTED && cl_mode != CL_ABORTED)
