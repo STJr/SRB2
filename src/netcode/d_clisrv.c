@@ -1358,7 +1358,7 @@ void SV_StartSinglePlayerServer(void)
   * \param node The packet sender (should be the server)
   *
   */
-static void HandleShutdown(SINT8 node)
+static void PT_Shutdown(SINT8 node)
 {
 	(void)node;
 	LUA_HookBool(false, HOOK(GameQuit));
@@ -1373,7 +1373,7 @@ static void HandleShutdown(SINT8 node)
   * \param node The packet sender (should be the server)
   *
   */
-static void HandleTimeout(SINT8 node)
+static void PT_Timeout(SINT8 node)
 {
 	(void)node;
 	LUA_HookBool(false, HOOK(GameQuit));
@@ -1608,26 +1608,26 @@ void GetPackets(void)
 
 		if (netbuffer->packettype == PT_CLIENTJOIN && server)
 		{
-			HandleConnect(node);
+			PT_Connect(node);
 			continue;
 		}
 		if (node == servernode && client && cl_mode != CL_SEARCHING)
 		{
 			if (netbuffer->packettype == PT_SERVERSHUTDOWN)
 			{
-				HandleShutdown(node);
+				PT_Shutdown(node);
 				continue;
 			}
 			if (netbuffer->packettype == PT_NODETIMEOUT)
 			{
-				HandleTimeout(node);
+				PT_Timeout(node);
 				continue;
 			}
 		}
 
 		if (netbuffer->packettype == PT_SERVERINFO)
 		{
-			HandleServerInfo(node);
+			PT_ServerInfo(node);
 			continue;
 		}
 

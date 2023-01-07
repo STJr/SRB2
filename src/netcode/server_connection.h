@@ -17,7 +17,7 @@
 #include "../doomdef.h"
 #include "../doomtype.h"
 
-void HandleConnect(SINT8 node);
+void PT_Connect(SINT8 node);
 void PT_AskInfoViaMS(SINT8 node);
 void PT_TellFilesNeeded(SINT8 node);
 void PT_AskInfo(SINT8 node);
