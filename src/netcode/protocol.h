@@ -260,7 +260,7 @@ typedef struct
 	UINT8 data; // Color is first four bits, hasflag, isit and issuper have one bit each, the last is unused.
 	UINT32 score;
 	UINT16 timeinserver; // In seconds.
-} ATTRPACK plrinfo;
+} ATTRPACK plrinfo_pak;
 
 // Shortest player information for join during intermission.
 typedef struct
@@ -271,7 +271,7 @@ typedef struct
 	UINT32 pflags;
 	UINT32 score;
 	UINT8 ctfteam;
-} ATTRPACK plrconfig;
+} ATTRPACK plrconfig_pak;
 
 typedef struct
 {
@@ -308,8 +308,8 @@ typedef struct
 		serverrefuse_pak serverrefuse;      //       65025 bytes (somehow I feel like those values are garbage...)
 		askinfo_pak askinfo;                //          61 bytes
 		msaskinfo_pak msaskinfo;            //          22 bytes
-		plrinfo playerinfo[MAXPLAYERS];     //         576 bytes(?)
-		plrconfig playerconfig[MAXPLAYERS]; // (up to) 528 bytes(?)
+		plrinfo_pak playerinfo[MAXPLAYERS];     //         576 bytes(?)
+		plrconfig_pak playerconfig[MAXPLAYERS]; // (up to) 528 bytes(?)
 		INT32 filesneedednum;               //           4 bytes
 		filesneededconfig_pak filesneededcfg; //       ??? bytes
 		UINT32 pingtable[MAXPLAYERS+1];     //          68 bytes
