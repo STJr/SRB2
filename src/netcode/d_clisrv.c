@@ -1350,7 +1350,7 @@ void SV_StartSinglePlayerServer(void)
   * \param node The packet sender (should be the server)
   *
   */
-static void PT_Shutdown(SINT8 node)
+static void PT_ServerShutdown(SINT8 node)
 {
 	(void)node;
 	LUA_HookBool(false, HOOK(GameQuit));
@@ -1365,7 +1365,7 @@ static void PT_Shutdown(SINT8 node)
   * \param node The packet sender (should be the server)
   *
   */
-static void PT_Timeout(SINT8 node)
+static void PT_NodeTimeout(SINT8 node)
 {
 	(void)node;
 	LUA_HookBool(false, HOOK(GameQuit));
