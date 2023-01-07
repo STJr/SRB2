@@ -1166,7 +1166,7 @@ void PT_ServerCFG(SINT8 node)
 
 	/// \note Wait. What if a Lua script uses some global custom variables synched with the NetVars hook?
 	///       Shouldn't them be downloaded even at intermission time?
-	///       Also, according to PT_Connect, the server will send the savegame even during intermission...
+	///       Also, according to PT_ClientJoin, the server will send the savegame even during intermission...
 	if (netbuffer->u.servercfg.gamestate == GS_LEVEL/* ||
 		netbuffer->u.servercfg.gamestate == GS_INTERMISSION*/)
 		cl_mode = CL_DOWNLOADSAVEGAME;
