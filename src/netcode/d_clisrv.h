@@ -89,19 +89,16 @@ void NetUpdate(void);
 void GetPackets(void);
 void ResetNode(INT32 node);
 INT16 Consistancy(void);
-boolean SV_ResendingSavegameToAnyone(void);
 
 void SV_StartSinglePlayerServer(void);
 void SV_SpawnServer(void);
 void SV_StopServer(void);
 void SV_ResetServer(void);
-void SV_SendSaveGame(INT32 node, boolean resending);
 void CL_AddSplitscreenPlayer(void);
 void CL_RemoveSplitscreenPlayer(void);
 void CL_Reset(void);
 void CL_ClearPlayer(INT32 playernum);
 void CL_RemovePlayer(INT32 playernum, kickreason_t reason);
-void CL_LoadReceivedSavegame(boolean reloading);
 // Is there a game running
 boolean Playing(void);
 
@@ -129,8 +126,6 @@ INT32 D_NumPlayers(void);
 tic_t GetLag(INT32 node);
 
 void D_MD5PasswordPass(const UINT8 *buffer, size_t len, const char *salt, void *dest);
-
-extern UINT8 hu_redownloadinggamestate;
 
 extern UINT8 adminpassmd5[16];
 extern boolean adminpasswordset;

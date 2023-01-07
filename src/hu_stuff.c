@@ -21,6 +21,7 @@
 
 #include "netcode/d_clisrv.h"
 #include "netcode/net_command.h"
+#include "netcode/gamestate.h"
 
 #include "g_game.h"
 #include "g_input.h"

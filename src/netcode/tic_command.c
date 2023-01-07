@@ -14,6 +14,7 @@
 #include "d_clisrv.h"
 #include "net_command.h"
 #include "client_connection.h"
+#include "gamestate.h"
 #include "i_net.h"
 #include "../d_main.h"
 #include "../g_game.h"
