@@ -1605,8 +1605,6 @@ void GetPackets(void)
 {
 	SINT8 node; // The packet sender
 
-	player_joining = false;
-
 	while (HGetPacket())
 	{
 		node = (SINT8)doomcom->remotenode;
@@ -1791,13 +1789,6 @@ boolean TryRunTics(tic_t realtics)
 	{
 		if (realtics)
 			hu_stopped = false;
-	}
-
-	if (player_joining)
-	{
-		if (realtics)
-			hu_stopped = true;
-		return false;
 	}
 
 	if (ticking)
