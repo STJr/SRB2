@@ -1725,12 +1725,6 @@ INT16 Consistancy(void)
 	return (INT16)(ret & 0xFFFF);
 }
 
-/*
-Ping Update except better:
-We call this once per second and check for people's pings. If their ping happens to be too high, we increment some timer and kick them out.
-If they're not lagging, decrement the timer by 1. Of course, reset all of this if they leave.
-*/
-
 boolean TryRunTics(tic_t realtics)
 {
 	// the machine has lagged but it is not so bad
@@ -1824,6 +1818,11 @@ boolean TryRunTics(tic_t realtics)
 	}
 }
 
+/*
+Ping Update except better:
+We call this once per second and check for people's pings. If their ping happens to be too high, we increment some timer and kick them out.
+If they're not lagging, decrement the timer by 1. Of course, reset all of this if they leave.
+*/
 
 static INT32 pingtimeout[MAXPLAYERS];
 
