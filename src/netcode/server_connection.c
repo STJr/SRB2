@@ -37,8 +37,6 @@ tic_t joindelay = 0;
 // The actual timeout will be longer depending on the savegame length
 char playeraddress[MAXPLAYERS][64];
 
-UINT8 player_joining = false;
-
 consvar_t cv_showjoinaddress = CVAR_INIT ("showjoinaddress", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
 
 consvar_t cv_allownewplayer = CVAR_INIT ("allowjoin", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
@@ -475,7 +473,6 @@ void PT_ClientJoin(SINT8 node)
 		SV_AddPlayer(node, names[i]);
 
 	joindelay += cv_joindelay.value * TICRATE;
-	player_joining = true;
 }
 
 void PT_AskInfoViaMS(SINT8 node)
