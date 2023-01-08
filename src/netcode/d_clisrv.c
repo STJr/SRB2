@@ -1421,15 +1421,9 @@ static void PT_ClientQuit(SINT8 node, INT32 netconsole)
 		return;
 	}
 
-	if (!netnodes[node].ingame)
-	{
-		Net_CloseConnection(node);
-		return;
-	}
-
 	// nodeingame will be put false in the execution of kick command
 	// this allow to send some packets to the quitting client to have their ack back
-	if (netconsole != -1 && playeringame[netconsole])
+	if (netnodes[node].ingame && netconsole != -1 && playeringame[netconsole])
 	{
 		UINT8 kickmsg;
 
@@ -1440,17 +1434,18 @@ static void PT_ClientQuit(SINT8 node, INT32 netconsole)
 		kickmsg |= KICK_MSG_KEEP_BODY;
 
 		SendKick(netconsole, kickmsg);
-		netnodes[node].player = -1;
 
 		if (netnodes[node].player2 != -1 && netnodes[node].player2 >= 0
 			&& playeringame[(UINT8)netnodes[node].player2])
 		{
 			SendKick(netnodes[node].player2, kickmsg);
-			netnodes[node].player2 = -1;
 		}
 	}
+
 	Net_CloseConnection(node);
 	netnodes[node].ingame = false;
+	netnodes[node].player = -1;
+	netnodes[node].player2 = -1;
 }
 
 static void PT_AskLuaFile(SINT8 node)
@@ -1603,11 +1598,9 @@ static void HandlePacketFromPlayer(SINT8 node)
   */
 void GetPackets(void)
 {
-	SINT8 node; // The packet sender
-
 	while (HGetPacket())
 	{
-		node = (SINT8)doomcom->remotenode;
+		SINT8 node = doomcom->remotenode;
 
 		// Packet received from someone already playing
 		if (netnodes[node].ingame)
@@ -1740,8 +1733,6 @@ If they're not lagging, decrement the timer by 1. Of course, reset all of this i
 
 boolean TryRunTics(tic_t realtics)
 {
-	boolean ticking;
-
 	// the machine has lagged but it is not so bad
 	if (realtics > TICRATE/7)
 	{
@@ -1783,16 +1774,11 @@ boolean TryRunTics(tic_t realtics)
 	}
 #endif
 
-	ticking = neededtic > gametic;
-
-	if (ticking)
+	if (neededtic > gametic)
 	{
 		if (realtics)
 			hu_stopped = false;
-	}
 
-	if (ticking)
-	{
 		if (advancedemo)
 		{
 			if (timedemo_quit)
@@ -1826,15 +1812,18 @@ boolean TryRunTics(tic_t realtics)
 				if (client && gamestate == GS_LEVEL && leveltime > 3 && neededtic <= gametic + cv_netticbuffer.value)
 					break;
 			}
+
+		return true;
 	}
 	else
 	{
 		if (realtics)
 			hu_stopped = true;
-	}
 
-	return ticking;
+		return false;
+	}
 }
+
 
 static INT32 pingtimeout[MAXPLAYERS];
 
@@ -1976,8 +1965,6 @@ void NetUpdate(void)
 	{
 		if (!demoplayback)
 		{
-			INT32 counts;
-
 			hu_redownloadinggamestate = false;
 
 			firstticstosend = gametic;
@@ -1991,8 +1978,7 @@ void NetUpdate(void)
 				}
 
 			// Don't erase tics not acknowledged
-			counts = realtics;
-
+			INT32 counts = realtics;
 			if (maketic + counts >= firstticstosend + BACKUPTICS)
 				counts = firstticstosend+BACKUPTICS-maketic-1;
 
