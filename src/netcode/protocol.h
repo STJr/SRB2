@@ -85,7 +85,6 @@ typedef enum
 	PT_TEXTCMD,       // Extra text commands from the client.
 	PT_TEXTCMD2,      // Splitscreen text commands.
 	PT_CLIENTJOIN,    // Client wants to join; used in start game.
-	PT_NODETIMEOUT,   // Packet sent to self if the connection times out.
 
 	PT_LOGIN,         // Login attempt from the client.
 

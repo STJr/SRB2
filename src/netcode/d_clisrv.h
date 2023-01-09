@@ -94,6 +94,7 @@ void CL_RemoveSplitscreenPlayer(void);
 void CL_Reset(void);
 void CL_ClearPlayer(INT32 playernum);
 void CL_RemovePlayer(INT32 playernum, kickreason_t reason);
+void CL_HandleTimeout(void);
 // Is there a game running
 boolean Playing(void);
 

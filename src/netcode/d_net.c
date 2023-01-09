@@ -27,6 +27,7 @@
 #include "d_netfil.h"
 #include "d_clisrv.h"
 #include "tic_command.h"
+#include "net_command.h"
 #include "../z_zone.h"
 #include "i_tcp.h"
 #include "../d_main.h" // srb2home
@@ -461,14 +462,10 @@ void Net_ConnectionTimeout(INT32 node)
 		return;
 	nodes[node].flags |= NF_TIMEOUT;
 
-	// Send a very special packet to self (hack the reboundstore queue)
-	// Main code will handle it
-	reboundstore[rebound_head].packettype = PT_NODETIMEOUT;
-	reboundstore[rebound_head].ack = 0;
-	reboundstore[rebound_head].ackreturn = 0;
-	reboundstore[rebound_head].u.textcmd[0] = (UINT8)node;
-	reboundsize[rebound_head] = (INT16)(BASEPACKETSIZE + 1);
-	rebound_head = (rebound_head+1) % MAXREBOUND;
+	if (server)
+		SendKicksForNode(node, KICK_MSG_TIMEOUT | KICK_MSG_KEEP_BODY);
+	else
+		CL_HandleTimeout();
 
 	// Do not redo it quickly (if we do not close connection it is
 	// for a good reason!)
@@ -782,7 +779,6 @@ static const char *packettypename[NUMPACKETTYPE] =
 	"TEXTCMD",
 	"TEXTCMD2",
 	"CLIENTJOIN",
-	"NODETIMEOUT",
 	"LOGIN",
 	"TELLFILESNEEDED",
 	"MOREFILESNEEDED",
@@ -1065,10 +1061,7 @@ boolean HGetPacket(void)
 	{
 		M_Memcpy(netbuffer, &reboundstore[rebound_tail], reboundsize[rebound_tail]);
 		doomcom->datalength = reboundsize[rebound_tail];
-		if (netbuffer->packettype == PT_NODETIMEOUT)
-			doomcom->remotenode = netbuffer->u.textcmd[0];
-		else
-			doomcom->remotenode = 0;
+		doomcom->remotenode = 0;
 
 		rebound_tail = (rebound_tail+1) % MAXREBOUND;
 #ifdef DEBUGFILE
