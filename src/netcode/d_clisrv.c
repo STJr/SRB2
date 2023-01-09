@@ -1523,6 +1523,7 @@ static void HandlePacketFromAwayNode(SINT8 node)
 		case PT_CLIENTJOIN     : PT_ClientJoin     (node    ); break;
 		case PT_SERVERSHUTDOWN : PT_ServerShutdown (node    ); break;
 		case PT_CLIENTCMD      :                               break; // This is not an "unknown packet"
+		case PT_PLAYERINFO     :                               break; // This is not an "unknown packet"
 
 		default:
 			DEBFILE(va("unknown packet received (%d) from unknown host\n",netbuffer->packettype));
