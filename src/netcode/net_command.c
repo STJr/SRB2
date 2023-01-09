@@ -315,3 +315,13 @@ void SendKick(UINT8 playernum, UINT8 msg)
 	buf[1] = msg;
 	SendNetXCmd(XD_KICK, &buf, 2);
 }
+
+void SendKicksForNode(SINT8 node, UINT8 msg)
+{
+	if (!netnodes[node].ingame)
+		return;
+
+	for (INT32 playernum = netnodes[node].player; playernum != -1; playernum = netnodes[node].player2)
+		if (playernum != -1 && playeringame[playernum])
+			SendKick(playernum, msg);
+}

@@ -479,6 +479,15 @@ void CL_RemovePlayer(INT32 playernum, kickreason_t reason)
 		P_CheckRacers();
 }
 
+void CL_HandleTimeout(void)
+{
+	LUA_HookBool(false, HOOK(GameQuit));
+	D_QuitNetGame();
+	CL_Reset();
+	D_StartTitle();
+	M_StartMessage(M_GetText("Server Timeout\n\nPress Esc\n"), NULL, MM_NOTHING);
+}
+
 void CL_Reset(void)
 {
 	if (metalrecording)
@@ -1363,21 +1372,6 @@ static void PT_ServerShutdown(SINT8 node)
 	M_StartMessage(M_GetText("Server has shutdown\n\nPress Esc\n"), NULL, MM_NOTHING);
 }
 
-/** Called when a PT_NODETIMEOUT packet is received
-  *
-  * \param node The packet sender (should be the server)
-  *
-  */
-static void PT_NodeTimeout(SINT8 node)
-{
-	(void)node;
-	LUA_HookBool(false, HOOK(GameQuit));
-	D_QuitNetGame();
-	CL_Reset();
-	D_StartTitle();
-	M_StartMessage(M_GetText("Server Timeout\n\nPress Esc\n"), NULL, MM_NOTHING);
-}
-
 static void PT_Login(SINT8 node, INT32 netconsole)
 {
 	(void)node;
@@ -1415,32 +1409,10 @@ static void PT_Login(SINT8 node, INT32 netconsole)
 static void PT_ClientQuit(SINT8 node, INT32 netconsole)
 {
 	if (client)
-	{
-		if (node == servernode && cl_mode != CL_SEARCHING && netbuffer->packettype == PT_NODETIMEOUT)
-			PT_NodeTimeout(node);
 		return;
-	}
 
-	// nodeingame will be put false in the execution of kick command
-	// this allow to send some packets to the quitting client to have their ack back
 	if (netnodes[node].ingame && netconsole != -1 && playeringame[netconsole])
-	{
-		UINT8 kickmsg;
-
-		if (netbuffer->packettype == PT_NODETIMEOUT)
-			kickmsg = KICK_MSG_TIMEOUT;
-		else
-			kickmsg = KICK_MSG_PLAYER_QUIT;
-		kickmsg |= KICK_MSG_KEEP_BODY;
-
-		SendKick(netconsole, kickmsg);
-
-		if (netnodes[node].player2 != -1 && netnodes[node].player2 >= 0
-			&& playeringame[(UINT8)netnodes[node].player2])
-		{
-			SendKick(netnodes[node].player2, kickmsg);
-		}
-	}
+		SendKicksForNode(node, KICK_MSG_PLAYER_QUIT | KICK_MSG_KEEP_BODY);
 
 	Net_CloseConnection(node);
 	netnodes[node].ingame = false;
@@ -1517,7 +1489,6 @@ static void HandlePacketFromAwayNode(SINT8 node)
 		case PT_FILEACK        : PT_FileAck        (node    ); break;
 		case PT_FILERECEIVED   : PT_FileReceived   (node    ); break;
 		case PT_REQUESTFILE    : PT_RequestFile    (node    ); break;
-		case PT_NODETIMEOUT    : PT_ClientQuit     (node, -1); break;
 		case PT_CLIENTQUIT     : PT_ClientQuit     (node, -1); break;
 		case PT_SERVERTICS     : PT_ServerTics     (node, -1); break;
 		case PT_CLIENTJOIN     : PT_ClientJoin     (node    ); break;
@@ -1566,7 +1537,6 @@ static void HandlePacketFromPlayer(SINT8 node)
 		case PT_TEXTCMD            : PT_TextCmd            (node, netconsole); break;
 		case PT_TEXTCMD2           : PT_TextCmd            (node, netconsole); break;
 		case PT_LOGIN              : PT_Login              (node, netconsole); break;
-		case PT_NODETIMEOUT        : PT_ClientQuit         (node, netconsole); break;
 		case PT_CLIENTQUIT         : PT_ClientQuit         (node, netconsole); break;
 		case PT_CANRECEIVEGAMESTATE: PT_CanReceiveGamestate(node            ); break;
 		case PT_ASKLUAFILE         : PT_AskLuaFile         (node            ); break;
