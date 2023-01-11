@@ -16,10 +16,12 @@
 
 #include "console.h"
 #include "command.h"
+#include "i_time.h"
 #include "i_system.h"
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "g_input.h"
+#include "i_gamepad.h"
 #include "m_menu.h"
 #include "r_local.h"
 #include "r_skins.h"
@@ -48,6 +50,7 @@
 #include "m_anigif.h"
 #include "md5.h"
 #include "m_perfstats.h"
+#include "hardware/u_list.h" // TODO: this should be a standard utility class
 
 #ifdef NETGAME_DEVMODE
 #define CV_RESTRICT CV_NETVAR
@@ -180,18 +183,10 @@ static CV_PossibleValue_t mouse2port_cons_t[] = {{1, "COM1"}, {2, "COM2"}, {3, "
 	{0, NULL}};
 #endif
 
-#ifdef LJOYSTICK
-static CV_PossibleValue_t joyport_cons_t[] = {{1, "/dev/js0"}, {2, "/dev/js1"}, {3, "/dev/js2"},
-	{4, "/dev/js3"}, {0, NULL}};
-#else
-// accept whatever value - it is in fact the joystick device number
-#define usejoystick_cons_t NULL
-#endif
-
 static CV_PossibleValue_t teamscramble_cons_t[] = {{0, "Off"}, {1, "Random"}, {2, "Points"}, {0, NULL}};
 
 static CV_PossibleValue_t startingliveslimit_cons_t[] = {{1, "MIN"}, {99, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t sleeping_cons_t[] = {{-1, "MIN"}, {1000/TICRATE, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t sleeping_cons_t[] = {{0, "MIN"}, {1000/TICRATE, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t competitionboxes_cons_t[] = {{0, "Normal"}, {1, "Mystery"}, //{2, "Teleport"},
 	{3, "None"}, {0, NULL}};
 
@@ -246,19 +241,61 @@ INT32 cv_debug;
 consvar_t cv_usemouse = CVAR_INIT ("use_mouse", "On", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse);
 consvar_t cv_usemouse2 = CVAR_INIT ("use_mouse2", "Off", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse2);
 
-consvar_t cv_usejoystick = CVAR_INIT ("use_gamepad", "1", CV_SAVE|CV_CALL, usejoystick_cons_t, I_InitJoystick);
-consvar_t cv_usejoystick2 = CVAR_INIT ("use_gamepad2", "2", CV_SAVE|CV_CALL, usejoystick_cons_t, I_InitJoystick2);
-#if (defined (LJOYSTICK) || defined (HAVE_SDL))
-#ifdef LJOYSTICK
-consvar_t cv_joyport = CVAR_INIT ("padport", "/dev/js0", CV_SAVE, joyport_cons_t, NULL);
-consvar_t cv_joyport2 = CVAR_INIT ("padport2", "/dev/js0", CV_SAVE, joyport_cons_t, NULL); //Alam: for later
-#endif
-consvar_t cv_joyscale = CVAR_INIT ("padscale", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale);
-consvar_t cv_joyscale2 = CVAR_INIT ("padscale2", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale2);
-#else
-consvar_t cv_joyscale = CVAR_INIT ("padscale", "1", CV_SAVE|CV_HIDEN, NULL, NULL); //Alam: Dummy for save
-consvar_t cv_joyscale2 = CVAR_INIT ("padscale2", "1", CV_SAVE|CV_HIDEN, NULL, NULL); //Alam: Dummy for save
-#endif
+// We use cv_usegamepad.string as the USER-SET var
+// and cv_usegamepad.value as the INTERNAL var
+//
+// In practice, if cv_usegamepad.string == 0, this overrides
+// cv_usegamepad.value and always disables
+
+static void UseGamepad_OnChange(void)
+{
+	I_ChangeGamepad(0);
+}
+
+static void UseGamepad2_OnChange(void)
+{
+	I_ChangeGamepad(1);
+}
+
+consvar_t cv_usegamepad[2] = {
+	CVAR_INIT ("use_gamepad", "1", CV_SAVE|CV_CALL, NULL, UseGamepad_OnChange),
+	CVAR_INIT ("use_gamepad2", "2", CV_SAVE|CV_CALL, NULL, UseGamepad2_OnChange)
+};
+
+static void PadScale_OnChange(void)
+{
+	I_SetGamepadDigital(0, cv_gamepad_scale[0].value == 0);
+}
+
+static void PadScale2_OnChange(void)
+{
+	I_SetGamepadDigital(1, cv_gamepad_scale[1].value == 0);
+}
+
+consvar_t cv_gamepad_scale[2] = {
+	CVAR_INIT ("padscale", "1", CV_SAVE|CV_CALL, NULL, PadScale_OnChange),
+	CVAR_INIT ("padscale2", "1", CV_SAVE|CV_CALL, NULL, PadScale2_OnChange)
+};
+
+static void PadRumble_OnChange(void)
+{
+	if (!cv_gamepad_rumble[0].value)
+		I_StopGamepadRumble(0);
+}
+
+static void PadRumble2_OnChange(void)
+{
+	if (!cv_gamepad_rumble[1].value)
+		I_StopGamepadRumble(1);
+}
+
+consvar_t cv_gamepad_rumble[2] = {
+	CVAR_INIT ("padrumble", "Off", CV_SAVE|CV_CALL, CV_OnOff, PadRumble_OnChange),
+	CVAR_INIT ("padrumble2", "Off", CV_SAVE|CV_CALL, CV_OnOff, PadRumble2_OnChange)
+};
+
+consvar_t cv_gamepad_autopause = CVAR_INIT ("pauseongamepaddisconnect", "On", CV_SAVE, CV_OnOff, NULL);
+
 #if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 consvar_t cv_mouse2port = CVAR_INIT ("mouse2port", "/dev/gpmdata", CV_SAVE, mouse2port_cons_t, NULL);
 consvar_t cv_mouse2opt = CVAR_INIT ("mouse2opt", "0", CV_SAVE, NULL, NULL);
@@ -770,26 +807,18 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_pauseifunfocused);
 
 	// g_input.c
-	CV_RegisterVar(&cv_sideaxis);
-	CV_RegisterVar(&cv_sideaxis2);
-	CV_RegisterVar(&cv_turnaxis);
-	CV_RegisterVar(&cv_turnaxis2);
-	CV_RegisterVar(&cv_moveaxis);
-	CV_RegisterVar(&cv_moveaxis2);
-	CV_RegisterVar(&cv_lookaxis);
-	CV_RegisterVar(&cv_lookaxis2);
-	CV_RegisterVar(&cv_jumpaxis);
-	CV_RegisterVar(&cv_jumpaxis2);
-	CV_RegisterVar(&cv_spinaxis);
-	CV_RegisterVar(&cv_spinaxis2);
-	CV_RegisterVar(&cv_fireaxis);
-	CV_RegisterVar(&cv_fireaxis2);
-	CV_RegisterVar(&cv_firenaxis);
-	CV_RegisterVar(&cv_firenaxis2);
-	CV_RegisterVar(&cv_deadzone);
-	CV_RegisterVar(&cv_deadzone2);
-	CV_RegisterVar(&cv_digitaldeadzone);
-	CV_RegisterVar(&cv_digitaldeadzone2);
+	CV_RegisterVar(&cv_sideaxis[0]);
+	CV_RegisterVar(&cv_sideaxis[1]);
+	CV_RegisterVar(&cv_turnaxis[0]);
+	CV_RegisterVar(&cv_turnaxis[1]);
+	CV_RegisterVar(&cv_moveaxis[0]);
+	CV_RegisterVar(&cv_moveaxis[1]);
+	CV_RegisterVar(&cv_lookaxis[0]);
+	CV_RegisterVar(&cv_lookaxis[1]);
+	CV_RegisterVar(&cv_deadzone[0]);
+	CV_RegisterVar(&cv_deadzone[1]);
+	CV_RegisterVar(&cv_digitaldeadzone[0]);
+	CV_RegisterVar(&cv_digitaldeadzone[1]);
 
 	// filesrch.c
 	CV_RegisterVar(&cv_addons_option);
@@ -805,7 +834,6 @@ void D_RegisterClientCommands(void)
 #if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 	CV_RegisterVar(&cv_mouse2opt);
 #endif
-	CV_RegisterVar(&cv_controlperkey);
 
 	CV_RegisterVar(&cv_usemouse);
 	CV_RegisterVar(&cv_usemouse2);
@@ -818,14 +846,14 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_mousemove);
 	CV_RegisterVar(&cv_mousemove2);
 
-	CV_RegisterVar(&cv_usejoystick);
-	CV_RegisterVar(&cv_usejoystick2);
-#ifdef LJOYSTICK
-	CV_RegisterVar(&cv_joyport);
-	CV_RegisterVar(&cv_joyport2);
-#endif
-	CV_RegisterVar(&cv_joyscale);
-	CV_RegisterVar(&cv_joyscale2);
+	for (i = 0; i < 2; i++)
+	{
+		CV_RegisterVar(&cv_usegamepad[i]);
+		CV_RegisterVar(&cv_gamepad_scale[i]);
+		CV_RegisterVar(&cv_gamepad_rumble[i]);
+	}
+
+	CV_RegisterVar(&cv_gamepad_autopause);
 
 	// Analog Control
 	CV_RegisterVar(&cv_analog[0]);
@@ -2214,9 +2242,14 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 		{
 			if (!menuactive || netgame)
 				S_PauseAudio();
+
+			P_PauseRumble(NULL);
 		}
 		else
+		{
 			S_ResumeAudio();
+			P_UnpauseRumble(NULL);
+		}
 	}
 
 	I_UpdateMouseGrab();
@@ -3271,6 +3304,69 @@ static void Got_RunSOCcmd(UINT8 **cp, INT32 playernum)
 	G_SetGameModified(true);
 }
 
+// C++ would make this SO much simpler!
+typedef struct addedfile_s
+{
+	struct addedfile_s *next;
+	struct addedfile_s *prev;
+	char *value;
+} addedfile_t;
+
+static boolean AddedFileContains(addedfile_t *list, const char *value)
+{
+	addedfile_t *node;
+	for (node = list; node; node = node->next)
+	{
+		if (!strcmp(value, node->value))
+			return true;
+	}
+
+	return false;
+}
+
+static void AddedFilesAdd(addedfile_t **list, const char *value)
+{
+	addedfile_t *item = Z_Calloc(sizeof(addedfile_t), PU_STATIC, NULL);
+	item->value = Z_StrDup(value);
+	ListAdd(item, (listitem_t**)list);
+}
+
+static void AddedFilesRemove(void *pItem, addedfile_t **itemHead)
+{
+	addedfile_t *item = (addedfile_t *)pItem;
+
+	if (item == *itemHead) // Start of list
+	{
+		*itemHead = item->next;
+
+		if (*itemHead)
+			(*itemHead)->prev = NULL;
+	}
+	else if (item->next == NULL) // end of list
+	{
+		item->prev->next = NULL;
+	}
+	else // Somewhere in between
+	{
+		item->prev->next = item->next;
+		item->next->prev = item->prev;
+	}
+
+	Z_Free(item->value);
+	Z_Free(item);
+}
+
+static void AddedFilesClearList(addedfile_t **itemHead)
+{
+	addedfile_t *item;
+	addedfile_t *next;
+	for (item = *itemHead; item; item = next)
+	{
+		next = item->next;
+		AddedFilesRemove(item, itemHead);
+	}
+}
+
 /** Adds a pwad at runtime.
   * Searches for sounds, maps, music, new images.
   */
@@ -3279,8 +3375,7 @@ static void Command_Addfile(void)
 	size_t argc = COM_Argc(); // amount of arguments total
 	size_t curarg; // current argument index
 
-	const char *addedfiles[argc]; // list of filenames already processed
-	size_t numfilesadded = 0; // the amount of filenames processed
+	addedfile_t *addedfiles = NULL; // list of filenames already processed
 
 	if (argc < 2)
 	{
@@ -3295,25 +3390,14 @@ static void Command_Addfile(void)
 		char buf[256];
 		char *buf_p = buf;
 		INT32 i;
-		size_t ii;
 		int musiconly; // W_VerifyNMUSlumps isn't boolean
 		boolean fileadded = false;
 
 		fn = COM_Argv(curarg);
 
 		// For the amount of filenames previously processed...
-		for (ii = 0; ii < numfilesadded; ii++)
-		{
-			// If this is one of them, don't try to add it.
-			if (!strcmp(fn, addedfiles[ii]))
-			{
-				fileadded = true;
-				break;
-			}
-		}
-
-		// If we've added this one, skip to the next one.
-		if (fileadded)
+		fileadded = AddedFileContains(addedfiles, fn);
+		if (fileadded) // If this is one of them, don't try to add it.
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Already processed %s, skipping\n"), fn);
 			continue;
@@ -3322,13 +3406,16 @@ static void Command_Addfile(void)
 		// Disallow non-printing characters and semicolons.
 		for (i = 0; fn[i] != '\0'; i++)
 			if (!isprint(fn[i]) || fn[i] == ';')
+			{
+				AddedFilesClearList(&addedfiles);
 				return;
+			}
 
 		musiconly = W_VerifyNMUSlumps(fn, false);
 
 		if (musiconly == -1)
 		{
-			addedfiles[numfilesadded++] = fn;
+			AddedFilesAdd(&addedfiles, fn);
 			continue;
 		}
 
@@ -3347,7 +3434,7 @@ static void Command_Addfile(void)
 		if (!(netgame || multiplayer) || musiconly)
 		{
 			P_AddWadFile(fn);
-			addedfiles[numfilesadded++] = fn;
+			AddedFilesAdd(&addedfiles, fn);
 			continue;
 		}
 
@@ -3362,6 +3449,7 @@ static void Command_Addfile(void)
 		if (numwadfiles >= MAX_WADFILES)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+			AddedFilesClearList(&addedfiles);
 			return;
 		}
 
@@ -3401,13 +3489,15 @@ static void Command_Addfile(void)
 			WRITEMEM(buf_p, md5sum, 16);
 		}
 
-		addedfiles[numfilesadded++] = fn;
+		AddedFilesAdd(&addedfiles, fn);
 
 		if (IsPlayerAdmin(consoleplayer) && (!server)) // Request to add file
 			SendNetXCmd(XD_REQADDFILE, buf, buf_p - buf);
 		else
 			SendNetXCmd(XD_ADDFILE, buf, buf_p - buf);
 	}
+
+	AddedFilesClearList(&addedfiles);
 }
 
 static void Command_Addfolder(void)
@@ -3415,8 +3505,7 @@ static void Command_Addfolder(void)
 	size_t argc = COM_Argc(); // amount of arguments total
 	size_t curarg; // current argument index
 
-	const char *addedfolders[argc]; // list of filenames already processed
-	size_t numfoldersadded = 0; // the amount of filenames processed
+	addedfile_t *addedfolders = NULL; // list of filenames already processed
 
 	if (argc < 2)
 	{
@@ -3432,24 +3521,13 @@ static void Command_Addfolder(void)
 		char buf[256];
 		char *buf_p = buf;
 		INT32 i, stat;
-		size_t ii;
 		boolean folderadded = false;
 
 		fn = COM_Argv(curarg);
 
 		// For the amount of filenames previously processed...
-		for (ii = 0; ii < numfoldersadded; ii++)
-		{
-			// If this is one of them, don't try to add it.
-			if (!strcmp(fn, addedfolders[ii]))
-			{
-				folderadded = true;
-				break;
-			}
-		}
-
-		// If we've added this one, skip to the next one.
-		if (folderadded)
+		folderadded = AddedFileContains(addedfolders, fn);
+		if (folderadded) // If we've added this one, skip to the next one.
 		{
 			CONS_Alert(CONS_WARNING, M_GetText("Already processed %s, skipping\n"), fn);
 			continue;
@@ -3458,13 +3536,16 @@ static void Command_Addfolder(void)
 		// Disallow non-printing characters and semicolons.
 		for (i = 0; fn[i] != '\0'; i++)
 			if (!isprint(fn[i]) || fn[i] == ';')
+			{
+				AddedFilesClearList(&addedfolders);
 				return;
+			}
 
 		// Add file on your client directly if you aren't in a netgame.
 		if (!(netgame || multiplayer))
 		{
 			P_AddFolder(fn);
-			addedfolders[numfoldersadded++] = fn;
+			AddedFilesAdd(&addedfolders, fn);
 			continue;
 		}
 
@@ -3486,6 +3567,7 @@ static void Command_Addfolder(void)
 		if (numwadfiles >= MAX_WADFILES)
 		{
 			CONS_Alert(CONS_ERROR, M_GetText("Too many files loaded to add %s\n"), fn);
+			AddedFilesClearList(&addedfolders);
 			return;
 		}
 
@@ -3531,7 +3613,7 @@ static void Command_Addfolder(void)
 
 		Z_Free(fullpath);
 
-		addedfolders[numfoldersadded++] = fn;
+		AddedFilesAdd(&addedfolders, fn);
 
 		WRITESTRINGN(buf_p,p,240);
 
@@ -4561,6 +4643,8 @@ void Command_ExitGame_f(void)
 	cv_debug = 0;
 	emeralds = 0;
 	memset(&luabanks, 0, sizeof(luabanks));
+
+	P_StopRumble(NULL);
 
 	if (dirmenu)
 		closefilemenu(true);

@@ -15,6 +15,7 @@
 #include <unistd.h> //for unlink
 #endif
 
+#include "i_time.h"
 #include "i_net.h"
 #include "i_system.h"
 #include "i_video.h"
@@ -24,7 +25,8 @@
 #include "st_stuff.h"
 #include "hu_stuff.h"
 #include "keys.h"
-#include "g_input.h" // JOY1
+#include "g_input.h"
+#include "i_gamepad.h"
 #include "m_menu.h"
 #include "console.h"
 #include "d_netfil.h"
@@ -32,6 +34,7 @@
 #include "p_saveg.h"
 #include "z_zone.h"
 #include "p_local.h"
+#include "p_haptic.h"
 #include "m_misc.h"
 #include "am_map.h"
 #include "m_random.h"
@@ -46,6 +49,9 @@
 #include "lua_libs.h"
 #include "md5.h"
 #include "m_perfstats.h"
+
+// aaaaaa
+#include "i_gamepad.h"
 
 #ifndef NONET
 // cl loading screen
@@ -112,6 +118,9 @@ static INT16 consistancy[BACKUPTICS];
 
 static UINT8 player_joining = false;
 UINT8 hu_redownloadinggamestate = 0;
+
+// true when a player is connecting or disconnecting so that the gameplay has stopped in its tracks
+boolean hu_stopped = false;
 
 UINT8 adminpassmd5[16];
 boolean adminpasswordset = false;
@@ -672,16 +681,17 @@ static void Snake_Handle(void)
 	UINT8 x, y;
 	UINT8 oldx, oldy;
 	UINT16 i;
+	UINT16 joystate = 0;
 
 	// Handle retry
-	if (snake->gameover && (PLAYER1INPUTDOWN(GC_JUMP) || gamekeydown[KEY_ENTER]))
+	if (snake->gameover && (G_PlayerInputDown(0, GC_JUMP) || gamekeydown[KEY_ENTER]))
 	{
 		Snake_Initialise();
 		snake->pausepressed = true; // Avoid accidental pause on respawn
 	}
 
 	// Handle pause
-	if (PLAYER1INPUTDOWN(GC_PAUSE) || gamekeydown[KEY_ENTER])
+	if (G_PlayerInputDown(0, GC_PAUSE) || gamekeydown[KEY_ENTER])
 	{
 		if (!snake->pausepressed)
 			snake->paused = !snake->paused;
@@ -701,22 +711,22 @@ static void Snake_Handle(void)
 	oldy = snake->snakey[1];
 
 	// Update direction
-	if (gamekeydown[KEY_LEFTARROW])
+	if (G_PlayerInputDown(0, GC_STRAFELEFT) || gamekeydown[KEY_LEFTARROW] || joystate == 3)
 	{
 		if (snake->snakelength < 2 || x <= oldx)
 			snake->snakedir[0] = 1;
 	}
-	else if (gamekeydown[KEY_RIGHTARROW])
+	else if (G_PlayerInputDown(0, GC_STRAFERIGHT) || gamekeydown[KEY_RIGHTARROW] || joystate == 4)
 	{
 		if (snake->snakelength < 2 || x >= oldx)
 			snake->snakedir[0] = 2;
 	}
-	else if (gamekeydown[KEY_UPARROW])
+	else if (G_PlayerInputDown(0, GC_FORWARD) || gamekeydown[KEY_UPARROW] || joystate == 1)
 	{
 		if (snake->snakelength < 2 || y <= oldy)
 			snake->snakedir[0] = 3;
 	}
-	else if (gamekeydown[KEY_DOWNARROW])
+	else if (G_PlayerInputDown(0, GC_BACKWARD) || gamekeydown[KEY_DOWNARROW] || joystate == 2)
 	{
 		if (snake->snakelength < 2 || y >= oldy)
 			snake->snakedir[0] = 4;
@@ -1642,6 +1652,8 @@ static void CL_LoadReceivedSavegame(boolean reloading)
 	titledemo = false;
 	automapactive = false;
 
+	P_StopRumble(NULL);
+
 	// load a base level
 	if (P_LoadNetGame(reloading))
 	{
@@ -1928,9 +1940,10 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 static void M_ConfirmConnect(event_t *ev)
 {
 #ifndef NONET
-	if (ev->type == ev_keydown)
+
+	if (ev->type == ev_keydown || ev->type == ev_gamepad_down)
 	{
-		if (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER)
+		if ((ev->type == ev_keydown && (ev->key == ' ' || ev->key == 'y' || ev->key == KEY_ENTER)) || (ev->type == ev_gamepad_down && ev->which == 0 && ev->key == GAMEPAD_BUTTON_A))
 		{
 			if (totalfilesrequestednum > 0)
 			{
@@ -1945,7 +1958,7 @@ static void M_ConfirmConnect(event_t *ev)
 
 			M_ClearMenus(true);
 		}
-		else if (ev->key == 'n' || ev->key == KEY_ESCAPE)
+		else if ((ev->type == ev_keydown && (ev->key == 'n' || ev->key == KEY_ESCAPE)) || (ev->type == ev_gamepad_down && ev->which == 0 && ev->key == GAMEPAD_BUTTON_B))
 		{
 			cl_mode = CL_ABORTED;
 			M_ClearMenus(true);
@@ -1960,6 +1973,7 @@ static boolean CL_FinishedFileList(void)
 {
 	INT32 i;
 	char *downloadsize = NULL;
+
 	//CONS_Printf(M_GetText("Checking files...\n"));
 	i = CL_CheckFiles();
 	if (i == 4) // still checking ...
@@ -2375,11 +2389,14 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			D_ProcessEvents(); //needed for menu system to receive inputs
 		else
 		{
+			// my hand has been forced and I am dearly sorry for this awful hack :vomit:
 			for (; eventtail != eventhead; eventtail = (eventtail+1) & (MAXEVENTS-1))
+			{
 				G_MapEventsToControls(&events[eventtail]);
+			}
 		}
 
-		if (gamekeydown[KEY_ESCAPE] || gamekeydown[KEY_JOY1+1] || cl_mode == CL_ABORTED)
+		if (gamekeydown[KEY_ESCAPE] || gamepads[0].buttons[GAMEPAD_BUTTON_B] || cl_mode == CL_ABORTED)
 		{
 			CONS_Printf(M_GetText("Network game synchronization aborted.\n"));
 			M_StartMessage(M_GetText("Network game synchronization aborted.\n\nPress ESC\n"), NULL, MM_NOTHING);
@@ -2441,7 +2458,10 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 #endif
 	}
 	else
-		I_Sleep();
+	{
+		I_Sleep(cv_sleep.value);
+		I_UpdateTime(cv_timescale.value);
+	}
 
 	return true;
 }
@@ -3449,7 +3469,7 @@ consvar_t cv_resynchattempts = CVAR_INIT ("resynchattempts", "10", CV_SAVE|CV_NE
 consvar_t cv_blamecfail = CVAR_INIT ("blamecfail", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
 
 // max file size to send to a player (in kilobytes)
-static CV_PossibleValue_t maxsend_cons_t[] = {{0, "MIN"}, {51200, "MAX"}, {0, NULL}};
+static CV_PossibleValue_t maxsend_cons_t[] = {{0, "MIN"}, {204800, "MAX"}, {0, NULL}};
 consvar_t cv_maxsend = CVAR_INIT ("maxsend", "4096", CV_SAVE|CV_NETVAR, maxsend_cons_t, NULL);
 consvar_t cv_noticedownload = CVAR_INIT ("noticedownload", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
 
@@ -5159,7 +5179,7 @@ static void Local_Maketic(INT32 realtics)
 	                   // game responder calls HU_Responder, AM_Responder,
 	                   // and G_MapEventsToControls
 	if (!dedicated) rendergametic = gametic;
-	// translate inputs (keyboard/mouse/joystick) into game controls
+	// translate inputs (keyboard/mouse/gamepad) into game controls
 	G_BuildTiccmd(&localcmds, realtics, 1);
 	if (splitscreen || botingame)
 		G_BuildTiccmd(&localcmds2, realtics, 2);
@@ -5206,8 +5226,10 @@ static void SV_Maketic(void)
 	maketic++;
 }
 
-void TryRunTics(tic_t realtics)
+boolean TryRunTics(tic_t realtics)
 {
+	boolean ticking;
+
 	// the machine has lagged but it is not so bad
 	if (realtics > TICRATE/7) // FIXME: consistency failure!!
 	{
@@ -5231,7 +5253,7 @@ void TryRunTics(tic_t realtics)
 
 	if (demoplayback)
 	{
-		neededtic = gametic + (realtics * cv_playbackspeed.value);
+		neededtic = gametic + realtics;
 		// start a game after a demo
 		maketic += realtics;
 		firstticstosend = maketic;
@@ -5251,10 +5273,22 @@ void TryRunTics(tic_t realtics)
 	}
 #endif
 
-	if (player_joining)
-		return;
+	ticking = neededtic > gametic;
 
-	if (neededtic > gametic)
+	if (ticking)
+	{
+		if (realtics)
+			hu_stopped = false;
+	}
+
+	if (player_joining)
+	{
+		if (realtics)
+			hu_stopped = true;
+		return false;
+	}
+
+	if (ticking)
 	{
 		if (advancedemo)
 		{
@@ -5290,6 +5324,13 @@ void TryRunTics(tic_t realtics)
 					break;
 			}
 	}
+	else
+	{
+		if (realtics)
+			hu_stopped = true;
+	}
+
+	return ticking;
 }
 
 /*

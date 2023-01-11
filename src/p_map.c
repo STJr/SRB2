@@ -19,6 +19,7 @@
 #include "m_random.h"
 #include "p_local.h"
 #include "p_setup.h" // NiGHTS stuff
+#include "r_fps.h"
 #include "r_state.h"
 #include "r_main.h"
 #include "r_sky.h"
@@ -74,7 +75,7 @@ camera_t *mapcampointer;
 //
 // P_TeleportMove
 //
-boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
+static boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 {
 	// the move is ok,
 	// so link the thing into its new position
@@ -104,6 +105,30 @@ boolean P_TeleportMove(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
 	thing->ceilingrover = tmceilingrover;
 
 	return true;
+}
+
+// P_SetOrigin - P_TeleportMove which RESETS interpolation values.
+//
+boolean P_SetOrigin(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
+{
+	boolean result = P_TeleportMove(thing, x, y, z);
+
+	if (result == true)
+	{
+		thing->old_x = thing->x;
+		thing->old_y = thing->y;
+		thing->old_z = thing->z;
+	}
+
+	return result;
+}
+
+//
+// P_MoveOrigin - P_TeleportMove which KEEPS interpolation values.
+//
+boolean P_MoveOrigin(mobj_t *thing, fixed_t x, fixed_t y, fixed_t z)
+{
+	return P_TeleportMove(thing, x, y, z);
 }
 
 // =========================================================================
@@ -568,7 +593,7 @@ static void P_DoPterabyteCarry(player_t *player, mobj_t *ptera)
 	player->mo->x = ptera->x;
 	player->mo->y = ptera->y;
 	P_SetThingPosition(player->mo);
-	ptera->movefactor = 3*TICRATE;
+	ptera->movefactor = 3*TICRATE; // timer before dropping
 	ptera->watertop = ptera->waterbottom = ptera->cusval = 0;
 }
 
@@ -1153,9 +1178,9 @@ static boolean PIT_CheckThing(mobj_t *thing)
 			return true; // underneath
 
 		if (tmthing->eflags & MFE_VERTICALFLIP)
-			P_TeleportMove(thing, thing->x, thing->y, tmthing->z - thing->height - FixedMul(FRACUNIT, tmthing->scale));
+			P_SetOrigin(thing, thing->x, thing->y, tmthing->z - thing->height - FixedMul(FRACUNIT, tmthing->scale));
 		else
-			P_TeleportMove(thing, thing->x, thing->y, tmthing->z + tmthing->height + FixedMul(FRACUNIT, tmthing->scale));
+			P_SetOrigin(thing, thing->x, thing->y, tmthing->z + tmthing->height + FixedMul(FRACUNIT, tmthing->scale));
 		if (thing->flags & MF_SHOOTABLE)
 			P_DamageMobj(thing, tmthing, tmthing, 1, DMG_SPIKE);
 		return true;
@@ -1915,7 +1940,7 @@ static boolean PIT_CheckLine(line_t *ld)
 			cosradius = FixedMul(dist, FINECOSINE(langle>>ANGLETOFINESHIFT));
 			sinradius = FixedMul(dist, FINESINE(langle>>ANGLETOFINESHIFT));
 			tmthing->flags |= MF_NOCLIP;
-			P_TeleportMove(tmthing, result.x + cosradius - tmthing->momx, result.y + sinradius - tmthing->momy, tmthing->z);
+			P_MoveOrigin(tmthing, result.x + cosradius - tmthing->momx, result.y + sinradius - tmthing->momy, tmthing->z);
 			tmthing->flags &= ~MF_NOCLIP;
 		}
 #endif
@@ -2128,12 +2153,20 @@ boolean P_CheckPosition(mobj_t *thing, fixed_t x, fixed_t y)
 
 			if (rover->fofflags & FOF_QUICKSAND)
 			{
-				if (thing->z < topheight && bottomheight < thingtop)
+				if (!(thing->eflags & MFE_VERTICALFLIP) && thing->z < topheight && bottomheight < thingtop)
 				{
 					if (tmfloorz < thing->z) {
 						tmfloorz = thing->z;
 						tmfloorrover = rover;
 						tmfloorslope = NULL;
+					}
+				}
+				else if (thing->eflags & MFE_VERTICALFLIP && thing->z < topheight && bottomheight < thingtop)
+				{
+					if (tmceilingz > thingtop) {
+						tmceilingz = thingtop;
+						tmceilingrover = rover;
+						tmceilingslope = NULL;
 					}
 				}
 				// Quicksand blocks never change heights otherwise.
@@ -5094,8 +5127,8 @@ fixed_t P_CeilingzAtPos(fixed_t x, fixed_t y, fixed_t z, fixed_t height)
 			{
 				if (thingtop > bottomheight && topheight > z)
 				{
-					if (ceilingz > z)
-						ceilingz = z;
+					if (ceilingz > thingtop)
+						ceilingz = thingtop;
 				}
 				continue;
 			}

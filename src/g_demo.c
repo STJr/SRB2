@@ -17,6 +17,7 @@
 #include "d_player.h"
 #include "d_clisrv.h"
 #include "p_setup.h"
+#include "i_time.h"
 #include "i_system.h"
 #include "m_random.h"
 #include "p_local.h"
@@ -31,7 +32,7 @@
 #include "z_zone.h"
 #include "i_video.h"
 #include "byteptr.h"
-#include "i_joy.h"
+#include "i_gamepad.h"
 #include "r_local.h"
 #include "r_skins.h"
 #include "y_inter.h"
@@ -1008,7 +1009,7 @@ void G_ReadMetalTic(mobj_t *metal)
 		oldmetal.x = READFIXED(metal_p);
 		oldmetal.y = READFIXED(metal_p);
 		oldmetal.z = READFIXED(metal_p);
-		P_TeleportMove(metal, oldmetal.x, oldmetal.y, oldmetal.z);
+		P_MoveOrigin(metal, oldmetal.x, oldmetal.y, oldmetal.z);
 		oldmetal.x = metal->x;
 		oldmetal.y = metal->y;
 		oldmetal.z = metal->z;
@@ -1526,9 +1527,9 @@ void G_BeginRecording(void)
 			buf |= 0x08;
 			pflags |= PF_AUTOBRAKE;
 		}
-		if (cv_usejoystick.value)
+		if (cv_usegamepad[0].value)
 			buf |= 0x10;
-		CV_SetValue(&cv_showinputjoy, !!(cv_usejoystick.value));
+		CV_SetValue(&cv_showinputjoy, !!(cv_usegamepad[0].value));
 
 		WRITEUINT8(demo_p,buf);
 		player->pflags = pflags;

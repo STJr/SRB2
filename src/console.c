@@ -918,7 +918,8 @@ boolean CON_Responder(event_t *ev)
 	static INT32 alias_skips;
 
 	const char *cmd = NULL;
-	INT32 key;
+	INT32 key = ev->key;
+	boolean key_is_console = (key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]);
 
 	if (chat_on)
 		return false;
@@ -926,12 +927,10 @@ boolean CON_Responder(event_t *ev)
 	// let go keyup events, don't eat them
 	if (ev->type != ev_keydown && ev->type != ev_console)
 	{
-		if (ev->key == gamecontrol[GC_CONSOLE][0] || ev->key == gamecontrol[GC_CONSOLE][1])
+		if (key_is_console)
 			consdown = false;
 		return false;
 	}
-
-	key = ev->key;
 
 	// check for console toggle key
 	if (ev->type != ev_console)
@@ -939,7 +938,7 @@ boolean CON_Responder(event_t *ev)
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
 
-		if (key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1])
+		if (key_is_console)
 		{
 			if (consdown) // ignore repeat
 				return true;

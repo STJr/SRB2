@@ -355,6 +355,8 @@ typedef enum
 	SSF_ZOOMTUBEEND = 1<<16,
 	SSF_FINISHLINE = 1<<17,
 	SSF_ROPEHANG = 1<<18,
+	SSF_JUMPFLIP = 1<<19,
+	SSF_GRAVITYOVERRIDE = 1<<20, // combine with MSF_GRAVITYFLIP
 } sectorspecialflags_t;
 
 typedef enum
@@ -585,7 +587,7 @@ typedef struct subsector_s
 {
 	sector_t *sector;
 	INT16 numlines;
-	UINT16 firstline;
+	UINT32 firstline;
 	struct polyobj_s *polyList; // haleyjd 02/19/06: list of polyobjects
 	size_t validcount;
 } subsector_t;

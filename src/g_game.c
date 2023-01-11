@@ -19,10 +19,12 @@
 #include "f_finale.h"
 #include "p_setup.h"
 #include "p_saveg.h"
+#include "i_time.h"
 #include "i_system.h"
 #include "am_map.h"
 #include "m_random.h"
 #include "p_local.h"
+#include "p_haptic.h"
 #include "r_draw.h"
 #include "r_main.h"
 #include "s_sound.h"
@@ -37,7 +39,7 @@
 #include "z_zone.h"
 #include "i_video.h"
 #include "byteptr.h"
-#include "i_joy.h"
+#include "i_gamepad.h"
 #include "r_local.h"
 #include "r_skins.h"
 #include "y_inter.h"
@@ -46,6 +48,7 @@
 #include "b_bot.h"
 #include "m_cond.h" // condition sets
 #include "lua_script.h"
+#include "r_fps.h" // frame interpolation/uncapped
 
 #include "lua_hud.h"
 
@@ -56,9 +59,6 @@ UINT8 ultimatemode = false;
 boolean botingame;
 UINT8 botskin;
 UINT16 botcolor;
-
-JoyType_t Joystick;
-JoyType_t Joystick2;
 
 // 1024 bytes is plenty for a savegame
 #define SAVEGAMESIZE (1024)
@@ -254,12 +254,6 @@ UINT32 timesBeaten;
 UINT32 timesBeatenWithEmeralds;
 UINT32 timesBeatenUltimate;
 
-typedef struct joystickvector2_s
-{
-	INT32 xaxis;
-	INT32 yaxis;
-} joystickvector2_t;
-
 boolean precache = true; // if true, load all graphics at start
 
 INT16 prevmap, nextmap;
@@ -278,21 +272,38 @@ static void AutoBrake2_OnChange(void);
 void SendWeaponPref(void);
 void SendWeaponPref2(void);
 
-static CV_PossibleValue_t crosshair_cons_t[] = {{0, "Off"}, {1, "Cross"}, {2, "Angle"}, {3, "Point"}, {0, NULL}};
-static CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
-{1, "X-Axis"}, {2, "Y-Axis"}, {-1, "X-Axis-"}, {-2, "Y-Axis-"},
-#if JOYAXISSET > 1
-{3, "Z-Axis"}, {4, "X-Rudder"}, {-3, "Z-Axis-"}, {-4, "X-Rudder-"},
+CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
+#ifndef OLD_GAMEPAD_AXES
+	{1, "Left Stick X"}, {2, "Left Stick Y"},
+	{3, "Right Stick X"},{4, "Right Stick Y"},
+	{-1, "Left Stick X-"}, {-2, "Left Stick Y-"},
+	{-3, "Right Stick X-"}, {-4, "Right Stick Y-"},
+	{5, "Left Trigger"}, {6, "Right Trigger"},
+#else
+	{1, "X-Axis"}, {2, "Y-Axis"}, {-1, "X-Axis-"}, {-2, "Y-Axis-"},
+	#if JOYAXISSET > 1
+	{3, "Z-Axis"}, {4, "X-Rudder"}, {-3, "Z-Axis-"}, {-4, "X-Rudder-"},
+	#endif
+	#if JOYAXISSET > 2
+	{5, "Y-Rudder"}, {6, "Z-Rudder"}, {-5, "Y-Rudder-"}, {-6, "Z-Rudder-"},
+	#endif
+	#if JOYAXISSET > 3
+	{7, "U-Axis"}, {8, "V-Axis"}, {-7, "U-Axis-"}, {-8, "V-Axis-"},
+	#endif
 #endif
-#if JOYAXISSET > 2
-{5, "Y-Rudder"}, {6, "Z-Rudder"}, {-5, "Y-Rudder-"}, {-6, "Z-Rudder-"},
-#endif
-#if JOYAXISSET > 3
-{7, "U-Axis"}, {8, "V-Axis"}, {-7, "U-Axis-"}, {-8, "V-Axis-"},
-#endif
- {0, NULL}};
-#if JOYAXISSET > 4
-"More Axis Sets"
+	{0, NULL}
+};
+
+#ifndef OLD_GAMEPAD_AXES
+#define MOVEAXIS_DEFAULT "Left Stick Y"
+#define SIDEAXIS_DEFAULT "Left Stick X"
+#define LOOKAXIS_DEFAULT "Right Stick Y"
+#define TURNAXIS_DEFAULT "Right Stick X"
+#else
+#define MOVEAXIS_DEFAULT "Y-Axis"
+#define SIDEAXIS_DEFAULT "X-Axis"
+#define LOOKAXIS_DEFAULT "Y-Rudder-"
+#define TURNAXIS_DEFAULT "X-Rudder"
 #endif
 
 // don't mind me putting these here, I was lazy to figure out where else I could put those without blowing up the compiler.
@@ -328,6 +339,7 @@ consvar_t cv_consolechat = CVAR_INIT ("chatmode", "Window", CV_SAVE, consolechat
 // Pause game upon window losing focus
 consvar_t cv_pauseifunfocused = CVAR_INIT ("pauseifunfocused", "Yes", CV_SAVE, CV_YesNo, NULL);
 
+static CV_PossibleValue_t crosshair_cons_t[] = {{0, "Off"}, {1, "Cross"}, {2, "Angle"}, {3, "Point"}, {0, NULL}};
 consvar_t cv_crosshair = CVAR_INIT ("crosshair", "Cross", CV_SAVE, crosshair_cons_t, NULL);
 consvar_t cv_crosshair2 = CVAR_INIT ("crosshair2", "Cross", CV_SAVE, crosshair_cons_t, NULL);
 consvar_t cv_invertmouse = CVAR_INIT ("invertmouse", "Off", CV_SAVE, CV_OnOff, NULL);
@@ -407,27 +419,30 @@ consvar_t cv_cam_lockonboss[2] = {
 	CVAR_INIT ("cam2_lockaimassist", "Full", CV_SAVE, lockedassist_cons_t, NULL),
 };
 
-consvar_t cv_moveaxis = CVAR_INIT ("joyaxis_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_sideaxis = CVAR_INIT ("joyaxis_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis = CVAR_INIT ("joyaxis_look", "Y-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_turnaxis = CVAR_INIT ("joyaxis_turn", "X-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_jumpaxis = CVAR_INIT ("joyaxis_jump", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_spinaxis = CVAR_INIT ("joyaxis_spin", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_fireaxis = CVAR_INIT ("joyaxis_fire", "Z-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_firenaxis = CVAR_INIT ("joyaxis_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_deadzone = CVAR_INIT ("joy_deadzone", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
-consvar_t cv_digitaldeadzone = CVAR_INIT ("joy_digdeadzone", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
-
-consvar_t cv_moveaxis2 = CVAR_INIT ("joyaxis2_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_sideaxis2 = CVAR_INIT ("joyaxis2_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis2 = CVAR_INIT ("joyaxis2_look", "Y-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_turnaxis2 = CVAR_INIT ("joyaxis2_turn", "X-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_jumpaxis2 = CVAR_INIT ("joyaxis2_jump", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_spinaxis2 = CVAR_INIT ("joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_fireaxis2 = CVAR_INIT ("joyaxis2_fire", "Z-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_firenaxis2 = CVAR_INIT ("joyaxis2_firenormal", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_deadzone2 = CVAR_INIT ("joy_deadzone2", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
-consvar_t cv_digitaldeadzone2 = CVAR_INIT ("joy_digdeadzone2", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL);
+consvar_t cv_moveaxis[2] = {
+	CVAR_INIT ("joyaxis_move", MOVEAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_move", MOVEAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_sideaxis[2] = {
+	CVAR_INIT ("joyaxis_side", SIDEAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_side", SIDEAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_lookaxis[2] = {
+	CVAR_INIT ("joyaxis_look", LOOKAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_look", LOOKAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_turnaxis[2] = {
+	CVAR_INIT ("joyaxis_turn", TURNAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL),
+	CVAR_INIT ("joyaxis2_turn", TURNAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL)
+};
+consvar_t cv_deadzone[2] = {
+	CVAR_INIT ("joy_deadzone", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("joy_deadzone2", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL)
+};
+consvar_t cv_digitaldeadzone[2] = {
+	CVAR_INIT ("joy_digdeadzone", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("joy_digdeadzone2", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL)
+};
 
 player_t *seenplayer; // player we're aiming at right now
 
@@ -826,194 +841,167 @@ INT16 G_SoftwareClipAimingPitch(INT32 *aiming)
 	return (INT16)((*aiming)>>16);
 }
 
-INT32 JoyAxis(joyaxis_e axissel)
+#ifdef OLD_GAMEPAD_AXES
+static gamepad_axis_e ConvertXboxControllerAxes(int type)
 {
-	INT32 retaxis;
-	INT32 axisval;
+	switch (type)
+	{
+		// Left stick
+		case 1: // X-Axis
+			return GAMEPAD_AXIS_LEFTX;
+		case 2: // Y-Axis
+			return GAMEPAD_AXIS_LEFTY;
+
+		// Right stick
+		case 4: // X-Rudder
+			return GAMEPAD_AXIS_RIGHTX;
+		case 5: // Y-Rudder
+			return GAMEPAD_AXIS_RIGHTY;
+
+		// Triggers
+		case 3: // Z-Axis
+			return GAMEPAD_AXIS_TRIGGERLEFT;
+		case 6: // Z-Rudder
+			return GAMEPAD_AXIS_TRIGGERRIGHT;
+
+		default: // All the other ones
+			return NUM_GAMEPAD_AXES;
+	}
+}
+#endif
+
+static INT16 GetJoystickAxisValue(INT32 axisval)
+{
 	boolean flp = false;
 
-	//find what axis to get
+	if (axisval < 0) // odd -axes
+	{
+		axisval = -axisval;
+		flp = true;
+	}
+	else if (axisval == 0)
+		return 0;
+
+	if (axisval > JOYAXISSET*2)
+		return 0;
+
+	gamepad_axis_e gp_axis;
+
+#ifdef OLD_GAMEPAD_AXES
+	gp_axis = ConvertXboxControllerAxes(axisval);
+#else
+	gp_axis = axisval - 1;
+#endif
+
+	if (gp_axis >= NUM_GAMEPAD_AXES)
+		return 0;
+
+	if (axisval % 2)
+		axisval /= 2;
+	else
+	{
+		axisval--;
+		axisval /= 2;
+	}
+
+	INT16 retaxis = G_GetGamepadAxisValue(0, gp_axis);
+	
+	// flip it around
+	if (flp)
+	{
+		if (retaxis == -32768)
+			retaxis = 32767;
+		else
+			retaxis = -retaxis;
+	}
+
+	return retaxis;
+}
+
+INT16 G_JoyAxis(UINT8 which, joyaxis_e axissel)
+{
+	INT32 axisval;
+	INT32 value;
+
+	// find what axis to get
 	switch (axissel)
 	{
 		case JA_TURN:
-			axisval = cv_turnaxis.value;
+			axisval = cv_turnaxis[which].value;
 			break;
 		case JA_MOVE:
-			axisval = cv_moveaxis.value;
+			axisval = cv_moveaxis[which].value;
 			break;
 		case JA_LOOK:
-			axisval = cv_lookaxis.value;
+			axisval = cv_lookaxis[which].value;
 			break;
 		case JA_STRAFE:
-			axisval = cv_sideaxis.value;
-			break;
-		case JA_JUMP:
-			axisval = cv_jumpaxis.value;
-			break;
-		case JA_SPIN:
-			axisval = cv_spinaxis.value;
-			break;
-		case JA_FIRE:
-			axisval = cv_fireaxis.value;
-			break;
-		case JA_FIRENORMAL:
-			axisval = cv_firenaxis.value;
+			axisval = cv_sideaxis[which].value;
 			break;
 		default:
 			return 0;
 	}
 
-	if (axisval < 0) //odd -axises
+	value = GetJoystickAxisValue(axisval);
+	if (axissel == JA_LOOK)
 	{
-		axisval = -axisval;
-		flp = true;
+		// Look is inverted because +Y goes _down_ in gamepads.
+		if (value == -32768)
+			value = 32767;
+		else
+			value = -value;
 	}
-	if (axisval > JOYAXISSET*2 || axisval == 0) //not there in array or None
-		return 0;
-
-	if (axisval%2)
-	{
-		axisval /= 2;
-		retaxis = joyxmove[axisval];
-	}
-	else
-	{
-		axisval--;
-		axisval /= 2;
-		retaxis = joyymove[axisval];
-	}
-
-	if (retaxis < (-JOYAXISRANGE))
-		retaxis = -JOYAXISRANGE;
-	if (retaxis > (+JOYAXISRANGE))
-		retaxis = +JOYAXISRANGE;
-
-	if (!Joystick.bGamepadStyle && axissel >= JA_DIGITAL)
-	{
-		const INT32 jdeadzone = ((JOYAXISRANGE-1) * cv_digitaldeadzone.value) >> FRACBITS;
-		if (-jdeadzone < retaxis && retaxis < jdeadzone)
-			return 0;
-	}
-
-	if (flp) retaxis = -retaxis; //flip it around
-	return retaxis;
+	return value;
 }
 
-INT32 Joy2Axis(joyaxis_e axissel)
+static INT16 GetAnalogInput(UINT8 which, gamecontrols_e gc)
 {
-	INT32 retaxis;
-	INT32 axisval;
-	boolean flp = false;
-
-	//find what axis to get
-	switch (axissel)
+	for (UINT8 i = 0; i < 2; i++)
 	{
-		case JA_TURN:
-			axisval = cv_turnaxis2.value;
-			break;
-		case JA_MOVE:
-			axisval = cv_moveaxis2.value;
-			break;
-		case JA_LOOK:
-			axisval = cv_lookaxis2.value;
-			break;
-		case JA_STRAFE:
-			axisval = cv_sideaxis2.value;
-			break;
-		case JA_JUMP:
-			axisval = cv_jumpaxis2.value;
-			break;
-		case JA_SPIN:
-			axisval = cv_spinaxis2.value;
-			break;
-		case JA_FIRE:
-			axisval = cv_fireaxis2.value;
-			break;
-		case JA_FIRENORMAL:
-			axisval = cv_firenaxis2.value;
-			break;
-		default:
-			return 0;
+		SINT8 isAnalog = G_PlayerInputIsAnalog(which, gc, i);
+		if (!isAnalog)
+			continue;
+
+		INT16 value = G_GetAnalogPlayerInput(which, gc, i);
+		if (value > 0 && isAnalog == 1)
+			return value;
+		else if (value < 0 && isAnalog == -1)
+			return max(min(-value, INT16_MAX), INT16_MIN);
 	}
 
-
-	if (axisval < 0) //odd -axises
-	{
-		axisval = -axisval;
-		flp = true;
-	}
-
-	if (axisval > JOYAXISSET*2 || axisval == 0) //not there in array or None
-		return 0;
-
-	if (axisval%2)
-	{
-		axisval /= 2;
-		retaxis = joy2xmove[axisval];
-	}
-	else
-	{
-		axisval--;
-		axisval /= 2;
-		retaxis = joy2ymove[axisval];
-	}
-
-	if (retaxis < (-JOYAXISRANGE))
-		retaxis = -JOYAXISRANGE;
-	if (retaxis > (+JOYAXISRANGE))
-		retaxis = +JOYAXISRANGE;
-
-	if (!Joystick2.bGamepadStyle && axissel >= JA_DIGITAL)
-	{
-		const INT32 jdeadzone = ((JOYAXISRANGE-1) * cv_digitaldeadzone2.value) >> FRACBITS;
-		if (-jdeadzone < retaxis && retaxis < jdeadzone)
-			return 0;
-	}
-
-	if (flp) retaxis = -retaxis; //flip it around
-	return retaxis;
+	return 0;
 }
 
-
-#define PlayerJoyAxis(p, ax) ((p) == 1 ? JoyAxis(ax) : Joy2Axis(ax))
-
-// Take a magnitude of two axes, and adjust it to take out the deadzone
-// Will return a value between 0 and JOYAXISRANGE
-static INT32 G_BasicDeadZoneCalculation(INT32 magnitude, fixed_t deadZone)
+static boolean CheckAxesUsable(UINT8 which, gamecontrols_e gc1, gamecontrols_e gc2)
 {
-	const INT32 jdeadzone = (JOYAXISRANGE * deadZone) / FRACUNIT;
-	INT32 deadzoneAppliedValue = 0;
-	INT32 adjustedMagnitude = abs(magnitude);
+	INT32 (*controls)[2] = which == 0 ? gamecontrol : gamecontrolbis;
 
-	if (jdeadzone >= JOYAXISRANGE && adjustedMagnitude >= JOYAXISRANGE) // If the deadzone and magnitude are both 100%...
-		return JOYAXISRANGE; // ...return 100% input directly, to avoid dividing by 0
-	else if (adjustedMagnitude > jdeadzone) // Otherwise, calculate how much the magnitude exceeds the deadzone
-	{
-		adjustedMagnitude = min(adjustedMagnitude, JOYAXISRANGE);
+#define CHECK_RANGE(x, y, z) \
+	(controls[x][y] >= KEY_AXES && controls[x][y] < KEY_AXES + NUM_GAMEPAD_AXES \
+	&& controls[x][z] >= KEY_INV_AXES && controls[x][z] < KEY_INV_AXES + NUM_GAMEPAD_AXES)
 
-		adjustedMagnitude -= jdeadzone;
+	if (CHECK_RANGE(gc1, 0, 1) || CHECK_RANGE(gc2, 0, 1))
+		return false;
+	if (CHECK_RANGE(gc1, 1, 0) || CHECK_RANGE(gc2, 1, 0))
+		return false;
 
-		deadzoneAppliedValue = (adjustedMagnitude * JOYAXISRANGE) / (JOYAXISRANGE - jdeadzone);
-	}
+#undef CHECK_RANGE
 
-	return deadzoneAppliedValue;
+	return true;
 }
+
+typedef struct
+{
+	INT32 xaxis, yaxis;
+} joystickvector2_t;
 
 // Get the actual sensible radial value for a joystick axis when accounting for a deadzone
-static void G_HandleAxisDeadZone(UINT8 splitnum, joystickvector2_t *joystickvector)
+static void G_HandleAxisDeadZone(UINT8 playernum, joystickvector2_t *joystickvector)
 {
-	INT32 gamepadStyle = Joystick.bGamepadStyle;
-	fixed_t deadZone = cv_deadzone.value;
-
-	if (splitnum == 1)
+	if (!gamepads[playernum].digital)
 	{
-		gamepadStyle = Joystick2.bGamepadStyle;
-		deadZone = cv_deadzone2.value;
-	}
+		const UINT16 deadZone = G_GetGamepadDeadZone(playernum);
 
-	// When gamepadstyle is "true" the values are just -1, 0, or 1. This is done in the interface code.
-	if (!gamepadStyle)
-	{
 		// Get the total magnitude of the 2 axes
 		INT32 magnitude = (joystickvector->xaxis * joystickvector->xaxis) + (joystickvector->yaxis * joystickvector->yaxis);
 		INT32 normalisedXAxis;
@@ -1027,18 +1015,18 @@ static void G_HandleAxisDeadZone(UINT8 splitnum, joystickvector2_t *joystickvect
 		normalisedYAxis = (joystickvector->yaxis * magnitude) / JOYAXISRANGE;
 
 		// Apply the deadzone to the magnitude to give a correct value between 0 and JOYAXISRANGE
-		normalisedMagnitude = G_BasicDeadZoneCalculation(magnitude, deadZone);
+		normalisedMagnitude = G_BasicDeadZoneCalculation(abs(magnitude), deadZone);
 
 		// Apply the deadzone to the xy axes
 		joystickvector->xaxis = (normalisedXAxis * normalisedMagnitude) / JOYAXISRANGE;
 		joystickvector->yaxis = (normalisedYAxis * normalisedMagnitude) / JOYAXISRANGE;
-
-		// Cap the values so they don't go above the correct maximum
-		joystickvector->xaxis = min(joystickvector->xaxis, JOYAXISRANGE);
-		joystickvector->xaxis = max(joystickvector->xaxis, -JOYAXISRANGE);
-		joystickvector->yaxis = min(joystickvector->yaxis, JOYAXISRANGE);
-		joystickvector->yaxis = max(joystickvector->yaxis, -JOYAXISRANGE);
 	}
+
+	// Cap the values so they don't go above the correct maximum
+	joystickvector->xaxis = min(joystickvector->xaxis, JOYAXISRANGE);
+	joystickvector->xaxis = max(joystickvector->xaxis, -JOYAXISRANGE - 1);
+	joystickvector->yaxis = min(joystickvector->yaxis, JOYAXISRANGE);
+	joystickvector->yaxis = max(joystickvector->yaxis, -JOYAXISRANGE - 1);
 }
 
 //
@@ -1061,23 +1049,27 @@ boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind
 mobj_t *ticcmd_ztargetfocus[2]; // Locking onto an object?
 void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 {
+	UINT8 forplayer = ssplayer - 1;
+
 	boolean forcestrafe = false;
 	boolean forcefullinput = false;
-	INT32 tspeed, forward, side, axis, strafeaxis, moveaxis, turnaxis, lookaxis, i;
+	INT32 tspeed, forward, side, strafeaxis, moveaxis, turnaxis, lookaxis, i;
 
 	joystickvector2_t movejoystickvector, lookjoystickvector;
 
 	const INT32 speed = 1;
 	// these ones used for multiple conditions
-	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming, analogjoystickmove, gamepadjoystickmove, thisjoyaiming;
+	boolean turnleft, turnright, strafelkey, straferkey, movefkey, movebkey, mouseaiming;
+	boolean analogaxismove, digitalaxismove, thisjoyaiming;
 	boolean strafeisturn; // Simple controls only
 	player_t *player = &players[ssplayer == 2 ? secondarydisplayplayer : consoleplayer];
 	camera_t *thiscam = ((ssplayer == 1 || player->bot == BOT_2PHUMAN) ? &camera : &camera2);
 	angle_t *myangle = (ssplayer == 1 ? &localangle : &localangle2);
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
+	gamepad_t *gamepad = &gamepads[forplayer];
 
 	angle_t drawangleoffset = (player->powers[pw_carry] == CR_ROLLOUT) ? ANGLE_180 : 0;
-	INT32 chasecam, chasefreelook, alwaysfreelook, usejoystick, invertmouse, turnmultiplier, mousemove;
+	INT32 chasecam, chasefreelook, alwaysfreelook, usegamepad, invertmouse, turnmultiplier, mousemove;
 	controlstyle_e controlstyle = G_ControlStyle(ssplayer);
 	INT32 mdx, mdy, mldy;
 
@@ -1091,14 +1083,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	static fixed_t tta_factor[2] = {FRACUNIT, FRACUNIT}; // disables turn-to-angle when manually turning camera until movement happens
 	boolean centerviewdown = false;
 
-	UINT8 forplayer = ssplayer-1;
-
 	if (ssplayer == 1)
 	{
 		chasecam = cv_chasecam.value;
 		chasefreelook = cv_chasefreelook.value;
 		alwaysfreelook = cv_alwaysfreelook.value;
-		usejoystick = cv_usejoystick.value;
 		invertmouse = cv_invertmouse.value;
 		turnmultiplier = cv_cam_turnmultiplier.value;
 		mousemove = cv_mousemove.value;
@@ -1112,7 +1101,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		chasecam = cv_chasecam2.value;
 		chasefreelook = cv_chasefreelook2.value;
 		alwaysfreelook = cv_alwaysfreelook2.value;
-		usejoystick = cv_usejoystick2.value;
 		invertmouse = cv_invertmouse2.value;
 		turnmultiplier = cv_cam2_turnmultiplier.value;
 		mousemove = cv_mousemove2.value;
@@ -1121,6 +1109,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		mldy = -mouse2.mlookdy;
 		G_CopyTiccmd(cmd, I_BaseTiccmd2(), 1); // empty, or external driver
 	}
+
+	usegamepad = cv_usegamepad[forplayer].value;
 
 	if (menuactive || CON_Ready() || chat_on)
 		mdx = mdy = mldy = 0;
@@ -1140,13 +1130,14 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		return;
 	}
 
-	turnright = PLAYERINPUTDOWN(ssplayer, GC_TURNRIGHT);
-	turnleft = PLAYERINPUTDOWN(ssplayer, GC_TURNLEFT);
+	// Axes for turning or strafing are ignored here
+	turnright = G_CheckDigitalPlayerInput(forplayer, GC_TURNRIGHT);
+	turnleft = G_CheckDigitalPlayerInput(forplayer, GC_TURNLEFT);
 
-	straferkey = PLAYERINPUTDOWN(ssplayer, GC_STRAFERIGHT);
-	strafelkey = PLAYERINPUTDOWN(ssplayer, GC_STRAFELEFT);
-	movefkey = PLAYERINPUTDOWN(ssplayer, GC_FORWARD);
-	movebkey = PLAYERINPUTDOWN(ssplayer, GC_BACKWARD);
+	straferkey = G_CheckDigitalPlayerInput(forplayer, GC_STRAFERIGHT);
+	strafelkey = G_CheckDigitalPlayerInput(forplayer, GC_STRAFELEFT);
+	movefkey = G_CheckDigitalPlayerInput(forplayer, GC_FORWARD);
+	movebkey = G_CheckDigitalPlayerInput(forplayer, GC_BACKWARD);
 
 	if (strafeisturn)
 	{
@@ -1155,10 +1146,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		straferkey = strafelkey = false;
 	}
 
-	mouseaiming = (PLAYERINPUTDOWN(ssplayer, GC_MOUSEAIMING)) ^
+	mouseaiming = (G_PlayerInputDown(forplayer, GC_MOUSEAIMING)) ^
 		((chasecam && !player->spectator) ? chasefreelook : alwaysfreelook);
-	analogjoystickmove = usejoystick && !Joystick.bGamepadStyle;
-	gamepadjoystickmove = usejoystick && Joystick.bGamepadStyle;
+	analogaxismove = usegamepad && !gamepad->digital;
+	digitalaxismove = usegamepad && gamepad->digital;
 
 	thisjoyaiming = (chasecam && !player->spectator) ? chasefreelook : alwaysfreelook;
 
@@ -1167,19 +1158,38 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		*myaiming = 0;
 	joyaiming[forplayer] = thisjoyaiming;
 
-	turnaxis = PlayerJoyAxis(ssplayer, JA_TURN);
+	turnaxis = G_JoyAxis(forplayer, JA_TURN);
 	if (strafeisturn)
-		turnaxis += PlayerJoyAxis(ssplayer, JA_STRAFE);
-	lookaxis = PlayerJoyAxis(ssplayer, JA_LOOK);
+		turnaxis += G_JoyAxis(forplayer, JA_STRAFE);
+	lookaxis = G_JoyAxis(forplayer, JA_LOOK);
+
+	if (usegamepad)
+	{
+		turnaxis -= GetAnalogInput(forplayer, GC_TURNLEFT);
+		turnaxis += GetAnalogInput(forplayer, GC_TURNRIGHT);
+
+		if (strafeisturn)
+		{
+			turnaxis -= GetAnalogInput(forplayer, GC_STRAFELEFT);
+			turnaxis += GetAnalogInput(forplayer, GC_STRAFERIGHT);
+		}
+
+		lookaxis += GetAnalogInput(forplayer, GC_LOOKUP);
+		lookaxis -= GetAnalogInput(forplayer, GC_LOOKDOWN);
+	}
+
+	// Handle deadzones
 	lookjoystickvector.xaxis = turnaxis;
 	lookjoystickvector.yaxis = lookaxis;
 	G_HandleAxisDeadZone(forplayer, &lookjoystickvector);
 
-	if (gamepadjoystickmove && lookjoystickvector.xaxis != 0)
+	// Do digital axis turning
+	if (digitalaxismove && lookjoystickvector.xaxis != 0)
 	{
 		turnright = turnright || (lookjoystickvector.xaxis > 0);
 		turnleft = turnleft || (lookjoystickvector.xaxis < 0);
 	}
+
 	forward = side = 0;
 
 	// use two stage accelerative turning
@@ -1218,10 +1228,10 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		if (turnleft)
 			side -= sidemove[speed];
 
-		if (analogjoystickmove && lookjoystickvector.xaxis != 0)
+		if (analogaxismove && lookjoystickvector.xaxis != 0)
 		{
-			// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
-			side += ((lookjoystickvector.xaxis * sidemove[1]) >> 10);
+			// JOYAXISRANGE is supposed to be 32767 (divide by 32768)
+			side += ((lookjoystickvector.xaxis * sidemove[1]) >> 15);
 		}
 	}
 	else if (controlstyle == CS_LMAOGALOG) // Analog
@@ -1239,47 +1249,69 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		else if (turnleft)
 			cmd->angleturn = (INT16)(cmd->angleturn + ((angleturn[tspeed] * turnmultiplier)>>FRACBITS));
 
-		if (analogjoystickmove && lookjoystickvector.xaxis != 0)
+		if (analogaxismove && lookjoystickvector.xaxis != 0)
 		{
-			// JOYAXISRANGE should be 1023 (divide by 1024)
-			cmd->angleturn = (INT16)(cmd->angleturn - ((((lookjoystickvector.xaxis * angleturn[1]) >> 10) * turnmultiplier)>>FRACBITS)); // ANALOG!
+			// JOYAXISRANGE should be 32767 (divide by 32768)
+			cmd->angleturn = (INT16)(cmd->angleturn - ((((lookjoystickvector.xaxis * angleturn[1]) >> 15) * turnmultiplier)>>FRACBITS)); // ANALOG!
 		}
 
 		if (turnright || turnleft || abs(cmd->angleturn) > angleturn[2])
 			tta_factor[forplayer] = 0; // suspend turn to angle
 	}
 
-	strafeaxis = strafeisturn ? 0 : PlayerJoyAxis(ssplayer, JA_STRAFE);
-	moveaxis = PlayerJoyAxis(ssplayer, JA_MOVE);
+	// Strafing axes (moving left and right)
+	if (strafeisturn)
+		strafeaxis = 0;
+	else
+	{
+		strafeaxis = G_JoyAxis(forplayer, JA_STRAFE);
+
+		if (usegamepad && CheckAxesUsable(forplayer, GC_STRAFELEFT, GC_STRAFERIGHT))
+		{
+			strafeaxis -= GetAnalogInput(forplayer, GC_STRAFELEFT);
+			strafeaxis += GetAnalogInput(forplayer, GC_STRAFERIGHT);
+		}
+	}
+
+	// Moving axes (moving forwards and backwards)
+	moveaxis = G_JoyAxis(forplayer, JA_MOVE);
+	if (usegamepad && CheckAxesUsable(forplayer, GC_FORWARD, GC_BACKWARD))
+	{
+		moveaxis -= GetAnalogInput(forplayer, GC_FORWARD);
+		moveaxis += GetAnalogInput(forplayer, GC_BACKWARD);
+	}
+
 	movejoystickvector.xaxis = strafeaxis;
 	movejoystickvector.yaxis = moveaxis;
 	G_HandleAxisDeadZone(forplayer, &movejoystickvector);
 
-	if (gamepadjoystickmove && movejoystickvector.xaxis != 0)
+	if (digitalaxismove && movejoystickvector.xaxis != 0)
 	{
+		// Do digital axis movement
 		if (movejoystickvector.xaxis > 0)
 			side += sidemove[speed];
 		else if (movejoystickvector.xaxis < 0)
 			side -= sidemove[speed];
 	}
-	else if (analogjoystickmove && movejoystickvector.xaxis != 0)
+	else if (analogaxismove && movejoystickvector.xaxis != 0)
 	{
-		// JOYAXISRANGE is supposed to be 1023 (divide by 1024)
-		side += ((movejoystickvector.xaxis * sidemove[1]) >> 10);
+		// JOYAXISRANGE is supposed to be 32767 (divide by 32768)
+		side += ((movejoystickvector.xaxis * sidemove[1]) >> 15);
 	}
 
 	// forward with key or button
-	if (movefkey || (gamepadjoystickmove && movejoystickvector.yaxis < 0)
+	// also handles digital axis movement
+	if (movefkey || (digitalaxismove && movejoystickvector.yaxis < 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYERINPUTDOWN(ssplayer, GC_LOOKUP) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))))
+			&& (G_CheckDigitalPlayerInput(forplayer, GC_LOOKUP) || (digitalaxismove && lookjoystickvector.yaxis > 0))))
 		forward = forwardmove[speed];
-	if (movebkey || (gamepadjoystickmove && movejoystickvector.yaxis > 0)
+	if (movebkey || (digitalaxismove && movejoystickvector.yaxis > 0)
 		|| ((player->powers[pw_carry] == CR_NIGHTSMODE)
-			&& (PLAYERINPUTDOWN(ssplayer, GC_LOOKDOWN) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))))
+			&& (G_CheckDigitalPlayerInput(forplayer, GC_LOOKDOWN) || (digitalaxismove && lookjoystickvector.yaxis < 0))))
 		forward -= forwardmove[speed];
 
-	if (analogjoystickmove && movejoystickvector.yaxis != 0)
-		forward -= ((movejoystickvector.yaxis * forwardmove[1]) >> 10); // ANALOG!
+	if (analogaxismove && movejoystickvector.yaxis != 0)
+		forward -= ((movejoystickvector.yaxis * forwardmove[1]) >> 15); // ANALOG!
 
 	// some people strafe left & right with mouse buttons
 	// those people are weird
@@ -1288,53 +1320,51 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (strafelkey)
 		side -= sidemove[speed];
 
-	if (PLAYERINPUTDOWN(ssplayer, GC_WEAPONNEXT))
+	if (G_PlayerInputDown(forplayer, GC_WEAPONNEXT))
 		cmd->buttons |= BT_WEAPONNEXT; // Next Weapon
-	if (PLAYERINPUTDOWN(ssplayer, GC_WEAPONPREV))
+	if (G_PlayerInputDown(forplayer, GC_WEAPONPREV))
 		cmd->buttons |= BT_WEAPONPREV; // Previous Weapon
 
 #if NUM_WEAPONS > 10
-"Add extra inputs to g_input.h/gamecontrols_e"
+#error "Add extra inputs to g_input.h/gamecontrols_e"
 #endif
+
 	//use the four avaliable bits to determine the weapon.
 	cmd->buttons &= ~BT_WEAPONMASK;
 	for (i = 0; i < NUM_WEAPONS; ++i)
-		if (PLAYERINPUTDOWN(ssplayer, GC_WEPSLOT1 + i))
+		if (G_PlayerInputDown(forplayer, GC_WEPSLOT1 + i))
 		{
 			cmd->buttons |= (UINT16)(i + 1);
 			break;
 		}
 
 	// fire with any button/key
-	axis = PlayerJoyAxis(ssplayer, JA_FIRE);
-	if (PLAYERINPUTDOWN(ssplayer, GC_FIRE) || (usejoystick && axis > 0))
+	if (G_PlayerInputDown(forplayer, GC_FIRE))
 		cmd->buttons |= BT_ATTACK;
 
 	// fire normal with any button/key
-	axis = PlayerJoyAxis(ssplayer, JA_FIRENORMAL);
-	if (PLAYERINPUTDOWN(ssplayer, GC_FIRENORMAL) || (usejoystick && axis > 0))
+	if (G_PlayerInputDown(forplayer, GC_FIRENORMAL))
 		cmd->buttons |= BT_FIRENORMAL;
 
-	if (PLAYERINPUTDOWN(ssplayer, GC_TOSSFLAG))
+	if (G_PlayerInputDown(forplayer, GC_TOSSFLAG))
 		cmd->buttons |= BT_TOSSFLAG;
 
 	// Lua scriptable buttons
-	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM1))
+	if (G_PlayerInputDown(forplayer, GC_CUSTOM1))
 		cmd->buttons |= BT_CUSTOM1;
-	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM2))
+	if (G_PlayerInputDown(forplayer, GC_CUSTOM2))
 		cmd->buttons |= BT_CUSTOM2;
-	if (PLAYERINPUTDOWN(ssplayer, GC_CUSTOM3))
+	if (G_PlayerInputDown(forplayer, GC_CUSTOM3))
 		cmd->buttons |= BT_CUSTOM3;
 
-	// use with any button/key
-	axis = PlayerJoyAxis(ssplayer, JA_SPIN);
-	if (PLAYERINPUTDOWN(ssplayer, GC_SPIN) || (usejoystick && axis > 0))
+	// spin with any button/key
+	if (G_PlayerInputDown(forplayer, GC_SPIN))
 		cmd->buttons |= BT_SPIN;
 
 	// Centerview can be a toggle in simple mode!
 	{
 		static boolean last_centerviewdown[2], centerviewhold[2]; // detect taps for toggle behavior
-		boolean down = PLAYERINPUTDOWN(ssplayer, GC_CENTERVIEW);
+		boolean down = G_PlayerInputDown(forplayer, GC_CENTERVIEW);
 
 		if (!(controlstyle == CS_SIMPLE && cv_cam_centertoggle[forplayer].value))
 			centerviewdown = down;
@@ -1433,7 +1463,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	if (ticcmd_centerviewdown[forplayer] && controlstyle == CS_SIMPLE)
 		controlstyle = CS_LEGACY;
 
-	if (PLAYERINPUTDOWN(ssplayer, GC_CAMRESET))
+	if (G_PlayerInputDown(forplayer, GC_CAMRESET))
 	{
 		if (thiscam->chase && !resetdown[forplayer])
 			P_ResetCamera(&players[ssplayer == 1 ? displayplayer : secondarydisplayplayer], thiscam);
@@ -1443,10 +1473,8 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	else
 		resetdown[forplayer] = false;
 
-
 	// jump button
-	axis = PlayerJoyAxis(ssplayer, JA_JUMP);
-	if (PLAYERINPUTDOWN(ssplayer, GC_JUMP) || (usejoystick && axis > 0))
+	if (G_PlayerInputDown(forplayer, GC_JUMP))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
@@ -1456,7 +1484,6 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			(player->mo && (player->mo->eflags & MFE_VERTICALFLIP)
 			 && (!thiscam->chase || player->pflags & PF_FLIPCAM)) //because chasecam's not inverted
 			 ? -1 : 1; // set to -1 or 1 to multiply
-		 INT32 configlookaxis = ssplayer == 1 ? cv_lookaxis.value : cv_lookaxis2.value;
 
 		// mouse look stuff (mouse look is not the same as mouse aim)
 		if (mouseaiming)
@@ -1467,21 +1494,21 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 			*myaiming += (mldy<<19)*player_invert*screen_invert;
 		}
 
-		if (analogjoystickmove && joyaiming[forplayer] && lookjoystickvector.yaxis != 0 && configlookaxis != 0)
-			*myaiming += (lookjoystickvector.yaxis<<16) * screen_invert;
+		if (joyaiming[forplayer] && lookjoystickvector.yaxis != 0)
+			*myaiming += (lookjoystickvector.yaxis<<11) * screen_invert;
 
 		// spring back if not using keyboard neither mouselookin'
-		if (!keyboard_look[forplayer] && configlookaxis == 0 && !joyaiming[forplayer] && !mouseaiming)
+		if (!keyboard_look[forplayer] && !joyaiming[forplayer] && !mouseaiming)
 			*myaiming = 0;
 
 		if (!(player->powers[pw_carry] == CR_NIGHTSMODE))
 		{
-			if (PLAYERINPUTDOWN(ssplayer, GC_LOOKUP) || (gamepadjoystickmove && lookjoystickvector.yaxis < 0))
+			if (G_CheckDigitalPlayerInput(forplayer, GC_LOOKUP) || (digitalaxismove && lookjoystickvector.yaxis < 0))
 			{
 				*myaiming += KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
 			}
-			else if (PLAYERINPUTDOWN(ssplayer, GC_LOOKDOWN) || (gamepadjoystickmove && lookjoystickvector.yaxis > 0))
+			else if (G_CheckDigitalPlayerInput(forplayer, GC_LOOKDOWN) || (digitalaxismove && lookjoystickvector.yaxis > 0))
 			{
 				*myaiming -= KB_LOOKSPEED * screen_invert;
 				keyboard_look[forplayer] = true;
@@ -1714,6 +1741,64 @@ ticcmd_t *G_MoveTiccmd(ticcmd_t* dest, const ticcmd_t* src, const size_t n)
 	return dest;
 }
 
+static player_t *G_GetInputPlayer(UINT8 which)
+{
+	if (which == 0)
+		return &players[displayplayer];
+	else if (which == 1)
+	{
+		if (splitscreen)
+			return &players[secondarydisplayplayer];
+		else if (playeringame[1] && players[1].bot == BOT_2PHUMAN)
+			return &players[1];
+	}
+
+	return NULL;
+}
+
+// Returns a player's gamepad index, even if it's disabled
+// Gamepad indexes correspond to the local player index.
+INT16 G_GetGamepadForPlayer(player_t *player)
+{
+	for (UINT8 i = 0; i < 2; i++)
+	{
+		if (player == G_GetInputPlayer(i))
+			return i;
+	}
+
+	return -1;
+}
+
+// Gets the user-set gamepad device for a specific player
+INT32 G_GetGamepadDeviceIndex(INT32 player)
+{
+#ifdef GAMEPAD_HOTPLUG
+	if (atoi(cv_usegamepad[player].string) > I_NumGamepads())
+		return atoi(cv_usegamepad[player].string);
+	else
+#endif
+		return cv_usegamepad[player].value;
+}
+
+void G_OnGamepadConnect(UINT8 which)
+{
+	LUA_HookGamepadEvent(which, HOOK(GamepadAdded));
+}
+
+void G_OnGamepadDisconnect(UINT8 which)
+{
+	LUA_HookGamepadEvent(which, HOOK(GamepadRemoved));
+
+	if (!cv_gamepad_autopause.value)
+		return;
+
+	if (gamestate != GS_LEVEL || paused || netgame || splitscreen)
+		return;
+
+	if (which == 0 || (which == 1 && playeringame[1] && players[1].bot == BOT_2PHUMAN))
+		COM_ImmedExecute("pause");
+}
+
 // User has designated that they want
 // analog ON, so tell the game to stop
 // fudging with it.
@@ -1785,6 +1870,25 @@ static void AutoBrake2_OnChange(void)
 	SendWeaponPref2();
 }
 
+static void G_ResetInputs(void)
+{
+	memset(gamekeydown, 0, sizeof (gamekeydown));
+
+	for (UINT8 i = 0; i < NUM_GAMEPADS; i++)
+	{
+		for (UINT8 j = 0; j < NUM_GAMEPAD_BUTTONS; j++)
+			gamepads[i].buttons[j] = 0;
+
+		for (UINT8 j = 0; j < NUM_GAMEPAD_AXES; j++)
+			gamepads[i].axes[j] = 0;
+	}
+
+	G_SetMouseDeltas(0, 0, 1);
+	G_SetMouseDeltas(0, 0, 2);
+
+	P_StopRumble(NULL);
+}
+
 //
 // G_DoLoadLevel
 //
@@ -1853,14 +1957,7 @@ void G_DoLoadLevel(boolean resetplayer)
 		P_ResetCamera(&players[secondarydisplayplayer], &camera2);
 
 	// clear cmd building stuff
-	memset(gamekeydown, 0, sizeof (gamekeydown));
-	for (i = 0;i < JOYAXISSET; i++)
-	{
-		joyxmove[i] = joyymove[i] = 0;
-		joy2xmove[i] = joy2ymove[i] = 0;
-	}
-	G_SetMouseDeltas(0, 0, 1);
-	G_SetMouseDeltas(0, 0, 2);
+	G_ResetInputs();
 
 	// clear hud messages remains (usually from game startup)
 	CON_ClearHUD();
@@ -1903,7 +2000,10 @@ void G_PreLevelTitleCard(void)
 	{
 		// draw loop
 		while (!((nowtime = I_GetTime()) - lasttime))
-			I_Sleep();
+		{
+			I_Sleep(cv_sleep.value);
+			I_UpdateTime(cv_timescale.value);
+		}
 		lasttime = nowtime;
 
 		ST_runTitleCard();
@@ -1954,17 +2054,99 @@ INT32 pausedelay = 0;
 boolean pausebreakkey = false;
 static INT32 camtoggledelay, camtoggledelay2 = 0;
 
+static boolean ViewpointSwitchResponder(event_t *ev)
+{
+	// ViewpointSwitch Lua hook.
+	UINT8 canSwitchView = 0;
+
+	INT32 direction = 0;
+	if (ev->key == KEY_F12 || ev->key == gamecontrol[GC_VIEWPOINTNEXT][0] || ev->key == gamecontrol[GC_VIEWPOINTNEXT][1])
+		direction = 1;
+	if (ev->key == gamecontrol[GC_VIEWPOINTPREV][0] || ev->key == gamecontrol[GC_VIEWPOINTPREV][1])
+		direction = -1;
+	// This enabled reverse-iterating with shift+F12, sadly I had to
+	// disable this in case your shift key is bound to a control =((
+	//if (shiftdown)
+	//	direction = -direction;
+
+	// allow spy mode changes even during the demo
+	if (!(gamestate == GS_LEVEL && ev->type == ev_keydown && direction != 0))
+		return false;
+
+	if (splitscreen || !netgame)
+	{
+		displayplayer = consoleplayer;
+		return false;
+	}
+
+	// spy mode
+	do
+	{
+		// Wrap in both directions
+		displayplayer += direction;
+		displayplayer = (displayplayer + MAXPLAYERS) % MAXPLAYERS;
+
+		if (!playeringame[displayplayer])
+			continue;
+
+		// Call ViewpointSwitch hooks here.
+		canSwitchView = LUA_HookViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
+		if (canSwitchView == 1) // Set viewpoint to this player
+			break;
+		else if (canSwitchView == 2) // Skip this player
+			continue;
+
+		if (players[displayplayer].spectator)
+			continue;
+
+		if (G_GametypeHasTeams())
+		{
+			if (players[consoleplayer].ctfteam
+				&& players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
+				continue;
+		}
+		else if (gametyperules & GTR_HIDEFROZEN)
+		{
+			if (players[consoleplayer].pflags & PF_TAGIT)
+				continue;
+		}
+		// Other Tag-based gametypes?
+		else if (G_TagGametype())
+		{
+			if (!players[consoleplayer].spectator
+				&& (players[consoleplayer].pflags & PF_TAGIT) != (players[displayplayer].pflags & PF_TAGIT))
+				continue;
+		}
+		else if (G_GametypeHasSpectators() && G_RingSlingerGametype())
+		{
+			if (!players[consoleplayer].spectator)
+				continue;
+		}
+
+		break;
+	} while (displayplayer != consoleplayer);
+
+	// change statusbar also if playing back demo
+	if (singledemo)
+		ST_changeDemoView();
+
+	return true;
+}
+
 //
 // G_Responder
 // Get info needed to make ticcmd_ts for the players.
 //
 boolean G_Responder(event_t *ev)
 {
+	INT32 evtype = ev->type;
+	INT32 key = G_RemapGamepadEvent(ev, &evtype);
+
 	// any other key pops up menu if in demos
 	if (gameaction == ga_nothing && !singledemo &&
 		((demoplayback && !modeattacking && !titledemo) || gamestate == GS_TITLESCREEN))
 	{
-		if (ev->type == ev_keydown && ev->key != 301 && !(gamestate == GS_TITLESCREEN && finalecount < TICRATE))
+		if (evtype == ev_keydown && !(gamestate == GS_TITLESCREEN && finalecount < TICRATE))
 		{
 			M_StartControlPanel();
 			return true;
@@ -1989,7 +2171,7 @@ boolean G_Responder(event_t *ev)
 			return true; // chat ate the event
 		if (AM_Responder(ev))
 			return true; // automap ate it
-		// map the event (key/mouse/joy) to a gamecontrol
+		// map the event (key/mouse/gamepad) to a gamecontrol
 	}
 	// Intro
 	else if (gamestate == GS_INTRO)
@@ -2038,88 +2220,22 @@ boolean G_Responder(event_t *ev)
 		if (HU_Responder(ev))
 			return true; // chat ate the event
 
-	// allow spy mode changes even during the demo
-	if (gamestate == GS_LEVEL && ev->type == ev_keydown
-		&& (ev->key == KEY_F12 || ev->key == gamecontrol[GC_VIEWPOINT][0] || ev->key == gamecontrol[GC_VIEWPOINT][1]))
-	{
-		// ViewpointSwitch Lua hook.
-		UINT8 canSwitchView = 0;
-
-		if (splitscreen || !netgame)
-			displayplayer = consoleplayer;
-		else
-		{
-			// spy mode
-			do
-			{
-				displayplayer++;
-				if (displayplayer == MAXPLAYERS)
-					displayplayer = 0;
-
-				if (!playeringame[displayplayer])
-					continue;
-
-				// Call ViewpointSwitch hooks here.
-				canSwitchView = LUA_HookViewpointSwitch(&players[consoleplayer], &players[displayplayer], false);
-				if (canSwitchView == 1) // Set viewpoint to this player
-					break;
-				else if (canSwitchView == 2) // Skip this player
-					continue;
-
-				if (players[displayplayer].spectator)
-					continue;
-
-				if (G_GametypeHasTeams())
-				{
-					if (players[consoleplayer].ctfteam
-					 && players[displayplayer].ctfteam != players[consoleplayer].ctfteam)
-						continue;
-				}
-				else if (gametyperules & GTR_HIDEFROZEN)
-				{
-					if (players[consoleplayer].pflags & PF_TAGIT)
-						continue;
-				}
-				// Other Tag-based gametypes?
-				else if (G_TagGametype())
-				{
-					if (!players[consoleplayer].spectator
-					 && (players[consoleplayer].pflags & PF_TAGIT) != (players[displayplayer].pflags & PF_TAGIT))
-						continue;
-				}
-				else if (G_GametypeHasSpectators() && G_RingSlingerGametype())
-				{
-					if (!players[consoleplayer].spectator)
-						continue;
-				}
-
-				break;
-			} while (displayplayer != consoleplayer);
-
-			// change statusbar also if playing back demo
-			if (singledemo)
-				ST_changeDemoView();
-
-			// tell who's the view
-			CONS_Printf(M_GetText("Viewpoint: %s\n"), player_names[displayplayer]);
-
-			return true;
-		}
-	}
+	if (ViewpointSwitchResponder(ev))
+		return true;
 
 	// update keys current state
 	G_MapEventsToControls(ev);
 
-	switch (ev->type)
+	switch (evtype)
 	{
 		case ev_keydown:
-			if (ev->key == gamecontrol[GC_PAUSE][0]
-				|| ev->key == gamecontrol[GC_PAUSE][1]
-				|| ev->key == KEY_PAUSE)
+			if (key == gamecontrol[GC_PAUSE][0]
+				|| key == gamecontrol[GC_PAUSE][1]
+				|| key == KEY_PAUSE)
 			{
 				if (modeattacking && !demoplayback && (gamestate == GS_LEVEL))
 				{
-					pausebreakkey = (ev->key == KEY_PAUSE);
+					pausebreakkey = (key == KEY_PAUSE);
 					if (menuactive || pausedelay < 0 || leveltime < 2)
 						return true;
 
@@ -2144,8 +2260,8 @@ boolean G_Responder(event_t *ev)
 					}
 				}
 			}
-			if (ev->key == gamecontrol[GC_CAMTOGGLE][0]
-				|| ev->key == gamecontrol[GC_CAMTOGGLE][1])
+			if (key == gamecontrol[GC_CAMTOGGLE][0]
+				|| key == gamecontrol[GC_CAMTOGGLE][1])
 			{
 				if (!camtoggledelay)
 				{
@@ -2153,8 +2269,8 @@ boolean G_Responder(event_t *ev)
 					CV_SetValue(&cv_chasecam, cv_chasecam.value ? 0 : 1);
 				}
 			}
-			if (ev->key == gamecontrolbis[GC_CAMTOGGLE][0]
-				|| ev->key == gamecontrolbis[GC_CAMTOGGLE][1])
+			if (key == gamecontrolbis[GC_CAMTOGGLE][0]
+				|| key == gamecontrolbis[GC_CAMTOGGLE][1])
 			{
 				if (!camtoggledelay2)
 				{
@@ -2167,15 +2283,9 @@ boolean G_Responder(event_t *ev)
 		case ev_keyup:
 			return false; // always let key up events filter down
 
-		case ev_mouse:
-			return true; // eat events
-
-		case ev_joystick:
-			return true; // eat events
-
-		case ev_joystick2:
-			return true; // eat events
-
+		case ev_mouse: // eat events
+		case ev_gamepad_axis:
+			return true;
 
 		default:
 			break;
@@ -2202,6 +2312,10 @@ boolean G_LuaResponder(event_t *ev)
 		cancelled = LUA_HookKey(ev, HOOK(KeyUp));
 		LUA_InvalidateUserdata(ev);
 	}
+	else if (ev->type == ev_gamepad_down)
+		cancelled = LUA_HookGamepadButton(ev, HOOK(GamepadButtonDown));
+	else if (ev->type == ev_gamepad_up)
+		cancelled = LUA_HookGamepadButton(ev, HOOK(GamepadButtonUp));
 
 	return cancelled;
 }
@@ -2362,6 +2476,7 @@ void G_Ticker(boolean run)
 			F_TextPromptTicker();
 			AM_Ticker();
 			HU_Ticker();
+
 			break;
 
 		case GS_INTERMISSION:
@@ -2414,7 +2529,9 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TITLESCREEN:
-			if (titlemapinaction) P_Ticker(run); // then intentionally fall through
+			if (titlemapinaction)
+				P_Ticker(run);
+				// then intentionally fall through
 			/* FALLTHRU */
 		case GS_WAITINGPLAYERS:
 			F_MenuPresTicker(run);
@@ -2801,6 +2918,13 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 		P_MovePlayerToStarpost(playernum);
 	else
 		P_MovePlayerToSpawn(playernum, G_FindMapStart(playernum));
+
+	R_ResetMobjInterpolationState(players[playernum].mo);
+
+	if (playernum == consoleplayer)
+		P_ResetCamera(&players[playernum], &camera);
+	else if (playernum == secondarydisplayplayer)
+		P_ResetCamera(&players[playernum], &camera2);
 }
 
 mapthing_t *G_FindCTFStart(INT32 playernum)
@@ -3159,14 +3283,7 @@ void G_DoReborn(INT32 playernum)
 				P_ResetCamera(&players[secondarydisplayplayer], &camera2);
 
 			// clear cmd building stuff
-			memset(gamekeydown, 0, sizeof (gamekeydown));
-			for (i = 0; i < JOYAXISSET; i++)
-			{
-				joyxmove[i] = joyymove[i] = 0;
-				joy2xmove[i] = joy2ymove[i] = 0;
-			}
-			G_SetMouseDeltas(0, 0, 1);
-			G_SetMouseDeltas(0, 0, 2);
+			G_ResetInputs();
 
 			// clear hud messages remains (usually from game startup)
 			CON_ClearHUD();
@@ -4574,11 +4691,7 @@ void G_LoadGame(UINT32 slot, INT16 mapoverride)
 	}
 	save_p += VERSIONSIZE;
 
-//	if (demoplayback) // reset game engine
-//		G_StopDemo();
-
-//	paused = false;
-//	automapactive = false;
+	P_StopRumble(NULL);
 
 	// dearchive all the modifications
 	if (!P_LoadGame(mapoverride))
@@ -4841,6 +4954,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 {
 	INT32 i;
 
+	P_StopRumble(NULL);
 	Y_CleanupScreenBuffer();
 
 	if (paused)

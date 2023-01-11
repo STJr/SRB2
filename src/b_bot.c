@@ -30,7 +30,7 @@ void B_UpdateBotleader(player_t *player)
 	{
 		if (players[i].bot || players[i].playerstate != PST_LIVE || players[i].spectator || !players[i].mo)
 			continue;
-		
+
 		if (!player->botleader)
 		{
 			player->botleader = &players[i]; // set default
@@ -85,7 +85,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 	boolean stalled = (bmom < scale >> 1) && dist > followthres; // Helps to see if the AI is having trouble catching up
 	boolean samepos = (sonic->x == tails->x && sonic->y == tails->y);
 	boolean blocked = bot->blocked;
-	
+
 	if (!samepos)
 		ang = R_PointToAngle2(tails->x, tails->y, sonic->x, sonic->y);
 
@@ -188,6 +188,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 			&& !(pcmd->forwardmove || pcmd->sidemove || player->dashspeed)
 			&& P_IsObjectOnGround(sonic) && P_IsObjectOnGround(tails)
 			&& !(player->pflags & PF_STASIS)
+			&& !(player->exiting)
 			&& bot->charability == CA_FLY)
 				mem->thinkstate = AI_THINKFLY;
 		else if (mem->thinkstate == AI_THINKFLY)
@@ -448,10 +449,10 @@ void B_KeysToTiccmd(mobj_t *mo, ticcmd_t *cmd, boolean forward, boolean backward
 			cmd->forwardmove += MAXPLMOVE<<FRACBITS>>16;
 		if (backward)
 			cmd->forwardmove -= MAXPLMOVE<<FRACBITS>>16;
- 		if (left)
+		if (left)
 			cmd->angleturn += 1280;
 		if (right)
-			cmd->angleturn -= 1280; 
+			cmd->angleturn -= 1280;
 		if (strafeleft)
 			cmd->sidemove -= MAXPLMOVE<<FRACBITS>>16;
 		if (straferight)
@@ -486,7 +487,7 @@ boolean B_CheckRespawn(player_t *player)
 	//We don't have a main player to spawn to!
 	if (!player->botleader)
 		return false;
-	
+
 	sonic = player->botleader->mo;
 	// We can't follow Sonic if he's not around!
 	if (!sonic || sonic->health <= 0)
@@ -579,7 +580,7 @@ void B_RespawnBot(INT32 playernum)
 	player->powers[pw_nocontrol] = sonic->player->powers[pw_nocontrol];
 	player->pflags |= PF_AUTOBRAKE|(sonic->player->pflags & PF_DIRECTIONCHAR);
 
-	P_TeleportMove(tails, x, y, z);
+	P_SetOrigin(tails, x, y, z);
 	if (player->charability == CA_FLY)
 	{
 		P_SetPlayerMobjState(tails, S_PLAY_FLY);

@@ -22,6 +22,7 @@
 #include "p_setup.h"
 #include "p_saveg.h"
 #include "r_data.h"
+#include "r_fps.h"
 #include "r_textures.h"
 #include "r_things.h"
 #include "r_skins.h"
@@ -202,7 +203,7 @@ static void P_NetArchivePlayers(void)
 		WRITEUINT8(save_p, players[i].botmem.catchup_tics);
 		WRITEUINT8(save_p, players[i].botmem.thinkstate);
 		WRITEUINT8(save_p, players[i].removing);
-		
+
 		WRITEUINT8(save_p, players[i].blocked);
 		WRITEUINT16(save_p, players[i].lastbuttons);
 
@@ -424,7 +425,7 @@ static void P_NetUnArchivePlayers(void)
 		// Bots //
 		//////////
 		players[i].bot = READUINT8(save_p);
-		
+
 		players[i].botmem.lastForward = READUINT8(save_p);
 		players[i].botmem.lastBlocked = READUINT8(save_p);
 		players[i].botmem.catchup_tics = READUINT8(save_p);
@@ -433,7 +434,7 @@ static void P_NetUnArchivePlayers(void)
 
 		players[i].blocked = READUINT8(save_p);
 		players[i].lastbuttons = READUINT16(save_p);
-		
+
 		////////////////////////////
 		// Conveyor Belt Movement //
 		////////////////////////////
@@ -3058,7 +3059,21 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 			mobj->player->viewz = mobj->player->mo->z + mobj->player->viewheight;
 	}
 
+	if (mobj->type == MT_SKYBOX && mobj->spawnpoint)
+	{
+		mtag_t tag = Tag_FGet(&mobj->spawnpoint->tags);
+		if (tag >= 0 && tag <= 15)
+		{
+			if (mobj->spawnpoint->args[0])
+				skyboxcenterpnts[tag] = mobj;
+			else
+				skyboxviewpnts[tag] = mobj;
+		}
+	}
+
 	mobj->info = (mobjinfo_t *)next; // temporarily, set when leave this function
+
+	R_AddMobjInterpolator(mobj);
 
 	return &mobj->thinker;
 }
@@ -3677,10 +3692,14 @@ static void P_NetUnArchiveThinkers(void)
 		{
 			next = currentthinker->next;
 
-			if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker)
+			if (currentthinker->function.acp1 == (actionf_p1)P_MobjThinker || currentthinker->function.acp1 == (actionf_p1)P_NullPrecipThinker)
 				P_RemoveSavegameMobj((mobj_t *)currentthinker); // item isn't saved, don't remove it
 			else
+			{
+				(next->prev = currentthinker->prev)->next = next;
+				R_DestroyLevelInterpolators(currentthinker);
 				Z_Free(currentthinker);
+			}
 		}
 	}
 
@@ -3881,6 +3900,10 @@ static void P_NetUnArchiveThinkers(void)
 
 		CONS_Debug(DBG_NETPLAY, "%u thinkers loaded in list %d\n", numloaded, i);
 	}
+
+	// Set each skyboxmo to the first skybox (or NULL)
+	skyboxmo[0] = skyboxviewpnts[0];
+	skyboxmo[1] = skyboxcenterpnts[0];
 
 	if (restoreNum)
 	{

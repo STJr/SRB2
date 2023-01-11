@@ -18,6 +18,7 @@ am_map.c
 command.c
 console.c
 hu_stuff.c
+i_time.c
 y_inter.c
 st_stuff.c
 m_aatree.c
@@ -50,11 +51,13 @@ p_spec.c
 p_telept.c
 p_tick.c
 p_user.c
+p_haptic.c
 p_slopes.c
 tables.c
 r_bsp.c
 r_data.c
 r_draw.c
+r_fps.c
 r_main.c
 r_plane.c
 r_segs.c
@@ -95,4 +98,5 @@ lua_taglib.c
 lua_polyobjlib.c
 lua_blockmaplib.c
 lua_hudlib.c
+lua_hudlib_drawlist.c
 lua_inputlib.c

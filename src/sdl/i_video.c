@@ -1,3 +1,4 @@
+
 // Emacs style mode select   -*- C++ -*-
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
@@ -65,7 +66,7 @@
 #include "../m_menu.h"
 #include "../d_main.h"
 #include "../s_sound.h"
-#include "../i_joy.h"
+#include "../i_gamepad.h"
 #include "../st_stuff.h"
 #include "../hu_stuff.h"
 #include "../g_game.h"
@@ -448,51 +449,10 @@ static void SurfaceInfo(const SDL_Surface *infoSurface, const char *SurfaceText)
 
 static void VID_Command_Info_f (void)
 {
-#if 0
-	SDL2STUB();
-#else
-#if 0
-	const SDL_VideoInfo *videoInfo;
-	videoInfo = SDL_GetVideoInfo(); //Alam: Double-Check
-	if (videoInfo)
-	{
-		CONS_Printf("%s", M_GetText("Video Interface Capabilities:\n"));
-		if (videoInfo->hw_available)
-			CONS_Printf("%s", M_GetText(" Hardware surfaces\n"));
-		if (videoInfo->wm_available)
-			CONS_Printf("%s", M_GetText(" Window manager\n"));
-		//UnusedBits1  :6
-		//UnusedBits2  :1
-		if (videoInfo->blit_hw)
-			CONS_Printf("%s", M_GetText(" Accelerated blits HW-2-HW\n"));
-		if (videoInfo->blit_hw_CC)
-			CONS_Printf("%s", M_GetText(" Accelerated blits HW-2-HW with Colorkey\n"));
-		if (videoInfo->wm_available)
-			CONS_Printf("%s", M_GetText(" Accelerated blits HW-2-HW with Alpha\n"));
-		if (videoInfo->blit_sw)
-		{
-			CONS_Printf("%s", M_GetText(" Accelerated blits SW-2-HW\n"));
-			if (!M_CheckParm("-noblit")) videoblitok = SDL_TRUE;
-		}
-		if (videoInfo->blit_sw_CC)
-			CONS_Printf("%s", M_GetText(" Accelerated blits SW-2-HW with Colorkey\n"));
-		if (videoInfo->blit_sw_A)
-			CONS_Printf("%s", M_GetText(" Accelerated blits SW-2-HW with Alpha\n"));
-		if (videoInfo->blit_fill)
-			CONS_Printf("%s", M_GetText(" Accelerated Color filling\n"));
-		//UnusedBits3  :16
-		if (videoInfo->video_mem)
-			CONS_Printf(M_GetText(" There is %i KB of video memory\n"), videoInfo->video_mem);
-		else
-			CONS_Printf("%s", M_GetText(" There no video memory for SDL\n"));
-		//*vfmt
-	}
-#else
 	if (!M_CheckParm("-noblit")) videoblitok = SDL_TRUE;
-#endif
+
 	SurfaceInfo(bufSurface, M_GetText("Current Engine Mode"));
 	SurfaceInfo(vidSurface, M_GetText("Current Video Mode"));
-#endif
 }
 
 static void VID_Command_ModeList_f(void)
@@ -527,61 +487,6 @@ static void VID_Command_Mode_f (void)
 		setmodeneeded = modenum+1; // request vid mode change
 }
 
-static inline void SDLJoyRemap(event_t *event)
-{
-	(void)event;
-}
-
-static INT32 SDLJoyAxis(const Sint16 axis, evtype_t which)
-{
-	// -32768 to 32767
-	INT32 raxis = axis/32;
-	if (which == ev_joystick)
-	{
-		if (Joystick.bGamepadStyle)
-		{
-			// gamepad control type, on or off, live or die
-			if (raxis < -(JOYAXISRANGE/2))
-				raxis = -1;
-			else if (raxis > (JOYAXISRANGE/2))
-				raxis = 1;
-			else
-				raxis = 0;
-		}
-		else
-		{
-			raxis = JoyInfo.scale!=1?((raxis/JoyInfo.scale)*JoyInfo.scale):raxis;
-
-#ifdef SDL_JDEADZONE
-			if (-SDL_JDEADZONE <= raxis && raxis <= SDL_JDEADZONE)
-				raxis = 0;
-#endif
-		}
-	}
-	else if (which == ev_joystick2)
-	{
-		if (Joystick2.bGamepadStyle)
-		{
-			// gamepad control type, on or off, live or die
-			if (raxis < -(JOYAXISRANGE/2))
-				raxis = -1;
-			else if (raxis > (JOYAXISRANGE/2))
-				raxis = 1;
-			else raxis = 0;
-		}
-		else
-		{
-			raxis = JoyInfo2.scale!=1?((raxis/JoyInfo2.scale)*JoyInfo2.scale):raxis;
-
-#ifdef SDL_JDEADZONE
-			if (-SDL_JDEADZONE <= raxis && raxis <= SDL_JDEADZONE)
-				raxis = 0;
-#endif
-		}
-	}
-	return raxis;
-}
-
 static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 {
 	static SDL_bool firsttimeonmouse = SDL_TRUE;
@@ -613,13 +518,13 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 		// Tell game we got focus back, resume music if necessary
 		window_notinfocus = false;
 		if (!paused)
-			S_ResumeAudio(); //resume it
+			S_ResumeAudio();
 
-		if (!firsttimeonmouse)
-		{
-			if (cv_usemouse.value) I_StartupMouse();
-		}
-		//else firsttimeonmouse = SDL_FALSE;
+		I_ToggleControllerRumble(true);
+		P_UnpauseRumble(NULL);
+
+		if (!firsttimeonmouse && cv_usemouse.value)
+			I_StartupMouse();
 
 		if (USE_MOUSEINPUT && !IgnoreMouse())
 			SDLdoGrabMouse();
@@ -628,43 +533,45 @@ static void Impl_HandleWindowEvent(SDL_WindowEvent evt)
 	{
 		// Tell game we lost focus, pause music
 		window_notinfocus = true;
-		if (! cv_playmusicifunfocused.value)
+
+		if (!cv_playmusicifunfocused.value)
 			S_PauseAudio();
-		if (! cv_playsoundsifunfocused.value)
+		if (!cv_playsoundsifunfocused.value)
 			S_StopSounds();
 
 		if (!disable_mouse)
-		{
 			SDLforceUngrabMouse();
-		}
+
 		memset(gamekeydown, 0, NUMKEYS); // TODO this is a scary memset
 
-		if (MOUSE_MENU)
-		{
-			SDLdoUngrabMouse();
-		}
-	}
+		I_ToggleControllerRumble(false);
+		if (P_AutoPause())
+			P_PauseRumble(NULL);
 
+		if (MOUSE_MENU)
+			SDLdoUngrabMouse();
+	}
 }
 
 static void Impl_HandleKeyboardEvent(SDL_KeyboardEvent evt, Uint32 type)
 {
 	event_t event;
+
 	if (type == SDL_KEYUP)
-	{
 		event.type = ev_keyup;
-	}
 	else if (type == SDL_KEYDOWN)
-	{
 		event.type = ev_keydown;
-	}
 	else
-	{
 		return;
-	}
+
 	event.key = Impl_SDL_Scancode_To_Keycode(evt.keysym.scancode);
+	if (!event.key)
+		return;
+
 	event.repeated = (evt.repeat != 0);
-	if (event.key) D_PostEvent(&event);
+	event.which = 0;
+
+	D_PostEvent(&event);
 }
 
 static void Impl_HandleMouseMotionEvent(SDL_MouseMotionEvent evt)
@@ -729,32 +636,35 @@ static void Impl_HandleMouseButtonEvent(SDL_MouseButtonEvent evt, Uint32 type)
 	if (SDL_GetMouseFocus() != window || IgnoreMouse())
 		return;
 
-	/// \todo inputEvent.button.which
 	if (USE_MOUSEINPUT)
 	{
 		if (type == SDL_MOUSEBUTTONUP)
-		{
 			event.type = ev_keyup;
-		}
 		else if (type == SDL_MOUSEBUTTONDOWN)
-		{
 			event.type = ev_keydown;
-		}
-		else return;
-		if (evt.button == SDL_BUTTON_MIDDLE)
-			event.key = KEY_MOUSE1+2;
-		else if (evt.button == SDL_BUTTON_RIGHT)
-			event.key = KEY_MOUSE1+1;
-		else if (evt.button == SDL_BUTTON_LEFT)
-			event.key = KEY_MOUSE1;
-		else if (evt.button == SDL_BUTTON_X1)
-			event.key = KEY_MOUSE1+3;
-		else if (evt.button == SDL_BUTTON_X2)
-			event.key = KEY_MOUSE1+4;
-		if (event.type == ev_keyup || event.type == ev_keydown)
+		else
+			return;
+
+		switch (evt.button)
 		{
-			D_PostEvent(&event);
+		case SDL_BUTTON_LEFT:
+			event.key = KEY_MOUSE1+0;
+			break;
+		case SDL_BUTTON_RIGHT:
+			event.key = KEY_MOUSE1+1;
+			break;
+		case SDL_BUTTON_MIDDLE:
+			event.key = KEY_MOUSE1+2;
+			break;
+		case SDL_BUTTON_X1:
+			event.key = KEY_MOUSE1+3;
+			break;
+		case SDL_BUTTON_X2:
+			event.key = KEY_MOUSE1+4;
+			break;
 		}
+
+		D_PostEvent(&event);
 	}
 }
 
@@ -784,111 +694,6 @@ static void Impl_HandleMouseWheelEvent(SDL_MouseWheelEvent evt)
 		D_PostEvent(&event);
 	}
 }
-
-static void Impl_HandleJoystickAxisEvent(SDL_JoyAxisEvent evt)
-{
-	event_t event;
-	SDL_JoystickID joyid[2];
-
-	// Determine the Joystick IDs for each current open joystick
-	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
-	joyid[1] = SDL_JoystickInstanceID(JoyInfo2.dev);
-
-	evt.axis++;
-	event.key = event.x = event.y = INT32_MAX;
-
-	if (evt.which == joyid[0])
-	{
-		event.type = ev_joystick;
-	}
-	else if (evt.which == joyid[1])
-	{
-		event.type = ev_joystick2;
-	}
-	else return;
-	//axis
-	if (evt.axis > JOYAXISSET*2)
-		return;
-	//vaule
-	if (evt.axis%2)
-	{
-		event.key = evt.axis / 2;
-		event.x = SDLJoyAxis(evt.value, event.type);
-	}
-	else
-	{
-		evt.axis--;
-		event.key = evt.axis / 2;
-		event.y = SDLJoyAxis(evt.value, event.type);
-	}
-	D_PostEvent(&event);
-}
-
-#if 0
-static void Impl_HandleJoystickHatEvent(SDL_JoyHatEvent evt)
-{
-	event_t event;
-	SDL_JoystickID joyid[2];
-
-	// Determine the Joystick IDs for each current open joystick
-	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
-	joyid[1] = SDL_JoystickInstanceID(JoyInfo2.dev);
-
-	if (evt.hat >= JOYHATS)
-		return; // ignore hats with too high an index
-
-	if (evt.which == joyid[0])
-	{
-		event.key = KEY_HAT1 + (evt.hat*4);
-	}
-	else if (evt.which == joyid[1])
-	{
-		event.key = KEY_2HAT1 + (evt.hat*4);
-	}
-	else return;
-
-	// NOTE: UNFINISHED
-}
-#endif
-
-static void Impl_HandleJoystickButtonEvent(SDL_JoyButtonEvent evt, Uint32 type)
-{
-	event_t event;
-	SDL_JoystickID joyid[2];
-
-	// Determine the Joystick IDs for each current open joystick
-	joyid[0] = SDL_JoystickInstanceID(JoyInfo.dev);
-	joyid[1] = SDL_JoystickInstanceID(JoyInfo2.dev);
-
-	if (evt.which == joyid[0])
-	{
-		event.key = KEY_JOY1;
-	}
-	else if (evt.which == joyid[1])
-	{
-		event.key = KEY_2JOY1;
-	}
-	else return;
-	if (type == SDL_JOYBUTTONUP)
-	{
-		event.type = ev_keyup;
-	}
-	else if (type == SDL_JOYBUTTONDOWN)
-	{
-		event.type = ev_keydown;
-	}
-	else return;
-	if (evt.button < JOYBUTTONS)
-	{
-		event.key += evt.button;
-	}
-	else return;
-
-	SDLJoyRemap(&event);
-	if (event.type != ev_console) D_PostEvent(&event);
-}
-
-
 
 void I_GetEvent(void)
 {
@@ -927,148 +732,19 @@ void I_GetEvent(void)
 			case SDL_MOUSEWHEEL:
 				Impl_HandleMouseWheelEvent(evt.wheel);
 				break;
-			case SDL_JOYAXISMOTION:
-				Impl_HandleJoystickAxisEvent(evt.jaxis);
+			case SDL_CONTROLLERAXISMOTION:
+				I_HandleControllerAxisEvent(evt.caxis);
 				break;
-#if 0
-			case SDL_JOYHATMOTION:
-				Impl_HandleJoystickHatEvent(evt.jhat)
+			case SDL_CONTROLLERBUTTONUP:
+			case SDL_CONTROLLERBUTTONDOWN:
+				I_HandleControllerButtonEvent(evt.cbutton, evt.type);
 				break;
-#endif
-			case SDL_JOYBUTTONUP:
-			case SDL_JOYBUTTONDOWN:
-				Impl_HandleJoystickButtonEvent(evt.jbutton, evt.type);
+			case SDL_CONTROLLERDEVICEADDED:
+				I_ControllerDeviceAdded(evt.cdevice.which);
 				break;
-			case SDL_JOYDEVICEADDED:
-				{
-					SDL_Joystick *newjoy = SDL_JoystickOpen(evt.jdevice.which);
-
-					CONS_Debug(DBG_GAMELOGIC, "Joystick device index %d added\n", evt.jdevice.which + 1);
-
-					// Because SDL's device index is unstable, we're going to cheat here a bit:
-					// For the first joystick setting that is NOT active:
-					// 1. Set cv_usejoystickX.value to the new device index (this does not change what is written to config.cfg)
-					// 2. Set OTHERS' cv_usejoystickX.value to THEIR new device index, because it likely changed
-					//    * If device doesn't exist, switch cv_usejoystick back to default value (.string)
-					//      * BUT: If that default index is being occupied, use ANOTHER cv_usejoystick's default value!
-					if (newjoy && (!JoyInfo.dev || !SDL_JoystickGetAttached(JoyInfo.dev))
-						&& JoyInfo2.dev != newjoy) // don't override a currently active device
-					{
-						cv_usejoystick.value = evt.jdevice.which + 1;
-
-						if (JoyInfo2.dev)
-							cv_usejoystick2.value = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
-						else if (atoi(cv_usejoystick2.string) != JoyInfo.oldjoy
-								&& atoi(cv_usejoystick2.string) != cv_usejoystick.value)
-							cv_usejoystick2.value = atoi(cv_usejoystick2.string);
-						else if (atoi(cv_usejoystick.string) != JoyInfo.oldjoy
-								&& atoi(cv_usejoystick.string) != cv_usejoystick.value)
-							cv_usejoystick2.value = atoi(cv_usejoystick.string);
-						else // we tried...
-							cv_usejoystick2.value = 0;
-					}
-					else if (newjoy && (!JoyInfo2.dev || !SDL_JoystickGetAttached(JoyInfo2.dev))
-						&& JoyInfo.dev != newjoy) // don't override a currently active device
-					{
-						cv_usejoystick2.value = evt.jdevice.which + 1;
-
-						if (JoyInfo.dev)
-							cv_usejoystick.value = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
-						else if (atoi(cv_usejoystick.string) != JoyInfo2.oldjoy
-								&& atoi(cv_usejoystick.string) != cv_usejoystick2.value)
-							cv_usejoystick.value = atoi(cv_usejoystick.string);
-						else if (atoi(cv_usejoystick2.string) != JoyInfo2.oldjoy
-								&& atoi(cv_usejoystick2.string) != cv_usejoystick2.value)
-							cv_usejoystick.value = atoi(cv_usejoystick2.string);
-						else // we tried...
-							cv_usejoystick.value = 0;
-					}
-
-					// Was cv_usejoystick disabled in settings?
-					if (!strcmp(cv_usejoystick.string, "0") || !cv_usejoystick.value)
-						cv_usejoystick.value = 0;
-					else if (atoi(cv_usejoystick.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
-						     && cv_usejoystick.value) // update the cvar ONLY if a device exists
-						CV_SetValue(&cv_usejoystick, cv_usejoystick.value);
-
-					if (!strcmp(cv_usejoystick2.string, "0") || !cv_usejoystick2.value)
-						cv_usejoystick2.value = 0;
-					else if (atoi(cv_usejoystick2.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
-					         && cv_usejoystick2.value) // update the cvar ONLY if a device exists
-						CV_SetValue(&cv_usejoystick2, cv_usejoystick2.value);
-
-					// Update all joysticks' init states
-					// This is a little wasteful since cv_usejoystick already calls this, but
-					// we need to do this in case CV_SetValue did nothing because the string was already same.
-					// if the device is already active, this should do nothing, effectively.
-					I_InitJoystick();
-					I_InitJoystick2();
-
-					CONS_Debug(DBG_GAMELOGIC, "Joystick1 device index: %d\n", JoyInfo.oldjoy);
-					CONS_Debug(DBG_GAMELOGIC, "Joystick2 device index: %d\n", JoyInfo2.oldjoy);
-
-					// update the menu
-					if (currentMenu == &OP_JoystickSetDef)
-						M_SetupJoystickMenu(0);
-
-					if (JoyInfo.dev != newjoy && JoyInfo2.dev != newjoy)
-						SDL_JoystickClose(newjoy);
-				}
+			case SDL_CONTROLLERDEVICEREMOVED:
+				I_ControllerDeviceRemoved();
 				break;
-			case SDL_JOYDEVICEREMOVED:
-				if (JoyInfo.dev && !SDL_JoystickGetAttached(JoyInfo.dev))
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Joystick1 removed, device index: %d\n", JoyInfo.oldjoy);
-					I_ShutdownJoystick();
-				}
-
-				if (JoyInfo2.dev && !SDL_JoystickGetAttached(JoyInfo2.dev))
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Joystick2 removed, device index: %d\n", JoyInfo2.oldjoy);
-					I_ShutdownJoystick2();
-				}
-
-				// Update the device indexes, because they likely changed
-				// * If device doesn't exist, switch cv_usejoystick back to default value (.string)
-				//   * BUT: If that default index is being occupied, use ANOTHER cv_usejoystick's default value!
-				if (JoyInfo.dev)
-					cv_usejoystick.value = JoyInfo.oldjoy = I_GetJoystickDeviceIndex(JoyInfo.dev) + 1;
-				else if (atoi(cv_usejoystick.string) != JoyInfo2.oldjoy)
-					cv_usejoystick.value = atoi(cv_usejoystick.string);
-				else if (atoi(cv_usejoystick2.string) != JoyInfo2.oldjoy)
-					cv_usejoystick.value = atoi(cv_usejoystick2.string);
-				else // we tried...
-					cv_usejoystick.value = 0;
-
-				if (JoyInfo2.dev)
-					cv_usejoystick2.value = JoyInfo2.oldjoy = I_GetJoystickDeviceIndex(JoyInfo2.dev) + 1;
-				else if (atoi(cv_usejoystick2.string) != JoyInfo.oldjoy)
-					cv_usejoystick2.value = atoi(cv_usejoystick2.string);
-				else if (atoi(cv_usejoystick.string) != JoyInfo.oldjoy)
-					cv_usejoystick2.value = atoi(cv_usejoystick.string);
-				else // we tried...
-					cv_usejoystick2.value = 0;
-
-				// Was cv_usejoystick disabled in settings?
-				if (!strcmp(cv_usejoystick.string, "0"))
-					cv_usejoystick.value = 0;
-				else if (atoi(cv_usejoystick.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
-						 && cv_usejoystick.value) // update the cvar ONLY if a device exists
-					CV_SetValue(&cv_usejoystick, cv_usejoystick.value);
-
-				if (!strcmp(cv_usejoystick2.string, "0"))
-					cv_usejoystick2.value = 0;
-				else if (atoi(cv_usejoystick2.string) <= I_NumJoys() // don't mess if we intentionally set higher than NumJoys
-						 && cv_usejoystick2.value) // update the cvar ONLY if a device exists
-					CV_SetValue(&cv_usejoystick2, cv_usejoystick2.value);
-
-				CONS_Debug(DBG_GAMELOGIC, "Joystick1 device index: %d\n", JoyInfo.oldjoy);
-				CONS_Debug(DBG_GAMELOGIC, "Joystick2 device index: %d\n", JoyInfo2.oldjoy);
-
-				// update the menu
-				if (currentMenu == &OP_JoystickSetDef)
-					M_SetupJoystickMenu(0);
-			 	break;
 			case SDL_QUIT:
 				LUA_HookBool(true, HOOK(GameQuit));
 				I_Quit();
@@ -1085,6 +761,7 @@ void I_GetEvent(void)
 		//SDL_memset(&event, 0, sizeof(event_t));
 		event.type = ev_mouse;
 		event.key = 0;
+		event.which = 0;
 		event.x = (INT32)lround(mousemovex * ((float)wwidth / (float)realwidth));
 		event.y = (INT32)lround(mousemovey * ((float)wheight / (float)realheight));
 		D_PostEvent(&event);
@@ -1123,15 +800,9 @@ void I_OsPolling(void)
 
 	if (consolevent)
 		I_GetConsoleEvents();
-	if (SDL_WasInit(SDL_INIT_JOYSTICK) == SDL_INIT_JOYSTICK)
-	{
-		SDL_JoystickUpdate();
-		I_GetJoystickEvents();
-		I_GetJoystick2Events();
-	}
 
+	I_UpdateControllers();
 	I_GetMouseEvents();
-
 	I_GetEvent();
 
 	mod = SDL_GetModState();
@@ -1178,11 +849,14 @@ void I_UpdateNoBlit(void)
 // from PrBoom's src/SDL/i_video.c
 static inline boolean I_SkipFrame(void)
 {
-#if 0
+#if 1
+	// While I fixed the FPS counter bugging out with this,
+	// I actually really like being able to pause and
+	// use perfstats to measure rendering performance
+	// without game logic changes.
+	return false;
+#else
 	static boolean skip = false;
-
-	if (rendermode != render_soft)
-		return false;
 
 	skip = !skip;
 
@@ -1199,16 +873,19 @@ static inline boolean I_SkipFrame(void)
 			return false;
 	}
 #endif
-	return false;
 }
 
 //
 // I_FinishUpdate
 //
+static SDL_Rect src_rect = { 0, 0, 0, 0 };
+
 void I_FinishUpdate(void)
 {
 	if (rendermode == render_none)
 		return; //Alam: No software or OpenGl surface
+
+	SCR_CalculateFPS();
 
 	if (I_SkipFrame())
 		return;
@@ -1228,27 +905,22 @@ void I_FinishUpdate(void)
 
 	if (rendermode == render_soft && screens[0])
 	{
-		SDL_Rect rect;
-
-		rect.x = 0;
-		rect.y = 0;
-		rect.w = vid.width;
-		rect.h = vid.height;
-
 		if (!bufSurface) //Double-Check
 		{
 			Impl_VideoSetupSDLBuffer();
 		}
+
 		if (bufSurface)
 		{
-			SDL_BlitSurface(bufSurface, NULL, vidSurface, &rect);
+			SDL_BlitSurface(bufSurface, &src_rect, vidSurface, &src_rect);
 			// Fury -- there's no way around UpdateTexture, the GL backend uses it anyway
 			SDL_LockSurface(vidSurface);
-			SDL_UpdateTexture(texture, &rect, vidSurface->pixels, vidSurface->pitch);
+			SDL_UpdateTexture(texture, &src_rect, vidSurface->pixels, vidSurface->pitch);
 			SDL_UnlockSurface(vidSurface);
 		}
+
 		SDL_RenderClear(renderer);
-		SDL_RenderCopy(renderer, texture, NULL, NULL);
+		SDL_RenderCopy(renderer, texture, &src_rect, NULL);
 		SDL_RenderPresent(renderer);
 	}
 #ifdef HWRENDER
@@ -1257,6 +929,7 @@ void I_FinishUpdate(void)
 		OglSdlFinishUpdate(cv_vidwait.value);
 	}
 #endif
+
 	exposevideo = SDL_FALSE;
 }
 
@@ -1473,8 +1146,15 @@ static SDL_bool Impl_CreateContext(void)
 		int flags = 0; // Use this to set SDL_RENDERER_* flags now
 		if (usesdl2soft)
 			flags |= SDL_RENDERER_SOFTWARE;
+#if 0
+		// This shit is BROKEN.
+		// - The version of SDL we're using cannot toggle VSync at runtime. We'll need a new SDL version implemented to have this work properly.
+		// - cv_vidwait is initialized before config is loaded, so it's forced to default value at runtime, and forced off when switching. The config loading code would need restructured.
+		// - With both this & frame interpolation on, I_FinishUpdate takes x10 longer. At this point, it is simpler to use a standard FPS cap.
+		// So you can probably guess why I'm kinda over this, I'm just disabling it.
 		else if (cv_vidwait.value)
 			flags |= SDL_RENDERER_PRESENTVSYNC;
+#endif
 
 		if (!renderer)
 			renderer = SDL_CreateRenderer(window, -1, flags);
@@ -1593,6 +1273,27 @@ boolean VID_CheckRenderer(void)
 	return rendererchanged;
 }
 
+static UINT32 refresh_rate;
+static UINT32 VID_GetRefreshRate(void)
+{
+	int index = SDL_GetWindowDisplayIndex(window);
+	SDL_DisplayMode m;
+
+	if (SDL_WasInit(SDL_INIT_VIDEO) == 0)
+	{
+		// Video not init yet.
+		return 0;
+	}
+
+	if (SDL_GetCurrentDisplayMode(index, &m) != 0)
+	{
+		// Error has occurred.
+		return 0;
+	}
+
+	return m.refresh_rate;
+}
+
 INT32 VID_SetMode(INT32 modeNum)
 {
 	SDLdoUngrabMouse();
@@ -1610,6 +1311,11 @@ INT32 VID_SetMode(INT32 modeNum)
 	vid.modenum = modeNum;
 
 	//Impl_SetWindowName("SRB2 "VERSIONSTRING);
+	src_rect.w = vid.width;
+	src_rect.h = vid.height;
+
+	refresh_rate = VID_GetRefreshRate();
+
 	VID_CheckRenderer();
 	return SDL_TRUE;
 }
@@ -1960,4 +1666,14 @@ void I_ShutdownGraphics(void)
 void I_GetCursorPosition(INT32 *x, INT32 *y)
 {
 	SDL_GetMouseState(x, y);
+}
+
+UINT32 I_GetRefreshRate(void)
+{
+	// Moved to VID_GetRefreshRate.
+	// Precalculating it like that won't work as
+	// well for windowed mode since you can drag
+	// the window around, but very slow PCs might have
+	// trouble querying mode over and over again.
+	return refresh_rate;
 }

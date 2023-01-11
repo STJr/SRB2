@@ -22,9 +22,9 @@
 #include "v_video.h" // video flags (for lua)
 #include "i_sound.h" // musictype_t (for lua)
 #include "g_state.h" // gamestate_t (for lua)
-#include "g_game.h" // Joystick axes (for lua)
-#include "i_joy.h"
+#include "g_game.h" // Gamepad axes (for lua)
 #include "g_input.h" // Game controls (for lua)
+#include "i_gamepad.h"
 
 #include "deh_tables.h"
 
@@ -4841,7 +4841,7 @@ const char *const MENUTYPES_LIST[] = {
 	"OP_CHANGECONTROLS", // OP_ChangeControlsDef shared with P2
 	"OP_P1MOUSE",
 	"OP_P1JOYSTICK",
-	"OP_JOYSTICKSET", // OP_JoystickSetDef shared with P2
+	"OP_JOYSTICKSET", // OP_GamepadSetDef shared with P2
 	"OP_P1CAMERA",
 
 	"OP_P2CONTROLS",
@@ -5642,18 +5642,13 @@ struct int_const_s const INT_CONST[] = {
 	{"GS_DEDICATEDSERVER",GS_DEDICATEDSERVER},
 	{"GS_WAITINGPLAYERS",GS_WAITINGPLAYERS},
 
-	// Joystick axes
+	// Gamepad axes
 	{"JA_NONE",JA_NONE},
 	{"JA_TURN",JA_TURN},
 	{"JA_MOVE",JA_MOVE},
 	{"JA_LOOK",JA_LOOK},
 	{"JA_STRAFE",JA_STRAFE},
-	{"JA_DIGITAL",JA_DIGITAL},
-	{"JA_JUMP",JA_JUMP},
-	{"JA_SPIN",JA_SPIN},
-	{"JA_FIRE",JA_FIRE},
-	{"JA_FIRENORMAL",JA_FIRENORMAL},
-	{"JOYAXISRANGE",JOYAXISRANGE},
+	{"JOYAXISRANGE",OLDJOYAXISRANGE},
 
 	// Game controls
 	{"GC_NULL",GC_NULL},
@@ -5694,7 +5689,9 @@ struct int_const_s const INT_CONST[] = {
 	{"GC_SYSTEMMENU",GC_SYSTEMMENU},
 	{"GC_SCREENSHOT",GC_SCREENSHOT},
 	{"GC_RECORDGIF",GC_RECORDGIF},
-	{"GC_VIEWPOINT",GC_VIEWPOINT},
+	{"GC_VIEWPOINTNEXT",GC_VIEWPOINTNEXT},
+	{"GC_VIEWPOINT",GC_VIEWPOINTNEXT}, // Alias for retrocompatibility. Remove for the next major version
+	{"GC_VIEWPOINTPREV",GC_VIEWPOINTPREV},
 	{"GC_CUSTOM1",GC_CUSTOM1},
 	{"GC_CUSTOM2",GC_CUSTOM2},
 	{"GC_CUSTOM3",GC_CUSTOM3},
