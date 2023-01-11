@@ -3828,7 +3828,7 @@ boolean F_ContinueResponder(event_t *event)
 
 	if (timetonext >= 21*TICRATE/2)
 		return false;
-	if (event->type != ev_keydown)
+	if (type != ev_keydown)
 		return false;
 
 	// remap virtual keys (mouse & gamepad buttons)
