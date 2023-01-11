@@ -24,14 +24,12 @@
 #define MAXMOUSESENSITIVITY 100 // sensitivity steps
 
 static CV_PossibleValue_t mousesens_cons_t[] = {{1, "MIN"}, {MAXMOUSESENSITIVITY, "MAX"}, {0, NULL}};
-static CV_PossibleValue_t onecontrolperkey_cons_t[] = {{1, "One"}, {2, "Several"}, {0, NULL}};
 
 // mouse values are used once
 consvar_t cv_mousesens = CVAR_INIT ("mousesens", "20", CV_SAVE, mousesens_cons_t, NULL);
 consvar_t cv_mousesens2 = CVAR_INIT ("mousesens2", "20", CV_SAVE, mousesens_cons_t, NULL);
 consvar_t cv_mouseysens = CVAR_INIT ("mouseysens", "20", CV_SAVE, mousesens_cons_t, NULL);
 consvar_t cv_mouseysens2 = CVAR_INIT ("mouseysens2", "20", CV_SAVE, mousesens_cons_t, NULL);
-consvar_t cv_controlperkey = CVAR_INIT ("controlperkey", "One", CV_SAVE, onecontrolperkey_cons_t, NULL);
 
 mouse_t mouse;
 mouse_t mouse2;
@@ -962,9 +960,6 @@ static keyname_t keynames[] =
 	DEF_GAMEPAD_AXIS(TRIGGERLEFT, "left trigger"),
 	DEF_GAMEPAD_AXIS(TRIGGERRIGHT, "right trigger"),
 
-#undef DEF_GAMEPAD_NAME
-#undef DEF_GAMEPAD_AXIS
-
 	{KEY_DBLMOUSE1+0, "dblmouse1"},
 	{KEY_DBLMOUSE1+1, "dblmouse2"},
 	{KEY_DBLMOUSE1+2, "dblmouse3"},
@@ -983,7 +978,50 @@ static keyname_t keynames[] =
 	{KEY_DBL2MOUSE1+7, "dblsec_mouse8"}
 };
 
+static keyname_t oldjoynames[] =
+{
+	DEF_GAMEPAD_NAME(A, "joy1"),
+	DEF_GAMEPAD_NAME(B, "joy2"),
+	DEF_GAMEPAD_NAME(X, "joy3"),
+	DEF_GAMEPAD_NAME(Y, "joy4"),
+
+	DEF_GAMEPAD_NAME(BACK, "joy7"),
+	DEF_GAMEPAD_NAME(START, "joy8"),
+	DEF_GAMEPAD_NAME(LEFTSTICK, "joy9"),
+	DEF_GAMEPAD_NAME(RIGHTSTICK, "joy10"),
+
+	DEF_GAMEPAD_NAME(LEFTSHOULDER, "joy5"),
+	DEF_GAMEPAD_NAME(RIGHTSHOULDER, "joy6"),
+
+	DEF_GAMEPAD_NAME(DPAD_UP, "hatup"),
+	DEF_GAMEPAD_NAME(DPAD_DOWN, "hatdown"),
+	DEF_GAMEPAD_NAME(DPAD_LEFT, "hatleft"),
+	DEF_GAMEPAD_NAME(DPAD_RIGHT, "hatright"),
+
+	DEF_GAMEPAD_NAME(A, "sec_joy1"),
+	DEF_GAMEPAD_NAME(B, "sec_joy2"),
+	DEF_GAMEPAD_NAME(X, "sec_joy3"),
+	DEF_GAMEPAD_NAME(Y, "sec_joy4"),
+
+	DEF_GAMEPAD_NAME(BACK, "sec_joy7"),
+	DEF_GAMEPAD_NAME(START, "sec_joy8"),
+	DEF_GAMEPAD_NAME(LEFTSTICK, "sec_joy9"),
+	DEF_GAMEPAD_NAME(RIGHTSTICK, "sec_joy10"),
+
+	DEF_GAMEPAD_NAME(LEFTSHOULDER, "sec_joy5"),
+	DEF_GAMEPAD_NAME(RIGHTSHOULDER, "sec_joy6"),
+
+	DEF_GAMEPAD_NAME(DPAD_UP, "sec_hatup"),
+	DEF_GAMEPAD_NAME(DPAD_DOWN, "sec_hatdown"),
+	DEF_GAMEPAD_NAME(DPAD_LEFT, "sec_hatleft"),
+	DEF_GAMEPAD_NAME(DPAD_RIGHT, "sec_hatright"),
+};
+
+#undef DEF_GAMEPAD_NAME
+#undef DEF_GAMEPAD_AXIS
+
 #define NUMKEYNAMES (sizeof(keynames) / sizeof(keyname_t))
+#define NUMOLDJOYNAMES (sizeof(oldjoynames) / sizeof(keyname_t))
 
 static keyname_t displaykeynames[] =
 {
@@ -1272,6 +1310,10 @@ INT32 G_KeyNameToNum(const char *keystr)
 		if (!stricmp(keynames[j].name, keystr))
 			return keynames[j].keynum;
 
+	for (j = 0; j < NUMOLDJOYNAMES; j++)
+		if (!stricmp(oldjoynames[j].name, keystr))
+			return oldjoynames[j].keynum;
+
 	return 0;
 }
 
@@ -1377,15 +1419,17 @@ void G_DefineDefaultControls(void)
 		gamecontroldefault[i][GC_CUSTOM1    ][1] = GAMEPAD_KEY(B); // B
 		gamecontroldefault[i][GC_CUSTOM2    ][1] = GAMEPAD_KEY(Y); // Y
 		gamecontroldefault[i][GC_CUSTOM3    ][1] = GAMEPAD_KEY(LEFTSTICK); // Left Stick
-		gamecontroldefault[i][GC_CENTERVIEW ][1] = GAMEPAD_KEY(RIGHTSTICK); // Right Stick
-		gamecontroldefault[i][GC_WEAPONPREV ][1] = GAMEPAD_KEY(LEFTSHOULDER); // LB
-		gamecontroldefault[i][GC_WEAPONNEXT ][1] = GAMEPAD_KEY(RIGHTSHOULDER); // RB
+		gamecontroldefault[i][GC_CENTERVIEW ][1] = GAMEPAD_KEY(RIGHTSHOULDER); // R1
+		gamecontroldefault[i][GC_CAMTOGGLE  ][1] = GAMEPAD_KEY(LEFTSHOULDER); // L1
 		gamecontroldefault[i][GC_SCREENSHOT ][1] = GAMEPAD_KEY(BACK); // Back
 		gamecontroldefault[i][GC_SYSTEMMENU ][0] = GAMEPAD_KEY(START); // Start
-		gamecontroldefault[i][GC_CAMTOGGLE  ][1] = GAMEPAD_KEY(DPAD_UP); // D-Pad Up
-		gamecontroldefault[i][GC_VIEWPOINTNEXT][1] = GAMEPAD_KEY(DPAD_DOWN); // D-Pad Down
-		gamecontroldefault[i][GC_TOSSFLAG   ][1] = GAMEPAD_KEY(DPAD_LEFT); // D-Pad Left
-		gamecontroldefault[i][GC_SCORES     ][1] = GAMEPAD_KEY(DPAD_RIGHT); // D-Pad Right
+		gamecontroldefault[i][GC_TOSSFLAG   ][1] = GAMEPAD_KEY(DPAD_UP); // D-Pad Up
+		gamecontroldefault[i][GC_WEAPONPREV ][1] = GAMEPAD_KEY(DPAD_LEFT); // D-Pad Left
+		gamecontroldefault[i][GC_WEAPONNEXT ][1] = GAMEPAD_KEY(DPAD_RIGHT); // D-Pad Right
+		gamecontroldefault[i][GC_SCORES     ][1] = GAMEPAD_KEY(DPAD_DOWN); // D-Pad Down
+		gamecontroldefault[i][GC_VIEWPOINTNEXT][1] = GAMEPAD_KEY(RIGHTSTICK); // Right Stick
+		gamecontroldefault[i][GC_FIRE       ][1] = GAMEPAD_AXIS(TRIGGERRIGHT); // R2
+		gamecontroldefault[i][GC_FIRENORMAL ][1] = GAMEPAD_AXIS(TRIGGERLEFT); // L2
 
 		// Second player only has gamepad defaults
 		gamecontrolbisdefault[i][GC_JUMP       ][1] = GAMEPAD_KEY(A); // A
@@ -1393,15 +1437,17 @@ void G_DefineDefaultControls(void)
 		gamecontrolbisdefault[i][GC_CUSTOM1    ][1] = GAMEPAD_KEY(B); // B
 		gamecontrolbisdefault[i][GC_CUSTOM2    ][1] = GAMEPAD_KEY(Y); // Y
 		gamecontrolbisdefault[i][GC_CUSTOM3    ][1] = GAMEPAD_KEY(LEFTSTICK); // Left Stick
-		gamecontrolbisdefault[i][GC_CENTERVIEW ][1] = GAMEPAD_KEY(RIGHTSTICK); // Right Stick
-		gamecontrolbisdefault[i][GC_WEAPONPREV ][1] = GAMEPAD_KEY(LEFTSHOULDER); // LB
-		gamecontrolbisdefault[i][GC_WEAPONNEXT ][1] = GAMEPAD_KEY(RIGHTSHOULDER); // RB
+		gamecontrolbisdefault[i][GC_CENTERVIEW ][1] = GAMEPAD_KEY(RIGHTSHOULDER); // R1
+		gamecontrolbisdefault[i][GC_CAMTOGGLE  ][1] = GAMEPAD_KEY(LEFTSHOULDER); // L1
 		gamecontrolbisdefault[i][GC_SCREENSHOT ][1] = GAMEPAD_KEY(BACK); // Back
 		//gamecontrolbisdefault[i][GC_SYSTEMMENU ][0] = GAMEPAD_KEY(START); // Start
-		gamecontrolbisdefault[i][GC_CAMTOGGLE  ][1] = GAMEPAD_KEY(DPAD_UP); // D-Pad Up
-		gamecontrolbisdefault[i][GC_VIEWPOINTNEXT][1] = GAMEPAD_KEY(DPAD_DOWN); // D-Pad Down
-		gamecontrolbisdefault[i][GC_TOSSFLAG   ][1] = GAMEPAD_KEY(DPAD_LEFT); // D-Pad Left
-		//gamecontrolbisdefault[i][GC_SCORES     ][1] = GAMEPAD_KEY(DPAD_RIGHT); // D-Pad Right
+		gamecontrolbisdefault[i][GC_TOSSFLAG   ][1] = GAMEPAD_KEY(DPAD_UP); // D-Pad Up
+		gamecontrolbisdefault[i][GC_WEAPONPREV ][1] = GAMEPAD_KEY(DPAD_LEFT); // D-Pad Left
+		gamecontrolbisdefault[i][GC_WEAPONNEXT ][1] = GAMEPAD_KEY(DPAD_RIGHT); // D-Pad Right
+		//gamecontrolbisdefault[i][GC_SCORES     ][1] = GAMEPAD_KEY(DPAD_DOWN); // D-Pad Down
+		gamecontrolbisdefault[i][GC_VIEWPOINTNEXT][1] = GAMEPAD_KEY(RIGHTSTICK); // Right Stick
+		gamecontrolbisdefault[i][GC_FIRE       ][1] = GAMEPAD_AXIS(TRIGGERRIGHT); // R2
+		gamecontrolbisdefault[i][GC_FIRENORMAL ][1] = GAMEPAD_AXIS(TRIGGERLEFT); // L2
 	}
 }
 
@@ -1471,42 +1517,40 @@ void G_SaveKeySetting(FILE *f, INT32 (*fromcontrols)[2], INT32 (*fromcontrolsbis
 	}
 }
 
-INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify)
+INT32 G_CheckDoubleUsage(INT32 keynum, boolean modify, UINT8 player)
 {
 	INT32 result = GC_NULL;
-	if (cv_controlperkey.value == 1)
+	INT32 i;
+	for (i = 0; i < NUM_GAMECONTROLS; i++)
 	{
-		INT32 i;
-		for (i = 0; i < NUM_GAMECONTROLS; i++)
+		if (gamecontrol[i][0] == keynum && player != 2)
 		{
-			if (gamecontrol[i][0] == keynum)
-			{
-				result = i;
-				if (modify) gamecontrol[i][0] = KEY_NULL;
-			}
-			if (gamecontrol[i][1] == keynum)
-			{
-				result = i;
-				if (modify) gamecontrol[i][1] = KEY_NULL;
-			}
-			if (gamecontrolbis[i][0] == keynum)
-			{
-				result = i;
-				if (modify) gamecontrolbis[i][0] = KEY_NULL;
-			}
-			if (gamecontrolbis[i][1] == keynum)
-			{
-				result = i;
-				if (modify) gamecontrolbis[i][1] = KEY_NULL;
-			}
-			if (result && !modify)
-				return result;
+			result = i;
+			if (modify) gamecontrol[i][0] = KEY_NULL;
 		}
+		if (gamecontrol[i][1] == keynum && player != 2)
+		{
+			result = i;
+			if (modify) gamecontrol[i][1] = KEY_NULL;
+		}
+		if (gamecontrolbis[i][0] == keynum && player != 1)
+		{
+			result = i;
+			if (modify) gamecontrolbis[i][0] = KEY_NULL;
+		}
+		if (gamecontrolbis[i][1] == keynum && player != 1)
+		{
+			result = i;
+			if (modify) gamecontrolbis[i][1] = KEY_NULL;
+		}
+		if (result && !modify)
+			return result;
 	}
+	
 	return result;
 }
 
-static INT32 G_FilterKeyByVersion(INT32 numctrl, INT32 keyidx, INT32 player, INT32 *keynum1, INT32 *keynum2, boolean *nestedoverride)
+static INT32 G_FilterSpecialKeys(INT32 keyidx, INT32 *keynum1, INT32 *keynum2)
 {
 	// Special case: ignore KEY_PAUSE because it's hardcoded
 	if (keyidx == 0 && *keynum1 == KEY_PAUSE)
@@ -1522,99 +1566,6 @@ static INT32 G_FilterKeyByVersion(INT32 numctrl, INT32 keyidx, INT32 player, INT
 	else if (keyidx == 1 && *keynum2 == KEY_PAUSE)
 		return -1; // skip setting control
 
-	if (GETMAJOREXECVERSION(cv_execversion.value) < 27 && ( // v2.1.22
-		numctrl == GC_WEAPONNEXT || numctrl == GC_WEAPONPREV || numctrl == GC_TOSSFLAG ||
-		numctrl == GC_SPIN || numctrl == GC_CAMRESET || numctrl == GC_JUMP ||
-		numctrl == GC_PAUSE || numctrl == GC_SYSTEMMENU || numctrl == GC_CAMTOGGLE ||
-		numctrl == GC_SCREENSHOT || numctrl == GC_TALKKEY || numctrl == GC_SCORES ||
-		numctrl == GC_CENTERVIEW
-	))
-	{
-		INT32 keynum = 0, existingctrl = 0;
-		INT32 defaultkey;
-		boolean defaultoverride = false;
-
-		// get the default gamecontrol
-		if (player == 0 && numctrl == GC_SYSTEMMENU)
-			defaultkey = gamecontrol[numctrl][0];
-		else
-			defaultkey = (player == 1 ? gamecontrolbis[numctrl][0] : gamecontrol[numctrl][1]);
-
-		// Assign joypad button defaults if there is an open slot.
-		// At this point, gamecontrol/bis should have the default controls
-		// (unless LOADCONFIG is being run)
-		//
-		// If the player runs SETCONTROL in-game, this block should not be reached
-		// because EXECVERSION is locked onto the latest version.
-		if (keyidx == 0 && !*keynum1)
-		{
-			if (*keynum2) // push keynum2 down; this is an edge case
-			{
-				*keynum1 = *keynum2;
-				*keynum2 = 0;
-				keynum = *keynum1;
-			}
-			else
-			{
-				keynum = defaultkey;
-				defaultoverride = true;
-			}
-		}
-		else if (keyidx == 1 && (!*keynum2 || (!*keynum1 && *keynum2))) // last one is the same edge case as above
-		{
-			keynum = defaultkey;
-			defaultoverride = true;
-		}
-		else // default to the specified keynum
-			keynum = (keyidx == 1 ? *keynum2 : *keynum1);
-
-		// Did our last call override keynum2?
-		if (*nestedoverride)
-		{
-			defaultoverride = true;
-			*nestedoverride = false;
-		}
-
-		// Fill keynum2 with the default control
-		if (keyidx == 0 && !*keynum2)
-		{
-			*keynum2 = defaultkey;
-			// Tell the next call that this is an override
-			*nestedoverride = true;
-
-			// if keynum2 already matches keynum1, we probably recursed
-			// so unset it
-			if (*keynum1 == *keynum2)
-			{
-				*keynum2 = 0;
-				*nestedoverride = false;
-		}
-		}
-
-		// check if the key is being used somewhere else before passing it
-		// pass it through if it's the same numctrl. This is an edge case -- when using
-		// LOADCONFIG, gamecontrol is not reset with default.
-		//
-		// Also, only check if we're actually overriding, to preserve behavior where
-		// config'd keys overwrite default keys.
-		if (defaultoverride)
-			existingctrl = G_CheckDoubleUsage(keynum, false);
-
-		if (keynum && (!existingctrl || existingctrl == numctrl))
-			return keynum;
-		else if (keyidx == 0 && *keynum2)
-		{
-			// try it again and push down keynum2
-			*keynum1 = *keynum2;
-			*keynum2 = 0;
-			return G_FilterKeyByVersion(numctrl, keyidx, player, keynum1, keynum2, nestedoverride);
-			// recursion *should* be safe because we only assign keynum2 to a joy default
-			// and then clear it if we find that keynum1 already has the joy default.
-		}
-		else
-			return 0;
-	}
-
 	// All's good, so pass the keynum as-is
 	if (keyidx == 1)
 		return *keynum2;
@@ -1628,7 +1579,6 @@ static void setcontrol(INT32 (*gc)[2])
 	const char *namectrl;
 	INT32 keynum, keynum1, keynum2;
 	INT32 player = ((void*)gc == (void*)&gamecontrolbis ? 1 : 0);
-	boolean nestedoverride = false;
 
 	// Update me for 2.3
 	namectrl = (stricmp(COM_Argv(1), "use")) ? COM_Argv(1) : "spin";
@@ -1643,20 +1593,20 @@ static void setcontrol(INT32 (*gc)[2])
 	}
 	keynum1 = G_KeyNameToNum(COM_Argv(2));
 	keynum2 = G_KeyNameToNum(COM_Argv(3));
-	keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2, &nestedoverride);
+	keynum = G_FilterSpecialKeys(0, &keynum1, &keynum2);
 
 	if (keynum >= 0)
 	{
-		(void)G_CheckDoubleUsage(keynum, true);
+		(void)G_CheckDoubleUsage(keynum, true, player+1);
 
 		// if keynum was rejected, try it again with keynum2
 		if (!keynum && keynum2)
 		{
 			keynum1 = keynum2; // push down keynum2
 			keynum2 = 0;
-			keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2, &nestedoverride);
+			keynum = G_FilterSpecialKeys(0, &keynum1, &keynum2);
 			if (keynum >= 0)
-				(void)G_CheckDoubleUsage(keynum, true);
+				(void)G_CheckDoubleUsage(keynum, true, player+1);
 		}
 	}
 
@@ -1665,7 +1615,7 @@ static void setcontrol(INT32 (*gc)[2])
 
 	if (keynum2)
 	{
-		keynum = G_FilterKeyByVersion(numctrl, 1, player, &keynum1, &keynum2, &nestedoverride);
+		keynum = G_FilterSpecialKeys(1, &keynum1, &keynum2);
 		if (keynum >= 0)
 		{
 			if (keynum != gc[numctrl][0])

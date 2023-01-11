@@ -71,7 +71,6 @@ extern consvar_t cv_autobrake, cv_autobrake2;
 extern consvar_t cv_ghost_bestscore, cv_ghost_besttime, cv_ghost_bestrings, cv_ghost_last, cv_ghost_guest;
 
 extern consvar_t cv_sideaxis[2], cv_turnaxis[2], cv_moveaxis[2], cv_lookaxis[2],
-	cv_jumpaxis[2], cv_spinaxis[2], cv_fireaxis[2], cv_firenaxis[2],
 	cv_deadzone[2], cv_digitaldeadzone[2];
 
 extern CV_PossibleValue_t joyaxis_cons_t[];
@@ -98,13 +97,6 @@ typedef enum
 	JA_MOVE,
 	JA_LOOK,
 	JA_STRAFE,
-
-	JA_DIGITAL, // axes henceforth use digital deadzone
-
-	JA_JUMP = JA_DIGITAL,
-	JA_SPIN,
-	JA_FIRE,
-	JA_FIRENORMAL,
 } joyaxis_e;
 
 INT16 G_JoyAxis(UINT8 which, joyaxis_e axissel);

@@ -297,17 +297,13 @@ CV_PossibleValue_t joyaxis_cons_t[] = {{0, "None"},
 #ifndef OLD_GAMEPAD_AXES
 #define MOVEAXIS_DEFAULT "Left Stick Y"
 #define SIDEAXIS_DEFAULT "Left Stick X"
-#define LOOKAXIS_DEFAULT "Right Stick Y-"
+#define LOOKAXIS_DEFAULT "Right Stick Y"
 #define TURNAXIS_DEFAULT "Right Stick X"
-#define FIREAXIS_DEFAULT "Right Trigger"
-#define FIRENAXIS_DEFAULT "Left Trigger"
 #else
 #define MOVEAXIS_DEFAULT "Y-Axis"
 #define SIDEAXIS_DEFAULT "X-Axis"
 #define LOOKAXIS_DEFAULT "Y-Rudder-"
 #define TURNAXIS_DEFAULT "X-Rudder"
-#define FIREAXIS_DEFAULT "Z-Rudder"
-#define FIRENAXIS_DEFAULT "Z-Axis"
 #endif
 
 // don't mind me putting these here, I was lazy to figure out where else I could put those without blowing up the compiler.
@@ -438,22 +434,6 @@ consvar_t cv_lookaxis[2] = {
 consvar_t cv_turnaxis[2] = {
 	CVAR_INIT ("joyaxis_turn", TURNAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL),
 	CVAR_INIT ("joyaxis2_turn", TURNAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL)
-};
-consvar_t cv_jumpaxis[2] = {
-	CVAR_INIT ("joyaxis_jump", "None", CV_SAVE, joyaxis_cons_t, NULL),
-	CVAR_INIT ("joyaxis2_jump", "None", CV_SAVE, joyaxis_cons_t, NULL)
-};
-consvar_t cv_spinaxis[2] = {
-	CVAR_INIT ("joyaxis_spin", "None", CV_SAVE, joyaxis_cons_t, NULL),
-	CVAR_INIT ("joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL)
-};
-consvar_t cv_fireaxis[2] = {
-	CVAR_INIT ("joyaxis_fire", FIREAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL),
-	CVAR_INIT ("joyaxis2_fire", FIREAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL)
-};
-consvar_t cv_firenaxis[2] = {
-	CVAR_INIT ("joyaxis_firenormal", FIRENAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL),
-	CVAR_INIT ("joyaxis2_firenormal", FIRENAXIS_DEFAULT, CV_SAVE, joyaxis_cons_t, NULL)
 };
 consvar_t cv_deadzone[2] = {
 	CVAR_INIT ("joy_deadzone", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
@@ -890,7 +870,7 @@ static gamepad_axis_e ConvertXboxControllerAxes(int type)
 }
 #endif
 
-static INT16 GetJoystickAxisValue(UINT8 which, joyaxis_e axissel, INT32 axisval)
+static INT16 GetJoystickAxisValue(INT32 axisval)
 {
 	boolean flp = false;
 
@@ -925,14 +905,7 @@ static INT16 GetJoystickAxisValue(UINT8 which, joyaxis_e axissel, INT32 axisval)
 	}
 
 	INT16 retaxis = G_GetGamepadAxisValue(0, gp_axis);
-
-	if (gamepads[which].digital && axissel >= JA_DIGITAL)
-	{
-		const UINT16 jdeadzone = G_GetGamepadDigitalDeadZone(which) / 2;
-		if (-jdeadzone < retaxis && retaxis < jdeadzone)
-			return 0;
-	}
-
+	
 	// flip it around
 	if (flp)
 	{
@@ -965,23 +938,11 @@ INT16 G_JoyAxis(UINT8 which, joyaxis_e axissel)
 		case JA_STRAFE:
 			axisval = cv_sideaxis[which].value;
 			break;
-		case JA_JUMP:
-			axisval = cv_jumpaxis[which].value;
-			break;
-		case JA_SPIN:
-			axisval = cv_spinaxis[which].value;
-			break;
-		case JA_FIRE:
-			axisval = cv_fireaxis[which].value;
-			break;
-		case JA_FIRENORMAL:
-			axisval = cv_firenaxis[which].value;
-			break;
 		default:
 			return 0;
 	}
 
-	value = GetJoystickAxisValue(which, axissel, axisval);
+	value = GetJoystickAxisValue(axisval);
 	if (axissel == JA_LOOK)
 	{
 		// Look is inverted because +Y goes _down_ in gamepads.
@@ -1092,7 +1053,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 
 	boolean forcestrafe = false;
 	boolean forcefullinput = false;
-	INT32 tspeed, forward, side, axis, strafeaxis, moveaxis, turnaxis, lookaxis, i;
+	INT32 tspeed, forward, side, strafeaxis, moveaxis, turnaxis, lookaxis, i;
 
 	joystickvector2_t movejoystickvector, lookjoystickvector;
 
@@ -1378,13 +1339,11 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		}
 
 	// fire with any button/key
-	axis = G_JoyAxis(forplayer, JA_FIRE);
-	if (G_PlayerInputDown(forplayer, GC_FIRE) || (usegamepad && axis > 0))
+	if (G_PlayerInputDown(forplayer, GC_FIRE))
 		cmd->buttons |= BT_ATTACK;
 
 	// fire normal with any button/key
-	axis = G_JoyAxis(forplayer, JA_FIRENORMAL);
-	if (G_PlayerInputDown(forplayer, GC_FIRENORMAL) || (usegamepad && axis > 0))
+	if (G_PlayerInputDown(forplayer, GC_FIRENORMAL))
 		cmd->buttons |= BT_FIRENORMAL;
 
 	if (G_PlayerInputDown(forplayer, GC_TOSSFLAG))
@@ -1399,8 +1358,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		cmd->buttons |= BT_CUSTOM3;
 
 	// spin with any button/key
-	axis = G_JoyAxis(forplayer, JA_SPIN);
-	if (G_PlayerInputDown(forplayer, GC_SPIN) || (usegamepad && axis > 0))
+	if (G_PlayerInputDown(forplayer, GC_SPIN))
 		cmd->buttons |= BT_SPIN;
 
 	// Centerview can be a toggle in simple mode!
@@ -1516,8 +1474,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 		resetdown[forplayer] = false;
 
 	// jump button
-	axis = G_JoyAxis(forplayer, JA_JUMP);
-	if (G_PlayerInputDown(forplayer, GC_JUMP) || (usegamepad && axis > 0))
+	if (G_PlayerInputDown(forplayer, GC_JUMP))
 		cmd->buttons |= BT_JUMP;
 
 	// player aiming shit, ahhhh...
