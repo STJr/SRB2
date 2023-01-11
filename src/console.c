@@ -918,14 +918,15 @@ boolean CON_Responder(event_t *ev)
 	static INT32 alias_skips;
 
 	const char *cmd = NULL;
-	INT32 key = ev->key;
+	INT32 type = ev->type;
+	INT32 key = G_RemapGamepadEvent(ev, &type);
 	boolean key_is_console = (key == gamecontrol[GC_CONSOLE][0] || key == gamecontrol[GC_CONSOLE][1]);
 
 	if (chat_on)
 		return false;
 
 	// let go keyup events, don't eat them
-	if (ev->type != ev_keydown && ev->type != ev_console)
+	if (type != ev_keydown && type != ev_console)
 	{
 		if (key_is_console)
 			consdown = false;
@@ -933,7 +934,7 @@ boolean CON_Responder(event_t *ev)
 	}
 
 	// check for console toggle key
-	if (ev->type != ev_console)
+	if (type != ev_console)
 	{
 		if (modeattacking || metalrecording || marathonmode)
 			return false;
