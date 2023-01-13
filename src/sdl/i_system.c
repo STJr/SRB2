@@ -189,6 +189,7 @@ static char returnWadPath[256];
 #include "../i_threads.h"
 #include "../screen.h" //vid.WndParent
 #include "../netcode/d_net.h"
+#include "../netcode/commands.h"
 #include "../g_game.h"
 #include "../filesrch.h"
 #include "endtxt.h"
