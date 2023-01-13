@@ -1043,6 +1043,7 @@ angle_t localangle, localangle2;
 static fixed_t forwardmove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16};
 static fixed_t sidemove[2] = {25<<FRACBITS>>16, 50<<FRACBITS>>16}; // faster!
 static fixed_t angleturn[3] = {640, 1280, 320}; // + slow turn
+static INT32 camtoggledelay[2] = {0, 0};
 
 INT16 ticcmd_oldangleturn[2];
 boolean ticcmd_centerviewdown[2]; // For simple controls, lock the camera behind the player
@@ -1064,6 +1065,7 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	boolean strafeisturn; // Simple controls only
 	player_t *player = &players[ssplayer == 2 ? secondarydisplayplayer : consoleplayer];
 	camera_t *thiscam = ((ssplayer == 1 || player->bot == BOT_2PHUMAN) ? &camera : &camera2);
+	consvar_t *chasecamcv = (ssplayer == 1 ? &cv_chasecam : &cv_chasecam2);
 	angle_t *myangle = (ssplayer == 1 ? &localangle : &localangle2);
 	INT32 *myaiming = (ssplayer == 1 ? &localaiming : &localaiming2);
 	gamepad_t *gamepad = &gamepads[forplayer];
@@ -1472,6 +1474,15 @@ void G_BuildTiccmd(ticcmd_t *cmd, INT32 realtics, UINT8 ssplayer)
 	}
 	else
 		resetdown[forplayer] = false;
+	
+	if (G_PlayerInputDown(forplayer, GC_CAMTOGGLE))
+	{
+		if (!camtoggledelay[forplayer])
+		{
+			camtoggledelay[forplayer] = NEWTICRATE / 6;
+			CV_SetValue(chasecamcv, chasecamcv->value ? 0 : 1);
+		}
+	}
 
 	// jump button
 	if (G_PlayerInputDown(forplayer, GC_JUMP))
@@ -2052,7 +2063,6 @@ boolean G_IsTitleCardAvailable(void)
 
 INT32 pausedelay = 0;
 boolean pausebreakkey = false;
-static INT32 camtoggledelay, camtoggledelay2 = 0;
 
 static boolean ViewpointSwitchResponder(event_t *ev)
 {
@@ -2229,9 +2239,7 @@ boolean G_Responder(event_t *ev)
 	switch (evtype)
 	{
 		case ev_keydown:
-			if (key == gamecontrol[GC_PAUSE][0]
-				|| key == gamecontrol[GC_PAUSE][1]
-				|| key == KEY_PAUSE)
+			if (key == gamecontrol[GC_PAUSE][0] || key == gamecontrol[GC_PAUSE][1] || key == KEY_PAUSE)
 			{
 				if (modeattacking && !demoplayback && (gamestate == GS_LEVEL))
 				{
@@ -2258,24 +2266,6 @@ boolean G_Responder(event_t *ev)
 						COM_ImmedExecute("pause");
 						return true;
 					}
-				}
-			}
-			if (key == gamecontrol[GC_CAMTOGGLE][0]
-				|| key == gamecontrol[GC_CAMTOGGLE][1])
-			{
-				if (!camtoggledelay)
-				{
-					camtoggledelay = NEWTICRATE / 7;
-					CV_SetValue(&cv_chasecam, cv_chasecam.value ? 0 : 1);
-				}
-			}
-			if (key == gamecontrolbis[GC_CAMTOGGLE][0]
-				|| key == gamecontrolbis[GC_CAMTOGGLE][1])
-			{
-				if (!camtoggledelay2)
-				{
-					camtoggledelay2 = NEWTICRATE / 7;
-					CV_SetValue(&cv_chasecam2, cv_chasecam2.value ? 0 : 1);
 				}
 			}
 			return true;
@@ -2546,23 +2536,13 @@ void G_Ticker(boolean run)
 	if (run)
 	{
 		if (pausedelay && pausedelay != INT32_MIN)
-		{
-			if (pausedelay > 0)
-				pausedelay--;
-			else
-				pausedelay++;
-		}
+			(pausedelay > 0) ? pausedelay-- : pausedelay++;
 
-		if (camtoggledelay)
-			camtoggledelay--;
-
-		if (camtoggledelay2)
-			camtoggledelay2--;
+		for (i = 0; i < 2; i++)
+			if (camtoggledelay[i]) camtoggledelay[i]--;
 
 		if (gametic % NAMECHANGERATE == 0)
-		{
 			memset(player_name_changes, 0, sizeof player_name_changes);
-		}
 	}
 }
 
