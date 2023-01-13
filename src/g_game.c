@@ -870,7 +870,7 @@ static gamepad_axis_e ConvertXboxControllerAxes(int type)
 }
 #endif
 
-static INT16 GetJoystickAxisValue(INT32 axisval)
+static INT16 GetJoystickAxisValue(UINT8 which, INT32 axisval)
 {
 	boolean flp = false;
 
@@ -904,7 +904,7 @@ static INT16 GetJoystickAxisValue(INT32 axisval)
 		axisval /= 2;
 	}
 
-	INT16 retaxis = G_GetGamepadAxisValue(0, gp_axis);
+	INT16 retaxis = G_GetGamepadAxisValue(which, gp_axis);
 	
 	// flip it around
 	if (flp)
@@ -942,7 +942,7 @@ INT16 G_JoyAxis(UINT8 which, joyaxis_e axissel)
 			return 0;
 	}
 
-	value = GetJoystickAxisValue(axisval);
+	value = GetJoystickAxisValue(which, axisval);
 	if (axissel == JA_LOOK)
 	{
 		// Look is inverted because +Y goes _down_ in gamepads.
