@@ -304,7 +304,7 @@ void PT_TextCmd(SINT8 node, INT32 netconsole)
 	}
 }
 
-void SV_CopyNetCommandsToServerPacket(tic_t tic)
+void CL_CopyNetCommandsFromServerPacket(tic_t tic)
 {
 	servertics_pak *packet = &netbuffer->u.serverpak;
 	UINT8 *cmds = (UINT8*)&packet->cmds[packet->numslots * packet->numtics];
