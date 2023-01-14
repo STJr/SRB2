@@ -304,6 +304,26 @@ void PT_TextCmd(SINT8 node, INT32 netconsole)
 	}
 }
 
+void SV_CopyNetCommandsToServerPacket(tic_t tic)
+{
+	servertics_pak *packet = &netbuffer->u.serverpak;
+	UINT8 *cmds = (UINT8*)&packet->cmds[packet->numslots * packet->numtics];
+	UINT8 numcmds;
+
+	numcmds = *cmds++;
+
+	for (UINT32 i = 0; i < numcmds; i++)
+	{
+		INT32 playernum = *cmds++; // playernum
+		size_t size = cmds[0]+1;
+
+		if (tic >= gametic) // Don't copy old net commands
+			M_Memcpy(D_GetTextcmd(tic, playernum), cmds, size);
+		cmds += size;
+	}
+}
+
+void CL_SendNetCommands(void)
 void SendKick(UINT8 playernum, UINT8 msg)
 {
 	UINT8 buf[2];

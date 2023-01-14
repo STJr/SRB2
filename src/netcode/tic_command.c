@@ -204,7 +204,6 @@ void PT_ClientCmd(SINT8 node, INT32 netconsole)
 
 void PT_ServerTics(SINT8 node, INT32 netconsole)
 {
-	UINT8 *pak, *txtpak, numtxtpak;
 	tic_t realend, realstart;
 
 	if (!netnodes[node].ingame)
@@ -230,19 +229,15 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 	realstart = netbuffer->u.serverpak.starttic;
 	realend = realstart + netbuffer->u.serverpak.numtics;
 
-	txtpak = (UINT8 *)&netbuffer->u.serverpak.cmds[netbuffer->u.serverpak.numslots
-		* netbuffer->u.serverpak.numtics];
-
 	if (realend > gametic + CLIENTBACKUPTICS)
 		realend = gametic + CLIENTBACKUPTICS;
 	cl_packetmissed = realstart > neededtic;
 
 	if (realstart <= neededtic && realend > neededtic)
 	{
-		tic_t i, j;
-		pak = (UINT8 *)&netbuffer->u.serverpak.cmds;
+		UINT8 *pak = (UINT8 *)&netbuffer->u.serverpak.cmds;
 
-		for (i = realstart; i < realend; i++)
+		for (tic_t i = realstart; i < realend; i++)
 		{
 			// clear first
 			D_Clearticcmd(i);
@@ -251,17 +246,7 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 			pak = G_ScpyTiccmd(netcmds[i%BACKUPTICS], pak,
 				netbuffer->u.serverpak.numslots*sizeof (ticcmd_t));
 
-			// copy the textcmds
-			numtxtpak = *txtpak++;
-			for (j = 0; j < numtxtpak; j++)
-			{
-				INT32 k = *txtpak++; // playernum
-				const size_t txtsize = txtpak[0]+1;
-
-				if (i >= gametic) // Don't copy old net commands
-					M_Memcpy(D_GetTextcmd(i, k), txtpak, txtsize);
-				txtpak += txtsize;
-			}
+			SV_CopyNetCommandsToServerPacket(i);
 		}
 
 		neededtic = realend;
