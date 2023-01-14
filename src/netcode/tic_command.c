@@ -298,16 +298,56 @@ void CL_SendClientCmd(void)
 		CL_SendNetCommands();
 }
 
+// PT_SERVERTICS packets can grow too large for a single UDP packet,
+// So this checks how many tics worth of data can be sent in one packet.
+// The rest can be sent later, usually the next tic.
+static tic_t SV_CalculateNumTicsForPacket(SINT8 nodenum, tic_t firsttic, tic_t lasttic)
+{
+	size_t size = BASESERVERTICSSIZE;
+	tic_t tic;
+
+	for (tic = firsttic; tic < lasttic; tic++)
+	{
+		size += sizeof (ticcmd_t) * doomcom->numslots;
+		size += TotalTextCmdPerTic(tic);
+
+		if (size > software_MAXPACKETLENGTH)
+		{
+			DEBFILE(va("packet too large (%s) at tic %d (should be from %d to %d)\n",
+				sizeu1(size), tic, firsttic, lasttic));
+			lasttic = tic;
+
+			// too bad: too much player have send extradata and there is too
+			//          much data in one tic.
+			// To avoid it put the data on the next tic. (see getpacket
+			// textcmd case) but when numplayer changes the computation can be different
+			if (lasttic == firsttic)
+			{
+				if (size > MAXPACKETLENGTH)
+					I_Error("Too many players: can't send %s data for %d players to node %d\n"
+							"Well sorry nobody is perfect....\n",
+							sizeu1(size), doomcom->numslots, nodenum);
+				else
+				{
+					lasttic++; // send it anyway!
+					DEBFILE("sending it anyway\n");
+				}
+			}
+			break;
+		}
+	}
+
+	return lasttic - firsttic;
+}
+
 // send the server packet
 // send tic from firstticstosend to maketic-1
 void SV_SendTics(void)
 {
 	tic_t realfirsttic, lasttictosend, i;
 	UINT32 n;
-	INT32 j;
 	size_t packsize;
 	UINT8 *bufpos;
-	UINT8 *ntextcmd;
 
 	// send to all client but not to me
 	// for each node create a packet with x tics and send it
@@ -336,38 +376,7 @@ void SV_SendTics(void)
 			if (realfirsttic < firstticstosend)
 				realfirsttic = firstticstosend;
 
-			// compute the length of the packet and cut it if too large
-			packsize = BASESERVERTICSSIZE;
-			for (i = realfirsttic; i < lasttictosend; i++)
-			{
-				packsize += sizeof (ticcmd_t) * doomcom->numslots;
-				packsize += TotalTextCmdPerTic(i);
-
-				if (packsize > software_MAXPACKETLENGTH)
-				{
-					DEBFILE(va("packet too large (%s) at tic %d (should be from %d to %d)\n",
-						sizeu1(packsize), i, realfirsttic, lasttictosend));
-					lasttictosend = i;
-
-					// too bad: too much player have send extradata and there is too
-					//          much data in one tic.
-					// To avoid it put the data on the next tic. (see getpacket
-					// textcmd case) but when numplayer changes the computation can be different
-					if (lasttictosend == realfirsttic)
-					{
-						if (packsize > MAXPACKETLENGTH)
-							I_Error("Too many players: can't send %s data for %d players to node %d\n"
-							        "Well sorry nobody is perfect....\n",
-							        sizeu1(packsize), doomcom->numslots, n);
-						else
-						{
-							lasttictosend++; // send it anyway!
-							DEBFILE("sending it anyway\n");
-						}
-					}
-					break;
-				}
-			}
+			lasttictosend = realfirsttic + SV_CalculateNumTicsForPacket(n, realfirsttic, lasttictosend);
 
 			// Send the tics
 			netbuffer->packettype = PT_SERVERTICS;
@@ -383,23 +392,7 @@ void SV_SendTics(void)
 
 			// add textcmds
 			for (i = realfirsttic; i < lasttictosend; i++)
-			{
-				ntextcmd = bufpos++;
-				*ntextcmd = 0;
-				for (j = 0; j < MAXPLAYERS; j++)
-				{
-					UINT8 *textcmd = D_GetExistingTextcmd(i, j);
-					INT32 size = textcmd ? textcmd[0] : 0;
-
-					if ((!j || playeringame[j]) && size)
-					{
-						(*ntextcmd)++;
-						WRITEUINT8(bufpos, j);
-						M_Memcpy(bufpos, textcmd, size + 1);
-						bufpos += size + 1;
-					}
-				}
-			}
+				SV_WriteNetCommandsForTic();
 			packsize = bufpos - (UINT8 *)&(netbuffer->u);
 
 			HSendPacket(n, false, 0, packsize);

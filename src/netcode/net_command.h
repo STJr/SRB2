@@ -57,6 +57,7 @@ void ExtraDataTicker(void);
 size_t TotalTextCmdPerTic(tic_t tic);
 
 void PT_TextCmd(SINT8 node, INT32 netconsole);
+void SV_WriteNetCommandsForTic(tic_t tic, UINT8 **buf);
 void CL_CopyNetCommandsFromServerPacket(tic_t tic);
 void CL_SendNetCommands(void);
 void SendKick(UINT8 playernum, UINT8 msg);
