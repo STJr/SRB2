@@ -103,6 +103,55 @@ void D_ResetTiccmds(void)
 			D_Clearticcmd(textcmds[i]->tic);
 }
 
+// Check ticcmd for "speed hacks"
+static void CheckTiccmdHacks(INT32 playernum)
+{
+	ticcmd_t *cmd = &netcmds[maketic%BACKUPTICS][playernum];
+	if (cmd->forwardmove > MAXPLMOVE || cmd->forwardmove < -MAXPLMOVE
+		|| cmd->sidemove > MAXPLMOVE || cmd->sidemove < -MAXPLMOVE)
+	{
+		CONS_Alert(CONS_WARNING, M_GetText("Illegal movement value received from node %d\n"), playernum);
+		SendKick(playernum, KICK_MSG_CON_FAIL);
+	}
+}
+
+// Check player consistancy during the level
+static void CheckConsistancy(SINT8 nodenum, tic_t tic)
+{
+	netnode_t *node = &netnodes[nodenum];
+	INT16 neededconsistancy = consistancy[tic%BACKUPTICS];
+	INT16 clientconsistancy = SHORT(netbuffer->u.clientpak.consistancy);
+
+	if (tic > gametic || tic + BACKUPTICS - 1 <= gametic || gamestate != GS_LEVEL
+		|| neededconsistancy == clientconsistancy || SV_ResendingSavegameToAnyone()
+		|| node->resendingsavegame || node->savegameresendcooldown > I_GetTime())
+		return;
+
+	if (cv_resynchattempts.value)
+	{
+		// Tell the client we are about to resend them the gamestate
+		netbuffer->packettype = PT_WILLRESENDGAMESTATE;
+		HSendPacket(nodenum, true, 0, 0);
+
+		node->resendingsavegame = true;
+
+		if (cv_blamecfail.value)
+			CONS_Printf(M_GetText("Synch failure for player %d (%s); expected %hd, got %hd\n"),
+				node->player+1, player_names[node->player],
+				neededconsistancy, clientconsistancy);
+
+		DEBFILE(va("Restoring player %d (synch failure) [%update] %d!=%d\n",
+			node->player, tic, neededconsistancy, clientconsistancy));
+	}
+	else
+	{
+		SendKick(node->player, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
+
+		DEBFILE(va("player %d kicked (synch failure) [%u] %d!=%d\n",
+			node->player, tic, neededconsistancy, clientconsistancy));
+	}
+}
+
 void PT_ClientCmd(SINT8 node, INT32 netconsole)
 {
 	tic_t realend, realstart;
@@ -143,56 +192,14 @@ void PT_ClientCmd(SINT8 node, INT32 netconsole)
 	// Copy ticcmd
 	G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][netconsole], &netbuffer->u.clientpak.cmd, 1);
 
-	// Check ticcmd for "speed hacks"
-	if (netcmds[maketic%BACKUPTICS][netconsole].forwardmove > MAXPLMOVE || netcmds[maketic%BACKUPTICS][netconsole].forwardmove < -MAXPLMOVE
-		|| netcmds[maketic%BACKUPTICS][netconsole].sidemove > MAXPLMOVE || netcmds[maketic%BACKUPTICS][netconsole].sidemove < -MAXPLMOVE)
-	{
-		CONS_Alert(CONS_WARNING, M_GetText("Illegal movement value received from node %d\n"), netconsole);
-		//D_Clearticcmd(k);
-
-		SendKick(netconsole, KICK_MSG_CON_FAIL);
-		return;
-	}
-
 	// Splitscreen cmd
 	if ((netbuffer->packettype == PT_CLIENT2CMD || netbuffer->packettype == PT_CLIENT2MIS)
 		&& netnodes[node].player2 >= 0)
 		G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][(UINT8)netnodes[node].player2],
 			&netbuffer->u.client2pak.cmd2, 1);
 
-	// Check player consistancy during the level
-	if (realstart <= gametic && realstart + BACKUPTICS - 1 > gametic && gamestate == GS_LEVEL
-		&& consistancy[realstart%BACKUPTICS] != SHORT(netbuffer->u.clientpak.consistancy)
-		&& !SV_ResendingSavegameToAnyone()
-		&& !netnodes[node].resendingsavegame && netnodes[node].savegameresendcooldown <= I_GetTime())
-	{
-		if (cv_resynchattempts.value)
-		{
-			// Tell the client we are about to resend them the gamestate
-			netbuffer->packettype = PT_WILLRESENDGAMESTATE;
-			HSendPacket(node, true, 0, 0);
-
-			netnodes[node].resendingsavegame = true;
-
-			if (cv_blamecfail.value)
-				CONS_Printf(M_GetText("Synch failure for player %d (%s); expected %hd, got %hd\n"),
-					netconsole+1, player_names[netconsole],
-					consistancy[realstart%BACKUPTICS],
-					SHORT(netbuffer->u.clientpak.consistancy));
-			DEBFILE(va("Restoring player %d (synch failure) [%update] %d!=%d\n",
-				netconsole, realstart, consistancy[realstart%BACKUPTICS],
-				SHORT(netbuffer->u.clientpak.consistancy)));
-			return;
-		}
-		else
-		{
-			SendKick(netconsole, KICK_MSG_CON_FAIL | KICK_MSG_KEEP_BODY);
-			DEBFILE(va("player %d kicked (synch failure) [%u] %d!=%d\n",
-				netconsole, realstart, consistancy[realstart%BACKUPTICS],
-				SHORT(netbuffer->u.clientpak.consistancy)));
-			return;
-		}
-	}
+	CheckTiccmdHacks(netconsole);
+	CheckConsistancy(node, realstart);
 }
 
 void PT_ServerTics(SINT8 node, INT32 netconsole)
