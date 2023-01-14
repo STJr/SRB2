@@ -79,7 +79,6 @@ static void Ban_Clear(void)
 void Ban_Load_File(boolean warning)
 {
 	FILE *f;
-	size_t i;
 	const char *address, *mask;
 	char buffer[MAX_WADPATH];
 
@@ -97,7 +96,7 @@ void Ban_Load_File(boolean warning)
 
 	Ban_Clear();
 
-	for (i=0; fgets(buffer, (int)sizeof(buffer), f); i++)
+	for (size_t i=0; fgets(buffer, (int)sizeof(buffer), f); i++)
 	{
 		address = strtok(buffer, " \t\r\n");
 		mask = strtok(NULL, " \t\r\n");
@@ -113,7 +112,6 @@ void Ban_Load_File(boolean warning)
 void D_SaveBan(void)
 {
 	FILE *f;
-	size_t i;
 	banreason_t *reasonlist = reasonhead;
 	const char *address, *mask;
 	const char *path = va("%s"PATHSEP"%s", srb2home, "ban.txt");
@@ -132,7 +130,7 @@ void D_SaveBan(void)
 		return;
 	}
 
-	for (i = 0;(address = I_GetBanAddress(i)) != NULL;i++)
+	for (size_t i = 0;(address = I_GetBanAddress(i)) != NULL;i++)
 	{
 		if (!I_GetBanMask || (mask = I_GetBanMask(i)) == NULL)
 			fprintf(f, "%s 0", address);
@@ -236,12 +234,12 @@ void Command_Ban(void)
 			}
 			else
 			{
-				size_t i, j = COM_Argc();
+				size_t j = COM_Argc();
 				char message[MAX_REASONLENGTH];
 
 				//Steal from the motd code so you don't have to put the reason in quotes.
 				strlcpy(message, COM_Argv(2), sizeof message);
-				for (i = 3; i < j; i++)
+				for (size_t i = 3; i < j; i++)
 				{
 					strlcat(message, " ", sizeof message);
 					strlcat(message, COM_Argv(i), sizeof message);
@@ -340,12 +338,12 @@ void Command_Kick(void)
 		}
 		else
 		{
-			size_t i, j = COM_Argc();
+			size_t j = COM_Argc();
 			char message[MAX_REASONLENGTH];
 
 			//Steal from the motd code so you don't have to put the reason in quotes.
 			strlcpy(message, COM_Argv(2), sizeof message);
-			for (i = 3; i < j; i++)
+			for (size_t i = 3; i < j; i++)
 			{
 				strlcat(message, " ", sizeof message);
 				strlcat(message, COM_Argv(i), sizeof message);
@@ -435,9 +433,7 @@ void Command_connect(void)
 
 void Command_GetPlayerNum(void)
 {
-	INT32 i;
-
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i])
 		{
 			if (serverplayer == i)
@@ -453,18 +449,17 @@ void Command_GetPlayerNum(void)
   */
 void Command_Nodes(void)
 {
-	INT32 i;
 	size_t maxlen = 0;
 	const char *address;
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		const size_t plen = strlen(player_names[i]);
 		if (playeringame[i] && plen > maxlen)
 			maxlen = plen;
 	}
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		if (playeringame[i])
 		{

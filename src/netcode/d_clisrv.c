@@ -440,11 +440,9 @@ static void Got_KickCmd(UINT8 **p, INT32 playernum)
 
 			if (M_CheckParm("-consisdump")) // Helps debugging some problems
 			{
-				INT32 i;
-
 				CONS_Printf(M_GetText("Player kicked is #%d, dumping consistency...\n"), pnum);
 
-				for (i = 0; i < MAXPLAYERS; i++)
+				for (INT32 i = 0; i < MAXPLAYERS; i++)
 				{
 					if (!playeringame[i])
 						continue;
@@ -545,8 +543,8 @@ static void RedistributeSpecialStageSpheres(INT32 playernum)
 		INT32 sincrement = max(spheres / count, 1);
 		INT32 rincrement = max(rings / count, 1);
 
-		INT32 i, n;
-		for (i = 0; i < MAXPLAYERS; i++)
+		INT32 n;
+		for (INT32 i = 0; i < MAXPLAYERS; i++)
 		{
 			if (!playeringame[i] || i == playernum)
 				continue;
@@ -644,10 +642,8 @@ void D_QuitNetGame(void)
 
 	if (server)
 	{
-		INT32 i;
-
 		netbuffer->packettype = PT_SERVERSHUTDOWN;
-		for (i = 0; i < MAXNETNODES; i++)
+		for (INT32 i = 0; i < MAXNETNODES; i++)
 			if (netnodes[i].ingame)
 				HSendPacket(i, true, 0, 0);
 #ifdef MASTERSERVER
@@ -701,8 +697,6 @@ void CL_RemoveSplitscreenPlayer(void)
 
 void SV_ResetServer(void)
 {
-	INT32 i;
-
 	// +1 because this command will be executed in com_executebuffer in
 	// tryruntic so gametic will be incremented, anyway maketic > gametic
 	// is not an issue
@@ -713,10 +707,10 @@ void SV_ResetServer(void)
 
 	joindelay = 0;
 
-	for (i = 0; i < MAXNETNODES; i++)
+	for (INT32 i = 0; i < MAXNETNODES; i++)
 		ResetNode(i);
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		LUA_InvalidatePlayer(&players[i]);
 		playeringame[i] = false;
@@ -755,10 +749,9 @@ void SV_ResetServer(void)
 
 static inline void SV_GenContext(void)
 {
-	UINT8 i;
 	// generate server_context, as exactly 8 bytes of randomly mixed A-Z and a-z
 	// (hopefully M_Random is initialized!! if not this will be awfully silly!)
-	for (i = 0; i < 8; i++)
+	for (UINT8 i = 0; i < 8; i++)
 	{
 		const char a = M_RandomKey(26*2);
 		if (a < 26) // uppercase
@@ -814,8 +807,6 @@ void SV_StartSinglePlayerServer(void)
 
 void SV_StopServer(void)
 {
-	tic_t i;
-
 	if (gamestate == GS_INTERMISSION)
 		Y_EndIntermission();
 	gamestate = wipegamestate = GS_NULL;
@@ -823,7 +814,7 @@ void SV_StopServer(void)
 	localtextcmd[0] = 0;
 	localtextcmd2[0] = 0;
 
-	for (i = firstticstosend; i < firstticstosend + BACKUPTICS; i++)
+	for (tic_t i = firstticstosend; i < firstticstosend + BACKUPTICS; i++)
 		D_Clearticcmd(i);
 
 	consoleplayer = 0;
@@ -913,7 +904,6 @@ If they're not lagging, decrement the timer by 1. Of course, reset all of this i
 
 static inline void PingUpdate(void)
 {
-	INT32 i;
 	boolean laggers[MAXPLAYERS];
 	UINT8 numlaggers = 0;
 	memset(laggers, 0, sizeof(boolean) * MAXPLAYERS);
@@ -923,7 +913,7 @@ static inline void PingUpdate(void)
 	//check for ping limit breakage.
 	if (cv_maxping.value)
 	{
-		for (i = 1; i < MAXPLAYERS; i++)
+		for (INT32 i = 1; i < MAXPLAYERS; i++)
 		{
 			if (playeringame[i] && !players[i].quittime
 			&& (realpingtable[i] / pingmeasurecount > (unsigned)cv_maxping.value))
@@ -940,7 +930,7 @@ static inline void PingUpdate(void)
 		//in that case, it is probably the server's fault.
 		if (numlaggers < D_NumPlayers() - 1)
 		{
-			for (i = 1; i < MAXPLAYERS; i++)
+			for (INT32 i = 1; i < MAXPLAYERS; i++)
 			{
 				if (playeringame[i] && laggers[i])
 				{
@@ -965,7 +955,7 @@ static inline void PingUpdate(void)
 	}
 
 	//make the ping packet and clear server data for next one
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		netbuffer->u.pingtable[i] = realpingtable[i] / pingmeasurecount;
 		//server takes a snapshot of the real ping for display.
@@ -978,7 +968,7 @@ static inline void PingUpdate(void)
 	netbuffer->u.pingtable[MAXPLAYERS] = cv_maxping.value;
 
 	//send out our ping packets
-	for (i = 0; i < MAXNETNODES; i++)
+	for (INT32 i = 0; i < MAXNETNODES; i++)
 		if (netnodes[i].ingame)
 			HSendPacket(i, true, 0, sizeof(INT32) * (MAXPLAYERS+1));
 
@@ -999,8 +989,7 @@ static void PT_Ping(SINT8 node, INT32 netconsole)
 	//Update client ping table from the server.
 	if (client)
 	{
-		UINT8 i;
-		for (i = 0; i < MAXPLAYERS; i++)
+		for (INT32 i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i])
 				playerpingtable[i] = (tic_t)netbuffer->u.pingtable[i];
 
@@ -1225,7 +1214,6 @@ void NetUpdate(void)
 	static tic_t gametime = 0;
 	static tic_t resptime = 0;
 	tic_t nowtime;
-	INT32 i;
 	INT32 realtics;
 
 	nowtime = I_GetTime();
@@ -1248,7 +1236,7 @@ void NetUpdate(void)
 		if (netgame && !(gametime % 35)) // update once per second.
 			PingUpdate();
 		// update node latency values so we can take an average later.
-		for (i = 0; i < MAXPLAYERS; i++)
+		for (INT32 i = 0; i < MAXPLAYERS; i++)
 			if (playeringame[i] && playernode[i] != UINT8_MAX)
 				realpingtable[i] += G_TicsToMilliseconds(GetLag(playernode[i]));
 		pingmeasurecount++;
@@ -1287,7 +1275,7 @@ void NetUpdate(void)
 			hu_redownloadinggamestate = false;
 
 			firstticstosend = gametic;
-			for (i = 0; i < MAXNETNODES; i++)
+			for (INT32 i = 0; i < MAXNETNODES; i++)
 				if (netnodes[i].ingame && netnodes[i].tic < firstticstosend)
 				{
 					firstticstosend = netnodes[i].tic;
@@ -1301,7 +1289,7 @@ void NetUpdate(void)
 			if (maketic + counts >= firstticstosend + BACKUPTICS)
 				counts = firstticstosend+BACKUPTICS-maketic-1;
 
-			for (i = 0; i < counts; i++)
+			for (INT32 i = 0; i < counts; i++)
 				SV_Maketic(); // Create missed tics and increment maketic
 
 			for (; tictoclear < firstticstosend; tictoclear++) // Clear only when acknowledged
@@ -1318,7 +1306,7 @@ void NetUpdate(void)
 	// Handle timeouts to prevent definitive freezes from happenning
 	if (server)
 	{
-		for (i = 1; i < MAXNETNODES; i++)
+		for (INT32 i = 1; i < MAXNETNODES; i++)
 			if (netnodes[i].ingame && netnodes[i].freezetimeout < I_GetTime())
 				Net_ConnectionTimeout(i);
 
@@ -1387,7 +1375,7 @@ void D_ClientServerInit(void)
 
 SINT8 nametonum(const char *name)
 {
-	INT32 playernum, i;
+	INT32 playernum;
 
 	if (!strcmp(name, "0"))
 		return 0;
@@ -1405,7 +1393,7 @@ SINT8 nametonum(const char *name)
 			return -1;
 	}
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i] && !stricmp(player_names[i], name))
 			return (SINT8)i;
 
@@ -1427,8 +1415,8 @@ boolean Playing(void)
   */
 INT32 D_NumPlayers(void)
 {
-	INT32 num = 0, ix;
-	for (ix = 0; ix < MAXPLAYERS; ix++)
+	INT32 num = 0;
+	for (INT32 ix = 0; ix < MAXPLAYERS; ix++)
 		if (playeringame[ix])
 			num++;
 	return num;
@@ -1444,7 +1432,6 @@ INT32 D_NumPlayers(void)
 //
 INT16 Consistancy(void)
 {
-	INT32 i;
 	UINT32 ret = 0;
 #ifdef MOBJCONSISTANCY
 	thinker_t *th;
@@ -1453,7 +1440,7 @@ INT16 Consistancy(void)
 
 	DEBFILE(va("TIC %u ", gametic));
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		if (!playeringame[i])
 			ret ^= 0xCCCC;

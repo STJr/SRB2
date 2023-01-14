@@ -211,7 +211,7 @@ FUNCMATH static INT32 cmpack(UINT8 a, UINT8 b)
 static boolean GetFreeAcknum(UINT8 *freeack, boolean lowtimer)
 {
 	node_t *node = &nodes[doomcom->remotenode];
-	INT32 i, numfreeslot = 0;
+	INT32 numfreeslot = 0;
 
 	if (cmpack((UINT8)((node->remotefirstack + MAXACKTOSEND) % 256), node->nextacknum) < 0)
 	{
@@ -219,7 +219,7 @@ static boolean GetFreeAcknum(UINT8 *freeack, boolean lowtimer)
 		return false;
 	}
 
-	for (i = 0; i < MAXACKPACKETS; i++)
+	for (INT32 i = 0; i < MAXACKPACKETS; i++)
 		if (!ackpak[i].acknum)
 		{
 			// For low priority packets, make sure to let freeslots so urgent packets can be sent
@@ -276,10 +276,10 @@ static boolean GetFreeAcknum(UINT8 *freeack, boolean lowtimer)
   */
 INT32 Net_GetFreeAcks(boolean urgent)
 {
-	INT32 i, numfreeslot = 0;
+	INT32 numfreeslot = 0;
 	INT32 n = 0; // Number of free acks found
 
-	for (i = 0; i < MAXACKPACKETS; i++)
+	for (INT32 i = 0; i < MAXACKPACKETS; i++)
 		if (!ackpak[i].acknum)
 		{
 			// For low priority packets, make sure to let freeslots so urgent packets can be sent
@@ -315,7 +315,6 @@ static void RemoveAck(INT32 i)
 // We have got a packet, proceed the ack request and ack return
 static boolean Processackpak(void)
 {
-	INT32 i;
 	boolean goodpacket = true;
 	node_t *node = &nodes[doomcom->remotenode];
 
@@ -324,7 +323,7 @@ static boolean Processackpak(void)
 	{
 		node->remotefirstack = netbuffer->ackreturn;
 		// Search the ackbuffer and free it
-		for (i = 0; i < MAXACKPACKETS; i++)
+		for (INT32 i = 0; i < MAXACKPACKETS; i++)
 			if (ackpak[i].acknum && ackpak[i].destinationnode == node - nodes
 				&& cmpack(ackpak[i].acknum, netbuffer->ackreturn) <= 0)
 			{
@@ -346,7 +345,7 @@ static boolean Processackpak(void)
 		else
 		{
 			// Check if it is not already in the queue
-			for (i = node->acktosend_tail; i != node->acktosend_head; i = (i+1) % MAXACKTOSEND)
+			for (INT32 i = node->acktosend_tail; i != node->acktosend_head; i = (i+1) % MAXACKTOSEND)
 				if (node->acktosend[i] == ack)
 				{
 					DEBFILE(va("Discard(2) ack %d (duplicated)\n", ack));
@@ -374,7 +373,7 @@ static boolean Processackpak(void)
 					while (change)
 					{
 						change = false;
-						for (i = node->acktosend_tail; i != node->acktosend_head;
+						for (INT32 i = node->acktosend_tail; i != node->acktosend_head;
 							i = (i+1) % MAXACKTOSEND)
 						{
 							if (cmpack(node->acktosend[i], nextfirstack) <= 0)
@@ -434,11 +433,9 @@ void Net_SendAcks(INT32 node)
 
 static void GotAcks(void)
 {
-	INT32 i, j;
-
-	for (j = 0; j < MAXACKTOSEND; j++)
+	for (INT32 j = 0; j < MAXACKTOSEND; j++)
 		if (netbuffer->u.textcmd[j])
-			for (i = 0; i < MAXACKPACKETS; i++)
+			for (INT32 i = 0; i < MAXACKPACKETS; i++)
 				if (ackpak[i].acknum && ackpak[i].destinationnode == doomcom->remotenode)
 				{
 					if (ackpak[i].acknum == netbuffer->u.textcmd[j])
@@ -475,9 +472,8 @@ void Net_ConnectionTimeout(INT32 node)
 // Resend the data if needed
 void Net_AckTicker(void)
 {
-	INT32 i;
 
-	for (i = 0; i < MAXACKPACKETS; i++)
+	for (INT32 i = 0; i < MAXACKPACKETS; i++)
 	{
 		const INT32 nodei = ackpak[i].destinationnode;
 		node_t *node = &nodes[nodei];
@@ -504,7 +500,7 @@ void Net_AckTicker(void)
 		}
 	}
 
-	for (i = 1; i < MAXNETNODES; i++)
+	for (INT32 i = 1; i < MAXNETNODES; i++)
 	{
 		// This is something like node open flag
 		if (nodes[i].firstacktosend)
@@ -567,9 +563,7 @@ void Net_UnAcknowledgePacket(INT32 node)
   */
 static boolean Net_AllAcksReceived(void)
 {
-	INT32 i;
-
-	for (i = 0; i < MAXACKPACKETS; i++)
+	for (INT32 i = 0; i < MAXACKPACKETS; i++)
 		if (ackpak[i].acknum)
 			return false;
 
@@ -611,12 +605,10 @@ static void InitNode(node_t *node)
 
 static void InitAck(void)
 {
-	INT32 i;
-
-	for (i = 0; i < MAXACKPACKETS; i++)
+	for (INT32 i = 0; i < MAXACKPACKETS; i++)
 		ackpak[i].acknum = 0;
 
-	for (i = 0; i < MAXNETNODES; i++)
+	for (INT32 i = 0; i < MAXNETNODES; i++)
 		InitNode(&nodes[i]);
 }
 
@@ -627,8 +619,7 @@ static void InitAck(void)
   */
 void Net_AbortPacketType(UINT8 packettype)
 {
-	INT32 i;
-	for (i = 0; i < MAXACKPACKETS; i++)
+	for (INT32 i = 0; i < MAXACKPACKETS; i++)
 		if (ackpak[i].acknum && (ackpak[i].pak.data.packettype == packettype
 			|| packettype == UINT8_MAX))
 		{
@@ -643,7 +634,6 @@ void Net_AbortPacketType(UINT8 packettype)
 // remove a node, clear all ack from this node and reset askret
 void Net_CloseConnection(INT32 node)
 {
-	INT32 i;
 	boolean forceclose = (node & FORCECLOSE) != 0;
 
 	if (node == -1)
@@ -673,7 +663,7 @@ void Net_CloseConnection(INT32 node)
 	}
 
 	// check if we are waiting for an ack from this node
-	for (i = 0; i < MAXACKPACKETS; i++)
+	for (INT32 i = 0; i < MAXACKPACKETS; i++)
 		if (ackpak[i].acknum && ackpak[i].destinationnode == node)
 		{
 			if (!forceclose)
@@ -697,9 +687,8 @@ static UINT32 NetbufferChecksum(void)
 	UINT32 c = 0x1234567;
 	const INT32 l = doomcom->datalength - 4;
 	const UINT8 *buf = (UINT8 *)netbuffer + 4;
-	INT32 i;
 
-	for (i = 0; i < l; i++, buf++)
+	for (INT32 i = 0; i < l; i++, buf++)
 		c += (*buf) * (i+1);
 
 	return LONG(c);
@@ -710,9 +699,8 @@ static UINT32 NetbufferChecksum(void)
 static void fprintfstring(char *s, size_t len)
 {
 	INT32 mode = 0;
-	size_t i;
 
-	for (i = 0; i < len; i++)
+	for (size_t i = 0; i < len; i++)
 		if (s[i] < 32)
 		{
 			if (!mode)
@@ -879,7 +867,6 @@ void Command_Drop(void)
 {
 	INT32 packetquantity;
 	const char *packetname;
-	size_t i;
 
 	if (COM_Argc() < 2)
 	{
@@ -909,11 +896,11 @@ void Command_Drop(void)
 	packetname = COM_Argv(1);
 
 	if (!(stricmp(packetname, "all") && stricmp(packetname, "any")))
-		for (i = 0; i < NUMPACKETTYPE; i++)
+		for (size_t i = 0; i < NUMPACKETTYPE; i++)
 			packetdropquantity[i] = packetquantity;
 	else
 	{
-		for (i = 0; i < NUMPACKETTYPE; i++)
+		for (size_t i = 0; i < NUMPACKETTYPE; i++)
 			if (!stricmp(packetname, packettypename[i]))
 			{
 				packetdropquantity[i] = packetquantity;
@@ -1336,13 +1323,12 @@ void Command_Ping_f(void)
 	int name_width = 0;
 	int   ms_width = 0;
 
-	int n;
-	INT32 i;
-
 	pingc = 0;
-	for (i = 1; i < MAXPLAYERS; ++i)
+	for (INT32 i = 1; i < MAXPLAYERS; ++i)
 		if (playeringame[i])
 	{
+		int n;
+
 		n = strlen(player_names[i]);
 		if (n > name_width)
 			name_width = n;
@@ -1362,7 +1348,7 @@ void Command_Ping_f(void)
 
 	qsort(pingv, pingc, sizeof (struct pingcell), &pingcellcmp);
 
-	for (i = 0; i < pingc; ++i)
+	for (INT32 i = 0; i < pingc; ++i)
 	{
 		CONS_Printf("%02d : %-*s %*d ms\n",
 				pingv[i].num,
@@ -1378,15 +1364,13 @@ void Command_Ping_f(void)
 
 void D_CloseConnection(void)
 {
-	INT32 i;
-
 	if (netgame)
 	{
 		// wait the ackreturn with timout of 5 Sec
 		Net_WaitAllAckReceived(5);
 
 		// close all connection
-		for (i = 0; i < MAXNETNODES; i++)
+		for (INT32 i = 0; i < MAXNETNODES; i++)
 			Net_CloseConnection(i|FORCECLOSE);
 
 		InitAck();

@@ -90,13 +90,11 @@ void D_FreeTextcmd(tic_t tic)
 
 	if (textcmdtic)
 	{
-		INT32 i;
-
 		// Remove this tic from the list.
 		*tctprev = textcmdtic->next;
 
 		// Free all players.
-		for (i = 0; i < TEXTCMD_HASH_SIZE; i++)
+		for (INT32 i = 0; i < TEXTCMD_HASH_SIZE; i++)
 		{
 			textcmdplayer_t *textcmdplayer = textcmdtic->playercmds[i];
 
@@ -174,9 +172,7 @@ UINT8* D_GetTextcmd(tic_t tic, INT32 playernum)
 
 void ExtraDataTicker(void)
 {
-	INT32 i;
-
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 		if (playeringame[i] || i == 0)
 		{
 			UINT8 *bufferstart = D_GetExistingTextcmd(gametic, i);
@@ -221,10 +217,9 @@ void ExtraDataTicker(void)
 // used at txtcmds received to check packetsize bound
 size_t TotalTextCmdPerTic(tic_t tic)
 {
-	INT32 i;
 	size_t total = 1; // num of textcmds in the tic (ntextcmd byte)
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		UINT8 *textcmd = D_GetExistingTextcmd(tic, i);
 		if ((!i || playeringame[i]) && textcmd)
