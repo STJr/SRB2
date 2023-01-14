@@ -80,11 +80,9 @@ tic_t ExpandTics(INT32 low, INT32 node)
 
 void D_Clearticcmd(tic_t tic)
 {
-	INT32 i;
-
 	D_FreeTextcmd(tic);
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 		netcmds[tic%BACKUPTICS][i].angleturn = 0;
 
 	DEBFILE(va("clear tic %5u (%2u)\n", tic, tic%BACKUPTICS));
@@ -92,13 +90,11 @@ void D_Clearticcmd(tic_t tic)
 
 void D_ResetTiccmds(void)
 {
-	INT32 i;
-
 	memset(&localcmds, 0, sizeof(ticcmd_t));
 	memset(&localcmds2, 0, sizeof(ticcmd_t));
 
 	// Reset the net command list
-	for (i = 0; i < TEXTCMD_HASH_SIZE; i++)
+	for (INT32 i = 0; i < TEXTCMD_HASH_SIZE; i++)
 		while (textcmds[i])
 			D_Clearticcmd(textcmds[i]->tic);
 }
@@ -229,8 +225,7 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 	realstart = netbuffer->u.serverpak.starttic;
 	realend = realstart + netbuffer->u.serverpak.numtics;
 
-	if (realend > gametic + CLIENTBACKUPTICS)
-		realend = gametic + CLIENTBACKUPTICS;
+	realend = min(realend, gametic + CLIENTBACKUPTICS);
 	cl_packetmissed = realstart > neededtic;
 
 	if (realstart <= neededtic && realend > neededtic)
@@ -304,9 +299,8 @@ void CL_SendClientCmd(void)
 static tic_t SV_CalculateNumTicsForPacket(SINT8 nodenum, tic_t firsttic, tic_t lasttic)
 {
 	size_t size = BASESERVERTICSSIZE;
-	tic_t tic;
 
-	for (tic = firsttic; tic < lasttic; tic++)
+	for (tic_t tic = firsttic; tic < lasttic; tic++)
 	{
 		size += sizeof (ticcmd_t) * doomcom->numslots;
 		size += TotalTextCmdPerTic(tic);
@@ -344,15 +338,12 @@ static tic_t SV_CalculateNumTicsForPacket(SINT8 nodenum, tic_t firsttic, tic_t l
 // send tic from firstticstosend to maketic-1
 void SV_SendTics(void)
 {
-	tic_t realfirsttic, lasttictosend, i;
-	UINT32 n;
-	size_t packsize;
-	UINT8 *bufpos;
+	tic_t realfirsttic, lasttictosend;
 
 	// send to all client but not to me
 	// for each node create a packet with x tics and send it
 	// x is computed using netnodes[n].supposedtic, max packet size and maketic
-	for (n = 1; n < MAXNETNODES; n++)
+	for (INT32 n = 1; n < MAXNETNODES; n++)
 		if (netnodes[n].ingame)
 		{
 			// assert netnodes[n].supposedtic>=netnodes[n].tic
@@ -367,42 +358,42 @@ void SV_SendTics(void)
 				// (getpacket servertics case)
 				DEBFILE(va("Nothing to send node %u mak=%u sup=%u net=%u \n",
 					n, maketic, netnodes[n].supposedtic, netnodes[n].tic));
+
 				realfirsttic = netnodes[n].tic;
+
 				if (realfirsttic >= lasttictosend || (I_GetTime() + n)&3)
 					// all tic are ok
 					continue;
+
 				DEBFILE(va("Sent %d anyway\n", realfirsttic));
 			}
-			if (realfirsttic < firstticstosend)
-				realfirsttic = firstticstosend;
+			realfirsttic = max(realfirsttic, firstticstosend);
 
 			lasttictosend = realfirsttic + SV_CalculateNumTicsForPacket(n, realfirsttic, lasttictosend);
 
-			// Send the tics
+			// Prepare the packet header
 			netbuffer->packettype = PT_SERVERTICS;
 			netbuffer->u.serverpak.starttic = realfirsttic;
 			netbuffer->u.serverpak.numtics = (UINT8)(lasttictosend - realfirsttic);
 			netbuffer->u.serverpak.numslots = (UINT8)SHORT(doomcom->numslots);
-			bufpos = (UINT8 *)&netbuffer->u.serverpak.cmds;
 
-			for (i = realfirsttic; i < lasttictosend; i++)
-			{
+			// Fill and send the packet
+			UINT8 *bufpos = (UINT8 *)&netbuffer->u.serverpak.cmds;
+			for (tic_t i = realfirsttic; i < lasttictosend; i++)
 				bufpos = G_DcpyTiccmd(bufpos, netcmds[i%BACKUPTICS], doomcom->numslots * sizeof (ticcmd_t));
-			}
-
-			// add textcmds
-			for (i = realfirsttic; i < lasttictosend; i++)
-				SV_WriteNetCommandsForTic();
-			packsize = bufpos - (UINT8 *)&(netbuffer->u);
-
+			for (tic_t i = realfirsttic; i < lasttictosend; i++)
+				SV_WriteNetCommandsForTic(i, &bufpos);
+			size_t packsize = bufpos - (UINT8 *)&(netbuffer->u);
 			HSendPacket(n, false, 0, packsize);
+
 			// when tic are too large, only one tic is sent so don't go backward!
 			if (lasttictosend-doomcom->extratics > realfirsttic)
 				netnodes[n].supposedtic = lasttictosend-doomcom->extratics;
 			else
 				netnodes[n].supposedtic = lasttictosend;
-			if (netnodes[n].supposedtic < netnodes[n].tic) netnodes[n].supposedtic = netnodes[n].tic;
+			netnodes[n].supposedtic = max(netnodes[n].supposedtic, netnodes[n].tic);
 		}
+
 	// node 0 is me!
 	netnodes[0].supposedtic = maketic;
 }
@@ -413,7 +404,8 @@ void Local_Maketic(INT32 realtics)
 	D_ProcessEvents(); // menu responder, cons responder,
 	                   // game responder calls HU_Responder, AM_Responder,
 	                   // and G_MapEventsToControls
-	if (!dedicated) rendergametic = gametic;
+	if (!dedicated)
+		rendergametic = gametic;
 	// translate inputs (keyboard/mouse/gamepad) into game controls
 	G_BuildTiccmd(&localcmds, realtics, 1);
 	if (splitscreen || botingame)
@@ -426,9 +418,7 @@ void Local_Maketic(INT32 realtics)
 // create missed tic
 void SV_Maketic(void)
 {
-	INT32 i;
-
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		if (!playeringame[i])
 			continue;

@@ -43,9 +43,7 @@ boolean cl_redownloadinggamestate = false;
 
 boolean SV_ResendingSavegameToAnyone(void)
 {
-	INT32 i;
-
-	for (i = 0; i < MAXNETNODES; i++)
+	for (INT32 i = 0; i < MAXNETNODES; i++)
 		if (netnodes[i].resendingsavegame)
 			return true;
 	return false;
@@ -236,9 +234,7 @@ void CL_LoadReceivedSavegame(boolean reloading)
 
 void CL_ReloadReceivedSavegame(void)
 {
-	INT32 i;
-
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		LUA_InvalidatePlayer(&players[i]);
 		sprintf(player_names[i], "Player %d", i + 1);

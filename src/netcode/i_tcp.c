@@ -416,24 +416,20 @@ static boolean SOCK_cmpaddr(mysockaddr_t *a, mysockaddr_t *b, UINT8 mask)
   */
 static void cleanupnodes(void)
 {
-	SINT8 j;
-
 	if (!Playing())
 		return;
 
 	// Why can't I start at zero?
-	for (j = 1; j < MAXNETNODES; j++)
+	for (SINT8 j = 1; j < MAXNETNODES; j++)
 		if (!(netnodes[j].ingame || SendingFile(j)))
 			nodeconnected[j] = false;
 }
 
 static SINT8 getfreenode(void)
 {
-	SINT8 j;
-
 	cleanupnodes();
 
-	for (j = 0; j < MAXNETNODES; j++)
+	for (SINT8 j = 0; j < MAXNETNODES; j++)
 		if (!nodeconnected[j])
 		{
 			nodeconnected[j] = true;
@@ -446,7 +442,7 @@ static SINT8 getfreenode(void)
 	  *          downloading a needed wad, but it's better than not letting anyone join...
 	  */
 	/*I_Error("No more free nodes!!1!11!11!!1111\n");
-	for (j = 1; j < MAXNETNODES; j++)
+	for (SINT8 j = 1; j < MAXNETNODES; j++)
 		if (!netnodes[j].ingame)
 			return j;*/
 
@@ -458,9 +454,8 @@ void Command_Numnodes(void)
 {
 	INT32 connected = 0;
 	INT32 ingame = 0;
-	INT32 i;
 
-	for (i = 1; i < MAXNETNODES; i++)
+	for (INT32 i = 1; i < MAXNETNODES; i++)
 	{
 		if (!(nodeconnected[i] || netnodes[i].ingame))
 			continue;
@@ -496,13 +491,13 @@ void Command_Numnodes(void)
 // Returns true if a packet was received from a new node, false in all other cases
 static boolean SOCK_Get(void)
 {
-	size_t i, n;
+	size_t i;
 	int j;
 	ssize_t c;
 	mysockaddr_t fromaddress;
 	socklen_t fromlen;
 
-	for (n = 0; n < mysocketses; n++)
+	for (size_t n = 0; n < mysocketses; n++)
 	{
 		fromlen = (socklen_t)sizeof(fromaddress);
 		c = recvfrom(mysockets[n], (char *)&doomcom->data, MAXPACKETLENGTH, 0,
@@ -563,10 +558,9 @@ static fd_set masterset;
 #ifdef SELECTTEST
 static boolean FD_CPY(fd_set *src, fd_set *dst, SOCKET_TYPE *fd, size_t len)
 {
-	size_t i;
 	boolean testset = false;
 	FD_ZERO(dst);
-	for (i = 0; i < len;i++)
+	for (size_t i = 0; i < len;i++)
 	{
 		if(fd[i] != (SOCKET_TYPE)ERRSOCKET &&
 		   FD_ISSET(fd[i], src) && !FD_ISSET(fd[i], dst)) // no checking for dups
@@ -630,16 +624,15 @@ static inline ssize_t SOCK_SendToAddr(SOCKET_TYPE socket, mysockaddr_t *sockaddr
 static void SOCK_Send(void)
 {
 	ssize_t c = ERRSOCKET;
-	size_t i, j;
 
 	if (!nodeconnected[doomcom->remotenode])
 		return;
 
 	if (doomcom->remotenode == BROADCASTADDR)
 	{
-		for (i = 0; i < mysocketses; i++)
+		for (size_t i = 0; i < mysocketses; i++)
 		{
-			for (j = 0; j < broadcastaddresses; j++)
+			for (size_t j = 0; j < broadcastaddresses; j++)
 			{
 				if (myfamily[i] == broadcastaddress[j].any.sa_family)
 					SOCK_SendToAddr(mysockets[i], &broadcastaddress[j]);
@@ -649,7 +642,7 @@ static void SOCK_Send(void)
 	}
 	else if (nodesocket[doomcom->remotenode] == (SOCKET_TYPE)ERRSOCKET)
 	{
-		for (i = 0; i < mysocketses; i++)
+		for (size_t i = 0; i < mysocketses; i++)
 		{
 			if (myfamily[i] == clientaddress[doomcom->remotenode].any.sa_family)
 				SOCK_SendToAddr(mysockets[i], &clientaddress[doomcom->remotenode]);
@@ -1082,8 +1075,7 @@ boolean I_InitTcpDriver(void)
 
 static void SOCK_CloseSocket(void)
 {
-	size_t i;
-	for (i=0; i < MAXNETNODES+1; i++)
+	for (size_t i=0; i < MAXNETNODES+1; i++)
 	{
 		if (mysockets[i] != (SOCKET_TYPE)ERRSOCKET
 		 && FD_ISSET(mysockets[i], &masterset))
@@ -1154,12 +1146,10 @@ static SINT8 SOCK_NetMakeNodewPort(const char *address, const char *port)
 
 static boolean SOCK_OpenSocket(void)
 {
-	size_t i;
-
 	memset(clientaddress, 0, sizeof (clientaddress));
 
 	nodeconnected[0] = true; // always connected to self
-	for (i = 1; i < MAXNETNODES; i++)
+	for (size_t i = 1; i < MAXNETNODES; i++)
 		nodeconnected[i] = false;
 	nodeconnected[BROADCASTADDR] = true;
 	I_NetSend = SOCK_Send;

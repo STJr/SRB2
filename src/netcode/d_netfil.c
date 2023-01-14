@@ -128,9 +128,7 @@ consvar_t cv_downloadspeed = CVAR_INIT ("downloadspeed", "16", CV_SAVE|CV_NETVAR
 
 static UINT16 GetWadNumFromFileNeededId(UINT8 id)
 {
-	UINT16 wadnum;
-
-	for (wadnum = mainwads; wadnum < numwadfiles; wadnum++)
+	for (UINT16 wadnum = mainwads; wadnum < numwadfiles; wadnum++)
 	{
 		if (!wadfiles[wadnum]->important)
 			continue;
@@ -150,14 +148,13 @@ static UINT16 GetWadNumFromFileNeededId(UINT8 id)
   */
 UINT8 *PutFileNeeded(UINT16 firstfile)
 {
-	size_t i;
 	UINT8 count = 0;
 	UINT8 *p_start = netbuffer->packettype == PT_MOREFILESNEEDED ? netbuffer->u.filesneededcfg.files : netbuffer->u.serverinfo.fileneeded;
 	UINT8 *p = p_start;
 	char wadfilename[MAX_WADPATH] = "";
 	UINT8 filestatus, folder;
 
-	for (i = mainwads; i < numwadfiles; i++) //mainwads, otherwise we start on the first mainwad
+	for (size_t i = mainwads; i < numwadfiles; i++) //mainwads, otherwise we start on the first mainwad
 	{
 		// If it has only music/sound lumps, don't put it in the list
 		if (!wadfiles[i]->important)
@@ -232,7 +229,6 @@ void FreeFileNeeded(void)
   */
 void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr, UINT16 firstfile)
 {
-	INT32 i;
 	UINT8 *p;
 	UINT8 filestatus;
 
@@ -241,7 +237,7 @@ void D_ParseFileneeded(INT32 fileneedednum_parm, UINT8 *fileneededstr, UINT16 fi
 
 	AllocFileNeeded(fileneedednum);
 
-	for (i = firstfile; i < fileneedednum; i++)
+	for (INT32 i = firstfile; i < fileneedednum; i++)
 	{
 		fileneeded[i].type = FILENEEDED_WAD;
 		fileneeded[i].status = FS_NOTCHECKED; // We haven't even started looking for the file yet
@@ -281,9 +277,9 @@ void CL_PrepareDownloadSaveGame(const char *tmpsave)
   */
 boolean CL_CheckDownloadable(void)
 {
-	UINT8 i,dlstatus = 0;
+	UINT8 dlstatus = 0;
 
-	for (i = 0; i < fileneedednum; i++)
+	for (UINT8 i = 0; i < fileneedednum; i++)
 		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN)
 		{
 			if (fileneeded[i].willsend == 1)
@@ -304,7 +300,7 @@ boolean CL_CheckDownloadable(void)
 
 	// not downloadable, put reason in console
 	CONS_Alert(CONS_NOTICE, M_GetText("You need additional files to connect to this server:\n"));
-	for (i = 0; i < fileneedednum; i++)
+	for (UINT8 i = 0; i < fileneedednum; i++)
 		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN)
 		{
 			CONS_Printf(" * \"%s\" (%dK)", fileneeded[i].filename, fileneeded[i].totalsize >> 10);
@@ -374,14 +370,13 @@ void CL_AbortDownloadResume(void)
 boolean CL_SendFileRequest(void)
 {
 	char *p;
-	INT32 i;
 	INT64 totalfreespaceneeded = 0, availablefreespace;
 
 #ifdef PARANOIA
 	if (M_CheckParm("-nodownload"))
 		I_Error("Attempted to download files in -nodownload mode");
 
-	for (i = 0; i < fileneedednum; i++)
+	for (INT32 i = 0; i < fileneedednum; i++)
 		if (fileneeded[i].status != FS_FOUND && fileneeded[i].status != FS_OPEN
 			&& (fileneeded[i].willsend == 0 || fileneeded[i].willsend == 2))
 		{
@@ -391,7 +386,7 @@ boolean CL_SendFileRequest(void)
 
 	netbuffer->packettype = PT_REQUESTFILE;
 	p = (char *)netbuffer->u.textcmd;
-	for (i = 0; i < fileneedednum; i++)
+	for (INT32 i = 0; i < fileneedednum; i++)
 		if ((fileneeded[i].status == FS_NOTFOUND || fileneeded[i].status == FS_MD5SUMBAD))
 		{
 			totalfreespaceneeded += fileneeded[i].totalsize;
@@ -422,7 +417,6 @@ boolean CL_SendFileRequest(void)
 void PT_RequestFile(SINT8 node)
 {
 	UINT8 *p = netbuffer->u.textcmd;
-	UINT8 id;
 
 	if (client || !cv_downloading.value)
 	{
@@ -432,7 +426,7 @@ void PT_RequestFile(SINT8 node)
 
 	while (p < netbuffer->u.textcmd + MAXTEXTCMD-1) // Don't allow hacked client to overflow
 	{
-		id = READUINT8(p);
+		UINT8 id = READUINT8(p);
 		if (id == 0xFF)
 			break;
 
@@ -543,9 +537,7 @@ INT32 CL_CheckFiles(void)
 // Load it now
 boolean CL_LoadServerFiles(void)
 {
-	INT32 i;
-
-	for (i = 0; i < fileneedednum; i++)
+	for (INT32 i = 0; i < fileneedednum; i++)
 	{
 		if (fileneeded[i].status == FS_OPEN)
 			continue; // Already loaded
@@ -641,11 +633,10 @@ void AddLuaFileTransfer(const char *filename, const char *mode)
 
 static void SV_PrepareSendLuaFileToNextNode(void)
 {
-	INT32 i;
 	UINT8 success = 1;
 
     // Find a client to send the file to
-	for (i = 1; i < MAXNETNODES; i++)
+	for (INT32 i = 1; i < MAXNETNODES; i++)
 		if (luafiletransfers->nodestatus[i] == LFTNS_WAITING) // Node waiting
 		{
 			// Tell the client we're about to send them the file
@@ -667,12 +658,11 @@ static void SV_PrepareSendLuaFileToNextNode(void)
 void SV_PrepareSendLuaFile(void)
 {
 	char *binfilename;
-	INT32 i;
 
 	luafiletransfers->ongoing = true;
 
 	// Set status to "waiting" for everyone
-	for (i = 0; i < MAXNETNODES; i++)
+	for (INT32 i = 0; i < MAXNETNODES; i++)
 		luafiletransfers->nodestatus[i] = (netnodes[i].ingame ? LFTNS_WAITING : LFTNS_NONE);
 
 	if (FIL_ReadFileOK(luafiletransfers->realfilename))
@@ -1153,7 +1143,6 @@ void PT_FileAck(SINT8 node)
 {
 	fileack_pak *packet = &netbuffer->u.fileack;
 	filetran_t *trans = &transfer[node];
-	INT32 i, j;
 
 	if (client)
 		return;
@@ -1175,11 +1164,11 @@ void PT_FileAck(SINT8 node)
 			trans->dontsenduntil = 0;
 	}
 
-	for (i = 0; i < packet->numsegments; i++)
+	for (INT32 i = 0; i < packet->numsegments; i++)
 	{
 		fileacksegment_t *segment = &packet->segments[i];
 
-		for (j = 0; j < 32; j++)
+		for (INT32 j = 0; j < 32; j++)
 			if (LONG(segment->acks) & (1 << j))
 			{
 				if (LONG(segment->start) * FILEFRAGMENTSIZE >= trans->txlist->size)
@@ -1215,13 +1204,12 @@ void PT_FileReceived(SINT8 node)
 static void SendAckPacket(fileack_pak *packet, UINT8 fileid)
 {
 	size_t packetsize;
-	INT32 i;
 
 	packetsize = sizeof(*packet) + packet->numsegments * sizeof(*packet->segments);
 
 	// Finalise the packet
 	packet->fileid = fileid;
-	for (i = 0; i < packet->numsegments; i++)
+	for (INT32 i = 0; i < packet->numsegments; i++)
 	{
 		packet->segments[i].start = LONG(packet->segments[i].start);
 		packet->segments[i].acks = LONG(packet->segments[i].acks);
@@ -1261,9 +1249,7 @@ static void AddFragmentToAckPacket(fileack_pak *packet, UINT8 iteration, UINT32 
 
 void FileReceiveTicker(void)
 {
-	INT32 i;
-
-	for (i = 0; i < fileneedednum; i++)
+	for (INT32 i = 0; i < fileneedednum; i++)
 	{
 		fileneeded_t *file = &fileneeded[i];
 
@@ -1277,8 +1263,7 @@ void FileReceiveTicker(void)
 			if (file->ackresendposition != UINT32_MAX && file->status == FS_DOWNLOADING)
 			{
 				// Acknowledge ~70 MB/s, whichs means the client sends ~18 KB/s
-				INT32 j;
-				for (j = 0; j < 2048; j++)
+				for (INT32 j = 0; j < 2048; j++)
 				{
 					if (file->receivedfragments[file->ackresendposition])
 						AddFragmentToAckPacket(file->ackpacket, file->iteration, file->ackresendposition, i);
@@ -1500,15 +1485,14 @@ void SV_AbortSendFiles(INT32 node)
 
 void CloseNetFile(void)
 {
-	INT32 i;
 	// Is sending?
-	for (i = 0; i < MAXNETNODES; i++)
+	for (INT32 i = 0; i < MAXNETNODES; i++)
 		SV_AbortSendFiles(i);
 
 	// Receiving a file?
 	if (fileneeded)
 	{
-		for (i = 0; i < fileneedednum; i++)
+		for (INT32 i = 0; i < fileneedednum; i++)
 			if (fileneeded[i].status == FS_DOWNLOADING && fileneeded[i].file)
 			{
 				fclose(fileneeded[i].file);
@@ -1541,9 +1525,7 @@ void CloseNetFile(void)
 
 void Command_Downloads_f(void)
 {
-	INT32 node;
-
-	for (node = 0; node < MAXNETNODES; node++)
+	for (INT32 node = 0; node < MAXNETNODES; node++)
 		if (transfer[node].txlist
 		&& transfer[node].txlist->ram == SF_FILE) // Node is downloading a file?
 		{
@@ -1577,14 +1559,11 @@ void Command_Downloads_f(void)
 
 void nameonly(char *s)
 {
-	size_t j, len;
-	void *ns;
-
-	for (j = strlen(s); j != (size_t)-1; j--)
+	for (size_t j = strlen(s); j != (size_t)-1; j--)
 		if ((s[j] == '\\') || (s[j] == ':') || (s[j] == '/'))
 		{
-			ns = &(s[j+1]);
-			len = strlen(ns);
+			void *ns = &(s[j+1]);
+			size_t len = strlen(ns);
 #if 0
 			M_Memcpy(s, ns, len+1);
 #else
@@ -1597,9 +1576,9 @@ void nameonly(char *s)
 // Returns the length in characters of the last element of a path.
 size_t nameonlylength(const char *s)
 {
-	size_t j, len = strlen(s);
+	size_t len = strlen(s);
 
-	for (j = len; j != (size_t)-1; j--)
+	for (size_t j = len; j != (size_t)-1; j--)
 		if ((s[j] == '\\') || (s[j] == ':') || (s[j] == '/'))
 			return len - j - 1;
 

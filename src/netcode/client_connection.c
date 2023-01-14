@@ -60,7 +60,7 @@ static inline void CL_DrawConnectionStatus(void)
 
 	if (cl_mode != CL_DOWNLOADFILES && cl_mode != CL_LOADFILES)
 	{
-		INT32 i, animtime = ((ccstime / 4) & 15) + 16;
+		INT32 animtime = ((ccstime / 4) & 15) + 16;
 		UINT8 palstart;
 		const char *cltext;
 
@@ -75,7 +75,7 @@ static inline void CL_DrawConnectionStatus(void)
 			palstart = 96; // Green
 
 		if (!(cl_mode == CL_DOWNLOADSAVEGAME && lastfilenum != -1))
-			for (i = 0; i < 16; ++i) // 15 pal entries total.
+			for (INT32 i = 0; i < 16; ++i) // 15 pal entries total.
 				V_DrawFill((BASEVIDWIDTH/2-128) + (i * 16), BASEVIDHEIGHT-16, 16, 8, palstart + ((animtime - i) & 15));
 
 		switch (cl_mode)
@@ -134,14 +134,13 @@ static inline void CL_DrawConnectionStatus(void)
 		{
 			INT32 totalfileslength;
 			INT32 loadcompletednum = 0;
-			INT32 i;
 
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
 
 			//ima just count files here
 			if (fileneeded)
 			{
-				for (i = 0; i < fileneedednum; i++)
+				for (INT32 i = 0; i < fileneedednum; i++)
 					if (fileneeded[i].status == FS_OPEN)
 						loadcompletednum++;
 			}
@@ -277,9 +276,7 @@ UINT32 serverlistcount = 0;
 
 static void SL_ClearServerList(INT32 connectedserver)
 {
-	UINT32 i;
-
-	for (i = 0; i < serverlistcount; i++)
+	for (UINT32 i = 0; i < serverlistcount; i++)
 		if (connectedserver != serverlist[i].node)
 		{
 			Net_CloseConnection(serverlist[i].node|FORCECLOSE);
@@ -290,8 +287,7 @@ static void SL_ClearServerList(INT32 connectedserver)
 
 static UINT32 SL_SearchServer(INT32 node)
 {
-	UINT32 i;
-	for (i = 0; i < serverlistcount; i++)
+	for (UINT32 i = 0; i < serverlistcount; i++)
 		if (serverlist[i].node == node)
 			return i;
 
@@ -388,9 +384,7 @@ Fetch_servers_thread (struct Fetch_servers_ctx *ctx)
 
 void CL_QueryServerList (msg_server_t *server_list)
 {
-	INT32 i;
-
-	for (i = 0; server_list[i].header.buffer[0]; i++)
+	for (INT32 i = 0; server_list[i].header.buffer[0]; i++)
 	{
 		// Make sure MS version matches our own, to
 		// thwart nefarious servers who lie to the MS.
@@ -781,7 +775,6 @@ static boolean CL_ServerConnectionSearchTicker(tic_t *asksent)
 static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic_t *asksent)
 {
 	boolean waitmore;
-	INT32 i;
 
 	switch (cl_mode)
 	{
@@ -808,7 +801,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			break;
 		case CL_DOWNLOADFILES:
 			waitmore = false;
-			for (i = 0; i < fileneedednum; i++)
+			for (INT32 i = 0; i < fileneedednum; i++)
 				if (fileneeded[i].status == FS_DOWNLOADING
 					|| fileneeded[i].status == FS_REQUESTED)
 				{

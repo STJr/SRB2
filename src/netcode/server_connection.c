@@ -55,7 +55,6 @@ static INT32 FindRejoinerNum(SINT8 node)
 	char strippednodeaddress[64];
 	const char *nodeaddress;
 	char *port;
-	INT32 i;
 
 	// Make sure there is no dead dress before proceeding to the stripping
 	if (!I_GetNodeAddress)
@@ -71,7 +70,7 @@ static INT32 FindRejoinerNum(SINT8 node)
 		*port = '\0';
 
 	// Check if any player matches the stripped address
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (INT32 i = 0; i < MAXPLAYERS; i++)
 	{
 		if (playeringame[i] && playeraddress[i][0] && playernode[i] == UINT8_MAX
 		&& !strcmp(playeraddress[i], strippednodeaddress))
@@ -162,10 +161,9 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 
 static void SV_SendPlayerInfo(INT32 node)
 {
-	UINT8 i;
 	netbuffer->packettype = PT_PLAYERINFO;
 
-	for (i = 0; i < MAXPLAYERS; i++)
+	for (UINT8 i = 0; i < MAXPLAYERS; i++)
 	{
 		if (!playeringame[i])
 		{
@@ -425,7 +423,6 @@ void PT_ClientJoin(SINT8 node)
 	char names[MAXSPLITSCREENPLAYERS][MAXPLAYERNAME + 1];
 	INT32 numplayers = netbuffer->u.clientcfg.localplayers;
 	INT32 rejoinernum;
-	INT32 i;
 
 	// Ignore duplicate packets
 	if (client || netnodes[node].ingame)
@@ -440,7 +437,7 @@ void PT_ClientJoin(SINT8 node)
 		return;
 	}
 
-	for (i = 0; i < numplayers; i++)
+	for (INT32 i = 0; i < numplayers; i++)
 	{
 		strlcpy(names[i], netbuffer->u.clientcfg.names[i], MAXPLAYERNAME + 1);
 		if (!EnsurePlayerNameIsGood(names[i], rejoinernum))
@@ -469,7 +466,7 @@ void PT_ClientJoin(SINT8 node)
 	}
 
 	// Splitscreen can allow 2 players in one node
-	for (i = 0; i < numplayers; i++)
+	for (INT32 i = 0; i < numplayers; i++)
 		SV_AddPlayer(node, names[i]);
 
 	joindelay += cv_joindelay.value * TICRATE;
