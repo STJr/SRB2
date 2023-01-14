@@ -246,7 +246,7 @@ void PT_ServerTics(SINT8 node, INT32 netconsole)
 			pak = G_ScpyTiccmd(netcmds[i%BACKUPTICS], pak,
 				netbuffer->u.serverpak.numslots*sizeof (ticcmd_t));
 
-			SV_CopyNetCommandsToServerPacket(i);
+			CL_CopyNetCommandsFromServerPacket(i);
 		}
 
 		neededtic = realend;
