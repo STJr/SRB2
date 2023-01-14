@@ -58,6 +58,7 @@ size_t TotalTextCmdPerTic(tic_t tic);
 
 void PT_TextCmd(SINT8 node, INT32 netconsole);
 void SV_CopyNetCommandsToServerPacket(tic_t tic);
+void CL_SendNetCommands(void);
 void SendKick(UINT8 playernum, UINT8 msg);
 void SendKicksForNode(SINT8 node, UINT8 msg);
 

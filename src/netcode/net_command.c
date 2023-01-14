@@ -324,6 +324,28 @@ void SV_CopyNetCommandsToServerPacket(tic_t tic)
 }
 
 void CL_SendNetCommands(void)
+{
+	// Send extra data if needed
+	if (localtextcmd[0])
+	{
+		netbuffer->packettype = PT_TEXTCMD;
+		M_Memcpy(netbuffer->u.textcmd,localtextcmd, localtextcmd[0]+1);
+		// All extra data have been sent
+		if (HSendPacket(servernode, true, 0, localtextcmd[0]+1)) // Send can fail...
+			localtextcmd[0] = 0;
+	}
+
+	// Send extra data if needed for player 2 (splitscreen)
+	if (localtextcmd2[0])
+	{
+		netbuffer->packettype = PT_TEXTCMD2;
+		M_Memcpy(netbuffer->u.textcmd, localtextcmd2, localtextcmd2[0]+1);
+		// All extra data have been sent
+		if (HSendPacket(servernode, true, 0, localtextcmd2[0]+1)) // Send can fail...
+			localtextcmd2[0] = 0;
+	}
+}
+
 void SendKick(UINT8 playernum, UINT8 msg)
 {
 	UINT8 buf[2];
