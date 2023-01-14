@@ -16,6 +16,7 @@
 #include "server_connection.h"
 #include "d_clisrv.h"
 #include "i_net.h"
+#include "../byteptr.h"
 #include "../g_game.h"
 #include "../z_zone.h"
 #include "../doomtype.h"
