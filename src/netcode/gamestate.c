@@ -242,8 +242,7 @@ void CL_ReloadReceivedSavegame(void)
 
 	CL_LoadReceivedSavegame(true);
 
-	if (neededtic < gametic)
-		neededtic = gametic;
+	neededtic = max(neededtic, gametic);
 	maketic = neededtic;
 
 	ticcmd_oldangleturn[0] = players[consoleplayer].oldrelangleturn;
