@@ -148,8 +148,9 @@ static void CheckConsistancy(SINT8 nodenum, tic_t tic)
 	}
 }
 
-void PT_ClientCmd(SINT8 node, INT32 netconsole)
+void PT_ClientCmd(SINT8 nodenum, INT32 netconsole)
 {
+	netnode_t *node = &netnodes[nodenum];
 	tic_t realend, realstart;
 
 	if (client)
@@ -157,24 +158,24 @@ void PT_ClientCmd(SINT8 node, INT32 netconsole)
 
 	// To save bytes, only the low byte of tic numbers are sent
 	// Use ExpandTics to figure out what the rest of the bytes are
-	realstart = ExpandTics(netbuffer->u.clientpak.client_tic, node);
-	realend = ExpandTics(netbuffer->u.clientpak.resendfrom, node);
+	realstart = ExpandTics(netbuffer->u.clientpak.client_tic, nodenum);
+	realend = ExpandTics(netbuffer->u.clientpak.resendfrom, nodenum);
 
 	if (netbuffer->packettype == PT_CLIENTMIS || netbuffer->packettype == PT_CLIENT2MIS
 		|| netbuffer->packettype == PT_NODEKEEPALIVEMIS
-		|| netnodes[node].supposedtic < realend)
+		|| node->supposedtic < realend)
 	{
-		netnodes[node].supposedtic = realend;
+		node->supposedtic = realend;
 	}
 	// Discard out of order packet
-	if (netnodes[node].tic > realend)
+	if (node->tic > realend)
 	{
-		DEBFILE(va("out of order ticcmd discarded nettics = %u\n", netnodes[node].tic));
+		DEBFILE(va("out of order ticcmd discarded nettics = %u\n", node->tic));
 		return;
 	}
 
 	// Update the nettics
-	netnodes[node].tic = realend;
+	node->tic = realend;
 
 	// Don't do anything for packets of type NODEKEEPALIVE?
 	if (netconsole == -1 || netbuffer->packettype == PT_NODEKEEPALIVE
@@ -183,19 +184,19 @@ void PT_ClientCmd(SINT8 node, INT32 netconsole)
 
 	// As long as clients send valid ticcmds, the server can keep running, so reset the timeout
 	/// \todo Use a separate cvar for that kind of timeout?
-	netnodes[node].freezetimeout = I_GetTime() + connectiontimeout;
+	node->freezetimeout = I_GetTime() + connectiontimeout;
 
 	// Copy ticcmd
 	G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][netconsole], &netbuffer->u.clientpak.cmd, 1);
 
 	// Splitscreen cmd
 	if ((netbuffer->packettype == PT_CLIENT2CMD || netbuffer->packettype == PT_CLIENT2MIS)
-		&& netnodes[node].player2 >= 0)
-		G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][(UINT8)netnodes[node].player2],
+		&& node->player2 >= 0)
+		G_MoveTiccmd(&netcmds[maketic%BACKUPTICS][(UINT8)node->player2],
 			&netbuffer->u.client2pak.cmd2, 1);
 
 	CheckTiccmdHacks(netconsole);
-	CheckConsistancy(node, realstart);
+	CheckConsistancy(nodenum, realstart);
 }
 
 void PT_ServerTics(SINT8 node, INT32 netconsole)
@@ -346,9 +347,11 @@ void SV_SendTics(void)
 	for (INT32 n = 1; n < MAXNETNODES; n++)
 		if (netnodes[n].ingame)
 		{
-			// assert netnodes[n].supposedtic>=netnodes[n].tic
-			realfirsttic = netnodes[n].supposedtic;
-			lasttictosend = min(maketic, netnodes[n].tic + CLIENTBACKUPTICS);
+			netnode_t *node = netnodes[n];
+
+			// assert node->supposedtic>=node->tic
+			realfirsttic = node->supposedtic;
+			lasttictosend = min(maketic, node->tic + CLIENTBACKUPTICS);
 
 			if (realfirsttic >= lasttictosend)
 			{
@@ -357,9 +360,9 @@ void SV_SendTics(void)
 				// packet detection work when we have received packet with firsttic > neededtic
 				// (getpacket servertics case)
 				DEBFILE(va("Nothing to send node %u mak=%u sup=%u net=%u \n",
-					n, maketic, netnodes[n].supposedtic, netnodes[n].tic));
+					n, maketic, node->supposedtic, node->tic));
 
-				realfirsttic = netnodes[n].tic;
+				realfirsttic = node->tic;
 
 				if (realfirsttic >= lasttictosend || (I_GetTime() + n)&3)
 					// all tic are ok
@@ -388,10 +391,10 @@ void SV_SendTics(void)
 
 			// when tic are too large, only one tic is sent so don't go backward!
 			if (lasttictosend-doomcom->extratics > realfirsttic)
-				netnodes[n].supposedtic = lasttictosend-doomcom->extratics;
+				node->supposedtic = lasttictosend-doomcom->extratics;
 			else
-				netnodes[n].supposedtic = lasttictosend;
-			netnodes[n].supposedtic = max(netnodes[n].supposedtic, netnodes[n].tic);
+				node->supposedtic = lasttictosend;
+			node->supposedtic = max(node->supposedtic, node->tic);
 		}
 
 	// node 0 is me!
