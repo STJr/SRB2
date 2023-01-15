@@ -170,8 +170,8 @@ static int lib_getGameKeyDown(lua_State *L)
 {
 	int i = luaL_checkinteger(L, 2);
 	if (i < 0 || i >= NUMINPUTS)
-		return luaL_error(L, "gamekeydown[] index %d out of range (0 - %d)", i, NUMINPUTS-1);
-	lua_pushboolean(L, gamekeydown[i]);
+		return luaL_error(L, "Key index %d out of range (0 - %d)", i, NUMINPUTS-1);
+	lua_pushboolean(L, G_CheckKeyDown(0, i, false) || G_CheckKeyDown(1, i, false));
 	return 1;
 }
 

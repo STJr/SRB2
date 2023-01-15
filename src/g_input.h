@@ -285,6 +285,7 @@ extern INT32 gamecontrolbis[NUM_GAMECONTROLS][2]; // secondary splitscreen playe
 extern INT32 gamecontroldefault[num_gamecontrolschemes][NUM_GAMECONTROLS][2];
 extern INT32 gamecontrolbisdefault[num_gamecontrolschemes][NUM_GAMECONTROLS][2];
 
+boolean G_CheckKeyDown(UINT8 which, INT32 key, boolean checkaxes);
 boolean G_PlayerInputDown(UINT8 which, gamecontrols_e gc);
 boolean G_CheckDigitalPlayerInput(UINT8 which, gamecontrols_e gc);
 

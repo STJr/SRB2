@@ -89,26 +89,26 @@ static boolean CheckInputDown(UINT8 which, gamecontrols_e gc, boolean checkaxes)
 {
 	INT32 (*controls)[2] = which == 0 ? gamecontrol : gamecontrolbis;
 
-	for (unsigned i = 0; i < 2; i++)
+	return G_CheckKeyDown(which, controls[gc][0], checkaxes) || G_CheckKeyDown(which, controls[gc][1], checkaxes);
+}
+
+boolean G_CheckKeyDown(UINT8 which, INT32 key, boolean checkaxes)
+{
+	if (key >= KEY_GAMEPAD && key < KEY_AXES)
 	{
-		INT32 key = controls[gc][i];
-
-		if (key >= KEY_GAMEPAD && key < KEY_AXES)
-		{
-			if (gamepads[which].buttons[key - KEY_GAMEPAD])
-				return true;
-		}
-		else if (checkaxes && (key >= KEY_AXES && key < KEY_INV_AXES + NUM_GAMEPAD_AXES))
-		{
-			const UINT16 jdeadzone = G_GetGamepadDigitalDeadZone(which);
-			const INT16 value = G_GetGamepadAxisValue(which, (key - KEY_AXES) % NUM_GAMEPAD_AXES);
-
-			if (abs(value) > jdeadzone)
-				return true;
-		}
-		else if (gamekeydown[key])
+		if (gamepads[which].buttons[key - KEY_GAMEPAD])
 			return true;
 	}
+	else if (checkaxes && (key >= KEY_AXES && key < KEY_INV_AXES + NUM_GAMEPAD_AXES))
+	{
+		const UINT16 jdeadzone = G_GetGamepadDigitalDeadZone(which);
+		const INT16 value = G_GetGamepadAxisValue(which, (key - KEY_AXES) % NUM_GAMEPAD_AXES);
+
+		if (abs(value) > jdeadzone)
+			return true;
+	}
+	else if (gamekeydown[key])
+		return true;
 
 	return false;
 }
