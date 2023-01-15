@@ -3,7 +3,7 @@
 #
 
 passthru_opts+=\
-	NO_IPV6 NOHW NOMD5 NOPOSTPROCESSING\
+	NONET NO_IPV6 NOHW NOMD5 NOPOSTPROCESSING\
 	MOBJCONSISTANCY PACKETDROP ZDEBUG\
 	HAVE_MINIUPNPC\
 
@@ -46,10 +46,12 @@ sources+=apng.c
 endif
 endif
 
+ifndef NONET
 ifndef NOCURL
 CURLCONFIG?=curl-config
 $(eval $(call Configure,CURL,$(CURLCONFIG)))
 opts+=-DHAVE_CURL
+endif
 endif
 
 ifdef HAVE_MINIUPNPC

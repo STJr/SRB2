@@ -34,7 +34,7 @@
 #include "r_sky.h"
 #include "fastcmp.h"
 #include "lua_script.h" // Reluctantly included for LUA_EvalMath
-#include "netcode/d_clisrv.h"
+#include "d_clisrv.h"
 
 #ifdef HWRENDER
 #include "hardware/hw_light.h"

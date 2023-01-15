@@ -18,7 +18,7 @@
 #include "i_gamepad.h"
 #include "keys.h"
 #include "hu_stuff.h" // need HUFONT start & end
-#include "netcode/d_net.h"
+#include "d_net.h"
 #include "console.h"
 
 #define MAXMOUSESENSITIVITY 100 // sensitivity steps

@@ -1,5 +1,9 @@
 string.c
 d_main.c
+d_clisrv.c
+d_net.c
+d_netfil.c
+d_netcmd.c
 dehacked.c
 deh_soc.c
 deh_lua.c
@@ -73,10 +77,12 @@ s_sound.c
 sounds.c
 w_wad.c
 filesrch.c
+mserv.c
+http-mserv.c
+i_tcp.c
 lzf.c
 vid_copy.s
 b_bot.c
-snake.c
 lua_script.c
 lua_baselib.c
 lua_mathlib.c

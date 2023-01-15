@@ -683,7 +683,7 @@ extern boolean singletics;
 // Netgame stuff
 // =============
 
-#include "netcode/d_clisrv.h"
+#include "d_clisrv.h"
 
 extern consvar_t cv_timetic; // display high resolution timer
 extern consvar_t cv_powerupdisplay; // display powerups

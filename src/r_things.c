@@ -34,7 +34,7 @@
 #include "p_tick.h"
 #include "p_local.h"
 #include "p_slopes.h"
-#include "netcode/d_netfil.h" // blargh. for nameonly().
+#include "d_netfil.h" // blargh. for nameonly().
 #include "m_cheat.h" // objectplace
 #ifdef HWRENDER
 #include "hardware/hw_md2.h"

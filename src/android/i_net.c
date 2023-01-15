@@ -1,4 +1,4 @@
-#include "../netcode/i_net.h"
+#include "../i_net.h"
 
 boolean I_InitNetwork(void)
 {
