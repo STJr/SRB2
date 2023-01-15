@@ -199,13 +199,19 @@ static int keyevent_get(lua_State *L)
 {
 	event_t *event = *((event_t **)luaL_checkudata(L, 1, META_KEYEVENT));
 	const char *field = luaL_checkstring(L, 2);
+	INT32 keynum;
 
 	I_Assert(event != NULL);
 
+	if (event->type == ev_gamepad_up || event->type == ev_gamepad_down)
+		keynum = event->key + KEY_GAMEPAD;
+	else
+		keynum = event->key;
+
 	if (fastcmp(field,"name"))
-		lua_pushstring(L, G_KeyNumToName(event->key));
+		lua_pushstring(L, G_KeyNumToName(keynum));
 	else if (fastcmp(field,"num"))
-		lua_pushinteger(L, event->key);
+		lua_pushinteger(L, keynum);
 	else if (fastcmp(field,"repeated"))
 		lua_pushboolean(L, event->repeated);
 	else
