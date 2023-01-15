@@ -34,7 +34,7 @@
 
 cl_mode_t cl_mode = CL_SEARCHING;
 static UINT16 cl_lastcheckedfilecount = 0;	// used for full file list
-boolean serverisfull = false; //lets us be aware if the server was full after we check files, but before downloading, so we can ask if the user still wants to download or not
+boolean serverisfull = false; // lets us be aware if the server was full after we check files, but before downloading, so we can ask if the user still wants to download or not
 tic_t firstconnectattempttime = 0;
 UINT8 mynode;
 static void *snake = NULL;
@@ -137,7 +137,7 @@ static inline void CL_DrawConnectionStatus(void)
 
 			V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT-16-16, V_YELLOWMAP, "Press ESC to abort");
 
-			//ima just count files here
+			// ima just count files here
 			if (fileneeded)
 			{
 				for (INT32 i = 0; i < fileneedednum; i++)
@@ -248,7 +248,7 @@ boolean CL_SendJoin(void)
 
 	CleanupPlayerName(consoleplayer, cv_playername.zstring);
 	if (splitscreen)
-		CleanupPlayerName(1, cv_playername2.zstring);/* 1 is a HACK? oh no */
+		CleanupPlayerName(1, cv_playername2.zstring); // 1 is a HACK? oh no
 
 	strncpy(netbuffer->u.clientcfg.names[0], cv_playername.zstring, MAXPLAYERNAME);
 	strncpy(netbuffer->u.clientcfg.names[1], cv_playername2.zstring, MAXPLAYERNAME);
@@ -306,14 +306,14 @@ static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
 		if (serverlistcount >= MAXSERVERLIST)
 			return; // list full
 
-		/* check it later if connecting to this one */
+		// check it later if connecting to this one
 		if (node != servernode)
 		{
 			if (info->_255 != 255)
-				return;/* old packet format */
+				return; // Old packet format
 
 			if (info->packetversion != PACKETVERSION)
-				return;/* old new packet format */
+				return; // Old new packet format
 
 			if (info->version != VERSION)
 				return; // Not same version.
@@ -322,7 +322,7 @@ static void SL_InsertServer(serverinfo_pak* info, SINT8 node)
 				return; // Close, but no cigar.
 
 			if (strcmp(info->application, SRB2APPLICATION))
-				return;/* that's a different mod */
+				return; // That's a different mod
 		}
 
 		i = serverlistcount++;
@@ -380,7 +380,7 @@ Fetch_servers_thread (struct Fetch_servers_ctx *ctx)
 
 	free(ctx);
 }
-#endif/*defined (MASTERSERVER) && defined (HAVE_THREADS)*/
+#endif // defined (MASTERSERVER) && defined (HAVE_THREADS)
 
 void CL_QueryServerList (msg_server_t *server_list)
 {
@@ -389,7 +389,7 @@ void CL_QueryServerList (msg_server_t *server_list)
 		// Make sure MS version matches our own, to
 		// thwart nefarious servers who lie to the MS.
 
-		/* lol bruh, that version COMES from the servers */
+		// lol bruh, that version COMES from the servers
 		//if (strcmp(version, server_list[i].version) == 0)
 		{
 			INT32 node = I_NetMakeNodewPort(server_list[i].ip, server_list[i].port);
@@ -441,7 +441,7 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 
 		ctx = malloc(sizeof *ctx);
 
-		/* This called from M_Refresh so I don't use a mutex */
+		// This called from M_Refresh so I don't use a mutex
 		m_waiting_mode = M_WAITING_SERVERS;
 
 		I_lock_mutex(&ms_QueryId_mutex);
@@ -465,7 +465,7 @@ void CL_UpdateServerList(boolean internetsearch, INT32 room)
 		}
 #endif
 	}
-#endif/*MASTERSERVER*/
+#endif // MASTERSERVER
 }
 
 static void M_ConfirmConnect(event_t *ev)
@@ -619,7 +619,7 @@ static const char * InvalidServerReason (serverinfo_pak *info)
 {
 #define EOT "\nPress ESC\n"
 
-	/* magic number for new packet format */
+	// Magic number for new packet format
 	if (info->_255 != 255)
 	{
 		return
@@ -691,10 +691,10 @@ static boolean CL_ServerConnectionSearchTicker(tic_t *asksent)
 {
 	INT32 i;
 
-	// serverlist is updated by GetPacket function
+	// serverlist is updated by GetPackets
 	if (serverlistcount > 0)
 	{
-		// this can be a responce to our broadcast request
+		// This can be a response to our broadcast request
 		if (servernode == -1 || servernode >= MAXNETNODES)
 		{
 			i = 0;
@@ -819,7 +819,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 			if (CL_LoadServerFiles())
 			{
 				FreeFileNeeded();
-				*asksent = 0; //This ensure the first join ask is right away
+				*asksent = 0; // This ensures the first join request is right away
 				firstconnectattempttime = I_GetTime();
 				cl_mode = CL_ASKJOIN;
 			}
@@ -841,9 +841,7 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 				return false;
 			}
 
-			// prepare structures to save the file
-			// WARNING: this can be useless in case of server not in GS_LEVEL
-			// but since the network layer doesn't provide ordered packets...
+			// Prepare structures to save the file
 			CL_PrepareDownloadSaveGame(tmpsave);
 
 			if (I_GetTime() >= *asksent && CL_SendJoin())
@@ -954,11 +952,6 @@ static boolean CL_ServerConnectionTicker(const char *tmpsave, tic_t *oldtic, tic
 
 #define TMPSAVENAME "$$$.sav"
 
-/** Use adaptive send using net_bandwidth and stat.sendbytes
-  *
-  * \todo Better description...
-  *
-  */
 void CL_ConnectToServer(void)
 {
 	INT32 pnumnodes, nodewaited = doomcom->numnodes, i;
@@ -1158,7 +1151,7 @@ void PT_ServerCFG(SINT8 node)
 	DEBFILE(va("Server accept join gametic=%u mynode=%d\n", gametic, mynode));
 
 	/// \note Wait. What if a Lua script uses some global custom variables synched with the NetVars hook?
-	///       Shouldn't them be downloaded even at intermission time?
+	///       Shouldn't they be downloaded even at intermission time?
 	///       Also, according to PT_ClientJoin, the server will send the savegame even during intermission...
 	if (netbuffer->u.servercfg.gamestate == GS_LEVEL/* ||
 		netbuffer->u.servercfg.gamestate == GS_INTERMISSION*/)

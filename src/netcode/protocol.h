@@ -123,13 +123,12 @@ typedef struct
 #endif
 
 // Server to client packet
-// this packet is too large
 typedef struct
 {
 	tic_t starttic;
 	UINT8 numtics;
 	UINT8 numslots; // "Slots filled": Highest player number in use plus one.
-	ticcmd_t cmds[45]; // Normally [BACKUPTIC][MAXPLAYERS] but too large
+	ticcmd_t cmds[45];
 } ATTRPACK servertics_pak;
 
 typedef struct

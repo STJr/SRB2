@@ -24,8 +24,8 @@
 #include "../doomstat.h"
 #include "../doomtype.h"
 
-tic_t firstticstosend; // min of the nettics
-tic_t tictoclear = 0; // optimize d_clearticcmd
+tic_t firstticstosend; // Smallest netnode.tic
+tic_t tictoclear = 0; // Optimize D_ClearTiccmd
 ticcmd_t localcmds;
 ticcmd_t localcmds2;
 boolean cl_packetmissed;
@@ -312,10 +312,9 @@ static tic_t SV_CalculateNumTicsForPacket(SINT8 nodenum, tic_t firsttic, tic_t l
 				sizeu1(size), tic, firsttic, lasttic));
 			lasttic = tic;
 
-			// too bad: too much player have send extradata and there is too
-			//          much data in one tic.
-			// To avoid it put the data on the next tic. (see getpacket
-			// textcmd case) but when numplayer changes the computation can be different
+			// Too bad: too many players have sent extra data
+			// and there is too much data for a single tic.
+			// To avoid that, keep the data for the next tic (see PT_TEXTCMD).
 			if (lasttic == firsttic)
 			{
 				if (size > MAXPACKETLENGTH)
@@ -335,15 +334,15 @@ static tic_t SV_CalculateNumTicsForPacket(SINT8 nodenum, tic_t firsttic, tic_t l
 	return lasttic - firsttic;
 }
 
-// send the server packet
-// send tic from firstticstosend to maketic-1
+// Sends the server packet
+// Sends tic/net commands from firstticstosend to maketic-1
 void SV_SendTics(void)
 {
 	tic_t realfirsttic, lasttictosend;
 
-	// send to all client but not to me
-	// for each node create a packet with x tics and send it
-	// x is computed using netnodes[n].supposedtic, max packet size and maketic
+	// Send to all clients except yourself
+	// For each node, create a packet with x tics and send it
+	// x is computed using node.supposedtic, max packet size and maketic
 	for (INT32 n = 1; n < MAXNETNODES; n++)
 		if (netnodes[n].ingame)
 		{
@@ -355,17 +354,17 @@ void SV_SendTics(void)
 
 			if (realfirsttic >= lasttictosend)
 			{
-				// well we have sent all tics we will so use extrabandwidth
-				// to resent packet that are supposed lost (this is necessary since lost
-				// packet detection work when we have received packet with firsttic > neededtic
-				// (getpacket servertics case)
+				// Well, we have sent all the tics, so we will use extra bandwidth
+				// to resend packets that are supposed lost.
+				// This is necessary since lost packet detection
+				// works when we receive a packet with firsttic > neededtic (PT_SERVERTICS)
 				DEBFILE(va("Nothing to send node %u mak=%u sup=%u net=%u \n",
 					n, maketic, node->supposedtic, node->tic));
 
 				realfirsttic = node->tic;
 
 				if (realfirsttic >= lasttictosend || (I_GetTime() + n)&3)
-					// all tic are ok
+					// All tics are Ok
 					continue;
 
 				DEBFILE(va("Sent %d anyway\n", realfirsttic));
@@ -389,7 +388,7 @@ void SV_SendTics(void)
 			size_t packsize = bufpos - (UINT8 *)&(netbuffer->u);
 			HSendPacket(n, false, 0, packsize);
 
-			// when tic are too large, only one tic is sent so don't go backward!
+			// When tics are too large, only one tic is sent so don't go backwards!
 			if (lasttictosend-doomcom->extratics > realfirsttic)
 				node->supposedtic = lasttictosend-doomcom->extratics;
 			else
@@ -450,6 +449,6 @@ void SV_Maketic(void)
 		}
 	}
 
-	// all tic are now proceed make the next
+	// All tics have been processed, make the next
 	maketic++;
 }

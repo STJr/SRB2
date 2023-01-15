@@ -1252,8 +1252,8 @@ void NetUpdate(void)
 
 	GetPackets(); // get packet from client or from server
 
-	// client send the command after a receive of the server
-	// the server send before because in single player is beter
+	// The client sends the command after receiving from the server
+	// The server sends it before because this is better in single player
 
 #ifdef MASTERSERVER
 	MasterClient_Ticker(); // Acking the Master Server
@@ -1402,7 +1402,7 @@ SINT8 nametonum(const char *name)
 	return -1;
 }
 
-// is there a game running
+// Is there a game running?
 boolean Playing(void)
 {
 	return (server && serverrunning) || (client && cl_mode == CL_CONNECTED);
@@ -1423,11 +1423,8 @@ INT32 D_NumPlayers(void)
 }
 
 //
-// NetUpdate
-// Builds ticcmds for console player,
-// sends out a packet
+// Consistancy
 //
-// no more use random generator, because at very first tic isn't yet synchronized
 // Note: It is called consistAncy on purpose.
 //
 INT16 Consistancy(void)
