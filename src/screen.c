@@ -27,7 +27,7 @@
 #include "hu_stuff.h"
 #include "z_zone.h"
 #include "d_main.h"
-#include "d_clisrv.h"
+#include "netcode/d_clisrv.h"
 #include "f_finale.h"
 #include "y_inter.h" // usebuffer
 #include "i_sound.h" // closed captions

@@ -17,7 +17,7 @@
 
 #include "command.h"
 #include "doomtype.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 #include "m_fixed.h"
 #include "i_system.h"
 

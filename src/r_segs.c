@@ -20,7 +20,7 @@
 
 #include "w_wad.h"
 #include "z_zone.h"
-#include "d_netcmd.h"
+#include "netcode/d_netcmd.h"
 #include "m_misc.h"
 #include "p_local.h" // Camera...
 #include "p_slopes.h"

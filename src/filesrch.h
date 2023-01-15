@@ -5,7 +5,7 @@
 #define __FILESRCH_H__
 
 #include "doomdef.h"
-#include "d_netfil.h"
+#include "netcode/d_netfil.h"
 #include "m_menu.h" // MAXSTRINGLENGTH
 #include "w_wad.h"
 

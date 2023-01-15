@@ -64,7 +64,6 @@
 #
 # Netplay incompatible
 # --------------------
-# NONET=1 - Disable online capability.
 # NOMD5=1 - Disable MD5 checksum (validation tool).
 # NOPOSTPROCESSING=1 - ?
 # MOBJCONSISTANCY=1 - ??
@@ -208,6 +207,7 @@ objdir:=$(makedir)/objs
 sources+=\
 	$(call List,Sourcefile)\
 	$(call List,blua/Sourcefile)\
+	$(call List,netcode/Sourcefile)\
 
 depends:=$(basename $(filter %.c %.s,$(sources)))
 objects:=$(basename $(filter %.c %.s %.nas,$(sources)))

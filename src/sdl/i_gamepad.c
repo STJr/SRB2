@@ -15,7 +15,7 @@
 #include "../i_system.h"
 #include "../doomdef.h"
 #include "../d_main.h"
-#include "../d_netcmd.h"
+#include "../netcode/d_netcmd.h"
 #include "../g_game.h"
 #include "../m_argv.h"
 #include "../m_menu.h"
