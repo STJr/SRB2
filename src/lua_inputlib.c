@@ -169,9 +169,13 @@ static luaL_Reg lib[] = {
 static int lib_getGameKeyDown(lua_State *L)
 {
 	int i = luaL_checkinteger(L, 2);
+	int p = luaL_optinteger(L, 3, 0);
 	if (i < 0 || i >= NUMINPUTS)
 		return luaL_error(L, "Key index %d out of range (0 - %d)", i, NUMINPUTS-1);
-	lua_pushboolean(L, G_CheckKeyDown(0, i, false) || G_CheckKeyDown(1, i, false));
+	if (p > 0)
+		lua_pushboolean(L, G_CheckKeyDown(p-1, i, false));
+	else
+		lua_pushboolean(L, G_CheckKeyDown(0, i, false) | G_CheckKeyDown(1, i, false));
 	return 1;
 }
 

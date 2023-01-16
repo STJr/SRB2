@@ -2302,21 +2302,16 @@ boolean G_LuaResponder(event_t *ev)
 {
 	boolean cancelled = false;
 
-	if (ev->type == ev_keydown)
+	switch (ev->type)
 	{
-		cancelled = LUA_HookKey(ev, HOOK(KeyDown));
-		LUA_InvalidateUserdata(ev);
+		case ev_keydown:      cancelled = LUA_HookKey(ev, HOOK(KeyDown)); break;
+		case ev_keyup:        cancelled = LUA_HookKey(ev, HOOK(KeyUp)); break;
+		case ev_gamepad_down: cancelled = LUA_HookGamepadButton(ev, HOOK(GamepadButtonDown)) | LUA_HookKey(ev, HOOK(KeyDown)); break;
+		case ev_gamepad_up:   cancelled = LUA_HookGamepadButton(ev, HOOK(GamepadButtonUp)) | LUA_HookKey(ev, HOOK(KeyUp)); break;
+		default: break;
 	}
-	else if (ev->type == ev_keyup)
-	{
-		cancelled = LUA_HookKey(ev, HOOK(KeyUp));
-		LUA_InvalidateUserdata(ev);
-	}
-	else if (ev->type == ev_gamepad_down)
-		cancelled = LUA_HookGamepadButton(ev, HOOK(GamepadButtonDown));
-	else if (ev->type == ev_gamepad_up)
-		cancelled = LUA_HookGamepadButton(ev, HOOK(GamepadButtonUp));
-
+	
+	LUA_InvalidateUserdata(ev);
 	return cancelled;
 }
 
