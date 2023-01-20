@@ -86,13 +86,8 @@ Contact_error (void)
 static void
 get_user_agent(char *buf, size_t len)
 {
-#if defined(__STDC__) && __STDC_VERSION__ >= 201112L
-	if (sprintf_s(buf, len, "%s/%s (%s; %s; %i; %i) SRB2BASE/%i", SRB2APPLICATION, VERSIONSTRING, compbranch, comprevision,  MODID, MODVERSION, CODEBASE) < 1)
+	if (snprintf(buf, len, "%s/%s (%s; %s; %i; %i) SRB2BASE/%i", SRB2APPLICATION, VERSIONSTRING, compbranch, comprevision,  MODID, MODVERSION, CODEBASE) < 0)
 		I_Error("http-mserv: get_user_agent failed");
-#else
-	if (sprintf(buf, "%s/%s (%s; %s; %i; %i) SRB2BASE/%i", SRB2APPLICATION, VERSIONSTRING, compbranch, comprevision,  MODID, MODVERSION, CODEBASE) < 0)
-		I_Error("http-mserv: get_user_agent failed");
-#endif
 }
 
 static void
