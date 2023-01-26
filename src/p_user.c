@@ -11038,6 +11038,21 @@ static void P_MinecartThink(player_t *player)
 					S_StartSound(minecart, minecart->info->activesound);
 				}
 			}
+
+			// Mark interpolation; the old positions need to be relative to the displacement from the minecart _after_ it's moved.
+			// This isn't quite correct (it captures the landing wobble) but it works well enough
+			if (detleft)
+			{
+				detleft->old_x = detleft->x - (minecart->old_x - minecart->old_x2);
+				detleft->old_y = detleft->y - (minecart->old_y - minecart->old_y2);
+				detleft->old_z = detleft->z - (minecart->old_z - minecart->old_z2);
+			}
+			if (detright)
+			{
+				detright->old_x = detright->x - (minecart->old_x - minecart->old_x2);
+				detright->old_y = detright->y - (minecart->old_y - minecart->old_y2);
+				detright->old_z = detright->z - (minecart->old_z - minecart->old_z2);
+			}
 		}
 		else
 		{
