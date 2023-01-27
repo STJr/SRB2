@@ -43,7 +43,6 @@
 #include "i_time.h"
 #include "i_threads.h"
 #include "i_video.h"
-#include "i_gamepad.h"
 #include "m_argv.h"
 #include "m_menu.h"
 #include "m_misc.h"
@@ -987,7 +986,6 @@ void D_StartTitle(void)
 	G_SetGametype(GT_COOP);
 	paused = false;
 	advancedemo = false;
-	P_StopRumble(NULL);
 	F_InitMenuPresValues();
 	F_StartTitleScreen();
 
@@ -1398,9 +1396,6 @@ void D_SRB2Main(void)
 	CONS_Printf("I_InitializeTime()...\n");
 	I_InitializeTime();
 
-	// Initializes the game logic side of gamepads
-	G_InitGamepads();
-
 	// Make backups of some SOCcable tables.
 	P_BackupTables();
 
@@ -1456,9 +1451,6 @@ void D_SRB2Main(void)
 
 	D_RegisterServerCommands();
 	D_RegisterClientCommands(); // be sure that this is called before D_CheckNetGame
-
-	I_InitGamepads();
-
 	R_RegisterEngineStuff();
 	S_RegisterSoundStuff();
 

@@ -21,7 +21,6 @@
 #include "g_game.h"
 #include "hu_stuff.h"
 #include "g_input.h"
-#include "i_gamepad.h"
 #include "m_menu.h"
 #include "r_local.h"
 #include "r_skins.h"
@@ -183,6 +182,14 @@ static CV_PossibleValue_t mouse2port_cons_t[] = {{1, "COM1"}, {2, "COM2"}, {3, "
 	{0, NULL}};
 #endif
 
+#ifdef LJOYSTICK
+static CV_PossibleValue_t joyport_cons_t[] = {{1, "/dev/js0"}, {2, "/dev/js1"}, {3, "/dev/js2"},
+	{4, "/dev/js3"}, {0, NULL}};
+#else
+// accept whatever value - it is in fact the joystick device number
+#define usejoystick_cons_t NULL
+#endif
+
 static CV_PossibleValue_t teamscramble_cons_t[] = {{0, "Off"}, {1, "Random"}, {2, "Points"}, {0, NULL}};
 
 static CV_PossibleValue_t startingliveslimit_cons_t[] = {{1, "MIN"}, {99, "MAX"}, {0, NULL}};
@@ -241,61 +248,19 @@ INT32 cv_debug;
 consvar_t cv_usemouse = CVAR_INIT ("use_mouse", "On", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse);
 consvar_t cv_usemouse2 = CVAR_INIT ("use_mouse2", "Off", CV_SAVE|CV_CALL,usemouse_cons_t, I_StartupMouse2);
 
-// We use cv_usegamepad.string as the USER-SET var
-// and cv_usegamepad.value as the INTERNAL var
-//
-// In practice, if cv_usegamepad.string == 0, this overrides
-// cv_usegamepad.value and always disables
-
-static void UseGamepad_OnChange(void)
-{
-	I_ChangeGamepad(0);
-}
-
-static void UseGamepad2_OnChange(void)
-{
-	I_ChangeGamepad(1);
-}
-
-consvar_t cv_usegamepad[2] = {
-	CVAR_INIT ("use_gamepad", "1", CV_SAVE|CV_CALL, NULL, UseGamepad_OnChange),
-	CVAR_INIT ("use_gamepad2", "2", CV_SAVE|CV_CALL, NULL, UseGamepad2_OnChange)
-};
-
-static void PadScale_OnChange(void)
-{
-	I_SetGamepadDigital(0, cv_gamepad_scale[0].value == 0);
-}
-
-static void PadScale2_OnChange(void)
-{
-	I_SetGamepadDigital(1, cv_gamepad_scale[1].value == 0);
-}
-
-consvar_t cv_gamepad_scale[2] = {
-	CVAR_INIT ("padscale", "1", CV_SAVE|CV_CALL, NULL, PadScale_OnChange),
-	CVAR_INIT ("padscale2", "1", CV_SAVE|CV_CALL, NULL, PadScale2_OnChange)
-};
-
-static void PadRumble_OnChange(void)
-{
-	if (!cv_gamepad_rumble[0].value)
-		I_StopGamepadRumble(0);
-}
-
-static void PadRumble2_OnChange(void)
-{
-	if (!cv_gamepad_rumble[1].value)
-		I_StopGamepadRumble(1);
-}
-
-consvar_t cv_gamepad_rumble[2] = {
-	CVAR_INIT ("padrumble", "Off", CV_SAVE|CV_CALL, CV_OnOff, PadRumble_OnChange),
-	CVAR_INIT ("padrumble2", "Off", CV_SAVE|CV_CALL, CV_OnOff, PadRumble2_OnChange)
-};
-
-consvar_t cv_gamepad_autopause = CVAR_INIT ("pauseongamepaddisconnect", "On", CV_SAVE, CV_OnOff, NULL);
-
+consvar_t cv_usejoystick = CVAR_INIT ("use_gamepad", "1", CV_SAVE|CV_CALL, usejoystick_cons_t, I_InitJoystick);
+consvar_t cv_usejoystick2 = CVAR_INIT ("use_gamepad2", "2", CV_SAVE|CV_CALL, usejoystick_cons_t, I_InitJoystick2);
+#if (defined (LJOYSTICK) || defined (HAVE_SDL))
+#ifdef LJOYSTICK
+consvar_t cv_joyport = CVAR_INIT ("padport", "/dev/js0", CV_SAVE, joyport_cons_t, NULL);
+consvar_t cv_joyport2 = CVAR_INIT ("padport2", "/dev/js0", CV_SAVE, joyport_cons_t, NULL); //Alam: for later
+#endif
+consvar_t cv_joyscale = CVAR_INIT ("padscale", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale);
+consvar_t cv_joyscale2 = CVAR_INIT ("padscale2", "1", CV_SAVE|CV_CALL, NULL, I_JoyScale2);
+#else
+consvar_t cv_joyscale = CVAR_INIT ("padscale", "1", CV_SAVE|CV_HIDEN, NULL, NULL); //Alam: Dummy for save
+consvar_t cv_joyscale2 = CVAR_INIT ("padscale2", "1", CV_SAVE|CV_HIDEN, NULL, NULL); //Alam: Dummy for save
+#endif
 #if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 consvar_t cv_mouse2port = CVAR_INIT ("mouse2port", "/dev/gpmdata", CV_SAVE, mouse2port_cons_t, NULL);
 consvar_t cv_mouse2opt = CVAR_INIT ("mouse2opt", "0", CV_SAVE, NULL, NULL);
@@ -807,26 +772,26 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_pauseifunfocused);
 
 	// g_input.c
-	CV_RegisterVar(&cv_sideaxis[0]);
-	CV_RegisterVar(&cv_sideaxis[1]);
-	CV_RegisterVar(&cv_turnaxis[0]);
-	CV_RegisterVar(&cv_turnaxis[1]);
-	CV_RegisterVar(&cv_moveaxis[0]);
-	CV_RegisterVar(&cv_moveaxis[1]);
-	CV_RegisterVar(&cv_lookaxis[0]);
-	CV_RegisterVar(&cv_lookaxis[1]);
-	CV_RegisterVar(&cv_jumpaxis[0]);
-	CV_RegisterVar(&cv_jumpaxis[1]);
-	CV_RegisterVar(&cv_spinaxis[0]);
-	CV_RegisterVar(&cv_spinaxis[1]);
-	CV_RegisterVar(&cv_fireaxis[0]);
-	CV_RegisterVar(&cv_fireaxis[1]);
-	CV_RegisterVar(&cv_firenaxis[0]);
-	CV_RegisterVar(&cv_firenaxis[1]);
-	CV_RegisterVar(&cv_deadzone[0]);
-	CV_RegisterVar(&cv_deadzone[1]);
-	CV_RegisterVar(&cv_digitaldeadzone[0]);
-	CV_RegisterVar(&cv_digitaldeadzone[1]);
+	CV_RegisterVar(&cv_sideaxis);
+	CV_RegisterVar(&cv_sideaxis2);
+	CV_RegisterVar(&cv_turnaxis);
+	CV_RegisterVar(&cv_turnaxis2);
+	CV_RegisterVar(&cv_moveaxis);
+	CV_RegisterVar(&cv_moveaxis2);
+	CV_RegisterVar(&cv_lookaxis);
+	CV_RegisterVar(&cv_lookaxis2);
+	CV_RegisterVar(&cv_jumpaxis);
+	CV_RegisterVar(&cv_jumpaxis2);
+	CV_RegisterVar(&cv_spinaxis);
+	CV_RegisterVar(&cv_spinaxis2);
+	CV_RegisterVar(&cv_fireaxis);
+	CV_RegisterVar(&cv_fireaxis2);
+	CV_RegisterVar(&cv_firenaxis);
+	CV_RegisterVar(&cv_firenaxis2);
+	CV_RegisterVar(&cv_deadzone);
+	CV_RegisterVar(&cv_deadzone2);
+	CV_RegisterVar(&cv_digitaldeadzone);
+	CV_RegisterVar(&cv_digitaldeadzone2);
 
 	// filesrch.c
 	CV_RegisterVar(&cv_addons_option);
@@ -855,14 +820,14 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_mousemove);
 	CV_RegisterVar(&cv_mousemove2);
 
-	for (i = 0; i < 2; i++)
-	{
-		CV_RegisterVar(&cv_usegamepad[i]);
-		CV_RegisterVar(&cv_gamepad_scale[i]);
-		CV_RegisterVar(&cv_gamepad_rumble[i]);
-	}
-
-	CV_RegisterVar(&cv_gamepad_autopause);
+	CV_RegisterVar(&cv_usejoystick);
+	CV_RegisterVar(&cv_usejoystick2);
+#ifdef LJOYSTICK
+	CV_RegisterVar(&cv_joyport);
+	CV_RegisterVar(&cv_joyport2);
+#endif
+	CV_RegisterVar(&cv_joyscale);
+	CV_RegisterVar(&cv_joyscale2);
 
 	// Analog Control
 	CV_RegisterVar(&cv_analog[0]);
@@ -2251,14 +2216,9 @@ static void Got_Pause(UINT8 **cp, INT32 playernum)
 		{
 			if (!menuactive || netgame)
 				S_PauseAudio();
-
-			P_PauseRumble(NULL);
 		}
 		else
-		{
 			S_ResumeAudio();
-			P_UnpauseRumble(NULL);
-		}
 	}
 
 	I_UpdateMouseGrab();
@@ -4652,8 +4612,6 @@ void Command_ExitGame_f(void)
 	cv_debug = 0;
 	emeralds = 0;
 	memset(&luabanks, 0, sizeof(luabanks));
-
-	P_StopRumble(NULL);
 
 	if (dirmenu)
 		closefilemenu(true);

@@ -5331,9 +5331,9 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						// disabled because it seemed to disorient people and Z-targeting exists now
 						/*if (!demoplayback)
 						{
-							if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0 && !(G_PlayerInputDown(0, GC_TURNLEFT) || G_PlayerInputDown(0, GC_TURNRIGHT)))
+							if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0 && !(PLAYER1INPUTDOWN(GC_TURNLEFT) || PLAYER1INPUTDOWN(GC_TURNRIGHT)))
 								P_SetPlayerAngle(player, player->mo->angle);;
-							else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0 && !(G_PlayerInputDown(1, GC_TURNLEFT) || G_PlayerInputDown(1, GC_TURNRIGHT)))
+							else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0 && !(PLAYER2INPUTDOWN(GC_TURNLEFT) || PLAYER2INPUTDOWN(GC_TURNRIGHT)))
 								P_SetPlayerAngle(player, player->mo->angle);
 						}*/
 					}
@@ -7342,7 +7342,7 @@ static void P_NiGHTSMovement(player_t *player)
 			else if (cmd->forwardmove < 0)
 				newangle = 270;
 		}
-		else // AngleFixed(R_PointToAngle2()) results in slight inaccuracy! Don't use it unless movement is on both axes.
+		else // AngleFixed(R_PointToAngle2()) results in slight inaccuracy! Don't use it unless movement is on both axises.
 			newangle = (INT16)FixedInt(AngleFixed(R_PointToAngle2(0,0, cmd->sidemove*FRACUNIT, cmd->forwardmove*FRACUNIT)));
 
 		newangle -= player->viewrollangle / ANG1;

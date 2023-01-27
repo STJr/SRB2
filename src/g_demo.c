@@ -32,7 +32,7 @@
 #include "z_zone.h"
 #include "i_video.h"
 #include "byteptr.h"
-#include "i_gamepad.h"
+#include "i_joy.h"
 #include "r_local.h"
 #include "r_skins.h"
 #include "y_inter.h"
@@ -1527,9 +1527,9 @@ void G_BeginRecording(void)
 			buf |= 0x08;
 			pflags |= PF_AUTOBRAKE;
 		}
-		if (cv_usegamepad[0].value)
+		if (cv_usejoystick.value)
 			buf |= 0x10;
-		CV_SetValue(&cv_showinputjoy, !!(cv_usegamepad[0].value));
+		CV_SetValue(&cv_showinputjoy, !!(cv_usejoystick.value));
 
 		WRITEUINT8(demo_p,buf);
 		player->pflags = pflags;
