@@ -164,7 +164,7 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 	{ 288, 176, V_SNAPTORIGHT|V_SNAPTOBOTTOM}, // HUD_POWERUPS
 };
 
-static huddrawlist_h luahuddrawlist_game;
+static huddrawlist_h luahuddrawlist_game[2];
 static huddrawlist_h luahuddrawlist_titlecard;
 
 //
@@ -427,7 +427,8 @@ void ST_Init(void)
 
 	ST_LoadGraphics();
 
-	luahuddrawlist_game = LUA_HUD_CreateDrawList();
+	luahuddrawlist_game[0] = LUA_HUD_CreateDrawList();
+	luahuddrawlist_game[1] = LUA_HUD_CreateDrawList();
 	luahuddrawlist_titlecard = LUA_HUD_CreateDrawList();
 }
 
@@ -2757,10 +2758,13 @@ static void ST_overlayDrawer(void)
 
 	if (!(netgame || multiplayer) || !hu_showscores)
 	{
+		INT32 hooklistindex = splitscreen && stplyr == &players[secondarydisplayplayer] ? 1 : 0;
 		if (renderisnewtic)
 		{
-			LUA_HUDHOOK(game, luahuddrawlist_game);
+			LUA_HUD_ClearDrawList(luahuddrawlist_game[hooklistindex]);
+			LUA_HUDHOOK(game, luahuddrawlist_game[hooklistindex]);
 		}
+		LUA_HUD_DrawList(luahuddrawlist_game[hooklistindex]);
 	}
 
 	// draw level title Tails
@@ -2839,10 +2843,6 @@ void ST_Drawer(void)
 
 	if (st_overlay)
 	{
-		if (renderisnewtic)
-		{
-			LUA_HUD_ClearDrawList(luahuddrawlist_game);
-		}
 		// No deadview!
 		stplyr = &players[displayplayer];
 		ST_overlayDrawer();
@@ -2852,7 +2852,5 @@ void ST_Drawer(void)
 			stplyr = &players[secondarydisplayplayer];
 			ST_overlayDrawer();
 		}
-
-		LUA_HUD_DrawList(luahuddrawlist_game);
 	}
 }
