@@ -3224,7 +3224,6 @@ boolean M_Responder(event_t *ev)
 	static INT32 pjoyx = 0, pjoyy = 0;
 	static INT32 pmousex = 0, pmousey = 0;
 	static INT32 lastx = 0, lasty = 0;
-	boolean shouldswallowevent = false;
 	void (*routine)(INT32 choice); // for some casting problem
 
 	if (dedicated || (demoplayback && titledemo)
@@ -3240,18 +3239,11 @@ boolean M_Responder(event_t *ev)
 
 	boolean useEventHandler = false;
 
-	if (menuactive && ev->type == ev_gamepad_axis && ev->which == 0)
-	{
-		// ALWAYS swallow gamepad axis events, to prevent trickling down to game input
-		// this applies even if the axis event does not get remapped
-		shouldswallowevent = true;
-	}
-
 	if (noFurtherInput)
 	{
 		// Ignore input after enter/escape/other buttons
 		// (but still allow shift keyup so caps doesn't get stuck)
-		return shouldswallowevent;
+		return false;
 	}
 	else if (menuactive)
 	{
@@ -3376,7 +3368,7 @@ boolean M_Responder(event_t *ev)
 	}
 
 	if (!useEventHandler && ch == -1)
-		return shouldswallowevent;
+		return false;
 	else if (ch == gamecontrol[GC_SYSTEMMENU][0] || ch == gamecontrol[GC_SYSTEMMENU][1]) // allow remappable ESC key
 		ch = KEY_ESCAPE;
 
@@ -3609,7 +3601,7 @@ boolean M_Responder(event_t *ev)
 			//currentMenu->lastOn = itemOn;
 			//if (currentMenu->prevMenu)
 			//	M_SetupNextMenu(currentMenu->prevMenu);
-			return shouldswallowevent;
+			return false;
 
 		default:
 			CON_Responder(ev);
