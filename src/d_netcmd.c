@@ -815,6 +815,14 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_moveaxis[1]);
 	CV_RegisterVar(&cv_lookaxis[0]);
 	CV_RegisterVar(&cv_lookaxis[1]);
+	CV_RegisterVar(&cv_jumpaxis[0]);
+	CV_RegisterVar(&cv_jumpaxis[1]);
+	CV_RegisterVar(&cv_spinaxis[0]);
+	CV_RegisterVar(&cv_spinaxis[1]);
+	CV_RegisterVar(&cv_fireaxis[0]);
+	CV_RegisterVar(&cv_fireaxis[1]);
+	CV_RegisterVar(&cv_firenaxis[0]);
+	CV_RegisterVar(&cv_firenaxis[1]);
 	CV_RegisterVar(&cv_deadzone[0]);
 	CV_RegisterVar(&cv_deadzone[1]);
 	CV_RegisterVar(&cv_digitaldeadzone[0]);
@@ -834,6 +842,7 @@ void D_RegisterClientCommands(void)
 #if defined (__unix__) || defined (__APPLE__) || defined (UNIXCOMMON)
 	CV_RegisterVar(&cv_mouse2opt);
 #endif
+	CV_RegisterVar(&cv_controlperkey);
 
 	CV_RegisterVar(&cv_usemouse);
 	CV_RegisterVar(&cv_usemouse2);
