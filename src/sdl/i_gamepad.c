@@ -66,11 +66,7 @@ void I_InitGamepads(void)
 	if (!InitGamepadSubsystems())
 		return;
 
-#if SDL_VERSION_ATLEAST(2,0,9)
 	rumble_supported = !M_CheckParm("-norumble");
-#else
-	rumble_supported = false;
-#endif
 
 	for (UINT8 i = 0; i < NUM_GAMEPADS; i++)
 		controllers[i].info = &gamepads[i];
@@ -731,20 +727,14 @@ boolean I_RumbleSupported(void)
 
 static boolean Controller_Rumble(ControllerInfo *c)
 {
-#if SDL_VERSION_ATLEAST(2,0,9)
 	if (SDL_GameControllerRumble(c->dev, c->rumble.large_magnitude, c->rumble.small_magnitude, 0) == -1)
 		return false;
 
 	return true;
-#else
-	(void)c;
-	return false;
-#endif
 }
 
 void I_ToggleControllerRumble(boolean unpause)
 {
-#if SDL_VERSION_ATLEAST(2,0,9)
 	if (!I_RumbleSupported() || rumble_paused == !unpause)
 		return;
 
@@ -764,10 +754,6 @@ void I_ToggleControllerRumble(boolean unpause)
 				controller->rumble.expiration = controller->rumble.time_left = 0;
 		}
 	}
-#else
-	(void)unpause;
-	return;
-#endif
 }
 
 void I_UpdateControllers(void)
