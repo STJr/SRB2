@@ -179,11 +179,20 @@ UINT8 R_GetBoundingBoxColor(mobj_t *thing)
 	if (flags & (MF_NOCLIPTHING))
 		return 7; // BFBFBF
 
-	if (flags & (MF_BOSS|MF_MISSILE|MF_ENEMY|MF_PAIN))
+	if (flags & (MF_BOSS|MF_ENEMY))
 		return 35; // F00
+
+	if (flags & (MF_MISSILE|MF_PAIN))
+		return 54; // F70
 
 	if (flags & (MF_SPECIAL|MF_MONITOR))
 		return 73; // FF0
+
+	if (flags & MF_PUSHABLE)
+		return 112; // 0F0
+
+	if (flags & (MF_SPRING))
+		return 181; // F0F
 
 	if (flags & (MF_NOCLIP))
 		return 152; // 00F
@@ -299,7 +308,7 @@ boolean R_ThingBoundingBoxVisible(mobj_t *thing)
 			return is_tangible(thing);
 
 		case RENDERHITBOX_RINGS:
-			return (thing->type == MT_RING);
+			return (thing->type == MT_RING || thing->type == MT_BLUESPHERE);
 
 		default:
 			return false;
