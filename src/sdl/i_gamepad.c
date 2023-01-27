@@ -233,7 +233,7 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 		CONS_Debug(DBG_GAMELOGIC, M_GetText("    Type: %s\n"), G_GamepadTypeToString(controller->info->type));
 
 		// Change the ring LEDs on Xbox 360 controllers
-		// FIXME: Doesn't seem to work?
+		// TODO: Doesn't seem to work?
 		SDL_GameControllerSetPlayerIndex(controller->dev, which);
 
 		// Check if rumble is supported
@@ -248,11 +248,7 @@ static boolean Controller_OpenDevice(UINT8 which, INT32 devindex)
 			CONS_Debug(DBG_GAMELOGIC, M_GetText("    Rumble supported: No\n"));;
 		}
 
-		if (!controller->info->connected)
-		{
-			controller->info->connected = true;
-			G_OnGamepadConnect(which);
-		}
+		controller->info->connected = true;
 	}
 
 	return controller->started;

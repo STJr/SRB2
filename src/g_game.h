@@ -133,9 +133,6 @@ INT32 G_GetGamepadDeviceIndex(INT32 player);
 // returns a player's gamepad index
 INT16 G_GetGamepadForPlayer(player_t *player);
 
-// called when a player's gamepad is connected
-void G_OnGamepadConnect(UINT8 which);
-
 // called when a player's gamepad is disconnected
 void G_OnGamepadDisconnect(UINT8 which);
 
