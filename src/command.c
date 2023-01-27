@@ -77,6 +77,7 @@ CV_PossibleValue_t CV_Natural[] = {{1, "MIN"}, {999999999, "MAX"}, {0, NULL}};
 
 // Filter consvars by EXECVERSION
 // First implementation is 26 (2.1.21), so earlier configs default at 25 (2.1.20)
+// Also set CV_HIDEN during runtime, after config is loaded
 static boolean execversion_enabled = false;
 consvar_t cv_execversion = CVAR_INIT ("execversion","25",CV_CALL,CV_Unsigned, CV_EnforceExecVersion);
 
@@ -2181,48 +2182,131 @@ static void CV_EnforceExecVersion(void)
 		CV_StealthSetValue(&cv_execversion, EXECVERSION);
 }
 
-#ifndef OLD_GAMEPAD_AXES
-static boolean CV_ConvertOldJoyAxisVars(consvar_t *v, const char *valstr)
+static boolean CV_FilterJoyAxisVars(consvar_t *v, const char *valstr)
 {
-	static struct {
-		const char *old;
-		const char *new;
-	} axis_names[] = {
-		{"X-Axis",    "Left Stick X"},
-		{"Y-Axis",    "Left Stick Y"},
-		{"X-Axis-",   "Left Stick X-"},
-		{"Y-Axis-",   "Left Stick Y-"},
-		{"X-Rudder",  "Right Stick X"},
-		{"Y-Rudder",  "Right Stick Y"},
-		{"X-Rudder-", "Right Stick X-"},
-		{"Y-Rudder-", "Right Stick Y-"},
-		{"Z-Axis",    "Left Trigger"},
-		{"Z-Rudder",  "Right Trigger"},
-		{"Z-Axis-",   "Left Trigger"},
-		{"Z-Rudder-", "Right Trigger"},
-		{NULL, NULL}
-	};
+	// If ALL axis settings are previous defaults, set them to the new defaults
+	// EXECVERSION < 26 (2.1.21)
 
-	if (v->PossibleValue != joyaxis_cons_t)
-		return true;
-
-	for (unsigned i = 0;; i++)
+	if (joyaxis_default)
 	{
-		if (axis_names[i].old == NULL)
+		if (!stricmp(v->name, "joyaxis_turn"))
 		{
-			CV_SetCVar(v, "None", false);
-			return false;
+			if (joyaxis_count > 6) return false;
+			// we're currently setting the new defaults, don't interfere
+			else if (joyaxis_count == 6) return true;
+
+			if (!stricmp(valstr, "X-Axis")) joyaxis_count++;
+			else joyaxis_default = false;
 		}
-		else if (!stricmp(valstr, axis_names[i].old))
+		if (!stricmp(v->name, "joyaxis_move"))
 		{
-			CV_SetCVar(v, axis_names[i].new, false);
+			if (joyaxis_count > 6) return false;
+			else if (joyaxis_count == 6) return true;
+
+			if (!stricmp(valstr, "Y-Axis")) joyaxis_count++;
+			else joyaxis_default = false;
+		}
+		if (!stricmp(v->name, "joyaxis_side"))
+		{
+			if (joyaxis_count > 6) return false;
+			else if (joyaxis_count == 6) return true;
+
+			if (!stricmp(valstr, "Z-Axis")) joyaxis_count++;
+			else joyaxis_default = false;
+		}
+		if (!stricmp(v->name, "joyaxis_look"))
+		{
+			if (joyaxis_count > 6) return false;
+			else if (joyaxis_count == 6) return true;
+
+			if (!stricmp(valstr, "None")) joyaxis_count++;
+			else joyaxis_default = false;
+		}
+		if (!stricmp(v->name, "joyaxis_fire")
+			|| !stricmp(v->name, "joyaxis_firenormal"))
+		{
+			if (joyaxis_count > 6) return false;
+			else if (joyaxis_count == 6) return true;
+
+			if (!stricmp(valstr, "None")) joyaxis_count++;
+			else joyaxis_default = false;
+		}
+		// reset all axis settings to defaults
+		if (joyaxis_count == 6)
+		{
+			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis.name, cv_turnaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis.name, cv_moveaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis.name, cv_sideaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis.name, cv_lookaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis.name, cv_fireaxis.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis.name, cv_firenaxis.defaultvalue));
+			joyaxis_count++;
 			return false;
 		}
 	}
 
+	if (joyaxis2_default)
+	{
+		if (!stricmp(v->name, "joyaxis2_turn"))
+		{
+			if (joyaxis2_count > 6) return false;
+			// we're currently setting the new defaults, don't interfere
+			else if (joyaxis2_count == 6) return true;
+
+			if (!stricmp(valstr, "X-Axis")) joyaxis2_count++;
+			else joyaxis2_default = false;
+		}
+		if (!stricmp(v->name, "joyaxis2_move"))
+		{
+			if (joyaxis2_count > 6) return false;
+			else if (joyaxis2_count == 6) return true;
+
+			if (!stricmp(valstr, "Y-Axis")) joyaxis2_count++;
+			else joyaxis2_default = false;
+		}
+		if (!stricmp(v->name, "joyaxis2_side"))
+		{
+			if (joyaxis2_count > 6) return false;
+			else if (joyaxis2_count == 6) return true;
+
+			if (!stricmp(valstr, "Z-Axis")) joyaxis2_count++;
+			else joyaxis2_default = false;
+		}
+		if (!stricmp(v->name, "joyaxis2_look"))
+		{
+			if (joyaxis2_count > 6) return false;
+			else if (joyaxis2_count == 6) return true;
+
+			if (!stricmp(valstr, "None")) joyaxis2_count++;
+			else joyaxis2_default = false;
+		}
+		if (!stricmp(v->name, "joyaxis2_fire")
+			|| !stricmp(v->name, "joyaxis2_firenormal"))
+		{
+			if (joyaxis2_count > 6) return false;
+			else if (joyaxis2_count == 6) return true;
+
+			if (!stricmp(valstr, "None")) joyaxis2_count++;
+			else joyaxis2_default = false;
+		}
+
+		// reset all axis settings to defaults
+		if (joyaxis2_count == 6)
+		{
+			COM_BufInsertText(va("%s \"%s\"\n", cv_turnaxis2.name, cv_turnaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_moveaxis2.name, cv_moveaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_sideaxis2.name, cv_sideaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_lookaxis2.name, cv_lookaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_fireaxis2.name, cv_fireaxis2.defaultvalue));
+			COM_BufInsertText(va("%s \"%s\"\n", cv_firenaxis2.name, cv_firenaxis2.defaultvalue));
+			joyaxis2_count++;
+			return false;
+		}
+	}
+
+	// we haven't reached our counts yet, or we're not default
 	return true;
 }
-#endif
 
 static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 {
@@ -2233,14 +2317,39 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr)
 	if (!(v->flags & CV_SAVE))
 		return true;
 
-#ifndef OLD_GAMEPAD_AXES
-	if (GETMAJOREXECVERSION(cv_execversion.value) <= 51 && GETMINOREXECVERSION(cv_execversion.value) < 1)
+	if (GETMAJOREXECVERSION(cv_execversion.value) < 26) // 26 = 2.1.21
 	{
-		if (!CV_ConvertOldJoyAxisVars(v, valstr))
+		// MOUSE SETTINGS
+		// alwaysfreelook split between first and third person (chasefreelook)
+		// mousemove was on by default, which invalidates the current approach
+		if (!stricmp(v->name, "alwaysmlook")
+			|| !stricmp(v->name, "alwaysmlook2")
+			|| !stricmp(v->name, "mousemove")
+			|| !stricmp(v->name, "mousemove2"))
 			return false;
-	}
+
+		// mousesens was changed from 35 to 20 due to oversensitivity
+		if ((!stricmp(v->name, "mousesens")
+			|| !stricmp(v->name, "mousesens2")
+			|| !stricmp(v->name, "mouseysens")
+			|| !stricmp(v->name, "mouseysens2"))
+			&& atoi(valstr) == 35)
+			return false;
+
+		// JOYSTICK DEFAULTS
+		// use_joystick was changed from 0 to 1 to automatically use a joystick if available
+#if defined(HAVE_SDL) || defined(_WINDOWS)
+		if ((!stricmp(v->name, "use_joystick")
+			|| !stricmp(v->name, "use_joystick2"))
+			&& atoi(valstr) == 0)
+			return false;
 #endif
 
+		// axis defaults were changed to be friendly to 360 controllers
+		// if ALL axis settings are defaults, then change them to new values
+		if (!CV_FilterJoyAxisVars(v, valstr))
+			return false;
+	}
 	return true;
 }
 

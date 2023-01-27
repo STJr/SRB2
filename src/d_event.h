@@ -24,21 +24,19 @@ typedef enum
 	ev_keyup,
 	ev_console,
 	ev_mouse,
+	ev_joystick,
 	ev_mouse2,
-	ev_gamepad_up,
-	ev_gamepad_down,
-	ev_gamepad_axis
+	ev_joystick2,
 } evtype_t;
 
 // Event structure.
 typedef struct
 {
 	evtype_t type;
-	INT32 key; // key, mouse button, or gamepad button/axis type
-	INT32 x; // mouse x move, or gamepad axis value
-	INT32 y; // mouse y move
-	UINT8 which; // which gamepad or mouse ID
-	boolean repeated; // is the event repeated?
+	INT32 key; // keys/mouse/joystick buttons
+	INT32 x; // mouse/joystick x move
+	INT32 y; // mouse/joystick y move
+	boolean repeated; // key repeat
 } event_t;
 
 //

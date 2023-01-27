@@ -13,7 +13,6 @@
 
 #include "doomdef.h"
 #include "i_system.h"
-#include "i_gamepad.h"
 #include "am_map.h"
 #include "g_game.h"
 #include "m_random.h"
@@ -25,7 +24,6 @@
 #include "lua_hook.h"
 #include "m_cond.h" // unlockables, emblems, etc
 #include "p_setup.h"
-#include "p_haptic.h"
 #include "m_cheat.h" // objectplace
 #include "m_misc.h"
 #include "v_video.h" // video flags for CEchos
@@ -34,6 +32,54 @@
 // CTF player names
 #define CTFTEAMCODE(pl) pl->ctfteam ? (pl->ctfteam == 1 ? "\x85" : "\x84") : ""
 #define CTFTEAMENDCODE(pl) pl->ctfteam ? "\x80" : ""
+
+void P_ForceFeed(const player_t *player, INT32 attack, INT32 fade, tic_t duration, INT32 period)
+{
+	BasicFF_t Basicfeed;
+	if (!player)
+		return;
+	Basicfeed.Duration = (UINT32)(duration * (100L/TICRATE));
+	Basicfeed.ForceX = Basicfeed.ForceY = 1;
+	Basicfeed.Gain = 25000;
+	Basicfeed.Magnitude = period*10;
+	Basicfeed.player = player;
+	/// \todo test FFB
+	P_RampConstant(&Basicfeed, attack, fade);
+}
+
+void P_ForceConstant(const BasicFF_t *FFInfo)
+{
+	JoyFF_t ConstantQuake;
+	if (!FFInfo || !FFInfo->player)
+		return;
+	ConstantQuake.ForceX    = FFInfo->ForceX;
+	ConstantQuake.ForceY    = FFInfo->ForceY;
+	ConstantQuake.Duration  = FFInfo->Duration;
+	ConstantQuake.Gain      = FFInfo->Gain;
+	ConstantQuake.Magnitude = FFInfo->Magnitude;
+	if (FFInfo->player == &players[consoleplayer])
+		I_Tactile(ConstantForce, &ConstantQuake);
+	else if (splitscreen && FFInfo->player == &players[secondarydisplayplayer])
+		I_Tactile2(ConstantForce, &ConstantQuake);
+}
+void P_RampConstant(const BasicFF_t *FFInfo, INT32 Start, INT32 End)
+{
+	JoyFF_t RampQuake;
+	if (!FFInfo || !FFInfo->player)
+		return;
+	RampQuake.ForceX    = FFInfo->ForceX;
+	RampQuake.ForceY    = FFInfo->ForceY;
+	RampQuake.Duration  = FFInfo->Duration;
+	RampQuake.Gain      = FFInfo->Gain;
+	RampQuake.Magnitude = FFInfo->Magnitude;
+	RampQuake.Start     = Start;
+	RampQuake.End       = End;
+	if (FFInfo->player == &players[consoleplayer])
+		I_Tactile(ConstantForce, &RampQuake);
+	else if (splitscreen && FFInfo->player == &players[secondarydisplayplayer])
+		I_Tactile2(ConstantForce, &RampQuake);
+}
+
 
 //
 // GET STUFF
@@ -3011,8 +3057,6 @@ static boolean P_TagDamage(mobj_t *target, mobj_t *inflictor, mobj_t *source, IN
 	player_t *player = target->player;
 	(void)damage; //unused parm
 
-	P_DoRumbleCombined(player, FRACUNIT, TICRATE / 6);
-
 	// If flashing or invulnerable, ignore the tag,
 	if (player->powers[pw_flashing] || player->powers[pw_invulnerability])
 		return false;
@@ -3116,8 +3160,6 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 {
 	player_t *player = target->player;
 
-	(void)damage;
-
 	if (!(damagetype & DMG_CANHURTSELF))
 	{
 		// You can't kill yourself, idiot...
@@ -3180,8 +3222,6 @@ static boolean P_PlayerHitsPlayer(mobj_t *target, mobj_t *inflictor, mobj_t *sou
 
 static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 {
-	(void)damage;
-
 	player->pflags &= ~PF_SLIDING;
 
 	player->powers[pw_carry] = CR_NONE;
@@ -3202,7 +3242,7 @@ static void P_KillPlayer(player_t *player, mobj_t *source, INT32 damage)
 	// Get rid of emeralds
 	player->powers[pw_emeralds] = 0;
 
-	P_DoRumbleCombined(player, FRACUNIT, TICRATE / 3);
+	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
 	P_ResetPlayer(player);
 
@@ -3242,9 +3282,7 @@ static void P_SuperDamage(player_t *player, mobj_t *inflictor, mobj_t *source, I
 	fixed_t fallbackspeed;
 	angle_t ang;
 
-	(void)damage;
-
-	P_DoRumbleCombined(player, FRACUNIT, TICRATE / 6);
+	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
 	if (player->mo->eflags & MFE_VERTICALFLIP)
 		player->mo->z--;
@@ -3325,14 +3363,12 @@ void P_RemoveShield(player_t *player)
 
 static void P_ShieldDamage(player_t *player, mobj_t *inflictor, mobj_t *source, INT32 damage, UINT8 damagetype)
 {
-	(void)damage;
-
 	// Must do pain first to set flashing -- P_RemoveShield can cause damage
 	P_DoPlayerPain(player, source, inflictor);
 
 	P_RemoveShield(player);
 
-	P_DoRumbleCombined(player, FRACUNIT, TICRATE / 6);
+	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
 	if (damagetype == DMG_SPIKE) // spikes
 		S_StartSound(player->mo, sfx_spkdth);
@@ -3361,7 +3397,7 @@ static void P_RingDamage(player_t *player, mobj_t *inflictor, mobj_t *source, IN
 {
 	P_DoPlayerPain(player, source, inflictor);
 
-	P_DoRumbleCombined(player, FRACUNIT, TICRATE / 6);
+	P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 
 	if (damagetype == DMG_SPIKE) // spikes
 		S_StartSound(player->mo, sfx_spkdth);
@@ -3692,6 +3728,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 			damage = 1;
 			P_KillPlayer(player, source, damage);
 		}
+
+		P_ForceFeed(player, 40, 10, TICRATE, 40 + min(damage, 100)*2);
 	}
 
 	// Killing dead. Just for kicks.
