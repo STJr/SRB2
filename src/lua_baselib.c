@@ -2261,6 +2261,18 @@ static int lib_pMobjTouchingSectorSpecial(lua_State *L)
 	return 1;
 }
 
+static int lib_pThingOnSpecial3DFloor(lua_State *L)
+{
+	mobj_t *mo = *((mobj_t **)luaL_checkudata(L, 1, META_MOBJ));
+	NOHUD
+	INLEVEL
+	if (!mo)
+		return LUA_ErrInvalid(L, "mobj_t");
+	LUA_Deprecated(L, "P_ThingOnSpecial3DFloor", "P_MobjTouchingSectorSpecial\" or \"P_MobjTouchingSectorSpecialFlag");
+	LUA_PushUserdata(L, P_ThingOnSpecial3DFloor(mo), META_SECTOR);
+	return 1;
+}
+
 static int lib_pMobjTouchingSectorSpecialFlag(lua_State *L)
 {
 	mobj_t *mo = *((mobj_t**)luaL_checkudata(L, 1, META_MOBJ));
@@ -4132,6 +4144,7 @@ static luaL_Reg lib[] = {
 	{"P_DoSuperTransformation",lib_pDoSuperTransformation},
 	{"P_ExplodeMissile",lib_pExplodeMissile},
 	{"P_MobjTouchingSectorSpecial",lib_pMobjTouchingSectorSpecial},
+	{"P_ThingOnSpecial3DFloor",lib_pThingOnSpecial3DFloor},
 	{"P_MobjTouchingSectorSpecialFlag",lib_pMobjTouchingSectorSpecialFlag},
 	{"P_PlayerTouchingSectorSpecial",lib_pPlayerTouchingSectorSpecial},
 	{"P_PlayerTouchingSectorSpecialFlag",lib_pPlayerTouchingSectorSpecialFlag},
