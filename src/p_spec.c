@@ -4375,7 +4375,7 @@ sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
 			return loopsector;
 	}
 
-	return false;
+	return NULL;
 }
 
 boolean P_IsPlayerValid(size_t playernum)
