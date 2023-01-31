@@ -3989,12 +3989,11 @@ void P_NullPrecipThinker(precipmobj_t *mobj)
 {
 	//(void)mobj;
 	mobj->precipflags &= ~PCF_THUNK;
+	R_ResetPrecipitationMobjInterpolationState(mobj);
 }
 
 void P_SnowThinker(precipmobj_t *mobj)
 {
-	R_ResetPrecipitationMobjInterpolationState(mobj);
-
 	P_CycleStateAnimation((mobj_t *)mobj);
 
 	// adjust height
@@ -4007,8 +4006,6 @@ void P_SnowThinker(precipmobj_t *mobj)
 
 void P_RainThinker(precipmobj_t *mobj)
 {
-	R_ResetPrecipitationMobjInterpolationState(mobj);
-
 	P_CycleStateAnimation((mobj_t *)mobj);
 
 	if (mobj->state != &states[S_RAIN1])
@@ -5664,6 +5661,8 @@ static void P_Boss9Thinker(mobj_t *mobj)
 			{
 				mobj_t *missile = P_SpawnMissile(spawner, mobj, MT_MSGATHER);
 				missile->fuse = (dist/P_AproxDistance(missile->momx, missile->momy));
+				if (missile->fuse <= 0) // Prevents a division by zero when calculating missile->scalespeed
+					missile->fuse = 1;
 
 				if (missile->fuse > mobj->fuse)
 					P_RemoveMobj(missile);
@@ -11195,21 +11194,41 @@ void P_RemovePrecipMobj(precipmobj_t *mobj)
 void P_RemoveSavegameMobj(mobj_t *mobj)
 {
 	// unlink from sector and block lists
-	P_UnsetThingPosition(mobj);
-
-	// Remove touching_sectorlist from mobj.
-	if (sector_list)
+	if (((thinker_t *)mobj)->function.acp1 == (actionf_p1)P_NullPrecipThinker)
 	{
-		P_DelSeclist(sector_list);
-		sector_list = NULL;
+		P_UnsetPrecipThingPosition((precipmobj_t *)mobj);
+
+		if (precipsector_list)
+		{
+			P_DelPrecipSeclist(precipsector_list);
+			precipsector_list = NULL;
+		}
+	}
+	else
+	{
+		// unlink from sector and block lists
+		P_UnsetThingPosition(mobj);
+
+		// Remove touching_sectorlist from mobj.
+		if (sector_list)
+		{
+			P_DelSeclist(sector_list);
+			sector_list = NULL;
+		}
 	}
 
 	// stop any playing sound
 	S_StopSound(mobj);
+	R_RemoveMobjInterpolator(mobj);
 
 	// free block
-	P_RemoveThinker((thinker_t *)mobj);
-	R_RemoveMobjInterpolator(mobj);
+	// Here we use the same code as R_RemoveThinkerDelayed, but without reference counting (we're removing everything so it shouldn't matter) and without touching currentthinker since we aren't in P_RunThinkers
+	{
+		thinker_t *thinker = (thinker_t *)mobj;
+		thinker_t *next = thinker->next;
+		(next->prev = thinker->prev)->next = next;
+		Z_Free(thinker);
+	}
 }
 
 static CV_PossibleValue_t respawnitemtime_cons_t[] = {{1, "MIN"}, {300, "MAX"}, {0, NULL}};
@@ -13506,7 +13525,7 @@ static void P_SpawnItemRow(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numi
 static void P_SpawnSingularItemRow(mapthing_t *mthing, mobjtype_t itemtype, INT32 numitems, fixed_t horizontalspacing, fixed_t verticalspacing, INT16 fixedangle, boolean bonustime)
 {
 	mobjtype_t itemtypes[1] = { itemtype };
-	return P_SpawnItemRow(mthing, itemtypes, 1, numitems, horizontalspacing, verticalspacing, fixedangle, bonustime);
+	P_SpawnItemRow(mthing, itemtypes, 1, numitems, horizontalspacing, verticalspacing, fixedangle, bonustime);
 }
 
 static void P_SpawnItemCircle(mapthing_t *mthing, mobjtype_t *itemtypes, UINT8 numitemtypes, INT32 numitems, fixed_t size, boolean bonustime)

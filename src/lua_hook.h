@@ -41,6 +41,7 @@ automatically.
 	X (MobjMoveBlocked),/* P_XYMovement (when movement is blocked) */\
 	X (MapThingSpawn),/* P_SpawnMapThing */\
 	X (FollowMobj),/* P_PlayerAfterThink Smiles mobj-following */\
+	X (HurtMsg),/* imhurttin */\
 
 #define HOOK_LIST(X) \
 	X (NetVars),/* add to archive table (netsave) */\
@@ -56,7 +57,6 @@ automatically.
 	X (JumpSpinSpecial),/* P_DoJumpStuff (Spin button effect (mid-air)) */\
 	X (BotTiccmd),/* B_BuildTiccmd */\
 	X (PlayerMsg),/* chat messages */\
-	X (HurtMsg),/* imhurttin */\
 	X (PlayerSpawn),/* G_SpawnPlayer */\
 	X (ShieldSpawn),/* P_SpawnShieldOrb */\
 	X (ShieldSpecial),/* shield abilities */\
@@ -74,10 +74,6 @@ automatically.
 	X (PlayerCanEnterSpinGaps),\
 	X (KeyDown),\
 	X (KeyUp),\
-	X (GamepadButtonDown),\
-	X (GamepadButtonUp),\
-	X (GamepadAdded),\
-	X (GamepadRemoved),\
 
 #define STRING_HOOK_LIST(X) \
 	X (BotAI),/* B_BuildTailsTiccmd by skin name */\
@@ -129,8 +125,6 @@ void LUA_HookBool(boolean value, int hook);
 int  LUA_HookPlayer(player_t *, int hook);
 int  LUA_HookTiccmd(player_t *, ticcmd_t *, int hook);
 int  LUA_HookKey(event_t *event, int hook); // Hooks for key events
-int  LUA_HookGamepadButton(event_t *event, int hook);
-void LUA_HookGamepadEvent(UINT8 which, int hook);
 
 void LUA_HookThinkFrame(void);
 int  LUA_HookMobjLineCollide(mobj_t *, line_t *);

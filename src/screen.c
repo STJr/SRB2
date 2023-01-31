@@ -401,7 +401,6 @@ void SCR_SetDefaultMode(void)
 	// remember the default screen size
 	CV_SetValue(&cv_scr_width, vid.width);
 	CV_SetValue(&cv_scr_height, vid.height);
-	CV_SetValue(&cv_scr_depth, vid.bpp*8);
 }
 
 // Change fullscreen on/off according to cv_fullscreen
@@ -622,7 +621,13 @@ void SCR_ClosedCaptions(void)
 		y = basey-((i + 2)*10);
 
 		if (closedcaptions[i].b)
-			y -= (closedcaptions[i].b--)*vid.dupy;
+		{
+			y -= closedcaptions[i].b * vid.dupy;
+			if (renderisnewtic)
+			{
+				closedcaptions[i].b--;
+			}
+		}
 
 		if (closedcaptions[i].t < CAPTIONFADETICS)
 			flags |= (((CAPTIONFADETICS-closedcaptions[i].t)/2)*V_10TRANS);

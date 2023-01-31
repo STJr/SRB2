@@ -2671,7 +2671,7 @@ void A_LobShot(mobj_t *actor)
 	fixed_t z;
 	fixed_t dist;
 	fixed_t vertical, horizontal;
-	fixed_t airtime = var2 & 65535;
+	fixed_t airtime = max(1, var2 & 65535);
 
 	if (LUA_CallAction(A_LOBSHOT, actor))
 		return;
@@ -4859,12 +4859,12 @@ void A_FishJump(mobj_t *actor)
 		else
 		{
 			if (actor->spawnpoint && actor->spawnpoint->args[0])
-				jumpval = actor->spawnpoint->args[0];
+				jumpval = actor->spawnpoint->args[0] << (FRACBITS - 2);
 			else
-				jumpval = 44;
+				jumpval = 44 << (FRACBITS - 2);
 		}
 
-		actor->momz = FixedMul(jumpval << (FRACBITS - 2), actor->scale);
+		actor->momz = FixedMul(jumpval, actor->scale);
 		P_SetMobjStateNF(actor, actor->info->seestate);
 	}
 

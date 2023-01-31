@@ -22,6 +22,16 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
+#ifdef _MSC_VER
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
+
+#ifndef strncasecmp
+#define strncasecmp _strnicmp
+#endif
+
+#endif
 
 static inline int
 trycmp (char **pp, char *cp,

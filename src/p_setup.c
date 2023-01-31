@@ -3009,7 +3009,7 @@ static inline void P_LoadSubsectors(UINT8 *data)
 	for (i = 0; i < numsubsectors; i++, ss++, ms++)
 	{
 		ss->numlines = SHORT(ms->numsegs);
-		ss->firstline = SHORT(ms->firstseg);
+		ss->firstline = (UINT16)SHORT(ms->firstseg);
 		P_InitializeSubsector(ss);
 	}
 }
@@ -4910,9 +4910,9 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 331: // Player skin - continuous
 		case 332: // Player skin - each time
 		case 333: // Player skin - once
-			if (lines[i].special == 303)
+			if (lines[i].special == 333)
 				lines[i].args[0] = TMT_ONCE;
-			else if (lines[i].special == 302)
+			else if (lines[i].special == 332)
 				lines[i].args[0] = (lines[i].flags & ML_BOUNCY) ? TMT_EACHTIMEENTERANDEXIT : TMT_EACHTIMEENTER;
 			else
 				lines[i].args[0] = TMT_CONTINUOUS;
@@ -6627,8 +6627,8 @@ static void P_ConvertBinaryThingTypes(void)
 		case 1713: //Hoop (Customizable)
 		{
 			UINT16 oldangle = mapthings[i].angle;
-			mapthings[i].angle = ((oldangle >> 8)*360)/256;
-			mapthings[i].pitch = ((oldangle & 255)*360)/256;
+			mapthings[i].angle = (mapthings[i].extrainfo == 1) ? oldangle - 90  : ((oldangle >> 8)*360)/256;
+			mapthings[i].pitch = (mapthings[i].extrainfo == 1) ? oldangle / 360 : ((oldangle & 255)*360)/256;
 			mapthings[i].args[0] = (mapthings[i].type == 1705) ? 96 : (mapthings[i].options & 0xF)*16 + 32;
 			mapthings[i].options &= ~0xF;
 			mapthings[i].type = 1713;

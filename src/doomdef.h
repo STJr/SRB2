@@ -211,7 +211,7 @@ extern char logfilename[1024];
 // to an increment in MODVERSION. This might never happen in practice.
 // If MODVERSION increases, set MINOREXECVERSION to 0.
 #define MAJOREXECVERSION MODVERSION
-#define MINOREXECVERSION 1
+#define MINOREXECVERSION 0
 // (It would have been nice to use VERSION and SUBVERSION but those are zero'd out for DEVELOP builds)
 
 // Macros
@@ -557,6 +557,9 @@ UINT32 quickncasehash (const char *p, size_t n)
 #ifndef max // Double-Check with WATTCP-32's cdefs.h
 #define max(x, y) (((x) > (y)) ? (x) : (y))
 #endif
+
+// Max gamepad/joysticks that can be detected/used.
+#define MAX_JOYSTICKS 4
 
 #ifndef M_PIl
 #define M_PIl 3.1415926535897932384626433832795029L

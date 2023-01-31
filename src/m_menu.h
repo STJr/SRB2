@@ -223,9 +223,8 @@ typedef enum
 {
 	MM_NOTHING = 0, // is just displayed until the user do someting
 	MM_YESNO,       // routine is called with only 'y' or 'n' in param
-	MM_KEYHANDLER,  // the same of above but without 'y' or 'n' restriction
-	MM_EVENTHANDLER // the same of above but routine is void routine(event_t *)
-	                // (ex: set control)
+	MM_EVENTHANDLER // the same of above but without 'y' or 'n' restriction
+	                // and routine is void routine(event_t *) (ex: set control)
 } menumessagetype_t;
 void M_StartMessage(const char *string, void *routine, menumessagetype_t itemtype);
 
@@ -362,11 +361,9 @@ extern menu_t *currentMenu;
 extern menu_t MainDef;
 extern menu_t SP_LoadDef;
 
-// Call when a gamepad is connected or disconnected
-void M_UpdateGamepadMenu(void);
-
-// Returns true if the player is on the gamepad selection menu
-boolean M_OnGamepadMenu(void);
+// Call upon joystick hotplug
+void M_SetupJoystickMenu(INT32 choice);
+extern menu_t OP_JoystickSetDef;
 
 // Stuff for customizing the player select screen
 typedef struct
@@ -541,19 +538,6 @@ void M_FreePlayerSetupColors(void);
 	NULL\
 }
 
-#define GAMEPADMENUSTYLE(id, header, source, prev, x, y)\
-{\
-	id,\
-	header,\
-	sizeof(source)/sizeof(menuitem_t),\
-	prev,\
-	source,\
-	M_DrawGamepadMenu,\
-	x, y,\
-	0,\
-	NULL\
-}
-
 #define MAPPLATTERMENUSTYLE(id, header, source)\
 {\
 	id,\
@@ -574,7 +558,7 @@ void M_FreePlayerSetupColors(void);
 	sizeof (source)/sizeof (menuitem_t),\
 	prev,\
 	source,\
-	M_DrawControlConfigMenu,\
+	M_DrawControl,\
 	24, 40,\
 	0,\
 	NULL\

@@ -949,7 +949,6 @@ enum
 	ARCH_MAPHEADER,
 	ARCH_SKINCOLOR,
 	ARCH_MOUSE,
-	ARCH_GAMEPAD,
 
 	ARCH_TEND=0xFF,
 };
@@ -977,7 +976,6 @@ static const struct {
 	{META_SLOPE,    ARCH_SLOPE},
 	{META_MAPHEADER,   ARCH_MAPHEADER},
 	{META_SKINCOLOR,   ARCH_SKINCOLOR},
-	{META_GAMEPAD,  ARCH_GAMEPAD},
 	{META_MOUSE,    ARCH_MOUSE},
 	{NULL,          ARCH_NULL}
 };
@@ -1293,13 +1291,6 @@ static UINT8 ArchiveValue(int TABLESINDEX, int myindex)
 			WRITEUINT16(save_p, info - skincolors);
 			break;
 		}
-		case ARCH_GAMEPAD:
-		{
-			gamepad_t *gamepad = *((gamepad_t **)lua_touserdata(gL, myindex));
-			WRITEUINT8(save_p, ARCH_GAMEPAD);
-			WRITEUINT8(save_p, gamepad->num);
-			break;
-		}
 		case ARCH_MOUSE:
 		{
 			mouse_t *m = *((mouse_t **)lua_touserdata(gL, myindex));
@@ -1550,15 +1541,6 @@ static UINT8 UnArchiveValue(int TABLESINDEX)
 	case ARCH_SKINCOLOR:
 		LUA_PushUserdata(gL, &skincolors[READUINT16(save_p)], META_SKINCOLOR);
 		break;
-	case ARCH_GAMEPAD:
-	{
-		UINT8 which = READUINT8(save_p);
-		if (which < NUM_GAMEPADS)
-			LUA_PushUserdata(gL, &gamepads[which], META_GAMEPAD);
-		else // Wait, what?
-			lua_pushnil(gL);
-		break;
-	}
 	case ARCH_MOUSE:
 		LUA_PushUserdata(gL, READUINT16(save_p) == 1 ? &mouse : &mouse2, META_MOUSE);
 		break;
