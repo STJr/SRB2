@@ -572,7 +572,8 @@ void SCR_ClosedCaptions(void)
 
 	for (i = 0; i < NUMCAPTIONS; i++)
 	{
-		INT32 flags, y;
+		INT32 flags;
+		fixed_t y;
 		char dot;
 		boolean music;
 
@@ -585,14 +586,19 @@ void SCR_ClosedCaptions(void)
 			continue;
 
 		flags = V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE;
-		y = basey-(i*10);
+		y = (basey-(i*10)) * FRACUNIT;
 
 		if (closedcaptions[i].b)
 		{
-			y -= closedcaptions[i].b * 4;
 			if (renderisnewtic)
-			{
 				closedcaptions[i].b--;
+
+			if (closedcaptions[i].b) // If the caption hasn't reached its final destination...
+			{
+				y -= closedcaptions[i].b * 4 * FRACUNIT; // ...move it per tic...
+				y += (rendertimefrac % FRACUNIT) * 4; // ...and interpolate it per frame
+				// We have to modulo it by FRACUNIT, so that it won't be a tic ahead with interpolation disabled
+				// Unlike everything else, captions are (intentionally) interpolated from T to T+1 instead of T-1 to T
 			}
 		}
 
@@ -606,7 +612,7 @@ void SCR_ClosedCaptions(void)
 		else
 			dot = ' ';
 
-		V_DrawRightAlignedString(BASEVIDWIDTH - 20, y, flags,
+		V_DrawRightAlignedStringAtFixed((BASEVIDWIDTH-20) * FRACUNIT, y, flags,
 			va("%c [%s]", dot, (closedcaptions[i].s->caption[0] ? closedcaptions[i].s->caption : closedcaptions[i].s->name)));
 	}
 }
