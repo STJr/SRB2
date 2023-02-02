@@ -552,7 +552,7 @@ void SCR_ClosedCaptions(void)
 {
 	UINT8 i;
 	boolean gamestopped = (paused || P_AutoPause());
-	INT32 basey = BASEVIDHEIGHT;
+	INT32 basey = BASEVIDHEIGHT - 20;
 
 	if (gamestate != wipegamestate)
 		return;
@@ -585,7 +585,7 @@ void SCR_ClosedCaptions(void)
 			continue;
 
 		flags = V_SNAPTORIGHT|V_SNAPTOBOTTOM|V_ALLOWLOWERCASE;
-		y = basey-((i + 2)*10);
+		y = basey-(i*10);
 
 		if (closedcaptions[i].b)
 		{
