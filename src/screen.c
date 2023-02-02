@@ -589,7 +589,7 @@ void SCR_ClosedCaptions(void)
 
 		if (closedcaptions[i].b)
 		{
-			y -= closedcaptions[i].b * vid.dup;
+			y -= closedcaptions[i].b * 4;
 			if (renderisnewtic)
 			{
 				closedcaptions[i].b--;
