@@ -72,8 +72,8 @@ static INT32 con_curlines;  // vid lines currently used by console
 
        INT32 con_clipviewtop; // (useless)
 
-static INT32 con_hudlines;        // number of console heads up message lines
-static INT32 con_hudtime[MAXHUDLINES];      // remaining time of display for hud msg lines
+static UINT8 con_hudlines;             // number of console heads up message lines
+static INT32 con_hudtime[MAXHUDLINES]; // remaining time of display for hud msg lines
 
        INT32 con_clearlines;      // top screen lines to refresh when view reduced
        boolean con_hudupdate;   // when messages scroll, we need a backgrnd refresh
@@ -128,7 +128,8 @@ static char con_buffer[CON_BUFFERSIZE];
 static consvar_t cons_msgtimeout = CVAR_INIT ("con_hudtime", "5", CV_SAVE, CV_Unsigned, NULL);
 
 // number of lines displayed on the HUD
-static consvar_t cons_hudlines = CVAR_INIT ("con_hudlines", "5", CV_CALL|CV_SAVE, CV_Unsigned, CONS_hudlines_Change);
+static CV_PossibleValue_t hudlines_cons_t[] = {{1, "MIN"}, {MAXHUDLINES, "MAX"}, {0, "None"}, {0, NULL}};
+static consvar_t cons_hudlines = CVAR_INIT ("con_hudlines", "5", CV_CALL|CV_SAVE, hudlines_cons_t, CONS_hudlines_Change);
 
 // number of lines console move per frame
 // (con_speed needs a limit, apparently)
@@ -167,11 +168,6 @@ static void CONS_hudlines_Change(void)
 	// Clear the currently displayed lines
 	for (i = 0; i < con_hudlines; i++)
 		con_hudtime[i] = 0;
-
-	if (cons_hudlines.value < 1)
-		cons_hudlines.value = 1;
-	else if (cons_hudlines.value > MAXHUDLINES)
-		cons_hudlines.value = MAXHUDLINES;
 
 	con_hudlines = cons_hudlines.value;
 
@@ -1328,7 +1324,8 @@ boolean CON_Responder(event_t *ev)
 static void CON_Linefeed(void)
 {
 	// set time for heads up messages
-	con_hudtime[con_cy%con_hudlines] = cons_msgtimeout.value*TICRATE;
+	if (con_hudlines)
+		con_hudtime[con_cy%con_hudlines] = cons_msgtimeout.value*TICRATE;
 
 	con_cy++;
 	con_cx = 0;
@@ -1684,7 +1681,7 @@ static void CON_DrawHudlines(void)
 	INT32 charwidth = 8 * con_scalefactor;
 	INT32 charheight = 8 * con_scalefactor;
 
-	if (con_hudlines <= 0)
+	if (!con_hudlines)
 		return;
 
 	if (chat_on && OLDCHAT)
@@ -1692,7 +1689,7 @@ static void CON_DrawHudlines(void)
 	else
 		y = 0;
 
-	for (i = con_cy - con_hudlines+1; i <= con_cy; i++)
+	for (i = con_cy - con_hudlines; i <= con_cy; i++)
 	{
 		size_t c;
 		INT32 x;
