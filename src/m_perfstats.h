@@ -43,12 +43,16 @@ extern ps_metric_t ps_thlist_times[];
 
 extern ps_metric_t ps_checkposition_calls;
 
+extern ps_metric_t ps_lua_prethinkframe_time;
 extern ps_metric_t ps_lua_thinkframe_time;
+extern ps_metric_t ps_lua_postthinkframe_time;
 extern ps_metric_t ps_lua_mobjhooks;
 
 extern ps_metric_t ps_otherlogictime;
 
+void PS_SetPreThinkFrameHookInfo(int index, precise_t time_taken, char* short_src);
 void PS_SetThinkFrameHookInfo(int index, precise_t time_taken, char* short_src);
+void PS_SetPostThinkFrameHookInfo(int index, precise_t time_taken, char* short_src);
 
 void PS_UpdateTickStats(void);
 

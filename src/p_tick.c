@@ -664,7 +664,9 @@ void P_Ticker(boolean run)
 		ps_lua_mobjhooks.value.i = 0;
 		ps_checkposition_calls.value.i = 0;
 
-		LUA_HOOK(PreThinkFrame);
+		PS_START_TIMING(ps_lua_prethinkframe_time);
+		LUA_HookPreThinkFrame();
+		PS_STOP_TIMING(ps_lua_prethinkframe_time);
 
 		PS_START_TIMING(ps_playerthink_time);
 		for (i = 0; i < MAXPLAYERS; i++)
@@ -768,7 +770,9 @@ void P_Ticker(boolean run)
 		if (modeattacking)
 			G_GhostTicker();
 
-		LUA_HOOK(PostThinkFrame);
+		PS_START_TIMING(ps_lua_postthinkframe_time);
+		LUA_HookPostThinkFrame();
+		PS_STOP_TIMING(ps_lua_postthinkframe_time);
 	}
 
 	if (run)
