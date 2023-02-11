@@ -646,9 +646,20 @@ void PS_UpdateTickStats(void)
 		if(cv_perfstats.value >= 3 && PS_IsLevelActive())
 		{
 			int i;
-			for (i = 0; i < thinkframe_hooks_length; i++)
+			if (cv_perfstats.value == 3)
 			{
-				PS_UpdateMetricHistory(&thinkframe_hooks[i].time_taken, true, false, false);
+				for (i = 0; i < thinkframe_hooks_length; i++)
+					PS_UpdateMetricHistory(&thinkframe_hooks[i].time_taken, true, false, false);
+			}
+			else if (cv_perfstats.value == 4)
+			{
+				for (i = 0; i < prethinkframe_hooks_length; i++)
+					PS_UpdateMetricHistory(&prethinkframe_hooks[i].time_taken, true, false, false);
+			}
+			else if (cv_perfstats.value == 5)
+			{
+				for (i = 0; i < postthinkframe_hooks_length; i++)
+					PS_UpdateMetricHistory(&postthinkframe_hooks[i].time_taken, true, false, false);
 			}
 		}
 		if (cv_perfstats.value)
