@@ -4180,6 +4180,29 @@ sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number)
 	return NULL;
 }
 
+// Deprecated in favor of P_MobjTouchingSectorSpecial
+// Kept for Lua backwards compatibility only
+sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
+{
+	ffloor_t *rover;
+
+	for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
+	{
+		if (!rover->master->frontsector->special)
+			continue;
+
+		if (!(rover->fofflags & FOF_EXISTS))
+			continue;
+
+		if (!P_IsMobjTouching3DFloor(mo, rover, mo->subsector->sector))
+			continue;
+
+		return rover->master->frontsector;
+	}
+
+	return NULL;
+}
+
 sector_t *P_MobjTouchingSectorSpecialFlag(mobj_t *mo, sectorspecialflags_t flag)
 {
 	msecnode_t *node;
@@ -4577,6 +4600,9 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 		return;
 
 	if (player->bot)
+		return;
+
+	if (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))
 		return;
 
 	// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
