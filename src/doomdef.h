@@ -108,6 +108,14 @@ FILE *fopenfile(const char*, const char*);
 
 //#define NOMD5
 
+// If you don't disable ALL debug first, you get ALL debug enabled
+#if !defined (NDEBUG)
+#define PACKETDROP
+#define PARANOIA
+#define RANGECHECK
+#define ZDEBUG
+#endif
+
 // Uncheck this to compile debugging code
 //#define RANGECHECK
 //#ifndef PARANOIA
