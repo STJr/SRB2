@@ -1210,6 +1210,15 @@ D_ConvertVersionNumbers (void)
 #endif
 }
 
+static void Command_assert(void)
+{
+#if !defined(NDEBUG) || defined(PARANOIA)
+	CONS_Printf("Yes, assertions are enabled.\n");
+#else
+	CONS_Printf("No, assertions are NOT enabled.\n");
+#endif
+}
+
 //
 // D_SRB2Main
 //
@@ -1363,6 +1372,8 @@ void D_SRB2Main(void)
 
 	// Do this up here so that WADs loaded through the command line can use ExecCfg
 	COM_Init();
+
+	COM_AddCommand("assert", Command_assert);
 
 	// Add any files specified on the command line with
 	// "-file <file>" or "-folder <folder>" to the add-on list
