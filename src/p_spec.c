@@ -1760,13 +1760,11 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	{
 		if (caller->triggerer == TO_PLAYEREMERALDS)
 		{
-			CONS_Alert(CONS_WARNING, M_GetText("Deprecated emerald check sector type detected. Please use linedef types 337-339 instead.\n"));
 			if (!(ALL7EMERALDS(emeralds)))
 				return false;
 		}
 		else if (caller->triggerer == TO_PLAYERNIGHTS)
 		{
-			CONS_Alert(CONS_WARNING, M_GetText("Deprecated NiGHTS mare sector type detected. Please use linedef types 340-342 instead.\n"));
 			if (!P_CheckPlayerMareOld(triggerline))
 				return false;
 		}
@@ -5970,8 +5968,6 @@ static inline void P_AddCameraScanner(sector_t *sourcesec, sector_t *actionsecto
 {
 	elevator_t *elevator; // Why not? LOL
 
-	CONS_Alert(CONS_WARNING, M_GetText("Detected a camera scanner effect (linedef type 5). This effect is deprecated and will be removed in the future!\n"));
-
 	// create and initialize new elevator thinker
 	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &elevator->thinker);
@@ -6226,22 +6222,21 @@ void P_SpawnSpecials(boolean fromnetsave)
 				circuitmap = true;
 		}
 
-		if (!sector->special)
+		if (sector->damagetype == SD_SPIKE) {
+			//Terrible hack to replace an even worse hack:
+			//Spike damage automatically sets MSF_TRIGGERSPECIAL_TOUCH.
+			//Yes, this also affects other specials on the same sector. Sorry.
+			sector->flags |= MSF_TRIGGERSPECIAL_TOUCH;
+		}
+
+		// Process deprecated binary sector specials
+		if (udmf || !sector->special)
 			continue;
 
 		// Process Section 1
 		switch(GETSECSPECIAL(sector->special, 1))
 		{
-			case 5: // Spikes
-				//Terrible hack to replace an even worse hack:
-				//Spike damage automatically sets MSF_TRIGGERSPECIAL_TOUCH.
-				//Yes, this also affects other specials on the same sector. Sorry.
-				sector->flags |= MSF_TRIGGERSPECIAL_TOUCH;
-				break;
 			case 15: // Bouncy FOF
-				if (udmf)
-					break;
-				CONS_Alert(CONS_WARNING, M_GetText("Deprecated bouncy FOF sector type detected. Please use linedef type 76 instead.\n"));
 				CheckForBouncySector = true;
 				break;
 		}
@@ -6250,17 +6245,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 		switch(GETSECSPECIAL(sector->special, 2))
 		{
 			case 10: // Time for special stage
-				if (udmf)
-					break;
-				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for special stage requirements detected. Please use the SpecialStageTime and SpecialStageSpheres level header options instead.\n"));
 				sstimer = (sector->floorheight>>FRACBITS) * TICRATE + 6; // Time to finish
 				ssspheres = sector->ceilingheight>>FRACBITS; // Ring count for special stage
 				break;
 
 			case 11: // Custom global gravity!
-				if (udmf)
-					break;
-				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for global gravity detected. Please use the Gravity level header option instead.\n"));
 				gravity = sector->floorheight/1000;
 				break;
 		}
