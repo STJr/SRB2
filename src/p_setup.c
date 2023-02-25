@@ -6288,7 +6288,6 @@ static void P_ConvertBinaryThingTypes(void)
 		case 312: //Emerald token
 		case 320: //Emerald hunt location
 		case 321: //Match chaos emerald spawn
-		case 322: //Emblem
 		case 330: //Bounce ring panel
 		case 331: //Rail ring panel
 		case 332: //Automatic ring panel
@@ -6300,6 +6299,9 @@ static void P_ConvertBinaryThingTypes(void)
 		case 1706: //Blue sphere
 		case 1800: //Coin
 			mapthings[i].args[0] = !(mapthings[i].options & MTF_AMBUSH);
+			break;
+		case 322: //Emblem
+			mapthings[i].args[1] = !(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 409: //Extra life monitor
 			mapthings[i].args[2] = !(mapthings[i].options & (MTF_AMBUSH|MTF_OBJECTSPECIAL));

@@ -11849,7 +11849,6 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	case MT_EMERHUNT:
 	case MT_EMERALDSPAWN:
 	case MT_TOKEN:
-	case MT_EMBLEM:
 	case MT_RING:
 	case MT_REDTEAMRING:
 	case MT_BLUETEAMRING:
@@ -11859,6 +11858,10 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	case MT_NIGHTSCHIP:
 	case MT_NIGHTSSTAR:
 		offset += mthing->args[0] ? 0 : 24*FRACUNIT;
+		break;
+
+	case MT_EMBLEM:
+		offset += mthing->args[1] ? 0 : 24 * FRACUNIT;
 		break;
 
 	// Remaining objects.
