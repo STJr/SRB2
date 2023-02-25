@@ -4102,7 +4102,7 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 			scale *= spr->shadowscale;
 
 		if (spr->rotateflags & SRF_3D || renderflags & RF_NOSPLATBILLBOARD)
-			angle = spr->angle;
+			angle = spr->mobj->angle;
 		else
 			angle = viewangle;
 
@@ -4157,8 +4157,8 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		// Translate
 		for (i = 0; i < 4; i++)
 		{
-			wallVerts[i].x = rotated[i].x + spr->x1;
-			wallVerts[i].z = rotated[i].y + spr->z1;
+			wallVerts[i].x = rotated[i].x + FIXED_TO_FLOAT(spr->mobj->x);
+			wallVerts[i].z = rotated[i].y + FIXED_TO_FLOAT(spr->mobj->y);
 		}
 
 		if (renderflags & (RF_SLOPESPLAT | RF_OBJECTSLOPESPLAT))
