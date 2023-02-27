@@ -4653,7 +4653,7 @@ static void P_ProcessTeamBase(player_t *player, boolean redteam)
 
 	// Make sure the team still has their own
 	// flag at their base so they can score.
-	if (!P_IsFlagAtBase(redteam ? MT_BLUEFLAG : MT_REDFLAG))
+	if (!P_IsFlagAtBase(redteam ? MT_REDFLAG : MT_BLUEFLAG))
 		return;
 
 	HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
