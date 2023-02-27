@@ -13460,6 +13460,9 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 	if (!player)
 		return true;
 
+	if (player->spectator)
+		return true;
+
 	if (player->powers[pw_carry] != CR_DUSTDEVIL && (player->powers[pw_ignorelatch] & (1<<15)))
 		return true;
 
