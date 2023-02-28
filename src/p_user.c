@@ -1,4 +1,3 @@
-
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
@@ -3108,7 +3107,7 @@ static void P_DoPlayerHeadSigns(player_t *player)
 	if (G_TagGametype())
 	{
 		// If you're "IT", show a big "IT" over your head for others to see.
-		if (player->pflags & PF_TAGIT && P_IsLocalPlayer(player))
+		if (player->pflags & PF_TAGIT && !P_IsLocalPlayer(player))
 		{
 			mobj_t* it = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_TAG);
 			it->x = player->mo->x;
@@ -3134,7 +3133,7 @@ static void P_DoPlayerHeadSigns(player_t *player)
 	{
 		// Spawn a got-flag message over the head of the player that
 		// has it (but not on your own screen if you have the flag).
-		if (splitscreen || player != &players[consoleplayer] || true)
+		if (splitscreen || player != &players[consoleplayer])
 		{
 			fixed_t zofs;
 			mobj_t *sign;
