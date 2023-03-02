@@ -1405,6 +1405,9 @@ void A_StatueBurst(mobj_t *actor)
 	if (LUA_CallAction(A_STATUEBURST, actor))
 		return;
 
+	// make statue intangible upon spawning so you can't stand above the created object for 40 tics
+	actor->flags &= ~MF_SOLID;
+
 	if (!locvar1 || !(new = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1)))
 		return;
 
@@ -2668,7 +2671,7 @@ void A_LobShot(mobj_t *actor)
 	fixed_t z;
 	fixed_t dist;
 	fixed_t vertical, horizontal;
-	fixed_t airtime = var2 & 65535;
+	fixed_t airtime = max(1, var2 & 65535);
 
 	if (LUA_CallAction(A_LOBSHOT, actor))
 		return;
@@ -4856,12 +4859,12 @@ void A_FishJump(mobj_t *actor)
 		else
 		{
 			if (actor->spawnpoint && actor->spawnpoint->args[0])
-				jumpval = actor->spawnpoint->args[0];
+				jumpval = actor->spawnpoint->args[0] << (FRACBITS - 2);
 			else
-				jumpval = 44;
+				jumpval = 44 << (FRACBITS - 2);
 		}
 
-		actor->momz = FixedMul(jumpval << (FRACBITS - 2), actor->scale);
+		actor->momz = FixedMul(jumpval, actor->scale);
 		P_SetMobjStateNF(actor, actor->info->seestate);
 	}
 
@@ -13455,6 +13458,9 @@ static boolean PIT_DustDevilLaunch(mobj_t *thing)
 	player_t *player = thing->player;
 
 	if (!player)
+		return true;
+
+	if (player->spectator)
 		return true;
 
 	if (player->powers[pw_carry] != CR_DUSTDEVIL && (player->powers[pw_ignorelatch] & (1<<15)))

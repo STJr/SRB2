@@ -1660,7 +1660,7 @@ void EV_DoFloor(mtag_t tag, line_t *line, floor_e floortype)
 				// chained linedef executing ability
 				// Only set it on one of the moving sectors (the smallest numbered)
 				if (line->args[3])
-					dofloor->tag = firstone ? (INT16)line->args[3] : -1;
+					dofloor->tag = firstone ? (INT16)line->args[3] : 0;
 
 				// flat changing ability
 				dofloor->texture = line->args[4] ? line->frontsector->floorpic : -1;

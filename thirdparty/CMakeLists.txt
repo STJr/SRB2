@@ -91,6 +91,7 @@ if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 
 		configure_file("${ZLIB_SOURCE_DIR}/zlib.pc.cmakein" "${ZLIB_BINARY_DIR}/zlib.pc" @ONLY)
 		configure_file("${ZLIB_SOURCE_DIR}/zconf.h.cmakein" "${ZLIB_BINARY_DIR}/include/zconf.h" @ONLY)
+		configure_file("${ZLIB_SOURCE_DIR}/zlib.h" "${ZLIB_BINARY_DIR}/include/zlib.h" @ONLY)
 
 		add_library(ZLIB ${SRB2_INTERNAL_LIBRARY_TYPE} ${ZLIB_SRCS})
 		set_target_properties(ZLIB PROPERTIES
@@ -173,8 +174,8 @@ if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 		target_include_directories(png PUBLIC "${png_BINARY_DIR}/include")
 
 		# ... and these also need to be present only for png build
-		target_include_directories(png PRIVATE "${zlib_SOURCE_DIR}")
-		target_include_directories(png PRIVATE "${zlib_BINARY_DIR}")
+		target_include_directories(png PRIVATE "${ZLIB_SOURCE_DIR}")
+		target_include_directories(png PRIVATE "${ZLIB_BINARY_DIR}")
 		target_include_directories(png PRIVATE "${png_BINARY_DIR}")
 
 		target_link_libraries(png PRIVATE ZLIB::ZLIB)
@@ -495,7 +496,7 @@ if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 		if("${CMAKE_C_COMPILER_ID}" STREQUAL GNU OR "${CMAKE_C_COMPILER_ID}" STREQUAL Clang OR "${CMAKE_C_COMPILER_ID}" STREQUAL AppleClang)
 			target_compile_options(openmpt PRIVATE "-g0")
 		endif()
-		if("${CMAKE_SYSTEM_NAME}" STREQUAL Windows)
+		if("${CMAKE_SYSTEM_NAME}" STREQUAL Windows AND "${CMAKE_C_COMPILER_ID}" STREQUAL MSVC)
 			target_link_libraries(openmpt PRIVATE Rpcrt4)
 		endif()
 		target_compile_features(openmpt PRIVATE cxx_std_11)
@@ -521,6 +522,7 @@ if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 		OPTIONS
 			"BUILD_SHARED_LIBS ${SRB2_CONFIG_SHARED_INTERNAL_LIBRARIES}"
 			"ENABLE_UBSAN OFF"
+			"GME_YM2612_EMU MAME"
 	)
 	target_compile_features(gme PRIVATE cxx_std_11)
 	target_link_libraries(gme PRIVATE ZLIB::ZLIB)

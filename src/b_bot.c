@@ -188,6 +188,7 @@ static void B_BuildTailsTiccmd(mobj_t *sonic, mobj_t *tails, ticcmd_t *cmd)
 			&& !(pcmd->forwardmove || pcmd->sidemove || player->dashspeed)
 			&& P_IsObjectOnGround(sonic) && P_IsObjectOnGround(tails)
 			&& !(player->pflags & PF_STASIS)
+			&& !(player->exiting)
 			&& bot->charability == CA_FLY)
 				mem->thinkstate = AI_THINKFLY;
 		else if (mem->thinkstate == AI_THINKFLY)

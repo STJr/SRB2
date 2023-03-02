@@ -1,4 +1,3 @@
-
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
@@ -3108,14 +3107,25 @@ static void P_DoPlayerHeadSigns(player_t *player)
 	if (G_TagGametype())
 	{
 		// If you're "IT", show a big "IT" over your head for others to see.
-		if (player->pflags & PF_TAGIT)
+		if (player->pflags & PF_TAGIT && !P_IsLocalPlayer(player))
 		{
-			if (!P_IsLocalPlayer(player)) // Don't display it on your own view.
+			mobj_t* it = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_TAG);
+			it->x = player->mo->x;
+			it->y = player->mo->y;
+			it->z = player->mo->z;
+			it->old_x = player->mo->old_x;
+			it->old_y = player->mo->old_y;
+			it->old_z = player->mo->old_z;
+
+			if (!(player->mo->eflags & MFE_VERTICALFLIP))
 			{
-				if (!(player->mo->eflags & MFE_VERTICALFLIP))
-					P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + player->mo->height, MT_TAG);
-				else
-					P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z - mobjinfo[MT_TAG].height, MT_TAG)->eflags |= MFE_VERTICALFLIP;
+				it->z += player->mo->height;
+				it->old_z += player->mo->height;
+			}
+			else
+			{
+				it->z -= mobjinfo[MT_TAG].height;
+				it->old_z -= mobjinfo[MT_TAG].height;
 			}
 		}
 	}
@@ -3125,15 +3135,32 @@ static void P_DoPlayerHeadSigns(player_t *player)
 		// has it (but not on your own screen if you have the flag).
 		if (splitscreen || player != &players[consoleplayer])
 		{
-			mobj_t *sign = P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
-					player->mo->z+player->mo->momz, MT_GOTFLAG);
-			if (player->mo->eflags & MFE_VERTICALFLIP)
+			fixed_t zofs;
+			mobj_t *sign;
+			boolean player_is_flipped = (player->mo->eflags & MFE_VERTICALFLIP) > 0;
+
+			zofs = player->mo->momz;
+			if (player_is_flipped)
 			{
-				sign->z += player->mo->height-P_GetPlayerHeight(player)-mobjinfo[MT_GOTFLAG].height-FixedMul(16*FRACUNIT, player->mo->scale);
-				sign->eflags |= MFE_VERTICALFLIP;
+				zofs += player->mo->height - P_GetPlayerHeight(player) - mobjinfo[MT_GOTFLAG].height - FixedMul(16 * FRACUNIT, player->mo->scale);
 			}
 			else
-				sign->z += P_GetPlayerHeight(player)+FixedMul(16*FRACUNIT, player->mo->scale);
+			{
+				zofs += P_GetPlayerHeight(player) + FixedMul(16 * FRACUNIT, player->mo->scale);
+			}
+
+			sign = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_GOTFLAG);
+			sign->x = player->mo->x;
+			sign->y = player->mo->y;
+			sign->z = player->mo->z + zofs;
+			sign->old_x = player->mo->old_x;
+			sign->old_y = player->mo->old_y;
+			sign->old_z = player->mo->old_z + zofs;
+
+			if (player_is_flipped)
+			{
+				sign->eflags |= MFE_VERTICALFLIP;
+			}
 
 			if (player->gotflag & GF_REDFLAG)
 				sign->frame = 1|FF_FULLBRIGHT;
@@ -4984,7 +5011,7 @@ void P_Telekinesis(player_t *player, fixed_t thrust, fixed_t range)
 
 static void P_DoTwinSpin(player_t *player)
 {
-	player->pflags &= ~PF_NOJUMPDAMAGE;
+	player->pflags &= ~(PF_NOJUMPDAMAGE|PF_SPINNING);
 	player->pflags |= P_GetJumpFlags(player) | PF_THOKKED;
 	S_StartSound(player->mo, sfx_s3k42);
 	player->mo->frame = 0;
@@ -5031,6 +5058,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 			if ((player->powers[pw_shield] & ~(SH_FORCEHP|SH_STACK)) == SH_FORCE)
 			{
 				player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+				player->pflags &= ~PF_SPINNING;
 				player->mo->momx = player->mo->momy = player->mo->momz = 0;
 				S_StartSound(player->mo, sfx_ngskid);
 			}
@@ -5046,11 +5074,13 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 					// Armageddon pow
 					case SH_ARMAGEDDON:
 						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+						player->pflags &= ~PF_SPINNING;
 						P_BlackOw(player);
 						break;
 					// Attraction blast
 					case SH_ATTRACT:
 						player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+						player->pflags &= ~PF_SPINNING;
 						player->homing = 2;
 						P_SetTarget(&player->mo->target, P_SetTarget(&player->mo->tracer, lockonshield));
 						if (lockonshield)
@@ -5070,6 +5100,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 							{
 								boolean elem = ((player->powers[pw_shield] & SH_NOSTACK) == SH_ELEMENTAL);
 								player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
+								player->pflags &= ~PF_SPINNING;
 								if (elem)
 								{
 									player->mo->momx = player->mo->momy = 0;
@@ -5092,7 +5123,7 @@ static boolean P_PlayerShieldThink(player_t *player, ticcmd_t *cmd, mobj_t *lock
 							player->pflags |= PF_THOKKED|PF_SHIELDABILITY;
 							P_Thrust(player->mo, player->mo->angle, FixedMul(30*FRACUNIT - FixedSqrt(FixedDiv(player->speed, player->mo->scale)), player->mo->scale));
 							player->drawangle = player->mo->angle;
-							player->pflags &= ~PF_NOJUMPDAMAGE;
+							player->pflags &= ~(PF_NOJUMPDAMAGE|PF_SPINNING);
 							P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 							S_StartSound(player->mo, sfx_s3k43);
 						default:
@@ -5385,7 +5416,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					if (!(player->pflags & PF_THOKKED) || ((player->charflags & SF_MULTIABILITY) && (player->secondjump < (player->actionspd >> FRACBITS))))
 					{
 						player->pflags |= PF_THOKKED;
-						player->pflags &= ~PF_JUMPED;
+						player->pflags &= ~(PF_JUMPED|PF_SPINNING);
 						P_DoJump(player, true);
 						player->secondjump++;
 					}
@@ -5411,6 +5442,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						P_Telekinesis(player,
 							FixedMul(player->actionspd, player->mo->scale), // +ve thrust (pushing away from player)
 							FixedMul(384*FRACUNIT, player->mo->scale));
+						player->pflags &= ~PF_SPINNING;
 					}
 					break;
 				case CA_FALLSWITCH:
@@ -5419,6 +5451,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						player->mo->momz = -player->mo->momz;
 						P_SpawnThokMobj(player);
 						player->pflags |= PF_THOKKED;
+						player->pflags &= ~PF_SPINNING;
 					}
 					break;
 				case CA_AIRDRILL:
@@ -5426,6 +5459,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					{
 						player->flyangle = 56 + (60-(player->actionspd>>FRACBITS))/3;
 						player->pflags |= PF_THOKKED;
+						player->pflags &= ~PF_SPINNING;
 						S_StartSound(player->mo, sfx_spndsh);
 					}
 					break;
@@ -5433,7 +5467,7 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 					if (!(player->pflags & PF_THOKKED) || player->charflags & SF_MULTIABILITY)
 					{
 						P_SetPlayerMobjState(player->mo, S_PLAY_BOUNCE);
-						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE);
+						player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_SPINNING);
 						player->pflags |= PF_THOKKED|PF_BOUNCING;
 						player->mo->momx >>= 1;
 						player->mo->momy >>= 1;
@@ -11031,6 +11065,21 @@ static void P_MinecartThink(player_t *player)
 					S_StartSound(minecart, minecart->info->activesound);
 				}
 			}
+
+			// Mark interpolation; the old positions need to be relative to the displacement from the minecart _after_ it's moved.
+			// This isn't quite correct (it captures the landing wobble) but it works well enough
+			if (detleft)
+			{
+				detleft->old_x = detleft->x - (minecart->old_x - minecart->old_x2);
+				detleft->old_y = detleft->y - (minecart->old_y - minecart->old_y2);
+				detleft->old_z = detleft->z - (minecart->old_z - minecart->old_z2);
+			}
+			if (detright)
+			{
+				detright->old_x = detright->x - (minecart->old_x - minecart->old_x2);
+				detright->old_y = detright->y - (minecart->old_y - minecart->old_y2);
+				detright->old_z = detright->z - (minecart->old_z - minecart->old_z2);
+			}
 		}
 		else
 		{
@@ -11259,6 +11308,11 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	tails->y = player->mo->y + P_ReturnThrustY(tails, tails->angle, FixedMul(backwards, tails->scale));
 	tails->z = player->mo->z + zoffs;
 	P_SetThingPosition(tails);
+	
+	if (player->mo->flags2 & MF2_SHADOW)
+		tails->flags2 |= MF2_SHADOW;
+	else
+		tails->flags2 &= ~MF2_SHADOW;
 }
 
 // Metal Sonic's jet fume
@@ -12006,7 +12060,6 @@ void P_PlayerThink(player_t *player)
 	P_DoBubbleBreath(player); // Spawn Sonic's bubbles
 	P_CheckUnderwaterAndSpaceTimer(player); // Display the countdown drown numbers!
 	P_CheckInvincibilityTimer(player); // Spawn Invincibility Sparkles
-	P_DoPlayerHeadSigns(player); // Spawn Tag/CTF signs over player's head
 
 #if 1
 	// "Blur" a bit when you have speed shoes and are going fast enough
@@ -12871,6 +12924,8 @@ void P_PlayerAfterThink(player_t *player)
 			}
 		}
 	}
+
+	P_DoPlayerHeadSigns(player); // Spawn Tag/CTF signs over player's head
 }
 
 void P_SetPlayerAngle(player_t *player, angle_t angle)
