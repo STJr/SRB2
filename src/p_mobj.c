@@ -6334,11 +6334,7 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 		mobj->fuse = (radius>>(FRACBITS+2)) + 1;
 
 		if (spawncenter)
-		{
-			mobj->x = x;
-			mobj->y = y;
-			mobj->z = z;
-		}
+			P_SetOrigin(mobj, x, y, z);
 
 		if (mobj->fuse <= 1)
 			mobj->fuse = 2;
