@@ -51,7 +51,6 @@ p_spec.c
 p_telept.c
 p_tick.c
 p_user.c
-p_haptic.c
 p_slopes.c
 tables.c
 r_bsp.c

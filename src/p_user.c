@@ -1,4 +1,3 @@
-
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
@@ -3108,14 +3107,25 @@ static void P_DoPlayerHeadSigns(player_t *player)
 	if (G_TagGametype())
 	{
 		// If you're "IT", show a big "IT" over your head for others to see.
-		if (player->pflags & PF_TAGIT)
+		if (player->pflags & PF_TAGIT && !P_IsLocalPlayer(player))
 		{
-			if (!P_IsLocalPlayer(player)) // Don't display it on your own view.
+			mobj_t* it = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_TAG);
+			it->x = player->mo->x;
+			it->y = player->mo->y;
+			it->z = player->mo->z;
+			it->old_x = player->mo->old_x;
+			it->old_y = player->mo->old_y;
+			it->old_z = player->mo->old_z;
+
+			if (!(player->mo->eflags & MFE_VERTICALFLIP))
 			{
-				if (!(player->mo->eflags & MFE_VERTICALFLIP))
-					P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + player->mo->height, MT_TAG);
-				else
-					P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z - mobjinfo[MT_TAG].height, MT_TAG)->eflags |= MFE_VERTICALFLIP;
+				it->z += player->mo->height;
+				it->old_z += player->mo->height;
+			}
+			else
+			{
+				it->z -= mobjinfo[MT_TAG].height;
+				it->old_z -= mobjinfo[MT_TAG].height;
 			}
 		}
 	}
@@ -3125,15 +3135,32 @@ static void P_DoPlayerHeadSigns(player_t *player)
 		// has it (but not on your own screen if you have the flag).
 		if (splitscreen || player != &players[consoleplayer])
 		{
-			mobj_t *sign = P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
-					player->mo->z+player->mo->momz, MT_GOTFLAG);
-			if (player->mo->eflags & MFE_VERTICALFLIP)
+			fixed_t zofs;
+			mobj_t *sign;
+			boolean player_is_flipped = (player->mo->eflags & MFE_VERTICALFLIP) > 0;
+
+			zofs = player->mo->momz;
+			if (player_is_flipped)
 			{
-				sign->z += player->mo->height-P_GetPlayerHeight(player)-mobjinfo[MT_GOTFLAG].height-FixedMul(16*FRACUNIT, player->mo->scale);
-				sign->eflags |= MFE_VERTICALFLIP;
+				zofs += player->mo->height - P_GetPlayerHeight(player) - mobjinfo[MT_GOTFLAG].height - FixedMul(16 * FRACUNIT, player->mo->scale);
 			}
 			else
-				sign->z += P_GetPlayerHeight(player)+FixedMul(16*FRACUNIT, player->mo->scale);
+			{
+				zofs += P_GetPlayerHeight(player) + FixedMul(16 * FRACUNIT, player->mo->scale);
+			}
+
+			sign = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_GOTFLAG);
+			sign->x = player->mo->x;
+			sign->y = player->mo->y;
+			sign->z = player->mo->z + zofs;
+			sign->old_x = player->mo->old_x;
+			sign->old_y = player->mo->old_y;
+			sign->old_z = player->mo->old_z + zofs;
+
+			if (player_is_flipped)
+			{
+				sign->eflags |= MFE_VERTICALFLIP;
+			}
 
 			if (player->gotflag & GF_REDFLAG)
 				sign->frame = 1|FF_FULLBRIGHT;
@@ -5331,9 +5358,9 @@ static void P_DoJumpStuff(player_t *player, ticcmd_t *cmd)
 						// disabled because it seemed to disorient people and Z-targeting exists now
 						/*if (!demoplayback)
 						{
-							if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0 && !(G_PlayerInputDown(0, GC_TURNLEFT) || G_PlayerInputDown(0, GC_TURNRIGHT)))
+							if (player == &players[consoleplayer] && cv_cam_turnfacingability[0].value > 0 && !(PLAYER1INPUTDOWN(GC_TURNLEFT) || PLAYER1INPUTDOWN(GC_TURNRIGHT)))
 								P_SetPlayerAngle(player, player->mo->angle);;
-							else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0 && !(G_PlayerInputDown(1, GC_TURNLEFT) || G_PlayerInputDown(1, GC_TURNRIGHT)))
+							else if (player == &players[secondarydisplayplayer] && cv_cam_turnfacingability[1].value > 0 && !(PLAYER2INPUTDOWN(GC_TURNLEFT) || PLAYER2INPUTDOWN(GC_TURNRIGHT)))
 								P_SetPlayerAngle(player, player->mo->angle);
 						}*/
 					}
@@ -7342,7 +7369,7 @@ static void P_NiGHTSMovement(player_t *player)
 			else if (cmd->forwardmove < 0)
 				newangle = 270;
 		}
-		else // AngleFixed(R_PointToAngle2()) results in slight inaccuracy! Don't use it unless movement is on both axes.
+		else // AngleFixed(R_PointToAngle2()) results in slight inaccuracy! Don't use it unless movement is on both axises.
 			newangle = (INT16)FixedInt(AngleFixed(R_PointToAngle2(0,0, cmd->sidemove*FRACUNIT, cmd->forwardmove*FRACUNIT)));
 
 		newangle -= player->viewrollangle / ANG1;
@@ -11038,6 +11065,21 @@ static void P_MinecartThink(player_t *player)
 					S_StartSound(minecart, minecart->info->activesound);
 				}
 			}
+
+			// Mark interpolation; the old positions need to be relative to the displacement from the minecart _after_ it's moved.
+			// This isn't quite correct (it captures the landing wobble) but it works well enough
+			if (detleft)
+			{
+				detleft->old_x = detleft->x - (minecart->old_x - minecart->old_x2);
+				detleft->old_y = detleft->y - (minecart->old_y - minecart->old_y2);
+				detleft->old_z = detleft->z - (minecart->old_z - minecart->old_z2);
+			}
+			if (detright)
+			{
+				detright->old_x = detright->x - (minecart->old_x - minecart->old_x2);
+				detright->old_y = detright->y - (minecart->old_y - minecart->old_y2);
+				detright->old_z = detright->z - (minecart->old_z - minecart->old_z2);
+			}
 		}
 		else
 		{
@@ -11266,6 +11308,11 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	tails->y = player->mo->y + P_ReturnThrustY(tails, tails->angle, FixedMul(backwards, tails->scale));
 	tails->z = player->mo->z + zoffs;
 	P_SetThingPosition(tails);
+	
+	if (player->mo->flags2 & MF2_SHADOW)
+		tails->flags2 |= MF2_SHADOW;
+	else
+		tails->flags2 &= ~MF2_SHADOW;
 }
 
 // Metal Sonic's jet fume
@@ -12013,7 +12060,6 @@ void P_PlayerThink(player_t *player)
 	P_DoBubbleBreath(player); // Spawn Sonic's bubbles
 	P_CheckUnderwaterAndSpaceTimer(player); // Display the countdown drown numbers!
 	P_CheckInvincibilityTimer(player); // Spawn Invincibility Sparkles
-	P_DoPlayerHeadSigns(player); // Spawn Tag/CTF signs over player's head
 
 #if 1
 	// "Blur" a bit when you have speed shoes and are going fast enough
@@ -12878,6 +12924,8 @@ void P_PlayerAfterThink(player_t *player)
 			}
 		}
 	}
+
+	P_DoPlayerHeadSigns(player); // Spawn Tag/CTF signs over player's head
 }
 
 void P_SetPlayerAngle(player_t *player, angle_t angle)

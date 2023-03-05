@@ -472,5 +472,5 @@ mtag_t Tag_NextUnused(mtag_t start)
 		start++;
 	}
 
-	return MAXTAGS;
+	return (mtag_t)MAXTAGS;
 }
