@@ -2638,7 +2638,7 @@ static void HU_DrawRankings(void)
 	UINT32 whiteplayer;
 
 	// draw the current gametype in the lower right
-	if (gametype >= 0 || gametype < gametypecount)
+	if (gametype >= 0 && gametype < gametypecount)
 		V_DrawString(4, splitscreen ? 184 : 192, 0, Gametype_Names[gametype]);
 
 	if (gametyperules & (GTR_TIMELIMIT|GTR_POINTLIMIT))
