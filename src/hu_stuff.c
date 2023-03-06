@@ -1221,32 +1221,25 @@ static void HU_drawMiniChat(void)
 	for (; i>0; i--)
 	{
 		char *msg = V_ChatWordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i-1]);
-		size_t j = 0;
 
-		while(msg[j]) // iterate through msg
+		for(size_t j = 0; msg[j]; j++) // iterate through msg
 		{
 			if (msg[j] < FONTSTART) // don't draw
 			{
 				if (msg[j] == '\n') // get back down.
 				{
-					++j;
 					msglines++;
 					dx = 0;
-					continue;
-				}
-				else if (msg[j] & 0x80) // stolen from video.c, nice.
-				{
-					++j;
-					continue;
 				}
 			}
-			j++;
-
-			dx += charwidth;
-			if (dx >= boxw)
+			else
 			{
-				dx = 0;
-				msglines++;
+				dx += charwidth;
+				if (dx >= boxw)
+				{
+					dx = 0;
+					msglines++;
+				}
 			}
 		}
 		dx = dy = 0;
@@ -1259,49 +1252,38 @@ static void HU_drawMiniChat(void)
 	y = chaty - charheight*(msglines+1);
 	dx = dy = i = 0;
 
-	for (; i<=(chat_nummsg_min-1); i++) // iterate through our hot messages
+	for (; i < chat_nummsg_min; i++) // iterate through our hot messages
 	{
-		INT32 clrflag = 0;
 		INT32 timer = ((cv_chattime.value*TICRATE)-chat_timers[i]) - cv_chattime.value*TICRATE+9; // see below...
 		INT32 transflag = (timer >= 0 && timer <= 9) ? (timer*V_10TRANS) : 0; // you can make bad jokes out of this one.
-		size_t j = 0;
 		char *msg = V_ChatWordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i]); // get the current message, and word wrap it.
 		UINT8 *colormap = NULL;
 
-		while(msg[j]) // iterate through msg
+		for(size_t j = 0; msg[j]; j++) // iterate through msg
 		{
 			if (msg[j] < FONTSTART) // don't draw
 			{
 				if (msg[j] == '\n') // get back down.
 				{
-					++j;
 					dy += charheight;
 					dx = 0;
-					continue;
 				}
-				else if (msg[j] & 0x80) // stolen from video.c, nice.
-				{
-					clrflag = ((msg[j] & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK;
-					colormap = V_GetStringColormap(clrflag);
-					++j;
-					continue;
-				}
-
-				++j;
+				else if (msg[j] & 0x80) // get colormap
+					colormap = V_GetStringColormap(((msg[j] & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK);
 			}
 			else
 			{
 				if (cv_chatbacktint.value) // on request of wolfy
 					V_DrawFillConsoleMap(x + dx + 2, y+dy, charwidth, charheight, 239|V_SNAPTOBOTTOM|V_SNAPTOLEFT);
 
-				V_DrawChatCharacter(x + dx + 2, y+dy, msg[j++] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|transflag, true, colormap);
-			}
+				V_DrawChatCharacter(x + dx + 2, y+dy, msg[j] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|transflag, true, colormap);
 
-			dx += charwidth;
-			if (dx >= boxw)
-			{
-				dx = 0;
-				dy += charheight;
+				dx += charwidth;
+				if (dx >= boxw)
+				{
+					dx = 0;
+					dy += charheight;
+				}
 			}
 		}
 		dy += charheight;
@@ -1357,38 +1339,31 @@ static void HU_drawChatLog(INT32 offset)
 
 	for (i=0; i<chat_nummsg_log; i++) // iterate through our chatlog
 	{
-		INT32 clrflag = 0;
-		INT32 j = 0;
 		char *msg = V_ChatWordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_log[i]); // get the current message, and word wrap it.
 		UINT8 *colormap = NULL;
-		while(msg[j]) // iterate through msg
+		for(size_t j = 0; msg[j]; j++) // iterate through msg
 		{
 			if (msg[j] < FONTSTART) // don't draw
 			{
 				if (msg[j] == '\n') // get back down.
 				{
-					++j;
 					dy += charheight;
 					dx = 0;
-					continue;
 				}
-				else if (msg[j] & 0x80) // stolen from video.c, nice.
-				{
-					clrflag = ((msg[j] & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK;
-					colormap = V_GetStringColormap(clrflag);
-					++j;
-					continue;
-				}
+				else if (msg[j] & 0x80) // get colormap
+					colormap = V_GetStringColormap(((msg[j] & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK);
 			}
-			else if ((y+dy+2 >= chat_topy) && (y+dy < (chat_bottomy)))
-				V_DrawChatCharacter(x + dx + 2, y+dy+2, msg[j] |V_SNAPTOBOTTOM|V_SNAPTOLEFT, true, colormap);
-
-			j++;
-			dx += charwidth;
-			if (dx >= boxw-charwidth-2 && i<chat_nummsg_log && msg[j] >= FONTSTART) // end of message shouldn't count, nor should invisible characters!!!!
+			else 
 			{
-				dx = 0;
-				dy += charheight;
+				if ((y+dy+2 >= chat_topy) && (y+dy < (chat_bottomy)))
+					V_DrawChatCharacter(x + dx + 2, y+dy+2, msg[j] |V_SNAPTOBOTTOM|V_SNAPTOLEFT, true, colormap);
+
+				dx += charwidth;
+				if (dx >= boxw-charwidth-2 && i<chat_nummsg_log) // end of message shouldn't count, nor should invisible characters!!!!
+				{
+					dx = 0;
+					dy += charheight;
+				}
 			}
 		}
 		dy += charheight;
@@ -1529,8 +1504,7 @@ static void HU_DrawChat(void)
 		}
 #endif
 
-		i = 0;
-		for(i=0; (i<MAXPLAYERS); i++)
+		for(i=0; i<MAXPLAYERS; i++)
 		{
 			// filter: (code needs optimization pls help I'm bad with C)
 			if (w_chat[3])
@@ -1544,15 +1518,14 @@ static void HU_DrawChat(void)
 				strncpy(playernum, w_chat+3, 3);
 				n = atoi(playernum); // turn that into a number
 				// special cases:
-
-				if ((n == 0) && !(w_chat[4] == '0'))
-					if (!(i<10)) continue;
-				else if ((n == 1) && !(w_chat[3] == '0'))
-					if (!((i == 1) || ((i >= 10) && (i <= 19)))) continue;
-				else if ((n == 2) && !(w_chat[3] == '0'))
-					if (!((i == 2) || ((i >= 20) && (i <= 29)))) continue;
-				else if ((n == 3) && !(w_chat[3] == '0'))
-					if (!((i == 3) || ((i >= 30) && (i <= 31)))) continue;
+				if ((n == 0) && !(w_chat[4] == '0') && (!(i<10)))
+					continue;
+				else if ((n == 1) && !(w_chat[3] == '0') && (!((i == 1) || ((i >= 10) && (i <= 19)))))
+					continue;
+				else if ((n == 2) && !(w_chat[3] == '0') && (!((i == 2) || ((i >= 20) && (i <= 29)))))
+					continue; 
+				else if ((n == 3) && !(w_chat[3] == '0') && (!((i == 3) || ((i >= 30) && (i <= 31)))))
+					continue; 
 				else	// general case.
 					if (i != n) continue;
 			}
@@ -1646,9 +1619,6 @@ static void HU_DrawChat_Old(void)
 			y += charheight;
 		}
 	}
-
-	if (hu_tick < 4)
-		V_DrawCharacter(HU_INPUTX + c, y, '_' | cv_constextsize.value |V_NOSCALESTART|t, true);
 }
 #endif
 
