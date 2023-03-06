@@ -1735,21 +1735,6 @@ static void HU_DrawCEcho(void)
 	}
 }
 
-static void HU_drawGametype(void)
-{
-	const char *strvalue = NULL;
-
-	if (gametype < 0 || gametype >= gametypecount)
-		return; // not a valid gametype???
-
-	strvalue = Gametype_Names[gametype];
-
-	if (splitscreen)
-		V_DrawString(4, 184, 0, strvalue);
-	else
-		V_DrawString(4, 192, 0, strvalue);
-}
-
 //
 // demo info stuff
 //
@@ -2683,7 +2668,8 @@ static void HU_DrawRankings(void)
 	UINT32 whiteplayer;
 
 	// draw the current gametype in the lower right
-	HU_drawGametype();
+	if (gametype >= 0 || gametype < gametypecount)
+		V_DrawString(4, splitscreen ? 184 : 192, 0, Gametype_Names[gametype]);
 
 	if (gametyperules & (GTR_TIMELIMIT|GTR_POINTLIMIT))
 	{
