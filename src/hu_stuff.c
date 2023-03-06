@@ -1210,7 +1210,6 @@ static void HU_drawMiniChat(void)
 	INT32 boxw = cv_chatwidth.value;
 	INT32 dx = 0, dy = 0;
 	size_t i = chat_nummsg_min;
-	boolean prev_linereturn = false; // a hack to prevent double \n while I have no idea why they happen in the first place.
 
 	INT32 msglines = 0;
 	// process all messages once without rendering anything or doing anything fancy so that we know how many lines each message has...
@@ -1219,14 +1218,10 @@ static void HU_drawMiniChat(void)
 	if (!chat_nummsg_min)
 		return; // needless to say it's useless to do anything if we don't have anything to draw.
 
-	/*if (splitscreen > 1)
-		boxw = max(64, boxw/2);*/
-
 	for (; i>0; i--)
 	{
 		char *msg = V_ChatWordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i-1]);
 		size_t j = 0;
-		INT32 linescount = 0;
 
 		while(msg[j]) // iterate through msg
 		{
@@ -1235,12 +1230,8 @@ static void HU_drawMiniChat(void)
 				if (msg[j] == '\n') // get back down.
 				{
 					++j;
-					if (!prev_linereturn)
-					{
-						linescount += 1;
-						dx = 0;
-					}
-					prev_linereturn = true;
+					msglines++;
+					dx = 0;
 					continue;
 				}
 				else if (msg[j] & 0x80) // stolen from video.c, nice.
@@ -1248,42 +1239,25 @@ static void HU_drawMiniChat(void)
 					++j;
 					continue;
 				}
+			}
+			j++;
 
-				++j;
-			}
-			else
-			{
-				j++;
-			}
-			prev_linereturn = false;
 			dx += charwidth;
 			if (dx >= boxw)
 			{
 				dx = 0;
-				linescount += 1;
+				msglines++;
 			}
 		}
-		dy = 0;
-		dx = 0;
-		msglines += linescount+1;
+		dx = dy = 0;
+		msglines++;
 
 		if (msg)
 			Z_Free(msg);
 	}
 
 	y = chaty - charheight*(msglines+1);
-
-	/*if (splitscreen)
-	{
-		y -= BASEVIDHEIGHT/2;
-		if (splitscreen > 1)
-			y += 16;
-	}*/
-
-	dx = 0;
-	dy = 0;
-	i = 0;
-	prev_linereturn = false;
+	dx = dy = i = 0;
 
 	for (; i<=(chat_nummsg_min-1); i++) // iterate through our hot messages
 	{
@@ -1301,12 +1275,8 @@ static void HU_drawMiniChat(void)
 				if (msg[j] == '\n') // get back down.
 				{
 					++j;
-					if (!prev_linereturn)
-					{
-						dy += charheight;
-						dx = 0;
-					}
-					prev_linereturn = true;
+					dy += charheight;
+					dx = 0;
 					continue;
 				}
 				else if (msg[j] & 0x80) // stolen from video.c, nice.
@@ -1328,7 +1298,6 @@ static void HU_drawMiniChat(void)
 			}
 
 			dx += charwidth;
-			prev_linereturn = false;
 			if (dx >= boxw)
 			{
 				dx = 0;
@@ -1344,7 +1313,6 @@ static void HU_drawMiniChat(void)
 
 	// decrement addy and make that shit smooth:
 	addy /= 2;
-
 }
 
 // HU_DrawChatLog
@@ -1411,17 +1379,11 @@ static void HU_drawChatLog(INT32 offset)
 					++j;
 					continue;
 				}
-
-				++j;
 			}
-			else
-			{
-				if ((y+dy+2 >= chat_topy) && (y+dy < (chat_bottomy)))
-					V_DrawChatCharacter(x + dx + 2, y+dy+2, msg[j++] |V_SNAPTOBOTTOM|V_SNAPTOLEFT, true, colormap);
-				else
-					j++; // don't forget to increment this or we'll get stuck in the limbo.
-			}
+			else if ((y+dy+2 >= chat_topy) && (y+dy < (chat_bottomy)))
+				V_DrawChatCharacter(x + dx + 2, y+dy+2, msg[j] |V_SNAPTOBOTTOM|V_SNAPTOLEFT, true, colormap);
 
+			j++;
 			dx += charwidth;
 			if (dx >= boxw-charwidth-2 && i<chat_nummsg_log && msg[j] >= FONTSTART) // end of message shouldn't count, nor should invisible characters!!!!
 			{
@@ -1443,23 +1405,20 @@ static void HU_drawChatLog(INT32 offset)
 	}
 	chat_scrollmedown = false;
 
-	// getmaxscroll through a lazy hack. We do all these loops,
-	// so let's not do more loops that are gonna lag the game more. :P
+	// getmaxscroll through a lazy hack. We do all these loops, so let's not do more loops that are gonna lag the game more. :P
 	chat_maxscroll = max(dy / charheight - cv_chatheight.value, 0);
 
 	// if we're not bound by the time, autoscroll for next frame:
 	if (atbottom)
 		chat_scroll = chat_maxscroll;
 
-	// draw arrows to indicate that we can (or not) scroll.
-	// account for Y = -1 offset in tinyfont
+	// draw arrows to indicate that we can (or not) scroll, accounting for Y = -1 offset in tinyfont
 	if (chat_scroll > 0)
 		V_DrawThinString(chatx-8, ((justscrolledup) ? (chat_topy-1) : (chat_topy)) - 1, V_SNAPTOBOTTOM | V_SNAPTOLEFT | V_YELLOWMAP, "\x1A"); // up arrow
 	if (chat_scroll < chat_maxscroll)
 		V_DrawThinString(chatx-8, chat_bottomy-((justscrolleddown) ? 5 : 6) - 1, V_SNAPTOBOTTOM | V_SNAPTOLEFT | V_YELLOWMAP, "\x1B"); // down arrow
 
-	justscrolleddown = false;
-	justscrolledup = false;
+	justscrolleddown = justscrolledup = false;
 }
 
 //
@@ -1492,15 +1451,7 @@ static void HU_DrawChat(void)
 #endif
 
 	if (teamtalk)
-	{
 		talk = ttalk;
-#if 0
-		if (players[consoleplayer].ctfteam == 1)
-			t = 0x500;  // Red
-		else if (players[consoleplayer].ctfteam == 2)
-			t = 0x400; // Blue
-#endif
-	}
 
 	if (CHAT_MUTE)
 	{
@@ -1513,14 +1464,9 @@ static void HU_DrawChat(void)
 
 	while (talk[i])
 	{
-		if (talk[i] < FONTSTART)
-			++i;
-		else
-		{
+		if (talk[i] >= FONTSTART)
 			V_DrawChatCharacter(chatx + c + 2, y, talk[i] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|cflag, true, V_GetStringColormap(talk[i]|cflag));
-			i++;
-		}
-
+		i++;
 		c += charwidth;
 	}
 
@@ -1600,30 +1546,15 @@ static void HU_DrawChat(void)
 				// special cases:
 
 				if ((n == 0) && !(w_chat[4] == '0'))
-				{
-					if (!(i<10))
-						continue;
-				}
+					if (!(i<10)) continue;
 				else if ((n == 1) && !(w_chat[3] == '0'))
-				{
-					if (!((i == 1) || ((i >= 10) && (i <= 19))))
-						continue;
-				}
+					if (!((i == 1) || ((i >= 10) && (i <= 19)))) continue;
 				else if ((n == 2) && !(w_chat[3] == '0'))
-				{
-					if (!((i == 2) || ((i >= 20) && (i <= 29))))
-						continue;
-				}
+					if (!((i == 2) || ((i >= 20) && (i <= 29)))) continue;
 				else if ((n == 3) && !(w_chat[3] == '0'))
-				{
-					if (!((i == 3) || ((i >= 30) && (i <= 31))))
-						continue;
-				}
+					if (!((i == 3) || ((i >= 30) && (i <= 31)))) continue;
 				else	// general case.
-				{
-					if (i != n)
-						continue;
-				}
+					if (i != n) continue;
 			}
 
 			if (playeringame[i])
