@@ -195,15 +195,17 @@ void V_DrawFadeFill(INT32 x, INT32 y, INT32 w, INT32 h, INT32 c, UINT16 color, U
 
 void V_DrawFadeConsBack(INT32 plines);
 void V_DrawPromptBack(INT32 boxheight, INT32 color);
-
-// draw a single character
-void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed);
-// draw a single character, but for the chat
-void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UINT8 *colormap);
-
-// wordwrap a string using the hu_font
-char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string);
 UINT8 *V_GetStringColormap(INT32 colorflags);
+
+// Generalized character drawing function, combining console & chat functionality with a specified font.
+void V_DrawFontCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, fixed_t scale, UINT8 *colormap, fontdef_t font);
+#define V_DrawCharacter(x,y,c,l) V_DrawFontCharacter(x,y,c,l,FRACUNIT,NULL,hu_font)
+#define V_DrawChatCharacter(x,y,c,l,cm) V_DrawFontCharacter(x,y,c,l,FRACUNIT/2,cm,hu_font)
+
+// Precompile a wordwrapped string to any given width, using a specified font.
+char *V_FontWordWrap(INT32 x, INT32 w, INT32 option, fixed_t scale, const char *string, fontdef_t font);
+#define V_WordWrap(x,w,o,str) V_FontWordWrap(x, w, o, FRACUNIT, str, hu_font)
+#define V_ChatWordWrap(x,w,o,str) V_FontWordWrap(x, w, o, FRACUNIT/2, str, hu_font)
 
 // Draw a string, using a supplied font and scale.
 void V_DrawFontString(INT32 x, INT32 y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font);

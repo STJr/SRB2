@@ -1197,66 +1197,9 @@ boolean HU_Responder(event_t *ev)
 
 #ifndef NONET
 
-// Precompile a wordwrapped string to any given width.
-// This is a muuuch better method than V_WORDWRAP.
-// again stolen and modified a bit from video.c, don't mind me, will need to rearrange this one day.
-// this one is simplified for the chat drawer.
-static char *CHAT_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
-{
-	INT32 c;
-	size_t chw, i, lastusablespace = 0;
-	size_t slen;
-	char *newstring = Z_StrDup(string);
-	INT32 spacewidth = (vid.width < 640) ? 8 : 4, charwidth = (vid.width < 640) ? 8 : 4;
-
-	slen = strlen(string);
-	x = 0;
-
-	for (i = 0; i < slen; ++i)
-	{
-		c = newstring[i];
-		if ((UINT8)c >= 0x80 && (UINT8)c <= 0x89) //color parsing! -Inuyasha 2.16.09
-			continue;
-
-		if (c == '\n')
-		{
-			x = 0;
-			lastusablespace = 0;
-			continue;
-		}
-
-		if (!(option & V_ALLOWLOWERCASE))
-			c = toupper(c);
-		c -= FONTSTART;
-
-		if (c < 0 || c >= FONTSIZE || !hu_font.chars[c])
-		{
-			chw = spacewidth;
-			lastusablespace = i;
-		}
-		else
-			chw = charwidth;
-
-		x += chw;
-
-		if (lastusablespace != 0 && x > w)
-		{
-			//CONS_Printf("Wrap at index %d\n", i);
-			newstring[lastusablespace] = '\n';
-			i = lastusablespace+1;
-			lastusablespace = 0;
-			x = 0;
-		}
-	}
-	return newstring;
-}
-
-
 // 30/7/18: chaty is now the distance at which the lowest point of the chat will be drawn if that makes any sense.
 
 INT16 chatx = 13, chaty = 169; // let's use this as our coordinates
-
-// chat stuff by VincyTM LOL XD!
 
 // HU_DrawMiniChat
 
@@ -1281,7 +1224,7 @@ static void HU_drawMiniChat(void)
 
 	for (; i>0; i--)
 	{
-		char *msg = CHAT_WordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i-1]);
+		char *msg = V_ChatWordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i-1]);
 		size_t j = 0;
 		INT32 linescount = 0;
 
@@ -1348,7 +1291,7 @@ static void HU_drawMiniChat(void)
 		INT32 timer = ((cv_chattime.value*TICRATE)-chat_timers[i]) - cv_chattime.value*TICRATE+9; // see below...
 		INT32 transflag = (timer >= 0 && timer <= 9) ? (timer*V_10TRANS) : 0; // you can make bad jokes out of this one.
 		size_t j = 0;
-		char *msg = CHAT_WordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i]); // get the current message, and word wrap it.
+		char *msg = V_ChatWordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i]); // get the current message, and word wrap it.
 		UINT8 *colormap = NULL;
 
 		while(msg[j]) // iterate through msg
@@ -1448,7 +1391,7 @@ static void HU_drawChatLog(INT32 offset)
 	{
 		INT32 clrflag = 0;
 		INT32 j = 0;
-		char *msg = CHAT_WordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_log[i]); // get the current message, and word wrap it.
+		char *msg = V_ChatWordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_log[i]); // get the current message, and word wrap it.
 		UINT8 *colormap = NULL;
 		while(msg[j]) // iterate through msg
 		{

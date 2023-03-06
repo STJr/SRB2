@@ -1940,125 +1940,6 @@ void V_DrawPromptBack(INT32 boxheight, INT32 color)
 		*buf = promptbgmap[*buf];
 }
 
-// Writes a single character (draw WHITE if bit 7 set)
-//
-void V_DrawCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed)
-{
-	INT32 w, flags;
-	const UINT8 *colormap = V_GetStringColormap(c);
-
-	flags = c & ~(V_CHARCOLORMASK | V_PARAMMASK);
-	c &= 0x7f;
-	if (lowercaseallowed)
-		c -= FONTSTART;
-	else
-		c = toupper(c) - FONTSTART;
-	if (c < 0 || c >= FONTSIZE || !hu_font.chars[c])
-		return;
-
-	w = hu_font.chars[c]->width;
-	if (x + w > vid.width)
-		return;
-
-	if (colormap != NULL)
-		V_DrawMappedPatch(x, y, flags, hu_font.chars[c], colormap);
-	else
-		V_DrawScaledPatch(x, y, flags, hu_font.chars[c]);
-}
-
-// Writes a single character for the chat. (draw WHITE if bit 7 set)
-// Essentially the same as the above but it's small or big depending on what resolution you've chosen to huge..
-//
-void V_DrawChatCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, UINT8 *colormap)
-{
-	INT32 w, flags;
-	//const UINT8 *colormap = V_GetStringColormap(c);
-
-	flags = c & ~(V_CHARCOLORMASK | V_PARAMMASK);
-	c &= 0x7f;
-	if (lowercaseallowed)
-		c -= FONTSTART;
-	else
-		c = toupper(c) - FONTSTART;
-	if (c < 0 || c >= FONTSIZE || !hu_font.chars[c])
-		return;
-
-	w = (vid.width < 640 ) ? ((hu_font.chars[c]->width / 2)) : (hu_font.chars[c]->width);	// use normal sized characters if we're using a terribly low resolution.
-	if (x + w > vid.width)
-		return;
-
-	V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, (vid.width < 640) ? (FRACUNIT) : (FRACUNIT/2), flags, hu_font.chars[c], colormap);
-}
-
-// Precompile a wordwrapped string to any given width.
-// This is a muuuch better method than V_WORDWRAP.
-char *V_WordWrap(INT32 x, INT32 w, INT32 option, const char *string)
-{
-	int c;
-	size_t chw, i, lastusablespace = 0;
-	size_t slen;
-	char *newstring = Z_StrDup(string);
-	INT32 spacewidth = 4, charwidth = 0;
-
-	slen = strlen(string);
-
-	if (w == 0)
-		w = BASEVIDWIDTH;
-	w -= x;
-	x = 0;
-
-	switch (option & V_SPACINGMASK)
-	{
-		case V_MONOSPACE:
-			spacewidth = 8;
-			/* FALLTHRU */
-		case V_OLDSPACING:
-			charwidth = 8;
-			break;
-		case V_6WIDTHSPACE:
-			spacewidth = 6;
-		default:
-			break;
-	}
-
-	for (i = 0; i < slen; ++i)
-	{
-		c = newstring[i];
-		if ((UINT8)c & 0x80) //color parsing! -Inuyasha 2.16.09
-			continue;
-
-		if (c == '\n')
-		{
-			x = 0;
-			lastusablespace = 0;
-			continue;
-		}
-
-		if (!(option & V_ALLOWLOWERCASE))
-			c = toupper(c);
-		c -= FONTSTART;
-
-		if (c < 0 || c >= FONTSIZE || !hu_font.chars[c])
-		{
-			chw = spacewidth;
-			lastusablespace = i;
-		}
-		else
-			chw = (charwidth ? charwidth : hu_font.chars[c]->width);
-
-		x += chw;
-
-		if (lastusablespace != 0 && x > w)
-		{
-			newstring[lastusablespace] = '\n';
-			i = lastusablespace;
-			lastusablespace = 0;
-			x = 0;
-		}
-	}
-	return newstring;
-}
-
 // Gets string colormap, used for 0x80 color codes
 //
 UINT8 *V_GetStringColormap(INT32 colorflags)
@@ -2098,6 +1979,97 @@ UINT8 *V_GetStringColormap(INT32 colorflags)
 	default: // reset
 		return NULL;
 	}
+}
+
+// Generalized character drawing function, combining console & chat functionality with a specified font.
+//
+void V_DrawFontCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, fixed_t scale, UINT8 *colormap, fontdef_t font)
+{
+	INT32 w, flags;
+	const UINT8 *color = colormap ? colormap : V_GetStringColormap(c);
+
+	flags = c & ~(V_CHARCOLORMASK | V_PARAMMASK);
+	c &= 0x7f;
+	if (lowercaseallowed)
+		c -= FONTSTART;
+	else
+		c = toupper(c) - FONTSTART;
+	if (c < 0 || c >= FONTSIZE || !font.chars[c])
+		return;
+
+	w = FixedMul(font.chars[c]->width / 2, scale);	// use normal sized characters if we're using a terribly low resolution.
+	if (x + w > vid.width)
+		return;
+
+	V_DrawFixedPatch(x*FRACUNIT, y*FRACUNIT, scale, flags, font.chars[c], color);
+}
+
+// Precompile a wordwrapped string to any given width, using a specified font.
+//
+char *V_FontWordWrap(INT32 x, INT32 w, INT32 option, fixed_t scale, const char *string, fontdef_t font)
+{
+	int c;
+	size_t chw, i, lastusablespace = 0;
+	size_t slen;
+	char *newstring = Z_StrDup(string);
+	INT32 spacewidth = font.spacewidth, charwidth = 0;
+
+	slen = strlen(string);
+	
+	if (w == 0)
+		w = BASEVIDWIDTH;
+	w -= x;
+	x = 0;
+
+	switch (option & V_SPACINGMASK)
+	{
+		case V_MONOSPACE:
+			spacewidth = font.spacewidth*2;
+			/* FALLTHRU */
+		case V_OLDSPACING:
+			charwidth = font.spacewidth*2;
+			break;
+		case V_6WIDTHSPACE:
+			spacewidth = 6;
+		default:
+			break;
+	}
+
+	for (i = 0; i < slen; ++i)
+	{
+		c = newstring[i];
+		if ((UINT8)c & 0x80) //color parsing! -Inuyasha 2.16.09
+			continue;
+
+		if (c == '\n')
+		{
+			x = 0;
+			lastusablespace = 0;
+			continue;
+		}
+
+		if (!(option & V_ALLOWLOWERCASE))
+			c = toupper(c);
+		c -= FONTSTART;
+
+		if (c < 0 || c >= FONTSIZE || !font.chars[c])
+		{
+			chw = spacewidth;
+			lastusablespace = i;
+		}
+		else
+			chw = (charwidth ? charwidth : font.chars[c]->width);
+
+		x +=  FixedMul(chw, scale);
+
+		if (lastusablespace != 0 && x > w)
+		{
+			newstring[lastusablespace] = '\n';
+			i = lastusablespace;
+			lastusablespace = x = 0;
+		}
+	}
+	return newstring;
 }
 
 // Draw a string, using a supplied font and scale.
