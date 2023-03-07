@@ -1205,73 +1205,61 @@ INT16 chatx = 13, chaty = 169; // let's use this as our coordinates
 
 static void HU_drawMiniChat(void)
 {
-	INT32 x = chatx+2;
+	INT32 x = chatx+2, y;
+	INT32 chatheight = 0;
 	INT32 charwidth = 4, charheight = 6;
 	INT32 boxw = cv_chatwidth.value;
 	INT32 dx = 0, dy = 0;
-	size_t i = chat_nummsg_min;
-
-	INT32 msglines = 0;
-	// process all messages once without rendering anything or doing anything fancy so that we know how many lines each message has...
-	INT32 y;
 
 	if (!chat_nummsg_min)
 		return; // needless to say it's useless to do anything if we don't have anything to draw.
 
-	for (; i>0; i--)
+	for (size_t i = chat_nummsg_min; i > 0; i--)
 	{
-		char *msg = V_ChatWordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i-1]);
-
+		char *msg = V_ChatWordWrap(x+2, boxw-charwidth, V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i-1]);
 		for(size_t j = 0; msg[j]; j++) // iterate through msg
 		{
-			if (msg[j] < FONTSTART) // don't draw
+			if (msg[j] == '\n') // get back down.
 			{
-				if (msg[j] == '\n') // get back down.
-				{
-					msglines++;
-					dx = 0;
-				}
+				chatheight += charheight;
+				dx = 0;
 			}
-			else
+			else if (msg[j] >= FONTSTART)
 			{
 				dx += charwidth;
 				if (dx >= boxw)
 				{
 					dx = 0;
-					msglines++;
+					chatheight += charheight;
 				}
 			}
 		}
-		dx = dy = 0;
-		msglines++;
+		dx = 0;
+		chatheight += charheight;
 
 		if (msg)
 			Z_Free(msg);
 	}
 
-	y = chaty - charheight*(msglines+1);
-	dx = dy = i = 0;
+	y = chaty - (chatheight + charheight);
 
-	for (; i < chat_nummsg_min; i++) // iterate through our hot messages
+	for (size_t i = 0; i < chat_nummsg_min; i++) // iterate through our hot messages
 	{
 		INT32 timer = ((cv_chattime.value*TICRATE)-chat_timers[i]) - cv_chattime.value*TICRATE+9; // see below...
 		INT32 transflag = (timer >= 0 && timer <= 9) ? (timer*V_10TRANS) : 0; // you can make bad jokes out of this one.
-		char *msg = V_ChatWordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i]); // get the current message, and word wrap it.
+		char *msg = V_ChatWordWrap(x+2, boxw-charwidth, V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_mini[i]); // get the current message, and word wrap it.
 		UINT8 *colormap = NULL;
 
 		for(size_t j = 0; msg[j]; j++) // iterate through msg
 		{
-			if (msg[j] < FONTSTART) // don't draw
+			if (msg[j] == '\n') // get back down.
 			{
-				if (msg[j] == '\n') // get back down.
-				{
-					dy += charheight;
-					dx = 0;
-				}
-				else if (msg[j] & 0x80) // get colormap
-					colormap = V_GetStringColormap(((msg[j] & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK);
+				dy += charheight;
+				dx = 0;
 			}
-			else
+			else if (msg[j] & 0x80) // get colormap
+				colormap = V_GetStringColormap(((msg[j] & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK);
+			else if (msg[j] >= FONTSTART)
 			{
 				if (cv_chatbacktint.value) // on request of wolfy
 					V_DrawFillConsoleMap(x + dx + 2, y+dy, charwidth, charheight, 239|V_SNAPTOBOTTOM|V_SNAPTOLEFT);
@@ -1339,21 +1327,18 @@ static void HU_drawChatLog(INT32 offset)
 
 	for (i=0; i<chat_nummsg_log; i++) // iterate through our chatlog
 	{
-		char *msg = V_ChatWordWrap(x+2, boxw-(charwidth*2), V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_log[i]); // get the current message, and word wrap it.
+		char *msg = V_ChatWordWrap(x+2, boxw-charwidth, V_SNAPTOBOTTOM|V_SNAPTOLEFT|V_ALLOWLOWERCASE, chat_log[i]); // get the current message, and word wrap it.
 		UINT8 *colormap = NULL;
 		for(size_t j = 0; msg[j]; j++) // iterate through msg
 		{
-			if (msg[j] < FONTSTART) // don't draw
+			if (msg[j] == '\n') // get back down.
 			{
-				if (msg[j] == '\n') // get back down.
-				{
-					dy += charheight;
-					dx = 0;
-				}
-				else if (msg[j] & 0x80) // get colormap
-					colormap = V_GetStringColormap(((msg[j] & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK);
+				dy += charheight;
+				dx = 0;
 			}
-			else 
+			else if (msg[j] & 0x80) // get colormap
+				colormap = V_GetStringColormap(((msg[j] & 0x7f) << V_CHARCOLORSHIFT) & V_CHARCOLORMASK);
+			else if (msg[j] >= FONTSTART)
 			{
 				if ((y+dy+2 >= chat_topy) && (y+dy < (chat_bottomy)))
 					V_DrawChatCharacter(x + dx + 2, y+dy+2, msg[j] |V_SNAPTOBOTTOM|V_SNAPTOLEFT, true, colormap);
@@ -1373,11 +1358,9 @@ static void HU_drawChatLog(INT32 offset)
 			Z_Free(msg);
 	}
 
-
 	if (((chat_scroll >= chat_maxscroll) || (chat_scrollmedown)) && !(justscrolleddown || justscrolledup || chat_scrolltime)) // was already at the bottom of the page before new maxscroll calculation and was NOT scrolling.
-	{
 		atbottom = true; // we should scroll
-	}
+
 	chat_scrollmedown = false;
 
 	// getmaxscroll through a lazy hack. We do all these loops, so let's not do more loops that are gonna lag the game more. :P
@@ -1437,11 +1420,10 @@ static void HU_DrawChat(void)
 
 	V_DrawFillConsoleMap(chatx, y-1, boxw, (typelines*charheight), 239 | V_SNAPTOBOTTOM | V_SNAPTOLEFT);
 
-	while (talk[i])
+	for (i = 0; talk[i]; i++)
 	{
 		if (talk[i] >= FONTSTART)
 			V_DrawChatCharacter(chatx + c + 2, y, talk[i] |V_SNAPTOBOTTOM|V_SNAPTOLEFT|cflag, true, V_GetStringColormap(talk[i]|cflag));
-		i++;
 		c += charwidth;
 	}
 
@@ -1452,13 +1434,12 @@ static void HU_DrawChat(void)
 		return;
 	}
 
-	i = 0;
 	typelines = 1;
 
 	if ((strlen(w_chat) == 0 || c_input == 0) && hu_tick < 4)
 		V_DrawChatCharacter(chatx + 2 + c, y+1, '_' |V_SNAPTOBOTTOM|V_SNAPTOLEFT|t, true, NULL);
 
-	while (w_chat[i])
+	for (i = 0; w_chat[i]; i++)
 	{
 		boolean skippedline = false;
 		if (c_input == (i+1))
@@ -1475,14 +1456,11 @@ static void HU_DrawChat(void)
 			}
 		}
 
-		//Hurdler: isn't it better like that?
-		if (w_chat[i] < FONTSTART)
-			++i;
-		else
-			V_DrawChatCharacter(chatx + c + 2, y, w_chat[i++] | V_SNAPTOBOTTOM|V_SNAPTOLEFT | t, true, NULL);
+		if (w_chat[i] >= FONTSTART)
+			V_DrawChatCharacter(chatx + c + 2, y, w_chat[i] | V_SNAPTOBOTTOM|V_SNAPTOLEFT | t, true, NULL);
 
 		c += charwidth;
-		if (c > boxw-(charwidth*2) && !skippedline)
+		if (c > boxw-charwidth && !skippedline)
 		{
 			c = 0;
 			y += charheight;
@@ -1558,41 +1536,22 @@ static void HU_DrawChat_Old(void)
 	size_t i = 0;
 	const char *ntalk = "Say: ", *ttalk = "Say-Team: ";
 	const char *talk = ntalk;
-	INT32 charwidth = 8 * con_scalefactor; //(hu_font.chars['A'-FONTSTART]->width) * con_scalefactor;
-	INT32 charheight = 8 * con_scalefactor; //(hu_font.chars['A'-FONTSTART]->height) * con_scalefactor;
+	INT32 charwidth = 8 * con_scalefactor, charheight = 8 * con_scalefactor;
 	if (teamtalk)
-	{
 		talk = ttalk;
-#if 0
-		if (players[consoleplayer].ctfteam == 1)
-			t = 0x500;  // Red
-		else if (players[consoleplayer].ctfteam == 2)
-			t = 0x400; // Blue
-#endif
-	}
 
-	while (talk[i])
+	for (i = 0; talk[i]; i++)
 	{
-		if (talk[i] < FONTSTART)
-		{
-			++i;
-			//charwidth = 4 * con_scalefactor;
-		}
-		else
-		{
-			//charwidth = (hu_font.chars[talk[i]-FONTSTART]->width) * con_scalefactor;
-			V_DrawCharacter(HU_INPUTX + c, y, talk[i++] | cv_constextsize.value | V_NOSCALESTART, true);
-		}
+		if (talk[i] >= FONTSTART)
+			V_DrawCharacter(HU_INPUTX + c, y, talk[i] | cv_constextsize.value | V_NOSCALESTART, true);
 		c += charwidth;
 	}
 
 	if ((strlen(w_chat) == 0 || c_input == 0) && hu_tick < 4)
 		V_DrawCharacter(HU_INPUTX+c, y+2*con_scalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, true);
 
-	i = 0;
-	while (w_chat[i])
+	for (i = 0; w_chat[i]; i++)
 	{
-
 		if (c_input == (i+1) && hu_tick < 4)
 		{
 			INT32 cursorx = (HU_INPUTX+c+charwidth < vid.width) ? (HU_INPUTX + c + charwidth) : (HU_INPUTX); // we may have to go down.
@@ -1600,17 +1559,8 @@ static void HU_DrawChat_Old(void)
 			V_DrawCharacter(cursorx, cursory+2*con_scalefactor, '_' |cv_constextsize.value | V_NOSCALESTART|t, true);
 		}
 
-		//Hurdler: isn't it better like that?
-		if (w_chat[i] < FONTSTART)
-		{
-			++i;
-			//charwidth = 4 * con_scalefactor;
-		}
-		else
-		{
-			//charwidth = (hu_font.chars[w_chat[i]-FONTSTART]->width) * con_scalefactor;
-			V_DrawCharacter(HU_INPUTX + c, y, w_chat[i++] | cv_constextsize.value | V_NOSCALESTART | t, true);
-		}
+		if (w_chat[i] >= FONTSTART)
+			V_DrawCharacter(HU_INPUTX + c, y, w_chat[i] | cv_constextsize.value | V_NOSCALESTART | t, true);
 
 		c += charwidth;
 		if (c >= vid.width)
