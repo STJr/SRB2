@@ -1990,10 +1990,7 @@ void V_DrawFontCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, fi
 
 	flags = c & ~(V_CHARCOLORMASK | V_PARAMMASK);
 	c &= 0x7f;
-	if (lowercaseallowed)
-		c -= FONTSTART;
-	else
-		c = toupper(c) - FONTSTART;
+	c = (lowercaseallowed ? c : toupper(c)) - FONTSTART;
 	if (c < 0 || c >= FONTSIZE || !font.chars[c])
 		return;
 
@@ -2009,8 +2006,7 @@ void V_DrawFontCharacter(INT32 x, INT32 y, INT32 c, boolean lowercaseallowed, fi
 char *V_FontWordWrap(INT32 x, INT32 w, INT32 option, fixed_t scale, const char *string, fontdef_t font)
 {
 	int c;
-	size_t chw, i, lastusablespace = 0;
-	size_t slen;
+	size_t slen, chw, i, lastusablespace = 0;
 	char *newstring = Z_StrDup(string);
 	INT32 spacewidth = font.spacewidth, charwidth = 0;
 
@@ -2048,10 +2044,7 @@ char *V_FontWordWrap(INT32 x, INT32 w, INT32 option, fixed_t scale, const char *
 			continue;
 		}
 
-		if (!(option & V_ALLOWLOWERCASE))
-			c = toupper(c);
-		c -= FONTSTART;
-
+		c = (option & V_ALLOWLOWERCASE ? c : toupper(c)) - FONTSTART;
 		if (c < 0 || c >= FONTSIZE || !font.chars[c])
 		{
 			chw = spacewidth;
@@ -2148,20 +2141,11 @@ void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale,
 		if (*ch == '\n')
 		{
 			cx = x;
-
-			if (option & V_RETURN8)
-				cy += FixedMul((8<<FRACBITS), dupy);
-			else
-				cy += FixedMul((font.linespacing<<FRACBITS), dupy);
-
+			cy += FixedMul(((option & V_RETURN8) ? 8 : font.linespacing)<<FRACBITS, dupy);
 			continue;
 		}
 
-		c = *ch;
-		if (!lowercase)
-			c = toupper(c);
-		c -= FONTSTART;
-
+		c = (lowercase ? *ch : toupper(*ch)) - FONTSTART;
 		if (c < 0 || c >= FONTSIZE || !font.chars[c])
 		{
 			cx += FixedMul((spacewidth<<FRACBITS), dupx);
@@ -2190,16 +2174,58 @@ void V_DrawFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale,
 	}
 }
 
+#define MAXLINELEN 256
+void V_DrawAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font, boolean center)
+{
+	char line[MAXLINELEN];
+	size_t i, start = 0;
+	fixed_t lx = x, ly = y;
+
+	while (*(string+start))
+	{
+		for (i = 0; i < strlen(string+start); i++)
+		{
+			if (*(string+start+i) == '\n')
+			{
+				memset(line, 0, MAXLINELEN);
+				if (i >= MAXLINELEN) 
+				{
+					CONS_Printf("V_DrawAlignedFontStringAtFixed: a line exceeds max. length %d (string: %s)\n", MAXLINELEN, string);
+					return;
+				}
+				strncpy(line,string + start, i);
+				line[i] = '\0';
+				start += i + 1;
+				i = (size_t)-1; //added : 07-02-98 : damned!
+				break;
+			}
+		}
+
+		if (i == strlen(string + start))
+		{
+			if (i >= MAXLINELEN) 
+			{
+				CONS_Printf("V_DrawAlignedFontStringAtFixed: a line exceeds max. length %d (string: %s)\n", MAXLINELEN, string);
+				return;
+			}
+			strcpy(line, string + start);
+			start += i;
+		}
+
+		lx = x - (V_FontStringWidth(line, option, font)*pscale) / (center ? 2 : 1);
+		V_DrawFontStringAtFixed(lx, ly, option, pscale, vscale, line, font);
+		ly += FixedMul(((option & V_RETURN8) ? 8 : font.linespacing)<<FRACBITS, vscale);
+	}
+}
+
 void V_DrawCenteredFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font)
 {
-	x -= (V_FontStringWidth(string, option, font)*pscale)/2;
-	V_DrawFontStringAtFixed(x, y, option, pscale, vscale, string, font);
+	V_DrawAlignedFontStringAtFixed(x, y, option, pscale, vscale, string, font, true);
 }
 
 void V_DrawRightAlignedFontStringAtFixed(fixed_t x, fixed_t y, INT32 option, fixed_t pscale, fixed_t vscale, const char *string, fontdef_t font)
 {
-	x -= V_FontStringWidth(string, option, font)*pscale;
-	V_DrawFontStringAtFixed(x, y, option, pscale, vscale, string, font);
+	V_DrawAlignedFontStringAtFixed(x, y, option, pscale, vscale, string, font, false);
 }
 
 // Draws a tallnum.  Replaces two functions in y_inter and st_stuff
@@ -2324,10 +2350,7 @@ static void V_DrawNameTagLine(INT32 x, INT32 y, INT32 option, fixed_t scale, UIN
 			continue;
 		}
 
-		c = toupper(*ch);
-		c -= FONTSTART;
-
-		// character does not exist or is a space
+		c = toupper(*ch) - FONTSTART;
 		if (c < 0 || c >= FONTSIZE || !ntb_font.chars[c] || !nto_font.chars[c])
 		{
 			cx += FixedMul((ntb_font.spacewidth * dupx)*FRACUNIT, scale);
@@ -2464,9 +2487,8 @@ INT32 V_CountNameTagLines(const char *string)
 //
 INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
 {
-	INT32 c, w = 0;
+	INT32 c, w = 0, wline = 0;
 	INT32 spacewidth = font.spacewidth, charwidth = 0;
-	size_t i;
 
 	switch (option & V_SPACINGMASK)
 	{
@@ -2482,16 +2504,24 @@ INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
 			break;
 	}
 
-	for (i = 0; i < strlen(string); i++)
+	for (size_t i = 0; i < strlen(string); i++)
 	{
+		if (string[i] == '\n')
+		{
+			if (wline < w) wline = w;
+			w = 0;
+			continue;
+		}	
 		if (string[i] & 0x80)
 			continue;
-		c = ((option & V_ALLOWLOWERCASE ? string[i] : toupper(string[i])) - FONTSTART);
+
+		c = (option & V_ALLOWLOWERCASE ? string[i] : toupper(string[i])) - FONTSTART;
 		if (c < 0 || c >= FONTSIZE || !font.chars[c])
 			w += spacewidth;
 		else
 			w += (charwidth ? charwidth : (font.chars[c]->width)) + font.kerning;
 	}
+	w = max(wline, w);
 
 	if (option & (V_NOSCALESTART|V_NOSCALEPATCH))
 		w *= vid.dupx;
@@ -2501,22 +2531,28 @@ INT32 V_FontStringWidth(const char *string, INT32 option, fontdef_t font)
 
 // Find max string height from supplied font characters
 //
-INT32 V_FontStringHeight(const char *string, fontdef_t font)
+INT32 V_FontStringHeight(const char *string, INT32 option, fontdef_t font)
 {
-	INT32 c, h = 0;
-	size_t i;
+	INT32 c, h = 0, result = 0;
 
-	for (i = 0; i < strlen(string); i++)
+	for (size_t i = 0; i < strlen(string); i++)
 	{
-		c = string[i] - FONTSTART;
+		c = (option & V_ALLOWLOWERCASE ? string[i] : toupper(string[i])) - FONTSTART;
 		if (c < 0 || c >= FONTSIZE || !font.chars[c])
+		{
+			if (string[i] == '\n')
+			{
+				result += (option & V_RETURN8) ? 8 : font.linespacing;
+				h = 0;
+			}	
 			continue;
+		}
 
 		if (font.chars[c]->height > h)
 			h = font.chars[c]->height;
 	}
 
-	return h;
+	return result + h;
 }
 
 boolean *heatshifter = NULL;
