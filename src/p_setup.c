@@ -1761,7 +1761,14 @@ static void ParseTextmapSectorParameter(UINT32 i, const char *param, const char 
 	else if (fastcmp(param, "triggertag"))
 		sectors[i].triggertag = atol(val);
 	else if (fastcmp(param, "triggerer"))
-		sectors[i].triggerer = atol(val);
+	{
+		if (fastcmp(val, "Player"))
+			sectors[i].triggerer = TO_PLAYER;
+		if (fastcmp(val, "AllPlayers"))
+			sectors[i].triggerer = TO_ALLPLAYERS;
+		if (fastcmp(val, "Mobj"))
+			sectors[i].triggerer = TO_MOBJ;
+	}
 }
 
 static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char *val)
@@ -2263,6 +2270,9 @@ static void P_WriteTextmap(void)
 			case 10:
 				CONS_Alert(CONS_WARNING, M_GetText("Sector %s has ring drainer effect, which is not supported in UDMF. Use linedef type 462 instead.\n"), sizeu1(i));
 				break;
+			case 15:
+				CONS_Alert(CONS_WARNING, M_GetText("Sector %s has bouncy FOF effect, which is not supported in UDMF. Use linedef type 76 instead.\n"), sizeu1(i));
+				break;
 			default:
 				break;
 		}
@@ -2277,6 +2287,12 @@ static void P_WriteTextmap(void)
 				break;
 			case 9:
 				CONS_Alert(CONS_WARNING, M_GetText("Sector %s has Egg Capsule type, which is not supported in UDMF. Use linedef type 464 instead.\n"), sizeu1(i));
+				break;
+			case 10:
+				CONS_Alert(CONS_WARNING, M_GetText("Sector %s has special stage time/spheres requirements effect, which is not supported in UDMF. Use the SpecialStageTime and SpecialStageSpheres level header options instead.\n"), sizeu1(i));
+				break;
+			case 11:
+				CONS_Alert(CONS_WARNING, M_GetText("Sector %s has custom global gravity effect, which is not supported in UDMF. Use the Gravity level header option instead.\n"), sizeu1(i));
 				break;
 			default:
 				break;
@@ -2633,7 +2649,22 @@ static void P_WriteTextmap(void)
 		if (wsectors[i].triggertag != 0)
 			fprintf(f, "triggertag = %d;\n", wsectors[i].triggertag);
 		if (wsectors[i].triggerer != 0)
-			fprintf(f, "triggerer = %d;\n", wsectors[i].triggerer);
+		{
+			switch (wsectors[i].triggerer)
+			{
+				case TO_PLAYER:
+					fprintf(f, "triggerer = \"Player\";\n");
+					break;
+				case TO_ALLPLAYERS:
+					fprintf(f, "triggerer = \"AllPlayers\";\n");
+					break;
+				case TO_MOBJ:
+					fprintf(f, "triggerer = \"Mobj\";\n");
+					break;
+				default:
+					break;
+			}
+		}
 		fprintf(f, "}\n");
 		fprintf(f, "\n");
 	}
@@ -4187,7 +4218,8 @@ static void P_ConvertBinaryLinedefTypes(void)
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
 			lines[i].args[1] = sides[lines[i].sidenum[0]].rowoffset >> FRACBITS;
 			lines[i].args[2] = !!(lines[i].flags & ML_SKEWTD);
-			P_WriteConstant(sides[lines[i].sidenum[0]].toptexture, &lines[i].stringargs[0]);
+			if (sides[lines[i].sidenum[0]].toptexture)
+				P_WriteConstant(sides[lines[i].sidenum[0]].toptexture, &lines[i].stringargs[0]);
 			break;
 		case 16: //Minecart parameters
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
@@ -5986,6 +6018,9 @@ static void P_ConvertBinarySectorTypes(void)
 			case 14: //Non-ramp sector
 				sectors[i].specialflags |= SSF_NOSTEPDOWN;
 				break;
+			case 15: //Bouncy FOF
+				CONS_Alert(CONS_WARNING, M_GetText("Deprecated bouncy FOF sector type detected. Please use linedef type 76 instead.\n"));
+				break;
 			default:
 				break;
 		}
@@ -6018,17 +6053,25 @@ static void P_ConvertBinarySectorTypes(void)
 				sectors[i].triggerer = TO_PLAYER;
 				break;
 			case 6: //Trigger linedef executor (Emerald check)
+				CONS_Alert(CONS_WARNING, M_GetText("Deprecated emerald check sector type detected. Please use linedef types 337-339 instead.\n"));
 				sectors[i].triggertag = tag;
 				sectors[i].flags &= ~MSF_TRIGGERLINE_PLANE;
 				sectors[i].triggerer = TO_PLAYEREMERALDS;
 				break;
 			case 7: //Trigger linedef executor (NiGHTS mare)
+				CONS_Alert(CONS_WARNING, M_GetText("Deprecated NiGHTS mare sector type detected. Please use linedef types 340-342 instead.\n"));
 				sectors[i].triggertag = tag;
 				sectors[i].flags &= ~MSF_TRIGGERLINE_PLANE;
 				sectors[i].triggerer = TO_PLAYERNIGHTS;
 				break;
 			case 8: //Check for linedef executor on FOFs
 				sectors[i].flags |= MSF_TRIGGERLINE_MOBJ;
+				break;
+			case 10: //Special stage time/spheres requirements
+				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for special stage requirements detected. Please use the SpecialStageTime and SpecialStageSpheres level header options instead.\n"));
+				break;
+			case 11: //Custom global gravity
+				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for global gravity detected. Please use the Gravity level header option instead.\n"));
 				break;
 			default:
 				break;
@@ -6266,7 +6309,6 @@ static void P_ConvertBinaryThingTypes(void)
 		case 312: //Emerald token
 		case 320: //Emerald hunt location
 		case 321: //Match chaos emerald spawn
-		case 322: //Emblem
 		case 330: //Bounce ring panel
 		case 331: //Rail ring panel
 		case 332: //Automatic ring panel
@@ -6278,6 +6320,9 @@ static void P_ConvertBinaryThingTypes(void)
 		case 1706: //Blue sphere
 		case 1800: //Coin
 			mapthings[i].args[0] = !(mapthings[i].options & MTF_AMBUSH);
+			break;
+		case 322: //Emblem
+			mapthings[i].args[1] = !(mapthings[i].options & MTF_AMBUSH);
 			break;
 		case 409: //Extra life monitor
 			mapthings[i].args[2] = !(mapthings[i].options & (MTF_AMBUSH|MTF_OBJECTSPECIAL));

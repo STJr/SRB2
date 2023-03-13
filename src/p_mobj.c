@@ -11849,7 +11849,6 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	case MT_EMERHUNT:
 	case MT_EMERALDSPAWN:
 	case MT_TOKEN:
-	case MT_EMBLEM:
 	case MT_RING:
 	case MT_REDTEAMRING:
 	case MT_BLUETEAMRING:
@@ -11859,6 +11858,10 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	case MT_NIGHTSCHIP:
 	case MT_NIGHTSSTAR:
 		offset += mthing->args[0] ? 0 : 24*FRACUNIT;
+		break;
+
+	case MT_EMBLEM:
+		offset += mthing->args[1] ? 0 : 24 * FRACUNIT;
 		break;
 
 	// Remaining objects.
@@ -13277,6 +13280,23 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 	return true;
 }
 
+// Pre-UDMF backwards compatibility stuff. Remove for 2.3
+static void P_SetAmbush(mapthing_t *mthing, mobj_t *mobj)
+{
+	if (mobj->type == MT_NIGHTSBUMPER
+		|| mobj->type == MT_AXIS
+		|| mobj->type == MT_AXISTRANSFER
+		|| mobj->type == MT_AXISTRANSFERLINE
+		|| mobj->type == MT_NIGHTSBUMPER
+		|| mobj->type == MT_STARPOST)
+		return;
+
+	if ((mthing->options & MTF_OBJECTSPECIAL) && (mobj->flags & MF_PUSHABLE))
+		return;
+
+	mobj->flags2 |= MF2_AMBUSH;
+}
+
 static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, mobjtype_t i)
 {
 	mobj_t *mobj = NULL;
@@ -13298,6 +13318,9 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	mobj->roll = FixedAngle(mthing->roll << FRACBITS);
 
 	mthing->mobj = mobj;
+
+	if (!udmf && (mthing->options & MTF_AMBUSH))
+		P_SetAmbush(mthing, mobj);
 
 	// Generic reverse gravity for individual objects flag.
 	if (mthing->options & MTF_OBJECTFLIP)
