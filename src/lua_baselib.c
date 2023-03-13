@@ -3807,11 +3807,13 @@ static int lib_gSetCustomExitVars(lua_State *L)
 
 	nextmapoverride = 0;
 	skipstats = 0;
+	specialoverride = false;
 
 	if (n >= 1)
 	{
 		nextmapoverride = (INT16)luaL_optinteger(L, 1, 0);
 		skipstats = (INT16)luaL_optinteger(L, 2, 0);
+		specialoverride = (INT16)lua_optboolean(L, 3);
 	}
 
 	return 0;

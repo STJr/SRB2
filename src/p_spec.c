@@ -4631,6 +4631,9 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 
 	if (lines[lineindex].args[1] & TMEF_SKIPTALLY)
 		skipstats = 1;
+
+	if (lines[lineindex].args[1] & TMEF_SPECIALOVERRIDE)
+		specialoverride = true;
 }
 
 static void P_ProcessTeamBase(player_t *player, boolean redteam)

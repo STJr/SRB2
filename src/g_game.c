@@ -155,6 +155,7 @@ textprompt_t *textprompts[MAX_PROMPTS];
 
 INT16 nextmapoverride;
 UINT8 skipstats;
+boolean specialoverride;
 
 // Pointers to each CTF flag
 mobj_t *redflag;
@@ -4029,7 +4030,7 @@ static void G_DoCompleted(void)
 	{
 		token--;
 
-		if (!nextmapoverride)
+		if (!(nextmapoverride && specialoverride))
 			for (i = 0; i < 7; i++)
 				if (!(emeralds & (1<<i)))
 				{
@@ -4044,7 +4045,7 @@ static void G_DoCompleted(void)
 		}
 	}
 
-	if (spec && !gottoken && !nextmapoverride)
+	if (spec && !gottoken && !(nextmapoverride && specialoverride))
 		nextmap = lastmap; // Exiting from a special stage? Go back to the game. Tails 08-11-2001
 
 	automapactive = false;

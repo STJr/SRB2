@@ -126,6 +126,7 @@ typedef enum
 {
 	TMEF_SKIPTALLY    = 1,
 	TMEF_EMERALDCHECK = 1<<1,
+	TMEF_SPECIALOVERRIDE = 1<<2,
 } textmapexitflags_t;
 
 typedef enum

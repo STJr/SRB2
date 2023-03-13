@@ -4120,6 +4120,8 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[1] |= TMEF_SKIPTALLY;
 			if (lines[i].flags & ML_BLOCKMONSTERS)
 				lines[i].args[1] |= TMEF_EMERALDCHECK;
+			if (lines[i].flags & ML_EFFECT6)
+				lines[i].args[1] |= TMEF_SPECIALOVERRIDE;
 			break;
 		case 3: //Zoom tube parameters
 			lines[i].args[0] = sides[lines[i].sidenum[0]].textureoffset >> FRACBITS;
@@ -7790,6 +7792,7 @@ boolean P_LoadLevel(boolean fromnetsave, boolean reloadinggamestate)
 
 	nextmapoverride = 0;
 	skipstats = 0;
+	specialoverride = false;
 
 	if (!(netgame || multiplayer || demoplayback) && (!modifiedgame || savemoddata))
 		mapvisited[gamemap-1] |= MV_VISITED;
