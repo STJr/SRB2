@@ -3800,10 +3800,11 @@ static int lib_gSetCustomExitVars(lua_State *L)
 
 	// LUA EXTENSION: Custom exit like support
 	// Supported:
-	//	G_SetCustomExitVars();			[reset to defaults]
-	//	G_SetCustomExitVars(int)		[nextmap override only]
-	//	G_SetCustomExitVars(nil, int)	[skipstats only]
-	//	G_SetCustomExitVars(int, int)	[both of the above]
+	//	G_SetCustomExitVars();					[reset to defaults]
+	//	G_SetCustomExitVars(int)				[nextmap override only]
+	//	G_SetCustomExitVars(nil, int)			[skipstats only]
+	//	G_SetCustomExitVars(int, int)			[both of the above]
+	//	G_SetCustomExitVars(int, nil, boolean)	[nextmap & special stage override only]
 
 	nextmapoverride = 0;
 	skipstats = 0;
