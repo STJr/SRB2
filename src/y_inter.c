@@ -450,7 +450,7 @@ void Y_IntermissionDrawer(void)
 	{
 		INT32 bonusy;
 
-		if (gottoken) // first to be behind everything else
+		if (gottoken && !(nextmapoverride && specialoverride)) // first to be behind everything else
 			Y_IntermissionTokenDrawer();
 
 		if (!splitscreen)  // there's not enough room in splitscreen, don't even bother trying!
@@ -525,7 +525,7 @@ void Y_IntermissionDrawer(void)
 		INT32 xoffset6 = 0; // Line 6 x offset
 		UINT8 drawsection = 0;
 
-		if (gottoken) // first to be behind everything else
+		if (gottoken && !(nextmapoverride && specialoverride)) // first to be behind everything else
 			Y_IntermissionTokenDrawer();
 
 		// draw the header
@@ -1089,7 +1089,7 @@ void Y_Ticker(void)
 		{
 			tallydonetic = intertic;
 			endtic = intertic + 3*TICRATE; // 3 second pause after end of tally
-			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
+			S_StartSound(NULL, (gottoken && !(nextmapoverride && specialoverride) ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
 			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
@@ -1220,7 +1220,7 @@ void Y_Ticker(void)
 			if (!((data.spec.continues & 0x80) || (super && ALL7EMERALDS(emeralds)))) // don't set endtic yet!
 				endtic = intertic + 4*TICRATE; // 4 second pause after end of tally
 
-			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
+			S_StartSound(NULL, (gottoken && !(nextmapoverride && specialoverride) ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
 			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)

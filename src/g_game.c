@@ -4026,17 +4026,16 @@ static void G_DoCompleted(void)
 			lastmap = nextmap; // Remember last map for when you come out of the special stage.
 	}
 
-	if ((gottoken = ((gametyperules & GTR_SPECIALSTAGES) && token)))
+	if ((gottoken = ((gametyperules & GTR_SPECIALSTAGES) && token)) && !(nextmapoverride && specialoverride))
 	{
 		token--;
 
-		if (!(nextmapoverride && specialoverride))
-			for (i = 0; i < 7; i++)
-				if (!(emeralds & (1<<i)))
-				{
-					nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
-					break;
-				}
+		for (i = 0; i < 7; i++)
+			if (!(emeralds & (1<<i)))
+			{
+				nextmap = ((netgame || multiplayer) ? smpstage_start : sstage_start) + i - 1; // to special stage!
+				break;
+			}
 
 		if (i == 7)
 		{
