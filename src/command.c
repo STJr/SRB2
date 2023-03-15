@@ -1000,6 +1000,9 @@ static void COM_Toggle_f(void)
 		return;
 	}
 
+	if (CV_Immutable(cvar))
+		return;
+
 	if (!(cvar->PossibleValue == CV_YesNo || cvar->PossibleValue == CV_OnOff))
 	{
 		CONS_Alert(CONS_NOTICE, M_GetText("%s is not a boolean value\n"), COM_Argv(1));
@@ -1028,6 +1031,9 @@ static void COM_Add_f(void)
 		CONS_Alert(CONS_NOTICE, M_GetText("%s is not a cvar\n"), COM_Argv(1));
 		return;
 	}
+
+	if (CV_Immutable(cvar))
+		return;
 
 	if (( cvar->flags & CV_FLOAT ))
 	{
