@@ -57,6 +57,7 @@ static boolean CV_FilterVarByVersion(consvar_t *v, const char *valstr);
 static boolean CV_Command(void);
 consvar_t *CV_FindVar(const char *name);
 static const char *CV_StringValue(const char *var_name);
+static boolean CV_Immutable(const consvar_t *var);
 
 static consvar_t *consvar_vars; // list of registered console variables
 static UINT16     consvar_number_of_netids = 0;
@@ -2371,7 +2372,7 @@ static boolean CV_Command(void)
 	if (!v)
 		return false;
 
-	if (( com_flags & COM_SAFE ) && ( v->flags & CV_NOLUA ))
+	if (CV_Immutable(v))
 	{
 		CONS_Alert(CONS_WARNING, "Variable '%s' cannot be changed from Lua.\n", v->name);
 		return true;
@@ -2458,6 +2459,22 @@ void CV_SaveVariables(FILE *f)
 
 			fprintf(f, "%s \"%s\"\n", cvar->name, string);
 		}
+}
+
+// Returns true if this cvar cannot be modified in current context.
+// Such as if the cvar does not have CV_ALLOWLUA.
+static boolean CV_Immutable(const consvar_t *var)
+{
+	// Currently operating from Lua
+	if (com_flags & COM_SAFE)
+	{
+		if (!(var->flags & CV_ALLOWLUA))
+		{
+			return true;
+		}
+	}
+
+	return false;
 }
 
 //============================================================================
