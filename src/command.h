@@ -20,19 +20,17 @@
 // Command buffer & command execution
 //===================================
 
-/* Lua command registration flags. */
-enum
+/* Command registration flags. */
+typedef enum
 {
 	COM_ADMIN       = 1,
 	COM_SPLITSCREEN = 2,
 	COM_LOCAL       = 4,
-};
 
-/* Command buffer flags. */
-enum
-{
-	COM_SAFE = 1,
-};
+	// COM_BufInsertText etc: can only access cvars
+	// with CV_ALLOWLUA set.
+	COM_LUA         = 8,
+} com_flags_t;
 
 typedef void (*com_func_t)(void);
 
@@ -53,11 +51,11 @@ const char *COM_CompleteAlias(const char *partial, INT32 skips);
 
 // insert at queu (at end of other command)
 #define COM_BufAddText(s) COM_BufAddTextEx(s, 0)
-void COM_BufAddTextEx(const char *btext, int flags);
+void COM_BufAddTextEx(const char *btext, com_flags_t flags);
 
 // insert in head (before other command)
 #define COM_BufInsertText(s) COM_BufInsertTextEx(s, 0)
-void COM_BufInsertTextEx(const char *btext, int flags);
+void COM_BufInsertTextEx(const char *btext, com_flags_t flags);
 
 // don't bother inserting, just do immediately
 void COM_ImmedExecute(const char *ptext);
@@ -89,7 +87,7 @@ void VS_Free(vsbuf_t *buf);
 void VS_Clear(vsbuf_t *buf);
 void *VS_GetSpace(vsbuf_t *buf, size_t length);
 void VS_Write(vsbuf_t *buf, const void *data, size_t length);
-void VS_WriteEx(vsbuf_t *buf, const void *data, size_t length, int flags);
+void VS_WriteEx(vsbuf_t *buf, const void *data, size_t length, com_flags_t flags);
 void VS_Print(vsbuf_t *buf, const char *data); // strcats onto the sizebuf
 
 //==================

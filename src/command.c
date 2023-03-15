@@ -109,6 +109,7 @@ static cmdalias_t *com_alias; // aliases list
 // =========================================================================
 
 static vsbuf_t com_text; // variable sized buffer
+static com_flags_t com_flags = 0;
 
 /** Purges control characters out of some text.
   *
@@ -141,7 +142,7 @@ COM_Purge (char *s, int *np)
   * \param ptext The text to add.
   * \sa COM_BufInsertTextEx
   */
-void COM_BufAddTextEx(const char *ptext, int flags)
+void COM_BufAddTextEx(const char *ptext, com_flags_t flags)
 {
 	int l;
 	char *text;
@@ -164,7 +165,7 @@ void COM_BufAddTextEx(const char *ptext, int flags)
   * \param ptext The text to execute. A newline is automatically added.
   * \sa COM_BufAddTextEx
   */
-void COM_BufInsertTextEx(const char *ptext, int flags)
+void COM_BufInsertTextEx(const char *ptext, com_flags_t flags)
 {
 	const INT32 old_wait = com_wait;
 
@@ -320,7 +321,6 @@ static size_t com_argc;
 static char *com_argv[MAX_ARGS];
 static const char *com_null_string = "";
 static char *com_args = NULL; // current command args or NULL
-static int com_flags;
 
 static void Got_NetVar(UINT8 **p, INT32 playernum);
 
@@ -1124,7 +1124,7 @@ void VS_Write(vsbuf_t *buf, const void *data, size_t length)
 	M_Memcpy(VS_GetSpace(buf, length), data, length);
 }
 
-void VS_WriteEx(vsbuf_t *buf, const void *data, size_t length, int flags)
+void VS_WriteEx(vsbuf_t *buf, const void *data, size_t length, com_flags_t flags)
 {
 	char *p;
 	p = VS_GetSpace(buf, 2 + length);
@@ -2472,7 +2472,7 @@ void CV_SaveVariables(FILE *f)
 static boolean CV_Immutable(const consvar_t *var)
 {
 	// Currently operating from Lua
-	if (com_flags & COM_SAFE)
+	if (com_flags & COM_LUA)
 	{
 		if (!(var->flags & CV_ALLOWLUA))
 		{
