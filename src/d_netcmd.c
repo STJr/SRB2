@@ -464,57 +464,57 @@ void D_RegisterServerCommands(void)
 	RegisterNetXCmd(XD_LUAFILE, Got_LuaFile);
 
 	// Remote Administration
-	COM_AddCommand("password", Command_Changepassword_f);
-	COM_AddCommand("login", Command_Login_f); // useful in dedicated to kick off remote admin
-	COM_AddCommand("promote", Command_Verify_f);
+	COM_AddCommand("password", Command_Changepassword_f, 0);
+	COM_AddCommand("login", Command_Login_f, 0); // useful in dedicated to kick off remote admin
+	COM_AddCommand("promote", Command_Verify_f, 0);
 	RegisterNetXCmd(XD_VERIFIED, Got_Verification);
-	COM_AddCommand("demote", Command_RemoveAdmin_f);
+	COM_AddCommand("demote", Command_RemoveAdmin_f, 0);
 	RegisterNetXCmd(XD_DEMOTED, Got_Removal);
 
-	COM_AddCommand("motd", Command_MotD_f);
+	COM_AddCommand("motd", Command_MotD_f, 0);
 	RegisterNetXCmd(XD_SETMOTD, Got_MotD_f); // For remote admin
 
 	RegisterNetXCmd(XD_TEAMCHANGE, Got_Teamchange);
-	COM_AddCommand("serverchangeteam", Command_ServerTeamChange_f);
+	COM_AddCommand("serverchangeteam", Command_ServerTeamChange_f, 0);
 
 	RegisterNetXCmd(XD_CLEARSCORES, Got_Clearscores);
-	COM_AddCommand("clearscores", Command_Clearscores_f);
-	COM_AddCommand("map", Command_Map_f);
+	COM_AddCommand("clearscores", Command_Clearscores_f, 0);
+	COM_AddCommand("map", Command_Map_f, 0);
 
-	COM_AddCommand("exitgame", Command_ExitGame_f);
-	COM_AddCommand("retry", Command_Retry_f);
-	COM_AddCommand("exitlevel", Command_ExitLevel_f);
-	COM_AddCommand("showmap", Command_Showmap_f);
-	COM_AddCommand("mapmd5", Command_Mapmd5_f);
+	COM_AddCommand("exitgame", Command_ExitGame_f, 0);
+	COM_AddCommand("retry", Command_Retry_f, 0);
+	COM_AddCommand("exitlevel", Command_ExitLevel_f, 0);
+	COM_AddCommand("showmap", Command_Showmap_f, 0);
+	COM_AddCommand("mapmd5", Command_Mapmd5_f, 0);
 
-	COM_AddCommand("addfolder", Command_Addfolder);
-	COM_AddCommand("addfile", Command_Addfile);
-	COM_AddCommand("listwad", Command_ListWADS_f);
+	COM_AddCommand("addfolder", Command_Addfolder, 0);
+	COM_AddCommand("addfile", Command_Addfile, 0);
+	COM_AddCommand("listwad", Command_ListWADS_f, 0);
 
-	COM_AddCommand("runsoc", Command_RunSOC);
-	COM_AddCommand("pause", Command_Pause);
-	COM_AddCommand("suicide", Command_Suicide);
+	COM_AddCommand("runsoc", Command_RunSOC, 0);
+	COM_AddCommand("pause", Command_Pause, 0);
+	COM_AddCommand("suicide", Command_Suicide, 0);
 
-	COM_AddCommand("gametype", Command_ShowGametype_f);
-	COM_AddCommand("version", Command_Version_f);
+	COM_AddCommand("gametype", Command_ShowGametype_f, 0);
+	COM_AddCommand("version", Command_Version_f, 0);
 #ifdef UPDATE_ALERT
-	COM_AddCommand("mod_details", Command_ModDetails_f);
+	COM_AddCommand("mod_details", Command_ModDetails_f, 0);
 #endif
-	COM_AddCommand("quit", Command_Quit_f);
+	COM_AddCommand("quit", Command_Quit_f, 0);
 
-	COM_AddCommand("saveconfig", Command_SaveConfig_f);
-	COM_AddCommand("loadconfig", Command_LoadConfig_f);
-	COM_AddCommand("changeconfig", Command_ChangeConfig_f);
-	COM_AddCommand("isgamemodified", Command_Isgamemodified_f); // test
-	COM_AddCommand("showscores", Command_ShowScores_f);
-	COM_AddCommand("showtime", Command_ShowTime_f);
-	COM_AddCommand("cheats", Command_Cheats_f); // test
+	COM_AddCommand("saveconfig", Command_SaveConfig_f, 0);
+	COM_AddCommand("loadconfig", Command_LoadConfig_f, 0);
+	COM_AddCommand("changeconfig", Command_ChangeConfig_f, 0);
+	COM_AddCommand("isgamemodified", Command_Isgamemodified_f, 0); // test
+	COM_AddCommand("showscores", Command_ShowScores_f, 0);
+	COM_AddCommand("showtime", Command_ShowTime_f, 0);
+	COM_AddCommand("cheats", Command_Cheats_f, 0); // test
 #ifdef _DEBUG
-	COM_AddCommand("togglemodified", Command_Togglemodified_f);
-	COM_AddCommand("archivetest", Command_Archivetest_f);
+	COM_AddCommand("togglemodified", Command_Togglemodified_f, 0);
+	COM_AddCommand("archivetest", Command_Archivetest_f, 0);
 #endif
 
-	COM_AddCommand("downloads", Command_Downloads_f);
+	COM_AddCommand("downloads", Command_Downloads_f, 0);
 
 	// for master server connection
 	AddMServCommands();
@@ -601,7 +601,7 @@ void D_RegisterServerCommands(void)
 	CV_RegisterVar(&cv_blamecfail);
 #endif
 
-	COM_AddCommand("ping", Command_Ping_f);
+	COM_AddCommand("ping", Command_Ping_f, 0);
 	CV_RegisterVar(&cv_nettimeout);
 	CV_RegisterVar(&cv_jointimeout);
 
@@ -645,25 +645,25 @@ void D_RegisterClientCommands(void)
 	if (dedicated)
 		return;
 
-	COM_AddCommand("numthinkers", Command_Numthinkers_f);
-	COM_AddCommand("countmobjs", Command_CountMobjs_f);
+	COM_AddCommand("numthinkers", Command_Numthinkers_f, 0);
+	COM_AddCommand("countmobjs", Command_CountMobjs_f, 0);
 
-	COM_AddCommand("changeteam", Command_Teamchange_f);
-	COM_AddCommand("changeteam2", Command_Teamchange2_f);
+	COM_AddCommand("changeteam", Command_Teamchange_f, 0);
+	COM_AddCommand("changeteam2", Command_Teamchange2_f, 0);
 
-	COM_AddCommand("playdemo", Command_Playdemo_f);
-	COM_AddCommand("timedemo", Command_Timedemo_f);
-	COM_AddCommand("stopdemo", Command_Stopdemo_f);
-	COM_AddCommand("playintro", Command_Playintro_f);
+	COM_AddCommand("playdemo", Command_Playdemo_f, 0);
+	COM_AddCommand("timedemo", Command_Timedemo_f, 0);
+	COM_AddCommand("stopdemo", Command_Stopdemo_f, 0);
+	COM_AddCommand("playintro", Command_Playintro_f, 0);
 
-	COM_AddCommand("resetcamera", Command_ResetCamera_f);
+	COM_AddCommand("resetcamera", Command_ResetCamera_f, 0);
 
-	COM_AddCommand("setcontrol", Command_Setcontrol_f);
-	COM_AddCommand("setcontrol2", Command_Setcontrol2_f);
+	COM_AddCommand("setcontrol", Command_Setcontrol_f, 0);
+	COM_AddCommand("setcontrol2", Command_Setcontrol2_f, 0);
 
-	COM_AddCommand("screenshot", M_ScreenShot);
-	COM_AddCommand("startmovie", Command_StartMovie_f);
-	COM_AddCommand("stopmovie", Command_StopMovie_f);
+	COM_AddCommand("screenshot", M_ScreenShot, 0);
+	COM_AddCommand("startmovie", Command_StartMovie_f, 0);
+	COM_AddCommand("stopmovie", Command_StopMovie_f, 0);
 
 	CV_RegisterVar(&cv_screenshot_option);
 	CV_RegisterVar(&cv_screenshot_folder);
@@ -725,7 +725,7 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_ghost_last);
 	CV_RegisterVar(&cv_ghost_guest);
 
-	COM_AddCommand("displayplayer", Command_Displayplayer_f);
+	COM_AddCommand("displayplayer", Command_Displayplayer_f, 0);
 
 	// FIXME: not to be here.. but needs be done for config loading
 	CV_RegisterVar(&cv_globalgamma);
@@ -881,7 +881,7 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_ps_descriptor);
 
 	// ingame object placing
-	COM_AddCommand("objectplace", Command_ObjectPlace_f);
+	COM_AddCommand("objectplace", Command_ObjectPlace_f, 0);
 	//COM_AddCommand("writethings", Command_Writethings_f);
 	CV_RegisterVar(&cv_speed);
 	CV_RegisterVar(&cv_opflags);
@@ -893,32 +893,32 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_freedemocamera);
 
 	// add cheat commands
-	COM_AddCommand("noclip", Command_CheatNoClip_f);
-	COM_AddCommand("god", Command_CheatGod_f);
-	COM_AddCommand("notarget", Command_CheatNoTarget_f);
-	COM_AddCommand("getallemeralds", Command_Getallemeralds_f);
-	COM_AddCommand("resetemeralds", Command_Resetemeralds_f);
-	COM_AddCommand("setrings", Command_Setrings_f);
-	COM_AddCommand("setlives", Command_Setlives_f);
-	COM_AddCommand("setcontinues", Command_Setcontinues_f);
-	COM_AddCommand("devmode", Command_Devmode_f);
-	COM_AddCommand("savecheckpoint", Command_Savecheckpoint_f);
-	COM_AddCommand("scale", Command_Scale_f);
-	COM_AddCommand("gravflip", Command_Gravflip_f);
-	COM_AddCommand("hurtme", Command_Hurtme_f);
-	COM_AddCommand("jumptoaxis", Command_JumpToAxis_f);
-	COM_AddCommand("charability", Command_Charability_f);
-	COM_AddCommand("charspeed", Command_Charspeed_f);
-	COM_AddCommand("teleport", Command_Teleport_f);
-	COM_AddCommand("rteleport", Command_RTeleport_f);
-	COM_AddCommand("skynum", Command_Skynum_f);
-	COM_AddCommand("weather", Command_Weather_f);
-	COM_AddCommand("toggletwod", Command_Toggletwod_f);
+	COM_AddCommand("noclip", Command_CheatNoClip_f, 0);
+	COM_AddCommand("god", Command_CheatGod_f, 0);
+	COM_AddCommand("notarget", Command_CheatNoTarget_f, 0);
+	COM_AddCommand("getallemeralds", Command_Getallemeralds_f, 0);
+	COM_AddCommand("resetemeralds", Command_Resetemeralds_f, 0);
+	COM_AddCommand("setrings", Command_Setrings_f, 0);
+	COM_AddCommand("setlives", Command_Setlives_f, 0);
+	COM_AddCommand("setcontinues", Command_Setcontinues_f, 0);
+	COM_AddCommand("devmode", Command_Devmode_f, 0);
+	COM_AddCommand("savecheckpoint", Command_Savecheckpoint_f, 0);
+	COM_AddCommand("scale", Command_Scale_f, 0);
+	COM_AddCommand("gravflip", Command_Gravflip_f, 0);
+	COM_AddCommand("hurtme", Command_Hurtme_f, 0);
+	COM_AddCommand("jumptoaxis", Command_JumpToAxis_f, 0);
+	COM_AddCommand("charability", Command_Charability_f, 0);
+	COM_AddCommand("charspeed", Command_Charspeed_f, 0);
+	COM_AddCommand("teleport", Command_Teleport_f, 0);
+	COM_AddCommand("rteleport", Command_RTeleport_f, 0);
+	COM_AddCommand("skynum", Command_Skynum_f, 0);
+	COM_AddCommand("weather", Command_Weather_f, 0);
+	COM_AddCommand("toggletwod", Command_Toggletwod_f, 0);
 #ifdef _DEBUG
-	COM_AddCommand("causecfail", Command_CauseCfail_f);
+	COM_AddCommand("causecfail", Command_CauseCfail_f, 0);
 #endif
 #ifdef LUA_ALLOW_BYTECODE
-	COM_AddCommand("dumplua", Command_Dumplua_f);
+	COM_AddCommand("dumplua", Command_Dumplua_f, 0);
 #endif
 }
 

@@ -328,10 +328,10 @@ void HU_LoadGraphics(void)
 void HU_Init(void)
 {
 #ifndef NONET
-	COM_AddCommand("say", Command_Say_f);
-	COM_AddCommand("sayto", Command_Sayto_f);
-	COM_AddCommand("sayteam", Command_Sayteam_f);
-	COM_AddCommand("csay", Command_CSay_f);
+	COM_AddCommand("say", Command_Say_f, 0);
+	COM_AddCommand("sayto", Command_Sayto_f, 0);
+	COM_AddCommand("sayteam", Command_Sayteam_f, 0);
+	COM_AddCommand("csay", Command_CSay_f, 0);
 	RegisterNetXCmd(XD_SAY, Got_Saycmd);
 #endif
 

@@ -289,8 +289,8 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&cv_miditimiditypath);
 #endif
 
-	COM_AddCommand("tunes", Command_Tunes_f);
-	COM_AddCommand("restartaudio", Command_RestartAudio_f);
+	COM_AddCommand("tunes", Command_Tunes_f, 0);
+	COM_AddCommand("restartaudio", Command_RestartAudio_f, 0);
 }
 
 static void SetChannelsNum(void)

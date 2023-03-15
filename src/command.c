@@ -312,6 +312,7 @@ typedef struct xcommand_s
 	const char *name;
 	struct xcommand_s *next;
 	com_func_t function;
+	com_flags_t flags;
 } xcommand_t;
 
 static xcommand_t *com_commands = NULL; // current commands
@@ -332,16 +333,16 @@ void COM_Init(void)
 	VS_Alloc(&com_text, COM_BUF_SIZE);
 
 	// add standard commands
-	COM_AddCommand("alias", COM_Alias_f);
-	COM_AddCommand("echo", COM_Echo_f);
-	COM_AddCommand("cecho", COM_CEcho_f);
-	COM_AddCommand("cechoflags", COM_CEchoFlags_f);
-	COM_AddCommand("cechoduration", COM_CEchoDuration_f);
-	COM_AddCommand("exec", COM_Exec_f);
-	COM_AddCommand("wait", COM_Wait_f);
-	COM_AddCommand("help", COM_Help_f);
-	COM_AddCommand("toggle", COM_Toggle_f);
-	COM_AddCommand("add", COM_Add_f);
+	COM_AddCommand("alias", COM_Alias_f, 0);
+	COM_AddCommand("echo", COM_Echo_f, 0);
+	COM_AddCommand("cecho", COM_CEcho_f, 0);
+	COM_AddCommand("cechoflags", COM_CEchoFlags_f, 0);
+	COM_AddCommand("cechoduration", COM_CEchoDuration_f, 0);
+	COM_AddCommand("exec", COM_Exec_f, 0);
+	COM_AddCommand("wait", COM_Wait_f, 0);
+	COM_AddCommand("help", COM_Help_f, 0);
+	COM_AddCommand("toggle", COM_Toggle_f, 0);
+	COM_AddCommand("add", COM_Add_f, 0);
 	RegisterNetXCmd(XD_NETVAR, Got_NetVar);
 }
 
@@ -480,7 +481,7 @@ static void COM_TokenizeString(char *ptext)
   * \param name Name of the command.
   * \param func Function called when the command is run.
   */
-void COM_AddCommand(const char *name, com_func_t func)
+void COM_AddCommand(const char *name, com_func_t func, com_flags_t flags)
 {
 	xcommand_t *cmd;
 
@@ -510,6 +511,7 @@ void COM_AddCommand(const char *name, com_func_t func)
 	cmd = ZZ_Alloc(sizeof *cmd);
 	cmd->name = name;
 	cmd->function = func;
+	cmd->flags = flags;
 	cmd->next = com_commands;
 	com_commands = cmd;
 }
@@ -542,6 +544,7 @@ int COM_AddLuaCommand(const char *name)
 	cmd = ZZ_Alloc(sizeof *cmd);
 	cmd->name = name;
 	cmd->function = COM_Lua_f;
+	cmd->flags = 0;
 	cmd->next = com_commands;
 	com_commands = cmd;
 	return 0;

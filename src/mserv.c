@@ -97,8 +97,8 @@ void AddMServCommands(void)
 	CV_RegisterVar(&cv_masterserver_token);
 	CV_RegisterVar(&cv_servername);
 #ifdef MASTERSERVER
-	COM_AddCommand("listserv", Command_Listserv_f);
-	COM_AddCommand("masterserver_update", Update_parameters); // allows people to updates manually in case you were delisted by accident
+	COM_AddCommand("listserv", Command_Listserv_f, 0);
+	COM_AddCommand("masterserver_update", Update_parameters, 0); // allows people to updates manually in case you were delisted by accident
 #endif
 #endif
 }
