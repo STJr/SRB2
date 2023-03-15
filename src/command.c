@@ -264,6 +264,8 @@ void COM_BufExecute(void)
 			break;
 		}
 	}
+
+	com_flags = 0;
 }
 
 /** Executes a string immediately.  Used for skirting around WAIT commands.
@@ -440,7 +442,6 @@ static void COM_TokenizeString(char *ptext)
 
 	com_argc = 0;
 	com_args = NULL;
-	com_flags = 0;
 
 	while (com_argc < MAX_ARGS)
 	{
