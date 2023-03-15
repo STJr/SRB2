@@ -794,8 +794,8 @@ static void COM_Exec_f(void)
 		CONS_Printf(M_GetText("executing %s\n"), COM_Argv(1));
 
 	// insert text file into the command buffer
-	COM_BufAddText((char *)buf);
-	COM_BufAddText("\n");
+	COM_BufAddTextEx((char *)buf, com_flags);
+	COM_BufAddTextEx("\n", com_flags);
 
 	// free buffer
 	Z_Free(buf);
