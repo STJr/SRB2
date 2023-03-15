@@ -1377,8 +1377,9 @@ static void SV_SendServerInfo(INT32 node, tic_t servertime)
 	netbuffer->u.serverinfo.time = (tic_t)LONG(servertime);
 	netbuffer->u.serverinfo.leveltime = (tic_t)LONG(leveltime);
 
-	netbuffer->u.serverinfo.numberofplayer = (UINT8)D_NumPlayers();
-	netbuffer->u.serverinfo.maxplayer = (UINT8)cv_maxplayers.value;
+	// Exclude bots from both counts
+	netbuffer->u.serverinfo.numberofplayer = (UINT8)(D_NumPlayers() - D_NumBots());
+	netbuffer->u.serverinfo.maxplayer = (UINT8)(cv_maxplayers.value - D_NumBots());
 
 	netbuffer->u.serverinfo.refusereason = GetRefuseReason(node);
 
@@ -4077,7 +4078,7 @@ ConnectionRefused (SINT8 node, INT32 rejoinernum)
 		{
 			return va(
 					"Maximum players reached: %d",
-					cv_maxplayers.value);
+					cv_maxplayers.value - D_NumBots());
 		}
 	}
 
@@ -5605,6 +5606,19 @@ INT32 D_NumPlayers(void)
 	INT32 num = 0, ix;
 	for (ix = 0; ix < MAXPLAYERS; ix++)
 		if (playeringame[ix])
+			num++;
+	return num;
+}
+
+/** Similar to the above, but counts only bots.
+  * Purpose is to remove bots from both the player count and the
+  * max player count on the server view
+*/
+INT32 D_NumBots(void)
+{
+	INT32 num = 0, ix;
+	for (ix = 0; ix < MAXPLAYERS; ix++)
+		if (playeringame[ix] && players[ix].bot)
 			num++;
 	return num;
 }
