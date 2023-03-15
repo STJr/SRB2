@@ -544,7 +544,7 @@ int COM_AddLuaCommand(const char *name)
 	cmd = ZZ_Alloc(sizeof *cmd);
 	cmd->name = name;
 	cmd->function = COM_Lua_f;
-	cmd->flags = 0;
+	cmd->flags = COM_LUA;
 	cmd->next = com_commands;
 	com_commands = cmd;
 	return 0;
@@ -640,6 +640,12 @@ static void COM_ExecuteString(char *ptext)
 	{
 		if (!stricmp(com_argv[0], cmd->name)) //case insensitive now that we have lower and uppercase!
 		{
+			if ((com_flags & COM_LUA) && !(cmd->flags & COM_LUA))
+			{
+				CONS_Alert(CONS_WARNING, "Command '%s' cannot be run from Lua.\n", cmd->name);
+				return;
+			}
+
 			cmd->function();
 			return;
 		}

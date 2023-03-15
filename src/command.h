@@ -29,6 +29,8 @@ typedef enum
 
 	// COM_BufInsertText etc: can only access cvars
 	// with CV_ALLOWLUA set.
+	// COM_AddCommand: without this flag, the command
+	// CANNOT be run from Lua.
 	COM_LUA         = 8,
 } com_flags_t;
 
