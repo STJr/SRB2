@@ -1504,7 +1504,7 @@ static SDL_bool Impl_CreateContext(void)
 			// This is because the renderer will be created before the config
 			// is read and vid_wait is set from the user's preferences, and thus
 			// vid_wait will have no effect.
-			CV_StealthSetValue(cv_vidwait, 0);
+			CV_StealthSetValue(&cv_vidwait, 0);
 #endif
 		}
 
