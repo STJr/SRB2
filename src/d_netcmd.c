@@ -203,37 +203,37 @@ static CV_PossibleValue_t matchboxes_cons_t[] = {{0, "Normal"}, {1, "Mystery"}, 
 static CV_PossibleValue_t chances_cons_t[] = {{0, "MIN"}, {9, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t pause_cons_t[] = {{0, "Server"}, {1, "All"}, {0, NULL}};
 
-consvar_t cv_showinputjoy = CVAR_INIT ("showinputjoy", "Off", 0, CV_OnOff, NULL);
+consvar_t cv_showinputjoy = CVAR_INIT ("showinputjoy", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
 
 #ifdef NETGAME_DEVMODE
 static consvar_t cv_fishcake = CVAR_INIT ("fishcake", "Off", CV_CALL|CV_NOSHOWHELP|CV_RESTRICT, CV_OnOff, Fishcake_OnChange);
 #endif
 static consvar_t cv_dummyconsvar = CVAR_INIT ("dummyconsvar", "Off", CV_CALL|CV_NOSHOWHELP, CV_OnOff, DummyConsvar_OnChange);
 
-consvar_t cv_restrictskinchange = CVAR_INIT ("restrictskinchange", "Yes", CV_SAVE|CV_NETVAR|CV_CHEAT, CV_YesNo, NULL);
-consvar_t cv_allowteamchange = CVAR_INIT ("allowteamchange", "Yes", CV_SAVE|CV_NETVAR, CV_YesNo, NULL);
+consvar_t cv_restrictskinchange = CVAR_INIT ("restrictskinchange", "Yes", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, CV_YesNo, NULL);
+consvar_t cv_allowteamchange = CVAR_INIT ("allowteamchange", "Yes", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 
-consvar_t cv_startinglives = CVAR_INIT ("startinglives", "3", CV_SAVE|CV_NETVAR|CV_CHEAT, startingliveslimit_cons_t, NULL);
+consvar_t cv_startinglives = CVAR_INIT ("startinglives", "3", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, startingliveslimit_cons_t, NULL);
 
 static CV_PossibleValue_t respawntime_cons_t[] = {{1, "MIN"}, {30, "MAX"}, {0, "Off"}, {0, NULL}};
-consvar_t cv_respawntime = CVAR_INIT ("respawndelay", "3", CV_SAVE|CV_NETVAR|CV_CHEAT, respawntime_cons_t, NULL);
+consvar_t cv_respawntime = CVAR_INIT ("respawndelay", "3", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, respawntime_cons_t, NULL);
 
-consvar_t cv_competitionboxes = CVAR_INIT ("competitionboxes", "Mystery", CV_SAVE|CV_NETVAR|CV_CHEAT, competitionboxes_cons_t, NULL);
+consvar_t cv_competitionboxes = CVAR_INIT ("competitionboxes", "Mystery", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, competitionboxes_cons_t, NULL);
 
 static CV_PossibleValue_t seenames_cons_t[] = {{0, "Off"}, {1, "Colorless"}, {2, "Team"}, {3, "Ally/Foe"}, {0, NULL}};
-consvar_t cv_seenames = CVAR_INIT ("seenames", "Ally/Foe", CV_SAVE, seenames_cons_t, 0);
-consvar_t cv_allowseenames = CVAR_INIT ("allowseenames", "Yes", CV_SAVE|CV_NETVAR, CV_YesNo, NULL);
+consvar_t cv_seenames = CVAR_INIT ("seenames", "Ally/Foe", CV_SAVE|CV_ALLOWLUA, seenames_cons_t, 0);
+consvar_t cv_allowseenames = CVAR_INIT ("allowseenames", "Yes", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 
 // names
 consvar_t cv_playername = CVAR_INIT ("name", "Sonic", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name_OnChange);
 consvar_t cv_playername2 = CVAR_INIT ("name2", "Tails", CV_SAVE|CV_CALL|CV_NOINIT, NULL, Name2_OnChange);
 // player colors
 UINT16 lastgoodcolor = SKINCOLOR_BLUE, lastgoodcolor2 = SKINCOLOR_BLUE;
-consvar_t cv_playercolor = CVAR_INIT ("color", "Blue", CV_CALL|CV_NOINIT, Color_cons_t, Color_OnChange);
-consvar_t cv_playercolor2 = CVAR_INIT ("color2", "Orange", CV_CALL|CV_NOINIT, Color_cons_t, Color2_OnChange);
+consvar_t cv_playercolor = CVAR_INIT ("color", "Blue", CV_CALL|CV_NOINIT|CV_ALLOWLUA, Color_cons_t, Color_OnChange);
+consvar_t cv_playercolor2 = CVAR_INIT ("color2", "Orange", CV_CALL|CV_NOINIT|CV_ALLOWLUA, Color_cons_t, Color2_OnChange);
 // player's skin, saved for commodity, when using a favorite skins wad..
-consvar_t cv_skin = CVAR_INIT ("skin", DEFAULTSKIN, CV_CALL|CV_NOINIT, NULL, Skin_OnChange);
-consvar_t cv_skin2 = CVAR_INIT ("skin2", DEFAULTSKIN2, CV_CALL|CV_NOINIT, NULL, Skin2_OnChange);
+consvar_t cv_skin = CVAR_INIT ("skin", DEFAULTSKIN, CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Skin_OnChange);
+consvar_t cv_skin2 = CVAR_INIT ("skin2", DEFAULTSKIN2, CV_CALL|CV_NOINIT|CV_ALLOWLUA, NULL, Skin2_OnChange);
 
 // saved versions of the above six
 consvar_t cv_defaultplayercolor = CVAR_INIT ("defaultcolor", "Blue", CV_SAVE, Color_cons_t, NULL);
@@ -268,43 +268,43 @@ consvar_t cv_mouse2opt = CVAR_INIT ("mouse2opt", "0", CV_SAVE, NULL, NULL);
 consvar_t cv_mouse2port = CVAR_INIT ("mouse2port", "COM2", CV_SAVE, mouse2port_cons_t, NULL);
 #endif
 
-consvar_t cv_matchboxes = CVAR_INIT ("matchboxes", "Normal", CV_SAVE|CV_NETVAR|CV_CHEAT, matchboxes_cons_t, NULL);
-consvar_t cv_specialrings = CVAR_INIT ("specialrings", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
-consvar_t cv_powerstones = CVAR_INIT ("powerstones", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_matchboxes = CVAR_INIT ("matchboxes", "Normal", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, matchboxes_cons_t, NULL);
+consvar_t cv_specialrings = CVAR_INIT ("specialrings", "On", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_powerstones = CVAR_INIT ("powerstones", "On", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
 
-consvar_t cv_recycler =      CVAR_INIT ("tv_recycler",      "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_teleporters =   CVAR_INIT ("tv_teleporter",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_superring =     CVAR_INIT ("tv_superring",     "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_supersneakers = CVAR_INIT ("tv_supersneaker",  "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_invincibility = CVAR_INIT ("tv_invincibility", "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_jumpshield =    CVAR_INIT ("tv_jumpshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_watershield =   CVAR_INIT ("tv_watershield",   "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_ringshield =    CVAR_INIT ("tv_ringshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_forceshield =   CVAR_INIT ("tv_forceshield",   "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_bombshield =    CVAR_INIT ("tv_bombshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_1up =           CVAR_INIT ("tv_1up",           "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
-consvar_t cv_eggmanbox =     CVAR_INIT ("tv_eggman",        "5", CV_SAVE|CV_NETVAR|CV_CHEAT, chances_cons_t, NULL);
+consvar_t cv_recycler =      CVAR_INIT ("tv_recycler",      "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_teleporters =   CVAR_INIT ("tv_teleporter",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_superring =     CVAR_INIT ("tv_superring",     "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_supersneakers = CVAR_INIT ("tv_supersneaker",  "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_invincibility = CVAR_INIT ("tv_invincibility", "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_jumpshield =    CVAR_INIT ("tv_jumpshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_watershield =   CVAR_INIT ("tv_watershield",   "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_ringshield =    CVAR_INIT ("tv_ringshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_forceshield =   CVAR_INIT ("tv_forceshield",   "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_bombshield =    CVAR_INIT ("tv_bombshield",    "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_1up =           CVAR_INIT ("tv_1up",           "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
+consvar_t cv_eggmanbox =     CVAR_INIT ("tv_eggman",        "5", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, chances_cons_t, NULL);
 
-consvar_t cv_ringslinger = CVAR_INIT ("ringslinger", "No", CV_NETVAR|CV_NOSHOWHELP|CV_CALL|CV_CHEAT, CV_YesNo, Ringslinger_OnChange);
-consvar_t cv_gravity = CVAR_INIT ("gravity", "0.5", CV_RESTRICT|CV_FLOAT|CV_CALL, NULL, Gravity_OnChange);
+consvar_t cv_ringslinger = CVAR_INIT ("ringslinger", "No", CV_NETVAR|CV_NOSHOWHELP|CV_CALL|CV_CHEAT|CV_ALLOWLUA, CV_YesNo, Ringslinger_OnChange);
+consvar_t cv_gravity = CVAR_INIT ("gravity", "0.5", CV_RESTRICT|CV_FLOAT|CV_CALL|CV_ALLOWLUA, NULL, Gravity_OnChange);
 
 consvar_t cv_soundtest = CVAR_INIT ("soundtest", "0", CV_CALL, NULL, SoundTest_OnChange);
 
 static CV_PossibleValue_t minitimelimit_cons_t[] = {{1, "MIN"}, {9999, "MAX"}, {0, NULL}};
-consvar_t cv_countdowntime = CVAR_INIT ("countdowntime", "60", CV_SAVE|CV_NETVAR|CV_CHEAT, minitimelimit_cons_t, NULL);
+consvar_t cv_countdowntime = CVAR_INIT ("countdowntime", "60", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, minitimelimit_cons_t, NULL);
 
-consvar_t cv_touchtag = CVAR_INIT ("touchtag", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
-consvar_t cv_hidetime = CVAR_INIT ("hidetime", "30", CV_SAVE|CV_NETVAR|CV_CALL, minitimelimit_cons_t, Hidetime_OnChange);
+consvar_t cv_touchtag = CVAR_INIT ("touchtag", "Off", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_hidetime = CVAR_INIT ("hidetime", "30", CV_SAVE|CV_NETVAR|CV_CALL|CV_ALLOWLUA, minitimelimit_cons_t, Hidetime_OnChange);
 
-consvar_t cv_autobalance = CVAR_INIT ("autobalance", "Off", CV_SAVE|CV_NETVAR|CV_CALL, CV_OnOff, AutoBalance_OnChange);
-consvar_t cv_teamscramble = CVAR_INIT ("teamscramble", "Off", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT, teamscramble_cons_t, TeamScramble_OnChange);
-consvar_t cv_scrambleonchange = CVAR_INIT ("scrambleonchange", "Off", CV_SAVE|CV_NETVAR, teamscramble_cons_t, NULL);
+consvar_t cv_autobalance = CVAR_INIT ("autobalance", "Off", CV_SAVE|CV_NETVAR|CV_CALL|CV_ALLOWLUA, CV_OnOff, AutoBalance_OnChange);
+consvar_t cv_teamscramble = CVAR_INIT ("teamscramble", "Off", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, teamscramble_cons_t, TeamScramble_OnChange);
+consvar_t cv_scrambleonchange = CVAR_INIT ("scrambleonchange", "Off", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, teamscramble_cons_t, NULL);
 
-consvar_t cv_friendlyfire = CVAR_INIT ("friendlyfire", "Off", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
-consvar_t cv_itemfinder = CVAR_INIT ("itemfinder", "Off", CV_CALL, CV_OnOff, ItemFinder_OnChange);
+consvar_t cv_friendlyfire = CVAR_INIT ("friendlyfire", "Off", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_itemfinder = CVAR_INIT ("itemfinder", "Off", CV_CALL|CV_ALLOWLUA, CV_OnOff, ItemFinder_OnChange);
 
 // Scoring type options
-consvar_t cv_overtime = CVAR_INIT ("overtime", "Yes", CV_SAVE|CV_NETVAR, CV_YesNo, NULL);
+consvar_t cv_overtime = CVAR_INIT ("overtime", "Yes", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 
 consvar_t cv_rollingdemos = CVAR_INIT ("rollingdemos", "On", CV_SAVE, CV_OnOff, NULL);
 
@@ -315,13 +315,13 @@ static CV_PossibleValue_t powerupdisplay_cons_t[] = {{0, "Never"}, {1, "First-pe
 consvar_t cv_powerupdisplay = CVAR_INIT ("powerupdisplay", "First-person only", CV_SAVE, powerupdisplay_cons_t, NULL);
 
 static CV_PossibleValue_t pointlimit_cons_t[] = {{1, "MIN"}, {MAXSCORE, "MAX"}, {0, "None"}, {0, NULL}};
-consvar_t cv_pointlimit = CVAR_INIT ("pointlimit", "None", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT, pointlimit_cons_t, PointLimit_OnChange);
+consvar_t cv_pointlimit = CVAR_INIT ("pointlimit", "None", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, pointlimit_cons_t, PointLimit_OnChange);
 static CV_PossibleValue_t timelimit_cons_t[] = {{1, "MIN"}, {30, "MAX"}, {0, "None"}, {0, NULL}};
-consvar_t cv_timelimit = CVAR_INIT ("timelimit", "None", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT, timelimit_cons_t, TimeLimit_OnChange);
+consvar_t cv_timelimit = CVAR_INIT ("timelimit", "None", CV_SAVE|CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, timelimit_cons_t, TimeLimit_OnChange);
 static CV_PossibleValue_t numlaps_cons_t[] = {{1, "MIN"}, {50, "MAX"}, {0, NULL}};
-consvar_t cv_numlaps = CVAR_INIT ("numlaps", "4", CV_NETVAR|CV_CALL|CV_NOINIT, numlaps_cons_t, NumLaps_OnChange);
+consvar_t cv_numlaps = CVAR_INIT ("numlaps", "4", CV_NETVAR|CV_CALL|CV_NOINIT|CV_ALLOWLUA, numlaps_cons_t, NumLaps_OnChange);
 static CV_PossibleValue_t basenumlaps_cons_t[] = {{1, "MIN"}, {50, "MAX"}, {0, "Map default"}, {0, NULL}};
-consvar_t cv_basenumlaps = CVAR_INIT ("basenumlaps", "Map default", CV_SAVE|CV_NETVAR|CV_CALL|CV_CHEAT, basenumlaps_cons_t, BaseNumLaps_OnChange);
+consvar_t cv_basenumlaps = CVAR_INIT ("basenumlaps", "Map default", CV_SAVE|CV_NETVAR|CV_CALL|CV_CHEAT|CV_ALLOWLUA, basenumlaps_cons_t, BaseNumLaps_OnChange);
 
 // Point and time limits for every gametype
 INT32 pointlimits[NUMGAMETYPES];
@@ -330,11 +330,11 @@ INT32 timelimits[NUMGAMETYPES];
 // log elemental hazards -- not a netvar, is local to current player
 consvar_t cv_hazardlog = CVAR_INIT ("hazardlog", "Yes", 0, CV_YesNo, NULL);
 
-consvar_t cv_forceskin = CVAR_INIT ("forceskin", "None", CV_NETVAR|CV_CALL|CV_CHEAT, NULL, ForceSkin_OnChange);
+consvar_t cv_forceskin = CVAR_INIT ("forceskin", "None", CV_NETVAR|CV_CALL|CV_CHEAT|CV_ALLOWLUA, NULL, ForceSkin_OnChange);
 consvar_t cv_downloading = CVAR_INIT ("downloading", "On", 0, CV_OnOff, NULL);
-consvar_t cv_allowexitlevel = CVAR_INIT ("allowexitlevel", "No", CV_SAVE|CV_NETVAR, CV_YesNo, NULL);
+consvar_t cv_allowexitlevel = CVAR_INIT ("allowexitlevel", "No", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_YesNo, NULL);
 
-consvar_t cv_killingdead = CVAR_INIT ("killingdead", "Off", CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_killingdead = CVAR_INIT ("killingdead", "Off", CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
 
 consvar_t cv_netstat = CVAR_INIT ("netstat", "Off", 0, CV_OnOff, NULL); // show bandwidth statistics
 static CV_PossibleValue_t nettimeout_cons_t[] = {{TICRATE/7, "MIN"}, {60*TICRATE, "MAX"}, {0, NULL}};
@@ -352,26 +352,26 @@ consvar_t cv_showping = CVAR_INIT ("showping", "Warning", CV_SAVE, showping_cons
 
 // Intermission time Tails 04-19-2002
 static CV_PossibleValue_t inttime_cons_t[] = {{0, "MIN"}, {3600, "MAX"}, {0, NULL}};
-consvar_t cv_inttime = CVAR_INIT ("inttime", "10", CV_SAVE|CV_NETVAR, inttime_cons_t, NULL);
+consvar_t cv_inttime = CVAR_INIT ("inttime", "10", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, inttime_cons_t, NULL);
 
 static CV_PossibleValue_t coopstarposts_cons_t[] = {{0, "Per-player"}, {1, "Shared"}, {2, "Teamwork"}, {0, NULL}};
-consvar_t cv_coopstarposts = CVAR_INIT ("coopstarposts", "Per-player", CV_SAVE|CV_NETVAR|CV_CALL, coopstarposts_cons_t, CoopStarposts_OnChange);
+consvar_t cv_coopstarposts = CVAR_INIT ("coopstarposts", "Per-player", CV_SAVE|CV_NETVAR|CV_CALL|CV_ALLOWLUA, coopstarposts_cons_t, CoopStarposts_OnChange);
 
 static CV_PossibleValue_t cooplives_cons_t[] = {{0, "Infinite"}, {1, "Per-player"}, {2, "Avoid Game Over"}, {3, "Single pool"}, {0, NULL}};
-consvar_t cv_cooplives = CVAR_INIT ("cooplives", "Avoid Game Over", CV_SAVE|CV_NETVAR|CV_CALL|CV_CHEAT, cooplives_cons_t, CoopLives_OnChange);
+consvar_t cv_cooplives = CVAR_INIT ("cooplives", "Avoid Game Over", CV_SAVE|CV_NETVAR|CV_CALL|CV_CHEAT|CV_ALLOWLUA, cooplives_cons_t, CoopLives_OnChange);
 
 static CV_PossibleValue_t advancemap_cons_t[] = {{0, "Off"}, {1, "Next"}, {2, "Random"}, {0, NULL}};
-consvar_t cv_advancemap = CVAR_INIT ("advancemap", "Next", CV_SAVE|CV_NETVAR, advancemap_cons_t, NULL);
+consvar_t cv_advancemap = CVAR_INIT ("advancemap", "Next", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, advancemap_cons_t, NULL);
 
 static CV_PossibleValue_t playersforexit_cons_t[] = {{0, "One"}, {1, "1/4"}, {2, "Half"}, {3, "3/4"}, {4, "All"}, {0, NULL}};
-consvar_t cv_playersforexit = CVAR_INIT ("playersforexit", "All", CV_SAVE|CV_NETVAR, playersforexit_cons_t, NULL);
+consvar_t cv_playersforexit = CVAR_INIT ("playersforexit", "All", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, playersforexit_cons_t, NULL);
 
-consvar_t cv_exitmove = CVAR_INIT ("exitmove", "On", CV_SAVE|CV_NETVAR|CV_CALL, CV_OnOff, ExitMove_OnChange);
+consvar_t cv_exitmove = CVAR_INIT ("exitmove", "On", CV_SAVE|CV_NETVAR|CV_CALL|CV_ALLOWLUA, CV_OnOff, ExitMove_OnChange);
 
-consvar_t cv_runscripts = CVAR_INIT ("runscripts", "Yes", 0, CV_YesNo, NULL);
+consvar_t cv_runscripts = CVAR_INIT ("runscripts", "Yes", CV_ALLOWLUA, CV_YesNo, NULL);
 
-consvar_t cv_pause = CVAR_INIT ("pausepermission", "Server", CV_SAVE|CV_NETVAR, pause_cons_t, NULL);
-consvar_t cv_mute = CVAR_INIT ("mute", "Off", CV_NETVAR|CV_CALL, CV_OnOff, Mute_OnChange);
+consvar_t cv_pause = CVAR_INIT ("pausepermission", "Server", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, pause_cons_t, NULL);
+consvar_t cv_mute = CVAR_INIT ("mute", "Off", CV_NETVAR|CV_CALL|CV_ALLOWLUA, CV_OnOff, Mute_OnChange);
 
 consvar_t cv_sleep = CVAR_INIT ("cpusleep", "1", CV_SAVE, sleeping_cons_t, NULL);
 
