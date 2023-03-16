@@ -4231,13 +4231,11 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 dama
 //  the way it was and call P_CheckSector (? was P_ChangeSector - Graue) again
 //  to undo the changes.
 //
-static boolean crushchange;
-static boolean nofit;
 
 //
 // PIT_ChangeSector
 //
-static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
+static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush, boolean crunch)
 {
 	mobj_t *killer = NULL;
 	//If a thing is both pushable and vulnerable, it doesn't block the crusher because it gets killed.
@@ -4261,11 +4259,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 	if (thing->z + thing->height > thing->ceilingz && thing->z <= thing->ceilingz)
 	{
 		if (immunepushable && thing->z + thing->height > thing->subsector->sector->ceilingheight)
-		{
-			//Thing is a pushable and blocks the moving ceiling
-			nofit = true;
-			return false;
-		}
+			return false; //Thing is a pushable and blocks the moving ceiling
 
 		//Check FOFs in the sector
 		if (thing->subsector->sector->ffloors && (realcrush || immunepushable))
@@ -4291,11 +4285,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 				if (bottomheight <= thing->ceilingz && abs(delta1) >= abs(delta2))
 				{
 					if (immunepushable)
-					{
-						//FOF is blocked by pushable
-						nofit = true;
-						return false;
-					}
+						return false; //FOF is blocked by pushable
 					else
 					{
 						//If the thing was crushed by a crumbling FOF, reward the player who made it crumble!
@@ -4333,14 +4323,14 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 		}
 	}
 
-	if (realcrush && crushchange)
+	if (realcrush && crunch)
 		P_DamageMobj(thing, NULL, NULL, 1, 0);
 
 	// keep checking (crush other things)
 	return true;
 }
 
-static boolean P_CheckSectorHelper(sector_t *sector, boolean realcrush)
+static boolean P_CheckSectorHelper(sector_t *sector, boolean realcrush, boolean crunch)
 {
 	msecnode_t *n;
 	size_t i;
@@ -4381,7 +4371,7 @@ static boolean P_CheckSectorHelper(sector_t *sector, boolean realcrush)
 							if (!P_MobjInsidePolyobj(po, mo))
 								continue;
 
-							if (!PIT_ChangeSector(mo, realcrush) && !realcrush)
+							if (!PIT_ChangeSector(mo, realcrush, crunch) && !realcrush)
 								return false;
 						}
 					}
@@ -4414,7 +4404,7 @@ static boolean P_CheckSectorHelper(sector_t *sector, boolean realcrush)
 					n->visited = true;
 					if (!(n->m_thing->flags & MF_NOBLOCKMAP))
 					{
-						if (!PIT_ChangeSector(n->m_thing, realcrush) && !realcrush)
+						if (!PIT_ChangeSector(n->m_thing, realcrush, crunch) && !realcrush)
 							return false;
 					}
 					break;
@@ -4437,7 +4427,7 @@ static boolean P_CheckSectorHelper(sector_t *sector, boolean realcrush)
 				n->visited = true; // mark thing as processed
 				if (!(n->m_thing->flags & MF_NOBLOCKMAP)) //jff 4/7/98 don't do these
 				{
-					if (!PIT_ChangeSector(n->m_thing, realcrush) && !realcrush) // process it
+					if (!PIT_ChangeSector(n->m_thing, realcrush, crunch) && !realcrush) // process it
 						return false;
 				}
 				break; // exit and start over
@@ -4452,9 +4442,6 @@ static boolean P_CheckSectorHelper(sector_t *sector, boolean realcrush)
 //
 boolean P_CheckSector(sector_t *sector, boolean crunch)
 {
-	nofit = false;
-	crushchange = crunch;
-
 	// killough 4/4/98: scan list front-to-back until empty or exhausted,
 	// restarting from beginning after each thing is processed. Avoids
 	// crashes, and is sure to examine all things in the sector, and only
@@ -4464,16 +4451,13 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	// killough 4/7/98: simplified to avoid using complicated counter
 
 	// First, let's see if anything will keep it from crushing.
-	if (!P_CheckSectorHelper(sector, false))
-	{
-		nofit = true;
-		return nofit;
-	}
+	if (!P_CheckSectorHelper(sector, false, crunch))
+		return true;
 
 	// Nothing blocked us, so lets crush for real!
-	P_CheckSectorHelper(sector, true);
+	P_CheckSectorHelper(sector, true, crunch);
 
-	return nofit;
+	return false;
 }
 
 /*
