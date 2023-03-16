@@ -4340,14 +4340,118 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 	return true;
 }
 
+static boolean P_CheckSectorHelper(sector_t *sector, boolean realcrush)
+{
+	msecnode_t *n;
+	size_t i;
+
+	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
+	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
+	validcount++;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		if (sector->lines[i]->polyobj)
+		{
+			polyobj_t *po = sector->lines[i]->polyobj;
+			if (po->validcount == validcount)
+				continue; // skip if already checked
+			if (!(po->flags & POF_SOLID))
+				continue;
+			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
+			{
+				INT32 x, y;
+				po->validcount = validcount;
+
+				for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
+				{
+					for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
+					{
+						mobj_t *mo;
+
+						if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
+							continue;
+
+						mo = blocklinks[y * bmapwidth + x];
+
+						for (; mo; mo = mo->bnext)
+						{
+							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
+
+							if (!P_MobjInsidePolyobj(po, mo))
+								continue;
+
+							if (!PIT_ChangeSector(mo, realcrush) && !realcrush)
+								return false;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	if (sector->numattached)
+	{
+		sector_t *sec;
+		for (i = 0; i < sector->numattached; i++)
+		{
+			sec = &sectors[sector->attached[i]];
+			for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
+				n->visited = false;
+
+			sec->moved = true;
+
+			P_RecalcPrecipInSector(sec);
+
+			if (!sector->attachedsolid[i])
+				continue;
+
+			do
+			{
+				for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
+				if (!n->visited)
+				{
+					n->visited = true;
+					if (!(n->m_thing->flags & MF_NOBLOCKMAP))
+					{
+						if (!PIT_ChangeSector(n->m_thing, realcrush) && !realcrush)
+							return false;
+					}
+					break;
+				}
+			} while (n);
+		}
+	}
+
+	// Mark all things invalid
+	sector->moved = true;
+
+	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
+		n->visited = false;
+
+	do
+	{
+		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
+			if (!n->visited) // unprocessed thing found
+			{
+				n->visited = true; // mark thing as processed
+				if (!(n->m_thing->flags & MF_NOBLOCKMAP)) //jff 4/7/98 don't do these
+				{
+					if (!PIT_ChangeSector(n->m_thing, realcrush) && !realcrush) // process it
+						return false;
+				}
+				break; // exit and start over
+			}
+	} while (n); // repeat from scratch until all things left are marked valid
+
+	return true;
+}
+
 //
 // P_CheckSector
 //
 boolean P_CheckSector(sector_t *sector, boolean crunch)
 {
-	msecnode_t *n;
-	size_t i;
-
 	nofit = false;
 	crushchange = crunch;
 
@@ -4359,209 +4463,15 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	//
 	// killough 4/7/98: simplified to avoid using complicated counter
 
-
 	// First, let's see if anything will keep it from crushing.
-
-	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
-	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
-	validcount++;
-
-	for (i = 0; i < sector->linecount; i++)
+	if (!P_CheckSectorHelper(sector, false))
 	{
-		if (sector->lines[i]->polyobj)
-		{
-			polyobj_t *po = sector->lines[i]->polyobj;
-			if (po->validcount == validcount)
-				continue; // skip if already checked
-			if (!(po->flags & POF_SOLID))
-				continue;
-			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
-			{
-				INT32 x, y;
-				po->validcount = validcount;
-
-				for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
-				{
-					for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
-					{
-						mobj_t *mo;
-
-						if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
-							continue;
-
-						mo = blocklinks[y * bmapwidth + x];
-
-						for (; mo; mo = mo->bnext)
-						{
-							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
-
-							if (!P_MobjInsidePolyobj(po, mo))
-								continue;
-
-							if (!PIT_ChangeSector(mo, false))
-							{
-								nofit = true;
-								return nofit;
-							}
-						}
-					}
-				}
-			}
-		}
+		nofit = true;
+		return nofit;
 	}
-
-	if (sector->numattached)
-	{
-		sector_t *sec;
-		for (i = 0; i < sector->numattached; i++)
-		{
-			sec = &sectors[sector->attached[i]];
-			for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
-				n->visited = false;
-
-			sec->moved = true;
-
-			P_RecalcPrecipInSector(sec);
-
-			if (!sector->attachedsolid[i])
-				continue;
-
-			do
-			{
-				for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
-				if (!n->visited)
-				{
-					n->visited = true;
-					if (!(n->m_thing->flags & MF_NOBLOCKMAP))
-					{
-						if (!PIT_ChangeSector(n->m_thing, false))
-						{
-							nofit = true;
-							return nofit;
-						}
-					}
-					break;
-				}
-			} while (n);
-		}
-	}
-
-	// Mark all things invalid
-	sector->moved = true;
-
-	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
-		n->visited = false;
-
-	do
-	{
-		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
-			if (!n->visited) // unprocessed thing found
-			{
-				n->visited = true; // mark thing as processed
-				if (!(n->m_thing->flags & MF_NOBLOCKMAP)) //jff 4/7/98 don't do these
-				{
-					if (!PIT_ChangeSector(n->m_thing, false)) // process it
-					{
-						nofit = true;
-						return nofit;
-					}
-				}
-				break; // exit and start over
-			}
-	} while (n); // repeat from scratch until all things left are marked valid
 
 	// Nothing blocked us, so lets crush for real!
-
-	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
-	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
-	validcount++;
-
-	for (i = 0; i < sector->linecount; i++)
-	{
-		if (sector->lines[i]->polyobj)
-		{
-			polyobj_t *po = sector->lines[i]->polyobj;
-			if (po->validcount == validcount)
-				continue; // skip if already checked
-			if (!(po->flags & POF_SOLID))
-				continue;
-			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
-			{
-				INT32 x, y;
-				po->validcount = validcount;
-
-				for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
-				{
-					for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
-					{
-						mobj_t *mo;
-
-						if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
-							continue;
-
-						mo = blocklinks[y * bmapwidth + x];
-
-						for (; mo; mo = mo->bnext)
-						{
-							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
-
-							if (!P_MobjInsidePolyobj(po, mo))
-								continue;
-
-							PIT_ChangeSector(mo, true);
-						}
-					}
-				}
-			}
-		}
-	}
-	if (sector->numattached)
-	{
-		sector_t *sec;
-		for (i = 0; i < sector->numattached; i++)
-		{
-			sec = &sectors[sector->attached[i]];
-			for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
-				n->visited = false;
-
-			sec->moved = true;
-
-			P_RecalcPrecipInSector(sec);
-
-			if (!sector->attachedsolid[i])
-				continue;
-
-			do
-			{
-				for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
-				if (!n->visited)
-				{
-					n->visited = true;
-					if (!(n->m_thing->flags & MF_NOBLOCKMAP))
-						PIT_ChangeSector(n->m_thing, true);
-					break;
-				}
-			} while (n);
-		}
-	}
-
-	// Mark all things invalid
-	sector->moved = true;
-
-	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
-		n->visited = false;
-
-	do
-	{
-		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
-			if (!n->visited) // unprocessed thing found
-			{
-				n->visited = true; // mark thing as processed
-				if (!(n->m_thing->flags & MF_NOBLOCKMAP)) //jff 4/7/98 don't do these
-					PIT_ChangeSector(n->m_thing, true); // process it
-				break; // exit and start over
-			}
-	} while (n); // repeat from scratch until all things left are marked valid
+	P_CheckSectorHelper(sector, true);
 
 	return nofit;
 }
