@@ -4271,43 +4271,54 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush, boolean crunch
 
 			for (rover = thing->subsector->sector->ffloors; rover; rover = rover->next)
 			{
-				if (!(((rover->fofflags & FOF_BLOCKPLAYER) && thing->player)
-				|| ((rover->fofflags & FOF_BLOCKOTHERS) && !thing->player)) || !(rover->fofflags & FOF_EXISTS))
+				thinker_t *think;
+
+				if (!(rover->fofflags & FOF_EXISTS))
+					continue;
+				if (thing->player && !(rover->fofflags & FOF_BLOCKPLAYER))
+					continue;
+				if (!thing->player && !(rover->fofflags & FOF_BLOCKOTHERS))
 					continue;
 
 				topheight = *rover->topheight;
 				bottomheight = *rover->bottomheight;
-				//topheight    = P_GetFFloorTopZAt   (rover, thing->x, thing->y);
-				//bottomheight = P_GetFFloorBottomZAt(rover, thing->x, thing->y);
+
+				if (bottomheight > thing->ceilingz)
+					continue;
 
 				delta1 = thing->z - (bottomheight + topheight)/2;
 				delta2 = thingtop - (bottomheight + topheight)/2;
-				if (bottomheight <= thing->ceilingz && abs(delta1) >= abs(delta2))
+				if (abs(delta1) < abs(delta2))
+					continue;
+
+				if (immunepushable)
+					return false; //FOF is blocked by pushable
+
+				if (!realcrush)
+					continue;
+
+				//If the thing was crushed by a crumbling FOF, reward the player who made it crumble!
+				for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 				{
-					if (immunepushable)
-						return false; //FOF is blocked by pushable
-					else
-					{
-						//If the thing was crushed by a crumbling FOF, reward the player who made it crumble!
-						thinker_t *think;
-						crumble_t *crumbler;
+					crumble_t *crumbler;
 
-						for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
-						{
-							if (think->function.acp1 != (actionf_p1)T_StartCrumble)
-								continue;
+					if (think->function.acp1 != (actionf_p1)T_StartCrumble)
+						continue;
 
-							crumbler = (crumble_t *)think;
+					crumbler = (crumble_t *)think;
 
-							if (crumbler->player && crumbler->player->mo
-								&& crumbler->player->mo != thing
-								&& crumbler->actionsector == thing->subsector->sector
-								&& crumbler->sector == rover->master->frontsector)
-							{
-								killer = crumbler->player->mo;
-							}
-						}
-					}
+					if (!crumbler->player)
+						continue;
+					if (!crumbler->player->mo)
+						continue;
+					if (crumbler->player->mo == thing)
+						continue;
+					if (crumbler->actionsector != thing->subsector->sector)
+						continue;
+					if (crumbler->sector != rover->master->frontsector)
+						continue;
+
+					killer = crumbler->player->mo;
 				}
 			}
 		}
