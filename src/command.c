@@ -334,15 +334,15 @@ void COM_Init(void)
 
 	// add standard commands
 	COM_AddCommand("alias", COM_Alias_f, 0);
-	COM_AddCommand("echo", COM_Echo_f, 0);
-	COM_AddCommand("cecho", COM_CEcho_f, 0);
-	COM_AddCommand("cechoflags", COM_CEchoFlags_f, 0);
-	COM_AddCommand("cechoduration", COM_CEchoDuration_f, 0);
+	COM_AddCommand("echo", COM_Echo_f, COM_LUA);
+	COM_AddCommand("cecho", COM_CEcho_f, COM_LUA);
+	COM_AddCommand("cechoflags", COM_CEchoFlags_f, COM_LUA);
+	COM_AddCommand("cechoduration", COM_CEchoDuration_f, COM_LUA);
 	COM_AddCommand("exec", COM_Exec_f, 0);
 	COM_AddCommand("wait", COM_Wait_f, 0);
-	COM_AddCommand("help", COM_Help_f, 0);
-	COM_AddCommand("toggle", COM_Toggle_f, 0);
-	COM_AddCommand("add", COM_Add_f, 0);
+	COM_AddCommand("help", COM_Help_f, COM_LUA);
+	COM_AddCommand("toggle", COM_Toggle_f, COM_LUA);
+	COM_AddCommand("add", COM_Add_f, COM_LUA);
 	RegisterNetXCmd(XD_NETVAR, Got_NetVar);
 }
 

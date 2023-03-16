@@ -3537,22 +3537,22 @@ void D_ClientServerInit(void)
 		VERSION/100, VERSION%100, SUBVERSION));
 
 #ifndef NONET
-	COM_AddCommand("getplayernum", Command_GetPlayerNum, 0);
-	COM_AddCommand("kick", Command_Kick, 0);
-	COM_AddCommand("ban", Command_Ban, 0);
-	COM_AddCommand("banip", Command_BanIP, 0);
-	COM_AddCommand("clearbans", Command_ClearBans, 0);
-	COM_AddCommand("showbanlist", Command_ShowBan, 0);
-	COM_AddCommand("reloadbans", Command_ReloadBan, 0);
-	COM_AddCommand("connect", Command_connect, 0);
-	COM_AddCommand("nodes", Command_Nodes, 0);
-	COM_AddCommand("resendgamestate", Command_ResendGamestate, 0);
+	COM_AddCommand("getplayernum", Command_GetPlayerNum, COM_LUA);
+	COM_AddCommand("kick", Command_Kick, COM_LUA);
+	COM_AddCommand("ban", Command_Ban, COM_LUA);
+	COM_AddCommand("banip", Command_BanIP, COM_LUA);
+	COM_AddCommand("clearbans", Command_ClearBans, COM_LUA);
+	COM_AddCommand("showbanlist", Command_ShowBan, COM_LUA);
+	COM_AddCommand("reloadbans", Command_ReloadBan, COM_LUA);
+	COM_AddCommand("connect", Command_connect, COM_LUA);
+	COM_AddCommand("nodes", Command_Nodes, COM_LUA);
+	COM_AddCommand("resendgamestate", Command_ResendGamestate, COM_LUA);
 #ifdef PACKETDROP
-	COM_AddCommand("drop", Command_Drop, 0);
-	COM_AddCommand("droprate", Command_Droprate, 0);
+	COM_AddCommand("drop", Command_Drop, COM_LUA);
+	COM_AddCommand("droprate", Command_Droprate, COM_LUA);
 #endif
 #ifdef _DEBUG
-	COM_AddCommand("numnodes", Command_Numnodes, 0);
+	COM_AddCommand("numnodes", Command_Numnodes, COM_LUA);
 #endif
 #endif
 
