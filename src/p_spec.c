@@ -2786,6 +2786,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				mo->flags2 &= ~MF2_OBJECTFLIP;
 			else
 				mo->flags2 |= MF2_OBJECTFLIP;
+			if (line->args[2])
+				mo->eflags |= MFE_VERTICALFLIP;
 			if (bot)
 				bot->flags2 = (bot->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP);
 			break;
