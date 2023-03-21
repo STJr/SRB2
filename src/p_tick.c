@@ -279,20 +279,34 @@ static thinker_t *currentthinker;
 void P_RemoveThinkerDelayed(thinker_t *thinker)
 {
 	thinker_t *next;
-#ifdef PARANOIA
-#define BEENAROUNDBIT (0x40000000) // has to be sufficiently high that it's unlikely to happen in regular gameplay. If you change this, pay attention to the bit pattern of INT32_MIN.
-	if (thinker->references & ~BEENAROUNDBIT)
+
+	if (thinker->references != 0)
 	{
-		if (thinker->references & BEENAROUNDBIT) // Usually gets cleared up in one frame; what's going on here, then?
-			CONS_Printf("Number of potentially faulty references: %d\n", (thinker->references & ~BEENAROUNDBIT));
-		thinker->references |= BEENAROUNDBIT;
+#ifdef PARANOIA
+		if (thinker->debug_time > leveltime)
+		{
+			thinker->debug_time = leveltime + 2; // do not print errors again
+		}
+		// Removed mobjs can be the target of another mobj. In
+		// that case, the other mobj will manage its reference
+		// to the removed mobj in P_MobjThinker. However, if
+		// the removed mobj is removed after the other object
+		// thinks, the reference management is delayed by one
+		// tic.
+		else if (thinker->debug_time < leveltime)
+		{
+			CONS_Printf(
+					"PARANOIA/P_RemoveThinkerDelayed: %p %s references=%d\n",
+					(void*)thinker,
+					MobjTypeName((mobj_t*)thinker),
+					thinker->references
+			);
+
+			thinker->debug_time = leveltime + 2; // do not print this error again
+		}
+#endif
 		return;
 	}
-#undef BEENAROUNDBIT
-#else
-	if (thinker->references)
-		return;
-#endif
 
 	/* Remove from main thinker list */
 	next = thinker->next;
@@ -359,12 +373,18 @@ mobj_t *P_SetTarget2(mobj_t **mop, mobj_t *targ
 					source_line
 			);
 		}
+
+		(*mop)->thinker.debug_time = leveltime;
 #endif
 	}
 
 	if (targ != NULL) // Set new target and if non-NULL, increase its counter
 	{
 		targ->thinker.references++;
+
+#ifdef PARANOIA
+		targ->thinker.debug_time = leveltime;
+#endif
 	}
 
 	*mop = targ;

@@ -54,6 +54,7 @@ typedef struct thinker_s
 
 #ifdef PARANOIA
 	INT32 debug_mobjtype;
+	tic_t debug_time;
 #endif
 } thinker_t;
 
