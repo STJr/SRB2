@@ -1646,7 +1646,6 @@ void readlevelheader(MYFILE *f, INT32 num)
 				else i = -1; // (fastcmp(word2, "DEFAULT"))
 
 				if (i >= -1 && i <= 1) // -1 to force off, 1 to force on, 0 to honor default.
-					// This behavior can be disabled with cv_resetmusicbyheader
 					mapheaderinfo[num-1]->musforcereset = (SINT8)i;
 				else
 					deh_warning("Level header %d: invalid forceresetmusic option %d", num, i);

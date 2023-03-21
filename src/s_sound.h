@@ -29,22 +29,18 @@ extern openmpt_module *openmpt_mhandle;
 #define PICKUP_SOUND 0x8000
 
 extern consvar_t stereoreverse;
-extern consvar_t cv_soundvolume, cv_closedcaptioning, cv_digmusicvolume, cv_midimusicvolume;
+extern consvar_t cv_soundvolume, cv_closedcaptioning, cv_digmusicvolume;
 extern consvar_t cv_numChannels;
 
 extern consvar_t cv_resetmusic;
-extern consvar_t cv_resetmusicbyheader;
 
 extern consvar_t cv_1upsound;
 
 #define RESETMUSIC (!modeattacking && \
-	(cv_resetmusicbyheader.value ? \
-		(mapheaderinfo[gamemap-1]->musforcereset != -1 ? mapheaderinfo[gamemap-1]->musforcereset : cv_resetmusic.value) \
-		: cv_resetmusic.value) \
+		mapheaderinfo[gamemap-1]->musforcereset != -1 ? mapheaderinfo[gamemap-1]->musforcereset : cv_resetmusic.value \
 	)
 
 extern consvar_t cv_gamedigimusic;
-extern consvar_t cv_gamemidimusic;
 extern consvar_t cv_gamesounds;
 extern consvar_t cv_musicpref;
 
@@ -154,23 +150,14 @@ void S_StopSound(void *origin);
 // Music Status
 //
 
-boolean S_DigMusicDisabled(void);
-boolean S_MIDIMusicDisabled(void);
 boolean S_MusicDisabled(void);
 boolean S_MusicPlaying(void);
 boolean S_MusicPaused(void);
 boolean S_MusicNotInFocus(void);
 musictype_t S_MusicType(void);
 const char *S_MusicName(void);
+boolean S_MusicPrefExists(const char *mname);
 boolean S_MusicExists(const char *mname, boolean checkMIDI, boolean checkDigi);
-#define S_DigExists(a) S_MusicExists(a, false, true)
-#define S_MIDIExists(a) S_MusicExists(a, true, false)
-
-// Returns whether the preferred format a (true = MIDI, false = Digital)
-// exists and is enabled for musicname b
-#define S_PrefAvailable(a, b) (a ? \
-	(!S_MIDIMusicDisabled() && S_MIDIExists(b)) : \
-	(!S_DigMusicDisabled() && S_DigExists(b)))
 
 //
 // Music Effects
@@ -310,10 +297,7 @@ void S_UpdateClosedCaptions(void);
 FUNCMATH fixed_t S_CalculateSoundDistance(fixed_t px1, fixed_t py1, fixed_t pz1, fixed_t px2, fixed_t py2, fixed_t pz2);
 
 void S_SetSfxVolume(INT32 volume);
-void S_SetMusicVolume(INT32 digvolume, INT32 seqvolume);
-#define S_SetDigMusicVolume(a) S_SetMusicVolume(a,-1)
-#define S_SetMIDIMusicVolume(a) S_SetMusicVolume(-1,a)
-#define S_InitMusicVolume() S_SetMusicVolume(-1,-1)
+void S_SetMusicVolume(INT32 volume);
 
 INT32 S_OriginPlaying(void *origin);
 INT32 S_IdPlaying(sfxenum_t id);

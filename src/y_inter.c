@@ -1050,7 +1050,7 @@ void Y_Ticker(void)
 #endif
 			)
 				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musinterfadeout);
-			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
+			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicPrefExists(mapheaderinfo[gamemap-1]->musintername))
 				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
 			else
 				S_ChangeMusicInternal("_clear", false); // don't loop it
@@ -1127,7 +1127,7 @@ void Y_Ticker(void)
 #endif
 			)
 				S_FadeOutStopMusic(mapheaderinfo[gamemap-1]->musinterfadeout);
-			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicExists(mapheaderinfo[gamemap-1]->musintername, !midi_disabled, !digital_disabled))
+			else if (mapheaderinfo[gamemap-1]->musintername[0] && S_MusicPrefExists(mapheaderinfo[gamemap-1]->musintername))
 				S_ChangeMusicInternal(mapheaderinfo[gamemap-1]->musintername, false); // don't loop it
 			else
 				S_ChangeMusicInternal("_clear", false); // don't loop it
