@@ -2105,14 +2105,10 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 
 static lumpnum_t S_GetMusicLumpNum(const char *mname)
 {
-	boolean midipref = cv_musicpref.value;
-
 	if (S_MusicPrefExists(mname))
-		return W_GetNumForName(va(midipref ? "d_%s":"o_%s", mname));
-	else if (S_MusicPrefExists(mname))
-		return W_GetNumForName(va(midipref ? "o_%s":"d_%s", mname));
-	else
-		return LUMPERROR;
+		return W_CheckNumForName(va(cv_musicpref.value ? "d_%s":"o_%s", mname));
+	else // see if the other music type exists
+		return W_CheckNumForName(va(cv_musicpref.value ? "o_%s":"d_%s", mname));
 }
 
 static boolean S_LoadMusic(const char *mname)
