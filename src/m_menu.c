@@ -1533,6 +1533,7 @@ static menuitem_t OP_SoundAdvancedMenu[] =
 };
 
 #undef OPENMPT_MENUOFFSET
+#undef MIXERX_MENUOFFSET
 
 static menuitem_t OP_DataOptionsMenu[] =
 {
