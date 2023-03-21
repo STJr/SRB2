@@ -11200,6 +11200,11 @@ void P_RemoveMobj(mobj_t *mobj)
 
 	P_RemoveThinker((thinker_t *)mobj);
 
+#ifdef PARANOIA
+	// Saved to avoid being scrambled like below...
+	mobj->thinker.debug_mobjtype = mobj->type;
+#endif
+
 	// DBG: set everything in mobj_t to 0xFF instead of leaving it. debug memory error.
 #ifdef SCRAMBLE_REMOVED
 	// Invalidate mobj_t data to cause crashes if accessed!

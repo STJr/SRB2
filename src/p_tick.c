@@ -30,6 +30,10 @@
 // Object place
 #include "m_cheat.h"
 
+#ifdef PARANOIA
+#include "deh_tables.h" // MOBJTYPE_LIST
+#endif
+
 tic_t leveltime;
 
 //
@@ -211,7 +215,48 @@ void P_AddThinker(const thinklistnum_t n, thinker_t *thinker)
 	thlist[n].prev = thinker;
 
 	thinker->references = 0;    // killough 11/98: init reference counter to 0
+
+#ifdef PARANOIA
+	thinker->debug_mobjtype = MT_NULL;
+#endif
 }
+
+#ifdef PARANOIA
+static const char *MobjTypeName(const mobj_t *mobj)
+{
+	actionf_p1 p1 = mobj->thinker.function.acp1;
+
+	if (p1 == (actionf_p1)P_MobjThinker)
+	{
+		return MOBJTYPE_LIST[mobj->type];
+	}
+	else if (p1 == (actionf_p1)P_RemoveThinkerDelayed)
+	{
+		if (mobj->thinker.debug_mobjtype != MT_NULL)
+		{
+			return MOBJTYPE_LIST[mobj->thinker.debug_mobjtype];
+		}
+	}
+
+	return "<Not a mobj>";
+}
+
+static const char *MobjThinkerName(const mobj_t *mobj)
+{
+	actionf_p1 p1 = mobj->thinker.function.acp1;
+
+	if (p1 == (actionf_p1)P_MobjThinker)
+	{
+		return "P_MobjThinker";
+	}
+	else if (p1 == (actionf_p1)P_RemoveThinkerDelayed)
+	{
+		return "P_RemoveThinkerDelayed";
+	}
+
+	return "<Unknown Thinker>";
+}
+#endif
 
 //
 // killough 11/98:
@@ -291,11 +336,30 @@ void P_RemoveThinker(thinker_t *thinker)
  * references, and delay removal until the count is 0.
  */
 
-mobj_t *P_SetTarget(mobj_t **mop, mobj_t *targ)
+mobj_t *P_SetTarget2(mobj_t **mop, mobj_t *targ
+#ifdef PARANOIA
+		, const char *source_file, int source_line
+#endif
+)
 {
 	if (*mop) // If there was a target already, decrease its refcount
 	{
 		(*mop)->thinker.references--;
+
+#ifdef PARANOIA
+		if ((*mop)->thinker.references < 0)
+		{
+			CONS_Printf(
+					"PARANOIA/P_SetTarget: %p %s %s references=%d, references go negative! (%s:%d)\n",
+					(void*)*mop,
+					MobjTypeName(*mop),
+					MobjThinkerName(*mop),
+					(*mop)->thinker.references,
+					source_file,
+					source_line
+			);
+		}
+#endif
 	}
 
 	if (targ != NULL) // Set new target and if non-NULL, increase its counter
