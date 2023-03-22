@@ -2395,13 +2395,8 @@ boolean S_FadeOutStopMusic(UINT32 ms)
 //
 void S_StartEx(boolean reset)
 {
-	if (mapmusflags & MUSIC_RELOADRESET)
-	{
-		strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
-		mapmusname[6] = 0;
-		mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
-		mapmusposition = mapheaderinfo[gamemap-1]->muspos;
-	}
+	if ((mapmusflags & MUSIC_RELOADRESET) && !(mapheaderinfo[gamemap-1]->levelflags & LF_NORELOAD || netgame))
+		S_ReloadReset();
 
 	if (RESETMUSIC || reset)
 		S_StopMusic();
@@ -2411,6 +2406,14 @@ void S_StartEx(boolean reset)
 	music_stack_noposition = false;
 	music_stack_fadeout = 0;
 	music_stack_fadein = JINGLEPOSTFADE;
+}
+
+void S_ReloadReset(void)
+{
+	strncpy(mapmusname, mapheaderinfo[gamemap-1]->musname, 7);
+	mapmusname[6] = 0;
+	mapmusflags = (mapheaderinfo[gamemap-1]->mustrack & MUSIC_TRACKMASK);
+	mapmusposition = mapheaderinfo[gamemap-1]->muspos;
 }
 
 static void Command_Tunes_f(void)

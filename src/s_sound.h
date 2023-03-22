@@ -122,6 +122,7 @@ void S_InitSfxChannels(INT32 sfxVolume);
 void S_StopSounds(void);
 void S_ClearSfx(void);
 void S_StartEx(boolean reset);
+void S_ReloadReset(void);
 #define S_Start() S_StartEx(false)
 
 //
