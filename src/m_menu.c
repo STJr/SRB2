@@ -1498,7 +1498,7 @@ static menuitem_t OP_SoundOptionsMenu[] =
 	{IT_STRING | IT_CVAR, NULL, "Default 1-Up sound", &cv_1upsound, 112},
 	{IT_STRING | IT_CVAR, NULL, "Reset Music Upon Dying", &cv_resetmusic, 122},
 
-	{IT_STRING | IT_SUBMENU, NULL, "Advanced Settings...", &OP_SoundAdvancedDef, 142},
+	{IT_STRING | IT_SUBMENU, NULL, "Advanced/MIDI Settings...", &OP_SoundAdvancedDef, 142},
 };
 
 #ifdef HAVE_OPENMPT
@@ -1508,7 +1508,7 @@ static menuitem_t OP_SoundOptionsMenu[] =
 #endif
 
 #ifdef HAVE_MIXERX
-#define MIXERX_MENUOFFSET 80
+#define MIXERX_MENUOFFSET 90
 #else
 #define MIXERX_MENUOFFSET 0
 #endif
@@ -1522,9 +1522,10 @@ static menuitem_t OP_SoundAdvancedMenu[] =
 
 #ifdef HAVE_MIXERX
 	{IT_HEADER, NULL, "MIDI Settings", NULL, OPENMPT_MENUOFFSET},
-	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, OPENMPT_MENUOFFSET+12},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, OPENMPT_MENUOFFSET+22},
-	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+49},
+	{IT_STRING | IT_CVAR | IT_CV_SLIDER, NULL, "MIDI Volume", &cv_midimusicvolume, OPENMPT_MENUOFFSET+12},
+	{IT_STRING | IT_CVAR, NULL, "MIDI Player", &cv_midiplayer, OPENMPT_MENUOFFSET+22},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "FluidSynth Sound Font File", &cv_midisoundfontpath, OPENMPT_MENUOFFSET+32},
+	{IT_STRING | IT_CVAR | IT_CV_STRING, NULL, "TiMidity++ Config Folder", &cv_miditimiditypath, OPENMPT_MENUOFFSET+59},
 #endif
 
 	{IT_HEADER, NULL, "Focus settings", NULL, OPENMPT_MENUOFFSET+MIXERX_MENUOFFSET},

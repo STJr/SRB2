@@ -75,6 +75,7 @@ static consvar_t precachesound = CVAR_INIT ("precachesound", "Off", CV_SAVE, CV_
 // actual general (maximum) sound & music volume, saved into the config
 consvar_t cv_soundvolume = CVAR_INIT ("soundvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
 consvar_t cv_digmusicvolume = CVAR_INIT ("digmusicvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
+consvar_t cv_midimusicvolume = CVAR_INIT ("midimusicvolume", "16", CV_SAVE, soundvolume_cons_t, NULL);
 
 static void Captioning_OnChange(void)
 {
@@ -831,6 +832,8 @@ void S_UpdateSounds(void)
 
 	mobj_t *listenmobj = players[displayplayer].mo;
 	mobj_t *listenmobj2 = NULL;
+	
+	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
 
 	memset(&listener, 0, sizeof(listener_t));
 	memset(&listener2, 0, sizeof(listener_t));
@@ -838,8 +841,8 @@ void S_UpdateSounds(void)
 	// Update sound/music volumes, if changed manually at console
 	if (actualsfxvolume != cv_soundvolume.value)
 		S_SetSfxVolume(cv_soundvolume.value);
-	if (actualmusicvolume != cv_digmusicvolume.value)
-		S_SetMusicVolume(cv_digmusicvolume.value);
+	if (actualmusicvolume != currentmidi ? cv_midimusicvolume.value : cv_digmusicvolume.value)
+		S_SetMusicVolume(-1);
 
 	// We're done now, if we're not in a level.
 	if (gamestate != GS_LEVEL)
@@ -2346,13 +2349,19 @@ void S_ResumeAudio(void)
 
 void S_SetMusicVolume(INT32 volume)
 {
+	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
+
 	if (volume < 0)
 		volume = cv_digmusicvolume.value;
 
+	if (currentmidi)
+		volume = cv_midimusicvolume.value;
+
 	if (volume < 0 || volume > 31)
-		CONS_Alert(CONS_WARNING, "digmusicvolume should be between 0-31\n");
-	CV_SetValue(&cv_digmusicvolume, volume&31);
-	actualmusicvolume = cv_digmusicvolume.value;   //check for change of var
+		CONS_Alert(CONS_WARNING, "Music volume should be between 0-31\n");
+
+	CV_SetValue(currentmidi ? &cv_midimusicvolume : &cv_digmusicvolume, volume&31);
+	actualmusicvolume = currentmidi ? cv_midimusicvolume.value : cv_digmusicvolume.value; //check for change of var
 
 	I_SetMusicVolume(volume&31);
 }
@@ -2491,7 +2500,7 @@ static void Command_RestartAudio_f(void)
 // These must be called or no sound and music until manually set.
 
 	I_SetSfxVolume(cv_soundvolume.value);
-	S_SetMusicVolume(cv_digmusicvolume.value);
+	S_SetMusicVolume(-1);
 	if (Playing()) // Gotta make sure the player is in a level
 		P_RestoreMusic(&players[consoleplayer]);
 }
