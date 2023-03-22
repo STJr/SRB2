@@ -164,8 +164,7 @@ caption_t closedcaptions[NUMCAPTIONS];
 
 void S_ResetCaptions(void)
 {
-	UINT8 i;
-	for (i = 0; i < NUMCAPTIONS; i++)
+	for (UINT8 i = 0; i < NUMCAPTIONS; i++)
 	{
 		closedcaptions[i].c = NULL;
 		closedcaptions[i].s = NULL;
@@ -290,8 +289,6 @@ void S_RegisterSoundStuff(void)
 
 static void SetChannelsNum(void)
 {
-	INT32 i;
-
 	// Allocating the internal channels for mixing
 	// (the maximum number of sounds rendered
 	// simultaneously) within zone memory.
@@ -300,7 +297,6 @@ static void SetChannelsNum(void)
 
 	Z_Free(channels);
 	channels = NULL;
-
 
 	if (cv_numChannels.value == 999999999) //Alam_GBC: OH MY ROD!(ROD rimmiced with GOD!)
 		CV_StealthSet(&cv_numChannels,cv_numChannels.defaultvalue);
@@ -317,7 +313,7 @@ static void SetChannelsNum(void)
 	numofchannels = cv_numChannels.value;
 
 	// Free all channels for use
-	for (i = 0; i < numofchannels; i++)
+	for (INT32 i = 0; i < numofchannels; i++)
 		channels[i].sfxinfo = 0;
 
 	S_ResetCaptions();
@@ -352,17 +348,12 @@ lumpnum_t S_GetSfxLumpNum(sfxinfo_t *sfx)
 
 boolean S_SoundDisabled(void)
 {
-	return (
-			sound_disabled ||
-			( window_notinfocus && ! cv_playsoundsifunfocused.value )
-	);
+	return sound_disabled || (window_notinfocus && !cv_playsoundsifunfocused.value);
 }
 
 // Stop all sounds, load level info, THEN start sounds.
 void S_StopSounds(void)
 {
-	INT32 cnum;
-
 #ifdef HW3SOUND
 	if (hws_mode != HWS_DEFAULT_MODE)
 	{
@@ -372,7 +363,7 @@ void S_StopSounds(void)
 #endif
 
 	// kill all playing sounds at start of level
-	for (cnum = 0; cnum < numofchannels; cnum++)
+	for (INT32 cnum = 0; cnum < numofchannels; cnum++)
 		if (channels[cnum].sfxinfo)
 			S_StopChannel(cnum);
 
@@ -381,8 +372,6 @@ void S_StopSounds(void)
 
 void S_StopSoundByID(void *origin, sfxenum_t sfx_id)
 {
-	INT32 cnum;
-
 	// Sounds without origin can have multiple sources, they shouldn't
 	// be stopped by new sounds.
 	if (!origin)
@@ -394,7 +383,7 @@ void S_StopSoundByID(void *origin, sfxenum_t sfx_id)
 		return;
 	}
 #endif
-	for (cnum = 0; cnum < numofchannels; cnum++)
+	for (INT32 cnum = 0; cnum < numofchannels; cnum++)
 	{
 		if (channels[cnum].sfxinfo == &S_sfx[sfx_id] && channels[cnum].origin == origin)
 		{
@@ -406,8 +395,6 @@ void S_StopSoundByID(void *origin, sfxenum_t sfx_id)
 
 void S_StopSoundByNum(sfxenum_t sfxnum)
 {
-	INT32 cnum;
-
 #ifdef HW3SOUND
 	if (hws_mode != HWS_DEFAULT_MODE)
 	{
@@ -415,7 +402,7 @@ void S_StopSoundByNum(sfxenum_t sfxnum)
 		return;
 	}
 #endif
-	for (cnum = 0; cnum < numofchannels; cnum++)
+	for (INT32 cnum = 0; cnum < numofchannels; cnum++)
 	{
 		if (channels[cnum].sfxinfo == &S_sfx[sfxnum])
 		{
@@ -792,8 +779,6 @@ void S_StartSound(const void *origin, sfxenum_t sfx_id)
 
 void S_StopSound(void *origin)
 {
-	INT32 cnum;
-
 	// Sounds without origin can have multiple sources, they shouldn't
 	// be stopped by new sounds.
 	if (!origin)
@@ -806,7 +791,7 @@ void S_StopSound(void *origin)
 		return;
 	}
 #endif
-	for (cnum = 0; cnum < numofchannels; cnum++)
+	for (INT32 cnum = 0; cnum < numofchannels; cnum++)
 	{
 		if (channels[cnum].sfxinfo && channels[cnum].origin == origin)
 		{
@@ -974,9 +959,8 @@ notinlevel:
 
 void S_UpdateClosedCaptions(void)
 {
-	UINT8 i;
 	boolean gamestopped = (paused || P_AutoPause());
-	for (i = 0; i < NUMCAPTIONS; i++) // update captions
+	for (UINT8 i = 0; i < NUMCAPTIONS; i++) // update captions
 	{
 		if (!closedcaptions[i].s)
 			continue;
@@ -1193,7 +1177,6 @@ INT32 S_AdjustSoundParams(const mobj_t *listener, const mobj_t *source, INT32 *v
 // on the given origin.
 INT32 S_OriginPlaying(void *origin)
 {
-	INT32 cnum;
 	if (!origin)
 		return false;
 
@@ -1202,7 +1185,7 @@ INT32 S_OriginPlaying(void *origin)
 		return HW3S_OriginPlaying(origin);
 #endif
 
-	for (cnum = 0; cnum < numofchannels; cnum++)
+	for (INT32 cnum = 0; cnum < numofchannels; cnum++)
 		if (channels[cnum].origin == origin)
 			return 1;
 	return 0;
@@ -1212,14 +1195,12 @@ INT32 S_OriginPlaying(void *origin)
 // is playing anywhere.
 INT32 S_IdPlaying(sfxenum_t id)
 {
-	INT32 cnum;
-
 #ifdef HW3SOUND
 	if (hws_mode != HWS_DEFAULT_MODE)
 		return HW3S_IdPlaying(id);
 #endif
 
-	for (cnum = 0; cnum < numofchannels; cnum++)
+	for (INT32 cnum = 0; cnum < numofchannels; cnum++)
 		if ((size_t)(channels[cnum].sfxinfo - S_sfx) == (size_t)id)
 			return 1;
 	return 0;
@@ -1229,7 +1210,6 @@ INT32 S_IdPlaying(sfxenum_t id)
 // origin x playing sound id y.
 INT32 S_SoundPlaying(void *origin, sfxenum_t id)
 {
-	INT32 cnum;
 	if (!origin)
 		return 0;
 
@@ -1238,7 +1218,7 @@ INT32 S_SoundPlaying(void *origin, sfxenum_t id)
 		return HW3S_SoundPlaying(origin, id);
 #endif
 
-	for (cnum = 0; cnum < numofchannels; cnum++)
+	for (INT32 cnum = 0; cnum < numofchannels; cnum++)
 	{
 		if (channels[cnum].origin == origin
 		 && (size_t)(channels[cnum].sfxinfo - S_sfx) == (size_t)id)
@@ -1659,8 +1639,7 @@ void S_LoadMusicDefs(UINT16 wadnum)
 //
 void S_InitMusicDefs(void)
 {
-	UINT16 i;
-	for (i = 0; i < numwadfiles; i++)
+	for (UINT16 i = 0; i < numwadfiles; i++)
 		S_LoadMusicDefs(i);
 }
 
@@ -1718,7 +1697,7 @@ boolean S_PrepareSoundTest(void)
 
 boolean S_MusicDisabled(void)
 {
-	return (music_disabled);
+	return music_disabled;
 }
 
 boolean S_MusicPlaying(void)
@@ -1733,9 +1712,7 @@ boolean S_MusicPaused(void)
 
 boolean S_MusicNotInFocus(void)
 {
-	return (
-			( window_notinfocus && ! cv_playmusicifunfocused.value )
-	);
+	return window_notinfocus && !cv_playmusicifunfocused.value;
 }
 
 musictype_t S_MusicType(void)
@@ -1994,7 +1971,6 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 	musicstack_t *result;
 	musicstack_t *entry = Z_Calloc(sizeof (*result), PU_MUSIC, NULL);
 	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
-	boolean midipref = cv_musicpref.value;
 
 	if (status)
 		result = S_GetMusicStackEntry(status, fromfirst, -1);
@@ -2050,7 +2026,7 @@ boolean S_RecallMusic(UINT16 status, boolean fromfirst)
 	}
 
 	if (strncmp(entry->musname, S_MusicName(), 7) || // don't restart music if we're already playing it
-		(midipref != currentmidi && S_MusicPrefExists(entry->musname))) // but do if the user's preference has changed
+		(cv_musicpref.value != currentmidi && S_MusicPrefExists(entry->musname))) // but do if the user's preference has changed
 	{
 		if (music_stack_fadeout)
 			S_ChangeMusicEx(entry->musname, entry->musflags, entry->looping, 0, music_stack_fadeout, 0);
@@ -2224,7 +2200,6 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 	};
 
 	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
-	boolean midipref = cv_musicpref.value;
 
 	if (S_MusicDisabled())
 		return;
@@ -2253,7 +2228,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 		return;
 	}
 	else if (strnicmp(music_name, newmusic, 6) || (mflags & MUSIC_FORCERESET) ||
-		(midipref != currentmidi && S_MusicPrefExists(newmusic)))
+		(cv_musicpref.value != currentmidi && S_MusicPrefExists(newmusic)))
 	{
 		CONS_Debug(DBG_DETAILED, "Now playing song %s\n", newmusic);
 
@@ -2277,7 +2252,7 @@ void S_ChangeMusicEx(const char *mmusic, UINT16 mflags, boolean looping, UINT32 
 	{
 		I_SetSongPosition(position);
 		I_FadeSong(100, fadeinms, NULL);
-}
+	}
 	else // reset volume to 100 with same music
 	{
 		I_StopFadingSong();
@@ -2338,19 +2313,16 @@ void S_ResumeAudio(void)
 
 void S_SetMusicVolume(INT32 volume)
 {
-	boolean currentmidi = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX);
+	consvar_t *musicvolume = (I_SongType() == MU_MID || I_SongType() == MU_MID_EX) ? &cv_midimusicvolume : &cv_digmusicvolume;
 
 	if (volume < 0)
-		volume = cv_digmusicvolume.value;
-
-	if (currentmidi)
-		volume = cv_midimusicvolume.value;
+		volume = musicvolume->value;
 
 	if (volume < 0 || volume > 31)
 		CONS_Alert(CONS_WARNING, "Music volume should be between 0-31\n");
 
-	CV_SetValue(currentmidi ? &cv_midimusicvolume : &cv_digmusicvolume, volume&31);
-	actualmusicvolume = currentmidi ? cv_midimusicvolume.value : cv_digmusicvolume.value; //check for change of var
+	CV_SetValue(musicvolume, volume&31);
+	actualmusicvolume = musicvolume->value; //check for change of var
 
 	I_SetMusicVolume(volume&31);
 }
