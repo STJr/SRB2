@@ -185,14 +185,6 @@ INT32 I_NumJoys(void);
 */
 const char *I_GetJoyName(INT32 joyindex);
 
-#ifndef NOMUMBLE
-#include "p_mobj.h" // mobj_t
-#include "s_sound.h" // listener_t
-/** \brief to update Mumble of Player Postion
-*/
-void I_UpdateMumble(const mobj_t *mobj, const listener_t listener);
-#endif
-
 /**	\brief Startup the first mouse
 */
 void I_StartupMouse(void);

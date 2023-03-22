@@ -80,14 +80,6 @@ const char *I_GetJoyName(INT32 joyindex)
 	return NULL;
 }
 
-#ifndef NOMUMBLE
-void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
-{
-	(void)mobj;
-	(void)listener;
-}
-#endif
-
 void I_OutputMsg(const char *error, ...)
 {
 	(void)error;

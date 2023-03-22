@@ -79,7 +79,7 @@ boolean server = true; // true or false but !server == client
 boolean nodownload = false;
 boolean serverrunning = false;
 INT32 serverplayer = 0;
-char motd[254], server_context[8]; // Message of the Day, Unique Context (even without Mumble support)
+char motd[254], server_context[8]; // Message of the Day, Unique Context
 
 // Server specific vars
 UINT8 playernode[MAXPLAYERS];

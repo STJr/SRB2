@@ -846,14 +846,7 @@ void S_UpdateSounds(void)
 
 	// We're done now, if we're not in a level.
 	if (gamestate != GS_LEVEL)
-	{
-#ifndef NOMUMBLE
-		// Stop Mumble cutting out. I'm sick of it.
-		I_UpdateMumble(NULL, listener);
-#endif
-
 		goto notinlevel;
-	}
 
 	if (dedicated || sound_disabled)
 		return;
@@ -882,10 +875,6 @@ void S_UpdateSounds(void)
 		listener.z = listenmobj->z;
 		listener.angle = listenmobj->angle;
 	}
-
-#ifndef NOMUMBLE
-	I_UpdateMumble(players[consoleplayer].mo, listener);
-#endif
 
 #ifdef HW3SOUND
 	if (hws_mode != HWS_DEFAULT_MODE)

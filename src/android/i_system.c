@@ -158,18 +158,6 @@ const char *I_GetJoyName(INT32 joyindex)
   return NULL;
 }
 
-void I_SetupMumble(void)
-{
-}
-
-#ifndef NOMUMBLE
-void I_UpdateMumble(const mobj_t *mobj, const listener_t listener)
-{
-	(void)mobj;
-	(void)listener;
-}
-#endif
-
 void I_OutputMsg(const char *fmt, ...)
 {
   va_list argptr;
