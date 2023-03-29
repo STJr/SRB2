@@ -951,7 +951,7 @@ boolean CON_Responder(event_t *ev)
 		// check other keys only if console prompt is active
 		if (!consoleready && key < NUMINPUTS) // metzgermeister: boundary check!!
 		{
-			if (!menuactive && bindtable[key])
+			if (ev->type == ev_keydown && !menuactive && bindtable[key])
 			{
 				COM_BufAddText(bindtable[key]);
 				COM_BufAddText("\n");
