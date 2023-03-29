@@ -21675,7 +21675,7 @@ skincolor_t skincolors[MAXSKINCOLORS] = {
 	{"Purple",     {0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa4, 0xa5, 0xa5, 0xa5, 0xa6, 0xa7, 0xa7, 0xa8, 0xa8, 0xa9, 0xa9}, SKINCOLOR_FLAME,      7,  V_PURPLEMAP,  true}, // SKINCOLOR_PURPLE
 	{"Noble",      { 144,  146,  147,  148,  149,  164,  164,  165,  166,  185,  186,  186,  187,  187,   28,   29}, SKINCOLOR_CHARTREUSE, 12, V_PURPLEMAP,  true}, // SKINCOLOR_NOBLE
 	{"Fuchsia",    { 200,  201,  203,  204,  204,  183,  184,  184,  165,  166,  167,  168,  169,  159,  253,  254}, SKINCOLOR_LEMON,      10, V_PURPLEMAP,  true}, // SKINCOLOR_FUCHSIA
-	{"Bubblegum",  {   0,  208,  208,  176,  177,  178,  179,  180,  181,  183,  165,  166,  167,  168,  169,  253}, SKINCOLOR_PASTEL,     8,  V_MAGENTAMAP, true}, // SKINCOLOR_BUBBLEGUM
+	{"Bubblegum",  {   0,  208,  208,  176,  177,  178,  179,  180,  181,  182,  164,  166,  167,  168,  169,  253}, SKINCOLOR_PASTEL,     8,  V_MAGENTAMAP, true}, // SKINCOLOR_BUBBLEGUM
 	{"Crystal",    { 252,  177,  179,  180,  181,  181,  182,  182,  183,  164,  166,  167,  167,  168,  169,  159}, SKINCOLOR_EMERALD,    8,  V_MAGENTAMAP, true}, // SKINCOLOR_CRYSTAL
 	{"Magenta",    {0xb3, 0xb3, 0xb4, 0xb5, 0xb6, 0xb6, 0xb7, 0xb7, 0xb7, 0xb8, 0xb9, 0xb9, 0xba, 0xba, 0xbb, 0xbb}, SKINCOLOR_LIME,       6,  V_MAGENTAMAP, true}, // SKINCOLOR_MAGENTA
 	{"Neon",       {0xb3, 0xb5, 0xb6, 0xb7, 0xb8, 0xb9, 0xb9, 0xba, 0xba, 0xbb, 0xbb, 0xc7, 0xc7, 0x1d, 0x1d, 0x1e}, SKINCOLOR_CERULEAN,   2,  V_MAGENTAMAP, true}, // SKINCOLOR_NEON
