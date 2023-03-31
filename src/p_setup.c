@@ -5299,6 +5299,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 433: //Enable/disable gravity flip
 			lines[i].args[0] = !!(lines[i].flags & ML_NOCLIMB);
 			lines[i].args[1] = !!(lines[i].flags & ML_SKEWTD);
+			lines[i].args[2] = !!(lines[i].flags & ML_BLOCKMONSTERS);
 			break;
 		case 434: //Award power-up
 			if (sides[lines[i].sidenum[0]].text)
