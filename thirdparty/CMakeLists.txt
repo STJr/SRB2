@@ -16,5 +16,6 @@ if(NOT "${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 	include("cpm-png.cmake")
 	include("cpm-curl.cmake")
 	include("cpm-openmpt.cmake")
-	include("cpm-libgme.cmake")
 endif()
+
+include("cpm-libgme.cmake")

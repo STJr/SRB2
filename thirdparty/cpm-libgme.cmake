@@ -11,5 +11,6 @@ CPMAddPackage(
 
 if(libgme_ADDED)
 	target_compile_features(gme PRIVATE cxx_std_11)
-	target_link_libraries(gme PRIVATE ZLIB::ZLIB)
+	# libgme's CMakeLists.txt already links this
+	#target_link_libraries(gme PRIVATE ZLIB::ZLIB)
 endif()

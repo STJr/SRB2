@@ -131,7 +131,11 @@ if("${SRB2_CONFIG_SYSTEM_LIBRARIES}")
 	find_package(SDL2_mixer REQUIRED)
 	find_package(CURL REQUIRED)
 	find_package(OPENMPT REQUIRED)
-	find_package(GME REQUIRED)
+
+	# libgme defaults to "Nuked" YM2612 emulator, which is
+	# very SLOW. The system library probably uses the
+	# default so just always build it.
+	#find_package(GME REQUIRED)
 endif()
 
 if(${PROJECT_SOURCE_DIR} MATCHES ${PROJECT_BINARY_DIR})
