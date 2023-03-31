@@ -1139,7 +1139,7 @@ void Y_Ticker(void)
 			data.spec.emeraldmomy = 20;
 			data.spec.emeraldy = -40;
 		}
-		else
+		else if (P_GetNextEmerald() < 7)
 		{
 			if (!stagefailed)
 			{
