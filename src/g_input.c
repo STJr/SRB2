@@ -993,7 +993,7 @@ static void setcontrol(INT32 (*gc)[2])
 {
 	INT32 numctrl;
 	const char *namectrl;
-	INT32 keynum, keynum1, keynum2;
+	INT32 keynum, keynum1, keynum2 = 0;
 	INT32 player = ((void*)gc == (void*)&gamecontrolbis ? 1 : 0);
 	boolean nestedoverride = false;
 
@@ -1009,7 +1009,8 @@ static void setcontrol(INT32 (*gc)[2])
 		return;
 	}
 	keynum1 = G_KeyNameToNum(COM_Argv(2));
-	keynum2 = G_KeyNameToNum(COM_Argv(3));
+	if (COM_Argc() > 3)
+		keynum2 = G_KeyNameToNum(COM_Argv(3));
 	keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2, &nestedoverride);
 
 	if (keynum >= 0)
