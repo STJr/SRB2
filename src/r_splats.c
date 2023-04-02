@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,6 +11,7 @@
 /// \brief Floor splats
 
 #include "r_draw.h"
+#include "r_fps.h"
 #include "r_main.h"
 #include "r_splats.h"
 #include "r_bsp.h"
@@ -185,7 +186,7 @@ void R_DrawFloorSplat(vissprite_t *spr)
 		splat.scale = FixedMul(splat.scale, ((skin_t *)mobj->skin)->highresscale);
 
 	if (spr->rotateflags & SRF_3D || renderflags & RF_NOSPLATBILLBOARD)
-		splatangle = spr->centerangle;
+		splatangle = mobj->angle;
 	else
 		splatangle = spr->viewpoint.angle;
 
@@ -209,8 +210,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	xoffset = FixedMul(leftoffset, splat.xscale);
 	yoffset = FixedMul(topoffset, splat.yscale);
 
-	x = spr->gx;
-	y = spr->gy;
+	x = mobj->x;
+	y = mobj->y;
 	w = (splat.width * splat.xscale);
 	h = (splat.height * splat.yscale);
 
@@ -263,8 +264,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	// Translate
 	for (i = 0; i < 4; i++)
 	{
-		tr_x = rotated[i].x + x;
-		tr_y = rotated[i].y + y;
+		tr_x = rotated[i].x + mobj->x;
+		tr_y = rotated[i].y + mobj->y;
 
 		if (splat.slope)
 		{
@@ -292,8 +293,8 @@ void R_DrawFloorSplat(vissprite_t *spr)
 		tr_y = v3d->y - spr->viewpoint.y;
 
 		// rotation around vertical y axis
-		rot_x = FixedMul(tr_x, sa) - FixedMul(tr_y, ca);
-		rot_y = FixedMul(tr_x, ca) + FixedMul(tr_y, sa);
+		rot_x = FixedMul(tr_x - (mobj->x - x), sa) - FixedMul(tr_y - (mobj->y - y), ca);
+		rot_y = FixedMul(tr_x - (mobj->x - x), ca) + FixedMul(tr_y - (mobj->y - y), sa);
 		rot_z = v3d->z - spr->viewpoint.z;
 
 		if (rot_y < FRACUNIT)
