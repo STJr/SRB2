@@ -5665,21 +5665,25 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					missile->fuse = 1;
 
 				if (missile->fuse > mobj->fuse)
-					P_RemoveMobj(missile);
-
-				if (mobj->health > mobj->info->damage)
 				{
-					P_SetScale(missile, FRACUNIT/3);
-					missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
+					P_RemoveMobj(missile);
 				}
 				else
 				{
-					P_SetScale(missile, FRACUNIT/5);
-					missile->color = SKINCOLOR_SUNSET; // sonic cd electric power
+					if (mobj->health > mobj->info->damage)
+					{
+						P_SetScale(missile, FRACUNIT/3);
+						missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
+					}
+					else
+					{
+						P_SetScale(missile, FRACUNIT/5);
+						missile->color = SKINCOLOR_SUNSET; // sonic cd electric power
+					}
+					missile->destscale = missile->scale*2;
+					missile->scalespeed = abs(missile->scale - missile->destscale)/missile->fuse;
+					missile->colorized = true;
 				}
-				missile->destscale = missile->scale*2;
-				missile->scalespeed = abs(missile->scale - missile->destscale)/missile->fuse;
-				missile->colorized = true;
 			}
 
 			// ...then down. easier than changing the missile's momz after-the-fact
