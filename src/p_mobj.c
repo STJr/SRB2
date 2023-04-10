@@ -10061,6 +10061,8 @@ static boolean P_FuseThink(mobj_t *mobj)
 	case MT_SPIKE:
 	case MT_WALLSPIKE:
 		P_SetMobjState(mobj, mobj->state->nextstate);
+		if (P_MobjWasRemoved(mobj))
+			return false;
 		mobj->fuse = mobj->spawnpoint ? mobj->spawnpoint->args[0] : mobj->info->speed;
 		break;
 	case MT_NIGHTSCORE:
@@ -10221,6 +10223,9 @@ void P_MobjThinker(mobj_t *mobj)
 
 	if (mobj->flags2 & MF2_FIRING)
 		P_FiringThink(mobj);
+
+	if (P_MobjWasRemoved(mobj))
+		return;
 
 	if (mobj->type == MT_AMBIENT)
 	{
