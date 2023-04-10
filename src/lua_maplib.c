@@ -1910,10 +1910,10 @@ static INT32 P_GetOldFOFFlags(ffloor_t *fflr)
 		result |= FF_OLD_SPINBUST;
 	if (fflr->busttype == BT_STRONG)
 		result |= FF_OLD_STRONGBUST;
-	if (fflr->fofflags & FF_OLD_RIPPLE)
-		result |= FOF_RIPPLE;
-	if (fflr->fofflags & FF_OLD_COLORMAPONLY)
-		result |= FOF_COLORMAPONLY;
+	if (fflr->fofflags & FOF_RIPPLE)
+		result |= FF_OLD_RIPPLE;
+	if (fflr->fofflags & FOF_COLORMAPONLY)
+		result |= FF_OLD_COLORMAPONLY;
 	return result;
 }
 
