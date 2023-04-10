@@ -12808,7 +12808,7 @@ void P_PlayerAfterThink(player_t *player)
 					P_KillMobj(ptera, player->mo, player->mo, 0);
 					P_SetObjectMomZ(player->mo, 12*FRACUNIT, false);
 					player->pflags |= PF_APPLYAUTOBRAKE|PF_JUMPED|PF_THOKKED;
-					P_SetMobjState(player->mo, S_PLAY_ROLL);
+					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					break;
 				}
 
