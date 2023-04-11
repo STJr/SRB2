@@ -10224,9 +10224,6 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->flags2 & MF2_FIRING)
 		P_FiringThink(mobj);
 
-	if (P_MobjWasRemoved(mobj))
-		return;
-
 	if (mobj->type == MT_AMBIENT)
 	{
 		if (leveltime % mobj->health)
