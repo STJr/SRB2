@@ -36,7 +36,6 @@
 #include "r_main.h"
 #include "i_system.h" // I_GetPreciseTime
 #include "r_fps.h" // Frame interpolation/uncapped
-#include "filesrch.c" // cv_addons_folder
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -1589,10 +1588,6 @@ void R_RegisterEngineStuff(void)
 	CV_RegisterVar(&cv_homremoval);
 	CV_RegisterVar(&cv_flipcam);
 	CV_RegisterVar(&cv_flipcam2);
-
-	// Other filesrch.c consvars are defined in D_RegisterClientCommands
-	CV_RegisterVar(&cv_addons_option);
-	CV_RegisterVar(&cv_addons_folder);
 
 	// Enough for dedicated server
 	if (dedicated)

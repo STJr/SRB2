@@ -613,6 +613,10 @@ void D_RegisterServerCommands(void)
 
 	CV_RegisterVar(&cv_allowseenames);
 
+	// Other filesrch.c consvars are defined in D_RegisterClientCommands
+	CV_RegisterVar(&cv_addons_option);
+	CV_RegisterVar(&cv_addons_folder);
+
 	CV_RegisterVar(&cv_dummyconsvar);
 }
 
@@ -795,7 +799,7 @@ void D_RegisterClientCommands(void)
 
 	// filesrch.c
 	//CV_RegisterVar(&cv_addons_option); // These two are now defined
-	//CV_RegisterVar(&cv_addons_folder); // in R_RegisterEngineStuff
+	//CV_RegisterVar(&cv_addons_folder); // in D_RegisterServerCommands
 	CV_RegisterVar(&cv_addons_md5);
 	CV_RegisterVar(&cv_addons_showall);
 	CV_RegisterVar(&cv_addons_search_type);
