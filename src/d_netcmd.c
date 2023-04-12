@@ -794,8 +794,8 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_digitaldeadzone2);
 
 	// filesrch.c
-	CV_RegisterVar(&cv_addons_option);
-	CV_RegisterVar(&cv_addons_folder);
+	//CV_RegisterVar(&cv_addons_option); // These two are now defined
+	//CV_RegisterVar(&cv_addons_folder); // in R_RegisterEngineStuff
 	CV_RegisterVar(&cv_addons_md5);
 	CV_RegisterVar(&cv_addons_showall);
 	CV_RegisterVar(&cv_addons_search_type);
