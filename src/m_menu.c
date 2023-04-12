@@ -3909,7 +3909,7 @@ void M_Init(void)
 {
 	int i;
 
-	COM_AddCommand("manual", Command_Manual_f);
+	COM_AddCommand("manual", Command_Manual_f, COM_LUA);
 
 	CV_RegisterVar(&cv_nextmap);
 	CV_RegisterVar(&cv_newgametype);
