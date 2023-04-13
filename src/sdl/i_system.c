@@ -259,28 +259,29 @@ UINT8 keyboard_started = false;
 
 #ifdef UNIXBACKTRACE
 
-// NOTE: if written ends up ever being -1, all further writes end up being cancelled.
-// i figure an error is a reason to stop writing...
-#define WRITE_FILE(string) \
-	sourcelen = strlen(string); \
-	while (fd != -1 && (written != -1 && errno != EINTR) && written < sourcelen) \
+static void bt_write_file(int fd, const char *string) {
+	ssize_t written = 0;
+	ssize_t sourcelen = strlen(string);
+
+	while (fd != -1 && (written != -1 && errno != EINTR) && written < sourcelen)
 		written = write(fd, string, sourcelen);
+}
 
-#define WRITE_STDERR(string) \
-	I_OutputMsg("%s", string);
+static void bt_write_stderr(const char *string) {
+	bt_write_file(STDERR_FILENO, string);
+}
 
-#define WRITE_ALL(string) \
-	WRITE_FILE(string); \
-	WRITE_STDERR(string);
+static void bt_write_all(int fd, const char *string) {
+	bt_write_file(fd, string);
+	bt_write_file(STDERR_FILENO, string);
+}
 
 static void write_backtrace(INT32 signal)
 {
 	int fd = -1;
-	ssize_t written = 0;
-	ssize_t sourcelen = 0;
 	time_t rawtime;
 	struct tm timeinfo;
-	size_t size;
+	size_t bt_size;
 
 	enum { BT_SIZE = 1024, STR_SIZE = 32 };
 	void *funcptrs[BT_SIZE];
@@ -291,49 +292,47 @@ static void write_backtrace(INT32 signal)
 	fd = open(filename, O_CREAT|O_APPEND|O_RDWR, S_IRUSR|S_IWUSR);
 
 	if (fd == -1) // File handle error
-		WRITE_STDERR("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
+		bt_write_stderr("\nWARNING: Couldn't open crash log for writing! Make sure your permissions are correct. Please save the below report!\n");
 
 	// Get the current time as a string.
 	time(&rawtime);
 	localtime_r(&rawtime, &timeinfo);
 	strftime(timestr, STR_SIZE, "%a, %d %b %Y %T %z", &timeinfo);
 
-	WRITE_FILE("------------------------\n"); // Nice looking seperator
+	bt_write_file(fd, "------------------------\n"); // Nice looking seperator
 
-	WRITE_ALL("\n"); // Newline to look nice for both outputs.
-	WRITE_ALL("An error occurred within SRB2! Send this stack trace to someone who can help!\n");
+	bt_write_all(fd, "\n"); // Newline to look nice for both outputs.
+	bt_write_all(fd, "An error occurred within SRB2! Send this stack trace to someone who can help!\n");
 
 	if (fd != -1) // If the crash log exists,
-		WRITE_STDERR("(Or find crash-log.txt in your SRB2 directory.)\n"); // tell the user where the crash log is.
+		bt_write_stderr("(Or find crash-log.txt in your SRB2 directory.)\n"); // tell the user where the crash log is.
 
 	// Tell the log when we crashed.
-	WRITE_FILE("Time of crash: ");
-	WRITE_FILE(timestr);
-	WRITE_FILE("\n");
+	bt_write_file(fd, "Time of crash: ");
+	bt_write_file(fd, timestr);
+	bt_write_file(fd, "\n");
 
 	// Give the crash log the cause and a nice 'Backtrace:' thing
 	// The signal is given to the user when the parent process sees we crashed.
-	WRITE_FILE("Cause: ");
-	WRITE_FILE(strsignal(signal));
-	WRITE_FILE("\n"); // Newline for the signal name
+	bt_write_file(fd, "Cause: ");
+	bt_write_file(fd, strsignal(signal));
+	bt_write_file(fd, "\n"); // Newline for the signal name
 
-	WRITE_ALL("\nBacktrace:\n");
+	bt_write_all(fd, "\nBacktrace:\n");
 
 	// Flood the output and log with the backtrace
-	size = backtrace(funcptrs, BT_SIZE);
-	backtrace_symbols_fd(funcptrs, size, fd);
-	backtrace_symbols_fd(funcptrs, size, STDERR_FILENO);
+	bt_size = backtrace(funcptrs, BT_SIZE);
+	backtrace_symbols_fd(funcptrs, bt_size, fd);
+	backtrace_symbols_fd(funcptrs, bt_size, STDERR_FILENO);
 
-	WRITE_FILE("\n"); // Write another newline to the log so it looks nice :)
+	bt_write_file(fd, "\n"); // Write another newline to the log so it looks nice :)
 
 	if (fd != -1) {
 		fsync(fd); // reaaaaally make sure we got that data written.
 		close(fd);
 	}
 }
-#undef WRITE_FILE
-#undef WRITE_STDERR
-#undef WRITE_ALL
+
 #endif // UNIXBACKTRACE
 
 static void I_ReportSignal(int num, int coredumped)
