@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -364,36 +364,36 @@ consvar_t cv_autobrake2 = CVAR_INIT ("autobrake2", "On", CV_SAVE|CV_CALL, CV_OnO
 // hi here's some new controls
 static CV_PossibleValue_t zerotoone_cons_t[] = {{0, "MIN"}, {FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_cam_shiftfacing[2] = {
-	CVAR_INIT ("cam_shiftfacingchar", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_shiftfacingchar", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_shiftfacingchar", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_shiftfacingchar", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacing[2] = {
-	CVAR_INIT ("cam_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacingability[2] = {
-	CVAR_INIT ("cam_turnfacingability", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacingability", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacingability", "0.125", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacingability", "0.125", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacingspindash[2] = {
-	CVAR_INIT ("cam_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacinginput[2] = {
-	CVAR_INIT ("cam_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 
 static CV_PossibleValue_t centertoggle_cons_t[] = {{0, "Hold"}, {1, "Toggle"}, {2, "Sticky Hold"}, {0, NULL}};
 consvar_t cv_cam_centertoggle[2] = {
-	CVAR_INIT ("cam_centertoggle", "Hold", CV_SAVE, centertoggle_cons_t, NULL),
-	CVAR_INIT ("cam2_centertoggle", "Hold", CV_SAVE, centertoggle_cons_t, NULL),
+	CVAR_INIT ("cam_centertoggle", "Hold", CV_SAVE|CV_ALLOWLUA, centertoggle_cons_t, NULL),
+	CVAR_INIT ("cam2_centertoggle", "Hold", CV_SAVE|CV_ALLOWLUA, centertoggle_cons_t, NULL),
 };
 
 static CV_PossibleValue_t lockedinput_cons_t[] = {{0, "Strafe"}, {1, "Turn"}, {0, NULL}};
 consvar_t cv_cam_lockedinput[2] = {
-	CVAR_INIT ("cam_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL),
-	CVAR_INIT ("cam2_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL),
+	CVAR_INIT ("cam_lockedinput", "Strafe", CV_SAVE|CV_ALLOWLUA, lockedinput_cons_t, NULL),
+	CVAR_INIT ("cam2_lockedinput", "Strafe", CV_SAVE|CV_ALLOWLUA, lockedinput_cons_t, NULL),
 };
 
 static CV_PossibleValue_t lockedassist_cons_t[] = {
@@ -405,8 +405,8 @@ static CV_PossibleValue_t lockedassist_cons_t[] = {
 	{0, NULL}
 };
 consvar_t cv_cam_lockonboss[2] = {
-	CVAR_INIT ("cam_lockaimassist", "Full", CV_SAVE, lockedassist_cons_t, NULL),
-	CVAR_INIT ("cam2_lockaimassist", "Full", CV_SAVE, lockedassist_cons_t, NULL),
+	CVAR_INIT ("cam_lockaimassist", "Full", CV_SAVE|CV_ALLOWLUA, lockedassist_cons_t, NULL),
+	CVAR_INIT ("cam2_lockaimassist", "Full", CV_SAVE|CV_ALLOWLUA, lockedassist_cons_t, NULL),
 };
 
 consvar_t cv_moveaxis = CVAR_INIT ("joyaxis_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);

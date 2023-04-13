@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2006      by Graue.
-// Copyright (C) 2006-2022 by Sonic Team Junior.
+// Copyright (C) 2006-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -116,10 +116,10 @@ void Z_Init(void)
 	CONS_Printf("System memory: %uMB - Free: %uMB\n", total>>20, memfree);
 
 	// Note: This allocates memory. Watch out.
-	COM_AddCommand("memfree", Command_Memfree_f);
+	COM_AddCommand("memfree", Command_Memfree_f, COM_LUA);
 
 #ifdef ZDEBUG
-	COM_AddCommand("memdump", Command_Memdump_f);
+	COM_AddCommand("memdump", Command_Memdump_f, COM_LUA);
 #endif
 }
 

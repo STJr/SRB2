@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2022 by Sonic Team Junior.
+// Copyright (C) 2004-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1139,7 +1139,7 @@ void Y_Ticker(void)
 			data.spec.emeraldmomy = 20;
 			data.spec.emeraldy = -40;
 		}
-		else
+		else if (P_GetNextEmerald() < 7)
 		{
 			if (!stagefailed)
 			{

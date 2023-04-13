@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -253,7 +253,7 @@ static int lib_comBufAddText(lua_State *L)
 		plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	if (plr && plr != &players[consoleplayer])
 		return 0;
-	COM_BufAddTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
+	COM_BufAddTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_LUA);
 	return 0;
 }
 
@@ -269,7 +269,7 @@ static int lib_comBufInsertText(lua_State *L)
 		plr = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
 	if (plr && plr != &players[consoleplayer])
 		return 0;
-	COM_BufInsertTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_SAFE);
+	COM_BufInsertTextEx(va("%s\n", luaL_checkstring(L, 2)), COM_LUA);
 	return 0;
 }
 
@@ -450,6 +450,7 @@ static int lib_cvRegisterVar(lua_State *L)
 		return luaL_error(L, M_GetText("Variable %s has CV_CALL without a function"), cvar->name);
 	}
 
+	cvar->flags |= CV_ALLOWLUA;
 	// actually time to register it to the console now! Finally!
 	cvar->flags |= CV_MODIFIED;
 	CV_RegisterVar(cvar);
@@ -478,7 +479,7 @@ static int CVarSetFunction
 ){
 	consvar_t *cvar = *(consvar_t **)luaL_checkudata(L, 1, META_CVAR);
 
-	if (cvar->flags & CV_NOLUA)
+	if (!(cvar->flags & CV_ALLOWLUA))
 		return luaL_error(L, "Variable '%s' cannot be set from Lua.", cvar->name);
 
 	switch (lua_type(L, 2))
@@ -510,7 +511,7 @@ static int lib_cvAddValue(lua_State *L)
 {
 	consvar_t *cvar = *(consvar_t **)luaL_checkudata(L, 1, META_CVAR);
 
-	if (cvar->flags & CV_NOLUA)
+	if (!(cvar->flags & CV_ALLOWLUA))
 		return luaL_error(L, "Variable %s cannot be set from Lua.", cvar->name);
 
 	CV_AddValue(cvar, (INT32)luaL_checknumber(L, 2));

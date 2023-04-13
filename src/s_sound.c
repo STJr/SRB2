@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -289,8 +289,8 @@ void S_RegisterSoundStuff(void)
 	CV_RegisterVar(&cv_miditimiditypath);
 #endif
 
-	COM_AddCommand("tunes", Command_Tunes_f);
-	COM_AddCommand("restartaudio", Command_RestartAudio_f);
+	COM_AddCommand("tunes", Command_Tunes_f, COM_LUA);
+	COM_AddCommand("restartaudio", Command_RestartAudio_f, COM_LUA);
 }
 
 static void SetChannelsNum(void)

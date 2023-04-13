@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3541,7 +3541,6 @@ static int lib_gAddPlayer(lua_State *L)
 		return 1;
 	}
 
-
 	newplayernum = i;
 
 	CL_ClearPlayer(newplayernum);
@@ -3552,9 +3551,6 @@ static int lib_gAddPlayer(lua_State *L)
 
 	newplayer->jointime = 0;
 	newplayer->quittime = 0;
-
-	// Set the bot name (defaults to Bot #)
-	strcpy(player_names[newplayernum], va("Bot %d", botcount));
 
 	// Read the skin argument (defaults to Sonic)
 	if (!lua_isnoneornil(L, 1))
@@ -3567,7 +3563,10 @@ static int lib_gAddPlayer(lua_State *L)
 	if (!lua_isnoneornil(L, 2))
 		newplayer->skincolor = R_GetColorByName(luaL_checkstring(L, 2));
 	else
-		newplayer->skincolor = skins[newplayer->skin].prefcolor;
+		newplayer->skincolor = skins[skinnum].prefcolor;
+
+	// Set the bot default name as the skin
+	strcpy(player_names[newplayernum], skins[skinnum].realname);
 
 	// Read the bot name, if given
 	if (!lua_isnoneornil(L, 3))
@@ -3583,14 +3582,19 @@ static int lib_gAddPlayer(lua_State *L)
 	// Set the skin (can't do this until AFTER bot type is set!)
 	SetPlayerSkinByNum(newplayernum, skinnum);
 
-
 	if (netgame)
 	{
 		char joinmsg[256];
 
+		// Truncate bot name
+		player_names[newplayernum][sizeof(*player_names) - 7] = '\0'; // The length of colored [BOT] + 1
+
 		strcpy(joinmsg, M_GetText("\x82*Bot %s has joined the game (player %d)"));
 		strcpy(joinmsg, va(joinmsg, player_names[newplayernum], newplayernum));
 		HU_AddChatText(joinmsg, false);
+
+		// Append blue [BOT] tag at the end
+		strlcat(player_names[newplayernum], "\x84[BOT]", sizeof(*player_names));
 	}
 
 	LUA_PushUserdata(L, newplayer, META_PLAYER);

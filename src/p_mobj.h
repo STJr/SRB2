@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -118,7 +118,7 @@ typedef enum
 	// Don't apply gravity (every tic); object will float, keeping current height
 	//  or changing it actively.
 	MF_NOGRAVITY        = 1<<9,
-	// This object is an ambient sound. Obsolete, but keep this around for backwards compatibility.
+	// This object is an ambient sound.
 	MF_AMBIENT          = 1<<10,
 	// Slide this object when it hits a wall.
 	MF_SLIDEME          = 1<<11,
