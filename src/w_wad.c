@@ -1035,7 +1035,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 		return W_InitFileError(path, startup);
 	}
 
-	important = 0; /// \todo Implement a W_VerifyFolder.
+	important = 1; /// \todo Implement a W_VerifyFolder.
 
 	// Remove path delimiters.
 	p = path + (strlen(path) - 1);
