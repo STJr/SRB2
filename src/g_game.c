@@ -2825,6 +2825,9 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 
 	R_ResetMobjInterpolationState(players[playernum].mo);
 
+	if (players[playernum].bot) // don't reset the camera for bots
+		return;
+
 	if (playernum == consoleplayer)
 		P_ResetCamera(&players[playernum], &camera);
 	else if (playernum == secondarydisplayplayer)
