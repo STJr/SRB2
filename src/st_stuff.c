@@ -1412,7 +1412,7 @@ void ST_drawTitleCard(void)
 	lt_lasttic = lt_ticker;
 
 luahook:
-	if (renderisnewtic)
+	//if (renderisnewtic)
 	{
 		LUA_HUD_ClearDrawList(luahuddrawlist_titlecard);
 		LUA_HUDHOOK(titlecard, luahuddrawlist_titlecard);
