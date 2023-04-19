@@ -1133,7 +1133,11 @@ void Y_Ticker(void)
 		}
 
 		// emerald bounce
-		if (intertic <= 1)
+		if (dedicated)
+		{
+			// dedicated servers don't need this, especially since it crashes when stagefailed
+		}
+		else if (intertic <= 1)
 		{
 			data.spec.emeraldbounces = 0;
 			data.spec.emeraldmomy = 20;
