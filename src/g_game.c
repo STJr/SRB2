@@ -4108,7 +4108,7 @@ void G_AfterIntermission(void)
 		&& stagefailed == false)
 	{
 		// Start a custom cutscene.
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
+		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false, false);
 	}
 	else
 	{
@@ -4958,7 +4958,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	imcontinuing = false;
 
 	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer);
+		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer, FLS);
 	else
 		G_DoLoadLevel(resetplayer);
 
