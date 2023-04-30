@@ -2861,6 +2861,8 @@ boolean P_CheckMove(mobj_t *thing, fixed_t x, fixed_t y, boolean allowdropoff)
 {
 	boolean moveok;
 	mobj_t *hack = P_SpawnMobjFromMobj(thing, 0, 0, 0, MT_RAY);
+	if (P_MobjWasRemoved(hack))
+		return false;
 
 	hack->radius = thing->radius;
 	hack->height = thing->height;
