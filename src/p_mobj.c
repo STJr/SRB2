@@ -6904,6 +6904,13 @@ static void P_AddOverlay(mobj_t *thing)
 static void P_RemoveOverlay(mobj_t *thing)
 {
 	mobj_t *mo;
+	if (overlaycap == thing)
+	{
+		P_SetTarget(&overlaycap, thing->hnext);
+		P_SetTarget(&thing->hnext, NULL);
+		return;
+	}
+
 	for (mo = overlaycap; mo; mo = mo->hnext)
 	{
 		if (mo->hnext != thing)
