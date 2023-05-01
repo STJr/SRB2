@@ -52,7 +52,7 @@ void F_EndingDrawer(void);
 void F_CreditTicker(void);
 void F_CreditDrawer(void);
 
-void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer);
+void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer, boolean FLS);
 void F_CutsceneDrawer(void);
 void F_EndCutScene(void);
 

@@ -337,7 +337,7 @@ static tic_t introscenetime[NUMINTROSCENES] =
 };
 
 // custom intros
-void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer);
+void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer, boolean FLS);
 
 void F_StartIntro(void)
 {
@@ -349,7 +349,7 @@ void F_StartIntro(void)
 		if (!cutscenes[introtoplay - 1])
 			D_StartTitle();
 		else
-			F_StartCustomCutscene(introtoplay - 1, false, false);
+			F_StartCustomCutscene(introtoplay - 1, false, false, false);
 		return;
 	}
 
@@ -1257,7 +1257,7 @@ void F_StartCredits(void)
 
 	if (creditscutscene)
 	{
-		F_StartCustomCutscene(creditscutscene - 1, false, false);
+		F_StartCustomCutscene(creditscutscene - 1, false, false, false);
 		return;
 	}
 
@@ -3859,7 +3859,7 @@ static INT32 scenenum, cutnum;
 static INT32 picxpos, picypos, picnum, pictime, picmode, numpics, pictoloop;
 static INT32 textxpos, textypos;
 static boolean cutsceneover = false;
-static boolean runningprecutscene = false, precutresetplayer = false;
+static boolean runningprecutscene = false, precutresetplayer = false, precutFLS = false;
 
 static void F_AdvanceToNextScene(void)
 {
@@ -3928,7 +3928,7 @@ void F_EndCutScene(void)
 	if (runningprecutscene)
 	{
 		if (server)
-			D_MapChange(gamemap, gametype, ultimatemode, precutresetplayer, 0, true, false);
+			D_MapChange(gamemap, gametype, ultimatemode, precutresetplayer, 0, true, precutFLS);
 	}
 	else
 	{
@@ -3943,7 +3943,7 @@ void F_EndCutScene(void)
 	}
 }
 
-void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer)
+void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean resetplayer, boolean FLS)
 {
 	if (!cutscenes[cutscenenum])
 		return;
@@ -3962,6 +3962,7 @@ void F_StartCustomCutscene(INT32 cutscenenum, boolean precutscene, boolean reset
 	cutsceneover = false;
 	runningprecutscene = precutscene;
 	precutresetplayer = resetplayer;
+	precutFLS = FLS;
 
 	scenenum = picnum = 0;
 	cutnum = cutscenenum;
