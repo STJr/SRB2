@@ -3765,6 +3765,9 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 	else
 		P_SetMobjState(target, target->info->painstate);
 
+	if (P_MobjWasRemoved(target))
+		return false;
+
 	if (target->type == MT_HIVEELEMENTAL)
 		target->extravalue1 += 3;
 
