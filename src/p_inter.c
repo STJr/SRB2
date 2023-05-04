@@ -3546,6 +3546,8 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		UINT8 shouldForce = LUA_HookShouldDamage(target, inflictor, source, damage, damagetype);
 		if (P_MobjWasRemoved(target))
 			return (shouldForce == 1); // mobj was removed
+		if (P_MobjWasRemoved(source))
+			source = NULL;
 		if (shouldForce == 1)
 			force = true;
 		else if (shouldForce == 2)
@@ -3762,6 +3764,9 @@ boolean P_DamageMobj(mobj_t *target, mobj_t *inflictor, mobj_t *source, INT32 da
 		P_SetMobjState(target, target->info->meleestate); // go to pinch pain state
 	else
 		P_SetMobjState(target, target->info->painstate);
+
+	if (P_MobjWasRemoved(target))
+		return false;
 
 	if (target->type == MT_HIVEELEMENTAL)
 		target->extravalue1 += 3;

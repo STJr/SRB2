@@ -1133,7 +1133,12 @@ void Y_Ticker(void)
 		}
 
 		// emerald bounce
-		if (intertic <= 1)
+		if (dedicated || !LUA_HudEnabled(hud_intermissionemeralds))
+		{
+			// dedicated servers don't need this, especially since it crashes when stagefailed
+			// also skip this if Lua disabled intermission emeralds, so it doesn't play sounds
+		}
+		else if (intertic <= 1)
 		{
 			data.spec.emeraldbounces = 0;
 			data.spec.emeraldmomy = 20;
