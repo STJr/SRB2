@@ -3589,14 +3589,14 @@ static int lib_gAddPlayer(lua_State *L)
 		char joinmsg[256];
 
 		// Truncate bot name
-		player_names[newplayernum][sizeof(*player_names) - 7] = '\0'; // The length of colored [BOT] + 1
+		player_names[newplayernum][sizeof(*player_names) - 8] = '\0'; // The length of colored [BOT] + 1
 
 		strcpy(joinmsg, M_GetText("\x82*Bot %s has joined the game (player %d)"));
 		strcpy(joinmsg, va(joinmsg, player_names[newplayernum], newplayernum));
 		HU_AddChatText(joinmsg, false);
 
 		// Append blue [BOT] tag at the end
-		strlcat(player_names[newplayernum], "\x84[BOT]", sizeof(*player_names));
+		strlcat(player_names[newplayernum], "\x84[BOT]\x80", sizeof(*player_names));
 	}
 
 	LUA_PushUserdata(L, newplayer, META_PLAYER);
