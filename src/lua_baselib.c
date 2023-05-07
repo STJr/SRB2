@@ -874,6 +874,7 @@ static int lib_pGetClosestAxis(lua_State *L)
 
 static int lib_pSpawnParaloop(lua_State *L)
 {
+	mobj_t *ptmthing = tmthing;
 	fixed_t x = luaL_checkfixed(L, 1);
 	fixed_t y = luaL_checkfixed(L, 2);
 	fixed_t z = luaL_checkfixed(L, 3);
@@ -890,6 +891,7 @@ static int lib_pSpawnParaloop(lua_State *L)
 	if (nstate >= NUMSTATES)
 		return luaL_error(L, "state %d out of range (0 - %d)", nstate, NUMSTATES-1);
 	P_SpawnParaloop(x, y, z, radius, number, type, nstate, rotangle, spawncenter);
+	P_SetTarget(&tmthing, ptmthing);
 	return 0;
 }
 
