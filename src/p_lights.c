@@ -353,8 +353,8 @@ void P_FadeLightBySector(sector_t *sector, INT32 destvalue, INT32 speed, boolean
 	else
 	{
 		// Speed means increment per tic (literally speed).
-		ll->timer = FixedDiv((destvalue<<FRACBITS) - ll->fixedcurlevel, speed<<FRACBITS)>>FRACBITS;
-		ll->fixedpertic = speed<<FRACBITS;
+		ll->timer = abs(FixedDiv((destvalue<<FRACBITS) - ll->fixedcurlevel, speed<<FRACBITS)>>FRACBITS);
+		ll->fixedpertic = ll->destlevel < ll->sourcelevel ? -speed<<FRACBITS : speed<<FRACBITS;
 	}
 }
 
