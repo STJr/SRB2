@@ -869,7 +869,7 @@ fixed_t P_GetWallTransferMomZ(mobj_t *mo, pslope_t *slope)
 	vector3_t slopemom, axis;
 	angle_t ang;
 
-	if (mo->standingslope->flags & SL_NOPHYSICS)
+	if (slope->flags & SL_NOPHYSICS)
 		return 0;
 
 	// If there's physics, time for launching.
