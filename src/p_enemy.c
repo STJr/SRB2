@@ -2231,7 +2231,7 @@ void A_CrushclawLaunch(mobj_t *actor)
 		}
 	}
 
-	if (!actor->target)
+	if (P_MobjWasRemoved(actor->target))
 		return;
 
 	{
