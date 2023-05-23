@@ -601,6 +601,7 @@ void I_GetConsoleEvents(void)
 	else
 	{
 		// push regular character
+		ev.type = ev_text;
 		ev.key = tty_con.buffer[tty_con.cursor] = key;
 		tty_con.cursor++;
 		// print the current line (this is differential)
