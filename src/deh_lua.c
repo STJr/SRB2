@@ -188,6 +188,9 @@ static inline int lib_freeslot(lua_State *L)
 		lua_remove(L, 1);
 		continue;
 	}
+
+	R_RefreshSprite2();
+
 	return r;
 }
 

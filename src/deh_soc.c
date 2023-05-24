@@ -513,6 +513,8 @@ void readfreeslots(MYFILE *f)
 	} while (!myfeof(f)); // finish when the line is empty
 
 	Z_Free(s);
+
+	R_RefreshSprite2();
 }
 
 void readthing(MYFILE *f, INT32 num)
