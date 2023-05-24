@@ -204,6 +204,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 	} else if (fastcmp(word,"modifiedgame")) {
 		lua_pushboolean(L, modifiedgame && !savemoddata);
 		return 1;
+	} else if (fastcmp(word,"usedCheats")) {
+		lua_pushboolean(L, usedCheats);
+		return 1;
 	} else if (fastcmp(word,"menuactive")) {
 		lua_pushboolean(L, menuactive);
 		return 1;

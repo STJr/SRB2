@@ -158,6 +158,7 @@ typedef struct
 
 	UINT8 gametype;
 	UINT8 modifiedgame;
+	UINT8 usedCheats;
 
 	char server_context[8]; // Unique context id, generated at server startup.
 } ATTRPACK serverconfig_pak;

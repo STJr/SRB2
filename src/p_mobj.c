@@ -12003,11 +12003,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		break;
 	case MT_EMBLEM:
 		if (netgame || multiplayer)
-			return false; // Single player
-
-		if (modifiedgame && !savemoddata)
-			return false; // No cheating!!
-
+			return false; // Single player (You're next on my shit list)
 		break;
 	default:
 		break;

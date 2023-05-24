@@ -200,9 +200,6 @@ UINT8 M_UpdateUnlockablesAndExtraEmblems(void)
 	char cechoText[992] = "";
 	UINT8 cechoLines = 0;
 
-	if (modifiedgame && !savemoddata)
-		return false;
-
 	M_CheckUnlockConditions();
 
 	// Go through extra emblems

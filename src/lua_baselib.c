@@ -3630,6 +3630,16 @@ static int lib_gRemovePlayer(lua_State *L)
 }
 
 
+static int lib_gSetUsedCheats(lua_State *L)
+{
+	// Let large-scale level packs using Lua be able to add cheat commands.
+	boolean silent = lua_optboolean(L, 1);
+	//NOHUD
+	//INLEVEL
+	G_SetUsedCheats(silent);
+	return 0;
+}
+
 static int Lcheckmapnumber (lua_State *L, int idx, const char *fun)
 {
 	if (ISINLEVEL)
@@ -4232,6 +4242,7 @@ static luaL_Reg lib[] = {
 	{"G_AddGametype", lib_gAddGametype},
 	{"G_AddPlayer", lib_gAddPlayer},
 	{"G_RemovePlayer", lib_gRemovePlayer},
+	{"G_SetUsedCheats", lib_gSetUsedCheats},
 	{"G_BuildMapName",lib_gBuildMapName},
 	{"G_BuildMapTitle",lib_gBuildMapTitle},
 	{"G_FindMap",lib_gFindMap},

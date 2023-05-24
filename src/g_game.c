@@ -96,6 +96,7 @@ SINT8 startinglivesbalance[maxgameovers+1] = {3, 5, 7, 9, 12, 15, 20, 25, 30, 40
 UINT16 mainwads = 0;
 boolean modifiedgame; // Set if homebrew PWAD stuff has been added.
 boolean savemoddata = false;
+boolean usedCheats = false; // Set when a gamedata-preventing cheat command is used.
 UINT8 paused;
 UINT8 modeattacking = ATTACKING_NONE;
 boolean disableSpeedAdjust = false;
@@ -755,7 +756,24 @@ void G_SetGameModified(boolean silent)
 	savemoddata = false;
 
 	if (!silent)
-		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to record statistics.\n"));
+		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to play Record Attack.\n"));
+
+	// If in record attack recording, cancel it.
+	if (modeattacking)
+		M_EndModeAttackRun();
+	else if (marathonmode)
+		Command_ExitGame_f();
+}
+
+void G_SetUsedCheats(boolean silent)
+{
+	if (usedCheats)
+		return;
+
+	usedCheats = true;
+
+	if (!silent)
+		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to save progress.\n"));
 
 	// If in record attack recording, cancel it.
 	if (modeattacking)
@@ -3842,8 +3860,7 @@ static void G_UpdateVisited(void)
 {
 	boolean spec = G_IsSpecialStage(gamemap);
 	// Update visitation flags?
-	if ((!modifiedgame || savemoddata) // Not modified
-		&& !multiplayer && !demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
+	if (!multiplayer && !demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
 		&& !stagefailed) // Did not fail the stage
 	{
 		UINT8 earnedEmblems;
@@ -3911,14 +3928,18 @@ static void G_HandleSaveLevel(void)
 					remove(liveeventbackup);
 				cursaveslot = 0;
 			}
-			else if ((!modifiedgame || savemoddata) && !(netgame || multiplayer || ultimatemode || demorecording || metalrecording || modeattacking))
+			else if (!usedCheats && !(netgame || multiplayer || ultimatemode || demorecording || metalrecording || modeattacking))
+			{
 				G_SaveGame((UINT32)cursaveslot, spstage_start);
+			}
 		}
 	}
 	// and doing THIS here means you don't lose your progress if you close the game mid-intermission
 	else if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
-		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(lastmap+1))
+		&& !usedCheats && cursaveslot > 0 && CanSaveLevel(lastmap+1))
+	{
 		G_SaveGame((UINT32)cursaveslot, lastmap+1); // not nextmap+1 to route around special stages
+	}
 }
 
 //
@@ -4194,8 +4215,10 @@ static void G_DoContinued(void)
 	tokenlist = 0;
 	token = 0;
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && (!modifiedgame || savemoddata) && cursaveslot > 0)
+	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && !usedCheats && cursaveslot > 0)
+	{
 		G_SaveGameOver((UINT32)cursaveslot, true);
+	}
 
 	// Reset # of lives
 	pl->lives = (ultimatemode) ? 1 : startinglivesbalance[numgameovers];
@@ -4260,13 +4283,17 @@ void G_LoadGameSettings(void)
 	S_InitRuntimeSounds();
 }
 
+#define GAMEDATA_ID 0x86E4A27C // Change every major version, as usual
+#define COMPAT_GAMEDATA_ID 0xFCAFE211 // Can be removed entirely for 2.3
+
 // G_LoadGameData
 // Loads the main data file, which stores information such as emblems found, etc.
 void G_LoadGameData(void)
 {
 	size_t length;
 	INT32 i, j;
-	UINT8 modded = false;
+
+	UINT32 versionID;
 	UINT8 rtemp;
 
 	//For records
@@ -4277,6 +4304,9 @@ void G_LoadGameData(void)
 	UINT8 recmares;
 	INT32 curmare;
 
+	// Stop saving, until we successfully load it again.
+	gamedataloaded = false;
+
 	// Clear things so previously read gamedata doesn't transfer
 	// to new gamedata
 	G_ClearRecords(); // main and nights records
@@ -4284,27 +4314,35 @@ void G_LoadGameData(void)
 	totalplaytime = 0; // total play time (separate from all)
 
 	if (M_CheckParm("-nodata"))
-		return; // Don't load.
-
-	// Allow saving of gamedata beyond this point
-	gamedataloaded = true;
-
-	if (M_CheckParm("-gamedata") && M_IsNextParm())
 	{
-		strlcpy(gamedatafilename, M_GetNextParm(), sizeof gamedatafilename);
+		// Don't load at all.
+		return;
 	}
 
 	if (M_CheckParm("-resetdata"))
-		return; // Don't load (essentially, reset).
+	{
+		// Don't load, but do save. (essentially, reset)
+		gamedataloaded = true;
+		return; 
+	}
 
 	length = FIL_ReadFile(va(pandf, srb2home, gamedatafilename), &savebuffer);
-	if (!length) // Aw, no game data. Their loss!
+	if (!length)
+	{
+		// No gamedata. We can save a new one.
+		gamedataloaded = true;
 		return;
+	}
 
 	save_p = savebuffer;
 
 	// Version check
-	if (READUINT32(save_p) != 0xFCAFE211)
+	versionID = READUINT32(save_p);
+	if (versionID != GAMEDATA_ID
+#ifdef COMPAT_GAMEDATA_ID // backwards compat behavior
+		&& versionID != COMPAT_GAMEDATA_ID
+#endif
+		)
 	{
 		const char *gdfolder = "the SRB2 folder";
 		if (strcmp(srb2home,"."))
@@ -4317,13 +4355,35 @@ void G_LoadGameData(void)
 
 	totalplaytime = READUINT32(save_p);
 
-	modded = READUINT8(save_p);
+#ifdef COMPAT_GAMEDATA_ID
+	if (versionID == COMPAT_GAMEDATA_ID)
+	{
+		// We'll temporarily use the old condition when loading an older file.
+		// The proper mod-specific hash will get saved in afterwards.
+		boolean modded = READUINT8(save_p);
 
-	// Aha! Someone's been screwing with the save file!
-	if ((modded && !savemoddata))
-		goto datacorrupt;
-	else if (modded != true && modded != false)
-		goto datacorrupt;
+		if (modded && !savemoddata)
+		{
+			goto datacorrupt;
+		}
+		else if (modded != true && modded != false)
+		{
+			goto datacorrupt;
+		}
+	}
+	else
+#endif
+	{
+		// Quick & dirty hash for what mod this save file is for.
+		UINT32 modID = READUINT32(save_p);
+		UINT32 expectedID = quickncasehash(timeattackfolder, sizeof timeattackfolder);
+
+		if (modID != expectedID)
+		{
+			// Aha! Someone's been screwing with the save file!
+			goto datacorrupt;
+		}
+	}
 
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
@@ -4409,6 +4469,12 @@ void G_LoadGameData(void)
 	Z_Free(savebuffer);
 	save_p = NULL;
 
+	// Don't consider loaded until it's a success!
+	// It used to do this much earlier, but this would cause the gamedata to
+	// save over itself when it I_Errors from the corruption landing point below,
+	// which can accidentally delete players' legitimate data if the code ever has any tiny mistakes!
+	gamedataloaded = true;
+
 	// Silent update unlockables in case they're out of sync with conditions
 	M_SilentUpdateUnlockablesAndEmblems();
 
@@ -4448,7 +4514,7 @@ void G_SaveGameData(void)
 		return;
 	}
 
-	if (modifiedgame && !savemoddata)
+	if (usedCheats)
 	{
 		free(savebuffer);
 		save_p = savebuffer = NULL;
@@ -4456,12 +4522,11 @@ void G_SaveGameData(void)
 	}
 
 	// Version test
-	WRITEUINT32(save_p, 0xFCAFE211);
+	WRITEUINT32(save_p, GAMEDATA_ID);
 
 	WRITEUINT32(save_p, totalplaytime);
 
-	btemp = (UINT8)(savemoddata || modifiedgame);
-	WRITEUINT8(save_p, btemp);
+	WRITEUINT32(save_p, quickncasehash(timeattackfolder, sizeof timeattackfolder));
 
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
