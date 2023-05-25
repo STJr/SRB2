@@ -5731,22 +5731,31 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 513: //Scroll ceiling texture
 		case 514: //Scroll ceiling texture (accelerative)
 		case 515: //Scroll ceiling texture (displacement)
+		case 516: //Scroll floor and ceiling texture
+		case 517: //Scroll floor and ceiling texture (accelerative)
+		case 518: //Scroll floor and ceiling texture (displacement)
 		case 520: //Carry objects on floor
 		case 521: //Carry objects on floor (accelerative)
 		case 522: //Carry objects on floor (displacement)
 		case 523: //Carry objects on ceiling
 		case 524: //Carry objects on ceiling (accelerative)
 		case 525: //Carry objects on ceiling (displacement)
+		case 526: //Carry objects on floor and ceiling
+		case 527: //Carry objects on floor and ceiling (accelerative)
+		case 528: //Carry objects on floor and ceiling (displacement)
 		case 530: //Scroll floor texture and carry objects
 		case 531: //Scroll floor texture and carry objects (accelerative)
 		case 532: //Scroll floor texture and carry objects (displacement)
 		case 533: //Scroll ceiling texture and carry objects
 		case 534: //Scroll ceiling texture and carry objects (accelerative)
 		case 535: //Scroll ceiling texture and carry objects (displacement)
+		case 536: //Scroll floor and ceiling texture and carry objects
+		case 537: //Scroll floor and ceiling texture and carry objects (accelerative)
+		case 538: //Scroll floor and ceiling texture and carry objects (displacement)
 			lines[i].args[0] = tag;
-			lines[i].args[1] = ((lines[i].special % 10) < 3) ? TMP_FLOOR : TMP_CEILING;
+			lines[i].args[1] = ((lines[i].special % 10) < 6) ? (((lines[i].special % 10) < 3) ? TMP_FLOOR : TMP_CEILING) : TMP_BOTH;
 			lines[i].args[2] = ((lines[i].special - 510)/10 + 1) % 3;
-			lines[i].args[3] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+			lines[i].args[3] = ((lines[i].flags & ML_EFFECT6) ? sides[lines[i].sidenum[0]].textureoffset : R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y)) >> FRACBITS;
 			lines[i].args[4] = (lines[i].special % 10) % 3;
 			if (lines[i].args[2] != TMS_SCROLLONLY && !(lines[i].flags & ML_NOCLIMB))
 				lines[i].args[4] |= TMST_NONEXCLUSIVE;
@@ -5777,17 +5786,19 @@ static void P_ConvertBinaryLinedefTypes(void)
 		case 544: //Current
 		case 545: //Upwards current
 		case 546: //Downwards current
+		{
+			fixed_t strength = (lines[i].flags & ML_EFFECT6) ? sides[lines[i].sidenum[0]].textureoffset : R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y);
 			lines[i].args[0] = tag;
 			switch ((lines[i].special - 541) % 3)
 			{
 				case 0:
-					lines[i].args[1] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+					lines[i].args[1] = strength >> FRACBITS;
 					break;
 				case 1:
-					lines[i].args[2] = R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+					lines[i].args[2] = strength >> FRACBITS;
 					break;
 				case 2:
-					lines[i].args[2] = -R_PointToDist2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y) >> FRACBITS;
+					lines[i].args[2] = -strength >> FRACBITS;
 					break;
 			}
 			lines[i].args[3] = (lines[i].special >= 544) ? p_current : p_wind;
@@ -5797,6 +5808,7 @@ static void P_ConvertBinaryLinedefTypes(void)
 				lines[i].args[4] |= TMPF_NONEXCLUSIVE;
 			lines[i].special = 541;
 			break;
+		}
 		case 600: //Floor lighting
 		case 601: //Ceiling lighting
 			lines[i].args[0] = tag;
@@ -6450,7 +6462,7 @@ static void P_ConvertBinaryThingTypes(void)
 			}
 
 			mapthings[i].args[0] = mapthings[i].angle;
-			mapthings[i].args[1] = P_AproxDistance(line->dx >> FRACBITS, line->dy >> FRACBITS);
+			mapthings[i].args[1] = (line->flags & ML_EFFECT6) ? sides[line->sidenum[0]].textureoffset >> FRACBITS : P_AproxDistance(line->dx >> FRACBITS, line->dy >> FRACBITS);
 			if (mapthings[i].type == 755)
 				mapthings[i].args[1] *= -1;
 			if (mapthings[i].options & MTF_OBJECTSPECIAL)
