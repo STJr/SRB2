@@ -5031,7 +5031,7 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			return;
 	}
 
-	dispoffset = thing->info->dispoffset;
+	dispoffset = thing->dispoffset;
 
 
 	if (R_UsingFrameInterpolation() && !paused)

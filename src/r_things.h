@@ -212,7 +212,7 @@ typedef struct vissprite_s
 
 	INT16 clipbot[MAXVIDWIDTH], cliptop[MAXVIDWIDTH];
 
-	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
+	INT32 dispoffset; // copy of mobj->dispoffset, affects ordering but not drawing
 } vissprite_t;
 
 extern UINT32 visspritecount;
