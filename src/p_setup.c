@@ -8146,7 +8146,7 @@ static boolean P_LoadAddon(UINT16 numlumps)
 		ST_Start();
 
 	// Prevent savefile cheating
-	if (cursaveslot > 0)
+	if (modifiedgame && (cursaveslot > 0))
 		cursaveslot = 0;
 
 	if (replacedcurrentmap && gamestate == GS_LEVEL && (netgame || multiplayer))
