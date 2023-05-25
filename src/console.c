@@ -61,7 +61,7 @@ static boolean con_started = false; // console has been initialised
 static boolean con_forcepic = true; // at startup toggle console translucency when first off
        boolean con_recalc;          // set true when screen size has changed
 
-static tic_t con_tick; // console ticker for anim or blinking prompt cursor
+static tic_t con_tick; // console ticker for blinking prompt cursor
                         // con_scrollup should use time (currenttime - lasttime)..
 
 static boolean consoletoggle; // true when console key pushed, ticker will handle
@@ -110,6 +110,7 @@ static void CON_RecalcSize(void);
 static void CON_ChangeHeight(void);
 
 static void CON_DrawBackpic(void);
+static void CONS_height_Change(void);
 static void CONS_hudlines_Change(void);
 static void CONS_backcolor_Change(void);
 
@@ -136,7 +137,7 @@ static CV_PossibleValue_t speed_cons_t[] = {{0, "MIN"}, {64, "MAX"}, {0, NULL}};
 static consvar_t cons_speed = CVAR_INIT ("con_speed", "8", CV_SAVE, speed_cons_t, NULL);
 
 // percentage of screen height to use for console
-static consvar_t cons_height = CVAR_INIT ("con_height", "50", CV_SAVE, CV_Unsigned, NULL);
+static consvar_t cons_height = CVAR_INIT ("con_height", "50", CV_CALL|CV_SAVE, CV_Unsigned, CONS_height_Change);
 
 static CV_PossibleValue_t backpic_cons_t[] = {{0, "translucent"}, {1, "picture"}, {0, NULL}};
 // whether to use console background picture, or translucent mode
@@ -155,6 +156,18 @@ static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 		{1, "Black"},		{
 consvar_t cons_backcolor = CVAR_INIT ("con_backcolor", "Green", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change);
 
 static void CON_Print(char *msg);
+
+// Change the console height on demand
+//
+static void CONS_height_Change(void)
+{
+	Lock_state();
+
+	if (con_destlines > 0 && !con_startup) // If the console is open (as in, not using "bind")...
+		CON_ChangeHeight(); // ...update its height now, not only when it's closed and re-opened
+
+	Unlock_state();
+}
 
 //
 //
@@ -643,32 +656,38 @@ static void CON_ChangeHeight(void)
 //
 static void CON_MoveConsole(void)
 {
-	fixed_t conspeed;
+	static fixed_t fracmovement = 0;
 
 	Lock_state();
-
-	conspeed = FixedDiv(cons_speed.value*vid.fdupy, FRACUNIT);
 
 	// instant
 	if (!cons_speed.value)
 	{
 		con_curlines = con_destlines;
+		Unlock_state();
 		return;
 	}
 
-	// up/down move to dest
-	if (con_curlines < con_destlines)
+	// Not instant - Increment fracmovement fractionally
+	fracmovement += FixedMul(cons_speed.value*vid.fdupy, renderdeltatics);
+
+	if (con_curlines < con_destlines) // Move the console downwards
 	{
-		con_curlines += FixedInt(conspeed);
-		if (con_curlines > con_destlines)
-			con_curlines = con_destlines;
+		con_curlines += FixedInt(fracmovement); // Move by fracmovement's integer value
+		if (con_curlines > con_destlines) // If we surpassed the destination...
+			con_curlines = con_destlines; // ...clamp to it!
 	}
-	else if (con_curlines > con_destlines)
+	else // Move the console upwards
 	{
-		con_curlines -= FixedInt(conspeed);
+		con_curlines -= FixedInt(fracmovement);
 		if (con_curlines < con_destlines)
 			con_curlines = con_destlines;
+
+		if (con_destlines == 0) // If the console is being closed, not just moved up...
+			con_tick = 0; // ...don't show the blinking cursor
 	}
+
+	fracmovement %= FRACUNIT; // Reset fracmovement's integer value, but keep the fraction
 
 	Unlock_state();
 }
@@ -751,10 +770,6 @@ void CON_Ticker(void)
 		else
 			CON_ChangeHeight();
 	}
-
-	// console movement
-	if (con_destlines != con_curlines)
-		CON_MoveConsole();
 
 	// clip the view, so that the part under the console is not drawn
 	con_clipviewtop = -1;
@@ -1809,41 +1824,41 @@ static void CON_DrawConsole(void)
 	}
 
 	// draw console text lines from top to bottom
-	if (con_curlines < minheight)
-		return;
-
-	i = con_cy - con_scrollup;
-
-	// skip the last empty line due to the cursor being at the start of a new line
-	i--;
-
-	i -= (con_curlines - minheight) / charheight;
-
-	if (rendermode == render_none) return;
-
-	for (y = (con_curlines-minheight) % charheight; y <= con_curlines-minheight; y += charheight, i++)
+	if (con_curlines >= minheight)
 	{
-		INT32 x;
-		size_t c;
+		i = con_cy - con_scrollup;
 
-		p = (UINT8 *)&con_buffer[((i > 0 ? i : 0)%con_totallines)*con_width];
+		// skip the last empty line due to the cursor being at the start of a new line
+		i--;
 
-		for (c = 0, x = charwidth; c < con_width; c++, x += charwidth, p++)
+		i -= (con_curlines - minheight) / charheight;
+
+		if (rendermode == render_none) return;
+
+		for (y = (con_curlines-minheight) % charheight; y <= con_curlines-minheight; y += charheight, i++)
 		{
-			while (*p & 0x80)
+			INT32 x;
+			size_t c;
+
+			p = (UINT8 *)&con_buffer[((i > 0 ? i : 0)%con_totallines)*con_width];
+
+			for (c = 0, x = charwidth; c < con_width; c++, x += charwidth, p++)
 			{
-				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
-				p++;
-				c++;
+				while (*p & 0x80)
+				{
+					charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
+					p++;
+					c++;
+				}
+				if (c >= con_width)
+					break;
+				V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 			}
-			if (c >= con_width)
-				break;
-			V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 		}
 	}
 
 	// draw prompt if enough place (not while game startup)
-	if ((con_curlines == con_destlines) && (con_curlines >= minheight) && !con_startup)
+	if ((con_curlines >= (minheight-charheight)) && !con_startup)
 		CON_DrawInput();
 }
 
@@ -1865,6 +1880,10 @@ void CON_Drawer(void)
 		if (con_curlines <= 0)
 			CON_ClearHUD();
 	}
+
+	// console movement
+	if (con_curlines != con_destlines)
+		CON_MoveConsole();
 
 	if (con_curlines > 0)
 		CON_DrawConsole();
