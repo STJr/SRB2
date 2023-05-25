@@ -9697,7 +9697,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		P_RingThinker(mobj);
 		if (mobj->flags2 & MF2_NIGHTSPULL)
 			P_NightsItemChase(mobj);
-		else
+		else if (mobj->type != MT_BOMBSPHERE) // prevent shields from attracting bomb spheres
 			A_AttractChase(mobj);
 		return false;
 		// Flung items
