@@ -8499,12 +8499,12 @@ void P_MovePlayer(player_t *player)
 		}
 	}
 
-	// End your chain if you're on the ground or climbing a wall.
+	// End your chain if you're on the ground while not rolling, or climbing a wall.
 	// But not if invincible! Allow for some crazy long chains with it.
 	// Also keep in mind the PF_JUMPED check.
 	// If we lacked this, stepping up while jumping up would reset score.
 	// (for instance, when climbing up off a wall.)
-	if ((onground || player->climbing) && !(player->pflags & PF_JUMPED) && player->powers[pw_invulnerability] <= 1)
+	if ((onground || player->climbing) && ((player->pflags & (PF_STARTDASH|PF_SPINNING)) != PF_SPINNING) && !(player->pflags & PF_JUMPED) && player->powers[pw_invulnerability] <= 1)
 		P_ResetScore(player);
 
 	// Show the "THOK!" graphic when spinning quickly across the ground. (even applies to non-spinners, in the case of zoom tubes)
