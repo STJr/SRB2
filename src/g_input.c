@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -744,31 +744,31 @@ void G_DefineDefaultControls(void)
 		gamecontroldefault[i][GC_CUSTOM1      ][1] = KEY_JOY1+1; // B
 		gamecontroldefault[i][GC_CUSTOM2      ][1] = KEY_JOY1+3; // Y
 		gamecontroldefault[i][GC_CUSTOM3      ][1] = KEY_JOY1+8; // Left Stick
-		gamecontroldefault[i][GC_CENTERVIEW   ][1] = KEY_JOY1+9; // Right Stick
-		gamecontroldefault[i][GC_WEAPONPREV   ][1] = KEY_JOY1+4; // LB
-		gamecontroldefault[i][GC_WEAPONNEXT   ][1] = KEY_JOY1+5; // RB
+		gamecontroldefault[i][GC_CAMTOGGLE    ][1] = KEY_JOY1+4; // LB
+		gamecontroldefault[i][GC_CENTERVIEW   ][1] = KEY_JOY1+5; // RB
 		gamecontroldefault[i][GC_SCREENSHOT   ][1] = KEY_JOY1+6; // Back
 		gamecontroldefault[i][GC_SYSTEMMENU   ][0] = KEY_JOY1+7; // Start
-		gamecontroldefault[i][GC_CAMTOGGLE    ][1] = KEY_HAT1+0; // D-Pad Up
-		gamecontroldefault[i][GC_VIEWPOINTNEXT][1] = KEY_HAT1+1; // D-Pad Down
-		gamecontroldefault[i][GC_TOSSFLAG     ][1] = KEY_HAT1+2; // D-Pad Left
-		gamecontroldefault[i][GC_SCORES       ][1] = KEY_HAT1+3; // D-Pad Right
+		gamecontroldefault[i][GC_WEAPONPREV   ][1] = KEY_HAT1+2; // D-Pad Left
+		gamecontroldefault[i][GC_WEAPONNEXT   ][1] = KEY_HAT1+3; // D-Pad Right
+		gamecontroldefault[i][GC_VIEWPOINTNEXT][1] = KEY_JOY1+9; // Right Stick
+		gamecontroldefault[i][GC_TOSSFLAG     ][1] = KEY_HAT1+0; // D-Pad Up
+		gamecontroldefault[i][GC_SCORES       ][1] = KEY_HAT1+1; // D-Pad Down
 
 		// Second player controls only have joypad defaults
-		gamecontrolbisdefault[i][GC_JUMP        ][1] = KEY_2JOY1+0; // A
-		gamecontrolbisdefault[i][GC_SPIN        ][1] = KEY_2JOY1+2; // X
-		gamecontrolbisdefault[i][GC_CUSTOM1     ][1] = KEY_2JOY1+1; // B
-		gamecontrolbisdefault[i][GC_CUSTOM2     ][1] = KEY_2JOY1+3; // Y
-		gamecontrolbisdefault[i][GC_CUSTOM3     ][1] = KEY_2JOY1+8; // Left Stick
-		gamecontrolbisdefault[i][GC_CENTERVIEW  ][1] = KEY_2JOY1+9; // Right Stick
-		gamecontrolbisdefault[i][GC_WEAPONPREV  ][1] = KEY_2JOY1+4; // LB
-		gamecontrolbisdefault[i][GC_WEAPONNEXT  ][1] = KEY_2JOY1+5; // RB
-		gamecontrolbisdefault[i][GC_SCREENSHOT  ][1] = KEY_2JOY1+6; // Back
+		gamecontrolbisdefault[i][GC_JUMP         ][1] = KEY_2JOY1+0; // A
+		gamecontrolbisdefault[i][GC_SPIN         ][1] = KEY_2JOY1+2; // X
+		gamecontrolbisdefault[i][GC_CUSTOM1      ][1] = KEY_2JOY1+1; // B
+		gamecontrolbisdefault[i][GC_CUSTOM2      ][1] = KEY_2JOY1+3; // Y
+		gamecontrolbisdefault[i][GC_CUSTOM3      ][1] = KEY_2JOY1+8; // Left Stick
+		gamecontrolbisdefault[i][GC_CAMTOGGLE    ][1] = KEY_2JOY1+4; // LB
+		gamecontrolbisdefault[i][GC_CENTERVIEW   ][1] = KEY_2JOY1+5; // RB
+		gamecontrolbisdefault[i][GC_SCREENSHOT   ][1] = KEY_2JOY1+6; // Back
 		//gamecontrolbisdefault[i][GC_SYSTEMMENU   ][0] = KEY_2JOY1+7; // Start
-		gamecontrolbisdefault[i][GC_CAMTOGGLE    ][1] = KEY_2HAT1+0; // D-Pad Up
-		gamecontrolbisdefault[i][GC_VIEWPOINTNEXT][1] = KEY_2HAT1+1; // D-Pad Down
-		gamecontrolbisdefault[i][GC_TOSSFLAG     ][1] = KEY_2HAT1+2; // D-Pad Left
-		//gamecontrolbisdefault[i][GC_SCORES       ][1] = KEY_2HAT1+3; // D-Pad Right
+		gamecontrolbisdefault[i][GC_WEAPONPREV   ][1] = KEY_2HAT1+2; // D-Pad Left
+		gamecontrolbisdefault[i][GC_WEAPONNEXT   ][1] = KEY_2HAT1+3; // D-Pad Right
+		gamecontrolbisdefault[i][GC_VIEWPOINTNEXT][1] = KEY_2JOY1+9; // Right Stick
+		gamecontrolbisdefault[i][GC_TOSSFLAG     ][1] = KEY_2HAT1+0; // D-Pad Up
+		//gamecontrolbisdefault[i][GC_SCORES       ][1] = KEY_2HAT1+1; // D-Pad Down
 	}
 }
 
@@ -993,7 +993,7 @@ static void setcontrol(INT32 (*gc)[2])
 {
 	INT32 numctrl;
 	const char *namectrl;
-	INT32 keynum, keynum1, keynum2;
+	INT32 keynum, keynum1, keynum2 = 0;
 	INT32 player = ((void*)gc == (void*)&gamecontrolbis ? 1 : 0);
 	boolean nestedoverride = false;
 
@@ -1009,7 +1009,8 @@ static void setcontrol(INT32 (*gc)[2])
 		return;
 	}
 	keynum1 = G_KeyNameToNum(COM_Argv(2));
-	keynum2 = G_KeyNameToNum(COM_Argv(3));
+	if (COM_Argc() > 3)
+		keynum2 = G_KeyNameToNum(COM_Argv(3));
 	keynum = G_FilterKeyByVersion(numctrl, 0, player, &keynum1, &keynum2, &nestedoverride);
 
 	if (keynum >= 0)

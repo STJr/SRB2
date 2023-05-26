@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1571,6 +1571,7 @@ typedef enum
 	MD2_SPRITEXOFFSET = 1<<20,
 	MD2_SPRITEYOFFSET = 1<<21,
 	MD2_FLOORSPRITESLOPE = 1<<22,
+	MD2_DISPOFFSET = 1<<23
 } mobj_diff2_t;
 
 typedef enum
@@ -1805,6 +1806,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		|| (slope->normal.z != FRACUNIT))
 			diff2 |= MD2_FLOORSPRITESLOPE;
 	}
+	if (mobj->dispoffset != mobj->info->dispoffset)
+		diff2 |= MD2_DISPOFFSET;
 
 	if (diff2 != 0)
 		diff |= MD_MORE;
@@ -1980,6 +1983,8 @@ static void SaveMobjThinker(const thinker_t *th, const UINT8 type)
 		WRITEFIXED(save_p, slope->normal.y);
 		WRITEFIXED(save_p, slope->normal.z);
 	}
+	if (diff2 & MD2_DISPOFFSET)
+		WRITEINT32(save_p, mobj->dispoffset);
 
 	WRITEUINT32(save_p, mobj->mobjnum);
 }
@@ -3034,6 +3039,10 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		slope->normal.y = READFIXED(save_p);
 		slope->normal.z = READFIXED(save_p);
 	}
+	if (diff2 & MD2_DISPOFFSET)
+		mobj->dispoffset = READINT32(save_p);
+	else
+		mobj->dispoffset = mobj->info->dispoffset;
 
 	if (diff & MD_REDFLAG)
 	{

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1760,13 +1760,11 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 	{
 		if (caller->triggerer == TO_PLAYEREMERALDS)
 		{
-			CONS_Alert(CONS_WARNING, M_GetText("Deprecated emerald check sector type detected. Please use linedef types 337-339 instead.\n"));
 			if (!(ALL7EMERALDS(emeralds)))
 				return false;
 		}
 		else if (caller->triggerer == TO_PLAYERNIGHTS)
 		{
-			CONS_Alert(CONS_WARNING, M_GetText("Deprecated NiGHTS mare sector type detected. Please use linedef types 340-342 instead.\n"));
 			if (!P_CheckPlayerMareOld(triggerline))
 				return false;
 		}
@@ -1797,7 +1795,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // Unlockable triggers required
 				INT32 trigid = triggerline->args[1];
 
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+				if (netgame || multiplayer)
 					return false;
 				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
 				{
@@ -1812,7 +1810,7 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			{ // An unlockable itself must be unlocked!
 				INT32 unlockid = triggerline->args[1];
 
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
+				if (netgame || multiplayer)
 					return false;
 				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
 				{
@@ -2788,6 +2786,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				mo->flags2 &= ~MF2_OBJECTFLIP;
 			else
 				mo->flags2 |= MF2_OBJECTFLIP;
+			if (line->args[2])
+				mo->eflags |= MFE_VERTICALFLIP;
 			if (bot)
 				bot->flags2 = (bot->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP);
 			break;
@@ -2937,7 +2937,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 441: // Trigger unlockable
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
+			if (!(netgame || multiplayer))
 			{
 				INT32 trigid = line->args[0];
 
@@ -4180,6 +4180,29 @@ sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number)
 	return NULL;
 }
 
+// Deprecated in favor of P_MobjTouchingSectorSpecial
+// Kept for Lua backwards compatibility only
+sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
+{
+	ffloor_t *rover;
+
+	for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
+	{
+		if (!rover->master->frontsector->special)
+			continue;
+
+		if (!(rover->fofflags & FOF_EXISTS))
+			continue;
+
+		if (!P_IsMobjTouching3DFloor(mo, rover, mo->subsector->sector))
+			continue;
+
+		return rover->master->frontsector;
+	}
+
+	return NULL;
+}
+
 sector_t *P_MobjTouchingSectorSpecialFlag(mobj_t *mo, sectorspecialflags_t flag)
 {
 	msecnode_t *node;
@@ -4375,7 +4398,7 @@ sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
 			return loopsector;
 	}
 
-	return false;
+	return NULL;
 }
 
 boolean P_IsPlayerValid(size_t playernum)
@@ -4579,6 +4602,9 @@ static void P_ProcessExitSector(player_t *player, mtag_t sectag)
 	if (player->bot)
 		return;
 
+	if (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))
+		return;
+
 	// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
 	P_DoPlayerFinish(player);
 
@@ -4627,7 +4653,7 @@ static void P_ProcessTeamBase(player_t *player, boolean redteam)
 
 	// Make sure the team still has their own
 	// flag at their base so they can score.
-	if (!P_IsFlagAtBase(redteam ? MT_BLUEFLAG : MT_REDFLAG))
+	if (!P_IsFlagAtBase(redteam ? MT_REDFLAG : MT_BLUEFLAG))
 		return;
 
 	HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
@@ -5944,8 +5970,6 @@ static inline void P_AddCameraScanner(sector_t *sourcesec, sector_t *actionsecto
 {
 	elevator_t *elevator; // Why not? LOL
 
-	CONS_Alert(CONS_WARNING, M_GetText("Detected a camera scanner effect (linedef type 5). This effect is deprecated and will be removed in the future!\n"));
-
 	// create and initialize new elevator thinker
 	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
 	P_AddThinker(THINK_MAIN, &elevator->thinker);
@@ -6200,22 +6224,21 @@ void P_SpawnSpecials(boolean fromnetsave)
 				circuitmap = true;
 		}
 
-		if (!sector->special)
+		if (sector->damagetype == SD_SPIKE) {
+			//Terrible hack to replace an even worse hack:
+			//Spike damage automatically sets MSF_TRIGGERSPECIAL_TOUCH.
+			//Yes, this also affects other specials on the same sector. Sorry.
+			sector->flags |= MSF_TRIGGERSPECIAL_TOUCH;
+		}
+
+		// Process deprecated binary sector specials
+		if (udmf || !sector->special)
 			continue;
 
 		// Process Section 1
 		switch(GETSECSPECIAL(sector->special, 1))
 		{
-			case 5: // Spikes
-				//Terrible hack to replace an even worse hack:
-				//Spike damage automatically sets MSF_TRIGGERSPECIAL_TOUCH.
-				//Yes, this also affects other specials on the same sector. Sorry.
-				sector->flags |= MSF_TRIGGERSPECIAL_TOUCH;
-				break;
 			case 15: // Bouncy FOF
-				if (udmf)
-					break;
-				CONS_Alert(CONS_WARNING, M_GetText("Deprecated bouncy FOF sector type detected. Please use linedef type 76 instead.\n"));
 				CheckForBouncySector = true;
 				break;
 		}
@@ -6224,17 +6247,11 @@ void P_SpawnSpecials(boolean fromnetsave)
 		switch(GETSECSPECIAL(sector->special, 2))
 		{
 			case 10: // Time for special stage
-				if (udmf)
-					break;
-				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for special stage requirements detected. Please use the SpecialStageTime and SpecialStageSpheres level header options instead.\n"));
 				sstimer = (sector->floorheight>>FRACBITS) * TICRATE + 6; // Time to finish
 				ssspheres = sector->ceilingheight>>FRACBITS; // Ring count for special stage
 				break;
 
 			case 11: // Custom global gravity!
-				if (udmf)
-					break;
-				CONS_Alert(CONS_WARNING, M_GetText("Deprecated sector type for global gravity detected. Please use the Gravity level header option instead.\n"));
 				gravity = sector->floorheight/1000;
 				break;
 		}

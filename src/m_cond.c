@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by Matthew "Kaito Sinclaire" Walsh.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -199,9 +199,6 @@ UINT8 M_UpdateUnlockablesAndExtraEmblems(void)
 	INT32 i;
 	char cechoText[992] = "";
 	UINT8 cechoLines = 0;
-
-	if (modifiedgame && !savemoddata)
-		return false;
 
 	M_CheckUnlockConditions();
 
