@@ -35,7 +35,7 @@ static CV_PossibleValue_t renderhitbox_cons_t[] = {
 	{0}};
 
 consvar_t cv_renderhitbox = CVAR_INIT ("renderhitbox", "Off", 0, renderhitbox_cons_t, NULL);
-consvar_t cv_renderhitboxinterpolation = CVAR_INIT ("renderhitbox_interpolation", "On", 0, CV_OnOff, NULL);
+consvar_t cv_renderhitboxinterpolation = CVAR_INIT ("renderhitbox_interpolation", "On", CV_SAVE, CV_OnOff, NULL);
 
 struct bbox_col {
 	INT32 x;
