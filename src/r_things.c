@@ -1437,10 +1437,11 @@ static void R_ProjectBoundingBox(mobj_t *thing, vissprite_t *vis)
 	}
 
 	// uncapped/interpolation
+	boolean interpolate = cv_renderhitboxinterpolation.value;
 	interpmobjstate_t interp = {0};
 
 	// do interpolation
-	if (R_UsingFrameInterpolation() && !paused)
+	if (R_UsingFrameInterpolation() && !paused && interpolate)
 	{
 		R_InterpolateMobjState(thing, rendertimefrac, &interp);
 	}

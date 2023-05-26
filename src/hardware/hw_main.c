@@ -5687,9 +5687,10 @@ static void HWR_ProjectBoundingBox(mobj_t *thing)
 		return;
 
 	// uncapped/interpolation
+	boolean interpolate = cv_renderhitboxinterpolation.value;
 	interpmobjstate_t interp = {0};
 
-	if (R_UsingFrameInterpolation() && !paused)
+	if (R_UsingFrameInterpolation() && !paused && interpolate)
 	{
 		R_InterpolateMobjState(thing, rendertimefrac, &interp);
 	}
