@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3429,10 +3429,10 @@ state_t states[NUMSTATES] =
 	{SPR_LCKN, 2|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_LOCKONINF3
 	{SPR_LCKN, 3|FF_FULLBRIGHT, -1, {NULL}, 0, 0, S_NULL}, // S_LOCKONINF4
 
-	{SPR_TTAG, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_TTAG
+	{SPR_TTAG, FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_NULL}, // S_TTAG
 
 	// CTF Sign
-	{SPR_GFLG, FF_FULLBRIGHT, 2, {NULL}, 0, 0, S_NULL}, // S_GOTFLAG
+	{SPR_GFLG, FF_FULLBRIGHT, 1, {NULL}, 0, 0, S_NULL}, // S_GOTFLAG
 
 	// Finish flag
 	{SPR_FNSF,    FF_TRANS30, -1, {NULL}, 0, 0, S_NULL}, // S_FINISHFLAG

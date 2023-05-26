@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -328,10 +328,10 @@ void HU_LoadGraphics(void)
 void HU_Init(void)
 {
 #ifndef NONET
-	COM_AddCommand("say", Command_Say_f);
-	COM_AddCommand("sayto", Command_Sayto_f);
-	COM_AddCommand("sayteam", Command_Sayteam_f);
-	COM_AddCommand("csay", Command_CSay_f);
+	COM_AddCommand("say", Command_Say_f, COM_LUA);
+	COM_AddCommand("sayto", Command_Sayto_f, COM_LUA);
+	COM_AddCommand("sayteam", Command_Sayteam_f, COM_LUA);
+	COM_AddCommand("csay", Command_CSay_f, COM_LUA);
 	RegisterNetXCmd(XD_SAY, Got_Saycmd);
 #endif
 
@@ -2994,7 +2994,7 @@ static void HU_DrawCoopOverlay(void)
 		V_DrawSmallScaledPatch(148, 172, 0, tokenicon);
 	}
 
-	if (LUA_HudEnabled(hud_tabemblems) && (!modifiedgame || savemoddata))
+	if (LUA_HudEnabled(hud_tabemblems))
 	{
 		V_DrawString(160, 144, 0, va("- %d/%d", M_CountEmblems(), numemblems+numextraemblems));
 		V_DrawScaledPatch(128, 144 - emblemicon->height/4, 0, emblemicon);

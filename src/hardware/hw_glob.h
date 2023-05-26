@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -89,7 +89,7 @@ typedef struct gl_vissprite_s
 
 	//Hurdler: 25/04/2000: now support colormap in hardware mode
 	UINT8 *colormap;
-	INT32 dispoffset; // copy of info->dispoffset, affects ordering but not drawing
+	INT32 dispoffset; // copy of mobj->dispoffset, affects ordering but not drawing
 
 	patch_t *gpatch;
 	mobj_t *mobj; // NOTE: This is a precipmobj_t if precip is true !!! Watch out.

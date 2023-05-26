@@ -1,9 +1,8 @@
-
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -3108,14 +3107,25 @@ static void P_DoPlayerHeadSigns(player_t *player)
 	if (G_TagGametype())
 	{
 		// If you're "IT", show a big "IT" over your head for others to see.
-		if (player->pflags & PF_TAGIT)
+		if (player->pflags & PF_TAGIT && !P_IsLocalPlayer(player))
 		{
-			if (!P_IsLocalPlayer(player)) // Don't display it on your own view.
+			mobj_t* it = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_TAG);
+			it->x = player->mo->x;
+			it->y = player->mo->y;
+			it->z = player->mo->z;
+			it->old_x = player->mo->old_x;
+			it->old_y = player->mo->old_y;
+			it->old_z = player->mo->old_z;
+
+			if (!(player->mo->eflags & MFE_VERTICALFLIP))
 			{
-				if (!(player->mo->eflags & MFE_VERTICALFLIP))
-					P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z + player->mo->height, MT_TAG);
-				else
-					P_SpawnMobj(player->mo->x, player->mo->y, player->mo->z - mobjinfo[MT_TAG].height, MT_TAG)->eflags |= MFE_VERTICALFLIP;
+				it->z += player->mo->height;
+				it->old_z += player->mo->height;
+			}
+			else
+			{
+				it->z -= mobjinfo[MT_TAG].height;
+				it->old_z -= mobjinfo[MT_TAG].height;
 			}
 		}
 	}
@@ -3125,15 +3135,32 @@ static void P_DoPlayerHeadSigns(player_t *player)
 		// has it (but not on your own screen if you have the flag).
 		if (splitscreen || player != &players[consoleplayer])
 		{
-			mobj_t *sign = P_SpawnMobj(player->mo->x+player->mo->momx, player->mo->y+player->mo->momy,
-					player->mo->z+player->mo->momz, MT_GOTFLAG);
-			if (player->mo->eflags & MFE_VERTICALFLIP)
+			fixed_t zofs;
+			mobj_t *sign;
+			boolean player_is_flipped = (player->mo->eflags & MFE_VERTICALFLIP) > 0;
+
+			zofs = player->mo->momz;
+			if (player_is_flipped)
 			{
-				sign->z += player->mo->height-P_GetPlayerHeight(player)-mobjinfo[MT_GOTFLAG].height-FixedMul(16*FRACUNIT, player->mo->scale);
-				sign->eflags |= MFE_VERTICALFLIP;
+				zofs += player->mo->height - P_GetPlayerHeight(player) - mobjinfo[MT_GOTFLAG].height - FixedMul(16 * FRACUNIT, player->mo->scale);
 			}
 			else
-				sign->z += P_GetPlayerHeight(player)+FixedMul(16*FRACUNIT, player->mo->scale);
+			{
+				zofs += P_GetPlayerHeight(player) + FixedMul(16 * FRACUNIT, player->mo->scale);
+			}
+
+			sign = P_SpawnMobjFromMobj(player->mo, 0, 0, 0, MT_GOTFLAG);
+			sign->x = player->mo->x;
+			sign->y = player->mo->y;
+			sign->z = player->mo->z + zofs;
+			sign->old_x = player->mo->old_x;
+			sign->old_y = player->mo->old_y;
+			sign->old_z = player->mo->old_z + zofs;
+
+			if (player_is_flipped)
+			{
+				sign->eflags |= MFE_VERTICALFLIP;
+			}
 
 			if (player->gotflag & GF_REDFLAG)
 				sign->frame = 1|FF_FULLBRIGHT;
@@ -8472,12 +8499,12 @@ void P_MovePlayer(player_t *player)
 		}
 	}
 
-	// End your chain if you're on the ground or climbing a wall.
+	// End your chain if you're on the ground while not rolling, or climbing a wall.
 	// But not if invincible! Allow for some crazy long chains with it.
 	// Also keep in mind the PF_JUMPED check.
 	// If we lacked this, stepping up while jumping up would reset score.
 	// (for instance, when climbing up off a wall.)
-	if ((onground || player->climbing) && !(player->pflags & PF_JUMPED) && player->powers[pw_invulnerability] <= 1)
+	if ((onground || player->climbing) && ((player->pflags & (PF_STARTDASH|PF_SPINNING)) != PF_SPINNING) && !(player->pflags & PF_JUMPED) && player->powers[pw_invulnerability] <= 1)
 		P_ResetScore(player);
 
 	// Show the "THOK!" graphic when spinning quickly across the ground. (even applies to non-spinners, in the case of zoom tubes)
@@ -9620,45 +9647,45 @@ static CV_PossibleValue_t rotation_cons_t[] = {{1, "MIN"}, {25, "MAX"}, {0, NULL
 static CV_PossibleValue_t CV_CamRotate[] = {{-720, "MIN"}, {720, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t multiplier_cons_t[] = {{0, "MIN"}, {3*FRACUNIT, "MAX"}, {0, NULL}};
 
-consvar_t cv_cam_dist = CVAR_INIT ("cam_curdist", "160", CV_FLOAT, NULL, NULL);
-consvar_t cv_cam_height = CVAR_INIT ("cam_curheight", "25", CV_FLOAT, NULL, NULL);
-consvar_t cv_cam_still = CVAR_INIT ("cam_still", "Off", 0, CV_OnOff, NULL);
-consvar_t cv_cam_speed = CVAR_INIT ("cam_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL);
-consvar_t cv_cam_rotate = CVAR_INIT ("cam_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate_OnChange);
-consvar_t cv_cam_rotspeed = CVAR_INIT ("cam_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL);
-consvar_t cv_cam_turnmultiplier = CVAR_INIT ("cam_turnmultiplier", "0.75", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL);
-consvar_t cv_cam_orbit = CVAR_INIT ("cam_orbit", "Off", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_cam_adjust = CVAR_INIT ("cam_adjust", "On", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_cam2_dist = CVAR_INIT ("cam2_curdist", "160", CV_FLOAT, NULL, NULL);
-consvar_t cv_cam2_height = CVAR_INIT ("cam2_curheight", "25", CV_FLOAT, NULL, NULL);
-consvar_t cv_cam2_still = CVAR_INIT ("cam2_still", "Off", 0, CV_OnOff, NULL);
-consvar_t cv_cam2_speed = CVAR_INIT ("cam2_speed", "0.3", CV_FLOAT|CV_SAVE, CV_CamSpeed, NULL);
-consvar_t cv_cam2_rotate = CVAR_INIT ("cam2_rotate", "0", CV_CALL|CV_NOINIT, CV_CamRotate, CV_CamRotate2_OnChange);
-consvar_t cv_cam2_rotspeed = CVAR_INIT ("cam2_rotspeed", "10", CV_SAVE, rotation_cons_t, NULL);
-consvar_t cv_cam2_turnmultiplier = CVAR_INIT ("cam2_turnmultiplier", "0.75", CV_FLOAT|CV_SAVE, multiplier_cons_t, NULL);
-consvar_t cv_cam2_orbit = CVAR_INIT ("cam2_orbit", "Off", CV_SAVE, CV_OnOff, NULL);
-consvar_t cv_cam2_adjust = CVAR_INIT ("cam2_adjust", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_cam_dist = CVAR_INIT ("cam_curdist", "160", CV_FLOAT|CV_ALLOWLUA, NULL, NULL);
+consvar_t cv_cam_height = CVAR_INIT ("cam_curheight", "25", CV_FLOAT|CV_ALLOWLUA, NULL, NULL);
+consvar_t cv_cam_still = CVAR_INIT ("cam_still", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_cam_speed = CVAR_INIT ("cam_speed", "0.3", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, CV_CamSpeed, NULL);
+consvar_t cv_cam_rotate = CVAR_INIT ("cam_rotate", "0", CV_CALL|CV_NOINIT|CV_ALLOWLUA, CV_CamRotate, CV_CamRotate_OnChange);
+consvar_t cv_cam_rotspeed = CVAR_INIT ("cam_rotspeed", "10", CV_SAVE|CV_ALLOWLUA, rotation_cons_t, NULL);
+consvar_t cv_cam_turnmultiplier = CVAR_INIT ("cam_turnmultiplier", "0.75", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, multiplier_cons_t, NULL);
+consvar_t cv_cam_orbit = CVAR_INIT ("cam_orbit", "Off", CV_SAVE|CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_cam_adjust = CVAR_INIT ("cam_adjust", "On", CV_SAVE|CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_cam2_dist = CVAR_INIT ("cam2_curdist", "160", CV_FLOAT|CV_ALLOWLUA, NULL, NULL);
+consvar_t cv_cam2_height = CVAR_INIT ("cam2_curheight", "25", CV_FLOAT|CV_ALLOWLUA, NULL, NULL);
+consvar_t cv_cam2_still = CVAR_INIT ("cam2_still", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_cam2_speed = CVAR_INIT ("cam2_speed", "0.3", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, CV_CamSpeed, NULL);
+consvar_t cv_cam2_rotate = CVAR_INIT ("cam2_rotate", "0", CV_CALL|CV_NOINIT|CV_ALLOWLUA, CV_CamRotate, CV_CamRotate2_OnChange);
+consvar_t cv_cam2_rotspeed = CVAR_INIT ("cam2_rotspeed", "10", CV_SAVE|CV_ALLOWLUA, rotation_cons_t, NULL);
+consvar_t cv_cam2_turnmultiplier = CVAR_INIT ("cam2_turnmultiplier", "0.75", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, multiplier_cons_t, NULL);
+consvar_t cv_cam2_orbit = CVAR_INIT ("cam2_orbit", "Off", CV_SAVE|CV_ALLOWLUA, CV_OnOff, NULL);
+consvar_t cv_cam2_adjust = CVAR_INIT ("cam2_adjust", "On", CV_SAVE|CV_ALLOWLUA, CV_OnOff, NULL);
 
 // [standard vs simple][p1 or p2]
 consvar_t cv_cam_savedist[2][2] = {
 	{ // standard
-		CVAR_INIT ("cam_dist", "192", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
-		CVAR_INIT ("cam2_dist", "192", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
+		CVAR_INIT ("cam_dist", "192", CV_FLOAT|CV_SAVE|CV_CALL|CV_ALLOWLUA, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_dist", "192", CV_FLOAT|CV_SAVE|CV_CALL|CV_ALLOWLUA, NULL, CV_UpdateCam2Dist),
 	},
 	{ // simple
-		CVAR_INIT ("cam_simpledist", "256", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
-		CVAR_INIT ("cam2_simpledist", "256", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
+		CVAR_INIT ("cam_simpledist", "256", CV_FLOAT|CV_SAVE|CV_CALL|CV_ALLOWLUA, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_simpledist", "256", CV_FLOAT|CV_SAVE|CV_CALL|CV_ALLOWLUA, NULL, CV_UpdateCam2Dist),
 
 	}
 };
 consvar_t cv_cam_saveheight[2][2] = {
 	{ // standard
-		CVAR_INIT ("cam_height", "40", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
-		CVAR_INIT ("cam2_height", "40", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
+		CVAR_INIT ("cam_height", "40", CV_FLOAT|CV_SAVE|CV_CALL|CV_ALLOWLUA, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_height", "40", CV_FLOAT|CV_SAVE|CV_CALL|CV_ALLOWLUA, NULL, CV_UpdateCam2Dist),
 	},
 	{ // simple
-		CVAR_INIT ("cam_simpleheight", "60", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCamDist),
-		CVAR_INIT ("cam2_simpleheight", "60", CV_FLOAT|CV_SAVE|CV_CALL, NULL, CV_UpdateCam2Dist),
+		CVAR_INIT ("cam_simpleheight", "60", CV_FLOAT|CV_SAVE|CV_CALL|CV_ALLOWLUA, NULL, CV_UpdateCamDist),
+		CVAR_INIT ("cam2_simpleheight", "60", CV_FLOAT|CV_SAVE|CV_CALL|CV_ALLOWLUA, NULL, CV_UpdateCam2Dist),
 
 	}
 };
@@ -11281,6 +11308,11 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 	tails->y = player->mo->y + P_ReturnThrustY(tails, tails->angle, FixedMul(backwards, tails->scale));
 	tails->z = player->mo->z + zoffs;
 	P_SetThingPosition(tails);
+	
+	if (player->mo->flags2 & MF2_SHADOW)
+		tails->flags2 |= MF2_SHADOW;
+	else
+		tails->flags2 &= ~MF2_SHADOW;
 }
 
 // Metal Sonic's jet fume
@@ -12028,7 +12060,6 @@ void P_PlayerThink(player_t *player)
 	P_DoBubbleBreath(player); // Spawn Sonic's bubbles
 	P_CheckUnderwaterAndSpaceTimer(player); // Display the countdown drown numbers!
 	P_CheckInvincibilityTimer(player); // Spawn Invincibility Sparkles
-	P_DoPlayerHeadSigns(player); // Spawn Tag/CTF signs over player's head
 
 #if 1
 	// "Blur" a bit when you have speed shoes and are going fast enough
@@ -12777,7 +12808,7 @@ void P_PlayerAfterThink(player_t *player)
 					P_KillMobj(ptera, player->mo, player->mo, 0);
 					P_SetObjectMomZ(player->mo, 12*FRACUNIT, false);
 					player->pflags |= PF_APPLYAUTOBRAKE|PF_JUMPED|PF_THOKKED;
-					P_SetMobjState(player->mo, S_PLAY_ROLL);
+					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
 					break;
 				}
 
@@ -12893,6 +12924,8 @@ void P_PlayerAfterThink(player_t *player)
 			}
 		}
 	}
+
+	P_DoPlayerHeadSigns(player); // Spawn Tag/CTF signs over player's head
 }
 
 void P_SetPlayerAngle(player_t *player, angle_t angle)

@@ -2,8 +2,8 @@
 # the poly3 Makefile adapted over and over...
 #
 # Copyright 1998-2000 DooM Legacy Team.
-# Copyright 2020-2022 James R.
-# Copyright 2003-2022 Sonic Team Junior.
+# Copyright 2020-2023 James R.
+# Copyright 2003-2023 Sonic Team Junior.
 #
 # This program is free software distributed under the
 # terms of the GNU General Public License, version 2.

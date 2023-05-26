@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2022 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -203,6 +203,9 @@ int LUA_PushGlobals(lua_State *L, const char *word)
 		return 1;
 	} else if (fastcmp(word,"modifiedgame")) {
 		lua_pushboolean(L, modifiedgame && !savemoddata);
+		return 1;
+	} else if (fastcmp(word,"usedCheats")) {
+		lua_pushboolean(L, usedCheats);
 		return 1;
 	} else if (fastcmp(word,"menuactive")) {
 		lua_pushboolean(L, menuactive);

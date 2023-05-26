@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -5665,21 +5665,25 @@ static void P_Boss9Thinker(mobj_t *mobj)
 					missile->fuse = 1;
 
 				if (missile->fuse > mobj->fuse)
-					P_RemoveMobj(missile);
-
-				if (mobj->health > mobj->info->damage)
 				{
-					P_SetScale(missile, FRACUNIT/3);
-					missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
+					P_RemoveMobj(missile);
 				}
 				else
 				{
-					P_SetScale(missile, FRACUNIT/5);
-					missile->color = SKINCOLOR_SUNSET; // sonic cd electric power
+					if (mobj->health > mobj->info->damage)
+					{
+						P_SetScale(missile, FRACUNIT/3);
+						missile->color = SKINCOLOR_MAGENTA; // sonic OVA/4 purple power
+					}
+					else
+					{
+						P_SetScale(missile, FRACUNIT/5);
+						missile->color = SKINCOLOR_SUNSET; // sonic cd electric power
+					}
+					missile->destscale = missile->scale*2;
+					missile->scalespeed = abs(missile->scale - missile->destscale)/missile->fuse;
+					missile->colorized = true;
 				}
-				missile->destscale = missile->scale*2;
-				missile->scalespeed = abs(missile->scale - missile->destscale)/missile->fuse;
-				missile->colorized = true;
 			}
 
 			// ...then down. easier than changing the missile's momz after-the-fact
@@ -6334,11 +6338,7 @@ void P_SpawnParaloop(fixed_t x, fixed_t y, fixed_t z, fixed_t radius, INT32 numb
 		mobj->fuse = (radius>>(FRACBITS+2)) + 1;
 
 		if (spawncenter)
-		{
-			mobj->x = x;
-			mobj->y = y;
-			mobj->z = z;
-		}
+			P_SetOrigin(mobj, x, y, z);
 
 		if (mobj->fuse <= 1)
 			mobj->fuse = 2;
@@ -6765,7 +6765,8 @@ void P_RunShields(void)
 	// run shields
 	for (i = 0; i < numshields; i++)
 	{
-		P_ShieldLook(shields[i], shields[i]->threshold);
+		if (!P_MobjWasRemoved(shields[i]))
+			P_ShieldLook(shields[i], shields[i]->threshold);
 		P_SetTarget(&shields[i], NULL);
 	}
 	numshields = 0;
@@ -6904,6 +6905,13 @@ static void P_AddOverlay(mobj_t *thing)
 static void P_RemoveOverlay(mobj_t *thing)
 {
 	mobj_t *mo;
+	if (overlaycap == thing)
+	{
+		P_SetTarget(&overlaycap, thing->hnext);
+		P_SetTarget(&thing->hnext, NULL);
+		return;
+	}
+
 	for (mo = overlaycap; mo; mo = mo->hnext)
 	{
 		if (mo->hnext != thing)
@@ -9690,7 +9698,7 @@ static boolean P_MobjRegularThink(mobj_t *mobj)
 		P_RingThinker(mobj);
 		if (mobj->flags2 & MF2_NIGHTSPULL)
 			P_NightsItemChase(mobj);
-		else
+		else if (mobj->type != MT_BOMBSPHERE) // prevent shields from attracting bomb spheres
 			A_AttractChase(mobj);
 		return false;
 		// Flung items
@@ -10065,6 +10073,8 @@ static boolean P_FuseThink(mobj_t *mobj)
 	case MT_SPIKE:
 	case MT_WALLSPIKE:
 		P_SetMobjState(mobj, mobj->state->nextstate);
+		if (P_MobjWasRemoved(mobj))
+			return false;
 		mobj->fuse = mobj->spawnpoint ? mobj->spawnpoint->args[0] : mobj->info->speed;
 		break;
 	case MT_NIGHTSCORE:
@@ -10226,7 +10236,7 @@ void P_MobjThinker(mobj_t *mobj)
 	if (mobj->flags2 & MF2_FIRING)
 		P_FiringThink(mobj);
 
-	if (mobj->type == MT_AMBIENT)
+	if (mobj->flags & MF_AMBIENT)
 	{
 		if (leveltime % mobj->health)
 			return;
@@ -10612,6 +10622,8 @@ mobj_t *P_SpawnMobj(fixed_t x, fixed_t y, fixed_t z, mobjtype_t type)
 	mobj->health = (info->spawnhealth ? info->spawnhealth : 1);
 
 	mobj->reactiontime = info->reactiontime;
+
+	mobj->dispoffset = info->dispoffset;
 
 	mobj->lastlook = -1; // stuff moved in P_enemy.P_LookForPlayer
 
@@ -11232,10 +11244,10 @@ void P_RemoveSavegameMobj(mobj_t *mobj)
 }
 
 static CV_PossibleValue_t respawnitemtime_cons_t[] = {{1, "MIN"}, {300, "MAX"}, {0, NULL}};
-consvar_t cv_itemrespawntime = CVAR_INIT ("respawnitemtime", "30", CV_SAVE|CV_NETVAR|CV_CHEAT, respawnitemtime_cons_t, NULL);
-consvar_t cv_itemrespawn = CVAR_INIT ("respawnitem", "On", CV_SAVE|CV_NETVAR, CV_OnOff, NULL);
+consvar_t cv_itemrespawntime = CVAR_INIT ("respawnitemtime", "30", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, respawnitemtime_cons_t, NULL);
+consvar_t cv_itemrespawn = CVAR_INIT ("respawnitem", "On", CV_SAVE|CV_NETVAR|CV_ALLOWLUA, CV_OnOff, NULL);
 static CV_PossibleValue_t flagtime_cons_t[] = {{0, "MIN"}, {300, "MAX"}, {0, NULL}};
-consvar_t cv_flagtime = CVAR_INIT ("flagtime", "30", CV_SAVE|CV_NETVAR|CV_CHEAT, flagtime_cons_t, NULL);
+consvar_t cv_flagtime = CVAR_INIT ("flagtime", "30", CV_SAVE|CV_NETVAR|CV_CHEAT|CV_ALLOWLUA, flagtime_cons_t, NULL);
 
 void P_SpawnPrecipitation(void)
 {
@@ -11849,7 +11861,6 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	case MT_EMERHUNT:
 	case MT_EMERALDSPAWN:
 	case MT_TOKEN:
-	case MT_EMBLEM:
 	case MT_RING:
 	case MT_REDTEAMRING:
 	case MT_BLUETEAMRING:
@@ -11859,6 +11870,10 @@ fixed_t P_GetMapThingSpawnHeight(const mobjtype_t mobjtype, const mapthing_t* mt
 	case MT_NIGHTSCHIP:
 	case MT_NIGHTSSTAR:
 		offset += mthing->args[0] ? 0 : 24*FRACUNIT;
+		break;
+
+	case MT_EMBLEM:
+		offset += mthing->args[1] ? 0 : 24 * FRACUNIT;
 		break;
 
 	// Remaining objects.
@@ -11991,11 +12006,7 @@ static boolean P_AllowMobjSpawn(mapthing_t* mthing, mobjtype_t i)
 		break;
 	case MT_EMBLEM:
 		if (netgame || multiplayer)
-			return false; // Single player
-
-		if (modifiedgame && !savemoddata)
-			return false; // No cheating!!
-
+			return false; // Single player (You're next on my shit list)
 		break;
 	default:
 		break;
@@ -13273,8 +13284,31 @@ static boolean P_SetupSpawnedMapThing(mapthing_t *mthing, mobj_t *mobj, boolean 
 				mobj->flags2 |= MF2_STRONGBOX;
 		}
 	}
+	// Custom ambient sounds
+	if ((mobj->flags & MF_AMBIENT) && mobj->type != MT_AMBIENT)
+	{
+		mobj->threshold = mobj->info->seesound;
+		mobj->health = mobj->info->spawnhealth;
+	}
 
 	return true;
+}
+
+// Pre-UDMF backwards compatibility stuff. Remove for 2.3
+static void P_SetAmbush(mapthing_t *mthing, mobj_t *mobj)
+{
+	if (mobj->type == MT_NIGHTSBUMPER
+		|| mobj->type == MT_AXIS
+		|| mobj->type == MT_AXISTRANSFER
+		|| mobj->type == MT_AXISTRANSFERLINE
+		|| mobj->type == MT_NIGHTSBUMPER
+		|| mobj->type == MT_STARPOST)
+		return;
+
+	if ((mthing->options & MTF_OBJECTSPECIAL) && (mobj->flags & MF_PUSHABLE))
+		return;
+
+	mobj->flags2 |= MF2_AMBUSH;
 }
 
 static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y, fixed_t z, mobjtype_t i)
@@ -13298,6 +13332,9 @@ static mobj_t *P_SpawnMobjFromMapThing(mapthing_t *mthing, fixed_t x, fixed_t y,
 	mobj->roll = FixedAngle(mthing->roll << FRACBITS);
 
 	mthing->mobj = mobj;
+
+	if (!udmf && (mthing->options & MTF_AMBUSH))
+		P_SetAmbush(mthing, mobj);
 
 	// Generic reverse gravity for individual objects flag.
 	if (mthing->options & MTF_OBJECTFLIP)

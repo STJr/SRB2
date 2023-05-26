@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -96,6 +96,7 @@ SINT8 startinglivesbalance[maxgameovers+1] = {3, 5, 7, 9, 12, 15, 20, 25, 30, 40
 UINT16 mainwads = 0;
 boolean modifiedgame; // Set if homebrew PWAD stuff has been added.
 boolean savemoddata = false;
+boolean usedCheats = false; // Set when a gamedata-preventing cheat command is used.
 UINT8 paused;
 UINT8 modeattacking = ATTACKING_NONE;
 boolean disableSpeedAdjust = false;
@@ -364,36 +365,36 @@ consvar_t cv_autobrake2 = CVAR_INIT ("autobrake2", "On", CV_SAVE|CV_CALL, CV_OnO
 // hi here's some new controls
 static CV_PossibleValue_t zerotoone_cons_t[] = {{0, "MIN"}, {FRACUNIT, "MAX"}, {0, NULL}};
 consvar_t cv_cam_shiftfacing[2] = {
-	CVAR_INIT ("cam_shiftfacingchar", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_shiftfacingchar", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_shiftfacingchar", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_shiftfacingchar", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacing[2] = {
-	CVAR_INIT ("cam_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacingchar", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacingability[2] = {
-	CVAR_INIT ("cam_turnfacingability", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacingability", "0.125", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacingability", "0.125", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacingability", "0.125", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacingspindash[2] = {
-	CVAR_INIT ("cam_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacingspindash", "0.25", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 consvar_t cv_cam_turnfacinginput[2] = {
-	CVAR_INIT ("cam_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
-	CVAR_INIT ("cam2_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
+	CVAR_INIT ("cam2_turnfacinginput", "0.375", CV_FLOAT|CV_SAVE|CV_ALLOWLUA, zerotoone_cons_t, NULL),
 };
 
 static CV_PossibleValue_t centertoggle_cons_t[] = {{0, "Hold"}, {1, "Toggle"}, {2, "Sticky Hold"}, {0, NULL}};
 consvar_t cv_cam_centertoggle[2] = {
-	CVAR_INIT ("cam_centertoggle", "Hold", CV_SAVE, centertoggle_cons_t, NULL),
-	CVAR_INIT ("cam2_centertoggle", "Hold", CV_SAVE, centertoggle_cons_t, NULL),
+	CVAR_INIT ("cam_centertoggle", "Hold", CV_SAVE|CV_ALLOWLUA, centertoggle_cons_t, NULL),
+	CVAR_INIT ("cam2_centertoggle", "Hold", CV_SAVE|CV_ALLOWLUA, centertoggle_cons_t, NULL),
 };
 
 static CV_PossibleValue_t lockedinput_cons_t[] = {{0, "Strafe"}, {1, "Turn"}, {0, NULL}};
 consvar_t cv_cam_lockedinput[2] = {
-	CVAR_INIT ("cam_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL),
-	CVAR_INIT ("cam2_lockedinput", "Strafe", CV_SAVE, lockedinput_cons_t, NULL),
+	CVAR_INIT ("cam_lockedinput", "Strafe", CV_SAVE|CV_ALLOWLUA, lockedinput_cons_t, NULL),
+	CVAR_INIT ("cam2_lockedinput", "Strafe", CV_SAVE|CV_ALLOWLUA, lockedinput_cons_t, NULL),
 };
 
 static CV_PossibleValue_t lockedassist_cons_t[] = {
@@ -405,14 +406,14 @@ static CV_PossibleValue_t lockedassist_cons_t[] = {
 	{0, NULL}
 };
 consvar_t cv_cam_lockonboss[2] = {
-	CVAR_INIT ("cam_lockaimassist", "Full", CV_SAVE, lockedassist_cons_t, NULL),
-	CVAR_INIT ("cam2_lockaimassist", "Full", CV_SAVE, lockedassist_cons_t, NULL),
+	CVAR_INIT ("cam_lockaimassist", "Full", CV_SAVE|CV_ALLOWLUA, lockedassist_cons_t, NULL),
+	CVAR_INIT ("cam2_lockaimassist", "Full", CV_SAVE|CV_ALLOWLUA, lockedassist_cons_t, NULL),
 };
 
 consvar_t cv_moveaxis = CVAR_INIT ("joyaxis_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_sideaxis = CVAR_INIT ("joyaxis_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis = CVAR_INIT ("joyaxis_look", "Y-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_turnaxis = CVAR_INIT ("joyaxis_turn", "X-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_lookaxis = CVAR_INIT ("joyaxis_look", "X-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_turnaxis = CVAR_INIT ("joyaxis_turn", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_jumpaxis = CVAR_INIT ("joyaxis_jump", "None", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_spinaxis = CVAR_INIT ("joyaxis_spin", "None", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_fireaxis = CVAR_INIT ("joyaxis_fire", "Z-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
@@ -422,8 +423,8 @@ consvar_t cv_digitaldeadzone = CVAR_INIT ("joy_digdeadzone", "0.25", CV_FLOAT|CV
 
 consvar_t cv_moveaxis2 = CVAR_INIT ("joyaxis2_move", "Y-Axis", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_sideaxis2 = CVAR_INIT ("joyaxis2_side", "X-Axis", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_lookaxis2 = CVAR_INIT ("joyaxis2_look", "Y-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
-consvar_t cv_turnaxis2 = CVAR_INIT ("joyaxis2_turn", "X-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_lookaxis2 = CVAR_INIT ("joyaxis2_look", "X-Rudder-", CV_SAVE, joyaxis_cons_t, NULL);
+consvar_t cv_turnaxis2 = CVAR_INIT ("joyaxis2_turn", "Z-Axis", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_jumpaxis2 = CVAR_INIT ("joyaxis2_jump", "None", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_spinaxis2 = CVAR_INIT ("joyaxis2_spin", "None", CV_SAVE, joyaxis_cons_t, NULL);
 consvar_t cv_fireaxis2 = CVAR_INIT ("joyaxis2_fire", "Z-Rudder", CV_SAVE, joyaxis_cons_t, NULL);
@@ -755,7 +756,24 @@ void G_SetGameModified(boolean silent)
 	savemoddata = false;
 
 	if (!silent)
-		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to record statistics.\n"));
+		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to play Record Attack.\n"));
+
+	// If in record attack recording, cancel it.
+	if (modeattacking)
+		M_EndModeAttackRun();
+	else if (marathonmode)
+		Command_ExitGame_f();
+}
+
+void G_SetUsedCheats(boolean silent)
+{
+	if (usedCheats)
+		return;
+
+	usedCheats = true;
+
+	if (!silent)
+		CONS_Alert(CONS_NOTICE, M_GetText("Game must be restarted to save progress.\n"));
 
 	// If in record attack recording, cancel it.
 	if (modeattacking)
@@ -2825,6 +2843,9 @@ void G_MovePlayerToSpawnOrStarpost(INT32 playernum)
 
 	R_ResetMobjInterpolationState(players[playernum].mo);
 
+	if (players[playernum].bot) // don't reset the camera for bots
+		return;
+
 	if (playernum == consoleplayer)
 		P_ResetCamera(&players[playernum], &camera);
 	else if (playernum == secondarydisplayplayer)
@@ -3839,8 +3860,7 @@ static void G_UpdateVisited(void)
 {
 	boolean spec = G_IsSpecialStage(gamemap);
 	// Update visitation flags?
-	if ((!modifiedgame || savemoddata) // Not modified
-		&& !multiplayer && !demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
+	if (!multiplayer && !demoplayback && (gametype == GT_COOP) // SP/RA/NiGHTS mode
 		&& !stagefailed) // Did not fail the stage
 	{
 		UINT8 earnedEmblems;
@@ -3908,14 +3928,18 @@ static void G_HandleSaveLevel(void)
 					remove(liveeventbackup);
 				cursaveslot = 0;
 			}
-			else if ((!modifiedgame || savemoddata) && !(netgame || multiplayer || ultimatemode || demorecording || metalrecording || modeattacking))
+			else if (!usedCheats && !(netgame || multiplayer || ultimatemode || demorecording || metalrecording || modeattacking))
+			{
 				G_SaveGame((UINT32)cursaveslot, spstage_start);
+			}
 		}
 	}
 	// and doing THIS here means you don't lose your progress if you close the game mid-intermission
 	else if (!(ultimatemode || netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking)
-		&& (!modifiedgame || savemoddata) && cursaveslot > 0 && CanSaveLevel(lastmap+1))
+		&& !usedCheats && cursaveslot > 0 && CanSaveLevel(lastmap+1))
+	{
 		G_SaveGame((UINT32)cursaveslot, lastmap+1); // not nextmap+1 to route around special stages
+	}
 }
 
 //
@@ -4105,7 +4129,7 @@ void G_AfterIntermission(void)
 		&& stagefailed == false)
 	{
 		// Start a custom cutscene.
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false);
+		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->cutscenenum-1, false, false, false);
 	}
 	else
 	{
@@ -4191,8 +4215,10 @@ static void G_DoContinued(void)
 	tokenlist = 0;
 	token = 0;
 
-	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && (!modifiedgame || savemoddata) && cursaveslot > 0)
+	if (!(netgame || multiplayer || demoplayback || demorecording || metalrecording || modeattacking) && !usedCheats && cursaveslot > 0)
+	{
 		G_SaveGameOver((UINT32)cursaveslot, true);
+	}
 
 	// Reset # of lives
 	pl->lives = (ultimatemode) ? 1 : startinglivesbalance[numgameovers];
@@ -4257,13 +4283,17 @@ void G_LoadGameSettings(void)
 	S_InitRuntimeSounds();
 }
 
+#define GAMEDATA_ID 0x86E4A27C // Change every major version, as usual
+#define COMPAT_GAMEDATA_ID 0xFCAFE211 // Can be removed entirely for 2.3
+
 // G_LoadGameData
 // Loads the main data file, which stores information such as emblems found, etc.
 void G_LoadGameData(void)
 {
 	size_t length;
 	INT32 i, j;
-	UINT8 modded = false;
+
+	UINT32 versionID;
 	UINT8 rtemp;
 
 	//For records
@@ -4274,6 +4304,9 @@ void G_LoadGameData(void)
 	UINT8 recmares;
 	INT32 curmare;
 
+	// Stop saving, until we successfully load it again.
+	gamedataloaded = false;
+
 	// Clear things so previously read gamedata doesn't transfer
 	// to new gamedata
 	G_ClearRecords(); // main and nights records
@@ -4281,27 +4314,35 @@ void G_LoadGameData(void)
 	totalplaytime = 0; // total play time (separate from all)
 
 	if (M_CheckParm("-nodata"))
-		return; // Don't load.
-
-	// Allow saving of gamedata beyond this point
-	gamedataloaded = true;
-
-	if (M_CheckParm("-gamedata") && M_IsNextParm())
 	{
-		strlcpy(gamedatafilename, M_GetNextParm(), sizeof gamedatafilename);
+		// Don't load at all.
+		return;
 	}
 
 	if (M_CheckParm("-resetdata"))
-		return; // Don't load (essentially, reset).
+	{
+		// Don't load, but do save. (essentially, reset)
+		gamedataloaded = true;
+		return; 
+	}
 
 	length = FIL_ReadFile(va(pandf, srb2home, gamedatafilename), &savebuffer);
-	if (!length) // Aw, no game data. Their loss!
+	if (!length)
+	{
+		// No gamedata. We can save a new one.
+		gamedataloaded = true;
 		return;
+	}
 
 	save_p = savebuffer;
 
 	// Version check
-	if (READUINT32(save_p) != 0xFCAFE211)
+	versionID = READUINT32(save_p);
+	if (versionID != GAMEDATA_ID
+#ifdef COMPAT_GAMEDATA_ID // backwards compat behavior
+		&& versionID != COMPAT_GAMEDATA_ID
+#endif
+		)
 	{
 		const char *gdfolder = "the SRB2 folder";
 		if (strcmp(srb2home,"."))
@@ -4314,13 +4355,35 @@ void G_LoadGameData(void)
 
 	totalplaytime = READUINT32(save_p);
 
-	modded = READUINT8(save_p);
+#ifdef COMPAT_GAMEDATA_ID
+	if (versionID == COMPAT_GAMEDATA_ID)
+	{
+		// We'll temporarily use the old condition when loading an older file.
+		// The proper mod-specific hash will get saved in afterwards.
+		boolean modded = READUINT8(save_p);
 
-	// Aha! Someone's been screwing with the save file!
-	if ((modded && !savemoddata))
-		goto datacorrupt;
-	else if (modded != true && modded != false)
-		goto datacorrupt;
+		if (modded && !savemoddata)
+		{
+			goto datacorrupt;
+		}
+		else if (modded != true && modded != false)
+		{
+			goto datacorrupt;
+		}
+	}
+	else
+#endif
+	{
+		// Quick & dirty hash for what mod this save file is for.
+		UINT32 modID = READUINT32(save_p);
+		UINT32 expectedID = quickncasehash(timeattackfolder, sizeof timeattackfolder);
+
+		if (modID != expectedID)
+		{
+			// Aha! Someone's been screwing with the save file!
+			goto datacorrupt;
+		}
+	}
 
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
@@ -4406,6 +4469,12 @@ void G_LoadGameData(void)
 	Z_Free(savebuffer);
 	save_p = NULL;
 
+	// Don't consider loaded until it's a success!
+	// It used to do this much earlier, but this would cause the gamedata to
+	// save over itself when it I_Errors from the corruption landing point below,
+	// which can accidentally delete players' legitimate data if the code ever has any tiny mistakes!
+	gamedataloaded = true;
+
 	// Silent update unlockables in case they're out of sync with conditions
 	M_SilentUpdateUnlockablesAndEmblems();
 
@@ -4445,7 +4514,7 @@ void G_SaveGameData(void)
 		return;
 	}
 
-	if (modifiedgame && !savemoddata)
+	if (usedCheats)
 	{
 		free(savebuffer);
 		save_p = savebuffer = NULL;
@@ -4453,12 +4522,11 @@ void G_SaveGameData(void)
 	}
 
 	// Version test
-	WRITEUINT32(save_p, 0xFCAFE211);
+	WRITEUINT32(save_p, GAMEDATA_ID);
 
 	WRITEUINT32(save_p, totalplaytime);
 
-	btemp = (UINT8)(savemoddata || modifiedgame);
-	WRITEUINT8(save_p, btemp);
+	WRITEUINT32(save_p, quickncasehash(timeattackfolder, sizeof timeattackfolder));
 
 	// TODO put another cipher on these things? meh, I don't care...
 	for (i = 0; i < NUMMAPS; i++)
@@ -4955,7 +5023,7 @@ void G_InitNew(UINT8 pultmode, const char *mapname, boolean resetplayer, boolean
 	imcontinuing = false;
 
 	if ((gametyperules & GTR_CUTSCENES) && !skipprecutscene && mapheaderinfo[gamemap-1]->precutscenenum && !modeattacking && !(marathonmode & MA_NOCUTSCENES)) // Start a custom cutscene.
-		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer);
+		F_StartCustomCutscene(mapheaderinfo[gamemap-1]->precutscenenum-1, true, resetplayer, FLS);
 	else
 		G_DoLoadLevel(resetplayer);
 

@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -513,6 +513,8 @@ void readfreeslots(MYFILE *f)
 	} while (!myfeof(f)); // finish when the line is empty
 
 	Z_Free(s);
+
+	R_RefreshSprite2();
 }
 
 void readthing(MYFILE *f, INT32 num)
@@ -2907,7 +2909,9 @@ static boolean GoodDataFileName(const char *s)
 	p = s + strlen(s) - strlen(tail);
 	if (p <= s) return false; // too short
 	if (!fasticmp(p, tail)) return false; // doesn't end in .dat
-	if (fasticmp(s, "gamedata.dat")) return false;
+
+	if (fasticmp(s, "gamedata.dat")) return false; // Don't overwrite default gamedata
+	if (fasticmp(s, "main.dat")) return false; // Don't overwrite default time attack replays
 
 	return true;
 }

@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2022 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -1576,7 +1576,7 @@ static void R_ProjectSprite(mobj_t *thing)
 	fixed_t paperoffset = 0, paperdistance = 0;
 	angle_t centerangle = 0;
 
-	INT32 dispoffset = thing->info->dispoffset;
+	INT32 dispoffset = thing->dispoffset;
 
 	//SoM: 3/17/2000
 	fixed_t gz = 0, gzt = 0;
