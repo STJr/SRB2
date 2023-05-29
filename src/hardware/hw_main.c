@@ -5120,6 +5120,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	spriteyscale = FIXED_TO_FLOAT(interp.spriteyscale);
 
 	// transform the origin point
+	if (thing->type == MT_OVERLAY) // Handle overlays
+		R_ThingOffsetOverlay(thing, &interp.x, &interp.y);
 	tr_x = FIXED_TO_FLOAT(interp.x) - gl_viewx;
 	tr_y = FIXED_TO_FLOAT(interp.y) - gl_viewy;
 
@@ -5439,6 +5441,8 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 		// calculate tz for tracer, same way it is calculated for this sprite
 		// transform the origin point
+		if (thing->tracer->type == MT_OVERLAY) // Handle overlays
+			R_ThingOffsetOverlay(thing->tracer, &tracer_interp.x, &tracer_interp.y);
 		tr_x = FIXED_TO_FLOAT(tracer_interp.x) - gl_viewx;
 		tr_y = FIXED_TO_FLOAT(tracer_interp.y) - gl_viewy;
 

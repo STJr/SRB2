@@ -1580,6 +1580,8 @@ boolean HWR_DrawModel(gl_vissprite_t *spr)
 #undef INTERPOLERATION_LIMIT
 #endif
 
+		if (spr->mobj->type == MT_OVERLAY) // Handle overlays
+			R_ThingOffsetOverlay(spr->mobj, &interp.x, &interp.y);
 		//Hurdler: it seems there is still a small problem with mobj angle
 		p.x = FIXED_TO_FLOAT(interp.x);
 		p.y = FIXED_TO_FLOAT(interp.y)+md2->offset;
