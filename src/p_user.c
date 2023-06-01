@@ -4537,7 +4537,7 @@ void P_DoJump(player_t *player, boolean soundandstate)
 	}
 }
 
-static void P_DoSpinDashDust(player_t *player)
+void P_DoSpinDashDust(player_t *player)
 {
 	UINT32 i;
 	mobj_t *particle;
