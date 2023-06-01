@@ -563,7 +563,7 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 			special->momx = special->momy = special->momz = 0;
 			P_GivePlayerSpheres(player, 1);
 
-			if (special->type == MT_BLUESPHERE)
+			if (special->type == MT_BLUESPHERE || special->type == MT_FLINGBLUESPHERE)
 			{
 				special->destscale = ((player->powers[pw_carry] == CR_NIGHTSMODE) ? 4 : 2)*special->scale;
 				if (states[special->info->deathstate].tics > 0)
