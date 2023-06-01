@@ -1327,6 +1327,17 @@ static int lib_pSetObjectMomZ(lua_State *L)
 	return 0;
 }
 
+static int lib_pIsLocalPlayer(lua_State *L)
+{
+	player_t *player = *((player_t **)luaL_checkudata(L, 1, META_PLAYER));
+	//NOHUD
+	//INLEVEL
+	if (!player)
+		return LUA_ErrInvalid(L, "player_t");
+	lua_pushboolean(L, P_IsLocalPlayer(player));
+	return 1;
+}
+
 static int lib_pPlayJingle(lua_State *L)
 {
 	player_t *player = NULL;
@@ -4085,6 +4096,7 @@ static luaL_Reg lib[] = {
 	{"P_InQuicksand",lib_pInQuicksand},
 	{"P_InJumpFlipSector",lib_pInJumpFlipSector},
 	{"P_SetObjectMomZ",lib_pSetObjectMomZ},
+	{"P_IsLocalPlayer",lib_pIsLocalPlayer},
 	{"P_PlayJingle",lib_pPlayJingle},
 	{"P_PlayJingleMusic",lib_pPlayJingleMusic},
 	{"P_RestoreMusic",lib_pRestoreMusic},
