@@ -2342,6 +2342,38 @@ boolean P_ZMovement(mobj_t *mo)
 		else if (!onground)
 			P_SlopeLaunch(mo);
 	}
+	
+	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
+	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
+	{
+		switch (mo->type)
+		{
+			case MT_GHOST:
+			case MT_METALSONIC_RACE:
+			case MT_EXPLODE:
+			case MT_BOSSEXPLODE:
+			case MT_SONIC3KBOSSEXPLODE:
+				break;
+			case MT_REDFLAG:
+			case MT_BLUEFLAG:
+				// Remove from death pits.  DON'T FUCKING DESPAWN IT DAMMIT
+				mo->fuse = 1;
+				return false;
+			default:
+				if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
+				{
+					// Kill enemies, bosses and minecarts that fall into death pits.
+					P_KillMobj(mo, NULL, NULL, 0);
+					return !P_MobjWasRemoved(mo); // allows explosion states to run
+				}
+				else
+				{
+					P_RemoveMobj(mo);
+					return false;
+				}
+				break;
+		}
+	}
 
 	switch (mo->type)
 	{
@@ -2369,19 +2401,7 @@ boolean P_ZMovement(mobj_t *mo)
 				mo->flags |= MF_NOGRAVITY;
 			}
 			break;
-		case MT_SPINFIRE:
-			if (P_CheckDeathPitCollide(mo))
-			{
-				P_RemoveMobj(mo);
-				return false;
-			}
-			break;
 		case MT_GOOP:
-			if (P_CheckDeathPitCollide(mo))
-			{
-				P_RemoveMobj(mo);
-				return false;
-			}
 			if (mo->z <= mo->floorz && mo->momz)
 			{
 				P_SetMobjState(mo, mo->info->meleestate);
@@ -2391,27 +2411,6 @@ boolean P_ZMovement(mobj_t *mo)
 					S_StartSound(mo, mo->info->painsound);
 			}
 			break;
-		case MT_FALLINGROCK:
-		case MT_BIGTUMBLEWEED:
-		case MT_LITTLETUMBLEWEED:
-		case MT_SHELL:
-			// Remove stuff from death pits.
-			if (P_CheckDeathPitCollide(mo))
-			{
-				P_RemoveMobj(mo);
-				return false;
-			}
-			break;
-		case MT_REDFLAG:
-		case MT_BLUEFLAG:
-			// Remove from death pits.  DON'T FUCKING DESPAWN IT DAMMIT
-			if (P_CheckDeathPitCollide(mo))
-			{
-				mo->fuse = 1;
-				return false;
-			}
-			break;
-
 		case MT_RING: // Ignore still rings
 		case MT_COIN:
 		case MT_BLUESPHERE:
@@ -2425,15 +2424,6 @@ boolean P_ZMovement(mobj_t *mo)
 		case MT_FLINGBLUESPHERE:
 		case MT_FLINGNIGHTSCHIP:
 		case MT_FLINGEMERALD:
-			// Remove flinged stuff from death pits.
-			if (P_CheckDeathPitCollide(mo))
-			{
-				P_RemoveMobj(mo);
-				return false;
-			}
-			if (!(mo->momx || mo->momy || mo->momz))
-				return true;
-			break;
 		case MT_BOUNCERING:
 		case MT_INFINITYRING:
 		case MT_AUTOMATICRING:
@@ -2447,12 +2437,6 @@ boolean P_ZMovement(mobj_t *mo)
 		case MT_EXPLODEPICKUP:
 		case MT_SCATTERPICKUP:
 		case MT_GRENADEPICKUP:
-			// Remove flinged stuff from death pits.
-			if (P_CheckDeathPitCollide(mo) && (mo->flags2 & MF2_DONTRESPAWN))
-			{
-				P_RemoveMobj(mo);
-				return false;
-			}
 			if (!(mo->momx || mo->momy || mo->momz))
 				return true;
 			break;
@@ -2472,33 +2456,6 @@ boolean P_ZMovement(mobj_t *mo)
 			break;
 		default:
 			break;
-	}
-
-	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
-	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
-	{
-		switch (mo->type)
-		{
-			case MT_GHOST:
-			case MT_METALSONIC_RACE:
-			case MT_EXPLODE:
-			case MT_BOSSEXPLODE:
-			case MT_SONIC3KBOSSEXPLODE:
-				break;
-			default:
-				if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
-				{
-					// Kill enemies, bosses and minecarts that fall into death pits.
-					P_KillMobj(mo, NULL, NULL, 0);
-					return !P_MobjWasRemoved(mo); // allows explosion states to run
-				}
-				else
-				{
-					P_RemoveMobj(mo);
-					return false;
-				}
-				break;
-		}
 	}
 
 	if (P_MobjFlip(mo)*mo->momz < 0
@@ -2952,7 +2909,7 @@ void P_PlayerZMovement(mobj_t *mo)
 
 		if (P_MobjFlip(mo)*mo->momz < 0) // falling
 		{
-			boolean clipmomz = !(P_CheckDeathPitCollide(mo));
+			boolean clipmomz;
 
 			mo->pmomz = 0; // We're on a new floor, don't keep doing platform movement.
 
@@ -3060,6 +3017,13 @@ boolean P_SceneryZMovement(mobj_t *mo)
 		mo->eflags &= ~MFE_APPLYPMOMZ;
 	}
 	mo->z += mo->momz;
+	
+	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
+	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
+	{
+		P_RemoveMobj(mo);
+		return false;
+	}
 
 	switch (mo->type)
 	{
@@ -3073,11 +3037,6 @@ boolean P_SceneryZMovement(mobj_t *mo)
 			}
 			break;
 		case MT_MEDIUMBUBBLE:
-			if (P_CheckDeathPitCollide(mo)) // Don't split if you fell in a pit
-			{
-				P_RemoveMobj(mo);
-				return false;
-			}
 			if ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z <= mo->floorz)
 			|| (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height >= mo->ceilingz)) // Hit the floor, so split!
 			{
@@ -3110,11 +3069,6 @@ boolean P_SceneryZMovement(mobj_t *mo)
 			}
 			break;
 		case MT_SEED: // now scenery
-			if (P_CheckDeathPitCollide(mo)) // No flowers for death pits
-			{
-				P_RemoveMobj(mo);
-				return false;
-			}
 			// Soniccd seed turns into a flower!
 			if ((!(mo->eflags & MFE_VERTICALFLIP) && mo->z <= mo->floorz)
 			|| (mo->eflags & MFE_VERTICALFLIP && mo->z+mo->height >= mo->ceilingz))
@@ -3133,13 +3087,6 @@ boolean P_SceneryZMovement(mobj_t *mo)
 			}
 		default:
 			break;
-	}
-
-	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
-	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
-	{
-		P_RemoveMobj(mo);
-		return false;
 	}
 
 	// clip movement
@@ -7764,7 +7711,6 @@ static void P_MobjSceneryThink(mobj_t *mobj)
 		if (!(mobj->eflags & MFE_UNDERWATER)
 			|| (!(mobj->eflags & MFE_VERTICALFLIP) && mobj->z + mobj->height >= mobj->ceilingz)
 			|| (mobj->eflags & MFE_VERTICALFLIP && mobj->z <= mobj->floorz)
-			|| (P_CheckDeathPitCollide(mobj))
 			|| --mobj->fuse <= 0) // Bubbles eventually dissipate if they can't reach the surface.
 		{
 			// no playing sound: no point; the object is being removed
