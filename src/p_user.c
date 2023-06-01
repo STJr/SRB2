@@ -11103,7 +11103,7 @@ static void P_MinecartThink(player_t *player)
 }
 
 // Handle Tails' fluff
-static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
+void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 {
 	// init...
 	boolean smilesonground = P_IsObjectOnGround(player->mo);
@@ -11308,7 +11308,7 @@ static void P_DoTailsOverlay(player_t *player, mobj_t *tails)
 }
 
 // Metal Sonic's jet fume
-static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
+void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 {
 	static const UINT8 FUME_SKINCOLORS[] =
 	{
@@ -11437,6 +11437,30 @@ static void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 	// If dashmode is high enough, spawn a trail
 	if (player->normalspeed >= skins[player->skin].normalspeed*2)
 		P_SpawnGhostMobj(fume);
+}
+
+// Handle Followmobj behavior
+void P_DoFollowMobj(player_t *player, mobj_t *followmobj)
+{
+	if (LUAh_FollowMobj(player, followmobj) || P_MobjWasRemoved(followmobj))
+		{;}
+	else
+	{
+		switch (followmobj->type)
+		{
+			case MT_TAILSOVERLAY: // c:
+				P_DoTailsOverlay(player, followmobj);
+				break;
+			case MT_METALJETFUME:
+				P_DoMetalJetFume(player, followmobj);
+				break;
+			default:
+				var1 = 1;
+				var2 = 0;
+				A_CapeChase(followmobj);
+				break;
+		}
+	}
 }
 
 //
@@ -12894,27 +12918,7 @@ void P_PlayerAfterThink(player_t *player)
 		}
 
 		if (player->followmobj)
-		{
-			if (LUA_HookFollowMobj(player, player->followmobj) || P_MobjWasRemoved(player->followmobj))
-				{;}
-			else
-			{
-				switch (player->followmobj->type)
-				{
-					case MT_TAILSOVERLAY: // c:
-						P_DoTailsOverlay(player, player->followmobj);
-						break;
-					case MT_METALJETFUME:
-						P_DoMetalJetFume(player, player->followmobj);
-						break;
-					default:
-						var1 = 1;
-						var2 = 0;
-						A_CapeChase(player->followmobj);
-						break;
-				}
-			}
-		}
+			P_DoFollowMobj(player, player->followmobj);
 	}
 
 	P_DoPlayerHeadSigns(player); // Spawn Tag/CTF signs over player's head
