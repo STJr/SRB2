@@ -2474,7 +2474,8 @@ boolean P_ZMovement(mobj_t *mo)
 			break;
 	}
 
-	if (!mo->player && P_CheckDeathPitCollide(mo))
+	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
+	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
 		switch (mo->type)
 		{
@@ -2488,10 +2489,7 @@ boolean P_ZMovement(mobj_t *mo)
 				if (mo->flags & MF_ENEMY || mo->flags & MF_BOSS || mo->type == MT_MINECART)
 				{
 					// Kill enemies, bosses and minecarts that fall into death pits.
-					if (mo->health)
-					{
-						P_KillMobj(mo, NULL, NULL, 0);
-					}
+					P_KillMobj(mo, NULL, NULL, 0);
 					return !P_MobjWasRemoved(mo); // allows explosion states to run
 				}
 				else
@@ -3137,7 +3135,8 @@ boolean P_SceneryZMovement(mobj_t *mo)
 			break;
 	}
 
-	if (P_CheckDeathPitCollide(mo))
+	if (!mo->player && P_CheckDeathPitCollide(mo) && mo->health
+	&& !(mo->flags & MF_NOCLIPHEIGHT) && !(mo->flags2 & MF2_BOSSDEAD))
 	{
 		P_RemoveMobj(mo);
 		return false;
