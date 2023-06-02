@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -245,7 +245,8 @@ typedef enum
 	CR_MINECART,
 	CR_ROLLOUT,
 	CR_PTERABYTE,
-	CR_DUSTDEVIL
+	CR_DUSTDEVIL,
+	CR_FAN
 } carrytype_t; // pw_carry
 
 // Player powers. (don't edit this comment)
@@ -344,7 +345,7 @@ typedef struct botmem_s
 {
 	boolean lastForward;
 	boolean lastBlocked;
-	boolean blocked;	
+	boolean blocked;
 	UINT8 catchup_tics;
 	UINT8 thinkstate;
 } botmem_t;
@@ -382,6 +383,8 @@ typedef struct player_s
 
 	// fun thing for player sprite
 	angle_t drawangle;
+	angle_t old_drawangle;
+	angle_t old_drawangle2;
 
 	// player's ring count
 	INT16 rings;
@@ -565,7 +568,7 @@ typedef struct player_s
 	UINT16 lastbuttons;
 	botmem_t botmem;
 	boolean blocked;
-	
+
 	tic_t jointime; // Timer when player joins game to change skin/color
 	tic_t quittime; // Time elapsed since user disconnected, zero if connected
 #ifdef HWRENDER

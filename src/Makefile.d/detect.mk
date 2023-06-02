@@ -17,7 +17,6 @@ all_systems:=\
 	UNIX\
 	LINUX\
 	FREEBSD\
-	SDL\
 
 # check for user specified system
 ifeq (,$(filter $(all_systems),$(.VARIABLES)))
@@ -71,13 +70,17 @@ latest_gcc_version:=10.2
 # manually set. And don't bother if this is a clean only
 # run.
 ifeq (,$(call Wildvar,GCC% destructive))
-version:=$(shell $(CC) --version)
+
+# can't use $(CC) --version here since that uses argv[0] to display the name
+# also gcc outputs the information to stderr, so I had to do 2>&1
+# this program really doesn't like identifying itself
+version:=$(shell $(CC) -v 2>&1)
 
 # check if this is in fact GCC
-ifneq (,$(or $(findstring gcc,$(version)),\
-	$(findstring GCC,$(version))))
+ifneq (,$(findstring gcc version,$(version)))
 
-version:=$(shell $(CC) -dumpversion)
+# in stark contrast to the name, gcc will give me a nicely formatted version number for free
+version:=$(shell $(CC) -dumpfullversion)
 
 # Turn version into words of major, minor
 v:=$(subst ., ,$(version))

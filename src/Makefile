@@ -2,8 +2,8 @@
 # the poly3 Makefile adapted over and over...
 #
 # Copyright 1998-2000 DooM Legacy Team.
-# Copyright 2020-2021 James R.
-# Copyright 2003-2021 Sonic Team Junior.
+# Copyright 2020-2023 James R.
+# Copyright 2003-2023 Sonic Team Junior.
 #
 # This program is free software distributed under the
 # terms of the GNU General Public License, version 2.
@@ -31,8 +31,8 @@
 # MINGW=1, MINGW64=1 - Windows (MinGW toolchain)
 # UNIX=1 - Generic Unix like system
 # FREEBSD=1
-# SDL=1 - Use SDL backend. SDL is the only backend though
-#         and thus, always enabled.
+# SDL=1 - Use SDL backend. SDL is the only implemented backend though.
+#         If disabled, a dummy backend will be used.
 #
 # A list of supported GCC versions can be found in
 # Makefile.d/detect.mk -- search 'gcc_versions'.
@@ -357,9 +357,9 @@ $(dbg).txt : $(dbg)
 # this really updates comptime.h
 comptime.c ::
 ifdef WINDOWSHELL
-	$(.)..\comptime.bat .
+	-$(.)..\comptime.bat .
 else
-	$(.)../comptime.sh .
+	-$(.)../comptime.sh .
 endif
 
 # I wish I could make dependencies out of rc files :(

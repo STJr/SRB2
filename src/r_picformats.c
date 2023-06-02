@@ -2,8 +2,8 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 2005-2009 by Andrey "entryway" Budko.
-// Copyright (C) 2018-2021 by Jaime "Lactozilla" Passos.
-// Copyright (C) 2019-2021 by Sonic Team Junior.
+// Copyright (C) 2018-2023 by Jaime "Lactozilla" Passos.
+// Copyright (C) 2019-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -447,7 +447,7 @@ void *Picture_FlatConvert(
 	for (y = 0; y < inheight; y++)
 		for (x = 0; x < inwidth; x++)
 		{
-			void *input;
+			void *input = NULL;
 			size_t offs = ((y * inwidth) + x);
 
 			// Read pixel
@@ -901,9 +901,8 @@ static png_bytep *PNG_Read(
 	png_colorp palette;
 	int palette_size;
 
-	png_bytep trans;
-	int trans_num;
-	png_color_16p trans_values;
+	png_bytep trans = NULL;
+	int num_trans = 0;
 
 #ifdef PNG_SETJMP_SUPPORTED
 #ifdef USE_FAR_KEYWORD
@@ -998,12 +997,12 @@ static png_bytep *PNG_Read(
 		// color is present on the image, the palette flag is disabled.
 		if (usepal)
 		{
-			png_get_tRNS(png_ptr, png_info_ptr, &trans, &trans_num, &trans_values);
+			png_uint_32 result = png_get_tRNS(png_ptr, png_info_ptr, &trans, &num_trans, NULL);
 
-			if (trans && trans_num > 0)
+			if ((result & PNG_INFO_tRNS) && num_trans > 0 && trans != NULL)
 			{
 				INT32 i;
-				for (i = 0; i < trans_num; i++)
+				for (i = 0; i < num_trans; i++)
 				{
 					// libpng will transform this image into RGBA even if
 					// the transparent index does not exist in the image,

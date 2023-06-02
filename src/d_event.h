@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -33,9 +33,10 @@ typedef enum
 typedef struct
 {
 	evtype_t type;
-	INT32 data1; // keys / mouse/joystick buttons
-	INT32 data2; // mouse/joystick x move
-	INT32 data3; // mouse/joystick y move
+	INT32 key; // keys/mouse/joystick buttons
+	INT32 x; // mouse/joystick x move
+	INT32 y; // mouse/joystick y move
+	boolean repeated; // key repeat
 } event_t;
 
 //

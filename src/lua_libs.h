@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -11,6 +11,8 @@
 /// \brief libraries for Lua scripting
 
 extern lua_State *gL;
+
+extern boolean mousegrabbedbylua;
 
 #define MUTABLE_TAGS
 
@@ -88,6 +90,7 @@ extern lua_State *gL;
 
 #define META_LUABANKS "LUABANKS[]*"
 
+#define META_KEYEVENT "KEYEVENT_T*"
 #define META_MOUSE "MOUSE_T*"
 
 boolean luaL_checkboolean(lua_State *L, int narg);

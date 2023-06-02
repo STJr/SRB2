@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2004-2021 by Sonic Team Junior.
+// Copyright (C) 2004-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -38,6 +38,7 @@
 #include "lua_hook.h" // IntermissionThinker hook
 
 #include "lua_hud.h"
+#include "lua_hudlib_drawlist.h"
 
 #ifdef HWRENDER
 #include "hardware/hw_main.h"
@@ -82,6 +83,10 @@ typedef union
 		INT32 passedx2;
 		INT32 passedx3;
 		INT32 passedx4;
+
+		INT32 emeraldbounces;
+		INT32 emeraldmomy;
+		INT32 emeraldy;
 
 		y_bonus_t bonuses[2];
 		patch_t *bonuspatches[2];
@@ -161,6 +166,8 @@ static INT32 endtic = -1;
 intertype_t intertype = int_none;
 intertype_t intermissiontypes[NUMGAMETYPES];
 
+static huddrawlist_h luahuddrawlist_intermission;
+
 static void Y_RescaleScreenBuffer(void);
 static void Y_AwardCoopBonuses(void);
 static void Y_AwardSpecialStageBonus(void);
@@ -212,7 +219,7 @@ static void Y_IntermissionTokenDrawer(void)
 	calc = (lowy - y)*2;
 
 	if (calc > 0)
-		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, 0, tokenicon, 0, 0, tokenicon->width, calc);
+		V_DrawCroppedPatch(32<<FRACBITS, y<<FRACBITS, FRACUNIT/2, FRACUNIT/2, 0, tokenicon, NULL, 0, 0, tokenicon->width<<FRACBITS, calc<<FRACBITS);
 }
 
 
@@ -239,12 +246,12 @@ void Y_LoadIntermissionData(void)
 			}
 			data.coop.ptotal = W_CachePatchName("YB_TOTAL", PU_PATCH);
 
-			// get background patches
-			bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
 				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
+			else // no interscreen? use default background
+				bgpatch = W_CachePatchName("INTERSCR", PU_PATCH);
 			break;
 		}
 		case int_spec:
@@ -255,12 +262,11 @@ void Y_LoadIntermissionData(void)
 			data.spec.pscore = W_CachePatchName("YB_SCORE", PU_PATCH);
 			data.spec.pcontinues = W_CachePatchName("YB_CONTI", PU_PATCH);
 
-			// get background tile
-			bgtile = W_CachePatchName("SPECTILE", PU_PATCH);
-
 			// grab an interscreen if appropriate
 			if (mapheaderinfo[gamemap-1]->interscreen[0] != '#')
 				interpic = W_CachePatchName(mapheaderinfo[gamemap-1]->interscreen, PU_PATCH);
+			else // no interscreen? use default background
+				bgtile = W_CachePatchName("SPECTILE", PU_PATCH);
 			break;
 		}
 		case int_ctf:
@@ -430,7 +436,13 @@ void Y_IntermissionDrawer(void)
 	else if (bgtile)
 		V_DrawPatchFill(bgtile);
 
-	LUAh_IntermissionHUD(intertype == int_spec && stagefailed);
+	if (renderisnewtic)
+	{
+		LUA_HUD_ClearDrawList(luahuddrawlist_intermission);
+		LUA_HUDHOOK(intermission, luahuddrawlist_intermission);
+	}
+	LUA_HUD_DrawList(luahuddrawlist_intermission);
+
 	if (!LUA_HudEnabled(hud_intermissiontally))
 		goto skiptallydrawer;
 
@@ -647,7 +659,6 @@ void Y_IntermissionDrawer(void)
 		}
 
 		// draw the emeralds
-		//if (intertic & 1)
 		if (LUA_HudEnabled(hud_intermissionemeralds))
 		{
 			boolean drawthistic = !(ALL7EMERALDS(emeralds) && (intertic & 1));
@@ -664,10 +675,6 @@ void Y_IntermissionDrawer(void)
 			}
 			else if (em < 7)
 			{
-				static UINT8 emeraldbounces = 0;
-				static INT32 emeraldmomy = 20;
-				static INT32 emeraldy = -40;
-
 				if (drawthistic)
 					for (i = 0; i < 7; ++i)
 					{
@@ -678,45 +685,15 @@ void Y_IntermissionDrawer(void)
 
 				emeraldx = 152 + (em-3)*28;
 
-				if (intertic <= 1)
+				if (intertic > 1)
 				{
-					emeraldbounces = 0;
-					emeraldmomy = 20;
-					emeraldy = -40;
-				}
-				else
-				{
-					if (!stagefailed)
+					if (stagefailed && data.spec.emeraldy < (vid.height/vid.dupy)+16)
 					{
-						if (emeraldbounces < 3)
-						{
-							emeraldy += (++emeraldmomy);
-							if (emeraldy > 74)
-							{
-								S_StartSound(NULL, sfx_tink); // tink
-								emeraldbounces++;
-								emeraldmomy = -(emeraldmomy/2);
-								emeraldy = 74;
-							}
-						}
+						emeraldx += intertic - 6;
 					}
-					else
-					{
-						if (emeraldy < (vid.height/vid.dupy)+16)
-						{
-							emeraldy += (++emeraldmomy);
-							emeraldx += intertic - 6;
-						}
-						if (emeraldbounces < 1 && emeraldy > 74)
-						{
-							S_StartSound(NULL, sfx_shldls); // nope
-							emeraldbounces++;
-							emeraldmomy = -(emeraldmomy/2);
-							emeraldy = 74;
-						}
-					}
+
 					if (drawthistic)
-						V_DrawScaledPatch(emeraldx, emeraldy, 0, emeraldpics[0][em]);
+						V_DrawScaledPatch(emeraldx, data.spec.emeraldy, 0, emeraldpics[0][em]);
 				}
 			}
 		}
@@ -1115,7 +1092,7 @@ void Y_Ticker(void)
 			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
+			if (!(netgame || multiplayer) && !demoplayback)
 			{
 				if (M_UpdateUnlockablesAndExtraEmblems())
 					S_StartSound(NULL, sfx_s3k68);
@@ -1153,6 +1130,50 @@ void Y_Ticker(void)
 			else
 				S_ChangeMusicInternal("_clear", false); // don't loop it
 			tallydonetic = -1;
+		}
+
+		// emerald bounce
+		if (dedicated || !LUA_HudEnabled(hud_intermissionemeralds))
+		{
+			// dedicated servers don't need this, especially since it crashes when stagefailed
+			// also skip this if Lua disabled intermission emeralds, so it doesn't play sounds
+		}
+		else if (intertic <= 1)
+		{
+			data.spec.emeraldbounces = 0;
+			data.spec.emeraldmomy = 20;
+			data.spec.emeraldy = -40;
+		}
+		else if (P_GetNextEmerald() < 7)
+		{
+			if (!stagefailed)
+			{
+				if (data.spec.emeraldbounces < 3)
+				{
+					data.spec.emeraldy += (++data.spec.emeraldmomy);
+					if (data.spec.emeraldy > 74)
+					{
+						S_StartSound(NULL, sfx_tink); // tink
+						data.spec.emeraldbounces++;
+						data.spec.emeraldmomy = -(data.spec.emeraldmomy/2);
+						data.spec.emeraldy = 74;
+					}
+				}
+			}
+			else
+			{
+				if (data.spec.emeraldy < (vid.height/vid.dupy)+16)
+				{
+					data.spec.emeraldy += (++data.spec.emeraldmomy);
+				}
+				if (data.spec.emeraldbounces < 1 && data.spec.emeraldy > 74)
+				{
+					S_StartSound(NULL, sfx_shldls); // nope
+					data.spec.emeraldbounces++;
+					data.spec.emeraldmomy = -(data.spec.emeraldmomy/2);
+					data.spec.emeraldy = 74;
+				}
+			}
 		}
 
 		if (intertic < 2*TICRATE) // TWO second pause before tally begins, thank you mazmazz
@@ -1207,7 +1228,7 @@ void Y_Ticker(void)
 			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer) && !demoplayback)
+			if (!(netgame || multiplayer) && !demoplayback)
 			{
 				if (M_UpdateUnlockablesAndExtraEmblems())
 					S_StartSound(NULL, sfx_s3k68);
@@ -1584,6 +1605,9 @@ void Y_StartIntermission(void)
 		default:
 			break;
 	}
+
+	LUA_HUD_DestroyDrawList(luahuddrawlist_intermission);
+	luahuddrawlist_intermission = LUA_HUD_CreateDrawList();
 }
 
 //
@@ -2024,7 +2048,7 @@ static void Y_AwardCoopBonuses(void)
 
 	for (i = 0; i < MAXPLAYERS; ++i)
 	{
-		if (!playeringame[i] || players[i].lives < 1) // not active or game over
+		if (!playeringame[i] || players[i].lives < 1 || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // not active, game over or tails bot
 			bonusnum = 0; // all null
 		else
 			bonusnum = mapheaderinfo[prevmap]->bonustype + 1; // -1 is none
@@ -2074,7 +2098,7 @@ static void Y_AwardSpecialStageBonus(void)
 	{
 		oldscore = players[i].score;
 
-		if (!playeringame[i] || players[i].lives < 1) // not active or game over
+		if (!playeringame[i] || players[i].lives < 1 || players[i].bot == BOT_2PAI || players[i].bot == BOT_2PHUMAN) // not active, game over or tails bot
 		{
 			Y_SetNullBonus(&players[i], &localbonuses[0]);
 			Y_SetNullBonus(&players[i], &localbonuses[1]);
