@@ -710,6 +710,10 @@ static int player_set(lua_State *L)
 		if (!lua_isnil(L, 3))
 			mo = *((mobj_t **)luaL_checkudata(L, 3, META_MOBJ));
 		P_SetTarget(&plr->awayviewmobj, mo);
+		if (plr == &players[displayplayer])
+			P_ResetCamera(plr, &camera); // reset p1 camera on p1 getting an awayviewmobj
+		else if (splitscreen && plr == &players[secondarydisplayplayer])
+			P_ResetCamera(plr, &camera2);  // reset p2 camera on p2 getting an awayviewmobj
 	}
 	else if (fastcmp(field,"awayviewtics"))
 	{

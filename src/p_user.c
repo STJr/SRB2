@@ -11507,14 +11507,23 @@ void P_PlayerThink(player_t *player)
 	if (player->awayviewmobj && P_MobjWasRemoved(player->awayviewmobj))
 	{
 		P_SetTarget(&player->awayviewmobj, NULL); // remove awayviewmobj asap if invalid
-		player->awayviewtics = 0; // reset to zero
+		player->awayviewtics = 1; // reset to one, the below code will immediately set it to zero
+	}
+	
+	if (player->awayviewtics && player->awayviewtics != -1)
+	{
+		player->awayviewtics--;
+		if (!(player->awayviewtics))
+		{
+			if (player == &players[displayplayer])
+				P_ResetCamera(player, &camera); // reset p1 camera on p1 running out of awayviewtics
+			else if (splitscreen && player == &players[secondarydisplayplayer])
+				P_ResetCamera(player, &camera2);  // reset p2 camera on p2 running out of awayviewtics
+		}
 	}
 
 	if (player->flashcount)
 		player->flashcount--;
-
-	if (player->awayviewtics && player->awayviewtics != -1)
-		player->awayviewtics--;
 
 	/// \note do this in the cheat code
 	if (player->pflags & PF_NOCLIP)
