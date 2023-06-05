@@ -2728,8 +2728,22 @@ increment_move
 	fixed_t thingtop;
 	floatok = false;
 
-	if (radius < MAXRADIUS/2)
-		radius = MAXRADIUS/2;
+	// This makes sure that there are no freezes from computing extremely small movements.
+	// Originally was MAXRADIUS/2, but that can cause some bad inconsistencies for small players.
+	radius = max(radius, thing->scale);
+
+	// And we also have to prevent Big Large (tm) movements, as those can skip too far
+	// across slopes and cause us to fail step up checks on them when we otherwise shouldn't.
+	radius = min(radius, 16 * thing->scale);
+
+	// (This whole "step" system is flawed; it was OK before, but the addition of slopes has
+	// exposed the problems with doing it like this. The right thing to do would be to use
+	// raycasting for physics to fix colliding in weird order, double-checking collisions,
+	// randomly colliding with slopes instead of going up them, etc. I don't feel like porting
+	// that from RR, as its both a huge sweeping change and still incomplete at the time of
+	// writing. Clamping radius to make our steps more precise will work just fine as long
+	// as you keep all of your crazy intentions to poke any of the other deep-rooted movement
+	// code to yourself. -- Sal 6/5/2023)
 
 	do {
 		if (thing->flags & MF_NOCLIP) {
