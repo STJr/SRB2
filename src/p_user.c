@@ -11442,7 +11442,7 @@ void P_DoMetalJetFume(player_t *player, mobj_t *fume)
 // Handle Followmobj behavior
 void P_DoFollowMobj(player_t *player, mobj_t *followmobj)
 {
-	if (LUAh_FollowMobj(player, followmobj) || P_MobjWasRemoved(followmobj))
+	if (LUA_HookFollowMobj(player, followmobj) || P_MobjWasRemoved(followmobj))
 		{;}
 	else
 	{
