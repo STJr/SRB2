@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -35,6 +35,7 @@
 #include "doomstat.h"
 #include "d_main.h"
 #include "g_game.h"
+#include "i_time.h"
 #include "i_net.h"
 #include "i_system.h"
 #include "m_argv.h"

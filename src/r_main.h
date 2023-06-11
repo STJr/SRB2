@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -34,6 +34,13 @@ extern fixed_t fovtan;
 #define AIMINGTODY(a) FixedDiv((FINETANGENT((2048+(((INT32)a)>>ANGLETOFINESHIFT)) & FINEMASK)*160), fovtan)
 
 extern size_t validcount, linecount, loopcount, framecount;
+
+// The fraction of a tic being drawn (for interpolation between two tics)
+extern fixed_t rendertimefrac;
+// Evaluated delta tics for this frame (how many tics since the last frame)
+extern fixed_t renderdeltatics;
+// The current render is a new logical tic
+extern boolean renderisnewtic;
 
 //
 // Lighting LUT.

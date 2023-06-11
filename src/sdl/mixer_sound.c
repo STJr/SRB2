@@ -1,6 +1,6 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
-// Copyright (C) 2014-2021 by Sonic Team Junior.
+// Copyright (C) 2014-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -74,7 +74,7 @@
 #endif
 
 #ifdef HAVE_GME
-#include "gme/gme.h"
+#include <gme/gme.h>
 #define GME_TREBLE 5.0f
 #define GME_BASS 1.0f
 #endif // HAVE_GME

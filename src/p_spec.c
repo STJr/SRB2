@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -15,11 +15,13 @@
 ///        utility functions, etc.
 ///        Line Tag handling. Line and Sector triggers.
 
+#include "dehacked.h"
 #include "doomdef.h"
 #include "g_game.h"
 #include "p_local.h"
 #include "p_setup.h" // levelflats for flat animation
 #include "r_data.h"
+#include "r_fps.h"
 #include "r_textures.h"
 #include "m_random.h"
 #include "p_mobj.h"
@@ -49,9 +51,6 @@
 mobj_t *skyboxmo[2]; // current skybox mobjs: 0 = viewpoint, 1 = centerpoint
 mobj_t *skyboxviewpnts[16]; // array of MT_SKYBOX viewpoint mobjs
 mobj_t *skyboxcenterpnts[16]; // array of MT_SKYBOX centerpoint mobjs
-
-// Amount (dx, dy) vector linedef is shifted right to get scroll amount
-#define SCROLL_SHIFT 5
 
 /** Animated texture descriptor
   * This keeps track of an animated texture or an animated flat.
@@ -100,7 +99,7 @@ typedef struct
 static void P_SpawnScrollers(void);
 static void P_SpawnFriction(void);
 static void P_SpawnPushers(void);
-static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
+static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t z_mag, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider); //SoM: 3/9/2000
 static void Add_MasterDisappearer(tic_t appeartime, tic_t disappeartime, tic_t offset, INT32 line, INT32 sourceline);
 static void P_ResetFakeFloorFader(ffloor_t *rover, fade_t *data, boolean finalize);
 #define P_RemoveFakeFloorFader(l) P_ResetFakeFloorFader(l, NULL, false);
@@ -117,7 +116,7 @@ static void Add_ColormapFader(sector_t *sector, extracolormap_t *source_exc, ext
 static void P_AddBlockThinker(sector_t *sec, line_t *sourceline);
 static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline);
 //static void P_AddBridgeThinker(line_t *sourceline, sector_t *sec);
-static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
+static void P_AddFakeFloorsByLine(size_t line, INT32 alpha, UINT8 blendmode, ffloortype_e ffloorflags, thinkerlist_t *secthinkers);
 static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec);
 static void Add_Friction(INT32 friction, INT32 movefactor, INT32 affectee, INT32 referrer);
 static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, INT32 affectee, UINT8 reverse);
@@ -993,30 +992,22 @@ static boolean PolyDoor(line_t *line)
 {
 	polydoordata_t pdd;
 
-	pdd.polyObjNum = Tag_FGet(&line->tags); // polyobject id
+	pdd.polyObjNum = line->args[0]; // polyobject id
 
 	switch(line->special)
 	{
 		case 480: // Polyobj_DoorSlide
 			pdd.doorType = POLY_DOOR_SLIDE;
-			pdd.speed    = sides[line->sidenum[0]].textureoffset / 8;
+			pdd.speed    = line->args[1] << (FRACBITS - 3);
 			pdd.angle    = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y); // angle of motion
-			pdd.distance = sides[line->sidenum[0]].rowoffset;
-
-			if (line->sidenum[1] != 0xffff)
-				pdd.delay = sides[line->sidenum[1]].textureoffset >> FRACBITS; // delay in tics
-			else
-				pdd.delay = 0;
+			pdd.distance = line->args[2] << FRACBITS;
+			pdd.delay    = line->args[3]; // delay in tics
 			break;
 		case 481: // Polyobj_DoorSwing
 			pdd.doorType = POLY_DOOR_SWING;
-			pdd.speed    = sides[line->sidenum[0]].textureoffset >> FRACBITS; // angular speed
-			pdd.distance = sides[line->sidenum[0]].rowoffset >> FRACBITS; // angular distance
-
-			if (line->sidenum[1] != 0xffff)
-				pdd.delay = sides[line->sidenum[1]].textureoffset >> FRACBITS; // delay in tics
-			else
-				pdd.delay = 0;
+			pdd.speed    = line->args[1]; // angular speed
+			pdd.distance = line->args[2]; // angular distance
+			pdd.delay    = line->args[3]; // delay in tics
 			break;
 		default:
 			return 0; // ???
@@ -1025,31 +1016,29 @@ static boolean PolyDoor(line_t *line)
 	return EV_DoPolyDoor(&pdd);
 }
 
-// Parses arguments for parameterized polyobject move specials
+// Parses arguments for parameterized polyobject move special
 static boolean PolyMove(line_t *line)
 {
 	polymovedata_t pmd;
 
-	pmd.polyObjNum = Tag_FGet(&line->tags);
-	pmd.speed      = sides[line->sidenum[0]].textureoffset / 8;
+	pmd.polyObjNum = line->args[0];
+	pmd.speed      = line->args[1] << (FRACBITS - 3);
 	pmd.angle      = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y);
-	pmd.distance   = sides[line->sidenum[0]].rowoffset;
+	pmd.distance   = line->args[2] << FRACBITS;
 
-	pmd.overRide = (line->special == 483); // Polyobj_OR_Move
+	pmd.overRide = !!line->args[3]; // Polyobj_OR_Move
 
 	return EV_DoPolyObjMove(&pmd);
 }
 
-// Makes a polyobject invisible and intangible
-// If NOCLIMB is ticked, the polyobject will still be tangible, just not visible.
-static void PolyInvisible(line_t *line)
+static void PolySetVisibilityTangibility(line_t *line)
 {
-	INT32 polyObjNum = Tag_FGet(&line->tags);
-	polyobj_t *po;
+	INT32 polyObjNum = line->args[0];
+	polyobj_t* po;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "PolyInvisible: bad polyobj %d\n", polyObjNum);
+		CONS_Debug(DBG_POLYOBJ, "PolySetVisibilityTangibility: bad polyobj %d\n", polyObjNum);
 		return;
 	}
 
@@ -1057,49 +1046,32 @@ static void PolyInvisible(line_t *line)
 	if (po->isBad)
 		return;
 
-	if (!(line->flags & ML_NOCLIMB))
-		po->flags &= ~POF_SOLID;
-
-	po->flags |= POF_NOSPECIALS;
-	po->flags &= ~POF_RENDERALL;
-}
-
-// Makes a polyobject visible and tangible
-// If NOCLIMB is ticked, the polyobject will not be tangible, just visible.
-static void PolyVisible(line_t *line)
-{
-	INT32 polyObjNum = Tag_FGet(&line->tags);
-	polyobj_t *po;
-
-	if (!(po = Polyobj_GetForNum(polyObjNum)))
+	if (line->args[1] == TMPV_VISIBLE)
 	{
-		CONS_Debug(DBG_POLYOBJ, "PolyVisible: bad polyobj %d\n", polyObjNum);
-		return;
+		po->flags &= ~POF_NOSPECIALS;
+		po->flags |= (po->spawnflags & POF_RENDERALL);
+	}
+	else if (line->args[1] == TMPV_INVISIBLE)
+	{
+		po->flags |= POF_NOSPECIALS;
+		po->flags &= ~POF_RENDERALL;
 	}
 
-	// don't allow line actions to affect bad polyobjects
-	if (po->isBad)
-		return;
-
-	if (!(line->flags & ML_NOCLIMB))
+	if (line->args[2] == TMPT_TANGIBLE)
 		po->flags |= POF_SOLID;
-
-	po->flags &= ~POF_NOSPECIALS;
-	po->flags |= (po->spawnflags & POF_RENDERALL);
+	else if (line->args[2] == TMPT_INTANGIBLE)
+		po->flags &= ~POF_SOLID;
 }
-
 
 // Sets the translucency of a polyobject
-// Frontsector floor / 100 = translevel
 static void PolyTranslucency(line_t *line)
 {
-	INT32 polyObjNum = Tag_FGet(&line->tags);
+	INT32 polyObjNum = line->args[0];
 	polyobj_t *po;
-	INT32 value;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
-		CONS_Debug(DBG_POLYOBJ, "EV_DoPolyObjWaypoint: bad polyobj %d\n", polyObjNum);
+		CONS_Debug(DBG_POLYOBJ, "PolyTranslucency: bad polyobj %d\n", polyObjNum);
 		return;
 	}
 
@@ -1107,17 +1079,10 @@ static void PolyTranslucency(line_t *line)
 	if (po->isBad)
 		return;
 
-	// If Front X Offset is specified, use that. Else, use floorheight.
-	value = (sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : line->frontsector->floorheight) >> FRACBITS;
-
-	// If DONTPEGBOTTOM, specify raw translucency value. Else, take it out of 1000.
-	if (!(line->flags & ML_DONTPEGBOTTOM))
-		value /= 100;
-
-	if (line->flags & ML_EFFECT3) // relative calc
-		po->translucency += value;
+	if (lines->args[2]) // relative calc
+		po->translucency += line->args[1];
 	else
-		po->translucency = value;
+		po->translucency = line->args[1];
 
 	po->translucency = max(min(po->translucency, NUMTRANSMAPS), 0);
 }
@@ -1125,10 +1090,9 @@ static void PolyTranslucency(line_t *line)
 // Makes a polyobject translucency fade and applies tangibility
 static boolean PolyFade(line_t *line)
 {
-	INT32 polyObjNum = Tag_FGet(&line->tags);
+	INT32 polyObjNum = line->args[0];
 	polyobj_t *po;
 	polyfadedata_t pfd;
-	INT32 value;
 
 	if (!(po = Polyobj_GetForNum(polyObjNum)))
 	{
@@ -1141,7 +1105,7 @@ static boolean PolyFade(line_t *line)
 		return 0;
 
 	// Prevent continuous execs from interfering on an existing fade
-	if (!(line->flags & ML_EFFECT5)
+	if (!(line->args[3] & TMPF_OVERRIDE)
 		&& po->thinker
 		&& po->thinker->function.acp1 == (actionf_p1)T_PolyObjFade)
 	{
@@ -1151,17 +1115,10 @@ static boolean PolyFade(line_t *line)
 
 	pfd.polyObjNum = polyObjNum;
 
-	// If Front X Offset is specified, use that. Else, use floorheight.
-	value = (sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : line->frontsector->floorheight) >> FRACBITS;
-
-	// If DONTPEGBOTTOM, specify raw translucency value. Else, take it out of 1000.
-	if (!(line->flags & ML_DONTPEGBOTTOM))
-		value /= 100;
-
-	if (line->flags & ML_EFFECT3) // relative calc
-		pfd.destvalue = po->translucency + value;
+	if (line->args[3] & TMPF_RELATIVE) // relative calc
+		pfd.destvalue = po->translucency + line->args[1];
 	else
-		pfd.destvalue = value;
+		pfd.destvalue = line->args[1];
 
 	pfd.destvalue = max(min(pfd.destvalue, NUMTRANSMAPS), 0);
 
@@ -1169,15 +1126,11 @@ static boolean PolyFade(line_t *line)
 	if (po->translucency == pfd.destvalue)
 		return 1;
 
-	pfd.docollision = !(line->flags & ML_BOUNCY);         // do not handle collision flags
-	pfd.doghostfade = (line->flags & ML_EFFECT1);         // do ghost fade (no collision flags during fade)
-	pfd.ticbased = (line->flags & ML_EFFECT4);            // Speed = Tic Duration
+	pfd.docollision = !(line->args[3] & TMPF_IGNORECOLLISION); // do not handle collision flags
+	pfd.doghostfade = (line->args[3] & TMPF_GHOSTFADE);        // do ghost fade (no collision flags during fade)
+	pfd.ticbased = (line->args[3] & TMPF_TICBASED);            // Speed = Tic Duration
 
-	// allow Back Y Offset to be consistent with other fade specials
-	pfd.speed = (line->sidenum[1] != 0xFFFF && !sides[line->sidenum[0]].rowoffset) ?
-		abs(sides[line->sidenum[1]].rowoffset>>FRACBITS)
-		: abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
-
+	pfd.speed = line->args[2];
 
 	return EV_DoPolyObjFade(&pfd);
 }
@@ -1187,49 +1140,25 @@ static boolean PolyWaypoint(line_t *line)
 {
 	polywaypointdata_t pwd;
 
-	pwd.polyObjNum = Tag_FGet(&line->tags);
-	pwd.speed      = sides[line->sidenum[0]].textureoffset / 8;
-	pwd.sequence   = sides[line->sidenum[0]].rowoffset >> FRACBITS; // Sequence #
-
-	// Behavior after reaching the last waypoint?
-	if (line->flags & ML_EFFECT3)
-		pwd.returnbehavior = PWR_WRAP; // Wrap back to first waypoint
-	else if (line->flags & ML_EFFECT2)
-		pwd.returnbehavior = PWR_COMEBACK; // Go through sequence in reverse
-	else
-		pwd.returnbehavior = PWR_STOP; // Stop
-
-	// Flags
-	pwd.flags = 0;
-	if (line->flags & ML_EFFECT1)
-		pwd.flags |= PWF_REVERSE;
-	if (line->flags & ML_EFFECT4)
-		pwd.flags |= PWF_LOOP;
+	pwd.polyObjNum     = line->args[0];
+	pwd.speed          = line->args[1] << (FRACBITS - 3);
+	pwd.sequence       = line->args[2];
+	pwd.returnbehavior = line->args[3];
+	pwd.flags          = line->args[4];
 
 	return EV_DoPolyObjWaypoint(&pwd);
 }
 
-// Parses arguments for parameterized polyobject rotate specials
+// Parses arguments for parameterized polyobject rotate special
 static boolean PolyRotate(line_t *line)
 {
 	polyrotdata_t prd;
 
-	prd.polyObjNum = Tag_FGet(&line->tags);
-	prd.speed      = sides[line->sidenum[0]].textureoffset >> FRACBITS; // angular speed
-	prd.distance   = sides[line->sidenum[0]].rowoffset >> FRACBITS; // angular distance
-
-	// Polyobj_(OR_)RotateRight have dir == -1
-	prd.direction = (line->special == 484 || line->special == 485) ? -1 : 1;
-
-	// Polyobj_OR types have override set to true
-	prd.overRide  = (line->special == 485 || line->special == 487);
-
-	if (line->flags & ML_NOCLIMB)
-		prd.turnobjs = 0;
-	else if (line->flags & ML_EFFECT4)
-		prd.turnobjs = 2;
-	else
-		prd.turnobjs = 1;
+	prd.polyObjNum = line->args[0];
+	prd.speed      = line->args[1]; // angular speed
+	prd.distance   = abs(line->args[2]); // angular distance
+	prd.direction  = (line->args[2] < 0) ? -1 : 1;
+	prd.flags      = line->args[3];
 
 	return EV_DoPolyObjRotate(&prd);
 }
@@ -1239,10 +1168,10 @@ static boolean PolyFlag(line_t *line)
 {
 	polyflagdata_t pfd;
 
-	pfd.polyObjNum = Tag_FGet(&line->tags);
-	pfd.speed = P_AproxDistance(line->dx, line->dy) >> FRACBITS;
-	pfd.angle = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y) >> ANGLETOFINESHIFT;
-	pfd.momx = sides[line->sidenum[0]].textureoffset >> FRACBITS;
+	pfd.polyObjNum = line->args[0];
+	pfd.speed = line->args[1];
+	pfd.angle = line->angle >> ANGLETOFINESHIFT;
+	pfd.momx = line->args[2];
 
 	return EV_DoPolyObjFlag(&pfd);
 }
@@ -1251,12 +1180,14 @@ static boolean PolyFlag(line_t *line)
 static boolean PolyDisplace(line_t *line)
 {
 	polydisplacedata_t pdd;
+	fixed_t length = R_PointToDist2(line->v2->x, line->v2->y, line->v1->x, line->v1->y);
+	fixed_t speed = line->args[1] << FRACBITS;
 
-	pdd.polyObjNum = Tag_FGet(&line->tags);
+	pdd.polyObjNum = line->args[0];
 
 	pdd.controlSector = line->frontsector;
-	pdd.dx = line->dx>>8;
-	pdd.dy = line->dy>>8;
+	pdd.dx = FixedMul(FixedDiv(line->dx, length), speed) >> 8;
+	pdd.dy = FixedMul(FixedDiv(line->dy, length), speed) >> 8;
 
 	return EV_DoPolyObjDisplace(&pdd);
 }
@@ -1268,22 +1199,16 @@ static boolean PolyRotDisplace(line_t *line)
 	polyrotdisplacedata_t pdd;
 	fixed_t anginter, distinter;
 
-	pdd.polyObjNum = Tag_FGet(&line->tags);
+	pdd.polyObjNum = line->args[0];
 	pdd.controlSector = line->frontsector;
 
 	// Rotate 'anginter' interval for each 'distinter' interval from the control sector.
-	// Use default values if not provided as fallback.
-	anginter	= sides[line->sidenum[0]].rowoffset ? sides[line->sidenum[0]].rowoffset : 90*FRACUNIT;
-	distinter	= sides[line->sidenum[0]].textureoffset ? sides[line->sidenum[0]].textureoffset : 128*FRACUNIT;
+	anginter	= line->args[2] << FRACBITS;
+	distinter	= line->args[1] << FRACBITS;
 	pdd.rotscale = FixedDiv(anginter, distinter);
 
 	// Same behavior as other rotators when carrying things.
-	if (line->flags & ML_NOCLIMB)
-		pdd.turnobjs = 0;
-	else if (line->flags & ML_EFFECT4)
-		pdd.turnobjs = 2;
-	else
-		pdd.turnobjs = 1;
+	pdd.turnobjs = line->args[3];
 
 	return EV_DoPolyObjRotDisplace(&pdd);
 }
@@ -1298,7 +1223,7 @@ void P_RunNightserizeExecutors(mobj_t *actor)
 
 	for (i = 0; i < numlines; i++)
 	{
-		if (lines[i].special == 323 || lines[i].special == 324)
+		if (lines[i].special == 323)
 			P_RunTriggerLinedef(&lines[i], actor, NULL);
 	}
 }
@@ -1312,7 +1237,7 @@ void P_RunDeNightserizeExecutors(mobj_t *actor)
 
 	for (i = 0; i < numlines; i++)
 	{
-		if (lines[i].special == 325 || lines[i].special == 326)
+		if (lines[i].special == 325)
 			P_RunTriggerLinedef(&lines[i], actor, NULL);
 	}
 }
@@ -1326,7 +1251,7 @@ void P_RunNightsLapExecutors(mobj_t *actor)
 
 	for (i = 0; i < numlines; i++)
 	{
-		if (lines[i].special == 327 || lines[i].special == 328)
+		if (lines[i].special == 327)
 			P_RunTriggerLinedef(&lines[i], actor, NULL);
 	}
 }
@@ -1340,13 +1265,19 @@ void P_RunNightsCapsuleTouchExecutors(mobj_t *actor, boolean entering, boolean e
 
 	for (i = 0; i < numlines; i++)
 	{
-		if ((lines[i].special == 329 || lines[i].special == 330)
-			&& ((entering && (lines[i].flags & ML_TFERLINE))
-				|| (!entering && !(lines[i].flags & ML_TFERLINE)))
-			&& ((lines[i].flags & ML_DONTPEGTOP)
-				|| (enoughspheres && !(lines[i].flags & ML_BOUNCY))
-				|| (!enoughspheres && (lines[i].flags & ML_BOUNCY))))
-			P_RunTriggerLinedef(&lines[i], actor, NULL);
+		if (lines[i].special != 329)
+			continue;
+
+		if (!!(lines[i].args[7] & TMI_ENTER) != entering)
+			continue;
+
+		if (lines[i].args[6] == TMS_IFENOUGH && !enoughspheres)
+			continue;
+
+		if (lines[i].args[6] == TMS_IFNOTENOUGH && enoughspheres)
+			continue;
+
+		P_RunTriggerLinedef(&lines[i], actor, NULL);
 	}
 }
 
@@ -1426,27 +1357,42 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 	INT16 specialtype = triggerline->special;
 	size_t i;
 
-	UINT8 inputmare = max(0, min(255, sides[triggerline->sidenum[0]].textureoffset>>FRACBITS));
-	UINT8 inputlap = max(0, min(255, sides[triggerline->sidenum[0]].rowoffset>>FRACBITS));
+	UINT8 inputmare = max(0, min(255, triggerline->args[1]));
+	UINT8 inputlap = max(0, min(255, triggerline->args[2]));
 
-	boolean ltemare = triggerline->flags & ML_NOCLIMB;
-	boolean gtemare = triggerline->flags & ML_BLOCKMONSTERS;
-	boolean ltelap = triggerline->flags & ML_EFFECT1;
-	boolean gtelap = triggerline->flags & ML_EFFECT2;
+	textmapcomparison_t marecomp = triggerline->args[3];
+	textmapcomparison_t lapcomp = triggerline->args[4];
+	textmapnightsplayer_t checkplayer = triggerline->args[5];
 
-	boolean lapfrombonustime = triggerline->flags & ML_EFFECT3;
-	boolean perglobalinverse = triggerline->flags & ML_DONTPEGBOTTOM;
-	boolean perglobal = !(triggerline->flags & ML_EFFECT4) && !perglobalinverse;
+	boolean lapfrombonustime;
 
-	boolean donomares = triggerline->flags & ML_BOUNCY; // nightserize: run at end of level (no mares)
-	boolean fromnonights = triggerline->flags & ML_TFERLINE; // nightserize: from non-nights // denightserize: all players no nights
-	boolean fromnights = triggerline->flags & ML_DONTPEGTOP; // nightserize: from nights // denightserize: >0 players are nights
+	boolean donomares = (specialtype == 323) && (triggerline->args[7] & TMN_LEVELCOMPLETION); // nightserize: run at end of level (no mares)
 
 	UINT8 currentmare = UINT8_MAX;
 	UINT8 currentlap = UINT8_MAX;
 
+	// Set lapfrombonustime
+	switch (specialtype)
+	{
+		case 323:
+			lapfrombonustime = !!(triggerline->args[7] & TMN_BONUSLAPS);
+			break;
+		case 325:
+			lapfrombonustime = !!(triggerline->args[7]);
+			break;
+		case 327:
+			lapfrombonustime = !!(triggerline->args[6]);
+			break;
+		case 329:
+			lapfrombonustime = !!(triggerline->args[7] & TMI_BONUSLAPS);
+			break;
+		default:
+			lapfrombonustime = false;
+			break;
+	}
+
 	// Do early returns for Nightserize
-	if (specialtype >= 323 && specialtype <= 324)
+	if (specialtype == 323)
 	{
 		// run only when no mares are found
 		if (donomares && P_FindLowestMare() != UINT8_MAX)
@@ -1457,7 +1403,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 			return false;
 
 		// run only if player is nightserizing from non-nights
-		if (fromnonights)
+		if (triggerline->args[6] == TMN_FROMNONIGHTS)
 		{
 			if (!actor->player)
 				return false;
@@ -1465,7 +1411,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 				return false;
 		}
 		// run only if player is nightserizing from nights
-		else if (fromnights)
+		else if (triggerline->args[6] == TMN_FROMNIGHTS)
 		{
 			if (!actor->player)
 				return false;
@@ -1475,8 +1421,8 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 	}
 
 	// Get current mare and lap (and check early return for DeNightserize)
-	if (perglobal || perglobalinverse
-		|| (specialtype >= 325 && specialtype <= 326 && (fromnonights || fromnights)))
+	if (checkplayer != TMNP_TRIGGERER
+		|| (specialtype == 325 && triggerline->args[6] != TMD_ALWAYS))
 	{
 		UINT8 playersarenights = 0;
 
@@ -1487,19 +1433,19 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 				continue;
 
 			// denightserize: run only if all players are not nights
-			if (specialtype >= 325 && specialtype <= 326 && fromnonights
+			if (specialtype == 325 && triggerline->args[6] == TMD_NOBODYNIGHTS
 				&& players[i].powers[pw_carry] == CR_NIGHTSMODE)
 				return false;
 
 			// count number of nights players for denightserize return
-			if (specialtype >= 325 && specialtype <= 326 && fromnights
+			if (specialtype == 325 && triggerline->args[6] == TMD_SOMEBODYNIGHTS
 				&& players[i].powers[pw_carry] == CR_NIGHTSMODE)
 				playersarenights++;
 
 			lap = lapfrombonustime ? players[i].marebonuslap : players[i].marelap;
 
 			// get highest mare/lap of players
-			if (perglobal)
+			if (checkplayer == TMNP_FASTEST)
 			{
 				if (players[i].mare > currentmare || currentmare == UINT8_MAX)
 				{
@@ -1511,7 +1457,7 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 					currentlap = lap;
 			}
 			// get lowest mare/lap of players
-			else if (perglobalinverse)
+			else if (checkplayer == TMNP_SLOWEST)
 			{
 				if (players[i].mare < currentmare || currentmare == UINT8_MAX)
 				{
@@ -1525,12 +1471,12 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 		}
 
 		// denightserize: run only if >0 players are nights
-		if (specialtype >= 325 && specialtype <= 326 && fromnights
+		if (specialtype == 325 && triggerline->args[6] == TMD_SOMEBODYNIGHTS
 			&& playersarenights < 1)
 			return false;
 	}
 	// get current mare/lap from triggering player
-	else if (!perglobal && !perglobalinverse)
+	else if (checkplayer == TMNP_TRIGGERER)
 	{
 		if (!actor->player)
 			return false;
@@ -1542,280 +1488,170 @@ static boolean P_CheckNightsTriggerLine(line_t *triggerline, mobj_t *actor)
 		return false; // special case: player->marebonuslap is 0 until passing through on bonus time. Don't trigger lines looking for inputlap 0.
 
 	// Compare current mare/lap to input mare/lap based on rules
-	if (!(specialtype >= 323 && specialtype <= 324 && donomares) // don't return false if donomares and we got this far
-		&& ((ltemare && currentmare > inputmare)
-		|| (gtemare && currentmare < inputmare)
-		|| (!ltemare && !gtemare && currentmare != inputmare)
-		|| (ltelap && currentlap > inputlap)
-		|| (gtelap && currentlap < inputlap)
-		|| (!ltelap && !gtelap && currentlap != inputlap))
+	if (!donomares // don't return false if donomares and we got this far
+		&& ((marecomp == TMC_LTE && currentmare > inputmare)
+		|| (marecomp == TMC_GTE && currentmare < inputmare)
+		|| (marecomp == TMC_EQUAL && currentmare != inputmare)
+		|| (lapcomp == TMC_LTE && currentlap > inputlap)
+		|| (lapcomp == TMC_GTE && currentlap < inputlap)
+		|| (lapcomp == TMC_EQUAL && currentlap != inputlap))
 		)
 		return false;
 
 	return true;
 }
 
-/** Used by P_LinedefExecute to check a trigger linedef's conditions
-  * The linedef executor specials in the trigger linedef's sector are run if all conditions are met.
-  * Return false cancels P_LinedefExecute, this happens if a condition is not met.
-  *
-  * \param triggerline Trigger linedef to check conditions for; should NEVER be NULL.
-  * \param actor Object initiating the action; should not be NULL.
-  * \param caller Sector in which the action was started. May be NULL.
-  * \sa P_ProcessLineSpecial, P_LinedefExecute
-  */
-boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller)
+static boolean P_CheckPlayerMareOld(line_t *triggerline)
 {
-	sector_t *ctlsector;
-	fixed_t dist = P_AproxDistance(triggerline->dx, triggerline->dy)>>FRACBITS;
-	size_t i, linecnt, sectori;
-	INT16 specialtype = triggerline->special;
+	UINT8 mare;
+	INT32 targetmare = P_AproxDistance(triggerline->dx, triggerline->dy) >> FRACBITS;
 
-	/////////////////////////////////////////////////
-	// Distance-checking/sector trigger conditions //
-	/////////////////////////////////////////////////
+	if (!(maptol & TOL_NIGHTS))
+		return false;
 
-	// Linetypes 303 and 304 require a specific
-	// number, or minimum or maximum, of rings.
-	if (specialtype == 303 || specialtype == 304)
+	mare = P_FindLowestMare();
+
+	if (triggerline->flags & ML_NOCLIMB)
+		return mare <= targetmare;
+
+	if (triggerline->flags & ML_BLOCKMONSTERS)
+		return mare >= targetmare;
+
+	return mare == targetmare;
+}
+
+static boolean P_CheckPlayerMare(line_t *triggerline)
+{
+	UINT8 mare;
+	INT32 targetmare = triggerline->args[1];
+
+	if (!(maptol & TOL_NIGHTS))
+		return false;
+
+	mare = P_FindLowestMare();
+
+	switch (triggerline->args[2])
 	{
-		fixed_t rings = 0;
-
-		// With the passuse flag, count all player's
-		// rings.
-		if (triggerline->flags & ML_EFFECT4)
-		{
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i] || players[i].spectator)
-					continue;
-
-				if (!players[i].mo || ((maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings) <= 0)
-					continue;
-
-				rings += (maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings;
-			}
-		}
-		else
-		{
-			if (!(actor && actor->player))
-				return false; // no player to count rings from here, sorry
-
-			rings = (maptol & TOL_NIGHTS) ? actor->player->spheres : actor->player->rings;
-		}
-
-		if (triggerline->flags & ML_NOCLIMB)
-		{
-			if (rings > dist)
-				return false;
-		}
-		else if (triggerline->flags & ML_BLOCKMONSTERS)
-		{
-			if (rings < dist)
-				return false;
-		}
-		else
-		{
-			if (rings != dist)
-				return false;
-		}
-	}
-	else if (specialtype >= 314 && specialtype <= 315)
-	{
-		msecnode_t *node;
-		mobj_t *mo;
-		INT32 numpush = 0;
-		INT32 numneeded = dist;
-
-		if (!caller)
-			return false; // we need a calling sector to find pushables in, silly!
-
-		// Count the pushables in this sector
-		node = caller->touching_thinglist; // things touching this sector
-		while (node)
-		{
-			mo = node->m_thing;
-			if ((mo->flags & MF_PUSHABLE) || ((mo->info->flags & MF_PUSHABLE) && mo->fuse))
-				numpush++;
-			node = node->m_thinglist_next;
-		}
-
-		if (triggerline->flags & ML_NOCLIMB) // Need at least or more
-		{
-			if (numpush < numneeded)
-				return false;
-		}
-		else if (triggerline->flags & ML_EFFECT4) // Need less than
-		{
-			if (numpush >= numneeded)
-				return false;
-		}
-		else // Need exact
-		{
-			if (numpush != numneeded)
-				return false;
-		}
-	}
-	else if (caller)
-	{
-		if (GETSECSPECIAL(caller->special, 2) == 6)
-		{
-			if (!(ALL7EMERALDS(emeralds)))
-				return false;
-		}
-		else if (GETSECSPECIAL(caller->special, 2) == 7)
-		{
-			UINT8 mare;
-
-			if (!(maptol & TOL_NIGHTS))
-				return false;
-
-			mare = P_FindLowestMare();
-
-			if (triggerline->flags & ML_NOCLIMB)
-			{
-				if (!(mare <= dist))
-					return false;
-			}
-			else if (triggerline->flags & ML_BLOCKMONSTERS)
-			{
-				if (!(mare >= dist))
-					return false;
-			}
-			else
-			{
-				if (!(mare == dist))
-					return false;
-			}
-		}
-		// If we were not triggered by a sector type especially for the purpose,
-		// a Linedef Executor linedef trigger is not handling sector triggers properly, return.
-
-		else if ((!GETSECSPECIAL(caller->special, 2) || GETSECSPECIAL(caller->special, 2) > 7) && (specialtype > 322))
-		{
-			CONS_Alert(CONS_WARNING,
-				M_GetText("Linedef executor trigger isn't handling sector triggers properly!\nspecialtype = %d, if you are not a dev, report this warning instance\nalong with the wad that caused it!\n"),
-				specialtype);
-			return false;
-		}
-	}
-
-	//////////////////////////////////////
-	// Miscellaneous trigger conditions //
-	//////////////////////////////////////
-
-	switch (specialtype)
-	{
-		case 305: // continuous
-		case 306: // each time
-		case 307: // once
-			if (!(actor && actor->player && actor->player->charability == dist/10))
-				return false;
-			break;
-		case 309: // continuous
-		case 310: // each time
-			// Only red team members can activate this.
-			if (!(actor && actor->player && actor->player->ctfteam == 1))
-				return false;
-			break;
-		case 311: // continuous
-		case 312: // each time
-			// Only blue team members can activate this.
-			if (!(actor && actor->player && actor->player->ctfteam == 2))
-				return false;
-			break;
-		case 317: // continuous
-		case 318: // once
-			{ // Unlockable triggers required
-				INT32 trigid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
-
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
-					return false;
-				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", triggerline->sidenum[0], trigid);
-					return false;
-				}
-				else if (!(unlocktriggers & (1 << trigid)))
-					return false;
-			}
-			break;
-		case 319: // continuous
-		case 320: // once
-			{ // An unlockable itself must be unlocked!
-				INT32 unlockid = (INT32)(sides[triggerline->sidenum[0]].textureoffset>>FRACBITS);
-
-				if ((modifiedgame && !savemoddata) || (netgame || multiplayer))
-					return false;
-				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (sidedef %hu): bad unlockable ID %d\n", triggerline->sidenum[0], unlockid);
-					return false;
-				}
-				else if (!(unlockables[unlockid-1].unlocked))
-					return false;
-			}
-			break;
-		case 321: // continuous
-		case 322: // each time
-			// decrement calls left before triggering
-			if (triggerline->callcount > 0)
-			{
-				if (--triggerline->callcount > 0)
-					return false;
-			}
-			break;
-		case 323: // nightserize - each time
-		case 324: // nightserize - once
-		case 325: // denightserize - each time
-		case 326: // denightserize - once
-		case 327: // nights lap - each time
-		case 328: // nights lap - once
-		case 329: // nights egg capsule touch - each time
-		case 330: // nights egg capsule touch - once
-			if (!P_CheckNightsTriggerLine(triggerline, actor))
-				return false;
-			break;
-		case 331: // continuous
-		case 332: // each time
-		case 333: // once
-			if (!(actor && actor->player && ((stricmp(triggerline->text, skins[actor->player->skin].name) == 0) ^ ((triggerline->flags & ML_NOCLIMB) == ML_NOCLIMB))))
-				return false;
-			break;
-		case 334: // object dye - continuous
-		case 335: // object dye - each time
-		case 336: // object dye - once
-			{
-				INT32 triggercolor = (INT32)sides[triggerline->sidenum[0]].toptexture;
-				UINT16 color = (actor->player ? actor->player->powers[pw_dye] : actor->color);
-				boolean invert = (triggerline->flags & ML_NOCLIMB ? true : false);
-
-				if (invert ^ (triggercolor != color))
-					return false;
-			}
+		case TMC_EQUAL:
 		default:
-			break;
+			return mare == targetmare;
+		case TMC_GTE:
+			return mare >= targetmare;
+		case TMC_LTE:
+			return mare <= targetmare;
+	}
+}
+
+static boolean P_CheckPlayerRings(line_t *triggerline, mobj_t *actor)
+{
+	INT32 rings = 0;
+	INT32 targetrings = triggerline->args[1];
+	size_t i;
+
+	// Count all players' rings.
+	if (triggerline->args[3])
+	{
+		for (i = 0; i < MAXPLAYERS; i++)
+		{
+			if (!playeringame[i] || players[i].spectator)
+				continue;
+
+			if (!players[i].mo || ((maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings) <= 0)
+				continue;
+
+			rings += (maptol & TOL_NIGHTS) ? players[i].spheres : players[i].rings;
+		}
+	}
+	else
+	{
+		if (!(actor && actor->player))
+			return false; // no player to count rings from here, sorry
+
+		rings = (maptol & TOL_NIGHTS) ? actor->player->spheres : actor->player->rings;
 	}
 
-	/////////////////////////////////
-	// Processing linedef specials //
-	/////////////////////////////////
+	switch (triggerline->args[2])
+	{
+		case TMC_EQUAL:
+		default:
+			return rings == targetrings;
+		case TMC_GTE:
+			return rings >= targetrings;
+		case TMC_LTE:
+			return rings <= targetrings;
+	}
+}
 
-	ctlsector = triggerline->frontsector;
-	sectori = (size_t)(ctlsector - sectors);
-	linecnt = ctlsector->linecount;
+static boolean P_CheckPushables(line_t *triggerline, sector_t *caller)
+{
+	msecnode_t *node;
+	mobj_t *mo;
+	INT32 numpushables = 0;
+	INT32 targetpushables = triggerline->args[1];
 
-	if (triggerline->flags & ML_EFFECT5) // disregard order for efficiency
+	if (!caller)
+		return false; // we need a calling sector to find pushables in, silly!
+
+	// Count the pushables in this sector
+	for (node = caller->touching_thinglist; node; node = node->m_thinglist_next)
+	{
+		mo = node->m_thing;
+		if ((mo->flags & MF_PUSHABLE) || ((mo->info->flags & MF_PUSHABLE) && mo->fuse))
+			numpushables++;
+	}
+
+	switch (triggerline->args[2])
+	{
+		case TMC_EQUAL:
+		default:
+			return numpushables == targetpushables;
+		case TMC_GTE:
+			return numpushables >= targetpushables;
+		case TMC_LTE:
+			return numpushables <= targetpushables;
+	}
+}
+
+static boolean P_CheckEmeralds(INT32 checktype, UINT16 target)
+{
+	switch (checktype)
+	{
+		case TMF_HASALL:
+		default:
+			return (emeralds & target) == target;
+		case TMF_HASANY:
+			return !!(emeralds & target);
+		case TMF_HASEXACTLY:
+			return emeralds == target;
+		case TMF_DOESNTHAVEALL:
+			return (emeralds & target) != target;
+		case TMF_DOESNTHAVEANY:
+			return !(emeralds & target);
+	}
+}
+
+static void P_ActivateLinedefExecutor(line_t *line, mobj_t *actor, sector_t *caller)
+{
+	if (line->special < 400 || line->special >= 500)
+		return;
+
+	if (line->executordelay)
+		P_AddExecutorDelay(line, actor, caller);
+	else
+		P_ProcessLineSpecial(line, actor, caller);
+}
+
+static boolean P_ActivateLinedefExecutorsInSector(line_t *triggerline, mobj_t *actor, sector_t *caller)
+{
+	sector_t *ctlsector = triggerline->frontsector;
+	size_t sectori = (size_t)(ctlsector - sectors);
+	size_t linecnt = ctlsector->linecount;
+	size_t i;
+
+	if (!udmf && triggerline->flags & ML_WRAPMIDTEX) // disregard order for efficiency
 	{
 		for (i = 0; i < linecnt; i++)
-			if (ctlsector->lines[i]->special >= 400
-				&& ctlsector->lines[i]->special < 500)
-			{
-				if (ctlsector->lines[i]->executordelay)
-					P_AddExecutorDelay(ctlsector->lines[i], actor, caller);
-				else
-					P_ProcessLineSpecial(ctlsector->lines[i], actor, caller);
-			}
+			P_ActivateLinedefExecutor(ctlsector->lines[i], actor, caller);
 	}
 	else // walk around the sector in a defined order
 	{
@@ -1896,39 +1732,183 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
 			if (i == masterlineindex)
 				break;
 
-			if (ctlsector->lines[i]->special >= 400
-				&& ctlsector->lines[i]->special < 500)
-			{
-				if (ctlsector->lines[i]->executordelay)
-					P_AddExecutorDelay(ctlsector->lines[i], actor, caller);
-				else
-					P_ProcessLineSpecial(ctlsector->lines[i], actor, caller);
-			}
+			P_ActivateLinedefExecutor(ctlsector->lines[i], actor, caller);
 		}
 	}
 
-	// "Trigger on X calls" linedefs reset if noclimb is set
-	if ((specialtype == 321 || specialtype == 322) && triggerline->flags & ML_NOCLIMB)
-		triggerline->callcount = sides[triggerline->sidenum[0]].textureoffset>>FRACBITS;
+	return true;
+}
+
+/** Used by P_LinedefExecute to check a trigger linedef's conditions
+  * The linedef executor specials in the trigger linedef's sector are run if all conditions are met.
+  * Return false cancels P_LinedefExecute, this happens if a condition is not met.
+  *
+  * \param triggerline Trigger linedef to check conditions for; should NEVER be NULL.
+  * \param actor Object initiating the action; should not be NULL.
+  * \param caller Sector in which the action was started. May be NULL.
+  * \sa P_ProcessLineSpecial, P_LinedefExecute
+  */
+boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller)
+{
+	INT16 specialtype = triggerline->special;
+
+	////////////////////////
+	// Trigger conditions //
+	////////////////////////
+
+	if (caller && !udmf)
+	{
+		if (caller->triggerer == TO_PLAYEREMERALDS)
+		{
+			if (!(ALL7EMERALDS(emeralds)))
+				return false;
+		}
+		else if (caller->triggerer == TO_PLAYERNIGHTS)
+		{
+			if (!P_CheckPlayerMareOld(triggerline))
+				return false;
+		}
+	}
+
+	switch (specialtype)
+	{
+		case 303:
+			if (!P_CheckPlayerRings(triggerline, actor))
+				return false;
+			break;
+		case 305:
+			if (!(actor && actor->player && actor->player->charability == triggerline->args[1]))
+				return false;
+			break;
+		case 309:
+			// Only red/blue team members can activate this.
+			if (!(actor && actor->player))
+				return false;
+			if (actor->player->ctfteam != ((triggerline->args[1] == TMT_RED) ? 1 : 2))
+				return false;
+			break;
+		case 314:
+			if (!P_CheckPushables(triggerline, caller))
+				return false;
+			break;
+		case 317:
+			{ // Unlockable triggers required
+				INT32 trigid = triggerline->args[1];
+
+				if (netgame || multiplayer)
+					return false;
+				else if (trigid < 0 || trigid > 31) // limited by 32 bit variable
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", triggerline->sidenum[0], trigid);
+					return false;
+				}
+				else if (!(unlocktriggers & (1 << trigid)))
+					return false;
+			}
+			break;
+		case 319:
+			{ // An unlockable itself must be unlocked!
+				INT32 unlockid = triggerline->args[1];
+
+				if (netgame || multiplayer)
+					return false;
+				else if (unlockid < 0 || unlockid >= MAXUNLOCKABLES) // limited by unlockable count
+				{
+					CONS_Debug(DBG_GAMELOGIC, "Unlockable check (sidedef %hu): bad unlockable ID %d\n", triggerline->sidenum[0], unlockid);
+					return false;
+				}
+				else if (!(unlockables[unlockid-1].unlocked))
+					return false;
+			}
+			break;
+		case 321:
+			// decrement calls left before triggering
+			if (triggerline->callcount > 0)
+			{
+				if (--triggerline->callcount > 0)
+					return false;
+			}
+			break;
+		case 323: // nightserize
+		case 325: // denightserize
+		case 327: // nights lap
+		case 329: // nights egg capsule touch
+			if (!P_CheckNightsTriggerLine(triggerline, actor))
+				return false;
+			break;
+		case 331:
+			if (!(actor && actor->player))
+				return false;
+			if (!triggerline->stringargs[0])
+				return false;
+			if (!(stricmp(triggerline->stringargs[0], skins[actor->player->skin].name) == 0) ^ !!(triggerline->args[1]))
+				return false;
+			break;
+		case 334: // object dye
+			{
+				INT32 triggercolor = triggerline->stringargs[0] ? get_number(triggerline->stringargs[0]) : SKINCOLOR_NONE;
+				UINT16 color = (actor->player ? actor->player->powers[pw_dye] : actor->color);
+
+				if (!!(triggerline->args[1]) ^ (triggercolor != color))
+					return false;
+			}
+			break;
+		case 337: // emerald check
+			if (!P_CheckEmeralds(triggerline->args[2], (UINT16)triggerline->args[1]))
+				return false;
+			break;
+		case 340: // NiGHTS mare
+			if (!P_CheckPlayerMare(triggerline))
+				return false;
+			break;
+		case 343: // gravity check
+			if (triggerline->args[1] == TMG_TEMPREVERSE && (!(actor->flags2 & MF2_OBJECTFLIP) != !(actor->player->powers[pw_gravityboots])))
+				return false;
+			if ((triggerline->args[1] == TMG_NORMAL) != !(actor->eflags & MFE_VERTICALFLIP))
+				return false;
+			break;
+		default:
+			break;
+	}
+
+	/////////////////////////////////
+	// Processing linedef specials //
+	/////////////////////////////////
+
+	if (!P_ActivateLinedefExecutorsInSector(triggerline, actor, caller))
+		return false;
+
+	// "Trigger on X calls" linedefs reset if args[2] is set
+	if (specialtype == 321 && triggerline->args[2])
+		triggerline->callcount = triggerline->args[1];
 	else
-	// These special types work only once
-	if (specialtype == 302  // Once
-	 || specialtype == 304  // Ring count - Once
-	 || specialtype == 307  // Character ability - Once
-	 || specialtype == 308  // Race only - Once
-	 || specialtype == 313  // No More Enemies - Once
-	 || specialtype == 315  // No of pushables - Once
-	 || specialtype == 318  // Unlockable trigger - Once
-	 || specialtype == 320  // Unlockable - Once
-	 || specialtype == 321 || specialtype == 322 // Trigger on X calls - Continuous + Each Time
-	 || specialtype == 324 // Nightserize - Once
-	 || specialtype == 326 // DeNightserize - Once
-	 || specialtype == 328 // Nights lap - Once
-	 || specialtype == 330 // Nights Bonus Time - Once
-	 || specialtype == 333 // Skin - Once
-	 || specialtype == 336 // Dye - Once
-	 || specialtype == 399) // Level Load
-		triggerline->special = 0; // Clear it out
+	{
+		// These special types work only once
+		if (specialtype == 313  // No more enemies
+			|| specialtype == 321 // Trigger on X calls
+			|| specialtype == 399) // Level Load
+			triggerline->special = 0;
+		else if ((specialtype == 323 // Nightserize
+			|| specialtype == 325 // DeNightserize
+			|| specialtype == 327 // Nights lap
+			|| specialtype == 329) // Nights bonus time
+			&& triggerline->args[0])
+			triggerline->special = 0;
+		else if ((specialtype == 300 // Basic
+			|| specialtype == 303 // Ring count
+			|| specialtype == 305 // Character ability
+			|| specialtype == 308 // Gametype
+			|| specialtype == 309 // CTF team
+			|| specialtype == 314 // No of pushables
+			|| specialtype == 317 // Unlockable trigger
+			|| specialtype == 319 // Unlockable
+			|| specialtype == 331 // Player skin
+			|| specialtype == 334 // Object dye
+			|| specialtype == 337 // Emerald check
+			|| specialtype == 343) // Gravity check
+			&& triggerline->args[0] == TMT_ONCE)
+			triggerline->special = 0;
+	}
 
 	return true;
 }
@@ -1948,36 +1928,142 @@ boolean P_RunTriggerLinedef(line_t *triggerline, mobj_t *actor, sector_t *caller
   */
 void P_LinedefExecute(INT16 tag, mobj_t *actor, sector_t *caller)
 {
-	size_t masterline;
+	INT32 masterline;
 
 	CONS_Debug(DBG_GAMELOGIC, "P_LinedefExecute: Executing trigger linedefs of tag %d\n", tag);
 
 	I_Assert(!actor || !P_MobjWasRemoved(actor)); // If actor is there, it must be valid.
 
-	for (masterline = 0; masterline < numlines; masterline++)
+	TAG_ITER_LINES(tag, masterline)
 	{
-		if (Tag_FGet(&lines[masterline].tags) != tag)
-			continue;
-
-		// "No More Enemies" and "Level Load" take care of themselves.
-		if (lines[masterline].special == 313
-		 || lines[masterline].special == 399
-		 // Each-time executors handle themselves, too
-		 || lines[masterline].special == 301 // Each time
-		 || lines[masterline].special == 306 // Character ability - Each time
-		 || lines[masterline].special == 310 // CTF Red team - Each time
-		 || lines[masterline].special == 312 // CTF Blue team - Each time
-		 || lines[masterline].special == 322 // Trigger on X calls - Each Time
-		 || lines[masterline].special == 332 // Skin - Each time
-		 || lines[masterline].special == 335)// Dye - Each time
-			continue;
-
 		if (lines[masterline].special < 300
 			|| lines[masterline].special > 399)
 			continue;
 
+		// "No More Enemies" and "Level Load" take care of themselves.
+		if (lines[masterline].special == 313  || lines[masterline].special == 399)
+			continue;
+
+		// Each-time executors handle themselves, too
+		if ((lines[masterline].special == 300 // Basic
+			|| lines[masterline].special == 303 // Ring count
+			|| lines[masterline].special == 305 // Character ability
+			|| lines[masterline].special == 308 // Gametype
+			|| lines[masterline].special == 309 // CTF team
+			|| lines[masterline].special == 314 // Number of pushables
+			|| lines[masterline].special == 317 // Condition set trigger
+			|| lines[masterline].special == 319 // Unlockable trigger
+			|| lines[masterline].special == 331 // Player skin
+			|| lines[masterline].special == 334 // Object dye
+			|| lines[masterline].special == 337 // Emerald check
+			|| lines[masterline].special == 343) // Gravity check
+			&& lines[masterline].args[0] > TMT_EACHTIMEMASK)
+			continue;
+
+		if (lines[masterline].special == 321 && lines[masterline].args[0] > TMXT_EACHTIMEMASK) // Trigger after X calls
+			continue;
+
 		if (!P_RunTriggerLinedef(&lines[masterline], actor, caller))
 			return; // cancel P_LinedefExecute if function returns false
+	}
+}
+
+static void P_PlaySFX(INT32 sfxnum, mobj_t *mo, sector_t *callsec, INT16 tag, textmapsoundsource_t source, textmapsoundlistener_t listener)
+{
+	if (sfxnum == sfx_None)
+		return; // Do nothing!
+
+	if (sfxnum < sfx_None || sfxnum >= NUMSFX)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "Line type 414 Executor: sfx number %d is invalid!\n", sfxnum);
+		return;
+	}
+
+	// Check if you can hear the sound
+	switch (listener)
+	{
+		case TMSL_TRIGGERER: // only play sound if displayplayer
+			if (!mo)
+				return;
+
+			if (!mo->player)
+				return;
+
+			if (mo->player != &players[displayplayer] && mo->player != &players[secondarydisplayplayer])
+				return;
+
+			break;
+		case TMSL_TAGGEDSECTOR: // only play if touching tagged sectors
+		{
+			UINT8 i = 0;
+			mobj_t *camobj = players[displayplayer].mo;
+			ffloor_t *rover;
+			boolean foundit = false;
+
+			for (i = 0; i < 2; camobj = players[secondarydisplayplayer].mo, i++)
+			{
+				if (!camobj)
+					continue;
+
+				if (foundit || Tag_Find(&camobj->subsector->sector->tags, tag))
+				{
+					foundit = true;
+					break;
+				}
+
+				// Only trigger if mobj is touching the tag
+				for (rover = camobj->subsector->sector->ffloors; rover; rover = rover->next)
+				{
+					if (!Tag_Find(&rover->master->frontsector->tags, tag))
+						continue;
+
+					if (camobj->z > P_GetSpecialTopZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+						continue;
+
+					if (camobj->z + camobj->height < P_GetSpecialBottomZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
+						continue;
+
+					foundit = true;
+					break;
+				}
+			}
+
+			if (!foundit)
+				return;
+
+			break;
+		}
+		case TMSL_EVERYONE: // no additional check
+		default:
+			break;
+	}
+
+	// Play the sound from the specified source
+	switch (source)
+	{
+		case TMSS_TRIGGERMOBJ: // play the sound from mobj that triggered it
+			if (mo)
+				S_StartSound(mo, sfxnum);
+			break;
+		case TMSS_TRIGGERSECTOR: // play the sound from calling sector's soundorg
+			if (callsec)
+				S_StartSound(&callsec->soundorg, sfxnum);
+			else if (mo)
+				S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
+			break;
+		case TMSS_NOWHERE: // play the sound from nowhere
+			S_StartSound(NULL, sfxnum);
+			break;
+		case TMSS_TAGGEDSECTOR: // play the sound from tagged sectors' soundorgs
+		{
+			INT32 secnum;
+
+			TAG_ITER_SECTORS(tag, secnum)
+				S_StartSound(&sectors[secnum].soundorg, sfxnum);
+			break;
+		}
+		default:
+			break;
 	}
 }
 
@@ -2093,7 +2179,7 @@ void P_SwitchWeather(INT32 weathernum)
 	{
 		case PRECIP_SNOW: // snow
 			curWeather = PRECIP_SNOW;
-			
+
 			if (purge)
 				P_SpawnPrecipitation();
 
@@ -2163,6 +2249,39 @@ static mobj_t *P_GetObjectTypeInSectorNum(mobjtype_t type, size_t s)
 	return NULL;
 }
 
+static mobj_t* P_FindObjectTypeFromTag(mobjtype_t type, mtag_t tag)
+{
+	if (udmf)
+	{
+		INT32 mtnum;
+		mobj_t *mo;
+
+		TAG_ITER_THINGS(tag, mtnum)
+		{
+			mo = mapthings[mtnum].mobj;
+
+			if (!mo)
+				continue;
+
+			if (mo->type != type)
+				continue;
+
+			return mo;
+		}
+
+		return NULL;
+	}
+	else
+	{
+		INT32 secnum;
+
+		if ((secnum = Tag_Iterate_Sectors(tag, 0)) < 0)
+			return NULL;
+
+		return P_GetObjectTypeInSectorNum(type, secnum);
+	}
+}
+
 /** Processes the line special triggered by an object.
   *
   * \param line Line with the special command on it.
@@ -2181,7 +2300,6 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 {
 	INT32 secnum = -1;
 	mobj_t *bot = NULL;
-	mtag_t tag = Tag_FGet(&line->tags);
 
 	I_Assert(!mo || !P_MobjWasRemoved(mo)); // If mo is there, mo must be valid!
 
@@ -2191,90 +2309,134 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 	// note: only commands with linedef types >= 400 && < 500 can be used
 	switch (line->special)
 	{
-		case 400: // Set tagged sector's floor height/pic
-			EV_DoFloor(line, instantMoveFloorByFrontSector);
+		case 400: // Set tagged sector's heights/flats
+			if (line->args[1] != TMP_CEILING)
+				EV_DoFloor(line->args[0], line, instantMoveFloorByFrontSector);
+			if (line->args[1] != TMP_FLOOR)
+				EV_DoCeiling(line->args[0], line, instantMoveCeilingByFrontSector);
 			break;
 
-		case 401: // Set tagged sector's ceiling height/pic
-			EV_DoCeiling(line, instantMoveCeilingByFrontSector);
-			break;
-
-		case 402: // Set tagged sector's light level
+		case 402: // Copy light level to tagged sectors
 			{
 				INT16 newlightlevel;
+				INT16 newfloorlightlevel, newceilinglightlevel;
+				boolean newfloorlightabsolute, newceilinglightabsolute;
 				INT32 newfloorlightsec, newceilinglightsec;
 
 				newlightlevel = line->frontsector->lightlevel;
+				newfloorlightlevel = line->frontsector->floorlightlevel;
+				newfloorlightabsolute = line->frontsector->floorlightabsolute;
+				newceilinglightlevel = line->frontsector->ceilinglightlevel;
+				newceilinglightabsolute = line->frontsector->ceilinglightabsolute;
 				newfloorlightsec = line->frontsector->floorlightsec;
 				newceilinglightsec = line->frontsector->ceilinglightsec;
 
-				// act on all sectors with the same tag as the triggering linedef
-				TAG_ITER_SECTORS(tag, secnum)
+				TAG_ITER_SECTORS(line->args[0], secnum)
 				{
 					if (sectors[secnum].lightingdata)
 					{
 						// Stop the lighting madness going on in this sector!
-						P_RemoveThinker(&((elevator_t *)sectors[secnum].lightingdata)->thinker);
+						P_RemoveThinker(&((thinkerdata_t *)sectors[secnum].lightingdata)->thinker);
 						sectors[secnum].lightingdata = NULL;
-
-						// No, it's not an elevator_t, but any struct with a thinker_t named
-						// 'thinker' at the beginning will do here. (We don't know what it
-						// actually is: could be lightlevel_t, fireflicker_t, glow_t, etc.)
 					}
 
-					sectors[secnum].lightlevel = newlightlevel;
-					sectors[secnum].floorlightsec = newfloorlightsec;
-					sectors[secnum].ceilinglightsec = newceilinglightsec;
+					if (!(line->args[1] & TMLC_NOSECTOR))
+						sectors[secnum].lightlevel = newlightlevel;
+					if (!(line->args[1] & TMLC_NOFLOOR))
+					{
+						sectors[secnum].floorlightlevel = newfloorlightlevel;
+						sectors[secnum].floorlightabsolute = newfloorlightabsolute;
+						sectors[secnum].floorlightsec = newfloorlightsec;
+					}
+					if (!(line->args[1] & TMLC_NOCEILING))
+					{
+						sectors[secnum].ceilinglightlevel = newceilinglightlevel;
+						sectors[secnum].ceilinglightabsolute = newceilinglightabsolute;
+						sectors[secnum].ceilinglightsec = newceilinglightsec;
+					}
 				}
 			}
 			break;
 
-		case 403: // Move floor, linelen = speed, frontsector floor = dest height
-			EV_DoFloor(line, moveFloorByFrontSector);
+		case 403: // Move planes by front sector
+			if (line->args[1] != TMP_CEILING)
+				EV_DoFloor(line->args[0], line, moveFloorByFrontSector);
+			if (line->args[1] != TMP_FLOOR)
+				EV_DoCeiling(line->args[0], line, moveCeilingByFrontSector);
 			break;
 
-		case 404: // Move ceiling, linelen = speed, frontsector ceiling = dest height
-			EV_DoCeiling(line, moveCeilingByFrontSector);
+		case 405: // Move planes by distance
+			if (line->args[1] != TMP_CEILING)
+				EV_DoFloor(line->args[0], line, moveFloorByDistance);
+			if (line->args[1] != TMP_FLOOR)
+				EV_DoCeiling(line->args[0], line, moveCeilingByDistance);
 			break;
 
-		case 405: // Move floor by front side texture offsets, offset x = speed, offset y = amount to raise/lower
-			EV_DoFloor(line, moveFloorByFrontTexture);
+		case 408: // Set flats
+		{
+			TAG_ITER_SECTORS(line->args[0], secnum)
+			{
+				if (line->args[1] != TMP_CEILING)
+					sectors[secnum].floorpic = line->frontsector->floorpic;
+				if (line->args[1] != TMP_FLOOR)
+					sectors[secnum].ceilingpic = line->frontsector->ceilingpic;
+			}
 			break;
-
-		case 407: // Move ceiling by front side texture offsets, offset x = speed, offset y = amount to raise/lower
-			EV_DoCeiling(line, moveCeilingByFrontTexture);
-			break;
-
-/*		case 405: // Lower floor by line, dx = speed, dy = amount to lower
-			EV_DoFloor(line, lowerFloorByLine);
-			break;
-
-		case 406: // Raise floor by line, dx = speed, dy = amount to raise
-			EV_DoFloor(line, raiseFloorByLine);
-			break;
-
-		case 407: // Lower ceiling by line, dx = speed, dy = amount to lower
-			EV_DoCeiling(line, lowerCeilingByLine);
-			break;
-
-		case 408: // Raise ceiling by line, dx = speed, dy = amount to raise
-			EV_DoCeiling(line, raiseCeilingByLine);
-			break;*/
+		}
 
 		case 409: // Change tagged sectors' tag
 		// (formerly "Change calling sectors' tag", but behavior was changed)
 		{
-			TAG_ITER_SECTORS(tag, secnum)
-				Tag_SectorFSet(secnum,(INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS));
+			mtag_t newtag = line->args[1];
+
+			TAG_ITER_SECTORS(line->args[0], secnum)
+			{
+				switch (line->args[2])
+				{
+					case TMT_ADD:
+						Tag_SectorAdd(secnum, newtag);
+						break;
+					case TMT_REMOVE:
+						Tag_SectorRemove(secnum, newtag);
+						break;
+					case TMT_REPLACEFIRST:
+					default:
+						Tag_SectorFSet(secnum, newtag);
+						break;
+					case TMT_TRIGGERTAG:
+						sectors[secnum].triggertag = newtag;
+						break;
+				}
+			}
 			break;
 		}
 
 		case 410: // Change front sector's tag
-			Tag_SectorFSet((UINT32)(line->frontsector - sectors), (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS));
+		{
+			mtag_t newtag = line->args[1];
+			secnum = (UINT32)(line->frontsector - sectors);
+
+			switch (line->args[2])
+			{
+				case TMT_ADD:
+					Tag_SectorAdd(secnum, newtag);
+					break;
+				case TMT_REMOVE:
+					Tag_SectorRemove(secnum, newtag);
+					break;
+				case TMT_REPLACEFIRST:
+				default:
+					Tag_SectorFSet(secnum, newtag);
+					break;
+				case TMT_TRIGGERTAG:
+					sectors[secnum].triggertag = newtag;
+					break;
+			}
 			break;
+		}
 
 		case 411: // Stop floor/ceiling movement in tagged sector(s)
-			TAG_ITER_SECTORS(tag, secnum)
+			TAG_ITER_SECTORS(line->args[0], secnum)
 			{
 				if (sectors[secnum].floordata)
 				{
@@ -2308,13 +2470,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (!mo) // nothing to teleport
 					return;
 
-				if (line->flags & ML_EFFECT3) // Relative silent teleport
+				if (line->args[1] & TMT_RELATIVE) // Relative silent teleport
 				{
 					fixed_t x, y, z;
 
-					x = sides[line->sidenum[0]].textureoffset;
-					y = sides[line->sidenum[0]].rowoffset;
-					z = line->frontsector->ceilingheight;
+					x = line->args[2] << FRACBITS;
+					y = line->args[3] << FRACBITS;
+					z = line->args[4] << FRACBITS;
 
 					P_UnsetThingPosition(mo);
 					mo->x += x;
@@ -2325,7 +2487,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (mo->player)
 					{
 						if (bot) // This might put poor Tails in a wall if he's too far behind! D: But okay, whatever! >:3
-							P_TeleportMove(bot, bot->x + x, bot->y + y, bot->z + z);
+							P_SetOrigin(bot, bot->x + x, bot->y + y, bot->z + z);
 						if (splitscreen && mo->player == &players[secondarydisplayplayer] && camera2.chase)
 						{
 							camera2.x += x;
@@ -2344,41 +2506,40 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 				else
 				{
-					if ((secnum = Tag_Iterate_Sectors(tag, 0)) < 0)
-						return;
+					angle_t angle;
+					boolean silent, keepmomentum;
 
-					dest = P_GetObjectTypeInSectorNum(MT_TELEPORTMAN, secnum);
+					dest = P_FindObjectTypeFromTag(MT_TELEPORTMAN, line->args[0]);
 					if (!dest)
 						return;
 
+					angle = (line->args[1] & TMT_KEEPANGLE) ? mo->angle : dest->angle;
+					silent = !!(line->args[1] & TMT_SILENT);
+					keepmomentum = !!(line->args[1] & TMT_KEEPMOMENTUM);
+
 					if (bot)
-						P_Teleport(bot, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, (line->flags & ML_BLOCKMONSTERS) == 0, (line->flags & ML_EFFECT4) == ML_EFFECT4);
-					if (line->flags & ML_BLOCKMONSTERS)
-						P_Teleport(mo, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, false, (line->flags & ML_EFFECT4) == ML_EFFECT4);
-					else
-					{
-						P_Teleport(mo, dest->x, dest->y, dest->z, (line->flags & ML_NOCLIMB) ?  mo->angle : dest->angle, true, (line->flags & ML_EFFECT4) == ML_EFFECT4);
-						// Play the 'bowrwoosh!' sound
-						S_StartSound(dest, sfx_mixup);
-					}
+						P_Teleport(bot, dest->x, dest->y, dest->z, angle, !silent, keepmomentum);
+					P_Teleport(mo, dest->x, dest->y, dest->z, angle, !silent, keepmomentum);
+					if (!silent)
+						S_StartSound(dest, sfx_mixup); // Play the 'bowrwoosh!' sound
 				}
 			}
 			break;
 
 		case 413: // Change music
-			// console player only unless NOCLIMB is set
-			if ((line->flags & ML_NOCLIMB) || (mo && mo->player && P_IsLocalPlayer(mo->player)) || titlemapinaction)
+			// console player only unless TMM_ALLPLAYERS is set
+			if ((line->args[0] & TMM_ALLPLAYERS) || (mo && mo->player && P_IsLocalPlayer(mo->player)) || titlemapinaction)
 			{
-				boolean musicsame = (!sides[line->sidenum[0]].text[0] || !strnicmp(sides[line->sidenum[0]].text, S_MusicName(), 7));
-				UINT16 tracknum = (UINT16)max(sides[line->sidenum[0]].bottomtexture, 0);
-				INT32 position = (INT32)max(sides[line->sidenum[0]].midtexture, 0);
-				UINT32 prefadems = (UINT32)max(sides[line->sidenum[0]].textureoffset >> FRACBITS, 0);
-				UINT32 postfadems = (UINT32)max(sides[line->sidenum[0]].rowoffset >> FRACBITS, 0);
-				UINT8 fadetarget = (UINT8)max((line->sidenum[1] != 0xffff) ? sides[line->sidenum[1]].textureoffset >> FRACBITS : 0, 0);
-				INT16 fadesource = (INT16)max((line->sidenum[1] != 0xffff) ? sides[line->sidenum[1]].rowoffset >> FRACBITS : -1, -1);
+				boolean musicsame = (!line->stringargs[0] || !line->stringargs[0][0] || !strnicmp(line->stringargs[0], S_MusicName(), 7));
+				UINT16 tracknum = (UINT16)max(line->args[6], 0);
+				INT32 position = (INT32)max(line->args[1], 0);
+				UINT32 prefadems = (UINT32)max(line->args[2], 0);
+				UINT32 postfadems = (UINT32)max(line->args[3], 0);
+				UINT8 fadetarget = (UINT8)max(line->args[4], 0);
+				INT16 fadesource = (INT16)max(line->args[5], -1);
 
 				// Seek offset from current song position
-				if (line->flags & ML_EFFECT1)
+				if (line->args[0] & TMM_OFFSET)
 				{
 					// adjust for loop point if subtracting
 					if (position < 0 && S_GetMusicLength() &&
@@ -2390,7 +2551,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				}
 
 				// Fade current music to target volume (if music won't be changed)
-				if ((line->flags & ML_EFFECT2) && fadetarget && musicsame)
+				if ((line->args[0] & TMM_FADE) && fadetarget && musicsame)
 				{
 					// 0 fadesource means fade from current volume.
 					// meaning that we can't specify volume 0 as the source volume -- this starts at 1.
@@ -2408,22 +2569,25 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				// Change the music and apply position/fade operations
 				else
 				{
-					strncpy(mapmusname, sides[line->sidenum[0]].text, 7);
+					if (!line->stringargs[0])
+						break;
+
+					strncpy(mapmusname, line->stringargs[0], 7);
 					mapmusname[6] = 0;
 
 					mapmusflags = tracknum & MUSIC_TRACKMASK;
-					if (!(line->flags & ML_BLOCKMONSTERS))
+					if (!(line->args[0] & TMM_NORELOAD))
 						mapmusflags |= MUSIC_RELOADRESET;
-					if (line->flags & ML_BOUNCY)
+					if (line->args[0] & TMM_FORCERESET)
 						mapmusflags |= MUSIC_FORCERESET;
 
 					mapmusposition = position;
 
-					S_ChangeMusicEx(mapmusname, mapmusflags, !(line->flags & ML_EFFECT4), position,
-						!(line->flags & ML_EFFECT2) ? prefadems : 0,
-						!(line->flags & ML_EFFECT2) ? postfadems : 0);
+					S_ChangeMusicEx(mapmusname, mapmusflags, !(line->args[0] & TMM_NOLOOP), position,
+						!(line->args[0] & TMM_FADE) ? prefadems : 0,
+						!(line->args[0] & TMM_FADE) ? postfadems : 0);
 
-					if ((line->flags & ML_EFFECT2) && fadetarget)
+					if ((line->args[0] & TMM_FADE) && fadetarget)
 					{
 						if (!postfadems)
 							S_SetInternalMusicVolume(fadetarget);
@@ -2432,302 +2596,55 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					}
 				}
 
-				// Except, you can use the ML_BLOCKMONSTERS flag to change this behavior.
+				// Except, you can use the TMM_NORELOAD flag to change this behavior.
 				// if (mapmusflags & MUSIC_RELOADRESET) then it will reset the music in G_PlayerReborn.
 			}
 			break;
 
 		case 414: // Play SFX
-			{
-				INT32 sfxnum;
-
-				sfxnum = sides[line->sidenum[0]].toptexture;
-
-				if (sfxnum == sfx_None)
-					return; // Do nothing!
-				if (sfxnum < sfx_None || sfxnum >= NUMSFX)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Line type 414 Executor: sfx number %d is invalid!\n", sfxnum);
-					return;
-				}
-
-				if (tag != 0) // Do special stuff only if a non-zero linedef tag is set
-				{
-					// Play sounds from tagged sectors' origins.
-					if (line->flags & ML_EFFECT5) // Repeat Midtexture
-					{
-						// Additionally play the sound from tagged sectors' soundorgs
-						sector_t *sec;
-
-						TAG_ITER_SECTORS(tag, secnum)
-						{
-							sec = &sectors[secnum];
-							S_StartSound(&sec->soundorg, sfxnum);
-						}
-					}
-
-					// Play the sound without origin for anyone, as long as they're inside tagged areas.
-					else
-					{
-						UINT8 i = 0;
-						mobj_t* camobj = players[displayplayer].mo;
-						ffloor_t *rover;
-						boolean foundit = false;
-
-						for (i = 0; i < 2; camobj = players[secondarydisplayplayer].mo, i++)
-						{
-							if (!camobj)
-								continue;
-
-							if (foundit || Tag_Find(&camobj->subsector->sector->tags, tag))
-							{
-								foundit = true;
-								break;
-							}
-
-							// Only trigger if mobj is touching the tag
-							for(rover = camobj->subsector->sector->ffloors; rover; rover = rover->next)
-							{
-								if (!Tag_Find(&rover->master->frontsector->tags, tag))
-									continue;
-
-								if (camobj->z > P_GetSpecialTopZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
-									continue;
-
-								if (camobj->z + camobj->height < P_GetSpecialBottomZ(camobj, sectors + rover->secnum, camobj->subsector->sector))
-									continue;
-
-								foundit = true;
-								break;
-							}
-						}
-
-						if (foundit)
-							S_StartSound(NULL, sfxnum);
-					}
-				}
-				else
-				{
-					if (line->flags & ML_NOCLIMB)
-					{
-						// play the sound from nowhere, but only if display player triggered it
-						if (mo && mo->player && (mo->player == &players[displayplayer] || mo->player == &players[secondarydisplayplayer]))
-							S_StartSound(NULL, sfxnum);
-					}
-					else if (line->flags & ML_EFFECT4)
-					{
-						// play the sound from nowhere
-						S_StartSound(NULL, sfxnum);
-					}
-					else if (line->flags & ML_BLOCKMONSTERS)
-					{
-						// play the sound from calling sector's soundorg
-						if (callsec)
-							S_StartSound(&callsec->soundorg, sfxnum);
-						else if (mo)
-							S_StartSound(&mo->subsector->sector->soundorg, sfxnum);
-					}
-					else if (mo)
-					{
-						// play the sound from mobj that triggered it
-						S_StartSound(mo, sfxnum);
-					}
-				}
-			}
+			P_PlaySFX(line->stringargs[0] ? get_number(line->stringargs[0]) : sfx_None, mo, callsec, line->args[2], line->args[0], line->args[1]);
 			break;
 
 		case 415: // Run a script
 			if (cv_runscripts.value)
 			{
-				INT32 scrnum;
-				lumpnum_t lumpnum;
-				char newname[9];
-
-				strcpy(newname, G_BuildMapName(gamemap));
-				newname[0] = 'S';
-				newname[1] = 'C';
-				newname[2] = 'R';
-
-				scrnum = sides[line->sidenum[0]].textureoffset>>FRACBITS;
-				if (scrnum < 0 || scrnum > 999)
-				{
-					scrnum = 0;
-					newname[5] = newname[6] = newname[7] = '0';
-				}
-				else
-				{
-					newname[5] = (char)('0' + (char)((scrnum/100)));
-					newname[6] = (char)('0' + (char)((scrnum%100)/10));
-					newname[7] = (char)('0' + (char)(scrnum%10));
-				}
-				newname[8] = '\0';
-
-				lumpnum = W_CheckNumForName(newname);
+				lumpnum_t lumpnum = W_CheckNumForName(line->stringargs[0]);
 
 				if (lumpnum == LUMPERROR || W_LumpLength(lumpnum) == 0)
-				{
-					CONS_Debug(DBG_SETUP, "SOC Error: script lump %s not found/not valid.\n", newname);
-				}
+					CONS_Debug(DBG_SETUP, "Line type 415 Executor: script lump %s not found/not valid.\n", line->stringargs[0]);
 				else
 					COM_BufInsertText(W_CacheLumpNum(lumpnum, PU_CACHE));
 			}
 			break;
 
 		case 416: // Spawn adjustable fire flicker
-			TAG_ITER_SECTORS(tag, secnum)
-			{
-				if (line->flags & ML_NOCLIMB && line->backsector)
-				{
-					// Use front sector for min light level, back sector for max.
-					// This is tricky because P_SpawnAdjustableFireFlicker expects
-					// the maxsector (second argument) to also be the target
-					// sector, so we have to do some light level twiddling.
-					fireflicker_t *flick;
-					INT16 reallightlevel = sectors[secnum].lightlevel;
-					sectors[secnum].lightlevel = line->backsector->lightlevel;
-
-					flick = P_SpawnAdjustableFireFlicker(line->frontsector, &sectors[secnum],
-						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
-
-					// Make sure the starting light level is in range.
-					if (reallightlevel < flick->minlight)
-						reallightlevel = (INT16)flick->minlight;
-					else if (reallightlevel > flick->maxlight)
-						reallightlevel = (INT16)flick->maxlight;
-
-					sectors[secnum].lightlevel = reallightlevel;
-				}
-				else
-				{
-					// Use front sector for min, target sector for max,
-					// the same way linetype 61 does it.
-					P_SpawnAdjustableFireFlicker(line->frontsector, &sectors[secnum],
-						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
-				}
-			}
+			TAG_ITER_SECTORS(line->args[0], secnum)
+				P_SpawnAdjustableFireFlicker(&sectors[secnum], line->args[2],
+					line->args[3] ? sectors[secnum].lightlevel : line->args[4], line->args[1]);
 			break;
 
 		case 417: // Spawn adjustable glowing light
-			TAG_ITER_SECTORS(tag, secnum)
-			{
-				if (line->flags & ML_NOCLIMB && line->backsector)
-				{
-					// Use front sector for min light level, back sector for max.
-					// This is tricky because P_SpawnAdjustableGlowingLight expects
-					// the maxsector (second argument) to also be the target
-					// sector, so we have to do some light level twiddling.
-					glow_t *glow;
-					INT16 reallightlevel = sectors[secnum].lightlevel;
-					sectors[secnum].lightlevel = line->backsector->lightlevel;
-
-					glow = P_SpawnAdjustableGlowingLight(line->frontsector, &sectors[secnum],
-						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
-
-					// Make sure the starting light level is in range.
-					if (reallightlevel < glow->minlight)
-						reallightlevel = (INT16)glow->minlight;
-					else if (reallightlevel > glow->maxlight)
-						reallightlevel = (INT16)glow->maxlight;
-
-					sectors[secnum].lightlevel = reallightlevel;
-				}
-				else
-				{
-					// Use front sector for min, target sector for max,
-					// the same way linetype 602 does it.
-					P_SpawnAdjustableGlowingLight(line->frontsector, &sectors[secnum],
-						P_AproxDistance(line->dx, line->dy)>>FRACBITS);
-				}
-			}
+			TAG_ITER_SECTORS(line->args[0], secnum)
+				P_SpawnAdjustableGlowingLight(&sectors[secnum], line->args[2],
+					line->args[3] ? sectors[secnum].lightlevel : line->args[4], line->args[1]);
 			break;
 
-		case 418: // Spawn adjustable strobe flash (unsynchronized)
-			TAG_ITER_SECTORS(tag, secnum)
-			{
-				if (line->flags & ML_NOCLIMB && line->backsector)
-				{
-					// Use front sector for min light level, back sector for max.
-					// This is tricky because P_SpawnAdjustableGlowingLight expects
-					// the maxsector (second argument) to also be the target
-					// sector, so we have to do some light level twiddling.
-					strobe_t *flash;
-					INT16 reallightlevel = sectors[secnum].lightlevel;
-					sectors[secnum].lightlevel = line->backsector->lightlevel;
-
-					flash = P_SpawnAdjustableStrobeFlash(line->frontsector, &sectors[secnum],
-						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, false);
-
-					// Make sure the starting light level is in range.
-					if (reallightlevel < flash->minlight)
-						reallightlevel = (INT16)flash->minlight;
-					else if (reallightlevel > flash->maxlight)
-						reallightlevel = (INT16)flash->maxlight;
-
-					sectors[secnum].lightlevel = reallightlevel;
-				}
-				else
-				{
-					// Use front sector for min, target sector for max,
-					// the same way linetype 602 does it.
-					P_SpawnAdjustableStrobeFlash(line->frontsector, &sectors[secnum],
-						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, false);
-				}
-			}
-			break;
-
-		case 419: // Spawn adjustable strobe flash (synchronized)
-			TAG_ITER_SECTORS(tag, secnum)
-			{
-				if (line->flags & ML_NOCLIMB && line->backsector)
-				{
-					// Use front sector for min light level, back sector for max.
-					// This is tricky because P_SpawnAdjustableGlowingLight expects
-					// the maxsector (second argument) to also be the target
-					// sector, so we have to do some light level twiddling.
-					strobe_t *flash;
-					INT16 reallightlevel = sectors[secnum].lightlevel;
-					sectors[secnum].lightlevel = line->backsector->lightlevel;
-
-					flash = P_SpawnAdjustableStrobeFlash(line->frontsector, &sectors[secnum],
-						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, true);
-
-					// Make sure the starting light level is in range.
-					if (reallightlevel < flash->minlight)
-						reallightlevel = (INT16)flash->minlight;
-					else if (reallightlevel > flash->maxlight)
-						reallightlevel = (INT16)flash->maxlight;
-
-					sectors[secnum].lightlevel = reallightlevel;
-				}
-				else
-				{
-					// Use front sector for min, target sector for max,
-					// the same way linetype 602 does it.
-					P_SpawnAdjustableStrobeFlash(line->frontsector, &sectors[secnum],
-						abs(line->dx)>>FRACBITS, abs(line->dy)>>FRACBITS, true);
-				}
-			}
+		case 418: // Spawn adjustable strobe flash
+			TAG_ITER_SECTORS(line->args[0], secnum)
+				P_SpawnAdjustableStrobeFlash(&sectors[secnum], line->args[3],
+					(line->args[4] & TMB_USETARGET) ? sectors[secnum].lightlevel : line->args[5],
+					line->args[1], line->args[2], line->args[4] & TMB_SYNC);
 			break;
 
 		case 420: // Fade light levels in tagged sectors to new value
-			P_FadeLight(tag,
-				(line->flags & ML_DONTPEGBOTTOM) ? max(sides[line->sidenum[0]].textureoffset>>FRACBITS, 0) : line->frontsector->lightlevel,
-				// failsafe: if user specifies Back Y Offset and NOT Front Y Offset, use the Back Offset
-				// to be consistent with other light and fade specials
-				(line->flags & ML_DONTPEGBOTTOM) ?
-					((line->sidenum[1] != 0xFFFF && !(sides[line->sidenum[0]].rowoffset>>FRACBITS)) ?
-						max(min(sides[line->sidenum[1]].rowoffset>>FRACBITS, 255), 0)
-						: max(min(sides[line->sidenum[0]].rowoffset>>FRACBITS, 255), 0))
-					: abs(P_AproxDistance(line->dx, line->dy))>>FRACBITS,
-				(line->flags & ML_EFFECT4),
-				(line->flags & ML_EFFECT5));
+			P_FadeLight(line->args[0], line->args[1], line->args[2], line->args[3] & TMF_TICBASED, line->args[3] & TMF_OVERRIDE, line->args[3] & TMF_RELATIVE);
 			break;
 
 		case 421: // Stop lighting effect in tagged sectors
-			TAG_ITER_SECTORS(tag, secnum)
+			TAG_ITER_SECTORS(line->args[0], secnum)
 				if (sectors[secnum].lightingdata)
 				{
-					P_RemoveThinker(&((elevator_t *)sectors[secnum].lightingdata)->thinker);
+					P_RemoveThinker(&((thinkerdata_t *)sectors[secnum].lightingdata)->thinker);
 					sectors[secnum].lightingdata = NULL;
 				}
 			break;
@@ -2735,15 +2652,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 422: // Cut away to another view
 			{
 				mobj_t *altview;
+				INT32 aim;
 
 				if ((!mo || !mo->player) && !titlemapinaction) // only players have views, and title screens
 					return;
 
-				if ((secnum = Tag_Iterate_Sectors(tag, 0)) < 0)
-					return;
-
-				altview = P_GetObjectTypeInSectorNum(MT_ALTVIEWMAN, secnum);
-				if (!altview)
+				altview = P_FindObjectTypeFromTag(MT_ALTVIEWMAN, line->args[0]);
+				if (!altview || !altview->spawnpoint)
 					return;
 
 				// If titlemap, set the camera ref for title's thinker
@@ -2753,59 +2668,50 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				else
 				{
 					P_SetTarget(&mo->player->awayviewmobj, altview);
-					mo->player->awayviewtics = P_AproxDistance(line->dx, line->dy)>>FRACBITS;
+					mo->player->awayviewtics = line->args[1];
 				}
 
-
-				if (line->flags & ML_NOCLIMB) // lets you specify a vertical angle
-				{
-					INT32 aim;
-
-					aim = sides[line->sidenum[0]].textureoffset>>FRACBITS;
-					aim = (aim + 360) % 360;
-					aim *= (ANGLE_90>>8);
-					aim /= 90;
-					aim <<= 8;
-					if (titlemapinaction)
-						titlemapcameraref->cusval = (angle_t)aim;
-					else
-						mo->player->awayviewaiming = (angle_t)aim;
-				}
+				aim = udmf ? altview->spawnpoint->pitch : line->args[2];
+				aim = (aim + 360) % 360;
+				aim *= (ANGLE_90>>8);
+				aim /= 90;
+				aim <<= 8;
+				if (titlemapinaction)
+					titlemapcameraref->cusval = (angle_t)aim;
 				else
-				{
-					// straight ahead
-					if (!titlemapinaction)
-						mo->player->awayviewaiming = 0;
-					// don't do cusval cause that's annoying
-				}
+					mo->player->awayviewaiming = (angle_t)aim;
 			}
 			break;
 
 		case 423: // Change Sky
-			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || (line->flags & ML_NOCLIMB))
-				P_SetupLevelSky(sides[line->sidenum[0]].textureoffset>>FRACBITS, (line->flags & ML_NOCLIMB));
+			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || line->args[1])
+				P_SetupLevelSky(line->args[0], line->args[1]);
 			break;
 
 		case 424: // Change Weather
-			if (line->flags & ML_NOCLIMB)
+			if (line->args[1])
 			{
-				globalweather = (UINT8)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				globalweather = (UINT8)(line->args[0]);
 				P_SwitchWeather(globalweather);
 			}
 			else if (mo && mo->player && P_IsLocalPlayer(mo->player))
-				P_SwitchWeather(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				P_SwitchWeather(line->args[0]);
 			break;
 
 		case 425: // Calls P_SetMobjState on calling mobj
 			if (mo && !mo->player)
-				P_SetMobjState(mo, sides[line->sidenum[0]].toptexture); //P_AproxDistance(line->dx, line->dy)>>FRACBITS);
+			{
+				statenum_t state = line->stringargs[0] ? get_number(line->stringargs[0]) : S_NULL;
+				if (state >= 0 && state < NUMSTATES)
+					P_SetMobjState(mo, state);
+			}
 			break;
 
 		case 426: // Moves the mobj to its sector's soundorg and on the floor, and stops it
 			if (!mo)
 				return;
 
-			if (line->flags & ML_NOCLIMB)
+			if (line->args[0])
 			{
 				P_UnsetThingPosition(mo);
 				mo->x = mo->subsector->sector->soundorg.x;
@@ -2826,8 +2732,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 				// Reset bot too.
 				if (bot) {
-					if (line->flags & ML_NOCLIMB)
-						P_TeleportMove(bot, mo->x, mo->y, mo->z);
+					if (line->args[0])
+						P_SetOrigin(bot, mo->x, mo->y, mo->z);
 					bot->momx = bot->momy = bot->momz = 1;
 					bot->pmomz = 0;
 					bot->player->rmomx = bot->player->rmomy = 1;
@@ -2840,29 +2746,26 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 427: // Awards points if the mobj is a player
 			if (mo && mo->player)
-				P_AddPlayerScore(mo->player, sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				P_AddPlayerScore(mo->player, line->args[0]);
 			break;
 
 		case 428: // Start floating platform movement
-			EV_DoElevator(line, elevateContinuous, true);
+			EV_DoElevator(line->args[0], line, elevateContinuous);
 			break;
 
-		case 429: // Crush Ceiling Down Once
-			EV_DoCrush(line, crushCeilOnce);
+		case 429: // Crush planes once
+			if (line->args[1] == TMP_FLOOR)
+				EV_DoFloor(line->args[0], line, crushFloorOnce);
+			else if (line->args[1] == TMP_CEILING)
+				EV_DoCrush(line->args[0], line, crushCeilOnce);
+			else
+				EV_DoCrush(line->args[0], line, crushBothOnce);
 			break;
 
-		case 430: // Crush Floor Up Once
-			EV_DoFloor(line, crushFloorOnce);
-			break;
-
-		case 431: // Crush Floor & Ceiling to middle Once
-			EV_DoCrush(line, crushBothOnce);
-			break;
-
-		case 432: // Enable 2D Mode (Disable if noclimb)
+		case 432: // Enable/Disable 2D Mode
 			if (mo && mo->player)
 			{
-				if (line->flags & ML_NOCLIMB)
+				if (line->args[0])
 					mo->flags2 &= ~MF2_TWOD;
 				else
 					mo->flags2 |= MF2_TWOD;
@@ -2871,16 +2774,20 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				// (Teleport them to you so they don't break it.)
 				if (bot && (bot->flags2 & MF2_TWOD) != (mo->flags2 & MF2_TWOD)) {
 					bot->flags2 = (bot->flags2 & ~MF2_TWOD) | (mo->flags2 & MF2_TWOD);
-					P_TeleportMove(bot, mo->x, mo->y, mo->z);
+					P_SetOrigin(bot, mo->x, mo->y, mo->z);
 				}
 			}
 			break;
 
-		case 433: // Flip gravity (Flop gravity if noclimb) Works on pushables, too!
-			if (line->flags & ML_NOCLIMB)
+		case 433: // Flip/flop gravity. Works on pushables, too!
+			if (line->args[1])
+				mo->flags2 ^= MF2_OBJECTFLIP;
+			else if (line->args[0])
 				mo->flags2 &= ~MF2_OBJECTFLIP;
 			else
 				mo->flags2 |= MF2_OBJECTFLIP;
+			if (line->args[2])
+				mo->eflags |= MFE_VERTICALFLIP;
 			if (bot)
 				bot->flags2 = (bot->flags2 & ~MF2_OBJECTFLIP) | (mo->flags2 & MF2_OBJECTFLIP);
 			break;
@@ -2888,25 +2795,15 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 434: // Custom Power
 			if (mo && mo->player)
 			{
-				mobj_t *dummy = P_SpawnMobj(mo->x, mo->y, mo->z, MT_NULL);
+				powertype_t power = line->stringargs[0] ? get_number(line->stringargs[0]) : 0;
+				INT32 value = line->stringargs[1] ? get_number(line->stringargs[1]) : 0;
+				if (value == -1) // 'Infinite'
+					value = UINT16_MAX;
 
-				var1 = sides[line->sidenum[0]].toptexture; //(line->dx>>FRACBITS)-1;
+				P_SetPower(mo->player, power, value);
 
-				if (line->sidenum[1] != 0xffff && line->flags & ML_BLOCKMONSTERS) // read power from back sidedef
-					var2 = sides[line->sidenum[1]].toptexture;
-				else if (line->flags & ML_NOCLIMB) // 'Infinite'
-					var2 = UINT16_MAX;
-				else
-					var2 = sides[line->sidenum[0]].textureoffset>>FRACBITS;
-
-				P_SetTarget(&dummy->target, mo);
-				A_CustomPower(dummy);
-
-				if (bot) {
-					P_SetTarget(&dummy->target, bot);
-					A_CustomPower(dummy);
-				}
-				P_RemoveMobj(dummy);
+				if (bot)
+					P_SetPower(bot->player, power, value);
 			}
 			break;
 
@@ -2915,25 +2812,30 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				scroll_t *scroller;
 				thinker_t *th;
 
+				fixed_t length = R_PointToDist2(line->v2->x, line->v2->y, line->v1->x, line->v1->y);
+				fixed_t speed = line->args[1] << FRACBITS;
+				fixed_t dx = FixedMul(FixedMul(FixedDiv(line->dx, length), speed) >> SCROLL_SHIFT, CARRYFACTOR);
+				fixed_t dy = FixedMul(FixedMul(FixedDiv(line->dy, length), speed) >> SCROLL_SHIFT, CARRYFACTOR);
+
 				for (th = thlist[THINK_MAIN].next; th != &thlist[THINK_MAIN]; th = th->next)
 				{
 					if (th->function.acp1 != (actionf_p1)T_Scroll)
 						continue;
 
 					scroller = (scroll_t *)th;
-					if (!Tag_Find(&sectors[scroller->affectee].tags, tag))
+					if (!Tag_Find(&sectors[scroller->affectee].tags, line->args[0]))
 						continue;
 
-					scroller->dx = FixedMul(line->dx>>SCROLL_SHIFT, CARRYFACTOR);
-					scroller->dy = FixedMul(line->dy>>SCROLL_SHIFT, CARRYFACTOR);
+					scroller->dx = dx;
+					scroller->dy = dy;
 				}
 			}
 			break;
 
 		case 436: // Shatter block remotely
 			{
-				INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
-				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				INT16 sectag = (INT16)(line->args[0]);
+				INT16 foftag = (INT16)(line->args[1]);
 				sector_t *sec; // Sector that the FOF is visible in
 				ffloor_t *rover; // FOF that we are going to crumble
 				boolean foundrover = false; // for debug, "Can't find a FOF" message
@@ -2970,10 +2872,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 437: // Disable Player Controls
 			if (mo && mo->player)
 			{
-				UINT16 fractime = (UINT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				UINT16 fractime = (UINT16)(line->args[0]);
 				if (fractime < 1)
 					fractime = 1; //instantly wears off upon leaving
-				if (line->flags & ML_NOCLIMB)
+				if (line->args[1])
 					fractime |= 1<<15; //more crazy &ing, as if music stuff wasn't enough
 				mo->player->powers[pw_nocontrol] = fractime;
 				if (bot)
@@ -2984,7 +2886,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 438: // Set player scale
 			if (mo)
 			{
-				mo->destscale = FixedDiv(P_AproxDistance(line->dx, line->dy), 100<<FRACBITS);
+				mo->destscale = FixedDiv(line->args[0]<<FRACBITS, 100<<FRACBITS);
 				if (mo->destscale < FRACUNIT/100)
 					mo->destscale = FRACUNIT/100;
 				if (mo->player && bot)
@@ -2995,31 +2897,36 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 439: // Set texture
 			{
 				size_t linenum;
-				side_t *set = &sides[line->sidenum[0]], *this;
-				boolean always = !(line->flags & ML_NOCLIMB); // If noclimb: Only change mid texture if mid texture already exists on tagged lines, etc.
+				side_t *setfront = &sides[line->sidenum[0]];
+				side_t *setback = (line->args[3] && line->sidenum[1] != 0xffff) ? &sides[line->sidenum[1]] : setfront;
+				side_t *this;
+				boolean always = !(line->args[2]); // If args[2] is set: Only change mid texture if mid texture already exists on tagged lines, etc.
 
 				for (linenum = 0; linenum < numlines; linenum++)
 				{
 					if (lines[linenum].special == 439)
 						continue; // Don't override other set texture lines!
 
-					if (!Tag_Find(&lines[linenum].tags, tag))
+					if (!Tag_Find(&lines[linenum].tags, line->args[0]))
 						continue; // Find tagged lines
 
 					// Front side
-					this = &sides[lines[linenum].sidenum[0]];
-					if (always || this->toptexture) this->toptexture = set->toptexture;
-					if (always || this->midtexture) this->midtexture = set->midtexture;
-					if (always || this->bottomtexture) this->bottomtexture = set->bottomtexture;
-
-					if (lines[linenum].sidenum[1] == 0xffff)
-						continue; // One-sided stops here.
+					if (line->args[1] != TMSD_BACK)
+					{
+						this = &sides[lines[linenum].sidenum[0]];
+						if (always || this->toptexture) this->toptexture = setfront->toptexture;
+						if (always || this->midtexture) this->midtexture = setfront->midtexture;
+						if (always || this->bottomtexture) this->bottomtexture = setfront->bottomtexture;
+					}
 
 					// Back side
-					this = &sides[lines[linenum].sidenum[1]];
-					if (always || this->toptexture) this->toptexture = set->toptexture;
-					if (always || this->midtexture) this->midtexture = set->midtexture;
-					if (always || this->bottomtexture) this->bottomtexture = set->bottomtexture;
+					if (line->args[1] != TMSD_FRONT && lines[linenum].sidenum[1] != 0xffff)
+					{
+						this = &sides[lines[linenum].sidenum[1]];
+						if (always || this->toptexture) this->toptexture = setback->toptexture;
+						if (always || this->midtexture) this->midtexture = setback->midtexture;
+						if (always || this->bottomtexture) this->bottomtexture = setback->bottomtexture;
+					}
 				}
 			}
 			break;
@@ -3030,9 +2937,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 441: // Trigger unlockable
-			if ((!modifiedgame || savemoddata) && !(netgame || multiplayer))
+			if (!(netgame || multiplayer))
 			{
-				INT32 trigid = (INT32)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
+				INT32 trigid = line->args[0];
 
 				if (trigid < 0 || trigid > 31) // limited by 32 bit variable
 					CONS_Debug(DBG_GAMELOGIC, "Unlockable trigger (sidedef %hu): bad trigger ID %d\n", line->sidenum[0], trigid);
@@ -3055,37 +2962,37 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 442: // Calls P_SetMobjState on mobjs of a given type in the tagged sectors
 		{
-			const mobjtype_t type = (mobjtype_t)sides[line->sidenum[0]].toptexture;
+			const mobjtype_t type = line->stringargs[0] ? get_number(line->stringargs[0]) : MT_NULL;
 			statenum_t state = NUMSTATES;
-			sector_t *sec;
 			mobj_t *thing;
 
-			if (line->sidenum[1] != 0xffff)
-				state = (statenum_t)sides[line->sidenum[1]].toptexture;
+			if (type < 0 || type >= NUMMOBJTYPES)
+				break;
 
-			TAG_ITER_SECTORS(tag, secnum)
+			if (!line->args[1])
+			{
+				state = line->stringargs[1] ? get_number(line->stringargs[1]) : S_NULL;
+
+				if (state < 0 || state >= NUMSTATES)
+					break;
+			}
+
+			TAG_ITER_SECTORS(line->args[0], secnum)
 			{
 				boolean tryagain;
-				sec = sectors + secnum;
 				do {
 					tryagain = false;
-					for (thing = sec->thinglist; thing; thing = thing->snext)
-						if (thing->type == type)
-						{
-							if (state != NUMSTATES)
-							{
-								if (!P_SetMobjState(thing, state)) // set state to specific state
-								{ // mobj was removed
-									tryagain = true; // snext is corrupt, we'll have to start over.
-									break;
-								}
-							}
-							else if (!P_SetMobjState(thing, thing->state->nextstate)) // set state to nextstate
-							{ // mobj was removed
-								tryagain = true; // snext is corrupt, we'll have to start over.
-								break;
-							}
+					for (thing = sectors[secnum].thinglist; thing; thing = thing->snext)
+					{
+						if (thing->type != type)
+							continue;
+
+						if (!P_SetMobjState(thing, line->args[1] ? thing->state->nextstate : state))
+						{ // mobj was removed
+							tryagain = true; // snext is corrupt, we'll have to start over.
+							break;
 						}
+					}
 				} while (tryagain);
 			}
 			break;
@@ -3095,14 +3002,14 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			if (line->stringargs[0])
 				LUA_HookLinedefExecute(line, mo, callsec);
 			else
-				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in arg0str)\n", sizeu1(line-lines));
+				CONS_Alert(CONS_WARNING, "Linedef %s is missing the hook name of the Lua function to call! (This should be given in stringarg0)\n", sizeu1(line-lines));
 			break;
 
 		case 444: // Earthquake camera
 		{
-			quake.intensity = sides[line->sidenum[0]].textureoffset;
-			quake.radius = sides[line->sidenum[0]].rowoffset;
-			quake.time = P_AproxDistance(line->dx, line->dy)>>FRACBITS;
+			quake.intensity = line->args[1] << FRACBITS;
+			quake.radius = line->args[2] << FRACBITS;
+			quake.time = line->args[0];
 
 			quake.epicenter = NULL; /// \todo
 
@@ -3114,10 +3021,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 		}
 
-		case 445: // Force block disappear remotely (reappear if noclimb)
+		case 445: // Force block disappear remotely (reappear if args[2] is set)
 			{
-				INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
-				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				INT16 sectag = (INT16)(line->args[0]);
+				INT16 foftag = (INT16)(line->args[1]);
 				sector_t *sec; // Sector that the FOF is visible (or not visible) in
 				ffloor_t *rover; // FOF to vanish/un-vanish
 				boolean foundrover = false; // for debug, "Can't find a FOF" message
@@ -3139,16 +3046,16 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						{
 							foundrover = true;
 
-							oldflags = rover->flags;
+							oldflags = rover->fofflags;
 
 							// Abracadabra!
-							if (line->flags & ML_NOCLIMB)
-								rover->flags |= FF_EXISTS;
+							if (line->args[2])
+								rover->fofflags |= FOF_EXISTS;
 							else
-								rover->flags &= ~FF_EXISTS;
+								rover->fofflags &= ~FOF_EXISTS;
 
 							// if flags changed, reset sector's light list
-							if (rover->flags != oldflags)
+							if (rover->fofflags != oldflags)
 							{
 								sec->moved = true;
 								P_RecalcPrecipInSector(sec);
@@ -3165,10 +3072,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
-		case 446: // Make block fall remotely (acts like FF_CRUMBLE)
+		case 446: // Make block fall remotely (acts like FOF_CRUMBLE)
 			{
-				INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
-				INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				INT16 sectag = (INT16)(line->args[0]);
+				INT16 foftag = (INT16)(line->args[1]);
 				sector_t *sec; // Sector that the FOF is visible in
 				ffloor_t *rover; // FOF that we are going to make fall down
 				boolean foundrover = false; // for debug, "Can't find a FOF" message
@@ -3178,7 +3085,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (mo) // NULL check
 					player = mo->player;
 
-				if (line->flags & ML_NOCLIMB) // don't respawn!
+				if (line->args[2] & TMFR_NORETURN) // don't respawn!
 					respawn = false;
 
 				TAG_ITER_SECTORS(sectag, secnum)
@@ -3197,10 +3104,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						{
 							foundrover = true;
 
-							if (line->flags & ML_BLOCKMONSTERS) // FOF flags determine respawn ability instead?
-								respawn = !(rover->flags & FF_NORETURN) ^ !!(line->flags & ML_NOCLIMB); // no climb inverts
+							if (line->args[2] & TMFR_CHECKFLAG) // FOF flags determine respawn ability instead?
+								respawn = !(rover->fofflags & FOF_NORETURN) ^ !!(line->args[2] & TMFR_NORETURN); // TMFR_NORETURN inverts
 
-							EV_StartCrumble(rover->master->frontsector, rover, (rover->flags & FF_FLOATBOB), player, rover->alpha, respawn);
+							EV_StartCrumble(rover->master->frontsector, rover, (rover->fofflags & FOF_FLOATBOB), player, rover->alpha, respawn);
 						}
 					}
 
@@ -3280,57 +3187,48 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 		}
 		case 448: // Change skybox viewpoint/centerpoint
-			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || (line->flags & ML_NOCLIMB))
+			if ((mo && mo->player && P_IsLocalPlayer(mo->player)) || line->args[3])
 			{
-				INT32 viewid = sides[line->sidenum[0]].textureoffset>>FRACBITS;
-				INT32 centerid = sides[line->sidenum[0]].rowoffset>>FRACBITS;
+				INT32 viewid = line->args[0];
+				INT32 centerid = line->args[1];
 
-				if ((line->flags & (ML_EFFECT4|ML_BLOCKMONSTERS)) == ML_EFFECT4) // Solid Midtexture is on but Block Enemies is off?
+				// set viewpoint mobj
+				if (line->args[2] != TMS_CENTERPOINT)
 				{
-					CONS_Alert(CONS_WARNING,
-					M_GetText("Skybox switch linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
-					tag);
+					if (viewid >= 0 && viewid < 16)
+						skyboxmo[0] = skyboxviewpnts[viewid];
+					else
+						skyboxmo[0] = NULL;
 				}
-				else
-				{
-					// set viewpoint mobj
-					if (!(line->flags & ML_EFFECT4)) // Solid Midtexture turns off viewpoint setting
-					{
-						if (viewid >= 0 && viewid < 16)
-							skyboxmo[0] = skyboxviewpnts[viewid];
-						else
-							skyboxmo[0] = NULL;
-					}
 
-					// set centerpoint mobj
-					if (line->flags & ML_BLOCKMONSTERS) // Block Enemies turns ON centerpoint setting
-					{
-						if (centerid >= 0 && centerid < 16)
-							skyboxmo[1] = skyboxcenterpnts[centerid];
-						else
-							skyboxmo[1] = NULL;
-					}
+				// set centerpoint mobj
+				if (line->args[2] != TMS_VIEWPOINT)
+				{
+					if (centerid >= 0 && centerid < 16)
+						skyboxmo[1] = skyboxcenterpnts[centerid];
+					else
+						skyboxmo[1] = NULL;
 				}
 
 				CONS_Debug(DBG_GAMELOGIC, "Line type 448 Executor: viewid = %d, centerid = %d, viewpoint? = %s, centerpoint? = %s\n",
 						viewid,
 						centerid,
-						((line->flags & ML_EFFECT4) ? "no" : "yes"),
-						((line->flags & ML_BLOCKMONSTERS) ? "yes" : "no"));
+						((line->args[2] == TMS_CENTERPOINT) ? "no" : "yes"),
+						((line->args[2] == TMS_VIEWPOINT) ? "no" : "yes"));
 			}
 			break;
 
 		case 449: // Enable bosses with parameter
 		{
-			INT32 bossid = sides[line->sidenum[0]].textureoffset>>FRACBITS;
+			INT32 bossid = line->args[0];
 			if (bossid & ~15) // if any bits other than first 16 are set
 			{
 				CONS_Alert(CONS_WARNING,
-					M_GetText("Boss enable linedef (tag %d) has an invalid texture x offset.\nConsider changing it or removing it entirely.\n"),
-					tag);
+					M_GetText("Boss enable linedef has an invalid boss ID (%d).\nConsider changing it or removing it entirely.\n"),
+					bossid);
 				break;
 			}
-			if (line->flags & ML_NOCLIMB)
+			if (line->args[1])
 			{
 				bossdisabled |= (1<<bossid);
 				CONS_Debug(DBG_GAMELOGIC, "Line type 449 Executor: bossid disabled = %d", bossid);
@@ -3344,13 +3242,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		}
 
 		case 450: // Execute Linedef Executor - for recursion
-			P_LinedefExecute(tag, mo, NULL);
+			P_LinedefExecute(line->args[0], mo, NULL);
 			break;
 
 		case 451: // Execute Random Linedef Executor
 		{
-			INT32 rvalue1 = sides[line->sidenum[0]].textureoffset>>FRACBITS;
-			INT32 rvalue2 = sides[line->sidenum[0]].rowoffset>>FRACBITS;
+			INT32 rvalue1 = line->args[0];
+			INT32 rvalue2 = line->args[1];
 			INT32 result;
 
 			if (rvalue1 <= rvalue2)
@@ -3364,10 +3262,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 452: // Set FOF alpha
 		{
-			INT16 destvalue = line->sidenum[1] != 0xffff ?
-				(INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : (INT16)(P_AproxDistance(line->dx, line->dy)>>FRACBITS);
-			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
-			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+			INT16 destvalue = (INT16)(line->args[2]);
+			INT16 sectag = (INT16)(line->args[0]);
+			INT16 foftag = (INT16)(line->args[1]);
 			sector_t *sec; // Sector that the FOF is visible in
 			ffloor_t *rover; // FOF that we are going to operate
 			boolean foundrover = false; // for debug, "Can't find a FOF" message
@@ -3391,26 +3288,26 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						// If fading an invisible FOF whose render flags we did not yet set,
 						// initialize its alpha to 1
 						// for relative alpha calc
-						if (!(line->flags & ML_NOCLIMB) &&      // do translucent
-							(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-							!(rover->spawnflags & FF_RENDERSIDES) &&
-							!(rover->spawnflags & FF_RENDERPLANES) &&
-							!(rover->flags & FF_RENDERALL))
+						if (!(line->args[3] & TMST_DONTDOTRANSLUCENT) &&      // do translucent
+							(rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+							!(rover->spawnflags & FOF_RENDERSIDES) &&
+							!(rover->spawnflags & FOF_RENDERPLANES) &&
+							!(rover->fofflags & FOF_RENDERALL))
 							rover->alpha = 1;
 
 						P_RemoveFakeFloorFader(rover);
 						P_FadeFakeFloor(rover,
 							rover->alpha,
-							max(1, min(256, (line->flags & ML_EFFECT3) ? rover->alpha + destvalue : destvalue)),
-							0,                                  // set alpha immediately
-							false, NULL,                        // tic-based logic
-							false,                              // do not handle FF_EXISTS
-							!(line->flags & ML_NOCLIMB),        // handle FF_TRANSLUCENT
-							false,                              // do not handle lighting
-							false,                              // do not handle colormap
-							false,                              // do not handle collision
-							false,                              // do not do ghost fade (no collision during fade)
-							true);                               // use exact alpha values (for opengl)
+							max(1, min(256, (line->args[3] & TMST_RELATIVE) ? rover->alpha + destvalue : destvalue)),
+							0,                                         // set alpha immediately
+							false, NULL,                               // tic-based logic
+							false,                                     // do not handle FOF_EXISTS
+							!(line->args[3] & TMST_DONTDOTRANSLUCENT), // handle FOF_TRANSLUCENT
+							false,                                     // do not handle lighting
+							false,                                     // do not handle colormap
+							false,                                     // do not handle collision
+							false,                                     // do not do ghost fade (no collision during fade)
+							true);                                     // use exact alpha values (for opengl)
 					}
 				}
 
@@ -3425,12 +3322,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 453: // Fade FOF
 		{
-			INT16 destvalue = line->sidenum[1] != 0xffff ?
-				(INT16)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : (INT16)(line->dx>>FRACBITS);
-			INT16 speed = line->sidenum[1] != 0xffff ?
-				(INT16)(abs(sides[line->sidenum[1]].rowoffset>>FRACBITS)) : (INT16)(abs(line->dy)>>FRACBITS);
-			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
-			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+			INT16 destvalue = (INT16)(line->args[2]);
+			INT16 speed = (INT16)(line->args[3]);
+			INT16 sectag = (INT16)(line->args[0]);
+			INT16 foftag = (INT16)(line->args[1]);
 			sector_t *sec; // Sector that the FOF is visible in
 			ffloor_t *rover; // FOF that we are going to operate
 			boolean foundrover = false; // for debug, "Can't find a FOF" message
@@ -3453,7 +3348,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						foundrover = true;
 
 						// Prevent continuous execs from interfering on an existing fade
-						if (!(line->flags & ML_EFFECT5)
+						if (!(line->args[4] & TMFT_OVERRIDE)
 							&& rover->fadingdata)
 							//&& ((fade_t*)rover->fadingdata)->timer > (ticbased ? 2 : speed*2))
 						{
@@ -3465,40 +3360,40 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 							P_AddFakeFloorFader(rover, secnum, j,
 								destvalue,
 								speed,
-								(line->flags & ML_EFFECT4),         // tic-based logic
-								(line->flags & ML_EFFECT3),         // Relative destvalue
-								!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
-								!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
-								!(line->flags & ML_EFFECT2),        // do not handle lighting
-								!(line->flags & ML_EFFECT2),        // do not handle colormap (ran out of flags)
-								!(line->flags & ML_BOUNCY),         // do not handle collision
-								(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
-								(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
+								(line->args[4] & TMFT_TICBASED),           // tic-based logic
+								(line->args[4] & TMFT_RELATIVE),           // Relative destvalue
+								!(line->args[4] & TMFT_DONTDOEXISTS),      // do not handle FOF_EXISTS
+								!(line->args[4] & TMFT_DONTDOTRANSLUCENT), // do not handle FOF_TRANSLUCENT
+								!(line->args[4] & TMFT_DONTDOLIGHTING),    // do not handle lighting
+								!(line->args[4] & TMFT_DONTDOCOLORMAP),    // do not handle colormap
+								!(line->args[4] & TMFT_IGNORECOLLISION),   // do not handle collision
+								(line->args[4] & TMFT_GHOSTFADE),          // do ghost fade (no collision during fade)
+								(line->args[4] & TMFT_USEEXACTALPHA));     // use exact alpha values (for opengl)
 						else
 						{
 							// If fading an invisible FOF whose render flags we did not yet set,
 							// initialize its alpha to 1
 							// for relative alpha calc
-							if (!(line->flags & ML_NOCLIMB) &&      // do translucent
-								(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-								!(rover->spawnflags & FF_RENDERSIDES) &&
-								!(rover->spawnflags & FF_RENDERPLANES) &&
-								!(rover->flags & FF_RENDERALL))
+							if (!(line->args[4] & TMFT_DONTDOTRANSLUCENT) &&      // do translucent
+								(rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+								!(rover->spawnflags & FOF_RENDERSIDES) &&
+								!(rover->spawnflags & FOF_RENDERPLANES) &&
+								!(rover->fofflags & FOF_RENDERALL))
 								rover->alpha = 1;
 
 							P_RemoveFakeFloorFader(rover);
 							P_FadeFakeFloor(rover,
 								rover->alpha,
-								max(1, min(256, (line->flags & ML_EFFECT3) ? rover->alpha + destvalue : destvalue)),
-								0,                                  // set alpha immediately
-								false, NULL,                        // tic-based logic
-								!(line->flags & ML_BLOCKMONSTERS),  // do not handle FF_EXISTS
-								!(line->flags & ML_NOCLIMB),        // do not handle FF_TRANSLUCENT
-								!(line->flags & ML_EFFECT2),        // do not handle lighting
-								!(line->flags & ML_EFFECT2),        // do not handle colormap (ran out of flags)
-								!(line->flags & ML_BOUNCY),         // do not handle collision
-								(line->flags & ML_EFFECT1),         // do ghost fade (no collision during fade)
-								(line->flags & ML_TFERLINE));       // use exact alpha values (for opengl)
+								max(1, min(256, (line->args[4] & TMFT_RELATIVE) ? rover->alpha + destvalue : destvalue)),
+								0,                                         // set alpha immediately
+								false, NULL,                               // tic-based logic
+								!(line->args[4] & TMFT_DONTDOEXISTS),      // do not handle FOF_EXISTS
+								!(line->args[4] & TMFT_DONTDOTRANSLUCENT), // do not handle FOF_TRANSLUCENT
+								!(line->args[4] & TMFT_DONTDOLIGHTING),    // do not handle lighting
+								!(line->args[4] & TMFT_DONTDOCOLORMAP),    // do not handle colormap
+								!(line->args[4] & TMFT_IGNORECOLLISION),   // do not handle collision
+								(line->args[4] & TMFT_GHOSTFADE),          // do ghost fade (no collision during fade)
+								(line->args[4] & TMFT_USEEXACTALPHA));     // use exact alpha values (for opengl)
 						}
 					}
 					j++;
@@ -3515,8 +3410,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 454: // Stop fading FOF
 		{
-			INT16 sectag = (INT16)(sides[line->sidenum[0]].textureoffset>>FRACBITS);
-			INT16 foftag = (INT16)(sides[line->sidenum[0]].rowoffset>>FRACBITS);
+			INT16 sectag = (INT16)(line->args[0]);
+			INT16 foftag = (INT16)(line->args[1]);
 			sector_t *sec; // Sector that the FOF is visible in
 			ffloor_t *rover; // FOF that we are going to operate
 			boolean foundrover = false; // for debug, "Can't find a FOF" message
@@ -3538,7 +3433,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 						foundrover = true;
 
 						P_ResetFakeFloorFader(rover, NULL,
-							!(line->flags & ML_BLOCKMONSTERS)); // do not finalize collision flags
+							!(line->args[2])); // do not finalize collision flags
 					}
 				}
 
@@ -3659,17 +3554,13 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 		case 457: // Track mobj angle to point
 			if (mo)
 			{
-				INT32 failureangle = FixedAngle((min(max(abs(sides[line->sidenum[0]].textureoffset>>FRACBITS), 0), 360))*FRACUNIT);
-				INT32 failuredelay = abs(sides[line->sidenum[0]].rowoffset>>FRACBITS);
-				INT32 failureexectag = line->sidenum[1] != 0xffff ?
-					(INT32)(sides[line->sidenum[1]].textureoffset>>FRACBITS) : 0;
-				boolean persist = (line->flags & ML_EFFECT2);
+				INT32 failureangle = FixedAngle((min(max(abs(line->args[1]), 0), 360))*FRACUNIT);
+				INT32 failuredelay = abs(line->args[2]);
+				INT32 failureexectag = line->args[3];
+				boolean persist = !!(line->args[4]);
 				mobj_t *anchormo;
 
-				if ((secnum = Tag_Iterate_Sectors(tag, 0)) < 0)
-					return;
-
-				anchormo = P_GetObjectTypeInSectorNum(MT_ANGLEMAN, secnum);
+				anchormo = P_FindObjectTypeFromTag(MT_ANGLEMAN, line->args[0]);
 				if (!anchormo)
 					return;
 
@@ -3692,27 +3583,27 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			break;
 
 		case 459: // Control Text Prompt
-			// console player only unless NOCLIMB is set
+			// console player only
 			if (mo && mo->player && P_IsLocalPlayer(mo->player) && (!bot || bot != mo))
 			{
-				INT32 promptnum = max(0, (sides[line->sidenum[0]].textureoffset>>FRACBITS)-1);
-				INT32 pagenum = max(0, (sides[line->sidenum[0]].rowoffset>>FRACBITS)-1);
-				INT32 postexectag = abs((line->sidenum[1] != 0xFFFF) ? sides[line->sidenum[1]].textureoffset>>FRACBITS : tag);
+				INT32 promptnum = max(0, line->args[0] - 1);
+				INT32 pagenum = max(0, line->args[1] - 1);
+				INT32 postexectag = abs(line->args[3]);
 
-				boolean closetextprompt = (line->flags & ML_BLOCKMONSTERS);
-				//boolean allplayers = (line->flags & ML_NOCLIMB);
-				boolean runpostexec = (line->flags & ML_EFFECT1);
-				boolean blockcontrols = !(line->flags & ML_EFFECT2);
-				boolean freezerealtime = !(line->flags & ML_EFFECT3);
-				//boolean freezethinkers = (line->flags & ML_EFFECT4);
-				boolean callbynamedtag = (line->flags & ML_TFERLINE);
+				boolean closetextprompt = (line->args[2] & TMP_CLOSE);
+				//boolean allplayers = (line->args[2] & TMP_ALLPLAYERS);
+				boolean runpostexec = (line->args[2] & TMP_RUNPOSTEXEC);
+				boolean blockcontrols = !(line->args[2] & TMP_KEEPCONTROLS);
+				boolean freezerealtime = !(line->args[2] & TMP_KEEPREALTIME);
+				//boolean freezethinkers = (line->args[2] & TMP_FREEZETHINKERS);
+				boolean callbynamedtag = (line->args[2] & TMP_CALLBYNAME);
 
 				if (closetextprompt)
 					F_EndTextPrompt(false, false);
 				else
 				{
-					if (callbynamedtag && sides[line->sidenum[0]].text && sides[line->sidenum[0]].text[0])
-						F_GetPromptPageByNamedTag(sides[line->sidenum[0]].text, &promptnum, &pagenum);
+					if (callbynamedtag && line->stringargs[0] && line->stringargs[0][0])
+						F_GetPromptPageByNamedTag(line->stringargs[0], &promptnum, &pagenum);
 					F_StartTextPrompt(promptnum, pagenum, mo, runpostexec ? postexectag : 0, blockcontrols, freezerealtime);
 				}
 			}
@@ -3720,8 +3611,8 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 460: // Award rings
 			{
-				INT16 rings = (sides[line->sidenum[0]].textureoffset>>FRACBITS);
-				INT32 delay = (sides[line->sidenum[0]].rowoffset>>FRACBITS);
+				INT16 rings = line->args[0];
+				INT32 delay = line->args[1];
 				if (mo && mo->player)
 				{
 					if (delay <= 0 || !(leveltime % delay))
@@ -3732,34 +3623,28 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 461: // Spawns an object on the map based on texture offsets
 			{
-				const mobjtype_t type = (mobjtype_t)(sides[line->sidenum[0]].toptexture);
+				const mobjtype_t type = line->stringargs[0] ? get_number(line->stringargs[0]) : MT_NULL;
 				mobj_t *mobj;
 
 				fixed_t x, y, z;
-				x = sides[line->sidenum[0]].textureoffset;
-				y = sides[line->sidenum[0]].rowoffset;
-				z = line->frontsector->floorheight;
 
-				if (line->flags & ML_NOCLIMB) // If noclimb is set, spawn randomly within a range
+				if (line->args[4]) // If args[4] is set, spawn randomly within a range
 				{
-					if (line->sidenum[1] != 0xffff) // Make sure the linedef has a back side
-					{
-						x = P_RandomRange(sides[line->sidenum[0]].textureoffset>>FRACBITS, sides[line->sidenum[1]].textureoffset>>FRACBITS)<<FRACBITS;
-						y = P_RandomRange(sides[line->sidenum[0]].rowoffset>>FRACBITS, sides[line->sidenum[1]].rowoffset>>FRACBITS)<<FRACBITS;
-						z = P_RandomRange(line->frontsector->floorheight>>FRACBITS, line->frontsector->ceilingheight>>FRACBITS)<<FRACBITS;
-					}
-					else
-					{
-						CONS_Alert(CONS_WARNING,"Linedef Type %d - Spawn Object: Linedef is set for random range but has no back side.\n", line->special);
-						break;
-					}
+					x = P_RandomRange(line->args[0], line->args[5])<<FRACBITS;
+					y = P_RandomRange(line->args[1], line->args[6])<<FRACBITS;
+					z = P_RandomRange(line->args[2], line->args[7])<<FRACBITS;
+				}
+				else
+				{
+					x = line->args[0] << FRACBITS;
+					y = line->args[1] << FRACBITS;
+					z = line->args[2] << FRACBITS;
 				}
 
 				mobj = P_SpawnMobj(x, y, z, type);
 				if (mobj)
 				{
-					if (line->flags & ML_EFFECT1)
-						mobj->angle = R_PointToAngle2(line->v1->x, line->v1->y, line->v2->x, line->v2->y);
+					mobj->angle = FixedAngle(line->args[3] << FRACBITS);
 					CONS_Debug(DBG_GAMELOGIC, "Linedef Type %d - Spawn Object: %d spawned at (%d, %d, %d)\n", line->special, mobj->type, mobj->x>>FRACBITS, mobj->y>>FRACBITS, mobj->z>>FRACBITS); //TODO: Convert mobj->type to a string somehow.
 				}
 				else
@@ -3787,10 +3672,10 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 463: // Dye object
 			{
-				INT32 color = sides[line->sidenum[0]].toptexture;
-
 				if (mo)
 				{
+					INT32 color = line->stringargs[0] ? get_number(line->stringargs[0]) : SKINCOLOR_NONE;
+
 					if (color < 0 || color >= numskincolors)
 						return;
 
@@ -3803,31 +3688,28 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 464: // Trigger Egg Capsule
 			{
-				thinker_t *th;
+				INT32 mtnum;
 				mobj_t *mo2;
 
 				// Find the center of the Eggtrap and release all the pretty animals!
 				// The chimps are my friends.. heeheeheheehehee..... - LouisJM
-				for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+				TAG_ITER_THINGS(line->args[0], mtnum)
 				{
-					if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-						continue;
+					mo2 = mapthings[mtnum].mobj;
 
-					mo2 = (mobj_t *)th;
+					if (!mo2)
+						continue;
 
 					if (mo2->type != MT_EGGTRAP)
 						continue;
 
-					if (!mo2->spawnpoint)
-						continue;
-
-					if (mo2->spawnpoint->angle != tag)
+					if (mo2->thinker.function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
 						continue;
 
 					P_KillMobj(mo2, NULL, mo, 0);
 				}
 
-				if (!(line->flags & ML_NOCLIMB))
+				if (!(line->args[1]))
 				{
 					INT32 i;
 
@@ -3861,7 +3743,7 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 
 		case 466: // Set level failure state
 			{
-				if (line->flags & ML_NOCLIMB)
+				if (line->args[1])
 				{
 					stagefailed = false;
 					CONS_Debug(DBG_GAMELOGIC, "Stage can be completed successfully!\n");
@@ -3874,28 +3756,109 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 			}
 			break;
 
+		case 467: // Set light level
+			TAG_ITER_SECTORS(line->args[0], secnum)
+			{
+				if (sectors[secnum].lightingdata)
+				{
+					// Stop any lighting effects going on in the sector
+					P_RemoveThinker(&((thinkerdata_t *)sectors[secnum].lightingdata)->thinker);
+					sectors[secnum].lightingdata = NULL;
+				}
+
+				if (line->args[2] == TML_FLOOR)
+				{
+					if (line->args[3])
+						sectors[secnum].floorlightlevel += line->args[1];
+					else
+						sectors[secnum].floorlightlevel = line->args[1];
+				}
+				else if (line->args[2] == TML_CEILING)
+				{
+					if (line->args[3])
+						sectors[secnum].ceilinglightlevel += line->args[1];
+					else
+						sectors[secnum].ceilinglightlevel = line->args[1];
+				}
+				else
+				{
+					if (line->args[3])
+						sectors[secnum].lightlevel += line->args[1];
+					else
+						sectors[secnum].lightlevel = line->args[1];
+					sectors[secnum].lightlevel = max(0, min(255, sectors[secnum].lightlevel));
+				}
+			}
+			break;
+
+		case 468: // Change linedef executor argument
+		{
+			INT32 linenum;
+
+			if (!udmf)
+				break;
+
+			if (line->args[1] < 0 || line->args[1] >= NUMLINEARGS)
+			{
+				CONS_Debug(DBG_GAMELOGIC, "Linedef type 468: Invalid linedef arg %d\n", line->args[1]);
+				break;
+			}
+
+			TAG_ITER_LINES(line->args[0], linenum)
+			{
+				if (line->args[3])
+					lines[linenum].args[line->args[1]] += line->args[2];
+				else
+					lines[linenum].args[line->args[1]] = line->args[2];
+			}
+		}
+		break;
+
+		case 469: // Change sector gravity
+		{
+			fixed_t gravityvalue;
+
+			if (!udmf)
+				break;
+
+			if (!line->stringargs[0])
+				break;
+
+			gravityvalue = FloatToFixed(atof(line->stringargs[0]));
+
+			TAG_ITER_SECTORS(line->args[0], secnum)
+			{
+				if (line->args[1])
+					sectors[secnum].gravity = FixedMul(sectors[secnum].gravity, gravityvalue);
+				else
+					sectors[secnum].gravity = gravityvalue;
+
+				if (line->args[2] == TMF_ADD)
+					sectors[secnum].flags |= MSF_GRAVITYFLIP;
+				else if (line->args[2] == TMF_REMOVE)
+					sectors[secnum].flags &= ~MSF_GRAVITYFLIP;
+
+				if (line->args[3])
+					sectors[secnum].specialflags |= SSF_GRAVITYOVERRIDE;
+			}
+		}
+		break;
+
 		case 480: // Polyobj_DoorSlide
 		case 481: // Polyobj_DoorSwing
 			PolyDoor(line);
 			break;
 		case 482: // Polyobj_Move
-		case 483: // Polyobj_OR_Move
 			PolyMove(line);
 			break;
 		case 484: // Polyobj_RotateRight
-		case 485: // Polyobj_OR_RotateRight
-		case 486: // Polyobj_RotateLeft
-		case 487: // Polyobj_OR_RotateLeft
 			PolyRotate(line);
 			break;
 		case 488: // Polyobj_Waypoint
 			PolyWaypoint(line);
 			break;
 		case 489:
-			PolyInvisible(line);
-			break;
-		case 490:
-			PolyVisible(line);
+			PolySetVisibilityTangibility(line);
 			break;
 		case 491:
 			PolyTranslucency(line);
@@ -3986,7 +3949,7 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 {
 	thinker_t *think;
 	mobj_t *mo;
-	INT32 specialnum = (flag == MT_REDFLAG) ? 3 : 4;
+	sectorspecialflags_t specialflag = (flag == MT_REDFLAG) ? SSF_REDTEAMBASE : SSF_BLUETEAMBASE;
 
 	for (think = thlist[THINK_MOBJ].next; think != &thlist[THINK_MOBJ]; think = think->next)
 	{
@@ -3998,7 +3961,7 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 		if (mo->type != flag)
 			continue;
 
-		if (GETSECSPECIAL(mo->subsector->sector->special, 4) == specialnum)
+		if (mo->subsector->sector->specialflags & specialflag)
 			return true;
 		else if (mo->subsector->sector->ffloors) // Check the 3D floors
 		{
@@ -4006,10 +3969,10 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 
 			for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
 			{
-				if (!(rover->flags & FF_EXISTS))
+				if (!(rover->fofflags & FOF_EXISTS))
 					continue;
 
-				if (GETSECSPECIAL(rover->master->frontsector->special, 4) != specialnum)
+				if (!(rover->master->frontsector->specialflags & specialflag))
 					continue;
 
 				if (!(mo->z <= P_GetSpecialTopZ(mo, sectors + rover->secnum, mo->subsector->sector)
@@ -4021,6 +3984,258 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 		}
 	}
 	return false;
+}
+
+static boolean P_IsMobjTouchingPlane(mobj_t *mo, sector_t *sec, fixed_t floorz, fixed_t ceilingz)
+{
+	boolean floorallowed = ((sec->flags & MSF_FLIPSPECIAL_FLOOR) && ((sec->flags & MSF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == floorz));
+	boolean ceilingallowed = ((sec->flags & MSF_FLIPSPECIAL_CEILING) && ((sec->flags &  MSF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == ceilingz));
+	return (floorallowed || ceilingallowed);
+}
+
+boolean P_IsMobjTouchingSectorPlane(mobj_t *mo, sector_t *sec)
+{
+	return P_IsMobjTouchingPlane(mo, sec, P_GetSpecialBottomZ(mo, sec, sec), P_GetSpecialTopZ(mo, sec, sec));
+}
+
+boolean P_IsMobjTouching3DFloor(mobj_t *mo, ffloor_t *ffloor, sector_t *sec)
+{
+	fixed_t topheight = P_GetSpecialTopZ(mo, sectors + ffloor->secnum, sec);
+	fixed_t bottomheight = P_GetSpecialBottomZ(mo, sectors + ffloor->secnum, sec);
+
+	if (((ffloor->fofflags & FOF_BLOCKPLAYER) && mo->player)
+		|| ((ffloor->fofflags & FOF_BLOCKOTHERS) && !mo->player))
+	{
+		// Solid 3D floor: Mobj must touch the top or bottom
+		return P_IsMobjTouchingPlane(mo, ffloor->master->frontsector, topheight, bottomheight);
+	}
+	else
+	{
+		// Water or intangible 3D floor: Mobj must be inside
+		return mo->z <= topheight && (mo->z + mo->height) >= bottomheight;
+	}
+}
+
+boolean P_IsMobjTouchingPolyobj(mobj_t *mo, polyobj_t *po, sector_t *polysec)
+{
+	if (!(po->flags & POF_TESTHEIGHT)) // Don't do height checking
+		return true;
+
+	if (po->flags & POF_SOLID)
+	{
+		// Solid polyobject: Player must touch the top or bottom
+		return P_IsMobjTouchingPlane(mo, polysec, polysec->ceilingheight, polysec->floorheight);
+	}
+	else
+	{
+		// Water or intangible polyobject: Player must be inside
+		return mo->z <= polysec->ceilingheight && (mo->z + mo->height) >= polysec->floorheight;
+	}
+}
+
+static sector_t *P_MobjTouching3DFloorSpecial(mobj_t *mo, sector_t *sector, INT32 section, INT32 number)
+{
+	ffloor_t *rover;
+
+	for (rover = sector->ffloors; rover; rover = rover->next)
+	{
+		if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
+			continue;
+
+		if (!(rover->fofflags & FOF_EXISTS))
+			continue;
+
+		if (!P_IsMobjTouching3DFloor(mo, rover, sector))
+			continue;
+
+		// This FOF has the special we're looking for, but are we allowed to touch it?
+		if (sector == mo->subsector->sector
+			|| (rover->master->frontsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
+			return rover->master->frontsector;
+	}
+
+	return NULL;
+}
+
+static sector_t *P_MobjTouching3DFloorSpecialFlag(mobj_t *mo, sector_t *sector, sectorspecialflags_t flag)
+{
+	ffloor_t *rover;
+
+	for (rover = sector->ffloors; rover; rover = rover->next)
+	{
+		if (!(rover->master->frontsector->specialflags & flag))
+			continue;
+
+		if (!(rover->fofflags & FOF_EXISTS))
+			continue;
+
+		if (!P_IsMobjTouching3DFloor(mo, rover, sector))
+			continue;
+
+		// This FOF has the special we're looking for, but are we allowed to touch it?
+		if (sector == mo->subsector->sector
+			|| (rover->master->frontsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
+			return rover->master->frontsector;
+	}
+
+	return NULL;
+}
+
+static sector_t *P_MobjTouchingPolyobjSpecial(mobj_t *mo, INT32 section, INT32 number)
+{
+	polyobj_t *po;
+	sector_t *polysec;
+	boolean touching = false;
+	boolean inside = false;
+
+	for (po = mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
+	{
+		if (po->flags & POF_NOSPECIALS)
+			continue;
+
+		polysec = po->lines[0]->backsector;
+
+		if (GETSECSPECIAL(polysec->special, section) != number)
+			continue;
+
+		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, mo);
+		inside = P_MobjInsidePolyobj(po, mo);
+
+		if (!(inside || touching))
+			continue;
+
+		if (!P_IsMobjTouchingPolyobj(mo, po, polysec))
+			continue;
+
+		return polysec;
+	}
+
+	return NULL;
+}
+
+static sector_t *P_MobjTouchingPolyobjSpecialFlag(mobj_t *mo, sectorspecialflags_t flag)
+{
+	polyobj_t *po;
+	sector_t *polysec;
+	boolean touching = false;
+	boolean inside = false;
+
+	for (po = mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
+	{
+		if (po->flags & POF_NOSPECIALS)
+			continue;
+
+		polysec = po->lines[0]->backsector;
+
+		if (!(polysec->specialflags & flag))
+			continue;
+
+		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, mo);
+		inside = P_MobjInsidePolyobj(po, mo);
+
+		if (!(inside || touching))
+			continue;
+
+		if (!P_IsMobjTouchingPolyobj(mo, po, polysec))
+			continue;
+
+		return polysec;
+	}
+
+	return NULL;
+}
+
+sector_t *P_MobjTouchingSectorSpecial(mobj_t *mo, INT32 section, INT32 number)
+{
+	msecnode_t *node;
+	sector_t *result;
+
+	result = P_MobjTouching3DFloorSpecial(mo, mo->subsector->sector, section, number);
+	if (result)
+		return result;
+
+	result = P_MobjTouchingPolyobjSpecial(mo, section, number);
+	if (result)
+		return result;
+
+	if (GETSECSPECIAL(mo->subsector->sector->special, section) == number)
+		return mo->subsector->sector;
+
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		if (node->m_sector == mo->subsector->sector) // Don't duplicate
+			continue;
+
+		result = P_MobjTouching3DFloorSpecial(mo, node->m_sector, section, number);
+		if (result)
+			return result;
+
+		if (!(node->m_sector->flags & MSF_TRIGGERSPECIAL_TOUCH))
+			continue;
+
+		if (GETSECSPECIAL(node->m_sector->special, section) == number)
+			return node->m_sector;
+	}
+
+	return NULL;
+}
+
+// Deprecated in favor of P_MobjTouchingSectorSpecial
+// Kept for Lua backwards compatibility only
+sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
+{
+	ffloor_t *rover;
+
+	for (rover = mo->subsector->sector->ffloors; rover; rover = rover->next)
+	{
+		if (!rover->master->frontsector->special)
+			continue;
+
+		if (!(rover->fofflags & FOF_EXISTS))
+			continue;
+
+		if (!P_IsMobjTouching3DFloor(mo, rover, mo->subsector->sector))
+			continue;
+
+		return rover->master->frontsector;
+	}
+
+	return NULL;
+}
+
+sector_t *P_MobjTouchingSectorSpecialFlag(mobj_t *mo, sectorspecialflags_t flag)
+{
+	msecnode_t *node;
+	sector_t *result;
+
+	result = P_MobjTouching3DFloorSpecialFlag(mo, mo->subsector->sector, flag);
+	if (result)
+		return result;
+
+	result = P_MobjTouchingPolyobjSpecialFlag(mo, flag);
+	if (result)
+		return result;
+
+	if (mo->subsector->sector->specialflags & flag)
+		return mo->subsector->sector;
+
+	for (node = mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		if (node->m_sector == mo->subsector->sector) // Don't duplicate
+			continue;
+
+		result = P_MobjTouching3DFloorSpecialFlag(mo, node->m_sector, flag);
+		if (result)
+			return result;
+
+		if (!(node->m_sector->flags & MSF_TRIGGERSPECIAL_TOUCH))
+			continue;
+
+		if (node->m_sector->specialflags & flag)
+			return node->m_sector;
+	}
+
+	return NULL;
 }
 
 //
@@ -4036,163 +4251,898 @@ boolean P_IsFlagAtBase(mobjtype_t flag)
 //
 sector_t *P_PlayerTouchingSectorSpecial(player_t *player, INT32 section, INT32 number)
 {
-	msecnode_t *node;
-	ffloor_t *rover;
-
 	if (!player->mo)
 		return NULL;
 
-	// Check default case first
-	if (GETSECSPECIAL(player->mo->subsector->sector->special, section) == number)
-		return player->mo->subsector->sector;
+	return P_MobjTouchingSectorSpecial(player->mo, section, number);
+}
 
-	// Hmm.. maybe there's a FOF that has it...
-	for (rover = player->mo->subsector->sector->ffloors; rover; rover = rover->next)
+sector_t *P_PlayerTouchingSectorSpecialFlag(player_t *player, sectorspecialflags_t flag)
+{
+	if (!player->mo)
+		return NULL;
+
+	return P_MobjTouchingSectorSpecialFlag(player->mo, flag);
+}
+
+static sector_t *P_CheckPlayer3DFloorTrigger(player_t *player, sector_t *sector, line_t *sourceline)
+{
+	ffloor_t *rover;
+
+	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
-		fixed_t topheight, bottomheight;
-
-		if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
+		if (!rover->master->frontsector->triggertag)
 			continue;
 
-		if (!(rover->flags & FF_EXISTS))
+		if (rover->master->frontsector->triggerer == TO_MOBJ)
 			continue;
 
-		topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
-		bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
+		if (!(rover->fofflags & FOF_EXISTS))
+			continue;
 
-		// Check the 3D floor's type...
-		if (rover->flags & FF_BLOCKPLAYER)
-		{
-			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
-			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
-			// Thing must be on top of the floor to be affected...
-			if (!(floorallowed || ceilingallowed))
-				continue;
-		}
-		else
-		{
-			// Water and DEATH FOG!!! heh
-			if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
-				continue;
-		}
+		if (!Tag_Find(&sourceline->tags, rover->master->frontsector->triggertag))
+			continue;
 
-		// This FOF has the special we're looking for!
-		return rover->master->frontsector;
-	}
+		if (!P_IsMobjTouching3DFloor(player->mo, rover, sector))
+			continue;
 
-	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-	{
-		if (GETSECSPECIAL(node->m_sector->special, section) == number)
-		{
-			// This sector has the special we're looking for, but
-			// are we allowed to touch it?
-			if (node->m_sector == player->mo->subsector->sector
-				|| (node->m_sector->flags & SF_TRIGGERSPECIAL_TOUCH))
-				return node->m_sector;
-		}
-
-		// Hmm.. maybe there's a FOF that has it...
-		for (rover = node->m_sector->ffloors; rover; rover = rover->next)
-		{
-			fixed_t topheight, bottomheight;
-
-			if (GETSECSPECIAL(rover->master->frontsector->special, section) != number)
-				continue;
-
-			if (!(rover->flags & FF_EXISTS))
-				continue;
-
-			topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
-			bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, player->mo->subsector->sector);
-
-			// Check the 3D floor's type...
-			if (rover->flags & FF_BLOCKPLAYER)
-			{
-				boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
-				boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
-				// Thing must be on top of the floor to be affected...
-				if (!(floorallowed || ceilingallowed))
-					continue;
-			}
-			else
-			{
-				// Water and DEATH FOG!!! heh
-				if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
-					continue;
-			}
-
-			// This FOF has the special we're looking for, but are we allowed to touch it?
-			if (node->m_sector == player->mo->subsector->sector
-				|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
-				return rover->master->frontsector;
-		}
+		// This FOF has the special we're looking for, but are we allowed to touch it?
+		if (sector == player->mo->subsector->sector
+			|| (rover->master->frontsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
+			return rover->master->frontsector;
 	}
 
 	return NULL;
 }
 
-//
-// P_ThingIsOnThe3DFloor
-//
-// This checks whether the mobj is on/in the FOF we want it to be at
-// Needed for the "All players" trigger sector specials only
-//
-static boolean P_ThingIsOnThe3DFloor(mobj_t *mo, sector_t *sector, sector_t *targetsec)
+static sector_t *P_CheckPlayerPolyobjTrigger(player_t *player, line_t *sourceline)
 {
-	ffloor_t *rover;
-	fixed_t top, bottom;
+	polyobj_t *po;
+	sector_t *polysec;
+	boolean touching = false;
+	boolean inside = false;
 
-	if (!mo->player) // should NEVER happen
-		return false;
-
-	if (!targetsec->ffloors) // also should NEVER happen
-		return false;
-
-	for (rover = targetsec->ffloors; rover; rover = rover->next)
+	for (po = player->mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
 	{
-		if (rover->master->frontsector != sector)
+		if (po->flags & POF_NOSPECIALS)
 			continue;
 
-		// we're assuming the FOF existed when the first player touched it
-		//if (!(rover->flags & FF_EXISTS))
-		//	return false;
+		polysec = po->lines[0]->backsector;
 
-		top = P_GetSpecialTopZ(mo, sector, targetsec);
-		bottom = P_GetSpecialBottomZ(mo, sector, targetsec);
+		if (!polysec->triggertag)
+			continue;
 
-		// Check the 3D floor's type...
-		if (rover->flags & FF_BLOCKPLAYER)
+		if (polysec->triggerer == TO_MOBJ)
+			continue;
+
+		if (!Tag_Find(&sourceline->tags, polysec->triggertag))
+			continue;
+
+		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);
+		inside = P_MobjInsidePolyobj(po, player->mo);
+
+		if (!(inside || touching))
+			continue;
+
+		if (!P_IsMobjTouchingPolyobj(player->mo, po, polysec))
+			continue;
+
+		return polysec;
+	}
+
+	return NULL;
+}
+
+static boolean P_CheckPlayerSectorTrigger(player_t *player, sector_t *sector, line_t *sourceline)
+{
+	if (!sector->triggertag)
+		return false;
+
+	if (sector->triggerer == TO_MOBJ)
+		return false;
+
+	if (!Tag_Find(&sourceline->tags, sector->triggertag))
+		return false;
+
+	if (!(sector->flags & MSF_TRIGGERLINE_PLANE))
+		return true; // Don't require plane touch
+
+	return P_IsMobjTouchingSectorPlane(player->mo, sector);
+
+}
+
+sector_t *P_FindPlayerTrigger(player_t *player, line_t *sourceline)
+{
+	sector_t *originalsector;
+	sector_t *loopsector;
+	msecnode_t *node;
+	sector_t *caller;
+
+	if (!player->mo)
+		return NULL;
+
+	originalsector = player->mo->subsector->sector;
+
+	caller = P_CheckPlayer3DFloorTrigger(player, originalsector, sourceline); // Handle FOFs first.
+
+	if (caller)
+		return caller;
+
+	// Allow sector specials to be applied to polyobjects!
+	caller = P_CheckPlayerPolyobjTrigger(player, sourceline);
+
+	if (caller)
+		return caller;
+
+	if (P_CheckPlayerSectorTrigger(player, originalsector, sourceline))
+		return originalsector;
+
+	// Iterate through touching_sectorlist for SF_TRIGGERSPECIAL_TOUCH
+	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
+	{
+		loopsector = node->m_sector;
+
+		if (loopsector == originalsector) // Don't duplicate
+			continue;
+
+		// Check 3D floors...
+		caller = P_CheckPlayer3DFloorTrigger(player, loopsector, sourceline); // Handle FOFs first.
+
+		if (caller)
+			return caller;
+
+		if (!(loopsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
+			continue;
+
+		if (P_CheckPlayerSectorTrigger(player, loopsector, sourceline))
+			return loopsector;
+	}
+
+	return NULL;
+}
+
+boolean P_IsPlayerValid(size_t playernum)
+{
+	if (!playeringame[playernum])
+		return false;
+
+	if (!players[playernum].mo)
+		return false;
+
+	if (players[playernum].mo->health <= 0)
+		return false;
+
+	if (players[playernum].spectator)
+		return false;
+
+	return true;
+}
+
+boolean P_CanPlayerTrigger(size_t playernum)
+{
+	return P_IsPlayerValid(playernum) && !players[playernum].bot;
+}
+
+/// \todo check continues for proper splitscreen support?
+static boolean P_DoAllPlayersTrigger(mtag_t triggertag)
+{
+	INT32 i;
+	line_t dummyline;
+	dummyline.tags.count = 1;
+	dummyline.tags.tags = &triggertag;
+
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!P_CanPlayerTrigger(i))
+			continue;
+		if (!P_FindPlayerTrigger(&players[i], &dummyline))
+			return false;
+	}
+
+	return true;
+}
+
+static void P_ProcessEggCapsule(player_t *player, sector_t *sector)
+{
+	thinker_t *th;
+	mobj_t *mo2;
+	INT32 i;
+
+	if (player->bot || sector->ceilingdata || sector->floordata)
+		return;
+
+	// Find the center of the Eggtrap and release all the pretty animals!
+	// The chimps are my friends.. heeheeheheehehee..... - LouisJM
+	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
+	{
+		if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
+			continue;
+		mo2 = (mobj_t *)th;
+		if (mo2->type != MT_EGGTRAP)
+			continue;
+		P_KillMobj(mo2, NULL, player->mo, 0);
+	}
+
+	// clear the special so you can't push the button twice.
+	sector->special = 0;
+
+	// Move the button down
+	EV_DoElevator(LE_CAPSULE0, NULL, elevateDown);
+
+	// Open the top FOF
+	EV_DoFloor(LE_CAPSULE1, NULL, raiseFloorToNearestFast);
+	// Open the bottom FOF
+	EV_DoCeiling(LE_CAPSULE2, NULL, lowerToLowestFast);
+
+	// Mark all players with the time to exit thingy!
+	for (i = 0; i < MAXPLAYERS; i++)
+	{
+		if (!playeringame[i])
+			continue;
+		P_DoPlayerExit(&players[i]);
+	}
+}
+
+static void P_ProcessSpeedPad(player_t *player, sector_t *sector, sector_t *roversector, mtag_t sectag)
+{
+	INT32 lineindex = -1;
+	angle_t lineangle;
+	fixed_t linespeed;
+	fixed_t sfxnum;
+	size_t i;
+
+	if (player->powers[pw_flashing] != 0 && player->powers[pw_flashing] < TICRATE/2)
+		return;
+
+	// Try for lines facing the sector itself, with tag 0.
+	for (i = 0; i < sector->linecount; i++)
+	{
+		line_t *li = sector->lines[i];
+
+		if (li->frontsector != sector)
+			continue;
+
+		if (li->special != 4)
+			continue;
+
+		if (!Tag_Find(&li->tags, 0))
+			continue;
+
+		lineindex = li - lines;
+		break;
+	}
+
+	// Nothing found? Look via tag.
+	if (lineindex == -1)
+		lineindex = Tag_FindLineSpecial(4, sectag);
+
+	if (lineindex == -1)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Speed pad missing line special #4.\n");
+		return;
+	}
+
+	lineangle = R_PointToAngle2(lines[lineindex].v1->x, lines[lineindex].v1->y, lines[lineindex].v2->x, lines[lineindex].v2->y);
+	linespeed = lines[lineindex].args[0] << FRACBITS;
+
+	if (linespeed == 0)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Speed pad (tag %d) at zero speed.\n", sectag);
+		return;
+	}
+
+	player->mo->angle = player->drawangle = lineangle;
+
+	if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
+		P_SetPlayerAngle(player, player->mo->angle);
+
+	if (!(lines[lineindex].args[1] & TMSP_NOTELEPORT))
+	{
+		P_UnsetThingPosition(player->mo);
+		if (roversector) // make FOF speed pads work
 		{
-			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == top));
-			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == bottom));
-			// Thing must be on top of the floor to be affected...
-			if (!(floorallowed || ceilingallowed))
-				continue;
+			player->mo->x = roversector->soundorg.x;
+			player->mo->y = roversector->soundorg.y;
 		}
 		else
 		{
-			// Water and intangible FOFs
-			if (mo->z > top || (mo->z + mo->height) < bottom)
-				return false;
+			player->mo->x = sector->soundorg.x;
+			player->mo->y = sector->soundorg.y;
+		}
+		P_SetThingPosition(player->mo);
+	}
+
+	P_InstaThrust(player->mo, player->mo->angle, linespeed);
+
+	if (lines[lineindex].args[1] & TMSP_FORCESPIN) // Roll!
+	{
+		if (!(player->pflags & PF_SPINNING))
+			player->pflags |= PF_SPINNING;
+
+		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+	}
+
+	player->powers[pw_flashing] = TICRATE/3;
+
+	sfxnum = lines[lineindex].stringargs[0] ? get_number(lines[lineindex].stringargs[0]) : sfx_spdpad;
+
+	if (!sfxnum)
+		sfxnum = sfx_spdpad;
+
+	S_StartSound(player->mo, sfxnum);
+}
+
+static void P_ProcessSpecialStagePit(player_t* player)
+{
+	if (!(gametyperules & GTR_ALLOWEXIT))
+		return;
+
+	if (player->bot)
+		return;
+
+	if (!G_IsSpecialStage(gamemap))
+		return;
+
+	if (maptol & TOL_NIGHTS)
+		return;
+
+	if (player->nightstime <= 6)
+		return;
+
+	player->nightstime = 6; // Just let P_Ticker take care of the rest.
+}
+
+static void P_ProcessExitSector(player_t *player, mtag_t sectag)
+{
+	INT32 lineindex;
+
+	if (!(gametyperules & GTR_ALLOWEXIT))
+		return;
+
+	if (player->bot)
+		return;
+
+	if (G_IsSpecialStage(gamemap) && !(maptol & TOL_NIGHTS))
+		return;
+
+	// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
+	P_DoPlayerFinish(player);
+
+	P_SetupSignExit(player);
+
+	if (!G_CoopGametype())
+		return;
+
+	// Custom exit!
+	// important: use sectag on next line instead of player->mo->subsector->tag
+	// this part is different from in P_PlayerThink, this is what was causing
+	// FOF custom exits not to work.
+	lineindex = Tag_FindLineSpecial(2, sectag);
+
+	if (lineindex == -1)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Exit sector missing line special #2.\n");
+		return;
+	}
+
+	// Special goodies depending on emeralds collected
+	if ((lines[lineindex].args[1] & TMEF_EMERALDCHECK) && ALL7EMERALDS(emeralds))
+		nextmapoverride = (INT16)(udmf ? lines[lineindex].args[2] : lines[lineindex].frontsector->ceilingheight>>FRACBITS);
+	else
+		nextmapoverride = (INT16)(udmf ? lines[lineindex].args[0] : lines[lineindex].frontsector->floorheight>>FRACBITS);
+
+	if (lines[lineindex].args[1] & TMEF_SKIPTALLY)
+		skipstats = 1;
+}
+
+static void P_ProcessTeamBase(player_t *player, boolean redteam)
+{
+	mobj_t *mo;
+
+	if (!(gametyperules & GTR_TEAMFLAGS))
+		return;
+
+	if (!P_IsObjectOnGround(player->mo))
+		return;
+
+	if (player->ctfteam != (redteam ? 1 : 2))
+		return;
+
+	if (!(player->gotflag & (redteam ? GF_BLUEFLAG : GF_REDFLAG)))
+		return;
+
+	// Make sure the team still has their own
+	// flag at their base so they can score.
+	if (!P_IsFlagAtBase(redteam ? MT_REDFLAG : MT_BLUEFLAG))
+		return;
+
+	HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
+	HU_SetCEchoDuration(5);
+	HU_DoCEcho(va(M_GetText("%s%s\200\\CAPTURED THE %s%s FLAG\200.\\\\\\\\"), redteam ? "\205" : "\204", player_names[player-players], redteam ? "\204" : "\205", redteam ? "BLUE" : "RED"));
+
+	if (splitscreen || players[consoleplayer].ctfteam == (redteam ? 1 : 2))
+		S_StartSound(NULL, sfx_flgcap);
+	else if (players[consoleplayer].ctfteam == (redteam ? 2 : 1))
+		S_StartSound(NULL, sfx_lose);
+
+	mo = P_SpawnMobj(player->mo->x,player->mo->y,player->mo->z, redteam ? MT_BLUEFLAG : MT_REDFLAG);
+	player->gotflag &= ~(redteam ? GF_BLUEFLAG : GF_REDFLAG);
+	mo->flags &= ~MF_SPECIAL;
+	mo->fuse = TICRATE;
+	mo->spawnpoint = redteam ? bflagpoint : rflagpoint;
+	mo->flags2 |= MF2_JUSTATTACKED;
+	if (redteam)
+		redscore += 1;
+	else
+		bluescore += 1;
+	P_AddPlayerScore(player, 250);
+}
+
+static void P_ProcessZoomTube(player_t *player, mtag_t sectag, boolean end)
+{
+	INT32 sequence;
+	fixed_t speed;
+	INT32 lineindex;
+	mobj_t *waypoint = NULL;
+	angle_t an;
+
+	if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
+		return;
+
+	if (player->powers[pw_ignorelatch] & (1<<15))
+		return;
+
+	// Find line #3 tagged to this sector
+	lineindex = Tag_FindLineSpecial(3, sectag);
+
+	if (lineindex == -1)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Zoom tube missing line special #3.\n");
+		return;
+	}
+
+	// Grab speed and sequence values
+	speed = abs(lines[lineindex].args[0])<<(FRACBITS-3);
+	if (end)
+		speed *= -1;
+	sequence = abs(lines[lineindex].args[1]);
+
+	if (speed == 0)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
+		return;
+	}
+
+	waypoint = end ? P_GetLastWaypoint(sequence) : P_GetFirstWaypoint(sequence);
+
+	if (!waypoint)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: %s WAYPOINT IN SEQUENCE %d NOT FOUND.\n", end ? "LAST" : "FIRST", sequence);
+		return;
+	}
+
+	CONS_Debug(DBG_GAMELOGIC, "Waypoint %d found in sequence %d - speed = %d\n", waypoint->health, sequence, speed);
+
+	an = R_PointToAngle2(player->mo->x, player->mo->y, waypoint->x, waypoint->y) - player->mo->angle;
+
+	if (an > ANGLE_90 && an < ANGLE_270 && !(lines[lineindex].args[2]))
+		return; // behind back
+
+	P_SetTarget(&player->mo->tracer, waypoint);
+	player->powers[pw_carry] = CR_ZOOMTUBE;
+	player->speed = speed;
+	player->pflags |= PF_SPINNING;
+	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
+	player->climbing = 0;
+
+	if (player->mo->state-states != S_PLAY_ROLL)
+	{
+		P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+		S_StartSound(player->mo, sfx_spin);
+	}
+}
+
+static void P_ProcessFinishLine(player_t *player)
+{
+	if ((gametyperules & (GTR_RACE|GTR_LIVES)) != GTR_RACE)
+		return;
+
+	if (player->exiting)
+		return;
+
+	if (player->starpostnum == numstarposts) // Must have touched all the starposts
+	{
+		player->laps++;
+
+		if (player->powers[pw_carry] == CR_NIGHTSMODE)
+			player->drillmeter += 48*20;
+
+		if (player->laps >= (UINT8)cv_numlaps.value)
+			CONS_Printf(M_GetText("%s has finished the race.\n"), player_names[player-players]);
+		else if (player->laps == (UINT8)cv_numlaps.value-1)
+			CONS_Printf(M_GetText("%s started the \205final lap\200!\n"), player_names[player-players]);
+		else
+			CONS_Printf(M_GetText("%s started lap %u\n"), player_names[player-players], (UINT32)player->laps+1);
+
+		// Reset starposts (checkpoints) info
+		player->starpostscale = player->starpostangle = player->starposttime = player->starpostnum = 0;
+		player->starpostx = player->starposty = player->starpostz = 0;
+		P_ResetStarposts();
+
+		// Play the starpost sound for 'consistency'
+		S_StartSound(player->mo, sfx_strpst);
+	}
+	else if (player->starpostnum)
+	{
+		// blatant reuse of a variable that's normally unused in circuit
+		if (!player->tossdelay)
+			S_StartSound(player->mo, sfx_lose);
+		player->tossdelay = 3;
+	}
+
+	if (player->laps >= (unsigned)cv_numlaps.value)
+	{
+		if (P_IsLocalPlayer(player))
+		{
+			HU_SetCEchoFlags(0);
+			HU_SetCEchoDuration(5);
+			HU_DoCEcho("FINISHED!");
 		}
 
-		return true;
+		P_DoPlayerExit(player);
 	}
+}
+
+static void P_ProcessRopeHang(player_t *player, mtag_t sectag)
+{
+	INT32 sequence;
+	fixed_t speed;
+	INT32 lineindex;
+	mobj_t *waypointmid = NULL;
+	mobj_t *waypointhigh = NULL;
+	mobj_t *waypointlow = NULL;
+	mobj_t *closest = NULL;
+	vector3_t p, line[2], resulthigh, resultlow;
+
+	if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ROPEHANG)
+		return;
+
+	if (player->powers[pw_ignorelatch] & (1<<15))
+		return;
+
+	if (player->mo->momz > 0)
+		return;
+
+	if (player->cmd.buttons & BT_SPIN)
+		return;
+
+	if (!(player->pflags & PF_SLIDING) && player->mo->state == &states[player->mo->info->painstate])
+		return;
+
+	if (player->exiting)
+		return;
+
+	//initialize resulthigh and resultlow with 0
+	memset(&resultlow, 0x00, sizeof(resultlow));
+	memset(&resulthigh, 0x00, sizeof(resulthigh));
+
+	// Find line #11 tagged to this sector
+	lineindex = Tag_FindLineSpecial(11, sectag);
+
+	if (lineindex == -1)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: Rope hang missing line special #11.\n");
+		return;
+	}
+
+	// Grab speed and sequence values
+	speed = abs(lines[lineindex].args[0]) << (FRACBITS - 3);
+	sequence = abs(lines[lineindex].args[1]);
+
+	// Find the closest waypoint
+	// Find the preceding waypoint
+	// Find the proceeding waypoint
+	// Determine the closest spot on the line between the three waypoints
+	// Put player at that location.
+
+	waypointmid = P_GetClosestWaypoint(sequence, player->mo);
+
+	if (!waypointmid)
+	{
+		CONS_Debug(DBG_GAMELOGIC, "ERROR: WAYPOINT(S) IN SEQUENCE %d NOT FOUND.\n", sequence);
+		return;
+	}
+
+	waypointlow = P_GetPreviousWaypoint(waypointmid, true);
+	waypointhigh = P_GetNextWaypoint(waypointmid, true);
+
+	CONS_Debug(DBG_GAMELOGIC, "WaypointMid: %d; WaypointLow: %d; WaypointHigh: %d\n",
+					waypointmid->health, waypointlow ? waypointlow->health : -1, waypointhigh ? waypointhigh->health : -1);
+
+	// Now we have three waypoints... the closest one we're near, and the one that comes before, and after.
+	// Next, we need to find the closest point on the line between each set, and determine which one we're
+	// closest to.
+
+	p.x = player->mo->x;
+	p.y = player->mo->y;
+	p.z = player->mo->z;
+
+	// Waypointmid and Waypointlow:
+	if (waypointlow)
+	{
+		line[0].x = waypointmid->x;
+		line[0].y = waypointmid->y;
+		line[0].z = waypointmid->z;
+		line[1].x = waypointlow->x;
+		line[1].y = waypointlow->y;
+		line[1].z = waypointlow->z;
+
+		P_ClosestPointOnLine3D(&p, line, &resultlow);
+	}
+
+	// Waypointmid and Waypointhigh:
+	if (waypointhigh)
+	{
+		line[0].x = waypointmid->x;
+		line[0].y = waypointmid->y;
+		line[0].z = waypointmid->z;
+		line[1].x = waypointhigh->x;
+		line[1].y = waypointhigh->y;
+		line[1].z = waypointhigh->z;
+
+		P_ClosestPointOnLine3D(&p, line, &resulthigh);
+	}
+
+	// 3D support now available. Disregard the previous notice here. -Red
+
+	P_UnsetThingPosition(player->mo);
+	P_ResetPlayer(player);
+	player->mo->momx = player->mo->momy = player->mo->momz = 0;
+
+	if (lines[lineindex].args[2]) // Don't wrap
+	{
+		mobj_t *highest = P_GetLastWaypoint(sequence);
+		highest->flags |= MF_SLIDEME;
+	}
+
+	// Changing the conditions on these ifs to fix issues with snapping to the wrong spot -Red
+	if ((lines[lineindex].args[2]) && waypointmid->health == 0)
+	{
+		closest = waypointhigh;
+		player->mo->x = resulthigh.x;
+		player->mo->y = resulthigh.y;
+		player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
+	}
+	else if ((lines[lineindex].args[2]) && waypointmid->health == numwaypoints[sequence] - 1)
+	{
+		closest = waypointmid;
+		player->mo->x = resultlow.x;
+		player->mo->y = resultlow.y;
+		player->mo->z = resultlow.z - P_GetPlayerHeight(player);
+	}
+	else
+	{
+		if (P_AproxDistance(P_AproxDistance(player->mo->x-resultlow.x, player->mo->y-resultlow.y),
+				player->mo->z-resultlow.z) < P_AproxDistance(P_AproxDistance(player->mo->x-resulthigh.x,
+					player->mo->y-resulthigh.y), player->mo->z-resulthigh.z))
+		{
+			// Line between Mid and Low is closer
+			closest = waypointmid;
+			player->mo->x = resultlow.x;
+			player->mo->y = resultlow.y;
+			player->mo->z = resultlow.z - P_GetPlayerHeight(player);
+		}
+		else
+		{
+			// Line between Mid and High is closer
+			closest = waypointhigh;
+			player->mo->x = resulthigh.x;
+			player->mo->y = resulthigh.y;
+			player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
+		}
+	}
+
+	P_SetTarget(&player->mo->tracer, closest);
+	player->powers[pw_carry] = CR_ROPEHANG;
+	player->speed = speed;
+
+	S_StartSound(player->mo, sfx_s3k4a);
+
+	player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
+	player->climbing = 0;
+	P_SetThingPosition(player->mo);
+	P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
+}
+
+static boolean P_SectorHasSpecial(sector_t *sec)
+{
+	if (sec->specialflags)
+		return true;
+
+	if (sec->damagetype != SD_NONE)
+		return true;
+
+	if (sec->triggertag)
+		return true;
+
+	if (sec->special)
+		return true;
 
 	return false;
 }
 
-//
-// P_MobjReadyToTrigger
-//
-// Is player standing on the sector's "ground"?
-//
-static boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
+static void P_EvaluateSpecialFlags(player_t *player, sector_t *sector, sector_t *roversector, boolean isTouching)
 {
-	boolean floorallowed = ((sec->flags & SF_FLIPSPECIAL_FLOOR) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == P_GetSpecialBottomZ(mo, sec, sec)));
-	boolean ceilingallowed = ((sec->flags & SF_FLIPSPECIAL_CEILING) && ((sec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == P_GetSpecialTopZ(mo, sec, sec)));
-	// Thing must be on top of the floor to be affected...
-	return (floorallowed || ceilingallowed);
+	mtag_t sectag = Tag_FGet(&sector->tags);
+
+	if (sector->specialflags & SSF_OUTERSPACE)
+	{
+		if (!(player->powers[pw_shield] & SH_PROTECTWATER) && !player->powers[pw_spacetime])
+			player->powers[pw_spacetime] = spacetimetics + 1;
+	}
+	if (sector->specialflags & SSF_WINDCURRENT)
+		player->onconveyor = 2;
+	if (sector->specialflags & SSF_CONVEYOR)
+		player->onconveyor = 4;
+	if ((sector->specialflags & SSF_SPEEDPAD) && isTouching)
+		P_ProcessSpeedPad(player, sector, roversector, sectag);
+	if (sector->specialflags & SSF_STARPOSTACTIVATOR)
+	{
+		mobj_t *post = P_GetObjectTypeInSectorNum(MT_STARPOST, sector - sectors);
+		if (post)
+			P_TouchStarPost(post, player, false);
+	}
+	if (sector->specialflags & SSF_EXIT)
+		P_ProcessExitSector(player, sectag);
+	if ((sector->specialflags & SSF_SPECIALSTAGEPIT) && isTouching)
+		P_ProcessSpecialStagePit(player);
+	if ((sector->specialflags & SSF_REDTEAMBASE) && isTouching)
+		P_ProcessTeamBase(player, true);
+	if ((sector->specialflags & SSF_BLUETEAMBASE) && isTouching)
+		P_ProcessTeamBase(player, false);
+	if (sector->specialflags & SSF_FAN)
+	{
+		player->mo->momz += mobjinfo[MT_FAN].mass/4;
+
+		if (player->mo->momz > mobjinfo[MT_FAN].mass)
+			player->mo->momz = mobjinfo[MT_FAN].mass;
+
+		if (!player->powers[pw_carry])
+		{
+			P_ResetPlayer(player);
+			P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
+			P_SetTarget(&player->mo->tracer, player->mo);
+			player->powers[pw_carry] = CR_FAN;
+		}
+	}
+	if (sector->specialflags & SSF_SUPERTRANSFORM)
+	{
+		if (player->mo->health > 0 && !player->bot && (player->charflags & SF_SUPER) && !player->powers[pw_super] && ALL7EMERALDS(emeralds))
+			P_DoSuperTransformation(player, true);
+	}
+	if ((sector->specialflags & SSF_FORCESPIN) && isTouching)
+	{
+		if (!(player->pflags & PF_SPINNING))
+		{
+			player->pflags |= PF_SPINNING;
+			P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
+			S_StartAttackSound(player->mo, sfx_spin);
+
+			if (abs(player->rmomx) < FixedMul(5*FRACUNIT, player->mo->scale)
+			&& abs(player->rmomy) < FixedMul(5*FRACUNIT, player->mo->scale))
+				P_InstaThrust(player->mo, player->mo->angle, FixedMul(10*FRACUNIT, player->mo->scale));
+		}
+	}
+	if (sector->specialflags & SSF_ZOOMTUBESTART)
+		P_ProcessZoomTube(player, sectag, false);
+	if (sector->specialflags & SSF_ZOOMTUBEEND)
+		P_ProcessZoomTube(player, sectag, true);
+	if (sector->specialflags & SSF_FINISHLINE)
+		P_ProcessFinishLine(player);
+	if ((sector->specialflags & SSF_ROPEHANG) && isTouching)
+		P_ProcessRopeHang(player, sectag);
+}
+
+static void P_EvaluateDamageType(player_t *player, sector_t *sector, boolean isTouching)
+{
+	switch (sector->damagetype)
+	{
+		case SD_GENERIC:
+			if (isTouching)
+				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
+			break;
+		case SD_WATER:
+			if (isTouching && (player->powers[pw_underwater] || player->powers[pw_carry] == CR_NIGHTSMODE))
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_WATER);
+			break;
+		case SD_FIRE:
+		case SD_LAVA:
+			if (isTouching)
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_FIRE);
+			break;
+		case SD_ELECTRIC:
+			if (isTouching)
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_ELECTRIC);
+			break;
+		case SD_SPIKE:
+			if (isTouching)
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPIKE);
+			break;
+		case SD_DEATHPITTILT:
+		case SD_DEATHPITNOTILT:
+			if (!isTouching)
+				break;
+			if (player->quittime)
+				G_MovePlayerToSpawnOrStarpost(player - players);
+			else
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_DEATHPIT);
+			break;
+		case SD_INSTAKILL:
+			if (player->quittime)
+				G_MovePlayerToSpawnOrStarpost(player - players);
+			else
+				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
+			break;
+		case SD_SPECIALSTAGE:
+			if (!isTouching)
+				break;
+
+			if (player->exiting || player->bot) // Don't do anything for bots or players who have just finished
+				break;
+
+			if (!(player->powers[pw_shield] || player->spheres > 0)) // Don't do anything if no shield or spheres anyway
+				break;
+
+			P_SpecialStageDamage(player, NULL, NULL);
+			break;
+		default:
+			break;
+	}
+}
+
+static void P_EvaluateLinedefExecutorTrigger(player_t *player, sector_t *sector, boolean isTouching)
+{
+	if (player->bot)
+		return;
+
+	if (!sector->triggertag)
+		return;
+
+	if (sector->triggerer == TO_MOBJ)
+		return;
+	else if (sector->triggerer == TO_ALLPLAYERS && !P_DoAllPlayersTrigger(sector->triggertag))
+		return;
+
+	if ((sector->flags & MSF_TRIGGERLINE_PLANE) && !isTouching)
+		return;
+
+	P_LinedefExecute(sector->triggertag, player->mo, sector);
+}
+
+static void P_EvaluateOldSectorSpecial(player_t *player, sector_t *sector, sector_t *roversector, boolean isTouching)
+{
+	switch (GETSECSPECIAL(sector->special, 1))
+	{
+		case 9: // Ring Drainer (Floor Touch)
+			if (!isTouching)
+				break;
+			/* FALLTHRU */
+		case 10: // Ring Drainer (No Floor Touch)
+			if (leveltime % (TICRATE/2) == 0 && player->rings > 0)
+			{
+				player->rings--;
+				S_StartSound(player->mo, sfx_antiri);
+			}
+			break;
+	}
+
+	switch (GETSECSPECIAL(sector->special, 2))
+	{
+		case 9: // Egg trap capsule
+			if (roversector)
+				P_ProcessEggCapsule(player, sector);
+			break;
+	}
 }
 
 /** Applies a sector special to a player.
@@ -4201,20 +5151,14 @@ static boolean P_MobjReadyToTrigger(mobj_t *mo, sector_t *sec)
   * \param sector       Sector with the special.
   * \param roversector  If !NULL, sector is actually an FOF; otherwise, sector
   *                     is being physically contacted by the player.
-  * \todo Split up into multiple functions.
   * \sa P_PlayerInSpecialSector, P_PlayerOnSpecial3DFloor
   */
 void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *roversector)
 {
-	INT32 i = 0;
-	INT32 section1, section2, section3, section4;
-	INT32 special;
-	mtag_t sectag = Tag_FGet(&sector->tags);
+	boolean isTouching;
 
-	section1 = GETSECSPECIAL(sector->special, 1);
-	section2 = GETSECSPECIAL(sector->special, 2);
-	section3 = GETSECSPECIAL(sector->special, 3);
-	section4 = GETSECSPECIAL(sector->special, 4);
+	if (!P_SectorHasSpecial(sector))
+		return;
 
 	// Ignore spectators
 	if (player->spectator)
@@ -4226,847 +5170,17 @@ void P_ProcessSpecialSector(player_t *player, sector_t *sector, sector_t *rovers
 	if (player->playerstate != PST_LIVE)
 		return;
 
-	// Conveyor stuff
-	if (section3 == 2 || section3 == 4)
-		player->onconveyor = section3;
+	isTouching = roversector || P_IsMobjTouchingSectorPlane(player->mo, sector);
 
-	special = section1;
+	P_EvaluateSpecialFlags(player, sector, roversector, isTouching);
+	P_EvaluateDamageType(player, sector, isTouching);
+	P_EvaluateLinedefExecutorTrigger(player, sector, isTouching);
 
-	// Process Section 1
-	switch (special)
-	{
-		case 1: // Damage (Generic)
-			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
-				P_DamageMobj(player->mo, NULL, NULL, 1, 0);
-			break;
-		case 2: // Damage (Water)
-			if ((roversector || P_MobjReadyToTrigger(player->mo, sector)) && (player->powers[pw_underwater] || player->powers[pw_carry] == CR_NIGHTSMODE))
-				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_WATER);
-			break;
-		case 3: // Damage (Fire)
-			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
-				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_FIRE);
-			break;
-		case 4: // Damage (Electrical)
-			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
-				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_ELECTRIC);
-			break;
-		case 5: // Spikes
-			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
-				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_SPIKE);
-			break;
-		case 6: // Death Pit (Camera Mod)
-		case 7: // Death Pit (No Camera Mod)
-			if (roversector || P_MobjReadyToTrigger(player->mo, sector))
-			{
-				if (player->quittime)
-					G_MovePlayerToSpawnOrStarpost(player - players);
-				else
-					P_DamageMobj(player->mo, NULL, NULL, 1, DMG_DEATHPIT);
-			}
-			break;
-		case 8: // Instant Kill
-			if (player->quittime)
-				G_MovePlayerToSpawnOrStarpost(player - players);
-			else
-				P_DamageMobj(player->mo, NULL, NULL, 1, DMG_INSTAKILL);
-			break;
-		case 9: // Ring Drainer (Floor Touch)
-		case 10: // Ring Drainer (No Floor Touch)
-			if (leveltime % (TICRATE/2) == 0 && player->rings > 0)
-			{
-				player->rings--;
-				S_StartSound(player->mo, sfx_antiri);
-			}
-			break;
-		case 11: // Special Stage Damage
-			if (player->exiting || player->bot) // Don't do anything for bots or players who have just finished
-				break;
-
-			if (!(player->powers[pw_shield] || player->spheres > 0)) // Don't do anything if no shield or spheres anyway
-				break;
-
-			P_SpecialStageDamage(player, NULL, NULL);
-			break;
-		case 12: // Space Countdown
-			if (!(player->powers[pw_shield] & SH_PROTECTWATER) && !player->powers[pw_spacetime])
-				player->powers[pw_spacetime] = spacetimetics + 1;
-			break;
-		case 13: // Ramp Sector (Increase step-up/down)
-		case 14: // Non-Ramp Sector (Don't step-down)
-		case 15: // Bouncy Sector (FOF Control Only)
-			break;
-	}
-
-	special = section2;
-
-	// Process Section 2
-	switch (special)
-	{
-		case 1: // Trigger Linedef Exec (Pushable Objects)
-			break;
-		case 2: // Linedef executor requires all players present+doesn't require touching floor
-		case 3: // Linedef executor requires all players present
-			/// \todo check continues for proper splitscreen support?
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i])
-					continue;
-				if (!players[i].mo)
-					continue;
-				if (players[i].spectator)
-					continue;
-				if (players[i].bot)
-					continue;
-				if (G_CoopGametype() && players[i].lives <= 0)
-					continue;
-				if (roversector)
-				{
-					if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
-					{
-						msecnode_t *node;
-						for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-						{
-							if (P_ThingIsOnThe3DFloor(players[i].mo, sector, node->m_sector))
-								break;
-						}
-						if (!node)
-							goto DoneSection2;
-					}
-					else if (players[i].mo->subsector && !P_ThingIsOnThe3DFloor(players[i].mo, sector, players[i].mo->subsector->sector)) // this function handles basically everything for us lmao
-						goto DoneSection2;
-				}
-				else
-				{
-					if (players[i].mo->subsector->sector == sector)
-						;
-					else if (sector->flags & SF_TRIGGERSPECIAL_TOUCH)
-					{
-						msecnode_t *node;
-						for (node = players[i].mo->touching_sectorlist; node; node = node->m_sectorlist_next)
-						{
-							if (node->m_sector == sector)
-								break;
-						}
-						if (!node)
-							goto DoneSection2;
-					}
-					else
-						goto DoneSection2;
-
-					if (special == 3 && !P_MobjReadyToTrigger(players[i].mo, sector))
-						goto DoneSection2;
-				}
-			}
-			/* FALLTHRU */
-		case 4: // Linedef executor that doesn't require touching floor
-		case 5: // Linedef executor
-		case 6: // Linedef executor (7 Emeralds)
-		case 7: // Linedef executor (NiGHTS Mare)
-			if (!player->bot)
-				P_LinedefExecute(sectag, player->mo, sector);
-			break;
-		case 8: // Tells pushable things to check FOFs
-			break;
-		case 9: // Egg trap capsule
-		{
-			thinker_t *th;
-			mobj_t *mo2;
-			line_t junk;
-
-			if (player->bot || sector->ceilingdata || sector->floordata)
-				return;
-
-			// Find the center of the Eggtrap and release all the pretty animals!
-			// The chimps are my friends.. heeheeheheehehee..... - LouisJM
-			for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
-			{
-				if (th->function.acp1 == (actionf_p1)P_RemoveThinkerDelayed)
-					continue;
-				mo2 = (mobj_t *)th;
-				if (mo2->type != MT_EGGTRAP)
-					continue;
-				P_KillMobj(mo2, NULL, player->mo, 0);
-			}
-
-			// clear the special so you can't push the button twice.
-			sector->special = 0;
-
-			// Initialize my junk
-			junk.tags.tags = NULL;
-			junk.tags.count = 0;
-
-			// Move the button down
-			Tag_FSet(&junk.tags, LE_CAPSULE0);
-			EV_DoElevator(&junk, elevateDown, false);
-
-			// Open the top FOF
-			Tag_FSet(&junk.tags, LE_CAPSULE1);
-			EV_DoFloor(&junk, raiseFloorToNearestFast);
-			// Open the bottom FOF
-			Tag_FSet(&junk.tags, LE_CAPSULE2);
-			EV_DoCeiling(&junk, lowerToLowestFast);
-
-			// Mark all players with the time to exit thingy!
-			for (i = 0; i < MAXPLAYERS; i++)
-			{
-				if (!playeringame[i])
-					continue;
-				P_DoPlayerExit(&players[i]);
-			}
-			break;
-		}
-		case 10: // Special Stage Time/Rings
-		case 11: // Custom Gravity
-			break;
-		case 12: // Lua sector special
-			break;
-	}
-DoneSection2:
-
-	special = section3;
-
-	// Process Section 3
-	switch (special)
-	{
-		case 1: // Unused
-		case 2: // Wind/Current
-		case 3: // Unused
-		case 4: // Conveyor Belt
-			break;
-
-		case 5: // Speed pad
-			if (player->powers[pw_flashing] != 0 && player->powers[pw_flashing] < TICRATE/2)
-				break;
-
-			i = Tag_FindLineSpecial(4, sectag);
-
-			if (i != -1)
-			{
-				angle_t lineangle;
-				fixed_t linespeed;
-				fixed_t sfxnum;
-
-				lineangle = R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y);
-				linespeed = sides[lines[i].sidenum[0]].textureoffset;
-
-				if (linespeed == 0)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Speed pad (tag %d) at zero speed.\n", sectag);
-					break;
-				}
-
-				player->mo->angle = player->drawangle = lineangle;
-
-				if (!demoplayback || P_ControlStyle(player) == CS_LMAOGALOG)
-					P_SetPlayerAngle(player, player->mo->angle);
-
-				if (!(lines[i].flags & ML_EFFECT4))
-				{
-					P_UnsetThingPosition(player->mo);
-					if (roversector) // make FOF speed pads work
-					{
-						player->mo->x = roversector->soundorg.x;
-						player->mo->y = roversector->soundorg.y;
-					}
-					else
-					{
-						player->mo->x = sector->soundorg.x;
-						player->mo->y = sector->soundorg.y;
-					}
-					P_SetThingPosition(player->mo);
-				}
-
-				P_InstaThrust(player->mo, player->mo->angle, linespeed);
-
-				if (lines[i].flags & ML_EFFECT5) // Roll!
-				{
-					if (!(player->pflags & PF_SPINNING))
-						player->pflags |= PF_SPINNING;
-
-					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-				}
-
-				player->powers[pw_flashing] = TICRATE/3;
-
-				sfxnum = sides[lines[i].sidenum[0]].toptexture;
-
-				if (!sfxnum)
-					sfxnum = sfx_spdpad;
-
-				S_StartSound(player->mo, sfxnum);
-			}
-			break;
-
-		case 6: // Unused
-		case 7: // Unused
-		case 8: // Unused
-		case 9: // Unused
-		case 10: // Unused
-		case 11: // Unused
-		case 12: // Unused
-		case 13: // Unused
-		case 14: // Unused
-		case 15: // Unused
-			break;
-	}
-
-	special = section4;
-
-	// Process Section 4
-	switch (special)
-	{
-		case 1: // Starpost Activator
-		{
-			mobj_t *post = P_GetObjectTypeInSectorNum(MT_STARPOST, sector - sectors);
-
-			if (!post)
-				break;
-
-			P_TouchStarPost(post, player, false);
-			break;
-		}
-
-		case 2: // Special stage GOAL sector / Exit Sector / CTF Flag Return
-			if (player->bot || !(gametyperules & GTR_ALLOWEXIT))
-				break;
-			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap) && player->nightstime > 6)
-			{
-				player->nightstime = 6; // Just let P_Ticker take care of the rest.
-				return;
-			}
-
-			// Exit (for FOF exits; others are handled in P_PlayerThink in p_user.c)
-			{
-				INT32 lineindex;
-
-				P_DoPlayerFinish(player);
-
-				P_SetupSignExit(player);
-				// important: use sector->tag on next line instead of player->mo->subsector->tag
-				// this part is different from in P_PlayerThink, this is what was causing
-				// FOF custom exits not to work.
-				lineindex = Tag_FindLineSpecial(2, sectag);
-
-				if (G_CoopGametype() && lineindex != -1) // Custom exit!
-				{
-					// Special goodies with the block monsters flag depending on emeralds collected
-					if ((lines[lineindex].flags & ML_BLOCKMONSTERS) && ALL7EMERALDS(emeralds))
-						nextmapoverride = (INT16)(lines[lineindex].frontsector->ceilingheight>>FRACBITS);
-					else
-						nextmapoverride = (INT16)(lines[lineindex].frontsector->floorheight>>FRACBITS);
-
-					if (lines[lineindex].flags & ML_NOCLIMB)
-						skipstats = 1;
-				}
-			}
-			break;
-
-		case 3: // Red Team's Base
-			if ((gametyperules & GTR_TEAMFLAGS) && P_IsObjectOnGround(player->mo))
-			{
-				if (player->ctfteam == 1 && (player->gotflag & GF_BLUEFLAG))
-				{
-					mobj_t *mo;
-
-					// Make sure the red team still has their own
-					// flag at their base so they can score.
-					if (!P_IsFlagAtBase(MT_REDFLAG))
-						break;
-
-					HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
-					HU_SetCEchoDuration(5);
-					HU_DoCEcho(va(M_GetText("\205%s\200\\CAPTURED THE \204BLUE FLAG\200.\\\\\\\\"), player_names[player-players]));
-
-					if (splitscreen || players[consoleplayer].ctfteam == 1)
-						S_StartSound(NULL, sfx_flgcap);
-					else if (players[consoleplayer].ctfteam == 2)
-						S_StartSound(NULL, sfx_lose);
-
-					mo = P_SpawnMobj(player->mo->x,player->mo->y,player->mo->z,MT_BLUEFLAG);
-					player->gotflag &= ~GF_BLUEFLAG;
-					mo->flags &= ~MF_SPECIAL;
-					mo->fuse = TICRATE;
-					mo->spawnpoint = bflagpoint;
-					mo->flags2 |= MF2_JUSTATTACKED;
-					redscore += 1;
-					P_AddPlayerScore(player, 250);
-				}
-			}
-			break;
-
-		case 4: // Blue Team's Base
-			if ((gametyperules & GTR_TEAMFLAGS) && P_IsObjectOnGround(player->mo))
-			{
-				if (player->ctfteam == 2 && (player->gotflag & GF_REDFLAG))
-				{
-					mobj_t *mo;
-
-					// Make sure the blue team still has their own
-					// flag at their base so they can score.
-					if (!P_IsFlagAtBase(MT_BLUEFLAG))
-						break;
-
-					HU_SetCEchoFlags(V_AUTOFADEOUT|V_ALLOWLOWERCASE);
-					HU_SetCEchoDuration(5);
-					HU_DoCEcho(va(M_GetText("\204%s\200\\CAPTURED THE \205RED FLAG\200.\\\\\\\\"), player_names[player-players]));
-
-					if (splitscreen || players[consoleplayer].ctfteam == 2)
-						S_StartSound(NULL, sfx_flgcap);
-					else if (players[consoleplayer].ctfteam == 1)
-						S_StartSound(NULL, sfx_lose);
-
-					mo = P_SpawnMobj(player->mo->x,player->mo->y,player->mo->z,MT_REDFLAG);
-					player->gotflag &= ~GF_REDFLAG;
-					mo->flags &= ~MF_SPECIAL;
-					mo->fuse = TICRATE;
-					mo->spawnpoint = rflagpoint;
-					mo->flags2 |= MF2_JUSTATTACKED;
-					bluescore += 1;
-					P_AddPlayerScore(player, 250);
-				}
-			}
-			break;
-
-		case 5: // Fan sector
-			player->mo->momz += mobjinfo[MT_FAN].mass/4;
-
-			if (player->mo->momz > mobjinfo[MT_FAN].mass)
-				player->mo->momz = mobjinfo[MT_FAN].mass;
-
-			P_ResetPlayer(player);
-			if (player->panim != PA_FALL)
-				P_SetPlayerMobjState(player->mo, S_PLAY_FALL);
-			break;
-
-		case 6: // Super Sonic transformer
-			if (player->mo->health > 0 && !player->bot && (player->charflags & SF_SUPER) && !player->powers[pw_super] && ALL7EMERALDS(emeralds))
-				P_DoSuperTransformation(player, true);
-			break;
-
-		case 7: // Make player spin
-			if (!(player->pflags & PF_SPINNING))
-			{
-				player->pflags |= PF_SPINNING;
-				P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-				S_StartAttackSound(player->mo, sfx_spin);
-
-				if (abs(player->rmomx) < FixedMul(5*FRACUNIT, player->mo->scale)
-				&& abs(player->rmomy) < FixedMul(5*FRACUNIT, player->mo->scale))
-					P_InstaThrust(player->mo, player->mo->angle, FixedMul(10*FRACUNIT, player->mo->scale));
-			}
-			break;
-
-		case 8: // Zoom Tube Start
-			{
-				INT32 sequence;
-				fixed_t speed;
-				INT32 lineindex;
-				mobj_t *waypoint = NULL;
-				angle_t an;
-
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
-					break;
-
-				if (player->powers[pw_ignorelatch] & (1<<15))
-					break;
-
-				// Find line #3 tagged to this sector
-				lineindex = Tag_FindLineSpecial(3, sectag);
-
-				if (lineindex == -1)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Sector special %d missing line special #3.\n", sector->special);
-					break;
-				}
-
-				// Grab speed and sequence values
-				speed = abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8;
-				sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
-
-				if (speed == 0)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
-					break;
-				}
-
-				waypoint = P_GetFirstWaypoint(sequence);
-
-				if (!waypoint)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: FIRST WAYPOINT IN SEQUENCE %d NOT FOUND.\n", sequence);
-					break;
-				}
-				else
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Waypoint %d found in sequence %d - speed = %d\n", waypoint->health, sequence, speed);
-				}
-
-				an = R_PointToAngle2(player->mo->x, player->mo->y, waypoint->x, waypoint->y) - player->mo->angle;
-
-				if (an > ANGLE_90 && an < ANGLE_270 && !(lines[lineindex].flags & ML_EFFECT4))
-					break; // behind back
-
-				P_SetTarget(&player->mo->tracer, waypoint);
-				player->powers[pw_carry] = CR_ZOOMTUBE;
-				player->speed = speed;
-				player->pflags |= PF_SPINNING;
-				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
-				player->climbing = 0;
-
-				if (player->mo->state-states != S_PLAY_ROLL)
-				{
-					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-					S_StartSound(player->mo, sfx_spin);
-				}
-			}
-			break;
-
-		case 9: // Zoom Tube End
-			{
-				INT32 sequence;
-				fixed_t speed;
-				INT32 lineindex;
-				mobj_t *waypoint = NULL;
-				angle_t an;
-
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ZOOMTUBE)
-					break;
-
-				if (player->powers[pw_ignorelatch] & (1<<15))
-					break;
-
-				// Find line #3 tagged to this sector
-				lineindex = Tag_FindLineSpecial(3, sectag);
-
-				if (lineindex == -1)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Sector special %d missing line special #3.\n", sector->special);
-					break;
-				}
-
-				// Grab speed and sequence values
-				speed = -abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8; // Negative means reverse
-				sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
-
-				if (speed == 0)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
-					break;
-				}
-
-				waypoint = P_GetLastWaypoint(sequence);
-
-				if (!waypoint)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: LAST WAYPOINT IN SEQUENCE %d NOT FOUND.\n", sequence);
-					break;
-				}
-				else
-				{
-					CONS_Debug(DBG_GAMELOGIC, "Waypoint %d found in sequence %d - speed = %d\n", waypoint->health, sequence, speed);
-				}
-
-				an = R_PointToAngle2(player->mo->x, player->mo->y, waypoint->x, waypoint->y) - player->mo->angle;
-
-				if (an > ANGLE_90 && an < ANGLE_270 && !(lines[lineindex].flags & ML_EFFECT4))
-					break; // behind back
-
-				P_SetTarget(&player->mo->tracer, waypoint);
-				player->powers[pw_carry] = CR_ZOOMTUBE;
-				player->speed = speed;
-				player->pflags |= PF_SPINNING;
-				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
-				player->climbing = 0;
-
-				if (player->mo->state-states != S_PLAY_ROLL)
-				{
-					P_SetPlayerMobjState(player->mo, S_PLAY_ROLL);
-					S_StartSound(player->mo, sfx_spin);
-				}
-			}
-			break;
-
-		case 10: // Finish Line
-			if (((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE) && !player->exiting)
-			{
-				if (player->starpostnum == numstarposts) // Must have touched all the starposts
-				{
-					player->laps++;
-
-					if (player->powers[pw_carry] == CR_NIGHTSMODE)
-						player->drillmeter += 48*20;
-
-					if (player->laps >= (UINT8)cv_numlaps.value)
-						CONS_Printf(M_GetText("%s has finished the race.\n"), player_names[player-players]);
-					else if (player->laps == (UINT8)cv_numlaps.value-1)
-						CONS_Printf(M_GetText("%s started the \205final lap\200!\n"), player_names[player-players]);
-					else
-						CONS_Printf(M_GetText("%s started lap %u\n"), player_names[player-players], (UINT32)player->laps+1);
-
-					// Reset starposts (checkpoints) info
-					player->starpostscale = player->starpostangle = player->starposttime = player->starpostnum = 0;
-					player->starpostx = player->starposty = player->starpostz = 0;
-					P_ResetStarposts();
-
-					// Play the starpost sound for 'consistency'
-					S_StartSound(player->mo, sfx_strpst);
-				}
-				else if (player->starpostnum)
-				{
-					// blatant reuse of a variable that's normally unused in circuit
-					if (!player->tossdelay)
-						S_StartSound(player->mo, sfx_lose);
-					player->tossdelay = 3;
-				}
-
-				if (player->laps >= (unsigned)cv_numlaps.value)
-				{
-					if (P_IsLocalPlayer(player))
-					{
-						HU_SetCEchoFlags(0);
-						HU_SetCEchoDuration(5);
-						HU_DoCEcho("FINISHED!");
-					}
-
-					P_DoPlayerExit(player);
-				}
-			}
-			break;
-
-		case 11: // Rope hang
-			{
-				INT32 sequence;
-				fixed_t speed;
-				INT32 lineindex;
-				mobj_t *waypointmid = NULL;
-				mobj_t *waypointhigh = NULL;
-				mobj_t *waypointlow = NULL;
-				mobj_t *closest = NULL;
-				vector3_t p, line[2], resulthigh, resultlow;
-
-				if (player->mo->tracer && player->mo->tracer->type == MT_TUBEWAYPOINT && player->powers[pw_carry] == CR_ROPEHANG)
-					break;
-
-				if (player->powers[pw_ignorelatch] & (1<<15))
-					break;
-
-				if (player->mo->momz > 0)
-					break;
-
-				if (player->cmd.buttons & BT_SPIN)
-					break;
-
-				if (!(player->pflags & PF_SLIDING) && player->mo->state == &states[player->mo->info->painstate])
-					break;
-
-				if (player->exiting)
-					break;
-
-				//initialize resulthigh and resultlow with 0
-				memset(&resultlow, 0x00, sizeof(resultlow));
-				memset(&resulthigh, 0x00, sizeof(resulthigh));
-
-				// Find line #11 tagged to this sector
-				lineindex = Tag_FindLineSpecial(11, sectag);
-
-				if (lineindex == -1)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Sector special %d missing line special #11.\n", sector->special);
-					break;
-				}
-
-				// Grab speed and sequence values
-				speed = abs(sides[lines[lineindex].sidenum[0]].textureoffset)/8;
-				sequence = abs(sides[lines[lineindex].sidenum[0]].rowoffset)>>FRACBITS;
-
-				if (speed == 0)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: Waypoint sequence %d at zero speed.\n", sequence);
-					break;
-				}
-
-				// Find the closest waypoint
-				// Find the preceding waypoint
-				// Find the proceeding waypoint
-				// Determine the closest spot on the line between the three waypoints
-				// Put player at that location.
-
-				waypointmid = P_GetClosestWaypoint(sequence, player->mo);
-
-				if (!waypointmid)
-				{
-					CONS_Debug(DBG_GAMELOGIC, "ERROR: WAYPOINT(S) IN SEQUENCE %d NOT FOUND.\n", sequence);
-					break;
-				}
-
-				waypointlow = P_GetPreviousWaypoint(waypointmid, true);
-				waypointhigh = P_GetNextWaypoint(waypointmid, true);
-
-				CONS_Debug(DBG_GAMELOGIC, "WaypointMid: %d; WaypointLow: %d; WaypointHigh: %d\n",
-								waypointmid->health, waypointlow ? waypointlow->health : -1, waypointhigh ? waypointhigh->health : -1);
-
-				// Now we have three waypoints... the closest one we're near, and the one that comes before, and after.
-				// Next, we need to find the closest point on the line between each set, and determine which one we're
-				// closest to.
-
-				p.x = player->mo->x;
-				p.y = player->mo->y;
-				p.z = player->mo->z;
-
-				// Waypointmid and Waypointlow:
-				if (waypointlow)
-				{
-					line[0].x = waypointmid->x;
-					line[0].y = waypointmid->y;
-					line[0].z = waypointmid->z;
-					line[1].x = waypointlow->x;
-					line[1].y = waypointlow->y;
-					line[1].z = waypointlow->z;
-
-					P_ClosestPointOnLine3D(&p, line, &resultlow);
-				}
-
-				// Waypointmid and Waypointhigh:
-				if (waypointhigh)
-				{
-					line[0].x = waypointmid->x;
-					line[0].y = waypointmid->y;
-					line[0].z = waypointmid->z;
-					line[1].x = waypointhigh->x;
-					line[1].y = waypointhigh->y;
-					line[1].z = waypointhigh->z;
-
-					P_ClosestPointOnLine3D(&p, line, &resulthigh);
-				}
-
-				// 3D support now available. Disregard the previous notice here. -Red
-
-				P_UnsetThingPosition(player->mo);
-				P_ResetPlayer(player);
-				player->mo->momx = player->mo->momy = player->mo->momz = 0;
-
-				if (lines[lineindex].flags & ML_EFFECT1) // Don't wrap
-				{
-					mobj_t *highest = P_GetLastWaypoint(sequence);
-					highest->flags |= MF_SLIDEME;
-				}
-
-				// Changing the conditions on these ifs to fix issues with snapping to the wrong spot -Red
-				if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == 0)
-				{
-					closest = waypointhigh;
-					player->mo->x = resulthigh.x;
-					player->mo->y = resulthigh.y;
-					player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
-				}
-				else if ((lines[lineindex].flags & ML_EFFECT1) && waypointmid->health == numwaypoints[sequence] - 1)
-				{
-					closest = waypointmid;
-					player->mo->x = resultlow.x;
-					player->mo->y = resultlow.y;
-					player->mo->z = resultlow.z - P_GetPlayerHeight(player);
-				}
-				else
-				{
-					if (P_AproxDistance(P_AproxDistance(player->mo->x-resultlow.x, player->mo->y-resultlow.y),
-							player->mo->z-resultlow.z) < P_AproxDistance(P_AproxDistance(player->mo->x-resulthigh.x,
-								player->mo->y-resulthigh.y), player->mo->z-resulthigh.z))
-					{
-						// Line between Mid and Low is closer
-						closest = waypointmid;
-						player->mo->x = resultlow.x;
-						player->mo->y = resultlow.y;
-						player->mo->z = resultlow.z - P_GetPlayerHeight(player);
-					}
-					else
-					{
-						// Line between Mid and High is closer
-						closest = waypointhigh;
-						player->mo->x = resulthigh.x;
-						player->mo->y = resulthigh.y;
-						player->mo->z = resulthigh.z - P_GetPlayerHeight(player);
-					}
-				}
-
-				P_SetTarget(&player->mo->tracer, closest);
-				player->powers[pw_carry] = CR_ROPEHANG;
-
-				// Option for static ropes.
-				if (lines[lineindex].flags & ML_NOCLIMB)
-					player->speed = 0;
-				else
-					player->speed = speed;
-
-				S_StartSound(player->mo, sfx_s3k4a);
-
-				player->pflags &= ~(PF_JUMPED|PF_NOJUMPDAMAGE|PF_GLIDING|PF_BOUNCING|PF_SLIDING|PF_CANCARRY);
-				player->climbing = 0;
-				P_SetThingPosition(player->mo);
-				P_SetPlayerMobjState(player->mo, S_PLAY_RIDE);
-			}
-			break;
-		case 12: // Camera noclip
-		case 13: // Unused
-		case 14: // Unused
-		case 15: // Unused
-			break;
-	}
+	if (!udmf)
+		P_EvaluateOldSectorSpecial(player, sector, roversector, isTouching);
 }
 
-/** Checks if an object is standing on or is inside a special 3D floor.
-  * If so, the sector is returned.
-  *
-  * \param mo Object to check.
-  * \return Pointer to the sector with a special type, or NULL if no special 3D
-  *         floors are being contacted.
-  * \sa P_PlayerOnSpecial3DFloor
-  */
-sector_t *P_ThingOnSpecial3DFloor(mobj_t *mo)
-{
-	sector_t *sector;
-	ffloor_t *rover;
-	fixed_t topheight, bottomheight;
-
-	sector = mo->subsector->sector;
-	if (!sector->ffloors)
-		return NULL;
-
-	for (rover = sector->ffloors; rover; rover = rover->next)
-	{
-		if (!rover->master->frontsector->special)
-			continue;
-
-		if (!(rover->flags & FF_EXISTS))
-			continue;
-
-		topheight = P_GetSpecialTopZ(mo, sectors + rover->secnum, sector);
-		bottomheight = P_GetSpecialBottomZ(mo, sectors + rover->secnum, sector);
-
-		// Check the 3D floor's type...
-		if (((rover->flags & FF_BLOCKPLAYER) && mo->player)
-			|| ((rover->flags & FF_BLOCKOTHERS) && !mo->player))
-		{
-			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(mo->eflags & MFE_VERTICALFLIP)) && (mo->z == topheight));
-			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (mo->eflags & MFE_VERTICALFLIP)) && (mo->z + mo->height == bottomheight));
-			// Thing must be on top of the floor to be affected...
-			if (!(floorallowed || ceilingallowed))
-				continue;
-		}
-		else
-		{
-			// Water and intangible FOFs
-			if (mo->z > topheight || (mo->z + mo->height) < bottomheight)
-				continue;
-		}
-
-		return rover->master->frontsector;
-	}
-
-	return NULL;
-}
-
-#define TELEPORTED (player->mo->subsector->sector != originalsector)
+#define TELEPORTED(mo) (mo->subsector->sector != originalsector)
 
 /** Checks if a player is standing on or is inside a 3D floor (e.g. water) and
   * applies any specials.
@@ -5078,200 +5192,58 @@ static void P_PlayerOnSpecial3DFloor(player_t *player, sector_t *sector)
 {
 	sector_t *originalsector = player->mo->subsector->sector;
 	ffloor_t *rover;
-	fixed_t topheight, bottomheight;
 
 	for (rover = sector->ffloors; rover; rover = rover->next)
 	{
-		if (!rover->master->frontsector->special)
+		if (!P_SectorHasSpecial(rover->master->frontsector))
 			continue;
 
-		if (!(rover->flags & FF_EXISTS))
+		if (!(rover->fofflags & FOF_EXISTS))
 			continue;
 
-		topheight = P_GetSpecialTopZ(player->mo, sectors + rover->secnum, sector);
-		bottomheight = P_GetSpecialBottomZ(player->mo, sectors + rover->secnum, sector);
-
-		// Check the 3D floor's type...
-		if (rover->flags & FF_BLOCKPLAYER)
-		{
-			boolean floorallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_FLOOR) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == topheight));
-			boolean ceilingallowed = ((rover->master->frontsector->flags & SF_FLIPSPECIAL_CEILING) && ((rover->master->frontsector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == bottomheight));
-			// Thing must be on top of the floor to be affected...
-			if (!(floorallowed || ceilingallowed))
-				continue;
-		}
-		else
-		{
-			// Water and DEATH FOG!!! heh
-			if (player->mo->z > topheight || (player->mo->z + player->mo->height) < bottomheight)
-				continue;
-		}
+		if (!P_IsMobjTouching3DFloor(player->mo, rover, sector))
+			continue;
 
 		// This FOF has the special we're looking for, but are we allowed to touch it?
 		if (sector == player->mo->subsector->sector
-			|| (rover->master->frontsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+			|| (rover->master->frontsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
 		{
 			P_ProcessSpecialSector(player, rover->master->frontsector, sector);
-			if TELEPORTED return;
-		}
-	}
-
-	// Allow sector specials to be applied to polyobjects!
-	if (player->mo->subsector->polyList)
-	{
-		polyobj_t *po = player->mo->subsector->polyList;
-		sector_t *polysec;
-		boolean touching = false;
-		boolean inside = false;
-
-		while (po)
-		{
-			if (po->flags & POF_NOSPECIALS)
-			{
-				po = (polyobj_t *)(po->link.next);
-				continue;
-			}
-
-			polysec = po->lines[0]->backsector;
-
-			if ((polysec->flags & SF_TRIGGERSPECIAL_TOUCH))
-				touching = P_MobjTouchingPolyobj(po, player->mo);
-			else
-				touching = false;
-
-			inside = P_MobjInsidePolyobj(po, player->mo);
-
-			if (!(inside || touching))
-			{
-				po = (polyobj_t *)(po->link.next);
-				continue;
-			}
-
-			// We're inside it! Yess...
-			if (!polysec->special)
-			{
-				po = (polyobj_t *)(po->link.next);
-				continue;
-			}
-
-			if (!(po->flags & POF_TESTHEIGHT)) // Don't do height checking
-				;
-			else if (po->flags & POF_SOLID)
-			{
-				boolean floorallowed = ((polysec->flags & SF_FLIPSPECIAL_FLOOR) && ((polysec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == polysec->ceilingheight));
-				boolean ceilingallowed = ((polysec->flags & SF_FLIPSPECIAL_CEILING) && ((polysec->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == polysec->floorheight));
-				// Thing must be on top of the floor to be affected...
-				if (!(floorallowed || ceilingallowed))
-				{
-					po = (polyobj_t *)(po->link.next);
-					continue;
-				}
-			}
-			else
-			{
-				// Water and DEATH FOG!!! heh
-				if (player->mo->z > polysec->ceilingheight || (player->mo->z + player->mo->height) < polysec->floorheight)
-				{
-					po = (polyobj_t *)(po->link.next);
-					continue;
-				}
-			}
-
-			P_ProcessSpecialSector(player, polysec, sector);
-			if TELEPORTED return;
-
-			po = (polyobj_t *)(po->link.next);
+			if TELEPORTED(player->mo) return;
 		}
 	}
 }
 
-#define VDOORSPEED (FRACUNIT*2)
-
-//
-// P_RunSpecialSectorCheck
-//
-// Helper function to P_PlayerInSpecialSector
-//
-static void P_RunSpecialSectorCheck(player_t *player, sector_t *sector)
+static void P_PlayerOnSpecialPolyobj(player_t *player)
 {
-	boolean nofloorneeded = false;
-	fixed_t f_affectpoint, c_affectpoint;
+	sector_t *originalsector = player->mo->subsector->sector;
+	polyobj_t *po;
+	sector_t *polysec;
+	boolean touching = false;
+	boolean inside = false;
 
-	if (!sector->special) // nothing special, exit
-		return;
-
-	if (GETSECSPECIAL(sector->special, 2) == 9) // Egg trap capsule -- should only be for 3dFloors!
-		return;
-
-	// The list of specials that activate without floor touch
-	// Check Section 1
-	switch(GETSECSPECIAL(sector->special, 1))
+	for (po = player->mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
 	{
-		case 2: // Damage (water)
-		case 8: // Instant kill
-		case 10: // Ring drainer that doesn't require floor touch
-		case 12: // Space countdown
-			nofloorneeded = true;
-			break;
+		if (po->flags & POF_NOSPECIALS)
+			continue;
+
+		polysec = po->lines[0]->backsector;
+
+		if (!P_SectorHasSpecial(polysec))
+			continue;
+
+		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, player->mo);
+		inside = P_MobjInsidePolyobj(po, player->mo);
+
+		if (!(inside || touching))
+			continue;
+
+		if (!P_IsMobjTouchingPolyobj(player->mo, po, polysec))
+			continue;
+
+		P_ProcessSpecialSector(player, polysec, originalsector);
+		if TELEPORTED(player->mo) return;
 	}
-
-	// Check Section 2
-	switch(GETSECSPECIAL(sector->special, 2))
-	{
-		case 2: // Linedef executor (All players needed)
-		case 4: // Linedef executor
-		case 6: // Linedef executor (7 Emeralds)
-		case 7: // Linedef executor (NiGHTS Mare)
-			nofloorneeded = true;
-			break;
-	}
-
-	// Check Section 3
-/*	switch(GETSECSPECIAL(sector->special, 3))
-	{
-
-	}*/
-
-	// Check Section 4
-	switch(GETSECSPECIAL(sector->special, 4))
-	{
-		case 2: // Level Exit / GOAL Sector / Flag Return
-			if (!(maptol & TOL_NIGHTS) && G_IsSpecialStage(gamemap))
-			{
-				// Special stage GOAL sector
-				// requires touching floor.
-				break;
-			}
-			/* FALLTHRU */
-
-		case 1: // Starpost activator
-		case 5: // Fan sector
-		case 6: // Super Sonic Transform
-		case 8: // Zoom Tube Start
-		case 9: // Zoom Tube End
-		case 10: // Finish line
-			nofloorneeded = true;
-			break;
-	}
-
-	if (nofloorneeded)
-	{
-		P_ProcessSpecialSector(player, sector, NULL);
-		return;
-	}
-
-	f_affectpoint = P_GetSpecialBottomZ(player->mo, sector, sector);
-	c_affectpoint = P_GetSpecialTopZ(player->mo, sector, sector);
-
-	{
-		boolean floorallowed = ((sector->flags & SF_FLIPSPECIAL_FLOOR) && ((sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || !(player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z == f_affectpoint));
-		boolean ceilingallowed = ((sector->flags & SF_FLIPSPECIAL_CEILING) && ((sector->flags & SF_TRIGGERSPECIAL_HEADBUMP) || (player->mo->eflags & MFE_VERTICALFLIP)) && (player->mo->z + player->mo->height == c_affectpoint));
-		// Thing must be on top of the floor to be affected...
-		if (!(floorallowed || ceilingallowed))
-			return;
-	}
-
-	P_ProcessSpecialSector(player, sector, NULL);
 }
 
 /** Checks if the player is in a special sector or FOF and apply any specials.
@@ -5291,10 +5263,14 @@ void P_PlayerInSpecialSector(player_t *player)
 	originalsector = player->mo->subsector->sector;
 
 	P_PlayerOnSpecial3DFloor(player, originalsector); // Handle FOFs first.
-	if TELEPORTED return;
+	if TELEPORTED(player->mo) return;
 
-	P_RunSpecialSectorCheck(player, originalsector);
-	if TELEPORTED return;
+	// Allow sector specials to be applied to polyobjects!
+	P_PlayerOnSpecialPolyobj(player);
+	if TELEPORTED(player->mo) return;
+
+	P_ProcessSpecialSector(player, originalsector, NULL);
+	if TELEPORTED(player->mo) return;
 
 	// Iterate through touching_sectorlist for SF_TRIGGERSPECIAL_TOUCH
 	for (node = player->mo->touching_sectorlist; node; node = node->m_sectorlist_next)
@@ -5306,14 +5282,108 @@ void P_PlayerInSpecialSector(player_t *player)
 
 		// Check 3D floors...
 		P_PlayerOnSpecial3DFloor(player, loopsector);
-		if TELEPORTED return;
+		if TELEPORTED(player->mo) return;
 
-		if (!(loopsector->flags & SF_TRIGGERSPECIAL_TOUCH))
+		if (!(loopsector->flags & MSF_TRIGGERSPECIAL_TOUCH))
 			continue;
 
-		P_RunSpecialSectorCheck(player, loopsector);
-		if TELEPORTED return;
+		P_ProcessSpecialSector(player, loopsector, NULL);
+		if TELEPORTED(player->mo) return;
 	}
+}
+
+static void P_CheckMobj3DFloorTrigger(mobj_t *mo, sector_t *sec)
+{
+	sector_t *originalsector = mo->subsector->sector;
+	ffloor_t *rover;
+
+	for (rover = sec->ffloors; rover; rover = rover->next)
+	{
+		if (!rover->master->frontsector->triggertag)
+			continue;
+
+		if (rover->master->frontsector->triggerer != TO_MOBJ)
+			continue;
+
+		if (!(rover->fofflags & FOF_EXISTS))
+			continue;
+
+		if (!P_IsMobjTouching3DFloor(mo, rover, sec))
+			continue;
+
+		P_LinedefExecute(rover->master->frontsector->triggertag, mo, rover->master->frontsector);
+		if TELEPORTED(mo) return;
+	}
+}
+
+static void P_CheckMobjPolyobjTrigger(mobj_t *mo)
+{
+	sector_t *originalsector = mo->subsector->sector;
+	polyobj_t *po;
+	sector_t *polysec;
+	boolean touching = false;
+	boolean inside = false;
+
+	for (po = mo->subsector->polyList; po; po = (polyobj_t *)(po->link.next))
+	{
+		if (po->flags & POF_NOSPECIALS)
+			continue;
+
+		polysec = po->lines[0]->backsector;
+
+		if (!polysec->triggertag)
+			continue;
+
+		if (polysec->triggerer != TO_MOBJ)
+			continue;
+
+		touching = (polysec->flags & MSF_TRIGGERSPECIAL_TOUCH) && P_MobjTouchingPolyobj(po, mo);
+		inside = P_MobjInsidePolyobj(po, mo);
+
+		if (!(inside || touching))
+			continue;
+
+		if (!P_IsMobjTouchingPolyobj(mo, po, polysec))
+			continue;
+
+		P_LinedefExecute(polysec->triggertag, mo, polysec);
+		if TELEPORTED(mo) return;
+	}
+}
+
+static void P_CheckMobjSectorTrigger(mobj_t *mo, sector_t *sec)
+{
+	if (!sec->triggertag)
+		return;
+
+	if (sec->triggerer != TO_MOBJ)
+		return;
+
+	if ((sec->flags & MSF_TRIGGERLINE_PLANE) && !P_IsMobjTouchingSectorPlane(mo, sec))
+		return;
+
+	P_LinedefExecute(sec->triggertag, mo, sec);
+}
+
+void P_CheckMobjTrigger(mobj_t *mobj, boolean pushable)
+{
+	sector_t *originalsector;
+
+	if (!mobj->subsector)
+		return;
+
+	originalsector = mobj->subsector->sector;
+
+	if (!pushable && !(originalsector->flags & MSF_TRIGGERLINE_MOBJ))
+		return;
+
+	P_CheckMobj3DFloorTrigger(mobj, originalsector);
+	if TELEPORTED(mobj)	return;
+
+	P_CheckMobjPolyobjTrigger(mobj);
+	if TELEPORTED(mobj)	return;
+
+	P_CheckMobjSectorTrigger(mobj, originalsector);
 }
 
 #undef TELEPORTED
@@ -5465,12 +5535,14 @@ static inline void P_AddFFloorToList(sector_t *sec, ffloor_t *fflr)
   * \param sec         Target sector.
   * \param sec2        Control sector.
   * \param master      Control linedef.
+  * \param alpha       Alpha value (0-255).
+  * \param blendmode   Blending mode.
   * \param flags       Options affecting this 3Dfloor.
   * \param secthinkers List of relevant thinkers sorted by sector. May be NULL.
   * \return Pointer to the new 3Dfloor.
   * \sa P_AddFFloor, P_AddFakeFloorsByLine, P_SpawnSpecials
   */
-static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, ffloortype_e flags, thinkerlist_t *secthinkers)
+static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, INT32 alpha, UINT8 blendmode, ffloortype_e flags, thinkerlist_t *secthinkers)
 {
 	ffloor_t *fflr;
 	thinker_t *th;
@@ -5488,7 +5560,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	{
 		fixed_t tempceiling = sec2->ceilingheight;
 		//flip the sector around and print an error instead of crashing 12.1.08 -Inuyasha
-		CONS_Alert(CONS_ERROR, M_GetText("FOF (line %s) has a top height below its bottom.\n"), sizeu1(master - lines));
+		CONS_Alert(CONS_ERROR, M_GetText("A FOF tagged %d has a top height below its bottom.\n"), master->args[0]);
 		sec2->ceilingheight = sec2->floorheight;
 		sec2->floorheight = tempceiling;
 	}
@@ -5499,7 +5571,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 		sec2->attachedsolid = Z_Malloc(sizeof (*sec2->attachedsolid) * sec2->maxattached, PU_STATIC, NULL);
 		sec2->attached[0] = sec - sectors;
 		sec2->numattached = 1;
-		sec2->attachedsolid[0] = (flags & FF_SOLID);
+		sec2->attachedsolid[0] = (flags & FOF_SOLID);
 	}
 	else
 	{
@@ -5514,7 +5586,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 			sec2->attachedsolid = Z_Realloc(sec2->attachedsolid, sizeof (*sec2->attachedsolid) * sec2->maxattached, PU_STATIC, NULL);
 		}
 		sec2->attached[sec2->numattached] = sec - sectors;
-		sec2->attachedsolid[sec2->numattached] = (flags & FF_SOLID);
+		sec2->attachedsolid[sec2->numattached] = (flags & FOF_SOLID);
 		sec2->numattached++;
 	}
 
@@ -5544,13 +5616,7 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 	if (sec2->hasslope)
 		sec->hasslope = true;
 
-	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT1)) // Block player only
-		flags &= ~FF_BLOCKOTHERS;
-
-	if ((flags & FF_SOLID) && (master->flags & ML_EFFECT2)) // Block all BUT player
-		flags &= ~FF_BLOCKPLAYER;
-
-	fflr->spawnflags = fflr->flags = flags;
+	fflr->spawnflags = fflr->fofflags = flags;
 	fflr->master = master;
 	fflr->norender = INFTICS;
 	fflr->fadingdata = NULL;
@@ -5590,54 +5656,60 @@ static ffloor_t *P_AddFakeFloor(sector_t *sec, sector_t *sec2, line_t *master, f
 			p = (pusher_t *)th;
 
 			if (p->affectee == (INT32)sec2num)
-				Add_Pusher(p->type, p->x_mag<<FRACBITS, p->y_mag<<FRACBITS, p->source, (INT32)(sec-sectors), p->affectee, p->exclusive, p->slider);
+				Add_Pusher(p->type, p->x_mag, p->y_mag, p->z_mag, (INT32)(sec-sectors), p->affectee, p->exclusive, p->slider);
 		}
 
 		if(secthinkers) i++;
 		else th = th->next;
 	}
 
-
-	if (flags & FF_TRANSLUCENT)
+	fflr->alpha = max(0, min(0xff, alpha));
+	if (fflr->alpha < 0xff || flags & FOF_SPLAT)
 	{
-		if (sides[master->sidenum[0]].toptexture > 0)
-		{
-			 // for future reference, "#0" is 1, and "#255" is 256. Be warned
-			fflr->alpha = sides[master->sidenum[0]].toptexture;
-
-			if (fflr->alpha >= 1001) // fourth digit
-			{
-				fflr->blend = (fflr->alpha/1000)+1; // becomes an AST
-				fflr->alpha %= 1000;
-			}
-		}
-		else
-			fflr->alpha = 0x80;
+		fflr->fofflags |= FOF_TRANSLUCENT;
+		fflr->spawnflags = fflr->fofflags;
 	}
-	else
-		fflr->alpha = 0xff;
-
 	fflr->spawnalpha = fflr->alpha; // save for netgames
 
-	if (flags & FF_QUICKSAND)
+	switch (blendmode)
+	{
+		case TMB_TRANSLUCENT:
+		default:
+			fflr->blend = AST_COPY;
+			break;
+		case TMB_ADD:
+			fflr->blend = AST_ADD;
+			break;
+		case TMB_SUBTRACT:
+			fflr->blend = AST_SUBTRACT;
+			break;
+		case TMB_REVERSESUBTRACT:
+			fflr->blend = AST_REVERSESUBTRACT;
+			break;
+		case TMB_MODULATE:
+			fflr->blend = AST_MODULATE;
+			break;
+	}
+
+	if (flags & FOF_QUICKSAND)
 		CheckForQuicksand = true;
 
-	if ((flags & FF_BUSTUP) || (flags & FF_SHATTER) || (flags & FF_SPINBUST))
+	if (flags & FOF_BUSTUP)
 		CheckForBustableBlocks = true;
 
-	if ((flags & FF_MARIO))
+	if ((flags & FOF_MARIO))
 	{
-		if (!(flags & FF_SHATTERBOTTOM)) // Don't change the textures of a brick block, just a question block
+		if (!(flags & FOF_GOOWATER)) // Don't change the textures of a brick block, just a question block
 			P_AddBlockThinker(sec2, master);
 		CheckForMarioBlocks = true;
 	}
 
-	if ((flags & FF_CRUMBLE))
+	if ((flags & FOF_CRUMBLE))
 		sec2->crumblestate = CRUMBLE_WAIT;
 
-	if ((flags & FF_FLOATBOB))
+	if ((flags & FOF_FLOATBOB))
 	{
-		P_AddFloatThinker(sec2, Tag_FGet(&master->tags), master);
+		P_AddFloatThinker(sec2, master->args[0], master);
 		CheckForFloatBob = true;
 	}
 
@@ -5671,6 +5743,10 @@ static void P_AddFloatThinker(sector_t *sec, UINT16 tag, line_t *sourceline)
 	floater->sector = sec;
 	floater->tag = (INT16)tag;
 	floater->sourceline = sourceline;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&floater->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&floater->thinker, sec, true);
 }
 
 /**
@@ -5700,6 +5776,9 @@ static void P_AddPlaneDisplaceThinker(INT32 type, fixed_t speed, INT32 control, 
 	displace->speed = speed;
 	displace->type = type;
 	displace->reverse = reverse;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&displace->thinker, &sectors[affectee], false);
 }
 
 /** Adds a Mario block thinker, which changes the block's texture between blank
@@ -5753,12 +5832,16 @@ static void P_AddRaiseThinker(sector_t *sec, INT16 tag, fixed_t speed, fixed_t c
 	raise->ceilingtop = ceilingtop;
 	raise->ceilingbottom = ceilingbottom;
 
-	raise->basespeed = speed;
+	raise->basespeed = speed >> 2;
 
 	if (lower)
 		raise->flags |= RF_REVERSE;
 	if (spindash)
 		raise->flags |= RF_SPINDASH;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&raise->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&raise->thinker, sec, true);
 }
 
 static void P_AddAirbob(sector_t *sec, INT16 tag, fixed_t dist, boolean raise, boolean spindash, boolean dynamic)
@@ -5784,6 +5867,10 @@ static void P_AddAirbob(sector_t *sec, INT16 tag, fixed_t dist, boolean raise, b
 		airbob->flags |= RF_SPINDASH;
 	if (dynamic)
 		airbob->flags |= RF_DYNAMIC;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&airbob->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&airbob->thinker, sec, true);
 }
 
 /** Adds a thwomp thinker.
@@ -5817,13 +5904,17 @@ static inline void P_AddThwompThinker(sector_t *sec, line_t *sourceline, fixed_t
 	thwomp->floorstartheight = sec->floorheight;
 	thwomp->ceilingstartheight = sec->ceilingheight;
 	thwomp->delay = 1;
-	thwomp->tag = Tag_FGet(&sourceline->tags);
+	thwomp->tag = sourceline->args[0];
 	thwomp->sound = sound;
 
 	sec->floordata = thwomp;
 	sec->ceilingdata = thwomp;
 	// Start with 'resting' texture
 	sides[sourceline->sidenum[0]].midtexture = sides[sourceline->sidenum[0]].bottomtexture;
+
+	// interpolation
+	R_CreateInterpolator_SectorPlane(&thwomp->thinker, sec, false);
+	R_CreateInterpolator_SectorPlane(&thwomp->thinker, sec, true);
 }
 
 /** Adds a thinker which checks if any MF_ENEMY objects with health are in the defined area.
@@ -5853,7 +5944,7 @@ static inline void P_AddNoEnemiesThinker(line_t *sourceline)
   * \sa P_SpawnSpecials, T_EachTimeThinker
   * \author SSNTails <http://www.ssntails.org>
   */
-static void P_AddEachTimeThinker(line_t *sourceline)
+static void P_AddEachTimeThinker(line_t *sourceline, boolean triggerOnExit)
 {
 	eachtime_t *eachtime;
 
@@ -5864,7 +5955,7 @@ static void P_AddEachTimeThinker(line_t *sourceline)
 	eachtime->thinker.function.acp1 = (actionf_p1)T_EachTimeThinker;
 
 	eachtime->sourceline = sourceline;
-	eachtime->triggerOnExit = !!(sourceline->flags & ML_BOUNCY);
+	eachtime->triggerOnExit = triggerOnExit;
 }
 
 /** Adds a camera scanner.
@@ -5878,8 +5969,6 @@ static void P_AddEachTimeThinker(line_t *sourceline)
 static inline void P_AddCameraScanner(sector_t *sourcesec, sector_t *actionsector, angle_t angle)
 {
 	elevator_t *elevator; // Why not? LOL
-
-	CONS_Alert(CONS_WARNING, M_GetText("Detected a camera scanner effect (linedef type 5). This effect is deprecated and will be removed in the future!\n"));
 
 	// create and initialize new elevator thinker
 	elevator = Z_Calloc(sizeof (*elevator), PU_LEVSPEC, NULL);
@@ -5918,14 +6007,14 @@ void T_LaserFlash(laserthink_t *flash)
 			if (fflr->master != flash->sourceline)
 				continue;
 
-			if (!(fflr->flags & FF_EXISTS))
+			if (!(fflr->fofflags & FOF_EXISTS))
 				break;
 
 			if (leveltime & 2)
-				//fflr->flags |= FF_RENDERALL;
+				//fflr->flags |= FOF_RENDERALL;
 				fflr->alpha = 0xB0;
 			else
-				//fflr->flags &= ~FF_RENDERALL;
+				//fflr->flags &= ~FOF_RENDERALL;
 				fflr->alpha = 0x90;
 
 			top    = P_GetFFloorTopZAt   (fflr, sector->soundorg.x, sector->soundorg.y);
@@ -6029,22 +6118,74 @@ void P_InitSpecials(void)
 	globalweather = mapheaderinfo[gamemap-1]->weather;
 }
 
-static void P_ApplyFlatAlignment(line_t *master, sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs)
+void P_ApplyFlatAlignment(sector_t *sector, angle_t flatangle, fixed_t xoffs, fixed_t yoffs, boolean floor, boolean ceiling)
 {
-	if (!(master->flags & ML_NETONLY)) // Modify floor flat alignment unless ML_NETONLY flag is set
+	if (floor)
 	{
 		sector->floorpic_angle = flatangle;
 		sector->floor_xoffs += xoffs;
 		sector->floor_yoffs += yoffs;
 	}
 
-	if (!(master->flags & ML_NONET)) // Modify ceiling flat alignment unless ML_NONET flag is set
+	if (ceiling)
 	{
 		sector->ceilingpic_angle = flatangle;
 		sector->ceiling_xoffs += xoffs;
 		sector->ceiling_yoffs += yoffs;
 	}
 
+}
+
+static void P_MakeFOFBouncy(line_t *paramline, line_t *masterline)
+{
+	INT32 s;
+
+	if (masterline->special < 100 || masterline->special >= 300)
+		return;
+
+	TAG_ITER_SECTORS(masterline->args[0], s)
+	{
+		ffloor_t *rover;
+
+		for (rover = sectors[s].ffloors; rover; rover = rover->next)
+		{
+			if (rover->master != masterline)
+				continue;
+
+			rover->fofflags |= FOF_BOUNCY;
+			rover->spawnflags |= FOF_BOUNCY;
+			rover->bouncestrength = (paramline->args[1]<< FRACBITS)/100;
+			CheckForBouncySector = true;
+			break;
+		}
+	}
+
+}
+
+static boolean P_CheckGametypeRules(INT32 checktype, UINT32 target)
+{
+	switch (checktype)
+	{
+		case TMF_HASALL:
+		default:
+			return (gametyperules & target) == target;
+		case TMF_HASANY:
+			return !!(gametyperules & target);
+		case TMF_HASEXACTLY:
+			return gametyperules == target;
+		case TMF_DOESNTHAVEALL:
+			return (gametyperules & target) != target;
+		case TMF_DOESNTHAVEANY:
+			return !(gametyperules & target);
+	}
+}
+
+fixed_t P_GetSectorGravityFactor(sector_t *sec)
+{
+	if (sec->gravityptr)
+		return FixedDiv(*sec->gravityptr >> FRACBITS, 1000);
+	else
+		return sec->gravity;
 }
 
 /** After the map has loaded, scans for specials that spawn 3Dfloors and
@@ -6075,19 +6216,29 @@ void P_SpawnSpecials(boolean fromnetsave)
 	sector = sectors;
 	for (i = 0; i < numsectors; i++, sector++)
 	{
-		if (!sector->special)
+		CheckForReverseGravity |= (sector->flags & MSF_GRAVITYFLIP);
+
+		if (sector->specialflags & SSF_FINISHLINE)
+		{
+			if ((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE)
+				circuitmap = true;
+		}
+
+		if (sector->damagetype == SD_SPIKE) {
+			//Terrible hack to replace an even worse hack:
+			//Spike damage automatically sets MSF_TRIGGERSPECIAL_TOUCH.
+			//Yes, this also affects other specials on the same sector. Sorry.
+			sector->flags |= MSF_TRIGGERSPECIAL_TOUCH;
+		}
+
+		// Process deprecated binary sector specials
+		if (udmf || !sector->special)
 			continue;
 
 		// Process Section 1
 		switch(GETSECSPECIAL(sector->special, 1))
 		{
-			case 5: // Spikes
-				//Terrible hack to replace an even worse hack:
-				//Spike damage automatically sets SF_TRIGGERSPECIAL_TOUCH.
-				//Yes, this also affects other specials on the same sector. Sorry.
-				sector->flags |= SF_TRIGGERSPECIAL_TOUCH;
-				break;
-			case 15: // Bouncy sector
+			case 15: // Bouncy FOF
 				CheckForBouncySector = true;
 				break;
 		}
@@ -6102,21 +6253,6 @@ void P_SpawnSpecials(boolean fromnetsave)
 
 			case 11: // Custom global gravity!
 				gravity = sector->floorheight/1000;
-				break;
-		}
-
-		// Process Section 3
-/*		switch(GETSECSPECIAL(player->specialsector, 3))
-		{
-
-		}*/
-
-		// Process Section 4
-		switch(GETSECSPECIAL(sector->special, 4))
-		{
-			case 10: // Circuit finish line
-				if ((gametyperules & (GTR_RACE|GTR_LIVES)) == GTR_RACE)
-					circuitmap = true;
 				break;
 		}
 	}
@@ -6165,665 +6301,686 @@ void P_SpawnSpecials(boolean fromnetsave)
 	// Init line EFFECTs
 	for (i = 0; i < numlines; i++)
 	{
-		mtag_t tag = Tag_FGet(&lines[i].tags);
-
-		if (lines[i].special != 7) // This is a hack. I can at least hope nobody wants to prevent flat alignment in netgames...
+		// set line specials to 0 here too, same reason as above
+		if (netgame || multiplayer)
 		{
-			// set line specials to 0 here too, same reason as above
-			if (netgame || multiplayer)
-			{
-				if (lines[i].flags & ML_NONET)
-				{
-					lines[i].special = 0;
-					continue;
-				}
-			}
-			else if (lines[i].flags & ML_NETONLY)
+			if (lines[i].flags & ML_NONET)
 			{
 				lines[i].special = 0;
 				continue;
 			}
 		}
+		else if (lines[i].flags & ML_NETONLY)
+		{
+			lines[i].special = 0;
+			continue;
+		}
 
 		switch (lines[i].special)
 		{
 			INT32 s;
+			INT32 l;
 			size_t sec;
 			ffloortype_e ffloorflags;
 
 			case 1: // Definable gravity per sector
+				if (udmf)
+					break;
+
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
+				TAG_ITER_SECTORS(Tag_FGet(&lines[i].tags), s)
 				{
-					sectors[s].gravity = &sectors[sec].floorheight; // This allows it to change in realtime!
+					sectors[s].gravityptr = &sectors[sec].floorheight; // This allows it to change in realtime!
 
 					if (lines[i].flags & ML_NOCLIMB)
-						sectors[s].verticalflip = true;
+						sectors[s].flags |= MSF_GRAVITYFLIP;
 					else
-						sectors[s].verticalflip = false;
+						sectors[s].flags &= ~MSF_GRAVITYFLIP;
 
-					CheckForReverseGravity = sectors[s].verticalflip;
+					if (lines[i].flags & ML_EFFECT6)
+						sectors[s].specialflags |= SSF_GRAVITYOVERRIDE;
+
+					CheckForReverseGravity |= (sectors[s].flags & MSF_GRAVITYFLIP);
 				}
 				break;
 
-			case 2: // Custom exit
-				break;
-
-			case 3: // Zoom Tube Parameters
-				break;
-
-			case 4: // Speed pad (combines with sector special Section3:5 or Section3:6)
-				break;
-
 			case 5: // Change camera info
+				if (udmf)
+					break;
+
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
+				TAG_ITER_SECTORS(Tag_FGet(&lines[i].tags), s)
 					P_AddCameraScanner(&sectors[sec], &sectors[s], R_PointToAngle2(lines[i].v2->x, lines[i].v2->y, lines[i].v1->x, lines[i].v1->y));
 				break;
 
 			case 7: // Flat alignment - redone by toast
-				if ((lines[i].flags & (ML_NETONLY|ML_NONET)) != (ML_NETONLY|ML_NONET)) // If you can do something...
+			{
+				// Set calculated offsets such that line's v1 is the apparent origin
+				angle_t flatangle = InvAngle(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y));
+				fixed_t xoffs = -lines[i].v1->x;
+				fixed_t yoffs = lines[i].v1->y;
+
+				//If no tag is given, apply to front sector
+				if (lines[i].args[0] == 0)
+					P_ApplyFlatAlignment(lines[i].frontsector, flatangle, xoffs, yoffs, lines[i].args[1] != TMP_CEILING, lines[i].args[1] != TMP_FLOOR);
+				else
 				{
-					angle_t flatangle = InvAngle(R_PointToAngle2(lines[i].v1->x, lines[i].v1->y, lines[i].v2->x, lines[i].v2->y));
-					fixed_t xoffs;
-					fixed_t yoffs;
-
-					if (lines[i].flags & ML_EFFECT6) // Set offset through x and y texture offsets if ML_EFFECT6 flag is set
-					{
-						xoffs = sides[lines[i].sidenum[0]].textureoffset;
-						yoffs = sides[lines[i].sidenum[0]].rowoffset;
-					}
-					else // Otherwise, set calculated offsets such that line's v1 is the apparent origin
-					{
-						xoffs = -lines[i].v1->x;
-						yoffs = lines[i].v1->y;
-					}
-
-					//If no tag is given, apply to front sector
-					if (tag == 0)
-						P_ApplyFlatAlignment(lines + i, lines[i].frontsector, flatangle, xoffs, yoffs);
-					else
-					{
-						TAG_ITER_SECTORS(tag, s)
-							P_ApplyFlatAlignment(lines + i, sectors + s, flatangle, xoffs, yoffs);
-					}
-				}
-				else // Otherwise, print a helpful warning. Can I do no less?
-					CONS_Alert(CONS_WARNING,
-					M_GetText("Flat alignment linedef (tag %d) doesn't have anything to do.\nConsider changing the linedef's flag configuration or removing it entirely.\n"),
-					tag);
-				break;
-
-			case 8: // Sector Parameters
-				TAG_ITER_SECTORS(tag, s)
-				{
-					if (lines[i].flags & ML_NOCLIMB)
-					{
-						sectors[s].flags &= ~SF_FLIPSPECIAL_FLOOR;
-						sectors[s].flags |= SF_FLIPSPECIAL_CEILING;
-					}
-					else if (lines[i].flags & ML_EFFECT4)
-						sectors[s].flags |= SF_FLIPSPECIAL_BOTH;
-
-					if (lines[i].flags & ML_EFFECT3)
-						sectors[s].flags |= SF_TRIGGERSPECIAL_TOUCH;
-					if (lines[i].flags & ML_EFFECT2)
-						sectors[s].flags |= SF_TRIGGERSPECIAL_HEADBUMP;
-
-					if (lines[i].flags & ML_EFFECT1)
-						sectors[s].flags |= SF_INVERTPRECIP;
-
-					if (lines[i].frontsector && GETSECSPECIAL(lines[i].frontsector->special, 4) == 12)
-						sectors[s].camsec = sides[*lines[i].sidenum].sector-sectors;
+					TAG_ITER_SECTORS(lines[i].args[0], s)
+						P_ApplyFlatAlignment(sectors + s, flatangle, xoffs, yoffs, lines[i].args[1] != TMP_CEILING, lines[i].args[1] != TMP_FLOOR);
 				}
 				break;
+			}
 
-			case 9: // Chain Parameters
+			case 8: // Set camera collision planes
+				if (lines[i].frontsector)
+					TAG_ITER_SECTORS(lines[i].args[0], s)
+						sectors[s].camsec = lines[i].frontsector-sectors;
 				break;
 
 			case 10: // Vertical culling plane for sprites and FOFs
-				TAG_ITER_SECTORS(tag, s)
+				TAG_ITER_SECTORS(lines[i].args[0], s)
 					sectors[s].cullheight = &lines[i]; // This allows it to change in realtime!
 				break;
 
 			case 50: // Insta-Lower Sector
-				EV_DoFloor(&lines[i], instantLower);
+				if (!udmf)
+					EV_DoFloor(lines[i].args[0], &lines[i], instantLower);
 				break;
 
 			case 51: // Instant raise for ceilings
-				EV_DoCeiling(&lines[i], instantRaise);
+				if (!udmf)
+					EV_DoCeiling(lines[i].args[0], &lines[i], instantRaise);
 				break;
 
 			case 52: // Continuously Falling sector
-				EV_DoContinuousFall(lines[i].frontsector, lines[i].backsector, P_AproxDistance(lines[i].dx, lines[i].dy), (lines[i].flags & ML_NOCLIMB));
+				EV_DoContinuousFall(lines[i].frontsector, lines[i].backsector, lines[i].args[0] << FRACBITS, lines[i].args[1]);
 				break;
 
-			case 53: // New super cool and awesome moving floor and ceiling type
-			case 54: // New super cool and awesome moving floor type
+			case 53: // Continuous plane movement (slowdown)
 				if (lines[i].backsector)
-					EV_DoFloor(&lines[i], bounceFloor);
-				if (lines[i].special == 54)
-					break;
-				/* FALLTHRU */
-
-			case 55: // New super cool and awesome moving ceiling type
-				if (lines[i].backsector)
-					EV_DoCeiling(&lines[i], bounceCeiling);
+				{
+					if (lines[i].args[1] != TMP_CEILING)
+						EV_DoFloor(lines[i].args[0], &lines[i], bounceFloor);
+					if (lines[i].args[1] != TMP_FLOOR)
+						EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeiling);
+				}
 				break;
 
-			case 56: // New super cool and awesome moving floor and ceiling crush type
-			case 57: // New super cool and awesome moving floor crush type
+			case 56: // Continuous plane movement (constant)
 				if (lines[i].backsector)
-					EV_DoFloor(&lines[i], bounceFloorCrush);
-
-				if (lines[i].special == 57)
-					break; //only move the floor
-				/* FALLTHRU */
-
-			case 58: // New super cool and awesome moving ceiling crush type
-				if (lines[i].backsector)
-					EV_DoCeiling(&lines[i], bounceCeilingCrush);
+				{
+					if (lines[i].args[1] != TMP_CEILING)
+						EV_DoFloor(lines[i].args[0], &lines[i], bounceFloorCrush);
+					if (lines[i].args[1] != TMP_FLOOR)
+						EV_DoCeiling(lines[i].args[0], &lines[i], bounceCeilingCrush);
+				}
 				break;
 
-			case 59: // Activate floating platform
-				EV_DoElevator(&lines[i], elevateContinuous, false);
-				break;
-
-			case 60: // Floating platform with adjustable speed
-				EV_DoElevator(&lines[i], elevateContinuous, true);
+			case 60: // Moving platform
+				EV_DoElevator(lines[i].args[0], &lines[i], elevateContinuous);
 				break;
 
 			case 61: // Crusher!
-				EV_DoCrush(&lines[i], crushAndRaise);
-				break;
-
-			case 62: // Crusher (up and then down)!
-				EV_DoCrush(&lines[i], fastCrushAndRaise);
+				EV_DoCrush(lines[i].args[0], &lines[i], lines[i].args[1] ? raiseAndCrush : crushAndRaise);
 				break;
 
 			case 63: // support for drawn heights coming from different sector
 				sec = sides[*lines[i].sidenum].sector-sectors;
-				TAG_ITER_SECTORS(tag, s)
+				TAG_ITER_SECTORS(lines[i].args[0], s)
 					sectors[s].heightsec = (INT32)sec;
 				break;
 
 			case 64: // Appearing/Disappearing FOF option
-				if (lines[i].flags & ML_BLOCKMONSTERS) { // Find FOFs by control sector tag
-					TAG_ITER_SECTORS(tag, s)
-						for (j = 0; (unsigned)j < sectors[s].linecount; j++)
-							if (sectors[s].lines[j]->special >= 100 && sectors[s].lines[j]->special < 300)
-								Add_MasterDisappearer(abs(lines[i].dx>>FRACBITS), abs(lines[i].dy>>FRACBITS), abs(sides[lines[i].sidenum[0]].sector->floorheight>>FRACBITS), (INT32)(sectors[s].lines[j]-lines), (INT32)i);
-				} else // Find FOFs by effect sector tag
+				if (lines[i].args[0] == 0) // Find FOFs by control sector tag
 				{
-					TAG_ITER_LINES(tag, s)
+					TAG_ITER_SECTORS(lines[i].args[1], s)
 					{
-						if ((size_t)s == i)
+						for (j = 0; (unsigned)j < sectors[s].linecount; j++)
+						{
+							if (sectors[s].lines[j]->special < 100 || sectors[s].lines[j]->special >= 300)
+								continue;
+
+							Add_MasterDisappearer(abs(lines[i].args[2]), abs(lines[i].args[3]), abs(lines[i].args[4]), (INT32)(sectors[s].lines[j] - lines), (INT32)i);
+						}
+					}
+				}
+				else // Find FOFs by effect sector tag
+				{
+					TAG_ITER_LINES(lines[i].args[0], s)
+					{
+						if (lines[s].special < 100 || lines[s].special >= 300)
 							continue;
-						if (Tag_Find(&sides[lines[s].sidenum[0]].sector->tags, Tag_FGet(&sides[lines[i].sidenum[0]].sector->tags)))
-							Add_MasterDisappearer(abs(lines[i].dx>>FRACBITS), abs(lines[i].dy>>FRACBITS), abs(sides[lines[i].sidenum[0]].sector->floorheight>>FRACBITS), s, (INT32)i);
+
+						if (lines[i].args[1] != 0 && !Tag_Find(&lines[s].frontsector->tags, lines[i].args[1]))
+							continue;
+
+						Add_MasterDisappearer(abs(lines[i].args[2]), abs(lines[i].args[3]), abs(lines[i].args[4]), s, (INT32)i);
 					}
 				}
 				break;
 
-			case 66: // Displace floor by front sector
-				TAG_ITER_SECTORS(tag, s)
-					P_AddPlaneDisplaceThinker(pd_floor, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
-				break;
-			case 67: // Displace ceiling by front sector
-				TAG_ITER_SECTORS(tag, s)
-					P_AddPlaneDisplaceThinker(pd_ceiling, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
-				break;
-			case 68: // Displace both floor AND ceiling by front sector
-				TAG_ITER_SECTORS(tag, s)
-					P_AddPlaneDisplaceThinker(pd_both, P_AproxDistance(lines[i].dx, lines[i].dy)>>8, sides[lines[i].sidenum[0]].sector-sectors, s, !!(lines[i].flags & ML_NOCLIMB));
+			case 66: // Displace planes by front sector
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+					P_AddPlaneDisplaceThinker(lines[i].args[1], abs(lines[i].args[2])<<8, sides[lines[i].sidenum[0]].sector-sectors, s, lines[i].args[2] < 0);
 				break;
 
-			case 100: // FOF (solid, opaque, shadows)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				break;
-
-			case 101: // FOF (solid, opaque, no shadows)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_CUTLEVEL, secthinkers);
-				break;
-
-			case 102: // TL block: FOF (solid, translucent)
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_NOSHADE|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-
-				// Draw the 'insides' of the block too
-				if (lines[i].flags & ML_NOCLIMB)
+			case 70: // Add raise thinker to FOF
+				if (udmf)
 				{
-					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
-					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
+					fixed_t destheight = lines[i].args[2] << FRACBITS;
+					fixed_t startheight, topheight, bottomheight;
+
+					TAG_ITER_LINES(lines[i].args[0], l)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						startheight = lines[l].frontsector->ceilingheight;
+						topheight = max(startheight, destheight);
+						bottomheight = min(startheight, destheight);
+
+						P_AddRaiseThinker(lines[l].frontsector, lines[l].args[0], lines[i].args[1] << FRACBITS, topheight, bottomheight, (destheight < startheight), !!(lines[i].args[3]));
+					}
+				}
+				break;
+
+			case 71: // Add air bob thinker to FOF
+				if (udmf)
+				{
+					TAG_ITER_LINES(lines[i].args[0], l)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						P_AddAirbob(lines[l].frontsector, lines[l].args[0], lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
+					}
+				}
+				break;
+
+			case 72: // Add thwomp thinker to FOF
+				if (udmf)
+				{
+					UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
+
+					TAG_ITER_LINES(lines[i].args[0], l)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						P_AddThwompThinker(lines[l].frontsector, &lines[l], lines[i].args[1] << (FRACBITS - 3), lines[i].args[2] << (FRACBITS - 3), sound);
+					}
+				}
+				break;
+
+			case 73: // Add laser thinker to FOF
+				if (udmf)
+				{
+					TAG_ITER_LINES(lines[i].args[0], l)
+					{
+						if (lines[l].special < 100 || lines[l].special >= 300)
+							continue;
+
+						P_AddLaserThinker(lines[l].args[0], lines + l, !!(lines[i].args[1]));
+					}
+				}
+				break;
+
+			case 100: // FOF (solid)
+				ffloorflags = FOF_EXISTS|FOF_SOLID|FOF_RENDERALL;
+
+				//Appearance settings
+				if (lines[i].args[3] & TMFA_NOPLANES)
+					ffloorflags &= ~FOF_RENDERPLANES;
+				if (lines[i].args[3] & TMFA_NOSIDES)
+					ffloorflags &= ~FOF_RENDERSIDES;
+				if (lines[i].args[3] & TMFA_INSIDES)
+				{
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_BOTHPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_ALLSIDES;
+				}
+				if (lines[i].args[3] & TMFA_ONLYINSIDES)
+				{
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_INVERTPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_INVERTSIDES;
+				}
+				if (lines[i].args[3] & TMFA_NOSHADE)
+					ffloorflags |= FOF_NOSHADE;
+				if (lines[i].args[3] & TMFA_SPLAT)
+					ffloorflags |= FOF_SPLAT;
+
+				//Tangibility settings
+				if (lines[i].args[4] & TMFT_INTANGIBLETOP)
+					ffloorflags |= FOF_REVERSEPLATFORM;
+				if (lines[i].args[4] & TMFT_INTANGIBLEBOTTOM)
+					ffloorflags |= FOF_PLATFORM;
+				if (lines[i].args[4] & TMFT_DONTBLOCKPLAYER)
+					ffloorflags &= ~FOF_BLOCKPLAYER;
+				if (lines[i].args[4] & TMFT_DONTBLOCKOTHERS)
+					ffloorflags &= ~FOF_BLOCKOTHERS;
+
+				//Cutting options
+				if (ffloorflags & FOF_RENDERALL)
+				{
+					//If inside is visible, cut inner walls
+					if ((lines[i].args[1] < 255) || (lines[i].args[3] & TMFA_SPLAT) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
+						ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
+					else
+						ffloorflags |= FOF_CUTLEVEL;
 				}
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 				break;
 
-			case 103: // Solid FOF with no floor/ceiling (quite possibly useless)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_NOSHADE|FF_CUTLEVEL, secthinkers);
+			case 120: // FOF (water)
+				ffloorflags = FOF_EXISTS|FOF_RENDERPLANES|FOF_SWIMMABLE|FOF_BOTHPLANES|FOF_CUTEXTRA|FOF_EXTRA|FOF_CUTSPRITES;
+				if (!(lines[i].args[3] & TMFW_NOSIDES))
+					ffloorflags |= FOF_RENDERSIDES|FOF_ALLSIDES;
+				if (lines[i].args[3] & TMFW_DOUBLESHADOW)
+					ffloorflags |= FOF_DOUBLESHADOW;
+				if (lines[i].args[3] & TMFW_COLORMAPONLY)
+					ffloorflags |= FOF_COLORMAPONLY;
+				if (!(lines[i].args[3] & TMFW_NORIPPLE))
+					ffloorflags |= FOF_RIPPLE;
+				if (lines[i].args[3] & TMFW_GOOWATER)
+					ffloorflags |= FOF_GOOWATER;
+				if (lines[i].args[3] & TMFW_SPLAT)
+					ffloorflags |= FOF_SPLAT;
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 				break;
 
-			case 104: // 3D Floor type that doesn't draw sides
-				// If line has no-climb set, give it shadows, otherwise don't
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERPLANES|FF_CUTLEVEL;
-				if (!(lines[i].flags & ML_NOCLIMB))
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+			case 150: // FOF (Air bobbing)
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FOF_EXISTS|FOF_SOLID|FOF_RENDERALL, secthinkers);
+				P_AddAirbob(lines[i].frontsector, lines[i].args[0], lines[i].args[1] << FRACBITS, !!(lines[i].args[2] & TMFB_REVERSE), !!(lines[i].args[2] & TMFB_SPINDASH), !!(lines[i].args[2] & TMFB_DYNAMIC));
 				break;
 
-			case 105: // FOF (solid, invisible)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_NOSHADE, secthinkers);
+			case 160: // FOF (Water bobbing)
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FOF_EXISTS|FOF_SOLID|FOF_RENDERALL|FOF_FLOATBOB, secthinkers);
 				break;
 
-			case 120: // Opaque water
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
+			case 170: // FOF (Crumbling)
+				ffloorflags = FOF_EXISTS|FOF_SOLID|FOF_RENDERALL|FOF_CRUMBLE;
 
-			case 121: // TL water
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_SWIMMABLE|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
+				//Tangibility settings
+				if (lines[i].args[3] & TMFT_INTANGIBLETOP)
+					ffloorflags |= FOF_REVERSEPLATFORM;
+				if (lines[i].args[3] & TMFT_INTANGIBLEBOTTOM)
+					ffloorflags |= FOF_PLATFORM;
+				if (lines[i].args[3] & TMFT_DONTBLOCKPLAYER)
+					ffloorflags &= ~FOF_BLOCKPLAYER;
+				if (lines[i].args[3] & TMFT_DONTBLOCKOTHERS)
+					ffloorflags &= ~FOF_BLOCKOTHERS;
 
-			case 122: // Opaque water, no sides
-				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
+				//Flags
+				if (lines[i].args[4] & TMFC_NOSHADE)
+					ffloorflags |= FOF_NOSHADE;
+				if (lines[i].args[4] & TMFC_NORETURN)
+					ffloorflags |= FOF_NORETURN;
+				if (lines[i].args[4] & TMFC_FLOATBOB)
+					ffloorflags |= FOF_FLOATBOB;
+				if (lines[i].args[4] & TMFC_SPLAT)
+					ffloorflags |= FOF_SPLAT;
 
-			case 123: // TL water, no sides
-				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_TRANSLUCENT|FF_SWIMMABLE|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
+				//If inside is visible, cut inner walls
+				if (lines[i].args[1] < 0xff || (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE) || (lines[i].args[4] & TMFC_SPLAT))
+					ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
+				else
+					ffloorflags |= FOF_CUTLEVEL;
 
-			case 124: // goo water
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_SWIMMABLE|FF_GOOWATER|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 125: // goo water, no sides
-				ffloorflags = FF_EXISTS|FF_RENDERPLANES|FF_TRANSLUCENT|FF_SWIMMABLE|FF_GOOWATER|FF_BOTHPLANES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_DOUBLESHADOW;
-				if (lines[i].flags & ML_EFFECT4)
-					ffloorflags |= FF_COLORMAPONLY;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 140: // 'Platform' - You can jump up through it
-				// If line has no-climb set, don't give it shadows, otherwise do
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_PLATFORM|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 141: // Translucent "platform"
-				// If line has no-climb set, don't give it shadows, otherwise do
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_PLATFORM|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_NOSHADE;
-
-				// Draw the 'insides' of the block too
-				if (lines[i].flags & ML_EFFECT2)
+				//If player can enter it, render insides
+				if (lines[i].args[3] & TMFT_VISIBLEFROMINSIDE)
 				{
-					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
-					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_BOTHPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_ALLSIDES;
 				}
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
+				if (lines[i].args[4] & TMFC_AIRBOB)
+					P_AddAirbob(lines[i].frontsector, lines[i].args[0], 16*FRACUNIT, false, false, false);
 				break;
 
-			case 142: // Translucent "platform" with no sides
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERPLANES|FF_TRANSLUCENT|FF_PLATFORM|FF_EXTRA|FF_CUTEXTRA;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
-					ffloorflags |= FF_NOSHADE;
-
-				// Draw the 'insides' of the block too
-				if (lines[i].flags & ML_EFFECT2)
-				{
-					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
-					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
-				}
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 143: // 'Reverse platform' - You fall through it
-				// If line has no-climb set, don't give it shadows, otherwise do
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_REVERSEPLATFORM|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 144: // Translucent "reverse platform"
-				// If line has no-climb set, don't give it shadows, otherwise do
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_REVERSEPLATFORM|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_NOSHADE;
-
-				// Draw the 'insides' of the block too
-				if (lines[i].flags & ML_EFFECT2)
-				{
-					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
-					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
-				}
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 145: // Translucent "reverse platform" with no sides
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERPLANES|FF_TRANSLUCENT|FF_REVERSEPLATFORM|FF_EXTRA|FF_CUTEXTRA;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
-					ffloorflags |= FF_NOSHADE;
-
-				// Draw the 'insides' of the block too
-				if (lines[i].flags & ML_EFFECT2)
-				{
-					ffloorflags |= FF_CUTLEVEL|FF_BOTHPLANES|FF_ALLSIDES;
-					ffloorflags &= ~(FF_EXTRA|FF_CUTEXTRA);
-				}
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 146: // Intangible floor/ceiling with solid sides (fences/hoops maybe?)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERSIDES|FF_ALLSIDES|FF_INTANGIBLEFLATS, secthinkers);
-				break;
-
-			case 150: // Air bobbing platform
-			case 151: // Adjustable air bobbing platform
+			case 190: // FOF (Rising)
 			{
-				fixed_t dist = (lines[i].special == 150) ? 16*FRACUNIT : P_AproxDistance(lines[i].dx, lines[i].dy);
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, tag, dist, false, !!(lines[i].flags & ML_NOCLIMB), false);
-				break;
-			}
-			case 152: // Adjustable air bobbing platform in reverse
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, tag, P_AproxDistance(lines[i].dx, lines[i].dy), true, !!(lines[i].flags & ML_NOCLIMB), false);
-				break;
-			case 153: // Dynamic Sinking Platform
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
-				P_AddAirbob(lines[i].frontsector, tag, P_AproxDistance(lines[i].dx, lines[i].dy), false, !!(lines[i].flags & ML_NOCLIMB), true);
-				break;
-
-			case 160: // Float/bob platform
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB, secthinkers);
-				break;
-
-			case 170: // Crumbling platform
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE, secthinkers);
-				break;
-
-			case 171: // Crumbling platform that will not return
-				P_AddFakeFloorsByLine(i,
-					FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE|FF_NORETURN, secthinkers);
-				break;
-
-			case 172: // "Platform" that crumbles and returns
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_PLATFORM|FF_CRUMBLE|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 173: // "Platform" that crumbles and doesn't return
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_PLATFORM|FF_CRUMBLE|FF_NORETURN|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 174: // Translucent "platform" that crumbles and returns
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_PLATFORM|FF_CRUMBLE|FF_TRANSLUCENT|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 175: // Translucent "platform" that crumbles and doesn't return
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_PLATFORM|FF_CRUMBLE|FF_NORETURN|FF_TRANSLUCENT|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].flags & ML_NOCLIMB) // shade it unless no-climb
-					ffloorflags |= FF_NOSHADE;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 176: // Air bobbing platform that will crumble and bob on the water when it falls and hits
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_FLOATBOB|FF_CRUMBLE, secthinkers);
-				P_AddAirbob(lines[i].frontsector, tag, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
-				break;
-
-			case 177: // Air bobbing platform that will crumble and bob on
-				// the water when it falls and hits, then never return
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_FLOATBOB|FF_CRUMBLE|FF_NORETURN, secthinkers);
-				P_AddAirbob(lines[i].frontsector, tag, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
-				break;
-
-			case 178: // Crumbling platform that will float when it hits water
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CRUMBLE|FF_FLOATBOB, secthinkers);
-				break;
-
-			case 179: // Crumbling platform that will float when it hits water, but not return
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE|FF_FLOATBOB|FF_NORETURN, secthinkers);
-				break;
-
-			case 180: // Air bobbing platform that will crumble
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_CRUMBLE, secthinkers);
-				P_AddAirbob(lines[i].frontsector, tag, 16*FRACUNIT, false, !!(lines[i].flags & ML_NOCLIMB), false);
-				break;
-
-			case 190: // Rising Platform FOF (solid, opaque, shadows)
-			case 191: // Rising Platform FOF (solid, opaque, no shadows)
-			case 192: // Rising Platform TL block: FOF (solid, translucent)
-			case 193: // Rising Platform FOF (solid, invisible)
-			case 194: // Rising Platform 'Platform' - You can jump up through it
-			case 195: // Rising Platform Translucent "platform"
-			{
-				fixed_t speed = FixedDiv(P_AproxDistance(lines[i].dx, lines[i].dy), 4*FRACUNIT);
 				fixed_t ceilingtop = P_FindHighestCeilingSurrounding(lines[i].frontsector);
 				fixed_t ceilingbottom = P_FindLowestCeilingSurrounding(lines[i].frontsector);
 
-				ffloorflags = FF_EXISTS|FF_SOLID;
-				if (lines[i].special != 193)
-					ffloorflags |= FF_RENDERALL;
-				if (lines[i].special <= 191)
-					ffloorflags |= FF_CUTLEVEL;
-				if (lines[i].special == 192 || lines[i].special == 195)
-					ffloorflags |= FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA;
-				if (lines[i].special >= 194)
-					ffloorflags |= FF_PLATFORM|FF_BOTHPLANES|FF_ALLSIDES;
-				if (lines[i].special != 190 && (lines[i].special <= 193 || lines[i].flags & ML_NOCLIMB))
-					ffloorflags |= FF_NOSHADE;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				ffloorflags = FOF_EXISTS|FOF_SOLID|FOF_RENDERALL;
 
-				P_AddRaiseThinker(lines[i].frontsector, tag, speed, ceilingtop, ceilingbottom, !!(lines[i].flags & ML_BLOCKMONSTERS), !!(lines[i].flags & ML_NOCLIMB));
+				//Appearance settings
+				if (lines[i].args[3] & TMFA_NOPLANES)
+					ffloorflags &= ~FOF_RENDERPLANES;
+				if (lines[i].args[3] & TMFA_NOSIDES)
+					ffloorflags &= ~FOF_RENDERSIDES;
+				if (lines[i].args[3] & TMFA_INSIDES)
+				{
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_BOTHPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_ALLSIDES;
+				}
+				if (lines[i].args[3] & TMFA_ONLYINSIDES)
+				{
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_INVERTPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_INVERTSIDES;
+				}
+				if (lines[i].args[3] & TMFA_NOSHADE)
+					ffloorflags |= FOF_NOSHADE;
+				if (lines[i].args[3] & TMFA_SPLAT)
+					ffloorflags |= FOF_SPLAT;
+
+				//Tangibility settings
+				if (lines[i].args[4] & TMFT_INTANGIBLETOP)
+					ffloorflags |= FOF_REVERSEPLATFORM;
+				if (lines[i].args[4] & TMFT_INTANGIBLEBOTTOM)
+					ffloorflags |= FOF_PLATFORM;
+				if (lines[i].args[4] & TMFT_DONTBLOCKPLAYER)
+					ffloorflags &= ~FOF_BLOCKPLAYER;
+				if (lines[i].args[4] & TMFT_DONTBLOCKOTHERS)
+					ffloorflags &= ~FOF_BLOCKOTHERS;
+
+				//Cutting options
+				if (ffloorflags & FOF_RENDERALL)
+				{
+					//If inside is visible, cut inner walls
+					if ((lines[i].args[1] < 255) || (lines[i].args[3] & TMFA_SPLAT) || (lines[i].args[4] & TMFT_VISIBLEFROMINSIDE))
+						ffloorflags |= FOF_CUTEXTRA|FOF_EXTRA;
+					else
+						ffloorflags |= FOF_CUTLEVEL;
+				}
+
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
+				P_AddRaiseThinker(lines[i].frontsector, lines[i].args[0], lines[i].args[5] << FRACBITS, ceilingtop, ceilingbottom, !!(lines[i].args[6] & TMFR_REVERSE), !!(lines[i].args[6] & TMFR_SPINDASH));
 				break;
 			}
-
-			case 200: // Double light effect
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_CUTSPRITES|FF_DOUBLESHADOW, secthinkers);
-				break;
-
-			case 201: // Light effect
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_CUTSPRITES, secthinkers);
+			case 200: // Light block
+				ffloorflags = FOF_EXISTS|FOF_CUTSPRITES;
+				if (!lines[i].args[1])
+					ffloorflags |= FOF_DOUBLESHADOW;
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				break;
 
 			case 202: // Fog
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_FOG|FF_INVERTPLANES|FF_INVERTSIDES|FF_CUTEXTRA|FF_EXTRA|FF_DOUBLESHADOW|FF_CUTSPRITES;
+				ffloorflags = FOF_EXISTS|FOF_RENDERALL|FOF_FOG|FOF_INVERTPLANES|FOF_INVERTSIDES|FOF_CUTEXTRA|FOF_EXTRA|FOF_DOUBLESHADOW|FOF_CUTSPRITES;
 				sec = sides[*lines[i].sidenum].sector - sectors;
 				// SoM: Because it's fog, check for an extra colormap and set the fog flag...
 				if (sectors[sec].extra_colormap)
 					sectors[sec].extra_colormap->flags = CMF_FOG;
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				break;
 
-			case 220: // Like opaque water, but not swimmable. (Good for snow effect on FOFs)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_RENDERALL|FF_BOTHPLANES|FF_ALLSIDES|FF_CUTEXTRA|FF_EXTRA|FF_CUTSPRITES, secthinkers);
-				break;
+			case 220: //Intangible
+				ffloorflags = FOF_EXISTS|FOF_RENDERALL|FOF_CUTEXTRA|FOF_EXTRA|FOF_CUTSPRITES;
 
-			case 221: // FOF (intangible, translucent)
-				// If line has no-climb set, give it shadows, otherwise don't
-				ffloorflags = FF_EXISTS|FF_RENDERALL|FF_TRANSLUCENT|FF_EXTRA|FF_CUTEXTRA|FF_CUTSPRITES;
-				if (!(lines[i].flags & ML_NOCLIMB))
-					ffloorflags |= FF_NOSHADE;
+				//Appearance settings
+				if (lines[i].args[3] & TMFA_NOPLANES)
+					ffloorflags &= ~FOF_RENDERPLANES;
+				if (lines[i].args[3] & TMFA_NOSIDES)
+					ffloorflags &= ~FOF_RENDERSIDES;
+				if (!(lines[i].args[3] & TMFA_INSIDES))
+				{
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_BOTHPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_ALLSIDES;
+				}
+				if (lines[i].args[3] & TMFA_ONLYINSIDES)
+				{
+					if (ffloorflags & FOF_RENDERPLANES)
+						ffloorflags |= FOF_INVERTPLANES;
+					if (ffloorflags & FOF_RENDERSIDES)
+						ffloorflags |= FOF_INVERTSIDES;
+				}
+				if (lines[i].args[3] & TMFA_NOSHADE)
+					ffloorflags |= FOF_NOSHADE;
+				if (lines[i].args[3] & TMFA_SPLAT)
+					ffloorflags |= FOF_SPLAT;
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 222: // FOF with no floor/ceiling (good for GFZGRASS effect on FOFs)
-				// If line has no-climb set, give it shadows, otherwise don't
-				ffloorflags = FF_EXISTS|FF_RENDERSIDES|FF_ALLSIDES;
-				if (!(lines[i].flags & ML_NOCLIMB))
-					ffloorflags |= FF_NOSHADE|FF_CUTSPRITES;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 				break;
 
 			case 223: // FOF (intangible, invisible) - for combining specials in a sector
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_NOSHADE, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FOF_EXISTS|FOF_NOSHADE, secthinkers);
 				break;
 
 			case 250: // Mario Block
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL|FF_MARIO;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_SHATTERBOTTOM;
-				if (lines[i].flags & ML_EFFECT1)
-					ffloorflags &= ~(FF_SOLID|FF_RENDERALL|FF_CUTLEVEL);
+				ffloorflags = FOF_EXISTS|FOF_SOLID|FOF_RENDERALL|FOF_CUTLEVEL|FOF_MARIO;
+				if (lines[i].args[1] & TMFM_BRICK)
+					ffloorflags |= FOF_GOOWATER;
+				if (lines[i].args[1] & TMFM_INVISIBLE)
+					ffloorflags &= ~(FOF_SOLID|FOF_RENDERALL|FOF_CUTLEVEL);
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
 				break;
 
 			case 251: // A THWOMP!
 			{
-				fixed_t crushspeed = (lines[i].flags & ML_EFFECT5) ? lines[i].dy >> 3 : 10*FRACUNIT;
-				fixed_t retractspeed = (lines[i].flags & ML_EFFECT5) ? lines[i].dx >> 3 : 2*FRACUNIT;
-				UINT16 sound = (lines[i].flags & ML_EFFECT4) ? sides[lines[i].sidenum[0]].textureoffset >> FRACBITS : sfx_thwomp;
-				P_AddThwompThinker(lines[i].frontsector, &lines[i], crushspeed, retractspeed, sound);
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_CUTLEVEL, secthinkers);
+				UINT16 sound = (lines[i].stringargs[0]) ? get_number(lines[i].stringargs[0]) : sfx_thwomp;
+				P_AddThwompThinker(lines[i].frontsector, &lines[i], lines[i].args[1] << (FRACBITS - 3), lines[i].args[2] << (FRACBITS - 3), sound);
+				P_AddFakeFloorsByLine(i, 0xff, TMB_TRANSLUCENT, FOF_EXISTS|FOF_SOLID|FOF_RENDERALL|FOF_CUTLEVEL, secthinkers);
 				break;
 			}
 
-			case 252: // Shatter block (breaks when touched)
-				ffloorflags = FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_BLOCKPLAYER|FF_SHATTERBOTTOM;
-
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
-				break;
-
-			case 253: // Translucent shatter block (see 76)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_BLOCKOTHERS|FF_RENDERALL|FF_BUSTUP|FF_SHATTER|FF_TRANSLUCENT, secthinkers);
-				break;
-
 			case 254: // Bustable block
-				ffloorflags = FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP;
-				if (lines[i].flags & ML_NOCLIMB)
-					ffloorflags |= FF_STRONGBUST;
+			{
+				UINT8 busttype = BT_REGULAR;
+				ffloorbustflags_e bustflags = 0;
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				ffloorflags = FOF_EXISTS|FOF_BLOCKOTHERS|FOF_RENDERALL|FOF_BUSTUP;
+
+				//Bustable type
+				switch (lines[i].args[3])
+				{
+					case TMFB_TOUCH:
+						busttype = BT_TOUCH;
+						break;
+					case TMFB_SPIN:
+						busttype = BT_SPINBUST;
+						break;
+					case TMFB_REGULAR:
+						busttype = BT_REGULAR;
+						break;
+					case TMFB_STRONG:
+						busttype = BT_STRONG;
+						break;
+				}
+
+				//Flags
+				if (lines[i].args[4] & TMFB_PUSHABLES)
+					bustflags |= FB_PUSHABLES;
+				if (lines[i].args[4] & TMFB_EXECUTOR)
+					bustflags |= FB_EXECUTOR;
+				if (lines[i].args[4] & TMFB_ONLYBOTTOM)
+					bustflags |= FB_ONLYBOTTOM;
+				if (lines[i].args[4] & TMFB_SPLAT)
+					ffloorflags |= FOF_SPLAT;
+
+				if (busttype != BT_TOUCH || bustflags & FB_ONLYBOTTOM)
+					ffloorflags |= FOF_BLOCKPLAYER;
+
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+				{
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
+					if (!fflr)
+						continue;
+					fflr->bustflags = bustflags;
+					fflr->busttype = busttype;
+					fflr->busttag = lines[i].args[5];
+				}
 				break;
-
-			case 255: // Spin bust block (breaks when jumped or spun downwards onto)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP|FF_SPINBUST, secthinkers);
-				break;
-
-			case 256: // Translucent spin bust block (see 78)
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_SOLID|FF_RENDERALL|FF_BUSTUP|FF_SPINBUST|FF_TRANSLUCENT, secthinkers);
-				break;
-
+			}
 			case 257: // Quicksand
-				ffloorflags = FF_EXISTS|FF_QUICKSAND|FF_RENDERALL|FF_ALLSIDES|FF_CUTSPRITES;
-				if (lines[i].flags & ML_EFFECT5)
-					ffloorflags |= FF_RIPPLE;
+				ffloorflags = FOF_EXISTS|FOF_QUICKSAND|FOF_RENDERALL|FOF_ALLSIDES|FOF_CUTSPRITES;
+				if (!(lines[i].args[1]))
+					ffloorflags |= FOF_RIPPLE;
 
-				P_AddFakeFloorsByLine(i, ffloorflags, secthinkers);
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+				{
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, 0xff, TMB_TRANSLUCENT, ffloorflags, secthinkers);
+					if (!fflr)
+						continue;
+					fflr->sinkspeed = abs(lines[i].args[2]) << (FRACBITS - 1);
+					fflr->friction = abs(lines[i].args[3]) << (FRACBITS - 6);
+				}
 				break;
 
 			case 258: // Laser block
-				P_AddLaserThinker(tag, lines + i, !!(lines[i].flags & ML_EFFECT1));
-				P_AddFakeFloorsByLine(i, FF_EXISTS|FF_RENDERALL|FF_NOSHADE|FF_EXTRA|FF_CUTEXTRA|FF_TRANSLUCENT, secthinkers);
+				ffloorflags = FOF_EXISTS|FOF_RENDERALL|FOF_NOSHADE|FOF_EXTRA|FOF_CUTEXTRA|FOF_TRANSLUCENT;
+				P_AddLaserThinker(lines[i].args[0], lines + i, !!(lines[i].args[3] & TMFL_NOBOSSES));
+				if (lines[i].args[3] & TMFL_SPLAT)
+					ffloorflags |= FOF_SPLAT;
+				P_AddFakeFloorsByLine(i, lines[i].args[1], lines[i].args[2], ffloorflags, secthinkers);
 				break;
 
 			case 259: // Custom FOF
-				if (lines[i].sidenum[1] != 0xffff)
+				TAG_ITER_SECTORS(lines[i].args[0], s)
 				{
-					ffloortype_e fofflags = sides[lines[i].sidenum[1]].toptexture;
-					P_AddFakeFloorsByLine(i, fofflags, secthinkers);
+					ffloor_t *fflr = P_AddFakeFloor(&sectors[s], lines[i].frontsector, lines + i, lines[i].args[1], lines[i].args[2], lines[i].args[3], secthinkers);
+					if (!fflr)
+						continue;
+					if (!udmf) // Ugly backwards compatibility stuff
+					{
+						if (lines[i].args[3] & FOF_QUICKSAND)
+						{
+							fflr->sinkspeed = abs(lines[i].dx) >> 1;
+							fflr->friction = abs(lines[i].dy) >> 6;
+						}
+						if (lines[i].args[3] & FOF_BUSTUP)
+						{
+							switch (lines[i].args[4] % TMFB_ONLYBOTTOM)
+							{
+								case TMFB_TOUCH:
+									fflr->busttype = BT_TOUCH;
+									break;
+								case TMFB_SPIN:
+									fflr->busttype = BT_SPINBUST;
+									break;
+								case TMFB_REGULAR:
+									fflr->busttype = BT_REGULAR;
+									break;
+								case TMFB_STRONG:
+									fflr->busttype = BT_STRONG;
+									break;
+							}
+
+							if (lines[i].args[4] & TMFB_ONLYBOTTOM)
+								fflr->bustflags |= FB_ONLYBOTTOM;
+							if (lines[i].flags & ML_MIDSOLID)
+								fflr->bustflags |= FB_PUSHABLES;
+							if (lines[i].flags & ML_WRAPMIDTEX)
+							{
+								fflr->bustflags |= FB_EXECUTOR;
+								fflr->busttag = P_AproxDistance(lines[i].dx, lines[i].dy) >> FRACBITS;
+							}
+						}
+					}
 				}
-				else
-					I_Error("Custom FOF (tag %d) found without a linedef back side!", tag);
 				break;
 
-			case 300: // Linedef executor (combines with sector special 974/975) and commands
-			case 302:
-			case 303:
-			case 304:
+			case 260: // GZDoom-like 3D Floor.
+				{
+					UINT8 dtype = lines[i].args[1] & 3;
+					UINT8 dflags1 = lines[i].args[1] - dtype;
+					UINT8 dflags2 = lines[i].args[2];
+					UINT8 dopacity = lines[i].args[3];
+					boolean isfog = false;
 
-			// Charability linedef executors
-			case 305:
-			case 307:
+					if (dtype == 0)
+						dtype = 1;
+
+					ffloorflags = FOF_EXISTS;
+
+					if (dflags2 & 1) ffloorflags |= FOF_NOSHADE; // Disable light effects (Means no shadowcast)
+					if (dflags2 & 2) ffloorflags |= FOF_DOUBLESHADOW; // Restrict light inside (Means doubleshadow)
+					if (dflags2 & 4) isfog = true; // Fog effect (Explicitly render like a fog block)
+
+					if (dflags1 & 4) ffloorflags |= FOF_BOTHPLANES|FOF_ALLSIDES; // Render-inside
+					if (dflags1 & 16) ffloorflags |= FOF_INVERTSIDES|FOF_INVERTPLANES; // Invert visibility rules
+
+					// Fog block
+					if (isfog)
+						ffloorflags |= FOF_RENDERALL|FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_BOTHPLANES|FOF_EXTRA|FOF_FOG|FOF_INVERTPLANES|FOF_ALLSIDES|FOF_INVERTSIDES;
+					else
+					{
+						ffloorflags |= FOF_RENDERALL;
+
+						// Solid
+						if (dtype == 1)
+							ffloorflags |= FOF_SOLID|FOF_CUTLEVEL;
+						// Water
+						else if (dtype == 2)
+							ffloorflags |= FOF_SWIMMABLE|FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_EXTRA|FOF_RIPPLE;
+						// Intangible
+						else if (dtype == 3)
+							ffloorflags |= FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_EXTRA;
+					}
+
+					// Non-opaque
+					if (dopacity < 255)
+					{
+						// Invisible
+						if (dopacity == 0)
+						{
+							// True invisible
+							if (ffloorflags & FOF_NOSHADE)
+								ffloorflags &= ~(FOF_RENDERALL|FOF_CUTEXTRA|FOF_CUTSPRITES|FOF_EXTRA|FOF_BOTHPLANES|FOF_ALLSIDES|FOF_CUTLEVEL);
+							// Shadow block
+							else
+							{
+								ffloorflags |= FOF_CUTSPRITES;
+								ffloorflags &= ~(FOF_RENDERALL|FOF_CUTEXTRA|FOF_EXTRA|FOF_BOTHPLANES|FOF_ALLSIDES|FOF_CUTLEVEL);
+							}
+						}
+						else
+						{
+							ffloorflags |= FOF_TRANSLUCENT|FOF_CUTEXTRA|FOF_EXTRA;
+							ffloorflags &= ~FOF_CUTLEVEL;
+						}
+					}
+
+					P_AddFakeFloorsByLine(i, dopacity, TMB_TRANSLUCENT, ffloorflags, secthinkers);
+				}
+				break;
+
+			case 300: // Trigger linedef executor
+			case 303: // Count rings
+			case 305: // Character ability
+			case 314: // Pushable linedef executors (count # of pushables)
+			case 317: // Condition set trigger
+			case 319: // Unlockable trigger
+			case 331: // Player skin
+			case 334: // Object dye
+			case 337: // Emerald check
+			case 343: // Gravity check
+				if (lines[i].args[0] > TMT_EACHTIMEMASK)
+					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
 
 			case 308: // Race-only linedef executor. Triggers once.
-				if (!(gametyperules & GTR_RACE))
+				if (!P_CheckGametypeRules(lines[i].args[2], (UINT32)lines[i].args[1]))
+				{
 					lines[i].special = 0;
+					break;
+				}
+				if (lines[i].args[0] > TMT_EACHTIMEMASK)
+					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
 
 			// Linedef executor triggers for CTF teams.
 			case 309:
-			case 311:
 				if (!(gametyperules & GTR_TEAMFLAGS))
+				{
 					lines[i].special = 0;
-				break;
-
-			// Each time executors
-			case 306:
-			case 301:
-			case 310:
-			case 312:
-			case 332:
-			case 335:
-				P_AddEachTimeThinker(&lines[i]);
+					break;
+				}
+				if (lines[i].args[0] > TMT_EACHTIMEMASK)
+					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMT_EACHTIMEENTERANDEXIT);
 				break;
 
 			// No More Enemies Linedef Exec
@@ -6831,100 +6988,24 @@ void P_SpawnSpecials(boolean fromnetsave)
 				P_AddNoEnemiesThinker(&lines[i]);
 				break;
 
-			// Pushable linedef executors (count # of pushables)
-			case 314:
-			case 315:
-				break;
-
-			// Unlock trigger executors
-			case 317:
-			case 318:
-				break;
-			case 319:
-			case 320:
-				break;
-
 			// Trigger on X calls
 			case 321:
-			case 322:
-				if (lines[i].flags & ML_NOCLIMB && sides[lines[i].sidenum[0]].rowoffset > 0) // optional "starting" count
-					lines[i].callcount = sides[lines[i].sidenum[0]].rowoffset>>FRACBITS;
-				else
-					lines[i].callcount = sides[lines[i].sidenum[0]].textureoffset>>FRACBITS;
-				if (lines[i].special == 322) // Each time
-					P_AddEachTimeThinker(&lines[i]);
-				break;
-
-			// NiGHTS trigger executors
-			case 323:
-			case 324:
-			case 325:
-			case 326:
-			case 327:
-			case 328:
-			case 329:
-			case 330:
-				break;
-
-			// Skin trigger executors
-			case 331:
-			case 333:
-				break;
-
-			// Object dye executors
-			case 334:
-			case 336:
-				break;
-
-			case 399: // Linedef execute on map load
-				// This is handled in P_RunLevelLoadExecutors.
-				break;
-
-			case 400:
-			case 401:
-			case 402:
-			case 403:
-			case 404:
-			case 405:
-			case 406:
-			case 407:
-			case 408:
-			case 409:
-			case 410:
-			case 411:
-			case 412:
-			case 413:
-			case 414:
-			case 415:
-			case 416:
-			case 417:
-			case 418:
-			case 419:
-			case 420:
-			case 421:
-			case 422:
-			case 423:
-			case 424:
-			case 425:
-			case 426:
-			case 427:
-			case 428:
-			case 429:
-			case 430:
-			case 431:
+				lines[i].callcount = (lines[i].args[2] && lines[i].args[3] > 0) ? lines[i].args[3] : lines[i].args[1]; // optional "starting" count
+				if (lines[i].args[0] > TMXT_EACHTIMEMASK) // Each time
+					P_AddEachTimeThinker(&lines[i], lines[i].args[0] == TMXT_EACHTIMEENTERANDEXIT);
 				break;
 
 			case 449: // Enable bosses with parameter
 			{
-				INT32 bossid = sides[*lines[i].sidenum].textureoffset>>FRACBITS;
+				INT32 bossid = lines[i].args[0];
 				if (bossid & ~15) // if any bits other than first 16 are set
 				{
 					CONS_Alert(CONS_WARNING,
-						M_GetText("Boss enable linedef (tag %d) has an invalid texture x offset.\nConsider changing it or removing it entirely.\n"),
-						tag);
+						M_GetText("Boss enable linedef has an invalid boss ID (%d).\nConsider changing it or removing it entirely.\n"),
+						bossid);
 					break;
 				}
-				if (!(lines[i].flags & ML_NOCLIMB))
+				if (!(lines[i].args[1]))
 				{
 					bossdisabled |= (1<<bossid); // gotta disable in the first place to enable
 					CONS_Debug(DBG_GAMELOGIC, "Line type 449 spawn effect: bossid disabled = %d", bossid);
@@ -6932,80 +7013,37 @@ void P_SpawnSpecials(boolean fromnetsave)
 				break;
 			}
 
-			// 500 is used for a scroller
-			// 501 is used for a scroller
-			// 502 is used for a scroller
-			// 503 is used for a scroller
-			// 504 is used for a scroller
-			// 505 is used for a scroller
-			// 506 is used for a scroller
-			// 507 is used for a scroller
-			// 508 is used for a scroller
-			// 510 is used for a scroller
-			// 511 is used for a scroller
-			// 512 is used for a scroller
-			// 513 is used for a scroller
-			// 514 is used for a scroller
-			// 515 is used for a scroller
-			// 520 is used for a scroller
-			// 521 is used for a scroller
-			// 522 is used for a scroller
-			// 523 is used for a scroller
-			// 524 is used for a scroller
-			// 525 is used for a scroller
-			// 530 is used for a scroller
-			// 531 is used for a scroller
-			// 532 is used for a scroller
-			// 533 is used for a scroller
-			// 534 is used for a scroller
-			// 535 is used for a scroller
-			// 540 is used for friction
-			// 541 is used for wind
-			// 542 is used for upwards wind
-			// 543 is used for downwards wind
-			// 544 is used for current
-			// 545 is used for upwards current
-			// 546 is used for downwards current
-			// 547 is used for push/pull
-
-			case 600: // floor lighting independently (e.g. lava)
+			case 600: // Copy light level to tagged sector's planes
 				sec = sides[*lines[i].sidenum].sector-sectors;
-				TAG_ITER_SECTORS(tag, s)
-					sectors[s].floorlightsec = (INT32)sec;
-				break;
-
-			case 601: // ceiling lighting independently
-				sec = sides[*lines[i].sidenum].sector-sectors;
-				TAG_ITER_SECTORS(tag, s)
-					sectors[s].ceilinglightsec = (INT32)sec;
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+				{
+					if (lines[i].args[1] != TMP_CEILING)
+						sectors[s].floorlightsec = (INT32)sec;
+					if (lines[i].args[1] != TMP_FLOOR)
+						sectors[s].ceilinglightsec = (INT32)sec;
+				}
 				break;
 
 			case 602: // Adjustable pulsating light
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableGlowingLight(&sectors[sec], &sectors[s],
-						P_AproxDistance(lines[i].dx, lines[i].dy)>>FRACBITS);
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+					P_SpawnAdjustableGlowingLight(&sectors[s], lines[i].args[2],
+						lines[i].args[3] ? sectors[s].lightlevel : lines[i].args[4], lines[i].args[1]);
 				break;
 
 			case 603: // Adjustable flickering light
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableFireFlicker(&sectors[sec], &sectors[s],
-						P_AproxDistance(lines[i].dx, lines[i].dy)>>FRACBITS);
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+					P_SpawnAdjustableFireFlicker(&sectors[s], lines[i].args[2],
+						lines[i].args[3] ? sectors[s].lightlevel : lines[i].args[4], lines[i].args[1]);
 				break;
 
-			case 604: // Adjustable Blinking Light (unsynchronized)
+			case 604: // Adjustable Blinking Light
 				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableStrobeFlash(&sectors[sec], &sectors[s],
-						abs(lines[i].dx)>>FRACBITS, abs(lines[i].dy)>>FRACBITS, false);
-				break;
-
-			case 605: // Adjustable Blinking Light (synchronized)
-				sec = sides[*lines[i].sidenum].sector - sectors;
-				TAG_ITER_SECTORS(tag, s)
-					P_SpawnAdjustableStrobeFlash(&sectors[sec], &sectors[s],
-						abs(lines[i].dx)>>FRACBITS, abs(lines[i].dy)>>FRACBITS, true);
+				TAG_ITER_SECTORS(lines[i].args[0], s)
+					P_SpawnAdjustableStrobeFlash(&sectors[s], lines[i].args[3],
+						(lines[i].args[4] & TMB_USETARGET) ? sectors[s].lightlevel : lines[i].args[5],
+						lines[i].args[1], lines[i].args[2], lines[i].args[4] & TMB_SYNC);
 				break;
 
 			case 606: // HACK! Copy colormaps. Just plain colormaps.
@@ -7042,6 +7080,124 @@ void P_SpawnSpecials(boolean fromnetsave)
 		}
 	}
 
+	// And another round, this time with all FOFs already created
+	for (i = 0; i < numlines; i++)
+	{
+		switch (lines[i].special)
+		{
+			INT32 s;
+			INT32 l;
+
+			case 74: // Make FOF bustable
+			{
+				UINT8 busttype = BT_REGULAR;
+				ffloorbustflags_e bustflags = 0;
+
+				if (!udmf)
+					break;
+
+				switch (lines[i].args[1])
+				{
+					case TMFB_TOUCH:
+						busttype = BT_TOUCH;
+						break;
+					case TMFB_SPIN:
+						busttype = BT_SPINBUST;
+						break;
+					case TMFB_REGULAR:
+						busttype = BT_REGULAR;
+						break;
+					case TMFB_STRONG:
+						busttype = BT_STRONG;
+						break;
+				}
+
+				if (lines[i].args[2] & TMFB_PUSHABLES)
+					bustflags |= FB_PUSHABLES;
+				if (lines[i].args[2] & TMFB_EXECUTOR)
+					bustflags |= FB_EXECUTOR;
+				if (lines[i].args[2] & TMFB_ONLYBOTTOM)
+					bustflags |= FB_ONLYBOTTOM;
+
+				TAG_ITER_LINES(lines[i].args[0], l)
+				{
+					if (lines[l].special < 100 || lines[l].special >= 300)
+						continue;
+
+					TAG_ITER_SECTORS(lines[l].args[0], s)
+					{
+						ffloor_t *rover;
+
+						for (rover = sectors[s].ffloors; rover; rover = rover->next)
+						{
+							if (rover->master != lines + l)
+								continue;
+
+							rover->fofflags |= FOF_BUSTUP;
+							rover->spawnflags |= FOF_BUSTUP;
+							rover->bustflags = bustflags;
+							rover->busttype = busttype;
+							rover->busttag = lines[i].args[3];
+							CheckForBustableBlocks = true;
+							break;
+						}
+					}
+				}
+				break;
+			}
+
+			case 75: // Make FOF quicksand
+			{
+				if (!udmf)
+					break;
+				TAG_ITER_LINES(lines[i].args[0], l)
+				{
+					if (lines[l].special < 100 || lines[l].special >= 300)
+						continue;
+
+					TAG_ITER_SECTORS(lines[l].args[0], s)
+					{
+						ffloor_t *rover;
+
+						for (rover = sectors[s].ffloors; rover; rover = rover->next)
+						{
+							if (rover->master != lines + l)
+								continue;
+
+							rover->fofflags |= FOF_QUICKSAND;
+							rover->spawnflags |= FOF_QUICKSAND;
+							rover->sinkspeed = abs(lines[i].args[1]) << (FRACBITS - 1);
+							rover->friction = abs(lines[i].args[2]) << (FRACBITS - 6);
+							CheckForQuicksand = true;
+							break;
+						}
+					}
+				}
+				break;
+			}
+
+			case 76: // Make FOF bouncy
+			{
+				if (udmf)
+				{
+					TAG_ITER_LINES(lines[i].args[0], l)
+						P_MakeFOFBouncy(lines + i, lines + l);
+				}
+				else
+				{
+					TAG_ITER_SECTORS(lines[i].args[0], s)
+						for (j = 0; (unsigned)j < sectors[s].linecount; j++)
+							P_MakeFOFBouncy(lines + i, sectors[s].lines[j]);
+				}
+				break;
+			}
+		}
+	}
+
+
+
+
+
 	// Allocate each list
 	for (i = 0; i < numsectors; i++)
 		if(secthinkers[i].thinkers)
@@ -7077,20 +7233,22 @@ void P_SpawnSpecials(boolean fromnetsave)
 /** Adds 3Dfloors as appropriate based on a common control linedef.
   *
   * \param line        Control linedef to use.
+  * \param alpha       Alpha value (0-255).
+  * \param blendmode   Blending mode.
   * \param ffloorflags 3Dfloor flags to use.
   * \param secthkiners Lists of thinkers sorted by sector. May be NULL.
   * \sa P_SpawnSpecials, P_AddFakeFloor
   * \author Graue <graue@oceanbase.org>
   */
-static void P_AddFakeFloorsByLine(size_t line, ffloortype_e ffloorflags, thinkerlist_t *secthinkers)
+static void P_AddFakeFloorsByLine(size_t line, INT32 alpha, UINT8 blendmode, ffloortype_e ffloorflags, thinkerlist_t *secthinkers)
 {
 	INT32 s;
-	mtag_t tag = Tag_FGet(&lines[line].tags);
+	mtag_t tag = lines[line].args[0];
 	size_t sec = sides[*lines[line].sidenum].sector-sectors;
 
 	line_t* li = lines + line;
 	TAG_ITER_SECTORS(tag, s)
-		P_AddFakeFloor(&sectors[s], &sectors[sec], li, ffloorflags, secthinkers);
+		P_AddFakeFloor(&sectors[s], &sectors[sec], li, alpha, blendmode, ffloorflags, secthinkers);
 }
 
 /*
@@ -7235,7 +7393,7 @@ void T_Scroll(scroll_t *s)
 				if (!is3dblock)
 					continue;
 
-				TAG_ITER_SECTORS(Tag_FGet(&line->tags), sect)
+				TAG_ITER_SECTORS(line->args[0], sect)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
@@ -7250,7 +7408,7 @@ void T_Scroll(scroll_t *s)
 					if (!rover) // This should be impossible, but don't complain if it is the case somehow
 						continue;
 
-					if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
+					if (!(rover->fofflags & FOF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
 						continue;
 
 					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
@@ -7310,7 +7468,7 @@ void T_Scroll(scroll_t *s)
 
 				if (!is3dblock)
 					continue;
-				TAG_ITER_SECTORS(Tag_FGet(&line->tags), sect)
+				TAG_ITER_SECTORS(line->args[0], sect)
 				{
 					sector_t *psec;
 					psec = sectors + sect;
@@ -7325,7 +7483,7 @@ void T_Scroll(scroll_t *s)
 					if (!rover) // This should be impossible, but don't complain if it is the case somehow
 						continue;
 
-					if (!(rover->flags & FF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
+					if (!(rover->fofflags & FOF_EXISTS)) // If the FOF does not "exist", we pretend that nobody's there
 						continue;
 
 					for (node = psec->touching_thinglist; node; node = node->m_thinglist_next)
@@ -7372,6 +7530,17 @@ void T_Scroll(scroll_t *s)
 	} // end of switch
 }
 
+static boolean IsSector3DBlock(sector_t* sec)
+{
+	size_t i;
+	for (i = 0; i < sec->linecount; i++)
+	{
+		if (sec->lines[i]->special >= 100 && sec->lines[i]->special < 300)
+			return true;
+	}
+	return false;
+}
+
 /** Adds a generalized scroller to the thinker list.
   *
   * \param type     The enumerated type of scrolling.
@@ -7393,10 +7562,56 @@ static void Add_Scroller(INT32 type, fixed_t dx, fixed_t dy, INT32 control, INT3
 	s->accel = accel;
 	s->exclusive = exclusive;
 	s->vdx = s->vdy = 0;
-	if ((s->control = control) != -1)
+	s->control = control;
+	if (s->control != -1)
 		s->last_height = sectors[control].floorheight + sectors[control].ceilingheight;
 	s->affectee = affectee;
+	if (type == sc_carry || type == sc_carry_ceiling)
+	{
+		sectors[affectee].specialflags |= SSF_CONVEYOR;
+		if (IsSector3DBlock(&sectors[affectee]))
+		{
+			if (type == sc_carry)
+				sectors[affectee].flags |= MSF_FLIPSPECIAL_CEILING;
+			else
+				sectors[affectee].flags |= MSF_FLIPSPECIAL_FLOOR;
+		}
+	}
 	P_AddThinker(THINK_MAIN, &s->thinker);
+
+	// interpolation
+	switch (type)
+	{
+		case sc_side:
+			R_CreateInterpolator_SideScroll(&s->thinker, &sides[affectee]);
+			break;
+		case sc_floor:
+			R_CreateInterpolator_SectorScroll(&s->thinker, &sectors[affectee], false);
+			break;
+		case sc_ceiling:
+			R_CreateInterpolator_SectorScroll(&s->thinker, &sectors[affectee], true);
+			break;
+		default:
+			break;
+	}
+}
+
+static void P_SpawnPlaneScroller(line_t *l, fixed_t dx, fixed_t dy, INT32 control, INT32 affectee, INT32 accel, INT32 exclusive)
+{
+	if (l->args[1] != TMP_CEILING)
+	{
+		if (l->args[2] != TMS_SCROLLONLY)
+			Add_Scroller(sc_carry, FixedMul(dx, CARRYFACTOR), FixedMul(dy, CARRYFACTOR), control, affectee, accel, exclusive);
+		if (l->args[2] != TMS_CARRYONLY)
+			Add_Scroller(sc_floor, -dx, dy, control, affectee, accel, exclusive);
+	}
+	if (l->args[1] != TMP_FLOOR)
+	{
+		if (l->args[2] != TMS_SCROLLONLY)
+			Add_Scroller(sc_carry_ceiling, FixedMul(dx, CARRYFACTOR), FixedMul(dy, CARRYFACTOR), control, affectee, accel, exclusive);
+		if (l->args[2] != TMS_CARRYONLY)
+			Add_Scroller(sc_ceiling, -dx, dy, control, affectee, accel, exclusive);
+	}
 }
 
 /** Initializes the scrollers.
@@ -7408,140 +7623,65 @@ static void P_SpawnScrollers(void)
 {
 	size_t i;
 	line_t *l = lines;
-	mtag_t tag;
 
 	for (i = 0; i < numlines; i++, l++)
 	{
-		fixed_t dx = l->dx >> SCROLL_SHIFT; // direction and speed of scrolling
-		fixed_t dy = l->dy >> SCROLL_SHIFT;
 		INT32 control = -1, accel = 0; // no control sector or acceleration
-		INT32 special = l->special;
 
-		tag = Tag_FGet(&l->tags);
-
-		// These types are same as the ones they get set to except that the
-		// first side's sector's heights cause scrolling when they change, and
-		// this linedef controls the direction and speed of the scrolling. The
-		// most complicated linedef since donuts, but powerful :)
-
-		if (special == 515 || special == 512 || special == 522 || special == 532 || special == 504) // displacement scrollers
+		if (l->special == 502 || l->special == 510)
 		{
-			special -= 2;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 514 || special == 511 || special == 521 || special == 531 || special == 503) // accelerative scrollers
-		{
-			special--;
-			accel = 1;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 535 || special == 525) // displacement scrollers
-		{
-			special -= 2;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
-		}
-		else if (special == 534 || special == 524) // accelerative scrollers
-		{
-			accel = 1;
-			special--;
-			control = (INT32)(sides[*l->sidenum].sector - sectors);
+			if ((l->args[4] & TMST_TYPEMASK) != TMST_REGULAR)
+				control = (INT32)(sides[*l->sidenum].sector - sectors);
+			if ((l->args[4] & TMST_TYPEMASK) == TMST_ACCELERATIVE)
+				accel = 1;
 		}
 
-		switch (special)
+		switch (l->special)
 		{
 			register INT32 s;
 
-			case 513: // scroll effect ceiling
-			case 533: // scroll and carry objects on ceiling
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_ceiling, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				if (special != 533)
-					break;
-				/* FALLTHRU */
+			case 510: // plane scroller
+			{
+				fixed_t length = R_PointToDist2(l->v2->x, l->v2->y, l->v1->x, l->v1->y);
+				fixed_t speed = l->args[3] << FRACBITS;
+				fixed_t dx = FixedMul(FixedDiv(l->dx, length), speed) >> SCROLL_SHIFT;
+				fixed_t dy = FixedMul(FixedDiv(l->dy, length), speed) >> SCROLL_SHIFT;
 
-			case 523:	// carry objects on ceiling
-				dx = FixedMul(dx, CARRYFACTOR);
-				dy = FixedMul(dy, CARRYFACTOR);
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_carry_ceiling, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
+				if (l->args[0] == 0)
+					P_SpawnPlaneScroller(l, dx, dy, control, (INT32)(l->frontsector - sectors), accel, !(l->args[4] & TMST_NONEXCLUSIVE));
+				else
+				{
+					TAG_ITER_SECTORS(l->args[0], s)
+						P_SpawnPlaneScroller(l, dx, dy, control, s, accel, !(l->args[4] & TMST_NONEXCLUSIVE));
+				}
 				break;
-
-			case 510: // scroll effect floor
-			case 530: // scroll and carry objects on floor
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_floor, -dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				if (special != 530)
-					break;
-				/* FALLTHRU */
-
-			case 520:	// carry objects on floor
-				dx = FixedMul(dx, CARRYFACTOR);
-				dy = FixedMul(dy, CARRYFACTOR);
-				TAG_ITER_SECTORS(tag, s)
-					Add_Scroller(sc_carry, dx, dy, control, s, accel, l->flags & ML_NOCLIMB);
-				break;
+			}
 
 			// scroll wall according to linedef
 			// (same direction and speed as scrolling floors)
 			case 502:
 			{
-				TAG_ITER_LINES(tag, s)
+				TAG_ITER_LINES(l->args[0], s)
 					if (s != (INT32)i)
 					{
-						if (l->flags & ML_EFFECT2) // use texture offsets instead
-						{
-							dx = sides[l->sidenum[0]].textureoffset;
-							dy = sides[l->sidenum[0]].rowoffset;
-						}
-						if (l->flags & ML_EFFECT3)
-						{
-							if (lines[s].sidenum[1] != 0xffff)
-								Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[1], accel, 0);
-						}
-						else
-							Add_Scroller(sc_side, dx, dy, control, lines[s].sidenum[0], accel, 0);
+						if (l->args[1] != TMSD_BACK)
+							Add_Scroller(sc_side, l->args[2] << (FRACBITS - SCROLL_SHIFT), l->args[3] << (FRACBITS - SCROLL_SHIFT), control, lines[s].sidenum[0], accel, 0);
+						if (l->args[1] != TMSD_FRONT && lines[s].sidenum[1] != 0xffff)
+							Add_Scroller(sc_side, l->args[2] << (FRACBITS - SCROLL_SHIFT), l->args[3] << (FRACBITS - SCROLL_SHIFT), control, lines[s].sidenum[1], accel, 0);
 					}
 				break;
 			}
 
-			case 505:
-				s = lines[i].sidenum[0];
-				Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, s, accel, 0);
-				break;
-
-			case 506:
-				s = lines[i].sidenum[1];
-
-				if (s != 0xffff)
-					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, lines[i].sidenum[0], accel, 0);
-				else
-					CONS_Debug(DBG_GAMELOGIC, "Line special 506 (line #%s) missing back side!\n", sizeu1(i));
-				break;
-
-			case 507:
-				s = lines[i].sidenum[0];
-
-				if (lines[i].sidenum[1] != 0xffff)
-					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, lines[i].sidenum[1], accel, 0);
-				else
-					CONS_Debug(DBG_GAMELOGIC, "Line special 507 (line #%s) missing back side!\n", sizeu1(i));
-				break;
-
-			case 508:
-				s = lines[i].sidenum[1];
-
-				if (s != 0xffff)
-					Add_Scroller(sc_side, -sides[s].textureoffset, sides[s].rowoffset, -1, s, accel, 0);
-				else
-					CONS_Debug(DBG_GAMELOGIC, "Line special 508 (line #%s) missing back side!\n", sizeu1(i));
-				break;
-
-			case 500: // scroll first side
-				Add_Scroller(sc_side, FRACUNIT, 0, -1, lines[i].sidenum[0], accel, 0);
-				break;
-
-			case 501: // jff 1/30/98 2-way scroll
-				Add_Scroller(sc_side, -FRACUNIT, 0, -1, lines[i].sidenum[0], accel, 0);
+			case 500:
+				if (l->args[0] != TMSD_BACK)
+					Add_Scroller(sc_side, -l->args[1] << FRACBITS, l->args[2] << FRACBITS, -1, l->sidenum[0], accel, 0);
+				if (l->args[0] != TMSD_FRONT)
+				{
+					if (l->sidenum[1] != 0xffff)
+						Add_Scroller(sc_side, -l->args[1] << FRACBITS, l->args[2] << FRACBITS, -1, l->sidenum[1], accel, 0);
+					else
+						CONS_Debug(DBG_GAMELOGIC, "Line special 500 (line #%s) missing back side!\n", sizeu1(i));
+				}
 				break;
 		}
 	}
@@ -7586,7 +7726,7 @@ void T_Disappear(disappear_t *d)
 	{
 		ffloor_t *rover;
 		register INT32 s;
-		mtag_t afftag = Tag_FGet(&lines[d->affectee].tags);
+		mtag_t afftag = lines[d->affectee].args[0];
 
 		TAG_ITER_SECTORS(afftag, s)
 		{
@@ -7596,12 +7736,12 @@ void T_Disappear(disappear_t *d)
 					continue;
 
 				if (d->exists)
-					rover->flags &= ~FF_EXISTS;
+					rover->fofflags &= ~FOF_EXISTS;
 				else
 				{
-					rover->flags |= FF_EXISTS;
+					rover->fofflags |= FOF_EXISTS;
 
-					if (!(lines[d->sourceline].flags & ML_NOCLIMB))
+					if (!(lines[d->sourceline].args[5]))
 					{
 						sectors[s].soundorg.z = P_GetFFloorTopZAt(rover, sectors[s].soundorg.x, sectors[s].soundorg.y);
 						S_StartSound(&sectors[s].soundorg, sfx_appear);
@@ -7684,11 +7824,11 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
 	// If fading an invisible FOF whose render flags we did not yet set,
 	// initialize its alpha to 1
 	if (dotranslucent &&
-		(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-		!(rover->flags & FF_FOG) && // do not include fog
-		!(rover->spawnflags & FF_RENDERSIDES) &&
-		!(rover->spawnflags & FF_RENDERPLANES) &&
-		!(rover->flags & FF_RENDERALL))
+		(rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+		!(rover->fofflags & FOF_FOG) && // do not include fog
+		!(rover->spawnflags & FOF_RENDERSIDES) &&
+		!(rover->spawnflags & FOF_RENDERPLANES) &&
+		!(rover->fofflags & FOF_RENDERALL))
 		rover->alpha = 1;
 
 	if (fadingdata)
@@ -7709,16 +7849,16 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
 
 			if (docollision)
 			{
-				if (rover->spawnflags & FF_SOLID)
-					rover->flags &= ~FF_SOLID;
-				if (rover->spawnflags & FF_SWIMMABLE)
-					rover->flags &= ~FF_SWIMMABLE;
-				if (rover->spawnflags & FF_QUICKSAND)
-					rover->flags &= ~FF_QUICKSAND;
-				if (rover->spawnflags & FF_BUSTUP)
-					rover->flags &= ~FF_BUSTUP;
-				if (rover->spawnflags & FF_MARIO)
-					rover->flags &= ~FF_MARIO;
+				if (rover->spawnflags & FOF_SOLID)
+					rover->fofflags &= ~FOF_SOLID;
+				if (rover->spawnflags & FOF_SWIMMABLE)
+					rover->fofflags &= ~FOF_SWIMMABLE;
+				if (rover->spawnflags & FOF_QUICKSAND)
+					rover->fofflags &= ~FOF_QUICKSAND;
+				if (rover->spawnflags & FOF_BUSTUP)
+					rover->fofflags &= ~FOF_BUSTUP;
+				if (rover->spawnflags & FOF_MARIO)
+					rover->fofflags &= ~FOF_MARIO;
 			}
 		}
 		else // continue fading out
@@ -7744,16 +7884,16 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
 
 			if (docollision)
 			{
-				if (rover->spawnflags & FF_SOLID)
-					rover->flags |= FF_SOLID;
-				if (rover->spawnflags & FF_SWIMMABLE)
-					rover->flags |= FF_SWIMMABLE;
-				if (rover->spawnflags & FF_QUICKSAND)
-					rover->flags |= FF_QUICKSAND;
-				if (rover->spawnflags & FF_BUSTUP)
-					rover->flags |= FF_BUSTUP;
-				if (rover->spawnflags & FF_MARIO)
-					rover->flags |= FF_MARIO;
+				if (rover->spawnflags & FOF_SOLID)
+					rover->fofflags |= FOF_SOLID;
+				if (rover->spawnflags & FOF_SWIMMABLE)
+					rover->fofflags |= FOF_SWIMMABLE;
+				if (rover->spawnflags & FOF_QUICKSAND)
+					rover->fofflags |= FOF_QUICKSAND;
+				if (rover->spawnflags & FOF_BUSTUP)
+					rover->fofflags |= FOF_BUSTUP;
+				if (rover->spawnflags & FOF_MARIO)
+					rover->fofflags |= FOF_MARIO;
 			}
 		}
 		else // continue fading in
@@ -7773,114 +7913,114 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
 	// routines common to both fade in and fade out
 	if (!stillfading)
 	{
-		if (doexists && !(rover->spawnflags & FF_BUSTUP))
+		if (doexists && !(rover->spawnflags & FOF_BUSTUP))
 		{
 			if (alpha <= 1)
-				rover->flags &= ~FF_EXISTS;
+				rover->fofflags &= ~FOF_EXISTS;
 			else
-				rover->flags |= FF_EXISTS;
+				rover->fofflags |= FOF_EXISTS;
 
 			// Re-render lighting at end of fade
-			if (dolighting && !(rover->spawnflags & FF_NOSHADE) && !(rover->flags & FF_EXISTS))
+			if (dolighting && !(rover->spawnflags & FOF_NOSHADE) && !(rover->fofflags & FOF_EXISTS))
 				rover->target->moved = true;
 		}
 
-		if (dotranslucent && !(rover->flags & FF_FOG))
+		if (dotranslucent && !(rover->fofflags & FOF_FOG))
 		{
 			if (alpha >= 256)
 			{
-				if (!(rover->flags & FF_CUTSOLIDS) &&
-					(rover->spawnflags & FF_CUTSOLIDS))
+				if (!(rover->fofflags & FOF_CUTSOLIDS) &&
+					(rover->spawnflags & FOF_CUTSOLIDS))
 				{
-					rover->flags |= FF_CUTSOLIDS;
+					rover->fofflags |= FOF_CUTSOLIDS;
 					rover->target->moved = true;
 				}
 
-				rover->flags &= ~FF_TRANSLUCENT;
+				rover->fofflags &= ~FOF_TRANSLUCENT;
 			}
 			else
 			{
-				rover->flags |= FF_TRANSLUCENT;
+				rover->fofflags |= FOF_TRANSLUCENT;
 
-				if ((rover->flags & FF_CUTSOLIDS) &&
-					(rover->spawnflags & FF_CUTSOLIDS))
+				if ((rover->fofflags & FOF_CUTSOLIDS) &&
+					(rover->spawnflags & FOF_CUTSOLIDS))
 				{
-					rover->flags &= ~FF_CUTSOLIDS;
+					rover->fofflags &= ~FOF_CUTSOLIDS;
 					rover->target->moved = true;
 				}
 			}
 
-			if ((rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-				!(rover->spawnflags & FF_RENDERSIDES) &&
-				!(rover->spawnflags & FF_RENDERPLANES))
+			if ((rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+				!(rover->spawnflags & FOF_RENDERSIDES) &&
+				!(rover->spawnflags & FOF_RENDERPLANES))
 			{
 				if (rover->alpha > 1)
-					rover->flags |= FF_RENDERALL;
+					rover->fofflags |= FOF_RENDERALL;
 				else
-					rover->flags &= ~FF_RENDERALL;
+					rover->fofflags &= ~FOF_RENDERALL;
 			}
 		}
 	}
 	else
 	{
-		if (doexists && !(rover->spawnflags & FF_BUSTUP))
+		if (doexists && !(rover->spawnflags & FOF_BUSTUP))
 		{
-			// Re-render lighting if we haven't yet set FF_EXISTS (beginning of fade)
-			if (dolighting && !(rover->spawnflags & FF_NOSHADE) && !(rover->flags & FF_EXISTS))
+			// Re-render lighting if we haven't yet set FOF_EXISTS (beginning of fade)
+			if (dolighting && !(rover->spawnflags & FOF_NOSHADE) && !(rover->fofflags & FOF_EXISTS))
 				rover->target->moved = true;
 
-			rover->flags |= FF_EXISTS;
+			rover->fofflags |= FOF_EXISTS;
 		}
 
-		if (dotranslucent && !(rover->flags & FF_FOG))
+		if (dotranslucent && !(rover->fofflags & FOF_FOG))
 		{
-			rover->flags |= FF_TRANSLUCENT;
+			rover->fofflags |= FOF_TRANSLUCENT;
 
-			if ((rover->flags & FF_CUTSOLIDS) &&
-				(rover->spawnflags & FF_CUTSOLIDS))
+			if ((rover->fofflags & FOF_CUTSOLIDS) &&
+				(rover->spawnflags & FOF_CUTSOLIDS))
 			{
-				rover->flags &= ~FF_CUTSOLIDS;
+				rover->fofflags &= ~FOF_CUTSOLIDS;
 				rover->target->moved = true;
 			}
 
-			if ((rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-				!(rover->spawnflags & FF_RENDERSIDES) &&
-				!(rover->spawnflags & FF_RENDERPLANES))
-				rover->flags |= FF_RENDERALL;
+			if ((rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+				!(rover->spawnflags & FOF_RENDERSIDES) &&
+				!(rover->spawnflags & FOF_RENDERPLANES))
+				rover->fofflags |= FOF_RENDERALL;
 		}
 
 		if (docollision)
 		{
 			if (doghostfade) // remove collision flags during fade
 			{
-				if (rover->spawnflags & FF_SOLID)
-					rover->flags &= ~FF_SOLID;
-				if (rover->spawnflags & FF_SWIMMABLE)
-					rover->flags &= ~FF_SWIMMABLE;
-				if (rover->spawnflags & FF_QUICKSAND)
-					rover->flags &= ~FF_QUICKSAND;
-				if (rover->spawnflags & FF_BUSTUP)
-					rover->flags &= ~FF_BUSTUP;
-				if (rover->spawnflags & FF_MARIO)
-					rover->flags &= ~FF_MARIO;
+				if (rover->spawnflags & FOF_SOLID)
+					rover->fofflags &= ~FOF_SOLID;
+				if (rover->spawnflags & FOF_SWIMMABLE)
+					rover->fofflags &= ~FOF_SWIMMABLE;
+				if (rover->spawnflags & FOF_QUICKSAND)
+					rover->fofflags &= ~FOF_QUICKSAND;
+				if (rover->spawnflags & FOF_BUSTUP)
+					rover->fofflags &= ~FOF_BUSTUP;
+				if (rover->spawnflags & FOF_MARIO)
+					rover->fofflags &= ~FOF_MARIO;
 			}
 			else // keep collision during fade
 			{
-				if (rover->spawnflags & FF_SOLID)
-					rover->flags |= FF_SOLID;
-				if (rover->spawnflags & FF_SWIMMABLE)
-					rover->flags |= FF_SWIMMABLE;
-				if (rover->spawnflags & FF_QUICKSAND)
-					rover->flags |= FF_QUICKSAND;
-				if (rover->spawnflags & FF_BUSTUP)
-					rover->flags |= FF_BUSTUP;
-				if (rover->spawnflags & FF_MARIO)
-					rover->flags |= FF_MARIO;
+				if (rover->spawnflags & FOF_SOLID)
+					rover->fofflags |= FOF_SOLID;
+				if (rover->spawnflags & FOF_SWIMMABLE)
+					rover->fofflags |= FOF_SWIMMABLE;
+				if (rover->spawnflags & FOF_QUICKSAND)
+					rover->fofflags |= FOF_QUICKSAND;
+				if (rover->spawnflags & FOF_BUSTUP)
+					rover->fofflags |= FOF_BUSTUP;
+				if (rover->spawnflags & FOF_MARIO)
+					rover->fofflags |= FOF_MARIO;
 			}
 		}
 	}
 
-	if (!(rover->flags & FF_FOG)) // don't set FOG alpha
+	if (!(rover->fofflags & FOF_FOG)) // don't set FOG alpha
 	{
 		if (!stillfading || exactalpha)
 			rover->alpha = alpha;
@@ -7923,8 +8063,8 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
   * \param speed        speed to fade by
   * \param ticbased     tic-based logic, speed = duration
   * \param relative     Destvalue is relative to rover->alpha
-  * \param doexists	    handle FF_EXISTS
-  * \param dotranslucent handle FF_TRANSLUCENT
+  * \param doexists	    handle FOF_EXISTS
+  * \param dotranslucent handle FOF_TRANSLUCENT
   * \param dolighting  fade FOF light
   * \param docollision handle interactive flags
   * \param doghostfade  no interactive flags during fading
@@ -7940,10 +8080,10 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	// If fading an invisible FOF whose render flags we did not yet set,
 	// initialize its alpha to 1
 	if (dotranslucent &&
-		(rover->spawnflags & FF_NOSHADE) && // do not include light blocks, which don't set FF_NOSHADE
-		!(rover->spawnflags & FF_RENDERSIDES) &&
-		!(rover->spawnflags & FF_RENDERPLANES) &&
-		!(rover->flags & FF_RENDERALL))
+		(rover->spawnflags & FOF_NOSHADE) && // do not include light blocks, which don't set FOF_NOSHADE
+		!(rover->spawnflags & FOF_RENDERSIDES) &&
+		!(rover->spawnflags & FOF_RENDERPLANES) &&
+		!(rover->fofflags & FOF_RENDERALL))
 		rover->alpha = 1;
 
 	// already equal, nothing to do
@@ -7984,7 +8124,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 	P_ResetFakeFloorFader(rover, d, false);
 
 	// Set a separate thinker for shadow fading
-	if (dolighting && !(rover->flags & FF_NOSHADE))
+	if (dolighting && !(rover->fofflags & FOF_NOSHADE))
 	{
 		UINT16 lightdelta = abs(sectors[rover->secnum].spawn_lightlevel - rover->target->lightlevel);
 		fixed_t alphapercent = min(FixedDiv(d->destvalue, rover->spawnalpha), 1*FRACUNIT); // don't make darker than spawn_lightlevel
@@ -8005,7 +8145,7 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 		d->destlightlevel = -1;
 
 	// Set a separate thinker for colormap fading
-	if (docolormap && !(rover->flags & FF_NOSHADE) && sectors[rover->secnum].spawn_extra_colormap && !sectors[rover->secnum].colormap_protected)
+	if (docolormap && !(rover->fofflags & FOF_NOSHADE) && sectors[rover->secnum].spawn_extra_colormap && !sectors[rover->secnum].colormap_protected)
 	{
 		extracolormap_t *dest_exc,
 			*source_exc = sectors[rover->secnum].extra_colormap ? sectors[rover->secnum].extra_colormap : R_GetDefaultColormap();
@@ -8066,11 +8206,11 @@ void T_Fade(fade_t *d)
 		d->doexists, d->dotranslucent, d->dolighting, d->docolormap, d->docollision, d->doghostfade, d->exactalpha))
 	{
 		// Finalize lighting, copypasta from P_AddFakeFloorFader
-		if (d->dolighting && !(d->rover->flags & FF_NOSHADE) && d->destlightlevel > -1)
+		if (d->dolighting && !(d->rover->fofflags & FOF_NOSHADE) && d->destlightlevel > -1)
 			sectors[d->rover->secnum].lightlevel = d->destlightlevel;
 
 		// Finalize colormap
-		if (d->docolormap && !(d->rover->flags & FF_NOSHADE) && sectors[d->rover->secnum].spawn_extra_colormap)
+		if (d->docolormap && !(d->rover->fofflags & FOF_NOSHADE) && sectors[d->rover->secnum].spawn_extra_colormap)
 			sectors[d->rover->secnum].extra_colormap = d->dest_exc;
 
 		P_RemoveFakeFloorFader(d->rover);
@@ -8084,7 +8224,7 @@ static void P_ResetColormapFader(sector_t *sector)
 		// The thinker is the first member in all the action structs,
 		// so just let the thinker get freed, and that will free the whole
 		// structure.
-		P_RemoveThinker(&((elevator_t *)sector->fadecolormapdata)->thinker);
+		P_RemoveThinker(&((thinkerdata_t *)sector->fadecolormapdata)->thinker);
 		sector->fadecolormapdata = NULL;
 	}
 }
@@ -8313,40 +8453,32 @@ void T_Friction(friction_t *f)
 static void P_SpawnFriction(void)
 {
 	size_t i;
-	line_t *l = lines;
-	mtag_t tag;
-	register INT32 s;
-	fixed_t strength; // frontside texture offset controls magnitude
+	sector_t *s = sectors;
+
 	fixed_t friction; // friction value to be applied during movement
 	INT32 movefactor; // applied to each player move to simulate inertia
 
-	for (i = 0; i < numlines; i++, l++)
-		if (l->special == 540)
-		{
-			tag = Tag_FGet(&l->tags);
-			strength = sides[l->sidenum[0]].textureoffset>>FRACBITS;
-			if (strength > 0) // sludge
-				strength = strength*2; // otherwise, the maximum sludginess value is +967...
+	for (i = 0; i < numsectors; i++, s++)
+	{
+		if (s->friction == ORIG_FRICTION)
+			continue;
 
-			// The following might seem odd. At the time of movement,
-			// the move distance is multiplied by 'friction/0x10000', so a
-			// higher friction value actually means 'less friction'.
-			friction = ORIG_FRICTION - (0x1EB8*strength)/0x80; // ORIG_FRICTION is 0xE800
+		friction = s->friction;
 
-			if (friction > FRACUNIT)
-				friction = FRACUNIT;
-			if (friction < 0)
-				friction = 0;
+		if (friction > FRACUNIT)
+			friction = FRACUNIT;
+		if (friction < 0)
+			friction = 0;
 
-			movefactor = FixedDiv(ORIG_FRICTION, friction);
-			if (movefactor < FRACUNIT)
-				movefactor = 8*movefactor - 7*FRACUNIT;
-			else
-				movefactor = FRACUNIT;
+		movefactor = FixedDiv(ORIG_FRICTION, friction);
+		if (movefactor < FRACUNIT)
+			movefactor = 8*movefactor - 7*FRACUNIT;
+		else
+			movefactor = FRACUNIT;
 
-			TAG_ITER_SECTORS(tag, s)
-				Add_Friction(friction, movefactor, s, -1);
-		}
+		Add_Friction(friction, movefactor, (INT32)(s-sectors), -1);
+
+	}
 }
 
 /*
@@ -8365,20 +8497,20 @@ static void P_SpawnFriction(void)
   * \param type     Type of push/pull effect.
   * \param x_mag    X magnitude.
   * \param y_mag    Y magnitude.
-  * \param source   For a point pusher/puller, the source object.
+  * \param z_mag    Z magnitude.
   * \param affectee Target sector.
   * \param referrer What sector set it
   * \sa T_Pusher, P_GetPushThing, P_SpawnPushers
   */
-static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *source, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider)
+static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, fixed_t z_mag, INT32 affectee, INT32 referrer, INT32 exclusive, INT32 slider)
 {
 	pusher_t *p = Z_Calloc(sizeof *p, PU_LEVSPEC, NULL);
 
 	p->thinker.function.acp1 = (actionf_p1)T_Pusher;
-	p->source = source;
 	p->type = type;
-	p->x_mag = x_mag>>FRACBITS;
-	p->y_mag = y_mag>>FRACBITS;
+	p->x_mag = x_mag;
+	p->y_mag = y_mag;
+	p->z_mag = z_mag;
 	p->exclusive = exclusive;
 	p->slider = slider;
 
@@ -8386,183 +8518,16 @@ static void Add_Pusher(pushertype_e type, fixed_t x_mag, fixed_t y_mag, mobj_t *
 	{
 		p->roverpusher = true;
 		p->referrer = referrer;
+		sectors[referrer].specialflags |= SSF_WINDCURRENT;
 	}
 	else
-		p->roverpusher = false;
-
-	// "The right triangle of the square of the length of the hypotenuse is equal to the sum of the squares of the lengths of the other two sides."
-	// "Bah! Stupid brains! Don't you know anything besides the Pythagorean Theorem?" - Earthworm Jim
-	if (type == p_downcurrent || type == p_upcurrent || type == p_upwind || type == p_downwind)
-		p->magnitude = P_AproxDistance(p->x_mag,p->y_mag)<<(FRACBITS-PUSH_FACTOR);
-	else
-		p->magnitude = P_AproxDistance(p->x_mag,p->y_mag);
-	if (source) // point source exist?
 	{
-		// where force goes to zero
-		if (type == p_push)
-			p->radius = AngleFixed(source->angle);
-		else
-			p->radius = (p->magnitude)<<(FRACBITS+1);
-
-		p->x = p->source->x;
-		p->y = p->source->y;
-		p->z = p->source->z;
+		p->roverpusher = false;
+		sectors[affectee].specialflags |= SSF_WINDCURRENT;
 	}
+
 	p->affectee = affectee;
 	P_AddThinker(THINK_MAIN, &p->thinker);
-}
-
-
-// PIT_PushThing determines the angle and magnitude of the effect.
-// The object's x and y momentum values are changed.
-static pusher_t *tmpusher; // pusher structure for blockmap searches
-
-/** Applies a point pusher/puller to a thing.
-  *
-  * \param thing Thing to be pushed.
-  * \return True if the thing was pushed.
-  * \todo Make a more robust P_BlockThingsIterator() so the hidden parameter
-  *       ::tmpusher won't need to be used.
-  * \sa T_Pusher
-  */
-static inline boolean PIT_PushThing(mobj_t *thing)
-{
-	if (thing->eflags & MFE_PUSHED)
-		return false;
-
-	if (thing->player && thing->player->powers[pw_carry] == CR_ROPEHANG)
-		return false;
-
-	if (!tmpusher->source)
-		return false;
-
-	// Allow this to affect pushable objects at some point?
-	if (thing->player && (!(thing->flags & (MF_NOGRAVITY | MF_NOCLIP)) || thing->player->powers[pw_carry] == CR_NIGHTSMODE))
-	{
-		INT32 dist;
-		INT32 speed;
-		INT32 sx, sy, sz;
-
-		sx = tmpusher->x;
-		sy = tmpusher->y;
-		sz = tmpusher->z;
-
-		// don't fade wrt Z if health & 2 (mapthing has multi flag)
-		if (tmpusher->source->health & 2)
-			dist = P_AproxDistance(thing->x - sx,thing->y - sy);
-		else
-		{
-			// Make sure the Z is in range
-			if (thing->z < sz - tmpusher->radius || thing->z > sz + tmpusher->radius)
-				return false;
-
-			dist = P_AproxDistance(P_AproxDistance(thing->x - sx, thing->y - sy),
-				thing->z - sz);
-		}
-
-		speed = (tmpusher->magnitude - ((dist>>FRACBITS)>>1))<<(FRACBITS - PUSH_FACTOR - 1);
-
-		// If speed <= 0, you're outside the effective radius. You also have
-		// to be able to see the push/pull source point.
-
-		// Written with bits and pieces of P_HomingAttack
-		if ((speed > 0) && (P_CheckSight(thing, tmpusher->source)))
-		{
-			if (thing->player->powers[pw_carry] != CR_NIGHTSMODE)
-			{
-				// only push wrt Z if health & 1 (mapthing has ambush flag)
-				if (tmpusher->source->health & 1)
-				{
-					fixed_t tmpmomx, tmpmomy, tmpmomz;
-
-					tmpmomx = FixedMul(FixedDiv(sx - thing->x, dist), speed);
-					tmpmomy = FixedMul(FixedDiv(sy - thing->y, dist), speed);
-					tmpmomz = FixedMul(FixedDiv(sz - thing->z, dist), speed);
-					if (tmpusher->source->type == MT_PUSH) // away!
-					{
-						tmpmomx *= -1;
-						tmpmomy *= -1;
-						tmpmomz *= -1;
-					}
-
-					thing->momx += tmpmomx;
-					thing->momy += tmpmomy;
-					thing->momz += tmpmomz;
-
-					if (thing->player)
-					{
-						thing->player->cmomx += tmpmomx;
-						thing->player->cmomy += tmpmomy;
-						thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
-						thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
-					}
-				}
-				else
-				{
-					angle_t pushangle;
-
-					pushangle = R_PointToAngle2(thing->x, thing->y, sx, sy);
-					if (tmpusher->source->type == MT_PUSH)
-						pushangle += ANGLE_180; // away
-					pushangle >>= ANGLETOFINESHIFT;
-					thing->momx += FixedMul(speed, FINECOSINE(pushangle));
-					thing->momy += FixedMul(speed, FINESINE(pushangle));
-
-					if (thing->player)
-					{
-						thing->player->cmomx += FixedMul(speed, FINECOSINE(pushangle));
-						thing->player->cmomy += FixedMul(speed, FINESINE(pushangle));
-						thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
-						thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
-					}
-				}
-			}
-			else
-			{
-				//NiGHTS-specific handling.
-				//By default, pushes and pulls only affect the Z-axis.
-				//By having the ambush flag, it affects the X-axis.
-				//By having the object special flag, it affects the Y-axis.
-				fixed_t tmpmomx, tmpmomy, tmpmomz;
-
-				if (tmpusher->source->health & 1)
-					tmpmomx = FixedMul(FixedDiv(sx - thing->x, dist), speed);
-				else
-					tmpmomx = 0;
-
-				if (tmpusher->source->health & 2)
-					tmpmomy = FixedMul(FixedDiv(sy - thing->y, dist), speed);
-				else
-					tmpmomy = 0;
-
-				tmpmomz = FixedMul(FixedDiv(sz - thing->z, dist), speed);
-
-				if (tmpusher->source->type == MT_PUSH) // away!
-				{
-					tmpmomx *= -1;
-					tmpmomy *= -1;
-					tmpmomz *= -1;
-				}
-
-				thing->momx += tmpmomx;
-				thing->momy += tmpmomy;
-				thing->momz += tmpmomz;
-
-				if (thing->player)
-				{
-					thing->player->cmomx += tmpmomx;
-					thing->player->cmomy += tmpmomy;
-					thing->player->cmomx = FixedMul(thing->player->cmomx, 0xe800);
-					thing->player->cmomy = FixedMul(thing->player->cmomy, 0xe800);
-				}
-			}
-		}
-	}
-
-	if (tmpusher->exclusive)
-		thing->eflags |= MFE_PUSHED;
-
-	return true;
 }
 
 /** Applies a pusher to all affected objects.
@@ -8576,30 +8541,19 @@ void T_Pusher(pusher_t *p)
 	sector_t *sec, *referrer = NULL;
 	mobj_t *thing;
 	msecnode_t *node;
-	INT32 xspeed = 0,yspeed = 0;
-	INT32 xl, xh, yl, yh, bx, by;
-	INT32 radius;
-	//INT32 ht = 0;
+	fixed_t x_mag, y_mag, z_mag;
+	fixed_t xspeed = 0, yspeed = 0, zspeed = 0;
 	boolean inFOF;
 	boolean touching;
 	boolean moved;
 
-	xspeed = yspeed = 0;
+	x_mag = p->x_mag >> PUSH_FACTOR;
+	y_mag = p->y_mag >> PUSH_FACTOR;
+	z_mag = p->z_mag >> PUSH_FACTOR;
 
 	sec = sectors + p->affectee;
-
-	// Be sure the special sector type is still turned on. If so, proceed.
-	// Else, bail out; the sector type has been changed on us.
-
 	if (p->roverpusher)
-	{
-		referrer = &sectors[p->referrer];
-
-		if (GETSECSPECIAL(referrer->special, 3) != 2)
-			return;
-	}
-	else if (GETSECSPECIAL(sec->special, 3) != 2)
-		return;
+		referrer = sectors + p->referrer;
 
 	// For constant pushers (wind/current) there are 3 situations:
 	//
@@ -8618,29 +8572,6 @@ void T_Pusher(pusher_t *p)
 	// Apply the effect to clipped players only for now.
 	//
 	// In Phase II, you can apply these effects to Things other than players.
-
-	if (p->type == p_push)
-	{
-
-		// Seek out all pushable things within the force radius of this
-		// point pusher. Crosses sectors, so use blockmap.
-
-		tmpusher = p; // MT_PUSH/MT_PULL point source
-		radius = p->radius; // where force goes to zero
-		tmbbox[BOXTOP]    = p->y + radius;
-		tmbbox[BOXBOTTOM] = p->y - radius;
-		tmbbox[BOXRIGHT]  = p->x + radius;
-		tmbbox[BOXLEFT]   = p->x - radius;
-
-		xl = (unsigned)(tmbbox[BOXLEFT] - bmaporgx - MAXRADIUS)>>MAPBLOCKSHIFT;
-		xh = (unsigned)(tmbbox[BOXRIGHT] - bmaporgx + MAXRADIUS)>>MAPBLOCKSHIFT;
-		yl = (unsigned)(tmbbox[BOXBOTTOM] - bmaporgy - MAXRADIUS)>>MAPBLOCKSHIFT;
-		yh = (unsigned)(tmbbox[BOXTOP] - bmaporgy + MAXRADIUS)>>MAPBLOCKSHIFT;
-		for (bx = xl; bx <= xh; bx++)
-			for (by = yl; by <= yh; by++)
-				P_BlockThingsIterator(bx,by, PIT_PushThing);
-		return;
-	}
 
 	// constant pushers p_wind and p_current
 	node = sec->touching_thinglist; // things touching this sector
@@ -8709,90 +8640,44 @@ void T_Pusher(pusher_t *p)
 		{
 			if (thing->z == P_GetSpecialBottomZ(thing, sec, sec))
 				touching = true;
-			else if (p->type != p_current)
+			// Annoying backwards compatibility nonsense:
+			// In binary, horizontal currents require floor touch
+			else if (udmf || p->type != p_current || z_mag != 0)
 				inFOF = true;
 		}
 
 		if (!touching && !inFOF) // Object is out of range of effect
 			continue;
 
-		if (p->type == p_wind)
+		if (inFOF || (p->type == p_current && touching))
 		{
-			if (touching) // on ground
-			{
-				xspeed = (p->x_mag)>>1; // half force
-				yspeed = (p->y_mag)>>1;
-				moved = true;
-			}
-			else if (inFOF)
-			{
-				xspeed = (p->x_mag); // full force
-				yspeed = (p->y_mag);
-				moved = true;
-			}
+			xspeed = x_mag; // full force
+			yspeed = y_mag;
+			zspeed = z_mag;
+			moved = true;
 		}
-		else if (p->type == p_upwind)
+		else if (p->type == p_wind && touching)
 		{
-			if (touching) // on ground
-			{
-				thing->momz += (p->magnitude)>>1;
-				moved = true;
-			}
-			else if (inFOF)
-			{
-				thing->momz += p->magnitude;
-				moved = true;
-			}
-		}
-		else if (p->type == p_downwind)
-		{
-			if (touching) // on ground
-			{
-				thing->momz -= (p->magnitude)>>1;
-				moved = true;
-			}
-			else if (inFOF)
-			{
-				thing->momz -= p->magnitude;
-				moved = true;
-			}
-		}
-		else // p_current
-		{
-			if (!touching && !inFOF) // Not in water at all
-				xspeed = yspeed = 0; // no force
-			else // underwater / touching water
-			{
-				if (p->type == p_upcurrent)
-					thing->momz += p->magnitude;
-				else if (p->type == p_downcurrent)
-					thing->momz -= p->magnitude;
-				else
-				{
-					xspeed = p->x_mag; // full force
-					yspeed = p->y_mag;
-				}
-				moved = true;
-			}
+			xspeed = x_mag>>1; // half force
+			yspeed = y_mag>>1;
+			zspeed = z_mag>>1;
+			moved = true;
 		}
 
-		if (p->type != p_downcurrent && p->type != p_upcurrent
-			&& p->type != p_upwind && p->type != p_downwind)
+		thing->momx += xspeed;
+		thing->momy += yspeed;
+		thing->momz += zspeed;
+		if (thing->player)
 		{
-			thing->momx += xspeed<<(FRACBITS-PUSH_FACTOR);
-			thing->momy += yspeed<<(FRACBITS-PUSH_FACTOR);
-			if (thing->player)
-			{
-				thing->player->cmomx += xspeed<<(FRACBITS-PUSH_FACTOR);
-				thing->player->cmomy += yspeed<<(FRACBITS-PUSH_FACTOR);
-				thing->player->cmomx = FixedMul(thing->player->cmomx, ORIG_FRICTION);
-				thing->player->cmomy = FixedMul(thing->player->cmomy, ORIG_FRICTION);
-			}
-
-			// Tumbleweeds bounce a bit...
-			if (thing->type == MT_LITTLETUMBLEWEED || thing->type == MT_BIGTUMBLEWEED)
-				thing->momz += P_AproxDistance(xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR)) >> 2;
+			thing->player->cmomx += xspeed;
+			thing->player->cmomy += yspeed;
+			thing->player->cmomx = FixedMul(thing->player->cmomx, ORIG_FRICTION);
+			thing->player->cmomy = FixedMul(thing->player->cmomy, ORIG_FRICTION);
 		}
+
+		// Tumbleweeds bounce a bit...
+		if (thing->type == MT_LITTLETUMBLEWEED || thing->type == MT_BIGTUMBLEWEED)
+			thing->momz += P_AproxDistance(xspeed, yspeed) >> 2;
 
 		if (moved)
 		{
@@ -8805,7 +8690,7 @@ void T_Pusher(pusher_t *p)
 					thing->player->pflags |= jumped;
 
 				thing->player->pflags |= PF_SLIDING;
-				thing->angle = R_PointToAngle2 (0, 0, xspeed<<(FRACBITS-PUSH_FACTOR), yspeed<<(FRACBITS-PUSH_FACTOR));
+				thing->angle = R_PointToAngle2(0, 0, xspeed, yspeed);
 
 				if (!demoplayback || P_ControlStyle(thing->player) == CS_LMAOGALOG)
 				{
@@ -8824,86 +8709,33 @@ void T_Pusher(pusher_t *p)
 	}
 }
 
-
-/** Gets a push/pull object.
-  *
-  * \param s Sector number to look in.
-  * \return Pointer to the first ::MT_PUSH or ::MT_PULL object found in the
-  *         sector.
-  * \sa P_GetTeleportDestThing, P_GetStarpostThing, P_GetAltViewThing
-  */
-mobj_t *P_GetPushThing(UINT32 s)
-{
-	mobj_t *thing;
-	sector_t *sec;
-
-	sec = sectors + s;
-	thing = sec->thinglist;
-	while (thing)
-	{
-		switch (thing->type)
-		{
-			case MT_PUSH:
-			case MT_PULL:
-				return thing;
-			default:
-				break;
-		}
-		thing = thing->snext;
-	}
-	return NULL;
-}
-
 /** Spawns pushers.
   *
-  * \todo Remove magic numbers.
   * \sa P_SpawnSpecials, Add_Pusher
   */
 static void P_SpawnPushers(void)
 {
 	size_t i;
 	line_t *l = lines;
-	mtag_t tag;
 	register INT32 s;
-	mobj_t *thing;
+	fixed_t length, hspeed, dx, dy;
 
 	for (i = 0; i < numlines; i++, l++)
 	{
-		tag = Tag_FGet(&l->tags);
-		switch (l->special)
+		if (l->special != 541)
+			continue;
+
+		length = R_PointToDist2(l->v2->x, l->v2->y, l->v1->x, l->v1->y);
+		hspeed = l->args[1] << FRACBITS;
+		dx = FixedMul(FixedDiv(l->dx, length), hspeed);
+		dy = FixedMul(FixedDiv(l->dy, length), hspeed);
+
+		if (l->args[0] == 0)
+			Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, (INT32)(l->frontsector - sectors), -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
+		else
 		{
-			case 541: // wind
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_wind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 544: // current
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_current, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 547: // push/pull
-				TAG_ITER_SECTORS(tag, s)
-				{
-					thing = P_GetPushThing(s);
-					if (thing) // No MT_P* means no effect
-						Add_Pusher(p_push, l->dx, l->dy, thing, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				}
-				break;
-			case 545: // current up
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_upcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 546: // current down
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_downcurrent, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 542: // wind up
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_upwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
-			case 543: // wind down
-				TAG_ITER_SECTORS(tag, s)
-					Add_Pusher(p_downwind, l->dx, l->dy, NULL, s, -1, l->flags & ML_NOCLIMB, l->flags & ML_EFFECT4);
-				break;
+			TAG_ITER_SECTORS(l->args[0], s)
+				Add_Pusher(l->args[3], dx, dy, l->args[2] << FRACBITS, s, -1, !(l->args[4] & TMPF_NONEXCLUSIVE), !!(l->args[4] & TMPF_SLIDE));
 		}
 	}
 }

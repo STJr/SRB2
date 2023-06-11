@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -31,17 +31,7 @@
 #include <stdint.h>
 #endif
 
-#define UINT8 unsigned __int8
 #define SINT8 signed __int8
-
-#define UINT16 unsigned __int16
-#define INT16 __int16
-
-#define INT32 __int32
-#define UINT32 unsigned __int32
-
-#define INT64  __int64
-#define UINT64 unsigned __int64
 
 typedef long ssize_t;
 
@@ -106,6 +96,9 @@ typedef long ssize_t;
 
 char *strcasestr(const char *in, const char *what);
 #define stristr strcasestr
+
+int startswith (const char *base, const char *tag);
+int endswith (const char *base, const char *tag);
 
 #if defined (macintosh) //|| defined (__APPLE__) //skip all boolean/Boolean crap
 	#define true 1
@@ -392,8 +385,6 @@ unset_bit_array (bitarray_t * const array, const int value)
 	array[value >> 3] &= ~(1<<(value & 7));
 }
 
-#ifdef HAVE_SDL
 typedef UINT64 precise_t;
-#endif
 
 #endif //__DOOMTYPE__

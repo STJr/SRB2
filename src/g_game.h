@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -243,6 +243,7 @@ void G_LoadGameData(void);
 void G_LoadGameSettings(void);
 
 void G_SetGameModified(boolean silent);
+void G_SetUsedCheats(boolean silent);
 
 void G_SetGamestate(gamestate_t newstate);
 

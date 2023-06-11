@@ -5,7 +5,7 @@
 //
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Portions Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 2014-2021 by Sonic Team Junior.
+// Copyright (C) 2014-2023 by Sonic Team Junior.
 //
 // This program is free software; you can redistribute it and/or
 // modify it under the terms of the GNU General Public License
@@ -143,21 +143,32 @@ typedef LPVOID (WINAPI *p_MapViewOfFile) (HANDLE, DWORD, DWORD, DWORD, SIZE_T);
 #define UNIXBACKTRACE
 #endif
 
-// Locations for searching the srb2.pk3
+// Locations to directly check for srb2.pk3 in
+const char *wadDefaultPaths[] = {
 #if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
-#define DEFAULTWADLOCATION1 "/usr/local/share/games/SRB2"
-#define DEFAULTWADLOCATION2 "/usr/local/games/SRB2"
-#define DEFAULTWADLOCATION3 "/usr/share/games/SRB2"
-#define DEFAULTWADLOCATION4 "/usr/games/SRB2"
-#define DEFAULTSEARCHPATH1 "/usr/local/games"
-#define DEFAULTSEARCHPATH2 "/usr/games"
-#define DEFAULTSEARCHPATH3 "/usr/local"
+	"/usr/local/share/games/SRB2",
+	"/usr/local/games/SRB2",
+	"/usr/share/games/SRB2",
+	"/usr/games/SRB2",
 #elif defined (_WIN32)
-#define DEFAULTWADLOCATION1 "c:\\games\\srb2"
-#define DEFAULTWADLOCATION2 "\\games\\srb2"
-#define DEFAULTSEARCHPATH1 "c:\\games"
-#define DEFAULTSEARCHPATH2 "\\games"
+	"c:\\games\\srb2",
+	"\\games\\srb2",
 #endif
+	NULL
+};
+
+// Folders to recurse through looking for srb2.pk3
+const char *wadSearchPaths[] = {
+#if defined (__unix__) || defined(__APPLE__) || defined (UNIXCOMMON)
+	"/usr/local/games",
+	"/usr/games",
+	"/usr/local",
+#elif defined (_WIN32)
+	"c:\\games",
+	"\\games",
+#endif
+	NULL
+};
 
 /**	\brief WAD file to look for
 */
@@ -170,6 +181,7 @@ static char returnWadPath[256];
 
 #include "../doomdef.h"
 #include "../m_misc.h"
+#include "../i_time.h"
 #include "../i_video.h"
 #include "../i_sound.h"
 #include "../i_system.h"
@@ -185,7 +197,8 @@ static char returnWadPath[256];
 
 #include "../m_argv.h"
 
-#include "../m_menu.h"
+#include "../r_main.h" // Frame interpolation/uncapped
+#include "../r_fps.h"
 
 #ifdef MAC_ALERT
 #include "macosx/mac_alert.h"
@@ -358,9 +371,10 @@ static void I_ReportSignal(int num, int coredumped)
 
 	I_OutputMsg("\nProcess killed by signal: %s\n\n", sigmsg);
 
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-		"Process killed by signal",
-		sigmsg, NULL);
+	if (!M_CheckParm("-dedicated"))
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+			"Process killed by signal",
+			sigmsg, NULL);
 }
 
 #ifndef NEWSIGNALHANDLER
@@ -2141,52 +2155,78 @@ ticcmd_t *I_BaseTiccmd2(void)
 
 static Uint64 timer_frequency;
 
-static double tic_frequency;
-static Uint64 tic_epoch;
-
-tic_t I_GetTime(void)
-{
-	static double elapsed;
-
-	const Uint64 now = SDL_GetPerformanceCounter();
-
-	elapsed += (now - tic_epoch) / tic_frequency;
-	tic_epoch = now; // moving epoch
-
-	return (tic_t)elapsed;
-}
-
 precise_t I_GetPreciseTime(void)
 {
 	return SDL_GetPerformanceCounter();
 }
 
-int I_PreciseToMicros(precise_t d)
+UINT64 I_GetPrecisePrecision(void)
 {
-	// d is going to be converted into a double. So remove the highest bits
-	// to avoid loss of precision in the lower bits, for the (probably rare) case
-	// that the higher bits are actually used.
-	d &= ((precise_t)1 << 53) - 1; // The mantissa of a double can handle 53 bits at most.
-	// The resulting double from the calculation is converted first to UINT64 to avoid overflow,
-	// which is undefined behaviour when converting floating point values to integers.
-	return (int)(UINT64)(d / (timer_frequency / 1000000.0));
+	return SDL_GetPerformanceFrequency();
+}
+
+static UINT32 frame_rate;
+
+static double frame_frequency;
+static UINT64 frame_epoch;
+static double elapsed_frames;
+
+static void I_InitFrameTime(const UINT64 now, const UINT32 cap)
+{
+	frame_rate = cap;
+	frame_epoch = now;
+
+	//elapsed_frames = 0.0;
+
+	if (frame_rate == 0)
+	{
+		// Shouldn't be used, but just in case...?
+		frame_frequency = 1.0;
+		return;
+	}
+
+	frame_frequency = timer_frequency / (double)frame_rate;
+}
+
+double I_GetFrameTime(void)
+{
+	const UINT64 now = SDL_GetPerformanceCounter();
+	const UINT32 cap = R_GetFramerateCap();
+
+	if (cap != frame_rate)
+	{
+		// Maybe do this in a OnChange function for cv_fpscap?
+		I_InitFrameTime(now, cap);
+	}
+
+	if (frame_rate == 0)
+	{
+		// Always advance a frame.
+		elapsed_frames += 1.0;
+	}
+	else
+	{
+		elapsed_frames += (now - frame_epoch) / frame_frequency;
+	}
+
+	frame_epoch = now; // moving epoch
+	return elapsed_frames;
 }
 
 //
-//I_StartupTimer
+// I_StartupTimer
 //
 void I_StartupTimer(void)
 {
 	timer_frequency = SDL_GetPerformanceFrequency();
-	tic_epoch       = SDL_GetPerformanceCounter();
 
-	tic_frequency   = timer_frequency / (double)NEWTICRATE;
+	I_InitFrameTime(0, R_GetFramerateCap());
+	elapsed_frames  = 0.0;
 }
 
-void I_Sleep(void)
+void I_Sleep(UINT32 ms)
 {
-	if (cv_sleep.value != -1)
-		SDL_Delay(cv_sleep.value);
+	SDL_Delay(ms);
 }
 
 #ifdef NEWSIGNALHANDLER
@@ -2202,9 +2242,10 @@ static void newsignalhandler_Warn(const char *pr)
 
 	I_OutputMsg("%s\n", text);
 
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-		"Startup error",
-		text, NULL);
+	if (!M_CheckParm("-dedicated"))
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+			"Startup error",
+			text, NULL);
 
 	I_ShutdownConsole();
 	exit(-1);
@@ -2405,9 +2446,10 @@ void I_Error(const char *error, ...)
 			// Implement message box with SDL_ShowSimpleMessageBox,
 			// which should fail gracefully if it can't put a message box up
 			// on the target system
-			SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-				"SRB2 "VERSIONSTRING" Recursive Error",
-				buffer, NULL);
+			if (!M_CheckParm("-dedicated"))
+				SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+					"SRB2 "VERSIONSTRING" Recursive Error",
+					buffer, NULL);
 
 			W_Shutdown();
 			exit(-1); // recursive errors detected
@@ -2449,9 +2491,10 @@ void I_Error(const char *error, ...)
 	// Implement message box with SDL_ShowSimpleMessageBox,
 	// which should fail gracefully if it can't put a message box up
 	// on the target system
-	SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
-		"SRB2 "VERSIONSTRING" Error",
-		buffer, NULL);
+	if (!M_CheckParm("-dedicated"))
+		SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR,
+			"SRB2 "VERSIONSTRING" Error",
+			buffer, NULL);
 	// Note that SDL_ShowSimpleMessageBox does *not* require SDL to be
 	// initialized at the time, so calling it after SDL_Quit() is
 	// perfectly okay! In addition, we do this on purpose so the
@@ -2804,6 +2847,20 @@ static const char *searchWad(const char *searchDir)
 	return NULL;
 }
 
+#define CHECKWADPATH(ret) \
+do { \
+	I_OutputMsg(",%s", returnWadPath); \
+	if (isWadPathOk(returnWadPath)) \
+		return ret; \
+} while (0)
+
+#define SEARCHWAD(str) \
+do { \
+	WadPath = searchWad(str); \
+	if (WadPath) \
+		return WadPath; \
+} while (0)
+
 /**	\brief go through all possible paths and look for srb2.pk3
 
   \return path to srb2.pk3 if any
@@ -2812,6 +2869,7 @@ static const char *locateWad(void)
 {
 	const char *envstr;
 	const char *WadPath;
+	int i;
 
 	I_OutputMsg("SRB2WADDIR");
 	// does SRB2WADDIR exist?
@@ -2819,108 +2877,37 @@ static const char *locateWad(void)
 		return envstr;
 
 #ifndef NOCWD
-	I_OutputMsg(",.");
 	// examine current dir
 	strcpy(returnWadPath, ".");
-	if (isWadPathOk(returnWadPath))
-		return NULL;
-#endif
-
-
-#ifdef CMAKECONFIG
-#ifndef NDEBUG
-	I_OutputMsg(","CMAKE_ASSETS_DIR);
-	strcpy(returnWadPath, CMAKE_ASSETS_DIR);
-	if (isWadPathOk(returnWadPath))
-	{
-		return returnWadPath;
-	}
-#endif
+	CHECKWADPATH(NULL);
 #endif
 
 #ifdef __APPLE__
 	OSX_GetResourcesPath(returnWadPath);
-	I_OutputMsg(",%s", returnWadPath);
-	if (isWadPathOk(returnWadPath))
-	{
-		return returnWadPath;
-	}
+	CHECKWADPATH(returnWadPath);
 #endif
 
 	// examine default dirs
-#ifdef DEFAULTWADLOCATION1
-	I_OutputMsg(","DEFAULTWADLOCATION1);
-	strcpy(returnWadPath, DEFAULTWADLOCATION1);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION2
-	I_OutputMsg(","DEFAULTWADLOCATION2);
-	strcpy(returnWadPath, DEFAULTWADLOCATION2);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION3
-	I_OutputMsg(","DEFAULTWADLOCATION3);
-	strcpy(returnWadPath, DEFAULTWADLOCATION3);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION4
-	I_OutputMsg(","DEFAULTWADLOCATION4);
-	strcpy(returnWadPath, DEFAULTWADLOCATION4);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION5
-	I_OutputMsg(","DEFAULTWADLOCATION5);
-	strcpy(returnWadPath, DEFAULTWADLOCATION5);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION6
-	I_OutputMsg(","DEFAULTWADLOCATION6);
-	strcpy(returnWadPath, DEFAULTWADLOCATION6);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
-#ifdef DEFAULTWADLOCATION7
-	I_OutputMsg(","DEFAULTWADLOCATION7);
-	strcpy(returnWadPath, DEFAULTWADLOCATION7);
-	if (isWadPathOk(returnWadPath))
-		return returnWadPath;
-#endif
+	for (i = 0; wadDefaultPaths[i]; i++)
+	{
+		strcpy(returnWadPath, wadDefaultPaths[i]);
+		CHECKWADPATH(returnWadPath);
+	}
+
 #ifndef NOHOME
 	// find in $HOME
 	I_OutputMsg(",HOME");
 	if ((envstr = I_GetEnv("HOME")) != NULL)
+		SEARCHWAD(envstr);
+#endif
+
+	// search paths
+	for (i = 0; wadSearchPaths[i]; i++)
 	{
-		WadPath = searchWad(envstr);
-		if (WadPath)
-			return WadPath;
+		I_OutputMsg(", in:%s", wadSearchPaths[i]);
+		SEARCHWAD(wadSearchPaths[i]);
 	}
-#endif
-#ifdef DEFAULTSEARCHPATH1
-	// find in /usr/local
-	I_OutputMsg(", in:"DEFAULTSEARCHPATH1);
-	WadPath = searchWad(DEFAULTSEARCHPATH1);
-	if (WadPath)
-		return WadPath;
-#endif
-#ifdef DEFAULTSEARCHPATH2
-	// find in /usr/games
-	I_OutputMsg(", in:"DEFAULTSEARCHPATH2);
-	WadPath = searchWad(DEFAULTSEARCHPATH2);
-	if (WadPath)
-		return WadPath;
-#endif
-#ifdef DEFAULTSEARCHPATH3
-	// find in ???
-	I_OutputMsg(", in:"DEFAULTSEARCHPATH3);
-	WadPath = searchWad(DEFAULTSEARCHPATH3);
-	if (WadPath)
-		return WadPath;
-#endif
+
 	// if nothing was found
 	return NULL;
 }
@@ -2975,8 +2962,7 @@ static long get_entry(const char* name, const char* buf)
 }
 #endif
 
-// quick fix for compil
-UINT32 I_GetFreeMem(UINT32 *total)
+size_t I_GetFreeMem(size_t *total)
 {
 #ifdef FREEBSD
 	struct vmmeter sum;
@@ -3024,14 +3010,14 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	info.dwLength = sizeof (MEMORYSTATUS);
 	GlobalMemoryStatus( &info );
 	if (total)
-		*total = (UINT32)info.dwTotalPhys;
-	return (UINT32)info.dwAvailPhys;
+		*total = (size_t)info.dwTotalPhys;
+	return (size_t)info.dwAvailPhys;
 #elif defined (__linux__)
 	/* Linux */
 	char buf[1024];
 	char *memTag;
-	UINT32 freeKBytes;
-	UINT32 totalKBytes;
+	size_t freeKBytes;
+	size_t totalKBytes;
 	INT32 n;
 	INT32 meminfo_fd = -1;
 	long Cached;
@@ -3062,7 +3048,7 @@ UINT32 I_GetFreeMem(UINT32 *total)
 	}
 
 	memTag += sizeof (MEMTOTAL);
-	totalKBytes = atoi(memTag);
+	totalKBytes = (size_t)atoi(memTag);
 
 	if ((memTag = strstr(buf, MEMAVAILABLE)) == NULL)
 	{

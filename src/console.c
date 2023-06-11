@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -61,7 +61,7 @@ static boolean con_started = false; // console has been initialised
 static boolean con_forcepic = true; // at startup toggle console translucency when first off
        boolean con_recalc;          // set true when screen size has changed
 
-static tic_t con_tick; // console ticker for anim or blinking prompt cursor
+static tic_t con_tick; // console ticker for blinking prompt cursor
                         // con_scrollup should use time (currenttime - lasttime)..
 
 static boolean consoletoggle; // true when console key pushed, ticker will handle
@@ -110,6 +110,7 @@ static void CON_RecalcSize(void);
 static void CON_ChangeHeight(void);
 
 static void CON_DrawBackpic(void);
+static void CONS_height_Change(void);
 static void CONS_hudlines_Change(void);
 static void CONS_backcolor_Change(void);
 
@@ -136,7 +137,7 @@ static CV_PossibleValue_t speed_cons_t[] = {{0, "MIN"}, {64, "MAX"}, {0, NULL}};
 static consvar_t cons_speed = CVAR_INIT ("con_speed", "8", CV_SAVE, speed_cons_t, NULL);
 
 // percentage of screen height to use for console
-static consvar_t cons_height = CVAR_INIT ("con_height", "50", CV_SAVE, CV_Unsigned, NULL);
+static consvar_t cons_height = CVAR_INIT ("con_height", "50", CV_CALL|CV_SAVE, CV_Unsigned, CONS_height_Change);
 
 static CV_PossibleValue_t backpic_cons_t[] = {{0, "translucent"}, {1, "picture"}, {0, NULL}};
 // whether to use console background picture, or translucent mode
@@ -155,6 +156,18 @@ static CV_PossibleValue_t backcolor_cons_t[] = {{0, "White"}, 		{1, "Black"},		{
 consvar_t cons_backcolor = CVAR_INIT ("con_backcolor", "Green", CV_CALL|CV_SAVE, backcolor_cons_t, CONS_backcolor_Change);
 
 static void CON_Print(char *msg);
+
+// Change the console height on demand
+//
+static void CONS_height_Change(void)
+{
+	Lock_state();
+
+	if (con_destlines > 0 && !con_startup) // If the console is open (as in, not using "bind")...
+		CON_ChangeHeight(); // ...update its height now, not only when it's closed and re-opened
+
+	Unlock_state();
+}
 
 //
 //
@@ -382,16 +395,16 @@ static void CON_SetupColormaps(void)
 
 	//                      0x1       0x3                           0x9                           0xF
 	colset(magentamap, 177, 177, 178, 178, 178, 180, 180, 180, 182, 182, 182, 182, 184, 184, 184, 185);
-	colset(yellowmap,   82,  82,  73,  73,  73,  64,  64,  64,  66,  66,  66,  66,  67,  67,  67,  68);
-	colset(lgreenmap,   96,  96,  98,  98,  98, 101, 101, 101, 104, 104, 104, 104, 106, 106, 106, 107);
-	colset(bluemap,    146, 146, 147, 147, 147, 149, 149, 149, 152, 152, 152, 152, 155, 155, 155, 157);
-	colset(redmap,      32,  32,  33,  33,  33,  35,  35,  35,  39,  39,  39,  39,  42,  42,  42,  44);
+	colset(yellowmap,   82,  82,  73,  73,  73,  74,  74,  74,  66,  66,  66,  66,  67,  67,  67,  68);
+	colset(lgreenmap,   96,  96,  98,  98,  98, 100, 100, 100, 103, 103, 103, 103, 105, 105, 105, 107);
+	colset(bluemap,    146, 146, 147, 147, 147, 148, 148, 148, 149, 149, 149, 149, 150, 150, 150, 151);
+	colset(redmap,      32,  32,  33,  33,  33,  34,  34,  34,  35,  35,  35,  35,  37,  37,  37,  39);
 	colset(graymap,      8,   9,  10,  11,  12,  13,  14,  15,  16,  17,  18,  19,  20,  21,  22,  23);
 	colset(orangemap,   50,  50,  52,  52,  52,  54,  54,  54,  56,  56,  56,  56,  59,  59,  59,  60);
 	colset(skymap,     129, 129, 130, 130, 130, 131, 131, 131, 133, 133, 133, 133, 135, 135, 135, 136);
 	colset(purplemap,  160, 160, 161, 161, 161, 162, 162, 162, 163, 163, 163, 163, 164, 164, 164, 165);
 	colset(aquamap,    120, 120, 121, 121, 121, 122, 122, 122, 123, 123, 123, 123, 124, 124, 124, 125);
-	colset(peridotmap,  72,  72, 188, 188, 189, 189, 189, 189, 190, 190, 190, 190, 191, 191, 191,  94);
+	colset(peridotmap,  73,  73, 188, 188, 188, 189, 189, 189, 190, 190, 190, 190, 191, 191, 191,  94);
 	colset(azuremap,   144, 144, 145, 145, 145, 146, 146, 146, 170, 170, 170, 170, 171, 171, 171, 172);
 	colset(brownmap,   219, 219, 221, 221, 221, 222, 222, 222, 224, 224, 224, 224, 227, 227, 227, 229);
 	colset(rosymap,    200, 200, 201, 201, 201, 202, 202, 202, 203, 203, 203, 203, 204, 204, 204, 205);
@@ -443,7 +456,7 @@ void CON_Init(void)
 
 	// register our commands
 	//
-	COM_AddCommand("cls", CONS_Clear_f);
+	COM_AddCommand("cls", CONS_Clear_f, 0);
 	//COM_AddCommand("english", CONS_English_f);
 	// set console full screen for game startup MAKE SURE VID_Init() done !!!
 	Lock_state();
@@ -470,7 +483,7 @@ void CON_Init(void)
 		CV_RegisterVar(&cons_height);
 		CV_RegisterVar(&cons_backpic);
 		CV_RegisterVar(&cons_backcolor);
-		COM_AddCommand("bind", CONS_Bind_f);
+		COM_AddCommand("bind", CONS_Bind_f, 0);
 	}
 	else
 	{
@@ -643,32 +656,38 @@ static void CON_ChangeHeight(void)
 //
 static void CON_MoveConsole(void)
 {
-	fixed_t conspeed;
+	static fixed_t fracmovement = 0;
 
 	Lock_state();
-
-	conspeed = FixedDiv(cons_speed.value*vid.fdupy, FRACUNIT);
 
 	// instant
 	if (!cons_speed.value)
 	{
 		con_curlines = con_destlines;
+		Unlock_state();
 		return;
 	}
 
-	// up/down move to dest
-	if (con_curlines < con_destlines)
+	// Not instant - Increment fracmovement fractionally
+	fracmovement += FixedMul(cons_speed.value*vid.fdupy, renderdeltatics);
+
+	if (con_curlines < con_destlines) // Move the console downwards
 	{
-		con_curlines += FixedInt(conspeed);
-		if (con_curlines > con_destlines)
-			con_curlines = con_destlines;
+		con_curlines += FixedInt(fracmovement); // Move by fracmovement's integer value
+		if (con_curlines > con_destlines) // If we surpassed the destination...
+			con_curlines = con_destlines; // ...clamp to it!
 	}
-	else if (con_curlines > con_destlines)
+	else // Move the console upwards
 	{
-		con_curlines -= FixedInt(conspeed);
+		con_curlines -= FixedInt(fracmovement);
 		if (con_curlines < con_destlines)
 			con_curlines = con_destlines;
+
+		if (con_destlines == 0) // If the console is being closed, not just moved up...
+			con_tick = 0; // ...don't show the blinking cursor
 	}
+
+	fracmovement %= FRACUNIT; // Reset fracmovement's integer value, but keep the fraction
 
 	Unlock_state();
 }
@@ -751,10 +770,6 @@ void CON_Ticker(void)
 		else
 			CON_ChangeHeight();
 	}
-
-	// console movement
-	if (con_destlines != con_curlines)
-		CON_MoveConsole();
 
 	// clip the view, so that the part under the console is not drawn
 	con_clipviewtop = -1;
@@ -1809,41 +1824,41 @@ static void CON_DrawConsole(void)
 	}
 
 	// draw console text lines from top to bottom
-	if (con_curlines < minheight)
-		return;
-
-	i = con_cy - con_scrollup;
-
-	// skip the last empty line due to the cursor being at the start of a new line
-	i--;
-
-	i -= (con_curlines - minheight) / charheight;
-
-	if (rendermode == render_none) return;
-
-	for (y = (con_curlines-minheight) % charheight; y <= con_curlines-minheight; y += charheight, i++)
+	if (con_curlines >= minheight)
 	{
-		INT32 x;
-		size_t c;
+		i = con_cy - con_scrollup;
 
-		p = (UINT8 *)&con_buffer[((i > 0 ? i : 0)%con_totallines)*con_width];
+		// skip the last empty line due to the cursor being at the start of a new line
+		i--;
 
-		for (c = 0, x = charwidth; c < con_width; c++, x += charwidth, p++)
+		i -= (con_curlines - minheight) / charheight;
+
+		if (rendermode == render_none) return;
+
+		for (y = (con_curlines-minheight) % charheight; y <= con_curlines-minheight; y += charheight, i++)
 		{
-			while (*p & 0x80)
+			INT32 x;
+			size_t c;
+
+			p = (UINT8 *)&con_buffer[((i > 0 ? i : 0)%con_totallines)*con_width];
+
+			for (c = 0, x = charwidth; c < con_width; c++, x += charwidth, p++)
 			{
-				charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
-				p++;
-				c++;
+				while (*p & 0x80)
+				{
+					charflags = (*p & 0x7f) << V_CHARCOLORSHIFT;
+					p++;
+					c++;
+				}
+				if (c >= con_width)
+					break;
+				V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 			}
-			if (c >= con_width)
-				break;
-			V_DrawCharacter(x, y, (INT32)(*p) | charflags | cv_constextsize.value | V_NOSCALESTART, true);
 		}
 	}
 
 	// draw prompt if enough place (not while game startup)
-	if ((con_curlines == con_destlines) && (con_curlines >= minheight) && !con_startup)
+	if ((con_curlines >= (minheight-charheight)) && !con_startup)
 		CON_DrawInput();
 }
 
@@ -1865,6 +1880,10 @@ void CON_Drawer(void)
 		if (con_curlines <= 0)
 			CON_ClearHUD();
 	}
+
+	// console movement
+	if (con_curlines != con_destlines)
+		CON_MoveConsole();
 
 	if (con_curlines > 0)
 		CON_DrawConsole();

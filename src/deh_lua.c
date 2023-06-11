@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -177,6 +177,9 @@ static inline int lib_freeslot(lua_State *L)
 		lua_remove(L, 1);
 		continue;
 	}
+
+	R_RefreshSprite2();
+
 	return r;
 }
 
@@ -328,12 +331,84 @@ static int ScanConstants(lua_State *L, boolean mathlib, const char *word)
 	}
 	else if (fastncmp("ML_", word, 3)) {
 		p = word+3;
-		for (i = 0; i < 16; i++)
-			if (ML_LIST[i] && fastcmp(p, ML_LIST[i])) {
+
+		for (i = 0; ML_LIST[i]; i++)
+			if (fastcmp(p, ML_LIST[i])) {
 				CacheAndPushConstant(L, word, ((lua_Integer)1<<i));
 				return 1;
 			}
+		// Aliases
+		if (fastcmp(p, "EFFECT1"))
+		{
+			lua_pushinteger(L, (lua_Integer)ML_SKEWTD);
+			return 1;
+		}
+		if (fastcmp(p, "EFFECT2"))
+		{
+			lua_pushinteger(L, (lua_Integer)ML_NOSKEW);
+			return 1;
+		}
+		if (fastcmp(p, "EFFECT3"))
+		{
+			lua_pushinteger(L, (lua_Integer)ML_MIDPEG);
+			return 1;
+		}
+		if (fastcmp(p, "EFFECT4"))
+		{
+			lua_pushinteger(L, (lua_Integer)ML_MIDSOLID);
+			return 1;
+		}
+		if (fastcmp(p, "EFFECT5"))
+		{
+			lua_pushinteger(L, (lua_Integer)ML_WRAPMIDTEX);
+			return 1;
+		}
 		if (mathlib) return luaL_error(L, "linedef flag '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("MSF_", word, 4)) {
+		p = word + 4;
+		for (i = 0; MSF_LIST[i]; i++)
+			if (fastcmp(p, MSF_LIST[i])) {
+				lua_pushinteger(L, ((lua_Integer)1 << i));
+				return 1;
+			}
+		if (fastcmp(p, "FLIPSPECIAL_BOTH"))
+		{
+			lua_pushinteger(L, (lua_Integer)MSF_FLIPSPECIAL_BOTH);
+			return 1;
+		}
+		if (mathlib) return luaL_error(L, "sector flag '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("SSF_", word, 4)) {
+		p = word + 4;
+		for (i = 0; SSF_LIST[i]; i++)
+			if (fastcmp(p, SSF_LIST[i])) {
+				lua_pushinteger(L, ((lua_Integer)1 << i));
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "sector special flag '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("SD_", word, 3)) {
+		p = word + 3;
+		for (i = 0; SD_LIST[i]; i++)
+			if (fastcmp(p, SD_LIST[i])) {
+				lua_pushinteger(L, i);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "sector damagetype '%s' could not be found.\n", word);
+		return 0;
+	}
+	else if (fastncmp("TO_", word, 3)) {
+		p = word + 3;
+		for (i = 0; TO_LIST[i]; i++)
+			if (fastcmp(p, TO_LIST[i])) {
+				lua_pushinteger(L, i);
+				return 1;
+			}
+		if (mathlib) return luaL_error(L, "sector triggerer '%s' could not be found.\n", word);
 		return 0;
 	}
 	else if (fastncmp("S_",word,2)) {

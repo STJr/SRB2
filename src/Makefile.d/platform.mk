@@ -64,6 +64,8 @@ ifdef UNIX
 include Makefile.d/nix.mk
 endif
 
-ifdef SDL
+ifeq ($(SDL), 1)
 include Makefile.d/sdl.mk
+else
+include Makefile.d/dummy.mk
 endif
