@@ -6718,7 +6718,7 @@ static void P_ConvertBinaryThingTypes(void)
 		}
 		
 		// Clear binary thing height hacks, to prevent interfering with UDMF-only flags
-		mapthings[i].options &= 8;
+		mapthings[i].options &= 0xF;
 	}
 }
 
