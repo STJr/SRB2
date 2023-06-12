@@ -4256,13 +4256,11 @@ void P_RadiusAttack(mobj_t *spot, mobj_t *source, fixed_t damagedist, UINT8 dama
 //  the way it was and call P_CheckSector (? was P_ChangeSector - Graue) again
 //  to undo the changes.
 //
-static boolean crushchange;
-static boolean nofit;
 
 //
 // PIT_ChangeSector
 //
-static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
+static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush, boolean crunch)
 {
 	mobj_t *killer = NULL;
 	//If a thing is both pushable and vulnerable, it doesn't block the crusher because it gets killed.
@@ -4286,11 +4284,7 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 	if (thing->z + thing->height > thing->ceilingz && thing->z <= thing->ceilingz)
 	{
 		if (immunepushable && thing->z + thing->height > thing->subsector->sector->ceilingheight)
-		{
-			//Thing is a pushable and blocks the moving ceiling
-			nofit = true;
-			return false;
-		}
+			return false; //Thing is a pushable and blocks the moving ceiling
 
 		//Check FOFs in the sector
 		if (thing->subsector->sector->ffloors && (realcrush || immunepushable))
@@ -4302,47 +4296,54 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 
 			for (rover = thing->subsector->sector->ffloors; rover; rover = rover->next)
 			{
-				if (!(((rover->fofflags & FOF_BLOCKPLAYER) && thing->player)
-				|| ((rover->fofflags & FOF_BLOCKOTHERS) && !thing->player)) || !(rover->fofflags & FOF_EXISTS))
+				thinker_t *think;
+
+				if (!(rover->fofflags & FOF_EXISTS))
+					continue;
+				if (thing->player && !(rover->fofflags & FOF_BLOCKPLAYER))
+					continue;
+				if (!thing->player && !(rover->fofflags & FOF_BLOCKOTHERS))
 					continue;
 
 				topheight = *rover->topheight;
 				bottomheight = *rover->bottomheight;
-				//topheight    = P_GetFFloorTopZAt   (rover, thing->x, thing->y);
-				//bottomheight = P_GetFFloorBottomZAt(rover, thing->x, thing->y);
+
+				if (bottomheight > thing->ceilingz)
+					continue;
 
 				delta1 = thing->z - (bottomheight + topheight)/2;
 				delta2 = thingtop - (bottomheight + topheight)/2;
-				if (bottomheight <= thing->ceilingz && abs(delta1) >= abs(delta2))
+				if (abs(delta1) < abs(delta2))
+					continue;
+
+				if (immunepushable)
+					return false; //FOF is blocked by pushable
+
+				if (!realcrush)
+					continue;
+
+				//If the thing was crushed by a crumbling FOF, reward the player who made it crumble!
+				for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
 				{
-					if (immunepushable)
-					{
-						//FOF is blocked by pushable
-						nofit = true;
-						return false;
-					}
-					else
-					{
-						//If the thing was crushed by a crumbling FOF, reward the player who made it crumble!
-						thinker_t *think;
-						crumble_t *crumbler;
+					crumble_t *crumbler;
 
-						for (think = thlist[THINK_MAIN].next; think != &thlist[THINK_MAIN]; think = think->next)
-						{
-							if (think->function.acp1 != (actionf_p1)T_StartCrumble)
-								continue;
+					if (think->function.acp1 != (actionf_p1)T_StartCrumble)
+						continue;
 
-							crumbler = (crumble_t *)think;
+					crumbler = (crumble_t *)think;
 
-							if (crumbler->player && crumbler->player->mo
-								&& crumbler->player->mo != thing
-								&& crumbler->actionsector == thing->subsector->sector
-								&& crumbler->sector == rover->master->frontsector)
-							{
-								killer = crumbler->player->mo;
-							}
-						}
-					}
+					if (!crumbler->player)
+						continue;
+					if (!crumbler->player->mo)
+						continue;
+					if (crumbler->player->mo == thing)
+						continue;
+					if (crumbler->actionsector != thing->subsector->sector)
+						continue;
+					if (crumbler->sector != rover->master->frontsector)
+						continue;
+
+					killer = crumbler->player->mo;
 				}
 			}
 		}
@@ -4358,11 +4359,132 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 		}
 	}
 
-	if (realcrush && crushchange)
+	if (realcrush && crunch)
 		P_DamageMobj(thing, NULL, NULL, 1, 0);
 
 	// keep checking (crush other things)
 	return true;
+}
+
+static boolean P_CheckSectorPolyObjects(sector_t *sector, boolean realcrush, boolean crunch)
+{
+	size_t i;
+
+	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
+	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
+	validcount++;
+
+	for (i = 0; i < sector->linecount; i++)
+	{
+		INT32 x, y;
+		polyobj_t *po = sector->lines[i]->polyobj;
+
+		if (!po)
+			continue;
+		if (po->validcount == validcount)
+			continue; // skip if already checked
+		if (!(po->flags & POF_SOLID))
+			continue;
+		if (po->lines[0]->backsector != sector) // Make sure you're currently checking the control sector
+			continue;
+
+		po->validcount = validcount;
+
+		for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
+		{
+			for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
+			{
+				mobj_t *mo;
+
+				if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
+					continue;
+
+				mo = blocklinks[y * bmapwidth + x];
+
+				for (; mo; mo = mo->bnext)
+				{
+					// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
+
+					if (!P_MobjInsidePolyobj(po, mo))
+						continue;
+
+					if (!PIT_ChangeSector(mo, realcrush, crunch) && !realcrush)
+						return false;
+				}
+			}
+		}
+	}
+
+	return true;
+}
+
+static boolean P_CheckTouchingThinglist(sector_t *sector, boolean realcrush, boolean crunch)
+{
+	msecnode_t *n;
+
+	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
+		n->visited = false;
+
+	do
+	{
+		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
+		{
+			if (n->visited)
+				continue;
+
+			n->visited = true; // mark thing as processed
+
+			if (n->m_thing->flags & MF_NOBLOCKMAP) //jff 4/7/98 don't do these
+				continue;
+
+			if (!PIT_ChangeSector(n->m_thing, realcrush, crunch) && !realcrush) // process it
+				return false;
+
+			break; // exit and start over
+		}
+	} while (n); // repeat from scratch until all things left are marked valid
+
+	return true;
+}
+
+static boolean P_CheckSectorFFloors(sector_t *sector, boolean realcrush, boolean crunch)
+{
+	sector_t *sec;
+	size_t i;
+
+	if (!sector->numattached)
+		return true;
+
+	for (i = 0; i < sector->numattached; i++)
+	{
+		sec = &sectors[sector->attached[i]];
+
+		sec->moved = true;
+
+		P_RecalcPrecipInSector(sec);
+
+		if (!sector->attachedsolid[i])
+			continue;
+
+		if (!P_CheckTouchingThinglist(sec, realcrush, crunch))
+			return false;
+	}
+
+	return true;
+}
+
+static boolean P_CheckSectorHelper(sector_t *sector, boolean realcrush, boolean crunch)
+{
+	if (!P_CheckSectorPolyObjects(sector, realcrush, crunch))
+		return false;
+
+	if (!P_CheckSectorFFloors(sector, realcrush, crunch))
+		return false;
+
+	// Mark all things invalid
+	sector->moved = true;
+
+	return P_CheckTouchingThinglist(sector, realcrush, crunch);
 }
 
 //
@@ -4370,12 +4492,6 @@ static boolean PIT_ChangeSector(mobj_t *thing, boolean realcrush)
 //
 boolean P_CheckSector(sector_t *sector, boolean crunch)
 {
-	msecnode_t *n;
-	size_t i;
-
-	nofit = false;
-	crushchange = crunch;
-
 	// killough 4/4/98: scan list front-to-back until empty or exhausted,
 	// restarting from beginning after each thing is processed. Avoids
 	// crashes, and is sure to examine all things in the sector, and only
@@ -4384,218 +4500,14 @@ boolean P_CheckSector(sector_t *sector, boolean crunch)
 	//
 	// killough 4/7/98: simplified to avoid using complicated counter
 
-
 	// First, let's see if anything will keep it from crushing.
-
-	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
-	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
-	validcount++;
-
-	for (i = 0; i < sector->linecount; i++)
-	{
-		if (sector->lines[i]->polyobj)
-		{
-			polyobj_t *po = sector->lines[i]->polyobj;
-			if (po->validcount == validcount)
-				continue; // skip if already checked
-			if (!(po->flags & POF_SOLID))
-				continue;
-			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
-			{
-				INT32 x, y;
-				po->validcount = validcount;
-
-				for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
-				{
-					for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
-					{
-						mobj_t *mo;
-
-						if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
-							continue;
-
-						mo = blocklinks[y * bmapwidth + x];
-
-						for (; mo; mo = mo->bnext)
-						{
-							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
-
-							if (!P_MobjInsidePolyobj(po, mo))
-								continue;
-
-							if (!PIT_ChangeSector(mo, false))
-							{
-								nofit = true;
-								return nofit;
-							}
-						}
-					}
-				}
-			}
-		}
-	}
-
-	if (sector->numattached)
-	{
-		sector_t *sec;
-		for (i = 0; i < sector->numattached; i++)
-		{
-			sec = &sectors[sector->attached[i]];
-			for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
-				n->visited = false;
-
-			sec->moved = true;
-
-			P_RecalcPrecipInSector(sec);
-
-			if (!sector->attachedsolid[i])
-				continue;
-
-			do
-			{
-				for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
-				if (!n->visited)
-				{
-					n->visited = true;
-					if (!(n->m_thing->flags & MF_NOBLOCKMAP))
-					{
-						if (!PIT_ChangeSector(n->m_thing, false))
-						{
-							nofit = true;
-							return nofit;
-						}
-					}
-					break;
-				}
-			} while (n);
-		}
-	}
-
-	// Mark all things invalid
-	sector->moved = true;
-
-	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
-		n->visited = false;
-
-	do
-	{
-		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
-			if (!n->visited) // unprocessed thing found
-			{
-				n->visited = true; // mark thing as processed
-				if (!(n->m_thing->flags & MF_NOBLOCKMAP)) //jff 4/7/98 don't do these
-				{
-					if (!PIT_ChangeSector(n->m_thing, false)) // process it
-					{
-						nofit = true;
-						return nofit;
-					}
-				}
-				break; // exit and start over
-			}
-	} while (n); // repeat from scratch until all things left are marked valid
+	if (!P_CheckSectorHelper(sector, false, crunch))
+		return true;
 
 	// Nothing blocked us, so lets crush for real!
+	P_CheckSectorHelper(sector, true, crunch);
 
-	// Sal: This stupid function chain is required to fix polyobjects not being able to crush.
-	// Monster Iestyn: don't use P_CheckSector actually just look for objects in the blockmap instead
-	validcount++;
-
-	for (i = 0; i < sector->linecount; i++)
-	{
-		if (sector->lines[i]->polyobj)
-		{
-			polyobj_t *po = sector->lines[i]->polyobj;
-			if (po->validcount == validcount)
-				continue; // skip if already checked
-			if (!(po->flags & POF_SOLID))
-				continue;
-			if (po->lines[0]->backsector == sector) // Make sure you're currently checking the control sector
-			{
-				INT32 x, y;
-				po->validcount = validcount;
-
-				for (y = po->blockbox[BOXBOTTOM]; y <= po->blockbox[BOXTOP]; ++y)
-				{
-					for (x = po->blockbox[BOXLEFT]; x <= po->blockbox[BOXRIGHT]; ++x)
-					{
-						mobj_t *mo;
-
-						if (x < 0 || y < 0 || x >= bmapwidth || y >= bmapheight)
-							continue;
-
-						mo = blocklinks[y * bmapwidth + x];
-
-						for (; mo; mo = mo->bnext)
-						{
-							// Monster Iestyn: do we need to check if a mobj has already been checked? ...probably not I suspect
-
-							if (!P_MobjInsidePolyobj(po, mo))
-								continue;
-
-							PIT_ChangeSector(mo, true);
-							return nofit;
-						}
-					}
-				}
-			}
-		}
-	}
-	if (sector->numattached)
-	{
-		sector_t *sec;
-		for (i = 0; i < sector->numattached; i++)
-		{
-			sec = &sectors[sector->attached[i]];
-			for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
-				n->visited = false;
-
-			sec->moved = true;
-
-			P_RecalcPrecipInSector(sec);
-
-			if (!sector->attachedsolid[i])
-				continue;
-
-			do
-			{
-				for (n = sec->touching_thinglist; n; n = n->m_thinglist_next)
-				if (!n->visited)
-				{
-					n->visited = true;
-					if (!(n->m_thing->flags & MF_NOBLOCKMAP))
-					{
-						PIT_ChangeSector(n->m_thing, true);
-						return nofit;
-					}
-					break;
-				}
-			} while (n);
-		}
-	}
-
-	// Mark all things invalid
-	sector->moved = true;
-
-	for (n = sector->touching_thinglist; n; n = n->m_thinglist_next)
-		n->visited = false;
-
-	do
-	{
-		for (n = sector->touching_thinglist; n; n = n->m_thinglist_next) // go through list
-			if (!n->visited) // unprocessed thing found
-			{
-				n->visited = true; // mark thing as processed
-				if (!(n->m_thing->flags & MF_NOBLOCKMAP)) //jff 4/7/98 don't do these
-				{
-					PIT_ChangeSector(n->m_thing, true); // process it
-					return nofit;
-				}
-				break; // exit and start over
-			}
-	} while (n); // repeat from scratch until all things left are marked valid
-
-	return nofit;
+	return false;
 }
 
 /*
