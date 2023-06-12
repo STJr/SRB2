@@ -1092,12 +1092,14 @@ void Y_Ticker(void)
 			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
-			if (!(netgame || multiplayer) && !demoplayback)
+			if (!demoplayback)
 			{
-				if (M_UpdateUnlockablesAndExtraEmblems())
+				M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+				if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 					S_StartSound(NULL, sfx_s3k68);
 
-				G_SaveGameData();
+				G_SaveGameData(clientGamedata);
 			}
 		}
 		else if (!(intertic & 1))
@@ -1228,12 +1230,14 @@ void Y_Ticker(void)
 			S_StartSound(NULL, (gottoken ? sfx_token : sfx_chchng)); // cha-ching!
 
 			// Update when done with tally
-			if (!(netgame || multiplayer) && !demoplayback)
+			if (!demoplayback)
 			{
-				if (M_UpdateUnlockablesAndExtraEmblems())
+				M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+
+				if (M_UpdateUnlockablesAndExtraEmblems(clientGamedata))
 					S_StartSound(NULL, sfx_s3k68);
 
-				G_SaveGameData();
+				G_SaveGameData(clientGamedata);
 			}
 		}
 		else if (!(intertic & 1))

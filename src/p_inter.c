@@ -164,6 +164,62 @@ boolean P_CanPickupItem(player_t *player, boolean weapon)
 	return true;
 }
 
+boolean P_CanPickupEmblem(player_t *player, INT32 emblemID)
+{
+	emblem_t *emblem = NULL;
+
+	if (emblemID < 0 || emblemID >= numemblems)
+	{
+		// Invalid emblem ID, can't pickup.
+		return false;
+	}
+
+	emblem = &emblemlocations[emblemID];
+
+	if (demoplayback)
+	{
+		// Never collect emblems in replays.
+		return false;
+	}
+
+	if (player->bot && player->bot != BOT_MPAI)
+	{
+		// Your little lap-dog can't grab these for you.
+		return false;
+	}
+
+	if (emblem->type == ET_SKIN)
+	{
+		INT32 skinnum = M_EmblemSkinNum(emblem);
+
+		if (player->skin != skinnum)
+		{
+			// Incorrect skin to pick up this emblem.
+			return false;
+		}
+	}
+
+	return true;
+}
+
+boolean P_EmblemWasCollected(INT32 emblemID)
+{
+	if (emblemID < 0 || emblemID >= numemblems)
+	{
+		// Invalid emblem ID, can't pickup.
+		return true;
+	}
+
+	if (shareEmblems && !serverGamedata->collected[emblemID])
+	{
+		// It can be worth collecting again if we're sharing emblems
+		// and the server doesn't have it.
+		return false;
+	}
+
+	return clientGamedata->collected[emblemID];
+}
+
 //
 // P_DoNightsScore
 //
@@ -738,13 +794,70 @@ void P_TouchSpecialThing(mobj_t *special, mobj_t *toucher, boolean heightcheck)
 		// Secret emblem thingy
 		case MT_EMBLEM:
 			{
-				if (demoplayback || (player->bot && player->bot != BOT_MPAI) || special->health <= 0 || special->health > MAXEMBLEMS)
-					return;
-				emblemlocations[special->health-1].collected = true;
+				const boolean toucherIsServer = ((player - players) == serverplayer);
+				const boolean consoleIsServer = (consoleplayer == serverplayer);
+				boolean prevCollected = false;
 
-				M_UpdateUnlockablesAndExtraEmblems();
-				G_SaveGameData();
-				break;
+				if ((special->flags2 & MF2_NIGHTSPULL)
+					&& (toucher == special->tracer))
+				{
+					// Since collecting may not remove the object,
+					// we need to manually stop it from chasing.
+					P_SetTarget(&special->tracer, NULL);
+					special->flags2 &= ~MF2_NIGHTSPULL;
+					special->movefactor = 0;
+					special->momx = special->momy = special->momz = 0;
+				}
+
+				if (!P_CanPickupEmblem(player, special->health - 1))
+				{
+					return;
+				}
+
+				prevCollected = P_EmblemWasCollected(special->health - 1);
+
+				if (toucherIsServer || shareEmblems)
+				{
+					serverGamedata->collected[special->health-1] = true;
+					M_SilentUpdateUnlockablesAndEmblems(serverGamedata);
+				}
+
+				if (P_IsLocalPlayer(player) || (consoleIsServer && shareEmblems))
+				{
+					clientGamedata->collected[special->health-1] = true;
+					M_UpdateUnlockablesAndExtraEmblems(clientGamedata);
+					G_SaveGameData(clientGamedata);
+				}
+
+				if (netgame)
+				{
+					// This always spawns the object to prevent mobjnum issues,
+					// but makes the effect invisible to whoever it doesn't matter to.
+					mobj_t *spark = P_SpawnMobjFromMobj(special, 0, 0, 0, MT_SPARK);
+
+					if (prevCollected == false && P_EmblemWasCollected(special->health - 1) == true)
+					{
+						// Play the sound if it was collected.
+						S_StartSound((shareEmblems ? NULL : special), special->info->deathsound);
+					}
+					else
+					{
+						// We didn't collect it, make it invisible to us.
+						spark->flags2 |= MF2_DONTDRAW;
+					}
+
+					return;
+				}
+				else
+				{
+					if (prevCollected == false && P_EmblemWasCollected(special->health - 1) == true)
+					{
+						// Disappear when collecting for local games.
+						break;
+					}
+
+					return;
+				}
 			}
 
 		// CTF Flags

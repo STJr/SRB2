@@ -1732,7 +1732,7 @@ static void ST_drawNightsRecords(void)
 			ST_DrawNightsOverlayNum((BASEVIDWIDTH/2 + 56)<<FRACBITS, 160<<FRACBITS, FRACUNIT, aflag, stplyr->lastmarescore, nightsnum, SKINCOLOR_AZURE);
 
 			// If new record, say so!
-			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1) <= stplyr->lastmarescore)
+			if (!(netgame || multiplayer) && G_GetBestNightsScore(gamemap, stplyr->lastmare + 1, clientGamedata) <= stplyr->lastmarescore)
 			{
 				if (stplyr->texttimer & 16)
 					V_DrawCenteredString(BASEVIDWIDTH/2, 184, V_YELLOWMAP|aflag, "* NEW RECORD *");
@@ -2580,7 +2580,7 @@ static void ST_doHuntIconsAndSound(void)
 		S_StartSound(NULL, sfx_emfind);
 }
 
-static void ST_doItemFinderIconsAndSound(void)
+static boolean ST_doItemFinderIconsAndSound(void)
 {
 	INT32 emblems[16];
 	thinker_t *th;
@@ -2591,6 +2591,12 @@ static void ST_doItemFinderIconsAndSound(void)
 	INT32 interval = 0, newinterval = 0;
 	INT32 soffset;
 
+	if (!(cv_itemfinder.value && M_SecretUnlocked(SECRET_ITEMFINDER, clientGamedata)))
+	{
+		// Not unlocked, or not enabled. Use emerald hunt radar.
+		return false;
+	}
+
 	for (i = 0; i < numemblems; ++i)
 	{
 		if (emblemlocations[i].type > ET_SKIN || emblemlocations[i].level != gamemap)
@@ -2598,15 +2604,21 @@ static void ST_doItemFinderIconsAndSound(void)
 
 		emblems[stemblems++] = i;
 
-		if (!emblemlocations[i].collected)
+		if (!P_EmblemWasCollected(i) && P_CanPickupEmblem(stplyr, i))
+		{
 			++stunfound;
+		}
 
 		if (stemblems >= 16)
 			break;
 	}
+
 	// Found all/none exist? Don't waste our time
 	if (!stunfound)
-		return;
+	{
+		// Allow emerald hunt radar to function after they're all collected.
+		return false;
+	}
 
 	// Scan thinkers to find emblem mobj with these ids
 	for (th = thlist[THINK_MOBJ].next; th != &thlist[THINK_MOBJ]; th = th->next)
@@ -2626,6 +2638,9 @@ static void ST_doItemFinderIconsAndSound(void)
 		{
 			if (mo2->health == emblems[i] + 1)
 			{
+				if (P_EmblemWasCollected(emblems[i]) || !P_CanPickupEmblem(stplyr, emblems[i]))
+					break;
+
 				soffset = (i * 20) - ((stemblems - 1) * 10);
 
 				newinterval = ST_drawEmeraldHuntIcon(mo2, itemhoming, soffset);
@@ -2640,6 +2655,8 @@ static void ST_doItemFinderIconsAndSound(void)
 
 	if (!(P_AutoPause() || paused) && interval > 0 && leveltime && leveltime % interval == 0 && renderisnewtic)
 		S_StartSound(NULL, sfx_emfind);
+
+	return true;
 }
 
 //
@@ -2758,9 +2775,7 @@ static void ST_overlayDrawer(void)
 			ST_drawRaceHUD();
 
 		// Emerald Hunt Indicators
-		if (cv_itemfinder.value && M_SecretUnlocked(SECRET_ITEMFINDER))
-			ST_doItemFinderIconsAndSound();
-		else
+		if (!ST_doItemFinderIconsAndSound())
 			ST_doHuntIconsAndSound();
 
 		if(!P_IsLocalPlayer(stplyr))

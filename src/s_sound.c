@@ -1692,6 +1692,7 @@ UINT8 soundtestpage = 1;
 //
 boolean S_PrepareSoundTest(void)
 {
+	gamedata_t *data = clientGamedata;
 	musicdef_t *def;
 	INT32 pos = numsoundtestdefs = 0;
 
@@ -1717,9 +1718,9 @@ boolean S_PrepareSoundTest(void)
 		if (!(def->soundtestpage & soundtestpage))
 			continue;
 		soundtestdefs[pos++] = def;
-		if (def->soundtestcond > 0 && !(mapvisited[def->soundtestcond-1] & MV_BEATEN))
+		if (def->soundtestcond > 0 && !(data->mapvisited[def->soundtestcond-1] & MV_BEATEN))
 			continue;
-		if (def->soundtestcond < 0 && !M_Achieved(-1-def->soundtestcond))
+		if (def->soundtestcond < 0 && !M_Achieved(-1-def->soundtestcond, data))
 			continue;
 		def->allowed = true;
 	}

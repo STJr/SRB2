@@ -3839,6 +3839,10 @@ void readmaincfg(MYFILE *f)
 			{
 				useContinues = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
 			}
+			else if (fastcmp(word, "SHAREEMBLEMS"))
+			{
+				shareEmblems = (UINT8)(value || word2[0] == 'T' || word2[0] == 'Y');
+			}
 
 			else if (fastcmp(word, "GAMEDATA"))
 			{
@@ -3849,7 +3853,7 @@ void readmaincfg(MYFILE *f)
 				if (!GoodDataFileName(word2))
 					I_Error("Maincfg: bad data file name '%s'\n", word2);
 
-				G_SaveGameData();
+				G_SaveGameData(clientGamedata);
 				strlcpy(gamedatafilename, word2, sizeof (gamedatafilename));
 				strlwr(gamedatafilename);
 				savemoddata = true;
