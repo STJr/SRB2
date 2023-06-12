@@ -710,20 +710,23 @@ void LUA_DumpFile(const char *filename)
 
 fixed_t LUA_EvalMath(const char *word)
 {
-	lua_State *L = NULL;
+	static lua_State *L = NULL;
 	char buf[1024], *b;
 	const char *p;
 	fixed_t res = 0;
 
-	// make a new state so SOC can't interefere with scripts
-	// allocate state
-	L = lua_newstate(LUA_Alloc, NULL);
-	lua_atpanic(L, LUA_Panic);
+	if (!L)
+	{
+		// make a new state so SOC can't interefere with scripts
+		// allocate state
+		L = lua_newstate(LUA_Alloc, NULL);
+		lua_atpanic(L, LUA_Panic);
 
-	// open only enum lib
-	lua_pushcfunction(L, LUA_EnumLib);
-	lua_pushboolean(L, true);
-	lua_call(L, 1, 0);
+		// open only enum lib
+		lua_pushcfunction(L, LUA_EnumLib);
+		lua_pushboolean(L, true);
+		lua_call(L, 1, 0);
+	}
 
 	// change ^ into ^^ for Lua.
 	strcpy(buf, "return ");
@@ -748,8 +751,6 @@ fixed_t LUA_EvalMath(const char *word)
 	else
 		res = lua_tointeger(L, -1);
 
-	// clean up and return.
-	lua_close(L);
 	return res;
 }
 
