@@ -2391,7 +2391,8 @@ void G_Ticker(boolean run)
 			break;
 
 		case GS_TIMEATTACK:
-			F_MenuPresTicker(run);
+			if (run)
+				F_MenuPresTicker();
 			break;
 
 		case GS_INTRO:
@@ -2439,7 +2440,8 @@ void G_Ticker(boolean run)
 				// then intentionally fall through
 			/* FALLTHRU */
 		case GS_WAITINGPLAYERS:
-			F_MenuPresTicker(run);
+			if (run)
+				F_MenuPresTicker();
 			F_TitleScreenTicker(run);
 			break;
 

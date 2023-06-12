@@ -5981,7 +5981,7 @@ static void M_DrawLevelPlatterMenu(void)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 		else if (!curbghide || !titlemapinaction)
 		{
-			F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+			F_SkyScroll(curbgname);
 			// Draw and animate foreground
 			if (!strncmp("RECATKBG", curbgname, 8))
 				M_DrawRecordAttackForeground();
@@ -6243,7 +6243,7 @@ static void M_DrawMessageMenu(void)
 			}
 			else
 			{
-				F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+				F_SkyScroll(curbgname);
 				if (!strncmp("RECATKBG", curbgname, 8))
 					M_DrawRecordAttackForeground();
 			}
@@ -9938,7 +9938,7 @@ void M_DrawTimeAttackMenu(void)
 		V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, curbgcolor);
 	else if (!curbghide || !titlemapinaction)
 	{
-		F_SkyScroll(curbgxspeed, curbgyspeed, curbgname);
+		F_SkyScroll(curbgname);
 		// Draw and animate foreground
 		if (!strncmp("RECATKBG", curbgname, 8))
 			M_DrawRecordAttackForeground();
