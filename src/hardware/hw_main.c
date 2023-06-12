@@ -3606,6 +3606,8 @@ static void HWR_DrawDropShadow(mobj_t *thing, fixed_t scale)
 
 	scalemul = FixedMul(FRACUNIT - floordiff/640, scale);
 	scalemul = FixedMul(scalemul, (thing->radius*2) / gpatch->height);
+	if ((thing->scale != thing->old_scale) && (thing->scale >= FRACUNIT/1024)) // Interpolate shadows when scaling mobjs
+		scalemul = FixedMul(scalemul, FixedDiv(interp.scale, thing->scale));
 
 	fscale = FIXED_TO_FLOAT(scalemul);
 	fx = FIXED_TO_FLOAT(interp.x);
