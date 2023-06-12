@@ -975,7 +975,7 @@ static menuitem_t MP_MainMenu[] =
 {
 	{IT_HEADER, NULL, "Join a game", NULL, 0},
 	{IT_STRING|IT_CALL,       NULL, "Server browser...",     M_ConnectMenuModChecks,          12},
-	{IT_STRING|IT_KEYHANDLER, NULL, "Specify IPv4 address:", M_HandleConnectIP,      22},
+	{IT_STRING|IT_KEYHANDLER, NULL, "Specify server address:", M_HandleConnectIP,    22},
 	{IT_HEADER, NULL, "Host a game", NULL, 54},
 	{IT_STRING|IT_CALL,       NULL, "Internet/LAN...",       M_StartServerMenu,      66},
 	{IT_STRING|IT_CALL,       NULL, "Splitscreen...",        M_StartSplitServerMenu, 76},
@@ -11738,34 +11738,18 @@ static void M_StartServerMenu(INT32 choice)
 
 #define CONNIP_LEN 128
 static char setupm_ip[CONNIP_LEN];
-
 #define DOTS "... "
 
-// Draw the funky Connect IP menu. Tails 11-19-2002
-// So much work for such a little thing!
-static void M_DrawMPMainMenu(void)
+static void M_DrawConnectIP(void)
 {
 	INT32 x = currentMenu->x;
-	INT32 y = currentMenu->y;
+	INT32 y = currentMenu->y + 22;
+
 	const INT32 boxwidth = /*16*8 + 6*/ (BASEVIDWIDTH - 2*(x+5));
 	const INT32 maxstrwidth = boxwidth - 5;
 	char *drawnstr = malloc(sizeof(setupm_ip));
 	char *drawnstr_orig = drawnstr;
 	boolean drawthin, shorten = false;
-
-	// use generic drawer for cursor, items and title
-	M_DrawGenericMenu();
-
-	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+66,
-		((itemOn == 4) ? V_YELLOWMAP : 0), va("(2-%d players)", MAXPLAYERS));
-
-	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+76,
-		((itemOn == 5) ? V_YELLOWMAP : 0), "(2 players)");
-
-	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+116,
-		((itemOn == 8) ? V_YELLOWMAP : 0), "(splitscreen)");
-
-	y += 22;
 
 	V_DrawFill(x+5, y+4+5, boxwidth, 8+6, 159);
 
@@ -11812,6 +11796,28 @@ static void M_DrawMPMainMenu(void)
 	}
 
 	free(drawnstr_orig);
+}
+
+// Draw the funky Connect IP menu. Tails 11-19-2002
+// So much work for such a little thing!
+static void M_DrawMPMainMenu(void)
+{
+	INT32 x = currentMenu->x;
+	INT32 y = currentMenu->y;
+
+	// use generic drawer for cursor, items and title
+	M_DrawGenericMenu();
+
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+66,
+		((itemOn == 4) ? V_YELLOWMAP : 0), va("(2-%d players)", MAXPLAYERS));
+
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+76,
+		((itemOn == 5) ? V_YELLOWMAP : 0), "(2 players)");
+
+	V_DrawRightAlignedString(BASEVIDWIDTH-x, y+116,
+		((itemOn == 8) ? V_YELLOWMAP : 0), "(splitscreen)");
+
+	M_DrawConnectIP();
 }
 
 #undef DOTS
@@ -11951,7 +11957,11 @@ static void M_HandleConnectIP(INT32 choice)
 				break;
 
 			// Rudimentary number and period enforcing - also allows letters so hostnames can be used instead
-			if ((choice >= '-' && choice <= ':') || (choice >= 'A' && choice <= 'Z') || (choice >= 'a' && choice <= 'z'))
+			// and square brackets for RFC 2732 IPv6 addresses
+			if ((choice >= '-' && choice <= ':') ||
+					(choice == '[' || choice == ']') ||
+					(choice >= 'A' && choice <= 'Z') ||
+					(choice >= 'a' && choice <= 'z'))
 			{
 				S_StartSound(NULL,sfx_menu1); // Tails
 				setupm_ip[l] = (char)choice;
