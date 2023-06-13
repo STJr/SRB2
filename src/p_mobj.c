@@ -13687,7 +13687,6 @@ void P_SpawnItemPattern(mapthing_t *mthing, boolean bonustime)
 		UINT8 numitemtypes;
 		if (!udmf)
 			return;
-		CONS_Printf("Itemstring: %s\n", mthing->stringargs[0]);
 		P_ParseItemTypes(mthing->stringargs[0], itemtypes, &numitemtypes);
 		P_SpawnItemCircle(mthing, itemtypes, numitemtypes, mthing->args[0], mthing->args[1] << FRACBITS, bonustime);
 		return;
