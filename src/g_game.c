@@ -2437,12 +2437,15 @@ void G_Ticker(boolean run)
 		case GS_TITLESCREEN:
 			if (titlemapinaction)
 				P_Ticker(run);
-				// then intentionally fall through
-			/* FALLTHRU */
-		case GS_WAITINGPLAYERS:
 			if (run)
 				F_MenuPresTicker();
 			F_TitleScreenTicker(run);
+			break;
+
+		case GS_WAITINGPLAYERS:
+			if (netgame)
+				F_WaitingPlayersTicker();
+			HU_Ticker();
 			break;
 
 		case GS_DEDICATEDSERVER:

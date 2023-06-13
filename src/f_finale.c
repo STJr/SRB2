@@ -4660,3 +4660,36 @@ void F_TextPromptTicker(void)
 			animtimer--;
 	}
 }
+
+// ================
+//  WAITINGPLAYERS
+// ================
+
+void F_StartWaitingPlayers(void)
+{
+	wipegamestate = GS_TITLESCREEN; // technically wiping from title screen
+	finalecount = 0;
+}
+
+void F_WaitingPlayersTicker(void)
+{
+	if (paused)
+		return;
+
+	finalecount++;
+
+	// dumb hack, only start the music on the 1st tick so if you instantly go into the map you aren't hearing a tic of music
+	if (finalecount == 2)
+		S_ChangeMusicInternal("_CHSEL", true);
+}
+
+void F_WaitingPlayersDrawer(void)
+{
+	const char *waittext1 = "You will join";
+	const char *waittext2 = "next level...";
+
+	V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 31);
+
+	V_DrawCreditString((160 - (V_CreditStringWidth(waittext1)>>1))<<FRACBITS, 48<<FRACBITS, 0, waittext1);
+	V_DrawCreditString((160 - (V_CreditStringWidth(waittext2)>>1))<<FRACBITS, 64<<FRACBITS, 0, waittext2);
+}
