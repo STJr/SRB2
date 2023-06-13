@@ -125,12 +125,12 @@ static void CONS_backcolor_Change(void);
 static char con_buffer[CON_BUFFERSIZE];
 
 // how many seconds the hud messages lasts on the screen
-// CV_Unsigned can overflow when multiplied by TICRATE later, so let's use a 24-hour limit instead
-static CV_PossibleValue_t hudtime_cons_t[] = {{0, "MIN"}, {86400, "MAX"}, {0, NULL}};
+// CV_Unsigned can overflow when multiplied by TICRATE later, so let's use a 3-year limit instead
+static CV_PossibleValue_t hudtime_cons_t[] = {{0, "MIN"}, {99999999, "MAX"}, {0, NULL}};
 static consvar_t cons_hudtime = CVAR_INIT ("con_hudtime", "5", CV_SAVE, hudtime_cons_t, NULL);
 
 // number of lines displayed on the HUD
-static CV_PossibleValue_t hudlines_cons_t[] = {{1, "MIN"}, {MAXHUDLINES, "MAX"}, {0, "None"}, {0, NULL}};
+static CV_PossibleValue_t hudlines_cons_t[] = {{0, "MIN"}, {MAXHUDLINES, "MAX"}, {0, NULL}};
 static consvar_t cons_hudlines = CVAR_INIT ("con_hudlines", "5", CV_CALL|CV_SAVE, hudlines_cons_t, CONS_hudlines_Change);
 
 // number of lines console move per frame
