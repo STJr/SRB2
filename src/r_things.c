@@ -1436,19 +1436,33 @@ static void R_ProjectBoundingBox(mobj_t *thing, vissprite_t *vis)
 		return;
 	}
 
+	// uncapped/interpolation
+	boolean interpolate = cv_renderhitboxinterpolation.value;
+	interpmobjstate_t interp = {0};
+
+	// do interpolation
+	if (R_UsingFrameInterpolation() && !paused && interpolate)
+	{
+		R_InterpolateMobjState(thing, rendertimefrac, &interp);
+	}
+	else
+	{
+		R_InterpolateMobjState(thing, FRACUNIT, &interp);
+	}
+
 	// 1--3
 	// |  |
 	// 0--2
 
 	// start in the (0) corner
-	gx = thing->x - thing->radius - viewx;
-	gy = thing->y - thing->radius - viewy;
+	gx = interp.x - thing->radius - viewx;
+	gy = interp.y - thing->radius - viewy;
 
 	tz = FixedMul(gx, viewcos) + FixedMul(gy, viewsin);
 
 	// thing is behind view plane?
 	// if parent vis is visible, ignore this
-	if (!vis && (tz < FixedMul(MINZ, thing->scale)))
+	if (!vis && (tz < FixedMul(MINZ, interp.scale)))
 	{
 		return;
 	}
@@ -1473,7 +1487,7 @@ static void R_ProjectBoundingBox(mobj_t *thing, vissprite_t *vis)
 	box->scale = 2 * FixedMul(thing->radius, viewsin);
 	box->xscale = 2 * FixedMul(thing->radius, viewcos);
 
-	box->pz = thing->z;
+	box->pz = interp.z;
 	box->pzt = box->pz + box->thingheight;
 
 	box->gzt = box->pzt;
