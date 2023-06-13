@@ -5686,9 +5686,22 @@ static void HWR_ProjectBoundingBox(mobj_t *thing)
 	if (!R_ThingBoundingBoxVisible(thing))
 		return;
 
+	// uncapped/interpolation
+	boolean interpolate = cv_renderhitboxinterpolation.value;
+	interpmobjstate_t interp = {0};
+
+	if (R_UsingFrameInterpolation() && !paused && interpolate)
+	{
+		R_InterpolateMobjState(thing, rendertimefrac, &interp);
+	}
+	else
+	{
+		R_InterpolateMobjState(thing, FRACUNIT, &interp);
+	}
+
 	// transform the origin point
-	tr_x = FIXED_TO_FLOAT(thing->x) - gl_viewx;
-	tr_y = FIXED_TO_FLOAT(thing->y) - gl_viewy;
+	tr_x = FIXED_TO_FLOAT(interp.x) - gl_viewx;
+	tr_y = FIXED_TO_FLOAT(interp.y) - gl_viewy;
 
 	// rotation around vertical axis
 	tz = (tr_x * gl_viewcos) + (tr_y * gl_viewsin);
@@ -5707,7 +5720,7 @@ static void HWR_ProjectBoundingBox(mobj_t *thing)
 	vis->x2 = tr_x + rad;
 	vis->z1 = tr_y - rad;
 	vis->z2 = tr_y + rad;
-	vis->gz = FIXED_TO_FLOAT(thing->z);
+	vis->gz = FIXED_TO_FLOAT(interp.z);
 	vis->gzt = vis->gz + FIXED_TO_FLOAT(thing->height);
 	vis->mobj = thing;
 
