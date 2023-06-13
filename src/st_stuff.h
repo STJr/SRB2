@@ -92,6 +92,7 @@ typedef struct
 typedef enum
 {
 	HUD_LIVES,
+	HUD_INPUT,
 
 	HUD_RINGS,
 	HUD_RINGSNUM,

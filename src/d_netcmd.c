@@ -203,6 +203,7 @@ static CV_PossibleValue_t matchboxes_cons_t[] = {{0, "Normal"}, {1, "Mystery"}, 
 static CV_PossibleValue_t chances_cons_t[] = {{0, "MIN"}, {9, "MAX"}, {0, NULL}};
 static CV_PossibleValue_t pause_cons_t[] = {{0, "Server"}, {1, "All"}, {0, NULL}};
 
+consvar_t cv_showinput = CVAR_INIT ("showinput", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
 consvar_t cv_showinputjoy = CVAR_INIT ("showinputjoy", "Off", CV_ALLOWLUA, CV_OnOff, NULL);
 
 #ifdef NETGAME_DEVMODE
@@ -720,6 +721,7 @@ void D_RegisterClientCommands(void)
 	CV_RegisterVar(&cv_timetic);
 	CV_RegisterVar(&cv_powerupdisplay);
 	CV_RegisterVar(&cv_itemfinder);
+	CV_RegisterVar(&cv_showinput);
 	CV_RegisterVar(&cv_showinputjoy);
 
 	// time attack ghost options are also saved to config
