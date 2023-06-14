@@ -5373,16 +5373,27 @@ void G_FreeMapSearch(mapsearchfreq_t *freq, INT32 freqc)
 INT32 G_FindMapByNameOrCode(const char *mapname, char **realmapnamep)
 {
 	boolean usemapcode = false;
-
 	INT32 newmapnum;
-
-	size_t mapnamelen;
-
+	size_t mapnamelen = strlen(mapname);
 	char *p;
 
-	mapnamelen = strlen(mapname);
-
-	if (mapnamelen == 2)/* maybe two digit code */
+	if (mapnamelen == 1)
+	{
+		if (strcmp(mapname, "*") == 0) // current map
+			return gamemap;
+		else if (strcmp(mapname, "+") == 0 && mapheaderinfo[gamemap-1]) // next map
+		{
+			newmapnum = mapheaderinfo[gamemap-1]->nextlevel;
+			if (newmapnum < 1 || newmapnum > NUMMAPS)
+			{
+				CONS_Alert(CONS_ERROR, M_GetText("NextLevel (%d) is not a valid map.\n"), newmapnum);
+				return 0;
+			}
+			else
+				return newmapnum;
+		}
+	}
+	else if (mapnamelen == 2)/* maybe two digit code */
 	{
 		if (( newmapnum = M_MapNumber(mapname[0], mapname[1]) ))
 			usemapcode = true;
