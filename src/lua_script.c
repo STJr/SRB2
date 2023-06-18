@@ -1729,15 +1729,37 @@ void LUA_UnArchive(void)
 }
 
 // For mobj_t, player_t, etc. to take custom variables.
-int Lua_optoption(lua_State *L, int narg,
-	const char *def, const char *const lst[])
+int Lua_optoption(lua_State *L, int narg, int def, int list_ref)
 {
-	const char *name = (def) ? luaL_optstring(L, narg, def) :  luaL_checkstring(L, narg);
-	int i;
-	for (i=0; lst[i]; i++)
-		if (fastcmp(lst[i], name))
-			return i;
+	if (lua_isnoneornil(L, narg))
+		return def;
+
+	I_Assert(lua_checkstack(L, 2));
+	luaL_checkstring(L, narg);
+
+	lua_rawgeti(L, LUA_REGISTRYINDEX, list_ref);
+	I_Assert(lua_istable(L, -1));
+	lua_pushvalue(L, narg);
+	lua_rawget(L, -2);
+
+	if (lua_isnumber(L, -1))
+		return lua_tointeger(L, -1);
 	return -1;
+}
+
+int Lua_CreateFieldTable(lua_State *L, const char *const lst[])
+{
+	int i;
+
+	lua_newtable(L);
+	for (i = 0; lst[i] != NULL; i++)
+	{
+		lua_pushstring(L, lst[i]);
+		lua_pushinteger(L, i);
+		lua_settable(L, -3);
+	}
+
+	return luaL_ref(L, LUA_REGISTRYINDEX);
 }
 
 void LUA_PushTaggableObjectArray
