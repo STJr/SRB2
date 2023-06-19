@@ -55,6 +55,7 @@ enum skin {
 	skin_soundsid,
 	skin_sprites
 };
+
 static const char *const skin_opt[] = {
 	"valid",
 	"name",
@@ -95,10 +96,12 @@ static const char *const skin_opt[] = {
 
 #define UNIMPLEMENTED luaL_error(L, LUA_QL("skin_t") " field " LUA_QS " is not implemented for Lua and cannot be accessed.", skin_opt[field])
 
+static int skin_fields_ref = LUA_NOREF;
+
 static int skin_get(lua_State *L)
 {
 	skin_t *skin = *((skin_t **)luaL_checkudata(L, 1, META_SKIN));
-	enum skin field = luaL_checkoption(L, 2, NULL, skin_opt);
+	enum skin field = Lua_optoption(L, 2, -1, skin_fields_ref);
 
 	// skins are always valid, only added, never removed
 	I_Assert(skin != NULL);
@@ -375,6 +378,8 @@ int LUA_SkinLib(lua_State *L)
 		lua_pushcfunction(L, skin_num);
 		lua_setfield(L, -2, "__len");
 	lua_pop(L,1);
+
+	skin_fields_ref = Lua_CreateFieldTable(L, skin_opt);
 
 	luaL_newmetatable(L, META_SOUNDSID);
 		lua_pushcfunction(L, soundsid_get);
