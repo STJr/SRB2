@@ -3139,7 +3139,8 @@ boolean P_SceneryZMovement(mobj_t *mo)
 
 	if (P_CheckDeathPitCollide(mo))
 	{
-		P_RemoveMobj(mo);
+		if (mo->type != MT_GHOST)  // ghosts play death animations instead, so don't remove them
+			P_RemoveMobj(mo);
 		return false;
 	}
 
