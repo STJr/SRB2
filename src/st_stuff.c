@@ -170,6 +170,7 @@ hudinfo_t hudinfo[NUMHUDITEMS] =
 static huddrawlist_h luahuddrawlist_game[2];
 static huddrawlist_h luahuddrawlist_titlecard;
 
+// NiGHTS link colors; 3 sets with increasingly fancy colors (1 to 299, 300 to 599, 600 and above)
 skincolornum_t linkColor[3][NUMLINKCOLORS] = {
 {SKINCOLOR_SHAMROCK, SKINCOLOR_AQUA, SKINCOLOR_SKY, SKINCOLOR_BLUE, SKINCOLOR_PURPLE, SKINCOLOR_MAGENTA,
  SKINCOLOR_ROSY, SKINCOLOR_RED, SKINCOLOR_ORANGE, SKINCOLOR_GOLD, SKINCOLOR_YELLOW, SKINCOLOR_PERIDOT},
@@ -1758,8 +1759,6 @@ static void ST_drawNightsRecords(void)
 			break;
 	}
 }
-
-// NiGHTS link colors; 3 sets with increasingly fancy colors (1 to 299, 300 to 599, 600 and above)
 
 static void ST_drawNiGHTSLink(void)
 {
