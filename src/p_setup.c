@@ -2934,7 +2934,7 @@ static void P_LoadTextmap(void)
 			sc->f_slope = MakeViaEquationConstants(textmap_planefloor.a, textmap_planefloor.b, textmap_planefloor.c, textmap_planefloor.d);
 			sc->hasslope = true;
 			if (sc->specialflags & SSF_NOPHYSICSFLOOR)
-				sc->f_slope->flags |= SL_NOPHYSICS|SL_DYNAMIC;
+				sc->f_slope->flags |= SL_NOPHYSICS;
         }
 
 		if (textmap_planeceiling.defined == (PD_A|PD_B|PD_C|PD_D))
@@ -2942,7 +2942,7 @@ static void P_LoadTextmap(void)
 			sc->c_slope = MakeViaEquationConstants(textmap_planeceiling.a, textmap_planeceiling.b, textmap_planeceiling.c, textmap_planeceiling.d);
 			sc->hasslope = true;
 			if (sc->specialflags & SSF_NOPHYSICSCEILING)
-				sc->c_slope->flags |= SL_NOPHYSICS|SL_DYNAMIC;
+				sc->c_slope->flags |= SL_NOPHYSICS;
         }
 
 		TextmapFixFlatOffsets(sc);
