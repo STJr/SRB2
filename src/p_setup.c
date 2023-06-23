@@ -1243,6 +1243,9 @@ static void P_LoadSidedefs(UINT8 *data)
 		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bot = 0;
 		sd->offsety_top = sd->offsety_mid = sd->offsety_bot = 0;
 
+		sd->scalex_top = sd->scalex_mid = sd->scalex_bot = FRACUNIT;
+		sd->scaley_top = sd->scaley_mid = sd->scaley_bot = FRACUNIT;
+
 		P_SetSidedefSector(i, SHORT(msd->sector));
 
 		// Special info stored in texture fields!
@@ -1792,6 +1795,18 @@ static void ParseTextmapSidedefParameter(UINT32 i, const char *param, const char
 		sides[i].offsety_mid = atol(val) << FRACBITS;
 	else if (fastcmp(param, "offsety_bottom"))
 		sides[i].offsety_bot = atol(val) << FRACBITS;
+	else if (fastcmp(param, "scalex_top"))
+		sides[i].scalex_top = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scalex_mid"))
+		sides[i].scalex_mid = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scalex_bottom"))
+		sides[i].scalex_bot = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_top"))
+		sides[i].scaley_top = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_mid"))
+		sides[i].scaley_mid = FLOAT_TO_FIXED(atof(val));
+	else if (fastcmp(param, "scaley_bottom"))
+		sides[i].scaley_bot = FLOAT_TO_FIXED(atof(val));
 	else if (fastcmp(param, "texturetop"))
 		sides[i].toptexture = R_TextureNumForName(val);
 	else if (fastcmp(param, "texturebottom"))
@@ -2488,6 +2503,18 @@ static void P_WriteTextmap(void)
 			fprintf(f, "offsetx_bottom = %d;\n", wsides[i].offsetx_bot >> FRACBITS);
 		if (wsides[i].offsety_bot != 0)
 			fprintf(f, "offsety_bottom = %d;\n", wsides[i].offsety_bot >> FRACBITS);
+		if (wsides[i].scalex_top != FRACUNIT)
+			fprintf(f, "scalex_top = %f;\n", FIXED_TO_FLOAT(wsides[i].scalex_top));
+		if (wsides[i].scaley_top != FRACUNIT)
+			fprintf(f, "scaley_top = %f;\n", FIXED_TO_FLOAT(wsides[i].scaley_top));
+		if (wsides[i].scalex_mid != FRACUNIT)
+			fprintf(f, "scalex_mid = %f;\n", FIXED_TO_FLOAT(wsides[i].scalex_mid));
+		if (wsides[i].scaley_mid != FRACUNIT)
+			fprintf(f, "scaley_mid = %f;\n", FIXED_TO_FLOAT(wsides[i].scaley_mid));
+		if (wsides[i].scalex_bot != FRACUNIT)
+			fprintf(f, "scalex_bottom = %f;\n", FIXED_TO_FLOAT(wsides[i].scalex_bot));
+		if (wsides[i].scaley_bot != FRACUNIT)
+			fprintf(f, "scaley_bottom = %f;\n", FIXED_TO_FLOAT(wsides[i].scaley_bot));
 		if (wsides[i].toptexture > 0 && wsides[i].toptexture < numtextures)
 			fprintf(f, "texturetop = \"%.*s\";\n", 8, textures[wsides[i].toptexture]->name);
 		if (wsides[i].bottomtexture > 0 && wsides[i].bottomtexture < numtextures)
@@ -2857,6 +2884,8 @@ static void P_LoadTextmap(void)
 		sd->rowoffset = 0;
 		sd->offsetx_top = sd->offsetx_mid = sd->offsetx_bot = 0;
 		sd->offsety_top = sd->offsety_mid = sd->offsety_bot = 0;
+		sd->scalex_top = sd->scalex_mid = sd->scalex_bot = FRACUNIT;
+		sd->scaley_top = sd->scaley_mid = sd->scaley_bot = FRACUNIT;
 		sd->toptexture = R_TextureNumForName("-");
 		sd->midtexture = R_TextureNumForName("-");
 		sd->bottomtexture = R_TextureNumForName("-");

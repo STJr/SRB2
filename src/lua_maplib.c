@@ -172,6 +172,12 @@ enum side_e {
 	side_offsety_mid,
 	side_offsetx_bot,
 	side_offsety_bot,
+	side_scalex_top,
+	side_scaley_top,
+	side_scalex_mid,
+	side_scaley_mid,
+	side_scalex_bot,
+	side_scaley_bot,
 	side_toptexture,
 	side_bottomtexture,
 	side_midtexture,
@@ -192,6 +198,12 @@ static const char *const side_opt[] = {
 	"offsety_mid",
 	"offsetx_bot",
 	"offsety_bot",
+	"scalex_top",
+	"scaley_top",
+	"scalex_mid",
+	"scaley_mid",
+	"scalex_bot",
+	"scaley_bot",
 	"toptexture",
 	"bottomtexture",
 	"midtexture",
@@ -1127,6 +1139,24 @@ static int side_get(lua_State *L)
 	case side_offsety_bot:
 		lua_pushfixed(L, side->offsety_bot);
 		return 1;
+	case side_scalex_top:
+		lua_pushfixed(L, side->scalex_top);
+		return 1;
+	case side_scaley_top:
+		lua_pushfixed(L, side->scaley_top);
+		return 1;
+	case side_scalex_mid:
+		lua_pushfixed(L, side->scalex_mid);
+		return 1;
+	case side_scaley_mid:
+		lua_pushfixed(L, side->scaley_mid);
+		return 1;
+	case side_scalex_bot:
+		lua_pushfixed(L, side->scalex_bot);
+		return 1;
+	case side_scaley_bot:
+		lua_pushfixed(L, side->scaley_bot);
+		return 1;
 	case side_toptexture:
 		lua_pushinteger(L, side->toptexture);
 		return 1;
@@ -1201,6 +1231,24 @@ static int side_set(lua_State *L)
 		break;
 	case side_offsety_bot:
 		side->offsety_bot = luaL_checkfixed(L, 3);
+		break;
+	case side_scalex_top:
+		side->scalex_top = luaL_checkfixed(L, 3);
+		break;
+	case side_scaley_top:
+		side->scaley_top = luaL_checkfixed(L, 3);
+		break;
+	case side_scalex_mid:
+		side->scalex_mid = luaL_checkfixed(L, 3);
+		break;
+	case side_scaley_mid:
+		side->scaley_mid = luaL_checkfixed(L, 3);
+		break;
+	case side_scalex_bot:
+		side->scalex_bot = luaL_checkfixed(L, 3);
+		break;
+	case side_scaley_bot:
+		side->scaley_bot = luaL_checkfixed(L, 3);
 		break;
 	case side_toptexture:
 		side->toptexture = luaL_checkinteger(L, 3);

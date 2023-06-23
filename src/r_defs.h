@@ -563,6 +563,9 @@ typedef struct
 	fixed_t offsetx_top, offsetx_mid, offsetx_bot;
 	fixed_t offsety_top, offsety_mid, offsety_bot;
 
+	fixed_t scalex_top, scalex_mid, scalex_bot;
+	fixed_t scaley_top, scaley_mid, scaley_bot;
+
 	// Texture indices.
 	// We do not maintain names here.
 	INT32 toptexture, bottomtexture, midtexture;

@@ -42,6 +42,10 @@ angle_t rw_normalangle;
 // angle to line origin
 angle_t rw_angle1;
 fixed_t rw_distance;
+// Horizontal scaling hack shenanigans.
+fixed_t rw_distance_scalex_top;
+fixed_t rw_distance_scalex_mid;
+fixed_t rw_distance_scalex_bot;
 
 //
 // regular wall
@@ -69,6 +73,7 @@ static fixed_t *rw_bsilheight = NULL;
 static fixed_t pixhigh, pixlow, pixhighstep, pixlowstep;
 static fixed_t topfrac, topstep;
 static fixed_t bottomfrac, bottomstep;
+static fixed_t topxscale, topyscale, midxscale, midyscale, botxscale, botyscale;
 
 static lighttable_t **walllights;
 static INT16 *maskedtexturecol;
@@ -1093,6 +1098,9 @@ static void R_RenderSegLoop (void)
 
 	INT32     mid;
 	fixed_t texturecolumn = 0;
+	fixed_t texturecolumn_top = 0;
+	fixed_t texturecolumn_mid = 0;
+	fixed_t texturecolumn_bot = 0;
 	fixed_t oldtexturecolumn = -1;
 	INT32     top;
 	INT32     bottom;
@@ -1261,6 +1269,9 @@ static void R_RenderSegLoop (void)
 		// calculate texture offset
 		angle = (rw_centerangle + xtoviewangle[rw_x])>>ANGLETOFINESHIFT;
 		texturecolumn = rw_offset-FixedMul(FINETANGENT(angle),rw_distance);
+		texturecolumn_top = (rw_offset_top - FixedMul(FINETANGENT(angle),rw_distance_scalex_top))>>FRACBITS;
+		texturecolumn_mid = (rw_offset_mid - FixedMul(FINETANGENT(angle),rw_distance_scalex_mid))>>FRACBITS;
+		texturecolumn_bot = (rw_offset_bot - FixedMul(FINETANGENT(angle),rw_distance_scalex_bot))>>FRACBITS;
 
 		if (oldtexturecolumn != -1) {
 			rw_bottomtexturemid += FixedMul(rw_bottomtextureslide,  oldtexturecolumn-texturecolumn);
@@ -1335,8 +1346,9 @@ static void R_RenderSegLoop (void)
 			{
 				dc_yl = yl;
 				dc_yh = yh;
-				dc_texturemid = rw_midtexturemid;
-				dc_source = R_GetColumn(midtexture,texturecolumn + (rw_offset_mid>>FRACBITS));
+				dc_texturemid = FixedMul(rw_midtexturemid, midyscale);
+				dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, midyscale);
+				dc_source = R_GetColumn(midtexture, texturecolumn_mid);
 				dc_texheight = textureheight[midtexture]>>FRACBITS;
 
 				//profile stuff ---------------------------------------------------------
@@ -1396,8 +1408,9 @@ static void R_RenderSegLoop (void)
 					{
 						dc_yl = yl;
 						dc_yh = mid;
-						dc_texturemid = rw_toptexturemid;
-						dc_source = R_GetColumn(toptexture,texturecolumn + (rw_offset_top>>FRACBITS));
+						dc_texturemid = FixedMul(rw_toptexturemid, topyscale);
+						dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, topyscale);
+						dc_source = R_GetColumn(toptexture, texturecolumn_top);
 						dc_texheight = textureheight[toptexture]>>FRACBITS;
 						colfunc();
 						ceilingclip[rw_x] = (INT16)mid;
@@ -1432,9 +1445,9 @@ static void R_RenderSegLoop (void)
 					{
 						dc_yl = mid;
 						dc_yh = yh;
-						dc_texturemid = rw_bottomtexturemid;
-						dc_source = R_GetColumn(bottomtexture,
-							texturecolumn + (rw_offset_bot>>FRACBITS));
+						dc_texturemid = FixedMul(rw_bottomtexturemid, botyscale);
+						dc_iscale = FixedMul(0xffffffffu / (unsigned)rw_scale, botyscale);
+						dc_source = R_GetColumn(bottomtexture, texturecolumn_bot);
 						dc_texheight = textureheight[bottomtexture]>>FRACBITS;
 						colfunc();
 						floorclip[rw_x] = (INT16)mid;
@@ -2305,10 +2318,22 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 
 		/// don't use texture offset for splats
 		rw_offset2 = rw_offset + curline->offset;
+
+		// Per-texture scaling, offsetting.
+		topxscale = sidedef->scalex_top;
+		midxscale = sidedef->scalex_mid;
+		botxscale = sidedef->scalex_bot;
+		topyscale = sidedef->scaley_top;
+		midyscale = sidedef->scaley_mid;
+		botyscale = sidedef->scaley_bot;
+		rw_offset_top = FixedMul(rw_offset + curline->offset, topxscale) + sidedef->textureoffset + sidedef->offsetx_top;
+		rw_offset_mid = FixedMul(rw_offset + curline->offset, midxscale) + sidedef->textureoffset + sidedef->offsetx_mid;
+		rw_offset_bot = FixedMul(rw_offset + curline->offset, botxscale) + sidedef->textureoffset + sidedef->offsetx_bot;
+		rw_distance_scalex_top = FixedMul(rw_distance, topxscale);
+		rw_distance_scalex_mid = FixedMul(rw_distance, midxscale);
+		rw_distance_scalex_bot = FixedMul(rw_distance, botxscale);
+
 		rw_offset += sidedef->textureoffset + curline->offset;
-		rw_offset_top = sidedef->offsetx_top;
-		rw_offset_mid = sidedef->offsetx_mid;
-		rw_offset_bot = sidedef->offsetx_bot;
 		rw_centerangle = ANGLE_90 + viewangle - rw_normalangle;
 
 		// calculate light table
