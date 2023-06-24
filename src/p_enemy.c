@@ -12583,8 +12583,7 @@ void A_MineRange(mobj_t *actor)
 void A_ConnectToGround(mobj_t *actor)
 {
 	mobj_t *work;
-	fixed_t workz;
-	fixed_t workh;
+	fixed_t endz;
 	angle_t ang;
 	INT32 locvar1 = var1;
 	INT32 locvar2 = var2;
@@ -12595,38 +12594,42 @@ void A_ConnectToGround(mobj_t *actor)
 	if (actor->subsector->sector->ffloors)
 		P_AdjustMobjFloorZ_FFloors(actor, actor->subsector->sector, 2);
 
+	endz = actor->z;
 	if (actor->flags2 & MF2_OBJECTFLIP)
-		workz = (actor->z + actor->height) - actor->ceilingz;
+		actor->z = actor->ceilingz - actor->height; // Ensures perfect ceiling connection
 	else
-		workz = actor->floorz - actor->z;
+		actor->z = actor->floorz; // Ensures perfect floor connection
 
 	if (locvar2)
 	{
-		workh = FixedMul(mobjinfo[locvar2].height, actor->scale);
-		if (actor->flags2 & MF2_OBJECTFLIP)
-			workz += workh;
-		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar2);
-		workz += workh;
+		work = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar2);
+		if (work)
+			work->old_z = work->z; // Don't copy old_z from the actor
+
+		actor->z += P_MobjFlip(actor) * FixedMul(mobjinfo[locvar2].height, actor->scale);
 	}
 
-	if (!locvar1)
+	if (!locvar1 || !mobjinfo[locvar1].height) // Can't tile the middle object?
+	{
+		actor->z = endz;
 		return;
-
-	if (!(workh = FixedMul(mobjinfo[locvar1].height, actor->scale)))
-		return;
+	}
 
 	ang = actor->angle + ANGLE_45;
-	while (workz < 0)
+	while ((actor->flags2 & MF2_OBJECTFLIP) ? (actor->z > endz) : (actor->z < endz))
 	{
-		work = P_SpawnMobjFromMobj(actor, 0, 0, workz, locvar1);
+		work = P_SpawnMobjFromMobj(actor, 0, 0, 0, locvar1);
 		if (work)
-			work->angle = ang;
+		{
+			work->angle = work->old_angle = ang;
+			work->old_z = work->z; // Don't copy old_z from the actor
+		}
+
 		ang += ANGLE_90;
-		workz += workh;
+		actor->z += P_MobjFlip(actor) * FixedMul(mobjinfo[locvar1].height, actor->scale);
 	}
 
-	if (workz != 0)
-		actor->z += P_MobjFlip(actor)*workz;
+	actor->old_z = actor->z; // Reset Z interpolation - the spawned objects intentionally don't have any Z interpolation either, after all
 }
 
 // Function: A_SpawnParticleRelative
