@@ -196,7 +196,7 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 
 //
 // R_DrawBlendColumnInCache
-// Draws a translucent column into the cache, applying a half-cooked equation to get a proper translucency value (Needs code in R_GenerateTexture()).
+// Draws a translucent column into the cache.
 //
 static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight, pictureformat_t format)
 {
@@ -362,7 +362,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 // Allocate space for full size texture, either single patch or 'composite'
 // Build the full textures from patches.
 // The texture caching system is a little more hungry of memory, but has
-// been simplified for the sake of highcolor (lol), dynamic ligthing, & speed.
+// been simplified for the sake of highcolor, dynamic ligthing, & speed.
 //
 // This is not optimised, but it's supposed to be executed only once
 // per level, when enough memory is available.
@@ -490,8 +490,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 				pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_STATIC);
 				lumplength = W_LumpLengthPwad(wadnum, lumpnum);
 
-				// If this patch is a PNG, this means that
-				// the entire texture is 32bpp.
+				// If this patch is a PNG, this means that the entire texture becomes 32bpp.
 				if (Picture_IsLumpPNG(pdata, lumplength))
 				{
 					texture->format = PICFMT_PATCH32;

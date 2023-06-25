@@ -529,10 +529,23 @@ void R_DrawDropShadowColumn_8(void)
 
 	dest = &topleft[dc_yl*vid.width + dc_x];
 
-	{
 #define DSCOLOR 31 // palette index for the color of the shadow
+
+	if (!dc_transmap)
+	{
+		while ((count -= 2) >= 0)
+		{
+			R_AlphaBlend_8(DSCOLOR, dc_alpha, dest);
+			dest += vid.width;
+			R_AlphaBlend_8(DSCOLOR, dc_alpha, dest);
+			dest += vid.width;
+		}
+		if (count & 1)
+			R_AlphaBlend_8(DSCOLOR, dc_alpha, dest);
+	}
+	else
+	{
 		register const UINT8 *transmap_offset = dc_transmap + (dc_colormap[DSCOLOR] << 8);
-#undef DSCOLOR
 		while ((count -= 2) >= 0)
 		{
 			*dest = *(transmap_offset + (*dest));
@@ -543,6 +556,8 @@ void R_DrawDropShadowColumn_8(void)
 		if (count & 1)
 			*dest = *(transmap_offset + (*dest));
 	}
+
+#undef DSCOLOR
 }
 
 void R_DrawAlphaColumn_8(void)

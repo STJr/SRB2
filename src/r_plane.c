@@ -992,7 +992,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 			if (pl->ffloor->fofflags & FOF_TRANSLUCENT)
 			{
 				INT32 alpha = pl->ffloor->alpha;
-				INT32 blendmode = pl->ffloor->blend;
+				INT32 blendmode = pl->ffloor->blend ? pl->ffloor->blend : AST_TRANSLUCENT;
+				boolean splat = false;
 
 				spanfunctype = (pl->ffloor->fofflags & FOF_SPLAT) ? span_translu_splat : span_translu;
 
@@ -1001,7 +1002,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 					if (alpha >= 255) // Opaque, but allow transparent flat pixels
 					{
 						if (blendmode != AST_TRANSLUCENT && blendmode != AST_COPY)
-							spanfunctype = SPAN_SPLAT;
+							splat = true;
 						ds_alpha = 0xFF;
 					}
 					else if (alpha < 1 && (blendmode == AST_TRANSLUCENT || blendmode == AST_ADD))
@@ -1014,19 +1015,24 @@ void R_DrawSinglePlane(visplane_t *pl)
 				else
 				{
 					INT32 transnum = R_AlphaToTransnum(alpha);
-					if (transnum == -1)
+					if (transnum == -1 && (blendmode == AST_TRANSLUCENT || blendmode == AST_COPY))
 						return; // Don't even draw it
-					else if (transnum > 0)
+					else if (transnum >= 0)
 					{
 						ds_transmap = R_GetBlendTable(blendmode, transnum);
 						if (!ds_transmap)
-							spanfunctype = SPAN_SPLAT;
+							splat = true;
 					}
 					else // Opaque, but allow transparent flat pixels
-						spanfunctype = SPAN_SPLAT;
+						splat = true;
 				}
 
-				if ((spanfunctype == SPAN_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
+				if (splat)
+				{
+					spanfunctype = SPAN_SPLAT;
+				}
+
+				if (splat || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 					light = (pl->lightlevel >> LIGHTSEGSHIFT);
 				else
 					light = LIGHTLEVELS-1;
@@ -1126,7 +1132,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		if (ds_solidcolor)
 		{
-			// can't possibly have fog and solid color at the same time
+			// NOTE: can't possibly have fog and solid color at the same time
 			if (spanfunctype == span_water)
 				spanfunctype = span_water_solidcolor;
 			else if (spanfunctype == span_translu)
@@ -1178,23 +1184,22 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else
 			R_SetSlopePlaneVectors(pl, 0, xoffs, yoffs);
 
-		if (!ds_solidcolor)
-		{
-			if (spanfunctype == span_water)
-				spanfunctype = span_water_tilted;
-			else if (spanfunctype == span_water_solidcolor)
-				spanfunctype = span_water_tilted_solidcolor;
-			else if (spanfunctype == span_translu)
-				spanfunctype = span_translu_tilted;
-			else if (spanfunctype == span_translu_solidcolor)
-				spanfunctype = span_translu_tilted_solidcolor;
-			else if (spanfunctype == SPAN_SPLAT)
-				spanfunctype = SPAN_SPLAT_TILTED;
-			else if (spanfunctype == SPAN_FOG)
-				spanfunctype = SPAN_FOG_TILTED;
-			else
-				spanfunctype = SPAN_TILTED;
-		}
+		if (spanfunctype == span_water)
+			spanfunctype = span_water_tilted;
+		else if (spanfunctype == span_water_solidcolor)
+			spanfunctype = span_water_tilted_solidcolor;
+		else if (spanfunctype == span_translu)
+			spanfunctype = span_translu_tilted;
+		else if (spanfunctype == span_translu_solidcolor)
+			spanfunctype = span_translu_tilted_solidcolor;
+		else if (spanfunctype == SPAN_SOLIDCOLOR)
+			spanfunctype = SPAN_SOLIDCOLOR_TILTED;
+		else if (spanfunctype == SPAN_SPLAT)
+			spanfunctype = SPAN_SPLAT_TILTED;
+		else if (spanfunctype == SPAN_FOG)
+			spanfunctype = SPAN_FOG_TILTED;
+		else
+			spanfunctype = SPAN_TILTED;
 
 #ifdef TRUECOLOR
 		if (tc_colormaps)

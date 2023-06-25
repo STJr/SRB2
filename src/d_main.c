@@ -709,7 +709,7 @@ void D_CheckColorDepth(INT32 newbitdepth, INT32 oldbitdepth)
 	if (newbitdepth != oldbitdepth)
 	{
 		// Reload every texture.
-		R_LoadTextures();
+		R_FlushTextureCache();
 
 		// Also free levelflat pictures.
 		R_ClearLevelFlats();

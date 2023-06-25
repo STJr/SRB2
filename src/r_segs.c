@@ -734,14 +734,14 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	if (pfloor->fofflags & FOF_TRANSLUCENT)
 	{
 		INT32 alpha = pfloor->alpha;
-		INT32 blendmode = pfloor->blend;
-		boolean fuzzy = true;
+		INT32 blendmode = pfloor->blend ? pfloor->blend : AST_TRANSLUCENT;
+		boolean translucent = true;
 
 		if (!usetranstables)
 		{
 			if (alpha >= 255) // Opaque
 			{
-				fuzzy = blendmode != AST_TRANSLUCENT && blendmode != AST_COPY;
+				translucent = blendmode != AST_TRANSLUCENT && blendmode != AST_COPY;
 				dc_alpha = 0xFF;
 			}
 			else if (alpha < 1 && (blendmode == AST_TRANSLUCENT || blendmode == AST_ADD))
@@ -749,7 +749,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			else
 				dc_alpha = alpha;
 
-			if (fuzzy)
+			if (translucent)
 				R_SetColumnBlendingFunction(blendmode);
 		}
 		else
@@ -757,17 +757,17 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			INT32 transnum = R_AlphaToTransnum(alpha);
 			if (transnum == -1 && (blendmode == AST_TRANSLUCENT || blendmode == AST_ADD))
 				return; // Don't even draw it
-			else if (transnum > 0)
+			else if (transnum >= 0)
 			{
 				dc_transmap = R_GetBlendTable(blendmode, transnum);
 				if (!dc_transmap)
-					fuzzy = false;
+					translucent = false;
 			}
 			else
-				fuzzy = false; // Opaque
+				translucent = false; // Opaque
 		}
 
-		if (fuzzy)
+		if (translucent)
 			colfunc = colfuncs[column_translu];
 	}
 	else if (pfloor->fofflags & FOF_FOG)
