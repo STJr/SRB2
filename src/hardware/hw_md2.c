@@ -415,7 +415,7 @@ static void md2_loadTexture(md2_t *model)
 		size = w*h;
 		while (size--)
 		{
-			V_CubeApply(&image->s.red, &image->s.green, &image->s.blue);
+			ColorCube_Apply(&image->s.red, &image->s.green, &image->s.blue);
 			image++;
 		}
 	}

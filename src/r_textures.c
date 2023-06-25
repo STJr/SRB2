@@ -78,12 +78,13 @@ static INT32 tidcachelen = 0;
 // R_DrawColumnInCache
 // Clip and draw a column from a patch into a cached post.
 //
-static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight, pictureformat_t format)
 {
 	INT32 count, position;
 	UINT8 *source;
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
+	size_t fmtbpp = 1;
 
 	(void)patchheight; // This parameter is unused
 
@@ -96,11 +97,13 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t
 		source = (UINT8 *)patch + 3;
 		count = patch->length;
 		position = originy + topdelta;
+		if (format == PICFMT_PATCH32)
+			fmtbpp = 4;
 
 		if (position < 0)
 		{
-			count += position;
-			source -= position; // start further down the column
+			count += position * fmtbpp;
+			source -= position * fmtbpp; // start further down the column
 			position = 0;
 		}
 
@@ -108,9 +111,17 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t
 			count = cacheheight - position;
 
 		if (count > 0)
-			M_Memcpy(cache + position, source, count);
+		{
+			if (format == PICFMT_PATCH32)
+				count *= 4;
+			M_Memcpy(cache + (position * fmtbpp), source, count);
+		}
 
-		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+		if (format == PICFMT_PATCH32)
+			patch = (column_t *)((UINT32 *)patch + patch->length);
+		else
+			patch = (column_t *)((UINT8 *)patch + patch->length);
+		patch = (column_t *)((UINT8 *)patch + 4);
 	}
 }
 
@@ -118,10 +129,11 @@ static inline void R_DrawColumnInCache(column_t *patch, UINT8 *cache, texpatch_t
 // R_DrawFlippedColumnInCache
 // Similar to R_DrawColumnInCache; it draws the column inverted, however.
 //
-static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight, pictureformat_t format)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
+	UINT32 *s32 = NULL, *dest32 = NULL;
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
@@ -132,39 +144,65 @@ static inline void R_DrawFlippedColumnInCache(column_t *patch, UINT8 *cache, tex
 			topdelta += prevdelta;
 		prevdelta = topdelta;
 		topdelta = patchheight-patch->length-topdelta;
-		source = (UINT8 *)patch + 2 + patch->length; // patch + 3 + (patch->length-1)
+		source = (UINT8 *)patch + 2; // patch + 3 + (patch->length-1)
+		if (format == PICFMT_PATCH32)
+			s32 = (UINT32 *)source + patch->length;
+		source += patch->length;
 		count = patch->length;
 		position = originy + topdelta;
 
 		if (position < 0)
 		{
 			count += position;
-			source += position; // start further UP the column
+			// start further UP the column
+			if (format == PICFMT_PATCH32)
+				s32 += position;
+			source += position;
 			position = 0;
 		}
 
 		if (position + count > cacheheight)
 			count = cacheheight - position;
 
+		if (format == PICFMT_PATCH32)
+			dest32 = ((UINT32 *)cache) + position;
 		dest = cache + position;
+
 		if (count > 0)
 		{
-			for (; dest < cache + position + count; --source)
-				*dest++ = *source;
+			if (format == PICFMT_PATCH32)
+			{
+				for (; dest < cache + position + count; --source)
+				{
+					*dest32++ = *s32;
+					dest++;
+					s32--;
+				}
+			}
+			else
+			{
+				for (; dest < cache + position + count; --source)
+					*dest++ = *source;
+			}
 		}
 
-		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+		if (format == PICFMT_PATCH32)
+			patch = (column_t *)((UINT32 *)patch + patch->length);
+		else
+			patch = (column_t *)((UINT8 *)patch + patch->length);
+		patch = (column_t *)((UINT8 *)patch + 4);
 	}
 }
 
 //
 // R_DrawBlendColumnInCache
-// Draws a translucent column into the cache, applying a half-cooked equation to get a proper translucency value (Needs code in R_GenerateTexture()).
+// Draws a translucent column into the cache.
 //
-static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight, pictureformat_t format)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
+	UINT32 *s32 = NULL, *dest32 = NULL;
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
@@ -177,28 +215,63 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 			topdelta += prevdelta;
 		prevdelta = topdelta;
 		source = (UINT8 *)patch + 3;
+		if (format == PICFMT_PATCH32)
+			s32 = (UINT32 *)source;
 		count = patch->length;
 		position = originy + topdelta;
 
 		if (position < 0)
 		{
 			count += position;
-			source -= position; // start further down the column
+			// start further down the column
+			if (format == PICFMT_PATCH32)
+				s32 -= position;
+			source -= position;
 			position = 0;
 		}
 
 		if (position + count > cacheheight)
 			count = cacheheight - position;
 
+		if (format == PICFMT_PATCH32)
+			dest32 = ((UINT32 *)cache) + position;
 		dest = cache + position;
+
 		if (count > 0)
 		{
-			for (; dest < cache + position + count; source++, dest++)
-				if (*source != 0xFF)
-					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
+			if (format == PICFMT_PATCH32)
+			{
+				for (; dest < cache + position + count; source++, dest++)
+				{
+					if (R_GetRgbaA(*s32))
+					{
+						RGBA_t destrgba;
+						RGBA_t sourcergba;
+
+						// pack into rgba
+						destrgba.rgba = *dest32;
+						sourcergba.rgba = *s32;
+
+						// blend
+						*dest32 = ASTBlendTexturePixel(destrgba, sourcergba, originPatch->style, originPatch->alpha);
+					}
+					dest32++;
+					s32++;
+				}
+			}
+			else
+			{
+				for (; dest < cache + position + count; source++, dest++)
+					if (*source != 0xFF)
+						*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
+			}
 		}
 
-		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+		if (format == PICFMT_PATCH32)
+			patch = (column_t *)((UINT32 *)patch + patch->length);
+		else
+			patch = (column_t *)((UINT8 *)patch + patch->length);
+		patch = (column_t *)((UINT8 *)patch + 4);
 	}
 }
 
@@ -206,10 +279,11 @@ static inline void R_DrawBlendColumnInCache(column_t *patch, UINT8 *cache, texpa
 // R_DrawBlendFlippedColumnInCache
 // Similar to the one above except that the column is inverted.
 //
-static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight)
+static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache, texpatch_t *originPatch, INT32 cacheheight, INT32 patchheight, pictureformat_t format)
 {
 	INT32 count, position;
 	UINT8 *source, *dest;
+	UINT32 *s32 = NULL, *dest32 = NULL;
 	INT32 topdelta, prevdelta = -1;
 	INT32 originy = originPatch->originy;
 
@@ -220,29 +294,65 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 			topdelta += prevdelta;
 		prevdelta = topdelta;
 		topdelta = patchheight-patch->length-topdelta;
-		source = (UINT8 *)patch + 2 + patch->length; // patch + 3 + (patch->length-1)
+		source = (UINT8 *)patch + 2; // patch + 3 + (patch->length-1)
+		if (format == PICFMT_PATCH32)
+			s32 = (UINT32 *)source + patch->length;
+		source += patch->length;
 		count = patch->length;
 		position = originy + topdelta;
 
 		if (position < 0)
 		{
 			count += position;
-			source += position; // start further UP the column
+			// start further UP the column
+			if (format == PICFMT_PATCH32)
+				s32 += position;
+			source += position;
 			position = 0;
 		}
 
 		if (position + count > cacheheight)
 			count = cacheheight - position;
 
+		if (format == PICFMT_PATCH32)
+			dest32 = ((UINT32 *)cache) + position;
 		dest = cache + position;
+
 		if (count > 0)
 		{
-			for (; dest < cache + position + count; --source, dest++)
-				if (*source != 0xFF)
-					*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
+			if (format == PICFMT_PATCH32)
+			{
+				for (; dest < cache + position + count; --source, dest++)
+				{
+					if (R_GetRgbaA(*s32))
+					{
+						RGBA_t destrgba;
+						RGBA_t sourcergba;
+
+						// pack into rgba
+						destrgba.rgba = *dest32;
+						sourcergba.rgba = *s32;
+
+						// blend
+						*dest32 = ASTBlendTexturePixel(destrgba, sourcergba, originPatch->style, originPatch->alpha);
+					}
+					dest32++;
+					s32--;
+				}
+			}
+			else
+			{
+				for (; dest < cache + position + count; --source, dest++)
+					if (*source != 0xFF)
+						*dest = ASTBlendPaletteIndexes(*dest, *source, originPatch->style, originPatch->alpha);
+			}
 		}
 
-		patch = (column_t *)((UINT8 *)patch + patch->length + 4);
+		if (format == PICFMT_PATCH32)
+			patch = (column_t *)((UINT32 *)patch + patch->length);
+		else
+			patch = (column_t *)((UINT8 *)patch + patch->length);
+		patch = (column_t *)((UINT8 *)patch + 4);
 	}
 }
 
@@ -252,7 +362,7 @@ static inline void R_DrawBlendFlippedColumnInCache(column_t *patch, UINT8 *cache
 // Allocate space for full size texture, either single patch or 'composite'
 // Build the full textures from patches.
 // The texture caching system is a little more hungry of memory, but has
-// been simplified for the sake of highcolor (lol), dynamic ligthing, & speed.
+// been simplified for the sake of highcolor, dynamic ligthing, & speed.
 //
 // This is not optimised, but it's supposed to be executed only once
 // per level, when enough memory is available.
@@ -269,6 +379,8 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	size_t blocksize;
 	column_t *patchcol;
 	UINT8 *colofs;
+	pictureformat_t format;
+	size_t patbpp = 1;
 
 	UINT16 wadnum;
 	lumpnum_t lumpnum;
@@ -279,6 +391,10 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	I_Assert(texture != NULL);
 
 	// allocate texture column offset lookup
+#ifdef TRUECOLOR
+	if (truecolor)
+		goto multipatch;
+#endif
 
 	// single-patch textures can have holes in them and may be used on
 	// 2sided lines so they need to be kept in 'packed' format
@@ -360,13 +476,44 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 	// multi-patch textures (or 'composite')
 	multipatch:
+	if (texture->format == PICFMT_NONE)
+	{
+		texture->format = PICFMT_PATCH;
+#if defined (PICTURES_ALLOWDEPTH) && !defined (NO_PNG_LUMPS) && defined(TRUECOLOR)
+		// Detect if any of the patches are PNGs, and adjust the texture format accordingly.
+		if (truecolor)
+		{
+			for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
+			{
+				wadnum = patch->wad;
+				lumpnum = patch->lump;
+				pdata = W_CacheLumpNumPwad(wadnum, lumpnum, PU_STATIC);
+				lumplength = W_LumpLengthPwad(wadnum, lumpnum);
+
+				// If this patch is a PNG, this means that the entire texture becomes 32bpp.
+				if (Picture_IsLumpPNG(pdata, lumplength))
+				{
+					texture->format = PICFMT_PATCH32;
+					Z_Free(pdata);
+					break;
+				}
+			}
+		}
+#endif
+	}
+
 	texture->holes = false;
 	texture->flip = 0;
-	blocksize = (texture->width * 4) + (texture->width * texture->height);
+	format = texture->format;
+	patbpp = Picture_FormatBPP(format) / 8;
+	blocksize = (texture->width * 4) + ((texture->width * texture->height) * patbpp);
 	texturememory += blocksize;
 	block = Z_Malloc(blocksize+1, PU_STATIC, &texturecache[texnum]);
 
-	memset(block, TRANSPARENTPIXEL, blocksize+1); // Transparency hack
+	if (format == PICFMT_PATCH32)
+		memset(block, 0x00, blocksize+1);
+	else
+		memset(block, TRANSPARENTPIXEL, blocksize+1); // Transparency hack
 
 	// columns lookup table
 	colofs = block;
@@ -379,7 +526,7 @@ UINT8 *R_GenerateTexture(size_t texnum)
 	for (i = 0, patch = texture->patches; i < texture->patchcount; i++, patch++)
 	{
 		boolean dealloc = true;
-		static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32); // Column drawing function pointer.
+		static void (*ColumnDrawerPointer)(column_t *, UINT8 *, texpatch_t *, INT32, INT32, pictureformat_t); // Column drawing function pointer.
 		if (patch->style != AST_COPY)
 			ColumnDrawerPointer = (patch->flip & 2) ? R_DrawBlendFlippedColumnInCache : R_DrawBlendColumnInCache;
 		else
@@ -394,17 +541,19 @@ UINT8 *R_GenerateTexture(size_t texnum)
 
 #ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)realpatch, lumplength))
-			realpatch = (softwarepatch_t *)Picture_PNGConvert((UINT8 *)realpatch, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, lumplength, NULL, 0);
+			realpatch = (softwarepatch_t *)Picture_PNGConvert((UINT8 *)realpatch, Picture_PatchFormatTranslation(format), NULL, NULL, NULL, NULL, lumplength, NULL, 0);
 		else
 #endif
 #ifdef WALLFLATS
 		if (texture->type == TEXTURETYPE_FLAT)
-			realpatch = (softwarepatch_t *)Picture_Convert(PICFMT_FLAT, pdata, PICFMT_DOOMPATCH, 0, NULL, texture->width, texture->height, 0, 0, 0);
+			realpatch = (softwarepatch_t *)Picture_Convert(PICFMT_FLAT, pdata, Picture_PatchFormatTranslation(format), 0, NULL, texture->width, texture->height, 0, 0, 0);
 		else
 #endif
 		{
-			(void)lumplength;
-			dealloc = false;
+			if (format == PICFMT_PATCH32)
+				realpatch = (softwarepatch_t *)Picture_Convert(PICFMT_PATCH, pdata, PICFMT_DOOMPATCH32, lumplength, NULL, SHORT(realpatch->width), SHORT(realpatch->height), SHORT(realpatch->leftoffset), SHORT(realpatch->topoffset), 0);
+			else
+				dealloc = false;
 		}
 
 		x1 = patch->originx;
@@ -446,9 +595,9 @@ UINT8 *R_GenerateTexture(size_t texnum)
 			else
 				patchcol = (column_t *)((UINT8 *)realpatch + LONG(realpatch->columnofs[x-x1]));
 
-			// generate column ofset lookup
-			*(UINT32 *)&colofs[x<<2] = LONG((x * texture->height) + (texture->width*4));
-			ColumnDrawerPointer(patchcol, block + LONG(*(UINT32 *)&colofs[x<<2]), patch, texture->height, height);
+			// generate column offset lookup
+			*(UINT32 *)&colofs[x<<2] = LONG(((x * texture->height) * patbpp) + (texture->width*4));
+			ColumnDrawerPointer(patchcol, block + LONG(*(UINT32 *)&colofs[x<<2]), patch, texture->height, height, format);
 		}
 
 		if (dealloc)
@@ -470,7 +619,15 @@ UINT8 *R_GenerateTextureAsFlat(size_t texnum)
 {
 	texture_t *texture = textures[texnum];
 	UINT8 *converted = NULL;
-	size_t size = (texture->width * texture->height);
+	size_t size;
+	pictureformat_t format;
+	INT32 fmtbpp;
+
+	// Generate the texture.
+	R_CheckTextureCache(texnum);
+	format = texture->format;
+	fmtbpp = Picture_FormatBPP(format) / 8;
+	size = (texture->width * texture->height) * fmtbpp;
 
 	// The flat picture for this texture was not generated yet.
 	if (!texture->flat)
@@ -558,6 +715,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 			flatdata = texture->flat;
 			ds_flatwidth = texture->width;
 			ds_flatheight = texture->height;
+			ds_picfmt = texture->format;
 			texturechanged = false;
 		}
 		else
@@ -567,12 +725,57 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 	// If the texture changed, or the flat wasn't generated, convert.
 	if (levelflat->picture == NULL || texturechanged)
 	{
+#ifdef PICTURES_ALLOWDEPTH
+		// Flat lump
+		if (levelflat->type == LEVELFLAT_FLAT)
+		{
+			UINT8 *converted;
+			size_t size;
+			pictureformat_t format = PICFMT_FLAT;
+			size_t fmtbpp = 1;
+
+			R_SetFlatVars(W_LumpLength(levelflat->u.flat.lumpnum));
+
+#if defined(PICTURES_FORCEFLATDEPTH) && defined(TRUECOLOR)
+			if (truecolor)
+			{
+				format = PICFMT_FLAT32;
+				fmtbpp = 4;
+			}
+			else
+#endif
+			{
+				// There's nothing to convert
+				ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
+				ds_picfmt = format;
+				return ds_source;
+			}
+
+			// Set by R_CheckFlatLength
+			levelflat->width = ds_flatwidth;
+			levelflat->height = ds_flatheight;
+			levelflat->format = format;
+			ds_picfmt = format;
+
+			levelflat->picture = Z_Malloc((levelflat->width * levelflat->height) * fmtbpp, PU_LEVEL, NULL);
+			converted = Picture_FlatConvert(PICFMT_FLAT, W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), format, 0, &size, levelflat->width, levelflat->height, 0, 0, 0);
+			M_Memcpy(levelflat->picture, converted, size);
+			Z_Free(converted);
+		}
+		else
+#endif
 		// Level texture
 		if (isleveltexture)
 		{
 			levelflat->picture = R_GenerateTextureAsFlat(levelflat->u.texture.num);
 			ds_flatwidth = levelflat->width = texture->width;
 			ds_flatheight = levelflat->height = texture->height;
+			// detect format
+			if (texture->format == PICFMT_PATCH32)
+				levelflat->format = PICFMT_FLAT32;
+			else // must be 8bpp right??
+				levelflat->format = PICFMT_FLAT;
+			ds_picfmt = levelflat->format;
 		}
 		else
 		{
@@ -580,13 +783,21 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 			if (levelflat->type == LEVELFLAT_PNG)
 			{
 				INT32 pngwidth, pngheight;
+				pictureformat_t format = PICFMT_FLAT;
 
-				levelflat->picture = Picture_PNGConvert(W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), PICFMT_FLAT, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
+#if defined(PICTURES_ALLOWDEPTH) && defined(TRUECOLOR)
+				if (truecolor)
+					format = PICFMT_FLAT32;
+#endif
+
+				levelflat->picture = Picture_PNGConvert(W_CacheLumpNum(levelflat->u.flat.lumpnum, PU_CACHE), format, &pngwidth, &pngheight, NULL, NULL, W_LumpLength(levelflat->u.flat.lumpnum), NULL, 0);
 				levelflat->width = (UINT16)pngwidth;
 				levelflat->height = (UINT16)pngheight;
+				levelflat->format = format;
 
 				ds_flatwidth = levelflat->width;
 				ds_flatheight = levelflat->height;
+				ds_picfmt = format;
 			}
 			else
 #endif
@@ -610,6 +821,7 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 	{
 		ds_flatwidth = levelflat->width;
 		ds_flatheight = levelflat->height;
+		ds_picfmt = levelflat->format;
 	}
 
 	levelflat->u.texture.lastnum = levelflat->u.texture.num;
@@ -617,6 +829,39 @@ void *R_GetLevelFlat(levelflat_t *levelflat)
 	if (flatdata == NULL)
 		flatdata = levelflat->picture;
 	return flatdata;
+}
+
+void R_ClearLevelFlats(void)
+{
+	size_t i;
+	for (i = 0; i < numlevelflats; i++)
+	{
+		levelflat_t *levelflat = &levelflats[i];
+
+		if (levelflat->picture)
+		{
+			// Texture levelflat picture data already
+			// points to somwehere inside the texture cache.
+			if (levelflat->type != LEVELFLAT_TEXTURE)
+				Z_Free(levelflat->picture);
+			levelflat->picture = NULL;
+		}
+
+#ifdef HWRENDER
+		// Is this safe? I don't know.
+		if (levelflat->mipmap)
+		{
+			GLMipmap_t *mipmap = levelflat->mipmap;
+			if (mipmap->data)
+			{
+				Z_Free(mipmap->data);
+				mipmap->data = NULL;
+			}
+			Z_Free(mipmap);
+			levelflat->mipmap = NULL;
+		}
+#endif
+	}
 }
 
 //
@@ -776,6 +1021,7 @@ Rloadflats (INT32 i, INT32 w)
 
 			// Set texture properties.
 			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
+			texture->format = PICFMT_PATCH; // Textures are always patches. Don't use flat formats here.
 			texture->hash = quickncasehash(texture->name, 8);
 
 #ifndef NO_PNG_LUMPS
@@ -875,6 +1121,7 @@ Rloadtextures (INT32 i, INT32 w)
 
 			// Set texture properties.
 			M_Memcpy(texture->name, W_CheckNameForNumPwad(wadnum, lumpnum), sizeof(texture->name));
+			texture->format = PICFMT_PATCH;
 			texture->hash = quickncasehash(texture->name, 8);
 
 #ifndef NO_PNG_LUMPS
@@ -885,6 +1132,11 @@ Rloadtextures (INT32 i, INT32 w)
 				Picture_PNGDimensions(png, &width, &height, NULL, NULL, lumplength);
 				texture->width = (INT16)width;
 				texture->height = (INT16)height;
+#if defined(PICTURES_ALLOWDEPTH) && defined(TRUECOLOR)
+				// If this patch is a PNG, this means that the entire texture is 32bpp.
+				if (truecolor)
+					texture->format = PICFMT_PATCH32;
+#endif
 				Z_Free(png);
 			}
 			else

@@ -83,6 +83,7 @@ const char *GetRevisionString(void);
 // s1 = s2+s3+s1 (1024 lenghtmax)
 void strcatbf(char *s1, const char *s2, const char *s3);
 
+void M_Memset32(void *dest, UINT64 value, uintptr_t size);
 void M_SetupMemcpy(void);
 
 const char *M_FileError(FILE *handle);

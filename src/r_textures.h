@@ -60,6 +60,7 @@ typedef struct
 	boolean holes;
 	UINT8 flip; // 1 = flipx, 2 = flipy, 3 = both
 	void *flat; // The texture, as a flat.
+	INT32 format; // The format of the texture.
 
 	// All the patches[patchcount] are drawn back to front into the cached texture.
 	INT16 patchcount;
@@ -86,6 +87,7 @@ UINT8 *R_GenerateTextureAsFlat(size_t texnum);
 INT32 R_GetTextureNum(INT32 texnum);
 void R_CheckTextureCache(INT32 tex);
 void R_ClearTextureNumCache(boolean btell);
+void R_ClearLevelFlats(void);
 
 // Retrieve texture data.
 void *R_GetLevelFlat(levelflat_t *levelflat);

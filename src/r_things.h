@@ -116,26 +116,26 @@ void R_DrawMasked(maskcount_t* masks, INT32 nummasks);
 
 typedef enum
 {
-	// actual cuts
 	SC_NONE       = 0,
 	SC_TOP        = 1,
 	SC_BOTTOM     = 1<<1,
-	// other flags
-	SC_PRECIP     = 1<<2,
-	SC_LINKDRAW   = 1<<3,
-	SC_FULLBRIGHT = 1<<4,
-	SC_SEMIBRIGHT = 1<<5,
-	SC_FULLDARK   = 1<<6,
-	SC_VFLIP      = 1<<7,
-	SC_ISSCALED   = 1<<8,
-	SC_ISROTATED  = 1<<9,
-	SC_SHADOW     = 1<<10,
-	SC_SHEAR      = 1<<11,
-	SC_SPLAT      = 1<<12,
-	// masks
-	SC_CUTMASK    = SC_TOP|SC_BOTTOM,
-	SC_FLAGMASK   = ~SC_CUTMASK
 } spritecut_e;
+
+typedef enum
+{
+	VIS_PRECIP      = 1,
+	VIS_LINKDRAW    = 1<<1,
+	VIS_FULLBRIGHT  = 1<<2,
+	VIS_SEMIBRIGHT  = 1<<3,
+	VIS_FULLDARK    = 1<<4,
+	VIS_VFLIP       = 1<<5,
+	VIS_SCALED      = 1<<6,
+	VIS_ROTATED     = 1<<7,
+	VIS_TRANSLUCENT = 1<<8,
+	VIS_SHADOW      = 1<<9,
+	VIS_SHEARED     = 1<<10,
+	VIS_FLOORSPRITE = 1<<11,
+} visspriteflag_e;
 
 // A vissprite_t is a thing that will be drawn during a refresh,
 // i.e. a sprite object that is partly visible.
@@ -185,7 +185,9 @@ typedef struct vissprite_s
 	lighttable_t *colormap; // for color translation and shadow draw
 	                        // maxbright frames as well
 
-	UINT8 *transmap; // for MF2_SHADOW sprites, which translucency table to use
+	UINT8 alpha;     // alpha level
+	UINT8 *transmap; // which translucency table to use
+	INT32 blendmode; // which blending mode to use
 
 	INT32 mobjflags;
 
@@ -200,6 +202,8 @@ typedef struct vissprite_s
 	INT16 sz, szt;
 
 	spritecut_e cut;
+	visspriteflag_e flags;
+
 	UINT32 renderflags;
 	UINT8 rotateflags;
 
@@ -222,6 +226,8 @@ void R_ClipVisSprite(vissprite_t *spr, INT32 x1, INT32 x2, drawseg_t* dsstart, p
 
 boolean R_SpriteIsFlashing(vissprite_t *vis);
 UINT8 *R_GetSpriteTranslation(vissprite_t *vis);
+
+boolean R_SpriteIsPaletted(vissprite_t *spr);
 
 // ----------
 // DRAW NODES

@@ -17,6 +17,7 @@
 #include "console.h"
 #include "m_easing.h" // For Easing_InOutSine, used in R_UpdatePlaneRipple
 #include "g_game.h"
+#include "i_video.h"
 #include "p_setup.h" // levelflats
 #include "p_slopes.h"
 #include "r_data.h"
@@ -75,6 +76,9 @@ static INT32 spanstart[MAXVIDHEIGHT];
 // texture mapping
 //
 lighttable_t **planezlight;
+#ifdef TRUECOLOR
+lighttable_u32_t **planezlight_u32;
+#endif
 static fixed_t planeheight;
 
 //added : 10-02-98: yslopetab is what yslope used to be,
@@ -216,9 +220,34 @@ static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 	if (pindex >= MAXLIGHTZ)
 		pindex = MAXLIGHTZ - 1;
 
-	ds_colormap = planezlight[pindex];
+#ifdef TRUECOLOR
+	if (tc_colormaps)
+	{
+		ds_colormap = (UINT8 *)(planezlight_u32[pindex]);
+		ds_colmapstyle = TC_COLORMAPSTYLE_32BPP;
+		dp_lighting = TC_CalcScaleLight(planezlight_u32[pindex]);
+	}
+	else
+#endif
+	{
+		ds_colormap = planezlight[pindex];
+		ds_colmapstyle = TC_COLORMAPSTYLE_8BPP;
+	}
+
 	if (currentplane->extra_colormap)
-		ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
+	{
+#ifdef TRUECOLOR
+		dp_extracolormap = currentplane->extra_colormap;
+		if (tc_colormaps)
+			ds_colormap = (UINT8 *)(currentplane->extra_colormap->colormap_u32 + ((UINT32*)ds_colormap - colormaps_u32));
+		else
+#endif
+			ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
+	}
+#ifdef TRUECOLOR
+	else
+		dp_extracolormap = defaultextracolormap;
+#endif
 
 	ds_y = y;
 	ds_x1 = x1;
@@ -254,10 +283,34 @@ static void R_MapTiltedPlane(INT32 y, INT32 x1, INT32 x2)
 			ds_bgofs = -y;
 	}
 
-	if (currentplane->extra_colormap)
-		ds_colormap = currentplane->extra_colormap->colormap;
+#ifdef TRUECOLOR
+	if (tc_colormaps)
+	{
+		ds_colormap = (lighttable_t*)colormaps_u32;
+		ds_colmapstyle = TC_COLORMAPSTYLE_32BPP;
+		dp_lighting = 0xFF;
+	}
 	else
+#endif
+	{
 		ds_colormap = colormaps;
+		ds_colmapstyle = TC_COLORMAPSTYLE_8BPP;
+	}
+
+	if (currentplane->extra_colormap)
+	{
+#ifdef TRUECOLOR
+		dp_extracolormap = currentplane->extra_colormap;
+		if (tc_colormaps)
+			ds_colormap = (UINT8 *)(currentplane->extra_colormap->colormap_u32 + ((UINT32*)ds_colormap - colormaps_u32));
+		else
+#endif
+			ds_colormap = currentplane->extra_colormap->colormap + (ds_colormap - colormaps);
+	}
+#ifdef TRUECOLOR
+	else
+		dp_extracolormap = defaultextracolormap;
+#endif
 
 	ds_y = y;
 	ds_x1 = x1;
@@ -620,6 +673,7 @@ void R_DrawPlanes(void)
 	visplane_t *pl;
 	INT32 i;
 
+	ds_picfmt = PICFMT_FLAT;
 	R_UpdatePlaneRipple();
 
 	for (i = 0; i < MAXVISPLANES; i++, pl++)
@@ -651,11 +705,20 @@ static void R_DrawSkyPlane(visplane_t *pl)
 	// use correct aspect ratio scale
 	dc_iscale = skyscale;
 
+#ifdef TRUECOLOR
+	dc_picfmt = textures[skytexture]->format;
+	dc_colmapstyle = tc_colormaps ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
+
 	// Sky is always drawn full bright,
 	//  i.e. colormaps[0] is used.
 	// Because of this hack, sky is not affected
 	//  by sector colormaps (INVUL inverse mapping is not implemented in SRB2 so is irrelevant).
-	dc_colormap = colormaps;
+	if (tc_colormaps)
+		dc_colormap = (UINT8 *)colormaps_u32;
+	else
+#endif
+		dc_colormap = colormaps;
+
 	dc_texturemid = skytexturemid;
 	dc_texheight = textureheight[skytexture]
 		>>FRACBITS;
@@ -874,16 +937,31 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 	if (pl->polyobj)
 	{
-		// Hacked up support for alpha value in software mode Tails 09-24-2002 (sidenote: ported to polys 10-15-2014, there was no time travel involved -Red)
 		if (pl->polyobj->translucency >= 10)
 			return; // Don't even draw it
 		else if (pl->polyobj->translucency > 0)
 		{
-			spanfunctype = (pl->polyobj->flags & POF_SPLAT) ? SPANDRAWFUNC_TRANSSPLAT : SPANDRAWFUNC_TRANS;
-			ds_transmap = R_GetTranslucencyTable(pl->polyobj->translucency);
+			INT32 transval = pl->polyobj->translucency;
+
+			if (!usetranstables)
+			{
+				R_SetSpanBlendingFunction(AST_TRANSLUCENT);
+				ds_alpha = R_TransnumToAlpha(transval);
+			}
+			else
+				ds_transmap = R_GetTranslucencyTable(transval);
+
+			spanfunctype = (pl->polyobj->flags & POF_SPLAT) ? span_translu_splat : span_translu_splat;
 		}
 		else if (pl->polyobj->flags & POF_SPLAT) // Opaque, but allow transparent flat pixels
-			spanfunctype = SPANDRAWFUNC_SPLAT;
+		{
+			spanfunctype = SPAN_SPLAT;
+
+#ifdef TRUECOLOR
+			R_SetSpanBlendingFunction(AST_COPY);
+			ds_alpha = 0xFF;
+#endif
+		}
 
 		if (pl->polyobj->translucency == 0 || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 			light = (pl->lightlevel >> LIGHTSEGSHIFT);
@@ -913,21 +991,48 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 			if (pl->ffloor->fofflags & FOF_TRANSLUCENT)
 			{
-				spanfunctype = (pl->ffloor->fofflags & FOF_SPLAT) ? SPANDRAWFUNC_TRANSSPLAT : SPANDRAWFUNC_TRANS;
+				INT32 alpha = pl->ffloor->alpha;
+				INT32 blendmode = pl->ffloor->blend ? pl->ffloor->blend : AST_TRANSLUCENT;
+				boolean splat = false;
 
-				// Hacked up support for alpha value in software mode Tails 09-24-2002
-				// ...unhacked by toaster 04-01-2021, re-hacked a little by sphere 19-11-2021
+				spanfunctype = (pl->ffloor->fofflags & FOF_SPLAT) ? span_translu_splat : span_translu;
+
+				if (!usetranstables)
 				{
-					INT32 trans = (10*((256+12) - pl->ffloor->alpha))/255;
-					if (trans >= 10)
+					if (alpha >= 255) // Opaque, but allow transparent flat pixels
+					{
+						if (blendmode != AST_TRANSLUCENT && blendmode != AST_COPY)
+							splat = true;
+						ds_alpha = 0xFF;
+					}
+					else if (alpha < 1 && (blendmode == AST_TRANSLUCENT || blendmode == AST_ADD))
 						return; // Don't even draw it
-					if (pl->ffloor->blend) // additive, (reverse) subtractive, modulative
-						ds_transmap = R_GetBlendTable(pl->ffloor->blend, trans);
-					else if (!(ds_transmap = R_GetTranslucencyTable(trans)) || trans == 0)
-						spanfunctype = SPANDRAWFUNC_SPLAT; // Opaque, but allow transparent flat pixels
+					else
+						ds_alpha = alpha;
+
+					R_SetSpanBlendingFunction(blendmode);
+				}
+				else
+				{
+					INT32 transnum = R_AlphaToTransnum(alpha);
+					if (transnum == -1 && (blendmode == AST_TRANSLUCENT || blendmode == AST_COPY))
+						return; // Don't even draw it
+					else if (transnum >= 0)
+					{
+						ds_transmap = R_GetBlendTable(blendmode, transnum);
+						if (!ds_transmap)
+							splat = true;
+					}
+					else // Opaque, but allow transparent flat pixels
+						splat = true;
 				}
 
-				if ((spanfunctype == SPANDRAWFUNC_SPLAT) || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
+				if (splat)
+				{
+					spanfunctype = SPAN_SPLAT;
+				}
+
+				if (splat || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 					light = (pl->lightlevel >> LIGHTSEGSHIFT);
 				else
 					light = LIGHTLEVELS-1;
@@ -935,16 +1040,17 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else if (pl->ffloor->fofflags & FOF_FOG)
 			{
 				fog = true;
-				spanfunctype = SPANDRAWFUNC_FOG;
+				spanfunctype = SPAN_FOG;
 				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 			}
-			else light = (pl->lightlevel >> LIGHTSEGSHIFT);
+			else
+				light = (pl->lightlevel >> LIGHTSEGSHIFT);
 
 			if (pl->ffloor->fofflags & FOF_RIPPLE && !fog)
 			{
 				planeripple.active = true;
 
-				if (spanfunctype == SPANDRAWFUNC_TRANS)
+				if (spanfunctype == span_translu)
 				{
 					// Copy the current scene, ugh
 					INT32 top = pl->high-8;
@@ -955,12 +1061,12 @@ void R_DrawSinglePlane(visplane_t *pl)
 					if (bottom > vid.height)
 						bottom = vid.height;
 
-					spanfunctype = SPANDRAWFUNC_WATER;
+					spanfunctype = span_water;
 
 					// Only copy the part of the screen we need
-					VID_BlitLinearScreen((splitscreen && viewplayer == &players[secondarydisplayplayer]) ? screens[0] + (top+(vid.height>>1))*vid.width : screens[0]+((top)*vid.width), screens[1]+((top)*vid.width),
-										 vid.width, bottom-top,
-										 vid.width, vid.width);
+					VID_BlitLinearScreen((splitscreen && viewplayer == &players[secondarydisplayplayer]) ? screens[0] + (top+(vid.height>>1))*vid.rowbytes : screens[0]+((top)*vid.rowbytes), screens[1]+((top)*vid.rowbytes),
+										 vid.rowbytes, bottom-top,
+										 vid.rowbytes, vid.rowbytes);
 				}
 			}
 		}
@@ -986,7 +1092,16 @@ void R_DrawSinglePlane(visplane_t *pl)
 			case LEVELFLAT_NONE:
 				return;
 			case LEVELFLAT_FLAT:
-				ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
+#if defined(PICTURES_ALLOWDEPTH) && defined(TRUECOLOR)
+				if (truecolor)
+				{
+					ds_source = (UINT8 *)R_GetLevelFlat(levelflat);
+					if (!ds_source)
+						return;
+				}
+				else
+#endif
+					ds_source = (UINT8 *)R_GetFlat(levelflat->u.flat.lumpnum);
 				R_SetFlatVars(W_LumpLength(levelflat->u.flat.lumpnum));
 				if (R_CheckSolidColorFlat())
 					ds_solidcolor = true;
@@ -1017,18 +1132,13 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 		if (ds_solidcolor)
 		{
-			switch (spanfunctype)
-			{
-				case SPANDRAWFUNC_WATER:
-					spanfunctype = SPANDRAWFUNC_WATERSOLID;
-					break;
-				case SPANDRAWFUNC_TRANS:
-					spanfunctype = SPANDRAWFUNC_TRANSSOLID;
-					break;
-				default:
-					spanfunctype = SPANDRAWFUNC_SOLID;
-					break;
-			}
+			// NOTE: can't possibly have fog and solid color at the same time
+			if (spanfunctype == span_water)
+				spanfunctype = span_water_solidcolor;
+			else if (spanfunctype == span_translu)
+				spanfunctype = span_translu_solidcolor;
+			else
+				spanfunctype = SPAN_SOLIDCOLOR;
 		}
 	}
 
@@ -1074,40 +1184,41 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else
 			R_SetSlopePlaneVectors(pl, 0, xoffs, yoffs);
 
-		switch (spanfunctype)
-		{
-			case SPANDRAWFUNC_WATER:
-				spanfunctype = SPANDRAWFUNC_TILTEDWATER;
-				break;
-			case SPANDRAWFUNC_TRANS:
-				spanfunctype = SPANDRAWFUNC_TILTEDTRANS;
-				break;
-			case SPANDRAWFUNC_SPLAT:
-				spanfunctype = SPANDRAWFUNC_TILTEDSPLAT;
-				break;
-			case SPANDRAWFUNC_SOLID:
-				spanfunctype = SPANDRAWFUNC_TILTEDSOLID;
-				break;
-			case SPANDRAWFUNC_TRANSSOLID:
-				spanfunctype = SPANDRAWFUNC_TILTEDTRANSSOLID;
-				break;
-			case SPANDRAWFUNC_WATERSOLID:
-				spanfunctype = SPANDRAWFUNC_TILTEDWATERSOLID;
-				break;
-			case SPANDRAWFUNC_FOG:
-				spanfunctype = SPANDRAWFUNC_TILTEDFOG;
-				break;
-			default:
-				spanfunctype = SPANDRAWFUNC_TILTED;
-				break;
-		}
+		if (spanfunctype == span_water)
+			spanfunctype = span_water_tilted;
+		else if (spanfunctype == span_water_solidcolor)
+			spanfunctype = span_water_tilted_solidcolor;
+		else if (spanfunctype == span_translu)
+			spanfunctype = span_translu_tilted;
+		else if (spanfunctype == span_translu_solidcolor)
+			spanfunctype = span_translu_tilted_solidcolor;
+		else if (spanfunctype == SPAN_SOLIDCOLOR)
+			spanfunctype = SPAN_SOLIDCOLOR_TILTED;
+		else if (spanfunctype == SPAN_SPLAT)
+			spanfunctype = SPAN_SPLAT_TILTED;
+		else if (spanfunctype == SPAN_FOG)
+			spanfunctype = SPAN_FOG_TILTED;
+		else
+			spanfunctype = SPAN_TILTED;
 
-		planezlight = scalelight[light];
+#ifdef TRUECOLOR
+		if (tc_colormaps)
+			planezlight_u32 = scalelight_u32[light];
+		else
+#endif
+			planezlight = scalelight[light];
 	}
 	else
 	{
 		planeheight = abs(pl->height - pl->viewz);
-		planezlight = zlight[light];
+
+#ifdef TRUECOLOR
+		if (tc_colormaps)
+			planezlight_u32 = zlight_u32[light];
+		else
+#endif
+			planezlight = zlight[light];
+
 	}
 
 	// Set the span drawer

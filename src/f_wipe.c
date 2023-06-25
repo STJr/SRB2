@@ -162,10 +162,17 @@ static fademask_t *F_GetFadeMask(UINT8 masknum, UINT8 scrnnum) {
 	{
 		// Determine pixel to use from fademask
 		pcolor = &pMasterPalette[*lump++];
-		if (wipestyle == WIPESTYLE_COLORMAP)
-			*mask++ = pcolor->s.red / FADECOLORMAPDIV;
+#ifdef TRUECOLOR
+		if (truecolor)
+			*mask++ = pcolor->s.red;
 		else
-			*mask++ = FixedDiv((pcolor->s.red+1)<<FRACBITS, paldiv)>>FRACBITS;
+#endif
+		{
+			if (wipestyle == WIPESTYLE_COLORMAP)
+				*mask++ = pcolor->s.red / FADECOLORMAPDIV;
+			else
+				*mask++ = FixedDiv((pcolor->s.red+1)<<FRACBITS, paldiv)>>FRACBITS;
+		}
 	}
 
 	fm.xscale = FixedDiv(vid.width<<FRACBITS, fm.width<<FRACBITS);
@@ -200,231 +207,583 @@ void F_WipeStageTitle(void)
 	}
 }
 
-/**	Wipe ticker
-  *
-  * \param	fademask	pixels to change
-  */
+// Software mask wipe -- optimized; though it might not look like it!
+// Okay, to save you wondering *how* this is more optimized than the simpler
+// version that came before it...
+// ---
+// The previous code did two FixedMul calls for every single pixel on the
+// screen, of which there are hundreds of thousands -- if not millions -- of.
+// This worked fine for smaller screen sizes, but with excessively large
+// (1920x1200) screens that meant 4 million+ calls out to FixedMul, and that
+// would take /just/ long enough that fades would start to noticably lag.
+// ---
+// This code iterates over the fade mask's pixels instead of the screen's,
+// and deals with drawing over each rectangular area before it moves on to
+// the next pixel in the fade mask.  As a result, it's more complex (and might
+// look a little messy; sorry!) but it simultaneously runs at twice the speed.
+// In addition, we precalculate all the X and Y positions that we need to draw
+// from and to, so it uses a little extra memory, but again, helps it run faster.
 static void F_DoWipe(fademask_t *fademask)
 {
-	// Software mask wipe -- optimized; though it might not look like it!
-	// Okay, to save you wondering *how* this is more optimized than the simpler
-	// version that came before it...
+	// wipe screen, start, end
+	UINT8       *w = wipe_scr;
+	const UINT8 *s = wipe_scr_start;
+	const UINT8 *e = wipe_scr_end;
+
+	// first pixel for each screen
+	UINT8       *w_base = w;
+	const UINT8 *s_base = s;
+	const UINT8 *e_base = e;
+
+	// mask data, end
+	UINT8       *transtbl;
+	const UINT8 *mask    = fademask->mask;
+	const UINT8 *maskend = mask + fademask->size;
+
+	// rectangle draw hints
+	UINT32 draw_linestart, draw_rowstart;
+	UINT32 draw_lineend,   draw_rowend;
+	UINT32 draw_linestogo, draw_rowstogo;
+
+	// rectangle coordinates, etc.
+	UINT16* scrxpos = (UINT16*)malloc((fademask->width + 1)  * sizeof(UINT16));
+	UINT16* scrypos = (UINT16*)malloc((fademask->height + 1) * sizeof(UINT16));
+	UINT16 maskx, masky;
+	UINT32 relativepos;
+
 	// ---
-	// The previous code did two FixedMul calls for every single pixel on the
-	// screen, of which there are hundreds of thousands -- if not millions -- of.
-	// This worked fine for smaller screen sizes, but with excessively large
-	// (1920x1200) screens that meant 4 million+ calls out to FixedMul, and that
-	// would take /just/ long enough that fades would start to noticably lag.
+	// Screw it, we do the fixed point math ourselves up front.
+	scrxpos[0] = 0;
+	for (relativepos = 0, maskx = 1; maskx < fademask->width; ++maskx)
+		scrxpos[maskx] = (relativepos += fademask->xscale)>>FRACBITS;
+	scrxpos[fademask->width] = vid.width;
+
+	scrypos[0] = 0;
+	for (relativepos = 0, masky = 1; masky < fademask->height; ++masky)
+		scrypos[masky] = (relativepos += fademask->yscale)>>FRACBITS;
+	scrypos[fademask->height] = vid.height;
 	// ---
-	// This code iterates over the fade mask's pixels instead of the screen's,
-	// and deals with drawing over each rectangular area before it moves on to
-	// the next pixel in the fade mask.  As a result, it's more complex (and might
-	// look a little messy; sorry!) but it simultaneously runs at twice the speed.
-	// In addition, we precalculate all the X and Y positions that we need to draw
-	// from and to, so it uses a little extra memory, but again, helps it run faster.
+
+	maskx = masky = 0;
+	do
 	{
-		// wipe screen, start, end
-		UINT8       *w = wipe_scr;
-		const UINT8 *s = wipe_scr_start;
-		const UINT8 *e = wipe_scr_end;
+		draw_rowstart = scrxpos[maskx];
+		draw_rowend   = scrxpos[maskx + 1];
+		draw_linestart = scrypos[masky];
+		draw_lineend   = scrypos[masky + 1];
 
-		// first pixel for each screen
-		UINT8       *w_base = w;
-		const UINT8 *s_base = s;
-		const UINT8 *e_base = e;
+		relativepos = (draw_linestart * vid.width) + draw_rowstart;
+		draw_linestogo = draw_lineend - draw_linestart;
 
-		// mask data, end
-		UINT8       *transtbl;
-		const UINT8 *mask    = fademask->mask;
-		const UINT8 *maskend = mask + fademask->size;
-
-		// rectangle draw hints
-		UINT32 draw_linestart, draw_rowstart;
-		UINT32 draw_lineend,   draw_rowend;
-		UINT32 draw_linestogo, draw_rowstogo;
-
-		// rectangle coordinates, etc.
-		UINT16* scrxpos = (UINT16*)malloc((fademask->width + 1)  * sizeof(UINT16));
-		UINT16* scrypos = (UINT16*)malloc((fademask->height + 1) * sizeof(UINT16));
-		UINT16 maskx, masky;
-		UINT32 relativepos;
-
-		// ---
-		// Screw it, we do the fixed point math ourselves up front.
-		scrxpos[0] = 0;
-		for (relativepos = 0, maskx = 1; maskx < fademask->width; ++maskx)
-			scrxpos[maskx] = (relativepos += fademask->xscale)>>FRACBITS;
-		scrxpos[fademask->width] = vid.width;
-
-		scrypos[0] = 0;
-		for (relativepos = 0, masky = 1; masky < fademask->height; ++masky)
-			scrypos[masky] = (relativepos += fademask->yscale)>>FRACBITS;
-		scrypos[fademask->height] = vid.height;
-		// ---
-
-		maskx = masky = 0;
-		do
+		if (*mask == 0)
 		{
-			draw_rowstart = scrxpos[maskx];
-			draw_rowend   = scrxpos[maskx + 1];
-			draw_linestart = scrypos[masky];
-			draw_lineend   = scrypos[masky + 1];
-
-			relativepos = (draw_linestart * vid.width) + draw_rowstart;
-			draw_linestogo = draw_lineend - draw_linestart;
-
-			if (*mask == 0)
+			// shortcut - memcpy source to work
+			while (draw_linestogo--)
 			{
-				// shortcut - memcpy source to work
-				while (draw_linestogo--)
-				{
-					M_Memcpy(w_base+relativepos, s_base+relativepos, draw_rowend-draw_rowstart);
-					relativepos += vid.width;
-				}
+				M_Memcpy(w_base+relativepos, s_base+relativepos, draw_rowend-draw_rowstart);
+				relativepos += vid.width;
 			}
-			else if (*mask >= 10)
+		}
+		else if (*mask >= 10)
+		{
+			// shortcut - memcpy target to work
+			while (draw_linestogo--)
 			{
-				// shortcut - memcpy target to work
-				while (draw_linestogo--)
-				{
-					M_Memcpy(w_base+relativepos, e_base+relativepos, draw_rowend-draw_rowstart);
-					relativepos += vid.width;
-				}
+				M_Memcpy(w_base+relativepos, e_base+relativepos, draw_rowend-draw_rowstart);
+				relativepos += vid.width;
 			}
-			else
+		}
+		else
+		{
+			// pointer to transtable that this mask would use
+			transtbl = R_GetTranslucencyTable((9 - *mask) + 1);
+
+			// DRAWING LOOP
+			while (draw_linestogo--)
 			{
-				// pointer to transtable that this mask would use
-				transtbl = R_GetTranslucencyTable((9 - *mask) + 1);
+				w = w_base + relativepos;
+				s = s_base + relativepos;
+				e = e_base + relativepos;
+				draw_rowstogo = draw_rowend - draw_rowstart;
 
-				// DRAWING LOOP
-				while (draw_linestogo--)
-				{
-					w = w_base + relativepos;
-					s = s_base + relativepos;
-					e = e_base + relativepos;
-					draw_rowstogo = draw_rowend - draw_rowstart;
+				while (draw_rowstogo--)
+					*w++ = transtbl[ ( *e++ << 8 ) + *s++ ];
 
-					while (draw_rowstogo--)
-						*w++ = transtbl[ ( *e++ << 8 ) + *s++ ];
-
-					relativepos += vid.width;
-				}
-				// END DRAWING LOOP
+				relativepos += vid.width;
 			}
+			// END DRAWING LOOP
+		}
 
-			if (++maskx >= fademask->width)
-				++masky, maskx = 0;
-		} while (++mask < maskend);
+		if (++maskx >= fademask->width)
+			++masky, maskx = 0;
+	} while (++mask < maskend);
 
-		free(scrxpos);
-		free(scrypos);
-	}
+	free(scrxpos);
+	free(scrypos);
 }
 
+// F_DoWipe for WIPESTYLE_COLORMAP
 static void F_DoColormapWipe(fademask_t *fademask, UINT8 *colormap)
 {
-	// Lactozilla: F_DoWipe for WIPESTYLE_COLORMAP
+	// wipe screen, start, end
+	UINT8       *w = wipe_scr;
+	const UINT8 *s = wipe_scr_start;
+	const UINT8 *e = wipe_scr_end;
+
+	// first pixel for each screen
+	UINT8       *w_base = w;
+	const UINT8 *s_base = s;
+	const UINT8 *e_base = e;
+
+	// mask data, end
+	UINT8       *transtbl;
+	const UINT8 *mask    = fademask->mask;
+	const UINT8 *maskend = mask + fademask->size;
+
+	// rectangle draw hints
+	UINT32 draw_linestart, draw_rowstart;
+	UINT32 draw_lineend,   draw_rowend;
+	UINT32 draw_linestogo, draw_rowstogo;
+
+	// rectangle coordinates, etc.
+	UINT16* scrxpos = (UINT16*)malloc((fademask->width + 1)  * sizeof(UINT16));
+	UINT16* scrypos = (UINT16*)malloc((fademask->height + 1) * sizeof(UINT16));
+	UINT16 maskx, masky;
+	UINT32 relativepos;
+
+	// ---
+	// Screw it, we do the fixed point math ourselves up front.
+	scrxpos[0] = 0;
+	for (relativepos = 0, maskx = 1; maskx < fademask->width; ++maskx)
+		scrxpos[maskx] = (relativepos += fademask->xscale)>>FRACBITS;
+	scrxpos[fademask->width] = vid.width;
+
+	scrypos[0] = 0;
+	for (relativepos = 0, masky = 1; masky < fademask->height; ++masky)
+		scrypos[masky] = (relativepos += fademask->yscale)>>FRACBITS;
+	scrypos[fademask->height] = vid.height;
+	// ---
+
+	maskx = masky = 0;
+	do
 	{
-		// wipe screen, start, end
-		UINT8       *w = wipe_scr;
-		const UINT8 *s = wipe_scr_start;
-		const UINT8 *e = wipe_scr_end;
+		draw_rowstart = scrxpos[maskx];
+		draw_rowend   = scrxpos[maskx + 1];
+		draw_linestart = scrypos[masky];
+		draw_lineend   = scrypos[masky + 1];
 
-		// first pixel for each screen
-		UINT8       *w_base = w;
-		const UINT8 *s_base = s;
-		const UINT8 *e_base = e;
+		relativepos = (draw_linestart * vid.width) + draw_rowstart;
+		draw_linestogo = draw_lineend - draw_linestart;
 
-		// mask data, end
-		UINT8       *transtbl;
-		const UINT8 *mask    = fademask->mask;
-		const UINT8 *maskend = mask + fademask->size;
-
-		// rectangle draw hints
-		UINT32 draw_linestart, draw_rowstart;
-		UINT32 draw_lineend,   draw_rowend;
-		UINT32 draw_linestogo, draw_rowstogo;
-
-		// rectangle coordinates, etc.
-		UINT16* scrxpos = (UINT16*)malloc((fademask->width + 1)  * sizeof(UINT16));
-		UINT16* scrypos = (UINT16*)malloc((fademask->height + 1) * sizeof(UINT16));
-		UINT16 maskx, masky;
-		UINT32 relativepos;
-
-		// ---
-		// Screw it, we do the fixed point math ourselves up front.
-		scrxpos[0] = 0;
-		for (relativepos = 0, maskx = 1; maskx < fademask->width; ++maskx)
-			scrxpos[maskx] = (relativepos += fademask->xscale)>>FRACBITS;
-		scrxpos[fademask->width] = vid.width;
-
-		scrypos[0] = 0;
-		for (relativepos = 0, masky = 1; masky < fademask->height; ++masky)
-			scrypos[masky] = (relativepos += fademask->yscale)>>FRACBITS;
-		scrypos[fademask->height] = vid.height;
-		// ---
-
-		maskx = masky = 0;
-		do
+		if (*mask == 0)
 		{
-			draw_rowstart = scrxpos[maskx];
-			draw_rowend   = scrxpos[maskx + 1];
-			draw_linestart = scrypos[masky];
-			draw_lineend   = scrypos[masky + 1];
-
-			relativepos = (draw_linestart * vid.width) + draw_rowstart;
-			draw_linestogo = draw_lineend - draw_linestart;
-
-			if (*mask == 0)
+			// shortcut - memcpy source to work
+			while (draw_linestogo--)
 			{
-				// shortcut - memcpy source to work
-				while (draw_linestogo--)
-				{
-					M_Memcpy(w_base+relativepos, s_base+relativepos, draw_rowend-draw_rowstart);
-					relativepos += vid.width;
-				}
+				M_Memcpy(w_base+relativepos, s_base+relativepos, draw_rowend-draw_rowstart);
+				relativepos += vid.width;
 			}
-			else if (*mask >= FADECOLORMAPROWS)
+		}
+		else if (*mask >= FADECOLORMAPROWS)
+		{
+			// shortcut - memcpy target to work
+			while (draw_linestogo--)
 			{
-				// shortcut - memcpy target to work
-				while (draw_linestogo--)
-				{
-					M_Memcpy(w_base+relativepos, e_base+relativepos, draw_rowend-draw_rowstart);
-					relativepos += vid.width;
-				}
+				M_Memcpy(w_base+relativepos, e_base+relativepos, draw_rowend-draw_rowstart);
+				relativepos += vid.width;
 			}
-			else
+		}
+		else
+		{
+			int nmask = *mask;
+			if (wipestyleflags & WSF_FADEIN)
+				nmask = (FADECOLORMAPROWS-1) - nmask;
+
+			transtbl = colormap + (nmask * 256);
+
+			// DRAWING LOOP
+			while (draw_linestogo--)
 			{
-				int nmask = *mask;
-				if (wipestyleflags & WSF_FADEIN)
-					nmask = (FADECOLORMAPROWS-1) - nmask;
+				w = w_base + relativepos;
+				s = s_base + relativepos;
+				e = e_base + relativepos;
+				draw_rowstogo = draw_rowend - draw_rowstart;
 
-				transtbl = colormap + (nmask * 256);
+				while (draw_rowstogo--)
+					*w++ = transtbl[*e++];
 
-				// DRAWING LOOP
-				while (draw_linestogo--)
-				{
-					w = w_base + relativepos;
-					s = s_base + relativepos;
-					e = e_base + relativepos;
-					draw_rowstogo = draw_rowend - draw_rowstart;
-
-					while (draw_rowstogo--)
-						*w++ = transtbl[*e++];
-
-					relativepos += vid.width;
-				}
-				// END DRAWING LOOP
+				relativepos += vid.width;
 			}
+			// END DRAWING LOOP
+		}
 
-			if (++maskx >= fademask->width)
-				++masky, maskx = 0;
-		} while (++mask < maskend);
+		if (++maskx >= fademask->width)
+			++masky, maskx = 0;
+	} while (++mask < maskend);
 
-		free(scrxpos);
-		free(scrypos);
-	}
+	free(scrxpos);
+	free(scrypos);
 }
+
+#ifdef TRUECOLOR
+static void F_DoWipe32(fademask_t *fademask)
+{
+	// wipe screen, start, end
+	UINT32       *w = (UINT32 *)wipe_scr;
+	const UINT32 *s = (UINT32 *)wipe_scr_start;
+	const UINT32 *e = (UINT32 *)wipe_scr_end;
+
+	// first pixel for each screen
+	UINT32       *w_base = w;
+	const UINT32 *s_base = s;
+	const UINT32 *e_base = e;
+
+	// mask data, end
+	const UINT8 *mask    = fademask->mask;
+	const UINT8 *maskend = mask + fademask->size;
+
+	// rectangle draw hints
+	UINT32 draw_linestart, draw_rowstart;
+	UINT32 draw_lineend,   draw_rowend;
+	UINT32 draw_linestogo, draw_rowstogo;
+
+	// rectangle coordinates, etc.
+	UINT16* scrxpos = (UINT16*)malloc((fademask->width + 1)  * sizeof(UINT16));
+	UINT16* scrypos = (UINT16*)malloc((fademask->height + 1) * sizeof(UINT16));
+	UINT16 maskx, masky;
+	UINT32 relativepos;
+
+	// ---
+	// Screw it, we do the fixed point math ourselves up front.
+	scrxpos[0] = 0;
+	for (relativepos = 0, maskx = 1; maskx < fademask->width; ++maskx)
+		scrxpos[maskx] = (relativepos += fademask->xscale)>>FRACBITS;
+	scrxpos[fademask->width] = vid.width;
+
+	scrypos[0] = 0;
+	for (relativepos = 0, masky = 1; masky < fademask->height; ++masky)
+		scrypos[masky] = (relativepos += fademask->yscale)>>FRACBITS;
+	scrypos[fademask->height] = vid.height;
+	// ---
+
+	maskx = masky = 0;
+	do
+	{
+		draw_rowstart = scrxpos[maskx];
+		draw_rowend   = scrxpos[maskx + 1];
+		draw_linestart = scrypos[masky];
+		draw_lineend   = scrypos[masky + 1];
+
+		relativepos = (draw_linestart * vid.width) + draw_rowstart;
+		draw_linestogo = draw_lineend - draw_linestart;
+
+		if (*mask == 0)
+		{
+			// shortcut - memcpy source to work
+			while (draw_linestogo--)
+			{
+				M_Memcpy(w_base+relativepos, s_base+relativepos, (draw_rowend-draw_rowstart) * vid.bpp);
+				relativepos += vid.width;
+			}
+		}
+		else if (*mask >= 255)
+		{
+			// shortcut - memcpy target to work
+			while (draw_linestogo--)
+			{
+				M_Memcpy(w_base+relativepos, e_base+relativepos, (draw_rowend-draw_rowstart) * vid.bpp);
+				relativepos += vid.width;
+			}
+		}
+		else
+		{
+			// DRAWING LOOP
+			while (draw_linestogo--)
+			{
+				w = w_base + relativepos;
+				s = s_base + relativepos;
+				e = e_base + relativepos;
+				draw_rowstogo = draw_rowend - draw_rowstart;
+
+				while (draw_rowstogo--)
+				{
+					*w = R_TranslucentMix(*s, *e, *mask);
+					w++;
+					e++;
+					s++;
+				}
+
+				relativepos += vid.width;
+			}
+			// END DRAWING LOOP
+		}
+
+		if (++maskx >= fademask->width)
+			++masky, maskx = 0;
+	} while (++mask < maskend);
+
+	free(scrxpos);
+	free(scrypos);
+}
+
+// F_DoWipe32 for WIPESTYLE_COLORMAP
+static void F_DoColormapWipe32(fademask_t *fademask)
+{
+	RGBA_t pack;
+	INT16 r, g, b;
+
+	// wipe screen, start, end
+	UINT32       *w = (UINT32 *)wipe_scr;
+	const UINT32 *s = (UINT32 *)wipe_scr_start;
+	const UINT32 *e = (UINT32 *)wipe_scr_end;
+
+	// first pixel for each screen
+	UINT32       *w_base = w;
+	const UINT32 *s_base = s;
+	const UINT32 *e_base = e;
+
+	// mask data, end
+	const UINT8 *mask    = fademask->mask;
+	const UINT8 *maskend = mask + fademask->size;
+
+	// rectangle draw hints
+	UINT32 draw_linestart, draw_rowstart;
+	UINT32 draw_lineend,   draw_rowend;
+	UINT32 draw_linestogo, draw_rowstogo;
+
+	// rectangle coordinates, etc.
+	UINT16* scrxpos = (UINT16*)malloc((fademask->width + 1)  * sizeof(UINT16));
+	UINT16* scrypos = (UINT16*)malloc((fademask->height + 1) * sizeof(UINT16));
+	UINT16 maskx, masky;
+	UINT32 relativepos;
+
+	// ---
+	// Screw it, we do the fixed point math ourselves up front.
+	scrxpos[0] = 0;
+	for (relativepos = 0, maskx = 1; maskx < fademask->width; ++maskx)
+		scrxpos[maskx] = (relativepos += fademask->xscale)>>FRACBITS;
+	scrxpos[fademask->width] = vid.width;
+
+	scrypos[0] = 0;
+	for (relativepos = 0, masky = 1; masky < fademask->height; ++masky)
+		scrypos[masky] = (relativepos += fademask->yscale)>>FRACBITS;
+	scrypos[fademask->height] = vid.height;
+	// ---
+
+	maskx = masky = 0;
+	do
+	{
+		draw_rowstart = scrxpos[maskx];
+		draw_rowend   = scrxpos[maskx + 1];
+		draw_linestart = scrypos[masky];
+		draw_lineend   = scrypos[masky + 1];
+
+		relativepos = (draw_linestart * vid.width) + draw_rowstart;
+		draw_linestogo = draw_lineend - draw_linestart;
+
+		if (*mask == 0)
+		{
+			// shortcut - memcpy source to work
+			while (draw_linestogo--)
+			{
+				M_Memcpy(w_base+relativepos, s_base+relativepos, (draw_rowend-draw_rowstart) * vid.bpp);
+				relativepos += vid.width;
+			}
+		}
+		else if (*mask >= 255)
+		{
+			// shortcut - memcpy target to work
+			while (draw_linestogo--)
+			{
+				M_Memcpy(w_base+relativepos, e_base+relativepos, (draw_rowend-draw_rowstart) * vid.bpp);
+				relativepos += vid.width;
+			}
+		}
+		else
+		{
+			// DRAWING LOOP
+			while (draw_linestogo--)
+			{
+				UINT8 alpha = *mask;
+				const UINT32 *sauce = NULL;
+				w = w_base + relativepos;
+				s = s_base + relativepos;
+				e = e_base + relativepos;
+				draw_rowstogo = draw_rowend - draw_rowstart;
+
+				if (wipestyleflags & WSF_FADEIN)
+				{
+					alpha = 0xFF - alpha;
+					sauce = e;
+				}
+				else
+					sauce = s;
+
+				// This is gonna be mad slow...
+				while (draw_rowstogo--)
+				{
+					// subtractive color blending
+					pack.rgba = *sauce;
+					r = pack.s.red - FADEREDFACTOR*alpha/10;
+					g = pack.s.green - FADEGREENFACTOR*alpha/10;
+					b = pack.s.blue - FADEBLUEFACTOR*alpha/10;
+
+					// clamp values
+					if (r < 0) r = 0;
+					if (g < 0) g = 0;
+					if (b < 0) b = 0;
+
+					// pack into rgba
+					pack.s.red = r;
+					pack.s.green = g;
+					pack.s.blue = b;
+					*w = pack.rgba;
+					w++;
+					sauce++;
+				}
+
+				relativepos += vid.width;
+			}
+			// END DRAWING LOOP
+		}
+
+		if (++maskx >= fademask->width)
+			++masky, maskx = 0;
+	} while (++mask < maskend);
+
+	free(scrxpos);
+	free(scrypos);
+}
+
+// F_DoWipe32 for WIPESTYLE_COLORMAP and WSF_TOWHITE
+static void F_DoWhiteColormapWipe32(fademask_t *fademask)
+{
+	RGBA_t pack;
+	INT16 r, g, b;
+
+	// wipe screen, start, end
+	UINT32       *w = (UINT32 *)wipe_scr;
+	const UINT32 *s = (UINT32 *)wipe_scr_start;
+	const UINT32 *e = (UINT32 *)wipe_scr_end;
+
+	// first pixel for each screen
+	UINT32       *w_base = w;
+	const UINT32 *s_base = s;
+	const UINT32 *e_base = e;
+
+	// mask data, end
+	const UINT8 *mask    = fademask->mask;
+	const UINT8 *maskend = mask + fademask->size;
+
+	// rectangle draw hints
+	UINT32 draw_linestart, draw_rowstart;
+	UINT32 draw_lineend,   draw_rowend;
+	UINT32 draw_linestogo, draw_rowstogo;
+
+	// rectangle coordinates, etc.
+	UINT16* scrxpos = (UINT16*)malloc((fademask->width + 1)  * sizeof(UINT16));
+	UINT16* scrypos = (UINT16*)malloc((fademask->height + 1) * sizeof(UINT16));
+	UINT16 maskx, masky;
+	UINT32 relativepos;
+
+	// ---
+	// Screw it, we do the fixed point math ourselves up front.
+	scrxpos[0] = 0;
+	for (relativepos = 0, maskx = 1; maskx < fademask->width; ++maskx)
+		scrxpos[maskx] = (relativepos += fademask->xscale)>>FRACBITS;
+	scrxpos[fademask->width] = vid.width;
+
+	scrypos[0] = 0;
+	for (relativepos = 0, masky = 1; masky < fademask->height; ++masky)
+		scrypos[masky] = (relativepos += fademask->yscale)>>FRACBITS;
+	scrypos[fademask->height] = vid.height;
+	// ---
+
+	maskx = masky = 0;
+	do
+	{
+		draw_rowstart = scrxpos[maskx];
+		draw_rowend   = scrxpos[maskx + 1];
+		draw_linestart = scrypos[masky];
+		draw_lineend   = scrypos[masky + 1];
+
+		relativepos = (draw_linestart * vid.width) + draw_rowstart;
+		draw_linestogo = draw_lineend - draw_linestart;
+
+		if (*mask == 0)
+		{
+			// shortcut - memcpy source to work
+			while (draw_linestogo--)
+			{
+				M_Memcpy(w_base+relativepos, s_base+relativepos, (draw_rowend-draw_rowstart) * vid.bpp);
+				relativepos += vid.width;
+			}
+		}
+		else if (*mask >= 255)
+		{
+			// shortcut - memcpy target to work
+			while (draw_linestogo--)
+			{
+				M_Memcpy(w_base+relativepos, e_base+relativepos, (draw_rowend-draw_rowstart) * vid.bpp);
+				relativepos += vid.width;
+			}
+		}
+		else
+		{
+			// DRAWING LOOP
+			while (draw_linestogo--)
+			{
+				UINT8 alpha = *mask;
+				const UINT32 *sauce = NULL;
+				w = w_base + relativepos;
+				s = s_base + relativepos;
+				e = e_base + relativepos;
+				draw_rowstogo = draw_rowend - draw_rowstart;
+
+				if (wipestyleflags & WSF_FADEIN)
+				{
+					alpha = 0xFF - alpha;
+					sauce = e;
+				}
+				else
+					sauce = s;
+
+				// This is gonna be mad slow...
+				while (draw_rowstogo--)
+				{
+					// additive color blending
+					pack.rgba = *sauce;
+					r = pack.s.red + FADEREDFACTOR*alpha/10;
+					g = pack.s.green + FADEGREENFACTOR*alpha/10;
+					b = pack.s.blue + FADEBLUEFACTOR*alpha/10;
+
+					// clamp values
+					if (r > 255) r = 255;
+					if (g > 255) g = 255;
+					if (b > 255) b = 255;
+
+					// pack into rgba
+					pack.s.red = r;
+					pack.s.green = g;
+					pack.s.blue = b;
+					*w = pack.rgba;
+					w++;
+					sauce++;
+				}
+
+				relativepos += vid.width;
+			}
+			// END DRAWING LOOP
+		}
+
+		if (++maskx >= fademask->width)
+			++masky, maskx = 0;
+	} while (++mask < maskend);
+
+	free(scrxpos);
+	free(scrypos);
+}
+#endif // TRUECOLOR
 #endif
 
 /** Save the "before" screen of a wipe.
@@ -433,7 +792,7 @@ void F_WipeStartScreen(void)
 {
 #ifndef NOWIPE
 #ifdef HWRENDER
-	if(rendermode != render_soft)
+	if(!VID_InSoftwareRenderer())
 	{
 		HWR_StartScreenWipe();
 		return;
@@ -450,7 +809,7 @@ void F_WipeEndScreen(void)
 {
 #ifndef NOWIPE
 #ifdef HWRENDER
-	if(rendermode != render_soft)
+	if(!VID_InSoftwareRenderer())
 	{
 		HWR_EndScreenWipe();
 		return;
@@ -514,6 +873,10 @@ boolean F_TryColormapFade(UINT8 wipecolor)
 		if (rendermode == render_opengl)
 			F_WipeColorFill(wipecolor);
 #endif
+#ifdef TRUECOLOR
+		if (VID_InSoftwareRenderer() && truecolor)
+			F_WipeColorFill(wipecolor);
+#endif
 		return true;
 	}
 	else
@@ -574,10 +937,22 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			else
 #endif
 			{
-				UINT8 *colormap = fadecolormap;
-				if (wipestyleflags & WSF_TOWHITE)
-					colormap += (FADECOLORMAPROWS * 256);
-				F_DoColormapWipe(fmask, colormap);
+#ifdef TRUECOLOR
+				if (truecolor)
+				{
+					if (wipestyleflags & WSF_TOWHITE)
+						F_DoWhiteColormapWipe32(fmask);
+					else
+						F_DoColormapWipe32(fmask);
+				}
+				else
+#endif
+				{
+					UINT8 *colormap = fadecolormap;
+					if (wipestyleflags & WSF_TOWHITE)
+						colormap += (FADECOLORMAPROWS * 256);
+					F_DoColormapWipe(fmask, colormap);
+				}
 			}
 
 			// Draw the title card above the wipe
@@ -593,7 +968,14 @@ void F_RunWipe(UINT8 wipetype, boolean drawMenu)
 			}
 			else
 #endif
-				F_DoWipe(fmask);
+			{
+#ifdef TRUECOLOR
+				if (truecolor)
+					F_DoWipe32(fmask);
+				else
+#endif
+					F_DoWipe(fmask);
+			}
 		}
 
 		I_OsPolling();

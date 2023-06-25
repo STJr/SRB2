@@ -84,6 +84,7 @@ typedef struct GLMapTexture_s GLMapTexture_t;
 struct GLPatch_s
 {
 	GLMipmap_t *mipmap; // Texture data. Allocated whenever the patch is.
+	int         picfmt;
 	float       max_s, max_t;
 };
 typedef struct GLPatch_s GLPatch_t;

@@ -29,6 +29,7 @@
 #include "doomstat.h"
 #include "r_patch.h"
 #include "r_picformats.h"
+#include "r_textures.h"
 #include "i_system.h" // I_GetFreeMem
 #include "i_video.h" // rendermode
 #include "z_zone.h"

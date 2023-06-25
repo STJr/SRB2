@@ -2837,7 +2837,6 @@ void readsound(MYFILE *f, INT32 num)
 			tmp = strchr(s, '\n');
 			if (tmp)
 				*tmp = '\0';
-
 			tmp = strchr(s, '#');
 			if (tmp)
 				*tmp = '\0';

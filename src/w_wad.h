@@ -157,6 +157,7 @@ void W_Shutdown(void);
 FILE *W_OpenWadFile(const char **filename, boolean useerrors);
 // Load and add a wadfile to the active wad files, returns numbers of lumps, INT16_MAX on error
 UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup);
+void W_InitFileCache(wadfile_t *wadfile, UINT16 numlumps);
 // Adds a folder as a file
 UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup);
 
@@ -181,7 +182,9 @@ UINT16 W_CheckNumForFullNamePK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderStartPK3(const char *name, UINT16 wad, UINT16 startlump);
 UINT16 W_CheckNumForFolderEndPK3(const char *name, UINT16 wad, UINT16 startlump);
 
+lumpnum_t W_FindFirstLump(const char *name);
 lumpnum_t W_CheckNumForMap(const char *name);
+
 lumpnum_t W_CheckNumForName(const char *name);
 lumpnum_t W_CheckNumForLongName(const char *name);
 lumpnum_t W_GetNumForName(const char *name); // like W_CheckNumForName but I_Error on LUMPERROR

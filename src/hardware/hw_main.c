@@ -704,36 +704,15 @@ FBITFIELD HWR_GetBlendModeFlag(INT32 style)
 	}
 }
 
-UINT8 HWR_GetTranstableAlpha(INT32 transtablenum)
+FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 alpha, FSurfaceInfo *pSurf)
 {
-	transtablenum = max(min(transtablenum, tr_trans90), 0);
-
-	switch (transtablenum)
-	{
-		case 0          : return 0xff;
-		case tr_trans10 : return 0xe6;
-		case tr_trans20 : return 0xcc;
-		case tr_trans30 : return 0xb3;
-		case tr_trans40 : return 0x99;
-		case tr_trans50 : return 0x80;
-		case tr_trans60 : return 0x66;
-		case tr_trans70 : return 0x4c;
-		case tr_trans80 : return 0x33;
-		case tr_trans90 : return 0x19;
-	}
-
-	return 0xff;
-}
-
-FBITFIELD HWR_SurfaceBlend(INT32 style, INT32 transtablenum, FSurfaceInfo *pSurf)
-{
-	if (!transtablenum || style <= AST_COPY || style >= AST_OVERLAY)
+	if (style <= AST_COPY || style >= AST_OVERLAY)
 	{
 		pSurf->PolyColor.s.alpha = 0xff;
 		return PF_Masked;
 	}
 
-	pSurf->PolyColor.s.alpha = HWR_GetTranstableAlpha(transtablenum);
+	pSurf->PolyColor.s.alpha = alpha;
 	return HWR_GetBlendModeFlag(style);
 }
 
@@ -745,7 +724,7 @@ FBITFIELD HWR_TranstableToAlpha(INT32 transtablenum, FSurfaceInfo *pSurf)
 		return PF_Masked;
 	}
 
-	pSurf->PolyColor.s.alpha = HWR_GetTranstableAlpha(transtablenum);
+	pSurf->PolyColor.s.alpha = R_TransnumToAlpha(transtablenum);
 	return PF_Translucent;
 }
 
@@ -3760,8 +3739,8 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	FBITFIELD blend = 0;
 	FBITFIELD occlusion;
 	INT32 shader = SHADER_DEFAULT;
+	INT32 alpha;
 	boolean use_linkdraw_hack = false;
-	UINT8 alpha;
 
 	INT32 i;
 	float realtop, realbot, top, bot;
@@ -3853,37 +3832,18 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 	else
 		occlusion = PF_Occlude;
 
-	INT32 blendmode;
-	if (spr->mobj->frame & FF_BLENDMASK)
-		blendmode = ((spr->mobj->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
-	else
-		blendmode = spr->mobj->blendmode;
+	alpha = spr->alpha;
 
-	if (!cv_translucency.value) // translucency disabled
+	if (spr->translucent)
 	{
-		Surf.PolyColor.s.alpha = 0xFF;
-		blend = PF_Translucent|occlusion;
-		if (!occlusion) use_linkdraw_hack = true;
-	}
-	else if (spr->mobj->flags2 & MF2_SHADOW)
-	{
-		Surf.PolyColor.s.alpha = 0x40;
-		blend = HWR_GetBlendModeFlag(blendmode);
-	}
-	else if (spr->mobj->frame & FF_TRANSMASK)
-	{
-		INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
-		blend = HWR_SurfaceBlend(blendmode, trans, &Surf);
+		blend = HWR_SurfaceBlend(spr->blendmode, alpha, &Surf);
 	}
 	else
 	{
-		// BP: i agree that is little better in environement but it don't
-		//     work properly under glide nor with fogcolor to ffffff :(
-		// Hurdler: PF_Environement would be cool, but we need to fix
-		//          the issue with the fog before
 		Surf.PolyColor.s.alpha = 0xFF;
-		blend = HWR_GetBlendModeFlag(blendmode)|occlusion;
-		if (!occlusion) use_linkdraw_hack = true;
+		blend = HWR_GetBlendModeFlag(spr->blendmode) | occlusion;
+		if (!occlusion)
+			use_linkdraw_hack = true;
 	}
 
 	if (HWR_UseShader())
@@ -3891,8 +3851,6 @@ static void HWR_SplitSprite(gl_vissprite_t *spr)
 		shader = SHADER_SPRITE;
 		blend |= PF_ColorMapped;
 	}
-
-	alpha = Surf.PolyColor.s.alpha;
 
 	// Start with the lightlevel and colormap from the top of the sprite
 	lightlevel = *list[sector->numlights - 1].lightlevel;
@@ -4297,49 +4255,16 @@ static void HWR_DrawSprite(gl_vissprite_t *spr)
 		else
 			occlusion = PF_Occlude;
 
-		INT32 blendmode;
-		if (spr->mobj->frame & FF_BLENDMASK)
-			blendmode = ((spr->mobj->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
-		else
-			blendmode = spr->mobj->blendmode;
-
-		if (!cv_translucency.value) // translucency disabled
+		if (spr->translucent)
 		{
-			Surf.PolyColor.s.alpha = 0xFF;
-			blend = PF_Translucent|occlusion;
-			if (!occlusion) use_linkdraw_hack = true;
-		}
-		else if (spr->mobj->flags2 & MF2_SHADOW)
-		{
-			Surf.PolyColor.s.alpha = 0x40;
-			blend = HWR_GetBlendModeFlag(blendmode);
-		}
-		else if (spr->mobj->frame & FF_TRANSMASK)
-		{
-			INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
-			blend = HWR_SurfaceBlend(blendmode, trans, &Surf);
+			blend = HWR_SurfaceBlend(spr->blendmode, spr->alpha, &Surf);
 		}
 		else
 		{
-			// BP: i agree that is little better in environement but it don't
-			//     work properly under glide nor with fogcolor to ffffff :(
-			// Hurdler: PF_Environement would be cool, but we need to fix
-			//          the issue with the fog before
 			Surf.PolyColor.s.alpha = 0xFF;
-			blend = HWR_GetBlendModeFlag(blendmode)|occlusion;
-			if (!occlusion) use_linkdraw_hack = true;
-		}
-
-		if (spr->renderflags & RF_SHADOWEFFECTS)
-		{
-			INT32 alpha = Surf.PolyColor.s.alpha;
-			alpha -= ((INT32)(spr->shadowheight / 4.0f)) + 75;
-			if (alpha < 1)
-				return;
-
-			Surf.PolyColor.s.alpha = (UINT8)(alpha);
-			blend = PF_Translucent|occlusion;
-			if (!occlusion) use_linkdraw_hack = true;
+			blend = HWR_GetBlendModeFlag(spr->blendmode) | occlusion;
+			if (!occlusion)
+				use_linkdraw_hack = true;
 		}
 
 		if (HWR_UseShader())
@@ -4433,19 +4358,14 @@ static inline void HWR_DrawPrecipitationSprite(gl_vissprite_t *spr)
 		HWR_Lighting(&Surf, lightlevel, colormap);
 	}
 
-	if (spr->mobj->frame & FF_TRANSMASK)
+	if (spr->translucent)
 	{
-		INT32 trans = (spr->mobj->frame & FF_TRANSMASK)>>FF_TRANSSHIFT;
-		blend = HWR_SurfaceBlend(AST_TRANSLUCENT, trans, &Surf);
+		blend = HWR_SurfaceBlend(spr->blendmode, spr->alpha, &Surf);
 	}
 	else
 	{
-		// BP: i agree that is little better in environement but it don't
-		//     work properly under glide nor with fogcolor to ffffff :(
-		// Hurdler: PF_Environement would be cool, but we need to fix
-		//          the issue with the fog before
 		Surf.PolyColor.s.alpha = 0xFF;
-		blend = HWR_GetBlendModeFlag(spr->mobj->blendmode)|PF_Occlude;
+		blend = HWR_GetBlendModeFlag(spr->blendmode);
 	}
 
 	if (HWR_UseShader())
@@ -4999,6 +4919,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	boolean vflip = (!(thing->eflags & MFE_VERTICALFLIP) != !R_ThingVerticallyFlipped(thing));
 	boolean mirrored = thing->mirrored;
 	boolean hflip = (!R_ThingHorizontallyFlipped(thing) != !mirrored);
+	INT32 blendmode, alpha = 255;
+	boolean translucent = false;
+	UINT32 trans;
 	INT32 dispoffset;
 
 	angle_t ang;
@@ -5020,21 +4943,31 @@ static void HWR_ProjectSprite(mobj_t *thing)
 	if (!thing)
 		return;
 
-	INT32 blendmode;
+	// Get the blend mode
 	if (thing->frame & FF_BLENDMASK)
 		blendmode = ((thing->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
 	else
-		blendmode = thing->blendmode;
+		blendmode = min(max(AST_COPY, thing->blendmode), AST_OVERLAY);
 
-	// Visibility check by the blend mode.
-	if (thing->frame & FF_TRANSMASK)
+	// Determine the translucency value.
+	if (thing->flags2 & MF2_SHADOW) // actually only the player should use this (temporary invisibility)
+		trans = tr_trans80; // because now the translucency is set through FF_TRANSMASK
+	else if (thing->frame & FF_TRANSMASK)
+		trans = (thing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
+	else
+		trans = 0;
+
+	if (cv_translucency.value && blendmode != AST_COPY && blendmode != AST_OVERLAY)
 	{
-		if (!R_BlendLevelVisible(blendmode, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT))
+		alpha = thing->alpha - (0xFF - R_BlendModeTransnumToAlpha(blendmode, trans));
+
+		if (!R_BlendLevelVisible(blendmode, alpha))
 			return;
+
+		translucent = true;
 	}
 
 	dispoffset = thing->dispoffset;
-
 
 	if (R_UsingFrameInterpolation() && !paused)
 	{
@@ -5261,11 +5194,21 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			shadowheight = FIXED_TO_FLOAT(floordiff);
 			shadowscale = FIXED_TO_FLOAT(FixedMul(FRACUNIT - floordiff/640, casterinterp.scale));
 
+			if (translucent)
+			{
+				alpha -= ((INT32)(shadowheight / 4.0f)) + 75;
+
+				if (!R_BlendLevelVisible(blendmode, alpha))
+					return;
+			}
+
 			if (splat)
 				spritexscale *= shadowscale;
 			spriteyscale *= shadowscale;
 		}
 	}
+
+	translucent = !(blendmode == AST_TRANSLUCENT && alpha >= 255);
 
 	this_xscale = spritexscale * this_scale;
 	this_yscale = spriteyscale * this_scale;
@@ -5288,18 +5231,6 @@ static void HWR_ProjectSprite(mobj_t *thing)
 			x1 = (FIXED_TO_FLOAT(spr_offset) * this_xscale);
 			x2 = (FIXED_TO_FLOAT(spr_width - spr_offset) * this_xscale);
 		}
-
-		// test if too close
-	/*
-		if (papersprite)
-		{
-			z1 = tz - x1 * angle_scalez;
-			z2 = tz + x2 * angle_scalez;
-
-			if (max(z1, z2) < ZCLIP_PLANE)
-				return;
-		}
-	*/
 
 		z1 = tr_y + x1 * rightsin;
 		z2 = tr_y - x2 * rightsin;
@@ -5473,6 +5404,9 @@ static void HWR_ProjectSprite(mobj_t *thing)
 
 	vis->precip = false;
 
+	vis->translucent = translucent;
+	vis->blendmode = blendmode;
+	vis->alpha = alpha;
 	vis->angle = interp.angle;
 }
 
@@ -5491,15 +5425,33 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	size_t lumpoff;
 	unsigned rot = 0;
 	UINT8 flip;
+	INT32 blendmode, alpha = 255;
+	boolean translucent = false;
+	UINT32 trans;
 
 	if (!thing)
 		return;
 
-	// Visibility check by the blend mode.
+	// Get the blend mode
+	if (thing->frame & FF_BLENDMASK)
+		blendmode = ((thing->frame & FF_BLENDMASK) >> FF_BLENDSHIFT) + 1;
+	else
+		blendmode = min(max(AST_COPY, thing->blendmode), AST_OVERLAY);
+
+	// Determine the translucency value.
 	if (thing->frame & FF_TRANSMASK)
+		trans = (thing->frame & FF_TRANSMASK) >> FF_TRANSSHIFT;
+	else
+		trans = 0;
+
+	if (cv_translucency.value && blendmode != AST_COPY && blendmode != AST_OVERLAY)
 	{
-		if (!R_BlendLevelVisible(thing->blendmode, (thing->frame & FF_TRANSMASK)>>FF_TRANSSHIFT))
+		alpha = thing->alpha - (0xFF - R_BlendModeTransnumToAlpha(blendmode, trans));
+
+		if (!R_BlendLevelVisible(blendmode, alpha))
 			return;
+
+		translucent = !(blendmode == AST_TRANSLUCENT && alpha >= 255);
 	}
 
 	// uncapped/interpolation
@@ -5594,6 +5546,10 @@ static void HWR_ProjectPrecipitationSprite(precipmobj_t *thing)
 	vis->gz = vis->gzt - FIXED_TO_FLOAT(spritecachedinfo[lumpoff].height);
 
 	vis->precip = true;
+
+	vis->translucent = translucent;
+	vis->blendmode = blendmode;
+	vis->alpha = alpha;
 
 	// okay... this is a hack, but weather isn't networked, so it should be ok
 	if (!(thing->precipflags & PCF_THUNK))

@@ -17,6 +17,9 @@
 #include "r_defs.h"
 #include "doomdef.h"
 
+#define PICTURES_ALLOWDEPTH
+//#define PICTURES_FORCEFLATDEPTH
+
 typedef enum
 {
 	PICFMT_NONE = 0,
@@ -78,11 +81,14 @@ void *Picture_GetPatchPixel(
 void *Picture_TextureToFlat(size_t trickytex);
 
 INT32 Picture_FormatBPP(pictureformat_t format);
+
 boolean Picture_IsPatchFormat(pictureformat_t format);
 boolean Picture_IsInternalPatchFormat(pictureformat_t format);
 boolean Picture_IsDoomPatchFormat(pictureformat_t format);
 boolean Picture_IsFlatFormat(pictureformat_t format);
 boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size);
+
+pictureformat_t Picture_PatchFormatTranslation(pictureformat_t format);
 
 // Structs
 typedef enum

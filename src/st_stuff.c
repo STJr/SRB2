@@ -212,9 +212,17 @@ INT32 st_translucency = 10;
 void ST_doPaletteStuff(void)
 {
 	INT32 palette;
+#ifdef TRUECOLOR
+	INT32 flashpal = 0;
+#endif
 
 	if (stplyr && stplyr->flashcount)
+	{
 		palette = stplyr->flashpal;
+#ifdef TRUECOLOR
+		flashpal = palette;
+#endif
+	}
 	else
 		palette = 0;
 
@@ -234,6 +242,27 @@ void ST_doPaletteStuff(void)
 				V_SetPalette(palette);
 		}
 	}
+
+#ifdef TRUECOLOR
+	if (VID_InSoftwareRenderer() && truecolor && (flashpal > 0))
+	{
+		UINT32 *buf32 = (UINT32 *)screens[0];
+		const UINT32 *deststop32 = buf32 + vid.width * vid.height;
+
+		// set flash color
+		UINT32 flashcolor;
+
+		// Look in HWR_DoPostProcessor for the reference colors
+		if (flashpal == PAL_NUKE)
+			flashcolor = 0xFF7F7FFF;
+		else
+			flashcolor = 0xFFFFFFFF;
+
+		// blend with the entire screen
+		for (; buf32 < deststop32; ++buf32)
+			*buf32 = R_TranslucentMix(*buf32, flashcolor, 0xC0);
+	}
+#endif
 }
 
 void ST_UnloadGraphics(void)
@@ -2867,7 +2896,7 @@ void ST_Drawer(void)
 	//25/08/99: Hurdler: palette changes is done for all players,
 	//                   not only player1! That's why this part
 	//                   of code is moved somewhere else.
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 #endif
 		if (rendermode != render_none) ST_doPaletteStuff();
 

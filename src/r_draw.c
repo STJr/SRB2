@@ -9,7 +9,7 @@
 // See the 'LICENSE' file for more details.
 //-----------------------------------------------------------------------------
 /// \file  r_draw.c
-/// \brief span / column drawer functions, for 8bpp and 16bpp
+/// \brief span / column drawer functions
 ///        All drawing to the view buffer is accomplished in this file.
 ///        The other refresh files only know about ccordinates,
 ///        not the architecture of the frame buffer.
@@ -32,14 +32,14 @@
 #endif
 
 // ==========================================================================
-//                     COMMON DATA FOR 8bpp AND 16bpp
+//                              COMMON DATA
 // ==========================================================================
 
 /**	\brief view info
 */
 INT32 viewwidth, scaledviewwidth, viewheight, viewwindowx, viewwindowy;
 
-/**	\brief pointer to the start of each line of the screen,
+/**	\brief pointer to the start of each line of the screen
 */
 UINT8 *ylookup[MAXVIDHEIGHT*4];
 
@@ -56,10 +56,29 @@ UINT8 *ylookup2[MAXVIDHEIGHT*4];
 */
 INT32 columnofs[MAXVIDWIDTH*4];
 
+/**	\brief pointer to the top left of the current view
+*/
 UINT8 *topleft;
 
 // =========================================================================
-//                      COLUMN DRAWING CODE STUFF
+//                            TRUECOLOR STUFF
+// =========================================================================
+
+/**	\brief use 32 bpp colormaps
+*/
+boolean tc_colormaps;
+boolean tc_spritecolormaps;
+
+/**	\brief pointer to the top left of the current view
+*/
+UINT32 *topleft_u32;
+
+UINT8 dp_lighting;
+extracolormap_t *dp_extracolormap;
+extracolormap_t *defaultextracolormap;
+
+// =========================================================================
+//                        COLUMN DRAWING CODE STUFF
 // =========================================================================
 
 lighttable_t *dc_colormap;
@@ -68,24 +87,31 @@ INT32 dc_x = 0, dc_yl = 0, dc_yh = 0;
 fixed_t dc_iscale, dc_texturemid;
 UINT8 dc_hires; // under MSVC boolean is a byte, while on other systems, it a bit,
                // soo lets make it a byte on all system for the ASM code
+UINT8 dc_picfmt = PICFMT_PATCH;
+UINT8 dc_colmapstyle = TC_COLORMAPSTYLE_8BPP;
 UINT8 *dc_source;
 
 // -----------------------
 // translucency stuff here
 // -----------------------
+boolean usetranstables;
+
 #define NUMTRANSTABLES 9 // how many translucency tables are used
 
-UINT8 *transtables; // translucency tables
+// translucency tables
+UINT8 *transtables;
 UINT8 *blendtables[NUMBLENDMAPS];
 
-/**	\brief R_DrawTransColumn uses this
+/**	\brief R_DrawTranslucentColumn uses this
 */
 UINT8 *dc_transmap; // one of the translucency tables
+UINT8 dc_alpha; // column alpha
+
+UINT32 (*R_BlendModeMix)(UINT32, UINT32, UINT8) = NULL;
 
 // ----------------------
 // translation stuff here
 // ----------------------
-
 
 /**	\brief R_DrawTranslatedColumn uses this
 */
@@ -107,9 +133,12 @@ INT32 ds_waterofs, ds_bgofs;
 
 UINT16 ds_flatwidth, ds_flatheight;
 boolean ds_powersoftwo, ds_solidcolor;
+UINT8 ds_picfmt = PICFMT_FLAT;
+UINT8 ds_colmapstyle = TC_COLORMAPSTYLE_8BPP;
 
 UINT8 *ds_source; // points to the start of a flat
 UINT8 *ds_transmap; // one of the translucency tables
+UINT8 ds_alpha; // span alpha
 
 // Vectors for Software's tilted slope drawers
 floatv3_t *ds_su, *ds_sv, *ds_sz;
@@ -378,7 +407,59 @@ boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel)
 	if (blendmode <= AST_COPY || blendmode == AST_SUBTRACT || blendmode == AST_MODULATE || blendmode >= AST_OVERLAY)
 		return true;
 
-	return (alphalevel < BlendTab_Count[BlendTab_FromStyle[blendmode]]);
+	return (alphalevel > 0);
+}
+
+INT32 R_AlphaToTransnum(UINT8 alpha)
+{
+	// Hacked up support for alpha value in software mode Tails 09-24-2002
+	if (alpha < 12)
+		return -1;
+	else if (alpha < 38)
+		return tr_trans90;
+	else if (alpha < 64)
+		return tr_trans80;
+	else if (alpha < 89)
+		return tr_trans70;
+	else if (alpha < 115)
+		return tr_trans60;
+	else if (alpha < 140)
+		return tr_trans50;
+	else if (alpha < 166)
+		return tr_trans40;
+	else if (alpha < 192)
+		return tr_trans30;
+	else if (alpha < 217)
+		return tr_trans20;
+	else if (alpha < 243)
+		return tr_trans10;
+	else
+		return 0;
+}
+
+UINT8 R_TransnumToAlpha(INT32 num)
+{
+	num = max(min(num, tr_trans90), 0);
+
+	switch (num)
+	{
+		case tr_trans10: return 0xE6;
+		case tr_trans20: return 0xCC;
+		case tr_trans30: return 0xB3;
+		case tr_trans40: return 0x99;
+		case tr_trans50: return 0x80;
+		case tr_trans60: return 0x66;
+		case tr_trans70: return 0x4C;
+		case tr_trans80: return 0x33;
+		case tr_trans90: return 0x19;
+	}
+
+	return 0xFF;
+}
+
+UINT8 R_BlendModeTransnumToAlpha(int style, INT32 num)
+{
+	return R_TransnumToAlpha(ClipBlendLevel(style, num));
 }
 
 // Define for getting accurate color brightness readings according to how the human eye sees them.
@@ -754,7 +835,7 @@ void R_FillBackScreen(void)
 	INT32 x, y, step, boff;
 
 	// quickfix, don't cache lumps in both modes
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		return;
 
 	// draw pattern around the status bar too (when hires),
@@ -850,7 +931,7 @@ void R_DrawViewBorder(void)
 	if (rendermode == render_none)
 		return;
 #ifdef HWRENDER
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 	{
 		HWR_DrawViewBorder(0);
 		return;
@@ -895,13 +976,12 @@ static void R_CalcTiltedLighting(fixed_t start, fixed_t end)
 	// ZDoom uses a different lighting setup to us, and I couldn't figure out how to adapt their version
 	// of this function. Here's my own.
 	INT32 left = ds_x1, right = ds_x2;
-	fixed_t step = (end-start)/(ds_x2-ds_x1+1);
-	INT32 i;
+	fixed_t step = (end-start)/(right-left+1);
 
 	// I wanna do some optimizing by checking for out-of-range segments on either side to fill in all at once,
 	// but I'm too bad at coding to not crash the game trying to do that. I guess this is fast enough for now...
-
-	for (i = left; i <= right; i++) {
+	for (INT32 i = left; i <= right; i++)
+	{
 		tiltlighting[i] = (start += step) >> FRACBITS;
 		if (tiltlighting[i] < 0)
 			tiltlighting[i] = 0;
@@ -920,16 +1000,438 @@ static void R_CalcTiltedLighting(fixed_t start, fixed_t end)
 }
 
 // ==========================================================================
-//                   INCLUDE 8bpp DRAWING CODE HERE
+//                              COLOR MATH
+// ==========================================================================
+
+static colorlookup_t r_draw_lut;
+
+#define clamp(c) max(min(c, 0xFF), 0x00)
+
+static inline UINT32 Blend_Copy(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	(void)bg;
+	(void)alpha;
+	return (0xFF000000 | fg);
+}
+
+static inline UINT32 Blend_Translucent(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	fg = R_TranslucentMix(bg, fg, alpha);
+	return (0xFF000000 | fg);
+}
+
+static inline UINT32 Blend_Additive(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	UINT8 r = clamp(R_GetRgbaR(bg) + R_GetRgbaR(fg));
+	UINT8 g = clamp(R_GetRgbaG(bg) + R_GetRgbaG(fg));
+	UINT8 b = clamp(R_GetRgbaB(bg) + R_GetRgbaB(fg));
+
+	fg = R_PutRgbaRGB(r, g, b);
+	fg = R_TranslucentMix(bg, fg, alpha);
+
+	return (0xFF000000 | fg);
+}
+
+static inline UINT32 Blend_Subtractive(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	INT32 mixR, mixG, mixB;
+	UINT8 r, g, b;
+
+	if (alpha == 0)
+		return 0xFF000000;
+
+	mixR = R_GetRgbaR(fg);
+	mixG = R_GetRgbaG(fg);
+	mixB = R_GetRgbaB(fg);
+
+	r = clamp((INT32)(-R_GetRgbaR(bg) + mixR));
+	g = clamp((INT32)(-R_GetRgbaG(bg) + mixG));
+	b = clamp((INT32)(-R_GetRgbaB(bg) + mixB));
+
+	alpha = (0xFF - alpha);
+
+	r = clamp((INT32)(r - alpha));
+	g = clamp((INT32)(g - alpha));
+	b = clamp((INT32)(b - alpha));
+
+	return (0xFF000000 | R_PutRgbaRGB(r, g, b));
+}
+
+static inline UINT32 Blend_ReverseSubtractive(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	INT32 mixR, mixG, mixB;
+	UINT8 r, g, b;
+
+	if (alpha == 0)
+		return bg;
+
+	mixR = R_GetRgbaR(fg);
+	mixG = R_GetRgbaG(fg);
+	mixB = R_GetRgbaB(fg);
+
+	r = clamp((INT32)(R_GetRgbaR(bg) - mixR));
+	g = clamp((INT32)(R_GetRgbaG(bg) - mixG));
+	b = clamp((INT32)(R_GetRgbaB(bg) - mixB));
+
+	fg = R_PutRgbaRGB(r, g, b);
+	fg = R_TranslucentMix(bg, fg, alpha);
+
+	return (0xFF000000 | fg);
+}
+
+static inline UINT32 Blend_Multiplicative(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	float mixR = ((float)R_GetRgbaR(fg) / 256.0f);
+	float mixG = ((float)R_GetRgbaG(fg) / 256.0f);
+	float mixB = ((float)R_GetRgbaB(fg) / 256.0f);
+
+	UINT8 r = clamp((int)(R_GetRgbaR(bg) * mixR));
+	UINT8 g = clamp((int)(R_GetRgbaG(bg) * mixG));
+	UINT8 b = clamp((int)(R_GetRgbaB(bg) * mixB));
+
+	(void)alpha;
+
+	return (0xFF000000 | R_PutRgbaRGB(r, g, b));
+}
+
+static inline void R_SetBlendingFunction(INT32 blendmode)
+{
+	switch (blendmode)
+	{
+		case AST_COPY:
+		case AST_OVERLAY:
+			R_BlendModeMix = Blend_Copy;
+			break;
+		case AST_TRANSLUCENT:
+			R_BlendModeMix = Blend_Translucent;
+			break;
+		case AST_ADD:
+			R_BlendModeMix = Blend_Additive;
+			break;
+		case AST_SUBTRACT:
+			R_BlendModeMix = Blend_Subtractive;
+			break;
+		case AST_REVERSESUBTRACT:
+			R_BlendModeMix = Blend_ReverseSubtractive;
+			break;
+		case AST_MODULATE:
+			R_BlendModeMix = Blend_Multiplicative;
+			break;
+	}
+}
+
+static void R_AlphaBlend_8(UINT8 src, UINT8 alpha, UINT8 *dest)
+{
+	RGBA_t result;
+	result.rgba = R_BlendModeMix(GetTrueColor(src), GetTrueColor(*dest), alpha);
+	*dest = GetColorLUT(&r_draw_lut, result.s.red, result.s.green, result.s.blue);
+}
+
+static UINT8 R_AlphaBlend_s8d8(UINT8 src, UINT8 alpha, UINT8 dest)
+{
+	RGBA_t result;
+	result.rgba = R_BlendModeMix(GetTrueColor(src), GetTrueColor(dest), alpha);
+	return GetColorLUT(&r_draw_lut, result.s.red, result.s.green, result.s.blue);
+}
+
+#ifdef TRUECOLOR
+static inline void R_SetBlendingFunction_ColorMix(INT32 blendmode);
+#endif
+
+void R_SetColumnBlendingFunction(INT32 blendmode)
+{
+#ifdef TRUECOLOR
+	if (truecolor && dc_picfmt == PICFMT_PATCH32)
+		R_SetBlendingFunction_ColorMix(blendmode);
+	else
+#endif
+		R_SetBlendingFunction(blendmode);
+}
+
+void R_SetSpanBlendingFunction(INT32 blendmode)
+{
+#ifdef TRUECOLOR
+	if (truecolor && ds_picfmt == PICFMT_FLAT32)
+		R_SetBlendingFunction_ColorMix(blendmode);
+	else
+#endif
+		R_SetBlendingFunction(blendmode);
+}
+
+void R_InitAlphaLUT(void)
+{
+	InitColorLUT(&r_draw_lut, pMasterPalette, false);
+}
+
+// ==========================================================================
+//                      INCLUDE 8bpp DRAWING CODE HERE
 // ==========================================================================
 
 #include "r_draw8.c"
 #include "r_draw8_npo2.c"
 
 // ==========================================================================
-//                   INCLUDE 16bpp DRAWING CODE HERE
+//                     INCLUDE 32bpp DRAWING CODE HERE
 // ==========================================================================
 
-#ifdef HIGHCOLOR
-#include "r_draw16.c"
+#ifdef TRUECOLOR
+typedef struct
+{
+	UINT32 fg, bg;
+	UINT32 result;
+} tc_mixcache_t;
+
+static tc_mixcache_t tc_mixcache[2];
+
+static UINT32 TC_ColorMix(UINT32 fg, UINT32 bg)
+{
+	RGBA_t rgba;
+	UINT32 pixel, origpixel = fg;
+	UINT8 tint, alpha = R_GetRgbaA(origpixel);
+	tc_mixcache_t *cache = &tc_mixcache[0];
+
+	if (!alpha)
+		return bg;
+	else if (alpha == 0xFF && fg == cache->fg)
+		return cache->result;
+	else if (alpha < 0xFF && fg == cache->fg && bg == cache->bg)
+		return cache->result;
+
+	cache->fg = fg;
+	cache->bg = bg;
+
+	pixel = rgba.rgba = fg;
+	tint = R_GetRgbaA(dp_extracolormap->rgba) * 10;
+
+	// Mix pixel with blend color
+	if (tint > 0)
+		pixel = TC_TintTrueColor(rgba, (UINT32)(dp_extracolormap->rgba), tint);
+
+	// Mix pixel with fade color
+	fg = R_TranslucentMix(pixel, (UINT32)(dp_extracolormap->fadergba), (0xFF - dp_lighting));
+
+	// Mix pixel with its own alpha value
+	fg = R_TranslucentMix(bg, fg, alpha);
+
+	// Apply the color cube
+	fg = ColorCube_ApplyRGBA(fg);
+
+	cache->result = (0xFF000000 | fg);
+	return cache->result;
+}
+
+static UINT32 TC_ColorMix2(UINT32 fg, UINT32 bg)
+{
+	RGBA_t rgba;
+	UINT32 pixel, origpixel = fg;
+	UINT8 tint, alpha = R_GetRgbaA(origpixel);
+	tc_mixcache_t *cache = &tc_mixcache[1];
+
+	if (!alpha)
+		return bg;
+	else if (alpha == 0xFF && fg == cache->fg)
+		return cache->result;
+	else if (alpha < 0xFF && fg == cache->fg && bg == cache->bg)
+		return cache->result;
+
+	cache->fg = fg;
+	cache->bg = bg;
+
+	pixel = rgba.rgba = fg;
+	tint = R_GetRgbaA(dp_extracolormap->rgba) * 10;
+
+	// Mix pixel with blend color
+	if (tint > 0)
+		pixel = TC_TintTrueColor(rgba, (UINT32)(dp_extracolormap->rgba), tint);
+
+	// Mix pixel with fade color
+	fg = R_TranslucentMix(pixel, (UINT32)(dp_extracolormap->fadergba), (0xFF - dp_lighting));
+
+	// Apply the color cube
+	fg = ColorCube_ApplyRGBA(fg);
+
+	cache->result = (0xFF000000 | fg);
+	return cache->result;
+}
+
+void TC_ClearMixCache(void)
+{
+#define CLEAR(i) tc_mixcache[i].fg = tc_mixcache[i].bg = tc_mixcache[i].result = 0x00000000
+	CLEAR(0);
+	CLEAR(1);
+#undef CLEAR
+}
+
+FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt)
+{
+	fixed_t r, g, b;
+	fixed_t cmaskr, cmaskg, cmaskb;
+	fixed_t cbrightness;
+	fixed_t maskamt, othermask;
+	UINT32 origpixel = rgba.rgba;
+
+	r = cmaskr = rgba.s.red;
+	g = cmaskg = rgba.s.green;
+	b = cmaskb = rgba.s.blue;
+
+	cbrightness = (r+r+r+b+g+g+g+g)<<13;
+	maskamt = tintamt<<8;
+	othermask = (0xFF-tintamt)<<8;
+
+	cmaskr <<= FRACBITS;
+	cmaskg <<= FRACBITS;
+	cmaskb <<= FRACBITS;
+
+	maskamt = FixedDiv(maskamt, 0xFF0000);
+	cmaskr = FixedMul(cmaskr, maskamt);
+	cmaskg = FixedMul(cmaskg, maskamt);
+	cmaskb = FixedMul(cmaskb, maskamt);
+
+	r <<= FRACBITS;
+	g <<= FRACBITS;
+	b <<= FRACBITS;
+
+	rgba.s.red = (FixedMul(cbrightness, cmaskr)>>FRACBITS) + (FixedMul(r, othermask)>>FRACBITS);
+	rgba.s.green = (FixedMul(cbrightness, cmaskg)>>FRACBITS) + (FixedMul(g, othermask)>>FRACBITS);
+	rgba.s.blue = (FixedMul(cbrightness, cmaskb)>>FRACBITS) + (FixedMul(b, othermask)>>FRACBITS);
+
+	return R_TranslucentMix(origpixel, R_TranslucentMix(rgba.rgba, blendcolor, (cbrightness>>FRACBITS)), tintamt);
+}
+
+static inline UINT32 TC_Colormap32Mix(UINT32 color)
+{
+	return ColorCube_ApplyRGBA(color);
+}
+
+static inline UINT32 Blend_ColorMix_Copy(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	(void)alpha;
+	fg = TC_ColorMix(fg, bg);
+	return (0xFF000000 | fg);
+}
+
+static inline UINT32 Blend_ColorMix_Translucent(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	fg = TC_ColorMix(fg, bg);
+	fg = R_TranslucentMix(bg, fg, alpha);
+	return (0xFF000000 | fg);
+}
+
+static inline UINT32 Blend_ColorMix_Additive(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	float mixR, mixG, mixB, mixA = (float)R_GetRgbaA(fg) / 255;
+	UINT8 r, g, b;
+
+	fg = TC_ColorMix2(fg, bg);
+	mixR = (float)R_GetRgbaR(fg) * mixA;
+	mixG = (float)R_GetRgbaG(fg) * mixA;
+	mixB = (float)R_GetRgbaB(fg) * mixA;
+
+	r = clamp((INT32)(R_GetRgbaR(bg) + mixR));
+	g = clamp((INT32)(R_GetRgbaG(bg) + mixG));
+	b = clamp((INT32)(R_GetRgbaB(bg) + mixB));
+
+	fg = R_PutRgbaRGB(r, g, b);
+	fg = R_TranslucentMix(bg, fg, alpha);
+
+	return (0xFF000000 | fg);
+}
+
+static inline UINT32 Blend_ColorMix_Subtractive(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	INT32 mixR, mixG, mixB, mixA = R_GetRgbaA(fg);
+	UINT8 r, g, b;
+
+	if (alpha == 0)
+		return 0xFF000000;
+
+	fg = TC_ColorMix2(fg, bg);
+	mixR = R_GetRgbaR(fg);
+	mixG = R_GetRgbaG(fg);
+	mixB = R_GetRgbaB(fg);
+	mixA = (0xFF - mixA);
+
+	r = clamp((INT32)(-R_GetRgbaR(bg) + mixR));
+	g = clamp((INT32)(-R_GetRgbaG(bg) + mixG));
+	b = clamp((INT32)(-R_GetRgbaB(bg) + mixB));
+
+	r = clamp((INT32)(r - mixA));
+	g = clamp((INT32)(g - mixA));
+	b = clamp((INT32)(b - mixA));
+	fg = R_PutRgbaRGBA(r, g, b, 0xFF);
+
+	if (alpha != 0xFF)
+		fg = R_TranslucentMix(0, fg, alpha);
+
+	return (0xFF000000 | fg);
+}
+
+static inline UINT32 Blend_ColorMix_ReverseSubtractive(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	float mixR, mixG, mixB, mixA = (float)R_GetRgbaA(fg) / 255;
+	UINT8 r, g, b;
+
+	fg = TC_ColorMix2(fg, bg);
+	mixR = (float)R_GetRgbaR(fg) * mixA;
+	mixG = (float)R_GetRgbaG(fg) * mixA;
+	mixB = (float)R_GetRgbaB(fg) * mixA;
+
+	r = clamp((INT32)(R_GetRgbaR(bg) - mixR));
+	g = clamp((INT32)(R_GetRgbaG(bg) - mixG));
+	b = clamp((INT32)(R_GetRgbaB(bg) - mixB));
+
+	fg = R_PutRgbaRGB(r, g, b);
+	fg = R_TranslucentMix(bg, fg, alpha);
+
+	return (0xFF000000 | fg);
+}
+
+static inline UINT32 Blend_ColorMix_Multiplicative(UINT32 fg, UINT32 bg, UINT8 alpha)
+{
+	return Blend_Multiplicative(TC_ColorMix(fg, bg), bg, alpha);
+}
+
+static inline void R_SetBlendingFunction_ColorMix(INT32 blendmode)
+{
+	switch (blendmode)
+	{
+		case AST_COPY:
+		case AST_OVERLAY:
+			R_BlendModeMix = Blend_ColorMix_Copy;
+			break;
+		case AST_TRANSLUCENT:
+			R_BlendModeMix = Blend_ColorMix_Translucent;
+			break;
+		case AST_ADD:
+			R_BlendModeMix = Blend_ColorMix_Additive;
+			break;
+		case AST_SUBTRACT:
+			R_BlendModeMix = Blend_ColorMix_Subtractive;
+			break;
+		case AST_REVERSESUBTRACT:
+			R_BlendModeMix = Blend_ColorMix_ReverseSubtractive;
+			break;
+		case AST_MODULATE:
+			R_BlendModeMix = Blend_ColorMix_Multiplicative;
+			break;
+	}
+}
+
+#undef clamp
+
+#define WriteTranslucentColumn(idx) *dest = R_BlendModeMix(GetTrueColor(idx), *(UINT32 *)dest, dc_alpha)
+#define WriteTranslucentColumn32(idx) *dest = R_BlendModeMix(idx, *(UINT32 *)dest, dc_alpha)
+
+#define WriteTranslucentSpan(idx) *dest = R_BlendModeMix(GetTrueColor(idx), *(UINT32 *)dest, ds_alpha)
+#define WriteTranslucentSpan32(idx) *dest = R_BlendModeMix(idx, *(UINT32 *)dest, ds_alpha)
+#define WriteTranslucentSpanIdx(idx, destidx) dest[destidx] = R_BlendModeMix(GetTrueColor(idx), dest[destidx], ds_alpha)
+#define WriteTranslucentSpanIdx32(idx, destidx) dest[destidx] = R_BlendModeMix(idx, dest[destidx], ds_alpha)
+
+#define WriteTranslucentWaterSpan(idx) *dest = R_BlendModeMix(GetTrueColor(idx), *(UINT32 *)dsrc, ds_alpha); dsrc++
+#define WriteTranslucentWaterSpan32(idx) *dest = R_BlendModeMix(idx, *(UINT32 *)dsrc, ds_alpha); dsrc++
+#define WriteTranslucentWaterSpanIdx(idx, destidx) dest[destidx] = R_BlendModeMix(GetTrueColor(idx), *(UINT32 *)dsrc, ds_alpha); dsrc++
+#define WriteTranslucentWaterSpanIdx32(idx, destidx) dest[destidx] = R_BlendModeMix(idx, *(UINT32 *)dsrc, ds_alpha); dsrc++
+
+#include "r_draw32.c"
+#include "r_draw32_npo2.c"
 #endif

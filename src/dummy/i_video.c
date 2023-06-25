@@ -6,6 +6,7 @@ rendermode_t rendermode = render_none;
 rendermode_t chosenrendermode = render_none;
 
 boolean highcolor = false;
+boolean truecolor = false;
 
 boolean allow_fullscreen = false;
 
@@ -39,6 +40,17 @@ INT32 VID_SetMode(INT32 modenum)
 {
 	(void)modenum;
 	return 0;
+}
+
+boolean VID_IsASoftwareRenderer(rendermode_t mode)
+{
+	(void)mode;
+	return false;
+}
+
+boolean VID_InSoftwareRenderer(void)
+{
+	return false;
 }
 
 boolean VID_CheckRenderer(void)

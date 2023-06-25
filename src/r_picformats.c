@@ -160,6 +160,9 @@ void *Picture_PatchConvert(
 		}
 	}
 
+	if (!picture)
+		return NULL;
+
 	// Write image size and offset
 	WRITEINT16(imgptr, inwidth);
 	WRITEINT16(imgptr, inheight);
@@ -359,6 +362,8 @@ void *Picture_PatchConvert(
 #ifdef HWRENDER
 		Patch_CreateGL(converted);
 #endif
+
+		converted->format = outformat;
 
 		Z_Free(img);
 
@@ -736,6 +741,38 @@ boolean Picture_CheckIfDoomPatch(softwarepatch_t *patch, size_t size)
 	return result;
 }
 
+/** Translates a patch format to a Doom patch format, and vice-versa.
+  * For example, an input of PICFMT_PATCH will return PICFMT_DOOMPATCH,
+  * and an input of PICFMT_DOOMPATCH will return PICFMT_PATCH.
+  *
+  * \param format Input patch format.
+  * \return The equivalent patch format.
+  */
+pictureformat_t Picture_PatchFormatTranslation(pictureformat_t format)
+{
+	switch (format)
+	{
+		// Patch to Doom patch
+		case PICFMT_PATCH:
+			return PICFMT_DOOMPATCH;
+		case PICFMT_PATCH16:
+			return PICFMT_DOOMPATCH16;
+		case PICFMT_PATCH32:
+			return PICFMT_DOOMPATCH32;
+		// Doom patch to patch
+		case PICFMT_DOOMPATCH:
+			return PICFMT_PATCH;
+		case PICFMT_DOOMPATCH16:
+			return PICFMT_PATCH16;
+		case PICFMT_DOOMPATCH32:
+			return PICFMT_PATCH32;
+		default:
+			break;
+	}
+
+	return PICFMT_NONE;
+}
+
 /** Converts a texture to a flat.
   *
   * \param trickytex The texture number.
@@ -748,10 +785,12 @@ void *Picture_TextureToFlat(size_t trickytex)
 
 	UINT8 *converted;
 	size_t flatsize;
-	fixed_t col, ofs;
+	fixed_t col, ofs, step;
 	column_t *column;
 	UINT8 *desttop, *dest, *deststop;
-	UINT8 *source;
+	UINT8 *source = NULL;
+	pictureformat_t format;
+	INT32 fmtbpp;
 
 	if (trickytex >= (unsigned)numtextures)
 		I_Error("Picture_TextureToFlat: invalid texture number!");
@@ -763,14 +802,22 @@ void *Picture_TextureToFlat(size_t trickytex)
 	R_CheckTextureCache(tex);
 
 	// Allocate the flat
-	flatsize = (texture->width * texture->height);
+	format = texture->format;
+	fmtbpp = Picture_FormatBPP(format) / 8;
+
+	flatsize = (texture->width * texture->height) * fmtbpp;
 	converted = Z_Malloc(flatsize, PU_STATIC, NULL);
-	memset(converted, TRANSPARENTPIXEL, flatsize);
+
+	if (format == PICFMT_PATCH32)
+		memset(converted, 0x00000000, flatsize);
+	else
+		memset(converted, TRANSPARENTPIXEL, flatsize); // Transparency hack
 
 	// Now we're gonna write to it
 	desttop = converted;
 	deststop = desttop + flatsize;
-	for (col = 0; col < texture->width; col++, desttop++)
+
+	for (col = 0; col < texture->width; col++, desttop += fmtbpp)
 	{
 		// no post_t info
 		if (!texture->holes)
@@ -778,11 +825,16 @@ void *Picture_TextureToFlat(size_t trickytex)
 			column = (column_t *)(R_GetColumn(tex, col));
 			source = (UINT8 *)(column);
 			dest = desttop;
-			for (ofs = 0; dest < deststop && ofs < texture->height; ofs++)
+			for (ofs = 0, step = 0; dest < deststop && step < texture->height; ofs += fmtbpp, step++)
 			{
-				if (source[ofs] != TRANSPARENTPIXEL)
-					*dest = source[ofs];
-				dest += texture->width;
+				if (format == PICFMT_PATCH32)
+					M_Memcpy(dest, &source[ofs], fmtbpp);
+				else
+				{
+					if (source[ofs] != TRANSPARENTPIXEL)
+						*dest = source[ofs];
+				}
+				dest += (texture->width * fmtbpp);
 			}
 		}
 		else
@@ -795,16 +847,24 @@ void *Picture_TextureToFlat(size_t trickytex)
 				if (topdelta <= prevdelta)
 					topdelta += prevdelta;
 				prevdelta = topdelta;
-
-				dest = desttop + (topdelta * texture->width);
+				dest = desttop + ((topdelta * texture->width) * fmtbpp);
 				source = (UINT8 *)column + 3;
-				for (ofs = 0; dest < deststop && ofs < column->length; ofs++)
+				for (ofs = 0, step = 0; dest < deststop && step < column->length; ofs += fmtbpp, step++)
 				{
-					if (source[ofs] != TRANSPARENTPIXEL)
-						*dest = source[ofs];
-					dest += texture->width;
+					if (format == PICFMT_PATCH32)
+						M_Memcpy(dest, &source[ofs], fmtbpp);
+					else
+					{
+						if (source[ofs] != TRANSPARENTPIXEL)
+							*dest = source[ofs];
+					}
+					dest += (texture->width * fmtbpp);
 				}
-				column = (column_t *)((UINT8 *)column + column->length + 4);
+				if (format == PICFMT_PATCH32)
+					column = (column_t *)((UINT32 *)column + column->length);
+				else
+					column = (column_t *)((UINT8 *)column + column->length);
+				column = (column_t *)((UINT8 *)column + 4);
 			}
 		}
 	}

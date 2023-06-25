@@ -659,6 +659,12 @@ extern const char *compdate, *comptime, *comprevision, *compbranch;
 /// Render flats on walls
 #define WALLFLATS
 
+
+/// Software true color mode rendering
+#ifndef NO_TRUECOLOR
+#define TRUECOLOR
+#endif
+
 /// Maintain compatibility with older 2.2 demos
 #define OLD22DEMOCOMPAT
 

@@ -21,7 +21,7 @@
 
 //
 // Creates a patch.
-// Assumes a PU_PATCH zone memory tag and no user, but can always be set later
+// Assumes a PU_PATCH zone memory tag and no user.
 //
 
 patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
@@ -58,6 +58,9 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 		M_Memcpy(patch->columns, ((UINT8 *)source + LONG(source->columnofs[0])), colsize);
 	}
 
+	patch->format = PICFMT_PATCH;
+	patch->extra = Z_Calloc(sizeof(patchextra_t), PU_PATCH_DATA, NULL);
+
 	return patch;
 }
 
@@ -65,25 +68,31 @@ patch_t *Patch_Create(softwarepatch_t *source, size_t srcsize, void *dest)
 // Frees a patch from memory.
 //
 
-static void Patch_FreeData(patch_t *patch)
+static void Patch_FreeExtra(patchextra_t *ext)
 {
 	INT32 i;
 
-#ifdef HWRENDER
-	if (patch->hardware)
-		HWR_FreeTexture(patch);
-#endif
+	if (ext->truecolor)
+		Patch_Free(ext->truecolor);
 
-	for (i = 0; i < 4; i++)
+	if (ext->source.data)
+		Z_Free(ext->source.data);
+
+	if (ext->flats)
 	{
-		if (patch->flats[i])
-			Z_Free(patch->flats[i]);
+		for (i = 0; i < 4; i++)
+		{
+			if (ext->flats[i])
+				Z_Free(ext->flats[i]);
+		}
+
+		Z_Free(ext->flats);
 	}
 
 #ifdef ROTSPRITE
-	if (patch->rotated)
+	if (ext->rotated)
 	{
-		rotsprite_t *rotsprite = patch->rotated;
+		rotsprite_t *rotsprite = ext->rotated;
 
 		for (i = 0; i < rotsprite->angles; i++)
 		{
@@ -95,6 +104,18 @@ static void Patch_FreeData(patch_t *patch)
 		Z_Free(rotsprite);
 	}
 #endif
+
+	Z_Free(ext);
+}
+
+static void Patch_FreeData(patch_t *patch)
+{
+#ifdef HWRENDER
+	if (patch->hardware)
+		HWR_FreeTexture(patch);
+#endif
+
+	Patch_FreeExtra(patch->extra);
 
 	if (patch->columnofs)
 		Z_Free(patch->columnofs);
@@ -124,24 +145,54 @@ void Patch_FreeTags(INT32 lowtag, INT32 hightag)
 	Z_IterateTags(lowtag, hightag, Patch_FreeTagsCallback);
 }
 
-void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags)
+void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags, pictureformat_t format)
 {
 	UINT8 flip = (flags & (PICFLAGS_XFLIP | PICFLAGS_YFLIP));
-	if (patch->flats[flip] == NULL)
-		patch->flats[flip] = Picture_Convert(PICFMT_PATCH, patch, PICFMT_FLAT16, 0, NULL, 0, 0, 0, 0, flags);
+
+	if (patch->extra->flats == NULL)
+		patch->extra->flats = Z_Calloc(sizeof(void *) * 4, PU_PATCH_DATA, NULL);
+
+	if (patch->extra->flats[flip] == NULL)
+		patch->extra->flats[flip] = Picture_Convert(patch->format, patch, format, 0, NULL, 0, 0, 0, 0, flags);
 }
 
-#ifdef HWRENDER
+//
+// Allocates a truecolor patch.
+//
+
+patch_t *Patch_GetTruecolor(patch_t *patch)
+{
+#ifdef PICTURES_ALLOWDEPTH
+	if (!patch->extra->truecolor && patch->extra->source.data)
+	{
+		patch_t *tc = Picture_PNGConvert(
+						(UINT8 *)patch->extra->source.data, PICFMT_PATCH32,
+						NULL, NULL, NULL, NULL,
+						patch->extra->source.len, NULL, 0);
+
+		tc->format = PICFMT_PATCH32;
+
+		patch->extra->truecolor = tc;
+	}
+
+	return patch->extra->truecolor;
+#else
+	return NULL;
+#endif
+}
+
 //
 // Allocates a hardware patch.
 //
 
+#ifdef HWRENDER
 void *Patch_AllocateHardwarePatch(patch_t *patch)
 {
 	if (!patch->hardware)
 	{
 		GLPatch_t *grPatch = Z_Calloc(sizeof(GLPatch_t), PU_HWRPATCHINFO, &patch->hardware);
 		grPatch->mipmap = Z_Calloc(sizeof(GLMipmap_t), PU_HWRPATCHINFO, &grPatch->mipmap);
+		grPatch->picfmt = PICFMT_PATCH;
 	}
 	return (void *)(patch->hardware);
 }

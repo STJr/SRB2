@@ -7384,6 +7384,10 @@ static void P_RunSpecialStageWipe(void)
 	if (rendermode == render_opengl)
 		F_WipeColorFill(0);
 #endif
+#ifdef TRUECOLOR
+	if (VID_InSoftwareRenderer() && truecolor)
+		F_WipeColorFill(0);
+#endif
 
 	F_WipeEndScreen();
 	F_RunWipe(wipedefs[wipe_speclevel_towhite], false);
@@ -7418,6 +7422,10 @@ static void P_RunLevelWipe(void)
 #ifdef HWRENDER
 	// uh..........
 	if (rendermode == render_opengl)
+		F_WipeColorFill(31);
+#endif
+#ifdef TRUECOLOR
+	if (VID_InSoftwareRenderer() && truecolor)
 		F_WipeColorFill(31);
 #endif
 

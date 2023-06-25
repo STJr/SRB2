@@ -25,6 +25,7 @@
 #include "keys.h"
 #include "i_video.h"
 #include "m_menu.h"
+#include "m_misc.h"
 #include "am_map.h"
 #include "d_main.h"
 #include "v_video.h"
@@ -98,8 +99,12 @@ INT32 viewangletox[FINEANGLES/2];
 angle_t xtoviewangle[MAXVIDWIDTH+1];
 
 lighttable_t *scalelight[LIGHTLEVELS][MAXLIGHTSCALE];
-lighttable_t *scalelightfixed[MAXLIGHTSCALE];
 lighttable_t *zlight[LIGHTLEVELS][MAXLIGHTZ];
+
+#ifdef TRUECOLOR
+lighttable_u32_t *scalelight_u32[LIGHTLEVELS][MAXLIGHTSCALE];
+lighttable_u32_t *zlight_u32[LIGHTLEVELS][MAXLIGHTZ];
+#endif
 
 // Hack to support extra boom colormaps.
 extracolormap_t *extra_colormaps = NULL;
@@ -163,6 +168,7 @@ consvar_t cv_showhud = CVAR_INIT ("showhud", "Yes", CV_CALL|CV_ALLOWLUA,  CV_Yes
 consvar_t cv_translucenthud = CVAR_INIT ("translucenthud", "10", CV_SAVE, translucenthud_cons_t, NULL);
 
 consvar_t cv_translucency = CVAR_INIT ("translucency", "On", CV_SAVE, CV_OnOff, NULL);
+consvar_t cv_transtables = CVAR_INIT ("transtables", "Off", CV_SAVE, CV_OnOff, NULL);
 consvar_t cv_drawdist = CVAR_INIT ("drawdist", "Infinite", CV_SAVE, drawdist_cons_t, NULL);
 consvar_t cv_drawdist_nights = CVAR_INIT ("drawdist_nights", "2048", CV_SAVE, drawdist_cons_t, NULL);
 consvar_t cv_drawdist_precip = CVAR_INIT ("drawdist_precip", "1024", CV_SAVE, drawdist_precip_cons_t, NULL);
@@ -588,6 +594,9 @@ static inline void R_InitLightTables(void)
 				level = NUMCOLORMAPS-1;
 
 			zlight[i][j] = colormaps + level*256;
+#ifdef TRUECOLOR
+			zlight_u32[i][j] = colormaps_u32 + level*256;
+#endif
 		}
 	}
 }
@@ -955,7 +964,7 @@ void R_ExecuteSetViewSize(void)
 	R_SetSkyScale();
 
 	// planes
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 	{
 		// this is only used for planes rendering in software mode
 		j = viewheight*16;
@@ -978,6 +987,9 @@ void R_ExecuteSetViewSize(void)
 	}
 
 	memset(scalelight, 0xFF, sizeof(scalelight));
+#ifdef TRUECOLOR
+	M_Memset32(scalelight_u32, 0xFF, sizeof(scalelight_u32));
+#endif
 
 	// Calculate the light levels to use for each level/scale combination.
 	for (i = 0; i< LIGHTLEVELS; i++)
@@ -994,12 +1006,15 @@ void R_ExecuteSetViewSize(void)
 				level = NUMCOLORMAPS - 1;
 
 			scalelight[i][j] = colormaps + level*256;
+#ifdef TRUECOLOR
+			scalelight_u32[i][j] = colormaps_u32 + level*256;
+#endif
 		}
 	}
 
-	// continue to do the software setviewsize as long as we use the reference software view
+	// continue to do the hardware setviewsize as long as we use the reference software view
 #ifdef HWRENDER
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		HWR_SetViewSize();
 #endif
 
@@ -1458,6 +1473,11 @@ void R_RenderPlayerView(player_t *player)
 			V_DrawFill(0, 0, BASEVIDWIDTH, BASEVIDHEIGHT, 32+(timeinmap&15));
 	}
 
+#ifdef TRUECOLOR
+	tc_colormaps = false;
+	tc_spritecolormaps = truecolor;
+#endif
+
 	R_SetupFrame(player);
 	framecount++;
 	validcount++;
@@ -1590,6 +1610,7 @@ void R_RegisterEngineStuff(void)
 	if (dedicated)
 		return;
 
+	CV_RegisterVar(&cv_transtables);
 	CV_RegisterVar(&cv_translucency);
 	CV_RegisterVar(&cv_drawdist);
 	CV_RegisterVar(&cv_drawdist_nights);

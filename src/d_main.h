@@ -48,6 +48,12 @@ boolean D_IsPathAllowed(const char *path);
 boolean D_CheckPathAllowed(const char *path, const char *why);
 
 //
+// RENDERER STATE
+//
+void D_CheckRendererState(void);
+void D_CheckColorDepth(INT32 newbitdepth, INT32 oldbitdepth);
+
+//
 // BASE LEVEL
 //
 void D_AdvanceDemo(void);

@@ -965,8 +965,7 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 	//
 	// set up caching
 	//
-	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
-	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
+	W_InitFileCache(wadfile, numlumps);
 
 	//
 	// add the wadfile
@@ -1001,6 +1000,13 @@ UINT16 W_InitFile(const char *filename, boolean mainfile, boolean startup)
 
 	W_InvalidateLumpnumCache();
 	return wadfile->numlumps;
+}
+
+// Allocate the lump cache, and the patch cache.
+void W_InitFileCache(wadfile_t *wadfile, UINT16 numlumps)
+{
+	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
+	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
 }
 
 //
@@ -1146,8 +1152,7 @@ UINT16 W_InitFolder(const char *path, boolean mainfile, boolean startup)
 	wadfile->filesize = 0;
 	memset(wadfile->md5sum, 0x00, 16);
 
-	Z_Calloc(numlumps * sizeof (*wadfile->lumpcache), PU_STATIC, &wadfile->lumpcache);
-	Z_Calloc(numlumps * sizeof (*wadfile->patchcache), PU_STATIC, &wadfile->patchcache);
+	W_InitFileCache(wadfile, numlumps);
 
 	CONS_Printf(M_GetText("Added folder %s (%u files, %u folders)\n"), fn, numlumps, foldercount);
 	wadfiles[numwadfiles] = wadfile;
@@ -1485,6 +1490,25 @@ lumpnum_t W_CheckNumForMap(const char *name)
 			}
 		}
 	}
+	return LUMPERROR;
+}
+
+//
+// W_FindFirstLump
+//
+// Finds the first lump that has the specified name.
+//
+lumpnum_t W_FindFirstLump(const char *name)
+{
+	INT32 i;
+
+	for (i = 0; i < numwadfiles; i++)
+	{
+		lumpnum_t check = W_CheckNumForNamePwad(name,(UINT16)i,0);
+		if (check != INT16_MAX)
+			return (i<<16)+check; // found it
+	}
+
 	return LUMPERROR;
 }
 
@@ -2047,8 +2071,10 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 	if (!lumpcache[lump])
 	{
-		size_t len = W_LumpLengthPwad(wad, lump);
+		size_t srclen = W_LumpLengthPwad(wad, lump), len = srclen;
 		void *ptr, *dest, *lumpdata = Z_Malloc(len, PU_STATIC, NULL);
+		void *sourcepic = NULL;
+		patch_t *patch = NULL;
 
 		// read the lump in full
 		W_ReadLumpHeaderPwad(wad, lump, lumpdata, 0, 0);
@@ -2056,11 +2082,32 @@ void *W_CacheSoftwarePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 #ifndef NO_PNG_LUMPS
 		if (Picture_IsLumpPNG((UINT8 *)lumpdata, len))
+		{
+			sourcepic = lumpdata;
 			ptr = Picture_PNGConvert((UINT8 *)lumpdata, PICFMT_DOOMPATCH, NULL, NULL, NULL, NULL, len, &len, 0);
+		}
 #endif
 
 		dest = Z_Calloc(sizeof(patch_t), tag, &lumpcache[lump]);
-		Patch_Create(ptr, len, dest);
+		patch = Patch_Create(ptr, len, dest);
+
+		if (sourcepic)
+		{
+			patch->extra->source.data = sourcepic;
+			patch->extra->source.len = srclen;
+		}
+		else
+		{
+			patch->extra->source.data = NULL;
+			patch->extra->source.len = 0;
+		}
+
+		patch->extra->truecolor = NULL;
+
+#ifdef TRUECOLOR
+		if (truecolor && sourcepic)
+			Patch_GetTruecolor(patch);
+#endif
 
 		Z_Free(ptr);
 	}
@@ -2086,7 +2133,7 @@ void *W_CachePatchNumPwad(UINT16 wad, UINT16 lump, INT32 tag)
 
 #ifdef HWRENDER
 	// Software-only compile cache the data without conversion
-	if (rendermode == render_soft || rendermode == render_none)
+	if (VID_InSoftwareRenderer() || rendermode == render_none)
 #endif
 		return (void *)patch;
 

@@ -333,7 +333,7 @@ static void D_Display(void)
 		SCR_Recalc(); // NOTE! setsizeneeded is set by SCR_Recalc()
 
 	// View morph
-	if (rendermode == render_soft && !splitscreen)
+	if (VID_InSoftwareRenderer() && !splitscreen)
 		R_CheckViewMorph();
 
 	// Change the view size if needed
@@ -475,20 +475,28 @@ static void D_Display(void)
 		if (gamestate == GS_LEVEL || (gamestate == GS_TITLESCREEN && titlemapinaction && curbghide && (!hidetitlemap)))
 		{
 			// draw the view directly
-
 			if (!automapactive && !dedicated && cv_renderview.value)
 			{
+				SCR_SetSoftwareTranslucency(); // Set translucency method
+				if (!usetranstables)
+					R_InitAlphaLUT();
+
 				R_ApplyLevelInterpolators(R_UsingFrameInterpolation() ? rendertimefrac : FRACUNIT);
 				PS_START_TIMING(ps_rendercalltime);
+
 				if (players[displayplayer].mo || players[displayplayer].playerstate == PST_DEAD)
 				{
 					topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+#ifdef TRUECOLOR
+					if (truecolor)
+						topleft_u32 = (UINT32 *)screens[0] + viewwindowy*vid.width + viewwindowx;
+#endif
 					objectsdrawn = 0;
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
+#ifdef HWRENDER
+					if (!VID_InSoftwareRenderer())
 						HWR_RenderPlayerView(0, &players[displayplayer]);
 					else
-	#endif
+#endif
 					if (rendermode != render_none)
 						R_RenderPlayerView(&players[displayplayer]);
 				}
@@ -496,17 +504,21 @@ static void D_Display(void)
 				// render the second screen
 				if (splitscreen && players[secondarydisplayplayer].mo)
 				{
-	#ifdef HWRENDER
-					if (rendermode != render_soft)
+#ifdef HWRENDER
+					if (!VID_InSoftwareRenderer())
 						HWR_RenderPlayerView(1, &players[secondarydisplayplayer]);
 					else
-	#endif
+#endif
 					if (rendermode != render_none)
 					{
 						viewwindowy = vid.height / 2;
 						M_Memcpy(ylookup, ylookup2, viewheight*sizeof (ylookup[0]));
 
 						topleft = screens[0] + viewwindowy*vid.width + viewwindowx;
+#ifdef TRUECOLOR
+						if (truecolor)
+							topleft_u32 = (UINT32 *)screens[0] + viewwindowy*vid.width + viewwindowx;
+#endif
 
 						R_RenderPlayerView(&players[secondarydisplayplayer]);
 
@@ -516,7 +528,7 @@ static void D_Display(void)
 				}
 
 				// Image postprocessing effect
-				if (rendermode == render_soft)
+				if (VID_InSoftwareRenderer())
 				{
 					if (!splitscreen)
 						R_ApplyViewMorph();
@@ -532,7 +544,7 @@ static void D_Display(void)
 
 			if (lastdraw)
 			{
-				if (rendermode == render_soft)
+				if (VID_InSoftwareRenderer())
 				{
 					VID_BlitLinearScreen(screens[0], screens[1], vid.width*vid.bpp, vid.height, vid.width*vid.bpp, vid.rowbytes);
 					Y_ConsiderScreenBuffer();
@@ -686,6 +698,26 @@ static void D_Display(void)
 		I_FinishUpdate(); // page flip or blit buffer
 		PS_STOP_TIMING(ps_swaptime);
 	}
+}
+
+void D_CheckColorDepth(INT32 newbitdepth, INT32 oldbitdepth)
+{
+#ifdef TRUECOLOR
+	if (oldbitdepth == 0) // Video init
+		return;
+
+	if (newbitdepth != oldbitdepth)
+	{
+		// Reload every texture.
+		R_FlushTextureCache();
+
+		// Also free levelflat pictures.
+		R_ClearLevelFlats();
+	}
+#else
+	(void)newbitdepth;
+	(void)oldbitdepth;
+#endif
 }
 
 // =========================================================================

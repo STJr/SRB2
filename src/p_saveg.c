@@ -21,6 +21,7 @@
 #include "p_local.h"
 #include "p_setup.h"
 #include "p_saveg.h"
+#include "i_video.h"
 #include "r_data.h"
 #include "r_fps.h"
 #include "r_textures.h"
@@ -762,10 +763,15 @@ static void P_NetUnArchiveColormaps(void)
 		if (existing_exc)
 			exc->colormap = existing_exc->colormap;
 		else
+		{
 			// CONS_Debug(DBG_RENDER, "Creating Colormap: rgba(%d,%d,%d,%d) fadergba(%d,%d,%d,%d)\n",
 			// 	R_GetRgbaR(rgba), R_GetRgbaG(rgba), R_GetRgbaB(rgba), R_GetRgbaA(rgba),
 			//	R_GetRgbaR(fadergba), R_GetRgbaG(fadergba), R_GetRgbaB(fadergba), R_GetRgbaA(fadergba));
 			exc->colormap = R_CreateLightTable(exc);
+#ifdef TRUECOLOR
+			exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+#endif
+		}
 
 		// HACK: If this dummy is a duplicate, we're going to add it
 		// to the extra_colormaps list anyway. I think this is faster
@@ -1566,13 +1572,14 @@ typedef enum
 	MD2_ROLLANGLE    = 1<<14,
 	MD2_SHADOWSCALE  = 1<<15,
 	MD2_RENDERFLAGS  = 1<<16,
-	MD2_BLENDMODE    = 1<<17,
-	MD2_SPRITEXSCALE = 1<<18,
-	MD2_SPRITEYSCALE = 1<<19,
-	MD2_SPRITEXOFFSET = 1<<20,
-	MD2_SPRITEYOFFSET = 1<<21,
-	MD2_FLOORSPRITESLOPE = 1<<22,
-	MD2_DISPOFFSET = 1<<23
+	MD2_ALPHA        = 1<<17,
+	MD2_BLENDMODE    = 1<<18,
+	MD2_SPRITEXSCALE = 1<<19,
+	MD2_SPRITEYSCALE = 1<<20,
+	MD2_SPRITEXOFFSET = 1<<21,
+	MD2_SPRITEYOFFSET = 1<<22,
+	MD2_FLOORSPRITESLOPE = 1<<23,
+	MD2_DISPOFFSET = 1<<24
 } mobj_diff2_t;
 
 typedef enum
@@ -3005,6 +3012,10 @@ static thinker_t* LoadMobjThinker(actionf_p1 thinker)
 		mobj->shadowscale = READFIXED(save_p);
 	if (diff2 & MD2_RENDERFLAGS)
 		mobj->renderflags = READUINT32(save_p);
+	if (diff2 & MD2_ALPHA)
+		mobj->alpha = READUINT8(save_p);
+	else
+		mobj->alpha = 0xFF;
 	if (diff2 & MD2_BLENDMODE)
 		mobj->blendmode = READINT32(save_p);
 	else

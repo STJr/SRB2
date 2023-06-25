@@ -1226,11 +1226,24 @@ static int libd_dupy(lua_State *L)
 static int libd_renderer(lua_State *L)
 {
 	HUDONLY
-	switch (rendermode) {
-		case render_opengl: lua_pushliteral(L, "opengl");   break; // OpenGL renderer
-		case render_soft:   lua_pushliteral(L, "software"); break; // Software renderer
-		default:            lua_pushliteral(L, "none");     break; // render_none (for dedicated), in case there's any reason this should be run
+
+	switch (rendermode)
+	{
+		// Software renderers
+		case render_software:
+		case render_software_truecolor:
+			lua_pushliteral(L, "software");
+			break;
+		// OpenGL renderer
+		case render_opengl:
+			lua_pushliteral(L, "opengl");
+			break;
+		// render_none (for dedicated), in case there's any reason this should be run
+		default:
+			lua_pushliteral(L, "none");
+			break;
 	}
+
 	return 1;
 }
 

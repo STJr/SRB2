@@ -25,6 +25,18 @@ extern UINT8 *ylookup2[MAXVIDHEIGHT*4];
 extern INT32 columnofs[MAXVIDWIDTH*4];
 extern UINT8 *topleft;
 
+// ----------------------
+// COMMON STUFF FOR 32bpp
+// ----------------------
+extern boolean tc_colormaps;
+extern boolean tc_spritecolormaps;
+
+extern UINT32 *topleft_u32;
+
+extern UINT8 dp_lighting;
+extern extracolormap_t *dp_extracolormap;
+extern extracolormap_t *defaultextracolormap;
+
 // -------------------------
 // COLUMN DRAWING CODE STUFF
 // -------------------------
@@ -33,14 +45,16 @@ extern lighttable_t *dc_colormap;
 extern INT32 dc_x, dc_yl, dc_yh;
 extern fixed_t dc_iscale, dc_texturemid;
 extern UINT8 dc_hires;
+extern UINT8 dc_picfmt;
+extern UINT8 dc_colmapstyle;
 
 extern UINT8 *dc_source; // first pixel in a column
 
 // translucency stuff here
 extern UINT8 *dc_transmap;
+extern UINT8 dc_alpha;
 
 // translation stuff here
-
 extern UINT8 *dc_translation;
 
 extern struct r_lightlist_s *dc_lightlist;
@@ -65,6 +79,9 @@ extern boolean ds_powersoftwo, ds_solidcolor;
 
 extern UINT8 *ds_source;
 extern UINT8 *ds_transmap;
+extern UINT8 ds_alpha;
+extern UINT8 ds_picfmt;
+extern UINT8 ds_colmapstyle;
 
 typedef struct {
 	float x, y, z;
@@ -100,9 +117,9 @@ extern UINT32 nflatmask;
 
 extern lumpnum_t viewborderlump[8];
 
-// ------------------------------------------------
-// r_draw.c COMMON ROUTINES FOR BOTH 8bpp and 16bpp
-// ------------------------------------------------
+// ------------------------
+// r_draw.c COMMON ROUTINES
+// ------------------------
 
 #define GTC_CACHE 1
 
@@ -126,6 +143,7 @@ UINT16 R_GetColorByName(const char *name);
 UINT16 R_GetSuperColorByName(const char *name);
 
 extern UINT8 *transtables; // translucency tables, should be (*transtables)[5][256][256]
+extern boolean usetranstables;
 
 enum
 {
@@ -145,6 +163,10 @@ UINT8 *R_GetTranslucencyTable(INT32 alphalevel);
 UINT8 *R_GetBlendTable(int style, INT32 alphalevel);
 
 boolean R_BlendLevelVisible(INT32 blendmode, INT32 alphalevel);
+UINT8 R_BlendModeTransnumToAlpha(int style, INT32 num);
+
+INT32 R_AlphaToTransnum(UINT8 alpha);
+UINT8 R_TransnumToAlpha(INT32 num);
 
 // Color ramp modification should force a recache
 extern UINT8 skincolor_modified[];
@@ -163,67 +185,121 @@ void R_DrawViewBorder(void);
 
 #define TRANSPARENTPIXEL 255
 
+#define COLFUNCLIST8(X) \
+	X(TRANSTAB, Translucent); \
+	X(ALPHA, Alpha); \
+	X(TRANSLATED, Translated); \
+	X(SHADE, Shade); \
+	X(LIGHTLIST, Shadowed); \
+	X(MAPPED_TRANSTAB, TranslatedTranslucent); \
+	X(MAPPED_ALPHA, TranslatedAlpha); \
+	X(MULTIPATCH, 2sMultiPatch); \
+	X(MULTIPATCH_TRANSTAB, 2sMultiPatchTranslucent); \
+	X(MULTIPATCH_ALPHA, 2sMultiPatchAlpha)
+
+#define COLFUNCLIST8_NOTEXTURE(X) \
+	X(FOG, Fog); \
+	X(DROP_SHADOW, DropShadow)
+
+#define SPANFUNCLIST8(X) \
+	X(TRANSTAB, TranslucentSpan); \
+	X(ALPHA, AlphaSpan); \
+	X(TILTED, TiltedSpan); \
+	X(TILTED_TRANSTAB, TiltedTranslucentSpan); \
+	X(TILTED_ALPHA, TiltedAlphaSpan); \
+	X(SPLAT, Splat); \
+	X(SPLAT_TRANSTAB, TranslucentSplat); \
+	X(SPLAT_ALPHA, AlphaSplat); \
+	X(SPLAT_TILTED, TiltedSplat); \
+	X(SPRITE, FloorSprite); \
+	X(SPRITE_TRANSTAB, TranslucentFloorSprite); \
+	X(SPRITE_ALPHA, AlphaFloorSprite); \
+	X(SPRITE_TILTED, TiltedFloorSprite); \
+	X(SPRITE_TILTED_TRANSTAB, TiltedTranslucentFloorSprite); \
+	X(SPRITE_TILTED_ALPHA, TiltedAlphaFloorSprite); \
+	X(WATER_TRANSTAB, WaterSpan); \
+	X(WATER_ALPHA, AlphaWaterSpan); \
+	X(WATER_TILTED_TRANSTAB, TiltedWaterSpan); \
+	X(WATER_TILTED_ALPHA, TiltedAlphaWaterSpan)
+
+#define SPANFUNCLIST8_NOTEXTURE(X) \
+	X(FOG, FogSpan); \
+	X(FOG_TILTED, TiltedFogSpan); \
+	X(SOLIDCOLOR, SolidColorSpan); \
+	X(SOLIDCOLOR_TILTED, TiltedSolidColorSpan); \
+	X(SOLIDCOLOR_TRANSTAB, TransSolidColorSpan); \
+	X(SOLIDCOLOR_ALPHA, AlphaSolidColorSpan); \
+	X(WATER_SOLIDCOLOR_TRANSTAB, WaterSolidColorSpan); \
+	X(WATER_SOLIDCOLOR_ALPHA, AlphaWaterSolidColorSpan); \
+	X(TILTED_SOLIDCOLOR_TRANSTAB, TiltedTransSolidColorSpan); \
+	X(TILTED_SOLIDCOLOR_ALPHA, TiltedAlphaSolidColorSpan); \
+	X(WATER_TILTED_SOLIDCOLOR_TRANSTAB, TiltedWaterSolidColorSpan); \
+	X(WATER_TILTED_SOLIDCOLOR_ALPHA, TiltedAlphaWaterSolidColorSpan)
+
+#define COLFUNCLIST32(X) \
+	X(ALPHA, Translucent); \
+	X(TRANSLATED, Translated); \
+	X(SHADE, Shade); \
+	X(LIGHTLIST, Shadowed); \
+	X(MAPPED_ALPHA, TranslatedTranslucent); \
+	X(MULTIPATCH, 2sMultiPatch); \
+	X(MULTIPATCH_ALPHA, 2sMultiPatchTranslucent)
+
+#define COLFUNCLIST32_NOTEXTURE(X) \
+	X(FOG, Fog); \
+	X(DROP_SHADOW, DropShadow)
+
+#define SPANFUNCLIST32(X) \
+	X(ALPHA, TranslucentSpan); \
+	X(TILTED, TiltedSpan); \
+	X(TILTED_ALPHA, TiltedTranslucentSpan); \
+	X(SPLAT, Splat); \
+	X(SPLAT_ALPHA, TranslucentSplat); \
+	X(SPLAT_TILTED, TiltedSplat); \
+	X(SPRITE, FloorSprite); \
+	X(SPRITE_ALPHA, TranslucentFloorSprite); \
+	X(SPRITE_TILTED, TiltedFloorSprite); \
+	X(SPRITE_TILTED_ALPHA, TiltedTranslucentFloorSprite); \
+	X(WATER_ALPHA, WaterSpan); \
+	X(WATER_TILTED_ALPHA, TiltedWaterSpan)
+
+#define SPANFUNCLIST32_NOTEXTURE(X) \
+	X(FOG, FogSpan); \
+	X(FOG_TILTED, TiltedFogSpan); \
+	X(SOLIDCOLOR, SolidColorSpan); \
+	X(SOLIDCOLOR_TILTED, TiltedSolidColorSpan); \
+	X(SOLIDCOLOR_ALPHA, TranslucentSolidColorSpan); \
+	X(WATER_SOLIDCOLOR_ALPHA, WaterSolidColorSpan); \
+	X(TILTED_SOLIDCOLOR_ALPHA, TiltedTranslucentSolidColorSpan); \
+	X(WATER_TILTED_SOLIDCOLOR_ALPHA, TiltedWaterSolidColorSpan)
+
 // -----------------
 // 8bpp DRAWING CODE
 // -----------------
 
 void R_DrawColumn_8(void);
-void R_DrawShadeColumn_8(void);
-void R_DrawTranslucentColumn_8(void);
-void R_DrawDropShadowColumn_8(void);
-void R_DrawTranslatedColumn_8(void);
-void R_DrawTranslatedTranslucentColumn_8(void);
-void R_Draw2sMultiPatchColumn_8(void);
-void R_Draw2sMultiPatchTranslucentColumn_8(void);
-void R_DrawFogColumn_8(void);
-void R_DrawColumnShadowed_8(void);
 
-#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
+#define COLFUNC8(type, func) void R_Draw##func##Column_8(void)
+	COLFUNCLIST8(COLFUNC8);
+	COLFUNCLIST8_NOTEXTURE(COLFUNC8);
+#undef COLFUNC8
 
 void R_DrawSpan_8(void);
-void R_DrawTranslucentSpan_8(void);
-void R_DrawTiltedSpan_8(void);
-void R_DrawTiltedTranslucentSpan_8(void);
 
-void R_DrawSplat_8(void);
-void R_DrawTranslucentSplat_8(void);
-void R_DrawTiltedSplat_8(void);
+#define SPANFUNC8(type, func) void R_Draw##func##_8(void)
+	SPANFUNCLIST8(SPANFUNC8);
+	SPANFUNCLIST8_NOTEXTURE(SPANFUNC8);
+#undef SPANFUNC8
 
-void R_DrawFloorSprite_8(void);
-void R_DrawTranslucentFloorSprite_8(void);
-void R_DrawTiltedFloorSprite_8(void);
-void R_DrawTiltedTranslucentFloorSprite_8(void);
-
-void R_DrawWaterSpan_8(void);
-void R_DrawTiltedWaterSpan_8(void);
-
-void R_DrawFogSpan_8(void);
-void R_DrawTiltedFogSpan_8(void);
-
-// Lactozilla: Non-powers-of-two
 void R_DrawSpan_NPO2_8(void);
-void R_DrawTranslucentSpan_NPO2_8(void);
-void R_DrawTiltedSpan_NPO2_8(void);
-void R_DrawTiltedTranslucentSpan_NPO2_8(void);
 
-void R_DrawSplat_NPO2_8(void);
-void R_DrawTranslucentSplat_NPO2_8(void);
-void R_DrawTiltedSplat_NPO2_8(void);
+#define SPANFUNC8(type, func) void R_Draw##func##_NPO2_8(void)
+	SPANFUNCLIST8(SPANFUNC8);
+#undef SPANFUNC8
 
-void R_DrawFloorSprite_NPO2_8(void);
-void R_DrawTranslucentFloorSprite_NPO2_8(void);
-void R_DrawTiltedFloorSprite_NPO2_8(void);
-void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void);
-
-void R_DrawWaterSpan_NPO2_8(void);
-void R_DrawTiltedWaterSpan_NPO2_8(void);
-
-void R_DrawSolidColorSpan_8(void);
-void R_DrawTransSolidColorSpan_8(void);
-void R_DrawTiltedSolidColorSpan_8(void);
-void R_DrawTiltedTransSolidColorSpan_8(void);
-void R_DrawWaterSolidColorSpan_8(void);
-void R_DrawTiltedWaterSolidColorSpan_8(void);
+#define PLANELIGHTFLOAT (BASEVIDWIDTH * BASEVIDWIDTH / vid.width / zeroheight / 21.0f * FIXED_TO_FLOAT(fovtan))
+#define SPANSIZE 16
+#define INVSPAN 0.0625f // (1.0f / 16.0f)
 
 #ifdef USEASM
 void ASMCALL R_DrawColumn_8_ASM(void);
@@ -248,6 +324,62 @@ void R_DrawTranslucentColumn_16(void);
 void R_DrawTranslatedColumn_16(void);
 void R_DrawSpan_16(void);
 #endif
+
+// ------------------
+// 32bpp DRAWING CODE
+// ------------------
+
+void R_DrawColumn_32(void);
+
+#define COLFUNC32(type, func) void R_Draw##func##Column_32(void)
+	COLFUNCLIST32(COLFUNC32);
+	COLFUNCLIST32_NOTEXTURE(COLFUNC32);
+#undef COLFUNC32
+
+void R_DrawSpan_32(void);
+
+#define SPANFUNC32(type, func) void R_Draw##func##_32(void)
+	SPANFUNCLIST32(SPANFUNC32);
+	SPANFUNCLIST32_NOTEXTURE(SPANFUNC32);
+#undef SPANFUNC32
+
+void R_DrawSpan_NPO2_32(void);
+
+#define SPANFUNC32(type, func) void R_Draw##func##_NPO2_32(void)
+	SPANFUNCLIST32(SPANFUNC32);
+#undef SPANFUNC32
+
+// ----------
+// COLOR MATH
+// ----------
+
+#define MIX_ALPHA(a) (0xFF-(a))
+
+#define R_TranslucentMix(bg, fg, alpha) \
+	((alpha) == 0) ? (bg) : ( ((alpha)==0xFF) ? (fg) \
+	:( ( (R_GetRgbaR(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaR(fg) * (alpha)) ) >> 8) \
+	|( ( (R_GetRgbaG(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaG(fg) * (alpha)) ) >> 8) << 8 \
+	|( ( (R_GetRgbaB(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaB(fg) * (alpha)) ) >> 8) << 16 \
+	|( ( (R_GetRgbaA(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaA(fg) * (alpha)) ) >> 8) << 24)
+
+extern UINT32 (*R_BlendModeMix)(UINT32, UINT32, UINT8);
+void R_SetColumnBlendingFunction(INT32 blendmode);
+void R_SetSpanBlendingFunction(INT32 blendmode);
+void R_InitAlphaLUT(void);
+
+FUNCMATH UINT32 TC_TintTrueColor(RGBA_t rgba, UINT32 blendcolor, UINT8 tintamt);
+void TC_ClearMixCache(void);
+
+#define TC_CalcScaleLight(light_p) (((scalelight_u32[0][0] - light_p) / 256) * 8)
+#define TC_CalcScaleLightPaletted(light_p) (((scalelight[0][0] - light_p) / 256) * 8)
+
+enum
+{
+	TC_COLORMAPSTYLE_8BPP,
+	TC_COLORMAPSTYLE_32BPP
+};
+
+#define GetTrueColor(c) ((st_palette > 0) ? V_GetPalNumColor(c,st_palette) : V_GetColor(c)).rgba
 
 // =========================================================================
 #endif  // __R_DRAW__

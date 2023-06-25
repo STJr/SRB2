@@ -70,6 +70,7 @@ typedef struct
 	u;
 
 	UINT16 width, height;
+	INT32 format;
 
 	// for flat animation
 	INT32 animseq; // start pos. in the anim sequence

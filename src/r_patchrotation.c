@@ -13,6 +13,11 @@
 #include "r_things.h" // FEETADJUST
 #include "z_zone.h"
 #include "w_wad.h"
+#include "v_video.h" // V_GetColor
+
+#ifdef TRUECOLOR
+#include "i_video.h" // truecolor
+#endif
 
 #ifdef ROTSPRITE
 fixed_t rollcosang[ROTANGLES];
@@ -31,7 +36,7 @@ INT32 R_GetRollAngle(angle_t rollangle)
 
 patch_t *Patch_GetRotated(patch_t *patch, INT32 angle, boolean flip)
 {
-	rotsprite_t *rotsprite = patch->rotated;
+	rotsprite_t *rotsprite = patch->extra->rotated;
 	if (rotsprite == NULL || angle < 1 || angle >= ROTANGLES)
 		return NULL;
 
@@ -52,30 +57,45 @@ patch_t *Patch_GetRotatedSprite(
 	INT32 idx = rotationangle;
 	UINT8 type = (adjustfeet ? 1 : 0);
 
+	patch_t *patch;
+	lumpnum_t lump;
+
+#ifdef TRUECOLOR
+	boolean usetc = false;
+#endif
+
 	if (rotationangle < 1 || rotationangle >= ROTANGLES)
 		return NULL;
 
-	rotsprite = sprite->rotated[type][spriteangle];
+	lump = sprite->lumppat[spriteangle];
+	if (lump == LUMPERROR)
+		return NULL;
+
+	patch = W_CachePatchNum(lump, PU_SPRITE);
+
+#ifdef TRUECOLOR
+	usetc = ((truecolor || rendermode == render_opengl) && Patch_GetTruecolor(patch) != NULL);
+#define SPRITELIST (usetc ? sprite->rotated_tc : sprite->rotated)
+#else
+#define SPRITELIST (sprite->rotated)
+#endif
+
+	rotsprite = SPRITELIST[type][spriteangle];
 
 	if (rotsprite == NULL)
 	{
 		rotsprite = RotatedPatch_Create(ROTANGLES);
-		sprite->rotated[type][spriteangle] = rotsprite;
+		SPRITELIST[type][spriteangle] = rotsprite;
 	}
+
+#undef SPRITELIST
 
 	if (flip)
 		idx += rotsprite->angles;
 
 	if (rotsprite->patches[idx] == NULL)
 	{
-		patch_t *patch;
 		INT32 xpivot = 0, ypivot = 0;
-		lumpnum_t lump = sprite->lumppat[spriteangle];
-
-		if (lump == LUMPERROR)
-			return NULL;
-
-		patch = W_CachePatchNum(lump, PU_SPRITE);
 
 		if (sprinfo->available)
 		{
@@ -87,6 +107,11 @@ patch_t *Patch_GetRotatedSprite(
 			xpivot = patch->leftoffset;
 			ypivot = patch->height / 2;
 		}
+
+#ifdef TRUECOLOR
+		if (usetc)
+			patch = Patch_GetTruecolor(patch);
+#endif
 
 		RotatedPatch_DoRotation(rotsprite, patch, rotationangle, xpivot, ypivot, flip);
 
@@ -100,9 +125,9 @@ patch_t *Patch_GetRotatedSprite(
 
 void Patch_Rotate(patch_t *patch, INT32 angle, INT32 xpivot, INT32 ypivot, boolean flip)
 {
-	if (patch->rotated == NULL)
-		patch->rotated = RotatedPatch_Create(ROTANGLES);
-	RotatedPatch_DoRotation(patch->rotated, patch, angle, xpivot, ypivot, flip);
+	if (patch->extra->rotated == NULL)
+		patch->extra->rotated = RotatedPatch_Create(ROTANGLES);
+	RotatedPatch_DoRotation(patch->extra->rotated, patch, angle, xpivot, ypivot, flip);
 }
 
 rotsprite_t *RotatedPatch_Create(INT32 numangles)
@@ -138,7 +163,7 @@ static void RotatedPatch_CalculateDimensions(
 void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle, INT32 xpivot, INT32 ypivot, boolean flip)
 {
 	patch_t *rotated;
-	UINT16 *rawdst, *rawconv;
+	void *rawdst, *rawconv;
 	size_t size;
 	pictureflags_t bflip = (flip) ? PICFLAGS_XFLIP : 0;
 
@@ -156,6 +181,9 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 	INT32 dx, dy;
 	INT32 ox, oy;
 	INT32 minx, miny, maxx, maxy;
+
+	pictureformat_t format = patch->format;
+	INT32 fmtbpp = PICDEPTH_NONE;
 
 	// Don't cache angle = 0
 	if (angle < 1 || angle >= ROTANGLES)
@@ -188,11 +216,15 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 	maxx = 0;
 	maxy = 0;
 
+	fmtbpp = Picture_FormatBPP(format);
+	if (fmtbpp < PICDEPTH_16BPP)
+		fmtbpp = PICDEPTH_16BPP;
+
 	// Draw the rotated sprite to a temporary buffer.
 	size = (newwidth * newheight);
 	if (!size)
 		size = (width * height);
-	rawdst = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
+	rawdst = Z_Calloc(size * (fmtbpp / 8), PU_STATIC, NULL);
 
 	for (dy = 0; dy < newheight; dy++)
 	{
@@ -208,10 +240,44 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 
 			if (sx >= 0 && sy >= 0 && sx < width && sy < height)
 			{
-				void *input = Picture_GetPatchPixel(patch, PICFMT_PATCH, sx, sy, bflip);
-				if (input != NULL)
+				void *input = Picture_GetPatchPixel(patch, format, sx, sy, bflip);
+				if (input)
 				{
-					rawdst[(dy * newwidth) + dx] = (0xFF00 | (*(UINT8 *)input));
+					size_t offs = (dy*newwidth)+dx;
+					switch (fmtbpp)
+					{
+						case PICDEPTH_32BPP:
+						{
+							UINT32 *f32 = (UINT32 *)rawdst;
+							if (format == PICFMT_PATCH32)
+							{
+								RGBA_t out = *(RGBA_t *)input;
+								f32[offs] = out.rgba;
+							}
+							else // PICFMT_PATCH
+							{
+								RGBA_t out = V_GetColor(*((UINT8 *)input));
+								f32[offs] = out.rgba;
+							}
+							break;
+						}
+						case PICDEPTH_16BPP:
+						{
+							UINT16 *f16 = (UINT16 *)rawdst;
+							if (format == PICFMT_PATCH32)
+							{
+								RGBA_t in = *(RGBA_t *)input;
+								UINT8 out = NearestColor(in.s.red, in.s.green, in.s.blue);
+								f16[offs] = (0xFF00 | out);
+							}
+							else // PICFMT_PATCH
+								f16[offs] = (0xFF00 | *((UINT8 *)input));
+							break;
+						}
+						default: // ???????
+							break;
+					}
+
 					if (dx < minx)
 						minx = dx;
 					if (dy < miny)
@@ -232,20 +298,38 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 
 	if ((unsigned)(width * height) > size)
 	{
-		UINT16 *src, *dest;
+		UINT8 *src = NULL, *dest;
+		size_t fmtsize = (fmtbpp / 8);
 
 		size = (width * height);
-		rawconv = Z_Calloc(size * sizeof(UINT16), PU_STATIC, NULL);
+		rawconv = Z_Calloc(size * fmtsize, PU_STATIC, NULL);
 
-		src = &rawdst[(miny * newwidth) + minx];
+		switch (fmtbpp)
+		{
+			case PICDEPTH_32BPP:
+			{
+				UINT32 *f32 = (UINT32 *)rawdst;
+				src = (UINT8 *)(&f32[(miny * newwidth) + minx]);
+				break;
+			}
+			case PICDEPTH_16BPP:
+			{
+				UINT16 *f16 = (UINT16 *)rawdst;
+				src = (UINT8 *)(&f16[(miny * newwidth) + minx]);
+				break;
+			}
+			default: // ???????
+				break;
+		}
+
 		dest = rawconv;
 		dy = height;
 
 		while (dy--)
 		{
-			M_Memcpy(dest, src, width * sizeof(UINT16));
-			dest += width;
-			src += newwidth;
+			M_Memcpy(dest, src, width * fmtsize);
+			dest += (width * fmtsize);
+			src += (newwidth * fmtsize);
 		}
 
 		ox -= minx;
@@ -261,7 +345,7 @@ void RotatedPatch_DoRotation(rotsprite_t *rotsprite, patch_t *patch, INT32 angle
 	}
 
 	// make patch
-	rotated = (patch_t *)Picture_Convert(PICFMT_FLAT16, rawconv, PICFMT_PATCH, 0, NULL, width, height, 0, 0, 0);
+	rotated = (patch_t *)Picture_Convert((fmtbpp == PICDEPTH_32BPP) ? PICFMT_FLAT32 : PICFMT_FLAT16, rawconv, format, 0, NULL, width, height, 0, 0, 0);
 
 	Z_ChangeTag(rotated, PU_PATCH_ROTATED);
 	Z_SetUser(rotated, (void **)(&rotsprite->patches[idx]));

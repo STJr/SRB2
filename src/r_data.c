@@ -46,6 +46,9 @@ sprcache_t *spritecachedinfo;
 lighttable_t *colormaps;
 lighttable_t *fadecolormap;
 
+// truecolor
+lighttable_u32_t *colormaps_u32 = NULL;
+
 // for debugging/info purposes
 size_t flatmemory, spritememory, texturememory;
 
@@ -91,7 +94,7 @@ UINT32 ASTBlendPixel(RGBA_t background, RGBA_t foreground, int style, UINT8 alph
 		}
 		return output.rgba;
 	}
-#define clamp(c) max(min(c, 0xFF), 0x00);
+#define clamp(c) max(min(c, 0xFF), 0x00)
 	else
 	{
 		float falpha = ((float)alpha / 256.0f);
@@ -278,7 +281,6 @@ static void R_InitSpriteLumps(void)
 //
 // R_CreateFadeColormaps
 //
-
 static void R_CreateFadeColormaps(void)
 {
 	UINT8 px, fade;
@@ -291,7 +293,7 @@ static void R_CreateFadeColormaps(void)
 	for (i = 0; i < len*2; i++)
 		fadecolormap[i] = (i%256);
 
-	// Load in the light tables, now 64k aligned for smokie...
+	// Load in the light tables
 	{
 		lumpnum_t lump = W_CheckNumForName("FADECMAP");
 		lumpnum_t wlump = W_CheckNumForName("FADEWMAP");
@@ -364,6 +366,32 @@ static void R_CreateFadeColormaps(void)
 }
 
 //
+// R_InitColormaps32
+//
+#ifdef TRUECOLOR
+static void R_InitColormaps32(UINT32 lastcolor)
+{
+	lighttable_u32_t *lighttable;
+	size_t size;
+
+	extracolormap_t *exc = Z_Calloc(sizeof(*exc), PU_STATIC, NULL);
+	exc->fadestart = 0;
+	exc->fadeend = 31;
+	exc->rgba = 0;
+	exc->fadergba = lastcolor;
+
+	lighttable = R_CreateTrueColorLightTable(exc);
+	size = ((256 * 34) + 10) * sizeof(UINT32); // from R_CreateTrueColorLightTable
+	Z_Free(exc);
+
+	if (!colormaps_u32)
+		colormaps_u32 = Z_Calloc(size, PU_STATIC, NULL);
+	M_Memcpy(colormaps_u32, lighttable, size);
+	Z_Free(lighttable);
+}
+#endif
+
+//
 // R_InitColormaps
 //
 static void R_InitColormaps(void)
@@ -376,6 +404,18 @@ static void R_InitColormaps(void)
 	len = W_LumpLength(lump);
 	colormaps = Z_MallocAlign(len, PU_STATIC, NULL, 8);
 	W_ReadLump(lump, colormaps);
+
+#ifdef TRUECOLOR
+	// Make 32bpp colormap
+	R_InitColormaps32(0xFF000000);
+
+	// Colormap blending
+	defaultextracolormap = Z_Calloc(sizeof(extracolormap_t), PU_STATIC, NULL);
+	defaultextracolormap->fadestart = 0;
+	defaultextracolormap->fadeend = 31;
+	defaultextracolormap->rgba = 0;
+	defaultextracolormap->fadergba = 0x19000000;
+#endif
 
 	// Make colormap for fades
 	R_CreateFadeColormaps();
@@ -395,7 +435,7 @@ void R_ReInitColormaps(UINT16 num)
 	if (num > 0 && num <= 10000)
 		snprintf(colormap, 8, "CLM%04u", num-1);
 
-	// Load in the light tables, now 64k aligned for smokie...
+	// Load in the light tables
 	lump = W_GetNumForName(colormap);
 	if (lump == LUMPERROR)
 		lump = basecolormaplump;
@@ -408,6 +448,20 @@ void R_ReInitColormaps(UINT16 num)
 	}
 
 	W_ReadLumpHeader(lump, colormaps, W_LumpLength(basecolormaplump), 0U);
+
+#ifdef TRUECOLOR
+	// Make 32bpp colormap
+	{
+		size_t offs = (256*31) + 31;
+		UINT32 lastcolor = 0xFF000000;
+		// custom colormap lump
+		if ((lump != basecolormaplump) && (offs < W_LumpLength(lump)))
+			lastcolor = V_GetMasterColor(colormaps[offs]).rgba;
+		R_InitColormaps32(lastcolor);
+	}
+#endif
+
+	// Make colormap for fades
 	if (fadecolormap)
 		Z_Free(fadecolormap);
 	R_CreateFadeColormaps();
@@ -440,6 +494,9 @@ extracolormap_t *R_CreateDefaultColormap(boolean lighttable)
 	exc->rgba = 0;
 	exc->fadergba = 0x19000000;
 	exc->colormap = lighttable ? R_CreateLightTable(exc) : NULL;
+#ifdef TRUECOLOR
+	exc->colormap_u32 = lighttable ? R_CreateTrueColorLightTable(exc) : NULL;
+#endif
 #ifdef EXTRACOLORMAPLUMPS
 	exc->lump = LUMPERROR;
 	exc->lumpname[0] = 0;
@@ -494,9 +551,19 @@ extracolormap_t *R_CopyColormap(extracolormap_t *extra_colormap, boolean lightta
 	else
 #endif
 	if (lighttable)
+	{
 		exc->colormap = R_CreateLightTable(exc);
+#ifdef TRUECOLOR
+		exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+#endif
+	}
 	else
+	{
 		exc->colormap = NULL;
+#ifdef TRUECOLOR
+		exc->colormap_u32 = NULL;
+#endif
+	}
 
 	return exc;
 }
@@ -822,6 +889,143 @@ lighttable_t *R_CreateLightTable(extracolormap_t *extra_colormap)
 	return lighttable;
 }
 
+#ifdef TRUECOLOR
+lighttable_u32_t *R_CreateTrueColorLightTable(extracolormap_t *extra_colormap)
+{
+	double cmaskr, cmaskg, cmaskb, cdestr, cdestg, cdestb;
+	double maskamt = 0, othermask = 0;
+
+	UINT8 cr = R_GetRgbaR(extra_colormap->rgba),
+		cg = R_GetRgbaG(extra_colormap->rgba),
+		cb = R_GetRgbaB(extra_colormap->rgba),
+		ca = R_GetRgbaA(extra_colormap->rgba),
+		cfr = R_GetRgbaR(extra_colormap->fadergba),
+		cfg = R_GetRgbaG(extra_colormap->fadergba),
+		cfb = R_GetRgbaB(extra_colormap->fadergba);
+//		cfa = R_GetRgbaA(extra_colormap->fadergba); // unused in software
+
+	UINT8 fadestart = extra_colormap->fadestart,
+		fadedist = extra_colormap->fadeend - extra_colormap->fadestart;
+
+	lighttable_u32_t *lighttable = NULL;
+	size_t i;
+
+	/////////////////////
+	// Calc the RGBA mask
+	/////////////////////
+	cmaskr = cr;
+	cmaskg = cg;
+	cmaskb = cb;
+
+	maskamt = (double)(ca/24.0l);
+	othermask = 1 - maskamt;
+	maskamt /= 0xff;
+
+	cmaskr *= maskamt;
+	cmaskg *= maskamt;
+	cmaskb *= maskamt;
+
+	/////////////////////
+	// Calc the RGBA fade mask
+	/////////////////////
+	cdestr = cfr;
+	cdestg = cfg;
+	cdestb = cfb;
+
+	// fade alpha unused in software
+	// maskamt = (double)(cfa/24.0l);
+	// othermask = 1 - maskamt;
+	// maskamt /= 0xff;
+
+	// cdestr *= maskamt;
+	// cdestg *= maskamt;
+	// cdestb *= maskamt;
+
+	/////////////////////
+	// This code creates the colormap array used by software renderer
+	/////////////////////
+	{
+		double r, g, b, cbrightness;
+		int p;
+		UINT32 *colormap_p;
+
+		// Initialise the map and delta arrays
+		// map[i] stores an RGB color (as double) for index i,
+		//  which is then converted to SRB2's palette later
+		// deltas[i] stores a corresponding fade delta between the RGB color and the final fade color;
+		//  map[i]'s values are decremented by after each use
+		for (i = 0; i < 256; i++)
+		{
+			r = pMasterPalette[i].s.red;
+			g = pMasterPalette[i].s.green;
+			b = pMasterPalette[i].s.blue;
+			cbrightness = sqrt((r*r) + (g*g) + (b*b));
+
+			map[i][0] = (cbrightness * cmaskr) + (r * othermask);
+			if (map[i][0] > 255.0l)
+				map[i][0] = 255.0l;
+			deltas[i][0] = (map[i][0] - cdestr) / (double)fadedist;
+
+			map[i][1] = (cbrightness * cmaskg) + (g * othermask);
+			if (map[i][1] > 255.0l)
+				map[i][1] = 255.0l;
+			deltas[i][1] = (map[i][1] - cdestg) / (double)fadedist;
+
+			map[i][2] = (cbrightness * cmaskb) + (b * othermask);
+			if (map[i][2] > 255.0l)
+				map[i][2] = 255.0l;
+			deltas[i][2] = (map[i][2] - cdestb) / (double)fadedist;
+		}
+
+		// Now allocate memory for the actual colormap array itself!
+		// aligned on 8 bit for asm code
+		colormap_p = Z_MallocAlign(((256 * 34) + 10) * sizeof(UINT32), PU_LEVEL, NULL, 8);
+		lighttable = (UINT32 *)colormap_p;
+
+		// Calculate the palette index for each palette index, for each light level
+		// (as well as the two unused colormap lines we inherited from Doom)
+		for (p = 0; p < 34; p++)
+		{
+			for (i = 0; i < 256; i++)
+			{
+				RGBA_t pack;
+
+				// put in rgba
+				pack.s.red = (UINT8)RoundUp(map[i][0]);
+				pack.s.green = (UINT8)RoundUp(map[i][1]);
+				pack.s.blue = (UINT8)RoundUp(map[i][2]);
+				pack.s.alpha = 0xFF;
+
+				// take from rgba
+				*colormap_p = pack.rgba;
+				colormap_p++;
+
+				if ((UINT32)p < fadestart)
+					continue;
+#define ABS2(x) ((x) < 0 ? -(x) : (x))
+				if (ABS2(map[i][0] - cdestr) > ABS2(deltas[i][0]))
+					map[i][0] -= deltas[i][0];
+				else
+					map[i][0] = cdestr;
+
+				if (ABS2(map[i][1] - cdestg) > ABS2(deltas[i][1]))
+					map[i][1] -= deltas[i][1];
+				else
+					map[i][1] = cdestg;
+
+				if (ABS2(map[i][2] - cdestb) > ABS2(deltas[i][1]))
+					map[i][2] -= deltas[i][2];
+				else
+					map[i][2] = cdestb;
+#undef ABS2
+			}
+		}
+	}
+
+	return lighttable;
+}
+#endif
+
 extracolormap_t *R_CreateColormapFromLinedef(char *p1, char *p2, char *p3)
 {
 	// default values
@@ -991,6 +1195,9 @@ extracolormap_t *R_CreateColormap(INT32 rgba, INT32 fadergba, UINT8 fadestart, U
 	// but if there happens to be a matching rgba entry that is NOT alpha-only (but has same rgb values),
 	// then it needs this lighttable because we share matching entries.
 	extra_colormap->colormap = R_CreateLightTable(extra_colormap);
+#ifdef TRUECOLOR
+	extra_colormap->colormap_u32 = R_CreateTrueColorLightTable(extra_colormap);
+#endif
 
 	R_AddColormapToList(extra_colormap);
 
@@ -1240,7 +1447,7 @@ void R_PrecacheLevel(void)
 		return;
 
 	// do not flush the memory, Z_Malloc twice with same user will cause error in Z_CheckHeap()
-	if (rendermode != render_soft)
+	if (!VID_InSoftwareRenderer())
 		return;
 
 	// Precache flats.

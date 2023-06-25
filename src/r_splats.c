@@ -20,6 +20,10 @@
 #include "w_wad.h"
 #include "z_zone.h"
 
+#ifdef TRUECOLOR
+#include "i_video.h"
+#endif
+
 struct rastery_s *prastertab; // for ASM code
 
 static struct rastery_s rastertab[MAXVIDHEIGHT];
@@ -142,6 +146,7 @@ static void rasterize_segment_tex(INT32 x1, INT32 y1, INT32 x2, INT32 y2, INT32 
 void R_DrawFloorSplat(vissprite_t *spr)
 {
 	floorsplat_t splat;
+	patch_t *patch = spr->patch;
 	mobj_t *mobj = spr->mobj;
 	fixed_t tr_x, tr_y, rot_x, rot_y, rot_z;
 
@@ -159,7 +164,7 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	INT32 i;
 
 	boolean hflip = (spr->xiscale < 0);
-	boolean vflip = (spr->cut & SC_VFLIP);
+	boolean vflip = (spr->flags & VIS_VFLIP);
 	UINT8 flipflags = 0;
 
 	renderflags_t renderflags = spr->renderflags;
@@ -169,11 +174,21 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	if (vflip)
 		flipflags |= PICFLAGS_YFLIP;
 
-	if (!mobj || P_MobjWasRemoved(mobj))
+	if (!mobj || P_MobjWasRemoved(mobj) || !patch)
 		return;
 
-	Patch_GenerateFlat(spr->patch, flipflags);
-	splat.pic = spr->patch->flats[flipflags];
+#ifdef TRUECOLOR
+	if (truecolor)
+	{
+		ds_picfmt = (patch->format == PICFMT_PATCH32) ? PICFMT_FLAT32 : PICFMT_FLAT16;
+		ds_colmapstyle = dc_colmapstyle;
+		Patch_GenerateFlat(patch, flipflags, ds_picfmt);
+	}
+	else
+#endif
+		Patch_GenerateFlat(patch, flipflags, PICFMT_FLAT16);
+
+	splat.pic = patch->extra->flats[flipflags];
 	if (splat.pic == NULL)
 		return;
 
@@ -190,7 +205,7 @@ void R_DrawFloorSplat(vissprite_t *spr)
 	else
 		splatangle = spr->viewpoint.angle;
 
-	if (!(spr->cut & SC_ISROTATED))
+	if (!(spr->flags & VIS_ROTATED))
 		splatangle += mobj->rollangle;
 
 	splat.angle = -splatangle;
@@ -326,7 +341,8 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	fixed_t planeheight = 0;
 	fixed_t step;
 
-	int spanfunctype = SPANDRAWFUNC_SPRITE;
+	INT32 spanfunctype = SPAN_SPRITE;
+	boolean translucent = false;
 
 	prepare_rastertab();
 
@@ -404,7 +420,7 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		R_SetTiltedSpan(0);
 		R_SetScaledSlopePlane(pSplat->slope, vis->viewpoint.x, vis->viewpoint.y, vis->viewpoint.z, pSplat->xscale, pSplat->yscale, -pSplat->verts[0].x, pSplat->verts[0].y, vis->viewpoint.angle, pSplat->angle);
 		R_CalculateSlopeVectors();
-		spanfunctype = SPANDRAWFUNC_TILTEDSPRITE;
+		spanfunctype = SPAN_SPRITE_TILTED;
 	}
 	else
 	{
@@ -433,25 +449,72 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	if (ds_translation == NULL)
 		ds_translation = colormaps;
 
+#ifdef TRUECOLOR
+	if (truecolor && ds_picfmt == PICFMT_FLAT32)
+	{
+		if (ds_colormap)
+		{
+			if (tc_spritecolormaps)
+				dp_lighting = TC_CalcScaleLight((UINT32 *)ds_colormap);
+			else
+				dp_lighting = TC_CalcScaleLightPaletted(ds_colormap);
+		}
+		else
+			dp_lighting = 0xFF;
+	}
+#endif
+
 	if (vis->extra_colormap)
 	{
-		if (!ds_colormap)
-			ds_colormap = vis->extra_colormap->colormap;
-		else
-			ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
-	}
+#ifdef TRUECOLOR
+		dp_extracolormap = vis->extra_colormap;
 
-	if (vis->transmap)
+		if (tc_spritecolormaps)
+		{
+			if (!ds_colormap)
+				ds_colormap = (UINT8 *)(vis->extra_colormap->colormap_u32);
+			else
+				ds_colormap = (UINT8 *)(vis->extra_colormap->colormap_u32 + ((UINT32 *)ds_colormap - colormaps_u32));
+		}
+		else
+#endif
+		{
+			if (!ds_colormap)
+				ds_colormap = vis->extra_colormap->colormap;
+			else
+				ds_colormap = &vis->extra_colormap->colormap[ds_colormap - colormaps];
+		}
+	}
+#ifdef TRUECOLOR
+	else
+		dp_extracolormap = defaultextracolormap;
+#endif
+
+	if (!usetranstables)
+	{
+		ds_alpha = vis->alpha;
+
+		if (vis->flags & VIS_TRANSLUCENT)
+		{
+			R_SetSpanBlendingFunction(vis->blendmode);
+			translucent = true;
+		}
+	}
+	else if (vis->flags & VIS_TRANSLUCENT)
 	{
 		ds_transmap = vis->transmap;
-
-		if (pSplat->slope)
-			spanfunctype = SPANDRAWFUNC_TILTEDTRANSSPRITE;
-		else
-			spanfunctype = SPANDRAWFUNC_TRANSSPRITE;
+		translucent = true;
 	}
 	else
 		ds_transmap = NULL;
+
+	if (translucent)
+	{
+		if (pSplat->slope)
+			spanfunctype = span_translu_sprite_tilted;
+		else
+			spanfunctype = span_translu_sprite;
+	}
 
 	if (ds_powersoftwo)
 		spanfunc = spanfuncs[spanfunctype];

@@ -52,6 +52,7 @@ typedef struct
 // from darkening PLAYPAL to all black.
 // Could even use more than 32 levels.
 typedef UINT8 lighttable_t;
+typedef UINT32 lighttable_u32_t;
 
 #define CMF_FADEFULLBRIGHTSPRITES  1
 #define CMF_FOG 4
@@ -63,11 +64,14 @@ typedef struct extracolormap_s
 	UINT8 flags;
 
 	// store rgba values in combined bitwise
-	// also used in OpenGL instead lighttables
+	// also used in OpenGL instead of lighttables
 	INT32 rgba; // similar to maskcolor in sw mode
 	INT32 fadergba; // The colour the colourmaps fade to
 
 	lighttable_t *colormap;
+#ifdef TRUECOLOR
+	lighttable_u32_t *colormap_u32;
+#endif
 
 #ifdef EXTRACOLORMAPLUMPS
 	lumpnum_t lump; // for colormap lump matching, init to LUMPERROR
@@ -288,6 +292,9 @@ typedef struct r_lightlist_s
 	lighttable_t *rcolormap;
 	ffloortype_e flags;
 	INT32 lightnum;
+#ifdef TRUECOLOR
+	UINT8 blendlight;
+#endif
 } r_lightlist_t;
 
 // Slopes
@@ -799,16 +806,32 @@ typedef struct
 	INT16 width, height;
 	INT16 leftoffset, topoffset;
 
+	INT32 format;
+
 	INT32 *columnofs; // Column offsets. This is relative to patch->columns
 	UINT8 *columns; // Software column data
 
 	void *hardware; // OpenGL patch, allocated whenever necessary
-	void *flats[4]; // The patch as flats
+
+	struct patchextra_s *extra;
+} patch_t;
+
+typedef struct patchextra_s
+{
+	// The unconverted source picture. May be a PNG.
+	struct
+	{
+		UINT8 *data;
+		size_t len;
+	} source;
+
+	void *truecolor; // Truecolor patch, for Software
+	void **flats; // The patch as flats
 
 #ifdef ROTSPRITE
 	rotsprite_t *rotated; // Rotated patches
 #endif
-} patch_t;
+} patchextra_t;
 
 #if defined(_MSC_VER)
 #pragma pack(1)
@@ -922,6 +945,9 @@ typedef struct
 
 #ifdef ROTSPRITE
 	rotsprite_t *rotated[2][16]; // Rotated patches
+#ifdef TRUECOLOR
+	rotsprite_t *rotated_tc[2][16]; // Rotated patches, for truecolor Software
+#endif
 #endif
 } spriteframe_t;
 

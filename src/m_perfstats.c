@@ -236,8 +236,8 @@ static boolean PS_IsLevelActive(void)
 static boolean PS_IsRowValid(perfstatrow_t *row)
 {
 	return !((row->flags & PS_LEVEL && !PS_IsLevelActive())
-		|| (row->flags & PS_SW && rendermode != render_soft)
-		|| (row->flags & PS_HW && rendermode != render_opengl)
+		|| (row->flags & PS_SW && !VID_InSoftwareRenderer())
+		|| (row->flags & PS_HW && VID_InSoftwareRenderer())
 #ifdef HWRENDER
 		|| (row->flags & PS_BATCHING && !cv_glbatching.value)
 #endif

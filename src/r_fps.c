@@ -121,8 +121,7 @@ static vector3_t *R_LerpVector3(const vector3_t *from, const vector3_t *to, fixe
 }
 
 // recalc necessary stuff for mouseaiming
-// slopes are already calculated for the full possible view (which is 4*viewheight).
-// 18/08/18: (No it's actually 16*viewheight, thanks Jimita for finding this out)
+// slopes are already calculated for the full possible view (which is 16*viewheight).
 static void R_SetupFreelook(player_t *player, boolean skybox)
 {
 #ifndef HWRENDER
@@ -132,7 +131,7 @@ static void R_SetupFreelook(player_t *player, boolean skybox)
 
 	// clip it in the case we are looking a hardware 90 degrees full aiming
 	// (lmps, network and use F12...)
-	if (rendermode == render_soft
+	if (VID_InSoftwareRenderer()
 #ifdef HWRENDER
 		|| (rendermode == render_opengl
 			&& (cv_glshearing.value == 1
@@ -145,16 +144,14 @@ static void R_SetupFreelook(player_t *player, boolean skybox)
 
 	centeryfrac = (viewheight/2)<<FRACBITS;
 
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 		centeryfrac += FixedMul(AIMINGTODY(aimingangle), FixedDiv(viewwidth<<FRACBITS, BASEVIDWIDTH<<FRACBITS));
 
 	centery = FixedInt(FixedRound(centeryfrac));
 
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 		yslope = &yslopetab[viewheight*8 - centery];
 }
-
-#undef AIMINGTODY
 
 void R_InterpolateView(fixed_t frac)
 {

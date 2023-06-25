@@ -8,10 +8,11 @@
 
 #include "utils/Log.h"
 
-rendermode_t rendermode = render_soft;
+rendermode_t rendermode = render_software;
 rendermode_t chosenrendermode = render_none;
 
 boolean highcolor = false;
+boolean truecolor = false;
 
 boolean allow_fullscreen = false;
 
@@ -51,6 +52,16 @@ INT32 VID_SetMode(INT32 modenum)
   vid.bpp = 1;
   vid.buffer = android_surface;
   return 0;
+}
+
+boolean VID_IsASoftwareRenderer(rendermode_t mode)
+{
+	return (mode == render_software);
+}
+
+boolean VID_InSoftwareRenderer(void)
+{
+	return VID_IsASoftwareRenderer(rendermode);
 }
 
 boolean VID_CheckRenderer(void)

@@ -82,7 +82,7 @@ typedef struct gl_vissprite_s
 	boolean flip, vflip;
 	boolean precip; // Tails 08-25-2002
 	boolean rotated;
-	UINT8 translucency;       //alpha level 0-255
+	boolean translucent;
 
 	angle_t angle; // for splats
 
@@ -92,6 +92,9 @@ typedef struct gl_vissprite_s
 
 	patch_t *gpatch;
 	mobj_t *mobj; // NOTE: This is a precipmobj_t if precip is true !!! Watch out.
+
+	INT32 blendmode;
+	INT32 alpha;
 } gl_vissprite_t;
 
 // --------

@@ -23,12 +23,14 @@ void Patch_Free(patch_t *patch);
 #define Patch_FreeTag(tagnum) Patch_FreeTags(tagnum, tagnum)
 void Patch_FreeTags(INT32 lowtag, INT32 hightag);
 
-void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags);
+void Patch_GenerateFlat(patch_t *patch, pictureflags_t flags, pictureformat_t format);
 
 #ifdef HWRENDER
 void *Patch_AllocateHardwarePatch(patch_t *patch);
 void *Patch_CreateGL(patch_t *patch);
 #endif
+
+patch_t *Patch_GetTruecolor(patch_t *patch);
 
 #ifdef ROTSPRITE
 void Patch_Rotate(patch_t *patch, INT32 angle, INT32 xpivot, INT32 ypivot, boolean flip);

@@ -20,6 +20,8 @@
 
 #include "w_wad.h"
 #include "z_zone.h"
+#include "i_video.h"
+#include "v_video.h"
 #include "d_netcmd.h"
 #include "m_misc.h"
 #include "p_local.h" // Camera...
@@ -36,6 +38,7 @@ static boolean markceiling;
 
 static boolean maskedtexture;
 static INT32 toptexture, bottomtexture, midtexture;
+static INT32 topformat, bottomformat, midformat;
 static INT32 numthicksides, numbackffloors;
 
 angle_t rw_normalangle;
@@ -70,6 +73,10 @@ static fixed_t topfrac, topstep;
 static fixed_t bottomfrac, bottomstep;
 
 static lighttable_t **walllights;
+#ifdef TRUECOLOR
+static lighttable_u32_t **walllights_u32;
+#endif
+
 static INT16 *maskedtexturecol;
 static fixed_t *maskedtextureheight = NULL;
 
@@ -112,9 +119,9 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 		dc_source = (UINT8 *)column + 3;
 
 		if (colfunc == colfuncs[BASEDRAWFUNC])
-			(colfuncs[COLDRAWFUNC_TWOSMULTIPATCH])();
-		else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
-			(colfuncs[COLDRAWFUNC_TWOSMULTIPATCHTRANS])();
+			(colfuncs[COLUMN_MULTIPATCH])();
+		else if (colfunc == colfuncs[column_translu])
+			(colfuncs[column_translu_multipatch])();
 		else
 			colfunc();
 	}
@@ -144,47 +151,100 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	// Use different light tables
 	//   for horizontal / vertical / diagonal. Diagonal?
 	// OPTIMIZE: get rid of LIGHTSEGSHIFT globally
-	curline = ds->curline;
 
+	curline = ds->curline;
 	frontsector = curline->frontsector;
 	backsector = curline->backsector;
 	texnum = R_GetTextureNum(curline->sidedef->midtexture);
 	windowbottom = windowtop = sprbotscreen = INT32_MAX;
 
 	ldef = curline->linedef;
-	if (!ldef->alpha)
-		return;
 
-	if (ldef->blendmode == AST_FOG)
+	INT32 blendmode = ldef->blendmode;
+
+	colfunc = colfuncs[BASEDRAWFUNC];
+
+	if (blendmode == AST_FOG)
 	{
-		colfunc = colfuncs[COLDRAWFUNC_FOG];
+		if (!ldef->alpha)
+			return;
+		colfunc = colfuncs[COLUMN_FOG];
 		windowtop = frontsector->ceilingheight;
 		windowbottom = frontsector->floorheight;
 	}
-	else if (ldef->blendmode)
-	{
-		if (ldef->alpha == NUMTRANSMAPS || ldef->blendmode == AST_MODULATE)
-			dc_transmap = R_GetBlendTable(ldef->blendmode, 0);
-		else
-			dc_transmap = R_GetBlendTable(ldef->blendmode, R_GetLinedefTransTable(ldef->alpha));
-		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
-	}
-	else if (ldef->alpha > 0 && ldef->alpha < FRACUNIT)
-	{
-		dc_transmap = R_GetTranslucencyTable(R_GetLinedefTransTable(ldef->alpha));
-		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
-	}
 	else
-		colfunc = colfuncs[BASEDRAWFUNC];
+	{
+		INT32 alpha = min(max(0, ldef->alpha), FRACUNIT);
+		boolean translucent = true;
+
+		alpha = FixedInt(alpha*255);
+
+		if (!usetranstables)
+		{
+			if (blendmode == AST_TRANSLUCENT || blendmode == AST_ADD)
+			{
+				if (!alpha)
+					return;
+				else if (alpha >= 255)
+					translucent = false;
+			}
+
+			if (translucent)
+			{
+				dc_alpha = alpha;
+				R_SetColumnBlendingFunction(blendmode);
+			}
+		}
+		else
+		{
+			if (blendmode == AST_MODULATE)
+				dc_transmap = R_GetBlendTable(blendmode, 0);
+			else
+				dc_transmap = R_GetBlendTable(blendmode, R_GetLinedefTransTable(alpha));
+
+			if (!dc_transmap)
+				translucent = false;
+		}
+
+		if (translucent)
+			colfunc = colfuncs[column_translu];
+	}
 
 	if (curline->polyseg && curline->polyseg->translucency > 0)
 	{
-		if (curline->polyseg->translucency >= NUMTRANSMAPS)
+		INT32 alphaval = curline->polyseg->translucency;
+		if (alphaval >= NUMTRANSMAPS)
 			return;
 
-		dc_transmap = R_GetTranslucencyTable(curline->polyseg->translucency);
-		colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+		boolean translucent = true;
+		if (!usetranstables)
+		{
+			alphaval = R_TransnumToAlpha(alphaval);
+			if (alphaval < 1)
+				return;
+			else if (alphaval >= 255)
+				translucent = false;
+			else
+			{
+				dc_alpha = alphaval;
+				R_SetColumnBlendingFunction(AST_TRANSLUCENT);
+			}
+		}
+		else
+		{
+			dc_transmap = R_GetTranslucencyTable(alphaval);
+			if (!dc_transmap)
+				translucent = false;
+		}
+
+		if (translucent)
+			colfunc = colfuncs[column_translu];
 	}
+
+#ifdef TRUECOLOR
+	dc_picfmt = textures[texnum]->format;
+	dc_colmapstyle = tc_colormaps ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
+#endif
 
 	range = max(ds->x2-ds->x1, 1);
 	rw_scalestep = ds->scalestep;
@@ -243,7 +303,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			rlight->extra_colormap = *light->extra_colormap;
 			rlight->flags = light->flags;
 
-			if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
+			if ((colfunc != colfuncs[column_translu])
 				|| (rlight->flags & FOF_FOG)
 				|| (rlight->extra_colormap && (rlight->extra_colormap->flags & CMF_FOG)))
 				lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
@@ -262,13 +322,13 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	}
 	else
 	{
-		if ((colfunc != colfuncs[COLDRAWFUNC_FUZZY])
+		if ((colfunc != colfuncs[column_translu])
 			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 		else
 			lightnum = LIGHTLEVELS - 1;
 
-		if (colfunc == colfuncs[COLDRAWFUNC_FOG]
+		if (colfunc == colfuncs[COLUMN_FOG]
 			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			;
 		else if (curline->v1->y == curline->v2->y)
@@ -276,12 +336,26 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		else if (curline->v1->x == curline->v2->x)
 			lightnum++;
 
-		if (lightnum < 0)
-			walllights = scalelight[0];
-		else if (lightnum >= LIGHTLEVELS)
-			walllights = scalelight[LIGHTLEVELS - 1];
+#ifdef TRUECOLOR
+		if (tc_colormaps)
+		{
+			if (lightnum < 0)
+				walllights_u32 = scalelight_u32[0];
+			else if (lightnum >= LIGHTLEVELS)
+				walllights_u32 = scalelight_u32[LIGHTLEVELS - 1];
+			else
+				walllights_u32 = scalelight_u32[lightnum];
+		}
 		else
-			walllights = scalelight[lightnum];
+#endif
+		{
+			if (lightnum < 0)
+				walllights = scalelight[0];
+			else if (lightnum >= LIGHTLEVELS)
+				walllights = scalelight[LIGHTLEVELS - 1];
+			else
+				walllights = scalelight[lightnum];
+		}
 	}
 
 	maskedtexturecol = ds->maskedtexturecol;
@@ -390,12 +464,26 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						if ((rlight->flags & FOF_NOSHADE))
 							continue;
 
-						if (rlight->lightnum < 0)
-							xwalllights = scalelight[0];
-						else if (rlight->lightnum >= LIGHTLEVELS)
-							xwalllights = scalelight[LIGHTLEVELS-1];
+#ifdef TRUECOLOR
+						if (tc_colormaps)
+						{
+							if (rlight->lightnum < 0)
+								xwalllights = (UINT8 **)(scalelight_u32[0]);
+							else if (rlight->lightnum >= LIGHTLEVELS)
+								xwalllights = (UINT8 **)(scalelight_u32[LIGHTLEVELS-1]);
+							else
+								xwalllights = (UINT8 **)(scalelight_u32[rlight->lightnum]);
+						}
 						else
-							xwalllights = scalelight[rlight->lightnum];
+#endif
+						{
+							if (rlight->lightnum < 0)
+								xwalllights = scalelight[0];
+							else if (rlight->lightnum >= LIGHTLEVELS)
+								xwalllights = scalelight[LIGHTLEVELS-1];
+							else
+								xwalllights = scalelight[rlight->lightnum];
+						}
 
 						pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
@@ -403,9 +491,31 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 							pindex = MAXLIGHTSCALE - 1;
 
 						if (rlight->extra_colormap)
-							rlight->rcolormap = rlight->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
+						{
+#ifdef TRUECOLOR
+							if (tc_colormaps)
+							{
+								UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+								rlight->blendlight = TC_CalcScaleLight(wlight);
+								rlight->rcolormap = (UINT8 *)(rlight->extra_colormap->colormap_u32 + (wlight - colormaps_u32));
+							}
+							else
+#endif
+								rlight->rcolormap = rlight->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
+						}
 						else
-							rlight->rcolormap = xwalllights[pindex];
+						{
+#ifdef TRUECOLOR
+							if (tc_colormaps)
+							{
+								UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+								rlight->blendlight = TC_CalcScaleLight(wlight);
+								rlight->rcolormap = (UINT8 *)wlight;
+							}
+							else
+#endif
+								rlight->rcolormap = xwalllights[pindex];
+						}
 
 						height = rlight->height;
 						rlight->height += rlight->heightstep;
@@ -413,6 +523,11 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						if (height <= windowtop)
 						{
 							dc_colormap = rlight->rcolormap;
+#ifdef TRUECOLOR
+							dp_extracolormap = rlight->extra_colormap;
+							if (!dp_extracolormap)
+								dp_extracolormap = defaultextracolormap;
+#endif
 							continue;
 						}
 
@@ -432,6 +547,11 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 						colfunc_2s(col);
 						windowtop = windowbottom + 1;
 						dc_colormap = rlight->rcolormap;
+#ifdef TRUECOLOR
+						dp_extracolormap = rlight->extra_colormap;
+						if (!dp_extracolormap)
+							dp_extracolormap = defaultextracolormap;
+#endif
 					}
 					windowbottom = realbot;
 					if (windowtop < windowbottom)
@@ -447,10 +567,20 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 				if (pindex >= MAXLIGHTSCALE)
 					pindex = MAXLIGHTSCALE - 1;
 
-				dc_colormap = walllights[pindex];
-
-				if (frontsector->extra_colormap)
-					dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
+#ifdef TRUECOLOR
+				if (tc_colormaps)
+				{
+					dc_colormap = (UINT8 *)(walllights_u32[pindex]);
+					if (frontsector->extra_colormap)
+						dc_colormap = (UINT8 *)(frontsector->extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
+				}
+				else
+#endif
+				{
+					dc_colormap = walllights[pindex];
+					if (frontsector->extra_colormap)
+						dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
+				}
 
 				sprtopscreen = centeryfrac - FixedMul(dc_texturemid, spryscale);
 				dc_iscale = 0xffffffffu / (unsigned)spryscale;
@@ -582,6 +712,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	pslope_t      *skewslope = NULL;
 
 	void (*colfunc_2s) (column_t *);
+	colfunc = colfuncs[BASEDRAWFUNC];
 
 	// Calculate light table.
 	// Use different light tables
@@ -593,8 +724,6 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 	frontsector = curline->frontsector == pfloor->target ? curline->backsector : curline->frontsector;
 	texnum = R_GetTextureNum(sides[pfloor->master->sidenum[0]].midtexture);
 
-	colfunc = colfuncs[BASEDRAWFUNC];
-
 	if (pfloor->master->flags & ML_TFERLINE)
 	{
 		size_t linenum = curline->linedef-backsector->lines[0];
@@ -604,25 +733,50 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	if (pfloor->fofflags & FOF_TRANSLUCENT)
 	{
-		boolean fuzzy = true;
+		INT32 alpha = pfloor->alpha;
+		INT32 blendmode = pfloor->blend ? pfloor->blend : AST_TRANSLUCENT;
+		boolean translucent = true;
 
-		// Hacked up support for alpha value in software mode Tails 09-24-2002
-		// ...unhacked by toaster 04-01-2021, re-hacked a little by sphere 19-11-2021
+		if (!usetranstables)
 		{
-			INT32 trans = (10*((256+12) - pfloor->alpha))/255;
-			if (trans >= 10)
+			if (alpha >= 255) // Opaque
+			{
+				translucent = blendmode != AST_TRANSLUCENT && blendmode != AST_COPY;
+				dc_alpha = 0xFF;
+			}
+			else if (alpha < 1 && (blendmode == AST_TRANSLUCENT || blendmode == AST_ADD))
 				return; // Don't even draw it
-			if (pfloor->blend) // additive, (reverse) subtractive, modulative
-				dc_transmap = R_GetBlendTable(pfloor->blend, trans);
-			else if (!(dc_transmap = R_GetTranslucencyTable(trans)) || trans == 0)
-				fuzzy = false; // Opaque
+			else
+				dc_alpha = alpha;
+
+			if (translucent)
+				R_SetColumnBlendingFunction(blendmode);
+		}
+		else
+		{
+			INT32 transnum = R_AlphaToTransnum(alpha);
+			if (transnum == -1 && (blendmode == AST_TRANSLUCENT || blendmode == AST_ADD))
+				return; // Don't even draw it
+			else if (transnum >= 0)
+			{
+				dc_transmap = R_GetBlendTable(blendmode, transnum);
+				if (!dc_transmap)
+					translucent = false;
+			}
+			else
+				translucent = false; // Opaque
 		}
 
-		if (fuzzy)
-			colfunc = colfuncs[COLDRAWFUNC_FUZZY];
+		if (translucent)
+			colfunc = colfuncs[column_translu];
 	}
 	else if (pfloor->fofflags & FOF_FOG)
-		colfunc = colfuncs[COLDRAWFUNC_FOG];
+		colfunc = colfuncs[COLUMN_FOG];
+
+#ifdef TRUECOLOR
+	dc_picfmt = textures[texnum]->format;
+	dc_colmapstyle = tc_colormaps ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
+#endif
 
 	range = max(ds->x2-ds->x1, 1);
 	//SoM: Moved these up here so they are available for my lightlist calculations
@@ -732,7 +886,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 		else if (pfloor->fofflags & FOF_FOG)
 			lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
-		else if (colfunc == colfuncs[COLDRAWFUNC_FUZZY])
+		else if (colfunc == colfuncs[column_translu])
 			lightnum = LIGHTLEVELS-1;
 		else
 			lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
@@ -744,12 +898,26 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		else if (curline->v1->x == curline->v2->x)
 			lightnum++;
 
-		if (lightnum < 0)
-			walllights = scalelight[0];
-		else if (lightnum >= LIGHTLEVELS)
-			walllights = scalelight[LIGHTLEVELS-1];
+#ifdef TRUECOLOR
+		if (tc_colormaps)
+		{
+			if (lightnum < 0)
+				walllights_u32 = scalelight_u32[0];
+			else if (lightnum >= LIGHTLEVELS)
+				walllights_u32 = scalelight_u32[LIGHTLEVELS-1];
+			else
+				walllights_u32 = scalelight_u32[lightnum];
+		}
 		else
-			walllights = scalelight[lightnum];
+#endif
+		{
+			if (lightnum < 0)
+				walllights = scalelight[0];
+			else if (lightnum >= LIGHTLEVELS)
+				walllights = scalelight[LIGHTLEVELS-1];
+			else
+				walllights = scalelight[lightnum];
+		}
 	}
 
 	maskedtexturecol = ds->thicksidecol;
@@ -898,7 +1066,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			// Get data for the column
 			col = (column_t *)((UINT8 *)R_GetColumn(texnum,maskedtexturecol[dc_x]) - 3);
 
-			// SoM: New code does not rely on R_DrawColumnShadowed_8 which
+			// SoM: New code does not rely on R_DrawShadowedColumn which
 			// will (hopefully) put less strain on the stack.
 			if (dc_numlights)
 			{
@@ -917,12 +1085,26 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					{
 						lightnum = rlight->lightnum;
 
-						if (lightnum < 0)
-							xwalllights = scalelight[0];
-						else if (lightnum >= LIGHTLEVELS)
-							xwalllights = scalelight[LIGHTLEVELS-1];
+#ifdef TRUECOLOR
+						if (tc_colormaps)
+						{
+							if (lightnum < 0)
+								xwalllights = (UINT8 **)(scalelight_u32[0]);
+							else if (lightnum >= LIGHTLEVELS)
+								xwalllights = (UINT8 **)(scalelight_u32[LIGHTLEVELS-1]);
+							else
+								xwalllights = (UINT8 **)(scalelight_u32[lightnum]);
+						}
 						else
-							xwalllights = scalelight[lightnum];
+#endif
+						{
+							if (lightnum < 0)
+								xwalllights = scalelight[0];
+							else if (lightnum >= LIGHTLEVELS)
+								xwalllights = scalelight[LIGHTLEVELS-1];
+							else
+								xwalllights = scalelight[lightnum];
+						}
 
 						pindex = FixedMul(spryscale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
@@ -932,16 +1114,60 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 						if (pfloor->fofflags & FOF_FOG)
 						{
 							if (pfloor->master->frontsector->extra_colormap)
-								rlight->rcolormap = pfloor->master->frontsector->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
+							{
+#ifdef TRUECOLOR
+								if (tc_colormaps)
+								{
+									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+									rlight->blendlight = TC_CalcScaleLight(wlight);
+									rlight->rcolormap = (UINT8 *)(pfloor->master->frontsector->extra_colormap->colormap_u32 + (wlight - colormaps_u32));
+								}
+								else
+#endif
+									rlight->rcolormap = pfloor->master->frontsector->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
+							}
 							else
-								rlight->rcolormap = xwalllights[pindex];
+							{
+#ifdef TRUECOLOR
+								if (tc_colormaps)
+								{
+									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+									rlight->blendlight = TC_CalcScaleLight(wlight);
+									rlight->rcolormap = (UINT8 *)wlight;
+								}
+								else
+#endif
+									rlight->rcolormap = xwalllights[pindex];
+							}
 						}
 						else
 						{
 							if (rlight->extra_colormap)
-								rlight->rcolormap = rlight->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
+							{
+#ifdef TRUECOLOR
+								if (tc_colormaps)
+								{
+									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+									rlight->blendlight = TC_CalcScaleLight(wlight);
+									rlight->rcolormap = (UINT8 *)(rlight->extra_colormap->colormap_u32 + (wlight - colormaps_u32));
+								}
+								else
+#endif
+									rlight->rcolormap = rlight->extra_colormap->colormap + (xwalllights[pindex] - colormaps);
+							}
 							else
-								rlight->rcolormap = xwalllights[pindex];
+							{
+#ifdef TRUECOLOR
+								if (tc_colormaps)
+								{
+									UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+									rlight->blendlight = TC_CalcScaleLight(wlight);
+									rlight->rcolormap = (UINT8 *)wlight;
+								}
+								else
+#endif
+									rlight->rcolormap = xwalllights[pindex];
+							}
 						}
 					}
 
@@ -977,7 +1203,14 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					if (height <= windowtop)
 					{
 						if (lighteffect)
+						{
 							dc_colormap = rlight->rcolormap;
+#ifdef TRUECOLOR
+							dp_extracolormap = rlight->extra_colormap;
+							if (!dp_extracolormap)
+								dp_extracolormap = defaultextracolormap;
+#endif
+						}
 						if (solid && windowtop < bheight)
 							windowtop = bheight;
 						continue;
@@ -1005,7 +1238,14 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 					else
 						windowtop = windowbottom + 1;
 					if (lighteffect)
+					{
 						dc_colormap = rlight->rcolormap;
+#ifdef TRUECOLOR
+						dp_extracolormap = rlight->extra_colormap;
+						if (!dp_extracolormap)
+							dp_extracolormap = defaultextracolormap;
+#endif
+					}
 				}
 				windowbottom = sprbotscreen;
 				// draw the texture, if there is any space left
@@ -1022,12 +1262,39 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			if (pindex >= MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE - 1;
 
-			dc_colormap = walllights[pindex];
+#ifdef TRUECOLOR
+			if (tc_colormaps)
+				dc_colormap = (UINT8 *)(walllights_u32[pindex]);
+			else
+#endif
+				dc_colormap = walllights[pindex];
 
 			if (pfloor->fofflags & FOF_FOG && pfloor->master->frontsector->extra_colormap)
-				dc_colormap = pfloor->master->frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
+			{
+				extracolormap_t *extra_colormap = pfloor->master->frontsector->extra_colormap;
+#ifdef TRUECOLOR
+				dp_extracolormap = extra_colormap;
+				if (tc_colormaps)
+					dc_colormap = (UINT8 *)(extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
+				else
+#endif
+					dc_colormap = extra_colormap->colormap + (dc_colormap - colormaps);
+			}
 			else if (frontsector->extra_colormap)
-				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
+			{
+				extracolormap_t *extra_colormap = frontsector->extra_colormap;
+#ifdef TRUECOLOR
+				dp_extracolormap = extra_colormap;
+				if (tc_colormaps)
+					dc_colormap = (UINT8 *)(extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
+				else
+#endif
+					dc_colormap = extra_colormap->colormap + (dc_colormap - colormaps);
+			}
+#ifdef TRUECOLOR
+			else
+				dp_extracolormap = defaultextracolormap;
+#endif
 
 			// draw the texture
 			colfunc_2s (col);
@@ -1280,12 +1547,36 @@ static void R_RenderSegLoop (void)
 			if (pindex >=  MAXLIGHTSCALE)
 				pindex = MAXLIGHTSCALE-1;
 
-			dc_colormap = walllights[pindex];
+#ifdef TRUECOLOR
+			if (tc_colormaps)
+				dc_colormap = (UINT8 *)(walllights_u32[pindex]);
+			else
+#endif
+				dc_colormap = walllights[pindex];
+
 			dc_x = rw_x;
 			dc_iscale = 0xffffffffu / (unsigned)rw_scale;
 
 			if (frontsector->extra_colormap)
-				dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
+			{
+#ifdef TRUECOLOR
+				dp_extracolormap = frontsector->extra_colormap;
+				if (tc_colormaps)
+				{
+					dp_lighting = TC_CalcScaleLight((UINT32 *)dc_colormap);
+					dc_colormap = (UINT8 *)(frontsector->extra_colormap->colormap_u32 + ((UINT32 *)dc_colormap - colormaps_u32));
+				}
+				else
+#endif
+					dc_colormap = frontsector->extra_colormap->colormap + (dc_colormap - colormaps);
+			}
+#ifdef TRUECOLOR
+			else
+			{
+				dp_lighting = TC_CalcScaleLight((UINT32 *)dc_colormap);
+				dp_extracolormap = defaultextracolormap;
+			}
+#endif
 		}
 
 		if (dc_numlights)
@@ -1303,12 +1594,26 @@ static void R_RenderSegLoop (void)
 				else if (curline->v1->x == curline->v2->x)
 					lightnum++;
 
-				if (lightnum < 0)
-					xwalllights = scalelight[0];
-				else if (lightnum >= LIGHTLEVELS)
-					xwalllights = scalelight[LIGHTLEVELS-1];
+#ifdef TRUECOLOR
+				if (tc_colormaps)
+				{
+					if (lightnum < 0)
+						xwalllights = (UINT8 **)(scalelight_u32[0]);
+					else if (lightnum >= LIGHTLEVELS)
+						xwalllights = (UINT8 **)(scalelight_u32[LIGHTLEVELS-1]);
+					else
+						xwalllights = (UINT8 **)(scalelight_u32[lightnum]);
+				}
 				else
-					xwalllights = scalelight[lightnum];
+#endif
+				{
+					if (lightnum < 0)
+						xwalllights = scalelight[0];
+					else if (lightnum >= LIGHTLEVELS)
+						xwalllights = scalelight[LIGHTLEVELS-1];
+					else
+						xwalllights = scalelight[lightnum];
+				}
 
 				pindex = FixedMul(rw_scale, LIGHTRESOLUTIONFIX)>>LIGHTSCALESHIFT;
 
@@ -1316,11 +1621,33 @@ static void R_RenderSegLoop (void)
 					pindex = MAXLIGHTSCALE-1;
 
 				if (dc_lightlist[i].extra_colormap)
-					dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[pindex] - colormaps);
+				{
+#ifdef TRUECOLOR
+					if (tc_colormaps)
+					{
+						UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+						dc_lightlist[i].blendlight = TC_CalcScaleLight(wlight);
+						dc_lightlist[i].rcolormap = (UINT8 *)(dc_lightlist[i].extra_colormap->colormap_u32 + (wlight - colormaps_u32));
+					}
+					else
+#endif
+						dc_lightlist[i].rcolormap = dc_lightlist[i].extra_colormap->colormap + (xwalllights[pindex] - colormaps);
+				}
 				else
-					dc_lightlist[i].rcolormap = xwalllights[pindex];
+				{
+#ifdef TRUECOLOR
+					if (tc_colormaps)
+					{
+						UINT32 *wlight = (((UINT32 **)xwalllights)[pindex]);
+						dc_lightlist[i].blendlight = TC_CalcScaleLight(wlight);
+						dc_lightlist[i].rcolormap = (UINT8 *)wlight;
+					}
+					else
+#endif
+						dc_lightlist[i].rcolormap = xwalllights[pindex];
+				}
 
-				colfunc = colfuncs[COLDRAWFUNC_SHADOWED];
+				colfunc = colfuncs[COLUMN_LIGHTLIST];
 			}
 		}
 
@@ -1334,6 +1661,7 @@ static void R_RenderSegLoop (void)
 			{
 				dc_yl = yl;
 				dc_yh = yh;
+				dc_picfmt = midformat;
 				dc_texturemid = rw_midtexturemid;
 				dc_source = R_GetColumn(midtexture,texturecolumn);
 				dc_texheight = textureheight[midtexture]>>FRACBITS;
@@ -1395,6 +1723,7 @@ static void R_RenderSegLoop (void)
 					{
 						dc_yl = yl;
 						dc_yh = mid;
+						dc_picfmt = topformat;
 						dc_texturemid = rw_toptexturemid;
 						dc_source = R_GetColumn(toptexture,texturecolumn);
 						dc_texheight = textureheight[toptexture]>>FRACBITS;
@@ -1431,6 +1760,7 @@ static void R_RenderSegLoop (void)
 					{
 						dc_yl = mid;
 						dc_yh = yh;
+						dc_picfmt = bottomformat;
 						dc_texturemid = rw_bottomtexturemid;
 						dc_source = R_GetColumn(bottomtexture,
 							texturecolumn);
@@ -1763,6 +2093,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		fixed_t texheight;
 		// single sided line
 		midtexture = R_GetTextureNum(sidedef->midtexture);
+		midformat = textures[midtexture]->format;
 		texheight = textureheight[midtexture];
 		// a single sided line is terminal, so it must mark ends
 		markfloor = markceiling = true;
@@ -1977,6 +2308,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 			// top texture
 			toptexture = R_GetTextureNum(sidedef->toptexture);
 			texheight = textureheight[toptexture];
+			topformat = textures[toptexture]->format;
 
 			if (!(linedef->flags & ML_SKEWTD)) { // Ignore slopes for lower/upper textures unless flag is checked
 				if (linedef->flags & ML_DONTPEGTOP)
@@ -2002,6 +2334,7 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		{
 			// bottom texture
 			bottomtexture = R_GetTextureNum(sidedef->bottomtexture);
+			bottomformat = textures[bottomtexture]->format;
 
 			if (!(linedef->flags & ML_SKEWTD)) { // Ignore slopes for lower/upper textures unless flag is checked
 				if (linedef->flags & ML_DONTPEGBOTTOM)
@@ -2318,12 +2651,26 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 		else if (curline->v1->x == curline->v2->x)
 			lightnum++;
 
-		if (lightnum < 0)
-			walllights = scalelight[0];
-		else if (lightnum >= LIGHTLEVELS)
-			walllights = scalelight[LIGHTLEVELS - 1];
+#ifdef TRUECOLOR
+		if (tc_colormaps)
+		{
+			if (lightnum < 0)
+				walllights_u32 = scalelight_u32[0];
+			else if (lightnum >= LIGHTLEVELS)
+				walllights_u32 = scalelight_u32[LIGHTLEVELS - 1];
+			else
+				walllights_u32 = scalelight_u32[lightnum];
+		}
 		else
-			walllights = scalelight[lightnum];
+#endif
+		{
+			if (lightnum < 0)
+				walllights = scalelight[0];
+			else if (lightnum >= LIGHTLEVELS)
+				walllights = scalelight[LIGHTLEVELS - 1];
+			else
+				walllights = scalelight[lightnum];
+		}
 	}
 
 	// if a floor / ceiling plane is on the wrong side
@@ -2723,6 +3070,10 @@ void R_StoreWallRange(INT32 start, INT32 stop)
 	rw_silhouette = &(ds_p->silhouette);
 	rw_tsilheight = &(ds_p->tsilheight);
 	rw_bsilheight = &(ds_p->bsilheight);
+
+#ifdef TRUECOLOR
+	dc_colmapstyle = tc_colormaps ? TC_COLORMAPSTYLE_32BPP : TC_COLORMAPSTYLE_8BPP;
+#endif
 
 	R_RenderSegLoop();
 	colfunc = colfuncs[BASEDRAWFUNC];

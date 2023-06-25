@@ -26,6 +26,7 @@
 #include "m_random.h"
 #include "p_mobj.h"
 #include "i_system.h"
+#include "i_video.h"
 #include "s_sound.h"
 #include "w_wad.h"
 #include "z_zone.h"
@@ -3172,6 +3173,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (!(sectors[secnum].extra_colormap = R_GetColormapFromList(exc)))
 					{
 						exc->colormap = R_CreateLightTable(exc);
+#ifdef TRUECOLOR
+						exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+#endif
 						R_AddColormapToList(exc);
 						sectors[secnum].extra_colormap = exc;
 					}
@@ -3497,6 +3501,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 					if (!(source_exc = R_GetColormapFromList(exc)))
 					{
 						exc->colormap = R_CreateLightTable(exc);
+#ifdef TRUECOLOR
+						exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+#endif
 						R_AddColormapToList(exc);
 						source_exc = exc;
 					}
@@ -3532,6 +3539,9 @@ static void P_ProcessLineSpecial(line_t *line, mobj_t *mo, sector_t *callsec)
 				if (!(dest_exc = R_GetColormapFromList(exc)))
 				{
 					exc->colormap = R_CreateLightTable(exc);
+#ifdef TRUECOLOR
+					exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+#endif
 					R_AddColormapToList(exc);
 					dest_exc = exc;
 				}
@@ -8024,7 +8034,7 @@ static boolean P_FadeFakeFloor(ffloor_t *rover, INT16 sourcevalue, INT16 destval
 		else // clamp fadingdata->alpha to software's alpha levels
 		{
 			if (alpha < 12)
-				rover->alpha = destvalue < 12 ? destvalue : 1; // Don't even draw it
+				rover->alpha = destvalue < 12 ? destvalue : 1;
 			else if (alpha < 38)
 				rover->alpha = destvalue >= 12 && destvalue < 38 ? destvalue : 25;
 			else if (alpha < 64)
@@ -8160,6 +8170,9 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 		if (!(d->dest_exc = R_GetColormapFromList(dest_exc)))
 		{
 			dest_exc->colormap = R_CreateLightTable(dest_exc);
+#ifdef TRUECOLOR
+			dest_exc->colormap_u32 = R_CreateTrueColorLightTable(dest_exc);
+#endif
 			R_AddColormapToList(dest_exc);
 			d->dest_exc = dest_exc;
 		}
@@ -8177,6 +8190,9 @@ static void P_AddFakeFloorFader(ffloor_t *rover, size_t sectornum, size_t ffloor
 			if (!(source_exc = R_GetColormapFromList(exc)))
 			{
 				exc->colormap = R_CreateLightTable(exc);
+#ifdef TRUECOLOR
+				exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+#endif
 				R_AddColormapToList(exc);
 				source_exc = exc;
 			}
@@ -8341,6 +8357,9 @@ void T_FadeColormap(fadecolormap_t *d)
 			exc->rgba = rgba;
 			exc->fadergba = fadergba;
 			exc->colormap = R_CreateLightTable(exc);
+#ifdef TRUECOLOR
+			exc->colormap_u32 = R_CreateTrueColorLightTable(exc);
+#endif
 			R_AddColormapToList(exc);
 			d->sector->extra_colormap = exc;
 		}

@@ -298,8 +298,10 @@ typedef struct mobj_s
 	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
-	UINT32 renderflags; // render flags
-	INT32 blendmode; // blend mode
+	UINT32 renderflags;
+	UINT8 alpha;
+	INT32 blendmode;
+
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
 	fixed_t old_spritexscale, old_spriteyscale;
@@ -435,8 +437,10 @@ typedef struct precipmobj_s
 	UINT8 sprite2; // player sprites
 	UINT16 anim_duration; // for FF_ANIMATE states
 
-	UINT32 renderflags; // render flags
-	INT32 blendmode; // blend mode
+	UINT32 renderflags;
+	UINT8 alpha;
+	INT32 blendmode;
+
 	fixed_t spritexscale, spriteyscale;
 	fixed_t spritexoffset, spriteyoffset;
 	fixed_t old_spritexscale, old_spriteyscale;

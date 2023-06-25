@@ -11132,7 +11132,7 @@ static void M_Refresh(INT32 choice)
 	V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2)+12, 0, "Please wait.");
 	I_OsPolling();
 	I_UpdateNoBlit();
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 		I_FinishUpdate(); // page flip or blit buffer
 
 	// note: this is the one case where 0 is a valid room number
@@ -11495,7 +11495,7 @@ static void M_RoomMenu(INT32 choice)
 	V_DrawCenteredString(BASEVIDWIDTH/2, (BASEVIDHEIGHT/2)+12, 0, "Please wait.");
 	I_OsPolling();
 	I_UpdateNoBlit();
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 		I_FinishUpdate(); // page flip or blit buffer
 
 	for (i = 1; i < NUM_LIST_ROOMS+1; ++i)
@@ -11842,7 +11842,7 @@ static void M_ConnectIP(INT32 choice)
 	V_DrawCenteredString(BASEVIDWIDTH/2, BASEVIDHEIGHT/2, 0, "Connecting to server...");
 	I_OsPolling();
 	I_UpdateNoBlit();
-	if (rendermode == render_soft)
+	if (VID_InSoftwareRenderer())
 		I_FinishUpdate(); // page flip or blit buffer
 }
 
