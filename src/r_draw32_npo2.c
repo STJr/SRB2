@@ -624,7 +624,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 						else
 							y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-						WriteTranslucentSpan(colormap[source[((y * ds_flatwidth) + x)]]);
+						WriteTranslucentSpan_s8d32(colormap[source[((y * ds_flatwidth) + x)]]);
 					}
 					dest++;
 					u += stepu;
@@ -656,7 +656,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 						else
 							y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-						WriteTranslucentSpan(colormap[source[((y * ds_flatwidth) + x)]]);
+						WriteTranslucentSpan_s8d32(colormap[source[((y * ds_flatwidth) + x)]]);
 					}
 				}
 				else
@@ -693,7 +693,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 							else
 								y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-							WriteTranslucentSpan(colormap[source[((y * ds_flatwidth) + x)]]);
+							WriteTranslucentSpan_s8d32(colormap[source[((y * ds_flatwidth) + x)]]);
 						}
 						dest++;
 						u += stepu;
@@ -736,7 +736,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 						else
 							y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-						WriteTranslucentSpan32(colormapu32[source[((y * ds_flatwidth) + x)]]);
+						WriteTranslucentSpan_s32d32(colormapu32[source[((y * ds_flatwidth) + x)]]);
 					}
 					dest++;
 					u += stepu;
@@ -768,7 +768,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 						else
 							y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-						WriteTranslucentSpan32(colormapu32[source[((y * ds_flatwidth) + x)]]);
+						WriteTranslucentSpan_s32d32(colormapu32[source[((y * ds_flatwidth) + x)]]);
 					}
 				}
 				else
@@ -805,7 +805,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_32(void)
 							else
 								y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-							WriteTranslucentSpan32(colormapu32[source[((y * ds_flatwidth) + x)]]);
+							WriteTranslucentSpan_s32d32(colormapu32[source[((y * ds_flatwidth) + x)]]);
 						}
 						dest++;
 						u += stepu;
@@ -1013,7 +1013,7 @@ void R_DrawTiltedWaterSpan_NPO2_32(void)
 						else
 							y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-						WriteTranslucentWaterSpan(colormapu32[source[((y * ds_flatwidth) + x)]]);
+						WriteTranslucentWaterSpan_s8d32(colormapu32[source[((y * ds_flatwidth) + x)]]);
 					}
 					dest++;
 					u += stepu;
@@ -1045,7 +1045,7 @@ void R_DrawTiltedWaterSpan_NPO2_32(void)
 						else
 							y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-						WriteTranslucentWaterSpan(colormap[source[((y * ds_flatwidth) + x)]]);
+						WriteTranslucentWaterSpan_s8d32(colormap[source[((y * ds_flatwidth) + x)]]);
 					}
 				}
 				else
@@ -1082,7 +1082,7 @@ void R_DrawTiltedWaterSpan_NPO2_32(void)
 							else
 								y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-							WriteTranslucentWaterSpan(colormap[source[((y * ds_flatwidth) + x)]]);
+							WriteTranslucentWaterSpan_s8d32(colormap[source[((y * ds_flatwidth) + x)]]);
 						}
 						dest++;
 						u += stepu;
@@ -1125,7 +1125,7 @@ void R_DrawTiltedWaterSpan_NPO2_32(void)
 						else
 							y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-						WriteTranslucentWaterSpan32(colormapu32[source[((y * ds_flatwidth) + x)]]);
+						WriteTranslucentWaterSpan_s32d32(colormapu32[source[((y * ds_flatwidth) + x)]]);
 					}
 					dest++;
 					u += stepu;
@@ -1157,7 +1157,7 @@ void R_DrawTiltedWaterSpan_NPO2_32(void)
 						else
 							y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-						WriteTranslucentWaterSpan32(colormapu32[source[((y * ds_flatwidth) + x)]]);
+						WriteTranslucentWaterSpan_s32d32(colormapu32[source[((y * ds_flatwidth) + x)]]);
 					}
 				}
 				else
@@ -1194,7 +1194,7 @@ void R_DrawTiltedWaterSpan_NPO2_32(void)
 							else
 								y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-							WriteTranslucentWaterSpan32(colormapu32[source[((y * ds_flatwidth) + x)]]);
+							WriteTranslucentWaterSpan_s32d32(colormapu32[source[((y * ds_flatwidth) + x)]]);
 						}
 						dest++;
 						u += stepu;
@@ -1946,7 +1946,7 @@ void R_DrawTranslucentSplat_NPO2_32(void)
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpan(colormap[val]);
+					WriteTranslucentSpan_s8d32(colormap[val]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -1977,7 +1977,7 @@ void R_DrawTranslucentSplat_NPO2_32(void)
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpan32(colormapu32[val]);
+					WriteTranslucentSpan_s32d32(colormapu32[val]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -2244,7 +2244,7 @@ void R_DrawTranslucentFloorSprite_NPO2_32(void)
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
-					WriteTranslucentSpan(colormap[translation[val & 0xFF]]);
+					WriteTranslucentSpan_s8d32(colormap[translation[val & 0xFF]]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -2277,7 +2277,7 @@ void R_DrawTranslucentFloorSprite_NPO2_32(void)
 				if (val & 0xFF00)
 				{
 					val = colormapu32[translation[val & 0xFF]];
-					WriteTranslucentSpan32(val);
+					WriteTranslucentSpan_s32d32(val);
 				}
 				dest++;
 				xposition += xstep;
@@ -2801,7 +2801,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 					val = source[((y * ds_flatwidth) + x)];
 					if (val & 0xFF00)
-						WriteTranslucentSpan(colormap[translation[val & 0xFF]]);
+						WriteTranslucentSpan_s8d32(colormap[translation[val & 0xFF]]);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -2833,7 +2833,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 						val = source[((y * ds_flatwidth) + x)];
 						if (val & 0xFF00)
-							WriteTranslucentSpan(colormap[translation[val & 0xFF]]);
+							WriteTranslucentSpan_s8d32(colormap[translation[val & 0xFF]]);
 					}
 				}
 				else
@@ -2870,7 +2870,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 						val = source[((y * ds_flatwidth) + x)];
 						if (val & 0xFF00)
-							WriteTranslucentSpan(colormap[translation[val & 0xFF]]);
+							WriteTranslucentSpan_s8d32(colormap[translation[val & 0xFF]]);
 						dest++;
 						u += stepu;
 						v += stepv;
@@ -2913,7 +2913,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 						val = source[((y * ds_flatwidth) + x)];
 						if (val & 0xFF00)
-							WriteTranslucentSpan32(colormapu32[translation[val & 0xFF]]);
+							WriteTranslucentSpan_s32d32(colormapu32[translation[val & 0xFF]]);
 					}
 					dest++;
 					u += stepu;
@@ -2946,7 +2946,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 						val = source[((y * ds_flatwidth) + x)];
 						if (val & 0xFF00)
-							WriteTranslucentSpan32(colormapu32[translation[val & 0xFF]]);
+							WriteTranslucentSpan_s32d32(colormapu32[translation[val & 0xFF]]);
 					}
 				}
 				else
@@ -2985,7 +2985,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_32(void)
 
 							val = source[((y * ds_flatwidth) + x)];
 							if (val & 0xFF00)
-								WriteTranslucentSpan32(colormapu32[translation[val & 0xFF]]);
+								WriteTranslucentSpan_s32d32(colormapu32[translation[val & 0xFF]]);
 						}
 						dest++;
 						u += stepu;
@@ -3183,7 +3183,7 @@ void R_DrawTranslucentSpan_NPO2_32(void)
 				y = (yposition >> FRACBITS);
 
 				val = colormap[source[((y * ds_flatwidth) + x)]];
-				WriteTranslucentSpan(val);
+				WriteTranslucentSpan_s8d32(val);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -3213,7 +3213,7 @@ void R_DrawTranslucentSpan_NPO2_32(void)
 				y = (yposition >> FRACBITS);
 
 				val = colormapu32[source[((y * ds_flatwidth) + x)]];
-				WriteTranslucentSpan32(val);
+				WriteTranslucentSpan_s32d32(val);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -3324,7 +3324,7 @@ void R_DrawWaterSpan_NPO2_32(void)
 				x = (xposition >> FRACBITS);
 				y = (yposition >> FRACBITS);
 
-				WriteTranslucentWaterSpan(colormap[source[((y * ds_flatwidth) + x)]]);
+				WriteTranslucentWaterSpan_s8d32(colormap[source[((y * ds_flatwidth) + x)]]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -3353,7 +3353,7 @@ void R_DrawWaterSpan_NPO2_32(void)
 				x = (xposition >> FRACBITS);
 				y = (yposition >> FRACBITS);
 
-				WriteTranslucentWaterSpan32(colormapu32[source[((y * ds_flatwidth) + x)]]);
+				WriteTranslucentWaterSpan_s32d32(colormapu32[source[((y * ds_flatwidth) + x)]]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;

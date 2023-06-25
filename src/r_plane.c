@@ -951,7 +951,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			else
 				ds_transmap = R_GetTranslucencyTable(transval);
 
-			spanfunctype = (pl->polyobj->flags & POF_SPLAT) ? span_translu_splat : span_translu_splat;
+			spanfunctype = (pl->polyobj->flags & POF_SPLAT) ? SPAN_SPLAT_TRANSLUCENT : SPAN_TRANSLUCENT;
 		}
 		else if (pl->polyobj->flags & POF_SPLAT) // Opaque, but allow transparent flat pixels
 		{
@@ -995,7 +995,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 				INT32 blendmode = pl->ffloor->blend ? pl->ffloor->blend : AST_TRANSLUCENT;
 				boolean splat = false;
 
-				spanfunctype = (pl->ffloor->fofflags & FOF_SPLAT) ? span_translu_splat : span_translu;
+				spanfunctype = (pl->ffloor->fofflags & FOF_SPLAT) ? SPAN_SPLAT_TRANSLUCENT : SPAN_TRANSLUCENT;
 
 				if (!usetranstables)
 				{
@@ -1050,7 +1050,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 			{
 				planeripple.active = true;
 
-				if (spanfunctype == span_translu)
+				if (spanfunctype == SPAN_TRANSLUCENT)
 				{
 					// Copy the current scene, ugh
 					INT32 top = pl->high-8;
@@ -1061,7 +1061,7 @@ void R_DrawSinglePlane(visplane_t *pl)
 					if (bottom > vid.height)
 						bottom = vid.height;
 
-					spanfunctype = span_water;
+					spanfunctype = SPAN_WATER;
 
 					// Only copy the part of the screen we need
 					VID_BlitLinearScreen((splitscreen && viewplayer == &players[secondarydisplayplayer]) ? screens[0] + (top+(vid.height>>1))*vid.rowbytes : screens[0]+((top)*vid.rowbytes), screens[1]+((top)*vid.rowbytes),
@@ -1133,10 +1133,10 @@ void R_DrawSinglePlane(visplane_t *pl)
 		if (ds_solidcolor)
 		{
 			// NOTE: can't possibly have fog and solid color at the same time
-			if (spanfunctype == span_water)
-				spanfunctype = span_water_solidcolor;
-			else if (spanfunctype == span_translu)
-				spanfunctype = span_translu_solidcolor;
+			if (spanfunctype == SPAN_WATER)
+				spanfunctype = SPAN_SOLIDCOLOR_WATER;
+			else if (spanfunctype == SPAN_TRANSLUCENT)
+				spanfunctype = SPAN_SOLIDCOLOR_TRANSLUCENT;
 			else
 				spanfunctype = SPAN_SOLIDCOLOR;
 		}
@@ -1184,14 +1184,14 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else
 			R_SetSlopePlaneVectors(pl, 0, xoffs, yoffs);
 
-		if (spanfunctype == span_water)
-			spanfunctype = span_water_tilted;
-		else if (spanfunctype == span_water_solidcolor)
-			spanfunctype = span_water_tilted_solidcolor;
-		else if (spanfunctype == span_translu)
-			spanfunctype = span_translu_tilted;
-		else if (spanfunctype == span_translu_solidcolor)
-			spanfunctype = span_translu_tilted_solidcolor;
+		if (spanfunctype == SPAN_WATER)
+			spanfunctype = SPAN_WATER_TILTED;
+		else if (spanfunctype == SPAN_SOLIDCOLOR_WATER)
+			spanfunctype = SPAN_SOLIDCOLOR_TILTED_WATER;
+		else if (spanfunctype == SPAN_TRANSLUCENT)
+			spanfunctype = SPAN_TILTED_TRANSLUCENT;
+		else if (spanfunctype == SPAN_SOLIDCOLOR_TRANSLUCENT)
+			spanfunctype = SPAN_SOLIDCOLOR_TILTED_TRANSLUCENT;
 		else if (spanfunctype == SPAN_SOLIDCOLOR)
 			spanfunctype = SPAN_SOLIDCOLOR_TILTED;
 		else if (spanfunctype == SPAN_SPLAT)

@@ -186,92 +186,49 @@ void R_DrawViewBorder(void);
 #define TRANSPARENTPIXEL 255
 
 #define COLFUNCLIST8(X) \
-	X(TRANSTAB, Translucent); \
-	X(ALPHA, Alpha); \
-	X(TRANSLATED, Translated); \
+	X(TRANSLUCENT, Translucent); \
+	X(MAPPED, Translated); \
 	X(SHADE, Shade); \
 	X(LIGHTLIST, Shadowed); \
-	X(MAPPED_TRANSTAB, TranslatedTranslucent); \
-	X(MAPPED_ALPHA, TranslatedAlpha); \
+	X(MAPPED_TRANSLUCENT, TranslatedTranslucent); \
 	X(MULTIPATCH, 2sMultiPatch); \
-	X(MULTIPATCH_TRANSTAB, 2sMultiPatchTranslucent); \
-	X(MULTIPATCH_ALPHA, 2sMultiPatchAlpha)
+	X(MULTIPATCH_TRANSLUCENT, 2sMultiPatchTranslucent)
 
 #define COLFUNCLIST8_NOTEXTURE(X) \
 	X(FOG, Fog); \
 	X(DROP_SHADOW, DropShadow)
 
 #define SPANFUNCLIST8(X) \
-	X(TRANSTAB, TranslucentSpan); \
-	X(ALPHA, AlphaSpan); \
+	X(TRANSLUCENT, TranslucentSpan); \
 	X(TILTED, TiltedSpan); \
-	X(TILTED_TRANSTAB, TiltedTranslucentSpan); \
-	X(TILTED_ALPHA, TiltedAlphaSpan); \
+	X(TILTED_TRANSLUCENT, TiltedTranslucentSpan); \
 	X(SPLAT, Splat); \
-	X(SPLAT_TRANSTAB, TranslucentSplat); \
-	X(SPLAT_ALPHA, AlphaSplat); \
+	X(SPLAT_TRANSLUCENT, TranslucentSplat); \
 	X(SPLAT_TILTED, TiltedSplat); \
 	X(SPRITE, FloorSprite); \
-	X(SPRITE_TRANSTAB, TranslucentFloorSprite); \
-	X(SPRITE_ALPHA, AlphaFloorSprite); \
+	X(SPRITE_TRANSLUCENT, TranslucentFloorSprite); \
 	X(SPRITE_TILTED, TiltedFloorSprite); \
-	X(SPRITE_TILTED_TRANSTAB, TiltedTranslucentFloorSprite); \
-	X(SPRITE_TILTED_ALPHA, TiltedAlphaFloorSprite); \
-	X(WATER_TRANSTAB, WaterSpan); \
-	X(WATER_ALPHA, AlphaWaterSpan); \
-	X(WATER_TILTED_TRANSTAB, TiltedWaterSpan); \
-	X(WATER_TILTED_ALPHA, TiltedAlphaWaterSpan)
+	X(SPRITE_TILTED_TRANSLUCENT, TiltedTranslucentFloorSprite); \
+	X(WATER, WaterSpan); \
+	X(WATER_TILTED, TiltedWaterSpan); \
 
 #define SPANFUNCLIST8_NOTEXTURE(X) \
 	X(FOG, FogSpan); \
 	X(FOG_TILTED, TiltedFogSpan); \
 	X(SOLIDCOLOR, SolidColorSpan); \
 	X(SOLIDCOLOR_TILTED, TiltedSolidColorSpan); \
-	X(SOLIDCOLOR_TRANSTAB, TransSolidColorSpan); \
-	X(SOLIDCOLOR_ALPHA, AlphaSolidColorSpan); \
-	X(WATER_SOLIDCOLOR_TRANSTAB, WaterSolidColorSpan); \
-	X(WATER_SOLIDCOLOR_ALPHA, AlphaWaterSolidColorSpan); \
-	X(TILTED_SOLIDCOLOR_TRANSTAB, TiltedTransSolidColorSpan); \
-	X(TILTED_SOLIDCOLOR_ALPHA, TiltedAlphaSolidColorSpan); \
-	X(WATER_TILTED_SOLIDCOLOR_TRANSTAB, TiltedWaterSolidColorSpan); \
-	X(WATER_TILTED_SOLIDCOLOR_ALPHA, TiltedAlphaWaterSolidColorSpan)
+	X(SOLIDCOLOR_TRANSLUCENT, TranslucentSolidColorSpan); \
+	X(SOLIDCOLOR_TILTED_TRANSLUCENT, TiltedTranslucentSolidColorSpan); \
+	X(SOLIDCOLOR_WATER, WaterSolidColorSpan); \
+	X(SOLIDCOLOR_TILTED_WATER, TiltedWaterSolidColorSpan)
 
-#define COLFUNCLIST32(X) \
-	X(ALPHA, Translucent); \
-	X(TRANSLATED, Translated); \
-	X(SHADE, Shade); \
-	X(LIGHTLIST, Shadowed); \
-	X(MAPPED_ALPHA, TranslatedTranslucent); \
-	X(MULTIPATCH, 2sMultiPatch); \
-	X(MULTIPATCH_ALPHA, 2sMultiPatchTranslucent)
+#define COLFUNCLIST32(X) COLFUNCLIST8(X)
 
-#define COLFUNCLIST32_NOTEXTURE(X) \
-	X(FOG, Fog); \
-	X(DROP_SHADOW, DropShadow)
+#define COLFUNCLIST32_NOTEXTURE(X) COLFUNCLIST8_NOTEXTURE(X)
 
-#define SPANFUNCLIST32(X) \
-	X(ALPHA, TranslucentSpan); \
-	X(TILTED, TiltedSpan); \
-	X(TILTED_ALPHA, TiltedTranslucentSpan); \
-	X(SPLAT, Splat); \
-	X(SPLAT_ALPHA, TranslucentSplat); \
-	X(SPLAT_TILTED, TiltedSplat); \
-	X(SPRITE, FloorSprite); \
-	X(SPRITE_ALPHA, TranslucentFloorSprite); \
-	X(SPRITE_TILTED, TiltedFloorSprite); \
-	X(SPRITE_TILTED_ALPHA, TiltedTranslucentFloorSprite); \
-	X(WATER_ALPHA, WaterSpan); \
-	X(WATER_TILTED_ALPHA, TiltedWaterSpan)
+#define SPANFUNCLIST32(X) SPANFUNCLIST8(X)
 
-#define SPANFUNCLIST32_NOTEXTURE(X) \
-	X(FOG, FogSpan); \
-	X(FOG_TILTED, TiltedFogSpan); \
-	X(SOLIDCOLOR, SolidColorSpan); \
-	X(SOLIDCOLOR_TILTED, TiltedSolidColorSpan); \
-	X(SOLIDCOLOR_ALPHA, TranslucentSolidColorSpan); \
-	X(WATER_SOLIDCOLOR_ALPHA, WaterSolidColorSpan); \
-	X(TILTED_SOLIDCOLOR_ALPHA, TiltedTranslucentSolidColorSpan); \
-	X(WATER_TILTED_SOLIDCOLOR_ALPHA, TiltedWaterSolidColorSpan)
+#define SPANFUNCLIST32_NOTEXTURE(X) SPANFUNCLIST8_NOTEXTURE(X)
 
 // -----------------
 // 8bpp DRAWING CODE
@@ -363,6 +320,11 @@ void R_DrawSpan_NPO2_32(void);
 	|( ( (R_GetRgbaA(bg) * MIX_ALPHA(alpha)) + (R_GetRgbaA(fg) * (alpha)) ) >> 8) << 24)
 
 extern UINT32 (*R_BlendModeMix)(UINT32, UINT32, UINT8);
+extern UINT8 (*R_AlphaBlend)(UINT8, UINT8, UINT8 *);
+
+UINT8 R_AlphaBlend_8(UINT8 src, UINT8 alpha, UINT8 *dest);
+UINT8 R_TransTabBlend_8(UINT8 src, UINT8 alpha, UINT8 *dest);
+
 void R_SetColumnBlendingFunction(INT32 blendmode);
 void R_SetSpanBlendingFunction(INT32 blendmode);
 void R_InitAlphaLUT(void);

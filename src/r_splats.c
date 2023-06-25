@@ -511,9 +511,9 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 	if (translucent)
 	{
 		if (pSplat->slope)
-			spanfunctype = span_translu_sprite_tilted;
+			spanfunctype = SPAN_SPRITE_TILTED_TRANSLUCENT;
 		else
-			spanfunctype = span_translu_sprite;
+			spanfunctype = SPAN_SPRITE_TRANSLUCENT;
 	}
 
 	if (ds_powersoftwo)

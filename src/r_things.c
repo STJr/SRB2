@@ -851,13 +851,13 @@ static void R_DrawVisSprite(vissprite_t *vis)
 	dc_translation = R_GetSpriteTranslation(vis);
 
 	if (R_SpriteIsFlashing(vis)) // Bosses "flash"
-		colfunc = colfuncs[COLUMN_TRANSLATED]; // translate certain pixels to white
+		colfunc = colfuncs[COLUMN_MAPPED]; // translate certain pixels to white
 	else if (vis->flags & VIS_TRANSLUCENT)
-		colfunc = colfuncs[vis->color ? column_translu_mapped : column_translu];
+		colfunc = colfuncs[vis->color ? COLUMN_MAPPED_TRANSLUCENT : COLUMN_TRANSLUCENT];
 	else if (vis->color) // translate green skin to another color
-		colfunc = colfuncs[COLUMN_TRANSLATED];
+		colfunc = colfuncs[COLUMN_MAPPED];
 	else if (vis->mobj->sprite == SPR_PLAY) // Looks like a player, but doesn't have a color? Get rid of green sonic syndrome.
-		colfunc = colfuncs[COLUMN_TRANSLATED];
+		colfunc = colfuncs[COLUMN_MAPPED];
 	else
 		colfunc = colfuncs[BASEDRAWFUNC];
 
@@ -1071,7 +1071,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 	if (vis->flags & VIS_TRANSLUCENT)
 	{
-		colfunc = colfuncs[column_translu];
+		colfunc = colfuncs[COLUMN_TRANSLUCENT];
 
 		if (!usetranstables)
 		{

@@ -343,7 +343,8 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 				else
 					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
+				// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
+				// TODO
 			}
 			dest++;
 			u += stepu;
@@ -375,7 +376,8 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 				else
 					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
+				// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
+				// TODO
 			}
 		}
 		else
@@ -412,7 +414,8 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 					else
 						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-					*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
+					// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
+					// TODO
 				}
 				dest++;
 				u += stepu;
@@ -420,11 +423,6 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 			}
 		}
 	}
-}
-
-void R_DrawTiltedAlphaSpan_NPO2_8(void)
-{
-	// TODO
 }
 
 void R_DrawTiltedSplat_NPO2_8(void)
@@ -713,16 +711,14 @@ void R_DrawTranslucentSplat_NPO2_8(void)
 		y = (yposition >> FRACBITS);
 		val = source[((y * ds_flatwidth) + x)];
 		if (val != TRANSPARENTPIXEL)
-			*dest = *(ds_transmap + (colormap[val] << 8) + *dest);
+		{
+			// TODO
+			// *dest = *(ds_transmap + (colormap[val] << 8) + *dest);
+		}
 		dest++;
 		xposition += xstep;
 		yposition += ystep;
 	}
-}
-
-void R_DrawAlphaSplat_NPO2_8(void)
-{
-	// TODO
 }
 
 /**	\brief The R_DrawFloorSprite_NPO2_8 function
@@ -858,16 +854,14 @@ void R_DrawTranslucentFloorSprite_NPO2_8(void)
 		y = (yposition >> FRACBITS);
 		val = source[((y * ds_flatwidth) + x)];
 		if (val & 0xFF00)
-			*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+		{
+			// TODO
+			// *dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+		}
 		dest++;
 		xposition += xstep;
 		yposition += ystep;
 	}
-}
-
-void R_DrawAlphaFloorSprite_NPO2_8(void)
-{
-	// TODO
 }
 
 /**	\brief The R_DrawTiltedFloorSprite_NPO2_8 function
@@ -1100,7 +1094,10 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 			val = source[((y * ds_flatwidth) + x)];
 			if (val & 0xFF00)
-				*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+			{
+				// TODO
+				// *dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+			}
 			dest++;
 
 			u += stepu;
@@ -1133,7 +1130,10 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
-					*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+				{
+					// TODO
+					// *dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+				}
 			}
 		}
 		else
@@ -1170,7 +1170,10 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
-					*dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+				{
+					// TODO
+					// *dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
+				}
 				dest++;
 
 				u += stepu;
@@ -1178,11 +1181,6 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 			}
 		}
 	}
-}
-
-void R_DrawTiltedAlphaFloorSprite_NPO2_8(void)
-{
-	// TODO
 }
 
 /**	\brief The R_DrawTranslucentSpan_NPO2_8 function
@@ -1245,16 +1243,12 @@ void R_DrawTranslucentSpan_NPO2_8(void)
 		x = (xposition >> FRACBITS);
 		y = (yposition >> FRACBITS);
 		val = ((y * ds_flatwidth) + x);
-		*dest = *(ds_transmap + (colormap[source[val]] << 8) + *dest);
+		// TODO
+		// *dest = *(ds_transmap + (colormap[source[val]] << 8) + *dest);
 		dest++;
 		xposition += xstep;
 		yposition += ystep;
 	}
-}
-
-void R_DrawAlphaSpan_NPO2_8(void)
-{
-	// TODO
 }
 
 void R_DrawWaterSpan_NPO2_8(void)
@@ -1314,15 +1308,11 @@ void R_DrawWaterSpan_NPO2_8(void)
 
 		x = (xposition >> FRACBITS);
 		y = (yposition >> FRACBITS);
-		*dest++ = colormap[*(ds_transmap + (source[((y * ds_flatwidth) + x)] << 8) + *dsrc++)];
+		// TODO
+		// *dest++ = colormap[*(ds_transmap + (source[((y * ds_flatwidth) + x)] << 8) + *dsrc++)];
 		xposition += xstep;
 		yposition += ystep;
 	}
-}
-
-void R_DrawAlphaWaterSpan_NPO2_8(void)
-{
-	// TODO
 }
 
 /**	\brief The R_DrawTiltedWaterSpan_NPO2_8 function
@@ -1400,7 +1390,8 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 				else
 					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
+				// TODO
+				// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 			}
 			dest++;
 			u += stepu;
@@ -1432,7 +1423,8 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 				else
 					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-				*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
+				// TODO
+				// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 			}
 		}
 		else
@@ -1469,7 +1461,8 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 					else
 						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-					*dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
+					// TODO
+					// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
 				}
 				dest++;
 				u += stepu;
@@ -1477,9 +1470,4 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 			}
 		}
 	}
-}
-
-void R_DrawTiltedAlphaWaterSpan_NPO2_8(void)
-{
-	// TODO
 }

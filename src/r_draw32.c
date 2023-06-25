@@ -458,7 +458,7 @@ void R_Draw2sMultiPatchTranslucentColumn_32(void)
 						val = source[frac>>FRACBITS];
 
 						if (val != TRANSPARENTPIXEL)
-							WriteTranslucentColumn(colormap[val]);
+							WriteTranslucentColumn_s8d32(colormap[val]);
 
 						dest += vid.width;
 
@@ -483,7 +483,7 @@ void R_Draw2sMultiPatchTranslucentColumn_32(void)
 						val = source[frac>>FRACBITS];
 
 						if (val != TRANSPARENTPIXEL)
-							WriteTranslucentColumn32(colormapu32[val]);
+							WriteTranslucentColumn_s32d32(colormapu32[val]);
 
 						dest += vid.width;
 
@@ -533,12 +533,12 @@ void R_Draw2sMultiPatchTranslucentColumn_32(void)
 					{
 						val = source[(frac>>FRACBITS) & heightmask];
 						if (val != TRANSPARENTPIXEL)
-							WriteTranslucentColumn(colormap[val]);
+							WriteTranslucentColumn_s8d32(colormap[val]);
 						dest += vid.width;
 						frac += fracstep;
 						val = source[(frac>>FRACBITS) & heightmask];
 						if (val != TRANSPARENTPIXEL)
-							WriteTranslucentColumn(colormap[val]);
+							WriteTranslucentColumn_s8d32(colormap[val]);
 						dest += vid.width;
 						frac += fracstep;
 					}
@@ -546,7 +546,7 @@ void R_Draw2sMultiPatchTranslucentColumn_32(void)
 					{
 						val = source[(frac>>FRACBITS) & heightmask];
 						if (val != TRANSPARENTPIXEL)
-							WriteTranslucentColumn(colormap[val]);
+							WriteTranslucentColumn_s8d32(colormap[val]);
 					}
 				}
 				else if (dc_colmapstyle == TC_COLORMAPSTYLE_32BPP)
@@ -556,12 +556,12 @@ void R_Draw2sMultiPatchTranslucentColumn_32(void)
 					{
 						val = source[(frac>>FRACBITS) & heightmask];
 						if (val != TRANSPARENTPIXEL)
-							WriteTranslucentColumn32(colormapu32[val]);
+							WriteTranslucentColumn_s32d32(colormapu32[val]);
 						dest += vid.width;
 						frac += fracstep;
 						val = source[(frac>>FRACBITS) & heightmask];
 						if (val != TRANSPARENTPIXEL)
-							WriteTranslucentColumn32(colormapu32[val]);
+							WriteTranslucentColumn_s32d32(colormapu32[val]);
 						dest += vid.width;
 						frac += fracstep;
 					}
@@ -569,7 +569,7 @@ void R_Draw2sMultiPatchTranslucentColumn_32(void)
 					{
 						val = source[(frac>>FRACBITS) & heightmask];
 						if (val != TRANSPARENTPIXEL)
-							WriteTranslucentColumn32(colormapu32[val]);
+							WriteTranslucentColumn_s32d32(colormapu32[val]);
 					}
 				}
 			}
@@ -700,7 +700,7 @@ void R_DrawTranslucentColumn_32(void)
 						// Re-map color indices from wall texture column
 						// using a lighting/special effects LUT.
 						// heightmask is the Tutti-Frutti fix
-						WriteTranslucentColumn(colormap[source[frac>>FRACBITS]]);
+						WriteTranslucentColumn_s8d32(colormap[source[frac>>FRACBITS]]);
 						dest += vid.width;
 						if ((frac += fracstep) >= heightmask)
 							frac -= heightmask;
@@ -715,7 +715,7 @@ void R_DrawTranslucentColumn_32(void)
 						// Re-map color indices from wall texture column
 						// using a lighting/special effects LUT.
 						// heightmask is the Tutti-Frutti fix
-						WriteTranslucentColumn32(colormapu32[source[frac>>FRACBITS]]);
+						WriteTranslucentColumn_s32d32(colormapu32[source[frac>>FRACBITS]]);
 						dest += vid.width;
 						if ((frac += fracstep) >= heightmask)
 							frac -= heightmask;
@@ -746,30 +746,30 @@ void R_DrawTranslucentColumn_32(void)
 				{
 					while ((count -= 2) >= 0) // texture height is a power of 2
 					{
-						WriteTranslucentColumn(colormap[source[(frac>>FRACBITS)&heightmask]]);
+						WriteTranslucentColumn_s8d32(colormap[source[(frac>>FRACBITS)&heightmask]]);
 						dest += vid.width;
 						frac += fracstep;
-						WriteTranslucentColumn(colormap[source[(frac>>FRACBITS)&heightmask]]);
+						WriteTranslucentColumn_s8d32(colormap[source[(frac>>FRACBITS)&heightmask]]);
 						dest += vid.width;
 						frac += fracstep;
 					}
 					if (count & 1)
-						WriteTranslucentColumn(colormap[source[(frac>>FRACBITS)&heightmask]]);
+						WriteTranslucentColumn_s8d32(colormap[source[(frac>>FRACBITS)&heightmask]]);
 				}
 				else if (dc_colmapstyle == TC_COLORMAPSTYLE_32BPP)
 				{
 					colormapu32 = (lighttable_u32_t *)colormap;
 					while ((count -= 2) >= 0) // texture height is a power of 2
 					{
-						WriteTranslucentColumn32(colormapu32[source[(frac>>FRACBITS)&heightmask]]);
+						WriteTranslucentColumn_s32d32(colormapu32[source[(frac>>FRACBITS)&heightmask]]);
 						dest += vid.width;
 						frac += fracstep;
-						WriteTranslucentColumn32(colormapu32[source[(frac>>FRACBITS)&heightmask]]);
+						WriteTranslucentColumn_s32d32(colormapu32[source[(frac>>FRACBITS)&heightmask]]);
 						dest += vid.width;
 						frac += fracstep;
 					}
 					if (count & 1)
-						WriteTranslucentColumn32(colormapu32[source[(frac>>FRACBITS)&heightmask]]);
+						WriteTranslucentColumn_s32d32(colormapu32[source[(frac>>FRACBITS)&heightmask]]);
 				}
 			}
 			else if (dc_picfmt == PICFMT_PATCH32)
@@ -867,7 +867,7 @@ void R_DrawTranslatedTranslucentColumn_32(void)
 						// Re-map color indices from wall texture column
 						//  using a lighting/special effects LUT.
 						// heightmask is the Tutti-Frutti fix
-						WriteTranslucentColumn(colormap[dc_translation[source[frac>>FRACBITS]]]);
+						WriteTranslucentColumn_s8d32(colormap[dc_translation[source[frac>>FRACBITS]]]);
 						dest += vid.width;
 						if ((frac += fracstep) >= heightmask)
 							frac -= heightmask;
@@ -882,7 +882,7 @@ void R_DrawTranslatedTranslucentColumn_32(void)
 						// Re-map color indices from wall texture column
 						//  using a lighting/special effects LUT.
 						// heightmask is the Tutti-Frutti fix
-						WriteTranslucentColumn32(colormapu32[dc_translation[source[frac>>FRACBITS]]]);
+						WriteTranslucentColumn_s32d32(colormapu32[dc_translation[source[frac>>FRACBITS]]]);
 						dest += vid.width;
 						if ((frac += fracstep) >= heightmask)
 							frac -= heightmask;
@@ -913,30 +913,30 @@ void R_DrawTranslatedTranslucentColumn_32(void)
 				{
 					while ((count -= 2) >= 0) // texture height is a power of 2
 					{
-						WriteTranslucentColumn(colormap[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
+						WriteTranslucentColumn_s8d32(colormap[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
 						dest += vid.width;
 						frac += fracstep;
-						WriteTranslucentColumn(colormap[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
+						WriteTranslucentColumn_s8d32(colormap[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
 						dest += vid.width;
 						frac += fracstep;
 					}
 					if (count & 1)
-						WriteTranslucentColumn(colormap[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
+						WriteTranslucentColumn_s8d32(colormap[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
 				}
 				else if (dc_colmapstyle == TC_COLORMAPSTYLE_32BPP)
 				{
 					colormapu32 = (lighttable_u32_t *)colormap;
 					while ((count -= 2) >= 0) // texture height is a power of 2
 					{
-						WriteTranslucentColumn32(colormapu32[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
+						WriteTranslucentColumn_s32d32(colormapu32[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
 						dest += vid.width;
 						frac += fracstep;
-						WriteTranslucentColumn32(colormapu32[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
+						WriteTranslucentColumn_s32d32(colormapu32[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
 						dest += vid.width;
 						frac += fracstep;
 					}
 					if (count & 1)
-						WriteTranslucentColumn32(colormapu32[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
+						WriteTranslucentColumn_s32d32(colormapu32[dc_translation[source[(frac>>FRACBITS)&heightmask]]]);
 				}
 			}
 			else if (dc_picfmt == PICFMT_PATCH32)
@@ -1092,46 +1092,6 @@ void R_DrawSpan_32(void)
 	{
 		if (ds_colmapstyle == TC_COLORMAPSTYLE_8BPP)
 		{
-			while (count >= 8)
-			{
-				// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-				// have the uber complicated math to calculate it now, so that was a memory write we didn't
-				// need!
-				dest[0] = GetTrueColor(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[1] = GetTrueColor(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[2] = GetTrueColor(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[3] = GetTrueColor(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[4] = GetTrueColor(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[5] = GetTrueColor(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[6] = GetTrueColor(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[7] = GetTrueColor(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest += 8;
-				count -= 8;
-			}
 			while (count-- && dest <= deststop)
 			{
 				*dest = GetTrueColor(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
@@ -1142,46 +1102,6 @@ void R_DrawSpan_32(void)
 		}
 		else if (ds_colmapstyle == TC_COLORMAPSTYLE_32BPP)
 		{
-			while (count >= 8)
-			{
-				// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-				// have the uber complicated math to calculate it now, so that was a memory write we didn't
-				// need!
-				dest[0] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[1] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[2] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[3] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[4] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[5] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[6] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest[7] = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest += 8;
-				count -= 8;
-			}
 			while (count-- && dest <= deststop)
 			{
 				*dest = TC_Colormap32Mix(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]]);
@@ -1193,46 +1113,6 @@ void R_DrawSpan_32(void)
 	}
 	else if (ds_picfmt == PICFMT_FLAT32)
 	{
-		while (count >= 8)
-		{
-			// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-			// have the uber complicated math to calculate it now, so that was a memory write we didn't
-			// need!
-			dest[0] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[0]);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[1] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[1]);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[2] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[2]);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[3] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[3]);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[4] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[4]);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[5] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[5]);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[6] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[6]);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[7] = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[7]);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest += 8;
-			count -= 8;
-		}
 		while (count-- && dest <= deststop)
 		{
 			*dest = TC_ColorMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], *dest);
@@ -1547,7 +1427,7 @@ void R_DrawTiltedTranslucentSpan_32(void)
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
 					colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-					WriteTranslucentSpan(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+					WriteTranslucentSpan_s8d32(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -1563,7 +1443,7 @@ void R_DrawTiltedTranslucentSpan_32(void)
 					u = (INT64)(startu);
 					v = (INT64)(startv);
 					colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-					WriteTranslucentSpan(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+					WriteTranslucentSpan_s8d32(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 				}
 				else
 				{
@@ -1584,7 +1464,7 @@ void R_DrawTiltedTranslucentSpan_32(void)
 					for (; width != 0; width--)
 					{
 						colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-						WriteTranslucentSpan(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+						WriteTranslucentSpan_s8d32(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 						dest++;
 						u += stepu;
 						v += stepv;
@@ -1611,7 +1491,7 @@ void R_DrawTiltedTranslucentSpan_32(void)
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
 					colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
-					WriteTranslucentSpan32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+					WriteTranslucentSpan_s32d32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -1627,7 +1507,7 @@ void R_DrawTiltedTranslucentSpan_32(void)
 					u = (INT64)(startu);
 					v = (INT64)(startv);
 					colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
-					WriteTranslucentSpan32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+					WriteTranslucentSpan_s32d32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 				}
 				else
 				{
@@ -1648,7 +1528,7 @@ void R_DrawTiltedTranslucentSpan_32(void)
 					for (; width != 0; width--)
 					{
 						colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
-						WriteTranslucentSpan32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+						WriteTranslucentSpan_s32d32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 						dest++;
 						u += stepu;
 						v += stepv;
@@ -1789,7 +1669,7 @@ void R_DrawTiltedWaterSpan_32(void)
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
 					colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-					WriteTranslucentWaterSpan(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+					WriteTranslucentWaterSpan_s8d32(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -1805,7 +1685,7 @@ void R_DrawTiltedWaterSpan_32(void)
 					u = (INT64)(startu);
 					v = (INT64)(startv);
 					colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-					WriteTranslucentWaterSpan(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+					WriteTranslucentWaterSpan_s8d32(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 				}
 				else
 				{
@@ -1826,7 +1706,7 @@ void R_DrawTiltedWaterSpan_32(void)
 					for (; width != 0; width--)
 					{
 						colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-						WriteTranslucentWaterSpan(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+						WriteTranslucentWaterSpan_s8d32(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 						dest++;
 						u += stepu;
 						v += stepv;
@@ -1853,7 +1733,7 @@ void R_DrawTiltedWaterSpan_32(void)
 				for (i = SPANSIZE-1; i >= 0; i--)
 				{
 					colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
-					WriteTranslucentWaterSpan32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+					WriteTranslucentWaterSpan_s32d32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -1869,7 +1749,7 @@ void R_DrawTiltedWaterSpan_32(void)
 					u = (INT64)(startu);
 					v = (INT64)(startv);
 					colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
-					WriteTranslucentWaterSpan32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+					WriteTranslucentWaterSpan_s32d32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 				}
 				else
 				{
@@ -1890,7 +1770,7 @@ void R_DrawTiltedWaterSpan_32(void)
 					for (; width != 0; width--)
 					{
 						colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
-						WriteTranslucentWaterSpan32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+						WriteTranslucentWaterSpan_s32d32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 						dest++;
 						u += stepu;
 						v += stepv;
@@ -2272,80 +2152,6 @@ void R_DrawSplat_32(void)
 	{
 		if (ds_colmapstyle == TC_COLORMAPSTYLE_8BPP)
 		{
-			while (count >= 8)
-			{
-				// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-				// have the uber complicated math to calculate it now, so that was a memory write we didn't
-				// need!
-				//
-				// <Callum> 4194303 = (2048x2048)-1 (2048x2048 is maximum flat size)
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[0] = GetTrueColor(colormap[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[1] = GetTrueColor(colormap[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[2] = GetTrueColor(colormap[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[3] = GetTrueColor(colormap[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[4] = GetTrueColor(colormap[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[5] = GetTrueColor(colormap[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[6] = GetTrueColor(colormap[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[7] = GetTrueColor(colormap[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest += 8;
-				count -= 8;
-			}
 			while (count-- && dest <= deststop)
 			{
 				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
@@ -2358,80 +2164,6 @@ void R_DrawSplat_32(void)
 		}
 		else if (ds_colmapstyle == TC_COLORMAPSTYLE_32BPP)
 		{
-			while (count >= 8)
-			{
-				// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-				// have the uber complicated math to calculate it now, so that was a memory write we didn't
-				// need!
-				//
-				// <Callum> 4194303 = (2048x2048)-1 (2048x2048 is maximum flat size)
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[0] = TC_Colormap32Mix(colormapu32[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[1] = TC_Colormap32Mix(colormapu32[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[2] = TC_Colormap32Mix(colormapu32[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[3] = TC_Colormap32Mix(colormapu32[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[4] = TC_Colormap32Mix(colormapu32[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[5] = TC_Colormap32Mix(colormapu32[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[6] = TC_Colormap32Mix(colormapu32[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				val &= 4194303;
-				val = source[val];
-				if (val != TRANSPARENTPIXEL)
-					dest[7] = TC_Colormap32Mix(colormapu32[val]);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest += 8;
-				count -= 8;
-			}
 			while (count-- && dest <= deststop)
 			{
 				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
@@ -2445,80 +2177,6 @@ void R_DrawSplat_32(void)
 	}
 	else if (ds_picfmt == PICFMT_FLAT32)
 	{
-		while (count >= 8)
-		{
-			// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-			// have the uber complicated math to calculate it now, so that was a memory write we didn't
-			// need!
-			//
-			// <Callum> 4194303 = (2048x2048)-1 (2048x2048 is maximum flat size)
-			val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-			val &= 4194303;
-			val = sourceu32[val];
-			if (R_GetRgbaA(val))
-				dest[0] = TC_ColorMix(val, dest[0]);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-			val &= 4194303;
-			val = sourceu32[val];
-			if (R_GetRgbaA(val))
-				dest[1] = TC_ColorMix(val, dest[1]);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-			val &= 4194303;
-			val = sourceu32[val];
-			if (R_GetRgbaA(val))
-				dest[2] = TC_ColorMix(val, dest[2]);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-			val &= 4194303;
-			val = sourceu32[val];
-			if (R_GetRgbaA(val))
-				dest[3] = TC_ColorMix(val, dest[3]);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-			val &= 4194303;
-			val = sourceu32[val];
-			if (R_GetRgbaA(val))
-				dest[4] = TC_ColorMix(val, dest[4]);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-			val &= 4194303;
-			val = sourceu32[val];
-			if (R_GetRgbaA(val))
-				dest[5] = TC_ColorMix(val, dest[5]);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-			val &= 4194303;
-			val = sourceu32[val];
-			if (R_GetRgbaA(val))
-				dest[6] = TC_ColorMix(val, dest[6]);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-			val &= 4194303;
-			val = sourceu32[val];
-			if (R_GetRgbaA(val))
-				dest[7] = TC_ColorMix(val, dest[7]);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest += 8;
-			count -= 8;
-		}
 		while (count-- && dest <= deststop)
 		{
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
@@ -2579,67 +2237,11 @@ void R_DrawTranslucentSplat_32(void)
 	{
 		if (ds_colmapstyle == TC_COLORMAPSTYLE_8BPP)
 		{
-			while (count >= 8)
-			{
-				// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-				// have the uber complicated math to calculate it now, so that was a memory write we didn't
-				// need!
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx(colormap[val], 0);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx(colormap[val], 1);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx(colormap[val], 2);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx(colormap[val], 3);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx(colormap[val], 4);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx(colormap[val], 5);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx(colormap[val], 6);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx(colormap[val], 7);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest += 8;
-				count -= 8;
-			}
 			while (count-- && dest <= deststop)
 			{
 				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpan(colormap[val]);
+					WriteTranslucentSpan_s8d32(colormap[val]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -2647,67 +2249,11 @@ void R_DrawTranslucentSplat_32(void)
 		}
 		else if (ds_colmapstyle == TC_COLORMAPSTYLE_32BPP)
 		{
-			while (count >= 8)
-			{
-				// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-				// have the uber complicated math to calculate it now, so that was a memory write we didn't
-				// need!
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx32(colormapu32[val], 0);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx32(colormapu32[val], 1);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx32(colormapu32[val], 2);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx32(colormapu32[val], 3);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx32(colormapu32[val], 4);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx32(colormapu32[val], 5);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx32(colormapu32[val], 6);
-				xposition += xstep;
-				yposition += ystep;
-
-				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpanIdx32(colormapu32[val], 7);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest += 8;
-				count -= 8;
-			}
 			while (count-- && dest <= deststop)
 			{
 				val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 				if (val != TRANSPARENTPIXEL)
-					WriteTranslucentSpan32(colormapu32[val]);
+					WriteTranslucentSpan_s32d32(colormapu32[val]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -2716,62 +2262,6 @@ void R_DrawTranslucentSplat_32(void)
 	}
 	else if (ds_picfmt == PICFMT_FLAT32)
 	{
-		while (count >= 8)
-		{
-			// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-			// have the uber complicated math to calculate it now, so that was a memory write we didn't
-			// need!
-			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-			if (R_GetRgbaA(val))
-				dest[0] = R_BlendModeMix(val, dest[0], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-			if (R_GetRgbaA(val))
-				dest[1] = R_BlendModeMix(val, dest[1], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-			if (R_GetRgbaA(val))
-				dest[2] = R_BlendModeMix(val, dest[2], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-			if (R_GetRgbaA(val))
-				dest[3] = R_BlendModeMix(val, dest[3], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-			if (R_GetRgbaA(val))
-				dest[4] = R_BlendModeMix(val, dest[4], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-			if (R_GetRgbaA(val))
-				dest[5] = R_BlendModeMix(val, dest[5], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-			if (R_GetRgbaA(val))
-				dest[6] = R_BlendModeMix(val, dest[6], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
-			if (R_GetRgbaA(val))
-				dest[7] = R_BlendModeMix(val, dest[7], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest += 8;
-			count -= 8;
-		}
 		while (count-- && dest <= deststop)
 		{
 			val = sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
@@ -2927,7 +2417,7 @@ void R_DrawTranslucentFloorSprite_32(void)
 			{
 				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
 				if (val & 0xFF00)
-					WriteTranslucentSpan(colormap[translation[source[val & 0xFF]]]);
+					WriteTranslucentSpan_s8d32(colormap[translation[source[val & 0xFF]]]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -2939,7 +2429,7 @@ void R_DrawTranslucentFloorSprite_32(void)
 			{
 				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
 				if (val & 0xFF00)
-					WriteTranslucentSpan32(colormapu32[translation[source[val & 0xFF]]]);
+					WriteTranslucentSpan_s32d32(colormapu32[translation[source[val & 0xFF]]]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -3286,7 +2776,7 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 				{
 					val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 					if (val & 0xFF00)
-						WriteTranslucentSpan(colormap[translation[val & 0xFF]]);
+						WriteTranslucentSpan_s8d32(colormap[translation[val & 0xFF]]);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -3303,7 +2793,7 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 					v = (INT64)(startv);
 					val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 					if (val & 0xFF00)
-						WriteTranslucentSpan(colormap[translation[val & 0xFF]]);
+						WriteTranslucentSpan_s8d32(colormap[translation[val & 0xFF]]);
 				}
 				else
 				{
@@ -3325,7 +2815,7 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 					{
 						val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 						if (val & 0xFF00)
-							WriteTranslucentSpan(colormap[translation[val & 0xFF]]);
+							WriteTranslucentSpan_s8d32(colormap[translation[val & 0xFF]]);
 						dest++;
 						u += stepu;
 						v += stepv;
@@ -3353,7 +2843,7 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 				{
 					val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 					if (val & 0xFF00)
-						WriteTranslucentSpan32(colormapu32[translation[val & 0xFF]]);
+						WriteTranslucentSpan_s32d32(colormapu32[translation[val & 0xFF]]);
 					dest++;
 					u += stepu;
 					v += stepv;
@@ -3369,7 +2859,7 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 					u = (INT64)(startu);
 					v = (INT64)(startv);
 					colormapu32 = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
-					WriteTranslucentSpan32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
+					WriteTranslucentSpan_s32d32(colormapu32[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]]);
 				}
 				else
 				{
@@ -3391,7 +2881,7 @@ void R_DrawTiltedTranslucentFloorSprite_32(void)
 					{
 						val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 						if (val & 0xFF00)
-							WriteTranslucentSpan32(colormapu32[translation[val & 0xFF]]);
+							WriteTranslucentSpan_s32d32(colormapu32[translation[val & 0xFF]]);
 						dest++;
 						u += stepu;
 						v += stepv;
@@ -3517,50 +3007,10 @@ void R_DrawTranslucentSpan_32(void)
 	{
 		if (ds_colmapstyle == TC_COLORMAPSTYLE_8BPP)
 		{
-			while (count >= 8)
-			{
-				// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-				// have the uber complicated math to calculate it now, so that was a memory write we didn't
-				// need!
-				WriteTranslucentSpanIdx(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 0);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 1);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 2);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 3);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 4);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 5);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 6);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 7);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest += 8;
-				count -= 8;
-			}
 			while (count-- && dest <= deststop)
 			{
 				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				WriteTranslucentSpan(colormap[source[val]]);
+				WriteTranslucentSpan_s8d32(colormap[source[val]]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -3568,50 +3018,10 @@ void R_DrawTranslucentSpan_32(void)
 		}
 		else if (ds_colmapstyle == TC_COLORMAPSTYLE_32BPP)
 		{
-			while (count >= 8)
-			{
-				// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-				// have the uber complicated math to calculate it now, so that was a memory write we didn't
-				// need!
-				WriteTranslucentSpanIdx32(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 0);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx32(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 1);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx32(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 2);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx32(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 3);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx32(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 4);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx32(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 5);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx32(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 6);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentSpanIdx32(colormapu32[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], 7);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest += 8;
-				count -= 8;
-			}
 			while (count-- && dest <= deststop)
 			{
 				val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-				WriteTranslucentSpan32(colormapu32[source[val]]);
+				WriteTranslucentSpan_s32d32(colormapu32[source[val]]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -3620,46 +3030,6 @@ void R_DrawTranslucentSpan_32(void)
 	}
 	else if (ds_picfmt == PICFMT_FLAT32)
 	{
-		while (count >= 8)
-		{
-			// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-			// have the uber complicated math to calculate it now, so that was a memory write we didn't
-			// need!
-			dest[0] = R_BlendModeMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[0], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[1] = R_BlendModeMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[1], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[2] = R_BlendModeMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[2], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[3] = R_BlendModeMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[3], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[4] = R_BlendModeMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[4], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[5] = R_BlendModeMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[5], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[6] = R_BlendModeMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[6], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[7] = R_BlendModeMix(sourceu32[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)], dest[7], ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest += 8;
-			count -= 8;
-		}
 		while (count-- && dest <= deststop)
 		{
 			val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
@@ -3714,49 +3084,9 @@ void R_DrawWaterSpan_32(void)
 	{
 		if (ds_colmapstyle == TC_COLORMAPSTYLE_8BPP)
 		{
-			while (count >= 8)
-			{
-				// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-				// have the uber complicated math to calculate it now, so that was a memory write we didn't
-				// need!
-				WriteTranslucentWaterSpanIdx(colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 0);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx(colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 1);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx(colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 2);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx(colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 3);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx(colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 4);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx(colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 5);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx(colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 6);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx(colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 7);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest += 8;
-				count -= 8;
-			}
 			while (count--)
 			{
-				WriteTranslucentWaterSpan(colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]]);
+				WriteTranslucentWaterSpan_s8d32(colormap[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -3764,49 +3094,9 @@ void R_DrawWaterSpan_32(void)
 		}
 		else if (ds_colmapstyle == TC_COLORMAPSTYLE_32BPP)
 		{
-			while (count >= 8)
-			{
-				// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-				// have the uber complicated math to calculate it now, so that was a memory write we didn't
-				// need!
-				WriteTranslucentWaterSpanIdx32(colormapu32[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 0);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx32(colormapu32[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 1);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx32(colormapu32[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 2);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx32(colormapu32[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 3);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx32(colormapu32[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 4);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx32(colormapu32[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 5);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx32(colormapu32[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 6);
-				xposition += xstep;
-				yposition += ystep;
-
-				WriteTranslucentWaterSpanIdx32(colormapu32[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]], 7);
-				xposition += xstep;
-				yposition += ystep;
-
-				dest += 8;
-				count -= 8;
-			}
 			while (count--)
 			{
-				WriteTranslucentWaterSpan32(colormapu32[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]]);
+				WriteTranslucentWaterSpan_s32d32(colormapu32[source[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)]]);
 				dest++;
 				xposition += xstep;
 				yposition += ystep;
@@ -3815,46 +3105,6 @@ void R_DrawWaterSpan_32(void)
 	}
 	else if (ds_picfmt == PICFMT_FLAT32)
 	{
-		while (count >= 8)
-		{
-			// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
-			// have the uber complicated math to calculate it now, so that was a memory write we didn't
-			// need!
-			dest[0] = R_BlendModeMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[1] = R_BlendModeMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[2] = R_BlendModeMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[3] = R_BlendModeMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[4] = R_BlendModeMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[5] = R_BlendModeMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[6] = R_BlendModeMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest[7] = R_BlendModeMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);
-			xposition += xstep;
-			yposition += ystep;
-
-			dest += 8;
-			count -= 8;
-		}
 		while (count--)
 		{
 			*dest = R_BlendModeMix(sourceu32[((yposition >> nflatyshift) & nflatmask) | (xposition >> nflatxshift)], *dsrc++, ds_alpha);

@@ -54,25 +54,9 @@
 void (*colfunc)(void);
 void (*colfuncs[COLUMN_MAX])(void);
 
-INT32 column_translu;
-INT32 column_translu_mapped;
-INT32 column_translu_multipatch;
-
 void (*spanfunc)(void);
 void (*spanfuncs[SPAN_MAX])(void);
 void (*spanfuncs_npo2[SPAN_MAX])(void);
-
-INT32 span_translu;
-INT32 span_translu_tilted;
-INT32 span_translu_splat;
-INT32 span_translu_solidcolor;
-INT32 span_translu_tilted_solidcolor;
-INT32 span_translu_sprite;
-INT32 span_translu_sprite_tilted;
-INT32 span_water;
-INT32 span_water_tilted;
-INT32 span_water_solidcolor;
-INT32 span_water_tilted_solidcolor;
 
 // ------------------
 // global video state
@@ -205,41 +189,9 @@ void SCR_SetSoftwareTranslucency(void)
 		usetranstables = cv_transtables.value;
 
 	if (usetranstables)
-	{
-		column_translu = COLUMN_TRANSTAB;
-		column_translu_mapped = COLUMN_MAPPED_TRANSTAB;
-		column_translu_multipatch = COLUMN_MULTIPATCH_TRANSTAB;
-
-		span_translu = SPAN_TRANSTAB;
-		span_translu_tilted = SPAN_TILTED_TRANSTAB;
-		span_translu_splat = SPAN_SPLAT_TRANSTAB;
-		span_translu_solidcolor = SPAN_SOLIDCOLOR_TRANSTAB;
-		span_translu_tilted_solidcolor = SPAN_TILTED_SOLIDCOLOR_TRANSTAB;
-		span_translu_sprite = SPAN_SPRITE_TRANSTAB;
-		span_translu_sprite_tilted = SPAN_SPRITE_TILTED_TRANSTAB;
-		span_water = SPAN_WATER_TRANSTAB;
-		span_water_tilted = SPAN_WATER_TILTED_TRANSTAB;
-		span_water_solidcolor = SPAN_WATER_SOLIDCOLOR_TRANSTAB;
-		span_water_tilted_solidcolor = SPAN_WATER_TILTED_SOLIDCOLOR_TRANSTAB;
-	}
+		R_AlphaBlend = R_TransTabBlend_8;
 	else
-	{
-		column_translu = COLUMN_ALPHA;
-		column_translu_mapped = COLUMN_MAPPED_ALPHA;
-		column_translu_multipatch = COLUMN_MULTIPATCH_ALPHA;
-
-		span_translu = SPAN_ALPHA;
-		span_translu_tilted = SPAN_TILTED_ALPHA;
-		span_translu_splat = SPAN_SPLAT_ALPHA;
-		span_translu_solidcolor = SPAN_SOLIDCOLOR_ALPHA;
-		span_translu_tilted_solidcolor = SPAN_TILTED_SOLIDCOLOR_ALPHA;
-		span_translu_sprite = SPAN_SPRITE_ALPHA;
-		span_translu_sprite_tilted = SPAN_SPRITE_TILTED_ALPHA;
-		span_water = SPAN_WATER_ALPHA;
-		span_water_tilted = SPAN_WATER_TILTED_ALPHA;
-		span_water_solidcolor = SPAN_WATER_SOLIDCOLOR_ALPHA;
-		span_water_tilted_solidcolor = SPAN_WATER_TILTED_SOLIDCOLOR_ALPHA;
-	}
+		R_AlphaBlend = R_AlphaBlend_8;
 }
 
 void SCR_SetMode(void)

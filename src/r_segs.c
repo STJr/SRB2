@@ -120,8 +120,8 @@ static void R_Render2sidedMultiPatchColumn(column_t *column)
 
 		if (colfunc == colfuncs[BASEDRAWFUNC])
 			(colfuncs[COLUMN_MULTIPATCH])();
-		else if (colfunc == colfuncs[column_translu])
-			(colfuncs[column_translu_multipatch])();
+		else if (colfunc == colfuncs[COLUMN_TRANSLUCENT])
+			(colfuncs[COLUMN_MULTIPATCH_TRANSLUCENT])();
 		else
 			colfunc();
 	}
@@ -207,7 +207,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		}
 
 		if (translucent)
-			colfunc = colfuncs[column_translu];
+			colfunc = colfuncs[COLUMN_TRANSLUCENT];
 	}
 
 	if (curline->polyseg && curline->polyseg->translucency > 0)
@@ -238,7 +238,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 		}
 
 		if (translucent)
-			colfunc = colfuncs[column_translu];
+			colfunc = colfuncs[COLUMN_TRANSLUCENT];
 	}
 
 #ifdef TRUECOLOR
@@ -303,7 +303,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			rlight->extra_colormap = *light->extra_colormap;
 			rlight->flags = light->flags;
 
-			if ((colfunc != colfuncs[column_translu])
+			if ((colfunc != colfuncs[COLUMN_TRANSLUCENT])
 				|| (rlight->flags & FOF_FOG)
 				|| (rlight->extra_colormap && (rlight->extra_colormap->flags & CMF_FOG)))
 				lightnum = (rlight->lightlevel >> LIGHTSEGSHIFT);
@@ -322,7 +322,7 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 	}
 	else
 	{
-		if ((colfunc != colfuncs[column_translu])
+		if ((colfunc != colfuncs[COLUMN_TRANSLUCENT])
 			|| (frontsector->extra_colormap && (frontsector->extra_colormap->flags & CMF_FOG)))
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 		else
@@ -768,7 +768,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 		}
 
 		if (translucent)
-			colfunc = colfuncs[column_translu];
+			colfunc = colfuncs[COLUMN_TRANSLUCENT];
 	}
 	else if (pfloor->fofflags & FOF_FOG)
 		colfunc = colfuncs[COLUMN_FOG];
@@ -886,7 +886,7 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 			lightnum = (frontsector->lightlevel >> LIGHTSEGSHIFT);
 		else if (pfloor->fofflags & FOF_FOG)
 			lightnum = (pfloor->master->frontsector->lightlevel >> LIGHTSEGSHIFT);
-		else if (colfunc == colfuncs[column_translu])
+		else if (colfunc == colfuncs[COLUMN_TRANSLUCENT])
 			lightnum = LIGHTLEVELS-1;
 		else
 			lightnum = R_FakeFlat(frontsector, &tempsec, &templight, &templight, false)
