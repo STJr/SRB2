@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -19,6 +19,7 @@
 #include "d_event.h"
 #include "g_demo.h"
 #include "m_cheat.h" // objectplacing
+#include "m_cond.h"
 
 extern char gamedatafilename[64];
 extern char timeattackfolder[64];
@@ -84,6 +85,25 @@ typedef enum
 	LOCK_INTERESTS = 1<<2,
 } lockassist_e;
 
+
+typedef enum
+{
+	JA_NONE = 0,
+	JA_TURN,
+	JA_MOVE,
+	JA_LOOK,
+	JA_STRAFE,
+
+	JA_DIGITAL, // axes henceforth use digital deadzone
+
+	JA_JUMP = JA_DIGITAL,
+	JA_SPIN,
+	JA_FIRE,
+	JA_FIRENORMAL,
+} joyaxis_e;
+
+INT32 JoyAxis(joyaxis_e axissel);
+INT32 Joy2Axis(joyaxis_e axissel);
 
 // mouseaiming (looking up/down with the mouse or keyboard)
 #define KB_LOOKSPEED (1<<25)
@@ -164,7 +184,7 @@ boolean G_IsTitleCardAvailable(void);
 // Can be called by the startup code or M_Responder, calls P_SetupLevel.
 void G_LoadGame(UINT32 slot, INT16 mapoverride);
 
-void G_SaveGameData(void);
+void G_SaveGameData(gamedata_t *data);
 
 void G_SaveGame(UINT32 slot, INT16 mapnum);
 
@@ -204,6 +224,7 @@ void G_EndGame(void); // moved from y_inter.c/h and renamed
 
 void G_Ticker(boolean run);
 boolean G_Responder(event_t *ev);
+boolean G_LuaResponder(event_t *ev);
 
 void G_AddPlayer(INT32 playernum);
 
@@ -219,27 +240,28 @@ void G_SetModeAttackRetryFlag(void);
 void G_ClearModeAttackRetryFlag(void);
 boolean G_GetModeAttackRetryFlag(void);
 
-void G_LoadGameData(void);
+void G_LoadGameData(gamedata_t *data);
 void G_LoadGameSettings(void);
 
 void G_SetGameModified(boolean silent);
+void G_SetUsedCheats(boolean silent);
 
 void G_SetGamestate(gamestate_t newstate);
 
 // Gamedata record shit
-void G_AllocMainRecordData(INT16 i);
-void G_AllocNightsRecordData(INT16 i);
-void G_ClearRecords(void);
+void G_AllocMainRecordData(INT16 i, gamedata_t *data);
+void G_AllocNightsRecordData(INT16 i, gamedata_t *data);
+void G_ClearRecords(gamedata_t *data);
 
-UINT32 G_GetBestScore(INT16 map);
-tic_t G_GetBestTime(INT16 map);
-UINT16 G_GetBestRings(INT16 map);
-UINT32 G_GetBestNightsScore(INT16 map, UINT8 mare);
-tic_t G_GetBestNightsTime(INT16 map, UINT8 mare);
-UINT8 G_GetBestNightsGrade(INT16 map, UINT8 mare);
+UINT32 G_GetBestScore(INT16 map, gamedata_t *data);
+tic_t G_GetBestTime(INT16 map, gamedata_t *data);
+UINT16 G_GetBestRings(INT16 map, gamedata_t *data);
+UINT32 G_GetBestNightsScore(INT16 map, UINT8 mare, gamedata_t *data);
+tic_t G_GetBestNightsTime(INT16 map, UINT8 mare, gamedata_t *data);
+UINT8 G_GetBestNightsGrade(INT16 map, UINT8 mare, gamedata_t *data);
 
 void G_AddTempNightsRecords(UINT32 pscore, tic_t ptime, UINT8 mare);
-void G_SetNightsRecords(void);
+void G_SetNightsRecords(gamedata_t *data);
 
 FUNCMATH INT32 G_TicsToHours(tic_t tics);
 FUNCMATH INT32 G_TicsToMinutes(tic_t tics, boolean full);

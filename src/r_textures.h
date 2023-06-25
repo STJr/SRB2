@@ -2,7 +2,7 @@
 //-----------------------------------------------------------------------------
 // Copyright (C) 1993-1996 by id Software, Inc.
 // Copyright (C) 1998-2000 by DooM Legacy Team.
-// Copyright (C) 1999-2021 by Sonic Team Junior.
+// Copyright (C) 1999-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -54,6 +54,7 @@ typedef struct
 {
 	// Keep name for switch changing, etc.
 	char name[8];
+	UINT32 hash;
 	UINT8 type; // TEXTURETYPE_
 	INT16 width, height;
 	boolean holes;
@@ -76,6 +77,7 @@ extern UINT8 **texturecache; // graphics data for each generated full-size textu
 
 // Load TEXTURES definitions, create lookup tables
 void R_LoadTextures(void);
+void R_LoadTexturesPwad(UINT16 wadnum);
 void R_FlushTextureCache(void);
 
 // Texture generation
@@ -91,7 +93,11 @@ UINT8 *R_GetColumn(fixed_t tex, INT32 col);
 void *R_GetFlat(lumpnum_t flatnum);
 
 boolean R_CheckPowersOfTwo(void);
-void R_CheckFlatLength(size_t size);
+boolean R_CheckSolidColorFlat(void);
+
+UINT16 R_GetFlatSize(size_t length);
+UINT8 R_GetFlatBits(INT32 size);
+void R_SetFlatVars(size_t length);
 
 // Returns the texture number for the texture name.
 INT32 R_TextureNumForName(const char *name);

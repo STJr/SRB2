@@ -1,7 +1,7 @@
 // SONIC ROBO BLAST 2
 //-----------------------------------------------------------------------------
 // Copyright (C) 2012-2016 by John "JTE" Muniz.
-// Copyright (C) 2012-2021 by Sonic Team Junior.
+// Copyright (C) 2012-2023 by Sonic Team Junior.
 //
 // This program is free software distributed under the
 // terms of the GNU General Public License, version 2.
@@ -57,9 +57,9 @@ int LUA_PushGlobals(lua_State *L, const char *word);
 int LUA_CheckGlobals(lua_State *L, const char *word);
 void Got_Luacmd(UINT8 **cp, INT32 playernum); // lua_consolelib.c
 void LUA_CVarChanged(void *cvar); // lua_consolelib.c
-int Lua_optoption(lua_State *L, int narg,
-	const char *def, const char *const lst[]);
-void LUAh_NetArchiveHook(lua_CFunction archFunc);
+int Lua_optoption(lua_State *L, int narg, int def, int list_ref);
+int Lua_CreateFieldTable(lua_State *L, const char *const lst[]);
+void LUA_HookNetArchive(lua_CFunction archFunc);
 
 void LUA_PushTaggableObjectArray
 (		lua_State *L,

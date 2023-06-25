@@ -39,46 +39,46 @@
     <ProjectGuid>{61BA7D3C-F77D-4D31-B718-1177FE482CF2}</ProjectGuid>
     <Keyword>Win32Proj</Keyword>
     <RootNamespace>Srb2SDL</RootNamespace>
-    <WindowsTargetPlatformVersion>10.0.16299.0</WindowsTargetPlatformVersion>
+    <WindowsTargetPlatformVersion>10.0</WindowsTargetPlatformVersion>
     <ProjectName>Srb2Win</ProjectName>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'" Label="Configuration">
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>true</UseDebugLibraries>
     <WindowsSDKDesktopARMSupport>true</WindowsSDKDesktopARMSupport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'" Label="Configuration">
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <WindowsSDKDesktopARMSupport>true</WindowsSDKDesktopARMSupport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>true</UseDebugLibraries>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM64'" Label="Configuration">
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>true</UseDebugLibraries>
     <WindowsSDKDesktopARM64Support>true</WindowsSDKDesktopARM64Support>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
-    <PlatformToolset>v140</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM64'" Label="Configuration">
-    <PlatformToolset>v141</PlatformToolset>
+    <PlatformToolset>v143</PlatformToolset>
     <UseDebugLibraries>false</UseDebugLibraries>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <WindowsSDKDesktopARM64Support>true</WindowsSDKDesktopARM64Support>
@@ -134,6 +134,9 @@
     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
     <RunCodeAnalysis>false</RunCodeAnalysis>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <TargetName>$(ProjectName)_Debug</TargetName>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <ClCompile>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
@@ -153,6 +156,26 @@
     <Link>
       <AdditionalDependencies>setupapi.lib;winmm.lib;imm32.lib;version.lib;ole32.lib;advapi32.lib;shell32.lib;gdi32.lib;oleaut32.lib;uuid.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
+    <ClCompile>
+      <LanguageStandard_C>Default</LanguageStandard_C>
+      <TreatWarningAsError>false</TreatWarningAsError>
+      <DisableSpecificWarnings>4244;4267;4146</DisableSpecificWarnings>
+      <MultiProcessorCompilation>true</MultiProcessorCompilation>
+      <MinimalRebuild>false</MinimalRebuild>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <LanguageStandard>stdcpp17</LanguageStandard>
+    </ClCompile>
+  </ItemDefinitionGroup>
+  <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
+    <ClCompile>
+      <DisableSpecificWarnings>4244;4267;4146;4003</DisableSpecificWarnings>
+    </ClCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\libs\libpng-src\projects\visualc10\libpng.vcxproj">
@@ -245,11 +268,14 @@
     <ClInclude Include="..\i_sound.h" />
     <ClInclude Include="..\i_system.h" />
     <ClInclude Include="..\i_tcp.h" />
+    <ClInclude Include="..\i_threads.h" />
+    <ClInclude Include="..\i_time.h" />
     <ClInclude Include="..\i_video.h" />
     <ClInclude Include="..\keys.h" />
     <ClInclude Include="..\libdivide.h" />
     <ClInclude Include="..\lua_hook.h" />
     <ClInclude Include="..\lua_hud.h" />
+    <ClInclude Include="..\lua_hudlib_drawlist.h" />
     <ClInclude Include="..\lua_libs.h" />
     <ClInclude Include="..\lua_script.h" />
     <ClInclude Include="..\lzf.h" />
@@ -263,6 +289,7 @@
     <ClInclude Include="..\m_cheat.h" />
     <ClInclude Include="..\m_cond.h" />
     <ClInclude Include="..\m_dllist.h" />
+    <ClInclude Include="..\m_easing.h" />
     <ClInclude Include="..\m_fixed.h" />
     <ClInclude Include="..\m_menu.h" />
     <ClInclude Include="..\m_misc.h" />
@@ -271,6 +298,7 @@
     <ClInclude Include="..\m_random.h" />
     <ClInclude Include="..\m_swap.h" />
     <ClInclude Include="..\p5prof.h" />
+    <ClInclude Include="..\p_haptic.h" />
     <ClInclude Include="..\p_local.h" />
     <ClInclude Include="..\p_maputl.h" />
     <ClInclude Include="..\p_mobj.h" />
@@ -285,6 +313,7 @@
     <ClInclude Include="..\r_data.h" />
     <ClInclude Include="..\r_defs.h" />
     <ClInclude Include="..\r_draw.h" />
+    <ClInclude Include="..\r_fps.h" />
     <ClInclude Include="..\r_local.h" />
     <ClInclude Include="..\r_main.h" />
     <ClInclude Include="..\r_patch.h" />
@@ -304,6 +333,7 @@
     <ClInclude Include="..\st_stuff.h" />
     <ClInclude Include="..\s_sound.h" />
     <ClInclude Include="..\tables.h" />
+    <ClInclude Include="..\taglist.h" />
     <ClInclude Include="..\v_video.h" />
     <ClInclude Include="..\w_wad.h" />
     <ClInclude Include="..\y_inter.h" />
@@ -401,12 +431,15 @@
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
     <ClCompile Include="..\i_tcp.c" />
+    <ClCompile Include="..\i_time.c" />
     <ClCompile Include="..\lua_baselib.c" />
     <ClCompile Include="..\lua_blockmaplib.c" />
     <ClCompile Include="..\lua_consolelib.c" />
     <ClCompile Include="..\lua_hooklib.c" />
     <ClCompile Include="..\lua_hudlib.c" />
+    <ClCompile Include="..\lua_hudlib_drawlist.c" />
     <ClCompile Include="..\lua_infolib.c" />
+    <ClCompile Include="..\lua_inputlib.c" />
     <ClCompile Include="..\lua_maplib.c" />
     <ClCompile Include="..\lua_mathlib.c" />
     <ClCompile Include="..\lua_mobjlib.c" />
@@ -414,6 +447,7 @@
     <ClCompile Include="..\lua_polyobjlib.c" />
     <ClCompile Include="..\lua_script.c" />
     <ClCompile Include="..\lua_skinlib.c" />
+    <ClCompile Include="..\lua_taglib.c" />
     <ClCompile Include="..\lua_thinkerlib.c" />
     <ClCompile Include="..\lzf.c" />
     <ClCompile Include="..\md5.c" />
@@ -425,6 +459,7 @@
     <ClCompile Include="..\m_bbox.c" />
     <ClCompile Include="..\m_cheat.c" />
     <ClCompile Include="..\m_cond.c" />
+    <ClCompile Include="..\m_easing.c" />
     <ClCompile Include="..\m_fixed.c" />
     <ClCompile Include="..\m_menu.c" />
     <ClCompile Include="..\m_misc.c" />
@@ -434,6 +469,7 @@
     <ClCompile Include="..\p_ceilng.c" />
     <ClCompile Include="..\p_enemy.c" />
     <ClCompile Include="..\p_floor.c" />
+    <ClCompile Include="..\p_haptic.c" />
     <ClCompile Include="..\p_inter.c" />
     <ClCompile Include="..\p_lights.c" />
     <ClCompile Include="..\p_map.c" />
@@ -460,6 +496,7 @@
     <ClCompile Include="..\r_draw8_npo2.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
+    <ClCompile Include="..\r_fps.c" />
     <ClCompile Include="..\r_main.c" />
     <ClCompile Include="..\r_patch.c" />
     <ClCompile Include="..\r_patchrotation.c" />
@@ -478,6 +515,7 @@
     <ClCompile Include="..\st_stuff.c" />
     <ClCompile Include="..\s_sound.c" />
     <ClCompile Include="..\tables.c" />
+    <ClCompile Include="..\taglist.c" />
     <ClCompile Include="..\t_facon.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
@@ -501,7 +539,7 @@
     <ClCompile Include="IMG_xpm.c">
       <ExcludedFromBuild>true</ExcludedFromBuild>
     </ClCompile>
-    <ClCompile Include="i_cdmus.c" />
+    <ClCompile Include="i_gamepad.c" />
     <ClCompile Include="i_main.c" />
     <ClCompile Include="i_net.c" />
     <ClCompile Include="i_system.c" />
