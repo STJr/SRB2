@@ -355,7 +355,7 @@ void R_Draw2sMultiPatchAlphaColumn_8(void)
 				val = source[frac>>FRACBITS];
 
 				if (val != TRANSPARENTPIXEL)
-					R_AlphaBlend_8(colormap[val], dc_alpha, dest);
+					*dest = R_AlphaBlend_8(colormap[val], dc_alpha, dest);
 
 				dest += vid.width;
 
@@ -375,12 +375,12 @@ void R_Draw2sMultiPatchAlphaColumn_8(void)
 			{
 				val = source[(frac>>FRACBITS) & heightmask];
 				if (val != TRANSPARENTPIXEL)
-					R_AlphaBlend_8(colormap[val], dc_alpha, dest);
+					*dest = R_AlphaBlend_8(colormap[val], dc_alpha, dest);
 				dest += vid.width;
 				frac += fracstep;
 				val = source[(frac>>FRACBITS) & heightmask];
 				if (val != TRANSPARENTPIXEL)
-					R_AlphaBlend_8(colormap[val], dc_alpha, dest);
+					*dest = R_AlphaBlend_8(colormap[val], dc_alpha, dest);
 				dest += vid.width;
 				frac += fracstep;
 			}
@@ -388,7 +388,7 @@ void R_Draw2sMultiPatchAlphaColumn_8(void)
 			{
 				val = source[(frac>>FRACBITS) & heightmask];
 				if (val != TRANSPARENTPIXEL)
-					R_AlphaBlend_8(colormap[val], dc_alpha, dest);
+					*dest = R_AlphaBlend_8(colormap[val], dc_alpha, dest);
 			}
 		}
 	}
@@ -535,13 +535,13 @@ void R_DrawDropShadowColumn_8(void)
 	{
 		while ((count -= 2) >= 0)
 		{
-			R_AlphaBlend_8(DSCOLOR, dc_alpha, dest);
+			*dest = R_AlphaBlend_8(DSCOLOR, dc_alpha, dest);
 			dest += vid.width;
-			R_AlphaBlend_8(DSCOLOR, dc_alpha, dest);
+			*dest = R_AlphaBlend_8(DSCOLOR, dc_alpha, dest);
 			dest += vid.width;
 		}
 		if (count & 1)
-			R_AlphaBlend_8(DSCOLOR, dc_alpha, dest);
+			*dest = R_AlphaBlend_8(DSCOLOR, dc_alpha, dest);
 	}
 	else
 	{
@@ -608,7 +608,7 @@ void R_DrawAlphaColumn_8(void)
 				// Re-map color indices from wall texture column
 				// using a lighting/special effects LUT.
 				// heightmask is the Tutti-Frutti fix
-				R_AlphaBlend_8(colormap[source[frac>>FRACBITS]], dc_alpha, dest);
+				*dest = R_AlphaBlend_8(colormap[source[frac>>FRACBITS]], dc_alpha, dest);
 				dest += vid.width;
 				if ((frac += fracstep) >= heightmask)
 					frac -= heightmask;
@@ -619,15 +619,15 @@ void R_DrawAlphaColumn_8(void)
 		{
 			while ((count -= 2) >= 0) // texture height is a power of 2
 			{
-				R_AlphaBlend_8(colormap[source[(frac>>FRACBITS)&heightmask]], dc_alpha, dest);
+				*dest = R_AlphaBlend_8(colormap[source[(frac>>FRACBITS)&heightmask]], dc_alpha, dest);
 				dest += vid.width;
 				frac += fracstep;
-				R_AlphaBlend_8(colormap[source[(frac>>FRACBITS)&heightmask]], dc_alpha, dest);
+				*dest = R_AlphaBlend_8(colormap[source[(frac>>FRACBITS)&heightmask]], dc_alpha, dest);
 				dest += vid.width;
 				frac += fracstep;
 			}
 			if (count & 1)
-				R_AlphaBlend_8(colormap[source[(frac>>FRACBITS)&heightmask]], dc_alpha, dest);
+				*dest = R_AlphaBlend_8(colormap[source[(frac>>FRACBITS)&heightmask]], dc_alpha, dest);
 		}
 	}
 }
@@ -744,7 +744,7 @@ void R_DrawTranslatedAlphaColumn_8(void)
 				// Re-map color indices from wall texture column
 				//  using a lighting/special effects LUT.
 				// heightmask is the Tutti-Frutti fix
-				R_AlphaBlend_8(dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]], dc_alpha, dest);
+				*dest = R_AlphaBlend_8(dc_colormap[dc_translation[dc_source[frac>>FRACBITS]]], dc_alpha, dest);
 				dest += vid.width;
 				if ((frac += fracstep) >= heightmask)
 					frac -= heightmask;
@@ -755,15 +755,15 @@ void R_DrawTranslatedAlphaColumn_8(void)
 		{
 			while ((count -= 2) >= 0) // texture height is a power of 2
 			{
-				R_AlphaBlend_8(dc_colormap[dc_translation[dc_source[(frac>>FRACBITS)&heightmask]]], dc_alpha, dest);
+				*dest = R_AlphaBlend_8(dc_colormap[dc_translation[dc_source[(frac>>FRACBITS)&heightmask]]], dc_alpha, dest);
 				dest += vid.width;
 				frac += fracstep;
-				R_AlphaBlend_8(dc_colormap[dc_translation[dc_source[(frac>>FRACBITS)&heightmask]]], dc_alpha, dest);
+				*dest = R_AlphaBlend_8(dc_colormap[dc_translation[dc_source[(frac>>FRACBITS)&heightmask]]], dc_alpha, dest);
 				dest += vid.width;
 				frac += fracstep;
 			}
 			if (count & 1)
-				R_AlphaBlend_8(dc_colormap[dc_translation[dc_source[(frac>>FRACBITS)&heightmask]]], dc_alpha, dest);
+				*dest = R_AlphaBlend_8(dc_colormap[dc_translation[dc_source[(frac>>FRACBITS)&heightmask]]], dc_alpha, dest);
 		}
 	}
 }
@@ -1174,7 +1174,7 @@ void R_DrawTiltedAlphaSpan_8(void)
 		for (i = SPANSIZE-1; i >= 0; i--)
 		{
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-			R_AlphaBlend_8(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]], ds_alpha, dest);
+			*dest = R_AlphaBlend_8(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]], ds_alpha, dest);
 			dest++;
 			u += stepu;
 			v += stepv;
@@ -1190,7 +1190,7 @@ void R_DrawTiltedAlphaSpan_8(void)
 			u = (INT64)(startu);
 			v = (INT64)(startv);
 			colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-			R_AlphaBlend_8(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]], ds_alpha, dest);
+			*dest = R_AlphaBlend_8(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]], ds_alpha, dest);
 		}
 		else
 		{
@@ -1211,7 +1211,7 @@ void R_DrawTiltedAlphaSpan_8(void)
 			for (; width != 0; width--)
 			{
 				colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-				R_AlphaBlend_8(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]], ds_alpha, dest);
+				*dest = R_AlphaBlend_8(colormap[source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)]], ds_alpha, dest);
 				dest++;
 				u += stepu;
 				v += stepv;
@@ -1788,49 +1788,49 @@ void R_DrawAlphaSplat_8(void)
 		// need!
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val != TRANSPARENTPIXEL)
-			R_AlphaBlend_8(colormap[val], ds_alpha, dest + 0);
+			*dest = R_AlphaBlend_8(colormap[val], ds_alpha, dest + 0);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val != TRANSPARENTPIXEL)
-			R_AlphaBlend_8(colormap[val], ds_alpha, dest + 1);
+			*dest = R_AlphaBlend_8(colormap[val], ds_alpha, dest + 1);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val != TRANSPARENTPIXEL)
-			R_AlphaBlend_8(colormap[val], ds_alpha, dest + 2);
+			*dest = R_AlphaBlend_8(colormap[val], ds_alpha, dest + 2);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val != TRANSPARENTPIXEL)
-			R_AlphaBlend_8(colormap[val], ds_alpha, dest + 3);
+			*dest = R_AlphaBlend_8(colormap[val], ds_alpha, dest + 3);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val != TRANSPARENTPIXEL)
-			R_AlphaBlend_8(colormap[val], ds_alpha, dest + 4);
+			*dest = R_AlphaBlend_8(colormap[val], ds_alpha, dest + 4);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val != TRANSPARENTPIXEL)
-			R_AlphaBlend_8(colormap[val], ds_alpha, dest + 5);
+			*dest = R_AlphaBlend_8(colormap[val], ds_alpha, dest + 5);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val != TRANSPARENTPIXEL)
-			R_AlphaBlend_8(colormap[val], ds_alpha, dest + 6);
+			*dest = R_AlphaBlend_8(colormap[val], ds_alpha, dest + 6);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val != TRANSPARENTPIXEL)
-			R_AlphaBlend_8(colormap[val], ds_alpha, dest + 7);
+			*dest = R_AlphaBlend_8(colormap[val], ds_alpha, dest + 7);
 		xposition += xstep;
 		yposition += ystep;
 
@@ -1841,7 +1841,7 @@ void R_DrawAlphaSplat_8(void)
 	{
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val != TRANSPARENTPIXEL)
-			R_AlphaBlend_8(colormap[val], ds_alpha, dest);
+			*dest = R_AlphaBlend_8(colormap[val], ds_alpha, dest);
 		dest++;
 		xposition += xstep;
 		yposition += ystep;
@@ -2102,49 +2102,49 @@ void R_DrawAlphaFloorSprite_8(void)
 		// need!
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val & 0xFF00)
-			R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 0);
+			*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 0);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val & 0xFF00)
-			R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 1);
+			*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 1);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val & 0xFF00)
-			R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 2);
+			*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 2);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val & 0xFF00)
-			R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 3);
+			*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 3);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val & 0xFF00)
-			R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 4);
+			*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 4);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val & 0xFF00)
-			R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 5);
+			*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 5);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val & 0xFF00)
-			R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 6);
+			*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 6);
 		xposition += xstep;
 		yposition += ystep;
 
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val & 0xFF00)
-			R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 7);
+			*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest + 7);
 		xposition += xstep;
 		yposition += ystep;
 
@@ -2155,7 +2155,7 @@ void R_DrawAlphaFloorSprite_8(void)
 	{
 		val = source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)];
 		if (val & 0xFF00)
-			R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest);
+			*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest);
 		dest++;
 		xposition += xstep;
 		yposition += ystep;
@@ -2433,7 +2433,7 @@ void R_DrawTiltedAlphaFloorSprite_8(void)
 		{
 			val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 			if (val & 0xFF00)
-				R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest);
+				*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest);
 			dest++;
 
 			u += stepu;
@@ -2451,7 +2451,7 @@ void R_DrawTiltedAlphaFloorSprite_8(void)
 			v = (INT64)(startv);
 			val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 			if (val & 0xFF00)
-				R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest);
+				*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest);
 		}
 		else
 		{
@@ -2473,7 +2473,7 @@ void R_DrawTiltedAlphaFloorSprite_8(void)
 			{
 				val = source[((v >> nflatyshift) & nflatmask) | (u >> nflatxshift)];
 				if (val & 0xFF00)
-					R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest);
+					*dest = R_AlphaBlend_8(colormap[translation[val & 0xFF]], ds_alpha, dest);
 				dest++;
 
 				u += stepu;
@@ -2603,35 +2603,35 @@ void R_DrawAlphaSpan_8(void)
 		// SoM: Why didn't I see this earlier? the spot variable is a waste now because we don't
 		// have the uber complicated math to calculate it now, so that was a memory write we didn't
 		// need!
-		R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 0);
+		*dest = R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 0);
 		xposition += xstep;
 		yposition += ystep;
 
-		R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 1);
+		*dest = R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 1);
 		xposition += xstep;
 		yposition += ystep;
 
-		R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 2);
+		*dest = R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 2);
 		xposition += xstep;
 		yposition += ystep;
 
-		R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 3);
+		*dest = R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 3);
 		xposition += xstep;
 		yposition += ystep;
 
-		R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 4);
+		*dest = R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 4);
 		xposition += xstep;
 		yposition += ystep;
 
-		R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 5);
+		*dest = R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 5);
 		xposition += xstep;
 		yposition += ystep;
 
-		R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 6);
+		*dest = R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 6);
 		xposition += xstep;
 		yposition += ystep;
 
-		R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 7);
+		*dest = R_AlphaBlend_8(colormap[source[(((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift)]], ds_alpha, dest + 7);
 		xposition += xstep;
 		yposition += ystep;
 
@@ -2641,7 +2641,7 @@ void R_DrawAlphaSpan_8(void)
 	while (count-- && dest <= deststop)
 	{
 		val = (((UINT32)yposition >> nflatyshift) & nflatmask) | ((UINT32)xposition >> nflatxshift);
-		R_AlphaBlend_8(colormap[source[val]], ds_alpha, dest);
+		*dest = R_AlphaBlend_8(colormap[source[val]], ds_alpha, dest);
 		dest++;
 		xposition += xstep;
 		yposition += ystep;

@@ -107,6 +107,12 @@ UINT8 *blendtables[NUMBLENDMAPS];
 UINT8 *dc_transmap; // one of the translucency tables
 UINT8 dc_alpha; // column alpha
 
+static INT32 multtable[0x10000];
+static INT32 multtableinv[0x10000];
+
+static INT32 *dp_multtable = NULL;
+static INT32 *dp_multtableinv = NULL;
+
 UINT32 (*R_BlendModeMix)(UINT32, UINT32, UINT8) = NULL;
 
 // ----------------------
@@ -210,8 +216,7 @@ void R_InitTranslucencyTables(void)
 	// Load here the transparency lookup tables 'TRANSx0'
 	// NOTE: the TRANSx0 resources MUST BE aligned on 64k for the asm
 	// optimised code (in other words, transtables pointer low word is 0)
-	transtables = Z_MallocAlign(NUMTRANSTABLES*0x10000, PU_STATIC,
-		NULL, 16);
+	transtables = Z_MallocAlign(NUMTRANSTABLES*0x10000, PU_STATIC, NULL, 16);
 
 	W_ReadLump(W_GetNumForName("TRANS10"), transtables);
 	W_ReadLump(W_GetNumForName("TRANS20"), transtables+0x10000);
@@ -222,6 +227,15 @@ void R_InitTranslucencyTables(void)
 	W_ReadLump(W_GetNumForName("TRANS70"), transtables+0x60000);
 	W_ReadLump(W_GetNumForName("TRANS80"), transtables+0x70000);
 	W_ReadLump(W_GetNumForName("TRANS90"), transtables+0x80000);
+
+	for (unsigned alpha = 0; alpha < 0x100; alpha++)
+	{
+		for (unsigned color = 0; color < 0x100; color++)
+		{
+			multtable[alpha << 8 | color] = (alpha * color) >> 8;
+			multtableinv[alpha << 8 | color] = (((int)alpha ^ 0xFF) * color) >> 8;
+		}
+	}
 
 	R_GenerateBlendTables();
 }
@@ -1011,42 +1025,38 @@ static inline UINT32 Blend_Copy(UINT32 fg, UINT32 bg, UINT8 alpha)
 {
 	(void)bg;
 	(void)alpha;
-	return (0xFF000000 | fg);
+	return 0xFF000000 | fg;
 }
 
 static inline UINT32 Blend_Translucent(UINT32 fg, UINT32 bg, UINT8 alpha)
 {
-	fg = R_TranslucentMix(bg, fg, alpha);
-	return (0xFF000000 | fg);
+	(void)alpha;
+
+	return 0xFF000000 | R_PutRgbaRGB(
+		(dp_multtable[R_GetRgbaR(fg)] + dp_multtableinv[R_GetRgbaR(bg)]),
+		(dp_multtable[R_GetRgbaG(fg)] + dp_multtableinv[R_GetRgbaG(bg)]),
+		(dp_multtable[R_GetRgbaB(fg)] + dp_multtableinv[R_GetRgbaB(bg)]));
 }
 
 static inline UINT32 Blend_Additive(UINT32 fg, UINT32 bg, UINT8 alpha)
 {
-	UINT8 r = clamp(R_GetRgbaR(bg) + R_GetRgbaR(fg));
-	UINT8 g = clamp(R_GetRgbaG(bg) + R_GetRgbaG(fg));
-	UINT8 b = clamp(R_GetRgbaB(bg) + R_GetRgbaB(fg));
+	(void)alpha;
 
-	fg = R_PutRgbaRGB(r, g, b);
-	fg = R_TranslucentMix(bg, fg, alpha);
+	UINT8 r = clamp(dp_multtable[R_GetRgbaR(fg)] + R_GetRgbaR(bg));
+	UINT8 g = clamp(dp_multtable[R_GetRgbaG(fg)] + R_GetRgbaG(bg));
+	UINT8 b = clamp(dp_multtable[R_GetRgbaB(fg)] + R_GetRgbaB(bg));
 
-	return (0xFF000000 | fg);
+	return 0xFF000000 | R_PutRgbaRGB(
+		(dp_multtable[r] + dp_multtableinv[R_GetRgbaR(bg)]),
+		(dp_multtable[g] + dp_multtableinv[R_GetRgbaG(bg)]),
+		(dp_multtable[b] + dp_multtableinv[R_GetRgbaB(bg)]));
 }
 
 static inline UINT32 Blend_Subtractive(UINT32 fg, UINT32 bg, UINT8 alpha)
 {
-	INT32 mixR, mixG, mixB;
-	UINT8 r, g, b;
-
-	if (alpha == 0)
-		return 0xFF000000;
-
-	mixR = R_GetRgbaR(fg);
-	mixG = R_GetRgbaG(fg);
-	mixB = R_GetRgbaB(fg);
-
-	r = clamp((INT32)(-R_GetRgbaR(bg) + mixR));
-	g = clamp((INT32)(-R_GetRgbaG(bg) + mixG));
-	b = clamp((INT32)(-R_GetRgbaB(bg) + mixB));
+	UINT8 r = clamp((INT32)(-R_GetRgbaR(bg) + R_GetRgbaR(fg)));
+	UINT8 g = clamp((INT32)(-R_GetRgbaG(bg) + R_GetRgbaG(fg)));
+	UINT8 b = clamp((INT32)(-R_GetRgbaB(bg) + R_GetRgbaB(fg)));
 
 	alpha = (0xFF - alpha);
 
@@ -1054,44 +1064,34 @@ static inline UINT32 Blend_Subtractive(UINT32 fg, UINT32 bg, UINT8 alpha)
 	g = clamp((INT32)(g - alpha));
 	b = clamp((INT32)(b - alpha));
 
-	return (0xFF000000 | R_PutRgbaRGB(r, g, b));
+	return 0xFF000000 | R_PutRgbaRGB(r, g, b);
 }
 
 static inline UINT32 Blend_ReverseSubtractive(UINT32 fg, UINT32 bg, UINT8 alpha)
 {
-	INT32 mixR, mixG, mixB;
-	UINT8 r, g, b;
+	(void)alpha;
 
-	if (alpha == 0)
-		return bg;
+	INT32 bgr = R_GetRgbaR(bg);
+	INT32 bgg = R_GetRgbaG(bg);
+	INT32 bgb = R_GetRgbaB(bg);
 
-	mixR = R_GetRgbaR(fg);
-	mixG = R_GetRgbaG(fg);
-	mixB = R_GetRgbaB(fg);
+	UINT8 r = clamp((INT32)(bgr - R_GetRgbaR(fg)));
+	UINT8 g = clamp((INT32)(bgg - R_GetRgbaG(fg)));
+	UINT8 b = clamp((INT32)(bgb - R_GetRgbaB(fg)));
 
-	r = clamp((INT32)(R_GetRgbaR(bg) - mixR));
-	g = clamp((INT32)(R_GetRgbaG(bg) - mixG));
-	b = clamp((INT32)(R_GetRgbaB(bg) - mixB));
-
-	fg = R_PutRgbaRGB(r, g, b);
-	fg = R_TranslucentMix(bg, fg, alpha);
-
-	return (0xFF000000 | fg);
+	return 0xFF000000 | R_PutRgbaRGB(
+		(dp_multtable[r] + dp_multtableinv[bgr]),
+		(dp_multtable[g] + dp_multtableinv[bgg]),
+		(dp_multtable[b] + dp_multtableinv[bgb]));
 }
 
 static inline UINT32 Blend_Multiplicative(UINT32 fg, UINT32 bg, UINT8 alpha)
 {
-	float mixR = ((float)R_GetRgbaR(fg) / 256.0f);
-	float mixG = ((float)R_GetRgbaG(fg) / 256.0f);
-	float mixB = ((float)R_GetRgbaB(fg) / 256.0f);
-
-	UINT8 r = clamp((int)(R_GetRgbaR(bg) * mixR));
-	UINT8 g = clamp((int)(R_GetRgbaG(bg) * mixG));
-	UINT8 b = clamp((int)(R_GetRgbaB(bg) * mixB));
-
 	(void)alpha;
-
-	return (0xFF000000 | R_PutRgbaRGB(r, g, b));
+	UINT8 r = ((INT32)R_GetRgbaR(bg) * (INT32)R_GetRgbaR(fg)) >> 8;
+	UINT8 g = ((INT32)R_GetRgbaG(bg) * (INT32)R_GetRgbaG(fg)) >> 8;
+	UINT8 b = ((INT32)R_GetRgbaB(bg) * (INT32)R_GetRgbaB(fg)) >> 8;
+	return 0xFF000000 | R_PutRgbaRGB(r, g, b);
 }
 
 static inline void R_SetBlendingFunction(INT32 blendmode)
@@ -1120,11 +1120,11 @@ static inline void R_SetBlendingFunction(INT32 blendmode)
 	}
 }
 
-static void R_AlphaBlend_8(UINT8 src, UINT8 alpha, UINT8 *dest)
+static UINT8 R_AlphaBlend_8(UINT8 src, UINT8 alpha, UINT8 *dest)
 {
 	RGBA_t result;
 	result.rgba = R_BlendModeMix(GetTrueColor(src), GetTrueColor(*dest), alpha);
-	*dest = GetColorLUT(&r_draw_lut, result.s.red, result.s.green, result.s.blue);
+	return GetColorLUT(&r_draw_lut, result.s.red, result.s.green, result.s.blue);
 }
 
 static UINT8 R_AlphaBlend_s8d8(UINT8 src, UINT8 alpha, UINT8 dest)
@@ -1146,6 +1146,9 @@ void R_SetColumnBlendingFunction(INT32 blendmode)
 	else
 #endif
 		R_SetBlendingFunction(blendmode);
+
+	dp_multtable = &multtable[dc_alpha << 8];
+	dp_multtableinv = &multtableinv[dc_alpha << 8];
 }
 
 void R_SetSpanBlendingFunction(INT32 blendmode)
@@ -1156,6 +1159,9 @@ void R_SetSpanBlendingFunction(INT32 blendmode)
 	else
 #endif
 		R_SetBlendingFunction(blendmode);
+
+	dp_multtable = &multtable[ds_alpha << 8];
+	dp_multtableinv = &multtableinv[ds_alpha << 8];
 }
 
 void R_InitAlphaLUT(void)
@@ -1216,7 +1222,7 @@ static UINT32 TC_ColorMix(UINT32 fg, UINT32 bg)
 	// Apply the color cube
 	fg = ColorCube_ApplyRGBA(fg);
 
-	cache->result = (0xFF000000 | fg);
+	cache->result = 0xFF000000 | fg;
 	return cache->result;
 }
 
@@ -1250,7 +1256,7 @@ static UINT32 TC_ColorMix2(UINT32 fg, UINT32 bg)
 	// Apply the color cube
 	fg = ColorCube_ApplyRGBA(fg);
 
-	cache->result = (0xFF000000 | fg);
+	cache->result = 0xFF000000 | fg;
 	return cache->result;
 }
 
@@ -1306,15 +1312,12 @@ static inline UINT32 TC_Colormap32Mix(UINT32 color)
 static inline UINT32 Blend_ColorMix_Copy(UINT32 fg, UINT32 bg, UINT8 alpha)
 {
 	(void)alpha;
-	fg = TC_ColorMix(fg, bg);
-	return (0xFF000000 | fg);
+	return TC_ColorMix(fg, bg);
 }
 
 static inline UINT32 Blend_ColorMix_Translucent(UINT32 fg, UINT32 bg, UINT8 alpha)
 {
-	fg = TC_ColorMix(fg, bg);
-	fg = R_TranslucentMix(bg, fg, alpha);
-	return (0xFF000000 | fg);
+	return Blend_Translucent(fg, TC_ColorMix(fg, bg), alpha);
 }
 
 static inline UINT32 Blend_ColorMix_Additive(UINT32 fg, UINT32 bg, UINT8 alpha)
@@ -1419,15 +1422,15 @@ static inline void R_SetBlendingFunction_ColorMix(INT32 blendmode)
 
 #undef clamp
 
-#define WriteTranslucentColumn(idx) *dest = R_BlendModeMix(GetTrueColor(idx), *(UINT32 *)dest, dc_alpha)
-#define WriteTranslucentColumn32(idx) *dest = R_BlendModeMix(idx, *(UINT32 *)dest, dc_alpha)
+#define WriteTranslucentColumn(idx) *dest = R_AlphaBlend_8(idx, dc_alpha, dest)
+#define WriteTranslucentColumn32(idx) *dest = R_BlendModeMix(idx, dc_alpha, (UINT32 *)dest)
 
-#define WriteTranslucentSpan(idx) *dest = R_BlendModeMix(GetTrueColor(idx), *(UINT32 *)dest, ds_alpha)
+#define WriteTranslucentSpan(idx) *dest = R_AlphaBlend_8(idx, ds_alpha, dest)
 #define WriteTranslucentSpan32(idx) *dest = R_BlendModeMix(idx, *(UINT32 *)dest, ds_alpha)
 #define WriteTranslucentSpanIdx(idx, destidx) dest[destidx] = R_BlendModeMix(GetTrueColor(idx), dest[destidx], ds_alpha)
 #define WriteTranslucentSpanIdx32(idx, destidx) dest[destidx] = R_BlendModeMix(idx, dest[destidx], ds_alpha)
 
-#define WriteTranslucentWaterSpan(idx) *dest = R_BlendModeMix(GetTrueColor(idx), *(UINT32 *)dsrc, ds_alpha); dsrc++
+#define WriteTranslucentWaterSpan(idx) *dest = R_AlphaBlend_8(idx, ds_alpha, dsrc); dsrc++
 #define WriteTranslucentWaterSpan32(idx) *dest = R_BlendModeMix(idx, *(UINT32 *)dsrc, ds_alpha); dsrc++
 #define WriteTranslucentWaterSpanIdx(idx, destidx) dest[destidx] = R_BlendModeMix(GetTrueColor(idx), *(UINT32 *)dsrc, ds_alpha); dsrc++
 #define WriteTranslucentWaterSpanIdx32(idx, destidx) dest[destidx] = R_BlendModeMix(idx, *(UINT32 *)dsrc, ds_alpha); dsrc++

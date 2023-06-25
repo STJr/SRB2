@@ -945,8 +945,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 			if (!usetranstables)
 			{
-				R_SetSpanBlendingFunction(AST_TRANSLUCENT);
 				ds_alpha = R_TransnumToAlpha(transval);
+				R_SetSpanBlendingFunction(AST_TRANSLUCENT);
 			}
 			else
 				ds_transmap = R_GetTranslucencyTable(transval);
@@ -958,8 +958,8 @@ void R_DrawSinglePlane(visplane_t *pl)
 			spanfunctype = SPAN_SPLAT;
 
 #ifdef TRUECOLOR
-			R_SetSpanBlendingFunction(AST_COPY);
 			ds_alpha = 0xFF;
+			R_SetSpanBlendingFunction(AST_COPY);
 #endif
 		}
 

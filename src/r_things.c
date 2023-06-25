@@ -1075,8 +1075,8 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 
 		if (!usetranstables)
 		{
-			R_SetColumnBlendingFunction(vis->blendmode);
 			dc_alpha = vis->alpha;
+			R_SetColumnBlendingFunction(vis->blendmode);
 		}
 		else
 			dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
