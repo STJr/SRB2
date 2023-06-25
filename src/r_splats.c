@@ -495,21 +495,20 @@ static void R_RasterizeFloorSplat(floorsplat_t *pSplat, vector2_t *verts, visspr
 		ds_alpha = vis->alpha;
 
 		if (vis->flags & VIS_TRANSLUCENT)
-		{
-			R_SetSpanBlendingFunction(vis->blendmode);
 			translucent = true;
-		}
 	}
 	else if (vis->flags & VIS_TRANSLUCENT)
 	{
-		ds_transmap = vis->transmap;
+		dp_transmap = vis->transmap;
 		translucent = true;
 	}
 	else
-		ds_transmap = NULL;
+		dp_transmap = NULL;
 
 	if (translucent)
 	{
+		R_SetSpanBlendingFunction(vis->blendmode);
+
 		if (pSplat->slope)
 			spanfunctype = SPAN_SPRITE_TILTED_TRANSLUCENT;
 		else

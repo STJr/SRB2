@@ -1596,8 +1596,7 @@ void R_DrawTranslucentSolidColorSpan_8(void)
 
 	while (count-- && dest <= deststop)
 	{
-		// TODO
-		// *dest = *(ds_transmap + (source << 8) + *dest);
+		*dest = R_AlphaBlend(source, dc_alpha, dest);
 		dest++;
 	}
 }
@@ -1640,8 +1639,7 @@ void R_DrawTiltedTranslucentSolidColorSpan_8(void)
 	do
 	{
 		UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-		// *dest = *(ds_transmap + (colormap[source] << 8) + *dest);
-		// TODO
+		*dest = R_AlphaBlend(colormap[source], dc_alpha, dest);
 		dest++;
 	} while (--width >= 0);
 }
@@ -1660,10 +1658,7 @@ void R_DrawWaterSolidColorSpan_8(void)
 	const UINT8 *deststop = screens[0] + vid.rowbytes * vid.height;
 
 	while (count-- && dest <= deststop)
-	{
-		*dest = colormap[*(ds_transmap + (source << 8) + *dsrc++)];
-		dest++;
-	}
+		*dest++ = colormap[R_AlphaBlend(source, dc_alpha, dsrc++)];
 }
 
 /**	\brief The R_DrawTiltedWaterSolidColorSpan_8 function
@@ -1684,8 +1679,7 @@ void R_DrawTiltedWaterSolidColorSpan_8(void)
 	do
 	{
 		UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
-		// *dest++ = *(ds_transmap + (colormap[source] << 8) + *dsrc++);
-		// TODO
+		*dest++ = R_AlphaBlend(colormap[source], dc_alpha, dsrc++);
 	} while (--width >= 0);
 }
 

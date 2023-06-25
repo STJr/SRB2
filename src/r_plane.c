@@ -32,6 +32,7 @@
 #include "w_wad.h"
 #include "z_zone.h"
 #include "p_tick.h"
+#include "st_stuff.h"
 
 //
 // opening
@@ -249,6 +250,24 @@ static void R_MapPlane(INT32 y, INT32 x1, INT32 x2)
 		dp_extracolormap = defaultextracolormap;
 #endif
 
+#ifdef TRUECOLOR
+	if (ds_solidcolor && truecolor)
+	{
+		if (ds_picfmt == PICFMT_FLAT32)
+			dp_color = ds_source[0];
+		else
+		{
+			if (tc_colormaps)
+			{
+				UINT32 *colormapu32 = (lighttable_u32_t *)ds_colormap;
+				dp_color = GetTrueColor(colormapu32[ds_source[0]]);
+			}
+			else
+				dp_color = GetTrueColor(ds_colormap[ds_source[0]]);
+		}
+	}
+#endif
+
 	ds_y = y;
 	ds_x1 = x1;
 	ds_x2 = x2;
@@ -310,6 +329,11 @@ static void R_MapTiltedPlane(INT32 y, INT32 x1, INT32 x2)
 #ifdef TRUECOLOR
 	else
 		dp_extracolormap = defaultextracolormap;
+#endif
+
+#ifdef TRUECOLOR
+	if (ds_solidcolor && truecolor)
+		dp_color = ds_source[0];
 #endif
 
 	ds_y = y;
@@ -941,17 +965,28 @@ void R_DrawSinglePlane(visplane_t *pl)
 			return; // Don't even draw it
 		else if (pl->polyobj->translucency > 0)
 		{
+			// Remember to update this whenever polyobjects begin supporting blend modes.
 			INT32 transval = pl->polyobj->translucency;
+			boolean translucent = true;
 
 			if (!usetranstables)
 			{
 				ds_alpha = R_TransnumToAlpha(transval);
-				R_SetSpanBlendingFunction(AST_TRANSLUCENT);
+				if (ds_alpha == 0xFF)
+					translucent = false;
 			}
 			else
-				ds_transmap = R_GetTranslucencyTable(transval);
+			{
+				dp_transmap = R_GetTranslucencyTable(transval);
+				if (!dp_transmap)
+					translucent = false;
+			}
 
-			spanfunctype = (pl->polyobj->flags & POF_SPLAT) ? SPAN_SPLAT_TRANSLUCENT : SPAN_TRANSLUCENT;
+			if (translucent)
+			{
+				spanfunctype = (pl->polyobj->flags & POF_SPLAT) ? SPAN_SPLAT_TRANSLUCENT : SPAN_TRANSLUCENT;
+				R_SetSpanBlendingFunction(AST_TRANSLUCENT);
+			}
 		}
 		else if (pl->polyobj->flags & POF_SPLAT) // Opaque, but allow transparent flat pixels
 		{
@@ -991,46 +1026,51 @@ void R_DrawSinglePlane(visplane_t *pl)
 
 			if (pl->ffloor->fofflags & FOF_TRANSLUCENT)
 			{
-				INT32 alpha = pl->ffloor->alpha;
+				// 3D floor alpha is a signed 32-bit value, for some arcane reason.
+				INT32 alpha = min(max(0, pl->ffloor->alpha), 0xFF);
 				INT32 blendmode = pl->ffloor->blend ? pl->ffloor->blend : AST_TRANSLUCENT;
 				boolean splat = false;
-
-				spanfunctype = (pl->ffloor->fofflags & FOF_SPLAT) ? SPAN_SPLAT_TRANSLUCENT : SPAN_TRANSLUCENT;
+				boolean translucent = false;
 
 				if (!usetranstables)
 				{
-					if (alpha >= 255) // Opaque, but allow transparent flat pixels
+					if (alpha >= 0xFF && blendmode == AST_TRANSLUCENT) // Opaque, but allow transparent flat pixels
 					{
-						if (blendmode != AST_TRANSLUCENT && blendmode != AST_COPY)
-							splat = true;
+						splat = true;
 						ds_alpha = 0xFF;
 					}
 					else if (alpha < 1 && (blendmode == AST_TRANSLUCENT || blendmode == AST_ADD))
 						return; // Don't even draw it
 					else
+					{
 						ds_alpha = alpha;
-
-					R_SetSpanBlendingFunction(blendmode);
+						translucent = true;
+					}
 				}
 				else
 				{
 					INT32 transnum = R_AlphaToTransnum(alpha);
-					if (transnum == -1 && (blendmode == AST_TRANSLUCENT || blendmode == AST_COPY))
+					if (transnum == -1 && blendmode == AST_TRANSLUCENT)
 						return; // Don't even draw it
 					else if (transnum >= 0)
 					{
-						ds_transmap = R_GetBlendTable(blendmode, transnum);
-						if (!ds_transmap)
+						dp_transmap = R_GetBlendTable(blendmode, transnum);
+						if (dp_transmap)
+							translucent = true;
+						else
 							splat = true;
 					}
 					else // Opaque, but allow transparent flat pixels
 						splat = true;
 				}
 
-				if (splat)
+				if (translucent)
 				{
-					spanfunctype = SPAN_SPLAT;
+					spanfunctype = (pl->ffloor->fofflags & FOF_SPLAT) ? SPAN_SPLAT_TRANSLUCENT : SPAN_TRANSLUCENT;
+					R_SetSpanBlendingFunction(blendmode);
 				}
+				else if (splat)
+					spanfunctype = SPAN_SPLAT;
 
 				if (splat || (pl->extra_colormap && (pl->extra_colormap->flags & CMF_FOG)))
 					light = (pl->lightlevel >> LIGHTSEGSHIFT);
@@ -1184,22 +1224,33 @@ void R_DrawSinglePlane(visplane_t *pl)
 		else
 			R_SetSlopePlaneVectors(pl, 0, xoffs, yoffs);
 
-		if (spanfunctype == SPAN_WATER)
+		switch (spanfunctype)
+		{
+		case SPAN_WATER:
 			spanfunctype = SPAN_WATER_TILTED;
-		else if (spanfunctype == SPAN_SOLIDCOLOR_WATER)
+			break;
+		case SPAN_SOLIDCOLOR_WATER:
 			spanfunctype = SPAN_SOLIDCOLOR_TILTED_WATER;
-		else if (spanfunctype == SPAN_TRANSLUCENT)
+			break;
+		case SPAN_TRANSLUCENT:
 			spanfunctype = SPAN_TILTED_TRANSLUCENT;
-		else if (spanfunctype == SPAN_SOLIDCOLOR_TRANSLUCENT)
+			break;
+		case SPAN_SOLIDCOLOR_TRANSLUCENT:
 			spanfunctype = SPAN_SOLIDCOLOR_TILTED_TRANSLUCENT;
-		else if (spanfunctype == SPAN_SOLIDCOLOR)
+			break;
+		case SPAN_SOLIDCOLOR:
 			spanfunctype = SPAN_SOLIDCOLOR_TILTED;
-		else if (spanfunctype == SPAN_SPLAT)
+			break;
+		case SPAN_SPLAT:
 			spanfunctype = SPAN_SPLAT_TILTED;
-		else if (spanfunctype == SPAN_FOG)
+			break;
+		case SPAN_FOG:
 			spanfunctype = SPAN_FOG_TILTED;
-		else
+			break;
+		default:
 			spanfunctype = SPAN_TILTED;
+			break;
+		}
 
 #ifdef TRUECOLOR
 		if (tc_colormaps)

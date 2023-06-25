@@ -33,7 +33,10 @@ extern boolean tc_spritecolormaps;
 
 extern UINT32 *topleft_u32;
 
+extern UINT32 dp_color;
 extern UINT8 dp_lighting;
+extern UINT8 *dp_transmap;
+
 extern extracolormap_t *dp_extracolormap;
 extern extracolormap_t *defaultextracolormap;
 
@@ -51,7 +54,6 @@ extern UINT8 dc_colmapstyle;
 extern UINT8 *dc_source; // first pixel in a column
 
 // translucency stuff here
-extern UINT8 *dc_transmap;
 extern UINT8 dc_alpha;
 
 // translation stuff here
@@ -78,7 +80,6 @@ extern UINT16 ds_flatwidth, ds_flatheight;
 extern boolean ds_powersoftwo, ds_solidcolor;
 
 extern UINT8 *ds_source;
-extern UINT8 *ds_transmap;
 extern UINT8 ds_alpha;
 extern UINT8 ds_picfmt;
 extern UINT8 ds_colmapstyle;

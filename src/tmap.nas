@@ -64,7 +64,7 @@ cextern dc_hires
 cextern centery
 cextern centeryfrac
 cextern dc_colormap
-cextern dc_transmap
+cextern dp_transmap
 cextern colormaps
 cextern vid
 cextern topleft
@@ -446,7 +446,7 @@ R_DrawTranslucentColumn_8_ASM:
         shr     eax,0x2
         test    byte [pixelcount],0x3
         mov     ch,al                   ;; quad count
-        mov     eax,[dc_transmap]
+        mov     eax,[dp_transmap]
         je      vt4quadloop
 ;;
 ;;  do un-even pixel

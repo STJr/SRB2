@@ -343,8 +343,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 				else
 					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-				// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
-				// TODO
+				*dest = R_AlphaBlend(colormap[source[((y * ds_flatwidth) + x)]], ds_alpha, dest);
 			}
 			dest++;
 			u += stepu;
@@ -376,8 +375,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 				else
 					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-				// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
-				// TODO
+				*dest = R_AlphaBlend(colormap[source[((y * ds_flatwidth) + x)]], ds_alpha, dest);
 			}
 		}
 		else
@@ -414,8 +412,7 @@ void R_DrawTiltedTranslucentSpan_NPO2_8(void)
 					else
 						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-					// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dest);
-					// TODO
+					*dest = R_AlphaBlend(colormap[source[((y * ds_flatwidth) + x)]], ds_alpha, dest);
 				}
 				dest++;
 				u += stepu;
@@ -711,10 +708,7 @@ void R_DrawTranslucentSplat_NPO2_8(void)
 		y = (yposition >> FRACBITS);
 		val = source[((y * ds_flatwidth) + x)];
 		if (val != TRANSPARENTPIXEL)
-		{
-			// TODO
-			// *dest = *(ds_transmap + (colormap[val] << 8) + *dest);
-		}
+			*dest = R_AlphaBlend(colormap[val], ds_alpha, dest);
 		dest++;
 		xposition += xstep;
 		yposition += ystep;
@@ -854,10 +848,7 @@ void R_DrawTranslucentFloorSprite_NPO2_8(void)
 		y = (yposition >> FRACBITS);
 		val = source[((y * ds_flatwidth) + x)];
 		if (val & 0xFF00)
-		{
-			// TODO
-			// *dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
-		}
+			*dest = R_AlphaBlend(colormap[translation[val & 0xFF]], ds_alpha, dest);
 		dest++;
 		xposition += xstep;
 		yposition += ystep;
@@ -1094,10 +1085,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 			val = source[((y * ds_flatwidth) + x)];
 			if (val & 0xFF00)
-			{
-				// TODO
-				// *dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
-			}
+				*dest = R_AlphaBlend(colormap[translation[val & 0xFF]], ds_alpha, dest);
 			dest++;
 
 			u += stepu;
@@ -1130,10 +1118,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
-				{
-					// TODO
-					// *dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
-				}
+					*dest = R_AlphaBlend(colormap[translation[val & 0xFF]], ds_alpha, dest);
 			}
 		}
 		else
@@ -1170,10 +1155,7 @@ void R_DrawTiltedTranslucentFloorSprite_NPO2_8(void)
 
 				val = source[((y * ds_flatwidth) + x)];
 				if (val & 0xFF00)
-				{
-					// TODO
-					// *dest = *(ds_transmap + (colormap[translation[val & 0xFF]] << 8) + *dest);
-				}
+					*dest = R_AlphaBlend(colormap[translation[val & 0xFF]], ds_alpha, dest);
 				dest++;
 
 				u += stepu;
@@ -1243,8 +1225,7 @@ void R_DrawTranslucentSpan_NPO2_8(void)
 		x = (xposition >> FRACBITS);
 		y = (yposition >> FRACBITS);
 		val = ((y * ds_flatwidth) + x);
-		// TODO
-		// *dest = *(ds_transmap + (colormap[source[val]] << 8) + *dest);
+		*dest = R_AlphaBlend(colormap[source[val]], ds_alpha, dest);
 		dest++;
 		xposition += xstep;
 		yposition += ystep;
@@ -1308,8 +1289,7 @@ void R_DrawWaterSpan_NPO2_8(void)
 
 		x = (xposition >> FRACBITS);
 		y = (yposition >> FRACBITS);
-		// TODO
-		// *dest++ = colormap[*(ds_transmap + (source[((y * ds_flatwidth) + x)] << 8) + *dsrc++)];
+		*dest++ = colormap[R_AlphaBlend(source[((y * ds_flatwidth) + x)], ds_alpha, dsrc++)];
 		xposition += xstep;
 		yposition += ystep;
 	}
@@ -1390,8 +1370,7 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 				else
 					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-				// TODO
-				// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
+				*dest = R_AlphaBlend(colormap[source[((y * ds_flatwidth) + x)]], ds_alpha, dsrc++);
 			}
 			dest++;
 			u += stepu;
@@ -1423,8 +1402,7 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 				else
 					y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-				// TODO
-				// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
+				*dest = R_AlphaBlend(colormap[source[((y * ds_flatwidth) + x)]], ds_alpha, dsrc++);
 			}
 		}
 		else
@@ -1461,8 +1439,7 @@ void R_DrawTiltedWaterSpan_NPO2_8(void)
 					else
 						y -= libdivide_u32_do((UINT32)y, &y_divider) * ds_flatheight;
 
-					// TODO
-					// *dest = *(ds_transmap + (colormap[source[((y * ds_flatwidth) + x)]] << 8) + *dsrc++);
+					*dest = R_AlphaBlend(colormap[source[((y * ds_flatwidth) + x)]], ds_alpha, dsrc++);
 				}
 				dest++;
 				u += stepu;

@@ -185,31 +185,27 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			{
 				if (!alpha)
 					return;
-				else if (alpha >= 255)
+				else if (alpha >= 255 && blendmode == AST_TRANSLUCENT)
 					translucent = false;
 			}
 
-			if (translucent)
-			{
-				dc_alpha = alpha;
-				R_SetColumnBlendingFunction(blendmode);
-			}
+			dc_alpha = alpha;
 		}
 		else
 		{
-			if (blendmode == AST_MODULATE)
-				dc_transmap = R_GetBlendTable(blendmode, 0);
-			else
-				dc_transmap = R_GetBlendTable(blendmode, R_GetLinedefTransTable(alpha));
-
-			if (!dc_transmap)
+			dp_transmap = R_GetBlendTable(blendmode, R_GetLinedefTransTable(alpha));
+			if (!dp_transmap)
 				translucent = false;
 		}
 
 		if (translucent)
+		{
 			colfunc = colfuncs[COLUMN_TRANSLUCENT];
+			R_SetColumnBlendingFunction(blendmode);
+		}
 	}
 
+	// Remember to update this whenever polyobjects begin supporting blend modes.
 	if (curline->polyseg && curline->polyseg->translucency > 0)
 	{
 		INT32 alphaval = curline->polyseg->translucency;
@@ -225,20 +221,20 @@ void R_RenderMaskedSegRange(drawseg_t *ds, INT32 x1, INT32 x2)
 			else if (alphaval >= 255)
 				translucent = false;
 			else
-			{
 				dc_alpha = alphaval;
-				R_SetColumnBlendingFunction(AST_TRANSLUCENT);
-			}
 		}
 		else
 		{
-			dc_transmap = R_GetTranslucencyTable(alphaval);
-			if (!dc_transmap)
+			dp_transmap = R_GetTranslucencyTable(alphaval);
+			if (!dp_transmap)
 				translucent = false;
 		}
 
 		if (translucent)
+		{
 			colfunc = colfuncs[COLUMN_TRANSLUCENT];
+			R_SetColumnBlendingFunction(AST_TRANSLUCENT);
+		}
 	}
 
 #ifdef TRUECOLOR
@@ -733,24 +729,25 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 
 	if (pfloor->fofflags & FOF_TRANSLUCENT)
 	{
-		INT32 alpha = pfloor->alpha;
+		// 3D floor alpha is a signed 32-bit value, for some arcane reason.
+		INT32 alpha = min(max(0, pfloor->alpha), 0xFF);
 		INT32 blendmode = pfloor->blend ? pfloor->blend : AST_TRANSLUCENT;
-		boolean translucent = true;
+		boolean translucent = false;
 
 		if (!usetranstables)
 		{
-			if (alpha >= 255) // Opaque
+			if (alpha >= 0xFF) // Opaque
 			{
-				translucent = blendmode != AST_TRANSLUCENT && blendmode != AST_COPY;
+				translucent = blendmode != AST_TRANSLUCENT;
 				dc_alpha = 0xFF;
 			}
 			else if (alpha < 1 && (blendmode == AST_TRANSLUCENT || blendmode == AST_ADD))
 				return; // Don't even draw it
 			else
+			{
 				dc_alpha = alpha;
-
-			if (translucent)
-				R_SetColumnBlendingFunction(blendmode);
+				translucent = true;
+			}
 		}
 		else
 		{
@@ -759,16 +756,17 @@ void R_RenderThickSideRange(drawseg_t *ds, INT32 x1, INT32 x2, ffloor_t *pfloor)
 				return; // Don't even draw it
 			else if (transnum >= 0)
 			{
-				dc_transmap = R_GetBlendTable(blendmode, transnum);
-				if (!dc_transmap)
-					translucent = false;
+				dp_transmap = R_GetBlendTable(blendmode, transnum);
+				if (dp_transmap)
+					translucent = true;
 			}
-			else
-				translucent = false; // Opaque
 		}
 
 		if (translucent)
+		{
 			colfunc = colfuncs[COLUMN_TRANSLUCENT];
+			R_SetColumnBlendingFunction(blendmode);
+		}
 	}
 	else if (pfloor->fofflags & FOF_FOG)
 		colfunc = colfuncs[COLUMN_FOG];

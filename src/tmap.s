@@ -835,7 +835,7 @@ C(R_DrawTranslucentColumn_8):
     shrl    $2,%eax
     testb   $0x03,C(pixelcount)
     movb    %al,%ch             // quad count
-    movl    C(dc_transmap),%eax
+    movl    C(dp_transmap),%eax
     jz      vt4quadloop
 //
 //  do un-even pixel

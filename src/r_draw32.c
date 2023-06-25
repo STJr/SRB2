@@ -604,41 +604,7 @@ void R_Draw2sMultiPatchTranslucentColumn_32(void)
 */
 void R_DrawShadeColumn_32(void)
 {
-#if 0
-	register INT32 count;
-	register UINT32 *dest;
-	register fixed_t frac, fracstep;
-
-	// check out coords for src*
-	if ((dc_yl < 0) || (dc_x >= vid.width))
-		return;
-
-	count = dc_yh - dc_yl;
-	if (count < 0)
-		return;
-
-#ifdef RANGECHECK
-	if ((unsigned)dc_x >= (unsigned)vid.width || dc_yl < 0 || dc_yh >= vid.height)
-		I_Error("R_DrawShadeColumn_32: %d to %d at %d", dc_yl, dc_yh, dc_x);
-#endif
-
-	// FIXME. As above.
-	//dest = ylookup[dc_yl] + columnofs[dc_x];
-	dest = &topleft_u32[dc_yl*vid.width + dc_x];
-
-	// Looks familiar.
-	fracstep = dc_iscale;
-	//frac = dc_texturemid + (dc_yl - centery)*fracstep;
-	frac = (dc_texturemid + FixedMul((dc_yl << FRACBITS) - centeryfrac, fracstep))*(!dc_hires);
-
-	// Here we do an additional index re-mapping.
-	do
-	{
-		*dest = colormaps[(dc_source[frac>>FRACBITS] <<8) + (*dest)];
-		dest += vid.width;
-		frac += fracstep;
-	} while (count--);
-#endif
+	// TODO
 }
 
 /**	\brief The R_DrawTranslucentColumn_32 function
@@ -1084,9 +1050,6 @@ void R_DrawSpan_32(void)
 		colormap = ds_colormap;
 	else if (ds_colmapstyle == TC_COLORMAPSTYLE_32BPP)
 		colormapu32 = (UINT32 *)ds_colormap;
-
-	if (dest+8 > deststop)
-		return;
 
 	if (ds_picfmt == PICFMT_FLAT)
 	{
@@ -3151,9 +3114,222 @@ void R_DrawFogSpan_32(void)
 	}
 }
 
+/**	\brief The R_DrawTiltedFogSpan_32 function
+	Draws a tilted span with fogging.
+*/
 void R_DrawTiltedFogSpan_32(void)
 {
-	// TODO
+	int width = ds_x2 - ds_x1;
+
+	UINT32 *dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	if (ds_colmapstyle == TC_COLORMAPSTYLE_8BPP)
+	{
+		do
+		{
+			UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+			*dest = GetTrueColor(colormap[*dest]);
+			dest++;
+		} while (--width >= 0);
+	}
+	else if (ds_colmapstyle == TC_COLORMAPSTYLE_32BPP)
+	{
+		RGBA_t pack;
+		do
+		{
+			// TODO
+			pack.rgba = *dest;
+			*dest = (0xFF000000 | TC_TintTrueColor(pack, (0xFF000000 | (UINT32)dp_extracolormap->rgba), R_GetRgbaA(dp_extracolormap->rgba) * 10));
+			dest++;
+		} while (--width >= 0);
+	}
+}
+
+/**	\brief The R_DrawSolidColorSpan_32 function
+	Draws a solid color span.
+*/
+void R_DrawSolidColorSpan_32(void)
+{
+	size_t count = (ds_x2 - ds_x1 + 1);
+
+	UINT32 *dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
+
+	M_Memset32(dest, dp_color, count);
+}
+
+/**	\brief The R_DrawTransSolidColorSpan_32 function
+	Draws a translucent solid color span.
+*/
+void R_DrawTranslucentSolidColorSpan_32(void)
+{
+	size_t count = (ds_x2 - ds_x1 + 1);
+
+	UINT32 source = dp_color;
+	UINT32 *dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
+
+	const UINT32 *deststop = (UINT32 *)screens[0] + vid.width * vid.height;
+
+	while (count-- && dest <= deststop)
+	{
+		*dest = R_BlendModeMix(source, *dest, ds_alpha);
+		dest++;
+	}
+}
+
+/**	\brief The R_DrawTiltedSolidColorSpan_32 function
+	Draws a tilted solid color span.
+*/
+void R_DrawTiltedSolidColorSpan_32(void)
+{
+	int width = ds_x2 - ds_x1;
+
+	UINT32 source = dp_color;
+	UINT32 *dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	if (ds_picfmt == PICFMT_FLAT)
+	{
+		if (ds_colmapstyle == TC_COLORMAPSTYLE_8BPP)
+		{
+			do
+			{
+				UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+				*dest++ = GetTrueColor(colormap[source]);
+			} while (--width >= 0);
+		}
+		else if (ds_colmapstyle == TC_COLORMAPSTYLE_32BPP)
+		{
+			do
+			{
+				UINT32 *colormap = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
+				*dest++ = TC_Colormap32Mix(colormap[source]);
+			} while (--width >= 0);
+		}
+	}
+	else if (ds_picfmt == PICFMT_FLAT32)
+	{
+		do
+		{
+			dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
+			*dest = TC_ColorMix(source, *dest);
+			dest++;
+		} while (--width >= 0);
+	}
+}
+
+/**	\brief The R_DrawTiltedTransSolidColorSpan_32 function
+	Draws a tilted and translucent solid color span.
+*/
+void R_DrawTiltedTranslucentSolidColorSpan_32(void)
+{
+	int width = ds_x2 - ds_x1;
+
+	UINT32 source = dp_color;
+	UINT32 *dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	if (ds_picfmt == PICFMT_FLAT)
+	{
+		if (ds_colmapstyle == TC_COLORMAPSTYLE_8BPP)
+		{
+			do
+			{
+				UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+				WriteTranslucentSpan_s8d32(colormap[source]);
+				dest++;
+			} while (--width >= 0);
+		}
+		else if (ds_colmapstyle == TC_COLORMAPSTYLE_32BPP)
+		{
+			do
+			{
+				UINT32 *colormap = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
+				WriteTranslucentSpan_s32d32(colormap[source]);
+				dest++;
+			} while (--width >= 0);
+		}
+	}
+	else if (ds_picfmt == PICFMT_FLAT32)
+	{
+		do
+		{
+			dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
+			*dest = R_BlendModeMix(source, *dest, ds_alpha);
+			dest++;
+		} while (--width >= 0);
+	}
+}
+
+/**	\brief The R_DrawWaterSolidColorSpan_32 function
+	Draws a water solid color span.
+*/
+void R_DrawWaterSolidColorSpan_32(void)
+{
+	UINT32 source = dp_color;
+	UINT32 *dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
+	UINT32 *dsrc = ((UINT32 *)screens[1]) + (ds_y+ds_bgofs)*vid.width + ds_x1;
+
+	size_t count = (ds_x2 - ds_x1 + 1);
+	const UINT32 *deststop = (UINT32 *)screens[0] + vid.width * vid.height;
+
+	while (count-- && dest <= deststop)
+		*dest++ = R_BlendModeMix(source, *dsrc++, ds_alpha);
+}
+
+/**	\brief The R_DrawTiltedWaterSolidColorSpan_32 function
+	Draws a tilted water solid color span.
+*/
+void R_DrawTiltedWaterSolidColorSpan_32(void)
+{
+	int width = ds_x2 - ds_x1;
+
+	UINT32 source = dp_color;
+	UINT32 *dest = (UINT32 *)(ylookup[ds_y] + columnofs[ds_x1]);
+	UINT32 *dsrc = ((UINT32 *)screens[1]) + (ds_y+ds_bgofs)*vid.width + ds_x1;
+
+	double iz = ds_szp->z + ds_szp->y*(centery-ds_y) + ds_szp->x*(ds_x1-centerx);
+
+	CALC_SLOPE_LIGHT
+
+	if (ds_picfmt == PICFMT_FLAT)
+	{
+		if (ds_colmapstyle == TC_COLORMAPSTYLE_8BPP)
+		{
+			do
+			{
+				UINT8 *colormap = planezlight[tiltlighting[ds_x1++]] + (ds_colormap - colormaps);
+				WriteTranslucentWaterSpan_s8d32(colormap[source]);
+				dest++;
+			} while (--width >= 0);
+		}
+		else if (ds_colmapstyle == TC_COLORMAPSTYLE_32BPP)
+		{
+			do
+			{
+				UINT32 *colormap = planezlight_u32[tiltlighting[ds_x1++]] + ((UINT32*)ds_colormap - colormaps_u32);
+				WriteTranslucentWaterSpan_s32d32(colormap[source]);
+				dest++;
+			} while (--width >= 0);
+		}
+	}
+	else if (ds_picfmt == PICFMT_FLAT32)
+	{
+		do
+		{
+			dp_lighting = TC_CalcScaleLight(planezlight_u32[tiltlighting[ds_x1++]]);
+			*dest++ = R_BlendModeMix(source, *dsrc++, ds_alpha);
+		} while (--width >= 0);
+	}
 }
 
 /**	\brief The R_DrawFogColumn_32 function
@@ -3267,34 +3443,4 @@ void R_DrawShadowedColumn_32(void)
 	dc_yh = realyh;
 	if (dc_yl <= realyh)
 		(colfuncs[BASEDRAWFUNC])();		// R_DrawColumn_32 for the appropriate architecture
-}
-
-void R_DrawSolidColorSpan_32(void)
-{
-	// TODO
-}
-
-void R_DrawTiltedSolidColorSpan_32(void)
-{
-	// TODO
-}
-
-void R_DrawTranslucentSolidColorSpan_32(void)
-{
-	// TODO
-}
-
-void R_DrawWaterSolidColorSpan_32(void)
-{
-	// TODO
-}
-
-void R_DrawTiltedTranslucentSolidColorSpan_32(void)
-{
-	// TODO
-}
-
-void R_DrawTiltedWaterSolidColorSpan_32(void)
-{
-	// TODO
 }

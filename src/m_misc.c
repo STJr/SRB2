@@ -2217,7 +2217,6 @@ char *sizeu5(size_t num)
 	return sizeu5_buf;
 }
 
-// 32-bit memset
 void M_Memset32(void *dest, UINT64 value, uintptr_t size)
 {
 	uintptr_t i;

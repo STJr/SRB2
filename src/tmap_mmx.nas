@@ -64,7 +64,7 @@ cextern dc_source
 cextern dc_hires
 cextern centery
 cextern centeryfrac
-cextern dc_transmap
+cextern dp_transmap
 
 cextern R_DrawColumn_8_ASM
 cextern R_Draw2sMultiPatchColumn_8_ASM

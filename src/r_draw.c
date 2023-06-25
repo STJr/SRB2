@@ -73,7 +73,9 @@ boolean tc_spritecolormaps;
 */
 UINT32 *topleft_u32;
 
+UINT32 dp_color;
 UINT8 dp_lighting;
+
 extracolormap_t *dp_extracolormap;
 extracolormap_t *defaultextracolormap;
 
@@ -104,7 +106,6 @@ UINT8 *blendtables[NUMBLENDMAPS];
 
 /**	\brief R_DrawTranslucentColumn uses this
 */
-UINT8 *dc_transmap; // one of the translucency tables
 UINT8 dc_alpha; // column alpha
 
 static INT32 multtable[0x10000];
@@ -112,7 +113,8 @@ static INT32 multtableinv[0x10000];
 
 static INT32 *dp_multtable = NULL;
 static INT32 *dp_multtableinv = NULL;
-static UINT8 *dp_transmap = NULL;
+
+UINT8 *dp_transmap; // one of the translucency tables
 
 UINT32 (*R_BlendModeMix)(UINT32, UINT32, UINT8) = NULL;
 UINT8 (*R_AlphaBlend)(UINT8, UINT8, UINT8 *) = NULL;
@@ -145,7 +147,6 @@ UINT8 ds_picfmt = PICFMT_FLAT;
 UINT8 ds_colmapstyle = TC_COLORMAPSTYLE_8BPP;
 
 UINT8 *ds_source; // points to the start of a flat
-UINT8 *ds_transmap; // one of the translucency tables
 UINT8 ds_alpha; // span alpha
 
 // Vectors for Software's tilted slope drawers
@@ -1156,7 +1157,6 @@ void R_SetColumnBlendingFunction(INT32 blendmode)
 
 	dp_multtable = &multtable[dc_alpha << 8];
 	dp_multtableinv = &multtableinv[dc_alpha << 8];
-	dp_transmap = dc_transmap;
 }
 
 void R_SetSpanBlendingFunction(INT32 blendmode)
@@ -1170,7 +1170,6 @@ void R_SetSpanBlendingFunction(INT32 blendmode)
 
 	dp_multtable = &multtable[ds_alpha << 8];
 	dp_multtableinv = &multtableinv[ds_alpha << 8];
-	dp_transmap = ds_transmap;
 }
 
 void R_InitAlphaLUT(void)
@@ -1431,14 +1430,14 @@ static inline void R_SetBlendingFunction_ColorMix(INT32 blendmode)
 
 #undef clamp
 
-#define WriteTranslucentColumn_s8d32(idx) *dest = R_BlendModeMix(GetTrueColor(idx), *(UINT32 *)dest, dc_alpha)
-#define WriteTranslucentColumn_s32d32(idx) *dest = R_BlendModeMix(idx, *(UINT32 *)dest, dc_alpha)
+#define WriteTranslucentColumn_s8d32(val) *dest = R_BlendModeMix(GetTrueColor(val), *dest, dc_alpha)
+#define WriteTranslucentColumn_s32d32(val) *dest = R_BlendModeMix(val, *dest, dc_alpha)
 
-#define WriteTranslucentSpan_s8d32(idx) *dest = R_BlendModeMix(GetTrueColor(idx), *(UINT32 *)dest, ds_alpha)
-#define WriteTranslucentSpan_s32d32(idx) *dest = R_BlendModeMix(idx, *(UINT32 *)dest, ds_alpha)
+#define WriteTranslucentSpan_s8d32(val) *dest = R_BlendModeMix(GetTrueColor(val), *dest, ds_alpha)
+#define WriteTranslucentSpan_s32d32(val) *dest = R_BlendModeMix(val, *dest, ds_alpha)
 
-#define WriteTranslucentWaterSpan_s8d32(idx) *dest = R_BlendModeMix(GetTrueColor(idx), *(UINT32 *)dsrc, ds_alpha); dsrc++
-#define WriteTranslucentWaterSpan_s32d32(idx) *dest = R_BlendModeMix(idx, *(UINT32 *)dsrc, ds_alpha); dsrc++
+#define WriteTranslucentWaterSpan_s8d32(val) *dest = R_BlendModeMix(GetTrueColor(val), *dsrc, ds_alpha); dsrc++
+#define WriteTranslucentWaterSpan_s32d32(val) *dest = R_BlendModeMix(val, *dsrc, ds_alpha); dsrc++
 
 #include "r_draw32.c"
 #include "r_draw32_npo2.c"

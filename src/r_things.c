@@ -867,7 +867,7 @@ static void R_DrawVisSprite(vissprite_t *vis)
 		R_SetColumnBlendingFunction(vis->blendmode);
 	}
 	else
-		dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
+		dp_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 
 #ifdef TRUECOLOR
 	if (truecolor && dc_picfmt == PICFMT_PATCH32 && dc_colormap)
@@ -1079,7 +1079,7 @@ static void R_DrawPrecipitationVisSprite(vissprite_t *vis)
 			R_SetColumnBlendingFunction(vis->blendmode);
 		}
 		else
-			dc_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
+			dp_transmap = vis->transmap;    //Fab : 29-04-98: translucency table
 	}
 
 #ifdef TRUECOLOR
